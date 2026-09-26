@@ -6,10 +6,10 @@
  *
  * MESURE DU 2026-09-26, rejouée avant d'écrire une ligne : `docs/PLAN-STATE.md` annonçait cinq
  * questions ouvertes pour Will — W9, W6, DEC-INT-002 (« bloquante, §1 du registre »), W12, W11 —
- * que le lecteur unique (`scripts/lot/registre-decisions.ts`, GOV-027) rend TOUTES tranchées le
+ * que le lecteur unique (`scripts/lot/registre-decisions.ts`) rend TOUTES tranchées le
  * 2026-09-03, DEC-INT-002 étant l'alias de W3. `scripts/plan-state/build.ts` découpait lui-même
  * `docs/DECISIONS.md` par ses titres de section et y ramassait les identifiants à deux préfixes :
- * la lecture que GOV-027 a retirée du composeur et de `gov:tasks`. `plan-state:verifier` ne pouvait
+ * la lecture que le lecteur unique a retirée du composeur et de `gov:tasks`. `plan-state:verifier` ne pouvait
  * pas le voir — il compare la vue à son générateur, pas le générateur à la source.
  *
  * LE REGISTRE FAIT FOI, LA VUE EST FAUTIVE (RM-01, REQ-GOV-024). Ces témoins exigent :

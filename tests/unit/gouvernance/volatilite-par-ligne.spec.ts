@@ -8,7 +8,7 @@
  * nommer la PR en tête de file, elle était donc exemptée EN ENTIER, et sa part dérivable de
  * `docs/tasks.json` seul sortait du contrôle avec le reste.
  *
- * REJOUÉE LE 2026-09-26 AVANT D'ÉCRIRE UNE LIGNE : EXIT 1. GOV-090 (PR 106) a déjà descendu
+ * REJOUÉE LE 2026-09-26 AVANT D'ÉCRIRE UNE LIGNE : EXIT 1. La PR 106 a déjà descendu
  * l'attribution des lectures de la rubrique à la ligne, et la ligne falsifiée est désormais
  * confrontée par sa PRÉSENCE. Ce qui manquait encore, et que ces témoins exigent :
  *   (a) l'écart se NOMME en unités du domaine — le nombre de tâches éligibles — et la ligne se

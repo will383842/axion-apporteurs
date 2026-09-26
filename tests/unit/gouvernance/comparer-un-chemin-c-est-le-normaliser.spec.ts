@@ -11,7 +11,7 @@
  * HOMOGLYPHE ; (4) la CASSE ; (5) une forme NON CANONIQUE.
  *
  * « La propriété protégée n'est pas une propriété du CHEMIN, c'est une propriété de la
- * COMPARAISON. » Aucune clause de forme ne ferme (2) et (3) — GOV-050 ferme (1) et (5) au schéma,
+ * COMPARAISON. » Aucune clause de forme ne ferme (2) et (3) — le schéma (`tasks.schema.json`) ferme (1) et (5),
  * pour ses écrivains. Le remède est à la LECTURE : toute comparaison de chemin passe par une
  * primitive UNIQUE qui normalise d'abord (forme canonique, Unicode, casse tranchée), et échoue
  * FERMÉE sur ce qu'elle ne sait pas comparer — seul endroit où un homoglyphe peut être vu.

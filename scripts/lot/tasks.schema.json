@@ -11,37 +11,6 @@
     "taches": { "type": "array", "items": { "$ref": "#/$defs/tache" } }
   },
   "$defs": {
-    "chemin": {
-      "_commentaire": [
-        "GOV-050 (REQ-GOV-021) — LA FORME d'un chemin de `paths`. Un chemin remontant hors du dépôt traversait",
-        "toute la chaîne (écrivain, `gov:tasks`, `gov:check`) : le champ était lu, sa forme ne l'était pas.",
-        "Chaque clause est une CLASSE FERMÉE ou une PROPRIÉTÉ, jamais une liste de membres. Les motifs sont",
-        "évalués en mode Unicode (Ajv : `unicodeRegExp`), et `[\\s\\S]` remplace `.`, qui s'arrête aux fins de",
-        "ligne U+2028 et U+2029. Limites, dites : contrôle SYNTAXIQUE — rien n'est décodé, aucun lien",
-        "symbolique n'est vu, et un homoglyphe est une lettre ordinaire. La propriété qui protège est celle",
-        "de la COMPARAISON (GOV-051, `scripts/gates/gov-conventions.ts`), pas celle du chemin."
-      ],
-      "type": "string",
-      "minLength": 1,
-      "allOf": [
-        {
-          "pattern": "^[^\\p{C}]*$",
-          "description": "(a) Aucun caractère de la classe Unicode C — Cc, Cf, Cs, Co et Cn, pas Cf seul."
-        },
-        {
-          "pattern": "^(?![\\s\\S]*(?:^|/)\\p{White_Space})(?![\\s\\S]*\\p{White_Space}(?:/|$))",
-          "description": "(b) Aucun blanc Unicode (propriété White_Space, pas `\\s`) en bordure d'AUCUN segment. Le premier segment commence où commence la chaîne : la bordure de la chaîne est déjà couverte."
-        },
-        {
-          "pattern": "^(?![\\s\\S]*%[0-9A-Fa-f]{2})",
-          "description": "(c) Aucune séquence percent-encodée : elle se refuse, elle ne se décode jamais."
-        },
-        {
-          "pattern": "^(?!/)(?![A-Za-z]:)(?![\\s\\S]*\\\\)(?![\\s\\S]*//)(?![\\s\\S]*(?:^|/)\\.\\.?(?:/|$))",
-          "description": "(d) Égal à sa forme canonique et dans le dépôt : ni racine, ni lettre de lecteur, ni antislash, ni segment vide, ni segment `.` ou `..` — un remontant EN TÊTE survit à la normalisation, d'où le contrôle du segment."
-        }
-      ]
-    },
     "tache": {
       "type": "object",
       "additionalProperties": false,
@@ -238,6 +207,37 @@
             "required": ["motif"],
             "properties": { "motif": { "type": "string", "minLength": 10 } }
           }
+        }
+      ]
+    },
+    "chemin": {
+      "_commentaire": [
+        "GOV-050 (REQ-GOV-021) — LA FORME d'un chemin de `paths`. Un chemin remontant hors du dépôt traversait",
+        "toute la chaîne (écrivain, `gov:tasks`, `gov:check`) : le champ était lu, sa forme ne l'était pas.",
+        "Chaque clause est une CLASSE FERMÉE ou une PROPRIÉTÉ, jamais une liste de membres. Les motifs sont",
+        "évalués en mode Unicode (Ajv : `unicodeRegExp`), et `[\\s\\S]` remplace `.`, qui s'arrête aux fins de",
+        "ligne U+2028 et U+2029. Limites, dites : contrôle SYNTAXIQUE — rien n'est décodé, aucun lien",
+        "symbolique n'est vu, et un homoglyphe est une lettre ordinaire. La propriété qui protège est celle",
+        "de la COMPARAISON (GOV-051, `scripts/gates/gov-conventions.ts`), pas celle du chemin."
+      ],
+      "type": "string",
+      "minLength": 1,
+      "allOf": [
+        {
+          "pattern": "^[^\\p{C}]*$",
+          "description": "(a) Aucun caractère de la classe Unicode C — Cc, Cf, Cs, Co et Cn, pas Cf seul."
+        },
+        {
+          "pattern": "^(?![\\s\\S]*(?:^|/)\\p{White_Space})(?![\\s\\S]*\\p{White_Space}(?:/|$))",
+          "description": "(b) Aucun blanc Unicode (propriété White_Space, pas `\\s`) en bordure d'AUCUN segment. Le premier segment commence où commence la chaîne : la bordure de la chaîne est déjà couverte."
+        },
+        {
+          "pattern": "^(?![\\s\\S]*%[0-9A-Fa-f]{2})",
+          "description": "(c) Aucune séquence percent-encodée : elle se refuse, elle ne se décode jamais."
+        },
+        {
+          "pattern": "^(?!/)(?![A-Za-z]:)(?![\\s\\S]*\\\\)(?![\\s\\S]*//)(?![\\s\\S]*(?:^|/)\\.\\.?(?:/|$))",
+          "description": "(d) Égal à sa forme canonique et dans le dépôt : ni racine, ni lettre de lecteur, ni antislash, ni segment vide, ni segment `.` ou `..` — un remontant EN TÊTE survit à la normalisation, d'où le contrôle du segment."
         }
       ]
     }
