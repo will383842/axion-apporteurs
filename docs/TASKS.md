@@ -13,7 +13,7 @@
 | Phase | Taches | Jours | Terminees |
 | --- | ---: | ---: | ---: |
 | -1 — Gouvernance (prealable bloquant) | 39 | 23.75 | 39 |
-| 0 — Socle technique | 116 | 89.85 | 35 |
+| 0 — Socle technique | 116 | 89.85 | 43 |
 | 1 — Operationnel | 62 | 48.00 | 0 |
 | 2 — Argent | 45 | 33.50 | 0 |
 | 3 — Pilotage et conformite | 28 | 25.25 | 0 |
@@ -502,7 +502,7 @@ Couvre : `REQ-QA-006`
 
 **Tests.** `tests/integration/harnais-testcontainers.spec.ts` · `tests/unit/ci/integration-collectee-par-gate-a.spec.ts` · `tests/integration/rate-limit-redis.spec.ts`
 
-### QA-T04 — env.ts Zod fail-fast, /api/livez, /api/readyz, entrypoint bloquant, Dockerfile + HEALTHCHECK
+### QA-T04 — env.ts Zod fail-fast, /api/livez, /api/readyz, entrypoint bloquant, Dockerfile + HEALTHCHECK ✅ **fusionnee**
 
 `1 j` · zone `qualite` · `schema` · depend de `QA-T02`, `SEC-01`
 
@@ -532,7 +532,7 @@ Couvre : `REQ-QA-011`, `REQ-QA-013`
 
 **Tests.** `tests/unit/qualite/semgrep-regles-maison.spec.ts`
 
-### QA-T30 — Stryker sur `src/domain` : seuil aligné sur la mesure puis ≥ 80 % bloquant sur fichiers touchés, complet en nightly
+### QA-T30 — Stryker sur `src/domain` : seuil aligné sur la mesure puis ≥ 80 % bloquant sur fichiers touchés, complet en nightly ✅ **fusionnee**
 
 `0.5 j` · zone `qualite` · depend de `QA-T01`
 
@@ -542,7 +542,7 @@ Couvre : `REQ-QA-002`
 
 **Tests.** `tests/unit/qualite/score-de-mutation.spec.ts`
 
-### CPL-T22 — Job CI « red-first »
+### CPL-T22 — Job CI « red-first » ✅ **fusionnee**
 
 `0.5 j` · zone `gouvernance` · depend de `QA-T01`
 
@@ -712,7 +712,7 @@ Couvre : `REQ-INT-014`, `REQ-SEC-012`
 
 **Tests.** `tests/integration/frontiere.spec.ts`
 
-### SEC-03 — Lien magique apporteur
+### SEC-03 — Lien magique apporteur ✅ **fusionnee**
 
 `1 j` · zone `securite` · `schema` · sensible : auth · depend de `SEC-01`, `SEC-08`, `SEC-10`
 
@@ -772,7 +772,7 @@ Couvre : `REQ-INT-022`, `REQ-INT-023`
 
 **Tests.** `tests/unit/email/emetteur.spec.ts` · `tests/integration/webhook-rebonds.spec.ts`
 
-### INT-T11 — Adaptateur MCP `partners` : porte, serrure, contrat porté, harnais 9 contrôles, manifeste vide
+### INT-T11 — Adaptateur MCP `partners` : porte, serrure, contrat porté, harnais 9 contrôles, manifeste vide ✅ **fusionnee**
 
 `1 j` · zone `integration` · depend de `SEC-01`
 
@@ -852,7 +852,7 @@ Couvre : `REQ-UX-008`, `REQ-UX-017`, `REQ-UX-034`
 
 **Tests.** `tests/unit/espace/maquettes-validees.spec.ts`
 
-### UX-P0-03 — Harnais a11y et mobile
+### UX-P0-03 — Harnais a11y et mobile ✅ **fusionnee**
 
 `1 j` · zone `espace` · depend de `QA-T01`
 
@@ -1693,7 +1693,7 @@ Couvre : `REQ-GOV-015`
 
 **Tests.** `tests/unit/gouvernance/registre-lecteur-unique.spec.ts`
 
-### GOV-100 — Cadrage de SEC-03 et SEC-04 : deux tables écrites au schéma, empreinte HMAC des jetons, statuts qui ouvrent l'espace
+### GOV-100 — Cadrage de SEC-03 et SEC-04 : deux tables écrites au schéma, empreinte HMAC des jetons, statuts qui ouvrent l'espace ✅ **fusionnee**
 
 `0.5 j` · zone `gouvernance` · aucune dependance
 
@@ -1713,7 +1713,7 @@ Couvre : `REQ-GOV-011`, `REQ-GOV-013`, `REQ-GOV-032`, `REQ-QA-002`
 
 **Tests.** `tests/unit/gouvernance/relectures-sans-defaut.spec.ts`
 
-### GOV-102 — Cadrage du schéma des phases 0 et 1 : une table, un créateur ; champ `schema` remis droit ; INT-T01c et INT-T26 versées
+### GOV-102 — Cadrage du schéma des phases 0 et 1 : une table, un créateur ; champ `schema` remis droit ; INT-T01c et INT-T26 versées ✅ **fusionnee**
 
 `0.5 j` · zone `gouvernance` · aucune dependance
 
