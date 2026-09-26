@@ -17,4 +17,6 @@ export const DUREES_AUTH = {
   lienMagiqueMs: { valeur: 15 * 60 * 1000, source: 'REQ-SEC-001', verifieLe: '2026-09-19' },
   /** REQ-SEC-003 : « La session est un cookie `__Host-` [...] de 30 jours » (HYP-E1-15). */
   sessionMs: { valeur: 30 * 24 * 60 * 60 * 1000, source: 'REQ-SEC-003', verifieLe: '2026-09-26' },
+  /** REQ-SEC-004 : « un lien magique consommé depuis moins de 10 minutes » (le relèvement). */
+  releveMs: { valeur: 10 * 60 * 1000, source: 'REQ-SEC-004', verifieLe: '2026-09-26' },
 } as const satisfies Record<string, Duree>;

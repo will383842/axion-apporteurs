@@ -417,7 +417,21 @@ describe('REQ-SEC-004 — changements de courriel et essais de code', () => {
   it('REQ-SEC-004 : un seul changement de courriel EN COURS par apporteur ; une fois annulé, un autre peut naître', async () => {
     const id = await apporteur('chg@example.org');
     const premier = await changement(id, new Date(t0));
-    const message = await refus(changement(id, new Date(t0 + MINUTE)));
+    // Prisma ne rend que la clé d'une unicité violée : le bloc relève le NOM de l'index que
+    // Postgres a opposé. Les deux valeurs insérées sont tirées ici, jamais saisies.
+    const message = await refus(
+      sql(
+        `DO $$ DECLARE c text; BEGIN
+           INSERT INTO changements_courriel (id, apporteur_id, email_chiffre, email_hash, token_hash, kid, demande_at)
+           SELECT gen_random_uuid(), apporteur_id, email_chiffre, email_hash,
+                  '${randomBytes(32).toString('hex')}', kid, demande_at
+           FROM changements_courriel WHERE id = '${premier.id}'::uuid;
+         EXCEPTION WHEN unique_violation THEN
+           GET STACKED DIAGNOSTICS c = CONSTRAINT_NAME;
+           RAISE EXCEPTION 'unicite violee : %', c;
+         END $$`
+      )
+    );
     expect(message).toContain('changements_courriel_un_en_cours');
     await base.prisma.changementCourriel.update({
       where: { id: premier.id },
