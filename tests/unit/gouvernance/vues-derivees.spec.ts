@@ -885,6 +885,50 @@ describe('REQ-GOV-032 — docs/PLAN-STATE.md est comparée à ses sources (GOV-0
     expect(sortie).toMatch(/rubrique_manquante/);
   });
 
+  it('RM-02 · famille rubrique_due_absente — REQ-GOV-006 déclare une rubrique que le générateur ne produit pas (GOV-055)', () => {
+    // La vue et ses sources la perdent ENSEMBLE : seule la source extérieure la voit. Le registre
+    // d'essai porte une copie de `docs/requirements.json` où REQ-GOV-006 déclare une rubrique de
+    // plus ; le générateur, lui, est celui du dépôt. Le témoin complet (générateur mutant) vit dans
+    // `couverture-attendue.spec.ts` ; celui-ci fait sortir la famille par CE lanceur.
+    const racine = join(bac, 'registre-rubrique-due');
+    mkdirSync(join(racine, 'docs'), { recursive: true });
+    for (const f of ['docs/tasks.json', 'docs/DECISIONS.md']) copyFileSync(f, join(racine, f));
+    for (const dossier of ['docs/adr', 'docs/journal']) {
+      mkdirSync(join(racine, dossier), { recursive: true });
+      for (const f of readdirSync(dossier))
+        if (statSync(join(dossier, f)).isFile())
+          copyFileSync(join(dossier, f), join(racine, dossier, f));
+    }
+    const exigences = JSON.parse(readFileSync('docs/requirements.json', 'utf8')) as {
+      exigences: { id: string; texte: string }[];
+    };
+    const req = exigences.exigences.find((e) => e.id === 'REQ-GOV-006');
+    expect(req, 'REQ-GOV-006 doit exister au registre des exigences').toBeDefined();
+    // Que REQ-GOV-006 déclare déjà sa liste ou non, la rubrique fantôme y entre : insérée en tête
+    // de la liste existante, ou dans une phrase neuve.
+    const i = req!.texte.indexOf('Ses rubriques dues');
+    const j = i < 0 ? -1 : req!.texte.indexOf('«', i);
+    req!.texte =
+      j < 0
+        ? `${req!.texte} Ses rubriques dues : « Rubrique fantôme ».`
+        : `${req!.texte.slice(0, j)}« Rubrique fantôme », ${req!.texte.slice(j)}`;
+    writeFileSync(join(racine, 'docs/requirements.json'), JSON.stringify(exigences, null, 2));
+    const forge = join(racine, 'forge.json');
+    writeFileSync(
+      forge,
+      JSON.stringify({
+        prs: [],
+        issues: '[]',
+        main: { sha: 'abc1234', date: '2026-01-01T00:00:00+00:00' },
+      })
+    );
+    const vue = rendrePlanStateDans(racine, 'PLAN-STATE-rubrique-due.md', '--forge', forge);
+    const { code, sortie } = lancerPlanDans(racine, '--verifier', '--out', vue, '--forge', forge);
+    expect(code, `une rubrique due jamais produite passe : ${sortie}`).toBe(1);
+    expect(sortie).toMatch(/rubrique_due_absente/);
+    expect(sortie).toContain('« Rubrique fantôme »');
+  });
+
   it('RM-02 · famille mesure_absente — une mesure du domaine introuvable dans la vue', () => {
     const vue = rendrePlanState('PLAN-STATE-mesure-absente.md');
     const t = readFileSync(vue, 'utf8');

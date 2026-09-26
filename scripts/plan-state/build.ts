@@ -541,16 +541,21 @@ let cheminCritique: string[];
   lignes.push('');
 }
 
+// ÉMISE SANS CONDITION (GOV-055) : « Bloquées » est une rubrique DUE (REQ-GOV-006). Émise les seuls
+// jours où une tâche est bloquée, elle aurait rendu la liste des rubriques dues conditionnelle à
+// l'état du registre — et une rubrique qu'on ne doit que certains jours ne se confronte à rien.
+titre('Bloquées');
+lignes.push('');
 if (bloquees.length || attente.length) {
-  titre('Bloquées');
-  lignes.push('');
   for (const t of [...bloquees, ...attente]) {
     lignes.push(
       `- **${t.id}** — ${t.titre} · ${t.motif ?? `attend ${t.externe}`}${(t.attempts ?? 0) > 0 ? ` · ${t.attempts} tentative(s)` : ''}`
     );
   }
-  lignes.push('');
+} else {
+  lignes.push('Aucune tâche bloquée ni en attente externe.');
 }
+lignes.push('');
 
 titre('Questions ouvertes pour Will');
 lignes.push('');
@@ -975,8 +980,11 @@ debutsDesRubriques.forEach(([t, debut], k) => {
 //       tâches éligibles, qui ne se dérive que de `docs/tasks.json`, reste confrontée — par sa
 //       présence et par son compte. Le vert imprime, rubrique par rubrique, ce qui est confronté
 //       et ce qui est libre ;
-//   (3) un élément que le générateur CESSE de produire disparaît des deux côtés à la fois. C'est
-//       GOV-055, et il faut une source extérieure pour le fermer.
+//   (3) un élément que le générateur CESSE de produire disparaît des deux côtés à la fois. Pour les
+//       RUBRIQUES, GOV-055 le ferme par une source extérieure (REQ-GOV-006, `lireRubriquesDues`).
+//       Les lignes du bloc de reprise et les mesures du domaine (`MESURES_ATTENDUES`, dérivée de
+//       `LECTURES`) restent jugées contre le générateur lui-même : une lecture retirée fait tomber
+//       l'attendu et l'observé ensemble.
 
 export const BLOC_DE_REPRISE = 'REPRENDRE EN 30 SECONDES';
 
@@ -1161,6 +1169,7 @@ export const FAMILLES = [
   'ligne_de_reprise_dupliquee',
   'fin_de_ligne_non_lf',
   'structure_dans_une_exemption',
+  'rubrique_due_absente',
 ] as const;
 
 export type Famille = (typeof FAMILLES)[number];
@@ -1206,10 +1215,55 @@ interface BilanDeRubrique {
   motif: string;
 }
 
+/**
+ * LES RUBRIQUES DUES — UNE SOURCE EXTÉRIEURE AU GÉNÉRATEUR (GOV-055).
+ *
+ * Le vérificateur compare ce que le générateur PRODUIT à ce qui est sur le DISQUE. Un élément que le
+ * générateur cesse de produire disparaît des deux côtés à la fois, et l'écart n'existe pas : un
+ * témoin qui dérive son attendu du rendu ne peut pas voir ce que le rendu a perdu (mesuré : la
+ * rubrique « Bloquées » neutralisée, « 8 rubrique(s) comparée(s) », EXIT 0).
+ *
+ * La liste des rubriques DUES se déclare donc UNE fois, dans l'exigence qui dit ce que la vue
+ * contient — REQ-GOV-006, `docs/requirements.json` —, par une phrase qui commence par
+ * `MARQUEUR_DES_RUBRIQUES_DUES` et nomme chaque rubrique entre guillemets français. Elle ne s'écrit
+ * pas ici : le script se comparerait encore à lui-même.
+ *
+ * UNE RUBRIQUE DUE CORRESPOND à un titre rendu qui lui est égal, ou qui la prolonge par « : » et une
+ * valeur (« Phase courante : 0 ») : le numéro de phase est une valeur du registre, pas un nom.
+ *
+ * ⚠️ UNE SOURCE QUI NE DÉCLARE RIEN EST DITE, PAS TUE (`docs/CONVENTIONS.md` §11, « périmètre vide
+ * = périmètre DIT ») : le vert imprime « 0/0 » et le motif, et `couverture-attendue.spec.ts` rougit
+ * tant que REQ-GOV-006 ne porte pas la liste. La lecture est faite à l'appel du vérificateur
+ * seulement : importer ce module ne lit rien de plus que ses sources de rendu.
+ */
+const SOURCE_DES_RUBRIQUES_DUES = { fichier: 'docs/requirements.json', exigence: 'REQ-GOV-006' };
+const MARQUEUR_DES_RUBRIQUES_DUES = 'Ses rubriques dues';
+
+/** Les rubriques qu'un texte d'exigence déclare dues — vide s'il n'en déclare aucune. */
+export function lireRubriquesDues(texte: string): string[] {
+  const i = texte.indexOf(MARQUEUR_DES_RUBRIQUES_DUES);
+  if (i < 0) return [];
+  const phrase = texte.slice(i).split(/\.(?:\s|$)/)[0] ?? '';
+  return [...phrase.matchAll(/«\s*([^»]+?)\s*»/g)].map((m) => m[1]!);
+}
+
+function chargerRubriquesDues(): string[] {
+  if (!existsSync(SOURCE_DES_RUBRIQUES_DUES.fichier)) return [];
+  const doc = JSON.parse(readFileSync(SOURCE_DES_RUBRIQUES_DUES.fichier, 'utf8')) as {
+    exigences?: { id: string; texte: string }[];
+  };
+  const req = (doc.exigences ?? []).find((e) => e.id === SOURCE_DES_RUBRIQUES_DUES.exigence);
+  return req ? lireRubriquesDues(req.texte) : [];
+}
+
+const correspond = (titreRendu: string, due: string): boolean =>
+  titreRendu === due || titreRendu.startsWith(`${due} : `);
+
 /** Le verdict : ce que le disque porte, confronté à ce que les sources produisent À L'INSTANT. */
 function comparer(
   attendu: string,
-  surDisque: string
+  surDisque: string,
+  dues: readonly string[] = []
 ): {
   ecarts: Ecart[];
   rubriques: Etage;
@@ -1218,8 +1272,10 @@ function comparer(
   lignesDansExemptees: { comparees: number; total: number };
   rubriquesNonConverties: string[];
   parRubrique: BilanDeRubrique[];
+  duesProduites: number;
 } {
   const parRubrique: BilanDeRubrique[] = [];
+  let duesProduites = 0;
   const ecarts: Ecart[] = [];
   const rubriques: Etage = { comparees: 0, exemptees: [] };
   /**
@@ -1311,6 +1367,18 @@ function comparer(
   }
   const titresA = rA.map((r) => r.titre);
   const titresD = rD.map((r) => r.titre);
+  // LA COUVERTURE, confrontée à la source extérieure (GOV-055) : ce que le générateur produit, et
+  // non ce que le disque porte — c'est le générateur qui peut perdre une rubrique en silence.
+  for (const d of dues) {
+    if (titresA.some((t) => correspond(t, d))) {
+      duesProduites += 1;
+      continue;
+    }
+    ecarts.push({
+      famille: 'rubrique_due_absente',
+      message: `rubrique « ${d} » : ${SOURCE_DES_RUBRIQUES_DUES.exigence} la déclare DUE, et le générateur ne la produit plus. La vue et ses sources l'ont perdue ENSEMBLE : aucune comparaison de l'une à l'autre ne pouvait le voir.`,
+    });
+  }
   for (const t of titresA)
     if (!titresD.includes(t))
       ecarts.push({
@@ -1553,6 +1621,7 @@ function comparer(
     lignesDansExemptees,
     rubriquesNonConverties,
     parRubrique,
+    duesProduites,
   };
 }
 
@@ -1578,6 +1647,7 @@ if (!LANCE_EN_SCRIPT) {
     );
     process.exitCode = 1;
   } else {
+    const dues = chargerRubriquesDues();
     const {
       ecarts,
       rubriques,
@@ -1586,7 +1656,8 @@ if (!LANCE_EN_SCRIPT) {
       lignesDansExemptees,
       rubriquesNonConverties,
       parRubrique,
-    } = comparer(rendu, readFileSync(CHEMIN_VUE, 'utf8'));
+      duesProduites,
+    } = comparer(rendu, readFileSync(CHEMIN_VUE, 'utf8'), dues);
     if (ecarts.length > 0) {
       console.error(
         `❌ plan-state:verifier — ${CHEMIN_VUE} a DÉRIVÉ de ses sources : ${ecarts.length} écart(s).`
@@ -1611,6 +1682,15 @@ if (!LANCE_EN_SCRIPT) {
           `${lignesDansExemptees.comparees} ligne(s) non vide(s) COMPARÉE(S) sur ${lignesDansExemptees.total} ` +
           `À L'INTÉRIEUR des rubriques exemptées (GOV-090 — une ligne comptée au dénominateur et pas ` +
           `au numérateur porte une valeur de la forge, ou vit dans une rubrique non convertie).`
+      );
+      // GOV-055 — LE COMPTE ATTENDU À CÔTÉ DE L'OBSERVÉ, l'attendu tiré de la source extérieure.
+      console.log(
+        `   COUVERTURE — ${duesProduites}/${dues.length} rubrique(s) DUE(S) produite(s) par le générateur ` +
+          `(source : ${SOURCE_DES_RUBRIQUES_DUES.exigence}, \`${SOURCE_DES_RUBRIQUES_DUES.fichier}\`).` +
+          (dues.length === 0
+            ? ` ⚠️ ${SOURCE_DES_RUBRIQUES_DUES.exigence} n'en déclare AUCUNE (phrase « ${MARQUEUR_DES_RUBRIQUES_DUES} … » absente) : ` +
+              `une rubrique que le générateur cesserait de produire disparaîtrait ici en silence. La liste appartient au registre des exigences (GOV-055).`
+            : '')
       );
       // LE COMPLÉMENT EST NOMMÉ, JAMAIS SOUS-ENTENDU : une rubrique non convertie est
       // entièrement libre, et le vert doit le DIRE plutôt que de laisser croire à une
