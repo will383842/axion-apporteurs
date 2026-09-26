@@ -11,9 +11,10 @@ import base from './vitest.config';
  * et chaque mutant est jugé par les tests qui le couvrent (`coverageAnalysis: perTest`, `related`).
  * Les tests de `tests/integration/` exigent un démon Docker et ceux de gouvernance lancent des
  * gardes en sous-processus : ni l'un ni l'autre ne juge un mutant, et les deux feraient échouer la
- * passe à blanc. Mesuré le 2026-09-26 sur le diff de SEC-03 (cinq fichiers, 200 mutants) : sans les
- * tests du serveur, 196 mutants « sans couverture » et un score de 0,51 % ; avec eux, 82,50 % en
- * 3 min 10 s. Tout le reste (préparation, délais, parallélisme) est hérité, jamais recopié.
+ * passe à blanc. Mesuré le 2026-09-26 sur le diff de SEC-03 : sans les tests du serveur, presque
+ * tous les mutants sortaient « sans couverture » ; avec eux, la passe tient le seuil en un peu plus
+ * de trois minutes (chiffres dans l'entrée de journal de la PR 140). Tout le reste (préparation,
+ * délais, parallélisme) est hérité, jamais recopié.
  *
  * CE QUI EST ÉCARTÉ, NOMMÉ, parce que cela ne juge pas le COMPORTEMENT du domaine et échoue sur le
  * bac à sable de Stryker — chacun vu rougir à blanc le 2026-09-25, un par passe :
