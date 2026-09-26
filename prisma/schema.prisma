@@ -181,6 +181,7 @@ model Apporteur {
   identitesFacturation IdentiteFacturation[]
   liensMagiques        LienMagique[]
   sessionsEspace       SessionEspace[]
+  courrielsEnvoyes     CourrielEnvoye[]
 
   @@map("apporteurs")
 }
@@ -340,4 +341,60 @@ model Battement {
   compteurs       Json?
 
   @@map("battements")
+}
+
+// ── INT-T10 : l'émetteur de courriels et la liste de suppression (partners/ADR-0022) ──────────
+
+/// Le statut d'une demande d'envoi (REQ-INT-022, REQ-INT-023). Un envoi RETENU est visible, jamais
+/// jeté : il écrit sa ligne, et n'appelle pas le relais.
+enum StatutCourriel {
+  envoye
+  retenu_adresse_supprimee
+  retenu_dmarc_non_verifie
+  echec
+
+  @@map("statut_courriel")
+}
+
+/// Le motif d'une suppression. Une valeur de plainte n'entre ici que si le relais émet réellement
+/// cet événement (INT-T10, acceptance 6).
+enum MotifSuppressionCourriel {
+  rebond_definitif
+
+  @@map("motif_suppression_courriel")
+}
+
+/// Chaque demande d'envoi, qu'elle parte ou non (REQ-INT-022, REQ-INT-023, REQ-UX-016). Aucun corps,
+/// aucune adresse : l'empreinte de recherche seule. DM-07 y ajoutera `attribution_id`.
+model CourrielEnvoye {
+  id                   String         @id @default(uuid()) @db.Uuid
+  /// Exception E2 de partners/ADR-0022 (point 9) : clé de `src/server/notifications/table-ssot.ts`.
+  gabarit              String         @db.VarChar(64)
+  /// Empreinte de l'adresse de destination (`empreinteRecherche('courriel', …)`).
+  emailHash            String         @map("email_hash") @db.Char(64)
+  apporteurId          String?        @map("apporteur_id") @db.Uuid
+  apporteur            Apporteur?     @relation(fields: [apporteurId], references: [id], onDelete: Restrict)
+  statut               StatutCourriel
+  demandeAt            DateTime       @map("demande_at") @db.Timestamptz(3)
+  /// La date qui fait courir un délai (REQ-UX-016) — jamais une date de lecture.
+  envoyeAt             DateTime?      @map("envoye_at") @db.Timestamptz(3)
+  fournisseurMessageId String?        @map("fournisseur_message_id") @db.VarChar(200)
+  /// Un code fermé, jamais la réponse du relais.
+  erreur               String?        @db.VarChar(300)
+
+  @@index([emailHash])
+  @@index([apporteurId, gabarit])
+  @@index([statut, demandeAt])
+  @@map("courriels_envoyes")
+}
+
+/// La liste de suppression (REQ-INT-023). Idempotente par construction : une adresse, une ligne.
+model SuppressionCourriel {
+  id        String                   @id @default(uuid()) @db.Uuid
+  emailHash String                   @unique @map("email_hash") @db.Char(64)
+  motif     MotifSuppressionCourriel
+  survenuAt DateTime                 @map("survenu_at") @db.Timestamptz(3)
+  creeAt    DateTime                 @map("cree_at") @db.Timestamptz(3)
+
+  @@map("suppressions_courriel")
 }
