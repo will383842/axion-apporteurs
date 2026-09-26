@@ -58,8 +58,6 @@ export interface ConfigurationDuLien {
   readonly session: { readonly secret: string; readonly kid: string };
 }
 
-export type CompteurDeLien = 'magic:ip' | 'magic:courriel';
-
 export interface VerdictDeLimite {
   readonly autorise: boolean;
   readonly panne: boolean;
@@ -106,7 +104,12 @@ export interface PortsDeDemande {
   empreinteAdresseReseau(adresse: string): string;
   /** L'empreinte de recherche du courriel saisi, ou `null` s'il est hors forme. */
   empreinteCourriel(saisie: string): string | null;
-  limiter(nom: CompteurDeLien, sujet: string, maintenantMs: number): Promise<VerdictDeLimite>;
+  /**
+   * Les deux compteurs de REQ-SEC-002, un port chacun : le NOM du compteur ne vit qu'au registre
+   * (`src/server/securite/rate-limit.ts`) et dans l'appel direct que câble l'action serveur.
+   */
+  compterAdresse(sujet: string, maintenantMs: number): Promise<VerdictDeLimite>;
+  compterCourriel(sujet: string, maintenantMs: number): Promise<VerdictDeLimite>;
   /** Exécute le travail une fois la réponse partie. */
   planifier(travail: () => Promise<void>): void;
   emission: PortsDEmission;
@@ -134,14 +137,12 @@ export async function demanderLien(
     const adresse = ports.adresseDuClient(requete.entetes);
     if (adresse === null) return 'indisponible';
     const adresseHash = ports.empreinteAdresseReseau(adresse);
-    const parAdresse = refusDe(await ports.limiter('magic:ip', adresseHash, maintenant.getTime()));
+    const parAdresse = refusDe(await ports.compterAdresse(adresseHash, maintenant.getTime()));
     if (parAdresse) return parAdresse;
 
     const emailHash = ports.empreinteCourriel(requete.saisie);
     if (emailHash === null) return 'adresse_invalide';
-    const parCourriel = refusDe(
-      await ports.limiter('magic:courriel', emailHash, maintenant.getTime())
-    );
+    const parCourriel = refusDe(await ports.compterCourriel(emailHash, maintenant.getTime()));
     if (parCourriel) return parCourriel;
 
     // Le piège et le nominal ne divergent qu'ICI, dans le travail différé.
