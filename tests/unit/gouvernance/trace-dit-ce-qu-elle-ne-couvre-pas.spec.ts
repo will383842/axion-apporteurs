@@ -146,7 +146,11 @@ describe('gov:trace — le plancher déclaré (RM-02, RM-10)', () => {
       // MILIEU de la liste : un témoin construit contre le dernier élément ne distingue pas
       // « tous » de « le dernier ».
       const aRetirer = p!.dedans.length - p!.plancher + 1;
-      const milieu = Math.floor(p!.dedans.length / 2);
+      // 🔧 GOV-101 : le périmètre a passé le DOUBLE du plancher (90 pour 45). À partir du milieu, il
+      // ne restait plus assez d'éléments pour en retirer `aRetirer` — le témoin rougissait sur sa
+      // propre arithmétique (« expected 45 to be 46 »), pas sur la garde. Le point de frappe reste le
+      // milieu tant qu'il laisse assez d'éléments derrière lui, et recule juste ce qu'il faut sinon.
+      const milieu = Math.min(Math.floor(p!.dedans.length / 2), p!.dedans.length - aRetirer);
       const cibles = new Set(p!.dedans.slice(milieu, milieu + aRetirer));
       expect(cibles.size).toBe(aRetirer);
       const b = backlog();
