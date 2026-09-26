@@ -257,7 +257,9 @@ describe('REQ-SEC-001 — la base refuse ce que le code ne ferait pas', () => {
         id
       )
     );
-    expect(m).toContain('liens_magiques_usage_unique');
+    expect(m).toContain(
+      'liens_magiques_usage_unique : un lien consommé ou annulé est gelé (REQ-SEC-001)'
+    );
   });
 
   it('REQ-SEC-001 : face ROUGE — prolonger `expire_at` est refusé', async () => {
@@ -269,7 +271,9 @@ describe('REQ-SEC-001 — la base refuse ce que le code ne ferait pas', () => {
         id
       )
     );
-    expect(m).toMatch(/liens_magiques_/);
+    expect(m).toContain(
+      "liens_magiques_usage_unique : seules consomme_at et annule_at s'écrivent (REQ-SEC-001)"
+    );
   });
 
   it('REQ-SEC-001 : face ROUGE — une seconde session pour le même lien est refusée par la base', async () => {
@@ -287,6 +291,6 @@ describe('REQ-SEC-001 — la base refuse ce que le code ne ferait pas', () => {
         'e'.repeat(64)
       )
     );
-    expect(m).toMatch(/lien_magique_id|unique/i);
+    expect(m).toContain('sessions_espace_lien_magique_id_key');
   });
 });

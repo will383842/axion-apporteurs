@@ -173,6 +173,8 @@ model Apporteur {
 
   jetonsDepot          JetonDepot[]
   identitesFacturation IdentiteFacturation[]
+  liensMagiques        LienMagique[]
+  sessionsEspace       SessionEspace[]
 
   @@map("apporteurs")
 }
@@ -190,6 +192,43 @@ model JetonDepot {
 
   @@index([apporteurId])
   @@map("jetons_depot")
+}
+
+/// Un lien magique de connexion (SEC-03, REQ-SEC-001). Seule l'EMPREINTE se stocke : HMAC-SHA-256
+/// sous MAGIC_LINK_SECRET, domaine séparé, avec le `kid` de ce secret (partners/ADR-0013). Usage
+/// unique : une ligne consommée ou annulée est gelée (déclencheur `liens_magiques_usage_unique`).
+model LienMagique {
+  id          String         @id @default(uuid()) @db.Uuid
+  apporteurId String         @map("apporteur_id") @db.Uuid
+  apporteur   Apporteur      @relation(fields: [apporteurId], references: [id], onDelete: Restrict)
+  tokenHash   String         @unique @map("token_hash") @db.Char(64)
+  kid         String         @db.Char(8)
+  creeAt      DateTime       @map("cree_at") @db.Timestamptz(3)
+  expireAt    DateTime       @map("expire_at") @db.Timestamptz(3)
+  consommeAt  DateTime?      @map("consomme_at") @db.Timestamptz(3)
+  annuleAt    DateTime?      @map("annule_at") @db.Timestamptz(3)
+  session     SessionEspace?
+
+  @@index([apporteurId])
+  @@map("liens_magiques")
+}
+
+/// Une session de l'espace apporteur (SEC-03, REQ-SEC-001, REQ-SEC-003). Seule l'EMPREINTE du jeton
+/// se stocke : HMAC-SHA-256 sous SESSION_SECRET, domaine séparé. Une session par lien au plus.
+model SessionEspace {
+  id            String      @id @default(uuid()) @db.Uuid
+  apporteurId   String      @map("apporteur_id") @db.Uuid
+  apporteur     Apporteur   @relation(fields: [apporteurId], references: [id], onDelete: Restrict)
+  lienMagiqueId String      @unique @map("lien_magique_id") @db.Uuid
+  lienMagique   LienMagique @relation(fields: [lienMagiqueId], references: [id], onDelete: Restrict)
+  tokenHash     String      @unique @map("token_hash") @db.Char(64)
+  kid           String      @db.Char(8)
+  ipHash        String?     @map("ip_hash") @db.Char(16)
+  creeAt        DateTime    @map("cree_at") @db.Timestamptz(3)
+  expireAt      DateTime    @map("expire_at") @db.Timestamptz(3)
+
+  @@index([apporteurId])
+  @@map("sessions_espace")
 }
 
 /// Une identité de facturation DATÉE, valable sur [debutAt, finAt) (REQ-CPL-005). Un relevé qui
