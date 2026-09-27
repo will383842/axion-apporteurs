@@ -1,0 +1,380 @@
+{
+  "Source": "GÉNÉRÉE — ne pas éditer à la main. Producteur : axionia, scripts/partners/fixtures.ts (INT-T01b). Méthode : scénario écrit puis RELU dans la base de développement (localhost:5434) via les modèles Prisma réels, payloads construits par src/server/partners/payloads.ts, transaction ANNULÉE, sortie pseudonymisée. Aucune valeur n'est complétée : un champ absent fait échouer la génération (RM-03, REQ-QA-007). Contrat : contracts.v1.json, empreinte 8b0b09a04727d24c8291874c315b89db80207f948dabf9276f528c46f827e901, schema_version 1. Régénérer : pnpm partners:fixtures — vérifier : pnpm partners:fixtures --verifier",
+  "schemaVersion": 1,
+  "evenements": [
+    {
+      "event_id": "c44906eb-233f-4e86-acac-6a16e4dd7599",
+      "event_type": "client.cree",
+      "schema_version": 1,
+      "occurred_at": "2026-01-02T10:00:00.000Z",
+      "producer": "axionia",
+      "subject_ref": {
+        "client_id": "0a1b2c3d-0001-4000-8000-000000000001"
+      },
+      "sequence": 1,
+      "payload": {
+        "clientId": "fab55778-9393-4d6b-808d-5d8f4a0451d4",
+        "numero": "AXI-D2F4B99F",
+        "type": "entreprise",
+        "raisonSociale": "Société A8F759",
+        "siren": "751655777",
+        "nafCode": "6201Z",
+        "secteur": "Informatique",
+        "taille": "PME",
+        "creeLe": "2026-01-02T10:00:00.000Z",
+        "misAJourLe": "2026-01-02T10:00:00.000Z"
+      }
+    },
+    {
+      "event_id": "2a06418b-f3ad-476a-8988-0a52c8196ef5",
+      "event_type": "client.mis_a_jour",
+      "schema_version": 1,
+      "occurred_at": "2026-01-02T10:00:00.000Z",
+      "producer": "axionia",
+      "subject_ref": {
+        "client_id": "0a1b2c3d-0001-4000-8000-000000000001"
+      },
+      "sequence": 2,
+      "payload": {
+        "clientId": "fab55778-9393-4d6b-808d-5d8f4a0451d4",
+        "numero": "AXI-D2F4B99F",
+        "type": "entreprise",
+        "raisonSociale": "Société A8F759",
+        "siren": "751655777",
+        "nafCode": "6201Z",
+        "secteur": "Informatique",
+        "taille": "PME",
+        "creeLe": "2026-01-02T10:00:00.000Z",
+        "misAJourLe": "2026-01-02T10:00:00.000Z"
+      }
+    },
+    {
+      "event_id": "fc6b72bf-5f9e-42bb-a648-ab7a7ebd3068",
+      "event_type": "devis.signe",
+      "schema_version": 1,
+      "occurred_at": "2026-02-14T15:00:00.000Z",
+      "producer": "axionia",
+      "subject_ref": {
+        "devis_id": "0a1b2c3d-0002-4000-8000-000000000002"
+      },
+      "sequence": 3,
+      "payload": {
+        "devisId": "4964b6d1-487c-447e-8626-2b69a0aa8259",
+        "numero": "AXI-D09B0061",
+        "clientId": "fab55778-9393-4d6b-808d-5d8f4a0451d4",
+        "activite": "formation",
+        "montantTotalHtCents": 500000,
+        "signeLe": "2026-02-14T15:00:00.000Z",
+        "lignes": [
+          {
+            "designation": "Formation IA 2 jours",
+            "activite": "formation",
+            "jours": 2,
+            "montantHtCents": 500000,
+            "offreCode": "AXI-OFF-004",
+            "commissionId": "com-formation-2j",
+            "commission": {
+              "statut": "calculee",
+              "commissionId": "com-formation-2j",
+              "montantCents": 100000,
+              "motifBlocage": null,
+              "libelleCommission": "Formation 2 jours",
+              "grilleVersion": "089825b6d328"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_id": "9143addc-a8e8-4804-94ca-7ff8da62826f",
+      "event_type": "facture.emise",
+      "schema_version": 1,
+      "occurred_at": "2026-03-01T09:00:00.000Z",
+      "producer": "axionia",
+      "subject_ref": {
+        "facture_id": "0a1b2c3d-0004-4000-8000-000000000004"
+      },
+      "sequence": 4,
+      "payload": {
+        "factureId": "25612487-ca1e-437e-8929-650da2821d08",
+        "numero": "AXI-6B15C193",
+        "activite": "formation",
+        "clientId": "fab55778-9393-4d6b-808d-5d8f4a0451d4",
+        "origineClient": "facture",
+        "siren": "751655777",
+        "destinataire": "opco",
+        "subrogation": true,
+        "montantHtCents": 100000,
+        "montantTvaCents": 20000,
+        "montantTtcCents": 120000,
+        "regimeTva": "assujetti",
+        "emiseLe": "2026-03-01T09:00:00.000Z",
+        "echeanceLe": "2026-03-31T09:00:00.000Z",
+        "echeanceFinanceurAt": "2026-05-15T00:00:00.000Z",
+        "payers": [
+          {
+            "payeurType": "opco_subroge",
+            "montantAttenduCents": 90000
+          },
+          {
+            "payeurType": "entreprise",
+            "montantAttenduCents": 30000
+          }
+        ]
+      }
+    },
+    {
+      "event_id": "fc34f7ff-69ed-4adf-9045-b0bbbd5b772c",
+      "event_type": "avoir.emis",
+      "schema_version": 1,
+      "occurred_at": "2026-06-01T09:00:00.000Z",
+      "producer": "axionia",
+      "subject_ref": {
+        "facture_id": "0a1b2c3d-0005-4000-8000-000000000005"
+      },
+      "sequence": 5,
+      "payload": {
+        "avoirId": "ae19e330-73a6-46ec-8534-836f6f364c96",
+        "numero": "AXI-8C542946",
+        "avoirDeFactureId": "22e7c802-3ad4-4b13-b3a8-5f6dd6800149",
+        "clientId": "fab55778-9393-4d6b-808d-5d8f4a0451d4",
+        "siren": "751655777",
+        "montantHtCents": -40000,
+        "montantTvaCents": -8000,
+        "montantTtcCents": -48000,
+        "regimeTva": "assujetti",
+        "emisLe": "2026-06-01T09:00:00.000Z"
+      }
+    },
+    {
+      "event_id": "4468bb62-4d85-46f3-bff8-95b795658a19",
+      "event_type": "paiement.recu",
+      "schema_version": 1,
+      "occurred_at": "2026-03-10T12:00:00.000Z",
+      "producer": "axionia",
+      "subject_ref": {
+        "payment_id": "0a1b2c3d-0009-4000-8000-000000000010"
+      },
+      "sequence": 6,
+      "payload": {
+        "paymentId": "8c2452ab-1b02-4787-b9a9-6a38fea88731",
+        "factureId": "25612487-ca1e-437e-8929-650da2821d08",
+        "clientId": "fab55778-9393-4d6b-808d-5d8f4a0451d4",
+        "origineClient": "facture",
+        "siren": "751655777",
+        "montantEncaisseTtcCents": 40000,
+        "factureMontantHtCents": 100000,
+        "factureMontantTtcCents": 120000,
+        "regimeTva": "assujetti",
+        "totalEncaisseTtcCents": 40000,
+        "paidAt": "2026-03-10T12:00:00.000Z",
+        "provider": "stripe",
+        "amountHtCents": 33333,
+        "soldeLaFacture": false
+      }
+    },
+    {
+      "event_id": "175893f1-11fc-4659-b6c0-73d81a37b0bf",
+      "event_type": "paiement.recu",
+      "schema_version": 1,
+      "occurred_at": "2026-04-10T12:00:00.000Z",
+      "producer": "axionia",
+      "subject_ref": {
+        "payment_id": "0a1b2c3d-0009-4000-8000-000000000011"
+      },
+      "sequence": 7,
+      "payload": {
+        "paymentId": "270eb45b-0292-459d-ab4a-9c5640b27c2f",
+        "factureId": "25612487-ca1e-437e-8929-650da2821d08",
+        "clientId": "fab55778-9393-4d6b-808d-5d8f4a0451d4",
+        "origineClient": "facture",
+        "siren": "751655777",
+        "montantEncaisseTtcCents": 40000,
+        "factureMontantHtCents": 100000,
+        "factureMontantTtcCents": 120000,
+        "regimeTva": "assujetti",
+        "totalEncaisseTtcCents": 80000,
+        "paidAt": "2026-04-10T12:00:00.000Z",
+        "provider": "stripe",
+        "amountHtCents": 33333,
+        "soldeLaFacture": false
+      }
+    },
+    {
+      "event_id": "5ff33531-1e2d-44a5-a88d-f2b4fc4a37f8",
+      "event_type": "paiement.recu",
+      "schema_version": 1,
+      "occurred_at": "2026-05-10T12:00:00.000Z",
+      "producer": "axionia",
+      "subject_ref": {
+        "payment_id": "0a1b2c3d-0009-4000-8000-000000000012"
+      },
+      "sequence": 8,
+      "payload": {
+        "paymentId": "aff28e23-39d9-4895-a0d9-50cb2fe6454a",
+        "factureId": "25612487-ca1e-437e-8929-650da2821d08",
+        "clientId": "fab55778-9393-4d6b-808d-5d8f4a0451d4",
+        "origineClient": "facture",
+        "siren": "751655777",
+        "montantEncaisseTtcCents": 40000,
+        "factureMontantHtCents": 100000,
+        "factureMontantTtcCents": 120000,
+        "regimeTva": "assujetti",
+        "totalEncaisseTtcCents": 120000,
+        "paidAt": "2026-05-10T12:00:00.000Z",
+        "provider": "stripe",
+        "amountHtCents": 33334,
+        "soldeLaFacture": true
+      }
+    },
+    {
+      "event_id": "1e06cf70-aae8-45b9-a969-ec77e3229104",
+      "event_type": "paiement.rembourse",
+      "schema_version": 1,
+      "occurred_at": "2026-06-02T09:00:00.000Z",
+      "producer": "axionia",
+      "subject_ref": {
+        "payment_id": "0a1b2c3d-0007-4000-8000-000000000007"
+      },
+      "sequence": 9,
+      "payload": {
+        "paymentId": "a0b9e83b-9463-4fd6-8edc-8969d2c052a1",
+        "factureId": "25612487-ca1e-437e-8929-650da2821d08",
+        "clientId": "fab55778-9393-4d6b-808d-5d8f4a0451d4",
+        "siren": "751655777",
+        "montantHtCents": 10000,
+        "montantEncaisseTtcCents": 12000,
+        "motif": "remboursement",
+        "forme": "payment_type_refund",
+        "rembourseLe": "2026-06-02T09:00:00.000Z",
+        "provider": "stripe"
+      }
+    },
+    {
+      "event_id": "d69574ab-a23e-490b-b3d7-4496b5160110",
+      "event_type": "paiement.rembourse",
+      "schema_version": 1,
+      "occurred_at": "2026-06-03T09:00:00.000Z",
+      "producer": "axionia",
+      "subject_ref": {
+        "payment_id": "0a1b2c3d-0008-4000-8000-000000000008"
+      },
+      "sequence": 10,
+      "payload": {
+        "paymentId": "4724a442-6530-4a8b-ab39-cfe560a0089c",
+        "factureId": "25612487-ca1e-437e-8929-650da2821d08",
+        "clientId": "fab55778-9393-4d6b-808d-5d8f4a0451d4",
+        "siren": "751655777",
+        "montantHtCents": 10000,
+        "montantEncaisseTtcCents": 12000,
+        "motif": "rejet_prelevement",
+        "forme": "payment_status_refunded",
+        "rembourseLe": "2026-06-03T09:00:00.000Z",
+        "provider": "manual_wire"
+      }
+    }
+  ],
+  "horsContratV1": [
+    {
+      "event_type": "facture.annulee",
+      "occurred_at": "2026-03-01T09:00:00.000Z",
+      "subject_ref": {
+        "facture_id": "0a1b2c3d-0004-4000-8000-000000000004"
+      },
+      "payload": {
+        "factureId": "25612487-ca1e-437e-8929-650da2821d08",
+        "motif": "doublon",
+        "clientId": "fab55778-9393-4d6b-808d-5d8f4a0451d4"
+      }
+    },
+    {
+      "event_type": "financement.mis_a_jour",
+      "occurred_at": "2026-02-20T09:00:00.000Z",
+      "subject_ref": {
+        "facture_id": "0a1b2c3d-0004-4000-8000-000000000004"
+      },
+      "payload": {
+        "factureId": "25612487-ca1e-437e-8929-650da2821d08",
+        "payers": [
+          {
+            "payeurType": "opco_subroge",
+            "montantAttenduCents": 90000
+          },
+          {
+            "payeurType": "entreprise",
+            "montantAttenduCents": 30000
+          }
+        ],
+        "echeanceFinanceurAt": "2026-05-15T00:00:00.000Z"
+      }
+    },
+    {
+      "event_type": "candidature.recue",
+      "occurred_at": "2026-08-20T08:30:00.000Z",
+      "subject_ref": {
+        "submission_id": "0a1b2c3d-0006-4000-8000-000000000006"
+      },
+      "payload": {
+        "candidatureId": "270022c1-2cc8-4a05-ba5a-4e7584250470",
+        "reponsesJson": {
+          "ia": {
+            "outils": [
+              "chatgpt"
+            ],
+            "utilise": true
+          },
+          "b2b": {
+            "annees": 8,
+            "dejaVendu": true
+          },
+          "zone": {
+            "zones": [
+              "auvergne-rhone-alpes"
+            ],
+            "mobile": true
+          },
+          "statut": "auto_entrepreneur",
+          "version": 1,
+          "informatique": {
+            "usages": [
+              "crm"
+            ],
+            "utilise": true
+          },
+          "disponibilite": "immediate",
+          "permisVehicule": true
+        },
+        "scoreInitial": 72,
+        "scorePartsJson": {
+          "ia": 0,
+          "zone": 0,
+          "carnet": 25,
+          "statut": 12,
+          "b2bAnnees": 25,
+          "deplacement": 0,
+          "informatique": 0,
+          "typesClients": 10
+        },
+        "scoreBaremeVersion": "48b8b385795f",
+        "sourceCanal": "/devenir-commercial-ia/candidature",
+        "utm": {
+          "utm_source": "linkedin",
+          "utm_campaign": "apporteurs-q1"
+        },
+        "campagneId": null,
+        "parrainCodeCapture": null
+      }
+    },
+    {
+      "event_type": "client.fusionne",
+      "occurred_at": "2026-01-02T10:00:00.000Z",
+      "subject_ref": {
+        "client_id": "0a1b2c3d-0001-4000-8000-000000000001"
+      },
+      "payload": {
+        "survivorId": "b419dc54-9e89-4838-a4dc-22db1fe3c40f",
+        "absorbedId": "0a3b2f4f-a997-4222-b838-65b2c52cef93"
+      }
+    }
+  ]
+}
