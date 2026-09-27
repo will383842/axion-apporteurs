@@ -26,12 +26,16 @@ export const PERIMETRE_VIDE: DeclarationDePerimetreVide | null = {
 /**
  * Contrôle 3 — les symboles de la couche service du produit qu'un fichier de l'adaptateur a le droit
  * d'importer, NOMMÉS, par module (chemin du dépôt, sans extension). La porte seule en importe : le
- * juge des secrets et la comparaison à temps constant.
+ * juge des secrets, la comparaison à temps constant, et la borne des corps entrants de REQ-SEC-010,
+ * écrite une seule fois pour toutes les portes (SEC-06).
  */
 export const SYMBOLES_AUTORISES: readonly {
   readonly module: string;
   readonly symboles: readonly string[];
 }[] = [
   { module: 'src/lib/env', symboles: ['lireEnvironnement'] },
-  { module: 'src/server/securite/primitives-de-porte', symboles: ['egalATempsConstant'] },
+  {
+    module: 'src/server/securite/primitives-de-porte',
+    symboles: ['egalATempsConstant', 'CORPS_MAX_OCTETS'],
+  },
 ];
