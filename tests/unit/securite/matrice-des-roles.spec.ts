@@ -25,6 +25,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { spawnSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import { ConsoleRole, type PrismaClient } from '@prisma/client';
 import { kidDe } from '../../../src/lib/env';
 import {
@@ -46,6 +47,7 @@ import {
 } from '../../../src/server/roles/require-role';
 import {
   FAMILLES,
+  MODULE_DE_LA_PORTE,
   jugerLaConsole,
   rendreLeVerdict,
   type FichierDeConsole,
@@ -403,16 +405,22 @@ const MATRICE_TEMOIN = {
   'ecran:tableau': ['admin', 'lecteur'],
 } as const;
 
-const action = (corps: string, chemin = 'src/app/(console)/console/gel/actions.ts') =>
+/**
+ * L'import de la porte depuis un fichier de `src/app/(console)/console/<x>/` : seul le
+ * `requireRole` importé du module des rôles garde un site (5e tour de relecture).
+ */
+const IMPORT_DE_LA_PORTE = "import { requireRole } from '../../../../server/roles/require-role';\n";
+
+const action = (corps: string) =>
   ({
-    chemin,
-    source: `'use server';\nexport async function leverLeGel(id: string) {\n${corps}\n}\n`,
+    chemin: 'src/app/(console)/console/gel/actions.ts',
+    source: `'use server';\n${IMPORT_DE_LA_PORTE}export async function leverLeGel(id: string) {\n${corps}\n}\n`,
   }) satisfies FichierDeConsole;
 
 const page = (corps: string) =>
   ({
     chemin: 'src/app/(console)/console/tableau/page.tsx',
-    source: `export default async function Page() {\n${corps}\n  return null;\n}\n`,
+    source: `${IMPORT_DE_LA_PORTE}export default async function Page() {\n${corps}\n  return null;\n}\n`,
   }) satisfies FichierDeConsole;
 
 const familles = (fichiers: FichierDeConsole[]) =>
@@ -482,6 +490,7 @@ describe('REQ-SEC-023 — la garde `securite:roles` confronte le disque à la ma
     const f = {
       chemin: 'src/app/(console)/console/export/route.ts',
       source:
+        IMPORT_DE_LA_PORTE +
         "export async function GET() {\n  await requireRole('ecran:tableau', j, p);\n}\n" +
         'export async function POST() {\n  return 1;\n}\n',
     };
@@ -523,10 +532,16 @@ describe('REQ-SEC-023 — la garde `securite:roles` confronte le disque à la ma
   // ── les formes d'export : TOUTE valeur exportée d'un module 'use server' et TOUTE méthode HTTP
   //    exportée d'un route.ts est un site ; un site dont le corps ne s'établit pas est une faute.
 
-  const serveur = (source: string, chemin = 'src/app/(console)/console/gel/actions.ts') =>
-    ({ chemin, source: `'use server';\n${source}` }) satisfies FichierDeConsole;
+  const serveur = (source: string) =>
+    ({
+      chemin: 'src/app/(console)/console/gel/actions.ts',
+      source: `'use server';\n${IMPORT_DE_LA_PORTE}${source}`,
+    }) satisfies FichierDeConsole;
   const route = (source: string) =>
-    ({ chemin: 'src/app/(console)/console/export/route.ts', source }) satisfies FichierDeConsole;
+    ({
+      chemin: 'src/app/(console)/console/export/route.ts',
+      source: `${IMPORT_DE_LA_PORTE}${source}`,
+    }) satisfies FichierDeConsole;
   const GARDE_ACTION = "  await requireRole('action:lever_gel', j, p);";
   const GARDE_ECRAN = "  await requireRole('ecran:tableau', j, p);";
 
@@ -881,9 +896,11 @@ describe('REQ-SEC-023 — la garde `securite:roles` confronte le disque à la ma
         ),
       ])
     ).toEqual(['action_sans_requireRole']);
-    expect(familles([js(ROUTE_JS, `export async function GET() {\n${GARDE_ECRAN}\n}\n`)])).toEqual(
-      []
-    );
+    expect(
+      familles([
+        js(ROUTE_JS, `${IMPORT_DE_LA_PORTE}export async function GET() {\n${GARDE_ECRAN}\n}\n`),
+      ])
+    ).toEqual([]);
   });
 
   it('REQ-SEC-023 : TÉMOIN À DEUX FACES — une MÉTHODE d’objet ou de classe qui porte « use server » est une action', () => {
@@ -900,7 +917,9 @@ describe('REQ-SEC-023 — la garde `securite:roles` confronte le disque à la ma
       familles([
         {
           chemin: 'src/server/console/aide.ts',
-          source: `export class C {\n  async lever() {\n    'use server';\n${GARDE_ACTION}\n  }\n}\n`,
+          source:
+            "import { requireRole } from '../roles/require-role';\n" +
+            `export class C {\n  async lever() {\n    'use server';\n${GARDE_ACTION}\n  }\n}\n`,
         },
       ])
     ).toEqual([]);
@@ -925,7 +944,7 @@ describe('REQ-SEC-023 — la garde `securite:roles` confronte le disque à la ma
       familles([
         {
           chemin,
-          source: `async function Page() {\n${GARDE_ECRAN}\n  return null;\n}\nexport { Page as default };\n`,
+          source: `${IMPORT_DE_LA_PORTE}async function Page() {\n${GARDE_ECRAN}\n  return null;\n}\nexport { Page as default };\n`,
         },
       ])
     ).toEqual([]);
@@ -943,24 +962,27 @@ describe('REQ-SEC-023 — la garde `securite:roles` confronte le disque à la ma
   // ── 5e tour : un module CommonJS n'a aucun export ES, et la garde ne lui voyait aucun site ;
   //    un `requireRole` homonyme, défini dans le fichier, passait pour la porte.
 
-  /** L'import de la porte depuis un fichier de `src/app/(console)/console/<x>/`. */
-  const IMPORT_DE_LA_PORTE =
-    "import { requireRole } from '../../../../server/roles/require-role';\n";
+  /** Un fichier de route SANS l'import de la porte que `route` ajoute. */
+  const routeBrute = (source: string, chemin = 'src/app/(console)/console/export/route.ts') =>
+    ({ chemin, source }) satisfies FichierDeConsole;
 
   it('REQ-SEC-023 : TÉMOIN À DEUX FACES — un fichier de console écrit en CommonJS est une faute nommée, jamais « aucun site » ; la route en exports ES gardée passe', () => {
     const REPONSE = "async () => new Response('x')";
     const formes: FichierDeConsole[] = [
-      route(`exports.GET = ${REPONSE};\n`),
-      {
-        chemin: 'src/app/(console)/console/w7/route.js',
-        source: `module.exports = { GET: ${REPONSE} };\n`,
-      },
-      route(`Object.defineProperty(exports, 'GET', { value: ${REPONSE} });\n`),
-      route(`exports['POST'] = ${REPONSE};\n`),
-      route(`Object.assign(module.exports, { GET: ${REPONSE} });\n`),
+      routeBrute(`exports.GET = ${REPONSE};\n`),
+      routeBrute(
+        `module.exports = { GET: ${REPONSE} };\n`,
+        'src/app/(console)/console/w7/route.js'
+      ),
+      routeBrute(`Object.defineProperty(exports, 'GET', { value: ${REPONSE} });\n`),
+      routeBrute(`exports['POST'] = ${REPONSE};\n`),
+      routeBrute(`Object.assign(module.exports, { GET: ${REPONSE} });\n`),
       serveur(`module.exports.leverLeGel = async () => 1;\n`),
-      route(`this.GET = ${REPONSE};\n`),
-      route(`require.cache[__filename].exports.GET = ${REPONSE};\n`),
+      routeBrute(`this.GET = ${REPONSE};\n`),
+      routeBrute(`const f = () => { arguments[0].GET = ${REPONSE}; };\nf();\n`),
+      routeBrute(`require.cache[__filename].exports.GET = ${REPONSE};\n`),
+      routeBrute(`eval('exports.GET = 1');\n`),
+      routeBrute(`__webpack_exports__.GET = ${REPONSE};\n`),
     ];
     for (const f of formes) {
       const r = jugerLaConsole([f], MATRICE_TEMOIN, ROLES_CONSOLE);
@@ -971,32 +993,53 @@ describe('REQ-SEC-023 — la garde `securite:roles` confronte le disque à la ma
       expect(r.fautes.map((x) => x.message).join('\n'), f.source).toMatch(/module CommonJS/);
       expect(rendreLeVerdict(r, 2, 4).code, f.source).toBe(1);
     }
+    // La faute nomme le fichier, le nom et sa ligne.
+    const nomme = jugerLaConsole(
+      [routeBrute(`// en tête\nexports.GET = ${REPONSE};\n`)],
+      MATRICE_TEMOIN,
+      ROLES_CONSOLE
+    );
+    expect(nomme.fautes[0]!.message).toContain('src/app/(console)/console/export/route.ts');
+    expect(nomme.fautes[0]!.message).toContain('« exports » ligne 2');
     // Échec fermé, sans juger le CommonJS : même lié localement, le nom `exports` est refusé.
     expect(
       familles([
         route(
-          `${IMPORT_DE_LA_PORTE}export async function GET() {\n  const exports = 1;\n${GARDE_ECRAN}\n  return exports;\n}\n`
+          `export async function GET() {\n  const exports = 1;\n${GARDE_ECRAN}\n  return exports;\n}\n`
         ),
       ])
     ).toContain('export_non_jugeable');
+    // Contre-témoin : la route en exports ES gardée, où `module`, `exports` et `this` ne sont que
+    // des noms de propriété ou vivent dans une fonction, passe.
     expect(
-      familles([route(`${IMPORT_DE_LA_PORTE}export async function GET() {\n${GARDE_ECRAN}\n}\n`)])
-    ).toEqual([]);
+      familles([
+        route(
+          `export async function GET() {\n${GARDE_ECRAN}\n  const o = { module: 1, exports: 2 };\n` +
+            '  return o.module + o.exports;\n}\nexport function OPTIONS() {\n  return this;\n}\n'
+        ),
+      ])
+    ).toEqual(['route_sans_requireRole']);
+    expect(familles([route(`export async function GET() {\n${GARDE_ECRAN}\n}\n`)])).toEqual([]);
   });
 
   it('REQ-SEC-023 : TÉMOIN À DEUX FACES — seul le `requireRole` IMPORTÉ du module des rôles garde ; un homonyme local, un paramètre qui le masque ou un objet quelconque ne gardent pas', () => {
     const GET = `export async function GET() {\n${GARDE_ECRAN}\n}\n`;
+    // Un homonyme local, sans import de la porte ; puis à côté de l'import, qu'il masque.
+    expect(
+      familles([routeBrute(`async function requireRole() {\n  return { ok: true };\n}\n${GET}`)])
+    ).toEqual(['route_sans_requireRole']);
     expect(
       familles([route(`async function requireRole() {\n  return { ok: true };\n}\n${GET}`)])
     ).toEqual(['route_sans_requireRole']);
-    expect(familles([route(`import { requireRole } from './ailleurs';\n${GET}`)])).toEqual([
+    // Un `requireRole` importé d'ailleurs.
+    expect(familles([routeBrute(`import { requireRole } from './ailleurs';\n${GET}`)])).toEqual([
       'route_sans_requireRole',
     ]);
+    // Un paramètre qui masque la porte importée.
     expect(
-      familles([
-        route(`${IMPORT_DE_LA_PORTE}export async function GET(requireRole) {\n${GARDE_ECRAN}\n}\n`),
-      ])
+      familles([route(`export async function GET(requireRole) {\n${GARDE_ECRAN}\n}\n`)])
     ).toEqual(['route_sans_requireRole']);
+    // `x.requireRole(…)` sur un objet quelconque.
     expect(
       familles([
         route(
@@ -1005,11 +1048,19 @@ describe('REQ-SEC-023 — la garde `securite:roles` confronte le disque à la ma
         ),
       ])
     ).toEqual(['route_sans_requireRole']);
-    // La porte importée, nommée ou par espace de noms, garde.
-    expect(familles([route(`${IMPORT_DE_LA_PORTE}${GET}`)])).toEqual([]);
+    // Le message dit ce qui garde.
+    const r = jugerLaConsole([routeBrute(GET)], MATRICE_TEMOIN, ROLES_CONSOLE);
+    expect(r.fautes[0]!.message).toContain(`importé de ${MODULE_DE_LA_PORTE}`);
+    // La porte importée, nommée, par alias ou par espace de noms, garde ; son module est sur le disque.
+    expect(existsSync(`${MODULE_DE_LA_PORTE}.ts`)).toBe(true);
+    expect(familles([route(GET)])).toEqual([]);
     expect(
       familles([
-        route(
+        routeBrute(
+          "import { requireRole as porte } from '../../../../server/roles/require-role.js';\n" +
+            "export async function GET() {\n  await porte('ecran:tableau', j, p);\n}\n"
+        ),
+        routeBrute(
           "import * as roles from '../../../../server/roles/require-role.ts';\n" +
             "export async function GET() {\n  await roles.requireRole('ecran:tableau', j, p);\n}\n"
         ),

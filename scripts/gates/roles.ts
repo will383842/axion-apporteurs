@@ -8,16 +8,24 @@
  *
  * CE QU'ELLE TIENT. La liste des actions et des routes de la console est DÉRIVÉE DU DISQUE, jamais
  * déclarée : tout fichier suivi sous `src/app/(console)/` et `src/server/console/`, en TypeScript
- * comme en JavaScript (`.ts`, `.tsx`, `.js`, `.jsx`, `.mts`, `.cts`, `.mjs`, `.cjs`). Chacune est
- * confrontée à LA matrice (`src/server/roles/matrice.ts`) :
- *   — une ACTION est TOUTE valeur exportée d'un module `'use server'`, sous toute forme
- *     (déclaration, `export { f }` avec ou sans alias, `export const` ou `export let` quel que soit
- *     l'initialiseur, déstructuration — un site par nom lié —, `export default`, `export *`,
+ * comme en JavaScript (`.ts`, `.tsx`, `.js`, `.jsx`, `.mts`, `.cts`, `.mjs`, `.cjs`) — ses sites
+ * se dérivent des SEULS exports ES, et un fichier écrit en CommonJS est une faute (plus bas).
+ * Chacune est confrontée à LA matrice (`src/server/roles/matrice.ts`) :
+ *   — une ACTION est TOUTE valeur exportée d'un module `'use server'`, sous toute forme d'export
+ *     ES (déclaration, `export { f }` avec ou sans alias, `export const` ou `export let` quel que
+ *     soit l'initialiseur, déstructuration — un site par nom lié —, `export default`, `export *`,
  *     réexport, `export import X = …`), ou toute fonction ou méthode qui porte elle-même la
  *     directive. Elle appelle `requireRole('action:<nom>', …)` ;
  *   — une PAGE (`page.tsx`, `page.js`…) appelle `requireRole('ecran:<nom>', …)` dans sa fonction
  *     exportée par défaut ; une ROUTE (`route.ts`, `route.js`…) l'appelle dans chacune de ses
- *     méthodes HTTP exportées, sous toute forme, alias et déstructuration compris ;
+ *     méthodes HTTP exportées, sous toute forme d'export ES, alias et déstructuration compris ;
+ *   — LA PORTE est le `requireRole` IMPORTÉ de `src/server/roles/require-role`
+ *     (`MODULE_DE_LA_PORTE`, chemin relatif résolu depuis le fichier, extension indifférente),
+ *     nommément, par alias ou par espace de noms (`import * as r` puis `r.requireRole(…)`), déclaré
+ *     UNE fois dans le fichier et jamais réassigné. Un homonyme local, un `requireRole` importé
+ *     d'ailleurs, un paramètre ou une variable qui le masque (n'importe où dans le fichier, sans
+ *     analyse de portée), `x.requireRole(…)` sur un objet quelconque, `r['requireRole'](…)` ne
+ *     gardent pas : le site est `action_sans_requireRole` ou `route_sans_requireRole` ;
  *   — le droit est un LITTÉRAL, présent dans la matrice. Un droit absent de la matrice fait rougir
  *     la garde en NOMMANT l'action : c'est le défaut = refus appliqué au disque, avant qu'il le soit
  *     à l'exécution.
@@ -33,31 +41,48 @@
  * type que s'il est MARQUÉ `type` (`export type { … }` ou `export { type X }`) : un `export { X }`
  * non marqué dont le nom n'a pas de valeur établie est `export_non_jugeable`. PRIX ASSUMÉ : un
  * réexport de type doit s'écrire `export type`.
+ * MODULE COMMONJS. Next charge un fichier de route sans export ES par `require` et sert ce qu'il
+ * range dans `exports` : la garde, qui ne dérive ses sites que des exports ES, n'y verrait AUCUN
+ * site. Sans chercher à juger le CommonJS, tout fichier du périmètre (action, route, page, mais
+ * aussi `layout.*` et module de serveur) qui nomme l'objet des exports ou une voie qui y mène est
+ * `export_non_jugeable`, motif « module CommonJS », chaque nom cité avec sa ligne : les
+ * identifiants `exports`, `module`, `require`, `eval` (l'`eval` direct voit la portée de
+ * l'enveloppe) et les internes du bundler (`__webpack_…`, `__turbopack_…`), MÊME LIÉS
+ * LOCALEMENT, hors position de nom de propriété (`o.module`, `{ exports: 1 }`) ; `this` et
+ * `arguments` hors d'une fonction non fléchée (dans l'enveloppe, l'objet des exports et ses
+ * arguments) ; toute instruction `with`. PRIX ASSUMÉ : une variable locale nommée `exports` ou
+ * `module` se renomme.
  * Le vert imprime les fichiers lus, les sites confrontés, et les couples droit-rôle confrontés à la
  * ligne de la matrice RÔLE PAR RÔLE (ouverts, fermés). Le « périmètre vide » ne se dit que si AUCUN
  * fichier n'est lu.
  *
  * SEPT FAMILLES, chacune vue rougir sur son témoin par `--prove` :
- *   `action_sans_requireRole`  une action de console qui n'appelle pas `requireRole`
+ *   `action_sans_requireRole`  une action de console qui n'appelle pas la porte importée
  *   `route_sans_requireRole`   une page ou une méthode de route qui ne l'appelle pas
  *   `droit_non_litteral`       un droit qui n'est pas une chaîne littérale : il ne se confronte pas
  *   `droit_de_mauvais_genre`   une action qui invoque un droit `ecran:`, une page un droit `action:`
  *   `droit_hors_matrice`       un droit absent de la matrice — l'action ou la route est nommée
- *   `export_non_jugeable`      un site dont le corps ne s'établit pas dans le fichier
+ *   `export_non_jugeable`      un site dont le corps ne s'établit pas dans le fichier, ou un
+ *                              fichier qui nomme l'objet des exports CommonJS
  *   `source_illisible`         un fichier que TypeScript ne lit pas sans diagnostic
  *
  * LIMITES DÉCLARÉES. Elle voit la PRÉSENCE de l'appel et son droit, pas que le verdict est honoré :
  * une action qui appelle `requireRole` puis ignore le refus lui échappe, comme un `requireRole`
  * présent dans une fermeture jamais appelée ou dans un paramètre par défaut (l'appel est DANS le
  * corps, sans être exécuté à chaque requête) — c'est la relecture qui les tient, et `requireRole`
- * rend un verdict qu'on ne peut pas lire comme un succès sans son `ok`. Elle ne suit pas un appel délégué à une fonction voisine : l'appel doit être DANS l'action (RM-07 —
- * une garde extraite se perd avec son appelant). Elle tient pour l'appel de la porte tout
- * `x.requireRole(…)`, sur un objet QUELCONQUE : elle ne vérifie pas que `x` est le module de la
- * porte — c'est la relecture qui le tient. Seuls `page.*` et `route.*` sont des sites de routage :
- * `layout.*`, `template.*`, `default.*` (route parallèle), `loading.*`, `error.*`, `not-found.*`
- * ne sont PAS jugés — une page se garde elle-même, et le contenu d'un `default.*` ou d'un `layout.*`
- * qui lirait une donnée protégée lui échappe. Hors de `src/app/(console)/` et de
- * `src/server/console/`, elle ne juge rien.
+ * rend un verdict qu'on ne peut pas lire comme un succès sans son `ok`. Elle ne suit pas un appel
+ * délégué à une fonction voisine : l'appel doit être DANS l'action (RM-07 — une garde extraite se
+ * perd avec son appelant). De la porte, elle vérifie le CHEMIN du module importé, pas ce que ce
+ * module exporte. ÉVALUATION DYNAMIQUE DE CODE : hors de l'`eval` direct, refusé, le code évalué
+ * à l'exécution — `Function` ou `new Function`, l'`eval` indirect (`(0, eval)(…)` est refusé par
+ * son nom, pas `globalThis['ev' + 'al']`), `vm`, un minuteur à chaîne — et toute mutation des
+ * exports d'un module par une voie d'exécution (cache de modules du bundler atteint par un
+ * global) lui échappent : elle lit la syntaxe, pas l'exécution ; ce code s'exécute en portée
+ * globale, sans les liaisons de l'enveloppe, et c'est la relecture qui le tient. Seuls `page.*` et
+ * `route.*` sont des sites de routage : `layout.*`, `template.*`, `default.*` (route parallèle),
+ * `loading.*`, `error.*`, `not-found.*` n'ont pas de site jugé — une page se garde elle-même, et
+ * le contenu d'un `default.*` ou d'un `layout.*` qui lirait une donnée protégée lui échappe. Hors
+ * de `src/app/(console)/` et de `src/server/console/`, elle ne juge rien.
  *
  * INVARIANT DE LA PREUVE (RM-11). `jugerLaConsole` et `rendreLeVerdict` sont pures : fichiers,
  * matrice et rôles sont INJECTÉS, sans défaut. `--prove` ne lit rien du dépôt.
@@ -115,6 +140,12 @@ const EST_UNE_PAGE = /^page\.(?:[jt]sx?|[mc][jt]s)$/;
 const EST_UNE_ROUTE = /^route\.(?:[jt]sx?|[mc][jt]s)$/;
 const METHODES_HTTP = new Set(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']);
 const NOM_DE_LA_PORTE = 'requireRole';
+/**
+ * Le module canonique de la porte, chemin du dépôt sans extension : seul le `requireRole` IMPORTÉ
+ * de ce module garde un site. Sa présence sur le disque est vérifiée par la spécification.
+ */
+export const MODULE_DE_LA_PORTE = 'src/server/roles/require-role';
+const EXTENSION = /\.(?:[jt]sx?|[mc][jt]s)$/;
 /** Le nom exporté d'un `export * from '…'` : il peut porter n'importe quel nom, méthodes HTTP comprises. */
 const TOUT = '*';
 
@@ -492,19 +523,102 @@ function sitesDuFichier(chemin: string, source: ts.SourceFile): Site[] {
   return sites;
 }
 
-/** Le premier appel de la porte dans un corps : `requireRole(…)` ou `x.requireRole(…)`. */
-function premierAppel(corps: ts.Node): ts.CallExpression | null {
+/** Chaque nom que DÉCLARE le fichier, où que ce soit (paramètres et portées imbriquées compris). */
+function nomsDeclares(source: ts.SourceFile): Map<string, number> {
+  const vus = new Map<string, number>();
+  const compter = (n: ts.Node | undefined): void => {
+    if (n !== undefined && ts.isIdentifier(n)) vus.set(n.text, (vus.get(n.text) ?? 0) + 1);
+  };
+  const visiter = (n: ts.Node): void => {
+    if (
+      ts.isVariableDeclaration(n) ||
+      ts.isParameter(n) ||
+      ts.isBindingElement(n) ||
+      ts.isFunctionDeclaration(n) ||
+      ts.isFunctionExpression(n) ||
+      ts.isClassDeclaration(n) ||
+      ts.isClassExpression(n) ||
+      ts.isEnumDeclaration(n) ||
+      ts.isModuleDeclaration(n) ||
+      ts.isImportEqualsDeclaration(n) ||
+      ts.isImportClause(n) ||
+      ts.isNamespaceImport(n) ||
+      ts.isImportSpecifier(n)
+    ) {
+      compter(n.name);
+    }
+    ts.forEachChild(n, visiter);
+  };
+  visiter(source);
+  return vus;
+}
+
+/** La porte telle que le fichier la lie : ses noms importés, ses espaces de noms importés. */
+interface Porte {
+  noms: Set<string>;
+  espaces: Set<string>;
+}
+
+/**
+ * La porte d'un fichier : `requireRole` importé du module canonique, nommément (alias admis) ou
+ * par espace de noms (`import * as r` puis `r.requireRole(…)`). Un nom de porte déclaré une
+ * seconde fois n'importe où dans le fichier (homonyme, paramètre ou variable qui le masque) ou
+ * réassigné n'est PAS la porte — échec fermé, sans analyse de portée.
+ */
+function porteDuFichier(chemin: string, source: ts.SourceFile): Porte {
+  const dossier = chemin.slice(0, chemin.lastIndexOf('/'));
+  const canonique = (specifieur: string): boolean => {
+    if (!specifieur.startsWith('.')) return false;
+    const parties: string[] = [];
+    for (const p of `${dossier}/${specifieur}`.split('/')) {
+      if (p === '..') parties.pop();
+      else if (p !== '.' && p !== '') parties.push(p);
+    }
+    return parties.join('/').replace(EXTENSION, '') === MODULE_DE_LA_PORTE;
+  };
+  const porte: Porte = { noms: new Set(), espaces: new Set() };
+  for (const i of source.statements) {
+    if (!ts.isImportDeclaration(i) || !ts.isStringLiteral(i.moduleSpecifier)) continue;
+    const c = i.importClause;
+    if (!c || c.isTypeOnly || !canonique(i.moduleSpecifier.text)) continue;
+    const b = c.namedBindings;
+    if (b && ts.isNamespaceImport(b)) porte.espaces.add(b.name.text);
+    else if (b) {
+      for (const e of b.elements) {
+        if (!e.isTypeOnly && (e.propertyName ?? e.name).text === NOM_DE_LA_PORTE) {
+          porte.noms.add(e.name.text);
+        }
+      }
+    }
+  }
+  const declares = nomsDeclares(source);
+  const reassignes = nomsReassignes(source);
+  for (const lot of [porte.noms, porte.espaces]) {
+    for (const nom of [...lot]) {
+      if ((declares.get(nom) ?? 0) !== 1 || reassignes.has(nom)) lot.delete(nom);
+    }
+  }
+  return porte;
+}
+
+/**
+ * Le premier appel de LA porte dans un corps : `requireRole(…)` importé du module canonique, ou
+ * `r.requireRole(…)` sur son espace de noms importé. Un homonyme local, un import d'ailleurs, un
+ * objet quelconque ne sont pas la porte.
+ */
+function premierAppel(corps: ts.Node, porte: Porte): ts.CallExpression | null {
   let trouve: ts.CallExpression | null = null;
   const visiter = (n: ts.Node): void => {
     if (trouve) return;
     if (ts.isCallExpression(n)) {
       const c = n.expression;
-      const nom = ts.isIdentifier(c)
-        ? c.text
-        : ts.isPropertyAccessExpression(c)
-          ? c.name.text
-          : null;
-      if (nom === NOM_DE_LA_PORTE) {
+      const estLaPorte = ts.isIdentifier(c)
+        ? porte.noms.has(c.text)
+        : ts.isPropertyAccessExpression(c) &&
+          ts.isIdentifier(c.expression) &&
+          porte.espaces.has(c.expression.text) &&
+          c.name.text === NOM_DE_LA_PORTE;
+      if (estLaPorte) {
         trouve = n;
         return;
       }
@@ -513,6 +627,77 @@ function premierAppel(corps: ts.Node): ts.CallExpression | null {
   };
   visiter(corps);
   return trouve;
+}
+
+/** Les noms CommonJS : l'objet des exports, et ce qui y mène depuis la portée du module. */
+const NOMS_COMMONJS = new Set(['exports', 'module', 'require', 'eval']);
+const INTERNE_DU_BUNDLER = /^__(?:webpack|turbopack)_/;
+
+/** Un identifiant en position de NOM DE PROPRIÉTÉ ou d'étiquette : ce n'est pas une référence. */
+function estUnNomDePropriete(id: ts.Identifier): boolean {
+  const p = id.parent;
+  return (
+    ((ts.isPropertyAccessExpression(p) ||
+      ts.isPropertyAssignment(p) ||
+      ts.isPropertyDeclaration(p) ||
+      ts.isPropertySignature(p) ||
+      ts.isMethodDeclaration(p) ||
+      ts.isMethodSignature(p) ||
+      ts.isGetAccessorDeclaration(p) ||
+      ts.isSetAccessorDeclaration(p) ||
+      ts.isEnumMember(p) ||
+      ts.isJsxAttribute(p) ||
+      ts.isMetaProperty(p) ||
+      ts.isNamespaceExport(p)) &&
+      p.name === id) ||
+    (ts.isQualifiedName(p) && p.right === id) ||
+    (ts.isBindingElement(p) && p.propertyName === id) ||
+    (ts.isImportSpecifier(p) && p.propertyName === id) ||
+    ts.isExportSpecifier(p) ||
+    ((ts.isLabeledStatement(p) || ts.isBreakOrContinueStatement(p)) && p.label === id) ||
+    ((ts.isJsxOpeningElement(p) || ts.isJsxSelfClosingElement(p) || ts.isJsxClosingElement(p)) &&
+      p.tagName === id)
+  );
+}
+
+/**
+ * Ce qui, dans un fichier, nomme l'objet des exports CommonJS ou y mène : `exports`, `module`,
+ * `require`, `eval` direct, un interne du bundler (`__webpack_…`, `__turbopack_…`) — même liés
+ * localement —, `this` ou `arguments` hors d'une fonction (dans l'enveloppe CommonJS, c'est
+ * l'objet des exports et les arguments de l'enveloppe), une instruction `with`. Chaque
+ * occurrence, avec sa ligne.
+ */
+function formesCommonJS(source: ts.SourceFile): string[] {
+  const vues: string[] = [];
+  const ligne = (n: ts.Node) => source.getLineAndCharacterOfPosition(n.getStart(source)).line + 1;
+  const visiter = (n: ts.Node, dansUneFonction: boolean): void => {
+    if (ts.isIdentifier(n)) {
+      const nom = n.text;
+      const interdit =
+        NOMS_COMMONJS.has(nom) ||
+        INTERNE_DU_BUNDLER.test(nom) ||
+        (nom === 'arguments' && !dansUneFonction);
+      if (interdit && !estUnNomDePropriete(n)) vues.push(`« ${nom} » ligne ${ligne(n)}`);
+      return;
+    }
+    if (n.kind === ts.SyntaxKind.ThisKeyword && !dansUneFonction) {
+      vues.push(`« this » hors d’une fonction ligne ${ligne(n)}`);
+    }
+    if (ts.isWithStatement(n)) vues.push(`« with » ligne ${ligne(n)}`);
+    if (ts.isPropertyDeclaration(n)) {
+      // Le nom calculé s'évalue dehors ; l'initialiseur, dans l'instance.
+      visiter(n.name, dansUneFonction);
+      if (n.initializer) visiter(n.initializer, true);
+      return;
+    }
+    const dedans =
+      dansUneFonction ||
+      (ts.isFunctionLike(n) && !ts.isArrowFunction(n)) ||
+      ts.isClassStaticBlockDeclaration(n);
+    ts.forEachChild(n, (e) => visiter(e, dedans));
+  };
+  visiter(source, false);
+  return vues;
 }
 
 function droitLitteral(appel: ts.CallExpression): string | null {
@@ -561,6 +746,17 @@ export function jugerLaConsole(
       );
       continue;
     }
+    const commonjs = formesCommonJS(source);
+    if (commonjs.length > 0) {
+      faute(
+        'export_non_jugeable',
+        `${f.chemin} — module CommonJS : une route ou une action de la console s'écrit en exports ` +
+          `ES. Le fichier nomme ${commonjs.join(', ')} : l'objet des exports CommonJS ou une voie ` +
+          `qui y mène. La garde ne dérive ses sites que des exports ES ; ces noms sont refusés ` +
+          `même liés localement — échec fermé (REQ-SEC-023).`
+      );
+    }
+    const porte = porteDuFichier(f.chemin, source);
     for (const site of sitesDuFichier(f.chemin, source)) {
       if (site.genre === 'action') j.actions += 1;
       else j.routes += 1;
@@ -575,12 +771,14 @@ export function jugerLaConsole(
         );
         continue;
       }
-      const appel = premierAppel(site.corps);
+      const appel = premierAppel(site.corps, porte);
       if (appel === null) {
         faute(
           site.genre === 'action' ? 'action_sans_requireRole' : 'route_sans_requireRole',
-          `${ou} n'appelle pas ${NOM_DE_LA_PORTE} : chaque action et chaque route de la console ` +
-            `passe par la porte, et le défaut est le refus (REQ-SEC-023, RM-05).`
+          `${ou} n'appelle pas ${NOM_DE_LA_PORTE} importé de ${MODULE_DE_LA_PORTE} (un homonyme ` +
+            `local, un import d'ailleurs, un nom masqué ou un objet quelconque ne gardent pas) : ` +
+            `chaque action et chaque route de la console passe par la porte, et le défaut est le ` +
+            `refus (REQ-SEC-023, RM-05).`
         );
         continue;
       }
@@ -669,25 +867,27 @@ const MATRICE_TEMOIN: Matrice = {
   'ecran:tableau': ['admin', 'lecteur'],
 };
 const ROLES_TEMOIN = ['admin', 'qualifieur', 'comptable', 'lecteur'];
+/** L'import de la porte depuis un fichier de `src/app/(console)/console/<x>/`. */
+const IMPORT_PORTE = "import { requireRole } from '../../../../server/roles/require-role';";
 const ACTION = (corps: string): FichierDeConsole => ({
   chemin: 'src/app/(console)/console/gel/actions.ts',
-  source: `'use server';\nexport async function leverLeGel() {\n${corps}\n}\n`,
+  source: `'use server';\n${IMPORT_PORTE}\nexport async function leverLeGel() {\n${corps}\n}\n`,
 });
 const SERVEUR = (source: string): FichierDeConsole => ({
   chemin: 'src/app/(console)/console/gel/actions.ts',
-  source: `'use server';\n${source}\n`,
+  source: `'use server';\n${IMPORT_PORTE}\n${source}\n`,
 });
 const ROUTE = (source: string): FichierDeConsole => ({
   chemin: 'src/app/(console)/console/export/route.ts',
-  source: `${source}\n`,
+  source: `${IMPORT_PORTE}\n${source}\n`,
 });
 const PAGE = (corps: string): FichierDeConsole => ({
   chemin: 'src/app/(console)/console/tableau/page.tsx',
-  source: `export default async function Page() {\n${corps}\n  return null;\n}\n`,
+  source: `${IMPORT_PORTE}\nexport default async function Page() {\n${corps}\n  return null;\n}\n`,
 });
 const PAGE_BRUTE = (source: string): FichierDeConsole => ({
   chemin: 'src/app/(console)/console/tableau/page.tsx',
-  source: `${source}\n`,
+  source: `${IMPORT_PORTE}\n${source}\n`,
 });
 const GARDE_ACTION = "  await requireRole('action:lever_gel', j, p);";
 const GARDE_ECRAN = "  await requireRole('ecran:tableau', j, p);";
@@ -1043,21 +1243,25 @@ const CONTRE_TEMOINS: { quoi: string; fichiers: FichierDeConsole[] }[] = [
     fichiers: [
       {
         chemin: 'src/app/(console)/console/export/route.js',
-        source: `export async function GET() {\n${GARDE_ECRAN}\n}\n`,
+        source: `${IMPORT_PORTE}\nexport async function GET() {\n${GARDE_ECRAN}\n}\n`,
       },
       {
         chemin: 'src/server/console/aide.ts',
-        source: `export class C {\n  async lever() {\n    'use server';\n${GARDE_ACTION}\n  }\n}\n`,
+        source:
+          "import { requireRole } from '../roles/require-role';\n" +
+          `export class C {\n  async lever() {\n    'use server';\n${GARDE_ACTION}\n  }\n}\n`,
       },
     ],
   },
   {
-    quoi: 'une route en exports ES qui importe la porte du module des rôles et l’appelle',
+    quoi: 'une route en exports ES qui importe la porte par espace de noms et l’appelle',
     fichiers: [
-      ROUTE(
-        "import { requireRole } from '../../../../server/roles/require-role';\n" +
-          `export async function GET() {\n${GARDE_ECRAN}\n}`
-      ),
+      {
+        chemin: 'src/app/(console)/console/export/route.ts',
+        source:
+          "import * as roles from '../../../../server/roles/require-role.ts';\n" +
+          "export async function GET() {\n  await roles.requireRole('ecran:tableau', j, p);\n}\n",
+      },
     ],
   },
 ];
