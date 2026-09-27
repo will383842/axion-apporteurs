@@ -26,6 +26,12 @@
  * lanceur, configuration de vitest, parallélisme — tout est hérité. Ne changent que `mutate`, le
  * mode incrémental, le fichier incrémental et le rapport, écrits sous `reports/mutation/` (ignoré).
  *
+ * UN DIFF DE COMMENTAIRES SEULS N'EST PAS MUTÉ, ET EST NOMMÉ (`codeInchange`) : si la suite des
+ * JETONS de code du fichier est la même à la base de fusion et dans l'arbre (lue par l'analyseur
+ * de TypeScript, jamais par une heuristique de ligne), aucun mutant ne peut changer de sort. Base
+ * illisible ou fichier ajouté : MUTÉ (échec fermé). Un `// Stryker disable` ajouté par un tel diff
+ * garde le fichier dans la passe, où la désactivation le fait échouer.
+ *
  * LE VERDICT est celui du lecteur unique du rapport (`scripts/mutation/rapport.ts`, `decider`) :
  * score sous le seuil → 1, survivants NOMMÉS ; rapport absent ou vide → 1. Stryker en échec → 1.
  */
@@ -33,6 +39,7 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import ts from 'typescript';
 import { CHEMIN_CONFIG, decider, lireSeuil } from './rapport';
 
 /**
@@ -60,6 +67,9 @@ const MOTIF_DU_RESTE_DU_PRODUIT =
   'code de surface Next (route, page, proxy, instrumentation, configuration, contenu) : ses tests ' +
   'le jugent au rendu ou en navigateur, hors du processus que Stryker instrumente';
 
+export const MOTIF_COMMENTAIRES_SEULS =
+  'diff de commentaires seuls : aucun jeton de code ne change entre la base de fusion et l’arbre';
+
 const estUnSource = (f: string): boolean =>
   /\.tsx?$/.test(f) && !/\.(spec|test)\.tsx?$/.test(f) && !f.endsWith('.d.ts');
 
@@ -84,6 +94,59 @@ export function fichiersAMuter(fichiers: readonly string[]): {
           : []
     );
   return { mutes, ecartes };
+}
+
+/**
+ * La suite des jetons de code d'un source, commentaires et blancs retirés. Les feuilles de l'arbre
+ * syntaxique, pas le scanner seul : lui lirait `// x` dans la queue d'un gabarit après `${…}` ou
+ * dans une classe de regex (`/[//]/`) comme un commentaire. Les nœuds JSDoc sont sautés.
+ */
+function jetonsDeCode(texte: string, fichier: string): string[] {
+  const sf = ts.createSourceFile(
+    fichier,
+    texte,
+    ts.ScriptTarget.Latest,
+    true,
+    fichier.endsWith('.tsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS
+  );
+  const jetons: string[] = [];
+  const visiter = (n: ts.Node): void => {
+    if (n.kind >= ts.SyntaxKind.FirstJSDocNode && n.kind <= ts.SyntaxKind.LastJSDocNode) return;
+    const enfants = n.getChildren(sf);
+    if (enfants.length === 0) {
+      const t = n.getText(sf);
+      if (t !== '') jetons.push(`${n.kind}:${t}`);
+      return;
+    }
+    enfants.forEach(visiter);
+  };
+  visiter(sf);
+  return jetons;
+}
+
+/**
+ * Vrai si le diff de `fichier` entre `base` et `tete` ne touche QUE des commentaires et des blancs.
+ * `base` null (fichier ajouté, base illisible) → faux : on ne s'écarte jamais par défaut.
+ */
+export function codeInchange(base: string | null, tete: string, fichier: string): boolean {
+  if (base === null) return false;
+  const a = jetonsDeCode(base, fichier);
+  const b = jetonsDeCode(tete, fichier);
+  return a.length === b.length && a.every((j, i) => j === b[i]);
+}
+
+/** Le texte de `fichier` à la base de fusion avec `base`, ou null (échec fermé : il sera muté). */
+function lireLaBase(base: string, fichier: string): string | null {
+  try {
+    const mb = execFileSync('git', ['merge-base', base, 'HEAD'], { encoding: 'utf8' }).trim();
+    return execFileSync('git', ['show', `${mb}:${fichier}`], {
+      encoding: 'utf8',
+      maxBuffer: 64e6,
+      stdio: ['ignore', 'pipe', 'ignore'],
+    });
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -156,6 +219,8 @@ export function fichiersDeLaPr(base: string): string[] | null {
 export type Mesures = {
   fichiersDeLaPr?: (base: string) => string[] | null;
   lire?: (chemin: string) => string;
+  /** Le texte d'un fichier à la base de fusion, ou null s'il y est absent ou illisible. */
+  lireBase?: (base: string, chemin: string) => string | null;
   texteConfig?: string;
   /** Lance Stryker sur la configuration écrite ; rend son code de sortie. */
   lancerStryker?: (config: object) => number | null;
@@ -195,7 +260,24 @@ export function passer(base: string, m: Mesures = {}): { code: 0 | 1; lignes: st
       ],
     };
   }
-  const { mutes, ecartes } = fichiersAMuter(fichiers);
+  const tri = fichiersAMuter(fichiers);
+  const lire = m.lire ?? ((f: string) => readFileSync(f, 'utf8'));
+  const lireBase = m.lireBase ?? lireLaBase;
+  const commentairesSeuls = (f: string): boolean => {
+    try {
+      const tete = lire(f);
+      if (desactivationsDeStryker([f], () => tete).length > 0) return false;
+      return codeInchange(lireBase(base, f), tete, f);
+    } catch {
+      return false;
+    }
+  };
+  const inchanges = tri.mutes.filter(commentairesSeuls);
+  const mutes = tri.mutes.filter((f) => !inchanges.includes(f));
+  const ecartes = [
+    ...tri.ecartes,
+    ...inchanges.map((fichier) => ({ fichier, motif: MOTIF_COMMENTAIRES_SEULS })),
+  ];
   const lignes = ecartes.map((e) => `   · écarté : ${e.fichier} — ${e.motif}`);
   if (mutes.length === 0) {
     return {
@@ -207,10 +289,7 @@ export function passer(base: string, m: Mesures = {}): { code: 0 | 1; lignes: st
       ],
     };
   }
-  const desactivations = desactivationsDeStryker(
-    mutes,
-    m.lire ?? ((f: string) => readFileSync(f, 'utf8'))
-  );
+  const desactivations = desactivationsDeStryker(mutes, lire);
   if (desactivations.length > 0) {
     return {
       code: 1,
