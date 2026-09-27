@@ -64,10 +64,17 @@ import type { Notifieur } from '../../../lib/notify';
 export const CATEGORIES_ALERTE = [
   /**
    * Émise par les TESTS seulement (`notif-sans-pii.spec.ts`), comme catégorie d'essai du plafond et
-   * du dédoublonnage. AUCUNE exigence ne la nomme : `REQ-ARG-025` porte la vigilance au seuil légal
-   * et pas une alerte de console, et `REQ-QA-026` parle d'un relevé qui N'A PAS TOURNÉ, ce qui n'est
-   * pas « bloqué ». Elle reste donc ce qu'elle est — une catégorie d'essai —, jusqu'à ce qu'un
-   * émetteur de `src/` la demande et nomme son exigence.
+   * du dédoublonnage. AUCUNE exigence ne la nomme, et les deux qui s'en approchent ont été lues :
+   *
+   *   — `REQ-ARG-025` porte une alerte console pour le cas SOUS le seuil, non bloquant (« sous le
+   *     seuil, l'absence d'attestation ne bloque aucun versement et lève une alerte console »), et
+   *     NON pour un relevé bloqué. Elle décrit bien un relevé qui passe `bloque` motif
+   *     `vigilance_perimee` au-dessus du seuil — mais sans exiger d'alerte pour cet état-là.
+   *   — `REQ-QA-026` alerte si le relevé du 1er N'A PAS TOURNÉ le 2 à 08:00, ce qui n'est pas
+   *     « bloqué » non plus.
+   *
+   * Elle reste donc ce qu'elle est — une catégorie d'essai —, jusqu'à ce qu'un émetteur de `src/` la
+   * demande et nomme son exigence.
    */
   'releve_bloque',
   /** `QA-T12` — l'échec de l'exercice mensuel de restauration (`REQ-QA-023`, `docs/tiers/telegram.md`). */
