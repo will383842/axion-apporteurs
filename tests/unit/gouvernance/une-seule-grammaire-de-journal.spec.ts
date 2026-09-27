@@ -103,7 +103,15 @@ const ENTREE = (pr: number, suffixe = ''): string =>
 
 describe('REQ-GOV-024 — UNE grammaire exportée, importée par les quatre lecteurs, aucun motif local', () => {
   it('REQ-GOV-024 — chaque lecteur IMPORTE la grammaire unique, et aucun ne garde de motif de titre ni de plancher', () => {
-    const MOTIFS_LOCAUX = [/split\(\/\^## /, /PR #\(\\d\+\)/, /Plancher\\s\*:/];
+    // Les motifs d'une grammaire DE JOURNAL : une coupe sur les titres suivie de `.slice(1)`, ou sur
+    // « PR # », le titre d'entrée, le plancher. `gov-lecons.ts` coupe aussi `docs/LECONS.md` sur ses
+    // titres : ce n'est pas le journal, et ce motif-là n'est pas visé.
+    const MOTIFS_LOCAUX = [
+      /split\(\/\^## \/m\)\.slice\(1\)/,
+      /split\(\/\^## \(\?=PR/,
+      /PR #\(\\d\+\)/,
+      /Plancher\\s\*:/,
+    ];
     for (const { script } of LECTEURS) {
       if (script === 'scripts/gates/gov-attributions.ts') continue;
       const code = readFileSync(script, 'utf8');
@@ -144,17 +152,26 @@ describe('REQ-GOV-023 — une entrée à la limite de la forme est lue IDENTIQUE
     expect([...entreesDeJournal(LIMITE).keys()]).toEqual(entrees.map((e) => String(e.pr)));
   });
 
-  it('REQ-GOV-023 — le plancher écrit dans un commentaire MASQUÉ n’est lu par personne : seul le plancher affiché compte', () => {
+  it('REQ-GOV-023 — le plancher écrit AUSSI dans un commentaire MASQUÉ est refusé, jamais choisi : la première occurrence ne fait plus foi', () => {
+    // Avant : `gov:etat` prenait la PREMIÈRE occurrence — ici la masquée (> 99) — pendant que
+    // `gov:attributions` refusait. Deux verdicts pour un même fichier ; la lecture partagée refuse.
     const readme =
       '# Le journal\n\n<!-- Plancher : le journal couvre les PR de numéro **> 99**. -->\n\n' +
       '## Plancher\n\nPlancher : le journal couvre les PR de numéro **> 27**.\n';
     const lu = plancherDuJournal(readme);
-    expect('plancher' in lu ? lu.plancher : lu.refus).toBe(27);
-    // Et un plancher qui n'est écrit QUE dans un commentaire masqué est introuvable, pas lu.
-    const masque = plancherDuJournal(
-      '<!-- Plancher : le journal couvre les PR de numéro **> 99**. -->\n'
+    expect('refus' in lu ? lu.refus : lu.plancher).toMatch(/écrit 2 fois/);
+  });
+
+  it('REQ-GOV-023 — le plancher écrit SEULEMENT dans un commentaire masqué est signalé masqué, donc refusé', () => {
+    const lu = plancherDuJournal(
+      '# Le journal\n\n<!--\nPlancher : le journal couvre les PR de numéro **> 99**.\n-->\n'
     );
-    expect('refus' in masque).toBe(true);
+    expect('masque' in lu && lu.masque).toBe(true);
+    // Le contre-témoin : le même, affiché, ne l'est pas.
+    const affiche = plancherDuJournal(
+      '# Le journal\n\nPlancher : le journal couvre les PR de numéro **> 99**.\n'
+    );
+    expect('masque' in affiche && affiche.masque).toBe(false);
   });
 });
 

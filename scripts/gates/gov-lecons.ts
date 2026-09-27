@@ -57,12 +57,12 @@
  * l'heure ne se rejoue pas, et un rouge qu'on ne peut pas reproduire n'est pas un constat.
  */
 
-import { readFileSync, existsSync, readdirSync } from 'node:fs';
-import { join } from 'node:path';
+import { readFileSync, existsSync } from 'node:fs';
+import { DOSSIER_DU_JOURNAL, entreesDuDossier, ligneDuJournal } from './gov-attributions';
 
 const CHEMIN_LECONS = 'docs/LECONS.md';
 const CHEMIN_REGLES = 'docs/REGLES-MAISON.md';
-const DOSSIER_JOURNAL = 'docs/journal';
+const DOSSIER_JOURNAL = DOSSIER_DU_JOURNAL;
 
 /** Le délai de REQ-GOV-023, en jours. « plus de 7 jours » : 7 pile est encore frais. */
 const JOURS_AVANT_PEREMPTION = 7;
@@ -135,17 +135,13 @@ export function aConsolider(texte: string): string[] {
  */
 export function apprisDuJournal(dossier = DOSSIER_JOURNAL): ApprisJournal[] {
   if (!existsSync(dossier)) return [];
+  // PAR LA GRAMMAIRE UNIQUE DU JOURNAL (GOV-073) : les mêmes entrées que `gov:etat`, `plan-state` et
+  // `gov:attributions`, et le même refus sur une ligne malformée.
   const out: ApprisJournal[] = [];
-  for (const f of readdirSync(dossier)
-    .filter((n) => n.endsWith('.md') && n !== 'README.md')
-    .sort()) {
-    const texte = readFileSync(join(dossier, f), 'utf8');
-    for (const entree of texte.split(/^## (?=PR #\d+)/m).slice(1)) {
-      const pr = Number(/^PR #(\d+)/.exec(entree)![1]);
-      const bloc = /^\*\*Appris\.\*\*([\s\S]*?)(?=\n\n|\n## |$)/m.exec(entree)?.[1] ?? '';
-      const extrait = bloc.replace(/\s+/g, ' ').trim();
-      if (extrait.length > 0) out.push({ pr, extrait });
-    }
+  for (const entree of entreesDuDossier(dossier)) {
+    const bloc = /^\*\*Appris\.\*\*([\s\S]*?)(?=\n\n|\n## |$)/m.exec(entree.corps)?.[1] ?? '';
+    const extrait = bloc.replace(/\s+/g, ' ').trim();
+    if (extrait.length > 0) out.push({ pr: entree.pr, extrait });
   }
   return out;
 }
@@ -625,6 +621,9 @@ if (fautes.length === 0) {
       `(${jours(date, now)} j avant ${now}), ${attente.length} « appris » en attente.`
   );
   console.log(`   ${etatJournal}.`);
+  if (existsSync(dossierJournal)) {
+    console.log(`   ${ligneDuJournal(entreesDuDossier(dossierJournal).length)}.`);
+  }
   if (attente.length > 0) {
     console.log(
       `   ⏳ à consolider avant le ${new Date(

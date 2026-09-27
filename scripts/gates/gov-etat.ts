@@ -53,13 +53,20 @@
  */
 
 import { execFileSync } from 'node:child_process';
-import { readFileSync, readdirSync, existsSync } from 'node:fs';
-import { join } from 'node:path';
+import { readFileSync, existsSync } from 'node:fs';
 import { LIVREE as LIVREE_DERIVEE, verifierExhaustivite } from '../lot/avancement';
+import {
+  DOSSIER_DU_JOURNAL,
+  GUIDE_DU_JOURNAL,
+  entreesDuDossier,
+  ligneDuJournal,
+  plancherDuJournal,
+} from './gov-attributions';
 
 const CHEMIN_PLAN_STATE = 'docs/PLAN-STATE.md';
-const CHEMIN_JOURNAL = 'docs/journal';
-const CHEMIN_README_JOURNAL = 'docs/journal/README.md';
+// Le journal et son guide : les chemins de la grammaire UNIQUE du journal (GOV-073), pas une copie.
+const CHEMIN_JOURNAL = DOSSIER_DU_JOURNAL;
+const CHEMIN_README_JOURNAL = GUIDE_DU_JOURNAL;
 const CHEMIN_TACHES = 'docs/tasks.json';
 
 /** Les états dans lesquels une tâche est livrée : sa revendication est de l'histoire, pas un verrou. */
@@ -157,24 +164,15 @@ function lireJournal(): Entree[] {
     console.error(`❌ gov:etat — \`${CHEMIN_JOURNAL}\` est absent : le journal n'a pas de source.`);
     process.exit(1);
   }
-  const out: Entree[] = [];
-  for (const nom of readdirSync(CHEMIN_JOURNAL)
-    .filter((n) => n.endsWith('.md'))
-    .sort()) {
-    const texte = readFileSync(join(CHEMIN_JOURNAL, nom), 'utf8');
-    for (const bloc of texte.split(/^## /m).slice(1)) {
-      const m = /^PR #(\d+) — (\d{4}-\d{2}-\d{2}) — (.*)$/m.exec(bloc);
-      if (!m || !m[1] || !m[2]) continue;
-      out.push({
-        pr: Number(m[1]),
-        date: m[2],
-        titre: (m[3] ?? '').trim(),
-        corps: bloc,
-        fichier: nom,
-      });
-    }
-  }
-  return out;
+  // PAR LA GRAMMAIRE UNIQUE (GOV-073). Une ligne qui ressemble à un titre d'entrée sans en avoir la
+  // forme fait REFUSER, sous le nom commun aux quatre lecteurs — jamais une lecture à moitié.
+  return entreesDuDossier(CHEMIN_JOURNAL).map((e) => ({
+    pr: e.pr,
+    date: e.date,
+    titre: e.titre,
+    corps: e.corps,
+    fichier: e.fichier,
+  }));
 }
 
 /**
@@ -189,17 +187,25 @@ function lirePlancher(): number {
     );
     process.exit(1);
   }
-  const m = /Plancher\s*:\s*le journal couvre les PR de numéro \*\*> (\d+)\*\*/.exec(
-    readFileSync(CHEMIN_README_JOURNAL, 'utf8')
-  );
-  if (!m || !m[1]) {
+  // PAR LA LECTURE PARTAGÉE avec `gov:attributions` (GOV-073) : une seule écriture, sur sa ligne seule,
+  // hors de tout commentaire. La PREMIÈRE occurrence ne fait plus foi — elle pouvait être masquée.
+  const lu = plancherDuJournal(readFileSync(CHEMIN_README_JOURNAL, 'utf8'));
+  const refus =
+    'refus' in lu
+      ? lu.refus
+      : (lu.horsLigne ??
+        (lu.masque
+          ? `le plancher (« > ${lu.plancher} ») est MASQUÉ dans un commentaire HTML de \`${CHEMIN_README_JOURNAL}\` : ` +
+            'le dépôt publié ne l’affiche pas, et la garde ne lit pas ce que le rendu cache.'
+          : null));
+  if (refus !== null || 'refus' in lu) {
     console.error(
-      `❌ gov:etat — le plancher du journal est introuvable dans \`${CHEMIN_README_JOURNAL}\`.\n` +
-        '   Forme attendue : « Plancher : le journal couvre les PR de numéro **> <n>**. »'
+      `❌ gov:etat — ${refus}\n` +
+        '   Forme attendue : « Plancher : le journal couvre les PR de numéro **> <n>**. », écrite une fois.'
     );
     process.exit(1);
   }
-  return Number(m[1]);
+  return lu.plancher;
 }
 
 function lireTaches(): Tache[] {
@@ -900,6 +906,7 @@ if (fautes.length === 0) {
         : `GitHub (${etat.prOuvertes?.length ?? 0} PR ouverte(s), ${etat.prFusionnees?.length ?? 0} fusionnée(s), ` +
           `${etat.revendications?.size ?? 0} issue(s) revendiquée(s))`)
   );
+  console.log(`   ${ligneDuJournal(etat.entrees.length)}`);
   process.exit(0);
 }
 
