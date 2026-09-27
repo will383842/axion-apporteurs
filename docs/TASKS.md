@@ -13,7 +13,7 @@
 | Phase | Taches | Jours | Terminees |
 | --- | ---: | ---: | ---: |
 | -1 — Gouvernance (prealable bloquant) | 39 | 23.75 | 39 |
-| 0 — Socle technique | 116 | 89.85 | 47 |
+| 0 — Socle technique | 116 | 89.85 | 59 |
 | 1 — Operationnel | 62 | 48.00 | 0 |
 | 2 — Argent | 45 | 33.50 | 0 |
 | 3 — Pilotage et conformite | 28 | 25.25 | 0 |
@@ -942,7 +942,7 @@ Couvre : `REQ-GOV-021`, `REQ-GOV-026`
 
 **Tests.** `tests/unit/gouvernance/cloture-refuse-ce-qu-elle-n-a-pas-mesure.spec.ts`
 
-### GOV-042 — L'attestation d'une livraison existe pour l'autre depot, pas pour celui-ci
+### GOV-042 — L'attestation d'une livraison existe pour l'autre depot, pas pour celui-ci ✅ **fusionnee**
 
 `1 j` · zone `gouvernance` · depend de `GOV-038`
 
@@ -974,7 +974,7 @@ Couvre : `REQ-GOV-012`
 
 **Tests.** `tests/unit/gouvernance/perimetre-des-gardes-derive-du-disque.spec.ts`
 
-### GOV-045 — Le cliquet des refus garde un COMPTE, jamais une IDENTITE
+### GOV-045 — Le cliquet des refus garde un COMPTE, jamais une IDENTITE ✅ **fusionnee**
 
 `0.75 j` · zone `gouvernance` · depend de `GOV-038`
 
@@ -1034,7 +1034,7 @@ TEMOINS EXIGES, TROIS FACES. (a) ROUGE : une tache `en_cours` rattachee a un lot
 
 **Tests.** `tests/unit/gouvernance/une-tache-en-cours-appartient-a-un-lot.spec.ts`
 
-### GOV-050 — Le champ paths n'a AUCUNE forme : un chemin hors du depot traverse toute la chaine
+### GOV-050 — Le champ paths n'a AUCUNE forme : un chemin hors du depot traverse toute la chaine ✅ **fusionnee**
 
 `0.5 j` · zone `gouvernance` · depend de `GOV-038`
 
@@ -1044,7 +1044,7 @@ Couvre : `REQ-GOV-021`
 
 **Tests.** `tests/unit/gouvernance/un-path-designe-ce-depot-ci.spec.ts`
 
-### GOV-051 — Une garde qui compare des chemins compare des chaines brutes, et cinq familles la defont
+### GOV-051 — Une garde qui compare des chemins compare des chaines brutes, et cinq familles la defont ✅ **fusionnee**
 
 `0.5 j` · zone `gouvernance` · depend de `GOV-050`
 
@@ -1077,7 +1077,7 @@ TROU RECIPROQUE, mesure par A09 securite sur la PR 35 et a fermer dans la meme t
 
 **Tests.** `tests/unit/gouvernance/une-pr-porte-son-entree-de-journal.spec.ts`
 
-### GOV-053 — Le classement des vues est par RUBRIQUE, la volatilite est par LIGNE
+### GOV-053 — Le classement des vues est par RUBRIQUE, la volatilite est par LIGNE ✅ **fusionnee**
 
 `0.5 j` · zone `gouvernance` · aucune dependance
 
@@ -1100,7 +1100,7 @@ CE QUI EST DEJA FERME, et qu'il ne faut pas refaire : chaque rubrique exemptee e
 
 **Tests.** `tests/unit/gouvernance/volatilite-par-ligne.spec.ts`
 
-### GOV-054 — Le cliquet ne voit pas `process.exitCode = 1`, et deux refus neufs sont passes dessous
+### GOV-054 — Le cliquet ne voit pas `process.exitCode = 1`, et deux refus neufs sont passes dessous ✅ **fusionnee**
 
 `0.5 j` · zone `gouvernance` · aucune dependance
 
@@ -1121,7 +1121,7 @@ ATTENTION AU SEUIL. Il est GLOBAL : il somme tout ce qui atterrit, jamais le som
 
 **Tests.** `tests/unit/gouvernance/cliquet-sorties-differees.spec.ts`
 
-### GOV-055 — Comparer un generateur a lui-meme ne voit jamais ce qu'il a CESSE de produire
+### GOV-055 — Comparer un generateur a lui-meme ne voit jamais ce qu'il a CESSE de produire ✅ **fusionnee**
 
 `0.5 j` · zone `gouvernance` · aucune dependance
 
@@ -1196,7 +1196,7 @@ Couvre : `REQ-GOV-007`, `REQ-QA-013`
 
 **Tests.** `tests/unit/gouvernance/revendication-par-branche.spec.ts`
 
-### GOV-060 — La vue d'etat compte des questions deja tranchees : un troisieme lecteur du registre des decisions
+### GOV-060 — La vue d'etat compte des questions deja tranchees : un troisieme lecteur du registre des decisions ✅ **fusionnee**
 
 `0.5 j` · zone `gouvernance` · depend de `GOV-053`, `GOV-055`
 
@@ -1316,7 +1316,7 @@ Couvre : `REQ-GOV-017`, `REQ-JUR-037`, `REQ-GOV-003`
 
 **Tests.** `tests/unit/gouvernance/frontiere-de-mot-du-rendu.spec.ts`
 
-### GOV-072 — Une cle ecrite deux fois dans le registre des exigences passe toutes les gardes
+### GOV-072 — Une cle ecrite deux fois dans le registre des exigences passe toutes les gardes ✅ **fusionnee**
 
 `0.5 j` · zone `gouvernance` · aucune dependance
 
@@ -1386,7 +1386,7 @@ Couvre : `REQ-GOV-011`, `REQ-GOV-021`
 
 **Tests.** `tests/unit/gouvernance/scenario-d-attaque-exige.spec.ts`
 
-### GOV-079 — La vue d'etat tronque la liste des taches a faire a douze identifiants, sans le dire assez fort
+### GOV-079 — La vue d'etat tronque la liste des taches a faire a douze identifiants, sans le dire assez fort ✅ **fusionnee**
 
 `0.5 j` · zone `gouvernance` · depend de `GOV-060`
 
@@ -1560,7 +1560,7 @@ POURQUOI UNE TACHE DEDIEE PLUTOT QUE LA TACHE HISTORIQUE. Le precedent existe DE
 
 **Tests.** `tests/unit/gouvernance/plan-state-frais.spec.ts`
 
-### GOV-093 — Le champ `schema` d'une tache et ses `paths` ne sont confrontes par RIEN, et aucun verbe ne sait ecrire ce champ
+### GOV-093 — Le champ `schema` d'une tache et ses `paths` ne sont confrontes par RIEN, et aucun verbe ne sait ecrire ce champ ✅ **fusionnee**
 
 `0.5 j` · zone `gouvernance` · aucune dependance
 
@@ -1723,7 +1723,7 @@ Couvre : `REQ-GOV-015`
 
 **Tests.** `tests/unit/gouvernance/registre-lecteur-unique.spec.ts`
 
-### INT-T01c — Contrat d'événements v2 côté Partners : quatre types hors contrat entrent, payloads fermés, API des coordonnées du candidat
+### INT-T01c — Contrat d'événements v2 côté Partners : quatre types hors contrat entrent, payloads fermés, API des coordonnées du candidat ✅ **fusionnee**
 
 `1.5 j` · zone `integration` · `schema` · sensible : rgpd · depend de `INT-T01b`, `SEC-06`
 
