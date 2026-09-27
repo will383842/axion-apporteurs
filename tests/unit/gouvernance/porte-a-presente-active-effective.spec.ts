@@ -581,6 +581,15 @@ const APPELS_QUI_N_EN_SONT_PAS: readonly { forme: string; run: string }[] = [
   },
   { forme: 'après un guillemet échappé et un `;`', run: 'echo \\"x; pnpm mutation' },
   { forme: 'suivie d’une seconde ligne', run: 'pnpm mutation\necho fin' },
+  // VETO DE SÉCURITÉ, TOUR 4 — une affectation en tête de commande configure le LANCEUR : un
+  // `npm_config_script_shell` qui rend toujours 0, un `NODE_OPTIONS` qui précharge du code. Aucune
+  // affectation n'est admise dans une étape qui appelle une garde.
+  { forme: 'derrière une affectation `CI=1`', run: 'CI=1 pnpm mutation --flag' },
+  { forme: 'derrière une affectation `MODE=nuit`', run: 'MODE=nuit pnpm run mutation' },
+  {
+    forme: 'derrière `npm_config_script_shell`, qui remplace le shell des scripts',
+    run: 'npm_config_script_shell=/bin/true pnpm run mutation',
+  },
 ];
 
 describe('REQ-GOV-029 — une garde CITÉE, court-circuitée ou inatteignable n’est pas appelée (copies en mémoire de nightly.yml)', () => {
@@ -603,9 +612,9 @@ describe('REQ-GOV-029 — une garde CITÉE, court-circuitée ou inatteignable n�
 
   for (const run of [
     'pnpm mutation',
-    'CI=1 pnpm mutation --flag',
-    'MODE=nuit pnpm run mutation',
+    'pnpm run mutation',
     "pnpm mutation --seuil '80'",
+    'bash scripts/gates/stryker.sh',
   ]) {
     it(`REQ-GOV-029 — CONTRE-TÉMOIN : \`${run}\` appelle bien \`mutation\``, () => {
       expect(controler(nuitEn(run)).map((f) => f.famille)).toEqual([]);
@@ -746,5 +755,133 @@ describe('REQ-GOV-012 — les crochets de cycle de vie de la racine sont figés 
     for (const [nom, valeur] of Object.entries(PORTE_A_FIGEE.scripts)) {
       expect({ nom, valeur: scripts[nom] }).toEqual({ nom, valeur });
     }
+  });
+});
+
+/**
+ * REFUS D'EXACTITUDE ET VETO DE SÉCURITÉ, TOUR 4. (1) Une garde passait pour appelée dès qu'une étape
+ * lançait le script de `package.json` qui porte son IDENTIFIANT, quelle que soit sa VALEUR : un script
+ * réduit à `true` gardait sa garde « câblée ». Seul compte désormais le FICHIER de la garde, exécuté
+ * par une étape, directement ou à travers les valeurs de `package.json`. (2) `pnpm <mot>` exécute la
+ * COMMANDE INTÉGRÉE de pnpm quand `<mot>` en est une, jamais le script du même nom : `pnpm ls` ne
+ * lance pas un script `ls`, et un script qui porte un nom réservé est refusé. (3) Le `packageManager`
+ * que lit `pnpm/action-setup` est figé par sa valeur.
+ */
+describe('REQ-GOV-029 — une garde est appelée par son FICHIER exécuté, jamais par un nom (tour 4)', () => {
+  const avecPaquet = (vue: Vue, change: (p: Record<string, unknown>) => void): Vue => {
+    const pkg = JSON.parse(vue.packageJson) as Record<string, unknown>;
+    change(pkg);
+    return { ...vue, packageJson: JSON.stringify(pkg, null, 2) + '\n' };
+  };
+  const scriptsDe = (p: Record<string, unknown>): Record<string, string> =>
+    p.scripts as Record<string, string>;
+  const jamaisAppelee = (vue: Vue): string =>
+    controler(vue)
+      .filter((f) => f.famille === 'garde_ecrite_jamais_appelee')
+      .map((f) => f.message)
+      .join('\n');
+  const ANNEE_PROUVE = '        run: pnpm securite:annee-naissance:prove\n';
+  const ANNEE = '        run: pnpm securite:annee-naissance\n';
+  const nuitAnnee = (prouve: string, verdict: string): Vue => {
+    const vue = lireVue();
+    return {
+      ...vue,
+      workflows: vue.workflows.map((w) =>
+        w.chemin === NIGHTLY
+          ? {
+              ...w,
+              source: remplacerUneFois(
+                remplacerUneFois(w.source, ANNEE_PROUVE, runYaml(prouve)),
+                ANNEE,
+                runYaml(verdict)
+              ),
+            }
+          : w
+      ),
+    };
+  };
+
+  it('REQ-GOV-029 — la VALEUR du script `mutation` remplacée par `true`, étapes intactes : `mutation` n’est plus appelée', () => {
+    const vue = avecPaquet(lireVue(), (p) => {
+      scriptsDe(p).mutation = 'true';
+    });
+    expect(jamaisAppelee(vue)).toContain('`mutation`');
+  });
+
+  it('REQ-GOV-029 — les VALEURS des deux scripts d’une garde remplacées par `true` : elle n’est plus appelée', () => {
+    const vue = avecPaquet(lireVue(), (p) => {
+      scriptsDe(p)['securite:annee-naissance'] = 'true';
+      scriptsDe(p)['securite:annee-naissance:prove'] = 'true';
+    });
+    expect(jamaisAppelee(vue)).toContain('`securite:annee-naissance`');
+  });
+
+  it('REQ-GOV-029 — `pnpm ls` avec un script `ls` qui lance la garde : pnpm exécute sa commande intégrée, rien n’est appelé', () => {
+    const vue = avecPaquet(nuitEn('pnpm ls'), (p) => {
+      scriptsDe(p).ls = 'bash scripts/gates/stryker.sh';
+    });
+    expect(jamaisAppelee(vue)).toContain('`mutation`');
+  });
+
+  it('REQ-GOV-029 — `NODE_OPTIONS=… tsx <fichier>` : une affectation configure le lanceur, rien n’est appelé', () => {
+    const vue = nuitAnnee(
+      'echo nuit',
+      'NODE_OPTIONS=--require=./desarme.cjs tsx scripts/gates/aucun-annee-de-naissance.ts'
+    );
+    expect(jamaisAppelee(vue)).toContain('`securite:annee-naissance`');
+  });
+
+  it('REQ-GOV-029 — CONTRE-TÉMOIN : `tsx <fichier>` seul, sans affectation, appelle la garde', () => {
+    const vue = nuitAnnee('echo nuit', 'tsx scripts/gates/aucun-annee-de-naissance.ts');
+    expect(controler(vue).map((f) => f.famille)).toEqual([]);
+  });
+
+  it('REQ-GOV-029 — CONTRE-TÉMOIN : le vrai dépôt, `mutation` comprise (lancée par `bash scripts/gates/stryker.sh`)', () => {
+    const vue = lireVue();
+    expect(scriptsDe(JSON.parse(vue.packageJson) as Record<string, unknown>).mutation).toBe(
+      'bash scripts/gates/stryker.sh'
+    );
+    expect(controler(vue).map((f) => f.famille)).toEqual([]);
+  });
+
+  for (const [nom, valeur] of [
+    ['audit', 'tsx scripts/gates/gov-conventions.ts'],
+    ['ls', 'bash scripts/gates/stryker.sh'],
+  ] as const) {
+    it(`REQ-GOV-012 — un script nommé \`${nom}\`, commande intégrée de pnpm : porte_a_alteree, nommé`, async () => {
+      const vue = avecPaquet(lireVue(), (p) => {
+        scriptsDe(p)[nom] = valeur;
+      });
+      const fautes = (await confronterLaPorteA(vue)).fautes.filter(
+        (f) => f.famille === 'porte_a_alteree'
+      );
+      expect(fautes.map((f) => f.message).join('\n')).toContain(`\`${nom}\``);
+    });
+  }
+
+  for (const [quoi, change] of [
+    [
+      'changé',
+      (p: Record<string, unknown>) => {
+        p.packageManager = 'pnpm@9.15.9';
+      },
+    ],
+    [
+      'retiré',
+      (p: Record<string, unknown>) => {
+        delete p.packageManager;
+      },
+    ],
+  ] as const) {
+    it(`REQ-GOV-012 — \`packageManager\` ${quoi} : porte_a_alteree, nommé`, async () => {
+      const fautes = (await confronterLaPorteA(avecPaquet(lireVue(), change))).fautes.filter(
+        (f) => f.famille === 'porte_a_alteree'
+      );
+      expect(fautes.map((f) => f.message).join('\n')).toContain('`packageManager`');
+    });
+  }
+
+  it('REQ-GOV-012 — CONTRE-TÉMOIN : le vrai package.json passe la porte A, `packageManager` compris', async () => {
+    expect((await confronterLaPorteA(lireVue())).fautes).toEqual([]);
   });
 });
