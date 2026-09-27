@@ -73,7 +73,8 @@ const ANNULATION = TYPES_EVENEMENT.filter((t) => t.startsWith('facture.')).find(
   (t) => t !== typeQuiCommencePar('facture.')
 )!;
 
-const chargeDe = (type: string): Charge => structuredClone(CHARGES.find((c) => c.event_type === type)!);
+const chargeDe = (type: string): Charge =>
+  structuredClone(CHARGES.find((c) => c.event_type === type)!);
 
 /** L'enveloppe d'une charge, pour la frontière — qui ne regarde que `payload` et `subject_ref`. */
 function enveloppe(type: string, payload: Record<string, unknown>): Record<string, unknown> {
@@ -153,7 +154,9 @@ describe('REQ-INT-032 — la charge de la candidature traverse, la frontière re
 
     // Un autre champ « parrain » sur le bon type : refusé — le motif n'a pas été resserré.
     const voisin = { ...charge, parrainNom: 'X' };
-    expect(familles(enveloppe(CANDIDATURE, voisin))).toContain('identite_autre_apporteur@payload.parrainNom');
+    expect(familles(enveloppe(CANDIDATURE, voisin))).toContain(
+      'identite_autre_apporteur@payload.parrainNom'
+    );
   });
 
   it("REQ-INT-029 → REQ-INT-032 — la garde des coordonnées n'est pas affaiblie sur la candidature", () => {
@@ -166,12 +169,14 @@ describe('REQ-INT-032 — la charge de la candidature traverse, la frontière re
     );
   });
 
-  it('REQ-INT-029 → REQ-INT-032 — le contrat reste SANS donnée personnelle : aucun `$defs` de payload ne déclare une coordonnée', () => {
+  it('REQ-INT-029 → REQ-INT-032 — le contrat reste SANS donnée personnelle : aucune charge du contrat ne déclare une coordonnée', () => {
     const coordonnees = FRONTIERE_INTERDITE.find((f) => f.famille === 'coordonnees_du_contact')!;
     const defs = contratJsonSchema()['$defs'] as Record<string, Record<string, unknown>>;
     const declarees: string[] = [];
     const descendre = (schema: Record<string, unknown>, chemin: string): void => {
-      for (const [cle, sous] of Object.entries((schema['properties'] ?? {}) as Record<string, Record<string, unknown>>)) {
+      for (const [cle, sous] of Object.entries(
+        (schema['properties'] ?? {}) as Record<string, Record<string, unknown>>
+      )) {
         declarees.push(`${chemin}.${cle}`);
         descendre(sous, `${chemin}.${cle}`);
       }
@@ -186,11 +191,17 @@ describe('REQ-INT-032 — la charge de la candidature traverse, la frontière re
     const attendus = champsSelonREQ032();
     // Les quatre charges que l'exigence décrit — une liste vide ferait passer ce cas sans rien voir.
     expect(attendus.size).toBe(4);
-    const defs = contratJsonSchema()['$defs'] as Record<string, { properties?: Record<string, unknown> }>;
+    const defs = contratJsonSchema()['$defs'] as Record<
+      string,
+      { properties?: Record<string, unknown> }
+    >;
     for (const [type, champs] of attendus) {
       expect(TYPES_EVENEMENT as readonly string[], type).toContain(type);
       const declares = Object.keys(defs[nomDefPayload(type as TypeEvenement)]!.properties ?? {});
-      expect(champs.filter((c) => !declares.includes(c)), type).toEqual([]);
+      expect(
+        champs.filter((c) => !declares.includes(c)),
+        type
+      ).toEqual([]);
     }
   });
 });

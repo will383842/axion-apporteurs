@@ -144,9 +144,11 @@ n'y rien écrire aurait bloqué un lot entier.
   ce test lit les neuf noms dans le champ `texte` de REQ-INT-003 et les compare, position par
   position, au descripteur. Il verrait mourir aussi bien la casse retenue que l'ordre des champs.
 - **Assertion** — `tests/unit/integration/contrat-hash.spec.ts` ·
-  `it('REQ-INT-004 — la liste des types est FERMÉE sur les sept que le registre énumère')` : la
-  liste est lue dans le registre, jamais recopiée. Un huitième type ajouté au contrat sans exigence
-  la fait rougir ; c'est l'assertion qui tient le « sept, pas onze » de cette décision.
+  `it('REQ-INT-004 — la liste des types est FERMÉE sur les onze que le registre énumère, dans son ordre')` :
+  la liste est lue dans le registre, jamais recopiée. Un type ajouté au contrat sans exigence la
+  fait rougir. Elle a tenu le « sept, pas onze » de cette décision en `schema_version` 1 ; depuis que
+  REQ-INT-004 énumère les onze et que le contrat est passé en `schema_version` 2 (partners/ADR-0023,
+  geste de « Retour arrière » ci-dessous), c'est la même assertion qui tient les onze.
 - **Assertion** — `tests/unit/integration/contrat-hash.spec.ts` ·
   `it("REQ-QA-007 — contracts.sha256 est l'empreinte du schéma publié, et un champ renommé la change")` :
   l'empreinte est recalculée depuis le fichier publié, puis recalculée sur une copie où un champ a

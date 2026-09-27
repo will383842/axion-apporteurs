@@ -1,0 +1,1247 @@
+{
+  "$comment": "schema_version 2. La version lisible par une machine est le `const` du champ `schema_version` ; le nom du fichier la répète pour un lecteur, il ne la définit pas.",
+  "$defs": {
+    "api_coordonnees_candidature_parametres": {
+      "$comment": "Le paramètre de chemin : l'identifiant de candidature que porte la charge de la candidature reçue (`candidatureId`).",
+      "additionalProperties": false,
+      "properties": {
+        "candidatureId": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "candidatureId"
+      ],
+      "type": "object"
+    },
+    "api_coordonnees_candidature_reponse": {
+      "$comment": "Réponse 200, fermée. Toute autre situation rend 404, identique pour un identifiant inexistant et pour une candidature non émise vers Partners. Rien n'est mis en cache ; chaque appel est journalisé côté axionia sans aucune coordonnée ; au plus cinq lectures réussies par candidature sur vingt-quatre heures glissantes (partners/ADR-0023). Côté Partners, les valeurs ne vivent que le temps du traitement : jamais dans les charges reçues, jamais au journal, jamais dans un message.",
+      "additionalProperties": false,
+      "properties": {
+        "email": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "nom": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "prenom": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "telephone": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "nom",
+        "prenom",
+        "email",
+        "telephone"
+      ],
+      "type": "object"
+    },
+    "api_coordonnees_candidature_reponse_entetes": {
+      "$comment": "Réponse axionia → Partners, signée comme un envoi : HMAC-SHA-256, sous le secret d'émission, de `<horodatage>.<corps exact>`.",
+      "properties": {
+        "x-axionia-signature": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "x-axionia-timestamp": {
+          "pattern": "^[0-9]{1,20}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "x-axionia-timestamp",
+        "x-axionia-signature"
+      ],
+      "type": "object"
+    },
+    "api_coordonnees_candidature_requete_entetes": {
+      "$comment": "Requête Partners → axionia, même authentification que la relecture : HMAC-SHA-256, sous le secret dédié à la relecture, de `<horodatage>.<chemin exact>` ; tolérance de 300 s, comparaison à temps constant, liste d'autorisation d'adresses réseau (partners/ADR-0023, décision 3).",
+      "properties": {
+        "x-partners-signature": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "x-partners-timestamp": {
+          "pattern": "^[0-9]{1,20}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "x-partners-timestamp",
+        "x-partners-signature"
+      ],
+      "type": "object"
+    },
+    "payload_avoir_emis": {
+      "$comment": "FERMÉ en schema_version 2 — la charge de `avoir.emis`, champ pour champ celle du producteur réel (REQ-INT-005, REQ-INT-006, REQ-INT-032, REQ-QA-007).",
+      "additionalProperties": false,
+      "properties": {
+        "avoirDeFactureId": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "avoirId": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "clientId": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "emisLe": {
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
+          "type": "string"
+        },
+        "montantHtCents": {
+          "type": "integer"
+        },
+        "montantTtcCents": {
+          "type": "integer"
+        },
+        "montantTvaCents": {
+          "type": "integer"
+        },
+        "numero": {
+          "type": "string"
+        },
+        "regimeTva": {
+          "type": "string"
+        },
+        "siren": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "avoirId",
+        "numero",
+        "avoirDeFactureId",
+        "clientId",
+        "siren",
+        "montantHtCents",
+        "montantTvaCents",
+        "montantTtcCents",
+        "regimeTva",
+        "emisLe"
+      ],
+      "type": "object"
+    },
+    "payload_candidature_recue": {
+      "$comment": "FERMÉ en schema_version 2 — la charge de `candidature.recue`, champ pour champ celle du producteur réel (REQ-INT-005, REQ-INT-006, REQ-INT-032, REQ-QA-007).",
+      "additionalProperties": false,
+      "properties": {
+        "campagneId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "candidatureId": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "parrainCodeCapture": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "reponsesJson": {
+          "type": "object"
+        },
+        "scoreBaremeVersion": {
+          "type": "string"
+        },
+        "scoreInitial": {
+          "type": "number"
+        },
+        "scorePartsJson": {
+          "type": "object"
+        },
+        "sourceCanal": {
+          "type": "string"
+        },
+        "utm": {
+          "anyOf": [
+            {
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "candidatureId",
+        "reponsesJson",
+        "scoreInitial",
+        "scorePartsJson",
+        "scoreBaremeVersion",
+        "sourceCanal",
+        "utm",
+        "campagneId",
+        "parrainCodeCapture"
+      ],
+      "type": "object"
+    },
+    "payload_client_cree": {
+      "$comment": "FERMÉ en schema_version 2 — la charge de `client.cree`, champ pour champ celle du producteur réel (REQ-INT-005, REQ-INT-006, REQ-INT-032, REQ-QA-007).",
+      "additionalProperties": false,
+      "properties": {
+        "clientId": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "creeLe": {
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
+          "type": "string"
+        },
+        "misAJourLe": {
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
+          "type": "string"
+        },
+        "nafCode": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "numero": {
+          "type": "string"
+        },
+        "raisonSociale": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "secteur": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "siren": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "taille": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "type": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "clientId",
+        "numero",
+        "type",
+        "raisonSociale",
+        "siren",
+        "nafCode",
+        "secteur",
+        "taille",
+        "creeLe",
+        "misAJourLe"
+      ],
+      "type": "object"
+    },
+    "payload_client_fusionne": {
+      "$comment": "FERMÉ en schema_version 2 — la charge de `client.fusionne`, champ pour champ celle du producteur réel (REQ-INT-005, REQ-INT-006, REQ-INT-032, REQ-QA-007).",
+      "additionalProperties": false,
+      "properties": {
+        "absorbedId": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "survivorId": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "survivorId",
+        "absorbedId"
+      ],
+      "type": "object"
+    },
+    "payload_client_mis_a_jour": {
+      "$comment": "FERMÉ en schema_version 2 — la charge de `client.mis_a_jour`, champ pour champ celle du producteur réel (REQ-INT-005, REQ-INT-006, REQ-INT-032, REQ-QA-007).",
+      "additionalProperties": false,
+      "properties": {
+        "clientId": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "creeLe": {
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
+          "type": "string"
+        },
+        "misAJourLe": {
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
+          "type": "string"
+        },
+        "nafCode": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "numero": {
+          "type": "string"
+        },
+        "raisonSociale": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "secteur": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "siren": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "taille": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "type": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "clientId",
+        "numero",
+        "type",
+        "raisonSociale",
+        "siren",
+        "nafCode",
+        "secteur",
+        "taille",
+        "creeLe",
+        "misAJourLe"
+      ],
+      "type": "object"
+    },
+    "payload_devis_signe": {
+      "$comment": "FERMÉ en schema_version 2 — la charge de `devis.signe`, champ pour champ celle du producteur réel (REQ-INT-005, REQ-INT-006, REQ-INT-032, REQ-QA-007).",
+      "additionalProperties": false,
+      "properties": {
+        "activite": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "clientId": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "devisId": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "lignes": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "activite": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "commission": {
+                "additionalProperties": false,
+                "properties": {
+                  "commissionId": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "grilleVersion": {
+                    "type": "string"
+                  },
+                  "libelleCommission": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "montantCents": {
+                    "anyOf": [
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "motifBlocage": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "statut": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "statut",
+                  "commissionId",
+                  "montantCents",
+                  "motifBlocage",
+                  "libelleCommission",
+                  "grilleVersion"
+                ],
+                "type": "object"
+              },
+              "commissionId": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "designation": {
+                "type": "string"
+              },
+              "jours": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "montantHtCents": {
+                "type": "integer"
+              },
+              "offreCode": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "designation",
+              "activite",
+              "jours",
+              "montantHtCents",
+              "offreCode",
+              "commissionId",
+              "commission"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "montantTotalHtCents": {
+          "type": "integer"
+        },
+        "numero": {
+          "type": "string"
+        },
+        "signeLe": {
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "devisId",
+        "numero",
+        "clientId",
+        "activite",
+        "montantTotalHtCents",
+        "signeLe",
+        "lignes"
+      ],
+      "type": "object"
+    },
+    "payload_facture_annulee": {
+      "$comment": "FERMÉ en schema_version 2 — la charge de `facture.annulee`, champ pour champ celle du producteur réel (REQ-INT-005, REQ-INT-006, REQ-INT-032, REQ-QA-007).",
+      "additionalProperties": false,
+      "properties": {
+        "clientId": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "factureId": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "motif": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "factureId",
+        "motif",
+        "clientId"
+      ],
+      "type": "object"
+    },
+    "payload_facture_emise": {
+      "$comment": "FERMÉ en schema_version 2 — la charge de `facture.emise`, champ pour champ celle du producteur réel (REQ-INT-005, REQ-INT-006, REQ-INT-032, REQ-QA-007).",
+      "additionalProperties": false,
+      "properties": {
+        "activite": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "clientId": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "destinataire": {
+          "type": "string"
+        },
+        "echeanceFinanceurAt": {
+          "anyOf": [
+            {
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "echeanceLe": {
+          "anyOf": [
+            {
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "emiseLe": {
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
+          "type": "string"
+        },
+        "factureId": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "montantHtCents": {
+          "type": "integer"
+        },
+        "montantTtcCents": {
+          "type": "integer"
+        },
+        "montantTvaCents": {
+          "type": "integer"
+        },
+        "numero": {
+          "type": "string"
+        },
+        "origineClient": {
+          "type": "string"
+        },
+        "payers": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "montantAttenduCents": {
+                "type": "integer"
+              },
+              "payeurType": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "payeurType",
+              "montantAttenduCents"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "regimeTva": {
+          "type": "string"
+        },
+        "siren": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "subrogation": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "factureId",
+        "numero",
+        "activite",
+        "clientId",
+        "origineClient",
+        "siren",
+        "destinataire",
+        "subrogation",
+        "montantHtCents",
+        "montantTvaCents",
+        "montantTtcCents",
+        "regimeTva",
+        "emiseLe",
+        "echeanceLe",
+        "echeanceFinanceurAt",
+        "payers"
+      ],
+      "type": "object"
+    },
+    "payload_financement_mis_a_jour": {
+      "$comment": "FERMÉ en schema_version 2 — la charge de `financement.mis_a_jour`, champ pour champ celle du producteur réel (REQ-INT-005, REQ-INT-006, REQ-INT-032, REQ-QA-007).",
+      "additionalProperties": false,
+      "properties": {
+        "echeanceFinanceurAt": {
+          "anyOf": [
+            {
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "factureId": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "payers": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "montantAttenduCents": {
+                "type": "integer"
+              },
+              "payeurType": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "payeurType",
+              "montantAttenduCents"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "factureId",
+        "payers",
+        "echeanceFinanceurAt"
+      ],
+      "type": "object"
+    },
+    "payload_paiement_recu": {
+      "$comment": "FERMÉ en schema_version 2 — la charge de `paiement.recu`, champ pour champ celle du producteur réel (REQ-INT-005, REQ-INT-006, REQ-INT-032, REQ-QA-007).",
+      "additionalProperties": false,
+      "properties": {
+        "amountHtCents": {
+          "type": "integer"
+        },
+        "clientId": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "factureId": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "factureMontantHtCents": {
+          "type": "integer"
+        },
+        "factureMontantTtcCents": {
+          "type": "integer"
+        },
+        "montantEncaisseTtcCents": {
+          "type": "integer"
+        },
+        "origineClient": {
+          "type": "string"
+        },
+        "paidAt": {
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
+          "type": "string"
+        },
+        "paymentId": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "regimeTva": {
+          "type": "string"
+        },
+        "siren": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "soldeLaFacture": {
+          "type": "boolean"
+        },
+        "totalEncaisseTtcCents": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "paymentId",
+        "factureId",
+        "clientId",
+        "origineClient",
+        "siren",
+        "montantEncaisseTtcCents",
+        "factureMontantHtCents",
+        "factureMontantTtcCents",
+        "regimeTva",
+        "totalEncaisseTtcCents",
+        "paidAt",
+        "provider",
+        "amountHtCents",
+        "soldeLaFacture"
+      ],
+      "type": "object"
+    },
+    "payload_paiement_rembourse": {
+      "$comment": "FERMÉ en schema_version 2 — la charge de `paiement.rembourse`, champ pour champ celle du producteur réel (REQ-INT-005, REQ-INT-006, REQ-INT-032, REQ-QA-007).",
+      "additionalProperties": false,
+      "properties": {
+        "clientId": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "factureId": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "forme": {
+          "type": "string"
+        },
+        "montantEncaisseTtcCents": {
+          "type": "integer"
+        },
+        "montantHtCents": {
+          "type": "integer"
+        },
+        "motif": {
+          "type": "string"
+        },
+        "paymentId": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "rembourseLe": {
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
+          "type": "string"
+        },
+        "siren": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "paymentId",
+        "factureId",
+        "clientId",
+        "siren",
+        "montantHtCents",
+        "montantEncaisseTtcCents",
+        "motif",
+        "forme",
+        "rembourseLe",
+        "provider"
+      ],
+      "type": "object"
+    }
+  },
+  "$id": "https://axion-ia.com/contrats/partners/evenements/v2",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "event_type": {
+            "const": "client.cree"
+          }
+        },
+        "required": [
+          "event_type"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/payload_client_cree"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event_type": {
+            "const": "client.mis_a_jour"
+          }
+        },
+        "required": [
+          "event_type"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/payload_client_mis_a_jour"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event_type": {
+            "const": "devis.signe"
+          }
+        },
+        "required": [
+          "event_type"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/payload_devis_signe"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event_type": {
+            "const": "facture.emise"
+          }
+        },
+        "required": [
+          "event_type"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/payload_facture_emise"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event_type": {
+            "const": "avoir.emis"
+          }
+        },
+        "required": [
+          "event_type"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/payload_avoir_emis"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event_type": {
+            "const": "paiement.recu"
+          }
+        },
+        "required": [
+          "event_type"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/payload_paiement_recu"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event_type": {
+            "const": "paiement.rembourse"
+          }
+        },
+        "required": [
+          "event_type"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/payload_paiement_rembourse"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event_type": {
+            "const": "candidature.recue"
+          }
+        },
+        "required": [
+          "event_type"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/payload_candidature_recue"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event_type": {
+            "const": "financement.mis_a_jour"
+          }
+        },
+        "required": [
+          "event_type"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/payload_financement_mis_a_jour"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event_type": {
+            "const": "facture.annulee"
+          }
+        },
+        "required": [
+          "event_type"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/payload_facture_annulee"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event_type": {
+            "const": "client.fusionne"
+          }
+        },
+        "required": [
+          "event_type"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/payload_client_fusionne"
+          }
+        }
+      }
+    }
+  ],
+  "properties": {
+    "emitted_at": {
+      "$comment": "L'instant de l'ÉMISSION. Distinct du précédent : l'outbox peut rejouer (REQ-INT-001).",
+      "format": "date-time",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
+      "type": "string"
+    },
+    "event_id": {
+      "$comment": "REQ-INT-003 : uuid v4. C'est la clé d'idempotence du récepteur — celle de `EvenementRecu` (REQ-DM-036, `docs/GLOSSAIRE.md` §5), table portée par SEC-06 dans ce dépôt et non par le contrat : le contrat est un format de fil, il n'impose aucune table.",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "event_type": {
+      "$comment": "REQ-INT-004 : liste fermée, injectée depuis `events.ts`.",
+      "enum": [
+        "client.cree",
+        "client.mis_a_jour",
+        "devis.signe",
+        "facture.emise",
+        "avoir.emis",
+        "paiement.recu",
+        "paiement.rembourse",
+        "candidature.recue",
+        "financement.mis_a_jour",
+        "facture.annulee",
+        "client.fusionne"
+      ],
+      "type": "string"
+    },
+    "occurred_at": {
+      "$comment": "L'instant du FAIT métier, côté axionia.",
+      "format": "date-time",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
+      "type": "string"
+    },
+    "payload": {
+      "$comment": "Fermé par type dans `$defs`, champ pour champ, depuis le producteur réel (REQ-INT-005, REQ-INT-006, REQ-INT-032, REQ-QA-007).",
+      "type": "object"
+    },
+    "producer": {
+      "$comment": "OUVERT — aucune exigence du registre n'énumère les producteurs. La liste fermée est à trancher par INT-T01b ; en attendant, une chaîne non vide, jamais une valeur devinée.",
+      "minLength": 1,
+      "type": "string"
+    },
+    "schema_version": {
+      "$comment": "La version du contrat. Une enveloppe qui en porte une autre est refusée, pas devinée.",
+      "const": 2,
+      "type": "integer"
+    },
+    "sequence": {
+      "$comment": "OUVERT sur sa PORTÉE — le registre nomme le champ sans dire si la monotonie est globale ou par sujet. C'est l'outbox (INT-T02) qui la tranche ; aucune borne n'est inventée ici.",
+      "type": "integer"
+    },
+    "subject_ref": {
+      "$comment": "OUVERT — la forme de la référence de sujet n'est écrite dans aucune exigence. Le champ est EXIGÉ (sa présence est un invariant) et sa forme reste libre jusqu'à INT-T01b."
+    }
+  },
+  "required": [
+    "event_id",
+    "event_type",
+    "schema_version",
+    "occurred_at",
+    "emitted_at",
+    "producer",
+    "subject_ref",
+    "sequence",
+    "payload"
+  ],
+  "title": "Contrat d'événements axionia → Axion Partners",
+  "type": "object"
+}

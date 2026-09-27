@@ -89,8 +89,15 @@ lecture unique côté axionia est écartée : elle ferait perdre les coordonnée
 
 ## Ce qui le vérifie
 
-- **hors-code** — aucune assertion n'existe encore : la route et son client sont livrés par la tâche
-  axionia versée par GOV-102 et par INT-T26, et les assertions attendues sont listées ci-dessous.
+- **Assertion** — `tests/unit/integration/contrat-hash.spec.ts` ·
+  `it('REQ-QA-007 — le contrat compte les API que le registre compte, et la route des coordonnées est sous son empreinte')` :
+  REQ-QA-007 compte trois API et nomme la route, lue dans `packages/contracts/api.ts` ; ses `$defs`
+  (paramètre, en-têtes signés, réponse fermée) sont dans le JSON Schema publié, sous son empreinte.
+- **Assertion** — `tests/unit/integration/contrat-v2-frontiere.spec.ts` ·
+  `it('REQ-INT-029 → REQ-INT-032 — le contrat reste SANS donnée personnelle : aucune charge du contrat ne déclare une coordonnée')` :
+  décision 1 — aucune charge ne déclare un champ que la famille `coordonnees_du_contact` reconnaît.
+- **hors-code** — la route et son client sont livrés par la tâche axionia versée par GOV-102 et par
+  INT-T26 ; leurs assertions sont listées ci-dessous.
 
 ## Reste à faire
 
@@ -99,5 +106,7 @@ lecture unique côté axionia est écartée : elle ferait perdre les coordonnée
   ne porte aucune coordonnée ; côté Partners (INT-T26), une route en panne laisse zéro apporteur et un
   événement en attente, puis la reprise en crée exactement un, et aucune coordonnée n'apparaît dans
   `evenements_recus`.
-- REQ-QA-007 et le texte de partners/ADR-0008 disent encore « deux API » : l'alignement est porté par
-  INT-T01c avec le `gardien-spec`.
+- Le schéma de la route est publié dans `packages/contracts/api.ts` (JSON Schema, sous l'empreinte) ;
+  sa projection Zod n'est pas générée, `scripts/contracts/export.ts` ne projetant que l'enveloppe.
+  Le client de Partners (INT-T26) valide la réponse contre le `$defs`
+  `api_coordonnees_candidature_reponse`, ou la projection Zod est ajoutée à l'export d'abord.

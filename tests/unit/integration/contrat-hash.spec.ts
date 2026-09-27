@@ -171,8 +171,11 @@ function valideurDe(nomDef: string): Valideur {
   const Constructeur = ((Ajv2020 as unknown as { default?: unknown }).default ?? Ajv2020) as new (
     options: Record<string, unknown>
   ) => { compile: (schema: unknown) => Valideur };
+  // Les `$defs` du contrat, et rien d'autre de sa racine : l'enveloppe ne s'applique pas à une charge.
+  const contrat = contratJsonSchema();
   return new Constructeur({ strict: true, validateFormats: false, allErrors: true }).compile({
-    ...contratJsonSchema(),
+    $schema: contrat['$schema'],
+    $defs: contrat['$defs'],
     $ref: `#/$defs/${nomDef}`,
   });
 }
@@ -280,9 +283,9 @@ describe("le contrat d'événements est fermé, dérivé, et son empreinte le ti
     // Un jeu incomplet laisserait un type sans aucun exemple produit : son `$defs` serait deviné.
     const produits = new Set(CHARGES_PRODUITES.map((c) => c.event_type));
     expect([...TYPES_EVENEMENT].filter((t) => !produits.has(t))).toEqual([]);
-    expect([...produits].filter((t) => !(TYPES_EVENEMENT as readonly string[]).includes(t))).toEqual(
-      []
-    );
+    expect(
+      [...produits].filter((t) => !(TYPES_EVENEMENT as readonly string[]).includes(t))
+    ).toEqual([]);
   });
 
   it("REQ-QA-007 — l'enveloppe à l'émission ne pose que `schema_version` et `emitted_at` : la charge produite n'est pas touchée", () => {
@@ -336,9 +339,8 @@ describe("le contrat d'événements est fermé, dérivé, et son empreinte le ti
   });
 
   it('REQ-QA-007 — le contrat compte les API que le registre compte, et la route des coordonnées est sous son empreinte', async () => {
-    const { API_COORDONNEES_CANDIDATURE, nomsDefsApi } = await import(
-      '../../../packages/contracts/api'
-    );
+    const { API_COORDONNEES_CANDIDATURE, nomsDefsApi } =
+      await import('../../../packages/contracts/api');
     const texte = exigence('REQ-QA-007').texte;
     const compte = /les (\d+) API/.exec(texte);
     expect(compte, "REQ-QA-007 ne compte plus d'API").not.toBeNull();
