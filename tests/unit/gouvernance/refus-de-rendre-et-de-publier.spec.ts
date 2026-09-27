@@ -33,13 +33,13 @@ import {
   mkdtempSync,
   mkdirSync,
   rmSync,
-  readdirSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve, dirname } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { fichiersSuivis } from '../../../scripts/lot/fichiers-suivis';
 import { declarationsDeLaBase, declarationsRetirees } from './declarations-de-sorties';
+import { compterSorties, enumererFichiers } from '../../../scripts/gates/registre-des-refus';
 
 /** Ce fichier, tel que `origin/main` le porte : le cliquet des sorties se lit contre lui. */
 const CE_FICHIER = 'tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts';
@@ -95,26 +95,10 @@ function exigerQueLeRefusSORTE(nom: string, source: string, ancre: string): void
   expect(bloc.includes('process.exit(0)'), `${nom} : le refus sort en SUCCÈS`).toBe(false);
 }
 
-/**
- * Les extensions que le compilateur connaît (`ts.Extension`), DÉRIVÉES et jamais tapées — données
- * `.json` comprises, le sens bavard de l'erreur.
- */
-const EXTENSIONS_DE_CODE: string[] = Object.values(ts.Extension);
-
-/**
- * L'énumération du DISQUE, partagée par les deux gardes de ce fichier.
- *
- * Elle était locale à la garde de conservation ; la garde d'adjacence en avait besoin aussi et
- * s'en est passée, avec une liste de fichiers TAPÉE — motif de la lentille `schema` au 19e tour :
- * *l'énumérateur du disque existait déjà dans le même fichier, 270 lignes plus bas.*
- */
-function enumererFichiers(dossier: string): string[] {
-  return readdirSync(dossier, { withFileTypes: true }).flatMap((e) => {
-    const chemin = `${dossier}/${e.name}`;
-    if (e.isDirectory()) return e.name === 'node_modules' ? [] : enumererFichiers(chemin);
-    return EXTENSIONS_DE_CODE.some((x) => e.name.endsWith(x)) ? [chemin] : [];
-  });
-}
+// L'énumération du DISQUE, partagée par les gardes de ce fichier, vit dans
+// `scripts/gates/registre-des-refus.ts` (`enumererFichiers`), avec le motif des sorties : le
+// cliquet et la spec qui nomme chaque sortie énumèrent le même disque (RM-01). Elle était déjà
+// née d'un doublon — une liste de fichiers TAPÉE à côté d'un énumérateur existant.
 
 const TRACE = readFileSync('scripts/gates/gov-trace.ts', 'utf8');
 const TACHES = readFileSync('scripts/gates/gov-tasks.ts', 'utf8');
@@ -877,8 +861,10 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
   // imprime `[coordonnee_en_clair]` sur un IBAN d'un corps publié en dépôt PUBLIC **et sort 0**,
   // sans qu'aucun compteur ne bouge. *Un compteur qui cherche une orthographe ne compte pas une
   // famille* — et c'est la deuxième fois que l'EXTENSION de cette garde est trop étroite.
-  const SORTIE_NON_NULLE = /process\.exit\(\s*(?!0\s*\))/g;
-  const compter = (texte: string) => (texte.match(SORTIE_NON_NULLE) ?? []).length;
+  // Le motif vit dans `scripts/gates/registre-des-refus.ts` (`SORTIE_NON_NULLE`), importé : le
+  // cliquet et la spec qui NOMME chaque sortie (`cliquet-nomme-chaque-refus.spec.ts`) comptent
+  // la même famille (RM-01).
+  const compter = compterSorties;
   const surMain = (f: string) => {
     try {
       return compter(

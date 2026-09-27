@@ -36,7 +36,10 @@ function retirer(texte: string, position: number): string {
 
 describe('REQ-GOV-012 — chaque sortie déclarée porte un NOM, et le disque le confirme', () => {
   it('REQ-GOV-012 — les fichiers nommés sont EXACTEMENT ceux que le cliquet déclare', () => {
-    expect(DECLARES.size, `aucune déclaration lue dans ${CLIQUET} : illisible n’est pas vide`).toBeGreaterThan(0);
+    expect(
+      DECLARES.size,
+      `aucune déclaration lue dans ${CLIQUET} : illisible n’est pas vide`
+    ).toBeGreaterThan(0);
     expect(Object.keys(REFUS_NOMMES).sort()).toEqual([...DECLARES.keys()].sort());
   });
 
@@ -54,7 +57,10 @@ describe('REQ-GOV-012 — chaque sortie déclarée porte un NOM, et le disque le
     for (const [f, noms] of Object.entries(REFUS_NOMMES)) {
       expect(new Set(noms).size, `${f} : un nom répété`).toBe(noms.length);
       const faibles = noms.filter((n) => / #\d+$/.test(n));
-      expect(faibles, `${f} : identité à rang — retirer la première renommerait la suivante`).toEqual([]);
+      expect(
+        faibles,
+        `${f} : identité à rang — retirer la première renommerait la suivante`
+      ).toEqual([]);
     }
   });
 });
@@ -66,8 +72,14 @@ describe('REQ-GOV-024 — RM-02 par MUTATION : retirer UNE sortie fait rougir CE
       const texte = readFileSync(f, 'utf8');
       for (const s of sortiesNommees(f, texte)) {
         const r = confronterNoms(f, retirer(texte, s.position), noms);
-        expect(r.manquantes, `${f}:${s.ligne} retirée — la confrontation doit nommer « ${s.nom} »`).toEqual([s.nom]);
-        expect(r.nonDeclarees, `${f}:${s.ligne} retirée — une autre sortie a changé de nom`).toEqual([]);
+        expect(
+          r.manquantes,
+          `${f}:${s.ligne} retirée — la confrontation doit nommer « ${s.nom} »`
+        ).toEqual([s.nom]);
+        expect(
+          r.nonDeclarees,
+          `${f}:${s.ligne} retirée — une autre sortie a changé de nom`
+        ).toEqual([]);
         mutants++;
       }
     }
@@ -91,7 +103,10 @@ describe('REQ-GOV-024 — RM-02 par MUTATION : retirer UNE sortie fait rougir CE
 
   it('REQ-GOV-024 — CONTRE-TÉMOIN : le fichier intact ne rend aucune faute', () => {
     const [f, noms] = Object.entries(REFUS_NOMMES)[0]!;
-    expect(confronterNoms(f, readFileSync(f, 'utf8'), noms)).toEqual({ manquantes: [], nonDeclarees: [] });
+    expect(confronterNoms(f, readFileSync(f, 'utf8'), noms)).toEqual({
+      manquantes: [],
+      nonDeclarees: [],
+    });
   });
 });
 
@@ -103,7 +118,9 @@ describe('REQ-GOV-012 — ce que le registre laisse dehors est NOMMÉ et COMPTÉ
     const dehors = porteurs.filter(([f]) => !(f in REFUS_NOMMES));
     const dedans = porteurs.filter(([f]) => f in REFUS_NOMMES);
     // Tout fichier déclaré porte au moins une sortie — sinon il n'a rien à nommer.
-    expect(dedans.length, 'un fichier déclaré ne porte aucune sortie').toBe(Object.keys(REFUS_NOMMES).length);
+    expect(dedans.length, 'un fichier déclaré ne porte aucune sortie').toBe(
+      Object.keys(REFUS_NOMMES).length
+    );
     expect(dehors.length + dedans.length).toBe(porteurs.length);
     console.info(
       `[cliquet-nomme] ${dedans.length} fichier(s) nommé(s) sur ${porteurs.length} porteurs de sorties ; ` +
