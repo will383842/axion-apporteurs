@@ -706,6 +706,18 @@ describe('REQ-SEC-023 — la garde `securite:roles` confronte le disque à la ma
         ),
       ])
     ).toEqual(['export_non_jugeable']);
+    // Le motif est dit : c'est la réassignation, pas une forme quelconque, qui rend le site non jugeable.
+    const motif = jugerLaConsole(
+      [
+        route(
+          `let traiter = async () => {\n${GARDE_ECRAN}\n};\nfunction init() {\n  traiter = x;\n}\n` +
+            'export { traiter as GET };\n'
+        ),
+      ],
+      MATRICE_TEMOIN,
+      ROLES_CONSOLE
+    );
+    expect(motif.fautes.map((f) => f.message).join('\n')).toContain('liaison réassignable');
     // Contre-témoin : la même chaîne en `const`, jamais réassignée, gardée : elle passe.
     expect(
       familles([

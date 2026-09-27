@@ -7,22 +7,28 @@
  *         pnpm securite:roles:prove un témoin par famille et par forme d'export, des contre-témoins verts
  *
  * CE QU'ELLE TIENT. La liste des actions et des routes de la console est DÉRIVÉE DU DISQUE, jamais
- * déclarée : tout fichier suivi sous `src/app/(console)/` et `src/server/console/`. Chacune est
+ * déclarée : tout fichier suivi sous `src/app/(console)/` et `src/server/console/`, en TypeScript
+ * comme en JavaScript (`.ts`, `.tsx`, `.js`, `.jsx`, `.mts`, `.cts`, `.mjs`, `.cjs`). Chacune est
  * confrontée à LA matrice (`src/server/roles/matrice.ts`) :
  *   — une ACTION est TOUTE valeur exportée d'un module `'use server'`, sous toute forme
- *     (déclaration, `export { f }` avec ou sans alias, `export const` quel que soit l'initialiseur,
- *     `export default`, `export *`, réexport), ou toute fonction qui porte elle-même la directive.
- *     Elle appelle `requireRole('action:<nom>', …)` ;
- *   — une PAGE (`page.tsx`) appelle `requireRole('ecran:<nom>', …)` dans sa fonction exportée par
- *     défaut ; une ROUTE (`route.ts`) l'appelle dans chacune de ses méthodes HTTP exportées, sous
- *     toute forme, alias compris ;
+ *     (déclaration, `export { f }` avec ou sans alias, `export const` ou `export let` quel que soit
+ *     l'initialiseur, déstructuration — un site par nom lié —, `export default`, `export *`,
+ *     réexport, `export import X = …`), ou toute fonction ou méthode qui porte elle-même la
+ *     directive. Elle appelle `requireRole('action:<nom>', …)` ;
+ *   — une PAGE (`page.tsx`, `page.js`…) appelle `requireRole('ecran:<nom>', …)` dans sa fonction
+ *     exportée par défaut ; une ROUTE (`route.ts`, `route.js`…) l'appelle dans chacune de ses
+ *     méthodes HTTP exportées, sous toute forme, alias et déstructuration compris ;
  *   — le droit est un LITTÉRAL, présent dans la matrice. Un droit absent de la matrice fait rougir
  *     la garde en NOMMANT l'action : c'est le défaut = refus appliqué au disque, avant qu'il le soit
  *     à l'exécution.
  * ÉCHEC FERMÉ. Un site dont le CORPS ne s'établit pas dans le fichier — ni une fonction, ni le nom
- * d'une fonction locale : un appel d'enveloppe, un import, un réexport, une constante, une page sans
- * export par défaut reconnu — est une faute nommée, jamais un silence, et jamais jugé sur le
- * fichier entier.
+ * d'une fonction locale établie : un appel d'enveloppe, un import, un réexport, une constante, une
+ * déstructuration, une page sans export par défaut reconnu — est une faute nommée, jamais un
+ * silence, et jamais jugé sur le fichier entier. Ne S'ÉTABLISSENT que la déclaration de fonction
+ * et la `const`, chacune déclarée une fois et jamais réassignée : une liaison `let`/`var`, ou tout
+ * nom réassigné dans le module (fonction comprise), rend le site non jugeable — Next sert la
+ * valeur de FIN de module, que l'initialiseur ne dit pas. Un nom n'est écarté comme type que s'il
+ * ne désigne AUCUNE valeur, importée comprise.
  * Le vert imprime les fichiers lus, les sites confrontés, et les couples droit-rôle confrontés à la
  * ligne de la matrice RÔLE PAR RÔLE (ouverts, fermés). Le « périmètre vide » ne se dit que si AUCUN
  * fichier n'est lu.
@@ -40,7 +46,12 @@
  * une action qui appelle `requireRole` puis ignore le refus lui échappe — c'est la relecture qui la
  * tient, et `requireRole` rend un verdict qu'on ne peut pas lire comme un succès sans son `ok`. Elle
  * ne suit pas un appel délégué à une fonction voisine : l'appel doit être DANS l'action (RM-07 —
- * une garde extraite se perd avec son appelant). Hors de `src/app/(console)/` et de
+ * une garde extraite se perd avec son appelant). Elle tient pour l'appel de la porte tout
+ * `x.requireRole(…)`, sur un objet QUELCONQUE : elle ne vérifie pas que `x` est le module de la
+ * porte — c'est la relecture qui le tient. Seuls `page.*` et `route.*` sont des sites de routage :
+ * `layout.*`, `template.*`, `default.*` (route parallèle), `loading.*`, `error.*`, `not-found.*`
+ * ne sont PAS jugés — une page se garde elle-même, et le contenu d'un `default.*` ou d'un `layout.*`
+ * qui lirait une donnée protégée lui échappe. Hors de `src/app/(console)/` et de
  * `src/server/console/`, elle ne juge rien.
  *
  * INVARIANT DE LA PREUVE (RM-11). `jugerLaConsole` et `rendreLeVerdict` sont pures : fichiers,
@@ -91,9 +102,12 @@ export interface Jugement {
 
 /** Le périmètre : la console de l'application et ses modules de serveur. */
 export const PERIMETRE: readonly RegExp[] = [
-  /^src\/app\/\(console\)\/.+\.tsx?$/,
-  /^src\/server\/console\/.+\.tsx?$/,
+  /^src\/app\/\(console\)\/.+\.(?:[jt]sx?|[mc][jt]s)$/,
+  /^src\/server\/console\/.+\.(?:[jt]sx?|[mc][jt]s)$/,
 ];
+/** Une page ou une route : TypeScript comme JavaScript (Next compile un `page.js`, un `route.js`). */
+const EST_UNE_PAGE = /^page\.(?:[jt]sx?|[mc][jt]s)$/;
+const EST_UNE_ROUTE = /^route\.(?:[jt]sx?|[mc][jt]s)$/;
 const METHODES_HTTP = new Set(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']);
 const NOM_DE_LA_PORTE = 'requireRole';
 /** Le nom exporté d'un `export * from '…'` : il peut porter n'importe quel nom, méthodes HTTP comprises. */
@@ -144,57 +158,184 @@ interface Export {
   forme: string;
 }
 
+/** Les identifiants qu'un motif de liaison lie : `a`, `{ a, b: { c }, d = 1, ...e }`, `[f, , g]`. */
+function nomsLies(n: ts.BindingName): ts.Identifier[] {
+  if (ts.isIdentifier(n)) return [n];
+  const noms: ts.Identifier[] = [];
+  for (const e of n.elements) if (!ts.isOmittedExpression(e)) noms.push(...nomsLies(e.name));
+  return noms;
+}
+
+/**
+ * Les noms RÉASSIGNÉS quelque part dans le module : cible d'une affectation (simple, composée ou
+ * par déstructuration), d'un `++`/`--`, d'une boucle `for (x of …)`. Sans analyse de portée : un
+ * homonyme réassigné dans une fonction imbriquée suffit — échec fermé, jamais un silence.
+ */
+function nomsReassignes(source: ts.SourceFile): Set<string> {
+  const vus = new Set<string>();
+  const cible = (e: ts.Node): void => {
+    if (ts.isIdentifier(e)) vus.add(e.text);
+    else if (
+      ts.isParenthesizedExpression(e) ||
+      ts.isAsExpression(e) ||
+      ts.isSatisfiesExpression(e) ||
+      ts.isNonNullExpression(e) ||
+      ts.isTypeAssertionExpression(e) ||
+      ts.isSpreadElement(e) ||
+      ts.isSpreadAssignment(e)
+    ) {
+      cible(e.expression);
+    } else if (ts.isArrayLiteralExpression(e)) e.elements.forEach(cible);
+    else if (ts.isObjectLiteralExpression(e)) {
+      for (const p of e.properties) {
+        if (ts.isShorthandPropertyAssignment(p)) vus.add(p.name.text);
+        else if (ts.isPropertyAssignment(p)) cible(p.initializer);
+        else if (ts.isSpreadAssignment(p)) cible(p.expression);
+      }
+    } else if (ts.isBinaryExpression(e) && e.operatorToken.kind === ts.SyntaxKind.EqualsToken) {
+      cible(e.left); // une valeur par défaut dans un motif d'affectation : `[a = 1] = …`
+    }
+  };
+  const visiter = (n: ts.Node): void => {
+    if (
+      ts.isBinaryExpression(n) &&
+      n.operatorToken.kind >= ts.SyntaxKind.FirstAssignment &&
+      n.operatorToken.kind <= ts.SyntaxKind.LastAssignment
+    ) {
+      cible(n.left);
+    } else if (
+      (ts.isPrefixUnaryExpression(n) || ts.isPostfixUnaryExpression(n)) &&
+      (n.operator === ts.SyntaxKind.PlusPlusToken || n.operator === ts.SyntaxKind.MinusMinusToken)
+    ) {
+      cible(n.operand);
+    } else if (
+      (ts.isForInStatement(n) || ts.isForOfStatement(n)) &&
+      !ts.isVariableDeclarationList(n.initializer)
+    ) {
+      cible(n.initializer);
+    }
+    ts.forEachChild(n, visiter);
+  };
+  visiter(source);
+  return vus;
+}
+
+/** Une liste de déclarations `const` — ni `let`, ni `var`, ni `using`. */
+const estConst = (l: ts.VariableDeclarationList): boolean =>
+  (l.flags & ts.NodeFlags.BlockScoped) === ts.NodeFlags.Const;
+
 /**
  * TOUTES les valeurs exportées d'un module, quelle que soit leur forme. Un type ne s'exporte pas
- * comme valeur : il est écarté. Tout le reste est rendu, avec sa fonction quand elle s'établit
- * dans le fichier, `null` sinon.
+ * comme valeur : il est écarté — mais seulement s'il ne désigne AUCUNE valeur, importée comprise.
+ * Tout le reste est rendu, avec sa fonction quand elle s'établit dans le fichier, `null` sinon.
+ *
+ * Ce qui S'ÉTABLIT : une déclaration de fonction, ou une `const` dont l'initialiseur est une
+ * fonction ou le nom d'une liaison établie — chacune déclarée une seule fois et jamais réassignée.
+ * Une liaison `let`/`var`, ou tout nom réassigné, ne s'établit pas : Next sert la valeur de FIN de
+ * module, et l'initialiseur n'en dit rien.
  */
 function exportsDuModule(source: ts.SourceFile): Export[] {
-  // Les valeurs locales de premier niveau : la déclaration de fonction, ou l'initialiseur.
-  const locales = new Map<string, ts.Node | undefined>();
+  // Les liaisons de premier niveau qui peuvent s'établir : la déclaration de fonction, ou
+  // l'initialiseur d'une `const`. Toute liaison VALEUR est comptée, pour les redéclarations et
+  // pour distinguer un type d'une valeur homonyme.
+  const etablissables = new Map<string, ts.Node | undefined>();
+  const reassignables = new Set<string>(nomsReassignes(source));
+  const declarations = new Map<string, number>();
   const types = new Set<string>();
+  const valeurLiee = (n: ts.Identifier): void => {
+    declarations.set(n.text, (declarations.get(n.text) ?? 0) + 1);
+  };
   for (const i of source.statements) {
-    if (ts.isFunctionDeclaration(i) && i.name && i.body) locales.set(i.name.text, i);
-    else if (ts.isVariableStatement(i)) {
+    if (ts.isFunctionDeclaration(i) && i.name) {
+      if (!i.body) continue; // une signature de surcharge : l'implémentation suit
+      valeurLiee(i.name);
+      etablissables.set(i.name.text, i);
+    } else if (ts.isVariableStatement(i)) {
+      const constante = estConst(i.declarationList);
       for (const d of i.declarationList.declarations) {
-        if (ts.isIdentifier(d.name)) locales.set(d.name.text, d.initializer);
+        for (const n of nomsLies(d.name)) {
+          valeurLiee(n);
+          if (!constante) reassignables.add(n.text);
+        }
+        if (constante && ts.isIdentifier(d.name)) etablissables.set(d.name.text, d.initializer);
       }
-    } else if ((ts.isTypeAliasDeclaration(i) || ts.isInterfaceDeclaration(i)) && i.name) {
+    } else if (
+      (ts.isClassDeclaration(i) || ts.isEnumDeclaration(i) || ts.isModuleDeclaration(i)) &&
+      i.name &&
+      ts.isIdentifier(i.name)
+    ) {
+      valeurLiee(i.name);
+    } else if (ts.isImportDeclaration(i) && i.importClause) {
+      const c = i.importClause;
+      const lier = (n: ts.Identifier, typeSeul: boolean): void =>
+        typeSeul ? void types.add(n.text) : valeurLiee(n);
+      if (c.name) lier(c.name, c.isTypeOnly);
+      const b = c.namedBindings;
+      if (b && ts.isNamespaceImport(b)) lier(b.name, c.isTypeOnly);
+      else if (b) for (const e of b.elements) lier(e.name, c.isTypeOnly || e.isTypeOnly);
+    } else if (ts.isImportEqualsDeclaration(i)) {
+      if (i.isTypeOnly) types.add(i.name.text);
+      else valeurLiee(i.name);
+    } else if (ts.isTypeAliasDeclaration(i) || ts.isInterfaceDeclaration(i)) {
       types.add(i.name.text);
     }
   }
-  /** La fonction que désigne un nom local, en suivant `const a = b` ; `null` si elle ne s'établit pas. */
-  const resoudre = (nom: string, vus = new Set<string>()): Fonction | null => {
-    if (vus.has(nom)) return null;
+  const REASSIGNABLE = (nom: string) =>
+    `« ${nom} » est une liaison réassignable (let, var ou nom réassigné dans le module) : Next ` +
+    `sert sa valeur de fin de module, pas son initialiseur`;
+  const REDECLAREE = (nom: string) => `« ${nom} » est déclaré plus d’une fois dans le module`;
+  const NON_LOCALE = 'la valeur n’est ni une fonction ni le nom d’une fonction locale établie';
+  /** Pourquoi un nom ne s'établit pas ; `null` s'il peut s'établir. */
+  const obstacle = (nom: string): string | null =>
+    reassignables.has(nom)
+      ? REASSIGNABLE(nom)
+      : (declarations.get(nom) ?? 0) > 1
+        ? REDECLAREE(nom)
+        : null;
+  /** La fonction que désigne un nom local, en suivant `const a = b` — ou le motif qui l'empêche. */
+  const resoudre = (nom: string, vus = new Set<string>()): Fonction | string => {
+    if (vus.has(nom)) return NON_LOCALE;
     vus.add(nom);
-    const v = locales.get(nom);
+    const o = obstacle(nom);
+    if (o !== null) return o;
+    const v = etablissables.get(nom);
     if (estFonction(v)) return v;
     if (v !== undefined && ts.isIdentifier(v)) return resoudre(v.text, vus);
-    return null;
+    return NON_LOCALE;
   };
-  const valeur = (e: ts.Expression): Fonction | null =>
-    estFonction(e) ? e : ts.isIdentifier(e) ? resoudre(e.text) : null;
-  const NON_LOCALE = 'la valeur n’est ni une fonction ni le nom d’une fonction locale';
+  const valeur = (e: ts.Expression): Fonction | string =>
+    estFonction(e) ? e : ts.isIdentifier(e) ? resoudre(e.text) : NON_LOCALE;
+  /** Un export rendu : sa fonction si elle s'établit, sinon sa forme ET le motif. */
+  const rendu = (nom: string, libelle: string, r: Fonction | string, forme: string): Export =>
+    typeof r === 'string'
+      ? { nom, libelle, fn: null, forme: `${forme} : ${r}` }
+      : { nom, libelle, fn: r, forme: '' };
 
   const vues: Export[] = [];
   for (const i of source.statements) {
     if (ts.isFunctionDeclaration(i) && exporte(i)) {
       if (!i.body) continue; // une signature de surcharge : l'implémentation suit
-      const defaut = parDefaut(i);
-      const nom = defaut ? 'default' : (i.name?.text ?? 'default');
-      vues.push({ nom, libelle: i.name?.text ?? 'default', fn: i, forme: '' });
+      const nom = parDefaut(i) ? 'default' : (i.name?.text ?? 'default');
+      const libelle = i.name?.text ?? 'default';
+      const o = i.name ? obstacle(i.name.text) : null;
+      vues.push(rendu(nom, libelle, o ?? i, 'fonction exportée'));
     } else if (ts.isVariableStatement(i) && exporte(i)) {
+      const constante = estConst(i.declarationList);
       for (const d of i.declarationList.declarations) {
-        const nom = ts.isIdentifier(d.name) ? d.name.text : d.name.getText(source);
-        const fn = ts.isIdentifier(d.name) && d.initializer ? valeur(d.initializer) : null;
-        vues.push({
-          nom,
-          libelle: nom,
-          fn,
-          forme: ts.isIdentifier(d.name)
-            ? `constante exportée dont ${NON_LOCALE}`
-            : 'déstructuration exportée',
-        });
+        if (!ts.isIdentifier(d.name)) {
+          // Un motif : un site PAR NOM LIÉ, dont la valeur n'est pas une fonction locale établie.
+          for (const n of nomsLies(d.name)) {
+            vues.push(
+              rendu(n.text, n.text, NON_LOCALE, `déstructuration exportée, « ${n.text} » y est lié`)
+            );
+          }
+          continue;
+        }
+        const nom = d.name.text;
+        const r = !constante
+          ? REASSIGNABLE(nom)
+          : (obstacle(nom) ?? (d.initializer ? valeur(d.initializer) : NON_LOCALE));
+        vues.push(rendu(nom, nom, r, constante ? 'constante exportée' : 'liaison exportée'));
       }
     } else if (
       (ts.isClassDeclaration(i) || ts.isEnumDeclaration(i) || ts.isModuleDeclaration(i)) &&
@@ -212,15 +353,17 @@ function exportsDuModule(source: ts.SourceFile): Export[] {
         fn: null,
         forme: `${genre} exportée`,
       });
+    } else if (ts.isImportEqualsDeclaration(i) && exporte(i) && !i.isTypeOnly) {
+      const nom = i.name.text;
+      vues.push({ nom, libelle: nom, fn: null, forme: '`export import … =` (un import exporté)' });
     } else if (ts.isExportAssignment(i)) {
       const e = i.expression;
       const libelle = ts.isIdentifier(e) ? e.text : 'default';
-      vues.push({
-        nom: i.isExportEquals ? 'export =' : 'default',
-        libelle,
-        fn: i.isExportEquals ? null : valeur(e),
-        forme: i.isExportEquals ? '`export =`' : `export par défaut dont ${NON_LOCALE}`,
-      });
+      vues.push(
+        i.isExportEquals
+          ? { nom: 'export =', libelle, fn: null, forme: '`export =`' }
+          : rendu('default', libelle, valeur(e), 'export par défaut')
+      );
     } else if (ts.isExportDeclaration(i) && !i.isTypeOnly) {
       const depuis =
         i.moduleSpecifier && ts.isStringLiteral(i.moduleSpecifier)
@@ -246,13 +389,16 @@ function exportsDuModule(source: ts.SourceFile): Export[] {
             vues.push({ nom, libelle: nom, fn: null, forme: `réexport depuis « ${depuis} »` });
             continue;
           }
-          if (types.has(local) && !locales.has(local)) continue; // un type, pas une valeur
-          vues.push({
-            nom,
-            libelle: nom,
-            fn: resoudre(local),
-            forme: `\`export { ${local}${local === nom ? '' : ` as ${nom}`} }\` dont ${NON_LOCALE}`,
-          });
+          // Un type, pas une valeur — seulement si AUCUNE valeur, importée comprise, ne porte ce nom.
+          if (types.has(local) && !declarations.has(local)) continue;
+          vues.push(
+            rendu(
+              nom,
+              nom,
+              resoudre(local),
+              `\`export { ${local}${local === nom ? '' : ` as ${nom}`} }\``
+            )
+          );
         }
       }
     }
@@ -260,16 +406,19 @@ function exportsDuModule(source: ts.SourceFile): Export[] {
   return vues;
 }
 
-/** Les fonctions qui portent ELLES-MÊMES la directive `'use server'`, où qu'elles soient. */
+/**
+ * Les fonctions — et les méthodes d'objet ou de classe — qui portent ELLES-MÊMES la directive
+ * `'use server'`, où qu'elles soient.
+ */
 function actionsEnLigne(source: ts.SourceFile): Site[] {
   const vues: Site[] = [];
   const visiter = (n: ts.Node): void => {
-    if (estFonction(n) && n.body && ts.isBlock(n.body)) {
+    if ((estFonction(n) || ts.isMethodDeclaration(n)) && n.body && ts.isBlock(n.body)) {
       if (directives(n.body.statements).includes('use server')) {
         const parent = n.parent;
         const nom =
-          ts.isFunctionDeclaration(n) && n.name
-            ? n.name.text
+          (ts.isFunctionDeclaration(n) || ts.isMethodDeclaration(n)) && n.name
+            ? n.name.getText(source)
             : ts.isVariableDeclaration(parent) && ts.isIdentifier(parent.name)
               ? parent.name.text
               : '(anonyme)';
@@ -296,7 +445,7 @@ function sitesDuFichier(chemin: string, source: ts.SourceFile): Site[] {
   if (directives(source.statements).includes('use server')) {
     for (const e of exports) sites.push(site(e, 'action'));
   }
-  if (/^page\.tsx?$/.test(base)) {
+  if (EST_UNE_PAGE.test(base)) {
     const page = exports.find((e) => e.nom === 'default');
     sites.push(
       page
@@ -304,7 +453,7 @@ function sitesDuFichier(chemin: string, source: ts.SourceFile): Site[] {
         : { nom: 'default', genre: 'ecran', corps: null, forme: 'aucun export par défaut' }
     );
   }
-  if (/^route\.tsx?$/.test(base)) {
+  if (EST_UNE_ROUTE.test(base)) {
     for (const e of exports.filter((x) => METHODES_HTTP.has(x.nom) || x.nom === TOUT)) {
       sites.push(site(e, 'route'));
     }
