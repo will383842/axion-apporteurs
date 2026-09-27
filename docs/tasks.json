@@ -9355,12 +9355,22 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 1,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "ETAT MESURE le 2026-09-12. Le champ `attestation { pr, sha de 40 hex, fusionneeAt }` EXISTE, il est declare au schema, `lot:cloture` REFUSE le passage `fusionnee` sans ses trois valeurs, et `gov:tasks` en juge la forme (familles attestation_sha_non_conforme, attestation_date_non_conforme). Mais tout cela ne s'arme QUE si le depot de la tache n'est pas `partners` : la condition est dans `scripts/lot/cloture.ts` et gouverne tout le bloc. Mesure : 1 tache porte une attestation (INT-T01b, chez axionia) ; 33 taches `fusionnee` en `repo: partners`, ZERO avec un sha. Une tache locale passe donc `fusionnee` avec un `pr` nu, et rien ne conserve la trace du commit qui l'a fait atterrir. Consequence mesuree le 2026-09-09 sur la chaine de gardes d'alors : GOV-035 passee `fusionnee` A LA MAIN dans `docs/tasks.json`, sans aucun `resultat.json`, la laissait entierement verte — le `deny` de la configuration de session protege l'outil d'un agent, il ne protege pas le fichier. Et l'invariant qui aurait pu le voir est tenu par un fichier que le depot ne VOIT pas : `docs/lots/` est hors suivi, verifie par `git log --all --diff-filter=A -- docs/lots` qui ne rend rien sur aucune branche, et seul `rendre-resultat-lot.mjs`, hors depot, mesure l'ancestralite du commit. LA TACHE ETEND l'attestation aux taches locales — elle n'en invente pas une deuxieme forme (RM-01) — et une garde confronte les deux populations dans les DEUX SENS : un statut `fusionnee` sans attestation, une attestation sans statut. Contre-temoin obligatoire : les taches livrees hors depot, qui portent deja la leur, doivent RESTER vertes.\n\n⚠️ AMENDEMENT DU 2026-09-16 — LE RATTRAPAGE DU PASSE, SANS LEQUEL CETTE TACHE NE PEUT PAS SE FERMER. Etendre l'attestation aux taches locales la rend exigible sur les 33 taches de phase -1 deja `fusionnee` chez `partners`, dont AUCUNE ne porte de sha : la garde rougirait le jour de sa livraison sur un passe qu'elle ne peut pas reecrire. Le sha manquant NE S'INVENTE PAS et NE SE DEVINE PAS : il se LIT dans l'historique de la branche par defaut, en cherchant le commit d'ecrasement qui NOMME la tache (`git log --format=%H --grep '<ID>' origin/main`), et le rattrapage ECHOUE BRUYAMMENT quand la recherche rend zero commit ou plus d'un — une tache dont le commit d'atterrissage est ambigu reste SANS attestation et le dit, plutot que de porter un sha plausible. Un enregistrement fabrique est pire que l'enregistrement absent qu'il remplace : c'est exactement ce que cette tache reproche a l'etat actuel. Contre-temoin exige : une tache dont le motif de recherche rend deux commits laisse l'attestation vide, la garde la NOMME, et le vert final imprime le compte des taches reellement rattrapees, jamais la longueur d'une liste tapee.",
       "tests": {
         "REQ-GOV-026": [
           "tests/unit/gouvernance/un-statut-fusionnee-porte-sa-preuve.spec.ts"
         ]
+      },
+      "issue": 163,
+      "owner": "A05",
+      "branch": "t/lot-l0-08",
+      "pr": 168,
+      "motif": null,
+      "attestation": {
+        "pr": 168,
+        "sha": "a8d0f40dc85917d593b10a87a37a6ca39bf81f3e",
+        "fusionneeAt": "2026-09-27T07:31:18Z"
       }
     },
     {
@@ -9466,7 +9476,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.75,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "Le cliquet compte les sorties non nulles sous `scripts/` et les confronte a un registre DECLARE. MESURE SUR CE SHA, et DEUX de mes affirmations precedentes etaient FAUSSES — la lentille exactitude les a dementies, la seconde PAR MUTATION. L'ETAT : 12 fichiers declares, somme des `total` = 35, somme des `porte` = 71 ; 12 fichiers sur les 33 qui portent une sortie non nulle, sur 45 scripts suivis. PREMIERE CORRECTION : j'avais ecrit « 8 entrees a delta nul ». Le 8 comptait les entrees ou `total` egale `porte`, ce qui n'est pas un delta. Le delta que le cliquet lit est celui du DIFF COURANT : sur cette tete, `main` ayant absorbe les PR 31 et 32, les DOUZE entrees sur douze ont un delta de zero. Le registre n'est pas un journal du diff, c'est la DETTE du depot. SECONDE CORRECTION, et elle change la nature du defaut : j'avais ecrit que « retirer un refus et en ajouter un autre AILLEURS laisse le cliquet vert ». C'est FAUX, et la mutation le montre — un echange ENTRE FICHIERS est ROUGE et NOMME le fichier, parce que le controle exige `total === n` fichier par fichier sur ce que le diff ajoute. Ce qui reste vert est l'echange DANS UN MEME FICHIER, et il porte sur les 71 sorties absolues, pas sur un ecart de 36. LE DEFAUT REEL, DONC, EST PLUS ETROIT ET PLUS PRECIS QUE CE QUE J'ANNONCAIS : a l'interieur d'un fichier declare, les sorties sont interchangeables ; et 21 fichiers sur 33 ne sont gardes que par le total global. La tache attache a chaque sortie declaree un TEMOIN NOMME : retirer un refus doit faire rougir CE refus-la, pas seulement son fichier. RM-02 sur chacun, par MUTATION : retirer une sortie precise et constater QUEL test tombe, pas seulement QU'UN test tombe. Elle NOMME et COMPTE les fichiers qu'elle laisse hors registre. Tous les chiffres ci-dessus sont DATES du 2026-09-12 : ils se remesurent, ils ne se recopient pas — c'est en les recopiant que je me suis trompe deux fois.",
       "tests": {
         "REQ-GOV-012": [
@@ -9475,6 +9485,16 @@
         "REQ-GOV-024": [
           "tests/unit/gouvernance/cliquet-nomme-chaque-refus.spec.ts"
         ]
+      },
+      "issue": 159,
+      "owner": "A05",
+      "branch": "t/lot-l0-08",
+      "pr": 168,
+      "motif": null,
+      "attestation": {
+        "pr": 168,
+        "sha": "a8d0f40dc85917d593b10a87a37a6ca39bf81f3e",
+        "fusionneeAt": "2026-09-27T07:31:18Z"
       }
     },
     {
@@ -9635,12 +9655,22 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "LE DEFAUT, MESURE PAR MUTATION le 2026-09-12 : le schema ne pose sur `paths` que `items: { type: string }` — aucune forme. Un chemin remontant hors du depot traverse alors toute la chaine : ecrivain exit 0, `gov:tasks` exit 0, `pnpm gov:check` 16/16 exit 0 apres regeneration des vues. Refait independamment par une seconde lentille. Le champ EST lu — la famille `isolation_depot` tire sur un chemin d'axionia — c'est la FORME qui manque, pas la lecture. LA TACHE POSE LA FORME AU SCHEMA, la ou tous les ecrivains la rencontrent. LE CRITERE, ENONCE POSITIVEMENT — un chemin normal : (a) ne porte AUCUN caractere de la classe Unicode C ; (b) ne porte AUCUN blanc Unicode en bordure d'AUCUN SEGMENT ; (c) ne porte AUCUNE sequence percent-encodee ; (d) est EGAL a sa forme canonique, et ne sort pas du depot — pas de remontant en tete, pas de racine, pas de lettre de lecteur, pas d'antislash. ⚠️ LA CLAUSE (b) NE PARLE QUE DES SEGMENTS, ET C'EST UNE CORRECTION MESUREE : une redaction ajoutait « en bordure de la CHAINE ni d'aucun segment », et le test separe des bords de la chaine etait du CODE MORT — les 25 caracteres White_Space d'Unicode joues dans 8 positions, 200 formes, changent ZERO verdict quand on le desarme, parce que le premier segment commence ou commence la chaine. Une clause annoncee qui ne tient rien est un invariant que rien ne tient : la poser AU SCHEMA serait le figer. Aucune lentille ne l'exigeait ; c'est la mesure qui a decide. Chaque clause est une CLASSE FERMEE ou une PROPRIETE VERIFIABLE, jamais une enumeration de membres : c'est le point sur lequel quatre redactions successives de l'ecrivain provisoire ont echoue, chacune mesuree fausse par une lentille. Trois precisions qui ont chacune coute un tour : c'est `\\p{C}` et non `\\p{Cf}`, sans quoi `Cn` et `Co` passent ; c'est `White_Space` et non `\\s`, qui n'en est que la moitie ; et un remontant EN TETE survit a la normalisation, donc le controle du segment reste necessaire a cote. LE CONTRE-TEMOIN EST LE VRAI LIVRABLE, ET IL A TUE QUATRE REDACTIONS. Il balaie TOUS les chemins que le depot declare — l'UNION de ceux de `docs/tasks.json` et de `docs/paths-proposes.json` — et exige ZERO refus, en RENDANT le compte au lieu de l'attendre. ⚠️ AUCUN NOMBRE N'EST GRAVE ICI, et c'est une lecon payee : une redaction precedente citait « 396 + 281 » ; ce compte etait celui de la tete de la veille, c'etait une SOMME la ou 69 chemins appartiennent aux deux corpus, et la tache GOV-051 versee dans le MEME commit en ajoutait un. Une acceptance qui fige un compte que son propre commit fait bouger se perime toute seule. Le contre-temoin doit AUSSI laisser passer les formes qu'une lentille a jugees sans consommateur : les refuser serait retomber dans la premiere redaction, qui interdisait du legitime en silence. TROIS LIMITES DE FOND, MESUREES, ET LA TROISIEME EST LA PLUS IMPORTANTE. Ce controle est SYNTAXIQUE : il refuse la forme percent-encodee sans jamais DECODER, et il ne verra jamais un lien symbolique. ET IL NE FERMERA JAMAIS LES HOMOGLYPHES — un `a` cyrillique desarme le meme consommateur, et c'est une lettre ordinaire. Deux lentilles l'ont mesure separement et ont REFUSE d'en faire un motif, au meme argument : l'exiger serait demander l'article suivant d'un inventaire, c'est-a-dire reproduire le defaut quatre fois constate. LA PROPRIETE PROTEGEE N'EST PAS UNE PROPRIETE DU CHEMIN, C'EST UNE PROPRIETE DE LA COMPARAISON : c'est GOV-051 qui la porte, et cette tache-ci ne pretend pas la fermer. L'HISTOIRE DES QUATRE REDACTIONS N'EST PAS ICI, ET C'EST VOULU : une acceptance ne contient que ce qu'un developpeur peut verifier point par point le jour de la livraison. Le recit appartient a l'entree de journal de la PR 34, a sa cloture.",
       "tests": {
         "REQ-GOV-021": [
           "tests/unit/gouvernance/un-path-designe-ce-depot-ci.spec.ts"
         ]
+      },
+      "issue": 154,
+      "owner": "A05",
+      "branch": "t/lot-l0-06",
+      "pr": 158,
+      "motif": null,
+      "attestation": {
+        "pr": 158,
+        "sha": "3f6dc5c624e4996f5ade744fc405992ad928c518",
+        "fusionneeAt": "2026-09-27T02:50:44Z"
       }
     },
     {
@@ -9664,12 +9694,22 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "CE QUE CINQ REDACTIONS D'UN CONTROLE DE FORME ONT ENSEIGNE, et c'est une lentille qui l'a nomme : « la propriete protegee n'est pas une propriete du CHEMIN, c'est une propriete de la COMPARAISON ». Elle ajoutait, sur elle-meme : « j'ai passe deux tours a apporter un codepoint de plus au mauvais endroit. » LE FAIT MESURE le 2026-09-12 : `scripts/gates/gov-conventions.ts` decide si un chemin appartient au depot voisin par `p.startsWith('axionia/')` — une comparaison BRUTE, par prefixe, sensible a la casse, non normalisee. CINQ FAMILLES la defont, toutes jouees de bout en bout, chacune amenant `pnpm gov:check` de exit 1 a exit 0 sur une tache qui revendique un fichier du depot voisin : (1) un caractere de la classe Unicode C en tete ; (2) un caractere SANS GLYPHE hors de cette classe — remplisseur hangul, braille vide, marque non espacante ; (3) un HOMOGLYPHE, un `a` cyrillique par exemple, qui est une lettre ordinaire ; (4) la CASSE, `AXIONIA/` ; (5) une forme NON CANONIQUE, `./axionia/` ou `axionia//`. ⚠️ PRECISION MESUREE par la lentille mutation : depuis que l'ecrivain exige la forme canonique, la famille (5) n'amene plus `gov:check` a exit 0 PAR CET ECRIVAIN-LA. Elle reste entiere pour la propriete de comparaison, qui est le sujet de cette tache : une garde qui compare des chaines brutes reste defaite par deux orthographes du meme chemin, quel que soit l'ecrivain qui les a produites. AUCUNE CLAUSE DE FORME NE FERMERA CETTE FAMILLE, et c'est le coeur de la tache : GOV-050 ferme (1) et (5) au schema, et deux lentilles ont REFUSE d'exiger la fermeture de (2) et (3) en mesurant que ce serait « demander l'article suivant d'un inventaire », c'est-a-dire reproduire le defaut quatre fois constate. Le remede est ailleurs. LA TACHE : toute garde qui compare un chemin NORMALISE avant de comparer — forme canonique, normalisation Unicode, casse tranchee explicitement — et la comparaison passe par une primitive UNIQUE (RM-01), jamais par un `startsWith` recopie. Le temoin negatif porte LES CINQ FAMILLES, chacune vue rougir, et le contre-temoin verifie que les chemins legitimes du depot restent verts. A NOMMER DANS LA LIVRAISON : les autres gardes qui comparent des chemins par egalite ou par prefixe — `scripts/lot/composer.ts` detecte les collisions PAR EGALITE DE CHAINE — et si elles ne sont pas toutes converties, la liste de celles qui restent, comptee, jamais tue. CE QUE LA TACHE NE PRETEND PAS : elle ne rend pas la comparaison infaillible. Elle deplace la defense de la FORME de la donnee vers la LECTURE qu'on en fait, ce qui est le seul endroit ou un homoglyphe peut etre vu.",
       "tests": {
         "REQ-GOV-029": [
           "tests/unit/gouvernance/comparer-un-chemin-c-est-le-normaliser.spec.ts"
         ]
+      },
+      "issue": 155,
+      "owner": "A05",
+      "branch": "t/lot-l0-06",
+      "pr": 158,
+      "motif": null,
+      "attestation": {
+        "pr": 158,
+        "sha": "3f6dc5c624e4996f5ade744fc405992ad928c518",
+        "fusionneeAt": "2026-09-27T02:50:44Z"
       }
     },
     {
@@ -9721,12 +9761,22 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "MESURE QUI OUVRE LA TACHE, jouee par la lentille mutation au tour de revue de la PR 36, a refaire avant d'ecrire une ligne : reecrire la rubrique « Prochain pas » de docs/PLAN-STATE.md en « la phase -1 est TERMINEE, 39/39 taches, plus aucune tache eligible », puis `pnpm plan-state:verifier` -> EXIT 0. Le mensonge passe.\n\nPOURQUOI. `plan-state:verifier` exempte EN ENTIER toute rubrique dont le generateur a lu la forge pour l'ecrire — la provenance est notee au moment de l'ecriture, il n'y a plus de liste — et « Prochain pas » lit l'etat des PR pour la tete de la file de fusion. Mais LA LIGNE QUI ENUMERE LES TACHES ELIGIBLES se derive de `docs/tasks.json` SEUL — statut `a_faire`, phase courante, `externe` nul, dependances toutes livrees — sans le moindre appel a la forge. Une rubrique qui mele une source vivante et une source du depot est donc declaree volatile EN ENTIER, et sa part derivable sort du controle avec le reste.\n\n⚠️ AMENDEMENT DU 2026-09-16 — UNE RUBRIQUE SE DESIGNE PAR SON TITRE, JAMAIS PAR SON RANG. La premiere redaction disait « sa DEUXIEME ligne ». Ce rang est FAUX la moitie du temps : il designe le deuxieme paragraphe quand une PR est en tete de la file de fusion, et le premier quand la file est vide. Un temoin qui depend de l'etat de la file se perime entre deux lectures, et la garde qu'il fonde mesure alors autre chose que ce qu'elle annonce. TOUTE DESIGNATION ORDINALE EST RETIREE de cette tache : la rubrique se nomme « Prochain pas », la ligne visee se designe par CE QU'ELLE DERIVE (la liste des taches eligibles, derivee de `docs/tasks.json` seul), et le generateur porte cette designation dans son code, pas dans un commentaire. La meme interdiction vaut pour la livraison : aucun livrable de cette tache ne compte une ligne ni une rubrique par sa position.\n\nLA LECON, et elle deborde ce fichier : le classement est par RUBRIQUE, la volatilite est par LIGNE. Le bloc de reprise est deja traite ligne a ligne — c'est la bonne granularite, elle n'a simplement pas ete appliquee aux rubriques.\n\nACCEPTATION — ELLE EST LA GARDE.\n  (a) ROUGE : falsifier la part DERIVABLE d'une rubrique par ailleurs volatile fait sortir 1, et l'ecart est nomme en unites du domaine. Fabriquer la panne, jamais la constater (RM-02).\n  (b) VERT : falsifier la part VIVANTE de la meme rubrique reste vert, et le message le DIT — un vert muet promet plus qu'il ne tient.\n  (c) Le vert final annonce le compte des lignes REELLEMENT confrontees, jamais la longueur d'une liste declaree. C'est le defaut que la PR 36 a corrige au niveau des rubriques ; il ne doit pas revenir au niveau des lignes.\n\nCE QUI EST DEJA FERME, et qu'il ne faut pas refaire : chaque rubrique exemptee est imprimee avec la source vivante que le generateur a lue pour l'ecrire ; le bloc de reprise est compare dans les DEUX sens, ligne a ligne et par sa forme ; une question dupliquee est un refus ; une prose de trop est un refus. La granularite de la LIGNE existe donc deja dans le generateur (`ligneDeReprise`) : c'est elle qu'il faut etendre aux rubriques. Cette tache ne porte QUE la granularite des rubriques.",
       "tests": {
         "REQ-GOV-032": [
           "tests/unit/gouvernance/volatilite-par-ligne.spec.ts"
         ]
+      },
+      "issue": 150,
+      "owner": "A05",
+      "branch": "t/lot-l0-06",
+      "pr": 158,
+      "motif": null,
+      "attestation": {
+        "pr": 158,
+        "sha": "3f6dc5c624e4996f5ade744fc405992ad928c518",
+        "fusionneeAt": "2026-09-27T02:50:44Z"
       }
     },
     {
@@ -9748,12 +9798,22 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "MESURE QUI OUVRE LA TACHE, trouvee par A10 mutation au tour de revue de la PR 36 : le cliquet compte `/process\\.exit\\(\\s*(?!0\\s*\\))/g` sous `scripts/`. La PR 36 ajoute DEUX refus a `scripts/plan-state/build.ts`, tous deux ecrits `process.exitCode = 1` — une forme que ce motif ne voit pas. Le compte reste donc a 179 et le cliquet ne bouge pas.\n\nCE QUI EST GRAVE N'EST PAS LE CHIFFRE. « 179 -> 179 » etait EXACT, et exact pour une raison que la PR ne disait pas. Le cliquet est cense compter les sorties non nulles AJOUTEES pour qu'aucune n'entre sans etre declaree et couverte par un temoin d'effet. Deux sorties sont entrees sans passer devant lui.\n\nLES DEUX FORMES SONT LEGITIMES et ne doivent PAS etre unifiees a l'aveugle : `process.exit(n)` sort immediatement, `process.exitCode = n` laisse le processus finir — c'est la bonne forme quand il reste des lignes a imprimer. Le defaut est que le cliquet n'en voit qu'une.\n\nACCEPTATION — ELLE EST LA GARDE.\n  (a) ROUGE : ajouter un `process.exitCode = 1` non declare sous `scripts/` fait rougir le cliquet, en NOMMANT le fichier et l'ecart, exactement comme il le fait deja pour `process.exit(1)`. Fabriquer la panne (RM-02).\n  (b) VERT : le contre-temoin, un `process.exitCode = 0`, ne compte pas.\n  (c) Le total declare est recalcule UNE fois, ARBITRE et non subi, et le commentaire dit d'ou vient l'ecart — le fichier porte deja cette discipline pour les trois arbitrages precedents (25 -> 26 -> 27 -> 35).\n\nATTENTION AU SEUIL. Il est GLOBAL : il somme tout ce qui atterrit, jamais le sommet d'une branche. Recompter APRES avoir lu le rouge, jamais declarer d'avance — « le total ne bouge pas sans qu'on l'ecrive » est ecrit dans le fichier meme.",
       "tests": {
         "REQ-GOV-012": [
           "tests/unit/gouvernance/cliquet-sorties-differees.spec.ts"
         ]
+      },
+      "issue": 160,
+      "owner": "A05",
+      "branch": "t/lot-l0-08",
+      "pr": 168,
+      "motif": null,
+      "attestation": {
+        "pr": 168,
+        "sha": "a8d0f40dc85917d593b10a87a37a6ca39bf81f3e",
+        "fusionneeAt": "2026-09-27T07:31:18Z"
       }
     },
     {
@@ -9777,13 +9837,23 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "tests": {
         "REQ-GOV-032": [
           "tests/unit/gouvernance/couverture-attendue.spec.ts"
         ]
       },
-      "acceptance": "⚠️ CETTE ACCEPTANCE A ETE ECRITE FAUSSE UNE FOIS, ET LA CORRECTION FAIT PARTIE DE LA LECON. Sa premiere redaction annoncait trois mesures a EXIT 0 ; A09 exactitude les a rejouees et DEUX etaient fausses — elles avaient ete ecrites contre l'arbre du tour precedent et jamais rejouees. C'etait exactement le defaut que la meme lentille avait refuse au tour d'avant : un attendu derive d'un etat perime, transplante dans le backlog. Les trois mesures ci-dessous ont ete REJOUEES sur l'arbre final.\n\nLA MESURE QUI OUVRE LA TACHE, une seule, et elle suffit :\n  Neutraliser la rubrique `titre('Bloquées')` (et ses lignes) dans le generateur, puis `pnpm plan-state:build`, puis `pnpm plan-state:verifier` :\n      ✅ plan-state:verifier — 8 rubrique(s) comparee(s) octet par octet   EXIT 0\n  La couverture tombe de 9 a 8 EN SILENCE. Le vert ne ment pas — il compte ce qu'il a compare — mais rien ne dit qu'il en manque une.\n\nDEUX MESURES VOISINES, REJOUEES ET FERMEES — ne pas les reprendre, elles sont ici pour eviter qu'on les cherche :\n  - renommer `## Bloquees` en `## Dernier atterrissage` (un nom EXACTEMENT volatile) : EXIT 1, famille `rubrique_dupliquee`. Les cinq noms volatiles sont pousses inconditionnellement par le generateur, donc tout renommage vers l'un d'eux cree un doublon — et le doublon est un refus depuis la PR 36.\n  - supprimer une ligne comparee du bloc de reprise : le vert annonce « 4 ligne(s) CONFRONTEES » au lieu de 5. Meme famille que la mesure principale, meme cause.\n\nPOURQUOI CE N'EST PAS REPARABLE PAR UN TEST DE PLUS. Le verificateur compare ce que le generateur PRODUIT a ce qui est sur le DISQUE. Si le generateur cesse de produire un element, les deux cotes le perdent ENSEMBLE et l'ecart n'existe pas. Un temoin qui derive son attendu du rendu ne peut pas voir ce que le rendu a perdu. La PR 36 l'a appris deux fois : d'abord sur le temoin de couverture des rubriques, puis sur celui de la population des mesures. A10 mutation a nomme la forme generale : « la population et l'observation viennent de la meme source, la soustraction reste vide PAR CONSTRUCTION ».\n\nIL FAUT UNE SOURCE EXTERIEURE, et elle n'existe pas encore. REQ-GOV-006 enumere six elements de PLAN-STATE — SHA de main, PR en vol et file de fusion, tache revendiquee, decisions du jour, prochain pas, bloc REPRENDRE EN 30 SECONDES — toutes VOLATILES. Aucune source ne nomme les rubriques COMPAREES dues.\n\nACCEPTATION — ELLE EST LA GARDE.\n  (a) La liste des elements DUS est declaree UNE fois, dans une source du domaine (candidat : etendre REQ-GOV-006, qui en nomme deja six), jamais dans le script qui la verifie — sinon le script se compare encore a lui-meme.\n  (b) ROUGE : retirer un element du generateur sort 1 et NOMME l'element disparu. Fabriquer la panne (RM-02).\n  (c) VERT : le contre-temoin, un rendu complet, reste vert et annonce le compte ATTENDU a cote du compte observe.\n  (d) La famille neuve entre dans `FAMILLES` (`scripts/plan-state/build.ts`) — sinon le temoin de population la denoncera, ce qui est son office.\n\nLE MEME MUR, A LA QUATRIEME POPULATION. `MESURES_ATTENDUES` derive de `LECTURES`, donc retirer une lecture fait tomber l'attendu ET l'observe ensemble : le temoin `X/Y` reste vert. Il attrape en revanche le mode de panne REEL — une regex qui cesse de correspondre parce que la vue a change de forme — verifie dans les deux sens. La meme source exterieure fermerait les deux."
+      "acceptance": "⚠️ CETTE ACCEPTANCE A ETE ECRITE FAUSSE UNE FOIS, ET LA CORRECTION FAIT PARTIE DE LA LECON. Sa premiere redaction annoncait trois mesures a EXIT 0 ; A09 exactitude les a rejouees et DEUX etaient fausses — elles avaient ete ecrites contre l'arbre du tour precedent et jamais rejouees. C'etait exactement le defaut que la meme lentille avait refuse au tour d'avant : un attendu derive d'un etat perime, transplante dans le backlog. Les trois mesures ci-dessous ont ete REJOUEES sur l'arbre final.\n\nLA MESURE QUI OUVRE LA TACHE, une seule, et elle suffit :\n  Neutraliser la rubrique `titre('Bloquées')` (et ses lignes) dans le generateur, puis `pnpm plan-state:build`, puis `pnpm plan-state:verifier` :\n      ✅ plan-state:verifier — 8 rubrique(s) comparee(s) octet par octet   EXIT 0\n  La couverture tombe de 9 a 8 EN SILENCE. Le vert ne ment pas — il compte ce qu'il a compare — mais rien ne dit qu'il en manque une.\n\nDEUX MESURES VOISINES, REJOUEES ET FERMEES — ne pas les reprendre, elles sont ici pour eviter qu'on les cherche :\n  - renommer `## Bloquees` en `## Dernier atterrissage` (un nom EXACTEMENT volatile) : EXIT 1, famille `rubrique_dupliquee`. Les cinq noms volatiles sont pousses inconditionnellement par le generateur, donc tout renommage vers l'un d'eux cree un doublon — et le doublon est un refus depuis la PR 36.\n  - supprimer une ligne comparee du bloc de reprise : le vert annonce « 4 ligne(s) CONFRONTEES » au lieu de 5. Meme famille que la mesure principale, meme cause.\n\nPOURQUOI CE N'EST PAS REPARABLE PAR UN TEST DE PLUS. Le verificateur compare ce que le generateur PRODUIT a ce qui est sur le DISQUE. Si le generateur cesse de produire un element, les deux cotes le perdent ENSEMBLE et l'ecart n'existe pas. Un temoin qui derive son attendu du rendu ne peut pas voir ce que le rendu a perdu. La PR 36 l'a appris deux fois : d'abord sur le temoin de couverture des rubriques, puis sur celui de la population des mesures. A10 mutation a nomme la forme generale : « la population et l'observation viennent de la meme source, la soustraction reste vide PAR CONSTRUCTION ».\n\nIL FAUT UNE SOURCE EXTERIEURE, et elle n'existe pas encore. REQ-GOV-006 enumere six elements de PLAN-STATE — SHA de main, PR en vol et file de fusion, tache revendiquee, decisions du jour, prochain pas, bloc REPRENDRE EN 30 SECONDES — toutes VOLATILES. Aucune source ne nomme les rubriques COMPAREES dues.\n\nACCEPTATION — ELLE EST LA GARDE.\n  (a) La liste des elements DUS est declaree UNE fois, dans une source du domaine (candidat : etendre REQ-GOV-006, qui en nomme deja six), jamais dans le script qui la verifie — sinon le script se compare encore a lui-meme.\n  (b) ROUGE : retirer un element du generateur sort 1 et NOMME l'element disparu. Fabriquer la panne (RM-02).\n  (c) VERT : le contre-temoin, un rendu complet, reste vert et annonce le compte ATTENDU a cote du compte observe.\n  (d) La famille neuve entre dans `FAMILLES` (`scripts/plan-state/build.ts`) — sinon le temoin de population la denoncera, ce qui est son office.\n\nLE MEME MUR, A LA QUATRIEME POPULATION. `MESURES_ATTENDUES` derive de `LECTURES`, donc retirer une lecture fait tomber l'attendu ET l'observe ensemble : le temoin `X/Y` reste vert. Il attrape en revanche le mode de panne REEL — une regex qui cesse de correspondre parce que la vue a change de forme — verifie dans les deux sens. La meme source exterieure fermerait les deux.",
+      "issue": 151,
+      "owner": "A05",
+      "branch": "t/lot-l0-06",
+      "pr": 158,
+      "motif": null,
+      "attestation": {
+        "pr": 158,
+        "sha": "3f6dc5c624e4996f5ade744fc405992ad928c518",
+        "fusionneeAt": "2026-09-27T02:50:44Z"
+      }
     },
     {
       "id": "GOV-056",
@@ -9976,7 +10046,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "MESURE DU 2026-09-16, a refaire avant d'ecrire une ligne : `docs/PLAN-STATE.md` annonce des questions ouvertes pour Will, dont une au moins — la decision d'integration canonique, tranchee le 2026-09-03 — que le registre rend NON bloquante. `scripts/plan-state/build.ts` derive ces questions des hypotheses absentes d'une section de `docs/DECISIONS.md`, SANS passer par `registre-decisions.ts`, que le composeur et `gov:tasks` importent depuis GOV-027. C'est un TROISIEME lecteur du meme registre, et `plan-state:verifier` ne peut pas le voir : il compare la vue a son generateur, pas le generateur a la source. LE REGISTRE FAIT FOI, LA VUE EST FAUTIVE. A livrer : le generateur importe le lecteur unique, et aucun autre chemin de lecture ne subsiste dans le fichier. TEMOIN A DEUX FACES : une hypothese tranchee dans le registre fait disparaitre la question de la vue regeneree, et une hypothese reellement ouverte l'y fait apparaitre ; un second lecteur reintroduit dans le fichier fait sortir la garde du lecteur unique en code non nul et NOMME la ligne. Ordre impose, meme fichier que GOV-053 et GOV-055 : GOV-053, puis GOV-055, puis celle-ci ; jamais deux dans un meme lot.",
       "tests": {
         "REQ-GOV-006": [
@@ -9988,6 +10058,16 @@
         "REQ-GOV-024": [
           "tests/unit/gouvernance/plan-state-lecteur-unique.spec.ts"
         ]
+      },
+      "issue": 152,
+      "owner": "A05",
+      "branch": "t/lot-l0-06",
+      "pr": 158,
+      "motif": null,
+      "attestation": {
+        "pr": 158,
+        "sha": "3f6dc5c624e4996f5ade744fc405992ad928c518",
+        "fusionneeAt": "2026-09-27T02:50:44Z"
       }
     },
     {
@@ -10430,7 +10510,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "L'ANALYSE D'UN DOCUMENT JSON GARDE LA DERNIERE OCCURRENCE D'UNE CLE REPETEE, et aucune garde de ce depot ne lit le TEXTE du registre. Une exigence peut donc etre REMPLACEE EN SILENCE par une seconde ecriture de la meme cle, et toutes les gardes restent vertes : elles jugent l'objet obtenu, jamais le document lu. Mesure du 2026-09-16 : 355 identifiants, aucun doublon d'IDENTIFIANT — le defaut porte sur la cle d'objet, et il est donc ouvert sans etre realise. Meme famille, deja consignee : un identifiant repete dans une valeur derivee du registre. Fait joint : un registre illisible sort aujourd'hui sur une trace brute, pas sur un refus nomme. A livrer : la garde lit le TEXTE du registre et refuse toute cle ecrite deux fois, a quelque profondeur que ce soit ; un registre illisible sort par un refus NOMME. TEMOIN A DEUX FACES : un registre de bac d'essai ou une cle d'exigence est ecrite deux fois fait sortir la garde en code non nul et NOMME la cle et les deux positions ; le registre du depot la fait sortir en zero, avec le compte des cles reellement confrontees. A grouper avec la reparation de l'outil hors depot qui ecrit ce registre : c'est le meme defaut, des deux cotes de la barriere.",
       "tests": {
         "REQ-GOV-001": [
@@ -10439,6 +10519,16 @@
         "REQ-GOV-032": [
           "tests/unit/gouvernance/une-cle-ecrite-deux-fois.spec.ts"
         ]
+      },
+      "issue": 161,
+      "owner": "A05",
+      "branch": "t/lot-l0-08",
+      "pr": 168,
+      "motif": null,
+      "attestation": {
+        "pr": 168,
+        "sha": "a8d0f40dc85917d593b10a87a37a6ca39bf81f3e",
+        "fusionneeAt": "2026-09-27T07:31:18Z"
       }
     },
     {
@@ -10681,7 +10771,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "CONSTAT MESURE PAR LA REPETITION A BLANC DU 2026-09-16, et il corrige une premisse fausse de ma part. J'avais demande de verifier que GOV-050 et GOV-051 restent NOMMEES dans `docs/PLAN-STATE.md` apres le basculement en phase 0. Elles ne le sont NI AVANT NI APRES — et ce n'est pas une regression : `plan-state:build` tronque la rubrique des taches a faire a DOUZE identifiants suivis de points de suspension. Les deux taches sont nommees dans `docs/TASKS.md`, `docs/TRACABILITE.md` et `docs/REQUIREMENTS.md` ; la vue d'etat, elle, en montre douze sur soixante-dix-huit. CE QUI REND CELA COUTEUX PLUTOT QUE COSMETIQUE : la vue d'etat est le document qu'on lit pour savoir ou en est le projet, et une troncature muette y fabrique une impression de petit reste. Aucun lecteur ne peut distinguer « douze taches a faire » de « douze taches a faire affichees sur soixante-dix-huit », et c'est la meme famille que le compte tape qui ne tient pas — la quatrieme de ce depot. A livrer : (1) toute liste tronquee de la vue imprime, a l'endroit meme de la troncature, le COMPTE TOTAL et le compte affiche, derives, jamais tapes ; (2) la rubrique nomme la vue ou la liste COMPLETE se lit, pour que le lecteur ait un chemin et non une frustration ; (3) le choix du plafond (douze) est ecrit avec son motif a cote du code qui l'applique. TEMOIN A DEUX FACES : une vue regeneree sur un registre portant plus de taches a faire que le plafond imprime le total et le compte affiche, et la garde sort en zero ; la meme vue ou le total est retire, ou bien recopie a la main au lieu d'etre derive, fait sortir la garde en code non nul et NOMME la rubrique tronquee. CE QUE CETTE TACHE NE FAIT PAS : elle ne releve pas le plafond. Douze est peut-etre le bon nombre ; ce qui n'est pas bon, c'est qu'il se taise.",
       "tests": {
         "REQ-GOV-032": [
@@ -10690,6 +10780,16 @@
         "REQ-GOV-026": [
           "tests/unit/gouvernance/aucune-troncature-muette.spec.ts"
         ]
+      },
+      "issue": 153,
+      "owner": "A05",
+      "branch": "t/lot-l0-06",
+      "pr": 158,
+      "motif": null,
+      "attestation": {
+        "pr": 158,
+        "sha": "3f6dc5c624e4996f5ade744fc405992ad928c518",
+        "fusionneeAt": "2026-09-27T02:50:44Z"
       }
     },
     {
@@ -11145,12 +11245,22 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "MESURE QUI OUVRE LA TACHE, a rejouer et non a recopier. Le 2026-09-23, la lentille `schema` de la PR #102 a constate que `GOV-063` porte `\"schema\": false` dans `docs/tasks.json` alors que ses `paths` nomment `packages/contracts/events.ts`. Aucune garde ne rougit : `gov:tasks` ne confronte pas `schema` aux `paths`, et le CHAMP, lui, est bel et bien lu : le decideur de `scripts/lot/revues.ts` ouvre sa decision par `if (entree.tachesSchema) return true;` — le NOM plutot que le numero de ligne, qui pourrit au premier commit et qui obligerait, selon `gov:sonde`, a poser un repere date et signe pour une affirmation du depot LUI-MEME, et `tachesSchema` vaut `t.schema === true`. ⚠️ CETTE PHRASE A DIT L INVERSE jusqu au 2026-09-23 — elle affirmait que `gov:pr` derive `toucheSchema` des seuls fichiers du diff et de `cheminsSchema`, jamais du registre. La lentille `schema` l a mesuree fausse, et la rectification AGGRAVE la tache au lieu de l alleger : le champ n est pas inerte, c est une entree du discriminant, et un `schema: true` force la lentille a lui seul. Ce qui reste vrai, et qui est le sujet : RIEN ne confronte le champ aux `paths`. Le bon comportement a donc ete obtenu ce jour-la par le diff, pas par le registre, et personne ne l aurait su si la lentille ne l avait pas cherche. SECOND VOLET, mesure dans la foulee : `reecrire-champ.mjs` REFUSE d ecrire `schema` (« n est pas un champ ecrivable de tasks.json » ; il ne reecrit que titre, acceptance, tests, sensible, deps, estimateDays) et `reclasser.mjs` ne le connait pas davantage. Le champ existe, il ment, et AUCUN verbe hors depot ne sait le remettre droit : il n est modifiable qu a la main, donc hors de toute trace. A LIVRER. (1) Une famille de `gov:tasks` confronte `schema` aux `paths` : une tache dont un `path` tombe sous un `cheminsSchema` (derive de la §7 de `docs/CHARTE-AGENTS.md`, JAMAIS recopie) et qui porte `schema: false` rougit en nommant le chemin fautif. (2) La RECIPROQUE est jugee aussi, et elle est plus delicate : une tache `schema: true` dont aucun `path` ne tombe sous `cheminsSchema` n est PAS forcement fautive (une tache peut engager le schema sans nommer le fichier), donc elle ne rougit pas — elle est IMPRIMEE, avec son compte, sous une rubrique qui dit pourquoi elle n est pas refusee. Un avertissement muet serait un vert qui ment. (3) Un temoin ROUGE vu rougir par famille, et un contre-temoin VERT par famille, dont un qui prouve qu une tache SANS `paths` ne rougit pas par vacuite. (4) LA POPULATION EST DE SEPT, PAS D UNE, et elle a ete mesuree sur les 266 taches du registre : `DM-01` (deja FUSIONNEE, `prisma/schema.prisma` et `prisma/migrations/`), `QA-T06`, `DM-03-P`, `SEC-06`, `SEC-03`, `SEC-04` et `GOV-063` portent un chemin de schema avec `schema` non vrai. La reciproque en compte SIX : `INT-T01b`, `INT-T03`, `INT-T05`, `GOV-042`, `GOV-049`, `GOV-050` declarent `schema: true` sans aucun chemin de schema — et celles-la ne sont PAS forcement fautives, d ou le traitement separe du livrable (2). Les sept sont remises droites par le meme mouvement, ou bien la garde les NOMME et la tache qui les remettra droites est ouverte. ⚠️ Que `DM-01` soit deja fusionnee dit le prix de l attente : une tache close porte deja le champ faux. (5) Le champ devient ECRIVABLE par un verbe hors depot, avec motif obligatoire et consignation au journal des reecritures — ou, si l equipe tranche l inverse, la raison de le laisser inecrivable est ecrite la ou le verbe refuse, pour que le prochain ne la redecouvre pas.",
       "tests": {
         "REQ-GOV-013": [
           "tests/unit/gouvernance/tasks-schema-et-paths.spec.ts"
         ]
+      },
+      "issue": 162,
+      "owner": "A05",
+      "branch": "t/lot-l0-08",
+      "pr": 168,
+      "motif": null,
+      "attestation": {
+        "pr": 168,
+        "sha": "a8d0f40dc85917d593b10a87a37a6ca39bf81f3e",
+        "fusionneeAt": "2026-09-27T07:31:18Z"
       }
     },
     {
@@ -12175,7 +12285,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 1.5,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "tests": {
         "REQ-INT-004": [
           "tests/unit/integration/contrat-hash.spec.ts"
@@ -12187,7 +12297,17 @@
           "tests/unit/integration/contrat-hash.spec.ts"
         ]
       },
-      "acceptance": "ELLE ÉCRIT LE SCHÉMA (label `schema`, seule de sa famille dans son lot) ET CHANGE LE CONTRAT EN LOCKSTEP (partners/ADR-0008 : publication des deux côtés dans la même fenêtre). Cadrage de l'architecte du 2026-09-26 (partners/ADR-0022, partners/ADR-0023). (1) Les quatre types de `TYPES_HORS_CONTRAT_V1` — `candidature.recue`, `financement.mis_a_jour`, `facture.annulee`, `client.fusionne` — entrent dans `TYPES_EVENEMENT`, qui passe à ONZE, `schema_version` 2 ; INT-T05 et INT-T22 les produisent ensuite. Dans la MÊME PR, et avec le `gardien-spec` : REQ-INT-004 énumère les onze types, REQ-QA-007 dit trois API au lieu de deux, et le glossaire §5 passe les quatre valeurs dans la ligne de `TypeEvenementRecu` ; sans ce lockstep `tests/unit/integration/contrat-hash.spec.ts` et `termes-interdits.spec.ts` rougissent, et c'est voulu. (2) Les `$defs` des onze payloads sont FERMÉS dans `packages/contracts/`, dérivés des fixtures du producteur réel (RM-03), jamais écrits à la main. (3) Frontière `identite_autre_apporteur` : `parrainCodeCapture` est exempté sur `candidature.recue` SEULEMENT, exemption écrite avec REQ-INT-032 (partners/ADR-0008 §4) ; la garde `coordonnees_du_contact` n'est pas affaiblie et le contrat reste SANS donnée personnelle. (4) Les coordonnées du candidat sont TIRÉES par Partners au traitement de `candidature.recue` : le schéma de la route `GET /api/partners/candidatures/{candidatureId}/coordonnees` d'axionia (même authentification HMAC que la relecture, liste d'autorisation, réponse `{nom, prenom, email, telephone}` pour les seules candidatures émises vers Partners, chaque appel journalisé) vit dans `packages/contracts/api.ts`, troisième API (partners/ADR-0023). Échec de la route : l'événement reste `en_attente_dependance` avec `dependance_ref = 'coordonnees:<candidatureId>'` et est rejoué, jamais un apporteur sans adresse. (5) Une migration Partners ajoute les quatre valeurs à `type_evenement_recu`, identifiant Prisma en `snake_case` et libellé de fil exact par `@map` (`candidature_recue @map(\"candidature.recue\")`), générées depuis `TYPES_EVENEMENT` ; un test compare les libellés de `pg_enum` à la constante (RM-01). (6) TÉMOIN À DEUX FACES : un payload portant un champ non déclaré est refusé au schéma et nomme le champ ; la fixture du producteur réel passe. Et l'empreinte du contrat diffère d'un côté : `contrat-hash.spec.ts` rougit."
+      "acceptance": "ELLE ÉCRIT LE SCHÉMA (label `schema`, seule de sa famille dans son lot) ET CHANGE LE CONTRAT EN LOCKSTEP (partners/ADR-0008 : publication des deux côtés dans la même fenêtre). Cadrage de l'architecte du 2026-09-26 (partners/ADR-0022, partners/ADR-0023). (1) Les quatre types de `TYPES_HORS_CONTRAT_V1` — `candidature.recue`, `financement.mis_a_jour`, `facture.annulee`, `client.fusionne` — entrent dans `TYPES_EVENEMENT`, qui passe à ONZE, `schema_version` 2 ; INT-T05 et INT-T22 les produisent ensuite. Dans la MÊME PR, et avec le `gardien-spec` : REQ-INT-004 énumère les onze types, REQ-QA-007 dit trois API au lieu de deux, et le glossaire §5 passe les quatre valeurs dans la ligne de `TypeEvenementRecu` ; sans ce lockstep `tests/unit/integration/contrat-hash.spec.ts` et `termes-interdits.spec.ts` rougissent, et c'est voulu. (2) Les `$defs` des onze payloads sont FERMÉS dans `packages/contracts/`, dérivés des fixtures du producteur réel (RM-03), jamais écrits à la main. (3) Frontière `identite_autre_apporteur` : `parrainCodeCapture` est exempté sur `candidature.recue` SEULEMENT, exemption écrite avec REQ-INT-032 (partners/ADR-0008 §4) ; la garde `coordonnees_du_contact` n'est pas affaiblie et le contrat reste SANS donnée personnelle. (4) Les coordonnées du candidat sont TIRÉES par Partners au traitement de `candidature.recue` : le schéma de la route `GET /api/partners/candidatures/{candidatureId}/coordonnees` d'axionia (même authentification HMAC que la relecture, liste d'autorisation, réponse `{nom, prenom, email, telephone}` pour les seules candidatures émises vers Partners, chaque appel journalisé) vit dans `packages/contracts/api.ts`, troisième API (partners/ADR-0023). Échec de la route : l'événement reste `en_attente_dependance` avec `dependance_ref = 'coordonnees:<candidatureId>'` et est rejoué, jamais un apporteur sans adresse. (5) Une migration Partners ajoute les quatre valeurs à `type_evenement_recu`, identifiant Prisma en `snake_case` et libellé de fil exact par `@map` (`candidature_recue @map(\"candidature.recue\")`), générées depuis `TYPES_EVENEMENT` ; un test compare les libellés de `pg_enum` à la constante (RM-01). (6) TÉMOIN À DEUX FACES : un payload portant un champ non déclaré est refusé au schéma et nomme le champ ; la fixture du producteur réel passe. Et l'empreinte du contrat diffère d'un côté : `contrat-hash.spec.ts` rougit.",
+      "issue": 167,
+      "owner": "A05",
+      "branch": "t/int-t01c",
+      "pr": 169,
+      "motif": null,
+      "attestation": {
+        "pr": 169,
+        "sha": "9620e4d3a3bf87b97118f84f860bb585b7a9921e",
+        "fusionneeAt": "2026-09-27T04:30:49Z"
+      }
     },
     {
       "id": "INT-T26",
