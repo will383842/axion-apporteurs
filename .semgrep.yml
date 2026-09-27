@@ -17,45 +17,60 @@
 # regex apportait encore — la lecture du spécifieur de module — est réduit à UNE ancre,
 # `&specifieur-du-client`, définie une fois et réutilisée par `*specifieur-du-client`.
 #
-# ── CE QUE LA RÉSOLUTION NE SUIT PAS, ET CE QUI EN TIENT LIEU (revue `exactitude`, PR 82) ─────
+# ── CE QUE LA RÉSOLUTION NE SUIT PAS, ET CE QUI EN TIENT LIEU (revues `exactitude` et
+#    `securite`, PR 82) ──────────────────────────────────────────────────────────────────────
 #
 # La résolution s'arrête dès que le namespace QUITTE sa liaison d'import : `Prisma?.raw`,
 # `Prisma!.raw`, `let P; P = Prisma`, `(x, P = Prisma) =>`, `{ P: Prisma }`, `Prisma satisfies
-# …` — tous passaient en exit 0 (mesuré sur 1.176.1). Courir après chaque écriture referait
-# l'erreur des orthographes. La règle n° 2 refuse donc la SORTIE elle-même : le namespace
-# `Prisma` n'a droit qu'à un membre IMMÉDIAT (`Prisma.sql`, `Prisma.join`, un type) ou à une
-# déstructuration directe sans `raw` ni reste ; toute autre apparition de sa valeur est refusée.
+# …` — tous passaient en exit 0 (mesuré sur 1.176.1). Et elle ne voit pas l'accès CALCULÉ :
+# `C['Prisma'].raw` depuis l'objet module passait aussi. Courir après chaque écriture referait
+# l'erreur des orthographes. La règle n° 2 refuse donc la SORTIE du namespace — il n'a droit
+# qu'à un membre immédiat (`Prisma.sql`, `Prisma.join`, un type) ou à une déstructuration
+# directe sans `raw`, sans reste ni valeur par défaut qui l'emporte — ET le NOM `Prisma` écrit
+# comme chaîne, où qu'il soit : c'est ce qui ferme l'accès calculé sur l'objet module, quel que
+# soit le chargeur. Les fonctions d'ÉTIQUETTE (`$queryRaw`, `$executeRaw`, `Prisma.sql`)
+# n'ont droit, elles, qu'à la position d'étiquette d'un gabarit. Ce que ces motifs ne
+# tiennent PAS est nommé plus bas, règle par règle, sous « LIMITES DÉCLARÉES » : la phrase
+# ci-dessus n'en promet pas davantage.
 rules:
   # REQ-SEC-008 (texte en vigueur ; REQ-QA-011 y est absorbée) : aucun import direct du client de
   # base sous l'espace apporteur. `import type` compris — l'espace reçoit ses types de la couche
   # d'accès. Un segment `prisma` ou `db` OÙ QU'IL SOIT dans le chemin compte (`../db/index` est
-  # le client sous un autre nom), AVEC OU SANS extension de fichier, déclaration `.d.ts` comprise :
-  # sous `moduleResolution: "bundler"` (tsconfig.json:5), `../lib/prisma.js` et `../lib/prisma`
-  # résolvent le MÊME fichier. `@prisma/` et `.prisma/` comptent aussi DERRIÈRE un chemin
+  # le client sous un autre nom), AVEC OU SANS suffixe pointé — extension de fichier,
+  # déclaration `.d.ts`, ou suffixe de convention comme `db.server` : sous `moduleResolution:
+  # "bundler"` (tsconfig.json:5), `../lib/prisma.js` et `../lib/prisma` résolvent le MÊME
+  # fichier. `@prisma/` et `.prisma/` comptent aussi DERRIÈRE un chemin
   # (`../../node_modules/@prisma/client`). Les chargeurs comptent tous : `import`, `require`,
-  # `import()` (avec ou sans attributs), `module.require`, le chargeur fabriqué
-  # (`createRequire(…)(…)`) — et `require` lui-même ne peut pas être ré-affecté sous l'espace.
+  # `import()` (avec ou sans attributs), `module.require` et `module['require']`, le chargeur
+  # fabriqué (`createRequire(…)(…)`), la liaison TypeScript `import x = require(…)` (exportée
+  # ou non). Et un chargeur n'a droit qu'à l'APPEL DIRECT : `require` et `module.require` ne
+  # sont ni ré-affectés, ni passés, ni appelés par `.call` / `.apply` / `.bind` — seul
+  # `require.resolve` (un chemin, pas un module) reste admis.
   #
   # LIMITES DÉCLARÉES (aucune n'est fermée ici, et aucune ne se prétend fermée) :
   #   a) un module HORS de ces dossiers qui ENVELOPPE le client et que l'espace importe n'est pas
   #      vu — c'est la couche d'accès cloisonnée et son test IDOR qui ferment ce chemin ; la
   #      tâche SEC-05 qui les livre AMENDE cette règle si elle doit la lister par modèle ;
-  #   b) un spécifieur CALCULÉ (`import(variable)`, concaténation) n'est pas lisible
-  #      statiquement ;
-  #   c) `export type { … } from` et `export { type … } from` ne sont PAS représentés par l'AST
-  #      TypeScript de semgrep 1.176.1 (mesuré : le motif `export type { ... } from "$M"` ne
-  #      compile même pas, et aucun motif d'import ne les voit). C'est la SEULE forme du fichier
-  #      qui reste textuelle — et elle DÉRIVE quand même sa lecture du spécifieur de l'ancre
-  #      commune, par un groupe nommé `(?P<M>…)` que `metavariable-regex` contraint ensuite ;
-  #   d) un chargeur obtenu AUTREMENT que par `require` écrit sous l'espace — reçu en paramètre,
-  #      déstructuré (`const { require: r } = module`), importé d'un module voisin — n'est pas
-  #      suivi : l'appel `r('../db')` n'a rien qui le distingue d'un appel quelconque.
+  #   b) un spécifieur CALCULÉ (`import(variable)`, `module.require(variable)`, concaténation)
+  #      n'est pas lisible statiquement ;
+  #   c) `export type { … } from`, `export { type … } from` et `export import x = require(…)` ne
+  #      sont PAS représentés par l'AST TypeScript de semgrep 1.176.1 (mesuré : le motif
+  #      `export type { ... } from "$M"` ne compile même pas, et aucun motif d'import ne voit
+  #      `export import`). Ce sont les SEULES formes du fichier qui restent textuelles — et
+  #      elles DÉRIVENT quand même leur lecture du spécifieur de l'ancre commune, par un groupe
+  #      nommé `(?P<M>…)` que `metavariable-regex` contraint ensuite ;
+  #   d) un chargeur obtenu AUTREMENT que par `require` ou une propriété `require` écrits sous
+  #      l'espace — reçu en paramètre, déstructuré (`const { require: r } = module`), importé
+  #      d'un module voisin — n'est pas suivi : l'appel `r('../db')` n'a rien qui le distingue
+  #      d'un appel quelconque.
+  # Prix ASSUMÉ : sous l'espace, `require.cache`, `require.main` et toute propriété `require`
+  # d'un objet qui n'est pas appelée directement sont refusés aussi.
   - id: axion-prisma-hors-couche-d-acces
     message: >-
       Accès direct au client de base sous l'espace apporteur (REQ-SEC-008). Toute lecture ou
       écriture de l'espace passe par la couche d'accès, qui injecte l'apporteurId de la session
       dans le `where`. Importez depuis la couche d'accès, jamais `@prisma/*`, `.prisma/*`, ni un
-      module `prisma` ou `db` — avec ou sans extension de fichier, par quelque chargeur que ce soit.
+      module `prisma` ou `db` — avec ou sans suffixe, par quelque chargeur que ce soit.
     severity: ERROR
     languages: [typescript, javascript]
     paths:
@@ -64,7 +79,8 @@ rules:
         - "/src/server/espace/**"
     pattern-either:
       # La FAMILLE des liaisons de module, par l'AST. Mesuré : semgrep normalise
-      # `export { X } from "M"` en import, d'où sa couverture par le motif d'accolades.
+      # `export { X } from "M"` en import, d'où sa couverture par le motif d'accolades, et
+      # `import x = require("M")` en appel `require`.
       - patterns:
           - pattern-either:
               - pattern: import $X from "$M"
@@ -73,6 +89,7 @@ rules:
               - pattern: import "$M"
               - pattern: require("$M")
               - pattern: $O.require("$M")
+              - pattern: $O["require"]("$M")
               # Le chargeur fabriqué : `createRequire(import.meta.url)('…')`.
               - pattern: $F(...)("$M")
               - pattern: import("$M")
@@ -82,58 +99,110 @@ rules:
           - metavariable-regex: &specifieur-du-client
               metavariable: $M
               # `@prisma/…` ou `.prisma/…`, en tête ou derrière un chemin ; ou un SEGMENT entier
-              # `prisma`/`db` — suivi de rien, de `/`, d'une extension JS/TS ou d'une extension
-              # de déclaration. `prismatique`, `db-outils`, `dbx` ne sont PAS des segments
-              # `prisma`/`db` : leur terminaison n'est ni `/`, ni une extension, ni la fin.
+              # `prisma`/`db` — suivi de rien, de `/`, ou d'un suffixe POINTÉ (extension JS/TS,
+              # déclaration `.d.ts`, `db.server`…). `prismatique`, `db-outils`, `dbx`,
+              # `prisma-aide` ne sont PAS des segments `prisma`/`db` : ce qui suit le nom n'est
+              # ni `/`, ni un point, ni la fin.
               regex: |-
-                ^(.*/)?(@prisma/|\.prisma/|(prisma|db)(\.d\.[cm]?ts|\.[cm]?[jt]sx?)?(/|$))
-      # `require` ré-affecté (`const r = require`, `r = require`, paramètre par défaut) : le
-      # chargeur quitte son nom, et l'appel qui suit n'est plus reconnaissable. `require(…)` et
-      # `require.resolve(…)` (un chemin, pas un module) restent admis.
+                ^(.*/)?(@prisma/|\.prisma/|(prisma|db)(\.[^/]*)?(/|$))
+      # Le chargeur hors de l'APPEL DIRECT : `const r = require`, `require.call(…)`,
+      # `require.apply(…)`, `require.bind(…)`, paramètre par défaut. `require(…)` et
+      # `require.resolve` (un chemin, pas un module) restent admis, et eux seuls.
       - patterns:
           - pattern: require
           - pattern-not-inside: require(...)
-          - pattern-not-inside: require.$PROPRIETE
-      # Limite (c) : la seule forme textuelle, pour ce que l'AST de semgrep ne représente pas.
+          - pattern-not-inside: require.resolve
+      # … la même chose pour la propriété `require` d'un objet (`module.require`,
+      # `module['require']`) : appelée directement, elle est jugée par son spécifieur ci-dessus ;
+      # autrement, elle est refusée.
+      - patterns:
+          - pattern-either:
+              - pattern: $O.require
+              - pattern: $O["require"]
+          - pattern-not-inside: $O.require(...)
+          - pattern-not-inside: $O["require"](...)
+      # … et la sortie écrite DANS les arguments d'un appel direct, que l'exclusion ci-dessus
+      # couvrirait par sa portée (`require((r = require, './x'))`).
+      - patterns:
+          - pattern-either:
+              - pattern: require(..., $A, ...)
+              - pattern: $O.require(..., $A, ...)
+              - pattern: $O["require"](..., $A, ...)
+          - metavariable-pattern:
+              metavariable: $A
+              pattern-either:
+                - pattern: require
+                - pattern: $P.require
+                - pattern: $P["require"]
+      # Limite (c) : les formes textuelles, pour ce que l'AST de semgrep ne représente pas.
       - patterns:
           - pattern-regex: |-
               \bexport\s+(?:type\s+)?(?:\{[^}]*\}|\*(?:\s+as\s+[A-Za-z_$][\w$]*)?)\s*from\s*['"`](?P<M>[^'"`]*)['"`]
+          - metavariable-regex: *specifieur-du-client
+      - patterns:
+          - pattern-regex: |-
+              \bimport\s+(?:type\s+)?[A-Za-z_$][\w$]*\s*=\s*require\s*\(\s*['"`](?P<M>[^'"`]*)['"`]
           - metavariable-regex: *specifieur-du-client
       - pattern: new PrismaClient(...)
       - pattern: new $P.PrismaClient(...)
 
   # SQL brut non paramétré. Ce que la règle refuse est une RÉFÉRENCE au membre dangereux —
-  # `$queryRawUnsafe`, `$executeRawUnsafe`, `Prisma.raw`, `Prisma.Sql`, le `raw` du runtime —
-  # par toute écriture que l'AST rend lisible : membre pointé, optionnel ou non nul, accès
-  # calculé par littéral (guillemets ou gabarit), nom écrit comme chaîne n'importe où,
-  # déstructuration, renommage à l'import, espace de noms, objet module. Pour `Prisma`, c'est en
-  # plus la SORTIE du namespace hors de son usage immédiat qui est refusée (voir l'en-tête).
+  # `$queryRawUnsafe`, `$executeRawUnsafe`, `Prisma.raw`, `Prisma.Sql`, et, du runtime, `raw`,
+  # `Sql`, `sqltag`, `join`, `makeTypedQueryFactory` — par toute écriture que l'AST rend
+  # lisible : membre pointé, optionnel ou non nul, accès calculé par littéral (guillemets ou
+  # gabarit), nom écrit comme chaîne n'importe où, déstructuration, renommage à l'import, espace
+  # de noms, objet module (espace de noms, défaut, `require`, `import()` attendu). Pour
+  # `Prisma`, c'est en plus la SORTIE du namespace hors de son usage immédiat qui est refusée, et
+  # son NOM écrit comme chaîne (voir l'en-tête). Trois familles s'y ajoutent :
+  #   — les fonctions d'ÉTIQUETTE `$queryRaw`, `$executeRaw` et `Prisma.sql` (y compris `sql`
+  #     déstructuré de `Prisma`) ne sont admises qu'en étiquette d'un gabarit : appelées avec
+  #     un tableau (`Prisma.sql([x])`, `p.$queryRaw([x] as unknown as TemplateStringsArray)`),
+  #     par `.call` / `.apply`, rangées ou passées, leurs « morceaux » sont du TEXTE ;
+  #   — `Prisma.join` n'est admis qu'avec UNE valeur : séparateur, préfixe et suffixe sont
+  #     insérés en TEXTE ; un appel étalé (`join(...a)`) ou une sortie de la fonction le sont
+  #     aussi ;
+  #   — la lecture d'un CONSTRUCTEUR (`x.constructor`, `x['constructor']`) : elle rend la classe
+  #     `Sql` depuis n'importe quelle valeur du namespace (`Prisma.empty`, `Prisma.join(…)`).
   #
-  # LIMITES DÉCLARÉES, et elles bornent la phrase ci-dessus :
-  #   a) une clé `…Unsafe` que semgrep ne réduit pas à une constante (`p[k]` où `k` est un
-  #      paramètre ou vient d'un autre module) n'est pas lisible sans analyse de teinte. Mesuré :
-  #      une concaténation de littéraux (`p['$query' + 'RawUnsafe']`) est repliée, donc prise ;
-  #      et sur `Prisma`, tout accès calculé non littéral (`Prisma[k]`) est pris par le refus de
-  #      sortie ;
-  #   b) une déstructuration de `Prisma` à clé CALCULÉE (`const { ['raw']: r } = Prisma`) n'est
+  # LIMITES DÉCLARÉES, et elles bornent les phrases ci-dessus :
+  #   a) une clé que semgrep ne réduit pas à une constante (`p[k]`, `C[k]` sur l'objet module, où
+  #      `k` est un paramètre ou vient d'un autre module) n'est pas lisible sans analyse de
+  #      teinte. Mesuré : une concaténation de littéraux (`p['$query' + 'RawUnsafe']`) est
+  #      repliée, donc prise ; et sur `Prisma`, tout accès calculé non littéral (`Prisma[k]`) est
+  #      pris par le refus de sortie ;
+  #   b) une déstructuration de `Prisma` à clé CALCULÉE (`const { ['raw']: r } = Prisma`, ou une
+  #      clé calculée qui emporte le namespace : `{ [f(Prisma)]: y } = Prisma`) n'est
   #      représentée par aucun motif de semgrep 1.176.1 (mesuré : `var { "raw": $B } =
   #      $C.Prisma` ne matche pas) — l'élargir reviendrait à refuser toute déstructuration de
   #      `Prisma`, y compris le `sql` paramétré, ce qui punirait la bonne écriture ;
-  #   c) un module tiers qui ré-exporte `raw` sous un autre nom n'est pas vu ;
+  #   c) un module tiers qui ré-exporte `raw` (ou `Sql`, `sqltag`…) sous un autre nom n'est pas
+  #      vu ;
   #   d) l'objet module d'un spécifieur du client (espace de noms, `require`, `import()`) qui
   #      QUITTE sa liaison — rangé dans un objet, passé en argument, `.then((m) => m.raw)` —
-  #      n'est pas suivi : le refus de sortie ne vaut que pour le namespace `Prisma`, parce que
-  #      la couche d'accès a le droit, elle, de manipuler l'objet module du client.
-  # Prix ASSUMÉ du refus de sortie : `typeof Prisma` en position de type, et une propriété
-  # `.Prisma` d'un objet quelconque qu'on range ailleurs, sont refusés aussi — l'AST de semgrep
-  # ne les distingue pas d'une sortie. Aucun fichier de `src/` ne les écrit.
+  #      n'est pas suivi pour les membres du runtime : le refus de sortie ne vaut que pour le
+  #      namespace `Prisma`, parce que la couche d'accès a le droit, elle, de manipuler l'objet
+  #      module du client ;
+  #   e) le PROTOTYPE de `Sql` atteint sans lire `.constructor` — `Object.getPrototypeOf(…)`,
+  #      `Object.create(…)`, `Object.setPrototypeOf(…)`, `__proto__` — permet de forger un
+  #      fragment sans être vu ;
+  #   f) une fonction d'étiquette ou `join` obtenue AUTREMENT que par les écritures ci-dessus —
+  #      reçue en paramètre, ré-exportée par un module voisin — n'est pas suivie : son appel
+  #      avec un tableau n'a rien qui le distingue d'un appel quelconque.
+  # Prix ASSUMÉ, sous `src/` : `typeof Prisma` et `typeof p.$queryRaw` en position de type, une
+  # propriété `.Prisma` d'un objet quelconque qu'on range ailleurs, une chaîne EXACTEMENT égale
+  # à `Prisma` ou à `constructor`, toute lecture de `.constructor`, l'écriture calculée
+  # `C['Prisma'].sql`, et `Prisma.join(v, ', ')` à séparateur littéral sont refusés aussi —
+  # l'AST de semgrep ne les distingue pas d'une sortie. Aucun fichier de `src/` ne les écrit.
   - id: axion-sql-brut-non-parametre
     message: >-
-      SQL brut NON paramétré : `$queryRawUnsafe`, `$executeRawUnsafe`, `Prisma.raw` et
-      `Prisma.Sql` concatènent une chaîne dans la requête. Utilisez le gabarit étiqueté
-      (`$queryRaw` / `$executeRaw` avec des backticks, ou `Prisma.sql`), qui paramètre chaque
-      valeur. Le renommage, l'accès par crochets, la déstructuration et le passage du namespace
-      `Prisma` par une variable, un objet ou un paramètre ne changent rien à ce que le code FAIT.
+      SQL brut NON paramétré : `$queryRawUnsafe`, `$executeRawUnsafe`, `Prisma.raw`,
+      `Prisma.Sql` et les membres du runtime (`raw`, `Sql`, `sqltag`, `join`,
+      `makeTypedQueryFactory`) concatènent une chaîne dans la requête. Utilisez le gabarit
+      étiqueté (`$queryRaw` / `$executeRaw` avec des backticks, ou `Prisma.sql`), qui paramètre
+      chaque valeur, et `Prisma.join(valeurs)` sans séparateur. Le renommage, l'accès par
+      crochets, la déstructuration, l'appel d'une étiquette sans gabarit et le passage du
+      namespace `Prisma` par une variable, un objet ou un paramètre ne changent rien à ce que le
+      code FAIT.
     severity: ERROR
     languages: [typescript, javascript]
     paths:
@@ -178,6 +247,8 @@ rules:
       #   immédiat (`Prisma.x`, `Prisma["x"]`), ni une déstructuration directe, ni une liaison
       #   d'import. Ferme `Prisma?.raw`, `Prisma!.raw`, `let P; P = Prisma`, `(P = Prisma) =>`,
       #   `{ P: Prisma }`, `Prisma satisfies …`, `Reflect.get(Prisma, 'raw')`, `f(Prisma)`.
+      #   Mesuré : une sortie écrite DANS l'objet d'un membre admis (`f(Prisma).Prisma.x`) ou
+      #   dans l'expression d'une déstructuration admise est prise aussi.
       - patterns:
           - pattern-either:
               - pattern: $C.Prisma
@@ -194,6 +265,16 @@ rules:
           - pattern-not-inside: "var { ..., Prisma, ... } = $E"
       # La déstructuration directe avec RESTE emporte `raw` sans le nommer.
       - pattern: "var { ..., ...$RESTE } = $C.Prisma"
+      # Une VALEUR PAR DÉFAUT de déstructuration qui emporte le namespace
+      # (`const { sql = f(Prisma) } = Prisma`) : l'exclusion de la déstructuration directe la
+      # couvrirait par sa portée (mesuré).
+      - patterns:
+          - pattern: "var { ..., $K = $D, ... } = $E"
+          - metavariable-pattern:
+              metavariable: $D
+              pattern-either:
+                - pattern: Prisma
+                - pattern: $X.Prisma
       # `Prisma` déstructuré SOUS UN AUTRE NOM (`const { Prisma: Q } = await import(…)`) : le
       # nouveau nom n'est pas résolu, il est refusé à la liaison.
       - patterns:
@@ -201,8 +282,128 @@ rules:
           - metavariable-regex:
               metavariable: $Q
               regex: ^(?!Prisma$)
-      # — Le `raw` du runtime (ou de tout module du client), par l'objet module : espace de
-      #   noms, import par défaut, `require` affecté, `import()` attendu —
+      # Le NOM du namespace écrit comme chaîne, où qu'elle soit : `C['Prisma']` sur l'objet
+      # module quel que soit son chargeur (espace de noms, défaut, `require(…)`, `import()`
+      # attendu), ``C[`Prisma`]``, `Reflect.get(C, 'Prisma')`, clé calculée de déstructuration.
+      # Le motif prend aussi le gabarit sans substitution (mesuré). Par symétrie, le MEMBRE
+      # calculé est pris par les motifs `["raw"]` / `["Sql"]` et par ceux du runtime ci-dessous.
+      - pattern: '"Prisma"'
+      # — LES FONCTIONS D'ÉTIQUETTE hors de la position d'étiquette. Une étiquette est un appel
+      #   pour l'AST de semgrep (mesuré : `Prisma.sql(...)` matche `Prisma.sql`…``) ; c'est
+      #   donc la RÉFÉRENCE qui est jugée, et admise seulement DANS son propre gabarit étiqueté,
+      #   générique compris (`p.$queryRaw<T>`…``). La même liste sert trois fois, par l'ancre
+      #   `&hors-etiquette` : au niveau du fichier ; dans chaque interpolation d'un gabarit,
+      #   parce que l'exclusion par portée y couvrirait une sortie nichée
+      #   (`Prisma.sql`${Prisma.sql([x])}``) ; et dans l'OBJET d'une étiquette
+      #   (`(q = p.$queryRaw, p).$queryRaw`…``).
+      - patterns: &hors-etiquette
+          - pattern-either:
+              - pattern: $O.$queryRaw
+              - pattern: $O.$executeRaw
+              - pattern: $O["$queryRaw"]
+              - pattern: $O["$executeRaw"]
+              - pattern: $C.Prisma.sql
+              - pattern: Prisma.sql
+              - pattern: $C.Prisma["sql"]
+              - pattern: Prisma["sql"]
+          - pattern-not-inside: $O.$queryRaw`...`
+          - pattern-not-inside: $O.$queryRaw<$T>`...`
+          - pattern-not-inside: $O.$queryRaw<$T>
+          - pattern-not-inside: $O.$executeRaw`...`
+          - pattern-not-inside: $O.$executeRaw<$T>`...`
+          - pattern-not-inside: $O.$executeRaw<$T>
+          - pattern-not-inside: $O["$queryRaw"]`...`
+          - pattern-not-inside: $O["$executeRaw"]`...`
+          - pattern-not-inside: $C.Prisma.sql`...`
+          - pattern-not-inside: Prisma.sql`...`
+      - patterns:
+          - pattern: $F`...${$A}...`
+          - metavariable-pattern:
+              metavariable: $A
+              patterns: *hors-etiquette
+      - patterns:
+          - pattern-either:
+              - pattern: $O.$queryRaw
+              - pattern: $O.$executeRaw
+              - pattern: $O["$queryRaw"]
+              - pattern: $O["$executeRaw"]
+          - metavariable-pattern:
+              metavariable: $O
+              patterns: *hors-etiquette
+      # `sql` DÉSTRUCTURÉ de `Prisma`, court ou renommé (le motif renommé prend la forme courte,
+      # mesuré) : même jugement, sous son nouveau nom.
+      - patterns:
+          - pattern-either:
+              - pattern-inside: |
+                  var { ..., sql: $S, ... } = $C.Prisma;
+                  ...
+              - pattern-inside: |
+                  var { ..., sql: $S, ... } = Prisma;
+                  ...
+          - pattern-either:
+              - patterns:
+                  - pattern: $S
+                  - pattern-not-inside: $S`...`
+                  - pattern-not-inside: "var { ..., sql: $S, ... } = $E"
+              - patterns:
+                  - pattern: $F`...${$A}...`
+                  - metavariable-pattern:
+                      metavariable: $A
+                      patterns:
+                        - pattern: $S
+                        - pattern-not-inside: $S`...`
+      # — `Prisma.join` à UNE valeur : un second argument (séparateur, préfixe, suffixe) ou un
+      #   appel étalé est refusé ; toute autre référence à la fonction aussi, jugée au niveau du
+      #   fichier et dans l'argument d'un `join` admis (ancre `&join-hors-appel`).
+      - pattern: $C.Prisma.join($V, $S, ...)
+      - pattern: Prisma.join($V, $S, ...)
+      - pattern: $C.Prisma.join(...$V)
+      - pattern: Prisma.join(...$V)
+      - patterns: &join-hors-appel
+          - pattern-either:
+              - pattern: $C.Prisma.join
+              - pattern: Prisma.join
+              - pattern: $C.Prisma["join"]
+              - pattern: Prisma["join"]
+          - pattern-not-inside: $C.Prisma.join($V)
+          - pattern-not-inside: Prisma.join($V)
+      - patterns:
+          - pattern-either:
+              - pattern: $C.Prisma.join($V)
+              - pattern: Prisma.join($V)
+          - metavariable-pattern:
+              metavariable: $V
+              patterns: *join-hors-appel
+      # … et `join` DÉSTRUCTURÉ de `Prisma`, court ou renommé.
+      - patterns:
+          - pattern-either:
+              - pattern-inside: |
+                  var { ..., join: $J, ... } = $C.Prisma;
+                  ...
+              - pattern-inside: |
+                  var { ..., join: $J, ... } = Prisma;
+                  ...
+          - pattern-either:
+              - pattern: $J($V, $S, ...)
+              - pattern: $J(...$V)
+              - patterns:
+                  - pattern: $J
+                  - pattern-not-inside: $J($V)
+                  - pattern-not-inside: "var { ..., join: $J, ... } = $E"
+              - patterns:
+                  - pattern: $J($V)
+                  - metavariable-pattern:
+                      metavariable: $V
+                      patterns:
+                        - pattern: $J
+                        - pattern-not-inside: $J($W)
+      # — le CONSTRUCTEUR d'une valeur : `Prisma.empty.constructor`, `Prisma.join(…)
+      #   ['constructor']` rendent la classe `Sql`. Une méthode `constructor` DÉCLARÉE dans une
+      #   classe n'est pas une lecture (mesuré).
+      - pattern: $E.constructor
+      - pattern: '"constructor"'
+      # — Les membres dangereux du runtime (ou de tout module du client), par l'objet module :
+      #   espace de noms, import par défaut, `require` affecté, `import()` attendu —
       - patterns:
           - pattern-either:
               - pattern-inside: |
@@ -218,15 +419,22 @@ rules:
                   var $X = await import("$M");
                   ...
           - pattern-either:
-              - pattern: $X.raw
-              - pattern: $X["raw"]
+              - pattern: $X.$N
+              - pattern: $X["$N"]
           - metavariable-regex: *specifieur-du-client
-      # … et directement sur le chargeur, ou importé / déstructuré par son nom.
+          - metavariable-regex: &membres-du-runtime
+              metavariable: $N
+              regex: ^(raw|Sql|sqltag|join|makeTypedQueryFactory)$
+      # … et directement sur le chargeur (pointé ou calculé), ou importés / déstructurés par
+      # leur nom.
       - patterns:
           - pattern-either:
-              - pattern: require("$M").raw
-              - pattern: (await import("$M")).raw
-              - pattern: 'var { raw: $B } = require("$M")'
-              - pattern: 'var { raw: $B } = await import("$M")'
-              - pattern: import { ..., raw, ... } from "$M"
+              - pattern: require("$M").$N
+              - pattern: require("$M")["$N"]
+              - pattern: (await import("$M")).$N
+              - pattern: (await import("$M"))["$N"]
+              - pattern: 'var { ..., $N: $B, ... } = require("$M")'
+              - pattern: 'var { ..., $N: $B, ... } = await import("$M")'
+              - pattern: import { ..., $N, ... } from "$M"
           - metavariable-regex: *specifieur-du-client
+          - metavariable-regex: *membres-du-runtime
