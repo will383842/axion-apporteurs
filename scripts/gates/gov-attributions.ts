@@ -1174,6 +1174,7 @@ export const CITATIONS_DECLAREES: Citation[] = [
   },
   {
     ou: 'tests/fixtures/axionia/fixtures-producteur.v1.json',
+    ligne: 2,
     id: 'INT-T01b',
     nature: 'contexte',
     raison:
