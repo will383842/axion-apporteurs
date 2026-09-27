@@ -142,7 +142,8 @@ export type Citation = {
 /**
  * Une exemption FIGÉE, occurrence par occurrence (GOV-074) : pour les natures qu'AUCUN second
  * producteur ne tient (`NATURES_FIGEES`), l'exemption n'est accordée qu'à ce qui a été vu. Le
- * `site` est celui que l'exemption imprime : `fichier:ligne` pour un en-tête.
+ * `site` est la CLÉ de l'occurrence : `fichier:ligne` pour un en-tête (le site que l'exemption
+ * imprime) ; pour `docs/gates.json`, `docs/gates.json(<script>)<champ>` (`cleFigeeDansGates`).
  */
 export type ExemptionFigee = { nature: Nature; tache: string; site: string };
 
@@ -362,6 +363,17 @@ function surface(t: Tache): string[] {
  */
 function siteDansGates(ou: string, script: string): string {
   return `${ou} (${script})`;
+}
+
+/**
+ * LA CLÉ D'UNE EXEMPTION FIGÉE dans `docs/gates.json` (GOV-074) : le SCRIPT jugé et le chemin du
+ * champ, SANS l'identifiant de la gate. Deux raisons : le script est le fichier contre lequel la
+ * propriété se juge, et un identifiant de gate peut porter un préfixe de famille de compteurs
+ * (`partners:webhook:idempotent`) que `securite:rate-famille` refuse, à raison, dans toute
+ * chaîne de `scripts/` — la clé n'a pas à le recopier.
+ */
+function cleFigeeDansGates(script: string, champ: string): string {
+  return `docs/gates.json(${script})${champ}`;
 }
 
 /** Un chemin est couvert par une entrée exacte, ou par un préfixe de RÉPERTOIRE déclaré (barre finale). */
@@ -621,16 +633,22 @@ export function analyser(s: Sources): Verdict {
   // GOV-074 — une nature sans second producteur n'exempte que l'occurrence FIGÉE : chaque entrée de
   // `exemptionsFigees` en absout UNE, et une occurrence neuve rougit en se nommant.
   const figeesVues = new Set<ExemptionFigee>();
-  const exempter = (nature: Nature, tache: string, site: string, motif: string) => {
+  const exempter = (
+    nature: Nature,
+    tache: string,
+    site: string,
+    motif: string,
+    cle: string = site
+  ) => {
     if (NATURES_FIGEES.has(nature)) {
       const e = s.exemptionsFigees.find(
-        (x) => x.nature === nature && x.tache === tache && x.site === site && !figeesVues.has(x)
+        (x) => x.nature === nature && x.tache === tache && x.site === cle && !figeesVues.has(x)
       );
       if (!e) {
         dire(
           'exemption_non_figee',
           `${site} — « ${tache} » serait exempté en ${nature} (${SENS[nature]}), et cette occurrence ` +
-            `n'est pas figée dans EXEMPTIONS_FIGEES. Aucun second producteur ne tient cette nature : ` +
+            `(clé « ${cle} ») n'est pas figée dans EXEMPTIONS_FIGEES. Aucun second producteur ne tient cette nature : ` +
             `elle n'absout que ce qui a été vu. Corrige l'attribution, ou fige l'occurrence.`
         );
         return;
@@ -687,7 +705,8 @@ export function analyser(s: Sources): Verdict {
         pathsReels(t).length === 0 ? 'gate_paths_non_resolus' : 'gate_paths_en_partie_gabarit',
         t.id,
         site,
-        pathsDe(t)
+        pathsDe(t),
+        cleFigeeDansGates(chemin, '')
       );
       continue;
     }
@@ -859,7 +878,8 @@ export function analyser(s: Sources): Verdict {
     fichier: string,
     texte: string,
     situer: string,
-    proprietaire?: string
+    proprietaire?: string,
+    cleFigee: string = situer
   ) => {
     for (const trouve of texte.matchAll(motif)) {
       occurrences++;
@@ -895,7 +915,8 @@ export function analyser(s: Sources): Verdict {
             : 'mention_paths_en_partie_gabarit',
           m,
           situer,
-          pathsDe(t)
+          pathsDe(t),
+          cleFigee
         );
         continue;
       }
@@ -925,7 +946,8 @@ export function analyser(s: Sources): Verdict {
     const script = sansAncre(g.script);
     for (const [ou, texte] of chainesDe(g, `docs/gates.json:${g.id}`)) {
       const site = siteDansGates(ou, script);
-      texte.split('\n').forEach((l, i) => examiner(ou, i + 1, site, script, l, site, g.tache));
+      const cle = cleFigeeDansGates(script, ou.slice(`docs/gates.json:${g.id}`.length));
+      texte.split('\n').forEach((l, i) => examiner(ou, i + 1, site, script, l, site, g.tache, cle));
     }
   }
 
@@ -1458,146 +1480,151 @@ export const EXEMPTIONS_FIGEES: ExemptionFigee[] = [
   {
     nature: 'gate_paths_en_partie_gabarit',
     tache: 'DM-08',
-    site: 'docs/gates.json:partners:transitions:exhaustive (tests/domain/transitions.spec.ts)',
+    site: 'docs/gates.json(tests/domain/transitions.spec.ts)',
   },
   {
     nature: 'gate_paths_non_resolus',
     tache: 'DM-20',
-    site: 'docs/gates.json:partners:rgpd:export-complet (tests/integration/rgpd-export.spec.ts)',
+    site: 'docs/gates.json(tests/integration/rgpd-export.spec.ts)',
   },
   {
     nature: 'gate_paths_non_resolus',
     tache: 'DM-13',
-    site: 'docs/gates.json:GATE-JUR-PURGE (tests/integration/purge.spec.ts)',
+    site: 'docs/gates.json(tests/integration/purge.spec.ts)',
   },
   {
     nature: 'gate_paths_non_resolus',
     tache: 'UX-P1-14',
-    site: 'docs/gates.json:partners:grille:complete (scripts/gates/grille-complete.ts)',
+    site: 'docs/gates.json(scripts/gates/grille-complete.ts)',
   },
   {
     nature: 'gate_paths_non_resolus',
     tache: 'T-ARG-037',
-    site: 'docs/gates.json:partners:grille:contrat (tests/domain/grille-du-contrat.spec.ts)',
+    site: 'docs/gates.json(tests/domain/grille-du-contrat.spec.ts)',
   },
   {
     nature: 'gate_paths_non_resolus',
     tache: 'T-ARG-036',
-    site: 'docs/gates.json:argent:contre-calcul (tests/argent/contre-calcul.spec.ts)',
+    site: 'docs/gates.json(tests/argent/contre-calcul.spec.ts)',
   },
   {
     nature: 'gate_paths_non_resolus',
     tache: 'T-ARG-022',
-    site: 'docs/gates.json:GATE-ARG-rejeu-golden (tests/argent/rejeu-golden.spec.ts)',
+    site: 'docs/gates.json(tests/argent/rejeu-golden.spec.ts)',
   },
   {
     nature: 'gate_paths_non_resolus',
     tache: 'T-ARG-015',
-    site: 'docs/gates.json:GATE-ARG-double-paiement (tests/argent/double-paiement.spec.ts)',
+    site: 'docs/gates.json(tests/argent/double-paiement.spec.ts)',
   },
   {
     nature: 'gate_paths_non_resolus',
     tache: 'T-ARG-018',
-    site: 'docs/gates.json:GATE-ARG-sepa-xsd (tests/argent/sepa-xsd.spec.ts)',
+    site: 'docs/gates.json(tests/argent/sepa-xsd.spec.ts)',
   },
   {
     nature: 'gate_paths_non_resolus',
     tache: 'JUR-T16',
-    site: 'docs/gates.json:GATE-ARG-echec-ferme (tests/argent/controles-versement.spec.ts)',
+    site: 'docs/gates.json(tests/argent/controles-versement.spec.ts)',
   },
   {
     nature: 'gate_paths_non_resolus',
     tache: 'DM-15',
-    site: 'docs/gates.json:GATE-ARG-non-silence (tests/argent/non-silence.spec.ts)',
+    site: 'docs/gates.json(tests/argent/non-silence.spec.ts)',
   },
   {
     nature: 'gate_paths_non_resolus',
     tache: 'T-ARG-016',
-    site: 'docs/gates.json:GATE-ARG-tva-snapshot (tests/argent/tva-snapshot.spec.ts)',
+    site: 'docs/gates.json(tests/argent/tva-snapshot.spec.ts)',
   },
   {
     nature: 'gate_paths_non_resolus',
     tache: 'DM-19',
-    site: 'docs/gates.json:GATE-ARG-das2-seuil (tests/argent/das2.spec.ts)',
+    site: 'docs/gates.json(tests/argent/das2.spec.ts)',
   },
   {
     nature: 'gate_paths_non_resolus',
     tache: 'DM-15',
-    site: 'docs/gates.json:GATE-JUR-FAIT-GENERATEUR (tests/domain/fait-generateur.spec.ts)',
+    site: 'docs/gates.json(tests/domain/fait-generateur.spec.ts)',
   },
   {
     nature: 'gate_paths_non_resolus',
     tache: 'INT-T17',
-    site: 'docs/gates.json:GATE-ARG-cloisonnement (tests/security/cloisonnement-documents.spec.ts)',
+    site: 'docs/gates.json(tests/security/cloisonnement-documents.spec.ts)',
   },
   {
     nature: 'gate_paths_non_resolus',
     tache: 'CPL-T11',
-    site: 'docs/gates.json:mois-a-blanc (scripts/gates/mois-a-blanc.ts)',
+    site: 'docs/gates.json(scripts/gates/mois-a-blanc.ts)',
   },
   {
     nature: 'gate_paths_non_resolus',
     tache: 'SEC-12',
-    site: 'docs/gates.json:G-SEC-CONCURRENCE (tests/integration/concurrence.spec.ts)',
+    site: 'docs/gates.json(tests/integration/concurrence.spec.ts)',
   },
   {
     nature: 'gate_paths_non_resolus',
     tache: 'SEC-16',
-    site: 'docs/gates.json:G-SEC-ORACLE (tests/security/oracle.spec.ts)',
+    site: 'docs/gates.json(tests/security/oracle.spec.ts)',
   },
   {
     nature: 'gate_paths_en_partie_gabarit',
     tache: 'INT-T12',
-    site: 'docs/gates.json:docuseal-strict (tests/integration/docuseal.spec.ts)',
+    site: 'docs/gates.json(tests/integration/docuseal.spec.ts)',
   },
   {
     nature: 'gate_paths_non_resolus',
     tache: 'QA-T19',
-    site: 'docs/gates.json:sante (scripts/gates/sante.ts)',
+    site: 'docs/gates.json(scripts/gates/sante.ts)',
   },
   {
     nature: 'gate_paths_non_resolus',
     tache: 'INT-T08-A',
-    site: 'docs/gates.json:reconciliation-quotidienne (axionia/tests/integration/reconciliation.spec.ts)',
+    site: 'docs/gates.json(axionia/tests/integration/reconciliation.spec.ts)',
   },
   {
     nature: 'gate_paths_non_resolus',
     tache: 'JUR-T24',
-    site: 'docs/gates.json:jur:suspension-motifs-fermes (tests/domain/suspension-motifs.spec.ts)',
+    site: 'docs/gates.json(tests/domain/suspension-motifs.spec.ts)',
   },
   {
     nature: 'gate_paths_en_partie_gabarit',
     tache: 'INT-T12',
-    site: 'docs/gates.json:GATE-JUR-SIGNATURE-AVANT-DEPOT (tests/integration/signature-avant-depot.spec.ts)',
+    site: 'docs/gates.json(tests/integration/signature-avant-depot.spec.ts)',
   },
   {
     nature: 'gate_paths_non_resolus',
     tache: 'SEC-19',
-    site: 'docs/gates.json:GATE-JUR-ACTEUR-HUMAIN (tests/domain/acteur-humain.spec.ts)',
+    site: 'docs/gates.json(tests/domain/acteur-humain.spec.ts)',
   },
   {
     nature: 'gate_paths_non_resolus',
     tache: 'UX-P3-02',
-    site: 'docs/gates.json:lexique-financement-ressources (scripts/gates/lexique-financement-ressources.ts)',
+    site: 'docs/gates.json(scripts/gates/lexique-financement-ressources.ts)',
   },
   {
     nature: 'gate_paths_non_resolus',
     tache: 'UX-P1-08',
-    site: 'docs/gates.json:GATE-UX-ETATS-VIDES (tests/ux/etats-vides.spec.ts)',
+    site: 'docs/gates.json(tests/ux/etats-vides.spec.ts)',
   },
   {
     nature: 'gate_paths_non_resolus',
     tache: 'UX-P1-03',
-    site: 'docs/gates.json:GATE-UX-HORS-LIGNE (tests/ux/hors-ligne.spec.ts)',
+    site: 'docs/gates.json(tests/ux/hors-ligne.spec.ts)',
   },
   {
     nature: 'gate_paths_non_resolus',
     tache: 'QA-T16',
-    site: 'docs/gates.json:spec-espace-mobile (tests/unit/ci/spec-espace-mobile.spec.ts)',
+    site: 'docs/gates.json(tests/unit/ci/spec-espace-mobile.spec.ts)',
   },
   { nature: 'lot_sans_pr', tache: 'GOV-000', site: 'lot « gov-amorcage »' },
   { nature: 'mention_paths_non_resolus', tache: 'QA-T16', site: 'tests/a11y/harnais.ts:11' },
   { nature: 'mention_paths_non_resolus', tache: 'QA-T16', site: 'tests/a11y/harnais.ts:13' },
+  {
+    nature: 'mention_paths_non_resolus',
+    tache: 'T-ARG-022',
+    site: 'tests/integration/webhook-verdicts.spec.ts:19',
+  },
   {
     nature: 'mention_paths_non_resolus',
     tache: 'QA-T28',
@@ -1611,212 +1638,212 @@ export const EXEMPTIONS_FIGEES: ExemptionFigee[] = [
   {
     nature: 'mention_paths_non_resolus',
     tache: 'JUR-T13',
-    site: 'docs/gates.json:GATE-JUR-TEXTES-APPORTEURS.verifie (scripts/gates/lexique-apporteurs.ts)',
+    site: 'docs/gates.json(scripts/gates/lexique-apporteurs.ts).verifie',
   },
   {
     nature: 'mention_paths_en_partie_gabarit',
     tache: 'DM-07',
-    site: 'docs/gates.json:partners:schema:enums.verifie (scripts/gates/schema-enums.ts)',
+    site: 'docs/gates.json(scripts/gates/schema-enums.ts).verifie',
   },
   {
     nature: 'mention_paths_en_partie_gabarit',
     tache: 'DM-07',
-    site: 'docs/gates.json:partners:schema:cents.verifie (scripts/gates/schema-cents.ts)',
+    site: 'docs/gates.json(scripts/gates/schema-cents.ts).verifie',
   },
   {
     nature: 'mention_paths_non_resolus',
     tache: 'DM-20',
-    site: 'docs/gates.json:partners:journal:immutable.verifie (tests/integration/journal.spec.ts)',
+    site: 'docs/gates.json(tests/integration/journal.spec.ts).verifie',
   },
   {
     nature: 'mention_paths_en_partie_gabarit',
     tache: 'T-ARG-034',
-    site: 'docs/gates.json:partners:journal:immutable.verifie (tests/integration/journal.spec.ts)',
+    site: 'docs/gates.json(tests/integration/journal.spec.ts).verifie',
   },
   {
     nature: 'mention_paths_non_resolus',
     tache: 'DM-20',
-    site: 'docs/gates.json:partners:journal:immutable.preuveRouge (tests/integration/journal.spec.ts)',
+    site: 'docs/gates.json(tests/integration/journal.spec.ts).preuveRouge',
   },
   {
     nature: 'mention_paths_non_resolus',
     tache: 'DM-20',
-    site: 'docs/gates.json:journal:sans-pii.verifie (scripts/gates/journal-sans-pii.ts)',
+    site: 'docs/gates.json(scripts/gates/journal-sans-pii.ts).verifie',
   },
   {
     nature: 'mention_paths_en_partie_gabarit',
     tache: 'T-ARG-010',
-    site: 'docs/gates.json:partners:transitions:exhaustive.verifie (tests/domain/transitions.spec.ts)',
+    site: 'docs/gates.json(tests/domain/transitions.spec.ts).verifie',
   },
   {
     nature: 'mention_paths_non_resolus',
     tache: 'DM-20',
-    site: 'docs/gates.json:GATE-JUR-PURGE.verifie (tests/integration/purge.spec.ts)',
+    site: 'docs/gates.json(tests/integration/purge.spec.ts).verifie',
   },
   {
     nature: 'mention_paths_non_resolus',
     tache: 'QA-T21',
-    site: 'docs/gates.json:partners:money:conservation.verifie (tests/unit/domaine/conservation.spec.ts)',
+    site: 'docs/gates.json(tests/unit/domaine/conservation.spec.ts).verifie',
   },
   {
     nature: 'mention_paths_non_resolus',
     tache: 'DM-15',
-    site: 'docs/gates.json:partners:webhook:idempotent.verifie (tests/integration/webhook.spec.ts)',
+    site: 'docs/gates.json(tests/integration/webhook.spec.ts).verifie',
   },
   {
     nature: 'mention_paths_non_resolus',
     tache: 'UX-P2-05',
-    site: 'docs/gates.json:partners:grille:check.verifie (axionia/scripts/gates/grille-check.ts)',
+    site: 'docs/gates.json(axionia/scripts/gates/grille-check.ts).verifie',
   },
   {
     nature: 'mention_paths_non_resolus',
     tache: 'T-ARG-017',
-    site: 'docs/gates.json:GATE-ARG-double-paiement.verifie (tests/argent/double-paiement.spec.ts)',
+    site: 'docs/gates.json(tests/argent/double-paiement.spec.ts).verifie',
   },
   {
     nature: 'mention_paths_non_resolus',
     tache: 'T-ARG-018',
-    site: 'docs/gates.json:GATE-ARG-double-paiement.verifie (tests/argent/double-paiement.spec.ts)',
+    site: 'docs/gates.json(tests/argent/double-paiement.spec.ts).verifie',
   },
   {
     nature: 'mention_paths_non_resolus',
     tache: 'T-ARG-032',
-    site: 'docs/gates.json:GATE-ARG-echec-ferme.verifie (tests/argent/controles-versement.spec.ts)',
+    site: 'docs/gates.json(tests/argent/controles-versement.spec.ts).verifie',
   },
   {
     nature: 'mention_paths_non_resolus',
     tache: 'T-ARG-015',
-    site: 'docs/gates.json:GATE-ARG-non-silence.verifie (tests/argent/non-silence.spec.ts)',
+    site: 'docs/gates.json(tests/argent/non-silence.spec.ts).verifie',
   },
   {
     nature: 'mention_paths_non_resolus',
     tache: 'DM-16',
-    site: 'docs/gates.json:GATE-JUR-FAIT-GENERATEUR.verifie (tests/domain/fait-generateur.spec.ts)',
+    site: 'docs/gates.json(tests/domain/fait-generateur.spec.ts).verifie',
   },
   {
     nature: 'mention_paths_non_resolus',
     tache: 'UX-P2-04',
-    site: 'docs/gates.json:GATE-ARG-cloisonnement.verifie (tests/security/cloisonnement-documents.spec.ts)',
+    site: 'docs/gates.json(tests/security/cloisonnement-documents.spec.ts).verifie',
   },
   {
     nature: 'mention_paths_non_resolus',
     tache: 'CPL-T23',
-    site: 'docs/gates.json:mois-a-blanc.verifie (scripts/gates/mois-a-blanc.ts)',
+    site: 'docs/gates.json(scripts/gates/mois-a-blanc.ts).verifie',
   },
   {
     nature: 'mention_paths_non_resolus',
     tache: 'UX-P2-06',
-    site: 'docs/gates.json:idor:check.verifie (tests/integration/idor.spec.ts)',
+    site: 'docs/gates.json(tests/integration/idor.spec.ts).verifie',
   },
   {
     nature: 'mention_paths_non_resolus',
     tache: 'QA-T29',
-    site: 'docs/gates.json:G-SEC-CONCURRENCE.verifie (tests/integration/concurrence.spec.ts)',
+    site: 'docs/gates.json(tests/integration/concurrence.spec.ts).verifie',
   },
   {
     nature: 'mention_paths_non_resolus',
     tache: 'SEC-19',
-    site: 'docs/gates.json:G-SEC-REVOCATION.verifie (tests/unit/securite/revocation.spec.ts)',
+    site: 'docs/gates.json(tests/unit/securite/revocation.spec.ts).verifie',
   },
   {
     nature: 'mention_paths_non_resolus',
     tache: 'UX-P1-01',
-    site: 'docs/gates.json:G-SEC-ORACLE.verifie (tests/security/oracle.spec.ts)',
+    site: 'docs/gates.json(tests/security/oracle.spec.ts).verifie',
   },
   {
     nature: 'mention_paths_non_resolus',
     tache: 'SEC-26',
-    site: 'docs/gates.json:G-SEC-NOTIF.verifie (tests/unit/integration/notif-sans-pii.spec.ts)',
+    site: 'docs/gates.json(tests/unit/integration/notif-sans-pii.spec.ts).verifie',
   },
   {
     nature: 'mention_paths_non_resolus',
     tache: 'UX-P2-01',
-    site: 'docs/gates.json:frontiere.verifie (tests/integration/frontiere.spec.ts)',
+    site: 'docs/gates.json(tests/integration/frontiere.spec.ts).verifie',
   },
   {
     nature: 'mention_paths_non_resolus',
     tache: 'INT-T13',
-    site: 'docs/gates.json:harnais-mcp.verifie (scripts/gates/harnais-mcp.ts)',
+    site: 'docs/gates.json(scripts/gates/harnais-mcp.ts).verifie',
   },
   {
     nature: 'mention_paths_non_resolus',
     tache: 'INT-T17',
-    site: 'docs/gates.json:harnais-mcp.verifie (scripts/gates/harnais-mcp.ts)',
+    site: 'docs/gates.json(scripts/gates/harnais-mcp.ts).verifie',
   },
   {
     nature: 'mention_paths_en_partie_gabarit',
     tache: 'DM-11',
-    site: 'docs/gates.json:GATE-JUR-CONTRAT-COMPLET.verifie (tests/unit/contrat/contract-template-complete.spec.ts)',
+    site: 'docs/gates.json(tests/unit/contrat/contract-template-complete.spec.ts).verifie',
   },
   {
     nature: 'mention_paths_non_resolus',
     tache: 'INT-T23',
-    site: 'docs/gates.json:GATE-JUR-SIGNATURE-AVANT-DEPOT.verifie (tests/integration/signature-avant-depot.spec.ts)',
+    site: 'docs/gates.json(tests/integration/signature-avant-depot.spec.ts).verifie',
   },
   {
     nature: 'mention_paths_non_resolus',
     tache: 'JUR-T28',
-    site: 'docs/gates.json:GATE-JUR-ACTEUR-HUMAIN.verifie (tests/domain/acteur-humain.spec.ts)',
+    site: 'docs/gates.json(tests/domain/acteur-humain.spec.ts).verifie',
   },
   {
     nature: 'mention_paths_non_resolus',
     tache: 'QA-T16',
-    site: 'docs/gates.json:GATE-UX-A11Y.verifie (tests/a11y/axe.spec.ts)',
+    site: 'docs/gates.json(tests/a11y/axe.spec.ts).verifie',
   },
   {
     nature: 'mention_paths_non_resolus',
     tache: 'QA-T16',
-    site: 'docs/gates.json:GATE-UX-A11Y.verifie (tests/a11y/axe.spec.ts)',
+    site: 'docs/gates.json(tests/a11y/axe.spec.ts).verifie',
   },
   {
     nature: 'mention_paths_non_resolus',
     tache: 'QA-T16',
-    site: 'docs/gates.json:GATE-UX-CIBLES.verifie (tests/a11y/cibles.spec.ts)',
+    site: 'docs/gates.json(tests/a11y/cibles.spec.ts).verifie',
   },
   {
     nature: 'mention_paths_non_resolus',
     tache: 'QA-T16',
-    site: 'docs/gates.json:GATE-UX-CIBLES.verifie (tests/a11y/cibles.spec.ts)',
+    site: 'docs/gates.json(tests/a11y/cibles.spec.ts).verifie',
   },
   {
     nature: 'mention_paths_non_resolus',
     tache: 'QA-T16',
-    site: 'docs/gates.json:GATE-UX-REFLOW.verifie (tests/a11y/reflow.spec.ts)',
+    site: 'docs/gates.json(tests/a11y/reflow.spec.ts).verifie',
   },
   {
     nature: 'mention_paths_non_resolus',
     tache: 'QA-T16',
-    site: 'docs/gates.json:GATE-UX-REFLOW.verifie (tests/a11y/reflow.spec.ts)',
+    site: 'docs/gates.json(tests/a11y/reflow.spec.ts).verifie',
   },
   {
     nature: 'mention_paths_non_resolus',
     tache: 'UX-P3-01',
-    site: 'docs/gates.json:GATE-UX-HORS-LIGNE.verifie (tests/ux/hors-ligne.spec.ts)',
+    site: 'docs/gates.json(tests/ux/hors-ligne.spec.ts).verifie',
   },
   {
     nature: 'mention_paths_non_resolus',
     tache: 'SEC-26',
-    site: 'docs/gates.json:GATE-UX-HORS-LIGNE.verifie (tests/ux/hors-ligne.spec.ts)',
+    site: 'docs/gates.json(tests/ux/hors-ligne.spec.ts).verifie',
   },
   {
     nature: 'mention_paths_non_resolus',
     tache: 'QA-T20b',
-    site: 'docs/gates.json:perf:bundle.verifie (scripts/gates/bundle-par-route.ts)',
+    site: 'docs/gates.json(scripts/gates/bundle-par-route.ts).verifie',
   },
   {
     nature: 'mention_paths_non_resolus',
     tache: 'QA-T19',
-    site: 'docs/gates.json:gate-nightly.verifie (.github/workflows/nightly.yml)',
+    site: 'docs/gates.json(.github/workflows/nightly.yml).verifie',
   },
   {
     nature: 'mention_paths_non_resolus',
     tache: 'QA-T19',
-    site: 'docs/gates.json:gate-nightly.verifie (.github/workflows/nightly.yml)',
+    site: 'docs/gates.json(.github/workflows/nightly.yml).verifie',
   },
   {
     nature: 'mention_paths_non_resolus',
     tache: 'QA-T27',
-    site: 'docs/gates.json:gate-nightly.verifie (.github/workflows/nightly.yml)',
+    site: 'docs/gates.json(.github/workflows/nightly.yml).verifie',
   },
 ];
 
@@ -2912,7 +2939,11 @@ const CONTRE_TEMOINS: ContreTemoin[] = [
       taches: [T_GABARIT],
       gates: [GATE_GABARIT],
       exemptionsFigees: [
-        { nature: 'gate_paths_non_resolus', tache: 'GOV-003', site: SITE_GATE_GABARIT },
+        {
+          nature: 'gate_paths_non_resolus',
+          tache: 'GOV-003',
+          site: cleFigeeDansGates(GATE_GABARIT.script, ''),
+        },
       ],
     },
     exemptions: ['gate_paths_non_resolus'],
@@ -2962,7 +2993,7 @@ const CONTRE_TEMOINS: ContreTemoin[] = [
         {
           nature: 'gate_paths_en_partie_gabarit',
           tache: 'GOV-007',
-          site: siteDansGates('docs/gates.json:gov:pr', 'scripts/gates/gov-pr.ts'),
+          site: cleFigeeDansGates('scripts/gates/gov-pr.ts', ''),
         },
       ],
     },
