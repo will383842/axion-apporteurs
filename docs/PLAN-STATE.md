@@ -114,18 +114,17 @@ qui franchirait le canal. Le 2026-09-27T09:09Z, les paths de JUR-T02 couvrant d�
 `package.json`, `ci.yml` et `vitest.mutation.config.ts`, la garde est câblée : scripts
 `ssot:seuils` et `ssot:seuils:prove`, deux étapes du job `gate-a` après la grille chiffrée, et
 `tests/unit/juridique/` jugé sous mutation, deux tests écartés et nommés (balayage `git ls-files`,
-lecture du texte instrumenté de la SSOT).
+lecture du texte instrumenté de la SSOT). Le 2026-09-27T09:24Z, l'entrée du registre porte le nom
+de sa commande, `ssot:seuils`, et l'ancien identifiant n'y survit qu'en alias (`partners/ADR-0018`) :
+`un-nom-une-garde.spec.ts` ne compte plus que ses trois écarts. Les `preuveRouge` de `ssot:seuils`
+et de `G-SEC-NOTIF` sont posés. Les deux sorties non nulles de `scripts/gates/seuils-ssot.ts` sont
+déclarées au cliquet de `refus-de-rendre-et-de-publier.spec.ts` et nommées dans `REFUS_NOMMES`,
+témoins d'effet à zéro : dette déclarée.
 
-**Reste.** Dans `docs/gates.json`, remplir les `preuveRouge` de `GATE-JUR-SEUILS-SSOT` et de
-`G-SEC-NOTIF` : écritures réservées, textes remis à l'orchestrateur. `scripts/gates/seuils-ssot.ts`
-ajoute des sorties non nulles que ni le cliquet de `refus-de-rendre-et-de-publier.spec.ts` ni
-`REFUS_NOMMES` (`scripts/gates/registre-des-refus.ts`) ne déclarent, et ces deux fichiers sont hors
-des paths du lot. La PR #175, non fusionnée, fige les étapes de `gate-a` dans `PORTE_A_FIGEE`
+**Reste.** `docs/GARDES-AXIONIA.md` cite encore l'ancien identifiant, que l'alias résout : le
+fichier est hors des paths du lot. La PR #175, non fusionnée, fige les étapes de `gate-a` dans `PORTE_A_FIGEE`
 (`scripts/gates/gov-conventions.ts`) : les deux étapes ajoutées ici y manquent, et la PR qui
-fusionnera en second résout ce conflit sémantique, que `git` ne signale pas. Enfin, `ssot:seuils` lance
-la garde de `GATE-JUR-SEUILS-SSOT` sans en porter l'identifiant : c'est le quatrième écart que
-`partners/ADR-0018` fait rougir (`un-nom-une-garde.spec.ts`). Le fermer, c'est renommer l'entrée du
-registre en `ssot:seuils`, écriture réservée : décision remise à l'orchestrateur. `FENETRE_MOIS` attend la question `JUR-T01-Q02` (`HYP-E1-9`). L'appel réel au bot
+fusionnera en second résout ce conflit sémantique, que `git` ne signale pas. `FENETRE_MOIS` attend la question `JUR-T01-Q02` (`HYP-E1-9`). L'appel réel au bot
 attend la rubrique 2 de `docs/tiers/telegram.md` et les noms des deux secrets dans `src/lib/env.ts`.
 Sous mutation, la SSOT n'a aucun mutant jugé : toutes ses valeurs sont évaluées au chargement du
 module, donc statiques et hors score (`ignoreStatic`) ; ce sont ses tests en processus qui les

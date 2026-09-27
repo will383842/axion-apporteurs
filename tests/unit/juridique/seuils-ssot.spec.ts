@@ -2,7 +2,7 @@
 // @req REQ-EXT-028
 // @req REQ-JUR-029
 /**
- * `seuils-ssot.spec.ts` — GATE-JUR-SEUILS-SSOT (JUR-T02).
+ * `seuils-ssot.spec.ts` — `ssot:seuils` (JUR-T02).
  *
  * CE QU'IL TIENT.
  *   1. La source unique des seuils et des délais (`src/domain/seuils/ssot.ts`) porte TOUS les délais

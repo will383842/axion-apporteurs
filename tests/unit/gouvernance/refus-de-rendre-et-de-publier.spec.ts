@@ -884,6 +884,19 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
         '(un-statut-fusionnee-porte-sa-preuve.spec.ts) ; la branche rouge n’a pas de témoin ' +
         'd’effet. Dette DÉCLARÉE.',
     },
+    'scripts/gates/seuils-ssot.ts': {
+      total: 2,
+      porte: 2,
+      // ZÉRO : les témoins de cette garde vivent dans son propre `--prove` (un témoin par famille,
+      // des contre-témoins verts) et dans `tests/unit/juridique/seuils-ssot.spec.ts`, pas dans `REFUS`.
+      temoins: 0,
+      raison:
+        'JUR-T02 — `ssot:seuils`, REQ-JUR-015 et RM-10 : aucun seuil légal hors de la SSOT. Deux ' +
+        '`process.exit(1)` : le `--prove` qui voit un témoin rester vert ou un contre-témoin ' +
+        'rougir, et la sortie terminale sur faute du dépôt. Les familles sont éprouvées par ' +
+        '`pnpm ssot:seuils:prove` et par seuils-ssot.spec.ts ; la sortie elle-même n’a pas de ' +
+        'témoin d’effet sur le binaire. Dette DÉCLARÉE.',
+    },
   };
 
   // 🔴 ON COMPTE SUR LE DISQUE, PAS DANS LE DIFF COMMITÉ. Ma première version lisait

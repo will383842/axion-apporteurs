@@ -1,5 +1,5 @@
 /**
- * seuils-ssot.ts — `ssot:seuils`, GATE-JUR-SEUILS-SSOT (JUR-T02 : REQ-JUR-015, REQ-EXT-028, RM-10).
+ * seuils-ssot.ts — `ssot:seuils` (JUR-T02 : REQ-JUR-015, REQ-EXT-028, RM-10).
  *
  * USAGE : npx tsx scripts/gates/seuils-ssot.ts           (juge la SSOT, `src/` et le gabarit du dépôt)
  *         npx tsx scripts/gates/seuils-ssot.ts --prove   (un témoin par famille, contre-témoins verts)
