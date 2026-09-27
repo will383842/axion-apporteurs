@@ -11116,7 +11116,8 @@
       "paths": [
         "scripts/gates/gov-tasks.ts",
         "tests/unit/gouvernance/tasks-schema-et-paths.spec.ts",
-        "scripts/lot/revues.ts"
+        "scripts/lot/revues.ts",
+        "tests/unit/gouvernance/lentilles-selon-le-risque.spec.ts"
       ],
       "schema": false,
       "sensible": [],
