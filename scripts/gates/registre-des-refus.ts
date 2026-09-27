@@ -42,12 +42,38 @@ export function enumererFichiers(dossier: string): string[] {
 /**
  * Le motif des sorties non nulles — SOURCE UNIQUE, importée par le cliquet (RM-01). Il lit une
  * EXPRESSION, pas une valeur : un argument variable compte comme non nul.
+ *
+ * DEUX FORMES, toutes deux légitimes et jamais unifiées : l'appel de sortie IMMÉDIATE, et
+ * l'affectation du code de sortie, DIFFÉRÉE — celle qui laisse le processus finir d'imprimer.
+ * Le motif n'a longtemps vu que la première ; deux refus de `scripts/plan-state/build.ts` sont
+ * entrés par la seconde sans que le cliquet bouge (GOV-054). L'affectation nulle ne compte pas,
+ * la comparaison (`===`) non plus.
  */
-export const SORTIE_NON_NULLE = /process\.exit\(\s*(?!0\s*\))/g;
+export const SORTIE_NON_NULLE = /process\.exit(?:\(\s*(?!0\s*\))|Code\s*=(?!=)(?!\s*0(?![\w.])))/g;
 
 /** Le nombre de sorties non nulles d'un texte, au sens du motif ci-dessus. */
 export function compterSorties(texte: string): number {
   return (texte.match(new RegExp(SORTIE_NON_NULLE.source, 'g')) ?? []).length;
+}
+
+/**
+ * La confrontation du cliquet, fichier par fichier : ce que le disque AJOUTE à la base contre ce
+ * que le registre `declares` déclare. Rend les écarts NOMMÉS — vide si rien.
+ */
+export function ajoutsNonDeclares(
+  ajoutes: ReadonlyMap<string, number>,
+  declares: Readonly<Record<string, { total: number }>>
+): string[] {
+  const ecarts: string[] = [];
+  for (const [f, n] of [...ajoutes].sort(([a], [b]) => a.localeCompare(b))) {
+    const d = declares[f];
+    if (d === undefined) {
+      ecarts.push(`${f} ajoute ${n} sortie(s) non nulle(s) et n’est PAS déclaré`);
+    } else if (d.total !== n) {
+      ecarts.push(`${f} : ${n} sortie(s) ajoutée(s), ${d.total} déclarée(s)`);
+    }
+  }
+  return ecarts;
 }
 
 /** Une sortie repérée dans un texte, avec l'identité qui la nomme. */
@@ -141,6 +167,11 @@ function natureA(noeud: ts.Node, position: number): 'code' | 'commentaire' | 'ch
 function argumentDe(noeud: ts.Node | null, texte: string, fin: number, nature: string): string {
   if (noeud !== null && nature === 'code') {
     for (let n: ts.Node | undefined = noeud; n; n = n.parent) {
+      // La sortie DIFFÉRÉE est une affectation : son argument est la valeur affectée, préfixée
+      // de `=` pour qu'elle ne se confonde jamais avec la sortie immédiate de même argument.
+      if (ts.isBinaryExpression(n) && n.operatorToken.kind === ts.SyntaxKind.EqualsToken) {
+        return `= ${court(n.right.getText())}`;
+      }
       if (ts.isCallExpression(n)) return court(n.arguments.map((a) => a.getText()).join(', '));
     }
   }
@@ -381,6 +412,11 @@ export const REFUS_NOMMES: Readonly<Record<string, readonly string[]>> = {
   ],
   'scripts/mutation/pr.ts': ['module › si APPELE_DIRECTEMENT › (issue.code)'],
   'scripts/mutation/rapport.ts': ['module › si APPELE_DIRECTEMENT › (decision.code)'],
+  'scripts/plan-state/build.ts': [
+    'module › sinon !LANCE_EN_SCRIPT › si MODE_VERIFIER › si !existsSync(CHEMIN_VUE) › (= 1)',
+    'module › sinon !LANCE_EN_SCRIPT › si MODE_VERIFIER › sinon !existsSync(CHEMIN_VUE) › si ecarts.length > 0 › (= 1)',
+    'module › sinon !LANCE_EN_SCRIPT › sinon MODE_VERIFIER › si questions.length > PLAFOND_QUESTIONS › (= 1)',
+  ],
   'scripts/prevol.ts': [
     'etapesDeLaPorteA › si !estObjet(job) › (1)',
     'etapesDeLaPorteA › si !Array.isArray(etapes) › (1)',

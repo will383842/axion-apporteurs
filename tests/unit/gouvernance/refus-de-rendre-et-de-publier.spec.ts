@@ -39,7 +39,11 @@ import { join, resolve, dirname } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { fichiersSuivis } from '../../../scripts/lot/fichiers-suivis';
 import { declarationsDeLaBase, declarationsRetirees } from './declarations-de-sorties';
-import { compterSorties, enumererFichiers } from '../../../scripts/gates/registre-des-refus';
+import {
+  ajoutsNonDeclares,
+  compterSorties,
+  enumererFichiers,
+} from '../../../scripts/gates/registre-des-refus';
 
 /** Ce fichier, tel que `origin/main` le porte : le cliquet des sorties se lit contre lui. */
 const CE_FICHIER = 'tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts';
@@ -844,6 +848,23 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
         'famille est vue rendre 1 par score-de-mutation.spec.ts. Le binaire n’est pas lancé par un ' +
         'témoin : il lance Stryker. Dette DÉCLARÉE.',
     },
+    // ── GOV-054 : LES SORTIES DIFFÉRÉES, ARBITRÉES ET NON SUBIES ────────────────────────────
+    // Le motif ne voyait que la sortie IMMÉDIATE. `scripts/plan-state/build.ts` porte TROIS
+    // affectations non nulles du code de sortie — les deux refus de `plan-state:verifier` entrés
+    // par la PR #36 sans que le cliquet bouge, et le plafond de questions du mode de rendu. Le
+    // motif les voit désormais ; comptées des DEUX côtés du diff, elles laissent le delta à zéro,
+    // et c'est ICI qu'elles entrent au registre, une fois, avec leur motif. La somme des `total`
+    // déclarés gagne donc exactement ces trois-là — l'écart vient de ce fichier, pas d'un ajout.
+    'scripts/plan-state/build.ts': {
+      total: 3,
+      porte: 3,
+      temoins: 0,
+      raison:
+        'GOV-054 — trois sorties DIFFÉRÉES (affectation du code de sortie, pour laisser finir ' +
+        'l’impression) : vue absente et vue dérivée en `plan-state:verifier`, plafond de questions ' +
+        'en rendu. La dérive de la vue est vue rougir par les specs de PLAN-STATE, qui ne vivent ' +
+        'pas dans `REFUS`. Dette DÉCLARÉE.',
+    },
   };
 
   // 🔴 ON COMPTE SUR LE DISQUE, PAS DANS LE DIFF COMMITÉ. Ma première version lisait
@@ -949,11 +970,10 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
       'le registre `declares` est VIDE : on ne peut pas faire baisser la dette en la supprimant'
     ).toBeGreaterThan(0);
 
-    for (const [f, n] of [...ajoutesParFichier].sort()) {
-      const d = declares[f];
-      expect(d, `${f} ajoute ${n} \`process.exit(1)\` et n’est PAS déclaré ici`).toBeDefined();
-      expect(d!.total, `${f} : ${n} exits ajoutés, ${d!.total} déclarés`).toBe(n);
-    }
+    // La confrontation est la fonction partagée `ajoutsNonDeclares` : son témoin ROUGE sur une
+    // sortie DIFFÉRÉE fabriquée vit dans `cliquet-sorties-differees.spec.ts` (GOV-054).
+    const ecarts = ajoutsNonDeclares(ajoutesParFichier, declares);
+    expect(ecarts, ecarts.join('\n')).toEqual([]);
     // 🔴 UN FICHIER DÉCLARÉ QUI N'AJOUTE PLUS RIEN A ATTERRI — ce n'est pas une omission.
     // Mesuré à la réconciliation de `gov-038` : `main` ayant absorbé les PR #31 et #32, les NEUF
     // entrées qu'elles avaient déclarées sont passées à un delta de ZÉRO d'un coup. Les faire
