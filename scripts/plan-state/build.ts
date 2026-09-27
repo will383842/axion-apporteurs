@@ -33,6 +33,7 @@ import { execFileSync } from 'node:child_process';
 import { join } from 'node:path';
 import { referencePr, type Attestation } from '../lot/attestation';
 import { LIVREE, PLANCHER } from '../lot/avancement';
+import { chargerRegistre } from '../lot/registre-decisions';
 
 const PLAFOND_QUESTIONS = 10;
 
@@ -84,18 +85,21 @@ const sh = (cmd: string, args: string[]) => {
 
 const doc = JSON.parse(readFileSync('docs/tasks.json', 'utf8')) as { taches: Tache[] };
 const taches = doc.taches;
-// La frontière §1 / §2 du registre fait foi : le §4 prescrit de DÉPLACER une ligne de la §2 vers la §1
-// quand une décision cesse d'avoir un défaut. Ratisser tout le fichier rendait ce déplacement invisible
-// et faisait écrire « Aucune question ouverte » sur une décision redevenue bloquante.
-const decisions = readFileSync('docs/DECISIONS.md', 'utf8');
-const section = (n: number) =>
-  decisions
-    .split(new RegExp(`^## ${n}\\.`, 'm'))[1]
-    ?.split(new RegExp(`^## ${n + 1}\\.`, 'm'))[0] ?? '';
-const ids = (texte: string) => new Set(texte.match(/\b(HYP|DEC)-[A-Z0-9-]+\b/g) || []);
-/** §2 = décisions avec une hypothèse par défaut posée. §1 = décisions SANS défaut, bloquantes. */
-const posees = ids(section(2));
-const bloquantes = ids(section(1));
+/**
+ * LE REGISTRE DES DÉCISIONS, LU PAR LE LECTEUR UNIQUE (GOV-060, REQ-GOV-015, REQ-GOV-024).
+ *
+ * Ce fichier découpait `docs/DECISIONS.md` par ses titres de section et y ramassait les identifiants
+ * `HYP-`/`DEC-` au fil du texte — la lecture que GOV-027 a retirée du composeur et de `gov:tasks`.
+ * C'était un TROISIÈME lecteur du même registre, et il divergeait : mesuré le 2026-09-26, la vue
+ * annonçait cinq questions ouvertes pour Will (W9, W6, DEC-INT-002 « bloquante », W12, W11) que le
+ * registre rend toutes tranchées le 2026-09-03. `plan-state:verifier` ne pouvait pas le voir : il
+ * compare la vue à son générateur, jamais le générateur à la source. Le registre fait foi ; la
+ * lecture passe donc par `chargerRegistre`, et `plan-state-lecteur-unique.spec.ts` refuse tout
+ * autre chemin de lecture dans ce fichier.
+ */
+const registre = chargerRegistre();
+/** Les décisions portant une hypothèse par défaut : les lignes de tableau de la §2. */
+const posees = [...registre.parId.values()].filter((d) => d.section === 2);
 
 // Phase courante = la plus petite phase qui porte encore une tâche non terminée.
 // Le vocabulaire « livrée » vient de `scripts/lot/avancement.ts`, qui le dérive du barème et le
@@ -109,15 +113,16 @@ const enCours = par('en_cours');
 const bloquees = par('bloquee');
 const attente = par('attente_externe');
 
-// Questions ouvertes = décisions SANS hypothèse posée, citées par une tâche de la phase courante.
+// Questions ouvertes = décisions qui empêchent de coder (le `motif` du lecteur unique), citées par une
+// tâche de la phase courante. Une décision TRANCHÉE n'en est plus une, où qu'elle soit rangée.
 const questions = [
   ...new Set(
     taches
       .filter((t) => t.phase === phaseCourante && !LIVREE.has(t.statut))
       .flatMap((t) => [
         ...t.hyp
-          .filter((h) => !posees.has(h))
-          .map((h) => (bloquantes.has(h) ? `${h} — **bloquante (§1 du registre)**` : h)),
+          .filter((h) => !registre.estCodable(h))
+          .map((h) => (registre.estBloquante(h) ? `${h} — **bloquante (§1 du registre)**` : h)),
         ...(t.externe ? [`externe:${t.externe}`] : []),
       ])
   ),
@@ -159,6 +164,13 @@ const SOURCE_MAIN = '`git` sur `origin/main`';
 
 const sourcesDesRubriques = new Map<string, Set<string>>();
 const sourcesDesLignes = new Map<string, Set<string>>();
+/**
+ * CE QU'UNE LIGNE DÉRIVE, DIT PAR LE GÉNÉRATEUR QUI L'ÉCRIT (GOV-053). Une ligne se désigne par ce
+ * qu'elle porte, jamais par son RANG dans la rubrique : « la deuxième ligne de Prochain pas » désigne
+ * le premier paragraphe quand la file est vide, et le deuxième quand une PR est prête. Le
+ * vérificateur imprime cette désignation quand la ligne dérive, et le vert quand elle est libre.
+ */
+const designationsDesLignes = new Map<string, string>();
 let rubriqueCourante: string | null = null;
 let ligneCourante: Set<string> | null = null;
 
@@ -376,11 +388,14 @@ const neutraliser = (l: string): string => l.replaceAll('<', '&lt;').replace(/[\
  * vérificateur comparerait une ligne de forge — un faux rouge à chaque PR. Quand la forge a été
  * lue, `neutraliser` a déjà ramené le tout à une seule ligne.
  */
-function ligneAttribuee(ecrire: () => string): string {
+function ligneAttribuee(ecrire: () => string, designation?: string): string {
   ligneCourante = new Set();
   const brute = ecrire();
   const l = ligneCourante.size > 0 ? neutraliser(brute) : brute;
-  for (const physique of l.split('\n')) sourcesDesLignes.set(physique, ligneCourante);
+  for (const physique of l.split('\n')) {
+    sourcesDesLignes.set(physique, ligneCourante);
+    if (designation !== undefined) designationsDesLignes.set(physique, designation);
+  }
   ligneCourante = null;
   return l;
 }
@@ -393,9 +408,19 @@ const ligneDeReprise = ligneAttribuee;
  * la rubrique lit la forge : sans lui, la ligne n'a pas de provenance et le vérificateur ne sait
  * pas la distinguer d'une prose écrite à la main.
  */
-function pousser(ecrire: () => string): void {
-  lignes.push(ligneAttribuee(ecrire));
+function pousser(ecrire: () => string, designation?: string): void {
+  lignes.push(ligneAttribuee(ecrire, designation));
 }
+
+/**
+ * LES DEUX PARTS DE « Prochain pas », NOMMÉES PAR CE QU'ELLES DÉRIVENT (GOV-053). La rubrique mêle
+ * une valeur de la forge (la PR prête) et une liste qui ne se dérive que du registre : la première
+ * est libre, la seconde est confrontée — par sa présence, et par le compte qu'elle porte, qui est une
+ * mesure du domaine (`LECTURES`).
+ */
+const DESIGNATION_DES_ELIGIBLES =
+  'la liste des tâches éligibles, dérivée de `docs/tasks.json` seul';
+const DESIGNATION_DE_LA_PR_PRETE = 'le numéro de la PR en tête de file, lu sur la forge';
 
 lignes.push("# PLAN-STATE — état vivant d'Axion Partners");
 lignes.push('');
@@ -433,13 +458,39 @@ lignes.push('');
  */
 const STATUTS_DU_TABLEAU: readonly string[] = Object.keys(PLANCHER);
 
+/**
+ * LE PLAFOND D'UNE LISTE D'IDENTIFIANTS DANS LA VUE — DOUZE, ET SON MOTIF (GOV-079).
+ *
+ * Le motif : une liste d'identifiants vit dans UNE cellule de tableau, et la vue se lit d'un coup
+ * d'œil — douze identifiants tiennent sur la ligne rendue sans la faire déborder ; deux cents la
+ * rendraient illisible et noieraient les rubriques qui suivent. La liste complète existe déjà,
+ * entière, dans `docs/TASKS.md` : la vue d'état n'a pas à la recopier (RM-01).
+ *
+ * CE QUI N'ÉTAIT PAS BON, CE N'ÉTAIT PAS LE NOMBRE, C'ÉTAIT LE SILENCE : « JUR-T02, … » ne
+ * distinguait pas douze tâches à faire de douze affichées sur deux cents. Une liste tronquée dit
+ * donc, à l'endroit même de la troncature, l'affiché et le total — dérivés de la liste, jamais
+ * tapés — et la vue où lire le reste. `aucune-troncature-muette.spec.ts` recompte les deux.
+ */
+export const PLAFOND_D_UNE_LISTE = 12;
+const VUE_DE_LA_LISTE_COMPLETE = '`docs/TASKS.md`';
+/** Le nombre d'entrées de journal rendues en entier — motif écrit là où il s'applique (« Journal »). */
+const ENTREES_DE_JOURNAL_RENDUES = 3;
+
+function tronquer(ids: readonly string[], separateur = ', '): string {
+  if (ids.length <= PLAFOND_D_UNE_LISTE) return ids.join(separateur);
+  const affiches = ids.slice(0, PLAFOND_D_UNE_LISTE);
+  return `${affiches.join(separateur)} … (${affiches.length} affichées sur ${ids.length} — liste complète : ${VUE_DE_LA_LISTE_COMPLETE})`;
+}
+
 lignes.push('| Statut | Nombre | Détail |');
 lignes.push('| --- | --- | --- |');
 for (const s of STATUTS_DU_TABLEAU) {
   const l = par(s);
+  // LA MÊME TRONCATURE POUR TOUTES LES LISTES DE LA RUBRIQUE (GOV-079) : une liste détaillée qui
+  // dépasserait le plafond dirait son total comme les autres, jamais un silence de plus.
   const detail = ['en_cours', 'en_revue', 'bloquee', 'attente_externe'].includes(s)
-    ? l
-        .map((t) => {
+    ? tronquer(
+        l.map((t) => {
           // LA RÉFÉRENCE EST QUALIFIÉE PAR DÉPÔT (GOV-038). Cette ligne rendait `PR#<n>` sans dire de
           // quel dépôt : quatorze tâches de ce backlog vivent ailleurs, et la vue publique aurait
           // porté « INT-T01b (A01) PR#998 » pour une PR que la forge de CE dépôt ne connaît pas —
@@ -448,14 +499,10 @@ for (const s of STATUTS_DU_TABLEAU) {
           // (RM-01, RM-12).
           const ref = referencePr(t);
           return `${t.id}${t.owner ? ` (${t.owner})` : ''}${ref ? ` ${ref}` : ''}${t.motif ? ` — ${t.motif}` : ''}`;
-        })
-        .join(' · ')
-    : l.length > 12
-      ? `${l
-          .slice(0, 12)
-          .map((t) => t.id)
-          .join(', ')} …`
-      : l.map((t) => t.id).join(', ');
+        }),
+        ' · '
+      )
+    : tronquer(l.map((t) => t.id));
   lignes.push(`| \`${s}\` | ${l.length} | ${detail || '—'} |`);
 }
 lignes.push('');
@@ -521,22 +568,27 @@ let cheminCritique: string[];
   lignes.push('');
 }
 
+// ÉMISE SANS CONDITION (GOV-055) : « Bloquées » est une rubrique DUE (REQ-GOV-006). Émise les seuls
+// jours où une tâche est bloquée, elle aurait rendu la liste des rubriques dues conditionnelle à
+// l'état du registre — et une rubrique qu'on ne doit que certains jours ne se confronte à rien.
+titre('Bloquées');
+lignes.push('');
 if (bloquees.length || attente.length) {
-  titre('Bloquées');
-  lignes.push('');
   for (const t of [...bloquees, ...attente]) {
     lignes.push(
       `- **${t.id}** — ${t.titre} · ${t.motif ?? `attend ${t.externe}`}${(t.attempts ?? 0) > 0 ? ` · ${t.attempts} tentative(s)` : ''}`
     );
   }
-  lignes.push('');
+} else {
+  lignes.push('Aucune tâche bloquée ni en attente externe.');
 }
+lignes.push('');
 
 titre('Questions ouvertes pour Will');
 lignes.push('');
 if (!questions.length) {
   lignes.push(
-    'Aucune : toutes les décisions dont la phase courante dépend ont une hypothèse posée dans `docs/DECISIONS.md`.'
+    'Aucune : toutes les décisions dont la phase courante dépend sont codables dans `docs/DECISIONS.md` — tranchées, ou portées par une hypothèse par défaut.'
   );
 } else {
   for (const q of questions) lignes.push(`- ${q}`);
@@ -552,7 +604,7 @@ lignes.push('');
 titre('Hypothèses par défaut appliquées');
 lignes.push('');
 lignes.push(
-  `${posees.size} décisions portent une hypothèse datée dans \`docs/DECISIONS.md\` (avec leur réversibilité). Les décisions marquées « avenant » se tranchent **avant le premier envoi DocuSeal**.`
+  `${posees.length} décisions portent une hypothèse datée dans \`docs/DECISIONS.md\` (avec leur réversibilité). Les décisions marquées « avenant » se tranchent **avant le premier envoi DocuSeal**.`
 );
 lignes.push('');
 
@@ -759,23 +811,28 @@ lignes.push('');
     pousser(() => {
       forge.file();
       return `**Fusionner #${prete.number}** — elle est en tête de file et ne bloque sur rien.`;
-    });
+    }, DESIGNATION_DE_LA_PR_PRETE);
     lignes.push('');
   }
   // LA BRANCHE NE DÉPEND QUE DU REGISTRE (`suivante` se dérive de `docs/tasks.json` seul) : les
   // deux proses sont donc comparables, celle qui nomme la tâche comme celle qui dit qu'il n'y en a
   // pas. C'était `else if (!prete)` — un `prete` qui vient de la forge rendait la seconde
   // conditionnelle à la forge, et libre avec elle.
+  // Les DEUX proses portent le compte (« N tâche(s) éligible(s) en tout »), zéro compris : c'est
+  // une mesure du domaine (`LECTURES`), et une mesure qui n'existerait que certains jours ferait
+  // tomber le témoin de population `X/Y` le jour où la phase se vide.
   if (suivante) {
     pousser(
       () =>
         `**${suivante.id}** — ${suivante.titre} (${suivante.estimateDays} j` +
-        `${surLeChemin.has(suivante.id) ? ', **sur le chemin critique**' : ''}) : ${eligibles.length} tâche(s) éligible(s) en tout. \`pnpm lot:composer\` compose le lot.`
+        `${surLeChemin.has(suivante.id) ? ', **sur le chemin critique**' : ''}) : ${eligibles.length} tâche(s) éligible(s) en tout. \`pnpm lot:composer\` compose le lot.`,
+      DESIGNATION_DES_ELIGIBLES
     );
   } else {
     pousser(
       () =>
-        'Aucune tâche éligible en phase courante : toutes les candidates attendent une dépendance, un tiers ou un arbitrage de Will. Voir « Bloquées » et « Questions ouvertes ».'
+        'Aucune tâche éligible en phase courante (0 tâche(s) éligible(s) en tout) : toutes les candidates attendent une dépendance, un tiers ou un arbitrage de Will. Voir « Bloquées » et « Questions ouvertes ».',
+      DESIGNATION_DES_ELIGIBLES
     );
   }
   lignes.push('');
@@ -818,14 +875,20 @@ if (!entrees.length) {
     'Aucune entrée. Toute PR fusionnée doit être précédée de la sienne (REQ-GOV-023) — `gov:etat` rougit sinon.'
   );
 } else {
-  for (const e of entrees.slice(0, 3)) {
+  // TROIS ENTRÉES, et leur motif : le journal est la seule prose de la vue, chaque entrée tient
+  // plusieurs paragraphes, et une session qui reprend a besoin des dernières, pas de l'histoire.
+  // La troncature dit l'affiché, le total et où lire le reste (GOV-079), comme celle de « Tâches ».
+  const rendues = entrees.slice(0, ENTREES_DE_JOURNAL_RENDUES);
+  for (const e of rendues) {
     lignes.push(`### PR #${e.pr} — ${e.date} — ${e.titre}`);
     lignes.push('');
     lignes.push(e.corps.split('\n').slice(1).join('\n').trim());
     lignes.push('');
   }
-  if (entrees.length > 3)
-    lignes.push(`… ${entrees.length - 3} entrée(s) plus ancienne(s) dans \`docs/journal/\`.`);
+  if (entrees.length > rendues.length)
+    lignes.push(
+      `… ${rendues.length} entrée(s) affichée(s) sur ${entrees.length} ; les ${entrees.length - rendues.length} plus ancienne(s) se lisent dans \`docs/journal/\`.`
+    );
 }
 // Chaque entrée rendue laisse déjà sa ligne vide derrière elle : en ajouter une ici produirait une
 // ligne vide en double, que le prochain `diff` du fichier dérivé ferait passer pour un changement.
@@ -945,11 +1008,16 @@ debutsDesRubriques.forEach(([t, debut], k) => {
 // ⚠️ CE QUE CE VÉRIFICATEUR NE VOIT PAS, écrit plutôt que tu :
 //   (1) une falsification portée sur un élément exempté, et qui reste dans sa zone, passe —
 //       la comparer mesurerait la forge ;
-//   (2) le classement est par RUBRIQUE : « Prochain pas » lit la forge et sort du contrôle EN
-//       ENTIER, alors que sa ligne de tâche se dérive de `docs/tasks.json` seul. Le bloc de reprise
-//       est jugé ligne à ligne ; les rubriques pas encore. C'est GOV-053 ;
-//   (3) un élément que le générateur CESSE de produire disparaît des deux côtés à la fois. C'est
-//       GOV-055, et il faut une source extérieure pour le fermer.
+//   (2) FERMÉ par GOV-090 puis GOV-053 : la volatilité se juge à la LIGNE, dans les rubriques comme
+//       dans le bloc de reprise. « Prochain pas » lit la forge pour la PR prête, et la liste des
+//       tâches éligibles, qui ne se dérive que de `docs/tasks.json`, reste confrontée — par sa
+//       présence et par son compte. Le vert imprime, rubrique par rubrique, ce qui est confronté
+//       et ce qui est libre ;
+//   (3) un élément que le générateur CESSE de produire disparaît des deux côtés à la fois. Pour les
+//       RUBRIQUES, GOV-055 le ferme par une source extérieure (REQ-GOV-006, `lireRubriquesDues`).
+//       Les lignes du bloc de reprise et les mesures du domaine (`MESURES_ATTENDUES`, dérivée de
+//       `LECTURES`) restent jugées contre le générateur lui-même : une lecture retirée fait tomber
+//       l'attendu et l'observé ensemble.
 
 export const BLOC_DE_REPRISE = 'REPRENDRE EN 30 SECONDES';
 
@@ -1078,6 +1146,9 @@ const LECTURES: readonly (readonly [RegExp, ...string[]])[] = [
   ],
   [/^Reste sur ce chemin : \*\*([\d.]+) j\*\*\.$/m, 'jours restants sur le chemin critique'],
   [/^(\d+) décisions portent une hypothèse datée/m, 'décisions à hypothèse posée'],
+  // GOV-053 : le compte que porte la liste des tâches éligibles de « Prochain pas ». La rubrique
+  // lit la forge ; ce compte-ci ne se dérive que du registre.
+  [/(\d+) tâche\(s\) éligible\(s\) en tout/m, 'tâches éligibles en phase courante'],
 ];
 
 /** Les mesures COMPTÉES sans regex : elles n'ont pas de capture, seulement un dénombrement. */
@@ -1131,6 +1202,8 @@ export const FAMILLES = [
   'ligne_de_reprise_dupliquee',
   'fin_de_ligne_non_lf',
   'structure_dans_une_exemption',
+  'rubrique_due_absente',
+  'rubriques_dues_non_declarees',
 ] as const;
 
 export type Famille = (typeof FAMILLES)[number];
@@ -1165,10 +1238,68 @@ interface Etage {
   exemptees: [string, string][];
 }
 
+/**
+ * Une rubrique exemptée, LIGNE À LIGNE (GOV-053) : combien de lignes ont été réellement confrontées,
+ * et ce que dérivent celles qui sont libres. Le vert l'imprime pour chaque rubrique exemptée.
+ */
+interface BilanDeRubrique {
+  titre: string;
+  confrontees: number;
+  libres: string[];
+  motif: string;
+}
+
+/**
+ * LES RUBRIQUES DUES — UNE SOURCE EXTÉRIEURE AU GÉNÉRATEUR (GOV-055).
+ *
+ * Le vérificateur compare ce que le générateur PRODUIT à ce qui est sur le DISQUE. Un élément que le
+ * générateur cesse de produire disparaît des deux côtés à la fois, et l'écart n'existe pas : un
+ * témoin qui dérive son attendu du rendu ne peut pas voir ce que le rendu a perdu (mesuré : la
+ * rubrique « Bloquées » neutralisée, « 8 rubrique(s) comparée(s) », EXIT 0).
+ *
+ * La liste des rubriques DUES se déclare donc UNE fois, dans l'exigence qui dit ce que la vue
+ * contient — REQ-GOV-006, `docs/requirements.json` —, par une phrase qui commence par
+ * `MARQUEUR_DES_RUBRIQUES_DUES` et nomme chaque rubrique entre guillemets français. Elle ne s'écrit
+ * pas ici : le script se comparerait encore à lui-même.
+ *
+ * UNE RUBRIQUE DUE CORRESPOND à un titre rendu qui lui est égal, ou qui la prolonge par « : » et une
+ * valeur (« Phase courante : 0 ») : le numéro de phase est une valeur du registre, pas un nom.
+ *
+ * ⚠️ UNE SOURCE QUI NE DÉCLARE RIEN FAIT ÉCHOUER LE VÉRIFICATEUR (famille
+ * `rubriques_dues_non_declarees`) — fichier absent, exigence absente ou phrase absente. Ce texte
+ * disait « 0/0 » vert et un avertissement : retirer la phrase de REQ-GOV-006 éteignait alors la
+ * confrontation en silence, et seul un témoin rougissait, pas la porte (dette de la revue sécurité
+ * de la PR 158). La lecture est faite à l'appel du vérificateur seulement : importer ce module ne
+ * lit rien de plus que ses sources de rendu.
+ */
+const SOURCE_DES_RUBRIQUES_DUES = { fichier: 'docs/requirements.json', exigence: 'REQ-GOV-006' };
+const MARQUEUR_DES_RUBRIQUES_DUES = 'Ses rubriques dues';
+
+/** Les rubriques qu'un texte d'exigence déclare dues — vide s'il n'en déclare aucune. */
+export function lireRubriquesDues(texte: string): string[] {
+  const i = texte.indexOf(MARQUEUR_DES_RUBRIQUES_DUES);
+  if (i < 0) return [];
+  const phrase = texte.slice(i).split(/\.(?:\s|$)/)[0] ?? '';
+  return [...phrase.matchAll(/«\s*([^»]+?)\s*»/g)].map((m) => m[1]!);
+}
+
+function chargerRubriquesDues(): string[] {
+  if (!existsSync(SOURCE_DES_RUBRIQUES_DUES.fichier)) return [];
+  const doc = JSON.parse(readFileSync(SOURCE_DES_RUBRIQUES_DUES.fichier, 'utf8')) as {
+    exigences?: { id: string; texte: string }[];
+  };
+  const req = (doc.exigences ?? []).find((e) => e.id === SOURCE_DES_RUBRIQUES_DUES.exigence);
+  return req ? lireRubriquesDues(req.texte) : [];
+}
+
+const correspond = (titreRendu: string, due: string): boolean =>
+  titreRendu === due || titreRendu.startsWith(`${due} : `);
+
 /** Le verdict : ce que le disque porte, confronté à ce que les sources produisent À L'INSTANT. */
 function comparer(
   attendu: string,
-  surDisque: string
+  surDisque: string,
+  dues: readonly string[] = []
 ): {
   ecarts: Ecart[];
   rubriques: Etage;
@@ -1176,7 +1307,11 @@ function comparer(
   mesuresConfrontees: string[];
   lignesDansExemptees: { comparees: number; total: number };
   rubriquesNonConverties: string[];
+  parRubrique: BilanDeRubrique[];
+  duesProduites: number;
 } {
+  const parRubrique: BilanDeRubrique[] = [];
+  let duesProduites = 0;
   const ecarts: Ecart[] = [];
   const rubriques: Etage = { comparees: 0, exemptees: [] };
   /**
@@ -1268,6 +1403,18 @@ function comparer(
   }
   const titresA = rA.map((r) => r.titre);
   const titresD = rD.map((r) => r.titre);
+  // LA COUVERTURE, confrontée à la source extérieure (GOV-055) : ce que le générateur produit, et
+  // non ce que le disque porte — c'est le générateur qui peut perdre une rubrique en silence.
+  for (const d of dues) {
+    if (titresA.some((t) => correspond(t, d))) {
+      duesProduites += 1;
+      continue;
+    }
+    ecarts.push({
+      famille: 'rubrique_due_absente',
+      message: `rubrique « ${d} » : ${SOURCE_DES_RUBRIQUES_DUES.exigence} la déclare DUE, et le générateur ne la produit plus. La vue et ses sources l'ont perdue ENSEMBLE : aucune comparaison de l'une à l'autre ne pouvait le voir.`,
+    });
+  }
   for (const t of titresA)
     if (!titresD.includes(t))
       ecarts.push({
@@ -1320,6 +1467,24 @@ function comparer(
       // doit dépendre ni de la conversion de la rubrique ni de la présence de celle-ci sur le
       // disque. Un dénominateur qui suivrait le numérateur ne mesurerait plus rien.
       lignesDansExemptees.total += r.corps.split('\n').filter((l) => l !== '').length;
+      // GOV-053 : le compte PAR RUBRIQUE, incrémenté là où la ligne est réellement confrontée —
+      // jamais la longueur d'une liste déclarée. Ce qui n'est pas confronté est LIBRE, et le vert
+      // le dit, avec ce que la ligne libre dérive quand le générateur l'a nommé.
+      const bilan: BilanDeRubrique = { titre: r.titre, confrontees: 0, libres: [], motif };
+      parRubrique.push(bilan);
+      const toutesAttribuees = r.corps
+        .split('\n')
+        .every((l) => l === '' || sourcesDesLignes.has(l));
+      for (const l of r.corps.split('\n')) {
+        if (l === '') continue;
+        if (toutesAttribuees && exemption(sourcesDesLignes.get(l)) === null) continue;
+        bilan.libres.push(
+          designationsDesLignes.get(l) ??
+            (toutesAttribuees
+              ? 'une ligne nourrie par la forge'
+              : 'une ligne d’une rubrique non convertie')
+        );
+      }
       if (surPlace) {
         const lA = r.corps.split('\n');
         const surDisqueLignes = new Set(surPlace.corps.split('\n'));
@@ -1345,10 +1510,14 @@ function comparer(
             if (ligne === '') continue;
             if (exemption(sourcesDesLignes.get(ligne)) !== null) continue;
             lignesDansExemptees.comparees += 1;
+            bilan.confrontees += 1;
             if (surDisqueLignes.has(ligne)) continue;
+            // La ligne se DÉSIGNE par ce qu'elle dérive quand le générateur l'a nommée (GOV-053),
+            // jamais par son rang : le rang dépend de ce que la forge insère autour.
+            const quoi = designationsDesLignes.get(ligne);
             ecarts.push({
               famille: 'vue_perimee',
-              message: `rubrique « ${r.titre} » — une ligne qui ne lit RIEN de la forge a disparu de la vue : ses sources produisent « ${ligne.slice(0, 140)} », et la vue sur le disque ne la porte nulle part. Le CONTENU d'une ligne nourrie par la forge est libre ; celui-ci ne l'est pas.`,
+              message: `rubrique « ${r.titre} » — une ligne qui ne lit RIEN de la forge a disparu de la vue${quoi ? ` (${quoi})` : ''} : ses sources produisent « ${ligne.slice(0, 140)} », et la vue sur le disque ne la porte nulle part. Le CONTENU d'une ligne nourrie par la forge est libre ; celui-ci ne l'est pas.`,
             });
           }
         }
@@ -1487,6 +1656,8 @@ function comparer(
     mesuresConfrontees,
     lignesDansExemptees,
     rubriquesNonConverties,
+    parRubrique,
+    duesProduites,
   };
 }
 
@@ -1511,7 +1682,21 @@ if (!LANCE_EN_SCRIPT) {
       `❌ plan-state:verifier — ${CHEMIN_VUE} est ABSENT : il n’y a rien à comparer. Tape \`pnpm plan-state:build\`.`
     );
     process.exitCode = 1;
+  } else if (chargerRubriquesDues().length === 0) {
+    // ÉCHEC FERMÉ (GOV-055) : sans liste de rubriques dues, la confrontation ne mesure rien, et un
+    // « 0/0 » vert laisserait disparaître en silence une rubrique que le générateur cesse de produire.
+    console.error(
+      `❌ plan-state:verifier — aucune rubrique DUE n'est déclarée : la couverture de ${CHEMIN_VUE} ne se mesure contre rien.`
+    );
+    refuser(
+      'rubriques_dues_non_declarees',
+      `${SOURCE_DES_RUBRIQUES_DUES.exigence} (\`${SOURCE_DES_RUBRIQUES_DUES.fichier}\`) ne porte pas ` +
+        `la phrase « ${MARQUEUR_DES_RUBRIQUES_DUES} … » — fichier, exigence ou phrase absents. La ` +
+        `liste appartient au registre des exigences : elle se rétablit là, jamais dans ce script.`
+    );
+    process.exitCode = 1;
   } else {
+    const dues = chargerRubriquesDues();
     const {
       ecarts,
       rubriques,
@@ -1519,7 +1704,9 @@ if (!LANCE_EN_SCRIPT) {
       mesuresConfrontees,
       lignesDansExemptees,
       rubriquesNonConverties,
-    } = comparer(rendu, readFileSync(CHEMIN_VUE, 'utf8'));
+      parRubrique,
+      duesProduites,
+    } = comparer(rendu, readFileSync(CHEMIN_VUE, 'utf8'), dues);
     if (ecarts.length > 0) {
       console.error(
         `❌ plan-state:verifier — ${CHEMIN_VUE} a DÉRIVÉ de ses sources : ${ecarts.length} écart(s).`
@@ -1545,6 +1732,11 @@ if (!LANCE_EN_SCRIPT) {
           `À L'INTÉRIEUR des rubriques exemptées (GOV-090 — une ligne comptée au dénominateur et pas ` +
           `au numérateur porte une valeur de la forge, ou vit dans une rubrique non convertie).`
       );
+      // GOV-055 — LE COMPTE ATTENDU À CÔTÉ DE L'OBSERVÉ, l'attendu tiré de la source extérieure.
+      console.log(
+        `   COUVERTURE — ${duesProduites}/${dues.length} rubrique(s) DUE(S) produite(s) par le générateur ` +
+          `(source : ${SOURCE_DES_RUBRIQUES_DUES.exigence}, \`${SOURCE_DES_RUBRIQUES_DUES.fichier}\`).`
+      );
       // LE COMPLÉMENT EST NOMMÉ, JAMAIS SOUS-ENTENDU : une rubrique non convertie est
       // entièrement libre, et le vert doit le DIRE plutôt que de laisser croire à une
       // couverture complète. C'est la même règle que le « périmètre dit, pas supposé » de
@@ -1567,6 +1759,16 @@ if (!LANCE_EN_SCRIPT) {
         rendreExemptions('lignes du bloc de reprise', reprise.exemptees),
       ])
         if (ligne) console.log(ligne);
+      // GOV-053 — UN VERT MUET PROMET PLUS QU'IL NE TIENT. Une rubrique « non comparée » l'est
+      // ligne à ligne : ce qui ne lit pas la forge y est confronté, et le reste est libre. Chaque
+      // rubrique exemptée dit ses deux comptes et ce que dérivent ses lignes libres.
+      for (const b of parRubrique) {
+        const libres = [...new Set(b.libres)];
+        console.log(
+          `   LIGNE À LIGNE — « ${b.titre} » : ${b.confrontees} ligne(s) CONFRONTÉE(S), ${b.libres.length} ligne(s) LIBRE(S) — ` +
+            `${libres.length ? `libre(s) : ${libres.join(' · ')}` : 'aucune ligne libre'} (${b.motif}).`
+        );
+      }
     }
   }
 } else {
