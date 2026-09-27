@@ -151,21 +151,33 @@ describe('REQ-JUR-015 — une source qui cite un texte de loi dit si elle l’a 
     ).toEqual([]);
   });
 
-  it('REQ-JUR-015 — TÉMOIN : une source qui cite une loi en silence est vue', () => {
+  it('REQ-JUR-015 — TÉMOIN : une source qui cite une loi en silence est vue, abrégée OU en mots', () => {
     // Le témoin éprouve le DÉTECTEUR, pas la SSOT : sans lui, une expression trop étroite rendrait
     // la liste vide et le vert ne voudrait rien dire.
+    //
+    // 🔴 CE TÉMOIN A DÉJÀ ÉTÉ TROP ÉTROIT, ET C'EST POURQUOI LES ÉCRITURES EN MOTS Y SONT. Une
+    // première version du détecteur ne lisait que les abréviations (`C. trav.`), et « Code du
+    // travail » lui échappait ; l'élargissement a été vérifié par une commande jetable, donc par
+    // rien de durable. Une revue `securite` l'a relevé : la liste ci-dessous ne portait aucune
+    // écriture en mots, et l'élargissement n'était vu rougir par AUCUN test. Une vérification qui
+    // ne vit pas dans un témoin n'a pas eu lieu.
     for (const texte of [
       'contrat art. 5.3 ; C. com. L.441-10, I',
       'C. trav. D.8222-5',
       'REQ-JUR-029 ; C. com. L.123-22',
+      'Code du travail, article D.8222-5',
+      'code de commerce, article L.123-22',
+      'code général des impôts, article 240',
+      'Code civil',
     ]) {
       expect(CITE_UNE_LOI.test(texte), `« ${texte} » doit être vu comme citant une loi`).toBe(true);
       expect(/confront/i.test(texte), `« ${texte} » ne dit PAS avoir été confronté`).toBe(false);
     }
-    // Et une source sans loi ne doit pas être prise.
-    expect(CITE_UNE_LOI.test('contrat art. 5.5'), 'un article de contrat n’est pas une loi').toBe(
-      false
-    );
+    // Et ce qui n'est PAS une loi ne doit pas être pris : un article de contrat, une exigence, une
+    // hypothèse du registre. Sans ces contre-cas, un détecteur qui prendrait tout passerait aussi.
+    for (const texte of ['contrat art. 5.5', 'REQ-JUR-015', 'HYP-D9', 'contrat art. 3.3 et 5.6']) {
+      expect(CITE_UNE_LOI.test(texte), `« ${texte} » n’est pas une citation de loi`).toBe(false);
+    }
   });
 });
 
