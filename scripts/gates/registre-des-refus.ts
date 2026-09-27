@@ -390,6 +390,11 @@ export const REFUS_NOMMES: Readonly<Record<string, readonly string[]>> = {
   ],
   'scripts/gates/red-first.ts': ['module › si APPELE_DIRECTEMENT › (decision.code)'],
   'scripts/gates/roles.ts': ['module › si LANCE_EN_SCRIPT › (decision.code)'],
+  // QA-T07 — la gate semgrep. UNE sortie, `process.exit(verdict.code)`, commune aux deux modes :
+  // le verdict vient de fonctions PURES (`jugerReel`, `jugerPreuve`, `jugerEnsemble`) que
+  // `semgrep-regles-maison.spec.ts` voit rendre chaque famille, et la sortie elle-même est vue
+  // en 0 sur le dépôt réel et en 1 sur une copie des règles portant une règle sans témoin.
+  'scripts/gates/semgrep.ts': ['module › si APPELE_DIRECTEMENT › (verdict.code)'],
   'scripts/gates/schema-cents.ts': [
     "module › si LANCE_EN_SCRIPT › si process.argv.includes('--prove') › si echecs.length > 0 › (1)",
     'module › si LANCE_EN_SCRIPT › si fautes.length > 0 › (1)',
