@@ -380,6 +380,8 @@ describe('REQ-GOV-032 — docs/PLAN-STATE.md est comparée à ses sources (GOV-0
     const racine = join(bac, 'registre-essai');
     mkdirSync(join(racine, 'docs'), { recursive: true });
     copyFileSync('docs/DECISIONS.md', join(racine, 'docs/DECISIONS.md'));
+    // La source des rubriques dues : sans elle, le vérificateur échoue fermé (GOV-055).
+    copyFileSync('docs/requirements.json', join(racine, 'docs/requirements.json'));
     for (const dossier of ['docs/adr', 'docs/journal']) {
       mkdirSync(join(racine, dossier), { recursive: true });
       for (const f of readdirSync(dossier))
@@ -927,6 +929,33 @@ describe('REQ-GOV-032 — docs/PLAN-STATE.md est comparée à ses sources (GOV-0
     expect(code, `une rubrique due jamais produite passe : ${sortie}`).toBe(1);
     expect(sortie).toMatch(/rubrique_due_absente/);
     expect(sortie).toContain('« Rubrique fantôme »');
+  });
+
+  it('RM-02 · famille rubriques_dues_non_declarees — la source ne déclare aucune rubrique due (GOV-055)', () => {
+    // Un registre d'essai SANS `docs/requirements.json` : la confrontation n'a plus rien à mesurer,
+    // et le vérificateur échoue fermé au lieu d'imprimer « 0/0 » vert.
+    const racine = join(bac, 'registre-sans-rubriques-dues');
+    mkdirSync(join(racine, 'docs'), { recursive: true });
+    for (const f of ['docs/tasks.json', 'docs/DECISIONS.md']) copyFileSync(f, join(racine, f));
+    for (const dossier of ['docs/adr', 'docs/journal']) {
+      mkdirSync(join(racine, dossier), { recursive: true });
+      for (const f of readdirSync(dossier))
+        if (statSync(join(dossier, f)).isFile())
+          copyFileSync(join(dossier, f), join(racine, dossier, f));
+    }
+    const forge = join(racine, 'forge.json');
+    writeFileSync(
+      forge,
+      JSON.stringify({
+        prs: [],
+        issues: '[]',
+        main: { sha: 'abc1234', date: '2026-01-01T00:00:00+00:00' },
+      })
+    );
+    const vue = rendrePlanStateDans(racine, 'PLAN-STATE-sans-rubriques-dues.md', '--forge', forge);
+    const { code, sortie } = lancerPlanDans(racine, '--verifier', '--out', vue, '--forge', forge);
+    expect(code, `une source sans rubriques dues passe : ${sortie}`).toBe(1);
+    expect(sortie).toMatch(/\[rubriques_dues_non_declarees\]/);
   });
 
   it('RM-02 · famille mesure_absente — une mesure du domaine introuvable dans la vue', () => {

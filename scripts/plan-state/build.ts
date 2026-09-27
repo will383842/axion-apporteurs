@@ -588,7 +588,7 @@ titre('Questions ouvertes pour Will');
 lignes.push('');
 if (!questions.length) {
   lignes.push(
-    'Aucune : toutes les décisions dont la phase courante dépend ont une hypothèse posée dans `docs/DECISIONS.md`.'
+    'Aucune : toutes les décisions dont la phase courante dépend sont codables dans `docs/DECISIONS.md` — tranchées, ou portées par une hypothèse par défaut.'
   );
 } else {
   for (const q of questions) lignes.push(`- ${q}`);
@@ -1203,6 +1203,7 @@ export const FAMILLES = [
   'fin_de_ligne_non_lf',
   'structure_dans_une_exemption',
   'rubrique_due_absente',
+  'rubriques_dues_non_declarees',
 ] as const;
 
 export type Famille = (typeof FAMILLES)[number];
@@ -1264,10 +1265,12 @@ interface BilanDeRubrique {
  * UNE RUBRIQUE DUE CORRESPOND à un titre rendu qui lui est égal, ou qui la prolonge par « : » et une
  * valeur (« Phase courante : 0 ») : le numéro de phase est une valeur du registre, pas un nom.
  *
- * ⚠️ UNE SOURCE QUI NE DÉCLARE RIEN EST DITE, PAS TUE (`docs/CONVENTIONS.md` §11, « périmètre vide
- * = périmètre DIT ») : le vert imprime « 0/0 » et le motif, et `couverture-attendue.spec.ts` rougit
- * tant que REQ-GOV-006 ne porte pas la liste. La lecture est faite à l'appel du vérificateur
- * seulement : importer ce module ne lit rien de plus que ses sources de rendu.
+ * ⚠️ UNE SOURCE QUI NE DÉCLARE RIEN FAIT ÉCHOUER LE VÉRIFICATEUR (famille
+ * `rubriques_dues_non_declarees`) — fichier absent, exigence absente ou phrase absente. Ce texte
+ * disait « 0/0 » vert et un avertissement : retirer la phrase de REQ-GOV-006 éteignait alors la
+ * confrontation en silence, et seul un témoin rougissait, pas la porte (dette de la revue sécurité
+ * de la PR 158). La lecture est faite à l'appel du vérificateur seulement : importer ce module ne
+ * lit rien de plus que ses sources de rendu.
  */
 const SOURCE_DES_RUBRIQUES_DUES = { fichier: 'docs/requirements.json', exigence: 'REQ-GOV-006' };
 const MARQUEUR_DES_RUBRIQUES_DUES = 'Ses rubriques dues';
@@ -1679,6 +1682,19 @@ if (!LANCE_EN_SCRIPT) {
       `❌ plan-state:verifier — ${CHEMIN_VUE} est ABSENT : il n’y a rien à comparer. Tape \`pnpm plan-state:build\`.`
     );
     process.exitCode = 1;
+  } else if (chargerRubriquesDues().length === 0) {
+    // ÉCHEC FERMÉ (GOV-055) : sans liste de rubriques dues, la confrontation ne mesure rien, et un
+    // « 0/0 » vert laisserait disparaître en silence une rubrique que le générateur cesse de produire.
+    console.error(
+      `❌ plan-state:verifier — aucune rubrique DUE n'est déclarée : la couverture de ${CHEMIN_VUE} ne se mesure contre rien.`
+    );
+    refuser(
+      'rubriques_dues_non_declarees',
+      `${SOURCE_DES_RUBRIQUES_DUES.exigence} (\`${SOURCE_DES_RUBRIQUES_DUES.fichier}\`) ne porte pas ` +
+        `la phrase « ${MARQUEUR_DES_RUBRIQUES_DUES} … » — fichier, exigence ou phrase absents. La ` +
+        `liste appartient au registre des exigences : elle se rétablit là, jamais dans ce script.`
+    );
+    process.exitCode = 1;
   } else {
     const dues = chargerRubriquesDues();
     const {
@@ -1719,11 +1735,7 @@ if (!LANCE_EN_SCRIPT) {
       // GOV-055 — LE COMPTE ATTENDU À CÔTÉ DE L'OBSERVÉ, l'attendu tiré de la source extérieure.
       console.log(
         `   COUVERTURE — ${duesProduites}/${dues.length} rubrique(s) DUE(S) produite(s) par le générateur ` +
-          `(source : ${SOURCE_DES_RUBRIQUES_DUES.exigence}, \`${SOURCE_DES_RUBRIQUES_DUES.fichier}\`).` +
-          (dues.length === 0
-            ? ` ⚠️ ${SOURCE_DES_RUBRIQUES_DUES.exigence} n'en déclare AUCUNE (phrase « ${MARQUEUR_DES_RUBRIQUES_DUES} … » absente) : ` +
-              `une rubrique que le générateur cesserait de produire disparaîtrait ici en silence. La liste appartient au registre des exigences (GOV-055).`
-            : '')
+          `(source : ${SOURCE_DES_RUBRIQUES_DUES.exigence}, \`${SOURCE_DES_RUBRIQUES_DUES.fichier}\`).`
       );
       // LE COMPLÉMENT EST NOMMÉ, JAMAIS SOUS-ENTENDU : une rubrique non convertie est
       // entièrement libre, et le vert doit le DIRE plutôt que de laisser croire à une
