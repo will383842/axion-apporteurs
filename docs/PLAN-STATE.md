@@ -8,7 +8,7 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `a006447` — 2026-09-27T04:23:08+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #158 (un contrôle requis rouge ou une revue manquante) · 2. #169 (un contrôle requis rouge ou une revue manquante) · 3. #82 (un conflit avec `main`) · 4. #165 (un conflit avec `main`) · 5. #168 (un conflit avec `main`) |
+| Qu’est-ce qui est en vol ? | 1. #158 (un contrôle requis rouge ou une revue manquante) · 2. #165 (un contrôle requis rouge ou une revue manquante) · 3. #168 (un contrôle requis rouge ou une revue manquante) · 4. #169 (un contrôle requis rouge ou une revue manquante) · 5. #82 (un conflit avec `main`) |
 | Qui tient quoi ? | QA-T07 (A05) |
 | Où en est la phase ? | phase 0 — 47/116 tâches, reste 53.10 j |
 | Le prochain pas | SEC-17 — Rôles console : enum `ConsoleRole { admin, qualifieur, comptable, lecteur }`, matrice SSOT, `requireRole`, garde AST (chemin critique) |
@@ -64,10 +64,10 @@ Reste sur ce chemin : **12.75 j**.
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
 | 1 | #158 — chore(GOV-053): lot L0-06 — PLAN-STATE à la ligne, rubriques dues, lecteur unique, forme des chemins | `t/lot-l0-06` | un contrôle requis rouge ou une revue manquante |
-| 2 | #169 — feat(INT-T01c): contrat v2 — onze types, charges fermées, route des coordonnées du candidat | `t/int-t01c` | un contrôle requis rouge ou une revue manquante |
-| 3 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
-| 4 | #165 — feat(SEC-17): lot L0-07 — rôles console, matrice unique, requireRole ; gates structurelles de la charte | `t/lot-l0-07` | un conflit avec `main` — à résoudre avant tout |
-| 5 | #168 — chore(GOV-045): lot L0-08 — refus nommés, clé double, schema/paths, attestation, occurrences | `t/lot-l0-08` | un conflit avec `main` — à résoudre avant tout |
+| 2 | #165 — feat(SEC-17): lot L0-07 — rôles console, matrice unique, requireRole ; gates structurelles de la charte | `t/lot-l0-07` | un contrôle requis rouge ou une revue manquante |
+| 3 | #168 — chore(GOV-045): lot L0-08 — refus nommés, clé double, schema/paths, attestation, occurrences | `t/lot-l0-08` | un contrôle requis rouge ou une revue manquante |
+| 4 | #169 — feat(INT-T01c): contrat v2 — onze types, charges fermées, route des coordonnées du candidat | `t/int-t01c` | un contrôle requis rouge ou une revue manquante |
+| 5 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -78,8 +78,6 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 | Tâche | Revendiquée par | Issue | Statut |
 | --- | --- | --- | --- |
 | QA-T07 — Gate sécurité : semgrep | A05 | #69 | `a_faire` |
-
-⚠️ **45 revendication(s) périmée(s)** — GOV-007, GOV-018, GOV-008, GOV-002, GOV-004, GOV-009, GOV-010, GOV-011, GOV-012, GOV-015, INT-T01a, GOV-017b, GOV-020, GOV-023, QA-T00, QA-T01, SEC-01, SEC-02, SEC-10, DM-01, DM-02, QA-T02, QA-T03, SEC-06, SEC-07, SEC-04, INT-T10, UX-P0-02, CPL-T13, GOV-035, GOV-036, GOV-037, GOV-039, GOV-030, GOV-031, GOV-041, GOV-043, GOV-044, GOV-056, GOV-059, GOV-077, GOV-089, GOV-088, GOV-091, GOV-101 : leur issue porte encore un label `owner:` alors que la tâche est livrée. `pnpm lot:cloture` écrit `docs/tasks.json` mais n’efface pas les labels ; la dette appartient à GOV-012.
 
 ## Décisions du jour
 

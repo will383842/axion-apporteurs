@@ -2994,7 +2994,8 @@
         "src/server/auth/session.ts",
         "src/domain/apporteur/acces-espace.ts",
         "tests/integration/utilisateurs-console.spec.ts",
-        "tests/unit/securite/lien-magique-indistinction.spec.ts"
+        "tests/unit/securite/lien-magique-indistinction.spec.ts",
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts"
       ],
       "schema": true,
       "sensible": [
@@ -8177,7 +8178,8 @@
         "docs/gates.json",
         "scripts/gates/lexique-apporteurs.ts",
         "tests/unit/gouvernance/lexique.spec.ts",
-        "scripts/lot/revues.ts"
+        "scripts/lot/revues.ts",
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts"
       ],
       "schema": false,
       "sensible": [
