@@ -171,9 +171,60 @@ export function sansCommentaires(texte: string, blanchirChaines = false): string
   return sortie;
 }
 
-const DUREES = '(?:2|3|6|10|12|15|24|30|60|90)';
-const EN_LETTRES =
-  '(?:deux|trois|six|dix|douze|quinze|vingt-quatre|trente|soixante|quatre-vingt-dix)';
+// Les numéraux français, remontés ici : `enLettres()` est hissée, mais les CONSTANTES qu'elle lit
+// ne le sont pas, et la dérivation des durées ci-dessous l'appelle à l'évaluation du module.
+// Les laisser plus bas rendait une zone morte temporelle (mesuré : la garde levait sur
+// `UNITES_FR[reste]`).
+const UNITES_FR = [
+  'zéro',
+  'un',
+  'deux',
+  'trois',
+  'quatre',
+  'cinq',
+  'six',
+  'sept',
+  'huit',
+  'neuf',
+  'dix',
+  'onze',
+  'douze',
+  'treize',
+  'quatorze',
+  'quinze',
+  'seize',
+];
+const DIZAINES_FR = ['', '', 'vingt', 'trente', 'quarante', 'cinquante', 'soixante'];
+
+/**
+ * Les DURÉES de la SSOT, DÉRIVÉES et jamais retapées (RM-01, « dériver, jamais recopier »). Toute
+ * valeur de `SEUILS` qui n'est pas un montant est une durée : ajouter un délai à la SSOT arme donc
+ * ces motifs sans qu'on y pense, et un délai retiré en sort.
+ *
+ * 🔴 CE QUE LA LISTE ÉCRITE À LA MAIN COÛTAIT. Elle coïncidait avec la SSOT — mesuré au moment de
+ * la dérivation : les deux ensembles sont `2 3 6 10 12 15 24 30 60 90`, sans écart d'aucun côté.
+ * Mais la coïncidence n'est pas une dérivation : un `45` versé à la SSOT aurait laissé passer
+ * « 45 jours » écrit en dur dans `src/`, et la garde aurait mesuré autre chose que sa cible. Une
+ * garde qui mesure le mauvais registre ne mentionne rien : elle mesure, et son vert ne veut rien
+ * dire (revue `exactitude` de la PR 180, RM-01).
+ *
+ * L'ordre DÉCROISSANT est voulu : dans une alternance, `90` doit précéder `9`. Une alternance
+ * croissante s'arrête au préfixe et ne rattrape que par le retour arrière du motif qui l'entoure.
+ */
+const VALEURS_DE_DUREE: readonly number[] = [
+  ...new Set(
+    Object.values(SEUILS)
+      .filter((s) => s.unite !== 'centimes')
+      .map((s) => s.valeur)
+  ),
+].sort((a, b) => b - a);
+const DUREES = `(?:${VALEURS_DE_DUREE.join('|')})`;
+/** Les mêmes durées en lettres, par `enLettres()` : une durée sans mot connu n'entre pas au motif. */
+const EN_LETTRES = `(?:${[
+  ...new Set(
+    VALEURS_DE_DUREE.map((n) => enLettres(n)).filter((mot): mot is string => mot !== null)
+  ),
+].join('|')})`;
 const UNITE_TEMPS = '(?:jours?|mois|ans|ann[ée]es?)';
 
 /** Les motifs, chacun nommé : le message dit lequel a vu le littéral. */
@@ -458,27 +509,6 @@ export function preavisIndexes(fichiers: readonly Fichier[]): Faute[] {
 }
 
 // ── 4. La cohérence gabarit ↔ SSOT ──────────────────────────────────────────────────────────────
-
-const UNITES_FR = [
-  'zéro',
-  'un',
-  'deux',
-  'trois',
-  'quatre',
-  'cinq',
-  'six',
-  'sept',
-  'huit',
-  'neuf',
-  'dix',
-  'onze',
-  'douze',
-  'treize',
-  'quatorze',
-  'quinze',
-  'seize',
-];
-const DIZAINES_FR = ['', '', 'vingt', 'trente', 'quarante', 'cinquante', 'soixante'];
 
 /** Un entier de 0 à 99 en lettres (orthographe traditionnelle, traits d'union) ; `null` au-delà. */
 export function enLettres(n: number): string | null {

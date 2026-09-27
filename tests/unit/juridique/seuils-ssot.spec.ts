@@ -24,6 +24,7 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { SEUILS, type Seuil } from '../../../src/domain/seuils/ssot';
 import {
+  enLettres,
   EXEMPTIONS,
   controlerDepot,
   fautesDeCoherence,
@@ -118,6 +119,61 @@ describe('REQ-JUR-015 — la SSOT porte tous les délais du contrat, sourcés et
       'GRADATION_PALIERS_MOIS',
     ]);
     expect(new Set(fautes.map((f) => f.famille))).toEqual(new Set(['constante_de_gradation']));
+  });
+});
+
+describe('RM-01 — les durées des motifs sont DÉRIVÉES de la SSOT, jamais retapées', () => {
+  const SOURCE = readFileSync('scripts/gates/seuils-ssot.ts', 'utf8');
+
+  /** Les durées de la SSOT, telles que la garde doit les dériver. */
+  const DUREES_ATTENDUES = [
+    ...new Set(
+      Object.values(SEUILS)
+        .filter((s) => s.unite !== 'centimes')
+        .map((s) => s.valeur)
+    ),
+  ];
+
+  it('RM-01 — la dérivation est écrite : les durées viennent de SEUILS, filtrées sur leur unité', () => {
+    for (const morceau of ['VALEURS_DE_DUREE', 'Object.values(SEUILS)', "s.unite !== 'centimes'"]) {
+      expect(
+        SOURCE.includes(morceau),
+        `la garde doit DÉRIVER ses durées de la SSOT : « ${morceau} » manque à sa source`
+      ).toBe(true);
+    }
+  });
+
+  it('RM-01 — TÉMOIN : la liste des durées retapée à la main est refusée', () => {
+    // Une liste écrite à la main COÏNCIDE le jour où on l'écrit — c'était le cas ici, mesuré : les
+    // deux ensembles valaient `2 3 6 10 12 15 24 30 60 90`, sans écart d'aucun côté. Elle mentait
+    // le jour suivant : un `45` versé à la SSOT aurait laissé passer « 45 jours » écrit en dur dans
+    // `src/`. Ce témoin refuse la FORME, pas la valeur, parce que c'est la forme qui se dégrade
+    // sans bruit — et il refuse les deux ordres, croissant comme décroissant.
+    const croissant = `(?:${[...DUREES_ATTENDUES].sort((a, b) => a - b).join('|')})`;
+    const decroissant = `(?:${[...DUREES_ATTENDUES].sort((a, b) => b - a).join('|')})`;
+    for (const litteral of [croissant, decroissant]) {
+      expect(
+        SOURCE.includes(litteral),
+        `une alternance littérale de durées est réapparue (« ${litteral} ») : dérive-la de SEUILS`
+      ).toBe(false);
+    }
+  });
+
+  it('RM-01 — les mots des durées viennent de enLettres(), et chaque durée en a un', () => {
+    const durees = [
+      ...new Set(
+        Object.values(SEUILS)
+          .filter((s) => s.unite !== 'centimes')
+          .map((s) => s.valeur)
+      ),
+    ];
+    expect(durees.length, 'la SSOT doit porter au moins une durée').toBeGreaterThan(0);
+    for (const n of durees) {
+      expect(
+        enLettres(n),
+        `la durée ${n} de la SSOT n'a pas de mot : le motif en lettres l'ignorerait`
+      ).not.toBeNull();
+    }
   });
 });
 
