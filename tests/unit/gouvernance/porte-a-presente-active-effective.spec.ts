@@ -488,12 +488,16 @@ describe('REQ-GOV-029 — (f) un commentaire du workflow ne promet que les refus
 });
 
 /**
- * REFUS D'EXACTITUDE SUR LA PR 175 — UNE COMMANDE CITÉE N'EST PAS UNE COMMANDE LANCÉE. La lecture des
- * appels découpait la ligne de commande sur `;`, `|`, `&`, `(` et `)` sans tenir compte des
- * guillemets, et sans juger si la commande découpée s'exécute. La classe : une garde dont le seul
- * « appel » est cité dans une chaîne, court-circuité, inatteignable, masqué ou lancé en arrière-plan
- * n'est PAS appelée. `pnpm mutation` n'est lancé que par une étape de `nightly.yml` : chaque forme
- * ci-dessous remplace cette seule étape, sur une copie en mémoire.
+ * REFUS D'EXACTITUDE ET VETOS DE SÉCURITÉ SUR LA PR 175 — UNE GARDE N'EST APPELÉE QUE SI UNE ÉTAPE
+ * N'EXÉCUTE QU'ELLE. On ne découpe plus la ligne de commande et on ne juge plus ce qui s'y exécute :
+ * le `run:` doit être EXACTEMENT une commande simple, sur une ligne, sans affectation en tête, dont
+ * l'outil lance le FICHIER de la garde — directement (`tsx`, `node`, `bash`, `sh`, `npx tsx`), ou par
+ * `pnpm run <script>` (ou `pnpm <script>` hors commande intégrée de pnpm) dont la VALEUR obéit à la
+ * même règle. Toute autre forme n'appelle rien, même si elle lance réellement la garde : citée,
+ * court-circuitée, inatteignable, masquée, en arrière-plan, composée, derrière une affectation. La
+ * garde `mutation` (`scripts/gates/stryker.sh`) n'est lancée que par une étape de `nightly.yml`
+ * (`pnpm mutation`, qui vaut `bash scripts/gates/stryker.sh`) : chaque forme ci-dessous remplace
+ * cette seule étape, sur une copie en mémoire.
  */
 const NIGHTLY = '.github/workflows/nightly.yml';
 const RUN_MUTATION = '        run: pnpm mutation\n';
@@ -592,7 +596,7 @@ const APPELS_QUI_N_EN_SONT_PAS: readonly { forme: string; run: string }[] = [
   },
 ];
 
-describe('REQ-GOV-029 — une garde CITÉE, court-circuitée ou inatteignable n’est pas appelée (copies en mémoire de nightly.yml)', () => {
+describe('REQ-GOV-029 — une étape qui n’exécute pas SEULEMENT la garde ne l’appelle pas (copies en mémoire de nightly.yml)', () => {
   for (const a of APPELS_QUI_N_EN_SONT_PAS) {
     it(`REQ-GOV-029 — \`${a.run}\` (${a.forme}) : garde_ecrite_jamais_appelee, nommée`, () => {
       const fautes = controler(nuitEn(a.run)).filter(

@@ -349,7 +349,11 @@ describe('REQ-GOV-029 — la garde retenue rougit sur un témoin, famille par fa
   it('outillage_non_epingle — la CI lance le lint sans que l’outil soit épinglé', () => {
     const vue = variante({
       packageJson: JSON.stringify({
-        scripts: { lint: 'eslint .', 'format:check': 'prettier --check .' },
+        scripts: {
+          lint: 'eslint .',
+          'format:check': 'prettier --check .',
+          'gov:conventions': 'tsx scripts/gates/gov-conventions.ts',
+        },
         devDependencies: { tsx: '^4.19.2' },
       }),
     });

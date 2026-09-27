@@ -102,7 +102,7 @@ const TROIS_GARDES = ['gov:alpha', 'gov:beta', 'gov:gamma'] as const;
 const CHEMIN = (nom: string) => `scripts/gates/${nom.replace(':', '-')}.ts`;
 const CI_TROIS = CI_CONFORME.replace(
   '      - name: Conventions transposees\n',
-  TROIS_GARDES.map((n) => `      - name: ${n}\n        run: pnpm ${n}\n`).join('') +
+  TROIS_GARDES.map((n) => `      - name: ${n}\n        run: tsx ${CHEMIN(n)}\n`).join('') +
     '      - name: Conventions transposees\n'
 );
 /** Les trois gardes écrites sur le disque, toutes suivies. */
@@ -445,7 +445,7 @@ describe('REQ-GOV-012 — la décision sur le filtre de phase, écrite et GARDÉ
           chemin: '.github/workflows/ci.yml',
           source: CI_CONFORME.replace(
             '      - name: Conventions transposees\n',
-            '      - name: Zero\n        run: pnpm gov:zero\n      - name: Conventions transposees\n'
+            `      - name: Zero\n        run: tsx ${CHEMIN('gov:zero')}\n      - name: Conventions transposees\n`
           ),
         },
       ],

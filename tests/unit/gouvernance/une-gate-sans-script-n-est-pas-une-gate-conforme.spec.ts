@@ -207,7 +207,7 @@ describe('REQ-GOV-012 — une entrée du registre sans script sur le disque est 
           chemin: '.github/workflows/ci.yml',
           source:
             VUE_CONFORME.workflows[0]!.source +
-            '      - name: Passif\n        run: pnpm gov:passif\n',
+            '      - name: Passif\n        run: tsx scripts/gates/gov-passif.ts\n',
         },
       ],
       passifSansScript: { 'gov:passif': motif },

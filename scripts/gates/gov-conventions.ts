@@ -33,11 +33,15 @@
  *   • `garde_ecrite_jamais_appelee` — la leçon d'axionia : `qualiopi:isolation-check` existait
  *     depuis des mois, n'était câblé dans aucun workflow, et cumulait 88 violations pendant que
  *     la seule des trois gardes câblée affichait zéro. UNE GARDE EST APPELÉE SI UNE ÉTAPE N'EXÉCUTE
- *     QU'ELLE : le `run:` (ou la `command` d'un réglage) est EXACTEMENT une commande simple — des
- *     affectations littérales, `pnpm [run] <script>`, `npx tsx`, `tsx` ou `node <fichier>`, des
- *     arguments littéraux —, sur une ligne, sans opérateur, sans `$`, sans expression `${{ … }}`.
- *     Tout le reste n'appelle rien (refus d'exactitude et veto de sécurité sur la PR 175 : trois tours
- *     de modélisation du shell ont chacun laissé passer une forme ; on a cessé de modéliser).
+ *     QU'ELLE : le `run:` (ou la `command` d'un réglage) est EXACTEMENT une commande simple — AUCUNE
+ *     affectation en tête, `npx tsx`, `tsx`, `node`, `bash` ou `sh <fichier>`, ou `pnpm run <script>`
+ *     (`pnpm <script>` si `<script>` n'est pas une commande intégrée de pnpm), des arguments
+ *     littéraux —, sur une ligne, sans opérateur, sans `$`, sans expression `${{ … }}`. Et la garde
+ *     n'est appelée que si c'est son FICHIER qui est exécuté, directement ou par la VALEUR d'un script
+ *     de `package.json` jugée par la même règle : un nom de script, fût-il l'identifiant de la garde,
+ *     n'appelle rien. Tout le reste n'appelle rien (refus d'exactitude et vetos de sécurité sur la
+ *     PR 175 : trois tours de modélisation du shell ont chacun laissé passer une forme ; on a cessé de
+ *     modéliser ; au tour 4, un script réduit à `true`, `pnpm ls` et `npm_config_script_shell=…`).
  *   • `perimetre_vide_sans_motif` — le cas d'école à ne PAS reproduire :
  *     `axionia/scripts/check-zod.ts` sort en 0 avec un avertissement quand son répertoire
  *     n'existe pas. Une garde à périmètre vide qui rend « ✅ » ne garde rien. Ici, un périmètre
@@ -61,7 +65,10 @@
  *     `pnpm` de `package.json`) change le shell de chaque `pnpm <script>` : elle est figée ABSENTE.
  *     Les crochets que `pnpm install` exécute à la racine AVANT toutes les gardes (`postinstall`…) sont
  *     figés par leur VALEUR, ou leur ABSENCE, comme les `pre<script>`/`post<script>` des scripts de la
- *     porte, que pnpm 9 exécute autour d'eux (veto de sécurité, tour 3).
+ *     porte, que pnpm 9 exécute autour d'eux (veto de sécurité, tour 3). Au tour 4 : la valeur de
+ *     `packageManager`, que `pnpm/action-setup` lit, est figée — les listes de crochets et de
+ *     commandes intégrées ont été relevées sur cette version —, et un script qui porte le nom d'une
+ *     commande intégrée de pnpm (hors `test`, que `pnpm test` lance réellement) est refusé.
  *
  * ── CE QU'ELLE NE FAIT PAS, ET LE DIT ───────────────────────────────────────────────────────
  *
@@ -83,6 +90,13 @@
  *     motive `horsCi`. Mesuré sur le dépôt : trois étapes de verdict (`gov:etat --now "$(date …)"` en
  *     porte A, `gov:lecons --now $(date …)` et `gates:prouvees --phase ${{ … }}` la nuit) ne comptent
  *     plus ; leurs gardes restent appelées parce que leur étape `:prove` lance le MÊME fichier.
+ *     Même prix pour une affectation en tête (`CI=1 pnpm x`) : aucune n'est admise, parce que
+ *     `npm_config_*`, `NODE_OPTIONS` ou `PATH` configurent le lanceur lui-même — une variable se pose
+ *     dans un `env:`, que le constat fige. Et `pnpm run <script>` est la forme recommandée : `pnpm
+ *     <script>` ne compte que si `<script>` n'est pas une commande intégrée de pnpm (`pnpm ls` exécute
+ *     `list`, jamais le script `ls`). Mesuré sur le dépôt : aucune étape réelle ne porte d'affectation,
+ *     et aucune garde réelle ne perd son appel — `mutation` (`scripts/gates/stryker.sh`) le garde par
+ *     `bash`, que la règle reconnaît.
  *   — Le FICHIER d'une garde est tenu appelé si UNE étape le lance, quels que soient ses arguments :
  *     une étape `--prove` seule suffit. Hors porte A, le verdict lui-même n'est donc pas exigé.
  *   — Elle ne voit pas la configuration pnpm/npm HORS du dépôt : le `.npmrc` de l'utilisateur ou
@@ -435,7 +449,157 @@ export interface PorteFigee {
    * dérivation, sauf à les nommer ici.
    */
   readonly crochets: Readonly<Record<CrochetDInstallation, string | null>>;
+  /**
+   * LA VALEUR EXACTE de `packageManager` dans `package.json` (veto de sécurité, tour 4, sur la PR 175) :
+   * `pnpm/action-setup` la lit pour installer le pnpm qui exécutera TOUTES les étapes, et les listes
+   * `CROCHETS_D_INSTALLATION` et `COMMANDES_INTEGREES_DE_PNPM` ont été relevées dans le code de CETTE
+   * version. Une autre version exécuterait d'autres crochets et d'autres commandes intégrées que ceux
+   * que la garde connaît : la changer est une faute nommée (`porte_a_alteree`), jusqu'à ce que le même
+   * diff relève les deux listes sur la nouvelle version.
+   */
+  readonly gestionnaire: string;
 }
+
+/**
+ * LE GESTIONNAIRE SUR LEQUEL LES LISTES CI-DESSOUS ONT ÉTÉ RELEVÉES — la valeur de `packageManager`
+ * que le constat fige. Une seule écriture (RM-01) : le constat et la vue de référence la dérivent.
+ */
+export const GESTIONNAIRE_RELEVE = 'pnpm@9.12.0';
+
+/**
+ * LES COMMANDES INTÉGRÉES DE pnpm 9.12.0 — les mots que `pnpm <mot>` n'envoie JAMAIS au script du même
+ * nom (veto de sécurité, tour 4, sur la PR 175 : un script `ls` qui sort 3, `pnpm ls` rend 0 ;
+ * `pnpm run ls` rend 3). Relevées dans le code de pnpm 9.12.0, et non supposées :
+ *   — `dist/pnpm.cjs`, `lib/pnpm.js` : le `switch (argv[0])` qui passe à npm, sans jamais lire les
+ *     scripts, `access` … `xmas` ;
+ *   — `dist/pnpm.cjs`, `lib/cmd/index.js` : les `commandNames` des 49 commandes du tableau `commands`
+ *     (alias compris), plus `help` et `completion-server`, posés à part sur `handlerByCommandName` —
+ *     `parseCliArgs` ne se rabat sur `run` (`fallbackCommand`) que si `getCommandFullName` ne rend rien.
+ * `pnpm <mot>` n'est compté comme le lancement du script `<mot>` que si `<mot>` n'est PAS ici ; un
+ * script de `package.json` qui porte l'un de ces noms est refusé (`porte_a_alteree`), sauf `test`
+ * (`SCRIPTS_LANCES_PAR_LEUR_COMMANDE_INTEGREE`).
+ */
+export const COMMANDES_INTEGREES_DE_PNPM: ReadonlySet<string> = new Set([
+  // passées à npm (`passThruToNpm`)
+  'access',
+  'adduser',
+  'bugs',
+  'deprecate',
+  'dist-tag',
+  'docs',
+  'edit',
+  'home',
+  'info',
+  'issues',
+  'login',
+  'logout',
+  'owner',
+  'ping',
+  'prefix',
+  'profile',
+  'pkg',
+  'repo',
+  's',
+  'se',
+  'search',
+  'set-script',
+  'show',
+  'star',
+  'stars',
+  'team',
+  'token',
+  'unpublish',
+  'unstar',
+  'v',
+  'version',
+  'view',
+  'whoami',
+  'xmas',
+  // `handlerByCommandName` : les `commandNames` des commandes, puis `help` et `completion-server`
+  'add',
+  'audit',
+  'bin',
+  'c',
+  'cache',
+  'cat-file',
+  'cat-index',
+  'ci',
+  'clean-install',
+  'completion',
+  'config',
+  'create',
+  'dedupe',
+  'deploy',
+  'dislink',
+  'dlx',
+  'doctor',
+  'env',
+  'exec',
+  'fetch',
+  'find-hash',
+  'get',
+  'i',
+  'ic',
+  'import',
+  'init',
+  'install',
+  'install-clean',
+  'install-test',
+  'it',
+  'la',
+  'licenses',
+  'link',
+  'list',
+  'll',
+  'ln',
+  'ls',
+  'm',
+  'multi',
+  'outdated',
+  'pack',
+  'patch',
+  'patch-commit',
+  'patch-remove',
+  'prune',
+  'publish',
+  'rb',
+  'rebuild',
+  'recursive',
+  'remove',
+  'restart',
+  'rm',
+  'root',
+  'run',
+  'run-script',
+  'self-update',
+  'server',
+  'set',
+  'setup',
+  'store',
+  't',
+  'test',
+  'tst',
+  'un',
+  'uni',
+  'uninstall',
+  'unlink',
+  'up',
+  'update',
+  'upgrade',
+  'why',
+  'help',
+  'completion-server',
+]);
+
+/**
+ * LE SEUL SCRIPT QU'UNE COMMANDE INTÉGRÉE LANCE SOUS SON PROPRE NOM, ET RIEN D'AUTRE : `test`. Lu dans
+ * le même code (`lib/test.js`) : `handler(opts, params) { return run.handler(opts, ["test",
+ * ...params]) }`. Un script `test` n'est donc pas un script masqué, et il n'est pas refusé. Ni `t` ni
+ * `tst` (ils lancent le script `test`, pas le leur), ni `restart` (il lance aussi `stop` et `start`) n'y
+ * sont. `pnpm test`, lui, n'est pas compté comme un appel : l'échec fermé ne coûte rien, aucune garde
+ * n'est lancée par le script `test`.
+ */
+export const SCRIPTS_LANCES_PAR_LEUR_COMMANDE_INTEGREE: ReadonlySet<string> = new Set(['test']);
 
 /**
  * Les crochets de cycle de vie que pnpm 9 exécute pour le projet RACINE pendant `pnpm install` — lus
@@ -565,8 +729,6 @@ function commandesNommees(commande: string): Appels {
 const MOT_NU = /^[A-Za-z0-9_@%+=:,./-]+$/;
 /** Le contenu admis entre guillemets : le même, sans rien que le shell expanserait. */
 const ENTRE_GUILLEMETS = /^(?:'([A-Za-z0-9_@%+=:,./-]*)'|"([A-Za-z0-9_@%+=:,./-]*)")$/;
-/** Une affectation `NOM=valeur` dont la valeur est littérale (vide admise). */
-const AFFECTATION = /^[A-Za-z_][A-Za-z0-9_]*=[A-Za-z0-9_@%+=:,./-]*$/;
 
 /** La valeur d'un mot littéral, désenveloppée de ses guillemets ; `null` si le mot n'est pas littéral. */
 function motLitteral(brut: string): string | null {
@@ -577,12 +739,17 @@ function motLitteral(brut: string): string | null {
 
 /**
  * CE QU'UNE ÉTAPE APPELLE — LA RÈGLE STRICTE (GOV-061, fait (a) ; refus d'exactitude et veto de
- * sécurité, tour 3, sur la PR 175). UNE GARDE EST APPELÉE SI UNE ÉTAPE N'EXÉCUTE QU'ELLE : le `run:`
- * d'une étape (ou la `command` d'un réglage, ou la valeur d'un script de `package.json` qu'on suit),
- * blancs de bord retirés, doit être EXACTEMENT UNE commande simple, sur UNE ligne :
- *   — zéro ou plusieurs affectations `NOM=valeur`, valeur littérale ;
- *   — puis `pnpm [run] <script>`, `npx tsx <fichier>`, ou `tsx|node <fichier>` ;
+ * sécurité, tours 3 et 4, sur la PR 175). UNE GARDE EST APPELÉE SI UNE ÉTAPE N'EXÉCUTE QU'ELLE : le
+ * `run:` d'une étape (ou la `command` d'un réglage, ou la valeur d'un script de `package.json` qu'on
+ * suit), blancs de bord retirés, doit être EXACTEMENT UNE commande simple, sur UNE ligne :
+ *   — AUCUNE affectation en tête : `npm_config_script_shell=…`, `NODE_OPTIONS=…`, `PATH=…`
+ *     configurent le LANCEUR lui-même, et une étape qui appelle une garde n'en a pas besoin (tour 4) ;
+ *   — `pnpm run <script>` ; `pnpm <script>` seulement si `<script>` n'est PAS une commande intégrée
+ *     de pnpm (`COMMANDES_INTEGREES_DE_PNPM` : `pnpm ls` exécute `list`, jamais le script `ls`) ;
+ *     `npx tsx <fichier>`, ou `tsx|node|bash|sh <fichier>` ;
  *   — puis des arguments LITTÉRAUX : mots nus, ou entre guillemets sans rien à expanser.
+ * Un script de `package.json` n'appelle RIEN par son nom : ce qui compte est ce que sa VALEUR
+ * exécute, jugée par la même règle. Une garde est appelée quand son FICHIER l'est (`controler`).
  * Tout le reste n'appelle RIEN : un opérateur (`;`, `&&`, `||`, `|`, `&`, redirection, parenthèse,
  * accolade), un saut de ligne, un `$` (variable, substitution, expression d'Actions `${{ … }}` — qui
  * peut injecter un opérateur avant que le shell ne lise la ligne), un accent grave, un échappement, un
@@ -601,18 +768,24 @@ function appelsDe(commande: string): Appels {
   const bruts = ligne.split(/[ \t]+/);
   const mots = bruts.map(motLitteral);
   if (mots.some((m) => m === null)) return a;
-  let i = 0;
-  while (i < bruts.length && AFFECTATION.test(bruts[i]!)) i++;
   const cible = (j: number): string | undefined => {
     const m = mots[j];
     return typeof m === 'string' && m !== '' && !m.startsWith('-') ? m : undefined;
   };
-  const outil = mots[i];
+  const outil = mots[0];
   if (outil === 'pnpm') {
-    const s = cible(mots[i + 1] === 'run' ? i + 2 : i + 1);
-    if (s !== undefined) a.scripts.add(s);
-  } else if (outil === 'tsx' || outil === 'node' || (outil === 'npx' && mots[i + 1] === 'tsx')) {
-    const f = cible(outil === 'npx' ? i + 2 : i + 1);
+    const s = mots[1] === 'run' ? cible(2) : cible(1);
+    if (s !== undefined && (mots[1] === 'run' || !COMMANDES_INTEGREES_DE_PNPM.has(s))) {
+      a.scripts.add(s);
+    }
+  } else if (
+    outil === 'tsx' ||
+    outil === 'node' ||
+    outil === 'bash' ||
+    outil === 'sh' ||
+    (outil === 'npx' && mots[1] === 'tsx')
+  ) {
+    const f = cible(outil === 'npx' ? 2 : 1);
     if (f !== undefined) a.fichiers.add(f);
   }
   return a;
@@ -632,9 +805,10 @@ function scriptsDuPaquet(packageJson: string): Record<string, string> {
 }
 
 /**
- * Ce que les commandes données APPELLENT, suivi à travers `package.json` : `pnpm a` qui vaut
- * `pnpm b && tsx f.ts` appelle `a`, `b` et `f.ts`. Une garde lancée par un script composé est
- * donc vue appelée ; une garde seulement NOMMÉE ne l'est pas.
+ * Ce que les commandes données APPELLENT, suivi à travers `package.json` : `pnpm run a` qui vaut
+ * `pnpm run b`, qui vaut `tsx f.ts`, exécute `f.ts`. Chaque VALEUR est jugée par la lecture donnée
+ * (la règle stricte d'`appelsDe` par défaut) : une valeur composée (`pnpm b && tsx f.ts`) n'appelle
+ * rien, et un script seulement NOMMÉ n'appelle pas le fichier qu'il ne lance pas.
  */
 function appelsSuivis(
   commandes: readonly string[],
@@ -966,6 +1140,33 @@ export async function confronterLaPorteA(vue: Vue): Promise<ConfrontationDeLaPor
         `${ou} configure le gestionnaire de paquets, que le constat fige ABSENT : un ` +
         `\`script-shell\`, un crochet ou un réglage de scripts change ce que CHAQUE ` +
         `\`pnpm <script>\` de la porte exécute, sans toucher ni à l'étape ni au script. ${aRetenir}`,
+    });
+  }
+  // ── le gestionnaire lui-même : action-setup installe la version que `packageManager` nomme ──
+  const gestionnaire = Object.hasOwn(pkg, 'packageManager') ? pkg.packageManager : null;
+  if (gestionnaire !== figee.gestionnaire) {
+    fautes.push({
+      famille: 'porte_a_alteree',
+      message:
+        `\`package.json\` — la clé \`packageManager\` vaut ${JSON.stringify(gestionnaire)} au lieu ` +
+        `de ${JSON.stringify(figee.gestionnaire)}. \`pnpm/action-setup\` installe cette version pour ` +
+        `TOUTES les étapes, et les crochets d'installation comme les commandes intégrées que la ` +
+        `garde connaît ont été relevés dans le code de la version figée : une autre en exécute ` +
+        `d'autres. Relevez les deux listes sur la nouvelle version, dans le même diff. ${aRetenir}`,
+    });
+  }
+  // ── un script qui porte le nom d'une commande intégrée : `pnpm <nom>` ne le lance jamais ──
+  const masques = Object.keys(scripts).filter(
+    (n) => COMMANDES_INTEGREES_DE_PNPM.has(n) && !SCRIPTS_LANCES_PAR_LEUR_COMMANDE_INTEGREE.has(n)
+  );
+  for (const nom of masques) {
+    fautes.push({
+      famille: 'porte_a_alteree',
+      message:
+        `\`package.json\` — le script \`${nom}\` porte le nom d'une commande intégrée de ` +
+        `${figee.gestionnaire} : \`pnpm ${nom}\` exécute la commande, jamais le script, et rend ` +
+        `son propre statut. Une étape qui croirait lancer ce script ne mesurerait rien : ` +
+        `renommez-le.`,
     });
   }
   // ── les crochets de cycle de vie : ils tournent pendant `pnpm install`, ou autour d'un script ──
@@ -1506,9 +1707,11 @@ export function controler(vue: Vue): Faute[] {
     ],
     scriptsDuPaquet(vue.packageJson)
   );
+  // LE FICHIER, JAMAIS LE NOM (refus d'exactitude, tour 4) : un script de `package.json` qui porte
+  // l'identifiant ou un alias de la garde ne dit rien de ce qu'il exécute — réduit à `true`, il
+  // gardait la garde « câblée ». Seul compte le fichier de la garde, exécuté par une étape.
   for (const g of confrontation.jugees) {
-    const noms = [g.id, g.script, ...(g.alias ?? [])];
-    if (noms.some((n) => appels.scripts.has(n) || appels.fichiers.has(n))) continue;
+    if (appels.fichiers.has(g.script)) continue;
     const motif = (g.horsCi ?? '').trim();
     if (motif.length >= MOTIF_MINIMAL) continue;
     fautes.push({
@@ -1960,6 +2163,7 @@ export const PORTE_A_FIGEE: PorteFigee = {
   },
   paquet: CONFIGURATION_DU_PAQUET_ABSENTE,
   crochets: { ...AUCUN_CROCHET, postinstall: 'prisma generate' },
+  gestionnaire: GESTIONNAIRE_RELEVE,
 };
 
 export const PASSIF_SANS_SCRIPT: Readonly<Record<string, string>> = {
@@ -1996,6 +2200,7 @@ export const CI_CONFORME =
   '      - name: Conventions transposees\n        run: pnpm gov:conventions\n';
 
 const PKG_CONFORME = JSON.stringify({
+  packageManager: GESTIONNAIRE_RELEVE,
   scripts: {
     lint: 'eslint .',
     'format:check': 'prettier --check .',
@@ -2022,6 +2227,7 @@ export const PORTE_CONFORME: PorteFigee = {
   },
   paquet: CONFIGURATION_DU_PAQUET_ABSENTE,
   crochets: AUCUN_CROCHET,
+  gestionnaire: GESTIONNAIRE_RELEVE,
 };
 
 /**
@@ -2251,6 +2457,71 @@ const TEMOINS: ReadonlyArray<{ famille: string; libelle: string; vue: Vue }> = [
       ],
     }),
   },
+  // TOUR 4 — le FICHIER, jamais le nom ; aucune affectation ; aucune commande intégrée de pnpm.
+  {
+    famille: 'garde_ecrite_jamais_appelee',
+    libelle: 'la VALEUR du script de la garde réduite à `true`, étape intacte',
+    vue: variante({
+      packageJson: JSON.stringify({
+        ...(JSON.parse(PKG_CONFORME) as { scripts: Record<string, string> }),
+        scripts: {
+          ...(JSON.parse(PKG_CONFORME) as { scripts: Record<string, string> }).scripts,
+          'gov:conventions': 'true',
+        },
+      }),
+    }),
+  },
+  {
+    famille: 'garde_ecrite_jamais_appelee',
+    libelle: '`pnpm ls` vers un script `ls` qui lance la garde — pnpm exécute sa commande `list`',
+    vue: variante({
+      workflows: [
+        {
+          chemin: '.github/workflows/ci.yml',
+          source: CI_CONFORME.replace('run: pnpm gov:conventions\n', 'run: pnpm ls\n'),
+        },
+      ],
+      packageJson: JSON.stringify({
+        ...(JSON.parse(PKG_CONFORME) as { scripts: Record<string, string> }),
+        scripts: {
+          ...(JSON.parse(PKG_CONFORME) as { scripts: Record<string, string> }).scripts,
+          ls: 'tsx scripts/gates/gov-conventions.ts',
+        },
+      }),
+    }),
+  },
+  {
+    famille: 'garde_ecrite_jamais_appelee',
+    libelle:
+      'une affectation `npm_config_script_shell` qui remplace le shell du script de la garde',
+    vue: variante({
+      workflows: [
+        {
+          chemin: '.github/workflows/ci.yml',
+          source: CI_CONFORME.replace(
+            'run: pnpm gov:conventions\n',
+            'run: npm_config_script_shell=/bin/true pnpm run gov:conventions\n'
+          ),
+        },
+      ],
+    }),
+  },
+  {
+    famille: 'garde_ecrite_jamais_appelee',
+    libelle: 'une garde dont seul l’ALIAS est lancé, par un script qui exécute un AUTRE fichier',
+    vue: variante({
+      gates: [
+        ...VUE_CONFORME.gates,
+        {
+          id: 'req:check',
+          phase: -1,
+          script: 'scripts/gates/gov-trace.ts',
+          alias: ['gov:conventions'],
+        },
+      ],
+      fichiersSuivis: [...VUE_CONFORME.fichiersSuivis, 'scripts/gates/gov-trace.ts'],
+    }),
+  },
   {
     famille: 'garde_hors_registre',
     libelle: 'une garde ÉCRITE et suivie que `docs/gates.json` ne nomme nulle part',
@@ -2336,15 +2607,14 @@ const TEMOINS: ReadonlyArray<{ famille: string; libelle: string; vue: Vue }> = [
 const CONTRE_TEMOINS: ReadonlyArray<{ libelle: string; vue: Vue }> = [
   { libelle: 'la vue conforme', vue: VUE_CONFORME },
   {
-    libelle:
-      'une étape qui n’exécute QUE la garde, précédée d’une affectation et suivie d’arguments',
+    libelle: 'une étape qui n’exécute QUE la garde, par `pnpm run`, suivie d’arguments littéraux',
     vue: variante({
       workflows: [
         {
           chemin: '.github/workflows/ci.yml',
           source: CI_CONFORME.replace(
             'run: pnpm gov:conventions\n',
-            "run: CI=1 pnpm run gov:conventions --flag 'a'\n"
+            "run: pnpm run gov:conventions --flag 'a'\n"
           ),
         },
       ],
@@ -2429,18 +2699,27 @@ const CONTRE_TEMOINS: ReadonlyArray<{ libelle: string; vue: Vue }> = [
     }),
   },
   {
-    libelle: 'une garde citée sous son ALIAS dans le workflow',
+    libelle:
+      'une garde dont un script de `package.json` exécute le FICHIER, sous un autre nom que le sien',
     vue: variante({
       gates: [
         ...VUE_CONFORME.gates,
-        {
-          id: 'req:check',
-          phase: -1,
-          script: 'scripts/gates/gov-trace.ts',
-          alias: ['gov:conventions'],
-        },
+        { id: 'gov:trace', phase: -1, script: 'scripts/gates/gov-trace.ts' },
       ],
       fichiersSuivis: [...VUE_CONFORME.fichiersSuivis, 'scripts/gates/gov-trace.ts'],
+      workflows: [
+        {
+          chemin: '.github/workflows/ci.yml',
+          source: CI_CONFORME + '      - name: Trace\n        run: pnpm req:check\n',
+        },
+      ],
+      packageJson: JSON.stringify({
+        ...(JSON.parse(PKG_CONFORME) as { scripts: Record<string, string> }),
+        scripts: {
+          ...(JSON.parse(PKG_CONFORME) as { scripts: Record<string, string> }).scripts,
+          'req:check': 'tsx scripts/gates/gov-trace.ts --resultats test-results/vitest.json',
+        },
+      }),
     }),
   },
   {
@@ -2494,7 +2773,7 @@ const CONTRE_TEMOINS: ReadonlyArray<{ libelle: string; vue: Vue }> = [
           chemin: '.github/workflows/ci.yml',
           source: CI_CONFORME.replace(
             '      - name: Conventions transposees\n',
-            '      - name: Enums\n        run: pnpm partners:schema:enums\n' +
+            '      - name: Enums\n        run: tsx scripts/gates/schema-enums.ts\n' +
               '      - name: Conventions transposees\n'
           ),
         },
@@ -2677,6 +2956,22 @@ const TEMOINS_PORTE_A: ReadonlyArray<{ famille: string; libelle: string; vue: Vu
     libelle: 'un `pre<script>` posé devant une garde de la porte, que pnpm 9 exécute avant elle',
     vue: AVEC_SCRIPTS({ 'pregov:conventions': 'node -e "process.exit(0)"' }),
   },
+  {
+    famille: 'porte_a_alteree',
+    libelle:
+      'un script nommé `audit`, commande intégrée de pnpm que `pnpm audit` exécute à sa place',
+    vue: AVEC_SCRIPTS({ audit: 'tsx scripts/gates/gov-conventions.ts' }),
+  },
+  {
+    famille: 'porte_a_alteree',
+    libelle: 'un `packageManager` changé, qui fait installer un autre pnpm que celui relevé',
+    vue: variante({
+      packageJson: JSON.stringify({
+        ...(JSON.parse(PKG_CONFORME) as Record<string, unknown>),
+        packageManager: 'pnpm@9.15.9',
+      }),
+    }),
+  },
 ];
 
 const CONTRE_TEMOINS_PORTE_A: ReadonlyArray<{ libelle: string; vue: Vue }> = [
@@ -2694,6 +2989,11 @@ const CONTRE_TEMOINS_PORTE_A: ReadonlyArray<{ libelle: string; vue: Vue }> = [
       '        run: pnpm lint\n',
       '        run: pnpm lint\n        continue-on-error: false\n'
     ),
+  },
+  {
+    libelle:
+      'un script `test`, que `pnpm test` lance réellement (`run.handler(opts, ["test", ...params])`)',
+    vue: AVEC_SCRIPTS({ test: 'vitest run' }),
   },
 ];
 
