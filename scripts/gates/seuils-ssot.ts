@@ -1,7 +1,8 @@
 /**
  * seuils-ssot.ts — `ssot:seuils`, GATE-JUR-SEUILS-SSOT (JUR-T02 : REQ-JUR-015, REQ-EXT-028, RM-10).
  *
- * USAGE : npx tsx scripts/gates/seuils-ssot.ts   (juge la SSOT, `src/` et le gabarit du dépôt)
+ * USAGE : npx tsx scripts/gates/seuils-ssot.ts           (juge la SSOT, `src/` et le gabarit du dépôt)
+ *         npx tsx scripts/gates/seuils-ssot.ts --prove   (un témoin par famille, contre-témoins verts)
  *
  * CE QU'ELLE TIENT, en quatre familles de contrôle :
  *   1. LA SSOT (`src/domain/seuils/ssot.ts`) : chaque constante a une source et une date ISO réelle,
@@ -440,7 +441,103 @@ export function controlerDepot(racine: string): { fautes: Faute[]; fichiersLus: 
   return { fautes, fichiersLus: fichiers.length };
 }
 
+// ── La preuve : chaque famille vue rougir sur un témoin, et des contre-témoins verts ────────────
+
+const TEMOIN_SEUIL: Seuil = {
+  valeur: 15,
+  unite: 'jours',
+  source: 'contrat art. 11.2',
+  renvois: [{ document: 'contrat', unite: '11.2' }],
+  verifieLe: '2026-09-27',
+};
+
+/** Un témoin par famille : chacun DOIT produire exactement sa famille. */
+export function temoins(gabarit: string, annexe2: string): { famille: string; fautes: Faute[] }[] {
+  const code = (texte: string): Fichier[] => [{ chemin: 'src/server/temoin.ts', texte }];
+  return [
+    {
+      famille: 'constante_de_gradation',
+      fautes: fautesDeLaSsot({ CONTRADICTOIRE_JOURS: TEMOIN_SEUIL }),
+    },
+    {
+      famille: 'seuil_sans_source',
+      fautes: fautesDeLaSsot({ X_JOURS: { ...TEMOIN_SEUIL, source: ' ' } }),
+    },
+    {
+      famille: 'seuil_sans_date',
+      fautes: fautesDeLaSsot({ X_JOURS: { ...TEMOIN_SEUIL, verifieLe: '2026-02-30' } }),
+    },
+    {
+      famille: 'seuil_mal_forme',
+      fautes: fautesDeLaSsot({ X_JOURS: { ...TEMOIN_SEUIL, valeur: 1.5 } }),
+    },
+    { famille: 'litteral_hors_ssot', fautes: litterauxHorsSsot(code('const seuilDas2 = 2400;')) },
+    {
+      famille: 'exemption_orpheline',
+      fautes: litterauxHorsSsot(
+        [{ chemin: 'src/x.ts', texte: '' }],
+        [{ chemin: 'src/x.ts', raison: 'témoin' }]
+      ),
+    },
+    {
+      famille: 'preavis_indexe',
+      fautes: preavisIndexes(code('export const p = (anciennete: number) => preavis(anciennete);')),
+    },
+    {
+      famille: 'gabarit_diverge',
+      fautes: fautesDeCoherence({
+        seuils: { MISE_EN_DEMEURE_JOURS: { ...TEMOIN_SEUIL, valeur: 8 } },
+        gabarit,
+        annexe2,
+      }),
+    },
+    {
+      famille: 'renvoi_introuvable',
+      fautes: fautesDeCoherence({
+        seuils: { X_JOURS: { ...TEMOIN_SEUIL, renvois: [{ document: 'contrat', unite: '99.9' }] } },
+        gabarit,
+        annexe2,
+      }),
+    },
+  ];
+}
+
+/** Ce qui doit rester vert : une lecture de la SSOT, un commentaire, un nombre sans unité. */
+export const CONTRE_TEMOINS: readonly string[] = [
+  'const d = SEUILS.PREAVIS_JOURS.valeur * MS_PAR_JOUR;',
+  '// quinze jours, art. 11.2',
+  'const n = liste.slice(0, 12);',
+  'const noel = { mois: 12, jour: 25 };',
+];
+
 if (process.argv[1] !== undefined && /seuils-ssot[.](ts|js)$/.test(process.argv[1])) {
+  if (process.argv.includes('--prove')) {
+    const gabarit = readFileSync(GABARIT, 'utf8');
+    const annexe2 = readFileSync(ANNEXE_2, 'utf8');
+    let rate = 0;
+    const liste = temoins(gabarit, annexe2);
+    for (const t of liste) {
+      const familles = [...new Set(t.fautes.map((f) => f.famille))];
+      if (familles.length !== 1 || familles[0] !== t.famille) {
+        console.error(`❌ témoin ${t.famille} : a produit [${familles.join(', ')}]`);
+        rate++;
+      }
+    }
+    for (const c of CONTRE_TEMOINS) {
+      const f = litterauxHorsSsot([{ chemin: 'src/server/temoin.ts', texte: c }]);
+      if (f.length > 0) {
+        console.error(`❌ faux positif sur « ${c} » : ${f[0]!.message}`);
+        rate++;
+      }
+    }
+    if (rate > 0) process.exit(1);
+    console.log(
+      `✅ ssot:seuils --prove — ${liste.length} témoins rougissent chacun de leur famille, ` +
+        `${CONTRE_TEMOINS.length} contre-témoins restent verts — preuve faite.`
+    );
+    process.exit(0);
+  }
+
   const { fautes, fichiersLus } = controlerDepot('.');
   if (fautes.length > 0) {
     console.error(`❌ ssot:seuils — ${fautes.length} faute(s) :`);

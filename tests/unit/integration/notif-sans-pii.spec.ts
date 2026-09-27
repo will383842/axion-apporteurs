@@ -23,6 +23,7 @@ import type { Notification, Notifieur } from '../../../src/lib/notify';
 import { horlogeFigee } from '../../../src/domain/temps/horloge';
 import {
   GABARITS_ALERTE,
+  PlafondInvalide,
   creerAlerteur,
   messageDAlerte,
 } from '../../../src/server/integrations/telegram/alertes';
@@ -30,6 +31,7 @@ import {
   GABARIT_BAC_D_ESSAI,
   OBJET_TEMOIN,
   confronter,
+  executer,
 } from '../../../src/server/integrations/telegram/garde-sans-pii';
 
 const HEURE = 3_600_000;
@@ -180,4 +182,115 @@ describe('REQ-INT-024 — aucun message ne porte de coordonnée de tiers ni de l
       expect(bac.stdout + bac.stderr).toContain(champ);
     }
   }, 60_000);
+});
+
+describe('REQ-INT-024 — les bords de l’alerteur, chacun vu', () => {
+  it('REQ-INT-024 — un plafond de UN est permis, et son unique envoi annonce la retenue', async () => {
+    const notifieur = notifieurCompteur();
+    const alerteur = creerAlerteur({ notifieur, horloge: horlogeFigee(T0), plafondParHeure: 1 });
+    expect(await alerteur.alerter({ categorie: 'releve_bloque', id: 'a' })).toBe('envoyee');
+    expect(await alerteur.alerter({ categorie: 'releve_bloque', id: 'b' })).toBe('plafonnee');
+    expect(notifieur.envois).toHaveLength(1);
+    expect(notifieur.envois[0]!.corps).toMatch(/plafond horaire atteint/);
+  });
+
+  it('REQ-INT-024 — sous le plafond, le message ne parle PAS de plafond, et le sujet nomme la catégorie', async () => {
+    const notifieur = notifieurCompteur();
+    const alerteur = creerAlerteur({ notifieur, horloge: horlogeFigee(T0), plafondParHeure: 2 });
+    await alerteur.alerter({ categorie: 'releve_bloque', id: 'a' });
+    expect(notifieur.envois[0]!.corps).not.toMatch(/plafond/);
+    expect(notifieur.envois[0]!.sujet).toBe('alerte console · releve_bloque');
+  });
+
+  it('REQ-INT-024 — la même alerte, une heure pile plus tard, repart', async () => {
+    const notifieur = notifieurCompteur();
+    const horloge = horlogeMobile(T0);
+    const alerteur = creerAlerteur({ notifieur, horloge, plafondParHeure: 50 });
+    expect(await alerteur.alerter({ categorie: 'releve_bloque', id: 'rel_1' })).toBe('envoyee');
+    horloge.avancer(HEURE - 1);
+    expect(await alerteur.alerter({ categorie: 'releve_bloque', id: 'rel_1' })).toBe(
+      'dedoublonnee'
+    );
+    horloge.avancer(1);
+    expect(await alerteur.alerter({ categorie: 'releve_bloque', id: 'rel_1' })).toBe('envoyee');
+    expect(notifieur.envois).toHaveLength(2);
+  });
+
+  it('REQ-INT-024 — le refus de plafond porte un motif fermé et un nom', () => {
+    try {
+      creerAlerteur({
+        notifieur: notifieurCompteur(),
+        horloge: horlogeFigee(T0),
+        plafondParHeure: 0,
+      });
+      expect.unreachable('un plafond nul doit être refusé');
+    } catch (e) {
+      expect(e).toBeInstanceOf(PlafondInvalide);
+      expect((e as PlafondInvalide).motif).toBe('plafond_invalide');
+      expect((e as PlafondInvalide).name).toBe('PlafondInvalide');
+    }
+  });
+
+  it('REQ-INT-024 — un identifiant qui n’est pas une chaîne est retiré ; sans compte, le message n’en parle pas', () => {
+    const texte = messageDAlerte('alerte', {
+      categorie: 'releve_bloque',
+      id: 42 as unknown as string,
+    });
+    expect(texte).toBe('[releve_bloque] objet [identifiant non technique retiré]');
+  });
+});
+
+describe('REQ-INT-024 — la garde voit aussi une coordonnée qui ne vient d’aucun champ du témoin', () => {
+  it.each([
+    ['forme_courriel', () => 'écrire à contact@example.org'],
+    ['forme_url', () => 'voir https://example.org/admin'],
+    ['forme_telephone', () => 'appeler le 06 12 34 56 78'],
+  ])(
+    'REQ-INT-024 — un gabarit qui écrit une coordonnée en dur est refusé : %s',
+    (champ, gabarit) => {
+      const r = confronter({ en_dur: gabarit });
+      expect(r.code).toBe(1);
+      expect(r.fautes).toEqual([{ gabarit: 'en_dur', champ }]);
+    }
+  );
+
+  it('REQ-INT-024 — une table VIDE n’est pas un vert : code non nul, zéro confronté', () => {
+    expect(confronter({})).toEqual({ code: 1, confrontes: 0, fautes: [] });
+  });
+
+  it('REQ-INT-024 — la garde en ligne de commande, jouée en processus : les trois issues', () => {
+    const lignes = (): { sortie: string[]; erreur: string[] } => ({ sortie: [], erreur: [] });
+    const flux = (l: { sortie: string[]; erreur: string[] }) => ({
+      sortie: (x: string) => void l.sortie.push(x),
+      erreur: (x: string) => void l.erreur.push(x),
+    });
+    const depot = lignes();
+    expect(executer([], GABARITS_ALERTE, flux(depot))).toBe(0);
+    expect(depot.erreur).toEqual([]);
+    expect(depot.sortie).toEqual([
+      `✅ G-SEC-NOTIF — ${Object.keys(GABARITS_ALERTE).length} gabarits de message confrontés à un ` +
+        'objet portant nom, courriel, téléphone, lien de console, raison sociale et montant : ' +
+        'aucun champ ne franchit.',
+    ]);
+
+    const un = lignes();
+    expect(executer([], { seul: GABARITS_ALERTE.alerte }, flux(un))).toBe(0);
+    expect(un.sortie[0]).toMatch(/^✅ G-SEC-NOTIF — 1 gabarit de message confronté à un objet/);
+
+    const bac = lignes();
+    expect(executer(['--bac-d-essai'], GABARITS_ALERTE, flux(bac))).toBe(1);
+    expect(bac.sortie).toEqual([]);
+    expect(bac.erreur[0]).toBe("❌ G-SEC-NOTIF — 4 champ(s) franchissent le canal d'alerte :");
+    expect(bac.erreur.slice(1).sort()).toEqual(
+      ['courriel', 'lienConsole', 'nom', 'telephone']
+        .map((c) => `   gabarit bac_d_essai : champ ${c}`)
+        .sort()
+    );
+
+    const vide = lignes();
+    expect(executer([], {}, flux(vide))).toBe(1);
+    expect(vide.erreur).toEqual([
+      '❌ G-SEC-NOTIF — aucun gabarit confronté : un vert sur rien n’est pas un vert.',
+    ]);
+  });
 });

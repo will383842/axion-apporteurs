@@ -98,7 +98,7 @@ export function creerAlerteur({ notifieur, horloge, plafondParHeure }: OptionsAl
       const precedent = dernierEnvoi.get(cle);
       if (precedent !== undefined && precedent > depuis) return 'dedoublonnee';
 
-      const envois = (envoisParCategorie.get(objet.categorie) ?? []).filter((t) => t > depuis);
+      const envois = envoisParCategorie.get(objet.categorie)?.filter((t) => t > depuis) ?? [];
       envoisParCategorie.set(objet.categorie, envois);
       if (envois.length >= plafondParHeure) return 'plafonnee';
 

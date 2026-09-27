@@ -75,27 +75,47 @@ export function confronter(gabarits: Readonly<Record<string, (o: ObjetAlerte) =>
   return { code: fautes.length === 0 && confrontes > 0 ? 0 : 1, confrontes, fautes };
 }
 
-if (process.argv[1] !== undefined && /garde-sans-pii[.](ts|js)$/.test(process.argv[1])) {
-  const bac = process.argv.includes('--bac-d-essai');
+/** Où la garde écrit : deux flux, injectés — le test les lit sans lancer de processus. */
+export type Sorties = {
+  readonly sortie: (ligne: string) => void;
+  readonly erreur: (ligne: string) => void;
+};
+
+type Table = Readonly<Record<string, (o: ObjetAlerte) => string>>;
+
+/**
+ * La garde en ligne de commande, sans effet de bord : elle rend son code de sortie. `depot` est la
+ * table jugée sans `--bac-d-essai` — `GABARITS_ALERTE` au lancement, explicite dans les témoins.
+ */
+export function executer(
+  argv: readonly string[],
+  depot: Table,
+  { sortie, erreur }: Sorties
+): number {
+  const bac = argv.includes('--bac-d-essai');
   const { code, confrontes, fautes } = confronter(
-    bac ? { bac_d_essai: GABARIT_BAC_D_ESSAI } : GABARITS_ALERTE
+    bac ? { bac_d_essai: GABARIT_BAC_D_ESSAI } : depot
   );
-  const sortir = (flux: NodeJS.WriteStream, ligne: string): boolean => flux.write(`${ligne}\n`);
+  if (confrontes === 0) {
+    erreur('❌ G-SEC-NOTIF — aucun gabarit confronté : un vert sur rien n’est pas un vert.');
+    return code;
+  }
   if (code !== 0) {
-    sortir(
-      process.stderr,
-      `❌ G-SEC-NOTIF — ${fautes.length} champ(s) franchissent le canal d'alerte :`
-    );
-    for (const f of fautes) sortir(process.stderr, `   gabarit ${f.gabarit} : champ ${f.champ}`);
-    if (confrontes === 0)
-      sortir(process.stderr, '   aucun gabarit confronté : un vert sur rien n’est pas un vert.');
-    process.exit(code);
+    erreur(`❌ G-SEC-NOTIF — ${fautes.length} champ(s) franchissent le canal d'alerte :`);
+    for (const f of fautes) erreur(`   gabarit ${f.gabarit} : champ ${f.champ}`);
+    return code;
   }
   const s = confrontes > 1 ? 's' : '';
-  sortir(
-    process.stdout,
+  sortie(
     `✅ G-SEC-NOTIF — ${confrontes} gabarit${s} de message confronté${s} à un objet portant nom, ` +
       `courriel, téléphone, lien de console, raison sociale et montant : aucun champ ne franchit.`
   );
-  process.exit(0);
+  return 0;
+}
+
+if (process.argv[1] !== undefined && /garde-sans-pii[.](ts|js)$/.test(process.argv[1])) {
+  process.exitCode = executer(process.argv, GABARITS_ALERTE, {
+    sortie: (l) => process.stdout.write(`${l}\n`),
+    erreur: (l) => process.stderr.write(`${l}\n`),
+  });
 }
