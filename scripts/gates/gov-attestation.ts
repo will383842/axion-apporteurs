@@ -31,15 +31,18 @@
  *
  *   — `pnpm gov:tasks` (déterministe, bloquant, en CI, sans réseau) juge la FORME et ce qui se
  *     ferme sans forge : SHA de quarante hexadécimaux, instant UTC non postérieur à la passe, pas
- *     de `pr` nu hors dépôt, pas d'attestation locale sans `pr`, et — pour une tâche d'ICI — un
- *     SHA que git connaît comme commit de ce dépôt ;
- *   — ce script (non déterministe, à la main) juge la RÉSOLUTION : pour une tâche d'ici, le SHA
- *     est ancêtre de la branche par défaut ; pour une tâche d'ailleurs, la forge de son dépôt
- *     connaît le commit ; pour toutes, la PR citée est FUSIONNÉE, par CE commit, à CET instant.
+ *     de `pr` nu hors dépôt, pas d'attestation locale sans `pr` ;
+ *   — ce script (non déterministe, à la main) juge la RÉSOLUTION : pour une tâche d'ici, git
+ *     connaît le SHA comme commit ET comme ancêtre de la branche par défaut ; pour une tâche
+ *     d'ailleurs, la forge de son dépôt connaît le commit ; pour toutes, la PR citée est
+ *     FUSIONNÉE, par CE commit, à CET instant.
  *
- * L'AFFAIBLISSEMENT HORS LIGNE EST NOMMÉ PLUTÔT QUE TU : un commit d'ici qui existe mais n'est
- * pas celui de la PR citée, ou le SHA de quarante hexadécimaux d'une tâche d'AILLEURS qui ne
- * désigne rien, passent `gov:tasks`. Le rattrapage est ici. Il se lance après toute clôture de lot
+ * L'AFFAIBLISSEMENT HORS LIGNE EST NOMMÉ PLUTÔT QUE TU : un SHA de quarante hexadécimaux qui ne
+ * désigne AUCUN commit — d'ici comme d'ailleurs —, ou un commit d'ici qui existe mais n'est pas
+ * celui de la PR citée, passent `gov:tasks`. Un oracle `git cat-file` hors ligne pour le SHA
+ * d'ici a existé (famille `attestation_sha_etranger`) et a été RETIRÉ (PR 168, run
+ * 36298491294) : il rougissait les attestations justes partout où le clone n'a pas l'historique
+ * complet — les dépôts jetables des témoins d'effet, en CI comme en local. Le rattrapage est ici. Il se lance après toute clôture de lot
  * et avant toute publication d'un état d'avancement qui s'appuie dessus.
  *
  * UNE FORGE ILLISIBLE EST UNE FAUTE : échec fermé, jamais « rien à redire faute de réponse ».

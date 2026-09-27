@@ -208,59 +208,31 @@ export const FAMILLES_ATTESTATION = [
   'attestation_date_non_conforme',
   'attestation_date_future',
   'attestation_sans_pr',
-  'attestation_sha_etranger',
   'pr_nu_hors_depot',
   'livraison_repo_externe',
 ] as const;
 
 // ── les vues hors ligne (veto sécurité 5328941794, PR 168) ───────────────────
 /**
- * CE QUE LA GARDE HORS LIGNE LIT HORS DU BACKLOG, INJECTÉ (RM-11). Deux faits seulement :
+ * CE QUE LA GARDE HORS LIGNE LIT HORS DU BACKLOG, INJECTÉ (RM-11). Un fait seulement :
  *
  *   — `maintenant` : l'instant de LA PASSE, lu une fois par l'appelant. Une `fusionneeAt`
  *     postérieure n'atteste aucune fusion — elle en annonce une. Mesuré sur e8369ab : une date
  *     en 2030 passait `gov:tasks`.
- *   — `commitConnu` : « ce SHA est-il un commit de CE dépôt ? », répondu par git sans réseau.
- *     `null` = l'appelant NE PEUT PAS le savoir, et le DIT : `pnpm lot:cloture` écrit le SHA que
- *     le release manager lui rend, avant que l'arbre local ait forcément reçu ce commit ; la
- *     faute y serait un faux rouge, et `gov:tasks` la juge à la passe suivante, en CI, sur un
- *     clone entier (`fetch-depth: 0`). Jamais un défaut silencieux : le paramètre est requis.
  *
- * CE QUE CES VUES NE DISENT PAS : qu'un commit d'ici est bien celui de la PR citée, ni qu'il est
- * sur la branche par défaut. Ça, c'est la résolution en ligne (`resoudreAttestations`).
+ * CE QUE CES VUES NE DISENT PAS : qu'un SHA désigne un commit, qu'il est celui de la PR citée, ni
+ * qu'il est sur la branche par défaut. Tout cela — y compris l'EXISTENCE et l'ascendance du SHA
+ * d'une attestation LOCALE — est la résolution en ligne (`resoudreAttestations`,
+ * `gov-attestation.ts --en-ligne`).
+ *
+ * 🔴 UN ORACLE GIT HORS LIGNE A ÉTÉ RETIRÉ (famille `attestation_sha_etranger`, `git cat-file`,
+ * PR 168, run 36298491294) : il rougissait les 77 attestations JUSTES partout où l'historique
+ * complet n'est pas là — les dépôts jetables des témoins d'effet, dans l'étape « Tests » de la CI.
+ * Une garde qui dépend de la profondeur du clone rend un verdict sur le clone, pas sur le backlog.
  */
 export type VuesHorsLigne = {
   maintenant: number;
-  commitConnu: ((sha: string) => boolean) | null;
 };
-
-const COMMITS_LUS = new Map<string, boolean>();
-/**
- * L'oracle git de CE dépôt : UN `git cat-file --batch-check` pour tous les SHA encore inconnus,
- * mémorisé. Un objet qui existe mais n'est pas un commit (arbre, blob) ne compte pas. git qui
- * échoue LÈVE : une garde qui ne sait pas lire ne rend pas un vert.
- */
-export function commitsDeCeDepot(shas: readonly string[]): (sha: string) => boolean {
-  const lire = (liste: readonly string[]) => {
-    const inconnus = [...new Set(liste)].filter((s) => MOTIF_SHA.test(s) && !COMMITS_LUS.has(s));
-    if (inconnus.length === 0) return;
-    const sortie = execFileSync('git', ['cat-file', '--batch-check'], {
-      input: inconnus.join('\n') + '\n',
-      encoding: 'utf8',
-      maxBuffer: 64e6,
-    });
-    for (const ligne of sortie.split('\n')) {
-      const [sha, type] = ligne.trim().split(/\s+/);
-      if (sha && MOTIF_SHA.test(sha)) COMMITS_LUS.set(sha, type === 'commit');
-    }
-    for (const s of inconnus) if (!COMMITS_LUS.has(s)) COMMITS_LUS.set(s, false);
-  };
-  lire(shas);
-  return (sha) => {
-    lire([sha]);
-    return COMMITS_LUS.get(sha) === true;
-  };
-}
 
 /** Le dépôt de forge d'une tâche, ou `null` si son `repo` n'en désigne aucun. */
 export function depotDeLaTache(t: { repo: string }): string | null {
@@ -294,7 +266,7 @@ export function referencePr(t: TacheAttestable): string | null {
  * Les fautes d'attestation d'UNE tâche. `estLivree` est passée en paramètre plutôt que recalculée :
  * l'ensemble « livrée » a une source unique (`scripts/lot/avancement.ts`), et ce module ne va pas
  * en faire une sixième copie. `vues` est REQUIS : ce que la garde lit hors du backlog (l'instant de
- * la passe, l'oracle git) vient de l'appelant, et un appelant qui ne peut pas le lire le dit.
+ * la passe) vient de l'appelant.
  */
 export function controlerAttestation(
   t: TacheAttestable,
@@ -340,16 +312,6 @@ export function controlerAttestation(
           `${t.id} est « ${t.statut} » dans CE dépôt, porte une attestation de la PR ${a.pr} et ` +
             `AUCUN « pr ». \`pnpm lot:cloture\` écrit les deux ensemble : une attestation seule ` +
             `n'est confrontée à rien, et c'est la forme exacte d'une livraison posée à la main.`
-        );
-      }
-      // Un SHA de CE dépôt se vérifie SANS réseau : git le connaît, ou non. Celui d'un autre dépôt,
-      // non — il reste au contrôle en ligne (`scripts/gates/gov-attestation.ts --en-ligne`).
-      if (MOTIF_SHA.test(a.sha) && vues.commitConnu !== null && !vues.commitConnu(a.sha)) {
-        ajouter(
-          'attestation_sha_etranger',
-          `${t.id} vit dans CE dépôt et son « attestation.sha » ${a.sha} n'y désigne AUCUN commit ` +
-            `(git cat-file). Un SHA de quarante hexadécimaux qui ne désigne rien — inventé, ou venu ` +
-            `d'un autre dépôt — n'atteste aucun atterrissage.`
         );
       }
     } else if (estLivree && !auPassif && (t.pr != null || t.branch != null)) {

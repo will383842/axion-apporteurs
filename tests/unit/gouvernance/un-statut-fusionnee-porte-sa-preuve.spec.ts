@@ -37,11 +37,11 @@ const SHA_A = 'a'.repeat(40);
 const SHA_B = 'b'.repeat(40);
 const attestation = (pr: number, sha = SHA_A) => ({ pr, sha, fusionneeAt: '2026-09-20T10:00:00Z' });
 /**
- * LES VUES HORS LIGNE, INJECTÉES (RM-11) : l'instant de la passe et l'oracle « ce SHA est-il un
- * commit de CE dépôt ». Aucun témoin ne lit l'horloge ni git : le verdict ne dépend que d'elles.
+ * LES VUES HORS LIGNE, INJECTÉES (RM-11) : l'instant de la passe. Aucun témoin ne lit l'horloge :
+ * le verdict ne dépend que d'elles.
  */
 const MAINTENANT = Date.parse('2026-09-27T12:00:00Z');
-const VUES: VuesHorsLigne = { maintenant: MAINTENANT, commitConnu: () => true };
+const VUES: VuesHorsLigne = { maintenant: MAINTENANT };
 const familles = (t: TacheAttestable, livree: boolean, vues: VuesHorsLigne = VUES) =>
   controlerAttestation(t, livree, vues).map((f) => f.famille);
 const estLivree = (t: { statut: string }) => LIVREE.has(t.statut);
@@ -297,8 +297,10 @@ describe('REQ-GOV-026 — `lot:cloture` écrit l’attestation des tâches local
  * Le scénario qui motive GOV-042 (GOV-035) : une tâche passée `fusionnee` À LA MAIN, `owner` et
  * `branch` posés, SANS `pr`, avec une attestation inventée — PR 999, SHA à quarante zéros. Mesuré
  * sur e8369ab : `gov:tasks` la laissait passer, comme une `fusionneeAt` en 2030 et le SHA d'un
- * autre dépôt. Trois fautes se ferment sans interroger personne : l'horloge de la passe borne la
- * date, le `pr` de la tâche est confronté à l'attestation, et git dit si le SHA est un commit d'ICI.
+ * autre dépôt. Deux fautes se ferment sans interroger personne : l'horloge de la passe borne la
+ * date, et le `pr` de la tâche est confronté à l'attestation. Le SHA à zéros, lui, se ferme EN
+ * LIGNE (`resoudreAttestations`, plus bas) : un oracle `git cat-file` hors ligne rougissait les
+ * attestations justes sur tout clone sans l'historique complet (PR 168, run 36298491294).
  */
 describe('REQ-GOV-026 — hors ligne : ce qui se ferme sans forge est fermé', () => {
   const locale = (
@@ -312,8 +314,6 @@ describe('REQ-GOV-026 — hors ligne : ce qui se ferme sans forge est fermé', (
     branch: 't/gov-901',
     attestation: a,
   });
-  const connus = new Set([SHA_A]);
-  const vuesGit: VuesHorsLigne = { maintenant: MAINTENANT, commitConnu: (s) => connus.has(s) };
 
   it('REQ-GOV-026 — TÉMOIN : une `fusionneeAt` POSTÉRIEURE à l’instant de la passe est refusée', () => {
     const a = { ...attestation(140), fusionneeAt: '2030-01-01T00:00:00Z' };
@@ -333,7 +333,6 @@ describe('REQ-GOV-026 — hors ligne : ce qui se ferme sans forge est fermé', (
     expect(
       familles(locale(a, 140), true, {
         maintenant: Date.parse('2026-09-27T11:59:58Z'),
-        commitConnu: () => true,
       })
     ).toEqual(['attestation_date_future']);
   });
@@ -342,46 +341,14 @@ describe('REQ-GOV-026 — hors ligne : ce qui se ferme sans forge est fermé', (
     expect(familles(locale(attestation(140), null), true)).toEqual(['attestation_sans_pr']);
   });
 
-  it('REQ-GOV-026 — TÉMOIN : un SHA qui n’est pas un commit de CE dépôt est refusé', () => {
-    expect(familles(locale(attestation(140, SHA_B), 140), true, vuesGit)).toEqual([
-      'attestation_sha_etranger',
-    ]);
-    expect(familles(locale(attestation(140, SHA_A), 140), true, vuesGit)).toEqual([]);
-  });
-
-  it('REQ-GOV-026 — CONTRE-TÉMOIN : le SHA d’une tâche d’AILLEURS n’est pas cherché dans ce dépôt-ci', () => {
-    const vu: string[] = [];
-    const vues: VuesHorsLigne = {
-      maintenant: MAINTENANT,
-      commitConnu: (s) => {
-        vu.push(s);
-        return false;
-      },
-    };
-    expect(
-      familles(
-        {
-          id: 'INT-T01b',
-          repo: 'axionia',
-          statut: 'fusionnee',
-          pr: null,
-          attestation: attestation(998, SHA_B),
-        },
-        true,
-        vues
-      )
-    ).toEqual([]);
-    expect(vu).toEqual([]);
-  });
-
   it('REQ-GOV-026 — LE SCÉNARIO GOV-035 : `fusionnee` à la main, sans `pr`, PR 999 et SHA à zéros', () => {
+    // Hors ligne, l'absence de `pr` suffit à le refuser ; le SHA à zéros est rejeté EN LIGNE
+    // (« le SHA à zéros d'une tâche LOCALE est rejeté », plus bas).
     const f = familles(
       locale({ pr: 999, sha: '0'.repeat(40), fusionneeAt: '2026-09-26T00:00:00Z' }, null),
-      true,
-      vuesGit
+      true
     );
-    expect(f).toContain('attestation_sans_pr');
-    expect(f).toContain('attestation_sha_etranger');
+    expect(f).toEqual(['attestation_sans_pr']);
   });
 });
 

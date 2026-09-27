@@ -72,10 +72,9 @@ const attestation = (): Attestation => ({
   fusionneeAt: '2026-09-05T11:04:48Z',
 });
 
-/** Les vues hors ligne INJECTÉES (RM-11) : l'instant de la passe fixé, l'oracle git neutre. */
+/** Les vues hors ligne INJECTÉES (RM-11) : l'instant de la passe fixé. */
 const VUES: VuesHorsLigne = {
   maintenant: Date.parse('2026-09-27T12:00:00Z'),
-  commitConnu: () => true,
 };
 
 /**
@@ -297,20 +296,6 @@ describe('GOV-038 — les sept familles de l’attestation inter-dépôt (REQ-GO
       ],
     ];
     for (const [t, livree] of cas) for (const x of familles(t, livree)) vues.add(x);
-    // Le SHA que git ne connaît pas : le seul cas qui demande un AUTRE oracle que celui par défaut.
-    const etranger: VuesHorsLigne = { ...VUES, commitConnu: () => false };
-    for (const f of controlerAttestation(
-      {
-        id: 'j',
-        repo: 'partners',
-        statut: 'fusionnee',
-        pr: 31,
-        attestation: { ...attestation(), pr: 31 },
-      },
-      true,
-      etranger
-    ))
-      vues.add(f.famille);
     expect([...vues].sort()).toEqual([...FAMILLES_ATTESTATION].sort());
   });
 });

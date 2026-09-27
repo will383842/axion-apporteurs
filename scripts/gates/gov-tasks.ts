@@ -39,7 +39,6 @@ import {
   DEPOT_LOCAL,
   FAMILLES_ATTESTATION,
   PASSIF_SANS_ATTESTATION,
-  commitsDeCeDepot,
   controlerAttestation,
   versUtcSeconde,
   type Attestation,
@@ -120,8 +119,8 @@ const LIVREE = LIVREE_DERIVEE;
  * 🔴 PAS `attestation`, et c'est le motif `simplicite` de la PR 114 : une livraison d'AILLEURS est
  * déjà jugée, dans les deux sens, par `controlerAttestation` (`attestation_absente`,
  * `attestation_sans_livraison`) ; depuis GOV-042, une tâche d'ICI porte la même attestation, jugée
- * par la même fonction (`attestation_absente`, `attestation_pr_discordante`, `attestation_sans_pr`,
- * `attestation_sha_etranger`) — `attestation_hors_sujet` ne vaut plus que pour `repo: "externe"`.
+ * par la même fonction (`attestation_absente`, `attestation_pr_discordante`, `attestation_sans_pr`)
+ * — `attestation_hors_sujet` ne vaut plus que pour `repo: "externe"`.
  * La compter ici faisait rougir la même faute deux fois, sous deux noms et deux remèdes. Une
  * faute, une famille : le couple ne juge que les écritures `pr` et `branch` de CE dépôt.
  *
@@ -204,14 +203,13 @@ export function schemaSansChemin(taches: readonly Tache[], chemins: readonly str
 
 /**
  * Les vues hors ligne d'UNE passe (veto sécurité 5328941794, PR 168) : l'instant fourni par
- * l'appelant, et l'oracle git qui dit si un SHA est un commit de CE dépôt — lu en UN appel pour
- * toutes les attestations du document. Le CI clone l'historique entier (`fetch-depth: 0`) : un
- * SHA d'ici y est connu, ou il n'atteste rien.
+ * l'appelant, rien d'autre. L'existence et l'ascendance du SHA d'une attestation — d'ici comme
+ * d'ailleurs — sont résolues EN LIGNE (`gov-attestation.ts --en-ligne`) : un oracle `git cat-file`
+ * hors ligne rougissait les attestations justes partout où le clone n'a pas tout l'historique
+ * (run 36298491294), et il a été retiré.
  */
-export function vuesDeLaPasse(doc: unknown, maintenant: number): VuesHorsLigne {
-  const taches = ((doc as { taches?: Tache[] }).taches ?? []) as Tache[];
-  const shas = taches.flatMap((t) => (t.attestation?.sha ? [t.attestation.sha] : []));
-  return { maintenant, commitConnu: commitsDeCeDepot(shas) };
+export function vuesDeLaPasse(maintenant: number): VuesHorsLigne {
+  return { maintenant };
 }
 
 // ── les contrôles ────────────────────────────────────────────────────────────
@@ -220,7 +218,7 @@ export function controler(
   schema: object,
   registre: Registre,
   chemins: readonly string[] = cheminsSchema(),
-  vues: VuesHorsLigne = vuesDeLaPasse(doc, Date.now())
+  vues: VuesHorsLigne = vuesDeLaPasse(Date.now())
 ): Faute[] {
   const fautes: Faute[] = [];
   const ajouter = (famille: string, message: string) => fautes.push({ famille, message });
@@ -557,7 +555,7 @@ if (LANCE_EN_SCRIPT) {
   const chemins = cheminsSchema(readFileSync(CHEMIN_CHARTE, 'utf8'));
   // L'INSTANT DE LA PASSE, lu UNE fois et injecté partout : une `fusionneeAt` postérieure est une
   // faute (`attestation_date_future`), et deux appels de la même passe jugent au même instant.
-  const horsLigne = vuesDeLaPasse(doc, Date.now());
+  const horsLigne = vuesDeLaPasse(Date.now());
 
   if (process.argv.includes('--render') || process.argv.includes('--verifie-rendu')) {
     const fautes = controler(doc, schema, registre, chemins, horsLigne);
@@ -950,16 +948,6 @@ if (LANCE_EN_SCRIPT) {
         defaut: () => {
           const d = copie();
           livreeIciAttestee(d).pr = null;
-          return d;
-        },
-      },
-      // Le SHA à quarante zéros du veto : bien formé, et commit de RIEN dans ce dépôt.
-      {
-        famille: 'attestation_sha_etranger',
-        defaut: () => {
-          const d = copie();
-          const t = livreeIciAttestee(d);
-          t.attestation = { ...t.attestation!, sha: '0'.repeat(40) };
           return d;
         },
       },
