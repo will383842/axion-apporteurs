@@ -8,8 +8,8 @@
  *      une valeur entière positive ; AUCUNE constante de gradation, de manquements ni de délai de
  *      contradictoire (`HYP-D11`, décision du 2026-09-03).
  *   2. AUCUN LITTÉRAL HORS DE LA SSOT, dans le code de `src/` (spécifications exclues) :
- *        — les montants de seuil 2 400 €, 5 000 €, 50 € en centimes (`240000`, `500000`, `5000`,
- *          séparateurs `_` compris) et en euros (`2400`), n'importe où hors commentaire ;
+ *        — les montants de seuil de la SSOT (DAS2, vigilance, versement minimal), en centimes ou en
+ *          euros, séparateurs `_` compris, n'importe où hors commentaire ;
  *        — les durées 2, 3, 6, 10, 12, 15, 24, 30, 60 et 90 ATTACHÉES À UNE UNITÉ DE TEMPS :
  *          multipliées par une constante de jour, de mois ou d'année, ou par `24 * 60 * 60` ;
  *          passées à une fonction d'ajout de jours, de mois ou d'années ; posées sous une clé

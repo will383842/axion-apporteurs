@@ -15,7 +15,11 @@
  *      fragment de son texte : un retrait qui ne laisserait que le titre rougit.
  *
  * LIMITE DÉCLARÉE. C'est un contrôle LEXICAL : une réécriture qui garde les mots et change le sens
- * n'est vue que par la relecture de Will, qui précède toute signature (JUR-T01b).
+ * n'est vue que par la relecture de Will, qui précède toute signature.
+ *
+ * @no-red-first: le gabarit est déjà sobre depuis sa rédaction (PR #92) ; ce fichier fige
+ * l'acceptation de JUR-T27, et son rouge a été constaté sur un témoin — une clause réintroduisant
+ * « déchéance », « faute grave » et « contradictoire » dans l'art. 11 — copié dans la PR.
  */
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';

@@ -27,7 +27,7 @@ export const OBJET_TEMOIN = {
   telephone: '+33 6 12 34 56 78',
   lienConsole: 'https://console.partners.example/admin/apporteurs/obj_temoin_1',
   raisonSociale: 'Témoin Conseil SARL',
-  montantCents: 123_456,
+  montantHtCents: 987_654,
 } as const;
 
 /** Les champs qu'aucun message ne doit porter : clés de l'objet témoin hors des trois permis. */

@@ -126,7 +126,7 @@ describe('REQ-INT-024 — aucun message ne porte de coordonnée de tiers ni de l
       OBJET_TEMOIN.telephone,
       OBJET_TEMOIN.lienConsole,
       OBJET_TEMOIN.raisonSociale,
-      String(OBJET_TEMOIN.montantCents),
+      String(OBJET_TEMOIN.montantHtCents),
     ]) {
       expect(texte).not.toContain(valeur);
     }
