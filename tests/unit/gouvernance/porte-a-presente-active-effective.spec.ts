@@ -18,12 +18,23 @@
 
 import { describe, it, expect } from 'vitest';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import {
+  COMMANDES_INTEGREES_DE_PNPM,
+  COMMANDES_RELEVEES_DE_PNPM,
   controler,
   FAMILLES,
+  GESTIONNAIRE_RELEVE,
   confronterLaPorteA,
   lireVue,
   PORTE_A_FIGEE,
@@ -863,6 +874,51 @@ describe('REQ-GOV-029 — une garde est appelée par son FICHIER exécuté, jama
     });
   }
 
+  // VETO DE SÉCURITÉ, TOUR 5 — la table des commandes de pnpm 9.12.0 est un objet JS ordinaire : un
+  // mot qui nomme une propriété HÉRITÉE d'`Object.prototype` y passe pour une commande, et `pnpm <mot>`
+  // sort sans lancer le script de ce nom. Le script `mutation` est RENOMMÉ, l'étape repointée.
+  const renomme = (vue: Vue, nom: string): Vue =>
+    avecPaquet(vue, (p) => {
+      const s = scriptsDe(p);
+      s[nom] = s.mutation!;
+      delete s.mutation;
+    });
+  for (const nom of ['toString', 'constructor']) {
+    it(`REQ-GOV-029 — script \`mutation\` renommé \`${nom}\`, étape de nightly.yml repointée sur \`pnpm ${nom}\` : rien n’est appelé`, () => {
+      expect(jamaisAppelee(renomme(nuitEn(`pnpm ${nom}`), nom))).toContain('`mutation`');
+    });
+    it(`REQ-GOV-029 — script \`mutation\` renommé \`${nom}\`, lancé par une \`command\` des réglages \`pnpm ${nom}\` : rien n’est appelé`, () => {
+      const vue = renomme(nuitEn('echo nuit', reglagesPlus(`pnpm ${nom}`)), nom);
+      expect(jamaisAppelee(vue)).toContain('`mutation`');
+    });
+  }
+
+  it('REQ-GOV-029 — `pnpm <mot>` hors de la forme ASCII basse `^[a-z][a-z0-9:_-]*$` : rien n’est appelé (échec fermé)', () => {
+    expect(jamaisAppelee(renomme(nuitEn('pnpm Mutation'), 'Mutation'))).toContain('`mutation`');
+  });
+
+  it('REQ-GOV-029 — CONTRE-TÉMOIN : `pnpm run constructor` compte (mesuré : `run` lit les scripts, pas la table des commandes)', () => {
+    const vue = renomme(nuitEn('pnpm run constructor'), 'constructor');
+    expect(jamaisAppelee(vue)).toBe('');
+  });
+
+  it('REQ-GOV-012 — un script nommé `valueOf`, nom hérité d’Object.prototype que pnpm prend pour une commande : porte_a_alteree, nommé', async () => {
+    const vue = avecPaquet(lireVue(), (p) => {
+      scriptsDe(p).valueOf = 'tsx scripts/gates/gov-conventions.ts';
+    });
+    const fautes = (await confronterLaPorteA(vue)).fautes.filter(
+      (f) => f.famille === 'porte_a_alteree'
+    );
+    expect(fautes.map((f) => f.message).join('\n')).toContain('`valueOf`');
+  });
+
+  it('REQ-GOV-012 — CONTRE-TÉMOIN : le vrai dépôt, chaque script de forme ASCII basse et aucun sous un nom de commande', () => {
+    const noms = Object.keys(scriptsDe(JSON.parse(PKG_REEL) as Record<string, unknown>));
+    expect(noms.filter((n) => !/^[a-z][a-z0-9:_-]*$/.test(n))).toEqual([]);
+    expect(noms.filter((n) => COMMANDES_INTEGREES_DE_PNPM.has(n) && n !== 'test')).toEqual([]);
+    expect(controler(lireVue()).map((f) => f.famille)).toEqual([]);
+  });
+
   for (const [quoi, change] of [
     [
       'changé',
@@ -888,4 +944,72 @@ describe('REQ-GOV-029 — une garde est appelée par son FICHIER exécuté, jama
   it('REQ-GOV-012 — CONTRE-TÉMOIN : le vrai package.json passe la porte A, `packageManager` compris', async () => {
     expect((await confronterLaPorteA(lireVue())).fautes).toEqual([]);
   });
+});
+
+/**
+ * DETTE (1) DU VETO DE SÉCURITÉ, TOUR 5 — la liste relevée à la main (`COMMANDES_RELEVEES_DE_PNPM`)
+ * CONFRONTÉE au pnpm réellement installé, lu HORS LIGNE : le `switch` qui passe à npm, lu dans le
+ * texte de `dist/pnpm.cjs`, et les clés de `handlerByCommandName`, obtenues en compilant le même
+ * fichier sans son point d'entrée (dans un processus à part : rien de pnpm ne touche ce processus).
+ * Le pnpm lu est celui qui lance le test (`npm_execpath`, posé par `pnpm test` en CI comme en local),
+ * sinon celui que `packageManager` a fait installer sous `%LOCALAPPDATA%/pnpm/.tools`, sinon
+ * `node_modules/.pnpm` — et seulement s'il est à la version relevée (`GESTIONNAIRE_RELEVE`).
+ * ⚠️ LIMITE DÉCLARÉE : lancé hors de pnpm (`npx vitest`), sur une machine où aucun de ces chemins ne
+ * porte la version relevée, le test est SAUTÉ, et son titre le dit ; la porte `pnpm test`, elle, le
+ * lance toujours sous le pnpm qu'elle confronte.
+ */
+function pnpmReleve(): string | null {
+  const version = GESTIONNAIRE_RELEVE.replace(/^pnpm@/, '');
+  const racines = [
+    process.env.npm_execpath ? resolve(dirname(process.env.npm_execpath), '..') : '',
+    process.env.LOCALAPPDATA
+      ? join(process.env.LOCALAPPDATA, 'pnpm/.tools/pnpm', version, 'node_modules/pnpm')
+      : '',
+    join(RACINE, 'node_modules/.pnpm', `pnpm@${version}`, 'node_modules/pnpm'),
+  ].filter((r) => r !== '');
+  for (const r of racines) {
+    try {
+      const pkg = JSON.parse(readFileSync(join(r, 'package.json'), 'utf8')) as {
+        name?: string;
+        version?: string;
+      };
+      const cjs = join(r, 'dist/pnpm.cjs');
+      if (pkg.name === 'pnpm' && pkg.version === version && existsSync(cjs)) return cjs;
+    } catch {
+      /* chemin absent ou illisible : le suivant */
+    }
+  }
+  return null;
+}
+
+const PNPM_RELEVE = pnpmReleve();
+
+const LIRE_LES_COMMANDES = String.raw`
+const fs = require('fs'), path = require('path'), Module = require('module');
+const p = process.argv[1];
+const src = fs.readFileSync(p, 'utf8');
+const cmd = /var (\w+) = __commonJS\(\{\s*"lib\/cmd\/index\.js"/.exec(src);
+const i = src.lastIndexOf('(async () => {\n  switch (argv[0])');
+const j = src.indexOf('await passThruToNpm()', i);
+if (!cmd || i < 0 || j < 0) { console.log('null'); process.exit(0); }
+const npm = [...src.slice(i, j).matchAll(/case "([^"]+)":/g)].map((m) => m[1]);
+const mod = new Module(p);
+mod.filename = p;
+mod.paths = Module._nodeModulePaths(path.dirname(p));
+mod._compile(src.slice(0, i) + '\nmodule.exports = ' + cmd[1] + '();\n', p);
+console.log(JSON.stringify([...npm, ...Object.keys(mod.exports.pnpmCmds)]));
+`;
+
+describe('REQ-GOV-012 — les commandes intégrées relevées à la main sont celles du pnpm installé (dette 1, tour 5)', () => {
+  it.skipIf(PNPM_RELEVE === null)(
+    'REQ-GOV-012 — la liste relevée égale, mot pour mot, les commandes du pnpm de la version relevée (sauté si aucun n’est lisible hors ligne)',
+    () => {
+      const sortie = execFileSync(process.execPath, ['-e', LIRE_LES_COMMANDES, PNPM_RELEVE!], {
+        encoding: 'utf8',
+      });
+      const lues = JSON.parse(sortie) as string[] | null;
+      expect(lues, 'le code de pnpm a changé de forme : relevez la liste à nouveau').not.toBeNull();
+      expect([...new Set(lues)].sort()).toEqual([...COMMANDES_RELEVEES_DE_PNPM].sort());
+    }
+  );
 });
