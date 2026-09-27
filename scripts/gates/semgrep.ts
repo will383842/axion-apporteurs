@@ -433,6 +433,24 @@ const FORMES_PRISMA_ECHAPPEES: readonly {
     lignes: [`module.exports = require('..${AS}057..${AS}057db');`],
     fautive: 1,
   },
+  // L'INTERPOLATION d'un `String.raw` réduite à un littéral de chaîne écrit par échappement
+  // (revue `exactitude` 5328789820, PR 82) : `String.raw` rend le littéral déjà DÉCODÉ, et le
+  // spécifieur vaut le client. Refusée comme classe — toute interpolation d'un `String.raw`.
+  {
+    nom: 'interpolation-brute-import-dynamique',
+    lignes: [`export const charger = () => import(String.raw\`\${'@pri${AS}u0073ma/client'}\`);`],
+    fautive: 1,
+  },
+  {
+    nom: 'interpolation-brute-require',
+    lignes: [`export const client = require(String.raw\`../\${'../${AS}x64b'}\`);`],
+    fautive: 1,
+  },
+  {
+    nom: 'interpolation-brute-parenthese-double',
+    lignes: [`export const charger = () => import(String.raw\`\${("@pri${AS}u0073ma/client")}\`);`],
+    fautive: 1,
+  },
   {
     nom: 'echappement-barre-oblique-specifieur',
     lignes: [`import { PrismaClient } from '@prisma${AS}/client';`],
@@ -785,6 +803,39 @@ const FORMES_SQL: readonly { nom: string; lignes: string[]; fautive: number; ext
       `export const fragment = (x: string) => String.raw\`a\${Prisma['r${AS}u0061w'](x)}\`;`,
     ],
     fautive: 2,
+  },
+  // L'interpolation d'un `String.raw` réduite à un LITTÉRAL DE CHAÎNE écrit par échappement
+  // (revue `exactitude` 5328789820, PR 82) : `String.raw` rend le littéral déjà décodé, le vrai
+  // nom s'exécute. La classe est fermée — toute interpolation d'un `String.raw` sous `src/` —,
+  // et le dernier témoin, sans échappement, le prouve.
+  {
+    nom: 'interpolation-brute-nom-entier',
+    lignes: [
+      'declare const p: { $queryRawUnsafe(q: string): unknown };',
+      `export const lire = (q: string) => p[String.raw\`\${'$queryRaw${AS}u0055nsafe'}\`](q);`,
+    ],
+    fautive: 2,
+  },
+  {
+    nom: 'interpolation-brute-nom-coupe',
+    lignes: [
+      'declare const p: { $queryRawUnsafe(q: string): unknown };',
+      `export const lire = (q: string) => p[String.raw\`$query\${'Raw${AS}u0055nsafe'}\`](q);`,
+    ],
+    fautive: 2,
+  },
+  {
+    nom: 'interpolation-brute-parenthese-double',
+    lignes: [
+      'declare const p: { $queryRawUnsafe(q: string): unknown };',
+      `export const lire = (q: string) => p[String.raw\`$query\${("Raw${AS}u0055nsafe")}\`](q);`,
+    ],
+    fautive: 2,
+  },
+  {
+    nom: 'interpolation-brute-variable',
+    lignes: ['export const texte = (x: string) => String.raw`a${x}b`;'],
+    fautive: 1,
   },
   // Le membre du runtime par accès CALCULÉ sur le chargeur, et ses autres membres dangereux :
   // `Sql`, `sqltag`, `join`, `makeTypedQueryFactory`.
@@ -1203,8 +1254,9 @@ export const CONTRE_TEMOINS: readonly FichierDuBac[] = [
   // l'espace, donc jugés par les DEUX règles : un caractère de contrôle (U+0000 à U+001F) ou DEL
   // (le séparateur `u001f` des condensats), les échappements courants, un antislash doublé devant
   // `u` (du texte),
-  // une expression régulière littérale, un gabarit `String.raw` et son interpolation sans
-  // échappement.
+  // une expression régulière littérale, un gabarit `String.raw` SANS interpolation (toute
+  // interpolation d'un `String.raw` est refusée comme classe), et un gabarit NON étiqueté qui
+  // interpole, à côté d'un `String.raw` sans interpolation.
   fichier(
     'espace/echappements-admis',
     `${MILIEU_ESPACE}/echappements-admis.ts`,
@@ -1215,7 +1267,7 @@ export const CONTRE_TEMOINS: readonly FichierDuBac[] = [
       `export const d = /^[${AS}x21-${AS}x7e]{1,200}$/.test('a') && /${AS}u0061${AS}/${AS}d${AS}./.test('a');`,
       `export const e = String.raw\`^src/.*${AS}.tsx?$\`;`,
       `export const f = String.raw\`${AS}u0061${AS}d\`;`,
-      `export const g = String.raw\`x${AS}.y\${1}z${AS}d\`;`,
+      `export const g = \`x\${1}y\` + String.raw\`z${AS}.w${AS}d\`;`,
     ],
     null,
     0

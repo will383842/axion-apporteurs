@@ -53,14 +53,42 @@
 #     chiffre (octal).
 # EXEMPTIONS DÉCLARÉES, et elles seules : le CORPS d'une expression régulière littérale (`/…/` :
 # ses antislashs sont de la syntaxe d'expression, et sa valeur n'est jamais un nom), et le TEXTE
-# d'un gabarit `String.raw` (sa valeur garde l'antislash, c'est du texte) — PAS ses
-# interpolations, rejugées une à une sans l'exemption. Les COMMENTAIRES ne sont pas exemptés.
+# d'un gabarit `String.raw` SANS interpolation (sa valeur garde l'antislash, c'est du texte).
+# Les COMMENTAIRES ne sont pas exemptés.
+# L'INTERPOLATION BRUTE, refusée comme CLASSE (revue `exactitude` 5328789820, PR 82) : un
+# `String.raw` rend ses interpolations déjà évaluées, donc un littéral de chaîne écrit par
+# échappement y arrive DÉCODÉ — `${'…'}` entre guillemets simples ou doubles, parenthésé ou non,
+# passait les deux règles en exit 0. Plutôt que de rejuger chaque interpolation, les deux règles
+# refusent sous leur périmètre TOUT gabarit `String.raw` qui interpole (`${…}`), quel qu'en soit
+# le contenu (bras `&interpolation-brute`, défini dans la règle n° 1, réutilisé par la n° 2) :
+# le gabarit est pris par le motif MÊME de l'exemption, et l'interpolation par son ouverture
+# `${` non échappée dans le texte de ce gabarit — parce que semgrep replie une interpolation
+# littérale dans le texte et qu'aucun motif AST ne la voit plus (mesuré). Tout gabarit exempté
+# qui interpole est donc refusé. Les quatre `String.raw` de `src/` (`src/config/entite.ts`) n'interpolent
+# pas.
 # LIMITE DÉCLARÉE : l'exemption `String.raw` se fie au NOM `String` ; un `String` redéfini
 # localement dont `raw` rendrait le texte cuit verrait les échappements de son texte admis.
 # Prix ASSUMÉ, sous `src/` : un échappement refusé écrit dans un COMMENTAIRE, un dollar échappé
 # dans un gabarit (écrire le dollar hors de la séquence), une barre oblique échappée hors d'une
-# expression régulière littérale, et un `String.raw` à antislash imbriqué dans l'interpolation
-# d'un autre sont refusés aussi. Aucun fichier de `src/` ne les écrit.
+# expression régulière littérale, et TOUT `String.raw` qui interpole — même une variable sans
+# échappement — sont refusés aussi. Aucun fichier de `src/` ne les écrit.
+#
+# CE QUE LA GATE FERME, ET CE QU'ELLE N'EST PAS. La gate ferme les formes d'écriture ÉNUMÉRÉES ci-dessus et règle par règle : liaisons de module
+# et chargeurs (import, `import type`, `export … from`, `require`, `module.require`,
+# `module['require']`, chargeur fabriqué, `import()` avec ou sans attributs, `import x =
+# require(…)`) ; membre pointé, optionnel ou non nul ; accès calculé par littéral ou par
+# concaténation de littéraux ; déstructuration courte, renommée, à reste ou à valeur par défaut ;
+# renommage à l'import ; espace de noms et objet module ; sortie du namespace `Prisma` ; nom
+# `Prisma`, `constructor`, `$queryRawUnsafe` ou `$executeRawUnsafe` écrit comme chaîne ;
+# fonctions d'étiquette hors étiquette ; `Prisma.join` à plus d'une valeur. Elle refuse en plus,
+# comme CLASSES, les ÉCHAPPEMENTS (bras `&echappement`) et les INTERPOLATIONS BRUTES (bras
+# `&interpolation-brute`).
+# LIMITE DÉCLARÉE, à côté des limites a–f de chaque règle : la gate N'EST PAS une barrière contre
+# une obfuscation DÉLIBÉRÉE au-delà de ces formes et de ces classes — nom construit à
+# l'exécution (`String.fromCharCode`, `atob`, `split('').reverse().join('')`, tableau indexé),
+# alias transmis hors de sa liaison (paramètre, objet, module voisin), `eval` ou `Function`, etc.
+# Ces cas relèvent de la relecture humaine de la PR et de la couche d'accès cloisonnée, pas de
+# cette gate.
 rules:
   # REQ-SEC-008 (texte en vigueur ; REQ-QA-011 y est absorbée) : aucun import direct du client de
   # base sous l'espace apporteur. `import type` compris — l'espace reçoit ses types de la couche
@@ -181,9 +209,8 @@ rules:
       - pattern: new $P.PrismaClient(...)
       # L'ÉCHAPPEMENT (voir l'en-tête) : le bras commun aux deux règles, défini ici et réutilisé
       # par la règle n° 2. Deux expressions sur le TEXTE, hors du corps d'une expression
-      # régulière littérale et hors du texte d'un gabarit `String.raw` ; puis chaque
-      # interpolation d'un `String.raw` — que l'exemption couvrirait par sa portée — rejugée
-      # sans elle.
+      # régulière littérale et hors du texte d'un gabarit `String.raw` ; puis TOUTE
+      # interpolation d'un `String.raw`, refusée comme classe (bras suivant).
       - patterns: &echappement
           - pattern-either: &echappements-refuses
               # `u` + quatre chiffres, `u{…}`, `x` + deux chiffres, d'un caractère IMPRIMABLE :
@@ -198,13 +225,22 @@ rules:
                   (?<!\\)(?:\\\\)*\\(?:[^\\'"`nrtbfv0ux]|0[0-9])
           - pattern-not-inside: /.../
           - pattern-not-inside: String.raw`...`
-      - patterns: &echappement-dans-une-interpolation-brute
-          - pattern: String.raw`...${$A}...`
-          - metavariable-pattern:
-              metavariable: $A
-              patterns:
-                - pattern-either: *echappements-refuses
-                - pattern-not-inside: /.../
+      # L'INTERPOLATION BRUTE, refusée comme CLASSE (revue `exactitude` 5328789820, PR 82) : un
+      # `String.raw` rend chaque interpolation déjà ÉVALUÉE, donc un littéral de chaîne écrit par
+      # échappement (`String.raw` + gabarit + `${'…'}`) y arrive DÉCODÉ, parenthésé ou non, entre
+      # guillemets simples ou doubles. Rejuger l'interpolation par le bras textuel ne voyait pas
+      # ce littéral ; le refus porte donc sur la FORME : un gabarit `String.raw` n'a droit qu'à
+      # son texte, sans `${…}`. MESURÉ sur 1.176.1 : semgrep REPLIE une interpolation littérale
+      # dans le texte du gabarit, et `String.raw` + gabarit + `...${$A}...` ne la voit pas (il
+      # ne voit que `${x}`, `${1}`). Le bras prend donc le gabarit par le motif MÊME de
+      # l'exemption ci-dessus, et le TEXTE de son étendue par une ouverture `${` qu'aucun
+      # antislash n'échappe (un antislash seul devant `${` en fait du texte ; un antislash
+      # doublé, non) : tout gabarit que l'exemption couvre et qui interpole est refusé, sur la
+      # ligne de l'ouverture.
+      - patterns: &interpolation-brute
+          - pattern: String.raw`...`
+          - pattern-regex: |-
+              (?<!\\)(?:\\\\)*\$\{
 
   # SQL brut non paramétré. Ce que la règle refuse est une RÉFÉRENCE au membre dangereux —
   # `$queryRawUnsafe`, `$executeRawUnsafe`, `Prisma.raw`, `Prisma.Sql`, et, du runtime, `raw`,
@@ -276,10 +312,10 @@ rules:
         - "/src/**"
     pattern-either:
       # — le NOM écrit par échappement, où qu'il soit sous `src/` : le bras commun de la règle
-      #   n° 1 (voir l'en-tête), et chaque interpolation d'un `String.raw`. C'est lui qui rend
+      #   n° 1 (voir l'en-tête), et toute interpolation d'un `String.raw`. C'est lui qui rend
       #   vraie la suite : les motifs ci-dessous ne lisent qu'un nom écrit EN CLAIR. —
       - patterns: *echappement
-      - patterns: *echappement-dans-une-interpolation-brute
+      - patterns: *interpolation-brute
       # — les membres `…Unsafe` : pointés (optionnels et non nuls compris), nus (déstructuration
       #   et renommage) —
       - pattern: $C.$queryRawUnsafe
