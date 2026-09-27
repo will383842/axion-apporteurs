@@ -10,15 +10,27 @@
  * déclarée : tout fichier suivi sous `src/app/(console)/` et `src/server/console/`, en TypeScript
  * comme en JavaScript (`.ts`, `.tsx`, `.js`, `.jsx`, `.mts`, `.cts`, `.mjs`, `.cjs`) — ses sites
  * se dérivent des SEULS exports ES, et un fichier écrit en CommonJS est une faute (plus bas).
+ * LISTE BLANCHE. La garde juge les formes d'export par LISTE BLANCHE, jamais par liste noire :
+ * `FORMES_D_EXPORT_ADMISES` énumère les seules formes dont elle sait dériver les sites et juger le
+ * corps — `export function M` et `export async function M`, `export const M = …`, `export { x }`
+ * et `export { x as M }` de liaisons locales, les exports de type (`export type …`,
+ * `export interface`, `export type { … }`, `export { type X }`), `export default` hors d'un
+ * fichier de route, `export class` nommée dans un module qui n'est ni une route ni `'use server'`.
+ * Toute AUTRE instruction d'export de premier niveau, dans tout fichier du périmètre — `export =`
+ * (Next le compile en `module.exports` et le sert), `export *`, `export * as`, un réexport
+ * `export { … } from`, `export import X = …`, `export default` dans une route, `export let`,
+ * `export declare`, `export enum`, `export namespace`, `export as namespace`, et toute forme que
+ * la liste ne connaît pas — est `export_non_jugeable`, motif `MOTIF_HORS_LISTE_BLANCHE`, avec sa
+ * ligne. Une forme nouvelle est refusée tant qu'on ne l'a pas ajoutée, témoin à l'appui.
  * Chacune est confrontée à LA matrice (`src/server/roles/matrice.ts`) :
- *   — une ACTION est TOUTE valeur exportée d'un module `'use server'`, sous toute forme d'export
- *     ES (déclaration, `export { f }` avec ou sans alias, `export const` ou `export let` quel que
- *     soit l'initialiseur, déstructuration — un site par nom lié —, `export default`, `export *`,
- *     réexport, `export import X = …`), ou toute fonction ou méthode qui porte elle-même la
- *     directive. Elle appelle `requireRole('action:<nom>', …)` ;
+ *   — une ACTION est TOUTE valeur exportée d'un module `'use server'` par une forme admise
+ *     (déclaration, `export { f }` avec ou sans alias, `export const` quel que soit
+ *     l'initialiseur, déstructuration — un site par nom lié —, `export default`), ou toute
+ *     fonction ou méthode qui porte elle-même la directive. Elle appelle
+ *     `requireRole('action:<nom>', …)` ;
  *   — une PAGE (`page.tsx`, `page.js`…) appelle `requireRole('ecran:<nom>', …)` dans sa fonction
  *     exportée par défaut ; une ROUTE (`route.ts`, `route.js`…) l'appelle dans chacune de ses
- *     méthodes HTTP exportées, sous toute forme d'export ES, alias et déstructuration compris ;
+ *     méthodes HTTP exportées par une forme admise, alias et déstructuration compris ;
  *   — LA PORTE est le `requireRole` IMPORTÉ de `src/server/roles/require-role`
  *     (`MODULE_DE_LA_PORTE`, chemin relatif résolu depuis le fichier, extension indifférente),
  *     nommément, par alias ou par espace de noms (`import * as r` puis `r.requireRole(…)`), déclaré
@@ -64,8 +76,9 @@
  *   `droit_non_litteral`       un droit qui n'est pas une chaîne littérale : il ne se confronte pas
  *   `droit_de_mauvais_genre`   une action qui invoque un droit `ecran:`, une page un droit `action:`
  *   `droit_hors_matrice`       un droit absent de la matrice — l'action ou la route est nommée
- *   `export_non_jugeable`      un site dont le corps ne s'établit pas dans le fichier, ou un
- *                              fichier qui nomme l'objet des exports CommonJS
+ *   `export_non_jugeable`      un site dont le corps ne s'établit pas dans le fichier, une
+ *                              forme d'export hors liste blanche, ou un fichier qui nomme
+ *                              l'objet des exports CommonJS
  *   `source_illisible`         un fichier que TypeScript ne lit pas sans diagnostic
  *
  * LIMITES DÉCLARÉES. Elle voit la PRÉSENCE de l'appel et son droit, pas que le verdict est honoré :
@@ -195,6 +208,8 @@ interface Export {
   fn: Fonction | null;
   /** La forme de l'export, dite quand la fonction ne s'établit pas. */
   forme: string;
+  /** L'instruction de premier niveau qui porte l'export : la liste blanche la juge. */
+  origine?: ts.Statement;
 }
 
 /** Les identifiants qu'un motif de liaison lie : `a`, `{ a, b: { c }, d = 1, ...e }`, `[f, , g]`. */
@@ -281,6 +296,127 @@ function varsDePorteeModule(source: ts.SourceFile): ts.Identifier[] {
 /** Une liste de déclarations `const` — ni `let`, ni `var`, ni `using`. */
 const estConst = (l: ts.VariableDeclarationList): boolean =>
   (l.flags & ts.NodeFlags.BlockScoped) === ts.NodeFlags.Const;
+
+const declare = (n: ts.Node): boolean =>
+  modificateurs(n).some((m) => m.kind === ts.SyntaxKind.DeclareKeyword);
+/** Le nom qu'un spécificateur d'export publie : identifiant ou chaîne (`export { x as "GET" }`). */
+const nomPublie = (s: ts.ExportSpecifier): string => s.name.text;
+/** Une clause `{ … }` dont CHAQUE élément est marqué `type` : effacée à la compilation. */
+const toutEstType = (i: ts.ExportDeclaration): boolean =>
+  i.exportClause !== undefined &&
+  ts.isNamedExports(i.exportClause) &&
+  i.exportClause.elements.length > 0 &&
+  i.exportClause.elements.every((s) => s.isTypeOnly);
+
+/** Où se trouve l'instruction : un fichier de route (`route.ts`, `route.js`…), un module « use server ». */
+export interface ContexteDExport {
+  readonly route: boolean;
+  readonly serveur: boolean;
+}
+
+/** Une forme d'export que la garde sait juger : ce qu'elle admet, et comment elle le reconnaît. */
+export interface FormeAdmise {
+  readonly forme: string;
+  readonly admet: (i: ts.Statement, contexte: ContexteDExport) => boolean;
+}
+
+/**
+ * LA LISTE BLANCHE DES FORMES D'EXPORT d'un fichier de la console. Une instruction de premier
+ * niveau qui exporte (modificateur `export`, `export default`, `export =`, `export { … }`,
+ * `export *`, `export as namespace`…) n'est admise que si UNE de ces formes la reconnaît : ce
+ * sont les seules dont la garde sait dériver les sites et juger le corps. TOUT le reste — y
+ * compris une forme que TypeScript ajouterait demain — est `export_non_jugeable`, motif « forme
+ * d'export non admise dans un fichier de la console ». La garde ne ferme pas les formes une par
+ * une : elle n'ouvre que celles-ci.
+ */
+export const FORMES_D_EXPORT_ADMISES: readonly FormeAdmise[] = [
+  {
+    forme: '`export function M(…) { … }` / `export async function M(…) { … }` — fonction nommée',
+    admet: (i) =>
+      ts.isFunctionDeclaration(i) &&
+      exporte(i) &&
+      !parDefaut(i) &&
+      !declare(i) &&
+      i.name !== undefined,
+  },
+  {
+    forme:
+      '`export const M = …` — constante initialisée (le site se juge sur sa valeur établie ; ' +
+      'une déstructuration est un site par nom lié)',
+    admet: (i) =>
+      ts.isVariableStatement(i) &&
+      exporte(i) &&
+      !declare(i) &&
+      estConst(i.declarationList) &&
+      i.declarationList.declarations.every((d) => d.initializer !== undefined),
+  },
+  {
+    forme:
+      '`export { x }` / `export { x as M }` — liaisons LOCALES, sans `from` (jamais `as default` ' +
+      'dans une route)',
+    admet: (i, { route }) =>
+      ts.isExportDeclaration(i) &&
+      !i.isTypeOnly &&
+      i.moduleSpecifier === undefined &&
+      i.exportClause !== undefined &&
+      ts.isNamedExports(i.exportClause) &&
+      !(route && i.exportClause.elements.some((s) => !s.isTypeOnly && nomPublie(s) === 'default')),
+  },
+  {
+    forme:
+      'un type : `export type X = …`, `export interface I`, `export type { … }` (avec ou sans ' +
+      '`from`), `export { type X }` dont chaque élément est marqué `type` — effacé à la compilation',
+    admet: (i) =>
+      ((ts.isTypeAliasDeclaration(i) || ts.isInterfaceDeclaration(i)) &&
+        exporte(i) &&
+        !declare(i)) ||
+      (ts.isExportDeclaration(i) && (i.isTypeOnly || toutEstType(i))),
+  },
+  {
+    forme:
+      '`export default function …` / `export default <expression>` — hors d’un fichier de route ' +
+      '(la page se juge sur sa valeur établie)',
+    admet: (i, { route }) =>
+      !route &&
+      ((ts.isFunctionDeclaration(i) && exporte(i) && parDefaut(i) && !declare(i)) ||
+        (ts.isExportAssignment(i) && !i.isExportEquals)),
+  },
+  {
+    forme:
+      '`export class C { … }` — classe nommée, dans un module de console qui n’est ni une route ' +
+      'ni un module « use server » (aucune de ses valeurs n’est servie ; ses méthodes « use server » ' +
+      'sont jugées comme actions)',
+    admet: (i, { route, serveur }) =>
+      !route &&
+      !serveur &&
+      ts.isClassDeclaration(i) &&
+      exporte(i) &&
+      !parDefaut(i) &&
+      !declare(i) &&
+      i.name !== undefined,
+  },
+];
+
+/** Le motif d'une instruction d'export qu'aucune forme admise ne reconnaît. */
+export const MOTIF_HORS_LISTE_BLANCHE = 'forme d’export non admise dans un fichier de la console';
+
+/** Une instruction de premier niveau qui EXPORTE, sous quelque forme que ce soit. */
+const exporteQuelqueChose = (i: ts.Statement): boolean =>
+  ts.isExportAssignment(i) ||
+  ts.isExportDeclaration(i) ||
+  ts.isNamespaceExportDeclaration(i) ||
+  exporte(i);
+
+/** Les instructions d'export qu'AUCUNE forme de la liste blanche ne reconnaît. */
+function exportsNonAdmis(chemin: string, source: ts.SourceFile): ts.Statement[] {
+  const contexte: ContexteDExport = {
+    route: EST_UNE_ROUTE.test(chemin.slice(chemin.lastIndexOf('/') + 1)),
+    serveur: directives(source.statements).includes('use server'),
+  };
+  return source.statements.filter(
+    (i) => exporteQuelqueChose(i) && !FORMES_D_EXPORT_ADMISES.some((f) => f.admet(i, contexte))
+  );
+}
 
 /**
  * TOUTES les valeurs exportées d'un module, quelle que soit leur forme. Un type ne s'exporte pas
@@ -380,6 +516,7 @@ function exportsDuModule(source: ts.SourceFile): Export[] {
 
   const vues: Export[] = [];
   for (const i of source.statements) {
+    const avant = vues.length;
     if (ts.isFunctionDeclaration(i) && exporte(i)) {
       if (!i.body) continue; // une signature de surcharge : l'implémentation suit
       const nom = parDefaut(i) ? 'default' : (i.name?.text ?? 'default');
@@ -465,6 +602,7 @@ function exportsDuModule(source: ts.SourceFile): Export[] {
         }
       }
     }
+    for (let k = avant; k < vues.length; k++) vues[k]!.origine = i;
   }
   return vues;
 }
@@ -494,10 +632,19 @@ function actionsEnLigne(source: ts.SourceFile): Site[] {
   return vues;
 }
 
-/** Les sites d'un fichier de console : ses actions, sa page, ses méthodes de route. */
-function sitesDuFichier(chemin: string, source: ts.SourceFile): Site[] {
+/**
+ * Les sites d'un fichier de console : ses actions, sa page, ses méthodes de route. Un export
+ * porté par une instruction hors liste blanche (`refusees`) n'est pas un site : il a déjà sa
+ * faute, une seule, nommée par la liste blanche.
+ */
+function sitesDuFichier(
+  chemin: string,
+  source: ts.SourceFile,
+  refusees: ReadonlySet<ts.Statement>
+): Site[] {
   const base = chemin.slice(chemin.lastIndexOf('/') + 1);
-  const exports = exportsDuModule(source);
+  const tous = exportsDuModule(source);
+  const exports = tous.filter((e) => e.origine === undefined || !refusees.has(e.origine));
   const site = (e: Export, genre: Genre): Site => ({
     nom: e.libelle,
     genre,
@@ -510,11 +657,10 @@ function sitesDuFichier(chemin: string, source: ts.SourceFile): Site[] {
   }
   if (EST_UNE_PAGE.test(base)) {
     const page = exports.find((e) => e.nom === 'default');
-    sites.push(
-      page
-        ? site(page, 'ecran')
-        : { nom: 'default', genre: 'ecran', corps: null, forme: 'aucun export par défaut' }
-    );
+    if (page) sites.push(site(page, 'ecran'));
+    else if (!tous.some((e) => e.nom === 'default')) {
+      sites.push({ nom: 'default', genre: 'ecran', corps: null, forme: 'aucun export par défaut' });
+    }
   }
   if (EST_UNE_ROUTE.test(base)) {
     for (const e of exports.filter((x) => METHODES_HTTP.has(x.nom) || x.nom === TOUT)) {
@@ -808,8 +954,21 @@ export function jugerLaConsole(
           `même liés localement — échec fermé (REQ-SEC-023).`
       );
     }
+    const refusees = exportsNonAdmis(f.chemin, source);
+    for (const i of refusees) {
+      const ligne = source.getLineAndCharacterOfPosition(i.getStart(source)).line + 1;
+      const texte = i.getText(source).replace(/\s+/g, ' ');
+      const extrait = texte.length > 80 ? `${texte.slice(0, 79)}…` : texte;
+      faute(
+        'export_non_jugeable',
+        `${f.chemin} — ${MOTIF_HORS_LISTE_BLANCHE}, ligne ${ligne} : ` +
+          `« ${extrait} ». La garde juge par LISTE BLANCHE (FORMES_D_EXPORT_ADMISES) : une forme ` +
+          `qu'elle ne sait pas juger peut publier une méthode ou une action que Next servirait ` +
+          `sans ${NOM_DE_LA_PORTE} — échec fermé (REQ-SEC-023).`
+      );
+    }
     const porte = porteDuFichier(f.chemin, source);
-    for (const site of sitesDuFichier(f.chemin, source)) {
+    for (const site of sitesDuFichier(f.chemin, source, new Set(refusees))) {
       if (site.genre === 'action') j.actions += 1;
       else j.routes += 1;
       const ou = `${f.chemin} — ${MOT_DU_GENRE[site.genre]} « ${site.nom} »`;
@@ -946,7 +1105,13 @@ const PAGE_BRUTE = (source: string): FichierDeConsole => ({
 const GARDE_ACTION = "  await requireRole('action:lever_gel', j, p);";
 const GARDE_ECRAN = "  await requireRole('ecran:tableau', j, p);";
 
-const TEMOINS: { famille: Famille; quoi: string; fichiers: FichierDeConsole[] }[] = [
+const TEMOINS: {
+  famille: Famille;
+  quoi: string;
+  fichiers: FichierDeConsole[];
+  /** Un extrait que le message doit porter, quand la famille seule ne dit pas le chemin. */
+  motif?: string;
+}[] = [
   {
     famille: 'action_sans_requireRole',
     quoi: 'la fixtureRouge du registre : une Server Action sans requireRole',
@@ -1033,36 +1198,43 @@ const TEMOINS: { famille: Famille; quoi: string; fichiers: FichierDeConsole[] }[
   {
     famille: 'export_non_jugeable',
     quoi: 'forme `export =` dans un route.ts (Next la compile en module.exports : servie 200)',
+    motif: MOTIF_HORS_LISTE_BLANCHE,
     fichiers: [ROUTE("export = { GET: async () => new Response('x') };")],
   },
   {
     famille: 'export_non_jugeable',
     quoi: 'forme `export * from` dans un route.ts, hors liste blanche',
+    motif: MOTIF_HORS_LISTE_BLANCHE,
     fichiers: [ROUTE("export * from './h';")],
   },
   {
     famille: 'export_non_jugeable',
     quoi: 'forme `export { GET } from` dans un route.ts, hors liste blanche',
+    motif: MOTIF_HORS_LISTE_BLANCHE,
     fichiers: [ROUTE("export { GET } from './h';")],
   },
   {
     famille: 'export_non_jugeable',
     quoi: 'un réexport non HTTP (`export { aide } from`) dans un route.ts, hors liste blanche',
+    motif: MOTIF_HORS_LISTE_BLANCHE,
     fichiers: [ROUTE("export { aide } from './h';")],
   },
   {
     famille: 'export_non_jugeable',
     quoi: 'forme `export default` dans un route.ts',
+    motif: MOTIF_HORS_LISTE_BLANCHE,
     fichiers: [ROUTE("export default async () => new Response('x');")],
   },
   {
     famille: 'export_non_jugeable',
     quoi: 'forme `export enum` dans un route.ts',
+    motif: MOTIF_HORS_LISTE_BLANCHE,
     fichiers: [ROUTE('export enum E {\n  A,\n}')],
   },
   {
     famille: 'export_non_jugeable',
     quoi: 'forme `export namespace` dans un route.ts',
+    motif: MOTIF_HORS_LISTE_BLANCHE,
     fichiers: [ROUTE('export namespace N {\n  export const GET = 1;\n}')],
   },
   {
@@ -1368,6 +1540,30 @@ const CONTRE_TEMOINS: { quoi: string; fichiers: FichierDeConsole[] }[] = [
     fichiers: [SERVEUR('export type T = string;\ntype U = 1;\nexport type { U };')],
   },
   {
+    quoi:
+      'les formes de la liste blanche telles que la console les écrit : configuration de segment, ' +
+      'méthodes gardées, types, `export type { … } from`, layout et page d’erreur par défaut',
+    fichiers: [
+      ROUTE(
+        "export const dynamic = 'force-dynamic';\n" +
+          `export async function GET() {\n${GARDE_ECRAN}\n}\n` +
+          `export function POST() {\n${GARDE_ECRAN}\n}\n` +
+          'export type T = string;\nexport interface I {\n  a: 1;\n}\n' +
+          "export type { U } from './types';"
+      ),
+      {
+        chemin: 'src/app/(console)/console/layout.tsx',
+        source:
+          'export const metadata = { title: "Console" };\n' +
+          'export default function Layout() {\n  return null;\n}\n',
+      },
+      {
+        chemin: 'src/app/(console)/console/error.tsx',
+        source: "'use client';\nexport default function Erreur() {\n  return null;\n}\n",
+      },
+    ],
+  },
+  {
     quoi: 'une chaîne de `const` gardée, jamais réassignée, à côté d’un import',
     fichiers: [
       ROUTE(
@@ -1438,7 +1634,9 @@ function prouver(): { code: 0 | 1; lignes: string[] } {
   let ok = true;
   for (const t of TEMOINS) {
     const fautes = jugerLaConsole(t.fichiers, MATRICE_TEMOIN, ROLES_TEMOIN).fautes;
-    const rougit = fautes.some((f) => f.famille === t.famille);
+    const rougit = fautes.some(
+      (f) => f.famille === t.famille && (t.motif === undefined || f.message.includes(t.motif))
+    );
     ok &&= rougit;
     lignes.push(`${rougit ? '🔴' : '❌ RESTE VERT'} [${t.famille}] ${t.quoi}`);
   }
