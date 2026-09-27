@@ -162,13 +162,16 @@ const AS = String.fromCharCode(0x5c);
  * Des BLANCS UNICODE que TypeScript admet entre deux jetons, écrits par leur CODE pour la même
  * raison que l'antislash : invisibles dans le texte, ils se relisent mal. Espace insécable
  * U+00A0, espace ogham U+1680, espace fine insécable U+202F, espace idéographique U+3000,
- * ZWNBSP U+FEFF.
+ * ZWNBSP U+FEFF, espace sans chasse U+200B et passage à la ligne NEL U+0085 (deux blancs que le
+ * scanner de TypeScript admet aussi, et qui ne sont ni `\p{Zs}` ni un saut de ligne).
  */
 const NBSP = String.fromCharCode(0xa0);
 const OGHAM = String.fromCharCode(0x1680);
 const FINE = String.fromCharCode(0x202f);
 const IDEO = String.fromCharCode(0x3000);
 const ZWNBSP = String.fromCharCode(0xfeff);
+const ZWSP = String.fromCharCode(0x200b);
+const NEL = String.fromCharCode(0x85);
 
 /** Les formes d'accès direct au client de base que la règle n° 1 refuse. */
 const FORMES_PRISMA: readonly { nom: string; ext: string; lignes: string[]; fautive: number }[] = [
@@ -221,6 +224,47 @@ const FORMES_PRISMA: readonly { nom: string; ext: string; lignes: string[]; faut
     nom: 'export-type-en-ligne-espace-insecable',
     ext: 'ts',
     lignes: [`export { type Apporteur }${NBSP}from '../../lib/prisma.js';`],
+    fautive: 1,
+  },
+  // Un blanc que TypeScript admet sans qu'il soit `\p{Zs}` : U+200B et U+0085.
+  {
+    nom: 'export-type-from-espace-sans-chasse',
+    ext: 'ts',
+    lignes: [`export${ZWSP}type { Apporteur } from '@prisma/client';`],
+    fautive: 1,
+  },
+  {
+    nom: 'export-type-from-nel',
+    ext: 'ts',
+    lignes: [`export type { Apporteur }${NEL}from '@prisma/client';`],
+    fautive: 1,
+  },
+  // Une ACCOLADE FERMANTE écrite dans un commentaire ou une chaîne DANS la liste (revue
+  // `exactitude` 5329582597, PR 82) : une lecture de liste qui s'arrête à la première `}` du
+  // texte coupait la liste avant sa vraie fin. TypeScript 5.9 admet aussi un nom exporté écrit
+  // comme chaîne (`"}" as A`), mesuré par son analyseur.
+  {
+    nom: 'export-type-from-commentaire-bloc-accolade',
+    ext: 'ts',
+    lignes: ["export type { Apporteur /* } */ } from '@prisma/client';"],
+    fautive: 1,
+  },
+  {
+    nom: 'export-type-from-commentaire-ligne-accolade',
+    ext: 'ts',
+    lignes: ['export type {', '  Apporteur, // }', "} from '@prisma/client';"],
+    fautive: 1,
+  },
+  {
+    nom: 'export-type-en-ligne-commentaire-accolade',
+    ext: 'ts',
+    lignes: ["export { type Apporteur /* } */ } from '../../lib/prisma.js';"],
+    fautive: 1,
+  },
+  {
+    nom: 'export-type-from-chaine-accolade',
+    ext: 'ts',
+    lignes: [`export type { "}" as Apporteur } from '@prisma/client';`],
     fautive: 1,
   },
   {
@@ -1503,6 +1547,26 @@ export const CONTRE_TEMOINS: readonly FichierDuBac[] = [
       // Des chaînes qui RESSEMBLENT à un spécifieur sans être chargées comme module.
       "export const i = fetch('/api/db');",
       "export const j = require.resolve('./outil-prisma');",
+    ],
+    null,
+    0
+  ),
+  // Dans l'espace, des listes d'export dont un commentaire ou une chaîne porte une accolade
+  // fermante, sans que le spécifieur soit le client : la lecture de la liste va jusqu'à sa VRAIE
+  // fin, et pas plus loin. La dernière ligne écrit `from` et le client DANS un commentaire de la
+  // liste : une lecture arrêtée à la première `}` du texte la prendrait pour une liaison.
+  fichier(
+    'espace/listes-commentees',
+    `${MILIEU_ESPACE}/listes-commentees.ts`,
+    [
+      "export type { Apporteur /* } */ } from '@/server/acces/apporteur';",
+      "export { type Lecture /* } */ } from '@/server/acces/lecture';",
+      'export type {',
+      '  Autre, // }',
+      "} from '@/server/acces/autre';",
+      `export type { "}" as Chaine } from '@/server/acces/chaine';`,
+      'const x = 1;',
+      "export { x /* } from '@prisma/client' */ };",
     ],
     null,
     0
