@@ -14,9 +14,9 @@
 > **« Réputée testée » est DÉRIVÉ, pas lu.** Le registre ne porte aucune échelle de
 > maturité : une exigence l’est dès qu’une des tâches qui la portent est livrée.
 
-**334 exigences actives · 106 réputées testées · 106 couvertes · 0 orphelines.**
+**334 exigences actives · 107 réputées testées · 107 couvertes · 0 orphelines.**
 
-290 tâches, dont 86 livrées · 135 fichiers de test exécutés par `vitest` sur 135 présents.
+290 tâches, dont 98 livrées · 135 fichiers de test exécutés par `vitest` sur 135 présents.
 
 ## Exigences réputées testées
 
@@ -89,6 +89,7 @@
 | `REQ-INT-023` | `INT-T10` | `tests/integration/webhook-rebonds.spec.ts`, `tests/unit/email/courriels-migration.spec.ts`, `tests/unit/email/rebonds.spec.ts` | couverte |
 | `REQ-INT-026` | `INT-T11` | `tests/integration/adaptateur-mcp.spec.ts`, `tests/unit/securite/webhook-signature.spec.ts` | couverte |
 | `REQ-INT-029` | `INT-T01a`, `INT-T27-A` | `tests/unit/integration/contrat-hash.spec.ts`, `tests/unit/integration/contrat-v2-frontiere.spec.ts`, `tests/unit/securite/webhook-signature.spec.ts` | couverte |
+| `REQ-INT-032` | `DM-15`, `INT-T01b`, `INT-T01c`, `INT-T05`, `INT-T22`, `INT-T26`, `INT-T27-A` | `tests/unit/integration/contrat-v2-frontiere.spec.ts` | couverte |
 | `REQ-JUR-003` | `JUR-T01`, `JUR-T01b` | `tests/unit/contrat/contract-template-complete.spec.ts` | couverte |
 | `REQ-JUR-007` | `DM-25`, `JUR-T01`, `JUR-T01b`, `T-ARG-033` | `tests/unit/contrat/contract-template-complete.spec.ts` | couverte |
 | `REQ-JUR-023` | `DM-23`, `JUR-T01`, `SEC-12` | `tests/unit/contrat/contract-template-complete.spec.ts` | couverte |
@@ -257,7 +258,6 @@
 | `REQ-INT-027` | 1 | `INT-T13`, `INT-T17` | — |
 | `REQ-INT-030` | 1 | `INT-T08-A`, `INT-T08-P`, `QA-T19` | — |
 | `REQ-INT-031` | 0 | `INT-T02` | `axionia/src/server/partners-sync/__tests__/outbox-produit-des-evenements-valides.spec.ts` |
-| `REQ-INT-032` | -1 | `DM-15`, `INT-T01b`, `INT-T01c`, `INT-T05`, `INT-T22`, `INT-T26`, `INT-T27-A` | `axionia/src/server/partners-sync/__tests__/producteur-candidature.spec.ts`, `axionia/src/server/partners-sync/__tests__/producteurs-facturation.spec.ts`, `axionia/src/server/partners-sync/__tests__/route-coordonnees.spec.ts`, `axionia/src/server/partners/__tests__/commission.spec.ts`, `axionia/src/server/partners/__tests__/derivation-ht.spec.ts`, `axionia/src/server/partners/__tests__/enveloppe.spec.ts`, `axionia/src/server/partners/__tests__/fixtures-et-frontiere.spec.ts`, `axionia/src/server/partners/__tests__/payloads.spec.ts`, `axionia/src/server/partners/__tests__/transcription-du-contrat.spec.ts`, `tests/integration/candidature-recue.spec.ts`, `tests/unit/integration/contrat-hash.spec.ts`, `tests/unit/integration/contrat-v2-frontiere.spec.ts` |
 | `REQ-JUR-001` | 0 | `JUR-T03`, `JUR-T29` | `axionia/src/content/__tests__/remuneration-indicative.spec.ts`, `axionia/src/content/__tests__/vocabulaire-apporteur.spec.ts` |
 | `REQ-JUR-002` | 0 | `JUR-T03`, `JUR-T29` | `axionia/src/content/__tests__/remuneration-indicative.spec.ts`, `axionia/src/content/__tests__/vocabulaire-apporteur.spec.ts` |
 | `REQ-JUR-004` | 1 | `INT-T12`, `INT-T23` | — |
@@ -407,7 +407,7 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 
 | Module | Exigences | Dont réputées testées |
 | ---: | ---: | ---: |
-| 1 | 13 | 2 |
+| 1 | 13 | 3 |
 | 2 | 3 | 1 |
 | 3 | 1 | 0 |
 | 4 | 15 | 7 |
@@ -431,7 +431,7 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 
 | Étape | Exigences | Dont réputées testées |
 | ---: | ---: | ---: |
-| 1 | 3 | 0 |
+| 1 | 3 | 1 |
 | 2 | 12 | 2 |
 | 3 | 1 | 0 |
 | 4 | 16 | 7 |
