@@ -1221,7 +1221,10 @@
         "src/domain/seuils/ssot.ts",
         "scripts/gates/seuils-ssot.ts",
         "tests/unit/juridique/seuils-ssot.spec.ts",
-        "docs/gates.json"
+        "docs/gates.json",
+        "package.json",
+        ".github/workflows/ci.yml",
+        "vitest.mutation.config.ts"
       ],
       "schema": false,
       "sensible": [
