@@ -10,7 +10,23 @@
  * déclarée : tout fichier suivi sous `src/app/(console)/` et `src/server/console/`, en TypeScript
  * comme en JavaScript (`.ts`, `.tsx`, `.js`, `.jsx`, `.mts`, `.cts`, `.mjs`, `.cjs`) — ses sites
  * se dérivent des SEULS exports ES, et un fichier écrit en CommonJS est une faute (plus bas).
- * LISTE BLANCHE. La garde juge les formes d'export par LISTE BLANCHE, jamais par liste noire :
+ * LISTE BLANCHE DES FICHIERS. Next sert comme route, dans N'IMPORTE QUEL segment, d'autres
+ * fichiers que `page.*` et `route.*` : les fichiers de métadonnées (`icon`, `apple-icon`,
+ * `opengraph-image`, `twitter-image`, `sitemap`, et à la racine `robots`, `manifest`), dont
+ * l'export par défaut devient un GET servi. Sous `ROUTAGE_DE_LA_CONSOLE` (`src/app/(console)/`),
+ * la garde n'admet donc que les noms de fichier qu'elle sait juger, `FICHIERS_ADMIS_SOUS_LE_ROUTAGE`
+ * — `page`, `route` (des sites), `layout`, `template`, `default`, `loading`, `error`, `not-found`,
+ * avec les extensions lues. Tout AUTRE fichier de code sous ce répertoire qui n'est pas dans un
+ * dossier privé de Next (un segment `_nom`, que Next ne route pas) est `export_non_jugeable`,
+ * motif `MOTIF_FICHIER_NON_ADMIS` : les fichiers de métadonnées comme tout nom spécial que Next
+ * ajouterait demain. PRIX ASSUMÉ : le code utilitaire, et un module d'actions, se rangent hors de
+ * `src/app` (`src/server/console/`) ou dans un dossier privé (`_prive/`). Dans un fichier admis,
+ * les générateurs de Next (`GENERATEURS_REFUSES` : `generateMetadata`, `generateViewport`,
+ * `generateStaticParams`, `generateImageMetadata`, `generateSitemaps`) s'exécutent par requête ou
+ * au build, hors de la page gardée, et peuvent mettre une donnée protégée dans le `<head>` : aucune
+ * règle ne sait les juger, ils sont `export_non_jugeable`, motif `MOTIF_GENERATEUR`, sous leur nom
+ * exporté. PRIX ASSUMÉ : les métadonnées de la console sont STATIQUES (`export const metadata`).
+ * LISTE BLANCHE DES FORMES. La garde juge les formes d'export par LISTE BLANCHE, jamais par liste noire :
  * `FORMES_D_EXPORT_ADMISES` énumère les seules formes dont elle sait dériver les sites et juger le
  * corps — `export function M` et `export async function M`, `export const M = …`, `export { x }`
  * et `export { x as M }` de liaisons locales, les exports de type (`export type …`,
@@ -77,8 +93,9 @@
  *   `droit_de_mauvais_genre`   une action qui invoque un droit `ecran:`, une page un droit `action:`
  *   `droit_hors_matrice`       un droit absent de la matrice — l'action ou la route est nommée
  *   `export_non_jugeable`      un site dont le corps ne s'établit pas dans le fichier, une
- *                              forme d'export hors liste blanche, ou un fichier qui nomme
- *                              l'objet des exports CommonJS
+ *                              forme d'export hors liste blanche, un fichier qui nomme
+ *                              l'objet des exports CommonJS, un fichier non admis sous le
+ *                              routage de la console, ou un générateur de Next qui y est exporté
  *   `source_illisible`         un fichier que TypeScript ne lit pas sans diagnostic
  *
  * LIMITES DÉCLARÉES. Elle voit la PRÉSENCE de l'appel et son droit, pas que le verdict est honoré :
@@ -93,11 +110,15 @@
  * son nom, pas `globalThis['ev' + 'al']`), `vm`, un minuteur à chaîne — et toute mutation des
  * exports d'un module par une voie d'exécution (cache de modules du bundler atteint par un
  * global) lui échappent : elle lit la syntaxe, pas l'exécution ; ce code s'exécute en portée
- * globale, sans les liaisons de l'enveloppe, et c'est la relecture qui le tient. Seuls `page.*` et
- * `route.*` sont des sites de routage : `layout.*`, `template.*`, `default.*` (route parallèle),
- * `loading.*`, `error.*`, `not-found.*` n'ont pas de site jugé — une page se garde elle-même, et
- * le contenu d'un `default.*` ou d'un `layout.*` qui lirait une donnée protégée lui échappe. Hors
- * de `src/app/(console)/` et de `src/server/console/`, elle ne juge rien.
+ * globale, sans les liaisons de l'enveloppe, et c'est la relecture qui le tient. Parmi les huit
+ * fichiers admis sous le routage, seuls `page.*` et `route.*` sont des SITES : `layout.*`,
+ * `template.*`, `default.*` (route parallèle), `loading.*`, `error.*`, `not-found.*` sont admis
+ * sans site jugé — une page se garde elle-même, et le RENDU d'un `default.*` ou d'un `layout.*` qui
+ * lirait une donnée protégée lui échappe (leurs générateurs, eux, sont refusés). Une `const` de
+ * premier niveau (`metadata` compris) s'évalue au chargement du module, sans requête : ce qu'elle
+ * lirait lui échappe aussi. Un fichier qui n'est pas du code (`icon.png`, `opengraph-image.jpg`) est
+ * hors du périmètre : un contenu figé au commit, que la relecture tient. Hors de
+ * `src/app/(console)/` et de `src/server/console/`, elle ne juge rien.
  *
  * INVARIANT DE LA PREUVE (RM-11). `jugerLaConsole` et `rendreLeVerdict` sont pures : fichiers,
  * matrice et rôles sont INJECTÉS, sans défaut. `--prove` ne lit rien du dépôt.
@@ -150,6 +171,60 @@ export const PERIMETRE: readonly RegExp[] = [
   /^src\/app\/\(console\)\/.+\.(?:[jt]sx?|[mc][jt]s)$/,
   /^src\/server\/console\/.+\.(?:[jt]sx?|[mc][jt]s)$/,
 ];
+/** Le répertoire de routage de la console : Next sert comme route ce qui s'y trouve. */
+export const ROUTAGE_DE_LA_CONSOLE = 'src/app/(console)/';
+/**
+ * LA LISTE BLANCHE DES FICHIERS sous le routage de la console : les seuls noms (sans extension)
+ * que la garde sait juger. `page` et `route` sont des sites ; les six autres rendent un composant
+ * sans valeur servie hors d'une page. Tout AUTRE fichier de code sous `ROUTAGE_DE_LA_CONSOLE`, hors
+ * d'un dossier privé de Next (`_nom`), est `export_non_jugeable`, `MOTIF_FICHIER_NON_ADMIS` : les
+ * fichiers de métadonnées (`icon`, `apple-icon`, `opengraph-image`, `twitter-image`, `sitemap`,
+ * `robots`, `manifest`), dont Next sert l'export par défaut comme un GET, et tout nom spécial futur.
+ */
+export const FICHIERS_ADMIS_SOUS_LE_ROUTAGE = [
+  'page',
+  'route',
+  'layout',
+  'template',
+  'default',
+  'loading',
+  'error',
+  'not-found',
+] as const;
+export const MOTIF_FICHIER_NON_ADMIS =
+  'fichier non admis sous le routage de la console : Next peut le servir';
+/**
+ * Les générateurs de Next qu'un fichier de routage peut exporter : ils s'exécutent par requête ou
+ * au build, hors de toute page gardée, et peuvent mettre une donnée protégée dans le `<head>` ou
+ * dans une URL. Aucune règle ne sait les juger : sous le routage de la console, ils sont refusés.
+ */
+export const GENERATEURS_REFUSES = [
+  'generateMetadata',
+  'generateViewport',
+  'generateStaticParams',
+  'generateImageMetadata',
+  'generateSitemaps',
+] as const;
+export const MOTIF_GENERATEUR =
+  'générateur de Next refusé sous le routage de la console : il tourne par requête ou au build, ' +
+  'hors de requireRole, et peut mettre une donnée protégée dans le head';
+
+/**
+ * Où se trouve un fichier par rapport au routage de la console : `hors` (pas sous le routage),
+ * `prive` (sous un dossier privé de Next, `_nom`, que Next ne route pas), `admis` (un des huit noms
+ * de `FICHIERS_ADMIS_SOUS_LE_ROUTAGE`), `non_admis` (tout le reste : Next peut le servir).
+ */
+function placeSousLeRoutage(chemin: string): 'hors' | 'prive' | 'admis' | 'non_admis' {
+  if (!chemin.startsWith(ROUTAGE_DE_LA_CONSOLE)) return 'hors';
+  const segments = chemin.slice(ROUTAGE_DE_LA_CONSOLE.length).split('/');
+  const base = segments.pop() ?? '';
+  if (segments.some((s) => s.startsWith('_'))) return 'prive';
+  const nom = base.replace(EXTENSION, '');
+  return (FICHIERS_ADMIS_SOUS_LE_ROUTAGE as readonly string[]).includes(nom)
+    ? 'admis'
+    : 'non_admis';
+}
+
 /** Une page ou une route : TypeScript comme JavaScript (Next compile un `page.js`, un `route.js`). */
 const EST_UNE_PAGE = /^page\.(?:[jt]sx?|[mc][jt]s)$/;
 const EST_UNE_ROUTE = /^route\.(?:[jt]sx?|[mc][jt]s)$/;
@@ -634,17 +709,20 @@ function actionsEnLigne(source: ts.SourceFile): Site[] {
 
 /**
  * Les sites d'un fichier de console : ses actions, sa page, ses méthodes de route. Un export
- * porté par une instruction hors liste blanche (`refusees`) n'est pas un site : il a déjà sa
- * faute, une seule, nommée par la liste blanche.
+ * porté par une instruction hors liste blanche (`refusees`), ou un générateur refusé sous le
+ * routage (`ecartes`, par nom exporté), n'est pas un site : il a déjà sa faute, une seule.
  */
 function sitesDuFichier(
   chemin: string,
   source: ts.SourceFile,
-  refusees: ReadonlySet<ts.Statement>
+  refusees: ReadonlySet<ts.Statement>,
+  ecartes: ReadonlySet<string>
 ): Site[] {
   const base = chemin.slice(chemin.lastIndexOf('/') + 1);
   const tous = exportsDuModule(source);
-  const exports = tous.filter((e) => e.origine === undefined || !refusees.has(e.origine));
+  const exports = tous.filter(
+    (e) => (e.origine === undefined || !refusees.has(e.origine)) && !ecartes.has(e.nom)
+  );
   const site = (e: Export, genre: Genre): Site => ({
     nom: e.libelle,
     genre,
@@ -944,6 +1022,18 @@ export function jugerLaConsole(
       );
       continue;
     }
+    const place = placeSousLeRoutage(f.chemin);
+    if (place === 'non_admis') {
+      faute(
+        'export_non_jugeable',
+        `${f.chemin} — ${MOTIF_FICHIER_NON_ADMIS}. Sous ${ROUTAGE_DE_LA_CONSOLE}, la garde ` +
+          `n'admet que les fichiers qu'elle sait juger (FICHIERS_ADMIS_SOUS_LE_ROUTAGE : ` +
+          `${FICHIERS_ADMIS_SOUS_LE_ROUTAGE.join(', ')}) : Next sert comme route l'export par ` +
+          `défaut d'un fichier de métadonnées (icon, opengraph-image, sitemap…) de tout segment, ` +
+          `sans ${NOM_DE_LA_PORTE}. Le code utilitaire se range hors de src/app ou dans un ` +
+          `dossier privé (_nom) — échec fermé (REQ-SEC-023).`
+      );
+    }
     const commonjs = formesCommonJS(source);
     if (commonjs.length > 0) {
       faute(
@@ -967,8 +1057,28 @@ export function jugerLaConsole(
           `sans ${NOM_DE_LA_PORTE} — échec fermé (REQ-SEC-023).`
       );
     }
+    // Un générateur de Next exporté par un fichier de routage admis : refusé, sous son nom.
+    const generateurs =
+      place === 'admis'
+        ? exportsDuModule(source).filter(
+            (e) =>
+              (GENERATEURS_REFUSES as readonly string[]).includes(e.nom) &&
+              (e.origine === undefined || !refusees.includes(e.origine))
+          )
+        : [];
+    for (const e of generateurs) {
+      const debut = e.origine?.getStart(source) ?? 0;
+      const ligne = source.getLineAndCharacterOfPosition(debut).line + 1;
+      faute(
+        'export_non_jugeable',
+        `${f.chemin} — « ${e.nom} », ligne ${ligne} : ${MOTIF_GENERATEUR}. Aucune règle de la ` +
+          `garde ne sait le juger (GENERATEURS_REFUSES) : la console écrit un \`metadata\` ou un ` +
+          `\`viewport\` statique — échec fermé (REQ-SEC-023).`
+      );
+    }
     const porte = porteDuFichier(f.chemin, source);
-    for (const site of sitesDuFichier(f.chemin, source, new Set(refusees))) {
+    const ecartes = new Set(generateurs.map((e) => e.nom));
+    for (const site of sitesDuFichier(f.chemin, source, new Set(refusees), ecartes)) {
       if (site.genre === 'action') j.actions += 1;
       else j.routes += 1;
       const ou = `${f.chemin} — ${MOT_DU_GENRE[site.genre]} « ${site.nom} »`;
@@ -1078,7 +1188,7 @@ const MATRICE_TEMOIN: Matrice = {
   'ecran:tableau': ['admin', 'lecteur'],
 };
 const ROLES_TEMOIN = ['admin', 'qualifieur', 'comptable', 'lecteur'];
-/** L'import de la porte depuis un fichier de `src/app/(console)/console/<x>/`. */
+/** L'import de la porte depuis `src/app/(console)/console/<x>/` (un module d'actions : `_gel/`, dossier privé). */
 const IMPORT_PORTE = "import { requireRole } from '../../../../server/roles/require-role';";
 const ACTION = (corps: string): FichierDeConsole => ({
   chemin: 'src/app/(console)/console/_gel/actions.ts',
