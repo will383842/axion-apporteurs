@@ -32,7 +32,10 @@
  *     refusait l'inverse. Une garde à sens unique est le défaut que ce dépôt a déjà payé.
  *   • `garde_ecrite_jamais_appelee` — la leçon d'axionia : `qualiopi:isolation-check` existait
  *     depuis des mois, n'était câblé dans aucun workflow, et cumulait 88 violations pendant que
- *     la seule des trois gardes câblée affichait zéro.
+ *     la seule des trois gardes câblée affichait zéro. « Appelée » veut dire LANCÉE par une commande
+ *     atteignable dont le statut compte : une garde citée entre guillemets, court-circuitée (`true ||`),
+ *     placée après un `exit`, dans un pipeline ou en arrière-plan n'est pas appelée (refus
+ *     d'exactitude sur la PR 175 : la ligne était découpée sans tenir compte des guillemets).
  *   • `perimetre_vide_sans_motif` — le cas d'école à ne PAS reproduire :
  *     `axionia/scripts/check-zod.ts` sort en 0 avec un avertissement quand son répertoire
  *     n'existe pas. Une garde à périmètre vide qui rend « ✅ » ne garde rien. Ici, un périmètre
@@ -51,7 +54,9 @@
  *     du job : un `shell:` qui rend toujours 0, des `defaults:` de job, un `with: ref:` sur le
  *     checkout désarmaient la porte en exit 0 sans toucher au constat. Toute clé que le constat ne
  *     porte pas, ajoutée, retirée ou modifiée, est désormais une faute NOMMÉE ; deux étapes de même
- *     nom, qu'une table indexée par nom confondait, en sont une autre.
+ *     nom, qu'une table indexée par nom confondait, en sont une autre. Un étage plus bas, la
+ *     configuration pnpm/npm de la racine (`.npmrc`, `pnpm-workspace.yaml`, `.pnpmfile.cjs`, clé
+ *     `pnpm` de `package.json`) change le shell de chaque `pnpm <script>` : elle est figée ABSENTE.
  *
  * ── CE QU'ELLE NE FAIT PAS, ET LE DIT ───────────────────────────────────────────────────────
  *
@@ -62,6 +67,18 @@
  *     Aucune garde logée DANS un job ne juge sa propre condition d'exécution ; la fermer en CI
  *     demanderait un second job requis, que ce dépôt n'a pas. Des `on:` qui ne déclenchent plus,
  *     eux, ferment d'eux-mêmes : un check requis qui ne se présente jamais bloque la fusion.
+ *   — HORS DU JOB `gate-a`, RIEN NE JUGE QU'UNE ÉTAPE S'EXÉCUTE. Une étape de `nightly.yml` qui lance
+ *     une garde est lue comme un appel même si elle porte un `if:` toujours faux, un
+ *     `continue-on-error`, ou si son job ne se déclenche jamais : seul le job de la porte A est
+ *     confronté à un constat. `garde_ecrite_jamais_appelee` dit « câblée », pas « exécutée ».
+ *   — ⚠️ PRIX ASSUMÉ DU LEXER : une ligne qu'il refuse (guillemet non fermé, document en ligne `<<`)
+ *     ou qui porte une construction qu'il ne juge pas (`if`, `case`, boucle, fonction, groupe
+ *     `{ … }`, `trap`) n'appelle RIEN, même une garde qu'elle lance réellement ; une commande dans
+ *     un sous-shell ou une substitution non plus. Échouer fermé, ici, c'est tenir la garde pour NON
+ *     appelée : on simplifie la ligne, ou on motive `horsCi`.
+ *   — Elle ne voit pas la configuration pnpm/npm HORS du dépôt : le `.npmrc` de l'utilisateur ou
+ *     global du coureur, et les variables `npm_config_*` qu'il porterait. Celles qu'un `env:` du
+ *     workflow poserait sont figées avec lui ; les autres ne sont pas dans l'arbre qu'elle lit.
  *   — Elle ne fige pas les AUTRES jobs du workflow : ils ne désarment pas `gate-a`, sauf par
  *     `needs:` — et une clé `needs:` ajoutée au job est elle-même une faute (`porte_a_alteree`).
  *   — Elle n'exige d'aucune étape qu'elle EXISTE avant qu'elle soit écrite, ni aucune dépendance de
@@ -388,7 +405,25 @@ export interface PorteFigee {
   readonly workflow: Readonly<Record<string, unknown>>;
   readonly etapes: readonly EtapeFigee[];
   readonly scripts: Readonly<Record<string, string>>;
+  /**
+   * LA CONFIGURATION DU GESTIONNAIRE DE PAQUETS, figée ABSENTE (veto de sécurité (1) sur la PR 175, un
+   * étage plus bas que le `shell:` d'une étape). `pnpm <script>` lit, à la racine, des réglages qui
+   * changent ce que le script EXÉCUTE sans toucher ni au workflow ni au script : le shell des scripts
+   * (`script-shell`), leurs crochets, le code lancé à l'installation. Un fichier SUIVI de cette liste,
+   * ou une clé de `package.json` de cette liste, est une faute nommée (`porte_a_alteree`) ; le jour où
+   * l'un d'eux devient nécessaire, ce constat devra figer son CONTENU, pas seulement son absence.
+   */
+  readonly paquet: {
+    readonly fichiersAbsents: readonly string[];
+    readonly clesAbsentes: readonly string[];
+  };
 }
+
+/** Ce que la racine ne porte pas : les fichiers et les clés de `package.json` qui configurent pnpm/npm. */
+export const CONFIGURATION_DU_PAQUET_ABSENTE: PorteFigee['paquet'] = {
+  fichiersAbsents: ['.npmrc', 'pnpm-workspace.yaml', '.pnpmfile.cjs'],
+  clesAbsentes: ['pnpm'],
+};
 
 /** Le workflow qui porte la porte A. Le seul job requis de ce dépôt y vit. */
 export const WORKFLOW_DE_LA_PORTE_A = '.github/workflows/ci.yml';
@@ -435,44 +470,322 @@ function valeursDeCle(source: string, cle: string): string[] {
   return out;
 }
 
+/** Ce qu'une commande en position de commande lance : un script de `package.json`, ou un fichier. */
+interface Appels {
+  scripts: Set<string>;
+  fichiers: Set<string>;
+}
+
 /**
- * CE QU'UNE LIGNE DE COMMANDE APPELLE VRAIMENT — les scripts `package.json` et les fichiers en
- * POSITION DE COMMANDE, rien d'autre (GOV-061, fait (a), second tour). Une garde citée dans un
- * `name:`, un argument d'`echo` ou une chaîne n'est pas appelée : chercher son nom comme une
- * sous-chaîne du workflow la déclarait câblée. Reconnus : `pnpm [run|exec] <script>`,
+ * Les mots d'UNE commande simple, lus comme un appel. Reconnus : `pnpm [run|exec] <script>`,
  * `npm run <script>`, `npx`/`pnpm exec` suivis d'une commande, et `tsx`/`node`/`bash`/`sh <fichier>`.
  * Le reste — `echo`, `test`, une affectation seule — n'appelle rien.
  */
-function appelsDe(commande: string): { scripts: Set<string>; fichiers: Set<string> } {
-  const scripts = new Set<string>();
-  const fichiers = new Set<string>();
-  const sansGuillemets = (t: string): string => t.replace(/^["']|["']$/g, '');
-  const lire = (mots: readonly string[]): void => {
-    let i = 0;
-    while (i < mots.length && /^[A-Za-z_][A-Za-z0-9_]*=/.test(mots[i]!)) i++;
-    const outil = mots[i];
-    const suite = (j: number): number => {
-      while (j < mots.length && mots[j]!.startsWith('-')) j++;
-      return j;
-    };
-    if (outil === 'pnpm' || outil === 'npm') {
-      let j = suite(i + 1);
-      if (mots[j] === 'exec' || mots[j] === 'dlx') return lire(mots.slice(j + 1));
-      if (mots[j] === 'run' || mots[j] === 'run-script') j = suite(j + 1);
-      else if (outil === 'npm') return;
-      if (mots[j] !== undefined) scripts.add(mots[j]!);
-    } else if (outil === 'npx') {
-      lire(mots.slice(suite(i + 1)));
-    } else if (outil === 'tsx' || outil === 'node' || outil === 'bash' || outil === 'sh') {
-      const j = suite(i + 1);
-      if (mots[j] !== undefined) fichiers.add(mots[j]!);
-    }
+function lireUneCommande(mots: readonly string[], a: Appels): void {
+  let i = 0;
+  while (i < mots.length && /^[A-Za-z_][A-Za-z0-9_]*=/.test(mots[i]!)) i++;
+  const outil = mots[i];
+  const suite = (j: number): number => {
+    while (j < mots.length && mots[j]!.startsWith('-')) j++;
+    return j;
   };
+  if (outil === 'pnpm' || outil === 'npm') {
+    let j = suite(i + 1);
+    if (mots[j] === 'exec' || mots[j] === 'dlx') return lireUneCommande(mots.slice(j + 1), a);
+    if (mots[j] === 'run' || mots[j] === 'run-script') j = suite(j + 1);
+    else if (outil === 'npm') return;
+    if (mots[j] !== undefined) a.scripts.add(mots[j]!);
+  } else if (outil === 'npx') {
+    lireUneCommande(mots.slice(suite(i + 1)), a);
+  } else if (outil === 'tsx' || outil === 'node' || outil === 'bash' || outil === 'sh') {
+    const j = suite(i + 1);
+    if (mots[j] !== undefined) a.fichiers.add(mots[j]!);
+  }
+}
+
+/**
+ * CE QUE `package.json` NOMME EN POSITION DE COMMANDE — la sur-approximation, pour la seule question
+ * « ce script est-il DÉCLARÉ lancé ? » (`confronterDisqueEtRegistre`). Là, l'échec fermé va dans
+ * l'autre sens : un script nommé, même court-circuité, dont le fichier manque est une PERTE ; en
+ * compter trop rend fautive une entrée de plus, jamais une de moins. Le découpage ignore donc les
+ * guillemets, à dessein. Il ne sert JAMAIS à dire qu'une garde est appelée : c'est `appelsDe`.
+ */
+function commandesNommees(commande: string): Appels {
+  const a: Appels = { scripts: new Set(), fichiers: new Set() };
+  const sansGuillemets = (t: string): string => t.replace(/^["']|["']$/g, '');
   for (const segment of commande.split(/\r?\n|&&|\|\||[;|&()]/)) {
     const mots = segment.trim().split(/\s+/).filter(Boolean).map(sansGuillemets);
-    if (mots.length > 0) lire(mots);
+    if (mots.length > 0) lireUneCommande(mots, a);
   }
-  return { scripts, fichiers };
+  return a;
+}
+
+/** Un jeton de la ligne de commande : un MOT (déjà désenveloppé de ses guillemets), ou un OPÉRATEUR. */
+type Jeton = { readonly mot: string } | { readonly op: string };
+
+/**
+ * LE LEXER SHELL MINIMAL (refus d'exactitude sur la PR 175). Il respecte les guillemets simples et
+ * doubles et les échappements, et découpe sur `;`, `&&`, `||`, `|`, `&`, les sauts de ligne et les
+ * parenthèses de sous-shell. Une substitution (`$(…)`, accents graves, `<(…)`) et une expansion
+ * `${…}` restent DANS leur mot : ce qu'elles contiennent n'est jamais lu comme une commande. Une
+ * expression d'Actions `${{ … }}`, remplacée avant que le shell ne voie la ligne, est un mot opaque :
+ * son `||` n'est pas un opérateur du shell.
+ * ÉCHEC FERMÉ : un guillemet, une substitution ou une expression non fermés, un document en ligne
+ * (`<<`), une fin de branche de `case` (`;;`) rendent `null` — la ligne n'est pas lue.
+ */
+function jetonsShell(commande: string): Jeton[] | null {
+  const c = commande;
+  const out: Jeton[] = [];
+  let mot = '';
+  let enMot = false;
+  const finir = (): void => {
+    if (enMot) out.push({ mot });
+    mot = '';
+    enMot = false;
+  };
+  const ajouter = (texte: string): void => {
+    mot += texte;
+    enMot = true;
+  };
+  /** L'index qui suit l'accent grave fermant, ou -1. */
+  const finAccentGrave = (i: number): number => {
+    for (let j = i; j < c.length; j++) {
+      if (c[j] === '\\') j++;
+      else if (c[j] === '`') return j + 1;
+    }
+    return -1;
+  };
+  /** Le texte entre guillemets doubles et l'index qui suit le fermant, ou `null`. */
+  const finGuillemets = (i: number): { fin: number; texte: string } | null => {
+    let texte = '';
+    let j = i;
+    while (j < c.length) {
+      const x = c[j]!;
+      if (x === '"') return { fin: j + 1, texte };
+      if (x === '\\') {
+        texte += c[j + 1] ?? '';
+        j += 2;
+        continue;
+      }
+      let k = j + 1;
+      if (x === '$' && (c[j + 1] === '(' || c[j + 1] === '{')) {
+        k = finEquilibree(j + 2, c[j + 1]!, c[j + 1] === '(' ? ')' : '}');
+      } else if (x === '`') k = finAccentGrave(j + 1);
+      if (k < 0) return null;
+      texte += c.slice(j, k);
+      j = k;
+    }
+    return null;
+  };
+  /** L'index qui suit le fermant qui équilibre l'ouvrant déjà lu, guillemets respectés, ou -1. */
+  const finEquilibree = (i: number, ouvre: string, ferme: string): number => {
+    let profondeur = 1;
+    let j = i;
+    while (j < c.length) {
+      const x = c[j]!;
+      if (x === '\\') j += 2;
+      else if (x === "'") {
+        const k = c.indexOf("'", j + 1);
+        if (k < 0) return -1;
+        j = k + 1;
+      } else if (x === '"') {
+        const g = finGuillemets(j + 1);
+        if (g === null) return -1;
+        j = g.fin;
+      } else if (x === '`') {
+        const k = finAccentGrave(j + 1);
+        if (k < 0) return -1;
+        j = k;
+      } else {
+        if (x === ouvre) profondeur++;
+        else if (x === ferme && --profondeur === 0) return j + 1;
+        j++;
+      }
+    }
+    return -1;
+  };
+
+  let i = 0;
+  while (i < c.length) {
+    const x = c[i]!;
+    const suivant = c[i + 1];
+    if (x === ' ' || x === '\t' || (x === '\r' && suivant === '\n')) {
+      finir();
+      i++;
+    } else if (x === '\n') {
+      finir();
+      out.push({ op: '\n' });
+      i++;
+    } else if (x === '#' && !enMot) {
+      while (i < c.length && c[i] !== '\n') i++;
+    } else if (x === '\\') {
+      if (suivant === '\n') i += 2;
+      else if (suivant === '\r' && c[i + 2] === '\n') i += 3;
+      else {
+        ajouter(suivant ?? '');
+        i += 2;
+      }
+    } else if (x === "'") {
+      const k = c.indexOf("'", i + 1);
+      if (k < 0) return null;
+      ajouter(c.slice(i + 1, k));
+      i = k + 1;
+    } else if (x === '"') {
+      const g = finGuillemets(i + 1);
+      if (g === null) return null;
+      ajouter(g.texte);
+      i = g.fin;
+    } else if (x === '$' && c.startsWith('${{', i)) {
+      const k = c.indexOf('}}', i + 3);
+      if (k < 0) return null;
+      ajouter(c.slice(i, k + 2));
+      i = k + 2;
+    } else if (
+      (x === '$' && (suivant === '(' || suivant === '{')) ||
+      (x === '(' && /[<>]$/.test(mot))
+    ) {
+      const debut = x === '$' ? i + 2 : i + 1;
+      const ouvre = x === '$' ? suivant! : '(';
+      const k = finEquilibree(debut, ouvre, ouvre === '(' ? ')' : '}');
+      if (k < 0) return null;
+      ajouter(c.slice(i, k));
+      i = k;
+    } else if (x === '`') {
+      const k = finAccentGrave(i + 1);
+      if (k < 0) return null;
+      ajouter(c.slice(i, k));
+      i = k;
+    } else if (x === '<' && suivant === '<') {
+      return null;
+    } else if (x === '&' && suivant === '&') {
+      finir();
+      out.push({ op: '&&' });
+      i += 2;
+    } else if (
+      (x === '&' && (suivant === '>' || /[<>]$/.test(mot))) ||
+      (x === '|' && />$/.test(mot))
+    ) {
+      ajouter(x); // une redirection : `&>fichier`, `2>&1`, `>|fichier`
+      i++;
+    } else if (x === '|') {
+      finir();
+      out.push({ op: suivant === '|' ? '||' : '|' });
+      i += suivant === '|' || suivant === '&' ? 2 : 1;
+    } else if (x === ';') {
+      if (suivant === ';') return null;
+      finir();
+      out.push({ op: ';' });
+      i++;
+    } else if (x === '&' || x === '(' || x === ')') {
+      finir();
+      out.push({ op: x });
+      i++;
+    } else {
+      ajouter(x);
+      i++;
+    }
+  }
+  finir();
+  return out;
+}
+
+/**
+ * Les mots de commande que la lecture ne sait pas JUGER : une condition, une branche, une boucle,
+ * une fonction, un groupe entre accolades, un piège. Leur seule présence fait tenir la ligne ENTIÈRE
+ * pour n'appelant rien.
+ */
+const CONSTRUCTIONS_NON_JUGEES = new Set([
+  'if',
+  'then',
+  'elif',
+  'else',
+  'fi',
+  'case',
+  'esac',
+  'for',
+  'while',
+  'until',
+  'do',
+  'done',
+  'select',
+  'function',
+  'coproc',
+  'trap',
+  '{',
+  '}',
+]);
+/** Les commandes après lesquelles plus rien de la ligne ne s'exécute. */
+const FINS_DE_LIGNE = new Set(['exit', 'return', 'exec']);
+
+/**
+ * CE QU'UNE LIGNE DE COMMANDE APPELLE VRAIMENT — les scripts `package.json` et les fichiers lancés
+ * par une commande ATTEIGNABLE dont le statut compte (GOV-061, fait (a) ; refus d'exactitude sur la
+ * PR 175). Une garde citée dans un `name:`, un argument d'`echo` ou une chaîne n'est pas appelée ; une
+ * garde qu'on n'atteint pas, ou dont l'échec ne peut pas faire échouer la ligne, non plus. Une
+ * commande ne compte que si elle est au niveau de la ligne (hors sous-shell, hors substitution),
+ * n'est opérande d'aucun `||` (à droite elle est court-circuitée, à gauche son échec est rattrapé),
+ * n'est dans aucun pipeline (le statut d'un pipeline est celui de sa DERNIÈRE commande), n'est pas
+ * lancée en arrière-plan (`&`) ni niée (`!`), ne suit aucun `exit`/`return`/`exec` de la ligne, et
+ * n'est pas enchaînée par `&&` derrière un `false`, une négation ou un sous-shell.
+ * ÉCHEC FERMÉ, PRIX ASSUMÉ : une ligne que le lexer refuse, ou qui porte une construction qu'il ne
+ * juge pas (`if`, `case`, boucle, fonction, groupe `{ … }`, `trap`, document en ligne), n'appelle
+ * RIEN — même une garde qu'elle lance réellement. Celle-ci est alors tenue pour NON appelée : c'est la
+ * ligne qu'il faut simplifier, ou le `horsCi` qu'il faut motiver.
+ */
+function appelsDe(commande: string): Appels {
+  const a: Appels = { scripts: new Set(), fichiers: new Set() };
+  const jetons = jetonsShell(commande);
+  if (jetons === null) return a;
+  interface Commande {
+    mots: string[];
+    avant: string | null;
+    apres: string | null;
+    profondeur: number;
+  }
+  const commandes: Commande[] = [];
+  let courante: string[] = [];
+  let avant: string | null = null;
+  let profondeur = 0;
+  for (const j of jetons) {
+    if ('mot' in j) {
+      courante.push(j.mot);
+      continue;
+    }
+    if (j.op === '(') {
+      if (courante.length > 0) return a; // `nom()` : une définition de fonction
+      profondeur++;
+      continue;
+    }
+    commandes.push({ mots: courante, avant, apres: j.op, profondeur });
+    courante = [];
+    if (j.op === ')' && --profondeur < 0) return a;
+    avant = j.op;
+  }
+  commandes.push({ mots: courante, avant, apres: null, profondeur });
+  if (profondeur !== 0) return a;
+  const premierMot = (mots: readonly string[]): string | undefined =>
+    mots.find((m) => !/^[A-Za-z_][A-Za-z0-9_]*=/.test(m));
+  if (commandes.some((k) => CONSTRUCTIONS_NON_JUGEES.has(premierMot(k.mots) ?? ''))) return a;
+
+  let termine = false;
+  let chaineFausse = false;
+  for (const k of commandes) {
+    if (k.avant === null || k.avant === ';' || k.avant === '\n' || k.avant === '&') {
+      chaineFausse = false;
+    }
+    const premier = premierMot(k.mots);
+    const compte =
+      !termine &&
+      !chaineFausse &&
+      k.profondeur === 0 &&
+      premier !== '!' &&
+      k.apres !== '&' &&
+      ![k.avant, k.apres].some((o) => o === '||' || o === '|');
+    if (compte && k.mots.length > 0) lireUneCommande(k.mots, a);
+    if (premier !== undefined && FINS_DE_LIGNE.has(premier)) termine = true;
+    if (premier === 'false' || premier === '!' || k.apres === ')') chaineFausse = true;
+  }
+  return a;
 }
 
 /** Les scripts de `package.json`, lus ; `{}` si le fichier est illisible (rien n'y est défini). */
@@ -495,12 +808,13 @@ function scriptsDuPaquet(packageJson: string): Record<string, string> {
  */
 function appelsSuivis(
   commandes: readonly string[],
-  scripts: Readonly<Record<string, string>>
-): { scripts: Set<string>; fichiers: Set<string> } {
-  const tous = { scripts: new Set<string>(), fichiers: new Set<string>() };
+  scripts: Readonly<Record<string, string>>,
+  lire: (commande: string) => Appels = appelsDe
+): Appels {
+  const tous: Appels = { scripts: new Set<string>(), fichiers: new Set<string>() };
   const file = [...commandes];
   while (file.length > 0) {
-    const a = appelsDe(file.pop()!);
+    const a = lire(file.pop()!);
     for (const f of a.fichiers) tous.fichiers.add(f);
     for (const s of a.scripts) {
       if (tous.scripts.has(s)) continue;
@@ -788,14 +1102,35 @@ export async function confronterLaPorteA(vue: Vue): Promise<ConfrontationDeLaPor
   }
 
   // ── les scripts de `package.json` que ces étapes lancent : figés, donc non repointables ──
-  let scripts: Record<string, unknown>;
+  let pkg: Record<string, unknown>;
   try {
-    const pkg = JSON.parse(vue.packageJson || '{}') as { scripts?: unknown };
-    scripts = estObjet(pkg.scripts) ? pkg.scripts : {};
+    const lu: unknown = JSON.parse(vue.packageJson || '{}');
+    pkg = estObjet(lu) ? lu : {};
   } catch {
     return illisible(
       '`package.json` est illisible : les scripts que la porte lance n’ont pas de source'
     );
+  }
+  const scripts: Record<string, unknown> = estObjet(pkg.scripts) ? pkg.scripts : {};
+
+  // ── la configuration pnpm/npm de la racine : elle change ce que `pnpm <script>` exécute ──
+  const suivis = new Set(vue.fichiersSuivis);
+  const configuration = [
+    ...figee.paquet.fichiersAbsents
+      .filter((f) => suivis.has(f))
+      .map((f) => `le fichier \`${f}\`, suivi à la racine,`),
+    ...figee.paquet.clesAbsentes
+      .filter((k) => Object.hasOwn(pkg, k))
+      .map((k) => `la clé \`${k}\` de \`package.json\``),
+  ];
+  for (const ou of configuration) {
+    fautes.push({
+      famille: 'porte_a_alteree',
+      message:
+        `${ou} configure le gestionnaire de paquets, que le constat fige ABSENT : un ` +
+        `\`script-shell\`, un crochet ou un réglage de scripts change ce que CHAQUE ` +
+        `\`pnpm <script>\` de la porte exécute, sans toucher ni à l'étape ni au script. ${aRetenir}`,
+    });
   }
   for (const [nom, definition] of Object.entries(figee.scripts)) {
     const lue = scripts[nom];
@@ -1051,7 +1386,11 @@ export function confronterDisqueEtRegistre(vue: Vue): Confrontation {
   // promesse, quelle que soit la phase et quel que soit le statut de sa tâche. Mesuré sur la PR 175 :
   // `scripts/gates/migrations-additive.ts`, lancé par la porte A, retiré de l'index, sortait en zéro
   // rangé parmi les promesses, parce que sa tâche porteuse n'est pas livrée.
-  const lances = appelsSuivis(Object.values(scriptsDuPaquet(vue.packageJson)), {}).fichiers;
+  const lances = appelsSuivis(
+    Object.values(scriptsDuPaquet(vue.packageJson)),
+    {},
+    commandesNommees
+  ).fichiers;
   const lanceesParLePaquet: GateVue[] = [];
   for (const g of entreesSansScript) {
     if (lances.has(g.script)) {
@@ -1298,7 +1637,9 @@ export function controler(vue: Vue): Faute[] {
 
   // EN POSITION DE COMMANDE (GOV-061, fait (a)) : une garde citée dans un commentaire, un `name:`
   // ou un `echo` n'est pas appelée. Seuls comptent les `run:` des workflows et les `command` des
-  // réglages, lus par un analyseur, et ce qu'ils lancent à travers `package.json`.
+  // réglages, lus par un analyseur puis par le lexer shell d'`appelsDe` — guillemets respectés, et
+  // seulement les commandes ATTEIGNABLES dont le statut compte —, et ce qu'ils lancent à travers
+  // `package.json`.
   const appels = appelsSuivis(
     [
       ...vue.workflows.flatMap((w) => valeursDeCle(w.source, 'run')),
@@ -1758,6 +2099,7 @@ export const PORTE_A_FIGEE: PorteFigee = {
     'gov:etat': 'tsx scripts/gates/gov-etat.ts',
     'gov:etat:prove': 'tsx scripts/gates/gov-etat.ts --prove',
   },
+  paquet: CONFIGURATION_DU_PAQUET_ABSENTE,
 };
 
 export const PASSIF_SANS_SCRIPT: Readonly<Record<string, string>> = {
@@ -1818,6 +2160,7 @@ export const PORTE_CONFORME: PorteFigee = {
     'format:check': 'prettier --check .',
     'gov:conventions': 'tsx scripts/gates/gov-conventions.ts',
   },
+  paquet: CONFIGURATION_DU_PAQUET_ABSENTE,
 };
 
 /**
@@ -1972,6 +2315,36 @@ const TEMOINS: ReadonlyArray<{ famille: string; libelle: string; vue: Vue }> = [
     }),
   },
   {
+    famille: 'garde_ecrite_jamais_appelee',
+    libelle: 'une garde dont le seul « appel » est CITÉ entre guillemets, après un `;`',
+    vue: variante({
+      workflows: [
+        {
+          chemin: '.github/workflows/ci.yml',
+          source: CI_CONFORME.replace(
+            'run: pnpm gov:conventions\n',
+            'run: echo "nuit sautee; pnpm gov:conventions"\n'
+          ),
+        },
+      ],
+    }),
+  },
+  {
+    famille: 'garde_ecrite_jamais_appelee',
+    libelle: 'une garde dont le seul appel est COURT-CIRCUITÉ à droite de `true ||`',
+    vue: variante({
+      workflows: [
+        {
+          chemin: '.github/workflows/ci.yml',
+          source: CI_CONFORME.replace(
+            'run: pnpm gov:conventions\n',
+            'run: true || pnpm gov:conventions\n'
+          ),
+        },
+      ],
+    }),
+  },
+  {
     famille: 'garde_hors_registre',
     libelle: 'une garde ÉCRITE et suivie que `docs/gates.json` ne nomme nulle part',
     vue: variante({
@@ -2055,6 +2428,20 @@ const TEMOINS: ReadonlyArray<{ famille: string; libelle: string; vue: Vue }> = [
 
 const CONTRE_TEMOINS: ReadonlyArray<{ libelle: string; vue: Vue }> = [
   { libelle: 'la vue conforme', vue: VUE_CONFORME },
+  {
+    libelle: 'deux appels enchaînés par `&&`, dont une expression d’Actions qui porte un `||`',
+    vue: variante({
+      workflows: [
+        {
+          chemin: '.github/workflows/ci.yml',
+          source: CI_CONFORME.replace(
+            'run: pnpm gov:conventions\n',
+            "run: pnpm format:check && pnpm gov:conventions --x ${{ inputs.x || 'a' }}\n"
+          ),
+        },
+      ],
+    }),
+  },
   {
     libelle: 'une action asynchrone exportée d’un module « use server » — le cas normal',
     vue: variante({
@@ -2359,6 +2746,11 @@ const TEMOINS_PORTE_A: ReadonlyArray<{ famille: string; libelle: string; vue: Vu
     famille: 'porte_a_illisible',
     libelle: 'une vue sans constat de la porte A',
     vue: variante({ porteA: undefined }),
+  },
+  {
+    famille: 'porte_a_alteree',
+    libelle: 'un `.npmrc` suivi à la racine, qui peut changer le shell de chaque `pnpm <script>`',
+    vue: variante({ fichiersSuivis: [...VUE_CONFORME.fichiersSuivis, '.npmrc'] }),
   },
 ];
 
