@@ -135,7 +135,11 @@ describe('REQ-JUR-015 — une source qui cite un texte de loi dit si elle l’a 
    * `CONSERVATION_PIECES_ANS` (C. com. L.123-22). Une revue `exactitude` les a nommés.
    * Le témoin cherche donc la CITATION, jamais la formulation.
    */
-  const CITE_UNE_LOI = /C\.\s*(?:trav|com|civ)\b|\b[LDR]\.\d|art\.\s*[LDR]\.\d|BOFiP/i;
+  // Les abréviations ET les codes écrits en mots : une revue `securite` a relevé que « Code du
+  // travail » seul échappait à la première version, qui ne lisait que `C. trav`. Un détecteur qui
+  // ne voit qu'une écriture laisse passer l'autre, et son vert ne dit rien.
+  const CITE_UNE_LOI =
+    /C\.\s*(?:trav|com|civ)\b|\b[LDR]\.\d|art\.\s*[LDR]\.\d|BOFiP|code\s+(?:du\s+travail|de\s+commerce|civil|g[ée]n[ée]ral\s+des\s+imp[oô]ts)/i;
 
   it('REQ-JUR-015 — chaque source citant une loi dit si le texte a été confronté', () => {
     const muets = Object.entries(SEUILS)

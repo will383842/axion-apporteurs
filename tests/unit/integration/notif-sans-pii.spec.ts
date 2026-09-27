@@ -22,6 +22,7 @@ import { spawnSync } from 'node:child_process';
 import type { Notification, Notifieur } from '../../../src/lib/notify';
 import { horlogeFigee } from '../../../src/domain/temps/horloge';
 import {
+  type CategorieAlerte,
   GABARITS_ALERTE,
   PlafondInvalide,
   creerAlerteur,
@@ -353,10 +354,35 @@ describe('REQ-INT-024 — la catégorie brute ne contourne ni le plafond ni le d
     const notifieur = notifieurCompteur();
     const alerteur = creerAlerteur({ notifieur, horloge: horlogeFigee(T0), plafondParHeure: 3 });
     for (let i = 0; i < 10; i++) {
-      await alerteur.alerter({ categorie: `appeler le 06123456${10 + i}`, id: uuid(i) });
+      // Le `as` est VOULU et il est le sujet du témoin. Depuis que `categorie` est une union close
+      // (`CategorieAlerte`), le compilateur refuse cette valeur : c'est le premier rempart, et il
+      // tient. Le témoin franchit ce rempart exprès pour éprouver le SECOND — le contrôle
+      // d'exécution —, celui qui protège la donnée quand la valeur arrive d'un `any`, d'une
+      // frontière non typée ou d'un appelant en JavaScript. Sans ce `as`, on ne testerait plus que
+      // le compilateur, et on croirait la donnée protégée à l'exécution sans l'avoir vérifié.
+      await alerteur.alerter({
+        categorie: `appeler le 06123456${10 + i}` as CategorieAlerte,
+        id: uuid(i),
+      });
     }
     expect(notifieur.envois).toHaveLength(3);
     for (const e of notifieur.envois) expect(`${e.sujet} ${e.corps}`).not.toMatch(/06123456/);
+  });
+
+  it('REQ-INT-024 — TÉMOIN : un NOM en catégorie ne sort ni dans le corps ni dans le sujet', async () => {
+    // Le scénario exact que la revue `securite` de la PR 180 a nommé : un appelant qui écrirait
+    // `categorie: nom.toLowerCase()`. L'ancienne expression de FORME acceptait `jean_dupont` — des
+    // mots en minuscules liés par `_` —, et le nom sortait DANS LE SUJET comme dans le corps.
+    const notifieur = notifieurCompteur();
+    const alerteur = creerAlerteur({ notifieur, horloge: horlogeFigee(T0), plafondParHeure: 5 });
+    await alerteur.alerter({ categorie: 'jean_dupont' as CategorieAlerte, id: UUID_A });
+    expect(notifieur.envois).toHaveLength(1);
+    for (const e of notifieur.envois) {
+      expect(
+        `${e.sujet} ${e.corps}`,
+        'un nom ne doit sortir ni dans le sujet ni dans le corps'
+      ).not.toMatch(/jean|dupont/i);
+    }
   });
 
   it('REQ-INT-024 — TÉMOIN : dix identifiants hors format distincts ne font partir qu’UNE alerte', async () => {

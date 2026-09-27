@@ -3393,7 +3393,8 @@
         "src/server/integrations/telegram/",
         "docs/tiers/telegram.md",
         "tests/unit/integration/notif-sans-pii.spec.ts",
-        "docs/gates.json"
+        "docs/gates.json",
+        "src/server/integrations/telegram/alertes.ts"
       ],
       "schema": false,
       "sensible": [

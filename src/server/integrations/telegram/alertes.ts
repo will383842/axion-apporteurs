@@ -35,9 +35,34 @@ import type { Horloge } from '../../../domain/temps/horloge';
 import { MS_PAR_HEURE } from '../../../domain/temps/calendrier-civil';
 import type { Notifieur } from '../../../lib/notify';
 
+/**
+ * LES CATÉGORIES D'ALERTE, fermées — la liste, et rien qu'elle.
+ *
+ * 🔴 LE DÉFAUT QUE CETTE FERMETURE FERME (revue `securite`, PR 180). `categorie` était un `string`
+ * filtré par une expression de FORME (« des mots en minuscules liés par `_` »). Un appelant qui
+ * aurait écrit `categorie: nom.toLowerCase()` aurait fait passer `jean_dupont` : la forme est
+ * valide, et le nom serait sorti DANS LE MESSAGE et DANS LE SUJET. La garde ne l'aurait pas vu,
+ * son témoin portant une catégorie fixe.
+ *
+ * Une expression de forme dit à quoi une valeur RESSEMBLE ; une liste close dit ce qu'elle EST.
+ * Sur une donnée personnelle, la ressemblance ne suffit pas.
+ */
+export const CATEGORIES_ALERTE = [
+  'bancaire',
+  'contact',
+  'identite',
+  'postal',
+  'releve_bloque',
+  'reseau',
+  'restauration_echouee',
+  'temoin_garde',
+] as const;
+
+export type CategorieAlerte = (typeof CATEGORIES_ALERTE)[number];
+
 /** Ce qu'une alerte porte : de quoi RETROUVER l'objet, et rien de plus. */
 export type ObjetAlerte = {
-  readonly categorie: string;
+  readonly categorie: CategorieAlerte;
   readonly id: string;
   readonly compte?: string;
 };
@@ -48,13 +73,19 @@ export type ObjetAlerte = {
  * de formes interdites : un téléphone sans séparateur passait la règle précédente.
  */
 const IDENTIFIANT_D_AGREGAT = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/;
-/** Une catégorie : des mots en minuscules liés par `_`, sans chiffre ni espace. */
-const CATEGORIE = /^[a-z]{1,24}(?:_[a-z]{1,24}){0,4}$/;
 const RETIRE = '[identifiant non technique retiré]';
 
 const identifiant = (v: unknown): string =>
   typeof v === 'string' && IDENTIFIANT_D_AGREGAT.test(v) ? v : RETIRE;
-const categorie = (v: unknown): string => (typeof v === 'string' && CATEGORIE.test(v) ? v : RETIRE);
+
+/**
+ * La catégorie, confrontée à la LISTE CLOSE et non à une forme. Le type l'interdit déjà à la
+ * compilation ; ce contrôle tient la même règle à l'EXÉCUTION, pour qu'un `as`, un `any` ou une
+ * frontière non typée ne la contourne pas. Les deux sont voulus : le type protège l'auteur, le
+ * contrôle protège la donnée.
+ */
+const categorie = (v: unknown): string =>
+  typeof v === 'string' && (CATEGORIES_ALERTE as readonly string[]).includes(v) ? v : RETIRE;
 
 const ligneDeBase = (o: ObjetAlerte): string =>
   `[${categorie(o.categorie)}] objet ${identifiant(o.id)}` +
