@@ -9341,7 +9341,8 @@
         "tests/unit/gouvernance/un-statut-fusionnee-porte-sa-preuve.spec.ts",
         "tests/unit/gouvernance/attestation-inter-depot.spec.ts",
         "tests/unit/gouvernance/cloture-refuse-ce-qu-elle-n-a-pas-mesure.spec.ts",
-        "tests/unit/gouvernance/un-etat-cible-porte-son-operation.spec.ts"
+        "tests/unit/gouvernance/un-etat-cible-porte-son-operation.spec.ts",
+        "scripts/gates/gov-attestation.ts"
       ],
       "schema": false,
       "sensible": [],
