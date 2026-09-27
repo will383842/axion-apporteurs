@@ -23,6 +23,7 @@ import {
   mkdtempSync,
   readFileSync,
   readdirSync,
+  rmSync,
   statSync,
   writeFileSync,
 } from 'node:fs';
@@ -170,5 +171,28 @@ describe('REQ-GOV-032 — la couverture de la vue se confronte à une source EXT
     expect(Number(m![2])).toBeGreaterThan(0);
     expect(Number(m![1])).toBe(Number(m![2]));
     expect(sortie).toContain('REQ-GOV-006');
+  });
+
+  it('REQ-GOV-032 · (d) ROUGE — une source qui ne déclare AUCUNE rubrique due fait échouer le vérificateur, elle ne rend pas « 0/0 » vert', () => {
+    // Sans ce témoin, retirer la phrase de REQ-GOV-006 (ou le fichier) éteignait la confrontation :
+    // « 0/0 » et un avertissement, EXIT 0. Seul le témoin (a) rougissait — pas la porte.
+    const sansMarqueur = registreDEssai('registre-muet');
+    const chemin = join(sansMarqueur, 'docs/requirements.json');
+    const doc = JSON.parse(readFileSync(chemin, 'utf8')) as {
+      exigences: { id: string; texte: string }[];
+    };
+    const req = doc.exigences.find((e) => e.id === 'REQ-GOV-006')!;
+    req.texte = req.texte.split(MARQUEUR).join('Ses rubriques');
+    writeFileSync(chemin, JSON.stringify(doc, null, 2));
+    expect(duesDeclarees(texteDe(chemin))).toEqual([]);
+    const muet = rendreEtJuger(resolve(PLAN), sansMarqueur, 'PLAN-STATE-muet.md');
+    expect(muet.code, `une source muette est restée verte : ${muet.sortie}`).toBe(1);
+    expect(muet.sortie).toContain('[rubriques_dues_non_declarees]');
+
+    const sansSource = registreDEssai('registre-sans-source');
+    rmSync(join(sansSource, 'docs/requirements.json'));
+    const absent = rendreEtJuger(resolve(PLAN), sansSource, 'PLAN-STATE-sans-source.md');
+    expect(absent.code, `une source absente est restée verte : ${absent.sortie}`).toBe(1);
+    expect(absent.sortie).toContain('[rubriques_dues_non_declarees]');
   });
 });

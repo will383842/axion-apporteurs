@@ -114,6 +114,76 @@ describe('REQ-GOV-029 — comparer un chemin, c’est le normaliser', () => {
     expect(fautes.map((f) => f.message.slice(0, 120))).toEqual([]);
   });
 
+  /**
+   * (6) UN SEGMENT QUI DEVIENT POINT APRÈS NORMALISATION. La primitive nettoyait (NFKD, retrait des
+   * caractères sans glyphe) PUIS résolvait les remontants : un segment qui n'est pas `..` à l'écrit
+   * le devenait au nettoyage, et mangeait le segment `axionia`. Le verdict tombait à `non` — la
+   * seule réponse qui laisse passer — alors que la chaîne brute commence par `axionia/`. Le schéma
+   * ne refusait que le remontant littéral. Remède : un segment dont la forme comparée diffère de la
+   * forme écrite et qui devient `.`, `..` ou vide rend la comparaison INDÉCIDABLE — jamais résolue.
+   */
+  const DEVIENT_POINT = [
+    'axionia/‥/src/x.ts', // point de conduite double
+    'axionia/．．/src/x.ts', // points pleine chasse
+    'axionia/․․/x.ts', // points de conduite simples
+    'axionia/.ㅤ./src/x.ts', // remplisseur hangul entre deux points
+    'axionia/.́./x.ts', // marque combinante entre deux points
+    'axionia/x/‥/‥/y.ts', // deux remontants déguisés, plus profond
+  ];
+
+  it('REQ-GOV-029 · TÉMOIN (6) un segment qui devient point après normalisation — la tâche partners est refusée', () => {
+    const passees = DEVIENT_POINT.filter((f) => !isole(f));
+    expect(
+      passees,
+      `forme(s) qui traversent isolation_depot : ${passees.map((f) => JSON.stringify(f)).join(', ')}`
+    ).toEqual([]);
+  });
+
+  it('REQ-GOV-029 · TÉMOIN (6) — la primitive ne rend jamais `non` pour un segment qui devient point', () => {
+    const non = DEVIENT_POINT.filter((f) => conventions.estSousLeDossier(f, 'axionia') === 'non');
+    expect(non.map((f) => JSON.stringify(f))).toEqual([]);
+    // Le nettoyage ne RÉSOUT pas un segment qu'il a fabriqué : il le signale.
+    expect(conventions.estSousLeDossier('axionia/‥/src/x.ts', 'axionia')).toBe('indecidable');
+  });
+
+  it('REQ-GOV-029 · TÉMOIN — un chemin PLUS COURT que le dossier et illisible n’est pas `non` (dossier profond)', () => {
+    // Un seul segment, dont les barres sont des lettres : il peut désigner `scripts/gates/x.ts`.
+    expect(conventions.estSousLeDossier('scripts∕gates∕x.ts', 'scripts/gates')).toBe(
+      'indecidable'
+    );
+    // Contre-face : plus court et entièrement lisible, rien dessous.
+    expect(conventions.estSousLeDossier('scripts', 'scripts/gates')).toBe('non');
+  });
+
+  it('REQ-GOV-029 · TÉMOIN — une écriture indécidable ENTRE dans la population des gardes, elle n’en sort pas', () => {
+    const suivis = [
+      'scripts/gates/gov-x.ts',
+      'scripts/gates/‥/gov-y.ts',
+      'scripts/gates/‥/‥/gov-z.ts',
+      'docs/gov-w.ts',
+    ];
+    const { surLeDisque } = conventions.confronterDisqueEtRegistre({
+      ...VUE_CONFORME,
+      fichiersSuivis: suivis,
+    });
+    expect(surLeDisque).toEqual(suivis.slice(0, 3));
+  });
+
+  it('REQ-GOV-029 · CONTRE-TÉMOIN (6) — les points ÉCRITS restent comparés comme avant', () => {
+    expect(conventions.estSousLeDossier('docs/../axionia/x.ts', 'axionia')).toBe('oui');
+    expect(conventions.estSousLeDossier('axionia/../docs/x.ts', 'axionia')).toBe('non');
+    const legitimes = [
+      'docs/..notes.md',
+      'docs/.../x.md',
+      'src/app/[...slug]/page.tsx',
+      'docs/spec/Présentation générale.md', // accents décomposés, lettres présentes
+    ];
+    expect(legitimes.filter((c) => isole(c))).toEqual([]);
+    expect(legitimes.map((c) => conventions.estSousLeDossier(c, 'axionia'))).toEqual(
+      legitimes.map(() => 'non')
+    );
+  });
+
   it('REQ-GOV-029 · la comparaison passe par une primitive UNIQUE, jamais par un `startsWith` recopié', () => {
     expect(typeof (conventions as Record<string, unknown>).estSousLeDossier).toBe('function');
     const code = readFileSync(GARDE, 'utf8')

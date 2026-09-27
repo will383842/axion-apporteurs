@@ -133,6 +133,25 @@ describe('REQ-GOV-021 — un chemin de `paths` désigne CE dépôt, sous sa form
     expect(refuses(formes), `formes acceptées : ${montrer(refuses(formes))}`).toEqual([]);
   });
 
+  it('REQ-GOV-021 · (e) un segment qui ne devient point, remontant ou vide QU’APRÈS normalisation est refusé', () => {
+    // (d) ne refuse que l'écriture littérale ; le comparateur (GOV-051), lui, normalise. Un segment
+    // fait seulement de points de compatibilité et de caractères sans glyphe est refusé à l'écrit.
+    const formes = [
+      'axionia/‥/src/x.ts',
+      'axionia/．．/src/x.ts',
+      'axionia/․․/x.ts',
+      'axionia/.ㅤ./src/x.ts',
+      'axionia/.́./x.ts',
+      'axionia/x/‥/‥/y.ts',
+      'docs/﹒/plan.md',
+      'docs/ㅤ/plan.md',
+    ];
+    expect(refuses(formes), `formes acceptées : ${montrer(refuses(formes))}`).toEqual([]);
+    // Contre-face : des points ÉCRITS dans un nom, ou trois points, ne sont pas un remontant.
+    const legitimes = ['docs/..notes.md', 'docs/.../x.md', 'src/app/[...slug]/page.tsx'];
+    expect(legitimes.filter((f) => !accepte(f))).toEqual([]);
+  });
+
   it('REQ-GOV-021 · la forme est tenue de bout en bout : `gov:tasks` refuse un chemin qui remonte hors du dépôt', () => {
     const fautif = {
       version: doc.version,
