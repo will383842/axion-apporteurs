@@ -8,14 +8,14 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `9620e4d` — 2026-09-27T06:30:49+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #82 (un conflit avec `main`) · 2. #165 (état `UNKNOWN`) · 3. #168 (état `UNKNOWN`) |
+| Qu’est-ce qui est en vol ? | 1. #82 (rien) · 2. #168 (rien) · 3. #165 (un contrôle requis rouge ou une revue manquante) |
 | Qui tient quoi ? | QA-T07 (A05) |
 | Où en est la phase ? | phase 0 — 47/116 tâches, reste 53.10 j |
-| Le prochain pas | SEC-17 — Rôles console : enum `ConsoleRole { admin, qualifieur, comptable, lecteur }`, matrice SSOT, `requireRole`, garde AST (chemin critique) |
+| Le prochain pas | fusionner #82, puis SEC-17 — Rôles console : enum `ConsoleRole { admin, qualifieur, comptable, lecteur }`, matrice SSOT, `requireRole`, garde AST (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
 | Dernière entrée de journal | PR #169 — 2026-09-27 |
 
-**Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** `gh pr view 82 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : 0
 
@@ -60,9 +60,9 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
-| 2 | #165 — feat(SEC-17): lot L0-07 — rôles console, matrice unique, requireRole ; gates structurelles de la charte | `t/lot-l0-07` | état `UNKNOWN` — à qualifier à la main |
-| 3 | #168 — chore(GOV-045): lot L0-08 — refus nommés, clé double, schema/paths, attestation, occurrences | `t/lot-l0-08` | état `UNKNOWN` — à qualifier à la main |
+| 1 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | rien — fusionnable maintenant |
+| 2 | #168 — chore(GOV-045): lot L0-08 — refus nommés, clé double, schema/paths, attestation, occurrences | `t/lot-l0-08` | rien — fusionnable maintenant |
+| 3 | #165 — feat(SEC-17): lot L0-07 — rôles console, matrice unique, requireRole ; gates structurelles de la charte | `t/lot-l0-07` | un contrôle requis rouge ou une revue manquante |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -76,11 +76,13 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 
 ## Décisions du jour
 
-`docs/adr/0022-carte-du-schema-des-phases-0-et-1.md` — partners/ADR-0022 — La carte du schéma des phases 0 et 1 : une table, un créateur ; un type de journal par genre de transition
+`docs/adr/0008-contrat-evenements-enveloppe-et-nomenclature.md` — partners/ADR-0008 — Le contrat d'événements : enveloppe sur le fil, sept types, empreinte du JSON Schema · `docs/adr/0022-carte-du-schema-des-phases-0-et-1.md` — partners/ADR-0022 — La carte du schéma des phases 0 et 1 : une table, un créateur ; un type de journal par genre de transition · `docs/adr/0023-route-des-coordonnees-de-candidature.md` — partners/ADR-0023 — Les coordonnées d'un candidat se tirent par une route HMAC d'axionia, jamais par un événement
 
 Dérivé de `git log` sur `docs/adr/`, restreint au jour du dernier atterrissage. Une décision de Will n’est pas un ADR : elle vit au registre `docs/DECISIONS.md`, tranchée ou tenue par une hypothèse datée.
 
 ## Prochain pas
+
+**Fusionner #82** — elle est en tête de file et ne bloque sur rien.
 
 **SEC-17** — Rôles console : enum `ConsoleRole { admin, qualifieur, comptable, lecteur }`, matrice SSOT, `requireRole`, garde AST (1 j, **sur le chemin critique**) : 35 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
@@ -114,11 +116,11 @@ Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écr
 
 ### PR #165 — 2026-09-27 — feat(SEC-17): lot L0-07 — rôles console, matrice unique, requireRole ; gates structurelles de la charte
 
-**Fait.** SEC-17 : la table `utilisateurs_console` (rôle `ConsoleRole`, courriel et nom chiffrés, empreinte unique, `desactive_at`), la connexion de la console par le même lien magique (`utilisateur_console_id` sur `liens_magiques` et `sessions_espace`, `apporteur_id` relâché, CHECK d'une seule population, population figée par deux déclencheurs neufs), migration `20260927000200_utilisateurs_console` et module du semeur `prisma/seed/06-console.ts`. La matrice des droits par rôle vit dans `src/server/roles/matrice.ts`, défaut = refus ; `requireRole` relit rôle et désactivation à chaque requête ; l'espace refuse une session et un lien de la console. La garde `securite:roles` dérive du disque les actions et routes de la console — toute valeur exportée d'un module `'use server'` et toute méthode HTTP d'un `route.ts`, sous toute forme d'export — et les confronte à la matrice rôle par rôle ; un site dont le corps ne s'établit pas dans le fichier est une faute nommée (`export_non_jugeable`), jamais un silence. JUR-T26 : `jur:aucun-agregat-reseau`, `jur:aucune-progression`, `jur:revue-apporteur-facing` (label, checklist des douze motifs, revue A07 sous `--pr`, CODEOWNERS), `jur:lexique-social`, et la gate lexicale étendue aux ressources diffusées et aux composants de l'espace. `scripts/gates/jur-revue-apporteur-facing.ts`, qui juge la revue A07, devient une racine de la garde des revues (`RACINES_DE_LA_GARDE_DES_REVUES`). Mutation : 100 pour cent, 269 mutants sur 269.
+**Fait.** SEC-17 : la table `utilisateurs_console` (rôle `ConsoleRole`, courriel et nom chiffrés, empreinte unique, `desactive_at`), la connexion de la console par le même lien magique (`utilisateur_console_id` sur `liens_magiques` et `sessions_espace`, `apporteur_id` relâché, CHECK d'une seule population, population figée par deux déclencheurs neufs), migration `20260927000200_utilisateurs_console` et module du semeur `prisma/seed/06-console.ts`. La matrice des droits par rôle vit dans `src/server/roles/matrice.ts`, défaut = refus ; `requireRole` relit rôle et désactivation à chaque requête ; l'espace refuse une session et un lien de la console. La garde `securite:roles` dérive du disque les actions et routes de la console — toute valeur exportée d'un module `'use server'` et toute méthode HTTP d'un `route.ts`, sous toute forme d'export — et les confronte à la matrice rôle par rôle ; un site dont le corps ne s'établit pas dans le fichier est une faute nommée (`export_non_jugeable`), jamais un silence. Ne s'établissent que la déclaration de fonction et la `const`, déclarées une fois et jamais réassignées ; une liaison réassignable, une déstructuration exportée (un site par nom lié) et un import-equals exporté ne se jugent pas ; un nom n'est écarté comme type que s'il ne désigne aucune valeur, importée comprise ; les fichiers JavaScript du périmètre sont lus, et une méthode qui porte la directive est une action. JUR-T26 : `jur:aucun-agregat-reseau`, `jur:aucune-progression`, `jur:revue-apporteur-facing` (label, checklist des douze motifs, revue A07 sous `--pr`, CODEOWNERS), `jur:lexique-social`, et la gate lexicale étendue aux ressources diffusées et aux composants de l'espace. `scripts/gates/jur-revue-apporteur-facing.ts`, qui juge la revue A07, devient une racine de la garde des revues (`RACINES_DE_LA_GARDE_DES_REVUES`). Mutation : 100 pour cent, 269 mutants sur 269.
 
-**Reste.** La route de connexion de la console et le premier écran, avec sa ligne dans la matrice : UX-P1-12. Au registre, le périmètre de `GATE-JUR-TEXTES-APPORTEURS` dans son `verifie` ; les chemins de SEC-17 et JUR-T26, le `verifie` et la `preuveRouge` des cinq gardes sont écrits. Le mot « challenge » au lexique interdit : REQ-JUR-012, JUR-T13.
+**Reste.** La route de connexion de la console et le premier écran, avec sa ligne dans la matrice : UX-P1-12. Au registre, le `verifie` et la `preuveRouge` de `securite:roles` à relever sur la résolution des noms locaux et les fichiers JavaScript. Le périmètre de `GATE-JUR-TEXTES-APPORTEURS` est écrit dans son `verifie`, comme les chemins de SEC-17 et JUR-T26 et le `verifie` et la `preuveRouge` des cinq gardes. Déclarés hors de la garde : `layout`, `default` et les autres fichiers de routage qui ne sont ni `page` ni `route`, et un appel `x.requireRole` sur un objet quelconque. Le mot « challenge » au lexique interdit : REQ-JUR-012, JUR-T13.
 
-**Appris.** Stryker mute le fichier ENTIER que la PR touche : modifier une ligne de `lien-magique.ts` a fait remonter quinze survivants de SEC-03, dont neuf statiques — un motif, une chaîne de domaine, un `Set` en constante de module sont évalués au chargement, avant toute activation de mutant. Les passer dans la fonction qui les lit les fait tuer par les tests existants ; un encodage `utf8` écrit là où l'API l'a par défaut, ou un `typeof` avant un `includes`, sont des mutants ÉQUIVALENTS qu'on retire au lieu de les tester. Et Postgres enchaîne les déclencheurs `BEFORE` d'une même table dans l'ordre ALPHABÉTIQUE de leurs noms : c'est ce qui laisse corriger la sortie d'un déclencheur protégé par un déclencheur neuf, sans réécrire la fonction protégée que `partners:migrations:additive` interdit de remplacer. Enfin, une garde qui énumère les formes d'export qu'elle reconnaît laisse passer en silence toutes les autres : elle doit compter CHAQUE valeur exportée comme un site, et faire de celles dont elle ne voit pas le corps une faute.
+**Appris.** Stryker mute le fichier ENTIER que la PR touche : modifier une ligne de `lien-magique.ts` a fait remonter quinze survivants de SEC-03, dont neuf statiques — un motif, une chaîne de domaine, un `Set` en constante de module sont évalués au chargement, avant toute activation de mutant. Les passer dans la fonction qui les lit les fait tuer par les tests existants ; un encodage `utf8` écrit là où l'API l'a par défaut, ou un `typeof` avant un `includes`, sont des mutants ÉQUIVALENTS qu'on retire au lieu de les tester. Et Postgres enchaîne les déclencheurs `BEFORE` d'une même table dans l'ordre ALPHABÉTIQUE de leurs noms : c'est ce qui laisse corriger la sortie d'un déclencheur protégé par un déclencheur neuf, sans réécrire la fonction protégée que `partners:migrations:additive` interdit de remplacer. Enfin, une garde qui énumère les formes d'export qu'elle reconnaît laisse passer en silence toutes les autres : elle doit compter CHAQUE valeur exportée comme un site, et faire de celles dont elle ne voit pas le corps une faute. Et une garde qui suit un nom local juge la valeur que le module sert à la FIN de son évaluation : l'initialiseur d'une liaison réassignable ne dit rien de cette valeur, et un type homonyme ne retire pas la valeur importée qui porte le même nom.
 
 … 3 entrée(s) affichée(s) sur 70 ; les 67 plus ancienne(s) se lisent dans `docs/journal/`.
 
