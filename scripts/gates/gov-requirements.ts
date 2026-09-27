@@ -489,12 +489,155 @@ export const FAMILLES = [
  */
 const LANCE_EN_SCRIPT = /[\\/]gates[\\/]gov-requirements\.ts$/.test(process.argv[1] ?? '');
 
+// ── la lecture du TEXTE du registre (GOV-072) ────────────────────────────────
+/**
+ * UNE CLÉ ÉCRITE DEUX FOIS NE SE VOIT QUE DANS LE TEXTE. `JSON.parse` garde la DERNIÈRE
+ * occurrence d'une clé répétée : une exigence peut être remplacée en silence par une seconde
+ * écriture de la même clé, et toute garde qui juge l'OBJET obtenu reste verte. Cette lecture
+ * parcourt le texte lui-même, à toute profondeur, et nomme chaque clé répétée avec ses deux
+ * positions (`ligne:colonne`). Un texte illisible rend un refus NOMMÉ, jamais une exception.
+ */
+export interface DoublonDeCle {
+  cle: string;
+  /** L'objet qui porte la clé répétée, en notation pointée (`exigences[0]`). */
+  chemin: string;
+  premiere: string;
+  seconde: string;
+}
+export interface LectureDuRegistre {
+  /** `null` si le texte est lisible ; sinon le motif, position comprise. */
+  illisible: string | null;
+  doublons: DoublonDeCle[];
+  /** Le nombre de clés d'objet réellement confrontées dans le texte. */
+  cles: number;
+  doc: unknown;
+}
+
+class TexteIllisible extends Error {
+  constructor(
+    readonly position: number,
+    motif: string
+  ) {
+    super(motif);
+  }
+}
+
+export function lireLeRegistre(texte: string): LectureDuRegistre {
+  const n = texte.length;
+  const doublons: DoublonDeCle[] = [];
+  let cles = 0;
+  let i = 0;
+  const ligneColonne = (k: number): [number, number] => {
+    const avant = texte.slice(0, k);
+    return [avant.split('\n').length, k - avant.lastIndexOf('\n')];
+  };
+  const lc = (k: number) => ligneColonne(k).join(':');
+  const echouer = (motif: string): never => {
+    throw new TexteIllisible(i, motif);
+  };
+  const blancs = () => {
+    while (i < n && ' \t\n\r'.includes(texte[i]!)) i++;
+  };
+  const chaine = (): string => {
+    const debut = i++;
+    while (i < n) {
+      const c = texte[i]!;
+      if (c === '"') return JSON.parse(texte.slice(debut, ++i)) as string;
+      if (c === '\\') i += 2;
+      else if (c < ' ') echouer('caractère de contrôle dans une chaîne');
+      else i++;
+    }
+    return echouer('chaîne non refermée');
+  };
+  const SCALAIRE = /-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?|true|false|null/y;
+  const valeur = (chemin: string): void => {
+    blancs();
+    const c = texte[i];
+    if (c === '{') {
+      i++;
+      const vues = new Map<string, number>();
+      blancs();
+      if (texte[i] === '}') {
+        i++;
+        return;
+      }
+      for (;;) {
+        blancs();
+        if (texte[i] !== '"') echouer('clé attendue');
+        const a = i;
+        const cle = chaine();
+        cles++;
+        const deja = vues.get(cle);
+        if (deja === undefined) vues.set(cle, a);
+        else
+          doublons.push({ cle, chemin: chemin || '(racine)', premiere: lc(deja), seconde: lc(a) });
+        blancs();
+        if (texte[i] !== ':') echouer('« : » attendu');
+        i++;
+        valeur(chemin ? `${chemin}.${cle}` : cle);
+        blancs();
+        if (texte[i] === ',') i++;
+        else if (texte[i] === '}') return void i++;
+        else echouer('« , » ou « } » attendu');
+      }
+    }
+    if (c === '[') {
+      i++;
+      blancs();
+      if (texte[i] === ']') {
+        i++;
+        return;
+      }
+      for (let rang = 0; ; rang++) {
+        valeur(`${chemin}[${rang}]`);
+        blancs();
+        if (texte[i] === ',') i++;
+        else if (texte[i] === ']') return void i++;
+        else echouer('« , » ou « ] » attendu');
+      }
+    }
+    if (c === '"') {
+      chaine();
+      return;
+    }
+    SCALAIRE.lastIndex = i;
+    const m = SCALAIRE.exec(texte);
+    if (m === null) echouer('valeur attendue');
+    i += m![0].length;
+  };
+  try {
+    valeur('');
+    blancs();
+    if (i < n) echouer('texte après la fin du document');
+    return { illisible: null, doublons, cles, doc: JSON.parse(texte) as unknown };
+  } catch (e) {
+    const k = e instanceof TexteIllisible ? e.position : i;
+    const [l, col] = ligneColonne(Math.min(k, n));
+    const motif = e instanceof Error ? e.message : String(e);
+    return { illisible: `ligne ${l}, colonne ${col} : ${motif}`, doublons: [], cles, doc: null };
+  }
+}
+
+/** Les refus NOMMÉS d'une lecture du registre — vide si le texte est sain. */
+export function refusDeLecture(lu: LectureDuRegistre, chemin: string): string[] {
+  if (lu.illisible !== null) {
+    return [`❌ gov:requirements — registre_illisible : ${chemin}, ${lu.illisible}.`];
+  }
+  return lu.doublons.map(
+    (d) =>
+      `❌ gov:requirements — cle_ecrite_deux_fois : la clé « ${d.cle} » est écrite deux fois dans ` +
+      `${d.chemin} de ${chemin} — en ${d.premiere} puis en ${d.seconde} (ligne:colonne). L’analyse ` +
+      `ne garderait que la seconde, en silence.`
+  );
+}
+
 /** Les sources, lues au LANCEMENT et jamais à l'import. */
 function sources(): {
   schema: object;
   taches: Tache[];
   doc: { exigences: Exigence[] };
   annexe: string;
+  clesConfrontees: number;
 } {
   for (const f of [CHEMIN_REGISTRE, CHEMIN_SCHEMA, CHEMIN_TACHES, CHEMIN_ANNEXE]) {
     if (!existsSync(f)) {
@@ -502,11 +645,20 @@ function sources(): {
       process.exit(1);
     }
   }
+  // Le registre se lit par son TEXTE avant d'être jugé par son objet : tous les modes (normal,
+  // `--prove`, `--render`, `--verifie-rendu`) passent ici, donc tous refusent.
+  const lu = lireLeRegistre(readFileSync(CHEMIN_REGISTRE, 'utf8'));
+  const refus = refusDeLecture(lu, CHEMIN_REGISTRE);
+  if (refus.length > 0) {
+    for (const l of refus) console.error(l);
+    process.exit(1);
+  }
   return {
     schema: JSON.parse(readFileSync(CHEMIN_SCHEMA, 'utf8')) as object,
     taches: (JSON.parse(readFileSync(CHEMIN_TACHES, 'utf8')) as { taches: Tache[] }).taches,
-    doc: JSON.parse(readFileSync(CHEMIN_REGISTRE, 'utf8')) as { exigences: Exigence[] },
+    doc: lu.doc as { exigences: Exigence[] },
     annexe: readFileSync(CHEMIN_ANNEXE, 'utf8'),
+    clesConfrontees: lu.cles,
   };
 }
 
@@ -932,7 +1084,14 @@ export function modeNormal(
 }
 
 if (LANCE_EN_SCRIPT) {
-  const r = modeNormal(sources());
+  const src = sources();
+  const r = modeNormal(src);
   for (const l of r.lignes) (r.code === 0 ? console.log : console.error)(l);
+  if (r.code === 0) {
+    console.log(
+      `   ${src.clesConfrontees} clé(s) d’objet confrontée(s) dans le TEXTE de ${CHEMIN_REGISTRE}, ` +
+        `aucune écrite deux fois (GOV-072).`
+    );
+  }
   process.exit(r.code);
 }

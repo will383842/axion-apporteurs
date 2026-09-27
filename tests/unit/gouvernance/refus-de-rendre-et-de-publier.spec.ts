@@ -33,13 +33,17 @@ import {
   mkdtempSync,
   mkdirSync,
   rmSync,
-  readdirSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve, dirname } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { fichiersSuivis } from '../../../scripts/lot/fichiers-suivis';
 import { declarationsDeLaBase, declarationsRetirees } from './declarations-de-sorties';
+import {
+  ajoutsNonDeclares,
+  compterSorties,
+  enumererFichiers,
+} from '../../../scripts/gates/registre-des-refus';
 
 /** Ce fichier, tel que `origin/main` le porte : le cliquet des sorties se lit contre lui. */
 const CE_FICHIER = 'tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts';
@@ -95,26 +99,10 @@ function exigerQueLeRefusSORTE(nom: string, source: string, ancre: string): void
   expect(bloc.includes('process.exit(0)'), `${nom} : le refus sort en SUCCÈS`).toBe(false);
 }
 
-/**
- * Les extensions que le compilateur connaît (`ts.Extension`), DÉRIVÉES et jamais tapées — données
- * `.json` comprises, le sens bavard de l'erreur.
- */
-const EXTENSIONS_DE_CODE: string[] = Object.values(ts.Extension);
-
-/**
- * L'énumération du DISQUE, partagée par les deux gardes de ce fichier.
- *
- * Elle était locale à la garde de conservation ; la garde d'adjacence en avait besoin aussi et
- * s'en est passée, avec une liste de fichiers TAPÉE — motif de la lentille `schema` au 19e tour :
- * *l'énumérateur du disque existait déjà dans le même fichier, 270 lignes plus bas.*
- */
-function enumererFichiers(dossier: string): string[] {
-  return readdirSync(dossier, { withFileTypes: true }).flatMap((e) => {
-    const chemin = `${dossier}/${e.name}`;
-    if (e.isDirectory()) return e.name === 'node_modules' ? [] : enumererFichiers(chemin);
-    return EXTENSIONS_DE_CODE.some((x) => e.name.endsWith(x)) ? [chemin] : [];
-  });
-}
+// L'énumération du DISQUE, partagée par les gardes de ce fichier, vit dans
+// `scripts/gates/registre-des-refus.ts` (`enumererFichiers`), avec le motif des sorties : le
+// cliquet et la spec qui nomme chaque sortie énumèrent le même disque (RM-01). Elle était déjà
+// née d'un doublon — une liste de fichiers TAPÉE à côté d'un énumérateur existant.
 
 const TRACE = readFileSync('scripts/gates/gov-trace.ts', 'utf8');
 const TACHES = readFileSync('scripts/gates/gov-tasks.ts', 'utf8');
@@ -543,10 +531,12 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
       porte: 3,
       temoins: 0,
       raison:
-        'GOV-038 — atteste une livraison faite dans un AUTRE dépôt. Les trois sorties sont des ' +
-        "refus d'usage : `--en-ligne` absent, appel `gh` en échec, PR non résolue. Aucune ne " +
-        'garde un invariant de sécurité de CE dépôt ; leur témoin viendra avec la tâche qui ' +
-        'câblera la gate en CI.',
+        'GOV-038, GOV-042 — résout en ligne CHAQUE attestation du backlog, locales comprises (veto ' +
+        'sécurité 5328941794, PR 168). Trois sorties : `--en-ligne` absent (2), backlog introuvable ' +
+        '(1), au moins une attestation qui ne résout pas — forge illisible comprise, échec fermé ' +
+        '(1). La règle est `resoudreAttestations`, vue rougir sur forge et git SIMULÉS par ' +
+        'un-statut-fusionnee-porte-sa-preuve.spec.ts ; les sorties du binaire, qui lance `gh`, ' +
+        'n’ont pas de témoin d’effet : un témoin qui lance `gh` rendrait la suite intermittente.',
     },
     'scripts/gates/perf-budgets.ts': {
       total: 4,
@@ -616,10 +606,14 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
         'entre lui et sa base, et la base bouge.* GOV-038 y ajoute `pr_nu_hors_depot`.',
     },
     'scripts/gates/gov-requirements.ts': {
-      total: 3,
-      porte: 8,
+      total: 1,
+      porte: 9,
       temoins: 1,
-      raison: 'le refus de rendre a un témoin ; 2 non couverts.',
+      raison:
+        'le refus de rendre a un témoin ; 2 non couverts. GOV-072 — UNE sortie ajoutée dans ' +
+        '`sources()` : le registre lu par son TEXTE, clé écrite deux fois ou texte illisible, refusé ' +
+        'en nommant clé et positions. Son témoin d’EFFET à deux faces lance le binaire sur un bac ' +
+        'et sur le dépôt (une-cle-ecrite-deux-fois.spec.ts) ; il ne vit pas dans `REFUS`.',
     },
     'scripts/gates/schema-enums.ts': {
       total: 5,
@@ -877,6 +871,36 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
         'famille est vue rendre 1 par score-de-mutation.spec.ts. Le binaire n’est pas lancé par un ' +
         'témoin : il lance Stryker. Dette DÉCLARÉE.',
     },
+    // ── GOV-054 : LES SORTIES DIFFÉRÉES, ARBITRÉES ET NON SUBIES ────────────────────────────
+    // Le motif ne voyait que la sortie IMMÉDIATE. `scripts/plan-state/build.ts` portait TROIS
+    // affectations non nulles du code de sortie — les deux refus de `plan-state:verifier` entrés
+    // par la PR #36 sans que le cliquet bouge, et le plafond de questions du mode de rendu. La PR
+    // #158 (GOV-053) en a ajouté une QUATRIÈME : `rubriques_dues_non_declarees`, l'échec fermé
+    // de GOV-055 quand la liste des rubriques dues est introuvable. La déclaration suit le disque. Le
+    // motif les voit désormais ; comptées des DEUX côtés du diff, elles laissent le delta à zéro,
+    // et c'est ICI qu'elles entrent au registre, une fois, avec leur motif. La somme des `total`
+    // déclarés gagne donc exactement ces quatre-là — l'écart vient de ce fichier, pas d'un ajout.
+    'scripts/plan-state/build.ts': {
+      total: 4,
+      porte: 4,
+      temoins: 0,
+      raison:
+        'GOV-054 — quatre sorties DIFFÉRÉES (affectation du code de sortie, pour laisser finir ' +
+        'l’impression) : vue absente, rubriques dues non déclarées (GOV-055, PR #158) et vue ' +
+        'dérivée en `plan-state:verifier`, plafond de questions en rendu. La dérive de la vue est ' +
+        'vue rougir par les specs de PLAN-STATE, qui ne vivent pas dans `REFUS`. Dette DÉCLARÉE.',
+    },
+    'scripts/lot/cloture.ts': {
+      total: 1,
+      porte: 1,
+      temoins: 0,
+      raison:
+        'GOV-042 — `--rattraper-attestations` : UNE sortie DIFFÉRÉE, posée quand un échec de la ' +
+        'recherche du commit d’atterrissage n’est pas déclaré au passif — il appelle une décision, ' +
+        'pas un SHA plausible. Le binaire à blanc est vu sortir 0 sur le dépôt ' +
+        '(un-statut-fusionnee-porte-sa-preuve.spec.ts) ; la branche rouge n’a pas de témoin ' +
+        'd’effet. Dette DÉCLARÉE.',
+    },
   };
 
   // 🔴 ON COMPTE SUR LE DISQUE, PAS DANS LE DIFF COMMITÉ. Ma première version lisait
@@ -894,8 +918,10 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
   // imprime `[coordonnee_en_clair]` sur un IBAN d'un corps publié en dépôt PUBLIC **et sort 0**,
   // sans qu'aucun compteur ne bouge. *Un compteur qui cherche une orthographe ne compte pas une
   // famille* — et c'est la deuxième fois que l'EXTENSION de cette garde est trop étroite.
-  const SORTIE_NON_NULLE = /process\.exit\(\s*(?!0\s*\))/g;
-  const compter = (texte: string) => (texte.match(SORTIE_NON_NULLE) ?? []).length;
+  // Le motif vit dans `scripts/gates/registre-des-refus.ts` (`SORTIE_NON_NULLE`), importé : le
+  // cliquet et la spec qui NOMME chaque sortie (`cliquet-nomme-chaque-refus.spec.ts`) comptent
+  // la même famille (RM-01).
+  const compter = compterSorties;
   const surMain = (f: string) => {
     try {
       return compter(
@@ -980,11 +1006,10 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
       'le registre `declares` est VIDE : on ne peut pas faire baisser la dette en la supprimant'
     ).toBeGreaterThan(0);
 
-    for (const [f, n] of [...ajoutesParFichier].sort()) {
-      const d = declares[f];
-      expect(d, `${f} ajoute ${n} \`process.exit(1)\` et n’est PAS déclaré ici`).toBeDefined();
-      expect(d!.total, `${f} : ${n} exits ajoutés, ${d!.total} déclarés`).toBe(n);
-    }
+    // La confrontation est la fonction partagée `ajoutsNonDeclares` : son témoin ROUGE sur une
+    // sortie DIFFÉRÉE fabriquée vit dans `cliquet-sorties-differees.spec.ts` (GOV-054).
+    const ecarts = ajoutsNonDeclares(ajoutesParFichier, declares);
+    expect(ecarts, ecarts.join('\n')).toEqual([]);
     // 🔴 UN FICHIER DÉCLARÉ QUI N'AJOUTE PLUS RIEN A ATTERRI — ce n'est pas une omission.
     // Mesuré à la réconciliation de `gov-038` : `main` ayant absorbé les PR #31 et #32, les NEUF
     // entrées qu'elles avaient déclarées sont passées à un delta de ZÉRO d'un coup. Les faire
@@ -1611,7 +1636,13 @@ const GATES_A_TEMOIN_D_EFFET = [
     depot: 'partiel' as const,
     vue: 'docs/TASKS.md',
     script: 'scripts/gates/gov-tasks.ts',
-    fichiers: ['docs/tasks.json', 'docs/DECISIONS.md', 'scripts/lot/tasks.schema.json'],
+    // GOV-093 — la charte donne les chemins de schéma que `gov:tasks` confronte aux `paths`.
+    fichiers: [
+      'docs/tasks.json',
+      'docs/DECISIONS.md',
+      'scripts/lot/tasks.schema.json',
+      'docs/CHARTE-AGENTS.md',
+    ],
     // Une dépendance vers une tâche qui n'existe pas : faute RÉELLE, contrôlée par la gate.
     fautes: [
       {
