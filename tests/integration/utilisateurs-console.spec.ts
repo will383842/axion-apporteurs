@@ -1,6 +1,6 @@
 // @req REQ-SEC-023
 /**
- * Les utilisateurs de la console en base RÉELLE — SEC-17 (partners/ADR-0022, point 8 de la tâche).
+ * Les utilisateurs de la console en base RÉELLE (REQ-SEC-023 ; partners/ADR-0022).
  *
  * CE QUE LA BASE TIENT, CONTRE TOUT APPELANT :
  *   — un lien magique et une session appartiennent à UNE population, jamais deux, jamais aucune :

@@ -1,5 +1,5 @@
 // @req REQ-SEC-023
-// @req REQ-UX-024
+// @req REQ-UX-024 → REQ-SEC-023
 /**
  * `matrice-des-roles.spec.ts` — les rôles de la console (SEC-17) : la matrice droits × rôles en UN
  * fichier, `requireRole` relu en base à chaque requête, et la garde qui confronte le disque à la
