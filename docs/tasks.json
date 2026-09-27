@@ -133,6 +133,11 @@
         "REQ-GOV-026": [
           "tests/unit/gouvernance/inventaire-prouve.spec.ts#REQ-GOV-026 — toute tâche en état ≥ « codé » porte au moins une preuve qui résout (chemin présent ou SHA retrouvé)"
         ]
+      },
+      "attestation": {
+        "pr": 2,
+        "sha": "c4a029defe6749fe5b514d14ad75e102fb1e4d49",
+        "fusionneeAt": "2026-09-03T15:18:26Z"
       }
     },
     {
@@ -180,6 +185,11 @@
           "tests/unit/gouvernance/regles-maison.spec.ts#REQ-GOV-023 — ROUGE : consolidation de plus de 7 jours ALORS QUE des « appris » attendent",
           "tests/unit/gouvernance/regles-maison.spec.ts#REQ-GOV-023 — CONTRE-TEMOIN : la meme peremption sans aucun « appris » en attente reste VERTE"
         ]
+      },
+      "attestation": {
+        "pr": 28,
+        "sha": "9597865be97b5a7de95b46827b3302cfb7b01e81",
+        "fusionneeAt": "2026-09-04T04:27:42Z"
       }
     },
     {
@@ -231,7 +241,12 @@
           "tests/unit/gouvernance/plan-state-frais.spec.ts#REQ-GOV-023 — chaque entree cite un numero de PR et porte fait / reste / appris"
         ]
       },
-      "acceptance": "`docs/PLAN-STATE.md` porte les sept rubriques de REQ-GOV-006 — bloc « REPRENDRE EN 30 SECONDES » en tete, file de fusion ORDONNEE avec ce qui bloque chaque PR, revendications rendues depuis leurs deux sources existantes, decisions du jour derivees de `git log`, prochain pas derive du chemin critique, journal rendu depuis `docs/journal/` — le tout DERIVE par `pnpm plan-state:build`, jamais ecrit a la main. La revendication ne cree aucun troisieme endroit : elle vit dans les labels `en_cours` + `owner:<Axx>` de l'issue et dans le champ `owner` du backlog. Garde `gov:etat` : 9 familles dont `plan_state_perime` (date du COMMIT, jamais `mergedAt` : 1 s d'ecart systematique mesure), `deux_pr_meme_tache`, `pr_fusionnee_sans_journal` ; sans `gh` elle ECHOUE en nommant les cinq familles non evaluees, jamais de vert silencieux. 8 contre-temoins verts."
+      "acceptance": "`docs/PLAN-STATE.md` porte les sept rubriques de REQ-GOV-006 — bloc « REPRENDRE EN 30 SECONDES » en tete, file de fusion ORDONNEE avec ce qui bloque chaque PR, revendications rendues depuis leurs deux sources existantes, decisions du jour derivees de `git log`, prochain pas derive du chemin critique, journal rendu depuis `docs/journal/` — le tout DERIVE par `pnpm plan-state:build`, jamais ecrit a la main. La revendication ne cree aucun troisieme endroit : elle vit dans les labels `en_cours` + `owner:<Axx>` de l'issue et dans le champ `owner` du backlog. Garde `gov:etat` : 9 familles dont `plan_state_perime` (date du COMMIT, jamais `mergedAt` : 1 s d'ecart systematique mesure), `deux_pr_meme_tache`, `pr_fusionnee_sans_journal` ; sans `gh` elle ECHOUE en nommant les cinq familles non evaluees, jamais de vert silencieux. 8 contre-temoins verts.",
+      "attestation": {
+        "pr": 28,
+        "sha": "9597865be97b5a7de95b46827b3302cfb7b01e81",
+        "fusionneeAt": "2026-09-04T04:27:42Z"
+      }
     },
     {
       "id": "GOV-002",
@@ -305,7 +320,12 @@
           "tests/unit/gouvernance/gardes.spec.ts#'gov:identifiants' > sait rougir : 3 témoins et 10 contre-témoins"
         ]
       },
-      "acceptance": "Garde `gov:identifiants` : un identifiant nu de la forme lettre + un ou deux chiffres (`D3`, `C12`, `D11`) est refusé dans tout fichier suivi. Deux distinctions sont portées par le code, parce que l'énoncé de REQ-GOV-003 les confondait : (a) `A` suivi de DEUX chiffres est un code de POSTE d'agent, espace de noms déclaré par `tasks.schema.json` (`^A[0-9]{2}$`), non un identifiant de décision ; (b) un identifiant entre guillemets est une CITATION, pas une référence — les documents qui expliquent la règle doivent pouvoir écrire son contre-exemple. Trois témoins vus rougir, dix contre-témoins vus rester verts."
+      "acceptance": "Garde `gov:identifiants` : un identifiant nu de la forme lettre + un ou deux chiffres (`D3`, `C12`, `D11`) est refusé dans tout fichier suivi. Deux distinctions sont portées par le code, parce que l'énoncé de REQ-GOV-003 les confondait : (a) `A` suivi de DEUX chiffres est un code de POSTE d'agent, espace de noms déclaré par `tasks.schema.json` (`^A[0-9]{2}$`), non un identifiant de décision ; (b) un identifiant entre guillemets est une CITATION, pas une référence — les documents qui expliquent la règle doivent pouvoir écrire son contre-exemple. Trois témoins vus rougir, dix contre-témoins vus rester verts.",
+      "attestation": {
+        "pr": 3,
+        "sha": "25a96debb527b6b88e8587f296a80ffa7e35adc9",
+        "fusionneeAt": "2026-09-03T15:42:27Z"
+      }
     },
     {
       "id": "GOV-004",
@@ -388,6 +408,11 @@
         "REQ-GOV-015": [
           "tests/unit/gouvernance/gardes.spec.ts#'gov:hypotheses' > sait rougir : ses 10 familles ont chacune un témoin"
         ]
+      },
+      "attestation": {
+        "pr": 3,
+        "sha": "25a96debb527b6b88e8587f296a80ffa7e35adc9",
+        "fusionneeAt": "2026-09-03T15:42:27Z"
       }
     },
     {
@@ -437,6 +462,11 @@
         "REQ-JUR-027": [
           "glossaire-enums.spec.ts"
         ]
+      },
+      "attestation": {
+        "pr": 31,
+        "sha": "e0dacf3b7de27315a2700798e8ae35efc151ffdd",
+        "fusionneeAt": "2026-09-09T21:59:31Z"
       }
     },
     {
@@ -517,6 +547,11 @@
           "tests/unit/gouvernance/adr-assertion-existe.spec.ts#REQ-GOV-009 — chaque ADR « accepte » cite un fichier de test qui existe et un titre it() qu'on y retrouve LITTERALEMENT",
           "tests/unit/gouvernance/adr-assertion-existe.spec.ts#REQ-GOV-009 — la preuve NOMME les quatre familles de GOV-010, elle ne les compte pas"
         ]
+      },
+      "attestation": {
+        "pr": 28,
+        "sha": "9597865be97b5a7de95b46827b3302cfb7b01e81",
+        "fusionneeAt": "2026-09-04T04:27:42Z"
       }
     },
     {
@@ -557,7 +592,12 @@
           "tests/unit/gouvernance/tracabilite.spec.ts#REQ-QA-014 : chaque famille a son témoin, et les contre-témoins restent verts"
         ]
       },
-      "acceptance": "`pnpm gov:trace` derive la matrice REQ -> tache -> test -> PR de quatre sources : le registre des exigences, le backlog, les fichiers de test presents sur le disque, et les corps de PR fusionnees (source FACULTATIVE, dont l'indisponibilite est imprimee, jamais tue, et ne rend jamais vert). Les titres de `it()` sont RESOLUS par `vitest list --json`, gabarits `describe.each` compris — une promesse perimee (« ses 11 familles » pour un fichier qui en annonce douze) est refusee ; le perimetre d'execution est LU dans `vitest.config.ts`, un test promis que vitest ne lance pas est refuse. « >= testee » est DERIVE (le registre ne porte aucune echelle de maturite). `docs/TRACABILITE.md` est la VUE, ecrite par `--render`, gardee par `--verifier`, reseau-free par construction. 10 familles, 8 contre-temoins verts."
+      "acceptance": "`pnpm gov:trace` derive la matrice REQ -> tache -> test -> PR de quatre sources : le registre des exigences, le backlog, les fichiers de test presents sur le disque, et les corps de PR fusionnees (source FACULTATIVE, dont l'indisponibilite est imprimee, jamais tue, et ne rend jamais vert). Les titres de `it()` sont RESOLUS par `vitest list --json`, gabarits `describe.each` compris — une promesse perimee (« ses 11 familles » pour un fichier qui en annonce douze) est refusee ; le perimetre d'execution est LU dans `vitest.config.ts`, un test promis que vitest ne lance pas est refuse. « >= testee » est DERIVE (le registre ne porte aucune echelle de maturite). `docs/TRACABILITE.md` est la VUE, ecrite par `--render`, gardee par `--verifier`, reseau-free par construction. 10 familles, 8 contre-temoins verts.",
+      "attestation": {
+        "pr": 28,
+        "sha": "9597865be97b5a7de95b46827b3302cfb7b01e81",
+        "fusionneeAt": "2026-09-04T04:27:42Z"
+      }
     },
     {
       "id": "GOV-012",
@@ -602,6 +642,11 @@
           "tests/unit/gouvernance/tout-check-est-cable.spec.ts#branche_non_protegee — la protection SUPPRIMÉE est un ROUGE, pas un indéterminé",
           "tests/unit/gouvernance/tout-check-est-cable.spec.ts#protection_non_lisible — protection NON LUE ⇒ verdict INDÉTERMINÉ, pas conforme"
         ]
+      },
+      "attestation": {
+        "pr": 28,
+        "sha": "9597865be97b5a7de95b46827b3302cfb7b01e81",
+        "fusionneeAt": "2026-09-04T04:27:42Z"
       }
     },
     {
@@ -639,7 +684,12 @@
           "lexique.spec.ts"
         ]
       },
-      "acceptance": "`pnpm gov:lexique` refuse tout usage PRESCRIPTIF des termes de REQ-GOV-017, durcie par REQ-JUR-037, sur sept motifs — `prisma/**`, `messages/**`, `src/**/*.tsx`, `src/app/(espace)/**`, gabarits e-mail, `micro-copy/**`, `docs/adr/**` — et un motif attendu qui ne balaie plus rien est une faute, pas un succes. La liste noire n'est pas dans la gate : elle est IMPORTEE de `src/domain/lexique/lexique-interdit.ts` — 9 familles, 63 formes flechies, deux portees, les marqueurs de denegation et les exceptions declarees avec elle (RM-01). La garde vise la TOURNURE et non le mot : l'usage denegatif ou definitionnel passe, l'usage prescriptif ou evaluatif rougit. Une garde qui ferait rougir la phrase qui PROTEGE forcerait a la retirer."
+      "acceptance": "`pnpm gov:lexique` refuse tout usage PRESCRIPTIF des termes de REQ-GOV-017, durcie par REQ-JUR-037, sur sept motifs — `prisma/**`, `messages/**`, `src/**/*.tsx`, `src/app/(espace)/**`, gabarits e-mail, `micro-copy/**`, `docs/adr/**` — et un motif attendu qui ne balaie plus rien est une faute, pas un succes. La liste noire n'est pas dans la gate : elle est IMPORTEE de `src/domain/lexique/lexique-interdit.ts` — 9 familles, 63 formes flechies, deux portees, les marqueurs de denegation et les exceptions declarees avec elle (RM-01). La garde vise la TOURNURE et non le mot : l'usage denegatif ou definitionnel passe, l'usage prescriptif ou evaluatif rougit. Une garde qui ferait rougir la phrase qui PROTEGE forcerait a la retirer.",
+      "attestation": {
+        "pr": 31,
+        "sha": "e0dacf3b7de27315a2700798e8ae35efc151ffdd",
+        "fusionneeAt": "2026-09-09T21:59:31Z"
+      }
     },
     {
       "id": "GOV-014",
@@ -685,6 +735,11 @@
         "REQ-GOV-029": [
           "gardes-transposees.spec.ts"
         ]
+      },
+      "attestation": {
+        "pr": 33,
+        "sha": "d864ca87b8877784a10b3bc39511613d872e49b5",
+        "fusionneeAt": "2026-09-12T08:27:50Z"
       }
     },
     {
@@ -785,6 +840,11 @@
         "REQ-GOV-020": [
           "tests/unit/integration/contrat-hash.spec.ts#REQ-GOV-020 → REQ-QA-007 — la fixture est celle du PRODUCTEUR REEL, et elle couvre les onze types (RM-03)"
         ]
+      },
+      "attestation": {
+        "pr": 28,
+        "sha": "9597865be97b5a7de95b46827b3302cfb7b01e81",
+        "fusionneeAt": "2026-09-04T04:27:42Z"
       }
     },
     {
@@ -926,6 +986,11 @@
         "REQ-GOV-027": [
           "tests/gov/charte-pr.spec.ts#REQ-GOV-027 : la famille `phase_gelee` est prouvee, temoin et contre-temoin"
         ]
+      },
+      "attestation": {
+        "pr": 1,
+        "sha": "b7deff6a222b59d300635a414029a77efc75d8b9",
+        "fusionneeAt": "2026-09-03T13:10:23Z"
       }
     },
     {
@@ -1010,7 +1075,12 @@
           "poids-du-bundle-garde-vraiment.spec.ts"
         ]
       },
-      "acceptance": "`perf/budgets.json` (une entree de budget par route) et `lighthouserc.json` existent, et leurs seuils sont DERIVES du texte de REQ-GOV-028 lu dans `docs/requirements.json` : `--rendre` les ecrit, `--verifier` rougit si le disque en differe, et le test RENVERSE la source pour prouver que l'attente se renverse — sans quoi un retour constant passerait pour une derivation. La garde rougit sur une route de `src/app/(espace)` sans entree, dans les DEUX sens du cliquet, et LEVE si le texte de l'exigence ne dit plus le seuil au lieu de retomber sur un defaut. Perimetre vide ASSUME ET DIT : elle imprime le nombre de routes balayees et declare qu'un vert a zero route ne juge aucune route. Aucune dependance ajoutee — le mesureur entre avec QA-T20. L'etape de Gate A qui l'appelle ne porte pas `continue-on-error`, et la famille `etape_ci_muselee` le refuse."
+      "acceptance": "`perf/budgets.json` (une entree de budget par route) et `lighthouserc.json` existent, et leurs seuils sont DERIVES du texte de REQ-GOV-028 lu dans `docs/requirements.json` : `--rendre` les ecrit, `--verifier` rougit si le disque en differe, et le test RENVERSE la source pour prouver que l'attente se renverse — sans quoi un retour constant passerait pour une derivation. La garde rougit sur une route de `src/app/(espace)` sans entree, dans les DEUX sens du cliquet, et LEVE si le texte de l'exigence ne dit plus le seuil au lieu de retomber sur un defaut. Perimetre vide ASSUME ET DIT : elle imprime le nombre de routes balayees et declare qu'un vert a zero route ne juge aucune route. Aucune dependance ajoutee — le mesureur entre avec QA-T20. L'etape de Gate A qui l'appelle ne porte pas `continue-on-error`, et la famille `etape_ci_muselee` le refuse.",
+      "attestation": {
+        "pr": 33,
+        "sha": "d864ca87b8877784a10b3bc39511613d872e49b5",
+        "fusionneeAt": "2026-09-12T08:27:50Z"
+      }
     },
     {
       "id": "GOV-020",
@@ -1049,6 +1119,11 @@
           "tests/unit/gouvernance/inventaire-prouve.spec.ts#REQ-GOV-026 — une étiquette dont ce dépôt ne résout pas le référent ne porte AUCUN état : une preuve inventée est pire qu'une preuve absente",
           "tests/unit/gouvernance/inventaire-prouve.spec.ts#REQ-GOV-026 — la garde sait rougir : ses 7 familles ont chacune un témoin, et ses contre-témoins restent verts"
         ]
+      },
+      "attestation": {
+        "pr": 28,
+        "sha": "9597865be97b5a7de95b46827b3302cfb7b01e81",
+        "fusionneeAt": "2026-09-04T04:27:42Z"
       }
     },
     {
@@ -1092,6 +1167,11 @@
           "tests/unit/gouvernance/fiches-agents.spec.ts#REQ-GOV-010 — chaque chemin reserve du §7 nomme un poste de la source (gate de l’exigence)",
           "tests/unit/gouvernance/fiches-agents.spec.ts#REQ-GOV-010 — sait rougir : ses 14 familles ont chacune un temoin, 7 contre-temoins restent verts"
         ]
+      },
+      "attestation": {
+        "pr": 28,
+        "sha": "9597865be97b5a7de95b46827b3302cfb7b01e81",
+        "fusionneeAt": "2026-09-04T04:27:42Z"
       }
     },
     {
@@ -1257,6 +1337,11 @@
         "REQ-GOV-027": [
           "tests/unit/gouvernance/verrou-de-phase.spec.ts"
         ]
+      },
+      "attestation": {
+        "pr": 31,
+        "sha": "e0dacf3b7de27315a2700798e8ae35efc151ffdd",
+        "fusionneeAt": "2026-09-09T21:59:31Z"
       }
     },
     {
@@ -1317,7 +1402,12 @@
           "tests/unit/ci/aucune-gate-en-continue-on-error.spec.ts"
         ]
       },
-      "acceptance": "SOCLE DE MESURE DE TOUTE LA PHASE 0 : 35 taches sur 68 en dependent, une sur deux. (1) `vitest.config.ts` et `tests/setup.ts` existent, `pnpm test` decouvre les specs suivis, et le seuil de couverture de `src/domain/**` est DECLARE a 100 % lignes et 100 % branches (REQ-QA-002) — declare et applique a ce qui existe : `src/domain/` ne porte que trois fichiers au jour de l'ouverture, et le vert imprime le compte des fichiers reellement couverts, jamais la longueur d'une liste tapee. (2) L'etape de Gate A qui lance `pnpm test` ne porte pas `continue-on-error`, ni en litteral ni sous une forme evaluee ; la garde qui le juge est celle deja livree par GOV-031, cette tache n'en ecrit pas une seconde (RM-01). (3) ESLINT REND EN ERREUR, PAS EN AVERTISSEMENT (decision du 2026-09-16) : `no-console` vaut `error` et non `warn`, `noInlineConfig: true` interdit qu'un commentaire de fichier eteigne une regle, et les 13 avertissements mesures sur la PR 44 valent ZERO a la livraison — corriges, ou couverts par une derogation NOMMEE et motivee dans `eslint.config.mjs`, jamais par une regle eteinte en bloc. Une CI qu'on verdit en eteignant la regle mesure la regle eteinte. (4) REQ-QA-001 : le lint refuse toute I/O sous `src/domain/**` (client de base, cache, appel reseau, horloge systeme). Les FORMES VOISINES de ces interdits — import de module sans prefixe, import dynamique, horloge atteinte par un autre chemin — ne sont PAS fermees ici : elles appartiennent a la tache de dette qui les porte, et l'acceptance de la livraison DIT explicitement laquelle des deux les ferme, pour qu'aucune des deux ne s'en remette a l'autre. (5) TEMOIN A DEUX FACES sur le desarmement de la gate, dans `tests/unit/ci/aucune-gate-en-continue-on-error.spec.ts` : une copie de travail de `.github/workflows/ci.yml` dont une seule etape de `gate-a` porte la tolerance d'echec fait sortir la garde en code NON NUL et NOMME l'etape fautive ; le `ci.yml` du depot la fait sortir en code ZERO. (6) TEMOIN A DEUX FACES sur le lint : un fichier de bac d'essai qui ecrit sur la console sous `src/domain/` fait sortir `pnpm lint` en code non nul ; le depot reel le fait sortir en zero, et `pnpm format:check` aussi."
+      "acceptance": "SOCLE DE MESURE DE TOUTE LA PHASE 0 : 35 taches sur 68 en dependent, une sur deux. (1) `vitest.config.ts` et `tests/setup.ts` existent, `pnpm test` decouvre les specs suivis, et le seuil de couverture de `src/domain/**` est DECLARE a 100 % lignes et 100 % branches (REQ-QA-002) — declare et applique a ce qui existe : `src/domain/` ne porte que trois fichiers au jour de l'ouverture, et le vert imprime le compte des fichiers reellement couverts, jamais la longueur d'une liste tapee. (2) L'etape de Gate A qui lance `pnpm test` ne porte pas `continue-on-error`, ni en litteral ni sous une forme evaluee ; la garde qui le juge est celle deja livree par GOV-031, cette tache n'en ecrit pas une seconde (RM-01). (3) ESLINT REND EN ERREUR, PAS EN AVERTISSEMENT (decision du 2026-09-16) : `no-console` vaut `error` et non `warn`, `noInlineConfig: true` interdit qu'un commentaire de fichier eteigne une regle, et les 13 avertissements mesures sur la PR 44 valent ZERO a la livraison — corriges, ou couverts par une derogation NOMMEE et motivee dans `eslint.config.mjs`, jamais par une regle eteinte en bloc. Une CI qu'on verdit en eteignant la regle mesure la regle eteinte. (4) REQ-QA-001 : le lint refuse toute I/O sous `src/domain/**` (client de base, cache, appel reseau, horloge systeme). Les FORMES VOISINES de ces interdits — import de module sans prefixe, import dynamique, horloge atteinte par un autre chemin — ne sont PAS fermees ici : elles appartiennent a la tache de dette qui les porte, et l'acceptance de la livraison DIT explicitement laquelle des deux les ferme, pour qu'aucune des deux ne s'en remette a l'autre. (5) TEMOIN A DEUX FACES sur le desarmement de la gate, dans `tests/unit/ci/aucune-gate-en-continue-on-error.spec.ts` : une copie de travail de `.github/workflows/ci.yml` dont une seule etape de `gate-a` porte la tolerance d'echec fait sortir la garde en code NON NUL et NOMME l'etape fautive ; le `ci.yml` du depot la fait sortir en code ZERO. (6) TEMOIN A DEUX FACES sur le lint : un fichier de bac d'essai qui ecrit sur la console sous `src/domain/` fait sortir `pnpm lint` en code non nul ; le depot reel le fait sortir en zero, et `pnpm format:check` aussi.",
+      "attestation": {
+        "pr": 59,
+        "sha": "8c70f52a72994012be2055329768f185f90b3f2e",
+        "fusionneeAt": "2026-09-19T03:13:32Z"
+      }
     },
     {
       "id": "SEC-01",
@@ -1359,6 +1449,11 @@
         "REQ-SEC-028": [
           "tests/unit/securite/env-boot.spec.ts"
         ]
+      },
+      "attestation": {
+        "pr": 73,
+        "sha": "244d990dbefacad7a39118bd408dd5df7ba359b1",
+        "fusionneeAt": "2026-09-19T04:07:00Z"
       }
     },
     {
@@ -1407,6 +1502,11 @@
         "REQ-SEC-029": [
           "tests/unit/securite/headers.spec.ts"
         ]
+      },
+      "attestation": {
+        "pr": 74,
+        "sha": "9f2f6d9aa572f6db54ca509de7948d9165133f39",
+        "fusionneeAt": "2026-09-19T04:53:02Z"
       }
     },
     {
@@ -1456,6 +1556,11 @@
         "REQ-SEC-035": [
           "tests/unit/securite/rate-famille.spec.ts"
         ]
+      },
+      "attestation": {
+        "pr": 76,
+        "sha": "e0008b0d7fc082b8fd6b3370bfa6d0edb1ac4182",
+        "fusionneeAt": "2026-09-19T16:20:18Z"
       }
     },
     {
@@ -1504,6 +1609,11 @@
         "REQ-QA-024": [
           "tests/unit/qualite/journal-redige.spec.ts"
         ]
+      },
+      "attestation": {
+        "pr": 88,
+        "sha": "310cf0c1f7ddf8e992e0444b99a9f9b8f9df9aa3",
+        "fusionneeAt": "2026-09-25T17:18:06Z"
       }
     },
     {
@@ -1581,6 +1691,11 @@
         "REQ-SEC-027": [
           "tests/integration/journal.spec.ts"
         ]
+      },
+      "attestation": {
+        "pr": 75,
+        "sha": "fd41c0d6601eb9b7a08f4b8d4c74ace4feff4d48",
+        "fusionneeAt": "2026-09-19T15:25:36Z"
       }
     },
     {
@@ -1643,6 +1758,11 @@
         "REQ-JUR-027": [
           "tests/unit/domaine/gardes-de-schema.spec.ts"
         ]
+      },
+      "attestation": {
+        "pr": 84,
+        "sha": "571b1ebddb425793c1b2bccf01ec9e65684da0aa",
+        "fusionneeAt": "2026-09-22T06:18:27Z"
       }
     },
     {
@@ -1693,6 +1813,11 @@
           "tests/unit/ci/integration-collectee-par-gate-a.spec.ts",
           "tests/integration/rate-limit-redis.spec.ts"
         ]
+      },
+      "attestation": {
+        "pr": 86,
+        "sha": "242c879e2aa95b5f13b521e9af2dcf46f8b57af1",
+        "fusionneeAt": "2026-09-22T09:08:08Z"
       }
     },
     {
@@ -1758,6 +1883,11 @@
         "REQ-QA-030": [
           "tests/unit/qualite/env-fail-fast.spec.ts"
         ]
+      },
+      "attestation": {
+        "pr": 130,
+        "sha": "05dcd2f6bd87803c47edce000bdf4aee3848a44e",
+        "fusionneeAt": "2026-09-26T02:04:04Z"
       }
     },
     {
@@ -1817,6 +1947,11 @@
         "REQ-QA-014": [
           "tests/unit/qualite/req-check.spec.ts"
         ]
+      },
+      "attestation": {
+        "pr": 81,
+        "sha": "573914791bd3f96b0a934d337adb25a6efaa0df9",
+        "fusionneeAt": "2026-09-19T14:47:19Z"
       }
     },
     {
@@ -1907,6 +2042,11 @@
         "REQ-QA-002": [
           "tests/unit/qualite/score-de-mutation.spec.ts"
         ]
+      },
+      "attestation": {
+        "pr": 130,
+        "sha": "05dcd2f6bd87803c47edce000bdf4aee3848a44e",
+        "fusionneeAt": "2026-09-26T02:04:04Z"
       }
     },
     {
@@ -1948,6 +2088,11 @@
         "REQ-CPL-022": [
           "tests/unit/qualite/red-first.spec.ts"
         ]
+      },
+      "attestation": {
+        "pr": 130,
+        "sha": "05dcd2f6bd87803c47edce000bdf4aee3848a44e",
+        "fusionneeAt": "2026-09-26T02:04:04Z"
       }
     },
     {
@@ -1990,6 +2135,11 @@
         "REQ-SEC-024": [
           "tests/unit/securite/chiffrement-avec-aad.spec.ts"
         ]
+      },
+      "attestation": {
+        "pr": 126,
+        "sha": "1ca65922f8b60262c8cef6335b8633d0c3261d0c",
+        "fusionneeAt": "2026-09-25T20:16:37Z"
       }
     },
     {
@@ -2741,6 +2891,11 @@
         "REQ-SEC-011": [
           "tests/integration/webhook.spec.ts"
         ]
+      },
+      "attestation": {
+        "pr": 145,
+        "sha": "0a34b8853f618f6342223e390b8099ba93b1c6d3",
+        "fusionneeAt": "2026-09-27T01:08:19Z"
       }
     },
     {
@@ -2786,6 +2941,11 @@
         "REQ-SEC-012": [
           "tests/integration/frontiere.spec.ts"
         ]
+      },
+      "attestation": {
+        "pr": 90,
+        "sha": "e6b1df4ec50faf2dca5465d0f83c9bda146ddb61",
+        "fusionneeAt": "2026-09-22T23:47:47Z"
       }
     },
     {
@@ -2856,6 +3016,11 @@
         "REQ-SEC-016": [
           "tests/unit/securite/lien-magique-indistinction.spec.ts"
         ]
+      },
+      "attestation": {
+        "pr": 134,
+        "sha": "76548e9e753c0d2045653d8f62cc274a36b82d5e",
+        "fusionneeAt": "2026-09-26T04:06:25Z"
       }
     },
     {
@@ -2906,6 +3071,11 @@
         "REQ-SEC-004": [
           "tests/unit/securite/revocation.spec.ts"
         ]
+      },
+      "attestation": {
+        "pr": 148,
+        "sha": "9d6fbad0b7c13d451f6fbaeb1db0c341bbdcdeb6",
+        "fusionneeAt": "2026-09-26T23:02:56Z"
       }
     },
     {
@@ -3085,6 +3255,11 @@
         "REQ-UX-020": [
           "tests/unit/integration/recherche-entreprises-repli.spec.ts"
         ]
+      },
+      "attestation": {
+        "pr": 91,
+        "sha": "9f698f0a8fbe6c60fd691067b21aeab317226784",
+        "fusionneeAt": "2026-09-25T22:04:51Z"
       }
     },
     {
@@ -3139,6 +3314,11 @@
         "REQ-INT-023": [
           "tests/integration/webhook-rebonds.spec.ts"
         ]
+      },
+      "attestation": {
+        "pr": 145,
+        "sha": "0a34b8853f618f6342223e390b8099ba93b1c6d3",
+        "fusionneeAt": "2026-09-27T01:08:19Z"
       }
     },
     {
@@ -3184,6 +3364,11 @@
         "REQ-INT-026": [
           "tests/integration/adaptateur-mcp.spec.ts"
         ]
+      },
+      "attestation": {
+        "pr": 136,
+        "sha": "4c1fa00fbe810a2429f8e91830407f6d5173bd3d",
+        "fusionneeAt": "2026-09-26T06:39:08Z"
       }
     },
     {
@@ -3315,6 +3500,11 @@
         "REQ-QA-035": [
           "tests/unit/domaine/apporteur-score-fige.spec.ts"
         ]
+      },
+      "attestation": {
+        "pr": 128,
+        "sha": "835d8990849978659e6cd7c6c282e17e586434c7",
+        "fusionneeAt": "2026-09-25T21:02:20Z"
       }
     },
     {
@@ -3378,6 +3568,11 @@
         "REQ-JUR-023": [
           "tests/unit/contrat/contract-template-complete.spec.ts"
         ]
+      },
+      "attestation": {
+        "pr": 92,
+        "sha": "48b14b6b2e9a189669af95b0da40a12259288508",
+        "fusionneeAt": "2026-09-25T19:08:41Z"
       }
     },
     {
@@ -3529,6 +3724,11 @@
         "REQ-UX-019": [
           "tests/unit/espace/vocabulaire-et-micro-copy.spec.ts"
         ]
+      },
+      "attestation": {
+        "pr": 93,
+        "sha": "51b0d1b1f59ba28e65f6a3b59b83a126815aaed6",
+        "fusionneeAt": "2026-09-25T21:46:10Z"
       }
     },
     {
@@ -3583,6 +3783,11 @@
         "REQ-UX-034": [
           "tests/unit/espace/maquettes-validees.spec.ts"
         ]
+      },
+      "attestation": {
+        "pr": 79,
+        "sha": "5b306f800f8b1b2ebaa47c6331763ae764c4f6be",
+        "fusionneeAt": "2026-09-19T13:23:32Z"
       }
     },
     {
@@ -3637,6 +3842,11 @@
         "REQ-UX-018": [
           "tests/a11y/axe.spec.ts"
         ]
+      },
+      "attestation": {
+        "pr": 130,
+        "sha": "05dcd2f6bd87803c47edce000bdf4aee3848a44e",
+        "fusionneeAt": "2026-09-26T02:04:04Z"
       }
     },
     {
@@ -3792,6 +4002,11 @@
         "REQ-UX-028": [
           "tests/unit/domaine/temps-horloge-et-feries.spec.ts"
         ]
+      },
+      "attestation": {
+        "pr": 78,
+        "sha": "f37659e455ac030cb819511696e65906bac67cc1",
+        "fusionneeAt": "2026-09-19T08:37:25Z"
       }
     },
     {
@@ -8462,6 +8677,11 @@
         "REQ-GOV-011": [
           "tests/unit/gouvernance/revues-lecteur-unique.spec.ts"
         ]
+      },
+      "attestation": {
+        "pr": 31,
+        "sha": "e0dacf3b7de27315a2700798e8ae35efc151ffdd",
+        "fusionneeAt": "2026-09-09T21:59:31Z"
       }
     },
     {
@@ -8497,6 +8717,11 @@
         "REQ-GOV-003": [
           "tests/unit/gouvernance/identifiants-nus-positions-limites.spec.ts"
         ]
+      },
+      "attestation": {
+        "pr": 31,
+        "sha": "e0dacf3b7de27315a2700798e8ae35efc151ffdd",
+        "fusionneeAt": "2026-09-09T21:59:31Z"
       }
     },
     {
@@ -8533,6 +8758,11 @@
         "REQ-GOV-024": [
           "tests/unit/gouvernance/regles-maison.spec.ts"
         ]
+      },
+      "attestation": {
+        "pr": 31,
+        "sha": "e0dacf3b7de27315a2700798e8ae35efc151ffdd",
+        "fusionneeAt": "2026-09-09T21:59:31Z"
       }
     },
     {
@@ -8574,6 +8804,11 @@
         "REQ-GOV-021": [
           "tests/unit/gouvernance/registre-lecteur-unique.spec.ts"
         ]
+      },
+      "attestation": {
+        "pr": 31,
+        "sha": "e0dacf3b7de27315a2700798e8ae35efc151ffdd",
+        "fusionneeAt": "2026-09-09T21:59:31Z"
       }
     },
     {
@@ -8610,6 +8845,11 @@
         "REQ-GOV-003": [
           "tests/unit/gouvernance/citation-json-vs-prose.spec.ts"
         ]
+      },
+      "attestation": {
+        "pr": 33,
+        "sha": "d864ca87b8877784a10b3bc39511613d872e49b5",
+        "fusionneeAt": "2026-09-12T08:27:50Z"
       }
     },
     {
@@ -8645,6 +8885,11 @@
         "REQ-GOV-033": [
           "tests/unit/gouvernance/lot-identifiant-unique.spec.ts"
         ]
+      },
+      "attestation": {
+        "pr": 31,
+        "sha": "e0dacf3b7de27315a2700798e8ae35efc151ffdd",
+        "fusionneeAt": "2026-09-09T21:59:31Z"
       }
     },
     {
@@ -8680,6 +8925,11 @@
         "REQ-GOV-006": [
           "tests/unit/gouvernance/plan-state-frais.spec.ts"
         ]
+      },
+      "attestation": {
+        "pr": 31,
+        "sha": "e0dacf3b7de27315a2700798e8ae35efc151ffdd",
+        "fusionneeAt": "2026-09-09T21:59:31Z"
       }
     },
     {
@@ -8715,6 +8965,11 @@
         "REQ-GOV-032": [
           "tests/unit/gouvernance/vues-derivees.spec.ts"
         ]
+      },
+      "attestation": {
+        "pr": 36,
+        "sha": "c9b29195a5718343c44c1de8c6ca5a02b77f9599",
+        "fusionneeAt": "2026-09-15T07:16:39Z"
       }
     },
     {
@@ -8752,6 +9007,11 @@
         "REQ-GOV-031": [
           "tests/unit/gouvernance/entite-registre.spec.ts"
         ]
+      },
+      "attestation": {
+        "pr": 39,
+        "sha": "36de095cd8d680799485fa1f82c0fe7cf762491b",
+        "fusionneeAt": "2026-09-15T14:43:38Z"
       }
     },
     {
@@ -8788,6 +9048,11 @@
         "REQ-GOV-021": [
           "tests/unit/gouvernance/attributions-resolvent.spec.ts"
         ]
+      },
+      "attestation": {
+        "pr": 45,
+        "sha": "6f093b62bad436e45cc0fa719ae6f436c72771be",
+        "fusionneeAt": "2026-09-16T11:56:34Z"
       }
     },
     {
@@ -8833,6 +9098,11 @@
         "REQ-QA-014": [
           "tests/unit/gouvernance/titres-de-test-resolvent.spec.ts"
         ]
+      },
+      "attestation": {
+        "pr": 55,
+        "sha": "87a31ed847aea6cbb5005264431907b871a11d55",
+        "fusionneeAt": "2026-09-18T20:20:27Z"
       }
     },
     {
@@ -8909,6 +9179,11 @@
         "REQ-INT-004": [
           "tests/unit/gouvernance/termes-interdits.spec.ts"
         ]
+      },
+      "attestation": {
+        "pr": 41,
+        "sha": "d084b0b84409b75c435f627a22cc342206393953",
+        "fusionneeAt": "2026-09-15T08:38:06Z"
       }
     },
     {
@@ -8945,6 +9220,11 @@
         "REQ-GOV-018": [
           "tests/unit/gouvernance/gardes-transposees.spec.ts"
         ]
+      },
+      "attestation": {
+        "pr": 44,
+        "sha": "ae56ce4884f854b68ef0a1b35497dcbbb2b8c59d",
+        "fusionneeAt": "2026-09-15T12:36:27Z"
       }
     },
     {
@@ -8999,6 +9279,11 @@
         "REQ-GOV-026": [
           "tests/unit/gouvernance/attestation-inter-depot.spec.ts"
         ]
+      },
+      "attestation": {
+        "pr": 33,
+        "sha": "d864ca87b8877784a10b3bc39511613d872e49b5",
+        "fusionneeAt": "2026-09-12T08:27:50Z"
       }
     },
     {
@@ -9037,7 +9322,12 @@
       "owner": "A05",
       "branch": "t/gov-041",
       "pr": 53,
-      "motif": null
+      "motif": null,
+      "attestation": {
+        "pr": 53,
+        "sha": "809a746a4b40a8dcc02b0842486388c377c733dd",
+        "fusionneeAt": "2026-09-18T19:07:50Z"
+      }
     },
     {
       "id": "GOV-042",
@@ -9048,7 +9338,11 @@
       "paths": [
         "scripts/lot/attestation.ts",
         "scripts/lot/cloture.ts",
-        "tests/unit/gouvernance/un-statut-fusionnee-porte-sa-preuve.spec.ts"
+        "tests/unit/gouvernance/un-statut-fusionnee-porte-sa-preuve.spec.ts",
+        "tests/unit/gouvernance/attestation-inter-depot.spec.ts",
+        "tests/unit/gouvernance/cloture-refuse-ce-qu-elle-n-a-pas-mesure.spec.ts",
+        "tests/unit/gouvernance/un-etat-cible-porte-son-operation.spec.ts",
+        "scripts/gates/gov-attestation.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -9102,7 +9396,12 @@
       "owner": "A05",
       "branch": "t/gov-043",
       "pr": 61,
-      "motif": null
+      "motif": null,
+      "attestation": {
+        "pr": 61,
+        "sha": "87fb212b373b5ac52abb2cf20611bfa8db75d6ef",
+        "fusionneeAt": "2026-09-18T22:46:28Z"
+      }
     },
     {
       "id": "GOV-044",
@@ -9137,7 +9436,12 @@
       "owner": "A05",
       "branch": "t/gov-044",
       "pr": 54,
-      "motif": null
+      "motif": null,
+      "attestation": {
+        "pr": 54,
+        "sha": "300b72da8344517bc5c492a06b25a029baa04cb4",
+        "fusionneeAt": "2026-09-18T21:17:08Z"
+      }
     },
     {
       "id": "GOV-045",
@@ -9244,7 +9548,12 @@
       "owner": "A05",
       "branch": "t/gov-047",
       "pr": 99,
-      "motif": null
+      "motif": null,
+      "attestation": {
+        "pr": 99,
+        "sha": "047c7303cad47c4259976707f3875d1bbedb3ec9",
+        "fusionneeAt": "2026-09-25T08:31:47Z"
+      }
     },
     {
       "id": "GOV-048",
@@ -9513,7 +9822,12 @@
       "owner": "A05",
       "branch": "t/gov-056",
       "pr": 48,
-      "motif": null
+      "motif": null,
+      "attestation": {
+        "pr": 48,
+        "sha": "7f8300722e2287294cb2e0c80b77d76a01913043",
+        "fusionneeAt": "2026-09-17T16:53:09Z"
+      }
     },
     {
       "id": "GOV-057",
@@ -9631,7 +9945,12 @@
       "owner": "A05",
       "branch": "t/gov-059-suite",
       "pr": 100,
-      "motif": null
+      "motif": null,
+      "attestation": {
+        "pr": 100,
+        "sha": "53cf630f972df2104cc273224710386132ea127a",
+        "fusionneeAt": "2026-09-22T22:14:52Z"
+      }
     },
     {
       "id": "GOV-060",
@@ -10302,7 +10621,12 @@
       "owner": "A05",
       "branch": "t/gov-077",
       "pr": 64,
-      "motif": null
+      "motif": null,
+      "attestation": {
+        "pr": 64,
+        "sha": "a8221af1025b234a31a3756a544760e804470f29",
+        "fusionneeAt": "2026-09-19T02:42:28Z"
+      }
     },
     {
       "id": "GOV-078",
@@ -10707,7 +11031,12 @@
       "owner": "A05",
       "branch": "t/gov-entite-tiers",
       "pr": 107,
-      "motif": null
+      "motif": null,
+      "attestation": {
+        "pr": 107,
+        "sha": "8184c8847a922a17505725039089e6d9a3d8a16d",
+        "fusionneeAt": "2026-09-22T14:23:30Z"
+      }
     },
     {
       "id": "GOV-088",
@@ -10752,7 +11081,12 @@
       "owner": "A01",
       "branch": "t/glossaire-enveloppe",
       "pr": 108,
-      "motif": null
+      "motif": null,
+      "attestation": {
+        "pr": 108,
+        "sha": "1078394440e20888a78a9f05789725661399adf1",
+        "fusionneeAt": "2026-09-22T11:07:25Z"
+      }
     },
     {
       "id": "GOV-091",
@@ -10783,7 +11117,12 @@
       "owner": "A03",
       "branch": "t/journal-108",
       "pr": 109,
-      "motif": null
+      "motif": null,
+      "attestation": {
+        "pr": 109,
+        "sha": "93a7c32b94946c4885ea1c5d10076b210b2be3c4",
+        "fusionneeAt": "2026-09-22T12:20:17Z"
+      }
     },
     {
       "id": "GOV-093",
@@ -10793,7 +11132,9 @@
       "zone": "gouvernance",
       "paths": [
         "scripts/gates/gov-tasks.ts",
-        "tests/unit/gouvernance/tasks-schema-et-paths.spec.ts"
+        "tests/unit/gouvernance/tasks-schema-et-paths.spec.ts",
+        "scripts/lot/revues.ts",
+        "tests/unit/gouvernance/lentilles-selon-le-risque.spec.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -10844,7 +11185,12 @@
       "owner": "A03",
       "branch": "t/gov-092",
       "pr": 112,
-      "motif": null
+      "motif": null,
+      "attestation": {
+        "pr": 112,
+        "sha": "87e235aba9c55b32253836417b467c86180485b4",
+        "fusionneeAt": "2026-09-23T02:50:19Z"
+      }
     },
     {
       "id": "GOV-094",
@@ -10911,7 +11257,12 @@
       "owner": "A05",
       "branch": "t/gov-095-accord-survit",
       "pr": 116,
-      "motif": null
+      "motif": null,
+      "attestation": {
+        "pr": 116,
+        "sha": "e238abec27cc6f7e8fec2c651e118c40625919aa",
+        "fusionneeAt": "2026-09-25T12:33:26Z"
+      }
     },
     {
       "id": "GOV-096",
@@ -10950,7 +11301,12 @@
       "owner": "A05",
       "branch": "t/gov-096-gov-pr-lit-le-lot",
       "pr": 118,
-      "motif": null
+      "motif": null,
+      "attestation": {
+        "pr": 118,
+        "sha": "3625f6c1a67f9b66e54bd8a84353c31202d6082c",
+        "fusionneeAt": "2026-09-25T04:41:19Z"
+      }
     },
     {
       "id": "GOV-090",
@@ -11000,7 +11356,12 @@
       "owner": "A02",
       "branch": "t/gov-label-et-outils",
       "pr": 113,
-      "motif": null
+      "motif": null,
+      "attestation": {
+        "pr": 113,
+        "sha": "6d727b0da2b712462218a87bf2ff563f7ad0c014",
+        "fusionneeAt": "2026-09-24T21:53:27Z"
+      }
     },
     {
       "id": "GOV-098",
@@ -11041,7 +11402,12 @@
       "owner": "A01",
       "branch": "t/perimetre-fonctionnel-2026-09-25",
       "pr": 122,
-      "motif": null
+      "motif": null,
+      "attestation": {
+        "pr": 122,
+        "sha": "0a67575c59a3ad597c47263db400944319886da3",
+        "fusionneeAt": "2026-09-25T16:37:24Z"
+      }
     },
     {
       "id": "DM-26",
@@ -11549,7 +11915,12 @@
       "owner": "A05",
       "branch": "t/gov-097-risque-reserve",
       "pr": 120,
-      "motif": null
+      "motif": null,
+      "attestation": {
+        "pr": 120,
+        "sha": "f7ea7c32b013d90453cdd66222c759b050bc053e",
+        "fusionneeAt": "2026-09-25T15:40:52Z"
+      }
     },
     {
       "id": "GOV-099",
@@ -11589,7 +11960,12 @@
       "owner": "A01",
       "branch": "t/cadrage-dm-06",
       "pr": 124,
-      "motif": null
+      "motif": null,
+      "attestation": {
+        "pr": 124,
+        "sha": "fb5b3da9b88392098723d628724d188b6ea8ffab",
+        "fusionneeAt": "2026-09-25T18:02:03Z"
+      }
     },
     {
       "id": "GOV-100",
@@ -11632,7 +12008,12 @@
       "owner": "A01",
       "branch": "t/gov-100",
       "pr": 131,
-      "motif": null
+      "motif": null,
+      "attestation": {
+        "pr": 131,
+        "sha": "5552ef6da021112ad5b24625f108401cc275f1e2",
+        "fusionneeAt": "2026-09-26T00:34:56Z"
+      }
     },
     {
       "id": "GOV-101",
@@ -11697,7 +12078,12 @@
       "owner": "A05",
       "branch": "t/gov-101",
       "pr": 140,
-      "motif": null
+      "motif": null,
+      "attestation": {
+        "pr": 140,
+        "sha": "da567f3eff8ad7a58548d21d37a2922b0917a3f1",
+        "fusionneeAt": "2026-09-26T16:55:32Z"
+      }
     },
     {
       "id": "GOV-102",
@@ -11740,7 +12126,12 @@
       "owner": "A01",
       "branch": "t/gov-102",
       "pr": 139,
-      "motif": null
+      "motif": null,
+      "attestation": {
+        "pr": 139,
+        "sha": "7e25c565a6a7ad6a6ce55d28a8e4cddb12452829",
+        "fusionneeAt": "2026-09-26T06:04:20Z"
+      }
     },
     {
       "id": "INT-T01c",

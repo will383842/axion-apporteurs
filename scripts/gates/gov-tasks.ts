@@ -38,9 +38,13 @@ import { chargerRegistre, CHEMIN_REGISTRE, type Registre } from '../lot/registre
 import {
   DEPOT_LOCAL,
   FAMILLES_ATTESTATION,
+  PASSIF_SANS_ATTESTATION,
   controlerAttestation,
+  versUtcSeconde,
   type Attestation,
+  type VuesHorsLigne,
 } from '../lot/attestation';
+import { CHEMIN_CHARTE, cheminsSchema, touche } from '../lot/revues';
 
 const CHEMIN_TACHES = 'docs/tasks.json';
 const CHEMIN_SCHEMA = 'scripts/lot/tasks.schema.json';
@@ -114,9 +118,11 @@ const LIVREE = LIVREE_DERIVEE;
  *
  * 🔴 PAS `attestation`, et c'est le motif `simplicite` de la PR 114 : une livraison d'AILLEURS est
  * déjà jugée, dans les deux sens, par `controlerAttestation` (`attestation_absente`,
- * `attestation_sans_livraison`), et une attestation sur une tâche d'ici par
- * `attestation_hors_sujet`. La compter ici faisait rougir la même faute deux fois, sous deux noms
- * et deux remèdes. Une faute, une famille : le couple ne juge que CE dépôt.
+ * `attestation_sans_livraison`) ; depuis GOV-042, une tâche d'ICI porte la même attestation, jugée
+ * par la même fonction (`attestation_absente`, `attestation_pr_discordante`, `attestation_sans_pr`)
+ * — `attestation_hors_sujet` ne vaut plus que pour `repo: "externe"`.
+ * La compter ici faisait rougir la même faute deux fois, sous deux noms et deux remèdes. Une
+ * faute, une famille : le couple ne juge que les écritures `pr` et `branch` de CE dépôt.
  *
  * `owner` n'en est PAS : prendre une tâche n'est pas une écriture d'état — trois tâches « à faire »
  * en portent un aujourd'hui, légitimement, et les compter ici ferait rougir la revendication.
@@ -156,8 +162,64 @@ export function couplesEtatOperation(taches: Tache[]): Couple[] {
     }));
 }
 
+// ── le champ `schema` confronté aux `paths` (GOV-093) ────────────────────────
+/**
+ * LE CHAMP `schema` EST LU — le décideur de `scripts/lot/revues.ts` force la lentille `schema`
+ * dès qu'une tâche le porte à vrai —, et rien ne le confrontait aux `paths`. Les chemins de schéma
+ * sont DÉRIVÉS de la §7 de `docs/CHARTE-AGENTS.md` par `cheminsSchema`, jamais recopiés ici, et
+ * « tombe sous » est le `touche` du décideur : une seule définition des deux côtés (RM-01).
+ *
+ * Le sens REFUSÉ : un `path` sous un chemin de schéma et `schema` non vrai (absent compris).
+ * La RÉCIPROQUE n'est pas refusée — une tâche peut engager le schéma sans nommer le fichier —,
+ * elle est IMPRIMÉE avec son compte par le mode normal (`schemaSansChemin`).
+ */
+export function schemaChampFaux(taches: readonly Tache[], chemins: readonly string[]): Faute[] {
+  const fautes: Faute[] = [];
+  for (const t of taches) {
+    if (t.schema === true) continue;
+    for (const p of t.paths ?? []) {
+      const c = chemins.find((x) => touche(x, [p]));
+      if (c === undefined) continue;
+      fautes.push({
+        famille: 'schema_champ_faux',
+        message:
+          `${t.id} porte « schema: ${String(t.schema)} » alors que son chemin \`${p}\` tombe sous ` +
+          `\`${c}\`, chemin de schéma de ${CHEMIN_CHARTE} §7. Le champ force la lentille \`schema\` : ` +
+          `faux, il laisse la PR à la seule vigilance du diff.`,
+      });
+    }
+  }
+  return fautes;
+}
+
+/** Les tâches `schema: true` dont aucun `path` ne tombe sous un chemin de schéma. */
+export function schemaSansChemin(taches: readonly Tache[], chemins: readonly string[]): string[] {
+  return taches
+    .filter(
+      (t) => t.schema === true && !(t.paths ?? []).some((p) => chemins.some((c) => touche(c, [p])))
+    )
+    .map((t) => t.id);
+}
+
+/**
+ * Les vues hors ligne d'UNE passe (veto sécurité 5328941794, PR 168) : l'instant fourni par
+ * l'appelant, rien d'autre. L'existence et l'ascendance du SHA d'une attestation — d'ici comme
+ * d'ailleurs — sont résolues EN LIGNE (`gov-attestation.ts --en-ligne`) : un oracle `git cat-file`
+ * hors ligne rougissait les attestations justes partout où le clone n'a pas tout l'historique
+ * (run 36298491294), et il a été retiré.
+ */
+export function vuesDeLaPasse(maintenant: number): VuesHorsLigne {
+  return { maintenant };
+}
+
 // ── les contrôles ────────────────────────────────────────────────────────────
-export function controler(doc: unknown, schema: object, registre: Registre): Faute[] {
+export function controler(
+  doc: unknown,
+  schema: object,
+  registre: Registre,
+  chemins: readonly string[] = cheminsSchema(),
+  vues: VuesHorsLigne = vuesDeLaPasse(Date.now())
+): Faute[] {
   const fautes: Faute[] = [];
   const ajouter = (famille: string, message: string) => fautes.push({ famille, message });
 
@@ -261,7 +323,8 @@ export function controler(doc: unknown, schema: object, registre: Registre): Fau
     // écrivant un `pr` qui ne résout pas. Les contrôles vivent dans `scripts/lot/attestation.ts`,
     // avec la forme du champ, le motif du SHA et la fonction de rendu : une garde qui juge une
     // valeur et une vue qui l'imprime doivent lire la MÊME définition (RM-01).
-    for (const f of controlerAttestation(t, LIVREE.has(t.statut))) ajouter(f.famille, f.message);
+    for (const f of controlerAttestation(t, LIVREE.has(t.statut), vues))
+      ajouter(f.famille, f.message);
   }
 
   // ── l'état cible et l'opération qui y mène, DANS LES DEUX SENS (GOV-086) ──────────────────
@@ -316,6 +379,8 @@ export function controler(doc: unknown, schema: object, registre: Registre): Fau
   };
   for (const t of taches) if (couleur.get(t.id) === BLANC) visiter(t.id);
 
+  fautes.push(...schemaChampFaux(taches, chemins));
+
   return fautes;
 }
 
@@ -337,6 +402,7 @@ export const FAMILLES = [
   'dep_non_livree',
   'etat_cible_sans_operation',
   'operation_sans_effet',
+  'schema_champ_faux',
   ...FAMILLES_ATTESTATION,
 ];
 
@@ -477,7 +543,7 @@ const LANCE_EN_SCRIPT = /[\\/]gates[\\/]gov-tasks(\.ts)?$/.test(process.argv[1] 
 // ── le corps EXÉCUTABLE, sous le garde-fou d'import ──────────────────────────
 if (LANCE_EN_SCRIPT) {
   // ── chargement ───────────────────────────────────────────────────────────────
-  for (const f of [CHEMIN_TACHES, CHEMIN_SCHEMA, CHEMIN_DECISIONS]) {
+  for (const f of [CHEMIN_TACHES, CHEMIN_SCHEMA, CHEMIN_DECISIONS, CHEMIN_CHARTE]) {
     if (!existsSync(f)) {
       console.error(`❌ gov:tasks — ${f} est introuvable.`);
       process.exit(1);
@@ -486,9 +552,13 @@ if (LANCE_EN_SCRIPT) {
   const schema = JSON.parse(readFileSync(CHEMIN_SCHEMA, 'utf8')) as object;
   const registre = chargerRegistre(CHEMIN_DECISIONS);
   const doc = JSON.parse(readFileSync(CHEMIN_TACHES, 'utf8')) as { taches: Tache[] };
+  const chemins = cheminsSchema(readFileSync(CHEMIN_CHARTE, 'utf8'));
+  // L'INSTANT DE LA PASSE, lu UNE fois et injecté partout : une `fusionneeAt` postérieure est une
+  // faute (`attestation_date_future`), et deux appels de la même passe jugent au même instant.
+  const horsLigne = vuesDeLaPasse(Date.now());
 
   if (process.argv.includes('--render') || process.argv.includes('--verifie-rendu')) {
-    const fautes = controler(doc, schema, registre);
+    const fautes = controler(doc, schema, registre, chemins, horsLigne);
     if (fautes.length > 0) {
       console.error(
         `❌ Refus de rendre une vue d'un backlog fautif (${fautes.length}). Lance \`pnpm gov:tasks\`.`
@@ -548,7 +618,7 @@ if (LANCE_EN_SCRIPT) {
 
   // ── mode --prove : un défaut par famille, chacun vu rougir ────────────────────
   if (process.argv.includes('--prove')) {
-    const base = controler(doc, schema, registre);
+    const base = controler(doc, schema, registre, chemins, horsLigne);
     if (base.length > 0) {
       console.error(
         `❌ La preuve part d'un document DÉJÀ fautif (${base.length}) — corrige d'abord :`
@@ -593,6 +663,14 @@ if (LANCE_EN_SCRIPT) {
         d,
         (t) => LIVREE.has(t.statut) && t.repo === 'partners' && t.pr != null,
         'livrée ici AVEC un numéro de PR'
+      );
+    // GOV-042 — une tâche d'ici qui porte DÉJÀ son attestation : hors du passif par construction.
+    const livreeIciAttestee = (d: { taches: Tache[] }): Tache =>
+      choisir(
+        d,
+        (t) =>
+          LIVREE.has(t.statut) && t.repo === 'partners' && t.pr != null && t.attestation != null,
+        'livrée ici AVEC son attestation'
       );
 
     // Le SHA du témoin est LU dans git, jamais écrit en dur : une constante de 40 hexadécimaux tapée
@@ -788,10 +866,35 @@ if (LANCE_EN_SCRIPT) {
         },
       },
       {
+        // GOV-042 : une tâche de CE dépôt porte désormais son attestation ; le « hors sujet » ne
+        // vaut plus que pour `repo: "externe"`, qui ne désigne aucun dépôt de code.
         famille: 'attestation_hors_sujet',
         defaut: () => {
           const d = copie();
-          livreeIci(d).attestation = attestationValide();
+          const t = aFaireIci(d);
+          t.repo = 'externe';
+          t.attestation = attestationValide();
+          return d;
+        },
+      },
+      {
+        // GOV-042 — l'attestation locale porte un AUTRE numéro que le `pr` de la tâche.
+        famille: 'attestation_pr_discordante',
+        defaut: () => {
+          const d = copie();
+          const t = livreeIciAttestee(d);
+          t.attestation = { ...attestationValide(), pr: t.pr! + 1 };
+          return d;
+        },
+      },
+      {
+        // GOV-042 — une tâche du passif déclaré reçoit une attestation : l'exemption est périmée.
+        famille: 'attestation_passif_perime',
+        defaut: () => {
+          const d = copie();
+          const auPassif = new Set(PASSIF_SANS_ATTESTATION.map((p) => p.id));
+          choisir(d, (x) => auPassif.has(x.id), 'du passif déclaré').attestation =
+            attestationValide();
           return d;
         },
       },
@@ -823,6 +926,39 @@ if (LANCE_EN_SCRIPT) {
             ...attestationValide(),
             fusionneeAt: '05/09/2026 13:04',
           };
+          return d;
+        },
+      },
+      // ── ce qui se ferme sans forge (veto sécurité 5328941794, PR 168) ─────────
+      // Une fusion datée d'APRÈS la passe : un jour après l'instant injecté, jamais une année tapée.
+      {
+        famille: 'attestation_date_future',
+        defaut: () => {
+          const d = copie();
+          livreeAilleurs(d).attestation = {
+            ...attestationValide(),
+            fusionneeAt: versUtcSeconde(new Date(horsLigne.maintenant + 86_400_000).toISOString()),
+          };
+          return d;
+        },
+      },
+      // Le scénario GOV-035 : une tâche d'ici livrée, son `pr` effacé, l'attestation laissée seule.
+      {
+        famille: 'attestation_sans_pr',
+        defaut: () => {
+          const d = copie();
+          livreeIciAttestee(d).pr = null;
+          return d;
+        },
+      },
+      {
+        // GOV-093 — une tâche `a_faire` qui nomme le fichier de schéma sans porter `schema: true`.
+        famille: 'schema_champ_faux',
+        defaut: () => {
+          const d = copie();
+          const t = aFaireIci(d);
+          t.schema = false;
+          t.paths = [...t.paths, `${chemins[0]}schema.prisma`];
           return d;
         },
       },
@@ -867,10 +1003,12 @@ if (LANCE_EN_SCRIPT) {
       // rougir — jamais qu'elle sait se taire. Le troisième est le plus important : c'est la forme
       // même que la tâche introduit, et une garde qui la refuserait bloquerait `pnpm lot:cloture`.
       {
-        nom: 'une tâche `partners` livrée normalement, PR de ce dépôt et aucune attestation',
+        nom: 'une tâche `partners` livrée, sa PR et son attestation au MÊME numéro (GOV-042)',
         muter: () => {
           const d = copie();
-          livreeIci(d).pr = 4242;
+          const t = livreeIciAttestee(d);
+          t.pr = 4242;
+          t.attestation = { ...attestationValide(), pr: 4242 };
           return d;
         },
       },
@@ -893,7 +1031,7 @@ if (LANCE_EN_SCRIPT) {
     ];
 
     for (const c of CONTRE_TEMOINS) {
-      const f = controler(c.muter(), schema, registre);
+      const f = controler(c.muter(), schema, registre, chemins, horsLigne);
       if (f.length > 0) {
         console.error(
           `\u274c Le contre-t\u00e9moin \u00ab ${c.nom} \u00bb a fait rougir la garde alors qu'il est l\u00e9gitime :`
@@ -905,7 +1043,7 @@ if (LANCE_EN_SCRIPT) {
 
     const prouvees = new Set<string>();
     for (const t of TEMOINS) {
-      const f = controler(t.defaut(), schema, registre);
+      const f = controler(t.defaut(), schema, registre, chemins, horsLigne);
       if (!f.some((x) => x.famille === t.famille)) {
         console.error(
           `❌ Le témoin de « ${t.famille} » n'a PAS fait rougir sa famille ` +
@@ -931,7 +1069,7 @@ if (LANCE_EN_SCRIPT) {
   }
 
   // ── mode normal ──────────────────────────────────────────────────────────────
-  const fautes = controler(doc, schema, registre);
+  const fautes = controler(doc, schema, registre, chemins, horsLigne);
   if (fautes.length === 0) {
     const j = doc.taches.reduce((s, t) => s + t.estimateDays, 0);
     const parPhase = [-1, 0, 1, 2, 3].map((p) => {
@@ -949,6 +1087,16 @@ if (LANCE_EN_SCRIPT) {
     // GOV-086 — LE COMPTE DES COUPLES RÉELLEMENT CONFRONTÉS. Un contrôle qui ne dit pas sur
     // combien il a porté laisse croire qu'il a tout vu ; celui-ci le compte, et le compte vaut
     // le nombre de tâches de CE dépôt ou la garde en a sauté.
+    // GOV-093 — la RÉCIPROQUE du champ `schema`, IMPRIMÉE et jamais tue : un avertissement muet
+    // serait un vert qui ment.
+    const sansChemin = schemaSansChemin(doc.taches, chemins);
+    console.log(
+      `   ${doc.taches.length} champ(s) \`schema\` confronté(s) aux ${chemins.length} chemins de ` +
+        `schéma (${chemins.join(', ')}) ; SCHÉMA DÉCLARÉ SANS CHEMIN DE SCHÉMA — ` +
+        `${sansChemin.length} tâche(s), NON refusée(s) : une tâche peut engager le schéma sans ` +
+        `nommer le fichier` +
+        (sansChemin.length > 0 ? ` : ${sansChemin.join(', ')}.` : '.')
+    );
     const couples = couplesEtatOperation(doc.taches);
     const avecOperation = couples.filter((c) => c.operations.length > 0).length;
     console.log(
@@ -956,6 +1104,15 @@ if (LANCE_EN_SCRIPT) {
         `${DEPOT_LOCAL}, dont ${avecOperation} porteur(s) d'au moins une écriture parmi ` +
         `${ECRITURES_D_ETAT.join(', ')} ; les ${doc.taches.length - couples.length} autre(s) sont ` +
         `jugées par leur attestation.`
+    );
+    // GOV-042 — LES DEUX POPULATIONS, COMPTÉES : les tâches de ce dépôt livrées, celles qui portent
+    // leur attestation, et le passif déclaré qui n'en porte pas — nommé, jamais tu.
+    const livreesIci = doc.taches.filter((t) => t.repo === DEPOT_LOCAL && LIVREE.has(t.statut));
+    const attestees = livreesIci.filter((t) => t.attestation != null).length;
+    const passif = PASSIF_SANS_ATTESTATION.map((p) => p.id);
+    console.log(
+      `   ${livreesIci.length} tâche(s) de ${DEPOT_LOCAL} livrée(s) : ${attestees} portent leur ` +
+        `attestation ; ${passif.length} au passif déclaré sans attestation (${passif.join(', ')}).`
     );
     process.exit(0);
   }
