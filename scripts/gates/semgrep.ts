@@ -189,7 +189,10 @@ const FORMES_PRISMA: readonly { nom: string; ext: string; lignes: string[]; faut
   {
     nom: 'export-from',
     ext: 'ts',
-    lignes: ["export { Prisma } from '@prisma/client';"],
+    // Pas le namespace `Prisma` : sa ré-exportation est refusée par la règle n° 2 dans tout
+    // `src/` (témoin `sql/reexport-namespace`), et la copie sous la couche d'accès ne serait
+    // plus un contre-témoin muet.
+    lignes: ["export { PrismaClient } from '@prisma/client';"],
     fautive: 1,
   },
   {
@@ -250,8 +253,9 @@ const FORMES_PRISMA: readonly { nom: string; ext: string; lignes: string[]; faut
   {
     nom: 'export-type-from-commentaire-ligne-accolade',
     ext: 'ts',
+    // Le refus par le TEXTE nomme la ligne qui CITE le client, pas celle du mot `export`.
     lignes: ['export type {', '  Apporteur, // }', "} from '@prisma/client';"],
-    fautive: 1,
+    fautive: 3,
   },
   {
     nom: 'export-type-en-ligne-commentaire-accolade',
@@ -1614,6 +1618,12 @@ const FORMES_SQL: readonly { nom: string; lignes: string[]; fautive: number; ext
   {
     nom: 'reexport-renomme',
     lignes: ["export { Prisma as Q } from '@prisma/client';"],
+    fautive: 1,
+  },
+  // Le PRIX de la liste blanche : ré-exporter le namespace, même sans le renommer, est refusé.
+  {
+    nom: 'reexport-namespace',
+    lignes: ["export { Prisma } from '@prisma/client';"],
     fautive: 1,
   },
   {

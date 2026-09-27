@@ -24,11 +24,15 @@
 # `Prisma!.raw`, `let P; P = Prisma`, `(x, P = Prisma) =>`, `{ P: Prisma }`, `Prisma satisfies
 # …` — tous passaient en exit 0 (mesuré sur 1.176.1). Et elle ne voit pas l'accès CALCULÉ :
 # `C['Prisma'].raw` depuis l'objet module passait aussi. Courir après chaque écriture referait
-# l'erreur des orthographes. La règle n° 2 refuse donc la SORTIE du namespace — il n'a droit
-# qu'à un membre immédiat (`Prisma.sql`, `Prisma.join`, un type) ou à une déstructuration
-# directe sans `raw`, sans reste ni valeur par défaut qui l'emporte — ET le NOM `Prisma` écrit
-# comme chaîne, où qu'il soit : c'est ce qui ferme l'accès calculé sur l'objet module, quel que
-# soit le chargeur. Les fonctions d'ÉTIQUETTE (`$queryRaw`, `$executeRaw`, `Prisma.sql`)
+# l'erreur des orthographes — et c'est ce qu'ont montré huit tours de revue : un refus de sortie
+# qui admettait « un membre immédiat ou une déstructuration directe » laissait passer le
+# namespace lié par déstructuration puis `Sql` atteint autrement que par `.raw` pointé, et la
+# clause d'héritage (revue `securite` 5329828516, PR 82). La règle n° 2 est donc une LISTE
+# BLANCHE : comme VALEUR, le nom `Prisma` n'a droit qu'à `Prisma.sql`, `Prisma.join`,
+# `Prisma.empty` et `Prisma.PrismaClientKnownRequestError`, écrits en clair ; toute autre
+# apparition de la valeur est refusée, et les positions de TYPE restent libres. S'y ajoutent le
+# NOM `Prisma` écrit comme chaîne, où qu'il soit : c'est ce qui ferme l'accès calculé sur
+# l'objet module, quel que soit le chargeur. Les fonctions d'ÉTIQUETTE (`$queryRaw`, `$executeRaw`, `Prisma.sql`)
 # n'ont droit, elles, qu'à la position d'étiquette d'un gabarit. Ce que ces motifs ne
 # tiennent PAS est nommé plus bas, règle par règle, sous « LIMITES DÉCLARÉES » : la phrase
 # ci-dessus n'en promet pas davantage.
@@ -83,7 +87,7 @@
 #     échappement est refusée par `&echappement`, et leur nom replié d'une concaténation par le
 #     motif de chaîne ;
 #   — toute déclaration TypeScript IMPORT-EQUALS (`import X = …`, `export import X = …`), quelle
-#     qu'en soit la cible : c'est une liaison que le refus de sortie ne suit pas.
+#     qu'en soit la cible : c'est une liaison que la liste blanche du namespace ne suit pas.
 # Prix ASSUMÉ : un commentaire ou une chaîne qui écrit l'un de ces deux noms, ou le texte
 # `import X =`, est refusé aussi. Aucun fichier de `src/` ne les écrit.
 #
@@ -97,20 +101,17 @@
 # qui lisait un nom par `[A-Za-z_$][\w$]*` et les blancs par `\s` (ASCII sans `(*UCP)`, mesuré
 # sur 1.176.1) laissait passer l'import-equals et les formes textuelles de la limite (c) de la
 # règle n° 1, commentaire entre les mots compris pour ces dernières. Les bras textuels qui
-# lisent une LIAISON ne dépendent donc plus de la forme d'un identifiant :
-#   — un mot-clé (`import`, `export`, `type`, `as`, `from`, `require`) est borné des deux côtés
-#     par un caractère qui ne continue pas un identifiant, Unicode compris (`\p{ID_Continue}`,
-#     `$`, U+200C, U+200D — PCRE2 de semgrep 1.176.1, mesuré) ; `import` n'est pas non plus
-#     précédé d'un point ni d'un `#` (membre ou nom privé nommé `import`) ;
+# lisent une LIAISON (l'import-equals, des deux règles) ou un NOM (la clé `Prisma:` et la clause
+# d'héritage de la règle n° 2) ne dépendent donc plus de la forme d'un identifiant :
+#   — un mot-clé (`import`, `require`) ou le nom `Prisma` est borné des deux côtés par un
+#     caractère qui ne continue pas un identifiant, Unicode compris (`\p{ID_Continue}`, `$`,
+#     U+200C, U+200D — PCRE2 de semgrep 1.176.1, mesuré) ; il n'est pas non plus précédé d'un
+#     `#` (nom privé), ni, hors de la clause d'héritage, d'un point (membre) ;
 #   — un BLANC est tout blanc Unicode ci-dessus ou un commentaire ;
-#   — une LISTE entre accolades (`export { … } from`, `export type { … } from`) est lue jusqu'à
-#     sa VRAIE accolade fermante : un commentaire de bloc, un commentaire de ligne et une chaîne
-#     (TypeScript admet un nom exporté écrit comme chaîne, `"…" as A`) y sont consommés comme
-#     des UNITÉS, et une accolade qu'ils contiennent ne ferme rien (revue `exactitude`
-#     5329582597, PR 82 : une lecture arrêtée à la première `}` du texte laissait passer une
-#     liste dont un commentaire portait une accolade). La boucle de lecture est possessive :
-#     elle ne revient pas en arrière pour raccourcir un commentaire de ligne et y trouver une
-#     accolade, ce qui prendrait pour une liaison un `from` écrit dans ce commentaire ;
+#   — AUCUN bras ne lit plus une LISTE entre accolades (9e tour, revue `exactitude` 5329829625,
+#     PR 82 : la lecture « jusqu'à la vraie accolade » consommait une chaîne sans tenir compte de
+#     l'antislash, et un guillemet échappé la décalait). La limite (c) de la règle n° 1 est
+#     refusée par le TEXTE du fichier entier, voir la règle ;
 #   — le nom lié de l'import-equals est TOUT ce qui n'est ni un blanc, ni une ponctuation ASCII
 #     (accolade, étoile, guillemet, parenthèse, crochet, point, virgule, deux-points, `=`,
 #     opérateur, barre oblique), jusqu'au premier `=` qui n'est ni `==` ni `=>`. Une liaison ES
@@ -129,23 +130,33 @@
 # Prix ASSUMÉ, élargi : un commentaire ou une chaîne sous `src/` qui écrit `import` puis du texte
 # sans ponctuation jusqu'à un `=` est refusé aussi. Aucun fichier de `src/` ne l'écrit.
 #
-# CE QUE LA GATE FERME, ET CE QU'ELLE N'EST PAS. La gate ferme les formes d'écriture ÉNUMÉRÉES
-# ci-dessus et règle par règle : liaisons de module et chargeurs (import, `import type`,
-# `export … from`, `require`, `module.require`, `module['require']`, chargeur fabriqué,
-# `import()` avec ou sans attributs) ; membre pointé, optionnel ou non nul ; accès calculé par
-# littéral ou par concaténation de littéraux ; déstructuration courte, renommée, à reste ou à
-# valeur par défaut ; renommage à l'import ; espace de noms et objet module ; sortie du
-# namespace `Prisma` ; nom `Prisma` ou `constructor` écrit comme chaîne ; fonctions d'étiquette
-# hors étiquette ; `Prisma.join` à plus d'une valeur. Elle refuse en plus, comme CLASSES, les
-# ÉCHAPPEMENTS (bras `&echappement`), les INTERPOLATIONS BRUTES (bras `&interpolation-brute`),
-# les noms `$queryRawUnsafe` et `$executeRawUnsafe` écrits en clair où qu'ils soient, et toute
-# liaison IMPORT-EQUALS (`import x = require(…)` compris).
-# LIMITE DÉCLARÉE, à côté des limites a–f de chaque règle : la gate N'EST PAS une barrière contre
+# CE QUE LA GATE FERME, ET CE QU'ELLE N'EST PAS. Deux refus STRICTS, qui promettent moins que
+# les tours précédents et tiennent ce qu'ils promettent (9e tour, PR 82) :
+#   — règle n° 1 : sous l'espace, tout fichier dont le TEXTE cite le client (`@prisma/`,
+#     `.prisma/`, ou une chaîne dont un segment est `prisma` ou `db`) est refusé, où que soit la
+#     citation — liaison, directive de types, commentaire, chaîne. Les motifs AST de liaison et
+#     de chargeur restent en plus (le chargeur hors de l'appel direct n'a pas de texte à citer) ;
+#   — règle n° 2 : le nom `Prisma` comme VALEUR n'a droit qu'aux quatre formes de la LISTE
+#     BLANCHE, écrites en clair ; toute autre apparition de la valeur — membre hors liste,
+#     membre calculé, déstructuration de `Prisma` ou liaison du namespace par déstructuration,
+#     renommage à l'import ou au ré-export, clé `Prisma:`, clause d'héritage, alias, argument,
+#     valeur rendue, ré-export — est refusée. Les positions de TYPE restent libres.
+# Elle refuse en plus, comme CLASSES, les ÉCHAPPEMENTS (bras `&echappement`), les
+# INTERPOLATIONS BRUTES (bras `&interpolation-brute`), les noms `$queryRawUnsafe` et
+# `$executeRawUnsafe` écrits en clair où qu'ils soient, toute liaison IMPORT-EQUALS (`import x =
+# require(…)` compris), le nom `Prisma` ou `constructor` écrit comme chaîne, les fonctions
+# d'étiquette hors étiquette, `Prisma.join` à plus d'une valeur, et les membres dangereux du
+# runtime par l'objet module.
+# L'ALIAS DU NAMESPACE transmis hors de sa liaison — paramètre, objet, variable, valeur rendue,
+# ré-export depuis `src/` — est FERMÉ par la liste blanche : c'est une apparition de la valeur
+# hors liste. Reste OUVERT un module HORS de `src/` qui ré-exporte le namespace ou ses membres
+# sous un autre nom (limite c de la règle n° 2), et l'objet module d'un spécifieur du client
+# qui quitte sa liaison, non suivi pour les membres du RUNTIME (limite d de la règle n° 2).
+# LIMITE DÉCLARÉE, à côté des limites de chaque règle : la gate N'EST PAS une barrière contre
 # une obfuscation DÉLIBÉRÉE au-delà de ces formes et de ces classes — nom construit à
 # l'exécution (`String.fromCharCode`, `atob`, `split('').reverse().join('')`, tableau indexé),
-# alias transmis hors de sa liaison (paramètre, objet, module voisin), `eval` ou `Function`, etc.
-# Ces cas relèvent de la relecture humaine de la PR et de la couche d'accès cloisonnée, pas de
-# cette gate.
+# `eval` ou `Function`, etc. Ces cas relèvent de la relecture humaine de la PR et de la couche
+# d'accès cloisonnée, pas de cette gate.
 rules:
   # REQ-SEC-008 (texte en vigueur ; REQ-QA-011 y est absorbée) : aucun import direct du client de
   # base sous l'espace apporteur. `import type` compris — l'espace reçoit ses types de la couche
@@ -164,7 +175,7 @@ rules:
   # `requ` + échappement + `re(…)`), ils sont refusés en amont par le bras commun `&echappement`
   # (voir l'en-tête), avec ses exemptions et sa limite.
   #
-  # LIMITES DÉCLARÉES (aucune n'est fermée ici, et aucune ne se prétend fermée) :
+  # LIMITES DÉCLARÉES (a, b et d ne sont pas fermées ici ; c l'est, par le texte) :
   #   a) un module HORS de ces dossiers qui ENVELOPPE le client et que l'espace importe n'est pas
   #      vu — c'est la couche d'accès cloisonnée et son test IDOR qui ferment ce chemin ; la
   #      tâche SEC-05 qui les livre AMENDE cette règle si elle doit la lister par modèle ;
@@ -173,30 +184,35 @@ rules:
   #   c) `export type { … } from`, `export { type … } from` et `export import x = require(…)` ne
   #      sont PAS représentés par l'AST TypeScript de semgrep 1.176.1 (mesuré : le motif
   #      `export type { ... } from "$M"` ne compile même pas, et aucun motif d'import ne voit
-  #      `export import`). Ce sont les SEULES formes de LIAISON qui restent textuelles (le bras
-  #      `&echappement`, textuel aussi, juge une écriture, pas une liaison) — et elles
-  #      DÉRIVENT quand même leur lecture du spécifieur de l'ancre commune, par un groupe
-  #      nommé `(?P<M>…)` que `metavariable-regex` contraint ensuite. Leurs mots sont lus
-  #      séparés par TOUT blanc Unicode ou commentaire, et bornés en Unicode ; leur liste entre
-  #      accolades est lue jusqu'à sa vraie fin, commentaires et chaînes consommés comme des
-  #      unités (voir l'en-tête, « LE TEXTE N'EST PAS ASCII »). Un seul bras lit une telle
-  #      liste : celui de la limite (c), qui couvre `export { … } from` avec ou sans `type`, que
-  #      l'AST voie ou non la forme. `export type * from` n'est même pas analysé par
-  #      1.176.1 (mesuré : erreur de syntaxe partielle, que la gate juge faute
-  #      `erreur_semgrep`) ;
+  #      `export import`). Huit tours ont tenté de LIRE ces liaisons sur le texte (mots, blancs
+  #      Unicode, liste entre accolades jusqu'à sa vraie fin) ; chaque lecture avait sa faille,
+  #      la dernière un guillemet échappé dans une chaîne de la liste. Depuis le 9e tour, cette
+  #      limite est fermée par un REFUS ENTIER PAR LE TEXTE : sous l'espace, tout fichier dont le
+  #      texte contient `@prisma/` ou `.prisma/`, ou une chaîne dont un segment est `prisma` ou
+  #      `db` (le segment de l'ancre `&specifieur-du-client`), est refusé, quelle que soit la
+  #      forme qui porte la citation — liaison que l'AST voit ou non, directive
+  #      `/// <reference types="@prisma/client" />`, commentaire, chaîne quelconque. Aucune liste
+  #      n'est plus lue. `export type * from` n'est même pas analysé par 1.176.1 (mesuré :
+  #      erreur de syntaxe partielle, que la gate juge faute `erreur_semgrep`) ;
   #   d) un chargeur obtenu AUTREMENT que par `require` ou une propriété `require` écrits sous
   #      l'espace — reçu en paramètre, déstructuré (`const { require: r } = module`), importé
   #      d'un module voisin — n'est pas suivi : l'appel `r('../db')` n'a rien qui le distingue
   #      d'un appel quelconque.
   # Prix ASSUMÉ : sous l'espace, `require.cache`, `require.main` et toute propriété `require`
-  # d'un objet qui n'est pas appelée directement sont refusés aussi.
+  # d'un objet qui n'est pas appelée directement sont refusés aussi. Et, depuis le refus par le
+  # texte : un COMMENTAIRE qui cite le client (`@prisma/client`, `'../db'`), une chaîne
+  # quelconque dont un segment est `db` ou `prisma` (`fetch('/api/db')`), et un texte où une
+  # barre oblique précède `db` puis un guillemet sur la même ligne sont refusés aussi. Aucun
+  # fichier de l'espace ne les écrit (mesuré : 0 constat sur le dépôt).
   - id: axion-prisma-hors-couche-d-acces
     message: >-
       Accès direct au client de base sous l'espace apporteur (REQ-SEC-008). Toute lecture ou
       écriture de l'espace passe par la couche d'accès, qui injecte l'apporteurId de la session
       dans le `where`. Importez depuis la couche d'accès, jamais `@prisma/*`, `.prisma/*`, ni un
-      module `prisma` ou `db` — avec ou sans suffixe, par quelque chargeur que ce soit. Un nom
-      écrit par séquence d'échappement est refusé comme tel : écrivez-le en clair.
+      module `prisma` ou `db` — avec ou sans suffixe, par quelque chargeur que ce soit. Sous
+      l'espace, un fichier dont le TEXTE cite le client est refusé, commentaire et directive de
+      types compris. Un nom écrit par séquence d'échappement est refusé comme tel : écrivez-le
+      en clair.
     severity: ERROR
     languages: [typescript, javascript]
     paths:
@@ -260,14 +276,22 @@ rules:
                 - pattern: require
                 - pattern: $P.require
                 - pattern: $P["require"]
-      # Limite (c) : les formes textuelles, pour ce que l'AST de semgrep ne représente pas. La
-      # liste entre accolades est lue par une boucle POSSESSIVE dont chaque tour consomme un
-      # caractère ordinaire, un commentaire de bloc, un commentaire de ligne, une barre oblique
-      # seule ou une chaîne : une accolade dans un commentaire ou une chaîne ne ferme pas la liste.
-      - patterns:
-          - pattern-regex: |-
-              (?<![\p{ID_Continue}$\x{200C}\x{200D}.#])export(?![\p{ID_Continue}$\x{200C}\x{200D}])(?:[\t\n\x0B\f\r\x{0085}\x{200B}\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)*(?:type(?![\p{ID_Continue}$\x{200C}\x{200D}])(?:[\t\n\x0B\f\r\x{0085}\x{200B}\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)*)?(?:\{(?:[^}/'"]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*|/(?![*/])|'[^'\n\r\x{2028}\x{2029}]*'|"[^"\n\r\x{2028}\x{2029}]*")*+\}|\*(?:(?:[\t\n\x0B\f\r\x{0085}\x{200B}\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)*as(?![\p{ID_Continue}$\x{200C}\x{200D}])(?:[\t\n\x0B\f\r\x{0085}\x{200B}\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)*[^\t\n\x0B\f\r\x{0085}\x{200B}\x{2028}\x{2029}\x{FEFF}\p{Zs}{}()\[\];,:.=*'"`<>!?+\-&|^~%@#/]+)?)(?:[\t\n\x0B\f\r\x{0085}\x{200B}\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)*from(?![\p{ID_Continue}$\x{200C}\x{200D}])(?:[\t\n\x0B\f\r\x{0085}\x{200B}\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)*['"`](?P<M>[^'"`]*)['"`]
-          - metavariable-regex: *specifieur-du-client
+      # Limite (c), REFUS ENTIER PAR LE TEXTE (9e tour, revues `exactitude` 5329829625 et
+      # `securite` 5329828516, PR 82) : plus aucune lecture de liaison. Sous l'espace, tout
+      # fichier dont le TEXTE cite le client est refusé, où que la citation soit — liaison
+      # (`export type { … } from`, `export { type … } from`, `import`, `require`), directive
+      # `/// <reference types=…>`, commentaire ou chaîne quelconque :
+      #   — `@prisma/` ou `.prisma/`, n'importe où dans le texte (`@prisma/client` compris) ;
+      #   — un guillemet (simple, double ou accent grave), un chemin facultatif sans guillemet ni
+      #     fin de ligne, puis un SEGMENT `prisma` ou `db` — le segment de l'ancre
+      #     `&specifieur-du-client`, avec ou sans suffixe pointé — suivi d'une barre oblique ou
+      #     d'un guillemet.
+      # Une liste entre accolades n'est plus lue du tout : un guillemet échappé, une accolade
+      # dans un commentaire ou une chaîne ne changent rien à ce que le texte cite.
+      - pattern-regex: |-
+          [@.]prisma/
+      - pattern-regex: |-
+          ['"`](?:[^'"`\n\r\x{2028}\x{2029}]*/)?(?:prisma|db)(?:\.[^/'"`\n\r\x{2028}\x{2029}]*)?(?:/|['"`])
       - patterns:
           - pattern-regex: |-
               (?<![\p{ID_Continue}$\x{200C}\x{200D}.#])import(?![\p{ID_Continue}$\x{200C}\x{200D}])(?:[\t\n\x0B\f\r\x{0085}\x{200B}\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)*[^\t\n\x0B\f\r\x{0085}\x{200B}\x{2028}\x{2029}\x{FEFF}\p{Zs}{}()\[\];,:.=*'"`<>!?+\-&|^~%@#/](?:(?:[\t\n\x0B\f\r\x{0085}\x{200B}\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)|[^\t\n\x0B\f\r\x{0085}\x{200B}\x{2028}\x{2029}\x{FEFF}\p{Zs}{}()\[\];,:.=*'"`<>!?+\-&|^~%@#/])*=(?:[\t\n\x0B\f\r\x{0085}\x{200B}\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)*require(?![\p{ID_Continue}$\x{200C}\x{200D}])(?:[\t\n\x0B\f\r\x{0085}\x{200B}\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)*\((?:[\t\n\x0B\f\r\x{0085}\x{200B}\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)*['"`](?P<M>[^'"`]*)['"`]
@@ -322,10 +346,13 @@ rules:
   # n'est refusé que pour `$queryRawUnsafe`, `$executeRawUnsafe` (y compris replié d'une
   # concaténation de littéraux), `Prisma` et `constructor` : un membre du runtime n'est pris
   # par crochets que sur un objet module resté dans sa liaison (limite d). Pour `Prisma`, c'est
-  # en plus la SORTIE du namespace hors de son usage immédiat qui est refusée, et son NOM écrit
-  # comme chaîne (voir l'en-tête). Trois familles s'y ajoutent :
-  #   — les fonctions d'ÉTIQUETTE `$queryRaw`, `$executeRaw` et `Prisma.sql` (y compris `sql`
-  #     déstructuré de `Prisma`) ne sont admises qu'en étiquette d'un gabarit : appelées avec
+  # une LISTE BLANCHE qui tient (9e tour) : comme VALEUR, le nom n'a droit qu'à `Prisma.sql`,
+  # `Prisma.join`, `Prisma.empty` et `Prisma.PrismaClientKnownRequestError`, écrits en clair,
+  # et toute autre apparition est refusée ; son NOM écrit comme chaîne l'est aussi (voir
+  # l'en-tête). La déstructuration de `Prisma` étant refusée à sa source, les bras qui suivent
+  # `sql` et `join` déstructurés ne sont plus qu'un second filet. Trois familles s'y ajoutent :
+  #   — les fonctions d'ÉTIQUETTE `$queryRaw`, `$executeRaw` et `Prisma.sql` ne sont admises
+  #     qu'en étiquette d'un gabarit : appelées avec
   #     un tableau (`Prisma.sql([x])`, `p.$queryRaw([x] as unknown as TemplateStringsArray)`),
   #     par `.call` / `.apply`, rangées ou passées, leurs « morceaux » sont du TEXTE ;
   #   — `Prisma.join` n'est admis qu'avec UNE valeur : séparateur, préfixe et suffixe sont
@@ -338,20 +365,21 @@ rules:
   #   a) une clé que semgrep ne réduit pas à une constante (`p[k]`, `C[k]` sur l'objet module, où
   #      `k` est un paramètre ou vient d'un autre module) n'est pas lisible sans analyse de
   #      teinte. Mesuré : une concaténation de littéraux (`p['$query' + 'RawUnsafe']`) est
-  #      repliée, donc prise ; et sur `Prisma`, tout accès calculé non littéral (`Prisma[k]`) est
-  #      pris par le refus de sortie ;
-  #   b) une déstructuration de `Prisma` à clé CALCULÉE (`const { ['raw']: r } = Prisma`, ou une
-  #      clé calculée qui emporte le namespace : `{ [f(Prisma)]: y } = Prisma`) n'est
-  #      représentée par aucun motif de semgrep 1.176.1 (mesuré : `var { "raw": $B } =
-  #      $C.Prisma` ne matche pas) — l'élargir reviendrait à refuser toute déstructuration de
-  #      `Prisma`, y compris le `sql` paramétré, ce qui punirait la bonne écriture ;
+  #      repliée, donc prise ; et sur `Prisma`, tout accès calculé, littéral ou non (`Prisma[k]`),
+  #      est pris par la liste blanche ;
+  #   b) FERMÉE depuis le 9e tour : la déstructuration de `Prisma` à clé calculée
+  #      (`const { ['raw']: r } = Prisma`), que semgrep 1.176.1 ne représente par aucun motif,
+  #      est refusée avec TOUTE déstructuration de `Prisma` — `Prisma` à droite du `=` est une
+  #      valeur hors liste. Le `sql` paramétré déstructuré est refusé avec elle : c'est le prix
+  #      de la règle stricte, écrire `Prisma.sql` ;
   #   c) un module tiers qui ré-exporte `raw` (ou `Sql`, `sqltag`…) sous un autre nom n'est pas
-  #      vu ;
+  #      vu, ni un module HORS de `src/` qui ré-exporte le namespace sous un autre nom (sous
+  #      `src/`, ré-export et renommage du namespace sont des apparitions hors liste, refusées) ;
   #   d) l'objet module d'un spécifieur du client (espace de noms, `require`, `import()`) qui
   #      QUITTE sa liaison — rangé dans un objet, passé en argument, `.then((m) => m.raw)` —
-  #      n'est pas suivi pour les membres du runtime : le refus de sortie ne vaut que pour le
-  #      namespace `Prisma`, parce que la couche d'accès a le droit, elle, de manipuler l'objet
-  #      module du client ;
+  #      n'est pas suivi pour les membres du runtime : la liste blanche ne vaut que pour le nom
+  #      `Prisma` (et `C.Prisma` sur l'objet module), parce que la couche d'accès a le droit,
+  #      elle, de manipuler l'objet module du client ;
   #   e) le PROTOTYPE de `Sql` atteint sans lire `.constructor` — `Object.getPrototypeOf(…)`,
   #      `Object.create(…)`, `Object.setPrototypeOf(…)`, `__proto__` — permet de forger un
   #      fragment sans être vu ;
@@ -362,17 +390,26 @@ rules:
   # propriété `.Prisma` d'un objet quelconque qu'on range ailleurs, une chaîne EXACTEMENT égale
   # à `Prisma` ou à `constructor`, toute lecture de `.constructor`, l'écriture calculée
   # `C['Prisma'].sql`, et `Prisma.join(v, ', ')` à séparateur littéral sont refusés aussi —
-  # l'AST de semgrep ne les distingue pas d'une sortie. Aucun fichier de `src/` ne les écrit.
+  # l'AST de semgrep ne les distingue pas d'une sortie. Et, depuis la liste blanche : tout
+  # membre de VALEUR hors des quatre (`new Prisma.Decimal(…)`, `Prisma.validator`), toute
+  # déstructuration de `Prisma` (`{ sql } = Prisma` compris), la liaison du namespace par
+  # déstructuration (`{ Prisma } = await import(…)`), `C.Prisma.sql` par l'objet module et
+  # `P.sql` après `import { Prisma as P }`, tout renommage du namespace à l'import (même
+  # `import type`) ou au ré-export, tout ré-export du namespace, toute clause d'héritage qui
+  # écrit `Prisma` (même `extends Prisma.PrismaClientKnownRequestError`), et une clé `Prisma`
+  # suivie de `:` — dans un objet, un type littéral ou un COMMENTAIRE (`Prisma :`) — sont
+  # refusés. Aucun fichier de `src/` ne les écrit (mesuré : 0 constat sur le dépôt).
   - id: axion-sql-brut-non-parametre
     message: >-
       SQL brut NON paramétré : `$queryRawUnsafe`, `$executeRawUnsafe`, `Prisma.raw`,
       `Prisma.Sql` et les membres du runtime (`raw`, `Sql`, `sqltag`, `join`,
       `makeTypedQueryFactory`) concatènent une chaîne dans la requête. Utilisez le gabarit
       étiqueté (`$queryRaw` / `$executeRaw` avec des backticks, ou `Prisma.sql`), qui paramètre
-      chaque valeur, et `Prisma.join(valeurs)` sans séparateur. Le renommage, l'accès par
-      crochets, la déstructuration, l'appel d'une étiquette sans gabarit et le passage du
-      namespace `Prisma` par une variable, un objet ou un paramètre ne changent rien à ce que le
-      code FAIT. Les noms `$queryRawUnsafe` et `$executeRawUnsafe` sont refusés où qu'ils soient
+      chaque valeur, et `Prisma.join(valeurs)` sans séparateur. Comme VALEUR, le namespace
+      `Prisma` n'a droit qu'à `Prisma.sql`, `Prisma.join`, `Prisma.empty` et
+      `Prisma.PrismaClientKnownRequestError`, écrits en clair : renommage, accès par crochets,
+      déstructuration, héritage, alias, passage par une variable, un objet ou un paramètre sont
+      refusés, et l'appel d'une étiquette sans gabarit aussi. Les noms `$queryRawUnsafe` et `$executeRawUnsafe` sont refusés où qu'ils soient
       écrits, et toute liaison `import X = …` aussi (écrivez un `import` ES). Un nom écrit par
       séquence d'échappement est refusé comme tel : écrivez-le en clair.
     severity: ERROR
@@ -402,7 +439,7 @@ rules:
       - pattern: '"$executeRawUnsafe"'
       # — la liaison TypeScript IMPORT-EQUALS (`import X = …`, `export import X = …`), refusée
       #   comme CLASSE quelle qu'en soit la cible (revue `exactitude` 5328984956, PR 82) :
-      #   `import P = Prisma` fait sortir le namespace par une liaison que le refus de sortie ne
+      #   `import P = Prisma` fait sortir le namespace par une liaison que la liste blanche ne
       #   voit pas (l'AST de semgrep 1.176.1 ne la représente pas, mesuré), et `import x =
       #   require(…)` charge un module hors des liaisons ES. Lue sur le TEXTE, commentaires admis
       #   entre les mots (`import /* … */ P = Prisma`) ; `import type P = …` compris. Le bras ne
@@ -412,7 +449,8 @@ rules:
       #   N'EST PAS ASCII »). —
       - pattern-regex: |-
           (?<![\p{ID_Continue}$\x{200C}\x{200D}.#])import(?![\p{ID_Continue}$\x{200C}\x{200D}])(?:[\t\n\x0B\f\r\x{0085}\x{200B}\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)*[^\t\n\x0B\f\r\x{0085}\x{200B}\x{2028}\x{2029}\x{FEFF}\p{Zs}{}()\[\];,:.=*'"`<>!?+\-&|^~%@#/](?:(?:[\t\n\x0B\f\r\x{0085}\x{200B}\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)|[^\t\n\x0B\f\r\x{0085}\x{200B}\x{2028}\x{2029}\x{FEFF}\p{Zs}{}()\[\];,:.=*'"`<>!?+\-&|^~%@#/])*=(?![=>])
-      # — `Prisma.raw` et `Prisma.Sql`, par leur nom QUALIFIÉ : `$C.Prisma.raw` matche
+      # — `Prisma.raw` et `Prisma.Sql`, par leur nom QUALIFIÉ (doublés depuis le 9e tour par la
+      #   liste blanche, qui les refuse comme membres hors liste) : `$C.Prisma.raw` matche
       #   `Prisma.raw` (import nommé), `P.raw` (`import { Prisma as P }`) et `C.Prisma.raw`
       #   (`import * as C`), et ne matche PAS `autre.raw` ni `String.raw`, qui ne sont pas le
       #   `Prisma` de `@prisma/client`. `new Prisma.Sql([x], [])` range `x` dans le TEXTE.
@@ -425,51 +463,65 @@ rules:
       - pattern: "var { raw: $B } = $C.Prisma"
       - pattern: "var { Sql: $B } = $C.Prisma"
       # Ré-affectation locale de l'espace de noms, puis usage : la ligne de l'usage est nommée
-      # (la ligne de la ré-affectation l'est aussi, par le refus de sortie ci-dessous).
+      # (la ligne de la ré-affectation l'est aussi, par la liste blanche ci-dessous).
       - patterns:
           - pattern: $P.raw
           - pattern-inside: |
               var $P = $C.Prisma;
               ...
-      # — LE REFUS DE SORTIE : toute apparition de la valeur `Prisma` qui n'est ni un membre
-      #   immédiat (`Prisma.x`, `Prisma["x"]`), ni une déstructuration directe, ni une liaison
-      #   d'import. Ferme `Prisma?.raw`, `Prisma!.raw`, `let P; P = Prisma`, `(P = Prisma) =>`,
-      #   `{ P: Prisma }`, `Prisma satisfies …`, `Reflect.get(Prisma, 'raw')`, `f(Prisma)`.
-      #   Mesuré : une sortie écrite DANS l'objet d'un membre admis (`f(Prisma).Prisma.x`) ou
-      #   dans l'expression d'une déstructuration admise est prise aussi.
+      # — LA LISTE BLANCHE DU NAMESPACE COMME VALEUR (9e tour, revue `securite` 5329828516,
+      #   PR 82). Le nom `Prisma` en position de VALEUR n'a droit qu'à QUATRE formes, écrites en
+      #   clair `Prisma.<nom>` : `Prisma.sql` et `Prisma.join` (les constructeurs paramétrés que
+      #   ce message recommande, jugés ensuite par les familles d'étiquette et de `join`),
+      #   `Prisma.empty`, et `Prisma.PrismaClientKnownRequestError` (la seule forme de valeur
+      #   relevée sur le dépôt, en `instanceof`). TOUTE autre apparition de la valeur est
+      #   refusée : autre membre (`Prisma.raw`, `Prisma.Sql`, `new Prisma.Decimal`), membre
+      #   calculé (`Prisma[…]`), déstructuration de `Prisma` ou liaison du namespace par une
+      #   déstructuration (`{ Prisma } = await import(…)`, `{ Prisma } = C` sur l'objet de
+      #   l'import par défaut), alias (`const P = Prisma`), argument, valeur rendue, `export {
+      #   Prisma }`, chaînage optionnel ou non nul, et `C.Prisma` par l'objet module. La
+      #   résolution d'alias de semgrep rattache à ce nom un `import { Prisma as P }` : `P.sql`
+      #   est refusé comme `P.raw` (mesuré), seule l'écriture en clair `Prisma.<nom>` passe. Les
+      #   positions de TYPE restent libres : l'AST de semgrep 1.176.1 ne rend pas `Prisma.X`
+      #   d'une annotation, d'une assertion `as` ou d'une contrainte de générique comme une
+      #   valeur (mesuré) — sauf `typeof Prisma…`, qui LIT la valeur (prix ci-dessous).
       - patterns:
           - pattern-either:
               - pattern: $C.Prisma
               - pattern: Prisma
-          - pattern-not-inside: $C.Prisma.$MEMBRE
-          - pattern-not-inside: Prisma.$MEMBRE
-          - pattern-not-inside: $C.Prisma["$MEMBRE"]
-          - pattern-not-inside: Prisma["$MEMBRE"]
+          - pattern-not-inside: Prisma.sql
+          - pattern-not-inside: Prisma.join
+          - pattern-not-inside: Prisma.empty
+          - pattern-not-inside: Prisma.PrismaClientKnownRequestError
           - pattern-not-inside: import { ... } from "$M"
-          - pattern-not-inside: var { ... } = $C.Prisma
-          - pattern-not-inside: var { ... } = Prisma
-          # `const { Prisma } = await import('@prisma/client')` : la liaison garde son nom, et
-          # tout ce qui suit est jugé par nom.
-          - pattern-not-inside: "var { ..., Prisma, ... } = $E"
-      # La déstructuration directe avec RESTE emporte `raw` sans le nommer.
-      - pattern: "var { ..., ...$RESTE } = $C.Prisma"
-      # Une VALEUR PAR DÉFAUT de déstructuration qui emporte le namespace
-      # (`const { sql = f(Prisma) } = Prisma`) : l'exclusion de la déstructuration directe la
-      # couvrirait par sa portée (mesuré).
+      # … l'import qui RENOMME le namespace (`import { Prisma as P }`, `import type` compris, et
+      #   `export { Prisma as Q } from …`, que semgrep normalise en import) : sans lui, aucun
+      #   autre nom que `Prisma` ne désigne le namespace, et c'est ce qui rend lisibles par le
+      #   TEXTE les deux bras suivants.
       - patterns:
-          - pattern: "var { ..., $K = $D, ... } = $E"
-          - metavariable-pattern:
-              metavariable: $D
-              pattern-either:
-                - pattern: Prisma
-                - pattern: $X.Prisma
-      # `Prisma` déstructuré SOUS UN AUTRE NOM (`const { Prisma: Q } = await import(…)`) : le
-      # nouveau nom n'est pas résolu, il est refusé à la liaison.
-      - patterns:
-          - pattern: "var { Prisma: $Q } = $E"
+          - pattern: import { ..., Prisma as $Q, ... } from "$M"
           - metavariable-regex:
               metavariable: $Q
               regex: ^(?!Prisma$)
+      # … une CLÉ `Prisma` suivie de `:` — déstructuration renommée dans TOUTE position
+      #   (déclaration, paramètre, affectation, `for … of`, `catch`, imbriquée), clé d'objet ou
+      #   de type littéral —, lue sur le TEXTE, nom nu ou entre guillemets, blancs Unicode et
+      #   commentaires admis avant les deux-points. Refus textuel, parce qu'un motif AST par
+      #   position de déstructuration a manqué `for … of` (mesuré).
+      - pattern-regex: |-
+          (?:(?<![\p{ID_Continue}$\x{200C}\x{200D}.#])Prisma(?![\p{ID_Continue}$\x{200C}\x{200D}])|'Prisma'|"Prisma")(?:[\t\n\x0B\f\r\x{0085}\x{200B}\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)*:
+      # … la CLAUSE D'HÉRITAGE d'une classe, nommée ou anonyme, dont l'expression écrit le nom
+      #   `Prisma` : l'AST de semgrep 1.176.1 ne rend pas cette expression comme une valeur (le
+      #   motif de valeur n'y mord pas, et un `metavariable-pattern` sur elle échoue en erreur
+      #   interne, mesuré) ; elle est donc jugée sur son TEXTE. La contrainte d'un générique
+      #   (`class L<T extends Prisma.TransactionClient>`) n'est pas la clause d'héritage.
+      - patterns:
+          - pattern-either:
+              - pattern: class $K extends $E { ... }
+              - pattern: class extends $E { ... }
+          - metavariable-regex:
+              metavariable: $E
+              regex: (?<![\p{ID_Continue}$\x{200C}\x{200D}#])Prisma(?![\p{ID_Continue}$\x{200C}\x{200D}])
       # Le NOM du namespace écrit comme chaîne, où qu'elle soit : `C['Prisma']` sur l'objet
       # module quel que soit son chargeur (espace de noms, défaut, `require(…)`, `import()`
       # attendu), ``C[`Prisma`]``, `Reflect.get(C, 'Prisma')`, clé calculée de déstructuration.
@@ -519,7 +571,8 @@ rules:
               metavariable: $O
               patterns: *hors-etiquette
       # `sql` DÉSTRUCTURÉ de `Prisma`, court ou renommé (le motif renommé prend la forme courte,
-      # mesuré) : même jugement, sous son nouveau nom.
+      # mesuré) : même jugement, sous son nouveau nom. Second filet : la déstructuration de
+      # `Prisma` est déjà refusée à sa source par la liste blanche.
       - patterns:
           - pattern-either:
               - pattern-inside: |
