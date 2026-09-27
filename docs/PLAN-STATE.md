@@ -8,7 +8,7 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `a8d0f40` — 2026-09-27T09:31:18+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #82 (un conflit avec `main`) · 2. #165 (un conflit avec `main`) · 3. #175 (un conflit avec `main`) |
+| Qu’est-ce qui est en vol ? | 1. #165 (un contrôle requis rouge ou une revue manquante) · 2. #82 (un conflit avec `main`) · 3. #175 (un conflit avec `main`) |
 | Qui tient quoi ? | QA-T07 (A05) |
 | Où en est la phase ? | phase 0 — 47/116 tâches, reste 53.10 j |
 | Le prochain pas | SEC-17 — Rôles console : enum `ConsoleRole { admin, qualifieur, comptable, lecteur }`, matrice SSOT, `requireRole`, garde AST (chemin critique) |
@@ -60,8 +60,8 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
-| 2 | #165 — feat(SEC-17): lot L0-07 — rôles console, matrice unique, requireRole ; gates structurelles de la charte | `t/lot-l0-07` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #165 — feat(SEC-17): lot L0-07 — rôles console, matrice unique, requireRole ; gates structurelles de la charte | `t/lot-l0-07` | un contrôle requis rouge ou une revue manquante |
+| 2 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
 | 3 | #175 — chore(GOV-083): lot L0-09 — gates sans script triees, porte A confrontee, causes temoignees, journal | `t/lot-l0-09` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
@@ -105,16 +105,30 @@ GOV-061 : chaque étape du job `gate-a` est confrontée à un constat figé, pr�
 et une garde citée dans un seul commentaire du workflow ne passe plus pour appelée. GOV-094 : le banc
 du corps publié exige un témoin par CAUSE, et le compte des causes se dérive des sites qui les émettent.
 GOV-073 : une seule grammaire de journal, importée par ses quatre lecteurs, avec un refus commun.
+Correctif du 2026-09-27T07:55Z, après un veto de sécurité : le constat de la porte A fige désormais
+l'étape entière, le job entier et le workflow hors `jobs`, clé par clé (`porte_a_alteree`), et refuse
+deux étapes de même nom (`etape_en_double`) ; une garde n'est plus dite appelée que par une commande
+en position de commande, et un script que `package.json` lance ne passe plus pour une promesse.
 
 **Reste.** GOV-085 n'est pas livrée : GOV-082, dont elle dépend, est encore à faire. Les cinq entrées
 fautives de `docs/gates.json` sont à corriger par le gardien de la spécification ; chaque correction
 fera rougir sa ligne de passif, qu'il faudra retirer. Seize familles à plusieurs sites, nommées par le
-balayage de GOV-094, attendent la tâche qui les traitera.
+balayage de GOV-094, attendent la tâche qui les traitera. Limite déclarée de la porte A : un `if:`
+toujours faux posé sur le job `gate-a` saute aussi l'étape `gov:conventions`, et un job requis
+sauté laisse fusionner ; en CI, cette faute n'est vue qu'hors du job (pré-vol, revue). Dettes
+relevées par la revue, non traitées ici : dans `gov-entite.ts`, une famille écrite autrement qu'en
+littéral est sautée par le balayage des causes, et le compte de sites repose sur la même lecture ;
+dans `gov-attributions.ts`, un titre indenté est lu par `gov:etat` ; le point (6) de GOV-094 attend
+sa tâche ; GOV-083 et GOV-061 partagent un fichier et ont été composées dans un même lot. La règle
+littérale de GOV-083 (1), phase courante égale refus, rougirait dix entrées de phase 0 dont la tâche
+est en cours : elle attend une décision.
 
 **Appris.** Une tâche qui cite le chemin d'une garde dans ses `paths` ne la promet pas : elle peut
 aussi bien la retoucher. Seul le champ `tache` de l'entrée du registre dit qui l'écrira. Autre fait :
 l'analyseur YAML que Prettier embarque rend les commentaires comme des nœuds, avec leur position.
-Retirer les commentaires d'un workflow ne demande donc aucun découpage maison.
+Retirer les commentaires d'un workflow ne demande donc aucun découpage maison. Et une confrontation
+qui ne lit que les clés qu'elle connaît laisse passer toutes les autres : un `shell:` ou un
+`with: ref:` changent ce qu'une étape exécute sans changer sa commande. On fige l'objet entier.
 
 ### PR #169 — 2026-09-27 — feat(INT-T01c): contrat v2 — onze types, charges fermées, route des coordonnées du candidat
 

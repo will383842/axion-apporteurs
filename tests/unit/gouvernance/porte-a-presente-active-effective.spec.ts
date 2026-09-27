@@ -55,7 +55,7 @@ function remplacerUneFois(texte: string, cherche: string, par: string): string {
 const CI_REEL = readFileSync(CI, 'utf8');
 const PKG_REEL = readFileSync('package.json', 'utf8');
 
-/** Les six désarmements, chacun UNE variation du dépôt réel (RM-11). */
+/** Les désarmements des six faits — le (a) et le (d) en deux formes —, chacun UNE variation du dépôt réel (RM-11). */
 interface Desarmement {
   fait: string;
   famille: string;
@@ -208,7 +208,7 @@ describe('REQ-QA-013 — la porte A du dépôt est présente, active et effectiv
   });
 });
 
-describe('REQ-GOV-012 — six désarmements, six refus NOMMÉS (copies en mémoire)', () => {
+describe('REQ-GOV-012 — les six faits, chaque désarmement un refus NOMMÉ (copies en mémoire)', () => {
   for (const d of DESARMEMENTS) {
     it(`REQ-GOV-012 — ${d.fait} : ${d.famille}, et le refus nomme « ${d.nomme} »`, async () => {
       const vue = vueDesarmee(d);
@@ -385,7 +385,7 @@ function copieDeTravail(): string {
   return dir;
 }
 
-describe('REQ-GOV-029 — les six copies de travail font sortir la garde en non nul', () => {
+describe('REQ-GOV-029 — chaque copie de travail désarmée font sortir la garde en non nul', () => {
   it('REQ-GOV-029 — la copie intacte sort en zéro ; chaque copie désarmée sort en non nul, famille et étape NOMMÉES', () => {
     const dir = copieDeTravail();
     try {

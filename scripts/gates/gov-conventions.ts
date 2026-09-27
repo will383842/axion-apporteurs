@@ -45,9 +45,25 @@
  *     `etape_repointee`, `script_repointe`, `porte_a_illisible` (GOV-061) — CHAQUE étape du job de la
  *     porte A est PRÉSENTE, ACTIVE et EFFECTIVE, confrontée à son constat (`PORTE_A_FIGEE`). On
  *     croyait la porte armée ; rien ne le prouvait, et six désarmements passaient sans un rouge.
+ *   • `porte_a_alteree`, `etape_en_double` (GOV-061, veto de sécurité sur la PR 175) — l'étape
+ *     ENTIÈRE, le job ENTIER et le niveau workflow qui agit sur lui sont confrontés au constat, clé
+ *     par clé, sous leur forme canonique. La confrontation ne lisait que quatre clés d'étape et deux
+ *     du job : un `shell:` qui rend toujours 0, des `defaults:` de job, un `with: ref:` sur le
+ *     checkout désarmaient la porte en exit 0 sans toucher au constat. Toute clé que le constat ne
+ *     porte pas, ajoutée, retirée ou modifiée, est désormais une faute NOMMÉE ; deux étapes de même
+ *     nom, qu'une table indexée par nom confondait, en sont une autre.
  *
  * ── CE QU'ELLE NE FAIT PAS, ET LE DIT ───────────────────────────────────────────────────────
  *
+ *   — ⚠️ LIMITE DE LA PORTE A, AU PRIX PAYÉ : une faute qui fait SAUTER le job `gate-a` (un `if:`
+ *     toujours faux au niveau du job) saute AUSSI l'étape qui lance cette garde, et un job requis
+ *     « skipped » laisse fusionner. En CI, cette faute-là n'est donc vue qu'HORS de ce job : au
+ *     pré-vol local (`scripts/prevol.ts` joue les étapes sans lire la condition du job) et à la revue.
+ *     Aucune garde logée DANS un job ne juge sa propre condition d'exécution ; la fermer en CI
+ *     demanderait un second job requis, que ce dépôt n'a pas. Des `on:` qui ne déclenchent plus,
+ *     eux, ferment d'eux-mêmes : un check requis qui ne se présente jamais bloque la fusion.
+ *   — Elle ne fige pas les AUTRES jobs du workflow : ils ne désarment pas `gate-a`, sauf par
+ *     `needs:` — et une clé `needs:` ajoutée au job est elle-même une faute (`porte_a_alteree`).
  *   — Elle n'exige d'aucune étape qu'elle EXISTE avant qu'elle soit écrite, ni aucune dépendance de
  *     `package.json` : exiger une présence que personne n'a encore livrée rendrait la garde rouge
  *     en permanence pour un manque qu'aucune PR n'a créé (LEC-13). Ce qu'elle exige, c'est la
@@ -190,6 +206,8 @@ export const FAMILLES = [
   'etape_conditionnee',
   'etape_toleree',
   'etape_repointee',
+  'etape_en_double',
+  'porte_a_alteree',
   'script_repointe',
   'porte_a_illisible',
   'perimetre_vide_sans_motif',
@@ -329,7 +347,21 @@ export interface EtapeFigee {
   readonly uses?: string;
   /** Sa condition `if:`, telle qu'elle s'écrit. ABSENTE = l'étape ne porte aucune condition. */
   readonly si?: string;
+  /**
+   * TOUTES ses autres clés (`with`, `env`, `shell`, `id`, `working-directory`, `timeout-minutes`…),
+   * sous la forme que rend l'analyseur YAML partagé : chaque scalaire est une CHAÎNE. ABSENT = elle
+   * n'en porte aucune. `name`, `run`, `uses`, `if` et `continue-on-error` en sont exclues : chacune
+   * a sa famille, qui dit mieux ce qui a changé.
+   */
+  readonly cles?: Readonly<Record<string, unknown>>;
 }
+
+/** Les clés d'une étape qu'une famille dédiée juge déjà — les seules que `cles` ne porte pas. */
+const CLES_D_ETAPE_JUGEES_A_PART = new Set(['name', 'run', 'uses', 'if', 'continue-on-error']);
+/** Les clés du job qu'une famille dédiée juge déjà — les seules que `PorteFigee.cles` ne porte pas. */
+const CLES_DE_JOB_JUGEES_A_PART = new Set(['if', 'continue-on-error', 'steps']);
+/** La clé du workflow qui porte les jobs : le job de la porte A y est jugé à part. */
+const CLES_DE_WORKFLOW_JUGEES_A_PART = new Set(['jobs']);
 
 /**
  * LE CLIQUET DE LA PORTE A. Le job, sa condition, ses étapes, et la définition `package.json` de
@@ -343,6 +375,17 @@ export interface PorteFigee {
   readonly job: string;
   /** La condition du JOB. `null` = aucune. */
   readonly si: string | null;
+  /**
+   * TOUTES les autres clés du JOB (`runs-on`, `permissions`, et — absentes, donc refusées si on les
+   * pose — `defaults`, `env`, `container`, `services`, `strategy`, `needs`, `timeout-minutes`,
+   * `outputs`, `concurrency`…), sous leur forme canonique. Hors `if`, `continue-on-error`, `steps`.
+   */
+  readonly cles: Readonly<Record<string, unknown>>;
+  /**
+   * TOUTES les clés du WORKFLOW hors `jobs` (`name`, `on`, et — absentes, donc refusées si on les
+   * pose — `defaults`, `env`, `permissions`, `concurrency`, `run-name`…) : elles agissent sur le job.
+   */
+  readonly workflow: Readonly<Record<string, unknown>>;
   readonly etapes: readonly EtapeFigee[];
   readonly scripts: Readonly<Record<string, string>>;
 }
@@ -351,51 +394,144 @@ export interface PorteFigee {
 export const WORKFLOW_DE_LA_PORTE_A = '.github/workflows/ci.yml';
 
 /**
- * Le texte d'un workflow SANS SES COMMENTAIRES, les commentaires remplacés par des blancs (les fins
- * de ligne sont gardées). C'est ce texte-là qu'on interroge pour savoir si une garde est APPELÉE :
- * cherchée dans le texte brut, une garde citée dans un seul commentaire passait pour appelée (le
- * fait (a) de GOV-061). Les commentaires sont LOCALISÉS par l'analyseur YAML qu'embarque Prettier —
- * le même que `scripts/lib/lire-yaml.ts` — et ne sont pas devinés par un découpage : un `#` dans une
- * chaîne ou dans un bloc `run: |` n'est pas un commentaire YAML.
- * ÉCHEC FERMÉ : un fichier que l'analyseur refuse rend le VIDE — aucune garde n'y est appelée.
+ * Les valeurs SCALAIRES d'une clé, partout dans un workflow — lues dans l'arbre de l'analyseur YAML
+ * qu'embarque Prettier : un commentaire, même s'il cite une commande, n'y est jamais une valeur. Une clé dont la valeur est un objet (le `run:`
+ * de `defaults: run: shell:`) n'est pas une commande et n'est pas rendue.
+ * ÉCHEC FERMÉ : un fichier que l'analyseur refuse ne rend AUCUNE valeur — rien n'y est appelé.
  */
-export function sansCommentairesYaml(source: string): string {
+function valeursDeCle(source: string, cle: string): string[] {
   let racine: unknown;
   try {
     const options = { originalText: source };
     racine = analyseursYaml.yaml.parse(source, options as never);
   } catch {
-    return '';
+    return [];
   }
-  const plages: [number, number][] = [];
+  type Noeud = { type?: string; value?: unknown; children?: unknown[] };
+  const scalaire = (n: unknown): string | undefined => {
+    const x = n as Noeud | null;
+    if (x === null || typeof x !== 'object') return undefined;
+    if (typeof x.value === 'string' && x.type !== 'comment') return x.value;
+    const enfants = (x.children ?? []).filter((e) => e !== null);
+    return enfants.length === 1 &&
+      (x.type === 'mappingKey' || x.type === 'mappingValue' || x.type === 'flowMappingValue')
+      ? scalaire(enfants[0])
+      : undefined;
+  };
+  const out: string[] = [];
+  const pile: unknown[] = [racine];
+  while (pile.length > 0) {
+    const n = pile.pop() as Noeud | null;
+    if (n === null || typeof n !== 'object') continue;
+    const enfants = Array.isArray(n.children) ? n.children : [];
+    if ((n.type === 'mappingItem' || n.type === 'flowMappingItem') && enfants.length === 2) {
+      if (scalaire(enfants[0]) === cle) {
+        const v = scalaire(enfants[1]);
+        if (v !== undefined) out.push(v);
+      }
+    }
+    pile.push(...enfants);
+  }
+  return out;
+}
+
+/**
+ * CE QU'UNE LIGNE DE COMMANDE APPELLE VRAIMENT — les scripts `package.json` et les fichiers en
+ * POSITION DE COMMANDE, rien d'autre (GOV-061, fait (a), second tour). Une garde citée dans un
+ * `name:`, un argument d'`echo` ou une chaîne n'est pas appelée : chercher son nom comme une
+ * sous-chaîne du workflow la déclarait câblée. Reconnus : `pnpm [run|exec] <script>`,
+ * `npm run <script>`, `npx`/`pnpm exec` suivis d'une commande, et `tsx`/`node`/`bash`/`sh <fichier>`.
+ * Le reste — `echo`, `test`, une affectation seule — n'appelle rien.
+ */
+function appelsDe(commande: string): { scripts: Set<string>; fichiers: Set<string> } {
+  const scripts = new Set<string>();
+  const fichiers = new Set<string>();
+  const sansGuillemets = (t: string): string => t.replace(/^["']|["']$/g, '');
+  const lire = (mots: readonly string[]): void => {
+    let i = 0;
+    while (i < mots.length && /^[A-Za-z_][A-Za-z0-9_]*=/.test(mots[i]!)) i++;
+    const outil = mots[i];
+    const suite = (j: number): number => {
+      while (j < mots.length && mots[j]!.startsWith('-')) j++;
+      return j;
+    };
+    if (outil === 'pnpm' || outil === 'npm') {
+      let j = suite(i + 1);
+      if (mots[j] === 'exec' || mots[j] === 'dlx') return lire(mots.slice(j + 1));
+      if (mots[j] === 'run' || mots[j] === 'run-script') j = suite(j + 1);
+      else if (outil === 'npm') return;
+      if (mots[j] !== undefined) scripts.add(mots[j]!);
+    } else if (outil === 'npx') {
+      lire(mots.slice(suite(i + 1)));
+    } else if (outil === 'tsx' || outil === 'node' || outil === 'bash' || outil === 'sh') {
+      const j = suite(i + 1);
+      if (mots[j] !== undefined) fichiers.add(mots[j]!);
+    }
+  };
+  for (const segment of commande.split(/\r?\n|&&|\|\||[;|&()]/)) {
+    const mots = segment.trim().split(/\s+/).filter(Boolean).map(sansGuillemets);
+    if (mots.length > 0) lire(mots);
+  }
+  return { scripts, fichiers };
+}
+
+/** Les scripts de `package.json`, lus ; `{}` si le fichier est illisible (rien n'y est défini). */
+function scriptsDuPaquet(packageJson: string): Record<string, string> {
+  try {
+    const pkg = JSON.parse(packageJson || '{}') as { scripts?: unknown };
+    if (!estObjet(pkg.scripts)) return {};
+    return Object.fromEntries(
+      Object.entries(pkg.scripts).filter((e): e is [string, string] => typeof e[1] === 'string')
+    );
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * Ce que les commandes données APPELLENT, suivi à travers `package.json` : `pnpm a` qui vaut
+ * `pnpm b && tsx f.ts` appelle `a`, `b` et `f.ts`. Une garde lancée par un script composé est
+ * donc vue appelée ; une garde seulement NOMMÉE ne l'est pas.
+ */
+function appelsSuivis(
+  commandes: readonly string[],
+  scripts: Readonly<Record<string, string>>
+): { scripts: Set<string>; fichiers: Set<string> } {
+  const tous = { scripts: new Set<string>(), fichiers: new Set<string>() };
+  const file = [...commandes];
+  while (file.length > 0) {
+    const a = appelsDe(file.pop()!);
+    for (const f of a.fichiers) tous.fichiers.add(f);
+    for (const s of a.scripts) {
+      if (tous.scripts.has(s)) continue;
+      tous.scripts.add(s);
+      if (Object.hasOwn(scripts, s)) file.push(scripts[s]!);
+    }
+  }
+  return tous;
+}
+
+/** Les commandes des réglages `.claude/settings.json` : toute valeur de clé `command`, à toute profondeur. */
+function commandesDesReglages(hooks: string): string[] {
+  let racine: unknown;
+  try {
+    racine = JSON.parse(hooks || '{}');
+  } catch {
+    return [];
+  }
+  const out: string[] = [];
   const pile: unknown[] = [racine];
   while (pile.length > 0) {
     const n = pile.pop();
-    if (Array.isArray(n)) {
-      pile.push(...(n as unknown[]));
-      continue;
-    }
-    if (typeof n !== 'object' || n === null) continue;
-    const noeud = n as {
-      type?: unknown;
-      position?: { start?: { offset?: number }; end?: { offset?: number } };
-    };
-    if (noeud.type === 'comment') {
-      const debut = noeud.position?.start?.offset;
-      const fin = noeud.position?.end?.offset;
-      if (typeof debut === 'number' && typeof fin === 'number') plages.push([debut, fin]);
-      continue;
-    }
-    for (const [cle, valeur] of Object.entries(noeud)) {
-      if (cle !== 'position' && typeof valeur === 'object' && valeur !== null) pile.push(valeur);
+    if (Array.isArray(n)) pile.push(...(n as unknown[]));
+    else if (estObjet(n)) {
+      for (const [k, v] of Object.entries(n)) {
+        if (k === 'command' && typeof v === 'string') out.push(v);
+        else pile.push(v);
+      }
     }
   }
-  let texte = source;
-  for (const [debut, fin] of plages.sort((a, b) => b[0] - a[0])) {
-    texte =
-      texte.slice(0, debut) + texte.slice(debut, fin).replace(/[^\n]/g, ' ') + texte.slice(fin);
-  }
-  return texte;
+  return out;
 }
 
 /** Le nom d'une étape lue, dans la convention de `EtapeFigee.nom`. */
@@ -412,6 +548,44 @@ function nomDEtape(champs: Record<string, unknown>): string {
 /** Une valeur lue de l'arbre YAML, écrite pour un message : une chaîne telle quelle, le reste en JSON. */
 function ecrite(v: unknown): string | undefined {
   return typeof v === 'string' ? v : v === undefined ? undefined : JSON.stringify(v);
+}
+
+/**
+ * La forme CANONIQUE d'une valeur lue de l'arbre YAML : du JSON dont les clés de chaque objet sont
+ * triées. YAML n'ordonne pas les clés, et `{ a, b }` écrit en accolades vaut le bloc indenté.
+ */
+function canonique(v: unknown): string {
+  const trie = (x: unknown): unknown =>
+    Array.isArray(x)
+      ? x.map(trie)
+      : estObjet(x)
+        ? Object.fromEntries(
+            Object.keys(x)
+              .sort()
+              .map((k) => [k, trie(x[k])])
+          )
+        : x;
+  return JSON.stringify(trie(v)) ?? 'undefined';
+}
+
+/**
+ * Les clés où ce qu'on LIT diverge de ce qui est FIGÉ — ajoutées, retirées ou modifiées, sous leur
+ * forme canonique —, hors celles qu'une famille dédiée juge à part. ÉCHEC FERMÉ : une clé inconnue
+ * du constat est une divergence, jamais une clé « sans effet connu ».
+ */
+function clesDivergentes(
+  lu: Record<string, unknown>,
+  fige: Readonly<Record<string, unknown>>,
+  aPart: ReadonlySet<string>
+): { cle: string; lu: string; fige: string }[] {
+  const cles = [...new Set([...Object.keys(lu), ...Object.keys(fige)])]
+    .filter((c) => !aPart.has(c))
+    .sort();
+  const forme = (o: Readonly<Record<string, unknown>>, c: string): string =>
+    Object.hasOwn(o, c) ? canonique(o[c]) : '(absente)';
+  return cles
+    .map((cle) => ({ cle, lu: forme(lu, cle), fige: forme(fige, cle) }))
+    .filter((d) => d.lu !== d.fige);
 }
 
 /**
@@ -443,7 +617,14 @@ export interface ConfrontationDeLaPorteA {
  *   — ACTIVE : sa condition `if:` — et celle du job — est celle du constat (`etape_conditionnee`),
  *     et aucune tolérance d'échec, sous aucune forme évaluée, ne la désarme (`etape_toleree`) ;
  *   — EFFECTIVE : elle lance la commande du constat (`etape_repointee`), et le script de
- *     `package.json` que cette commande invoque a la définition du constat (`script_repointe`).
+ *     `package.json` que cette commande invoque a la définition du constat (`script_repointe`) ;
+ *   — ENTIÈRE : toutes ses AUTRES clés — et toutes celles du job, et celles du workflow hors `jobs`
+ *     — sont celles du constat, sous leur forme canonique ; une clé ajoutée, retirée ou modifiée
+ *     est refusée en la nommant (`porte_a_alteree`). Un `shell:`, des `defaults:`, un `env:` ou un
+ *     `with: ref:` changent ce que la commande EXÉCUTE, ou l'arbre qu'elle mesure, sans changer la
+ *     commande : `etape_repointee`, qui ne lit que `run` et `uses`, ne les voit pas ;
+ *   — UNIQUE : deux étapes de même nom sont refusées (`etape_en_double`) — la confrontation est
+ *     indexée par nom, et la seconde y échappait.
  * Un workflow qu'on ne sait pas lire, ou qui ne porte pas le job, est un refus
  * (`porte_a_illisible`) : on ne déclare pas armée une porte qu'on n'a pas lue.
  */
@@ -503,10 +684,54 @@ export async function confronterLaPorteA(vue: Vue): Promise<ConfrontationDeLaPor
     });
   }
 
+  // ── le workflow et le job ENTIERS : toute autre clé change ce que le job exécute ──
+  const alterees = (
+    ou: string,
+    lu: Record<string, unknown>,
+    fige: Readonly<Record<string, unknown>>,
+    aPart: ReadonlySet<string>
+  ): void => {
+    for (const d of clesDivergentes(lu, fige, aPart)) {
+      fautes.push({
+        famille: 'porte_a_alteree',
+        message:
+          `${ou} porte \`${d.cle}: ${d.lu}\` au lieu de \`${d.cle}: ${d.fige}\`. Une clé que le ` +
+          `constat ne porte pas — un \`shell:\` qui rend toujours 0, des \`defaults:\`, un \`env:\`, ` +
+          `un \`with: ref:\` qui fait mesurer un autre arbre — désarme sans changer la commande : ` +
+          `l'étape, le job et le workflow sont figés ENTIERS. ${aRetenir}`,
+      });
+    }
+  };
+  alterees(
+    `le workflow \`${WORKFLOW_DE_LA_PORTE_A}\``,
+    estObjet(workflow) ? workflow : {},
+    figee.workflow,
+    CLES_DE_WORKFLOW_JUGEES_A_PART
+  );
+  alterees(`le job \`${figee.job}\``, job, figee.cles, CLES_DE_JOB_JUGEES_A_PART);
+
   // ── les étapes, une par une ──
   const lues = job.steps.map((e: unknown) => (estObjet(e) ? e : {}));
   const parNom = new Map(lues.map((e) => [nomDEtape(e), e]));
   const figees = new Map(figee.etapes.map((e) => [e.nom, e]));
+  // UNIQUE : deux étapes de même nom se confondraient dans ces tables, et la seconde ne serait
+  // jamais confrontée. Le constat lui-même est soumis à la même règle.
+  const enDouble = (noms: readonly string[]): string[] =>
+    [...new Set(noms.filter((n, i) => noms.indexOf(n) !== i))].sort();
+  for (const [ou, noms] of [
+    [`le job \`${figee.job}\``, lues.map(nomDEtape)],
+    ['le constat `PORTE_A_FIGEE`', figee.etapes.map((e) => e.nom)],
+  ] as const) {
+    for (const nom of enDouble(noms)) {
+      fautes.push({
+        famille: 'etape_en_double',
+        message:
+          `${ou} porte plusieurs étapes nommées « ${nom} ». La confrontation est indexée par nom : ` +
+          `une seule serait jugée, et l'autre — n'importe laquelle de ses clés — passerait sans ` +
+          `un rouge. Donnez à chaque étape un nom unique. ${aRetenir}`,
+      });
+    }
+  }
   for (const f of figee.etapes) {
     if (parNom.has(f.nom)) continue;
     fautes.push({
@@ -559,6 +784,7 @@ export async function confronterLaPorteA(vue: Vue): Promise<ConfrontationDeLaPor
           `tolérance écrite dans le shell (\`|| true\`) est une tolérance comme une autre. ${aRetenir}`,
       });
     }
+    alterees(`l'étape « ${nom} »`, e, f.cles ?? {}, CLES_D_ETAPE_JUGEES_A_PART);
   }
 
   // ── les scripts de `package.json` que ces étapes lancent : figés, donc non repointables ──
@@ -589,8 +815,9 @@ export async function confronterLaPorteA(vue: Vue): Promise<ConfrontationDeLaPor
 /** Le décompte de la porte A, RENDU : une confrontation qu'on n'imprime pas ne se relit pas. */
 export function lignesDeLaPorteA(c: ConfrontationDeLaPorteA): string[] {
   return [
-    `PORTE A — ${c.etapes} étape(s) du job confrontée(s) au constat, chacune présente, active et ` +
-      `effective ; ${c.scripts} script(s) de \`package.json\` confronté(s) à leur définition figée.`,
+    `PORTE A — ${c.etapes} étape(s) du job confrontée(s) au constat, chacune présente, active, ` +
+      `effective et ENTIÈRE (toutes ses clés), le job et le workflow hors \`jobs\` figés de même ; ` +
+      `${c.scripts} script(s) de \`package.json\` confronté(s) à leur définition figée.`,
   ];
 }
 
@@ -774,14 +1001,17 @@ export interface Confrontation {
    *     MOTIF — ce dépôt ne peut ni lire ni câbler un fichier d'un autre dépôt ;
    *   — `promises` : la phase de l'entrée est FUTURE, ou la tâche qui la porte (`tache`) n'est pas
    *     livrée. Sortie avec sa phase et sa tâche : son absence est un fait attendu ;
-   *   — `fautives` : phase courante ou passée, et aucune tâche non livrée ne la porte. Le script
-   *     n'existera jamais sous ce nom : c'est un REFUS (`gate_sans_script`).
+   *   — `fautives` : phase courante ou passée, et aucune tâche non livrée ne la porte — ou, quelle
+   *     que soit sa phase, un script de `package.json` la LANCE, donc la déclare écrite. Le script
+   *     manque là où il est attendu : c'est un REFUS (`gate_sans_script`).
    * ⚠️ « Une autre tâche non livrée cite ce chemin dans ses paths » NE promet PAS : une tâche qui
    * RETOUCHE une garde la déclare, et supprimer la garde passerait alors pour « à venir ».
    */
   readonly autreDepot: readonly GateVue[];
   readonly promises: readonly { gate: GateVue; phase: number; porteur: string | null }[];
   readonly fautives: readonly GateVue[];
+  /** Celles des `fautives` qu'un script de `package.json` lance : perdues, pas promises. */
+  readonly lanceesParLePaquet: readonly GateVue[];
   /** La phase courante, DÉRIVÉE des tâches — `undefined` si aucune tâche ne la situe. */
   readonly phaseCourante: number | undefined;
 }
@@ -817,7 +1047,18 @@ export function confronterDisqueEtRegistre(vue: Vue): Confrontation {
   const statutDe = new Map(vue.taches.map((t) => [t.id, t.statut]));
   const promises: { gate: GateVue; phase: number; porteur: string | null }[] = [];
   const fautives: GateVue[] = [];
+  // UN SCRIPT QUE `package.json` LANCE EST DÉCLARÉ ÉCRIT : son absence est une PERTE, pas une
+  // promesse, quelle que soit la phase et quel que soit le statut de sa tâche. Mesuré sur la PR 175 :
+  // `scripts/gates/migrations-additive.ts`, lancé par la porte A, retiré de l'index, sortait en zéro
+  // rangé parmi les promesses, parce que sa tâche porteuse n'est pas livrée.
+  const lances = appelsSuivis(Object.values(scriptsDuPaquet(vue.packageJson)), {}).fichiers;
+  const lanceesParLePaquet: GateVue[] = [];
   for (const g of entreesSansScript) {
+    if (lances.has(g.script)) {
+      fautives.push(g);
+      lanceesParLePaquet.push(g);
+      continue;
+    }
     // ÉCHEC FERMÉ : sans phase courante, rien ne peut être dit « futur ».
     if (phaseCourante !== undefined && g.phase > phaseCourante) {
       promises.push({ gate: g, phase: g.phase, porteur: null });
@@ -846,6 +1087,7 @@ export function confronterDisqueEtRegistre(vue: Vue): Confrontation {
     ),
     promises,
     fautives,
+    lanceesParLePaquet,
     phaseCourante,
   };
 }
@@ -1021,13 +1263,17 @@ export function controler(vue: Vue): Faute[] {
   for (const g of confrontation.fautives) {
     const motif = motifDuPassif(g.id);
     if (motif.length >= MOTIF_MINIMAL) continue;
+    const pourquoi = confrontation.lanceesParLePaquet.includes(g)
+      ? `Un script de \`package.json\` le LANCE : il est déclaré écrit, et sa tâche, livrée ou non, ` +
+        `ne le promet plus — il a été PERDU (retiré de l'index, renommé), pas encore à écrire`
+      : `Phase courante : ${confrontation.phaseCourante ?? 'INDÉTERMINÉE'} — l'entrée n'est ` +
+        `pas d'une phase future, et aucune tâche non livrée ne la porte (champ \`tache\` : ` +
+        `${JSON.stringify(g.tache ?? null)}). Ce script n'existera donc jamais sous ce nom`;
     fautes.push({
       famille: 'gate_sans_script',
       message:
         `\`${g.id}\` (phase ${g.phase}) nomme \`${g.script}\`, introuvable parmi les fichiers ` +
-        `suivis. Phase courante : ${confrontation.phaseCourante ?? 'INDÉTERMINÉE'} — l'entrée n'est ` +
-        `pas d'une phase future, et aucune tâche non livrée ne la porte (champ \`tache\` : ` +
-        `${JSON.stringify(g.tache ?? null)}). Ce script n'existera donc jamais sous ce nom : ` +
+        `suivis. ${pourquoi} : ` +
         `l'entrée est FAUTIVE, et c'est le silence que GOV-083 ferme — une garde qui ne voit pas ` +
         `ce qui manque la déclare conforme. Corrigez l'entrée (le script réel), rattachez-la à la ` +
         `tâche qui l'écrira, ou retirez-la${
@@ -1050,13 +1296,19 @@ export function controler(vue: Vue): Faute[] {
     });
   }
 
-  // SANS LES COMMENTAIRES (GOV-061, fait (a)) : une garde citée dans un commentaire n'est pas appelée.
-  const appelants = [...vue.workflows.map((w) => sansCommentairesYaml(w.source)), vue.hooks].join(
-    '\n'
+  // EN POSITION DE COMMANDE (GOV-061, fait (a)) : une garde citée dans un commentaire, un `name:`
+  // ou un `echo` n'est pas appelée. Seuls comptent les `run:` des workflows et les `command` des
+  // réglages, lus par un analyseur, et ce qu'ils lancent à travers `package.json`.
+  const appels = appelsSuivis(
+    [
+      ...vue.workflows.flatMap((w) => valeursDeCle(w.source, 'run')),
+      ...commandesDesReglages(vue.hooks),
+    ],
+    scriptsDuPaquet(vue.packageJson)
   );
   for (const g of confrontation.jugees) {
     const noms = [g.id, g.script, ...(g.alias ?? [])];
-    if (noms.some((n) => appelants.includes(n))) continue;
+    if (noms.some((n) => appels.scripts.has(n) || appels.fichiers.has(n))) continue;
     const motif = (g.horsCi ?? '').trim();
     if (motif.length >= MOTIF_MINIMAL) continue;
     fautes.push({
@@ -1234,15 +1486,41 @@ export function lireVue(): Vue {
  * LE CONSTAT DE LA PORTE A (GOV-061), relevé sur `.github/workflows/ci.yml` et `package.json` le
  * 2026-09-27. Il se RELÈVE, il ne se tape pas : l'analyseur YAML partagé lit le job, et chaque ligne
  * ci-dessous est ce qu'il rend. Une étape ajoutée, retirée, conditionnée, tolérée ou repointée fait
- * rougir la garde jusqu'à ce que ce constat la porte — dans le même diff que `ci.yml`.
+ * rougir la garde jusqu'à ce que ce constat la porte — dans le même diff que `ci.yml`. Il fige
+ * l'étape ENTIÈRE, le job ENTIER et le workflow hors `jobs` : une clé ajoutée, retirée ou modifiée
+ * rougit `porte_a_alteree`.
  */
+/** Le jeton que cinq étapes reçoivent pour lire la forge — une valeur, écrite une fois (RM-01). */
+const JETON_DE_LA_FORGE = { env: { GH_TOKEN: '${{ secrets.GITHUB_TOKEN }}' } } as const;
+
 export const PORTE_A_FIGEE: PorteFigee = {
   job: 'gate-a',
   si: '${{ github.event.pull_request.merged != true }}',
+  cles: {
+    'runs-on': 'ubuntu-latest',
+    permissions: { contents: 'read', 'pull-requests': 'read' },
+  },
+  workflow: {
+    name: 'Gate A',
+    on: {
+      push: { branches: ['main'] },
+      pull_request: {
+        types: ['opened', 'synchronize', 'reopened', 'edited', 'labeled', 'unlabeled'],
+      },
+    },
+  },
   etapes: [
-    { nom: 'uses: actions/checkout@v4', uses: 'actions/checkout@v4' },
+    {
+      nom: 'uses: actions/checkout@v4',
+      uses: 'actions/checkout@v4',
+      cles: { with: { 'fetch-depth': '0' } },
+    },
     { nom: 'uses: pnpm/action-setup@v4', uses: 'pnpm/action-setup@v4' },
-    { nom: 'uses: actions/setup-node@v4', uses: 'actions/setup-node@v4' },
+    {
+      nom: 'uses: actions/setup-node@v4',
+      uses: 'actions/setup-node@v4',
+      cles: { with: { 'node-version': '22', cache: 'pnpm' } },
+    },
     { nom: 'run: pnpm install --frozen-lockfile', run: 'pnpm install --frozen-lockfile' },
     { nom: 'Regle de publication (depot public)', run: 'pnpm gov:publication' },
     { nom: 'La garde de publication sait rougir', run: 'pnpm gov:publication:prove' },
@@ -1279,10 +1557,15 @@ export const PORTE_A_FIGEE: PorteFigee = {
       nom: 'Le corps PUBLIE de la PR ne porte aucune coordonnee',
       run: 'pnpm gov:entite:corps',
       si: "github.event_name == 'pull_request'",
+      cles: JETON_DE_LA_FORGE,
     },
     { nom: 'La garde du corps publie sait rougir', run: 'pnpm gov:entite:corps:prove' },
     { nom: 'La garde du depot sait rougir', run: 'pnpm gov:depot-visibilite:prove' },
-    { nom: 'Matrice de tracabilite REQ vers tache vers test vers PR', run: 'pnpm gov:trace' },
+    {
+      nom: 'Matrice de tracabilite REQ vers tache vers test vers PR',
+      run: 'pnpm gov:trace',
+      cles: JETON_DE_LA_FORGE,
+    },
     { nom: 'La matrice de tracabilite sait rougir', run: 'pnpm gov:trace:prove' },
     { nom: 'La vue de tracabilite est derivee de ses sources', run: 'pnpm gov:trace:verifier' },
     { nom: 'La vue de l etat vivant est egale a sa source', run: 'pnpm plan-state:verifier' },
@@ -1373,10 +1656,11 @@ export const PORTE_A_FIGEE: PorteFigee = {
     { nom: 'La garde red-first sait rougir', run: 'pnpm red-first:prove' },
     { nom: 'Harnais de l adaptateur MCP', run: 'pnpm harnais-mcp' },
     { nom: 'Navigateurs des passes d accessibilite', run: 'pnpm a11y:navigateurs' },
-    { nom: 'Tests', run: 'pnpm test' },
+    { nom: 'Tests', run: 'pnpm test', cles: JETON_DE_LA_FORGE },
     {
       nom: 'req:check — chaque paire (tache, REQ) a son test annote et VERT',
       run: 'pnpm req:check',
+      cles: JETON_DE_LA_FORGE,
     },
     { nom: 'Le lecteur du rapport de mutation sait rougir', run: 'pnpm mutation:prove' },
     {
@@ -1386,6 +1670,7 @@ export const PORTE_A_FIGEE: PorteFigee = {
     {
       nom: 'Etat vivant — fraicheur, verrou d owner, journal',
       run: 'pnpm gov:etat --now "$(date -u +%Y-%m-%dT%H:%M:%SZ)"',
+      cles: JETON_DE_LA_FORGE,
     },
     { nom: 'La garde de l etat vivant sait rougir', run: 'pnpm gov:etat:prove' },
   ],
@@ -1521,6 +1806,8 @@ const PKG_CONFORME = JSON.stringify({
 export const PORTE_CONFORME: PorteFigee = {
   job: 'gate-a',
   si: null,
+  cles: {},
+  workflow: { name: 'Gate A' },
   etapes: [
     { nom: 'Lint', run: 'pnpm lint' },
     { nom: 'Format', run: 'pnpm format:check' },
@@ -2026,6 +2313,35 @@ const TEMOINS_PORTE_A: ReadonlyArray<{ famille: string; libelle: string; vue: Vu
     ),
   },
   {
+    famille: 'porte_a_alteree',
+    libelle: 'une clé `shell:` hors constat sur une étape, qui rend toujours 0',
+    vue: CI_EN(
+      '        run: pnpm lint\n',
+      "        run: pnpm lint\n        shell: sh -c 'exit 0' {0}\n"
+    ),
+  },
+  {
+    famille: 'porte_a_alteree',
+    libelle: 'des `defaults:` posés sur le JOB, qui désarment toutes ses étapes',
+    vue: CI_EN(
+      '  gate-a:\n',
+      "  gate-a:\n    defaults:\n      run:\n        shell: sh -c 'exit 0' {0}\n"
+    ),
+  },
+  {
+    famille: 'porte_a_alteree',
+    libelle: 'un `env:` posé au niveau du WORKFLOW',
+    vue: CI_EN('name: Gate A\n', 'name: Gate A\nenv:\n  CI: "false"\n'),
+  },
+  {
+    famille: 'etape_en_double',
+    libelle: 'deux étapes de même nom, dont la seconde échappait à la confrontation',
+    vue: CI_EN(
+      '      - name: Format\n        run: pnpm format:check\n',
+      '      - name: Format\n        run: pnpm format:check\n'.repeat(2)
+    ),
+  },
+  {
     famille: 'script_repointe',
     libelle: 'le script `package.json` d’une étape repointé',
     vue: variante({
@@ -2160,7 +2476,7 @@ export function lignesDeConfrontation(vue: Vue): string[] {
     `   • entrées sous \`${DOSSIER_DES_GARDES}\` dont le script n'est pas suivi ici, donc HORS ` +
       `périmètre : ${c.entreesSansScript.length} — réparties ci-dessous, aucune ne se tait :`,
     `     ↳ promises (phase future, ou tâche porteuse non livrée) : ${c.promises.length}`,
-    `     ↳ fautives (phase ${c.phaseCourante ?? '?'} ou antérieure, aucune tâche ne les porte) : ` +
+    `     ↳ fautives (phase ${c.phaseCourante ?? '?'} ou antérieure sans tâche non livrée, ou lancées par \`package.json\`) : ` +
       `${c.fautives.length} — dont ${declarees} déclarée(s) au passif, une par une avec son motif`
   );
   for (const g of c.fautives) {

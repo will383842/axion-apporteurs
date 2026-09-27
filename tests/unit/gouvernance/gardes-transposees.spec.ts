@@ -527,6 +527,23 @@ describe('REQ-GOV-029 — la garde retenue rougit sur un témoin, famille par fa
     expect(await porte(vue)).toEqual(['etape_repointee']);
   });
 
+  it('porte_a_alteree — une clé hors constat : `shell:` d’étape, `defaults:` de job, `env:` de workflow', async () => {
+    const shell = ciEn(FORMAT, FORMAT + "        shell: sh -c 'exit 0' {0}\n");
+    expect(await porte(shell)).toEqual(['porte_a_alteree']);
+    const defauts = ciEn(
+      '  gate-a:\n',
+      '  gate-a:\n    defaults:\n      run:\n        shell: sh\n'
+    );
+    expect(await porte(defauts)).toEqual(['porte_a_alteree']);
+    const env = ciEn('name: Gate A\n', 'name: Gate A\nenv:\n  CI: "false"\n');
+    expect(await porte(env)).toEqual(['porte_a_alteree']);
+  });
+
+  it('etape_en_double — deux étapes de même nom, la seconde n’était jamais confrontée', async () => {
+    const vue = ciEn(FORMAT, FORMAT + FORMAT);
+    expect(await porte(vue)).toEqual(['etape_en_double']);
+  });
+
   it('script_repointe — le script `package.json` d’une étape repointé', async () => {
     const pkg = JSON.parse(VUE_CONFORME.packageJson) as { scripts: Record<string, string> };
     const scripts = { ...pkg.scripts, 'gov:conventions': 'echo ok' };
