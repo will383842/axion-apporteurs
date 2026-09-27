@@ -727,6 +727,55 @@ describe('REQ-QA-002 — `mutation:pr` écarte un diff de commentaires seuls, ju
     expect(codeInchange(null, avant, F)).toBe(false);
   });
 
+  // L'INSERTION AUTOMATIQUE DE POINT-VIRGULE (revues `exactitude` 5328789820 et `securite`
+  // 5328796307, PR 82) : un saut de ligne — seul, ou DANS un commentaire bloc — après `return`,
+  // `throw`, `break`/`continue` étiquetés, ou avant un `++` postfixe, change ce que le code FAIT
+  // sans qu'aucun jeton ne change. `garde(false)` ne lève plus : la garde s'ouvre.
+  const garde = [
+    'declare function exiger(ok: boolean): boolean;',
+    'export function garde(ok: boolean): boolean {',
+    '  return exiger(ok);',
+    '}',
+    'export function lever(e: Error): never {',
+    '  throw e;',
+    '}',
+    'export function boucle(xs: number[][]): number {',
+    '  let n = 0;',
+    '  dehors: for (const l of xs) {',
+    '    for (const x of l) {',
+    '      if (x < 0) continue dehors;',
+    '      if (x > 9) break dehors;',
+    '      n += x;',
+    '    }',
+    '  }',
+    '  return n;',
+    '}',
+    'let i = 0;',
+    'export const inc = (): number => i++;',
+    '',
+  ].join('\n');
+  const dans = (de: string, par: string): string => garde.split(de).join(par);
+
+  it('REQ-QA-002 — `return` + commentaire bloc À SAUT DE LIGNE, ou saut de ligne seul : code changé (muté)', () => {
+    expect(codeInchange(garde, dans('return exiger(ok);', 'return /*\n  */ exiger(ok);'), F)).toBe(false);
+    expect(codeInchange(garde, dans('return exiger(ok);', 'return\n    exiger(ok);'), F)).toBe(false);
+  });
+
+  it('REQ-QA-002 — `throw`, `break`/`continue` étiquetés, `++` postfixe séparés par un saut de ligne : code changé (muté)', () => {
+    expect(codeInchange(garde, dans('throw e;', 'throw /*\n */ e;'), F)).toBe(false);
+    expect(codeInchange(garde, dans('throw e;', 'throw\n    e;'), F)).toBe(false);
+    expect(codeInchange(garde, dans('break dehors;', 'break /*\n */ dehors;'), F)).toBe(false);
+    expect(codeInchange(garde, dans('continue dehors;', 'continue\n dehors;'), F)).toBe(false);
+    expect(codeInchange(garde, dans('i++;', 'i /*\n */ ++;'), F)).toBe(false);
+    expect(codeInchange(garde, dans('i++;', 'i\n++;'), F)).toBe(false);
+  });
+
+  it('REQ-QA-002 — commentaire ligne ou bloc SUR UNE LIGNE, même après `return` : code inchangé (écarté)', () => {
+    expect(codeInchange(garde, dans('return exiger(ok);', 'return /* c */ exiger(ok);'), F)).toBe(true);
+    expect(codeInchange(garde, dans('  return exiger(ok);', '  // la garde\n  return exiger(ok); // fin'), F)).toBe(true);
+    expect(codeInchange(garde, dans('throw e;', 'throw /* e */ e;'), F)).toBe(true);
+  });
+
   const mesures = (lireBase: (base: string, f: string) => string | null, tete: string) => {
     let lance = 0;
     const r = () =>

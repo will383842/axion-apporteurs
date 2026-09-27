@@ -26,11 +26,19 @@
  * lanceur, configuration de vitest, parallélisme — tout est hérité. Ne changent que `mutate`, le
  * mode incrémental, le fichier incrémental et le rapport, écrits sous `reports/mutation/` (ignoré).
  *
- * UN DIFF DE COMMENTAIRES SEULS N'EST PAS MUTÉ, ET EST NOMMÉ (`codeInchange`) : si la suite des
- * JETONS de code du fichier est la même à la base de fusion et dans l'arbre (lue par l'analyseur
- * de TypeScript, jamais par une heuristique de ligne), aucun mutant ne peut changer de sort. Base
- * illisible ou fichier ajouté : MUTÉ (échec fermé). Un `// Stryker disable` ajouté par un tel diff
- * garde le fichier dans la passe, où la désactivation le fait échouer.
+ * UN DIFF DE COMMENTAIRES SEULS N'EST PAS MUTÉ, ET EST NOMMÉ (`codeInchange`) : il faut que la
+ * STRUCTURE du fichier soit la même à la base de fusion et dans l'arbre — lue par l'analyseur de
+ * TypeScript, jamais par une heuristique de ligne : la suite préfixe de TOUS les nœuds de l'arbre,
+ * le texte de chaque jeton, et pour chaque jeton la présence d'un saut de ligne qui le précède,
+ * commentaires compris. Les jetons SEULS ne suffisent pas : un saut de ligne — seul, ou DANS un
+ * commentaire bloc — après `return`, `throw`, `break`/`continue` étiquetés ou avant un `++`/`--`
+ * postfixe déclenche l'insertion automatique d'un point-virgule, et change ce que le code fait
+ * sans changer un jeton (revues `exactitude` 5328789820 et `securite` 5328796307, PR 82). Seul
+ * le diff qui laisse cette structure intacte est écarté : un commentaire changé, déplacé ou
+ * ajouté qui n'introduit ni ne retire de saut de ligne devant un jeton. Tout autre diff — un
+ * saut de ligne ajouté ou retiré devant un jeton, même sans effet — est MUTÉ. Base illisible ou
+ * fichier ajouté : MUTÉ (échec fermé). Un `// Stryker disable` ajouté par un tel diff garde le
+ * fichier dans la passe, où la désactivation le fait échouer.
  *
  * LE VERDICT est celui du lecteur unique du rapport (`scripts/mutation/rapport.ts`, `decider`) :
  * score sous le seuil → 1, survivants NOMMÉS ; rapport absent ou vide → 1. Stryker en échec → 1.
@@ -68,7 +76,7 @@ const MOTIF_DU_RESTE_DU_PRODUIT =
   'le jugent au rendu ou en navigateur, hors du processus que Stryker instrumente';
 
 export const MOTIF_COMMENTAIRES_SEULS =
-  'diff de commentaires seuls : aucun jeton de code ne change entre la base de fusion et l’arbre';
+  'diff de commentaires seuls : ni la structure, ni les jetons, ni les sauts de ligne devant un jeton ne changent entre la base de fusion et l’arbre';
 
 const estUnSource = (f: string): boolean =>
   /\.tsx?$/.test(f) && !/\.(spec|test)\.tsx?$/.test(f) && !f.endsWith('.d.ts');
@@ -97,8 +105,17 @@ export function fichiersAMuter(fichiers: readonly string[]): {
 }
 
 /**
- * La suite des jetons de code d'un source, commentaires et blancs retirés. Les feuilles de l'arbre
- * syntaxique, pas le scanner seul : lui lirait `// x` dans la queue d'un gabarit après `${…}` ou
+ * La STRUCTURE d'un source, commentaires retirés : la suite préfixe de TOUS les nœuds de l'arbre
+ * syntaxique (leur `kind`, ouvert puis fermé), le texte de chaque feuille, et pour chaque feuille
+ * le fait qu'un SAUT DE LIGNE la précède — dans le blanc OU dans un commentaire (le
+ * `hasPrecedingLineBreak` de TypeScript, recalculé sur l'arbre). Les feuilles SEULES ne
+ * suffisaient pas (revues `exactitude` 5328789820 et `securite` 5328796307, PR 82) : `return`,
+ * un commentaire bloc qui contient un saut de ligne, puis `exiger(ok);`, a les mêmes jetons que
+ * `return exiger(ok);`, mais l'insertion automatique de point-virgule en fait
+ * `return; exiger(ok);` — un `ReturnStatement` vide suivi d'un `ExpressionStatement`, que la
+ * structure voit, quelle qu'en soit la cause (commentaire bloc à saut de ligne ou saut de ligne
+ * seul, après `return`, `throw`, `break`/`continue` étiquetés, avant un `++`/`--` postfixe).
+ * L'arbre, pas le scanner seul : lui lirait `// x` dans la queue d'un gabarit après `${…}` ou
  * dans une classe de regex (`/[//]/`) comme un commentaire. Les nœuds JSDoc sont sautés.
  */
 function jetonsDeCode(texte: string, fichier: string): string[] {
@@ -115,17 +132,23 @@ function jetonsDeCode(texte: string, fichier: string): string[] {
     const enfants = n.getChildren(sf);
     if (enfants.length === 0) {
       const t = n.getText(sf);
-      if (t !== '') jetons.push(`${n.kind}:${t}`);
+      if (t === '') return;
+      const saut = /[\r\n\u2028\u2029]/.test(texte.slice(n.getFullStart(), n.getStart(sf)));
+      jetons.push(`${n.kind}:${saut ? '⏎' : ''}${t}`);
       return;
     }
+    jetons.push(`(${n.kind}`);
     enfants.forEach(visiter);
+    jetons.push(`)${n.kind}`);
   };
   visiter(sf);
   return jetons;
 }
 
 /**
- * Vrai si le diff de `fichier` entre `base` et `tete` ne touche QUE des commentaires et des blancs.
+ * Vrai si le diff de `fichier` entre `base` et `tete` ne touche QUE des commentaires et des
+ * blancs, sans rien changer de la structure ni des sauts de ligne qui précèdent un jeton (voir
+ * `jetonsDeCode`).
  * `base` null (fichier ajouté, base illisible) → faux : on ne s'écarte jamais par défaut.
  */
 export function codeInchange(base: string | null, tete: string, fichier: string): boolean {
