@@ -32,10 +32,12 @@
  *     refusait l'inverse. Une garde à sens unique est le défaut que ce dépôt a déjà payé.
  *   • `garde_ecrite_jamais_appelee` — la leçon d'axionia : `qualiopi:isolation-check` existait
  *     depuis des mois, n'était câblé dans aucun workflow, et cumulait 88 violations pendant que
- *     la seule des trois gardes câblée affichait zéro. « Appelée » veut dire LANCÉE par une commande
- *     atteignable dont le statut compte : une garde citée entre guillemets, court-circuitée (`true ||`),
- *     placée après un `exit`, dans un pipeline ou en arrière-plan n'est pas appelée (refus
- *     d'exactitude sur la PR 175 : la ligne était découpée sans tenir compte des guillemets).
+ *     la seule des trois gardes câblée affichait zéro. UNE GARDE EST APPELÉE SI UNE ÉTAPE N'EXÉCUTE
+ *     QU'ELLE : le `run:` (ou la `command` d'un réglage) est EXACTEMENT une commande simple — des
+ *     affectations littérales, `pnpm [run] <script>`, `npx tsx`, `tsx` ou `node <fichier>`, des
+ *     arguments littéraux —, sur une ligne, sans opérateur, sans `$`, sans expression `${{ … }}`.
+ *     Tout le reste n'appelle rien (refus d'exactitude et veto de sécurité sur la PR 175 : trois tours
+ *     de modélisation du shell ont chacun laissé passer une forme ; on a cessé de modéliser).
  *   • `perimetre_vide_sans_motif` — le cas d'école à ne PAS reproduire :
  *     `axionia/scripts/check-zod.ts` sort en 0 avec un avertissement quand son répertoire
  *     n'existe pas. Une garde à périmètre vide qui rend « ✅ » ne garde rien. Ici, un périmètre
@@ -57,6 +59,9 @@
  *     nom, qu'une table indexée par nom confondait, en sont une autre. Un étage plus bas, la
  *     configuration pnpm/npm de la racine (`.npmrc`, `pnpm-workspace.yaml`, `.pnpmfile.cjs`, clé
  *     `pnpm` de `package.json`) change le shell de chaque `pnpm <script>` : elle est figée ABSENTE.
+ *     Les crochets que `pnpm install` exécute à la racine AVANT toutes les gardes (`postinstall`…) sont
+ *     figés par leur VALEUR, ou leur ABSENCE, comme les `pre<script>`/`post<script>` des scripts de la
+ *     porte, que pnpm 9 exécute autour d'eux (veto de sécurité, tour 3).
  *
  * ── CE QU'ELLE NE FAIT PAS, ET LE DIT ───────────────────────────────────────────────────────
  *
@@ -69,13 +74,17 @@
  *     eux, ferment d'eux-mêmes : un check requis qui ne se présente jamais bloque la fusion.
  *   — HORS DU JOB `gate-a`, RIEN NE JUGE QU'UNE ÉTAPE S'EXÉCUTE. Une étape de `nightly.yml` qui lance
  *     une garde est lue comme un appel même si elle porte un `if:` toujours faux, un
- *     `continue-on-error`, ou si son job ne se déclenche jamais : seul le job de la porte A est
+ *     `continue-on-error`, un `shell:` ou un `env:` qui la désarment, ou si son job ne se déclenche
+ *     jamais : seul le job de la porte A est
  *     confronté à un constat. `garde_ecrite_jamais_appelee` dit « câblée », pas « exécutée ».
- *   — ⚠️ PRIX ASSUMÉ DU LEXER : une ligne qu'il refuse (guillemet non fermé, document en ligne `<<`)
- *     ou qui porte une construction qu'il ne juge pas (`if`, `case`, boucle, fonction, groupe
- *     `{ … }`, `trap`) n'appelle RIEN, même une garde qu'elle lance réellement ; une commande dans
- *     un sous-shell ou une substitution non plus. Échouer fermé, ici, c'est tenir la garde pour NON
- *     appelée : on simplifie la ligne, ou on motive `horsCi`.
+ *   — ⚠️ PRIX ASSUMÉ DE LA RÈGLE STRICTE : un idiome COMPOSÉ qui lance réellement la garde
+ *     (`pnpm a && pnpm b`, un argument `$(date …)` ou `${{ inputs.x }}`, deux lignes) est un FAUX
+ *     ROUGE : il n'appelle rien. On écrit la garde dans une étape à part, qui n'exécute qu'elle, ou on
+ *     motive `horsCi`. Mesuré sur le dépôt : trois étapes de verdict (`gov:etat --now "$(date …)"` en
+ *     porte A, `gov:lecons --now $(date …)` et `gates:prouvees --phase ${{ … }}` la nuit) ne comptent
+ *     plus ; leurs gardes restent appelées parce que leur étape `:prove` lance le MÊME fichier.
+ *   — Le FICHIER d'une garde est tenu appelé si UNE étape le lance, quels que soient ses arguments :
+ *     une étape `--prove` seule suffit. Hors porte A, le verdict lui-même n'est donc pas exigé.
  *   — Elle ne voit pas la configuration pnpm/npm HORS du dépôt : le `.npmrc` de l'utilisateur ou
  *     global du coureur, et les variables `npm_config_*` qu'il porterait. Celles qu'un `env:` du
  *     workflow poserait sont figées avec lui ; les autres ne sont pas dans l'arbre qu'elle lit.
@@ -417,7 +426,38 @@ export interface PorteFigee {
     readonly fichiersAbsents: readonly string[];
     readonly clesAbsentes: readonly string[];
   };
+  /**
+   * LES CROCHETS QUE `pnpm install` EXÉCUTE À LA RACINE (veto de sécurité, tour 3, sur la PR 175) :
+   * la VALEUR de chacun, ou `null` s'il doit être ABSENT. Ils tournent pendant l'étape
+   * `pnpm install --frozen-lockfile`, AVANT toutes les gardes : figer l'étape par sa seule commande
+   * laissait un `postinstall` repointé désarmer la porte entière. Les `pre<script>`/`post<script>`
+   * des scripts figés, que pnpm 9 exécute autour de chaque `pnpm <script>`, sont figés ABSENTS par
+   * dérivation, sauf à les nommer ici.
+   */
+  readonly crochets: Readonly<Record<CrochetDInstallation, string | null>>;
 }
+
+/**
+ * Les crochets de cycle de vie que pnpm 9 exécute pour le projet RACINE pendant `pnpm install` — lus
+ * dans le code de pnpm 9.12.0 (`dist/pnpm.cjs` : `DEV_PREINSTALL = "pnpm:devPreinstall"`, puis
+ * `runLifecycleHooksConcurrently(["preinstall", "install", "postinstall", "preprepare", "prepare",
+ * "postprepare"], …)`), et non supposés. `enable-pre-post-scripts` y vaut `true` par défaut.
+ */
+export const CROCHETS_D_INSTALLATION = [
+  'pnpm:devPreinstall',
+  'preinstall',
+  'install',
+  'postinstall',
+  'preprepare',
+  'prepare',
+  'postprepare',
+] as const;
+export type CrochetDInstallation = (typeof CROCHETS_D_INSTALLATION)[number];
+
+/** Aucun crochet d'installation : la forme de départ d'un constat, qui n'en nomme que les présents. */
+export const AUCUN_CROCHET = Object.fromEntries(
+  CROCHETS_D_INSTALLATION.map((c) => [c, null])
+) as Readonly<Record<CrochetDInstallation, null>>;
 
 /** Ce que la racine ne porte pas : les fichiers et les clés de `package.json` qui configurent pnpm/npm. */
 export const CONFIGURATION_DU_PAQUET_ABSENTE: PorteFigee['paquet'] = {
@@ -477,7 +517,8 @@ interface Appels {
 }
 
 /**
- * Les mots d'UNE commande simple, lus comme un appel. Reconnus : `pnpm [run|exec] <script>`,
+ * Les mots d'UNE commande simple, lus comme un appel NOMMÉ — pour la seule sur-approximation de
+ * `commandesNommees`. Reconnus : `pnpm [run|exec] <script>`,
  * `npm run <script>`, `npx`/`pnpm exec` suivis d'une commande, et `tsx`/`node`/`bash`/`sh <fichier>`.
  * Le reste — `echo`, `test`, une affectation seule — n'appelle rien.
  */
@@ -520,270 +561,59 @@ function commandesNommees(commande: string): Appels {
   return a;
 }
 
-/** Un jeton de la ligne de commande : un MOT (déjà désenveloppé de ses guillemets), ou un OPÉRATEUR. */
-type Jeton = { readonly mot: string } | { readonly op: string };
+/** Un mot LITTÉRAL nu : rien que le shell n'expanse, ne découpe ni n'interprète. */
+const MOT_NU = /^[A-Za-z0-9_@%+=:,./-]+$/;
+/** Le contenu admis entre guillemets : le même, sans rien que le shell expanserait. */
+const ENTRE_GUILLEMETS = /^(?:'([A-Za-z0-9_@%+=:,./-]*)'|"([A-Za-z0-9_@%+=:,./-]*)")$/;
+/** Une affectation `NOM=valeur` dont la valeur est littérale (vide admise). */
+const AFFECTATION = /^[A-Za-z_][A-Za-z0-9_]*=[A-Za-z0-9_@%+=:,./-]*$/;
 
-/**
- * LE LEXER SHELL MINIMAL (refus d'exactitude sur la PR 175). Il respecte les guillemets simples et
- * doubles et les échappements, et découpe sur `;`, `&&`, `||`, `|`, `&`, les sauts de ligne et les
- * parenthèses de sous-shell. Une substitution (`$(…)`, accents graves, `<(…)`) et une expansion
- * `${…}` restent DANS leur mot : ce qu'elles contiennent n'est jamais lu comme une commande. Une
- * expression d'Actions `${{ … }}`, remplacée avant que le shell ne voie la ligne, est un mot opaque :
- * son `||` n'est pas un opérateur du shell.
- * ÉCHEC FERMÉ : un guillemet, une substitution ou une expression non fermés, un document en ligne
- * (`<<`), une fin de branche de `case` (`;;`) rendent `null` — la ligne n'est pas lue.
- */
-function jetonsShell(commande: string): Jeton[] | null {
-  const c = commande;
-  const out: Jeton[] = [];
-  let mot = '';
-  let enMot = false;
-  const finir = (): void => {
-    if (enMot) out.push({ mot });
-    mot = '';
-    enMot = false;
-  };
-  const ajouter = (texte: string): void => {
-    mot += texte;
-    enMot = true;
-  };
-  /** L'index qui suit l'accent grave fermant, ou -1. */
-  const finAccentGrave = (i: number): number => {
-    for (let j = i; j < c.length; j++) {
-      if (c[j] === '\\') j++;
-      else if (c[j] === '`') return j + 1;
-    }
-    return -1;
-  };
-  /** Le texte entre guillemets doubles et l'index qui suit le fermant, ou `null`. */
-  const finGuillemets = (i: number): { fin: number; texte: string } | null => {
-    let texte = '';
-    let j = i;
-    while (j < c.length) {
-      const x = c[j]!;
-      if (x === '"') return { fin: j + 1, texte };
-      if (x === '\\') {
-        texte += c[j + 1] ?? '';
-        j += 2;
-        continue;
-      }
-      let k = j + 1;
-      if (x === '$' && (c[j + 1] === '(' || c[j + 1] === '{')) {
-        k = finEquilibree(j + 2, c[j + 1]!, c[j + 1] === '(' ? ')' : '}');
-      } else if (x === '`') k = finAccentGrave(j + 1);
-      if (k < 0) return null;
-      texte += c.slice(j, k);
-      j = k;
-    }
-    return null;
-  };
-  /** L'index qui suit le fermant qui équilibre l'ouvrant déjà lu, guillemets respectés, ou -1. */
-  const finEquilibree = (i: number, ouvre: string, ferme: string): number => {
-    let profondeur = 1;
-    let j = i;
-    while (j < c.length) {
-      const x = c[j]!;
-      if (x === '\\') j += 2;
-      else if (x === "'") {
-        const k = c.indexOf("'", j + 1);
-        if (k < 0) return -1;
-        j = k + 1;
-      } else if (x === '"') {
-        const g = finGuillemets(j + 1);
-        if (g === null) return -1;
-        j = g.fin;
-      } else if (x === '`') {
-        const k = finAccentGrave(j + 1);
-        if (k < 0) return -1;
-        j = k;
-      } else {
-        if (x === ouvre) profondeur++;
-        else if (x === ferme && --profondeur === 0) return j + 1;
-        j++;
-      }
-    }
-    return -1;
-  };
-
-  let i = 0;
-  while (i < c.length) {
-    const x = c[i]!;
-    const suivant = c[i + 1];
-    if (x === ' ' || x === '\t' || (x === '\r' && suivant === '\n')) {
-      finir();
-      i++;
-    } else if (x === '\n') {
-      finir();
-      out.push({ op: '\n' });
-      i++;
-    } else if (x === '#' && !enMot) {
-      while (i < c.length && c[i] !== '\n') i++;
-    } else if (x === '\\') {
-      if (suivant === '\n') i += 2;
-      else if (suivant === '\r' && c[i + 2] === '\n') i += 3;
-      else {
-        ajouter(suivant ?? '');
-        i += 2;
-      }
-    } else if (x === "'") {
-      const k = c.indexOf("'", i + 1);
-      if (k < 0) return null;
-      ajouter(c.slice(i + 1, k));
-      i = k + 1;
-    } else if (x === '"') {
-      const g = finGuillemets(i + 1);
-      if (g === null) return null;
-      ajouter(g.texte);
-      i = g.fin;
-    } else if (x === '$' && c.startsWith('${{', i)) {
-      const k = c.indexOf('}}', i + 3);
-      if (k < 0) return null;
-      ajouter(c.slice(i, k + 2));
-      i = k + 2;
-    } else if (
-      (x === '$' && (suivant === '(' || suivant === '{')) ||
-      (x === '(' && /[<>]$/.test(mot))
-    ) {
-      const debut = x === '$' ? i + 2 : i + 1;
-      const ouvre = x === '$' ? suivant! : '(';
-      const k = finEquilibree(debut, ouvre, ouvre === '(' ? ')' : '}');
-      if (k < 0) return null;
-      ajouter(c.slice(i, k));
-      i = k;
-    } else if (x === '`') {
-      const k = finAccentGrave(i + 1);
-      if (k < 0) return null;
-      ajouter(c.slice(i, k));
-      i = k;
-    } else if (x === '<' && suivant === '<') {
-      return null;
-    } else if (x === '&' && suivant === '&') {
-      finir();
-      out.push({ op: '&&' });
-      i += 2;
-    } else if (
-      (x === '&' && (suivant === '>' || /[<>]$/.test(mot))) ||
-      (x === '|' && />$/.test(mot))
-    ) {
-      ajouter(x); // une redirection : `&>fichier`, `2>&1`, `>|fichier`
-      i++;
-    } else if (x === '|') {
-      finir();
-      out.push({ op: suivant === '|' ? '||' : '|' });
-      i += suivant === '|' || suivant === '&' ? 2 : 1;
-    } else if (x === ';') {
-      if (suivant === ';') return null;
-      finir();
-      out.push({ op: ';' });
-      i++;
-    } else if (x === '&' || x === '(' || x === ')') {
-      finir();
-      out.push({ op: x });
-      i++;
-    } else {
-      ajouter(x);
-      i++;
-    }
-  }
-  finir();
-  return out;
+/** La valeur d'un mot littéral, désenveloppée de ses guillemets ; `null` si le mot n'est pas littéral. */
+function motLitteral(brut: string): string | null {
+  if (MOT_NU.test(brut)) return brut;
+  const g = ENTRE_GUILLEMETS.exec(brut);
+  return g === null ? null : (g[1] ?? g[2] ?? '');
 }
 
 /**
- * Les mots de commande que la lecture ne sait pas JUGER : une condition, une branche, une boucle,
- * une fonction, un groupe entre accolades, un piège. Leur seule présence fait tenir la ligne ENTIÈRE
- * pour n'appelant rien.
- */
-const CONSTRUCTIONS_NON_JUGEES = new Set([
-  'if',
-  'then',
-  'elif',
-  'else',
-  'fi',
-  'case',
-  'esac',
-  'for',
-  'while',
-  'until',
-  'do',
-  'done',
-  'select',
-  'function',
-  'coproc',
-  'trap',
-  '{',
-  '}',
-]);
-/** Les commandes après lesquelles plus rien de la ligne ne s'exécute. */
-const FINS_DE_LIGNE = new Set(['exit', 'return', 'exec']);
-
-/**
- * CE QU'UNE LIGNE DE COMMANDE APPELLE VRAIMENT — les scripts `package.json` et les fichiers lancés
- * par une commande ATTEIGNABLE dont le statut compte (GOV-061, fait (a) ; refus d'exactitude sur la
- * PR 175). Une garde citée dans un `name:`, un argument d'`echo` ou une chaîne n'est pas appelée ; une
- * garde qu'on n'atteint pas, ou dont l'échec ne peut pas faire échouer la ligne, non plus. Une
- * commande ne compte que si elle est au niveau de la ligne (hors sous-shell, hors substitution),
- * n'est opérande d'aucun `||` (à droite elle est court-circuitée, à gauche son échec est rattrapé),
- * n'est dans aucun pipeline (le statut d'un pipeline est celui de sa DERNIÈRE commande), n'est pas
- * lancée en arrière-plan (`&`) ni niée (`!`), ne suit aucun `exit`/`return`/`exec` de la ligne, et
- * n'est pas enchaînée par `&&` derrière un `false`, une négation ou un sous-shell.
- * ÉCHEC FERMÉ, PRIX ASSUMÉ : une ligne que le lexer refuse, ou qui porte une construction qu'il ne
- * juge pas (`if`, `case`, boucle, fonction, groupe `{ … }`, `trap`, document en ligne), n'appelle
- * RIEN — même une garde qu'elle lance réellement. Celle-ci est alors tenue pour NON appelée : c'est la
- * ligne qu'il faut simplifier, ou le `horsCi` qu'il faut motiver.
+ * CE QU'UNE ÉTAPE APPELLE — LA RÈGLE STRICTE (GOV-061, fait (a) ; refus d'exactitude et veto de
+ * sécurité, tour 3, sur la PR 175). UNE GARDE EST APPELÉE SI UNE ÉTAPE N'EXÉCUTE QU'ELLE : le `run:`
+ * d'une étape (ou la `command` d'un réglage, ou la valeur d'un script de `package.json` qu'on suit),
+ * blancs de bord retirés, doit être EXACTEMENT UNE commande simple, sur UNE ligne :
+ *   — zéro ou plusieurs affectations `NOM=valeur`, valeur littérale ;
+ *   — puis `pnpm [run] <script>`, `npx tsx <fichier>`, ou `tsx|node <fichier>` ;
+ *   — puis des arguments LITTÉRAUX : mots nus, ou entre guillemets sans rien à expanser.
+ * Tout le reste n'appelle RIEN : un opérateur (`;`, `&&`, `||`, `|`, `&`, redirection, parenthèse,
+ * accolade), un saut de ligne, un `$` (variable, substitution, expression d'Actions `${{ … }}` — qui
+ * peut injecter un opérateur avant que le shell ne lise la ligne), un accent grave, un échappement, un
+ * motif de fichiers, un mot de commande autre que les quatre outils (`set`, `trap`, `alias`, `eval`,
+ * `if`, `exit`, `[`…). On a cessé de MODÉLISER le shell : trois tours de lecture « atteignable, statut
+ * compté » ont chacun laissé passer une forme (`&&` non final avalé par `bash -e`, `set +e`, `trap`,
+ * `alias`, `eval`, expression qui injecte `|| true`). La règle stricte ne juge plus rien : elle
+ * RECONNAÎT une seule forme, et ÉCHOUE FERMÉE sur toutes les autres.
+ * PRIX ASSUMÉ : un idiome composé qui lance réellement la garde (`pnpm a && pnpm b`, un argument
+ * `$(date …)`) est un FAUX ROUGE. On écrit la garde dans une étape à part, ou on motive `horsCi`.
  */
 function appelsDe(commande: string): Appels {
   const a: Appels = { scripts: new Set(), fichiers: new Set() };
-  const jetons = jetonsShell(commande);
-  if (jetons === null) return a;
-  interface Commande {
-    mots: string[];
-    avant: string | null;
-    apres: string | null;
-    profondeur: number;
-  }
-  const commandes: Commande[] = [];
-  let courante: string[] = [];
-  let avant: string | null = null;
-  let profondeur = 0;
-  for (const j of jetons) {
-    if ('mot' in j) {
-      courante.push(j.mot);
-      continue;
-    }
-    if (j.op === '(') {
-      if (courante.length > 0) return a; // `nom()` : une définition de fonction
-      profondeur++;
-      continue;
-    }
-    commandes.push({ mots: courante, avant, apres: j.op, profondeur });
-    courante = [];
-    if (j.op === ')' && --profondeur < 0) return a;
-    avant = j.op;
-  }
-  commandes.push({ mots: courante, avant, apres: null, profondeur });
-  if (profondeur !== 0) return a;
-  const premierMot = (mots: readonly string[]): string | undefined =>
-    mots.find((m) => !/^[A-Za-z_][A-Za-z0-9_]*=/.test(m));
-  if (commandes.some((k) => CONSTRUCTIONS_NON_JUGEES.has(premierMot(k.mots) ?? ''))) return a;
-
-  let termine = false;
-  let chaineFausse = false;
-  for (const k of commandes) {
-    if (k.avant === null || k.avant === ';' || k.avant === '\n' || k.avant === '&') {
-      chaineFausse = false;
-    }
-    const premier = premierMot(k.mots);
-    const compte =
-      !termine &&
-      !chaineFausse &&
-      k.profondeur === 0 &&
-      premier !== '!' &&
-      k.apres !== '&' &&
-      ![k.avant, k.apres].some((o) => o === '||' || o === '|');
-    if (compte && k.mots.length > 0) lireUneCommande(k.mots, a);
-    if (premier !== undefined && FINS_DE_LIGNE.has(premier)) termine = true;
-    if (premier === 'false' || premier === '!' || k.apres === ')') chaineFausse = true;
+  const ligne = commande.trim();
+  if (ligne === '' || /[\r\n]/.test(ligne)) return a;
+  const bruts = ligne.split(/[ \t]+/);
+  const mots = bruts.map(motLitteral);
+  if (mots.some((m) => m === null)) return a;
+  let i = 0;
+  while (i < bruts.length && AFFECTATION.test(bruts[i]!)) i++;
+  const cible = (j: number): string | undefined => {
+    const m = mots[j];
+    return typeof m === 'string' && m !== '' && !m.startsWith('-') ? m : undefined;
+  };
+  const outil = mots[i];
+  if (outil === 'pnpm') {
+    const s = cible(mots[i + 1] === 'run' ? i + 2 : i + 1);
+    if (s !== undefined) a.scripts.add(s);
+  } else if (outil === 'tsx' || outil === 'node' || (outil === 'npx' && mots[i + 1] === 'tsx')) {
+    const f = cible(outil === 'npx' ? i + 2 : i + 1);
+    if (f !== undefined) a.fichiers.add(f);
   }
   return a;
 }
@@ -919,6 +749,8 @@ export interface ConfrontationDeLaPorteA {
   readonly etapes: number;
   /** Le nombre de scripts de `package.json` confrontés à leur définition figée. */
   readonly scripts: number;
+  /** Le nombre de crochets de cycle de vie confrontés à leur valeur ou à leur absence figées. */
+  readonly crochets: number;
   readonly fautes: readonly Faute[];
 }
 
@@ -938,7 +770,10 @@ export interface ConfrontationDeLaPorteA {
  *     `with: ref:` changent ce que la commande EXÉCUTE, ou l'arbre qu'elle mesure, sans changer la
  *     commande : `etape_repointee`, qui ne lit que `run` et `uses`, ne les voit pas ;
  *   — UNIQUE : deux étapes de même nom sont refusées (`etape_en_double`) — la confrontation est
- *     indexée par nom, et la seconde y échappait.
+ *     indexée par nom, et la seconde y échappait ;
+ *   — PRÉCÉDÉE DE RIEN : chaque crochet que `pnpm install` exécute à la racine, et chaque
+ *     `pre<script>`/`post<script>` d'un script figé, a la valeur du constat ou son absence
+ *     (`porte_a_alteree`) — sans quoi un `postinstall` repointé tournait avant toutes les gardes.
  * Un workflow qu'on ne sait pas lire, ou qui ne porte pas le job, est un refus
  * (`porte_a_illisible`) : on ne déclare pas armée une porte qu'on n'a pas lue.
  */
@@ -947,6 +782,7 @@ export async function confronterLaPorteA(vue: Vue): Promise<ConfrontationDeLaPor
   const illisible = (pourquoi: string): ConfrontationDeLaPorteA => ({
     etapes: 0,
     scripts: 0,
+    crochets: 0,
     fautes: [
       {
         famille: 'porte_a_illisible',
@@ -1132,6 +968,24 @@ export async function confronterLaPorteA(vue: Vue): Promise<ConfrontationDeLaPor
         `\`pnpm <script>\` de la porte exécute, sans toucher ni à l'étape ni au script. ${aRetenir}`,
     });
   }
+  // ── les crochets de cycle de vie : ils tournent pendant `pnpm install`, ou autour d'un script ──
+  const crochets = new Map<string, string | null>(Object.entries(figee.crochets));
+  for (const nom of Object.keys(figee.scripts)) {
+    for (const c of [`pre${nom}`, `post${nom}`]) if (!crochets.has(c)) crochets.set(c, null);
+  }
+  for (const [nom, attendu] of crochets) {
+    const lu = Object.hasOwn(scripts, nom) ? scripts[nom] : null;
+    if (lu === attendu) continue;
+    const ecrit = (v: unknown): string => (v === null ? '(absent)' : JSON.stringify(v));
+    fautes.push({
+      famille: 'porte_a_alteree',
+      message:
+        `\`package.json\` — le crochet \`${nom}\` vaut ${ecrit(lu)} au lieu de ${ecrit(attendu)}. ` +
+        `pnpm l'exécute de lui-même — pendant \`pnpm install\`, AVANT toutes les gardes, ou autour ` +
+        `d'un script de la porte : ajouté, retiré ou repointé, il désarme la porte sans toucher à ` +
+        `aucune étape. ${aRetenir}`,
+    });
+  }
   for (const [nom, definition] of Object.entries(figee.scripts)) {
     const lue = scripts[nom];
     if (lue === definition) continue;
@@ -1144,7 +998,12 @@ export async function confronterLaPorteA(vue: Vue): Promise<ConfrontationDeLaPor
         `de tests, ou une nuit déjà rouge, rattrapait. ${aRetenir}`,
     });
   }
-  return { etapes: lues.length, scripts: Object.keys(figee.scripts).length, fautes };
+  return {
+    etapes: lues.length,
+    scripts: Object.keys(figee.scripts).length,
+    crochets: crochets.size,
+    fautes,
+  };
 }
 
 /** Le décompte de la porte A, RENDU : une confrontation qu'on n'imprime pas ne se relit pas. */
@@ -1152,7 +1011,8 @@ export function lignesDeLaPorteA(c: ConfrontationDeLaPorteA): string[] {
   return [
     `PORTE A — ${c.etapes} étape(s) du job confrontée(s) au constat, chacune présente, active, ` +
       `effective et ENTIÈRE (toutes ses clés), le job et le workflow hors \`jobs\` figés de même ; ` +
-      `${c.scripts} script(s) de \`package.json\` confronté(s) à leur définition figée.`,
+      `${c.scripts} script(s) de \`package.json\` confronté(s) à leur définition figée ; ` +
+      `${c.crochets} crochet(s) de cycle de vie confronté(s) à leur valeur ou à leur absence figée.`,
   ];
 }
 
@@ -1635,11 +1495,10 @@ export function controler(vue: Vue): Faute[] {
     });
   }
 
-  // EN POSITION DE COMMANDE (GOV-061, fait (a)) : une garde citée dans un commentaire, un `name:`
-  // ou un `echo` n'est pas appelée. Seuls comptent les `run:` des workflows et les `command` des
-  // réglages, lus par un analyseur puis par le lexer shell d'`appelsDe` — guillemets respectés, et
-  // seulement les commandes ATTEIGNABLES dont le statut compte —, et ce qu'ils lancent à travers
-  // `package.json`.
+  // UNE GARDE EST APPELÉE SI UNE ÉTAPE N'EXÉCUTE QU'ELLE (GOV-061, fait (a) ; tour 3 de la PR 175).
+  // Seuls comptent les `run:` des workflows et les `command` des réglages, lus par un analyseur, puis
+  // jugés par la règle stricte d'`appelsDe` — une seule commande simple, littérale, sans opérateur —,
+  // et ce qu'ils lancent à travers `package.json`, dont chaque valeur est jugée par la même règle.
   const appels = appelsSuivis(
     [
       ...vue.workflows.flatMap((w) => valeursDeCle(w.source, 'run')),
@@ -2100,6 +1959,7 @@ export const PORTE_A_FIGEE: PorteFigee = {
     'gov:etat:prove': 'tsx scripts/gates/gov-etat.ts --prove',
   },
   paquet: CONFIGURATION_DU_PAQUET_ABSENTE,
+  crochets: { ...AUCUN_CROCHET, postinstall: 'prisma generate' },
 };
 
 export const PASSIF_SANS_SCRIPT: Readonly<Record<string, string>> = {
@@ -2161,6 +2021,7 @@ export const PORTE_CONFORME: PorteFigee = {
     'gov:conventions': 'tsx scripts/gates/gov-conventions.ts',
   },
   paquet: CONFIGURATION_DU_PAQUET_ABSENTE,
+  crochets: AUCUN_CROCHET,
 };
 
 /**
@@ -2345,6 +2206,52 @@ const TEMOINS: ReadonlyArray<{ famille: string; libelle: string; vue: Vue }> = [
     }),
   },
   {
+    famille: 'garde_ecrite_jamais_appelee',
+    libelle:
+      'une garde NON FINALE d’une liste `&&` suivie d’une autre ligne — `bash -e` avale son échec',
+    vue: variante({
+      workflows: [
+        {
+          chemin: '.github/workflows/ci.yml',
+          source: CI_CONFORME.replace(
+            'run: pnpm gov:conventions\n',
+            'run: |\n          pnpm gov:conventions && echo fait\n          echo fin\n'
+          ),
+        },
+      ],
+    }),
+  },
+  {
+    famille: 'garde_ecrite_jamais_appelee',
+    libelle: 'une expression d’Actions qui INJECTE un opérateur dans la ligne de la garde',
+    vue: variante({
+      workflows: [
+        {
+          chemin: '.github/workflows/ci.yml',
+          source: CI_CONFORME.replace(
+            'run: pnpm gov:conventions\n',
+            "run: pnpm gov:conventions ${{ '|| true' }}\n"
+          ),
+        },
+      ],
+    }),
+  },
+  {
+    famille: 'garde_ecrite_jamais_appelee',
+    libelle: 'une garde lancée après un `eval` qui pose un piège rendant 0',
+    vue: variante({
+      workflows: [
+        {
+          chemin: '.github/workflows/ci.yml',
+          source: CI_CONFORME.replace(
+            'run: pnpm gov:conventions\n',
+            `run: eval 'trap "exit 0" EXIT'; pnpm gov:conventions\n`
+          ),
+        },
+      ],
+    }),
+  },
+  {
     famille: 'garde_hors_registre',
     libelle: 'une garde ÉCRITE et suivie que `docs/gates.json` ne nomme nulle part',
     vue: variante({
@@ -2429,14 +2336,15 @@ const TEMOINS: ReadonlyArray<{ famille: string; libelle: string; vue: Vue }> = [
 const CONTRE_TEMOINS: ReadonlyArray<{ libelle: string; vue: Vue }> = [
   { libelle: 'la vue conforme', vue: VUE_CONFORME },
   {
-    libelle: 'deux appels enchaînés par `&&`, dont une expression d’Actions qui porte un `||`',
+    libelle:
+      'une étape qui n’exécute QUE la garde, précédée d’une affectation et suivie d’arguments',
     vue: variante({
       workflows: [
         {
           chemin: '.github/workflows/ci.yml',
           source: CI_CONFORME.replace(
             'run: pnpm gov:conventions\n',
-            "run: pnpm format:check && pnpm gov:conventions --x ${{ inputs.x || 'a' }}\n"
+            "run: CI=1 pnpm run gov:conventions --flag 'a'\n"
           ),
         },
       ],
@@ -2651,6 +2559,13 @@ const CI_EN = (de: string, par: string): Vue =>
   variante({
     workflows: [{ chemin: '.github/workflows/ci.yml', source: CI_CONFORME.replace(de, par) }],
   });
+/** La vue de référence dont `package.json` porte, en plus, les scripts donnés. */
+const AVEC_SCRIPTS = (plus: Record<string, string>): Vue => {
+  const pkg = JSON.parse(PKG_CONFORME) as { scripts: Record<string, string> };
+  return variante({
+    packageJson: JSON.stringify({ ...pkg, scripts: { ...pkg.scripts, ...plus } }),
+  });
+};
 const TEMOINS_PORTE_A: ReadonlyArray<{ famille: string; libelle: string; vue: Vue }> = [
   {
     famille: 'etape_absente',
@@ -2751,6 +2666,16 @@ const TEMOINS_PORTE_A: ReadonlyArray<{ famille: string; libelle: string; vue: Vu
     famille: 'porte_a_alteree',
     libelle: 'un `.npmrc` suivi à la racine, qui peut changer le shell de chaque `pnpm <script>`',
     vue: variante({ fichiersSuivis: [...VUE_CONFORME.fichiersSuivis, '.npmrc'] }),
+  },
+  {
+    famille: 'porte_a_alteree',
+    libelle: 'un crochet `postinstall` ajouté, que `pnpm install` exécute avant toutes les gardes',
+    vue: AVEC_SCRIPTS({ postinstall: 'node -e "process.exit(0)"' }),
+  },
+  {
+    famille: 'porte_a_alteree',
+    libelle: 'un `pre<script>` posé devant une garde de la porte, que pnpm 9 exécute avant elle',
+    vue: AVEC_SCRIPTS({ 'pregov:conventions': 'node -e "process.exit(0)"' }),
   },
 ];
 

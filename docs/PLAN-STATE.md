@@ -8,14 +8,14 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `aca324d` — 2026-09-27T10:54:47+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #82 (état `UNKNOWN`) · 2. #165 (état `UNKNOWN`) · 3. #175 (état `UNKNOWN`) · 4. #180 (état `UNKNOWN`) |
+| Qu’est-ce qui est en vol ? | 1. #175 (rien) · 2. #165 (un contrôle requis rouge ou une revue manquante) · 3. #180 (un contrôle requis rouge ou une revue manquante) · 4. #82 (un conflit avec `main`) |
 | Qui tient quoi ? | QA-T07 (A05) |
 | Où en est la phase ? | phase 0 — 59/116 tâches, reste 45.35 j |
-| Le prochain pas | SEC-17 — Rôles console : enum `ConsoleRole { admin, qualifieur, comptable, lecteur }`, matrice SSOT, `requireRole`, garde AST (chemin critique) |
+| Le prochain pas | fusionner #175, puis SEC-17 — Rôles console : enum `ConsoleRole { admin, qualifieur, comptable, lecteur }`, matrice SSOT, `requireRole`, garde AST (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
 | Dernière entrée de journal | PR #176 — 2026-09-27 |
 
-**Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** `gh pr view 175 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : 0
 
@@ -60,10 +60,10 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | état `UNKNOWN` — à qualifier à la main |
-| 2 | #165 — feat(SEC-17): lot L0-07 — rôles console, matrice unique, requireRole ; gates structurelles de la charte | `t/lot-l0-07` | état `UNKNOWN` — à qualifier à la main |
-| 3 | #175 — chore(GOV-083): lot L0-09 — gates sans script triees, porte A confrontee, causes temoignees, journal | `t/lot-l0-09` | état `UNKNOWN` — à qualifier à la main |
-| 4 | #180 — feat(JUR-T02): lot L0-10 — SSOT des délais du contrat, contrat sobre figé, alertes Telegram sans PII | `t/lot-l0-10` | état `UNKNOWN` — à qualifier à la main |
+| 1 | #175 — chore(GOV-083): lot L0-09 — gates sans script triees, porte A confrontee, causes temoignees, journal | `t/lot-l0-09` | rien — fusionnable maintenant |
+| 2 | #165 — feat(SEC-17): lot L0-07 — rôles console, matrice unique, requireRole ; gates structurelles de la charte | `t/lot-l0-07` | un contrôle requis rouge ou une revue manquante |
+| 3 | #180 — feat(JUR-T02): lot L0-10 — SSOT des délais du contrat, contrat sobre figé, alertes Telegram sans PII | `t/lot-l0-10` | un contrôle requis rouge ou une revue manquante |
+| 4 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -84,6 +84,8 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 Dérivé de `git log` sur `docs/adr/`, restreint au jour du dernier atterrissage. Une décision de Will n’est pas un ADR : elle vit au registre `docs/DECISIONS.md`, tranchée ou tenue par une hypothèse datée.
 
 ## Prochain pas
+
+**Fusionner #175** — elle est en tête de file et ne bloque sur rien.
 
 **SEC-17** — Rôles console : enum `ConsoleRole { admin, qualifieur, comptable, lecteur }`, matrice SSOT, `requireRole`, garde AST (1 j, **sur le chemin critique**) : 27 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
@@ -125,6 +127,11 @@ sans tenir compte des guillemets, et une garde citée dans un `echo`, court-circ
 ou placée après un `exit` passait pour appelée. Un lexer shell minimal respecte désormais guillemets
 et échappements, et ne compte que les commandes atteignables dont le statut compte ; une ligne qu'il
 ne sait pas juger n'appelle rien. La configuration pnpm/npm de la racine est figée absente au constat.
+Correctif du 2026-09-27T09:20Z, après un refus d'exactitude et un veto de sécurité : le lexer est
+retiré. Une garde n'est plus appelée que si une étape n'exécute qu'elle — une seule commande simple,
+littérale, sur une ligne, sans opérateur ni `$` ni expression d'Actions ; tout le reste n'appelle
+rien. Les crochets que `pnpm install` exécute à la racine, et les `pre`/`post` des scripts de la
+porte, sont figés par leur valeur ou leur absence.
 
 **Reste.** GOV-085 n'est pas livrée : GOV-082, dont elle dépend, est encore à faire. Les cinq entrées
 fautives de `docs/gates.json` sont à corriger par le gardien de la spécification ; chaque correction
@@ -139,7 +146,10 @@ sa tâche ; GOV-083 et GOV-061 partagent un fichier et ont été composées dans
 littérale de GOV-083 (1), phase courante égale refus, rougirait dix entrées de phase 0 dont la tâche
 porteuse est à faire (`a_faire`) : c'est un avenant d'acceptance à écrire au registre. Hors du job
 `gate-a`, rien ne juge qu'une étape s'exécute : une étape de `nightly.yml` sous un `if:` faux
-compte encore pour un appel.
+compte encore pour un appel. Prix de la règle stricte : un idiome composé qui lance vraiment la garde
+est un faux rouge, qu'on écrit en une étape à part. Et le fichier d'une garde est tenu appelé si une
+seule étape le lance, même en `--prove` : trois étapes de verdict (`gov:etat`, `gov:lecons`,
+`gates:prouvees`) ne comptent plus, et leurs gardes restent appelées par leur preuve.
 
 **Appris.** Une tâche qui cite le chemin d'une garde dans ses `paths` ne la promet pas : elle peut
 aussi bien la retoucher. Seul le champ `tache` de l'entrée du registre dit qui l'écrira. Autre fait :
@@ -149,6 +159,9 @@ qui ne lit que les clés qu'elle connaît laisse passer toutes les autres : un `
 `with: ref:` changent ce qu'une étape exécute sans changer sa commande. On fige l'objet entier.
 Enfin, découper une commande shell par une expression régulière la lit comme un texte, pas comme
 une commande : les guillemets, les courts-circuits et l'arrière-plan décident de ce qui s'exécute.
+Trois tours à modéliser le shell ont chacun laissé passer une forme (`set +e`, `eval`, un `&&` non
+final que `bash -e` avale) : on reconnaît une seule forme et on refuse le reste. Dernier fait : pnpm 9 lance
+de lui-même les `pre`/`post` d'un script : `enable-pre-post-scripts` y vaut `true` par défaut.
 
 ### PR #169 — 2026-09-27 — feat(INT-T01c): contrat v2 — onze types, charges fermées, route des coordonnées du candidat
 
