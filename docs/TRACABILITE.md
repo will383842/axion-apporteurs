@@ -313,7 +313,7 @@
 | `REQ-SEC-020` | 1 | `SEC-12`, `SEC-14` | — |
 | `REQ-SEC-021` | 1 | `SEC-16` | — |
 | `REQ-SEC-022` | 0 | `DM-10-P`, `DM-25`, `SEC-05`, `SEC-12`, `SEC-16` | `tests/integration/idor.spec.ts`, `tests/unit/securite/acces-scope.spec.ts` |
-| `REQ-SEC-023` | 0 | `SEC-17` | `tests/unit/securite/matrice-des-roles.spec.ts` |
+| `REQ-SEC-023` | 0 | `SEC-17` | `tests/integration/utilisateurs-console.spec.ts`, `tests/unit/securite/matrice-des-roles.spec.ts` |
 | `REQ-SEC-025` | 2 | `SEC-22` | — |
 | `REQ-SEC-026` | 1 | `DM-11` | `tests/unit/domaine/kyc-reference-piece-rib.spec.ts` |
 | `REQ-SEC-030` | 0 | `DM-20`, `JUR-T04` | `tests/unit/juridique/registre-rgpd.spec.ts` |
