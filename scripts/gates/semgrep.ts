@@ -1863,7 +1863,11 @@ export function jugerReel(p: Passage, presents: readonly string[]): Faute[] {
     if (!analyses.has(f)) {
       fautes.push({
         famille: 'fichier_non_analyse',
-        message: `${f} est présent sous src/ et semgrep ne l’a PAS analysé.`,
+        message:
+          `${f} est présent sous src/ et semgrep ne l’a PAS analysé.` +
+          (/\.[mc]ts$/.test(f)
+            ? ` semgrep ${VERSION} n’analyse aucun fichier .mts ni .cts (mesuré) : écrivez-le en .ts.`
+            : ''),
       });
     }
   }

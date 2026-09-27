@@ -87,6 +87,30 @@
 # Prix ASSUMÉ : un commentaire ou une chaîne qui écrit l'un de ces deux noms, ou le texte
 # `import X =`, est refusé aussi. Aucun fichier de `src/` ne les écrit.
 #
+# LE TEXTE N'EST PAS ASCII (revue `securite` 5329281085, PR 82) : TypeScript admet un
+# identifiant Unicode (`Pé`, un alias cyrillique) et tout BLANC Unicode entre deux jetons
+# (U+00A0, U+1680, U+2000 à U+200A, U+2028, U+2029, U+202F, U+205F, U+3000, U+FEFF). Un bras
+# qui lisait un nom par `[A-Za-z_$][\w$]*` et les blancs par `\s` (ASCII sans `(*UCP)`, mesuré
+# sur 1.176.1) laissait passer l'import-equals et les formes textuelles de la limite (c) de la
+# règle n° 1, commentaire entre les mots compris pour ces dernières. Les bras textuels qui
+# lisent une LIAISON ne dépendent donc plus de la forme d'un identifiant :
+#   — un mot-clé (`import`, `export`, `type`, `as`, `from`, `require`) est borné des deux côtés
+#     par un caractère qui ne continue pas un identifiant, Unicode compris (`\p{ID_Continue}`,
+#     `$`, U+200C, U+200D — PCRE2 de semgrep 1.176.1, mesuré) ; `import` n'est pas non plus
+#     précédé d'un point ni d'un `#` (membre ou nom privé nommé `import`) ;
+#   — un BLANC est tout blanc Unicode ci-dessus ou un commentaire ;
+#   — le nom lié de l'import-equals est TOUT ce qui n'est ni un blanc, ni une ponctuation ASCII
+#     (accolade, étoile, guillemet, parenthèse, crochet, point, virgule, deux-points, `=`,
+#     opérateur, barre oblique), jusqu'au premier `=` qui n'est ni `==` ni `=>`. Une liaison ES
+#     s'arrête toujours avant (accolades, étoile, ou spécifieur entre guillemets), `import()`
+#     et `import.meta` aussi ; le MOT `from` ne l'arrête PAS, parce que `import from = X` est un
+#     import-equals (`from` est un identifiant contextuel).
+# Les deux bras qui lisent les noms `…Unsafe` (règle n° 2) gardent leurs bornes ASCII `[\w$]` :
+# elles ne peuvent que refuser PLUS (un caractère non ASCII collé au nom le laisse refusé), et
+# aucun autre texte n'écrit ce nom — un identifiant JavaScript n'est pas normalisé.
+# Prix ASSUMÉ, élargi : un commentaire ou une chaîne sous `src/` qui écrit `import` puis du texte
+# sans ponctuation jusqu'à un `=` est refusé aussi. Aucun fichier de `src/` ne l'écrit.
+#
 # CE QUE LA GATE FERME, ET CE QU'ELLE N'EST PAS. La gate ferme les formes d'écriture ÉNUMÉRÉES
 # ci-dessus et règle par règle : liaisons de module et chargeurs (import, `import type`,
 # `export … from`, `require`, `module.require`, `module['require']`, chargeur fabriqué,
@@ -134,7 +158,11 @@ rules:
   #      `export import`). Ce sont les SEULES formes de LIAISON qui restent textuelles (le bras
   #      `&echappement`, textuel aussi, juge une écriture, pas une liaison) — et elles
   #      DÉRIVENT quand même leur lecture du spécifieur de l'ancre commune, par un groupe
-  #      nommé `(?P<M>…)` que `metavariable-regex` contraint ensuite ;
+  #      nommé `(?P<M>…)` que `metavariable-regex` contraint ensuite. Leurs mots sont lus
+  #      séparés par TOUT blanc Unicode ou commentaire, et bornés en Unicode (voir l'en-tête,
+  #      « LE TEXTE N'EST PAS ASCII »). `export type * from` n'est même pas analysé par
+  #      1.176.1 (mesuré : erreur de syntaxe partielle, que la gate juge faute
+  #      `erreur_semgrep`) ;
   #   d) un chargeur obtenu AUTREMENT que par `require` ou une propriété `require` écrits sous
   #      l'espace — reçu en paramètre, déstructuré (`const { require: r } = module`), importé
   #      d'un module voisin — n'est pas suivi : l'appel `r('../db')` n'a rien qui le distingue
@@ -214,11 +242,11 @@ rules:
       # Limite (c) : les formes textuelles, pour ce que l'AST de semgrep ne représente pas.
       - patterns:
           - pattern-regex: |-
-              \bexport\s+(?:type\s+)?(?:\{[^}]*\}|\*(?:\s+as\s+[A-Za-z_$][\w$]*)?)\s*from\s*['"`](?P<M>[^'"`]*)['"`]
+              (?<![\p{ID_Continue}$\x{200C}\x{200D}.#])export(?![\p{ID_Continue}$\x{200C}\x{200D}])(?:[\t\n\x0B\f\r\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)*(?:type(?![\p{ID_Continue}$\x{200C}\x{200D}])(?:[\t\n\x0B\f\r\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)*)?(?:\{[^}]*\}|\*(?:(?:[\t\n\x0B\f\r\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)*as(?![\p{ID_Continue}$\x{200C}\x{200D}])(?:[\t\n\x0B\f\r\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)*[^\t\n\x0B\f\r\x{2028}\x{2029}\x{FEFF}\p{Zs}{}()\[\];,:.=*'"`<>!?+\-&|^~%@#/]+)?)(?:[\t\n\x0B\f\r\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)*from(?![\p{ID_Continue}$\x{200C}\x{200D}])(?:[\t\n\x0B\f\r\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)*['"`](?P<M>[^'"`]*)['"`]
           - metavariable-regex: *specifieur-du-client
       - patterns:
           - pattern-regex: |-
-              \bimport\s+(?:type\s+)?[A-Za-z_$][\w$]*\s*=\s*require\s*\(\s*['"`](?P<M>[^'"`]*)['"`]
+              (?<![\p{ID_Continue}$\x{200C}\x{200D}.#])import(?![\p{ID_Continue}$\x{200C}\x{200D}])(?:[\t\n\x0B\f\r\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)*[^\t\n\x0B\f\r\x{2028}\x{2029}\x{FEFF}\p{Zs}{}()\[\];,:.=*'"`<>!?+\-&|^~%@#/](?:(?:[\t\n\x0B\f\r\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)|[^\t\n\x0B\f\r\x{2028}\x{2029}\x{FEFF}\p{Zs}{}()\[\];,:.=*'"`<>!?+\-&|^~%@#/])*=(?:[\t\n\x0B\f\r\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)*require(?![\p{ID_Continue}$\x{200C}\x{200D}])(?:[\t\n\x0B\f\r\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)*\((?:[\t\n\x0B\f\r\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)*['"`](?P<M>[^'"`]*)['"`]
           - metavariable-regex: *specifieur-du-client
       - pattern: new PrismaClient(...)
       - pattern: new $P.PrismaClient(...)
@@ -353,9 +381,13 @@ rules:
       #   `import P = Prisma` fait sortir le namespace par une liaison que le refus de sortie ne
       #   voit pas (l'AST de semgrep 1.176.1 ne la représente pas, mesuré), et `import x =
       #   require(…)` charge un module hors des liaisons ES. Lue sur le TEXTE, commentaires admis
-      #   entre les mots (`import /* … */ P = Prisma`) ; `import type P = …` compris. —
+      #   entre les mots (`import /* … */ P = Prisma`) ; `import type P = …` compris. Le bras ne
+      #   dépend PLUS de la forme de l'identifiant (revue `securite` 5329281085, PR 82) : après
+      #   le mot `import` borné en Unicode, tout ce qui n'est ni blanc Unicode, ni commentaire, ni
+      #   ponctuation ASCII, jusqu'à un `=` qui n'est ni `==` ni `=>` (voir l'en-tête, « LE TEXTE
+      #   N'EST PAS ASCII »). —
       - pattern-regex: |-
-          \bimport(?:\s|/\*(?:[^*]|\*(?!/))*\*/|//[^\n]*)+(?:type(?:\s|/\*(?:[^*]|\*(?!/))*\*/|//[^\n]*)+)?[A-Za-z_$][\w$]*(?:\s|/\*(?:[^*]|\*(?!/))*\*/|//[^\n]*)*=(?!=)
+          (?<![\p{ID_Continue}$\x{200C}\x{200D}.#])import(?![\p{ID_Continue}$\x{200C}\x{200D}])(?:[\t\n\x0B\f\r\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)*[^\t\n\x0B\f\r\x{2028}\x{2029}\x{FEFF}\p{Zs}{}()\[\];,:.=*'"`<>!?+\-&|^~%@#/](?:(?:[\t\n\x0B\f\r\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)|[^\t\n\x0B\f\r\x{2028}\x{2029}\x{FEFF}\p{Zs}{}()\[\];,:.=*'"`<>!?+\-&|^~%@#/])*=(?![=>])
       # — `Prisma.raw` et `Prisma.Sql`, par leur nom QUALIFIÉ : `$C.Prisma.raw` matche
       #   `Prisma.raw` (import nommé), `P.raw` (`import { Prisma as P }`) et `C.Prisma.raw`
       #   (`import * as C`), et ne matche PAS `autre.raw` ni `String.raw`, qui ne sont pas le
