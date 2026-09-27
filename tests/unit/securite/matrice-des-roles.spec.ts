@@ -44,7 +44,12 @@ import {
   type LigneDeSessionConsole,
   type PortsDeRole,
 } from '../../../src/server/roles/require-role';
-import { FAMILLES, jugerLaConsole, type FichierDeConsole } from '../../../scripts/gates/roles';
+import {
+  FAMILLES,
+  jugerLaConsole,
+  rendreLeVerdict,
+  type FichierDeConsole,
+} from '../../../scripts/gates/roles';
 
 const SECRET = 'temoin-sec17-secret-de-session-'.padEnd(64, '7');
 const KID = kidDe(SECRET);
@@ -508,10 +513,233 @@ describe('REQ-SEC-023 — la garde `securite:roles` confronte le disque à la ma
         'droit_de_mauvais_genre',
         'droit_hors_matrice',
         'droit_non_litteral',
+        'export_non_jugeable',
         'route_sans_requireRole',
         'source_illisible',
       ].sort()
     );
+  });
+
+  // ── les formes d'export : TOUTE valeur exportée d'un module 'use server' et TOUTE méthode HTTP
+  //    exportée d'un route.ts est un site ; un site dont le corps ne s'établit pas est une faute.
+
+  const serveur = (source: string, chemin = 'src/app/(console)/console/gel/actions.ts') =>
+    ({ chemin, source: `'use server';\n${source}` }) satisfies FichierDeConsole;
+  const route = (source: string) =>
+    ({ chemin: 'src/app/(console)/console/export/route.ts', source }) satisfies FichierDeConsole;
+  const GARDE_ACTION = "  await requireRole('action:lever_gel', j, p);";
+  const GARDE_ECRAN = "  await requireRole('ecran:tableau', j, p);";
+
+  it('REQ-SEC-023 : TÉMOIN À DEUX FACES — `export { f }` d’une fonction locale est une action ; sans requireRole elle rougit', () => {
+    const rouge = jugerLaConsole(
+      [serveur('async function leverLeGel() {\n  return 1;\n}\nexport { leverLeGel };\n')],
+      MATRICE_TEMOIN,
+      ROLES_CONSOLE
+    );
+    expect(rouge.fautes.map((f) => f.famille)).toEqual(['action_sans_requireRole']);
+    expect(rouge.fautes[0]!.message).toContain('leverLeGel');
+    const vert = jugerLaConsole(
+      [serveur(`async function leverLeGel() {\n${GARDE_ACTION}\n}\nexport { leverLeGel };\n`)],
+      MATRICE_TEMOIN,
+      ROLES_CONSOLE
+    );
+    expect(vert.fautes).toEqual([]);
+    expect(vert.actions).toBe(1);
+  });
+
+  it('REQ-SEC-023 : TÉMOIN À DEUX FACES — `export { f as g }` est jugée sous son nom exporté', () => {
+    const rouge = jugerLaConsole(
+      [serveur('const f = async () => 1;\nexport { f as lever };\n')],
+      MATRICE_TEMOIN,
+      ROLES_CONSOLE
+    );
+    expect(rouge.fautes.map((f) => f.famille)).toEqual(['action_sans_requireRole']);
+    expect(rouge.fautes[0]!.message).toContain('« lever »');
+    expect(
+      familles([serveur(`const f = async () => {\n${GARDE_ACTION}\n};\nexport { f as lever };\n`)])
+    ).toEqual([]);
+  });
+
+  it('REQ-SEC-023 : TÉMOIN À DEUX FACES — `export { traiter as GET, traiter as POST }` d’un route.ts : chaque méthode est jugée', () => {
+    const rouge = jugerLaConsole(
+      [
+        route(
+          'async function traiter() {\n  return 1;\n}\nexport { traiter as GET, traiter as POST };\n'
+        ),
+      ],
+      MATRICE_TEMOIN,
+      ROLES_CONSOLE
+    );
+    expect(rouge.fautes.map((f) => f.famille)).toEqual([
+      'route_sans_requireRole',
+      'route_sans_requireRole',
+    ]);
+    expect(rouge.fautes.map((f) => f.message).join('\n')).toMatch(/« GET »[\s\S]*« POST »/);
+    const vert = jugerLaConsole(
+      [
+        route(
+          `async function traiter() {\n${GARDE_ECRAN}\n}\nexport { traiter as GET, traiter as POST };\n`
+        ),
+      ],
+      MATRICE_TEMOIN,
+      ROLES_CONSOLE
+    );
+    expect(vert.fautes).toEqual([]);
+    expect(vert.routes).toBe(2);
+  });
+
+  it('REQ-SEC-023 : TÉMOIN À DEUX FACES — `export const x = enveloppe(async () => …)` ne se juge pas : faute nommée ; la fléchée gardée passe', () => {
+    const rouge = jugerLaConsole(
+      [serveur('export const approuverLot = avecJournal(async (lotId: string) => lotId);\n')],
+      MATRICE_TEMOIN,
+      ROLES_CONSOLE
+    );
+    expect(rouge.fautes.map((f) => f.famille)).toEqual(['export_non_jugeable']);
+    expect(rouge.fautes[0]!.message).toContain('approuverLot');
+    // Même avec requireRole DANS l'argument : l'enveloppe peut tout faire, le corps ne s'établit pas.
+    expect(
+      familles([
+        serveur(`export const approuverLot = avecJournal(async () => {\n${GARDE_ACTION}\n});\n`),
+      ])
+    ).toEqual(['export_non_jugeable']);
+    expect(
+      familles([serveur(`export const approuverLot = async () => {\n${GARDE_ACTION}\n};\n`)])
+    ).toEqual([]);
+  });
+
+  it('REQ-SEC-023 : une constante qui n’est pas une fonction, une classe, un enum, une déstructuration exportés d’un module « use server » : fautes nommées', () => {
+    expect(familles([serveur('export const LIMITE = 3;\n')])).toEqual(['export_non_jugeable']);
+    expect(familles([serveur('export class Lot {}\n')])).toEqual(['export_non_jugeable']);
+    expect(familles([serveur('export enum E {\n  A,\n}\n')])).toEqual(['export_non_jugeable']);
+    expect(familles([serveur('const o = { a: 1 };\nexport const { a } = o;\n')])).toEqual([
+      'export_non_jugeable',
+    ]);
+    expect(familles([serveur('const LIMITE = 3;\nexport { LIMITE };\n')])).toEqual([
+      'export_non_jugeable',
+    ]);
+    // Un type s'efface à la compilation : ce n'est pas une valeur exportée.
+    expect(
+      familles([
+        serveur(
+          'export type T = string;\nexport interface I {\n  a: 1;\n}\ntype U = 1;\nexport type { U };\n'
+        ),
+      ])
+    ).toEqual([]);
+  });
+
+  it('REQ-SEC-023 : `export *` et un réexport depuis un autre module ne se jugent pas — fautes nommées, en « use server » comme en route.ts', () => {
+    expect(familles([serveur("export * from './autre';\n")])).toEqual(['export_non_jugeable']);
+    expect(familles([serveur("export { leverLeGel } from './autre';\n")])).toEqual([
+      'export_non_jugeable',
+    ]);
+    expect(familles([serveur("export * as tout from './autre';\n")])).toEqual([
+      'export_non_jugeable',
+    ]);
+    expect(familles([route("export { GET } from './autre';\n")])).toEqual(['export_non_jugeable']);
+    expect(familles([route("export { traiter as POST } from './autre';\n")])).toEqual([
+      'export_non_jugeable',
+    ]);
+    expect(familles([route("export * from './autre';\n")])).toEqual(['export_non_jugeable']);
+    // Un réexport qui n'est pas une méthode HTTP, dans un route.ts : ce n'est pas un site.
+    expect(familles([route("export { aide } from './autre';\n")])).toEqual([]);
+  });
+
+  it('REQ-SEC-023 : TÉMOIN À DEUX FACES — `export const GET = enveloppe(…)` d’un route.ts est une faute nommée ; `export const GET = traiter` suit la fonction locale', () => {
+    expect(familles([route('export const GET = avecJournal(async () => 1);\n')])).toEqual([
+      'export_non_jugeable',
+    ]);
+    // Une constante dont la valeur est un NOM qui n'est pas une fonction locale : importé, il ne se juge pas.
+    expect(
+      familles([route("import { handler } from './autre';\nexport const GET = handler;\n")])
+    ).toEqual(['export_non_jugeable']);
+    expect(
+      familles([serveur("import { handler } from './autre';\nexport const lever = handler;\n")])
+    ).toEqual(['export_non_jugeable']);
+    expect(
+      familles([route('async function traiter() {\n  return 1;\n}\nexport const GET = traiter;\n')])
+    ).toEqual(['route_sans_requireRole']);
+    expect(
+      familles([
+        route(`async function traiter() {\n${GARDE_ECRAN}\n}\nexport const GET = traiter;\n`),
+      ])
+    ).toEqual([]);
+  });
+
+  it('REQ-SEC-023 : TÉMOIN À DEUX FACES — une page dont l’export par défaut ne se reconnaît pas est une faute, même si requireRole traîne ailleurs dans le fichier', () => {
+    const chemin = 'src/app/(console)/console/tableau/page.tsx';
+    expect(
+      familles([
+        {
+          chemin,
+          source:
+            `async function garde() {\n${GARDE_ECRAN}\n}\n` +
+            'function Page() {\n  return null;\n}\nexport default avecGarde(Page);\n',
+        },
+      ])
+    ).toEqual(['export_non_jugeable']);
+    expect(familles([{ chemin, source: `async function garde() {\n${GARDE_ECRAN}\n}\n` }])).toEqual(
+      ['export_non_jugeable']
+    );
+    expect(
+      familles([
+        {
+          chemin,
+          source: `async function Page() {\n${GARDE_ECRAN}\n  return null;\n}\nexport { Page as default };\n`,
+        },
+      ])
+    ).toEqual([]);
+  });
+
+  it('REQ-SEC-023 : `export default` d’un module « use server » qui n’est pas une fonction locale est une faute nommée', () => {
+    expect(familles([serveur('export default avecJournal(async () => 1);\n')])).toEqual([
+      'export_non_jugeable',
+    ]);
+    expect(familles([serveur(`export default async function () {\n${GARDE_ACTION}\n}\n`)])).toEqual(
+      []
+    );
+  });
+
+  it('REQ-SEC-023 : les couples sont confrontés RÔLE PAR RÔLE à la ligne de la matrice — ouverts et fermés comptés', () => {
+    const r = jugerLaConsole(
+      [page(GARDE_ECRAN), action(GARDE_ACTION)],
+      MATRICE_TEMOIN,
+      ROLES_CONSOLE
+    );
+    expect(r.fautes).toEqual([]);
+    // `ecran:tableau` : admin et lecteur ouverts, qualifieur et comptable fermés ;
+    // `action:lever_gel` : admin seul ouvert.
+    expect(r.couplesOuverts).toBe(3);
+    expect(r.couplesFermes).toBe(5);
+    expect(r.couples).toBe(8);
+  });
+
+  it('REQ-SEC-023 : le périmètre vide ne se dit que si AUCUN fichier n’est lu ; sinon les fichiers lus et les sites confrontés sont imprimés', () => {
+    const vide = rendreLeVerdict(jugerLaConsole([], MATRICE_TEMOIN, ROLES_CONSOLE), 2, 4);
+    expect(vide.code).toBe(0);
+    expect(vide.lignes.join('\n')).toMatch(/Périmètre vide/);
+
+    const aide = { chemin: 'src/server/console/aide.ts', source: 'export async function a() {}\n' };
+    const sansSite = rendreLeVerdict(jugerLaConsole([aide], MATRICE_TEMOIN, ROLES_CONSOLE), 2, 4);
+    const texte = sansSite.lignes.join('\n');
+    expect(sansSite.code).toBe(0);
+    expect(texte).not.toMatch(/Périmètre vide|aucun fichier suivi/);
+    expect(texte).toContain('src/server/console/aide.ts');
+    expect(texte).toMatch(/aucun site/i);
+
+    const avecSite = rendreLeVerdict(
+      jugerLaConsole([action(GARDE_ACTION)], MATRICE_TEMOIN, ROLES_CONSOLE),
+      2,
+      4
+    );
+    expect(avecSite.lignes.join('\n')).toContain('action « leverLeGel »');
+
+    const rouge = rendreLeVerdict(
+      jugerLaConsole([action('')], MATRICE_TEMOIN, ROLES_CONSOLE),
+      2,
+      4
+    );
+    expect(rouge.code).toBe(1);
+    expect(rouge.lignes.join('\n')).toContain('[action_sans_requireRole]');
   });
 
   it('REQ-SEC-023 : la garde sur la console du dépôt sort en 0 et imprime le compte des couples confrontés', () => {
