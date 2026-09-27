@@ -29,9 +29,12 @@
  *      mécanisme par lequel une transcription divergente entre les deux dépôts devient visible
  *      (REQ-QA-007 ; `fixtureRouge` du registre : « renommer un champ dans packages/contracts sans
  *      republier »).
- *   3. REQ-INT-029 est vérifiée sur les fixtures ET sur un MUTANT. Les fixtures de v1 portent des
- *      payloads vides — le contenu des payloads est fermé par INT-T01b —, si bien qu'un détecteur
- *      cassé y serait vert. Le mutant est le contre-témoin sans lequel ce cas ne mesurerait rien.
+ *   3. REQ-INT-029 est vérifiée sur les fixtures ET sur un MUTANT : un détecteur cassé serait vert
+ *      sur des fixtures sans champ interdit. Le mutant est le contre-témoin sans lequel ce cas ne
+ *      mesurerait rien.
+ *   4. Les payloads sont FERMÉS, et leurs `$defs` sont confrontés, clé pour clé et dans les deux
+ *      sens, aux charges que le producteur réel d'axionia a générées (RM-03) : aucun champ inventé,
+ *      aucun champ oublié. La copie du producteur est `tests/fixtures/axionia/fixtures-producteur.v1.json`.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -43,10 +46,10 @@ import Ajv2020 from 'ajv/dist/2020';
 import { SCHEMA_VERSION, CHAMPS_ENVELOPPE } from '../../../packages/contracts/enveloppe';
 import {
   TYPES_EVENEMENT,
-  TYPES_HORS_CONTRAT_V1,
   FRONTIERE_INTERDITE,
   champsInterdits,
   contratJsonSchema,
+  nomDefPayload,
 } from '../../../packages/contracts/events';
 import {
   RACINE_CONTRATS,
@@ -70,7 +73,7 @@ function exigence(id: string): Exigence {
   return trouvee;
 }
 
-/** Les sept types, LUS dans le texte de REQ-INT-004 — jamais recopiés (RM-01). */
+/** Les types, LUS dans le texte de REQ-INT-004 — jamais recopiés (RM-01). */
 function typesSelonLExigence(): string[] {
   // Le texte énumère les types entre accents graves, puis, après le tiret cadratin, NOMME les
   // modèles réels d'axionia. Couper au tiret évite de ramasser ces noms de modèles.
@@ -97,12 +100,70 @@ const CHEMIN_JSON = join(RACINE_CONTRATS, NOM_JSON_SCHEMA);
 const CHEMIN_EMPREINTE = join(RACINE_CONTRATS, NOM_EMPREINTE);
 const lire = (chemin: string): string => readFileSync(chemin, 'utf8').replace(/\r\n/g, '\n');
 
-// ── les fixtures ─────────────────────────────────────────────────────────────
+// ── les fixtures du producteur réel ──────────────────────────────────────────
 
-type Fixture = { Source: string; schemaVersion: number; evenements: Record<string, unknown>[] };
-const FIXTURES = JSON.parse(
-  readFileSync('tests/fixtures/axionia/enveloppes-provisoires.json', 'utf8')
-) as Fixture;
+/**
+ * La copie À L'IDENTIQUE — même JSON, mise en forme par Prettier — de la fixture que le
+ * producteur réel d'axionia génère (`scripts/partners/fixtures.ts`, fichier
+ * `src/server/partners/contrat/fixtures.v1.json`). Elle
+ * porte deux listes : les enveloppes des sept types émis en `schema_version` 1, et les charges des
+ * quatre types que le producteur savait déjà construire sans pouvoir les émettre.
+ */
+type Charge = { event_type: string; payload: Record<string, unknown> } & Record<string, unknown>;
+type FixtureProducteur = {
+  Source: string;
+  schemaVersion: number;
+  evenements: Charge[];
+  horsContratV1: Charge[];
+};
+const PRODUCTEUR = JSON.parse(
+  readFileSync('tests/fixtures/axionia/fixtures-producteur.v1.json', 'utf8')
+) as FixtureProducteur;
+
+/**
+ * LE SEUL RENOMMAGE de la version 2, nommé ici et nulle part ailleurs : le HT encaissé d'un paiement
+ * reçu sortait, en version 1, sous un nom que `docs/GLOSSAIRE.md` §3 interdit, avec son terme
+ * canonique (`packages/contracts/payloads.ts`, en-tête). Le producteur le renomme en publiant la
+ * version 2 ; d'ici là, la copie v1 est lue à travers cette table — une clé renommée, sa valeur
+ * intacte. Un test assère que chaque renommage porte sur un champ que la copie produit vraiment.
+ */
+const RENOMMAGES_V2: readonly { type: string; avant: string; apres: string }[] = [
+  { type: 'paiement.recu', avant: 'amountHtCents', apres: 'montantHtCents' },
+];
+
+function enV2(charge: Charge): Charge {
+  const payload: Record<string, unknown> = {};
+  for (const [cle, valeur] of Object.entries(charge.payload)) {
+    const r = RENOMMAGES_V2.find((x) => x.type === charge.event_type && x.avant === cle);
+    payload[r ? r.apres : cle] = valeur;
+  }
+  return { ...charge, payload };
+}
+
+/** Toutes les charges produites, des onze types, lues en version 2. */
+const CHARGES_PRODUITES: Charge[] = [...PRODUCTEUR.evenements, ...PRODUCTEUR.horsContratV1].map(
+  enV2
+);
+
+/**
+ * L'enveloppe d'une charge produite, telle qu'elle part en `schema_version` courante. Les champs
+ * posés ici sont ceux que le producteur pose À L'ÉMISSION, jamais à la génération de la fixture :
+ * `schema_version` (la copie est antérieure au passage à la version courante) et `emitted_at`
+ * (posé par le relais au premier envoi) ; les charges des quatre types qui n'étaient pas émis
+ * n'ont, en plus, ni `event_id`, ni `producer`, ni `sequence`. Rien du payload n'est touché : il
+ * est vérifié, pas complété (RM-03). Un test ci-dessous assère que, sur une enveloppe produite,
+ * seuls `schema_version` et `emitted_at` changent.
+ */
+function aLEmission(charge: Charge): Record<string, unknown> {
+  return {
+    event_id: '00000000-0000-4000-8000-000000000000',
+    sequence: 1,
+    producer: 'axionia',
+    ...structuredClone(charge),
+    schema_version: SCHEMA_VERSION,
+    emitted_at: charge['occurred_at'],
+  };
+}
 
 // ── ajv ──────────────────────────────────────────────────────────────────────
 
@@ -121,29 +182,67 @@ function valideur(): (donnee: unknown) => boolean {
   );
 }
 
-/** Une enveloppe conforme, prise dans les fixtures — jamais tapée ici (RM-03). */
+/** Une enveloppe conforme, prise dans la fixture du producteur — jamais tapée ici (RM-03). */
 function enveloppeDeReference(): Record<string, unknown> {
-  return structuredClone(FIXTURES.evenements[0]!);
+  return aLEmission(CHARGES_PRODUITES[0]!);
+}
+
+type Valideur = ((donnee: unknown) => boolean) & { errors?: unknown[] | null };
+
+/** Le valideur d'UN `$defs` du contrat publié. */
+function valideurDe(nomDef: string): Valideur {
+  const Constructeur = ((Ajv2020 as unknown as { default?: unknown }).default ?? Ajv2020) as new (
+    options: Record<string, unknown>
+  ) => { compile: (schema: unknown) => Valideur };
+  // Les `$defs` du contrat, et rien d'autre de sa racine : l'enveloppe ne s'applique pas à une charge.
+  const contrat = contratJsonSchema();
+  return new Constructeur({ strict: true, validateFormats: false, allErrors: true }).compile({
+    $schema: contrat['$schema'],
+    $defs: contrat['$defs'],
+    $ref: `#/$defs/${nomDef}`,
+  });
+}
+
+type Schema = Record<string, unknown>;
+
+/** Les clés que le schéma DÉCLARE, avec leur chemin, dans chaque objet FERMÉ qu'il contient. */
+function clesDeclarees(schema: Schema, chemin: string, acc: Set<string>): void {
+  if (schema['additionalProperties'] === false && schema['properties']) {
+    for (const [cle, sous] of Object.entries(schema['properties'] as Record<string, Schema>)) {
+      acc.add(`${chemin}.${cle}`);
+      clesDeclarees(sous, `${chemin}.${cle}`, acc);
+    }
+  }
+  if (schema['items']) clesDeclarees(schema['items'] as Schema, `${chemin}[]`, acc);
+}
+
+/** Les clés PRODUITES, aux mêmes chemins — en ne descendant que là où le schéma est fermé. */
+function clesProduites(valeur: unknown, schema: Schema, chemin: string, acc: Set<string>): void {
+  if (Array.isArray(valeur) && schema['items']) {
+    for (const v of valeur) clesProduites(v, schema['items'] as Schema, `${chemin}[]`, acc);
+    return;
+  }
+  if (valeur !== null && typeof valeur === 'object' && schema['additionalProperties'] === false) {
+    const proprietes = (schema['properties'] ?? {}) as Record<string, Schema>;
+    for (const [cle, v] of Object.entries(valeur as Record<string, unknown>)) {
+      acc.add(`${chemin}.${cle}`);
+      if (proprietes[cle]) clesProduites(v, proprietes[cle]!, `${chemin}.${cle}`, acc);
+    }
+  }
 }
 
 describe("le contrat d'événements est fermé, dérivé, et son empreinte le tient", () => {
-  it('REQ-INT-004 — la liste des types est FERMÉE sur les sept que le registre énumère', () => {
+  it('REQ-INT-004 — la liste des types est FERMÉE sur les onze que le registre énumère, dans son ordre', () => {
     const selonLExigence = typesSelonLExigence();
-    expect(selonLExigence).toHaveLength(7);
+    expect(selonLExigence).toHaveLength(11);
     expect([...TYPES_EVENEMENT]).toEqual(selonLExigence);
   });
 
-  it("REQ-INT-004 — les types nommés AILLEURS au registre sont hors du contrat v1, et chacun cite l'exigence qui le nomme", () => {
-    const dansLeContrat = new Set<string>(TYPES_EVENEMENT);
-    expect(TYPES_HORS_CONTRAT_V1.length).toBeGreaterThan(0);
-    for (const candidat of TYPES_HORS_CONTRAT_V1) {
-      expect(dansLeContrat.has(candidat.type)).toBe(false);
-      // La dette est NOMMÉE : l'exigence qui porte le type existe, et son texte le cite. Le
-      // registre écrit tantôt `type`, tantôt `type {champ, champ}` — la citation s'arrête donc au
-      // premier accent grave OU à la première espace, jamais à une égalité de chaîne.
-      const cite = new RegExp('`' + candidat.type.replace(/\./g, '\\.') + '(?:`| )');
-      expect(exigence(candidat.req).texte).toMatch(cite);
-    }
+  it('REQ-INT-004 — la version du contrat est celle que le registre écrit, pas une constante devinée', () => {
+    const version = /`schema_version` (\d+)/.exec(exigence('REQ-INT-004').texte);
+    expect(version, "REQ-INT-004 n'écrit plus la version du contrat").not.toBeNull();
+    expect(SCHEMA_VERSION).toBe(Number(version![1]));
+    expect(NOM_JSON_SCHEMA).toBe(`contracts.v${SCHEMA_VERSION}.json`);
   });
 
   it("REQ-INT-003 — l'enveloppe porte les neuf champs du registre, dans la casse du registre", () => {
@@ -166,7 +265,7 @@ describe("le contrat d'événements est fermé, dérivé, et son empreinte le ti
     const champDeTrop = { ...enveloppeDeReference(), champ_inconnu: 'x' };
     expect(valide(champDeTrop)).toBe(false);
 
-    const typeInconnu = { ...enveloppeDeReference(), event_type: 'facture.annulee' };
+    const typeInconnu = { ...enveloppeDeReference(), event_type: 'type.inconnu' };
     expect(valide(typeInconnu)).toBe(false);
 
     const identifiantNonV4 = {
@@ -200,15 +299,97 @@ describe("le contrat d'événements est fermé, dérivé, et son empreinte le ti
     expect(empreinte(renomme)).not.toBe(attendue);
   });
 
-  it('REQ-GOV-020 → REQ-QA-007 — la fixture DÉCLARE sa provenance et nomme la tâche qui la remplacera (RM-03)', () => {
-    expect(FIXTURES.Source).toBeTruthy();
-    expect(FIXTURES.Source).toContain('PROVISOIRE');
-    expect(FIXTURES.Source).toContain('INT-T01b');
-    expect(FIXTURES.schemaVersion).toBe(SCHEMA_VERSION);
-    // Une fixture par type : un jeu incomplet laisserait un type sans aucun exemple valide.
-    expect(FIXTURES.evenements.map((e) => e['event_type'])).toEqual([...TYPES_EVENEMENT]);
-    const valide = valideur();
-    for (const evenement of FIXTURES.evenements) expect(valide(evenement)).toBe(true);
+  it('REQ-GOV-020 → REQ-QA-007 — la fixture est celle du PRODUCTEUR RÉEL, et elle couvre les onze types (RM-03)', () => {
+    expect(PRODUCTEUR.Source).toMatch(
+      /^GÉNÉRÉE — ne pas éditer à la main\. Producteur : axionia, scripts\/partners\/fixtures\.ts/
+    );
+    // Un jeu incomplet laisserait un type sans aucun exemple produit : son `$defs` serait deviné.
+    const produits = new Set(CHARGES_PRODUITES.map((c) => c.event_type));
+    expect([...TYPES_EVENEMENT].filter((t) => !produits.has(t))).toEqual([]);
+    expect(
+      [...produits].filter((t) => !(TYPES_EVENEMENT as readonly string[]).includes(t))
+    ).toEqual([]);
+  });
+
+  it('REQ-QA-007 — chaque renommage de la version 2 porte sur un champ que le producteur produit, et rien d’autre ne change', () => {
+    for (const r of RENOMMAGES_V2) {
+      const avant = [...PRODUCTEUR.evenements, ...PRODUCTEUR.horsContratV1].filter(
+        (c) => c.event_type === r.type
+      );
+      expect(avant.length, r.type).toBeGreaterThan(0);
+      for (const charge of avant) {
+        expect(Object.keys(charge.payload), r.type).toContain(r.avant);
+        const apres = enV2(charge).payload;
+        expect(Object.keys(apres)).not.toContain(r.avant);
+        expect(apres[r.apres]).toBe(charge.payload[r.avant]);
+        expect(Object.keys(apres)).toHaveLength(Object.keys(charge.payload).length);
+      }
+    }
+  });
+
+  it("REQ-QA-007 — l'enveloppe à l'émission ne pose que `schema_version` et `emitted_at` : la charge produite n'est pas touchée", () => {
+    for (const charge of PRODUCTEUR.evenements.map(enV2)) {
+      const emise = aLEmission(charge);
+      const changes = Object.keys(emise).filter(
+        (k) => JSON.stringify(emise[k]) !== JSON.stringify(charge[k])
+      );
+      expect(changes.sort()).toEqual(['emitted_at', 'schema_version']);
+      expect(valideur()(emise), charge.event_type).toBe(true);
+    }
+  });
+
+  it('REQ-QA-007 — les onze `$defs` de payload sont FERMÉS et égaux, clé pour clé, à ce que le producteur réel produit', () => {
+    const defs = contratJsonSchema()['$defs'] as Record<string, Schema>;
+    for (const type of TYPES_EVENEMENT) {
+      const schema = defs[nomDefPayload(type)]!;
+      expect(schema['additionalProperties'], type).toBe(false);
+      expect([...((schema['required'] as string[] | undefined) ?? [])].sort(), type).toEqual(
+        Object.keys((schema['properties'] as object | undefined) ?? {}).sort()
+      );
+
+      const declarees = new Set<string>();
+      clesDeclarees(schema, 'payload', declarees);
+      const produites = new Set<string>();
+      const valide = valideurDe(nomDefPayload(type));
+      for (const charge of CHARGES_PRODUITES.filter((c) => c.event_type === type)) {
+        expect(valide(charge.payload), `${type} : ${JSON.stringify(valide.errors)}`).toBe(true);
+        clesProduites(charge.payload, schema, 'payload', produites);
+      }
+      // Dans les DEUX sens : un champ déclaré que le producteur ne produit pas est deviné ; un
+      // champ produit que le schéma ne déclare pas serait refusé en 422.
+      expect([...declarees].sort(), type).toEqual([...produites].sort());
+    }
+  });
+
+  it('REQ-QA-007 — TÉMOIN À DEUX FACES : un champ non déclaré est refusé et NOMMÉ, la charge produite passe', () => {
+    for (const type of TYPES_EVENEMENT) {
+      const charge = CHARGES_PRODUITES.find((c) => c.event_type === type)!;
+      const valide = valideurDe(nomDefPayload(type));
+      expect(valide(charge.payload), type).toBe(true);
+
+      const avecIntrus = { ...structuredClone(charge.payload), champIntrus: 1 };
+      expect(valide(avecIntrus), type).toBe(false);
+      expect(JSON.stringify(valide.errors), type).toContain('"additionalProperty":"champIntrus"');
+
+      // Et à travers l'enveloppe entière : l'`allOf` du contrat branche chaque type sur SON payload.
+      expect(valideur()(aLEmission(charge)), type).toBe(true);
+      expect(valideur()({ ...aLEmission(charge), payload: avecIntrus }), type).toBe(false);
+    }
+  });
+
+  it('REQ-QA-007 — le contrat compte les API que le registre compte, et la route des coordonnées est sous son empreinte', async () => {
+    const { API_COORDONNEES_CANDIDATURE, nomsDefsApi } =
+      await import('../../../packages/contracts/api');
+    const texte = exigence('REQ-QA-007').texte;
+    const compte = /les (\d+) API/.exec(texte);
+    expect(compte, "REQ-QA-007 ne compte plus d'API").not.toBeNull();
+    expect(Number(compte![1])).toBe(3);
+    expect(texte).toContain(API_COORDONNEES_CANDIDATURE.chemin);
+
+    // Sous la MÊME empreinte que le reste du contrat : ses `$defs` sont dans le JSON Schema publié.
+    const publie = JSON.parse(lire(CHEMIN_JSON)) as { $defs: Record<string, unknown> };
+    expect(nomsDefsApi().length).toBeGreaterThan(0);
+    for (const nom of nomsDefsApi()) expect(Object.keys(publie.$defs)).toContain(nom);
   });
 
   it('REQ-INT-029 — aucun champ interdit ne franchit la frontière, et le détecteur sait rougir', () => {
@@ -219,13 +400,13 @@ describe("le contrat d'événements est fermé, dérivé, et son empreinte le ti
       'coordonnees_du_contact',
     ]);
 
-    // Sur les fixtures : rien ne traverse.
-    for (const evenement of FIXTURES.evenements) {
-      expect(champsInterdits(evenement)).toEqual([]);
+    // Sur les charges du producteur réel, des onze types : rien ne traverse.
+    for (const charge of CHARGES_PRODUITES) {
+      expect(champsInterdits(aLEmission(charge)), charge.event_type).toEqual([]);
     }
 
-    // LE CONTRE-TÉMOIN. Les payloads de v1 sont vides : sans mutant, ce cas serait vert sur un
-    // détecteur qui rend toujours la liste vide (RM-02).
+    // LE CONTRE-TÉMOIN : sans mutant, ce cas serait vert sur un détecteur qui rend toujours la
+    // liste vide (RM-02).
     const mutants: { payload: Record<string, unknown>; famille: string }[] = [
       { payload: { montantHtCents: 1 }, famille: 'montant_avant_signature' },
       { payload: { autreApporteurId: 'x' }, famille: 'identite_autre_apporteur' },

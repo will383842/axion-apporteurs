@@ -828,7 +828,7 @@
           "tests/unit/integration/contrat-hash.spec.ts#REQ-INT-003 — un evenement hors schema est REFUSE : c’est ce refus qui vaut le 422"
         ],
         "REQ-INT-004": [
-          "tests/unit/integration/contrat-hash.spec.ts#REQ-INT-004 — la liste des types est FERMEE sur les sept que le registre enumere"
+          "tests/unit/integration/contrat-hash.spec.ts#REQ-INT-004 — la liste des types est FERMEE sur les onze que le registre enumere, dans son ordre"
         ],
         "REQ-INT-029": [
           "tests/unit/integration/contrat-hash.spec.ts#REQ-INT-029 — aucun champ interdit ne franchit la frontiere, et le detecteur sait rougir"
@@ -838,7 +838,7 @@
           "tests/unit/integration/contrat-hash.spec.ts#REQ-QA-007 — contracts.sha256 est l'empreinte du schema publie, et un champ renomme la change"
         ],
         "REQ-GOV-020": [
-          "tests/unit/integration/contrat-hash.spec.ts#REQ-GOV-020 → REQ-QA-007 — la fixture DECLARE sa provenance et nomme la tache qui la remplacera (RM-03)"
+          "tests/unit/integration/contrat-hash.spec.ts#REQ-GOV-020 → REQ-QA-007 — la fixture est celle du PRODUCTEUR REEL, et elle couvre les onze types (RM-03)"
         ]
       },
       "attestation": {
@@ -12147,7 +12147,16 @@
         "docs/requirements.json",
         "docs/REQUIREMENTS.md",
         "tests/unit/integration/contrat-v2-frontiere.spec.ts",
-        "docs/adr/0023-route-des-coordonnees-de-candidature.md"
+        "docs/adr/0023-route-des-coordonnees-de-candidature.md",
+        "tests/fixtures/axionia/fixtures-producteur.v1.json",
+        "tests/unit/securite/evenements-recus-migration.spec.ts",
+        "tests/unit/gouvernance/termes-interdits.spec.ts",
+        "tests/unit/domaine/apporteur-snapshot-candidature.spec.ts",
+        "src/domain/apporteur/snapshot-candidature.ts",
+        "scripts/gates/gov-check.ts",
+        "scripts/gates/journal-sans-pii.ts",
+        "scripts/gates/gov-attributions.ts",
+        "docs/adr/0008-contrat-evenements-enveloppe-et-nomenclature.md"
       ],
       "schema": true,
       "sensible": [
