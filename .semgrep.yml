@@ -73,16 +73,31 @@
 # expression régulière littérale, et TOUT `String.raw` qui interpole — même une variable sans
 # échappement — sont refusés aussi. Aucun fichier de `src/` ne les écrit.
 #
-# CE QUE LA GATE FERME, ET CE QU'ELLE N'EST PAS. La gate ferme les formes d'écriture ÉNUMÉRÉES ci-dessus et règle par règle : liaisons de module
-# et chargeurs (import, `import type`, `export … from`, `require`, `module.require`,
-# `module['require']`, chargeur fabriqué, `import()` avec ou sans attributs, `import x =
-# require(…)`) ; membre pointé, optionnel ou non nul ; accès calculé par littéral ou par
-# concaténation de littéraux ; déstructuration courte, renommée, à reste ou à valeur par défaut ;
-# renommage à l'import ; espace de noms et objet module ; sortie du namespace `Prisma` ; nom
-# `Prisma`, `constructor`, `$queryRawUnsafe` ou `$executeRawUnsafe` écrit comme chaîne ;
-# fonctions d'étiquette hors étiquette ; `Prisma.join` à plus d'une valeur. Elle refuse en plus,
-# comme CLASSES, les ÉCHAPPEMENTS (bras `&echappement`) et les INTERPOLATIONS BRUTES (bras
-# `&interpolation-brute`).
+# DEUX NOMS ET UNE LIAISON, refusés comme CLASSES par leur TEXTE (revue `exactitude` 5328984956,
+# PR 82) : la déstructuration renommée hors d'une déclaration de variable (paramètre, affectation,
+# `for … of`, imbriquée) et la liaison `import P = Prisma` passaient la règle n° 2 en exit 0.
+# Plutôt qu'un motif AST de plus par écriture, la règle n° 2 refuse sous `src/` :
+#   — les identifiants `$queryRawUnsafe` et `$executeRawUnsafe` écrits EN CLAIR, où qu'ils soient
+#     (membre, clé de déstructuration ou d'objet, paramètre, chaîne, commentaire). Ici le texte
+#     EST la classe et non une orthographe : aucun usage légitime n'existe, leur écriture par
+#     échappement est refusée par `&echappement`, et leur nom replié d'une concaténation par le
+#     motif de chaîne ;
+#   — toute déclaration TypeScript IMPORT-EQUALS (`import X = …`, `export import X = …`), quelle
+#     qu'en soit la cible : c'est une liaison que le refus de sortie ne suit pas.
+# Prix ASSUMÉ : un commentaire ou une chaîne qui écrit l'un de ces deux noms, ou le texte
+# `import X =`, est refusé aussi. Aucun fichier de `src/` ne les écrit.
+#
+# CE QUE LA GATE FERME, ET CE QU'ELLE N'EST PAS. La gate ferme les formes d'écriture ÉNUMÉRÉES
+# ci-dessus et règle par règle : liaisons de module et chargeurs (import, `import type`,
+# `export … from`, `require`, `module.require`, `module['require']`, chargeur fabriqué,
+# `import()` avec ou sans attributs) ; membre pointé, optionnel ou non nul ; accès calculé par
+# littéral ou par concaténation de littéraux ; déstructuration courte, renommée, à reste ou à
+# valeur par défaut ; renommage à l'import ; espace de noms et objet module ; sortie du
+# namespace `Prisma` ; nom `Prisma` ou `constructor` écrit comme chaîne ; fonctions d'étiquette
+# hors étiquette ; `Prisma.join` à plus d'une valeur. Elle refuse en plus, comme CLASSES, les
+# ÉCHAPPEMENTS (bras `&echappement`), les INTERPOLATIONS BRUTES (bras `&interpolation-brute`),
+# les noms `$queryRawUnsafe` et `$executeRawUnsafe` écrits en clair où qu'ils soient, et toute
+# liaison IMPORT-EQUALS (`import x = require(…)` compris).
 # LIMITE DÉCLARÉE, à côté des limites a–f de chaque règle : la gate N'EST PAS une barrière contre
 # une obfuscation DÉLIBÉRÉE au-delà de ces formes et de ces classes — nom construit à
 # l'exécution (`String.fromCharCode`, `atob`, `split('').reverse().join('')`, tableau indexé),
@@ -242,19 +257,21 @@ rules:
           - pattern-regex: |-
               (?<!\\)(?:\\\\)*\$\{
 
-  # SQL brut non paramétré. Ce que la règle refuse est une RÉFÉRENCE au membre dangereux —
-  # `$queryRawUnsafe`, `$executeRawUnsafe`, `Prisma.raw`, `Prisma.Sql`, et, du runtime, `raw`,
-  # `Sql`, `sqltag`, `join`, `makeTypedQueryFactory` —, écrite EN CLAIR (écrite par échappement,
-  # elle est refusée en amont par le bras commun `&echappement`, voir l'en-tête), par toute
-  # écriture que l'AST rend lisible : membre pointé, optionnel ou non nul, accès calculé par
-  # littéral (guillemets ou gabarit), déstructuration, renommage à l'import, espace de noms,
-  # objet module (espace de noms, défaut, `require`, `import()` attendu). Le nom écrit comme
-  # chaîne HORS d'un accès calculé (argument de `Reflect.get`, clé calculée de déstructuration,
-  # chaîne quelconque) n'est refusé que pour `$queryRawUnsafe`, `$executeRawUnsafe`, `Prisma` et
-  # `constructor` : un membre du runtime n'est pris par crochets que sur un objet module resté
-  # dans sa liaison (limite d). Pour `Prisma`, c'est en plus la SORTIE du namespace hors de son
-  # usage immédiat qui est refusée, et son NOM écrit comme chaîne (voir l'en-tête). Trois
-  # familles s'y ajoutent :
+  # SQL brut non paramétré. Les noms `$queryRawUnsafe` et `$executeRawUnsafe` écrits EN CLAIR
+  # sont refusés où qu'ils soient sous `src/`, et toute liaison IMPORT-EQUALS aussi (deux classes,
+  # voir l'en-tête). Pour le reste, ce que la règle refuse est une RÉFÉRENCE au membre
+  # dangereux — `Prisma.raw`, `Prisma.Sql`, et, du runtime, `raw`, `Sql`, `sqltag`, `join`,
+  # `makeTypedQueryFactory` —, écrite EN CLAIR (écrite par échappement, elle est refusée en amont
+  # par le bras commun `&echappement`, voir l'en-tête), par toute écriture que l'AST rend
+  # lisible : membre pointé, optionnel ou non nul, accès calculé par littéral (guillemets ou
+  # gabarit), déstructuration, renommage à l'import, espace de noms, objet module (espace de
+  # noms, défaut, `require`, `import()` attendu). Le nom écrit comme chaîne HORS d'un accès
+  # calculé (argument de `Reflect.get`, clé calculée de déstructuration, chaîne quelconque)
+  # n'est refusé que pour `$queryRawUnsafe`, `$executeRawUnsafe` (y compris replié d'une
+  # concaténation de littéraux), `Prisma` et `constructor` : un membre du runtime n'est pris
+  # par crochets que sur un objet module resté dans sa liaison (limite d). Pour `Prisma`, c'est
+  # en plus la SORTIE du namespace hors de son usage immédiat qui est refusée, et son NOM écrit
+  # comme chaîne (voir l'en-tête). Trois familles s'y ajoutent :
   #   — les fonctions d'ÉTIQUETTE `$queryRaw`, `$executeRaw` et `Prisma.sql` (y compris `sql`
   #     déstructuré de `Prisma`) ne sont admises qu'en étiquette d'un gabarit : appelées avec
   #     un tableau (`Prisma.sql([x])`, `p.$queryRaw([x] as unknown as TemplateStringsArray)`),
@@ -303,8 +320,9 @@ rules:
       chaque valeur, et `Prisma.join(valeurs)` sans séparateur. Le renommage, l'accès par
       crochets, la déstructuration, l'appel d'une étiquette sans gabarit et le passage du
       namespace `Prisma` par une variable, un objet ou un paramètre ne changent rien à ce que le
-      code FAIT. Un nom écrit par séquence d'échappement est refusé comme tel : écrivez-le en
-      clair.
+      code FAIT. Les noms `$queryRawUnsafe` et `$executeRawUnsafe` sont refusés où qu'ils soient
+      écrits, et toute liaison `import X = …` aussi (écrivez un `import` ES). Un nom écrit par
+      séquence d'échappement est refusé comme tel : écrivez-le en clair.
     severity: ERROR
     languages: [typescript, javascript]
     paths:
@@ -316,21 +334,28 @@ rules:
       #   vraie la suite : les motifs ci-dessous ne lisent qu'un nom écrit EN CLAIR. —
       - patterns: *echappement
       - patterns: *interpolation-brute
-      # — les membres `…Unsafe` : pointés (optionnels et non nuls compris), nus (déstructuration
-      #   et renommage) —
-      - pattern: $C.$queryRawUnsafe
-      - pattern: $queryRawUnsafe
-      - pattern: $C.$executeRawUnsafe
-      - pattern: $executeRawUnsafe
-      # Le NOM écrit comme chaîne, où qu'elle soit : accès calculé `p['…']`, `Reflect.get(p,
-      # '…')`, clé calculée de déstructuration. Un littéral de chaîne dans le motif matche aussi
-      # un gabarit sans substitution (mesuré).
+      # — les membres `…Unsafe`, refusés comme CLASSE par leur NOM écrit en clair, où qu'il soit
+      #   sous `src/` (revue `exactitude` 5328984956, PR 82) : membre pointé, optionnel ou non
+      #   nul, identifiant nu, clé de déstructuration — déclaration, paramètre de fonction ou de
+      #   flèche, affectation, `for … of`, imbriquée —, clé ou méthode d'objet, chaîne, gabarit,
+      #   commentaire. Aucun usage légitime n'existe, et un motif AST par écriture a manqué
+      #   chaque déstructuration renommée hors de `var { … } = …`. La borne du mot tient compte
+      #   du `$` : `$queryRawUnsafely` ou `queryRaw` ne sont pas ce nom. —
+      - pattern-regex: |-
+          (?<![\w$])\$(?:query|execute)RawUnsafe(?![\w$])
+      # Le nom que semgrep REPLIE en constante sans qu'aucun texte ne l'écrive : concaténation de
+      # littéraux (`p['$query' + 'RawUnsafe']`, limite a). Un littéral de chaîne dans le motif
+      # matche aussi un gabarit sans substitution (mesuré).
       - pattern: '"$queryRawUnsafe"'
       - pattern: '"$executeRawUnsafe"'
-      # Déstructuration RENOMMÉE : la clé est un nom de propriété, pas un identifiant, et le
-      # motif nu ci-dessus ne la voit pas (mesuré). La forme courte, elle, est un identifiant.
-      - pattern: "var { $queryRawUnsafe: $B } = $O"
-      - pattern: "var { $executeRawUnsafe: $B } = $O"
+      # — la liaison TypeScript IMPORT-EQUALS (`import X = …`, `export import X = …`), refusée
+      #   comme CLASSE quelle qu'en soit la cible (revue `exactitude` 5328984956, PR 82) :
+      #   `import P = Prisma` fait sortir le namespace par une liaison que le refus de sortie ne
+      #   voit pas (l'AST de semgrep 1.176.1 ne la représente pas, mesuré), et `import x =
+      #   require(…)` charge un module hors des liaisons ES. Lue sur le TEXTE, commentaires admis
+      #   entre les mots (`import /* … */ P = Prisma`) ; `import type P = …` compris. —
+      - pattern-regex: |-
+          \bimport(?:\s|/\*(?:[^*]|\*(?!/))*\*/|//[^\n]*)+(?:type(?:\s|/\*(?:[^*]|\*(?!/))*\*/|//[^\n]*)+)?[A-Za-z_$][\w$]*(?:\s|/\*(?:[^*]|\*(?!/))*\*/|//[^\n]*)*=(?!=)
       # — `Prisma.raw` et `Prisma.Sql`, par leur nom QUALIFIÉ : `$C.Prisma.raw` matche
       #   `Prisma.raw` (import nommé), `P.raw` (`import { Prisma as P }`) et `C.Prisma.raw`
       #   (`import * as C`), et ne matche PAS `autre.raw` ni `String.raw`, qui ne sont pas le

@@ -33,12 +33,20 @@
  * commentaires compris. Les jetons SEULS ne suffisent pas : un saut de ligne — seul, ou DANS un
  * commentaire bloc — après `return`, `throw`, `break`/`continue` étiquetés ou avant un `++`/`--`
  * postfixe déclenche l'insertion automatique d'un point-virgule, et change ce que le code fait
- * sans changer un jeton (revues `exactitude` 5328789820 et `securite` 5328796307, PR 82). Seul
- * le diff qui laisse cette structure intacte est écarté : un commentaire changé, déplacé ou
- * ajouté qui n'introduit ni ne retire de saut de ligne devant un jeton. Tout autre diff — un
- * saut de ligne ajouté ou retiré devant un jeton, même sans effet — est MUTÉ. Base illisible ou
- * fichier ajouté : MUTÉ (échec fermé). Un `// Stryker disable` ajouté par un tel diff garde le
- * fichier dans la passe, où la désactivation le fait échouer.
+ * sans changer un jeton (revues `exactitude` 5328789820 et `securite` 5328796307, PR 82). Et un
+ * commentaire qui porte une DIRECTIVE est du code (revue `exactitude` 5328984956, PR 82) : un
+ * pragma `@jsx`, `@jsxRuntime`, `@jsxImportSource` ou `@jsxFrag` change la transformation JSX,
+ * un `@ts-ignore`, `@ts-expect-error`, `@ts-nocheck` ou `@ts-check` ce que le compilateur
+ * accepte, un `eslint-disable`/`eslint-enable`, `istanbul ignore`, `c8 ignore`, `v8 ignore`,
+ * `Stryker disable`, un commentaire magique `webpack…`, `@vitest-environment`, `@__PURE__` /
+ * `#__PURE__` ou une directive `/// <reference …>` ce que l'outil fait du code — son TEXTE, à
+ * sa place (devant tel jeton), entre dans la comparaison (liste complète, et volontairement
+ * large : `DIRECTIVE_DE_COMMENTAIRE`). Seul le diff qui laisse cette structure intacte est
+ * écarté : un commentaire ORDINAIRE changé, déplacé ou ajouté qui n'introduit ni ne retire de
+ * saut de ligne devant un jeton. Tout autre diff — un saut de ligne ajouté ou retiré devant un
+ * jeton, même sans effet, une directive ajoutée, retirée, déplacée ou changée — est MUTÉ. Base
+ * illisible ou fichier ajouté : MUTÉ (échec fermé). Un `// Stryker disable` ajouté par un tel
+ * diff garde le fichier dans la passe, où la désactivation le fait échouer.
  *
  * LE VERDICT est celui du lecteur unique du rapport (`scripts/mutation/rapport.ts`, `decider`) :
  * score sous le seuil → 1, survivants NOMMÉS ; rapport absent ou vide → 1. Stryker en échec → 1.
@@ -76,7 +84,17 @@ const MOTIF_DU_RESTE_DU_PRODUIT =
   'le jugent au rendu ou en navigateur, hors du processus que Stryker instrumente';
 
 export const MOTIF_COMMENTAIRES_SEULS =
-  'diff de commentaires seuls : ni la structure, ni les jetons, ni les sauts de ligne devant un jeton ne changent entre la base de fusion et l’arbre';
+  'diff de commentaires seuls : ni la structure, ni les jetons, ni les sauts de ligne devant un jeton, ni une directive de commentaire ne changent entre la base de fusion et l’arbre';
+
+/**
+ * Un commentaire qui porte une DIRECTIVE — pragma JSX, directive TypeScript, désactivation de
+ * linter, de couverture ou de Stryker, commentaire magique d'empaqueteur, environnement de test,
+ * annotation de pureté, directive triple barre oblique — change ce que la chaîne d'outils fait du
+ * code : il compte comme CODE (voir l'en-tête). Large à dessein : un commentaire ordinaire qui
+ * cite l'un de ces mots est muté aussi, ce qui ne coûte qu'une passe (échec fermé).
+ */
+export const DIRECTIVE_DE_COMMENTAIRE =
+  /@jsx(?:Runtime|ImportSource|Frag)?\b|@ts-(?:ignore|expect-error|nocheck|check)\b|\beslint\b|^\/\*\s*(?:globals?|exported)\b|\b(?:istanbul|c8|v8)\s+ignore\b|\bStryker\s+(?:disable|restore)\b|\b(?:webpack|turbopack)[A-Z]\w*|@vite-ignore\b|@vitest-environment\b|@refresh\s+reset\b|[@#]__(?:PURE|NO_SIDE_EFFECTS|INLINE|NOINLINE|KEY)__|^\/\/\/\s*<(?:reference|amd-module|amd-dependency)\b/i;
 
 const estUnSource = (f: string): boolean =>
   /\.tsx?$/.test(f) && !/\.(spec|test)\.tsx?$/.test(f) && !f.endsWith('.d.ts');
@@ -117,6 +135,10 @@ export function fichiersAMuter(fichiers: readonly string[]): {
  * seul, après `return`, `throw`, `break`/`continue` étiquetés, avant un `++`/`--` postfixe).
  * L'arbre, pas le scanner seul : lui lirait `// x` dans la queue d'un gabarit après `${…}` ou
  * dans une classe de regex (`/[//]/`) comme un commentaire. Les nœuds JSDoc sont sautés.
+ * Un commentaire qui porte une DIRECTIVE (`DIRECTIVE_DE_COMMENTAIRE`) entre, lui, avec son texte
+ * et à sa place : devant la feuille dont il précède le jeton, ou en fin de fichier. Les
+ * commentaires sont lus dans la trivia de chaque feuille — de son début complet à son jeton —,
+ * que l'arbre a déjà délimitée : aucune chaîne ni regex ne peut y passer pour un commentaire.
  */
 function jetonsDeCode(texte: string, fichier: string): string[] {
   const sf = ts.createSourceFile(
@@ -126,6 +148,23 @@ function jetonsDeCode(texte: string, fichier: string): string[] {
     true,
     fichier.endsWith('.tsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS
   );
+  const directives = (debut: number, fin: number): string[] => {
+    const sc = ts.createScanner(
+      ts.ScriptTarget.Latest,
+      false,
+      ts.LanguageVariant.Standard,
+      texte.slice(debut, fin)
+    );
+    const trouvees: string[] = [];
+    for (let k = sc.scan(); k !== ts.SyntaxKind.EndOfFileToken; k = sc.scan()) {
+      const commentaire =
+        k === ts.SyntaxKind.SingleLineCommentTrivia || k === ts.SyntaxKind.MultiLineCommentTrivia;
+      if (commentaire && DIRECTIVE_DE_COMMENTAIRE.test(sc.getTokenText())) {
+        trouvees.push(`✎${sc.getTokenText()}`);
+      }
+    }
+    return trouvees;
+  };
   const jetons: string[] = [];
   const visiter = (n: ts.Node): void => {
     if (n.kind >= ts.SyntaxKind.FirstJSDocNode && n.kind <= ts.SyntaxKind.LastJSDocNode) return;
@@ -134,6 +173,7 @@ function jetonsDeCode(texte: string, fichier: string): string[] {
       const t = n.getText(sf);
       if (t === '') return;
       const saut = /[\r\n\u2028\u2029]/.test(texte.slice(n.getFullStart(), n.getStart(sf)));
+      jetons.push(...directives(n.getFullStart(), n.getStart(sf)));
       jetons.push(`${n.kind}:${saut ? '⏎' : ''}${t}`);
       return;
     }
@@ -142,6 +182,8 @@ function jetonsDeCode(texte: string, fichier: string): string[] {
     jetons.push(`)${n.kind}`);
   };
   visiter(sf);
+  // La trivia de fin de fichier : le jeton de fin n'a pas de texte, la boucle ne l'a pas lue.
+  jetons.push(...directives(sf.endOfFileToken.getFullStart(), texte.length));
   return jetons;
 }
 
