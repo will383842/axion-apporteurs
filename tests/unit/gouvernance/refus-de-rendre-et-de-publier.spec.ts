@@ -871,6 +871,78 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
         'famille est vue rendre 1 par score-de-mutation.spec.ts. Le binaire n’est pas lancé par un ' +
         'témoin : il lance Stryker. Dette DÉCLARÉE.',
     },
+    // ── JUR-T26 : QUATRE gardes neuves de la charte relationnelle, UNE sortie chacune ────────
+    // Le cliquet a rougi en NOMMANT la première (`jur-aucun-agregat-reseau.ts ajoute 1 …`) ; les
+    // trois autres étaient dans le même cas, comptées sur le disque contre `origin/main`, pas devinées.
+    'scripts/gates/jur-aucun-agregat-reseau.ts': {
+      total: 1,
+      porte: 1,
+      temoins: 0,
+      raison:
+        'JUR-T26 — REQ-JUR-034, aucun agrégat du réseau dans ce que l’espace sert à un apporteur. ' +
+        '`process.exit(decision.code)` : sortie TERMINALE à code variable, commune au jugement et à ' +
+        '`--prove` — 0 quand la garde passe, 1 sur une faute (`agregat_reseau`, `import_console`, ' +
+        '`source_illisible`). Les familles sont vues rougir sur des sources INJECTÉES dans la fonction ' +
+        'pure (charte-relationnelle.spec.ts), et le binaire est vu sortir en 0 sur le dépôt et sous ' +
+        '`--prove` ; ⛔ aucun témoin ne le voit sortir en 1, et aucun ne vit dans `REFUS`. Le REFUS DE ' +
+        'PÉRIMÈTRE vient de `fichiersSuivisOuRefus`, et `GARDES_QUI_BALAIENT` le déclare plus bas. ' +
+        'Dette DÉCLARÉE.',
+    },
+    'scripts/gates/jur-aucune-progression.ts': {
+      total: 1,
+      porte: 1,
+      temoins: 0,
+      raison:
+        'JUR-T26 — REQ-JUR-035, aucun composant de l’espace nommé ni typé comme une progression vers ' +
+        'un seuil. `process.exit(decision.code)` : sortie TERMINALE à code variable, commune au ' +
+        'jugement et à `--prove` — 0 quand la garde passe, 1 sur une faute. Les familles sont vues ' +
+        'rougir sur des sources INJECTÉES dans la fonction pure (charte-relationnelle.spec.ts), et le ' +
+        'binaire est vu sortir en 0 sur le dépôt et sous `--prove` ; ⛔ aucun témoin ne le voit sortir ' +
+        'en 1, et aucun ne vit dans `REFUS`. Le REFUS DE PÉRIMÈTRE vient de `fichiersSuivisOuRefus`, et ' +
+        '`GARDES_QUI_BALAIENT` le déclare plus bas. Dette DÉCLARÉE.',
+    },
+    'scripts/gates/jur-revue-apporteur-facing.ts': {
+      total: 1,
+      porte: 1,
+      temoins: 0,
+      raison:
+        'JUR-T26 — REQ-JUR-036, une PR qui touche ce qu’un apporteur voit ou reçoit exige le juriste. ' +
+        '`process.exit(decision.code)` : sortie TERMINALE à code variable, commune aux modes porte A, ' +
+        '`--pr <n>` et `--prove` — 0 quand la garde passe, 1 sur une faute (label, checklist de la ' +
+        'charte, revue du juriste, CODEOWNERS). Les familles sont vues rougir sur des entrées ' +
+        'INJECTÉES dans les fonctions pures (charte-relationnelle.spec.ts), et le binaire est vu ' +
+        'sortir en 0 sur le dépôt ; ⛔ aucun témoin ne le voit sortir en 1, et aucun ne vit dans ' +
+        '`REFUS`. Elle juge les fichiers de la PR et CODEOWNERS, pas `git ls-files` : elle n’importe ' +
+        'pas `fichiersSuivisOuRefus` et n’a rien à faire dans `GARDES_QUI_BALAIENT`. Dette DÉCLARÉE.',
+    },
+    'scripts/gates/jur-lexique-social.ts': {
+      total: 1,
+      porte: 1,
+      temoins: 0,
+      raison:
+        'JUR-T26 — REQ-JUR-037, aucun terme ni aucune rubrique du droit social dans ce qu’un ' +
+        'apporteur peut lire. `process.exit(decision.code)` : sortie TERMINALE à code variable, ' +
+        'commune au jugement et à `--prove` — 0 quand la garde passe, 1 sur une faute ' +
+        '(`terme_social`, `rubriques_de_paie`). Les familles sont vues rougir sur des sources ' +
+        'INJECTÉES dans la fonction pure (charte-relationnelle.spec.ts), et le binaire est vu sortir ' +
+        'en 0 sur le dépôt et sous `--prove` ; ⛔ aucun témoin ne le voit sortir en 1, et aucun ne vit ' +
+        'dans `REFUS`. Le REFUS DE PÉRIMÈTRE vient de `fichiersSuivisOuRefus`, et ' +
+        '`GARDES_QUI_BALAIENT` le déclare plus bas. Dette DÉCLARÉE.',
+    },
+    // ── SEC-17 : la garde AST des rôles de la console, UNE sortie ───────────────────────────
+    'scripts/gates/roles.ts': {
+      total: 1,
+      porte: 1,
+      temoins: 0,
+      raison:
+        'SEC-17 — REQ-SEC-023, toute action et toute route de la console appelle `requireRole` avec ' +
+        'un droit présent dans la matrice. `process.exit(decision.code)` : sortie TERMINALE à code ' +
+        'variable, commune au jugement et à `--prove` — 0 quand la garde passe, 1 sur une faute de ' +
+        'l’une de ses sept familles. Les familles sont vues rougir sur des sources INJECTÉES dans la ' +
+        'fonction pure (matrice-des-roles.spec.ts), et le binaire est vu sortir en 0 sur le dépôt ; ' +
+        '⛔ aucun témoin ne le voit sortir en 1, et aucun ne vit dans `REFUS`. Le REFUS DE PÉRIMÈTRE ' +
+        'vient de `fichiersSuivisOuRefus`, et `GARDES_QUI_BALAIENT` le déclare plus bas. Dette DÉCLARÉE.',
+    },
     // ── GOV-054 : LES SORTIES DIFFÉRÉES, ARBITRÉES ET NON SUBIES ────────────────────────────
     // Le motif ne voyait que la sortie IMMÉDIATE. `scripts/plan-state/build.ts` portait TROIS
     // affectations non nulles du code de sortie — les deux refus de `plan-state:verifier` entrés
@@ -2166,6 +2238,14 @@ const GARDES_QUI_BALAIENT = [
   // GOV-046 — `perf:budgets` juge les routes des fichiers SUIVIS sous `src/`. Elle rendait `[]`
   // quand `src/` manquait ; elle établit désormais son périmètre par la source unique.
   'scripts/gates/perf-budgets.ts',
+  // JUR-T26 — les trois gardes de la charte qui balaient l'espace (ou la portée apporteur et
+  // `src/server/pdf/`) dans les fichiers SUIVIS. La réciproque ci-dessous a rougi en les nommant.
+  'scripts/gates/jur-aucun-agregat-reseau.ts',
+  'scripts/gates/jur-aucune-progression.ts',
+  'scripts/gates/jur-lexique-social.ts',
+  // SEC-17 — `securite:roles` dérive les actions et les routes de la console des fichiers SUIVIS
+  // sous `src/app/(console)/` et `src/server/console/`.
+  'scripts/gates/roles.ts',
 ] as const;
 
 it('REQ-CPL-018 — toute garde qui importe la primitive de périmètre est DÉCLARÉE ci-dessus', () => {
