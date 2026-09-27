@@ -407,16 +407,28 @@ describe('REQ-GOV-029 — la garde retenue rougit sur un témoin, famille par fa
     expect(familles(vue)).toEqual([]);
   });
 
-  it('garde_ecrite_jamais_appelee — une gate dont le script n’existe PAS ne rougit pas ici', () => {
-    // Elle rougit ailleurs, et c'est délibéré : `gates:prouvees --phase -1` la nomme
-    // (`script_introuvable`). Deux gardes qui disent la même chose se contredisent un jour.
+  it('gate_sans_script — une gate de phase passée dont le script n’existe PAS, que nulle tâche ne porte', () => {
+    // Elle ne rougissait pas ici avant GOV-083 : « `gates:prouvees --phase -1` la nomme ». Mais
+    // cette commande tourne en nightly, rouge par construction, et une entrée fautive ne s'y
+    // distinguait pas d'une garde promise. Le tri vit désormais ICI ; le corps de la preuve est
+    // dans `une-gate-sans-script-n-est-pas-une-gate-conforme.spec.ts`.
     const vue = variante({
       gates: [
         ...VUE_CONFORME.gates,
         { id: 'gov:derivation', phase: -1, script: 'scripts/gates/gov-derivation.ts' },
       ],
     });
-    expect(familles(vue)).toEqual([]);
+    expect(familles(vue)).toEqual(['gate_sans_script']);
+  });
+
+  it('passif_sans_script_perime — une ligne de passif qui ne désigne plus aucune entrée fautive', () => {
+    const vue = variante({
+      passifSansScript: {
+        'gov:disparue':
+          'témoin : une ligne de passif dont l’entrée a quitté le registre, et qui absoudrait la suivante.',
+      },
+    });
+    expect(familles(vue)).toEqual(['passif_sans_script_perime']);
   });
 
   it('garde_hors_registre — une garde ÉCRITE que `docs/gates.json` ne nomme pas', () => {

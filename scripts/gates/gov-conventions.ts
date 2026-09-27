@@ -62,6 +62,7 @@
 
 import { fichiersSuivisOuRefus } from '../lot/fichiers-suivis';
 import { outilHorsDepot } from '../lot/chemins-de-tache';
+import { LIVREE } from '../lot/avancement';
 import { existsSync, readFileSync } from 'node:fs';
 
 // ── le vocabulaire des décisions, partagé avec le registre et son test ───────────────────────
@@ -99,12 +100,22 @@ export interface GateVue {
    * (`MOTIF_MINIMAL`), pour la même raison — deux mots ne sont pas une décision.
    */
   readonly horsCi?: string;
+  /**
+   * La tâche qui PORTE l'entrée au registre (GOV-083). C'est elle, et elle seule, qui peut rendre
+   * « promise » une entrée dont le script n'est pas encore écrit : tant qu'elle n'est pas livrée,
+   * l'absence du script est un fait attendu ; une fois livrée, c'est une entrée fautive.
+   */
+  readonly tache?: string | readonly string[];
 }
 
 export interface TacheVue {
   readonly id: string;
   readonly repo: string;
   readonly paths: readonly string[];
+  /** La phase de la tâche — d'où se DÉRIVE la phase courante (GOV-083). Absente : non comptée. */
+  readonly phase?: number;
+  /** Le statut — « livrée » se lit dans `LIVREE` (`scripts/lot/avancement.ts`), jamais ici. */
+  readonly statut?: string;
 }
 
 /** Les périmètres que la garde sait compter. Une union fermée : pas de clé inventée. */
@@ -134,6 +145,13 @@ export interface Vue {
   readonly gates: readonly GateVue[];
   readonly taches: readonly TacheVue[];
   readonly perimetres: readonly Perimetre[];
+  /**
+   * LE PASSIF DES ENTRÉES FAUTIVES (GOV-083) : l'identifiant d'une entrée de `docs/gates.json` dont le
+   * script est introuvable et que sa tâche, livrée, n'écrira plus — avec le MOTIF de sa tolérance.
+   * Une entrée déclarée ici ne rougit pas `gate_sans_script` ; une ligne qui ne sert plus rougit
+   * `passif_sans_script_perime`. ABSENT = aucun passif : rien n'est toléré.
+   */
+  readonly passifSansScript?: Readonly<Record<string, string>>;
 }
 
 export interface Faute {
@@ -150,6 +168,8 @@ export const FAMILLES = [
   'isolation_depot',
   'garde_ecrite_jamais_appelee',
   'garde_hors_registre',
+  'gate_sans_script',
+  'passif_sans_script_perime',
   'perimetre_vide_sans_motif',
 ] as const;
 
@@ -435,16 +455,48 @@ export interface Confrontation {
   /** Les gardes écrites que le registre ne nomme pas. LE trou que GOV-044 ferme. */
   readonly horsRegistre: readonly string[];
   /**
-   * Les entrées du registre sous `scripts/gates/` dont le script n'est pas suivi. HORS PÉRIMÈTRE,
-   * et RENDUES plutôt que tues : autre dépôt, garde promise à une phase future, entrée fautive —
-   * les trois se taisent aujourd'hui de la même façon. Ce texte disait que les distinguer était le
-   * travail de GOV-051 ; son acceptance porte la COMPARAISON des chemins, pas ce tri, et aucune
-   * tâche ne le porte au 2026-09-27.
+   * Les entrées du registre sous `scripts/gates/` dont le script n'est pas suivi — le silence que
+   * GOV-083 fait parler. Elles se répartissent EXACTEMENT entre `promises` et `fautives`.
    */
   readonly entreesSansScript: readonly GateVue[];
   /** Les fichiers suivis du dossier que l'extension exclut. La LIMITE, nommée. */
   readonly horsExtension: readonly string[];
+  /**
+   * LES TROIS SOUS-FAMILLES DE L'ENTRÉE SANS SCRIPT (GOV-083), distinguées au lieu de se taire :
+   *   — `autreDepot` : le script vit sous `axionia/scripts/gates/`. Sorti du périmètre avec son
+   *     MOTIF — ce dépôt ne peut ni lire ni câbler un fichier d'un autre dépôt ;
+   *   — `promises` : la phase de l'entrée est FUTURE, ou la tâche qui la porte (`tache`) n'est pas
+   *     livrée. Sortie avec sa phase et sa tâche : son absence est un fait attendu ;
+   *   — `fautives` : phase courante ou passée, et aucune tâche non livrée ne la porte. Le script
+   *     n'existera jamais sous ce nom : c'est un REFUS (`gate_sans_script`).
+   * ⚠️ « Une autre tâche non livrée cite ce chemin dans ses paths » NE promet PAS : une tâche qui
+   * RETOUCHE une garde la déclare, et supprimer la garde passerait alors pour « à venir ».
+   */
+  readonly autreDepot: readonly GateVue[];
+  readonly promises: readonly { gate: GateVue; phase: number; porteur: string | null }[];
+  readonly fautives: readonly GateVue[];
+  /** La phase courante, DÉRIVÉE des tâches — `undefined` si aucune tâche ne la situe. */
+  readonly phaseCourante: number | undefined;
 }
+
+/**
+ * La phase courante : la plus petite phase qui porte encore une tâche non livrée, sinon la
+ * dernière. LA MÊME définition que `docs/PLAN-STATE.md` (`scripts/plan-state/build.ts`), sur le
+ * même vocabulaire (`LIVREE`). Une tâche sans phase ou sans statut ne situe rien.
+ */
+export function phaseCouranteDe(taches: readonly TacheVue[]): number | undefined {
+  const situees = taches.filter(
+    (t): t is TacheVue & { phase: number; statut: string } =>
+      typeof t.phase === 'number' && typeof t.statut === 'string'
+  );
+  const phases = [...new Set(situees.map((t) => t.phase))].sort((a, b) => a - b);
+  return (
+    phases.find((p) => situees.some((t) => t.phase === p && !LIVREE.has(t.statut))) ?? phases.at(-1)
+  );
+}
+
+/** Le dossier des gardes de l'AUTRE dépôt, tel qu'une entrée du registre l'écrit. */
+const GARDES_DE_L_AUTRE_DEPOT = `${DEPOT_VOISIN}/${DOSSIER_DES_GARDES}`;
 
 export function confronterDisqueEtRegistre(vue: Vue): Confrontation {
   // Par la primitive unique (GOV-051). Une écriture indécidable ENTRE dans la population : une
@@ -453,6 +505,25 @@ export function confronterDisqueEtRegistre(vue: Vue): Confrontation {
   const duDossier = vue.fichiersSuivis.filter(sousLesGardes);
   const surLeDisque = duDossier.filter((f) => f.endsWith(EXTENSION_DES_GARDES));
   const duRegistre = vue.gates.filter((g) => sousLesGardes(g.script));
+  const entreesSansScript = duRegistre.filter((g) => !duDossier.includes(g.script));
+  const phaseCourante = phaseCouranteDe(vue.taches);
+  const statutDe = new Map(vue.taches.map((t) => [t.id, t.statut]));
+  const promises: { gate: GateVue; phase: number; porteur: string | null }[] = [];
+  const fautives: GateVue[] = [];
+  for (const g of entreesSansScript) {
+    // ÉCHEC FERMÉ : sans phase courante, rien ne peut être dit « futur ».
+    if (phaseCourante !== undefined && g.phase > phaseCourante) {
+      promises.push({ gate: g, phase: g.phase, porteur: null });
+      continue;
+    }
+    const porteurs = typeof g.tache === 'string' ? [g.tache] : [...(g.tache ?? [])];
+    const porteur = porteurs.find((id) => {
+      const statut = statutDe.get(id);
+      return typeof statut === 'string' && !LIVREE.has(statut);
+    });
+    if (porteur !== undefined) promises.push({ gate: g, phase: g.phase, porteur });
+    else fautives.push(g);
+  }
   return {
     surLeDisque,
     horsExtension: duDossier.filter((f) => !f.endsWith(EXTENSION_DES_GARDES)),
@@ -460,8 +531,15 @@ export function confronterDisqueEtRegistre(vue: Vue): Confrontation {
     // est une garde que le registre nomme et que `.claude/settings.json` câble. La dérivation du
     // disque ÉTEND la population, elle ne doit en retirer personne.
     jugees: duRegistre.filter((g) => duDossier.includes(g.script)),
-    entreesSansScript: duRegistre.filter((g) => !duDossier.includes(g.script)),
+    entreesSansScript,
     horsRegistre: surLeDisque.filter((f) => !duRegistre.some((g) => g.script === f)),
+    // Une écriture indécidable n'est PAS sortie du périmètre : elle reste où elle tombe.
+    autreDepot: vue.gates.filter(
+      (g) => estSousLeDossier(g.script, GARDES_DE_L_AUTRE_DEPOT) === 'oui'
+    ),
+    promises,
+    fautives,
+    phaseCourante,
   };
 }
 
@@ -629,6 +707,42 @@ export function controler(vue: Vue): Faute[] {
         '(`reecrire-champ` et `poser-champ` refusent une entrée absente) — ou retirez le fichier.',
     });
   }
+  // ── une entrée du registre sans script : triée, et la fautive REFUSÉE (GOV-083) ──
+  const passif = vue.passifSansScript ?? {};
+  const motifDuPassif = (id: string): string =>
+    Object.hasOwn(passif, id) ? (passif[id] ?? '').trim() : '';
+  for (const g of confrontation.fautives) {
+    const motif = motifDuPassif(g.id);
+    if (motif.length >= MOTIF_MINIMAL) continue;
+    fautes.push({
+      famille: 'gate_sans_script',
+      message:
+        `\`${g.id}\` (phase ${g.phase}) nomme \`${g.script}\`, introuvable parmi les fichiers ` +
+        `suivis. Phase courante : ${confrontation.phaseCourante ?? 'INDÉTERMINÉE'} — l'entrée n'est ` +
+        `pas d'une phase future, et aucune tâche non livrée ne la porte (champ \`tache\` : ` +
+        `${JSON.stringify(g.tache ?? null)}). Ce script n'existera donc jamais sous ce nom : ` +
+        `l'entrée est FAUTIVE, et c'est le silence que GOV-083 ferme — une garde qui ne voit pas ` +
+        `ce qui manque la déclare conforme. Corrigez l'entrée (le script réel), rattachez-la à la ` +
+        `tâche qui l'écrira, ou retirez-la${
+          motif.length > 0
+            ? ` ; son passif déclaré tient en ${motif.length} caractère(s), il en faut ${MOTIF_MINIMAL}`
+            : ''
+        }.`,
+    });
+  }
+  const fautivesParId = new Set(confrontation.fautives.map((g) => g.id));
+  for (const id of Object.keys(passif)) {
+    if (fautivesParId.has(id)) continue;
+    fautes.push({
+      famille: 'passif_sans_script_perime',
+      message:
+        `Le passif des entrées sans script déclare \`${id}\`, qui n'est plus une entrée fautive — ` +
+        `son script est suivi, sa tâche la porte encore, ou l'entrée a quitté le registre. Une ` +
+        `tolérance qui ne sert plus absoudrait la PROCHAINE entrée de ce nom sans que personne l'ait ` +
+        `examinée : retirez la ligne de \`PASSIF_SANS_SCRIPT\`.`,
+    });
+  }
+
   const appelants = [...vue.workflows.map((w) => w.source), vue.hooks].join('\n');
   for (const g of confrontation.jugees) {
     const noms = [g.id, g.script, ...(g.alias ?? [])];
@@ -774,9 +888,15 @@ export function lireVue(): Vue {
     .gates;
   const taches = (
     JSON.parse(lire('docs/tasks.json') || '{"taches":[]}') as {
-      taches: { id: string; repo: string; paths?: string[] }[];
+      taches: { id: string; repo: string; paths?: string[]; phase?: number; statut?: string }[];
     }
-  ).taches.map((t) => ({ id: t.id, repo: t.repo, paths: t.paths ?? [] }));
+  ).taches.map((t) => ({
+    id: t.id,
+    repo: t.repo,
+    paths: t.paths ?? [],
+    phase: t.phase,
+    statut: t.statut,
+  }));
 
   return {
     sources,
@@ -787,8 +907,35 @@ export function lireVue(): Vue {
     gates,
     taches,
     perimetres: PERIMETRES_DECLARES,
+    passifSansScript: PASSIF_SANS_SCRIPT,
   };
 }
+
+/**
+ * LE PASSIF DES ENTRÉES FAUTIVES DU REGISTRE (GOV-083), mesuré le 2026-09-27 : cinq entrées de
+ * phase -1 dont la tâche est LIVRÉE et dont le script n'a jamais été écrit sous ce nom. Chacune se
+ * corrige dans `docs/gates.json`, dont l'écrivain est le gardien de la spécification — pas un
+ * développeur (`docs/CONVENTIONS.md` §8). Elles sont déclarées ici UNE PAR UNE, avec leur motif,
+ * plutôt que tues : une entrée fautive NEUVE rougit `gate_sans_script`, et une ligne qui ne sert
+ * plus rougit `passif_sans_script_perime`.
+ */
+export const PASSIF_SANS_SCRIPT: Readonly<Record<string, string>> = {
+  detectPii:
+    'tâche porteuse livrée ; la tâche du harnais MCP, livrée elle aussi, déclarait ce chemin dans ' +
+    'ses paths sans l’écrire : le nom ne désigne rien sur le disque, entrée à corriger au registre.',
+  'gov:contrat':
+    'l’empreinte du contrat est tenue par `pnpm contracts:hash` (`scripts/contracts/export.ts ' +
+    '--verifier`, câblé en porte A) ; ce nom de script n’a jamais existé : entrée à re-pointer.',
+  'gate-deploiement':
+    'tâche porteuse livrée ; le script de vérification d’atterrissage est déclaré par une tâche ' +
+    'de phase 0 non livrée, mais l’entrée reste attribuée à la tâche du socle : à ré-attribuer.',
+  'gov:derivation':
+    'garde DIFFÉRÉE par écrit (`docs/GARDES-AXIONIA.md` §2) et reprise par la tâche de la grille, ' +
+    'qui déclare ce chemin ; son attribution d’origine est exigée par `gardes-transposees.spec.ts`.',
+  'fixtures:source':
+    'tâche porteuse livrée sans ce script, et aucune tâche du backlog ne le déclare : l’en-tête ' +
+    '`Source:` des fixtures n’est tenu par aucun script — entrée à corriger ou à rattacher.',
+};
 
 // ── la preuve ────────────────────────────────────────────────────────────────────────────────
 
@@ -846,12 +993,12 @@ export const VUE_CONFORME: Vue = {
   ],
   gates: [{ id: 'gov:conventions', phase: -1, script: 'scripts/gates/gov-conventions.ts' }],
   taches: [
-    { id: 'QA-T00', repo: 'partners', paths: ['tests/'] },
-    { id: 'QA-T01', repo: 'partners', paths: ['tests/'] },
-    { id: 'GOV-017a', repo: 'partners', paths: ['docs/'] },
-    { id: 'UX-P0-02', repo: 'partners', paths: ['src/app/UX-P0-02'] },
-    { id: 'UX-P1-02', repo: 'partners', paths: ['src/app/UX-P1-02'] },
-    { id: 'DM-03-A', repo: 'axionia', paths: ['axionia/DM-03-A'] },
+    { id: 'QA-T00', repo: 'partners', paths: ['tests/'], phase: -1, statut: 'fusionnee' },
+    { id: 'QA-T01', repo: 'partners', paths: ['tests/'], phase: 0, statut: 'a_faire' },
+    { id: 'GOV-017a', repo: 'partners', paths: ['docs/'], phase: -1, statut: 'fusionnee' },
+    { id: 'UX-P0-02', repo: 'partners', paths: ['src/app/UX-P0-02'], phase: 0, statut: 'a_faire' },
+    { id: 'UX-P1-02', repo: 'partners', paths: ['src/app/UX-P1-02'], phase: 1, statut: 'a_faire' },
+    { id: 'DM-03-A', repo: 'axionia', paths: ['axionia/DM-03-A'], phase: 0, statut: 'a_faire' },
   ],
   perimetres: PERIMETRES_DECLARES,
 };
@@ -965,6 +1112,32 @@ const TEMOINS: ReadonlyArray<{ famille: string; libelle: string; vue: Vue }> = [
     libelle: 'une garde ÉCRITE et suivie que `docs/gates.json` ne nomme nulle part',
     vue: variante({
       fichiersSuivis: [...VUE_CONFORME.fichiersSuivis, 'scripts/gates/gov-orpheline.ts'],
+    }),
+  },
+  {
+    famille: 'gate_sans_script',
+    libelle:
+      'une entrée de la phase courante dont le script est introuvable et que sa tâche, livrée, ne porte plus',
+    vue: variante({
+      gates: [
+        ...VUE_CONFORME.gates,
+        {
+          id: 'gov:jamais-ecrite',
+          phase: 0,
+          script: 'scripts/gates/gov-jamais-ecrite.ts',
+          tache: 'QA-T00',
+        },
+      ],
+    }),
+  },
+  {
+    famille: 'passif_sans_script_perime',
+    libelle: 'un passif d’entrée sans script qui ne désigne plus aucune entrée fautive',
+    vue: variante({
+      passifSansScript: {
+        'gov:disparue':
+          'témoin : une ligne de passif dont l’entrée a quitté le registre, et qui absoudrait la prochaine.',
+      },
     }),
   },
   {
@@ -1112,13 +1285,40 @@ const CONTRE_TEMOINS: ReadonlyArray<{ libelle: string; vue: Vue }> = [
     }),
   },
   {
-    libelle:
-      'une gate du registre dont le script n’existe PAS — `gates:prouvees` la nomme, pas nous',
+    libelle: 'une gate sans script PROMISE à une phase future — sortie avec sa phase, sans rougir',
+    vue: variante({
+      gates: [
+        ...VUE_CONFORME.gates,
+        { id: 'partners:rgpd:export-complet', phase: 3, script: 'scripts/gates/rgpd-export.ts' },
+      ],
+    }),
+  },
+  {
+    libelle: 'une gate sans script de la phase courante dont la tâche porteuse n’est PAS livrée',
+    vue: variante({
+      gates: [
+        ...VUE_CONFORME.gates,
+        { id: 'gov:a-venir', phase: 0, script: 'scripts/gates/gov-a-venir.ts', tache: 'QA-T01' },
+      ],
+    }),
+  },
+  {
+    libelle: 'une gate qui désigne l’AUTRE dépôt — sortie du périmètre avec son motif',
+    vue: variante({
+      gates: [
+        ...VUE_CONFORME.gates,
+        { id: 'inertie', phase: 0, script: 'axionia/scripts/gates/inertie.ts' },
+      ],
+    }),
+  },
+  {
+    libelle: 'une entrée fautive DÉCLARÉE au passif, avec son motif — la seule tolérance admise',
     vue: variante({
       gates: [
         ...VUE_CONFORME.gates,
         { id: 'gov:derivation', phase: -1, script: 'scripts/gates/gov-derivation.ts' },
       ],
+      passifSansScript: { 'gov:derivation': PASSIF_SANS_SCRIPT['gov:derivation']! },
     }),
   },
   {
@@ -1184,6 +1384,8 @@ const CONTRE_TEMOINS: ReadonlyArray<{ libelle: string; vue: Vue }> = [
       ],
       packageJson: '{}',
       fichiersSuivis: ['package.json'],
+      // Aucune garde au registre : ce contre-témoin juge le LINT absent, pas une entrée sans script.
+      gates: [],
       perimetres: PERIMETRES_DECLARES.filter((p) => p.cle !== 'etapes-lint-ci'),
     }),
   },
@@ -1256,10 +1458,21 @@ export function lignesDeConfrontation(vue: Vue): string[] {
   if (c.horsRegistre.length > 0) {
     lignes.push(`     ${c.horsRegistre.join('\n     ')}`);
   }
+  const passif = vue.passifSansScript ?? {};
+  const declarees = c.fautives.filter((g) => Object.hasOwn(passif, g.id)).length;
   lignes.push(
     `   • entrées sous \`${DOSSIER_DES_GARDES}\` dont le script n'est pas suivi ici, donc HORS ` +
-      `périmètre : ${c.entreesSansScript.length} — autre dépôt, phase future ou entrée fautive, ` +
-      `les trois se taisent de la même façon, et aucune tâche ne les distingue encore.`
+      `périmètre : ${c.entreesSansScript.length} — réparties ci-dessous, aucune ne se tait :`,
+    `     ↳ promises (phase future, ou tâche porteuse non livrée) : ${c.promises.length}`,
+    `     ↳ fautives (phase ${c.phaseCourante ?? '?'} ou antérieure, aucune tâche ne les porte) : ` +
+      `${c.fautives.length} — dont ${declarees} déclarée(s) au passif, une par une avec son motif`
+  );
+  for (const g of c.fautives) {
+    lignes.push(`       ${g.id} — ${g.script} — ${(passif[g.id] ?? 'NON DÉCLARÉE').trim()}`);
+  }
+  lignes.push(
+    `   • entrées qui désignent l'autre dépôt (\`${GARDES_DE_L_AUTRE_DEPOT}\`), sorties du ` +
+      `périmètre : ${c.autreDepot.length} — ce dépôt ne lit ni ne câble un fichier qui n'est pas le sien`
   );
   if (c.horsExtension.length > 0) {
     lignes.push(

@@ -13,8 +13,8 @@
  *
  * CE QUE CE FICHIER GARDE. Le périmètre part du DISQUE — les fichiers `scripts/gates/*.ts` SUIVIS
  * PAR GIT — et le registre devient ce qu'on lui confronte. Les deux populations sont comptées et
- * RENDUES ; une garde écrite que le registre ne nomme pas est un refus NOMMÉ ; l'inverse — une
- * entrée de registre sans script — reste chez son propriétaire, `gates:prouvees`.
+ * RENDUES ; une garde écrite que le registre ne nomme pas est un refus NOMMÉ. L'inverse — une
+ * entrée de registre sans script — est trié par la même garde, dans son propre fichier de témoins.
  *
  * ⚠️ CE FICHIER N'ASSERTE AUCUNE ORTHOGRAPHE. Une garde qui connaît un mot ne connaît pas un
  * comportement : chaque témoin ci-dessous EXÉCUTE `controler()`, `confronterDisqueEtRegistre()`,
@@ -507,14 +507,20 @@ describe('REQ-GOV-012 — une garde délibérément HORS CI se DÉCLARE, elle ne
   });
 });
 
-describe('REQ-GOV-012 — l’inverse reste chez son propriétaire, et il n’a pas bougé', () => {
-  it('une entrée de registre dont le script n’est pas sur le disque ne rougit PAS ici', () => {
-    // Deux gardes qui disent la même chose se contredisent un jour. Le tri des entrées sans
-    // script — autre dépôt, phase future, entrée fautive — est porté par GOV-051, pas par ici.
+describe('REQ-GOV-012 — l’inverse est TRIÉ ici depuis GOV-083, et son propriétaire garde sa preuve', () => {
+  it('une entrée de registre dont le script n’est pas sur le disque, promise par sa tâche non livrée, ne rougit PAS', () => {
+    // Le tri des entrées sans script — autre dépôt, promise, fautive — vit désormais dans cette
+    // garde (GOV-083, `une-gate-sans-script-n-est-pas-une-gate-conforme.spec.ts`) : ce témoin ne
+    // garde que la face PROMISE. La face fautive rougit `gate_sans_script`, et c'est là-bas.
     const vue = variante({
       gates: [
         ...VUE_CONFORME.gates,
-        { id: 'gov:derivation', phase: -1, script: 'scripts/gates/gov-derivation.ts' },
+        {
+          id: 'gov:derivation',
+          phase: -1,
+          script: 'scripts/gates/gov-derivation.ts',
+          tache: 'QA-T01',
+        },
       ],
     });
     expect(familles(vue)).toEqual([]);
