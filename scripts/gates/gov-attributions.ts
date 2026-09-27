@@ -24,8 +24,9 @@ import { LIVREE } from '../lot/avancement';
 /*
  * LIMITES CONNUES — ce que cette garde ne voit pas, écrit plutôt que supposé :
  *   — un identifiant écrit au-delà de la vingtième ligne d'un fichier (le périmètre que l'acceptance fixe) ;
- *   — un identifiant écrit en minuscules, ou dont le tiret n'est pas le tiret ASCII (trait d'union
- *     insécable) : la forme d'une mention se dérive des identifiants réels, tels qu'ils s'écrivent ;
+ *   — (FERMÉ par GOV-074) un identifiant en minuscules, ou au trait d'union non ASCII (insécable,
+ *     demi-cadratin, moins), est reconnu, ramené à la tâche qu'il désigne et jugé comme elle. Ce qui
+ *     reste hors de vue : un autre séparateur (espace, point), et une lettre d'un autre alphabet ;
  *   — une attribution qui vit dans une REVUE plutôt que dans un fichier du dépôt ;
  *   — qu'un `it()` soit étiqueté par l'exigence qu'il teste vraiment : « ce titre teste un IBAN »
  *     contre « l'exigence dit mono-tenant » n'est mécanisable par aucune garde ;
@@ -34,12 +35,13 @@ import { LIVREE } from '../lot/avancement';
  *     le `tests{}` de GOV-032 porte `plan-state-frais.spec.ts`, le script de cette gate ; son `tests{}`
  *     vidé, la même mention rougit en `mention_hors_paths`. La garde juge la propriété d'un fichier, pas
  *     le sens d'une phrase ;
- *   — une déclaration se range par SITE et identifiant (un fichier, ou une chaîne de `docs/gates.json`),
- *     pas par occurrence : une mention NEUVE du même identifiant au même site est absoute par la
- *     déclaration existante — le compte monte, et la raison imprimée est celle écrite pour l'autre ;
- *   — aucun cliquet ne borne les exemptions d'une tâche NON LIVRÉE aux paths gabarit : une mention neuve
- *     fait monter le compte, sous sa rubrique, et la sortie reste verte. Pour une tâche LIVRÉE, le
- *     registre `DETTE_GABARIT_LIVREE` fige chaque site ET son nombre d'occurrences : une de plus rougit ;
+ *   — (FERMÉ par GOV-074) une déclaration se range par OCCURRENCE — site, ligne, identifiant complet —
+ *     et en absout UNE : une mention neuve du même identifiant au même fichier est jugée. Les exemptions
+ *     qu'aucun second producteur ne tenait (tâche NON LIVRÉE aux paths gabarit, lot sans PR) sont
+ *     FIGÉES occurrence par occurrence dans `EXEMPTIONS_FIGEES` : une neuve rougit en
+ *     `exemption_non_figee`, une qui ne sert plus en `dette_perimee`. Ce qui reste au grain du SITE :
+ *     `DETTE_GABARIT_LIVREE` (un site ET son nombre d'occurrences), et une chaîne de `docs/gates.json`,
+ *     dont la « ligne » est celle de la chaîne ;
  *   — le journal n'a pas de grain plus fin que la PR : une tâche ÉTRANGÈRE au lot, livrée par une PR
  *     dont le TITRE ne nomme que ce lot, reste attestée. Seul le titre atteste : une ligne entière
  *     « ## PR #<n> — AAAA-MM-JJ — <titre> », la coupe et le titre que `gov-etat.ts` lit. Le journal est lu
@@ -121,8 +123,28 @@ export type Entete = { fichier: string; lignes: string[] };
 const NATURES_DECLAREES = ['citation', 'reservation', 'dette', 'contexte'] as const;
 type NatureDeclaree = (typeof NATURES_DECLAREES)[number];
 
-/** Une mention d'identifiant DÉCLARÉE : elle est vue, nommée, COMPTÉE, et ne rougit pas. */
-export type Citation = { ou: string; id: string; nature: NatureDeclaree; raison: string };
+/**
+ * Une mention d'identifiant DÉCLARÉE : elle est vue, nommée, COMPTÉE, et ne rougit pas.
+ *
+ * 🔑 UNE DÉCLARATION ABSOUT UNE OCCURRENCE, JAMAIS UN SITE (GOV-074). `ligne` est la ligne de
+ * l'en-tête (1 à 20), ou la ligne de la chaîne de `docs/gates.json` (1 pour une chaîne d'une ligne).
+ * Rangée par site, une déclaration absolvait toute mention NEUVE du même identifiant au même
+ * fichier : le compte montait, et la raison imprimée était celle écrite pour l'autre.
+ */
+export type Citation = {
+  ou: string;
+  ligne: number;
+  id: string;
+  nature: NatureDeclaree;
+  raison: string;
+};
+
+/**
+ * Une exemption FIGÉE, occurrence par occurrence (GOV-074) : pour les natures qu'AUCUN second
+ * producteur ne tient (`NATURES_FIGEES`), l'exemption n'est accordée qu'à ce qui a été vu. Le
+ * `site` est celui que l'exemption imprime : `fichier:ligne` pour un en-tête.
+ */
+export type ExemptionFigee = { nature: Nature; tache: string; site: string };
 
 /** Ce qu'une déclaration peut absoudre : `contexte` vise une tâche qui résout, les autres un identifiant qui ne résout pas. */
 const ADMISES: Record<'hors_paths' | 'non_resolue', readonly NatureDeclaree[]> = {
@@ -163,6 +185,7 @@ export type Sources = {
   dettesGate: DetteGate[];
   dettesGabarit: DetteGabaritLivree[];
   dettesLot: DetteLot[];
+  exemptionsFigees: ExemptionFigee[];
 };
 
 /**
@@ -180,6 +203,7 @@ export const FAMILLES = [
   'citation_perimee',
   'dette_perimee',
   'declaration_sans_raison',
+  'exemption_non_figee',
 ] as const;
 export type Famille = (typeof FAMILLES)[number];
 export type Faute = { famille: Famille; message: string };
@@ -211,7 +235,22 @@ const NATURES = [
 ] as const;
 export type Nature = (typeof NATURES)[number];
 export type Exemption = { nature: Nature; tache: string; site: string; motif: string };
-export type Verdict = { fautes: Faute[]; exemptions: Exemption[] };
+/** `occurrences` : les mentions d'identifiant RÉELLEMENT confrontées, comptées par `analyser`. */
+export type Verdict = { fautes: Faute[]; exemptions: Exemption[]; occurrences?: number };
+
+/**
+ * LES NATURES SANS SECOND PRODUCTEUR (GOV-074). Les autres sont tenues par un registre qui fige
+ * chaque cas (`DETTE_*`, `CITATIONS_DECLAREES`), par une source indépendante (le plancher du
+ * journal, le `repo` de la tâche) : celles-ci ne l'étaient par rien, et une occurrence neuve
+ * s'y exemptait en silence. Elles sont FIGÉES dans `EXEMPTIONS_FIGEES`.
+ */
+const NATURES_FIGEES: ReadonlySet<Nature> = new Set<Nature>([
+  'gate_paths_non_resolus',
+  'gate_paths_en_partie_gabarit',
+  'mention_paths_non_resolus',
+  'mention_paths_en_partie_gabarit',
+  'lot_sans_pr',
+]);
 
 const SENS: Record<Nature, string> = {
   dette_gate: 'non-réciprocité garde <-> tâche déclarée, que cette tâche ne peut pas réparer',
@@ -348,10 +387,38 @@ const echapper = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
  * `APRES` la fait échouer et le moteur essaie l'alternative suivante. Contre-témoins : `DM-03-A` (tâche
  * suffixée qui existe) et `DM-03-Z` (suffixe inconnu).
  */
-function motifIdentifiant(taches: Tache[]): RegExp {
+function motifIdentifiant(taches: Tache[], { souple = false }: { souple?: boolean } = {}): RegExp {
   const formes = [...new Set(taches.map((t) => echapper(t.id).replace(/[0-9]+/g, '[0-9]+')))];
-  return new RegExp(AVANT + '(?:' + formes.join('|') + ')' + APRES, 'g');
+  if (!souple) return new RegExp(AVANT + '(?:' + formes.join('|') + ')' + APRES, 'g');
+  // GOV-074 — LA CASSE ET LES TRAITS D'UNION NON USUELS. Un identifiant écrit en minuscules, ou
+  // dont le tiret est un trait d'union insécable, n'était pas vu du tout : il est reconnu, puis
+  // ramené à la tâche qu'il désigne (`canonique`) et jugé comme elle.
+  // Les tirets sont remplacés AVANT les chiffres : `[0-9]+` porte lui-même un tiret, et la classe
+  // des tirets porte des chiffres (`‐`) — d'où la forme reprise de l'identifiant brut.
+  const t = `[${TIRETS}]`;
+  const souples = [
+    ...new Set(
+      taches.map((x) =>
+        echapper(x.id)
+          .split('-')
+          .map((morceau) => morceau.replace(/[0-9]+/g, '[0-9]+'))
+          .join(t)
+      )
+    ),
+  ];
+  return new RegExp(
+    `(?<![A-Za-z0-9${TIRETS}])(?:${souples.join('|')})(?![A-Za-z0-9]|${t}[A-Za-z0-9])`,
+    'gi'
+  );
 }
+
+/** Les tirets qu'un identifiant peut porter à l'écrit : ASCII, trait d'union, insécable, chiffre, demi-cadratin, moins. */
+// Le tiret ASCII est ÉCHAPPÉ (`\\-`) : inséré dans une classe après `9`, il formerait sinon une plage.
+const TIRETS = '\\-\\u2010\\u2011\\u2012\\u2013\\u2212';
+const TIRETS_NON_ASCII = new RegExp(`[${TIRETS.slice(2)}]`, 'g');
+
+/** La clé d'identité d'une mention : casse et tirets repliés. */
+const cleDIdentifiant = (s: string): string => s.replace(TIRETS_NON_ASCII, '-').toUpperCase();
 
 /** L'entrée NOMME le lot comme un jeton entier — jamais comme une sous-chaîne d'un lot plus long. */
 function nommeLeLot(entree: string, lot: string): boolean {
@@ -551,8 +618,28 @@ export function analyser(s: Sources): Verdict {
   const exemptions: Exemption[] = [];
   // Une faute et une exemption par OCCURRENCE : un identifiant écrit deux fois est lu deux fois.
   const dire = (famille: Famille, message: string) => fautes.push({ famille, message });
-  const exempter = (nature: Nature, tache: string, site: string, motif: string) =>
+  // GOV-074 — une nature sans second producteur n'exempte que l'occurrence FIGÉE : chaque entrée de
+  // `exemptionsFigees` en absout UNE, et une occurrence neuve rougit en se nommant.
+  const figeesVues = new Set<ExemptionFigee>();
+  const exempter = (nature: Nature, tache: string, site: string, motif: string) => {
+    if (NATURES_FIGEES.has(nature)) {
+      const e = s.exemptionsFigees.find(
+        (x) => x.nature === nature && x.tache === tache && x.site === site && !figeesVues.has(x)
+      );
+      if (!e) {
+        dire(
+          'exemption_non_figee',
+          `${site} — « ${tache} » serait exempté en ${nature} (${SENS[nature]}), et cette occurrence ` +
+            `n'est pas figée dans EXEMPTIONS_FIGEES. Aucun second producteur ne tient cette nature : ` +
+            `elle n'absout que ce qui a été vu. Corrige l'attribution, ou fige l'occurrence.`
+        );
+        return;
+      }
+      figeesVues.add(e);
+    }
     exemptions.push({ nature, tache, site, motif });
+  };
+  let occurrences = 0;
 
   const parId = new Map(s.taches.map((t) => [t.id, t]));
 
@@ -738,10 +825,26 @@ export function analyser(s: Sources): Verdict {
   }
 
   // ── (4) tout identifiant de tâche NOMMÉ doit RÉSOUDRE, et désigner une tâche à qui le fichier appartient ──
-  const motif = motifIdentifiant(s.taches);
+  const motif = motifIdentifiant(s.taches, { souple: true });
+  const canoniques = new Map(s.taches.map((t) => [cleDIdentifiant(t.id), t.id]));
+  /** La tâche que désigne une mention, casse et tirets repliés ; sinon la mention, repliée. */
+  const canonique = (brut: string): string =>
+    canoniques.get(cleDIdentifiant(brut)) ??
+    (brut === brut.replace(TIRETS_NON_ASCII, '-') ? brut : cleDIdentifiant(brut));
   const citationsVues = new Set<Citation>();
-  const declaree = (ou: string, id: string, admises: readonly NatureDeclaree[]) =>
-    s.citations.find((c) => c.ou === ou && c.id === id && admises.includes(c.nature));
+  // UNE déclaration pour UNE occurrence : (site, ligne, identifiant complet), consommée une fois.
+  const declaree = (ou: string, ligne: number, id: string, admises: readonly NatureDeclaree[]) => {
+    const c = s.citations.find(
+      (x) =>
+        x.ou === ou &&
+        x.ligne === ligne &&
+        x.id === id &&
+        admises.includes(x.nature) &&
+        !citationsVues.has(x)
+    );
+    if (c) citationsVues.add(c);
+    return c;
+  };
 
   /**
    * @param ou           la clé sous laquelle une déclaration se range (fichier, ou chaîne de gates.json)
@@ -751,24 +854,28 @@ export function analyser(s: Sources): Verdict {
    */
   const examiner = (
     ou: string,
+    ligne: number,
     figeeSous: string,
     fichier: string,
     texte: string,
     situer: string,
     proprietaire?: string
   ) => {
-    for (const m of texte.match(motif) ?? []) {
+    for (const trouve of texte.matchAll(motif)) {
+      occurrences++;
+      const brut = trouve[0];
+      const m = canonique(brut);
+      const ecrit = brut === m ? '' : ` (écrit « ${brut} »)`;
       const t = parId.get(m);
       if (!t) {
-        const c = declaree(ou, m, ADMISES.non_resolue);
+        const c = declaree(ou, ligne, m, ADMISES.non_resolue);
         if (c) {
-          citationsVues.add(c);
           exempter(c.nature, m, situer, c.raison);
           continue;
         }
         dire(
           'mention_non_resolue',
-          `${situer} — « ${m} » a la forme d'un identifiant de tâche et ne RÉSOUT PAS. ` +
+          `${situer} — « ${m} »${ecrit} a la forme d'un identifiant de tâche et ne RÉSOUT PAS. ` +
             `gov:identifiants juge la forme, jamais la résolution : cette mention envoie le lecteur suivant nulle part. ` +
             `Corrige-la, ou DÉCLARE-la dans CITATIONS_DECLAREES en disant si tu CITES ou si tu RÉSERVES.`
         );
@@ -776,9 +883,8 @@ export function analyser(s: Sources): Verdict {
       }
       if (m === proprietaire) continue; // confrontée par la relation garde <-> tâche, ci-dessus
       if (couvre(t, fichier)) continue;
-      const c = declaree(ou, m, ADMISES.hors_paths);
+      const c = declaree(ou, ligne, m, ADMISES.hors_paths);
       if (c) {
-        citationsVues.add(c);
         exempter('contexte', m, situer, c.raison);
         continue;
       }
@@ -799,7 +905,7 @@ export function analyser(s: Sources): Verdict {
       }
       dire(
         'mention_hors_paths',
-        `${situer} — nomme « ${m} », et ${fichier} n'est ni dans les paths ni dans le tests{} de ${m}. ` +
+        `${situer} — nomme « ${m} »${ecrit}, et ${fichier} n'est ni dans les paths ni dans le tests{} de ${m}. ` +
           `Le lecteur suivant ira chercher chez ${m} un fichier qui n'est pas à elle. Corrige le nom, ou ` +
           `DÉCLARE la mention en « contexte » dans CITATIONS_DECLAREES si la tâche est nommée comme voisine.` +
           gabaritLivre(t)
@@ -809,7 +915,7 @@ export function analyser(s: Sources): Verdict {
 
   for (const e of s.entetes) {
     e.lignes.forEach((ligne, i) =>
-      examiner(e.fichier, e.fichier, e.fichier, ligne, `${e.fichier}:${i + 1}`)
+      examiner(e.fichier, i + 1, e.fichier, e.fichier, ligne, `${e.fichier}:${i + 1}`)
     );
   }
   // Chaque chaîne ET chaque nom de clé d'une entrée, à toute profondeur, PAS le seul champ `tache` : sur
@@ -819,7 +925,7 @@ export function analyser(s: Sources): Verdict {
     const script = sansAncre(g.script);
     for (const [ou, texte] of chainesDe(g, `docs/gates.json:${g.id}`)) {
       const site = siteDansGates(ou, script);
-      examiner(ou, site, script, texte, site, g.tache);
+      texte.split('\n').forEach((l, i) => examiner(ou, i + 1, site, script, l, site, g.tache));
     }
   }
 
@@ -833,7 +939,7 @@ export function analyser(s: Sources): Verdict {
       parId.has(c.id) && ADMISES.non_resolue.includes(c.nature)
         ? `CITATIONS_DECLAREES — « ${c.id} » est déclaré en ${c.nature} pour ${c.ou}, et il RÉSOUT maintenant : ` +
             `le backlog a bougé sous la déclaration. Retire l'entrée, et vérifie que la phrase dit encore ce qu'elle voulait dire.`
-        : `CITATIONS_DECLAREES — « ${c.id} » est déclaré en ${c.nature} pour ${c.ou}, et n'y absout plus aucune mention ` +
+        : `CITATIONS_DECLAREES — « ${c.id} » est déclaré en ${c.nature} pour ${c.ou}:${c.ligne}, et n'y absout plus aucune mention ` +
             `(le site ne le porte plus, la tâche déclare maintenant ce fichier, ou la nature ne convient pas). Retire ou corrige l'entrée.`
     );
   }
@@ -845,6 +951,15 @@ export function analyser(s: Sources): Verdict {
       'dette_perimee',
       `DETTE_GABARIT_LIVREE fige ${d.n} occurrence(s) de « ${d.tache} » (${d.lieu}) sur ${d.ou}, et ${vues} y sont mesurées : ` +
         `la mention a disparu, la tâche déclare maintenant ce fichier, ou son gabarit est résolu. Corrige ou retire l'entrée.`
+    );
+  }
+
+  for (const e of s.exemptionsFigees) {
+    if (figeesVues.has(e)) continue;
+    dire(
+      'dette_perimee',
+      `EXEMPTIONS_FIGEES fige « ${e.tache} » en ${e.nature} sur ${e.site}, et cette occurrence n'y est PLUS ` +
+        `mesurée : la mention a bougé ou disparu, ou la tâche déclare maintenant ce fichier. Retire ou corrige l'entrée.`
     );
   }
 
@@ -866,7 +981,7 @@ export function analyser(s: Sources): Verdict {
     );
   }
 
-  return { fautes, exemptions };
+  return { fautes, exemptions, occurrences };
 }
 
 // ── les registres : ce qui est DÉCLARÉ est vu, nommé, compté, et ne dort pas ──
@@ -923,6 +1038,7 @@ export const CITATIONS_DECLAREES: Citation[] = [
   // la phrase inutilisable : un lecteur saurait qu'une chose est exclue, sans savoir qui la porte.
   {
     ou: 'docs/gates.json:ux:exhaustivite.verifie',
+    ligne: 1,
     id: 'UX-P0-01b',
     nature: 'contexte',
     raison:
@@ -935,6 +1051,7 @@ export const CITATIONS_DECLAREES: Citation[] = [
   // dire lesquels. Une garde qui ferait rougir cette phrase forcerait à retirer la défense elle-même.
   {
     ou: 'scripts/gates/gov-tasks.ts',
+    ligne: 17,
     id: 'INT-T01',
     nature: 'citation',
     raison:
@@ -942,6 +1059,7 @@ export const CITATIONS_DECLAREES: Citation[] = [
   },
   {
     ou: 'scripts/gates/gov-tasks.ts',
+    ligne: 17,
     id: 'GOV-017',
     nature: 'citation',
     raison:
@@ -949,6 +1067,7 @@ export const CITATIONS_DECLAREES: Citation[] = [
   },
   {
     ou: 'scripts/gates/gov-tasks.ts',
+    ligne: 17,
     id: 'EXT-T02',
     nature: 'citation',
     raison:
@@ -956,12 +1075,14 @@ export const CITATIONS_DECLAREES: Citation[] = [
   },
   {
     ou: 'docs/gates.json:gov:tasks.verifie',
+    ligne: 1,
     id: 'INT-T01',
     nature: 'citation',
     raison: 'le registre décrit ce que gov:tasks interdit, dans les mêmes termes qu’elle.',
   },
   {
     ou: 'docs/gates.json:gov:tasks.verifie',
+    ligne: 1,
     id: 'GOV-017',
     nature: 'citation',
     raison:
@@ -969,6 +1090,7 @@ export const CITATIONS_DECLAREES: Citation[] = [
   },
   {
     ou: 'docs/gates.json:gov:tasks.verifie',
+    ligne: 1,
     id: 'EXT-T02',
     nature: 'citation',
     raison:
@@ -977,6 +1099,7 @@ export const CITATIONS_DECLAREES: Citation[] = [
   // ── des attributions FAUSSES, dans des fichiers hors des paths de GOV-037 ──
   {
     ou: 'scripts/lot/issues.ts',
+    ligne: 2,
     id: 'GOV-017',
     nature: 'dette',
     raison:
@@ -986,6 +1109,7 @@ export const CITATIONS_DECLAREES: Citation[] = [
   {
     // Un `.json` sous `scripts/` : lu comme tout fichier suivi, quelle que soit son extension.
     ou: 'scripts/lot/tasks.schema.json',
+    ligne: 20,
     id: 'GOV-017',
     nature: 'dette',
     raison:
@@ -994,6 +1118,7 @@ export const CITATIONS_DECLAREES: Citation[] = [
   },
   {
     ou: 'docs/gates.json:gate-nightly.verifie',
+    ligne: 1,
     id: 'INT-T08',
     nature: 'dette',
     raison:
@@ -1003,6 +1128,7 @@ export const CITATIONS_DECLAREES: Citation[] = [
   // ── des tâches nommées comme VOISINES, hors de leurs paths — l'acceptance le permet explicitement ──
   {
     ou: 'scripts/gates/gh-sur.js',
+    ligne: 5,
     id: 'GOV-012',
     nature: 'contexte',
     raison:
@@ -1010,12 +1136,14 @@ export const CITATIONS_DECLAREES: Citation[] = [
   },
   {
     ou: 'scripts/gates/gh-sur.js',
+    ligne: 5,
     id: 'GOV-008',
     nature: 'contexte',
     raison: 'historique : la seconde tâche qui a trouvé le même défaut, de son côté.',
   },
   {
     ou: 'tests/fixtures/axionia/candidature-recue.json',
+    ligne: 2,
     id: 'INT-T01b',
     nature: 'contexte',
     raison:
@@ -1024,6 +1152,7 @@ export const CITATIONS_DECLAREES: Citation[] = [
   },
   {
     ou: 'scripts/lot/corps-de-pr.ts',
+    ligne: 4,
     id: 'GOV-035',
     nature: 'contexte',
     raison:
@@ -1032,12 +1161,24 @@ export const CITATIONS_DECLAREES: Citation[] = [
   },
   {
     ou: 'scripts/lot/corps-de-pr.ts',
+    ligne: 6,
+    id: 'GOV-035',
+    nature: 'contexte',
+    raison:
+      'seconde occurrence du même récit, deux lignes plus bas : l’en-tête nomme GOV-035 pour dire ' +
+      'qu’il la nommait à tort. Une déclaration par occurrence (GOV-074) : celle de la ligne 4 ne ' +
+      'l’absout plus.',
+  },
+  {
+    ou: 'scripts/lot/corps-de-pr.ts',
+    ligne: 8,
     id: 'GOV-037',
     nature: 'contexte',
     raison: 'renvoie à la tâche qui porte la garde des attributions, comme suite du constat.',
   },
   {
     ou: 'tests/unit/gouvernance/autonomie.spec.ts',
+    ligne: 6,
     id: 'GOV-011',
     nature: 'contexte',
     raison:
@@ -1045,6 +1186,7 @@ export const CITATIONS_DECLAREES: Citation[] = [
   },
   {
     ou: 'tests/unit/gouvernance/autonomie.spec.ts',
+    ligne: 20,
     id: 'GOV-012',
     nature: 'contexte',
     raison:
@@ -1052,6 +1194,7 @@ export const CITATIONS_DECLAREES: Citation[] = [
   },
   {
     ou: 'tests/unit/gouvernance/corps-de-pr-couvre.spec.ts',
+    ligne: 12,
     id: 'GOV-036',
     nature: 'contexte',
     raison:
@@ -1059,12 +1202,14 @@ export const CITATIONS_DECLAREES: Citation[] = [
   },
   {
     ou: 'tests/unit/gouvernance/tout-check-est-cable.spec.ts',
+    ligne: 12,
     id: 'GOV-011',
     nature: 'contexte',
     raison: 'historique : la tâche dont la garde a trouvé la case cochée sans être vraie.',
   },
   {
     ou: 'docs/gates.json:perf:bundle.verifie',
+    ligne: 1,
     id: 'GOV-019',
     nature: 'contexte',
     raison:
@@ -1072,11 +1217,22 @@ export const CITATIONS_DECLAREES: Citation[] = [
   },
   {
     ou: 'scripts/gates/gov-check.ts',
+    ligne: 8,
     id: 'GOV-000',
     nature: 'contexte',
     raison:
       'historique : l’en-tête raconte que la tâche d’amorçage déclarait l’entrée des termes interdits ' +
       'sans que son script existe ; le fichier appartient à la tâche qui l’a livré.',
+  },
+  {
+    ou: 'docs/gates.json:gov:entite.verifie',
+    ligne: 1,
+    id: 'INT-T09',
+    nature: 'contexte',
+    raison:
+      'le registre date une mesure « sur t/int-t09 » : la tâche y est nommée par sa BRANCHE, comme ' +
+      'lieu de la mesure, pas comme propriétaire. Vue depuis que la garde reconnaît la minuscule ' +
+      '(GOV-074) ; docs/gates.json est en écriture réservée.',
   },
 ];
 
@@ -1293,6 +1449,375 @@ export const DETTE_LOT_JOURNAL: DetteLot[] = [
     pr: 33,
     lotsDuTitre: [],
   })),
+];
+
+/**
+ * LES EXEMPTIONS FIGÉES, OCCURRENCE PAR OCCURRENCE (GOV-074) — voir `NATURES_FIGEES`.
+ */
+export const EXEMPTIONS_FIGEES: ExemptionFigee[] = [
+  {
+    nature: 'gate_paths_en_partie_gabarit',
+    tache: 'DM-08',
+    site: 'docs/gates.json:partners:transitions:exhaustive (tests/domain/transitions.spec.ts)',
+  },
+  {
+    nature: 'gate_paths_non_resolus',
+    tache: 'DM-20',
+    site: 'docs/gates.json:partners:rgpd:export-complet (tests/integration/rgpd-export.spec.ts)',
+  },
+  {
+    nature: 'gate_paths_non_resolus',
+    tache: 'DM-13',
+    site: 'docs/gates.json:GATE-JUR-PURGE (tests/integration/purge.spec.ts)',
+  },
+  {
+    nature: 'gate_paths_non_resolus',
+    tache: 'UX-P1-14',
+    site: 'docs/gates.json:partners:grille:complete (scripts/gates/grille-complete.ts)',
+  },
+  {
+    nature: 'gate_paths_non_resolus',
+    tache: 'T-ARG-037',
+    site: 'docs/gates.json:partners:grille:contrat (tests/domain/grille-du-contrat.spec.ts)',
+  },
+  {
+    nature: 'gate_paths_non_resolus',
+    tache: 'T-ARG-036',
+    site: 'docs/gates.json:argent:contre-calcul (tests/argent/contre-calcul.spec.ts)',
+  },
+  {
+    nature: 'gate_paths_non_resolus',
+    tache: 'T-ARG-022',
+    site: 'docs/gates.json:GATE-ARG-rejeu-golden (tests/argent/rejeu-golden.spec.ts)',
+  },
+  {
+    nature: 'gate_paths_non_resolus',
+    tache: 'T-ARG-015',
+    site: 'docs/gates.json:GATE-ARG-double-paiement (tests/argent/double-paiement.spec.ts)',
+  },
+  {
+    nature: 'gate_paths_non_resolus',
+    tache: 'T-ARG-018',
+    site: 'docs/gates.json:GATE-ARG-sepa-xsd (tests/argent/sepa-xsd.spec.ts)',
+  },
+  {
+    nature: 'gate_paths_non_resolus',
+    tache: 'JUR-T16',
+    site: 'docs/gates.json:GATE-ARG-echec-ferme (tests/argent/controles-versement.spec.ts)',
+  },
+  {
+    nature: 'gate_paths_non_resolus',
+    tache: 'DM-15',
+    site: 'docs/gates.json:GATE-ARG-non-silence (tests/argent/non-silence.spec.ts)',
+  },
+  {
+    nature: 'gate_paths_non_resolus',
+    tache: 'T-ARG-016',
+    site: 'docs/gates.json:GATE-ARG-tva-snapshot (tests/argent/tva-snapshot.spec.ts)',
+  },
+  {
+    nature: 'gate_paths_non_resolus',
+    tache: 'DM-19',
+    site: 'docs/gates.json:GATE-ARG-das2-seuil (tests/argent/das2.spec.ts)',
+  },
+  {
+    nature: 'gate_paths_non_resolus',
+    tache: 'DM-15',
+    site: 'docs/gates.json:GATE-JUR-FAIT-GENERATEUR (tests/domain/fait-generateur.spec.ts)',
+  },
+  {
+    nature: 'gate_paths_non_resolus',
+    tache: 'INT-T17',
+    site: 'docs/gates.json:GATE-ARG-cloisonnement (tests/security/cloisonnement-documents.spec.ts)',
+  },
+  {
+    nature: 'gate_paths_non_resolus',
+    tache: 'CPL-T11',
+    site: 'docs/gates.json:mois-a-blanc (scripts/gates/mois-a-blanc.ts)',
+  },
+  {
+    nature: 'gate_paths_non_resolus',
+    tache: 'SEC-12',
+    site: 'docs/gates.json:G-SEC-CONCURRENCE (tests/integration/concurrence.spec.ts)',
+  },
+  {
+    nature: 'gate_paths_non_resolus',
+    tache: 'SEC-16',
+    site: 'docs/gates.json:G-SEC-ORACLE (tests/security/oracle.spec.ts)',
+  },
+  {
+    nature: 'gate_paths_en_partie_gabarit',
+    tache: 'INT-T12',
+    site: 'docs/gates.json:docuseal-strict (tests/integration/docuseal.spec.ts)',
+  },
+  {
+    nature: 'gate_paths_non_resolus',
+    tache: 'QA-T19',
+    site: 'docs/gates.json:sante (scripts/gates/sante.ts)',
+  },
+  {
+    nature: 'gate_paths_non_resolus',
+    tache: 'INT-T08-A',
+    site: 'docs/gates.json:reconciliation-quotidienne (axionia/tests/integration/reconciliation.spec.ts)',
+  },
+  {
+    nature: 'gate_paths_non_resolus',
+    tache: 'JUR-T24',
+    site: 'docs/gates.json:jur:suspension-motifs-fermes (tests/domain/suspension-motifs.spec.ts)',
+  },
+  {
+    nature: 'gate_paths_en_partie_gabarit',
+    tache: 'INT-T12',
+    site: 'docs/gates.json:GATE-JUR-SIGNATURE-AVANT-DEPOT (tests/integration/signature-avant-depot.spec.ts)',
+  },
+  {
+    nature: 'gate_paths_non_resolus',
+    tache: 'SEC-19',
+    site: 'docs/gates.json:GATE-JUR-ACTEUR-HUMAIN (tests/domain/acteur-humain.spec.ts)',
+  },
+  {
+    nature: 'gate_paths_non_resolus',
+    tache: 'UX-P3-02',
+    site: 'docs/gates.json:lexique-financement-ressources (scripts/gates/lexique-financement-ressources.ts)',
+  },
+  {
+    nature: 'gate_paths_non_resolus',
+    tache: 'UX-P1-08',
+    site: 'docs/gates.json:GATE-UX-ETATS-VIDES (tests/ux/etats-vides.spec.ts)',
+  },
+  {
+    nature: 'gate_paths_non_resolus',
+    tache: 'UX-P1-03',
+    site: 'docs/gates.json:GATE-UX-HORS-LIGNE (tests/ux/hors-ligne.spec.ts)',
+  },
+  {
+    nature: 'gate_paths_non_resolus',
+    tache: 'QA-T16',
+    site: 'docs/gates.json:spec-espace-mobile (tests/unit/ci/spec-espace-mobile.spec.ts)',
+  },
+  { nature: 'lot_sans_pr', tache: 'GOV-000', site: 'lot « gov-amorcage »' },
+  { nature: 'mention_paths_non_resolus', tache: 'QA-T16', site: 'tests/a11y/harnais.ts:11' },
+  { nature: 'mention_paths_non_resolus', tache: 'QA-T16', site: 'tests/a11y/harnais.ts:13' },
+  {
+    nature: 'mention_paths_non_resolus',
+    tache: 'QA-T28',
+    site: 'tests/unit/gouvernance/tout-check-est-cable.spec.ts:10',
+  },
+  {
+    nature: 'mention_paths_non_resolus',
+    tache: 'GOV-022',
+    site: 'tests/unit/gouvernance/tracabilite.spec.ts:9',
+  },
+  {
+    nature: 'mention_paths_non_resolus',
+    tache: 'JUR-T13',
+    site: 'docs/gates.json:GATE-JUR-TEXTES-APPORTEURS.verifie (scripts/gates/lexique-apporteurs.ts)',
+  },
+  {
+    nature: 'mention_paths_en_partie_gabarit',
+    tache: 'DM-07',
+    site: 'docs/gates.json:partners:schema:enums.verifie (scripts/gates/schema-enums.ts)',
+  },
+  {
+    nature: 'mention_paths_en_partie_gabarit',
+    tache: 'DM-07',
+    site: 'docs/gates.json:partners:schema:cents.verifie (scripts/gates/schema-cents.ts)',
+  },
+  {
+    nature: 'mention_paths_non_resolus',
+    tache: 'DM-20',
+    site: 'docs/gates.json:partners:journal:immutable.verifie (tests/integration/journal.spec.ts)',
+  },
+  {
+    nature: 'mention_paths_en_partie_gabarit',
+    tache: 'T-ARG-034',
+    site: 'docs/gates.json:partners:journal:immutable.verifie (tests/integration/journal.spec.ts)',
+  },
+  {
+    nature: 'mention_paths_non_resolus',
+    tache: 'DM-20',
+    site: 'docs/gates.json:partners:journal:immutable.preuveRouge (tests/integration/journal.spec.ts)',
+  },
+  {
+    nature: 'mention_paths_non_resolus',
+    tache: 'DM-20',
+    site: 'docs/gates.json:journal:sans-pii.verifie (scripts/gates/journal-sans-pii.ts)',
+  },
+  {
+    nature: 'mention_paths_en_partie_gabarit',
+    tache: 'T-ARG-010',
+    site: 'docs/gates.json:partners:transitions:exhaustive.verifie (tests/domain/transitions.spec.ts)',
+  },
+  {
+    nature: 'mention_paths_non_resolus',
+    tache: 'DM-20',
+    site: 'docs/gates.json:GATE-JUR-PURGE.verifie (tests/integration/purge.spec.ts)',
+  },
+  {
+    nature: 'mention_paths_non_resolus',
+    tache: 'QA-T21',
+    site: 'docs/gates.json:partners:money:conservation.verifie (tests/unit/domaine/conservation.spec.ts)',
+  },
+  {
+    nature: 'mention_paths_non_resolus',
+    tache: 'DM-15',
+    site: 'docs/gates.json:partners:webhook:idempotent.verifie (tests/integration/webhook.spec.ts)',
+  },
+  {
+    nature: 'mention_paths_non_resolus',
+    tache: 'UX-P2-05',
+    site: 'docs/gates.json:partners:grille:check.verifie (axionia/scripts/gates/grille-check.ts)',
+  },
+  {
+    nature: 'mention_paths_non_resolus',
+    tache: 'T-ARG-017',
+    site: 'docs/gates.json:GATE-ARG-double-paiement.verifie (tests/argent/double-paiement.spec.ts)',
+  },
+  {
+    nature: 'mention_paths_non_resolus',
+    tache: 'T-ARG-018',
+    site: 'docs/gates.json:GATE-ARG-double-paiement.verifie (tests/argent/double-paiement.spec.ts)',
+  },
+  {
+    nature: 'mention_paths_non_resolus',
+    tache: 'T-ARG-032',
+    site: 'docs/gates.json:GATE-ARG-echec-ferme.verifie (tests/argent/controles-versement.spec.ts)',
+  },
+  {
+    nature: 'mention_paths_non_resolus',
+    tache: 'T-ARG-015',
+    site: 'docs/gates.json:GATE-ARG-non-silence.verifie (tests/argent/non-silence.spec.ts)',
+  },
+  {
+    nature: 'mention_paths_non_resolus',
+    tache: 'DM-16',
+    site: 'docs/gates.json:GATE-JUR-FAIT-GENERATEUR.verifie (tests/domain/fait-generateur.spec.ts)',
+  },
+  {
+    nature: 'mention_paths_non_resolus',
+    tache: 'UX-P2-04',
+    site: 'docs/gates.json:GATE-ARG-cloisonnement.verifie (tests/security/cloisonnement-documents.spec.ts)',
+  },
+  {
+    nature: 'mention_paths_non_resolus',
+    tache: 'CPL-T23',
+    site: 'docs/gates.json:mois-a-blanc.verifie (scripts/gates/mois-a-blanc.ts)',
+  },
+  {
+    nature: 'mention_paths_non_resolus',
+    tache: 'UX-P2-06',
+    site: 'docs/gates.json:idor:check.verifie (tests/integration/idor.spec.ts)',
+  },
+  {
+    nature: 'mention_paths_non_resolus',
+    tache: 'QA-T29',
+    site: 'docs/gates.json:G-SEC-CONCURRENCE.verifie (tests/integration/concurrence.spec.ts)',
+  },
+  {
+    nature: 'mention_paths_non_resolus',
+    tache: 'SEC-19',
+    site: 'docs/gates.json:G-SEC-REVOCATION.verifie (tests/unit/securite/revocation.spec.ts)',
+  },
+  {
+    nature: 'mention_paths_non_resolus',
+    tache: 'UX-P1-01',
+    site: 'docs/gates.json:G-SEC-ORACLE.verifie (tests/security/oracle.spec.ts)',
+  },
+  {
+    nature: 'mention_paths_non_resolus',
+    tache: 'SEC-26',
+    site: 'docs/gates.json:G-SEC-NOTIF.verifie (tests/unit/integration/notif-sans-pii.spec.ts)',
+  },
+  {
+    nature: 'mention_paths_non_resolus',
+    tache: 'UX-P2-01',
+    site: 'docs/gates.json:frontiere.verifie (tests/integration/frontiere.spec.ts)',
+  },
+  {
+    nature: 'mention_paths_non_resolus',
+    tache: 'INT-T13',
+    site: 'docs/gates.json:harnais-mcp.verifie (scripts/gates/harnais-mcp.ts)',
+  },
+  {
+    nature: 'mention_paths_non_resolus',
+    tache: 'INT-T17',
+    site: 'docs/gates.json:harnais-mcp.verifie (scripts/gates/harnais-mcp.ts)',
+  },
+  {
+    nature: 'mention_paths_en_partie_gabarit',
+    tache: 'DM-11',
+    site: 'docs/gates.json:GATE-JUR-CONTRAT-COMPLET.verifie (tests/unit/contrat/contract-template-complete.spec.ts)',
+  },
+  {
+    nature: 'mention_paths_non_resolus',
+    tache: 'INT-T23',
+    site: 'docs/gates.json:GATE-JUR-SIGNATURE-AVANT-DEPOT.verifie (tests/integration/signature-avant-depot.spec.ts)',
+  },
+  {
+    nature: 'mention_paths_non_resolus',
+    tache: 'JUR-T28',
+    site: 'docs/gates.json:GATE-JUR-ACTEUR-HUMAIN.verifie (tests/domain/acteur-humain.spec.ts)',
+  },
+  {
+    nature: 'mention_paths_non_resolus',
+    tache: 'QA-T16',
+    site: 'docs/gates.json:GATE-UX-A11Y.verifie (tests/a11y/axe.spec.ts)',
+  },
+  {
+    nature: 'mention_paths_non_resolus',
+    tache: 'QA-T16',
+    site: 'docs/gates.json:GATE-UX-A11Y.verifie (tests/a11y/axe.spec.ts)',
+  },
+  {
+    nature: 'mention_paths_non_resolus',
+    tache: 'QA-T16',
+    site: 'docs/gates.json:GATE-UX-CIBLES.verifie (tests/a11y/cibles.spec.ts)',
+  },
+  {
+    nature: 'mention_paths_non_resolus',
+    tache: 'QA-T16',
+    site: 'docs/gates.json:GATE-UX-CIBLES.verifie (tests/a11y/cibles.spec.ts)',
+  },
+  {
+    nature: 'mention_paths_non_resolus',
+    tache: 'QA-T16',
+    site: 'docs/gates.json:GATE-UX-REFLOW.verifie (tests/a11y/reflow.spec.ts)',
+  },
+  {
+    nature: 'mention_paths_non_resolus',
+    tache: 'QA-T16',
+    site: 'docs/gates.json:GATE-UX-REFLOW.verifie (tests/a11y/reflow.spec.ts)',
+  },
+  {
+    nature: 'mention_paths_non_resolus',
+    tache: 'UX-P3-01',
+    site: 'docs/gates.json:GATE-UX-HORS-LIGNE.verifie (tests/ux/hors-ligne.spec.ts)',
+  },
+  {
+    nature: 'mention_paths_non_resolus',
+    tache: 'SEC-26',
+    site: 'docs/gates.json:GATE-UX-HORS-LIGNE.verifie (tests/ux/hors-ligne.spec.ts)',
+  },
+  {
+    nature: 'mention_paths_non_resolus',
+    tache: 'QA-T20b',
+    site: 'docs/gates.json:perf:bundle.verifie (scripts/gates/bundle-par-route.ts)',
+  },
+  {
+    nature: 'mention_paths_non_resolus',
+    tache: 'QA-T19',
+    site: 'docs/gates.json:gate-nightly.verifie (.github/workflows/nightly.yml)',
+  },
+  {
+    nature: 'mention_paths_non_resolus',
+    tache: 'QA-T19',
+    site: 'docs/gates.json:gate-nightly.verifie (.github/workflows/nightly.yml)',
+  },
+  {
+    nature: 'mention_paths_non_resolus',
+    tache: 'QA-T27',
+    site: 'docs/gates.json:gate-nightly.verifie (.github/workflows/nightly.yml)',
+  },
 ];
 
 // ── chargement des sources réelles ────────────────────────────────────────────
@@ -1561,14 +2086,18 @@ export function chargerSources(
     dettesGate: DETTE_GATE_NON_RECIPROQUE,
     dettesGabarit: DETTE_GABARIT_LIVREE,
     dettesLot: DETTE_LOT_JOURNAL,
+    exemptionsFigees: EXEMPTIONS_FIGEES,
   };
 }
 
 // ── le verdict RENDU : une seule fonction, pour la garde et pour la preuve ────
 
-function rendreVert(exemptions: Exemption[]): string[] {
+function rendreVert(exemptions: Exemption[], occurrences?: number): string[] {
   const lignes = [
     `✅ gov:attributions — aucune attribution rompue (${FAMILLES.length} familles). ` +
+      (occurrences === undefined
+        ? ''
+        : `${occurrences} occurrence(s) d’identifiant confrontée(s) dans les en-têtes et docs/gates.json. `) +
       `${exemptions.length} exemption(s), chacune imprimée sous la rubrique de sa nature : une exemption tue serait un vert qui ment.`,
   ];
   for (const nature of NATURES) {
@@ -1587,8 +2116,11 @@ function rendreVert(exemptions: Exemption[]): string[] {
  * CHAQUE cas : un témoin dont le verdict rendu sort 0, ou qui imprime une bannière de succès, fait
  * rougir la preuve — quelle que soit sa famille.
  */
-function rendre({ fautes, exemptions }: Verdict): { code: number; lignes: string[] } {
-  if (fautes.length === 0) return { code: 0, lignes: rendreVert(exemptions) };
+function rendre({ fautes, exemptions, occurrences }: Verdict): {
+  code: number;
+  lignes: string[];
+} {
+  if (fautes.length === 0) return { code: 0, lignes: rendreVert(exemptions, occurrences) };
   const lignes = [
     `❌ gov:attributions — ${fautes.length} attribution(s) rompue(s) (REQ-GOV-021, REQ-GOV-003) :\n`,
   ];
@@ -1623,6 +2155,7 @@ function completer(p: Partial<Sources>): Sources {
     dettesGate: p.dettesGate ?? [],
     dettesGabarit: p.dettesGabarit ?? [],
     dettesLot: p.dettesLot ?? [],
+    exemptionsFigees: p.exemptionsFigees ?? [],
   };
 }
 
@@ -2062,7 +2595,13 @@ const TEMOINS: Temoin[] = [
       taches: [T_RESOLUE],
       entetes: entete(['// GOV-017']),
       citations: [
-        { ou: 'scripts/gates/gov-tasks.ts', id: 'GOV-017', nature: 'citation', raison: RAISON },
+        {
+          ou: 'scripts/gates/gov-tasks.ts',
+          ligne: 1,
+          id: 'GOV-017',
+          nature: 'citation',
+          raison: RAISON,
+        },
       ],
     },
     nomme: ['scripts/gates/porte.ts:1', 'GOV-017'],
@@ -2074,7 +2613,13 @@ const TEMOINS: Temoin[] = [
       taches: [T_RESOLUE],
       entetes: entete(['// GOV-017 et GOV-033']),
       citations: [
-        { ou: 'scripts/gates/porte.ts', id: 'GOV-017', nature: 'citation', raison: RAISON },
+        {
+          ou: 'scripts/gates/porte.ts',
+          ligne: 1,
+          id: 'GOV-017',
+          nature: 'citation',
+          raison: RAISON,
+        },
       ],
     },
     nomme: ['GOV-033'],
@@ -2086,10 +2631,73 @@ const TEMOINS: Temoin[] = [
       taches: [T_RESOLUE],
       entetes: entete(['// GOV-033']),
       citations: [
-        { ou: 'scripts/gates/porte.ts', id: 'GOV-033', nature: 'contexte', raison: RAISON },
+        {
+          ou: 'scripts/gates/porte.ts',
+          ligne: 1,
+          id: 'GOV-033',
+          nature: 'contexte',
+          raison: RAISON,
+        },
       ],
     },
     nomme: ['GOV-033'],
+  },
+  // ── GOV-074 : une exemption sans second producteur n'absout que l'occurrence FIGÉE ──
+  {
+    famille: 'exemption_non_figee',
+    quoi: 'une mention d’une tâche à paths GABARIT, non figée : l’exemption n’est plus accordée d’office',
+    sources: { taches: [T_RESOLUE, T_GABARIT], entetes: entete(['// étendue par GOV-003']) },
+    nomme: ['scripts/gates/porte.ts:1', 'GOV-003'],
+  },
+  {
+    famille: 'exemption_non_figee',
+    quoi: 'une entrée figée absout UNE occurrence : la même tâche à la ligne suivante rougit',
+    sources: {
+      taches: [T_RESOLUE, T_GABARIT],
+      entetes: entete(['// étendue par GOV-003', '// et encore GOV-003']),
+      exemptionsFigees: [
+        { nature: 'mention_paths_non_resolus', tache: 'GOV-003', site: 'scripts/gates/porte.ts:1' },
+      ],
+    },
+    nomme: ['scripts/gates/porte.ts:2', 'GOV-003'],
+  },
+  {
+    famille: 'dette_perimee',
+    quoi: 'une exemption figée qui n’absout plus aucune occurrence',
+    sources: {
+      taches: [T_RESOLUE, T_GABARIT],
+      exemptionsFigees: [
+        { nature: 'mention_paths_non_resolus', tache: 'GOV-003', site: 'scripts/gates/porte.ts:9' },
+      ],
+    },
+    nomme: ['EXEMPTIONS_FIGEES', 'scripts/gates/porte.ts:9'],
+  },
+  {
+    famille: 'mention_hors_paths',
+    quoi: 'une citation déclarée pour UNE ligne n’absout pas la même mention à une AUTRE ligne',
+    sources: {
+      taches: [T_RESOLUE, T_VOISINE],
+      entetes: entete(['// GOV-101', '// GOV-101 encore']),
+      citations: [
+        {
+          ou: 'scripts/gates/porte.ts',
+          ligne: 1,
+          id: 'GOV-101',
+          nature: 'contexte',
+          raison: RAISON,
+        },
+      ],
+    },
+    nomme: ['scripts/gates/porte.ts:2', 'GOV-101'],
+  },
+  {
+    famille: 'mention_hors_paths',
+    quoi: 'une mention en MINUSCULES, ou au trait d’union insécable, est vue et jugée',
+    sources: {
+      taches: [T_RESOLUE, T_VOISINE],
+      entetes: entete(['// gov-101 puis GOV\u2011101']),
+    },
+    nomme: ['scripts/gates/porte.ts:1', 'gov-101', 'GOV\u2011101'],
   },
   {
     famille: 'mention_hors_paths',
@@ -2123,7 +2731,9 @@ const TEMOINS: Temoin[] = [
     sources: {
       taches: [T_RESOLUE, T_VOISINE],
       entetes: entete(['// GOV-101']),
-      citations: [{ ou: 'scripts/gates/porte.ts', id: 'GOV-101', nature, raison: RAISON }],
+      citations: [
+        { ou: 'scripts/gates/porte.ts', ligne: 1, id: 'GOV-101', nature, raison: RAISON },
+      ],
     },
     nomme: ['GOV-101'],
   })),
@@ -2134,7 +2744,13 @@ const TEMOINS: Temoin[] = [
       taches: [T_RESOLUE, { ...T_RESOLUE, id: 'GOV-033' }],
       entetes: entete(['// GOV-033']),
       citations: [
-        { ou: 'scripts/gates/porte.ts', id: 'GOV-033', nature: 'reservation', raison: RAISON },
+        {
+          ou: 'scripts/gates/porte.ts',
+          ligne: 1,
+          id: 'GOV-033',
+          nature: 'reservation',
+          raison: RAISON,
+        },
       ],
     },
     nomme: ['GOV-033', 'RÉSOUT maintenant'],
@@ -2145,7 +2761,13 @@ const TEMOINS: Temoin[] = [
     sources: {
       entetes: entete(['// plus rien ici']),
       citations: [
-        { ou: 'scripts/gates/porte.ts', id: 'GOV-033', nature: 'citation', raison: RAISON },
+        {
+          ou: 'scripts/gates/porte.ts',
+          ligne: 1,
+          id: 'GOV-033',
+          nature: 'citation',
+          raison: RAISON,
+        },
       ],
     },
     nomme: ['GOV-033'],
@@ -2175,7 +2797,13 @@ const TEMOINS: Temoin[] = [
       taches: [T_RESOLUE],
       entetes: entete(['// GOV-017']),
       citations: [
-        { ou: 'scripts/gates/porte.ts', id: 'GOV-017', nature: 'citation', raison: ' '.repeat(25) },
+        {
+          ou: 'scripts/gates/porte.ts',
+          ligne: 1,
+          id: 'GOV-017',
+          nature: 'citation',
+          raison: ' '.repeat(25),
+        },
       ],
     },
     nomme: ['GOV-017'],
@@ -2187,7 +2815,13 @@ const TEMOINS: Temoin[] = [
       taches: [T_RESOLUE],
       entetes: entete(['// GOV-017']),
       citations: [
-        { ou: 'scripts/gates/porte.ts', id: 'GOV-017', nature: 'citation', raison: 'idem.' },
+        {
+          ou: 'scripts/gates/porte.ts',
+          ligne: 1,
+          id: 'GOV-017',
+          nature: 'citation',
+          raison: 'idem.',
+        },
       ],
     },
     nomme: ['GOV-017'],
@@ -2201,6 +2835,7 @@ const TEMOINS: Temoin[] = [
       citations: [
         {
           ou: 'scripts/gates/porte.ts',
+          ligne: 1,
           id: 'GOV-017',
           nature: 'citation',
           raison: 'r'.repeat(RAISON_MINIMALE - 1),
@@ -2273,7 +2908,13 @@ const CONTRE_TEMOINS: ContreTemoin[] = [
   },
   {
     quoi: 'une gate d’une tâche NON LIVRÉE aux paths GABARIT : ni vraie ni fausse — et exemptée en le disant',
-    sources: { taches: [T_GABARIT], gates: [GATE_GABARIT] },
+    sources: {
+      taches: [T_GABARIT],
+      gates: [GATE_GABARIT],
+      exemptionsFigees: [
+        { nature: 'gate_paths_non_resolus', tache: 'GOV-003', site: SITE_GATE_GABARIT },
+      ],
+    },
     exemptions: ['gate_paths_non_resolus'],
   },
   {
@@ -2317,17 +2958,40 @@ const CONTRE_TEMOINS: ContreTemoin[] = [
     sources: {
       taches: [T_MIXTE],
       gates: [{ id: 'gov:pr', script: 'scripts/gates/gov-pr.ts', tache: 'GOV-007' }],
+      exemptionsFigees: [
+        {
+          nature: 'gate_paths_en_partie_gabarit',
+          tache: 'GOV-007',
+          site: siteDansGates('docs/gates.json:gov:pr', 'scripts/gates/gov-pr.ts'),
+        },
+      ],
     },
     exemptions: ['gate_paths_en_partie_gabarit'],
   },
   {
     quoi: 'un en-tête nomme une tâche aux paths GABARIT : ni vraie ni fausse, et exemptée en le disant',
-    sources: { taches: [T_RESOLUE, T_GABARIT], entetes: entete(['// étendue par GOV-003']) },
+    sources: {
+      taches: [T_RESOLUE, T_GABARIT],
+      entetes: entete(['// étendue par GOV-003']),
+      exemptionsFigees: [
+        { nature: 'mention_paths_non_resolus', tache: 'GOV-003', site: 'scripts/gates/porte.ts:1' },
+      ],
+    },
     exemptions: ['mention_paths_non_resolus'],
   },
   {
     quoi: 'un en-tête nomme une tâche aux paths MIXTES qu’aucun path réel ne relie au fichier : exemptée sous sa propre nature',
-    sources: { taches: [T_RESOLUE, T_MIXTE], entetes: entete(['// portée par GOV-007']) },
+    sources: {
+      taches: [T_RESOLUE, T_MIXTE],
+      entetes: entete(['// portée par GOV-007']),
+      exemptionsFigees: [
+        {
+          nature: 'mention_paths_en_partie_gabarit',
+          tache: 'GOV-007',
+          site: 'scripts/gates/porte.ts:1',
+        },
+      ],
+    },
     exemptions: ['mention_paths_en_partie_gabarit'],
   },
   {
@@ -2343,6 +3007,13 @@ const CONTRE_TEMOINS: ContreTemoin[] = [
     sources: {
       taches: [T_RESOLUE, T_GABARIT, T_GABARIT_BIS],
       entetes: entete(['// GOV-003 et GOV-004, puis GOV-003', '// GOV-003']),
+      // GOV-074 — une entrée figée par OCCURRENCE : GOV-003 deux fois à la ligne 1, une à la ligne 2.
+      exemptionsFigees: [
+        { nature: 'mention_paths_non_resolus', tache: 'GOV-003', site: 'scripts/gates/porte.ts:1' },
+        { nature: 'mention_paths_non_resolus', tache: 'GOV-004', site: 'scripts/gates/porte.ts:1' },
+        { nature: 'mention_paths_non_resolus', tache: 'GOV-003', site: 'scripts/gates/porte.ts:1' },
+        { nature: 'mention_paths_non_resolus', tache: 'GOV-003', site: 'scripts/gates/porte.ts:2' },
+      ],
     },
     exemptions: [
       'mention_paths_non_resolus',
@@ -2373,7 +3044,11 @@ const CONTRE_TEMOINS: ContreTemoin[] = [
   },
   {
     quoi: 'un lot écrit SANS PR : aucune entrée de journal ne peut l’attester — exemptée en le disant',
-    sources: { taches: [{ ...T_RESOLUE, lot: 'L-9-99', pr: null }], journal: JOURNAL },
+    sources: {
+      taches: [{ ...T_RESOLUE, lot: 'L-9-99', pr: null }],
+      journal: JOURNAL,
+      exemptionsFigees: [{ nature: 'lot_sans_pr', tache: 'GOV-100', site: 'lot « L-9-99 »' }],
+    },
     exemptions: ['lot_sans_pr'],
   },
   {
@@ -2401,6 +3076,7 @@ const CONTRE_TEMOINS: ContreTemoin[] = [
       citations: [
         {
           ou: 'scripts/gates/gov-tasks.ts',
+          ligne: 1,
           id: 'GOV-017',
           nature: 'citation',
           raison: 'r'.repeat(RAISON_MINIMALE),
@@ -2415,7 +3091,13 @@ const CONTRE_TEMOINS: ContreTemoin[] = [
       taches: [T_RESOLUE],
       entetes: entete(['// GOV-034 : réservé']),
       citations: [
-        { ou: 'scripts/gates/porte.ts', id: 'GOV-034', nature: 'reservation', raison: RAISON },
+        {
+          ou: 'scripts/gates/porte.ts',
+          ligne: 1,
+          id: 'GOV-034',
+          nature: 'reservation',
+          raison: RAISON,
+        },
       ],
     },
     exemptions: ['reservation'],
@@ -2425,7 +3107,9 @@ const CONTRE_TEMOINS: ContreTemoin[] = [
     sources: {
       taches: [T_RESOLUE],
       entetes: entete(['// synchronise les issues (GOV-017)']),
-      citations: [{ ou: 'scripts/gates/porte.ts', id: 'GOV-017', nature: 'dette', raison: RAISON }],
+      citations: [
+        { ou: 'scripts/gates/porte.ts', ligne: 1, id: 'GOV-017', nature: 'dette', raison: RAISON },
+      ],
     },
     exemptions: ['dette'],
   },
@@ -2435,7 +3119,13 @@ const CONTRE_TEMOINS: ContreTemoin[] = [
       taches: [T_RESOLUE, T_VOISINE],
       entetes: entete(['// défaut trouvé par GOV-101']),
       citations: [
-        { ou: 'scripts/gates/porte.ts', id: 'GOV-101', nature: 'contexte', raison: RAISON },
+        {
+          ou: 'scripts/gates/porte.ts',
+          ligne: 1,
+          id: 'GOV-101',
+          nature: 'contexte',
+          raison: RAISON,
+        },
       ],
     },
     exemptions: ['contexte'],
