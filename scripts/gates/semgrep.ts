@@ -403,7 +403,12 @@ const FORMES_PRISMA: readonly { nom: string; ext: string; lignes: string[]; faut
  * le client. Hors de `FORMES_PRISMA` parce que la règle n° 2 refuse ces échappements dans TOUT
  * `src/` : leurs copies sous `src/server/acces/` ne seraient pas des contre-témoins muets.
  */
-const FORMES_PRISMA_ECHAPPEES: readonly { nom: string; lignes: string[]; fautive: number }[] = [
+const FORMES_PRISMA_ECHAPPEES: readonly {
+  nom: string;
+  lignes: string[];
+  fautive: number;
+  ext?: string;
+}[] = [
   {
     nom: 'echappement-unicode-specifieur',
     lignes: [`import { Prisma } from '@pri${AS}u0073ma/client';`],
@@ -417,6 +422,15 @@ const FORMES_PRISMA_ECHAPPEES: readonly { nom: string; lignes: string[]; fautive
   {
     nom: 'echappement-hexa-specifieur',
     lignes: [`import { db } from '../../d${AS}x62';`],
+    fautive: 1,
+  },
+  // L'octal hérité À ZÉRO DE TÊTE (JavaScript non strict) : `0` + `57` vaut la barre oblique,
+  // et le spécifieur vaut `../../db`. Les chiffres 1 à 9 tombent sous l'identité ; celui-ci ne
+  // tombe que sous le bras « `0` suivi d'un chiffre ».
+  {
+    nom: 'echappement-octal-zero-specifieur',
+    ext: 'js',
+    lignes: [`module.exports = require('..${AS}057..${AS}057db');`],
     fautive: 1,
   },
   {
@@ -1126,7 +1140,13 @@ export const TEMOINS: readonly FichierDuBac[] = [
     )
   ),
   ...FORMES_PRISMA_ECHAPPEES.map((f) =>
-    fichier(`prisma/${f.nom}`, `${MILIEU_ESPACE}/${f.nom}.ts`, f.lignes, REGLE_PRISMA, f.fautive)
+    fichier(
+      `prisma/${f.nom}`,
+      `${MILIEU_ESPACE}/${f.nom}.${f.ext ?? 'ts'}`,
+      f.lignes,
+      REGLE_PRISMA,
+      f.fautive
+    )
   ),
   // L'autre moitié du périmètre de REQ-SEC-008, la page de l'espace.
   fichier(
