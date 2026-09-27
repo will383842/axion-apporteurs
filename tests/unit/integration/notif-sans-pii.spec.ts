@@ -1,0 +1,178 @@
+// @req REQ-INT-024
+/**
+ * `notif-sans-pii.spec.ts` — G-SEC-NOTIF (INT-T14) : les alertes de console par le bot Telegram dédié.
+ *
+ * CE QU'IL TIENT (acceptation de INT-T14).
+ *   1. Dédoublonnage et PLAFOND HORAIRE PAR CATÉGORIE : une alerte répétée 400 fois dans l'heure fait
+ *      désarmer le canal par celui qui le lit. Le test COMPTE les envois.
+ *   2. AUCUN message ne contient de coordonnée de tiers ni de lien de console : ni nom, ni courriel,
+ *      ni téléphone, ni URL d'administration — ni montant, ni raison sociale (`docs/gates.json`,
+ *      G-SEC-NOTIF).
+ *   3. Le message porte de quoi RETROUVER l'objet — identifiant technique, catégorie, compte — et
+ *      rien de plus.
+ *   4. TÉMOIN À DEUX FACES sur la garde : un gabarit de bac d'essai construit sur un objet portant
+ *      nom, courriel, téléphone et lien de console la fait sortir en code non nul et NOMME chaque
+ *      champ qui a franchi ; les gabarits du dépôt la font sortir en zéro, avec le compte des
+ *      gabarits réellement confrontés.
+ *   5. TÉMOIN À DEUX FACES sur le plafond : 200 alertes de la même catégorie dans l'heure donnent au
+ *      plus le nombre déclaré d'envois.
+ */
+import { describe, expect, it } from 'vitest';
+import { spawnSync } from 'node:child_process';
+import type { Notification, Notifieur } from '../../../src/lib/notify';
+import { horlogeFigee } from '../../../src/domain/temps/horloge';
+import {
+  GABARITS_ALERTE,
+  creerAlerteur,
+  messageDAlerte,
+} from '../../../src/server/integrations/telegram/alertes';
+import {
+  GABARIT_BAC_D_ESSAI,
+  OBJET_TEMOIN,
+  confronter,
+} from '../../../src/server/integrations/telegram/garde-sans-pii';
+
+const HEURE = 3_600_000;
+const T0 = Date.UTC(2026, 8, 27, 8, 0, 0);
+
+/** Un notifieur qui COMPTE : c'est le nombre d'envois que le test juge, pas un booléen. */
+function notifieurCompteur(): Notifieur & { envois: Notification[] } {
+  const envois: Notification[] = [];
+  return { envois, notifier: async (n) => void envois.push(n) };
+}
+
+/** Une horloge qu'on avance : le plafond est horaire, le test fait passer l'heure. */
+function horlogeMobile(debut: number): { maintenant(): number; avancer(ms: number): void } {
+  let t = debut;
+  return { maintenant: () => t, avancer: (ms) => void (t += ms) };
+}
+
+describe('REQ-INT-024 — dédoublonnage et plafond horaire par catégorie', () => {
+  it('REQ-INT-024 — 200 alertes de la même catégorie dans l’heure : au plus le plafond déclaré d’envois', async () => {
+    const notifieur = notifieurCompteur();
+    const plafondParHeure = 5;
+    const alerteur = creerAlerteur({ notifieur, horloge: horlogeFigee(T0), plafondParHeure });
+    for (let i = 0; i < 200; i++) {
+      await alerteur.alerter({ categorie: 'releve_bloque', id: `rel_${i}` });
+    }
+    expect(notifieur.envois).toHaveLength(plafondParHeure);
+  });
+
+  it('REQ-INT-024 — CONTRE-FACE : sous le plafond, chaque alerte distincte part', async () => {
+    const notifieur = notifieurCompteur();
+    const alerteur = creerAlerteur({ notifieur, horloge: horlogeFigee(T0), plafondParHeure: 50 });
+    for (let i = 0; i < 20; i++) {
+      await alerteur.alerter({ categorie: 'releve_bloque', id: `rel_${i}` });
+    }
+    expect(notifieur.envois).toHaveLength(20);
+  });
+
+  it('REQ-INT-024 — le plafond est PAR CATÉGORIE : une autre catégorie passe encore', async () => {
+    const notifieur = notifieurCompteur();
+    const alerteur = creerAlerteur({ notifieur, horloge: horlogeFigee(T0), plafondParHeure: 3 });
+    for (let i = 0; i < 10; i++) await alerteur.alerter({ categorie: 'releve_bloque', id: `r${i}` });
+    const issue = await alerteur.alerter({ categorie: 'restauration_echouee', id: 'exercice_1' });
+    expect(issue).toBe('envoyee');
+    expect(notifieur.envois).toHaveLength(4);
+  });
+
+  it('REQ-INT-024 — le dernier envoi permis DIT que la suite est retenue, et l’heure suivante rouvre', async () => {
+    const notifieur = notifieurCompteur();
+    const horloge = horlogeMobile(T0);
+    const alerteur = creerAlerteur({ notifieur, horloge, plafondParHeure: 2 });
+    expect(await alerteur.alerter({ categorie: 'releve_bloque', id: 'a' })).toBe('envoyee');
+    expect(await alerteur.alerter({ categorie: 'releve_bloque', id: 'b' })).toBe('envoyee');
+    expect(await alerteur.alerter({ categorie: 'releve_bloque', id: 'c' })).toBe('plafonnee');
+    expect(notifieur.envois[1]!.corps).toMatch(/plafond horaire atteint/);
+    horloge.avancer(HEURE);
+    expect(await alerteur.alerter({ categorie: 'releve_bloque', id: 'd' })).toBe('envoyee');
+    expect(notifieur.envois).toHaveLength(3);
+  });
+
+  it('REQ-INT-024 — la même alerte répétée 400 fois dans l’heure part UNE fois', async () => {
+    const notifieur = notifieurCompteur();
+    const alerteur = creerAlerteur({ notifieur, horloge: horlogeFigee(T0), plafondParHeure: 50 });
+    const issues = new Set<string>();
+    for (let i = 0; i < 400; i++) {
+      issues.add(await alerteur.alerter({ categorie: 'releve_bloque', id: 'rel_1' }));
+    }
+    expect(notifieur.envois).toHaveLength(1);
+    expect(issues).toEqual(new Set(['envoyee', 'dedoublonnee']));
+  });
+
+  it('REQ-INT-024 — un plafond qui n’est pas un entier positif est refusé à la construction', () => {
+    for (const plafondParHeure of [0, -1, 2.5, Number.NaN]) {
+      expect(() =>
+        creerAlerteur({ notifieur: notifieurCompteur(), horloge: horlogeFigee(T0), plafondParHeure })
+      ).toThrow(/plafond_invalide/);
+    }
+  });
+});
+
+describe('REQ-INT-024 — aucun message ne porte de coordonnée de tiers ni de lien de console', () => {
+  it('REQ-INT-024 — le message porte l’identifiant technique, la catégorie et le compte, et rien de plus', () => {
+    const texte = messageDAlerte('alerte', OBJET_TEMOIN);
+    expect(texte).toContain(OBJET_TEMOIN.categorie);
+    expect(texte).toContain(OBJET_TEMOIN.id);
+    expect(texte).toContain(OBJET_TEMOIN.compte!);
+    for (const valeur of [
+      OBJET_TEMOIN.nom,
+      OBJET_TEMOIN.courriel,
+      OBJET_TEMOIN.telephone,
+      OBJET_TEMOIN.lienConsole,
+      OBJET_TEMOIN.raisonSociale,
+      String(OBJET_TEMOIN.montantCents),
+    ]) {
+      expect(texte).not.toContain(valeur);
+    }
+    expect(texte).not.toMatch(/https?:\/\//);
+  });
+
+  it('REQ-INT-024 — un identifiant qui n’est pas technique (un courriel passé en id) n’entre pas dans le message', () => {
+    const texte = messageDAlerte('alerte', {
+      categorie: 'releve_bloque',
+      id: 'jeanne.temoin@example.org',
+      compte: '+33 6 12 34 56 78',
+    });
+    expect(texte).not.toContain('jeanne.temoin@example.org');
+    expect(texte).not.toContain('+33 6 12 34 56 78');
+    expect(texte).toMatch(/identifiant non technique/);
+  });
+
+  it('REQ-INT-024 — FACE ROUGE : le gabarit de bac d’essai est refusé, et CHAQUE champ qui a franchi est nommé', () => {
+    const r = confronter({ bac_d_essai: GABARIT_BAC_D_ESSAI });
+    expect(r.code).not.toBe(0);
+    expect(r.confrontes).toBe(1);
+    expect(r.fautes.map((f) => f.champ).sort()).toEqual(
+      ['courriel', 'lienConsole', 'nom', 'telephone'].sort()
+    );
+    expect(r.fautes.every((f) => f.gabarit === 'bac_d_essai')).toBe(true);
+  });
+
+  it('REQ-INT-024 — FACE VERTE : les gabarits du dépôt sortent en zéro, avec le compte des gabarits confrontés', () => {
+    const r = confronter(GABARITS_ALERTE);
+    expect(r.fautes).toEqual([]);
+    expect(r.code).toBe(0);
+    // Dérivé de la table des gabarits, jamais tapé : un gabarit ajouté est confronté d'office.
+    expect(r.confrontes).toBe(Object.keys(GABARITS_ALERTE).length);
+    expect(r.confrontes).toBeGreaterThan(0);
+  });
+
+  it('REQ-INT-024 — la garde, lancée comme un processus, sort en zéro sur le dépôt et en non-zéro sur le bac d’essai', () => {
+    const lancer = (args: string[]) =>
+      spawnSync('npx', ['tsx', 'src/server/integrations/telegram/garde-sans-pii.ts', ...args], {
+        encoding: 'utf8',
+        shell: process.platform === 'win32',
+      });
+    const depot = lancer([]);
+    expect(depot.status, depot.stderr).toBe(0);
+    expect(depot.stdout).toMatch(
+      new RegExp(`${Object.keys(GABARITS_ALERTE).length} gabarits? de message confronté`)
+    );
+    const bac = lancer(['--bac-d-essai']);
+    expect(bac.status).not.toBe(0);
+    for (const champ of ['nom', 'courriel', 'telephone', 'lienConsole']) {
+      expect(bac.stdout + bac.stderr).toContain(champ);
+    }
+  }, 60_000);
+});
