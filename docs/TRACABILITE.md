@@ -16,7 +16,7 @@
 
 **334 exigences actives · 98 réputées testées · 98 couvertes · 0 orphelines.**
 
-290 tâches, dont 82 livrées · 112 fichiers de test exécutés par `vitest` sur 112 présents.
+290 tâches, dont 82 livrées · 115 fichiers de test exécutés par `vitest` sur 115 présents.
 
 ## Exigences réputées testées
 
@@ -463,6 +463,7 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | `tests/integration/rate-limit-redis.spec.ts` | oui | `REQ-QA-006`, `REQ-SEC-016` |
 | `tests/integration/sessions-revocables.spec.ts` | oui | `REQ-SEC-003`, `REQ-SEC-004` |
 | `tests/integration/sondes-de-vie.spec.ts` | oui | `REQ-QA-019`, `REQ-QA-020`, `REQ-QA-030` |
+| `tests/integration/utilisateurs-console.spec.ts` | oui | `REQ-SEC-023` |
 | `tests/unit/ci/aucune-gate-en-continue-on-error.spec.ts` | oui | `REQ-QA-001`, `REQ-QA-002`, `REQ-QA-013` |
 | `tests/unit/ci/integration-collectee-par-gate-a.spec.ts` | oui | `REQ-QA-006` |
 | `tests/unit/contrat/contract-template-complete.spec.ts` | oui | `REQ-CPL-012`, `REQ-JUR-003`, `REQ-JUR-007`, `REQ-JUR-023` |
@@ -542,6 +543,7 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | `tests/unit/gouvernance/vues-derivees.spec.ts` | oui | `REQ-GOV-021`, `REQ-GOV-032` |
 | `tests/unit/integration/contrat-hash.spec.ts` | oui | `REQ-GOV-020`, `REQ-INT-003`, `REQ-INT-004`, `REQ-INT-029`, `REQ-QA-007` |
 | `tests/unit/integration/recherche-entreprises-repli.spec.ts` | oui | `REQ-INT-020`, `REQ-SEC-013`, `REQ-UX-020` |
+| `tests/unit/juridique/charte-relationnelle.spec.ts` | oui | `REQ-JUR-034`, `REQ-JUR-035`, `REQ-JUR-036`, `REQ-JUR-037` |
 | `tests/unit/qualite/env-fail-fast.spec.ts` | oui | `REQ-CPL-021`, `REQ-QA-030` |
 | `tests/unit/qualite/journal-redige.spec.ts` | oui | `REQ-QA-024` |
 | `tests/unit/qualite/red-first.spec.ts` | oui | `REQ-CPL-022` |
@@ -558,5 +560,6 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | `tests/unit/securite/lien-magique-indistinction.spec.ts` | oui | `REQ-SEC-001`, `REQ-SEC-002`, `REQ-SEC-016` |
 | `tests/unit/securite/lien-magique-migration.spec.ts` | oui | `REQ-SEC-001` |
 | `tests/unit/securite/lien-magique-production.spec.ts` | oui | `REQ-SEC-001`, `REQ-SEC-002`, `REQ-SEC-016` |
+| `tests/unit/securite/matrice-des-roles.spec.ts` | oui | `REQ-SEC-023`, `REQ-UX-024` |
 | `tests/unit/securite/rate-famille.spec.ts` | oui | `REQ-SEC-002`, `REQ-SEC-016`, `REQ-SEC-035` |
 | `tests/unit/securite/revocation.spec.ts` | oui | `REQ-SEC-003`, `REQ-SEC-004` |
