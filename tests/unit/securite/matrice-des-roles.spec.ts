@@ -755,6 +755,80 @@ describe('REQ-SEC-023 — la garde `securite:roles` confronte le disque à la ma
     ).toEqual([]);
   });
 
+  it('REQ-SEC-023 : TÉMOIN À DEUX FACES — un `var` de portée module hors du premier niveau est une valeur réassignable ; un export non marqué `type` n’est jamais écarté comme type', () => {
+    // Un `var` dans un bloc de premier niveau a la portée du module : le type homonyme n'efface pas
+    // la méthode que Next servirait.
+    expect(
+      familles([
+        route(
+          "import { impl } from './h';\ntype handler = never;\n{\n  var handler = impl;\n}\n" +
+            'export { handler as GET };\n'
+        ),
+      ])
+    ).toEqual(['export_non_jugeable']);
+    // Même classe par `for (var … of …)`.
+    expect(
+      familles([
+        route(
+          "import { impl } from './h';\ntype handler = never;\nfor (var handler of [impl]) {\n}\n" +
+            'export { handler as DELETE };\n'
+        ),
+      ])
+    ).toEqual(['export_non_jugeable']);
+    // Un `var` sous `if`, `try`, `while`, `switch`, étiquette : liaison de VALEUR, réassignable, dite.
+    for (const enveloppe of [
+      (c: string) => `if (ouvert) {\n${c}\n}\n`,
+      (c: string) => `try {\n${c}\n} catch {\n}\n`,
+      (c: string) => `while (ouvert) {\n${c}\n}\n`,
+      (c: string) => `switch (ouvert) {\n  case 1:\n${c}\n}\n`,
+      (c: string) => `etiquette: {\n${c}\n}\n`,
+    ]) {
+      const j = jugerLaConsole(
+        [
+          route(
+            'type traiter = never;\n' +
+              enveloppe(`var traiter = async () => {\n${GARDE_ECRAN}\n};`) +
+              'export { traiter as GET };\n'
+          ),
+        ],
+        MATRICE_TEMOIN,
+        ROLES_CONSOLE
+      );
+      expect(j.fautes.map((f) => f.famille)).toEqual(['export_non_jugeable']);
+      expect(j.fautes[0]!.message).toContain('liaison réassignable');
+    }
+    // Un export NON marqué `type` d'un nom sans valeur établie n'est jamais écarté : il s'écrit `export type`.
+    const nonMarque = jugerLaConsole(
+      [serveur('type T = string;\nexport { T };\n')],
+      MATRICE_TEMOIN,
+      ROLES_CONSOLE
+    );
+    expect(nonMarque.fautes.map((f) => f.famille)).toEqual(['export_non_jugeable']);
+    expect(nonMarque.fautes[0]!.message).toContain('export type');
+    // Contre-témoins : un `export type { … }` réel reste un type ; un `var` enfermé dans une fonction
+    // n'a pas la portée du module et ne touche pas la `const` gardée homonyme.
+    expect(
+      familles([
+        serveur('type T = string;\nexport type { T };\nexport { type T as U };\n'),
+        route(
+          `const traiter = async () => {\n${GARDE_ECRAN}\n};\n` +
+            'function aide() {\n  {\n    var traiter = 2;\n  }\n  return traiter;\n}\n' +
+            'export { traiter as GET };\n'
+        ),
+      ])
+    ).toEqual([]);
+  });
+
+  it('REQ-SEC-023 : un `let` JAMAIS réassigné ne s’établit pas non plus — la règle let/var a son témoin propre', () => {
+    const j = jugerLaConsole(
+      [route(`let traiter = async () => {\n${GARDE_ECRAN}\n};\nexport { traiter as GET };\n`)],
+      MATRICE_TEMOIN,
+      ROLES_CONSOLE
+    );
+    expect(j.fautes.map((f) => f.famille)).toEqual(['export_non_jugeable']);
+    expect(j.fautes[0]!.message).toContain('liaison réassignable');
+  });
+
   it('REQ-SEC-023 : TÉMOIN À DEUX FACES — un export par DÉSTRUCTURATION est un site PAR NOM LIÉ, jamais jugeable', () => {
     const objet = jugerLaConsole(
       [route("import { handlers } from './auth';\nexport const { GET, POST } = handlers;\n")],

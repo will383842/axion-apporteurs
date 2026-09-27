@@ -805,6 +805,46 @@ const TEMOINS: { famille: Famille; quoi: string; fichiers: FichierDeConsole[] }[
   },
   {
     famille: 'export_non_jugeable',
+    quoi: 'type homonyme d’un `var` de bloc de premier niveau (portée module) : `export { x as GET }` d’un route.ts',
+    fichiers: [
+      ROUTE(
+        "import { impl } from './h';\ntype handler = never;\n{\n  var handler = impl;\n}\n" +
+          'export { handler as GET };'
+      ),
+    ],
+  },
+  {
+    famille: 'export_non_jugeable',
+    quoi: 'type homonyme d’un `for (var … of …)` de premier niveau : `export { x as DELETE }` d’un route.ts',
+    fichiers: [
+      ROUTE(
+        "import { impl } from './h';\ntype handler = never;\nfor (var handler of [impl]) {\n}\n" +
+          'export { handler as DELETE };'
+      ),
+    ],
+  },
+  {
+    famille: 'export_non_jugeable',
+    quoi: 'export non marqué `type` d’un nom sans valeur (`type T …; export { T }`) d’un module « use server »',
+    fichiers: [SERVEUR('type T = string;\nexport { T };')],
+  },
+  {
+    famille: 'export_non_jugeable',
+    quoi: 'liaison `let` gardée, JAMAIS réassignée, exportée par alias d’un route.ts',
+    fichiers: [ROUTE(`let traiter = async () => {\n${GARDE_ECRAN}\n};\nexport { traiter as GET };`)],
+  },
+  {
+    famille: 'export_non_jugeable',
+    quoi: 'déclaration de fonction gardée, réassignée à un import, exportée par alias d’un route.ts',
+    fichiers: [
+      ROUTE(
+        `import { handler } from './h';\nasync function traiter() {\n${GARDE_ECRAN}\n}\n` +
+          'traiter = handler;\nexport { traiter as GET };'
+      ),
+    ],
+  },
+  {
+    famille: 'export_non_jugeable',
     quoi: 'déstructuration d’objet exportée d’un route.ts : un site par nom lié',
     fichiers: [ROUTE("import { handlers } from './auth';\nexport const { GET, POST } = handlers;")],
   },
@@ -908,6 +948,17 @@ const CONTRE_TEMOINS: { quoi: string; fichiers: FichierDeConsole[] }[] = [
   {
     quoi: 'un `export type { X }` explicite, homonyme d’un import : un type, pas une valeur',
     fichiers: [ROUTE("import { GET } from './h';\ntype GET = never;\nexport type { GET };")],
+  },
+  {
+    quoi: 'un `export type { T }` réel, et une `const` gardée à côté d’un `var` homonyme enfermé dans une fonction',
+    fichiers: [
+      SERVEUR('type T = string;\nexport type { T };\nexport { type T as U };'),
+      ROUTE(
+        `const traiter = async () => {\n${GARDE_ECRAN}\n};\n` +
+          'function aide() {\n  {\n    var traiter = 2;\n  }\n  return traiter;\n}\n' +
+          'export { traiter as GET };'
+      ),
+    ],
   },
   {
     quoi: 'un route.js gardé, une méthode de classe « use server » gardée',
