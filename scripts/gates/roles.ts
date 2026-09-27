@@ -309,7 +309,7 @@ function sitesDuFichier(chemin: string, source: ts.SourceFile): Site[] {
       sites.push(site(e, 'route'));
     }
   }
-  const dejaVus = new Set(sites.map((s) => s.corps).filter((c) => c !== null));
+  const dejaVus = new Set<ts.Node | null>(sites.map((s) => s.corps).filter((c) => c !== null));
   for (const s of actionsEnLigne(source)) if (!dejaVus.has(s.corps)) sites.push(s);
   return sites;
 }
