@@ -253,6 +253,29 @@ jobs:
         run: pnpm gov:lexique
       - name: La garde du lexique sait rougir, et laisse passer la negation qui protege
         run: pnpm gov:lexique:prove
+      # JUR-T26, REQ-JUR-034 a REQ-JUR-037 : les gardes STRUCTURELLES de la charte relationnelle.
+      # Decision de Will : classements et statistiques cote console SEULEMENT, ni challenge ni
+      # progression entre apporteurs. Aucun agregat du reseau dans un DTO de l espace et aucun import
+      # de la console ; aucun nom ni element de progression ; une PR qui touche ce qu un apporteur lit
+      # porte le label apporteur-facing et la checklist des douze motifs (la revue du juriste se juge
+      # sous --pr, avant fusion), et CODEOWNERS la demande ; aucun terme ni rubrique du droit social,
+      # meme nie, dans un document remis. Chaque vert imprime ce qu il a confronte.
+      - name: Charte — aucun agregat du reseau dans l espace
+        run: pnpm jur:aucun-agregat-reseau
+      - name: La garde des agregats du reseau sait rougir
+        run: pnpm jur:aucun-agregat-reseau:prove
+      - name: Charte — aucune progression vers un seuil dans l espace
+        run: pnpm jur:aucune-progression
+      - name: La garde des progressions sait rougir
+        run: pnpm jur:aucune-progression:prove
+      - name: Charte — revue du juriste sur ce qu un apporteur lit, label et checklist
+        run: pnpm jur:revue-apporteur-facing
+      - name: La garde de la revue apporteur-facing sait rougir
+        run: pnpm jur:revue-apporteur-facing:prove
+      - name: Charte — aucun terme ni rubrique du droit social
+        run: pnpm jur:lexique-social
+      - name: La garde du lexique social sait rougir
+        run: pnpm jur:lexique-social:prove
       # JUR-T01 : l'annexe 1 du gabarit de contrat ne nomme jamais un forfait, un bareme ou un
       # pourcentage sans valeur numerique. Sur le gabarit source les montants sont des variables :
       # c'est un fil tendu ; la regle protege au rendu (exigerGabaritPubliable, src/domain/contrat).
@@ -318,6 +341,13 @@ jobs:
         run: pnpm securite:schema-pii
       - name: La garde des donnees personnelles sait rougir
         run: pnpm securite:schema-pii:prove
+      # SEC-17, REQ-SEC-023. Chaque action et chaque route de la console appellent requireRole avec un droit litteral, present dans LA matrice
+      # (src/server/roles/matrice.ts) : la liste est DERIVEE du disque, et le defaut est le refus. Le vert imprime les fichiers lus, les actions
+      # et routes confrontees et le compte des couples ; un perimetre vide est dit, avec sa tache.
+      - name: Roles de la console — requireRole partout, droits dans la matrice
+        run: pnpm securite:roles
+      - name: La garde des roles sait rougir
+        run: pnpm securite:roles:prove
       # GOV-031, REQ-GOV-018. LES DEUX ETAPES QUI MANQUAIENT, ET SANS LESQUELLES LES DEUX
       # FAMILLES CI-DESSUS NE MESURAIENT RIEN. `outillage_non_epingle` et `lint_non_bloquant`
       # ne s'arment qu'en PRESENCE d'une etape qui lance l'outil — l'acceptation de GOV-031 le

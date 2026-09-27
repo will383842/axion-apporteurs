@@ -25,7 +25,7 @@ import base from './vitest.config';
  *    et sortent en échec quand elles ne le peuvent pas — le bac à sable n'est pas un dépôt git ;
  *  - trois tests LISENT le texte d'une source du domaine au lieu de l'exécuter : dans le bac, ce
  *    texte porte l'instrumentation de Stryker. Aucun mutant n'y survit ni n'y meurt ;
- *  - quatre tests balaient les fichiers suivis (dépôt git requis) ;
+ *  - cinq tests balaient les fichiers suivis (dépôt git requis) ;
  *  - un test exécute le code, mais sous un BUDGET de temps (moins de 5 s pour quinze ans d'heures)
  *    que l'instrumentation fait dépasser : mesuré à 7,3 s.
  * Tous tournent dans `pnpm test`, sur le vrai texte. Les titres sont des fragments d'expression
@@ -45,6 +45,9 @@ const ECARTES = [
   'le dépôt sort en zéro, et le vert imprime le compte des champs',
   // la source unique des secrets (REQ-SEC-028) : `git ls-files` sur src/ et scripts/ (même passe).
   'aucun fichier autre que src/lib/env.ts ne cite deux noms de secret',
+  // SEC-17 : lance la garde `securite:roles` en sous-processus, qui lit les fichiers SUIVIS par git — le
+  // bac à sable n'est pas un dépôt, la garde y sort en échec. Jugé dans `pnpm test`, sur le vrai dépôt.
+  'la garde sur la console du dépôt sort en 0',
 ];
 
 export default defineConfig({

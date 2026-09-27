@@ -7,15 +7,15 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `aca324d` — 2026-09-27T10:54:47+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #175 (rien) · 2. #82 (un contrôle requis rouge ou une revue manquante) · 3. #165 (un contrôle requis rouge ou une revue manquante) · 4. #180 (un contrôle requis rouge ou une revue manquante) |
+| Où est `main` ? | `4dd40e4` — 2026-09-27T12:49:00+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #82 (rien) · 2. #180 (rien) · 3. #175 (un conflit avec `main`) |
 | Qui tient quoi ? | QA-T07 (A05) |
 | Où en est la phase ? | phase 0 — 59/116 tâches, reste 45.35 j |
-| Le prochain pas | fusionner #175, puis SEC-17 — Rôles console : enum `ConsoleRole { admin, qualifieur, comptable, lecteur }`, matrice SSOT, `requireRole`, garde AST (chemin critique) |
+| Le prochain pas | fusionner #82, puis SEC-17 — Rôles console : enum `ConsoleRole { admin, qualifieur, comptable, lecteur }`, matrice SSOT, `requireRole`, garde AST (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
 | Dernière entrée de journal | PR #176 — 2026-09-27 |
 
-**Ce qu’on tape maintenant.** `gh pr view 175 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** `gh pr view 82 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : 0
 
@@ -60,10 +60,9 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #175 — chore(GOV-083): lot L0-09 — gates sans script triees, porte A confrontee, causes temoignees, journal | `t/lot-l0-09` | rien — fusionnable maintenant |
-| 2 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un contrôle requis rouge ou une revue manquante |
-| 3 | #165 — feat(SEC-17): lot L0-07 — rôles console, matrice unique, requireRole ; gates structurelles de la charte | `t/lot-l0-07` | un contrôle requis rouge ou une revue manquante |
-| 4 | #180 — feat(JUR-T02): lot L0-10 — SSOT des délais du contrat, contrat sobre figé, alertes Telegram sans PII | `t/lot-l0-10` | un contrôle requis rouge ou une revue manquante |
+| 1 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | rien — fusionnable maintenant |
+| 2 | #180 — feat(JUR-T02): lot L0-10 — SSOT des délais du contrat, contrat sobre figé, alertes Telegram sans PII | `t/lot-l0-10` | rien — fusionnable maintenant |
+| 3 | #175 — chore(GOV-083): lot L0-09 — gates sans script triees, porte A confrontee, causes temoignees, journal | `t/lot-l0-09` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -85,7 +84,7 @@ Dérivé de `git log` sur `docs/adr/`, restreint au jour du dernier atterrissage
 
 ## Prochain pas
 
-**Fusionner #175** — elle est en tête de file et ne bloque sur rien.
+**Fusionner #82** — elle est en tête de file et ne bloque sur rien.
 
 **SEC-17** — Rôles console : enum `ConsoleRole { admin, qualifieur, comptable, lecteur }`, matrice SSOT, `requireRole`, garde AST (1 j, **sur le chemin critique**) : 27 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
@@ -93,7 +92,7 @@ Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeS
 
 ## Dernier atterrissage
 
-`origin/main` = `aca324d` (2026-09-27T10:54:47+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `4dd40e4` (2026-09-27T12:49:00+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
@@ -137,7 +136,9 @@ passait pour appelée dès qu'une étape lançait le script qui porte son identi
 `true`. Seul compte désormais le fichier de la garde, exécuté par une étape, directement ou par la
 valeur d'un script. Aucune affectation n'est admise en tête d'une commande. `pnpm <mot>` ne compte
 plus quand le mot est une commande intégrée de pnpm, et un script qui en porte le nom est refusé,
-sauf `test`. La valeur de `packageManager` est figée au constat.
+sauf `test`. La valeur de `packageManager` est figée au constat. Au tour 5, un nom hérité
+d'`Object.prototype` compte aussi pour une commande intégrée : l'ensemble est dérivé à l'exécution,
+jamais recopié. Et `pnpm <mot>` sans `run` ne compte que si le mot est en ASCII bas.
 
 **Reste.** GOV-085 n'est pas livrée : GOV-082, dont elle dépend, est encore à faire. Les cinq entrées
 fautives de `docs/gates.json` sont à corriger par le gardien de la spécification ; chaque correction
@@ -170,6 +171,9 @@ final que `bash -e` avale) : on reconnaît une seule forme et on refuse le reste
 de lui-même les `pre`/`post` d'un script : `enable-pre-post-scripts` y vaut `true` par défaut.
 Et `pnpm ls` exécute la commande `list`, jamais le script `ls` : le mot qui suit `pnpm` n'est un
 script que s'il n'est pas une commande intégrée. `pnpm test`, lui, lance bien le script `test`.
+Dernier fait, mesuré au tour 5 : la table des commandes de pnpm 9.12.0 est un objet JS ordinaire.
+Un mot qui nomme une propriété héritée du prototype y trouve une fonction : pnpm le prend pour une
+commande et sort sans lancer le script. `pnpm run <mot>`, lui, lance bien le script.
 
 ### PR #169 — 2026-09-27 — feat(INT-T01c): contrat v2 — onze types, charges fermées, route des coordonnées du candidat
 
@@ -179,7 +183,7 @@ script que s'il n'est pas une commande intégrée. `pnpm test`, lui, lance bien 
 
 **Appris.** Un nom d'événement qui ENTRE au contrat devient interdit en clair partout ailleurs : `gov:termes-interdits` refuse un nom VALIDE écrit hors de `packages/contracts`, commentaires `.ts` compris, alors qu'il tolérait le même nom tant qu'il était hors nomenclature — ajouter un type rougit donc des fichiers que le diff du contrat ne touche pas (ici `src/domain/apporteur/snapshot-candidature.ts`). Et le producteur v1 émettait un champ (`paiement.recu`) sous un nom que le glossaire interdit sec : fermer une charge fidèlement au producteur peut buter sur le glossaire, qui prime ; le renommage se nomme alors dans le test, pas dans la fixture.
 
-… 3 entrée(s) affichée(s) sur 72 ; les 69 plus ancienne(s) se lisent dans `docs/journal/`.
+… 3 entrée(s) affichée(s) sur 73 ; les 70 plus ancienne(s) se lisent dans `docs/journal/`.
 
 ## Dette déclarée
 
