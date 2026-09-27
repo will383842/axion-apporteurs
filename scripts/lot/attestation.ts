@@ -1,5 +1,5 @@
 /**
- * attestation.ts — attester une livraison qui a eu lieu dans un AUTRE dépôt. (GOV-038)
+ * attestation.ts — attester une livraison : ailleurs (GOV-038), et ici aussi (GOV-042).
  *
  * LE TROU QU'ELLE BOUCHE, mesuré le 2026-09-05. `INT-T01b` (`repo: "axionia"`) est la PREMIÈRE des
  * quatorze tâches `repo` ≠ `partners` jamais livrée : PR 998 du dépôt `will383842/axion-ia`,
@@ -35,6 +35,8 @@
  * `scripts/gates/gov-attestation.ts --en-ligne`, jamais appelé par `pnpm test` ni par `pnpm gov:partiel`.
  */
 
+import { execFileSync } from 'node:child_process';
+
 /**
  * Les dépôts de forge que le backlog connaît, indexés par la valeur du champ `repo`.
  * `null` = la valeur ne désigne aucun dépôt de code (`externe` : une réponse attendue d'un tiers).
@@ -68,6 +70,7 @@ export type TacheAttestable = {
   repo: string;
   statut: string;
   pr?: number | null;
+  branch?: string | null;
   attestation?: Attestation | null;
 };
 
@@ -84,8 +87,114 @@ export const MOTIF_SHA = /^[0-9a-f]{40}$/;
 /** ISO 8601 en UTC, à la seconde, suffixe `Z` — la forme que rend `gh api … --jq .commit.committer.date`. */
 export const MOTIF_FUSIONNEE_AT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/;
 
+// ── le rattrapage du passé (GOV-042) ─────────────────────────────────────────
+/**
+ * UN SHA NE S'INVENTE PAS, IL SE LIT. Les tâches de ce dépôt livrées avant GOV-042 n'ont aucune
+ * attestation. Le SHA manquant se LIT dans l'historique de la branche par défaut : le commit
+ * d'ATTERRISSAGE est celui dont le sujet se termine par la référence de la PR de la tâche —
+ * `(#<pr>)`, la forme qu'écrit la fusion par écrasement — et dont le message NOMME la tâche,
+ * identifiant entier (un préfixe ne compte pas). Sans `pr`, tout commit qui la nomme est candidat.
+ * Zéro candidat ou plus d'un : la recherche ÉCHOUE, l'attestation reste vide, et la tâche est
+ * NOMMÉE. Un enregistrement fabriqué serait pire que l'absence qu'il remplacerait.
+ */
+export type CommitDeFusion = {
+  sha: string;
+  /** Instant du commit, ramené en UTC à la seconde (`MOTIF_FUSIONNEE_AT`). */
+  fusionneeAt: string;
+  message: string;
+};
+
+/** L'historique d'une référence git, lu une fois ; `null` n'existe pas — git qui échoue LÈVE. */
+export function lireJournalDeFusion(ref: string): CommitDeFusion[] {
+  const brut = execFileSync('git', ['log', '--format=%H%x1f%cI%x1f%B%x1e', ref], {
+    encoding: 'utf8',
+    maxBuffer: 256e6,
+  });
+  return brut
+    .split('\x1e')
+    .map((s) => s.replace(/^\n/, ''))
+    .filter((s) => s.length > 0)
+    .map((s) => {
+      const [sha, quand, message] = s.split('\x1f');
+      const fusionneeAt = new Date(quand!).toISOString().replace(/\.\d{3}Z$/, 'Z');
+      return { sha: sha!, fusionneeAt, message: message ?? '' };
+    });
+}
+
+const echapper = (s: string) => s.replace(/[.*+?^${}()|[\]\\-]/g, '\\$&');
+
+/** Les commits d'atterrissage candidats d'une tâche — la règle ci-dessus, et elle seule. */
+export function commitsDAtterrissage(
+  t: { id: string; pr?: number | null },
+  journal: readonly CommitDeFusion[]
+): CommitDeFusion[] {
+  const nomme = new RegExp(`(?<![A-Za-z0-9-])${echapper(t.id)}(?![A-Za-z0-9-])`);
+  const sujet = (c: CommitDeFusion) => c.message.split('\n')[0]!.trimEnd();
+  const candidats = t.pr != null ? journal.filter((c) => sujet(c).endsWith(`(#${t.pr})`)) : journal;
+  return candidats.filter((c) => nomme.test(c.message));
+}
+
+/**
+ * LE PASSIF QUE LA RECHERCHE NE SAIT PAS LEVER — déclaré, jamais deviné. Chaque entrée est
+ * confrontée à l'historique réel par `un-statut-fusionnee-porte-sa-preuve.spec.ts` : si la
+ * recherche y trouve un jour UN commit, l'entrée doit sortir. Une entrée qui reçoit une
+ * attestation rougit (`attestation_passif_perime`). La liste ne peut que DÉCROÎTRE : toute
+ * clôture future pose l'attestation, `pnpm lot:cloture` refusant de clore sans elle.
+ *
+ * MESURÉ le 2026-09-27 sur `origin/main` : 81 tâches de ce dépôt livrées, 73 rattrapées par la
+ * règle, 8 échecs — ceux-ci. Les chiffres se remesurent (`--rattraper-attestations --a-blanc`).
+ */
+const MOTIF_PR_26 =
+  'PR 26 fusionnée par un commit de FUSION (« Merge pull request #26 »), pas par écrasement : ' +
+  'aucun commit ne porte « (#26) » en fin de sujet en nommant la tâche — zéro candidat.';
+export const PASSIF_SANS_ATTESTATION: readonly { id: string; motif: string }[] = [
+  {
+    id: 'GOV-000',
+    motif:
+      'aucun `pr` (socle posé avant le premier lot) : la recherche par identifiant rend DOUZE ' +
+      'commits qui la nomment — ambigu, rien n’est choisi.',
+  },
+  { id: 'GOV-002', motif: MOTIF_PR_26 },
+  { id: 'GOV-004', motif: MOTIF_PR_26 },
+  { id: 'GOV-007', motif: MOTIF_PR_26 },
+  { id: 'GOV-009', motif: MOTIF_PR_26 },
+  { id: 'GOV-015', motif: MOTIF_PR_26 },
+  { id: 'GOV-017b', motif: MOTIF_PR_26 },
+  { id: 'QA-T00', motif: MOTIF_PR_26 },
+];
+const PASSIF_PAR_ID: ReadonlySet<string> = new Set(PASSIF_SANS_ATTESTATION.map((p) => p.id));
+
+/** Ce que le rattrapage rend : des attestations LUES, et des échecs NOMMÉS. */
+export type Rattrapage = {
+  rattrapees: { id: string; attestation: Attestation }[];
+  echecs: { id: string; trouves: number }[];
+};
+
+/** Le rattrapage des tâches de CE dépôt, livrées et sans attestation. Pur : il n'écrit rien. */
+export function rattraper(
+  taches: readonly TacheAttestable[],
+  journal: readonly CommitDeFusion[],
+  estLivree: (t: TacheAttestable) => boolean
+): Rattrapage {
+  const r: Rattrapage = { rattrapees: [], echecs: [] };
+  for (const t of taches) {
+    if (t.repo !== DEPOT_LOCAL || !estLivree(t) || t.attestation) continue;
+    const trouves = commitsDAtterrissage(t, journal);
+    const pr = t.pr ?? null;
+    if (trouves.length !== 1 || pr === null) {
+      r.echecs.push({ id: t.id, trouves: trouves.length });
+      continue;
+    }
+    const c = trouves[0]!;
+    r.rattrapees.push({ id: t.id, attestation: { pr, sha: c.sha, fusionneeAt: c.fusionneeAt } });
+  }
+  return r;
+}
+
 export const FAMILLES_ATTESTATION = [
   'attestation_absente',
+  'attestation_pr_discordante',
+  'attestation_passif_perime',
   'attestation_hors_sujet',
   'attestation_sans_livraison',
   'attestation_sha_non_conforme',
@@ -136,12 +245,36 @@ export function controlerAttestation(t: TacheAttestable, estLivree: boolean): Fa
   const depot = depotDeLaTache(t);
 
   if (local) {
+    // GOV-042 — LA MÊME ATTESTATION, ÉTENDUE À CE DÉPÔT. Elle était refusée ici (« hors sujet »),
+    // et une tâche locale passait `fusionnee` avec un `pr` nu, sans que rien ne conserve le commit
+    // qui l'avait fait atterrir. Le `pr` reste l'écriture de `pnpm lot:cloture` ; l'attestation
+    // lui ajoute le SHA, et son numéro ne peut pas en DIVERGER (une seule vérité, RM-01).
+    const auPassif = PASSIF_PAR_ID.has(t.id);
     if (a) {
+      if (auPassif) {
+        ajouter(
+          'attestation_passif_perime',
+          `${t.id} porte une attestation et figure encore au passif déclaré sans attestation ` +
+            `(PASSIF_SANS_ATTESTATION, scripts/lot/attestation.ts). Retire-la du passif : une ` +
+            `exemption qui survit à sa raison exempte ce qu'elle n'a plus besoin d'exempter.`
+        );
+      }
+      if (t.pr != null && a.pr !== t.pr) {
+        ajouter(
+          'attestation_pr_discordante',
+          `${t.id} porte « pr: ${t.pr} » et une attestation de la PR ${a.pr}. Dans ce dépôt, les ` +
+            `deux désignent la MÊME PR : deux numéros différents sont deux copies qui ont divergé.`
+        );
+      }
+    } else if (estLivree && !auPassif && (t.pr != null || t.branch != null)) {
+      // Une tâche livrée SANS aucune écriture (ni `pr`, ni `branch`) est déjà refusée par
+      // `etat_cible_sans_operation` : la juger ici ferait rougir la même faute deux fois.
       ajouter(
-        'attestation_hors_sujet',
-        `${t.id} est une tâche de CE dépôt (repo « ${t.repo} ») et porte une attestation ` +
-          `inter-dépôt. Sa PR se cite par « pr », écrit par \`pnpm lot:cloture\` — le seul écrivain. ` +
-          `Une attestation ici serait une seconde copie du même fait, à laisser diverger (RM-01).`
+        'attestation_absente',
+        `${t.id} est « ${t.statut} » dans CE dépôt et ne porte aucune attestation : rien ne ` +
+          `conserve le commit qui l'a fait atterrir. \`pnpm lot:cloture\` la pose à la clôture ; ` +
+          `pour le passé, \`npx tsx scripts/lot/cloture.ts --rattraper-attestations\` la LIT dans ` +
+          `l'historique de la branche par défaut — jamais à la main.`
       );
     }
   } else if (depot === null) {

@@ -38,6 +38,7 @@ import { chargerRegistre, CHEMIN_REGISTRE, type Registre } from '../lot/registre
 import {
   DEPOT_LOCAL,
   FAMILLES_ATTESTATION,
+  PASSIF_SANS_ATTESTATION,
   controlerAttestation,
   type Attestation,
 } from '../lot/attestation';
@@ -643,6 +644,14 @@ if (LANCE_EN_SCRIPT) {
         (t) => LIVREE.has(t.statut) && t.repo === 'partners' && t.pr != null,
         'livrée ici AVEC un numéro de PR'
       );
+    // GOV-042 — une tâche d'ici qui porte DÉJÀ son attestation : hors du passif par construction.
+    const livreeIciAttestee = (d: { taches: Tache[] }): Tache =>
+      choisir(
+        d,
+        (t) =>
+          LIVREE.has(t.statut) && t.repo === 'partners' && t.pr != null && t.attestation != null,
+        'livrée ici AVEC son attestation'
+      );
 
     // Le SHA du témoin est LU dans git, jamais écrit en dur : une constante de 40 hexadécimaux tapée
     // à la main est exactement la fixture inventée que RM-03 interdit, et elle ne prouverait pas
@@ -837,10 +846,35 @@ if (LANCE_EN_SCRIPT) {
         },
       },
       {
+        // GOV-042 : une tâche de CE dépôt porte désormais son attestation ; le « hors sujet » ne
+        // vaut plus que pour `repo: "externe"`, qui ne désigne aucun dépôt de code.
         famille: 'attestation_hors_sujet',
         defaut: () => {
           const d = copie();
-          livreeIci(d).attestation = attestationValide();
+          const t = aFaireIci(d);
+          t.repo = 'externe';
+          t.attestation = attestationValide();
+          return d;
+        },
+      },
+      {
+        // GOV-042 — l'attestation locale porte un AUTRE numéro que le `pr` de la tâche.
+        famille: 'attestation_pr_discordante',
+        defaut: () => {
+          const d = copie();
+          const t = livreeIciAttestee(d);
+          t.attestation = { ...attestationValide(), pr: t.pr! + 1 };
+          return d;
+        },
+      },
+      {
+        // GOV-042 — une tâche du passif déclaré reçoit une attestation : l'exemption est périmée.
+        famille: 'attestation_passif_perime',
+        defaut: () => {
+          const d = copie();
+          const auPassif = new Set(PASSIF_SANS_ATTESTATION.map((p) => p.id));
+          choisir(d, (x) => auPassif.has(x.id), 'du passif déclaré').attestation =
+            attestationValide();
           return d;
         },
       },
@@ -927,10 +961,12 @@ if (LANCE_EN_SCRIPT) {
       // rougir — jamais qu'elle sait se taire. Le troisième est le plus important : c'est la forme
       // même que la tâche introduit, et une garde qui la refuserait bloquerait `pnpm lot:cloture`.
       {
-        nom: 'une tâche `partners` livrée normalement, PR de ce dépôt et aucune attestation',
+        nom: 'une tâche `partners` livrée, sa PR et son attestation au MÊME numéro (GOV-042)',
         muter: () => {
           const d = copie();
-          livreeIci(d).pr = 4242;
+          const t = livreeIciAttestee(d);
+          t.pr = 4242;
+          t.attestation = { ...attestationValide(), pr: 4242 };
           return d;
         },
       },
@@ -1026,6 +1062,15 @@ if (LANCE_EN_SCRIPT) {
         `${DEPOT_LOCAL}, dont ${avecOperation} porteur(s) d'au moins une écriture parmi ` +
         `${ECRITURES_D_ETAT.join(', ')} ; les ${doc.taches.length - couples.length} autre(s) sont ` +
         `jugées par leur attestation.`
+    );
+    // GOV-042 — LES DEUX POPULATIONS, COMPTÉES : les tâches de ce dépôt livrées, celles qui portent
+    // leur attestation, et le passif déclaré qui n'en porte pas — nommé, jamais tu.
+    const livreesIci = doc.taches.filter((t) => t.repo === DEPOT_LOCAL && LIVREE.has(t.statut));
+    const attestees = livreesIci.filter((t) => t.attestation != null).length;
+    const passif = PASSIF_SANS_ATTESTATION.map((p) => p.id);
+    console.log(
+      `   ${livreesIci.length} tâche(s) de ${DEPOT_LOCAL} livrée(s) : ${attestees} portent leur ` +
+        `attestation ; ${passif.length} au passif déclaré sans attestation (${passif.join(', ')}).`
     );
     process.exit(0);
   }

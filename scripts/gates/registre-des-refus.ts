@@ -401,6 +401,7 @@ export const REFUS_NOMMES: Readonly<Record<string, readonly string[]>> = {
     'echouer › ∅ › (1)',
     'module › si APPELE_DIRECTEMENT › si fautes.length > 0 › (1)',
   ],
+  'scripts/lot/cloture.ts': ['rattraperLePasse › si horsPassif.length > 0 › (= 1)'],
   'scripts/lot/corps-de-pr.ts': [
     'caseRevues › si !verdictTete.concordent › (1)',
     "module › si process.argv[1]?.endsWith('corps-de-pr.ts') › si prBrut === null || !/^\\d+$/.test(prBrut) › (1)",

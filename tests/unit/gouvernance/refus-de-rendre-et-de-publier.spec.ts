@@ -869,6 +869,17 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
         'en rendu. La dérive de la vue est vue rougir par les specs de PLAN-STATE, qui ne vivent ' +
         'pas dans `REFUS`. Dette DÉCLARÉE.',
     },
+    'scripts/lot/cloture.ts': {
+      total: 1,
+      porte: 1,
+      temoins: 0,
+      raison:
+        'GOV-042 — `--rattraper-attestations` : UNE sortie DIFFÉRÉE, posée quand un échec de la ' +
+        'recherche du commit d’atterrissage n’est pas déclaré au passif — il appelle une décision, ' +
+        'pas un SHA plausible. Le binaire à blanc est vu sortir 0 sur le dépôt ' +
+        '(un-statut-fusionnee-porte-sa-preuve.spec.ts) ; la branche rouge n’a pas de témoin ' +
+        'd’effet. Dette DÉCLARÉE.',
+    },
   };
 
   // 🔴 ON COMPTE SUR LE DISQUE, PAS DANS LE DIFF COMMITÉ. Ma première version lisait

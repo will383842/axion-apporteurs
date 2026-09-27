@@ -52,6 +52,7 @@ import {
   DEPOTS,
   DEPOT_LOCAL,
   FAMILLES_ATTESTATION,
+  PASSIF_SANS_ATTESTATION,
   controlerAttestation,
   referencePr,
   type Attestation,
@@ -109,7 +110,9 @@ describe('GOV-038 — les sept familles de l’attestation inter-dépôt (REQ-GO
     expect(f[0]!.message).toContain(String(DEPOTS[DEPOT_LOCAL]));
   });
 
-  it('attestation_hors_sujet : une tâche de CE dépôt n’a rien à attester, sa PR y résout', () => {
+  // GOV-042 : une tâche de CE dépôt PORTE désormais son attestation ; ce qui reste refusé, c'est
+  // une attestation dont le numéro diverge du `pr` — deux copies d'une même PR qui ont divergé.
+  it('attestation_pr_discordante : une tâche de CE dépôt attestée sous un AUTRE numéro que son pr', () => {
     expect(
       familles(
         tache({
@@ -121,7 +124,7 @@ describe('GOV-038 — les sept familles de l’attestation inter-dépôt (REQ-GO
         }),
         true
       )
-    ).toEqual(['attestation_hors_sujet']);
+    ).toEqual(['attestation_pr_discordante']);
   });
 
   it('attestation_hors_sujet : `repo: "externe"` ne désigne aucun dépôt de code', () => {
@@ -251,7 +254,21 @@ describe('GOV-038 — les sept familles de l’attestation inter-dépôt (REQ-GO
         },
         true,
       ],
-      [{ id: 'g', repo: 'externe', statut: 'fusionnee', pr: null, attestation: null }, true],
+      [
+        { id: 'g', repo: 'externe', statut: 'fusionnee', pr: null, attestation: attestation() },
+        true,
+      ],
+      // GOV-042 — une tâche du passif déclaré qui reçoit une attestation.
+      [
+        {
+          id: PASSIF_SANS_ATTESTATION[0]!.id,
+          repo: 'partners',
+          statut: 'fusionnee',
+          pr: 998,
+          attestation: attestation(),
+        },
+        true,
+      ],
     ];
     for (const [t, livree] of cas) for (const x of familles(t, livree)) vues.add(x);
     expect([...vues].sort()).toEqual([...FAMILLES_ATTESTATION].sort());
@@ -259,10 +276,18 @@ describe('GOV-038 — les sept familles de l’attestation inter-dépôt (REQ-GO
 });
 
 describe('GOV-038 — les contre-témoins : ce que la garde doit LAISSER PASSER (RM-02)', () => {
-  it('une tâche `partners` livrée normalement : `pr` nu, aucune attestation', () => {
+  // GOV-042 : la forme NORMALE d'une livraison locale porte son `pr` ET son attestation, au
+  // même numéro — plus un `pr` nu, que la garde refuse désormais (`attestation_absente`).
+  it('une tâche `partners` livrée normalement : son `pr` et son attestation au même numéro', () => {
     expect(
       familles(
-        tache({ id: 'GOV-024', repo: 'partners', statut: 'fusionnee', pr: 31, attestation: null }),
+        tache({
+          id: 'GOV-024',
+          repo: 'partners',
+          statut: 'fusionnee',
+          pr: 998,
+          attestation: attestation(),
+        }),
         true
       )
     ).toEqual([]);
