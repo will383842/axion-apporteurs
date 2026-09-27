@@ -390,10 +390,17 @@ export const REFUS_NOMMES: Readonly<Record<string, readonly string[]>> = {
   ],
   'scripts/gates/red-first.ts': ['module › si APPELE_DIRECTEMENT › (decision.code)'],
   'scripts/gates/roles.ts': ['module › si LANCE_EN_SCRIPT › (decision.code)'],
-  // QA-T07 — la gate semgrep. UNE sortie, `process.exit(verdict.code)`, commune aux deux modes :
-  // le verdict vient de fonctions PURES (`jugerReel`, `jugerPreuve`, `jugerEnsemble`) que
-  // `semgrep-regles-maison.spec.ts` voit rendre chaque famille, et la sortie elle-même est vue
-  // en 0 sur le dépôt réel et en 1 sur une copie des règles portant une règle sans témoin.
+  // QA-T07 — la gate semgrep. UNE sortie non nulle, commune aux deux modes, dont le code vient de
+  // `verdict.code` : ce verdict est rendu par des fonctions PURES (`jugerReel`, `jugerPreuve`,
+  // `jugerEnsemble`) que `semgrep-regles-maison.spec.ts` voit rendre chaque famille, et la sortie
+  // elle-même est vue en 0 sur le dépôt réel et en 1 sur une copie des règles portant une règle
+  // sans témoin.
+  //
+  // ⚠️ Cette prose n'écrit PAS l'appel de sortie en clair, et c'est voulu : `SORTIE_NON_NULLE` lit
+  // le TEXTE du fichier, sans distinguer un appel d'une citation. Une première rédaction le citait
+  // entre accents graves ; le cliquet a compté le commentaire comme une sortie et a refusé ce
+  // fichier comme non déclaré (porte A de 95fd2bc). Le détecteur a raison de ne pas deviner : c'est
+  // à la prose de ne pas ressembler à du code.
   'scripts/gates/semgrep.ts': ['module › si APPELE_DIRECTEMENT › (verdict.code)'],
   'scripts/gates/schema-cents.ts': [
     "module › si LANCE_EN_SCRIPT › si process.argv.includes('--prove') › si echecs.length > 0 › (1)",
