@@ -159,18 +159,24 @@ export const SEUILS = {
     renvois: art('6.2'),
     verifieLe: LE,
   },
+  // `verifieLe` est la date de la dernière confrontation de la valeur À SA SOURCE (voir le type).
+  // Les deux seuils qui suivent portaient une source qui nommait un texte NON LU et une date qui
+  // affirmait pourtant la confrontation : la date démentait la source, sur de l'argent. La source
+  // dit maintenant ce qui a RÉELLEMENT été confronté — l'exigence —, et nomme séparément ce qui
+  // reste à lire. `verifieLe` redevient vrai sans qu'aucune valeur ne bouge.
   SEUIL_VIGILANCE: {
     valeur: 500_000,
     unite: 'centimes',
     source:
-      'C. trav. L.8222-1 et D.8222-5 (contrat art. 5.4) — valeur de REQ-ARG-025, texte de loi non relu ici',
+      'REQ-ARG-025 (valeur confrontée) — À RELIRE, non encore confronté : C. trav. L.8222-1 et D.8222-5, contrat art. 5.4',
     renvois: [],
     verifieLe: LE,
   },
   SEUIL_DAS2: {
     valeur: 240_000,
     unite: 'centimes',
-    source: 'HYP-D9 (à confirmer avec l’expert-comptable) — valeur de REQ-JUR-015',
+    source:
+      'REQ-JUR-015 (valeur confrontée) — À CONFIRMER avec l’expert-comptable, non encore confronté : HYP-D9',
     renvois: [],
     verifieLe: LE,
   },
