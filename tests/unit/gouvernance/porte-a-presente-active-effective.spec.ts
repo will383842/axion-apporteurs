@@ -486,3 +486,133 @@ describe('REQ-GOV-029 — (f) un commentaire du workflow ne promet que les refus
     expect(comptes.filter((c) => c !== n)).toEqual([]);
   });
 });
+
+/**
+ * REFUS D'EXACTITUDE SUR LA PR 175 — UNE COMMANDE CITÉE N'EST PAS UNE COMMANDE LANCÉE. La lecture des
+ * appels découpait la ligne de commande sur `;`, `|`, `&`, `(` et `)` sans tenir compte des
+ * guillemets, et sans juger si la commande découpée s'exécute. La classe : une garde dont le seul
+ * « appel » est cité dans une chaîne, court-circuité, inatteignable, masqué ou lancé en arrière-plan
+ * n'est PAS appelée. `pnpm mutation` n'est lancé que par une étape de `nightly.yml` : chaque forme
+ * ci-dessous remplace cette seule étape, sur une copie en mémoire.
+ */
+const NIGHTLY = '.github/workflows/nightly.yml';
+const RUN_MUTATION = '        run: pnpm mutation\n';
+
+function nuitEn(run: string, hooks?: string): Vue {
+  const vue = lireVue();
+  return {
+    ...vue,
+    workflows: vue.workflows.map((w) =>
+      w.chemin === NIGHTLY
+        ? { ...w, source: remplacerUneFois(w.source, RUN_MUTATION, `        run: ${run}\n`) }
+        : w
+    ),
+    hooks: hooks ?? vue.hooks,
+  };
+}
+
+/** Les réglages RÉELS, plus UNE commande de crochet : le reste des réglages reste ce qu'il est. */
+function reglagesPlus(command: string): string {
+  const reels = JSON.parse(lireVue().hooks || '{}') as Record<string, unknown>;
+  return JSON.stringify({ ...reels, temoin: { hooks: [{ type: 'command', command }] } });
+}
+
+const APPELS_QUI_N_EN_SONT_PAS: readonly { forme: string; run: string }[] = [
+  {
+    forme: 'citée entre guillemets doubles, après un `;`',
+    run: 'echo "nuit sautee; pnpm mutation"',
+  },
+  {
+    forme: 'citée entre guillemets simples, entre parenthèses',
+    run: "echo 'desactive (pnpm mutation)'",
+  },
+  {
+    forme: 'citée entre guillemets doubles, après un guillemet échappé',
+    run: 'echo "a \\" ; pnpm mutation"',
+  },
+  { forme: 'court-circuitée à droite de `true ||`', run: 'true || pnpm mutation' },
+  { forme: 'inatteignable après un `exit`', run: 'exit 0; pnpm mutation' },
+  {
+    forme: 'dans un pipeline, statut masqué par la commande suivante',
+    run: 'pnpm mutation | tee /dev/null',
+  },
+  { forme: 'lancée en arrière-plan', run: 'pnpm mutation &' },
+  { forme: 'enfermée dans une substitution', run: 'echo $(pnpm mutation)' },
+  {
+    forme: 'sous une construction `if` que la lecture ne juge pas',
+    run: 'if false; then pnpm mutation; fi',
+  },
+];
+
+describe('REQ-GOV-029 — une garde CITÉE, court-circuitée ou inatteignable n’est pas appelée (copies en mémoire de nightly.yml)', () => {
+  for (const a of APPELS_QUI_N_EN_SONT_PAS) {
+    it(`REQ-GOV-029 — \`${a.run}\` (${a.forme}) : garde_ecrite_jamais_appelee, nommée`, () => {
+      const fautes = controler(nuitEn(a.run)).filter(
+        (f) => f.famille === 'garde_ecrite_jamais_appelee'
+      );
+      expect(fautes.map((f) => f.message).join('\n')).toContain('`mutation`');
+    });
+  }
+
+  it('REQ-GOV-029 — une `command` des réglages lue de même : `exit 0; pnpm mutation` n’appelle rien', () => {
+    const hooks = reglagesPlus('exit 0; pnpm mutation');
+    const fautes = controler(nuitEn('echo nuit', hooks)).filter(
+      (f) => f.famille === 'garde_ecrite_jamais_appelee'
+    );
+    expect(fautes.map((f) => f.message).join('\n')).toContain('`mutation`');
+  });
+
+  for (const run of [
+    'pnpm mutation:prove && pnpm mutation',
+    'pnpm mutation --seuil $(date -u +%F)',
+    "pnpm mutation --phase ${{ inputs.phase || '-1' }}",
+    'echo \\"x; pnpm mutation',
+    'MODE=nuit pnpm run mutation',
+  ]) {
+    it(`REQ-GOV-029 — CONTRE-TÉMOIN : \`${run}\` appelle bien \`mutation\``, () => {
+      expect(controler(nuitEn(run)).map((f) => f.famille)).toEqual([]);
+    });
+  }
+
+  it('REQ-GOV-029 — CONTRE-TÉMOIN : une `command` des réglages qui lance la garde la tient pour appelée', () => {
+    const hooks = reglagesPlus('pnpm mutation');
+    expect(controler(nuitEn('echo nuit', hooks)).map((f) => f.famille)).toEqual([]);
+  });
+});
+
+/**
+ * VETO DE SÉCURITÉ (1), UN ÉTAGE PLUS BAS — la configuration du gestionnaire de paquets de la racine
+ * change ce que `pnpm <script>` exécute (le shell des scripts, leurs crochets) sans toucher ni au
+ * workflow ni au script : elle est figée au constat de la porte A.
+ */
+describe('REQ-GOV-012 — la configuration pnpm/npm de la racine est figée : aucun fichier ne change le shell des scripts', () => {
+  const avec = (fichier: string): Vue => {
+    const vue = lireVue();
+    return { ...vue, fichiersSuivis: [...vue.fichiersSuivis, fichier] };
+  };
+  for (const fichier of ['.npmrc', 'pnpm-workspace.yaml', '.pnpmfile.cjs']) {
+    it(`REQ-GOV-012 — un \`${fichier}\` suivi à la racine : porte_a_alteree, nommé`, async () => {
+      const fautes = (await confronterLaPorteA(avec(fichier))).fautes.filter(
+        (f) => f.famille === 'porte_a_alteree'
+      );
+      expect(fautes.map((f) => f.message).join('\n')).toContain(fichier);
+    });
+  }
+
+  it('REQ-GOV-012 — une clé `pnpm` posée dans package.json : porte_a_alteree, nommée', async () => {
+    const vue = lireVue();
+    const pkg = JSON.parse(vue.packageJson) as Record<string, unknown>;
+    const alteree: Vue = {
+      ...vue,
+      packageJson: JSON.stringify({ ...pkg, pnpm: { scriptShell: 'true' } }),
+    };
+    const fautes = (await confronterLaPorteA(alteree)).fautes.filter(
+      (f) => f.famille === 'porte_a_alteree'
+    );
+    expect(fautes.map((f) => f.message).join('\n')).toContain('pnpm');
+  });
+
+  it('REQ-GOV-012 — CONTRE-TÉMOIN : un `.npmrc` hors de la racine ne touche pas la porte A', async () => {
+    expect((await confronterLaPorteA(avec('packages/contracts/.npmrc'))).fautes).toEqual([]);
+  });
+});
