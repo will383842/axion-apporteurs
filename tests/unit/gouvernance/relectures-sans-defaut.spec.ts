@@ -51,6 +51,7 @@ import { fusionnerMain, trierLesConflits } from '../../../scripts/vues/fusion';
 import { etapesDeLaPorteA } from '../../../scripts/prevol';
 import { ETAPES_LENTES, etapesRapides } from '../../../scripts/prevol';
 import {
+  codeInchange,
   configDeLaPr,
   desactivationsDeStryker,
   fichiersAMuter,
@@ -683,6 +684,103 @@ describe('REQ-QA-002 — `passer()` : la passe entière, mesures injectées', ()
       lireRapport: () => null,
     });
     expect(tombe.code).toBe(1);
+  });
+});
+
+describe('REQ-QA-002 — `mutation:pr` écarte un diff de commentaires seuls, jugé par les JETONS', () => {
+  const F = 'src/domain/a.ts';
+  const avant = [
+    '/** Doc. */',
+    'export function f(a: number, b: number): number {',
+    '  // somme',
+    '  /* bloc */',
+    '  return a',
+    '    * b;',
+    '}',
+    "export const s = '// x';",
+    'export const t = (a: number) => `v${a} // x`;',
+    'export const r = /[//]a/;',
+    '',
+  ].join('\n');
+  const remplacer = (de: string, par: string): string => avant.split(de).join(par);
+
+  it('REQ-QA-002 — ligne //, bloc /* */ et JSDoc changés, blancs compris : code inchangé', () => {
+    const apres = remplacer('/** Doc. */', '/**\n * Doc reformulée.\n */')
+      .split('// somme')
+      .join('// produit, pas somme')
+      .split('/* bloc */')
+      .join('/* bloc\n     sur deux lignes */\n');
+    expect(codeInchange(avant, apres, F)).toBe(true);
+  });
+
+  it('REQ-QA-002 — une ligne de CODE qui commence par `*` change : code changé', () => {
+    expect(codeInchange(avant, remplacer('    * b;', '    * a;'), F)).toBe(false);
+  });
+
+  it('REQ-QA-002 — une chaîne, un gabarit ou une regex qui ressemblent à un commentaire changent : code changé', () => {
+    expect(codeInchange(avant, remplacer("'// x'", "'// y'"), F)).toBe(false);
+    expect(codeInchange(avant, remplacer('} // x`', '} // y`'), F)).toBe(false);
+    expect(codeInchange(avant, remplacer('/[//]a/', '/[//]b/'), F)).toBe(false);
+  });
+
+  it('REQ-QA-002 — fichier ajouté ou base illisible (base null) : code changé, jamais écarté par défaut', () => {
+    expect(codeInchange(null, avant, F)).toBe(false);
+  });
+
+  const mesures = (lireBase: (base: string, f: string) => string | null, tete: string) => {
+    let lance = 0;
+    const r = () =>
+      passer('origin/main', {
+        fichiersDeLaPr: () => [F],
+        lire: () => tete,
+        lireBase,
+        texteConfig: JSON.stringify({ thresholds: { break: 80 } }),
+        lancerStryker: () => (lance++, 0),
+        lireRapport: () => ({
+          files: {
+            [F]: {
+              mutants: [
+                {
+                  id: '0',
+                  mutatorName: 'X',
+                  status: 'Killed',
+                  location: { start: { line: 1, column: 1 } },
+                },
+              ],
+            },
+          },
+        }),
+      });
+    return { r, lances: () => lance };
+  };
+
+  it('REQ-QA-002 — passer() : diff de commentaires seuls → ÉCARTÉ avec motif, Stryker non lancé', () => {
+    const m = mesures(() => avant, remplacer('// somme', '// produit'));
+    const r = m.r();
+    expect(r.code).toBe(0);
+    expect(m.lances()).toBe(0);
+    expect(r.lignes.join('\n')).toContain(`écarté : ${F} — diff de commentaires seuls`);
+  });
+
+  it('REQ-QA-002 — passer() : fichier ajouté, base illisible ou lecture qui lève → MUTÉ', () => {
+    for (const lireBase of [
+      () => null,
+      () => {
+        throw new Error('git show impossible');
+      },
+    ]) {
+      const m = mesures(lireBase, avant);
+      expect(m.r().code).toBe(0);
+      expect(m.lances()).toBe(1);
+    }
+  });
+
+  it('REQ-QA-002 — passer() : un `// Stryker disable` AJOUTÉ par un diff de commentaires seuls fait échouer la passe', () => {
+    const m = mesures(() => avant, remplacer('// somme', '// Stryker disable next-line all'));
+    const r = m.r();
+    expect(r.code).toBe(1);
+    expect(m.lances()).toBe(0);
+    expect(r.lignes.join('\n')).toContain(`${F}:3`);
   });
 });
 
