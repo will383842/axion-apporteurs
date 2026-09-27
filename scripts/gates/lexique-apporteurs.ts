@@ -129,7 +129,25 @@ export const MOTIFS: readonly Motif[] = [
   },
   {
     nom: 'src/app/(espace)/**',
-    reg: /^src\/app\/\(espace\)\/.+\.(tsx|ts)$/,
+    reg: /^src\/app\/\(espace\)\/.+\.(tsx|ts|md|mdx|json)$/,
+    portee: 'apporteur',
+    attendu: false,
+    req: 'REQ-JUR-037',
+  },
+  // JUR-T26 : les composants de l'espace, rendus dans ses pages — ce qu'ils écrivent, l'apporteur le lit.
+  {
+    nom: 'src/components/espace/**',
+    reg: /^src\/components\/espace\/.+\.(tsx|ts)$/,
+    portee: 'apporteur',
+    attendu: false,
+    req: 'REQ-JUR-037',
+  },
+  // JUR-T26 : les RESSOURCES DIFFUSÉES (kit, FAQ, documents de présentation), que REQ-JUR-036 et
+  // REQ-JUR-037 nomment et qu'aucun motif ne couvrait. Aucune n'existe encore : elles naissent avec
+  // « Ressources » (UX-P3-02), et tombent sous la portée la plus stricte dès leur premier fichier.
+  {
+    nom: 'ressources diffusées',
+    reg: /^(src\/content\/|public\/)?ressources\/.+\.(md|mdx|html|txt|json|tsx|ts)$/,
     portee: 'apporteur',
     attendu: false,
     req: 'REQ-JUR-037',

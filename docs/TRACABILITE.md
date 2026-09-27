@@ -16,7 +16,7 @@
 
 **334 exigences actives · 107 réputées testées · 107 couvertes · 0 orphelines.**
 
-290 tâches, dont 98 livrées · 137 fichiers de test exécutés par `vitest` sur 137 présents.
+290 tâches, dont 98 livrées · 140 fichiers de test exécutés par `vitest` sur 140 présents.
 
 ## Exigences réputées testées
 
@@ -313,7 +313,7 @@
 | `REQ-SEC-020` | 1 | `SEC-12`, `SEC-14` | — |
 | `REQ-SEC-021` | 1 | `SEC-16` | — |
 | `REQ-SEC-022` | 0 | `DM-10-P`, `DM-25`, `SEC-05`, `SEC-12`, `SEC-16` | `tests/integration/idor.spec.ts`, `tests/unit/securite/acces-scope.spec.ts` |
-| `REQ-SEC-023` | 0 | `SEC-17` | `tests/unit/securite/matrice-des-roles.spec.ts` |
+| `REQ-SEC-023` | 0 | `SEC-17` | `tests/integration/utilisateurs-console.spec.ts`, `tests/unit/securite/matrice-des-roles.spec.ts` |
 | `REQ-SEC-025` | 2 | `SEC-22` | — |
 | `REQ-SEC-026` | 1 | `DM-11` | `tests/unit/domaine/kyc-reference-piece-rib.spec.ts` |
 | `REQ-SEC-030` | 0 | `DM-20`, `JUR-T04` | `tests/unit/juridique/registre-rgpd.spec.ts` |
@@ -463,6 +463,7 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | `tests/integration/rate-limit-redis.spec.ts` | oui | `REQ-QA-006`, `REQ-SEC-016` |
 | `tests/integration/sessions-revocables.spec.ts` | oui | `REQ-SEC-003`, `REQ-SEC-004` |
 | `tests/integration/sondes-de-vie.spec.ts` | oui | `REQ-QA-019`, `REQ-QA-020`, `REQ-QA-030` |
+| `tests/integration/utilisateurs-console.spec.ts` | oui | `REQ-SEC-023` |
 | `tests/integration/webhook-rebonds.spec.ts` | oui | `REQ-INT-023` |
 | `tests/integration/webhook-verdicts.spec.ts` | oui | `REQ-ARG-002`, `REQ-ARG-003`, `REQ-INT-011`, `REQ-QA-009` |
 | `tests/integration/webhook.spec.ts` | oui | `REQ-DM-036`, `REQ-INT-010`, `REQ-SEC-011` |
@@ -564,6 +565,7 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | `tests/unit/integration/evenement-recu-travail.spec.ts` | oui | `REQ-ARG-003`, `REQ-INT-011`, `REQ-QA-026` |
 | `tests/unit/integration/notif-sans-pii.spec.ts` | oui | `REQ-INT-024` |
 | `tests/unit/integration/recherche-entreprises-repli.spec.ts` | oui | `REQ-INT-020`, `REQ-SEC-013`, `REQ-UX-020` |
+| `tests/unit/juridique/charte-relationnelle.spec.ts` | oui | `REQ-JUR-034`, `REQ-JUR-035`, `REQ-JUR-036`, `REQ-JUR-037` |
 | `tests/unit/juridique/seuils-ssot.spec.ts` | oui | `REQ-EXT-028`, `REQ-JUR-015`, `REQ-JUR-029` |
 | `tests/unit/qualite/env-fail-fast.spec.ts` | oui | `REQ-CPL-021`, `REQ-QA-030` |
 | `tests/unit/qualite/journal-redige.spec.ts` | oui | `REQ-QA-024` |
@@ -582,6 +584,7 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | `tests/unit/securite/lien-magique-indistinction.spec.ts` | oui | `REQ-SEC-001`, `REQ-SEC-002`, `REQ-SEC-016` |
 | `tests/unit/securite/lien-magique-migration.spec.ts` | oui | `REQ-SEC-001` |
 | `tests/unit/securite/lien-magique-production.spec.ts` | oui | `REQ-SEC-001`, `REQ-SEC-002`, `REQ-SEC-016` |
+| `tests/unit/securite/matrice-des-roles.spec.ts` | oui | `REQ-SEC-023`, `REQ-UX-024` |
 | `tests/unit/securite/rate-famille.spec.ts` | oui | `REQ-SEC-002`, `REQ-SEC-016`, `REQ-SEC-035` |
 | `tests/unit/securite/revocation.spec.ts` | oui | `REQ-SEC-003`, `REQ-SEC-004` |
 | `tests/unit/securite/webhook-signature.spec.ts` | oui | `REQ-INT-026`, `REQ-INT-029`, `REQ-QA-008`, `REQ-SEC-010` |

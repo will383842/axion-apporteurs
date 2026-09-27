@@ -26,7 +26,7 @@ import base from './vitest.config';
  *    et sortent en échec quand elles ne le peuvent pas — le bac à sable n'est pas un dépôt git ;
  *  - quatre tests LISENT le texte d'une source du domaine au lieu de l'exécuter : dans le bac, ce
  *    texte porte l'instrumentation de Stryker. Aucun mutant n'y survit ni n'y meurt ;
- *  - cinq tests balaient les fichiers suivis (dépôt git requis) ;
+ *  - six tests balaient les fichiers suivis (dépôt git requis) ;
  *  - un test exécute le code, mais sous un BUDGET de temps (moins de 5 s pour quinze ans d'heures)
  *    que l'instrumentation fait dépasser : mesuré à 7,3 s.
  * Tous tournent dans `pnpm test`, sur le vrai texte. Les titres sont des fragments d'expression
@@ -50,6 +50,9 @@ const ECARTES = [
   'le dépôt réel est sans faute, et le compte des fichiers lus est imprimé',
   // et celui-ci LIT le texte de src/domain/seuils/ssot.ts, instrumente dans le bac.
   'la SSOT elle-même est le seul fichier où ces littéraux s.écrivent',
+  // SEC-17 : lance la garde `securite:roles` en sous-processus, qui lit les fichiers SUIVIS par git — le
+  // bac à sable n'est pas un dépôt, la garde y sort en échec. Jugé dans `pnpm test`, sur le vrai dépôt.
+  'la garde sur la console du dépôt sort en 0',
 ];
 
 export default defineConfig({
