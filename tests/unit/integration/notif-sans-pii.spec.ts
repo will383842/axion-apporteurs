@@ -217,9 +217,7 @@ describe('REQ-INT-024 — les bords de l’alerteur, chacun vu', () => {
     const alerteur = creerAlerteur({ notifieur, horloge, plafondParHeure: 50 });
     expect(await alerteur.alerter({ categorie: 'releve_bloque', id: UUID_A })).toBe('envoyee');
     horloge.avancer(HEURE - 1);
-    expect(await alerteur.alerter({ categorie: 'releve_bloque', id: UUID_A })).toBe(
-      'dedoublonnee'
-    );
+    expect(await alerteur.alerter({ categorie: 'releve_bloque', id: UUID_A })).toBe('dedoublonnee');
     horloge.avancer(1);
     expect(await alerteur.alerter({ categorie: 'releve_bloque', id: UUID_A })).toBe('envoyee');
     expect(notifieur.envois).toHaveLength(2);
@@ -326,19 +324,26 @@ describe('REQ-INT-024 — LISTE BLANCHE : seul un identifiant du format du dép�
     ['jeanne.temoin@example.org', 'courriel'],
     ['jeanne', 'nom en un mot'],
     ['987654', 'nombre nu'],
-  ])('REQ-INT-024 — TÉMOIN : « %s » (%s) en id comme en compte n’entre pas dans le message', async (valeur) => {
-    const notifieur = notifieurCompteur();
-    const alerteur = creerAlerteur({ notifieur, horloge: horlogeFigee(T0), plafondParHeure: 5 });
-    await alerteur.alerter({ categorie: 'releve_bloque', id: valeur, compte: valeur });
-    const envoi = notifieur.envois[0]!;
-    expect(`${envoi.sujet}\n${envoi.corps}`).not.toContain(valeur);
-    expect(envoi.corps).toBe(
-      '[releve_bloque] objet [identifiant non technique retiré] · compte [identifiant non technique retiré]'
-    );
-  });
+  ])(
+    'REQ-INT-024 — TÉMOIN : « %s » (%s) en id comme en compte n’entre pas dans le message',
+    async (valeur) => {
+      const notifieur = notifieurCompteur();
+      const alerteur = creerAlerteur({ notifieur, horloge: horlogeFigee(T0), plafondParHeure: 5 });
+      await alerteur.alerter({ categorie: 'releve_bloque', id: valeur, compte: valeur });
+      const envoi = notifieur.envois[0]!;
+      expect(`${envoi.sujet}\n${envoi.corps}`).not.toContain(valeur);
+      expect(envoi.corps).toBe(
+        '[releve_bloque] objet [identifiant non technique retiré] · compte [identifiant non technique retiré]'
+      );
+    }
+  );
 
   it('REQ-INT-024 — CONTRE-TÉMOIN : un vrai identifiant du format du dépôt entre, en id comme en compte', () => {
-    const texte = messageDAlerte('alerte', { categorie: 'releve_bloque', id: UUID_A, compte: UUID_B });
+    const texte = messageDAlerte('alerte', {
+      categorie: 'releve_bloque',
+      id: UUID_A,
+      compte: UUID_B,
+    });
     expect(texte).toBe(`[releve_bloque] objet ${UUID_A} · compte ${UUID_B}`);
   });
 });
@@ -371,9 +376,12 @@ describe('REQ-INT-024 — le montant est vu même formaté en euros', () => {
     ['9876.54 EUR', 'point décimal'],
     ['9 877 €', 'arrondi à l’euro'],
     ['9 876 €', 'tronqué à l’euro'],
-  ])('REQ-INT-024 — TÉMOIN : un gabarit qui écrit « %s » (%s) est refusé, champ montantHtCents nommé', (ecrit) => {
-    const r = confronter({ en_euros: (o) => `[${o.categorie}] ${ecrit}` });
-    expect(r.code).toBe(1);
-    expect(r.fautes).toEqual([{ gabarit: 'en_euros', champ: 'montantHtCents' }]);
-  });
+  ])(
+    'REQ-INT-024 — TÉMOIN : un gabarit qui écrit « %s » (%s) est refusé, champ montantHtCents nommé',
+    (ecrit) => {
+      const r = confronter({ en_euros: (o) => `[${o.categorie}] ${ecrit}` });
+      expect(r.code).toBe(1);
+      expect(r.fautes).toEqual([{ gabarit: 'en_euros', champ: 'montantHtCents' }]);
+    }
+  );
 });

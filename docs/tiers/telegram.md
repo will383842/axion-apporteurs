@@ -55,7 +55,10 @@ de REQ-INT-024.
 **Livré par INT-T14 (2026-09-27).** `src/server/integrations/telegram/alertes.ts` porte l'alerteur :
 dédoublonnage par catégorie et identifiant sur une heure glissante, plafond horaire par catégorie reçu en
 paramètre, dernier envoi permis qui annonce la retenue. Le message ne porte que la catégorie, l'identifiant
-technique de l'objet et le compte ; un identifiant qui n'a pas la forme technique est retiré du message.
+technique de l'objet et le compte. Liste blanche : seul un identifiant au format des identifiants
+d'agrégat du dépôt (uuid, `prisma/schema.prisma`) entre dans le message ; toute autre valeur d'`id` ou
+de `compte` est remplacée par un marqueur neutre, et le plafond comme le dédoublonnage se comptent sur
+cette forme affichée.
 `src/server/integrations/telegram/garde-sans-pii.ts` confronte chaque gabarit à un objet portant nom,
 courriel, téléphone, lien de console, raison sociale et montant, et sort en non-zéro en nommant le champ
 qui franchit (témoins : `tests/unit/integration/notif-sans-pii.spec.ts`).

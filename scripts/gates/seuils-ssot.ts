@@ -8,9 +8,16 @@
  *   1. LA SSOT (`src/domain/seuils/ssot.ts`) : chaque constante a une source et une date ISO réelle,
  *      une valeur entière positive ; AUCUNE constante de gradation, de manquements ni de délai de
  *      contradictoire (`HYP-D11`, décision du 2026-09-03).
- *   2. AUCUN LITTÉRAL HORS DE LA SSOT, dans le code de `src/` (spécifications exclues) :
- *        — les montants de seuil de la SSOT (DAS2, vigilance, versement minimal), en centimes ou en
- *          euros, séparateurs `_` compris, n'importe où hors commentaire ;
+ *   2. AUCUN LITTÉRAL HORS DE LA SSOT, dans le code de `src/` (spécifications exclues), par deux
+ *      RÈGLES qui normalisent ce qui est écrit plutôt que d'en décrire les formes :
+ *        — TOUT NOMBRE, lu sans ses séparateurs de milliers (espace, espaces insécables U+00A0 et
+ *          U+202F, espace fine U+2009, point, apostrophe, souligné, virgule entre groupes de trois)
+ *          et à décimales nulles, qui égale un montant de seuil de la SSOT, en centimes ou en
+ *          euros ; au-dessous de mille, suivi d'une unité monétaire ;
+ *        — TOUT PRODUIT d'au moins deux littéraux entiers, dans n'importe quel ordre, parenthèses
+ *          comprises, qui égale un délai de la SSOT exprimé en jours, heures, minutes, secondes ou
+ *          millisecondes (un mois compte trente jours, une année 365) ;
+ *      et, en plus de ces règles, par des motifs :
  *        — les durées 2, 3, 6, 10, 12, 15, 24, 30, 60 et 90 ATTACHÉES À UNE UNITÉ DE TEMPS :
  *          multipliées par une constante de jour, de mois ou d'année, ou par `24 * 60 * 60` ;
  *          passées à une fonction d'ajout de jours, de mois ou d'années ; posées sous une clé
@@ -30,13 +37,15 @@
  * valeurs pour les juger. Un délai calculé par un détour qu'aucun motif ne décrit (une constante
  * locale nommée `N`, puis `N * MS_PAR_JOUR`) lui échappe ; c'est la lentille exactitude qui le voit.
  *
- * ÉCHEC FERMÉ. Gabarit introuvable, énumération git en échec, zéro fichier lu : rouge.
+ * ÉCHEC FERMÉ. Gabarit introuvable, zéro fichier lu : rouge. Le périmètre vient de la source unique
+ * (`scripts/lot/fichiers-suivis.ts`) : les fichiers SUIVIS par git, et un refus nommé quand git ne
+ * répond pas, qu'elle est lancée hors de la racine, ou qu'un fichier suivi manque sur le disque.
  */
-import { spawnSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { SEUILS, type Seuil } from '../../src/domain/seuils/ssot';
 import { normaliser, texteRemis, unitesDuGabarit } from '../../src/domain/contrat/gabarit';
+import { fichiersSuivisOuRefus } from '../lot/fichiers-suivis';
 
 export type Faute = { famille: string; cle: string; message: string };
 export type Fichier = { chemin: string; texte: string };
@@ -170,11 +179,6 @@ const UNITE_TEMPS = '(?:jours?|mois|ans|ann[ée]es?)';
 /** Les motifs, chacun nommé : le message dit lequel a vu le littéral. */
 const MOTIFS: readonly { quoi: string; motif: RegExp }[] = [
   {
-    quoi: 'montant de seuil',
-    motif: /(?<![\w.])(2_?400|240_?000|5_?000|500_?000)(?![\w.])/,
-  },
-  { quoi: 'montant de seuil en euros', motif: /(?<![\w.,])(50(?:[,.]00)?)\s*(?:€|euros?)/i },
-  {
     quoi: 'durée multipliée par une unité de temps',
     motif: new RegExp(
       `(?<![\\w.])(${DUREES})\\s*\\*\\s*(?:[\\w.]*(?:JOUR|MOIS|ANNEE|DAY|MONTH|YEAR)\\w*|24\\s*\\*\\s*60\\s*\\*\\s*60|86_?400)`,
@@ -215,6 +219,152 @@ const MOTIFS: readonly { quoi: string; motif: RegExp }[] = [
 /** Une date civile `{ mois: 12, jour: 25 }` n'est pas une durée : la clé `jour` la signe. */
 const DATE_CIVILE = /\bjour\s*:\s*\d/;
 
+// ── 2 bis. Les deux RÈGLES : tout nombre, tout produit ──────────────────────────────────────────
+//
+// Un motif par forme perd la forme suivante : `2 400 €`, `5 000 €` à espace insécable,
+// `1000 * 60 * 60 * 24 * 30` passaient. Ces deux règles ne décrivent pas des formes : elles
+// NORMALISENT ce qui est écrit, puis confrontent le résultat aux valeurs DÉRIVÉES de `SEUILS`
+// (RM-01) — une valeur changée dans la SSOT change ce que la garde cherche.
+
+/** Tout séparateur de milliers qu'un texte ou un code peut porter entre deux groupes de chiffres. */
+const SEPARATEUR_DE_MILLIERS = "[ \\u00A0\\u202F\\u2009._',]";
+
+/**
+ * Un nombre écrit : des groupes de trois chiffres liés par un séparateur de milliers, ou des chiffres
+ * nus, puis d'éventuelles décimales (une ou deux). Jamais au milieu d'un mot, d'un nombre, ni après
+ * un point.
+ */
+const NOMBRE_ECRIT = new RegExp(
+  `(?<![\\p{L}\\d_$.])(\\d{1,3}(?:${SEPARATEUR_DE_MILLIERS}\\d{3})+|\\d+)(?:[.,](\\d{1,2}))?(?![\\p{L}\\d_])`,
+  'gu'
+);
+const UNITE_MONETAIRE = /^\s*(?:€|euros?\b|eur\b)/iu;
+
+/** Les montants de seuil de la SSOT, en centimes et en euros, lus dans `SEUILS`. */
+export function montantsDeSeuil(seuils: Readonly<Record<string, Seuil>>): Map<number, string> {
+  const montants = new Map<number, string>();
+  for (const [cle, s] of Object.entries(seuils)) {
+    if (s.unite !== 'centimes') continue;
+    montants.set(s.valeur, `${cle} en centimes`);
+    if (s.valeur % 100 === 0) montants.set(s.valeur / 100, `${cle} en euros`);
+  }
+  return montants;
+}
+
+/**
+ * La règle des montants : le premier nombre de la ligne qui, lu sans ses séparateurs de milliers et
+ * à décimales nulles, égale un montant de seuil. Au-dessous de mille, un nombre n'est un montant que
+ * suivi d'une unité monétaire : `slice(0, 50)` n'est pas un seuil.
+ */
+export function montantDansLaLigne(
+  ligne: string,
+  montants: ReadonlyMap<number, string>
+): string | null {
+  for (const m of ligne.matchAll(NOMBRE_ECRIT)) {
+    if (m[2] !== undefined && Number(m[2]) !== 0) continue;
+    const entier = Number(m[1]!.replace(new RegExp(SEPARATEUR_DE_MILLIERS, 'gu'), ''));
+    const quoi = montants.get(entier);
+    if (quoi === undefined) continue;
+    const suite = ligne.slice(m.index + m[0].length);
+    if (entier >= 1000 || UNITE_MONETAIRE.test(suite)) return `${m[0]}, ${quoi}`;
+  }
+  return null;
+}
+
+const JOURS_PAR_UNITE: Readonly<Record<Exclude<Seuil['unite'], 'centimes'>, number>> = {
+  jours: 1,
+  jours_ouvres: 1,
+  mois: 30,
+  ans: 365,
+};
+const ECHELLES: readonly (readonly [string, number])[] = [
+  ['jours', 1],
+  ['heures', 24],
+  ['minutes', 24 * 60],
+  ['secondes', 24 * 60 * 60],
+  ['millisecondes', 24 * 60 * 60 * 1000],
+];
+
+/**
+ * Chaque délai de la SSOT exprimé en jours, heures, minutes, secondes et millisecondes. Un mois
+ * compte trente jours ; un nombre entier d'années, écrit en mois ou en ans, compte 365 jours par an.
+ */
+export function delaisExprimes(seuils: Readonly<Record<string, Seuil>>): Map<number, string> {
+  const delais = new Map<number, string>();
+  for (const [cle, s] of Object.entries(seuils)) {
+    if (s.unite === 'centimes') continue;
+    const jours = new Set([s.valeur * JOURS_PAR_UNITE[s.unite]]);
+    if (s.unite === 'mois' && s.valeur % 12 === 0) jours.add((s.valeur / 12) * 365);
+    for (const j of jours) {
+      for (const [echelle, facteur] of ECHELLES) {
+        if (!delais.has(j * facteur)) {
+          delais.set(j * facteur, `${j} jours en ${echelle}, ${cle} = ${s.valeur} ${s.unite}`);
+        }
+      }
+    }
+  }
+  return delais;
+}
+
+const JETON = /[\p{L}_$][\p{L}\d_$]*|\d[\w.]*|\*\*|[*()]|\s+|[\s\S]/gu;
+
+export type Produit = { ligne: number; ecrit: string; valeur: number };
+
+/**
+ * La règle des produits : tout produit d'au moins deux littéraux entiers, dans n'importe quel ordre,
+ * parenthèses comprises et sur plusieurs lignes, est évalué. Rend chaque produit avec sa ligne de
+ * début (base 0), tel qu'écrit, et sa valeur. Un facteur qui n'est pas un littéral entier (un nom,
+ * une décimale, un grand entier `n`) clôt le produit.
+ */
+export function produitsDeLitteraux(texte: string): Produit[] {
+  const produits: Produit[] = [];
+  let facteurs: string[] = [];
+  let debut = 0;
+  let fin = 0;
+  let attendUnFacteur = true;
+  let precedent = '';
+  const clore = (): void => {
+    if (facteurs.length >= 2) {
+      const valeur = facteurs.reduce((p, f) => p * Number(f.replace(/_/g, '')), 1);
+      if (Number.isSafeInteger(valeur)) {
+        produits.push({
+          ligne: texte.slice(0, debut).split('\n').length - 1,
+          ecrit: texte.slice(debut, fin).replace(/\s+/g, ' '),
+          valeur,
+        });
+      }
+    }
+    facteurs = [];
+    attendUnFacteur = true;
+  };
+  for (const m of texte.matchAll(JETON)) {
+    const j = m[0];
+    if (/^\s+$/u.test(j) || j === '(' || j === ')') continue;
+    if (/^\d/.test(j)) {
+      if (!/^\d(?:_?\d)*$/.test(j) || precedent === '.') {
+        clore();
+      } else {
+        if (!attendUnFacteur) clore();
+        if (facteurs.length === 0) debut = m.index;
+        facteurs.push(j);
+        fin = m.index + j.length;
+        attendUnFacteur = false;
+      }
+    } else if (j === '*') {
+      if (attendUnFacteur) clore();
+      attendUnFacteur = true;
+    } else {
+      clore();
+    }
+    precedent = j;
+  }
+  clore();
+  return produits;
+}
+
+const MONTANTS = montantsDeSeuil(SEUILS);
+const DELAIS = delaisExprimes(SEUILS);
+
 export function litterauxHorsSsot(
   fichiers: readonly Fichier[],
   exemptions: readonly Exemption[] = EXEMPTIONS
@@ -224,26 +374,40 @@ export function litterauxHorsSsot(
     if (chemin === CHEMIN_SSOT) continue;
     const exemption = exemptions.find((e) => e.chemin === chemin);
     let vus = 0;
-    sansCommentaires(texte)
-      .split(/\r?\n/)
-      .forEach((ligne, i) => {
+    const code = sansCommentaires(texte);
+    const produits = new Map<number, string>();
+    for (const p of produitsDeLitteraux(code)) {
+      const delai = DELAIS.get(p.valeur);
+      if (delai !== undefined && !produits.has(p.ligne))
+        produits.set(p.ligne, `${p.ecrit} = ${delai}`);
+    }
+    code.split(/\r?\n/).forEach((ligne, i) => {
+      const vu = ((): { quoi: string; litteral: string } | null => {
+        const montant = montantDansLaLigne(ligne, MONTANTS);
+        if (montant !== null) return { quoi: 'montant de seuil', litteral: montant };
+        const produit = produits.get(i);
+        if (produit !== undefined) {
+          return { quoi: 'produit de littéraux égal à un délai', litteral: produit };
+        }
         for (const { quoi, motif } of MOTIFS) {
           if (quoi === 'durée posée sous une clé de temps' && DATE_CIVILE.test(ligne)) continue;
           const m = motif.exec(ligne);
-          if (m === null) continue;
-          vus++;
-          if (exemption === undefined) {
-            fautes.push({
-              famille: 'litteral_hors_ssot',
-              cle: `${chemin}:${i + 1}`,
-              message:
-                `${chemin}:${i + 1} — ${quoi} « ${m[1]} » : ce seuil ou ce délai vit dans ` +
-                `${CHEMIN_SSOT}, avec sa source et sa date (RM-10). Lis-le là, ne le retape pas.`,
-            });
-          }
-          break;
+          if (m !== null) return { quoi, litteral: m[1]! };
         }
-      });
+        return null;
+      })();
+      if (vu === null) return;
+      vus++;
+      if (exemption === undefined) {
+        fautes.push({
+          famille: 'litteral_hors_ssot',
+          cle: `${chemin}:${i + 1}`,
+          message:
+            `${chemin}:${i + 1} — ${vu.quoi} « ${vu.litteral} » : ce seuil ou ce délai vit dans ` +
+            `${CHEMIN_SSOT}, avec sa source et sa date (RM-10). Lis-le là, ne le retape pas.`,
+        });
+      }
+    });
     if (exemption !== undefined && vus === 0) {
       fautes.push({
         famille: 'exemption_orpheline',
@@ -391,23 +555,19 @@ export function fautesDeCoherence(entree: {
 
 // ── Le dépôt ────────────────────────────────────────────────────────────────────────────────────
 
-export class EnumerationImpossible extends Error {}
-
-function fichiersDeSrc(racine: string): string[] {
-  const r = spawnSync(
-    'git',
-    ['-C', racine, 'ls-files', '--cached', '--others', '--exclude-standard', '--', 'src'],
-    { encoding: 'utf8' }
+/**
+ * Les sources de `src/`, prises dans la source unique du périmètre : les fichiers SUIVIS, lus depuis
+ * la racine du dépôt. Elle refuse et sort en échec, en nommant la cause, quand le périmètre ne peut
+ * pas être établi — jamais une liste vide.
+ */
+function fichiersDeSrc(): string[] {
+  return fichiersSuivisOuRefus('ssot:seuils').filter(
+    (c) => c.startsWith('src/') && /\.(ts|tsx)$/.test(c) && !/\.(spec|test)\.tsx?$/.test(c)
   );
-  if (r.status !== 0) throw new EnumerationImpossible(`git ls-files a échoué : ${r.stderr}`);
-  return r.stdout
-    .split(/\r?\n/)
-    .filter((c) => /\.(ts|tsx)$/.test(c) && !/\.(spec|test)\.tsx?$/.test(c))
-    .filter((c) => existsSync(join(racine, c)));
 }
 
 export function controlerDepot(racine: string): { fautes: Faute[]; fichiersLus: number } {
-  const chemins = fichiersDeSrc(racine);
+  const chemins = fichiersDeSrc();
   const fichiers = chemins.map((chemin) => ({
     chemin,
     texte: readFileSync(join(racine, chemin), 'utf8'),
@@ -502,12 +662,34 @@ export function temoins(gabarit: string, annexe2: string): { famille: string; fa
   ];
 }
 
-/** Ce qui doit rester vert : une lecture de la SSOT, un commentaire, un nombre sans unité. */
+/**
+ * Les deux règles, une forme par séparateur et par écriture du produit : chacune DOIT produire
+ * exactement une faute `litteral_hors_ssot`.
+ */
+export const TEMOINS_DE_REGLE: readonly string[] = [
+  "const l = 'seuil de 2 400 €';",
+  "const l = 'vigilance à 5 000 €';",
+  "const l = 'vigilance à 5 000 €';",
+  "const l = 'seuil de 2 400 euros';",
+  "const l = 'seuil de 2.400 EUR';",
+  'const l = "seuil de 2\'400";',
+  'const s = 2_400;',
+  "const l = 'seuil de 2,400';",
+  "const l = 'versement dès 50,00 €';",
+  'const d = 1000 * 60 * 60 * 24 * 30;',
+  'const d = 15 * 24 * 3600 * 1000;',
+  'const d = (60 * 60) * (24 * 90) * 1000;',
+];
+
+/** Ce qui doit rester vert : une lecture de la SSOT, un commentaire, un nombre sans unité, un produit sans rapport. */
 export const CONTRE_TEMOINS: readonly string[] = [
   'const d = SEUILS.PREAVIS_JOURS.valeur * MS_PAR_JOUR;',
   '// quinze jours, art. 11.2',
   'const n = liste.slice(0, 12);',
   'const noel = { mois: 12, jour: 25 };',
+  "const l = '12 400 €';",
+  'const aire = 7 * 11;',
+  'const MS_PAR_JOUR = 24 * 60 * 60 * 1000;',
 ];
 
 if (process.argv[1] !== undefined && /seuils-ssot[.](ts|js)$/.test(process.argv[1])) {
@@ -523,6 +705,13 @@ if (process.argv[1] !== undefined && /seuils-ssot[.](ts|js)$/.test(process.argv[
         rate++;
       }
     }
+    for (const t of TEMOINS_DE_REGLE) {
+      const f = litterauxHorsSsot([{ chemin: 'src/server/temoin.ts', texte: t }]);
+      if (f.length !== 1 || f[0]!.famille !== 'litteral_hors_ssot') {
+        console.error(`❌ témoin de règle « ${t} » : ${f.length} faute(s) au lieu d'une`);
+        rate++;
+      }
+    }
     for (const c of CONTRE_TEMOINS) {
       const f = litterauxHorsSsot([{ chemin: 'src/server/temoin.ts', texte: c }]);
       if (f.length > 0) {
@@ -533,6 +722,7 @@ if (process.argv[1] !== undefined && /seuils-ssot[.](ts|js)$/.test(process.argv[
     if (rate > 0) process.exit(1);
     console.log(
       `✅ ssot:seuils --prove — ${liste.length} témoins rougissent chacun de leur famille, ` +
+        `${TEMOINS_DE_REGLE.length} formes des règles des montants et des produits rougissent, ` +
         `${CONTRE_TEMOINS.length} contre-témoins restent verts — preuve faite.`
     );
     process.exit(0);

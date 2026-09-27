@@ -265,11 +265,15 @@ describe('REQ-JUR-015 — un montant de seuil se reconnaît quel que soit son s�
     ["const libelle = 'vigilance à 5 000 €';", '5 000', 'espace fine insécable U+202F'],
     ["const libelle = 'seuil de 2 400 euros';", '2 400', 'espace fine U+2009'],
     ["const libelle = 'seuil de 2.400 EUR';", '2.400', 'point'],
-    ["const libelle = \"seuil de 2'400 CHF\";", "2'400", 'apostrophe'],
+    ['const libelle = "seuil de 2\'400 CHF";', "2'400", 'apostrophe'],
     ['const s = 2_400;', '2_400', 'souligné'],
     ["const libelle = 'seuil de 2,400';", '2,400', 'virgule entre groupes de trois'],
     ["const libelle = 'cumul de 240 000 centimes';", '240 000', 'centimes, espace'],
-    ["const libelle = 'versement dès 50,00 €';", '50,00', 'petit montant en euros, décimales nulles'],
+    [
+      "const libelle = 'versement dès 50,00 €';",
+      '50,00',
+      'petit montant en euros, décimales nulles',
+    ],
     ["const libelle = 'seuil de 2 400,00 €';", '2 400', 'milliers et décimales nulles'],
   ])('REQ-JUR-015 — TÉMOIN : « %s » fait rougir et nomme %s (%s)', (ligne, litteral) => {
     const fautes = litterauxHorsSsot([{ chemin: 'src/server/temoin.ts', texte: ligne }]);

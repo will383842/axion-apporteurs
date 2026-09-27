@@ -10,10 +10,17 @@
  *      n'en est pas affectée. La valeur du plafond vit en configuration (`docs/tiers/telegram.md`
  *      §4) : elle entre en paramètre, jamais écrite ici.
  *   3. AUCUNE COORDONNÉE DE TIERS NI LIEN DE CONSOLE : le message ne porte que la catégorie,
- *      l'identifiant technique de l'objet et le compte concerné. Un identifiant qui n'a pas la forme
- *      d'un identifiant technique (un courriel, un téléphone passés par erreur) n'entre pas dans le
- *      message. La garde `garde-sans-pii.ts` confronte chaque gabarit à un objet chargé de données
+ *      l'identifiant technique de l'objet et le compte concerné. LISTE BLANCHE : un `id` ou un
+ *      `compte` n'entre dans le message que s'il a le format des identifiants d'agrégat du dépôt
+ *      (`String @id @default(uuid()) @db.Uuid`, `prisma/schema.prisma`). Toute autre valeur — un
+ *      courriel, un téléphone avec ou sans séparateur, un nom, un nombre — est remplacée par un
+ *      marqueur neutre. Une catégorie n'entre que faite de mots en minuscules liés par `_`, sans
+ *      chiffre. La garde `garde-sans-pii.ts` confronte chaque gabarit à un objet chargé de données
  *      personnelles.
+ *   4. LA FORME AFFICHÉE EST LA FORME COMPTÉE : le dédoublonnage et le plafond portent sur la
+ *      catégorie et l'identifiant NORMALISÉS, tels que le message les écrit. Des valeurs brutes
+ *      distinctes que le message rendrait par le même marqueur partagent donc un seul plafond et un
+ *      seul dédoublonnage : varier la valeur brute ne contourne rien.
  *
  * LE TRANSPORT N'EST PAS ICI. L'alerteur remet ses messages au notifieur de QA-T08
  * (`src/lib/notify.ts`) : hors production ils vont au puits, jamais au canal. L'appel réel à
@@ -35,16 +42,23 @@ export type ObjetAlerte = {
   readonly compte?: string;
 };
 
-/** Un identifiant technique : lettres ASCII, chiffres, `_` et `-`, sans `@`, espace ni `+`. */
-const IDENTIFIANT_TECHNIQUE = /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/;
+/**
+ * Le format des identifiants d'agrégat du dépôt, et LUI SEUL : `@default(uuid()) @db.Uuid`
+ * (`prisma/schema.prisma`), en minuscules comme PostgreSQL le rend. Une liste blanche, pas une liste
+ * de formes interdites : un téléphone sans séparateur passait la règle précédente.
+ */
+const IDENTIFIANT_D_AGREGAT = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/;
+/** Une catégorie : des mots en minuscules liés par `_`, sans chiffre ni espace. */
+const CATEGORIE = /^[a-z]{1,24}(?:_[a-z]{1,24}){0,4}$/;
 const RETIRE = '[identifiant non technique retiré]';
 
-const technique = (v: unknown): string =>
-  typeof v === 'string' && IDENTIFIANT_TECHNIQUE.test(v) ? v : RETIRE;
+const identifiant = (v: unknown): string =>
+  typeof v === 'string' && IDENTIFIANT_D_AGREGAT.test(v) ? v : RETIRE;
+const categorie = (v: unknown): string => (typeof v === 'string' && CATEGORIE.test(v) ? v : RETIRE);
 
 const ligneDeBase = (o: ObjetAlerte): string =>
-  `[${technique(o.categorie)}] objet ${technique(o.id)}` +
-  (o.compte === undefined ? '' : ` · compte ${technique(o.compte)}`);
+  `[${categorie(o.categorie)}] objet ${identifiant(o.id)}` +
+  (o.compte === undefined ? '' : ` · compte ${identifiant(o.compte)}`);
 
 /**
  * Les gabarits de message, et eux seuls : la garde les confronte TOUS, en les énumérant ici. Chacun
@@ -94,12 +108,14 @@ export function creerAlerteur({ notifieur, horloge, plafondParHeure }: OptionsAl
     async alerter(objet) {
       const maintenant = horloge.maintenant();
       const depuis = maintenant - MS_PAR_HEURE;
-      const cle = `${objet.categorie}\u0000${objet.id}`;
+      // La forme affichée est la forme comptée (garantie 4).
+      const cat = categorie(objet.categorie);
+      const cle = `${cat}\u0000${identifiant(objet.id)}`;
       const precedent = dernierEnvoi.get(cle);
       if (precedent !== undefined && precedent > depuis) return 'dedoublonnee';
 
-      const envois = envoisParCategorie.get(objet.categorie)?.filter((t) => t > depuis) ?? [];
-      envoisParCategorie.set(objet.categorie, envois);
+      const envois = envoisParCategorie.get(cat)?.filter((t) => t > depuis) ?? [];
+      envoisParCategorie.set(cat, envois);
       if (envois.length >= plafondParHeure) return 'plafonnee';
 
       const gabarit: NomDeGabarit =
@@ -107,7 +123,7 @@ export function creerAlerteur({ notifieur, horloge, plafondParHeure }: OptionsAl
       envois.push(maintenant);
       dernierEnvoi.set(cle, maintenant);
       await notifieur.notifier({
-        sujet: `alerte console · ${technique(objet.categorie)}`,
+        sujet: `alerte console · ${cat}`,
         corps: messageDAlerte(gabarit, objet),
       });
       return 'envoyee';

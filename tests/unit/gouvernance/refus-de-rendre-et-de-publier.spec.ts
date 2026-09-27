@@ -895,7 +895,8 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
         '`process.exit(1)` : le `--prove` qui voit un témoin rester vert ou un contre-témoin ' +
         'rougir, et la sortie terminale sur faute du dépôt. Les familles sont éprouvées par ' +
         '`pnpm ssot:seuils:prove` et par seuils-ssot.spec.ts ; la sortie elle-même n’a pas de ' +
-        'témoin d’effet sur le binaire. Dette DÉCLARÉE.',
+        'témoin d’effet sur le binaire. Dette DÉCLARÉE. Le REFUS DE PÉRIMÈTRE n’est pas compté ' +
+        'ici : il vient de `fichiersSuivisOuRefus`, et `GARDES_QUI_BALAIENT` le déclare plus bas.',
     },
   };
 

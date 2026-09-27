@@ -20,12 +20,14 @@ import { GABARITS_ALERTE, type ObjetAlerte } from './alertes';
 /** Le témoin : les trois champs permis, et tout ce qu'un appelant pourrait passer par confort. */
 export const OBJET_TEMOIN = {
   categorie: 'temoin_garde',
-  id: 'obj_temoin_1',
-  compte: 'cpt_temoin_1',
+  // Au format des identifiants d'agrégat du dépôt (uuid) : seul ce format entre dans un message.
+  id: 'd4c3b2a1-e5f6-4a7b-8c9d-aebfcadbecfd',
+  compte: 'e1f2a3b4-c5d6-4e7f-a8b9-cadbecfdaebf',
   nom: 'Jeanne Témoin',
   courriel: 'jeanne.temoin@example.org',
   telephone: '+33 6 12 34 56 78',
-  lienConsole: 'https://console.partners.example/admin/apporteurs/obj_temoin_1',
+  lienConsole:
+    'https://console.partners.example/admin/apporteurs/d4c3b2a1-e5f6-4a7b-8c9d-aebfcadbecfd',
   raisonSociale: 'Témoin Conseil SARL',
   montantHtCents: 987_654,
 } as const;
@@ -52,6 +54,20 @@ export const GABARIT_BAC_D_ESSAI = (o: ObjetAlerte): string => {
 
 export type FauteDeGarde = { gabarit: string; champ: string };
 
+/**
+ * Le message, chaque séparateur entre deux chiffres retiré — de milliers comme décimal : « 9 876,54 € »
+ * s'y lit « 987654 € ». Un montant en centimes se retrouve ainsi quelle que soit sa mise en forme.
+ */
+const sansSeparateurs = (message: string): string =>
+  message.replace(/(?<=\d)[\s   .,'_](?=\d)/gu, '');
+
+/** Un montant en centimes, et ses deux lectures à l'euro près : tronquée et arrondie. */
+const formesDuMontant = (centimes: number): string[] => [
+  String(centimes),
+  String(Math.floor(centimes / 100)),
+  String(Math.round(centimes / 100)),
+];
+
 export function confronter(gabarits: Readonly<Record<string, (o: ObjetAlerte) => string>>): {
   code: number;
   confrontes: number;
@@ -63,9 +79,14 @@ export function confronter(gabarits: Readonly<Record<string, (o: ObjetAlerte) =>
     const message = gabarit(OBJET_TEMOIN);
     confrontes++;
     const champs = new Set<string>();
+    const chiffres = sansSeparateurs(message);
     for (const champ of INTERDITS) {
-      const valeur = String(OBJET_TEMOIN[champ as keyof typeof OBJET_TEMOIN]);
-      if (message.includes(valeur)) champs.add(champ);
+      const valeur = OBJET_TEMOIN[champ as keyof typeof OBJET_TEMOIN];
+      const vu =
+        typeof valeur === 'number'
+          ? formesDuMontant(valeur).some((f) => chiffres.includes(f))
+          : message.includes(valeur);
+      if (vu) champs.add(champ);
     }
     if (champs.size === 0) {
       for (const { champ, motif } of FORMES) if (motif.test(message)) champs.add(champ);

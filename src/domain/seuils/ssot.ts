@@ -11,8 +11,9 @@
  * manquements, aucun délai de « contradictoire » : retirés du produit le 2026-09-03 (`HYP-D11`).
  *
  * CE QUI N'Y FIGURE PAS ENCORE, ET POURQUOI. La durée de l'attribution (`{{FENETRE_MOIS}}`, art. 3.4
- * al. 1) est tenue par la question `JUR-T01-Q02` (`HYP-E1-9`, ligne `avenant` non tranchée) : la
- * SSOT n'invente pas une valeur que le registre ne porte pas. La fenêtre du parrainage vit en
+ * al. 1) est tenue par la question `JUR-T01-Q02`. `docs/DECISIONS.md` (`HYP-E1-9`) porte 12 mois ;
+ * la décision de Will du 2026-09-22, à 6 mois, n'est pas encore au registre. La SSOT n'invente pas
+ * une valeur que le registre ne porte pas. La fenêtre du parrainage vit en
  * configuration (`HYP-E1-19`, `src/domain/contrat/variables.ts`).
  *
  * Les montants sont en CENTIMES hors taxes (`docs/CONVENTIONS.md`, argent en centimes).
