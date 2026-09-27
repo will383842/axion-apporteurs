@@ -134,7 +134,8 @@ export const SEUILS = {
   VERSEMENT_PLAFOND_JOURS: {
     valeur: 60,
     unite: 'jours',
-    source: 'contrat art. 5.3 ; C. com. L.441-10, I',
+    source:
+      'contrat art. 5.3 (valeur confrontée, renvoi vérifié) — À RELIRE, non encore confronté : C. com. L.441-10, I',
     renvois: art('5.3'),
     verifieLe: LE,
   },
@@ -155,15 +156,25 @@ export const SEUILS = {
   VIGILANCE_PERIODICITE_MOIS: {
     valeur: 6,
     unite: 'mois',
-    source: 'contrat art. 6.2 ; C. trav. D.8222-5',
+    source:
+      'contrat art. 6.2 (valeur confrontée, renvoi vérifié) — À RELIRE, non encore confronté : C. trav. D.8222-5',
     renvois: art('6.2'),
     verifieLe: LE,
   },
   // `verifieLe` est la date de la dernière confrontation de la valeur À SA SOURCE (voir le type).
-  // Les deux seuils qui suivent portaient une source qui nommait un texte NON LU et une date qui
-  // affirmait pourtant la confrontation : la date démentait la source, sur de l'argent. La source
-  // dit maintenant ce qui a RÉELLEMENT été confronté — l'exigence —, et nomme séparément ce qui
-  // reste à lire. `verifieLe` redevient vrai sans qu'aucune valeur ne bouge.
+  //
+  // 🔴 LA RÈGLE, ET LE DÉFAUT QU'ELLE FERME. Une source qui nomme un texte de loi sans dire s'il a
+  // été lu, sous une date de vérification, AFFIRME une confrontation qui n'a pas eu lieu. Cinq
+  // seuils étaient dans ce cas — `SEUIL_VIGILANCE`, `SEUIL_DAS2`, `VERSEMENT_PLAFOND_JOURS`,
+  // `VIGILANCE_PERIODICITE_MOIS`, `CONSERVATION_PIECES_ANS` —, et trois d'entre eux l'étaient
+  // encore après une première correction qui n'en avait vu que deux : elle avait cherché une
+  // FORMULATION (« non relu », « à confirmer ») au lieu de chercher les CITATIONS DE LOI. C'est une
+  // revue `exactitude` qui l'a relevé, chiffres à l'appui (PR 180).
+  //
+  // DONC, DÉSORMAIS : toute source citant un texte de loi dit ce qui a RÉELLEMENT été confronté —
+  // l'article du contrat ou l'exigence —, et nomme séparément, en majuscules, ce qui reste à lire.
+  // `verifieLe` redevient vrai sans qu'aucune valeur ne bouge. Le témoin
+  // `RM-01 — une source qui cite un texte de loi dit si elle l'a lu` tient cette règle.
   SEUIL_VIGILANCE: {
     valeur: 500_000,
     unite: 'centimes',
@@ -232,7 +243,8 @@ export const SEUILS = {
   CONSERVATION_PIECES_ANS: {
     valeur: 10,
     unite: 'ans',
-    source: 'REQ-JUR-029 (contrats, autofactures, relevés, preuves de paiement) ; C. com. L.123-22',
+    source:
+      'REQ-JUR-029 (contrats, autofactures, relevés, preuves de paiement — valeur confrontée) — À RELIRE, non encore confronté : C. com. L.123-22',
     renvois: [],
     verifieLe: LE,
   },

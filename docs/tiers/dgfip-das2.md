@@ -16,13 +16,24 @@ L'export porte, pour chaque bénéficiaire au-dessus du seuil de l'article 240 d
 l'identité, le numéro d'établissement, l'adresse, la nature « commissions » et le montant. Un apporteur
 marqué `isTest` en est exclu (REQ-CPL-020).
 
-⚠️ **Le seuil n'a pas encore de valeur dans le code.** Depuis le 2026-09-19, REQ-ARG-024 renvoie à
-`DAS2_SEUIL_CENTS`, valeur unique de la source unique de vérité de REQ-JUR-015 (240 000 cents, BOFiP
-ACTU-2024-00154), marquée `HYP-D9` jusqu'à confirmation de l'expert-comptable : c'est le texte décidé par
-l'annexe de dédoublonnage, remis dans le registre sur décision de Will. Jusque-là, l'exigence se terminait
-par « le seuil n'a pas de valeur par défaut valide ». La source unique de vérité prévue par RM-10 reste
-**vide** tant que la valeur, sa source et sa date n'y sont pas posées : aucun cumul n'est donc calculable
-aujourd'hui. La valeur reste **à confirmer** par Will, sur avis de l'expert-comptable.
+**Le seuil A une valeur dans le code depuis cette PR.** `SEUIL_DAS2` est posé dans la source unique de
+vérité (`src/domain/seuils/ssot.ts`) à **240 000 centimes**, source `REQ-JUR-015`, BOFiP
+ACTU-2024-00154, avec sa date de confrontation. Les trois éléments exigés par RM-10 — la valeur, sa
+source et sa date — y sont : la source unique de vérité n'est plus vide, et le cumul est calculable.
+
+⚠️ **Ce qui reste ouvert, et ce n'est pas la valeur mais sa CONFIRMATION.** Le montant porte `HYP-D9`
+jusqu'à l'avis de l'expert-comptable, et la source de `SEUIL_DAS2` le dit en clair (« À CONFIRMER avec
+l'expert-comptable, non encore confronté : HYP-D9 »). Une valeur posée sous hypothèse datée n'est pas
+une valeur vérifiée : c'est une valeur qui permet d'avancer en disant qu'elle attend son arbitrage.
+
+⚠️ **Un nom diverge, et il faudra le trancher.** `REQ-ARG-024` renvoie à `DAS2_SEUIL_CENTS` ; le code
+pose `SEUIL_DAS2`. La tâche ARG-024 chercherait le premier nom et ne le trouverait pas. À aligner d'un
+côté ou de l'autre — dette relevée par une revue `exactitude` sur la PR 180, pas encore arbitrée.
+
+> Ce paragraphe affirmait le contraire — « le seuil n'a pas encore de valeur dans le code », « la
+> source unique de vérité reste **vide** » — et c'est devenu faux le jour où cette PR a posé la
+> constante, sans que le document bouge. Une affirmation sur de l'argent qui survit à ce qu'elle
+> décrit est un mensonge par inertie : c'est une revue qui l'a vu, pas le document.
 
 ## 2. Source officielle
 

@@ -122,6 +122,49 @@ describe('REQ-JUR-015 — la SSOT porte tous les délais du contrat, sourcés et
   });
 });
 
+describe('REQ-JUR-015 — une source qui cite un texte de loi dit si elle l’a lu', () => {
+  /**
+   * `verifieLe` est la date de la dernière confrontation de la valeur À SA SOURCE. Une source qui
+   * nomme un texte de loi sans dire s'il a été lu, sous cette date, AFFIRME une confrontation qui
+   * n'a pas eu lieu — et ces valeurs sont des montants et des délais contractuels.
+   *
+   * 🔴 CE TÉMOIN EXISTE PARCE QUE LE CONTRÔLE À L'ŒIL A ÉCHOUÉ. Une première correction a cherché
+   * une FORMULATION (« non relu », « à confirmer ») et a conclu « ce sont les DEUX seuls, vérifié
+   * sur les 27 ». Trois seuils citaient encore une loi en silence : `VERSEMENT_PLAFOND_JOURS`
+   * (C. com. L.441-10), `VIGILANCE_PERIODICITE_MOIS` (C. trav. D.8222-5) et
+   * `CONSERVATION_PIECES_ANS` (C. com. L.123-22). Une revue `exactitude` les a nommés.
+   * Le témoin cherche donc la CITATION, jamais la formulation.
+   */
+  const CITE_UNE_LOI = /C\.\s*(?:trav|com|civ)\b|\b[LDR]\.\d|art\.\s*[LDR]\.\d|BOFiP/i;
+
+  it('REQ-JUR-015 — chaque source citant une loi dit si le texte a été confronté', () => {
+    const muets = Object.entries(SEUILS)
+      .filter(([, s]) => CITE_UNE_LOI.test(s.source) && !/confront/i.test(s.source))
+      .map(([cle, s]) => `${cle} : « ${s.source} »`);
+    expect(
+      muets,
+      `ces sources citent un texte de loi sans dire s’il a été confronté, sous une date de vérification qui l’affirme :\n${muets.join('\n')}`
+    ).toEqual([]);
+  });
+
+  it('REQ-JUR-015 — TÉMOIN : une source qui cite une loi en silence est vue', () => {
+    // Le témoin éprouve le DÉTECTEUR, pas la SSOT : sans lui, une expression trop étroite rendrait
+    // la liste vide et le vert ne voudrait rien dire.
+    for (const texte of [
+      'contrat art. 5.3 ; C. com. L.441-10, I',
+      'C. trav. D.8222-5',
+      'REQ-JUR-029 ; C. com. L.123-22',
+    ]) {
+      expect(CITE_UNE_LOI.test(texte), `« ${texte} » doit être vu comme citant une loi`).toBe(true);
+      expect(/confront/i.test(texte), `« ${texte} » ne dit PAS avoir été confronté`).toBe(false);
+    }
+    // Et une source sans loi ne doit pas être prise.
+    expect(CITE_UNE_LOI.test('contrat art. 5.5'), 'un article de contrat n’est pas une loi').toBe(
+      false
+    );
+  });
+});
+
 describe('RM-01 — les durées des motifs sont DÉRIVÉES de la SSOT, jamais retapées', () => {
   const SOURCE = readFileSync('scripts/gates/seuils-ssot.ts', 'utf8');
 
