@@ -134,6 +134,36 @@ describe('REQ-GOV-012 — une entrée du registre sans script sur le disque est 
     expect(familles(avec('fusionnee'))).toEqual(['gate_sans_script']);
   });
 
+  it('REQ-GOV-012 — un script que `package.json` LANCE ne se promet plus : sa tâche non livrée ne l’absout pas', () => {
+    // Mesuré sur la PR 175 : `scripts/gates/migrations-additive.ts` retiré de l'index sortait en
+    // zéro, rangé parmi les promesses parce que sa tâche porteuse (phase courante) n'est pas livrée
+    // — alors que `package.json` le lance et que la porte A l'exécute. Un script qu'une commande
+    // du dépôt invoque est DÉCLARÉ écrit : son absence est une perte, pas une promesse.
+    const chemin = 'scripts/gates/gov-deja-lancee.ts';
+    const avec = (lance: boolean): Vue =>
+      variante({
+        gates: [
+          ...VUE_CONFORME.gates,
+          { id: 'gov:deja-lancee', phase: courante(), script: chemin, tache: 'ZZ-T03' },
+        ],
+        taches: [...VUE_CONFORME.taches, tache('ZZ-T03', courante(), 'a_faire', [chemin])],
+        packageJson: lance
+          ? JSON.stringify({
+              ...(JSON.parse(VUE_CONFORME.packageJson) as Record<string, unknown>),
+              scripts: {
+                ...(JSON.parse(VUE_CONFORME.packageJson) as { scripts: Record<string, string> })
+                  .scripts,
+                'gov:deja-lancee': `tsx ${chemin}`,
+              },
+            })
+          : VUE_CONFORME.packageJson,
+      });
+    expect(familles(avec(true))).toEqual(['gate_sans_script']);
+    expect(messages(avec(true))).toContain(chemin);
+    // L'AUTRE FACE, à un champ près : non lancé, il reste promis par sa tâche.
+    expect(familles(avec(false))).toEqual([]);
+  });
+
   it('REQ-GOV-012 — une AUTRE tâche non livrée qui cite le script dans ses paths ne le promet PAS', () => {
     // Une tâche qui MODIFIE une garde la déclare dans ses paths. Si ce seul fait valait promesse,
     // supprimer la garde passerait pour « à venir » tant qu'une retouche est au backlog.

@@ -85,6 +85,23 @@ const DESARMEMENTS: readonly Desarmement[] = [
       ),
   },
   {
+    fait: '(a, citation) une garde dont les deux étapes ne font plus que la CITER — dans un `name:` et un `echo`',
+    famille: 'garde_ecrite_jamais_appelee',
+    nomme: 'jur:grille-chiffree',
+    ci: (t) =>
+      remplacerUneFois(
+        t,
+        '      - name: Grille du contrat — aucun forfait, bareme ou pourcentage sans chiffre dans l annexe 1\n' +
+          '        run: pnpm jur:grille-chiffree\n' +
+          '      - name: La garde de la grille chiffree sait rougir\n' +
+          '        run: pnpm jur:grille-chiffree:prove\n',
+        '      - name: pnpm jur:grille-chiffree\n' +
+          '        run: echo pnpm jur:grille-chiffree scripts/gates/jur-grille-chiffree.ts\n' +
+          '      - name: La garde de la grille chiffree sait rougir\n' +
+          '        run: echo "pnpm jur:grille-chiffree:prove"\n'
+      ),
+  },
+  {
     fait: '(b) l’étape qui vérifie la vue d’état RETIRÉE — elle ne lance aucun script de garde',
     famille: 'etape_absente',
     nomme: 'La vue de l etat vivant est egale a sa source',
@@ -124,7 +141,7 @@ const DESARMEMENTS: readonly Desarmement[] = [
     },
   },
   {
-    fait: '(f) la commande d’une étape rendue inopérante par une tolérance écrite dans le shell',
+    fait: '(d, shell) la commande d’une étape rendue inopérante par une tolérance écrite dans le shell',
     famille: 'etape_repointee',
     nomme: 'La garde de l etat vivant sait rougir',
     ci: (t) =>
@@ -217,6 +234,124 @@ describe('REQ-GOV-012 — six désarmements, six refus NOMMÉS (copies en mémoi
 
   it('REQ-GOV-012 — CONTRE-TÉMOIN : la vue de référence passe la porte A qu’elle fige elle-même', async () => {
     expect((await confronterLaPorteA(VUE_CONFORME)).fautes).toEqual([]);
+  });
+});
+
+/**
+ * VETO DE SÉCURITÉ SUR LA PR 175 — L'ÉTAPE ET LE JOB SONT FIGÉS EN ENTIER. La confrontation ne lisait
+ * que quatre clés par étape (`if`, `continue-on-error`, `run`, `uses`) et deux du job : toute AUTRE
+ * clé désarmait la porte en exit 0 sans toucher au constat. La classe : une clé que le constat ne
+ * porte pas, ajoutée, retirée ou modifiée — à l'étape, au job ou au workflow — est une faute NOMMÉE.
+ */
+interface Alteration {
+  quoi: string;
+  famille: string;
+  nomme: readonly string[];
+  ci: (t: string) => string;
+}
+const ALTERATIONS: readonly Alteration[] = [
+  {
+    quoi: 'une clé `shell:` sur une étape — un shell qui rend toujours 0',
+    famille: 'porte_a_alteree',
+    nomme: ['Typecheck', 'shell'],
+    ci: (t) =>
+      remplacerUneFois(
+        t,
+        '        run: pnpm typecheck\n',
+        "        run: pnpm typecheck\n        shell: sh -c 'exit 0' {0}\n"
+      ),
+  },
+  {
+    quoi: '`defaults: run: shell:` sur le JOB — ses étapes désarmées d’un coup',
+    famille: 'porte_a_alteree',
+    nomme: ['gate-a', 'defaults'],
+    ci: (t) =>
+      remplacerUneFois(
+        t,
+        '    runs-on: ubuntu-latest\n',
+        "    runs-on: ubuntu-latest\n    defaults:\n      run:\n        shell: sh -c 'exit 0' {0}\n"
+      ),
+  },
+  {
+    quoi: '`with: ref:` sur le checkout — la porte mesure un AUTRE arbre',
+    famille: 'porte_a_alteree',
+    nomme: ['uses: actions/checkout@v4', 'with'],
+    ci: (t) =>
+      remplacerUneFois(
+        t,
+        '        with: { fetch-depth: 0 }\n',
+        '        with: { fetch-depth: 0, ref: main }\n'
+      ),
+  },
+  {
+    quoi: 'une clé INCONNUE du constat ajoutée à une étape',
+    famille: 'porte_a_alteree',
+    nomme: ['Format', 'working-directory'],
+    ci: (t) =>
+      remplacerUneFois(
+        t,
+        '        run: pnpm format:check\n',
+        '        run: pnpm format:check\n        working-directory: ./vide\n'
+      ),
+  },
+  {
+    quoi: 'l’`env:` d’une étape MODIFIÉ',
+    famille: 'porte_a_alteree',
+    nomme: ['Tests', 'env'],
+    ci: (t) =>
+      remplacerUneFois(
+        t,
+        '        run: pnpm test\n        env:\n          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}\n',
+        '        run: pnpm test\n        env:\n          GH_TOKEN: ${{ secrets.AUTRE }}\n'
+      ),
+  },
+  {
+    quoi: 'l’`env:` d’une étape RETIRÉ',
+    famille: 'porte_a_alteree',
+    nomme: ['Tests', 'env'],
+    ci: (t) =>
+      remplacerUneFois(
+        t,
+        '        run: pnpm test\n        env:\n          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}\n',
+        '        run: pnpm test\n'
+      ),
+  },
+  {
+    quoi: 'un `env:` posé au niveau du WORKFLOW, qui agit sur le job',
+    famille: 'porte_a_alteree',
+    nomme: ['workflow', 'env'],
+    ci: (t) => remplacerUneFois(t, 'name: Gate A\n', 'name: Gate A\nenv:\n  CI: "false"\n'),
+  },
+  {
+    quoi: 'deux étapes de MÊME nom — la seconde échappait à la confrontation',
+    famille: 'etape_en_double',
+    nomme: ['Typecheck'],
+    ci: (t) =>
+      remplacerUneFois(
+        t,
+        '      - name: Typecheck\n        run: pnpm typecheck\n',
+        '      - name: Typecheck\n        run: pnpm typecheck\n' +
+          "      - name: Typecheck\n        run: pnpm typecheck\n        shell: sh -c 'exit 0' {0}\n"
+      ),
+  },
+];
+
+describe('REQ-GOV-012 — l’étape ENTIÈRE et le job ENTIER sont figés : aucune clé ne désarme en silence', () => {
+  for (const a of ALTERATIONS) {
+    it(`REQ-GOV-012 — ${a.quoi} : ${a.famille}, nommée`, async () => {
+      const vue = vueDesarmee({ fait: a.quoi, famille: a.famille, nomme: '', ci: a.ci });
+      const porte = await confronterLaPorteA(vue);
+      expect(porte.fautes.map((f) => f.famille)).toContain(a.famille);
+      const dites = porte.fautes
+        .filter((f) => f.famille === a.famille)
+        .map((f) => f.message)
+        .join('\n');
+      for (const n of a.nomme) expect(dites).toContain(n);
+    });
+  }
+
+  it('REQ-GOV-012 — CONTRE-TÉMOIN : le vrai ci.yml passe, étapes, job et workflow figés compris', async () => {
+    expect((await confronterLaPorteA(lireVue())).fautes).toEqual([]);
   });
 });
 
