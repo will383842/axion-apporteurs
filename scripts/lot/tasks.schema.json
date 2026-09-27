@@ -238,6 +238,10 @@
         {
           "pattern": "^(?!/)(?![A-Za-z]:)(?![\\s\\S]*\\\\)(?![\\s\\S]*//)(?![\\s\\S]*(?:^|/)\\.\\.?(?:/|$))",
           "description": "(d) Égal à sa forme canonique et dans le dépôt : ni racine, ni lettre de lecteur, ni antislash, ni segment vide, ni segment `.` ou `..` — un remontant EN TÊTE survit à la normalisation, d'où le contrôle du segment."
+        },
+        {
+          "pattern": "^(?![\\s\\S]*(?:^|/)[.\\u2024\\u2025\\uFE30\\uFE52\\uFF0E\\p{M}\\p{Default_Ignorable_Code_Point}]*[\\u2024\\u2025\\uFE30\\uFE52\\uFF0E\\p{M}\\p{Default_Ignorable_Code_Point}][.\\u2024\\u2025\\uFE30\\uFE52\\uFF0E\\p{M}\\p{Default_Ignorable_Code_Point}]*(?:/|$))",
+          "description": "(e) Aucun segment qui ne devient `.`, `..` ou vide QU'APRÈS normalisation : un segment fait seulement de points, de points de compatibilité (les points de code dont la forme NFKD n'est qu'un ou deux points — ensemble MESURÉ sur tout Unicode, et re-mesuré par le témoin), de marques et de caractères ignorables par défaut, dont au moins un hors de l'ASCII. (d) ne voit que l'écriture littérale ; le comparateur de GOV-051 échoue fermé sur ces segments, cette clause les refuse dès l'écriture."
         }
       ]
     }

@@ -296,7 +296,13 @@ export const DOSSIER_DES_GARDES = 'scripts/gates/';
  *      défaut (`Default_Ignorable_Code_Point`, dont le remplisseur hangul), et les blancs Unicode en
  *      bordure de segment ;
  *   3. la forme canonique : antislash lu comme séparateur, segments vides et `.` retirés, `..`
- *      résolu — un remontant en tête reste un segment `..`, qui ne désigne rien du dépôt ;
+ *      résolu — un remontant en tête reste un segment `..`, qui ne désigne rien du dépôt. ⚠️ SEULS
+ *      LES POINTS ÉCRITS SE RÉSOLVENT : les segments sont découpés sur la forme ÉCRITE, puis
+ *      nettoyés un à un. Un segment qui ne devient `.`, `..` ou vide QU'APRÈS les étapes 1 et 2
+ *      n'est ni retiré ni résolu : il devient `SEGMENT_INDECIDABLE`, et la comparaison est
+ *      indécidable. Nettoyer PUIS résoudre laissait un segment fabriqué par le nettoyage manger le
+ *      segment `axionia` — le verdict tombait à `non`, la seule réponse qui laisse passer (veto
+ *      sécurité de la PR 158) ;
  *   4. la CASSE EST TRANCHÉE, et tranchée insensible : sur les systèmes de fichiers par défaut de
  *      Windows et de macOS, `AXIONIA/` désigne le même dossier que `axionia/` — les postes des
  *      agents sont des Windows ;
@@ -312,40 +318,68 @@ export const DOSSIER_DES_GARDES = 'scripts/gates/';
  * tues : `scripts/lot/composer.ts` (collisions par égalité de chaîne, `pris.has`),
  * `scripts/lot/paths-proposes.ts` (le préfixe `axionia/`, deux fois), `scripts/lot/chemins-de-tache.ts`
  * (`declares` / `promis`, par égalité), `scripts/lot/integrer.ts` (égalité et préfixe de dossier),
- * `scripts/gates/gov-pr.ts` (`touche()`, fichiers de la PR contre les `paths`) et
- * `scripts/gates/gov-attributions.ts` (`estGabarit`). Six fichiers, hors du périmètre de GOV-051.
+ * `scripts/lot/revues.ts` (`touche()`, qu'appelle `scripts/gates/gov-pr.ts` pour confronter les
+ * fichiers de la PR aux `paths`) et `scripts/gates/gov-attributions.ts` (`estGabarit`). Six
+ * fichiers, hors du périmètre de GOV-051. ET DANS CE FICHIER MÊME : `confronterDisqueEtRegistre()`
+ * trie la population par la primitive, mais apparie ensuite les entrées du registre aux fichiers
+ * suivis par ÉGALITÉ BRUTE (`duDossier.includes(g.script)`, `g.script === f`). Une écriture
+ * différente du même script y tombe du côté fermé — la garde écrite sort « hors registre », une
+ * faute, et l'entrée est rendue « sans script » —, jamais du côté muet ; elle n'est pas pour autant
+ * comparée.
  */
 export const DEPOT_VOISIN = 'axionia';
 
 const IMPRIMABLE_ASCII = /^[\x20-\x7e]*$/;
 
-/** Les segments d'un chemin sous sa forme de COMPARAISON (étapes 1 à 4 ci-dessus). */
-export function formeDeComparaison(chemin: string): string[] {
-  const nettoye = chemin
+/**
+ * Le segment qu'un nettoyage a FABRIQUÉ (étape 3) : il tient la place d'un `.`, d'un `..` ou d'un
+ * vide qui n'était pas écrit. Un caractère de la classe C ne survit pas au nettoyage : aucun
+ * segment nettoyé ne peut lui être égal.
+ */
+export const SEGMENT_INDECIDABLE = '\u0000';
+
+const PAS_UN_NOM = new Set(['', '.', '..']);
+
+/** Les étapes 1, 2 et 4 sur UN segment écrit — qui peut, lui, porter une barre de compatibilité. */
+function nettoyer(segment: string): string[] {
+  return segment
     .normalize('NFKD')
     .replace(/[\p{C}\p{M}\p{Default_Ignorable_Code_Point}]/gu, '')
-    .replaceAll('\\', '/')
-    .toLowerCase();
+    .toLowerCase()
+    .split(/[\\/]/)
+    .map((s) => s.replace(/^\p{White_Space}+|\p{White_Space}+$/gu, ''));
+}
+
+/** Les segments d'un chemin sous sa forme de COMPARAISON (étapes 1 à 4 ci-dessus). */
+export function formeDeComparaison(chemin: string): string[] {
   const segments: string[] = [];
-  for (const brut of nettoye.split('/')) {
-    const s = brut.replace(/^\p{White_Space}+|\p{White_Space}+$/gu, '');
-    if (s === '' || s === '.') continue;
-    if (s === '..' && segments.length > 0 && segments[segments.length - 1] !== '..') segments.pop();
-    else segments.push(s);
+  for (const ecrit of chemin.split(/[\\/]/)) {
+    for (const s of nettoyer(ecrit)) {
+      // Un point, un remontant ou un vide que l'écriture ne portait pas : signalé, jamais résolu.
+      if (PAS_UN_NOM.has(s) && s !== ecrit) segments.push(SEGMENT_INDECIDABLE);
+      else if (s === '' || s === '.') continue;
+      else if (s === '..' && segments.length > 0 && segments[segments.length - 1] !== '..')
+        segments.pop();
+      else segments.push(s);
+    }
   }
   return segments;
 }
 
 /**
  * Le chemin désigne-t-il le dossier `dossier` ou ce qui vit dessous ? `indecidable` quand un segment
- * comparé porte encore, normalisé, un caractère hors de l'ASCII imprimable — l'appelant échoue fermé.
+ * a été FABRIQUÉ par le nettoyage (il peut être un remontant : sa place ne borne rien), ou quand un
+ * segment confronté à ceux du dossier porte encore, normalisé, un caractère hors de l'ASCII
+ * imprimable — l'appelant échoue fermé.
  */
 export function estSousLeDossier(chemin: string, dossier: string): 'oui' | 'non' | 'indecidable' {
   const c = formeDeComparaison(chemin);
   const d = formeDeComparaison(dossier);
-  // Plus court que le dossier : rien dessous, quelle que soit l'écriture de ses segments.
-  if (d.length === 0 || c.length < d.length) return 'non';
-  if (d.every((s, i) => c[i] === s)) return 'oui';
+  if (d.length === 0) return 'non';
+  if (c.includes(SEGMENT_INDECIDABLE)) return 'indecidable';
+  if (c.length >= d.length && d.every((s, i) => c[i] === s)) return 'oui';
+  // Les segments confrontés à ceux du dossier — TOUS ceux du chemin s'il est plus court : un seul
+  // segment illisible peut porter, en lettres qui ressemblent à des barres, le dossier entier.
   return c.slice(0, d.length).some((s) => !IMPRIMABLE_ASCII.test(s)) ? 'indecidable' : 'non';
 }
 /**
@@ -566,8 +600,9 @@ export function controler(vue: Vue): Faute[] {
           `${t.id} — tâche \`repo: partners\` qui revendique ${JSON.stringify(p)}, ` +
           (verdict === 'oui'
             ? `un chemin du dépôt voisin (forme comparée : \`${formeDeComparaison(p).join('/')}\`). `
-            : `un chemin dont le premier segment porte, une fois normalisé, un caractère hors de ` +
-              `l'ASCII imprimable : la comparaison à \`${DEPOT_VOISIN}/\` est INDÉCIDABLE (un ` +
+            : `un chemin dont un segment porte, une fois normalisé, un caractère hors de ` +
+              `l'ASCII imprimable, ou ne devient un point, un remontant ou un vide qu'après ` +
+              `normalisation : la comparaison à \`${DEPOT_VOISIN}/\` est INDÉCIDABLE (un ` +
               `homoglyphe est une lettre ordinaire), et elle échoue fermée. `) +
           `Une tâche écrit dans UN dépôt : le composeur de lots suppose cet invariant ` +
           `pour ne jamais mêler deux dépôts dans un même lot. Le sens inverse est déjà gardé par ` +
