@@ -99,6 +99,9 @@ export const schemaSecrets = z.object({
   // INT-T11 (REQ-INT-026) : le secret propre de la porte MCP. Dans CETTE liste pour qu'il suive les
   // règles de REQ-SEC-028 — au moins 32 octets, distinct des autres, préfixes refusés en production.
   PARTNERS_MCP_SHARED_SECRET: secret,
+  // INT-T10 (REQ-INT-023, REQ-SEC-010) : la clé qui authentifie les webhooks de rebonds du relais de
+  // courriel — un secret dédié par source, dans CETTE liste pour les règles de REQ-SEC-028.
+  ZEPTOMAIL_WEBHOOK_SECRET: secret,
 });
 
 export type Secrets = z.infer<typeof schemaSecrets>;
@@ -152,6 +155,13 @@ export const schemaConfiguration = z.object({
   PARTNERS_ENV: nette.optional(),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).optional(),
   SENTRY_DSN: urlDe(['https:']).optional(),
+  // INT-T10 (REQ-INT-022) : l'envoi automatique n'existe que si ce drapeau vaut `true`. Absent, il
+  // vaut faux — le défaut est fermé. Il ne se pose qu'avec, dans `docs/tiers/zeptomail.md`, la
+  // référence datée du rapport d'agrégation montrant `dkim=pass` et `spf=pass`.
+  PARTNERS_EMAIL_DMARC_VERIFIE: z.enum(['true', 'false']).optional(),
+  // INT-T10 (REQ-INT-022) : l'adresse HUMAINE d'expédition, du domaine d'envoi ; sa forme est jugée
+  // par `configurationDeLEmetteur` (`src/server/integrations/zeptomail/emetteur.ts`).
+  PARTNERS_EMAIL_EXPEDITEUR: nette.optional(),
 });
 
 export type Configuration = z.infer<typeof schemaConfiguration>;
@@ -333,12 +343,18 @@ const ROLES: Record<NomDeVariable, string> = {
   IP_HASH_SALT: "sale l'empreinte des adresses réseau",
   PII_HASH_KEY: 'clé des empreintes de recherche des données personnelles',
   PARTNERS_MCP_SHARED_SECRET: 'serrure de la porte MCP `POST /api/mcp`, en-tête `x-mcp-secret`',
+  ZEPTOMAIL_WEBHOOK_SECRET:
+    'authentifie les webhooks de rebonds du relais de courriel, en-tête `Producer-Signature`',
   DATABASE_URL: 'la base Postgres ; `readyz` la sonde',
   REDIS_URL: 'le cache Redis ; `readyz` le sonde',
   NOTIFY_SINK: "retient toute notification dans le journal au lieu de l'envoyer",
   PARTNERS_ENV: "nom de l'environnement ; `production` avec `NODE_ENV=production` vaut production",
   LOG_LEVEL: 'niveau du journal (pino), `info` si absente',
   SENTRY_DSN: 'adresse de collecte des erreurs ; absente, rien ne part',
+  PARTNERS_EMAIL_DMARC_VERIFIE:
+    "ouvre l'envoi automatique des courriels ; absente ou `false`, aucun courriel ne part (REQ-INT-022)",
+  PARTNERS_EMAIL_EXPEDITEUR:
+    "adresse humaine d'expédition, du sous-domaine d'envoi ; jamais une adresse sans réponse",
 };
 
 /** La règle de forme, dite une fois par espèce de variable — celle que le schéma applique. */
@@ -360,6 +376,10 @@ function regleDe(nom: NomDeVariable): string {
         .join(', ');
     case 'SENTRY_DSN':
       return 'URL `https:`';
+    case 'PARTNERS_EMAIL_DMARC_VERIFIE':
+      return schemaConfiguration.shape.PARTNERS_EMAIL_DMARC_VERIFIE.unwrap()
+        .options.map((n) => `\`${n}\``)
+        .join(', ');
     default:
       return 'non vide, sans espace en bordure';
   }

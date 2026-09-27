@@ -7,8 +7,8 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `9d6fbad` — 2026-09-27T01:02:56+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #82 (un conflit avec `main`) · 2. #145 (un conflit avec `main`) |
+| Où est `main` ? | `0a34b88` — 2026-09-27T03:08:19+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #82 (un conflit avec `main`) · 2. #158 (un conflit avec `main`) · 3. #165 (un conflit avec `main`) |
 | Qui tient quoi ? | QA-T07 (A05) |
 | Où en est la phase ? | phase 0 — 43/116 tâches, reste 57.10 j |
 | Le prochain pas | SEC-04 — Sessions révocables en base, `sessionVersion`, step-up (chemin critique) |
@@ -65,7 +65,8 @@ Reste sur ce chemin : **13.75 j**.
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
 | 1 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
-| 2 | #145 — feat(SEC-06): lot L0-05 — réception des webhooks axionia, événements reçus et battements ; émetteur e-mail et rebonds | `t/lot-l0-05` | un conflit avec `main` — à résoudre avant tout |
+| 2 | #158 — chore(GOV-053): lot L0-06 — PLAN-STATE à la ligne, rubriques dues, lecteur unique, forme des chemins | `t/lot-l0-06` | un conflit avec `main` — à résoudre avant tout |
+| 3 | #165 — feat(SEC-17): lot L0-07 — rôles console, matrice unique, requireRole ; gates structurelles de la charte | `t/lot-l0-07` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -93,7 +94,7 @@ Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeS
 
 ## Dernier atterrissage
 
-`origin/main` = `9d6fbad` (2026-09-27T01:02:56+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `0a34b88` (2026-09-27T03:08:19+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
@@ -109,6 +110,69 @@ Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écr
 
 **Appris.** Stryker laisse survivre un mutant STATIQUE : une constante fléchée de module (`const refus = (motif) => ...`) est évaluée au chargement, avant toute activation de mutant, et `() => undefined` y survit alors que chaque test qui l'appelle rougirait. Une déclaration de fonction est évaluée à l'appel : même code, mutant tué. Et Prisma ne rend que la CLÉ d'une unicité violée, jamais le nom de l'index, même en SQL brut par `$executeRawUnsafe` : pour qu'un témoin nomme un index unique partiel, un bloc `DO` relève `CONSTRAINT_NAME` par `GET STACKED DIAGNOSTICS` et le relance dans son message. Les messages des `RAISE EXCEPTION` et des CHECK, eux, traversent.
 
+### PR #145 — 2026-09-26 — feat(SEC-06): lot L0-05 — réception des webhooks axionia, événements reçus et battements ; émetteur e-mail et rebonds
+
+**Fait.** SEC-06 porte la PR, INT-T10 est dans son champ `Lot:`. La réception des événements
+d'axionia vérifie le secret dédié, borne le corps à 128 Ko avant de le lire en entier, vérifie la
+signature `<secondes>.<corps exact>` à temps constant avec une tolérance de 300 s, juge l'enveloppe
+par le Zod publié du contrat et la frontière de REQ-INT-029, puis inscrit l'événement dans
+`evenements_recus` avant tout traitement ; le doublon, par `event_id` ou par `paymentId`, est refusé
+par la base et rend 200 `{duplicate:true}`. Une version inconnue bien formée est inscrite `held`. Le
+travail de fond, confié à `after()`, met en attente le devis sans client et le paiement sans
+facture, les réveille à l'arrivée du parent, écrit `en_erreur` sous le nom de l'erreur, et un
+battement par passage dans `battements`. La migration `20260927000000_evenements_recus_et_battements`
+pose les enums, les tables, les CHECK, les deux index partiels et le déclencheur qui ne laisse
+écrire que les cinq colonnes du traitement. L'émetteur d'INT-T10 écrit une ligne `courriels_envoyes`
+par demande, retenue et visible quand l'adresse est supprimée ou que le drapeau DMARC n'est pas
+vrai, sans appel au relais ; le webhook des rebonds vérifie `Producer-Signature` et seul un rebond
+définitif ajoute une ligne à `suppressions_courriel`. Migration
+`20260927000100_courriels_envoyes_et_suppressions`, secret et variables dans `src/lib/env.ts`.
+
+**Reste.** Les libellés de `type_evenement_recu` sont tranchés : la base porte la valeur de fil
+dont le point devient un souligné, sans `@map`, forme que le point 10 de `partners/ADR-0022`
+amendé (`6025808`) et l'acceptance (9) de SEC-06 prescrivent désormais, avis A02 rendu en
+revue 5327468600 sur `6025808`. Les effets métier du traitement appartiennent à DM-10-P et
+DM-15, qui se brancheront sur le port `dispatch`. La reprise automatique d'un événement
+`en_erreur` n'est portée par aucune tâche à ce jour. L'appel réel à l'interface d'envoi du relais et le câblage de
+`demanderEnvoi` dans l'envoi du lien magique de SEC-03 attendent la lecture de la rubrique 2 de
+`docs/tiers/zeptomail.md`, que `A01` répartit, et la pose du drapeau par Will. La charge réelle d'un
+rebond, à enregistrer en fixture, attend la même lecture. Les preuves rouges de
+`partners:webhook:idempotent` et `webhook-4-verdicts` attendent un passage de porte A. REQ-QA-026
+reste à verser aux `reqs` de SEC-06 par le `gardien-spec`.
+
+**Appris.** Le schéma tranché par l'architecte et une garde bloquante peuvent se contredire : un
+libellé Postgres `client.cree` posé par `@map` est refusé par `gov:termes-interdits`, qui lit
+`prisma/` et n'exempte que les commentaires des fichiers `.prisma` et `.sql`. Les fixtures du
+producteur axionia pseudonymisent `subject_ref` et le payload séparément : l'identifiant du sujet
+n'y est plus celui que la charge porte, et une dépendance entre deux événements ne se rejoue pas
+sur ces fixtures. Déplacer une constante vers un module partagé fait rougir le contrôle 3 de
+`harnais-mcp` : la liste des symboles que la porte MCP peut importer vit dans
+`src/server/mcp/registre.ts`. `journal:sans-pii` refuse le mot nu `evenement` jusque dans le nom
+d'un paramètre de type.
+
+**Porte A.** Les trois specs d'intégration, écrites sans Docker sur le poste, ont tourné en porte A
+(run 36254413689) et sont vertes du premier coup : `webhook.spec.ts` 31 tests,
+`webhook-verdicts.spec.ts` 9, `webhook-rebonds.spec.ts` 10. La porte a rougi sur un seul témoin,
+`titres-de-test-resolvent.spec.ts` : des titres de test nommaient REQ-QA-008, REQ-QA-009,
+REQ-INT-010 et REQ-SEC-011, absorbées. Les titres nomment désormais la survivante, et l'annotation
+garde l'absorbée avec son renvoi, la seule forme que `gov:trace` et ce témoin acceptent ensemble.
+
+**Mutation.** La porte A du run 36272143938 a rougi sur Stryker seul : 38,18 % pour un seuil de
+79 %, parce que `vitest.mutation.config.ts` ne lançait pas `tests/unit/email/**` (les deux modules
+du relais à 0 %, sans couverture) et que la porte MCP, touchée d'une ligne, n'était jugée que par un
+test d'intégration. Les tests du relais entrent dans la passe, et des témoins en processus tuent les
+survivants : la porte MCP, les adaptateurs Prisma sur un client qui enregistre, les corps de refus,
+les bornes et les réarmements. `pnpm mutation:pr` rend 93,99 % en local : 1110 mutants tués sur 1181
+jugés. Les 71 restants : 51 dans `src/lib/env.ts`, du code antérieur à la PR dont les tests vivent
+hors de ses `paths` ; la constante `CORPS_MAX_OCTETS`, mutée au chargement du module que la passe
+incrémentale ne recharge pas (le témoin de la borne rougit sur ce mutant posé à la main) ; 19
+équivalents nommés dans le corps de la PR — encodage `utf8` passé à une API
+qui l'a par défaut, repli `?? ''` ou `?? '0'` qui donne le même verdict, garde redondante avec la
+suivante. La lentille `securite` a relevé que la seconde tentative de `Producer-Signature` vérifiait
+le HMAC sur le corps percent-décodé puis lisait le corps reçu : le verdict porte désormais le texte
+vérifié, et c'est lui qui est lu. Le rejeu d'une livraison du relais n'est pas borné (le `ts` n'est
+pas signé) : sans effet tant que la suppression reste idempotente, dette nommée dans la fiche.
+
 ### PR #141 — 2026-09-26 — chore(GOV-012): registre rattrape, huit taches livrees par des PR fusionnees passent fusionnee
 
 **Fait.** Huit tâches livrées par des PR fusionnées portaient encore `a_faire` : GOV-100 (PR 131), QA-T04, CPL-T22, QA-T30 et UX-P0-03 (PR 130, lot L0-03), SEC-03 (PR 134), INT-T11 (PR 136) et GOV-102 (PR 139). Elles passent `fusionnee` par `reclasser.mjs`, revendication constatée sur l'issue puis livraison constatée sur la forge, jamais à la main ; chaque couple a été confronté à la main au titre ou au champ `Lot:` de sa PR. Les trois tâches du lot sans issue en ont reçu une chacune (issues 142, 143 et 144), sur décision du donneur d'ordre. La phase 0 passe de 35 à 43 tâches terminées sur 115, et le prochain pas quitte SEC-03, déjà livrée, pour SEC-04.
@@ -119,41 +183,7 @@ Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écr
 
 Porte A : deux rouges sur la tête 79f50e2, verts sur `main` 4c1fa00, donc causés par cette PR, et d'une seule cause. Le témoin REQ-INT-026 « tâche repreneuse sans REQ-INT-027 » désignait INT-T11 et lisait son statut dans le registre réel : passée `fusionnee`, elle déclenchait d'abord la famille « est livrée », qui masquait celle que le cas garde. Le témoin REQ-QA-006 « démon absent », qui dérive ses comptes du disque, rougissait par ricochet : `adaptateur-mcp.spec.ts` est l'un des trois fichiers autonomes, et il échouait. Correctif : le statut de la repreneuse est posé dans la fixture (`a_faire`), la famille attendue reste la même ; le fichier de test est ajouté aux chemins de GOV-012 par `ajouter-path.mjs`. Mesuré en local : les 30 cas du fichier verts, le témoin REQ-QA-006 vert (6 dépendants en échec, 3 autonomes au vert), et le cas corrigé rougit encore quand on neutralise dans le harnais le contrôle de REQ-INT-027 (code 0 au lieu de 1). Un témoin qui nomme une tâche réelle pour son CONTENU dépend aussi de son STATUT, et un rattrapage du registre le décale.
 
-### PR #140 — 2026-09-26 — feat(GOV-101): relectures sans defaut — deux lentilles, accord sur patch, pre-gate, mutation:pr
-
-**Fait.** Deux lentilles partout, `exactitude` et `securite`, plus `schema` sur une PR de schéma :
-décision de Will du 2026-09-26, `W16`, consignée par `partners/ADR-0024`. La mutation n'est plus un
-avis d'agent : `pnpm mutation:pr` lance Stryker en bac à sable, en porte A, sur les fichiers de
-`src/domain/`, `src/server/` et `src/lib/` que la PR touche, et nomme chaque survivant. Un accord
-survit à une
-fusion de `main` quand l'empreinte du diff propre à la PR (`git patch-id --stable` depuis la base de
-fusion, vues dérivées exclues) est inchangée, `exactitude` comprise. `pnpm pre-gate` joue les étapes
-rapides de la porte A lues dans `ci.yml` ; `pnpm vues:fusion` fusionne `main` et rend les vues quand
-elles seules sont en conflit ; le total littéral du cliquet des sorties non nulles est remplacé par
-une lecture de la base. GOV-101 porte la PR.
-
-**Reste.** Sortir `docs/PLAN-STATE.md` et `docs/TRACABILITE.md` des PR : un workflow devrait pousser
-sur `main`, ce que `partners/ADR-0006` section 4 interdit (REQ-GOV-014) ; décision de Will à prendre,
-nommée dans `partners/ADR-0024`. Une passe Stryker sur les fonctions pures des gardes. La durée de
-`mutation:pr` en porte A sur une PR du domaine reste à mesurer en CI.
-
-**Appris.** Sur le diff de SEC-03 (cinq fichiers, 200 mutants), la configuration de test de Stryker
-limitée aux tests du domaine rendait 196 mutants sans couverture et un score de 0,51 pour cent : le
-code du serveur est jugé par `tests/unit/securite/`. Avec ces tests, 82,50 pour cent en 3 min 10 s,
-arbre de travail propre. Et `vues:fusion` a fusionné `main` dans cette branche en 51 s, vues
-rendues ; la seconde fois, il a abandonné sur un vrai conflit (`docs/tasks.json`, des tâches
-versées des deux côtés), résolu par identifiant, sans perte.
-
-**Relecture.** `exactitude` et `securite` ont accepté (revues 5326296410 et 5326296579) ; le second
-tour a fermé leurs dettes. L'acceptance de GOV-101 promettait un robot sur `main` et la mutation des
-scripts de garde : elle est réécrite par le verbe hors dépôt pour dire ce qui est livré. `mutation:pr`
-sautait en silence `src/lib/`, `src/app/` et `src/proxy.ts` : `src/lib/` est désormais muté, le reste
-de `src/` est écarté et nommé, et un commentaire de désactivation de Stryker fait échouer la passe.
-L'empreinte a perdu son résumé `--summary` : muté hors de l'empreinte, il ne faisait rougir aucun
-témoin, `patch-id` hachant déjà les en-têtes de mode. `vues:fusion` défait la fusion sur toute
-levée, et l'API `sansMutation` est retirée.
-
-… 63 entrée(s) plus ancienne(s) dans `docs/journal/`.
+… 64 entrée(s) plus ancienne(s) dans `docs/journal/`.
 
 ## Dette déclarée
 
