@@ -23,21 +23,27 @@ import { peutOuvrirLEspace } from '../../domain/apporteur/acces-espace';
 // ── le jeton et son empreinte ────────────────────────────────────────────────────────────────────
 
 const OCTETS_JETON = 32;
+
+// Le motif et les domaines vivent DANS les fonctions qui les lisent, jamais en constantes de module :
+// une constante est évaluée au chargement, avant toute activation d'un mutant, et Stryker y laisse
+// survivre un mutant que chaque test tuerait (mesuré sur SEC-04, puis sur SEC-17). Une chaîne se
+// hache en UTF-8 par défaut : l'encodage n'est pas écrit, il ne ferait qu'un mutant équivalent.
+
 /** 32 octets en base64url sans remplissage : 43 caractères, ni plus ni moins. */
-const FORME_JETON = /^[A-Za-z0-9_-]{43}$/;
-const DOMAINE_EMPREINTE = 'partners.lien.v1\u001f';
-const DOMAINE_SESSION = 'partners.session.v1\u001f';
+function aLaFormeDUnJeton(jeton: string): boolean {
+  return /^[A-Za-z0-9_-]{43}$/.test(jeton);
+}
 
 export function tirerJeton(): string {
   return randomBytes(OCTETS_JETON).toString('base64url');
 }
 
 export function empreinteDuJeton(jeton: string, secret: string): string {
-  return createHmac('sha256', secret).update(`${DOMAINE_EMPREINTE}${jeton}`, 'utf8').digest('hex');
+  return createHmac('sha256', secret).update(`partners.lien.v1\u001f${jeton}`).digest('hex');
 }
 
 export function empreinteDeSession(jeton: string, secret: string): string {
-  return createHmac('sha256', secret).update(`${DOMAINE_SESSION}${jeton}`, 'utf8').digest('hex');
+  return createHmac('sha256', secret).update(`partners.session.v1\u001f${jeton}`).digest('hex');
 }
 
 // ── les états rendus ─────────────────────────────────────────────────────────────────────────────
@@ -49,11 +55,12 @@ export type EtatDeDemande = (typeof ETATS_DE_DEMANDE)[number];
 export const ETATS_DE_CONSOMMATION = ['ouverte', 'lien_invalide'] as const;
 export type EtatDeConsommation = (typeof ETATS_DE_CONSOMMATION)[number];
 
-/** Lit un état reçu de l'extérieur (une URL) : un état de la liste, ou `null`. */
+/**
+ * Lit un état reçu de l'extérieur (une URL) : un état de la liste, ou `null`. L'appartenance suffit :
+ * `includes` compare à l'identique, et aucune valeur qui n'est pas une chaîne n'égale un état.
+ */
 export function etatLu<E extends string>(liste: readonly E[], valeur: unknown): E | null {
-  return typeof valeur === 'string' && (liste as readonly string[]).includes(valeur)
-    ? (valeur as E)
-    : null;
+  return (liste as readonly unknown[]).includes(valeur) ? (valeur as E) : null;
 }
 export type ResultatDeConsommation =
   { etat: 'ouverte'; jetonSession: string } | { etat: 'lien_invalide' };
@@ -137,8 +144,10 @@ export interface RequeteDeLien {
   entetes: Headers;
 }
 
-const refusDe = (v: VerdictDeLimite): EtatDeDemande | null =>
-  v.autorise ? null : v.panne ? 'indisponible' : 'suspendu';
+/** Une déclaration de fonction, pas une constante fléchée : évaluée à l'appel (voir plus haut). */
+function refusDe(v: VerdictDeLimite): EtatDeDemande | null {
+  return v.autorise ? null : v.panne ? 'indisponible' : 'suspendu';
+}
 
 export async function demanderLien(
   requete: RequeteDeLien,
@@ -240,7 +249,7 @@ export async function consommerLien(
   entree: { jeton: string; ipHash: string | null },
   ports: PortsDeConsommation
 ): Promise<ResultatDeConsommation> {
-  if (!FORME_JETON.test(entree.jeton)) return INVALIDE;
+  if (!aLaFormeDUnJeton(entree.jeton)) return INVALIDE;
   const tokenHash = empreinteDuJeton(entree.jeton, ports.configuration.secret);
   const maintenant = ports.maintenant();
   return ports.transaction(async (tx) => {
@@ -253,7 +262,8 @@ export async function consommerLien(
     // Un lien de la CONSOLE ne s'ouvre pas ici : l'espace n'ouvre de session qu'à un apporteur.
     if (lien.apporteurId === null) return INVALIDE;
     const statut = await tx.statutApporteur(lien.apporteurId);
-    if (statut === null || !peutOuvrirLEspace(statut)) return INVALIDE;
+    // Un apporteur introuvable (`null`) est jugé par le prédicat, fermé comme un statut inconnu.
+    if (!peutOuvrirLEspace(statut)) return INVALIDE;
     const jetonSession = tirerJeton();
     const { secret, kid } = ports.configuration.session;
     await tx.ouvrirSession({

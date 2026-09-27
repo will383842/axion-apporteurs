@@ -755,3 +755,149 @@ describe('REQ-SEC-001 — la consommation : unique, atomique, bornée à 15 minu
     expect(u.appelsAuDepot()).toBe(0);
   });
 });
+
+// ── les refus de chaque branche, un à un (SEC-17 : mutants que Stryker nommait) ───────────────────
+
+describe('REQ-SEC-001 — chaque refus de la demande et de la consommation, isolé', () => {
+  const secret = randomBytes(32).toString('hex');
+  const secretSession = randomBytes(32).toString('hex');
+  const configuration: ConfigurationDuLien = {
+    secret,
+    kid: 'a1b2c3d4',
+    urlPublique: 'https://exemple.invalid',
+    session: { secret: secretSession, kid: 'e5f60718' },
+  };
+  const T = new Date(Date.UTC(2026, 8, 27, 9, 0, 0));
+  const ADMIS = { autorise: true, panne: false } as const;
+
+  /** Une demande dont chaque port est explicite (RM-11) ; le travail différé est CAPTURÉ. */
+  function demande(adresse: string | null, compte: { id: string; statut: string } | null) {
+    const traces: string[] = [];
+    const differes: (() => Promise<void>)[] = [];
+    const ports: PortsDeDemande = {
+      maintenant: () => T,
+      adresseDuClient: () => adresse,
+      empreinteAdresseReseau: (a) => `ip:${a}`,
+      empreinteCourriel: () => 'e'.repeat(64),
+      compterAdresse: async () => {
+        traces.push('compterAdresse');
+        return ADMIS;
+      },
+      compterCourriel: async () => {
+        traces.push('compterCourriel');
+        return ADMIS;
+      },
+      planifier: (travail) => {
+        differes.push(travail);
+      },
+      emission: {
+        trouverApporteur: async () => compte,
+        adresseStockee: async () => 'marie@example.org',
+        annulerLiensActifs: async () => {
+          traces.push('annulerLiensActifs');
+        },
+        insererLien: async () => {
+          traces.push('insererLien');
+        },
+        envoyer: async () => {
+          traces.push('envoyer');
+        },
+        signalerPotDeMiel: async () => {
+          traces.push('signalerPotDeMiel');
+        },
+        signalerEchec: () => {
+          traces.push('signalerEchec');
+        },
+      },
+      configuration,
+    };
+    return { ports, traces, differes };
+  }
+
+  const requete = { saisie: 'marie@example.org', piege: false, entetes: new Headers() };
+
+  it('REQ-SEC-001 : une adresse réseau illisible rend « indisponible » SANS consulter aucun compteur', async () => {
+    const d = demande(null, { id: 'a', statut: 'signe' });
+    expect(await demanderLien(requete, d.ports)).toBe('indisponible');
+    expect(d.traces).toEqual([]);
+    expect(d.differes).toEqual([]);
+  });
+
+  it('REQ-SEC-001 : un compte inconnu, ou au statut qui n’ouvre pas l’espace, ne reçoit rien — et rien n’échoue', async () => {
+    for (const compte of [null, { id: 'a', statut: 'candidat' }]) {
+      const d = demande('203.0.113.7', compte);
+      expect(await demanderLien(requete, d.ports)).toBe('envoye');
+      expect(d.differes).toHaveLength(1);
+      await d.differes[0]!();
+      expect(d.traces).toEqual(['compterAdresse', 'compterCourriel']);
+    }
+  });
+
+  /** Une consommation dont la transaction est explicite : ce que `lireLien` et le statut rendent. */
+  function consommation(
+    lien: { id: string; apporteurId: string | null; kid: string } | null,
+    statut: string | null
+  ) {
+    const ecritures: unknown[] = [];
+    const sessions: unknown[] = [];
+    const ports: PortsDeConsommation = {
+      maintenant: () => T,
+      transaction: (travail) =>
+        travail({
+          consommer: async (condition, donnees) => {
+            ecritures.push({ condition, donnees });
+            return 1;
+          },
+          lireLien: async () => lien,
+          statutApporteur: async () => statut,
+          ouvrirSession: async (s) => {
+            sessions.push(s);
+          },
+        }),
+      configuration,
+    };
+    return { ports, ecritures, sessions };
+  }
+  const JETON = 'Q'.repeat(43);
+
+  it('REQ-SEC-001 : la consommation écrit EXACTEMENT sa date, sous la condition de ce module', async () => {
+    const c = consommation({ id: 'l', apporteurId: 'a', kid: configuration.kid }, 'signe');
+    expect((await consommerLien({ jeton: JETON, ipHash: null }, c.ports)).etat).toBe('ouverte');
+    expect(c.ecritures).toEqual([
+      {
+        condition: {
+          tokenHash: empreinteDuJeton(JETON, secret),
+          consommeAt: null,
+          annuleAt: null,
+          expireAt: { gt: T },
+        },
+        donnees: { consommeAt: T },
+      },
+    ]);
+    expect(c.sessions).toHaveLength(1);
+  });
+
+  it('REQ-SEC-001 : un lien disparu après l’écriture, un lien d’une autre clé, un statut absent ou fermé : aucune session', async () => {
+    for (const [lien, statut] of [
+      [null, 'signe'],
+      [{ id: 'l', apporteurId: 'a', kid: 'ffffffff' }, 'signe'],
+      [{ id: 'l', apporteurId: 'a', kid: configuration.kid }, null],
+      [{ id: 'l', apporteurId: 'a', kid: configuration.kid }, 'resilie'],
+    ] as const) {
+      const c = consommation(lien, statut);
+      expect(await consommerLien({ jeton: JETON, ipHash: null }, c.ports)).toEqual({
+        etat: 'lien_invalide',
+      });
+      expect(c.sessions).toEqual([]);
+    }
+  });
+
+  it('REQ-SEC-001 : les empreintes sont séparées par domaine, sous le secret donné (partners/ADR-0013)', () => {
+    const attendue = (domaine: string, s: string) =>
+      createHmac('sha256', s).update(`${domaine}\u001f${JETON}`).digest('hex');
+    expect(empreinteDuJeton(JETON, secret)).toBe(attendue('partners.lien.v1', secret));
+    expect(empreinteDeSession(JETON, secretSession)).toBe(
+      attendue('partners.session.v1', secretSession)
+    );
+  });
+});

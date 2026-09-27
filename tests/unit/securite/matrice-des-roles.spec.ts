@@ -338,6 +338,21 @@ describe('REQ-SEC-023 — la population d’une session et d’un lien', () => {
     ).toBe(true);
   });
 
+  it('REQ-SEC-023 : l’identifiant d’apporteur ET l’apporteur relu sont exigés, chacun seul suffit à refuser', () => {
+    // La base ne produit pas ces deux lignes (CHECK de population, clé étrangère) : le juge ne
+    // s'y fie pas pour autant, et refuse chacune des deux moitiés manquantes.
+    expect(
+      jugerSession(
+        ligneEspace({ apporteurId: null, apporteur: { statut: 'signe', sessionVersion: 0 } }),
+        T0,
+        KID
+      )
+    ).toEqual({ ok: false, motif: 'inconnue' });
+    expect(
+      jugerSession(ligneEspace({ apporteurId: 'apporteur-a', apporteur: null }), T0, KID)
+    ).toEqual({ ok: false, motif: 'inconnue' });
+  });
+
   it('REQ-SEC-023 : TÉMOIN À DEUX FACES — un lien de la console ne s’ouvre pas dans l’espace ; celui d’un apporteur, si', async () => {
     const secretLien = 'temoin-sec17-secret-des-liens-'.padEnd(64, '3');
     const jeton = 'L'.repeat(43);
