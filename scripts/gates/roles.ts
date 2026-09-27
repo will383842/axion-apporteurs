@@ -27,8 +27,12 @@
  * silence, et jamais jugé sur le fichier entier. Ne S'ÉTABLISSENT que la déclaration de fonction
  * et la `const`, chacune déclarée une fois et jamais réassignée : une liaison `let`/`var`, ou tout
  * nom réassigné dans le module (fonction comprise), rend le site non jugeable — Next sert la
- * valeur de FIN de module, que l'initialiseur ne dit pas. Un nom n'est écarté comme type que s'il
- * ne désigne AUCUNE valeur, importée comprise.
+ * valeur de FIN de module, que l'initialiseur ne dit pas. Un `var` de portée module est relevé où
+ * qu'il soit hors d'une fonction (bloc, `if`, `try`, boucle, `for (var … of …)`, `switch`,
+ * étiquette) : liaison de valeur, réassignable, donc non jugeable. Un export n'est écarté comme
+ * type que s'il est MARQUÉ `type` (`export type { … }` ou `export { type X }`) : un `export { X }`
+ * non marqué dont le nom n'a pas de valeur établie est `export_non_jugeable`. PRIX ASSUMÉ : un
+ * réexport de type doit s'écrire `export type`.
  * Le vert imprime les fichiers lus, les sites confrontés, et les couples droit-rôle confrontés à la
  * ligne de la matrice RÔLE PAR RÔLE (ouverts, fermés). Le « périmètre vide » ne se dit que si AUCUN
  * fichier n'est lu.
@@ -43,9 +47,10 @@
  *   `source_illisible`         un fichier que TypeScript ne lit pas sans diagnostic
  *
  * LIMITES DÉCLARÉES. Elle voit la PRÉSENCE de l'appel et son droit, pas que le verdict est honoré :
- * une action qui appelle `requireRole` puis ignore le refus lui échappe — c'est la relecture qui la
- * tient, et `requireRole` rend un verdict qu'on ne peut pas lire comme un succès sans son `ok`. Elle
- * ne suit pas un appel délégué à une fonction voisine : l'appel doit être DANS l'action (RM-07 —
+ * une action qui appelle `requireRole` puis ignore le refus lui échappe, comme un `requireRole`
+ * présent dans une fermeture jamais appelée ou dans un paramètre par défaut (l'appel est DANS le
+ * corps, sans être exécuté à chaque requête) — c'est la relecture qui les tient, et `requireRole`
+ * rend un verdict qu'on ne peut pas lire comme un succès sans son `ok`. Elle ne suit pas un appel délégué à une fonction voisine : l'appel doit être DANS l'action (RM-07 —
  * une garde extraite se perd avec son appelant). Elle tient pour l'appel de la porte tout
  * `x.requireRole(…)`, sur un objet QUELCONQUE : elle ne vérifie pas que `x` est le module de la
  * porte — c'est la relecture qui le tient. Seuls `page.*` et `route.*` sont des sites de routage :
@@ -220,13 +225,33 @@ function nomsReassignes(source: ts.SourceFile): Set<string> {
   return vus;
 }
 
+/**
+ * Les noms que lie un `var` de PORTÉE MODULE placé hors du premier niveau : dans un bloc, un `if`,
+ * un `try`, une boucle (`for (var … of …)` compris), un `switch`, une étiquette. Le parcours
+ * descend partout SAUF dans une fonction, une classe ou un espace de noms — ce sont eux qui
+ * ferment la portée d'un `var`. Les `var` du premier niveau sont relevés par l'appelant.
+ */
+function varsDePorteeModule(source: ts.SourceFile): ts.Identifier[] {
+  const noms: ts.Identifier[] = [];
+  const visiter = (n: ts.Node): void => {
+    if (ts.isFunctionLike(n) || ts.isClassLike(n) || ts.isModuleDeclaration(n)) return;
+    if (ts.isVariableDeclarationList(n) && (n.flags & ts.NodeFlags.BlockScoped) === 0) {
+      for (const d of n.declarations) noms.push(...nomsLies(d.name));
+    }
+    ts.forEachChild(n, visiter);
+  };
+  for (const i of source.statements) if (!ts.isVariableStatement(i)) visiter(i);
+  return noms;
+}
+
 /** Une liste de déclarations `const` — ni `let`, ni `var`, ni `using`. */
 const estConst = (l: ts.VariableDeclarationList): boolean =>
   (l.flags & ts.NodeFlags.BlockScoped) === ts.NodeFlags.Const;
 
 /**
  * TOUTES les valeurs exportées d'un module, quelle que soit leur forme. Un type ne s'exporte pas
- * comme valeur : il est écarté — mais seulement s'il ne désigne AUCUNE valeur, importée comprise.
+ * comme valeur : il n'est écarté que s'il est MARQUÉ `type` (`export type { … }`, `{ type X }`) ;
+ * un export non marqué d'un nom sans valeur établie est rendu non jugeable, jamais sauté.
  * Tout le reste est rendu, avec sa fonction quand elle s'établit dans le fichier, `null` sinon.
  *
  * Ce qui S'ÉTABLIT : une déclaration de fonction, ou une `const` dont l'initialiseur est une
@@ -280,10 +305,18 @@ function exportsDuModule(source: ts.SourceFile): Export[] {
       types.add(i.name.text);
     }
   }
+  // Un `var` hors du premier niveau a la portée du module : une liaison de VALEUR, réassignable.
+  for (const n of varsDePorteeModule(source)) {
+    valeurLiee(n);
+    reassignables.add(n.text);
+  }
   const REASSIGNABLE = (nom: string) =>
     `« ${nom} » est une liaison réassignable (let, var ou nom réassigné dans le module) : Next ` +
     `sert sa valeur de fin de module, pas son initialiseur`;
   const REDECLAREE = (nom: string) => `« ${nom} » est déclaré plus d’une fois dans le module`;
+  const TYPE_NON_MARQUE = (nom: string) =>
+    `« ${nom} » n’a aucune valeur établie dans le module, et l’export n’est pas marqué \`type\` : ` +
+    `un export de type s’écrit \`export type { ${nom} }\` ou \`export { type ${nom} }\``;
   const NON_LOCALE = 'la valeur n’est ni une fonction ni le nom d’une fonction locale établie';
   /** Pourquoi un nom ne s'établit pas ; `null` s'il peut s'établir. */
   const obstacle = (nom: string): string | null =>
@@ -389,15 +422,11 @@ function exportsDuModule(source: ts.SourceFile): Export[] {
             vues.push({ nom, libelle: nom, fn: null, forme: `réexport depuis « ${depuis} »` });
             continue;
           }
-          // Un type, pas une valeur — seulement si AUCUNE valeur, importée comprise, ne porte ce nom.
-          if (types.has(local) && !declarations.has(local)) continue;
+          // Jamais écarté comme type : seul `export type { … }` ou `{ type X }` marque un type.
+          const r =
+            types.has(local) && !declarations.has(local) ? TYPE_NON_MARQUE(local) : resoudre(local);
           vues.push(
-            rendu(
-              nom,
-              nom,
-              resoudre(local),
-              `\`export { ${local}${local === nom ? '' : ` as ${nom}`} }\``
-            )
+            rendu(nom, nom, r, `\`export { ${local}${local === nom ? '' : ` as ${nom}`} }\``)
           );
         }
       }
@@ -831,7 +860,9 @@ const TEMOINS: { famille: Famille; quoi: string; fichiers: FichierDeConsole[] }[
   {
     famille: 'export_non_jugeable',
     quoi: 'liaison `let` gardée, JAMAIS réassignée, exportée par alias d’un route.ts',
-    fichiers: [ROUTE(`let traiter = async () => {\n${GARDE_ECRAN}\n};\nexport { traiter as GET };`)],
+    fichiers: [
+      ROUTE(`let traiter = async () => {\n${GARDE_ECRAN}\n};\nexport { traiter as GET };`),
+    ],
   },
   {
     famille: 'export_non_jugeable',
