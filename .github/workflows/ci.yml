@@ -7,8 +7,11 @@
 # la CI définitivement rouge — une CI toujours rouge ne garde plus rien. Elle tourne en nightly,
 # où son rouge est le décompte de ce qui reste à armer, pas le refus d'une PR. Ce qui entre ici,
 # c'est `gates:prouvees:prove` : la preuve ne dépend d'aucun état du dépôt, elle doit rester verte.
-# Chaque garde est suivie de SA PREUVE : une garde dont on ne vérifie pas qu'elle sait rougir
-# cesse un jour de garder sans que rien ne le signale.
+# La plupart des gardes sont suivies de SA PREUVE (`:prove`) : une garde dont on ne vérifie pas
+# qu'elle sait rougir cesse un jour de garder sans que rien ne le signale. Toutes ne l'ont pas encore,
+# et ce commentaire ne le cache plus. Chaque etape de ce job est confrontee a son CONSTAT par
+# `gov:conventions` (`PORTE_A_FIGEE`, scripts/gates/gov-conventions.ts) : presente, active,
+# effective. Ajouter, retirer, conditionner ou repointer une etape se fige LA-BAS, dans le meme diff.
 name: Gate A
 on:
   push: { branches: [main] }
@@ -23,8 +26,8 @@ jobs:
     # ⚠️ LA SEULE CHOSE QUE CE JOB N'A RIEN A MESURER : une demande de fusion DEJA FUSIONNEE.
     # Le runbook fait cocher la huitieme case de la definition de termine APRES
     # `gh pr merge --delete-branch`. Cette edition du corps relance `pull_request: edited`, la tete
-    # n'est plus une branche, et `gov:pr` — etape 26 sur 71 — echouait sur `git diff base...tete` :
-    # 45 etapes restaient en « skipped », dont Lint, Format, Typecheck, Tests, `req:check` et
+    # n'est plus une branche, et `gov:pr`, au premier tiers du job, echouait sur `git diff base...tete` :
+    # toutes les etapes suivantes restaient en « skipped », dont Lint, Format, Typecheck, Tests, `req:check` et
     # `gov:etat`. Elles avaient l'air d'avoir mesure et n'avaient rien mesure. C'est la pathologie
     # que GOV-059 vient de fermer un cran plus bas, par l'ORDRE des etapes ; ici elle se produisait
     # A CHAQUE demande de fusion, par construction. Un bruit qu'on apprend a ignorer finit par
@@ -46,7 +49,7 @@ jobs:
     # perdu : il change de porte, et se mesure au run `push: main` du meme sha.
     #
     # Ce `if:` est au JOB, pas aux etapes : un job saute se lit « skipped » sans aucun rouge, alors
-    # que 71 etapes sautees une par une afficheraient exactement l'image qu'on retire d'ici.
+    # que des dizaines d'etapes sautees une par une afficheraient exactement l'image qu'on retire d'ici.
     #
     # TEMOIN : `tests/unit/gouvernance/revendication-par-branche.spec.ts`, qui EVALUE cette
     # expression contre cinq contextes d'evenement au lieu d'en chercher le texte, et qui exige la
@@ -226,7 +229,10 @@ jobs:
       # GOV-030 : la garde des TERMES INTERDITS que des documents invoquaient sans qu'elle existe
       # (`docs/GLOSSAIRE.md`, `docs/CONVENTIONS.md` §2, RM-01 et RM-06, `packages/contracts/events.ts`,
       # REQ-GOV-001, `docs/GATES.md`). BLOQUANTE : pas de `continue-on-error` — la famille
-      # `lint_non_bloquant` de `gov:conventions` le refuse, et une gate qui ne bloque rien ne garde rien.
+      # `etape_toleree` de `gov:conventions` le refuse, sur cette etape comme sur toute etape de ce job,
+      # sous toute forme evaluee. Ce commentaire citait `lint_non_bloquant`, qui ne juge que le lint et
+      # le format : il promettait un refus qu'aucune garde ne portait. Une gate qui ne bloque rien ne
+      # garde rien.
       #
       # `partners/ADR-0018` a tranche l'homonymie : l'identifiant de cette garde au registre EST la
       # commande ecrite ci-dessous. Ces deux lignes `run:` sont donc ce que `gov:conventions` lit
@@ -289,9 +295,11 @@ jobs:
         run: pnpm securite:rate-famille
       - name: La garde des compteurs de debit sait rougir
         run: pnpm securite:rate-famille:prove
-      # GOV-014, REQ-GOV-018 + REQ-GOV-029. Les six gardes d'axionia retenues. Trois de ses cinq
-      # perimetres sont VIDES aujourd'hui, et elle les IMPRIME avec leur motif et la tache qui les
-      # ouvrira — c'est ce qui separe une garde differee d'une garde oubliee.
+      # GOV-014, REQ-GOV-018 + REQ-GOV-029. Les gardes d'axionia retenues ; le tri des entrees du
+      # registre dont le script manque ; et la confrontation de CHAQUE etape de ce job a son
+      # constat (`PORTE_A_FIGEE`). Ses perimetres vides, elle les IMPRIME avec leur motif et la tache qui les
+      # ouvrira — c'est ce qui separe une garde differee d'une garde oubliee. Leur nombre ne se recopie
+      # pas ici : la sortie le dit.
       - name: Conventions et gardes transposees d axionia
         run: pnpm gov:conventions
       - name: La garde des conventions sait rougir

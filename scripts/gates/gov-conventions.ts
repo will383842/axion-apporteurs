@@ -38,14 +38,22 @@
  *     n'existe pas. Une garde à périmètre vide qui rend « ✅ » ne garde rien. Ici, un périmètre
  *     vide doit porter son MOTIF et nommer la TÂCHE qui l'ouvrira, et cette tâche doit exister au
  *     backlog. C'est la seule chose qui distingue « différée » d'« oubliée ».
+ *   • `gate_sans_script`, `passif_sans_script_perime` (GOV-083) — une entrée de `docs/gates.json`
+ *     dont le script est absent du disque ne s'exempte plus en silence : elle est TRIÉE (autre dépôt,
+ *     promise, fautive), et la fautive est refusée sauf déclaration au passif, une par une.
+ *   • `etape_absente`, `etape_non_figee`, `etape_conditionnee`, `etape_toleree`,
+ *     `etape_repointee`, `script_repointe`, `porte_a_illisible` (GOV-061) — CHAQUE étape du job de la
+ *     porte A est PRÉSENTE, ACTIVE et EFFECTIVE, confrontée à son constat (`PORTE_A_FIGEE`). On
+ *     croyait la porte armée ; rien ne le prouvait, et six désarmements passaient sans un rouge.
  *
  * ── CE QU'ELLE NE FAIT PAS, ET LE DIT ───────────────────────────────────────────────────────
  *
- *   — Elle ne juge pas la présence des étapes de lint et de format dans `ci.yml`, ni les
- *     dépendances de `package.json` : ce sont des fichiers PARTAGÉS, écrits par A01, et un
- *     développeur ne les touche pas. Exiger leur présence rendrait la garde rouge en permanence
- *     pour un manque qu'aucune PR n'a créé (LEC-13). Ce qu'elle exige, c'est la COHÉRENCE : le
- *     jour où une étape de lint arrive, elle est bloquante et son outil est épinglé.
+ *   — Elle n'exige d'aucune étape qu'elle EXISTE avant qu'elle soit écrite, ni aucune dépendance de
+ *     `package.json` : exiger une présence que personne n'a encore livrée rendrait la garde rouge
+ *     en permanence pour un manque qu'aucune PR n'a créé (LEC-13). Ce qu'elle exige, c'est la
+ *     COHÉRENCE : une étape de lint est bloquante et son outil épinglé ; une étape de la porte A,
+ *     une fois figée à son constat, n'en disparaît plus, ne s'y désarme plus et ne s'y repointe
+ *     plus sans que le même diff fige le changement (GOV-061).
  *   — Elle ne suit pas un ré-export à la trace (`export { x } from "./y"`) pour savoir si `x` est
  *     asynchrone : elle refuse le ré-export lui-même, ce qui est plus simple et plus sûr.
  *   — Elle ne juge que le PRÉFIXE d'un chemin de tâche. `tests/fixtures/axionia/` (INT-T01a,
@@ -64,6 +72,8 @@ import { fichiersSuivisOuRefus } from '../lot/fichiers-suivis';
 import { outilHorsDepot } from '../lot/chemins-de-tache';
 import { LIVREE } from '../lot/avancement';
 import { existsSync, readFileSync } from 'node:fs';
+import { parsers as analyseursYaml } from 'prettier/plugins/yaml';
+import { estObjet, lireYaml } from '../lib/lire-yaml';
 
 // ── le vocabulaire des décisions, partagé avec le registre et son test ───────────────────────
 
@@ -152,6 +162,11 @@ export interface Vue {
    * `passif_sans_script_perime`. ABSENT = aucun passif : rien n'est toléré.
    */
   readonly passifSansScript?: Readonly<Record<string, string>>;
+  /**
+   * LE CONSTAT DE LA PORTE A (GOV-061) : ce que ses étapes doivent être. ABSENT = la porte A n'est
+   * pas confrontée, et `confronterLaPorteA` le REFUSE (`porte_a_illisible`) plutôt que de verdir.
+   */
+  readonly porteA?: PorteFigee;
 }
 
 export interface Faute {
@@ -170,6 +185,13 @@ export const FAMILLES = [
   'garde_hors_registre',
   'gate_sans_script',
   'passif_sans_script_perime',
+  'etape_absente',
+  'etape_non_figee',
+  'etape_conditionnee',
+  'etape_toleree',
+  'etape_repointee',
+  'script_repointe',
+  'porte_a_illisible',
   'perimetre_vide_sans_motif',
 ] as const;
 
@@ -264,6 +286,14 @@ function etapesDe(contenu: string): string[] {
   return out;
 }
 
+/**
+ * Une tolérance d'échec ÉCRITE, sous toute forme autre que `false` en toutes lettres — une expression
+ * `${{ … }}` ou une chaîne tolèrent comme `true` (GOV-061, fait (d)). La première au niveau d'une
+ * étape, la seconde au niveau du JOB (quatre espaces), qui désarme toutes ses étapes.
+ */
+const TOLERANCE_ECRITE = /continue-on-error:[ \t]*(?!false[ \t]*(?:#.*)?$)\S/m;
+const TOLERANCE_ECRITE_AU_JOB = /^ {4}continue-on-error:[ \t]*(?!false[ \t]*(?:#.*)?$)\S/m;
+
 const LANCE_LE_LINT = /run:[^\n]*pnpm\s+(?:lint|format)/;
 
 export interface EtapeDeLint {
@@ -277,7 +307,7 @@ export function etapesDeLint(vue: Vue): EtapeDeLint[] {
   const out: EtapeDeLint[] = [];
   for (const w of vue.workflows) {
     // `continue-on-error` posé au niveau du JOB (quatre espaces) désarme toutes ses étapes.
-    const jobNonBloquant = /^ {4}continue-on-error:\s*true/m.test(w.source);
+    const jobNonBloquant = TOLERANCE_ECRITE_AU_JOB.test(w.source);
     for (const bloc of etapesDe(w.source)) {
       if (!LANCE_LE_LINT.test(bloc)) continue;
       const outil = /pnpm\s+format/.test(bloc) ? 'prettier' : 'eslint';
@@ -285,6 +315,283 @@ export function etapesDeLint(vue: Vue): EtapeDeLint[] {
     }
   }
   return out;
+}
+
+// ── la porte A : chaque étape PRÉSENTE, ACTIVE et EFFECTIVE (GOV-061) ─────────────────────────
+
+/**
+ * UNE ÉTAPE FIGÉE DE LA PORTE A — ce qu'elle doit être pour mesurer ce qu'on croit qu'elle mesure.
+ * `nom` l'identifie comme `pnpm prevol` la nomme : son `name:`, sinon son `uses:` ou son `run:`.
+ */
+export interface EtapeFigee {
+  readonly nom: string;
+  readonly run?: string;
+  readonly uses?: string;
+  /** Sa condition `if:`, telle qu'elle s'écrit. ABSENTE = l'étape ne porte aucune condition. */
+  readonly si?: string;
+}
+
+/**
+ * LE CLIQUET DE LA PORTE A. Le job, sa condition, ses étapes, et la définition `package.json` de
+ * chaque script qu'une étape lance. Ce n'est pas une seconde source de `ci.yml` : c'est le CONSTAT
+ * de ce qu'il porte, confronté à lui à chaque exécution, dans les deux sens — une étape retirée
+ * rougit, une étape ajoutée rougit tant qu'elle n'est pas figée ici. Changer la porte A se fait donc
+ * en DEUX endroits, dans le même diff, et c'est voulu : le diff de ce constat est ce qu'un relecteur
+ * lit pour savoir ce que la porte a gagné ou perdu.
+ */
+export interface PorteFigee {
+  readonly job: string;
+  /** La condition du JOB. `null` = aucune. */
+  readonly si: string | null;
+  readonly etapes: readonly EtapeFigee[];
+  readonly scripts: Readonly<Record<string, string>>;
+}
+
+/** Le workflow qui porte la porte A. Le seul job requis de ce dépôt y vit. */
+export const WORKFLOW_DE_LA_PORTE_A = '.github/workflows/ci.yml';
+
+/**
+ * Le texte d'un workflow SANS SES COMMENTAIRES, les commentaires remplacés par des blancs (les fins
+ * de ligne sont gardées). C'est ce texte-là qu'on interroge pour savoir si une garde est APPELÉE :
+ * cherchée dans le texte brut, une garde citée dans un seul commentaire passait pour appelée (le
+ * fait (a) de GOV-061). Les commentaires sont LOCALISÉS par l'analyseur YAML qu'embarque Prettier —
+ * le même que `scripts/lib/lire-yaml.ts` — et ne sont pas devinés par un découpage : un `#` dans une
+ * chaîne ou dans un bloc `run: |` n'est pas un commentaire YAML.
+ * ÉCHEC FERMÉ : un fichier que l'analyseur refuse rend le VIDE — aucune garde n'y est appelée.
+ */
+export function sansCommentairesYaml(source: string): string {
+  let racine: unknown;
+  try {
+    const options = { originalText: source };
+    racine = analyseursYaml.yaml.parse(source, options as never);
+  } catch {
+    return '';
+  }
+  const plages: [number, number][] = [];
+  const pile: unknown[] = [racine];
+  while (pile.length > 0) {
+    const n = pile.pop();
+    if (Array.isArray(n)) {
+      pile.push(...(n as unknown[]));
+      continue;
+    }
+    if (typeof n !== 'object' || n === null) continue;
+    const noeud = n as {
+      type?: unknown;
+      position?: { start?: { offset?: number }; end?: { offset?: number } };
+    };
+    if (noeud.type === 'comment') {
+      const debut = noeud.position?.start?.offset;
+      const fin = noeud.position?.end?.offset;
+      if (typeof debut === 'number' && typeof fin === 'number') plages.push([debut, fin]);
+      continue;
+    }
+    for (const [cle, valeur] of Object.entries(noeud)) {
+      if (cle !== 'position' && typeof valeur === 'object' && valeur !== null) pile.push(valeur);
+    }
+  }
+  let texte = source;
+  for (const [debut, fin] of plages.sort((a, b) => b[0] - a[0])) {
+    texte =
+      texte.slice(0, debut) + texte.slice(debut, fin).replace(/[^\n]/g, ' ') + texte.slice(fin);
+  }
+  return texte;
+}
+
+/** Le nom d'une étape lue, dans la convention de `EtapeFigee.nom`. */
+function nomDEtape(champs: Record<string, unknown>): string {
+  const texte = (v: unknown): string | undefined => (typeof v === 'string' ? v.trim() : undefined);
+  const uses = texte(champs.uses);
+  const run = texte(champs.run);
+  return (
+    texte(champs.name) ??
+    (uses !== undefined ? `uses: ${uses}` : run !== undefined ? `run: ${run}` : '—')
+  );
+}
+
+/** Une valeur lue de l'arbre YAML, écrite pour un message : une chaîne telle quelle, le reste en JSON. */
+function ecrite(v: unknown): string | undefined {
+  return typeof v === 'string' ? v : v === undefined ? undefined : JSON.stringify(v);
+}
+
+/**
+ * La tolérance d'échec sous sa forme ÉVALUÉE (le fait (d) de GOV-061). La clé `continue-on-error`
+ * n'est admise qu'avec la seule valeur qui ne tolère rien, `false` écrit en toutes lettres : une
+ * expression (`${{ true }}`, `${{ 1 }}`), une chaîne, ou n'importe quel autre scalaire est une
+ * tolérance qu'on ne sait pas évaluer — et ce qu'on ne sait pas évaluer est refusé.
+ */
+function tolereLEchec(champs: Record<string, unknown>): string | null {
+  if (!Object.hasOwn(champs, 'continue-on-error')) return null;
+  const v = champs['continue-on-error'];
+  return v === 'false' ? null : JSON.stringify(v);
+}
+
+export interface ConfrontationDeLaPorteA {
+  /** Le nombre d'étapes du job RÉELLEMENT confrontées au constat — le compte que le vert imprime. */
+  readonly etapes: number;
+  /** Le nombre de scripts de `package.json` confrontés à leur définition figée. */
+  readonly scripts: number;
+  readonly fautes: readonly Faute[];
+}
+
+/**
+ * LA DÉFINITION UNIQUE DE « ÉTAPE PRÉSENTE, ACTIVE ET EFFECTIVE » (GOV-061, REQ-QA-013), appliquée
+ * à TOUTES les étapes du job de la porte A — et non aux seules étapes qui lancent un script de
+ * `scripts/gates/` :
+ *   — PRÉSENTE : chaque étape figée est dans le job (`etape_absente`), et le job ne porte aucune
+ *     étape que le constat ignore (`etape_non_figee`) ;
+ *   — ACTIVE : sa condition `if:` — et celle du job — est celle du constat (`etape_conditionnee`),
+ *     et aucune tolérance d'échec, sous aucune forme évaluée, ne la désarme (`etape_toleree`) ;
+ *   — EFFECTIVE : elle lance la commande du constat (`etape_repointee`), et le script de
+ *     `package.json` que cette commande invoque a la définition du constat (`script_repointe`).
+ * Un workflow qu'on ne sait pas lire, ou qui ne porte pas le job, est un refus
+ * (`porte_a_illisible`) : on ne déclare pas armée une porte qu'on n'a pas lue.
+ */
+export async function confronterLaPorteA(vue: Vue): Promise<ConfrontationDeLaPorteA> {
+  const fautes: Faute[] = [];
+  const illisible = (pourquoi: string): ConfrontationDeLaPorteA => ({
+    etapes: 0,
+    scripts: 0,
+    fautes: [
+      {
+        famille: 'porte_a_illisible',
+        message:
+          `\`${WORKFLOW_DE_LA_PORTE_A}\` — ${pourquoi}. On ne déclare pas armée une porte qu'on ` +
+          `n'a pas lue : la confrontation ÉCHOUE FERMÉE.`,
+      },
+    ],
+  });
+  const figee = vue.porteA;
+  if (figee === undefined) return illisible('aucun constat de la porte A n’est fourni à la garde');
+  const fichier = vue.workflows.find((w) => w.chemin === WORKFLOW_DE_LA_PORTE_A);
+  if (fichier === undefined) return illisible('le fichier n’est pas suivi');
+  let workflow: unknown;
+  try {
+    workflow = await lireYaml(fichier.source);
+  } catch (e) {
+    return illisible(
+      `l'analyseur YAML partagé le refuse (${e instanceof Error ? e.message : String(e)})`
+    );
+  }
+  const jobs = estObjet(workflow) && estObjet(workflow.jobs) ? workflow.jobs : {};
+  const job = jobs[figee.job];
+  if (!estObjet(job) || !Array.isArray(job.steps)) {
+    return illisible(`aucun job \`${figee.job}\` portant une liste d'étapes`);
+  }
+  const aRetenir =
+    'Si le changement est VOULU, fige-le dans `PORTE_A_FIGEE` ' +
+    '(`scripts/gates/gov-conventions.ts`), dans le même diff.';
+
+  // ── le JOB lui-même : sa condition et sa tolérance désarment TOUTES ses étapes ──
+  const siDuJob = ecrite(job.if) ?? null;
+  if (siDuJob !== figee.si) {
+    fautes.push({
+      famille: 'etape_conditionnee',
+      message:
+        `le job \`${figee.job}\` porte la condition ${JSON.stringify(siDuJob)} au lieu de ` +
+        `${JSON.stringify(figee.si)} : une condition de JOB saute TOUTES ses étapes, et un job ` +
+        `sauté se lit « skipped », sans aucun rouge. ${aRetenir}`,
+    });
+  }
+  const toleranceDuJob = tolereLEchec(job);
+  if (toleranceDuJob !== null) {
+    fautes.push({
+      famille: 'etape_toleree',
+      message:
+        `le job \`${figee.job}\` porte \`continue-on-error: ${toleranceDuJob}\` : toutes ses étapes ` +
+        `peuvent échouer sans que la porte rougisse. Seul \`false\` écrit en toutes lettres est admis.`,
+    });
+  }
+
+  // ── les étapes, une par une ──
+  const lues = job.steps.map((e: unknown) => (estObjet(e) ? e : {}));
+  const parNom = new Map(lues.map((e) => [nomDEtape(e), e]));
+  const figees = new Map(figee.etapes.map((e) => [e.nom, e]));
+  for (const f of figee.etapes) {
+    if (parNom.has(f.nom)) continue;
+    fautes.push({
+      famille: 'etape_absente',
+      message:
+        `l'étape « ${f.nom} » (\`${f.run ?? f.uses ?? '—'}\`) n'est plus dans le job ` +
+        `\`${figee.job}\` — retirée, ou réduite à un commentaire. Ce qu'elle mesurait ne l'est plus ` +
+        `nulle part, et rien d'autre ne le dirait. ${aRetenir}`,
+    });
+  }
+  for (const [nom, e] of parNom) {
+    const f = figees.get(nom);
+    if (f === undefined) {
+      fautes.push({
+        famille: 'etape_non_figee',
+        message:
+          `l'étape « ${nom} » du job \`${figee.job}\` n'est pas au constat de la porte A : sans lui, ` +
+          `son retrait futur ne rougirait rien. ${aRetenir}`,
+      });
+      continue;
+    }
+    const si = ecrite(e.if);
+    if (si !== f.si) {
+      fautes.push({
+        famille: 'etape_conditionnee',
+        message:
+          `l'étape « ${nom} » porte la condition ${si === undefined ? '(aucune)' : `« ${si} »`} au ` +
+          `lieu de ${f.si === undefined ? '(aucune)' : `« ${f.si} »`}. Une condition toujours fausse ` +
+          `désarme l'étape sans bruit : elle se lit « skipped ». ${aRetenir}`,
+      });
+    }
+    const tolerance = tolereLEchec(e);
+    if (tolerance !== null) {
+      fautes.push({
+        famille: 'etape_toleree',
+        message:
+          `l'étape « ${nom} » porte \`continue-on-error: ${tolerance}\`. La valeur est lue sous sa ` +
+          `forme ÉVALUÉE : toute autre écriture que \`false\` tolère l'échec, et une étape qui peut ` +
+          `échouer sans faire rougir la porte ne garde rien.`,
+      });
+    }
+    for (const cle of ['run', 'uses'] as const) {
+      const lu = typeof e[cle] === 'string' ? (e[cle] as string).trim() : undefined;
+      if (lu === f[cle]) continue;
+      fautes.push({
+        famille: 'etape_repointee',
+        message:
+          `l'étape « ${nom} » porte \`${cle}: ${lu ?? '(absent)'}\` au lieu de ` +
+          `\`${f[cle] ?? '(absent)'}\` : elle ne lance plus ce qu'on croit qu'elle mesure — une ` +
+          `tolérance écrite dans le shell (\`|| true\`) est une tolérance comme une autre. ${aRetenir}`,
+      });
+    }
+  }
+
+  // ── les scripts de `package.json` que ces étapes lancent : figés, donc non repointables ──
+  let scripts: Record<string, unknown>;
+  try {
+    const pkg = JSON.parse(vue.packageJson || '{}') as { scripts?: unknown };
+    scripts = estObjet(pkg.scripts) ? pkg.scripts : {};
+  } catch {
+    return illisible(
+      '`package.json` est illisible : les scripts que la porte lance n’ont pas de source'
+    );
+  }
+  for (const [nom, definition] of Object.entries(figee.scripts)) {
+    const lue = scripts[nom];
+    if (lue === definition) continue;
+    fautes.push({
+      famille: 'script_repointe',
+      message:
+        `\`package.json\` — le script \`${nom}\`, lancé par une étape de la porte A, vaut ` +
+        `${JSON.stringify(lue ?? null)} au lieu de ${JSON.stringify(definition)}. L'étape garde son ` +
+        `nom et sa commande, et ne mesure plus rien : c'est le repointage que seule une suite ` +
+        `de tests, ou une nuit déjà rouge, rattrapait. ${aRetenir}`,
+    });
+  }
+  return { etapes: lues.length, scripts: Object.keys(figee.scripts).length, fautes };
+}
+
+/** Le décompte de la porte A, RENDU : une confrontation qu'on n'imprime pas ne se relit pas. */
+export function lignesDeLaPorteA(c: ConfrontationDeLaPorteA): string[] {
+  return [
+    `PORTE A — ${c.etapes} étape(s) du job confrontée(s) au constat, chacune présente, active et ` +
+      `effective ; ${c.scripts} script(s) de \`package.json\` confronté(s) à leur définition figée.`,
+  ];
 }
 
 // ── le périmètre, dit et compté ──────────────────────────────────────────────────────────────
@@ -624,7 +931,7 @@ export function controler(vue: Vue): Faute[] {
   // ── lint et format BLOQUANTS (REQ-GOV-018) ──
   const lint = etapesDeLint(vue);
   for (const e of lint) {
-    if (/continue-on-error:\s*true/.test(e.bloc) || e.jobNonBloquant) {
+    if (TOLERANCE_ECRITE.test(e.bloc) || e.jobNonBloquant) {
       fautes.push({
         famille: 'lint_non_bloquant',
         message:
@@ -743,7 +1050,10 @@ export function controler(vue: Vue): Faute[] {
     });
   }
 
-  const appelants = [...vue.workflows.map((w) => w.source), vue.hooks].join('\n');
+  // SANS LES COMMENTAIRES (GOV-061, fait (a)) : une garde citée dans un commentaire n'est pas appelée.
+  const appelants = [...vue.workflows.map((w) => sansCommentairesYaml(w.source)), vue.hooks].join(
+    '\n'
+  );
   for (const g of confrontation.jugees) {
     const noms = [g.id, g.script, ...(g.alias ?? [])];
     if (noms.some((n) => appelants.includes(n))) continue;
@@ -908,6 +1218,7 @@ export function lireVue(): Vue {
     taches,
     perimetres: PERIMETRES_DECLARES,
     passifSansScript: PASSIF_SANS_SCRIPT,
+    porteA: PORTE_A_FIGEE,
   };
 }
 
@@ -919,6 +1230,251 @@ export function lireVue(): Vue {
  * plutôt que tues : une entrée fautive NEUVE rougit `gate_sans_script`, et une ligne qui ne sert
  * plus rougit `passif_sans_script_perime`.
  */
+/**
+ * LE CONSTAT DE LA PORTE A (GOV-061), relevé sur `.github/workflows/ci.yml` et `package.json` le
+ * 2026-09-27. Il se RELÈVE, il ne se tape pas : l'analyseur YAML partagé lit le job, et chaque ligne
+ * ci-dessous est ce qu'il rend. Une étape ajoutée, retirée, conditionnée, tolérée ou repointée fait
+ * rougir la garde jusqu'à ce que ce constat la porte — dans le même diff que `ci.yml`.
+ */
+export const PORTE_A_FIGEE: PorteFigee = {
+  job: 'gate-a',
+  si: '${{ github.event.pull_request.merged != true }}',
+  etapes: [
+    { nom: 'uses: actions/checkout@v4', uses: 'actions/checkout@v4' },
+    { nom: 'uses: pnpm/action-setup@v4', uses: 'pnpm/action-setup@v4' },
+    { nom: 'uses: actions/setup-node@v4', uses: 'actions/setup-node@v4' },
+    { nom: 'run: pnpm install --frozen-lockfile', run: 'pnpm install --frozen-lockfile' },
+    { nom: 'Regle de publication (depot public)', run: 'pnpm gov:publication' },
+    { nom: 'La garde de publication sait rougir', run: 'pnpm gov:publication:prove' },
+    { nom: 'Identifiants qualifies', run: 'pnpm gov:identifiants' },
+    { nom: 'La garde des identifiants sait rougir', run: 'pnpm gov:identifiants:prove' },
+    { nom: 'Coherence du backlog', run: 'pnpm gov:tasks' },
+    { nom: 'La garde du backlog sait rougir', run: 'pnpm gov:tasks:prove' },
+    { nom: 'La vue du backlog est egale a sa source', run: 'pnpm gov:tasks:verifie-rendu' },
+    { nom: 'Registre des exigences', run: 'pnpm gov:requirements' },
+    { nom: 'La garde du registre sait rougir', run: 'pnpm gov:requirements:prove' },
+    {
+      nom: 'La vue des exigences est egale a sa source',
+      run: 'pnpm gov:requirements:verifie-rendu',
+    },
+    { nom: 'Registre des decisions', run: 'pnpm gov:hypotheses' },
+    { nom: 'La garde des decisions sait rougir', run: 'pnpm gov:hypotheses:prove' },
+    { nom: 'Table de preseance', run: 'pnpm gov:preseance' },
+    { nom: 'La garde de preseance sait rougir', run: 'pnpm gov:preseance:prove' },
+    { nom: 'Affirmations verifiees sur axionia', run: 'pnpm gov:sonde' },
+    { nom: 'La sonde sait rougir', run: 'pnpm gov:sonde:prove' },
+    { nom: 'ADR — index derive et gabarit', run: 'pnpm gov:adr' },
+    { nom: 'La garde des ADR sait rougir', run: 'pnpm gov:adr:prove' },
+    { nom: 'Matrice d autonomie des agents et garde des pushes', run: 'pnpm gov:autonomie' },
+    { nom: 'La garde d autonomie sait rougir', run: 'pnpm gov:autonomie:prove' },
+    { nom: 'Gabarit de PR, CODEOWNERS et charte des agents', run: 'pnpm gov:pr' },
+    { nom: 'Inventaire prouve — tout etat >= code porte une preuve', run: 'pnpm gov:inventaire' },
+    { nom: 'La garde de l inventaire sait rougir', run: 'pnpm gov:inventaire:prove' },
+    { nom: 'Fiches de role derivees de docs/agents.json', run: 'pnpm gov:agents' },
+    { nom: 'La garde des fiches sait rougir', run: 'pnpm gov:agents:prove' },
+    { nom: 'Les fiches sur le disque sont egales a leur source', run: 'pnpm gov:agents:verifier' },
+    { nom: 'Registre d entite — sentinelle tenue dans les deux sens', run: 'pnpm gov:entite' },
+    { nom: 'La garde du registre d entite sait rougir', run: 'pnpm gov:entite:prove' },
+    {
+      nom: 'Le corps PUBLIE de la PR ne porte aucune coordonnee',
+      run: 'pnpm gov:entite:corps',
+      si: "github.event_name == 'pull_request'",
+    },
+    { nom: 'La garde du corps publie sait rougir', run: 'pnpm gov:entite:corps:prove' },
+    { nom: 'La garde du depot sait rougir', run: 'pnpm gov:depot-visibilite:prove' },
+    { nom: 'Matrice de tracabilite REQ vers tache vers test vers PR', run: 'pnpm gov:trace' },
+    { nom: 'La matrice de tracabilite sait rougir', run: 'pnpm gov:trace:prove' },
+    { nom: 'La vue de tracabilite est derivee de ses sources', run: 'pnpm gov:trace:verifier' },
+    { nom: 'La vue de l etat vivant est egale a sa source', run: 'pnpm plan-state:verifier' },
+    {
+      nom: 'Attributions — garde, poste, lot et identifiants nommes confrontes a leurs sources',
+      run: 'pnpm gov:attributions',
+    },
+    {
+      nom: 'La garde des attributions sait rougir, et laisse passer la citation legitime',
+      run: 'pnpm gov:attributions:prove',
+    },
+    {
+      nom: 'contracts:hash — le contrat est derive, et son empreinte le tient',
+      run: 'pnpm contracts:hash',
+    },
+    { nom: 'La garde de PR sait rougir', run: 'pnpm gov:pr:prove' },
+    { nom: 'Vue GATES.md derivee du registre', run: 'pnpm gov:gates-derivees' },
+    { nom: 'Le decompte des gardes sait rougir', run: 'pnpm gates:prouvees:prove' },
+    { nom: 'Les paths derives sont a jour', run: 'pnpm lot:paths:check' },
+    { nom: 'Vocabulaire — enums, glossaire et etats occupants', run: 'pnpm partners:schema:enums' },
+    { nom: 'La garde du vocabulaire sait rougir', run: 'pnpm partners:schema:enums:prove' },
+    { nom: 'Centimes — aucun flottant, montants en Cents', run: 'pnpm partners:schema:cents' },
+    { nom: 'La garde des centimes sait rougir', run: 'pnpm partners:schema:cents:prove' },
+    { nom: 'Migrations additives', run: 'pnpm partners:migrations:additive' },
+    { nom: 'La garde des migrations sait rougir', run: 'pnpm partners:migrations:additive:prove' },
+    {
+      nom: 'Termes interdits — nomenclature, modeles d axionia et synonymes',
+      run: 'pnpm gov:termes-interdits',
+    },
+    { nom: 'La garde des termes interdits sait rougir', run: 'pnpm gov:termes-interdits:prove' },
+    {
+      nom: 'Lexique interdit — aucun usage prescriptif dans le perimetre de REQ-GOV-017',
+      run: 'pnpm gov:lexique',
+    },
+    {
+      nom: 'La garde du lexique sait rougir, et laisse passer la negation qui protege',
+      run: 'pnpm gov:lexique:prove',
+    },
+    {
+      nom: 'Grille du contrat — aucun forfait, bareme ou pourcentage sans chiffre dans l annexe 1',
+      run: 'pnpm jur:grille-chiffree',
+    },
+    { nom: 'La garde de la grille chiffree sait rougir', run: 'pnpm jur:grille-chiffree:prove' },
+    {
+      nom: "Maquettes — aucune tache d'ecran attribuee sans validation de Will",
+      run: 'pnpm gov:maquettes-validees',
+    },
+    {
+      nom: 'La garde des maquettes sait rougir, y compris sur une ligne du milieu du tableau',
+      run: 'pnpm gov:maquettes-validees:prove',
+    },
+    {
+      nom: 'Micro-copie — chaque issue et chaque ecran ont leur texte, aucun libelle en dur',
+      run: 'pnpm ux:exhaustivite',
+    },
+    {
+      nom: "La garde de la micro-copie sait rougir, en nommant la valeur, l'ecran ou le fichier",
+      run: 'pnpm ux:exhaustivite:prove',
+    },
+    { nom: 'Budgets de performance derives de REQ-GOV-028', run: 'pnpm perf:budgets' },
+    { nom: 'La garde des budgets sait rougir', run: 'pnpm perf:budgets:prove' },
+    {
+      nom: 'Les budgets sur le disque sont le rendu de leur exigence',
+      run: 'pnpm perf:budgets:verifier',
+    },
+    {
+      nom: 'Compteurs de debit — conduite sur panne declaree et executee, famille close',
+      run: 'pnpm securite:rate-famille',
+    },
+    { nom: 'La garde des compteurs de debit sait rougir', run: 'pnpm securite:rate-famille:prove' },
+    { nom: 'Conventions et gardes transposees d axionia', run: 'pnpm gov:conventions' },
+    { nom: 'La garde des conventions sait rougir', run: 'pnpm gov:conventions:prove' },
+    { nom: 'Journal sans donnee personnelle', run: 'pnpm journal:sans-pii' },
+    { nom: 'La garde du journal sait rougir', run: 'pnpm journal:sans-pii:prove' },
+    {
+      nom: 'Donnees personnelles chiffrees, schema et chemins d ecriture',
+      run: 'pnpm securite:schema-pii',
+    },
+    { nom: 'La garde des donnees personnelles sait rougir', run: 'pnpm securite:schema-pii:prove' },
+    { nom: 'Lint', run: 'pnpm lint' },
+    { nom: 'Format', run: 'pnpm format:check' },
+    { nom: 'Typecheck', run: 'pnpm typecheck' },
+    {
+      nom: 'red-first — les tests nouveaux de la PR rougissent contre sa base',
+      run: 'pnpm red-first',
+      si: "github.event_name == 'pull_request'",
+    },
+    { nom: 'La garde red-first sait rougir', run: 'pnpm red-first:prove' },
+    { nom: 'Harnais de l adaptateur MCP', run: 'pnpm harnais-mcp' },
+    { nom: 'Navigateurs des passes d accessibilite', run: 'pnpm a11y:navigateurs' },
+    { nom: 'Tests', run: 'pnpm test' },
+    {
+      nom: 'req:check — chaque paire (tache, REQ) a son test annote et VERT',
+      run: 'pnpm req:check',
+    },
+    { nom: 'Le lecteur du rapport de mutation sait rougir', run: 'pnpm mutation:prove' },
+    {
+      nom: 'Mutation des fichiers de la PR — Stryker en bac a sable, survivants nommes',
+      run: 'pnpm mutation:pr',
+    },
+    {
+      nom: 'Etat vivant — fraicheur, verrou d owner, journal',
+      run: 'pnpm gov:etat --now "$(date -u +%Y-%m-%dT%H:%M:%SZ)"',
+    },
+    { nom: 'La garde de l etat vivant sait rougir', run: 'pnpm gov:etat:prove' },
+  ],
+  scripts: {
+    'gov:publication': 'tsx scripts/gates/gov-publication.ts',
+    'gov:publication:prove': 'tsx scripts/gates/gov-publication.ts --prove',
+    'gov:identifiants': 'tsx scripts/gates/gov-identifiants.ts',
+    'gov:identifiants:prove': 'tsx scripts/gates/gov-identifiants.ts --prove',
+    'gov:tasks': 'tsx scripts/gates/gov-tasks.ts',
+    'gov:tasks:prove': 'tsx scripts/gates/gov-tasks.ts --prove',
+    'gov:tasks:verifie-rendu': 'tsx scripts/gates/gov-tasks.ts --verifie-rendu',
+    'gov:requirements': 'tsx scripts/gates/gov-requirements.ts',
+    'gov:requirements:prove': 'tsx scripts/gates/gov-requirements.ts --prove',
+    'gov:requirements:verifie-rendu': 'tsx scripts/gates/gov-requirements.ts --verifie-rendu',
+    'gov:hypotheses': 'tsx scripts/gates/gov-hypotheses.ts',
+    'gov:hypotheses:prove': 'tsx scripts/gates/gov-hypotheses.ts --prove',
+    'gov:preseance': 'tsx scripts/gates/gov-preseance.ts',
+    'gov:preseance:prove': 'tsx scripts/gates/gov-preseance.ts --prove',
+    'gov:sonde': 'tsx scripts/gates/gov-sonde.ts',
+    'gov:sonde:prove': 'tsx scripts/gates/gov-sonde.ts --prove',
+    'gov:adr': 'tsx scripts/gates/gov-adr.ts',
+    'gov:adr:prove': 'tsx scripts/gates/gov-adr.ts --prove',
+    'gov:autonomie': 'tsx scripts/gates/gov-autonomie.ts',
+    'gov:autonomie:prove': 'tsx scripts/gates/gov-autonomie.ts --prove',
+    'gov:pr': 'tsx scripts/gates/gov-pr.ts',
+    'gov:inventaire': 'tsx scripts/gates/gov-inventaire.ts',
+    'gov:inventaire:prove': 'tsx scripts/gates/gov-inventaire.ts --prove',
+    'gov:agents': 'tsx scripts/gates/gov-agents.ts',
+    'gov:agents:prove': 'tsx scripts/gates/gov-agents.ts --prove',
+    'gov:agents:verifier': 'tsx scripts/agents/generer.ts --verifier',
+    'gov:entite': 'tsx scripts/gates/gov-entite.ts',
+    'gov:entite:prove': 'tsx scripts/gates/gov-entite.ts --prove',
+    'gov:entite:corps': 'tsx scripts/gates/gov-entite.ts --corps-publie',
+    'gov:entite:corps:prove': 'tsx scripts/gates/gov-entite.ts --corps-publie --prove',
+    'gov:depot-visibilite:prove': 'tsx scripts/gates/gov-depot.ts --prove',
+    'gov:trace': 'tsx scripts/gates/gov-trace.ts',
+    'gov:trace:prove': 'tsx scripts/gates/gov-trace.ts --prove',
+    'gov:trace:verifier': 'tsx scripts/gates/gov-trace.ts --verifier',
+    'plan-state:verifier': 'tsx scripts/plan-state/build.ts --verifier',
+    'gov:attributions': 'tsx scripts/gates/gov-attributions.ts',
+    'gov:attributions:prove': 'tsx scripts/gates/gov-attributions.ts --prove',
+    'contracts:hash': 'tsx scripts/contracts/export.ts --verifier',
+    'gov:pr:prove': 'tsx scripts/gates/gov-pr.ts --prove',
+    'gov:gates-derivees': 'tsx scripts/gates/gates-derivees.ts',
+    'gates:prouvees:prove': 'tsx scripts/gates/gates-prouvees.ts --prove',
+    'lot:paths:check': 'tsx scripts/lot/paths-proposes.ts --check',
+    'partners:schema:enums': 'tsx scripts/gates/schema-enums.ts',
+    'partners:schema:enums:prove': 'tsx scripts/gates/schema-enums.ts --prove',
+    'partners:schema:cents': 'tsx scripts/gates/schema-cents.ts',
+    'partners:schema:cents:prove': 'tsx scripts/gates/schema-cents.ts --prove',
+    'partners:migrations:additive': 'tsx scripts/gates/migrations-additive.ts',
+    'partners:migrations:additive:prove': 'tsx scripts/gates/migrations-additive.ts --prove',
+    'gov:termes-interdits': 'tsx scripts/gates/gov-check.ts',
+    'gov:termes-interdits:prove': 'tsx scripts/gates/gov-check.ts --prove',
+    'gov:lexique': 'tsx scripts/gates/lexique-apporteurs.ts',
+    'gov:lexique:prove': 'tsx scripts/gates/lexique-apporteurs.ts --prove',
+    'jur:grille-chiffree': 'tsx scripts/gates/jur-grille-chiffree.ts',
+    'jur:grille-chiffree:prove': 'tsx scripts/gates/jur-grille-chiffree.ts --prove',
+    'gov:maquettes-validees': 'tsx scripts/gates/maquettes-validees.ts',
+    'gov:maquettes-validees:prove': 'tsx scripts/gates/maquettes-validees.ts --prove',
+    'ux:exhaustivite': 'tsx scripts/gates/ux-exhaustivite.ts',
+    'ux:exhaustivite:prove': 'tsx scripts/gates/ux-exhaustivite.ts --prove',
+    'perf:budgets': 'tsx scripts/gates/perf-budgets.ts',
+    'perf:budgets:prove': 'tsx scripts/gates/perf-budgets.ts --prove',
+    'perf:budgets:verifier': 'tsx scripts/gates/perf-budgets.ts --verifier',
+    'securite:rate-famille': 'tsx scripts/gates/rate-famille.ts',
+    'securite:rate-famille:prove': 'tsx scripts/gates/rate-famille.ts --prove',
+    'gov:conventions': 'tsx scripts/gates/gov-conventions.ts',
+    'gov:conventions:prove': 'tsx scripts/gates/gov-conventions.ts --prove',
+    'journal:sans-pii': 'tsx scripts/gates/journal-sans-pii.ts',
+    'journal:sans-pii:prove': 'tsx scripts/gates/journal-sans-pii.ts --prove',
+    'securite:schema-pii': 'tsx scripts/gates/schema-pii.ts',
+    'securite:schema-pii:prove': 'tsx scripts/gates/schema-pii.ts --prove',
+    lint: 'eslint . --max-warnings 0',
+    'format:check': 'prettier --check .',
+    typecheck: 'tsc --noEmit',
+    'red-first': 'tsx scripts/gates/red-first.ts',
+    'red-first:prove': 'tsx scripts/gates/red-first.ts --prove',
+    'harnais-mcp': 'tsx scripts/gates/harnais-mcp.ts',
+    'a11y:navigateurs': 'playwright install --with-deps chromium webkit',
+    test: 'vitest run --coverage --reporter=default --reporter=json --outputFile.json=test-results/vitest.json',
+    'req:check': 'tsx scripts/gates/gov-trace.ts --resultats test-results/vitest.json',
+    'mutation:prove': 'tsx scripts/mutation/rapport.ts --prove',
+    'mutation:pr': 'tsx scripts/mutation/pr.ts',
+    'gov:etat': 'tsx scripts/gates/gov-etat.ts',
+    'gov:etat:prove': 'tsx scripts/gates/gov-etat.ts --prove',
+  },
+};
+
 export const PASSIF_SANS_SCRIPT: Readonly<Record<string, string>> = {
   detectPii:
     'tâche porteuse livrée ; la tâche du harnais MCP, livrée elle aussi, déclarait ce chemin dans ' +
@@ -953,9 +1509,29 @@ export const CI_CONFORME =
   '      - name: Conventions transposees\n        run: pnpm gov:conventions\n';
 
 const PKG_CONFORME = JSON.stringify({
-  scripts: { lint: 'eslint .', 'format:check': 'prettier --check .' },
+  scripts: {
+    lint: 'eslint .',
+    'format:check': 'prettier --check .',
+    'gov:conventions': 'tsx scripts/gates/gov-conventions.ts',
+  },
   devDependencies: { eslint: '^9.36.0', prettier: '^3.6.2' },
 });
+
+/** Le constat de la porte A de la vue de référence : les trois étapes de `CI_CONFORME`, figées. */
+export const PORTE_CONFORME: PorteFigee = {
+  job: 'gate-a',
+  si: null,
+  etapes: [
+    { nom: 'Lint', run: 'pnpm lint' },
+    { nom: 'Format', run: 'pnpm format:check' },
+    { nom: 'Conventions transposees', run: 'pnpm gov:conventions' },
+  ],
+  scripts: {
+    lint: 'eslint .',
+    'format:check': 'prettier --check .',
+    'gov:conventions': 'tsx scripts/gates/gov-conventions.ts',
+  },
+};
 
 /**
  * La vue de référence. Elle est CONFORME de bout en bout : chaque témoin en dérive par une seule
@@ -1001,6 +1577,7 @@ export const VUE_CONFORME: Vue = {
     { id: 'DM-03-A', repo: 'axionia', paths: ['axionia/DM-03-A'], phase: 0, statut: 'a_faire' },
   ],
   perimetres: PERIMETRES_DECLARES,
+  porteA: PORTE_CONFORME,
 };
 
 function variante(patch: Partial<Vue>): Vue {
@@ -1391,7 +1968,123 @@ const CONTRE_TEMOINS: ReadonlyArray<{ libelle: string; vue: Vue }> = [
   },
 ];
 
-function prouver(): number {
+/**
+ * LES TÉMOINS DE LA PORTE A (GOV-061) : chacun désarme `CI_CONFORME` ou `PKG_CONFORME` d'UNE façon,
+ * et la confrontation doit nommer la famille. Les contre-témoins prouvent qu'un commentaire ajouté
+ * ne change rien, et que la vue de référence passe.
+ */
+const CI_EN = (de: string, par: string): Vue =>
+  variante({
+    workflows: [{ chemin: '.github/workflows/ci.yml', source: CI_CONFORME.replace(de, par) }],
+  });
+const TEMOINS_PORTE_A: ReadonlyArray<{ famille: string; libelle: string; vue: Vue }> = [
+  {
+    famille: 'etape_absente',
+    libelle: 'une étape figée retirée du job',
+    vue: CI_EN('      - name: Format\n        run: pnpm format:check\n', ''),
+  },
+  {
+    famille: 'etape_absente',
+    libelle: 'une étape figée réduite à un commentaire',
+    vue: CI_EN(
+      '      - name: Format\n        run: pnpm format:check\n',
+      '      # - name: Format\n      #   run: pnpm format:check\n'
+    ),
+  },
+  {
+    famille: 'etape_non_figee',
+    libelle: 'une étape ajoutée au job sans être figée',
+    vue: CI_EN(
+      '      - name: Lint\n',
+      '      - name: Nouvelle\n        run: pnpm nouvelle\n      - name: Lint\n'
+    ),
+  },
+  {
+    famille: 'etape_conditionnee',
+    libelle: 'une étape désarmée par une condition toujours fausse',
+    vue: CI_EN('      - name: Format\n', '      - name: Format\n        if: ${{ false }}\n'),
+  },
+  {
+    famille: 'etape_conditionnee',
+    libelle: 'le JOB désarmé par une condition',
+    vue: CI_EN('  gate-a:\n', "  gate-a:\n    if: github.event_name == 'jamais'\n"),
+  },
+  {
+    famille: 'etape_toleree',
+    libelle: 'une tolérance d’échec sous forme évaluée sur une étape qui n’est pas un lint',
+    vue: CI_EN(
+      '        run: pnpm gov:conventions\n',
+      '        run: pnpm gov:conventions\n        continue-on-error: ${{ true }}\n'
+    ),
+  },
+  {
+    famille: 'etape_repointee',
+    libelle: 'une étape dont la commande tolère l’échec dans le shell',
+    vue: CI_EN(
+      '        run: pnpm gov:conventions\n',
+      '        run: pnpm gov:conventions || true\n'
+    ),
+  },
+  {
+    famille: 'script_repointe',
+    libelle: 'le script `package.json` d’une étape repointé',
+    vue: variante({
+      packageJson: JSON.stringify({
+        ...(JSON.parse(PKG_CONFORME) as Record<string, unknown>),
+        scripts: {
+          lint: 'eslint .',
+          'format:check': 'prettier --check .',
+          'gov:conventions': 'echo ok',
+        },
+      }),
+    }),
+  },
+  {
+    famille: 'porte_a_illisible',
+    libelle: 'une vue sans constat de la porte A',
+    vue: variante({ porteA: undefined }),
+  },
+];
+
+const CONTRE_TEMOINS_PORTE_A: ReadonlyArray<{ libelle: string; vue: Vue }> = [
+  { libelle: 'la vue conforme', vue: VUE_CONFORME },
+  {
+    libelle: 'un commentaire ajouté au job, qui cite une commande',
+    vue: CI_EN(
+      '      - name: Format\n',
+      '      # pnpm gov:fantome — cité, jamais lancé\n      - name: Format\n'
+    ),
+  },
+  {
+    libelle: '`continue-on-error: false` écrit en toutes lettres',
+    vue: CI_EN(
+      '        run: pnpm lint\n',
+      '        run: pnpm lint\n        continue-on-error: false\n'
+    ),
+  },
+];
+
+async function prouver(): Promise<number> {
+  for (const t of TEMOINS_PORTE_A) {
+    const familles = (await confronterLaPorteA(t.vue)).fautes.map((f) => f.famille);
+    if (!familles.includes(t.famille)) {
+      console.error(
+        `❌ Le témoin de la porte A « ${t.libelle} » n'a PAS fait rougir ${t.famille}.`
+      );
+      console.error(
+        `   Familles obtenues : ${familles.length === 0 ? '(aucune)' : familles.join(', ')}`
+      );
+      return 1;
+    }
+  }
+  for (const c of CONTRE_TEMOINS_PORTE_A) {
+    const fautes = [...controler(c.vue), ...(await confronterLaPorteA(c.vue)).fautes];
+    if (fautes.length > 0) {
+      console.error(`❌ Faux positif de la porte A : « ${c.libelle} » a rougi.`);
+      console.error(`   ${fautes[0]!.famille} — ${fautes[0]!.message}`);
+      return 1;
+    }
+  }
   for (const t of TEMOINS) {
     const familles = controler(t.vue).map((f) => f.famille);
     if (!familles.includes(t.famille)) {
@@ -1410,7 +2103,9 @@ function prouver(): number {
       return 1;
     }
   }
-  const sansTemoin = FAMILLES.filter((f) => !TEMOINS.some((t) => t.famille === f));
+  const sansTemoin = FAMILLES.filter(
+    (f) => !TEMOINS.some((t) => t.famille === f) && !TEMOINS_PORTE_A.some((t) => t.famille === f)
+  );
   if (sansTemoin.length > 0) {
     console.error(`❌ Famille(s) sans témoin : ${sansTemoin.join(', ')}.`);
     return 1;
@@ -1420,7 +2115,8 @@ function prouver(): number {
   );
   console.log(`   ${FAMILLES.map((f) => '• ' + f).join('\n   ')}`);
   console.log(
-    `   ${TEMOINS.length} témoins rouges, ${CONTRE_TEMOINS.length} contre-témoins verts — dont la vue conforme.`
+    `   ${TEMOINS.length + TEMOINS_PORTE_A.length} témoins rouges, ` +
+      `${CONTRE_TEMOINS.length + CONTRE_TEMOINS_PORTE_A.length} contre-témoins verts — dont la vue conforme.`
   );
   return 0;
 }
@@ -1491,23 +2187,27 @@ function direLeDisqueEtLeRegistre(vue: Vue): void {
 const APPELE_DIRECTEMENT = /gov-conventions\.ts$/.test(process.argv[1] ?? '');
 
 if (APPELE_DIRECTEMENT) {
-  if (process.argv.includes('--prove')) {
-    process.exit(prouver());
-  } else {
-    const vue = lireVue();
-    direLePerimetre(vue);
-    direLeDisqueEtLeRegistre(vue);
-    const fautes = controler(vue);
-    if (fautes.length === 0) {
-      console.log(
-        `✅ gov:conventions — ${FAMILLES.length} familles vérifiées (REQ-GOV-018, REQ-GOV-029), ` +
-          `aucune violation.`
-      );
-      process.exit(0);
+  void (async () => {
+    if (process.argv.includes('--prove')) {
+      process.exit(await prouver());
+    } else {
+      const vue = lireVue();
+      direLePerimetre(vue);
+      direLeDisqueEtLeRegistre(vue);
+      const porte = await confronterLaPorteA(vue);
+      for (const l of lignesDeLaPorteA(porte)) console.log(l);
+      const fautes = [...controler(vue), ...porte.fautes];
+      if (fautes.length === 0) {
+        console.log(
+          `✅ gov:conventions — ${FAMILLES.length} familles vérifiées (REQ-GOV-018, REQ-GOV-029), ` +
+            `aucune violation.`
+        );
+        process.exit(0);
+      }
+      console.error(`\n❌ gov:conventions — ${fautes.length} violation(s) :\n`);
+      fautes.slice(0, 25).forEach((f) => console.error(`   [${f.famille}] ${f.message}\n`));
+      if (fautes.length > 25) console.error(`   … et ${fautes.length - 25} autre(s).`);
+      process.exit(1);
     }
-    console.error(`\n❌ gov:conventions — ${fautes.length} violation(s) :\n`);
-    fautes.slice(0, 25).forEach((f) => console.error(`   [${f.famille}] ${f.message}\n`));
-    if (fautes.length > 25) console.error(`   … et ${fautes.length - 25} autre(s).`);
-    process.exit(1);
-  }
+  })();
 }
