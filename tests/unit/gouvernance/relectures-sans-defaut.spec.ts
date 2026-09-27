@@ -757,8 +757,12 @@ describe('REQ-QA-002 — `mutation:pr` écarte un diff de commentaires seuls, ju
   const dans = (de: string, par: string): string => garde.split(de).join(par);
 
   it('REQ-QA-002 — `return` + commentaire bloc À SAUT DE LIGNE, ou saut de ligne seul : code changé (muté)', () => {
-    expect(codeInchange(garde, dans('return exiger(ok);', 'return /*\n  */ exiger(ok);'), F)).toBe(false);
-    expect(codeInchange(garde, dans('return exiger(ok);', 'return\n    exiger(ok);'), F)).toBe(false);
+    expect(codeInchange(garde, dans('return exiger(ok);', 'return /*\n  */ exiger(ok);'), F)).toBe(
+      false
+    );
+    expect(codeInchange(garde, dans('return exiger(ok);', 'return\n    exiger(ok);'), F)).toBe(
+      false
+    );
   });
 
   it('REQ-QA-002 — `throw`, `break`/`continue` étiquetés, `++` postfixe séparés par un saut de ligne : code changé (muté)', () => {
@@ -771,8 +775,16 @@ describe('REQ-QA-002 — `mutation:pr` écarte un diff de commentaires seuls, ju
   });
 
   it('REQ-QA-002 — commentaire ligne ou bloc SUR UNE LIGNE, même après `return` : code inchangé (écarté)', () => {
-    expect(codeInchange(garde, dans('return exiger(ok);', 'return /* c */ exiger(ok);'), F)).toBe(true);
-    expect(codeInchange(garde, dans('  return exiger(ok);', '  // la garde\n  return exiger(ok); // fin'), F)).toBe(true);
+    expect(codeInchange(garde, dans('return exiger(ok);', 'return /* c */ exiger(ok);'), F)).toBe(
+      true
+    );
+    expect(
+      codeInchange(
+        garde,
+        dans('  return exiger(ok);', '  // la garde\n  return exiger(ok); // fin'),
+        F
+      )
+    ).toBe(true);
     expect(codeInchange(garde, dans('throw e;', 'throw /* e */ e;'), F)).toBe(true);
   });
 
