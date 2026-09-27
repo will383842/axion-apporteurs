@@ -237,6 +237,51 @@ const FORMES_PRISMA: readonly { nom: string; ext: string; lignes: string[]; faut
     lignes: ["export const charger = () => import('@prisma/client', { with: { type: 'js' } });"],
     fautive: 1,
   },
+  // Le chargeur par ses PROPRIÉTÉS et par crochets, la liaison `import = require` de TypeScript,
+  // et un segment `db` suivi d'un suffixe pointé (revue `securite` 5328211580, PR 82). Placés au
+  // MILIEU de la liste : ni premiers ni derniers du bac.
+  {
+    nom: 'require-call',
+    ext: 'ts',
+    lignes: ["export const client = require.call(null, '../../db');"],
+    fautive: 1,
+  },
+  {
+    nom: 'require-apply',
+    ext: 'ts',
+    lignes: ["export const client = require.apply(null, ['../db']);"],
+    fautive: 1,
+  },
+  {
+    nom: 'require-call-cjs',
+    ext: 'cjs',
+    lignes: ["module.exports = require.call(null, '../../db');"],
+    fautive: 1,
+  },
+  {
+    nom: 'module-require-calcule',
+    ext: 'ts',
+    lignes: ["export const client = module['require']('../../db');"],
+    fautive: 1,
+  },
+  {
+    nom: 'module-require-reaffecte',
+    ext: 'ts',
+    lignes: ['export const charger = module.require;'],
+    fautive: 1,
+  },
+  {
+    nom: 'export-import-require',
+    ext: 'ts',
+    lignes: ["export import p = require('../db');"],
+    fautive: 1,
+  },
+  {
+    nom: 'segment-db-suffixe',
+    ext: 'ts',
+    lignes: ["import { db } from '../db.server';"],
+    fautive: 1,
+  },
   // Le client atteint par son chemin DANS `node_modules`, et sa déclaration `.d.ts`.
   {
     nom: 'node-modules',
@@ -528,6 +573,258 @@ const FORMES_SQL: readonly { nom: string; lignes: string[]; fautive: number }[] 
     ],
     fautive: 2,
   },
+  // ── Placés au MILIEU de la liste (revues `exactitude` 5328209488 et `securite` 5328211580,
+  //    PR 82) : ni premiers ni derniers du bac. ──
+  // Le namespace atteint par ACCÈS CALCULÉ sur l'objet module du client — espace de noms, défaut,
+  // `import()` attendu, `require`, gabarit, `Reflect.get` : le nom `Prisma` écrit comme chaîne.
+  {
+    nom: 'prisma-calcule-espace-de-noms',
+    lignes: [
+      "import * as C from '@prisma/client';",
+      "export const fragment = (x: string) => C['Prisma'].raw(x);",
+    ],
+    fautive: 2,
+  },
+  {
+    nom: 'prisma-calcule-defaut',
+    lignes: [
+      "import pc from '@prisma/client';",
+      "export const fragment = (x: string) => pc['Prisma']['raw'](x);",
+    ],
+    fautive: 2,
+  },
+  {
+    nom: 'prisma-calcule-import-dynamique',
+    lignes: [
+      "export const fragment = async (x: string) => (await import('@prisma/client'))['Prisma'].raw(x);",
+    ],
+    fautive: 1,
+  },
+  {
+    nom: 'prisma-calcule-require',
+    lignes: ["export const fragment = (x: string) => require('@prisma/client')['Prisma'].raw(x);"],
+    fautive: 1,
+  },
+  {
+    nom: 'prisma-calcule-gabarit-sql',
+    lignes: [
+      "import * as C from '@prisma/client';",
+      'export const fragment = (x: string) => new C[`Prisma`].Sql([x], []);',
+    ],
+    fautive: 2,
+  },
+  {
+    nom: 'prisma-calcule-reflect',
+    lignes: [
+      "import * as C from '@prisma/client';",
+      "export const fragment = (x: string) => Reflect.get(C, 'Prisma').raw(x);",
+    ],
+    fautive: 2,
+  },
+  // Le membre du runtime par accès CALCULÉ sur le chargeur, et ses autres membres dangereux :
+  // `Sql`, `sqltag`, `join`, `makeTypedQueryFactory`.
+  {
+    nom: 'runtime-raw-require-calcule',
+    lignes: [
+      "export const fragment = (x: string) => require('@prisma/client/runtime/library')['raw'](x);",
+    ],
+    fautive: 1,
+  },
+  {
+    nom: 'runtime-raw-import-dynamique-calcule',
+    lignes: [
+      'export const fragment = async (x: string) =>',
+      "  (await import('@prisma/client/runtime/library'))['raw'](x);",
+    ],
+    fautive: 2,
+  },
+  {
+    nom: 'runtime-sql-importe',
+    lignes: [
+      "import { Sql } from '@prisma/client/runtime/library';",
+      'export const fragment = (x: string) => new Sql([x], []);',
+    ],
+    fautive: 1,
+  },
+  {
+    nom: 'runtime-sql-espace-de-noms',
+    lignes: [
+      "import * as rt from '@prisma/client/runtime/library';",
+      'export const fragment = (x: string) => new rt.Sql([x], []);',
+    ],
+    fautive: 2,
+  },
+  {
+    nom: 'runtime-sqltag',
+    lignes: [
+      "import { sqltag } from '@prisma/client/runtime/library';",
+      'export const fragment = (x: string) => sqltag([x] as unknown as TemplateStringsArray);',
+    ],
+    fautive: 1,
+  },
+  {
+    nom: 'runtime-join',
+    lignes: [
+      "import { join as joindre } from '@prisma/client/runtime/library';",
+      'export const fragment = (v: never[], s: string) => joindre(v, s);',
+    ],
+    fautive: 1,
+  },
+  {
+    nom: 'runtime-typed-query',
+    lignes: [
+      "import { makeTypedQueryFactory } from '@prisma/client/runtime/library';",
+      'export const requete = (x: string) => makeTypedQueryFactory(x);',
+    ],
+    fautive: 1,
+  },
+  // Une fonction d'ÉTIQUETTE appelée sans gabarit : le tableau de « morceaux » est du TEXTE.
+  {
+    nom: 'prisma-sql-appel',
+    lignes: [
+      "import { Prisma } from '@prisma/client';",
+      'export const fragment = (x: string) => Prisma.sql([x] as unknown as TemplateStringsArray);',
+    ],
+    fautive: 2,
+  },
+  {
+    nom: 'prisma-sql-call',
+    lignes: [
+      "import { Prisma } from '@prisma/client';",
+      'export const fragment = (x: string) => Prisma.sql.call(null, [x] as never);',
+    ],
+    fautive: 2,
+  },
+  {
+    nom: 'prisma-sql-niche',
+    lignes: [
+      "import { Prisma } from '@prisma/client';",
+      'export const fragment = (x: string) => Prisma.sql`a ${Prisma.sql([x] as never)}`;',
+    ],
+    fautive: 2,
+  },
+  {
+    nom: 'prisma-sql-destructure-appel',
+    lignes: [
+      "import { Prisma } from '@prisma/client';",
+      'const { sql } = Prisma;',
+      'export const fragment = (x: string) => sql([x] as never);',
+    ],
+    fautive: 3,
+  },
+  {
+    nom: 'prisma-sql-destructure-renomme',
+    lignes: [
+      "import { Prisma } from '@prisma/client';",
+      'const { sql: s } = Prisma;',
+      'export const fragment = (x: string) => s([x] as never);',
+    ],
+    fautive: 3,
+  },
+  {
+    nom: 'query-raw-appel',
+    lignes: [
+      'declare const p: { $queryRaw(s: TemplateStringsArray): unknown };',
+      'export const lire = (x: string) => p.$queryRaw([x] as unknown as TemplateStringsArray);',
+    ],
+    fautive: 2,
+  },
+  {
+    nom: 'query-raw-generique-appel',
+    lignes: [
+      'declare const p: { $queryRaw<T>(s: TemplateStringsArray): T };',
+      'export const lire = (x: string) => p.$queryRaw<number>([x] as never);',
+    ],
+    fautive: 2,
+  },
+  {
+    nom: 'query-raw-reference',
+    lignes: [
+      'declare const p: { $queryRaw(s: TemplateStringsArray): unknown };',
+      'export const brut = p.$queryRaw;',
+    ],
+    fautive: 2,
+  },
+  {
+    nom: 'execute-raw-calcule-appel',
+    lignes: [
+      'declare const p: { $executeRaw(s: TemplateStringsArray): unknown };',
+      "export const ecrire = (x: string) => p['$executeRaw']([x] as never);",
+    ],
+    fautive: 2,
+  },
+  {
+    nom: 'query-raw-sortie-dans-l-objet',
+    lignes: [
+      'declare const p: { $queryRaw(s: TemplateStringsArray): unknown };',
+      'let q: unknown;',
+      'export const lire = () => (q = p.$queryRaw, p).$queryRaw`SELECT 1`;',
+    ],
+    fautive: 3,
+  },
+  // `Prisma.join` : séparateur, préfixe et suffixe sont insérés en TEXTE ; seul `join(valeurs)`.
+  {
+    nom: 'prisma-join-separateur',
+    lignes: [
+      "import { Prisma } from '@prisma/client';",
+      'export const liste = (v: Prisma.Sql[], s: string) => Prisma.join(v, s);',
+    ],
+    fautive: 2,
+  },
+  {
+    nom: 'prisma-join-etale',
+    lignes: [
+      "import { Prisma } from '@prisma/client';",
+      'declare const a: [Prisma.Sql[], string];',
+      'export const liste = () => Prisma.join(...a);',
+    ],
+    fautive: 3,
+  },
+  {
+    nom: 'prisma-join-destructure',
+    lignes: [
+      "import { Prisma } from '@prisma/client';",
+      'const { join } = Prisma;',
+      'export const liste = (v: Prisma.Sql[], s: string) => join(v, s);',
+    ],
+    fautive: 3,
+  },
+  {
+    nom: 'prisma-join-call',
+    lignes: [
+      "import { Prisma } from '@prisma/client';",
+      'export const liste = (v: Prisma.Sql[], s: string) => Prisma.join.call(null, v, s);',
+    ],
+    fautive: 2,
+  },
+  // La classe `Sql` atteinte par le CONSTRUCTEUR d'une valeur du namespace.
+  {
+    nom: 'prisma-empty-constructeur',
+    lignes: [
+      "import { Prisma } from '@prisma/client';",
+      'export const fragment = (x: string) => new (Prisma.empty.constructor as never)([x], []);',
+    ],
+    fautive: 2,
+  },
+  {
+    nom: 'prisma-join-constructeur-calcule',
+    lignes: [
+      "import { Prisma } from '@prisma/client';",
+      "export const Classe = Prisma.join([Prisma.empty])['constructor'];",
+    ],
+    fautive: 2,
+  },
+  // Une sortie écrite DANS une construction admise : la valeur par défaut d'une déstructuration.
+  {
+    nom: 'prisma-sortie-valeur-par-defaut',
+    lignes: [
+      "import { Prisma } from '@prisma/client';",
+      'let P: unknown;',
+      'const garder = (v: unknown) => ((P = v), 1);',
+      'const { sql = garder(Prisma) } = Prisma;',
+    ],
+    fautive: 4,
+  },
   // Le nom du membre `…Unsafe` écrit comme CHAÎNE, où qu'elle soit.
   {
     nom: 'query-raw-unsafe-reflect',
@@ -757,7 +1054,9 @@ export const CONTRE_TEMOINS: readonly FichierDuBac[] = [
       'const { raw } = autre;',
       "export const c = raw('y') + autre['raw']('z');",
       'export const d = p.unsafe + p[`unsafe`];',
-      "export const e = p['$queryRaw'];",
+      // `$queryRaw` voisin de `$queryRawUnsafe`, par crochets — EN ÉTIQUETTE : une référence
+      // nue à `$queryRaw` est désormais une sortie de la fonction d'étiquette, refusée.
+      "export const e = p['$queryRaw']`SELECT 1`;",
     ],
     null,
     0
@@ -776,6 +1075,13 @@ export const CONTRE_TEMOINS: readonly FichierDuBac[] = [
       'export const g = (v: Prisma.Sql): Prisma.Sql => join([v, sql`x`]);',
       'export const h = (e: unknown) => e instanceof Prisma.PrismaClientKnownRequestError;',
       "export const k = async () => { const { Prisma } = await import('@prisma/client'); return Prisma.empty; };",
+      // Des étiquettes NICHÉES, génériques, et `join` à une seule valeur : tout cela reste admis.
+      'export const m = (id: string) => Prisma.sql`a ${Prisma.sql`b ${id}`} ${Prisma.join([Prisma.sql`c`])}`;',
+      'export const n = (id: string) => p.$queryRaw`x ${Prisma.join([id])} ${sql`y ${id}`}`;',
+      'export const o = (id: string) => p.$queryRaw<{ n: number }[]>`SELECT ${id}`;',
+      // Un constructeur DÉCLARÉ n'est pas une lecture de `.constructor`.
+      'class Ligne { constructor(public n: number) {} }',
+      'export const q = new Ligne(1);',
     ],
     null,
     0
