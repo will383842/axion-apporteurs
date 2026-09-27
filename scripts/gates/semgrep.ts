@@ -151,6 +151,13 @@ export interface FichierDuBac {
 /** Le dossier du MILIEU de l'espace : ni la racine du périmètre, ni sa dernière feuille. */
 const MILIEU_ESPACE = 'src/server/espace/a/b';
 
+/**
+ * L'antislash, écrit par son CODE. Les témoins d'échappement plantent un antislash dans le TEXTE
+ * du fichier ; écrit doublé dans une chaîne de ce fichier-ci, il se relit mal, et des outils
+ * d'édition réinterprètent une séquence `u` + quatre chiffres. Une seule source pour tous.
+ */
+const AS = String.fromCharCode(0x5c);
+
 /** Les formes d'accès direct au client de base que la règle n° 1 refuse. */
 const FORMES_PRISMA: readonly { nom: string; ext: string; lignes: string[]; fautive: number }[] = [
   {
@@ -390,8 +397,47 @@ const FORMES_PRISMA: readonly { nom: string; ext: string; lignes: string[]; faut
   },
 ];
 
+/**
+ * Le spécifieur ou le chargeur écrits par ÉCHAPPEMENT (revue `exactitude` 5328459424, PR 82) :
+ * semgrep compare le TEXTE source, et `'@pri` + échappement + `ma/client'` a la même VALEUR que
+ * le client. Hors de `FORMES_PRISMA` parce que la règle n° 2 refuse ces échappements dans TOUT
+ * `src/` : leurs copies sous `src/server/acces/` ne seraient pas des contre-témoins muets.
+ */
+const FORMES_PRISMA_ECHAPPEES: readonly { nom: string; lignes: string[]; fautive: number }[] = [
+  {
+    nom: 'echappement-unicode-specifieur',
+    lignes: [`import { Prisma } from '@pri${AS}u0073ma/client';`],
+    fautive: 1,
+  },
+  {
+    nom: 'echappement-identite-specifieur',
+    lignes: [`import { db } from '../../${AS}db';`],
+    fautive: 1,
+  },
+  {
+    nom: 'echappement-hexa-specifieur',
+    lignes: [`import { db } from '../../d${AS}x62';`],
+    fautive: 1,
+  },
+  {
+    nom: 'echappement-barre-oblique-specifieur',
+    lignes: [`import { PrismaClient } from '@prisma${AS}/client';`],
+    fautive: 1,
+  },
+  {
+    nom: 'echappement-unicode-require',
+    lignes: [`export const client = requ${AS}u0069re('../../db');`],
+    fautive: 1,
+  },
+  {
+    nom: 'echappement-hexa-module-require',
+    lignes: [`export const client = module['requ${AS}x69re']('../../db');`],
+    fautive: 1,
+  },
+];
+
 /** Les formes de SQL brut non paramétré que la règle n° 2 refuse. */
-const FORMES_SQL: readonly { nom: string; lignes: string[]; fautive: number }[] = [
+const FORMES_SQL: readonly { nom: string; lignes: string[]; fautive: number; ext?: string }[] = [
   {
     nom: 'query-raw-unsafe',
     lignes: [
@@ -618,6 +664,111 @@ const FORMES_SQL: readonly { nom: string; lignes: string[]; fautive: number }[] 
     lignes: [
       "import * as C from '@prisma/client';",
       "export const fragment = (x: string) => Reflect.get(C, 'Prisma').raw(x);",
+    ],
+    fautive: 2,
+  },
+  // Le NOM écrit par ÉCHAPPEMENT, sans rien de calculé (revue `exactitude` 5328459424, PR 82) :
+  // semgrep compare le TEXTE source, pas la valeur. Échappements imprimables `u` / `u{}` / `x`
+  // dans un identifiant ou une chaîne, échappement d'identité, continuation de ligne, octal
+  // hérité (JavaScript non strict), et l'interpolation d'un `String.raw`, que l'exemption du
+  // gabarit brut couvrirait par sa portée.
+  {
+    nom: 'echappement-unicode-membre',
+    lignes: [
+      "import { Prisma } from '@prisma/client';",
+      `export const fragment = (x: string) => Prisma.r${AS}u0061w(x);`,
+    ],
+    fautive: 2,
+  },
+  {
+    nom: 'echappement-unicode-unsafe',
+    lignes: [
+      'declare const p: { $queryRawUnsafe(q: string): unknown };',
+      `export const lire = (q: string) => p.$queryRaw${AS}u0055nsafe(q);`,
+    ],
+    fautive: 2,
+  },
+  {
+    nom: 'echappement-unicode-namespace',
+    lignes: [
+      "import { Prisma } from '@prisma/client';",
+      `export const fragment = (x: string) => Pr${AS}u0069sma.raw(x);`,
+    ],
+    fautive: 2,
+  },
+  {
+    nom: 'echappement-hexa-calcule',
+    lignes: [
+      "import * as C from '@prisma/client';",
+      `export const fragment = (x: string) => C['Pr${AS}x69sma'].raw(x);`,
+    ],
+    fautive: 2,
+  },
+  {
+    nom: 'echappement-unicode-calcule',
+    lignes: [
+      "import { Prisma } from '@prisma/client';",
+      `export const fragment = (x: string) => Prisma['r${AS}u0061w'](x);`,
+    ],
+    fautive: 2,
+  },
+  {
+    nom: 'echappement-accolades-calcule',
+    lignes: [
+      "import { Prisma } from '@prisma/client';",
+      `export const fragment = (x: string) => Prisma['r${AS}u{61}w'](x);`,
+    ],
+    fautive: 2,
+  },
+  {
+    nom: 'echappement-identite-calcule',
+    lignes: [
+      "import { Prisma } from '@prisma/client';",
+      `export const fragment = (x: string) => Prisma['r${AS}aw'](x);`,
+    ],
+    fautive: 2,
+  },
+  {
+    nom: 'echappement-identite-dollar',
+    lignes: [
+      'declare const p: { $queryRawUnsafe(q: string): unknown };',
+      `export const lire = (q: string) => p['${AS}$queryRawUnsafe'](q);`,
+    ],
+    fautive: 2,
+  },
+  {
+    nom: 'echappement-identite-gabarit',
+    lignes: [
+      "import * as C from '@prisma/client';",
+      `export const fragment = (x: string) => C[\`Pr${AS}isma\`].raw(x);`,
+    ],
+    fautive: 2,
+  },
+  // La continuation : la ligne fautive FINIT par l'antislash. Aucun commentaire ne peut la
+  // suivre : ce témoin n'a que son jumeau `nosemgrep` du DESSUS (voir `jumeauxNosem`).
+  {
+    nom: 'echappement-continuation',
+    lignes: [
+      "import * as C from '@prisma/client';",
+      `export const fragment = (x: string) => C['Pri${AS}`,
+      "sma'].raw(x);",
+    ],
+    fautive: 2,
+  },
+  {
+    nom: 'echappement-octal-js',
+    ext: 'js',
+    lignes: [
+      "const C = require('@prisma/client');",
+      `module.exports.fragment = (x) => C['Pr${AS}151sma'].raw(x);`,
+    ],
+    fautive: 2,
+  },
+  {
+    nom: 'echappement-interpolation-string-raw',
+    lignes: [
+      "import { Prisma } from '@prisma/client';",
+      `export const fragment = (x: string) => String.raw\`a\${Prisma['r${AS}u0061w'](x)}\`;`,
     ],
     fautive: 2,
   },
@@ -974,6 +1125,9 @@ export const TEMOINS: readonly FichierDuBac[] = [
       f.fautive
     )
   ),
+  ...FORMES_PRISMA_ECHAPPEES.map((f) =>
+    fichier(`prisma/${f.nom}`, `${MILIEU_ESPACE}/${f.nom}.ts`, f.lignes, REGLE_PRISMA, f.fautive)
+  ),
   // L'autre moitié du périmètre de REQ-SEC-008, la page de l'espace.
   fichier(
     'prisma/page-espace',
@@ -994,7 +1148,7 @@ export const TEMOINS: readonly FichierDuBac[] = [
     1
   ),
   ...FORMES_SQL.map((f) =>
-    fichier(`sql/${f.nom}`, `src/lib/sql/${f.nom}.ts`, f.lignes, REGLE_SQL, f.fautive)
+    fichier(`sql/${f.nom}`, `src/lib/sql/${f.nom}.${f.ext ?? 'ts'}`, f.lignes, REGLE_SQL, f.fautive)
   ),
 ];
 
@@ -1021,6 +1175,26 @@ export const CONTRE_TEMOINS: readonly FichierDuBac[] = [
       // Des chaînes qui RESSEMBLENT à un spécifieur sans être chargées comme module.
       "export const i = fetch('/api/db');",
       "export const j = require.resolve('./outil-prisma');",
+    ],
+    null,
+    0
+  ),
+  // Les échappements ADMIS — les exemptions déclarées dans `.semgrep.yml` —, au milieu de
+  // l'espace, donc jugés par les DEUX règles : un caractère de contrôle C0 ou DEL (le séparateur
+  // `u001f` des condensats), les échappements courants, un antislash doublé devant `u` (du texte),
+  // une expression régulière littérale, un gabarit `String.raw` et son interpolation sans
+  // échappement.
+  fichier(
+    'espace/echappements-admis',
+    `${MILIEU_ESPACE}/echappements-admis.ts`,
+    [
+      `export const a = '${AS}u001f' + '${AS}x1F' + '${AS}u{1f}' + '${AS}x7f' + '${AS}u007F' + '${AS}0';`,
+      `export const b = '${AS}n${AS}t${AS}r${AS}b${AS}f${AS}v' + '${AS}'' + "${AS}"" + \`${AS}\`\` + '${AS}${AS}';`,
+      `export const c = '${AS}${AS}u0061${AS}${AS}x62${AS}${AS}db';`,
+      `export const d = /^[${AS}x21-${AS}x7e]{1,200}$/.test('a') && /${AS}u0061${AS}/${AS}d${AS}./.test('a');`,
+      `export const e = String.raw\`^src/.*${AS}.tsx?$\`;`,
+      `export const f = String.raw\`${AS}u0061${AS}d\`;`,
+      `export const g = String.raw\`x${AS}.y\${1}z${AS}d\`;`,
     ],
     null,
     0
@@ -1092,6 +1266,10 @@ export const CONTRE_TEMOINS: readonly FichierDuBac[] = [
  * Les jumeaux `nosemgrep` d'un témoin rouge : le commentaire au-dessus de la ligne fautive
  * (forme nue), et en fin de ligne fautive (forme nommant la règle). Sans `--disable-nosem`,
  * semgrep les ÉTEINT (mesuré) : c'est ce qui rend le jumeau significatif.
+ *
+ * Une ligne fautive qui FINIT par un antislash (continuation de ligne dans une chaîne) n'a pas de
+ * jumeau en ligne : un commentaire ajouté derrière l'antislash tomberait DANS la chaîne et la
+ * laisserait non terminée — le fichier ne s'analyserait plus. Seul le jumeau du dessus existe.
  */
 export function jumeauxNosem(t: FichierDuBac): FichierDuBac[] {
   if (t.regle === null) return [];
@@ -1100,14 +1278,16 @@ export function jumeauxNosem(t: FichierDuBac): FichierDuBac[] {
   const ext = t.chemin.slice(base.length);
   const dessus = [...t.lignes.slice(0, i), '// nosemgrep', ...t.lignes.slice(i)];
   const enLigne = t.lignes.map((l, j) => (j === i ? `${l} // nosemgrep: ${t.regle}` : l));
+  const jumeauDessus = fichier(
+    `${t.nom}#nosem-dessus`,
+    `${base}.nosem-dessus${ext}`,
+    dessus,
+    t.regle,
+    t.ligneFautive + 1
+  );
+  if (t.lignes[i]!.endsWith(AS)) return [jumeauDessus];
   return [
-    fichier(
-      `${t.nom}#nosem-dessus`,
-      `${base}.nosem-dessus${ext}`,
-      dessus,
-      t.regle,
-      t.ligneFautive + 1
-    ),
+    jumeauDessus,
     fichier(
       `${t.nom}#nosem-en-ligne`,
       `${base}.nosem-en-ligne${ext}`,
