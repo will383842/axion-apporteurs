@@ -169,6 +169,23 @@ describe('REQ-GOV-029 — comparer un chemin, c’est le normaliser', () => {
     expect(surLeDisque).toEqual(suivis.slice(0, 3));
   });
 
+  it('REQ-GOV-029 · la NORMALISATION décide, l’échec fermé ne la remplace pas — ces formes rendent `oui`, pas `indecidable`', () => {
+    // Sans ce témoin, retirer la forme de compatibilité et le retrait des caractères sans glyphe
+    // laissait la spec verte : chacune de ces formes restait refusée, mais comme « indécidable ».
+    const ramenees = [
+      `​axionia/${TARIFS}`, // classe C retirée
+      `ㅤaxionia/${TARIFS}`, // ignorable par défaut retiré
+      `axíonia/${TARIFS}`, // marque retirée
+      `ａxionia/${TARIFS}`, // compatibilité : pleine chasse
+      `AXIONIA/${TARIFS}`, // casse
+    ];
+    expect(ramenees.map((c) => conventions.estSousLeDossier(c, 'axionia'))).toEqual(
+      ramenees.map(() => 'oui')
+    );
+    // L'homoglyphe, lui, n'est ramené par rien : il reste indécidable.
+    expect(conventions.estSousLeDossier(`аxionia/${TARIFS}`, 'axionia')).toBe('indecidable');
+  });
+
   it('REQ-GOV-029 · CONTRE-TÉMOIN (6) — les points ÉCRITS restent comparés comme avant', () => {
     expect(conventions.estSousLeDossier('docs/../axionia/x.ts', 'axionia')).toBe('oui');
     expect(conventions.estSousLeDossier('axionia/../docs/x.ts', 'axionia')).toBe('non');
