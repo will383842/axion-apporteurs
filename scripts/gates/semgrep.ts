@@ -1200,8 +1200,9 @@ export const CONTRE_TEMOINS: readonly FichierDuBac[] = [
     0
   ),
   // Les échappements ADMIS — les exemptions déclarées dans `.semgrep.yml` —, au milieu de
-  // l'espace, donc jugés par les DEUX règles : un caractère de contrôle C0 ou DEL (le séparateur
-  // `u001f` des condensats), les échappements courants, un antislash doublé devant `u` (du texte),
+  // l'espace, donc jugés par les DEUX règles : un caractère de contrôle (U+0000 à U+001F) ou DEL
+  // (le séparateur `u001f` des condensats), les échappements courants, un antislash doublé devant
+  // `u` (du texte),
   // une expression régulière littérale, un gabarit `String.raw` et son interpolation sans
   // échappement.
   fichier(

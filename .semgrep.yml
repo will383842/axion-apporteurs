@@ -43,9 +43,10 @@
 # membre pointé, accès calculé et spécifieur compris. Plutôt que de décoder, les deux règles
 # refusent l'ÉCRITURE elle-même, par un bras textuel commun (`&echappement`, défini dans la
 # règle n° 1, réutilisé par la n° 2 : l'espace est nommé par la n° 1, tout `src/` par la n° 2) :
-#   — tout échappement `u`, `u{…}` ou `x` d'un caractère IMPRIMABLE. C0 (U+0000 à U+001F) et DEL
-#     (U+007F) restent admis : un caractère de contrôle n'écrit ni un nom de membre ni un
-#     spécifieur, et `src/` en porte (le séparateur U+001F des condensats HMAC) ;
+#   — tout échappement `u`, `u{…}` ou `x` d'un caractère IMPRIMABLE. Les caractères de contrôle
+#     (U+0000 à U+001F) et DEL (U+007F) restent admis : un caractère de contrôle n'écrit ni un
+#     nom de membre ni un spécifieur, et `src/` en porte (le séparateur U+001F des condensats
+#     HMAC) ;
 #   — tout antislash non échappé suivi d'autre chose que l'antislash, `'`, `"`, l'accent grave,
 #     `n`, `r`, `t`, `b`, `f`, `v`, `0` (`u` et `x` sont jugés au tiret précédent) : échappement
 #     d'identité — barre oblique et dollar compris —, continuation de ligne, et `0` suivi d'un
@@ -186,7 +187,7 @@ rules:
       - patterns: &echappement
           - pattern-either: &echappements-refuses
               # `u` + quatre chiffres, `u{…}`, `x` + deux chiffres, d'un caractère IMPRIMABLE :
-              # C0 (0 à 1F) et DEL (7F) sont écartés par anticipation négative.
+              # contrôle (0 à 1F) et DEL (7F) sont écartés par anticipation négative.
               - pattern-regex: |-
                   (?<!\\)(?:\\\\)*\\(?:u(?!00[01][0-9A-Fa-f]|007[Ff])[0-9A-Fa-f]{4}|u\{(?!0*(?:[01]?[0-9A-Fa-f]|7[Ff])\})[0-9A-Fa-f]+\}|x(?![01][0-9A-Fa-f]|7[Ff])[0-9A-Fa-f]{2})
               # Un antislash NON échappé suivi d'autre chose qu'un échappement courant (`u` et
