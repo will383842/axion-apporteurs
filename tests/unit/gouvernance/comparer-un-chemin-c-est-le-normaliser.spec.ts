@@ -148,9 +148,7 @@ describe('REQ-GOV-029 — comparer un chemin, c’est le normaliser', () => {
 
   it('REQ-GOV-029 · TÉMOIN — un chemin PLUS COURT que le dossier et illisible n’est pas `non` (dossier profond)', () => {
     // Un seul segment, dont les barres sont des lettres : il peut désigner `scripts/gates/x.ts`.
-    expect(conventions.estSousLeDossier('scripts∕gates∕x.ts', 'scripts/gates')).toBe(
-      'indecidable'
-    );
+    expect(conventions.estSousLeDossier('scripts∕gates∕x.ts', 'scripts/gates')).toBe('indecidable');
     // Contre-face : plus court et entièrement lisible, rien dessous.
     expect(conventions.estSousLeDossier('scripts', 'scripts/gates')).toBe('non');
   });
