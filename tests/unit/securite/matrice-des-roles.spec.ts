@@ -655,8 +655,8 @@ describe('REQ-SEC-023 — la garde `securite:roles` confronte le disque à la ma
       'export_non_jugeable',
     ]);
     expect(familles([route("export * from './autre';\n")])).toEqual(['export_non_jugeable']);
-    // Un réexport qui n'est pas une méthode HTTP, dans un route.ts : ce n'est pas un site.
-    expect(familles([route("export { aide } from './autre';\n")])).toEqual([]);
+    // Un réexport qui n'est pas une méthode HTTP, dans un route.ts : hors de la liste blanche, refusé.
+    expect(familles([route("export { aide } from './autre';\n")])).toEqual(['export_non_jugeable']);
   });
 
   it('REQ-SEC-023 : TÉMOIN À DEUX FACES — `export const GET = enveloppe(…)` d’un route.ts est une faute nommée ; `export const GET = traiter` suit la fonction locale', () => {
@@ -872,6 +872,58 @@ describe('REQ-SEC-023 — la garde `securite:roles` confronte le disque à la ma
     expect(
       familles([serveur('import * as h from "./h";\nexport import lever = h.handler;\n')])
     ).toEqual(['export_non_jugeable']);
+  });
+
+  it('REQ-SEC-023 : TÉMOIN À DEUX FACES — la garde juge par LISTE BLANCHE : toute forme d’export qu’elle ne sait pas juger est une faute nommée, où qu’elle soit dans la console', () => {
+    const REPONSE = "async () => new Response('x')";
+    const layout = (source: string) =>
+      ({ chemin: 'src/app/(console)/console/layout.tsx', source }) satisfies FichierDeConsole;
+    // Next compile `export =` en `module.exports` : servi 200 sans requireRole.
+    const rouges: FichierDeConsole[] = [
+      route(`export = { GET: ${REPONSE} };\n`),
+      route("export * from './h';\n"),
+      route("export { GET } from './h';\n"),
+      route("export { aide } from './h';\n"),
+      route(`export default ${REPONSE};\n`),
+      route('export default async function traiter() {\n  return 1;\n}\n'),
+      route('export enum E {\n  A,\n}\n'),
+      route('export namespace N {\n  export const GET = 1;\n}\n'),
+      route('export declare const GET: () => Response;\n'),
+      route('export as namespace N;\n'),
+      layout('export enum E {\n  A,\n}\nexport default function Layout() {\n  return null;\n}\n'),
+      serveur(`export = { lever: ${REPONSE} };\n`),
+    ];
+    for (const f of rouges) {
+      const r = jugerLaConsole([f], MATRICE_TEMOIN, ROLES_CONSOLE);
+      expect(
+        r.fautes.map((x) => x.famille),
+        f.source
+      ).toEqual(['export_non_jugeable']);
+      expect(r.fautes[0]!.message, f.source).toContain(
+        'forme d’export non admise dans un fichier de la console'
+      );
+      expect(rendreLeVerdict(r, 2, 4).code, f.source).toBe(1);
+    }
+    // Contre-témoins : les formes admises, telles que la console les écrit, restent vertes.
+    expect(
+      familles([
+        route(
+          "export const dynamic = 'force-dynamic';\n" +
+            `export async function GET() {\n${GARDE_ECRAN}\n}\n` +
+            `export function POST() {\n${GARDE_ECRAN}\n}\n` +
+            'export type T = string;\nexport interface I {\n  a: 1;\n}\n' +
+            "export type { U } from './types';\n"
+        ),
+        layout(
+          'export const metadata = { title: "Console" };\n' +
+            'export default function Layout() {\n  return null;\n}\n'
+        ),
+        {
+          chemin: 'src/app/(console)/console/error.tsx',
+          source: "'use client';\nexport default function Erreur() {\n  return null;\n}\n",
+        },
+      ])
+    ).toEqual([]);
   });
 
   it('REQ-SEC-023 : TÉMOIN À DEUX FACES — une route, une page ou une action en JavaScript (`route.js`, `page.jsx`, `.mjs`) est lue et jugée', () => {

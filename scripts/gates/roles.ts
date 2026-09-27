@@ -1029,6 +1029,42 @@ const TEMOINS: { famille: Famille; quoi: string; fichiers: FichierDeConsole[] }[
     quoi: 'forme `export *` dans un route.ts',
     fichiers: [ROUTE("export * from './autre';")],
   },
+  // ── la LISTE BLANCHE : toute forme d'export que la garde ne sait pas juger est refusée ──────
+  {
+    famille: 'export_non_jugeable',
+    quoi: 'forme `export =` dans un route.ts (Next la compile en module.exports : servie 200)',
+    fichiers: [ROUTE("export = { GET: async () => new Response('x') };")],
+  },
+  {
+    famille: 'export_non_jugeable',
+    quoi: 'forme `export * from` dans un route.ts, hors liste blanche',
+    fichiers: [ROUTE("export * from './h';")],
+  },
+  {
+    famille: 'export_non_jugeable',
+    quoi: 'forme `export { GET } from` dans un route.ts, hors liste blanche',
+    fichiers: [ROUTE("export { GET } from './h';")],
+  },
+  {
+    famille: 'export_non_jugeable',
+    quoi: 'un réexport non HTTP (`export { aide } from`) dans un route.ts, hors liste blanche',
+    fichiers: [ROUTE("export { aide } from './h';")],
+  },
+  {
+    famille: 'export_non_jugeable',
+    quoi: 'forme `export default` dans un route.ts',
+    fichiers: [ROUTE("export default async () => new Response('x');")],
+  },
+  {
+    famille: 'export_non_jugeable',
+    quoi: 'forme `export enum` dans un route.ts',
+    fichiers: [ROUTE('export enum E {\n  A,\n}')],
+  },
+  {
+    famille: 'export_non_jugeable',
+    quoi: 'forme `export namespace` dans un route.ts',
+    fichiers: [ROUTE('export namespace N {\n  export const GET = 1;\n}')],
+  },
   {
     famille: 'export_non_jugeable',
     quoi: 'forme `export default enveloppe(Page)` d’une page, requireRole ailleurs dans le fichier',
@@ -1328,11 +1364,8 @@ const CONTRE_TEMOINS: { quoi: string; fichiers: FichierDeConsole[] }[] = [
     ],
   },
   {
-    quoi: 'un type exporté d’un module « use server » (effacé : pas une valeur), et un réexport non HTTP d’un route.ts',
-    fichiers: [
-      SERVEUR('export type T = string;\ntype U = 1;\nexport type { U };'),
-      ROUTE("export { aide } from './autre';"),
-    ],
+    quoi: 'un type exporté d’un module « use server » (effacé : pas une valeur)',
+    fichiers: [SERVEUR('export type T = string;\ntype U = 1;\nexport type { U };')],
   },
   {
     quoi: 'une chaîne de `const` gardée, jamais réassignée, à côté d’un import',
