@@ -2162,6 +2162,9 @@ const GARDES_QUI_BALAIENT = [
   // GOV-046 — `perf:budgets` juge les routes des fichiers SUIVIS sous `src/`. Elle rendait `[]`
   // quand `src/` manquait ; elle établit désormais son périmètre par la source unique.
   'scripts/gates/perf-budgets.ts',
+  // JUR-T02 — `ssot:seuils` juge les littéraux de seuil et de délai dans les fichiers SUIVIS sous
+  // `src/`. Elle lançait son propre `git ls-files` ; le témoin de la source unique l'a nommée.
+  'scripts/gates/seuils-ssot.ts',
 ] as const;
 
 it('REQ-CPL-018 — toute garde qui importe la primitive de périmètre est DÉCLARÉE ci-dessus', () => {

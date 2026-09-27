@@ -255,3 +255,65 @@ describe('REQ-JUR-029 — la durée de conservation des pièces vit dans la SSOT
     expect(s.source).toMatch(/REQ-JUR-029/);
   });
 });
+
+describe('REQ-JUR-015 — un montant de seuil se reconnaît quel que soit son séparateur de milliers', () => {
+  // Règle, pas motif : tout nombre écrit dans `src/` est lu sans ses séparateurs de milliers, puis
+  // confronté aux montants de la SSOT (centimes et euros). Un séparateur par ligne.
+  it.each([
+    ["const libelle = 'seuil de 2 400 €';", '2 400', 'espace'],
+    ["const libelle = 'vigilance à 5 000 €';", '5 000', 'espace insécable U+00A0'],
+    ["const libelle = 'vigilance à 5 000 €';", '5 000', 'espace fine insécable U+202F'],
+    ["const libelle = 'seuil de 2 400 euros';", '2 400', 'espace fine U+2009'],
+    ["const libelle = 'seuil de 2.400 EUR';", '2.400', 'point'],
+    ["const libelle = \"seuil de 2'400 CHF\";", "2'400", 'apostrophe'],
+    ['const s = 2_400;', '2_400', 'souligné'],
+    ["const libelle = 'seuil de 2,400';", '2,400', 'virgule entre groupes de trois'],
+    ["const libelle = 'cumul de 240 000 centimes';", '240 000', 'centimes, espace'],
+    ["const libelle = 'versement dès 50,00 €';", '50,00', 'petit montant en euros, décimales nulles'],
+    ["const libelle = 'seuil de 2 400,00 €';", '2 400', 'milliers et décimales nulles'],
+  ])('REQ-JUR-015 — TÉMOIN : « %s » fait rougir et nomme %s (%s)', (ligne, litteral) => {
+    const fautes = litterauxHorsSsot([{ chemin: 'src/server/temoin.ts', texte: ligne }]);
+    expect(fautes.map((f) => f.famille)).toEqual(['litteral_hors_ssot']);
+    expect(fautes[0]!.message).toContain(litteral);
+  });
+
+  it.each([
+    ["const libelle = '12 400 €';", 'un autre montant, dont 2 400 n’est que la fin'],
+    ["const libelle = '2 400,50 €';", 'décimales non nulles : ce n’est pas le seuil'],
+    ["const libelle = 'lot de 50 pièces';", 'petit nombre sans unité monétaire'],
+    ["const version = '1.2.400';", 'numéro de version'],
+  ])('REQ-JUR-015 — CONTRE-TÉMOIN : « %s » reste vert (%s)', (ligne) => {
+    expect(litterauxHorsSsot([{ chemin: 'src/server/temoin.ts', texte: ligne }])).toEqual([]);
+  });
+});
+
+describe('REQ-JUR-015 — un délai de la SSOT se reconnaît dans tout produit de littéraux', () => {
+  // Règle, pas motif : tout produit de littéraux entiers est évalué, dans n'importe quel ordre et
+  // parenthèses comprises, puis confronté à chaque délai de la SSOT exprimé en millisecondes,
+  // secondes, minutes, heures et jours.
+  it.each([
+    ['const d = 1000 * 60 * 60 * 24 * 30;', '30 jours', 'millisecondes, ordre croissant'],
+    ['const d = 15 * 24 * 3600 * 1000;', '15 jours', 'millisecondes, secondes par heure'],
+    ['const d = (60 * 60) * (24 * 90) * 1000;', '90 jours', 'parenthèses'],
+    ['const d = 60 * 60 * 24 * 15;', '15 jours', 'secondes'],
+    ['const d = 60 * 24 * 10;', '10 jours', 'minutes'],
+    ['const d = 24 * 2;', '2 jours', 'heures'],
+    ['const d = 3 * 30 * 24 * 60 * 60 * 1000;', '90 jours', 'trois mois de trente jours'],
+    ['const d = 1_000 *\n  86_400 * 60;', '60 jours', 'sur deux lignes, séparateurs `_`'],
+  ])('REQ-JUR-015 — TÉMOIN : « %s » fait rougir et nomme %s (%s)', (ligne, delai) => {
+    const fautes = litterauxHorsSsot([{ chemin: 'src/server/temoin.ts', texte: ligne }]);
+    expect(fautes.map((f) => f.famille)).toEqual(['litteral_hors_ssot']);
+    expect(fautes[0]!.message).toContain(delai);
+    expect(fautes[0]!.message).toContain('src/server/temoin.ts:1');
+  });
+
+  it.each([
+    ['const aire = 7 * 11;', 'un produit sans rapport'],
+    ['const MS_PAR_HEURE = 60 * 60 * 1000;', 'une heure, qui n’est aucun délai'],
+    ['const MS_PAR_JOUR = 24 * 60 * 60 * 1000;', 'un jour, qui n’est aucun délai'],
+    ['const CORPS_MAX_OCTETS = 128 * 1024;', 'une taille en octets'],
+    ['const x = v.2 * 15;', 'une décimale n’est pas un entier'],
+  ])('REQ-JUR-015 — CONTRE-TÉMOIN : « %s » reste vert (%s)', (ligne) => {
+    expect(litterauxHorsSsot([{ chemin: 'src/server/temoin.ts', texte: ligne }])).toEqual([]);
+  });
+});

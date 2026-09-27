@@ -37,6 +37,15 @@ import {
 const HEURE = 3_600_000;
 const T0 = Date.UTC(2026, 8, 27, 8, 0, 0);
 
+/**
+ * Un identifiant du format du dépôt (`@default(uuid()) @db.Uuid`, prisma/schema.prisma), le i-ème.
+ * Seul ce format entre dans un message : tout autre `id` est remplacé par un marqueur neutre, et
+ * tous les identifiants hors format d'une catégorie se dédoublonnent donc ensemble.
+ */
+const uuid = (i: number): string => `a3f1c2d4-5b6e-4f70-8a9b-${i.toString(16).padStart(12, 'c')}`;
+const UUID_A = 'b7e2d9a1-4c3f-4e8a-9d1b-2f6a8c0e4b7d';
+const UUID_B = 'c1d8e4f2-7a9b-4b3c-8e5d-6a2f9c1b3e8a';
+
 /** Un notifieur qui COMPTE : c'est le nombre d'envois que le test juge, pas un booléen. */
 function notifieurCompteur(): Notifieur & { envois: Notification[] } {
   const envois: Notification[] = [];
@@ -55,7 +64,7 @@ describe('REQ-INT-024 — dédoublonnage et plafond horaire par catégorie', () 
     const plafondParHeure = 5;
     const alerteur = creerAlerteur({ notifieur, horloge: horlogeFigee(T0), plafondParHeure });
     for (let i = 0; i < 200; i++) {
-      await alerteur.alerter({ categorie: 'releve_bloque', id: `rel_${i}` });
+      await alerteur.alerter({ categorie: 'releve_bloque', id: uuid(i) });
     }
     expect(notifieur.envois).toHaveLength(plafondParHeure);
   });
@@ -64,7 +73,7 @@ describe('REQ-INT-024 — dédoublonnage et plafond horaire par catégorie', () 
     const notifieur = notifieurCompteur();
     const alerteur = creerAlerteur({ notifieur, horloge: horlogeFigee(T0), plafondParHeure: 50 });
     for (let i = 0; i < 20; i++) {
-      await alerteur.alerter({ categorie: 'releve_bloque', id: `rel_${i}` });
+      await alerteur.alerter({ categorie: 'releve_bloque', id: uuid(i) });
     }
     expect(notifieur.envois).toHaveLength(20);
   });
@@ -73,8 +82,8 @@ describe('REQ-INT-024 — dédoublonnage et plafond horaire par catégorie', () 
     const notifieur = notifieurCompteur();
     const alerteur = creerAlerteur({ notifieur, horloge: horlogeFigee(T0), plafondParHeure: 3 });
     for (let i = 0; i < 10; i++)
-      await alerteur.alerter({ categorie: 'releve_bloque', id: `r${i}` });
-    const issue = await alerteur.alerter({ categorie: 'restauration_echouee', id: 'exercice_1' });
+      await alerteur.alerter({ categorie: 'releve_bloque', id: uuid(i) });
+    const issue = await alerteur.alerter({ categorie: 'restauration_echouee', id: UUID_B });
     expect(issue).toBe('envoyee');
     expect(notifieur.envois).toHaveLength(4);
   });
@@ -83,12 +92,12 @@ describe('REQ-INT-024 — dédoublonnage et plafond horaire par catégorie', () 
     const notifieur = notifieurCompteur();
     const horloge = horlogeMobile(T0);
     const alerteur = creerAlerteur({ notifieur, horloge, plafondParHeure: 2 });
-    expect(await alerteur.alerter({ categorie: 'releve_bloque', id: 'a' })).toBe('envoyee');
-    expect(await alerteur.alerter({ categorie: 'releve_bloque', id: 'b' })).toBe('envoyee');
-    expect(await alerteur.alerter({ categorie: 'releve_bloque', id: 'c' })).toBe('plafonnee');
+    expect(await alerteur.alerter({ categorie: 'releve_bloque', id: uuid(1) })).toBe('envoyee');
+    expect(await alerteur.alerter({ categorie: 'releve_bloque', id: uuid(2) })).toBe('envoyee');
+    expect(await alerteur.alerter({ categorie: 'releve_bloque', id: uuid(3) })).toBe('plafonnee');
     expect(notifieur.envois[1]!.corps).toMatch(/plafond horaire atteint/);
     horloge.avancer(HEURE);
-    expect(await alerteur.alerter({ categorie: 'releve_bloque', id: 'd' })).toBe('envoyee');
+    expect(await alerteur.alerter({ categorie: 'releve_bloque', id: uuid(4) })).toBe('envoyee');
     expect(notifieur.envois).toHaveLength(3);
   });
 
@@ -97,7 +106,7 @@ describe('REQ-INT-024 — dédoublonnage et plafond horaire par catégorie', () 
     const alerteur = creerAlerteur({ notifieur, horloge: horlogeFigee(T0), plafondParHeure: 50 });
     const issues = new Set<string>();
     for (let i = 0; i < 400; i++) {
-      issues.add(await alerteur.alerter({ categorie: 'releve_bloque', id: 'rel_1' }));
+      issues.add(await alerteur.alerter({ categorie: 'releve_bloque', id: UUID_A }));
     }
     expect(notifieur.envois).toHaveLength(1);
     expect(issues).toEqual(new Set(['envoyee', 'dedoublonnee']));
@@ -188,8 +197,8 @@ describe('REQ-INT-024 — les bords de l’alerteur, chacun vu', () => {
   it('REQ-INT-024 — un plafond de UN est permis, et son unique envoi annonce la retenue', async () => {
     const notifieur = notifieurCompteur();
     const alerteur = creerAlerteur({ notifieur, horloge: horlogeFigee(T0), plafondParHeure: 1 });
-    expect(await alerteur.alerter({ categorie: 'releve_bloque', id: 'a' })).toBe('envoyee');
-    expect(await alerteur.alerter({ categorie: 'releve_bloque', id: 'b' })).toBe('plafonnee');
+    expect(await alerteur.alerter({ categorie: 'releve_bloque', id: uuid(1) })).toBe('envoyee');
+    expect(await alerteur.alerter({ categorie: 'releve_bloque', id: uuid(2) })).toBe('plafonnee');
     expect(notifieur.envois).toHaveLength(1);
     expect(notifieur.envois[0]!.corps).toMatch(/plafond horaire atteint/);
   });
@@ -197,7 +206,7 @@ describe('REQ-INT-024 — les bords de l’alerteur, chacun vu', () => {
   it('REQ-INT-024 — sous le plafond, le message ne parle PAS de plafond, et le sujet nomme la catégorie', async () => {
     const notifieur = notifieurCompteur();
     const alerteur = creerAlerteur({ notifieur, horloge: horlogeFigee(T0), plafondParHeure: 2 });
-    await alerteur.alerter({ categorie: 'releve_bloque', id: 'a' });
+    await alerteur.alerter({ categorie: 'releve_bloque', id: uuid(1) });
     expect(notifieur.envois[0]!.corps).not.toMatch(/plafond/);
     expect(notifieur.envois[0]!.sujet).toBe('alerte console · releve_bloque');
   });
@@ -206,13 +215,13 @@ describe('REQ-INT-024 — les bords de l’alerteur, chacun vu', () => {
     const notifieur = notifieurCompteur();
     const horloge = horlogeMobile(T0);
     const alerteur = creerAlerteur({ notifieur, horloge, plafondParHeure: 50 });
-    expect(await alerteur.alerter({ categorie: 'releve_bloque', id: 'rel_1' })).toBe('envoyee');
+    expect(await alerteur.alerter({ categorie: 'releve_bloque', id: UUID_A })).toBe('envoyee');
     horloge.avancer(HEURE - 1);
-    expect(await alerteur.alerter({ categorie: 'releve_bloque', id: 'rel_1' })).toBe(
+    expect(await alerteur.alerter({ categorie: 'releve_bloque', id: UUID_A })).toBe(
       'dedoublonnee'
     );
     horloge.avancer(1);
-    expect(await alerteur.alerter({ categorie: 'releve_bloque', id: 'rel_1' })).toBe('envoyee');
+    expect(await alerteur.alerter({ categorie: 'releve_bloque', id: UUID_A })).toBe('envoyee');
     expect(notifieur.envois).toHaveLength(2);
   });
 
@@ -305,5 +314,66 @@ describe('REQ-INT-024 — ni montant, ni raison sociale (G-SEC-NOTIF, fixture ro
     });
     expect(r.code).toBe(1);
     expect(r.fautes.map((f) => f.champ).sort()).toEqual(['montantHtCents', 'raisonSociale']);
+  });
+});
+
+describe('REQ-INT-024 — LISTE BLANCHE : seul un identifiant du format du dépôt entre dans le message', () => {
+  // Le format est celui des agrégats de `prisma/schema.prisma` : `String @id @default(uuid()) @db.Uuid`.
+  // Tout autre `id` ou `compte` est remplacé par un marqueur neutre, quelle que soit sa forme.
+  it.each([
+    ['0612345678', 'téléphone nu'],
+    ['33612345678', 'téléphone international sans +'],
+    ['jeanne.temoin@example.org', 'courriel'],
+    ['jeanne', 'nom en un mot'],
+    ['987654', 'nombre nu'],
+  ])('REQ-INT-024 — TÉMOIN : « %s » (%s) en id comme en compte n’entre pas dans le message', async (valeur) => {
+    const notifieur = notifieurCompteur();
+    const alerteur = creerAlerteur({ notifieur, horloge: horlogeFigee(T0), plafondParHeure: 5 });
+    await alerteur.alerter({ categorie: 'releve_bloque', id: valeur, compte: valeur });
+    const envoi = notifieur.envois[0]!;
+    expect(`${envoi.sujet}\n${envoi.corps}`).not.toContain(valeur);
+    expect(envoi.corps).toBe(
+      '[releve_bloque] objet [identifiant non technique retiré] · compte [identifiant non technique retiré]'
+    );
+  });
+
+  it('REQ-INT-024 — CONTRE-TÉMOIN : un vrai identifiant du format du dépôt entre, en id comme en compte', () => {
+    const texte = messageDAlerte('alerte', { categorie: 'releve_bloque', id: UUID_A, compte: UUID_B });
+    expect(texte).toBe(`[releve_bloque] objet ${UUID_A} · compte ${UUID_B}`);
+  });
+});
+
+describe('REQ-INT-024 — la catégorie brute ne contourne ni le plafond ni le dédoublonnage', () => {
+  it('REQ-INT-024 — TÉMOIN : dix catégories hors format distinctes partagent UN plafond', async () => {
+    const notifieur = notifieurCompteur();
+    const alerteur = creerAlerteur({ notifieur, horloge: horlogeFigee(T0), plafondParHeure: 3 });
+    for (let i = 0; i < 10; i++) {
+      await alerteur.alerter({ categorie: `appeler le 06123456${10 + i}`, id: uuid(i) });
+    }
+    expect(notifieur.envois).toHaveLength(3);
+    for (const e of notifieur.envois) expect(`${e.sujet} ${e.corps}`).not.toMatch(/06123456/);
+  });
+
+  it('REQ-INT-024 — TÉMOIN : dix identifiants hors format distincts ne font partir qu’UNE alerte', async () => {
+    const notifieur = notifieurCompteur();
+    const alerteur = creerAlerteur({ notifieur, horloge: horlogeFigee(T0), plafondParHeure: 50 });
+    for (let i = 0; i < 10; i++) {
+      await alerteur.alerter({ categorie: 'releve_bloque', id: `06123456${10 + i}` });
+    }
+    expect(notifieur.envois).toHaveLength(1);
+  });
+});
+
+describe('REQ-INT-024 — le montant est vu même formaté en euros', () => {
+  it.each([
+    ['9 876,54 €', 'espace et virgule'],
+    ['9 876,54 €', 'format français, espace fine insécable'],
+    ['9876.54 EUR', 'point décimal'],
+    ['9 877 €', 'arrondi à l’euro'],
+    ['9 876 €', 'tronqué à l’euro'],
+  ])('REQ-INT-024 — TÉMOIN : un gabarit qui écrit « %s » (%s) est refusé, champ montantHtCents nommé', (ecrit) => {
+    const r = confronter({ en_euros: (o) => `[${o.categorie}] ${ecrit}` });
+    expect(r.code).toBe(1);
+    expect(r.fautes).toEqual([{ gabarit: 'en_euros', champ: 'montantHtCents' }]);
   });
 });
