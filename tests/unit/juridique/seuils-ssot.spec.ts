@@ -141,14 +141,41 @@ describe('REQ-JUR-015 — une source qui cite un texte de loi dit si elle l’a 
   const CITE_UNE_LOI =
     /C\.\s*(?:trav|com|civ)\b|\b[LDR]\.\d|art\.\s*[LDR]\.\d|BOFiP|code\s+(?:du\s+travail|de\s+commerce|civil|g[ée]n[ée]ral\s+des\s+imp[oô]ts)/i;
 
+  /**
+   * Ce qui compte comme un ÉTAT DÉCLARÉ du texte de loi lui-même. Le mot « confronté » seul ne
+   * suffit pas, et c'est une revue `exactitude` qui l'a montré : « contrat art. 5.3 (valeur
+   * confrontée) ; C. com. L.441-10 » contient « confront », et la loi y est pourtant citée en
+   * silence — le mot porte sur la VALEUR, pas sur le texte. Le témoin exige donc l'une des deux
+   * formes qui parlent du texte : « non encore confronté », ou une lecture datée.
+   */
+  const ETAT_DU_TEXTE_DECLARE = /non encore confront|confront[ée]+\s+le\s+\d{4}-\d{2}-\d{2}/i;
+
   it('REQ-JUR-015 — chaque source citant une loi dit si le texte a été confronté', () => {
     const muets = Object.entries(SEUILS)
-      .filter(([, s]) => CITE_UNE_LOI.test(s.source) && !/confront/i.test(s.source))
+      .filter(([, s]) => CITE_UNE_LOI.test(s.source) && !ETAT_DU_TEXTE_DECLARE.test(s.source))
       .map(([cle, s]) => `${cle} : « ${s.source} »`);
     expect(
       muets,
       `ces sources citent un texte de loi sans dire s’il a été confronté, sous une date de vérification qui l’affirme :\n${muets.join('\n')}`
     ).toEqual([]);
+  });
+
+  it('REQ-JUR-015 — TÉMOIN : « valeur confrontée » ne suffit PAS à dédouaner la loi citée', () => {
+    // Le contre-exemple exact que la revue a donné. Sans ce témoin, un `confront` portant sur la
+    // valeur laisserait passer une loi citée en silence, et le vert du test ci-dessus mentirait.
+    const piege = 'contrat art. 5.3 (valeur confrontée) ; C. com. L.441-10';
+    expect(CITE_UNE_LOI.test(piege), 'la loi y est bien citée').toBe(true);
+    expect(
+      ETAT_DU_TEXTE_DECLARE.test(piege),
+      '« valeur confrontée » parle de la valeur, pas du texte : ce piège doit être vu comme muet'
+    ).toBe(false);
+    // Et les deux formes qui, elles, parlent du texte.
+    for (const bonne of [
+      'REQ-ARG-025 (valeur confrontée) — À RELIRE, non encore confronté : C. trav. L.8222-1',
+      'C. com. L.441-10, confronté le 2026-09-27',
+    ]) {
+      expect(ETAT_DU_TEXTE_DECLARE.test(bonne), `« ${bonne} » déclare l’état du texte`).toBe(true);
+    }
   });
 
   it('REQ-JUR-015 — TÉMOIN : une source qui cite une loi en silence est vue, abrégée OU en mots', () => {

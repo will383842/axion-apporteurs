@@ -46,15 +46,27 @@ import type { Notifieur } from '../../../lib/notify';
  *
  * Une expression de forme dit à quoi une valeur RESSEMBLE ; une liste close dit ce qu'elle EST.
  * Sur une donnée personnelle, la ressemblance ne suffit pas.
+ *
+ * 🔴 CE QUE CETTE LISTE A PORTÉ À TORT, ET POURQUOI C'ÉTAIT GRAVE. Une première version en portait
+ * HUIT, annoncées comme « les catégories réellement employées ». C'était faux, mesuré par une revue
+ * `exactitude` : seules trois sont passées à `alerter()`. Les cinq autres — `identite`, `contact`,
+ * `bancaire`, `reseau`, `postal` — sont MOT POUR MOT `CategoriePersonnelle`
+ * (`src/domain/donnees-personnelles/champs.ts`), recopiées depuis un concept qui n'a rien à voir :
+ * ce sont les catégories de DONNÉE PERSONNELLE que cette garde protège. Une liste close qui les
+ * admet autorise un appelant à étiqueter une alerte du nom de ce qu'on ne doit pas divulguer.
+ * L'erreur venait d'un relevé fait à la va-vite : un `grep` sur `categorie:` avait ramassé le
+ * lexique des champs personnels au lieu des appelants d'`alerter()`.
+ *
+ * DONC : cette liste ne porte que les catégories ÉMISES ou EXIGÉES. Elle grandit quand un appelant
+ * en a besoin, jamais par anticipation — une valeur admise sans émetteur est une porte ouverte que
+ * personne ne surveille.
  */
 export const CATEGORIES_ALERTE = [
-  'bancaire',
-  'contact',
-  'identite',
-  'postal',
+  /** `INT-T14` — un relevé de commissions bloqué. */
   'releve_bloque',
-  'reseau',
+  /** `QA-T13` — une restauration de sauvegarde qui a échoué. */
   'restauration_echouee',
+  /** Le témoin de la garde `G-SEC-NOTIF` (`garde-sans-pii.ts`, `OBJET_TEMOIN`). */
   'temoin_garde',
 ] as const;
 

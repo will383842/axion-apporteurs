@@ -61,7 +61,8 @@ Aucun quota : le dépôt est annuel. La seule limite est l'**échéance de dép�
 
 Ce que **nous** garantissons de notre côté : le cumul est calculé sur les sommes effectivement versées et
 non sur les sommes acquises ; un test de frontière encadre le seuil, dans les deux sens (REQ-ARG-024,
-REQ-JUR-015) — il ne peut être écrit qu'une fois la valeur du seuil posée.
+REQ-JUR-015) — la valeur du seuil étant posée dans la source unique de vérité, ce test peut désormais
+être écrit, et il reste **à écrire** : c'est une dette, pas un empêchement.
 
 ## 5. Mode dégradé — s'il tombe
 
@@ -70,7 +71,7 @@ REQ-JUR-015) — il ne peut être écrit qu'une fois la valeur du seuil posée.
 | Le canal de dépôt est indisponible | Sans effet sur le produit : l'export est un fichier, conservé, re-déposable. Aucun traitement métier n'attend une réponse de l'administration |
 | Le fichier est rejeté au dépôt | Le cumul reste calculable et re-exportable à l'identique. Le rejet est une affaire de format, que la lecture de la rubrique 2 doit prévenir |
 | Le seuil de l'exercice change | Il vit dans la source unique de vérité avec sa source et sa date ; le changer est un acte tracé, pas une modification de littéral (RM-10) |
-| Le seuil de l'exercice n'est pas posé | État actuel : l'export n'est pas calculable, et c'est une attente, pas une panne |
+| Le seuil de l'exercice n'est pas posé | Ce n'est PLUS l'état actuel : `SEUIL_DAS2` est posé dans la source unique de vérité, et le cumul est calculable. Si un exercice futur retirait la valeur, l'export redeviendrait incalculable — et ce serait une attente, pas une panne |
 
 ## 6. Point de contact
 
@@ -93,7 +94,7 @@ REQ-JUR-015) — il ne peut être écrit qu'une fois la valeur du seuil posée.
 | --- | --- | --- |
 | Canal de dépôt et format attendu | expert-comptable, à défaut Will | premier export annuel |
 | Échéance de dépôt de l'exercice | expert-comptable, à défaut Will | clôture du premier exercice commissionné |
-| Valeur du seuil de l'exercice, avec sa source et sa date, dans la source unique de vérité | Will, sur avis de l'expert-comptable — REQ-ARG-024 : aucune valeur par défaut n'est valide, la source reste vide tant que la décision n'est pas prise | premier calcul de cumul |
+| **Confirmation** de la valeur du seuil de l'exercice | Will, sur avis de l'expert-comptable — la valeur EST posée dans la source unique de vérité (`SEUIL_DAS2`, 240 000 centimes, BOFiP ACTU-2024-00154) avec sa source et sa date, sous `HYP-D9` ; ce qui manque n'est pas la valeur mais son arbitrage | premier dépôt réel |
 
 ## 9. Référence à citer dans une fixture
 
