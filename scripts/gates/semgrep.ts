@@ -1642,10 +1642,7 @@ const FORMES_SQL: readonly { nom: string; lignes: string[]; fautive: number; ext
   {
     nom: 'jsx-namespace',
     ext: 'tsx',
-    lignes: [
-      'declare const Prisma: { raw: unknown };',
-      'export const f = () => <Prisma.raw />;',
-    ],
+    lignes: ['declare const Prisma: { raw: unknown };', 'export const f = () => <Prisma.raw />;'],
     fautive: 2,
   },
 ];
