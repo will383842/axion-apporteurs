@@ -49,8 +49,10 @@
  * identifiants `exports`, `module`, `require`, `eval` (l'`eval` direct voit la portée de
  * l'enveloppe) et les internes du bundler (`__webpack_…`, `__turbopack_…`), MÊME LIÉS
  * LOCALEMENT, hors position de nom de propriété (`o.module`, `{ exports: 1 }`) ; `this` et
- * `arguments` hors d'une fonction non fléchée (dans l'enveloppe, l'objet des exports et ses
- * arguments) ; toute instruction `with`. PRIX ASSUMÉ : une variable locale nommée `exports` ou
+ * `arguments` qu'aucune RÉGION LIANTE n'enferme (dans l'enveloppe, l'objet des exports et ses
+ * arguments) — seuls le corps ou les paramètres d'une fonction non fléchée, l'initialiseur d'une
+ * propriété de classe et un bloc `static` les lient ; un nom calculé de membre, un décorateur,
+ * une clause `extends` s'évaluent dans la portée qui les entoure ; toute instruction `with`. PRIX ASSUMÉ : une variable locale nommée `exports` ou
  * `module` se renomme.
  * Le vert imprime les fichiers lus, les sites confrontés, et les couples droit-rôle confrontés à la
  * ligne de la matrice RÔLE PAR RÔLE (ouverts, fermés). Le « périmètre vide » ne se dit que si AUCUN
@@ -142,7 +144,8 @@ const METHODES_HTTP = new Set(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 
 const NOM_DE_LA_PORTE = 'requireRole';
 /**
  * Le module canonique de la porte, chemin du dépôt sans extension : seul le `requireRole` IMPORTÉ
- * de ce module garde un site. Sa présence sur le disque est vérifiée par la spécification.
+ * de ce module, par un chemin relatif qui ne remonte pas au-delà de la racine du dépôt, garde un
+ * site. Sa présence sur le disque est vérifiée par la spécification.
  */
 export const MODULE_DE_LA_PORTE = 'src/server/roles/require-role';
 const EXTENSION = /\.(?:[jt]sx?|[mc][jt]s)$/;
