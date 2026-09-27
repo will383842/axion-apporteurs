@@ -1255,8 +1255,9 @@ export const CONTRE_TEMOINS: readonly FichierDuBac[] = [
   // (le séparateur `u001f` des condensats), les échappements courants, un antislash doublé devant
   // `u` (du texte),
   // une expression régulière littérale, un gabarit `String.raw` SANS interpolation (toute
-  // interpolation d'un `String.raw` est refusée comme classe), et un gabarit NON étiqueté qui
-  // interpole, à côté d'un `String.raw` sans interpolation.
+  // interpolation d'un `String.raw` est refusée comme classe), un gabarit NON étiqueté qui
+  // interpole, à côté d'un `String.raw` sans interpolation, et un `String.raw` dont le texte
+  // porte un `${` échappé par un antislash (du texte, pas une interpolation).
   fichier(
     'espace/echappements-admis',
     `${MILIEU_ESPACE}/echappements-admis.ts`,
@@ -1268,6 +1269,7 @@ export const CONTRE_TEMOINS: readonly FichierDuBac[] = [
       `export const e = String.raw\`^src/.*${AS}.tsx?$\`;`,
       `export const f = String.raw\`${AS}u0061${AS}d\`;`,
       `export const g = \`x\${1}y\` + String.raw\`z${AS}.w${AS}d\`;`,
+      `export const h = String.raw\`a${AS}\${x}b\`;`,
     ],
     null,
     0
