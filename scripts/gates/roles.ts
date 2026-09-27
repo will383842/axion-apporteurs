@@ -571,8 +571,11 @@ function porteDuFichier(chemin: string, source: ts.SourceFile): Porte {
     if (!specifieur.startsWith('.')) return false;
     const parties: string[] = [];
     for (const p of `${dossier}/${specifieur}`.split('/')) {
-      if (p === '..') parties.pop();
-      else if (p !== '.' && p !== '') parties.push(p);
+      if (p === '..') {
+        // Remonter au-delà de la racine du dépôt mène HORS du dépôt : ce n'est pas la porte.
+        if (parties.length === 0) return false;
+        parties.pop();
+      } else if (p !== '.' && p !== '') parties.push(p);
     }
     return parties.join('/').replace(EXTENSION, '') === MODULE_DE_LA_PORTE;
   };
@@ -661,42 +664,88 @@ function estUnNomDePropriete(id: ts.Identifier): boolean {
 }
 
 /**
+ * `enfant`, fils direct de `parent`, est-il dans une RÉGION QUI LIE `this` et `arguments` ?
+ * Une seule liste, fermée : le corps ou un paramètre d'une fonction non fléchée (déclaration,
+ * expression, méthode, accesseur, constructeur), l'initialiseur d'une propriété de classe, le
+ * corps d'un bloc `static {}`. Tout le reste d'un tel nœud — son nom (calculé ou non), ses
+ * modificateurs et décorateurs, ses paramètres de type, son type de retour — s'évalue dans la
+ * portée qui l'entoure, et n'est donc PAS une frontière.
+ */
+function lieThis(enfant: ts.Node, parent: ts.Node): boolean {
+  if (
+    ts.isFunctionDeclaration(parent) ||
+    ts.isFunctionExpression(parent) ||
+    ts.isMethodDeclaration(parent) ||
+    ts.isGetAccessorDeclaration(parent) ||
+    ts.isSetAccessorDeclaration(parent) ||
+    ts.isConstructorDeclaration(parent)
+  ) {
+    return (
+      (parent.body !== undefined && parent.body === enfant) ||
+      (ts.isParameter(enfant) && parent.parameters.includes(enfant))
+    );
+  }
+  if (ts.isPropertyDeclaration(parent)) {
+    return parent.initializer !== undefined && parent.initializer === enfant;
+  }
+  if (ts.isClassStaticBlockDeclaration(parent)) return parent.body === enfant;
+  return false;
+}
+
+/**
+ * `this` (ou `arguments`) au nœud `n` est-il lié par une région qui le lie, et non par la portée
+ * du module ? On remonte les parents ; une frontière ne compte que si le chemin passe DANS sa
+ * région liante (`lieThis`). Un décorateur s'évalue dans la portée qui entoure la classe qu'il
+ * décore (classe, membre ou paramètre) : on saute à cette classe. Arrivé au fichier sans
+ * frontière : portée du module — dans l'enveloppe CommonJS, l'objet des exports.
+ */
+function lieParUneRegion(n: ts.Node): boolean {
+  let enfant: ts.Node = n;
+  let parent: ts.Node | undefined = n.parent;
+  while (parent !== undefined) {
+    if (ts.isDecorator(enfant)) {
+      let classe: ts.Node | undefined = parent;
+      while (classe !== undefined && !ts.isClassLike(classe)) classe = classe.parent;
+      if (classe === undefined) return false; // décorateur hors classe : échec fermé
+      enfant = classe;
+      parent = classe.parent;
+      continue;
+    }
+    if (lieThis(enfant, parent)) return true;
+    enfant = parent;
+    parent = parent.parent;
+  }
+  return false;
+}
+
+/**
  * Ce qui, dans un fichier, nomme l'objet des exports CommonJS ou y mène : `exports`, `module`,
  * `require`, `eval` direct, un interne du bundler (`__webpack_…`, `__turbopack_…`) — même liés
- * localement —, `this` ou `arguments` hors d'une fonction (dans l'enveloppe CommonJS, c'est
- * l'objet des exports et les arguments de l'enveloppe), une instruction `with`. Chaque
- * occurrence, avec sa ligne.
+ * localement —, `this` ou `arguments` qu'aucune région liante n'enferme (`lieParUneRegion` : dans
+ * l'enveloppe CommonJS, c'est l'objet des exports et les arguments de l'enveloppe — y compris
+ * dans un nom calculé de membre, un décorateur, une clause `extends`), une instruction `with`.
+ * Chaque occurrence, avec sa ligne.
  */
 function formesCommonJS(source: ts.SourceFile): string[] {
   const vues: string[] = [];
   const ligne = (n: ts.Node) => source.getLineAndCharacterOfPosition(n.getStart(source)).line + 1;
-  const visiter = (n: ts.Node, dansUneFonction: boolean): void => {
+  const visiter = (n: ts.Node): void => {
     if (ts.isIdentifier(n)) {
       const nom = n.text;
       const interdit =
         NOMS_COMMONJS.has(nom) ||
         INTERNE_DU_BUNDLER.test(nom) ||
-        (nom === 'arguments' && !dansUneFonction);
+        (nom === 'arguments' && !lieParUneRegion(n));
       if (interdit && !estUnNomDePropriete(n)) vues.push(`« ${nom} » ligne ${ligne(n)}`);
       return;
     }
-    if (n.kind === ts.SyntaxKind.ThisKeyword && !dansUneFonction) {
+    if (n.kind === ts.SyntaxKind.ThisKeyword && !lieParUneRegion(n)) {
       vues.push(`« this » hors d’une fonction ligne ${ligne(n)}`);
     }
     if (ts.isWithStatement(n)) vues.push(`« with » ligne ${ligne(n)}`);
-    if (ts.isPropertyDeclaration(n)) {
-      // Le nom calculé s'évalue dehors ; l'initialiseur, dans l'instance.
-      visiter(n.name, dansUneFonction);
-      if (n.initializer) visiter(n.initializer, true);
-      return;
-    }
-    const dedans =
-      dansUneFonction ||
-      (ts.isFunctionLike(n) && !ts.isArrowFunction(n)) ||
-      ts.isClassStaticBlockDeclaration(n);
-    ts.forEachChild(n, (e) => visiter(e, dedans));
+    ts.forEachChild(n, visiter);
   };
-  visiter(source, false);
+  visiter(source);
   return vues;
 }
 
