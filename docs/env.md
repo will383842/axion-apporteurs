@@ -22,6 +22,7 @@ posée est jugée comme les autres.
 | `IP_HASH_SALT` | requise | au moins 32 octets, distincte des autres secrets ; préfixes `dev_` et `stub` refusés en production | sale l'empreinte des adresses réseau |
 | `PII_HASH_KEY` | requise | au moins 32 octets, distincte des autres secrets ; préfixes `dev_` et `stub` refusés en production | clé des empreintes de recherche des données personnelles |
 | `PARTNERS_MCP_SHARED_SECRET` | requise | au moins 32 octets, distincte des autres secrets ; préfixes `dev_` et `stub` refusés en production | serrure de la porte MCP `POST /api/mcp`, en-tête `x-mcp-secret` |
+| `ZEPTOMAIL_WEBHOOK_SECRET` | requise | au moins 32 octets, distincte des autres secrets ; préfixes `dev_` et `stub` refusés en production | authentifie les webhooks de rebonds du relais de courriel, en-tête `Producer-Signature` |
 
 ## Configuration
 
@@ -33,3 +34,5 @@ posée est jugée comme les autres.
 | `PARTNERS_ENV` | facultative | non vide, sans espace en bordure | nom de l'environnement ; `production` avec `NODE_ENV=production` vaut production |
 | `LOG_LEVEL` | facultative | `fatal`, `error`, `warn`, `info`, `debug`, `trace`, `silent` | niveau du journal (pino), `info` si absente |
 | `SENTRY_DSN` | facultative | URL `https:` | adresse de collecte des erreurs ; absente, rien ne part |
+| `PARTNERS_EMAIL_DMARC_VERIFIE` | facultative | `true`, `false` | ouvre l'envoi automatique des courriels ; absente ou `false`, aucun courriel ne part (REQ-INT-022) |
+| `PARTNERS_EMAIL_EXPEDITEUR` | facultative | non vide, sans espace en bordure | adresse humaine d'expédition, du sous-domaine d'envoi ; jamais une adresse sans réponse |
