@@ -62,9 +62,15 @@ import type { Notifieur } from '../../../lib/notify';
  * personne ne surveille.
  */
 export const CATEGORIES_ALERTE = [
-  /** `INT-T14` — un relevé de commissions bloqué. */
+  /**
+   * Émise par les TESTS seulement (`notif-sans-pii.spec.ts`), comme catégorie d'essai du plafond et
+   * du dédoublonnage. AUCUNE exigence ne la nomme : `REQ-ARG-025` porte la vigilance au seuil légal
+   * et pas une alerte de console, et `REQ-QA-026` parle d'un relevé qui N'A PAS TOURNÉ, ce qui n'est
+   * pas « bloqué ». Elle reste donc ce qu'elle est — une catégorie d'essai —, jusqu'à ce qu'un
+   * émetteur de `src/` la demande et nomme son exigence.
+   */
   'releve_bloque',
-  /** `QA-T13` — une restauration de sauvegarde qui a échoué. */
+  /** `QA-T12` — l'échec de l'exercice mensuel de restauration (`REQ-QA-023`, `docs/tiers/telegram.md`). */
   'restauration_echouee',
   /** Le témoin de la garde `G-SEC-NOTIF` (`garde-sans-pii.ts`, `OBJET_TEMOIN`). */
   'temoin_garde',
