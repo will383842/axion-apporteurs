@@ -122,7 +122,10 @@ ajoute des sorties non nulles que ni le cliquet de `refus-de-rendre-et-de-publie
 `REFUS_NOMMES` (`scripts/gates/registre-des-refus.ts`) ne déclarent, et ces deux fichiers sont hors
 des paths du lot. La PR #175, non fusionnée, fige les étapes de `gate-a` dans `PORTE_A_FIGEE`
 (`scripts/gates/gov-conventions.ts`) : les deux étapes ajoutées ici y manquent, et la PR qui
-fusionnera en second résout ce conflit sémantique, que `git` ne signale pas. `FENETRE_MOIS` attend la question `JUR-T01-Q02` (`HYP-E1-9`). L'appel réel au bot
+fusionnera en second résout ce conflit sémantique, que `git` ne signale pas. Enfin, `ssot:seuils` lance
+la garde de `GATE-JUR-SEUILS-SSOT` sans en porter l'identifiant : c'est le quatrième écart que
+`partners/ADR-0018` fait rougir (`un-nom-une-garde.spec.ts`). Le fermer, c'est renommer l'entrée du
+registre en `ssot:seuils`, écriture réservée : décision remise à l'orchestrateur. `FENETRE_MOIS` attend la question `JUR-T01-Q02` (`HYP-E1-9`). L'appel réel au bot
 attend la rubrique 2 de `docs/tiers/telegram.md` et les noms des deux secrets dans `src/lib/env.ts`.
 Sous mutation, la SSOT n'a aucun mutant jugé : toutes ses valeurs sont évaluées au chargement du
 module, donc statiques et hors score (`ignoreStatic`) ; ce sont ses tests en processus qui les
