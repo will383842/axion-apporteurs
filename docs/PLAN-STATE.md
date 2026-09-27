@@ -8,14 +8,14 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `9620e4d` — 2026-09-27T06:30:49+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #165 (un contrôle requis rouge ou une revue manquante) · 2. #82 (un conflit avec `main`) · 3. #168 (un conflit avec `main`) |
+| Qu’est-ce qui est en vol ? | 1. #82 (rien) · 2. #168 (rien) · 3. #165 (un contrôle requis rouge ou une revue manquante) |
 | Qui tient quoi ? | QA-T07 (A05) |
 | Où en est la phase ? | phase 0 — 47/116 tâches, reste 53.10 j |
-| Le prochain pas | SEC-17 — Rôles console : enum `ConsoleRole { admin, qualifieur, comptable, lecteur }`, matrice SSOT, `requireRole`, garde AST (chemin critique) |
+| Le prochain pas | fusionner #82, puis SEC-17 — Rôles console : enum `ConsoleRole { admin, qualifieur, comptable, lecteur }`, matrice SSOT, `requireRole`, garde AST (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
 | Dernière entrée de journal | PR #169 — 2026-09-27 |
 
-**Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** `gh pr view 82 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : 0
 
@@ -60,9 +60,9 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #165 — feat(SEC-17): lot L0-07 — rôles console, matrice unique, requireRole ; gates structurelles de la charte | `t/lot-l0-07` | un contrôle requis rouge ou une revue manquante |
-| 2 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
-| 3 | #168 — chore(GOV-045): lot L0-08 — refus nommés, clé double, schema/paths, attestation, occurrences | `t/lot-l0-08` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | rien — fusionnable maintenant |
+| 2 | #168 — chore(GOV-045): lot L0-08 — refus nommés, clé double, schema/paths, attestation, occurrences | `t/lot-l0-08` | rien — fusionnable maintenant |
+| 3 | #165 — feat(SEC-17): lot L0-07 — rôles console, matrice unique, requireRole ; gates structurelles de la charte | `t/lot-l0-07` | un contrôle requis rouge ou une revue manquante |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -76,11 +76,13 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 
 ## Décisions du jour
 
-`docs/adr/0022-carte-du-schema-des-phases-0-et-1.md` — partners/ADR-0022 — La carte du schéma des phases 0 et 1 : une table, un créateur ; un type de journal par genre de transition
+`docs/adr/0008-contrat-evenements-enveloppe-et-nomenclature.md` — partners/ADR-0008 — Le contrat d'événements : enveloppe sur le fil, sept types, empreinte du JSON Schema · `docs/adr/0022-carte-du-schema-des-phases-0-et-1.md` — partners/ADR-0022 — La carte du schéma des phases 0 et 1 : une table, un créateur ; un type de journal par genre de transition · `docs/adr/0023-route-des-coordonnees-de-candidature.md` — partners/ADR-0023 — Les coordonnées d'un candidat se tirent par une route HMAC d'axionia, jamais par un événement
 
 Dérivé de `git log` sur `docs/adr/`, restreint au jour du dernier atterrissage. Une décision de Will n’est pas un ADR : elle vit au registre `docs/DECISIONS.md`, tranchée ou tenue par une hypothèse datée.
 
 ## Prochain pas
+
+**Fusionner #82** — elle est en tête de file et ne bloque sur rien.
 
 **SEC-17** — Rôles console : enum `ConsoleRole { admin, qualifieur, comptable, lecteur }`, matrice SSOT, `requireRole`, garde AST (1 j, **sur le chemin critique**) : 35 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
@@ -109,22 +111,27 @@ Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écr
 **Fait.** GOV-045 porte la PR, et GOV-054, GOV-072, GOV-093, GOV-042 et GOV-074 sont dans son champ
 `Lot:`. Le cliquet des refus nomme désormais chaque sortie déclarée : portée, conditions, argument,
 figés dans `REFUS_NOMMES`, et une mutation retire les sorties une à une pour vérifier que chacune
-est tuée par son nom. Il compte aussi la sortie différée : les trois de `scripts/plan-state/build.ts`
+est tuée par son nom. Il compte aussi la sortie différée : les quatre de `scripts/plan-state/build.ts`
 sont déclarées. `gov:requirements` lit le texte du registre et refuse une clé écrite deux fois, ou un
 registre illisible, en nommant la clé ou la position. `gov:tasks` confronte le champ `schema` aux
 `paths` et imprime la réciproque. L'attestation s'étend aux tâches de ce dépôt : `lot:cloture` la
 pose, et `--rattraper-attestations` lit le passé dans `origin/main`, avec un passif déclaré de huit
 tâches. Les exemptions de `gov:attributions` portent sur une occurrence, et la minuscule comme le
-trait d'union insécable sont vus.
+trait d'union insécable sont vus. Sur veto de la lentille sécurité, le contrôle en ligne
+`scripts/gates/gov-attestation.ts --en-ligne` résout toutes les attestations, locales comprises
+(78, dont 77 locales), et `gov:tasks` refuse hors ligne une date de fusion postérieure à la passe,
+une attestation locale sans `pr` et un SHA local que git ne connaît pas.
 
-**Reste.** Deux écritures de registre réservées conditionnent la porte A : l'attestation des
-tâches déjà livrées dans `docs/tasks.json`, posée par le mode `--rattraper-attestations` de
-`scripts/lot/cloture.ts` et à relancer après toute fusion de `main`, et l'entrée de
-`scripts/gates/registre-des-refus.ts` dans `docs/gates.json`. Deux livrables relèvent de l'outillage
-hors dépôt : rendre le champ `schema` écrivable (GOV-093, livrable 5) et réparer l'écrivain du
-registre des exigences (GOV-072).
+**Reste.** L'attestation des tâches déjà livrées est à relancer après toute fusion de `main`
+(mode `--rattraper-attestations` de `scripts/lot/cloture.ts`). Le champ `verifie` de
+`gov:attestation` dans `docs/gates.json` décrit encore l'ancien périmètre : écriture réservée. Deux
+livrables relèvent de l'outillage hors dépôt : rendre le champ `schema` écrivable (GOV-093,
+livrable 5) et réparer l'écrivain du registre des exigences (GOV-072).
 
-**Appris.** Une exemption figée qui recopie l'identifiant d'une gate peut tomber sous
+**Appris.** Un filtre écrit pour une population ne suit pas la population quand elle change : le
+contrôle en ligne ne lisait que les attestations d'un autre dépôt, et il a continué d'imprimer un
+vert sur une seule quand le backlog en a porté 78. Une exemption figée qui recopie l'identifiant
+d'une gate peut tomber sous
 `securite:rate-famille` : l'identifiant `partners:webhook:idempotent` porte un préfixe de famille de
 compteurs, et toute chaîne de `scripts/` qui le contient est refusée. La clé figée d'une chaîne de
 `docs/gates.json` porte donc le script jugé et le champ, jamais l'identifiant de la gate. De son
