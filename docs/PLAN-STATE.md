@@ -8,7 +8,7 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `0a34b88` — 2026-09-27T03:08:19+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #82 (rien) · 2. #158 (rien) · 3. #166 (rien) · 4. #165 (un contrôle requis rouge ou une revue manquante) · 5. #168 (un contrôle requis rouge ou une revue manquante) |
+| Qu’est-ce qui est en vol ? | 1. #82 (rien) · 2. #158 (rien) · 3. #165 (un contrôle requis rouge ou une revue manquante) · 4. #166 (un contrôle requis rouge ou une revue manquante) · 5. #168 (un contrôle requis rouge ou une revue manquante) |
 | Qui tient quoi ? | QA-T07 (A05) |
 | Où en est la phase ? | phase 0 — 43/116 tâches, reste 56.60 j |
 | Le prochain pas | fusionner #82, puis SEC-04 — Sessions révocables en base, `sessionVersion`, step-up (chemin critique) |
@@ -66,8 +66,8 @@ Reste sur ce chemin : **13.75 j**.
 | --- | --- | --- | --- |
 | 1 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | rien — fusionnable maintenant |
 | 2 | #158 — chore(GOV-053): lot L0-06 — PLAN-STATE à la ligne, rubriques dues, lecteur unique, forme des chemins | `t/lot-l0-06` | rien — fusionnable maintenant |
-| 3 | #166 — chore(GOV-012): registre rattrape, quatre taches livrees par des PR fusionnees passent fusionnee | `t/registre-rattrapage-3` | rien — fusionnable maintenant |
-| 4 | #165 — feat(SEC-17): lot L0-07 — rôles console, matrice unique, requireRole ; gates structurelles de la charte | `t/lot-l0-07` | un contrôle requis rouge ou une revue manquante |
+| 3 | #165 — feat(SEC-17): lot L0-07 — rôles console, matrice unique, requireRole ; gates structurelles de la charte | `t/lot-l0-07` | un contrôle requis rouge ou une revue manquante |
+| 4 | #166 — chore(GOV-012): registre rattrape, quatre taches livrees par des PR fusionnees passent fusionnee | `t/registre-rattrapage-3` | un contrôle requis rouge ou une revue manquante |
 | 5 | #168 — chore(GOV-045): lot L0-08 — refus nommés, clé double, schema/paths, attestation, occurrences | `t/lot-l0-08` | un contrôle requis rouge ou une revue manquante |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.

@@ -1315,6 +1315,9 @@ export const RACINES_DE_LA_GARDE_DES_REVUES: readonly string[] = [
   'scripts/lot/revues.ts',
   'scripts/gates/gov-pr.ts',
   'scripts/lot/corps-de-pr.ts',
+  // GOV-093 : gov-tasks.ts lit le champ schema par touche() et cheminsSchema() — il importe revues.ts,
+  // donc il appartient a la garde (REQ-GOV-011 cas 7 : tout importeur de revues.ts y figure).
+  'scripts/gates/gov-tasks.ts',
 ];
 
 let gardeEnCache: readonly string[] | null = null;
