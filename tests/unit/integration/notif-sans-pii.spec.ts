@@ -294,3 +294,16 @@ describe('REQ-INT-024 — la garde voit aussi une coordonnée qui ne vient d’a
     ]);
   });
 });
+
+describe('REQ-INT-024 — ni montant, ni raison sociale (G-SEC-NOTIF, fixture rouge du registre)', () => {
+  it('REQ-INT-024 — un gabarit qui porte le montant ou la raison sociale est refusé, champ nommé', () => {
+    const r = confronter({
+      avec_montant: (o) => {
+        const riche = o as typeof o & Record<string, unknown>;
+        return `[${o.categorie}] ${String(riche.raisonSociale)} ${String(riche.montantHtCents)}`;
+      },
+    });
+    expect(r.code).toBe(1);
+    expect(r.fautes.map((f) => f.champ).sort()).toEqual(['montantHtCents', 'raisonSociale']);
+  });
+});
