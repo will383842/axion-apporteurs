@@ -2,29 +2,34 @@
  * events.ts — la SOURCE UNIQUE du contrat d'événements axionia → Axion Partners.
  *
  * REQ-INT-003 (l'enveloppe), REQ-INT-004 (la nomenclature), REQ-INT-029 (ce qui ne traverse pas),
- * REQ-QA-007 (la transcription tenue par une empreinte).
+ * REQ-INT-032 (les charges manquantes), REQ-QA-007 (la transcription tenue par une empreinte).
  *
- * LA LISTE EST FERMÉE, ET ELLE FAIT SEPT. REQ-INT-004 énumère sept types et les nomme sur les
- * modèles RÉELS d'axionia (`Client`, `Devis`, `FactureFormation`, `Payment`) — vérification
- * rejouée dans `docs/AFFIRMATIONS-AXIONIA.md`, repères `AFF-01` et `AFF-02` : les deux modèles
- * anglais sur lesquels quatre documents avaient bâti ce contrat n'existent plus, l'un n'a jamais
- * eu de modèle et l'autre est une valeur d'enum. Aucun type de ce contrat ne les référence.
+ * LA LISTE EST FERMÉE, ET ELLE FAIT ONZE, en `schema_version` 2. REQ-INT-004 énumère les onze types
+ * et les nomme sur les modèles RÉELS d'axionia — vérification rejouée dans
+ * `docs/AFFIRMATIONS-AXIONIA.md`, repères `AFF-01` et `AFF-02` : les deux modèles anglais sur
+ * lesquels quatre documents avaient bâti ce contrat n'existent plus, l'un n'a jamais eu de modèle et
+ * l'autre est une valeur d'enum. Aucun type de ce contrat ne les référence.
  *
- * L'ACCEPTATION D'INT-T01a EN ANNONCE ONZE. Elle n'est pas fantaisiste : sept sont ici, et quatre
- * autres noms d'événements circulent AILLEURS dans `docs/requirements.json` — ils sont recensés
- * ci-dessous sous `TYPES_HORS_CONTRAT_V1`, avec l'exigence qui les nomme. Le contrat v1 ne les
- * porte pas : REQ-INT-004 écrit « Les types d'événements SONT : … », c'est une liste fermée, et
- * l'exigence prime sur l'acceptation d'une tâche. L'arbitrage, sa clé de préséance et l'alignement
- * qui reste à faire sont consignés par `partners/ADR-0008`.
+ * SEPT EN VERSION 1, ONZE EN VERSION 2. Les quatre derniers types étaient recensés hors contrat,
+ * chacun avec l'exigence qui le nommait (partners/ADR-0008) ; ils y sont entrés en même temps que
+ * REQ-INT-004 les a énumérés, et que la frontière a reçu l'exemption nommée que la charge de la
+ * candidature exigeait (`EXEMPTIONS_NOMMEES`). Ajouter un type est un changement en lockstep : le
+ * consommateur d'une version refuse tout type qu'il ne connaît pas (partners/ADR-0008, reste à
+ * faire §5).
  */
 
 import { SCHEMA_VERSION, schemaEnveloppe, type FragmentSchema } from './enveloppe';
+import { CHARGES } from './payloads';
+import { defsApi } from './api';
 
 export { SCHEMA_VERSION };
 
 /**
- * Les SEPT types, dans l'ordre de REQ-INT-004. C'est la seule liste littérale de noms d'événements
- * du dépôt : la garde `gov:termes-interdits` refuse tout nom d'événement littéral hors `packages/contracts`.
+ * Les ONZE types, dans l'ordre de REQ-INT-004 — les quatre entrés en version 2 à la fin, parce que
+ * l'enum Postgres de la réception les reçoit par ajout, qui place une valeur en dernier, et que sa
+ * correspondance avec cette liste est testée DANS L'ORDRE (partners/ADR-0022, point 10). C'est la
+ * seule liste littérale de noms d'événements du dépôt : la garde `gov:termes-interdits` refuse tout
+ * nom d'événement littéral hors `packages/contracts`.
  */
 export const TYPES_EVENEMENT = [
   'client.cree',
@@ -34,41 +39,16 @@ export const TYPES_EVENEMENT = [
   'avoir.emis',
   'paiement.recu',
   'paiement.rembourse',
+  'candidature.recue',
+  'financement.mis_a_jour',
+  'facture.annulee',
+  'client.fusionne',
 ] as const;
 
 export type TypeEvenement = (typeof TYPES_EVENEMENT)[number];
 
 /** Les types de la phase d'AVANT-signature — ceux dont REQ-INT-029 exclut tout montant. */
 export const TYPES_AVANT_SIGNATURE: readonly TypeEvenement[] = ['client.cree', 'client.mis_a_jour'];
-
-/**
- * Les quatre noms d'événements que le registre nomme HORS de REQ-INT-004. Ils ne sont pas dans le
- * contrat v1 ; ils sont écrits ici pour que la dette soit NOMMÉE et que le décompte de onze de
- * l'acceptation soit reconstructible sans avoir à deviner. Le test de contrat vérifie que chacun
- * est absent de `TYPES_EVENEMENT` et que l'exigence citée le nomme réellement.
- */
-export const TYPES_HORS_CONTRAT_V1: readonly { type: string; req: string; pourquoi: string }[] = [
-  {
-    type: 'candidature.recue',
-    req: 'REQ-INT-032',
-    pourquoi: "sans lui, aucun apporteur n'existe jamais dans Partners.",
-  },
-  {
-    type: 'facture.annulee',
-    req: 'REQ-ARG-010',
-    pourquoi: "recalcule l'attendu sans créer de reprise.",
-  },
-  {
-    type: 'financement.mis_a_jour',
-    req: 'REQ-INT-032',
-    pourquoi: "porte l'échéance financeur et la ventilation des payeurs.",
-  },
-  {
-    type: 'client.fusionne',
-    req: 'REQ-CPL-014',
-    pourquoi: 'déclenche la re-résolution des commissions après fusion.',
-  },
-];
 
 // ── REQ-INT-029 : ce qui ne franchit JAMAIS la frontière ─────────────────────
 
@@ -104,11 +84,9 @@ export const FRONTIERE_INTERDITE: readonly FamilleInterdite[] = [
     exigence: "l'identité des autres apporteurs",
     types: [],
     // Le motif est LARGE À DESSEIN : sur une frontière de confidentialité, un détecteur se règle
-    // en échouant FERMÉ. Conséquence connue et assumée : le payload de `candidature.recue`, que
-    // REQ-INT-032 décrit avec un champ `parrainCodeCapture`, ferait rougir cette famille. Ce type
-    // n'est pas dans le contrat v1 ; l'arbitrage — un code de parrainage n'est pas une identité,
-    // ou bien il l'est — revient à INT-T01b, qui devra soit resserrer le motif, soit déclarer
-    // l'exemption avec l'exigence qui la porte. Deviner ici aurait ouvert la frontière en silence.
+    // en échouant FERMÉ. Il n'a pas été resserré quand la charge de la candidature est entrée au
+    // contrat avec son `parrainCodeCapture` (REQ-INT-032) : c'est une EXEMPTION NOMMÉE qui laisse
+    // passer ce champ-là, sur ce type-là, sous cette forme-là (`EXEMPTIONS_NOMMEES` ci-dessous).
     motifCle: /apporteur|parrain|filleul/i,
     motifValeur: null,
   },
@@ -129,6 +107,55 @@ export const FRONTIERE_INTERDITE: readonly FamilleInterdite[] = [
 ];
 
 export type ChampInterdit = { famille: string; chemin: string };
+
+export type ExemptionNommee = {
+  readonly famille: string;
+  readonly type: TypeEvenement;
+  /** Le chemin COMPLET du nœud exempté — pas un nom de feuille, qui vaudrait à toute profondeur. */
+  readonly chemin: string;
+  /** L'exigence qui impose ce champ, et donc l'exemption. */
+  readonly exigence: string;
+  /** La forme que la valeur DOIT avoir ; `null` est toujours admis — l'absence ne révèle rien. */
+  readonly formeAttendue: RegExp;
+};
+
+/**
+ * L'ARBITRAGE LAISSÉ OUVERT PAR partners/ADR-0008 (reste à faire §4), tranché et borné.
+ *
+ * CE N'EST PAS LE MOTIF QU'ON RESSERRE, C'EST L'EXEMPTION QU'ON NOMME. Resserrer
+ * `/apporteur|parrain|filleul/i` rouvrirait la frontière pour tous les champs à venir dont personne
+ * n'a encore eu l'idée. REQ-INT-029 vise « l'identité des AUTRES apporteurs » : qu'un apporteur
+ * apprenne qui sont ses pairs. Un code de parrainage saisi par un CANDIDAT est la seule référence
+ * qui le rattache à son parrain, et REQ-INT-032 demande de la transporter ; Partners connaît déjà
+ * tous ses apporteurs, ce code ne lui apprend l'identité de personne. Ce n'est pas une identité,
+ * c'est une référence opaque — et l'exemption s'arrête là : `parrainNom`, un code niché plus bas
+ * dans la charge, ou ce même champ sur un autre type restent refusés.
+ *
+ * L'exemption est donc NOMINATIVE (un chemin), TYPÉE (un seul type) et VÉRIFIÉE (la valeur a la
+ * forme d'un code, jamais celle d'un nom ou d'une adresse). Même forme que le producteur d'axionia,
+ * qui la vérifie avant d'émettre : les deux côtés refusent la même valeur.
+ */
+export const EXEMPTIONS_NOMMEES: readonly ExemptionNommee[] = [
+  {
+    famille: 'identite_autre_apporteur',
+    type: 'candidature.recue',
+    chemin: 'payload.parrainCodeCapture',
+    exigence: 'REQ-INT-032',
+    // Capitales, chiffres et tirets : ni espace (un nom), ni arobase (une adresse).
+    formeAttendue: /^[A-Z0-9][A-Z0-9-]{2,31}$/,
+  },
+];
+
+/** Vrai si le nœud est couvert par une exemption nommée de la famille, sur ce type. */
+function estExempte(famille: string, type: TypeEvenement | undefined, noeud: { chemin: string; valeur: unknown }): boolean {
+  return EXEMPTIONS_NOMMEES.some(
+    (x) =>
+      x.famille === famille &&
+      x.type === type &&
+      x.chemin === noeud.chemin &&
+      (noeud.valeur === null || (typeof noeud.valeur === 'string' && x.formeAttendue.test(noeud.valeur)))
+  );
+}
 
 /**
  * Les feuilles d'une valeur JSON, avec leur chemin pointé.
@@ -188,7 +215,9 @@ export function champsInterdits(evenement: Record<string, unknown>): ChampInterd
       const parLaCle = famille.motifCle.test(noeud.cle);
       const parLaValeur =
         famille.motifValeur !== null && typeof noeud.valeur === 'string' && famille.motifValeur.test(noeud.valeur);
-      if (parLaCle || parLaValeur) trouves.push({ famille: famille.famille, chemin: noeud.chemin });
+      if (!parLaCle && !parLaValeur) continue;
+      if (estExempte(famille.famille, type, noeud)) continue;
+      trouves.push({ famille: famille.famille, chemin: noeud.chemin });
     }
   }
   return trouves;
@@ -202,21 +231,19 @@ export function nomDefPayload(type: TypeEvenement): string {
 }
 
 /**
- * Le payload de CHAQUE type est un objet OUVERT en v1, et le dit. Aucun champ n'est inventé :
- * REQ-INT-005, REQ-INT-006 et REQ-INT-032 les énumèrent, et c'est INT-T01b qui les ferme depuis le
- * producteur réel. La couture existe déjà — INT-T01b remplit un `$defs`, il ne restructure rien —
- * et toute fermeture change l'empreinte, donc rougit des deux côtés tant que l'autre dépôt n'a pas
- * republié.
+ * Le payload de CHAQUE type est FERMÉ (`payloads.ts`) : un champ de plus est une charge hors
+ * schéma, refusée comme l'enveloppe l'est. Les champs sont ceux que le producteur réel construit,
+ * confrontés à sa fixture clé pour clé ; toute évolution change l'empreinte, et se publie donc des
+ * deux côtés dans la même fenêtre.
  */
 function defsPayloads(): Record<string, FragmentSchema> {
   const defs: Record<string, FragmentSchema> = {};
   for (const type of TYPES_EVENEMENT) {
     defs[nomDefPayload(type)] = {
-      type: 'object',
+      ...CHARGES[type],
       $comment:
-        `OUVERT en schema_version ${SCHEMA_VERSION} — le contenu du payload de \`${type}\` est fermé par ` +
-        'INT-T01b, depuis le producteur réel (REQ-INT-005, REQ-INT-006, REQ-INT-032, REQ-QA-007). ' +
-        "Aucun champ n'est deviné ici.",
+        `FERMÉ en schema_version ${SCHEMA_VERSION} — la charge de \`${type}\`, champ pour champ ` +
+        'celle du producteur réel (REQ-INT-005, REQ-INT-006, REQ-INT-032, REQ-QA-007).',
     };
   }
   return defs;
@@ -237,6 +264,7 @@ export function contratJsonSchema(): FragmentSchema {
       if: { properties: { event_type: { const: type } }, required: ['event_type'] },
       then: { properties: { payload: { $ref: `#/$defs/${nomDefPayload(type)}` } } },
     })),
-    $defs: defsPayloads(),
+    // Les schémas des API voisinent avec ceux des charges : une seule empreinte tient le tout.
+    $defs: { ...defsPayloads(), ...defsApi() },
   };
 }

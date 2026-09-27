@@ -3,7 +3,7 @@
  *
  * SOURCE UNIQUE. Ce fichier est le DESCRIPTEUR ; il ne dépend de rien. Deux projections en sont
  * dérivées par `scripts/contracts/export.ts`, et jamais tapées à la main (RM-01) :
- *   — `packages/contracts/contracts.v1.json` — le JSON Schema publié, celui qu'axionia copie et
+ *   — `packages/contracts/contracts.v<N>.json` — le JSON Schema publié, celui qu'axionia copie et
  *     dont l'empreinte `contracts.sha256` tient la transcription (REQ-QA-007) ;
  *   — `packages/contracts/events.zod.ts` — le schéma Zod que REQ-INT-003 nomme.
  *
@@ -22,10 +22,14 @@
 
 /**
  * La version du contrat. Elle est machine-lisible à deux endroits, et à deux seulement : le `const`
- * du champ `schema_version` du JSON Schema publié, et le nom de l'artefact (`contracts.v1.json`).
+ * du champ `schema_version` du JSON Schema publié, et le nom de l'artefact (`contracts.v<N>.json`).
  * Aucun autre fichier ne la retape.
+ *
+ * DEUX depuis que les quatre types entrants sont entrés au contrat (partners/ADR-0008, reste à faire
+ * §5 ; partners/ADR-0023) : un consommateur de la version 1 refuse tout type qu'il ne connaît pas,
+ * la bascule se publie donc des deux côtés dans la même fenêtre.
  */
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 /** Un fragment de JSON Schema — assez pour décrire un champ, sans dépendre d'une bibliothèque. */
 export type FragmentSchema = Record<string, unknown>;
@@ -47,8 +51,11 @@ export type ChampEnveloppe = {
  */
 const MOTIF_UUID_V4 = '^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$';
 
-/** Horodatage RFC 3339 avec fuseau explicite : un instant sans fuseau n'est pas un instant. */
-const MOTIF_INSTANT = '^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$';
+/**
+ * Horodatage RFC 3339 avec fuseau explicite : un instant sans fuseau n'est pas un instant. Exporté :
+ * les instants des charges (`payloads.ts`) ont la même forme que ceux de l'enveloppe.
+ */
+export const MOTIF_INSTANT = '^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$';
 
 /**
  * Les neuf champs, dans l'ORDRE de REQ-INT-003. L'ordre n'est pas décoratif : le test de contrat
@@ -137,7 +144,9 @@ export const CHAMPS_ENVELOPPE: readonly ChampEnveloppe[] = [
     nom: 'payload',
     schema: {
       type: 'object',
-      $comment: "Fermé par type dans `$defs`, et par INT-T01b (REQ-INT-005, REQ-INT-006, REQ-INT-032).",
+      $comment:
+        'Fermé par type dans `$defs`, champ pour champ, depuis le producteur réel (REQ-INT-005, ' +
+        'REQ-INT-006, REQ-INT-032, REQ-QA-007).',
     },
     zod: 'z.record(z.string(), z.unknown())',
   },
