@@ -147,6 +147,18 @@ describe('REQ-GOV-021 — un chemin de `paths` désigne CE dépôt, sous sa form
       'docs/ㅤ/plan.md',
     ];
     expect(refuses(formes), `formes acceptées : ${montrer(refuses(formes))}`).toEqual([]);
+    // L'ensemble des points de compatibilité est RE-MESURÉ sur tout Unicode, pas recopié : chaque
+    // point de code dont la forme nettoyée n'est qu'un ou deux points est refusé, seul et doublé.
+    const points: string[] = [];
+    for (let c = 0x80; c < 0x110000; c++) {
+      if (c >= 0xd800 && c < 0xe000) continue;
+      const ch = String.fromCodePoint(c);
+      const n = ch.normalize('NFKD').replace(/[\p{C}\p{M}\p{Default_Ignorable_Code_Point}]/gu, '');
+      if (n === '.' || n === '..') points.push(ch);
+    }
+    expect(points.length, 'une mesure vide dirait toujours oui').toBeGreaterThan(0);
+    const mesurees = points.flatMap((p) => [`docs/${p}/plan.md`, `docs/${p}${p}/plan.md`]);
+    expect(refuses(mesurees), `formes acceptées : ${montrer(refuses(mesurees))}`).toEqual([]);
     // Contre-face : des points ÉCRITS dans un nom, ou trois points, ne sont pas un remontant.
     const legitimes = ['docs/..notes.md', 'docs/.../x.md', 'src/app/[...slug]/page.tsx'];
     expect(legitimes.filter((f) => !accepte(f))).toEqual([]);
