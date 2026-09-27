@@ -13,7 +13,7 @@
 | Phase | Taches | Jours | Terminees |
 | --- | ---: | ---: | ---: |
 | -1 — Gouvernance (prealable bloquant) | 39 | 23.75 | 39 |
-| 0 — Socle technique | 116 | 90.35 | 43 |
+| 0 — Socle technique | 116 | 90.35 | 47 |
 | 1 — Operationnel | 62 | 48.00 | 0 |
 | 2 — Argent | 45 | 33.50 | 0 |
 | 3 — Pilotage et conformite | 28 | 25.25 | 0 |
@@ -692,7 +692,7 @@ Couvre : `REQ-CPL-015`, `REQ-DM-035`, `REQ-INT-032`, `REQ-QA-035`
 
 **Tests.** `axionia/src/server/partners-sync/__tests__/producteur-candidature.spec.ts`
 
-### SEC-06 — Réception des webhooks axionia : signature, tolérance, outbox, rejeu, attente de dépendance, worker
+### SEC-06 — Réception des webhooks axionia : signature, tolérance, outbox, rejeu, attente de dépendance, worker ✅ **fusionnee**
 
 `1 j` · zone `securite` · `schema` · depend de `INT-T01a`, `INT-T01b`, `QA-T02`, `SEC-01`
 
@@ -722,7 +722,7 @@ Couvre : `REQ-SEC-001`, `REQ-SEC-002`, `REQ-SEC-016`
 
 **Tests.** `tests/integration/lien-magique.spec.ts` · `tests/unit/securite/lien-magique-indistinction.spec.ts`
 
-### SEC-04 — Sessions révocables en base, `sessionVersion`, step-up
+### SEC-04 — Sessions révocables en base, `sessionVersion`, step-up ✅ **fusionnee**
 
 `1 j` · zone `securite` · `schema` · sensible : auth · depend de `SEC-03`
 
@@ -762,7 +762,7 @@ Couvre : `REQ-INT-020`, `REQ-INT-021`, `REQ-QA-028`, `REQ-SEC-013`, `REQ-UX-020`
 
 **Tests.** `tests/integration/api-gouv.spec.ts` · `tests/unit/integration/recherche-entreprises-repli.spec.ts`
 
-### INT-T10 — Émetteur e-mail Partners : agent ZeptoMail, domaine, DKIM, drapeau DMARC, webhook rebonds
+### INT-T10 — Émetteur e-mail Partners : agent ZeptoMail, domaine, DKIM, drapeau DMARC, webhook rebonds ✅ **fusionnee**
 
 `0.5 j` · zone `integration` · `schema` · depend de `SEC-01` · decisions `DEC-INT-002`
 
@@ -1703,7 +1703,7 @@ Couvre : `REQ-GOV-015`
 
 **Tests.** `tests/unit/gouvernance/registre-lecteur-unique.spec.ts`
 
-### GOV-101 — Supprimer les relectures sans defaut : vues d etat hors des PR, cliquet calcule, accord qui survit a une fusion de main, pre-gate, deux lentilles et mutation par Stryker
+### GOV-101 — Supprimer les relectures sans defaut : vues d etat hors des PR, cliquet calcule, accord qui survit a une fusion de main, pre-gate, deux lentilles et mutation par Stryker ✅ **fusionnee**
 
 `1 j` · zone `gouvernance` · aucune dependance
 

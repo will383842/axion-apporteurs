@@ -3771,7 +3771,7 @@
     {
       "id": "REQ-GOV-006",
       "domaine": "gouvernance-agents",
-      "texte": "Un seul fichier d'état vivant `docs/PLAN-STATE.md` est relu au début de chaque session d'agent et réécrit à la fin ; il contient : SHA de `main`, PR en vol et file de fusion ordonnée, tâche revendiquée par agent, décisions du jour, prochain pas, et un bloc « REPRENDRE EN 30 SECONDES ». Gate : sa date de mise à jour ≥ date de la dernière PR fusionnée, sinon rouge.",
+      "texte": "Un seul fichier d'état vivant `docs/PLAN-STATE.md` est relu au début de chaque session d'agent et réécrit à la fin ; il contient : SHA de `main`, PR en vol et file de fusion ordonnée, tâche revendiquée par agent, décisions du jour, prochain pas, et un bloc « REPRENDRE EN 30 SECONDES ». Ses rubriques dues, confrontées par `plan-state:verifier` à ce que le générateur produit : « REPRENDRE EN 30 SECONDES », « Phase courante », « Tâches », « Chemin critique », « Bloquées », « Questions ouvertes pour Will », « Hypothèses par défaut appliquées », « File de fusion », « Revendications », « Décisions du jour », « Prochain pas », « Dernier atterrissage », « Journal », « Dette déclarée ». Gate : sa date de mise à jour ≥ date de la dernière PR fusionnée, sinon rouge ; une rubrique due que le générateur ne produit pas → rouge.",
       "source": "nouvelle ; patron `_AUDIT/ETAT-VIVANT-NUIT-2026-08-24.md` et `axion-ops/docs/ETAT.md`",
       "statut": "active",
       "remplaceePar": null,
