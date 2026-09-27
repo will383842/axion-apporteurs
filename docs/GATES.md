@@ -20,11 +20,11 @@
 | Phase | Ce qu'elle est | Gates | Prouvées | Restent à prouver |
 | ----- | -------------- | ----: | -------: | ----------------: |
 | -1 | Socle de gouvernance | 40 | 27 | 13 |
-| 0 | Fondations, sécurité, charte | 42 | 23 | 19 |
+| 0 | Fondations, sécurité, charte | 43 | 24 | 19 |
 | 1 | Parcours, attribution, intégrations | 21 | 2 | 19 |
 | 2 | Argent et versements | 11 | 0 | 11 |
 | 3 | Clôture et obligations annuelles | 3 | 0 | 3 |
-| **Total** | | **117** | **52** | **65** |
+| **Total** | | **118** | **53** | **65** |
 
 La phase d'une gate est celle **à la sortie de laquelle** elle doit exister, être bloquante et
 avoir rougi. Une gate sans phase entière n'entre dans le périmètre d'aucune sortie :
@@ -67,7 +67,7 @@ champ `preuveRouge` du registre, recopié verbatim par le rendu.
 | `gov:attributions` | GOV-037 | `scripts/gates/gov-attributions.ts` | — | pnpm gov:attributions:prove — les 4 retraits de dette FORCES : reinserees, gov:attributions sort en 1 sur dette_perimee (revue securite 5235809231, PR 48, 2026-09-17) |
 | `gov:attestation` | GOV-038 | `scripts/gates/gov-attestation.ts` | — | PR 33 (GOV-038) — sha 0000...0000 vu passer gov:tasks puis rejete en HTTP 422 par gov:attestation --en-ligne |
 
-### Phase 0 — armées (23)
+### Phase 0 — armées (24)
 
 | Gate | Tâche | Script | Alias | Preuve rouge |
 | ---- | ----- | ------ | ----- | ------------ |
@@ -94,6 +94,7 @@ champ `preuveRouge` du registre, recopié verbatim par le rendu.
 | `maquettes-validees` | UX-P0-02 | `scripts/gates/maquettes-validees.ts` | — | pnpm gov:maquettes-validees:prove — 9 familles, un temoin chacune, 3 contre-temoins verts ; les temoins validation_partielle, ligne_mal_formee et ecran_attribue_sans_validation portent sur la ligne du MILIEU d'un tableau de trois. Et tests/unit/espace/maquettes-validees.spec.ts vu ROUGE avant la garde le 2026-09-19 (« Failed to load url ../../../scripts/gates/maquettes-validees »), puis quatre mutants de la garde tues par la spec : valideur ignore (1 echec), proprietaire ignore (1), seule la derniere ligne lue (4), index.html non exempte (3) |
 | `mutation` | QA-T30 | `scripts/gates/stryker.sh` | — | pnpm mutation:prove — 3 familles rougissent chacune sur son temoin (rapport_illisible, seuil_absent, score_sous_le_seuil), 1 contre-temoin vert (quatre mutants tues sur cinq contre une rupture a 80 pour cent). Temoin a deux faces de la chaine ENTIERE (scripts/gates/stryker.sh, Stryker, le lecteur) sur un projet jetable, tests/unit/qualite/score-de-mutation.spec.ts : un test prive de ses assertions -> sortie non nulle, famille score_sous_le_seuil, src/domain/plafond.ts:2 Survived nomme ; le meme test avec ses assertions -> sortie 0. Spec vue ROUGE avant le lecteur : Failed to load url ../../../scripts/gates/mutation. Passe complete du depot le 2026-09-25 avec une rupture a 80 : sortie 1, mesure 79,38 pour cent. Rupture alignee a 79 : le lecteur sort en 0 en nommant les 363 non detectes. Rouge constate par: A05 |
 | `red-first` | CPL-T22 | `scripts/gates/red-first.ts` | — | pnpm red-first:prove — 3 familles rougissent chacune sur son temoin (test_deja_vert_sur_main, no_red_first_sans_justification, non_execute_sur_main), 1 contre-temoin vert ; binaire sur un depot git jetable (tests/unit/qualite/red-first.spec.ts) : une branche qui ajoute un test deja vert contre main -> exit 1 nommant tests/somme.spec.ts, une branche dont le test nouveau rougit contre main -> exit 0 et l'arbre de la base retire. Sur la PR du lot L0-03 elle-meme, la garde a d'abord rougi sur sa propre spec (marqueur cite en prose pris pour une directive nue) : la directive ouvre desormais une ligne de commentaire. Spec vue ROUGE avant la garde : Failed to load url ../../../scripts/gates/red-first. Rouge constate par: A05 |
+| `gov:refus-nommes` | GOV-045 | `scripts/gates/registre-des-refus.ts` | — | PR 168 (GOV-045) — commit rouge 3314671, puis 105 mutants tues chacun par son nom |
 
 ### Phase 1 — armées (2)
 
