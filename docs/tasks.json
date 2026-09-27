@@ -9764,7 +9764,8 @@
       "paths": [
         "scripts/plan-state/build.ts",
         "docs/requirements.json",
-        "tests/unit/gouvernance/couverture-attendue.spec.ts"
+        "tests/unit/gouvernance/couverture-attendue.spec.ts",
+        "tests/unit/gouvernance/vues-derivees.spec.ts"
       ],
       "schema": false,
       "sensible": [],
