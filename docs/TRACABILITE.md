@@ -14,14 +14,16 @@
 > **« Réputée testée » est DÉRIVÉ, pas lu.** Le registre ne porte aucune échelle de
 > maturité : une exigence l’est dès qu’une des tâches qui la portent est livrée.
 
-**334 exigences actives · 98 réputées testées · 98 couvertes · 0 orphelines.**
+**334 exigences actives · 106 réputées testées · 106 couvertes · 0 orphelines.**
 
-290 tâches, dont 82 livrées · 127 fichiers de test exécutés par `vitest` sur 127 présents.
+290 tâches, dont 86 livrées · 127 fichiers de test exécutés par `vitest` sur 127 présents.
 
 ## Exigences réputées testées
 
 | Exigence | Tâches porteuses | Tests qui la citent | État |
 | --- | --- | --- | --- |
+| `REQ-ARG-002` | `INT-T01b`, `SEC-06`, `T-ARG-022` | `tests/integration/webhook-verdicts.spec.ts`, `tests/unit/securite/evenements-recus-migration.spec.ts` | couverte |
+| `REQ-ARG-003` | `SEC-06`, `T-ARG-022` | `tests/integration/webhook-verdicts.spec.ts`, `tests/unit/integration/evenement-recu-travail.spec.ts` | couverte |
 | `REQ-CPL-001` | `CPL-T01`, `GOV-089`, `GOV-092`, `T-ARG-018` | `tests/unit/gouvernance/entite-registre.spec.ts` | couverte |
 | `REQ-CPL-002` | `CPL-T01`, `GOV-015`, `T-ARG-018` | `tests/unit/gouvernance/entite-registre.spec.ts`, `tests/unit/gouvernance/fiches-tiers.spec.ts` | couverte |
 | `REQ-CPL-003` | `CPL-T01` | `tests/unit/gouvernance/entite-registre.spec.ts` | couverte |
@@ -79,9 +81,12 @@
 | `REQ-GOV-033` | `GOV-029` | `tests/unit/gouvernance/lot-identifiant-unique.spec.ts` | couverte |
 | `REQ-INT-003` | `GOV-088`, `INT-T01a` | `tests/unit/gouvernance/termes-interdits.spec.ts`, `tests/unit/integration/contrat-hash.spec.ts` | couverte |
 | `REQ-INT-004` | `GOV-030`, `GOV-069`, `GOV-088`, `INT-T01a`, `INT-T01c`, `INT-T05` | `tests/unit/gouvernance/termes-interdits.spec.ts`, `tests/unit/integration/contrat-hash.spec.ts` | couverte |
+| `REQ-INT-011` | `INT-T21-A`, `INT-T21-P`, `SEC-06` | `tests/integration/webhook-verdicts.spec.ts`, `tests/unit/integration/evenement-recu-travail.spec.ts` | couverte |
 | `REQ-INT-014` | `INT-T07-A`, `INT-T07-P`, `SEC-07` | `tests/integration/frontiere.spec.ts` | couverte |
 | `REQ-INT-020` | `INT-T09` | `tests/integration/api-gouv.spec.ts`, `tests/unit/integration/recherche-entreprises-repli.spec.ts` | couverte |
 | `REQ-INT-021` | `INT-T09` | `tests/integration/api-gouv.spec.ts` | couverte |
+| `REQ-INT-022` | `INT-T10` | `tests/unit/email/emetteur.spec.ts` | couverte |
+| `REQ-INT-023` | `INT-T10` | `tests/integration/webhook-rebonds.spec.ts`, `tests/unit/email/courriels-migration.spec.ts`, `tests/unit/email/rebonds.spec.ts` | couverte |
 | `REQ-INT-026` | `INT-T11` | `tests/integration/adaptateur-mcp.spec.ts`, `tests/unit/securite/webhook-signature.spec.ts` | couverte |
 | `REQ-INT-029` | `INT-T01a`, `INT-T27-A` | `tests/unit/integration/contrat-hash.spec.ts`, `tests/unit/securite/webhook-signature.spec.ts` | couverte |
 | `REQ-JUR-003` | `JUR-T01`, `JUR-T01b` | `tests/unit/contrat/contract-template-complete.spec.ts` | couverte |
@@ -103,6 +108,9 @@
 | `REQ-QA-035` | `DM-06`, `INT-T22`, `INT-T26` | `tests/unit/domaine/apporteur-score-fige.spec.ts` | couverte |
 | `REQ-SEC-001` | `SEC-03` | `tests/integration/lien-magique.spec.ts`, `tests/unit/domaine/apporteur-acces-espace.spec.ts`, `tests/unit/securite/connexion-actions.spec.ts`, `tests/unit/securite/connexion-ecran.spec.ts`, `tests/unit/securite/lien-magique-compteurs.spec.ts`, `tests/unit/securite/lien-magique-depot.spec.ts`, `tests/unit/securite/lien-magique-indistinction.spec.ts`, `tests/unit/securite/lien-magique-migration.spec.ts`, `tests/unit/securite/lien-magique-production.spec.ts` | couverte |
 | `REQ-SEC-002` | `SEC-03` | `tests/integration/lien-magique.spec.ts`, `tests/unit/securite/connexion-ecran.spec.ts`, `tests/unit/securite/lien-magique-compteurs.spec.ts`, `tests/unit/securite/lien-magique-indistinction.spec.ts`, `tests/unit/securite/lien-magique-production.spec.ts`, `tests/unit/securite/rate-famille.spec.ts` | couverte |
+| `REQ-SEC-003` | `SEC-04`, `SEC-19`, `UX-P1-04` | `tests/integration/sessions-revocables.spec.ts`, `tests/unit/securite/revocation.spec.ts` | couverte |
+| `REQ-SEC-004` | `SEC-04`, `SEC-22` | `tests/integration/sessions-revocables.spec.ts`, `tests/unit/securite/revocation.spec.ts` | couverte |
+| `REQ-SEC-010` | `SEC-06` | `tests/unit/securite/webhook-signature.spec.ts` | couverte |
 | `REQ-SEC-012` | `SEC-07` | `tests/integration/frontiere.spec.ts` | couverte |
 | `REQ-SEC-013` | `INT-T09` | `tests/unit/integration/recherche-entreprises-repli.spec.ts` | couverte |
 | `REQ-SEC-016` | `SEC-03`, `SEC-10` | `tests/integration/rate-limit-redis.spec.ts`, `tests/unit/securite/lien-magique-compteurs.spec.ts`, `tests/unit/securite/lien-magique-indistinction.spec.ts`, `tests/unit/securite/lien-magique-production.spec.ts`, `tests/unit/securite/rate-famille.spec.ts` | couverte |
@@ -125,8 +133,6 @@
 
 | Exigence | Phase | Tâches porteuses | Tests déclarés |
 | --- | ---: | --- | --- |
-| `REQ-ARG-002` | -1 | `INT-T01b`, `SEC-06`, `T-ARG-022` | `axionia/src/server/partners/__tests__/commission.spec.ts`, `axionia/src/server/partners/__tests__/derivation-ht.spec.ts`, `axionia/src/server/partners/__tests__/enveloppe.spec.ts`, `axionia/src/server/partners/__tests__/fixtures-et-frontiere.spec.ts`, `axionia/src/server/partners/__tests__/payloads.spec.ts`, `axionia/src/server/partners/__tests__/transcription-du-contrat.spec.ts`, `tests/integration/webhook-verdicts.spec.ts`, `tests/integration/webhook.spec.ts`, `tests/unit/securite/webhook-signature.spec.ts` |
-| `REQ-ARG-003` | 0 | `SEC-06`, `T-ARG-022` | `tests/integration/webhook-verdicts.spec.ts`, `tests/integration/webhook.spec.ts`, `tests/unit/securite/webhook-signature.spec.ts` |
 | `REQ-ARG-004` | 0 | `DM-04`, `T-ARG-036`, `T-ARG-037` | `tests/unit/domaine/commission-calcul.spec.ts`, `tests/unit/domaine/conservation.spec.ts` |
 | `REQ-ARG-005` | -1 | `DM-15`, `INT-T01b`, `INT-T05` | `axionia/src/server/partners-sync/__tests__/producteurs-facturation.spec.ts`, `axionia/src/server/partners/__tests__/commission.spec.ts`, `axionia/src/server/partners/__tests__/derivation-ht.spec.ts`, `axionia/src/server/partners/__tests__/enveloppe.spec.ts`, `axionia/src/server/partners/__tests__/fixtures-et-frontiere.spec.ts`, `axionia/src/server/partners/__tests__/payloads.spec.ts`, `axionia/src/server/partners/__tests__/transcription-du-contrat.spec.ts` |
 | `REQ-ARG-007` | 0 | `DM-04` | `tests/unit/domaine/commission-calcul.spec.ts`, `tests/unit/domaine/conservation.spec.ts` |
@@ -240,15 +246,12 @@
 | `REQ-INT-007` | 0 | `INT-T03`, `INT-T04`, `INT-T05`, `SEC-28` | `axionia/src/server/partners-sync/__tests__/cliquet-ecrivains.spec.ts`, `axionia/src/server/partners-sync/__tests__/producteur-devis.spec.ts`, `axionia/src/server/partners-sync/__tests__/producteurs-client.spec.ts`, `axionia/src/server/partners-sync/__tests__/producteurs-facturation.spec.ts` |
 | `REQ-INT-008` | 0 | `INT-T02` | `axionia/src/server/partners-sync/__tests__/outbox-produit-des-evenements-valides.spec.ts` |
 | `REQ-INT-009` | 0 | `INT-T02` | `axionia/src/server/partners-sync/__tests__/outbox-produit-des-evenements-valides.spec.ts` |
-| `REQ-INT-011` | 0 | `INT-T21-A`, `INT-T21-P`, `SEC-06` | `tests/integration/webhook-verdicts.spec.ts`, `tests/integration/webhook.spec.ts`, `tests/unit/securite/webhook-signature.spec.ts` |
 | `REQ-INT-012` | 0 | `INT-T02`, `INT-T08-A`, `INT-T08-P`, `INT-T21-A`, `INT-T21-P` | `axionia/src/server/partners-sync/__tests__/outbox-produit-des-evenements-valides.spec.ts` |
 | `REQ-INT-013` | 1 | `INT-T08-A`, `INT-T08-P` | — |
 | `REQ-INT-015` | 0 | `INT-T03`, `INT-T07-A`, `INT-T07-P` | `axionia/src/server/partners-sync/__tests__/cliquet-ecrivains.spec.ts`, `axionia/src/server/partners-sync/__tests__/producteurs-client.spec.ts` |
 | `REQ-INT-016` | 2 | `INT-T17`, `T-ARG-030` | — |
 | `REQ-INT-017` | 0 | `DM-03-A`, `DM-03-P` | `axionia/src/server/partners-sync/__tests__/grille-export.spec.ts`, `tests/integration/grille-versionnee.spec.ts`, `tests/unit/domaine/grille-import.spec.ts` |
 | `REQ-INT-019` | 1 | `INT-T12`, `INT-T24` | — |
-| `REQ-INT-022` | 0 | `INT-T10` | `tests/integration/webhook-rebonds.spec.ts`, `tests/unit/email/emetteur.spec.ts` |
-| `REQ-INT-023` | 0 | `INT-T10` | `tests/integration/webhook-rebonds.spec.ts`, `tests/unit/email/emetteur.spec.ts` |
 | `REQ-INT-024` | 0 | `INT-T14` | `tests/unit/integration/notif-sans-pii.spec.ts` |
 | `REQ-INT-025` | 3 | `UX-P3-01` | — |
 | `REQ-INT-027` | 1 | `INT-T13`, `INT-T17` | — |
@@ -299,13 +302,10 @@
 | `REQ-QA-029` | 2 | `T-ARG-018` | — |
 | `REQ-QA-032` | 0 | `QA-T05` | `tests/unit/qualite/build-sans-base.spec.ts`, `tests/unit/qualite/pipeline-image.spec.ts` |
 | `REQ-QA-034` | 0 | `QA-T13`, `QA-T25` | `tests/unit/qualite/retour-arriere.spec.ts`, `tests/unit/qualite/runbooks-exerces.spec.ts` |
-| `REQ-SEC-003` | 0 | `SEC-04`, `SEC-19`, `UX-P1-04` | `tests/unit/securite/revocation.spec.ts` |
-| `REQ-SEC-004` | 0 | `SEC-04`, `SEC-22` | `tests/unit/securite/revocation.spec.ts` |
 | `REQ-SEC-005` | 1 | `SEC-11`, `SEC-19`, `UX-P1-11` | — |
 | `REQ-SEC-006` | 1 | `SEC-11` | — |
 | `REQ-SEC-008` | 0 | `SEC-05` | `tests/integration/idor.spec.ts`, `tests/unit/securite/acces-scope.spec.ts` |
 | `REQ-SEC-009` | 0 | `SEC-05`, `UX-P2-06` | `tests/integration/idor.spec.ts`, `tests/unit/securite/acces-scope.spec.ts` |
-| `REQ-SEC-010` | 0 | `SEC-06` | `tests/integration/webhook-verdicts.spec.ts`, `tests/integration/webhook.spec.ts`, `tests/unit/securite/webhook-signature.spec.ts` |
 | `REQ-SEC-014` | 1 | `DM-07`, `SEC-12` | — |
 | `REQ-SEC-017` | 1 | `SEC-14` | — |
 | `REQ-SEC-018` | 1 | `SEC-15` | — |
@@ -410,7 +410,7 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | 1 | 13 | 2 |
 | 2 | 3 | 1 |
 | 3 | 1 | 0 |
-| 4 | 15 | 6 |
+| 4 | 15 | 7 |
 | 5 | 15 | 5 |
 | 6 | 1 | 1 |
 | 7 | 2 | 0 |
@@ -427,22 +427,22 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | 18 | 4 | 1 |
 | 19 | 1 | 0 |
 | 20 | 3 | 0 |
-| 21 | 11 | 1 |
+| 21 | 11 | 2 |
 
 | Étape | Exigences | Dont réputées testées |
 | ---: | ---: | ---: |
 | 1 | 3 | 0 |
 | 2 | 12 | 2 |
 | 3 | 1 | 0 |
-| 4 | 16 | 6 |
+| 4 | 16 | 7 |
 | 5 | 17 | 5 |
 | 6 | 3 | 1 |
 | 7 | 57 | 14 |
 | 8 | 12 | 3 |
-| 9 | 23 | 7 |
+| 9 | 23 | 8 |
 | 10 | 67 | 16 |
 | 11 | 30 | 6 |
-| 12 | 14 | 1 |
+| 12 | 14 | 2 |
 
 ## Fichiers de test
 
