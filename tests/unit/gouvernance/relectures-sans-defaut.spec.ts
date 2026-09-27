@@ -788,6 +788,51 @@ describe('REQ-QA-002 — `mutation:pr` écarte un diff de commentaires seuls, ju
     expect(codeInchange(garde, dans('throw e;', 'throw /* e */ e;'), F)).toBe(true);
   });
 
+  // UN COMMENTAIRE QUI PORTE UNE DIRECTIVE EST DU CODE (revue `exactitude` 5328984956, PR 82) :
+  // un pragma `@jsx` change la transformation JSX, un `@ts-expect-error` ce que le compilateur
+  // accepte, un `istanbul ignore` ou un `@__PURE__` ce que l'outil fait du code qui suit. Son
+  // texte entre dans la comparaison ; un commentaire ordinaire, non.
+  const X = 'src/lib/vue.tsx';
+  const jsx = [
+    '/** Rendu. */',
+    'declare function h(...a: unknown[]): unknown;',
+    'export const v = <p>x</p>;',
+    'export const w = (n: number): number => n + 1;',
+    '',
+  ].join('\n');
+  const dansJsx = (de: string, par: string): string => jsx.split(de).join(par);
+
+  it('REQ-QA-002 — un pragma `@jsx` qui remplace un commentaire, ou qui change : code changé (muté)', () => {
+    const avecPragma = dansJsx('/** Rendu. */', '/** @jsx h */');
+    expect(codeInchange(jsx, avecPragma, X)).toBe(false);
+    expect(codeInchange(avecPragma, dansJsx('/** Rendu. */', '/** @jsx autre */'), X)).toBe(false);
+    expect(codeInchange(jsx, dansJsx('/** Rendu. */', '/** @jsxImportSource preact */'), X)).toBe(
+      false
+    );
+  });
+
+  it('REQ-QA-002 — `@ts-expect-error`, `istanbul ignore`, `@__PURE__`, `/// <reference` ajoutés : code changé (muté)', () => {
+    const ligne = 'export const w = (n: number): number => n + 1;';
+    expect(codeInchange(jsx, dansJsx(ligne, `// @ts-expect-error\n${ligne}`), X)).toBe(false);
+    expect(codeInchange(jsx, dansJsx(ligne, `/* istanbul ignore next */\n${ligne}`), X)).toBe(
+      false
+    );
+    expect(codeInchange(jsx, dansJsx('=> n + 1', '=> /* @__PURE__ */ n + 1'), X)).toBe(false);
+    expect(codeInchange(jsx, `/// <reference types="node" />\n${jsx}`, X)).toBe(false);
+    // En FIN de fichier, derrière le dernier jeton : la directive est lue aussi.
+    expect(codeInchange(jsx, `${jsx}// eslint-disable-next-line\n`, X)).toBe(false);
+  });
+
+  it('REQ-QA-002 — un commentaire ORDINAIRE changé à côté d’un pragma : code inchangé (écarté)', () => {
+    const avecPragma = dansJsx('/** Rendu. */', '/** @jsx h */\n// rendu');
+    expect(codeInchange(avecPragma, avecPragma.replace('// rendu', '// rendu, reformulé'), X)).toBe(
+      true
+    );
+    expect(codeInchange(jsx, dansJsx('/** Rendu. */', '/** Rendu du paragraphe. */'), X)).toBe(
+      true
+    );
+  });
+
   const mesures = (lireBase: (base: string, f: string) => string | null, tete: string) => {
     let lance = 0;
     const r = () =>

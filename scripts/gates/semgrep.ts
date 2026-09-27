@@ -244,9 +244,10 @@ const FORMES_PRISMA: readonly { nom: string; ext: string; lignes: string[]; faut
     lignes: ["export const charger = () => import('@prisma/client', { with: { type: 'js' } });"],
     fautive: 1,
   },
-  // Le chargeur par ses PROPRIÉTÉS et par crochets, la liaison `import = require` de TypeScript,
-  // et un segment `db` suivi d'un suffixe pointé (revue `securite` 5328211580, PR 82). Placés au
-  // MILIEU de la liste : ni premiers ni derniers du bac.
+  // Le chargeur par ses PROPRIÉTÉS et par crochets, et un segment `db` suivi d'un suffixe pointé
+  // (revue `securite` 5328211580, PR 82). Placés au MILIEU de la liste : ni premiers ni derniers
+  // du bac. La liaison `export import p = require(…)` est dans `FORMES_PRISMA_REFUSEES_PARTOUT` :
+  // la règle n° 2 refuse tout import-equals sous `src/`.
   {
     nom: 'require-call',
     ext: 'ts',
@@ -275,12 +276,6 @@ const FORMES_PRISMA: readonly { nom: string; ext: string; lignes: string[]; faut
     nom: 'module-require-reaffecte',
     ext: 'ts',
     lignes: ['export const charger = module.require;'],
-    fautive: 1,
-  },
-  {
-    nom: 'export-import-require',
-    ext: 'ts',
-    lignes: ["export import p = require('../db');"],
     fautive: 1,
   },
   {
@@ -398,12 +393,13 @@ const FORMES_PRISMA: readonly { nom: string; ext: string; lignes: string[]; faut
 ];
 
 /**
- * Le spécifieur ou le chargeur écrits par ÉCHAPPEMENT (revue `exactitude` 5328459424, PR 82) :
- * semgrep compare le TEXTE source, et `'@pri` + échappement + `ma/client'` a la même VALEUR que
- * le client. Hors de `FORMES_PRISMA` parce que la règle n° 2 refuse ces échappements dans TOUT
- * `src/` : leurs copies sous `src/server/acces/` ne seraient pas des contre-témoins muets.
+ * Les formes de la règle n° 1 que la règle n° 2 refuse AUSSI dans tout `src/` : le spécifieur ou
+ * le chargeur écrits par ÉCHAPPEMENT (revue `exactitude` 5328459424, PR 82 — semgrep compare le
+ * TEXTE source, et `'@pri` + échappement + `ma/client'` a la même VALEUR que le client), et la
+ * liaison import-equals (revue `exactitude` 5328984956). Hors de `FORMES_PRISMA` parce que leurs
+ * copies sous `src/server/acces/` ne seraient pas des contre-témoins muets.
  */
-const FORMES_PRISMA_ECHAPPEES: readonly {
+const FORMES_PRISMA_REFUSEES_PARTOUT: readonly {
   nom: string;
   lignes: string[];
   fautive: number;
@@ -449,6 +445,11 @@ const FORMES_PRISMA_ECHAPPEES: readonly {
   {
     nom: 'interpolation-brute-parenthese-double',
     lignes: [`export const charger = () => import(String.raw\`\${("@pri${AS}u0073ma/client")}\`);`],
+    fautive: 1,
+  },
+  {
+    nom: 'export-import-require',
+    lignes: ["export import p = require('../db');"],
     fautive: 1,
   },
   {
@@ -698,6 +699,143 @@ const FORMES_SQL: readonly { nom: string; lignes: string[]; fautive: number; ext
       "export const fragment = (x: string) => Reflect.get(C, 'Prisma').raw(x);",
     ],
     fautive: 2,
+  },
+  // Le NOM `$queryRawUnsafe` / `$executeRawUnsafe` écrit EN CLAIR, refusé comme CLASSE où qu'il
+  // soit (revue `exactitude` 5328984956, PR 82) : la déstructuration RENOMMÉE hors d'une
+  // déclaration de variable — paramètre de fonction ou de flèche, seule ou parmi d'autres clés,
+  // affectation, `for … of`, imbriquée — et la clé d'objet. Aucune n'était prise : le motif
+  // renommé ne voyait que `var { … } = …`. Aucune ligne 1 ne nomme le membre : la ligne fautive
+  // est la seule qui l'écrit.
+  {
+    nom: 'unsafe-renomme-parametre-fonction',
+    lignes: [
+      "import type { PrismaClient } from '@prisma/client';",
+      'export async function lireBrut({ $queryRawUnsafe: brut }: PrismaClient, requete: string) { return brut(requete); }',
+    ],
+    fautive: 2,
+  },
+  {
+    nom: 'unsafe-renomme-parametre-fonction-execute',
+    lignes: [
+      "import type { PrismaClient } from '@prisma/client';",
+      'export async function ecrireBrut({ $executeRawUnsafe: brut }: PrismaClient, requete: string) { return brut(requete); }',
+    ],
+    fautive: 2,
+  },
+  {
+    nom: 'unsafe-renomme-parametre-fleche',
+    lignes: [
+      "import type { PrismaClient } from '@prisma/client';",
+      'export const lire = ({ $queryRawUnsafe: u }: PrismaClient, q: string) => u(q);',
+    ],
+    fautive: 2,
+  },
+  {
+    nom: 'unsafe-renomme-parametre-fleche-parmi',
+    lignes: [
+      "import type { PrismaClient } from '@prisma/client';",
+      'export const ecrire = ({ $connect, $executeRawUnsafe: u, $disconnect }: PrismaClient, q: string) =>',
+      '  [u(q), $connect, $disconnect];',
+    ],
+    fautive: 2,
+  },
+  {
+    nom: 'unsafe-renomme-affectation',
+    lignes: [
+      "import type { PrismaClient } from '@prisma/client';",
+      'declare const p: PrismaClient;',
+      'let u: unknown;',
+      '({ $queryRawUnsafe: u } = p);',
+      'export const lu = u;',
+    ],
+    fautive: 4,
+  },
+  {
+    nom: 'unsafe-renomme-for-of',
+    lignes: [
+      "import type { PrismaClient } from '@prisma/client';",
+      'declare const p: PrismaClient;',
+      "for (const { $queryRawUnsafe: brut } of [p]) void brut('SELECT 1');",
+    ],
+    fautive: 3,
+  },
+  {
+    nom: 'unsafe-renomme-imbrique-declaration',
+    lignes: [
+      "import type { PrismaClient } from '@prisma/client';",
+      'declare const o: { db: PrismaClient };',
+      'const { db: { $executeRawUnsafe: u } } = o;',
+      'export const e = u;',
+    ],
+    fautive: 3,
+  },
+  {
+    nom: 'unsafe-renomme-imbrique-parametre',
+    lignes: [
+      "import type { PrismaClient } from '@prisma/client';",
+      'export const lire = ({ db: { $queryRawUnsafe: u } }: { db: PrismaClient }, q: string) => u(q);',
+    ],
+    fautive: 2,
+  },
+  {
+    nom: 'unsafe-cle-d-objet',
+    lignes: ['export const faux = { $queryRawUnsafe: (q: string) => q };'],
+    fautive: 1,
+  },
+  // Le nom obtenu par CONCATÉNATION de littéraux : semgrep la replie (limite a), et c'est le
+  // bras « nom écrit comme chaîne » qui la prend — le seul qui voie un nom qu'aucun texte n'écrit.
+  {
+    nom: 'unsafe-concatene',
+    lignes: [
+      "import type { PrismaClient } from '@prisma/client';",
+      'declare const p: PrismaClient;',
+      "export const lire = (q: string) => p['$query' + 'RawUnsafe'](q);",
+    ],
+    fautive: 3,
+  },
+  // La liaison TypeScript `import X = …` (import-equals), refusée comme CLASSE quelle qu'en soit
+  // la cible (revue `exactitude` 5328984956, PR 82) : `import P = Prisma` fait sortir le namespace
+  // par une liaison que le refus de sortie ne voit pas, exportée ou non.
+  {
+    nom: 'import-egal-alias-prisma',
+    lignes: [
+      "import { Prisma } from '@prisma/client';",
+      'import P = Prisma;',
+      'export const fragment = (t: string) => P.raw(t);',
+    ],
+    fautive: 2,
+  },
+  {
+    nom: 'export-import-egal-alias-prisma',
+    lignes: [
+      "import { Prisma } from '@prisma/client';",
+      'export import P = Prisma;',
+      'export const fragment = (t: string) => P.raw(t);',
+    ],
+    fautive: 2,
+  },
+  {
+    nom: 'import-egal-commentaire',
+    lignes: [
+      "import { Prisma } from '@prisma/client';",
+      'import /* alias */ P = Prisma;',
+      'export const fragment = (t: string) => P.raw(t);',
+    ],
+    fautive: 2,
+  },
+  {
+    nom: 'import-egal-cible-quelconque',
+    lignes: [
+      'namespace Outils { export const un = 1; }',
+      'import Un = Outils.un;',
+      'export const deux = Un + 1;',
+    ],
+    fautive: 2,
+  },
+  {
+    nom: 'import-egal-require-quelconque',
+    lignes: ["import fs = require('node:fs');", 'export const lire = fs.readFileSync;'],
+    fautive: 1,
   },
   // Le NOM écrit par ÉCHAPPEMENT, sans rien de calculé (revue `exactitude` 5328459424, PR 82) :
   // semgrep compare le TEXTE source, pas la valeur. Échappements imprimables `u` / `u{}` / `x`
@@ -1190,7 +1328,7 @@ export const TEMOINS: readonly FichierDuBac[] = [
       f.fautive
     )
   ),
-  ...FORMES_PRISMA_ECHAPPEES.map((f) =>
+  ...FORMES_PRISMA_REFUSEES_PARTOUT.map((f) =>
     fichier(
       `prisma/${f.nom}`,
       `${MILIEU_ESPACE}/${f.nom}.${f.ext ?? 'ts'}`,
@@ -1306,6 +1444,27 @@ export const CONTRE_TEMOINS: readonly FichierDuBac[] = [
       // `$queryRaw` voisin de `$queryRawUnsafe`, par crochets — EN ÉTIQUETTE : une référence
       // nue à `$queryRaw` est désormais une sortie de la fonction d'étiquette, refusée.
       "export const e = p['$queryRaw']`SELECT 1`;",
+    ],
+    null,
+    0
+  ),
+  // Les VOISINS des deux classes refusées par leur écriture (revue `exactitude` 5328984956,
+  // PR 82) : un nom qui CONTIENT `queryRaw` sans être un membre `…Unsafe` (la borne du mot tient
+  // compte du `$`), un `import type`, un import nommé ordinaire de `Prisma` employé en membre
+  // immédiat, un gabarit étiqueté, et un identifiant qui COMMENCE par `import`.
+  fichier(
+    'sql/voisins-des-classes',
+    'src/lib/sql/voisins-des-classes.ts',
+    [
+      "import type { PrismaClient } from '@prisma/client';",
+      "import { Prisma } from '@prisma/client';",
+      'declare const p: PrismaClient;',
+      'const queryRaw = 1;',
+      'const $queryRawUnsafely = 2;',
+      'export const a = queryRaw + $queryRawUnsafely;',
+      'export const b = (id: string) => p.$queryRaw`SELECT ${id}`;',
+      'export const c = (e: unknown) => e instanceof Prisma.PrismaClientKnownRequestError;',
+      'export const important = 3;',
     ],
     null,
     0
