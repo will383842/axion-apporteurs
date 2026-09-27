@@ -911,6 +911,53 @@ const TEMOINS: { famille: Famille; quoi: string; fichiers: FichierDeConsole[] }[
     ],
   },
   {
+    famille: 'export_non_jugeable',
+    quoi: 'module CommonJS : `exports.GET =` d’un route.ts (aucun export ES, aucun site)',
+    fichiers: [ROUTE("exports.GET = async () => new Response('x');")],
+  },
+  {
+    famille: 'export_non_jugeable',
+    quoi: 'module CommonJS : `module.exports = { GET }` d’un route.js',
+    fichiers: [
+      {
+        chemin: 'src/app/(console)/console/w7/route.js',
+        source: "module.exports = { GET: async () => new Response('x') };\n",
+      },
+    ],
+  },
+  {
+    famille: 'export_non_jugeable',
+    quoi: "module CommonJS : `Object.defineProperty(exports, 'GET', …)` d’un route.ts",
+    fichiers: [
+      ROUTE("Object.defineProperty(exports, 'GET', { value: async () => new Response('x') });"),
+    ],
+  },
+  {
+    famille: 'export_non_jugeable',
+    quoi: "module CommonJS : `exports['POST'] =` d’un route.ts",
+    fichiers: [ROUTE("exports['POST'] = async () => new Response('x');")],
+  },
+  {
+    famille: 'route_sans_requireRole',
+    quoi: 'un `requireRole` homonyme défini dans le fichier : il ne garde pas',
+    fichiers: [
+      ROUTE(
+        'async function requireRole() {\n  return { ok: true };\n}\n' +
+          `export async function GET() {\n${GARDE_ECRAN}\n}`
+      ),
+    ],
+  },
+  {
+    famille: 'route_sans_requireRole',
+    quoi: '`x.requireRole(…)` sur un objet qui n’est pas le module des rôles',
+    fichiers: [
+      ROUTE(
+        'const x = { requireRole: async () => ({ ok: true }) };\n' +
+          "export async function GET() {\n  await x.requireRole('ecran:tableau', j, p);\n}"
+      ),
+    ],
+  },
+  {
     famille: 'source_illisible',
     quoi: 'un fichier tronqué',
     fichiers: [ACTION('  await requireRole(')],
@@ -1002,6 +1049,15 @@ const CONTRE_TEMOINS: { quoi: string; fichiers: FichierDeConsole[] }[] = [
         chemin: 'src/server/console/aide.ts',
         source: `export class C {\n  async lever() {\n    'use server';\n${GARDE_ACTION}\n  }\n}\n`,
       },
+    ],
+  },
+  {
+    quoi: 'une route en exports ES qui importe la porte du module des rôles et l’appelle',
+    fichiers: [
+      ROUTE(
+        "import { requireRole } from '../../../../server/roles/require-role';\n" +
+          `export async function GET() {\n${GARDE_ECRAN}\n}`
+      ),
     ],
   },
 ];
