@@ -88,7 +88,7 @@ import {
   dansLaPorteeDesEtats,
   finDeLigneEtrangere,
 } from './schema-enums';
-import { TYPES_EVENEMENT, TYPES_HORS_CONTRAT_V1 } from '../../packages/contracts/events';
+import { TYPES_EVENEMENT } from '../../packages/contracts/events';
 
 // ── le vocabulaire de la garde ───────────────────────────────────────────────
 
@@ -103,11 +103,11 @@ type Faute = { famille: string; message: string; refus?: RefusDeConclure };
 type Examine = { chemin: string; racine: string; octets: number; empreinte: string };
 
 export type Vue = {
-  /** Le texte de REQ-INT-004 — source des sept types valides et des modèles refusés. */
+  /** Le texte de REQ-INT-004 — source des onze types valides et des modèles refusés. */
   reqInt004: string;
   /** `docs/GLOSSAIRE.md` — source primaire des synonymes interdits (`docs/PRESEANCE.md` §2). */
   glossaire: string;
-  /** Les noms d'événements que `packages/contracts` publie, contrat v1 et dette nommée. */
+  /** Les noms d'événements que `packages/contracts` publie. */
   typesDuContrat: readonly string[];
   /** Les racines jugées, LUES dans l'en-tête du glossaire. Vide = source illisible, pas « tout ». */
   racines: string[];
@@ -714,7 +714,7 @@ export function vueDuDepot(): Vue {
   return {
     reqInt004: texteDeLaReq('REQ-INT-004'),
     glossaire,
-    typesDuContrat: [...TYPES_EVENEMENT, ...TYPES_HORS_CONTRAT_V1.map((t) => t.type)],
+    typesDuContrat: [...TYPES_EVENEMENT],
     racines: racinesDuGlossaire(glossaire),
     fichiers,
   };
@@ -770,8 +770,10 @@ export function cleDeCouverture(famille: string, refus?: string): string {
 /** Même liste de types que REQ-INT-004 : `termes-interdits.spec.ts` l'assère par ÉGALITÉ. */
 const REQ_INT_004_FIXTURE =
   "Les types d'événements sont : `client.cree`, `client.mis_a_jour`, `devis.signe`, " +
-  '`facture.emise`, `avoir.emis`, `paiement.recu`, `paiement.rembourse` — nommés sur les modèles ' +
-  'réels (Client, Devis, FactureFormation, Payment) ; aucun événement ne référence `Invoice` ni `Refund`.';
+  '`facture.emise`, `avoir.emis`, `paiement.recu`, `paiement.rembourse`, `candidature.recue`, ' +
+  '`financement.mis_a_jour`, `facture.annulee`, `client.fusionne` — nommés sur les modèles ' +
+  'réels (Client, Devis, FactureFormation, Payment, Submission, DossierPayeur) ; aucun événement ne ' +
+  'référence `Invoice` ni `Refund`.';
 
 /**
  * Les TOURNURES de `docs/GLOSSAIRE.md` que la garde doit savoir lire, au plus court. Ses racines et
@@ -833,6 +835,10 @@ export const VUE_CONFORME: Vue = {
     'avoir.emis',
     'paiement.recu',
     'paiement.rembourse',
+    'candidature.recue',
+    'financement.mis_a_jour',
+    'facture.annulee',
+    'client.fusionne',
   ],
   racines: racinesDuGlossaire(GLOSSAIRE_FIXTURE),
   fichiers: [fichierTexte('src/config/fixture.ts', 'export const rien = true;\n')],
@@ -876,7 +882,7 @@ export const TEMOINS: Temoin[] = [
     id: 'contrat_et_exigence_divergents',
     famille: 'source_illisible',
     refus: 'contrat_et_exigence_divergents',
-    quoi: "le contrat a perdu six des sept noms que l'exigence nomme",
+    quoi: "le contrat a perdu dix des onze noms que l'exigence nomme",
     vue: () => ({ ...VUE_CONFORME, typesDuContrat: ['client.cree'] }),
   },
   {

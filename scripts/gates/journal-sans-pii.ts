@@ -91,9 +91,9 @@ const DOMAINE_DU_JOURNAL = 'src/domain/evenement/';
  */
 export const LISTE_BLANCHE_PAR_CONTENU: { chemin: string; motif: string; lignes: string[] }[] = [
   {
-    chemin: 'packages/contracts/contracts.v1.json',
+    chemin: 'packages/contracts/contracts.v2.json',
     motif: 'l’URL du schéma du contrat d’événements inter-dépôts, pas la table',
-    lignes: ['"$id": "https://axion-ia.com/contrats/partners/evenements/v1",'],
+    lignes: ['"$id": "https://axion-ia.com/contrats/partners/evenements/v2",'],
   },
   {
     chemin: 'packages/contracts/events.ts',

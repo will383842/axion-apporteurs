@@ -1,7 +1,7 @@
 /**
  * DM-06 — le snapshot de candidature que porte l'apporteur (REQ-DM-035, REQ-QA-035).
  *
- * Il est lu dans la charge de l'événement `candidature.recue` émis par axionia, qui garde le
+ * Il est lu dans la charge de la candidature reçue, émise par axionia, qui garde le
  * tunnel (HYP-E1-7), et il est FIGÉ : Partners ne le recalcule, ne le complète ni ne le
  * réinterprète jamais.
  *
@@ -28,7 +28,7 @@ const json: z.ZodType<unknown> = z.lazy(() =>
   z.union([z.string(), z.number(), z.boolean(), z.null(), z.array(json), z.record(json)])
 );
 
-/** Les champs de la charge `candidature.recue` que le snapshot retient — ni plus, ni moins. */
+/** Les champs de la charge de la candidature reçue que le snapshot retient — ni plus, ni moins. */
 export const chargeCandidature = z.object({
   candidatureId: z.string().uuid(),
   reponsesJson: z.record(json),
@@ -54,7 +54,7 @@ export function snapshotDeCandidature(charge: unknown): {
   const lu = chargeCandidature.safeParse(charge);
   if (!lu.success) {
     const champs = lu.error.issues.map((i) => i.path.join('.') || '(racine)').join(', ');
-    throw new TypeError(`charge candidature.recue refusée : ${champs}`);
+    throw new TypeError(`charge de candidature refusée : ${champs}`);
   }
   const snapshot = lu.data;
   // Compter en POINTS DE CODE, comme `varchar(n)` de PostgreSQL — pas en unités UTF-16.
