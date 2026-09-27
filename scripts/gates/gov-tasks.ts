@@ -39,8 +39,11 @@ import {
   DEPOT_LOCAL,
   FAMILLES_ATTESTATION,
   PASSIF_SANS_ATTESTATION,
+  commitsDeCeDepot,
   controlerAttestation,
+  versUtcSeconde,
   type Attestation,
+  type VuesHorsLigne,
 } from '../lot/attestation';
 import { CHEMIN_CHARTE, cheminsSchema, touche } from '../lot/revues';
 
@@ -116,9 +119,11 @@ const LIVREE = LIVREE_DERIVEE;
  *
  * 🔴 PAS `attestation`, et c'est le motif `simplicite` de la PR 114 : une livraison d'AILLEURS est
  * déjà jugée, dans les deux sens, par `controlerAttestation` (`attestation_absente`,
- * `attestation_sans_livraison`), et une attestation sur une tâche d'ici par
- * `attestation_hors_sujet`. La compter ici faisait rougir la même faute deux fois, sous deux noms
- * et deux remèdes. Une faute, une famille : le couple ne juge que CE dépôt.
+ * `attestation_sans_livraison`) ; depuis GOV-042, une tâche d'ICI porte la même attestation, jugée
+ * par la même fonction (`attestation_absente`, `attestation_pr_discordante`, `attestation_sans_pr`,
+ * `attestation_sha_etranger`) — `attestation_hors_sujet` ne vaut plus que pour `repo: "externe"`.
+ * La compter ici faisait rougir la même faute deux fois, sous deux noms et deux remèdes. Une
+ * faute, une famille : le couple ne juge que les écritures `pr` et `branch` de CE dépôt.
  *
  * `owner` n'en est PAS : prendre une tâche n'est pas une écriture d'état — trois tâches « à faire »
  * en portent un aujourd'hui, légitimement, et les compter ici ferait rougir la revendication.
@@ -197,12 +202,25 @@ export function schemaSansChemin(taches: readonly Tache[], chemins: readonly str
     .map((t) => t.id);
 }
 
+/**
+ * Les vues hors ligne d'UNE passe (veto sécurité 5328941794, PR 168) : l'instant fourni par
+ * l'appelant, et l'oracle git qui dit si un SHA est un commit de CE dépôt — lu en UN appel pour
+ * toutes les attestations du document. Le CI clone l'historique entier (`fetch-depth: 0`) : un
+ * SHA d'ici y est connu, ou il n'atteste rien.
+ */
+export function vuesDeLaPasse(doc: unknown, maintenant: number): VuesHorsLigne {
+  const taches = ((doc as { taches?: Tache[] }).taches ?? []) as Tache[];
+  const shas = taches.flatMap((t) => (t.attestation?.sha ? [t.attestation.sha] : []));
+  return { maintenant, commitConnu: commitsDeCeDepot(shas) };
+}
+
 // ── les contrôles ────────────────────────────────────────────────────────────
 export function controler(
   doc: unknown,
   schema: object,
   registre: Registre,
-  chemins: readonly string[] = cheminsSchema()
+  chemins: readonly string[] = cheminsSchema(),
+  vues: VuesHorsLigne = vuesDeLaPasse(doc, Date.now())
 ): Faute[] {
   const fautes: Faute[] = [];
   const ajouter = (famille: string, message: string) => fautes.push({ famille, message });
@@ -307,7 +325,8 @@ export function controler(
     // écrivant un `pr` qui ne résout pas. Les contrôles vivent dans `scripts/lot/attestation.ts`,
     // avec la forme du champ, le motif du SHA et la fonction de rendu : une garde qui juge une
     // valeur et une vue qui l'imprime doivent lire la MÊME définition (RM-01).
-    for (const f of controlerAttestation(t, LIVREE.has(t.statut))) ajouter(f.famille, f.message);
+    for (const f of controlerAttestation(t, LIVREE.has(t.statut), vues))
+      ajouter(f.famille, f.message);
   }
 
   // ── l'état cible et l'opération qui y mène, DANS LES DEUX SENS (GOV-086) ──────────────────
@@ -536,9 +555,12 @@ if (LANCE_EN_SCRIPT) {
   const registre = chargerRegistre(CHEMIN_DECISIONS);
   const doc = JSON.parse(readFileSync(CHEMIN_TACHES, 'utf8')) as { taches: Tache[] };
   const chemins = cheminsSchema(readFileSync(CHEMIN_CHARTE, 'utf8'));
+  // L'INSTANT DE LA PASSE, lu UNE fois et injecté partout : une `fusionneeAt` postérieure est une
+  // faute (`attestation_date_future`), et deux appels de la même passe jugent au même instant.
+  const horsLigne = vuesDeLaPasse(doc, Date.now());
 
   if (process.argv.includes('--render') || process.argv.includes('--verifie-rendu')) {
-    const fautes = controler(doc, schema, registre, chemins);
+    const fautes = controler(doc, schema, registre, chemins, horsLigne);
     if (fautes.length > 0) {
       console.error(
         `❌ Refus de rendre une vue d'un backlog fautif (${fautes.length}). Lance \`pnpm gov:tasks\`.`
@@ -598,7 +620,7 @@ if (LANCE_EN_SCRIPT) {
 
   // ── mode --prove : un défaut par famille, chacun vu rougir ────────────────────
   if (process.argv.includes('--prove')) {
-    const base = controler(doc, schema, registre, chemins);
+    const base = controler(doc, schema, registre, chemins, horsLigne);
     if (base.length > 0) {
       console.error(
         `❌ La preuve part d'un document DÉJÀ fautif (${base.length}) — corrige d'abord :`
@@ -909,6 +931,38 @@ if (LANCE_EN_SCRIPT) {
           return d;
         },
       },
+      // ── ce qui se ferme sans forge (veto sécurité 5328941794, PR 168) ─────────
+      // Une fusion datée d'APRÈS la passe : un jour après l'instant injecté, jamais une année tapée.
+      {
+        famille: 'attestation_date_future',
+        defaut: () => {
+          const d = copie();
+          livreeAilleurs(d).attestation = {
+            ...attestationValide(),
+            fusionneeAt: versUtcSeconde(new Date(horsLigne.maintenant + 86_400_000).toISOString()),
+          };
+          return d;
+        },
+      },
+      // Le scénario GOV-035 : une tâche d'ici livrée, son `pr` effacé, l'attestation laissée seule.
+      {
+        famille: 'attestation_sans_pr',
+        defaut: () => {
+          const d = copie();
+          livreeIciAttestee(d).pr = null;
+          return d;
+        },
+      },
+      // Le SHA à quarante zéros du veto : bien formé, et commit de RIEN dans ce dépôt.
+      {
+        famille: 'attestation_sha_etranger',
+        defaut: () => {
+          const d = copie();
+          const t = livreeIciAttestee(d);
+          t.attestation = { ...t.attestation!, sha: '0'.repeat(40) };
+          return d;
+        },
+      },
       {
         // GOV-093 — une tâche `a_faire` qui nomme le fichier de schéma sans porter `schema: true`.
         famille: 'schema_champ_faux',
@@ -989,7 +1043,7 @@ if (LANCE_EN_SCRIPT) {
     ];
 
     for (const c of CONTRE_TEMOINS) {
-      const f = controler(c.muter(), schema, registre, chemins);
+      const f = controler(c.muter(), schema, registre, chemins, horsLigne);
       if (f.length > 0) {
         console.error(
           `\u274c Le contre-t\u00e9moin \u00ab ${c.nom} \u00bb a fait rougir la garde alors qu'il est l\u00e9gitime :`
@@ -1001,7 +1055,7 @@ if (LANCE_EN_SCRIPT) {
 
     const prouvees = new Set<string>();
     for (const t of TEMOINS) {
-      const f = controler(t.defaut(), schema, registre, chemins);
+      const f = controler(t.defaut(), schema, registre, chemins, horsLigne);
       if (!f.some((x) => x.famille === t.famille)) {
         console.error(
           `❌ Le témoin de « ${t.famille} » n'a PAS fait rougir sa famille ` +
@@ -1027,7 +1081,7 @@ if (LANCE_EN_SCRIPT) {
   }
 
   // ── mode normal ──────────────────────────────────────────────────────────────
-  const fautes = controler(doc, schema, registre, chemins);
+  const fautes = controler(doc, schema, registre, chemins, horsLigne);
   if (fautes.length === 0) {
     const j = doc.taches.reduce((s, t) => s + t.estimateDays, 0);
     const parPhase = [-1, 0, 1, 2, 3].map((p) => {

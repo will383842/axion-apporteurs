@@ -1,5 +1,5 @@
 /**
- * gov-attestation.ts — RÉSOUDRE, en ligne, les attestations inter-dépôt du backlog. (GOV-038)
+ * gov-attestation.ts — RÉSOUDRE, en ligne, CHAQUE attestation du backlog. (GOV-038)
  *
  * USAGE : pnpm gov:attestation --en-ligne
  *         …--taches <chemin>   lit un AUTRE backlog que celui du dépôt
@@ -7,6 +7,17 @@
  * `--taches` existe pour la même raison que le `--out` des générateurs de vues : sans lui, ce
  * contrôle ne pourrait être éprouvé qu'en modifiant `docs/tasks.json`, fichier réservé qu'un
  * développeur n'écrit pas, et il resterait donc « jamais vu marcher » jusqu'au jour où il compte.
+ *
+ * 🔴 LA POPULATION EST TOUTES LES ATTESTATIONS, LOCALES COMPRISES (veto sécurité 5328941794, PR
+ * 168). Ce script filtrait `repo !== DEPOT_LOCAL` : écrit quand seules les livraisons d'AILLEURS
+ * portaient une attestation (GOV-038), il est resté tel quand l'attestation s'est étendue à ce
+ * dépôt. Le backlog est passé de 1 à 78 attestations ; ce contrôle en résolvait UNE. Mesuré sur
+ * e8369ab : une tâche SENSIBLE de ce dépôt avec un SHA à quarante zéros → « ✅ les 1
+ * attestation(s) résolvent », sortie 0.
+ * *Un filtre écrit pour une population ne suit pas la population quand elle change.* La règle
+ * vit désormais dans `resoudreAttestations` (`scripts/lot/attestation.ts`), pure, éprouvée par
+ * `un-statut-fusionnee-porte-sa-preuve.spec.ts` sur une forge et un git SIMULÉS (RM-11) ; ce
+ * fichier ne fait que brancher les vues réelles et imprimer.
  *
  * ⚠️ CE CONTRÔLE N'EST NI DANS `pnpm test`, NI DANS `pnpm gov:partiel`, NI DANS LA CI, ET C'EST
  * DÉLIBÉRÉ. Il interroge la forge. Une garde qui lance `gh` fait dépendre son verdict du réseau,
@@ -18,15 +29,20 @@
  *
  * LE PARTAGE EST DONC EXPLICITE :
  *
- *   — `pnpm gov:tasks` (déterministe, bloquant, en CI) juge la FORME : le champ existe là où il
- *     doit, le SHA a quarante hexadécimaux, la date est un instant UTC, aucun `pr` nu hors dépôt ;
- *   — ce script (non déterministe, à la main) juge la RÉSOLUTION : ce SHA-là désigne un commit
- *     réel de ce dépôt-là, et la PR qu'il cite porte bien ce commit de fusion.
+ *   — `pnpm gov:tasks` (déterministe, bloquant, en CI, sans réseau) juge la FORME et ce qui se
+ *     ferme sans forge : SHA de quarante hexadécimaux, instant UTC non postérieur à la passe, pas
+ *     de `pr` nu hors dépôt, pas d'attestation locale sans `pr`, et — pour une tâche d'ICI — un
+ *     SHA que git connaît comme commit de ce dépôt ;
+ *   — ce script (non déterministe, à la main) juge la RÉSOLUTION : pour une tâche d'ici, le SHA
+ *     est ancêtre de la branche par défaut ; pour une tâche d'ailleurs, la forge de son dépôt
+ *     connaît le commit ; pour toutes, la PR citée est FUSIONNÉE, par CE commit, à CET instant.
  *
- * L'AFFAIBLISSEMENT DE LA PREMIÈRE EST NOMMÉ PLUTÔT QUE TU : un SHA de quarante hexadécimaux qui
- * ne désigne rien passe `gov:tasks`. C'est le prix du déterminisme, et le rattrapage est ici. Il
- * se lance après toute clôture de lot portant une tâche `repo` ≠ `partners`, et avant toute
- * publication d'un état d'avancement qui s'appuie dessus.
+ * L'AFFAIBLISSEMENT HORS LIGNE EST NOMMÉ PLUTÔT QUE TU : un commit d'ici qui existe mais n'est
+ * pas celui de la PR citée, ou le SHA de quarante hexadécimaux d'une tâche d'AILLEURS qui ne
+ * désigne rien, passent `gov:tasks`. Le rattrapage est ici. Il se lance après toute clôture de lot
+ * et avant toute publication d'un état d'avancement qui s'appuie dessus.
+ *
+ * UNE FORGE ILLISIBLE EST UNE FAUTE : échec fermé, jamais « rien à redire faute de réponse ».
  *
  * LE SCRIPT REFUSE DE TOURNER SANS `--en-ligne`. Sans ce refus, quelqu'un le câblerait un jour dans
  * une chaîne « pour être complet », et la suite entière deviendrait intermittente.
@@ -34,19 +50,27 @@
 
 import { readFileSync, existsSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
-import { DEPOT_LOCAL, MOTIF_SHA, depotDeLaTache, type Attestation } from '../lot/attestation';
+import {
+  resoudreAttestations,
+  versUtcSeconde,
+  type ReponseForge,
+  type SituationGit,
+  type TacheAttestable,
+} from '../lot/attestation';
+import { LIVREE } from '../lot/avancement';
 
 const iTaches = process.argv.indexOf('--taches');
 const CHEMIN_TACHES =
   iTaches >= 0 ? (process.argv[iTaches + 1] ?? 'docs/tasks.json') : 'docs/tasks.json';
 
-type Tache = { id: string; repo: string; statut: string; attestation?: Attestation | null };
+/** La branche par défaut telle que CET arbre la connaît. Le contrôle ne la rafraîchit pas : il la NOMME. */
+const BRANCHE = 'origin/main';
 
 if (!process.argv.includes('--en-ligne')) {
   console.error(
     "❌ gov:attestation — ce contrôle INTERROGE la forge et ne s'exécute qu'avec `--en-ligne`.\n" +
       "   Il n'a pas sa place dans `pnpm test`, `pnpm gov:partiel` ni la CI : son verdict dépendrait\n" +
-      "   du réseau, d'un jeton et d'un quota. La forme des attestations est jugée, elle, par\n" +
+      '   du réseau, d’un jeton et d’un quota. La forme des attestations est jugée, elle, par\n' +
       '   `pnpm gov:tasks` — déterministe, bloquante, et sans aucun appel sortant.'
   );
   process.exit(2);
@@ -57,85 +81,85 @@ if (!existsSync(CHEMIN_TACHES)) {
   process.exit(1);
 }
 
-const doc = JSON.parse(readFileSync(CHEMIN_TACHES, 'utf8')) as { taches: Tache[] };
-const attestees = doc.taches.filter((t) => t.repo !== DEPOT_LOCAL && t.attestation);
+const doc = JSON.parse(readFileSync(CHEMIN_TACHES, 'utf8')) as { taches: TacheAttestable[] };
 
-// TÉMOIN POSITIF. « 0 échec » et « 0 attestation lue » sont indiscernables dans un journal de CI,
-// et le second est le mode d'échec le plus probable d'un contrôle qui filtre sur deux champs.
-console.log(
-  `gov:attestation — ${attestees.length} attestation(s) à résoudre sur ${doc.taches.length} tâches.`
-);
-if (attestees.length === 0) {
-  console.log(
-    '   Aucune tâche livrée hors de ce dépôt : rien à résoudre. Ce n’est pas un vert de contrôle.'
-  );
-  process.exit(0);
-}
-
-const gh = (chemin: string): { ok: true; corps: unknown } | { ok: false; erreur: string } => {
+const forge = (chemin: string): ReponseForge => {
   try {
     return {
       ok: true,
-      corps: JSON.parse(execFileSync('gh', ['api', chemin], { encoding: 'utf8' })) as unknown,
+      corps: JSON.parse(
+        execFileSync('gh', ['api', chemin], { encoding: 'utf8', stdio: 'pipe' })
+      ) as unknown,
     };
   } catch (e) {
     return { ok: false, erreur: (e as Error).message.split('\n')[0] ?? 'sans message' };
   }
 };
 
-const fautes: string[] = [];
-
-for (const t of attestees) {
-  const a = t.attestation!;
-  const depot = depotDeLaTache(t);
-  if (depot === null) {
-    fautes.push(`${t.id} — repo « ${t.repo} » ne désigne aucun dépôt de forge : rien à résoudre.`);
-    continue;
+/** Le code de sortie de git, sans lever : 0 = oui, 1 = non, autre = git n'a pas su. */
+const statutGit = (args: string[]): number => {
+  try {
+    execFileSync('git', args, { stdio: 'ignore' });
+    return 0;
+  } catch (e) {
+    return (e as { status?: number | null }).status ?? -1;
   }
-  if (!MOTIF_SHA.test(a.sha)) {
-    fautes.push(
-      `${t.id} — « ${a.sha} » n'a pas la forme d'un SHA ; \`pnpm gov:tasks\` le dit déjà.`
+};
+
+const brancheLisible = statutGit(['rev-parse', '--verify', '--quiet', BRANCHE]) === 0;
+
+const situer = (sha: string): SituationGit => {
+  if (!brancheLisible) return 'illisible';
+  if (statutGit(['cat-file', '-e', `${sha}^{commit}`]) !== 0) return 'absent';
+  const s = statutGit(['merge-base', '--is-ancestor', sha, BRANCHE]);
+  return s === 0 ? 'ancetre' : s === 1 ? 'hors_branche' : 'illisible';
+};
+
+const dateDuCommit = (sha: string): string | null => {
+  try {
+    return versUtcSeconde(
+      execFileSync('git', ['show', '-s', '--format=%cI', sha], { encoding: 'utf8' }).trim()
     );
-    continue;
+  } catch {
+    return null;
   }
+};
 
-  const commit = gh(`repos/${depot}/commits/${a.sha}`);
-  if (!commit.ok) {
-    fautes.push(`${t.id} — le commit ${a.sha} est INTROUVABLE dans ${depot} (${commit.erreur}).`);
-    continue;
-  }
+const r = resoudreAttestations(
+  doc.taches,
+  { brancheParDefaut: BRANCHE, forge, situer, dateDuCommit },
+  (t) => LIVREE.has(t.statut)
+);
 
-  const pr = gh(`repos/${depot}/pulls/${a.pr}`);
-  if (!pr.ok) {
-    fautes.push(`${t.id} — la PR ${depot}#${a.pr} est introuvable (${pr.erreur}).`);
-    continue;
-  }
-  const p = pr.corps as { merge_commit_sha?: string; merged_at?: string | null };
-  if (p.merge_commit_sha !== a.sha) {
-    fautes.push(
-      `${t.id} — ${depot}#${a.pr} a fusionné par ${p.merge_commit_sha ?? 'aucun commit'}, pas par ${a.sha}. ` +
-        `Le numéro et le SHA de l'attestation désignent deux choses différentes.`
-    );
-    continue;
-  }
-  if (!p.merged_at) {
-    fautes.push(
-      `${t.id} — ${depot}#${a.pr} n'est PAS fusionnée, alors que la tâche est « ${t.statut} ».`
-    );
-    continue;
-  }
-  console.log(
-    `   ✓ ${t.id} — ${depot}#${a.pr} fusionnée par ${a.sha.slice(0, 7)} le ${p.merged_at}`
-  );
-}
+// TÉMOIN POSITIF. « 0 échec » et « 0 attestation lue » sont indiscernables dans un journal, et le
+// second est exactement le mode d'échec qu'a eu ce contrôle : un filtre sur une population morte.
+console.log(
+  `gov:attestation — ${r.population} attestation(s) à résoudre sur ${doc.taches.length} tâches ` +
+    `(branche de référence : ${BRANCHE}${brancheLisible ? '' : ' — ILLISIBLE'}).`
+);
+// CE QUE LE CONTRÔLE SAUTE, NOMMÉ À CHAQUE PASSAGE : jamais un périmètre silencieux.
+console.log(
+  `   SAUTÉ — ${r.sautees.length} tâche(s) livrée(s) sans attestation, donc sans rien à résoudre :`
+);
+r.sautees.forEach((s) => console.log(`     · ${s.id} — ${s.motif}`));
+r.resolues.forEach((l) => console.log(`   ✓ ${l}`));
 
+const fautes = r.fautes;
 if (fautes.length > 0) {
   console.error(`\n❌ gov:attestation — ${fautes.length} attestation(s) ne résolvent pas :`);
   fautes.forEach((f) => console.error(`   ${f}`));
   process.exit(1);
 }
 
+if (r.population === 0) {
+  console.log(
+    '   Aucune attestation au backlog : rien à résoudre. Ce n’est pas un vert de contrôle.'
+  );
+  process.exit(0);
+}
+
 console.log(
-  `\n✅ gov:attestation — les ${attestees.length} attestation(s) résolvent dans leur dépôt.`
+  `\n✅ gov:attestation — les ${r.population} attestation(s) résolvent : ${r.resolues.length} ` +
+    `confrontée(s) à git et à la forge, ${r.sautees.length} tâche(s) livrée(s) sautée(s) et nommée(s).`
 );
 process.exit(0);

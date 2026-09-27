@@ -57,6 +57,7 @@ import {
   referencePr,
   type Attestation,
   type TacheAttestable,
+  type VuesHorsLigne,
 } from '../../../scripts/lot/attestation';
 
 /**
@@ -71,6 +72,12 @@ const attestation = (): Attestation => ({
   fusionneeAt: '2026-09-05T11:04:48Z',
 });
 
+/** Les vues hors ligne INJECTÉES (RM-11) : l'instant de la passe fixé, l'oracle git neutre. */
+const VUES: VuesHorsLigne = {
+  maintenant: Date.parse('2026-09-27T12:00:00Z'),
+  commitConnu: () => true,
+};
+
 /**
  * Aucun défaut sur ce que les cas font varier (RM-11) : `repo`, `statut`, `pr` et `attestation`
  * sont explicites à chaque appel. « absent » et « présent » sont deux fixtures, pas une valeur par
@@ -81,13 +88,14 @@ function tache(champs: TacheAttestable): TacheAttestable {
 }
 
 const familles = (t: TacheAttestable, livree: boolean): string[] =>
-  controlerAttestation(t, livree).map((f) => f.famille);
+  controlerAttestation(t, livree, VUES).map((f) => f.famille);
 
 describe('GOV-038 — les sept familles de l’attestation inter-dépôt (REQ-GOV-026)', () => {
   it('REQ-GOV-026 — attestation_absente : une tâche `axionia` livrée sans rien qui prouve sa livraison', () => {
     const f = controlerAttestation(
       tache({ id: 'INT-T01b', repo: 'axionia', statut: 'fusionnee', pr: null, attestation: null }),
-      true
+      true,
+      VUES
     );
     expect(f.map((x) => x.famille)).toEqual(['attestation_absente']);
     // Le message NOMME le dépôt réel : « corrige-le » sans dire où chercher ne sert à personne.
@@ -103,7 +111,8 @@ describe('GOV-038 — les sept familles de l’attestation inter-dépôt (REQ-GO
         pr: 998,
         attestation: attestation(),
       }),
-      true
+      true,
+      VUES
     );
     expect(f.map((x) => x.famille)).toEqual(['pr_nu_hors_depot']);
     // Il dit POURQUOI c'est faux, en citant le dépôt où le numéro serait cherché — et ne résout pas.
@@ -166,7 +175,8 @@ describe('GOV-038 — les sept familles de l’attestation inter-dépôt (REQ-GO
         pr: null,
         attestation: { ...attestation(), sha: '998' },
       }),
-      true
+      true,
+      VUES
     );
     expect(f.map((x) => x.famille)).toEqual(['attestation_sha_non_conforme']);
   });
@@ -269,8 +279,38 @@ describe('GOV-038 — les sept familles de l’attestation inter-dépôt (REQ-GO
         },
         true,
       ],
+      // Veto sécurité 5328941794 (PR 168) — une fusion datée après la passe, une tâche d'ici
+      // livrée avec son attestation et SANS `pr`.
+      [
+        {
+          id: 'h',
+          repo: 'axionia',
+          statut: 'fusionnee',
+          pr: null,
+          attestation: { ...attestation(), fusionneeAt: '2999-01-01T00:00:00Z' },
+        },
+        true,
+      ],
+      [
+        { id: 'i', repo: 'partners', statut: 'fusionnee', pr: null, attestation: attestation() },
+        true,
+      ],
     ];
     for (const [t, livree] of cas) for (const x of familles(t, livree)) vues.add(x);
+    // Le SHA que git ne connaît pas : le seul cas qui demande un AUTRE oracle que celui par défaut.
+    const etranger: VuesHorsLigne = { ...VUES, commitConnu: () => false };
+    for (const f of controlerAttestation(
+      {
+        id: 'j',
+        repo: 'partners',
+        statut: 'fusionnee',
+        pr: 31,
+        attestation: { ...attestation(), pr: 31 },
+      },
+      true,
+      etranger
+    ))
+      vues.add(f.famille);
     expect([...vues].sort()).toEqual([...FAMILLES_ATTESTATION].sort());
   });
 });

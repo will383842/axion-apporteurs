@@ -141,6 +141,8 @@ describe('gov:tasks — un état cible porte l’opération qui y mène (GOV-086
   it('REQ-GOV-021 — l’état COMPLET reste vert : une livraison locale avec son `pr` et sa branche', () => {
     expect(
       // GOV-042 : une livraison locale porte aussi son attestation, au numéro de son `pr`.
+      // Le SHA est celui de la PR 112 DE CE DÉPÔT — la fixture portait celui d'axion-ia#998, qu'un
+      // git d'ici ne connaît pas : `attestation_sha_etranger` l'a vu (veto sécurité 5328941794).
       familles([
         tache({
           statut: 'fusionnee',
@@ -149,8 +151,8 @@ describe('gov:tasks — un état cible porte l’opération qui y mène (GOV-086
           branch: 't/gov-999',
           attestation: {
             pr: 112,
-            sha: '41d71a79392bc6aa1a3f60e7853fa5715e076b79',
-            fusionneeAt: '2026-09-05T11:04:48Z',
+            sha: '87e235aba9c55b32253836417b467c86180485b4',
+            fusionneeAt: '2026-09-23T02:50:19Z',
           },
         }),
       ])

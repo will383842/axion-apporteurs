@@ -196,6 +196,39 @@ describe('REQ-GOV-026 — le rattrapage LIT le SHA dans l’historique, et écho
     }
   });
 
+  /**
+   * LE PASSIF NE PEUT QUE DÉCROÎTRE — un CLIQUET, pas une phrase (revue exactitude 5328962131).
+   * Le test ci-dessus n'exige que « pas exactement UN commit » : une tâche AJOUTÉE au passif, avec
+   * zéro commit ou plusieurs, y passait verte — l'exemption s'allongeait en silence. Le PLAFOND est
+   * figé ICI, hors du module qu'il garde : l'élargir demande d'écrire dans ce fichier, sous revue.
+   * Une entrée qui SORT du passif ne demande rien (sous-ensemble, pas égalité) ; retire-la aussi
+   * du plafond quand tu y passes, il ne sert qu'à borner.
+   * Mesuré le 2026-09-27 : les huit entrées de `PASSIF_SANS_ATTESTATION` à la tête de la PR 168.
+   */
+  const PLAFOND_DU_PASSIF: readonly string[] = [
+    'GOV-000',
+    'GOV-002',
+    'GOV-004',
+    'GOV-007',
+    'GOV-009',
+    'GOV-015',
+    'GOV-017b',
+    'QA-T00',
+  ];
+  const horsPlafond = (ids: readonly string[]) =>
+    ids.filter((id) => !PLAFOND_DU_PASSIF.includes(id));
+
+  it('REQ-GOV-026 — CLIQUET : le passif déclaré ne dépasse pas son plafond figé', () => {
+    const ids = PASSIF_SANS_ATTESTATION.map((p) => p.id);
+    expect(horsPlafond(ids), 'entrée(s) AJOUTÉE(S) au passif sans attestation').toEqual([]);
+    expect(new Set(ids).size, 'une entrée du passif est écrite deux fois').toBe(ids.length);
+  });
+
+  it('REQ-GOV-026 — TÉMOIN : une entrée ajoutée au passif est NOMMÉE par le cliquet', () => {
+    const ids = [...PASSIF_SANS_ATTESTATION.map((p) => p.id), 'SEC-03'];
+    expect(horsPlafond(ids)).toEqual(['SEC-03']);
+  });
+
   it('REQ-GOV-026 — le binaire à blanc imprime le compte des tâches RÉELLEMENT rattrapables', () => {
     const journal = lireJournalDeFusion('origin/main');
     const taches = (

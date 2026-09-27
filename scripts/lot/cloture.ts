@@ -310,7 +310,12 @@ export function cloturerLeLot(options: {
           branch: t.branch,
           attestation: t.attestation,
         },
-        true
+        true,
+        // L'INSTANT est celui de la clôture. L'ORACLE git est DÉCLARÉ absent (`null`), pas omis : le
+        // SHA vient du release manager, et l'arbre qui clôt n'a pas forcément reçu ce commit — la
+        // faute y serait un faux rouge. `pnpm gov:tasks` la juge au commit suivant, en CI, sur un
+        // clone entier ; `gov-attestation.ts --en-ligne` résout le reste (PR, fusion, ancêtre).
+        { maintenant: Date.now(), commitConnu: null }
       );
       if (fautes.length > 0) {
         throw new Error(

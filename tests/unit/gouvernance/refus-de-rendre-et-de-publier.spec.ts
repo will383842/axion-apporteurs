@@ -514,10 +514,12 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
       porte: 3,
       temoins: 0,
       raison:
-        'GOV-038 — atteste une livraison faite dans un AUTRE dépôt. Les trois sorties sont des ' +
-        "refus d'usage : `--en-ligne` absent, appel `gh` en échec, PR non résolue. Aucune ne " +
-        'garde un invariant de sécurité de CE dépôt ; leur témoin viendra avec la tâche qui ' +
-        'câblera la gate en CI.',
+        'GOV-038, GOV-042 — résout en ligne CHAQUE attestation du backlog, locales comprises (veto ' +
+        'sécurité 5328941794, PR 168). Trois sorties : `--en-ligne` absent (2), backlog introuvable ' +
+        '(1), au moins une attestation qui ne résout pas — forge illisible comprise, échec fermé ' +
+        '(1). La règle est `resoudreAttestations`, vue rougir sur forge et git SIMULÉS par ' +
+        'un-statut-fusionnee-porte-sa-preuve.spec.ts ; les sorties du binaire, qui lance `gh`, ' +
+        'n’ont pas de témoin d’effet : un témoin qui lance `gh` rendrait la suite intermittente.',
     },
     'scripts/gates/perf-budgets.ts': {
       total: 4,
@@ -853,21 +855,23 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
         'témoin : il lance Stryker. Dette DÉCLARÉE.',
     },
     // ── GOV-054 : LES SORTIES DIFFÉRÉES, ARBITRÉES ET NON SUBIES ────────────────────────────
-    // Le motif ne voyait que la sortie IMMÉDIATE. `scripts/plan-state/build.ts` porte TROIS
+    // Le motif ne voyait que la sortie IMMÉDIATE. `scripts/plan-state/build.ts` portait TROIS
     // affectations non nulles du code de sortie — les deux refus de `plan-state:verifier` entrés
-    // par la PR #36 sans que le cliquet bouge, et le plafond de questions du mode de rendu. Le
+    // par la PR #36 sans que le cliquet bouge, et le plafond de questions du mode de rendu. La PR
+    // #158 (GOV-053) en a ajouté une QUATRIÈME : `rubriques_dues_non_declarees`, l'échec fermé
+    // de GOV-055 quand la liste des rubriques dues est introuvable. La déclaration suit le disque. Le
     // motif les voit désormais ; comptées des DEUX côtés du diff, elles laissent le delta à zéro,
     // et c'est ICI qu'elles entrent au registre, une fois, avec leur motif. La somme des `total`
-    // déclarés gagne donc exactement ces trois-là — l'écart vient de ce fichier, pas d'un ajout.
+    // déclarés gagne donc exactement ces quatre-là — l'écart vient de ce fichier, pas d'un ajout.
     'scripts/plan-state/build.ts': {
-      total: 3,
-      porte: 3,
+      total: 4,
+      porte: 4,
       temoins: 0,
       raison:
-        'GOV-054 — trois sorties DIFFÉRÉES (affectation du code de sortie, pour laisser finir ' +
-        'l’impression) : vue absente et vue dérivée en `plan-state:verifier`, plafond de questions ' +
-        'en rendu. La dérive de la vue est vue rougir par les specs de PLAN-STATE, qui ne vivent ' +
-        'pas dans `REFUS`. Dette DÉCLARÉE.',
+        'GOV-054 — quatre sorties DIFFÉRÉES (affectation du code de sortie, pour laisser finir ' +
+        'l’impression) : vue absente, rubriques dues non déclarées (GOV-055, PR #158) et vue ' +
+        'dérivée en `plan-state:verifier`, plafond de questions en rendu. La dérive de la vue est ' +
+        'vue rougir par les specs de PLAN-STATE, qui ne vivent pas dans `REFUS`. Dette DÉCLARÉE.',
     },
     'scripts/lot/cloture.ts': {
       total: 1,
