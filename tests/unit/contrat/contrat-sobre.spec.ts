@@ -45,7 +45,10 @@ const MARQUES_DE_GRADATION: readonly [string, RegExp][] = [
     'échelle ordinale de manquements',
     /(premier|deuxi[èe]me|second|troisi[èe]me|nouveau)\s+(manquement|avertissement|incident|signalement)/i,
   ],
-  ['compteur de manquements', /(au[- ]del[àa] de|[àa] partir de|apr[èe]s)\s+\S+\s+(manquements|avertissements|mises en demeure|suspensions)/i],
+  [
+    'compteur de manquements',
+    /(au[- ]del[àa] de|[àa] partir de|apr[èe]s)\s+\S+\s+(manquements|avertissements|mises en demeure|suspensions)/i,
+  ],
 ];
 
 /** Les fautes d'un texte, pour les deux listes : le mot, la ligne. */
@@ -88,8 +91,18 @@ const PROTECTIONS: readonly { objet: string; clause: string; unite: string; frag
     fragment: /commissions du filleul nées de commandes signées/,
   },
   { objet: 'CPF', clause: 'CL-CPF', unite: '8.1', fragment: /compte personnel de formation/ },
-  { objet: 'RGPD', clause: 'CL-RGPD', unite: '7', fragment: /responsable de traitement|données personnelles/ },
-  { objet: 'autofacturation', clause: 'CL-AUTOFACTURATION', unite: '5.2', fragment: /Autofacturation/ },
+  {
+    objet: 'RGPD',
+    clause: 'CL-RGPD',
+    unite: '7',
+    fragment: /responsable de traitement|données personnelles/,
+  },
+  {
+    objet: 'autofacturation',
+    clause: 'CL-AUTOFACTURATION',
+    unite: '5.2',
+    fragment: /Autofacturation/,
+  },
   { objet: 'compétence', clause: 'CL-DROIT', unite: '14', fragment: /comp[ée]tence/i },
 ];
 
@@ -134,9 +147,9 @@ describe('REQ-JUR-031 — le gabarit de contrat est sobre', () => {
     // « aucun barème » (art. 3.7) et « sur barème » (grille publiée) ne sont pas une échelle de
     // manquements : la garde ne vise pas le mot, elle vise la gradation.
     expect(texteRemis(GABARIT)).toMatch(/aucun barème/);
-    expect(fautesDeSobriete('Elle n’obéit à aucun barème, à aucun compteur et à aucun seuil.')).toEqual(
-      []
-    );
+    expect(
+      fautesDeSobriete('Elle n’obéit à aucun barème, à aucun compteur et à aucun seuil.')
+    ).toEqual([]);
   });
 
   it.each(PROTECTIONS)(

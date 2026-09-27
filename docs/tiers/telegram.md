@@ -52,6 +52,20 @@ l'optimisation. Sa valeur vit en configuration, pas dans un fichier versionné.
 La limite de débit du tiers est **à confirmer** par le lecteur désigné par `A01`, avant le test de plafond
 de REQ-INT-024.
 
+**Livré par INT-T14 (2026-09-27).** `src/server/integrations/telegram/alertes.ts` porte l'alerteur :
+dédoublonnage par catégorie et identifiant sur une heure glissante, plafond horaire par catégorie reçu en
+paramètre, dernier envoi permis qui annonce la retenue. Le message ne porte que la catégorie, l'identifiant
+technique de l'objet et le compte ; un identifiant qui n'a pas la forme technique est retiré du message.
+`src/server/integrations/telegram/garde-sans-pii.ts` confronte chaque gabarit à un objet portant nom,
+courriel, téléphone, lien de console, raison sociale et montant, et sort en non-zéro en nommant le champ
+qui franchit (témoins : `tests/unit/integration/notif-sans-pii.spec.ts`).
+
+**Ce qui n'est pas livré, et pourquoi.** L'appel réel à l'interface du bot : la rubrique 2 ci-dessus est
+vide, et **aucun nom de variable** de `src/lib/env.ts` ne déclare le jeton du bot dédié ni l'identifiant de
+la conversation de console. Ces deux secrets n'existent pas encore dans le dépôt ; ils ne sont pas
+fabriqués. L'alerteur remet ses messages au notifieur de QA-T08 (`src/lib/notify.ts`) : hors production,
+ils vont au puits. La valeur du plafond horaire reste à fixer en configuration.
+
 ## 5. Mode dégradé — s'il tombe
 
 | Panne | Ce que fait le produit |
@@ -89,6 +103,7 @@ unique.
 | Liste des personnes admises dans le fil d'alerte | Will | première alerte de production |
 | Canal de support, s'il en existe un | Will | armement de la sauvegarde horaire |
 | Limite de débit et signification d'une remise échouée, extraits cités | `A01` répartit ; le lecteur date sa lecture dans la fiche | avant le test de plafond de REQ-INT-024 |
+| Création du bot dédié à Partners (jamais celui d'axionia), son jeton et l'identifiant de la conversation de console, puis leur déclaration dans `src/lib/env.ts` | Will pour le bot et les secrets ; la tâche qui étend `env.ts` pour les noms | première alerte de production |
 
 ## 9. Référence à citer dans une fixture
 

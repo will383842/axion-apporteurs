@@ -138,7 +138,7 @@ describe('REQ-JUR-015 — aucun littéral de seuil ni de délai hors de la SSOT'
     ['const limite = debut + 15 * MS_PAR_JOUR;', '15'],
     ['const limite = MS_PAR_JOUR * 60 + debut;', '60'],
     ["const texte = 'vous avez 30 jours pour contester';", '30'],
-    ["const texte = `dans les quinze jours de la réception`;", 'quinze'],
+    ['const texte = `dans les quinze jours de la réception`;', 'quinze'],
     ["const texte = 'une antériorité de vingt-quatre mois';", 'vingt-quatre'],
     ['const d = addDays(x, 90);', '90'],
     ['const p = { mois: 6 };', '6'],
@@ -223,7 +223,11 @@ describe('REQ-EXT-028 — cohérence gabarit ↔ SSOT, cellule à cellule', () =
       'restée sans effet pendant huit jours'
     );
     expect(gabaritModifie).not.toBe(GABARIT);
-    const fautes = fautesDeCoherence({ seuils: SEUILS, gabarit: gabaritModifie, annexe2: ANNEXE_2 });
+    const fautes = fautesDeCoherence({
+      seuils: SEUILS,
+      gabarit: gabaritModifie,
+      annexe2: ANNEXE_2,
+    });
     expect(fautes.map((f) => f.cle)).toEqual(['MISE_EN_DEMEURE_JOURS']);
   });
 

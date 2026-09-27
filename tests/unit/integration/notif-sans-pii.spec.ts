@@ -70,7 +70,8 @@ describe('REQ-INT-024 — dédoublonnage et plafond horaire par catégorie', () 
   it('REQ-INT-024 — le plafond est PAR CATÉGORIE : une autre catégorie passe encore', async () => {
     const notifieur = notifieurCompteur();
     const alerteur = creerAlerteur({ notifieur, horloge: horlogeFigee(T0), plafondParHeure: 3 });
-    for (let i = 0; i < 10; i++) await alerteur.alerter({ categorie: 'releve_bloque', id: `r${i}` });
+    for (let i = 0; i < 10; i++)
+      await alerteur.alerter({ categorie: 'releve_bloque', id: `r${i}` });
     const issue = await alerteur.alerter({ categorie: 'restauration_echouee', id: 'exercice_1' });
     expect(issue).toBe('envoyee');
     expect(notifieur.envois).toHaveLength(4);
@@ -103,7 +104,11 @@ describe('REQ-INT-024 — dédoublonnage et plafond horaire par catégorie', () 
   it('REQ-INT-024 — un plafond qui n’est pas un entier positif est refusé à la construction', () => {
     for (const plafondParHeure of [0, -1, 2.5, Number.NaN]) {
       expect(() =>
-        creerAlerteur({ notifieur: notifieurCompteur(), horloge: horlogeFigee(T0), plafondParHeure })
+        creerAlerteur({
+          notifieur: notifieurCompteur(),
+          horloge: horlogeFigee(T0),
+          plafondParHeure,
+        })
       ).toThrow(/plafond_invalide/);
     }
   });
