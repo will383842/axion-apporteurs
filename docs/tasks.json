@@ -8176,7 +8176,8 @@
         "tests/unit/juridique/charte-relationnelle.spec.ts",
         "docs/gates.json",
         "scripts/gates/lexique-apporteurs.ts",
-        "tests/unit/gouvernance/lexique.spec.ts"
+        "tests/unit/gouvernance/lexique.spec.ts",
+        "scripts/lot/revues.ts"
       ],
       "schema": false,
       "sensible": [
