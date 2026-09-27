@@ -8,8 +8,10 @@
 
 // HYP-SEC03-ACCES — seuls `signe` et `suspendu` ouvrent l'espace tant que Will n'a pas dit si
 // `kyc_en_cours` et `pret_a_signer` doivent pouvoir s'y connecter (dépôt des pièces).
-const STATUTS_QUI_OUVRENT_L_ESPACE: ReadonlySet<string> = new Set(['signe', 'suspendu']);
-
-export function peutOuvrirLEspace(statut: string): boolean {
-  return STATUTS_QUI_OUVRENT_L_ESPACE.has(statut);
+//
+// La liste vit DANS la fonction, jamais en constante de module : une constante est évaluée au
+// chargement, avant toute activation d'un mutant, et Stryker y laisse survivre un mutant que chaque
+// test tuerait (SEC-17). Un statut ABSENT (`null`, apporteur introuvable) se juge ici, fermé.
+export function peutOuvrirLEspace(statut: string | null): boolean {
+  return statut === 'signe' || statut === 'suspendu';
 }

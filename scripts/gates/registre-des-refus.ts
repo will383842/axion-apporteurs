@@ -358,12 +358,16 @@ export const REFUS_NOMMES: Readonly<Record<string, readonly string[]>> = {
   ],
   'scripts/gates/harnais-mcp.ts': ['principal().then › ∅ › (code)'],
   'scripts/gates/journal-sans-pii.ts': ['module › si LANCE_EN_SCRIPT › (decision.code)'],
+  'scripts/gates/jur-aucun-agregat-reseau.ts': ['module › si LANCE_EN_SCRIPT › (decision.code)'],
+  'scripts/gates/jur-aucune-progression.ts': ['module › si LANCE_EN_SCRIPT › (decision.code)'],
   'scripts/gates/jur-grille-chiffree.ts': [
     "module › si APPELE_DIRECTEMENT › si process.argv.includes('--prove') › si !familles.includes(t.famille as never) › (1)",
     "module › si APPELE_DIRECTEMENT › si process.argv.includes('--prove') › si fautes.length > 0 › (1)",
     'module › si APPELE_DIRECTEMENT › si !existsSync(GABARIT) › (1)',
     'module › si APPELE_DIRECTEMENT › si fautes.length > 0 › (1)',
   ],
+  'scripts/gates/jur-lexique-social.ts': ['module › si LANCE_EN_SCRIPT › (decision.code)'],
+  'scripts/gates/jur-revue-apporteur-facing.ts': ['module › si LANCE_EN_SCRIPT › (decision.code)'],
   'scripts/gates/lexique-apporteurs.ts': [
     'echouer › ∅ › (1)',
     'module › si APPELE_DIRECTEMENT › (1)',
@@ -385,6 +389,7 @@ export const REFUS_NOMMES: Readonly<Record<string, readonly string[]>> = {
     "(process.argv.includes('--prove') ? prouver() : controler()… › ∅ › (code)",
   ],
   'scripts/gates/red-first.ts': ['module › si APPELE_DIRECTEMENT › (decision.code)'],
+  'scripts/gates/roles.ts': ['module › si LANCE_EN_SCRIPT › (decision.code)'],
   'scripts/gates/schema-cents.ts': [
     "module › si LANCE_EN_SCRIPT › si process.argv.includes('--prove') › si echecs.length > 0 › (1)",
     'module › si LANCE_EN_SCRIPT › si fautes.length > 0 › (1)',

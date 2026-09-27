@@ -63,7 +63,29 @@
 # proprietaire par defaut, et c'est la garde `gov:autonomie` (GOV-000, "preuveRouge": null a ce
 # jour) qui les gardera le jour ou elle sera ecrite.
 
-# CE QUI N'EST PAS DECLARE ICI
-# - la revue `apporteur-facing` du poste A07 (`juriste`) : ni le label, ni la section du gabarit,
-#   ni les chemins n'existent encore. Ils sont poses par la tache juridique qui les porte, pas par
-#   GOV-007 (docs/CHARTE-AGENTS.md, section 9).
+# --- Ce qu'un apporteur voit ou recoit : poste A07 (`juriste`), revue BLOQUANTE, label
+# `apporteur-facing` (JUR-T26, REQ-JUR-036). Les chemins sont ceux de la portee « apporteur » de la
+# gate lexicale (scripts/gates/lexique-apporteurs.ts, MOTIFS) : `pnpm jur:revue-apporteur-facing`
+# verifie que chaque motif de cette portee a sa ligne ici, et, sous `--pr <n>`, que la revue a eu
+# lieu, avec le label et la checklist des douze motifs. GitHub ne resout pas @A07 : meme forme
+# que ci-dessus, le poste en commentaire au-dessus de chaque ligne.
+# poste A07 (`juriste`)
+/src/app/(espace)/              @will383842
+# poste A07 (`juriste`)
+/src/components/espace/         @will383842
+# poste A07 (`juriste`)
+/emails/                        @will383842
+# poste A07 (`juriste`)
+/src/emails/                    @will383842
+# poste A07 (`juriste`)
+/micro-copy/                    @will383842
+# poste A07 (`juriste`)
+/src/content/micro-copy/espace/ @will383842
+# poste A07 (`juriste`)
+/messages/                      @will383842
+# poste A07 (`juriste`)
+/ressources/                    @will383842
+# poste A07 (`juriste`)
+/src/content/ressources/        @will383842
+# poste A07 (`juriste`)
+/public/ressources/             @will383842

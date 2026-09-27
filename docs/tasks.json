@@ -3160,7 +3160,13 @@
         "docs/gates.json",
         "prisma/migrations/",
         "prisma/seed/06-console.ts",
-        "src/server/auth/lien-magique.ts"
+        "src/server/auth/lien-magique.ts",
+        "src/server/auth/session.ts",
+        "src/domain/apporteur/acces-espace.ts",
+        "tests/integration/utilisateurs-console.spec.ts",
+        "tests/unit/securite/lien-magique-indistinction.spec.ts",
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts",
+        "scripts/gates/registre-des-refus.ts"
       ],
       "schema": true,
       "sensible": [
@@ -3188,7 +3194,8 @@
       "acceptance": "TACHE SENSIBLE — attribution et espace. ELLE ECRIT LE SCHEMA (label `schema`, seule de sa famille dans son lot). ELLE EST LA PORTE DE SORTIE DE LA PHASE 0 VERS LA PHASE 1 : rien de la phase 1 ne bouge avant elle. (1) Un enum `ConsoleRole { admin, qualifieur, comptable, lecteur }` et une matrice droits x actions vivent dans UN SEUL fichier, consommee par la disposition de page ET par chaque action de serveur (REQ-SEC-023, REQ-UX-024). (2) LE DEFAUT EST LE REFUS : un ecran ou une action ABSENT de la matrice est refuse, jamais autorise par omission. C'est la regle maison sur le masquage qui echoue ouvert, appliquee aux roles. (3) Les operations les plus sensibles — coordonnee bancaire en clair, approbation d'un lot de paiement — sont nommement restreintes. (4) `requireRole` est appele par CHAQUE action et CHAQUE route de console ; une garde DERIVE du disque la liste des actions et des routes et la confronte a la matrice. (5) TEMOIN A DEUX FACES : une action de console ajoutee sans entree dans la matrice fait sortir la garde en code non nul et nomme l'action ; la console du depot la fait sortir en zero avec le compte des couples ecran-role reellement confrontes. (6) TEMOIN A DEUX FACES sur le refus par defaut : un role non admin appelant une action reservee recoit le refus, et le meme appel par le role autorise passe. (7) Un utilisateur desactive ne franchit plus la requete suivante. (8) SCHEMA (partners/ADR-0022) : `UtilisateurConsole` -> `utilisateurs_console` : `role ConsoleRole`, `nomChiffre` nullable, `emailChiffre`, `emailHash` Char(64) unique, `creeAt`, `desactiveAt` ; cible de toutes les colonnes auteur, traitePar et decidePar des phases 1 a 3. La console se connecte par le MEME lien magique : `liens_magiques.utilisateurConsoleId` et `sessions_espace.utilisateurConsoleId` (uuid, cle etrangere), `apporteur_id` relache en nullable (relacher un NOT NULL est additif), CHECK `(apporteur_id IS NULL) <> (utilisateur_console_id IS NULL)` sur les deux tables. Aucun mot de passe (partners/ADR-0004 §1 vaut pour la console). Le role est RELU a chaque requete par `requireRole`, jamais mis en cookie. Module du semeur `prisma/seed/06-console.ts`.",
       "tests": {
         "REQ-SEC-023": [
-          "tests/unit/securite/matrice-des-roles.spec.ts"
+          "tests/unit/securite/matrice-des-roles.spec.ts",
+          "tests/integration/utilisateurs-console.spec.ts"
         ],
         "REQ-UX-024": [
           "tests/unit/securite/matrice-des-roles.spec.ts"
@@ -8386,7 +8393,9 @@
         "tests/unit/juridique/charte-relationnelle.spec.ts",
         "docs/gates.json",
         "scripts/gates/lexique-apporteurs.ts",
-        "tests/unit/gouvernance/lexique.spec.ts"
+        "tests/unit/gouvernance/lexique.spec.ts",
+        "scripts/lot/revues.ts",
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts"
       ],
       "schema": false,
       "sensible": [
