@@ -68,6 +68,17 @@ describe('REQ-DM-035 — le snapshot de candidature, tel que le producteur l’�
     }
   });
 
+  it('REQ-DM-035 : le refus nomme CHAQUE champ en défaut par son chemin pointé, séparés par une virgule', () => {
+    const fautive: Record<string, unknown> = {
+      ...PAYLOAD,
+      scorePartsJson: { ...(PAYLOAD.scorePartsJson as object), ia: 'x' },
+    };
+    delete fautive['scoreBaremeVersion'];
+    expect(() => snapshotDeCandidature(fautive)).toThrow(
+      'charge de candidature refusée : scorePartsJson.ia, scoreBaremeVersion'
+    );
+  });
+
   it('REQ-DM-035 : une charge incomplète est REFUSÉE — aucun champ n’est complété', () => {
     const incomplete = { ...PAYLOAD };
     delete incomplete.scoreBaremeVersion;
