@@ -1971,7 +1971,8 @@
         "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts",
         "src/domain/lexique/lexique-interdit.ts",
         "scripts/mutation/pr.ts",
-        "tests/unit/gouvernance/relectures-sans-defaut.spec.ts"
+        "tests/unit/gouvernance/relectures-sans-defaut.spec.ts",
+        "scripts/gates/registre-des-refus.ts"
       ],
       "schema": false,
       "sensible": [],
