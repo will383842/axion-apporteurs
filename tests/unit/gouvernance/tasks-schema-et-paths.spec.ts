@@ -68,9 +68,9 @@ describe('REQ-GOV-013 — `schema` non vrai avec un chemin de schéma : REFUSÉ,
     const d = backlog();
     const t = aFaire(d);
     t.schema = false;
-    t.paths = ['src/domaine/ailleurs.ts'];
+    t.paths = ['src/temoin-gov-093/ailleurs.ts'];
     expect(deLaFamille(d)).toEqual([]);
-    expect(deLaFamille(d, ['src/domaine/'])).toHaveLength(1);
+    expect(deLaFamille(d, ['src/temoin-gov-093/'])).toHaveLength(1);
   });
 
   it('REQ-GOV-013 — CONTRE-TÉMOIN VERT : `schema: true` avec le même chemin ne rougit pas', () => {
@@ -99,7 +99,7 @@ describe('REQ-GOV-013 — la RÉCIPROQUE est imprimée, pas refusée', () => {
     const d = backlog();
     const t = aFaire(d);
     t.schema = true;
-    t.paths = ['src/domaine/ailleurs.ts'];
+    t.paths = ['src/temoin-gov-093/ailleurs.ts'];
     expect(schemaSansChemin(d.taches, CHEMINS)).toContain(t.id);
     expect(deLaFamille(d)).toEqual([]);
   });

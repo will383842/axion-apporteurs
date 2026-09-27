@@ -1604,7 +1604,13 @@ const GATES_A_TEMOIN_D_EFFET = [
     depot: 'partiel' as const,
     vue: 'docs/TASKS.md',
     script: 'scripts/gates/gov-tasks.ts',
-    fichiers: ['docs/tasks.json', 'docs/DECISIONS.md', 'scripts/lot/tasks.schema.json'],
+    // GOV-093 — la charte donne les chemins de schéma que `gov:tasks` confronte aux `paths`.
+    fichiers: [
+      'docs/tasks.json',
+      'docs/DECISIONS.md',
+      'scripts/lot/tasks.schema.json',
+      'docs/CHARTE-AGENTS.md',
+    ],
     // Une dépendance vers une tâche qui n'existe pas : faute RÉELLE, contrôlée par la gate.
     fautes: [
       {
