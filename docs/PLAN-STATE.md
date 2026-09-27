@@ -8,7 +8,7 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `9620e4d` — 2026-09-27T06:30:49+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #82 (rien) · 2. #165 (un contrôle requis rouge ou une revue manquante) · 3. #168 (un contrôle requis rouge ou une revue manquante) |
+| Qu’est-ce qui est en vol ? | 1. #82 (rien) · 2. #165 (rien) · 3. #168 (un contrôle requis rouge ou une revue manquante) |
 | Qui tient quoi ? | QA-T07 (A05) |
 | Où en est la phase ? | phase 0 — 47/116 tâches, reste 53.10 j |
 | Le prochain pas | fusionner #82, puis SEC-17 — Rôles console : enum `ConsoleRole { admin, qualifieur, comptable, lecteur }`, matrice SSOT, `requireRole`, garde AST (chemin critique) |
@@ -61,7 +61,7 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
 | 1 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | rien — fusionnable maintenant |
-| 2 | #165 — feat(SEC-17): lot L0-07 — rôles console, matrice unique, requireRole ; gates structurelles de la charte | `t/lot-l0-07` | un contrôle requis rouge ou une revue manquante |
+| 2 | #165 — feat(SEC-17): lot L0-07 — rôles console, matrice unique, requireRole ; gates structurelles de la charte | `t/lot-l0-07` | rien — fusionnable maintenant |
 | 3 | #168 — chore(GOV-045): lot L0-08 — refus nommés, clé double, schema/paths, attestation, occurrences | `t/lot-l0-08` | un contrôle requis rouge ou une revue manquante |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
@@ -119,12 +119,16 @@ pose, et `--rattraper-attestations` lit le passé dans `origin/main`, avec un pa
 tâches. Les exemptions de `gov:attributions` portent sur une occurrence, et la minuscule comme le
 trait d'union insécable sont vus. Sur veto de la lentille sécurité, le contrôle en ligne
 `scripts/gates/gov-attestation.ts --en-ligne` résout toutes les attestations, locales comprises
-(78, dont 77 locales), et `gov:tasks` refuse hors ligne une date de fusion postérieure à la passe,
-une attestation locale sans `pr` et un SHA local que git ne connaît pas.
+(78, dont 77 locales), existence et ascendance du SHA local comprises ; `gov:tasks` refuse hors
+ligne une date de fusion postérieure à la passe et une attestation locale sans `pr`. Le bras hors
+ligne `attestation_sha_etranger` (`git cat-file`) a été retiré avant fusion : il rougissait les 77
+attestations justes dans les dépôts jetables des témoins d'effet (étape « Tests » de la CI, run
+36298491294).
 
 **Reste.** L'attestation des tâches déjà livrées est à relancer après toute fusion de `main`
 (mode `--rattraper-attestations` de `scripts/lot/cloture.ts`). Le champ `verifie` de
-`gov:attestation` dans `docs/gates.json` décrit encore l'ancien périmètre : écriture réservée. Deux
+`gov:attestation` dans `docs/gates.json` cite encore « sha local inconnu de git » parmi les fautes
+fermées hors ligne : écriture réservée, texte de remplacement rendu à l'orchestrateur. Deux
 livrables relèvent de l'outillage hors dépôt : rendre le champ `schema` écrivable (GOV-093,
 livrable 5) et réparer l'écrivain du registre des exigences (GOV-072).
 
@@ -137,6 +141,9 @@ compteurs, et toute chaîne de `scripts/` qui le contient est refusée. La clé 
 `docs/gates.json` porte donc le script jugé et le champ, jamais l'identifiant de la gate. De son
 côté, `pnpm vues:fusion` a laissé une fusion EN COURS (MERGE_HEAD présent) après avoir annoncé
 « fusion abandonnée, rien commité » quand le rendu de `docs/TASKS.md` refusait un backlog fautif.
+Enfin, une garde hors ligne qui interroge l'historique git juge la profondeur du clone, pas le
+backlog : `git cat-file` passait sur l'arbre de travail complet et rougissait les 77 attestations
+justes dans les dépôts jetables des témoins, qui n'ont pas l'historique.
 
 ### PR #166 — 2026-09-27 — chore(GOV-012): registre rattrape, quatre taches livrees par des PR fusionnees passent fusionnee
 
