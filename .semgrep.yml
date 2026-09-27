@@ -528,6 +528,26 @@ rules:
       # Le motif prend aussi le gabarit sans substitution (mesuré). Par symétrie, le MEMBRE
       # calculé est pris par les motifs `["raw"]` / `["Sql"]` et par ceux du runtime ci-dessous.
       - pattern: '"Prisma"'
+      # — LE NAMESPACE EN NOM D'ÉLÉMENT JSX (10e tour, revue `exactitude` 5329988928, PR 82) :
+      #   `<Prisma.raw />` n'est pas rendu comme une VALEUR par l'AST, la liste blanche ne le voit
+      #   donc pas. Le JSX n'a aucun usage légitime du namespace. Le bras juge l'ÉLÉMENT JSX
+      #   lui-même — et non le texte autour du chevron — en liant son nom à `$EL`. Conséquence
+      #   mesurée : un argument de type (`Promise<Prisma.X>`) n'est pas un élément JSX pour le
+      #   parseur, donc AUCUN faux positif n'est à payer sur les arguments de type ; et un élément
+      #   écrit dans le TEXTE d'un enfant (`<b>x<Prisma.raw /></b>`) ou derrière un `return` collé
+      #   est pris comme les autres, que le texte seul ne saurait pas distinguer. Mesuré sur 31 cas
+      #   (image épinglée 1.176.1) : 17 témoins rouges — attribut seul, paire ouvrante/fermante,
+      #   blancs autour du point, flèche collée, parenthèse, tableau, `return` `yield` `else` `do`
+      #   `in` `instanceof` collés, deux formes multi-lignes, fichier `.jsx`, fragment, enfant JSX —
+      #   et 14 contre-témoins muets : tous les arguments de type, `<PrismaCard />`, l'assertion à
+      #   chevrons `<Prisma.X>valeur` d'un `.ts`, un générique nommé `Margin<…>`, un fragment sain.
+      - patterns:
+          - pattern-either:
+              - pattern: <$EL ... />
+              - pattern: <$EL ...>...</$EL>
+          - metavariable-regex:
+              metavariable: $EL
+              regex: '^Prisma(\s*\.|$)'
       # — LES FONCTIONS D'ÉTIQUETTE hors de la position d'étiquette. Une étiquette est un appel
       #   pour l'AST de semgrep (mesuré : `Prisma.sql(...)` matche `Prisma.sql`…``) ; c'est
       #   donc la RÉFÉRENCE qui est jugée, et admise seulement DANS son propre gabarit étiqueté,

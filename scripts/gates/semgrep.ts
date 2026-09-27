@@ -1635,6 +1635,19 @@ const FORMES_SQL: readonly { nom: string; lignes: string[]; fautive: number; ext
     ],
     fautive: 2,
   },
+  // — LE NAMESPACE EN NOM D'ÉLÉMENT JSX (10e tour, revue `exactitude` 5329988928). Le bras
+  //   juge l'ÉLÉMENT JSX par l'AST, et non le texte autour du chevron : un argument de type
+  //   n'est pas un élément pour le parseur, donc aucun faux positif n'est à payer sur les
+  //   arguments de type — contre-témoin `espace/jsx-argument-de-type`.
+  {
+    nom: 'jsx-namespace',
+    ext: 'tsx',
+    lignes: [
+      'declare const Prisma: { raw: unknown };',
+      'export const f = () => <Prisma.raw />;',
+    ],
+    fautive: 2,
+  },
 ];
 
 function fichier(
@@ -1872,6 +1885,19 @@ export const CONTRE_TEMOINS: readonly FichierDuBac[] = [
       // Un constructeur DÉCLARÉ n'est pas une lecture de `.constructor`.
       'class Ligne { constructor(public n: number) {} }',
       'export const q = new Ligne(1);',
+    ],
+    null,
+    0
+  ),
+  // Un ARGUMENT DE TYPE qui nomme le namespace dans un `.tsx` : ce n'est pas un élément JSX pour
+  // le parseur, et le bras AST ne le prend donc pas. Un bras au TEXTE le rougirait — c'est le prix
+  // que l'AST évite, et ce contre-témoin est ce qui le tient.
+  fichier(
+    'espace/jsx-argument-de-type',
+    `${MILIEU_ESPACE}/jsx-argument-de-type.tsx`,
+    [
+      'declare namespace Prisma { type X = number }',
+      'export const a: Promise<Prisma.X> | null = null;',
     ],
     null,
     0
