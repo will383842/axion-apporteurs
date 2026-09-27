@@ -314,12 +314,13 @@ enum SourceEvenementRecu {
   @@map("source_evenement_recu")
 }
 
-/// Les types d'événements reçus : les sept de `TYPES_EVENEMENT` (`packages/contracts/events.ts`),
-/// chacun sous son identifiant snake_case — le nom de fil dont le point devient un souligné. La
-/// base porte le MÊME libellé : un nom de fil écrit ici en clair serait une recopie du contrat que
-/// `gov:termes-interdits` refuse hors de `packages/contracts`. La correspondance est DÉRIVÉE par
-/// `identifiantDuType` et confrontée à `pg_enum` par `tests/integration/webhook.spec.ts`.
-/// INT-T01c y ajoutera les quatre types entrants, INT-T12 les types DocuSeal.
+/// Les types d'événements reçus : les onze de `TYPES_EVENEMENT` (`packages/contracts/events.ts`),
+/// dans leur ordre, chacun sous son identifiant snake_case — le nom de fil dont le point devient un
+/// souligné. La base porte le MÊME libellé : un nom de fil écrit ici en clair serait une recopie du
+/// contrat que `gov:termes-interdits` refuse hors de `packages/contracts`. La correspondance est
+/// DÉRIVÉE par `identifiantDuType` et confrontée à `pg_enum` par `tests/integration/webhook.spec.ts`.
+/// Les quatre derniers sont entrés en `schema_version` 2, par ajout en fin d'enum (migration
+/// `20260927000300_types_evenement_recu_v2`) ; INT-T12 y ajoutera les types DocuSeal.
 enum TypeEvenementRecu {
   client_cree
   client_mis_a_jour
@@ -328,6 +329,10 @@ enum TypeEvenementRecu {
   avoir_emis
   paiement_recu
   paiement_rembourse
+  candidature_recue
+  financement_mis_a_jour
+  facture_annulee
+  client_fusionne
 
   @@map("type_evenement_recu")
 }

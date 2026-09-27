@@ -1023,6 +1023,15 @@ export const CITATIONS_DECLAREES: Citation[] = [
       'le fichier appartient à DM-06, qui le consomme.',
   },
   {
+    ou: 'tests/fixtures/axionia/fixtures-producteur.v1.json',
+    id: 'INT-T01b',
+    nature: 'contexte',
+    raison:
+      'copie à l’identique (même JSON) de la fixture générée par le producteur réel : sa ligne ' +
+      '`Source` (RM-03) nomme la tâche qui a livré ce producteur ; le fichier appartient à ' +
+      'INT-T01c, qui confronte les charges fermées du contrat à ses clés.',
+  },
+  {
     ou: 'scripts/lot/corps-de-pr.ts',
     id: 'GOV-035',
     nature: 'contexte',

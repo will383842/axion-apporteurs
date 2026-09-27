@@ -10,7 +10,8 @@
  * `tests/integration/webhook.spec.ts`.
  */
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { TYPES_EVENEMENT } from '../../../packages/contracts/events';
 
 const sql = readFileSync(
@@ -68,9 +69,30 @@ const IMMUABLES = [
 ] as const;
 
 describe('REQ-DM-036 — les enums de la réception', () => {
-  it('REQ-DM-036 : `type_evenement_recu` porte les sept types de TYPES_EVENEMENT, dans leur ordre, identifiants en snake_case', () => {
-    const attendu = TYPES_EVENEMENT.map((t) => `'${t.replace('.', '_')}'`).join(', ');
-    expect(plat).toContain(`CREATE TYPE "type_evenement_recu" AS ENUM (${attendu});`);
+  it('REQ-DM-036 : `type_evenement_recu` porte les types de TYPES_EVENEMENT, dans leur ordre, identifiants en snake_case', () => {
+    // L'enum est créé puis ÉTENDU par des migrations suivantes (`ADD VALUE`, qui place la valeur en
+    // dernier) : ses libellés sont ceux de la création suivis des ajouts, migration par migration,
+    // dans l'ordre des dossiers. Une valeur retirée, déplacée ou oubliée rougit ici sans Docker.
+    const racine = 'prisma/migrations';
+    const libelles: string[] = [];
+    for (const dossier of readdirSync(racine)
+      .filter((d) => /^\d{14}_/.test(d))
+      .sort()) {
+      const chemin = join(racine, dossier, 'migration.sql');
+      if (!existsSync(chemin)) continue;
+      const code = readFileSync(chemin, 'utf8').replace(/--.*$/gm, '').replace(/\s+/g, ' ');
+      const creation = /CREATE TYPE "type_evenement_recu" AS ENUM \(([^)]*)\);/.exec(code);
+      if (creation) libelles.push(...[...creation[1]!.matchAll(/'([a-z_]+)'/g)].map((m) => m[1]!));
+      for (const ajout of code.matchAll(
+        /ALTER TYPE "type_evenement_recu" ADD VALUE '([a-z_]+)';/g
+      )) {
+        libelles.push(ajout[1]!);
+      }
+    }
+    expect(libelles).toEqual(TYPES_EVENEMENT.map((t) => t.replace('.', '_')));
+    // La création, elle, reste dans la migration de la réception : une migration appliquée ne se
+    // déplace pas.
+    expect(plat).toContain('CREATE TYPE "type_evenement_recu" AS ENUM (');
   });
 
   it('REQ-DM-036 : la source et le statut sont des enums fermés', () => {

@@ -16,7 +16,7 @@
 
 **334 exigences actives · 106 réputées testées · 106 couvertes · 0 orphelines.**
 
-290 tâches, dont 86 livrées · 128 fichiers de test exécutés par `vitest` sur 128 présents.
+290 tâches, dont 86 livrées · 129 fichiers de test exécutés par `vitest` sur 129 présents.
 
 ## Exigences réputées testées
 
@@ -88,7 +88,7 @@
 | `REQ-INT-022` | `INT-T10` | `tests/unit/email/emetteur.spec.ts` | couverte |
 | `REQ-INT-023` | `INT-T10` | `tests/integration/webhook-rebonds.spec.ts`, `tests/unit/email/courriels-migration.spec.ts`, `tests/unit/email/rebonds.spec.ts` | couverte |
 | `REQ-INT-026` | `INT-T11` | `tests/integration/adaptateur-mcp.spec.ts`, `tests/unit/securite/webhook-signature.spec.ts` | couverte |
-| `REQ-INT-029` | `INT-T01a`, `INT-T27-A` | `tests/unit/integration/contrat-hash.spec.ts`, `tests/unit/securite/webhook-signature.spec.ts` | couverte |
+| `REQ-INT-029` | `INT-T01a`, `INT-T27-A` | `tests/unit/integration/contrat-hash.spec.ts`, `tests/unit/integration/contrat-v2-frontiere.spec.ts`, `tests/unit/securite/webhook-signature.spec.ts` | couverte |
 | `REQ-JUR-003` | `JUR-T01`, `JUR-T01b` | `tests/unit/contrat/contract-template-complete.spec.ts` | couverte |
 | `REQ-JUR-007` | `DM-25`, `JUR-T01`, `JUR-T01b`, `T-ARG-033` | `tests/unit/contrat/contract-template-complete.spec.ts` | couverte |
 | `REQ-JUR-023` | `DM-23`, `JUR-T01`, `SEC-12` | `tests/unit/contrat/contract-template-complete.spec.ts` | couverte |
@@ -553,6 +553,7 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | `tests/unit/gouvernance/volatilite-par-ligne.spec.ts` | oui | `REQ-GOV-032` |
 | `tests/unit/gouvernance/vues-derivees.spec.ts` | oui | `REQ-GOV-006`, `REQ-GOV-021`, `REQ-GOV-032` |
 | `tests/unit/integration/contrat-hash.spec.ts` | oui | `REQ-GOV-020`, `REQ-INT-003`, `REQ-INT-004`, `REQ-INT-029`, `REQ-QA-007` |
+| `tests/unit/integration/contrat-v2-frontiere.spec.ts` | oui | `REQ-INT-029`, `REQ-INT-032` |
 | `tests/unit/integration/evenement-recu-travail.spec.ts` | oui | `REQ-ARG-003`, `REQ-INT-011`, `REQ-QA-026` |
 | `tests/unit/integration/recherche-entreprises-repli.spec.ts` | oui | `REQ-INT-020`, `REQ-SEC-013`, `REQ-UX-020` |
 | `tests/unit/qualite/env-fail-fast.spec.ts` | oui | `REQ-CPL-021`, `REQ-QA-030` |
