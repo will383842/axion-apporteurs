@@ -47,11 +47,16 @@ import { execFileSync } from 'node:child_process';
 import { join } from 'node:path';
 import {
   DEPOT_LOCAL,
+  PASSIF_SANS_ATTESTATION,
   controlerAttestation,
   depotDeLaTache,
+  lireJournalDeFusion,
+  rattraper,
   referencePr,
   type Attestation,
+  type TacheAttestable,
 } from './attestation';
+import { LIVREE } from './avancement';
 import { outilHorsDepot } from './chemins-de-tache';
 
 export interface Tache {
@@ -268,22 +273,27 @@ export function cloturerLeLot(options: {
       // cet historique. Le SHA du commit de fusion est la seule valeur qu'aucun autre dépôt ne
       // réattribue ; sans lui, le backlog affirmerait une livraison introuvable. Le script REFUSE
       // plutôt que d'écrire un `pr` nu — c'est la même doctrine que le refus ci-dessus sur `owner`.
-      if (depotDeCetteTache !== DEPOT_LOCAL) {
-        const numero = r.fusion?.pr ?? r.dev?.pr ?? null;
-        const sha = r.fusion?.sha ?? null;
-        const quand = r.fusion?.fusionneeAt ?? null;
-        if (numero == null || sha == null || quand == null) {
-          throw new Error(
-            `${id} vit dans ${depotDeLaTache(t as { repo: string }) ?? `repo « ${depotDeCetteTache} »`} et ` +
-              `passerait \`fusionnee\` sans attestation complète : ` +
-              `pr=${numero ?? 'absent'}, sha=${sha ?? 'absent'}, fusionneeAt=${quand ?? 'absent'}. ` +
-              'Le release manager rend les trois : `gh pr view <n> --json number,mergeCommit,mergedAt` ' +
-              'dans le dépôt concerné. Un numéro seul serait rendu `PR#<n>` par les vues et ne résout pas ici.'
-          );
-        }
-        t.pr = null;
-        t.attestation = { pr: numero, sha, fusionneeAt: quand };
+      // GOV-042 — LE REFUS VAUT AUSSI POUR CE DÉPÔT. Il ne s'armait qu'ailleurs, et une tâche
+      // locale passait `fusionnee` avec un `pr` nu : rien ne conservait le commit qui l'avait fait
+      // atterrir. La MÊME attestation est exigée ici — aucune seconde forme (RM-01) ; seul le `pr`
+      // diffère : écrit ici, il résout, et l'attestation porte le même numéro.
+      const numero = r.fusion?.pr ?? r.dev?.pr ?? null;
+      const sha = r.fusion?.sha ?? null;
+      const quand = r.fusion?.fusionneeAt ?? null;
+      if (numero == null || sha == null || quand == null) {
+        const ou =
+          depotDeCetteTache === DEPOT_LOCAL
+            ? 'vit dans CE dépôt'
+            : `vit dans ${depotDeLaTache(t as { repo: string }) ?? `repo « ${depotDeCetteTache} »`}`;
+        throw new Error(
+          `${id} ${ou} et passerait \`fusionnee\` sans attestation complète : ` +
+            `pr=${numero ?? 'absent'}, sha=${sha ?? 'absent'}, fusionneeAt=${quand ?? 'absent'}. ` +
+            'Le release manager rend les trois : `gh pr view <n> --json number,mergeCommit,mergedAt` ' +
+            'dans le dépôt concerné. Sans le SHA, plus personne ne retrouverait le commit d’atterrissage.'
+        );
       }
+      t.pr = depotDeCetteTache === DEPOT_LOCAL ? numero : null;
+      t.attestation = { pr: numero, sha, fusionneeAt: quand };
 
       t.statut = 'fusionnee';
       t.motif = null;
@@ -292,8 +302,19 @@ export function cloturerLeLot(options: {
       // le poser. Sans ce contrôle, la faute serait découverte en CI, sur un fichier déjà commité par
       // le seul écrivain autorisé — et personne d'autre n'a le droit de le corriger.
       const fautes = controlerAttestation(
-        { id, repo: depotDeCetteTache, statut: t.statut, pr: t.pr, attestation: t.attestation },
-        true
+        {
+          id,
+          repo: depotDeCetteTache,
+          statut: t.statut,
+          pr: t.pr,
+          branch: t.branch,
+          attestation: t.attestation,
+        },
+        true,
+        // L'INSTANT est celui de la clôture. Le SHA vient du release manager : son existence, sa
+        // PR, sa fusion et son ascendance se résolvent EN LIGNE (`gov-attestation.ts --en-ligne`),
+        // jamais par l'arbre qui clôt, qui n'a pas forcément reçu ce commit.
+        { maintenant: Date.now() }
       );
       if (fautes.length > 0) {
         throw new Error(
@@ -364,7 +385,47 @@ function membresDeclares(dossier: string): string[] | null {
  */
 const LANCE_EN_SCRIPT = /[\\/]lot[\\/]cloture\.ts$/.test(process.argv[1] ?? '');
 
+/**
+ * LE RATTRAPAGE DU PASSÉ (GOV-042) — `--rattraper-attestations [--a-blanc]`. Il LIT le SHA de chaque
+ * tâche de ce dépôt livrée sans attestation dans l'historique de `origin/main` (`rattraper`,
+ * scripts/lot/attestation.ts), écrit les attestations trouvées, et NOMME chaque échec — zéro commit
+ * ou plus d'un. Un échec hors du passif déclaré fait échouer le mode : il appelle une décision, pas
+ * un SHA plausible. `--a-blanc` imprime tout et n'écrit rien. Le vert imprime le compte des tâches
+ * RÉELLEMENT rattrapées, jamais la longueur d'une liste tapée.
+ */
+function rattraperLePasse(aBlanc: boolean): void {
+  const doc = JSON.parse(readFileSync('docs/tasks.json', 'utf8')) as {
+    version: number;
+    taches: Tache[];
+  };
+  const journal = lireJournalDeFusion('origin/main');
+  const r = rattraper(doc.taches as TacheAttestable[], journal, (t) => LIVREE.has(t.statut));
+  const parId = new Map(doc.taches.map((t) => [t.id, t]));
+  for (const x of r.rattrapees) parId.get(x.id)!.attestation = x.attestation;
+  const auPassif = new Set(PASSIF_SANS_ATTESTATION.map((p) => p.id));
+  const horsPassif = r.echecs.filter((e) => !auPassif.has(e.id));
+  for (const e of r.echecs) {
+    const declare = auPassif.has(e.id);
+    (declare ? console.log : console.error)(
+      `${declare ? '⚠️' : '❌'} ${e.id} — ${e.trouves} commit(s) d’atterrissage trouvé(s) : ` +
+        `attestation laissée VIDE${declare ? ' (passif déclaré)' : ', et ce n’est PAS déclaré au passif'}.`
+    );
+  }
+  if (!aBlanc && r.rattrapees.length > 0) {
+    writeFileSync('docs/tasks.json', JSON.stringify(doc, null, 2) + '\n');
+  }
+  console.log(
+    `${aBlanc ? 'À BLANC — rien n’est écrit. ' : ''}${r.rattrapees.length} tâche(s) réellement ` +
+      `rattrapée(s) depuis origin/main ; ${r.echecs.length} échec(s), dont ${horsPassif.length} hors du passif.`
+  );
+  if (horsPassif.length > 0) process.exitCode = 1;
+}
+
 function principal(): void {
+  if (process.argv.includes('--rattraper-attestations')) {
+    rattraperLePasse(process.argv.includes('--a-blanc'));
+    return;
+  }
   const lotId = arg('lot');
   const ownerParDefaut = arg('owner', '');
   const doitCommiter = process.argv.includes('--commit');

@@ -7,15 +7,15 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `9620e4d` — 2026-09-27T06:30:49+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #82 (rien) · 2. #165 (un contrôle requis rouge ou une revue manquante) · 3. #168 (un contrôle requis rouge ou une revue manquante) · 4. #175 (un contrôle requis rouge ou une revue manquante) |
+| Où est `main` ? | `a8d0f40` — 2026-09-27T09:31:18+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #82 (un conflit avec `main`) · 2. #165 (un conflit avec `main`) · 3. #175 (un conflit avec `main`) |
 | Qui tient quoi ? | QA-T07 (A05) |
 | Où en est la phase ? | phase 0 — 47/116 tâches, reste 53.10 j |
-| Le prochain pas | fusionner #82, puis SEC-17 — Rôles console : enum `ConsoleRole { admin, qualifieur, comptable, lecteur }`, matrice SSOT, `requireRole`, garde AST (chemin critique) |
+| Le prochain pas | SEC-17 — Rôles console : enum `ConsoleRole { admin, qualifieur, comptable, lecteur }`, matrice SSOT, `requireRole`, garde AST (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
 | Dernière entrée de journal | PR #169 — 2026-09-27 |
 
-**Ce qu’on tape maintenant.** `gh pr view 82 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : 0
 
@@ -60,10 +60,9 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | rien — fusionnable maintenant |
-| 2 | #165 — feat(SEC-17): lot L0-07 — rôles console, matrice unique, requireRole ; gates structurelles de la charte | `t/lot-l0-07` | un contrôle requis rouge ou une revue manquante |
-| 3 | #168 — chore(GOV-045): lot L0-08 — refus nommés, clé double, schema/paths, attestation, occurrences | `t/lot-l0-08` | un contrôle requis rouge ou une revue manquante |
-| 4 | #175 — chore(GOV-083): lot L0-09 — gates sans script triees, porte A confrontee, causes temoignees, journal | `t/lot-l0-09` | un contrôle requis rouge ou une revue manquante |
+| 1 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
+| 2 | #165 — feat(SEC-17): lot L0-07 — rôles console, matrice unique, requireRole ; gates structurelles de la charte | `t/lot-l0-07` | un conflit avec `main` — à résoudre avant tout |
+| 3 | #175 — chore(GOV-083): lot L0-09 — gates sans script triees, porte A confrontee, causes temoignees, journal | `t/lot-l0-09` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -83,15 +82,13 @@ Dérivé de `git log` sur `docs/adr/`, restreint au jour du dernier atterrissage
 
 ## Prochain pas
 
-**Fusionner #82** — elle est en tête de file et ne bloque sur rien.
-
 **SEC-17** — Rôles console : enum `ConsoleRole { admin, qualifieur, comptable, lecteur }`, matrice SSOT, `requireRole`, garde AST (1 j, **sur le chemin critique**) : 35 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
 Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeStateStatus` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage —, la tâche ensuite. L’ordre de la file se corrige à la rubrique « File de fusion », jamais ici.
 
 ## Dernier atterrissage
 
-`origin/main` = `9620e4d` (2026-09-27T06:30:49+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `a8d0f40` (2026-09-27T09:31:18+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
@@ -107,6 +104,45 @@ Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écr
 
 **Appris.** Un nom d'événement qui ENTRE au contrat devient interdit en clair partout ailleurs : `gov:termes-interdits` refuse un nom VALIDE écrit hors de `packages/contracts`, commentaires `.ts` compris, alors qu'il tolérait le même nom tant qu'il était hors nomenclature — ajouter un type rougit donc des fichiers que le diff du contrat ne touche pas (ici `src/domain/apporteur/snapshot-candidature.ts`). Et le producteur v1 émettait un champ (`paiement.recu`) sous un nom que le glossaire interdit sec : fermer une charge fidèlement au producteur peut buter sur le glossaire, qui prime ; le renommage se nomme alors dans le test, pas dans la fixture.
 
+### PR #168 — 2026-09-27 — chore(GOV-045): lot L0-08 — refus nommés, clé double, schema/paths, attestation, occurrences
+
+**Fait.** GOV-045 porte la PR, et GOV-054, GOV-072, GOV-093, GOV-042 et GOV-074 sont dans son champ
+`Lot:`. Le cliquet des refus nomme désormais chaque sortie déclarée : portée, conditions, argument,
+figés dans `REFUS_NOMMES`, et une mutation retire les sorties une à une pour vérifier que chacune
+est tuée par son nom. Il compte aussi la sortie différée : les quatre de `scripts/plan-state/build.ts`
+sont déclarées. `gov:requirements` lit le texte du registre et refuse une clé écrite deux fois, ou un
+registre illisible, en nommant la clé ou la position. `gov:tasks` confronte le champ `schema` aux
+`paths` et imprime la réciproque. L'attestation s'étend aux tâches de ce dépôt : `lot:cloture` la
+pose, et `--rattraper-attestations` lit le passé dans `origin/main`, avec un passif déclaré de huit
+tâches. Les exemptions de `gov:attributions` portent sur une occurrence, et la minuscule comme le
+trait d'union insécable sont vus. Sur veto de la lentille sécurité, le contrôle en ligne
+`scripts/gates/gov-attestation.ts --en-ligne` résout toutes les attestations, locales comprises
+(78, dont 77 locales), existence et ascendance du SHA local comprises ; `gov:tasks` refuse hors
+ligne une date de fusion postérieure à la passe et une attestation locale sans `pr`. Le bras hors
+ligne `attestation_sha_etranger` (`git cat-file`) a été retiré avant fusion : il rougissait les 77
+attestations justes dans les dépôts jetables des témoins d'effet (étape « Tests » de la CI, run
+36298491294).
+
+**Reste.** L'attestation des tâches déjà livrées est à relancer après toute fusion de `main`
+(mode `--rattraper-attestations` de `scripts/lot/cloture.ts`). Le champ `verifie` de
+`gov:attestation` dans `docs/gates.json` cite encore « sha local inconnu de git » parmi les fautes
+fermées hors ligne : écriture réservée, texte de remplacement rendu à l'orchestrateur. Deux
+livrables relèvent de l'outillage hors dépôt : rendre le champ `schema` écrivable (GOV-093,
+livrable 5) et réparer l'écrivain du registre des exigences (GOV-072).
+
+**Appris.** Un filtre écrit pour une population ne suit pas la population quand elle change : le
+contrôle en ligne ne lisait que les attestations d'un autre dépôt, et il a continué d'imprimer un
+vert sur une seule quand le backlog en a porté 78. Une exemption figée qui recopie l'identifiant
+d'une gate peut tomber sous
+`securite:rate-famille` : l'identifiant `partners:webhook:idempotent` porte un préfixe de famille de
+compteurs, et toute chaîne de `scripts/` qui le contient est refusée. La clé figée d'une chaîne de
+`docs/gates.json` porte donc le script jugé et le champ, jamais l'identifiant de la gate. De son
+côté, `pnpm vues:fusion` a laissé une fusion EN COURS (MERGE_HEAD présent) après avoir annoncé
+« fusion abandonnée, rien commité » quand le rendu de `docs/TASKS.md` refusait un backlog fautif.
+Enfin, une garde hors ligne qui interroge l'historique git juge la profondeur du clone, pas le
+backlog : `git cat-file` passait sur l'arbre de travail complet et rougissait les 77 attestations
+justes dans les dépôts jetables des témoins, qui n'ont pas l'historique.
+
 ### PR #166 — 2026-09-27 — chore(GOV-012): registre rattrape, quatre taches livrees par des PR fusionnees passent fusionnee
 
 **Fait.** Onze tâches livrées par des PR fusionnées portaient encore `a_faire`. Quatre passent `fusionnee` par `reclasser.mjs` : GOV-101 (PR 140), SEC-04 (PR 148), SEC-06 et INT-T10 (PR 145, lot L0-05). Pour chacune, la revendication est constatée sur son issue déjà ouverte (137, 149, 146, 147), puis la livraison sur la forge, jamais à la main. Chaque couple a été confronté à la main au titre ou au champ `Lot:` de sa PR. La phase 0 passe de 43 à 47 tâches terminées sur 116, et le prochain pas quitte SEC-04, déjà livrée, pour SEC-17.
@@ -115,15 +151,7 @@ Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écr
 
 **Appris.** `--branche-divergente` ne lève qu'une divergence entre la tête de PR et une branche déjà portée par la tâche. Il ne permet pas d'écrire une tête hors motif sur une tâche qui n'a pas de branche : pour ces tâches, aucune voie ne mène à `fusionnee`. Et `--fusionnee` ne regarde pas les dépendances. Joué sur GOV-063, il écrit `fusionnee` avec exit 0 ; seule la garde `gov:tasks` refuse ensuite, en `dep_non_livree`. Les deux gestes ont été défaits avant les écritures légitimes, avec un sha256 identique à celui d'`origin/main`.
 
-### PR #165 — 2026-09-27 — feat(SEC-17): lot L0-07 — rôles console, matrice unique, requireRole ; gates structurelles de la charte
-
-**Fait.** SEC-17 : la table `utilisateurs_console` (rôle `ConsoleRole`, courriel et nom chiffrés, empreinte unique, `desactive_at`), la connexion de la console par le même lien magique (`utilisateur_console_id` sur `liens_magiques` et `sessions_espace`, `apporteur_id` relâché, CHECK d'une seule population, population figée par deux déclencheurs neufs), migration `20260927000200_utilisateurs_console` et module du semeur `prisma/seed/06-console.ts`. La matrice des droits par rôle vit dans `src/server/roles/matrice.ts`, défaut = refus ; `requireRole` relit rôle et désactivation à chaque requête ; l'espace refuse une session et un lien de la console. La garde `securite:roles` dérive du disque les actions et routes de la console — toute valeur exportée d'un module `'use server'` et toute méthode HTTP d'un `route.ts`, sous toute forme d'export — et les confronte à la matrice rôle par rôle ; un site dont le corps ne s'établit pas dans le fichier est une faute nommée (`export_non_jugeable`), jamais un silence. Ne s'établissent que la déclaration de fonction et la `const`, déclarées une fois et jamais réassignées ; une liaison réassignable, une déstructuration exportée (un site par nom lié) et un import-equals exporté ne se jugent pas ; un `var` de portée module, où qu'il soit hors d'une fonction, d'une classe ou d'un espace de noms (bloc, `if`, `try`, boucle, `for (var x of y)`), est une liaison réassignable ; un export n'est écarté comme type que s'il est marqué `type` (`export type { X }` ou `{ type X }`), et un `export { X }` non marqué d'un nom sans valeur établie ne se juge pas — un réexport de type s'écrit `export type` ; les fichiers JavaScript du périmètre sont lus, et une méthode qui porte la directive est une action. Un fichier du périmètre qui nomme l'objet des exports CommonJS ou une voie qui y mène (`exports`, `module`, `require`, `eval`, un interne du bundler, même liés localement ; `this` ou `arguments` hors d'une fonction ; `with`) est `export_non_jugeable`, motif « module CommonJS » : ses sites ne se dérivent que des exports ES. Seul le `requireRole` importé de `src/server/roles/require-role`, déclaré une fois dans le fichier et jamais réassigné, garde un site : un homonyme local, un import d'ailleurs, un nom masqué ou `x.requireRole` sur un objet quelconque ne gardent pas. JUR-T26 : `jur:aucun-agregat-reseau`, `jur:aucune-progression`, `jur:revue-apporteur-facing` (label, checklist des douze motifs, revue A07 sous `--pr`, CODEOWNERS), `jur:lexique-social`, et la gate lexicale étendue aux ressources diffusées et aux composants de l'espace. `scripts/gates/jur-revue-apporteur-facing.ts`, qui juge la revue A07, devient une racine de la garde des revues (`RACINES_DE_LA_GARDE_DES_REVUES`). Mutation : 100 pour cent, 269 mutants sur 269.
-
-**Reste.** La route de connexion de la console et le premier écran, avec sa ligne dans la matrice : UX-P1-12. Au registre, le `verifie` et la `preuveRouge` de `securite:roles` sont relevés sur le 4e tour (9632350) ; leur relevé sur le module CommonJS et la porte importée reste à écrire. Le périmètre de `GATE-JUR-TEXTES-APPORTEURS` est écrit dans son `verifie`, comme les chemins de SEC-17 et JUR-T26 et le `verifie` et la `preuveRouge` des cinq gardes. Déclarés hors de la garde : `layout`, `default` et les autres fichiers de routage qui ne sont ni `page` ni `route` (aucun site n'y est jugé), un `requireRole` présent dans une fermeture jamais appelée ou un paramètre par défaut, et l'évaluation dynamique de code (`Function`, `eval` indirect, `vm`, minuteur à chaîne) comme toute mutation des exports par une voie d'exécution. Le mot « challenge » au lexique interdit : REQ-JUR-012, JUR-T13.
-
-**Appris.** Stryker mute le fichier ENTIER que la PR touche : modifier une ligne de `lien-magique.ts` a fait remonter quinze survivants de SEC-03, dont neuf statiques — un motif, une chaîne de domaine, un `Set` en constante de module sont évalués au chargement, avant toute activation de mutant. Les passer dans la fonction qui les lit les fait tuer par les tests existants ; un encodage `utf8` écrit là où l'API l'a par défaut, ou un `typeof` avant un `includes`, sont des mutants ÉQUIVALENTS qu'on retire au lieu de les tester. Et Postgres enchaîne les déclencheurs `BEFORE` d'une même table dans l'ordre ALPHABÉTIQUE de leurs noms : c'est ce qui laisse corriger la sortie d'un déclencheur protégé par un déclencheur neuf, sans réécrire la fonction protégée que `partners:migrations:additive` interdit de remplacer. Enfin, une garde qui énumère les formes d'export qu'elle reconnaît laisse passer en silence toutes les autres : elle doit compter CHAQUE valeur exportée comme un site, et faire de celles dont elle ne voit pas le corps une faute. Et une garde qui suit un nom local juge la valeur que le module sert à la FIN de son évaluation : l'initialiseur d'une liaison réassignable ne dit rien de cette valeur, et un type homonyme ne retire pas la valeur importée qui porte le même nom. Un `var` n'a pas la portée de son bloc mais celle de sa fonction — au premier niveau d'un module, celle du module : une garde qui ne relève les liaisons que dans les instructions de premier niveau prend pour un type le nom qu'un `var` de bloc lie comme valeur. Le remède sûr n'est pas de mieux compter les valeurs, mais de n'écarter comme type que ce que le code MARQUE `type`. Une garde qui dérive ses sites de la syntaxe d'export ES ne voit RIEN dans un fichier CommonJS, que Next charge pourtant par `require` et sert : un fichier sans site sortait en zéro. Le remède n'est pas de juger le CommonJS, mais de refuser, dans tout fichier du périmètre, les noms qui mènent à l'objet des exports. Et une garde qui reconnaît la porte à son NOM accepte n'importe quel homonyme : la porte est une liaison importée d'un module précis, pas un nom.
-
-… 3 entrée(s) affichée(s) sur 70 ; les 67 plus ancienne(s) se lisent dans `docs/journal/`.
+… 3 entrée(s) affichée(s) sur 71 ; les 68 plus ancienne(s) se lisent dans `docs/journal/`.
 
 ## Dette déclarée
 
