@@ -265,6 +265,53 @@ const FORMES_PRISMA: readonly { nom: string; ext: string; lignes: string[]; faut
     lignes: [`export type { "}" as Apporteur } from '@prisma/client';`],
     fautive: 1,
   },
+  // Une chaîne de la liste qui porte un GUILLEMET ÉCHAPPÉ (revue `exactitude` 5329829625, PR 82),
+  // entre guillemets doubles puis simples : une lecture de liste qui ne tient pas compte de
+  // l'antislash se décale et ne retrouve plus la vraie accolade. Le refus ne lit plus de liste :
+  // le TEXTE du fichier cite le client, il est refusé.
+  {
+    nom: 'export-type-from-chaine-guillemet-double-echappe',
+    ext: 'ts',
+    lignes: [`export type { Apporteur, "${AS}"" as Autre } from '@prisma/client';`],
+    fautive: 1,
+  },
+  {
+    nom: 'export-type-from-chaine-guillemet-simple-echappe',
+    ext: 'ts',
+    lignes: [`export type { Apporteur, '${AS}'' as Autre } from '@prisma/client';`],
+    fautive: 1,
+  },
+  // Une directive de TYPES qui cite le client (revue `securite` 5329828516, dette 3) : aucun
+  // symbole n'est lié, mais le texte cite le client, et c'est le texte qui est jugé.
+  {
+    nom: 'reference-types',
+    ext: 'ts',
+    lignes: ['/// <reference types="@prisma/client" />', 'export const a = 1;'],
+    fautive: 1,
+  },
+  // Le PRIX du refus par le texte, montré plutôt que tu : un commentaire qui cite le client, une
+  // liste d'export dont un commentaire le cite, une chaîne quelconque dont un segment est `db`.
+  {
+    nom: 'prix-commentaire-cite-le-client',
+    ext: 'ts',
+    lignes: [
+      "// L'espace ne lit jamais @prisma/client : il passe par la couche d'accès.",
+      'export const a = 1;',
+    ],
+    fautive: 1,
+  },
+  {
+    nom: 'prix-liste-commentee-cite-le-client',
+    ext: 'ts',
+    lignes: ['const x = 1;', "export { x /* } from '@prisma/client' */ };"],
+    fautive: 2,
+  },
+  {
+    nom: 'prix-chaine-segment-db',
+    ext: 'ts',
+    lignes: ["export const i = fetch('/api/db');"],
+    fautive: 1,
+  },
   {
     nom: 'require',
     ext: 'ts',
@@ -1466,6 +1513,118 @@ const FORMES_SQL: readonly { nom: string; lignes: string[]; fautive: number; ext
     ],
     fautive: 1,
   },
+  // LA LISTE BLANCHE du namespace (revue `securite` 5329828516, PR 82). Le namespace lié par une
+  // déstructuration — d'un `import()` attendu, ou de l'objet de l'import par défaut —, puis le
+  // constructeur de fragment atteint par membre pointé, crochets ou déstructuration ; la clause
+  // d'héritage ; et les autres usages de VALEUR hors de la liste. La ligne fautive est celle de
+  // l'ACCÈS quand il en existe une : c'est l'accès lui-même qui doit être nommé, pas seulement la
+  // liaison.
+  {
+    nom: 'namespace-destructure-sql-pointe',
+    lignes: [
+      'export const f = async (x: string) => {',
+      "  const { Prisma } = await import('@prisma/client');",
+      '  return new Prisma.Sql([x], []);',
+      '};',
+    ],
+    fautive: 3,
+  },
+  {
+    nom: 'namespace-destructure-raw-crochets',
+    lignes: [
+      'export const f = async (x: string) => {',
+      "  const { Prisma } = await import('@prisma/client');",
+      "  return Prisma['raw'](x);",
+      '};',
+    ],
+    fautive: 3,
+  },
+  {
+    nom: 'namespace-destructure-sql-crochets',
+    lignes: [
+      'export const f = async (x: string) => {',
+      "  const { Prisma } = await import('@prisma/client');",
+      "  return new Prisma['Sql']([x], []);",
+      '};',
+    ],
+    fautive: 3,
+  },
+  {
+    nom: 'namespace-destructure-raw-destructure',
+    lignes: [
+      'export const f = async (x: string) => {',
+      "  const { Prisma } = await import('@prisma/client');",
+      '  const { raw } = Prisma;',
+      '  return raw(x);',
+      '};',
+    ],
+    fautive: 3,
+  },
+  {
+    nom: 'namespace-destructure-defaut-sql-destructure',
+    lignes: [
+      "import C from '@prisma/client';",
+      'const { Prisma } = C;',
+      'const { Sql } = Prisma;',
+      'export const f = (x: string) => new Sql([x], []);',
+    ],
+    fautive: 3,
+  },
+  {
+    nom: 'heritage-prisma-sql',
+    lignes: ["import { Prisma } from '@prisma/client';", 'export class Brut extends Prisma.Sql {}'],
+    fautive: 2,
+  },
+  {
+    nom: 'heritage-anonyme-prisma-sql',
+    lignes: [
+      "import { Prisma } from '@prisma/client';",
+      'export const Brut = class extends Prisma.Sql {};',
+    ],
+    fautive: 2,
+  },
+  // Le namespace lié par déstructuration NON renommée, sans rien d'autre : ce n'est plus un
+  // chargement paresseux admis, c'est une liaison du namespace hors de l'import.
+  {
+    nom: 'namespace-destructure-seul',
+    lignes: [
+      "export const k = async () => { const { Prisma } = await import('@prisma/client'); return Prisma.empty; };",
+    ],
+    fautive: 1,
+  },
+  {
+    nom: 'namespace-destructure-sql-join',
+    lignes: [
+      "import { Prisma } from '@prisma/client';",
+      'const { sql, join } = Prisma;',
+      'export const g = (v: string) => join([sql`${v}`]);',
+    ],
+    fautive: 2,
+  },
+  {
+    nom: 'new-membre-hors-liste',
+    lignes: ["import { Prisma } from '@prisma/client';", 'export const d = new Prisma.Decimal(1);'],
+    fautive: 2,
+  },
+  {
+    nom: 'import-renomme-puis-heritage',
+    lignes: ["import { Prisma as P } from '@prisma/client';", 'export class Brut extends P.Sql {}'],
+    fautive: 1,
+  },
+  {
+    nom: 'reexport-renomme',
+    lignes: ["export { Prisma as Q } from '@prisma/client';"],
+    fautive: 1,
+  },
+  {
+    nom: 'destructure-renomme-for-of',
+    lignes: [
+      'export const f = (a: object[]) => {',
+      '  for (const { Prisma: Q } of a as { Prisma: unknown }[]) return Q;',
+      '};',
+    ],
+    fautive: 2,
+  },
 ];
 
 function fichier(
@@ -1542,18 +1701,17 @@ export const CONTRE_TEMOINS: readonly FichierDuBac[] = [
       "import { f } from './db-outils.ts';",
       "import { g } from './prisma-aide.mjs';",
       "export * as h from '@/server/acces/dbx.js';",
-      // Des chaînes qui RESSEMBLENT à un spécifieur sans être chargées comme module.
-      "export const i = fetch('/api/db');",
+      // Une chaîne qui RESSEMBLE à un spécifieur sans en porter le segment. (Une chaîne dont un
+      // segment EST `db`, chargée ou non, est refusée par le texte : témoin `prix-chaine-segment-db`.)
       "export const j = require.resolve('./outil-prisma');",
     ],
     null,
     0
   ),
   // Dans l'espace, des listes d'export dont un commentaire ou une chaîne porte une accolade
-  // fermante, sans que le spécifieur soit le client : la lecture de la liste va jusqu'à sa VRAIE
-  // fin, et pas plus loin. Les deux dernières listes écrivent `from` et le client DANS un
-  // commentaire, de bloc puis de ligne : une lecture arrêtée à la première `}` du texte, ou qui
-  // raccourcirait un commentaire de ligne en revenant en arrière, les prendrait pour une liaison.
+  // fermante ou un guillemet échappé, depuis la couche d'accès : le refus ne lit plus de liste,
+  // il lit le TEXTE, et rien ici ne cite le client. (Une liste dont un commentaire CITE le client
+  // est refusée : témoin `prix-liste-commentee-cite-le-client`.)
   fichier(
     'espace/listes-commentees',
     `${MILIEU_ESPACE}/listes-commentees.ts`,
@@ -1564,11 +1722,7 @@ export const CONTRE_TEMOINS: readonly FichierDuBac[] = [
       '  Autre, // }',
       "} from '@/server/acces/autre';",
       `export type { "}" as Chaine } from '@/server/acces/chaine';`,
-      'const x = 1;',
-      "export { x /* } from '@prisma/client' */ };",
-      'const y = 2;',
-      "export { y // } from '@prisma/client'",
-      '};',
+      `export type { "${AS}"" as Double, '${AS}'' as Simple } from '@/server/acces/guillemets';`,
     ],
     null,
     0
@@ -1691,15 +1845,19 @@ export const CONTRE_TEMOINS: readonly FichierDuBac[] = [
       'declare const p: { $queryRaw(s: TemplateStringsArray, ...v: unknown[]): unknown };',
       'export const lire = (id: string) => p.$queryRaw`SELECT 1 WHERE id = ${id}`;',
       'export const fragment = (id: string) => Prisma.sql`id = ${id}`;',
-      // Ce que le namespace a le DROIT de faire : membre immédiat, déstructuration sans `raw`,
-      // type `Prisma.Sql` en annotation, chargement paresseux non renommé.
-      'const { sql, join } = Prisma;',
-      'export const g = (v: Prisma.Sql): Prisma.Sql => join([v, sql`x`]);',
+      // Ce que le namespace a le DROIT de faire comme VALEUR : les formes de la LISTE BLANCHE,
+      // écrites en clair `Prisma.<nom>` — `sql`, `join`, `empty`, et la classe d'erreur relevée
+      // sur le dépôt (`instanceof` ou `new`). Et, en position de TYPE, tout membre : annotation,
+      // assertion `as`, contrainte d'un générique de fonction ou de classe.
+      'export const g = (v: Prisma.Sql): Prisma.Sql => Prisma.join([v, Prisma.sql`x`]);',
       'export const h = (e: unknown) => e instanceof Prisma.PrismaClientKnownRequestError;',
-      "export const k = async () => { const { Prisma } = await import('@prisma/client'); return Prisma.empty; };",
+      'export const vide = Prisma.empty;',
+      "export const err = new Prisma.PrismaClientKnownRequestError('x', { code: 'P2002', clientVersion: '6' });",
+      'export async function t<T extends Prisma.TransactionClient>(c: T): Promise<Prisma.InputJsonObject> { return c as unknown as Prisma.InputJsonObject; }',
+      'export class Lot<T extends Prisma.TransactionClient> { t?: T; }',
       // Des étiquettes NICHÉES, génériques, et `join` à une seule valeur : tout cela reste admis.
       'export const m = (id: string) => Prisma.sql`a ${Prisma.sql`b ${id}`} ${Prisma.join([Prisma.sql`c`])}`;',
-      'export const n = (id: string) => p.$queryRaw`x ${Prisma.join([id])} ${sql`y ${id}`}`;',
+      'export const n = (id: string) => p.$queryRaw`x ${Prisma.join([id])} ${Prisma.sql`y ${id}`}`;',
       'export const o = (id: string) => p.$queryRaw<{ n: number }[]>`SELECT ${id}`;',
       // Un constructeur DÉCLARÉ n'est pas une lecture de `.constructor`.
       'class Ligne { constructor(public n: number) {} }',
