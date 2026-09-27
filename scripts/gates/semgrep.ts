@@ -162,8 +162,8 @@ const AS = String.fromCharCode(0x5c);
  * Des BLANCS UNICODE que TypeScript admet entre deux jetons, écrits par leur CODE pour la même
  * raison que l'antislash : invisibles dans le texte, ils se relisent mal. Espace insécable
  * U+00A0, espace ogham U+1680, espace fine insécable U+202F, espace idéographique U+3000,
- * ZWNBSP U+FEFF, espace sans chasse U+200B et passage à la ligne NEL U+0085 (deux blancs que le
- * scanner de TypeScript admet aussi, et qui ne sont ni `\p{Zs}` ni un saut de ligne).
+ * ZWNBSP U+FEFF, et l'espace sans chasse U+200B (un blanc pour le scanner de TypeScript, qui
+ * n'est ni `\p{Zs}` ni un saut de ligne).
  */
 const NBSP = String.fromCharCode(0xa0);
 const OGHAM = String.fromCharCode(0x1680);
@@ -171,7 +171,6 @@ const FINE = String.fromCharCode(0x202f);
 const IDEO = String.fromCharCode(0x3000);
 const ZWNBSP = String.fromCharCode(0xfeff);
 const ZWSP = String.fromCharCode(0x200b);
-const NEL = String.fromCharCode(0x85);
 
 /** Les formes d'accès direct au client de base que la règle n° 1 refuse. */
 const FORMES_PRISMA: readonly { nom: string; ext: string; lignes: string[]; fautive: number }[] = [
@@ -226,17 +225,16 @@ const FORMES_PRISMA: readonly { nom: string; ext: string; lignes: string[]; faut
     lignes: [`export { type Apporteur }${NBSP}from '../../lib/prisma.js';`],
     fautive: 1,
   },
-  // Un blanc que TypeScript admet sans qu'il soit `\p{Zs}` : U+200B et U+0085.
+  // Un blanc que TypeScript admet sans qu'il soit `\p{Zs}` : U+200B. Son voisin U+0085 n'a PAS
+  // de témoin au bac, et ne peut pas en avoir : MESURÉ sur 1.176.1, l'analyseur de semgrep ne le
+  // prend pas pour un blanc (erreur de syntaxe partielle sur la ligne), la gate le juge donc
+  // `erreur_semgrep` et rougit fermée — un fichier qui fait échouer l'analyse n'est pas un
+  // témoin. Il est dans la classe des blancs de `.semgrep.yml` pour ne pas dépendre de cette
+  // erreur.
   {
     nom: 'export-type-from-espace-sans-chasse',
     ext: 'ts',
     lignes: [`export${ZWSP}type { Apporteur } from '@prisma/client';`],
-    fautive: 1,
-  },
-  {
-    nom: 'export-type-from-nel',
-    ext: 'ts',
-    lignes: [`export type { Apporteur }${NEL}from '@prisma/client';`],
     fautive: 1,
   },
   // Une ACCOLADE FERMANTE écrite dans un commentaire ou une chaîne DANS la liste (revue
@@ -1553,8 +1551,9 @@ export const CONTRE_TEMOINS: readonly FichierDuBac[] = [
   ),
   // Dans l'espace, des listes d'export dont un commentaire ou une chaîne porte une accolade
   // fermante, sans que le spécifieur soit le client : la lecture de la liste va jusqu'à sa VRAIE
-  // fin, et pas plus loin. La dernière ligne écrit `from` et le client DANS un commentaire de la
-  // liste : une lecture arrêtée à la première `}` du texte la prendrait pour une liaison.
+  // fin, et pas plus loin. Les deux dernières listes écrivent `from` et le client DANS un
+  // commentaire, de bloc puis de ligne : une lecture arrêtée à la première `}` du texte, ou qui
+  // raccourcirait un commentaire de ligne en revenant en arrière, les prendrait pour une liaison.
   fichier(
     'espace/listes-commentees',
     `${MILIEU_ESPACE}/listes-commentees.ts`,
@@ -1567,6 +1566,9 @@ export const CONTRE_TEMOINS: readonly FichierDuBac[] = [
       `export type { "}" as Chaine } from '@/server/acces/chaine';`,
       'const x = 1;',
       "export { x /* } from '@prisma/client' */ };",
+      'const y = 2;',
+      "export { y // } from '@prisma/client'",
+      '};',
     ],
     null,
     0

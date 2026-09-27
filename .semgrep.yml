@@ -89,7 +89,11 @@
 #
 # LE TEXTE N'EST PAS ASCII (revue `securite` 5329281085, PR 82) : TypeScript admet un
 # identifiant Unicode (`Pé`, un alias cyrillique) et tout BLANC Unicode entre deux jetons
-# (U+00A0, U+1680, U+2000 à U+200A, U+2028, U+2029, U+202F, U+205F, U+3000, U+FEFF). Un bras
+# (U+0085, U+00A0, U+1680, U+2000 à U+200B, U+2028, U+2029, U+202F, U+205F, U+3000, U+FEFF —
+# U+0085 et U+200B sont des blancs pour le scanner de TypeScript sans être `\p{Zs}` ; U+0085
+# n'est pas pris pour un blanc par l'analyseur de semgrep 1.176.1, qui rend alors une erreur de
+# syntaxe partielle que la gate juge `erreur_semgrep` : il est dans la classe pour ne pas
+# dépendre de cette erreur, et n'a pas de témoin au bac, faute d'un fichier analysable). Un bras
 # qui lisait un nom par `[A-Za-z_$][\w$]*` et les blancs par `\s` (ASCII sans `(*UCP)`, mesuré
 # sur 1.176.1) laissait passer l'import-equals et les formes textuelles de la limite (c) de la
 # règle n° 1, commentaire entre les mots compris pour ces dernières. Les bras textuels qui
@@ -99,15 +103,29 @@
 #     `$`, U+200C, U+200D — PCRE2 de semgrep 1.176.1, mesuré) ; `import` n'est pas non plus
 #     précédé d'un point ni d'un `#` (membre ou nom privé nommé `import`) ;
 #   — un BLANC est tout blanc Unicode ci-dessus ou un commentaire ;
+#   — une LISTE entre accolades (`export { … } from`, `export type { … } from`) est lue jusqu'à
+#     sa VRAIE accolade fermante : un commentaire de bloc, un commentaire de ligne et une chaîne
+#     (TypeScript admet un nom exporté écrit comme chaîne, `"…" as A`) y sont consommés comme
+#     des UNITÉS, et une accolade qu'ils contiennent ne ferme rien (revue `exactitude`
+#     5329582597, PR 82 : une lecture arrêtée à la première `}` du texte laissait passer une
+#     liste dont un commentaire portait une accolade). La boucle de lecture est possessive :
+#     elle ne revient pas en arrière pour raccourcir un commentaire de ligne et y trouver une
+#     accolade, ce qui prendrait pour une liaison un `from` écrit dans ce commentaire ;
 #   — le nom lié de l'import-equals est TOUT ce qui n'est ni un blanc, ni une ponctuation ASCII
 #     (accolade, étoile, guillemet, parenthèse, crochet, point, virgule, deux-points, `=`,
 #     opérateur, barre oblique), jusqu'au premier `=` qui n'est ni `==` ni `=>`. Une liaison ES
 #     s'arrête toujours avant (accolades, étoile, ou spécifieur entre guillemets), `import()`
 #     et `import.meta` aussi ; le MOT `from` ne l'arrête PAS, parce que `import from = X` est un
 #     import-equals (`from` est un identifiant contextuel).
-# Les deux bras qui lisent les noms `…Unsafe` (règle n° 2) gardent leurs bornes ASCII `[\w$]` :
-# elles ne peuvent que refuser PLUS (un caractère non ASCII collé au nom le laisse refusé), et
-# aucun autre texte n'écrit ce nom — un identifiant JavaScript n'est pas normalisé.
+# ASYMÉTRIE VOULUE : les deux bras qui lisent les noms `…Unsafe` (règle n° 2) gardent leurs
+# bornes ASCII `[\w$]`, et ce sont les SEULES bornes ASCII des bras textuels. Une borne dit où le
+# nom NE PEUT PAS être collé ; une borne ASCII en exclut moins qu'une borne Unicode, donc elle ne
+# peut que refuser PLUS : `é$queryRawUnsafe` ou `$queryRawUnsafeé` (d'autres identifiants) sont
+# refusés aussi, jamais le nom lui-même laissé passer. Et aucun autre texte n'écrit ce nom : un
+# identifiant JavaScript n'est pas normalisé, et son écriture par échappement relève de
+# `&echappement`. Les mots-clés d'une liaison, eux, sont bornés en Unicode pour ne pas prendre
+# un identifiant voisin (`exportÉ`) pour le mot-clé : une borne ASCII y refuserait à tort du code
+# légitime. L'asymétrie tient au COÛT d'un faux positif, jamais à ce qui passe.
 # Prix ASSUMÉ, élargi : un commentaire ou une chaîne sous `src/` qui écrit `import` puis du texte
 # sans ponctuation jusqu'à un `=` est refusé aussi. Aucun fichier de `src/` ne l'écrit.
 #
@@ -159,8 +177,11 @@ rules:
   #      `&echappement`, textuel aussi, juge une écriture, pas une liaison) — et elles
   #      DÉRIVENT quand même leur lecture du spécifieur de l'ancre commune, par un groupe
   #      nommé `(?P<M>…)` que `metavariable-regex` contraint ensuite. Leurs mots sont lus
-  #      séparés par TOUT blanc Unicode ou commentaire, et bornés en Unicode (voir l'en-tête,
-  #      « LE TEXTE N'EST PAS ASCII »). `export type * from` n'est même pas analysé par
+  #      séparés par TOUT blanc Unicode ou commentaire, et bornés en Unicode ; leur liste entre
+  #      accolades est lue jusqu'à sa vraie fin, commentaires et chaînes consommés comme des
+  #      unités (voir l'en-tête, « LE TEXTE N'EST PAS ASCII »). Un seul bras lit une telle
+  #      liste : celui de la limite (c), qui couvre `export { … } from` avec ou sans `type`, que
+  #      l'AST voie ou non la forme. `export type * from` n'est même pas analysé par
   #      1.176.1 (mesuré : erreur de syntaxe partielle, que la gate juge faute
   #      `erreur_semgrep`) ;
   #   d) un chargeur obtenu AUTREMENT que par `require` ou une propriété `require` écrits sous
@@ -239,14 +260,17 @@ rules:
                 - pattern: require
                 - pattern: $P.require
                 - pattern: $P["require"]
-      # Limite (c) : les formes textuelles, pour ce que l'AST de semgrep ne représente pas.
+      # Limite (c) : les formes textuelles, pour ce que l'AST de semgrep ne représente pas. La
+      # liste entre accolades est lue par une boucle POSSESSIVE dont chaque tour consomme un
+      # caractère ordinaire, un commentaire de bloc, un commentaire de ligne, une barre oblique
+      # seule ou une chaîne : une accolade dans un commentaire ou une chaîne ne ferme pas la liste.
       - patterns:
           - pattern-regex: |-
-              (?<![\p{ID_Continue}$\x{200C}\x{200D}.#])export(?![\p{ID_Continue}$\x{200C}\x{200D}])(?:[\t\n\x0B\f\r\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)*(?:type(?![\p{ID_Continue}$\x{200C}\x{200D}])(?:[\t\n\x0B\f\r\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)*)?(?:\{[^}]*\}|\*(?:(?:[\t\n\x0B\f\r\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)*as(?![\p{ID_Continue}$\x{200C}\x{200D}])(?:[\t\n\x0B\f\r\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)*[^\t\n\x0B\f\r\x{2028}\x{2029}\x{FEFF}\p{Zs}{}()\[\];,:.=*'"`<>!?+\-&|^~%@#/]+)?)(?:[\t\n\x0B\f\r\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)*from(?![\p{ID_Continue}$\x{200C}\x{200D}])(?:[\t\n\x0B\f\r\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)*['"`](?P<M>[^'"`]*)['"`]
+              (?<![\p{ID_Continue}$\x{200C}\x{200D}.#])export(?![\p{ID_Continue}$\x{200C}\x{200D}])(?:[\t\n\x0B\f\r\x{0085}\x{200B}\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)*(?:type(?![\p{ID_Continue}$\x{200C}\x{200D}])(?:[\t\n\x0B\f\r\x{0085}\x{200B}\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)*)?(?:\{(?:[^}/'"]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*|/(?![*/])|'[^'\n\r\x{2028}\x{2029}]*'|"[^"\n\r\x{2028}\x{2029}]*")*+\}|\*(?:(?:[\t\n\x0B\f\r\x{0085}\x{200B}\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)*as(?![\p{ID_Continue}$\x{200C}\x{200D}])(?:[\t\n\x0B\f\r\x{0085}\x{200B}\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)*[^\t\n\x0B\f\r\x{0085}\x{200B}\x{2028}\x{2029}\x{FEFF}\p{Zs}{}()\[\];,:.=*'"`<>!?+\-&|^~%@#/]+)?)(?:[\t\n\x0B\f\r\x{0085}\x{200B}\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)*from(?![\p{ID_Continue}$\x{200C}\x{200D}])(?:[\t\n\x0B\f\r\x{0085}\x{200B}\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)*['"`](?P<M>[^'"`]*)['"`]
           - metavariable-regex: *specifieur-du-client
       - patterns:
           - pattern-regex: |-
-              (?<![\p{ID_Continue}$\x{200C}\x{200D}.#])import(?![\p{ID_Continue}$\x{200C}\x{200D}])(?:[\t\n\x0B\f\r\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)*[^\t\n\x0B\f\r\x{2028}\x{2029}\x{FEFF}\p{Zs}{}()\[\];,:.=*'"`<>!?+\-&|^~%@#/](?:(?:[\t\n\x0B\f\r\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)|[^\t\n\x0B\f\r\x{2028}\x{2029}\x{FEFF}\p{Zs}{}()\[\];,:.=*'"`<>!?+\-&|^~%@#/])*=(?:[\t\n\x0B\f\r\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)*require(?![\p{ID_Continue}$\x{200C}\x{200D}])(?:[\t\n\x0B\f\r\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)*\((?:[\t\n\x0B\f\r\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)*['"`](?P<M>[^'"`]*)['"`]
+              (?<![\p{ID_Continue}$\x{200C}\x{200D}.#])import(?![\p{ID_Continue}$\x{200C}\x{200D}])(?:[\t\n\x0B\f\r\x{0085}\x{200B}\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)*[^\t\n\x0B\f\r\x{0085}\x{200B}\x{2028}\x{2029}\x{FEFF}\p{Zs}{}()\[\];,:.=*'"`<>!?+\-&|^~%@#/](?:(?:[\t\n\x0B\f\r\x{0085}\x{200B}\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)|[^\t\n\x0B\f\r\x{0085}\x{200B}\x{2028}\x{2029}\x{FEFF}\p{Zs}{}()\[\];,:.=*'"`<>!?+\-&|^~%@#/])*=(?:[\t\n\x0B\f\r\x{0085}\x{200B}\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)*require(?![\p{ID_Continue}$\x{200C}\x{200D}])(?:[\t\n\x0B\f\r\x{0085}\x{200B}\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)*\((?:[\t\n\x0B\f\r\x{0085}\x{200B}\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)*['"`](?P<M>[^'"`]*)['"`]
           - metavariable-regex: *specifieur-du-client
       - pattern: new PrismaClient(...)
       - pattern: new $P.PrismaClient(...)
@@ -387,7 +411,7 @@ rules:
       #   ponctuation ASCII, jusqu'à un `=` qui n'est ni `==` ni `=>` (voir l'en-tête, « LE TEXTE
       #   N'EST PAS ASCII »). —
       - pattern-regex: |-
-          (?<![\p{ID_Continue}$\x{200C}\x{200D}.#])import(?![\p{ID_Continue}$\x{200C}\x{200D}])(?:[\t\n\x0B\f\r\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)*[^\t\n\x0B\f\r\x{2028}\x{2029}\x{FEFF}\p{Zs}{}()\[\];,:.=*'"`<>!?+\-&|^~%@#/](?:(?:[\t\n\x0B\f\r\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)|[^\t\n\x0B\f\r\x{2028}\x{2029}\x{FEFF}\p{Zs}{}()\[\];,:.=*'"`<>!?+\-&|^~%@#/])*=(?![=>])
+          (?<![\p{ID_Continue}$\x{200C}\x{200D}.#])import(?![\p{ID_Continue}$\x{200C}\x{200D}])(?:[\t\n\x0B\f\r\x{0085}\x{200B}\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)*[^\t\n\x0B\f\r\x{0085}\x{200B}\x{2028}\x{2029}\x{FEFF}\p{Zs}{}()\[\];,:.=*'"`<>!?+\-&|^~%@#/](?:(?:[\t\n\x0B\f\r\x{0085}\x{200B}\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)|[^\t\n\x0B\f\r\x{0085}\x{200B}\x{2028}\x{2029}\x{FEFF}\p{Zs}{}()\[\];,:.=*'"`<>!?+\-&|^~%@#/])*=(?![=>])
       # — `Prisma.raw` et `Prisma.Sql`, par leur nom QUALIFIÉ : `$C.Prisma.raw` matche
       #   `Prisma.raw` (import nommé), `P.raw` (`import { Prisma as P }`) et `C.Prisma.raw`
       #   (`import * as C`), et ne matche PAS `autre.raw` ni `String.raw`, qui ne sont pas le
