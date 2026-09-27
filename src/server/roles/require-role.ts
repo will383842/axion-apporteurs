@@ -3,8 +3,10 @@
  * (SEC-17, REQ-SEC-023 ; REQ-UX-024 absorbée).
  *
  * QUATRE RÈGLES, ET CE QUI LES TIENT.
- *  1. LE DÉFAUT EST LE REFUS : un droit absent de la matrice (`./matrice`) est refusé à tous, avant
- *     toute autre question. Le juge ne rend « passe » qu'au bout de toutes ses vérifications.
+ *  1. LE DÉFAUT EST LE REFUS : un droit absent de la matrice (`./matrice`) est refusé à tous. Seule
+ *     l'absence de jeton est refusée avant lui (`absente`, sans lire la base) ; dans le juge, le
+ *     droit est la première question, avant la session. Le juge ne rend « passe » qu'au bout de
+ *     toutes ses vérifications.
  *  2. LE RÔLE EST RELU À CHAQUE REQUÊTE, jamais mis en cookie : le cookie ne porte qu'un jeton de
  *     session ; la session, son utilisateur, son rôle et sa désactivation sont relus en base à
  *     chaque appel. Un rôle changé ou un utilisateur désactivé vaut dès la requête SUIVANTE.

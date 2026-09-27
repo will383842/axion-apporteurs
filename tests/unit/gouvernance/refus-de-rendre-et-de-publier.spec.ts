@@ -927,7 +927,7 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
         'SEC-17 — REQ-SEC-023, toute action et toute route de la console appelle `requireRole` avec ' +
         'un droit présent dans la matrice. `process.exit(decision.code)` : sortie TERMINALE à code ' +
         'variable, commune au jugement et à `--prove` — 0 quand la garde passe, 1 sur une faute de ' +
-        'l’une de ses six familles. Les familles sont vues rougir sur des sources INJECTÉES dans la ' +
+        'l’une de ses sept familles. Les familles sont vues rougir sur des sources INJECTÉES dans la ' +
         'fonction pure (matrice-des-roles.spec.ts), et le binaire est vu sortir en 0 sur le dépôt ; ' +
         '⛔ aucun témoin ne le voit sortir en 1, et aucun ne vit dans `REFUS`. Le REFUS DE PÉRIMÈTRE ' +
         'vient de `fichiersSuivisOuRefus`, et `GARDES_QUI_BALAIENT` le déclare plus bas. Dette DÉCLARÉE.',
