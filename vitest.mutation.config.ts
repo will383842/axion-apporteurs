@@ -45,7 +45,7 @@ const ECARTES = [
   'le dépôt sort en zéro, et le vert imprime le compte des champs',
   // la source unique des secrets (REQ-SEC-028) : `git ls-files` sur src/ et scripts/ (même passe).
   'aucun fichier autre que src/lib/env.ts ne cite deux noms de secret',
-  // SEC-17 : lance la garde `G-SEC-ROLES` en sous-processus, qui lit les fichiers SUIVIS par git — le
+  // SEC-17 : lance la garde `securite:roles` en sous-processus, qui lit les fichiers SUIVIS par git — le
   // bac à sable n'est pas un dépôt, la garde y sort en échec. Jugé dans `pnpm test`, sur le vrai dépôt.
   'la garde sur la console du dépôt sort en 0',
 ];

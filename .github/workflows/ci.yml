@@ -337,9 +337,9 @@ jobs:
       # (src/server/roles/matrice.ts) : la liste est DERIVEE du disque, et le defaut est le refus. Le vert imprime les fichiers lus, les actions
       # et routes confrontees et le compte des couples ; un perimetre vide est dit, avec sa tache.
       - name: Roles de la console — requireRole partout, droits dans la matrice
-        run: pnpm G-SEC-ROLES
+        run: pnpm securite:roles
       - name: La garde des roles sait rougir
-        run: pnpm G-SEC-ROLES:prove
+        run: pnpm securite:roles:prove
       # GOV-031, REQ-GOV-018. LES DEUX ETAPES QUI MANQUAIENT, ET SANS LESQUELLES LES DEUX
       # FAMILLES CI-DESSUS NE MESURAIENT RIEN. `outillage_non_epingle` et `lint_non_bloquant`
       # ne s'arment qu'en PRESENCE d'une etape qui lance l'outil — l'acceptation de GOV-031 le

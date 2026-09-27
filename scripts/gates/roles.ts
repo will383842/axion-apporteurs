@@ -1,10 +1,10 @@
 /**
  * roles.ts — la garde AST des rôles de la console (SEC-17, REQ-SEC-023 ; REQ-UX-024 absorbée).
- * Registre : `G-SEC-ROLES`, alias `GATE-UX-ROLES`. La commande porte l'identifiant du registre,
+ * Registre : `securite:roles`, alias `G-SEC-ROLES` et `GATE-UX-ROLES`. La commande porte l'identifiant du registre,
  * et le verdict l'imprime en le lisant (`ID_REGISTRE`, partners/ADR-0018 : un nom, une garde).
  *
- * USAGE : pnpm G-SEC-ROLES          juge la console du dépôt ; sort 1 sur faute, en la nommant
- *         pnpm G-SEC-ROLES:prove    un témoin par famille, et des contre-témoins verts
+ * USAGE : pnpm securite:roles       juge la console du dépôt ; sort 1 sur faute, en la nommant
+ *         pnpm securite:roles:prove un témoin par famille, et des contre-témoins verts
  *
  * CE QU'ELLE TIENT. La liste des actions et des routes de la console est DÉRIVÉE DU DISQUE, jamais
  * déclarée : tout fichier suivi sous `src/app/(console)/` et `src/server/console/`. Chacune est
@@ -44,7 +44,7 @@ import { fichiersSuivisOuRefus } from '../lot/fichiers-suivis';
 import { MATRICE_DES_ROLES, ROLES_CONSOLE } from '../../src/server/roles/matrice';
 
 /** L'identifiant du registre : c'est aussi la commande, et le nom que le verdict imprime. */
-export const ID_REGISTRE = 'G-SEC-ROLES';
+export const ID_REGISTRE = 'securite:roles';
 
 export const FAMILLES = [
   'action_sans_requireRole',

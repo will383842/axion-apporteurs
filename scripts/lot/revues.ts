@@ -1309,12 +1309,15 @@ export const DOSSIERS_DU_PROCESSUS: readonly string[] = ['config/'];
 export const CHEMIN_SCHEMA_DES_TACHES = 'scripts/lot/tasks.schema.json';
 
 /**
- * LES RACINES DE LA GARDE DES REVUES : le lecteur unique et ses deux appelants.
+ * LES RACINES DE LA GARDE DES REVUES : le lecteur unique et ses appelants — dont
+ * `jur:revue-apporteur-facing` (JUR-T26), qui juge la revue A07 par `verdictDeLaRevue` : elle
+ * décide si une PR qui touche l'espace apporteur peut atterrir, elle est donc de la garde.
  */
 export const RACINES_DE_LA_GARDE_DES_REVUES: readonly string[] = [
   'scripts/lot/revues.ts',
   'scripts/gates/gov-pr.ts',
   'scripts/lot/corps-de-pr.ts',
+  'scripts/gates/jur-revue-apporteur-facing.ts',
 ];
 
 let gardeEnCache: readonly string[] | null = null;
@@ -1327,7 +1330,7 @@ let gardeEnCache: readonly string[] | null = null;
  * 🔴 ELLE ÉTAIT UNE LISTE DE CINQ CHEMINS, ET LA GATE EN EXÉCUTE DAVANTAGE (dette 1 de la lentille
  * `securite`, second tour de la PR 64) : `scripts/lot/avancement.ts` et
  * `scripts/lot/chemins-de-tache.ts` tournent dans `gov:pr`, et une PR qui les modifiait passait
- * ordinaire. La garde est donc la FERMETURE TRANSITIVE des imports relatifs de ses trois racines,
+ * ordinaire. La garde est donc la FERMETURE TRANSITIVE des imports relatifs de ses racines,
  * DÉRIVÉE du disque à chaque lecture — jamais tapée —, plus les deux documents que la garde lit
  * (la charte, le registre des postes) — plus le schéma du registre des tâches, que le risque lit
  * pour savoir quelles zones existent (GOV-097).
