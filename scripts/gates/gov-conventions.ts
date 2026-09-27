@@ -321,7 +321,7 @@ export function etapesDeLint(vue: Vue): EtapeDeLint[] {
 
 /**
  * UNE ÉTAPE FIGÉE DE LA PORTE A — ce qu'elle doit être pour mesurer ce qu'on croit qu'elle mesure.
- * `nom` l'identifie comme `pnpm prevol` la nomme : son `name:`, sinon son `uses:` ou son `run:`.
+ * `nom` l'identifie comme le pré-vol la nomme (`scripts/prevol.ts`) : son `name:`, sinon son `uses:` ou son `run:`.
  */
 export interface EtapeFigee {
   readonly nom: string;
