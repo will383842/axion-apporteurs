@@ -32,6 +32,34 @@
 # n'ont droit, elles, qu'à la position d'étiquette d'un gabarit. Ce que ces motifs ne
 # tiennent PAS est nommé plus bas, règle par règle, sous « LIMITES DÉCLARÉES » : la phrase
 # ci-dessus n'en promet pas davantage.
+#
+# ── LE TEXTE N'EST PAS LA VALEUR : L'ÉCHAPPEMENT (revue `exactitude` 5328459424, PR 82) ─────
+#
+# Motifs et expressions régulières comparent le TEXTE source d'un nom, jamais sa VALEUR. Un nom
+# écrit par séquence d'échappement, sans rien de calculé — `u` suivi de quatre chiffres ou
+# `u{…}` dans un identifiant ou une chaîne, `x` suivi de deux chiffres, échappement d'identité
+# (antislash devant une lettre sans rôle, devant `$` ou `/`), continuation de ligne, octal
+# hérité du JavaScript non strict — garde le comportement et passait les deux règles en exit 0,
+# membre pointé, accès calculé et spécifieur compris. Plutôt que de décoder, les deux règles
+# refusent l'ÉCRITURE elle-même, par un bras textuel commun (`&echappement`, défini dans la
+# règle n° 1, réutilisé par la n° 2 : l'espace est nommé par la n° 1, tout `src/` par la n° 2) :
+#   — tout échappement `u`, `u{…}` ou `x` d'un caractère IMPRIMABLE. C0 (U+0000 à U+001F) et DEL
+#     (U+007F) restent admis : un caractère de contrôle n'écrit ni un nom de membre ni un
+#     spécifieur, et `src/` en porte (le séparateur U+001F des condensats HMAC) ;
+#   — tout antislash non échappé suivi d'autre chose que l'antislash, `'`, `"`, l'accent grave,
+#     `n`, `r`, `t`, `b`, `f`, `v`, `0` (`u` et `x` sont jugés au tiret précédent) : échappement
+#     d'identité — barre oblique et dollar compris —, continuation de ligne, et `0` suivi d'un
+#     chiffre (octal).
+# EXEMPTIONS DÉCLARÉES, et elles seules : le CORPS d'une expression régulière littérale (`/…/` :
+# ses antislashs sont de la syntaxe d'expression, et sa valeur n'est jamais un nom), et le TEXTE
+# d'un gabarit `String.raw` (sa valeur garde l'antislash, c'est du texte) — PAS ses
+# interpolations, rejugées une à une sans l'exemption. Les COMMENTAIRES ne sont pas exemptés.
+# LIMITE DÉCLARÉE : l'exemption `String.raw` se fie au NOM `String` ; un `String` redéfini
+# localement dont `raw` rendrait le texte cuit verrait les échappements de son texte admis.
+# Prix ASSUMÉ, sous `src/` : un échappement refusé écrit dans un COMMENTAIRE, un dollar échappé
+# dans un gabarit (écrire le dollar hors de la séquence), une barre oblique échappée hors d'une
+# expression régulière littérale, et un `String.raw` à antislash imbriqué dans l'interpolation
+# d'un autre sont refusés aussi. Aucun fichier de `src/` ne les écrit.
 rules:
   # REQ-SEC-008 (texte en vigueur ; REQ-QA-011 y est absorbée) : aucun import direct du client de
   # base sous l'espace apporteur. `import type` compris — l'espace reçoit ses types de la couche
@@ -45,7 +73,10 @@ rules:
   # fabriqué (`createRequire(…)(…)`), la liaison TypeScript `import x = require(…)` (exportée
   # ou non). Et un chargeur n'a droit qu'à l'APPEL DIRECT : `require` et `module.require` ne
   # sont ni ré-affectés, ni passés, ni appelés par `.call` / `.apply` / `.bind` — seul
-  # `require.resolve` (un chemin, pas un module) reste admis.
+  # `require.resolve` (un chemin, pas un module) reste admis. Tout cela vaut pour un spécifieur
+  # et un chargeur écrits EN CLAIR : écrits par échappement (`'../../` + antislash + `db'`,
+  # `requ` + échappement + `re(…)`), ils sont refusés en amont par le bras commun `&echappement`
+  # (voir l'en-tête), avec ses exemptions et sa limite.
   #
   # LIMITES DÉCLARÉES (aucune n'est fermée ici, et aucune ne se prétend fermée) :
   #   a) un module HORS de ces dossiers qui ENVELOPPE le client et que l'espace importe n'est pas
@@ -56,8 +87,9 @@ rules:
   #   c) `export type { … } from`, `export { type … } from` et `export import x = require(…)` ne
   #      sont PAS représentés par l'AST TypeScript de semgrep 1.176.1 (mesuré : le motif
   #      `export type { ... } from "$M"` ne compile même pas, et aucun motif d'import ne voit
-  #      `export import`). Ce sont les SEULES formes du fichier qui restent textuelles — et
-  #      elles DÉRIVENT quand même leur lecture du spécifieur de l'ancre commune, par un groupe
+  #      `export import`). Ce sont les SEULES formes de LIAISON qui restent textuelles (le bras
+  #      `&echappement`, textuel aussi, juge une écriture, pas une liaison) — et elles
+  #      DÉRIVENT quand même leur lecture du spécifieur de l'ancre commune, par un groupe
   #      nommé `(?P<M>…)` que `metavariable-regex` contraint ensuite ;
   #   d) un chargeur obtenu AUTREMENT que par `require` ou une propriété `require` écrits sous
   #      l'espace — reçu en paramètre, déstructuré (`const { require: r } = module`), importé
@@ -70,7 +102,8 @@ rules:
       Accès direct au client de base sous l'espace apporteur (REQ-SEC-008). Toute lecture ou
       écriture de l'espace passe par la couche d'accès, qui injecte l'apporteurId de la session
       dans le `where`. Importez depuis la couche d'accès, jamais `@prisma/*`, `.prisma/*`, ni un
-      module `prisma` ou `db` — avec ou sans suffixe, par quelque chargeur que ce soit.
+      module `prisma` ou `db` — avec ou sans suffixe, par quelque chargeur que ce soit. Un nom
+      écrit par séquence d'échappement est refusé comme tel : écrivez-le en clair.
     severity: ERROR
     languages: [typescript, javascript]
     paths:
@@ -145,15 +178,46 @@ rules:
           - metavariable-regex: *specifieur-du-client
       - pattern: new PrismaClient(...)
       - pattern: new $P.PrismaClient(...)
+      # L'ÉCHAPPEMENT (voir l'en-tête) : le bras commun aux deux règles, défini ici et réutilisé
+      # par la règle n° 2. Deux expressions sur le TEXTE, hors du corps d'une expression
+      # régulière littérale et hors du texte d'un gabarit `String.raw` ; puis chaque
+      # interpolation d'un `String.raw` — que l'exemption couvrirait par sa portée — rejugée
+      # sans elle.
+      - patterns: &echappement
+          - pattern-either: &echappements-refuses
+              # `u` + quatre chiffres, `u{…}`, `x` + deux chiffres, d'un caractère IMPRIMABLE :
+              # C0 (0 à 1F) et DEL (7F) sont écartés par anticipation négative.
+              - pattern-regex: |-
+                  (?<!\\)(?:\\\\)*\\(?:u(?!00[01][0-9A-Fa-f]|007[Ff])[0-9A-Fa-f]{4}|u\{(?!0*(?:[01]?[0-9A-Fa-f]|7[Ff])\})[0-9A-Fa-f]+\}|x(?![01][0-9A-Fa-f]|7[Ff])[0-9A-Fa-f]{2})
+              # Un antislash NON échappé suivi d'autre chose qu'un échappement courant (`u` et
+              # `x` sont jugés ci-dessus) : identité, barre oblique, dollar, continuation — le
+              # saut de ligne n'est pas dans la liste admise —, ou `0` suivi d'un chiffre (octal
+              # hérité ; les chiffres 1 à 9 tombent déjà sous l'identité).
+              - pattern-regex: |-
+                  (?<!\\)(?:\\\\)*\\(?:[^\\'"`nrtbfv0ux]|0[0-9])
+          - pattern-not-inside: /.../
+          - pattern-not-inside: String.raw`...`
+      - patterns: &echappement-dans-une-interpolation-brute
+          - pattern: String.raw`...${$A}...`
+          - metavariable-pattern:
+              metavariable: $A
+              patterns:
+                - pattern-either: *echappements-refuses
+                - pattern-not-inside: /.../
 
   # SQL brut non paramétré. Ce que la règle refuse est une RÉFÉRENCE au membre dangereux —
   # `$queryRawUnsafe`, `$executeRawUnsafe`, `Prisma.raw`, `Prisma.Sql`, et, du runtime, `raw`,
-  # `Sql`, `sqltag`, `join`, `makeTypedQueryFactory` — par toute écriture que l'AST rend
-  # lisible : membre pointé, optionnel ou non nul, accès calculé par littéral (guillemets ou
-  # gabarit), nom écrit comme chaîne n'importe où, déstructuration, renommage à l'import, espace
-  # de noms, objet module (espace de noms, défaut, `require`, `import()` attendu). Pour
-  # `Prisma`, c'est en plus la SORTIE du namespace hors de son usage immédiat qui est refusée, et
-  # son NOM écrit comme chaîne (voir l'en-tête). Trois familles s'y ajoutent :
+  # `Sql`, `sqltag`, `join`, `makeTypedQueryFactory` —, écrite EN CLAIR (écrite par échappement,
+  # elle est refusée en amont par le bras commun `&echappement`, voir l'en-tête), par toute
+  # écriture que l'AST rend lisible : membre pointé, optionnel ou non nul, accès calculé par
+  # littéral (guillemets ou gabarit), déstructuration, renommage à l'import, espace de noms,
+  # objet module (espace de noms, défaut, `require`, `import()` attendu). Le nom écrit comme
+  # chaîne HORS d'un accès calculé (argument de `Reflect.get`, clé calculée de déstructuration,
+  # chaîne quelconque) n'est refusé que pour `$queryRawUnsafe`, `$executeRawUnsafe`, `Prisma` et
+  # `constructor` : un membre du runtime n'est pris par crochets que sur un objet module resté
+  # dans sa liaison (limite d). Pour `Prisma`, c'est en plus la SORTIE du namespace hors de son
+  # usage immédiat qui est refusée, et son NOM écrit comme chaîne (voir l'en-tête). Trois
+  # familles s'y ajoutent :
   #   — les fonctions d'ÉTIQUETTE `$queryRaw`, `$executeRaw` et `Prisma.sql` (y compris `sql`
   #     déstructuré de `Prisma`) ne sont admises qu'en étiquette d'un gabarit : appelées avec
   #     un tableau (`Prisma.sql([x])`, `p.$queryRaw([x] as unknown as TemplateStringsArray)`),
@@ -202,13 +266,19 @@ rules:
       chaque valeur, et `Prisma.join(valeurs)` sans séparateur. Le renommage, l'accès par
       crochets, la déstructuration, l'appel d'une étiquette sans gabarit et le passage du
       namespace `Prisma` par une variable, un objet ou un paramètre ne changent rien à ce que le
-      code FAIT.
+      code FAIT. Un nom écrit par séquence d'échappement est refusé comme tel : écrivez-le en
+      clair.
     severity: ERROR
     languages: [typescript, javascript]
     paths:
       include:
         - "/src/**"
     pattern-either:
+      # — le NOM écrit par échappement, où qu'il soit sous `src/` : le bras commun de la règle
+      #   n° 1 (voir l'en-tête), et chaque interpolation d'un `String.raw`. C'est lui qui rend
+      #   vraie la suite : les motifs ci-dessous ne lisent qu'un nom écrit EN CLAIR. —
+      - patterns: *echappement
+      - patterns: *echappement-dans-une-interpolation-brute
       # — les membres `…Unsafe` : pointés (optionnels et non nuls compris), nus (déstructuration
       #   et renommage) —
       - pattern: $C.$queryRawUnsafe
