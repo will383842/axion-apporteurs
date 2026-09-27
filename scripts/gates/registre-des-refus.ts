@@ -416,7 +416,8 @@ export const REFUS_NOMMES: Readonly<Record<string, readonly string[]>> = {
   'scripts/mutation/rapport.ts': ['module › si APPELE_DIRECTEMENT › (decision.code)'],
   'scripts/plan-state/build.ts': [
     'module › sinon !LANCE_EN_SCRIPT › si MODE_VERIFIER › si !existsSync(CHEMIN_VUE) › (= 1)',
-    'module › sinon !LANCE_EN_SCRIPT › si MODE_VERIFIER › sinon !existsSync(CHEMIN_VUE) › si ecarts.length > 0 › (= 1)',
+    'module › sinon !LANCE_EN_SCRIPT › si MODE_VERIFIER › sinon !existsSync(CHEMIN_VUE) › si chargerRubriquesDues().length === 0 › (= 1)',
+    'module › sinon !LANCE_EN_SCRIPT › si MODE_VERIFIER › sinon !existsSync(CHEMIN_VUE) › sinon chargerRubriquesDues().length === 0 › si ecarts.length > 0 › (= 1)',
     'module › sinon !LANCE_EN_SCRIPT › sinon MODE_VERIFIER › si questions.length > PLAFOND_QUESTIONS › (= 1)',
   ],
   'scripts/prevol.ts': [
