@@ -8,7 +8,7 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `3f6dc5c` — 2026-09-27T04:50:44+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #82 (un conflit avec `main`) · 2. #165 (un conflit avec `main`) · 3. #168 (un conflit avec `main`) · 4. #169 (un conflit avec `main`) |
+| Qu’est-ce qui est en vol ? | 1. #82 (un contrôle requis rouge ou une revue manquante) · 2. #165 (un contrôle requis rouge ou une revue manquante) · 3. #168 (un contrôle requis rouge ou une revue manquante) · 4. #169 (un contrôle requis rouge ou une revue manquante) |
 | Qui tient quoi ? | QA-T07 (A05) |
 | Où en est la phase ? | phase 0 — 47/116 tâches, reste 53.60 j |
 | Le prochain pas | SEC-17 — Rôles console : enum `ConsoleRole { admin, qualifieur, comptable, lecteur }`, matrice SSOT, `requireRole`, garde AST (chemin critique) |
@@ -60,10 +60,10 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
-| 2 | #165 — feat(SEC-17): lot L0-07 — rôles console, matrice unique, requireRole ; gates structurelles de la charte | `t/lot-l0-07` | un conflit avec `main` — à résoudre avant tout |
-| 3 | #168 — chore(GOV-045): lot L0-08 — refus nommés, clé double, schema/paths, attestation, occurrences | `t/lot-l0-08` | un conflit avec `main` — à résoudre avant tout |
-| 4 | #169 — feat(INT-T01c): contrat v2 — onze types, charges fermées, route des coordonnées du candidat | `t/int-t01c` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un contrôle requis rouge ou une revue manquante |
+| 2 | #165 — feat(SEC-17): lot L0-07 — rôles console, matrice unique, requireRole ; gates structurelles de la charte | `t/lot-l0-07` | un contrôle requis rouge ou une revue manquante |
+| 3 | #168 — chore(GOV-045): lot L0-08 — refus nommés, clé double, schema/paths, attestation, occurrences | `t/lot-l0-08` | un contrôle requis rouge ou une revue manquante |
+| 4 | #169 — feat(INT-T01c): contrat v2 — onze types, charges fermées, route des coordonnées du candidat | `t/int-t01c` | un contrôle requis rouge ou une revue manquante |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
