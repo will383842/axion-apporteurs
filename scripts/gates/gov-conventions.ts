@@ -41,7 +41,11 @@
  *     de `package.json` jugée par la même règle : un nom de script, fût-il l'identifiant de la garde,
  *     n'appelle rien. Tout le reste n'appelle rien (refus d'exactitude et vetos de sécurité sur la
  *     PR 175 : trois tours de modélisation du shell ont chacun laissé passer une forme ; on a cessé de
- *     modéliser ; au tour 4, un script réduit à `true`, `pnpm ls` et `npm_config_script_shell=…`).
+ *     modéliser ; au tour 4, un script réduit à `true`, `pnpm ls` et `npm_config_script_shell=…` ;
+ *     au tour 5, un nom hérité d'`Object.prototype`, que la table des commandes de pnpm, objet JS
+ *     ordinaire, prend pour une commande : ces noms sont DÉRIVÉS à l'exécution et ajoutés aux
+ *     commandes intégrées, et `pnpm <script>` sans `run` n'est compté que sous la forme ASCII basse
+ *     `^[a-z][a-z0-9:_-]*$`).
  *   • `perimetre_vide_sans_motif` — le cas d'école à ne PAS reproduire :
  *     `axionia/scripts/check-zod.ts` sort en 0 avec un avertissement quand son répertoire
  *     n'existe pas. Une garde à périmètre vide qui rend « ✅ » ne garde rien. Ici, un périmètre
@@ -68,7 +72,8 @@
  *     porte, que pnpm 9 exécute autour d'eux (veto de sécurité, tour 3). Au tour 4 : la valeur de
  *     `packageManager`, que `pnpm/action-setup` lit, est figée — les listes de crochets et de
  *     commandes intégrées ont été relevées sur cette version —, et un script qui porte le nom d'une
- *     commande intégrée de pnpm (hors `test`, que `pnpm test` lance réellement) est refusé.
+ *     commande intégrée de pnpm (hors `test`, que `pnpm test` lance réellement) est refusé — au
+ *     tour 5, un nom hérité d'`Object.prototype` compte pour une commande intégrée.
  *
  * ── CE QU'ELLE NE FAIT PAS, ET LE DIT ───────────────────────────────────────────────────────
  *
@@ -475,11 +480,11 @@ export const GESTIONNAIRE_RELEVE = 'pnpm@9.12.0';
  *   — `dist/pnpm.cjs`, `lib/cmd/index.js` : les `commandNames` des 49 commandes du tableau `commands`
  *     (alias compris), plus `help` et `completion-server`, posés à part sur `handlerByCommandName` —
  *     `parseCliArgs` ne se rabat sur `run` (`fallbackCommand`) que si `getCommandFullName` ne rend rien.
- * `pnpm <mot>` n'est compté comme le lancement du script `<mot>` que si `<mot>` n'est PAS ici ; un
- * script de `package.json` qui porte l'un de ces noms est refusé (`porte_a_alteree`), sauf `test`
- * (`SCRIPTS_LANCES_PAR_LEUR_COMMANDE_INTEGREE`).
+ * Ce relevé est CONFRONTÉ au pnpm installé, lu hors ligne, par la suite
+ * (`porte-a-presente-active-effective.spec.ts`, dette 1 du tour 5). Il ne sert que par
+ * `COMMANDES_INTEGREES_DE_PNPM`, qui lui ajoute les noms hérités d'`Object.prototype`.
  */
-export const COMMANDES_INTEGREES_DE_PNPM: ReadonlySet<string> = new Set([
+export const COMMANDES_RELEVEES_DE_PNPM: ReadonlySet<string> = new Set([
   // passées à npm (`passThruToNpm`)
   'access',
   'adduser',
@@ -590,6 +595,42 @@ export const COMMANDES_INTEGREES_DE_PNPM: ReadonlySet<string> = new Set([
   'help',
   'completion-server',
 ]);
+
+/**
+ * LES NOMS HÉRITÉS D'`Object.prototype` (veto de sécurité, tour 5, sur la PR 175). La table des
+ * commandes de pnpm 9.12.0 (`handlerByCommandName`) est un objet JS ORDINAIRE, et
+ * `getCommandFullName` la lit par `handlerByCommandName[mot] ? mot : null` : un mot qui nomme une
+ * propriété héritée y trouve une fonction, passe pour une commande, et `pnpm <mot>` ne lance jamais
+ * le script de ce nom (mesuré : sortie 0, ou 1 pour l'accesseur du prototype ; `pnpm run <mot>` lance
+ * bien le script). DÉRIVÉS à l'exécution, jamais relevés à la main : le moteur qui fait tourner la
+ * garde est celui qui fait tourner pnpm, et un nom qu'il ajouterait y entre de lui-même.
+ */
+export const NOMS_HERITES_D_OBJECT_PROTOTYPE: ReadonlySet<string> = new Set(
+  Object.getOwnPropertyNames(Object.prototype)
+);
+
+/**
+ * LES MOTS QUE `pnpm <mot>` N'ENVOIE JAMAIS AU SCRIPT DU MÊME NOM : le relevé
+ * (`COMMANDES_RELEVEES_DE_PNPM`) et les noms hérités (`NOMS_HERITES_D_OBJECT_PROTOTYPE`). `pnpm <mot>`
+ * n'est compté comme le lancement du script `<mot>` que si `<mot>` n'est PAS ici ET a la forme
+ * `FORME_D_UN_SCRIPT_LANCE_SANS_RUN` ; un script de `package.json` qui porte l'un de ces noms est
+ * refusé (`porte_a_alteree`), sauf `test` (`SCRIPTS_LANCES_PAR_LEUR_COMMANDE_INTEGREE`).
+ */
+export const COMMANDES_INTEGREES_DE_PNPM: ReadonlySet<string> = new Set([
+  ...COMMANDES_RELEVEES_DE_PNPM,
+  ...NOMS_HERITES_D_OBJECT_PROTOTYPE,
+]);
+
+/**
+ * LA SEULE FORME DE NOM QUE `pnpm <mot>` (sans `run`) EST CENSÉ LANCER COMME UN SCRIPT : ASCII en
+ * casse basse, une lettre d'abord, puis lettres, chiffres, `:`, `_`, `-`. Défense en profondeur, en
+ * échec fermé : une table de commandes lue par un objet ordinaire peut reconnaître des mots que
+ * personne n'a su nommer, et les noms hérités d'un objet JS portent presque tous une majuscule ou un
+ * soulignement de tête. La forme ne REMPLACE pas l'ensemble dérivé ci-dessus : elle s'y ajoute.
+ * Mesuré : tous les scripts de `package.json` la respectent. PRIX ASSUMÉ : un script d'une autre
+ * forme n'est compté que par `pnpm run <script>`.
+ */
+export const FORME_D_UN_SCRIPT_LANCE_SANS_RUN = /^[a-z][a-z0-9:_-]*$/;
 
 /**
  * LE SEUL SCRIPT QU'UNE COMMANDE INTÉGRÉE LANCE SOUS SON PROPRE NOM, ET RIEN D'AUTRE : `test`. Lu dans
@@ -745,7 +786,9 @@ function motLitteral(brut: string): string | null {
  *   — AUCUNE affectation en tête : `npm_config_script_shell=…`, `NODE_OPTIONS=…`, `PATH=…`
  *     configurent le LANCEUR lui-même, et une étape qui appelle une garde n'en a pas besoin (tour 4) ;
  *   — `pnpm run <script>` ; `pnpm <script>` seulement si `<script>` n'est PAS une commande intégrée
- *     de pnpm (`COMMANDES_INTEGREES_DE_PNPM` : `pnpm ls` exécute `list`, jamais le script `ls`) ;
+ *     de pnpm (`COMMANDES_INTEGREES_DE_PNPM` : `pnpm ls` exécute `list`, jamais le script `ls` ; un
+ *     nom hérité d'`Object.prototype` y passe pour une commande — tour 5) ET si `<script>` a la
+ *     forme ASCII basse `FORME_D_UN_SCRIPT_LANCE_SANS_RUN` ;
  *     `npx tsx <fichier>`, ou `tsx|node|bash|sh <fichier>` ;
  *   — puis des arguments LITTÉRAUX : mots nus, ou entre guillemets sans rien à expanser.
  * Un script de `package.json` n'appelle RIEN par son nom : ce qui compte est ce que sa VALEUR
@@ -775,7 +818,11 @@ function appelsDe(commande: string): Appels {
   const outil = mots[0];
   if (outil === 'pnpm') {
     const s = mots[1] === 'run' ? cible(2) : cible(1);
-    if (s !== undefined && (mots[1] === 'run' || !COMMANDES_INTEGREES_DE_PNPM.has(s))) {
+    if (
+      s !== undefined &&
+      (mots[1] === 'run' ||
+        (FORME_D_UN_SCRIPT_LANCE_SANS_RUN.test(s) && !COMMANDES_INTEGREES_DE_PNPM.has(s)))
+    ) {
       a.scripts.add(s);
     }
   } else if (
@@ -1160,11 +1207,15 @@ export async function confronterLaPorteA(vue: Vue): Promise<ConfrontationDeLaPor
     (n) => COMMANDES_INTEGREES_DE_PNPM.has(n) && !SCRIPTS_LANCES_PAR_LEUR_COMMANDE_INTEGREE.has(n)
   );
   for (const nom of masques) {
+    const commande = COMMANDES_RELEVEES_DE_PNPM.has(nom)
+      ? `d'une commande intégrée de ${figee.gestionnaire}`
+      : `hérité d'\`Object.prototype\`, que la table des commandes de ${figee.gestionnaire}, ` +
+        `objet JS ordinaire, prend pour une commande`;
     fautes.push({
       famille: 'porte_a_alteree',
       message:
-        `\`package.json\` — le script \`${nom}\` porte le nom d'une commande intégrée de ` +
-        `${figee.gestionnaire} : \`pnpm ${nom}\` exécute la commande, jamais le script, et rend ` +
+        `\`package.json\` — le script \`${nom}\` porte le nom ${commande} : ` +
+        `\`pnpm ${nom}\` exécute la commande, jamais le script, et rend ` +
         `son propre statut. Une étape qui croirait lancer ce script ne mesurerait rien : ` +
         `renommez-le.`,
     });
@@ -2486,6 +2537,27 @@ const TEMOINS: ReadonlyArray<{ famille: string; libelle: string; vue: Vue }> = [
         scripts: {
           ...(JSON.parse(PKG_CONFORME) as { scripts: Record<string, string> }).scripts,
           ls: 'tsx scripts/gates/gov-conventions.ts',
+        },
+      }),
+    }),
+  },
+  // TOUR 5 — un nom hérité d'`Object.prototype` passe pour une commande dans la table de pnpm.
+  {
+    famille: 'garde_ecrite_jamais_appelee',
+    libelle:
+      '`pnpm constructor` vers un script de ce nom qui lance la garde — nom hérité d’Object.prototype',
+    vue: variante({
+      workflows: [
+        {
+          chemin: '.github/workflows/ci.yml',
+          source: CI_CONFORME.replace('run: pnpm gov:conventions\n', 'run: pnpm constructor\n'),
+        },
+      ],
+      packageJson: JSON.stringify({
+        ...(JSON.parse(PKG_CONFORME) as { scripts: Record<string, string> }),
+        scripts: {
+          ...(JSON.parse(PKG_CONFORME) as { scripts: Record<string, string> }).scripts,
+          constructor: 'tsx scripts/gates/gov-conventions.ts',
         },
       }),
     }),
