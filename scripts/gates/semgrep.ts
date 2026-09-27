@@ -491,6 +491,13 @@ const FORMES_PRISMA_REFUSEES_PARTOUT: readonly {
     lignes: ["export import p = require('../db');"],
     fautive: 1,
   },
+  // La même liaison, que l'AST ne représente pas, écrite avec un nom et des blancs UNICODE (revue
+  // `securite` 5329281085, PR 82) : le bras textuel de la règle n° 1 doit la lire lui aussi.
+  {
+    nom: 'export-import-require-unicode',
+    lignes: [`export import${NBSP}pé${IDEO}= require${NBSP}('../db');`],
+    fautive: 1,
+  },
   {
     nom: 'echappement-barre-oblique-specifieur',
     lignes: [`import { PrismaClient } from '@prisma${AS}/client';`],
