@@ -665,6 +665,161 @@ describe('REQ-SEC-023 — la garde `securite:roles` confronte le disque à la ma
     ).toEqual([]);
   });
 
+  // ── la résolution d'un nom local : seules une `const` et une déclaration de fonction, jamais
+  //    réassignées, s'établissent ; Next sert la valeur de FIN de module, pas l'initialiseur.
+
+  it('REQ-SEC-023 : TÉMOIN À DEUX FACES — une liaison réassignée ne s’établit pas : faute nommée ; la `const` gardée passe', () => {
+    // route.ts : une liaison `let` gardée à l'initialiseur, réassignée à un import, exportée par alias.
+    expect(
+      familles([
+        route(
+          "import { handler } from './h';\n" +
+            `let traiter = async () => {\n${GARDE_ECRAN}\n  return 1;\n};\n` +
+            'traiter = handler;\nexport { traiter as GET };\n'
+        ),
+      ])
+    ).toEqual(['export_non_jugeable']);
+    // 'use server' : `export let` gardée à l'initialiseur, réassignée à un import.
+    expect(
+      familles([
+        serveur(
+          "import { impl } from './h';\n" +
+            `export let voirIban = async () => {\n${GARDE_ACTION}\n};\nvoirIban = impl;\n`
+        ),
+      ])
+    ).toEqual(['export_non_jugeable']);
+    // une chaîne `const a = b` dont un maillon est une liaison réassignée.
+    expect(
+      familles([
+        route(
+          "import { handler } from './h';\n" +
+            `let b = async () => {\n${GARDE_ECRAN}\n};\nb = handler;\nconst a = b;\nexport const GET = a;\n`
+        ),
+      ])
+    ).toEqual(['export_non_jugeable']);
+    // une déclaration de fonction réassignée n'est plus établie non plus.
+    expect(
+      familles([
+        route(
+          "import { handler } from './h';\n" +
+            `async function traiter() {\n${GARDE_ECRAN}\n}\ntraiter = handler;\nexport { traiter as GET };\n`
+        ),
+      ])
+    ).toEqual(['export_non_jugeable']);
+    // Contre-témoin : la même chaîne en `const`, jamais réassignée, gardée : elle passe.
+    expect(
+      familles([
+        route(
+          "import { handler } from './h';\n" +
+            `const b = async () => {\n${GARDE_ECRAN}\n};\nconst a = b;\nexport const GET = a;\nexport { b as POST };\n`
+        ),
+      ])
+    ).toEqual([]);
+  });
+
+  it('REQ-SEC-023 : TÉMOIN À DEUX FACES — un type homonyme d’un import n’efface pas la valeur exportée ; un `export type` réel reste un type', () => {
+    expect(
+      familles([route("import { GET } from './h';\ntype GET = never;\nexport { GET };\n")])
+    ).toEqual(['export_non_jugeable']);
+    expect(
+      familles([
+        route(
+          "import { handler } from './h';\ntype handler = never;\nexport { handler as GET };\n"
+        ),
+      ])
+    ).toEqual(['export_non_jugeable']);
+    expect(
+      familles([
+        serveur("import { impl } from './h';\ninterface impl {\n  a: 1;\n}\nexport { impl };\n"),
+      ])
+    ).toEqual(['export_non_jugeable']);
+    // Contre-témoins : un `export type { … }` explicite, même homonyme d'un import, reste un type ;
+    // un type seul, sans valeur homonyme, aussi.
+    expect(
+      familles([
+        route("import { GET } from './h';\ntype GET = never;\nexport type { GET };\n"),
+        serveur('type T = string;\nexport { type T };\nexport type { T as U };\n'),
+      ])
+    ).toEqual([]);
+  });
+
+  it('REQ-SEC-023 : TÉMOIN À DEUX FACES — un export par DÉSTRUCTURATION est un site PAR NOM LIÉ, jamais jugeable', () => {
+    const objet = jugerLaConsole(
+      [route("import { handlers } from './auth';\nexport const { GET, POST } = handlers;\n")],
+      MATRICE_TEMOIN,
+      ROLES_CONSOLE
+    );
+    expect(objet.fautes.map((f) => f.famille)).toEqual([
+      'export_non_jugeable',
+      'export_non_jugeable',
+    ]);
+    expect(objet.sites.join('\n')).toContain('« GET »');
+    expect(objet.sites.join('\n')).toContain('« POST »');
+    expect(familles([route("export const [GET] = [async () => new Response('x')];\n")])).toEqual([
+      'export_non_jugeable',
+    ]);
+    // imbriqué, avec défaut et reste : chaque nom lié qui est une méthode est un site.
+    expect(
+      familles([route('const o = {};\nexport const { a: { GET }, POST = f, ...PUT } = o;\n')])
+    ).toEqual(['export_non_jugeable', 'export_non_jugeable', 'export_non_jugeable']);
+  });
+
+  it('REQ-SEC-023 : un import-equals exporté (`export import X = …`) est un site non jugeable, en route.ts comme en « use server »', () => {
+    expect(
+      familles([route('import * as h from "./h";\nexport import GET = h.handler;\n')])
+    ).toEqual(['export_non_jugeable']);
+    expect(
+      familles([serveur('import * as h from "./h";\nexport import lever = h.handler;\n')])
+    ).toEqual(['export_non_jugeable']);
+  });
+
+  it('REQ-SEC-023 : TÉMOIN À DEUX FACES — une route, une page ou une action en JavaScript (`route.js`, `page.jsx`, `.mjs`) est lue et jugée', () => {
+    const js = (chemin: string, source: string) => ({ chemin, source }) satisfies FichierDeConsole;
+    const ROUTE_JS = 'src/app/(console)/console/export/route.js';
+    expect(familles([js(ROUTE_JS, 'export async function GET() {\n  return 1;\n}\n')])).toEqual([
+      'route_sans_requireRole',
+    ]);
+    expect(
+      familles([
+        js(
+          'src/app/(console)/console/tableau/page.jsx',
+          'export default function Page() {\n  return null;\n}\n'
+        ),
+      ])
+    ).toEqual(['route_sans_requireRole']);
+    expect(
+      familles([
+        js(
+          'src/server/console/actions.mjs',
+          "'use server';\nexport async function a() {\n  return 1;\n}\n"
+        ),
+      ])
+    ).toEqual(['action_sans_requireRole']);
+    expect(familles([js(ROUTE_JS, `export async function GET() {\n${GARDE_ECRAN}\n}\n`)])).toEqual(
+      []
+    );
+  });
+
+  it('REQ-SEC-023 : TÉMOIN À DEUX FACES — une MÉTHODE d’objet ou de classe qui porte « use server » est une action', () => {
+    expect(
+      familles([
+        {
+          chemin: 'src/server/console/aide.ts',
+          source:
+            "export const o = {\n  async lever() {\n    'use server';\n    return 1;\n  },\n};\n",
+        },
+      ])
+    ).toEqual(['action_sans_requireRole']);
+    expect(
+      familles([
+        {
+          chemin: 'src/server/console/aide.ts',
+          source: `export class C {\n  async lever() {\n    'use server';\n${GARDE_ACTION}\n  }\n}\n`,
+        },
+      ])
+    ).toEqual([]);
+  });
+
   it('REQ-SEC-023 : TÉMOIN À DEUX FACES — une page dont l’export par défaut ne se reconnaît pas est une faute, même si requireRole traîne ailleurs dans le fichier', () => {
     const chemin = 'src/app/(console)/console/tableau/page.tsx';
     expect(

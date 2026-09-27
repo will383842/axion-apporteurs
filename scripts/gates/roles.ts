@@ -613,6 +613,84 @@ const TEMOINS: { famille: Famille; quoi: string; fichiers: FichierDeConsole[] }[
     fichiers: [PAGE_BRUTE(`async function garde() {\n${GARDE_ECRAN}\n}`)],
   },
   {
+    famille: 'export_non_jugeable',
+    quoi: 'liaison réassignée : un `let` gardé à l’initialiseur, réassigné, exporté par alias d’un route.ts',
+    fichiers: [
+      ROUTE(
+        `import { handler } from './h';\nlet traiter = async () => {\n${GARDE_ECRAN}\n};\n` +
+          'traiter = handler;\nexport { traiter as GET };'
+      ),
+    ],
+  },
+  {
+    famille: 'export_non_jugeable',
+    quoi: 'liaison réassignée : un `export let` gardé à l’initialiseur, réassigné, d’un module « use server »',
+    fichiers: [
+      SERVEUR(
+        `import { impl } from './h';\nexport let voirIban = async () => {\n${GARDE_ACTION}\n};\n` +
+          'voirIban = impl;'
+      ),
+    ],
+  },
+  {
+    famille: 'export_non_jugeable',
+    quoi: 'liaison réassignée dans une chaîne `const a = b` d’un route.ts',
+    fichiers: [
+      ROUTE(
+        `import { handler } from './h';\nlet b = async () => {\n${GARDE_ECRAN}\n};\n` +
+          'b = handler;\nconst a = b;\nexport const GET = a;'
+      ),
+    ],
+  },
+  {
+    famille: 'export_non_jugeable',
+    quoi: 'type homonyme d’un import : `export { X }` d’un route.ts',
+    fichiers: [ROUTE("import { GET } from './h';\ntype GET = never;\nexport { GET };")],
+  },
+  {
+    famille: 'export_non_jugeable',
+    quoi: 'type homonyme d’un import : `export { x as GET }` d’un route.ts',
+    fichiers: [
+      ROUTE("import { handler } from './h';\ntype handler = never;\nexport { handler as GET };"),
+    ],
+  },
+  {
+    famille: 'export_non_jugeable',
+    quoi: 'déstructuration d’objet exportée d’un route.ts : un site par nom lié',
+    fichiers: [ROUTE("import { handlers } from './auth';\nexport const { GET, POST } = handlers;")],
+  },
+  {
+    famille: 'export_non_jugeable',
+    quoi: 'déstructuration de tableau exportée d’un route.ts',
+    fichiers: [ROUTE("export const [GET] = [async () => new Response('x')];")],
+  },
+  {
+    famille: 'export_non_jugeable',
+    quoi: 'import-equals exporté (`export import X = …`) d’un route.ts',
+    fichiers: [ROUTE("import * as h from './h';\nexport import GET = h.handler;")],
+  },
+  {
+    famille: 'route_sans_requireRole',
+    quoi: 'un route.js (JavaScript) sans requireRole',
+    fichiers: [
+      {
+        chemin: 'src/app/(console)/console/export/route.js',
+        source: 'export async function GET() {\n  return 1;\n}\n',
+      },
+    ],
+  },
+  {
+    famille: 'action_sans_requireRole',
+    quoi: 'une méthode d’objet qui porte « use server », sans requireRole',
+    fichiers: [
+      {
+        chemin: 'src/server/console/aide.ts',
+        source:
+          "export const o = {\n  async lever() {\n    'use server';\n    return 1;\n  },\n};\n",
+      },
+    ],
+  },
+  {
     famille: 'source_illisible',
     quoi: 'un fichier tronqué',
     fichiers: [ACTION('  await requireRole(')],
@@ -667,6 +745,32 @@ const CONTRE_TEMOINS: { quoi: string; fichiers: FichierDeConsole[] }[] = [
     fichiers: [
       SERVEUR('export type T = string;\ntype U = 1;\nexport type { U };'),
       ROUTE("export { aide } from './autre';"),
+    ],
+  },
+  {
+    quoi: 'une chaîne de `const` gardée, jamais réassignée, à côté d’un import',
+    fichiers: [
+      ROUTE(
+        `import { handler } from './h';\nconst b = async () => {\n${GARDE_ECRAN}\n};\n` +
+          'const a = b;\nexport const GET = a;\nexport { b as POST };'
+      ),
+    ],
+  },
+  {
+    quoi: 'un `export type { X }` explicite, homonyme d’un import : un type, pas une valeur',
+    fichiers: [ROUTE("import { GET } from './h';\ntype GET = never;\nexport type { GET };")],
+  },
+  {
+    quoi: 'un route.js gardé, une méthode de classe « use server » gardée',
+    fichiers: [
+      {
+        chemin: 'src/app/(console)/console/export/route.js',
+        source: `export async function GET() {\n${GARDE_ECRAN}\n}\n`,
+      },
+      {
+        chemin: 'src/server/console/aide.ts',
+        source: `export class C {\n  async lever() {\n    'use server';\n${GARDE_ACTION}\n  }\n}\n`,
+      },
     ],
   },
 ];
