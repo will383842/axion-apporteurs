@@ -8,14 +8,14 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `0a34b88` — 2026-09-27T03:08:19+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #82 (un contrôle requis rouge ou une revue manquante) · 2. #166 (un contrôle requis rouge ou une revue manquante) · 3. #158 (un conflit avec `main`) · 4. #165 (un conflit avec `main`) |
+| Qu’est-ce qui est en vol ? | 1. #82 (rien) · 2. #158 (rien) · 3. #165 (un contrôle requis rouge ou une revue manquante) · 4. #166 (un contrôle requis rouge ou une revue manquante) · 5. #168 (un contrôle requis rouge ou une revue manquante) |
 | Qui tient quoi ? | QA-T07 (A05) |
 | Où en est la phase ? | phase 0 — 43/116 tâches, reste 56.60 j |
-| Le prochain pas | SEC-04 — Sessions révocables en base, `sessionVersion`, step-up (chemin critique) |
+| Le prochain pas | fusionner #82, puis SEC-04 — Sessions révocables en base, `sessionVersion`, step-up (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 5 question(s) pour Will |
-| Dernière entrée de journal | PR #148 — 2026-09-26 |
+| Dernière entrée de journal | PR #168 — 2026-09-27 |
 
-**Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** `gh pr view 82 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : 0
 
@@ -64,10 +64,11 @@ Reste sur ce chemin : **13.75 j**.
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un contrôle requis rouge ou une revue manquante |
-| 2 | #166 — chore(GOV-012): registre rattrape, quatre taches livrees par des PR fusionnees passent fusionnee | `t/registre-rattrapage-3` | un contrôle requis rouge ou une revue manquante |
-| 3 | #158 — chore(GOV-053): lot L0-06 — PLAN-STATE à la ligne, rubriques dues, lecteur unique, forme des chemins | `t/lot-l0-06` | un conflit avec `main` — à résoudre avant tout |
-| 4 | #165 — feat(SEC-17): lot L0-07 — rôles console, matrice unique, requireRole ; gates structurelles de la charte | `t/lot-l0-07` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | rien — fusionnable maintenant |
+| 2 | #158 — chore(GOV-053): lot L0-06 — PLAN-STATE à la ligne, rubriques dues, lecteur unique, forme des chemins | `t/lot-l0-06` | rien — fusionnable maintenant |
+| 3 | #165 — feat(SEC-17): lot L0-07 — rôles console, matrice unique, requireRole ; gates structurelles de la charte | `t/lot-l0-07` | un contrôle requis rouge ou une revue manquante |
+| 4 | #166 — chore(GOV-012): registre rattrape, quatre taches livrees par des PR fusionnees passent fusionnee | `t/registre-rattrapage-3` | un contrôle requis rouge ou une revue manquante |
+| 5 | #168 — chore(GOV-045): lot L0-08 — refus nommés, clé double, schema/paths, attestation, occurrences | `t/lot-l0-08` | un contrôle requis rouge ou une revue manquante |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -83,11 +84,13 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 
 ## Décisions du jour
 
-Aucun ADR daté du 2026-09-27 (jour du dernier atterrissage).
+`docs/adr/0022-carte-du-schema-des-phases-0-et-1.md` — partners/ADR-0022 — La carte du schéma des phases 0 et 1 : une table, un créateur ; un type de journal par genre de transition
 
 Dérivé de `git log` sur `docs/adr/`, restreint au jour du dernier atterrissage. Une décision de Will n’est pas un ADR : elle vit au registre `docs/DECISIONS.md`, tranchée ou tenue par une hypothèse datée.
 
 ## Prochain pas
+
+**Fusionner #82** — elle est en tête de file et ne bloque sur rien.
 
 **SEC-04** — Sessions révocables en base, `sessionVersion`, step-up (1 j, **sur le chemin critique**) : 37 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
@@ -102,6 +105,33 @@ Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la
 ## Journal
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
+
+### PR #168 — 2026-09-27 — chore(GOV-045): lot L0-08 — refus nommés, clé double, schema/paths, attestation, occurrences
+
+**Fait.** GOV-045 porte la PR, et GOV-054, GOV-072, GOV-093, GOV-042 et GOV-074 sont dans son champ
+`Lot:`. Le cliquet des refus nomme désormais chaque sortie déclarée : portée, conditions, argument,
+figés dans `REFUS_NOMMES`, et une mutation retire les sorties une à une pour vérifier que chacune
+est tuée par son nom. Il compte aussi la sortie différée : les trois de `scripts/plan-state/build.ts`
+sont déclarées. `gov:requirements` lit le texte du registre et refuse une clé écrite deux fois, ou un
+registre illisible, en nommant la clé ou la position. `gov:tasks` confronte le champ `schema` aux
+`paths` et imprime la réciproque. L'attestation s'étend aux tâches de ce dépôt : `lot:cloture` la
+pose, et `--rattraper-attestations` lit le passé dans `origin/main`, avec un passif déclaré de huit
+tâches. Les exemptions de `gov:attributions` portent sur une occurrence, et la minuscule comme le
+trait d'union insécable sont vus.
+
+**Reste.** Deux écritures de registre réservées conditionnent la porte A : l'attestation des
+tâches déjà livrées dans `docs/tasks.json`, posée par le mode `--rattraper-attestations` de
+`scripts/lot/cloture.ts` et à relancer après toute fusion de `main`, et l'entrée de
+`scripts/gates/registre-des-refus.ts` dans `docs/gates.json`. Deux livrables relèvent de l'outillage
+hors dépôt : rendre le champ `schema` écrivable (GOV-093, livrable 5) et réparer l'écrivain du
+registre des exigences (GOV-072).
+
+**Appris.** Une exemption figée qui recopie l'identifiant d'une gate peut tomber sous
+`securite:rate-famille` : l'identifiant `partners:webhook:idempotent` porte un préfixe de famille de
+compteurs, et toute chaîne de `scripts/` qui le contient est refusée. La clé figée d'une chaîne de
+`docs/gates.json` porte donc le script jugé et le champ, jamais l'identifiant de la gate. De son
+côté, `pnpm vues:fusion` a laissé une fusion EN COURS (MERGE_HEAD présent) après avoir annoncé
+« fusion abandonnée, rien commité » quand le rendu de `docs/TASKS.md` refusait un backlog fautif.
 
 ### PR #148 — 2026-09-26 — feat(SEC-04): sessions revocables en base, sessionVersion tenue par la base, relevement
 
@@ -174,17 +204,7 @@ le HMAC sur le corps percent-décodé puis lisait le corps reçu : le verdict po
 vérifié, et c'est lui qui est lu. Le rejeu d'une livraison du relais n'est pas borné (le `ts` n'est
 pas signé) : sans effet tant que la suppression reste idempotente, dette nommée dans la fiche.
 
-### PR #141 — 2026-09-26 — chore(GOV-012): registre rattrape, huit taches livrees par des PR fusionnees passent fusionnee
-
-**Fait.** Huit tâches livrées par des PR fusionnées portaient encore `a_faire` : GOV-100 (PR 131), QA-T04, CPL-T22, QA-T30 et UX-P0-03 (PR 130, lot L0-03), SEC-03 (PR 134), INT-T11 (PR 136) et GOV-102 (PR 139). Elles passent `fusionnee` par `reclasser.mjs`, revendication constatée sur l'issue puis livraison constatée sur la forge, jamais à la main ; chaque couple a été confronté à la main au titre ou au champ `Lot:` de sa PR. Les trois tâches du lot sans issue en ont reçu une chacune (issues 142, 143 et 144), sur décision du donneur d'ordre. La phase 0 passe de 35 à 43 tâches terminées sur 115, et le prochain pas quitte SEC-03, déjà livrée, pour SEC-04.
-
-**Reste.** Les six tâches du lot de la PR 114 restent exclues (majuscule de `t/lot-L0-02`), et GOV-063 attend toujours GOV-061. QA-T30 porte la réserve écrite par la PR 130 : seuil de rupture à 79, et le blocage à 80 % sur les fichiers touchés n'existe pas. Le retard de fond reste l'objet de GOV-057.
-
-**Appris.** Une PR de lot peut avoir une tête `t/lot-...` et un champ `Lot:` vide : la PR 136 a composé trois tâches et n'en a livré qu'une, INT-T11, les deux autres rendues en `stop`. La tête de branche ne dit donc pas combien de tâches une PR livre ; seuls le titre et le champ `Lot:` le disent. Et une issue de lot ne peut revendiquer que la tâche qui ouvre son titre : le verbe ancre l'identifiant en tête et n'accepte qu'une tâche par issue, si bien qu'une tâche de lot sans issue propre ne passe pas `fusionnee` tant qu'on ne lui en ouvre pas une.
-
-Porte A : deux rouges sur la tête 79f50e2, verts sur `main` 4c1fa00, donc causés par cette PR, et d'une seule cause. Le témoin REQ-INT-026 « tâche repreneuse sans REQ-INT-027 » désignait INT-T11 et lisait son statut dans le registre réel : passée `fusionnee`, elle déclenchait d'abord la famille « est livrée », qui masquait celle que le cas garde. Le témoin REQ-QA-006 « démon absent », qui dérive ses comptes du disque, rougissait par ricochet : `adaptateur-mcp.spec.ts` est l'un des trois fichiers autonomes, et il échouait. Correctif : le statut de la repreneuse est posé dans la fixture (`a_faire`), la famille attendue reste la même ; le fichier de test est ajouté aux chemins de GOV-012 par `ajouter-path.mjs`. Mesuré en local : les 30 cas du fichier verts, le témoin REQ-QA-006 vert (6 dépendants en échec, 3 autonomes au vert), et le cas corrigé rougit encore quand on neutralise dans le harnais le contrôle de REQ-INT-027 (code 0 au lieu de 1). Un témoin qui nomme une tâche réelle pour son CONTENU dépend aussi de son STATUT, et un rattrapage du registre le décale.
-
-… 63 entrée(s) plus ancienne(s) dans `docs/journal/`.
+… 64 entrée(s) plus ancienne(s) dans `docs/journal/`.
 
 ## Dette déclarée
 
