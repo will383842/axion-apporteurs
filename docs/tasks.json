@@ -3165,7 +3165,8 @@
         "src/domain/apporteur/acces-espace.ts",
         "tests/integration/utilisateurs-console.spec.ts",
         "tests/unit/securite/lien-magique-indistinction.spec.ts",
-        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts"
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts",
+        "scripts/gates/registre-des-refus.ts"
       ],
       "schema": true,
       "sensible": [
