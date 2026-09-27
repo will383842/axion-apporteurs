@@ -812,9 +812,6 @@
       "$comment": "FERMÉ en schema_version 2 — la charge de `paiement.recu`, champ pour champ celle du producteur réel (REQ-INT-005, REQ-INT-006, REQ-INT-032, REQ-QA-007).",
       "additionalProperties": false,
       "properties": {
-        "amountHtCents": {
-          "type": "integer"
-        },
         "clientId": {
           "anyOf": [
             {
@@ -837,6 +834,9 @@
           "type": "integer"
         },
         "montantEncaisseTtcCents": {
+          "type": "integer"
+        },
+        "montantHtCents": {
           "type": "integer"
         },
         "origineClient": {
@@ -886,7 +886,7 @@
         "totalEncaisseTtcCents",
         "paidAt",
         "provider",
-        "amountHtCents",
+        "montantHtCents",
         "soldeLaFacture"
       ],
       "type": "object"

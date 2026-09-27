@@ -14,7 +14,7 @@
  * déclare un champ que la famille `coordonnees_du_contact` reconnaîtrait, et la garde qui la tient
  * n'est ni exemptée ni resserrée.
  *
- * Les charges viennent de la fixture du producteur réel d'axionia, copiée octet pour octet
+ * Les charges viennent de la fixture du producteur réel d'axionia, copiée à l'identique (même JSON)
  * (RM-03) ; les champs attendus sont LUS dans le texte de REQ-INT-032, jamais recopiés (RM-01).
  */
 

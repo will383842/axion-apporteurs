@@ -103,8 +103,9 @@ const lire = (chemin: string): string => readFileSync(chemin, 'utf8').replace(/\
 // ── les fixtures du producteur réel ──────────────────────────────────────────
 
 /**
- * La copie OCTET POUR OCTET de la fixture que le producteur réel d'axionia génère
- * (`scripts/partners/fixtures.ts`, fichier `src/server/partners/contrat/fixtures.v1.json`). Elle
+ * La copie À L'IDENTIQUE — même JSON, mise en forme par Prettier — de la fixture que le
+ * producteur réel d'axionia génère (`scripts/partners/fixtures.ts`, fichier
+ * `src/server/partners/contrat/fixtures.v1.json`). Elle
  * porte deux listes : les enveloppes des sept types émis en `schema_version` 1, et les charges des
  * quatre types que le producteur savait déjà construire sans pouvoir les émettre.
  */
@@ -119,8 +120,30 @@ const PRODUCTEUR = JSON.parse(
   readFileSync('tests/fixtures/axionia/fixtures-producteur.v1.json', 'utf8')
 ) as FixtureProducteur;
 
-/** Toutes les charges produites, des onze types. */
-const CHARGES_PRODUITES: Charge[] = [...PRODUCTEUR.evenements, ...PRODUCTEUR.horsContratV1];
+/**
+ * LE SEUL RENOMMAGE de la version 2, nommé ici et nulle part ailleurs : le HT encaissé d'un paiement
+ * reçu sortait, en version 1, sous un nom que `docs/GLOSSAIRE.md` §3 interdit, avec son terme
+ * canonique (`packages/contracts/payloads.ts`, en-tête). Le producteur le renomme en publiant la
+ * version 2 ; d'ici là, la copie v1 est lue à travers cette table — une clé renommée, sa valeur
+ * intacte. Un test assère que chaque renommage porte sur un champ que la copie produit vraiment.
+ */
+const RENOMMAGES_V2: readonly { type: string; avant: string; apres: string }[] = [
+  { type: 'paiement.recu', avant: 'amountHtCents', apres: 'montantHtCents' },
+];
+
+function enV2(charge: Charge): Charge {
+  const payload: Record<string, unknown> = {};
+  for (const [cle, valeur] of Object.entries(charge.payload)) {
+    const r = RENOMMAGES_V2.find((x) => x.type === charge.event_type && x.avant === cle);
+    payload[r ? r.apres : cle] = valeur;
+  }
+  return { ...charge, payload };
+}
+
+/** Toutes les charges produites, des onze types, lues en version 2. */
+const CHARGES_PRODUITES: Charge[] = [...PRODUCTEUR.evenements, ...PRODUCTEUR.horsContratV1].map(
+  enV2
+);
 
 /**
  * L'enveloppe d'une charge produite, telle qu'elle part en `schema_version` courante. Les champs
@@ -161,7 +184,7 @@ function valideur(): (donnee: unknown) => boolean {
 
 /** Une enveloppe conforme, prise dans la fixture du producteur — jamais tapée ici (RM-03). */
 function enveloppeDeReference(): Record<string, unknown> {
-  return aLEmission(PRODUCTEUR.evenements[0]!);
+  return aLEmission(CHARGES_PRODUITES[0]!);
 }
 
 type Valideur = ((donnee: unknown) => boolean) & { errors?: unknown[] | null };
@@ -288,8 +311,24 @@ describe("le contrat d'événements est fermé, dérivé, et son empreinte le ti
     ).toEqual([]);
   });
 
+  it('REQ-QA-007 — chaque renommage de la version 2 porte sur un champ que le producteur produit, et rien d’autre ne change', () => {
+    for (const r of RENOMMAGES_V2) {
+      const avant = [...PRODUCTEUR.evenements, ...PRODUCTEUR.horsContratV1].filter(
+        (c) => c.event_type === r.type
+      );
+      expect(avant.length, r.type).toBeGreaterThan(0);
+      for (const charge of avant) {
+        expect(Object.keys(charge.payload), r.type).toContain(r.avant);
+        const apres = enV2(charge).payload;
+        expect(Object.keys(apres)).not.toContain(r.avant);
+        expect(apres[r.apres]).toBe(charge.payload[r.avant]);
+        expect(Object.keys(apres)).toHaveLength(Object.keys(charge.payload).length);
+      }
+    }
+  });
+
   it("REQ-QA-007 — l'enveloppe à l'émission ne pose que `schema_version` et `emitted_at` : la charge produite n'est pas touchée", () => {
-    for (const charge of PRODUCTEUR.evenements) {
+    for (const charge of PRODUCTEUR.evenements.map(enV2)) {
       const emise = aLEmission(charge);
       const changes = Object.keys(emise).filter(
         (k) => JSON.stringify(emise[k]) !== JSON.stringify(charge[k])

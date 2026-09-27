@@ -4,8 +4,8 @@
  *
  * D'OÙ VIENNENT CES CHAMPS. Aucun n'est deviné : chacun est un champ que le producteur réel
  * d'axionia construit (`src/server/partners/payloads.ts` de ce dépôt-là) et que sa fixture générée
- * porte (`scripts/partners/fixtures.ts`, copiée octet pour octet sous
- * `tests/fixtures/axionia/fixtures-producteur.v1.json`). Le test de contrat confronte, clé pour clé
+ * porte (`scripts/partners/fixtures.ts`, copiée à l'identique — même JSON, mise en forme par
+ * Prettier — sous `tests/fixtures/axionia/fixtures-producteur.v1.json`). Le test de contrat confronte, clé pour clé
  * et dans les DEUX sens, chaque `$defs` à ces charges : un champ déclaré ici que le producteur ne
  * produit pas rougit, un champ produit que ce fichier ne déclare pas rougit aussi (RM-03). La
  * NULLABILITÉ, qu'une fixture ne peut pas montrer quand la valeur y est renseignée, est celle des
@@ -20,9 +20,15 @@
  * sont des chaînes : leur liste vit chez le producteur, et la recopier ici en ferait une seconde
  * source (RM-01).
  *
- * LA CASSE est celle du code de ce dépôt — camelCase, suffixes `…Cents` —, à une exception que le
- * producteur a choisie et qui est gardée telle quelle : `paidAt`, `amountHtCents`, `provider` du
- * paiement, noms des colonnes de son modèle `Payment`.
+ * LA CASSE est celle du code de ce dépôt — camelCase, suffixes `…Cents` —, à deux exceptions que le
+ * producteur a choisies et qui sont gardées telles quelles : `paidAt` et `provider` du paiement,
+ * noms des colonnes de son modèle `Payment`.
+ *
+ * UN SEUL CHAMP DIFFÈRE DU PRODUCTEUR DE LA VERSION 1, ET C'EST LE GLOSSAIRE QUI LE NOMME. Le HT
+ * encaissé d'un paiement reçu (REQ-DM-018) sortait sous le nom anglais que `docs/GLOSSAIRE.md` §3
+ * range parmi les synonymes interdits, avec son terme canonique : `montantHtCents`. Le contrat v2
+ * porte le terme canonique ; le producteur le renomme en publiant la version 2 (lockstep), et le
+ * test de contrat nomme ce seul renommage, sans quoi la confrontation à la fixture v1 mentirait.
  */
 
 import { MOTIF_INSTANT, type FragmentSchema } from './enveloppe';
@@ -163,7 +169,7 @@ export const CHARGES: { readonly [T in TypeEvenement]: FragmentSchema } = {
     totalEncaisseTtcCents: entier,
     paidAt: instant,
     provider: chaine,
-    amountHtCents: entier,
+    montantHtCents: entier,
     soldeLaFacture: booleen,
   }),
   'paiement.rembourse': ferme({
