@@ -587,10 +587,14 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
         'entre lui et sa base, et la base bouge.* GOV-038 y ajoute `pr_nu_hors_depot`.',
     },
     'scripts/gates/gov-requirements.ts': {
-      total: 3,
-      porte: 8,
+      total: 1,
+      porte: 9,
       temoins: 1,
-      raison: 'le refus de rendre a un témoin ; 2 non couverts.',
+      raison:
+        'le refus de rendre a un témoin ; 2 non couverts. GOV-072 — UNE sortie ajoutée dans ' +
+        '`sources()` : le registre lu par son TEXTE, clé écrite deux fois ou texte illisible, refusé ' +
+        'en nommant clé et positions. Son témoin d’EFFET à deux faces lance le binaire sur un bac ' +
+        'et sur le dépôt (une-cle-ecrite-deux-fois.spec.ts) ; il ne vit pas dans `REFUS`.',
     },
     'scripts/gates/schema-enums.ts': {
       total: 5,

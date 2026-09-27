@@ -322,6 +322,7 @@ export const REFUS_NOMMES: Readonly<Record<string, readonly string[]>> = {
   ],
   'scripts/gates/gov-requirements.ts': [
     'sources › si !existsSync(f) › (1)',
+    'sources › si refus.length > 0 › (1)',
     "module › si LANCE_EN_SCRIPT && (process.argv.includes('--render') || pr… › si fautes.length > 0 › (1)",
     "module › si LANCE_EN_SCRIPT && (process.argv.includes('--render') || pr… › si process.argv.includes('--verifie-rendu') › si !existsSync(CHEMIN_VUE) › (1)",
     "module › si LANCE_EN_SCRIPT && (process.argv.includes('--render') || pr… › si process.argv.includes('--verifie-rendu') › si surDisque !== normaliserFins(rendu) › (1)",
