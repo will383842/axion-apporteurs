@@ -20,11 +20,11 @@
 | Phase | Ce qu'elle est | Gates | Prouvées | Restent à prouver |
 | ----- | -------------- | ----: | -------: | ----------------: |
 | -1 | Socle de gouvernance | 40 | 27 | 13 |
-| 0 | Fondations, sécurité, charte | 42 | 27 | 15 |
-| 1 | Parcours, attribution, intégrations | 21 | 1 | 20 |
+| 0 | Fondations, sécurité, charte | 42 | 28 | 14 |
+| 1 | Parcours, attribution, intégrations | 21 | 2 | 19 |
 | 2 | Argent et versements | 11 | 0 | 11 |
 | 3 | Clôture et obligations annuelles | 3 | 0 | 3 |
-| **Total** | | **117** | **55** | **62** |
+| **Total** | | **117** | **57** | **60** |
 
 La phase d'une gate est celle **à la sortie de laquelle** elle doit exister, être bloquante et
 avoir rougi. Une gate sans phase entière n'entre dans le périmètre d'aucune sortie :
@@ -67,7 +67,7 @@ champ `preuveRouge` du registre, recopié verbatim par le rendu.
 | `gov:attributions` | GOV-037 | `scripts/gates/gov-attributions.ts` | — | pnpm gov:attributions:prove — les 4 retraits de dette FORCES : reinserees, gov:attributions sort en 1 sur dette_perimee (revue securite 5235809231, PR 48, 2026-09-17) |
 | `gov:attestation` | GOV-038 | `scripts/gates/gov-attestation.ts` | — | PR 33 (GOV-038) — sha 0000...0000 vu passer gov:tasks puis rejete en HTTP 422 par gov:attestation --en-ligne |
 
-### Phase 0 — armées (27)
+### Phase 0 — armées (28)
 
 | Gate | Tâche | Script | Alias | Preuve rouge |
 | ---- | ----- | ------ | ----- | ------------ |
@@ -86,6 +86,7 @@ champ `preuveRouge` du registre, recopié verbatim par le rendu.
 | `G-SEC-CI-BLOQUANTE` | QA-T01 | `tests/unit/ci/aucune-gate-en-continue-on-error.spec.ts` | — | le detecteur lit par un VRAI analyseur YAML chaque job et chaque etape de CHAQUE workflow de .github/workflows (liste derivee du disque, compte imprime, planchers > 0) et nomme l'etape qui PORTE la cle continue-on-error, a toute valeur : vu ROUGE sur une copie EN MEMOIRE de ci.yml ou l'etape « Tests » de gate-a porte continue-on-error: ${{ true }} (seule « Tests » nommee), sur l'etape du MILIEU de gate-a, derivee de son rang (n° 32 sur 63 le 2026-09-19, « La garde du registre d entite sait rougir »), et sur l'avant-derniere (Typecheck) dont la cle precede name, en mapping entre accolades et en cle citee (Format), et au niveau JOB dans nightly.yml (gates-prouvees) — que le temoin etroit de G-SEC-GATE-A-BLOQUANTE laisse passer ; les commentaires de ci.yml et nightly.yml qui citent le mot restent VERTS ; un workflow sans jobs, a jobs vides ou porteur d'une ancre fait LEVER, jamais rendre vide ; le ci.yml du depot rend une liste vide |
 | `harnais-mcp` | INT-T11 | `scripts/gates/harnais-mcp.ts` | — | tests/integration/adaptateur-mcp.spec.ts vue ROUGE avant le code (INT-T11, 2026-09-26) : Failed to load url ../../src/server/mcp/porte. Temoin a deux faces dans la meme spec : le harnais contre l'adaptateur prive de son secret, avec un secret faux, puis avec le limiteur place apres la serrure, rend un code non nul et ne rougit QUE le controle 8, nomme ; contre l'adaptateur du depot il rend 0 et le binaire pnpm harnais-mcp sort en 0 en imprimant n°1 a n°9. Rouge constate par: A05 |
 | `api-gouv-degrade` | INT-T09 | `tests/integration/api-gouv.spec.ts` | — | mutations (INT-T09, 2026-09-19), chacune vue rouge puis retiree : (1) la fixtureRouge — le mandataire leve sur un refus pour exces : « × REQ-INT-020 — 429 : saisie manuelle, pas une erreur ; Retry-After (secondes) tient le disjoncteur ouvert — Error: 500 : le tiers a refusé pour excès » ; (2) Retry-After ignore (pause fixe du disjoncteur) : meme test, « AssertionError: expected 'saisie_manuelle' to be 'autocompletion' » ; (3) compteur global court-circuite : « × REQ-QA-028 — six requêtes dans la même seconde : cinq partent, la sixième est refusée sans réseau — AssertionError: expected [ 'autocompletion', …(5) ] to deeply equal [ 'autocompletion', …(5) ] » |
+| `email-emetteur` | INT-T10 | `tests/unit/email/emetteur.spec.ts` | — | npx vitest run tests/unit/email/emetteur.spec.ts sous deux mutants, lot L0-05 (INT-T10), 2026-09-26 : le refus des adresses sans reponse retire -> 4 echecs expediteur_sans_reponse (expected function to throw an error, but it didn't) ; la branche du drapeau DMARC neutralisee -> 2 echecs (face ROUGE drapeau faux, drapeau absent), Tests 2 failed \| 21 passed ; code restaure, 23/23 |
 | `jur:aucun-agregat-reseau` | JUR-T26 | `scripts/gates/jur-aucun-agregat-reseau.ts` | — | pnpm jur:aucun-agregat-reseau:prove — 3 familles sur 4 témoins, 2 contre-témoins verts. Binaire (2026-09-27) : src/app/(espace)/bac/temoin.tsx indexé portant moyenneReseau -> EXIT=1, « [agregat_reseau] … la clé « moyenneReseau » porte un agrégat (moyenne) » ; dépôt intact -> EXIT=0, 5 fichiers, 19 clés. charte-relationnelle.spec.ts vu ROUGE : Failed to load url ../../../scripts/gates/jur-aucun-agregat-reseau. Rouge constaté par: A05 |
 | `jur:aucune-progression` | JUR-T26 | `scripts/gates/jur-aucune-progression.ts` | — | pnpm jur:aucune-progression:prove — 3 familles sur 5 témoins, 2 contre-témoins verts. Binaire (2026-09-27) : temoin.tsx indexé portant ProgressToNextTier -> EXIT=1, « [nom_de_progression] … « ProgressToNextTier » nomme une progression (progress) » ; dépôt intact -> EXIT=0, 5 fichiers, 256 noms. Rouge constaté par: A05 |
 | `jur:revue-apporteur-facing` | JUR-T26 | `scripts/gates/jur-revue-apporteur-facing.ts` | — | pnpm jur:revue-apporteur-facing:prove — 6 familles chacune sur son témoin, 2 contre-témoins verts. Dépôt (2026-09-27), sans événement : EXIT=0, CODEOWNERS couvre les 7 motifs, 12 motifs lus ; charte-relationnelle.spec.ts : CODEOWNERS privé des lignes A07 -> codeowners_incomplet. Rouge constaté par: A05 |
@@ -99,15 +100,16 @@ champ `preuveRouge` du registre, recopié verbatim par le rendu.
 | `red-first` | CPL-T22 | `scripts/gates/red-first.ts` | — | pnpm red-first:prove — 3 familles rougissent chacune sur son temoin (test_deja_vert_sur_main, no_red_first_sans_justification, non_execute_sur_main), 1 contre-temoin vert ; binaire sur un depot git jetable (tests/unit/qualite/red-first.spec.ts) : une branche qui ajoute un test deja vert contre main -> exit 1 nommant tests/somme.spec.ts, une branche dont le test nouveau rougit contre main -> exit 0 et l'arbre de la base retire. Sur la PR du lot L0-03 elle-meme, la garde a d'abord rougi sur sa propre spec (marqueur cite en prose pris pour une directive nue) : la directive ouvre desormais une ligne de commentaire. Spec vue ROUGE avant la garde : Failed to load url ../../../scripts/gates/red-first. Rouge constate par: A05 |
 | `jur:lexique-social` | JUR-T26 | `scripts/gates/jur-lexique-social.ts` | — | pnpm jur:lexique-social:prove — 2 familles sur 3 témoins (dont un terme NIÉ), 2 contre-témoins verts. Binaire (2026-09-27) : src/server/pdf/temoin.tsx « Bulletin de commission » -> EXIT=1, « [terme_social] … « Bulletin » : un terme du droit social » ; dépôt intact -> EXIT=0, 8 fichiers. Rouge constaté par: A05 |
 
-### Phase 1 — armées (1)
+### Phase 1 — armées (2)
 
 | Gate | Tâche | Script | Alias | Preuve rouge |
 | ---- | ----- | ------ | ----- | ------------ |
 | `ux:exhaustivite` | UX-P0-01 | `scripts/gates/ux-exhaustivite.ts` | `GATE-UX-EXHAUSTIVITE` | pnpm ux:exhaustivite:prove — 17 familles rougissent chacune sur son temoin en nommant sa cible (valeur, ecran, chemin de texte ou fichier:ligne), 2 contre-temoins restent verts dont un composant qui lit la micro-copie, et la vue du depot lit ses six sources injectees, fichiers suivis et composants compris, et texte_calcule rougit sur ses trois branches (vu le 2026-09-25) |
+| `G-SEC-WEBHOOK` | SEC-06 | `tests/unit/securite/webhook-signature.spec.ts` | — | npx vitest run tests/unit/securite/webhook-signature.spec.ts sous le mutant de la fixtureRouge, lot L0-05 (SEC-06), 2026-09-26 : la signature egale au secret en clair acceptee -> 1 echec, REQ-SEC-010 un en-tete absent est refuse, sans repli en clair (AssertionError: expected true to be false), Tests 1 failed \| 24 passed ; code restaure, 25/25 |
 
 ## 3. Ce qui reste à prouver
 
-Aucune de ces **62** entrées ne porte de `preuveRouge` : personne ne les a vues rougir.
+Aucune de ces **60** entrées ne porte de `preuveRouge` : personne ne les a vues rougir.
 Le périmètre d'un appel est celui de SA phase : `pnpm gates:prouvees --phase -1` ne juge que les
 gates de phase -1, `--phase 0` y ajoute celles de phase 0, et ainsi de suite. Le compte des manques
 n'est pas recopié ici : il se lit dans la sortie de la commande, famille par famille, et il change à
@@ -139,7 +141,7 @@ sortie de la commande, elle, fait foi.
 | `fixtures:source` | INT-T01a | `scripts/gates/fixtures-source.ts` | — |
 | `gov:plan-state` | GOV-008 | `tests/unit/gouvernance/plan-state-frais.spec.ts` | — |
 
-### Phase 0 — fondations, sécurité, charte (15)
+### Phase 0 — fondations, sécurité, charte (14)
 
 | Gate | Tâche | Script | Alias |
 | ---- | ----- | ------ | ----- |
@@ -150,7 +152,6 @@ sortie de la commande, elle, fait foi.
 | `G-SEC-AST-PRISMA` | QA-T07 | `scripts/gates/ast-prisma.ts` | — |
 | `cliquet-ecrivains` | INT-T03 | `axionia/scripts/gates/cliquet-ecrivains.ts` | — |
 | `inertie` | INT-T02 | `axionia/scripts/gates/inertie.ts` | — |
-| `email-emetteur` | INT-T10 | `tests/unit/email/emetteur.spec.ts` | — |
 | `jur:copy-indicative` | JUR-T29 | `axionia/scripts/gates/jur-copy-indicative.ts` | — |
 | `GATE-JUR-VOCAB-PUBLIC` | JUR-T03 | `axionia/scripts/gates/vocab-public.ts` | — |
 | `perf:bundle` | QA-T20 | `scripts/gates/bundle-par-route.ts` | `GATE-UX-BUNDLE` |
@@ -159,7 +160,7 @@ sortie de la commande, elle, fait foi.
 | `gate-c` | QA-T05 | `scripts/gates/gate-c.sh` | — |
 | `gate-d` | QA-T11 | `scripts/gates/gate-d.sh` | — |
 
-### Phase 1 — parcours, attribution, intégrations (20)
+### Phase 1 — parcours, attribution, intégrations (19)
 
 | Gate | Tâche | Script | Alias |
 | ---- | ----- | ------ | ----- |
@@ -169,7 +170,6 @@ sortie de la commande, elle, fait foi.
 | `partners:webhook:idempotent` | SEC-06 | `tests/integration/webhook.spec.ts` | `GATE-ARG-idempotence` |
 | `partners:grille:complete` | UX-P1-14 | `scripts/gates/grille-complete.ts` | — |
 | `G-SEC-CONCURRENCE` | SEC-12 | `tests/integration/concurrence.spec.ts` | — |
-| `G-SEC-WEBHOOK` | SEC-06 | `tests/unit/securite/webhook-signature.spec.ts` | — |
 | `G-SEC-ORACLE` | SEC-16 | `tests/security/oracle.spec.ts` | `GATE-JUR-VERIFIER-BINAIRE` |
 | `G-SEC-NOTIF` | INT-T14 | `tests/unit/integration/notif-sans-pii.spec.ts` | — |
 | `docuseal-strict` | INT-T12 | `tests/integration/docuseal.spec.ts` | — |
