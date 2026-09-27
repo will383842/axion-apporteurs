@@ -881,6 +881,8 @@ const ROUTE = (source: string): FichierDeConsole => ({
   chemin: 'src/app/(console)/console/export/route.ts',
   source: `${IMPORT_PORTE}\n${source}\n`,
 });
+/** Un nom calculé qui pose `GET` sur le `this` de la portée où il s'évalue. */
+const FUITE_PAR_THIS = "(this.GET = async () => new Response('x'), 'm')";
 const PAGE = (corps: string): FichierDeConsole => ({
   chemin: 'src/app/(console)/console/tableau/page.tsx',
   source: `${IMPORT_PORTE}\nexport default async function Page() {\n${corps}\n  return null;\n}\n`,
@@ -1138,6 +1140,72 @@ const TEMOINS: { famille: Famille; quoi: string; fichiers: FichierDeConsole[] }[
     fichiers: [ROUTE("exports['POST'] = async () => new Response('x');")],
   },
   {
+    famille: 'export_non_jugeable',
+    quoi: '`this` dans le nom calculé d’une méthode de classe (portée du module) d’un route.js',
+    fichiers: [
+      {
+        chemin: 'src/app/(console)/console/w7/route.js',
+        source: `class C {\n  [${FUITE_PAR_THIS}]() {}\n}\n`,
+      },
+    ],
+  },
+  {
+    famille: 'export_non_jugeable',
+    quoi: '`this` dans le nom calculé d’un accesseur `get` d’un route.ts',
+    fichiers: [ROUTE(`class C {\n  get [${FUITE_PAR_THIS}]() {\n    return 1;\n  }\n}`)],
+  },
+  {
+    famille: 'export_non_jugeable',
+    quoi: '`this` dans le nom calculé d’un accesseur `set` d’un route.ts',
+    fichiers: [ROUTE(`class C {\n  set [${FUITE_PAR_THIS}](v) {}\n}`)],
+  },
+  {
+    famille: 'export_non_jugeable',
+    quoi: '`this` dans le nom calculé d’une propriété statique d’un route.ts',
+    fichiers: [ROUTE(`class C {\n  static [${FUITE_PAR_THIS}] = 1;\n}`)],
+  },
+  {
+    famille: 'export_non_jugeable',
+    quoi: '`this` dans le nom calculé d’une méthode de littéral d’objet d’un route.ts',
+    fichiers: [ROUTE(`const o = {\n  [${FUITE_PAR_THIS}]() {},\n};`)],
+  },
+  {
+    famille: 'export_non_jugeable',
+    quoi: '`this` dans un décorateur de classe d’un route.ts',
+    fichiers: [ROUTE("@((this.GET = async () => new Response('x'), (c) => c))\nclass C {}")],
+  },
+  {
+    famille: 'export_non_jugeable',
+    quoi: '`this` dans un décorateur de méthode d’un route.ts',
+    fichiers: [
+      ROUTE("class C {\n  @((this.GET = async () => new Response('x'), (m) => m))\n  m() {}\n}"),
+    ],
+  },
+  {
+    famille: 'export_non_jugeable',
+    quoi: '`this` dans la clause `extends` d’un route.ts',
+    fichiers: [ROUTE("class C extends (this.GET = async () => new Response('x'), Object) {}")],
+  },
+  {
+    famille: 'export_non_jugeable',
+    quoi: '`arguments` dans le nom calculé d’une méthode de classe d’un route.ts',
+    fichiers: [
+      ROUTE("class C {\n  [(arguments[0].GET = async () => new Response('x'), 'm')]() {}\n}"),
+    ],
+  },
+  {
+    famille: 'route_sans_requireRole',
+    quoi: 'un import de la porte dont le chemin remonte au-delà de la racine du dépôt',
+    fichiers: [
+      {
+        chemin: 'src/app/(console)/console/export/route.ts',
+        source:
+          "import { requireRole } from '../../../../../../src/server/roles/require-role';\n" +
+          `export async function GET() {\n${GARDE_ECRAN}\n}\n`,
+      },
+    ],
+  },
+  {
     famille: 'route_sans_requireRole',
     quoi: 'un `requireRole` homonyme défini dans le fichier : il ne garde pas',
     fichiers: [
@@ -1251,6 +1319,20 @@ const CONTRE_TEMOINS: { quoi: string; fichiers: FichierDeConsole[] }[] = [
           "import { requireRole } from '../roles/require-role';\n" +
           `export class C {\n  async lever() {\n    'use server';\n${GARDE_ACTION}\n  }\n}\n`,
       },
+    ],
+  },
+  {
+    quoi:
+      '`this` dans une région qui le lie : corps de méthode, de constructeur, d’accesseur, ' +
+      'paramètres, bloc `static`, initialiseur non calculé, nom calculé sous une fonction',
+    fichiers: [
+      ROUTE(
+        'class C {\n  x = this;\n  static y = this;\n  static {\n    this.z = 1;\n  }\n' +
+          '  constructor() {\n    this.a = 1;\n  }\n  m(a = this) {\n    return [a, this, arguments];\n  }\n' +
+          '  get g() {\n    return this;\n  }\n}\n' +
+          'function f() {\n  return class {\n    [this.k]() {}\n  };\n}\n' +
+          `export async function GET() {\n${GARDE_ECRAN}\n}`
+      ),
     ],
   },
   {

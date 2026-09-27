@@ -1068,6 +1068,66 @@ describe('REQ-SEC-023 — la garde `securite:roles` confronte le disque à la ma
     ).toEqual([]);
   });
 
+  // ── 6e tour : `this` et `arguments` ne sont liés que par une RÉGION qui les lie — le corps ou
+  //    les paramètres d'une fonction non fléchée, l'initialiseur d'une propriété de classe, un
+  //    bloc `static {}`. Un nom calculé de membre, un décorateur, une clause `extends` sont
+  //    évalués dans la portée englobante : au premier niveau, c'est l'objet des exports.
+
+  it('REQ-SEC-023 : TÉMOIN À DEUX FACES — `this` ou `arguments` évalués dans la portée du module (nom calculé, décorateur, `extends`) sont une faute nommée ; `this` dans une région qui le lie passe', () => {
+    const REPONSE = "async () => new Response('x')";
+    const fuite = `(this.GET = ${REPONSE}, 'm')`;
+    const formes: FichierDeConsole[] = [
+      routeBrute(`class C {\n  [${fuite}]() {}\n}\n`, 'src/app/(console)/console/w7/route.js'),
+      routeBrute(`class C {\n  get [${fuite}]() {\n    return 1;\n  }\n}\n`),
+      routeBrute(`class C {\n  set [${fuite}](v) {}\n}\n`),
+      routeBrute(`class C {\n  static [${fuite}] = 1;\n}\n`),
+      routeBrute(`const o = {\n  [${fuite}]() {},\n};\n`),
+      routeBrute(`@((this.GET = ${REPONSE}, (c) => c))\nclass C {}\n`),
+      routeBrute(`class C {\n  @((this.GET = ${REPONSE}, (m) => m))\n  m() {}\n}\n`),
+      routeBrute(`class C extends (this.GET = ${REPONSE}, Object) {}\n`),
+      routeBrute(`class C {\n  [(arguments[0].GET = ${REPONSE}, 'm')]() {}\n}\n`),
+    ];
+    for (const f of formes) {
+      const r = jugerLaConsole([f], MATRICE_TEMOIN, ROLES_CONSOLE);
+      expect(
+        r.fautes.map((x) => x.famille),
+        f.source
+      ).toContain('export_non_jugeable');
+      expect(r.fautes.map((x) => x.message).join('\n'), f.source).toMatch(/module CommonJS/);
+      expect(rendreLeVerdict(r, 2, 4).code, f.source).toBe(1);
+    }
+    // La faute nomme le nom et sa ligne.
+    const nomme = jugerLaConsole(
+      [routeBrute(`class C {\n  [${fuite}]() {}\n}\n`)],
+      MATRICE_TEMOIN,
+      ROLES_CONSOLE
+    );
+    expect(nomme.fautes[0]!.message).toContain('« this » hors d’une fonction ligne 2');
+    // Contre-témoins : `this` dans le corps d'une méthode, d'un constructeur, d'un accesseur,
+    // dans un bloc `static`, dans un initialiseur de propriété non calculé, dans les paramètres
+    // d'une méthode ; un nom calculé dans une fonction hérite de SA liaison.
+    const lie =
+      'class C {\n  x = this;\n  static y = this;\n  static {\n    this.z = 1;\n  }\n' +
+      '  constructor() {\n    this.a = 1;\n  }\n  m(a = this) {\n    return [a, this, arguments];\n  }\n' +
+      '  get g() {\n    return this;\n  }\n}\n' +
+      'function f() {\n  return class {\n    [this.k]() {}\n  };\n}\n';
+    expect(familles([route(`${lie}export async function GET() {\n${GARDE_ECRAN}\n}\n`)])).toEqual(
+      []
+    );
+  });
+
+  it('REQ-SEC-023 : un import de la porte dont le chemin remonte AU-DELÀ de la racine du dépôt n’est pas la porte', () => {
+    const GET = `export async function GET() {\n${GARDE_ECRAN}\n}\n`;
+    expect(
+      familles([
+        routeBrute(
+          "import { requireRole } from '../../../../../../src/server/roles/require-role';\n" + GET
+        ),
+      ])
+    ).toEqual(['route_sans_requireRole']);
+    expect(familles([route(GET)])).toEqual([]);
+  });
+
   it('REQ-SEC-023 : les couples sont confrontés RÔLE PAR RÔLE à la ligne de la matrice — ouverts et fermés comptés', () => {
     const r = jugerLaConsole(
       [page(GARDE_ECRAN), action(GARDE_ACTION)],
