@@ -1081,11 +1081,11 @@ const ROLES_TEMOIN = ['admin', 'qualifieur', 'comptable', 'lecteur'];
 /** L'import de la porte depuis un fichier de `src/app/(console)/console/<x>/`. */
 const IMPORT_PORTE = "import { requireRole } from '../../../../server/roles/require-role';";
 const ACTION = (corps: string): FichierDeConsole => ({
-  chemin: 'src/app/(console)/console/gel/actions.ts',
+  chemin: 'src/app/(console)/console/_gel/actions.ts',
   source: `'use server';\n${IMPORT_PORTE}\nexport async function leverLeGel() {\n${corps}\n}\n`,
 });
 const SERVEUR = (source: string): FichierDeConsole => ({
-  chemin: 'src/app/(console)/console/gel/actions.ts',
+  chemin: 'src/app/(console)/console/_gel/actions.ts',
   source: `'use server';\n${IMPORT_PORTE}\n${source}\n`,
 });
 const ROUTE = (source: string): FichierDeConsole => ({
@@ -1485,6 +1485,32 @@ const TEMOINS: {
       ),
     ],
   },
+  // ── la liste blanche des FICHIERS : Next sert les fichiers de métadonnées de tout segment ────
+  ...['icon.tsx', 'opengraph-image.tsx', 'sitemap.ts', 'apple-icon.tsx', 'utils.ts'].map((nom) => ({
+    famille: 'export_non_jugeable' as const,
+    quoi: `un ${nom} sous le routage de la console, export par défaut qui lit une donnée protégée`,
+    motif: 'fichier non admis sous le routage de la console : Next peut le servir',
+    fichiers: [
+      {
+        chemin: `src/app/(console)/console/fiches/[id]/${nom}`,
+        source:
+          "import { lireFiche } from '../../../../../server/console/fiches';\n" +
+          'export default async function F({ params }) {\n' +
+          '  return new Response(JSON.stringify(await lireFiche(params.id)));\n}\n',
+      },
+    ],
+  })),
+  {
+    famille: 'export_non_jugeable',
+    quoi: '`generateMetadata` dans une page gardée de la console, qui lit une donnée protégée',
+    motif: '« generateMetadata »',
+    fichiers: [
+      PAGE_BRUTE(
+        `export default async function Page() {\n${GARDE_ECRAN}\n  return null;\n}\n` +
+          "export async function generateMetadata() {\n  return { title: String(await lireFiche('x')) };\n}"
+      ),
+    ],
+  },
   {
     famille: 'source_illisible',
     quoi: 'un fichier tronqué',
@@ -1625,6 +1651,30 @@ const CONTRE_TEMOINS: { quoi: string; fichiers: FichierDeConsole[] }[] = [
           "import * as roles from '../../../../server/roles/require-role.ts';\n" +
           "export async function GET() {\n  await roles.requireRole('ecran:tableau', j, p);\n}\n",
       },
+    ],
+  },
+  {
+    quoi: 'un fichier utilitaire sous un dossier privé de Next (`_prive/`) de la console',
+    fichiers: [
+      {
+        chemin: 'src/app/(console)/console/fiches/_prive/format.ts',
+        source:
+          'export function formater(x) {\n  return x;\n}\n' +
+          'export default function F() {\n  return null;\n}\n',
+      },
+    ],
+  },
+  {
+    quoi:
+      'les huit noms de fichier admis sous le routage de la console : page et route gardées, ' +
+      'layout, template, default, loading, error, not-found',
+    fichiers: [
+      PAGE(GARDE_ECRAN),
+      ROUTE(`export async function GET() {\n${GARDE_ECRAN}\n}`),
+      ...['layout', 'template', 'default', 'loading', 'error', 'not-found'].map((nom) => ({
+        chemin: `src/app/(console)/console/tableau/${nom}.tsx`,
+        source: 'export default function Composant() {\n  return null;\n}\n',
+      })),
     ],
   },
 ];

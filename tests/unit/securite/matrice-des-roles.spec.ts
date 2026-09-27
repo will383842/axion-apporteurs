@@ -411,9 +411,13 @@ const MATRICE_TEMOIN = {
  */
 const IMPORT_DE_LA_PORTE = "import { requireRole } from '../../../../server/roles/require-role';\n";
 
+/**
+ * Un module d'actions sous le routage de la console vit dans un dossier PRIVÉ de Next (`_gel`) :
+ * hors des huit noms de fichier que la garde sait juger, seul un dossier privé est admis (9e tour).
+ */
 const action = (corps: string) =>
   ({
-    chemin: 'src/app/(console)/console/gel/actions.ts',
+    chemin: 'src/app/(console)/console/_gel/actions.ts',
     source: `'use server';\n${IMPORT_DE_LA_PORTE}export async function leverLeGel(id: string) {\n${corps}\n}\n`,
   }) satisfies FichierDeConsole;
 
@@ -534,7 +538,7 @@ describe('REQ-SEC-023 — la garde `securite:roles` confronte le disque à la ma
 
   const serveur = (source: string) =>
     ({
-      chemin: 'src/app/(console)/console/gel/actions.ts',
+      chemin: 'src/app/(console)/console/_gel/actions.ts',
       source: `'use server';\n${IMPORT_DE_LA_PORTE}${source}`,
     }) satisfies FichierDeConsole;
   const route = (source: string) =>
@@ -922,6 +926,124 @@ describe('REQ-SEC-023 — la garde `securite:roles` confronte le disque à la ma
           chemin: 'src/app/(console)/console/error.tsx',
           source: "'use client';\nexport default function Erreur() {\n  return null;\n}\n",
         },
+      ])
+    ).toEqual([]);
+  });
+
+  // ── 9e tour : Next sert comme route, dans N'IMPORTE QUEL segment, les fichiers de métadonnées
+  //    (`icon`, `apple-icon`, `opengraph-image`, `twitter-image`, `sitemap`, et à la racine
+  //    `robots`, `manifest`) : leur export par défaut devient un GET servi, que la garde ne
+  //    voyait pas comme un site. La liste blanche passe au niveau du FICHIER.
+
+  const MOTIF_FICHIER = 'fichier non admis sous le routage de la console : Next peut le servir';
+  const FUITE =
+    "import { lireFiche } from '../../../../../server/console/fiches';\n" +
+    'export default async function Image({ params }: { params: { id: string } }) {\n' +
+    '  return new Response(JSON.stringify(await lireFiche(params.id)));\n}\n';
+
+  it('REQ-SEC-023 : TÉMOIN À DEUX FACES — sous le routage de la console, seuls les huit noms de fichier que la garde sait juger sont admis ; tout autre fichier de code hors d’un dossier privé est une faute nommée', () => {
+    const sous = (nom: string, source = FUITE) =>
+      ({
+        chemin: `src/app/(console)/console/fiches/[id]/${nom}`,
+        source,
+      }) satisfies FichierDeConsole;
+    const rouges: FichierDeConsole[] = [
+      sous('icon.tsx'),
+      sous('apple-icon.tsx'),
+      sous('opengraph-image.tsx'),
+      sous('twitter-image.tsx'),
+      sous(
+        'sitemap.ts',
+        'export default async function sitemap() {\n  return [{ url: String(await lireTout()) }];\n}\n'
+      ),
+      sous('utils.ts', 'export function formater(x: string) {\n  return x;\n}\n'),
+      sous('(onglet)/icon.tsx'),
+      {
+        chemin: 'src/app/(console)/robots.ts',
+        source: 'export default function robots() {\n  return { rules: [] };\n}\n',
+      },
+    ];
+    for (const f of rouges) {
+      const r = jugerLaConsole([f], MATRICE_TEMOIN, ROLES_CONSOLE);
+      expect(
+        r.fautes.map((x) => x.famille),
+        f.chemin
+      ).toEqual(['export_non_jugeable']);
+      expect(r.fautes[0]!.message, f.chemin).toContain(MOTIF_FICHIER);
+      expect(r.fautes[0]!.message, f.chemin).toContain(f.chemin);
+      expect(rendreLeVerdict(r, 2, 4).code, f.chemin).toBe(1);
+    }
+    // Contre-témoins : un fichier sous un dossier privé de Next (`_prive`), et les huit noms admis.
+    const DOSSIER = 'src/app/(console)/console/fiches';
+    const composant = (nom: string) =>
+      ({
+        chemin: `${DOSSIER}/${nom}.tsx`,
+        source: 'export default function Composant() {\n  return null;\n}\n',
+      }) satisfies FichierDeConsole;
+    expect(
+      familles([
+        { chemin: `${DOSSIER}/_prive/format.ts`, source: FUITE },
+        { chemin: `${DOSSIER}/page.tsx`, source: page(GARDE_ECRAN).source },
+        {
+          chemin: `${DOSSIER}/route.ts`,
+          source: `${IMPORT_DE_LA_PORTE}export async function GET() {\n${GARDE_ECRAN}\n}\n`,
+        },
+        ...['layout', 'template', 'default', 'loading', 'error', 'not-found'].map(composant),
+      ])
+    ).toEqual([]);
+  });
+
+  it('REQ-SEC-023 : TÉMOIN À DEUX FACES — `generateMetadata` et les autres générateurs de Next sont refusés sous le routage de la console ; le `metadata` statique passe', () => {
+    const GENERE = "async () => ({ title: String(await lireFiche('x')) })";
+    const avec = (chemin: string, source: string) =>
+      ({ chemin, source }) satisfies FichierDeConsole;
+    const PAGE = 'src/app/(console)/console/tableau/page.tsx';
+    const rouges: [string, FichierDeConsole][] = [
+      [
+        'generateMetadata',
+        avec(
+          PAGE,
+          `${page(GARDE_ECRAN).source}export async function generateMetadata() {\n` +
+            "  return { title: String(await lireFiche('x')) };\n}\n"
+        ),
+      ],
+      [
+        'generateViewport',
+        avec(
+          'src/app/(console)/console/layout.tsx',
+          `export const generateViewport = ${GENERE};\n` +
+            'export default function Layout() {\n  return null;\n}\n'
+        ),
+      ],
+      [
+        'generateStaticParams',
+        avec(
+          'src/app/(console)/console/export/route.ts',
+          `${IMPORT_DE_LA_PORTE}export async function GET() {\n${GARDE_ECRAN}\n}\n` +
+            `const g = ${GENERE};\nexport { g as generateStaticParams };\n`
+        ),
+      ],
+      [
+        'generateImageMetadata',
+        avec(PAGE, `${page(GARDE_ECRAN).source}export const generateImageMetadata = ${GENERE};\n`),
+      ],
+      [
+        'generateSitemaps',
+        avec(PAGE, `${page(GARDE_ECRAN).source}export const generateSitemaps = ${GENERE};\n`),
+      ],
+    ];
+    for (const [nom, f] of rouges) {
+      const r = jugerLaConsole([f], MATRICE_TEMOIN, ROLES_CONSOLE);
+      expect(
+        r.fautes.map((x) => x.famille),
+        nom
+      ).toEqual(['export_non_jugeable']);
+      expect(r.fautes[0]!.message, nom).toContain(`« ${nom} »`);
+      expect(rendreLeVerdict(r, 2, 4).code, nom).toBe(1);
+    }
+    expect(
+      familles([
+        avec(PAGE, `${page(GARDE_ECRAN).source}export const metadata = { title: 'Tableau' };\n`),
       ])
     ).toEqual([]);
   });
