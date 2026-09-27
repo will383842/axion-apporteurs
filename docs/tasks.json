@@ -10000,7 +10000,8 @@
         "scripts/gates/gov-conventions.ts",
         ".github/workflows/ci.yml",
         "tests/unit/gouvernance/porte-a-presente-active-effective.spec.ts",
-        "tests/unit/gouvernance/gardes-transposees.spec.ts"
+        "tests/unit/gouvernance/gardes-transposees.spec.ts",
+        "scripts/gates/registre-des-refus.ts"
       ],
       "schema": false,
       "sensible": [],
