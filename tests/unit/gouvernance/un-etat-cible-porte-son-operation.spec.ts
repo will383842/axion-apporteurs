@@ -140,7 +140,22 @@ describe('gov:tasks — un état cible porte l’opération qui y mène (GOV-086
 
   it('REQ-GOV-021 — l’état COMPLET reste vert : une livraison locale avec son `pr` et sa branche', () => {
     expect(
-      familles([tache({ statut: 'fusionnee', owner: 'A01', pr: 112, branch: 't/gov-999' })])
+      // GOV-042 : une livraison locale porte aussi son attestation, au numéro de son `pr`.
+      // Le SHA est celui de la PR 112 DE CE DÉPÔT — la fixture portait celui d'axion-ia#998, qui
+      // n'atteste rien ici (veto sécurité 5328941794) ; son existence se résout EN LIGNE.
+      familles([
+        tache({
+          statut: 'fusionnee',
+          owner: 'A01',
+          pr: 112,
+          branch: 't/gov-999',
+          attestation: {
+            pr: 112,
+            sha: '87e235aba9c55b32253836417b467c86180485b4',
+            fusionneeAt: '2026-09-23T02:50:19Z',
+          },
+        }),
+      ])
     ).toEqual([]);
   });
 

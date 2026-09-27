@@ -85,7 +85,13 @@ const livree = (id: string, pr: number) => ({
   dev: { taskId: id, branch: `t/${id.toLowerCase()}`, pr, stop: null },
   fusion: {
     pr,
-    sha: `${id.toLowerCase().replace(/-/g, '')}0123456789abcdef01234567`,
+    // GOV-042 : la clôture juge désormais l'attestation des tâches LOCALES aussi — le SHA de la
+    // fixture a la forme exigée (40 hexadécimaux), et reste propre à chaque tâche.
+    sha: [...id]
+      .map((c) => c.charCodeAt(0).toString(16).padStart(2, '0'))
+      .join('')
+      .padEnd(40, '0')
+      .slice(0, 40),
     fusionneeAt: '2026-09-17T10:00:00Z',
     atterri: true,
   },
