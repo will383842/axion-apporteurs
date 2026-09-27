@@ -19,7 +19,7 @@
  */
 import { beforeAll, describe, expect, it } from 'vitest';
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
@@ -37,6 +37,7 @@ import {
   TEMOINS,
   argumentsDocker,
   executerPreuve,
+  fichiersPresents,
   fichiersDuBac,
   jugerEnsemble,
   jugerReel,
@@ -295,6 +296,38 @@ describe('REQ-QA-013 — le dépôt réel : zéro constat, et le compte des règ
     expect(jugerReel(passage, ['src/a.ts', 'src/b.ts']).map((f) => f.famille)).toContain(
       'fichier_non_analyse'
     );
+  });
+
+  it('REQ-QA-013 — un fichier `.mts` ou `.cts` sous src/ est COMPTÉ présent, et semgrep ne l’analysant pas, la gate échoue fermée', () => {
+    // Mesuré sur 1.176.1 : semgrep n'analyse ni `.mts` ni `.cts`, même nommés en cible explicite
+    // (revue `exactitude` 5329280901, PR 82). Le décompte des présents doit donc les voir, pour
+    // qu'un tel fichier soit une faute nommée et non un angle mort.
+    const racine = mkdtempSync(join(tmpdir(), 'sg-presents-'));
+    try {
+      const noms = ['a.ts', 'b.tsx', 'c.mts', 'd.cts', 'e.js', 'f.jsx', 'g.mjs', 'h.cjs'];
+      const sous = join(racine, 'src', 'x');
+      mkdirSync(sous, { recursive: true });
+      for (const n of [...noms, 'i.json', 'j.md']) writeFileSync(join(sous, n), 'export {};\n');
+      const presents = fichiersPresents(racine);
+      expect(presents).toEqual(noms.map((n) => `src/x/${n}`));
+      const passage: Passage = {
+        code: 0,
+        stderr: '',
+        sortie: {
+          version: IMAGE.split(':')[1]!.split('@')[0]!,
+          results: [],
+          errors: [],
+          paths: { scanned: presents.filter((f) => !/\.[mc]ts$/.test(f)) },
+          time: { rules: [] },
+        },
+      };
+      const nonAnalyses = jugerReel(passage, presents)
+        .filter((f) => f.famille === 'fichier_non_analyse')
+        .map((f) => f.message.split(' ')[0]);
+      expect(nonAnalyses).toEqual(['src/x/c.mts', 'src/x/d.cts']);
+    } finally {
+      rmSync(racine, { recursive: true, force: true });
+    }
   });
 });
 

@@ -158,6 +158,18 @@ const MILIEU_ESPACE = 'src/server/espace/a/b';
  */
 const AS = String.fromCharCode(0x5c);
 
+/**
+ * Des BLANCS UNICODE que TypeScript admet entre deux jetons, écrits par leur CODE pour la même
+ * raison que l'antislash : invisibles dans le texte, ils se relisent mal. Espace insécable
+ * U+00A0, espace ogham U+1680, espace fine insécable U+202F, espace idéographique U+3000,
+ * ZWNBSP U+FEFF.
+ */
+const NBSP = String.fromCharCode(0xa0);
+const OGHAM = String.fromCharCode(0x1680);
+const FINE = String.fromCharCode(0x202f);
+const IDEO = String.fromCharCode(0x3000);
+const ZWNBSP = String.fromCharCode(0xfeff);
+
 /** Les formes d'accès direct au client de base que la règle n° 1 refuse. */
 const FORMES_PRISMA: readonly { nom: string; ext: string; lignes: string[]; fautive: number }[] = [
   {
@@ -182,6 +194,33 @@ const FORMES_PRISMA: readonly { nom: string; ext: string; lignes: string[]; faut
     nom: 'export-type-from',
     ext: 'ts',
     lignes: ["export type { Apporteur } from '@prisma/client';"],
+    fautive: 1,
+  },
+  // Les formes TEXTUELLES de la limite (c) écrites avec un BLANC UNICODE ou un COMMENTAIRE entre
+  // leurs mots (revues `securite` 5329281085 et `exactitude` 5329280901, PR 82) : TypeScript les
+  // admet, et une classe de blancs ASCII (`\s`) ne les lisait pas.
+  {
+    nom: 'export-type-from-espace-insecable',
+    ext: 'ts',
+    lignes: [`export${NBSP}type { Apporteur } from '@prisma/client';`],
+    fautive: 1,
+  },
+  {
+    nom: 'export-type-from-commentaire',
+    ext: 'ts',
+    lignes: ["export /* c */ type { Apporteur } from '@prisma/client';"],
+    fautive: 1,
+  },
+  {
+    nom: 'export-type-from-espace-ideographique',
+    ext: 'ts',
+    lignes: [`export type${IDEO}{ Apporteur } from '@prisma/client';`],
+    fautive: 1,
+  },
+  {
+    nom: 'export-type-en-ligne-espace-insecable',
+    ext: 'ts',
+    lignes: [`export { type Apporteur }${NBSP}from '../../lib/prisma.js';`],
     fautive: 1,
   },
   {
@@ -837,6 +876,79 @@ const FORMES_SQL: readonly { nom: string; lignes: string[]; fautive: number; ext
     lignes: ["import fs = require('node:fs');", 'export const lire = fs.readFileSync;'],
     fautive: 1,
   },
+  // L'import-equals dont le NOM ou les BLANCS ne sont pas ASCII (revue `securite` 5329281085,
+  // PR 82) : TypeScript admet un identifiant Unicode et tout blanc Unicode entre les mots, et un
+  // bras qui lisait le nom par une classe ASCII et les blancs par `\s` les laissait passer.
+  {
+    nom: 'import-egal-alias-accentue',
+    lignes: [
+      "import { Prisma } from '@prisma/client';",
+      'import Pé = Prisma;',
+      'export const fragment = (t: string) => Pé.raw(t);',
+    ],
+    fautive: 2,
+  },
+  {
+    nom: 'import-egal-alias-cyrillique',
+    lignes: [
+      "import { Prisma } from '@prisma/client';",
+      'import Пр = Prisma;',
+      'export const fragment = (t: string) => Пр.raw(t);',
+    ],
+    fautive: 2,
+  },
+  {
+    nom: 'import-egal-espace-insecable',
+    lignes: [
+      "import { Prisma } from '@prisma/client';",
+      `import${NBSP}P = Prisma;`,
+      'export const fragment = (t: string) => P.raw(t);',
+    ],
+    fautive: 2,
+  },
+  {
+    nom: 'import-egal-espace-ideographique',
+    lignes: [
+      "import { Prisma } from '@prisma/client';",
+      `import${IDEO}P = Prisma;`,
+      'export const fragment = (t: string) => P.raw(t);',
+    ],
+    fautive: 2,
+  },
+  {
+    nom: 'import-egal-zwnbsp',
+    lignes: [
+      "import { Prisma } from '@prisma/client';",
+      `import${ZWNBSP}P = Prisma;`,
+      'export const fragment = (t: string) => P.raw(t);',
+    ],
+    fautive: 2,
+  },
+  {
+    nom: 'export-import-egal-unicode',
+    lignes: [
+      "import { Prisma } from '@prisma/client';",
+      `export${NBSP}import${OGHAM}Ωm${FINE}= Prisma;`,
+      'export const fragment = (t: string) => Ωm.raw(t);',
+    ],
+    fautive: 2,
+  },
+  {
+    nom: 'import-egal-require-accentue',
+    lignes: ["import fé = require('node:fs');", 'export const lire = fé.readFileSync;'],
+    fautive: 1,
+  },
+  // `from` est un identifiant contextuel : `import from = X` est un import-equals. Un bras qui
+  // s'arrêterait au MOT `from` le laisserait passer.
+  {
+    nom: 'import-egal-alias-from',
+    lignes: [
+      "import { Prisma } from '@prisma/client';",
+      'import from = Prisma;',
+      'export const fragment = (t: string) => from.raw(t);',
+    ],
+    fautive: 2,
+  },
   // Le NOM écrit par ÉCHAPPEMENT, sans rien de calculé (revue `exactitude` 5328459424, PR 82) :
   // semgrep compare le TEXTE source, pas la valeur. Échappements imprimables `u` / `u{}` / `x`
   // dans un identifiant ou une chaîne, échappement d'identité, continuation de ligne, octal
@@ -1465,6 +1577,35 @@ export const CONTRE_TEMOINS: readonly FichierDuBac[] = [
       'export const b = (id: string) => p.$queryRaw`SELECT ${id}`;',
       'export const c = (e: unknown) => e instanceof Prisma.PrismaClientKnownRequestError;',
       'export const important = 3;',
+    ],
+    null,
+    0
+  ),
+  // Les VOISINS de l'import-equals quand le bras ne lit plus la forme de l'identifiant (revue
+  // `securite` 5329281085, PR 82) : un identifiant qui COMMENCE par `import` et continue par un
+  // caractère non ASCII, les liaisons ES (accolades, étoile, défaut, `import type`, blanc
+  // insécable compris) suivies d'une affectation sur la ligne d'après, `import()`, une
+  // comparaison sur `import.meta`, un membre et une clé d'objet nommés `import`.
+  fichier(
+    'sql/voisins-import-unicode',
+    'src/lib/sql/voisins-import-unicode.ts',
+    [
+      "import type { PrismaClient } from '@prisma/client';",
+      "import { a } from './a';",
+      "import * as X from './x';",
+      "import d from './d';",
+      `import${NBSP}{ e } from './e';`,
+      "import type T from './t';",
+      'let importÉtat: unknown = 1;',
+      'const importé = 2;',
+      `const importé2${NBSP}= importé;`,
+      'importÉtat = importé + importé2;',
+      "export const m = () => import('./m');",
+      "export const u = import.meta.url == 'x';",
+      'export const w = { import: 1, b: 2 };',
+      'w.import = 3;',
+      'export const y: PrismaClient | T | typeof X = importÉtat as never;',
+      'export const z = [a, d, e];',
     ],
     null,
     0
