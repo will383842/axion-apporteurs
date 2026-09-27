@@ -1224,7 +1224,9 @@
         "docs/gates.json",
         "package.json",
         ".github/workflows/ci.yml",
-        "vitest.mutation.config.ts"
+        "vitest.mutation.config.ts",
+        "scripts/gates/registre-des-refus.ts",
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts"
       ],
       "schema": false,
       "sensible": [
