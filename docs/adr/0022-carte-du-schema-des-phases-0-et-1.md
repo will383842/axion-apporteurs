@@ -100,10 +100,24 @@ de chaque nouveau cron ou gabarit une PR `schema`. Forme imposée : `VarChar(64)
 d'intégration qui confronte les valeurs écrites à cette table. Aucune règle métier ne branche sur
 elles.
 
-**10. Valeurs de fil pointées.** Un enum dont les valeurs viennent d'un format de fil porte
-l'identifiant Prisma en `snake_case` et le libellé Postgres exact par `@map`
-(`client_cree @map("client.cree")`) ; les valeurs d'axionia sont générées depuis `TYPES_EVENEMENT`
-(`packages/contracts/events.ts`), et un test compare les libellés de `pg_enum` à cette constante.
+**10. Valeurs de fil pointées** (amendé le 2026-09-26 par SEC-06, avant l'acceptation de l'ADR).
+Un enum dont les valeurs viennent d'un format de fil pointé porte, en Prisma ET en Postgres, la
+valeur de fil dont le point est remplacé par un souligné, sans `@map` de valeur : `client.cree`
+devient `client_cree` des deux côtés. Chaque valeur de `TYPES_EVENEMENT`
+(`packages/contracts/events.ts`) porte exactement un point, de la forme `<sujet>.<action>`. La
+correspondance est une bijection, et elle est TESTÉE : les libellés de `pg_enum`, ceux du client
+Prisma et `TYPES_EVENEMENT` transformé doivent être égaux, dans l'ordre. L'unicité des libellés
+Postgres rend la transformation injective ; une valeur à deux points laisserait un point dans
+l'identifiant, que Prisma refuse, et le test rougit. La traduction du fil vers l'enum n'existe qu'à
+UN endroit, la frontière de réception (`identifiantDuType`,
+`src/server/integrations/axionia/reception.ts`) ; aucun code ne retraduit l'enum vers le fil, et
+une valeur de fil qui ne correspond à aucune valeur d'enum y lève au lieu d'être inscrite.
+
+La forme d'origine (`@map` portant le libellé pointé) est abandonnée : elle recopiait à la main, dans
+`prisma/schema.prisma`, sept noms d'événements que seul `packages/contracts` a le droit d'écrire, et
+la garde `gov:termes-interdits` la refusait à raison. L'exempter pour une ligne aurait ouvert la
+porte que cette garde ferme ; la dérivation par une fonction pure, tenue par un test de bijection,
+donne la même garantie sans seconde copie littérale (RM-01).
 
 **11. Forme commune.** Identifiant `uuid` ; horodatages `Timestamptz(3)` suffixés `At`, sans défaut
 sur ce qui est haché ou opposable ; une date calendaire sans heure est `@db.Date` et ne prend pas le
@@ -155,6 +169,7 @@ d'aucune exigence : ses valeurs attendent une décision (Reste à faire).
 | Chaque tâche ajoute les colonnes dont elle a besoin | Deux créateurs pour une table, des migrations croisées, et des colonnes `NOT NULL` ajoutées après coup que la porte D refuse. |
 | Enum Postgres pour les gabarits de courriel et les tâches de fond | Seconde copie d'une table de code ; chaque nouvel envoi ou cron devient une PR `schema`. |
 | Nommer `motif…` un texte libre et exempter la colonne | Une exemption par colonne est une porte ouverte ; séparer le nom de la justification du nom du vocabulaire est la distinction que la garde cherche. |
+| Libellé Postgres pointé par `@map` sur un enum de fil (forme d'origine du point 10) | Sept noms d'événements recopiés à la main hors de `packages/contracts` ; la garde `gov:termes-interdits` les refuse, et exempter une ligne dans une garde ouvre la porte qu'elle ferme. |
 | `Decimal` pour les coordonnées | La garde des centimes refuse tout flottant, quel que soit son nom ; l'entier en micro-degrés est exact et déterministe. |
 | Séquence d'émission posée par l'auto-incrément dans la transaction métier | Des trous, et un ordre de validation différent de l'ordre des numéros : un lecteur `after_sequence` perdrait des lignes. |
 
@@ -167,8 +182,9 @@ d'aucune exigence : ses valeurs attendent une décision (Reste à faire).
 
 ## Reste à faire
 
-- **Assertions à poser** : SEC-06 (libellés de `pg_enum` égaux à `TYPES_EVENEMENT`, point 10 ; index
-  partiels relus dans `pg_indexes`) ; DM-08 (la charge de `attribution_etat_modifie` dérive son enum
+- **Assertions à poser** : SEC-06 (libellés de `pg_enum` et du client Prisma égaux, dans l'ordre, à
+  `TYPES_EVENEMENT` dont le point devient un souligné, point 10 ; index partiels relus dans
+  `pg_indexes`) ; DM-08 (la charge de `attribution_etat_modifie` dérive son enum
   de la matrice, point 4) ; INT-T10 et UX-P1-10 (test d'intégration des clés de table de code, point
   9) ; INT-T02 (deux transactions validées dans l'ordre inverse, aucune ligne sautée, point 15) ;
   QA-T06 (le semeur exécute les modules dans l'ordre, point 14).
