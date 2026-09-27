@@ -23,8 +23,12 @@ import {
   controlerAttestation,
   lireJournalDeFusion,
   rattraper,
+  resoudreAttestations,
   type CommitDeFusion,
+  type ReponseForge,
+  type SituationGit,
   type TacheAttestable,
+  type VuesHorsLigne,
 } from '../../../scripts/lot/attestation';
 import { cloturerLeLot, type Tache as TacheDeCloture } from '../../../scripts/lot/cloture';
 import { LIVREE } from '../../../scripts/lot/avancement';
@@ -32,8 +36,14 @@ import { LIVREE } from '../../../scripts/lot/avancement';
 const SHA_A = 'a'.repeat(40);
 const SHA_B = 'b'.repeat(40);
 const attestation = (pr: number, sha = SHA_A) => ({ pr, sha, fusionneeAt: '2026-09-20T10:00:00Z' });
-const familles = (t: TacheAttestable, livree: boolean) =>
-  controlerAttestation(t, livree).map((f) => f.famille);
+/**
+ * LES VUES HORS LIGNE, INJECTÉES (RM-11) : l'instant de la passe et l'oracle « ce SHA est-il un
+ * commit de CE dépôt ». Aucun témoin ne lit l'horloge ni git : le verdict ne dépend que d'elles.
+ */
+const MAINTENANT = Date.parse('2026-09-27T12:00:00Z');
+const VUES: VuesHorsLigne = { maintenant: MAINTENANT, commitConnu: () => true };
+const familles = (t: TacheAttestable, livree: boolean, vues: VuesHorsLigne = VUES) =>
+  controlerAttestation(t, livree, vues).map((f) => f.famille);
 const estLivree = (t: { statut: string }) => LIVREE.has(t.statut);
 
 describe('REQ-GOV-026 — l’attestation s’étend aux tâches de CE dépôt, dans les deux sens', () => {
@@ -47,7 +57,8 @@ describe('REQ-GOV-026 — l’attestation s’étend aux tâches de CE dépôt, 
         branch: 't/gov-901',
         attestation: null,
       },
-      true
+      true,
+      VUES
     );
     expect(f.map((x) => x.famille)).toEqual(['attestation_absente']);
     expect(f[0]!.message).toContain('GOV-901');
@@ -244,5 +255,257 @@ describe('REQ-GOV-026 — `lot:cloture` écrit l’attestation des tâches local
       })
     ).toThrow(/sans attestation complète/);
     expect(taches[0]!.statut).toBe('a_faire');
+  });
+});
+
+/**
+ * CE QUE LA GARDE HORS LIGNE FERME SANS FORGE (veto sécurité 5328941794, PR 168).
+ *
+ * Le scénario qui motive GOV-042 (GOV-035) : une tâche passée `fusionnee` À LA MAIN, `owner` et
+ * `branch` posés, SANS `pr`, avec une attestation inventée — PR 999, SHA à quarante zéros. Mesuré
+ * sur e8369ab : `gov:tasks` la laissait passer, comme une `fusionneeAt` en 2030 et le SHA d'un
+ * autre dépôt. Trois fautes se ferment sans interroger personne : l'horloge de la passe borne la
+ * date, le `pr` de la tâche est confronté à l'attestation, et git dit si le SHA est un commit d'ICI.
+ */
+describe('REQ-GOV-026 — hors ligne : ce qui se ferme sans forge est fermé', () => {
+  const locale = (
+    a: { pr: number; sha: string; fusionneeAt: string } | null,
+    pr: number | null
+  ): TacheAttestable => ({
+    id: 'GOV-901',
+    repo: 'partners',
+    statut: 'fusionnee',
+    pr,
+    branch: 't/gov-901',
+    attestation: a,
+  });
+  const connus = new Set([SHA_A]);
+  const vuesGit: VuesHorsLigne = { maintenant: MAINTENANT, commitConnu: (s) => connus.has(s) };
+
+  it('REQ-GOV-026 — TÉMOIN : une `fusionneeAt` POSTÉRIEURE à l’instant de la passe est refusée', () => {
+    const a = { ...attestation(140), fusionneeAt: '2030-01-01T00:00:00Z' };
+    expect(familles(locale(a, 140), true)).toEqual(['attestation_date_future']);
+    // la même faute ailleurs : l'horloge ne dépend pas du dépôt
+    expect(
+      familles(
+        { id: 'INT-T01b', repo: 'axionia', statut: 'fusionnee', pr: null, attestation: a },
+        true
+      )
+    ).toEqual(['attestation_date_future']);
+  });
+
+  it('REQ-GOV-026 — CONTRE-TÉMOIN : la borne est l’instant INJECTÉ, pas l’horloge du relecteur', () => {
+    const a = { ...attestation(140), fusionneeAt: '2026-09-27T11:59:59Z' };
+    expect(familles(locale(a, 140), true)).toEqual([]);
+    expect(
+      familles(locale(a, 140), true, {
+        maintenant: Date.parse('2026-09-27T11:59:58Z'),
+        commitConnu: () => true,
+      })
+    ).toEqual(['attestation_date_future']);
+  });
+
+  it('REQ-GOV-026 — TÉMOIN : une tâche locale livrée qui porte une attestation SANS `pr` est refusée', () => {
+    expect(familles(locale(attestation(140), null), true)).toEqual(['attestation_sans_pr']);
+  });
+
+  it('REQ-GOV-026 — TÉMOIN : un SHA qui n’est pas un commit de CE dépôt est refusé', () => {
+    expect(familles(locale(attestation(140, SHA_B), 140), true, vuesGit)).toEqual([
+      'attestation_sha_etranger',
+    ]);
+    expect(familles(locale(attestation(140, SHA_A), 140), true, vuesGit)).toEqual([]);
+  });
+
+  it('REQ-GOV-026 — CONTRE-TÉMOIN : le SHA d’une tâche d’AILLEURS n’est pas cherché dans ce dépôt-ci', () => {
+    const vu: string[] = [];
+    const vues: VuesHorsLigne = {
+      maintenant: MAINTENANT,
+      commitConnu: (s) => {
+        vu.push(s);
+        return false;
+      },
+    };
+    expect(
+      familles(
+        {
+          id: 'INT-T01b',
+          repo: 'axionia',
+          statut: 'fusionnee',
+          pr: null,
+          attestation: attestation(998, SHA_B),
+        },
+        true,
+        vues
+      )
+    ).toEqual([]);
+    expect(vu).toEqual([]);
+  });
+
+  it('REQ-GOV-026 — LE SCÉNARIO GOV-035 : `fusionnee` à la main, sans `pr`, PR 999 et SHA à zéros', () => {
+    const f = familles(
+      locale({ pr: 999, sha: '0'.repeat(40), fusionneeAt: '2026-09-26T00:00:00Z' }, null),
+      true,
+      vuesGit
+    );
+    expect(f).toContain('attestation_sans_pr');
+    expect(f).toContain('attestation_sha_etranger');
+  });
+});
+
+/**
+ * CE QUE LE CONTRÔLE EN LIGNE RÉSOUT — TOUTES les attestations, locales comprises.
+ *
+ * Mesuré sur e8369ab : `gov-attestation.ts --en-ligne` filtrait `repo !== DEPOT_LOCAL` et rendait
+ * « les 1 attestation(s) résolvent » sur un backlog de 78, dont SEC-03 portait un SHA à zéros.
+ * La forge et git sont SIMULÉS (RM-11) : le verdict ne dépend que des vues injectées.
+ */
+describe('REQ-GOV-026 — en ligne : chaque attestation, locale ou non, RÉSOUT', () => {
+  const SHA_C = 'c'.repeat(40);
+  const QUAND = '2026-09-20T10:00:00Z';
+  type Pr = { merged_at: string | null; merge_commit_sha: string | null };
+  const vuesEnLigne = (o: {
+    prs?: Record<string, Pr>;
+    commitsDistants?: Record<string, string>;
+    situation?: Record<string, SituationGit>;
+    dates?: Record<string, string>;
+    forgeMuette?: boolean;
+  }) => {
+    const appels: string[] = [];
+    return {
+      appels,
+      vues: {
+        brancheParDefaut: 'origin/main',
+        forge: (chemin: string): ReponseForge => {
+          appels.push(chemin);
+          if (o.forgeMuette) return { ok: false, erreur: 'HTTP 503' };
+          const pr = o.prs?.[chemin];
+          if (pr) return { ok: true, corps: pr };
+          const c = /\/commits\/([0-9a-f]{40})$/.exec(chemin);
+          const date = c ? o.commitsDistants?.[c[1]!] : undefined;
+          if (date) return { ok: true, corps: { commit: { committer: { date } } } };
+          return { ok: false, erreur: 'HTTP 404' };
+        },
+        situer: (sha: string): SituationGit => o.situation?.[sha] ?? 'absent',
+        dateDuCommit: (sha: string) => o.dates?.[sha] ?? null,
+      },
+    };
+  };
+  const LOCAL = 'repos/will383842/axion-apporteurs/pulls/140';
+  const locale = (sha = SHA_A, fusionneeAt = QUAND): TacheAttestable => ({
+    id: 'SEC-03',
+    repo: 'partners',
+    statut: 'fusionnee',
+    pr: 140,
+    branch: 't/sec-03',
+    attestation: { pr: 140, sha, fusionneeAt },
+  });
+  const saine = {
+    prs: { [LOCAL]: { merged_at: QUAND, merge_commit_sha: SHA_A } },
+    situation: { [SHA_A]: 'ancetre' as const },
+    dates: { [SHA_A]: QUAND },
+  };
+
+  it('REQ-GOV-026 — CONTRE-TÉMOIN : une attestation LOCALE saine est dans la population et résout', () => {
+    const { vues, appels } = vuesEnLigne(saine);
+    const r = resoudreAttestations([locale()], vues, estLivree);
+    expect(r.population).toBe(1);
+    expect(r.fautes).toEqual([]);
+    expect(r.resolues).toHaveLength(1);
+    expect(appels).toContain(LOCAL);
+  });
+
+  it('REQ-GOV-026 — TÉMOIN : le SHA à zéros d’une tâche LOCALE est rejeté (le cas du veto)', () => {
+    const { vues } = vuesEnLigne(saine);
+    const r = resoudreAttestations([locale('0'.repeat(40))], vues, estLivree);
+    expect(r.fautes.join('\n')).toMatch(/SEC-03.*n'est pas un commit de ce dépôt/);
+  });
+
+  it('REQ-GOV-026 — TÉMOIN : un commit d’ici qui n’est PAS ancêtre de la branche par défaut est rejeté', () => {
+    const { vues } = vuesEnLigne({ ...saine, situation: { [SHA_A]: 'hors_branche' } });
+    expect(resoudreAttestations([locale()], vues, estLivree).fautes.join('\n')).toMatch(
+      /SEC-03.*n'est pas ancêtre de origin\/main/
+    );
+  });
+
+  it('REQ-GOV-026 — TÉMOIN : la PR fusionnée par un AUTRE commit que le SHA attesté est rejetée', () => {
+    const { vues } = vuesEnLigne({
+      ...saine,
+      prs: { [LOCAL]: { merged_at: QUAND, merge_commit_sha: SHA_C } },
+    });
+    expect(resoudreAttestations([locale()], vues, estLivree).fautes.join('\n')).toMatch(
+      /SEC-03.*a fusionné par c{40}/
+    );
+  });
+
+  it('REQ-GOV-026 — TÉMOIN : une PR NON fusionnée est rejetée', () => {
+    const { vues } = vuesEnLigne({
+      ...saine,
+      prs: { [LOCAL]: { merged_at: null, merge_commit_sha: SHA_A } },
+    });
+    expect(resoudreAttestations([locale()], vues, estLivree).fautes.join('\n')).toMatch(
+      /SEC-03.*n'est PAS fusionnée/
+    );
+  });
+
+  it('REQ-GOV-026 — TÉMOIN : une `fusionneeAt` qui n’est ni la fusion ni le commit est rejetée', () => {
+    const { vues } = vuesEnLigne(saine);
+    expect(
+      resoudreAttestations([locale(SHA_A, '2026-09-19T10:00:00Z')], vues, estLivree).fautes.join(
+        '\n'
+      )
+    ).toMatch(/SEC-03.*2026-09-19T10:00:00Z/);
+    // la date du COMMIT est admise aussi
+    const { vues: v2 } = vuesEnLigne({ ...saine, dates: { [SHA_A]: '2026-09-20T10:00:01Z' } });
+    expect(
+      resoudreAttestations([locale(SHA_A, '2026-09-20T10:00:01Z')], v2, estLivree).fautes
+    ).toEqual([]);
+  });
+
+  it('REQ-GOV-026 — TÉMOIN : une forge ILLISIBLE échoue FERMÉ, elle ne rend jamais un vert', () => {
+    const { vues } = vuesEnLigne({ ...saine, forgeMuette: true });
+    const r = resoudreAttestations([locale()], vues, estLivree);
+    expect(r.fautes.length).toBe(1);
+    expect(r.resolues).toEqual([]);
+  });
+
+  it('REQ-GOV-026 — une attestation d’AILLEURS reste résolue par la forge de SON dépôt', () => {
+    const distante: TacheAttestable = {
+      id: 'INT-T01b',
+      repo: 'axionia',
+      statut: 'fusionnee',
+      pr: null,
+      attestation: { pr: 998, sha: SHA_B, fusionneeAt: QUAND },
+    };
+    const { vues } = vuesEnLigne({
+      prs: {
+        'repos/will383842/axion-ia/pulls/998': { merged_at: QUAND, merge_commit_sha: SHA_B },
+      },
+      commitsDistants: { [SHA_B]: QUAND },
+    });
+    const r = resoudreAttestations([distante], vues, estLivree);
+    expect(r.fautes).toEqual([]);
+    expect(r.population).toBe(1);
+  });
+
+  it('REQ-GOV-026 — ce que le contrôle SAUTE est NOMMÉ : le passif déclaré sans attestation', () => {
+    const p = PASSIF_SANS_ATTESTATION[0]!;
+    const { vues } = vuesEnLigne(saine);
+    const r = resoudreAttestations(
+      [
+        locale(),
+        {
+          id: p.id,
+          repo: 'partners',
+          statut: 'fusionnee',
+          pr: null,
+          branch: 'b',
+          attestation: null,
+        },
+      ],
+      vues,
+      estLivree
+    );
+    expect(r.population).toBe(1);
+    expect(r.sautees.map((s) => s.id)).toEqual([p.id]);
   });
 });
