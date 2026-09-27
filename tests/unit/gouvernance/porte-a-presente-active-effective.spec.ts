@@ -498,13 +498,20 @@ describe('REQ-GOV-029 — (f) un commentaire du workflow ne promet que les refus
 const NIGHTLY = '.github/workflows/nightly.yml';
 const RUN_MUTATION = '        run: pnpm mutation\n';
 
+/** La clé `run:` d'une étape : sur une ligne, ou en bloc littéral si la commande en porte plusieurs. */
+function runYaml(run: string): string {
+  if (!run.includes('\n')) return `        run: ${run}\n`;
+  const lignes = run.split('\n').map((l) => `          ${l}\n`);
+  return `        run: |\n${lignes.join('')}`;
+}
+
 function nuitEn(run: string, hooks?: string): Vue {
   const vue = lireVue();
   return {
     ...vue,
     workflows: vue.workflows.map((w) =>
       w.chemin === NIGHTLY
-        ? { ...w, source: remplacerUneFois(w.source, RUN_MUTATION, `        run: ${run}\n`) }
+        ? { ...w, source: remplacerUneFois(w.source, RUN_MUTATION, runYaml(run)) }
         : w
     ),
     hooks: hooks ?? vue.hooks,
@@ -542,6 +549,38 @@ const APPELS_QUI_N_EN_SONT_PAS: readonly { forme: string; run: string }[] = [
     forme: 'sous une construction `if` que la lecture ne juge pas',
     run: 'if false; then pnpm mutation; fi',
   },
+  // REFUS D'EXACTITUDE ET VETO DE SÉCURITÉ, TOUR 3 — la règle STRICTE : une étape n'appelle une
+  // garde que si elle n'exécute QU'ELLE. Chaque forme ci-dessous lance la garde sans que son échec
+  // fasse échouer l'étape, ou sans qu'elle s'exécute : aucune n'est un appel.
+  {
+    forme: 'garde NON FINALE d’une liste `&&` suivie d’une autre ligne (bash -e avale son échec)',
+    run: 'pnpm mutation && echo fait\necho fin',
+  },
+  { forme: 'après un `set +e`', run: 'set +e; pnpm mutation; echo fin' },
+  {
+    forme: 'derrière un test `[ … ] &&` qui ne passe jamais',
+    run: '[ -n "$NUIT" ] && pnpm mutation',
+  },
+  { forme: 'après un piège `trap` qui rend 0', run: "trap 'exit 0' EXIT\npnpm mutation" },
+  {
+    forme: 'après un `alias` qui remplace l’outil',
+    run: 'shopt -s expand_aliases; alias pnpm=true\npnpm mutation',
+  },
+  { forme: 'après un `eval`', run: 'eval \'trap "exit 0" EXIT\'; pnpm mutation' },
+  {
+    forme: 'une expression d’Actions qui INJECTE un opérateur',
+    run: "pnpm mutation ${{ '|| true' }}",
+  },
+  // Les formes COMPOSÉES que le tour 2 lisait comme des appels : le PRIX de la règle stricte. On
+  // écrit la garde dans une étape à part.
+  { forme: 'enchaînée par `&&` à une autre commande', run: 'pnpm mutation:prove && pnpm mutation' },
+  { forme: 'un argument qui porte une substitution', run: 'pnpm mutation --seuil $(date -u +%F)' },
+  {
+    forme: 'un argument qui porte une expression d’Actions',
+    run: "pnpm mutation --phase ${{ inputs.phase || '-1' }}",
+  },
+  { forme: 'après un guillemet échappé et un `;`', run: 'echo \\"x; pnpm mutation' },
+  { forme: 'suivie d’une seconde ligne', run: 'pnpm mutation\necho fin' },
 ];
 
 describe('REQ-GOV-029 — une garde CITÉE, court-circuitée ou inatteignable n’est pas appelée (copies en mémoire de nightly.yml)', () => {
@@ -563,11 +602,10 @@ describe('REQ-GOV-029 — une garde CITÉE, court-circuitée ou inatteignable n�
   });
 
   for (const run of [
-    'pnpm mutation:prove && pnpm mutation',
-    'pnpm mutation --seuil $(date -u +%F)',
-    "pnpm mutation --phase ${{ inputs.phase || '-1' }}",
-    'echo \\"x; pnpm mutation',
+    'pnpm mutation',
+    'CI=1 pnpm mutation --flag',
     'MODE=nuit pnpm run mutation',
+    "pnpm mutation --seuil '80'",
   ]) {
     it(`REQ-GOV-029 — CONTRE-TÉMOIN : \`${run}\` appelle bien \`mutation\``, () => {
       expect(controler(nuitEn(run)).map((f) => f.famille)).toEqual([]);
@@ -614,5 +652,99 @@ describe('REQ-GOV-012 — la configuration pnpm/npm de la racine est figée : au
 
   it('REQ-GOV-012 — CONTRE-TÉMOIN : un `.npmrc` hors de la racine ne touche pas la porte A', async () => {
     expect((await confronterLaPorteA(avec('packages/contracts/.npmrc'))).fautes).toEqual([]);
+  });
+});
+
+/**
+ * VETO DE SÉCURITÉ, TOUR 3 — LES CROCHETS DE CYCLE DE VIE DE LA RACINE. L'étape `pnpm install
+ * --frozen-lockfile` n'était figée que par sa commande : pnpm 9 y exécute, pour le projet racine,
+ * `pnpm:devPreinstall`, `preinstall`, `install`, `postinstall`, `preprepare`, `prepare`, `postprepare`
+ * — AVANT toutes les gardes. Et `enable-pre-post-scripts` vaut `true` par défaut : un `pre<script>` ou
+ * un `post<script>` tourne autour de chaque `pnpm <script>` de la porte. La VALEUR de chaque crochet
+ * est figée, et l'ABSENCE des autres : tout ajout, retrait ou changement est un refus nommé.
+ */
+describe('REQ-GOV-012 — les crochets de cycle de vie de la racine sont figés : valeur, et absence des autres', () => {
+  const avecScripts = (change: (s: Record<string, string>) => void): Vue => {
+    const vue = lireVue();
+    const pkg = JSON.parse(vue.packageJson) as { scripts: Record<string, string> };
+    change(pkg.scripts);
+    return { ...vue, packageJson: JSON.stringify(pkg, null, 2) + '\n' };
+  };
+  const alterations: readonly {
+    quoi: string;
+    nomme: string;
+    change: (s: Record<string, string>) => void;
+  }[] = [
+    {
+      quoi: '`postinstall` repointé',
+      nomme: 'postinstall',
+      change: (s) => {
+        s.postinstall = 'prisma generate && node -e "process.exit(0)"';
+      },
+    },
+    {
+      quoi: '`postinstall` retiré',
+      nomme: 'postinstall',
+      change: (s) => {
+        delete s.postinstall;
+      },
+    },
+    {
+      quoi: '`preinstall` ajouté',
+      nomme: 'preinstall',
+      change: (s) => {
+        s.preinstall = 'node scripts/desarmer.js';
+      },
+    },
+    {
+      quoi: '`prepare` ajouté',
+      nomme: 'prepare',
+      change: (s) => {
+        s.prepare = 'node scripts/desarmer.js';
+      },
+    },
+    {
+      quoi: '`pnpm:devPreinstall` ajouté',
+      nomme: 'pnpm:devPreinstall',
+      change: (s) => {
+        s['pnpm:devPreinstall'] = 'node scripts/desarmer.js';
+      },
+    },
+    {
+      quoi: 'un `pre<script>` posé devant une garde de la porte',
+      nomme: 'pregov:conventions',
+      change: (s) => {
+        s['pregov:conventions'] = 'node scripts/desarmer.js';
+      },
+    },
+    {
+      quoi: 'un `post<script>` posé derrière une garde de la porte',
+      nomme: 'posttest',
+      change: (s) => {
+        s.posttest = 'node scripts/desarmer.js';
+      },
+    },
+  ];
+  for (const a of alterations) {
+    it(`REQ-GOV-012 — ${a.quoi} : porte_a_alteree, nommé`, async () => {
+      const fautes = (await confronterLaPorteA(avecScripts(a.change))).fautes.filter(
+        (f) => f.famille === 'porte_a_alteree'
+      );
+      expect(fautes.map((f) => f.message).join('\n')).toContain(`\`${a.nomme}\``);
+    });
+  }
+
+  it('REQ-GOV-012 — CONTRE-TÉMOIN : un script ordinaire ajouté ne touche pas la porte A', async () => {
+    const vue = avecScripts((s) => {
+      s['outil:local'] = 'tsx scripts/outil.ts';
+    });
+    expect((await confronterLaPorteA(vue)).fautes).toEqual([]);
+  });
+
+  it('REQ-GOV-012 — chaque script lancé par la porte est figé par sa VALEUR, pas par son nom', () => {
+    const scripts = (JSON.parse(PKG_REEL) as { scripts: Record<string, string> }).scripts;
+    for (const [nom, valeur] of Object.entries(PORTE_A_FIGEE.scripts)) {
+      expect({ nom, valeur: scripts[nom] }).toEqual({ nom, valeur });
+    }
   });
 });
