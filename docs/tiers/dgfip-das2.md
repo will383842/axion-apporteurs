@@ -16,13 +16,24 @@ L'export porte, pour chaque bénéficiaire au-dessus du seuil de l'article 240 d
 l'identité, le numéro d'établissement, l'adresse, la nature « commissions » et le montant. Un apporteur
 marqué `isTest` en est exclu (REQ-CPL-020).
 
-⚠️ **Le seuil n'a pas encore de valeur dans le code.** Depuis le 2026-09-19, REQ-ARG-024 renvoie à
-`DAS2_SEUIL_CENTS`, valeur unique de la source unique de vérité de REQ-JUR-015 (240 000 cents, BOFiP
-ACTU-2024-00154), marquée `HYP-D9` jusqu'à confirmation de l'expert-comptable : c'est le texte décidé par
-l'annexe de dédoublonnage, remis dans le registre sur décision de Will. Jusque-là, l'exigence se terminait
-par « le seuil n'a pas de valeur par défaut valide ». La source unique de vérité prévue par RM-10 reste
-**vide** tant que la valeur, sa source et sa date n'y sont pas posées : aucun cumul n'est donc calculable
-aujourd'hui. La valeur reste **à confirmer** par Will, sur avis de l'expert-comptable.
+**Le seuil A une valeur dans le code depuis cette PR.** `SEUIL_DAS2` est posé dans la source unique de
+vérité (`src/domain/seuils/ssot.ts`) à **240 000 centimes**, source `REQ-JUR-015`, BOFiP
+ACTU-2024-00154, avec sa date de confrontation. Les trois éléments exigés par RM-10 — la valeur, sa
+source et sa date — y sont : la source unique de vérité n'est plus vide, et le cumul est calculable.
+
+⚠️ **Ce qui reste ouvert, et ce n'est pas la valeur mais sa CONFIRMATION.** Le montant porte `HYP-D9`
+jusqu'à l'avis de l'expert-comptable, et la source de `SEUIL_DAS2` le dit en clair (« À CONFIRMER avec
+l'expert-comptable, non encore confronté : HYP-D9 »). Une valeur posée sous hypothèse datée n'est pas
+une valeur vérifiée : c'est une valeur qui permet d'avancer en disant qu'elle attend son arbitrage.
+
+⚠️ **Un nom diverge, et il faudra le trancher.** `REQ-ARG-024` renvoie à `DAS2_SEUIL_CENTS` ; le code
+pose `SEUIL_DAS2`. La tâche ARG-024 chercherait le premier nom et ne le trouverait pas. À aligner d'un
+côté ou de l'autre — dette relevée par une revue `exactitude` sur la PR 180, pas encore arbitrée.
+
+> Ce paragraphe affirmait le contraire — « le seuil n'a pas encore de valeur dans le code », « la
+> source unique de vérité reste **vide** » — et c'est devenu faux le jour où cette PR a posé la
+> constante, sans que le document bouge. Une affirmation sur de l'argent qui survit à ce qu'elle
+> décrit est un mensonge par inertie : c'est une revue qui l'a vu, pas le document.
 
 ## 2. Source officielle
 
@@ -50,7 +61,8 @@ Aucun quota : le dépôt est annuel. La seule limite est l'**échéance de dép�
 
 Ce que **nous** garantissons de notre côté : le cumul est calculé sur les sommes effectivement versées et
 non sur les sommes acquises ; un test de frontière encadre le seuil, dans les deux sens (REQ-ARG-024,
-REQ-JUR-015) — il ne peut être écrit qu'une fois la valeur du seuil posée.
+REQ-JUR-015) — la valeur du seuil étant posée dans la source unique de vérité, ce test peut désormais
+être écrit, et il reste **à écrire** : c'est une dette, pas un empêchement.
 
 ## 5. Mode dégradé — s'il tombe
 
@@ -59,7 +71,7 @@ REQ-JUR-015) — il ne peut être écrit qu'une fois la valeur du seuil posée.
 | Le canal de dépôt est indisponible | Sans effet sur le produit : l'export est un fichier, conservé, re-déposable. Aucun traitement métier n'attend une réponse de l'administration |
 | Le fichier est rejeté au dépôt | Le cumul reste calculable et re-exportable à l'identique. Le rejet est une affaire de format, que la lecture de la rubrique 2 doit prévenir |
 | Le seuil de l'exercice change | Il vit dans la source unique de vérité avec sa source et sa date ; le changer est un acte tracé, pas une modification de littéral (RM-10) |
-| Le seuil de l'exercice n'est pas posé | État actuel : l'export n'est pas calculable, et c'est une attente, pas une panne |
+| Le seuil de l'exercice n'est pas posé | Ce n'est PLUS l'état actuel : `SEUIL_DAS2` est posé dans la source unique de vérité, et le cumul est calculable. Si un exercice futur retirait la valeur, l'export redeviendrait incalculable — et ce serait une attente, pas une panne |
 
 ## 6. Point de contact
 
@@ -82,7 +94,7 @@ REQ-JUR-015) — il ne peut être écrit qu'une fois la valeur du seuil posée.
 | --- | --- | --- |
 | Canal de dépôt et format attendu | expert-comptable, à défaut Will | premier export annuel |
 | Échéance de dépôt de l'exercice | expert-comptable, à défaut Will | clôture du premier exercice commissionné |
-| Valeur du seuil de l'exercice, avec sa source et sa date, dans la source unique de vérité | Will, sur avis de l'expert-comptable — REQ-ARG-024 : aucune valeur par défaut n'est valide, la source reste vide tant que la décision n'est pas prise | premier calcul de cumul |
+| **Confirmation** de la valeur du seuil de l'exercice | Will, sur avis de l'expert-comptable — la valeur EST posée dans la source unique de vérité (`SEUIL_DAS2`, 240 000 centimes, BOFiP ACTU-2024-00154) avec sa source et sa date, sous `HYP-D9` ; ce qui manque n'est pas la valeur mais son arbitrage | premier dépôt réel |
 
 ## 9. Référence à citer dans une fixture
 
