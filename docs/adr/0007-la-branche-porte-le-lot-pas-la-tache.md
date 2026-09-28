@@ -85,3 +85,25 @@ même chose fausse ; ils disent maintenant la même chose vraie.
 ## Reste à faire
 
 —
+
+## Amendement — GOV-103, 2026-09-28 : la forme `t/` admet les majuscules
+
+**Décideur : Will**, le 2026-09-28, sur la recommandation de la session A01.
+
+**Mesure.** La PR #114 (lot L0-02) a été fusionnée depuis une branche que le motif ci-dessus refuse,
+parce qu'elle porte une majuscule après `t/`.
+
+Branche mesurée : `t/lot-L0-02`
+
+`reclasser.mjs` lit ce motif dans le schéma et rendait `branche_de_la_forge_refusee`. Les six tâches
+livrées par cette PR (GOV-046, GOV-048, GOV-076, GOV-078, GOV-082, GOV-086) restaient donc
+`a_faire`, avec leur code sur `main`. L'autre issue, écrire une branche fictive en minuscules, est
+celle que le tableau des options écartées refuse : le champ deviendrait décoratif.
+
+**Décision.** Le motif devient `^(t/[A-Za-z0-9][A-Za-z0-9._-]*|lot/[A-Za-z0-9][A-Za-z0-9._/-]*)$`.
+La forme `t/` admet les majuscules, comme la forme `lot/` les admettait déjà. Le motif reste
+**fermé** : une branche sans préfixe reconnu est toujours refusée.
+
+**Assertion** — `tests/unit/gouvernance/une-branche-reelle-de-la-forge-est-admise.spec.ts` : la
+branche mesurée ci-dessus, lue dans cet amendement, passe le schéma ; une branche sans préfixe
+reconnu reste refusée sous `schema` ; le registre réel reste vert.
