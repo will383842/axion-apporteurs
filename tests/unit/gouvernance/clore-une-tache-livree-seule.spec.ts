@@ -5,7 +5,7 @@
  * CLORE UNE TÂCHE LIVRÉE SEULE, HORS DE TOUT LOT (GOV-057).
  *
  * LE DÉFAUT. Le pas 8 de `docs/PROTOCOLE-FUSION.md` ne prescrivait qu'une commande :
- * `lot:cloture --lot <id>`. Or des tâches sont livrées SANS lot — INT-T01b et les cinq dernières de
+ * `lot:cloture --lot <id>`. Or des tâches sont livrées SANS lot — six, dont les cinq dernières de
  * la phase −1 — et `cloture.ts` n'avait aucun chemin pour elles : il ÉCRIT `t.lot = lotId`, il
  * TIRE son périmètre de ce même champ, et aucun écrivain ne posait `branch` alors que le schéma
  * refuse `fusionnee` sans elle. Clore une tâche seule, c'était donc soit inventer un lot, soit
@@ -202,7 +202,7 @@ describe('REQ-GOV-021 — chaque refus du chemin outillé est nommé, et un refu
     throw new Error('la clôture n’a rien refusé');
   }
 
-  it('TÉMOIN tache_inconnue : un identifiant absent du registre', () => {
+  it('REQ-GOV-021 — TÉMOIN tache_inconnue : un identifiant absent du registre', () => {
     expect(
       refus((doc) => {
         const t = revendiquee(doc);
@@ -211,7 +211,7 @@ describe('REQ-GOV-021 — chaque refus du chemin outillé est nommé, et un refu
     ).toEqual(['tache_inconnue']);
   });
 
-  it('TÉMOIN tache_d_un_lot : une tâche rangée dans un lot se clôt par son lot, pas seule', () => {
+  it('REQ-GOV-021 — TÉMOIN tache_d_un_lot : une tâche rangée dans un lot se clôt par son lot, pas seule', () => {
     expect(
       refus((doc) => {
         const t = tacheDUnLot(doc);
@@ -220,7 +220,7 @@ describe('REQ-GOV-021 — chaque refus du chemin outillé est nommé, et un refu
     ).toContain('tache_d_un_lot');
   });
 
-  it('TÉMOIN tache_deja_livree : une tâche déjà livrée n’est pas re-close', () => {
+  it('REQ-GOV-021 — TÉMOIN tache_deja_livree : une tâche déjà livrée n’est pas re-close', () => {
     expect(
       refus((doc) => {
         const t = doc.taches.find((x) => LIVREE.has(x.statut) && !x.lot)!;
@@ -229,7 +229,7 @@ describe('REQ-GOV-021 — chaque refus du chemin outillé est nommé, et un refu
     ).toContain('tache_deja_livree');
   });
 
-  it('TÉMOIN livraison_non_atterrie : une PR fusionnée dont l’atterrissage n’est pas vérifié', () => {
+  it('REQ-GOV-021 — TÉMOIN livraison_non_atterrie : une PR fusionnée dont l’atterrissage n’est pas vérifié', () => {
     expect(
       refus((doc) => {
         const t = revendiquee(doc);
@@ -238,7 +238,7 @@ describe('REQ-GOV-021 — chaque refus du chemin outillé est nommé, et un refu
     ).toEqual(['livraison_non_atterrie']);
   });
 
-  it('TÉMOIN branche_absente : la livraison ne dit pas quelle branche a été fusionnée', () => {
+  it('REQ-GOV-021 — TÉMOIN branche_absente : la livraison ne dit pas quelle branche a été fusionnée', () => {
     expect(
       refus((doc) => {
         const t = revendiquee(doc);
@@ -247,7 +247,7 @@ describe('REQ-GOV-021 — chaque refus du chemin outillé est nommé, et un refu
     ).toEqual(['branche_absente']);
   });
 
-  it('TÉMOIN attestation_incomplete : sans le SHA entier, rien ne retrouverait le commit', () => {
+  it('REQ-GOV-021 — TÉMOIN attestation_incomplete : sans le SHA entier, rien ne retrouverait le commit', () => {
     expect(
       refus((doc) => {
         const t = revendiquee(doc);
@@ -256,7 +256,7 @@ describe('REQ-GOV-021 — chaque refus du chemin outillé est nommé, et un refu
     ).toEqual(['attestation_incomplete']);
   });
 
-  it('TÉMOIN proprietaire_absent : une tâche sans propriétaire, et aucun fourni', () => {
+  it('REQ-GOV-021 — TÉMOIN proprietaire_absent : une tâche sans propriétaire, et aucun fourni', () => {
     expect(
       refus((doc) => {
         const t = tacheSeule(doc);
@@ -275,12 +275,12 @@ describe('REQ-GOV-014 — le protocole et l’usage nomment le chemin outillé',
   })();
   const entete = readFileSync(CHEMIN_CLOTURE, 'utf8').split('*/')[0]!;
 
-  it('le pas 8 décrit le cas « tâche seule » avec la commande `--tache`', () => {
+  it('REQ-GOV-014 — le pas 8 décrit le cas « tâche seule » avec la commande `--tache`', () => {
     expect(pas8).toContain('pnpm lot:cloture -- --tache');
     expect(pas8.toLowerCase()).toContain('tâche seule');
   });
 
-  it('l’usage du script déclare le même mode que le protocole prescrit', () => {
+  it('REQ-GOV-014 — l’usage du script déclare le même mode que le protocole prescrit', () => {
     expect(entete).toContain('--tache <id>');
   });
 });
