@@ -44,6 +44,17 @@ export class PerimetreIllisible extends Error {
 }
 
 /**
+ * Deux entrées DISTINCTES de l'index rendraient la MÊME chaîne de chemin. C'est un périmètre
+ * illisible d'une espèce nommée : la garde ne saurait pas lequel des deux elle juge.
+ */
+export class CheminsConfondus extends PerimetreIllisible {
+  constructor(motif: string) {
+    super(motif);
+    this.name = 'CheminsConfondus';
+  }
+}
+
+/**
  * Le périmètre est LISIBLE mais INCOMPLET : git déclare des fichiers que le disque ne rend pas.
  * Distincte de `PerimetreIllisible` — là on ne savait rien, ici on sait qu'il manque quelque chose.
  */
@@ -86,8 +97,89 @@ export interface EntreeSuivie {
   etage: string;
 }
 
-/** Une entrée de `git ls-files -s -z` : `<mode> <empreinte> <étage>`, tabulation, puis le chemin — tout le reste. */
-const ENTREE_D_INDEX = /^([0-7]{6}) ([0-9a-f]{40,64}) ([0-3])\t([\s\S]+)$/;
+/** L'en-tête d'une entrée de `git ls-files -s -z` : `<mode> <empreinte> <étage>`. Puis une tabulation, puis le chemin — tout le reste. */
+const ENTETE_D_INDEX = /^([0-7]{6}) ([0-9a-f]{40,64}) ([0-3])$/;
+
+const TABULATION = 0x09;
+const BARRE_INVERSE = 0x5c;
+
+/**
+ * Le nom d'une entrée, OCTET PAR OCTET, pour un message : l'ASCII imprimable tel quel, tout le
+ * reste en `\xHH`. Deux noms d'octets distincts s'y écrivent toujours distinctement — c'est ce
+ * qu'un refus de confusion doit pouvoir montrer, et ce qu'un décodage ne garantit pas.
+ */
+export function cheminNomme(octets: Buffer): string {
+  let rendu = '';
+  for (const o of octets) {
+    rendu +=
+      o >= 0x20 && o < 0x7f && o !== BARRE_INVERSE
+        ? String.fromCharCode(o)
+        : `${String.fromCharCode(BARRE_INVERSE)}x${o.toString(16).toUpperCase().padStart(2, '0')}`;
+  }
+  return rendu;
+}
+
+/**
+ * Les entrées d'une sortie BRUTE de `git ls-files -s -z`. Pure, pour que ses refus s'éprouvent
+ * sur des octets qu'aucun système de fichiers de poste ne laisserait créer.
+ *
+ * 🔴 LE DÉFAUT QU'ELLE FERME (GOV-064). La sortie était décodée en UTF-8 PERMISSIF : toute suite
+ * d'octets invalide y devient U+FFFD. Deux noms d'octets différents — l'un portant un octet
+ * invalide, l'autre U+FFFD écrit en toutes lettres — rendaient la MÊME chaîne ; et la garde
+ * d'entité, qui indexe les blobs par chemin, jugeait les deux fichiers sur le contenu d'UN seul.
+ * Mesuré : un IBAN dans l'un, un leurre propre dans l'autre, `gov:entite` sortait 0 en déclarant
+ * « 544 fichier(s) suivi(s) lu(s) en entier ».
+ *
+ * 🔑 LA MESURE N'EST PAS DE FAIRE CONFIANCE AU DÉCODEUR, C'EST DE LE VÉRIFIER. Un chemin n'est
+ * rendu que si le réencoder redonne EXACTEMENT ses octets. Cette égalité, vérifiée entrée par
+ * entrée, PROUVE l'injectivité : deux chemins rendus égaux se réencodent en les mêmes octets, donc
+ * viennent du même nom. Ce qui échoue est refusé en le nommant octet par octet ; et quand
+ * plusieurs entrées se confondraient, elles sont nommées TOUTES (`CheminsConfondus`).
+ */
+export function entreesDepuisSortie(sortie: Buffer): EntreeSuivie[] {
+  const entrees: EntreeSuivie[] = [];
+  const nonReversibles: Buffer[] = [];
+  const parChaine = new Map<string, Buffer[]>();
+  let debut = 0;
+  while (debut < sortie.length) {
+    let fin = sortie.indexOf(0, debut);
+    if (fin < 0) fin = sortie.length;
+    const brute = sortie.subarray(debut, fin);
+    debut = fin + 1;
+    if (brute.length === 0) continue;
+    const tab = brute.indexOf(TABULATION);
+    const m = tab < 0 ? null : ENTETE_D_INDEX.exec(brute.subarray(0, tab).toString('latin1'));
+    const octets = tab < 0 ? Buffer.alloc(0) : brute.subarray(tab + 1);
+    if (!m || octets.length === 0)
+      throw new PerimetreIllisible(
+        `\`git ls-files -s\` a rendu une entrée illisible : « ${cheminNomme(brute)} ».`
+      );
+    const chemin = octets.toString('utf8');
+    if (!Buffer.from(chemin, 'utf8').equals(octets)) nonReversibles.push(octets);
+    // Le MÊME nom à plusieurs étages (conflit) n'est pas une confusion de noms : `blobsDe` le
+    // refuse sous son propre motif. Seuls des octets DIFFÉRENTS sous une même chaîne se confondent.
+    const memes = parChaine.get(chemin) ?? [];
+    if (!memes.some((o) => o.equals(octets))) memes.push(octets);
+    parChaine.set(chemin, memes);
+    entrees.push({ mode: m[1]!, empreinte: m[2]!, etage: m[3]!, chemin });
+  }
+  const confondus = [...parChaine.values()].filter((g) => g.length > 1);
+  if (confondus.length > 0) {
+    throw new CheminsConfondus(
+      `${confondus.length} groupe(s) d'entrées DISTINCTES de l'index rendraient le même chemin : ` +
+        confondus.map((g) => g.map((o) => `« ${cheminNomme(o)} »`).join(' et ')).join(' ; ') +
+        ". Une garde qui indexe par chemin jugerait l'une à la place de l'autre."
+    );
+  }
+  if (nonReversibles.length > 0) {
+    throw new PerimetreIllisible(
+      `${nonReversibles.length} entrée(s) de l'index ne sont pas de l'UTF-8 : ` +
+        nonReversibles.map((o) => `« ${cheminNomme(o)} »`).join(', ') +
+        '. Leur nom décodé ne serait pas le leur : la garde lirait, sous ce nom, un autre fichier ou aucun.'
+    );
+  }
+  return entrees;
+}
 
 export function fichiersSuivis(): string[] {
   return entreesSuivies().map((e) => e.chemin);
@@ -130,7 +222,7 @@ export function entreesSuivies(): EntreeSuivie[] {
     );
   }
 
-  let sortie: string;
+  let sortie: Buffer;
   try {
     // 🔴 QUATRIÈME ÉTAT MUET — motif de `securite` au 26e tour, reproduit avant d'être fermé.
     // Sans `-z`, `git ls-files` CITE et échappe en octal tout chemin non-ASCII
@@ -140,9 +232,11 @@ export function entreesSuivies(): EntreeSuivie[] {
     // `-z` sépare par NUL et n'échappe RIEN — il ferme du même coup les noms à retour de ligne.
     // `core.quotepath=false` est la ceinture : il vaut même si un jour `-z` saute.
     // `-s` rend, dans la MÊME énumération, l'objet que l'index associe à chaque chemin.
+    // 🔴 Sans `encoding` : les OCTETS, que `entreesDepuisSortie` décode en vérifiant qu'aucun nom
+    // ne s'y perd. Décodée ici en UTF-8 permissif, la sortie confondait deux entrées distinctes.
     sortie = execFileSync('git', ['-c', 'core.quotepath=false', 'ls-files', '-s', '-z'], {
-      encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'pipe'],
+      maxBuffer: 256 * 2 ** 20,
     });
   } catch (e) {
     throw new PerimetreIllisible(
@@ -150,17 +244,7 @@ export function entreesSuivies(): EntreeSuivie[] {
         'Sans dépôt git, le périmètre est INCONNU — pas vide.'
     );
   }
-  const entrees = sortie
-    .split('\0')
-    .filter(Boolean)
-    .map((ligne): EntreeSuivie => {
-      const m = ENTREE_D_INDEX.exec(ligne);
-      if (!m)
-        throw new PerimetreIllisible(
-          `\`git ls-files -s\` a rendu une entrée illisible : « ${ligne} ».`
-        );
-      return { mode: m[1]!, empreinte: m[2]!, etage: m[3]!, chemin: m[4]! };
-    });
+  const entrees = entreesDepuisSortie(sortie);
   const fichiers = entrees.map((e) => e.chemin);
   if (fichiers.length === 0) {
     throw new PerimetreIllisible(
@@ -213,7 +297,10 @@ export function entreesSuiviesOuRefus(gate: string): EntreeSuivie[] {
       process.exit(1);
     }
     if (!(e instanceof PerimetreIllisible)) throw e;
-    console.error(`❌ ${gate} — [perimetre_illisible] ${e.message}`);
+    // La même sortie, une famille NOMMÉE de plus : deux entrées confondues ne sont pas « rien lu »,
+    // ce sont deux fichiers dont un seul aurait été jugé.
+    const famille = e instanceof CheminsConfondus ? 'chemins_confondus' : 'perimetre_illisible';
+    console.error(`❌ ${gate} — [${famille}] ${e.message}`);
     console.error(
       '   La garde REFUSE plutôt que de déclarer propre ce qu’elle n’a pas lu. ' +
         'Ce dépôt est PUBLIC : un vert obtenu sur zéro fichier est un vert qui ment.'

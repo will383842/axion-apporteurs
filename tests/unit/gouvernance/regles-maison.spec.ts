@@ -126,6 +126,10 @@ describe('REQ-GOV-024 — les règles maison vivent dans le dépôt', () => {
       'RM-12',
       'RM-13',
       'RM-14',
+      // RM-15 (GOV-052) : déclarée ici, pas glissée. ⚠️ Le titre de ce `it` garde « RM-01 à RM-14 » :
+      // `docs/tasks.json` le cite mot pour mot dans les `tests{}` d'une autre tâche, et ce registre
+      // n'est pas réécrit par cette PR. Le titre est donc en retard d'une règle sur la liste.
+      'RM-15',
     ]);
     // Le tableau de tête est une VUE des sections : une ligne sans section, ou l'inverse, et le
     // lecteur qui cite « RM-13 » cite un vide.

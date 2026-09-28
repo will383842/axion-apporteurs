@@ -9176,11 +9176,11 @@
       "externe": null,
       "estimateDays": 0.5,
       "statut": "a_faire",
-      "owner": null,
+      "owner": "A01",
       "lot": null,
       "branch": null,
       "pr": null,
-      "issue": null,
+      "issue": 189,
       "attempts": 0,
       "motif": null,
       "acceptance": "Mesure de la lentille schema au 8e tour de la PR 31 : des CINQ surfaces de gouvernance que partners/ADR-0010 prend pour etalon, DEUX SEULEMENT arment une machine — le deny de .claude/settings.json et le label du §7 de la charte. config/exemptions-corps-publie.json — le seul fichier du depot qui puisse ABSOUDRE un rouge bloquant de Gate A — est passe de 0/5 a 3/5 SANS OBTENIR NI L UNE NI L AUTRE : .github/CODEOWNERS porte deja un attrape-tout au meme proprietaire, donc la ligne ajoutee ne declenche aucune demande de revue nouvelle, et le label du §7 vaut « — ». Ce qui protege aujourd hui est la lentille securite, exigee sur TOUTE PR (DEUX_PREMIERES dans scripts/lot/revues.ts) — un controle reel mais qui ne vise pas ce fichier en particulier. A livrer : le deny sur ce chemin dans .claude/settings.json, plus le temoin qui rougit s il disparait. ⚠️ CE TRAVAIL NE PEUT PAS SE FAIRE EN SESSION : .claude/settings.json est precisement le fichier qu aucun agent en session n a le droit d ecrire (charte §7), et il s ecrit par le lot dedie lance avec --settings surcharge, comme GOV-000 et GOV-023. Le §7 ne l interdit pas : IL LE DESIGNE. C est cette lecture qui a manque a l orchestrateur, qui avait pris le panneau pour un mur. ⚠️ Cette tache a ete ecrite avec le defaut qu elle cotoie : ses paths ne portaient que .claude/settings.json alors que son tests{} promet un temoin dans un AUTRE fichier — ce que j'ai d'abord pris pour la lacune par laquelle verrou-de-phase.spec.ts etait devenu orphelin, et que j'ai declare « fermee sur CPL-T01 le jour meme » — CETTE PHRASE ETAIT FAUSSE, la lentille exactitude l'a mesure au 10e tour et ma propre mesure est pire que la sienne : 9 taches sur 9 de la PR 31 sont dans ce cas, GOV-037 comprise. Ce n'est donc pas une negligence mais LA CONVENTION du depot — paths porte la SOURCE, tests{} porte les SPECIFICATIONS, deliberement disjoints. scripts/lot/composer.ts compare t.paths pour detecter les collisions de lot : le fichier promis lui serait reste invisible. Mesure : ni gov:tasks ni gov:trace ne rougissent sur ce cas — AUCUNE GARDE NE CONFRONTE LE FICHIER QU UNE TACHE PROMET DE TESTER A CEUX QU ELLE DECLARE TOUCHER. Cette confrontation-la, contrairement a celle des titres, EST mecanisable : elle appartient a GOV-037.",
@@ -9788,7 +9788,9 @@
       "paths": [
         "scripts/gates/gov-pr.ts",
         "docs/REGLES-MAISON.md",
-        "tests/unit/gouvernance/une-pr-porte-son-entree-de-journal.spec.ts"
+        "tests/unit/gouvernance/une-pr-porte-son-entree-de-journal.spec.ts",
+        "tests/unit/gouvernance/regles-maison.spec.ts",
+        "docs/LECONS.md"
       ],
       "schema": false,
       "sensible": [],
@@ -9807,7 +9809,9 @@
         "REQ-GOV-023": [
           "tests/unit/gouvernance/une-pr-porte-son-entree-de-journal.spec.ts"
         ]
-      }
+      },
+      "issue": 191,
+      "owner": "A01"
     },
     {
       "id": "GOV-053",
@@ -10320,7 +10324,9 @@
         "REQ-GOV-031": [
           "tests/unit/gouvernance/deux-chemins-ne-se-confondent-pas.spec.ts"
         ]
-      }
+      },
+      "issue": 194,
+      "owner": "A01"
     },
     {
       "id": "GOV-065",
@@ -10577,7 +10583,9 @@
         "REQ-GOV-003": [
           "tests/unit/gouvernance/frontiere-de-mot-du-rendu.spec.ts"
         ]
-      }
+      },
+      "issue": 192,
+      "owner": "A01"
     },
     {
       "id": "GOV-072",
@@ -11106,7 +11114,8 @@
       "zone": "gouvernance",
       "paths": [
         "scripts/gates/gov-trace.ts",
-        "tests/unit/gouvernance/un-rendu-n-officialise-pas-une-attribution.spec.ts"
+        "tests/unit/gouvernance/un-rendu-n-officialise-pas-une-attribution.spec.ts",
+        "tests/unit/gouvernance/tout-check-est-cable.spec.ts"
       ],
       "schema": false,
       "sensible": [],

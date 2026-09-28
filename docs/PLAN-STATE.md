@@ -7,13 +7,13 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `20a4c9f` — 2026-09-28T23:32:53+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #188 (un contrôle requis rouge ou une revue manquante) |
-| Qui tient quoi ? | QA-T07 (A05) · GOV-104 (A01) |
+| Où est `main` ? | `ea85dfa` — 2026-09-29T00:50:40+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #188 (un conflit avec `main`) |
+| Qui tient quoi ? | QA-T07 (A05) · GOV-040 (A01) · GOV-052 (A01) · GOV-064 (A01) · GOV-071 (A01) · GOV-104 (A01) |
 | Où en est la phase ? | phase 0 — 76/118 tâches, reste 35.85 j |
 | Le prochain pas | QA-T07 — Gate sécurité : semgrep |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
-| Dernière entrée de journal | PR #188 — 2026-09-28 |
+| Dernière entrée de journal | PR #195 — 2026-09-28 |
 
 **Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
@@ -60,7 +60,7 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #188 — fix(GOV-104): la cloture lit la declaration dans le commit de fusion et juge l'atterrissage sur la branche par defaut | `t/gov-104b` | un contrôle requis rouge ou une revue manquante |
+| 1 | #188 — fix(GOV-104): la cloture lit la declaration dans le commit de fusion et juge l'atterrissage sur la branche par defaut | `t/gov-104b` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -71,13 +71,17 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 | Tâche | Revendiquée par | Issue | Statut |
 | --- | --- | --- | --- |
 | QA-T07 — Gate sécurité : semgrep | A05 | #69 | `a_faire` |
+| GOV-040 — Le registre d'exemptions n'a AUCUNE des deux surfaces qui arment une machine | A01 | #189 | `a_faire` |
+| GOV-052 — L'entree de journal d'une PR n'est exigee qu'APRES sa fusion : la seule victime possible est main | A01 | #191 | `a_faire` |
+| GOV-064 — Deux chemins suivis distincts peuvent se confondre dans la source unique du perimetre | A01 | #194 | `a_faire` |
+| GOV-071 — Les gardes lexicale et d'identifiants ne decoupent pas les mots comme le rendu les affiche | A01 | #192 | `a_faire` |
 | GOV-104 — La cloture d'une tache seule lit sa declaration dans un corps de PR reecrivable apres la fusion, et juge l'atterrissage sur la base de la PR | A01 | #186 | `a_faire` |
 
 ⚠️ **12 revendication(s) périmée(s)** — GOV-042, GOV-045, GOV-050, GOV-051, GOV-053, GOV-054, GOV-055, GOV-060, GOV-072, GOV-079, GOV-093, INT-T01c : leur issue porte encore un label `owner:` alors que la tâche est livrée. `pnpm lot:cloture` écrit `docs/tasks.json` mais n’efface pas les labels ; la dette appartient à GOV-012.
 
 ## Décisions du jour
 
-`docs/adr/0007-la-branche-porte-le-lot-pas-la-tache.md` — partners/ADR-0007 — La branche porte le LOT, la tâche porte le COMMIT
+Aucun ADR daté du 2026-09-29 (jour du dernier atterrissage).
 
 Dérivé de `git log` sur `docs/adr/`, restreint au jour du dernier atterrissage. Une décision de Will n’est pas un ADR : elle vit au registre `docs/DECISIONS.md`, tranchée ou tenue par une hypothèse datée.
 
@@ -89,13 +93,32 @@ Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeS
 
 ## Dernier atterrissage
 
-`origin/main` = `20a4c9f` (2026-09-28T23:32:53+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `ea85dfa` (2026-09-29T00:50:40+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
 ## Journal
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
+
+### PR #195 — 2026-09-28 — chore(GOV-052): lot L0-11 — six gardes de gouvernance qui laissaient passer ce qu'elles devaient voir
+
+**Fait.** Six tâches, un commit chacune. GOV-052 : `gov:pr --pr` exige l'entrée de journal AVANT
+la fusion, et refuse une entrée pour une PR non fusionnée ; RM-15 la pose. GOV-040 : le registre
+qui peut absoudre un rouge de la porte A passe sous `deny`. GOV-074 : une seule clé d'occurrence
+pour les trois registres de `gov:attributions`. GOV-071 : les gardes lexicale et d'identifiants
+jugent le texte rendu, par une seule fonction. GOV-085 : un rendu n'officialise plus une
+attribution fausse ; la source et la vue sont deux questions. GOV-064 : deux entrées distinctes de
+l'index ne se confondent plus sous un même chemin.
+
+**Reste.** GOV-052 ne s'évalue que sous `--pr` : l'événement `pull_request` de la CI ne la joue pas.
+GOV-040 ne ferme que Write et Edit, pas l'écriture par le shell. GOV-071 laisse passer une balise
+à attributs et la concaténation de chaînes, limites écrites dans le code. GOV-064 refuse désormais
+un nom de fichier légitime qui n'est pas de l'UTF-8.
+
+**Appris.** Les six tâches ont été écrites en parallèle par des agents, coupés par une limite
+d'usage puis repris : chaque commit a été rejoué sur `main` par son seul diff propre, et les vues
+rendues une fois, à la fin. Un `git add -A` d'urgence avait embarqué des vues dans chaque branche.
 
 ### PR #188 — 2026-09-28 — fix(GOV-104): la cloture lit la declaration dans le commit de fusion et juge l'atterrissage sur la branche par defaut
 
@@ -135,22 +158,7 @@ pas `Lot:`. C'est pourquoi ce rattrapage passe avant GOV-104.
 **Appris.** Le composeur proposait cinq de ces douze tâches pour le lot suivant : un registre en
 retard ne coûte pas un compteur faux, il fait refaire du travail livré.
 
-### PR #185 — 2026-09-28 — feat(GOV-103): la forme t/ du motif de branch admet les majuscules
-
-**Fait.** Décision de Will du 2026-09-28 : la forme `t/` du motif de `branch` admet les majuscules,
-comme la forme `lot/`. La PR #114 avait été fusionnée depuis `t/lot-L0-02`, et ses six tâches ne
-pouvaient pas être closes. Le motif reste fermé : la lentille `securite` l'a mesuré cas par cas avec
-la vraie garde. Amendement daté de `partners/ADR-0007` ; tâche versée par `verser-tache.mjs`.
-
-**Reste.** La décision n'a pas encore sa ligne dans `docs/DECISIONS.md` (W17) : elle y entre par
-GOV-104, tâche versée après cette PR. Deux dettes notées par la lentille `securite` : le motif
-admet `..`, dette antérieure ; et, depuis cette PR, deux branches peuvent ne différer que par la
-casse.
-
-**Appris.** Une branche réelle de la forge refusée par le registre ne se corrige pas en réécrivant
-la branche : le champ deviendrait décoratif. C'est le motif qui suit la réalité, par décision.
-
-… 3 entrée(s) affichée(s) sur 80 ; les 77 plus ancienne(s) se lisent dans `docs/journal/`.
+… 3 entrée(s) affichée(s) sur 81 ; les 78 plus ancienne(s) se lisent dans `docs/journal/`.
 
 ## Dette déclarée
 

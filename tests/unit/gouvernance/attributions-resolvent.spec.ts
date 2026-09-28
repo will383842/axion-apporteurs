@@ -22,6 +22,7 @@ import { readFileSync } from 'node:fs';
 import { posix } from 'node:path';
 import { fichiersSuivis } from '../../../scripts/lot/fichiers-suivis';
 import { LIVREE } from '../../../scripts/lot/avancement';
+import { referencePr, DEPOT_LOCAL } from '../../../scripts/lot/attestation';
 import {
   analyser,
   ANCRE_JOURNAL,
@@ -34,12 +35,29 @@ import {
   SourceIllisible,
   CITATIONS_DECLAREES,
   DETTE_GATE_NON_RECIPROQUE,
+  type Tache,
 } from '../../../scripts/gates/gov-attributions';
 
 const lireReel = (chemin: string) => readFileSync(chemin, 'utf8');
 const octets = (chemin: string) => readFileSync(chemin);
 const echapper = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const sousScriptsOuTests = (f: string) => f.startsWith('scripts/') || f.startsWith('tests/');
+
+/**
+ * Le site EXACT d'une exemption de lot (GOV-074) : `lot « L »` sans PR, `lot « L », <référence>` sinon.
+ * La référence vient de son unique auteur (`referencePr`) : la mise en forme d'une PR n'est pas ce
+ * qui est jugé ici.
+ */
+function siteDuLot(t: Tache): string {
+  const ref = referencePr({
+    id: t.id,
+    repo: t.repo ?? DEPOT_LOCAL,
+    statut: t.statut ?? 'a_faire',
+    pr: t.pr ?? null,
+    attestation: t.attestation ?? null,
+  });
+  return ref === null ? `lot « ${t.lot} »` : `lot « ${t.lot} », ${ref}`;
+}
 
 /** Un identifiant de la FORME d'une tâche réelle, qui ne résout pas : dérivé, jamais tapé. */
 function identifiantInconnu(taches: readonly { id: string }[]): string {
@@ -157,13 +175,76 @@ describe('REQ-GOV-021 — sur le dépôt réel, la garde lit ses sources EN ENTI
       ((entrees.get(String(pr)) ?? '').split('\n')[0] as string)
         .split(/[^A-Za-z0-9-]+/)
         .includes(lot);
+    // GOV-074 — le site d'une exemption de lot se compare par IDENTITÉ, jamais par inclusion.
     const sautees = avecLot
       .filter((t) => !(t.pr != null && titreNomme(t.pr, t.lot as string)))
-      .filter((t) => !exemptions.some((e) => e.tache === t.id && e.site.includes(`« ${t.lot} »`)));
+      .filter((t) => !exemptions.some((e) => e.tache === t.id && e.site === siteDuLot(t)));
     expect(
       sautees.map((t) => `${t.id} (lot ${t.lot}, pr ${t.pr})`),
       'une attribution de lot écrite n’est ni attestée, ni exemptée : elle est tue'
     ).toEqual([]);
+  });
+
+  /**
+   * LE SECOND PRODUCTEUR DES EXEMPTIONS DE LOT (GOV-074). Seules les exemptions « paths gabarit »
+   * avaient un recompte indépendant ; celles de lot — PR absente, autre dépôt, sous le plancher, dette
+   * de titre — n'étaient vues que par une INCLUSION du lot dans le site. Elles sont recomptées ici,
+   * depuis `docs/tasks.json`, les titres du journal et le plancher relus, et comparées par nature,
+   * tâche et site EXACT.
+   */
+  it('REQ-GOV-021 — les exemptions de LOT ont un PRODUCTEUR INDÉPENDANT : recomptées par nature, tâche et site exact', () => {
+    const s = chargerSources(fichiersSuivis());
+    const { exemptions } = analyser(s);
+    const suivis = fichiersSuivis();
+    // Les titres d'entrée, relus ligne à ligne dans chaque fichier suivi du journal.
+    const titres = new Map<string, string>();
+    for (const f of suivis.filter(
+      (x) => x.startsWith('docs/journal/') && x.endsWith('.md') && x !== 'docs/journal/README.md'
+    )) {
+      for (const l of lireReel(f).split('\n')) {
+        const m = /^## PR #(\d+) — /.exec(l);
+        if (m) titres.set(m[1] as string, l);
+      }
+    }
+    const plancher = Number(/\*\*> (\d+)\*\*/.exec(lireReel('docs/journal/README.md'))![1]);
+    const lots = new Set(s.taches.flatMap((t) => (t.lot ? [t.lot] : [])));
+    const lotsDuTitre = (titre: string) => [
+      ...new Set(titre.split(/[^A-Za-z0-9-]+/).filter((j) => lots.has(j))),
+    ];
+    const attendues: string[] = [];
+    for (const t of s.taches) {
+      if (!t.lot) continue;
+      const site = siteDuLot(t);
+      if (t.pr == null) {
+        attendues.push(`lot_sans_pr ${t.id} @ ${site}`);
+        continue;
+      }
+      if ((t.repo ?? DEPOT_LOCAL) !== DEPOT_LOCAL) {
+        attendues.push(`autre_depot ${t.id} @ ${site}`);
+        continue;
+      }
+      const titre = titres.get(String(t.pr));
+      if (titre === undefined) {
+        if (t.pr <= plancher) attendues.push(`lot_sous_plancher ${t.id} @ ${site}`);
+        continue; // au-dessus du plancher : une FAUTE, que le dépôt vert n'a pas
+      }
+      const nommes = lotsDuTitre(titre);
+      if (nommes.length === 1 && nommes[0] === t.lot) continue; // attesté
+      attendues.push(`dette_lot_journal ${t.id} @ ${site}`);
+    }
+    const rendues = exemptions
+      .filter((e) =>
+        /^(lot_sans_pr|autre_depot|lot_sous_plancher|dette_lot_journal)$/.test(e.nature)
+      )
+      .map((e) => `${e.nature} ${e.tache} @ ${e.site}`);
+    expect(
+      attendues.length,
+      'aucune exemption de lot recomptée : rien ne serait prouvé'
+    ).toBeGreaterThan(0);
+    expect(
+      rendues.sort(),
+      'les exemptions de lot rendues ne sont pas celles que le recompte indépendant trouve'
+    ).toEqual(attendues.sort());
   });
 
   /** Une tâche du dépôt réel dont l'entrée de journal existe et dont le TITRE nomme le lot, et un lot de sa forme qu'aucune tâche ne porte. */
@@ -766,8 +847,14 @@ describe('REQ-GOV-021 — sur le dépôt réel, la garde lit ses sources EN ENTI
    * passe pas par `analyser` : il relit les registres et les fichiers, découpe les textes en jetons, et
    * range chaque attribution sous la nature que sa cause lui donne. Une exemption tue selon son ORIGINE
    * (prose de `docs/gates.json`, fichiers sous `tests/`) ou selon la FORME d'une gate le fait diverger.
+   *
+   * GOV-074 — LE RECOMPTE SE FAIT À L'OCCURRENCE. Il comparait un en-tête au grain du FICHIER (ligne
+   * retirée) et ne voyait ni la minuscule ni le trait d'union non ASCII : deux exemptions pouvaient
+   * permuter de ligne, ou une mention écrite `gov-0xx` s'exempter, sans qu'il diverge. Il compare
+   * désormais la ligne, lit la mention casse et tirets repliés, et range une déclaration par sa
+   * propre composition du lieu (script jugé, gate si le script est partagé, champ, ligne).
    */
-  it('les exemptions « paths gabarit » ont un PRODUCTEUR INDÉPENDANT : recomptées ici sur les registres relus, par nature, tâche et lieu', () => {
+  it('REQ-GOV-021 — les exemptions « paths gabarit » ont un PRODUCTEUR INDÉPENDANT : recomptées ici sur les registres relus, par nature, tâche et OCCURRENCE', () => {
     const { exemptions } = analyser(chargerSources(fichiersSuivis()));
     type T = { id: string; paths?: string[]; tests?: Record<string, string[]>; statut?: string };
     const taches = (JSON.parse(lireReel('docs/tasks.json')) as { taches: T[] }).taches;
@@ -784,15 +871,32 @@ describe('REQ-GOV-021 — sur le dépôt réel, la garde lit ses sources EN ENTI
           .flat()
           .map((x) => x.split('#')[0] as string),
       ].some((x) => x === fichier || (x.endsWith('/') && fichier.startsWith(x)));
-    const enContexte = (ou: string, id: string) =>
-      CITATIONS_DECLAREES.some((c) => c.ou === ou && c.id === id && c.nature === 'contexte');
+    // Une déclaration « contexte » absout UNE occurrence : lieu, ligne et identifiant, par égalité.
+    const enContexte = (ou: string, ligne: number, id: string) =>
+      CITATIONS_DECLAREES.some(
+        (c) => c.ou === ou && c.ligne === ligne && c.id === id && c.nature === 'contexte'
+      );
+    // Le lieu d'une chaîne de docs/gates.json, recomposé ici : le script jugé, la gate si ce script
+    // est porté par plusieurs gates, puis le chemin du champ.
+    const scriptDe = (g: Record<string, unknown>) => (g.script as string).split('#')[0] as string;
+    const lieuDansGates = (g: Record<string, unknown>, champ: string) => {
+      const partage = gates.filter((x) => scriptDe(x) === scriptDe(g)).length > 1;
+      return `docs/gates.json(${scriptDe(g)})${partage ? `@${g.id as string}` : ''}${champ}`;
+    };
     // Une tâche LIVRÉE (ou sans statut) ne relève plus de « pas encore connu » : le dépôt vert la range sous sa dette figée.
     const nature = (lieu: 'gate' | 'mention', t: T) =>
       t.statut === undefined || LIVREE.has(t.statut)
         ? `dette_gabarit_livree_${lieu}`
         : `${lieu}_paths_${reels(t).length === 0 ? 'non_resolus' : 'en_partie_gabarit'}`;
-    // Une mention est un JETON entier égal à l'identifiant d'une tâche.
-    const mentions = (texte: string) => texte.split(/[^A-Za-z0-9-]+/).filter((j) => parId.has(j));
+    // Une mention est un JETON entier qui désigne une tâche, casse et traits d'union repliés : le
+    // trait d'union, l'insécable, le tiret numérique, le demi-cadratin et le signe moins.
+    const TIRET_NON_ASCII = /[‐‑‒–−]/g;
+    const replier = (j: string) => j.replace(TIRET_NON_ASCII, '-').toUpperCase();
+    const parCle = new Map(taches.map((t) => [replier(t.id), t.id]));
+    const mentions = (texte: string) =>
+      texte
+        .split(/[^A-Za-z0-9\-‐‑‒–−]+/)
+        .flatMap((j) => (parCle.has(replier(j)) ? [parCle.get(replier(j)) as string] : []));
 
     // Le LIEU d'une attribution lue dans docs/gates.json porte le fichier contre lequel elle est jugée : le script.
     const attendues: string[] = [];
@@ -809,14 +913,21 @@ describe('REQ-GOV-021 — sur le dépôt réel, la garde lit ses sources EN ENTI
       attendues.push(`${nature('gate', t)} ${t.id} @ docs/gates.json:${g.id} (${script})`);
     }
     for (const fichier of fichiersSuivis().filter(sousScriptsOuTests)) {
-      for (const ligne of lireReel(fichier).split('\n').slice(0, 20)) {
-        for (const id of mentions(ligne)) {
-          const t = parId.get(id) as T;
-          if (gabarits(t).length === 0 || declareToucher(t, fichier) || enContexte(fichier, id))
-            continue;
-          attendues.push(`${nature('mention', t)} ${id} @ ${fichier}`);
-        }
-      }
+      lireReel(fichier)
+        .split('\n')
+        .slice(0, 20)
+        .forEach((ligne, i) => {
+          for (const id of mentions(ligne)) {
+            const t = parId.get(id) as T;
+            if (
+              gabarits(t).length === 0 ||
+              declareToucher(t, fichier) ||
+              enContexte(fichier, i + 1, id)
+            )
+              continue;
+            attendues.push(`${nature('mention', t)} ${id} @ ${fichier}:${i + 1}`);
+          }
+        });
     }
     for (const g of gates) {
       const script = (g.script as string).split('#')[0] as string;
@@ -828,31 +939,33 @@ describe('REQ-GOV-021 — sur le dépôt réel, la garde lit ses sources EN ENTI
           for (const [cle, x] of Object.entries(v))
             pile.push([x, `${ou}.${cle}`], [cle, `${ou}.${cle} (nom de clé)`]);
         } else if (typeof v === 'string') {
-          for (const id of mentions(v)) {
-            const t = parId.get(id) as T;
-            if (
-              id === g.tache ||
-              gabarits(t).length === 0 ||
-              declareToucher(t, script) ||
-              enContexte(ou, id)
-            )
-              continue;
-            attendues.push(`${nature('mention', t)} ${id} @ ${ou} (${script})`);
-          }
+          const lieu = lieuDansGates(g, ou.slice(`docs/gates.json:${g.id as string}`.length));
+          v.split('\n').forEach((l, i) => {
+            for (const id of mentions(l)) {
+              const t = parId.get(id) as T;
+              if (
+                id === g.tache ||
+                gabarits(t).length === 0 ||
+                declareToucher(t, script) ||
+                enContexte(lieu, i + 1, id)
+              )
+                continue;
+              attendues.push(`${nature('mention', t)} ${id} @ ${ou} (${script})`);
+            }
+          });
         }
       }
     }
 
-    // Un site de docs/gates.json est comparé ENTIER (lieu, champ et script) ; un en-tête, par fichier.
-    const lieu = (site: string) =>
-      site.startsWith('docs/gates.json:') ? site : site.replace(/:\d+$/, '');
+    // Chaque site est comparé ENTIER : un en-tête à sa ligne, une chaîne de docs/gates.json par son
+    // lieu, son champ et son script.
     const rendues = exemptions
       .filter((e) =>
         /^(gate|mention)_paths_(non_resolus|en_partie_gabarit)$|^dette_gabarit_livree_(gate|mention)$/.test(
           e.nature
         )
       )
-      .map((e) => `${e.nature} ${e.tache} @ ${lieu(e.site)}`);
+      .map((e) => `${e.nature} ${e.tache} @ ${e.site}`);
     expect(
       attendues.length,
       'le recompte ne trouve aucune attribution à paths gabarit : il ne prouverait rien'
