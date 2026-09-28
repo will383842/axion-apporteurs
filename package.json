@@ -82,6 +82,8 @@
     "ux:exhaustivite:prove": "tsx scripts/gates/ux-exhaustivite.ts --prove",
     "jur:grille-chiffree": "tsx scripts/gates/jur-grille-chiffree.ts",
     "jur:grille-chiffree:prove": "tsx scripts/gates/jur-grille-chiffree.ts --prove",
+    "ssot:seuils": "tsx scripts/gates/seuils-ssot.ts",
+    "ssot:seuils:prove": "tsx scripts/gates/seuils-ssot.ts --prove",
     "jur:aucun-agregat-reseau": "tsx scripts/gates/jur-aucun-agregat-reseau.ts",
     "jur:aucun-agregat-reseau:prove": "tsx scripts/gates/jur-aucun-agregat-reseau.ts --prove",
     "jur:aucune-progression": "tsx scripts/gates/jur-aucune-progression.ts",

@@ -1221,7 +1221,12 @@
         "src/domain/seuils/ssot.ts",
         "scripts/gates/seuils-ssot.ts",
         "tests/unit/juridique/seuils-ssot.spec.ts",
-        "docs/gates.json"
+        "docs/gates.json",
+        "package.json",
+        ".github/workflows/ci.yml",
+        "vitest.mutation.config.ts",
+        "scripts/gates/registre-des-refus.ts",
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -3393,7 +3398,8 @@
         "src/server/integrations/telegram/",
         "docs/tiers/telegram.md",
         "tests/unit/integration/notif-sans-pii.spec.ts",
-        "docs/gates.json"
+        "docs/gates.json",
+        "src/server/integrations/telegram/alertes.ts"
       ],
       "schema": false,
       "sensible": [

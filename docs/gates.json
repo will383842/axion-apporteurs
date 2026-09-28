@@ -186,16 +186,16 @@
       "preuveRouge": "10 familles, un temoin chacune, 8 contre-temoins verts, 5 temoins de forme (pnpm gates:prouvees:prove)"
     },
     {
-      "id": "GATE-JUR-SEUILS-SSOT",
+      "id": "ssot:seuils",
       "phase": 0,
       "script": "scripts/gates/seuils-ssot.ts",
       "tache": "JUR-T02",
       "alias": [
-        "ssot:seuils"
+        "GATE-JUR-SEUILS-SSOT"
       ],
       "verifie": "chaque seuil et chaque duree porte source + verifieLe ; aucun litteral 2400 / 5000 / 50 / 90 / 12 mois hors du SSOT ; la SSOT ne contient AUCUNE constante de gradation ni de delai de contradictoire (CONTRADICTOIRE_JOURS ou un seuil de strikes y font rougir)",
       "fixtureRouge": "ecrire le litteral 2400 hors du SSOT",
-      "preuveRouge": null
+      "preuveRouge": "pnpm ssot:seuils:prove — 9 temoins vus rougir chacun sur sa seule famille (constante_de_gradation, seuil_sans_source, seuil_sans_date, seuil_mal_forme, litteral_hors_ssot, exemption_orpheline, preavis_indexe, gabarit_diverge, renvoi_introuvable), 4 contre-temoins verts ; sur le depot reel, la fixture (export const seuilDas2 = 2400;) posee dans src/server/ fait sortir pnpm ssot:seuils en 1 (litteral_hors_ssot, montant de seuil 2400 nomme), et 0 une fois retiree (27 constantes, 99 fichiers de src/ lus) — mesure le 2026-09-27, PR #180"
     },
     {
       "id": "detectPii",
@@ -665,8 +665,8 @@
       "script": "tests/unit/integration/notif-sans-pii.spec.ts",
       "tache": "INT-T14",
       "verifie": "aucune cle de contact, de montant ni de raison sociale dans Telegram, SMS ou push (etendue en phase 3 par SEC-26)",
-      "fixtureRouge": "envoyer un payload portant montantCents",
-      "preuveRouge": null
+      "fixtureRouge": "envoyer un payload portant un montant (montantHtCents) ou une raison sociale (raisonSociale)",
+      "preuveRouge": "tests/unit/integration/notif-sans-pii.spec.ts (PR #180) — FACE ROUGE : npx tsx src/server/integrations/telegram/garde-sans-pii.ts --bac-d-essai sort en 1 et nomme les champs nom, courriel, telephone, lienConsole ; un gabarit portant le montant et la raison sociale est refuse, champs montantHtCents et raisonSociale nommes ; FACE VERTE : sans --bac-d-essai, les 2 gabarits du depot sortent en 0, compte imprime ; plafond : 200 alertes d'une categorie dans l'heure donnent au plus le plafond d'envois, 400 alertes identiques en donnent 1 — mesure le 2026-09-27"
     },
     {
       "id": "G-SEC-CI-BLOQUANTE",

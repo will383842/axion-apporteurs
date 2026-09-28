@@ -20,11 +20,11 @@
 | Phase | Ce qu'elle est | Gates | Prouvées | Restent à prouver |
 | ----- | -------------- | ----: | -------: | ----------------: |
 | -1 | Socle de gouvernance | 40 | 27 | 13 |
-| 0 | Fondations, sécurité, charte | 43 | 30 | 13 |
-| 1 | Parcours, attribution, intégrations | 21 | 2 | 19 |
+| 0 | Fondations, sécurité, charte | 43 | 31 | 12 |
+| 1 | Parcours, attribution, intégrations | 21 | 3 | 18 |
 | 2 | Argent et versements | 11 | 0 | 11 |
 | 3 | Clôture et obligations annuelles | 3 | 0 | 3 |
-| **Total** | | **118** | **59** | **59** |
+| **Total** | | **118** | **61** | **57** |
 
 La phase d'une gate est celle **à la sortie de laquelle** elle doit exister, être bloquante et
 avoir rougi. Une gate sans phase entière n'entre dans le périmètre d'aucune sortie :
@@ -67,10 +67,11 @@ champ `preuveRouge` du registre, recopié verbatim par le rendu.
 | `gov:attributions` | GOV-037 | `scripts/gates/gov-attributions.ts` | — | pnpm gov:attributions:prove — les 4 retraits de dette FORCES : reinserees, gov:attributions sort en 1 sur dette_perimee (revue securite 5235809231, PR 48, 2026-09-17) |
 | `gov:attestation` | GOV-038 | `scripts/gates/gov-attestation.ts` | — | PR 33 (GOV-038) — sha 0000...0000 vu passer gov:tasks puis rejete en HTTP 422 par gov:attestation --en-ligne |
 
-### Phase 0 — armées (30)
+### Phase 0 — armées (31)
 
 | Gate | Tâche | Script | Alias | Preuve rouge |
 | ---- | ----- | ------ | ----- | ------------ |
+| `ssot:seuils` | JUR-T02 | `scripts/gates/seuils-ssot.ts` | `GATE-JUR-SEUILS-SSOT` | pnpm ssot:seuils:prove — 9 temoins vus rougir chacun sur sa seule famille (constante_de_gradation, seuil_sans_source, seuil_sans_date, seuil_mal_forme, litteral_hors_ssot, exemption_orpheline, preavis_indexe, gabarit_diverge, renvoi_introuvable), 4 contre-temoins verts ; sur le depot reel, la fixture (export const seuilDas2 = 2400;) posee dans src/server/ fait sortir pnpm ssot:seuils en 1 (litteral_hors_ssot, montant de seuil 2400 nomme), et 0 une fois retiree (27 constantes, 99 fichiers de src/ lus) — mesure le 2026-09-27, PR #180 |
 | `partners:schema:enums` | DM-02 | `scripts/gates/schema-enums.ts` | `GATE-JUR-ENUMS`, `GATE-ARG-enum`, `gov:glossaire` | pnpm partners:schema:enums:prove — 13 familles rougissent chacune sur son temoin, 17 contre-temoins restent verts ; la vue est INJECTEE et non lue sur le disque (RM-11), sans quoi la preuve mesurerait le depot du jour au lieu de la garde. DM-02 : un champ place apres une accolade commentee (Bac.statut) ; une liste d'etats jugee par GROUPE (liste multiligne, membres sans guillemets, clause IN SQL coupee) ; un index unique d'attribution occupante total ou divergent dans une migration ; schema_illisible ; perimetre_vide. 2026-09-22 : deux temoins de plus, statut Unsupported("text") et Unsupported("character varying(30)") @map("motif"), tous deux au MILIEU d'un modele ; deux contre-temoins de plus, le MEME mecanisme de type non textuel sur un nom neutre (reseau Unsupported("inet")) et un enum natif sur une colonne de vocabulaire (statut Unsupported("etat_attribution")) — sans eux on refermait l'orthographe sans refermer le comportement, ou on punissait du code legitime. 2026-09-22 (second tour) : LE DEFAUT ETAIT L'ABSENCE DE ROUGE, et c'est ainsi qu'il se mesure — la cecite au LIBELLE ne se joue pas dans --prove, qui n'a pas de base. Migration temoin posee dans prisma/migrations/ (CREATE EXTENSION IF NOT EXISTS citext ; ALTER TABLE evenements ADD COLUMN statut_liste TEXT[] ; ADD COLUMN statut_ci citext ; CREATE SCHEMA metier ; CREATE TABLE metier.attributions (id SERIAL PRIMARY KEY, statut TEXT NOT NULL)), puis `npx vitest run tests/integration/index-partiels.spec.ts`. AVANT, sur la tete 0b87bd1 : `Tests  7 passed (7)`, EXIT=0, et la ligne de perimetre imprimait « REQ-DM-001 → REQ-DM-038 : 21 colonne(s) de 3 table(s) lues dans information_schema apres migrate deploy. » — 19 sans la migration. Les deux colonnes fautives de public etaient donc LUES, COMPTEES et ABSOUTES, metier.attributions.statut n'etait meme pas lue, et AUCUN ROUGE N'APPARAISSAIT NULLE PART. APRES, migration inchangee : `Tests  1 failed \| 7 passed (8)`, EXIT=1, `AssertionError: expected [ …(3) ] to deeply equal []`, trois fautes nommees — `colonne_vocabulaire_en_chaine metier.attributions.statut est un text`, `colonne_vocabulaire_en_chaine public.evenements.statut_liste est un text[]`, `colonne_vocabulaire_en_chaine public.evenements.statut_ci est un citext` — et « 23 colonne(s) de 4 relation(s) dans 2 schema(s), types resolus par pg_type (631 types au catalogue) ». MUTANTS VUS ROUGES, un par piece portante : (1) la CATEGORIE retiree de GENRE_CHAINE_LIBRE -> `AssertionError: 16530: expected undefined to be 'colonne_vocabulaire_en_chaine'` ; (2) le depliage du tableau retire de typeReel -> 6 tests rouges, dont `AssertionError: expected 'public.bac.montants est un _numeric :…' to contain 'est un numeric[]'` (le prefixe `_` du nom n'est PAS ce qui decide) et `AssertionError: expected [ { …(2) } ] to deeply equal []` (montants_ht_cents INTEGER[] punie a tort : le depliage protege aussi la bonne ecriture) ; (3) la borne `n.nspname = 'public'` remise -> 2 tests rouges et « 21 colonne(s) de 3 relation(s) dans 1 schema(s) ». La migration temoin a ete RETIREE de l'arbre avant le commit : elle n'est pas dans le diff livre. Rouge constate par: A05 |
 | `partners:schema:cents` | DM-02 | `scripts/gates/schema-cents.ts` | — | pnpm partners:schema:cents:prove — 5 familles rougissent sur 18 temoins, la faute posee au MILIEU d'un modele (un Float place apres une accolade commentee compris), un temoin par mot de montant ; 7 contre-temoins restent verts (commissionId, remiseAt, un enum tarifPalier) ; la vue est INJECTEE, jamais lue sur le disque (RM-11). 2026-09-22 (second tour) : LE DEFAUT ETAIT L'ABSENCE DE ROUGE, et c'est ainsi qu'il se mesure — la cecite au LIBELLE ne se joue pas dans --prove, qui n'a pas de base. Migration temoin posee dans prisma/migrations/ (CREATE EXTENSION IF NOT EXISTS citext ; ALTER TABLE evenements ADD COLUMN statut_liste TEXT[] ; ADD COLUMN statut_ci citext ; CREATE SCHEMA metier ; CREATE TABLE metier.attributions (id SERIAL PRIMARY KEY, statut TEXT NOT NULL)), puis `npx vitest run tests/integration/index-partiels.spec.ts`. AVANT, sur la tete 0b87bd1 : `Tests  7 passed (7)`, EXIT=0, et la ligne de perimetre imprimait « REQ-DM-001 → REQ-DM-038 : 21 colonne(s) de 3 table(s) lues dans information_schema apres migrate deploy. » — 19 sans la migration. Les deux colonnes fautives de public etaient donc LUES, COMPTEES et ABSOUTES, metier.attributions.statut n'etait meme pas lue, et AUCUN ROUGE N'APPARAISSAIT NULLE PART. APRES, migration inchangee : `Tests  1 failed \| 7 passed (8)`, EXIT=1, `AssertionError: expected [ …(3) ] to deeply equal []`, trois fautes nommees — `colonne_vocabulaire_en_chaine metier.attributions.statut est un text`, `colonne_vocabulaire_en_chaine public.evenements.statut_liste est un text[]`, `colonne_vocabulaire_en_chaine public.evenements.statut_ci est un citext` — et « 23 colonne(s) de 4 relation(s) dans 2 schema(s), types resolus par pg_type (631 types au catalogue) ». MUTANTS VUS ROUGES, un par piece portante : (1) la CATEGORIE retiree de GENRE_CHAINE_LIBRE -> `AssertionError: 16530: expected undefined to be 'colonne_vocabulaire_en_chaine'` ; (2) le depliage du tableau retire de typeReel -> 6 tests rouges, dont `AssertionError: expected 'public.bac.montants est un _numeric :…' to contain 'est un numeric[]'` (le prefixe `_` du nom n'est PAS ce qui decide) et `AssertionError: expected [ { …(2) } ] to deeply equal []` (montants_ht_cents INTEGER[] punie a tort : le depliage protege aussi la bonne ecriture) ; (3) la borne `n.nspname = 'public'` remise -> 2 tests rouges et « 21 colonne(s) de 3 relation(s) dans 1 schema(s) ». La migration temoin a ete RETIREE de l'arbre avant le commit : elle n'est pas dans le diff livre. Rouge constate par: A05 |
 | `partners:migrations:additive` | QA-T11 | `scripts/gates/migrations-additive.ts` | — | pnpm partners:migrations:additive:prove — 11 familles rougissent sur 24 temoins, la faute posee dans la migration du MILIEU de trois ; 10 contre-temoins restent verts (le RAISE EXCEPTION '... DELETE ...' d'un corps $$, un declencheur sur INSERT seul retire) ; une ADR acceptee absout en l'imprimant, une ADR absente ou proposee n'absout rien ; la protection du journal se DERIVE des declencheurs des migrations ; vues INJECTEES (RM-11). Rouge constate par: A05 |
@@ -102,16 +103,17 @@ champ `preuveRouge` du registre, recopié verbatim par le rendu.
 | `jur:lexique-social` | JUR-T26 | `scripts/gates/jur-lexique-social.ts` | — | pnpm jur:lexique-social:prove — 2 familles sur 3 témoins (dont un terme NIÉ), 2 contre-témoins verts. Binaire (2026-09-27) : src/server/pdf/temoin.tsx « Bulletin de commission » -> EXIT=1, « [terme_social] … « Bulletin » : un terme du droit social » ; dépôt intact -> EXIT=0, 8 fichiers. Rouge constaté par: A05 |
 | `gov:refus-nommes` | GOV-045 | `scripts/gates/registre-des-refus.ts` | — | PR 168 (GOV-045) — commit rouge 3314671, puis 106 mutants tues chacun par son nom |
 
-### Phase 1 — armées (2)
+### Phase 1 — armées (3)
 
 | Gate | Tâche | Script | Alias | Preuve rouge |
 | ---- | ----- | ------ | ----- | ------------ |
 | `ux:exhaustivite` | UX-P0-01 | `scripts/gates/ux-exhaustivite.ts` | `GATE-UX-EXHAUSTIVITE` | pnpm ux:exhaustivite:prove — 17 familles rougissent chacune sur son temoin en nommant sa cible (valeur, ecran, chemin de texte ou fichier:ligne), 2 contre-temoins restent verts dont un composant qui lit la micro-copie, et la vue du depot lit ses six sources injectees, fichiers suivis et composants compris, et texte_calcule rougit sur ses trois branches (vu le 2026-09-25) |
 | `G-SEC-WEBHOOK` | SEC-06 | `tests/unit/securite/webhook-signature.spec.ts` | — | npx vitest run tests/unit/securite/webhook-signature.spec.ts sous le mutant de la fixtureRouge, lot L0-05 (SEC-06), 2026-09-26 : la signature egale au secret en clair acceptee -> 1 echec, REQ-SEC-010 un en-tete absent est refuse, sans repli en clair (AssertionError: expected true to be false), Tests 1 failed \| 24 passed ; code restaure, 25/25 |
+| `G-SEC-NOTIF` | INT-T14 | `tests/unit/integration/notif-sans-pii.spec.ts` | — | tests/unit/integration/notif-sans-pii.spec.ts (PR #180) — FACE ROUGE : npx tsx src/server/integrations/telegram/garde-sans-pii.ts --bac-d-essai sort en 1 et nomme les champs nom, courriel, telephone, lienConsole ; un gabarit portant le montant et la raison sociale est refuse, champs montantHtCents et raisonSociale nommes ; FACE VERTE : sans --bac-d-essai, les 2 gabarits du depot sortent en 0, compte imprime ; plafond : 200 alertes d'une categorie dans l'heure donnent au plus le plafond d'envois, 400 alertes identiques en donnent 1 — mesure le 2026-09-27 |
 
 ## 3. Ce qui reste à prouver
 
-Aucune de ces **59** entrées ne porte de `preuveRouge` : personne ne les a vues rougir.
+Aucune de ces **57** entrées ne porte de `preuveRouge` : personne ne les a vues rougir.
 Le périmètre d'un appel est celui de SA phase : `pnpm gates:prouvees --phase -1` ne juge que les
 gates de phase -1, `--phase 0` y ajoute celles de phase 0, et ainsi de suite. Le compte des manques
 n'est pas recopié ici : il se lit dans la sortie de la commande, famille par famille, et il change à
@@ -143,11 +145,10 @@ sortie de la commande, elle, fait foi.
 | `fixtures:source` | INT-T01a | `scripts/gates/fixtures-source.ts` | — |
 | `gov:plan-state` | GOV-008 | `tests/unit/gouvernance/plan-state-frais.spec.ts` | — |
 
-### Phase 0 — fondations, sécurité, charte (13)
+### Phase 0 — fondations, sécurité, charte (12)
 
 | Gate | Tâche | Script | Alias |
 | ---- | ----- | ------ | ----- |
-| `GATE-JUR-SEUILS-SSOT` | JUR-T02 | `scripts/gates/seuils-ssot.ts` | `ssot:seuils` |
 | `partners:money:conservation` | DM-04 | `tests/unit/domaine/conservation.spec.ts` | `GATE-ARG-prorata` |
 | `partners:grille:check` | DM-03-A | `axionia/scripts/gates/grille-check.ts` | `GATE-ARG-derivation-grille`, `GATE-JUR-GRILLE-DERIVEE`, `GATE-UX-GRILLE` |
 | `idor:check` | SEC-05 | `tests/integration/idor.spec.ts` | `G-SEC-IDOR`, `GATE-UX-CLOISONNEMENT` |
@@ -161,7 +162,7 @@ sortie de la commande, elle, fait foi.
 | `gate-c` | QA-T05 | `scripts/gates/gate-c.sh` | — |
 | `gate-d` | QA-T11 | `scripts/gates/gate-d.sh` | — |
 
-### Phase 1 — parcours, attribution, intégrations (19)
+### Phase 1 — parcours, attribution, intégrations (18)
 
 | Gate | Tâche | Script | Alias |
 | ---- | ----- | ------ | ----- |
@@ -172,7 +173,6 @@ sortie de la commande, elle, fait foi.
 | `partners:grille:complete` | UX-P1-14 | `scripts/gates/grille-complete.ts` | — |
 | `G-SEC-CONCURRENCE` | SEC-12 | `tests/integration/concurrence.spec.ts` | — |
 | `G-SEC-ORACLE` | SEC-16 | `tests/security/oracle.spec.ts` | `GATE-JUR-VERIFIER-BINAIRE` |
-| `G-SEC-NOTIF` | INT-T14 | `tests/unit/integration/notif-sans-pii.spec.ts` | — |
 | `docuseal-strict` | INT-T12 | `tests/integration/docuseal.spec.ts` | — |
 | `webhook-4-verdicts` | SEC-06 | `tests/integration/webhook-verdicts.spec.ts` | — |
 | `frontiere` | SEC-07 | `tests/integration/frontiere.spec.ts` | — |

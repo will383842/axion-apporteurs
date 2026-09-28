@@ -277,6 +277,14 @@ jobs:
         run: pnpm jur:grille-chiffree
       - name: La garde de la grille chiffree sait rougir
         run: pnpm jur:grille-chiffree:prove
+      # JUR-T02 (REQ-JUR-015, REQ-EXT-028, RM-10) : chaque delai et chaque seuil du contrat vit dans
+      # la SSOT src/domain/seuils/ssot.ts, source et date a l appui. Aucun litteral de duree ou de
+      # montant de seuil hors d elle dans src/, aucun preavis indexe sur l anciennete, et le gabarit
+      # dit les memes valeurs que la SSOT. Le vert imprime les fichiers lus et les exemptions nommees.
+      - name: Seuils et delais du contrat — une seule source, aucun litteral hors SSOT
+        run: pnpm ssot:seuils
+      - name: La garde des seuils sait rougir, famille par famille, sans faux positif
+        run: pnpm ssot:seuils:prove
       # UX-P0-02 : une tache d'ecran ne s'attribue pas avant que Will ait valide sa maquette
       # (docs/maquettes/VALIDATION.md). Le composeur l'appliquait seul, au moment de composer ;
       # une attribution faite a la main ne rougissait nulle part. La garde lit le tableau par ses
