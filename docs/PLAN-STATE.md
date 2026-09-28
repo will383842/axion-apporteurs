@@ -9,7 +9,7 @@
 | --- | --- |
 | Où est `main` ? | `20a4c9f` — 2026-09-28T23:32:53+02:00 |
 | Qu’est-ce qui est en vol ? | 1. #188 (un contrôle requis rouge ou une revue manquante) |
-| Qui tient quoi ? | QA-T07 (A05) · GOV-040 (A01) · GOV-052 (A01) · GOV-064 (A01) · GOV-071 (A01) · GOV-074 (A01) · GOV-085 (A01) |
+| Qui tient quoi ? | QA-T07 (A05) · GOV-040 (A01) · GOV-052 (A01) · GOV-064 (A01) · GOV-071 (A01) |
 | Où en est la phase ? | phase 0 — 76/117 tâches, reste 34.85 j |
 | Le prochain pas | QA-T07 — Gate sécurité : semgrep |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
@@ -75,8 +75,6 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 | GOV-052 — L'entree de journal d'une PR n'est exigee qu'APRES sa fusion : la seule victime possible est main | A01 | #191 | `a_faire` |
 | GOV-064 — Deux chemins suivis distincts peuvent se confondre dans la source unique du perimetre | A01 | #194 | `a_faire` |
 | GOV-071 — Les gardes lexicale et d'identifiants ne decoupent pas les mots comme le rendu les affiche | A01 | #192 | `a_faire` |
-| GOV-074 — Les exemptions de la garde des attributions se rangent par site, pas par occurrence | A01 | #190 | `a_faire` |
-| GOV-085 — Le geste que le rouge prescrit eteint le rouge en rendant vraie l'attribution qu'il denonce | A01 | #193 | `a_faire` |
 
 ⚠️ **12 revendication(s) périmée(s)** — GOV-042, GOV-045, GOV-050, GOV-051, GOV-053, GOV-054, GOV-055, GOV-060, GOV-072, GOV-079, GOV-093, INT-T01c : leur issue porte encore un label `owner:` alors que la tâche est livrée. `pnpm lot:cloture` écrit `docs/tasks.json` mais n’efface pas les labels ; la dette appartient à GOV-012.
 

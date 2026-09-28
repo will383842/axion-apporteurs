@@ -10703,9 +10703,7 @@
         "REQ-GOV-003": [
           "tests/unit/gouvernance/exemptions-par-occurrence.spec.ts"
         ]
-      },
-      "issue": 190,
-      "owner": "A01"
+      }
     },
     {
       "id": "GOV-075",
@@ -11140,9 +11138,7 @@
         "REQ-GOV-032": [
           "tests/unit/gouvernance/un-rendu-n-officialise-pas-une-attribution.spec.ts"
         ]
-      },
-      "issue": 193,
-      "owner": "A01"
+      }
     },
     {
       "id": "GOV-086",
