@@ -126,6 +126,8 @@ function fermetureDesImports(): Set<string> {
     'scripts/lot/corps-de-pr.ts',
     // GOV-093 : gov-tasks.ts importe revues.ts ; racine de la garde depuis la PR 168.
     'scripts/gates/gov-tasks.ts',
+    // GOV-057 : cloture.ts importe revues.ts pour lire la déclaration d'une PR ; racine depuis #182.
+    'scripts/lot/cloture.ts',
   ];
   const vus = new Set<string>();
   const resoudre = (depuis: string, specifiant: string): string => {

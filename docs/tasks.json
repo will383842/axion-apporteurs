@@ -9923,7 +9923,9 @@
       "paths": [
         "docs/PROTOCOLE-FUSION.md",
         "scripts/lot/cloture.ts",
-        "tests/unit/gouvernance/clore-une-tache-livree-seule.spec.ts"
+        "tests/unit/gouvernance/clore-une-tache-livree-seule.spec.ts",
+        "scripts/lot/revues.ts",
+        "tests/unit/gouvernance/lentilles-selon-le-risque.spec.ts"
       ],
       "schema": false,
       "sensible": [],

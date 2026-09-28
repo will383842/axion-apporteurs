@@ -8,7 +8,7 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `5e73b88` — 2026-09-28T07:14:42+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #82 (rien) · 2. #175 (rien) · 3. #181 (rien) · 4. #182 (un contrôle requis rouge ou une revue manquante) |
+| Qu’est-ce qui est en vol ? | 1. #82 (rien) · 2. #175 (rien) · 3. #181 (rien) · 4. #185 (rien) · 5. #182 (un contrôle requis rouge ou une revue manquante) |
 | Qui tient quoi ? | QA-T07 (A05) · GOV-057 (A01) |
 | Où en est la phase ? | phase 0 — 59/116 tâches, reste 45.35 j |
 | Le prochain pas | fusionner #82, puis SEC-17 — Rôles console : enum `ConsoleRole { admin, qualifieur, comptable, lecteur }`, matrice SSOT, `requireRole`, garde AST (chemin critique) |
@@ -63,7 +63,8 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 | 1 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | rien — fusionnable maintenant |
 | 2 | #175 — chore(GOV-083): lot L0-09 — gates sans script triees, porte A confrontee, causes temoignees, journal | `t/lot-l0-09` | rien — fusionnable maintenant |
 | 3 | #181 — chore(GOV-012): registre rattrape, cinq taches livrees par deux PR fusionnees passent fusionnee | `t/gov-cloture-l0-07-l0-10` | rien — fusionnable maintenant |
-| 4 | #182 — fix(GOV-057): lot:cloture --tache clot une tache livree seule, sans inventer de lot | `t/gov-057` | un contrôle requis rouge ou une revue manquante |
+| 4 | #185 — feat(GOV-103): la forme t/ du motif de branch admet les majuscules | `t/gov-103` | rien — fusionnable maintenant |
+| 5 | #182 — fix(GOV-057): lot:cloture --tache clot une tache livree seule, sans inventer de lot | `t/gov-057` | un contrôle requis rouge ou une revue manquante |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
