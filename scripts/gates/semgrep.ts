@@ -1545,6 +1545,120 @@ const FORMES_SQL: readonly { nom: string; lignes: string[]; fautive: number; ext
     ],
     fautive: 5,
   },
+  // ── LES SEPT FORMES DU 13e TOUR (revue `securite` sur `18936e6`). Trois montraient que juger ce
+  //    qui suit l'ACCOLADE FERMANTE est un inventaire de contextes ; quatre, que juger le membre et
+  //    la clé nue laisse passer le nom ÉCRIT EN CHAÎNE. Les deux bras ont changé de critère, pas
+  //    seulement de portée. ──
+  {
+    // Le motif NICHÉ : la fermante intérieure est suivie d'une autre fermante.
+    nom: 'destructuration-nichee',
+    lignes: [
+      'declare const p: { $queryRaw(s: TemplateStringsArray): unknown };',
+      'const { c: { $queryRaw: q2 } } = { c: p };',
+      'export const lire = (x: string) => q2.call(p, [`SELECT ${x}`]);',
+    ],
+    fautive: 2,
+  },
+  {
+    // Dans un `for…of` : la fermante est suivie du mot `of`, qu'aucun inventaire ne portait.
+    nom: 'destructuration-dans-un-for-of',
+    lignes: [
+      'declare const p: { $queryRaw(s: TemplateStringsArray): unknown };',
+      'export const lire = (x: string) => {',
+      '  for (const { $queryRaw: q2 } of [p]) return q2.call(p, [`SELECT ${x}`]);',
+      '  return null;',
+      '};',
+    ],
+    fautive: 3,
+  },
+  {
+    // Dans un motif de TABLEAU : la fermante est suivie de `]`.
+    nom: 'destructuration-dans-un-tableau',
+    lignes: [
+      'declare const p: { $queryRaw(s: TemplateStringsArray): unknown };',
+      'const [{ $queryRaw: q2 }] = [p];',
+      'export const lire = (x: string) => q2.call(p, [`SELECT ${x}`]);',
+    ],
+    fautive: 2,
+  },
+  {
+    // Un COMMENTAIRE entre la fermante et le `=` : la classe blancs/commentaires le saute.
+    nom: 'destructuration-commentee',
+    lignes: [
+      'declare const p: { $queryRaw(s: TemplateStringsArray): unknown };',
+      'const { $queryRaw: q2 } /* relais */ = p;',
+      'export const lire = (x: string) => q2.call(p, [`SELECT ${x}`]);',
+    ],
+    fautive: 2,
+  },
+  {
+    // Le MEMBRE CALCULÉ : `f['strings']` n'est pas `f.strings`.
+    nom: 'forge-membre-calcule',
+    lignes: [
+      "import { Prisma } from '@prisma/client';",
+      'declare const p: { $queryRaw(s: TemplateStringsArray, ...v: unknown[]): unknown };',
+      'export const lire = (x: string) => {',
+      '  const f = Prisma.sql`1 = 1`;',
+      "  (f['strings'] as unknown as string[])[0] = x;",
+      '  return p.$queryRaw`SELECT ${f}`;',
+      '};',
+    ],
+    fautive: 5,
+  },
+  {
+    // La clé passée en PAIRES : `fromEntries` la construit à l'exécution, mais le nom est écrit.
+    nom: 'forge-par-paires',
+    lignes: [
+      "import { Prisma } from '@prisma/client';",
+      'declare const p: { $queryRaw(s: TemplateStringsArray, ...v: unknown[]): unknown };',
+      'export const lire = (x: string) => {',
+      '  const f = Prisma.sql`1 = 1`;',
+      "  Object.assign(f, Object.fromEntries([['strings', [x]]]));",
+      '  return p.$queryRaw`SELECT ${f}`;',
+      '};',
+    ],
+    fautive: 5,
+  },
+  {
+    // Le littéral `__proto__` à la place d'`Object.create` : le même effet sans le verbe.
+    nom: 'forge-par-proto-litteral',
+    lignes: [
+      "import { Prisma } from '@prisma/client';",
+      'declare const p: { $queryRaw(s: TemplateStringsArray, ...v: unknown[]): unknown };',
+      'export const lire = (x: string) => {',
+      '  const f = { __proto__: Object.getPrototypeOf(Prisma.sql`y`) };',
+      "  Object.assign(f, Object.fromEntries([['strings', [x]], ['values', []]]));",
+      '  return p.$queryRaw`SELECT ${f}`;',
+      '};',
+    ],
+    fautive: 4,
+  },
+  {
+    // La clé dans un TEXTE JSON : `JSON.parse` n'est pas refusé, la chaîne l'est.
+    nom: 'forge-par-json',
+    lignes: [
+      "import { Prisma } from '@prisma/client';",
+      'declare const p: { $queryRaw(s: TemplateStringsArray, ...v: unknown[]): unknown };',
+      'export const lire = (x: string) => {',
+      '  const f = Prisma.sql`1 = 1`;',
+      '  Object.assign(f, JSON.parse(`{"strings": ["${x}", ""]}`));',
+      '  return p.$queryRaw`SELECT ${f}`;',
+      '};',
+    ],
+    fautive: 5,
+  },
+  {
+    // Le MEMBRE du runtime derrière un import par DÉFAUT, en nom d'élément JSX : rien ne dit
+    //  `Prisma` dans le nom. Fermé par le bras qui juge le membre — et désormais TÉMOIGNÉ : une
+    //  forme fermée sans témoin est une forme qu'on croit fermée (revue `securite`, c22).
+    nom: 'jsx-membre-du-runtime-par-defaut',
+    ext: 'tsx',
+    lignes: [
+      "import * as L from '@prisma/client/runtime/library';",
+      'export const E = ({ e }: { e: string }) => <L.default.sqltag>{e}</L.default.sqltag>;',
+    ],
+    fautive: 2,
+  },
   // Une fonction d'ÉTIQUETTE appelée sans gabarit : le tableau de « morceaux » est du TEXTE.
   {
     nom: 'prisma-sql-appel',

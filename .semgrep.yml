@@ -633,17 +633,25 @@ rules:
       #     const { $queryRaw } = p;       $queryRaw.apply(p, [[`SELECT ${x}`]]);
       #     ({ $queryRaw }: any, s) => $queryRaw.call(null, Object.assign([s], { raw: [s] }));
       #
-      #   Le motif refuse le nom PLACÉ DANS DES ACCOLADES dont la fermante est suivie de `=`, `:`,
-      #   `)` ou `,` — c'est-à-dire un motif de liaison ou un paramètre, et NON une déclaration de
-      #   type (`declare const p: { $queryRaw(...): unknown };`, fermante suivie de `;`), dont le
-      #   bac est plein. Sans cette contrainte, ce bras rougirait la moitié des témoins de la règle.
+      #   CE QUE LE MOTIF JUGE, ET POURQUOI IL A CHANGÉ (13e tour, revue `securite` sur `18936e6`).
+      #   Il jugeait ce qui SUIT L'ACCOLADE FERMANTE (`=`, `:`, `)`, `,`) — c'est-à-dire un
+      #   inventaire de contextes, et un inventaire s'oublie. Trois formes passaient, mesurées :
+      #     const { c: { $queryRaw: q2 } } = { c: p };   fermante suivie de `}`
+      #     for (const { $queryRaw: q2 } of [p])         fermante suivie de `of`
+      #     const [{ $queryRaw: q2 }] = [p];             fermante suivie de `]`
       #
-      #   POURQUOI PAS LE NOM NU : le dépôt le cite EN PROSE une fois
-      #   (`src/server/evenement/journal.ts:98`, « `$executeRaw`, pas `$queryRaw` : … »), sans
-      #   accolade. Refuser le nom nu rougirait ce commentaire — le même piège que la citation du
-      #   client en prose, corrigé au tour précédent. Mesuré, pas suppose.
+      #   Il juge maintenant ce qui suit LE NOM, et la distinction est structurelle et non
+      #   contextuelle : une méthode DÉCLARÉE ou APPELÉE est suivie de `(` ou de `<` (générique) ;
+      #   une LIAISON est suivie de `:`, `,`, `}` ou `=`. La déclaration de type dont le bac est
+      #   plein (`declare const p: { $queryRaw(...): unknown };`) reste donc muette, et l'étiquette
+      #   permise (`p.$queryRaw`…``) aussi — un accent grave n'est dans aucune des deux listes.
+      #
+      #   POURQUOI PAS LE NOM NU, SANS RIEN DERRIÈRE : le dépôt le cite EN PROSE une fois
+      #   (`src/server/evenement/journal.ts:98`, « `$executeRaw`, pas `$queryRaw` : … »). L'accent
+      #   grave qui ferme la citation le sauve — le même piège que la citation du client en prose,
+      #   corrigé au tour précédent. Mesuré, pas supposé.
       - pattern-regex: |-
-          \{[^{}]*\$(?:queryRaw|executeRaw|queryRawUnsafe|executeRawUnsafe)(?![\p{ID_Continue}$\x{200C}\x{200D}])[^{}]*\}(?:[\t\n\x0B\f\r\x{0085}\x{200B}\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)*(?:=(?![=>])|:|\)|,)
+          \$(?:queryRaw|executeRaw|queryRawUnsafe|executeRawUnsafe)(?![\p{ID_Continue}$\x{200C}\x{200D}])(?:[\t\n\x0B\f\r\x{0085}\x{200B}\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)*(?:[:,}]|=(?![=>]))
       # — LA FORGE D'UN `Sql` (même revue, témoins c04, c05, c10). Un `Sql` légitime naît d'une
       #   étiquette ; ces trois formes en fabriquent un, ou dénaturent un vrai, puis le passent à
       #   une étiquette permise — l'injection entre par l'INTERPOLATION, que la règle croyait sûre :
@@ -673,6 +681,36 @@ rules:
           - pattern: Object.defineProperties(...)
           - pattern: Object.setPrototypeOf(...)
           - pattern: Reflect.$M(...)
+          # — Le nom `strings` ÉCRIT EN CLAIR DANS UNE CHAÎNE (13e tour, revue `securite` sur
+          #   `18936e6`). Les deux bras ci-dessus jugent le MEMBRE `f.strings` et la CLÉ nue
+          #   `{ strings: … }` ; ils ne voyaient pas la chaîne, et quatre formes passaient :
+          #     (f['strings'] as string[])[0] = e;
+          #     Object.assign(f, Object.fromEntries([['strings', [e]]]));
+          #     Object.assign({ __proto__: proto }, Object.fromEntries([['strings', [e]]]));
+          #     Object.assign(f, JSON.parse(`{"strings": ["${e}", ""]}`));
+          #   Rien n'y est CONSTRUIT : le nom est écrit tel quel, comme l'étaient déjà `"Prisma"` et
+          #   `"constructor"` — ce précédent est la raison de ce bras, pas une analogie.
+          #   `JSON.parse` n'est PAS refusé (9 occurrences dans `src/`) : la chaîne suffit, et
+          #   refuser un verbe banal pour atteindre une chaîne, c'est payer le prix au mauvais
+          #   endroit. COÛT MESURÉ sur le `src/` réel : `'strings'`, `"strings"` et le mot `strings`
+          #   dans n'importe quelle chaîne — ZÉRO occurrence, commentaires compris.
+          - pattern: '"strings"'
+          #   ET LE MÊME NOM DANS UN GABARIT, jugé par le TEXTE (mesuré : le motif AST ci-dessus ne
+          #   mord pas dans `` `{"strings": ["${x}", ""]}` `` — un gabarit interpolé n'est pas un
+          #   littéral de chaîne pour l'AST, ses guillemets intérieurs sont du texte). C'est le seul
+          #   endroit de ce bras où le texte est nécessaire, et il l'est pour une raison mesurée, pas
+          #   par symétrie. Il exige le nom COLLÉ à ses guillemets, donc la prose française ne le
+          #   déclenche pas (« les `strings` de … » n'a pas de guillemet contre le mot).
+          - pattern-regex: |-
+              ['"`]strings['"`]
+          # — `__proto__` ÉCRIT EN CLAIR, clé ou chaîne (même revue, témoin c32) : le littéral
+          #   `{ __proto__: … }` remplace `Object.create` sans le nommer. Refusé partout sous `src/`
+          #   — 0 occurrence mesurée. Un dépôt qui n'en a jamais eu besoin n'a pas à en avoir le
+          #   droit : la prochaine fois qu'il apparaît, c'est une exemption nommée qui le dit.
+          - pattern-either:
+              - pattern: "{..., __proto__: $V, ...}"
+              - pattern: $X.__proto__
+              - pattern: '"__proto__"'
       # — LES FONCTIONS D'ÉTIQUETTE hors de la position d'étiquette. Une étiquette est un appel
       #   pour l'AST de semgrep (mesuré : `Prisma.sql(...)` matche `Prisma.sql`…``) ; c'est
       #   donc la RÉFÉRENCE qui est jugée, et admise seulement DANS son propre gabarit étiqueté,
