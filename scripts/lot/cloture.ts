@@ -47,7 +47,8 @@
 
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
-import { join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import {
   DEPOT_LOCAL,
   PASSIF_SANS_ATTESTATION,
@@ -295,6 +296,11 @@ function poserLaLivraison(t: Tache, attestation: Attestation): string {
  * LE MOTIF DE `branch`, LU DANS LE SCHÉMA — jamais recopié (RM-01). Lu à l'APPEL, pas à l'import :
  * importer ce module n'a aucun effet. Un schéma qui porterait zéro ou plusieurs motifs distincts
  * pour `branch` est une ambiguïté, et elle est refusée plutôt que tranchée au hasard.
+ *
+ * LE SCHÉMA EST DU CODE, PAS UNE DONNÉE DU DÉPÔT TRAITÉ : il se résout depuis la racine de CE module
+ * (deux niveaux au-dessus de `scripts/lot/`), jamais depuis le répertoire courant. Lu depuis le
+ * répertoire courant, le motif était introuvable dès que la clôture tournait sur un autre arbre —
+ * le dépôt jetable des témoins du script entier a rougi en ENOENT.
  */
 function motifDeBranche(): RegExp {
   const motifs = new Set<string>();
@@ -308,7 +314,8 @@ function motifDeBranche(): RegExp {
       parcourir(v);
     }
   };
-  parcourir(JSON.parse(readFileSync(CHEMIN_SCHEMA_DES_TACHES, 'utf8')));
+  const racineDuCode = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
+  parcourir(JSON.parse(readFileSync(join(racineDuCode, CHEMIN_SCHEMA_DES_TACHES), 'utf8')));
   if (motifs.size !== 1) {
     throw new Error(
       `${CHEMIN_SCHEMA_DES_TACHES} porte ${motifs.size} motif(s) distinct(s) pour \`branch\` : ` +
@@ -471,6 +478,20 @@ export function cloturerLeLot(options: {
   const { lotId, rendu, membres, taches, ownerParDefaut = '' } = options;
 
   const refus = controlerLePerimetre(lotId, rendu, membres);
+  // GOV-104 — LE MÊME REFUS QUE LE MODE `--tache`, ET AVANT TOUTE ÉCRITURE : une branche que le
+  // schéma refuse, écrite ici, rendrait le registre rouge sur une tâche qu'on ne pourrait plus
+  // re-clore. Le motif est lu dans le schéma, par la même fonction (RM-01).
+  for (const r of rendu.resultats ?? []) {
+    const branche = r?.dev?.branch;
+    if (branche && !motifDeBranche().test(branche)) {
+      refus.push({
+        famille: 'branche_hors_motif',
+        message:
+          `${r?.dev?.taskId ?? '?'} : la branche « ${branche} » est refusée par le motif de ` +
+          `\`branch\` de ${CHEMIN_SCHEMA_DES_TACHES}. Le motif se décide par ADR (partners/ADR-0007).`,
+      });
+    }
+  }
   if (refus.length > 0) throw new ErreurDeCloture(refus);
 
   const index = new Map(taches.map((t) => [t.id, t]));
@@ -605,55 +626,110 @@ function rattraperLePasse(aBlanc: boolean): void {
   if (horsPassif.length > 0) process.exitCode = 1;
 }
 
+/** Ce que `gh pr view` rend d'une PR. Le corps peut y figurer : il n'est JAMAIS lu (GOV-104). */
+export interface VueDeLaForge {
+  state: string;
+  mergeCommit: { oid: string } | null;
+  mergedAt: string | null;
+  headRefName: string;
+}
+
+/**
+ * LA LIVRAISON, COMPOSÉE DE CE QUE LA FORGE REND — la règle, sans I/O, pour qu'un témoin l'appelle.
+ *
+ * GOV-104 — LA DÉCLARATION SE LIT DANS LE COMMIT DE FUSION. Le titre et le champ `Lot:` étaient lus
+ * dans le CORPS de la PR, qui reste modifiable après la fusion : ajouter une tâche à `Lot:` suffisait
+ * à la faire clore sur une attestation qui ne l'a jamais portée (lentille `securite`, #182). Le
+ * message du commit d'écrasement, lui, est immuable, et le pas 6 y recopie `Lot:`. Un message
+ * absent ne déclare RIEN — jamais un repli sur le corps.
+ *
+ * GOV-104 — L'ATTERRISSAGE SE JUGE SUR LA BRANCHE PAR DÉFAUT du dépôt, pas sur `baseRefName`, que
+ * la PR choisit : une PR fusionnée dans une branche quelconque n'est pas livrée. `faceALaBrancheParDefaut`
+ * est le statut de `compare/<sha>...<défaut>` : `identical` ou `ahead` disent que le commit en est un
+ * ancêtre. C'est PLUS FAIBLE que le repli du pas 7, qui exige aussi `gate-a` verte sur `main`.
+ */
+export function livraisonDepuisLaForge(e: {
+  pr: number;
+  vue: VueDeLaForge;
+  messageDuCommit: string | null;
+  faceALaBrancheParDefaut: string | null;
+}): Livraison {
+  const sha = e.vue.state === 'MERGED' ? (e.vue.mergeCommit?.oid ?? null) : null;
+  const lignes = e.messageDuCommit === null ? null : e.messageDuCommit.split('\n');
+  // LE CORPS NE DÉCLARE QUE S'IL EST RÉDUIT À LA SEULE LIGNE `Lot:` que le pas 6 y recopie. Sans
+  // `--body`, la forge compose ce corps avec les messages des commits : un « Lot: X » écrit dans un
+  // commit par le développeur déclarerait X (lentille `securite`, #188). Tout autre corps ne
+  // déclare rien, et la PR ne livre alors que la tâche de son titre — échec fermé.
+  const utiles = lignes === null ? [] : lignes.slice(1).filter((l) => l.trim() !== '');
+  const corps =
+    lignes === null ? null : utiles.length === 1 && /^Lot:/.test(utiles[0]!) ? utiles[0]! : '';
+  return {
+    pr: e.pr,
+    sha,
+    fusionneeAt: e.vue.mergedAt,
+    branch: e.vue.headRefName,
+    atterri:
+      sha !== null &&
+      (e.faceALaBrancheParDefaut === 'identical' || e.faceALaBrancheParDefaut === 'ahead'),
+    titre: lignes === null ? null : (lignes[0] ?? null),
+    corps,
+  };
+}
+
 /**
  * LA LIVRAISON LUE SUR LA FORGE, pour `--tache`. Rien n'est tapé par l'opérateur hormis le numéro :
- * le SHA, l'instant et la branche viennent de `gh pr view`, dans le dépôt DE LA TÂCHE (`DEPOTS`).
- * L'atterrissage est l'ascendance du commit de fusion sur la branche de base, lue par l'API de
- * comparaison. C'est PLUS FAIBLE que le repli daté du pas 7, qui exige aussi `gate-a` verte sur
- * `main` : ce mode établit que le commit est dans l'historique de la base, pas qu'il y est vert.
+ * tout vient de la forge, dans le dépôt DE LA TÂCHE (`DEPOTS`). Trois lectures : la PR, le message
+ * du commit de fusion, et l'ascendance de ce commit sur la branche par défaut.
+ *
+ * `lire` est INJECTÉ (GOV-104) : c'est ce qui permet à un témoin de juger les APPELS — la
+ * comparaison vise la branche par défaut lue sur la forge, jamais la base que la PR a choisie.
+ * Sans lui, remettre `baseRefName` dans l'appel laissait tous les tests verts.
  */
-function livraisonSurLaForge(depot: string, pr: number): Livraison {
-  const brut = execFileSync(
-    'gh',
-    [
+export function livraisonSurLaForge(
+  depot: string,
+  pr: number,
+  lire: (args: string[]) => string = (args) => execFileSync('gh', args, { encoding: 'utf8' }).trim()
+): Livraison {
+  const vue = JSON.parse(
+    lire([
       'pr',
       'view',
       String(pr),
       '-R',
       depot,
       '--json',
-      'state,mergeCommit,mergedAt,headRefName,baseRefName,title,body',
-    ],
-    { encoding: 'utf8' }
-  );
-  const v = JSON.parse(brut) as {
-    state: string;
-    mergeCommit: { oid: string } | null;
-    mergedAt: string | null;
-    headRefName: string;
-    baseRefName: string;
-    title: string;
-    body: string;
-  };
-  const sha = v.state === 'MERGED' ? (v.mergeCommit?.oid ?? null) : null;
-  let atterri = false;
-  if (sha) {
-    const statut = execFileSync(
-      'gh',
-      ['api', `repos/${depot}/compare/${sha}...${v.baseRefName}`, '--jq', '.status'],
-      { encoding: 'utf8' }
-    ).trim();
-    atterri = statut === 'identical' || statut === 'ahead';
+      'state,mergeCommit,mergedAt,headRefName',
+    ])
+  ) as VueDeLaForge;
+  const sha = vue.state === 'MERGED' ? (vue.mergeCommit?.oid ?? null) : null;
+  if (sha === null) {
+    return livraisonDepuisLaForge({
+      pr,
+      vue,
+      messageDuCommit: null,
+      faceALaBrancheParDefaut: null,
+    });
   }
-  return {
+  const parDefaut = lire([
+    'repo',
+    'view',
+    depot,
+    '--json',
+    'defaultBranchRef',
+    '-q',
+    '.defaultBranchRef.name',
+  ]);
+  return livraisonDepuisLaForge({
     pr,
-    sha,
-    fusionneeAt: v.mergedAt,
-    branch: v.headRefName,
-    atterri,
-    titre: v.title,
-    corps: v.body,
-  };
+    vue,
+    messageDuCommit: lire(['api', `repos/${depot}/commits/${sha}`, '--jq', '.commit.message']),
+    faceALaBrancheParDefaut: lire([
+      'api',
+      `repos/${depot}/compare/${sha}...${parDefaut}`,
+      '--jq',
+      '.status',
+    ]),
+  });
 }
 
 function cloreUneTacheSeule(

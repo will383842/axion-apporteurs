@@ -324,8 +324,8 @@ les scripts de contrôle ont leurs propres signaux (garde des revues, CI, racine
 `scripts/` et `docs/` ramenait le gain sous son niveau d'avant GOV-097 (24 tâches ordinaires contre 31) à
 cause d'étiquettes `sensible` portées par des tâches de gouvernance — dette nommée : un `scripts/gates/*`
 hors de la garde des revues reste ordinaire ; (4) un de ses fichiers appartient au
-**processus** : la garde des revues — ses trois racines (`scripts/lot/revues.ts`, `scripts/gates/gov-pr.ts`,
-`scripts/lot/corps-de-pr.ts`), la **fermeture transitive** de leurs imports, dérivée du disque, cette charte,
+**processus** : la garde des revues — ses racines, énumérées par `RACINES_DE_LA_GARDE_DES_REVUES`
+(`scripts/lot/revues.ts`) et jamais recopiées ici, la **fermeture transitive** de leurs imports, dérivée du disque, cette charte,
 `docs/agents.json` et le schéma du registre des tâches —, **`.github/`** et tout dossier caché **de la racine**, **toute la
 racine**, documents compris (`package.json`, les configurations d'outils, mais aussi `CLAUDE.md` et
 `AGENTS.md`, que chaque agent charge), et `config/`. Ces fichiers peuvent désarmer les gardes elles-mêmes :

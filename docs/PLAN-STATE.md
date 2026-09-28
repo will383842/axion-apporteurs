@@ -7,10 +7,10 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `20a4c9f` — 2026-09-28T23:32:53+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #188 (un contrôle requis rouge ou une revue manquante) |
-| Qui tient quoi ? | QA-T07 (A05) · GOV-040 (A01) · GOV-052 (A01) · GOV-064 (A01) · GOV-071 (A01) |
-| Où en est la phase ? | phase 0 — 76/117 tâches, reste 34.85 j |
+| Où est `main` ? | `ea85dfa` — 2026-09-29T00:50:40+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #188 (un conflit avec `main`) |
+| Qui tient quoi ? | QA-T07 (A05) · GOV-040 (A01) · GOV-052 (A01) · GOV-064 (A01) · GOV-071 (A01) · GOV-104 (A01) |
+| Où en est la phase ? | phase 0 — 76/118 tâches, reste 35.85 j |
 | Le prochain pas | QA-T07 — Gate sécurité : semgrep |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
 | Dernière entrée de journal | PR #195 — 2026-09-28 |
@@ -19,14 +19,14 @@
 
 ## Phase courante : 0
 
-76/117 tâches terminées · reste 34.85 j estimés.
+76/118 tâches terminées · reste 35.85 j estimés.
 
 ## Tâches
 
 | Statut | Nombre | Détail |
 | --- | --- | --- |
 | `proposee` | 0 | — |
-| `a_faire` | 174 | QA-T07, QA-T05, QA-T11, QA-T06, QA-T12, QA-T13, DM-03-A, DM-03-P, DM-04, INT-T02, INT-T03, INT-T04 … (12 affichées sur 174 — liste complète : `docs/TASKS.md`) |
+| `a_faire` | 175 | QA-T07, QA-T05, QA-T11, QA-T06, QA-T12, QA-T13, DM-03-A, DM-03-P, DM-04, INT-T02, INT-T03, INT-T04 … (12 affichées sur 175 — liste complète : `docs/TASKS.md`) |
 | `en_cours` | 0 | — |
 | `bloquee` | 0 | — |
 | `attente_externe` | 2 | JUR-T01b · JUR-T01c |
@@ -60,7 +60,7 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #188 — fix(GOV-104): la cloture lit la declaration dans le commit de fusion et juge l'atterrissage sur la branche par defaut | `t/gov-104b` | un contrôle requis rouge ou une revue manquante |
+| 1 | #188 — fix(GOV-104): la cloture lit la declaration dans le commit de fusion et juge l'atterrissage sur la branche par defaut | `t/gov-104b` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -75,24 +75,25 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 | GOV-052 — L'entree de journal d'une PR n'est exigee qu'APRES sa fusion : la seule victime possible est main | A01 | #191 | `a_faire` |
 | GOV-064 — Deux chemins suivis distincts peuvent se confondre dans la source unique du perimetre | A01 | #194 | `a_faire` |
 | GOV-071 — Les gardes lexicale et d'identifiants ne decoupent pas les mots comme le rendu les affiche | A01 | #192 | `a_faire` |
+| GOV-104 — La cloture d'une tache seule lit sa declaration dans un corps de PR reecrivable apres la fusion, et juge l'atterrissage sur la base de la PR | A01 | #186 | `a_faire` |
 
 ⚠️ **12 revendication(s) périmée(s)** — GOV-042, GOV-045, GOV-050, GOV-051, GOV-053, GOV-054, GOV-055, GOV-060, GOV-072, GOV-079, GOV-093, INT-T01c : leur issue porte encore un label `owner:` alors que la tâche est livrée. `pnpm lot:cloture` écrit `docs/tasks.json` mais n’efface pas les labels ; la dette appartient à GOV-012.
 
 ## Décisions du jour
 
-`docs/adr/0007-la-branche-porte-le-lot-pas-la-tache.md` — partners/ADR-0007 — La branche porte le LOT, la tâche porte le COMMIT
+Aucun ADR daté du 2026-09-29 (jour du dernier atterrissage).
 
 Dérivé de `git log` sur `docs/adr/`, restreint au jour du dernier atterrissage. Une décision de Will n’est pas un ADR : elle vit au registre `docs/DECISIONS.md`, tranchée ou tenue par une hypothèse datée.
 
 ## Prochain pas
 
-**QA-T07** — Gate sécurité : semgrep (1 j) : 17 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
+**QA-T07** — Gate sécurité : semgrep (1 j) : 18 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
 Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeStateStatus` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage —, la tâche ensuite. L’ordre de la file se corrige à la rubrique « File de fusion », jamais ici.
 
 ## Dernier atterrissage
 
-`origin/main` = `20a4c9f` (2026-09-28T23:32:53+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `ea85dfa` (2026-09-29T00:50:40+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
@@ -119,6 +120,25 @@ un nom de fichier légitime qui n'est pas de l'UTF-8.
 d'usage puis repris : chaque commit a été rejoué sur `main` par son seul diff propre, et les vues
 rendues une fois, à la fin. Un `git add -A` d'urgence avait embarqué des vues dans chaque branche.
 
+### PR #188 — 2026-09-28 — fix(GOV-104): la cloture lit la declaration dans le commit de fusion et juge l'atterrissage sur la branche par defaut
+
+**Fait.** Les deux dettes de la lentille `securite` sur la PR #182, que Will a décidé de corriger
+(W18). La déclaration d'une livraison, titre et ligne `Lot:`, se lit dans le message du commit
+d'écrasement, immuable, et plus dans le corps de la PR, réécrivable après la fusion. Le pas 6 y
+recopie `Lot:` par `gh pr merge --body`. L'atterrissage se juge sur la branche par défaut du dépôt
+de la tâche, lue sur la forge. Le mode `--lot` refuse lui aussi une branche hors motif. W17 et W18
+entrent au registre des décisions, et la charte cite `RACINES_DE_LA_GARDE_DES_REVUES` au lieu de
+recopier leur nombre. L'instant des témoins qui lisent le registre réel a une seule définition.
+
+**Reste.** Les fusions antérieures au pas 6 ne portent pas `Lot:` dans leur commit : leurs tâches
+secondaires ne se clôturent plus par `--tache`, et c'est voulu (échec fermé). Sur les vingt-cinq
+tâches secondaires de ces fusions, vingt-quatre sont closes, huit d'entre elles par la PR #187 ; la
+dernière, GOV-074 (#168), n'était livrée qu'en partie et entre dans le lot L0-11.
+
+**Appris.** Cette branche a dû être reconstruite depuis `main` : elle portait les commits d'une PR
+fusionnée par écrasement, et la fusion de `main` n'a plus su réconcilier cinq fichiers. Une branche
+construite sur une autre branche de PR se reconstruit ; elle ne se fusionne pas.
+
 ### PR #187 — 2026-09-28 — chore(GOV-012): registre rattrape, douze taches livrees par quatre PR fusionnees passent fusionnee
 
 **Fait.** Sixième rattrapage du registre, et le premier par le chemin outillé de GOV-057 :
@@ -138,21 +158,7 @@ pas `Lot:`. C'est pourquoi ce rattrapage passe avant GOV-104.
 **Appris.** Le composeur proposait cinq de ces douze tâches pour le lot suivant : un registre en
 retard ne coûte pas un compteur faux, il fait refaire du travail livré.
 
-### PR #185 — 2026-09-28 — feat(GOV-103): la forme t/ du motif de branch admet les majuscules
-
-**Fait.** Décision de Will du 2026-09-28 : la forme `t/` du motif de `branch` admet les majuscules,
-comme la forme `lot/`. La PR #114 avait été fusionnée depuis `t/lot-L0-02`, et ses six tâches ne
-pouvaient pas être closes. Le motif reste fermé : la lentille `securite` l'a mesuré sur 23 cas par
-la vraie garde. Amendement daté de `partners/ADR-0007` ; tâche versée par `verser-tache.mjs`.
-
-**Reste.** La décision n'a pas encore sa ligne dans `docs/DECISIONS.md` (W17) : elle est portée par
-GOV-104. Deux dettes antérieures notées par la lentille `securite` : le motif admet `..`, et deux
-branches peuvent ne différer que par la casse.
-
-**Appris.** Une branche réelle de la forge refusée par le registre ne se corrige pas en réécrivant
-la branche : le champ deviendrait décoratif. C'est le motif qui suit la réalité, par décision.
-
-… 3 entrée(s) affichée(s) sur 80 ; les 77 plus ancienne(s) se lisent dans `docs/journal/`.
+… 3 entrée(s) affichée(s) sur 81 ; les 78 plus ancienne(s) se lisent dans `docs/journal/`.
 
 ## Dette déclarée
 

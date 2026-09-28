@@ -18,6 +18,7 @@ import { controler, vuesDeLaPasse, type Tache } from '../../../scripts/gates/gov
 import { chargerRegistre, CHEMIN_REGISTRE } from '../../../scripts/lot/registre-decisions';
 import { CHEMIN_CHARTE, cheminsSchema } from '../../../scripts/lot/revues';
 import { LIVREE } from '../../../scripts/lot/avancement';
+import { instantDuRegistre } from './instant-du-registre';
 
 const CHEMIN_ADR = 'docs/adr/0007-la-branche-porte-le-lot-pas-la-tache.md';
 type Doc = { taches: Tache[] };
@@ -25,21 +26,8 @@ const lireDoc = (): Doc => JSON.parse(readFileSync('docs/tasks.json', 'utf8')) a
 const schema = JSON.parse(readFileSync('scripts/lot/tasks.schema.json', 'utf8')) as object;
 const registre = chargerRegistre(CHEMIN_REGISTRE);
 const chemins = cheminsSchema(readFileSync(CHEMIN_CHARTE, 'utf8'));
-/**
- * L'INSTANT DE LA PASSE, DÉRIVÉ DU REGISTRE : un jour après la plus récente fusion qu'il atteste.
- * Figé à une heure du jour, il faisait lire `attestation_date_future` dès qu'une fusion plus
- * tardive entrait au registre. Aucun témoin ne lit l'horloge (RM-11).
- */
-const MAINTENANT =
-  Math.max(
-    0,
-    ...lireDoc().taches.map(
-      (t) =>
-        Date.parse(
-          (t as { attestation?: { fusionneeAt?: string } | null }).attestation?.fusionneeAt ?? ''
-        ) || 0
-    )
-  ) + 86_400_000;
+/** L'instant de la passe, dérivé du registre : voir `instant-du-registre.ts`. */
+const MAINTENANT = instantDuRegistre();
 const fautes = (doc: Doc) => controler(doc, schema, registre, chemins, vuesDeLaPasse(MAINTENANT));
 
 /**

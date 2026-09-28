@@ -12592,6 +12592,50 @@
         "fusionneeAt": "2026-09-28T19:33:44Z"
       },
       "motif": null
+    },
+    {
+      "id": "GOV-104",
+      "titre": "La cloture d'une tache seule lit sa declaration dans un corps de PR reecrivable apres la fusion, et juge l'atterrissage sur la base de la PR",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "scripts/lot/cloture.ts",
+        "docs/PROTOCOLE-FUSION.md",
+        ".claude/agents/release-manager.md",
+        "scripts/lot/lot.workflow.js",
+        "docs/DECISIONS.md",
+        "docs/CHARTE-AGENTS.md",
+        "tests/unit/gouvernance/la-declaration-se-lit-dans-le-commit-de-fusion.spec.ts",
+        "tests/unit/gouvernance/clore-une-tache-livree-seule.spec.ts",
+        "tests/unit/gouvernance/une-branche-reelle-de-la-forge-est-admise.spec.ts",
+        "tests/unit/gouvernance/gov-pr-lit-une-pr-de-lot.spec.ts",
+        "tests/unit/gouvernance/instant-du-registre.ts"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "GOV-057"
+      ],
+      "reqs": [
+        "REQ-GOV-026",
+        "REQ-GOV-021"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1,
+      "statut": "a_faire",
+      "acceptance": "Dettes des deux lentilles sur la PR #182 (GOV-057), et decision de Will du 2026-09-28 de les corriger. (1) SECURITE : `lot:cloture --tache` lit la declaration (titre, `Lot:`) dans le CORPS de la PR, que l'auteur peut reecrire apres la fusion ; une tache non portee pourrait alors etre declaree apres coup. La declaration se lit desormais dans le MESSAGE DU COMMIT DE FUSION, immuable : le pas 6 du protocole recopie la ligne `Lot:` du corps dans le message d'ecrasement (`gh pr merge --body`), et la cloture ne lit plus jamais le corps. Temoin : un corps de PR qui declare une tache que le commit ne declare pas ne la clot PAS. (2) SECURITE : l'atterrissage etait juge par ascendance sur `baseRefName` ; il l'est desormais sur la branche PAR DEFAUT du depot de la tache, lue sur la forge. Temoin : une PR fusionnee dans une autre base que la branche par defaut n'est pas atterrie. (3) Le mode `--lot` refuse lui aussi une branche hors du motif du schema, avant ecriture (temoin). (4) Le pas 8 dit qu'une PR doit declarer la tache qu'elle clot, et ce que cela implique pour une tache d'un autre depot. (5) `docs/DECISIONS.md` porte la decision W17 (motif de branch, GOV-103) et W18 (ce durcissement). (6) `docs/CHARTE-AGENTS.md` cite `RACINES_DE_LA_GARDE_DES_REVUES` au lieu de recopier « trois racines » (RM-01). LIMITE DECLAREE : les PR fusionnees avant ce durcissement ne portent pas `Lot:` dans leur commit ; leurs taches secondaires sont closes AVANT cette PR, par le rattrapage qui suit #182.",
+      "tests": {
+        "REQ-GOV-026": [
+          "tests/unit/gouvernance/la-declaration-se-lit-dans-le-commit-de-fusion.spec.ts"
+        ],
+        "REQ-GOV-021": [
+          "tests/unit/gouvernance/la-declaration-se-lit-dans-le-commit-de-fusion.spec.ts"
+        ]
+      },
+      "issue": 186,
+      "owner": "A01"
     }
   ]
 }

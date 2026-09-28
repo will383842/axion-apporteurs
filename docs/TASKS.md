@@ -8,12 +8,12 @@
 >
 > Une tache = une PR, **≤ 1,5 jour**. Le plafond est porte par la garde `gov:tasks`.
 
-**291 taches · 221.35 j estimes.**
+**292 taches · 222.35 j estimes.**
 
 | Phase | Taches | Jours | Terminees |
 | --- | ---: | ---: | ---: |
 | -1 — Gouvernance (prealable bloquant) | 39 | 23.75 | 39 |
-| 0 — Socle technique | 117 | 90.85 | 76 |
+| 0 — Socle technique | 118 | 91.85 | 76 |
 | 1 — Operationnel | 62 | 48.00 | 0 |
 | 2 — Argent | 45 | 33.50 | 0 |
 | 3 — Pilotage et conformite | 28 | 25.25 | 0 |
@@ -1762,6 +1762,16 @@ Couvre : `REQ-GOV-026`
 **Acceptation.** La PR #114 (lot L0-02) a ete fusionnee depuis la branche `t/lot-L0-02`. Le motif de `branch` fixe par partners/ADR-0007, `^(t/[a-z0-9][a-z0-9._-]*|lot/[A-Za-z0-9][A-Za-z0-9._/-]*)$`, refuse la majuscule apres `t/`. Consequence mesuree : `reclasser.mjs`, qui lit ce motif dans le schema, rend `branche_de_la_forge_refusee`, et les six taches livrees par #114 (GOV-046, GOV-048, GOV-076, GOV-078, GOV-082, GOV-086) restent `a_faire` alors que leur code est sur `main`. Ecrire une branche fictive en minuscules est exclu par l'ADR-0007 lui-meme (tableau des options ecartees) : le champ deviendrait decoratif. DECISION DE WILL DU 2026-09-28 : elargir le motif. A livrer : (1) la forme `t/` admet les majuscules, comme la forme `lot/` les admet deja ; le motif reste FERME, une branche sans prefixe reconnu reste refusee ; (2) l'ADR-0007 porte un amendement date qui cite la decision et la mesure. TEMOINS : (a) VERT, une tache `fusionnee` sur `t/lot-L0-02` passe la validation du schema ; (b) ROUGE, une branche sans prefixe reconnu reste refusee et nommee `schema` ; (c) VERT, l'etat reel du registre reste vert.
 
 **Tests.** `tests/unit/gouvernance/une-branche-reelle-de-la-forge-est-admise.spec.ts`
+
+### GOV-104 — La cloture d'une tache seule lit sa declaration dans un corps de PR reecrivable apres la fusion, et juge l'atterrissage sur la base de la PR
+
+`1 j` · zone `gouvernance` · depend de `GOV-057`
+
+Couvre : `REQ-GOV-026`, `REQ-GOV-021`
+
+**Acceptation.** Dettes des deux lentilles sur la PR #182 (GOV-057), et decision de Will du 2026-09-28 de les corriger. (1) SECURITE : `lot:cloture --tache` lit la declaration (titre, `Lot:`) dans le CORPS de la PR, que l'auteur peut reecrire apres la fusion ; une tache non portee pourrait alors etre declaree apres coup. La declaration se lit desormais dans le MESSAGE DU COMMIT DE FUSION, immuable : le pas 6 du protocole recopie la ligne `Lot:` du corps dans le message d'ecrasement (`gh pr merge --body`), et la cloture ne lit plus jamais le corps. Temoin : un corps de PR qui declare une tache que le commit ne declare pas ne la clot PAS. (2) SECURITE : l'atterrissage etait juge par ascendance sur `baseRefName` ; il l'est desormais sur la branche PAR DEFAUT du depot de la tache, lue sur la forge. Temoin : une PR fusionnee dans une autre base que la branche par defaut n'est pas atterrie. (3) Le mode `--lot` refuse lui aussi une branche hors du motif du schema, avant ecriture (temoin). (4) Le pas 8 dit qu'une PR doit declarer la tache qu'elle clot, et ce que cela implique pour une tache d'un autre depot. (5) `docs/DECISIONS.md` porte la decision W17 (motif de branch, GOV-103) et W18 (ce durcissement). (6) `docs/CHARTE-AGENTS.md` cite `RACINES_DE_LA_GARDE_DES_REVUES` au lieu de recopier « trois racines » (RM-01). LIMITE DECLAREE : les PR fusionnees avant ce durcissement ne portent pas `Lot:` dans leur commit ; leurs taches secondaires sont closes AVANT cette PR, par le rattrapage qui suit #182.
+
+**Tests.** `tests/unit/gouvernance/la-declaration-se-lit-dans-le-commit-de-fusion.spec.ts`
 
 ## Phase 1 — Operationnel
 
