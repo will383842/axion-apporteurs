@@ -111,11 +111,36 @@ describe('REQ-QA-011 → REQ-SEC-008 — le bac : chaque forme plantée est nomm
     }
   );
 
+  /**
+   * DEUX FACES, ET LA SECONDE EST CE QUI EMPÊCHE LE CHAMP D'ÊTRE UNE EXEMPTION MUETTE.
+   *
+   * La première face est la garde d'origine, INTACTE : aucune règle maison NON DÉCLARÉE ne rougit un
+   * contre-témoin. C'est ainsi qu'on voit une règle trop large, et rien n'est relâché là.
+   *
+   * La seconde est nouvelle (12e tour, PR 82). `reglesAdmises` existe parce qu'un fichier écrit pour
+   * prouver le silence de la règle A peut violer la règle B POUR DE BON : la couche d'accès a le
+   * droit d'importer le client, pas de le relayer en bloc (`export * as P from '@prisma/client'`) ni
+   * de le citer par un chemin interne (`.prisma/client/index`). Un champ qui se contenterait de
+   * TOLÉRER un constat serait une exemption qu'on oublierait ; il exige donc que la règle citée
+   * MORDE. Une déclaration qui ne correspond plus à rien est aussi trompeuse qu'une contamination
+   * cachée : elle laisse croire qu'on surveille encore.
+   *
+   * Cette assertion est la JUMELLE de `jugerPreuve` (familles `faux_positif` et `admission_muette`) :
+   * les deux lisent la même règle, et c'est voulu — le banc la fait rougir à la gate, ce test la fait
+   * rougir ici. Le champ et sa seconde face ont été relus par la lentille `securite` sur `b9579bf`
+   * (« il ne vaut que pour le banc, pas d'objection ») ; ce test les SUIT, il ne les élargit pas.
+   */
   it.each(CONTRE_TEMOINS.map((t) => [t.nom, t] as const))(
-    'REQ-QA-011 → REQ-SEC-008 — contre-témoin %s : AUCUN constat',
+    'REQ-QA-011 → REQ-SEC-008 — contre-témoin %s : AUCUN constat, sauf un refus DÉCLARÉ qui mord',
     (_nom, t) => {
       const constats = preuve.passage.sortie!.results.filter((c) => c.path === t.chemin);
-      expect(constats.map((c) => `${c.check_id}:${c.start.line}`)).toEqual([]);
+      const admises = t.reglesAdmises.map((r) => `${PREFIXE_MAISON}${r}`);
+      expect(
+        constats
+          .filter((c) => !admises.includes(c.check_id))
+          .map((c) => `${c.check_id}:${c.start.line}`)
+      ).toEqual([]);
+      expect(admises.filter((id) => !constats.some((c) => c.check_id === id))).toEqual([]);
     }
   );
 
