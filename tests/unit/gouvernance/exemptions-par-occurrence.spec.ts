@@ -21,6 +21,7 @@ import { LIVREE } from '../../../scripts/lot/avancement';
 import {
   analyser,
   chargerSources,
+  CITATIONS_DECLAREES,
   type Sources,
   type Tache,
 } from '../../../scripts/gates/gov-attributions';
@@ -124,6 +125,152 @@ describe('REQ-GOV-021 — une exemption sans second producteur est FIGÉE, occur
     });
     expect(r.code).toBe(1);
     expect(r.lignes.join('\n')).toContain('dette_perimee');
+  });
+});
+
+/**
+ * LE DÉFAUT RESTANT : TROIS CLÉS POUR UN MÊME LIEU, ET DEUX D'ENTRE ELLES AU GRAIN DU SITE.
+ *   — `DETTE_GABARIT_LIVREE` figeait un SITE et un NOMBRE : une mention déplacée d'une ligne à
+ *     l'autre du même en-tête gardait le compte, donc restait absoute sans avoir été vue ;
+ *   — une chaîne de `docs/gates.json` se rangeait sous le chemin de la gate (déclarations), sous
+ *     la gate ET son script (dette figée), ou sous le script SEUL (exemptions figées) : repointer le
+ *     script laissait la déclaration absoudre une mention jugée contre un AUTRE fichier, et deux
+ *     gates au même script partageaient la même clé figée ;
+ *   — la clé figée d'une chaîne de `docs/gates.json` ne portait pas la ligne.
+ * LA MESURE : une seule clé d'occurrence (lieu jugé, ligne), et chaque entrée n'en absout qu'une.
+ */
+describe('REQ-GOV-021 — une seule clé par occurrence, pour chaque registre', () => {
+  const exemptions = analyser(SOURCES).exemptions;
+  /** Les jetons d'une ligne qui désignent une tâche : dérivés du backlog, jamais tapés. */
+  const ids = new Set(SOURCES.taches.map((t) => t.id));
+  const jetons = (l: string) => l.split(/[^A-Za-z0-9-]+/).filter((j) => ids.has(j));
+
+  it('REQ-GOV-021 — TÉMOIN : une mention FIGÉE en dette gabarit, déplacée à une autre ligne du même en-tête, rougit à sa nouvelle ligne', () => {
+    // Une dette d'en-tête dont la ligne ne porte QUE cet identifiant, avant la vingtième.
+    const e = exemptions.find((x) => {
+      if (x.nature !== 'dette_gabarit_livree_mention' || !/:\d+$/.test(x.site)) return false;
+      const fichier = x.site.replace(/:\d+$/, '');
+      const n = Number(x.site.slice(fichier.length + 1));
+      const lignes = SOURCES.entetes.find((h) => h.fichier === fichier)?.lignes ?? [];
+      return (
+        n < 20 &&
+        lignes.length >= 20 &&
+        jetons(lignes[n - 1] as string).length === 1 &&
+        jetons(lignes[19] as string).length === 0
+      );
+    });
+    expect(
+      e,
+      'aucune dette gabarit d’en-tête à déplacer : le témoin ne porte sur rien'
+    ).toBeDefined();
+    const fichier = e!.site.replace(/:\d+$/, '');
+    const n = Number(e!.site.slice(fichier.length + 1));
+    const entetes = SOURCES.entetes.map((h) =>
+      h.fichier === fichier
+        ? {
+            ...h,
+            lignes: h.lignes.map((l, i) =>
+              i === n - 1 ? l.replace(e!.tache, '') : i === 19 ? ` * voir ${e!.tache}.` : l
+            ),
+          }
+        : h
+    );
+    const r = verdict({ ...SOURCES, entetes });
+    expect(r.code).toBe(1);
+    const l = r.lignes.join('\n');
+    expect(l).toContain(`${fichier}:20`);
+    expect(l).toContain('dette_perimee');
+  });
+
+  /** Une gate dont une chaîne porte une déclaration `contexte`, et cette déclaration. */
+  const gateDeclaree = () => {
+    for (const g of SOURCES.gates) {
+      const c = CITATIONS_DECLAREES.find(
+        (x) =>
+          x.nature === 'contexte' &&
+          x.ou.startsWith('docs/gates.json') &&
+          Object.values(g).some((v) => typeof v === 'string' && jetons(v).includes(x.id)) &&
+          x.ou.includes(g.script.split('#')[0] as string)
+      );
+      if (c) return { g, c };
+    }
+    for (const g of SOURCES.gates) {
+      const c = CITATIONS_DECLAREES.find(
+        (x) => x.nature === 'contexte' && x.ou.startsWith(`docs/gates.json:${g.id}.`)
+      );
+      if (c) return { g, c };
+    }
+    return undefined;
+  };
+
+  it('REQ-GOV-021 — TÉMOIN : une déclaration « contexte » d’une chaîne de docs/gates.json ne suit pas son script repointé', () => {
+    const trouve = gateDeclaree();
+    expect(
+      trouve,
+      'aucune déclaration contexte sur docs/gates.json : rien à repointer'
+    ).toBeDefined();
+    const { g, c } = trouve!;
+    const NEUF = 'scripts/gates/sonde-repointee.ts';
+    // La tâche de la gate est retirée : seule la mention déclarée reste à juger contre le script neuf.
+    const gates = SOURCES.gates.map((x) =>
+      x === g ? { ...x, script: NEUF, tache: undefined } : x
+    );
+    const r = verdict({ ...SOURCES, gates });
+    expect(r.code).toBe(1);
+    const perimees = r.lignes.filter((x) => x.startsWith('[citation_perimee]'));
+    expect(perimees.join('\n'), 'la déclaration a suivi le script repointé').toContain(c.id);
+    expect(r.lignes.some((x) => x.startsWith('[mention_hors_paths]') && x.includes(c.id))).toBe(
+      true
+    );
+  });
+
+  it('REQ-GOV-021 — TÉMOIN : deux gates au MÊME script ne partagent pas une exemption figée', () => {
+    // Une gate figée en `gate_paths_*` : son attribution passe à une gate NEUVE au même script.
+    const e = exemptions.find((x) => /^gate_paths_/.test(x.nature));
+    expect(e, 'aucune exemption figée de gate : rien à déplacer').toBeDefined();
+    const g = SOURCES.gates.find(
+      (x) =>
+        x.tache === e!.tache && e!.site === `docs/gates.json:${x.id} (${x.script.split('#')[0]})`
+    )!;
+    const gates = [
+      ...SOURCES.gates.map((x) => (x === g ? { ...x, tache: undefined } : x)),
+      { id: 'sonde-meme-script', script: g.script, tache: g.tache },
+    ];
+    const r = verdict({ ...SOURCES, gates });
+    expect(r.code).toBe(1);
+    const l = r.lignes.join('\n');
+    expect(l).toContain('exemption_non_figee');
+    expect(l).toContain('sonde-meme-script');
+  });
+
+  it('REQ-GOV-021 — TÉMOIN : une mention figée d’une chaîne de docs/gates.json, repoussée à une autre LIGNE de la chaîne, rougit', () => {
+    // Une exemption figée sur un champ de PREMIER niveau, chaîne simple d'une gate : le site imprimé
+    // est « docs/gates.json:<gate>.<champ> (<script>) », relu ici sans passer par la garde.
+    const cible = exemptions
+      .filter((x) => /^mention_paths_/.test(x.nature))
+      .flatMap((x) =>
+        SOURCES.gates.flatMap((g) =>
+          Object.keys(g)
+            .filter(
+              (champ) =>
+                typeof g[champ] === 'string' &&
+                x.site === `docs/gates.json:${g.id}.${champ} (${g.script.split('#')[0]})`
+            )
+            .map((champ) => ({ g, champ }))
+        )
+      )[0];
+    expect(cible, 'aucune exemption figée sur une chaîne simple de docs/gates.json').toBeDefined();
+    const { g, champ } = cible!;
+    const gates = SOURCES.gates.map((x) =>
+      x === g ? { ...x, [champ]: `ligne ajoutée\n${String(x[champ])}` } : x
+    );
+    const r = verdict({ ...SOURCES, gates });
+    expect(r.code).toBe(1);
+    expect(r.lignes.join('\n')).toContain('exemption_non_figee');
+  });
+
+  it('REQ-GOV-021 — CONTRE-TÉMOIN : les mêmes sources, rien de déplacé, sortent en zéro', () => {
+    expect(verdict({ ...SOURCES, gates: [...SOURCES.gates] }).code).toBe(0);
   });
 });
 

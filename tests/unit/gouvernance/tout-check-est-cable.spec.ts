@@ -72,7 +72,7 @@ describe('REQ-GOV-014 — les valeurs attendues sont DÉRIVÉES du dépôt (RM-0
     expect(visibiliteDecidee(renverse)).toBe('PRIVATE');
   });
 
-  it('le nom du check requis se lit dans les jobs de ci.yml, il n’est pas tapé', () => {
+  it('REQ-QA-013 — le nom du check requis se lit dans les jobs de ci.yml, il n’est pas tapé', () => {
     // GitHub nomme le check d'après le `name:` du job, ou à défaut d'après son identifiant.
     // `ci.yml` déclare le job `gate-a` sans `name:` : le check s'appelle donc `gate-a`.
     expect(checksProduits(readFileSync(CI, 'utf8'))).toEqual(['gate-a']);
@@ -81,7 +81,7 @@ describe('REQ-GOV-014 — les valeurs attendues sont DÉRIVÉES du dépôt (RM-0
     expect(checksProduits(renomme)).toEqual(['gate-zzz']);
   });
 
-  it('un workflow qui ne se déclenche pas sur `pull_request` ne produit aucun check de PR', () => {
+  it('REQ-QA-013 — un workflow qui ne se déclenche pas sur `pull_request` ne produit aucun check de PR', () => {
     // C'est le piège « Expected — Waiting for status » : le job existe, la protection l'exige,
     // et il n'arrive jamais parce que rien ne le déclenche sur une PR.
     const sansPr = readFileSync(CI, 'utf8').replace('  pull_request:', '  pull_request_target:');
@@ -140,7 +140,7 @@ describe('REQ-GOV-014 — chaque famille rougit sur son témoin', () => {
 });
 
 describe('REQ-GOV-014 — ne pas avoir pu lire n’est JAMAIS un vert', () => {
-  it('branche_non_protegee — la protection SUPPRIMÉE est un ROUGE, pas un indéterminé', () => {
+  it('REQ-GOV-014 — branche_non_protegee — la protection SUPPRIMÉE est un ROUGE, pas un indéterminé', () => {
     // Le scénario d'attaque de cette tâche : `gh api -X DELETE …/branches/main/protection` n'est
     // refusé par aucune règle de la matrice — celle qui le vise porte une espace devant
     // `/branches` que la commande réelle n'a pas. Si la garde traitait l'effacement comme « je
@@ -150,7 +150,7 @@ describe('REQ-GOV-014 — ne pas avoir pu lire n’est JAMAIS un vert', () => {
     expect(fautes[0]?.gravite).toBe('rouge');
   });
 
-  it('protection_non_lisible — protection NON LUE ⇒ verdict INDÉTERMINÉ, pas conforme', () => {
+  it('REQ-GOV-014 — protection_non_lisible — protection NON LUE ⇒ verdict INDÉTERMINÉ, pas conforme', () => {
     const fautes = controler({ ...VUE_CONFORME, protection: null });
     expect(fautes.map((f) => f.famille)).toEqual(['protection_non_lisible']);
     expect(fautes[0]?.gravite).toBe('indetermine');

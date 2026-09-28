@@ -4,7 +4,8 @@
 > que le plan directeur cite sans les numéroter, plus une treizième née de la revue qui a retiré le `CLAUDE.md` racine
 > de la PR #30 : elle n'existait que dans ce fichier d'amorçage, et elle a disparu avec lui — plus une
 > quatorzième consolidée le 2026-09-05 par le `documentaliste` (A03), sur demande de l'intégration du
-> lot `L-1-INT-a`, après deux rencontres du même piège le même jour par deux agents qui ne se parlaient pas. Chaque règle porte un
+> lot `L-1-INT-a`, après deux rencontres du même piège le même jour par deux agents qui ne se parlaient pas — plus
+> une quinzième, posée par **GOV-052** avec la garde qui la tient avant la fusion. Chaque règle porte un
 > numéro `RM-nn` ; les ADR et le gabarit de PR (« Règle maison
 > appliquée : RM-nn ») y renvoient par numéro, jamais par paraphrase. Test : `tests/unit/gouvernance/regles-maison.spec.ts`
 > (chaque RM a une section ; les neuf règles que REQ-GOV-024 énumère sont chacune couvertes).
@@ -28,6 +29,7 @@
 | RM-12 | Un identifiant nu n'est pas une référence               | `gov:identifiants`                                      |
 | RM-13 | Aucun lot composé tant qu'une PR de clôture est ouverte | `gov:etat` (`deux_pr_meme_tache`), Pas 7 du protocole de fusion |
 | RM-14 | Un fichier neuf est invisible tant qu'il n'est pas à l'index | aucune — `git status --short` avant les gardes, rattrapé par la Gate A de la PR |
+| RM-15 | Une PR porte son entrée de journal avant d'être fusionnée | `gov:pr --pr <n>` (`pr_sans_entree_de_journal`, `journal_cite_une_pr_non_fusionnee`) ; après coup, `gov:etat` (`pr_fusionnee_sans_journal`) |
 
 ---
 
@@ -258,6 +260,33 @@ disque à l'index rougirait sur tout brouillon légitime, et une garde qui rougi
 Le contrôle est procédural et tient en un geste — `git status --short` avant de lancer ses gardes, la liste des `??`
 étant exactement ce qu'aucune d'elles ne lira. Le filet d'après est la Gate A de la PR, qui juge l'arbre **tel qu'il
 est poussé**, donc indexé : elle rattrape après coup, au prix d'un aller-retour, ce que la session n'a pas vu.
+
+## RM-15 — Une PR porte son entrée de journal avant d'être fusionnée
+
+_Posée par **GOV-052**, qui livre dans la même PR la garde qui la tient. Cette section est la **seule** rédaction de
+l'obligation : la garde la cite par son numéro, et la leçon qui l'a fait naître (LEC-15, `docs/LECONS.md`) aussi. La
+forme d'une entrée et le plancher restent dans `docs/journal/README.md`, qui les porte déjà._
+
+**Énoncé.** Toute PR de numéro supérieur au plancher du journal porte, **sur sa propre branche et avant sa fusion**,
+une entrée de `docs/journal/` titrée par son numéro. Réciproquement, aucune entrée ne cite une PR que la forge ne
+connaît pas comme fusionnée — hormis la PR qui la porte, qui ne peut pas l'être encore.
+
+**Pourquoi.** La règle était écrite pour des lecteurs, à trois endroits, et elle s'est perdue plusieurs fois sans que
+rien ne le voie avant `main`. La seule famille qui la mesurait, `pr_fusionnee_sans_journal` de `gov:etat`, se lève
+**après** la fusion : l'oubli n'est plus réparable sur la branche, `main` rougit, et toutes les PR ouvertes derrière
+lui avec. Une obligation évaluée après la fusion détecte un incident, elle ne l'empêche pas (LEC-15). Le trou
+réciproque est du même ordre : ce dépôt est public, et une entrée pour une PR inexistante y affirme un atterrissage
+qui n'a jamais eu lieu. La mesure se rejoue sans rien recopier : pour chaque commit de fusion de `main`, chercher
+dans `docs/journal/` **à ce commit** un titre d'entrée portant le numéro de la PR fusionnée.
+
+**Comment on la voit.** `pnpm gov:pr --pr <n>` — la commande d'avant-fusion — lit `docs/journal/` sur la tête de la
+PR, par la grammaire unique du journal (`scripts/gates/gov-attributions.ts`), et rougit sous
+`pr_sans_entree_de_journal` en nommant le numéro ; elle confronte chaque entrée à la liste paginée des PR fusionnées
+de la forge et rougit sous `journal_cite_une_pr_non_fusionnee` en nommant le fantôme. Le plancher est **dérivé** de
+`docs/journal/README.md`. Témoins et contre-témoins : `pnpm gov:pr:prove` et
+`tests/unit/gouvernance/une-pr-porte-son-entree-de-journal.spec.ts`. Après la fusion, `gov:etat` garde
+`pr_fusionnee_sans_journal` : les deux coexistent. ⚠️ Ce qui n'est pas tenu : l'événement `pull_request` de la CI
+ne l'évalue pas — comme les revues, la famille dépend du geste humain qui lance `--pr` avant de fusionner.
 
 ---
 

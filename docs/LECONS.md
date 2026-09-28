@@ -125,7 +125,7 @@
 - **Ce qui s'est passé.** `gov:etat` ne voit la famille `pr_fusionnee_sans_journal` que lorsque la PR est fusionnée — donc sur `main`, donc trop tard pour refuser quoi que ce soit. La PR #28 est passée sans son entrée de journal ; le run `Gate A` du `push` sur `main` est resté rouge jusqu'à ce que la PR #29 l'écrive. Coût mesuré de l'oubli : une PR entière, sa Gate A complète, et un `main` rouge dans l'intervalle.
 - **Ce qu'on en tire.** Le protocole demande l'entrée sur la branche de la PR, mais rien ne le vérifie au moment où c'est encore réparable sans un second aller-retour. Une règle et le MOMENT où elle s'évalue se conçoivent ensemble : décalée d'un cran après la fusion, la même règle change de nature — elle nomme l'incident au lieu de l'empêcher, et sa seule victime possible devient la branche par défaut.
 - **Où c'est prouvé.** `ab5caf5` ; `docs/journal/2026-09.md`, entrée « PR #29 » : « sa seule victime possible est la branche par défaut ».
-- **Règle maison.** Aucune à ce jour ; même famille que LEC-05 — le contrôle et son déclencheur se conçoivent ensemble.
+- **Règle maison.** RM-15 ; même famille que LEC-05 — le contrôle et son déclencheur se conçoivent ensemble.
 
 ### LEC-16 — Le motif du PREMIER échec de clôture n'est écrit nulle part
 

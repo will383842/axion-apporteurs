@@ -266,6 +266,221 @@ export function zonesCitees(ligne: string): [number, number][] {
   return zones;
 }
 
+// ── le rendu : la forme que le lecteur VOIT, et non la source (GOV-071) ──────
+
+/**
+ * 🔴 LE DÉFAUT. Cette garde et `gov:identifiants` cherchaient leurs termes dans la SOURCE brute.
+ * Or ce que l'apporteur lit, c'est le RENDU. Une mise en forme tapée à la main AU MILIEU d'un mot
+ * coupe le mot dans la source et le laisse entier à l'écran : `com**m**ercial` s'affiche
+ * « commercial » (une lettre en gras), et les deux gardes, qui voyaient deux fragments, rendaient
+ * « ✅ ». Le terme interdit sortait donc sous les yeux du lecteur, garde verte — et c'est le
+ * vocabulaire dont un mot mal placé pèse dans un faisceau d'indices.
+ *
+ * LA MESURE. Chaque ligne est RENDUE avant d'être découpée en mots, par `lignesRendues` seule, que
+ * `gov-identifiants.ts` importe : les deux gardes ne peuvent plus découper différemment (RM-01).
+ * Le rendu EFFACE ce qui, collé entre deux lettres ou chiffres, ne s'affiche pas :
+ *   — partout : les caractères invisibles (Unicode `Default_Ignorable_Code_Point` : trait d'union
+ *     conditionnel, espaces de largeur nulle, joncteurs, marque d'ordre…), les entités HTML qui
+ *     rendent une lettre, un chiffre ou un invisible (`&#101;`, `&shy;`, `&eacute;`), les balises
+ *     EN LIGNE sans attribut (`<b>`, `<span>`…) et les commentaires HTML collés dans un mot ;
+ *   — en Markdown (`.md`, `.mdx`) : l'emphase et le barré (`*`, `**`, `***`, `~`, `~~`) ;
+ *   — en JSX (`.tsx`, `.jsx`, `.mdx`) : l'expression vide (chaîne vide, accolades vides ou
+ *     commentaire seul entre accolades).
+ *
+ * CE QU'IL NE REND PAS, EXPRÈS. En Markdown, un bloc de code et un code en ligne s'affichent TELS
+ * QUELS : leur contenu n'est pas rendu (seuls les invisibles y sont effacés, puisqu'ils ne se
+ * voient pas davantage). C'est ce qui laisse une documentation écrire son contre-exemple entre
+ * accents graves — `com**m**ercial` y reste des astérisques, et le lecteur les voit.
+ *
+ * CE QU'IL NE COUVRE PAS, ET QUI EST DIT. Une balise AVEC attributs n'est pas effacée : ses
+ * attributs peuvent porter du texte lu (un `title`, un `aria-label`), et l'effacer le soustrairait
+ * à la garde. La concaténation de chaînes dans du code (`'com' + 'mercial'`) n'est pas un rendu :
+ * elle n'est pas couverte. Le suivi des blocs clôturés est une bascule, sans appariement de
+ * longueur de clôture.
+ *
+ * Le rendu garde une ligne pour une ligne : le numéro qu'une garde nomme est celui de la source.
+ */
+const LETTRE_OU_CHIFFRE = '\\p{L}\\p{N}';
+const INVISIBLES = /\p{Default_Ignorable_Code_Point}/gu;
+const EST_RENDU_EN_MOT = /^[\p{L}\p{N}_\p{Default_Ignorable_Code_Point}]$/u;
+
+/**
+ * Les entités NOMMÉES qu'on décode : les invisibles, les ligatures, et les lettres accentuées
+ * DÉRIVÉES de leur décomposition (`é` = `e` + aigu, donc `eacute`) plutôt que recopiées en table.
+ */
+const SUFFIXE_DE_MARQUE: Record<string, string> = {
+  '̀': 'grave',
+  '́': 'acute',
+  '̂': 'circ',
+  '̈': 'uml',
+  '̧': 'cedil',
+};
+const ENTITES_NOMMEES: ReadonlyMap<string, string> = new Map([
+  ['shy', '­'],
+  ['zwj', '‍'],
+  ['zwnj', '‌'],
+  ['ZeroWidthSpace', '​'],
+  ['NoBreak', '⁠'],
+  ['oelig', 'œ'],
+  ['OElig', 'Œ'],
+  ['aelig', 'æ'],
+  ['AElig', 'Æ'],
+  ['szlig', 'ß'],
+  ...Array.from({ length: 0x180 - 0xc0 }, (_, k) => String.fromCodePoint(0xc0 + k)).flatMap(
+    (c): [string, string][] => {
+      const d = c.normalize('NFD');
+      const suffixe = d.length === 2 ? SUFFIXE_DE_MARQUE[d[1]!] : undefined;
+      return suffixe === undefined ? [] : [[d[0]! + suffixe, c]];
+    }
+  ),
+]);
+
+/** Une entité ne se décode que si elle rend une lettre, un chiffre ou un invisible : ailleurs, elle SÉPARE. */
+function decoderEntites(s: string): string {
+  return s.replace(
+    /&(?:#(\d{1,7})|#[xX]([0-9a-fA-F]{1,6})|([A-Za-z]+));/g,
+    (m: string, dec?: string, hex?: string, nom?: string) => {
+      const point =
+        dec !== undefined ? Number(dec) : hex !== undefined ? parseInt(hex, 16) : undefined;
+      const c =
+        point === undefined
+          ? ENTITES_NOMMEES.get(nom ?? '')
+          : point <= 0x10ffff
+            ? String.fromCodePoint(point)
+            : undefined;
+      return c !== undefined && EST_RENDU_EN_MOT.test(c) ? c : m;
+    }
+  );
+}
+
+/**
+ * Les balises EN LIGNE seulement. Une balise de bloc (`<dt>`, `<p>`, `<div>`, `<br>`…) passe à la
+ * ligne au rendu : elle SÉPARE les mots, et l'effacer en fabriquerait un. Mesuré sur ce dépôt :
+ * sans cette liste, `<dt>Employeur</dt><dt>Matricule</dt>` — une fixture de la charte — se
+ * rendait « EmployeurMatricule ».
+ */
+const BALISES_EN_LIGNE = [
+  'a',
+  'abbr',
+  'b',
+  'bdi',
+  'bdo',
+  'cite',
+  'code',
+  'data',
+  'del',
+  'dfn',
+  'em',
+  'font',
+  'i',
+  'ins',
+  'kbd',
+  'mark',
+  's',
+  'samp',
+  'small',
+  'span',
+  'strong',
+  'sub',
+  'sup',
+  'time',
+  'u',
+  'var',
+  'wbr',
+];
+const BALISE_EN_LIGNE_OU_COMMENTAIRE = `<\\/?(?:${BALISES_EN_LIGNE.join('|')})\\s*\\/?>|<!--.*?-->`;
+const EMPHASE_MARKDOWN = '\\*{1,3}|~{1,2}';
+const EXPRESSION_JSX_VIDE = '\\{\\s*(?:\'\'|""|``|\\/\\*.*?\\*\\/)?\\s*\\}';
+
+/**
+ * Ce qui s'efface ENTRE deux lettres ou chiffres — et seulement là : ailleurs, la mise en forme
+ * ne colle rien. La lettre de gauche ne doit pas suivre une barre oblique inverse : dans du code,
+ * `\n` est un saut de ligne, pas la lettre « n » (mesuré : `\n<details>` d'un gabarit de test).
+ */
+function effacablesPour(chemin: string): RegExp {
+  const formes = [BALISE_EN_LIGNE_OU_COMMENTAIRE];
+  if (/\.mdx?$/.test(chemin)) formes.push(EMPHASE_MARKDOWN);
+  if (/\.(tsx|jsx|mdx)$/.test(chemin)) formes.push(EXPRESSION_JSX_VIDE);
+  return new RegExp(
+    `(?<=(?<!\\\\)[${LETTRE_OU_CHIFFRE}])(?:${formes.join('|')})+(?=[${LETTRE_OU_CHIFFRE}])`,
+    'giu'
+  );
+}
+
+/** Rend un fragment jusqu'au point fixe : une entité décodée peut coller une lettre à une balise. */
+function rendreFragment(fragment: string, effacables: RegExp): string {
+  let avant: string;
+  let s = fragment;
+  do {
+    avant = s;
+    s = decoderEntites(s).replace(INVISIBLES, '').replace(effacables, '');
+  } while (s !== avant);
+  return s;
+}
+
+/**
+ * Les morceaux d'une ligne Markdown, `[texte, estDuCode]`. Un code en ligne s'ouvre sur une suite
+ * d'accents graves et se ferme sur une suite de MÊME longueur ; sans fermeture, ce sont des
+ * accents graves littéraux, et le texte reste rendu.
+ */
+function morceauxMarkdown(ligne: string): [string, boolean][] {
+  const out: [string, boolean][] = [];
+  let debutTexte = 0;
+  let i = 0;
+  while (i < ligne.length) {
+    if (ligne[i] !== '`') {
+      i++;
+      continue;
+    }
+    let n = 0;
+    while (ligne[i + n] === '`') n++;
+    let j = i + n;
+    let fin = -1;
+    while (j < ligne.length) {
+      if (ligne[j] !== '`') {
+        j++;
+        continue;
+      }
+      let m = 0;
+      while (ligne[j + m] === '`') m++;
+      if (m === n) {
+        fin = j;
+        break;
+      }
+      j += m;
+    }
+    if (fin === -1) {
+      i += n;
+      continue;
+    }
+    out.push([ligne.slice(debutTexte, i), false], [ligne.slice(i, fin + n), true]);
+    i = debutTexte = fin + n;
+  }
+  out.push([ligne.slice(debutTexte), false]);
+  return out;
+}
+
+/**
+ * LE rendu d'un fichier, ligne pour ligne — la seule découpe des deux gardes. `chemin` décide de
+ * ce qui se rend : c'est l'extension qui dit si `**` est une emphase ou une multiplication.
+ */
+export function lignesRendues(chemin: string, contenu: string): string[] {
+  const markdown = /\.mdx?$/.test(chemin);
+  const effacables = effacablesPour(chemin);
+  let dansUnBloc = false;
+  return contenu.split('\n').map((ligne) => {
+    if (markdown && /^\s{0,3}(```|~~~)/.test(ligne)) {
+      dansUnBloc = !dansUnBloc;
+      return ligne.replace(INVISIBLES, '');
+    }
+    if (dansUnBloc) return ligne.replace(INVISIBLES, '');
+    if (!markdown) return rendreFragment(ligne, effacables);
+    return morceauxMarkdown(ligne)
+      .map(([t, code]) => (code ? t.replace(INVISIBLES, '') : rendreFragment(t, effacables)))
+      .join('');
+  });
+}
+
 // ── la vue et le contrôle ────────────────────────────────────────────────────
 
 export type FichierVu = { chemin: string; contenu: string };
@@ -347,7 +562,8 @@ export function analyserFichier(f: FichierVu, exceptions: readonly ExceptionLexi
   const exemptions: Exemption[] = [];
   let occurrences = 0;
 
-  f.contenu.split('\n').forEach((ligne, i) => {
+  // GOV-071 : le terme se cherche dans ce que le lecteur VOIT, pas dans la source.
+  lignesRendues(f.chemin, f.contenu).forEach((ligne, i) => {
     const citees = prose ? zonesCitees(ligne) : [];
     for (const famille of familles) {
       for (const forme of famille.formes) {
@@ -391,7 +607,8 @@ export function analyserGabarit(f: FichierVu): Rapport {
   const fautes: Faute[] = [];
   const exemptions: Exemption[] = [];
   let occurrences = 0;
-  f.contenu.split('\n').forEach((brute, i) => {
+  // GOV-071 : la liste noire du gabarit se juge, elle aussi, sur le rendu.
+  lignesRendues(f.chemin, f.contenu).forEach((brute, i) => {
     const ligne = apostrophe(brute);
     for (const forme of LISTE_NOIRE_GABARIT.formes) {
       const reg = motifDeLaForme(forme);

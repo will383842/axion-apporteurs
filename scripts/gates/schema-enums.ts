@@ -824,14 +824,34 @@ export function controler(vue: Vue): Faute[] {
     ];
   }
 
-  // Chaque texte lu, UNE fois par chemin (le schéma et la source des états sont aussi dans `code`).
-  const textes = new Map<string, string>([
+  // Chaque texte lu (le schéma et la source des états sont aussi dans `code`).
+  // 🔴 Une table INDEXÉE PAR CHEMIN écrasait ici en silence : deux textes DIFFÉRENTS sous un même
+  // nom, le second seul était jugé — une fin de ligne étrangère se cachait derrière un homonyme
+  // propre, et le premier était ensuite lu sur d'autres lignes que les siennes (GOV-064).
+  // MESURE, en deux temps. (1) Deux FICHIERS DE CODE sous un même chemin sont deux entrées d'index
+  // confondues : on refuse, en nommant le chemin. (2) Tout texte lu est jugé, aucun n'en remplace
+  // un autre ; seul le MÊME texte relu sous le même nom n'est jugé qu'une fois.
+  const codeParChemin = new Map<string, string>();
+  for (const f of vue.code) {
+    const deja = codeParChemin.get(f.chemin);
+    if (deja !== undefined && deja !== f.contenu) {
+      throw new Error(
+        `partners:schema:enums — deux textes DIFFÉRENTS sont lus sous le chemin « ${f.chemin} » : ` +
+          "la garde jugerait l'un à la place de l'autre. Elle refuse au lieu d'écraser."
+      );
+    }
+    codeParChemin.set(f.chemin, f.contenu);
+  }
+  const lus: [string, string][] = [
     ['REQ-DM-003', vue.reqDm003],
     [CHEMIN_GLOSSAIRE, vue.glossaire],
     [CHEMIN_SCHEMA, vue.schema],
     [CHEMIN_ETATS, vue.etatsSource],
-    ...vue.code.map((f): [string, string] => [f.chemin, f.contenu]),
-  ]);
+    ...codeParChemin,
+  ];
+  const textes = lus.filter(
+    ([chemin, texte], i) => lus.findIndex(([c, t]) => c === chemin && t === texte) === i
+  );
   const coupes = new Set<string>();
   for (const [chemin, texte] of textes) {
     const fin = finDeLigneEtrangere(texte);

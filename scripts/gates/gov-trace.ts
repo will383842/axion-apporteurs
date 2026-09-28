@@ -105,6 +105,22 @@ const MOTIF_PLANCHER_LISIBLE =
 /** Le motif exact que porte `prIndisponible` quand le mode n'a PAS BESOIN de la source PR. */
 const PR_NON_CONSULTEE = 'non consultée par ce mode';
 
+/**
+ * LES DEUX QUESTIONS, ET ELLES NE SE MÉLANGENT PLUS (GOV-085).
+ *
+ * LE DÉFAUT. Le mode normal versait dans UNE liste les fautes de la source et la divergence de la
+ * vue, sous UN verdict, et le message de la vue prescrivait « regénère ». Or une attribution fausse
+ * qui fait bouger la vue ne rougissait QUE par la vue : le geste prescrit écrivait l'attribution
+ * dans la matrice, la vue concordait avec son générateur, et le rouge s'éteignait. Le geste que le
+ * rouge prescrivait rendait vraie l'erreur qu'il dénonçait — le circuit était fermé sur lui-même.
+ *
+ * LA MESURE. Deux contrôles, deux sections, deux messages. Rendre la vue répond à la seconde
+ * question, JAMAIS à la première : `--render` refuse une source fautive, et `--verifier` dit qu'il
+ * ne l'a pas jugée.
+ */
+export const QUESTION_SOURCE = '① la source dit-elle vrai du disque ?';
+export const QUESTION_VUE = '② la vue est-elle à jour de sa source ?';
+
 /** Les statuts de tâche qui valent « livrée » — la même liste que `gov:tasks`. */
 // L'ensemble « livrée » ne s'écrit plus ici : il se DÉRIVE du barème unique de
 // `scripts/lot/avancement.ts`, dont l'exhaustivité est confrontée à l'enum `statut` du schéma.
@@ -326,8 +342,20 @@ export function controler(u: Univers): Faute[] {
   return juger(u).fautes;
 }
 
-/** Ce que le jugement a confronté : tâches, paires (tâche, exigence), et paires VERTES. */
-type Jugement = { fautes: Faute[]; confrontees: Set<string>; paires: number; vertes: number };
+/**
+ * Ce que le jugement a confronté : tâches, paires (tâche, exigence), paires VERTES — et, depuis
+ * GOV-085, les PROMESSES jugées contre ce disque, dont celles dont le test précis (`#titre`) a été
+ * confronté à l'exigence qu'on lui attribue. Un vert qui ne dit pas combien de promesses il a
+ * regardées ne se distingue pas d'un vert qui n'en a regardé aucune.
+ */
+type Jugement = {
+  fautes: Faute[];
+  confrontees: Set<string>;
+  paires: number;
+  vertes: number;
+  promesses: number;
+  titrees: number;
+};
 
 /**
  * Le contrôle ET ce qu'il a confronté. Les deux sortent du MÊME passage : le périmètre n'est pas
@@ -342,6 +370,9 @@ function juger(u: Univers): Jugement {
   /** Les paires (tâche, exigence active) jugées sur les deux formes, et celles qu'on a vues VERTES. */
   let paires = 0;
   let vertes = 0;
+  /** Les promesses qui ont reçu un verdict, et celles dont le TEST PRÉCIS a été confronté (GOV-085). */
+  const promessesJugees = new Set<string>();
+  let titrees = 0;
 
   const parReq = new Map(u.exigences.map((e) => [e.id, e]));
   const parTache = new Map(u.taches.map((t) => [t.id, t]));
@@ -465,13 +496,19 @@ function juger(u: Univers): Jugement {
     const surCeDisque = (t.repo ?? DEPOT_LOCAL) === DEPOT_LOCAL;
     for (const [req, promesses] of Object.entries(t.tests ?? {})) {
       for (const promesse of promesses) {
+        // Une promesse est « confrontée » à l'endroit exact où elle reçoit un verdict : la tâche
+        // entre au périmètre, et la promesse au compte que le résumé imprime (GOV-085).
+        const confronter = () => {
+          confrontees.add(t.id);
+          promessesJugees.add(JSON.stringify([t.id, req, promesse]));
+        };
         const [chemin, ...reste] = promesse.split('#');
         const titre = reste.join('#');
         const r = resoudreFichier(chemin!, u.fichiers);
 
         if ('erreur' in r) {
           if (r.erreur === 'ambigu') {
-            confrontees.add(t.id);
+            confronter();
             ajouter(
               'promesse_ambigue',
               `${t.id} promet « ${promesse} » pour ${req} : ${r.candidats.length} fichiers portent ` +
@@ -482,7 +519,7 @@ function juger(u: Univers): Jugement {
             // dépôt est celui-ci. Avant la livraison, c'est une promesse de test à venir, et une
             // garde qui la refuserait interdirait d'écrire une acceptance avant son code ; hors de
             // ce dépôt, l'absence ne dit rien — le fichier n'a jamais eu vocation à être ici.
-            confrontees.add(t.id);
+            confronter();
             ajouter(
               'test_promis_absent',
               `${t.id} promet « ${promesse} » pour ${req} : aucun fichier de test de ce nom sur le disque.`
@@ -494,7 +531,7 @@ function juger(u: Univers): Jugement {
         const f = r.fichier;
         if (!f.execute) {
           if (!livree || !surCeDisque) continue;
-          confrontees.add(t.id);
+          confronter();
           ajouter(
             'test_promis_absent',
             `${t.id} promet « ${promesse} » pour ${req} : ${f.chemin} existe mais ${CHEMIN_VITEST} ne ` +
@@ -506,7 +543,7 @@ function juger(u: Univers): Jugement {
         /** Le titre promis n'a pas pu être retrouvé : son statut ne se juge pas une seconde fois. */
         let titreIntrouvable = false;
         if (titre.length > 0) {
-          confrontees.add(t.id);
+          confronter();
           if (f.titresResolus === null) {
             titreIntrouvable = true;
             ajouter(
@@ -546,7 +583,7 @@ function juger(u: Univers): Jugement {
         // Une exigence ACTIVE est jugée — ici, ou déjà par `req_sans_test` (même cause, un seul
         // message). Une exigence absorbée ou inconnue ne l'est pas : une promesse sans titre qui
         // ne porte qu'elle n'a RIEN reçu, et la tâche reste hors du périmètre — c'est dit.
-        confrontees.add(t.id);
+        confronter();
         if (sansTest.has(req)) continue;
         paires++;
 
@@ -574,12 +611,35 @@ function juger(u: Univers): Jugement {
               : `aucun titre de \`it()\` ne contient ${req}`
           );
         }
+        // LE TEST PROMIS LUI-MÊME (GOV-085). Une promesse `#titre` ne désigne pas un fichier : elle
+        // désigne CE test-là. Le contrôle ne regardait que le FICHIER — `@req` en tête et UN titre
+        // quelconque portant l'identifiant — si bien qu'une tâche pouvait promettre, pour une
+        // exigence, un test qui en cite une AUTRE : le fichier citait l'exigence ailleurs, et
+        // l'attribution passait. Chaque test que la promesse vise doit porter l'exigence dans le
+        // titre de son `it()` (dernier segment du nom résolu).
+        if (titre.length > 0 && !titreIntrouvable && f.titresResolus !== null) {
+          titrees++;
+          const muets = f.titresResolus
+            .filter((n) => nomPorteLaPromesse(n, titre))
+            .filter((n) => !n.split(' > ').pop()!.includes(req));
+          if (muets.length > 0) {
+            manques.push(
+              `le test promis ne cite pas ${req} dans son titre (${muets.map((n) => `« ${n} »`).join(', ')})`
+            );
+          }
+        }
         if (manques.length > 0) {
+          // LE REMÈDE EST NOMMÉ, et ce n'est pas le rendu (GOV-085) : une attribution fausse se
+          // corrige dans la promesse ou dans le test. Regénérer la vue l'y recopierait sans la
+          // rendre vraie — un message qui propose ce geste-là est un piège poli.
           ajouter(
             'req_non_citee_par_son_test',
             `${t.id} déclare couvrir ${req} par « ${promesse} », mais ${f.chemin} ne porte pas les ` +
               `deux formes de REQ-QA-014 : ${manques.join(' ; ')}. La traçabilité serait au vert sur ` +
-              `un test qui ne parle pas de cette exigence (défaut constaté à la main, PR 27).`
+              `un test qui ne parle pas de cette exigence (défaut constaté à la main, PR 27). ` +
+              `Remède : corrige l'un des deux — la promesse de ${t.id} dans ${CHEMIN_TACHES}, ou ` +
+              `le test ${f.chemin} —, jamais la vue : la regénérer recopierait cette attribution ` +
+              `sans la rendre vraie.`
           );
           continue;
         }
@@ -662,7 +722,7 @@ function juger(u: Univers): Jugement {
     );
   }
 
-  return { fautes, confrontees, paires, vertes };
+  return { fautes, confrontees, paires, vertes, promesses: promessesJugees.size, titrees };
 }
 
 /**
@@ -917,9 +977,14 @@ export function verifierVue(u: Univers, surDisque: string | null, chemin: string
     return [
       {
         famille: 'vue_divergente',
+        // Ce message ne répond qu'à la question ② (GOV-085). Il prescrivait « corrige la source ou
+        // regénère » comme deux remèdes équivalents : sur une source fautive, le second écrivait la
+        // faute dans la vue et éteignait le rouge. Le rendu remet la vue à jour, il ne dit rien de
+        // la vérité de la source — c'est écrit, et `--render` refuse une source fautive.
         message:
-          `${chemin} diffère de ce que les sources produisent. La matrice est une VUE : corrige la ` +
-          `source ou regénère (\`pnpm gov:trace --render\`), n'édite pas la vue.`,
+          `${chemin} diffère de ce que les sources produisent : la vue n'est pas à jour de sa ` +
+          `source. N'édite pas la vue. Le rendu (\`pnpm gov:trace --render\`) la remet à jour et ne ` +
+          `répond JAMAIS à la question « ${QUESTION_SOURCE} » : il refuse une source fautive.`,
       },
     ];
   }
@@ -1452,7 +1517,13 @@ function direLePerimetre(u: Univers): void {
  * formes de REQ-QA-014, et combien il a vues VERTES — ou qu'il ne l'a PAS jugé, et pourquoi.
  */
 function direLesPaires(u: Univers): void {
-  const { paires, vertes } = juger(u);
+  const { paires, vertes, promesses, titrees } = juger(u);
+  // GOV-085 : le vert dit combien de PROMESSES il a jugées, et combien de tests précis il a
+  // confrontés à l'exigence qu'on leur attribue — jamais un vert muet sur ce qu'il a regardé.
+  console.log(
+    `   ${promesses} promesse(s) de \`tests{}\` confrontée(s) à ce disque, dont ${titrees} au ` +
+      `titre de leur \`it()\` — le test précis confronté à l'exigence qu'on lui attribue`
+  );
   const tete = `${paires} paire(s) (tâche, exigence) confrontée(s) aux deux formes de REQ-QA-014`;
   const r = u.resultats;
   if (r.etat === 'lus') {
@@ -1897,6 +1968,19 @@ if (LANCE_EN_SCRIPT && process.argv.includes('--prove')) {
         return controler(u);
       },
     },
+    // GOV-085 : la promesse vise un test PRÉCIS dont le titre ne cite pas l'exigence, dans un
+    // fichier qui la cite ailleurs — la forme exacte qui passait, puis que le rendu officialisait.
+    {
+      famille: 'req_non_citee_par_son_test',
+      attendu: 'le test promis ne cite pas REQ-AAA-001',
+      defaut: () => {
+        const u = copie(base);
+        u.fichiers[0]!.titresDeTest.push('un test voisin');
+        u.fichiers[0]!.titresResolus = ['REQ-AAA-001 : un titre', 'un test voisin'];
+        u.taches[0]!.tests!['REQ-AAA-001'] = ['tests/f/a.spec.ts#un test voisin'];
+        return controler(u);
+      },
+    },
   ];
 
   /**
@@ -1905,6 +1989,21 @@ if (LANCE_EN_SCRIPT && process.argv.includes('--prove')) {
    * inutilisable, en réclamant un test à des exigences qu'aucune tâche n'a encore livrées.
    */
   const CONTRE_TEMOINS: { nom: string; muter: () => Univers; cle?: string }[] = [
+    // GOV-085 : le même fichier, la promesse visant le test qui CITE l'exigence — vert.
+    {
+      nom: 'une promesse `#titre` qui vise le test dont le titre cite son exigence',
+      muter: () => {
+        const u = copie(base);
+        u.fichiers[0]!.titresDeTest.push('un test voisin');
+        u.fichiers[0]!.titresResolus = ['REQ-AAA-001 : un titre', 'un test voisin'];
+        rendusDe(u)['tests/f/a.spec.ts']!.push({
+          nom: 'un test voisin',
+          titre: 'un test voisin',
+          statut: 'passed',
+        });
+        return u;
+      },
+    },
     // ── QA-T03 ──────────────────────────────────────────────────────────────────────────────
     {
       cle: 'renvoi-porte',
@@ -2173,17 +2272,30 @@ if (LANCE_EN_SCRIPT) {
   if (process.argv.includes('--verifier')) {
     const surDisque = existsSync(CHEMIN_VUE) ? readFileSync(CHEMIN_VUE, 'utf8') : null;
     const fautes = verifierVue(univers, surDisque, CHEMIN_VUE);
+    // Ce mode ne répond qu'à la question ② et le DIT (GOV-085) : un « ✅ » sur la vue se lisait
+    // comme un vert sur la matrice, alors qu'il concorde aussi avec une source fautive rendue.
+    const nonJugee = `   ${QUESTION_SOURCE} NON JUGÉE par ce mode — \`pnpm gov:trace\` la juge.`;
     if (fautes.length > 0) {
-      console.error(`❌ gov:trace — ${fautes[0]!.message}`);
+      console.error(`❌ gov:trace — ${QUESTION_VUE} ${fautes[0]!.message}`);
+      console.error(nonJugee);
       process.exit(1);
     }
-    console.log(`✅ gov:trace — ${CHEMIN_VUE} est égal à ce que ses sources produisent.`);
+    console.log(
+      `✅ gov:trace — ${QUESTION_VUE} oui : ${CHEMIN_VUE} est égal à ce que ses sources produisent.`
+    );
+    console.log(nonJugee);
     process.exit(0);
   }
 
   // ── mode normal ──────────────────────────────────────────────────────────────
+  // DEUX CONTRÔLES, DEUX SECTIONS, DEUX MESSAGES (GOV-085). Ils étaient versés dans une seule liste
+  // sous un seul verdict : une attribution fausse qui ne rougissait que par la vue invitait à
+  // regénérer, et le rendu éteignait le rouge en écrivant la faute. Chaque question a désormais sa
+  // section et sa réponse ; la garde sort en échec si l'UNE des deux est rouge.
   const surDisque = existsSync(CHEMIN_VUE) ? readFileSync(CHEMIN_VUE, 'utf8') : null;
-  const fautes = [...controler(univers), ...verifierVue(univers, surDisque, CHEMIN_VUE)];
+  const fautesSource = controler(univers);
+  const fautesVue = verifierVue(univers, surDisque, CHEMIN_VUE);
+  const fautes = [...fautesSource, ...fautesVue];
 
   if (fautes.length === 0) {
     const testees = univers.exigences.filter((e) =>
@@ -2192,21 +2304,41 @@ if (LANCE_EN_SCRIPT) {
     console.log(
       `✅ gov:trace — la matrice est cohérente : ${testees.length} exigences réputées testées, toutes citées par un test exécuté.`
     );
+    console.log(`   ${QUESTION_SOURCE} ✅ oui`);
+    console.log(`   ${QUESTION_VUE} ✅ oui — ${CHEMIN_VUE}`);
     direLesSources(univers);
     direLePerimetre(univers);
     direLesPaires(univers);
     process.exit(0);
   }
 
-  const parFamille = new Map<string, Faute[]>();
-  for (const f of fautes) parFamille.set(f.famille, [...(parFamille.get(f.famille) ?? []), f]);
+  // Tout le verdict passe par le MÊME flux : les deux sections se lisent dans l'ordre écrit.
   console.error(`❌ gov:trace — ${fautes.length} rupture(s) de traçabilité :\n`);
+  console.error(
+    fautesSource.length > 0
+      ? `   ${QUESTION_SOURCE} ❌ non — ${fautesSource.length} faute(s) ; le remède est dans la ` +
+          `source ou dans le disque, jamais dans le rendu de la vue :`
+      : `   ${QUESTION_SOURCE} ✅ oui`
+  );
+  const parFamille = new Map<string, Faute[]>();
+  for (const f of fautesSource)
+    parFamille.set(f.famille, [...(parFamille.get(f.famille) ?? []), f]);
   for (const famille of FAMILLES) {
     const liste = parFamille.get(famille);
     if (!liste) continue;
     console.error(`   ── ${famille} (${liste.length})`);
     liste.slice(0, 15).forEach((f) => console.error(`      ${f.message}`));
     if (liste.length > 15) console.error(`      … et ${liste.length - 15} autre(s).`);
+  }
+  console.error('');
+  if (fautesVue.length > 0) {
+    console.error(`   ${QUESTION_VUE} ❌ non`);
+    for (const f of fautesVue) console.error(`   ── ${f.famille} (1)\n      ${f.message}`);
+  } else {
+    console.error(
+      `   ${QUESTION_VUE} ✅ oui — ${CHEMIN_VUE} est égal à ce que la source produit, et cela ` +
+        `ne dit RIEN de la question ①.`
+    );
   }
   console.error('');
   direLesSources(univers);
