@@ -146,6 +146,20 @@ export interface FichierDuBac {
   readonly regle: string | null;
   /** Rang (1-based) de la ligne fautive dans `lignes` ; 0 pour un contre-témoin. */
   readonly ligneFautive: number;
+  /**
+   * Les AUTRES règles maison qui nomment LÉGITIMEMENT ce contre-témoin (11e tour, PR 82).
+   *
+   * Un contre-témoin doit être muet : c'est ainsi qu'on voit une règle trop large. Mais un fichier
+   * écrit pour prouver le silence de la règle A peut violer la règle B pour de bon — la couche
+   * d'accès a le droit d'importer le client, pas de le relayer en bloc ni de le citer par un
+   * sous-chemin. Le miroir de `FORMES_PRISMA` dans la couche d'accès présumait le contraire.
+   *
+   * Une admission est donc NOMMÉE et MESURÉE : la règle citée ici DOIT rougir le fichier, sinon
+   * c'est une faute (`admission_muette`). Une déclaration qui ne correspond plus à rien est aussi
+   * trompeuse qu'une contamination cachée : elle laisse croire qu'on surveille encore. Et toute
+   * règle NON déclarée qui rougit reste une faute — c'est ce que ce champ préserve.
+   */
+  readonly reglesAdmises: readonly string[];
 }
 
 /** Le dossier du MILIEU de l'espace : ni la racine du périmètre, ni sa dernière feuille. */
@@ -1244,6 +1258,173 @@ const FORMES_SQL: readonly { nom: string; lignes: string[]; fautive: number; ext
     ],
     fautive: 1,
   },
+  // ── Le MODULE D'EXÉCUTION, refusé par son TEXTE (10e tour, revue `securite` 5329989967, PR 82) :
+  //    un sous-chemin de `@prisma/client/` (ou `.prisma/`) cité sous `src/` est refusé, quelle que
+  //    soit la liaison qui le porte. L'objet module déstructuré ne passe donc plus. ──
+  {
+    nom: 'runtime-espace-de-noms-destructure',
+    lignes: [
+      "import * as L from '@prisma/client/runtime/library';",
+      'const { raw: r } = L;',
+      'export const fragment = (x: string) => r(x);',
+    ],
+    fautive: 1,
+  },
+  {
+    nom: 'runtime-defaut-destructure-sqltag',
+    lignes: [
+      "import L from '@prisma/client/runtime/library';",
+      'const { sqltag } = L;',
+      'export const fragment = (x: string) => sqltag([x] as unknown as TemplateStringsArray);',
+    ],
+    fautive: 1,
+  },
+  {
+    nom: 'sous-chemin-du-client',
+    lignes: ["import * as requetes from '@prisma/client/sql';", 'export const r = requetes;'],
+    fautive: 1,
+  },
+  {
+    nom: 'client-genere-point-prisma',
+    lignes: [
+      "import type { Prisma } from '.prisma/client/index';",
+      'export type T = Prisma.Sql;',
+    ],
+    fautive: 1,
+  },
+  // ── Le RELAIS EN BLOC (même revue) : `export *`, avec ou sans `as`, dont le spécifieur désigne
+  //    le client, un module `prisma`/`db` ou le runtime, est refusé partout sous `src/`. Le
+  //    consommateur du relais (`import { raw } from './relais-runtime'`) est au bac à côté, muet :
+  //    le refus porte sur le relais. ──
+  {
+    nom: 'relais-runtime',
+    lignes: ["export * from '@prisma/client/runtime/library';"],
+    fautive: 1,
+  },
+  {
+    nom: 'relais-runtime-espace-de-noms',
+    lignes: ["export * as rt from '@prisma/client/runtime/library';"],
+    fautive: 1,
+  },
+  {
+    nom: 'relais-client-en-bloc',
+    lignes: ["export * from '@prisma/client';"],
+    fautive: 1,
+  },
+  {
+    nom: 'relais-client-espace-de-noms',
+    lignes: ["export * as C from '@prisma/client';"],
+    fautive: 1,
+  },
+  {
+    nom: 'relais-module-db',
+    lignes: ["export * from '../../server/db';"],
+    fautive: 1,
+  },
+  {
+    nom: 'relais-module-prisma-commente',
+    lignes: ['export /* relais */ *', "  as base from '@/lib/prisma.js';"],
+    fautive: 1,
+  },
+  // ── Le namespace en NOM D'ÉLÉMENT JSX (10e tour, revue `exactitude` 5329988928, PR 82) : l'AST
+  //    ne le rend pas comme une valeur ; `<` puis `Prisma` est refusé par le texte, chevron en
+  //    position d'expression — collé à un mot-clé comme `return` compris, blancs admis. ──
+  {
+    nom: 'jsx-element-prisma',
+    ext: 'tsx',
+    lignes: [
+      "import { Prisma } from '@prisma/client';",
+      'export const E = () => <Prisma.raw />;',
+    ],
+    fautive: 2,
+  },
+  {
+    nom: 'jsx-return-colle',
+    ext: 'tsx',
+    lignes: [
+      "import { Prisma } from '@prisma/client';",
+      'export function E() { return<Prisma.raw />; }',
+    ],
+    fautive: 2,
+  },
+  {
+    nom: 'jsx-blanc-apres-chevron',
+    ext: 'tsx',
+    lignes: [
+      "import { Prisma } from '@prisma/client';",
+      'export const E = () => (<',
+      '  Prisma.raw />);',
+    ],
+    fautive: 2,
+  },
+  // Dans le TEXTE d'un enfant JSX, le chevron est collé à un mot : aucune exemption par le
+  // contexte ne tient.
+  {
+    nom: 'jsx-enfant-texte-colle',
+    ext: 'tsx',
+    lignes: [
+      "import { Prisma } from '@prisma/client';",
+      'export const E = () => <b>x<Prisma.raw /></b>;',
+    ],
+    fautive: 2,
+  },
+  // Le PRIX : un argument de type écrit `Prisma.X` directement. Passer par un alias de type.
+  {
+    nom: 'prix-generique-prisma',
+    lignes: [
+      "import type { Prisma } from '@prisma/client';",
+      'export const c = (p: Promise<Prisma.InputJsonObject>) => p;',
+    ],
+    fautive: 2,
+  },
+  // ── Le nom d'élément JSX **QUALIFIÉ** (11e tour, PR 82). Ces quatre formes n'étaient fermées par
+  //    RIEN avant le bras au chemin qualifié : ni par l'AST (`metavariable-regex` sur `$EL` ne mord
+  //    plus au-delà de deux segments, mesuré), ni par le bras au texte (ancré sur `<` puis
+  //    `Prisma`, il ne franchit pas le préfixe), ni par le bras des sous-chemins (l'import est
+  //    EXACTEMENT `'@prisma/client'`). ──
+  {
+    nom: 'jsx-namespace-aliase',
+    ext: 'tsx',
+    lignes: [
+      "import * as C from '@prisma/client';",
+      'export const E = () => <C.Prisma.raw />;',
+    ],
+    fautive: 2,
+  },
+  {
+    // Deux segments de préfixe : le bras franchit les segments, il ne compte pas jusqu'à deux.
+    nom: 'jsx-namespace-aliase-profond',
+    ext: 'tsx',
+    lignes: [
+      "import * as C from '@prisma/client';",
+      'const a = { b: C };',
+      'export const E = () => <a.b.Prisma.raw />;',
+    ],
+    fautive: 3,
+  },
+  {
+    // Le namespace ALIASÉ HORS DE VUE : rien ne dit `Prisma` dans le nom de l'élément. C'est le
+    // MEMBRE qui est jugé. (La ligne 1 rougit aussi, par le bras des sous-chemins : la ligne
+    // déclarée est celle du JSX, et un constat de plus sur le fichier n'est pas une faute.)
+    nom: 'jsx-membre-du-runtime-aliase',
+    ext: 'tsx',
+    lignes: [
+      "import * as L from '@prisma/client/runtime/library';",
+      'export const E = ({ e }: { e: string }) => <L.raw>{e}</L.raw>;',
+    ],
+    fautive: 2,
+  },
+  {
+    // La BALISE FERMANTE porte le même chemin qualifié : `</C.Prisma.raw>` est refusée comme
+    // l'ouvrante, sans quoi une paire suffirait à passer en n'écrivant l'ouvrante nulle part.
+    nom: 'jsx-fermante-qualifiee',
+    ext: 'tsx',
+    lignes: [
+      "import * as C from '@prisma/client';",
+      'export const E = () => <C.Prisma.raw>{null}</C.Prisma.raw>;',
+    ],
+    fautive: 2,
+  },
   // Une fonction d'ÉTIQUETTE appelée sans gabarit : le tableau de « morceaux » est du TEXTE.
   {
     nom: 'prisma-sql-appel',
@@ -1635,16 +1816,6 @@ const FORMES_SQL: readonly { nom: string; lignes: string[]; fautive: number; ext
     ],
     fautive: 2,
   },
-  // — LE NAMESPACE EN NOM D'ÉLÉMENT JSX (10e tour, revue `exactitude` 5329988928). Le bras
-  //   juge l'ÉLÉMENT JSX par l'AST, et non le texte autour du chevron : un argument de type
-  //   n'est pas un élément pour le parseur, donc aucun faux positif n'est à payer sur les
-  //   arguments de type — contre-témoin `espace/jsx-argument-de-type`.
-  {
-    nom: 'jsx-namespace',
-    ext: 'tsx',
-    lignes: ['declare const Prisma: { raw: unknown };', 'export const f = () => <Prisma.raw />;'],
-    fautive: 2,
-  },
 ];
 
 function fichier(
@@ -1652,9 +1823,10 @@ function fichier(
   chemin: string,
   lignes: readonly string[],
   regle: string | null,
-  ligneFautive: number
+  ligneFautive: number,
+  reglesAdmises: readonly string[] = []
 ): FichierDuBac {
-  return { nom, chemin, lignes, regle, ligneFautive };
+  return { nom, chemin, lignes, regle, ligneFautive, reglesAdmises };
 }
 
 /** Les témoins ROUGES : chacun doit être nommé par SA règle, sur SA ligne. */
@@ -1701,11 +1873,42 @@ export const TEMOINS: readonly FichierDuBac[] = [
   ),
 ];
 
-/** Les contre-témoins : AUCUN constat attendu. Une règle trop large rougit ici. */
+/**
+ * CE QUE LA COUCHE D'ACCÈS N'A PAS LE DROIT DE FAIRE, forme par forme (11e tour, PR 82).
+ *
+ * Le miroir ci-dessous recopie CHAQUE forme de `FORMES_PRISMA` dans la couche d'accès pour prouver
+ * que `REGLE_PRISMA` s'y taît — la couche d'accès est le seul endroit où le client s'importe. Il
+ * présumait qu'aucune de ces formes ne violait une AUTRE règle maison. C'est faux depuis que
+ * `REGLE_SQL` refuse, PARTOUT sous `src/`, le relais en bloc et les sous-chemins du client : la
+ * couche d'accès a le droit d'importer le client, pas de le relayer ni de le citer autrement que
+ * par son spécifieur canonique. Deux droits distincts, et le second ne découle pas du premier.
+ *
+ * Chaque admission est donc nommée ici avec son motif, et MESURÉE : la règle citée doit rougir le
+ * fichier. Mesuré par `pnpm sec:semgrep:prove`.
+ */
+const REFUS_ADMIS_DANS_LA_COUCHE_D_ACCES: Readonly<Record<string, readonly string[]>> = {
+  // Un relais en bloc du client depuis la couche d'accès fait sortir `Prisma.raw` sous un autre
+  // spécifieur, que plus rien ne reconnaît : c'est exactement le trou que le bras ferme.
+  'export-etoile': [REGLE_SQL],
+  // Le client se cite par `'@prisma/client'` et pas autrement. `.prisma/client/index` est le même
+  // module par un chemin interne : une seule écriture canonique, sinon la règle se contourne en
+  // changeant de chemin.
+  'point-prisma': [REGLE_SQL],
+  'node-modules-point-prisma': [REGLE_SQL],
+};
+
+/** Les contre-témoins : AUCUN constat attendu, sauf une règle DÉCLARÉE et mesurée. */
 export const CONTRE_TEMOINS: readonly FichierDuBac[] = [
   // Les MÊMES fichiers hors de l'espace : la couche d'accès a le droit d'importer le client.
   ...FORMES_PRISMA.map((f) =>
-    fichier(`acces/${f.nom}`, `src/server/acces/${f.nom}.${f.ext}`, f.lignes, null, 0)
+    fichier(
+      `acces/${f.nom}`,
+      `src/server/acces/${f.nom}.${f.ext}`,
+      f.lignes,
+      null,
+      0,
+      REFUS_ADMIS_DANS_LA_COUCHE_D_ACCES[f.nom] ?? []
+    )
   ),
   // Dans l'espace, des spécifieurs qui RESSEMBLENT sans être le client.
   fichier(
@@ -1857,6 +2060,60 @@ export const CONTRE_TEMOINS: readonly FichierDuBac[] = [
     null,
     0
   ),
+  // Le CONSOMMATEUR du relais `relais-runtime` : il n'a rien qui le distingue d'un import
+  // quelconque (limite f), et c'est pourquoi le refus porte sur le relais. Muet par construction.
+  fichier(
+    'sql/consommateur-du-relais',
+    'src/lib/sql/consommateur-du-relais.ts',
+    [
+      "import { raw } from './relais-runtime';",
+      'export const fragment = (x: string) => raw(x);',
+    ],
+    null,
+    0
+  ),
+  // Les relais en bloc ADMIS : un `export *` dont le spécifieur ne désigne ni le client, ni un
+  // module `prisma`/`db`, ni le runtime.
+  fichier(
+    'sql/relais-admis',
+    'src/lib/sql/relais-admis.ts',
+    [
+      "export * from './outils';",
+      "export * as acces from '@/server/acces/apporteur';",
+      "export * from '@/lib/prismatique';",
+      "export * as d from './db-outils';",
+    ],
+    null,
+    0
+  ),
+  // Le JSX et les GÉNÉRIQUES dans un `.tsx` : un élément dont le nom COMMENCE par `Prisma` sans
+  // l'être passe, et un type du namespace passé en argument de type par un ALIAS aussi (le
+  // chevron suivi de `Prisma` est refusé quel que soit le contexte : témoin
+  // `prix-generique-prisma`).
+  fichier(
+    'sql/jsx-et-generiques',
+    'src/lib/sql/jsx-et-generiques.tsx',
+    [
+      "import type { Prisma } from '@prisma/client';",
+      'type Json = Prisma.InputJsonObject;',
+      'declare function lire<T>(): T;',
+      'const Prismatique = () => null;',
+      'export const a = lire<Json>();',
+      'export const b: Array<Json> = [];',
+      'export const c = (p: Promise<Json>, q: Prisma.InputJsonObject[]) => [p, q];',
+      'export const d = (n: number) => <div data-n={n}><Prismatique /><span /></div>;',
+      'export const e = (m: Map<string, Json>) => m;',
+      // Le PRIX que le bras au chemin qualifié N'A PAS payé (11e tour) : un argument de type
+      // QUALIFIÉ reste muet, parce que son chevron est collé au mot qui le précède et que seule
+      // une liste fermée de mots-clés d'expression lève cette garde. Sans ce contre-témoin, rien
+      // ne distinguerait le bras d'un refus de tous les génériques.
+      "import type * as N from '@prisma/client';",
+      'export const f = (p: Promise<N.Prisma.InputJsonObject>) => p;',
+      'export const g = (p: Map<string, N.Prisma.InputJsonObject>) => p;',
+    ],
+    null,
+    0
+  ),
   fichier(
     'sql/parametre',
     'src/lib/sql/parametre.ts',
@@ -1873,7 +2130,10 @@ export const CONTRE_TEMOINS: readonly FichierDuBac[] = [
       'export const h = (e: unknown) => e instanceof Prisma.PrismaClientKnownRequestError;',
       'export const vide = Prisma.empty;',
       "export const err = new Prisma.PrismaClientKnownRequestError('x', { code: 'P2002', clientVersion: '6' });",
-      'export async function t<T extends Prisma.TransactionClient>(c: T): Promise<Prisma.InputJsonObject> { return c as unknown as Prisma.InputJsonObject; }',
+      // (Un argument de type écrit `Prisma.X` directement est refusé depuis le 10e tour — prix
+      // du refus du chevron suivi de `Prisma` : l'alias `Json` le porte.)
+      'type Json = Prisma.InputJsonObject;',
+      'export async function t<T extends Prisma.TransactionClient>(c: T): Promise<Json> { return c as unknown as Prisma.InputJsonObject; }',
       'export class Lot<T extends Prisma.TransactionClient> { t?: T; }',
       // Des étiquettes NICHÉES, génériques, et `join` à une seule valeur : tout cela reste admis.
       'export const m = (id: string) => Prisma.sql`a ${Prisma.sql`b ${id}`} ${Prisma.join([Prisma.sql`c`])}`;',
@@ -1882,19 +2142,6 @@ export const CONTRE_TEMOINS: readonly FichierDuBac[] = [
       // Un constructeur DÉCLARÉ n'est pas une lecture de `.constructor`.
       'class Ligne { constructor(public n: number) {} }',
       'export const q = new Ligne(1);',
-    ],
-    null,
-    0
-  ),
-  // Un ARGUMENT DE TYPE qui nomme le namespace dans un `.tsx` : ce n'est pas un élément JSX pour
-  // le parseur, et le bras AST ne le prend donc pas. Un bras au TEXTE le rougirait — c'est le prix
-  // que l'AST évite, et ce contre-témoin est ce qui le tient.
-  fichier(
-    'espace/jsx-argument-de-type',
-    `${MILIEU_ESPACE}/jsx-argument-de-type.tsx`,
-    [
-      'declare namespace Prisma { type X = number }',
-      'export const a: Promise<Prisma.X> | null = null;',
     ],
     null,
     0
@@ -2157,11 +2404,28 @@ export function jugerPreuve(p: Passage, bac: readonly FichierDuBac[]): Faute[] {
     }
     const constats = p.sortie.results.filter((c) => c.path === f.chemin);
     if (f.regle === null) {
+      const admises = new Set(f.reglesAdmises.map((r) => `${PREFIXE_MAISON}${r}`));
       for (const c of constats) {
+        if (admises.has(c.check_id)) continue;
         fautes.push({
           famille: 'faux_positif',
-          message: `${f.nom} (${f.chemin}:${c.start.line}) : ${c.check_id} rougit un contre-témoin.`,
+          message:
+            `${f.nom} (${f.chemin}:${c.start.line}) : ${c.check_id} rougit un contre-témoin.` +
+            (f.reglesAdmises.length === 0
+              ? ''
+              : ` Admises sur ce fichier : ${[...admises].join(', ')}.`),
         });
+      }
+      // Une admission qui ne mord plus est une surveillance qu'on croit encore en place.
+      for (const id of admises) {
+        if (!constats.some((c) => c.check_id === id)) {
+          fautes.push({
+            famille: 'admission_muette',
+            message:
+              `${f.nom} (${f.chemin}) : « ${id} » est DÉCLARÉE comme refus légitime et ne mord ` +
+              'pas. Retirez la déclaration, ou rendez à la règle ce qu’elle a perdu.',
+          });
+        }
       }
       continue;
     }

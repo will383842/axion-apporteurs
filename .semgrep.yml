@@ -548,6 +548,68 @@ rules:
           - metavariable-regex:
               metavariable: $EL
               regex: '^Prisma(\s*\.|$)'
+      # — LE MODULE D'EXÉCUTION ET LES SOUS-CHEMINS DU CLIENT, refusés par leur TEXTE (10e tour,
+      #   revue `securite` 5329989967, PR 82) : l'objet module du runtime qui quitte sa liaison
+      #   (`import * as L` puis `const { raw: r } = L`, import par défaut puis `{ sqltag }`)
+      #   n'est pas suivi (limite d). Plutôt que de le suivre, la règle refuse sous `src/` toute
+      #   citation de `.prisma/` et toute citation de `@prisma/` qui n'est pas EXACTEMENT
+      #   `@prisma/client` suivi d'un guillemet — `@prisma/client/runtime/…`, `@prisma/client/sql`,
+      #   un autre paquet `@prisma/…`.
+      #
+      #   LA CITATION DOIT AVOIR LA FORME D'UN SPÉCIFIEUR (11e tour, mesuré) : entre guillemets,
+      #   sans blanc. La version précédente lisait le texte « où qu'il soit, commentaire compris »,
+      #   et rougissait donc une phrase française qui NOMME le client pour dire qu'on ne l'importe
+      #   pas — mesuré sur le contre-témoin `acces/prix-commentaire-cite-le-client`, dont
+      #   l'apostrophe de « L'espace » tenait le rôle du guillemet ouvrant. Un spécifieur réel est
+      #   toujours cité et ne porte jamais d'espace ; exiger cette forme ne perd donc aucune
+      #   liaison, et rend la prose écrivable. `REGLE_PRISMA` refuse déjà la citation en prose hors
+      #   de la couche d'accès : ce prix est payé une fois, pas deux.
+      #   Le dépôt n'en cite aucune (mesuré : ses 13 citations sont `'@prisma/client'`).
+      - pattern-regex: |-
+          ['"`][^'"`\s]*(?:\.prisma/|@prisma/(?!client['"`]))[^'"`\s]*['"`]
+      # — LE RELAIS EN BLOC (même revue) : `export *` (avec ou sans `as`, `export type *` compris)
+      #   dont le spécifieur désigne le client, un module `prisma`/`db` ou le runtime — l'ancre
+      #   `&specifieur-du-client` —, lu sur le TEXTE, blancs Unicode et commentaires admis entre
+      #   les mots, et refusé partout sous `src/` : il fait sortir tous les membres du module sous
+      #   un autre spécifieur, que plus rien ne reconnaît (`import { raw } from './relais'`). Entre
+      #   l'étoile et `from`, le bras saute commentaires et chaînes (`as "nom"`) et s'arrête au
+      #   premier point-virgule hors d'eux.
+      - patterns:
+          - pattern-regex: |-
+              (?<![\p{ID_Continue}$\x{200C}\x{200D}.#])export(?![\p{ID_Continue}$\x{200C}\x{200D}])(?:[\t\n\x0B\f\r\x{0085}\x{200B}\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)*(?:type(?![\p{ID_Continue}$\x{200C}\x{200D}])(?:[\t\n\x0B\f\r\x{0085}\x{200B}\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)*)?\*(?:/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*|'[^'\n\r]*'|"[^"\n\r]*"|[^;'"`])*?from(?:[\t\n\x0B\f\r\x{0085}\x{200B}\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)*['"`](?P<M>[^'"`]*)['"`]
+          - metavariable-regex: *specifieur-du-client
+      # — LE NAMESPACE EN NOM D'ÉLÉMENT JSX (10e tour, revue `exactitude` 5329988928, PR 82) :
+      #   `<Prisma.raw />` n'est pas rendu comme une valeur par l'AST, la liste blanche ne le voit
+      #   pas. Le JSX n'a aucun usage légitime du namespace : TOUT chevron `<`, suivi de blancs
+      #   Unicode ou de commentaires, puis du nom `Prisma` borné (non suivi d'un caractère
+      #   d'identifiant), est refusé, QUEL QUE SOIT ce qui précède le chevron. Aucune exemption
+      #   par le contexte : un chevron collé à un mot ouvre des arguments de type
+      #   (`Promise<Prisma.X>`), mais aussi un élément dans le texte d'un enfant JSX
+      #   (`<b>x<Prisma.raw /></b>`) ou derrière un `return` collé — le texte ne les distingue
+      #   pas. Prix ci-dessous : un argument de type écrit `Prisma.X` directement.
+      - pattern-regex: |-
+          <(?:[\t\n\x0B\f\r\x{0085}\x{200B}\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)*Prisma(?![\p{ID_Continue}$\x{200C}\x{200D}])
+      # — LE NOM D'ÉLÉMENT JSX **QUALIFIÉ** (11e tour, mesure publiée en `issuecomment-5861172534`).
+      #   Les trois bras ci-dessus laissaient passer `<C.Prisma.raw />` sous
+      #   `import * as C from '@prisma/client'` : l'AST parce que `metavariable-regex` sur `$EL` ne
+      #   mord plus au-delà de DEUX segments (`<C.Prisma.raw />` et `<a.b.Prisma.raw />` muets,
+      #   mesuré) ; le bras au texte parce qu'il s'ancre sur `<` suivi de `Prisma` et ne franchit
+      #   pas le préfixe ; le bras des sous-chemins parce que l'import est EXACTEMENT
+      #   `'@prisma/client'`. Ce cas n'était donc fermé par RIEN.
+      #
+      #   Les deux motifs ci-dessous franchissent les segments et portent une GARDE ARRIÈRE : un
+      #   chevron collé à un identifiant, une parenthèse ou un crochet fermants ouvre des arguments
+      #   de type, jamais un élément — sauf derrière un mot-clé d'expression, énuméré. Le second
+      #   motif prend le cas où le namespace est ALIASÉ hors de vue (`<L.raw>`, runtime) en jugeant
+      #   le MEMBRE. Mesuré sur sept cas (image épinglée 1.176.1) : rouges `<C.Prisma.raw />`,
+      #   `<Prisma.raw />`, `<L.raw>{e}</L.raw>`, `<a.b.Prisma.raw />` ; muets `<PrismaCard />`,
+      #   `Promise<Prisma.X>`, `Promise<N.Prisma.X>`.
+      #
+      #   CE BRAS NE REMPLACE PAS LE PRÉCÉDENT, et les deux sont voulus : sa garde arrière lui
+      #   fait manquer l'élément écrit dans le TEXTE d'un enfant (`<b>x<Prisma.raw /></b>`), que le
+      #   bras au texte prend. Aucun des deux ne contient l'autre.
+      - pattern-regex: '(?:(?<![A-Za-z0-9_$)\]])|(?<=\breturn)|(?<=\byield)|(?<=\bdefault)|(?<=\bawait)|(?<=\bcase)|(?<=\bthrow))<\s*/?\s*(?:[A-Za-z0-9_$]+\s*\.\s*)*Prisma\s*\.'
+      - pattern-regex: '(?:(?<![A-Za-z0-9_$)\]])|(?<=\breturn)|(?<=\byield)|(?<=\bdefault)|(?<=\bawait)|(?<=\bcase)|(?<=\bthrow))<\s*/?\s*(?:[A-Za-z0-9_$]+\s*\.\s*)+(?:raw|Sql|sqltag|join|makeTypedQueryFactory)\s*(?=[\s/>])'
       # — LES FONCTIONS D'ÉTIQUETTE hors de la position d'étiquette. Une étiquette est un appel
       #   pour l'AST de semgrep (mesuré : `Prisma.sql(...)` matche `Prisma.sql`…``) ; c'est
       #   donc la RÉFÉRENCE qui est jugée, et admise seulement DANS son propre gabarit étiqueté,
