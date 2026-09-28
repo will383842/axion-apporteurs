@@ -68,16 +68,28 @@ type TacheDuRegistre = TacheDeLot & {
   zone?: string | null;
 };
 
-const REGISTRE = (
-  JSON.parse(readFileSync('docs/tasks.json', 'utf8')) as { taches: TacheDuRegistre[] }
-).taches;
-
 /**
  * LES SIX TÂCHES DE LA PR #114, telles que son corps les nomme. C'est une FIXTURE, et elle est
  * confrontée au registre avant tout usage (RM-03, RM-11) : si l'une d'elles disparaissait, le
  * rejeu ne mesurerait plus rien et le test le DIT au lieu de verdir.
  */
 const LOT_L0_02 = ['GOV-046', 'GOV-048', 'GOV-076', 'GOV-078', 'GOV-082', 'GOV-086'] as const;
+
+/**
+ * LE REGISTRE DU REJEU : le registre réel, où les six tâches de la PR #114 reprennent l'état
+ * qu'elles avaient quand la garde a jugé cette PR — pas encore livrées, sans `pr` ni attestation.
+ * Ce fichier rejoue une PR OUVERTE. Une fois le lot clos, le registre réel porte `pr: 114` sur les
+ * six et les dit `fusionnee` : le titre seul les résout alors toutes, et `Lot:` les refuse comme
+ * livrées. Le rejeu ne mesurerait plus la lecture du champ, mais l'avancement du registre. Seules
+ * ces six entrées sont remises en arrière ; tout le reste du registre est lu tel quel.
+ */
+const REGISTRE = (
+  JSON.parse(readFileSync('docs/tasks.json', 'utf8')) as { taches: TacheDuRegistre[] }
+).taches.map((t) =>
+  (LOT_L0_02 as readonly string[]).includes(t.id)
+    ? { ...t, statut: 'a_faire', pr: null, attestation: null }
+    : t
+);
 /** La tâche que le TITRE de la PR #114 nomme — la seule que la garde résolvait. */
 const TITRE_DE_LA_PR_114 = 'GOV-082';
 
