@@ -25,7 +25,21 @@ const lireDoc = (): Doc => JSON.parse(readFileSync('docs/tasks.json', 'utf8')) a
 const schema = JSON.parse(readFileSync('scripts/lot/tasks.schema.json', 'utf8')) as object;
 const registre = chargerRegistre(CHEMIN_REGISTRE);
 const chemins = cheminsSchema(readFileSync(CHEMIN_CHARTE, 'utf8'));
-const MAINTENANT = Date.parse('2026-09-28T12:00:00Z');
+/**
+ * L'INSTANT DE LA PASSE, DÉRIVÉ DU REGISTRE : un jour après la plus récente fusion qu'il atteste.
+ * Figé à une heure du jour, il faisait lire `attestation_date_future` dès qu'une fusion plus
+ * tardive entrait au registre. Aucun témoin ne lit l'horloge (RM-11).
+ */
+const MAINTENANT =
+  Math.max(
+    0,
+    ...lireDoc().taches.map(
+      (t) =>
+        Date.parse(
+          (t as { attestation?: { fusionneeAt?: string } | null }).attestation?.fusionneeAt ?? ''
+        ) || 0
+    )
+  ) + 86_400_000;
 const fautes = (doc: Doc) => controler(doc, schema, registre, chemins, vuesDeLaPasse(MAINTENANT));
 
 /**

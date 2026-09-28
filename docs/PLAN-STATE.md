@@ -8,7 +8,7 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `fc8775e` — 2026-09-28T21:33:43+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #82 (un conflit avec `main`) |
+| Qu’est-ce qui est en vol ? | 1. #82 (un contrôle requis rouge ou une revue manquante) · 2. #187 (un contrôle requis rouge ou une revue manquante) |
 | Qui tient quoi ? | QA-T07 (A05) |
 | Où en est la phase ? | phase 0 — 76/117 tâches, reste 34.35 j |
 | Le prochain pas | QA-T07 — Gate sécurité : semgrep |
@@ -60,7 +60,8 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un contrôle requis rouge ou une revue manquante |
+| 2 | #187 — chore(GOV-012): registre rattrape, douze taches livrees par quatre PR fusionnees passent fusionnee | `t/registre-rattrapage-6` | un contrôle requis rouge ou une revue manquante |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 

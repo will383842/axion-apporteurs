@@ -88,7 +88,17 @@ function prLibre(doc: Doc): number {
 
 const SHA = 'c'.repeat(40);
 const QUAND = '2026-09-20T10:00:00Z';
-const MAINTENANT = Date.parse('2026-09-28T12:00:00Z');
+/**
+ * L'INSTANT DE LA PASSE, DÉRIVÉ DU REGISTRE : un jour après la plus récente fusion qu'il atteste.
+ * Il était figé au 2026-09-28T12:00Z, et le premier rattrapage qui a inscrit une fusion de
+ * l'après-midi a fait lire `attestation_date_future` au témoin sur des tâches qui n'étaient pas
+ * les siennes. Aucun témoin ne lit l'horloge (RM-11) : c'est la donnée qui fixe l'instant.
+ */
+const MAINTENANT =
+  Math.max(
+    Date.parse(QUAND),
+    ...lireDoc().taches.map((t) => Date.parse(t.attestation?.fusionneeAt ?? '') || 0)
+  ) + 86_400_000;
 
 /** La tâche, revendiquée comme le fait l'outil de revendication : `en_cours`, owner, branche. */
 function revendiquee(doc: Doc): Tache {
