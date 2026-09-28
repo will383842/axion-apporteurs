@@ -2100,6 +2100,13 @@ export const PORTE_A_FIGEE: PorteFigee = {
     },
     { nom: 'La garde des donnees personnelles sait rougir', run: 'pnpm securite:schema-pii:prove' },
     { nom: 'Lint', run: 'pnpm lint' },
+    // QA-T07 : la gate de sécurité Semgrep et sa preuve. Figées ici par la PR qui les ajoute à
+    // `gate-a` : sans elles au constat, leur retrait futur ne rougirait rien.
+    { nom: 'Semgrep — regles maison et jeux publics sur src', run: 'pnpm sec:semgrep' },
+    {
+      nom: 'Semgrep — chaque regle maison mord sur son temoin, nosemgrep n eteint rien',
+      run: 'pnpm sec:semgrep:prove',
+    },
     { nom: 'Format', run: 'pnpm format:check' },
     { nom: 'Typecheck', run: 'pnpm typecheck' },
     {
@@ -2191,6 +2198,8 @@ export const PORTE_A_FIGEE: PorteFigee = {
     },
   ],
   scripts: {
+    'sec:semgrep': 'tsx scripts/gates/semgrep.ts',
+    'sec:semgrep:prove': 'tsx scripts/gates/semgrep.ts --prove',
     'gov:publication': 'tsx scripts/gates/gov-publication.ts',
     'gov:publication:prove': 'tsx scripts/gates/gov-publication.ts --prove',
     'gov:identifiants': 'tsx scripts/gates/gov-identifiants.ts',
