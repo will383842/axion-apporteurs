@@ -6,7 +6,8 @@ import base from './vitest.config';
  *
  * C'est `vitest.config.ts`, réduite aux tests UNITAIRES EN PROCESSUS du domaine et du serveur
  * (`tests/unit/domaine/**`, `tests/unit/contrat/**`, puis, depuis GOV-101, `tests/unit/securite/**`,
- * `tests/unit/integration/**` et `tests/unit/espace/**`, puis, depuis INT-T10, `tests/unit/email/**`) :
+ * `tests/unit/integration/**` et `tests/unit/espace/**`, puis, depuis INT-T10, `tests/unit/email/**`,
+ * puis, depuis JUR-T02, `tests/unit/juridique/**`) :
  * le travail de nuit ne mute que `src/domain/**`, `pnpm mutation:pr` mute aussi les fichiers de
  * `src/server/**` et `src/lib/**` que la PR touche, et chaque mutant est jugé par les tests qui le couvrent
  * (`coverageAnalysis: perTest`, `related`).
@@ -23,9 +24,9 @@ import base from './vitest.config';
  *    ENTIERS : ils jugent des GARDES (`journal:sans-pii`, `partners:schema:enums`,
  *    `partners:schema:cents` et leurs voisines), qui lisent les fichiers SUIVIS
  *    et sortent en échec quand elles ne le peuvent pas — le bac à sable n'est pas un dépôt git ;
- *  - trois tests LISENT le texte d'une source du domaine au lieu de l'exécuter : dans le bac, ce
+ *  - quatre tests LISENT le texte d'une source du domaine au lieu de l'exécuter : dans le bac, ce
  *    texte porte l'instrumentation de Stryker. Aucun mutant n'y survit ni n'y meurt ;
- *  - cinq tests balaient les fichiers suivis (dépôt git requis) ;
+ *  - six tests balaient les fichiers suivis (dépôt git requis) ;
  *  - un test exécute le code, mais sous un BUDGET de temps (moins de 5 s pour quinze ans d'heures)
  *    que l'instrumentation fait dépasser : mesuré à 7,3 s.
  * Tous tournent dans `pnpm test`, sur le vrai texte. Les titres sont des fragments d'expression
@@ -45,6 +46,10 @@ const ECARTES = [
   'le dépôt sort en zéro, et le vert imprime le compte des champs',
   // la source unique des secrets (REQ-SEC-028) : `git ls-files` sur src/ et scripts/ (même passe).
   'aucun fichier autre que src/lib/env.ts ne cite deux noms de secret',
+  // `ssot:seuils` (JUR-T02) : `controlerDepot` enumere src/ par `git ls-files` (depot git requis).
+  'le dépôt réel est sans faute, et le compte des fichiers lus est imprimé',
+  // et celui-ci LIT le texte de src/domain/seuils/ssot.ts, instrumente dans le bac.
+  'la SSOT elle-même est le seul fichier où ces littéraux s.écrivent',
   // SEC-17 : lance la garde `securite:roles` en sous-processus, qui lit les fichiers SUIVIS par git — le
   // bac à sable n'est pas un dépôt, la garde y sort en échec. Jugé dans `pnpm test`, sur le vrai dépôt.
   'la garde sur la console du dépôt sort en 0',
@@ -68,6 +73,9 @@ export default defineConfig({
       // le reste de `tests/unit/qualite/` lance des gardes et Stryker lui-même en sous-processus.
       'tests/unit/qualite/env-fail-fast.spec.ts',
       'tests/unit/qualite/journal-redige.spec.ts',
+      // La SSOT des seuils et des delais du contrat (JUR-T02) : sans ces tests, les mutants de
+      // `src/domain/seuils/ssot.ts` ne sont juges par rien.
+      'tests/unit/juridique/**/*.spec.ts',
     ],
     exclude: [
       ...(base.test?.exclude ?? []),

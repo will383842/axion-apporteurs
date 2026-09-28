@@ -7,15 +7,15 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `4dd40e4` — 2026-09-27T12:49:00+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #82 (rien) · 2. #180 (rien) · 3. #175 (un conflit avec `main`) |
+| Où est `main` ? | `5e73b88` — 2026-09-28T07:14:42+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #82 (un contrôle requis rouge ou une revue manquante) · 2. #181 (un contrôle requis rouge ou une revue manquante) · 3. #175 (un conflit avec `main`) |
 | Qui tient quoi ? | QA-T07 (A05) |
 | Où en est la phase ? | phase 0 — 59/116 tâches, reste 45.35 j |
-| Le prochain pas | fusionner #82, puis SEC-17 — Rôles console : enum `ConsoleRole { admin, qualifieur, comptable, lecteur }`, matrice SSOT, `requireRole`, garde AST (chemin critique) |
+| Le prochain pas | SEC-17 — Rôles console : enum `ConsoleRole { admin, qualifieur, comptable, lecteur }`, matrice SSOT, `requireRole`, garde AST (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
-| Dernière entrée de journal | PR #176 — 2026-09-27 |
+| Dernière entrée de journal | PR #180 — 2026-09-27 |
 
-**Ce qu’on tape maintenant.** `gh pr view 82 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : 0
 
@@ -60,8 +60,8 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | rien — fusionnable maintenant |
-| 2 | #180 — feat(JUR-T02): lot L0-10 — SSOT des délais du contrat, contrat sobre figé, alertes Telegram sans PII | `t/lot-l0-10` | rien — fusionnable maintenant |
+| 1 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un contrôle requis rouge ou une revue manquante |
+| 2 | #181 — chore(GOV-012): registre rattrape, cinq taches livrees par deux PR fusionnees passent fusionnee | `t/gov-cloture-l0-07-l0-10` | un contrôle requis rouge ou une revue manquante |
 | 3 | #175 — chore(GOV-083): lot L0-09 — gates sans script triees, porte A confrontee, causes temoignees, journal | `t/lot-l0-09` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
@@ -78,13 +78,11 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 
 ## Décisions du jour
 
-`docs/adr/0008-contrat-evenements-enveloppe-et-nomenclature.md` — partners/ADR-0008 — Le contrat d'événements : enveloppe sur le fil, sept types, empreinte du JSON Schema · `docs/adr/0022-carte-du-schema-des-phases-0-et-1.md` — partners/ADR-0022 — La carte du schéma des phases 0 et 1 : une table, un créateur ; un type de journal par genre de transition · `docs/adr/0023-route-des-coordonnees-de-candidature.md` — partners/ADR-0023 — Les coordonnées d'un candidat se tirent par une route HMAC d'axionia, jamais par un événement
+Aucun ADR daté du 2026-09-28 (jour du dernier atterrissage).
 
 Dérivé de `git log` sur `docs/adr/`, restreint au jour du dernier atterrissage. Une décision de Will n’est pas un ADR : elle vit au registre `docs/DECISIONS.md`, tranchée ou tenue par une hypothèse datée.
 
 ## Prochain pas
-
-**Fusionner #82** — elle est en tête de file et ne bloque sur rien.
 
 **SEC-17** — Rôles console : enum `ConsoleRole { admin, qualifieur, comptable, lecteur }`, matrice SSOT, `requireRole`, garde AST (1 j, **sur le chemin critique**) : 27 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
@@ -92,13 +90,66 @@ Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeS
 
 ## Dernier atterrissage
 
-`origin/main` = `4dd40e4` (2026-09-27T12:49:00+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `5e73b88` (2026-09-28T07:14:42+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
 ## Journal
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
+
+### PR #180 — 2026-09-27 — feat(JUR-T02): lot L0-10 — SSOT des délais du contrat, contrat sobre figé, alertes Telegram sans PII
+
+**Fait.** JUR-T02 porte la PR, et JUR-T27 et INT-T14 sont dans son champ `Lot:`. La SSOT
+`src/domain/seuils/ssot.ts` porte 27 constantes sourcées et datées, sans gradation ni contradictoire.
+La garde `scripts/gates/seuils-ssot.ts` refuse un seuil ou un délai retapé dans `src/`, un préavis
+indexé sur l'ancienneté, et une valeur qui diverge entre le gabarit et la SSOT ; son `--prove` joue
+neuf familles. Le gabarit de contrat, déjà sobre, n'est pas modifié : `contrat-sobre.spec.ts` fige
+l'acceptation de JUR-T27, et le texte final reste relu par Will avant toute signature. L'alerteur
+Telegram dédoublonne, plafonne par catégorie et par heure, et sa garde nomme tout champ personnel
+qui franchirait le canal. Le 2026-09-27T09:09Z, les paths de JUR-T02 couvrant désormais
+`package.json`, `ci.yml` et `vitest.mutation.config.ts`, la garde est câblée : scripts
+`ssot:seuils` et `ssot:seuils:prove`, deux étapes du job `gate-a` après la grille chiffrée, et
+`tests/unit/juridique/` jugé sous mutation, deux tests écartés et nommés (balayage `git ls-files`,
+lecture du texte instrumenté de la SSOT). Le 2026-09-27T09:24Z, l'entrée du registre porte le nom
+de sa commande, `ssot:seuils`, et l'ancien identifiant n'y survit qu'en alias (`partners/ADR-0018`) :
+`un-nom-une-garde.spec.ts` ne compte plus que ses trois écarts. Les `preuveRouge` de `ssot:seuils`
+et de `G-SEC-NOTIF` sont posés. Les deux sorties non nulles de `scripts/gates/seuils-ssot.ts` sont
+déclarées au cliquet de `refus-de-rendre-et-de-publier.spec.ts` et nommées dans `REFUS_NOMMES`,
+témoins d'effet à zéro : dette déclarée. Le 2026-09-27T10:57Z, sur la porte A rouge et l'avis `securite` :
+la garde établit son périmètre par la source unique `fichiersSuivisOuRefus` et figure parmi les
+gardes qui balaient le dépôt. Les motifs de montant écrits forme par forme laissent place à deux
+règles qui normalisent : tout nombre, lu sans séparateur de milliers, est confronté aux montants de
+la SSOT ; tout produit de littéraux entiers est évalué et confronté à chaque délai de la SSOT en
+jours, heures, minutes, secondes et millisecondes. L'alerteur n'admet comme identifiant que le
+format des identifiants d'agrégat du dépôt, et compte plafond et dédoublonnage sur la forme
+affichée. La garde sans PII voit le montant formaté en euros.
+
+**Reste.** `docs/GARDES-AXIONIA.md` cite encore l'ancien identifiant, que l'alias résout : le
+fichier est hors des paths du lot. La PR #175, non fusionnée, fige les étapes de `gate-a` dans `PORTE_A_FIGEE`
+(`scripts/gates/gov-conventions.ts`) : les deux étapes ajoutées ici y manquent, et la PR qui
+fusionnera en second résout ce conflit sémantique, que `git` ne signale pas. `FENETRE_MOIS` attend la question `JUR-T01-Q02` : `docs/DECISIONS.md` (`HYP-E1-9`) porte
+12 mois, et la décision de Will du 2026-09-22, à 6 mois, n'est pas encore au registre. Les
+catégories d'alerte n'ont pas de liste fermée : leur format est borné, pas leur nombre, et une
+liste fermée se déclare au glossaire. L'appel réel au bot
+attend la rubrique 2 de `docs/tiers/telegram.md` et les noms des deux secrets dans `src/lib/env.ts`.
+Sous mutation, la SSOT n'a aucun mutant jugé : toutes ses valeurs sont évaluées au chargement du
+module, donc statiques et hors score (`ignoreStatic`) ; ce sont ses tests en processus qui les
+figent. GOV-082 n'est pas dans ce lot : elle est livrée par la PR #114 (fusionnée, `32ea43d`), et
+son attestation reste bloquée par `branche_de_la_forge_refusee` (tête `t/lot-L0-02`) ; la décision
+(l'outil ou le schéma) reste à prendre.
+
+**Appris.** `gov:publication` refuse `montantCents` suivi d'un nombre, même sur un objet témoin
+factice. Elle refuse aussi le seuil de versement écrit en euros dans un commentaire, alors que la même valeur en centimes,
+sous la clé `SEUIL_VERSEMENT`, passe. Un script placé sous `scripts/gates/` est jugé par
+`gov:conventions` dès qu'il existe : s'il n'est appelé par aucun workflow, la pré-porte rougit
+tant que le registre ne le câble pas ou ne lui donne pas de `horsCi`. Une tâche dont les `paths` ne
+couvrent ni `package.json` ni `ci.yml` ne peut donc pas livrer seule une garde neuve. Enfin,
+`vitest.mutation.config.ts` n'inclut qu'une liste fermée de dossiers de tests : une source mutée dont
+le test vit ailleurs sort « sans couverture », pas « survivante ». Et le rapport incrémental de `pnpm mutation:pr` REPREND
+un résultat « sans couverture » quand seuls les tests ont changé : cinq mutants de la SSOT y restaient
+« sans couverture » après l'ajout de ses tests. Sans le fichier incrémental local, ils sont statiques,
+hors score.
 
 ### PR #176 — 2026-09-27 — chore(GOV-012): registre rattrape, douze taches livrees par des PR fusionnees passent fusionnee
 
@@ -175,15 +226,7 @@ Dernier fait, mesuré au tour 5 : la table des commandes de pnpm 9.12.0 est un o
 Un mot qui nomme une propriété héritée du prototype y trouve une fonction : pnpm le prend pour une
 commande et sort sans lancer le script. `pnpm run <mot>`, lui, lance bien le script.
 
-### PR #169 — 2026-09-27 — feat(INT-T01c): contrat v2 — onze types, charges fermées, route des coordonnées du candidat
-
-**Fait.** Le contrat d'événements passe en `schema_version` 2 : `TYPES_EVENEMENT` fait onze, les quatre types entrants en fin de liste, et l'enum `type_evenement_recu` les reçoit par une migration additive (`20260927000300`). Les onze charges sont fermées dans `packages/contracts/payloads.ts` et confrontées clé pour clé, dans les deux sens, à la fixture du producteur réel copiée sous `tests/fixtures/axionia/fixtures-producteur.v1.json`. La frontière porte une exemption nommée, par chemin, de `payload.parrainCodeCapture` sur la candidature seulement ; `packages/contracts/api.ts` publie, sous l'empreinte, le schéma de la route des coordonnées du candidat (partners/ADR-0023). Empreinte `8b0b09a...` → `e8ce08f...`.
-
-**Reste.** Le lockstep du registre : textes de REQ-INT-004 (onze types, `schema_version` 2) et REQ-QA-007 (trois API), deux titres de test promis par INT-T01a, les `paths` d'INT-T01c, puis les vues ; REQ-DM-018 écrit encore l'ancien nom du HT encaissé. Côté axionia, dans la même fenêtre (INT-T05, INT-T22) : copie de `contracts.v2.json`, émission des quatre types, renommage du HT encaissé en `montantHtCents`, fixtures régénérées en v2, exemption par chemin ; la route elle-même (INT-T27-A) et son client (INT-T26). Le récepteur ne juge pas encore les charges fermées : le Zod généré ne projette que l'enveloppe.
-
-**Appris.** Un nom d'événement qui ENTRE au contrat devient interdit en clair partout ailleurs : `gov:termes-interdits` refuse un nom VALIDE écrit hors de `packages/contracts`, commentaires `.ts` compris, alors qu'il tolérait le même nom tant qu'il était hors nomenclature — ajouter un type rougit donc des fichiers que le diff du contrat ne touche pas (ici `src/domain/apporteur/snapshot-candidature.ts`). Et le producteur v1 émettait un champ (`paiement.recu`) sous un nom que le glossaire interdit sec : fermer une charge fidèlement au producteur peut buter sur le glossaire, qui prime ; le renommage se nomme alors dans le test, pas dans la fixture.
-
-… 3 entrée(s) affichée(s) sur 73 ; les 70 plus ancienne(s) se lisent dans `docs/journal/`.
+… 3 entrée(s) affichée(s) sur 74 ; les 71 plus ancienne(s) se lisent dans `docs/journal/`.
 
 ## Dette déclarée
 

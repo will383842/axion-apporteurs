@@ -1,0 +1,142 @@
+/**
+ * La garde « aucune donnée personnelle dans une alerte Telegram » — INT-T14, G-SEC-NOTIF (REQ-INT-024).
+ *
+ * USAGE : npx tsx src/server/integrations/telegram/garde-sans-pii.ts                (gabarits du dépôt)
+ *         npx tsx src/server/integrations/telegram/garde-sans-pii.ts --bac-d-essai  (témoin rouge)
+ *
+ * CE QU'ELLE FAIT. Elle construit CHAQUE gabarit de `GABARITS_ALERTE` à partir d'un objet témoin qui
+ * porte, à côté des trois champs permis, un nom, un courriel, un téléphone, un lien de console, une
+ * raison sociale et un montant. Tout champ dont la valeur se retrouve dans le message est NOMMÉ ; un
+ * message qui porte une adresse de courriel, une URL ou un numéro de téléphone, d'où qu'ils viennent,
+ * est refusé aussi. Elle sort en non-zéro à la première faute, et imprime au vert le nombre de
+ * gabarits RÉELLEMENT confrontés, dérivé de la table — jamais une longueur tapée.
+ *
+ * CE QU'ELLE NE FAIT PAS. Elle confronte les gabarits à UN objet témoin : un gabarit qui ne ferait
+ * fuir un champ que sous une condition que le témoin ne remplit pas lui échapperait. Les gabarits sont
+ * donc écrits sans branche sur les champs non permis, et c'est la relecture qui le vérifie.
+ */
+import { GABARITS_ALERTE, type ObjetAlerte } from './alertes';
+
+/** Le témoin : les trois champs permis, et tout ce qu'un appelant pourrait passer par confort. */
+export const OBJET_TEMOIN = {
+  categorie: 'temoin_garde',
+  // Au format des identifiants d'agrégat du dépôt (uuid) : seul ce format entre dans un message.
+  id: 'd4c3b2a1-e5f6-4a7b-8c9d-aebfcadbecfd',
+  compte: 'e1f2a3b4-c5d6-4e7f-a8b9-cadbecfdaebf',
+  nom: 'Jeanne Témoin',
+  courriel: 'jeanne.temoin@example.org',
+  telephone: '+33 6 12 34 56 78',
+  lienConsole:
+    'https://console.partners.example/admin/apporteurs/d4c3b2a1-e5f6-4a7b-8c9d-aebfcadbecfd',
+  raisonSociale: 'Témoin Conseil SARL',
+  montantHtCents: 987_654,
+} as const;
+
+/** Les champs qu'aucun message ne doit porter : clés de l'objet témoin hors des trois permis. */
+const PERMIS: readonly string[] = ['categorie', 'id', 'compte'];
+const INTERDITS = Object.keys(OBJET_TEMOIN).filter((k) => !PERMIS.includes(k));
+
+/** Les formes qui trahissent une coordonnée, quelle que soit sa provenance. */
+const FORMES: readonly { champ: string; motif: RegExp }[] = [
+  { champ: 'forme_courriel', motif: /[^\s@]+@[^\s@]+\.[a-z]{2,}/i },
+  { champ: 'forme_url', motif: /\bhttps?:\/\/|\bwww\./i },
+  { champ: 'forme_telephone', motif: /(?:\+|\b0)\d(?:[\s.-]?\d){7,}/ },
+];
+
+/**
+ * Le gabarit du BAC D'ESSAI : il fait ce qu'aucun gabarit du dépôt ne doit faire. La garde DOIT le
+ * refuser et nommer nom, courriel, téléphone et lien de console.
+ */
+export const GABARIT_BAC_D_ESSAI = (o: ObjetAlerte): string => {
+  const riche = o as ObjetAlerte & Record<string, unknown>;
+  return `[${o.categorie}] ${String(riche.nom)} <${String(riche.courriel)}> ${String(riche.telephone)} ${String(riche.lienConsole)}`;
+};
+
+export type FauteDeGarde = { gabarit: string; champ: string };
+
+/**
+ * Le message, chaque séparateur entre deux chiffres retiré — de milliers comme décimal : « 9 876,54 € »
+ * s'y lit « 987654 € ». Un montant en centimes se retrouve ainsi quelle que soit sa mise en forme.
+ */
+const sansSeparateurs = (message: string): string =>
+  message.replace(/(?<=\d)[\s   .,'_](?=\d)/gu, '');
+
+/** Un montant en centimes, et ses deux lectures à l'euro près : tronquée et arrondie. */
+const formesDuMontant = (centimes: number): string[] => [
+  String(centimes),
+  String(Math.floor(centimes / 100)),
+  String(Math.round(centimes / 100)),
+];
+
+export function confronter(gabarits: Readonly<Record<string, (o: ObjetAlerte) => string>>): {
+  code: number;
+  confrontes: number;
+  fautes: FauteDeGarde[];
+} {
+  const fautes: FauteDeGarde[] = [];
+  let confrontes = 0;
+  for (const [nom, gabarit] of Object.entries(gabarits)) {
+    const message = gabarit(OBJET_TEMOIN);
+    confrontes++;
+    const champs = new Set<string>();
+    const chiffres = sansSeparateurs(message);
+    for (const champ of INTERDITS) {
+      const valeur = OBJET_TEMOIN[champ as keyof typeof OBJET_TEMOIN];
+      const vu =
+        typeof valeur === 'number'
+          ? formesDuMontant(valeur).some((f) => chiffres.includes(f))
+          : message.includes(valeur);
+      if (vu) champs.add(champ);
+    }
+    if (champs.size === 0) {
+      for (const { champ, motif } of FORMES) if (motif.test(message)) champs.add(champ);
+    }
+    for (const champ of champs) fautes.push({ gabarit: nom, champ });
+  }
+  return { code: fautes.length === 0 && confrontes > 0 ? 0 : 1, confrontes, fautes };
+}
+
+/** Où la garde écrit : deux flux, injectés — le test les lit sans lancer de processus. */
+export type Sorties = {
+  readonly sortie: (ligne: string) => void;
+  readonly erreur: (ligne: string) => void;
+};
+
+type Table = Readonly<Record<string, (o: ObjetAlerte) => string>>;
+
+/**
+ * La garde en ligne de commande, sans effet de bord : elle rend son code de sortie. `depot` est la
+ * table jugée sans `--bac-d-essai` — `GABARITS_ALERTE` au lancement, explicite dans les témoins.
+ */
+export function executer(
+  argv: readonly string[],
+  depot: Table,
+  { sortie, erreur }: Sorties
+): number {
+  const bac = argv.includes('--bac-d-essai');
+  const { code, confrontes, fautes } = confronter(
+    bac ? { bac_d_essai: GABARIT_BAC_D_ESSAI } : depot
+  );
+  if (confrontes === 0) {
+    erreur('❌ G-SEC-NOTIF — aucun gabarit confronté : un vert sur rien n’est pas un vert.');
+    return code;
+  }
+  if (code !== 0) {
+    erreur(`❌ G-SEC-NOTIF — ${fautes.length} champ(s) franchissent le canal d'alerte :`);
+    for (const f of fautes) erreur(`   gabarit ${f.gabarit} : champ ${f.champ}`);
+    return code;
+  }
+  const s = confrontes > 1 ? 's' : '';
+  sortie(
+    `✅ G-SEC-NOTIF — ${confrontes} gabarit${s} de message confronté${s} à un objet portant nom, ` +
+      `courriel, téléphone, lien de console, raison sociale et montant : aucun champ ne franchit.`
+  );
+  return 0;
+}
+
+if (process.argv[1] !== undefined && /garde-sans-pii[.](ts|js)$/.test(process.argv[1])) {
+  process.exitCode = executer(process.argv, GABARITS_ALERTE, {
+    sortie: (l) => process.stdout.write(`${l}\n`),
+    erreur: (l) => process.stderr.write(`${l}\n`),
+  });
+}

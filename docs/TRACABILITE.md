@@ -16,7 +16,7 @@
 
 **334 exigences actives · 107 réputées testées · 107 couvertes · 0 orphelines.**
 
-290 tâches, dont 98 livrées · 140 fichiers de test exécutés par `vitest` sur 140 présents.
+290 tâches, dont 98 livrées · 143 fichiers de test exécutés par `vitest` sur 143 présents.
 
 ## Exigences réputées testées
 
@@ -470,6 +470,7 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | `tests/unit/ci/aucune-gate-en-continue-on-error.spec.ts` | oui | `REQ-QA-001`, `REQ-QA-002`, `REQ-QA-013` |
 | `tests/unit/ci/integration-collectee-par-gate-a.spec.ts` | oui | `REQ-QA-006` |
 | `tests/unit/contrat/contract-template-complete.spec.ts` | oui | `REQ-CPL-012`, `REQ-JUR-003`, `REQ-JUR-007`, `REQ-JUR-023` |
+| `tests/unit/contrat/contrat-sobre.spec.ts` | oui | `REQ-JUR-031` |
 | `tests/unit/domaine/apporteur-acces-espace.spec.ts` | oui | `REQ-SEC-001` |
 | `tests/unit/domaine/apporteur-activite.spec.ts` | oui | `REQ-CPL-027` |
 | `tests/unit/domaine/apporteur-identifiants.spec.ts` | oui | `REQ-DM-012` |
@@ -565,8 +566,10 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | `tests/unit/integration/contrat-hash.spec.ts` | oui | `REQ-GOV-020`, `REQ-INT-003`, `REQ-INT-004`, `REQ-INT-029`, `REQ-QA-007` |
 | `tests/unit/integration/contrat-v2-frontiere.spec.ts` | oui | `REQ-INT-029`, `REQ-INT-032` |
 | `tests/unit/integration/evenement-recu-travail.spec.ts` | oui | `REQ-ARG-003`, `REQ-INT-011`, `REQ-QA-026` |
+| `tests/unit/integration/notif-sans-pii.spec.ts` | oui | `REQ-INT-024` |
 | `tests/unit/integration/recherche-entreprises-repli.spec.ts` | oui | `REQ-INT-020`, `REQ-SEC-013`, `REQ-UX-020` |
 | `tests/unit/juridique/charte-relationnelle.spec.ts` | oui | `REQ-JUR-034`, `REQ-JUR-035`, `REQ-JUR-036`, `REQ-JUR-037` |
+| `tests/unit/juridique/seuils-ssot.spec.ts` | oui | `REQ-EXT-028`, `REQ-JUR-015`, `REQ-JUR-029` |
 | `tests/unit/qualite/env-fail-fast.spec.ts` | oui | `REQ-CPL-021`, `REQ-QA-030` |
 | `tests/unit/qualite/journal-redige.spec.ts` | oui | `REQ-QA-024` |
 | `tests/unit/qualite/red-first.spec.ts` | oui | `REQ-CPL-022` |
