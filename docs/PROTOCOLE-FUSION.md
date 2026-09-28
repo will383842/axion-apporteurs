@@ -252,6 +252,15 @@ terminée. Puis les lignes `statut`, `pr`, `branch`, `owner` écrites dans `docs
 seul outil qui a le droit de les écrire, et `docs/PLAN-STATE.md` régénéré. Le créneau est libre : la
 PR suivante peut prendre le pas 1.
 
+**Cas de la tâche seule, livrée hors de tout lot (GOV-057).** La commande devient
+`pnpm lot:cloture -- --tache <id> --pr <numéro> [--owner <Axx>]`. On ne tape que le numéro : le SHA
+du commit de fusion, l'instant et la branche fusionnée sont lus sur la forge, dans le dépôt de la
+tâche, et l'atterrissage est l'ascendance de ce SHA sur la branche de base. La tâche ressort
+`fusionnee` avec ses trois preuves — `pr`, `branch`, attestation au SHA entier — et **aucun lot
+n'est inventé**. Une tâche rangée dans un lot est refusée (`tache_d_un_lot`) : elle se clôt par son
+lot, sinon ce chemin contournerait le contrôle de périmètre. Écrire `docs/tasks.json` à la main
+reste refusé : la garde `gov:tasks` rougit sur une tâche `fusionnee` sans `branch`.
+
 ---
 
 ## Ce que ce protocole ne couvre pas
