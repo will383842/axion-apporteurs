@@ -45,6 +45,7 @@ import tseslint from 'typescript-eslint';
 import prettierEslint from 'eslint-config-prettier';
 import {
   controler,
+  confronterLaPorteA,
   perimetresDe,
   FAMILLES,
   VUE_CONFORME,
@@ -348,7 +349,11 @@ describe('REQ-GOV-029 — la garde retenue rougit sur un témoin, famille par fa
   it('outillage_non_epingle — la CI lance le lint sans que l’outil soit épinglé', () => {
     const vue = variante({
       packageJson: JSON.stringify({
-        scripts: { lint: 'eslint .', 'format:check': 'prettier --check .' },
+        scripts: {
+          lint: 'eslint .',
+          'format:check': 'prettier --check .',
+          'gov:conventions': 'tsx scripts/gates/gov-conventions.ts',
+        },
         devDependencies: { tsx: '^4.19.2' },
       }),
     });
@@ -407,16 +412,28 @@ describe('REQ-GOV-029 — la garde retenue rougit sur un témoin, famille par fa
     expect(familles(vue)).toEqual([]);
   });
 
-  it('garde_ecrite_jamais_appelee — une gate dont le script n’existe PAS ne rougit pas ici', () => {
-    // Elle rougit ailleurs, et c'est délibéré : `gates:prouvees --phase -1` la nomme
-    // (`script_introuvable`). Deux gardes qui disent la même chose se contredisent un jour.
+  it('gate_sans_script — une gate de phase passée dont le script n’existe PAS, que nulle tâche ne porte', () => {
+    // Elle ne rougissait pas ici avant GOV-083 : « `gates:prouvees --phase -1` la nomme ». Mais
+    // cette commande tourne en nightly, rouge par construction, et une entrée fautive ne s'y
+    // distinguait pas d'une garde promise. Le tri vit désormais ICI ; le corps de la preuve est
+    // dans `une-gate-sans-script-n-est-pas-une-gate-conforme.spec.ts`.
     const vue = variante({
       gates: [
         ...VUE_CONFORME.gates,
         { id: 'gov:derivation', phase: -1, script: 'scripts/gates/gov-derivation.ts' },
       ],
     });
-    expect(familles(vue)).toEqual([]);
+    expect(familles(vue)).toEqual(['gate_sans_script']);
+  });
+
+  it('passif_sans_script_perime — une ligne de passif qui ne désigne plus aucune entrée fautive', () => {
+    const vue = variante({
+      passifSansScript: {
+        'gov:disparue':
+          'témoin : une ligne de passif dont l’entrée a quitté le registre, et qui absoudrait la suivante.',
+      },
+    });
+    expect(familles(vue)).toEqual(['passif_sans_script_perime']);
   });
 
   it('garde_hors_registre — une garde ÉCRITE que `docs/gates.json` ne nomme pas', () => {
@@ -472,6 +489,75 @@ describe('REQ-GOV-029 — la garde retenue rougit sur un témoin, famille par fa
       },
     ];
     expect(familles(variante({ sources: [], perimetres }))).toEqual([]);
+  });
+
+  // ── la porte A (GOV-061) : ces familles se jugent par `confronterLaPorteA`, asynchrone ──
+  // Le corps de la preuve vit dans `porte-a-presente-active-effective.spec.ts` ; ces témoins-ci
+  // sont ceux que la règle « chaque famille déclarée a été exercée ici » exige.
+  const porte = async (vue: Vue): Promise<string[]> =>
+    [...new Set((await confronterLaPorteA(vue)).fautes.map((f) => f.famille))].sort();
+  const ciEn = (de: string, par: string): Vue =>
+    variante({
+      workflows: [{ chemin: '.github/workflows/ci.yml', source: CI_CONFORME.replace(de, par) }],
+    });
+  const FORMAT = '      - name: Format\n        run: pnpm format:check\n';
+  const CONVENTIONS_LANCEES = '        run: pnpm gov:conventions\n';
+
+  it('etape_absente — une étape figée de la porte A retirée du job', async () => {
+    const vue = ciEn(FORMAT, '');
+    expect(await porte(vue)).toEqual(['etape_absente']);
+  });
+
+  it('etape_non_figee — une étape ajoutée au job sans être figée', async () => {
+    const vue = ciEn(FORMAT, FORMAT + '      - name: Neuve\n        run: pnpm neuve\n');
+    expect(await porte(vue)).toEqual(['etape_non_figee']);
+  });
+
+  it('etape_conditionnee — une étape désarmée par une condition toujours fausse', async () => {
+    const vue = ciEn(FORMAT, FORMAT + '        if: ${{ false }}\n');
+    expect(await porte(vue)).toEqual(['etape_conditionnee']);
+  });
+
+  it('etape_toleree — une tolérance d’échec sous forme évaluée', async () => {
+    const vue = ciEn(
+      CONVENTIONS_LANCEES,
+      CONVENTIONS_LANCEES + '        continue-on-error: ${{ true }}\n'
+    );
+    expect(await porte(vue)).toEqual(['etape_toleree']);
+  });
+
+  it('etape_repointee — une commande qui tolère l’échec dans le shell', async () => {
+    const vue = ciEn(CONVENTIONS_LANCEES, '        run: pnpm gov:conventions || true\n');
+    expect(await porte(vue)).toEqual(['etape_repointee']);
+  });
+
+  it('porte_a_alteree — une clé hors constat : `shell:` d’étape, `defaults:` de job, `env:` de workflow', async () => {
+    const shell = ciEn(FORMAT, FORMAT + "        shell: sh -c 'exit 0' {0}\n");
+    expect(await porte(shell)).toEqual(['porte_a_alteree']);
+    const defauts = ciEn(
+      '  gate-a:\n',
+      '  gate-a:\n    defaults:\n      run:\n        shell: sh\n'
+    );
+    expect(await porte(defauts)).toEqual(['porte_a_alteree']);
+    const env = ciEn('name: Gate A\n', 'name: Gate A\nenv:\n  CI: "false"\n');
+    expect(await porte(env)).toEqual(['porte_a_alteree']);
+  });
+
+  it('etape_en_double — deux étapes de même nom, la seconde n’était jamais confrontée', async () => {
+    const vue = ciEn(FORMAT, FORMAT + FORMAT);
+    expect(await porte(vue)).toEqual(['etape_en_double']);
+  });
+
+  it('script_repointe — le script `package.json` d’une étape repointé', async () => {
+    const pkg = JSON.parse(VUE_CONFORME.packageJson) as { scripts: Record<string, string> };
+    const scripts = { ...pkg.scripts, 'gov:conventions': 'echo ok' };
+    const vue = variante({ packageJson: JSON.stringify({ ...pkg, scripts }) });
+    expect(await porte(vue)).toEqual(['script_repointe']);
+  });
+
+  it('porte_a_illisible — une vue sans constat de la porte A', async () => {
+    const vue = variante({ porteA: undefined });
+    expect(await porte(vue)).toEqual(['porte_a_illisible']);
   });
 
   it('chaque famille déclarée a été exercée par au moins un témoin de ce fichier', () => {

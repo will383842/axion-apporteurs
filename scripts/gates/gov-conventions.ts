@@ -32,20 +32,89 @@
  *     refusait l'inverse. Une garde à sens unique est le défaut que ce dépôt a déjà payé.
  *   • `garde_ecrite_jamais_appelee` — la leçon d'axionia : `qualiopi:isolation-check` existait
  *     depuis des mois, n'était câblé dans aucun workflow, et cumulait 88 violations pendant que
- *     la seule des trois gardes câblée affichait zéro.
+ *     la seule des trois gardes câblée affichait zéro. UNE GARDE EST APPELÉE SI UNE ÉTAPE N'EXÉCUTE
+ *     QU'ELLE : le `run:` (ou la `command` d'un réglage) est EXACTEMENT une commande simple — AUCUNE
+ *     affectation en tête, `npx tsx`, `tsx`, `node`, `bash` ou `sh <fichier>`, ou `pnpm run <script>`
+ *     (`pnpm <script>` si `<script>` n'est pas une commande intégrée de pnpm), des arguments
+ *     littéraux —, sur une ligne, sans opérateur, sans `$`, sans expression `${{ … }}`. Et la garde
+ *     n'est appelée que si c'est son FICHIER qui est exécuté, directement ou par la VALEUR d'un script
+ *     de `package.json` jugée par la même règle : un nom de script, fût-il l'identifiant de la garde,
+ *     n'appelle rien. Tout le reste n'appelle rien (refus d'exactitude et vetos de sécurité sur la
+ *     PR 175 : trois tours de modélisation du shell ont chacun laissé passer une forme ; on a cessé de
+ *     modéliser ; au tour 4, un script réduit à `true`, `pnpm ls` et `npm_config_script_shell=…` ;
+ *     au tour 5, un nom hérité d'`Object.prototype`, que la table des commandes de pnpm, objet JS
+ *     ordinaire, prend pour une commande : ces noms sont DÉRIVÉS à l'exécution et ajoutés aux
+ *     commandes intégrées, et `pnpm <script>` sans `run` n'est compté que sous la forme ASCII basse
+ *     `^[a-z][a-z0-9:_-]*$`).
  *   • `perimetre_vide_sans_motif` — le cas d'école à ne PAS reproduire :
  *     `axionia/scripts/check-zod.ts` sort en 0 avec un avertissement quand son répertoire
  *     n'existe pas. Une garde à périmètre vide qui rend « ✅ » ne garde rien. Ici, un périmètre
  *     vide doit porter son MOTIF et nommer la TÂCHE qui l'ouvrira, et cette tâche doit exister au
  *     backlog. C'est la seule chose qui distingue « différée » d'« oubliée ».
+ *   • `gate_sans_script`, `passif_sans_script_perime` (GOV-083) — une entrée de `docs/gates.json`
+ *     dont le script est absent du disque ne s'exempte plus en silence : elle est TRIÉE (autre dépôt,
+ *     promise, fautive), et la fautive est refusée sauf déclaration au passif, une par une.
+ *   • `etape_absente`, `etape_non_figee`, `etape_conditionnee`, `etape_toleree`,
+ *     `etape_repointee`, `script_repointe`, `porte_a_illisible` (GOV-061) — CHAQUE étape du job de la
+ *     porte A est PRÉSENTE, ACTIVE et EFFECTIVE, confrontée à son constat (`PORTE_A_FIGEE`). On
+ *     croyait la porte armée ; rien ne le prouvait, et six désarmements passaient sans un rouge.
+ *   • `porte_a_alteree`, `etape_en_double` (GOV-061, veto de sécurité sur la PR 175) — l'étape
+ *     ENTIÈRE, le job ENTIER et le niveau workflow qui agit sur lui sont confrontés au constat, clé
+ *     par clé, sous leur forme canonique. La confrontation ne lisait que quatre clés d'étape et deux
+ *     du job : un `shell:` qui rend toujours 0, des `defaults:` de job, un `with: ref:` sur le
+ *     checkout désarmaient la porte en exit 0 sans toucher au constat. Toute clé que le constat ne
+ *     porte pas, ajoutée, retirée ou modifiée, est désormais une faute NOMMÉE ; deux étapes de même
+ *     nom, qu'une table indexée par nom confondait, en sont une autre. Un étage plus bas, la
+ *     configuration pnpm/npm de la racine (`.npmrc`, `pnpm-workspace.yaml`, `.pnpmfile.cjs`, clé
+ *     `pnpm` de `package.json`) change le shell de chaque `pnpm <script>` : elle est figée ABSENTE.
+ *     Les crochets que `pnpm install` exécute à la racine AVANT toutes les gardes (`postinstall`…) sont
+ *     figés par leur VALEUR, ou leur ABSENCE, comme les `pre<script>`/`post<script>` des scripts de la
+ *     porte, que pnpm 9 exécute autour d'eux (veto de sécurité, tour 3). Au tour 4 : la valeur de
+ *     `packageManager`, que `pnpm/action-setup` lit, est figée — les listes de crochets et de
+ *     commandes intégrées ont été relevées sur cette version —, et un script qui porte le nom d'une
+ *     commande intégrée de pnpm (hors `test`, que `pnpm test` lance réellement) est refusé — au
+ *     tour 5, un nom hérité d'`Object.prototype` compte pour une commande intégrée.
  *
  * ── CE QU'ELLE NE FAIT PAS, ET LE DIT ───────────────────────────────────────────────────────
  *
- *   — Elle ne juge pas la présence des étapes de lint et de format dans `ci.yml`, ni les
- *     dépendances de `package.json` : ce sont des fichiers PARTAGÉS, écrits par A01, et un
- *     développeur ne les touche pas. Exiger leur présence rendrait la garde rouge en permanence
- *     pour un manque qu'aucune PR n'a créé (LEC-13). Ce qu'elle exige, c'est la COHÉRENCE : le
- *     jour où une étape de lint arrive, elle est bloquante et son outil est épinglé.
+ *   — ⚠️ LIMITE DE LA PORTE A, AU PRIX PAYÉ : une faute qui fait SAUTER le job `gate-a` (un `if:`
+ *     toujours faux au niveau du job) saute AUSSI l'étape qui lance cette garde, et un job requis
+ *     « skipped » laisse fusionner. En CI, cette faute-là n'est donc vue qu'HORS de ce job : au
+ *     pré-vol local (`scripts/prevol.ts` joue les étapes sans lire la condition du job) et à la revue.
+ *     Aucune garde logée DANS un job ne juge sa propre condition d'exécution ; la fermer en CI
+ *     demanderait un second job requis, que ce dépôt n'a pas. Des `on:` qui ne déclenchent plus,
+ *     eux, ferment d'eux-mêmes : un check requis qui ne se présente jamais bloque la fusion.
+ *   — HORS DU JOB `gate-a`, RIEN NE JUGE QU'UNE ÉTAPE S'EXÉCUTE. Une étape de `nightly.yml` qui lance
+ *     une garde est lue comme un appel même si elle porte un `if:` toujours faux, un
+ *     `continue-on-error`, un `shell:` ou un `env:` qui la désarment, ou si son job ne se déclenche
+ *     jamais : seul le job de la porte A est
+ *     confronté à un constat. `garde_ecrite_jamais_appelee` dit « câblée », pas « exécutée ».
+ *   — ⚠️ PRIX ASSUMÉ DE LA RÈGLE STRICTE : un idiome COMPOSÉ qui lance réellement la garde
+ *     (`pnpm a && pnpm b`, un argument `$(date …)` ou `${{ inputs.x }}`, deux lignes) est un FAUX
+ *     ROUGE : il n'appelle rien. On écrit la garde dans une étape à part, qui n'exécute qu'elle, ou on
+ *     motive `horsCi`. Mesuré sur le dépôt : trois étapes de verdict (`gov:etat --now "$(date …)"` en
+ *     porte A, `gov:lecons --now $(date …)` et `gates:prouvees --phase ${{ … }}` la nuit) ne comptent
+ *     plus ; leurs gardes restent appelées parce que leur étape `:prove` lance le MÊME fichier.
+ *     Même prix pour une affectation en tête (`CI=1 pnpm x`) : aucune n'est admise, parce que
+ *     `npm_config_*`, `NODE_OPTIONS` ou `PATH` configurent le lanceur lui-même — une variable se pose
+ *     dans un `env:`, que le constat fige. Et `pnpm run <script>` est la forme recommandée : `pnpm
+ *     <script>` ne compte que si `<script>` n'est pas une commande intégrée de pnpm (`pnpm ls` exécute
+ *     `list`, jamais le script `ls`). Mesuré sur le dépôt : aucune étape réelle ne porte d'affectation,
+ *     et aucune garde réelle ne perd son appel — `mutation` (`scripts/gates/stryker.sh`) le garde par
+ *     `bash`, que la règle reconnaît.
+ *   — Le FICHIER d'une garde est tenu appelé si UNE étape le lance, quels que soient ses arguments :
+ *     une étape `--prove` seule suffit. Hors porte A, le verdict lui-même n'est donc pas exigé.
+ *   — Elle ne voit pas la configuration pnpm/npm HORS du dépôt : le `.npmrc` de l'utilisateur ou
+ *     global du coureur, et les variables `npm_config_*` qu'il porterait. Celles qu'un `env:` du
+ *     workflow poserait sont figées avec lui ; les autres ne sont pas dans l'arbre qu'elle lit.
+ *   — Elle ne fige pas les AUTRES jobs du workflow : ils ne désarment pas `gate-a`, sauf par
+ *     `needs:` — et une clé `needs:` ajoutée au job est elle-même une faute (`porte_a_alteree`).
+ *   — Elle n'exige d'aucune étape qu'elle EXISTE avant qu'elle soit écrite, ni aucune dépendance de
+ *     `package.json` : exiger une présence que personne n'a encore livrée rendrait la garde rouge
+ *     en permanence pour un manque qu'aucune PR n'a créé (LEC-13). Ce qu'elle exige, c'est la
+ *     COHÉRENCE : une étape de lint est bloquante et son outil épinglé ; une étape de la porte A,
+ *     une fois figée à son constat, n'en disparaît plus, ne s'y désarme plus et ne s'y repointe
+ *     plus sans que le même diff fige le changement (GOV-061).
  *   — Elle ne suit pas un ré-export à la trace (`export { x } from "./y"`) pour savoir si `x` est
  *     asynchrone : elle refuse le ré-export lui-même, ce qui est plus simple et plus sûr.
  *   — Elle ne juge que le PRÉFIXE d'un chemin de tâche. `tests/fixtures/axionia/` (INT-T01a,
@@ -62,7 +131,10 @@
 
 import { fichiersSuivisOuRefus } from '../lot/fichiers-suivis';
 import { outilHorsDepot } from '../lot/chemins-de-tache';
+import { LIVREE } from '../lot/avancement';
 import { existsSync, readFileSync } from 'node:fs';
+import { parsers as analyseursYaml } from 'prettier/plugins/yaml';
+import { estObjet, lireYaml } from '../lib/lire-yaml';
 
 // ── le vocabulaire des décisions, partagé avec le registre et son test ───────────────────────
 
@@ -99,12 +171,22 @@ export interface GateVue {
    * (`MOTIF_MINIMAL`), pour la même raison — deux mots ne sont pas une décision.
    */
   readonly horsCi?: string;
+  /**
+   * La tâche qui PORTE l'entrée au registre (GOV-083). C'est elle, et elle seule, qui peut rendre
+   * « promise » une entrée dont le script n'est pas encore écrit : tant qu'elle n'est pas livrée,
+   * l'absence du script est un fait attendu ; une fois livrée, c'est une entrée fautive.
+   */
+  readonly tache?: string | readonly string[];
 }
 
 export interface TacheVue {
   readonly id: string;
   readonly repo: string;
   readonly paths: readonly string[];
+  /** La phase de la tâche — d'où se DÉRIVE la phase courante (GOV-083). Absente : non comptée. */
+  readonly phase?: number;
+  /** Le statut — « livrée » se lit dans `LIVREE` (`scripts/lot/avancement.ts`), jamais ici. */
+  readonly statut?: string;
 }
 
 /** Les périmètres que la garde sait compter. Une union fermée : pas de clé inventée. */
@@ -134,6 +216,18 @@ export interface Vue {
   readonly gates: readonly GateVue[];
   readonly taches: readonly TacheVue[];
   readonly perimetres: readonly Perimetre[];
+  /**
+   * LE PASSIF DES ENTRÉES FAUTIVES (GOV-083) : l'identifiant d'une entrée de `docs/gates.json` dont le
+   * script est introuvable et que sa tâche, livrée, n'écrira plus — avec le MOTIF de sa tolérance.
+   * Une entrée déclarée ici ne rougit pas `gate_sans_script` ; une ligne qui ne sert plus rougit
+   * `passif_sans_script_perime`. ABSENT = aucun passif : rien n'est toléré.
+   */
+  readonly passifSansScript?: Readonly<Record<string, string>>;
+  /**
+   * LE CONSTAT DE LA PORTE A (GOV-061) : ce que ses étapes doivent être. ABSENT = la porte A n'est
+   * pas confrontée, et `confronterLaPorteA` le REFUSE (`porte_a_illisible`) plutôt que de verdir.
+   */
+  readonly porteA?: PorteFigee;
 }
 
 export interface Faute {
@@ -150,6 +244,17 @@ export const FAMILLES = [
   'isolation_depot',
   'garde_ecrite_jamais_appelee',
   'garde_hors_registre',
+  'gate_sans_script',
+  'passif_sans_script_perime',
+  'etape_absente',
+  'etape_non_figee',
+  'etape_conditionnee',
+  'etape_toleree',
+  'etape_repointee',
+  'etape_en_double',
+  'porte_a_alteree',
+  'script_repointe',
+  'porte_a_illisible',
   'perimetre_vide_sans_motif',
 ] as const;
 
@@ -244,6 +349,14 @@ function etapesDe(contenu: string): string[] {
   return out;
 }
 
+/**
+ * Une tolérance d'échec ÉCRITE, sous toute forme autre que `false` en toutes lettres — une expression
+ * `${{ … }}` ou une chaîne tolèrent comme `true` (GOV-061, fait (d)). La première au niveau d'une
+ * étape, la seconde au niveau du JOB (quatre espaces), qui désarme toutes ses étapes.
+ */
+const TOLERANCE_ECRITE = /continue-on-error:[ \t]*(?!false[ \t]*(?:#.*)?$)\S/m;
+const TOLERANCE_ECRITE_AU_JOB = /^ {4}continue-on-error:[ \t]*(?!false[ \t]*(?:#.*)?$)\S/m;
+
 const LANCE_LE_LINT = /run:[^\n]*pnpm\s+(?:lint|format)/;
 
 export interface EtapeDeLint {
@@ -257,7 +370,7 @@ export function etapesDeLint(vue: Vue): EtapeDeLint[] {
   const out: EtapeDeLint[] = [];
   for (const w of vue.workflows) {
     // `continue-on-error` posé au niveau du JOB (quatre espaces) désarme toutes ses étapes.
-    const jobNonBloquant = /^ {4}continue-on-error:\s*true/m.test(w.source);
+    const jobNonBloquant = TOLERANCE_ECRITE_AU_JOB.test(w.source);
     for (const bloc of etapesDe(w.source)) {
       if (!LANCE_LE_LINT.test(bloc)) continue;
       const outil = /pnpm\s+format/.test(bloc) ? 'prettier' : 'eslint';
@@ -265,6 +378,894 @@ export function etapesDeLint(vue: Vue): EtapeDeLint[] {
     }
   }
   return out;
+}
+
+// ── la porte A : chaque étape PRÉSENTE, ACTIVE et EFFECTIVE (GOV-061) ─────────────────────────
+
+/**
+ * UNE ÉTAPE FIGÉE DE LA PORTE A — ce qu'elle doit être pour mesurer ce qu'on croit qu'elle mesure.
+ * `nom` l'identifie comme le pré-vol la nomme (`scripts/prevol.ts`) : son `name:`, sinon son `uses:` ou son `run:`.
+ */
+export interface EtapeFigee {
+  readonly nom: string;
+  readonly run?: string;
+  readonly uses?: string;
+  /** Sa condition `if:`, telle qu'elle s'écrit. ABSENTE = l'étape ne porte aucune condition. */
+  readonly si?: string;
+  /**
+   * TOUTES ses autres clés (`with`, `env`, `shell`, `id`, `working-directory`, `timeout-minutes`…),
+   * sous la forme que rend l'analyseur YAML partagé : chaque scalaire est une CHAÎNE. ABSENT = elle
+   * n'en porte aucune. `name`, `run`, `uses`, `if` et `continue-on-error` en sont exclues : chacune
+   * a sa famille, qui dit mieux ce qui a changé.
+   */
+  readonly cles?: Readonly<Record<string, unknown>>;
+}
+
+/** Les clés d'une étape qu'une famille dédiée juge déjà — les seules que `cles` ne porte pas. */
+const CLES_D_ETAPE_JUGEES_A_PART = new Set(['name', 'run', 'uses', 'if', 'continue-on-error']);
+/** Les clés du job qu'une famille dédiée juge déjà — les seules que `PorteFigee.cles` ne porte pas. */
+const CLES_DE_JOB_JUGEES_A_PART = new Set(['if', 'continue-on-error', 'steps']);
+/** La clé du workflow qui porte les jobs : le job de la porte A y est jugé à part. */
+const CLES_DE_WORKFLOW_JUGEES_A_PART = new Set(['jobs']);
+
+/**
+ * LE CLIQUET DE LA PORTE A. Le job, sa condition, ses étapes, et la définition `package.json` de
+ * chaque script qu'une étape lance. Ce n'est pas une seconde source de `ci.yml` : c'est le CONSTAT
+ * de ce qu'il porte, confronté à lui à chaque exécution, dans les deux sens — une étape retirée
+ * rougit, une étape ajoutée rougit tant qu'elle n'est pas figée ici. Changer la porte A se fait donc
+ * en DEUX endroits, dans le même diff, et c'est voulu : le diff de ce constat est ce qu'un relecteur
+ * lit pour savoir ce que la porte a gagné ou perdu.
+ */
+export interface PorteFigee {
+  readonly job: string;
+  /** La condition du JOB. `null` = aucune. */
+  readonly si: string | null;
+  /**
+   * TOUTES les autres clés du JOB (`runs-on`, `permissions`, et — absentes, donc refusées si on les
+   * pose — `defaults`, `env`, `container`, `services`, `strategy`, `needs`, `timeout-minutes`,
+   * `outputs`, `concurrency`…), sous leur forme canonique. Hors `if`, `continue-on-error`, `steps`.
+   */
+  readonly cles: Readonly<Record<string, unknown>>;
+  /**
+   * TOUTES les clés du WORKFLOW hors `jobs` (`name`, `on`, et — absentes, donc refusées si on les
+   * pose — `defaults`, `env`, `permissions`, `concurrency`, `run-name`…) : elles agissent sur le job.
+   */
+  readonly workflow: Readonly<Record<string, unknown>>;
+  readonly etapes: readonly EtapeFigee[];
+  readonly scripts: Readonly<Record<string, string>>;
+  /**
+   * LA CONFIGURATION DU GESTIONNAIRE DE PAQUETS, figée ABSENTE (veto de sécurité (1) sur la PR 175, un
+   * étage plus bas que le `shell:` d'une étape). `pnpm <script>` lit, à la racine, des réglages qui
+   * changent ce que le script EXÉCUTE sans toucher ni au workflow ni au script : le shell des scripts
+   * (`script-shell`), leurs crochets, le code lancé à l'installation. Un fichier SUIVI de cette liste,
+   * ou une clé de `package.json` de cette liste, est une faute nommée (`porte_a_alteree`) ; le jour où
+   * l'un d'eux devient nécessaire, ce constat devra figer son CONTENU, pas seulement son absence.
+   */
+  readonly paquet: {
+    readonly fichiersAbsents: readonly string[];
+    readonly clesAbsentes: readonly string[];
+  };
+  /**
+   * LES CROCHETS QUE `pnpm install` EXÉCUTE À LA RACINE (veto de sécurité, tour 3, sur la PR 175) :
+   * la VALEUR de chacun, ou `null` s'il doit être ABSENT. Ils tournent pendant l'étape
+   * `pnpm install --frozen-lockfile`, AVANT toutes les gardes : figer l'étape par sa seule commande
+   * laissait un `postinstall` repointé désarmer la porte entière. Les `pre<script>`/`post<script>`
+   * des scripts figés, que pnpm 9 exécute autour de chaque `pnpm <script>`, sont figés ABSENTS par
+   * dérivation, sauf à les nommer ici.
+   */
+  readonly crochets: Readonly<Record<CrochetDInstallation, string | null>>;
+  /**
+   * LA VALEUR EXACTE de `packageManager` dans `package.json` (veto de sécurité, tour 4, sur la PR 175) :
+   * `pnpm/action-setup` la lit pour installer le pnpm qui exécutera TOUTES les étapes, et les listes
+   * `CROCHETS_D_INSTALLATION` et `COMMANDES_INTEGREES_DE_PNPM` ont été relevées dans le code de CETTE
+   * version. Une autre version exécuterait d'autres crochets et d'autres commandes intégrées que ceux
+   * que la garde connaît : la changer est une faute nommée (`porte_a_alteree`), jusqu'à ce que le même
+   * diff relève les deux listes sur la nouvelle version.
+   */
+  readonly gestionnaire: string;
+}
+
+/**
+ * LE GESTIONNAIRE SUR LEQUEL LES LISTES CI-DESSOUS ONT ÉTÉ RELEVÉES — la valeur de `packageManager`
+ * que le constat fige. Une seule écriture (RM-01) : le constat et la vue de référence la dérivent.
+ */
+export const GESTIONNAIRE_RELEVE = 'pnpm@9.12.0';
+
+/**
+ * LES COMMANDES INTÉGRÉES DE pnpm 9.12.0 — les mots que `pnpm <mot>` n'envoie JAMAIS au script du même
+ * nom (veto de sécurité, tour 4, sur la PR 175 : un script `ls` qui sort 3, `pnpm ls` rend 0 ;
+ * `pnpm run ls` rend 3). Relevées dans le code de pnpm 9.12.0, et non supposées :
+ *   — `dist/pnpm.cjs`, `lib/pnpm.js` : le `switch (argv[0])` qui passe à npm, sans jamais lire les
+ *     scripts, `access` … `xmas` ;
+ *   — `dist/pnpm.cjs`, `lib/cmd/index.js` : les `commandNames` des 49 commandes du tableau `commands`
+ *     (alias compris), plus `help` et `completion-server`, posés à part sur `handlerByCommandName` —
+ *     `parseCliArgs` ne se rabat sur `run` (`fallbackCommand`) que si `getCommandFullName` ne rend rien.
+ * Ce relevé est CONFRONTÉ au pnpm installé, lu hors ligne, par la suite
+ * (`porte-a-presente-active-effective.spec.ts`, dette 1 du tour 5). Il ne sert que par
+ * `COMMANDES_INTEGREES_DE_PNPM`, qui lui ajoute les noms hérités d'`Object.prototype`.
+ */
+export const COMMANDES_RELEVEES_DE_PNPM: ReadonlySet<string> = new Set([
+  // passées à npm (`passThruToNpm`)
+  'access',
+  'adduser',
+  'bugs',
+  'deprecate',
+  'dist-tag',
+  'docs',
+  'edit',
+  'home',
+  'info',
+  'issues',
+  'login',
+  'logout',
+  'owner',
+  'ping',
+  'prefix',
+  'profile',
+  'pkg',
+  'repo',
+  's',
+  'se',
+  'search',
+  'set-script',
+  'show',
+  'star',
+  'stars',
+  'team',
+  'token',
+  'unpublish',
+  'unstar',
+  'v',
+  'version',
+  'view',
+  'whoami',
+  'xmas',
+  // `handlerByCommandName` : les `commandNames` des commandes, puis `help` et `completion-server`
+  'add',
+  'audit',
+  'bin',
+  'c',
+  'cache',
+  'cat-file',
+  'cat-index',
+  'ci',
+  'clean-install',
+  'completion',
+  'config',
+  'create',
+  'dedupe',
+  'deploy',
+  'dislink',
+  'dlx',
+  'doctor',
+  'env',
+  'exec',
+  'fetch',
+  'find-hash',
+  'get',
+  'i',
+  'ic',
+  'import',
+  'init',
+  'install',
+  'install-clean',
+  'install-test',
+  'it',
+  'la',
+  'licenses',
+  'link',
+  'list',
+  'll',
+  'ln',
+  'ls',
+  'm',
+  'multi',
+  'outdated',
+  'pack',
+  'patch',
+  'patch-commit',
+  'patch-remove',
+  'prune',
+  'publish',
+  'rb',
+  'rebuild',
+  'recursive',
+  'remove',
+  'restart',
+  'rm',
+  'root',
+  'run',
+  'run-script',
+  'self-update',
+  'server',
+  'set',
+  'setup',
+  'store',
+  't',
+  'test',
+  'tst',
+  'un',
+  'uni',
+  'uninstall',
+  'unlink',
+  'up',
+  'update',
+  'upgrade',
+  'why',
+  'help',
+  'completion-server',
+]);
+
+/**
+ * LES NOMS HÉRITÉS D'`Object.prototype` (veto de sécurité, tour 5, sur la PR 175). La table des
+ * commandes de pnpm 9.12.0 (`handlerByCommandName`) est un objet JS ORDINAIRE, et
+ * `getCommandFullName` la lit par `handlerByCommandName[mot] ? mot : null` : un mot qui nomme une
+ * propriété héritée y trouve une fonction, passe pour une commande, et `pnpm <mot>` ne lance jamais
+ * le script de ce nom (mesuré : sortie 0, ou 1 pour l'accesseur du prototype ; `pnpm run <mot>` lance
+ * bien le script). DÉRIVÉS à l'exécution, jamais relevés à la main : le moteur qui fait tourner la
+ * garde est celui qui fait tourner pnpm, et un nom qu'il ajouterait y entre de lui-même.
+ */
+export const NOMS_HERITES_D_OBJECT_PROTOTYPE: ReadonlySet<string> = new Set(
+  Object.getOwnPropertyNames(Object.prototype)
+);
+
+/**
+ * LES MOTS QUE `pnpm <mot>` N'ENVOIE JAMAIS AU SCRIPT DU MÊME NOM : le relevé
+ * (`COMMANDES_RELEVEES_DE_PNPM`) et les noms hérités (`NOMS_HERITES_D_OBJECT_PROTOTYPE`). `pnpm <mot>`
+ * n'est compté comme le lancement du script `<mot>` que si `<mot>` n'est PAS ici ET a la forme
+ * `FORME_D_UN_SCRIPT_LANCE_SANS_RUN` ; un script de `package.json` qui porte l'un de ces noms est
+ * refusé (`porte_a_alteree`), sauf `test` (`SCRIPTS_LANCES_PAR_LEUR_COMMANDE_INTEGREE`).
+ */
+export const COMMANDES_INTEGREES_DE_PNPM: ReadonlySet<string> = new Set([
+  ...COMMANDES_RELEVEES_DE_PNPM,
+  ...NOMS_HERITES_D_OBJECT_PROTOTYPE,
+]);
+
+/**
+ * LA SEULE FORME DE NOM QUE `pnpm <mot>` (sans `run`) EST CENSÉ LANCER COMME UN SCRIPT : ASCII en
+ * casse basse, une lettre d'abord, puis lettres, chiffres, `:`, `_`, `-`. Défense en profondeur, en
+ * échec fermé : une table de commandes lue par un objet ordinaire peut reconnaître des mots que
+ * personne n'a su nommer, et les noms hérités d'un objet JS portent presque tous une majuscule ou un
+ * soulignement de tête. La forme ne REMPLACE pas l'ensemble dérivé ci-dessus : elle s'y ajoute.
+ * Mesuré : tous les scripts de `package.json` la respectent. PRIX ASSUMÉ : un script d'une autre
+ * forme n'est compté que par `pnpm run <script>`.
+ */
+export const FORME_D_UN_SCRIPT_LANCE_SANS_RUN = /^[a-z][a-z0-9:_-]*$/;
+
+/**
+ * LE SEUL SCRIPT QU'UNE COMMANDE INTÉGRÉE LANCE SOUS SON PROPRE NOM, ET RIEN D'AUTRE : `test`. Lu dans
+ * le même code (`lib/test.js`) : `handler(opts, params) { return run.handler(opts, ["test",
+ * ...params]) }`. Un script `test` n'est donc pas un script masqué, et il n'est pas refusé. Ni `t` ni
+ * `tst` (ils lancent le script `test`, pas le leur), ni `restart` (il lance aussi `stop` et `start`) n'y
+ * sont. `pnpm test`, lui, n'est pas compté comme un appel : l'échec fermé ne coûte rien, aucune garde
+ * n'est lancée par le script `test`.
+ */
+export const SCRIPTS_LANCES_PAR_LEUR_COMMANDE_INTEGREE: ReadonlySet<string> = new Set(['test']);
+
+/**
+ * Les crochets de cycle de vie que pnpm 9 exécute pour le projet RACINE pendant `pnpm install` — lus
+ * dans le code de pnpm 9.12.0 (`dist/pnpm.cjs` : `DEV_PREINSTALL = "pnpm:devPreinstall"`, puis
+ * `runLifecycleHooksConcurrently(["preinstall", "install", "postinstall", "preprepare", "prepare",
+ * "postprepare"], …)`), et non supposés. `enable-pre-post-scripts` y vaut `true` par défaut.
+ */
+export const CROCHETS_D_INSTALLATION = [
+  'pnpm:devPreinstall',
+  'preinstall',
+  'install',
+  'postinstall',
+  'preprepare',
+  'prepare',
+  'postprepare',
+] as const;
+export type CrochetDInstallation = (typeof CROCHETS_D_INSTALLATION)[number];
+
+/** Aucun crochet d'installation : la forme de départ d'un constat, qui n'en nomme que les présents. */
+export const AUCUN_CROCHET = Object.fromEntries(
+  CROCHETS_D_INSTALLATION.map((c) => [c, null])
+) as Readonly<Record<CrochetDInstallation, null>>;
+
+/** Ce que la racine ne porte pas : les fichiers et les clés de `package.json` qui configurent pnpm/npm. */
+export const CONFIGURATION_DU_PAQUET_ABSENTE: PorteFigee['paquet'] = {
+  fichiersAbsents: ['.npmrc', 'pnpm-workspace.yaml', '.pnpmfile.cjs'],
+  clesAbsentes: ['pnpm'],
+};
+
+/** Le workflow qui porte la porte A. Le seul job requis de ce dépôt y vit. */
+export const WORKFLOW_DE_LA_PORTE_A = '.github/workflows/ci.yml';
+
+/**
+ * Les valeurs SCALAIRES d'une clé, partout dans un workflow — lues dans l'arbre de l'analyseur YAML
+ * qu'embarque Prettier : un commentaire, même s'il cite une commande, n'y est jamais une valeur. Une clé dont la valeur est un objet (le `run:`
+ * de `defaults: run: shell:`) n'est pas une commande et n'est pas rendue.
+ * ÉCHEC FERMÉ : un fichier que l'analyseur refuse ne rend AUCUNE valeur — rien n'y est appelé.
+ */
+function valeursDeCle(source: string, cle: string): string[] {
+  let racine: unknown;
+  try {
+    const options = { originalText: source };
+    racine = analyseursYaml.yaml.parse(source, options as never);
+  } catch {
+    return [];
+  }
+  type Noeud = { type?: string; value?: unknown; children?: unknown[] };
+  const scalaire = (n: unknown): string | undefined => {
+    const x = n as Noeud | null;
+    if (x === null || typeof x !== 'object') return undefined;
+    if (typeof x.value === 'string' && x.type !== 'comment') return x.value;
+    const enfants = (x.children ?? []).filter((e) => e !== null);
+    return enfants.length === 1 &&
+      (x.type === 'mappingKey' || x.type === 'mappingValue' || x.type === 'flowMappingValue')
+      ? scalaire(enfants[0])
+      : undefined;
+  };
+  const out: string[] = [];
+  const pile: unknown[] = [racine];
+  while (pile.length > 0) {
+    const n = pile.pop() as Noeud | null;
+    if (n === null || typeof n !== 'object') continue;
+    const enfants = Array.isArray(n.children) ? n.children : [];
+    if ((n.type === 'mappingItem' || n.type === 'flowMappingItem') && enfants.length === 2) {
+      if (scalaire(enfants[0]) === cle) {
+        const v = scalaire(enfants[1]);
+        if (v !== undefined) out.push(v);
+      }
+    }
+    pile.push(...enfants);
+  }
+  return out;
+}
+
+/** Ce qu'une commande en position de commande lance : un script de `package.json`, ou un fichier. */
+interface Appels {
+  scripts: Set<string>;
+  fichiers: Set<string>;
+}
+
+/**
+ * Les mots d'UNE commande simple, lus comme un appel NOMMÉ — pour la seule sur-approximation de
+ * `commandesNommees`. Reconnus : `pnpm [run|exec] <script>`,
+ * `npm run <script>`, `npx`/`pnpm exec` suivis d'une commande, et `tsx`/`node`/`bash`/`sh <fichier>`.
+ * Le reste — `echo`, `test`, une affectation seule — n'appelle rien.
+ */
+function lireUneCommande(mots: readonly string[], a: Appels): void {
+  let i = 0;
+  while (i < mots.length && /^[A-Za-z_][A-Za-z0-9_]*=/.test(mots[i]!)) i++;
+  const outil = mots[i];
+  const suite = (j: number): number => {
+    while (j < mots.length && mots[j]!.startsWith('-')) j++;
+    return j;
+  };
+  if (outil === 'pnpm' || outil === 'npm') {
+    let j = suite(i + 1);
+    if (mots[j] === 'exec' || mots[j] === 'dlx') return lireUneCommande(mots.slice(j + 1), a);
+    if (mots[j] === 'run' || mots[j] === 'run-script') j = suite(j + 1);
+    else if (outil === 'npm') return;
+    if (mots[j] !== undefined) a.scripts.add(mots[j]!);
+  } else if (outil === 'npx') {
+    lireUneCommande(mots.slice(suite(i + 1)), a);
+  } else if (outil === 'tsx' || outil === 'node' || outil === 'bash' || outil === 'sh') {
+    const j = suite(i + 1);
+    if (mots[j] !== undefined) a.fichiers.add(mots[j]!);
+  }
+}
+
+/**
+ * CE QUE `package.json` NOMME EN POSITION DE COMMANDE — la sur-approximation, pour la seule question
+ * « ce script est-il DÉCLARÉ lancé ? » (`confronterDisqueEtRegistre`). Là, l'échec fermé va dans
+ * l'autre sens : un script nommé, même court-circuité, dont le fichier manque est une PERTE ; en
+ * compter trop rend fautive une entrée de plus, jamais une de moins. Le découpage ignore donc les
+ * guillemets, à dessein. Il ne sert JAMAIS à dire qu'une garde est appelée : c'est `appelsDe`.
+ */
+function commandesNommees(commande: string): Appels {
+  const a: Appels = { scripts: new Set(), fichiers: new Set() };
+  const sansGuillemets = (t: string): string => t.replace(/^["']|["']$/g, '');
+  for (const segment of commande.split(/\r?\n|&&|\|\||[;|&()]/)) {
+    const mots = segment.trim().split(/\s+/).filter(Boolean).map(sansGuillemets);
+    if (mots.length > 0) lireUneCommande(mots, a);
+  }
+  return a;
+}
+
+/** Un mot LITTÉRAL nu : rien que le shell n'expanse, ne découpe ni n'interprète. */
+const MOT_NU = /^[A-Za-z0-9_@%+=:,./-]+$/;
+/** Le contenu admis entre guillemets : le même, sans rien que le shell expanserait. */
+const ENTRE_GUILLEMETS = /^(?:'([A-Za-z0-9_@%+=:,./-]*)'|"([A-Za-z0-9_@%+=:,./-]*)")$/;
+
+/** La valeur d'un mot littéral, désenveloppée de ses guillemets ; `null` si le mot n'est pas littéral. */
+function motLitteral(brut: string): string | null {
+  if (MOT_NU.test(brut)) return brut;
+  const g = ENTRE_GUILLEMETS.exec(brut);
+  return g === null ? null : (g[1] ?? g[2] ?? '');
+}
+
+/**
+ * CE QU'UNE ÉTAPE APPELLE — LA RÈGLE STRICTE (GOV-061, fait (a) ; refus d'exactitude et veto de
+ * sécurité, tours 3 et 4, sur la PR 175). UNE GARDE EST APPELÉE SI UNE ÉTAPE N'EXÉCUTE QU'ELLE : le
+ * `run:` d'une étape (ou la `command` d'un réglage, ou la valeur d'un script de `package.json` qu'on
+ * suit), blancs de bord retirés, doit être EXACTEMENT UNE commande simple, sur UNE ligne :
+ *   — AUCUNE affectation en tête : `npm_config_script_shell=…`, `NODE_OPTIONS=…`, `PATH=…`
+ *     configurent le LANCEUR lui-même, et une étape qui appelle une garde n'en a pas besoin (tour 4) ;
+ *   — `pnpm run <script>` ; `pnpm <script>` seulement si `<script>` n'est PAS une commande intégrée
+ *     de pnpm (`COMMANDES_INTEGREES_DE_PNPM` : `pnpm ls` exécute `list`, jamais le script `ls` ; un
+ *     nom hérité d'`Object.prototype` y passe pour une commande — tour 5) ET si `<script>` a la
+ *     forme ASCII basse `FORME_D_UN_SCRIPT_LANCE_SANS_RUN` ;
+ *     `npx tsx <fichier>`, ou `tsx|node|bash|sh <fichier>` ;
+ *   — puis des arguments LITTÉRAUX : mots nus, ou entre guillemets sans rien à expanser.
+ * Un script de `package.json` n'appelle RIEN par son nom : ce qui compte est ce que sa VALEUR
+ * exécute, jugée par la même règle. Une garde est appelée quand son FICHIER l'est (`controler`).
+ * Tout le reste n'appelle RIEN : un opérateur (`;`, `&&`, `||`, `|`, `&`, redirection, parenthèse,
+ * accolade), un saut de ligne, un `$` (variable, substitution, expression d'Actions `${{ … }}` — qui
+ * peut injecter un opérateur avant que le shell ne lise la ligne), un accent grave, un échappement, un
+ * motif de fichiers, un mot de commande autre que les quatre outils (`set`, `trap`, `alias`, `eval`,
+ * `if`, `exit`, `[`…). On a cessé de MODÉLISER le shell : trois tours de lecture « atteignable, statut
+ * compté » ont chacun laissé passer une forme (`&&` non final avalé par `bash -e`, `set +e`, `trap`,
+ * `alias`, `eval`, expression qui injecte `|| true`). La règle stricte ne juge plus rien : elle
+ * RECONNAÎT une seule forme, et ÉCHOUE FERMÉE sur toutes les autres.
+ * PRIX ASSUMÉ : un idiome composé qui lance réellement la garde (`pnpm a && pnpm b`, un argument
+ * `$(date …)`) est un FAUX ROUGE. On écrit la garde dans une étape à part, ou on motive `horsCi`.
+ */
+function appelsDe(commande: string): Appels {
+  const a: Appels = { scripts: new Set(), fichiers: new Set() };
+  const ligne = commande.trim();
+  if (ligne === '' || /[\r\n]/.test(ligne)) return a;
+  const bruts = ligne.split(/[ \t]+/);
+  const mots = bruts.map(motLitteral);
+  if (mots.some((m) => m === null)) return a;
+  const cible = (j: number): string | undefined => {
+    const m = mots[j];
+    return typeof m === 'string' && m !== '' && !m.startsWith('-') ? m : undefined;
+  };
+  const outil = mots[0];
+  if (outil === 'pnpm') {
+    const s = mots[1] === 'run' ? cible(2) : cible(1);
+    if (
+      s !== undefined &&
+      (mots[1] === 'run' ||
+        (FORME_D_UN_SCRIPT_LANCE_SANS_RUN.test(s) && !COMMANDES_INTEGREES_DE_PNPM.has(s)))
+    ) {
+      a.scripts.add(s);
+    }
+  } else if (
+    outil === 'tsx' ||
+    outil === 'node' ||
+    outil === 'bash' ||
+    outil === 'sh' ||
+    (outil === 'npx' && mots[1] === 'tsx')
+  ) {
+    const f = cible(outil === 'npx' ? 2 : 1);
+    if (f !== undefined) a.fichiers.add(f);
+  }
+  return a;
+}
+
+/** Les scripts de `package.json`, lus ; `{}` si le fichier est illisible (rien n'y est défini). */
+function scriptsDuPaquet(packageJson: string): Record<string, string> {
+  try {
+    const pkg = JSON.parse(packageJson || '{}') as { scripts?: unknown };
+    if (!estObjet(pkg.scripts)) return {};
+    return Object.fromEntries(
+      Object.entries(pkg.scripts).filter((e): e is [string, string] => typeof e[1] === 'string')
+    );
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * Ce que les commandes données APPELLENT, suivi à travers `package.json` : `pnpm run a` qui vaut
+ * `pnpm run b`, qui vaut `tsx f.ts`, exécute `f.ts`. Chaque VALEUR est jugée par la lecture donnée
+ * (la règle stricte d'`appelsDe` par défaut) : une valeur composée (`pnpm b && tsx f.ts`) n'appelle
+ * rien, et un script seulement NOMMÉ n'appelle pas le fichier qu'il ne lance pas.
+ */
+function appelsSuivis(
+  commandes: readonly string[],
+  scripts: Readonly<Record<string, string>>,
+  lire: (commande: string) => Appels = appelsDe
+): Appels {
+  const tous: Appels = { scripts: new Set<string>(), fichiers: new Set<string>() };
+  const file = [...commandes];
+  while (file.length > 0) {
+    const a = lire(file.pop()!);
+    for (const f of a.fichiers) tous.fichiers.add(f);
+    for (const s of a.scripts) {
+      if (tous.scripts.has(s)) continue;
+      tous.scripts.add(s);
+      if (Object.hasOwn(scripts, s)) file.push(scripts[s]!);
+    }
+  }
+  return tous;
+}
+
+/** Les commandes des réglages `.claude/settings.json` : toute valeur de clé `command`, à toute profondeur. */
+function commandesDesReglages(hooks: string): string[] {
+  let racine: unknown;
+  try {
+    racine = JSON.parse(hooks || '{}');
+  } catch {
+    return [];
+  }
+  const out: string[] = [];
+  const pile: unknown[] = [racine];
+  while (pile.length > 0) {
+    const n = pile.pop();
+    if (Array.isArray(n)) pile.push(...(n as unknown[]));
+    else if (estObjet(n)) {
+      for (const [k, v] of Object.entries(n)) {
+        if (k === 'command' && typeof v === 'string') out.push(v);
+        else pile.push(v);
+      }
+    }
+  }
+  return out;
+}
+
+/** Le nom d'une étape lue, dans la convention de `EtapeFigee.nom`. */
+function nomDEtape(champs: Record<string, unknown>): string {
+  const texte = (v: unknown): string | undefined => (typeof v === 'string' ? v.trim() : undefined);
+  const uses = texte(champs.uses);
+  const run = texte(champs.run);
+  return (
+    texte(champs.name) ??
+    (uses !== undefined ? `uses: ${uses}` : run !== undefined ? `run: ${run}` : '—')
+  );
+}
+
+/** Une valeur lue de l'arbre YAML, écrite pour un message : une chaîne telle quelle, le reste en JSON. */
+function ecrite(v: unknown): string | undefined {
+  return typeof v === 'string' ? v : v === undefined ? undefined : JSON.stringify(v);
+}
+
+/**
+ * La forme CANONIQUE d'une valeur lue de l'arbre YAML : du JSON dont les clés de chaque objet sont
+ * triées. YAML n'ordonne pas les clés, et `{ a, b }` écrit en accolades vaut le bloc indenté.
+ */
+function canonique(v: unknown): string {
+  const trie = (x: unknown): unknown =>
+    Array.isArray(x)
+      ? x.map(trie)
+      : estObjet(x)
+        ? Object.fromEntries(
+            Object.keys(x)
+              .sort()
+              .map((k) => [k, trie(x[k])])
+          )
+        : x;
+  return JSON.stringify(trie(v)) ?? 'undefined';
+}
+
+/**
+ * Les clés où ce qu'on LIT diverge de ce qui est FIGÉ — ajoutées, retirées ou modifiées, sous leur
+ * forme canonique —, hors celles qu'une famille dédiée juge à part. ÉCHEC FERMÉ : une clé inconnue
+ * du constat est une divergence, jamais une clé « sans effet connu ».
+ */
+function clesDivergentes(
+  lu: Record<string, unknown>,
+  fige: Readonly<Record<string, unknown>>,
+  aPart: ReadonlySet<string>
+): { cle: string; lu: string; fige: string }[] {
+  const cles = [...new Set([...Object.keys(lu), ...Object.keys(fige)])]
+    .filter((c) => !aPart.has(c))
+    .sort();
+  const forme = (o: Readonly<Record<string, unknown>>, c: string): string =>
+    Object.hasOwn(o, c) ? canonique(o[c]) : '(absente)';
+  return cles
+    .map((cle) => ({ cle, lu: forme(lu, cle), fige: forme(fige, cle) }))
+    .filter((d) => d.lu !== d.fige);
+}
+
+/**
+ * La tolérance d'échec sous sa forme ÉVALUÉE (le fait (d) de GOV-061). La clé `continue-on-error`
+ * n'est admise qu'avec la seule valeur qui ne tolère rien, `false` écrit en toutes lettres : une
+ * expression (`${{ true }}`, `${{ 1 }}`), une chaîne, ou n'importe quel autre scalaire est une
+ * tolérance qu'on ne sait pas évaluer — et ce qu'on ne sait pas évaluer est refusé.
+ */
+function tolereLEchec(champs: Record<string, unknown>): string | null {
+  if (!Object.hasOwn(champs, 'continue-on-error')) return null;
+  const v = champs['continue-on-error'];
+  return v === 'false' ? null : JSON.stringify(v);
+}
+
+export interface ConfrontationDeLaPorteA {
+  /** Le nombre d'étapes du job RÉELLEMENT confrontées au constat — le compte que le vert imprime. */
+  readonly etapes: number;
+  /** Le nombre de scripts de `package.json` confrontés à leur définition figée. */
+  readonly scripts: number;
+  /** Le nombre de crochets de cycle de vie confrontés à leur valeur ou à leur absence figées. */
+  readonly crochets: number;
+  readonly fautes: readonly Faute[];
+}
+
+/**
+ * LA DÉFINITION UNIQUE DE « ÉTAPE PRÉSENTE, ACTIVE ET EFFECTIVE » (GOV-061, REQ-QA-013), appliquée
+ * à TOUTES les étapes du job de la porte A — et non aux seules étapes qui lancent un script de
+ * `scripts/gates/` :
+ *   — PRÉSENTE : chaque étape figée est dans le job (`etape_absente`), et le job ne porte aucune
+ *     étape que le constat ignore (`etape_non_figee`) ;
+ *   — ACTIVE : sa condition `if:` — et celle du job — est celle du constat (`etape_conditionnee`),
+ *     et aucune tolérance d'échec, sous aucune forme évaluée, ne la désarme (`etape_toleree`) ;
+ *   — EFFECTIVE : elle lance la commande du constat (`etape_repointee`), et le script de
+ *     `package.json` que cette commande invoque a la définition du constat (`script_repointe`) ;
+ *   — ENTIÈRE : toutes ses AUTRES clés — et toutes celles du job, et celles du workflow hors `jobs`
+ *     — sont celles du constat, sous leur forme canonique ; une clé ajoutée, retirée ou modifiée
+ *     est refusée en la nommant (`porte_a_alteree`). Un `shell:`, des `defaults:`, un `env:` ou un
+ *     `with: ref:` changent ce que la commande EXÉCUTE, ou l'arbre qu'elle mesure, sans changer la
+ *     commande : `etape_repointee`, qui ne lit que `run` et `uses`, ne les voit pas ;
+ *   — UNIQUE : deux étapes de même nom sont refusées (`etape_en_double`) — la confrontation est
+ *     indexée par nom, et la seconde y échappait ;
+ *   — PRÉCÉDÉE DE RIEN : chaque crochet que `pnpm install` exécute à la racine, et chaque
+ *     `pre<script>`/`post<script>` d'un script figé, a la valeur du constat ou son absence
+ *     (`porte_a_alteree`) — sans quoi un `postinstall` repointé tournait avant toutes les gardes.
+ * Un workflow qu'on ne sait pas lire, ou qui ne porte pas le job, est un refus
+ * (`porte_a_illisible`) : on ne déclare pas armée une porte qu'on n'a pas lue.
+ */
+export async function confronterLaPorteA(vue: Vue): Promise<ConfrontationDeLaPorteA> {
+  const fautes: Faute[] = [];
+  const illisible = (pourquoi: string): ConfrontationDeLaPorteA => ({
+    etapes: 0,
+    scripts: 0,
+    crochets: 0,
+    fautes: [
+      {
+        famille: 'porte_a_illisible',
+        message:
+          `\`${WORKFLOW_DE_LA_PORTE_A}\` — ${pourquoi}. On ne déclare pas armée une porte qu'on ` +
+          `n'a pas lue : la confrontation ÉCHOUE FERMÉE.`,
+      },
+    ],
+  });
+  const figee = vue.porteA;
+  if (figee === undefined) return illisible('aucun constat de la porte A n’est fourni à la garde');
+  const fichier = vue.workflows.find((w) => w.chemin === WORKFLOW_DE_LA_PORTE_A);
+  if (fichier === undefined) return illisible('le fichier n’est pas suivi');
+  let workflow: unknown;
+  try {
+    workflow = await lireYaml(fichier.source);
+  } catch (e) {
+    return illisible(
+      `l'analyseur YAML partagé le refuse (${e instanceof Error ? e.message : String(e)})`
+    );
+  }
+  const jobs = estObjet(workflow) && estObjet(workflow.jobs) ? workflow.jobs : {};
+  const job = jobs[figee.job];
+  if (!estObjet(job) || !Array.isArray(job.steps)) {
+    return illisible(`aucun job \`${figee.job}\` portant une liste d'étapes`);
+  }
+  const aRetenir =
+    'Si le changement est VOULU, fige-le dans `PORTE_A_FIGEE` ' +
+    '(`scripts/gates/gov-conventions.ts`), dans le même diff.';
+
+  // ── le JOB lui-même : sa condition et sa tolérance désarment TOUTES ses étapes ──
+  const siDuJob = ecrite(job.if) ?? null;
+  if (siDuJob !== figee.si) {
+    fautes.push({
+      famille: 'etape_conditionnee',
+      message:
+        `le job \`${figee.job}\` porte la condition ${JSON.stringify(siDuJob)} au lieu de ` +
+        `${JSON.stringify(figee.si)} : une condition de JOB saute TOUTES ses étapes, et un job ` +
+        `sauté se lit « skipped », sans aucun rouge. ${aRetenir}`,
+    });
+  }
+  const toleranceDuJob = tolereLEchec(job);
+  if (toleranceDuJob !== null) {
+    fautes.push({
+      famille: 'etape_toleree',
+      message:
+        `le job \`${figee.job}\` porte \`continue-on-error: ${toleranceDuJob}\` : toutes ses étapes ` +
+        `peuvent échouer sans que la porte rougisse. Seul \`false\` écrit en toutes lettres est admis.`,
+    });
+  }
+
+  // ── le workflow et le job ENTIERS : toute autre clé change ce que le job exécute ──
+  const alterees = (
+    ou: string,
+    lu: Record<string, unknown>,
+    fige: Readonly<Record<string, unknown>>,
+    aPart: ReadonlySet<string>
+  ): void => {
+    for (const d of clesDivergentes(lu, fige, aPart)) {
+      fautes.push({
+        famille: 'porte_a_alteree',
+        message:
+          `${ou} porte \`${d.cle}: ${d.lu}\` au lieu de \`${d.cle}: ${d.fige}\`. Une clé que le ` +
+          `constat ne porte pas — un \`shell:\` qui rend toujours 0, des \`defaults:\`, un \`env:\`, ` +
+          `un \`with: ref:\` qui fait mesurer un autre arbre — désarme sans changer la commande : ` +
+          `l'étape, le job et le workflow sont figés ENTIERS. ${aRetenir}`,
+      });
+    }
+  };
+  alterees(
+    `le workflow \`${WORKFLOW_DE_LA_PORTE_A}\``,
+    estObjet(workflow) ? workflow : {},
+    figee.workflow,
+    CLES_DE_WORKFLOW_JUGEES_A_PART
+  );
+  alterees(`le job \`${figee.job}\``, job, figee.cles, CLES_DE_JOB_JUGEES_A_PART);
+
+  // ── les étapes, une par une ──
+  const lues = job.steps.map((e: unknown) => (estObjet(e) ? e : {}));
+  const parNom = new Map(lues.map((e) => [nomDEtape(e), e]));
+  const figees = new Map(figee.etapes.map((e) => [e.nom, e]));
+  // UNIQUE : deux étapes de même nom se confondraient dans ces tables, et la seconde ne serait
+  // jamais confrontée. Le constat lui-même est soumis à la même règle.
+  const enDouble = (noms: readonly string[]): string[] =>
+    [...new Set(noms.filter((n, i) => noms.indexOf(n) !== i))].sort();
+  for (const [ou, noms] of [
+    [`le job \`${figee.job}\``, lues.map(nomDEtape)],
+    ['le constat `PORTE_A_FIGEE`', figee.etapes.map((e) => e.nom)],
+  ] as const) {
+    for (const nom of enDouble(noms)) {
+      fautes.push({
+        famille: 'etape_en_double',
+        message:
+          `${ou} porte plusieurs étapes nommées « ${nom} ». La confrontation est indexée par nom : ` +
+          `une seule serait jugée, et l'autre — n'importe laquelle de ses clés — passerait sans ` +
+          `un rouge. Donnez à chaque étape un nom unique. ${aRetenir}`,
+      });
+    }
+  }
+  for (const f of figee.etapes) {
+    if (parNom.has(f.nom)) continue;
+    fautes.push({
+      famille: 'etape_absente',
+      message:
+        `l'étape « ${f.nom} » (\`${f.run ?? f.uses ?? '—'}\`) n'est plus dans le job ` +
+        `\`${figee.job}\` — retirée, ou réduite à un commentaire. Ce qu'elle mesurait ne l'est plus ` +
+        `nulle part, et rien d'autre ne le dirait. ${aRetenir}`,
+    });
+  }
+  for (const [nom, e] of parNom) {
+    const f = figees.get(nom);
+    if (f === undefined) {
+      fautes.push({
+        famille: 'etape_non_figee',
+        message:
+          `l'étape « ${nom} » du job \`${figee.job}\` n'est pas au constat de la porte A : sans lui, ` +
+          `son retrait futur ne rougirait rien. ${aRetenir}`,
+      });
+      continue;
+    }
+    const si = ecrite(e.if);
+    if (si !== f.si) {
+      fautes.push({
+        famille: 'etape_conditionnee',
+        message:
+          `l'étape « ${nom} » porte la condition ${si === undefined ? '(aucune)' : `« ${si} »`} au ` +
+          `lieu de ${f.si === undefined ? '(aucune)' : `« ${f.si} »`}. Une condition toujours fausse ` +
+          `désarme l'étape sans bruit : elle se lit « skipped ». ${aRetenir}`,
+      });
+    }
+    const tolerance = tolereLEchec(e);
+    if (tolerance !== null) {
+      fautes.push({
+        famille: 'etape_toleree',
+        message:
+          `l'étape « ${nom} » porte \`continue-on-error: ${tolerance}\`. La valeur est lue sous sa ` +
+          `forme ÉVALUÉE : toute autre écriture que \`false\` tolère l'échec, et une étape qui peut ` +
+          `échouer sans faire rougir la porte ne garde rien.`,
+      });
+    }
+    for (const cle of ['run', 'uses'] as const) {
+      const lu = typeof e[cle] === 'string' ? (e[cle] as string).trim() : undefined;
+      if (lu === f[cle]) continue;
+      fautes.push({
+        famille: 'etape_repointee',
+        message:
+          `l'étape « ${nom} » porte \`${cle}: ${lu ?? '(absent)'}\` au lieu de ` +
+          `\`${f[cle] ?? '(absent)'}\` : elle ne lance plus ce qu'on croit qu'elle mesure — une ` +
+          `tolérance écrite dans le shell (\`|| true\`) est une tolérance comme une autre. ${aRetenir}`,
+      });
+    }
+    alterees(`l'étape « ${nom} »`, e, f.cles ?? {}, CLES_D_ETAPE_JUGEES_A_PART);
+  }
+
+  // ── les scripts de `package.json` que ces étapes lancent : figés, donc non repointables ──
+  let pkg: Record<string, unknown>;
+  try {
+    const lu: unknown = JSON.parse(vue.packageJson || '{}');
+    pkg = estObjet(lu) ? lu : {};
+  } catch {
+    return illisible(
+      '`package.json` est illisible : les scripts que la porte lance n’ont pas de source'
+    );
+  }
+  const scripts: Record<string, unknown> = estObjet(pkg.scripts) ? pkg.scripts : {};
+
+  // ── la configuration pnpm/npm de la racine : elle change ce que `pnpm <script>` exécute ──
+  const suivis = new Set(vue.fichiersSuivis);
+  const configuration = [
+    ...figee.paquet.fichiersAbsents
+      .filter((f) => suivis.has(f))
+      .map((f) => `le fichier \`${f}\`, suivi à la racine,`),
+    ...figee.paquet.clesAbsentes
+      .filter((k) => Object.hasOwn(pkg, k))
+      .map((k) => `la clé \`${k}\` de \`package.json\``),
+  ];
+  for (const ou of configuration) {
+    fautes.push({
+      famille: 'porte_a_alteree',
+      message:
+        `${ou} configure le gestionnaire de paquets, que le constat fige ABSENT : un ` +
+        `\`script-shell\`, un crochet ou un réglage de scripts change ce que CHAQUE ` +
+        `\`pnpm <script>\` de la porte exécute, sans toucher ni à l'étape ni au script. ${aRetenir}`,
+    });
+  }
+  // ── le gestionnaire lui-même : action-setup installe la version que `packageManager` nomme ──
+  const gestionnaire = Object.hasOwn(pkg, 'packageManager') ? pkg.packageManager : null;
+  if (gestionnaire !== figee.gestionnaire) {
+    fautes.push({
+      famille: 'porte_a_alteree',
+      message:
+        `\`package.json\` — la clé \`packageManager\` vaut ${JSON.stringify(gestionnaire)} au lieu ` +
+        `de ${JSON.stringify(figee.gestionnaire)}. \`pnpm/action-setup\` installe cette version pour ` +
+        `TOUTES les étapes, et les crochets d'installation comme les commandes intégrées que la ` +
+        `garde connaît ont été relevés dans le code de la version figée : une autre en exécute ` +
+        `d'autres. Relevez les deux listes sur la nouvelle version, dans le même diff. ${aRetenir}`,
+    });
+  }
+  // ── un script qui porte le nom d'une commande intégrée : `pnpm <nom>` ne le lance jamais ──
+  const masques = Object.keys(scripts).filter(
+    (n) => COMMANDES_INTEGREES_DE_PNPM.has(n) && !SCRIPTS_LANCES_PAR_LEUR_COMMANDE_INTEGREE.has(n)
+  );
+  for (const nom of masques) {
+    const commande = COMMANDES_RELEVEES_DE_PNPM.has(nom)
+      ? `d'une commande intégrée de ${figee.gestionnaire}`
+      : `hérité d'\`Object.prototype\`, que la table des commandes de ${figee.gestionnaire}, ` +
+        `objet JS ordinaire, prend pour une commande`;
+    fautes.push({
+      famille: 'porte_a_alteree',
+      message:
+        `\`package.json\` — le script \`${nom}\` porte le nom ${commande} : ` +
+        `\`pnpm ${nom}\` exécute la commande, jamais le script, et rend ` +
+        `son propre statut. Une étape qui croirait lancer ce script ne mesurerait rien : ` +
+        `renommez-le.`,
+    });
+  }
+  // ── les crochets de cycle de vie : ils tournent pendant `pnpm install`, ou autour d'un script ──
+  const crochets = new Map<string, string | null>(Object.entries(figee.crochets));
+  for (const nom of Object.keys(figee.scripts)) {
+    for (const c of [`pre${nom}`, `post${nom}`]) if (!crochets.has(c)) crochets.set(c, null);
+  }
+  for (const [nom, attendu] of crochets) {
+    const lu = Object.hasOwn(scripts, nom) ? scripts[nom] : null;
+    if (lu === attendu) continue;
+    const ecrit = (v: unknown): string => (v === null ? '(absent)' : JSON.stringify(v));
+    fautes.push({
+      famille: 'porte_a_alteree',
+      message:
+        `\`package.json\` — le crochet \`${nom}\` vaut ${ecrit(lu)} au lieu de ${ecrit(attendu)}. ` +
+        `pnpm l'exécute de lui-même — pendant \`pnpm install\`, AVANT toutes les gardes, ou autour ` +
+        `d'un script de la porte : ajouté, retiré ou repointé, il désarme la porte sans toucher à ` +
+        `aucune étape. ${aRetenir}`,
+    });
+  }
+  for (const [nom, definition] of Object.entries(figee.scripts)) {
+    const lue = scripts[nom];
+    if (lue === definition) continue;
+    fautes.push({
+      famille: 'script_repointe',
+      message:
+        `\`package.json\` — le script \`${nom}\`, lancé par une étape de la porte A, vaut ` +
+        `${JSON.stringify(lue ?? null)} au lieu de ${JSON.stringify(definition)}. L'étape garde son ` +
+        `nom et sa commande, et ne mesure plus rien : c'est le repointage que seule une suite ` +
+        `de tests, ou une nuit déjà rouge, rattrapait. ${aRetenir}`,
+    });
+  }
+  return {
+    etapes: lues.length,
+    scripts: Object.keys(figee.scripts).length,
+    crochets: crochets.size,
+    fautes,
+  };
+}
+
+/** Le décompte de la porte A, RENDU : une confrontation qu'on n'imprime pas ne se relit pas. */
+export function lignesDeLaPorteA(c: ConfrontationDeLaPorteA): string[] {
+  return [
+    `PORTE A — ${c.etapes} étape(s) du job confrontée(s) au constat, chacune présente, active, ` +
+      `effective et ENTIÈRE (toutes ses clés), le job et le workflow hors \`jobs\` figés de même ; ` +
+      `${c.scripts} script(s) de \`package.json\` confronté(s) à leur définition figée ; ` +
+      `${c.crochets} crochet(s) de cycle de vie confronté(s) à leur valeur ou à leur absence figée.`,
+  ];
 }
 
 // ── le périmètre, dit et compté ──────────────────────────────────────────────────────────────
@@ -435,16 +1436,51 @@ export interface Confrontation {
   /** Les gardes écrites que le registre ne nomme pas. LE trou que GOV-044 ferme. */
   readonly horsRegistre: readonly string[];
   /**
-   * Les entrées du registre sous `scripts/gates/` dont le script n'est pas suivi. HORS PÉRIMÈTRE,
-   * et RENDUES plutôt que tues : autre dépôt, garde promise à une phase future, entrée fautive —
-   * les trois se taisent aujourd'hui de la même façon. Ce texte disait que les distinguer était le
-   * travail de GOV-051 ; son acceptance porte la COMPARAISON des chemins, pas ce tri, et aucune
-   * tâche ne le porte au 2026-09-27.
+   * Les entrées du registre sous `scripts/gates/` dont le script n'est pas suivi — le silence que
+   * GOV-083 fait parler. Elles se répartissent EXACTEMENT entre `promises` et `fautives`.
    */
   readonly entreesSansScript: readonly GateVue[];
   /** Les fichiers suivis du dossier que l'extension exclut. La LIMITE, nommée. */
   readonly horsExtension: readonly string[];
+  /**
+   * LES TROIS SOUS-FAMILLES DE L'ENTRÉE SANS SCRIPT (GOV-083), distinguées au lieu de se taire :
+   *   — `autreDepot` : le script vit sous `axionia/scripts/gates/`. Sorti du périmètre avec son
+   *     MOTIF — ce dépôt ne peut ni lire ni câbler un fichier d'un autre dépôt ;
+   *   — `promises` : la phase de l'entrée est FUTURE, ou la tâche qui la porte (`tache`) n'est pas
+   *     livrée. Sortie avec sa phase et sa tâche : son absence est un fait attendu ;
+   *   — `fautives` : phase courante ou passée, et aucune tâche non livrée ne la porte — ou, quelle
+   *     que soit sa phase, un script de `package.json` la LANCE, donc la déclare écrite. Le script
+   *     manque là où il est attendu : c'est un REFUS (`gate_sans_script`).
+   * ⚠️ « Une autre tâche non livrée cite ce chemin dans ses paths » NE promet PAS : une tâche qui
+   * RETOUCHE une garde la déclare, et supprimer la garde passerait alors pour « à venir ».
+   */
+  readonly autreDepot: readonly GateVue[];
+  readonly promises: readonly { gate: GateVue; phase: number; porteur: string | null }[];
+  readonly fautives: readonly GateVue[];
+  /** Celles des `fautives` qu'un script de `package.json` lance : perdues, pas promises. */
+  readonly lanceesParLePaquet: readonly GateVue[];
+  /** La phase courante, DÉRIVÉE des tâches — `undefined` si aucune tâche ne la situe. */
+  readonly phaseCourante: number | undefined;
 }
+
+/**
+ * La phase courante : la plus petite phase qui porte encore une tâche non livrée, sinon la
+ * dernière. LA MÊME définition que `docs/PLAN-STATE.md` (`scripts/plan-state/build.ts`), sur le
+ * même vocabulaire (`LIVREE`). Une tâche sans phase ou sans statut ne situe rien.
+ */
+export function phaseCouranteDe(taches: readonly TacheVue[]): number | undefined {
+  const situees = taches.filter(
+    (t): t is TacheVue & { phase: number; statut: string } =>
+      typeof t.phase === 'number' && typeof t.statut === 'string'
+  );
+  const phases = [...new Set(situees.map((t) => t.phase))].sort((a, b) => a - b);
+  return (
+    phases.find((p) => situees.some((t) => t.phase === p && !LIVREE.has(t.statut))) ?? phases.at(-1)
+  );
+}
+
+/** Le dossier des gardes de l'AUTRE dépôt, tel qu'une entrée du registre l'écrit. */
+const GARDES_DE_L_AUTRE_DEPOT = `${DEPOT_VOISIN}/${DOSSIER_DES_GARDES}`;
 
 export function confronterDisqueEtRegistre(vue: Vue): Confrontation {
   // Par la primitive unique (GOV-051). Une écriture indécidable ENTRE dans la population : une
@@ -453,6 +1489,40 @@ export function confronterDisqueEtRegistre(vue: Vue): Confrontation {
   const duDossier = vue.fichiersSuivis.filter(sousLesGardes);
   const surLeDisque = duDossier.filter((f) => f.endsWith(EXTENSION_DES_GARDES));
   const duRegistre = vue.gates.filter((g) => sousLesGardes(g.script));
+  const entreesSansScript = duRegistre.filter((g) => !duDossier.includes(g.script));
+  const phaseCourante = phaseCouranteDe(vue.taches);
+  const statutDe = new Map(vue.taches.map((t) => [t.id, t.statut]));
+  const promises: { gate: GateVue; phase: number; porteur: string | null }[] = [];
+  const fautives: GateVue[] = [];
+  // UN SCRIPT QUE `package.json` LANCE EST DÉCLARÉ ÉCRIT : son absence est une PERTE, pas une
+  // promesse, quelle que soit la phase et quel que soit le statut de sa tâche. Mesuré sur la PR 175 :
+  // `scripts/gates/migrations-additive.ts`, lancé par la porte A, retiré de l'index, sortait en zéro
+  // rangé parmi les promesses, parce que sa tâche porteuse n'est pas livrée.
+  const lances = appelsSuivis(
+    Object.values(scriptsDuPaquet(vue.packageJson)),
+    {},
+    commandesNommees
+  ).fichiers;
+  const lanceesParLePaquet: GateVue[] = [];
+  for (const g of entreesSansScript) {
+    if (lances.has(g.script)) {
+      fautives.push(g);
+      lanceesParLePaquet.push(g);
+      continue;
+    }
+    // ÉCHEC FERMÉ : sans phase courante, rien ne peut être dit « futur ».
+    if (phaseCourante !== undefined && g.phase > phaseCourante) {
+      promises.push({ gate: g, phase: g.phase, porteur: null });
+      continue;
+    }
+    const porteurs = typeof g.tache === 'string' ? [g.tache] : [...(g.tache ?? [])];
+    const porteur = porteurs.find((id) => {
+      const statut = statutDe.get(id);
+      return typeof statut === 'string' && !LIVREE.has(statut);
+    });
+    if (porteur !== undefined) promises.push({ gate: g, phase: g.phase, porteur });
+    else fautives.push(g);
+  }
   return {
     surLeDisque,
     horsExtension: duDossier.filter((f) => !f.endsWith(EXTENSION_DES_GARDES)),
@@ -460,8 +1530,16 @@ export function confronterDisqueEtRegistre(vue: Vue): Confrontation {
     // est une garde que le registre nomme et que `.claude/settings.json` câble. La dérivation du
     // disque ÉTEND la population, elle ne doit en retirer personne.
     jugees: duRegistre.filter((g) => duDossier.includes(g.script)),
-    entreesSansScript: duRegistre.filter((g) => !duDossier.includes(g.script)),
+    entreesSansScript,
     horsRegistre: surLeDisque.filter((f) => !duRegistre.some((g) => g.script === f)),
+    // Une écriture indécidable n'est PAS sortie du périmètre : elle reste où elle tombe.
+    autreDepot: vue.gates.filter(
+      (g) => estSousLeDossier(g.script, GARDES_DE_L_AUTRE_DEPOT) === 'oui'
+    ),
+    promises,
+    fautives,
+    lanceesParLePaquet,
+    phaseCourante,
   };
 }
 
@@ -546,7 +1624,7 @@ export function controler(vue: Vue): Faute[] {
   // ── lint et format BLOQUANTS (REQ-GOV-018) ──
   const lint = etapesDeLint(vue);
   for (const e of lint) {
-    if (/continue-on-error:\s*true/.test(e.bloc) || e.jobNonBloquant) {
+    if (TOLERANCE_ECRITE.test(e.bloc) || e.jobNonBloquant) {
       fautes.push({
         famille: 'lint_non_bloquant',
         message:
@@ -629,10 +1707,62 @@ export function controler(vue: Vue): Faute[] {
         '(`reecrire-champ` et `poser-champ` refusent une entrée absente) — ou retirez le fichier.',
     });
   }
-  const appelants = [...vue.workflows.map((w) => w.source), vue.hooks].join('\n');
+  // ── une entrée du registre sans script : triée, et la fautive REFUSÉE (GOV-083) ──
+  const passif = vue.passifSansScript ?? {};
+  const motifDuPassif = (id: string): string =>
+    Object.hasOwn(passif, id) ? (passif[id] ?? '').trim() : '';
+  for (const g of confrontation.fautives) {
+    const motif = motifDuPassif(g.id);
+    if (motif.length >= MOTIF_MINIMAL) continue;
+    const pourquoi = confrontation.lanceesParLePaquet.includes(g)
+      ? `Un script de \`package.json\` le LANCE : il est déclaré écrit, et sa tâche, livrée ou non, ` +
+        `ne le promet plus — il a été PERDU (retiré de l'index, renommé), pas encore à écrire`
+      : `Phase courante : ${confrontation.phaseCourante ?? 'INDÉTERMINÉE'} — l'entrée n'est ` +
+        `pas d'une phase future, et aucune tâche non livrée ne la porte (champ \`tache\` : ` +
+        `${JSON.stringify(g.tache ?? null)}). Ce script n'existera donc jamais sous ce nom`;
+    fautes.push({
+      famille: 'gate_sans_script',
+      message:
+        `\`${g.id}\` (phase ${g.phase}) nomme \`${g.script}\`, introuvable parmi les fichiers ` +
+        `suivis. ${pourquoi} : ` +
+        `l'entrée est FAUTIVE, et c'est le silence que GOV-083 ferme — une garde qui ne voit pas ` +
+        `ce qui manque la déclare conforme. Corrigez l'entrée (le script réel), rattachez-la à la ` +
+        `tâche qui l'écrira, ou retirez-la${
+          motif.length > 0
+            ? ` ; son passif déclaré tient en ${motif.length} caractère(s), il en faut ${MOTIF_MINIMAL}`
+            : ''
+        }.`,
+    });
+  }
+  const fautivesParId = new Set(confrontation.fautives.map((g) => g.id));
+  for (const id of Object.keys(passif)) {
+    if (fautivesParId.has(id)) continue;
+    fautes.push({
+      famille: 'passif_sans_script_perime',
+      message:
+        `Le passif des entrées sans script déclare \`${id}\`, qui n'est plus une entrée fautive — ` +
+        `son script est suivi, sa tâche la porte encore, ou l'entrée a quitté le registre. Une ` +
+        `tolérance qui ne sert plus absoudrait la PROCHAINE entrée de ce nom sans que personne l'ait ` +
+        `examinée : retirez la ligne de \`PASSIF_SANS_SCRIPT\`.`,
+    });
+  }
+
+  // UNE GARDE EST APPELÉE SI UNE ÉTAPE N'EXÉCUTE QU'ELLE (GOV-061, fait (a) ; tour 3 de la PR 175).
+  // Seuls comptent les `run:` des workflows et les `command` des réglages, lus par un analyseur, puis
+  // jugés par la règle stricte d'`appelsDe` — une seule commande simple, littérale, sans opérateur —,
+  // et ce qu'ils lancent à travers `package.json`, dont chaque valeur est jugée par la même règle.
+  const appels = appelsSuivis(
+    [
+      ...vue.workflows.flatMap((w) => valeursDeCle(w.source, 'run')),
+      ...commandesDesReglages(vue.hooks),
+    ],
+    scriptsDuPaquet(vue.packageJson)
+  );
+  // LE FICHIER, JAMAIS LE NOM (refus d'exactitude, tour 4) : un script de `package.json` qui porte
+  // l'identifiant ou un alias de la garde ne dit rien de ce qu'il exécute — réduit à `true`, il
+  // gardait la garde « câblée ». Seul compte le fichier de la garde, exécuté par une étape.
   for (const g of confrontation.jugees) {
-    const noms = [g.id, g.script, ...(g.alias ?? [])];
-    if (noms.some((n) => appelants.includes(n))) continue;
+    if (appels.fichiers.has(g.script)) continue;
     const motif = (g.horsCi ?? '').trim();
     if (motif.length >= MOTIF_MINIMAL) continue;
     fautes.push({
@@ -774,9 +1904,15 @@ export function lireVue(): Vue {
     .gates;
   const taches = (
     JSON.parse(lire('docs/tasks.json') || '{"taches":[]}') as {
-      taches: { id: string; repo: string; paths?: string[] }[];
+      taches: { id: string; repo: string; paths?: string[]; phase?: number; statut?: string }[];
     }
-  ).taches.map((t) => ({ id: t.id, repo: t.repo, paths: t.paths ?? [] }));
+  ).taches.map((t) => ({
+    id: t.id,
+    repo: t.repo,
+    paths: t.paths ?? [],
+    phase: t.phase,
+    statut: t.statut,
+  }));
 
   return {
     sources,
@@ -787,8 +1923,398 @@ export function lireVue(): Vue {
     gates,
     taches,
     perimetres: PERIMETRES_DECLARES,
+    passifSansScript: PASSIF_SANS_SCRIPT,
+    porteA: PORTE_A_FIGEE,
   };
 }
+
+/**
+ * LE PASSIF DES ENTRÉES FAUTIVES DU REGISTRE (GOV-083), mesuré le 2026-09-27 : cinq entrées de
+ * phase -1 dont la tâche est LIVRÉE et dont le script n'a jamais été écrit sous ce nom. Chacune se
+ * corrige dans `docs/gates.json`, dont l'écrivain est le gardien de la spécification — pas un
+ * développeur (`docs/CONVENTIONS.md` §8). Elles sont déclarées ici UNE PAR UNE, avec leur motif,
+ * plutôt que tues : une entrée fautive NEUVE rougit `gate_sans_script`, et une ligne qui ne sert
+ * plus rougit `passif_sans_script_perime`.
+ */
+/**
+ * LE CONSTAT DE LA PORTE A (GOV-061), relevé sur `.github/workflows/ci.yml` et `package.json` le
+ * 2026-09-27. Il se RELÈVE, il ne se tape pas : l'analyseur YAML partagé lit le job, et chaque ligne
+ * ci-dessous est ce qu'il rend. Une étape ajoutée, retirée, conditionnée, tolérée ou repointée fait
+ * rougir la garde jusqu'à ce que ce constat la porte — dans le même diff que `ci.yml`. Il fige
+ * l'étape ENTIÈRE, le job ENTIER et le workflow hors `jobs` : une clé ajoutée, retirée ou modifiée
+ * rougit `porte_a_alteree`.
+ */
+/** Le jeton que cinq étapes reçoivent pour lire la forge — une valeur, écrite une fois (RM-01). */
+const JETON_DE_LA_FORGE = { env: { GH_TOKEN: '${{ secrets.GITHUB_TOKEN }}' } } as const;
+
+export const PORTE_A_FIGEE: PorteFigee = {
+  job: 'gate-a',
+  si: '${{ github.event.pull_request.merged != true }}',
+  cles: {
+    'runs-on': 'ubuntu-latest',
+    permissions: { contents: 'read', 'pull-requests': 'read' },
+  },
+  workflow: {
+    name: 'Gate A',
+    on: {
+      push: { branches: ['main'] },
+      pull_request: {
+        types: ['opened', 'synchronize', 'reopened', 'edited', 'labeled', 'unlabeled'],
+      },
+    },
+  },
+  etapes: [
+    {
+      nom: 'uses: actions/checkout@v4',
+      uses: 'actions/checkout@v4',
+      cles: { with: { 'fetch-depth': '0' } },
+    },
+    { nom: 'uses: pnpm/action-setup@v4', uses: 'pnpm/action-setup@v4' },
+    {
+      nom: 'uses: actions/setup-node@v4',
+      uses: 'actions/setup-node@v4',
+      cles: { with: { 'node-version': '22', cache: 'pnpm' } },
+    },
+    { nom: 'run: pnpm install --frozen-lockfile', run: 'pnpm install --frozen-lockfile' },
+    { nom: 'Regle de publication (depot public)', run: 'pnpm gov:publication' },
+    { nom: 'La garde de publication sait rougir', run: 'pnpm gov:publication:prove' },
+    { nom: 'Identifiants qualifies', run: 'pnpm gov:identifiants' },
+    { nom: 'La garde des identifiants sait rougir', run: 'pnpm gov:identifiants:prove' },
+    { nom: 'Coherence du backlog', run: 'pnpm gov:tasks' },
+    { nom: 'La garde du backlog sait rougir', run: 'pnpm gov:tasks:prove' },
+    { nom: 'La vue du backlog est egale a sa source', run: 'pnpm gov:tasks:verifie-rendu' },
+    { nom: 'Registre des exigences', run: 'pnpm gov:requirements' },
+    { nom: 'La garde du registre sait rougir', run: 'pnpm gov:requirements:prove' },
+    {
+      nom: 'La vue des exigences est egale a sa source',
+      run: 'pnpm gov:requirements:verifie-rendu',
+    },
+    { nom: 'Registre des decisions', run: 'pnpm gov:hypotheses' },
+    { nom: 'La garde des decisions sait rougir', run: 'pnpm gov:hypotheses:prove' },
+    { nom: 'Table de preseance', run: 'pnpm gov:preseance' },
+    { nom: 'La garde de preseance sait rougir', run: 'pnpm gov:preseance:prove' },
+    { nom: 'Affirmations verifiees sur axionia', run: 'pnpm gov:sonde' },
+    { nom: 'La sonde sait rougir', run: 'pnpm gov:sonde:prove' },
+    { nom: 'ADR — index derive et gabarit', run: 'pnpm gov:adr' },
+    { nom: 'La garde des ADR sait rougir', run: 'pnpm gov:adr:prove' },
+    { nom: 'Matrice d autonomie des agents et garde des pushes', run: 'pnpm gov:autonomie' },
+    { nom: 'La garde d autonomie sait rougir', run: 'pnpm gov:autonomie:prove' },
+    { nom: 'Gabarit de PR, CODEOWNERS et charte des agents', run: 'pnpm gov:pr' },
+    { nom: 'Inventaire prouve — tout etat >= code porte une preuve', run: 'pnpm gov:inventaire' },
+    { nom: 'La garde de l inventaire sait rougir', run: 'pnpm gov:inventaire:prove' },
+    { nom: 'Fiches de role derivees de docs/agents.json', run: 'pnpm gov:agents' },
+    { nom: 'La garde des fiches sait rougir', run: 'pnpm gov:agents:prove' },
+    { nom: 'Les fiches sur le disque sont egales a leur source', run: 'pnpm gov:agents:verifier' },
+    { nom: 'Registre d entite — sentinelle tenue dans les deux sens', run: 'pnpm gov:entite' },
+    { nom: 'La garde du registre d entite sait rougir', run: 'pnpm gov:entite:prove' },
+    {
+      nom: 'Le corps PUBLIE de la PR ne porte aucune coordonnee',
+      run: 'pnpm gov:entite:corps',
+      si: "github.event_name == 'pull_request'",
+      cles: JETON_DE_LA_FORGE,
+    },
+    { nom: 'La garde du corps publie sait rougir', run: 'pnpm gov:entite:corps:prove' },
+    { nom: 'La garde du depot sait rougir', run: 'pnpm gov:depot-visibilite:prove' },
+    {
+      nom: 'Matrice de tracabilite REQ vers tache vers test vers PR',
+      run: 'pnpm gov:trace',
+      cles: JETON_DE_LA_FORGE,
+    },
+    { nom: 'La matrice de tracabilite sait rougir', run: 'pnpm gov:trace:prove' },
+    { nom: 'La vue de tracabilite est derivee de ses sources', run: 'pnpm gov:trace:verifier' },
+    { nom: 'La vue de l etat vivant est egale a sa source', run: 'pnpm plan-state:verifier' },
+    {
+      nom: 'Attributions — garde, poste, lot et identifiants nommes confrontes a leurs sources',
+      run: 'pnpm gov:attributions',
+    },
+    {
+      nom: 'La garde des attributions sait rougir, et laisse passer la citation legitime',
+      run: 'pnpm gov:attributions:prove',
+    },
+    {
+      nom: 'contracts:hash — le contrat est derive, et son empreinte le tient',
+      run: 'pnpm contracts:hash',
+    },
+    { nom: 'La garde de PR sait rougir', run: 'pnpm gov:pr:prove' },
+    { nom: 'Vue GATES.md derivee du registre', run: 'pnpm gov:gates-derivees' },
+    { nom: 'Le decompte des gardes sait rougir', run: 'pnpm gates:prouvees:prove' },
+    { nom: 'Les paths derives sont a jour', run: 'pnpm lot:paths:check' },
+    { nom: 'Vocabulaire — enums, glossaire et etats occupants', run: 'pnpm partners:schema:enums' },
+    { nom: 'La garde du vocabulaire sait rougir', run: 'pnpm partners:schema:enums:prove' },
+    { nom: 'Centimes — aucun flottant, montants en Cents', run: 'pnpm partners:schema:cents' },
+    { nom: 'La garde des centimes sait rougir', run: 'pnpm partners:schema:cents:prove' },
+    { nom: 'Migrations additives', run: 'pnpm partners:migrations:additive' },
+    { nom: 'La garde des migrations sait rougir', run: 'pnpm partners:migrations:additive:prove' },
+    {
+      nom: 'Termes interdits — nomenclature, modeles d axionia et synonymes',
+      run: 'pnpm gov:termes-interdits',
+    },
+    { nom: 'La garde des termes interdits sait rougir', run: 'pnpm gov:termes-interdits:prove' },
+    {
+      nom: 'Lexique interdit — aucun usage prescriptif dans le perimetre de REQ-GOV-017',
+      run: 'pnpm gov:lexique',
+    },
+    {
+      nom: 'La garde du lexique sait rougir, et laisse passer la negation qui protege',
+      run: 'pnpm gov:lexique:prove',
+    },
+    {
+      nom: 'Grille du contrat — aucun forfait, bareme ou pourcentage sans chiffre dans l annexe 1',
+      run: 'pnpm jur:grille-chiffree',
+    },
+    { nom: 'La garde de la grille chiffree sait rougir', run: 'pnpm jur:grille-chiffree:prove' },
+    {
+      nom: "Maquettes — aucune tache d'ecran attribuee sans validation de Will",
+      run: 'pnpm gov:maquettes-validees',
+    },
+    {
+      nom: 'La garde des maquettes sait rougir, y compris sur une ligne du milieu du tableau',
+      run: 'pnpm gov:maquettes-validees:prove',
+    },
+    {
+      nom: 'Micro-copie — chaque issue et chaque ecran ont leur texte, aucun libelle en dur',
+      run: 'pnpm ux:exhaustivite',
+    },
+    {
+      nom: "La garde de la micro-copie sait rougir, en nommant la valeur, l'ecran ou le fichier",
+      run: 'pnpm ux:exhaustivite:prove',
+    },
+    { nom: 'Budgets de performance derives de REQ-GOV-028', run: 'pnpm perf:budgets' },
+    { nom: 'La garde des budgets sait rougir', run: 'pnpm perf:budgets:prove' },
+    {
+      nom: 'Les budgets sur le disque sont le rendu de leur exigence',
+      run: 'pnpm perf:budgets:verifier',
+    },
+    {
+      nom: 'Compteurs de debit — conduite sur panne declaree et executee, famille close',
+      run: 'pnpm securite:rate-famille',
+    },
+    { nom: 'La garde des compteurs de debit sait rougir', run: 'pnpm securite:rate-famille:prove' },
+    { nom: 'Conventions et gardes transposees d axionia', run: 'pnpm gov:conventions' },
+    { nom: 'La garde des conventions sait rougir', run: 'pnpm gov:conventions:prove' },
+    { nom: 'Journal sans donnee personnelle', run: 'pnpm journal:sans-pii' },
+    { nom: 'La garde du journal sait rougir', run: 'pnpm journal:sans-pii:prove' },
+    {
+      nom: 'Donnees personnelles chiffrees, schema et chemins d ecriture',
+      run: 'pnpm securite:schema-pii',
+    },
+    { nom: 'La garde des donnees personnelles sait rougir', run: 'pnpm securite:schema-pii:prove' },
+    { nom: 'Lint', run: 'pnpm lint' },
+    { nom: 'Format', run: 'pnpm format:check' },
+    { nom: 'Typecheck', run: 'pnpm typecheck' },
+    {
+      nom: 'red-first — les tests nouveaux de la PR rougissent contre sa base',
+      run: 'pnpm red-first',
+      si: "github.event_name == 'pull_request'",
+    },
+    { nom: 'La garde red-first sait rougir', run: 'pnpm red-first:prove' },
+    { nom: 'Harnais de l adaptateur MCP', run: 'pnpm harnais-mcp' },
+    { nom: 'Navigateurs des passes d accessibilite', run: 'pnpm a11y:navigateurs' },
+    { nom: 'Tests', run: 'pnpm test', cles: JETON_DE_LA_FORGE },
+    {
+      nom: 'req:check — chaque paire (tache, REQ) a son test annote et VERT',
+      run: 'pnpm req:check',
+      cles: JETON_DE_LA_FORGE,
+    },
+    { nom: 'Le lecteur du rapport de mutation sait rougir', run: 'pnpm mutation:prove' },
+    {
+      nom: 'Mutation des fichiers de la PR — Stryker en bac a sable, survivants nommes',
+      run: 'pnpm mutation:pr',
+    },
+    {
+      nom: 'Etat vivant — fraicheur, verrou d owner, journal',
+      run: 'pnpm gov:etat --now "$(date -u +%Y-%m-%dT%H:%M:%SZ)"',
+      cles: JETON_DE_LA_FORGE,
+    },
+    { nom: 'La garde de l etat vivant sait rougir', run: 'pnpm gov:etat:prove' },
+    // ── LES DOUZE ÉTAPES VENUES DE `main` PENDANT QUE CETTE BRANCHE VIVAIT (PR #165 et #180).
+    //    CE QUI EST VERSIONNÉ ICI EST UNE COPIE FIGÉE, et c'est la raison d'être d'un constat : on
+    //    ne confronte pas un workflow à lui-même. La dérivation dit COMMENT cette copie a été
+    //    produite, elle ne change pas ce qu'elle EST — précision d'une revue `exactitude`, et elle
+    //    compte, parce que RM-01 dit « dériver, jamais recopier » : ici la copie est le livrable.
+    //    Elle a été produite depuis
+    //    `.github/workflows/ci.yml` après `pnpm vues:fusion`, nom et commande lus tels quels, et
+    //    leur compte est confronté à celui que `gov:conventions` nomme — douze, ni onze ni
+    //    quatorze. Une première dérivation en annonçait QUATORZE : elle ne relevait les noms déjà
+    //    figés qu'entre apostrophes simples, et manquait les deux que Prettier écrit en guillemets
+    //    doubles parce que leur libellé contient une apostrophe. Les deux auraient été ajoutées en
+    //    DOUBLE, ce que la famille `etape_en_double` refuse. Le compte de la garde est l’arbitre.
+    //    Chaque garde vient avec sa preuve qu’elle sait rougir : c’est RM-02, et le constat le
+    //    montre par paires. ──
+    {
+      nom: 'Charte — aucun agregat du reseau dans l espace',
+      run: 'pnpm jur:aucun-agregat-reseau',
+    },
+    {
+      nom: 'La garde des agregats du reseau sait rougir',
+      run: 'pnpm jur:aucun-agregat-reseau:prove',
+    },
+    {
+      nom: 'Charte — aucune progression vers un seuil dans l espace',
+      run: 'pnpm jur:aucune-progression',
+    },
+    {
+      nom: 'La garde des progressions sait rougir',
+      run: 'pnpm jur:aucune-progression:prove',
+    },
+    {
+      nom: 'Charte — revue du juriste sur ce qu un apporteur lit, label et checklist',
+      run: 'pnpm jur:revue-apporteur-facing',
+    },
+    {
+      nom: 'La garde de la revue apporteur-facing sait rougir',
+      run: 'pnpm jur:revue-apporteur-facing:prove',
+    },
+    {
+      nom: 'Charte — aucun terme ni rubrique du droit social',
+      run: 'pnpm jur:lexique-social',
+    },
+    {
+      nom: 'La garde du lexique social sait rougir',
+      run: 'pnpm jur:lexique-social:prove',
+    },
+    {
+      nom: 'Seuils et delais du contrat — une seule source, aucun litteral hors SSOT',
+      run: 'pnpm ssot:seuils',
+    },
+    {
+      nom: 'La garde des seuils sait rougir, famille par famille, sans faux positif',
+      run: 'pnpm ssot:seuils:prove',
+    },
+    {
+      nom: 'Roles de la console — requireRole partout, droits dans la matrice',
+      run: 'pnpm securite:roles',
+    },
+    {
+      nom: 'La garde des roles sait rougir',
+      run: 'pnpm securite:roles:prove',
+    },
+  ],
+  scripts: {
+    'gov:publication': 'tsx scripts/gates/gov-publication.ts',
+    'gov:publication:prove': 'tsx scripts/gates/gov-publication.ts --prove',
+    'gov:identifiants': 'tsx scripts/gates/gov-identifiants.ts',
+    'gov:identifiants:prove': 'tsx scripts/gates/gov-identifiants.ts --prove',
+    'gov:tasks': 'tsx scripts/gates/gov-tasks.ts',
+    'gov:tasks:prove': 'tsx scripts/gates/gov-tasks.ts --prove',
+    'gov:tasks:verifie-rendu': 'tsx scripts/gates/gov-tasks.ts --verifie-rendu',
+    'gov:requirements': 'tsx scripts/gates/gov-requirements.ts',
+    'gov:requirements:prove': 'tsx scripts/gates/gov-requirements.ts --prove',
+    'gov:requirements:verifie-rendu': 'tsx scripts/gates/gov-requirements.ts --verifie-rendu',
+    'gov:hypotheses': 'tsx scripts/gates/gov-hypotheses.ts',
+    'gov:hypotheses:prove': 'tsx scripts/gates/gov-hypotheses.ts --prove',
+    'gov:preseance': 'tsx scripts/gates/gov-preseance.ts',
+    'gov:preseance:prove': 'tsx scripts/gates/gov-preseance.ts --prove',
+    'gov:sonde': 'tsx scripts/gates/gov-sonde.ts',
+    'gov:sonde:prove': 'tsx scripts/gates/gov-sonde.ts --prove',
+    'gov:adr': 'tsx scripts/gates/gov-adr.ts',
+    'gov:adr:prove': 'tsx scripts/gates/gov-adr.ts --prove',
+    'gov:autonomie': 'tsx scripts/gates/gov-autonomie.ts',
+    'gov:autonomie:prove': 'tsx scripts/gates/gov-autonomie.ts --prove',
+    'gov:pr': 'tsx scripts/gates/gov-pr.ts',
+    'gov:inventaire': 'tsx scripts/gates/gov-inventaire.ts',
+    'gov:inventaire:prove': 'tsx scripts/gates/gov-inventaire.ts --prove',
+    'gov:agents': 'tsx scripts/gates/gov-agents.ts',
+    'gov:agents:prove': 'tsx scripts/gates/gov-agents.ts --prove',
+    'gov:agents:verifier': 'tsx scripts/agents/generer.ts --verifier',
+    'gov:entite': 'tsx scripts/gates/gov-entite.ts',
+    'gov:entite:prove': 'tsx scripts/gates/gov-entite.ts --prove',
+    'gov:entite:corps': 'tsx scripts/gates/gov-entite.ts --corps-publie',
+    'gov:entite:corps:prove': 'tsx scripts/gates/gov-entite.ts --corps-publie --prove',
+    'gov:depot-visibilite:prove': 'tsx scripts/gates/gov-depot.ts --prove',
+    'gov:trace': 'tsx scripts/gates/gov-trace.ts',
+    'gov:trace:prove': 'tsx scripts/gates/gov-trace.ts --prove',
+    'gov:trace:verifier': 'tsx scripts/gates/gov-trace.ts --verifier',
+    'plan-state:verifier': 'tsx scripts/plan-state/build.ts --verifier',
+    'gov:attributions': 'tsx scripts/gates/gov-attributions.ts',
+    'gov:attributions:prove': 'tsx scripts/gates/gov-attributions.ts --prove',
+    'contracts:hash': 'tsx scripts/contracts/export.ts --verifier',
+    'gov:pr:prove': 'tsx scripts/gates/gov-pr.ts --prove',
+    'gov:gates-derivees': 'tsx scripts/gates/gates-derivees.ts',
+    'gates:prouvees:prove': 'tsx scripts/gates/gates-prouvees.ts --prove',
+    'lot:paths:check': 'tsx scripts/lot/paths-proposes.ts --check',
+    'partners:schema:enums': 'tsx scripts/gates/schema-enums.ts',
+    'partners:schema:enums:prove': 'tsx scripts/gates/schema-enums.ts --prove',
+    'partners:schema:cents': 'tsx scripts/gates/schema-cents.ts',
+    'partners:schema:cents:prove': 'tsx scripts/gates/schema-cents.ts --prove',
+    'partners:migrations:additive': 'tsx scripts/gates/migrations-additive.ts',
+    'partners:migrations:additive:prove': 'tsx scripts/gates/migrations-additive.ts --prove',
+    'gov:termes-interdits': 'tsx scripts/gates/gov-check.ts',
+    'gov:termes-interdits:prove': 'tsx scripts/gates/gov-check.ts --prove',
+    'gov:lexique': 'tsx scripts/gates/lexique-apporteurs.ts',
+    'gov:lexique:prove': 'tsx scripts/gates/lexique-apporteurs.ts --prove',
+    'jur:grille-chiffree': 'tsx scripts/gates/jur-grille-chiffree.ts',
+    'jur:grille-chiffree:prove': 'tsx scripts/gates/jur-grille-chiffree.ts --prove',
+    'gov:maquettes-validees': 'tsx scripts/gates/maquettes-validees.ts',
+    'gov:maquettes-validees:prove': 'tsx scripts/gates/maquettes-validees.ts --prove',
+    'ux:exhaustivite': 'tsx scripts/gates/ux-exhaustivite.ts',
+    'ux:exhaustivite:prove': 'tsx scripts/gates/ux-exhaustivite.ts --prove',
+    'perf:budgets': 'tsx scripts/gates/perf-budgets.ts',
+    'perf:budgets:prove': 'tsx scripts/gates/perf-budgets.ts --prove',
+    'perf:budgets:verifier': 'tsx scripts/gates/perf-budgets.ts --verifier',
+    'securite:rate-famille': 'tsx scripts/gates/rate-famille.ts',
+    'securite:rate-famille:prove': 'tsx scripts/gates/rate-famille.ts --prove',
+    'gov:conventions': 'tsx scripts/gates/gov-conventions.ts',
+    'gov:conventions:prove': 'tsx scripts/gates/gov-conventions.ts --prove',
+    'journal:sans-pii': 'tsx scripts/gates/journal-sans-pii.ts',
+    'journal:sans-pii:prove': 'tsx scripts/gates/journal-sans-pii.ts --prove',
+    'securite:schema-pii': 'tsx scripts/gates/schema-pii.ts',
+    'securite:schema-pii:prove': 'tsx scripts/gates/schema-pii.ts --prove',
+    lint: 'eslint . --max-warnings 0',
+    'format:check': 'prettier --check .',
+    typecheck: 'tsc --noEmit',
+    'red-first': 'tsx scripts/gates/red-first.ts',
+    'red-first:prove': 'tsx scripts/gates/red-first.ts --prove',
+    'harnais-mcp': 'tsx scripts/gates/harnais-mcp.ts',
+    'a11y:navigateurs': 'playwright install --with-deps chromium webkit',
+    test: 'vitest run --coverage --reporter=default --reporter=json --outputFile.json=test-results/vitest.json',
+    'req:check': 'tsx scripts/gates/gov-trace.ts --resultats test-results/vitest.json',
+    'mutation:prove': 'tsx scripts/mutation/rapport.ts --prove',
+    'mutation:pr': 'tsx scripts/mutation/pr.ts',
+    'gov:etat': 'tsx scripts/gates/gov-etat.ts',
+    'gov:etat:prove': 'tsx scripts/gates/gov-etat.ts --prove',
+    // ── LES DOUZE SCRIPTS DES ÉTAPES VENUES DE `main` (PR #165 et #180). Le constat fige DEUX
+    //    choses, et j'ai d'abord manqué la seconde : la liste des ÉTAPES du job, et la COMMANDE de
+    //    chaque script que ces étapes lancent. Figer les étapes seules laissait le témoin
+    //    « chaque script de `package.json` lancé par une étape du job est FIGÉ » rouge, en nommant
+    //    les douze. Sans cette seconde moitié, on garderait le NOM d'une garde en laissant
+    //    réécrire ce qu’elle lance — le nom resterait, la mesure changerait.
+    //    Dérivés de `package.json` par le MÊME calcul que le témoin, lu dans son code. ──
+    'jur:aucun-agregat-reseau': 'tsx scripts/gates/jur-aucun-agregat-reseau.ts',
+    'jur:aucun-agregat-reseau:prove': 'tsx scripts/gates/jur-aucun-agregat-reseau.ts --prove',
+    'jur:aucune-progression': 'tsx scripts/gates/jur-aucune-progression.ts',
+    'jur:aucune-progression:prove': 'tsx scripts/gates/jur-aucune-progression.ts --prove',
+    'jur:revue-apporteur-facing': 'tsx scripts/gates/jur-revue-apporteur-facing.ts',
+    'jur:revue-apporteur-facing:prove': 'tsx scripts/gates/jur-revue-apporteur-facing.ts --prove',
+    'jur:lexique-social': 'tsx scripts/gates/jur-lexique-social.ts',
+    'jur:lexique-social:prove': 'tsx scripts/gates/jur-lexique-social.ts --prove',
+    'ssot:seuils': 'tsx scripts/gates/seuils-ssot.ts',
+    'ssot:seuils:prove': 'tsx scripts/gates/seuils-ssot.ts --prove',
+    'securite:roles': 'tsx scripts/gates/roles.ts',
+    'securite:roles:prove': 'tsx scripts/gates/roles.ts --prove',
+  },
+  paquet: CONFIGURATION_DU_PAQUET_ABSENTE,
+  crochets: { ...AUCUN_CROCHET, postinstall: 'prisma generate' },
+  gestionnaire: GESTIONNAIRE_RELEVE,
+};
+
+export const PASSIF_SANS_SCRIPT: Readonly<Record<string, string>> = {
+  detectPii:
+    'tâche porteuse livrée ; la tâche du harnais MCP, livrée elle aussi, déclarait ce chemin dans ' +
+    'ses paths sans l’écrire : le nom ne désigne rien sur le disque, entrée à corriger au registre.',
+  'gov:contrat':
+    'l’empreinte du contrat est tenue par `pnpm contracts:hash` (`scripts/contracts/export.ts ' +
+    '--verifier`, câblé en porte A) ; ce nom de script n’a jamais existé : entrée à re-pointer.',
+  'gate-deploiement':
+    'tâche porteuse livrée ; le script de vérification d’atterrissage est déclaré par une tâche ' +
+    'de phase 0 non livrée, mais l’entrée reste attribuée à la tâche du socle : à ré-attribuer.',
+  'gov:derivation':
+    'garde DIFFÉRÉE par écrit (`docs/GARDES-AXIONIA.md` §2) et reprise par la tâche de la grille, ' +
+    'qui déclare ce chemin ; son attribution d’origine est exigée par `gardes-transposees.spec.ts`.',
+  'fixtures:source':
+    'tâche porteuse livrée sans ce script, et aucune tâche du backlog ne le déclare : l’en-tête ' +
+    '`Source:` des fixtures n’est tenu par aucun script — entrée à corriger ou à rattacher.',
+};
 
 // ── la preuve ────────────────────────────────────────────────────────────────────────────────
 
@@ -806,9 +2332,35 @@ export const CI_CONFORME =
   '      - name: Conventions transposees\n        run: pnpm gov:conventions\n';
 
 const PKG_CONFORME = JSON.stringify({
-  scripts: { lint: 'eslint .', 'format:check': 'prettier --check .' },
+  packageManager: GESTIONNAIRE_RELEVE,
+  scripts: {
+    lint: 'eslint .',
+    'format:check': 'prettier --check .',
+    'gov:conventions': 'tsx scripts/gates/gov-conventions.ts',
+  },
   devDependencies: { eslint: '^9.36.0', prettier: '^3.6.2' },
 });
+
+/** Le constat de la porte A de la vue de référence : les trois étapes de `CI_CONFORME`, figées. */
+export const PORTE_CONFORME: PorteFigee = {
+  job: 'gate-a',
+  si: null,
+  cles: {},
+  workflow: { name: 'Gate A' },
+  etapes: [
+    { nom: 'Lint', run: 'pnpm lint' },
+    { nom: 'Format', run: 'pnpm format:check' },
+    { nom: 'Conventions transposees', run: 'pnpm gov:conventions' },
+  ],
+  scripts: {
+    lint: 'eslint .',
+    'format:check': 'prettier --check .',
+    'gov:conventions': 'tsx scripts/gates/gov-conventions.ts',
+  },
+  paquet: CONFIGURATION_DU_PAQUET_ABSENTE,
+  crochets: AUCUN_CROCHET,
+  gestionnaire: GESTIONNAIRE_RELEVE,
+};
 
 /**
  * La vue de référence. Elle est CONFORME de bout en bout : chaque témoin en dérive par une seule
@@ -846,14 +2398,15 @@ export const VUE_CONFORME: Vue = {
   ],
   gates: [{ id: 'gov:conventions', phase: -1, script: 'scripts/gates/gov-conventions.ts' }],
   taches: [
-    { id: 'QA-T00', repo: 'partners', paths: ['tests/'] },
-    { id: 'QA-T01', repo: 'partners', paths: ['tests/'] },
-    { id: 'GOV-017a', repo: 'partners', paths: ['docs/'] },
-    { id: 'UX-P0-02', repo: 'partners', paths: ['src/app/UX-P0-02'] },
-    { id: 'UX-P1-02', repo: 'partners', paths: ['src/app/UX-P1-02'] },
-    { id: 'DM-03-A', repo: 'axionia', paths: ['axionia/DM-03-A'] },
+    { id: 'QA-T00', repo: 'partners', paths: ['tests/'], phase: -1, statut: 'fusionnee' },
+    { id: 'QA-T01', repo: 'partners', paths: ['tests/'], phase: 0, statut: 'a_faire' },
+    { id: 'GOV-017a', repo: 'partners', paths: ['docs/'], phase: -1, statut: 'fusionnee' },
+    { id: 'UX-P0-02', repo: 'partners', paths: ['src/app/UX-P0-02'], phase: 0, statut: 'a_faire' },
+    { id: 'UX-P1-02', repo: 'partners', paths: ['src/app/UX-P1-02'], phase: 1, statut: 'a_faire' },
+    { id: 'DM-03-A', repo: 'axionia', paths: ['axionia/DM-03-A'], phase: 0, statut: 'a_faire' },
   ],
   perimetres: PERIMETRES_DECLARES,
+  porteA: PORTE_CONFORME,
 };
 
 function variante(patch: Partial<Vue>): Vue {
@@ -961,10 +2514,198 @@ const TEMOINS: ReadonlyArray<{ famille: string; libelle: string; vue: Vue }> = [
     }),
   },
   {
+    famille: 'garde_ecrite_jamais_appelee',
+    libelle: 'une garde dont le seul « appel » est CITÉ entre guillemets, après un `;`',
+    vue: variante({
+      workflows: [
+        {
+          chemin: '.github/workflows/ci.yml',
+          source: CI_CONFORME.replace(
+            'run: pnpm gov:conventions\n',
+            'run: echo "nuit sautee; pnpm gov:conventions"\n'
+          ),
+        },
+      ],
+    }),
+  },
+  {
+    famille: 'garde_ecrite_jamais_appelee',
+    libelle: 'une garde dont le seul appel est COURT-CIRCUITÉ à droite de `true ||`',
+    vue: variante({
+      workflows: [
+        {
+          chemin: '.github/workflows/ci.yml',
+          source: CI_CONFORME.replace(
+            'run: pnpm gov:conventions\n',
+            'run: true || pnpm gov:conventions\n'
+          ),
+        },
+      ],
+    }),
+  },
+  {
+    famille: 'garde_ecrite_jamais_appelee',
+    libelle:
+      'une garde NON FINALE d’une liste `&&` suivie d’une autre ligne — `bash -e` avale son échec',
+    vue: variante({
+      workflows: [
+        {
+          chemin: '.github/workflows/ci.yml',
+          source: CI_CONFORME.replace(
+            'run: pnpm gov:conventions\n',
+            'run: |\n          pnpm gov:conventions && echo fait\n          echo fin\n'
+          ),
+        },
+      ],
+    }),
+  },
+  {
+    famille: 'garde_ecrite_jamais_appelee',
+    libelle: 'une expression d’Actions qui INJECTE un opérateur dans la ligne de la garde',
+    vue: variante({
+      workflows: [
+        {
+          chemin: '.github/workflows/ci.yml',
+          source: CI_CONFORME.replace(
+            'run: pnpm gov:conventions\n',
+            "run: pnpm gov:conventions ${{ '|| true' }}\n"
+          ),
+        },
+      ],
+    }),
+  },
+  {
+    famille: 'garde_ecrite_jamais_appelee',
+    libelle: 'une garde lancée après un `eval` qui pose un piège rendant 0',
+    vue: variante({
+      workflows: [
+        {
+          chemin: '.github/workflows/ci.yml',
+          source: CI_CONFORME.replace(
+            'run: pnpm gov:conventions\n',
+            `run: eval 'trap "exit 0" EXIT'; pnpm gov:conventions\n`
+          ),
+        },
+      ],
+    }),
+  },
+  // TOUR 4 — le FICHIER, jamais le nom ; aucune affectation ; aucune commande intégrée de pnpm.
+  {
+    famille: 'garde_ecrite_jamais_appelee',
+    libelle: 'la VALEUR du script de la garde réduite à `true`, étape intacte',
+    vue: variante({
+      packageJson: JSON.stringify({
+        ...(JSON.parse(PKG_CONFORME) as { scripts: Record<string, string> }),
+        scripts: {
+          ...(JSON.parse(PKG_CONFORME) as { scripts: Record<string, string> }).scripts,
+          'gov:conventions': 'true',
+        },
+      }),
+    }),
+  },
+  {
+    famille: 'garde_ecrite_jamais_appelee',
+    libelle: '`pnpm ls` vers un script `ls` qui lance la garde — pnpm exécute sa commande `list`',
+    vue: variante({
+      workflows: [
+        {
+          chemin: '.github/workflows/ci.yml',
+          source: CI_CONFORME.replace('run: pnpm gov:conventions\n', 'run: pnpm ls\n'),
+        },
+      ],
+      packageJson: JSON.stringify({
+        ...(JSON.parse(PKG_CONFORME) as { scripts: Record<string, string> }),
+        scripts: {
+          ...(JSON.parse(PKG_CONFORME) as { scripts: Record<string, string> }).scripts,
+          ls: 'tsx scripts/gates/gov-conventions.ts',
+        },
+      }),
+    }),
+  },
+  // TOUR 5 — un nom hérité d'`Object.prototype` passe pour une commande dans la table de pnpm.
+  {
+    famille: 'garde_ecrite_jamais_appelee',
+    libelle:
+      '`pnpm constructor` vers un script de ce nom qui lance la garde — nom hérité d’Object.prototype',
+    vue: variante({
+      workflows: [
+        {
+          chemin: '.github/workflows/ci.yml',
+          source: CI_CONFORME.replace('run: pnpm gov:conventions\n', 'run: pnpm constructor\n'),
+        },
+      ],
+      packageJson: JSON.stringify({
+        ...(JSON.parse(PKG_CONFORME) as { scripts: Record<string, string> }),
+        scripts: {
+          ...(JSON.parse(PKG_CONFORME) as { scripts: Record<string, string> }).scripts,
+          constructor: 'tsx scripts/gates/gov-conventions.ts',
+        },
+      }),
+    }),
+  },
+  {
+    famille: 'garde_ecrite_jamais_appelee',
+    libelle:
+      'une affectation `npm_config_script_shell` qui remplace le shell du script de la garde',
+    vue: variante({
+      workflows: [
+        {
+          chemin: '.github/workflows/ci.yml',
+          source: CI_CONFORME.replace(
+            'run: pnpm gov:conventions\n',
+            'run: npm_config_script_shell=/bin/true pnpm run gov:conventions\n'
+          ),
+        },
+      ],
+    }),
+  },
+  {
+    famille: 'garde_ecrite_jamais_appelee',
+    libelle: 'une garde dont seul l’ALIAS est lancé, par un script qui exécute un AUTRE fichier',
+    vue: variante({
+      gates: [
+        ...VUE_CONFORME.gates,
+        {
+          id: 'req:check',
+          phase: -1,
+          script: 'scripts/gates/gov-trace.ts',
+          alias: ['gov:conventions'],
+        },
+      ],
+      fichiersSuivis: [...VUE_CONFORME.fichiersSuivis, 'scripts/gates/gov-trace.ts'],
+    }),
+  },
+  {
     famille: 'garde_hors_registre',
     libelle: 'une garde ÉCRITE et suivie que `docs/gates.json` ne nomme nulle part',
     vue: variante({
       fichiersSuivis: [...VUE_CONFORME.fichiersSuivis, 'scripts/gates/gov-orpheline.ts'],
+    }),
+  },
+  {
+    famille: 'gate_sans_script',
+    libelle:
+      'une entrée de la phase courante dont le script est introuvable et que sa tâche, livrée, ne porte plus',
+    vue: variante({
+      gates: [
+        ...VUE_CONFORME.gates,
+        {
+          id: 'gov:jamais-ecrite',
+          phase: 0,
+          script: 'scripts/gates/gov-jamais-ecrite.ts',
+          tache: 'QA-T00',
+        },
+      ],
+    }),
+  },
+  {
+    famille: 'passif_sans_script_perime',
+    libelle: 'un passif d’entrée sans script qui ne désigne plus aucune entrée fautive',
+    vue: variante({
+      passifSansScript: {
+        'gov:disparue':
+          'témoin : une ligne de passif dont l’entrée a quitté le registre, et qui absoudrait la prochaine.',
+      },
     }),
   },
   {
@@ -1018,6 +2759,20 @@ const TEMOINS: ReadonlyArray<{ famille: string; libelle: string; vue: Vue }> = [
 
 const CONTRE_TEMOINS: ReadonlyArray<{ libelle: string; vue: Vue }> = [
   { libelle: 'la vue conforme', vue: VUE_CONFORME },
+  {
+    libelle: 'une étape qui n’exécute QUE la garde, par `pnpm run`, suivie d’arguments littéraux',
+    vue: variante({
+      workflows: [
+        {
+          chemin: '.github/workflows/ci.yml',
+          source: CI_CONFORME.replace(
+            'run: pnpm gov:conventions\n',
+            "run: pnpm run gov:conventions --flag 'a'\n"
+          ),
+        },
+      ],
+    }),
+  },
   {
     libelle: 'une action asynchrone exportée d’un module « use server » — le cas normal',
     vue: variante({
@@ -1097,28 +2852,64 @@ const CONTRE_TEMOINS: ReadonlyArray<{ libelle: string; vue: Vue }> = [
     }),
   },
   {
-    libelle: 'une garde citée sous son ALIAS dans le workflow',
+    libelle:
+      'une garde dont un script de `package.json` exécute le FICHIER, sous un autre nom que le sien',
     vue: variante({
       gates: [
         ...VUE_CONFORME.gates,
-        {
-          id: 'req:check',
-          phase: -1,
-          script: 'scripts/gates/gov-trace.ts',
-          alias: ['gov:conventions'],
-        },
+        { id: 'gov:trace', phase: -1, script: 'scripts/gates/gov-trace.ts' },
       ],
       fichiersSuivis: [...VUE_CONFORME.fichiersSuivis, 'scripts/gates/gov-trace.ts'],
+      workflows: [
+        {
+          chemin: '.github/workflows/ci.yml',
+          source: CI_CONFORME + '      - name: Trace\n        run: pnpm req:check\n',
+        },
+      ],
+      packageJson: JSON.stringify({
+        ...(JSON.parse(PKG_CONFORME) as { scripts: Record<string, string> }),
+        scripts: {
+          ...(JSON.parse(PKG_CONFORME) as { scripts: Record<string, string> }).scripts,
+          'req:check': 'tsx scripts/gates/gov-trace.ts --resultats test-results/vitest.json',
+        },
+      }),
     }),
   },
   {
-    libelle:
-      'une gate du registre dont le script n’existe PAS — `gates:prouvees` la nomme, pas nous',
+    libelle: 'une gate sans script PROMISE à une phase future — sortie avec sa phase, sans rougir',
+    vue: variante({
+      gates: [
+        ...VUE_CONFORME.gates,
+        { id: 'partners:rgpd:export-complet', phase: 3, script: 'scripts/gates/rgpd-export.ts' },
+      ],
+    }),
+  },
+  {
+    libelle: 'une gate sans script de la phase courante dont la tâche porteuse n’est PAS livrée',
+    vue: variante({
+      gates: [
+        ...VUE_CONFORME.gates,
+        { id: 'gov:a-venir', phase: 0, script: 'scripts/gates/gov-a-venir.ts', tache: 'QA-T01' },
+      ],
+    }),
+  },
+  {
+    libelle: 'une gate qui désigne l’AUTRE dépôt — sortie du périmètre avec son motif',
+    vue: variante({
+      gates: [
+        ...VUE_CONFORME.gates,
+        { id: 'inertie', phase: 0, script: 'axionia/scripts/gates/inertie.ts' },
+      ],
+    }),
+  },
+  {
+    libelle: 'une entrée fautive DÉCLARÉE au passif, avec son motif — la seule tolérance admise',
     vue: variante({
       gates: [
         ...VUE_CONFORME.gates,
         { id: 'gov:derivation', phase: -1, script: 'scripts/gates/gov-derivation.ts' },
       ],
+      passifSansScript: { 'gov:derivation': PASSIF_SANS_SCRIPT['gov:derivation']! },
     }),
   },
   {
@@ -1135,7 +2926,7 @@ const CONTRE_TEMOINS: ReadonlyArray<{ libelle: string; vue: Vue }> = [
           chemin: '.github/workflows/ci.yml',
           source: CI_CONFORME.replace(
             '      - name: Conventions transposees\n',
-            '      - name: Enums\n        run: pnpm partners:schema:enums\n' +
+            '      - name: Enums\n        run: tsx scripts/gates/schema-enums.ts\n' +
               '      - name: Conventions transposees\n'
           ),
         },
@@ -1184,12 +2975,202 @@ const CONTRE_TEMOINS: ReadonlyArray<{ libelle: string; vue: Vue }> = [
       ],
       packageJson: '{}',
       fichiersSuivis: ['package.json'],
+      // Aucune garde au registre : ce contre-témoin juge le LINT absent, pas une entrée sans script.
+      gates: [],
       perimetres: PERIMETRES_DECLARES.filter((p) => p.cle !== 'etapes-lint-ci'),
     }),
   },
 ];
 
-function prouver(): number {
+/**
+ * LES TÉMOINS DE LA PORTE A (GOV-061) : chacun désarme `CI_CONFORME` ou `PKG_CONFORME` d'UNE façon,
+ * et la confrontation doit nommer la famille. Les contre-témoins prouvent qu'un commentaire ajouté
+ * ne change rien, et que la vue de référence passe.
+ */
+const CI_EN = (de: string, par: string): Vue =>
+  variante({
+    workflows: [{ chemin: '.github/workflows/ci.yml', source: CI_CONFORME.replace(de, par) }],
+  });
+/** La vue de référence dont `package.json` porte, en plus, les scripts donnés. */
+const AVEC_SCRIPTS = (plus: Record<string, string>): Vue => {
+  const pkg = JSON.parse(PKG_CONFORME) as { scripts: Record<string, string> };
+  return variante({
+    packageJson: JSON.stringify({ ...pkg, scripts: { ...pkg.scripts, ...plus } }),
+  });
+};
+const TEMOINS_PORTE_A: ReadonlyArray<{ famille: string; libelle: string; vue: Vue }> = [
+  {
+    famille: 'etape_absente',
+    libelle: 'une étape figée retirée du job',
+    vue: CI_EN('      - name: Format\n        run: pnpm format:check\n', ''),
+  },
+  {
+    famille: 'etape_absente',
+    libelle: 'une étape figée réduite à un commentaire',
+    vue: CI_EN(
+      '      - name: Format\n        run: pnpm format:check\n',
+      '      # - name: Format\n      #   run: pnpm format:check\n'
+    ),
+  },
+  {
+    famille: 'etape_non_figee',
+    libelle: 'une étape ajoutée au job sans être figée',
+    vue: CI_EN(
+      '      - name: Lint\n',
+      '      - name: Nouvelle\n        run: pnpm nouvelle\n      - name: Lint\n'
+    ),
+  },
+  {
+    famille: 'etape_conditionnee',
+    libelle: 'une étape désarmée par une condition toujours fausse',
+    vue: CI_EN('      - name: Format\n', '      - name: Format\n        if: ${{ false }}\n'),
+  },
+  {
+    famille: 'etape_conditionnee',
+    libelle: 'le JOB désarmé par une condition',
+    vue: CI_EN('  gate-a:\n', "  gate-a:\n    if: github.event_name == 'jamais'\n"),
+  },
+  {
+    famille: 'etape_toleree',
+    libelle: 'une tolérance d’échec sous forme évaluée sur une étape qui n’est pas un lint',
+    vue: CI_EN(
+      '        run: pnpm gov:conventions\n',
+      '        run: pnpm gov:conventions\n        continue-on-error: ${{ true }}\n'
+    ),
+  },
+  {
+    famille: 'etape_repointee',
+    libelle: 'une étape dont la commande tolère l’échec dans le shell',
+    vue: CI_EN(
+      '        run: pnpm gov:conventions\n',
+      '        run: pnpm gov:conventions || true\n'
+    ),
+  },
+  {
+    famille: 'porte_a_alteree',
+    libelle: 'une clé `shell:` hors constat sur une étape, qui rend toujours 0',
+    vue: CI_EN(
+      '        run: pnpm lint\n',
+      "        run: pnpm lint\n        shell: sh -c 'exit 0' {0}\n"
+    ),
+  },
+  {
+    famille: 'porte_a_alteree',
+    libelle: 'des `defaults:` posés sur le JOB, qui désarment toutes ses étapes',
+    vue: CI_EN(
+      '  gate-a:\n',
+      "  gate-a:\n    defaults:\n      run:\n        shell: sh -c 'exit 0' {0}\n"
+    ),
+  },
+  {
+    famille: 'porte_a_alteree',
+    libelle: 'un `env:` posé au niveau du WORKFLOW',
+    vue: CI_EN('name: Gate A\n', 'name: Gate A\nenv:\n  CI: "false"\n'),
+  },
+  {
+    famille: 'etape_en_double',
+    libelle: 'deux étapes de même nom, dont la seconde échappait à la confrontation',
+    vue: CI_EN(
+      '      - name: Format\n        run: pnpm format:check\n',
+      '      - name: Format\n        run: pnpm format:check\n'.repeat(2)
+    ),
+  },
+  {
+    famille: 'script_repointe',
+    libelle: 'le script `package.json` d’une étape repointé',
+    vue: variante({
+      packageJson: JSON.stringify({
+        ...(JSON.parse(PKG_CONFORME) as Record<string, unknown>),
+        scripts: {
+          lint: 'eslint .',
+          'format:check': 'prettier --check .',
+          'gov:conventions': 'echo ok',
+        },
+      }),
+    }),
+  },
+  {
+    famille: 'porte_a_illisible',
+    libelle: 'une vue sans constat de la porte A',
+    vue: variante({ porteA: undefined }),
+  },
+  {
+    famille: 'porte_a_alteree',
+    libelle: 'un `.npmrc` suivi à la racine, qui peut changer le shell de chaque `pnpm <script>`',
+    vue: variante({ fichiersSuivis: [...VUE_CONFORME.fichiersSuivis, '.npmrc'] }),
+  },
+  {
+    famille: 'porte_a_alteree',
+    libelle: 'un crochet `postinstall` ajouté, que `pnpm install` exécute avant toutes les gardes',
+    vue: AVEC_SCRIPTS({ postinstall: 'node -e "process.exit(0)"' }),
+  },
+  {
+    famille: 'porte_a_alteree',
+    libelle: 'un `pre<script>` posé devant une garde de la porte, que pnpm 9 exécute avant elle',
+    vue: AVEC_SCRIPTS({ 'pregov:conventions': 'node -e "process.exit(0)"' }),
+  },
+  {
+    famille: 'porte_a_alteree',
+    libelle:
+      'un script nommé `audit`, commande intégrée de pnpm que `pnpm audit` exécute à sa place',
+    vue: AVEC_SCRIPTS({ audit: 'tsx scripts/gates/gov-conventions.ts' }),
+  },
+  {
+    famille: 'porte_a_alteree',
+    libelle: 'un `packageManager` changé, qui fait installer un autre pnpm que celui relevé',
+    vue: variante({
+      packageJson: JSON.stringify({
+        ...(JSON.parse(PKG_CONFORME) as Record<string, unknown>),
+        packageManager: 'pnpm@9.15.9',
+      }),
+    }),
+  },
+];
+
+const CONTRE_TEMOINS_PORTE_A: ReadonlyArray<{ libelle: string; vue: Vue }> = [
+  { libelle: 'la vue conforme', vue: VUE_CONFORME },
+  {
+    libelle: 'un commentaire ajouté au job, qui cite une commande',
+    vue: CI_EN(
+      '      - name: Format\n',
+      '      # pnpm gov:fantome — cité, jamais lancé\n      - name: Format\n'
+    ),
+  },
+  {
+    libelle: '`continue-on-error: false` écrit en toutes lettres',
+    vue: CI_EN(
+      '        run: pnpm lint\n',
+      '        run: pnpm lint\n        continue-on-error: false\n'
+    ),
+  },
+  {
+    libelle:
+      'un script `test`, que `pnpm test` lance réellement (`run.handler(opts, ["test", ...params])`)',
+    vue: AVEC_SCRIPTS({ test: 'vitest run' }),
+  },
+];
+
+async function prouver(): Promise<number> {
+  for (const t of TEMOINS_PORTE_A) {
+    const familles = (await confronterLaPorteA(t.vue)).fautes.map((f) => f.famille);
+    if (!familles.includes(t.famille)) {
+      console.error(
+        `❌ Le témoin de la porte A « ${t.libelle} » n'a PAS fait rougir ${t.famille}.`
+      );
+      console.error(
+        `   Familles obtenues : ${familles.length === 0 ? '(aucune)' : familles.join(', ')}`
+      );
+      return 1;
+    }
+  }
+  for (const c of CONTRE_TEMOINS_PORTE_A) {
+    const fautes = [...controler(c.vue), ...(await confronterLaPorteA(c.vue)).fautes];
+    if (fautes.length > 0) {
+      console.error(`❌ Faux positif de la porte A : « ${c.libelle} » a rougi.`);
+      console.error(`   ${fautes[0]!.famille} — ${fautes[0]!.message}`);
+      return 1;
+    }
+  }
   for (const t of TEMOINS) {
     const familles = controler(t.vue).map((f) => f.famille);
     if (!familles.includes(t.famille)) {
@@ -1208,7 +3189,9 @@ function prouver(): number {
       return 1;
     }
   }
-  const sansTemoin = FAMILLES.filter((f) => !TEMOINS.some((t) => t.famille === f));
+  const sansTemoin = FAMILLES.filter(
+    (f) => !TEMOINS.some((t) => t.famille === f) && !TEMOINS_PORTE_A.some((t) => t.famille === f)
+  );
   if (sansTemoin.length > 0) {
     console.error(`❌ Famille(s) sans témoin : ${sansTemoin.join(', ')}.`);
     return 1;
@@ -1218,7 +3201,8 @@ function prouver(): number {
   );
   console.log(`   ${FAMILLES.map((f) => '• ' + f).join('\n   ')}`);
   console.log(
-    `   ${TEMOINS.length} témoins rouges, ${CONTRE_TEMOINS.length} contre-témoins verts — dont la vue conforme.`
+    `   ${TEMOINS.length + TEMOINS_PORTE_A.length} témoins rouges, ` +
+      `${CONTRE_TEMOINS.length + CONTRE_TEMOINS_PORTE_A.length} contre-témoins verts — dont la vue conforme.`
   );
   return 0;
 }
@@ -1256,10 +3240,21 @@ export function lignesDeConfrontation(vue: Vue): string[] {
   if (c.horsRegistre.length > 0) {
     lignes.push(`     ${c.horsRegistre.join('\n     ')}`);
   }
+  const passif = vue.passifSansScript ?? {};
+  const declarees = c.fautives.filter((g) => Object.hasOwn(passif, g.id)).length;
   lignes.push(
     `   • entrées sous \`${DOSSIER_DES_GARDES}\` dont le script n'est pas suivi ici, donc HORS ` +
-      `périmètre : ${c.entreesSansScript.length} — autre dépôt, phase future ou entrée fautive, ` +
-      `les trois se taisent de la même façon, et aucune tâche ne les distingue encore.`
+      `périmètre : ${c.entreesSansScript.length} — réparties ci-dessous, aucune ne se tait :`,
+    `     ↳ promises (phase future, ou tâche porteuse non livrée) : ${c.promises.length}`,
+    `     ↳ fautives (phase ${c.phaseCourante ?? '?'} ou antérieure sans tâche non livrée, ou lancées par \`package.json\`) : ` +
+      `${c.fautives.length} — dont ${declarees} déclarée(s) au passif, une par une avec son motif`
+  );
+  for (const g of c.fautives) {
+    lignes.push(`       ${g.id} — ${g.script} — ${(passif[g.id] ?? 'NON DÉCLARÉE').trim()}`);
+  }
+  lignes.push(
+    `   • entrées qui désignent l'autre dépôt (\`${GARDES_DE_L_AUTRE_DEPOT}\`), sorties du ` +
+      `périmètre : ${c.autreDepot.length} — ce dépôt ne lit ni ne câble un fichier qui n'est pas le sien`
   );
   if (c.horsExtension.length > 0) {
     lignes.push(
@@ -1278,23 +3273,27 @@ function direLeDisqueEtLeRegistre(vue: Vue): void {
 const APPELE_DIRECTEMENT = /gov-conventions\.ts$/.test(process.argv[1] ?? '');
 
 if (APPELE_DIRECTEMENT) {
-  if (process.argv.includes('--prove')) {
-    process.exit(prouver());
-  } else {
-    const vue = lireVue();
-    direLePerimetre(vue);
-    direLeDisqueEtLeRegistre(vue);
-    const fautes = controler(vue);
-    if (fautes.length === 0) {
-      console.log(
-        `✅ gov:conventions — ${FAMILLES.length} familles vérifiées (REQ-GOV-018, REQ-GOV-029), ` +
-          `aucune violation.`
-      );
-      process.exit(0);
+  void (async () => {
+    if (process.argv.includes('--prove')) {
+      process.exit(await prouver());
+    } else {
+      const vue = lireVue();
+      direLePerimetre(vue);
+      direLeDisqueEtLeRegistre(vue);
+      const porte = await confronterLaPorteA(vue);
+      for (const l of lignesDeLaPorteA(porte)) console.log(l);
+      const fautes = [...controler(vue), ...porte.fautes];
+      if (fautes.length === 0) {
+        console.log(
+          `✅ gov:conventions — ${FAMILLES.length} familles vérifiées (REQ-GOV-018, REQ-GOV-029), ` +
+            `aucune violation.`
+        );
+        process.exit(0);
+      }
+      console.error(`\n❌ gov:conventions — ${fautes.length} violation(s) :\n`);
+      fautes.slice(0, 25).forEach((f) => console.error(`   [${f.famille}] ${f.message}\n`));
+      if (fautes.length > 25) console.error(`   … et ${fautes.length - 25} autre(s).`);
+      process.exit(1);
     }
-    console.error(`\n❌ gov:conventions — ${fautes.length} violation(s) :\n`);
-    fautes.slice(0, 25).forEach((f) => console.error(`   [${f.famille}] ${f.message}\n`));
-    if (fautes.length > 25) console.error(`   … et ${fautes.length - 25} autre(s).`);
-    process.exit(1);
-  }
+  })();
 }

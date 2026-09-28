@@ -7,15 +7,15 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `4dd40e4` — 2026-09-27T12:49:00+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #82 (rien) · 2. #175 (un contrôle requis rouge ou une revue manquante) · 3. #180 (un contrôle requis rouge ou une revue manquante) |
+| Où est `main` ? | `5e73b88` — 2026-09-28T07:14:42+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #181 (rien) · 2. #82 (un contrôle requis rouge ou une revue manquante) · 3. #175 (un conflit avec `main`) |
 | Qui tient quoi ? | QA-T07 (A05) |
 | Où en est la phase ? | phase 0 — 59/116 tâches, reste 45.35 j |
-| Le prochain pas | fusionner #82, puis SEC-17 — Rôles console : enum `ConsoleRole { admin, qualifieur, comptable, lecteur }`, matrice SSOT, `requireRole`, garde AST (chemin critique) |
+| Le prochain pas | fusionner #181, puis SEC-17 — Rôles console : enum `ConsoleRole { admin, qualifieur, comptable, lecteur }`, matrice SSOT, `requireRole`, garde AST (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
 | Dernière entrée de journal | PR #180 — 2026-09-27 |
 
-**Ce qu’on tape maintenant.** `gh pr view 82 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** `gh pr view 181 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : 0
 
@@ -60,9 +60,9 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | rien — fusionnable maintenant |
-| 2 | #175 — chore(GOV-083): lot L0-09 — gates sans script triees, porte A confrontee, causes temoignees, journal | `t/lot-l0-09` | un contrôle requis rouge ou une revue manquante |
-| 3 | #180 — feat(JUR-T02): lot L0-10 — SSOT des délais du contrat, contrat sobre figé, alertes Telegram sans PII | `t/lot-l0-10` | un contrôle requis rouge ou une revue manquante |
+| 1 | #181 — chore(GOV-012): registre rattrape, cinq taches livrees par deux PR fusionnees passent fusionnee | `t/gov-cloture-l0-07-l0-10` | rien — fusionnable maintenant |
+| 2 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un contrôle requis rouge ou une revue manquante |
+| 3 | #175 — chore(GOV-083): lot L0-09 — gates sans script triees, porte A confrontee, causes temoignees, journal | `t/lot-l0-09` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -78,13 +78,13 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 
 ## Décisions du jour
 
-`docs/adr/0008-contrat-evenements-enveloppe-et-nomenclature.md` — partners/ADR-0008 — Le contrat d'événements : enveloppe sur le fil, sept types, empreinte du JSON Schema · `docs/adr/0022-carte-du-schema-des-phases-0-et-1.md` — partners/ADR-0022 — La carte du schéma des phases 0 et 1 : une table, un créateur ; un type de journal par genre de transition · `docs/adr/0023-route-des-coordonnees-de-candidature.md` — partners/ADR-0023 — Les coordonnées d'un candidat se tirent par une route HMAC d'axionia, jamais par un événement
+Aucun ADR daté du 2026-09-28 (jour du dernier atterrissage).
 
 Dérivé de `git log` sur `docs/adr/`, restreint au jour du dernier atterrissage. Une décision de Will n’est pas un ADR : elle vit au registre `docs/DECISIONS.md`, tranchée ou tenue par une hypothèse datée.
 
 ## Prochain pas
 
-**Fusionner #82** — elle est en tête de file et ne bloque sur rien.
+**Fusionner #181** — elle est en tête de file et ne bloque sur rien.
 
 **SEC-17** — Rôles console : enum `ConsoleRole { admin, qualifieur, comptable, lecteur }`, matrice SSOT, `requireRole`, garde AST (1 j, **sur le chemin critique**) : 27 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
@@ -92,7 +92,7 @@ Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeS
 
 ## Dernier atterrissage
 
-`origin/main` = `4dd40e4` (2026-09-27T12:49:00+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `5e73b88` (2026-09-28T07:14:42+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
@@ -161,15 +161,74 @@ hors score.
 
 **Appris.** Depuis GOV-042, `--fusionnee` ne suffit plus : `reclasser.mjs` n'écrit pas l'attestation, et `gov:tasks` rougit sans elle. Le rattrapage du dépôt la lit dans l'historique, en filtrant le sujet par `(#<pr>)` avant de chercher l'identifiant. Ce filtre est nécessaire : le message de la PR 168 nomme aussi GOV-055, livrée par la PR 158. Sans le filtre, la recherche aurait trouvé deux commits et laissé l'attestation vide.
 
-### PR #169 — 2026-09-27 — feat(INT-T01c): contrat v2 — onze types, charges fermées, route des coordonnées du candidat
+### PR #175 — 2026-09-27 — chore(GOV-083): lot L0-09 — gates sans script triees, porte A confrontee, causes temoignees, journal
 
-**Fait.** Le contrat d'événements passe en `schema_version` 2 : `TYPES_EVENEMENT` fait onze, les quatre types entrants en fin de liste, et l'enum `type_evenement_recu` les reçoit par une migration additive (`20260927000300`). Les onze charges sont fermées dans `packages/contracts/payloads.ts` et confrontées clé pour clé, dans les deux sens, à la fixture du producteur réel copiée sous `tests/fixtures/axionia/fixtures-producteur.v1.json`. La frontière porte une exemption nommée, par chemin, de `payload.parrainCodeCapture` sur la candidature seulement ; `packages/contracts/api.ts` publie, sous l'empreinte, le schéma de la route des coordonnées du candidat (partners/ADR-0023). Empreinte `8b0b09a...` → `e8ce08f...`.
+**Fait.** Quatre tâches de la phase 0. GOV-083 : une entrée du registre des gates dont le script manque
+sur le disque est triée (autre dépôt, promise, fautive) au lieu d'être écartée en silence ; la fautive
+rougit `gate_sans_script`, et les cinq existantes sont déclarées une par une au passif, avec leur motif.
+GOV-061 : chaque étape du job `gate-a` est confrontée à un constat figé, présente, active et effective,
+et une garde citée dans un seul commentaire du workflow ne passe plus pour appelée. GOV-094 : le banc
+du corps publié exige un témoin par CAUSE, et le compte des causes se dérive des sites qui les émettent.
+GOV-073 : une seule grammaire de journal, importée par ses quatre lecteurs, avec un refus commun.
+Correctif du 2026-09-27T07:55Z, après un veto de sécurité : le constat de la porte A fige désormais
+l'étape entière, le job entier et le workflow hors `jobs`, clé par clé (`porte_a_alteree`), et refuse
+deux étapes de même nom (`etape_en_double`) ; une garde n'est plus dite appelée que par une commande
+en position de commande, et un script que `package.json` lance ne passe plus pour une promesse.
+Correctif du 2026-09-27T08:42Z, après un refus d'exactitude : la lecture des appels découpait la ligne
+sans tenir compte des guillemets, et une garde citée dans un `echo`, court-circuitée par `true ||`
+ou placée après un `exit` passait pour appelée. Un lexer shell minimal respecte désormais guillemets
+et échappements, et ne compte que les commandes atteignables dont le statut compte ; une ligne qu'il
+ne sait pas juger n'appelle rien. La configuration pnpm/npm de la racine est figée absente au constat.
+Correctif du 2026-09-27T09:20Z, après un refus d'exactitude et un veto de sécurité : le lexer est
+retiré. Une garde n'est plus appelée que si une étape n'exécute qu'elle — une seule commande simple,
+littérale, sur une ligne, sans opérateur ni `$` ni expression d'Actions ; tout le reste n'appelle
+rien. Les crochets que `pnpm install` exécute à la racine, et les `pre`/`post` des scripts de la
+porte, sont figés par leur valeur ou leur absence.
+Correctif du 2026-09-27T10:10Z, après un refus d'exactitude et un veto de sécurité : une garde
+passait pour appelée dès qu'une étape lançait le script qui porte son identifiant, même réduit à
+`true`. Seul compte désormais le fichier de la garde, exécuté par une étape, directement ou par la
+valeur d'un script. Aucune affectation n'est admise en tête d'une commande. `pnpm <mot>` ne compte
+plus quand le mot est une commande intégrée de pnpm, et un script qui en porte le nom est refusé,
+sauf `test`. La valeur de `packageManager` est figée au constat. Au tour 5, un nom hérité
+d'`Object.prototype` compte aussi pour une commande intégrée : l'ensemble est dérivé à l'exécution,
+jamais recopié. Et `pnpm <mot>` sans `run` ne compte que si le mot est en ASCII bas.
 
-**Reste.** Le lockstep du registre : textes de REQ-INT-004 (onze types, `schema_version` 2) et REQ-QA-007 (trois API), deux titres de test promis par INT-T01a, les `paths` d'INT-T01c, puis les vues ; REQ-DM-018 écrit encore l'ancien nom du HT encaissé. Côté axionia, dans la même fenêtre (INT-T05, INT-T22) : copie de `contracts.v2.json`, émission des quatre types, renommage du HT encaissé en `montantHtCents`, fixtures régénérées en v2, exemption par chemin ; la route elle-même (INT-T27-A) et son client (INT-T26). Le récepteur ne juge pas encore les charges fermées : le Zod généré ne projette que l'enveloppe.
+**Reste.** GOV-085 n'est pas livrée : GOV-082, dont elle dépend, est encore à faire. Les cinq entrées
+fautives de `docs/gates.json` sont à corriger par le gardien de la spécification ; chaque correction
+fera rougir sa ligne de passif, qu'il faudra retirer. Seize familles à plusieurs sites, nommées par le
+balayage de GOV-094, attendent la tâche qui les traitera. Limite déclarée de la porte A : un `if:`
+toujours faux posé sur le job `gate-a` saute aussi l'étape `gov:conventions`, et un job requis
+sauté laisse fusionner ; en CI, cette faute n'est vue qu'hors du job (pré-vol, revue). Dettes
+relevées par la revue, non traitées ici : dans `gov-entite.ts`, une famille écrite autrement qu'en
+littéral est sautée par le balayage des causes, et le compte de sites repose sur la même lecture ;
+dans `gov-attributions.ts`, un titre indenté est lu par `gov:etat` ; le point (6) de GOV-094 attend
+sa tâche ; GOV-083 et GOV-061 partagent un fichier et ont été composées dans un même lot. La règle
+littérale de GOV-083 (1), phase courante égale refus, rougirait dix entrées de phase 0 dont la tâche
+porteuse est à faire (`a_faire`) : c'est un avenant d'acceptance à écrire au registre. Hors du job
+`gate-a`, rien ne juge qu'une étape s'exécute : une étape de `nightly.yml` sous un `if:` faux
+compte encore pour un appel. Prix de la règle stricte : un idiome composé qui lance vraiment la garde
+est un faux rouge, qu'on écrit en une étape à part. Et le fichier d'une garde est tenu appelé si une
+seule étape le lance, même en `--prove` : trois étapes de verdict (`gov:etat`, `gov:lecons`,
+`gates:prouvees`) ne comptent plus, et leurs gardes restent appelées par leur preuve.
 
-**Appris.** Un nom d'événement qui ENTRE au contrat devient interdit en clair partout ailleurs : `gov:termes-interdits` refuse un nom VALIDE écrit hors de `packages/contracts`, commentaires `.ts` compris, alors qu'il tolérait le même nom tant qu'il était hors nomenclature — ajouter un type rougit donc des fichiers que le diff du contrat ne touche pas (ici `src/domain/apporteur/snapshot-candidature.ts`). Et le producteur v1 émettait un champ (`paiement.recu`) sous un nom que le glossaire interdit sec : fermer une charge fidèlement au producteur peut buter sur le glossaire, qui prime ; le renommage se nomme alors dans le test, pas dans la fixture.
+**Appris.** Une tâche qui cite le chemin d'une garde dans ses `paths` ne la promet pas : elle peut
+aussi bien la retoucher. Seul le champ `tache` de l'entrée du registre dit qui l'écrira. Autre fait :
+l'analyseur YAML que Prettier embarque rend les commentaires comme des nœuds, avec leur position.
+Retirer les commentaires d'un workflow ne demande donc aucun découpage maison. Et une confrontation
+qui ne lit que les clés qu'elle connaît laisse passer toutes les autres : un `shell:` ou un
+`with: ref:` changent ce qu'une étape exécute sans changer sa commande. On fige l'objet entier.
+Enfin, découper une commande shell par une expression régulière la lit comme un texte, pas comme
+une commande : les guillemets, les courts-circuits et l'arrière-plan décident de ce qui s'exécute.
+Trois tours à modéliser le shell ont chacun laissé passer une forme (`set +e`, `eval`, un `&&` non
+final que `bash -e` avale) : on reconnaît une seule forme et on refuse le reste. Dernier fait : pnpm 9 lance
+de lui-même les `pre`/`post` d'un script : `enable-pre-post-scripts` y vaut `true` par défaut.
+Et `pnpm ls` exécute la commande `list`, jamais le script `ls` : le mot qui suit `pnpm` n'est un
+script que s'il n'est pas une commande intégrée. `pnpm test`, lui, lance bien le script `test`.
+Dernier fait, mesuré au tour 5 : la table des commandes de pnpm 9.12.0 est un objet JS ordinaire.
+Un mot qui nomme une propriété héritée du prototype y trouve une fonction : pnpm le prend pour une
+commande et sort sans lancer le script. `pnpm run <mot>`, lui, lance bien le script.
 
-… 3 entrée(s) affichée(s) sur 73 ; les 70 plus ancienne(s) se lisent dans `docs/journal/`.
+… 3 entrée(s) affichée(s) sur 74 ; les 71 plus ancienne(s) se lisent dans `docs/journal/`.
 
 ## Dette déclarée
 
