@@ -9951,7 +9951,9 @@
         "REQ-GOV-021": [
           "tests/unit/gouvernance/clore-une-tache-livree-seule.spec.ts"
         ]
-      }
+      },
+      "issue": 183,
+      "owner": "A01"
     },
     {
       "id": "GOV-058",
