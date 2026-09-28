@@ -2128,7 +2128,11 @@ export const PORTE_A_FIGEE: PorteFigee = {
     },
     { nom: 'La garde de l etat vivant sait rougir', run: 'pnpm gov:etat:prove' },
     // ── LES DOUZE ÉTAPES VENUES DE `main` PENDANT QUE CETTE BRANCHE VIVAIT (PR #165 et #180).
-    //    Elles ne sont pas ajoutées ici par choix : elles sont DÉRIVÉES de
+    //    CE QUI EST VERSIONNÉ ICI EST UNE COPIE FIGÉE, et c'est la raison d'être d'un constat : on
+    //    ne confronte pas un workflow à lui-même. La dérivation dit COMMENT cette copie a été
+    //    produite, elle ne change pas ce qu'elle EST — précision d'une revue `exactitude`, et elle
+    //    compte, parce que RM-01 dit « dériver, jamais recopier » : ici la copie est le livrable.
+    //    Elle a été produite depuis
     //    `.github/workflows/ci.yml` après `pnpm vues:fusion`, nom et commande lus tels quels, et
     //    leur compte est confronté à celui que `gov:conventions` nomme — douze, ni onze ni
     //    quatorze. Une première dérivation en annonçait QUATORZE : elle ne relevait les noms déjà
@@ -2269,6 +2273,25 @@ export const PORTE_A_FIGEE: PorteFigee = {
     'mutation:pr': 'tsx scripts/mutation/pr.ts',
     'gov:etat': 'tsx scripts/gates/gov-etat.ts',
     'gov:etat:prove': 'tsx scripts/gates/gov-etat.ts --prove',
+    // ── LES DOUZE SCRIPTS DES ÉTAPES VENUES DE `main` (PR #165 et #180). Le constat fige DEUX
+    //    choses, et j'ai d'abord manqué la seconde : la liste des ÉTAPES du job, et la COMMANDE de
+    //    chaque script que ces étapes lancent. Figer les étapes seules laissait le témoin
+    //    « chaque script de `package.json` lancé par une étape du job est FIGÉ » rouge, en nommant
+    //    les douze. Sans cette seconde moitié, on garderait le NOM d'une garde en laissant
+    //    réécrire ce qu’elle lance — le nom resterait, la mesure changerait.
+    //    Dérivés de `package.json` par le MÊME calcul que le témoin, lu dans son code. ──
+    'jur:aucun-agregat-reseau': 'tsx scripts/gates/jur-aucun-agregat-reseau.ts',
+    'jur:aucun-agregat-reseau:prove': 'tsx scripts/gates/jur-aucun-agregat-reseau.ts --prove',
+    'jur:aucune-progression': 'tsx scripts/gates/jur-aucune-progression.ts',
+    'jur:aucune-progression:prove': 'tsx scripts/gates/jur-aucune-progression.ts --prove',
+    'jur:revue-apporteur-facing': 'tsx scripts/gates/jur-revue-apporteur-facing.ts',
+    'jur:revue-apporteur-facing:prove': 'tsx scripts/gates/jur-revue-apporteur-facing.ts --prove',
+    'jur:lexique-social': 'tsx scripts/gates/jur-lexique-social.ts',
+    'jur:lexique-social:prove': 'tsx scripts/gates/jur-lexique-social.ts --prove',
+    'ssot:seuils': 'tsx scripts/gates/seuils-ssot.ts',
+    'ssot:seuils:prove': 'tsx scripts/gates/seuils-ssot.ts --prove',
+    'securite:roles': 'tsx scripts/gates/roles.ts',
+    'securite:roles:prove': 'tsx scripts/gates/roles.ts --prove',
   },
   paquet: CONFIGURATION_DU_PAQUET_ABSENTE,
   crochets: { ...AUCUN_CROCHET, postinstall: 'prisma generate' },
