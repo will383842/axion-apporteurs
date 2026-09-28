@@ -12431,7 +12431,9 @@
         "REQ-GOV-026": [
           "tests/unit/gouvernance/une-branche-reelle-de-la-forge-est-admise.spec.ts"
         ]
-      }
+      },
+      "issue": 184,
+      "owner": "A01"
     }
   ]
 }
