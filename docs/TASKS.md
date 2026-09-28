@@ -8,12 +8,12 @@
 >
 > Une tache = une PR, **≤ 1,5 jour**. Le plafond est porte par la garde `gov:tasks`.
 
-**291 taches · 220.85 j estimes.**
+**291 taches · 221.35 j estimes.**
 
 | Phase | Taches | Jours | Terminees |
 | --- | ---: | ---: | ---: |
 | -1 — Gouvernance (prealable bloquant) | 39 | 23.75 | 39 |
-| 0 — Socle technique | 117 | 90.35 | 76 |
+| 0 — Socle technique | 117 | 90.85 | 76 |
 | 1 — Operationnel | 62 | 48.00 | 0 |
 | 2 — Argent | 45 | 33.50 | 0 |
 | 3 — Pilotage et conformite | 28 | 25.25 | 0 |
@@ -524,7 +524,7 @@ Couvre : `REQ-QA-014`
 
 ### QA-T07 — Gate sécurité : semgrep
 
-`0.5 j` · zone `qualite` · depend de `QA-T01`
+`1 j` · zone `qualite` · depend de `QA-T01`
 
 Couvre : `REQ-QA-011`, `REQ-QA-013`
 
