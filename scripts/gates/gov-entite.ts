@@ -47,6 +47,7 @@
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
+import ts from 'typescript';
 
 import {
   CHAMPS,
@@ -83,7 +84,12 @@ export type Univers = {
   fichiers: Fichier[];
 };
 
-export type Faute = { famille: string; message: string };
+/**
+ * Une faute. `cause` distingue les messages DISTINCTS qu'une même famille sait émettre (GOV-094) :
+ * la non-vacuité du banc du corps publié se juge à ce grain-là, et chaque site qui émet une famille
+ * de `FAMILLES_CORPS_PUBLIE` la nomme — `causesEmises()` refuse un site qui ne la nomme pas.
+ */
+export type Faute = { famille: string; message: string; cause?: string };
 
 export const FAMILLES = [
   'champ_absent',
@@ -1143,6 +1149,7 @@ export function controlerRegistreExemptions(exemptions: Exemption[]): Faute[] {
     if (manques.length > 0) {
       fautes.push({
         famille: 'exemption_malformee',
+        cause: 'exemption_mal_formee',
         message:
           `${ou} — ${manques.join(' ; ')}. Une exemption mal formée est PIRE qu'une exemption ` +
           `absente : elle a l'air d'une décision prise, donc plus personne ne la relit.`,
@@ -1155,6 +1162,7 @@ export function controlerRegistreExemptions(exemptions: Exemption[]): Faute[] {
     if (vues.has(cle)) {
       fautes.push({
         famille: 'exemption_malformee',
+        cause: 'exemption_en_double',
         message: `${ou} — cette exemption est déjà déclarée. Deux lignes pour une exception : on ne saura pas laquelle retirer.`,
       });
     }
@@ -1281,6 +1289,7 @@ export function jugerCorpsPublie(lecture: LectureDuCorps, exemptions: Exemption[
   if (!lecture.lu) {
     fautes.push({
       famille: 'lecture_impossible',
+      cause: 'lecture_impossible',
       message:
         `Le corps publié n'a PAS pu être lu : ${lecture.motif}. Ce dépôt est PUBLIC ` +
         `(REQ-GOV-031) et le corps d'une PR y est un artefact publié au même titre qu'un fichier ` +
@@ -1298,6 +1307,7 @@ export function jugerCorpsPublie(lecture: LectureDuCorps, exemptions: Exemption[
   if (lecture.lectureInachevee) {
     fautes.push({
       famille: 'revisions_non_lues',
+      cause: 'lecture_interrompue',
       message:
         `La lecture s'est ARRÊTÉE avant la fin : la borne de ${PAGES_MAX * EDITIONS_PAR_PAGE} ` +
         `révision(s) a été atteinte, ou la forge a servi un curseur qui n'avançait plus. Ce n'est ` +
@@ -1347,6 +1357,7 @@ export function jugerCorpsPublie(lecture: LectureDuCorps, exemptions: Exemption[
   for (const h of illisiblesNonAbsoutes) {
     fautes.push({
       famille: 'revisions_non_lues',
+      cause: 'revision_illisible',
       message:
         `PR #${lecture.pr} — révision du ${h} : la forge l'ANNONCE et en donne l'horodatage, mais ` +
         `son \`diff\` est NUL. Elle sert \`diff: null\` quand l'édition a produit un corps VIDE ou ` +
@@ -1366,6 +1377,7 @@ export function jugerCorpsPublie(lecture: LectureDuCorps, exemptions: Exemption[
   if (illisiblesSansHorodatage > 0) {
     fautes.push({
       famille: 'revisions_non_lues',
+      cause: 'revision_sans_horodatage',
       message:
         `PR #${lecture.pr} — la forge a servi ${illisiblesSansHorodatage} révision(s) SANS ` +
         `\`editedAt\` : quel que soit leur texte, on ne sait pas les DÉSIGNER. Celles-là n'ont AUCUN ` +
@@ -1385,6 +1397,7 @@ export function jugerCorpsPublie(lecture: LectureDuCorps, exemptions: Exemption[
   if (jamaisServies > 0) {
     fautes.push({
       famille: 'revisions_non_lues',
+      cause: 'revisions_jamais_servies',
       message:
         `La forge annonce ${lecture.revisionsAnnoncees} révision(s) du corps, ${lecture.revisionsLues} ` +
         `ont été lues, et ${jamaisServies} n'ont JAMAIS été servies — elles ne figurent dans aucune ` +
@@ -1421,6 +1434,7 @@ export function jugerCorpsPublie(lecture: LectureDuCorps, exemptions: Exemption[
       }
       fautes.push({
         famille: c.revision ? 'coordonnee_dans_une_revision' : 'coordonnee_dans_le_corps_courant',
+        cause: c.revision ? 'coordonnee_revision' : 'coordonnee_corps_courant',
         message:
           `${c.origine} — coordonnée en clair « ${coordonnee} » (empreinte ${empreinte}). ` +
           (c.revision
@@ -1456,6 +1470,10 @@ export function jugerCorpsPublie(lecture: LectureDuCorps, exemptions: Exemption[
       if (e.pr !== lecture.pr || servies.has(e) || !bienFormees.has(e)) continue;
       fautes.push({
         famille: 'exemption_sans_objet',
+        cause:
+          e.empreinte === undefined
+            ? 'exemption_revision_sans_objet'
+            : 'exemption_empreinte_sans_objet',
         message:
           e.empreinte === undefined
             ? `\`${CHEMIN_EXEMPTIONS}\` — l'exemption PR #${e.pr} / révision ${e.revision} (forme ` +
@@ -1868,12 +1886,134 @@ export function lireUneFois(numero: string, gh: ExecuteurGh): LectureDuCorps {
   return assemblerLecture(numero, corpsCourant, editions);
 }
 
+/** Le fichier de cette garde : ses sites d'émission SONT la source du compte des causes (RM-01). */
+const CE_FICHIER = 'scripts/gates/gov-entite.ts';
+
+/** Un site d'émission d'une famille : la famille, la cause qu'il nomme (`null` : aucune), sa ligne. */
+export interface CauseEmise {
+  readonly famille: string;
+  readonly cause: string | null;
+  readonly ligne: number;
+}
+
+/**
+ * Les valeurs littérales d'une expression, chacune avec le CHEMIN de ternaires qui la choisit : une
+ * chaîne, ou les branches d'un `c ? a : b` (récursif). `null` si l'expression n'est pas de cette
+ * forme — une valeur calculée ne se dérive pas, et le site est alors signalé plutôt que deviné.
+ */
+function branchesLitterales(e: ts.Expression): { valeur: string; chemin: string }[] | null {
+  if (ts.isParenthesizedExpression(e)) return branchesLitterales(e.expression);
+  if (ts.isStringLiteral(e) || ts.isNoSubstitutionTemplateLiteral(e)) {
+    return [{ valeur: e.text, chemin: '' }];
+  }
+  if (ts.isConditionalExpression(e)) {
+    const oui = branchesLitterales(e.whenTrue);
+    const non = branchesLitterales(e.whenFalse);
+    if (oui === null || non === null) return null;
+    const c = e.condition.getText();
+    return [
+      ...oui.map((b) => ({ valeur: b.valeur, chemin: `${c}?${b.chemin}` })),
+      ...non.map((b) => ({ valeur: b.valeur, chemin: `${c}:${b.chemin}` })),
+    ];
+  }
+  return null;
+}
+
+/** Les sites d'émission d'un texte : tout littéral objet qui porte `famille` ET `message`. */
+function sitesDEmission(
+  source: string,
+  chemin: string
+): {
+  familles: { valeur: string; chemin: string }[] | null;
+  causes: { valeur: string; chemin: string }[] | null;
+  ligne: number;
+}[] {
+  const fichier = ts.createSourceFile(chemin, source, ts.ScriptTarget.Latest, true);
+  const out: ReturnType<typeof sitesDEmission> = [];
+  const visiter = (n: ts.Node): void => {
+    if (ts.isObjectLiteralExpression(n)) {
+      const prop = (nom: string): ts.PropertyAssignment | undefined =>
+        n.properties.find(
+          (p): p is ts.PropertyAssignment =>
+            ts.isPropertyAssignment(p) && ts.isIdentifier(p.name) && p.name.text === nom
+        );
+      const famille = prop('famille');
+      if (famille !== undefined && prop('message') !== undefined) {
+        const cause = prop('cause');
+        out.push({
+          familles: branchesLitterales(famille.initializer),
+          causes: cause === undefined ? null : branchesLitterales(cause.initializer),
+          ligne: fichier.getLineAndCharacterOfPosition(n.getStart()).line + 1,
+        });
+      }
+    }
+    ts.forEachChild(n, visiter);
+  };
+  visiter(fichier);
+  return out;
+}
+
+/**
+ * LES CAUSES QUE CE FICHIER SAIT ÉMETTRE, DÉRIVÉES DE SON CODE (GOV-094). Chaque site qui émet une
+ * famille de `FAMILLES_CORPS_PUBLIE` nomme sa `cause` ; un ternaire de familles s'apparie au
+ * ternaire de causes de même condition. Un site sans cause — ou dont la cause ne s'apparie pas — est
+ * rendu avec `cause: null`, et le banc le REFUSE : un message ajouté sans cause échapperait au grain.
+ */
+export function causesEmises(source = readFileSync(CE_FICHIER, 'utf8')): CauseEmise[] {
+  const familles = new Set(FAMILLES_CORPS_PUBLIE);
+  const out: CauseEmise[] = [];
+  for (const site of sitesDEmission(source, CE_FICHIER)) {
+    const f = site.familles;
+    if (f === null || f.length === 0 || !f.every((b) => familles.has(b.valeur))) continue;
+    const c = site.causes;
+    if (c !== null && f.length === 1) {
+      for (const b of c) out.push({ famille: f[0]!.valeur, cause: b.valeur, ligne: site.ligne });
+    } else if (
+      c !== null &&
+      c.length === f.length &&
+      f.every((b, i) => b.chemin === c[i]!.chemin)
+    ) {
+      f.forEach((b, i) => out.push({ famille: b.valeur, cause: c[i]!.valeur, ligne: site.ligne }));
+    } else {
+      for (const b of f) out.push({ famille: b.valeur, cause: null, ligne: site.ligne });
+    }
+  }
+  return out;
+}
+
+/**
+ * LE BALAYAGE (GOV-094, livrable 6) : les familles du dépôt qu'un même script émet depuis PLUSIEURS
+ * sites — donc qui portent plusieurs causes. Lu sur les gardes suivies de `scripts/gates/`, par la
+ * même lecture des sites que `causesEmises`. Il NOMME, il ne juge pas : fermer toutes ces familles
+ * ici serait un périmètre que personne n'a mesuré.
+ * ⚠️ LIMITE DÉCLARÉE : un site écrit autrement qu'un littéral `{ famille, message }` (un appel
+ * `ajouter('famille', …)`, une famille calculée) n'est pas compté.
+ */
+export function famillesMulticauses(
+  fichiers: readonly string[] = entreesSuiviesOuRefus('gov:entite')
+    .map((e) => e.chemin)
+    .filter((c) => c.startsWith('scripts/gates/') && c.endsWith('.ts'))
+): { fichier: string; famille: string; sites: number }[] {
+  const out: { fichier: string; famille: string; sites: number }[] = [];
+  for (const fichier of fichiers) {
+    const parFamille = new Map<string, number>();
+    for (const site of sitesDEmission(readFileSync(fichier, 'utf8'), fichier)) {
+      for (const b of site.familles ?? [])
+        parFamille.set(b.valeur, (parFamille.get(b.valeur) ?? 0) + 1);
+    }
+    for (const [famille, sites] of parFamille) if (sites > 1) out.push({ fichier, famille, sites });
+  }
+  return out.sort((a, b) => b.sites - a.sites || a.fichier.localeCompare(b.fichier));
+}
+
 /**
  * LA PREUVE, HORS LIGNE. Un témoin par famille, des contre-témoins verts, et un témoin POSITIF de
  * la sonde elle-même : la forme masquée que produit le gabarit reste VERTE, sans quoi la garde
  * rougirait sur le corps qu'elle est censée bénir et se ferait retirer dans la semaine.
  */
-function prouverCorpsPublie(): number {
+export function prouverCorpsPublie(
+  garder: (t: { famille: string; cause: string }) => boolean = () => true
+): number {
   const HORODATAGE = '2026-01-02T03:04:05Z';
   const PR_TEMOIN = 4242;
   const corps = (texte: string, revision = false): LectureDuCorps => ({
@@ -1956,12 +2096,15 @@ function prouverCorpsPublie(): number {
 
   const TEMOINS: {
     famille: string;
+    /** La cause que ce témoin PORTE — le grain de la non-vacuité (GOV-094). */
+    cause: string;
     lecture: LectureDuCorps;
     exemptions?: Exemption[];
     attendu: 1 | 2;
   }[] = [
     {
       famille: 'coordonnee_dans_le_corps_courant',
+      cause: 'coordonnee_corps_courant',
       lecture: corps(`IBAN : ${IBAN_TEMOIN}`),
       attendu: 1,
     },
@@ -1970,12 +2113,14 @@ function prouverCorpsPublie(): number {
       // caractère que le banc d'essai de `normaliserEspaces` — UNE seule normalisation pour les
       // fichiers suivis et pour le corps publié, sans quoi les deux divergeraient (RM-01).
       famille: 'coordonnee_dans_le_corps_courant',
+      cause: 'coordonnee_corps_courant',
       lecture: corps(`IBAN : ${ibanAvecSeparateur(IBAN_TEMOIN, ' ')}`),
       attendu: 1,
     },
     {
       // LE DÉFAUT MESURÉ SUR LA PR #31 : corps courant PROPRE, révision qui porte la valeur.
       famille: 'coordonnee_dans_une_revision',
+      cause: 'coordonnee_revision',
       lecture: {
         lu: true,
         pr: PR_TEMOIN,
@@ -2006,6 +2151,7 @@ function prouverCorpsPublie(): number {
       // lui, une ligne du registre resterait valable sur une révision dont le contenu a changé
       // de sens, c'est-à-dire une autorisation ouverte sur un texte que personne n'a examiné.
       famille: 'exemption_sans_objet',
+      cause: 'exemption_empreinte_sans_objet',
       lecture: corps('aucune coordonnée dans cette révision', true),
       exemptions: [exemptionPour(IBAN_TEMOIN, HORODATAGE, PR_TEMOIN)],
       attendu: 1,
@@ -2014,6 +2160,7 @@ function prouverCorpsPublie(): number {
       // UNE LIGNE ILLISIBLE. Une exemption sans motif a l'air d'une décision prise, donc plus
       // personne ne la relit — et elle devient permanente sans que quiconque l'ait voulu.
       famille: 'exemption_malformee',
+      cause: 'exemption_mal_formee',
       lecture: corps(`IBAN : ${IBAN_TEMOIN}`, true),
       exemptions: [{ ...exemptionPour(IBAN_TEMOIN, HORODATAGE, PR_TEMOIN), motif: '' }],
       attendu: 1,
@@ -2022,6 +2169,7 @@ function prouverCorpsPublie(): number {
       // UNE EMPREINTE TRONQUÉE. Seize caractères hexadécimaux se collisionnent en 2^32 essais :
       // la ligne absoudrait alors une AUTRE coordonnée que celle qu'on a examinée.
       famille: 'exemption_malformee',
+      cause: 'exemption_mal_formee',
       lecture: corps(`IBAN : ${IBAN_TEMOIN}`, true),
       exemptions: [
         {
@@ -2035,6 +2183,7 @@ function prouverCorpsPublie(): number {
       // LE TÉMOIN QUI EMPÊCHE L'EXEMPTION D'ÊTRE UNE PASSOIRE : une révision NON exemptée qui
       // porte une coordonnée rougit MÊME sur une PR qui a par ailleurs des révisions exemptées.
       famille: 'coordonnee_dans_une_revision',
+      cause: 'coordonnee_revision',
       lecture: {
         lu: true,
         pr: PR_TEMOIN,
@@ -2071,6 +2220,7 @@ function prouverCorpsPublie(): number {
       // LE CORPS COURANT N'EST JAMAIS EXEMPTABLE : il s'édite, donc il n'y a rien à excuser.
       // Une exemption qui le couvrirait serait une permission de publier.
       famille: 'coordonnee_dans_le_corps_courant',
+      cause: 'coordonnee_corps_courant',
       lecture: corps(`IBAN : ${IBAN_TEMOIN}`),
       exemptions: [exemptionPour(IBAN_TEMOIN, HORODATAGE, PR_TEMOIN)],
       attendu: 1,
@@ -2080,6 +2230,7 @@ function prouverCorpsPublie(): number {
       // exemption qui ne diffère QUE par l'HORODATAGE n'absout pas. Sans ce cas, retirer la clé
       // d'horodatage de l'appariement laissait ce banc entièrement vert.
       famille: 'coordonnee_dans_une_revision',
+      cause: 'coordonnee_revision',
       lecture: corps(`IBAN : ${IBAN_TEMOIN}`, true),
       exemptions: [exemptionPour(IBAN_TEMOIN, '2026-01-02T09:09:09Z', PR_TEMOIN)],
       attendu: 1,
@@ -2087,6 +2238,7 @@ function prouverCorpsPublie(): number {
     {
       // … QUE par l'EMPREINTE : même PR, même horodatage, une AUTRE coordonnée déclarée.
       famille: 'coordonnee_dans_une_revision',
+      cause: 'coordonnee_revision',
       lecture: corps(`IBAN : ${IBAN_TEMOIN}`, true),
       exemptions: [exemptionPour(IBANS_TEMOINS_ETRANGERS.DE!, HORODATAGE, PR_TEMOIN)],
       attendu: 1,
@@ -2095,6 +2247,7 @@ function prouverCorpsPublie(): number {
       // … QUE par la PR. Exempter une révision d'une AUTRE PR n'absout rien ici : sinon une
       // ligne écrite pour une PR fermée couvrirait tout ce qui reste à écrire.
       famille: 'coordonnee_dans_une_revision',
+      cause: 'coordonnee_revision',
       lecture: corps(`IBAN : ${IBAN_TEMOIN}`, true),
       exemptions: [exemptionPour(IBAN_TEMOIN, HORODATAGE, PR_TEMOIN + 1)],
       attendu: 1,
@@ -2106,6 +2259,7 @@ function prouverCorpsPublie(): number {
       // famille exigée ici est `coordonnee_dans_une_revision`, pas `exemption_malformee` : c'est
       // la moitié qui manquait.
       famille: 'coordonnee_dans_une_revision',
+      cause: 'coordonnee_revision',
       lecture: corps(`IBAN : ${IBAN_TEMOIN}`, true),
       exemptions: [
         {
@@ -2117,6 +2271,7 @@ function prouverCorpsPublie(): number {
     },
     {
       famille: 'lecture_impossible',
+      cause: 'lecture_impossible',
       lecture: { lu: false, motif: 'gh introuvable (témoin)' },
       attendu: 2,
     },
@@ -2125,12 +2280,14 @@ function prouverCorpsPublie(): number {
       // transformerait toutes les exemptions en dettes imaginaires, et le verdict passerait de
       // « je n'ai pas pu lire » à « ton registre est faux » — deux diagnostics opposés.
       famille: 'lecture_impossible',
+      cause: 'lecture_impossible',
       lecture: { lu: false, motif: 'réseau injoignable (témoin)' },
       exemptions: [exemptionPour(IBAN_TEMOIN, HORODATAGE, PR_TEMOIN)],
       attendu: 2,
     },
     {
       famille: 'revisions_non_lues',
+      cause: 'revisions_jamais_servies',
       lecture: {
         lu: true,
         pr: PR_TEMOIN,
@@ -2152,6 +2309,7 @@ function prouverCorpsPublie(): number {
       // la révision, en donne l'horodatage, et en sert un `diff` NUL — corps vidé, ou re-posté
       // à l'identique. Sans ligne au registre, elle n'est PAS réputée propre.
       famille: 'revisions_non_lues',
+      cause: 'revision_illisible',
       lecture: illisible([HORODATAGE_ILLISIBLE]),
       attendu: 2,
     },
@@ -2161,6 +2319,7 @@ function prouverCorpsPublie(): number {
       // qu'on absoudrait. Le témoin porte une exemption BIEN formée sur l'autre horodatage :
       // c'est ce qui prouve que ce n'est pas l'absence de registre qui le fait rougir.
       famille: 'revisions_non_lues',
+      cause: 'revision_sans_horodatage',
       lecture: illisible([null]),
       exemptions: [deRevision(HORODATAGE_ILLISIBLE)],
       attendu: 2,
@@ -2170,6 +2329,7 @@ function prouverCorpsPublie(): number {
       // `diff` nul ne redeviendra pas un texte, et annoncer un report sur ce qui ne se referme
       // jamais ferait relire cette ligne un jour comme une dette oubliée.
       famille: 'exemption_malformee',
+      cause: 'exemption_mal_formee',
       lecture: illisible([HORODATAGE_ILLISIBLE]),
       exemptions: [{ ...deRevision(HORODATAGE_ILLISIBLE), definitive: false }],
       attendu: 1,
@@ -2179,6 +2339,7 @@ function prouverCorpsPublie(): number {
       // une révision LUE. Absoudre « la révision entière » d'un texte que la forge nous a DONNÉ
       // reviendrait à autoriser n'importe quelle coordonnée par une ligne de trois champs.
       famille: 'coordonnee_dans_une_revision',
+      cause: 'coordonnee_revision',
       lecture: corps(`IBAN : ${IBAN_TEMOIN}`, true),
       exemptions: [deRevision(HORODATAGE)],
       attendu: 1,
@@ -2186,8 +2347,40 @@ function prouverCorpsPublie(): number {
     {
       // … et la ligne qui n'a rien absous ROUGIT, elle n'est pas silencieusement ignorée.
       famille: 'exemption_sans_objet',
+      cause: 'exemption_revision_sans_objet',
       lecture: corps('aucune coordonnée dans cette révision', true),
       exemptions: [deRevision(HORODATAGE_ILLISIBLE)],
+      attendu: 1,
+    },
+    {
+      // LA LECTURE INTERROMPUE (GOV-094) : elle n'était gardée que par un bloc de consommation
+      // dédié, plus bas. Au grain de la CAUSE, elle porte son témoin ici comme les trois autres —
+      // aucun écart annoncé/lu, seule l'interruption est active (RM-11).
+      famille: 'revisions_non_lues',
+      cause: 'lecture_interrompue',
+      lecture: {
+        lu: true,
+        pr: PR_TEMOIN,
+        corps: [
+          { origine: 'témoin', horodatage: null, texte: 'aucune coordonnée ici', revision: false },
+        ],
+        revisionsLues: 0,
+        revisionsAnnoncees: 0,
+        lectureInachevee: true,
+        revisionsIllisibles: [],
+      },
+      attendu: 2,
+    },
+    {
+      // UNE EXEMPTION DÉCLARÉE DEUX FOIS (GOV-094) : la seconde cause de `exemption_malformee`,
+      // sans témoin jusqu'ici. Deux lignes bien formées, identiques : on ne saurait laquelle retirer.
+      famille: 'exemption_malformee',
+      cause: 'exemption_en_double',
+      lecture: corps(`IBAN : ${IBAN_TEMOIN}`, true),
+      exemptions: [
+        exemptionPour(IBAN_TEMOIN, HORODATAGE, PR_TEMOIN),
+        exemptionPour(IBAN_TEMOIN, HORODATAGE, PR_TEMOIN),
+      ],
       attendu: 1,
     },
   ];
@@ -2253,12 +2446,17 @@ function prouverCorpsPublie(): number {
     return 1;
   }
 
-  for (const t of TEMOINS) {
+  const temoins = TEMOINS.filter(garder);
+  for (const t of temoins) {
     const v = jugerCorpsPublie(t.lecture, t.exemptions ?? []);
-    if (!v.fautes.some((f) => f.famille === t.famille) || v.code !== t.attendu) {
+    if (
+      !v.fautes.some((f) => f.famille === t.famille && f.cause === t.cause) ||
+      v.code !== t.attendu
+    ) {
       console.error(
         `❌ Le témoin de « ${t.famille} » n'a pas rendu ce qu'il devait : code ${v.code} ` +
-          `(attendu ${t.attendu}), familles [${v.fautes.map((f) => f.famille).join(', ') || '—'}].`
+          `(attendu ${t.attendu}), cause « ${t.cause} » attendue, causes obtenues ` +
+          `[${v.fautes.map((f) => `${f.famille} › ${f.cause ?? '?'}`).join(', ') || '—'}].`
       );
       return 1;
     }
@@ -2305,11 +2503,38 @@ function prouverCorpsPublie(): number {
     }
   }
 
-  const sansTemoin = FAMILLES_CORPS_PUBLIE.filter((f) => !TEMOINS.some((t) => t.famille === f));
+  const sansTemoin = FAMILLES_CORPS_PUBLIE.filter((f) => !temoins.some((t) => t.famille === f));
   if (sansTemoin.length > 0) {
     console.error(
       `❌ ${sansTemoin.length} famille(s) sans témoin qui rougit : ${sansTemoin.join(', ')}.\n` +
         `   Une règle jamais vue rougir ne garde rien.`
+    );
+    return 1;
+  }
+
+  // ── LA NON-VACUITÉ AU GRAIN DE LA CAUSE (GOV-094) ──────────────────────────────────────────
+  // Une famille qui garde UN témoin sur quatre causes restait « couverte » au grain de la famille :
+  // c'est ainsi que le témoin de la révision illisible a pu quitter ce banc, le 2026-09-23, sans
+  // qu'il cesse d'imprimer ses six familles. Le compte des causes se DÉRIVE des sites qui les
+  // émettent (`causesEmises`), jamais d'une liste tapée à côté.
+  const emises = causesEmises();
+  const sansCause = emises.filter((c) => c.cause === null);
+  if (sansCause.length > 0) {
+    console.error(
+      `❌ ${sansCause.length} site(s) d'émission sans cause nommée : ` +
+        `${sansCause.map((c) => `${c.famille} (ligne ${c.ligne})`).join(', ')}.\n` +
+        '   Un message qui ne nomme pas sa cause échappe au grain de la non-vacuité : ajoute-lui `cause`.'
+    );
+    return 1;
+  }
+  const temoignees = new Set(temoins.map((t) => t.cause));
+  const orphelines = emises.filter((c) => !temoignees.has(c.cause as string));
+  if (orphelines.length > 0) {
+    console.error(
+      `❌ ${orphelines.length} cause(s) sans témoin qui rougit : ` +
+        `${orphelines.map((c) => `${c.famille} › ${c.cause} (ligne ${c.ligne})`).join(', ')}.\n` +
+        `   ${emises.length} cause(s) émise(s) par le code, ${emises.length - orphelines.length} avec leur ` +
+        'témoin. Une famille couverte par une AUTRE de ses causes ne prouve rien de celle-ci.'
     );
     return 1;
   }
@@ -2604,6 +2829,11 @@ function prouverCorpsPublie(): number {
     `✅ Les ${FAMILLES_CORPS_PUBLIE.length} familles du corps publié rougissent chacune sur son témoin — preuve faite.`
   );
   console.log(`   ${FAMILLES_CORPS_PUBLIE.map((f) => '• ' + f).join('\n   ')}`);
+  console.log(
+    `   ${emises.length} cause(s) émise(s) par le code, ${emises.length} avec leur témoin — le grain ` +
+      `de la non-vacuité est la CAUSE, pas la famille : ${temoins.length} témoin(s) pour ` +
+      `${FAMILLES_CORPS_PUBLIE.length} famille(s).`
+  );
   console.log(
     `   La LECTURE elle-même est éprouvée hors ligne : un \`gh\` de papier qui TOMBE rend ` +
       `toujours \`lu: false\`, donc 2 — jamais un corps vide qui passerait pour propre. Le ` +

@@ -8,12 +8,12 @@
 >
 > Une tache = une PR, **≤ 1,5 jour**. Le plafond est porte par la garde `gov:tasks`.
 
-**290 taches · 220.85 j estimes.**
+**291 taches · 221.35 j estimes.**
 
 | Phase | Taches | Jours | Terminees |
 | --- | ---: | ---: | ---: |
 | -1 — Gouvernance (prealable bloquant) | 39 | 23.75 | 39 |
-| 0 — Socle technique | 116 | 90.35 | 59 |
+| 0 — Socle technique | 117 | 90.85 | 64 |
 | 1 — Operationnel | 62 | 48.00 | 0 |
 | 2 — Argent | 45 | 33.50 | 0 |
 | 3 — Pilotage et conformite | 28 | 25.25 | 0 |
@@ -412,7 +412,7 @@ Couvre : `REQ-GOV-008`, `REQ-GOV-025`, `REQ-GOV-026`
 
 ## Phase 0 — Socle technique
 
-### JUR-T02 — SSOT des seuils et **de TOUS les délais du contrat** + garde « aucun littéral »
+### JUR-T02 — SSOT des seuils et **de TOUS les délais du contrat** + garde « aucun littéral » ✅ **fusionnee**
 
 `0.75 j` · zone `juridique` · sensible : argent, rgpd · depend de `GOV-000`, `JUR-T01` · decisions `W9`
 
@@ -742,7 +742,7 @@ Couvre : `REQ-ARG-029`, `REQ-QA-010`, `REQ-QA-011`, `REQ-QA-012`, `REQ-SEC-008`,
 
 **Tests.** `tests/integration/idor.spec.ts` · `tests/unit/securite/acces-scope.spec.ts`
 
-### SEC-17 — Rôles console : enum `ConsoleRole { admin, qualifieur, comptable, lecteur }`, matrice SSOT, `requireRole`, garde AST
+### SEC-17 — Rôles console : enum `ConsoleRole { admin, qualifieur, comptable, lecteur }`, matrice SSOT, `requireRole`, garde AST ✅ **fusionnee**
 
 `1 j` · zone `securite` · `schema` · sensible : attribution, espace · depend de `SEC-04`
 
@@ -782,7 +782,7 @@ Couvre : `REQ-INT-026`
 
 **Tests.** `tests/integration/adaptateur-mcp.spec.ts`
 
-### INT-T14 — Alertes console par bot Telegram dédié
+### INT-T14 — Alertes console par bot Telegram dédié ✅ **fusionnee**
 
 `0.5 j` · zone `integration` · sensible : espace, rgpd · depend de `QA-T08`
 
@@ -892,7 +892,7 @@ Couvre : `REQ-CPL-013`, `REQ-CPL-026`, `REQ-QA-027`, `REQ-UX-022`, `REQ-UX-028`
 
 **Tests.** `tests/unit/domaine/temps-horloge-et-feries.spec.ts` · `tests/unit/domaine/seuil-prioritaire.spec.ts`
 
-### JUR-T26 — Gates structurelles de la charte relationnelle
+### JUR-T26 — Gates structurelles de la charte relationnelle ✅ **fusionnee**
 
 `0.5 j` · zone `juridique` · sensible : espace · depend de `QA-T01`, `SEC-17`
 
@@ -902,7 +902,7 @@ Couvre : `REQ-JUR-034`, `REQ-JUR-035`, `REQ-JUR-036`, `REQ-JUR-037`
 
 **Tests.** `tests/unit/juridique/charte-relationnelle.spec.ts`
 
-### JUR-T27 — Gabarit de contrat sobre : retrait de la déchéance, du barème gradué et du vocabulaire disciplinaire
+### JUR-T27 — Gabarit de contrat sobre : retrait de la déchéance, du barème gradué et du vocabulaire disciplinaire ✅ **fusionnee**
 
 `0.5 j` · zone `juridique` · sensible : attribution, espace, rgpd · depend de `JUR-T01` · decisions `HYP-D11`, `W11`
 
@@ -1752,6 +1752,16 @@ Couvre : `REQ-INT-032`, `REQ-INT-029`
 **Acceptation.** DEPOT AXIONIA — la PR porte l'etiquette de depot et suit le runbook de fusion d'axionia. TACHE SENSIBLE — donnees personnelles. Cadrage de l'architecte du 2026-09-26 (partners/ADR-0023). AUCUNE MIGRATION : la route lit `Submission` et `partners_sync_outbox`, elle n'ecrit aucune table ; son journal d'appel passe par le journal structure d'axionia. (1) `GET /api/partners/candidatures/{candidatureId}/coordonnees` verifie une signature HMAC-SHA-256 de l'horodatage et de la requete sous le secret d'integration dedie, tolerance 300 s, comparaison a temps constant, liste d'autorisation d'adresses reseau ; toute requete non signee, mal signee ou hors fenetre est refusee et n'a lu aucune ligne. (2) PORTEE : la route ne repond que pour une candidature effectivement emise vers Partners (une ligne existe dans `partners_sync_outbox` pour ce `candidatureId`) ; un identifiant non emis rend EXACTEMENT la meme reponse qu'un identifiant inexistant, corps et statut compares octet a octet. (3) REPONSE FERMEE : `{nom, prenom, email, telephone}`, dechiffres depuis les colonnes chiffrees de `Submission` au moment de la reponse, chaque champ nul s'il est absent, aucun autre champ ; son schema est celui de `packages/contracts/api.ts` (INT-T01c), jamais retape. Aucun cache. (4) JOURNAL SANS CLAIR : chaque appel journalise l'identifiant de candidature, l'empreinte de l'adresse reseau et le resultat, jamais une coordonnee ; un test inspecte la ligne de journal. (5) INERTIE : sans le drapeau d'activation de la synchronisation, la route rend la reponse d'un identifiant inexistant. (6) TEMOIN A DEUX FACES : une candidature emise rend ses quatre champs et rien d'autre ; la meme requete pour une candidature non emise, puis avec une signature fausse, ne rend aucune coordonnee et le test le prouve sur le corps. (7) DÉBIT PLAFONNÉ PAR CANDIDATURE (partners/ADR-0023 : la route sert au traitement, elle n'est pas un annuaire) : au plus 5 lectures réussies par `candidatureId` sur 24 heures glissantes, par le limiteur à conduite sur panne déclarée `refuser` ; au-delà, la réponse est celle d'un identifiant inexistant et l'écart est journalisé et alerté. Le plafond laisse passer les rejeux légitimes de Partners après une panne de son côté ; il interdit la lecture répétée. TÉMOIN : la sixième lecture d'une même candidature dans les 24 heures ne rend aucune coordonnée, et la première lecture d'une autre candidature passe.
 
 **Tests.** `axionia/src/server/partners-sync/__tests__/route-coordonnees.spec.ts`
+
+### GOV-103 — Le motif de branch refuse une branche reelle de la forge, et six taches livrees ne peuvent pas etre closes
+
+`0.5 j` · zone `gouvernance` · aucune dependance
+
+Couvre : `REQ-GOV-026`
+
+**Acceptation.** La PR #114 (lot L0-02) a ete fusionnee depuis la branche `t/lot-L0-02`. Le motif de `branch` fixe par partners/ADR-0007, `^(t/[a-z0-9][a-z0-9._-]*|lot/[A-Za-z0-9][A-Za-z0-9._/-]*)$`, refuse la majuscule apres `t/`. Consequence mesuree : `reclasser.mjs`, qui lit ce motif dans le schema, rend `branche_de_la_forge_refusee`, et les six taches livrees par #114 (GOV-046, GOV-048, GOV-076, GOV-078, GOV-082, GOV-086) restent `a_faire` alors que leur code est sur `main`. Ecrire une branche fictive en minuscules est exclu par l'ADR-0007 lui-meme (tableau des options ecartees) : le champ deviendrait decoratif. DECISION DE WILL DU 2026-09-28 : elargir le motif. A livrer : (1) la forme `t/` admet les majuscules, comme la forme `lot/` les admet deja ; le motif reste FERME, une branche sans prefixe reconnu reste refusee ; (2) l'ADR-0007 porte un amendement date qui cite la decision et la mesure. TEMOINS : (a) VERT, une tache `fusionnee` sur `t/lot-L0-02` passe la validation du schema ; (b) ROUGE, une branche sans prefixe reconnu reste refusee et nommee `schema` ; (c) VERT, l'etat reel du registre reste vert.
+
+**Tests.** `tests/unit/gouvernance/une-branche-reelle-de-la-forge-est-admise.spec.ts`
 
 ## Phase 1 — Operationnel
 

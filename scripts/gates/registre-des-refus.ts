@@ -293,8 +293,8 @@ export const REFUS_NOMMES: Readonly<Record<string, readonly string[]>> = {
   ],
   'scripts/gates/gov-check.ts': ['module › si APPELE_DIRECTEMENT › (decision.code)'],
   'scripts/gates/gov-conventions.ts': [
-    "module › si APPELE_DIRECTEMENT › si process.argv.includes('--prove') › (prouver())",
-    "module › si APPELE_DIRECTEMENT › sinon process.argv.includes('--prove') › (1)",
+    "module › si process.argv.includes('--prove') › (await prouver())",
+    "module › sinon process.argv.includes('--prove') › (1)",
   ],
   'scripts/gates/gov-entite.ts': [
     "module › si APPELE_DIRECTEMENT › si iCorps >= 0 && !process.argv.includes('--prove') › si numero === undefined || !/^\\d+$/.test(numero) › (2)",

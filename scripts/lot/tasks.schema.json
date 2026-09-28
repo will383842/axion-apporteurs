@@ -133,7 +133,7 @@
         "lot": { "type": ["string", "null"] },
         "branch": {
           "type": ["string", "null"],
-          "pattern": "^(t/[a-z0-9][a-z0-9._-]*|lot/[A-Za-z0-9][A-Za-z0-9._/-]*)$",
+          "pattern": "^(t/[A-Za-z0-9][A-Za-z0-9._-]*|lot/[A-Za-z0-9][A-Za-z0-9._/-]*)$",
           "description": "Deux formes, et deux seulement (partners/ADR-0007) : `lot/<id>-<suffixe>` — la forme normale, un lot une branche une PR, un commit par tache ; `t/<slug>` — la forme derogatoire, pour une tache livree seule. Le motif reste ferme : sans prefixe reconnu, la garde gov:tasks rougit. Avant l ADR le motif n acceptait que `t/`, et `pnpm lot:cloture` — seul ecrivain du statut — produisait donc un document que le schema refusait."
         },
         "pr": {

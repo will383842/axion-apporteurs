@@ -1321,6 +1321,10 @@ export const RACINES_DE_LA_GARDE_DES_REVUES: readonly string[] = [
   // GOV-093 : gov-tasks.ts lit le champ schema par touche() et cheminsSchema() — il importe revues.ts,
   // donc il appartient a la garde (REQ-GOV-011 cas 7 : tout importeur de revues.ts y figure).
   'scripts/gates/gov-tasks.ts',
+  // GOV-057 : cloture.ts lit la declaration d'une PR (tachesDeLaPr, idDuTitre, lireLeLot) pour
+  // refuser de clore une tache que la PR ne porte pas — il importe revues.ts, donc il appartient a
+  // la garde. Affaiblir ce lecteur laisserait attacher n'importe quelle PR a n'importe quelle tache.
+  'scripts/lot/cloture.ts',
 ];
 
 let gardeEnCache: readonly string[] | null = null;
