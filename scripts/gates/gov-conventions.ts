@@ -2127,6 +2127,64 @@ export const PORTE_A_FIGEE: PorteFigee = {
       cles: JETON_DE_LA_FORGE,
     },
     { nom: 'La garde de l etat vivant sait rougir', run: 'pnpm gov:etat:prove' },
+    // ── LES DOUZE ÉTAPES VENUES DE `main` PENDANT QUE CETTE BRANCHE VIVAIT (PR #165 et #180).
+    //    Elles ne sont pas ajoutées ici par choix : elles sont DÉRIVÉES de
+    //    `.github/workflows/ci.yml` après `pnpm vues:fusion`, nom et commande lus tels quels, et
+    //    leur compte est confronté à celui que `gov:conventions` nomme — douze, ni onze ni
+    //    quatorze. Une première dérivation en annonçait QUATORZE : elle ne relevait les noms déjà
+    //    figés qu'entre apostrophes simples, et manquait les deux que Prettier écrit en guillemets
+    //    doubles parce que leur libellé contient une apostrophe. Les deux auraient été ajoutées en
+    //    DOUBLE, ce que la famille `etape_en_double` refuse. Le compte de la garde est l’arbitre.
+    //    Chaque garde vient avec sa preuve qu’elle sait rougir : c’est RM-02, et le constat le
+    //    montre par paires. ──
+    {
+      nom: 'Charte — aucun agregat du reseau dans l espace',
+      run: 'pnpm jur:aucun-agregat-reseau',
+    },
+    {
+      nom: 'La garde des agregats du reseau sait rougir',
+      run: 'pnpm jur:aucun-agregat-reseau:prove',
+    },
+    {
+      nom: 'Charte — aucune progression vers un seuil dans l espace',
+      run: 'pnpm jur:aucune-progression',
+    },
+    {
+      nom: 'La garde des progressions sait rougir',
+      run: 'pnpm jur:aucune-progression:prove',
+    },
+    {
+      nom: 'Charte — revue du juriste sur ce qu un apporteur lit, label et checklist',
+      run: 'pnpm jur:revue-apporteur-facing',
+    },
+    {
+      nom: 'La garde de la revue apporteur-facing sait rougir',
+      run: 'pnpm jur:revue-apporteur-facing:prove',
+    },
+    {
+      nom: 'Charte — aucun terme ni rubrique du droit social',
+      run: 'pnpm jur:lexique-social',
+    },
+    {
+      nom: 'La garde du lexique social sait rougir',
+      run: 'pnpm jur:lexique-social:prove',
+    },
+    {
+      nom: 'Seuils et delais du contrat — une seule source, aucun litteral hors SSOT',
+      run: 'pnpm ssot:seuils',
+    },
+    {
+      nom: 'La garde des seuils sait rougir, famille par famille, sans faux positif',
+      run: 'pnpm ssot:seuils:prove',
+    },
+    {
+      nom: 'Roles de la console — requireRole partout, droits dans la matrice',
+      run: 'pnpm securite:roles',
+    },
+    {
+      nom: 'La garde des roles sait rougir',
+      run: 'pnpm securite:roles:prove',
+    },
   ],
   scripts: {
     'gov:publication': 'tsx scripts/gates/gov-publication.ts',

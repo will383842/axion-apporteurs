@@ -904,7 +904,15 @@ describe('REQ-GOV-029 — une garde est appelée par son FICHIER exécuté, jama
 
   it('REQ-GOV-012 — un script nommé `valueOf`, nom hérité d’Object.prototype que pnpm prend pour une commande : porte_a_alteree, nommé', async () => {
     const vue = avecPaquet(lireVue(), (p) => {
-      scriptsDe(p).valueOf = 'tsx scripts/gates/gov-conventions.ts';
+      // `valueOf` est justement le sujet de ce témoin : c'est un nom HÉRITÉ d'`Object.prototype`.
+      // Conséquence pour le compilateur, et elle n'est pas un détail de confort : sur un nom connu
+      // d'`Object`, TypeScript résout le MEMBRE DÉCLARÉ (`() => Object`) et non la signature
+      // d'index de `Record<string, string>`, donc l'affectation directe ne compile pas. Le nom
+      // passe par une variable de type `string` — exactement ce que fait le code de production,
+      // qui lit un nom de script dans `package.json` sans le connaître à la compilation. C'est la
+      // même confusion, côté types, que celle que ce témoin mesure côté pnpm.
+      const nomHeriteDObjectPrototype: string = 'valueOf';
+      scriptsDe(p)[nomHeriteDObjectPrototype] = 'tsx scripts/gates/gov-conventions.ts';
     });
     const fautes = (await confronterLaPorteA(vue)).fautes.filter(
       (f) => f.famille === 'porte_a_alteree'
