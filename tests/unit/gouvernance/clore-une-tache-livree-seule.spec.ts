@@ -38,6 +38,7 @@ import { chargerRegistre, CHEMIN_REGISTRE } from '../../../scripts/lot/registre-
 import { CHEMIN_CHARTE, cheminsSchema } from '../../../scripts/lot/revues';
 import { DEPOT_LOCAL } from '../../../scripts/lot/attestation';
 import { LIVREE } from '../../../scripts/lot/avancement';
+import { instantDuRegistre } from './instant-du-registre';
 
 const CHEMIN_TACHES = 'docs/tasks.json';
 const CHEMIN_SCHEMA = 'scripts/lot/tasks.schema.json';
@@ -56,8 +57,9 @@ const chemins = cheminsSchema(readFileSync(CHEMIN_CHARTE, 'utf8'));
  * LA TÂCHE ÉPROUVÉE EST CHOISIE, PAS NOMMÉE : la première de CE dépôt encore à faire et rangée
  * dans AUCUN lot, et que PERSONNE n'a revendiquée. Un identifiant tapé cesserait d'être éligible
  * le jour où la tâche est livrée, et le témoin rougirait pour une raison qui n'est pas la sienne
- * (RM-01). « Sans propriétaire » n'est pas un confort : la fusion de #175 a amené au registre deux
- * tâches `a_faire` revendiquées, et le témoin qui promet « jamais revendiquée » en prenait une.
+ * (RM-01). « Sans propriétaire » n'est pas un confort : la fusion de #181 a livré la tâche jusque-là
+ * première éligible, la suivante était déjà revendiquée, et le témoin qui promet « jamais
+ * revendiquée » la prenait.
  */
 function tacheSeule(doc: Doc): Tache {
   const t = doc.taches.find(
@@ -88,17 +90,8 @@ function prLibre(doc: Doc): number {
 
 const SHA = 'c'.repeat(40);
 const QUAND = '2026-09-20T10:00:00Z';
-/**
- * L'INSTANT DE LA PASSE, DÉRIVÉ DU REGISTRE : un jour après la plus récente fusion qu'il atteste.
- * Il était figé au 2026-09-28T12:00Z, et le premier rattrapage qui a inscrit une fusion de
- * l'après-midi a fait lire `attestation_date_future` au témoin sur des tâches qui n'étaient pas
- * les siennes. Aucun témoin ne lit l'horloge (RM-11) : c'est la donnée qui fixe l'instant.
- */
-const MAINTENANT =
-  Math.max(
-    Date.parse(QUAND),
-    ...lireDoc().taches.map((t) => Date.parse(t.attestation?.fusionneeAt ?? '') || 0)
-  ) + 86_400_000;
+/** L'instant de la passe, dérivé du registre : voir `instant-du-registre.ts`. */
+const MAINTENANT = instantDuRegistre(QUAND);
 
 /** La tâche, revendiquée comme le fait l'outil de revendication : `en_cours`, owner, branche. */
 function revendiquee(doc: Doc): Tache {

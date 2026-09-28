@@ -310,7 +310,7 @@ Corrige, pousse sur la même branche. Ne réponds pas aux motifs par un commenta
 Tu es le release manager. Fusionne la PR #${revue.dev.pr}, UNE SEULE à la fois :
 1. \`gh pr view ${revue.dev.pr} --json mergeStateStatus,statusCheckRollup\` ; si BEHIND → \`gh pr update-branch\`.
 2. \`gh pr checks ${revue.dev.pr} --watch\` : toutes vertes, sinon rends \`atterri: false\` avec le motif.
-3. Relis l'état ET fusionne dans le MÊME appel (une PR verte peut passer BEHIND entre les deux) : \`gh pr merge ${revue.dev.pr} --squash --delete-branch\`.
+3. Relis l'état ET fusionne dans le MÊME appel (une PR verte peut passer BEHIND entre les deux) : \`gh pr merge ${revue.dev.pr} --squash --match-head-commit <sha-de-tête> --body "$(gh pr view ${revue.dev.pr} --json body -q .body | grep -m1 '^Lot:')" --delete-branch\` — \`--body\` recopie la ligne \`Lot:\` dans le message d'écrasement, le seul texte que \`lot:cloture\` lit (GOV-104).
 4. Vérifie l'atterrissage : \`pnpm deploy:verify <sha>\` (en-tête \`x-partners-build-sha\`). Tant que ce n'est pas vérifié, la PR suivante n'est pas fusionnée.
 5. Rends \`sha\` (le SHA **ENTIER** du commit de fusion, 40 hexadécimaux) et \`fusionneeAt\` (l'instant de fusion en UTC, \`AAAA-MM-JJTHH:MM:SSZ\`) — \`gh pr view ${revue.dev.pr} --json mergeCommit,mergedAt\`. Ce n'est pas de la décoration : si la tâche vit dans un AUTRE dépôt, ces deux valeurs sont la SEULE trace de sa livraison que ce dépôt-ci pourra porter (GOV-038), et \`pnpm lot:cloture\` refusera de clore sans elles. Un SHA abrégé ne convient pas.
 Tu ne fusionnes jamais une PR dont tu es l'auteur.`,

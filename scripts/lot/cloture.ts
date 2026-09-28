@@ -471,6 +471,20 @@ export function cloturerLeLot(options: {
   const { lotId, rendu, membres, taches, ownerParDefaut = '' } = options;
 
   const refus = controlerLePerimetre(lotId, rendu, membres);
+  // GOV-104 — LE MÊME REFUS QUE LE MODE `--tache`, ET AVANT TOUTE ÉCRITURE : une branche que le
+  // schéma refuse, écrite ici, rendrait le registre rouge sur une tâche qu'on ne pourrait plus
+  // re-clore. Le motif est lu dans le schéma, par la même fonction (RM-01).
+  for (const r of rendu.resultats ?? []) {
+    const branche = r?.dev?.branch;
+    if (branche && !motifDeBranche().test(branche)) {
+      refus.push({
+        famille: 'branche_hors_motif',
+        message:
+          `${r?.dev?.taskId ?? '?'} : la branche « ${branche} » est refusée par le motif de ` +
+          `\`branch\` de ${CHEMIN_SCHEMA_DES_TACHES}. Le motif se décide par ADR (partners/ADR-0007).`,
+      });
+    }
+  }
   if (refus.length > 0) throw new ErreurDeCloture(refus);
 
   const index = new Map(taches.map((t) => [t.id, t]));
@@ -605,55 +619,96 @@ function rattraperLePasse(aBlanc: boolean): void {
   if (horsPassif.length > 0) process.exitCode = 1;
 }
 
+/** Ce que `gh pr view` rend d'une PR. Le corps peut y figurer : il n'est JAMAIS lu (GOV-104). */
+export interface VueDeLaForge {
+  state: string;
+  mergeCommit: { oid: string } | null;
+  mergedAt: string | null;
+  headRefName: string;
+}
+
+/**
+ * LA LIVRAISON, COMPOSÉE DE CE QUE LA FORGE REND — la règle, sans I/O, pour qu'un témoin l'appelle.
+ *
+ * GOV-104 — LA DÉCLARATION SE LIT DANS LE COMMIT DE FUSION. Le titre et le champ `Lot:` étaient lus
+ * dans le CORPS de la PR, qui reste modifiable après la fusion : ajouter une tâche à `Lot:` suffisait
+ * à la faire clore sur une attestation qui ne l'a jamais portée (lentille `securite`, #182). Le
+ * message du commit d'écrasement, lui, est immuable, et le pas 6 y recopie `Lot:`. Un message
+ * absent ne déclare RIEN — jamais un repli sur le corps.
+ *
+ * GOV-104 — L'ATTERRISSAGE SE JUGE SUR LA BRANCHE PAR DÉFAUT du dépôt, pas sur `baseRefName`, que
+ * la PR choisit : une PR fusionnée dans une branche quelconque n'est pas livrée. `faceALaBrancheParDefaut`
+ * est le statut de `compare/<sha>...<défaut>` : `identical` ou `ahead` disent que le commit en est un
+ * ancêtre. C'est PLUS FAIBLE que le repli du pas 7, qui exige aussi `gate-a` verte sur `main`.
+ */
+export function livraisonDepuisLaForge(e: {
+  pr: number;
+  vue: VueDeLaForge;
+  messageDuCommit: string | null;
+  faceALaBrancheParDefaut: string | null;
+}): Livraison {
+  const sha = e.vue.state === 'MERGED' ? (e.vue.mergeCommit?.oid ?? null) : null;
+  const lignes = e.messageDuCommit === null ? null : e.messageDuCommit.split('\n');
+  return {
+    pr: e.pr,
+    sha,
+    fusionneeAt: e.vue.mergedAt,
+    branch: e.vue.headRefName,
+    atterri:
+      sha !== null &&
+      (e.faceALaBrancheParDefaut === 'identical' || e.faceALaBrancheParDefaut === 'ahead'),
+    titre: lignes === null ? null : (lignes[0] ?? null),
+    corps: lignes === null ? null : lignes.slice(1).join('\n'),
+  };
+}
+
 /**
  * LA LIVRAISON LUE SUR LA FORGE, pour `--tache`. Rien n'est tapé par l'opérateur hormis le numéro :
- * le SHA, l'instant et la branche viennent de `gh pr view`, dans le dépôt DE LA TÂCHE (`DEPOTS`).
- * L'atterrissage est l'ascendance du commit de fusion sur la branche de base, lue par l'API de
- * comparaison. C'est PLUS FAIBLE que le repli daté du pas 7, qui exige aussi `gate-a` verte sur
- * `main` : ce mode établit que le commit est dans l'historique de la base, pas qu'il y est vert.
+ * tout vient de la forge, dans le dépôt DE LA TÂCHE (`DEPOTS`). Trois lectures : la PR, le message
+ * du commit de fusion, et l'ascendance de ce commit sur la branche par défaut.
  */
 function livraisonSurLaForge(depot: string, pr: number): Livraison {
-  const brut = execFileSync(
-    'gh',
-    [
+  const lire = (args: string[]) => execFileSync('gh', args, { encoding: 'utf8' }).trim();
+  const vue = JSON.parse(
+    lire([
       'pr',
       'view',
       String(pr),
       '-R',
       depot,
       '--json',
-      'state,mergeCommit,mergedAt,headRefName,baseRefName,title,body',
-    ],
-    { encoding: 'utf8' }
-  );
-  const v = JSON.parse(brut) as {
-    state: string;
-    mergeCommit: { oid: string } | null;
-    mergedAt: string | null;
-    headRefName: string;
-    baseRefName: string;
-    title: string;
-    body: string;
-  };
-  const sha = v.state === 'MERGED' ? (v.mergeCommit?.oid ?? null) : null;
-  let atterri = false;
-  if (sha) {
-    const statut = execFileSync(
-      'gh',
-      ['api', `repos/${depot}/compare/${sha}...${v.baseRefName}`, '--jq', '.status'],
-      { encoding: 'utf8' }
-    ).trim();
-    atterri = statut === 'identical' || statut === 'ahead';
+      'state,mergeCommit,mergedAt,headRefName',
+    ])
+  ) as VueDeLaForge;
+  const sha = vue.state === 'MERGED' ? (vue.mergeCommit?.oid ?? null) : null;
+  if (sha === null) {
+    return livraisonDepuisLaForge({
+      pr,
+      vue,
+      messageDuCommit: null,
+      faceALaBrancheParDefaut: null,
+    });
   }
-  return {
+  const parDefaut = lire([
+    'repo',
+    'view',
+    depot,
+    '--json',
+    'defaultBranchRef',
+    '-q',
+    '.defaultBranchRef.name',
+  ]);
+  return livraisonDepuisLaForge({
     pr,
-    sha,
-    fusionneeAt: v.mergedAt,
-    branch: v.headRefName,
-    atterri,
-    titre: v.title,
-    corps: v.body,
-  };
+    vue,
+    messageDuCommit: lire(['api', `repos/${depot}/commits/${sha}`, '--jq', '.commit.message']),
+    faceALaBrancheParDefaut: lire([
+      'api',
+      `repos/${depot}/compare/${sha}...${parDefaut}`,
+      '--jq',
+      '.status',
+    ]),
+  });
 }
 
 function cloreUneTacheSeule(
