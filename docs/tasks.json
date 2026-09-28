@@ -1247,11 +1247,11 @@
       ],
       "externe": null,
       "estimateDays": 0.75,
-      "statut": "a_faire",
-      "owner": null,
-      "lot": null,
-      "branch": null,
-      "pr": null,
+      "statut": "fusionnee",
+      "owner": "A05",
+      "lot": "L0-10",
+      "branch": "t/lot-l0-10",
+      "pr": 180,
       "issue": null,
       "attempts": 0,
       "motif": null,
@@ -1266,6 +1266,11 @@
         "REQ-JUR-029": [
           "tests/unit/juridique/seuils-ssot.spec.ts"
         ]
+      },
+      "attestation": {
+        "pr": 180,
+        "sha": "5e73b88914f476306b07a2e61689bd6fcb9eefd1",
+        "fusionneeAt": "2026-09-28T05:14:43Z"
       }
     },
     {
@@ -3188,11 +3193,11 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 1,
-      "statut": "a_faire",
-      "owner": null,
-      "lot": null,
-      "branch": null,
-      "pr": null,
+      "statut": "fusionnee",
+      "owner": "A05",
+      "lot": "L0-07",
+      "branch": "t/lot-l0-07",
+      "pr": 165,
       "issue": null,
       "attempts": 0,
       "motif": null,
@@ -3205,6 +3210,11 @@
         "REQ-UX-024": [
           "tests/unit/securite/matrice-des-roles.spec.ts"
         ]
+      },
+      "attestation": {
+        "pr": 165,
+        "sha": "4dd40e481f4a740883f60edef38eda495cddecfb",
+        "fusionneeAt": "2026-09-27T10:49:00Z"
       }
     },
     {
@@ -3410,11 +3420,11 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
-      "owner": null,
-      "lot": null,
-      "branch": null,
-      "pr": null,
+      "statut": "fusionnee",
+      "owner": "A05",
+      "lot": "L0-10",
+      "branch": "t/lot-l0-10",
+      "pr": 180,
       "issue": null,
       "attempts": 0,
       "motif": null,
@@ -3423,6 +3433,11 @@
         "REQ-INT-024": [
           "tests/unit/integration/notif-sans-pii.spec.ts"
         ]
+      },
+      "attestation": {
+        "pr": 180,
+        "sha": "5e73b88914f476306b07a2e61689bd6fcb9eefd1",
+        "fusionneeAt": "2026-09-28T05:14:43Z"
       }
     },
     {
@@ -8420,11 +8435,11 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
-      "owner": null,
-      "lot": null,
-      "branch": null,
-      "pr": null,
+      "statut": "fusionnee",
+      "owner": "A05",
+      "lot": "L0-07",
+      "branch": "t/lot-l0-07",
+      "pr": 165,
       "issue": null,
       "attempts": 0,
       "motif": null,
@@ -8442,6 +8457,11 @@
         "REQ-JUR-037": [
           "tests/unit/juridique/charte-relationnelle.spec.ts"
         ]
+      },
+      "attestation": {
+        "pr": 165,
+        "sha": "4dd40e481f4a740883f60edef38eda495cddecfb",
+        "fusionneeAt": "2026-09-27T10:49:00Z"
       }
     },
     {
@@ -8587,11 +8607,11 @@
       ],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
-      "owner": null,
-      "lot": null,
-      "branch": null,
-      "pr": null,
+      "statut": "fusionnee",
+      "owner": "A05",
+      "lot": "L0-10",
+      "branch": "t/lot-l0-10",
+      "pr": 180,
       "issue": null,
       "attempts": 0,
       "motif": null,
@@ -8600,6 +8620,11 @@
         "REQ-JUR-031": [
           "tests/unit/contrat/contrat-sobre.spec.ts"
         ]
+      },
+      "attestation": {
+        "pr": 180,
+        "sha": "5e73b88914f476306b07a2e61689bd6fcb9eefd1",
+        "fusionneeAt": "2026-09-28T05:14:43Z"
       }
     },
     {
@@ -9923,7 +9948,9 @@
       "paths": [
         "docs/PROTOCOLE-FUSION.md",
         "scripts/lot/cloture.ts",
-        "tests/unit/gouvernance/clore-une-tache-livree-seule.spec.ts"
+        "tests/unit/gouvernance/clore-une-tache-livree-seule.spec.ts",
+        "scripts/lot/revues.ts",
+        "tests/unit/gouvernance/lentilles-selon-le-risque.spec.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -9951,7 +9978,9 @@
         "REQ-GOV-021": [
           "tests/unit/gouvernance/clore-une-tache-livree-seule.spec.ts"
         ]
-      }
+      },
+      "issue": 183,
+      "owner": "A01"
     },
     {
       "id": "GOV-058",
@@ -10094,7 +10123,9 @@
       "paths": [
         "scripts/gates/gov-conventions.ts",
         ".github/workflows/ci.yml",
-        "tests/unit/gouvernance/porte-a-presente-active-effective.spec.ts"
+        "tests/unit/gouvernance/porte-a-presente-active-effective.spec.ts",
+        "tests/unit/gouvernance/gardes-transposees.spec.ts",
+        "scripts/gates/registre-des-refus.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -10557,7 +10588,8 @@
         "scripts/plan-state/build.ts",
         "scripts/gates/gov-lecons.ts",
         "scripts/gates/gov-attributions.ts",
-        "tests/unit/gouvernance/une-seule-grammaire-de-journal.spec.ts"
+        "tests/unit/gouvernance/une-seule-grammaire-de-journal.spec.ts",
+        "tests/unit/gouvernance/attributions-resolvent.spec.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -10916,7 +10948,9 @@
       "zone": "gouvernance",
       "paths": [
         "scripts/gates/gov-conventions.ts",
-        "tests/unit/gouvernance/une-gate-sans-script-n-est-pas-une-gate-conforme.spec.ts"
+        "tests/unit/gouvernance/une-gate-sans-script-n-est-pas-une-gate-conforme.spec.ts",
+        "tests/unit/gouvernance/gardes-transposees.spec.ts",
+        "tests/unit/gouvernance/perimetre-des-gardes-derive-du-disque.spec.ts"
       ],
       "schema": false,
       "sensible": [],

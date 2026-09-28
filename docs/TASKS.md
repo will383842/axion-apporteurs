@@ -13,7 +13,7 @@
 | Phase | Taches | Jours | Terminees |
 | --- | ---: | ---: | ---: |
 | -1 — Gouvernance (prealable bloquant) | 39 | 23.75 | 39 |
-| 0 — Socle technique | 117 | 90.35 | 59 |
+| 0 — Socle technique | 117 | 90.35 | 64 |
 | 1 — Operationnel | 62 | 48.00 | 0 |
 | 2 — Argent | 45 | 33.50 | 0 |
 | 3 — Pilotage et conformite | 28 | 25.25 | 0 |
@@ -412,7 +412,7 @@ Couvre : `REQ-GOV-008`, `REQ-GOV-025`, `REQ-GOV-026`
 
 ## Phase 0 — Socle technique
 
-### JUR-T02 — SSOT des seuils et **de TOUS les délais du contrat** + garde « aucun littéral »
+### JUR-T02 — SSOT des seuils et **de TOUS les délais du contrat** + garde « aucun littéral » ✅ **fusionnee**
 
 `0.75 j` · zone `juridique` · sensible : argent, rgpd · depend de `GOV-000`, `JUR-T01` · decisions `W9`
 
@@ -742,7 +742,7 @@ Couvre : `REQ-ARG-029`, `REQ-QA-010`, `REQ-QA-011`, `REQ-QA-012`, `REQ-SEC-008`,
 
 **Tests.** `tests/integration/idor.spec.ts` · `tests/unit/securite/acces-scope.spec.ts`
 
-### SEC-17 — Rôles console : enum `ConsoleRole { admin, qualifieur, comptable, lecteur }`, matrice SSOT, `requireRole`, garde AST
+### SEC-17 — Rôles console : enum `ConsoleRole { admin, qualifieur, comptable, lecteur }`, matrice SSOT, `requireRole`, garde AST ✅ **fusionnee**
 
 `1 j` · zone `securite` · `schema` · sensible : attribution, espace · depend de `SEC-04`
 
@@ -782,7 +782,7 @@ Couvre : `REQ-INT-026`
 
 **Tests.** `tests/integration/adaptateur-mcp.spec.ts`
 
-### INT-T14 — Alertes console par bot Telegram dédié
+### INT-T14 — Alertes console par bot Telegram dédié ✅ **fusionnee**
 
 `0.5 j` · zone `integration` · sensible : espace, rgpd · depend de `QA-T08`
 
@@ -892,7 +892,7 @@ Couvre : `REQ-CPL-013`, `REQ-CPL-026`, `REQ-QA-027`, `REQ-UX-022`, `REQ-UX-028`
 
 **Tests.** `tests/unit/domaine/temps-horloge-et-feries.spec.ts` · `tests/unit/domaine/seuil-prioritaire.spec.ts`
 
-### JUR-T26 — Gates structurelles de la charte relationnelle
+### JUR-T26 — Gates structurelles de la charte relationnelle ✅ **fusionnee**
 
 `0.5 j` · zone `juridique` · sensible : espace · depend de `QA-T01`, `SEC-17`
 
@@ -902,7 +902,7 @@ Couvre : `REQ-JUR-034`, `REQ-JUR-035`, `REQ-JUR-036`, `REQ-JUR-037`
 
 **Tests.** `tests/unit/juridique/charte-relationnelle.spec.ts`
 
-### JUR-T27 — Gabarit de contrat sobre : retrait de la déchéance, du barème gradué et du vocabulaire disciplinaire
+### JUR-T27 — Gabarit de contrat sobre : retrait de la déchéance, du barème gradué et du vocabulaire disciplinaire ✅ **fusionnee**
 
 `0.5 j` · zone `juridique` · sensible : attribution, espace, rgpd · depend de `JUR-T01` · decisions `HYP-D11`, `W11`
 
