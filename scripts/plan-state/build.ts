@@ -34,6 +34,7 @@ import { join } from 'node:path';
 import { referencePr, type Attestation } from '../lot/attestation';
 import { LIVREE, PLANCHER } from '../lot/avancement';
 import { chargerRegistre } from '../lot/registre-decisions';
+import { DOSSIER_DU_JOURNAL, entreesDuDossier, ligneDuJournal } from '../gates/gov-attributions';
 
 const PLAFOND_QUESTIONS = 10;
 
@@ -316,32 +317,23 @@ const revendiqueursDe = (t: Tache): string[] => {
   return [...vus];
 };
 
-/** Le JOURNAL, dérivé du système de fichiers comme l'index des ADR (`pnpm adr:index`). */
-const CHEMIN_JOURNAL = 'docs/journal';
+/**
+ * Le JOURNAL, dérivé du système de fichiers comme l'index des ADR (`pnpm adr:index`), et lu par la
+ * grammaire UNIQUE du journal (GOV-073) : une ligne malformée fait refuser le rendu, sous le nom commun
+ * aux quatre lecteurs, plutôt que de rendre une vue qui en aurait lu la moitié.
+ */
+const CHEMIN_JOURNAL = DOSSIER_DU_JOURNAL;
 interface Entree {
   pr: number;
   date: string;
   titre: string;
   corps: string;
 }
-const entrees: Entree[] = [];
-if (existsSync(CHEMIN_JOURNAL)) {
-  for (const nom of readdirSync(CHEMIN_JOURNAL)
-    .filter((n) => n.endsWith('.md'))
-    .sort()) {
-    for (const bloc of readFileSync(join(CHEMIN_JOURNAL, nom), 'utf8').split(/^## /m).slice(1)) {
-      const m = /^PR #(\d+) — (\d{4}-\d{2}-\d{2}) — (.*)$/m.exec(bloc);
-      if (m && m[1] && m[2])
-        entrees.push({
-          pr: Number(m[1]),
-          date: m[2],
-          titre: (m[3] ?? '').trim(),
-          corps: bloc.trim(),
-        });
-    }
-  }
-}
+const entrees: Entree[] = (existsSync(CHEMIN_JOURNAL) ? entreesDuDossier(CHEMIN_JOURNAL) : []).map(
+  (e) => ({ pr: e.pr, date: e.date, titre: e.titre, corps: e.corps.trim() })
+);
 entrees.sort((a, b) => b.pr - a.pr);
+console.log(ligneDuJournal(entrees.length));
 
 const lignes: string[] = [];
 /** Où commence chaque rubrique dans `lignes` : la neutralisation des zones exemptées en a besoin. */

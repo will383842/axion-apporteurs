@@ -7,31 +7,31 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `5e73b88` — 2026-09-28T07:14:42+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #82 (rien) · 2. #175 (rien) · 3. #181 (rien) · 4. #185 (rien) · 5. #182 (un contrôle requis rouge ou une revue manquante) |
+| Où est `main` ? | `f59bc40` — 2026-09-28T18:38:24+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #82 (état `UNKNOWN`) · 2. #182 (état `UNKNOWN`) · 3. #185 (état `UNKNOWN`) |
 | Qui tient quoi ? | QA-T07 (A05) · GOV-057 (A01) |
-| Où en est la phase ? | phase 0 — 59/116 tâches, reste 45.35 j |
-| Le prochain pas | fusionner #82, puis SEC-17 — Rôles console : enum `ConsoleRole { admin, qualifieur, comptable, lecteur }`, matrice SSOT, `requireRole`, garde AST (chemin critique) |
+| Où en est la phase ? | phase 0 — 64/116 tâches, reste 42.10 j |
+| Le prochain pas | QA-T07 — Gate sécurité : semgrep |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
-| Dernière entrée de journal | PR #180 — 2026-09-27 |
+| Dernière entrée de journal | PR #181 — 2026-09-28 |
 
-**Ce qu’on tape maintenant.** `gh pr view 82 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : 0
 
-59/116 tâches terminées · reste 45.35 j estimés.
+64/116 tâches terminées · reste 42.10 j estimés.
 
 ## Tâches
 
 | Statut | Nombre | Détail |
 | --- | --- | --- |
 | `proposee` | 0 | — |
-| `a_faire` | 190 | JUR-T02, QA-T07, QA-T05, QA-T11, QA-T06, QA-T12, QA-T13, DM-03-A, DM-03-P, DM-04, INT-T02, INT-T03 … (12 affichées sur 190 — liste complète : `docs/TASKS.md`) |
+| `a_faire` | 185 | QA-T07, QA-T05, QA-T11, QA-T06, QA-T12, QA-T13, DM-03-A, DM-03-P, DM-04, INT-T02, INT-T03, INT-T04 … (12 affichées sur 185 — liste complète : `docs/TASKS.md`) |
 | `en_cours` | 0 | — |
 | `bloquee` | 0 | — |
 | `attente_externe` | 2 | JUR-T01b · JUR-T01c |
 | `en_revue` | 0 | — |
-| `fusionnee` | 98 | GOV-000, GOV-007, GOV-001, GOV-018, GOV-008, GOV-002, GOV-003, GOV-004, GOV-005, GOV-006, GOV-009, GOV-010 … (12 affichées sur 98 — liste complète : `docs/TASKS.md`) |
+| `fusionnee` | 103 | GOV-000, GOV-007, GOV-001, GOV-018, GOV-008, GOV-002, GOV-003, GOV-004, GOV-005, GOV-006, GOV-009, GOV-010 … (12 affichées sur 103 — liste complète : `docs/TASKS.md`) |
 | `deployee` | 0 | — |
 | `verifiee` | 0 | — |
 
@@ -39,9 +39,9 @@
 
 **22.00 j** sur 23 taches enchainees — duree PLANCHER du projet. Aucune flotte d'agents ne la raccourcit : ces taches ne peuvent pas se faire en parallele.
 
-~~GOV-000~~ (1 j, ph -1) → ~~GOV-007~~ (0.5 j, ph -1) → ~~GOV-012~~ (0.5 j, ph -1) → ~~GOV-013~~ (0.25 j, ph -1) → ~~GOV-014~~ (1 j, ph -1) → ~~QA-T01~~ (0.5 j, ph 0) → ~~DM-01~~ (1 j, ph 0) → ~~DM-02~~ (1.5 j, ph 0) → ~~SEC-08~~ (1 j, ph 0) → ~~SEC-03~~ (1 j, ph 0) → ~~SEC-04~~ (1 j, ph 0) → SEC-17 (1 j, ph 0) → DM-07 (1 j, ph 1) → DM-08 (1.25 j, ph 1) → T-ARG-010 (1 j, ph 2) → DM-15 (1.5 j, ph 2) → T-ARG-015 (1 j, ph 2) → T-ARG-016 (1.5 j, ph 2) → T-ARG-017 (0.5 j, ph 2) → T-ARG-018 (1 j, ph 2) → T-ARG-019 (1 j, ph 2) → T-ARG-030 (1 j, ph 3) → T-ARG-033 (1 j, ph 3)
+~~GOV-000~~ (1 j, ph -1) → ~~GOV-007~~ (0.5 j, ph -1) → ~~GOV-012~~ (0.5 j, ph -1) → ~~GOV-013~~ (0.25 j, ph -1) → ~~GOV-014~~ (1 j, ph -1) → ~~QA-T01~~ (0.5 j, ph 0) → ~~DM-01~~ (1 j, ph 0) → ~~DM-02~~ (1.5 j, ph 0) → ~~SEC-08~~ (1 j, ph 0) → ~~SEC-03~~ (1 j, ph 0) → ~~SEC-04~~ (1 j, ph 0) → ~~SEC-17~~ (1 j, ph 0) → DM-07 (1 j, ph 1) → DM-08 (1.25 j, ph 1) → T-ARG-010 (1 j, ph 2) → DM-15 (1.5 j, ph 2) → T-ARG-015 (1 j, ph 2) → T-ARG-016 (1.5 j, ph 2) → T-ARG-017 (0.5 j, ph 2) → T-ARG-018 (1 j, ph 2) → T-ARG-019 (1 j, ph 2) → T-ARG-030 (1 j, ph 3) → T-ARG-033 (1 j, ph 3)
 
-Reste sur ce chemin : **12.75 j**.
+Reste sur ce chemin : **11.75 j**.
 
 ## Bloquées
 
@@ -60,11 +60,9 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | rien — fusionnable maintenant |
-| 2 | #175 — chore(GOV-083): lot L0-09 — gates sans script triees, porte A confrontee, causes temoignees, journal | `t/lot-l0-09` | rien — fusionnable maintenant |
-| 3 | #181 — chore(GOV-012): registre rattrape, cinq taches livrees par deux PR fusionnees passent fusionnee | `t/gov-cloture-l0-07-l0-10` | rien — fusionnable maintenant |
-| 4 | #185 — feat(GOV-103): la forme t/ du motif de branch admet les majuscules | `t/gov-103` | rien — fusionnable maintenant |
-| 5 | #182 — fix(GOV-057): lot:cloture --tache clot une tache livree seule, sans inventer de lot | `t/gov-057` | un contrôle requis rouge ou une revue manquante |
+| 1 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | état `UNKNOWN` — à qualifier à la main |
+| 2 | #182 — fix(GOV-057): lot:cloture --tache clot une tache livree seule, sans inventer de lot | `t/gov-057` | état `UNKNOWN` — à qualifier à la main |
+| 3 | #185 — feat(GOV-103): la forme t/ du motif de branch admet les majuscules | `t/gov-103` | état `UNKNOWN` — à qualifier à la main |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -87,21 +85,49 @@ Dérivé de `git log` sur `docs/adr/`, restreint au jour du dernier atterrissage
 
 ## Prochain pas
 
-**Fusionner #82** — elle est en tête de file et ne bloque sur rien.
-
-**SEC-17** — Rôles console : enum `ConsoleRole { admin, qualifieur, comptable, lecteur }`, matrice SSOT, `requireRole`, garde AST (1 j, **sur le chemin critique**) : 27 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
+**QA-T07** — Gate sécurité : semgrep (0.5 j) : 24 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
 Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeStateStatus` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage —, la tâche ensuite. L’ordre de la file se corrige à la rubrique « File de fusion », jamais ici.
 
 ## Dernier atterrissage
 
-`origin/main` = `5e73b88` (2026-09-28T07:14:42+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `f59bc40` (2026-09-28T18:38:24+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
 ## Journal
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
+
+### PR #181 — 2026-09-28 — chore(GOV-012): registre rattrape, cinq taches livrees par deux PR fusionnees passent fusionnee
+
+**Fait.** Cinq tâches livrées par deux PR fusionnées et atterries passaient encore `a_faire` :
+SEC-17 et JUR-T26 (#165, lot L0-07), JUR-T02, JUR-T27 et INT-T14 (#180, lot L0-10). Elles passent
+`fusionnee` par `pnpm lot:cloture`, seul écrivain de `statut`, `pr`, `branch` et `owner`, avec leurs
+cinq attestations `{pr, sha, fusionneeAt}` écrites par l'outil. Le périmètre de chaque lot est
+dérivé de deux faits publics de sa PR — la tâche de son titre et la ligne `Lot:` de son corps, le
+lecteur de `tachesDeLaPr` (GOV-096) — et l'atterrissage des deux SHA est confronté à
+`git merge-base --is-ancestor <sha> origin/main` avant toute écriture. Phase 0 : 59/116 → 64/116,
+reste 45,35 j → 42,10 j. Les sept vues sont régénérées dans l'ordre, `plan-state:build` en dernier.
+
+**Reste.** Les cinq tâches portent `issue: null` : `lot:cloture` ne lit pas l'issue de revendication,
+là où `reclasser.mjs --revendiquer` l'inscrit. Le schéma ne l'exige pour aucun statut et `gov:tasks`
+est vert ; c'est une donnée de traçabilité absente, pas un état invalide. Et surtout : `docs/lots/`
+reste hors suivi, donc la même perte se reproduira au prochain changement de machine. GOV-057 (lot
+L0-11) porte la moitié de ce sujet ; la voie — versionner le périmètre, ou faire lire la ligne `Lot:`
+par `cloture` — appartient à A01 et n'est pas tranchée ici.
+
+**Appris.** Le pas 8 du protocole n'était pas oublié : il était **inexécutable**, et silencieusement.
+Il prescrit `lot:cloture --lot <id>`, qui exige `docs/lots/<id>/lot.json` ; ce fichier est en
+`.gitignore`, donc il vit sur le disque de la machine qui a composé le lot — et cette machine a
+changé. Une commande qu'on ne peut pas lancer ne rougit pas : elle ne se lance pas, et rien ne le
+dit. La conséquence n'était pas le compteur, qui n'est qu'un affichage, mais le COMPOSEUR : il
+voyait les cinq tâches éligibles et aurait recomposé un lot déjà livré — la pathologie même que
+l'en-tête de `cloture.ts` dit avoir fermée. Une garde qui protège d'un défaut peut être rendue
+inopérante par une condition d'exécution qu'elle ne mesure pas elle-même. L'attaque jouée dans la PR
+montre l'autre face, rassurante : avec une attestation entièrement VRAIE mais une appartenance
+fausse, `controlerLePerimetre` refuse, nomme `tache_etrangere_au_lot`, et `docs/tasks.json` reste
+octet pour octet identique — GOV-041 tient.
 
 ### PR #180 — 2026-09-27 — feat(JUR-T02): lot L0-10 — SSOT des délais du contrat, contrat sobre figé, alertes Telegram sans PII
 
@@ -164,15 +190,7 @@ hors score.
 
 **Appris.** Depuis GOV-042, `--fusionnee` ne suffit plus : `reclasser.mjs` n'écrit pas l'attestation, et `gov:tasks` rougit sans elle. Le rattrapage du dépôt la lit dans l'historique, en filtrant le sujet par `(#<pr>)` avant de chercher l'identifiant. Ce filtre est nécessaire : le message de la PR 168 nomme aussi GOV-055, livrée par la PR 158. Sans le filtre, la recherche aurait trouvé deux commits et laissé l'attestation vide.
 
-### PR #169 — 2026-09-27 — feat(INT-T01c): contrat v2 — onze types, charges fermées, route des coordonnées du candidat
-
-**Fait.** Le contrat d'événements passe en `schema_version` 2 : `TYPES_EVENEMENT` fait onze, les quatre types entrants en fin de liste, et l'enum `type_evenement_recu` les reçoit par une migration additive (`20260927000300`). Les onze charges sont fermées dans `packages/contracts/payloads.ts` et confrontées clé pour clé, dans les deux sens, à la fixture du producteur réel copiée sous `tests/fixtures/axionia/fixtures-producteur.v1.json`. La frontière porte une exemption nommée, par chemin, de `payload.parrainCodeCapture` sur la candidature seulement ; `packages/contracts/api.ts` publie, sous l'empreinte, le schéma de la route des coordonnées du candidat (partners/ADR-0023). Empreinte `8b0b09a...` → `e8ce08f...`.
-
-**Reste.** Le lockstep du registre : textes de REQ-INT-004 (onze types, `schema_version` 2) et REQ-QA-007 (trois API), deux titres de test promis par INT-T01a, les `paths` d'INT-T01c, puis les vues ; REQ-DM-018 écrit encore l'ancien nom du HT encaissé. Côté axionia, dans la même fenêtre (INT-T05, INT-T22) : copie de `contracts.v2.json`, émission des quatre types, renommage du HT encaissé en `montantHtCents`, fixtures régénérées en v2, exemption par chemin ; la route elle-même (INT-T27-A) et son client (INT-T26). Le récepteur ne juge pas encore les charges fermées : le Zod généré ne projette que l'enveloppe.
-
-**Appris.** Un nom d'événement qui ENTRE au contrat devient interdit en clair partout ailleurs : `gov:termes-interdits` refuse un nom VALIDE écrit hors de `packages/contracts`, commentaires `.ts` compris, alors qu'il tolérait le même nom tant qu'il était hors nomenclature — ajouter un type rougit donc des fichiers que le diff du contrat ne touche pas (ici `src/domain/apporteur/snapshot-candidature.ts`). Et le producteur v1 émettait un champ (`paiement.recu`) sous un nom que le glossaire interdit sec : fermer une charge fidèlement au producteur peut buter sur le glossaire, qui prime ; le renommage se nomme alors dans le test, pas dans la fixture.
-
-… 3 entrée(s) affichée(s) sur 73 ; les 70 plus ancienne(s) se lisent dans `docs/journal/`.
+… 3 entrée(s) affichée(s) sur 75 ; les 72 plus ancienne(s) se lisent dans `docs/journal/`.
 
 ## Dette déclarée
 
