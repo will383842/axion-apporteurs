@@ -157,6 +157,13 @@
 # l'exécution (`String.fromCharCode`, `atob`, `split('').reverse().join('')`, tableau indexé),
 # `eval` ou `Function`, etc. Ces cas relèvent de la relecture humaine de la PR et de la couche
 # d'accès cloisonnée, pas de cette gate.
+#
+# DEUX EXEMPLES MESURÉS DE CETTE LIMITE, pour qu'elle ne reste pas abstraite (revue `securite`,
+# PR 82, 14e tour) : `Object.values(f)[1][0] = e` atteint les `strings` d'un `Sql` par leur
+# POSITION, sans écrire le nom ; `for (const k in f) if (k.startsWith('str'))` le retrouve par
+# énumération. Les deux sont muets, et la revue les a classés DETTE et non motif de refus —
+# aucun nom n'y est écrit, donc aucun motif textuel ou AST ne peut les voir. C'est exactement le
+# périmètre que cette limite décrit : ce qui ne s'écrit pas ne se lit pas.
 rules:
   # REQ-SEC-008 (texte en vigueur ; REQ-QA-011 y est absorbée) : aucun import direct du client de
   # base sous l'espace apporteur. `import type` compris — l'espace reçoit ses types de la couche
@@ -652,6 +659,32 @@ rules:
       #   corrigé au tour précédent. Mesuré, pas supposé.
       - pattern-regex: |-
           \$(?:queryRaw|executeRaw|queryRawUnsafe|executeRawUnsafe)(?![\p{ID_Continue}$\x{200C}\x{200D}])(?:[\t\n\x0B\f\r\x{0085}\x{200B}\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)*(?:[:,}]|=(?![=>]))
+      # — LE NOM ÉCRIT EN CHAÎNE, en CLÉ de déstructuration (14e tour, revue `securite` sur
+      #   `5d918c6`). Le bras ci-dessus lit le nom NU ; entre guillemets, le nom est suivi d'un
+      #   guillemet, qui n'est ni `:` ni `,` ni `}` ni `=` :
+      #     const { '$queryRaw': q2 } = p;      const { ['$queryRaw']: q2 } = p;
+      #     const { [`$queryRaw`]: q2 } = p;
+      #
+      #   DEUX MOTIFS ONT ÉTÉ ESSAYÉS ET MESURÉS, et c'est la mesure qui a tranché — pas le goût.
+      #
+      #   1. Le motif AST de la chaîne (`"$queryRaw"`), sur le précédent de `"Prisma"`,
+      #      `"constructor"`, `"strings"` et `"$queryRawUnsafe"`. REJETÉ : il rougit le
+      #      contre-témoin `sql/voisins` ligne 8, `p['$queryRaw']`SELECT 1``, qui est une ÉTIQUETTE
+      #      LÉGITIME écrite par crochets — aucune injection, une requête constante. Et il ne
+      #      ferme même pas la première écriture : `{ '$queryRaw': q2 }` est une CLÉ de motif
+      #      d'objet, que semgrep 1.176.1 ne représente pas comme un littéral de chaîne (mesuré :
+      #      témoin `cle-en-chaine-simple` muet).
+      #
+      #   2. Le motif au TEXTE (`['"`]\$queryRaw['"`]`). REJETÉ AUSSI : il rougirait la prose de
+      #      `src/server/evenement/journal.ts:98`, qui cite le nom ENTRE ACCENTS GRAVES suivis d'un
+      #      deux-points — littéralement la forme qu'on cherche. Troisième fois que ce piège se
+      #      présente dans cette PR.
+      #
+      #   CE QUI TIENT : le nom ENTRE GUILLEMETS ET DANS DES ACCOLADES. Ni la prose ni l'étiquette
+      #   par crochets n'en ont ; un motif d'objet en a toujours. La contrainte n'est pas un
+      #   inventaire de contextes — c'est la structure même d'un motif de liaison.
+      - pattern-regex: |-
+          \{[^{}]*['"`]\$(?:queryRaw|executeRaw|queryRawUnsafe|executeRawUnsafe)['"`][^{}]*\}
       # — LA FORGE D'UN `Sql` (même revue, témoins c04, c05, c10). Un `Sql` légitime naît d'une
       #   étiquette ; ces trois formes en fabriquent un, ou dénaturent un vrai, puis le passent à
       #   une étiquette permise — l'injection entre par l'INTERPOLATION, que la règle croyait sûre :

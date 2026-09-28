@@ -1647,6 +1647,38 @@ const FORMES_SQL: readonly { nom: string; lignes: string[]; fautive: number; ext
     ],
     fautive: 5,
   },
+  // ── LE NOM ÉCRIT EN CHAÎNE, en CLÉ de déstructuration (14e tour, revue `securite` sur `5d918c6`).
+  //    Le bras du nom nu lit ce qui SUIT le nom ; entre guillemets, ce qui suit est un guillemet.
+  //    Les trois écritures sont fermées par le motif AST de la chaîne — le gabarit sans substitution
+  //    compris, que semgrep replie en constante (mesuré, et déjà le cas pour `"$queryRawUnsafe"`). ──
+  {
+    nom: 'cle-en-chaine-simple',
+    lignes: [
+      'declare const p: { $queryRaw(s: TemplateStringsArray): unknown };',
+      "const { '$queryRaw': q2 } = p;",
+      'export const lire = (x: string) => q2.call(p, [`SELECT ${x}`]);',
+    ],
+    fautive: 2,
+  },
+  {
+    nom: 'cle-en-chaine-calculee',
+    lignes: [
+      'declare const p: { $queryRaw(s: TemplateStringsArray): unknown };',
+      "const { ['$queryRaw']: q2 } = p;",
+      'export const lire = (x: string) => q2.call(p, [`SELECT ${x}`]);',
+    ],
+    fautive: 2,
+  },
+  {
+    // Le GABARIT sans substitution : replié en constante par semgrep, donc pris par le même motif.
+    nom: 'cle-en-gabarit',
+    lignes: [
+      'declare const p: { $queryRaw(s: TemplateStringsArray): unknown };',
+      'const { [`$queryRaw`]: q2 } = p;',
+      'export const lire = (x: string) => q2.call(p, [`SELECT ${x}`]);',
+    ],
+    fautive: 2,
+  },
   {
     // Le MEMBRE du runtime derrière un import par DÉFAUT, en nom d'élément JSX : rien ne dit
     //  `Prisma` dans le nom. Fermé par le bras qui juge le membre — et désormais TÉMOIGNÉ : une
