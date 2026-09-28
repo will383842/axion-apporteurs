@@ -8,12 +8,12 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `330afa1` — 2026-09-28T20:38:31+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #82 (état `UNKNOWN`) · 2. #185 (état `UNKNOWN`) |
+| Qu’est-ce qui est en vol ? | 1. #185 (un contrôle requis rouge ou une revue manquante) · 2. #82 (un conflit avec `main`) |
 | Qui tient quoi ? | QA-T07 (A05) · GOV-057 (A01) · GOV-103 (A01) |
 | Où en est la phase ? | phase 0 — 64/117 tâches, reste 42.60 j |
 | Le prochain pas | QA-T07 — Gate sécurité : semgrep |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
-| Dernière entrée de journal | PR #181 — 2026-09-28 |
+| Dernière entrée de journal | PR #185 — 2026-09-28 |
 
 **Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
@@ -60,8 +60,8 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | état `UNKNOWN` — à qualifier à la main |
-| 2 | #185 — feat(GOV-103): la forme t/ du motif de branch admet les majuscules | `t/gov-103` | état `UNKNOWN` — à qualifier à la main |
+| 1 | #185 — feat(GOV-103): la forme t/ du motif de branch admet les majuscules | `t/gov-103` | un contrôle requis rouge ou une revue manquante |
+| 2 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -99,6 +99,38 @@ Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
 
+### PR #185 — 2026-09-28 — feat(GOV-103): la forme t/ du motif de branch admet les majuscules
+
+**Fait.** Décision de Will du 2026-09-28 : la forme `t/` du motif de `branch` admet les majuscules,
+comme la forme `lot/`. La PR #114 avait été fusionnée depuis `t/lot-L0-02`, et ses six tâches ne
+pouvaient pas être closes. Le motif reste fermé : la lentille `securite` l'a mesuré sur 23 cas par
+la vraie garde. Amendement daté de `partners/ADR-0007` ; tâche versée par `verser-tache.mjs`.
+
+**Reste.** La décision n'a pas encore sa ligne dans `docs/DECISIONS.md` (W17) : elle est portée par
+GOV-104. Deux dettes antérieures notées par la lentille `securite` : le motif admet `..`, et deux
+branches peuvent ne différer que par la casse.
+
+**Appris.** Une branche réelle de la forge refusée par le registre ne se corrige pas en réécrivant
+la branche : le champ deviendrait décoratif. C'est le motif qui suit la réalité, par décision.
+
+### PR #182 — 2026-09-28 — fix(GOV-057): lot:cloture --tache clot une tache livree seule, sans inventer de lot
+
+**Fait.** `pnpm lot:cloture -- --tache <id> --pr <n>` clôt une tâche livrée hors de tout lot : le
+SHA, l'instant et la branche sont lus sur la forge, `branch` est posée, `t.lot` n'est jamais touché.
+Neuf refus nommés avant toute écriture, dont `tache_etrangere_a_la_pr`, trouvé par la lentille
+`securite` : sans lui, n'importe quelle PR fusionnée s'attachait à n'importe quelle tâche. La pose
+de `fusionnee` est extraite dans `poserLaLivraison()`, partagée avec le mode `--lot`. `cloture.ts`
+entre dans la garde des revues, comme `gov-tasks.ts` pour GOV-093.
+
+**Reste.** Deux dettes de sécurité, que Will a demandé de corriger : la déclaration est lue dans
+le corps de la PR, modifiable après la fusion, et l'atterrissage est jugé sur `baseRefName`. Elles
+sont portées par GOV-104. Cette entrée est écrite après la fusion, dans la PR #185 : la PR #182 a
+été fusionnée sans elle, et `gov:etat` l'a nommé (`pr_fusionnee_sans_journal`).
+
+**Appris.** Un témoin qui choisit « la première tâche à faire » dépend de l'état du registre : la
+fusion de #181 a changé cette première tâche, et il en a pris une déjà revendiquée. Le critère de
+choix doit dire tout ce que le témoin suppose.
+
 ### PR #181 — 2026-09-28 — chore(GOV-012): registre rattrape, cinq taches livrees par deux PR fusionnees passent fusionnee
 
 **Fait.** Cinq tâches livrées par deux PR fusionnées et atterries passaient encore `a_faire` :
@@ -129,68 +161,7 @@ montre l'autre face, rassurante : avec une attestation entièrement VRAIE mais u
 fausse, `controlerLePerimetre` refuse, nomme `tache_etrangere_au_lot`, et `docs/tasks.json` reste
 octet pour octet identique — GOV-041 tient.
 
-### PR #180 — 2026-09-27 — feat(JUR-T02): lot L0-10 — SSOT des délais du contrat, contrat sobre figé, alertes Telegram sans PII
-
-**Fait.** JUR-T02 porte la PR, et JUR-T27 et INT-T14 sont dans son champ `Lot:`. La SSOT
-`src/domain/seuils/ssot.ts` porte 27 constantes sourcées et datées, sans gradation ni contradictoire.
-La garde `scripts/gates/seuils-ssot.ts` refuse un seuil ou un délai retapé dans `src/`, un préavis
-indexé sur l'ancienneté, et une valeur qui diverge entre le gabarit et la SSOT ; son `--prove` joue
-neuf familles. Le gabarit de contrat, déjà sobre, n'est pas modifié : `contrat-sobre.spec.ts` fige
-l'acceptation de JUR-T27, et le texte final reste relu par Will avant toute signature. L'alerteur
-Telegram dédoublonne, plafonne par catégorie et par heure, et sa garde nomme tout champ personnel
-qui franchirait le canal. Le 2026-09-27T09:09Z, les paths de JUR-T02 couvrant désormais
-`package.json`, `ci.yml` et `vitest.mutation.config.ts`, la garde est câblée : scripts
-`ssot:seuils` et `ssot:seuils:prove`, deux étapes du job `gate-a` après la grille chiffrée, et
-`tests/unit/juridique/` jugé sous mutation, deux tests écartés et nommés (balayage `git ls-files`,
-lecture du texte instrumenté de la SSOT). Le 2026-09-27T09:24Z, l'entrée du registre porte le nom
-de sa commande, `ssot:seuils`, et l'ancien identifiant n'y survit qu'en alias (`partners/ADR-0018`) :
-`un-nom-une-garde.spec.ts` ne compte plus que ses trois écarts. Les `preuveRouge` de `ssot:seuils`
-et de `G-SEC-NOTIF` sont posés. Les deux sorties non nulles de `scripts/gates/seuils-ssot.ts` sont
-déclarées au cliquet de `refus-de-rendre-et-de-publier.spec.ts` et nommées dans `REFUS_NOMMES`,
-témoins d'effet à zéro : dette déclarée. Le 2026-09-27T10:57Z, sur la porte A rouge et l'avis `securite` :
-la garde établit son périmètre par la source unique `fichiersSuivisOuRefus` et figure parmi les
-gardes qui balaient le dépôt. Les motifs de montant écrits forme par forme laissent place à deux
-règles qui normalisent : tout nombre, lu sans séparateur de milliers, est confronté aux montants de
-la SSOT ; tout produit de littéraux entiers est évalué et confronté à chaque délai de la SSOT en
-jours, heures, minutes, secondes et millisecondes. L'alerteur n'admet comme identifiant que le
-format des identifiants d'agrégat du dépôt, et compte plafond et dédoublonnage sur la forme
-affichée. La garde sans PII voit le montant formaté en euros.
-
-**Reste.** `docs/GARDES-AXIONIA.md` cite encore l'ancien identifiant, que l'alias résout : le
-fichier est hors des paths du lot. La PR #175, non fusionnée, fige les étapes de `gate-a` dans `PORTE_A_FIGEE`
-(`scripts/gates/gov-conventions.ts`) : les deux étapes ajoutées ici y manquent, et la PR qui
-fusionnera en second résout ce conflit sémantique, que `git` ne signale pas. `FENETRE_MOIS` attend la question `JUR-T01-Q02` : `docs/DECISIONS.md` (`HYP-E1-9`) porte
-12 mois, et la décision de Will du 2026-09-22, à 6 mois, n'est pas encore au registre. Les
-catégories d'alerte n'ont pas de liste fermée : leur format est borné, pas leur nombre, et une
-liste fermée se déclare au glossaire. L'appel réel au bot
-attend la rubrique 2 de `docs/tiers/telegram.md` et les noms des deux secrets dans `src/lib/env.ts`.
-Sous mutation, la SSOT n'a aucun mutant jugé : toutes ses valeurs sont évaluées au chargement du
-module, donc statiques et hors score (`ignoreStatic`) ; ce sont ses tests en processus qui les
-figent. GOV-082 n'est pas dans ce lot : elle est livrée par la PR #114 (fusionnée, `32ea43d`), et
-son attestation reste bloquée par `branche_de_la_forge_refusee` (tête `t/lot-L0-02`) ; la décision
-(l'outil ou le schéma) reste à prendre.
-
-**Appris.** `gov:publication` refuse `montantCents` suivi d'un nombre, même sur un objet témoin
-factice. Elle refuse aussi le seuil de versement écrit en euros dans un commentaire, alors que la même valeur en centimes,
-sous la clé `SEUIL_VERSEMENT`, passe. Un script placé sous `scripts/gates/` est jugé par
-`gov:conventions` dès qu'il existe : s'il n'est appelé par aucun workflow, la pré-porte rougit
-tant que le registre ne le câble pas ou ne lui donne pas de `horsCi`. Une tâche dont les `paths` ne
-couvrent ni `package.json` ni `ci.yml` ne peut donc pas livrer seule une garde neuve. Enfin,
-`vitest.mutation.config.ts` n'inclut qu'une liste fermée de dossiers de tests : une source mutée dont
-le test vit ailleurs sort « sans couverture », pas « survivante ». Et le rapport incrémental de `pnpm mutation:pr` REPREND
-un résultat « sans couverture » quand seuls les tests ont changé : cinq mutants de la SSOT y restaient
-« sans couverture » après l'ajout de ses tests. Sans le fichier incrémental local, ils sont statiques,
-hors score.
-
-### PR #176 — 2026-09-27 — chore(GOV-012): registre rattrape, douze taches livrees par des PR fusionnees passent fusionnee
-
-**Fait.** Treize tâches livrées par les PR 158, 169 et 168 portaient encore `a_faire`. Douze passent `fusionnee` par `reclasser.mjs` : GOV-053, GOV-055, GOV-060, GOV-079, GOV-050 et GOV-051 (PR 158, lot L0-06), INT-T01c (PR 169), GOV-045, GOV-054, GOV-072, GOV-093 et GOV-042 (PR 168, lot L0-08). Chaque revendication est constatée sur son issue déjà ouverte (150 à 155, 167, 159 à 163), puis la livraison sur la forge. Chaque attestation est lue dans `origin/main` par `cloture.ts --rattraper-attestations`. La phase 0 passe de 47 à 59 tâches terminées sur 116, reste 45,35 jours.
-
-**Reste.** GOV-074 reste `a_faire` : la PR 168 écrit qu'elle ne livre pas toute son acceptance (comparaison par préfixe et exemptions sans second producteur non identifiées une à une, `DETTE_GABARIT_LIVREE` au grain du site). Décision à prendre : une tâche fille pour le reste, ou une acceptance rétrécie par avenant. Les PR 114 et 102 restent dans l'état écrit par la PR 166.
-
-**Appris.** Depuis GOV-042, `--fusionnee` ne suffit plus : `reclasser.mjs` n'écrit pas l'attestation, et `gov:tasks` rougit sans elle. Le rattrapage du dépôt la lit dans l'historique, en filtrant le sujet par `(#<pr>)` avant de chercher l'identifiant. Ce filtre est nécessaire : le message de la PR 168 nomme aussi GOV-055, livrée par la PR 158. Sans le filtre, la recherche aurait trouvé deux commits et laissé l'attestation vide.
-
-… 3 entrée(s) affichée(s) sur 75 ; les 72 plus ancienne(s) se lisent dans `docs/journal/`.
+… 3 entrée(s) affichée(s) sur 77 ; les 74 plus ancienne(s) se lisent dans `docs/journal/`.
 
 ## Dette déclarée
 
