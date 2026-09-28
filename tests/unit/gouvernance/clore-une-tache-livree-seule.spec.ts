@@ -54,12 +54,14 @@ const chemins = cheminsSchema(readFileSync(CHEMIN_CHARTE, 'utf8'));
 
 /**
  * LA TÂCHE ÉPROUVÉE EST CHOISIE, PAS NOMMÉE : la première de CE dépôt encore à faire et rangée
- * dans AUCUN lot. Un identifiant tapé cesserait d'être éligible le jour où la tâche est livrée,
- * et le témoin rougirait pour une raison qui n'est pas la sienne (RM-01).
+ * dans AUCUN lot, et que PERSONNE n'a revendiquée. Un identifiant tapé cesserait d'être éligible
+ * le jour où la tâche est livrée, et le témoin rougirait pour une raison qui n'est pas la sienne
+ * (RM-01). « Sans propriétaire » n'est pas un confort : la fusion de #175 a amené au registre deux
+ * tâches `a_faire` revendiquées, et le témoin qui promet « jamais revendiquée » en prenait une.
  */
 function tacheSeule(doc: Doc): Tache {
   const t = doc.taches.find(
-    (x) => x.statut === 'a_faire' && !x.lot && (x.repo ?? DEPOT_LOCAL) === DEPOT_LOCAL
+    (x) => x.statut === 'a_faire' && !x.lot && !x.owner && (x.repo ?? DEPOT_LOCAL) === DEPOT_LOCAL
   );
   if (!t) throw new Error('aucune tâche de ce dépôt à faire hors lot : le témoin n’a plus d’objet');
   return t;
