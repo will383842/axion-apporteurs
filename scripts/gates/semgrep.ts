@@ -1472,6 +1472,79 @@ const FORMES_SQL: readonly { nom: string; lignes: string[]; fautive: number; ext
     ],
     fautive: 2,
   },
+  // ── LA DÉSTRUCTURATION D'UNE MÉTHODE BRUTE (12e tour, revue `securite` sur `28f62d7`). La liste
+  //    `&hors-etiquette` juge la RÉFÉRENCE `p.$queryRaw` ; elle ne voit rien quand le nom sort de
+  //    l'objet par un motif de liaison, puis s'appelle par `.call` ou `.apply` avec un tableau
+  //    forgé. La ligne fautive est celle du MOTIF, pas celle de l'appel : c'est la sortie du nom
+  //    qu'on refuse, et c'est la seule ligne qu'un correctif doit changer. ──
+  {
+    nom: 'destructuration-renommee',
+    lignes: [
+      'declare const p: { $queryRaw(s: TemplateStringsArray): unknown };',
+      'const { $queryRaw: q2 } = p;',
+      'export const lire = (x: string) => q2.call(p, [`SELECT ${x}`]);',
+    ],
+    fautive: 2,
+  },
+  {
+    nom: 'destructuration-simple',
+    lignes: [
+      'declare const p: { $queryRaw(s: TemplateStringsArray): unknown };',
+      'const { $queryRaw } = p;',
+      'export const lire = (x: string) => $queryRaw.apply(p, [[`SELECT ${x}`]]);',
+    ],
+    fautive: 2,
+  },
+  {
+    // En PARAMÈTRE : aucune liaison locale, aucun objet nommé. Le motif est dans la signature.
+    nom: 'destructuration-en-parametre',
+    lignes: [
+      'export const lire = ({ $queryRaw }: { $queryRaw: (s: unknown) => unknown }, s: string) =>',
+      '  $queryRaw.call(null, Object.assign([s], { raw: [s] }));',
+    ],
+    fautive: 1,
+  },
+  // ── LA FORGE D'UN `Sql` (même revue). Un `Sql` légitime naît d'une étiquette ; ces trois formes
+  //    en fabriquent un, ou dénaturent un vrai, puis le passent à une étiquette PERMISE.
+  //    L'injection entre alors par l'interpolation, que la règle croyait sûre. ──
+  {
+    nom: 'forge-mutation-des-strings',
+    lignes: [
+      "import { Prisma } from '@prisma/client';",
+      'declare const p: { $queryRaw(s: TemplateStringsArray, ...v: unknown[]): unknown };',
+      'export const lire = (x: string) => {',
+      '  const f = Prisma.sql`1 = 1`;',
+      '  (f.strings as unknown as string[])[0] = x;',
+      '  return p.$queryRaw`SELECT ${f}`;',
+      '};',
+    ],
+    fautive: 5,
+  },
+  {
+    nom: 'forge-par-le-prototype',
+    lignes: [
+      "import { Prisma } from '@prisma/client';",
+      'declare const p: { $queryRaw(s: TemplateStringsArray, ...v: unknown[]): unknown };',
+      'export const lire = (x: string) => {',
+      '  const f = Object.create(Object.getPrototypeOf(Prisma.sql`x`));',
+      '  return p.$queryRaw`${f}`;',
+      '};',
+    ],
+    fautive: 4,
+  },
+  {
+    nom: 'forge-par-redefinition',
+    lignes: [
+      "import { Prisma } from '@prisma/client';",
+      'declare const p: { $queryRaw(s: TemplateStringsArray, ...v: unknown[]): unknown };',
+      'export const lire = (x: string) => {',
+      "  const f = Prisma.sql`a = ${'y'}`;",
+      "  Object.defineProperty(f, 'strings', { value: [x, ''] });",
+      '  return p.$queryRaw`${f}`;',
+      '};',
+    ],
+    fautive: 5,
+  },
   // Une fonction d'ÉTIQUETTE appelée sans gabarit : le tableau de « morceaux » est du TEXTE.
   {
     nom: 'prisma-sql-appel',

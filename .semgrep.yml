@@ -625,6 +625,54 @@ rules:
           <(?:[\t\n\x0B\f\r\x{0085}\x{200B}\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)*/?(?:[\t\n\x0B\f\r\x{0085}\x{200B}\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)*(?:[\p{ID_Continue}$\x{200C}\x{200D}]+(?:[\t\n\x0B\f\r\x{0085}\x{200B}\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)*\.(?:[\t\n\x0B\f\r\x{0085}\x{200B}\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)*)*Prisma(?:[\t\n\x0B\f\r\x{0085}\x{200B}\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)*\.
       - pattern-regex: |-
           <(?:[\t\n\x0B\f\r\x{0085}\x{200B}\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)*/?(?:[\t\n\x0B\f\r\x{0085}\x{200B}\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)*(?:[\p{ID_Continue}$\x{200C}\x{200D}]+(?:[\t\n\x0B\f\r\x{0085}\x{200B}\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)*\.(?:[\t\n\x0B\f\r\x{0085}\x{200B}\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)*)+(?:raw|Sql|sqltag|join|makeTypedQueryFactory)(?![\p{ID_Continue}$\x{200C}\x{200D}])
+      # — LA DÉSTRUCTURATION D'UNE MÉTHODE BRUTE (12e tour, revue `securite` sur `28f62d7`,
+      #   témoins c06, c09, c21). La liste `&hors-etiquette` juge la RÉFÉRENCE `p.$queryRaw` : elle
+      #   ne voit rien quand le nom sort de l'objet par un MOTIF de déstructuration, puis s'appelle
+      #   par `.call` ou `.apply` avec un tableau forgé :
+      #     const { $queryRaw: q2 } = p;   q2.call(p, [`SELECT ${x}`]);
+      #     const { $queryRaw } = p;       $queryRaw.apply(p, [[`SELECT ${x}`]]);
+      #     ({ $queryRaw }: any, s) => $queryRaw.call(null, Object.assign([s], { raw: [s] }));
+      #
+      #   Le motif refuse le nom PLACÉ DANS DES ACCOLADES dont la fermante est suivie de `=`, `:`,
+      #   `)` ou `,` — c'est-à-dire un motif de liaison ou un paramètre, et NON une déclaration de
+      #   type (`declare const p: { $queryRaw(...): unknown };`, fermante suivie de `;`), dont le
+      #   bac est plein. Sans cette contrainte, ce bras rougirait la moitié des témoins de la règle.
+      #
+      #   POURQUOI PAS LE NOM NU : le dépôt le cite EN PROSE une fois
+      #   (`src/server/evenement/journal.ts:98`, « `$executeRaw`, pas `$queryRaw` : … »), sans
+      #   accolade. Refuser le nom nu rougirait ce commentaire — le même piège que la citation du
+      #   client en prose, corrigé au tour précédent. Mesuré, pas suppose.
+      - pattern-regex: |-
+          \{[^{}]*\$(?:queryRaw|executeRaw|queryRawUnsafe|executeRawUnsafe)(?![\p{ID_Continue}$\x{200C}\x{200D}])[^{}]*\}(?:[\t\n\x0B\f\r\x{0085}\x{200B}\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)*(?:=(?![=>])|:|\)|,)
+      # — LA FORGE D'UN `Sql` (même revue, témoins c04, c05, c10). Un `Sql` légitime naît d'une
+      #   étiquette ; ces trois formes en fabriquent un, ou dénaturent un vrai, puis le passent à
+      #   une étiquette permise — l'injection entre par l'INTERPOLATION, que la règle croyait sûre :
+      #     (f.strings as string[])[0] = x;                          mutation d'un vrai
+      #     Object.assign(Object.create(proto), { strings: [x] });   forge par le prototype
+      #     Object.defineProperty(f, 'strings', { value: [x, ''] }); redéfinition
+      #
+      #   Deux bras, jugés par l'AST et non par le texte — donc insensibles aux commentaires, et
+      #   c'est voulu après le piège de la prose : le MEMBRE `strings` et la CLÉ `strings` d'un
+      #   littéral d'objet ; puis les quatre verbes de méta-programmation qui permettent de fabriquer
+      #   ou de redéfinir un objet sans passer par son constructeur.
+      #
+      #   COÛT MESURÉ SUR LE `src/` RÉEL, et c'est pour cela que ce refus est tenable :
+      #   `Object.create`, `Object.defineProperty`, `Object.defineProperties`,
+      #   `Object.setPrototypeOf`, `Reflect.*`, `.strings` et `{ strings: }` — ZÉRO occurrence.
+      #   `Object.assign` (0) et `Object.getPrototypeOf` (2) NE SONT PAS refusés : ils ne suffisent
+      #   pas à forger sans les quatre verbes ci-dessus, et `Object.assign` est un utilitaire banal.
+      #   Refuser large ce dont on n'a pas besoin, c'est préparer une exemption.
+      #
+      #   LIMITE DÉCLARÉE : `strings` est un mot commun. Le jour où un `strings` légitime apparaît
+      #   sous `src/`, il prend une exemption NOMMÉE — et cette exemption est la trace.
+      - pattern-either:
+          - pattern: $X.strings
+          - pattern: "{..., strings: $V, ...}"
+          - pattern: Object.create(...)
+          - pattern: Object.defineProperty(...)
+          - pattern: Object.defineProperties(...)
+          - pattern: Object.setPrototypeOf(...)
+          - pattern: Reflect.$M(...)
       # — LES FONCTIONS D'ÉTIQUETTE hors de la position d'étiquette. Une étiquette est un appel
       #   pour l'AST de semgrep (mesuré : `Prisma.sql(...)` matche `Prisma.sql`…``) ; c'est
       #   donc la RÉFÉRENCE qui est jugée, et admise seulement DANS son propre gabarit étiqueté,
