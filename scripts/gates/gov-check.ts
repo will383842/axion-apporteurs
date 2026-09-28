@@ -37,7 +37,8 @@
  *
  * ── LE PÉRIMÈTRE, ET CE QUI EST RÉELLEMENT EXAMINÉ ──────────────────────────────────────────
  *
- * La vue porte TOUS les fichiers suivis, EN OCTETS. Les racines sont LUES dans l'en-tête de
+ * La vue porte TOUS les fichiers suivis, EN OCTETS — ceux du BLOB de l'index, pas du disque : un vert
+ * local certifie alors ce que la CI extrait. Les racines sont LUES dans l'en-tête de
  * `docs/GLOSSAIRE.md`, plus `packages/contracts/` (seul endroit où un nom d'événement s'écrit :
  * sans cette racine, son exemption n'aurait aucun contre-témoin atteignable). `perimetreDeLaVue`
  * range chaque suivi sous une racine ou « hors périmètre ». `examiner` décode chaque fichier rangé,
@@ -58,14 +59,23 @@
  *
  * La GRAMMAIRE est lue sur la DERNIÈRE extension du nom — ni l'avant-dernière, ni celle d'un dossier.
  * Seules les extensions de `GRAMMAIRES_QUI_CITENT` accordent une exemption — le registre les énumère,
- * la preuve confronte les deux — et chacune a un témoin de CHAQUE côté de sa frontière :
- *   — `.md` (prose) : un span d'accents graves fermé sur SA ligne ou la SUIVANTE, un bloc à trois
- *     accents graves REFERMÉ, des guillemets français. Le guillemet droit ne cite pas ;
- *   — `.sql` : les spans d'accents graves DANS un commentaire (deux tirets, bloc barre-étoile) ;
- *   — `.prisma` : les spans d'accents graves DANS un commentaire (double ou triple barre).
- * Toute autre extension — code, JSON, YAML, et toute extension non nommée — n'exempte RIEN.
- * LIMITE : ces grammaires ne connaissent pas les littéraux de chaîne. Un marqueur de commentaire écrit
- * DANS une chaîne `.sql` ou `.prisma` y ouvre une zone jusqu'à la fin de sa ligne.
+ * la preuve confronte les deux — et chacune a un témoin de CHAQUE côté de sa frontière. La découpe est
+ * UNE fonction, `decouper`, qui reconnaît les constructions VALIDES de chaque langage :
+ *   — `.md` (prose, CommonMark) : les blocs d'abord — bloc clôturé (accents graves ou tildes, refermé
+ *     par une clôture de même caractère, au moins aussi longue, sans info), titre, tableau, code
+ *     indenté, paragraphe —, puis les spans de code DANS un paragraphe ou un titre : une suite de N
+ *     accents graves se referme sur une suite d'exactement N, sur autant de lignes que le paragraphe
+ *     en porte, jamais au-delà ; un accent grave échappé n'ouvre rien. Plus les guillemets français,
+ *     sur leur ligne. Le guillemet droit ne cite pas ;
+ *   — `.sql` (PostgreSQL) : les spans d'accents graves DANS un commentaire (deux tirets, bloc
+ *     barre-étoile IMBRIQUÉ) ; les chaînes (apostrophes, `E'…'`, à dollars) et les identifiants entre
+ *     guillemets sont reconnus pour qu'un marqueur de commentaire qu'ils portent n'ouvre RIEN ;
+ *   — `.prisma` : les spans d'accents graves DANS un commentaire (double ou triple barre) ; une chaîne
+ *     entre guillemets est reconnue, et le `//` d'une URL qu'elle porte n'ouvre rien.
+ * Une construction jamais refermée n'est pas traversée : le fichier est refusé en la NOMMANT avec sa
+ * ligne (`contenu_illisible`), et jugé SANS aucune exemption. La sortie imprime le compte des zones
+ * réellement découpées. Toute autre extension — code, JSON, YAML, et toute extension non nommée —
+ * n'exempte RIEN.
  *
  * ── LA PREUVE : SA POPULATION VIENT DU REGISTRE, SA DÉCISION EST UNE FONCTION PURE ───────────
  *
@@ -81,7 +91,8 @@ import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { fichiersSuivisOuRefus } from '../lot/fichiers-suivis';
+import { entreesSuiviesOuRefus } from '../lot/fichiers-suivis';
+import { blobsDe } from './gov-entite';
 import {
   texteDeLaReq,
   RACINES_CODE,
@@ -92,15 +103,25 @@ import { TYPES_EVENEMENT } from '../../packages/contracts/events';
 
 // ── le vocabulaire de la garde ───────────────────────────────────────────────
 
-/** Un fichier suivi, EN OCTETS ; `erreur` quand le disque refuse de les rendre (dossier, sous-module). */
+/**
+ * Un fichier suivi, EN OCTETS — ceux du BLOB que l'index associe à son chemin ; `erreur` quand l'index
+ * n'en rend pas (sous-module, entrée en conflit).
+ */
 type FichierVu = { chemin: string; octets: Uint8Array } | { chemin: string; erreur: string };
 /** `refus` ne vaut que pour `source_illisible` : il NOMME lequel des refus a parlé. */
 type Faute = { famille: string; message: string; refus?: RefusDeConclure };
 /**
  * Ce que `examiner` a RÉELLEMENT parcouru : la racine qui l'a rangé, et, calculés sur les lignes
  * parcourues, les octets et l'EMPREINTE sha256 du texte — une taille égale ne dit rien d'octets remplacés.
+ * `zones` : ce que la grammaire y a découpé, absent pour un fichier sans grammaire qui cite.
  */
-type Examine = { chemin: string; racine: string; octets: number; empreinte: string };
+type Examine = {
+  chemin: string;
+  racine: string;
+  octets: number;
+  empreinte: string;
+  zones: Zone[] | undefined;
+};
 
 export type Vue = {
   /** Le texte de REQ-INT-004 — source des onze types valides et des modèles refusés. */
@@ -131,7 +152,8 @@ export const FAMILLES: { nom: string; explication: string }[] = [
     nom: 'contenu_illisible',
     explication:
       'un fichier sous une racine que la garde ne lit pas en entier (octet NUL, UTF-8 invalide, ' +
-      "octets refusés par le disque) : « non lu » n'est pas « propre ».",
+      "octets que l'index ne rend pas), ou dont sa grammaire ne referme pas une construction (chaîne, " +
+      "commentaire, chaîne à dollars) — NOMMÉE avec sa ligne : « non lu » n'est pas « propre ».",
   },
   {
     nom: 'fin_de_ligne_non_lf',
@@ -175,6 +197,9 @@ type RefusDeConclure = (typeof REFUS_DE_CONCLURE)[number];
 
 /** Le paquet de contrats — seul endroit où un nom d'événement s'écrit littéralement. */
 const RACINE_CONTRATS = 'packages/contracts/';
+
+/** Le glossaire : source des synonymes et des racines. */
+const CHEMIN_GLOSSAIRE = 'docs/GLOSSAIRE.md';
 
 /** L'entrée de registre qui déclare la population que `--prove` doit couvrir. */
 const CHEMIN_REGISTRE = join(
@@ -298,15 +323,15 @@ export function synonymesDuGlossaire(glossaire: string): SynonymeInterdit[] {
   return out.filter((s) => !canoniques.has(s.terme));
 }
 
-// ── l'exemption de citation, par la GRAMMAIRE du fichier ─────────────────────
+// ── LA GRAMMAIRE : une découpe, trois langages, écrite ICI seulement ─────────
 
-type Grammaire = 'sans_exemption' | 'prose' | 'commentaire_sql' | 'commentaire_slash';
+type Grammaire = 'sans_exemption' | 'prose' | 'sql' | 'prisma';
 
 /** Les SEULES extensions qui accordent une exemption. Toute autre n'exempte rien. */
 const GRAMMAIRES_QUI_CITENT = new Map<string, Grammaire>([
   ['md', 'prose'],
-  ['sql', 'commentaire_sql'],
-  ['prisma', 'commentaire_slash'],
+  ['sql', 'sql'],
+  ['prisma', 'prisma'],
 ]);
 
 /** Les extensions qui citent, telles que la table les porte : le registre les énumère, la sortie les imprime. */
@@ -317,122 +342,365 @@ function grammaireDuFichier(chemin: string): Grammaire {
   return (extension !== undefined && GRAMMAIRES_QUI_CITENT.get(extension)) || 'sans_exemption';
 }
 
-const OUVRE_BLOC_SQL = '/' + '*';
-const FERME_BLOC_SQL = '*' + '/';
+/** Les natures de zone, dans l'ordre où la sortie les imprime. */
+export const NATURES_DE_ZONE = [
+  'commentaire',
+  'chaine',
+  'bloc_de_code',
+  'span_de_code',
+  'guillemets',
+] as const;
+export type NatureDeZone = (typeof NATURES_DE_ZONE)[number];
 
-/** Les intervalles COMMENTÉS d'une ligne. `etat` porte un bloc SQL resté ouvert d'une ligne à l'autre. */
-function zonesCommentees(
-  ligne: string,
-  grammaire: Grammaire,
-  etat: { dansUnBloc: boolean }
-): [number, number][] {
-  const zones: [number, number][] = [];
-  if (grammaire === 'commentaire_slash') {
-    const i = ligne.indexOf('//');
-    if (i >= 0) zones.push([i, ligne.length]);
-    return zones;
-  }
-  let c = 0;
-  let debutDuBloc = etat.dansUnBloc ? 0 : -1;
-  while (c < ligne.length) {
-    if (etat.dansUnBloc) {
-      const fin = ligne.indexOf(FERME_BLOC_SQL, c);
-      if (fin === -1) {
-        zones.push([debutDuBloc, ligne.length]);
-        return zones;
-      }
-      etat.dansUnBloc = false;
-      zones.push([debutDuBloc, fin + 2]);
-      c = fin + 2;
-      continue;
-    }
-    if (ligne.startsWith('--', c)) {
-      zones.push([c, ligne.length]);
-      return zones;
-    }
-    if (ligne.startsWith(OUVRE_BLOC_SQL, c)) {
-      etat.dansUnBloc = true;
-      debutDuBloc = c;
-      c += 2;
-      continue;
-    }
-    c++;
-  }
-  return zones;
-}
-
-/** Les spans d'accents graves d'une ligne, restreints aux intervalles passés. */
-function spansDansZones(ligne: string, zones: [number, number][]): [number, number][] {
-  const out: [number, number][] = [];
-  for (const [a, b] of zones) {
-    const morceau = ligne.slice(a, b);
-    for (const m of morceau.matchAll(/`[^`\n]*`/g)) {
-      out.push([a + m.index, a + m.index + m[0].length]);
-    }
-  }
-  return out;
-}
+/** Une zone RECONNUE, en positions du texte entier : [debut, fin). */
+export type Zone = { nature: NatureDeZone; construction: string; debut: number; fin: number };
 
 /**
- * LES ZONES EXEMPTÉES, ligne par ligne, selon la grammaire du fichier — sur les lignes MÊMES
- * qu'`examiner` parcourt : la découpe n'est écrite qu'une fois.
+ * Ce que la grammaire a découpé : ses zones, les intervalles qu'une citation EXEMPTE, et la construction
+ * qu'elle n'a pas su refermer. Une construction non reconnue n'est jamais traversée : `exemptes` est
+ * alors VIDE — le fichier est jugé comme du code —, et l'appelant le refuse en la NOMMANT.
  */
-function zonesExemptees(chemin: string, lignes: string[]): [number, number][][] {
-  const grammaire = grammaireDuFichier(chemin);
-  if (grammaire === 'sans_exemption') return lignes.map(() => []);
-  if (grammaire === 'prose') return zonesDeProse(lignes);
-
-  const etat = { dansUnBloc: false };
-  return lignes.map((ligne) => spansDansZones(ligne, zonesCommentees(ligne, grammaire, etat)));
-}
+export type Decoupe = {
+  zones: Zone[];
+  exemptes: [number, number][];
+  nonReconnue: { construction: string; ligne: number } | undefined;
+};
 
 /**
- * Les zones citées d'un document en PROSE : blocs à trois accents graves REFERMÉS (une clôture
- * impaire n'ouvre rien), guillemets français, et spans d'accents graves fermés sur leur ligne ou
- * la suivante — au-delà, l'accent pendant est abandonné et le suivant rouvre un span. Un accent
- * jamais refermé n'exempte rien.
+ * Une construction d'un langage de CODE (SQL, Prisma). `ouvre` ne porte aucun groupe capturant : les
+ * motifs sont réunis en UN seul, dont le groupe dit laquelle a ouvert. `ferme` : la fin de ligne, ou le
+ * texte qui referme (calculé sur l'ouvrante, pour la balise d'une chaîne à dollars).
  */
-function zonesDeProse(lignes: string[]): [number, number][][] {
-  const out: [number, number][][] = lignes.map(() => []);
-  const clotures = lignes.flatMap((l, i) => (l.trimStart().startsWith('```') ? [i] : []));
-  if (clotures.length % 2 === 1) clotures.pop();
-  const estCloture = new Set(clotures);
-  let dansUnBloc = false;
-  let ouvertureLigne = -1;
-  let ouvertureColonne = -1;
+type Construction = {
+  nom: string;
+  nature: 'commentaire' | 'chaine';
+  ouvre: RegExp;
+  ferme: 'fin_de_ligne' | ((ouvrante: string) => string);
+  /** `double` : la fermante doublée s'échappe ; `barre` : la barre oblique inverse échappe ; les deux. */
+  echappe?: 'double' | 'barre' | 'barre_et_double';
+  /** PostgreSQL imbrique ses commentaires de bloc. */
+  imbrique?: true;
+  /** Une chaîne Prisma ne franchit pas sa ligne. */
+  surUneLigne?: true;
+};
 
-  for (let i = 0; i < lignes.length; i++) {
-    const ligne = lignes[i]!;
-    for (const m of ligne.matchAll(/«[^»\n]*»/g)) out[i]!.push([m.index, m.index + m[0].length]);
+const MEME = (ouvrante: string): string => ouvrante;
+const BARRE = String.fromCharCode(92);
 
-    if (estCloture.has(i)) {
-      dansUnBloc = !dansUnBloc;
-      out[i]!.push([0, ligne.length]);
-      ouvertureLigne = -1;
-      continue;
-    }
-    if (dansUnBloc) {
-      out[i]!.push([0, ligne.length]);
-      continue;
-    }
-    for (let c = 0; c < ligne.length; c++) {
-      if (ligne[c] !== '`') continue;
-      if (ouvertureLigne !== -1 && i - ouvertureLigne > 1) ouvertureLigne = -1;
-      if (ouvertureLigne === -1) {
-        ouvertureLigne = i;
-        ouvertureColonne = c;
+/**
+ * PostgreSQL : deux commentaires (le bloc s'imbrique), quatre littéraux. Une construction non listée —
+ * un accent grave, par exemple — n'est pas une construction du langage : son texte est du CODE, jugé.
+ * L'ordre compte : la chaîne échappée `E'…'` avant l'apostrophe, qui l'ouvrirait autrement.
+ */
+const CONSTRUCTIONS_SQL: Construction[] = [
+  { nom: 'commentaire de ligne', nature: 'commentaire', ouvre: /--/, ferme: 'fin_de_ligne' },
+  {
+    nom: 'commentaire de bloc',
+    nature: 'commentaire',
+    ouvre: /\/\*/,
+    ferme: () => '*/',
+    imbrique: true,
+  },
+  {
+    nom: "chaîne échappée E'…'",
+    nature: 'chaine',
+    ouvre: /(?<![\w$])[Ee]'/,
+    ferme: () => "'",
+    echappe: 'barre_et_double',
+  },
+  {
+    nom: 'chaîne à dollars',
+    nature: 'chaine',
+    ouvre: /(?<![\w$])\$(?:[A-Za-z_\u0080-￿][\w\u0080-￿]*)?\$/,
+    ferme: MEME,
+  },
+  {
+    nom: 'identifiant entre guillemets',
+    nature: 'chaine',
+    ouvre: /"/,
+    ferme: () => '"',
+    echappe: 'double',
+  },
+  {
+    nom: 'chaîne entre apostrophes',
+    nature: 'chaine',
+    ouvre: /'/,
+    ferme: () => "'",
+    echappe: 'double',
+  },
+];
+
+/** Prisma : un commentaire (double ou triple barre), une chaîne entre guillemets qui ne franchit pas sa ligne. */
+const CONSTRUCTIONS_PRISMA: Construction[] = [
+  { nom: 'commentaire de ligne', nature: 'commentaire', ouvre: /\/\//, ferme: 'fin_de_ligne' },
+  {
+    nom: 'chaîne entre guillemets',
+    nature: 'chaine',
+    ouvre: /"/,
+    ferme: () => '"',
+    echappe: 'barre',
+    surUneLigne: true,
+  },
+];
+
+/** Le numéro (à partir de 1) de la ligne qui porte la position `p`. */
+function ligneDe(texte: string, p: number): number {
+  let n = 1;
+  for (let i = texte.indexOf(LF); i !== -1 && i < p; i = texte.indexOf(LF, i + 1)) n++;
+  return n;
+}
+
+/** La fin d'une construction ouverte en `debut` par `ouvrante`, ou `undefined` si elle n'est jamais refermée. */
+function finDeConstruction(
+  texte: string,
+  debut: number,
+  ouvrante: string,
+  c: Construction
+): number | undefined {
+  const apres = debut + ouvrante.length;
+  if (c.ferme === 'fin_de_ligne') {
+    const fin = texte.indexOf(LF, apres);
+    return fin === -1 ? texte.length : fin;
+  }
+  const fermante = c.ferme(ouvrante);
+  if (c.imbrique) {
+    let profondeur = 1;
+    let j = apres;
+    let ouvre = texte.indexOf(ouvrante, j);
+    for (;;) {
+      const ferme = texte.indexOf(fermante, j);
+      if (ferme === -1) return undefined;
+      if (ouvre !== -1 && ouvre < ferme) {
+        profondeur++;
+        j = ouvre + ouvrante.length;
+        ouvre = texte.indexOf(ouvrante, j);
         continue;
       }
-      if (ouvertureLigne === i) {
-        out[i]!.push([ouvertureColonne, c + 1]);
-      } else {
-        out[ouvertureLigne]!.push([ouvertureColonne, lignes[ouvertureLigne]!.length]);
-        out[i]!.push([0, c + 1]);
-      }
-      ouvertureLigne = -1;
+      profondeur--;
+      j = ferme + fermante.length;
+      if (profondeur === 0) return j;
+      if (ouvre !== -1 && ouvre < j) ouvre = texte.indexOf(ouvrante, j);
     }
   }
-  return out;
+  for (let j = apres; j < texte.length; j++) {
+    const car = texte[j]!;
+    if (car === LF && c.surUneLigne) return undefined;
+    if (car === BARRE && c.echappe !== undefined && c.echappe !== 'double') {
+      j++;
+      continue;
+    }
+    if (!texte.startsWith(fermante, j)) continue;
+    const doublee = texte.startsWith(fermante, j + fermante.length);
+    if (doublee && (c.echappe === 'double' || c.echappe === 'barre_et_double')) {
+      j += fermante.length * 2 - 1;
+      continue;
+    }
+    return j + fermante.length;
+  }
+  return undefined;
+}
+
+/** Les spans d'accents graves d'un commentaire, ligne par ligne : c'est là, et là seulement, qu'un code cite. */
+function citationsDansUnCommentaire(texte: string, zone: Zone): [number, number][] {
+  const morceau = texte.slice(zone.debut, zone.fin);
+  return [...morceau.matchAll(/`[^`\n]*`/g)].map((m): [number, number] => [
+    zone.debut + m.index,
+    zone.debut + m.index + m[0].length,
+  ]);
+}
+
+/** SQL et Prisma : un seul balayage, qui saute de construction en construction. */
+function decouperDuCode(texte: string, constructions: Construction[]): Decoupe {
+  const ouvrantes = new RegExp(constructions.map((c) => `(${c.ouvre.source})`).join('|'), 'g');
+  const zones: Zone[] = [];
+  let i = 0;
+  for (;;) {
+    ouvrantes.lastIndex = i;
+    const m = ouvrantes.exec(texte);
+    if (m === null) break;
+    const c = constructions[m.slice(1).findIndex((g) => g !== undefined)]!;
+    const fin = finDeConstruction(texte, m.index, m[0], c);
+    if (fin === undefined) {
+      return {
+        zones,
+        exemptes: [],
+        nonReconnue: { construction: c.nom, ligne: ligneDe(texte, m.index) },
+      };
+    }
+    zones.push({ nature: c.nature, construction: c.nom, debut: m.index, fin });
+    i = fin;
+  }
+  const exemptes = zones
+    .filter((z) => z.nature === 'commentaire')
+    .flatMap((z) => citationsDansUnCommentaire(texte, z));
+  return { zones, exemptes, nonReconnue: undefined };
+}
+
+// Les blocs de la prose, au sens de CommonMark (et des tableaux GFM). Chaque motif se lit sur la ligne
+// privée de ses marqueurs de citation Markdown.
+const MARQUEURS_DE_CITATION = /^(?: {0,3}> ?)+/;
+const LIGNE_VIDE = /^[ \t]*\r?$/;
+const OUVRE_UN_BLOC = /^ {0,3}(`{3,}|~{3,})([^\r]*)\r?$/;
+const FERME_UN_BLOC = /^ {0,3}(`{3,}|~{3,})[ \t]*\r?$/;
+const TITRE_ATX = /^ {0,3}#{1,6}(?:[ \t]|\r?$)/;
+const RUPTURE = /^ {0,3}(?:(?:[-*_])(?:[ \t]*[-*_]){2,}|=+)[ \t]*\r?$/;
+const DEBUT_D_ITEM = /^[ \t]*(?:[-+*]|\d{1,9}[.)])(?:[ \t]|\r?$)/;
+const CODE_INDENTE = /^(?: {4}|\t)/;
+const SEPARATEUR_DE_TABLEAU = /^[ \t]*\|?[ \t]*:?-+:?[ \t]*(?:\|[ \t]*:?-+:?[ \t]*)+\|?[ \t]*\r?$/;
+const RANGEE_DE_TABLEAU = /^[ \t]*\|/;
+
+/**
+ * Les spans de code d'un paragraphe, au sens de CommonMark : une suite de N accents graves ne se
+ * referme que sur une suite d'EXACTEMENT N ; sans fermante dans le paragraphe, elle est du texte et la
+ * lecture reprend juste après elle. Un accent grave échappé par une barre oblique inverse n'ouvre rien.
+ * Linéaire : les fermantes candidates sont rangées par longueur, et chaque curseur ne recule jamais.
+ */
+function spansDuParagraphe(texte: string, debut: number, fin: number, zones: Zone[]): void {
+  const suites: { pos: number; long: number; echappee: boolean }[] = [];
+  const motif = /`+/g;
+  motif.lastIndex = debut;
+  for (let m = motif.exec(texte); m !== null && m.index < fin; m = motif.exec(texte)) {
+    let barres = 0;
+    while (m.index - barres - 1 >= debut && texte[m.index - barres - 1] === BARRE) barres++;
+    suites.push({ pos: m.index, long: m[0].length, echappee: barres % 2 === 1 });
+  }
+  const parLongueur = new Map<number, number[]>();
+  suites.forEach((s, k) => {
+    const deCetteLongueur = parLongueur.get(s.long);
+    if (deCetteLongueur === undefined) parLongueur.set(s.long, [k]);
+    else deCetteLongueur.push(k);
+  });
+  const curseurs = new Map<number, number>();
+  for (let k = 0; k < suites.length; k++) {
+    const s = suites[k]!;
+    const long = s.echappee ? s.long - 1 : s.long;
+    const candidates = parLongueur.get(long) ?? [];
+    let c = curseurs.get(long) ?? 0;
+    while (c < candidates.length && candidates[c]! <= k) c++;
+    curseurs.set(long, c);
+    if (long === 0 || c === candidates.length) continue;
+    const j = candidates[c]!;
+    const fermante = suites[j]!;
+    zones.push({
+      nature: 'span_de_code',
+      construction: 'span de code',
+      debut: s.echappee ? s.pos + 1 : s.pos,
+      fin: fermante.pos + fermante.long,
+    });
+    k = j;
+  }
+}
+
+/**
+ * La prose : les blocs d'abord (bloc de code clôturé, titre, tableau, code indenté, paragraphe), puis
+ * les spans de code DANS chaque paragraphe ou titre — un span ne franchit jamais la frontière d'un bloc —,
+ * puis les guillemets français, sur leur ligne. Un bloc clôturé jamais refermé se prolonge jusqu'à la
+ * fin du document au rendu : la garde n'y exempte RIEN, et n'y cherche plus de span.
+ */
+function decouperLaProse(texte: string): Decoupe {
+  const lignes = texte.split(LF);
+  const debuts: number[] = [];
+  let position = 0;
+  for (const l of lignes) {
+    debuts.push(position);
+    position += l.length + 1;
+  }
+  const finDe = (i: number): number => debuts[i]! + lignes[i]!.length;
+  const zones: Zone[] = [];
+
+  let paragraphe: number[] = [];
+  let enTableau = false;
+  const clore = (): void => {
+    if (paragraphe.length > 0)
+      spansDuParagraphe(texte, debuts[paragraphe[0]!]!, finDe(paragraphe.at(-1)!), zones);
+    paragraphe = [];
+  };
+  const seule = (i: number): void => spansDuParagraphe(texte, debuts[i]!, finDe(i), zones);
+
+  for (let i = 0; i < lignes.length; i++) {
+    const brute = lignes[i]!;
+    const ligne = brute.replace(MARQUEURS_DE_CITATION, '');
+    const citee = ligne.length !== brute.length;
+
+    const ouvre = OUVRE_UN_BLOC.exec(ligne);
+    if (ouvre && !(ouvre[1]![0] === '`' && ouvre[2]!.includes('`'))) {
+      clore();
+      enTableau = false;
+      const clotureAttendue = ouvre[1]!;
+      let j = i + 1;
+      for (; j < lignes.length; j++) {
+        const f = FERME_UN_BLOC.exec(lignes[j]!.replace(MARQUEURS_DE_CITATION, ''));
+        if (f && f[1]![0] === clotureAttendue[0] && f[1]!.length >= clotureAttendue.length) break;
+      }
+      if (j === lignes.length) break;
+      zones.push({
+        nature: 'bloc_de_code',
+        construction: 'bloc de code clôturé',
+        debut: debuts[i]!,
+        fin: finDe(j),
+      });
+      i = j;
+      continue;
+    }
+    if (LIGNE_VIDE.test(ligne)) {
+      clore();
+      enTableau = false;
+      continue;
+    }
+    if (SEPARATEUR_DE_TABLEAU.test(ligne)) {
+      // La rangée d'en-tête est la ligne qui précède : elle quitte le paragraphe.
+      const entete = paragraphe.pop();
+      clore();
+      if (entete !== undefined) seule(entete);
+      seule(i);
+      enTableau = true;
+      continue;
+    }
+    if (
+      enTableau ||
+      RANGEE_DE_TABLEAU.test(ligne) ||
+      TITRE_ATX.test(ligne) ||
+      RUPTURE.test(ligne)
+    ) {
+      clore();
+      seule(i);
+      continue;
+    }
+    if (paragraphe.length === 0 && CODE_INDENTE.test(ligne)) continue;
+    const precedente = paragraphe.at(-1);
+    const precedenteCitee =
+      precedente !== undefined && MARQUEURS_DE_CITATION.test(lignes[precedente]!);
+    if (DEBUT_D_ITEM.test(ligne) || (precedente !== undefined && precedenteCitee !== citee))
+      clore();
+    paragraphe.push(i);
+  }
+  clore();
+
+  for (const m of texte.matchAll(/«[^»\n]*»/g)) {
+    zones.push({
+      nature: 'guillemets',
+      construction: 'guillemets français',
+      debut: m.index,
+      fin: m.index + m[0].length,
+    });
+  }
+  return {
+    zones,
+    exemptes: zones.map((z): [number, number] => [z.debut, z.fin]),
+    nonReconnue: undefined,
+  };
+}
+
+/**
+ * LA DÉCOUPE d'un fichier, selon la grammaire de sa DERNIÈRE extension. Toute zone qu'une exemption
+ * de citation touche vient d'ici, et de nulle part ailleurs.
+ */
+export function decouper(chemin: string, texte: string): Decoupe {
+  const grammaire = grammaireDuFichier(chemin);
+  if (grammaire === 'prose') return decouperLaProse(texte);
+  if (grammaire === 'sql') return decouperDuCode(texte, CONSTRUCTIONS_SQL);
+  if (grammaire === 'prisma') return decouperDuCode(texte, CONSTRUCTIONS_PRISMA);
+  return { zones: [], exemptes: [], nonReconnue: undefined };
 }
 
 // ── le périmètre ─────────────────────────────────────────────────────────────
@@ -481,7 +749,7 @@ const DECODEUR = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true });
 /** Le texte d'un fichier lu EN ENTIER, ou la raison pour laquelle il ne l'est pas. */
 function lireEnEntier(fichier: FichierVu): { texte: string } | { raison: string } {
   if ('erreur' in fichier)
-    return { raison: `le disque refuse d'en rendre les octets (${fichier.erreur})` };
+    return { raison: `l'index n'en rend pas les octets (${fichier.erreur})` };
   if (fichier.octets.includes(0)) return { raison: 'octet NUL — UTF-16 ou binaire' };
   try {
     return { texte: DECODEUR.decode(fichier.octets) };
@@ -588,7 +856,7 @@ export function examiner(vue: Vue): { fautes: Faute[]; examines: Examine[] } {
     });
   }
   const manquants = typesValides.filter((t) => !vue.typesDuContrat.includes(t));
-  if (typesValides.length > 0 && manquants.length > 0) {
+  if (manquants.length > 0) {
     fautes.push({
       famille: 'source_illisible',
       refus: 'contrat_et_exigence_divergents',
@@ -653,21 +921,33 @@ export function examiner(vue: Vue): { fautes: Faute[]; examines: Examine[] } {
         fautes.push(refusDeFinDeLigne(fichier.chemin, fin));
         continue;
       }
-      const lignes = lecture.texte.split(LF);
-      const zones = zonesExemptees(fichier.chemin, lignes);
+      const decoupe = decouper(fichier.chemin, lecture.texte);
+      if (decoupe.nonReconnue !== undefined) {
+        fautes.push({
+          famille: 'contenu_illisible',
+          message:
+            `${fichier.chemin}:${decoupe.nonReconnue.ligne} — construction non reconnue : ` +
+            `${decoupe.nonReconnue.construction} ouverte ici et jamais refermée. La garde ne découpe pas ` +
+            "ce qu'elle ne reconnaît pas : ce fichier est jugé SANS aucune exemption de citation.",
+        });
+      }
+      const { exemptes } = decoupe;
       const dansLeContrat = fichier.chemin.startsWith(RACINE_CONTRATS);
       let octets = 0;
+      let debutDeLigne = 0;
       const empreinte = createHash('sha256');
 
-      lignes.forEach((ligne, i) => {
+      lecture.texte.split(LF).forEach((ligne, i) => {
         if (i > 0) {
           octets += 1;
           empreinte.update(LF);
         }
         octets += Buffer.byteLength(ligne, 'utf8');
         empreinte.update(ligne);
-        const citees = zones[i] ?? [];
-        const cite = (index: number): boolean => citees.some(([a, b]) => index >= a && index < b);
+        const origine = debutDeLigne;
+        debutDeLigne += ligne.length + 1;
+        const cite = (index: number): boolean =>
+          exemptes.some(([a, b]) => origine + index >= a && origine + index < b);
 
         for (const regle of regles) {
           if (regle.famille === 'evenement_litteral_hors_contrat' && dansLeContrat) continue;
@@ -682,7 +962,13 @@ export function examiner(vue: Vue): { fautes: Faute[]; examines: Examine[] } {
           }
         }
       });
-      examines.push({ chemin: fichier.chemin, racine, octets, empreinte: empreinte.digest('hex') });
+      examines.push({
+        chemin: fichier.chemin,
+        racine,
+        octets,
+        empreinte: empreinte.digest('hex'),
+        zones: grammaireDuFichier(fichier.chemin) === 'sans_exemption' ? undefined : decoupe.zones,
+      });
     }
   }
 
@@ -696,21 +982,35 @@ export function controler(vue: Vue): Faute[] {
 
 // ── la vue du dépôt ──────────────────────────────────────────────────────────
 
+/** Le mode d'index d'un sous-module : son objet est un commit d'un AUTRE dépôt, jamais un blob. */
+const MODE_SOUS_MODULE = '160000';
+
 /**
  * La vue du dépôt : TOUS les fichiers suivis, en octets, sans filtre. Le périmètre d'abord, et dans
  * cet ordre : lancée hors de la racine, la garde refuse en NOMMANT `perimetre_illisible` au lieu de
- * mourir sur un `ENOENT` de `docs/GLOSSAIRE.md`. Un suivi dont le disque refuse les octets (un
- * sous-module est un dossier) garde son erreur : sous une racine, `examiner` le refuse en le nommant.
+ * mourir sur un `ENOENT` de `docs/GLOSSAIRE.md`.
+ *
+ * LES OCTETS SONT CEUX DU BLOB que l'index associe à chaque chemin, demandé par son empreinte
+ * (`blobsDe`, la lecture de `gov:entite`, importée et non recopiée) — jamais le disque. Un fichier
+ * déclaré inchangé dans l'index (`--assume-unchanged`, `--skip-worktree`) porte un disque propre et
+ * un blob fautif : lu sur le disque, il sortait vert en local et rouge en CI, qui extrait le blob. Un
+ * sous-module et une entrée en conflit n'ont pas de blob à rendre : ils gardent leur erreur, et sous
+ * une racine `examiner` les refuse en les nommant.
  */
 export function vueDuDepot(): Vue {
-  const fichiers = fichiersSuivisOuRefus(ID_REGISTRE).map((chemin): FichierVu => {
-    try {
-      return { chemin, octets: readFileSync(chemin) };
-    } catch (e) {
-      return { chemin, erreur: (e as NodeJS.ErrnoException).code ?? (e as Error).message };
-    }
+  const entrees = entreesSuiviesOuRefus(ID_REGISTRE);
+  const sansBlob = new Map<string, string>();
+  for (const e of entrees) {
+    if (e.mode === MODE_SOUS_MODULE) sansBlob.set(e.chemin, `sous-module, mode ${e.mode}`);
+    else if (e.etage !== '0') sansBlob.set(e.chemin, `entrée en conflit, étage ${e.etage}`);
+  }
+  const blobs = blobsDe(entrees.filter((e) => !sansBlob.has(e.chemin)));
+  const fichiers = [...new Set(entrees.map((e) => e.chemin))].map((chemin): FichierVu => {
+    const erreur = sansBlob.get(chemin);
+    return erreur === undefined ? { chemin, octets: blobs.get(chemin)! } : { chemin, erreur };
   });
-  const glossaire = readFileSync('docs/GLOSSAIRE.md', 'utf8');
+  const glossaire =
+    blobs.get(CHEMIN_GLOSSAIRE)?.toString('utf8') ?? readFileSync(CHEMIN_GLOSSAIRE, 'utf8');
   return {
     reqInt004: texteDeLaReq('REQ-INT-004'),
     glossaire,
@@ -852,6 +1152,9 @@ const avec = (chemin: string, contenu: string): Vue => avecFichierVu(fichierText
 
 /** L'accent grave, posé par son code : l'écrire dans un littéral de ce fichier le fermerait. */
 const AG = String.fromCharCode(96);
+/** Les marqueurs d'un commentaire de bloc SQL, posés en deux morceaux dans les fixtures. */
+const OUVRE_BLOC_SQL = '/' + '*';
+const FERME_BLOC_SQL = '*' + '/';
 
 export type Temoin = {
   /** L'identifiant que `docs/gates.json` énumère : supprimer ce témoin découvre SA clé. */
@@ -1201,6 +1504,31 @@ export const CONTRE_TEMOINS: ContreTemoin[] = [
       ),
   },
   {
+    quoi: 'un commentaire SQL IMBRIQUÉ cite encore après la fermeture de son niveau intérieur',
+    vue: () =>
+      avec(
+        'prisma/migrations/0006_imbrique/migration.sql',
+        `${OUVRE_BLOC_SQL} niveau 1 ${OUVRE_BLOC_SQL} niveau 2 ${FERME_BLOC_SQL} ` +
+          `le modèle ${AG}Invoice${AG} ${FERME_BLOC_SQL}\nSELECT 1;`
+      ),
+  },
+  {
+    quoi: 'une chaîne SQL qui porte deux tirets ne commente rien : le commentaire qui la suit cite',
+    vue: () =>
+      avec(
+        'prisma/migrations/0007_chaine/migration.sql',
+        `INSERT INTO t VALUES ('-- rien'); -- ${AG}payment.received${AG} est refusé`
+      ),
+  },
+  {
+    quoi: "un span de prose sur TROIS lignes d'un même paragraphe",
+    vue: () =>
+      avec(
+        'docs/adr/9992-trois-lignes.md',
+        `la table porte ${AG}{source,\neventId,\npayment.received}${AG} en entier`
+      ),
+  },
+  {
     quoi: 'un fichier HORS des racines que le glossaire nomme — la garde ne l’a pas lu, et le dit',
     vue: () => avec('docs/REQUIREMENTS.md', 'REQ-DM-036 — WebhookRecu {source, eventId, …}'),
   },
@@ -1314,8 +1642,16 @@ type Ecarts = {
   manque: string[];
 };
 
-/** LES ÉCARTS ENTRE LA POPULATION DU REGISTRE ET CE QUE LE CODE DÉCLARE ET PROUVE, dans les deux sens. */
-export function ecartsDePopulation(population: Population, code: CodeDeLaPreuve): Ecarts {
+/**
+ * LES ÉCARTS ENTRE LA POPULATION DU REGISTRE ET CE QUE LE CODE DÉCLARE ET PROUVE, dans les deux sens.
+ * `rapport` : l'épreuve des témoins, quand l'appelant l'a déjà faite — un témoin ne s'éprouve qu'UNE
+ * fois par décision.
+ */
+export function ecartsDePopulation(
+  population: Population,
+  code: CodeDeLaPreuve,
+  rapport: RapportDePreuve = eprouver(code.temoins)
+): Ecarts {
   const divergences: string[] = [];
   const confronter = (
     quoi: string,
@@ -1349,23 +1685,34 @@ export function ecartsDePopulation(population: Population, code: CodeDeLaPreuve)
     )
     .map((t) => `« ${t.quoi} » (${cleDeCouverture(t.famille, t.refus)})`);
 
-  const { couvertes } = eprouver(code.temoins);
   const manque = [
     ...population.familles,
     ...population.refus.map((r) => cleDeCouverture('source_illisible', r)),
     ...population.temoins,
-  ].filter((cle) => !couvertes.has(cle));
+  ].filter((cle) => !rapport.couvertes.has(cle));
 
   return { divergences, orphelins, manque };
 }
 
 type Decision = { code: 0 | 1; lignes: string[] };
 
+/** La population du registre, ou la phrase qui dit pourquoi elle est illisible. */
+function populationOuRefus(registre: string | Error): Population | string {
+  try {
+    if (registre instanceof Error) throw registre;
+    return populationDuRegistre(registre);
+  } catch (e) {
+    return `la population attendue est ILLISIBLE dans docs/gates.json : ${(e as Error).message}`;
+  }
+}
+
 /** LA DÉCISION DE `--prove`. La ligne de commande n'en fait qu'imprimer les lignes et sortir du code. */
 export function decisionDeLaPreuve(entrees: EntreesDeLaPreuve): Decision {
   const refus: string[] = [];
+  const echec = (): Decision => ({ code: 1, lignes: refus.map((r) => `❌ ${r}`) });
+  const rapport = eprouver(entrees.temoins);
 
-  for (const t of eprouver(entrees.temoins).sansMorsure) {
+  for (const t of rapport.sansMorsure) {
     refus.push(
       `Le témoin « ${t.quoi} » (${t.id}) n'a PAS fait rougir « ${cleDeCouverture(t.famille, t.refus)} ». ` +
         "Le témoin est faux, ou la règle ne couvre pas ce qu'elle prétend couvrir."
@@ -1380,35 +1727,27 @@ export function decisionDeLaPreuve(entrees: EntreesDeLaPreuve): Decision {
     }
   }
 
-  let population: Population | undefined;
-  try {
-    if (entrees.registre instanceof Error) throw entrees.registre;
-    population = populationDuRegistre(entrees.registre);
-  } catch (e) {
+  const population = populationOuRefus(entrees.registre);
+  if (typeof population === 'string') {
+    refus.push(population);
+    return echec();
+  }
+  const ecarts = ecartsDePopulation(population, entrees, rapport);
+  refus.push(...ecarts.divergences);
+  if (ecarts.orphelins.length > 0) {
     refus.push(
-      `la population attendue est ILLISIBLE dans docs/gates.json : ${(e as Error).message}`
+      `${ecarts.orphelins.length} témoin(s) dont la famille ou le refus n'est pas au registre : ` +
+        `${ecarts.orphelins.join(', ')}.`
     );
   }
-  if (population !== undefined) {
-    const ecarts = ecartsDePopulation(population, entrees);
-    refus.push(...ecarts.divergences);
-    if (ecarts.orphelins.length > 0) {
-      refus.push(
-        `${ecarts.orphelins.length} témoin(s) dont la famille ou le refus n'est pas au registre : ` +
-          `${ecarts.orphelins.join(', ')}.`
-      );
-    }
-    if (ecarts.manque.length > 0) {
-      refus.push(
-        `${ecarts.manque.length} entrée(s) de la population du registre sans témoin qui rougit : ` +
-          `${ecarts.manque.join(', ')}. Une règle jamais vue rougir ne garde rien.`
-      );
-    }
+  if (ecarts.manque.length > 0) {
+    refus.push(
+      `${ecarts.manque.length} entrée(s) de la population du registre sans témoin qui rougit : ` +
+        `${ecarts.manque.join(', ')}. Une règle jamais vue rougir ne garde rien.`
+    );
   }
 
-  if (refus.length > 0 || population === undefined) {
-    return { code: 1, lignes: refus.map((r) => `❌ ${r}`) };
-  }
+  if (refus.length > 0) return echec();
   return {
     code: 0,
     lignes: [
@@ -1419,6 +1758,22 @@ export function decisionDeLaPreuve(entrees: EntreesDeLaPreuve): Decision {
       ...FAMILLES.map((f) => `   • ${f.nom} — ${f.explication}`),
     ],
   };
+}
+
+/** Le nombre de fautes que la sortie imprime ; au-delà, elle les COMPTE. */
+export const FAUTES_IMPRIMEES = 30;
+
+/** Les zones que la grammaire a réellement découpées dans les fichiers examinés, par nature. */
+function ligneDesZones(examines: readonly Examine[]): string {
+  const aGrammaire = examines.flatMap((e) => (e.zones === undefined ? [] : [e.zones]));
+  const zones = aGrammaire.flat();
+  const parNature = NATURES_DE_ZONE.map(
+    (n) => `${n.replace(/_/g, ' ')} ${zones.filter((z) => z.nature === n).length}`
+  );
+  return (
+    `   Zones découpées : ${zones.length} zone(s) dans ${aGrammaire.length} fichier(s) à grammaire — ` +
+    `${parNature.join(', ')}. Une citation n'exempte que dans une zone que la grammaire a reconnue.`
+  );
 }
 
 /** LE VERDICT SUR UNE VUE, et tout ce qui s'imprime avec lui — les comptes viennent de ce qui a été EXAMINÉ. */
@@ -1444,8 +1799,10 @@ export function decisionDeLaGarde(vue: Vue): Decision {
       : [
           `❌ ${ID_REGISTRE} — ${fautes.length} faute(s) :`,
           '',
-          ...fautes.slice(0, 30).map((f) => `   [${f.famille}] ${f.message}`),
-          ...(fautes.length > 30 ? [`   … et ${fautes.length - 30} autre(s).`] : []),
+          ...fautes.slice(0, FAUTES_IMPRIMEES).map((f) => `   [${f.famille}] ${f.message}`),
+          ...(fautes.length > FAUTES_IMPRIMEES
+            ? [`   … et ${fautes.length - FAUTES_IMPRIMEES} autre(s).`]
+            : []),
           '',
         ];
 
@@ -1454,7 +1811,8 @@ export function decisionDeLaGarde(vue: Vue): Decision {
       parRacine.map((r) => `${r.racine} ${r.n} (${r.octets} octets)`).join(', ') +
       (refuses > 0 ? ` ; ${refuses} refusé(s) sans être jugé(s)` : '') +
       `. Toute extension est lue ; seules ${EXTENSIONS_QUI_CITENT.map((e) => `.${e}`).join(', ')} ` +
-      'accordent une exemption de citation, lue sur la dernière extension du nom.'
+      'accordent une exemption de citation, lue sur la dernière extension du nom.',
+    ligneDesZones(examines)
   );
   if (vides.length > 0) {
     lignes.push(
