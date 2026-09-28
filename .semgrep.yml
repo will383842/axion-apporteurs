@@ -30,7 +30,12 @@
 # clause d'héritage (revue `securite` 5329828516, PR 82). La règle n° 2 est donc une LISTE
 # BLANCHE : comme VALEUR, le nom `Prisma` n'a droit qu'à `Prisma.sql`, `Prisma.join`,
 # `Prisma.empty` et `Prisma.PrismaClientKnownRequestError`, écrits en clair ; toute autre
-# apparition de la valeur est refusée, et les positions de TYPE restent libres. S'y ajoutent le
+# apparition de la valeur est refusée, et les positions de TYPE restent libres POUR CETTE LISTE —
+# un argument de type est refusé ailleurs, par les bras JSX, quand son chemin commence AU chevron
+# (`Promise<Prisma.X>`, `Promise<N.Prisma.X>`) : prix déclaré au 11e tour, l'alias de type le porte.
+# Une première rédaction écrivait « les positions de TYPE restent libres » sans cette réserve, ce qui
+# est devenu faux le jour où ces bras sont entrés ; relevé par une revue `exactitude` sur `2cbfd75`.
+# S'y ajoutent le
 # NOM `Prisma` écrit comme chaîne, où qu'il soit : c'est ce qui ferme l'accès calculé sur
 # l'objet module, quel que soit le chargeur. Les fonctions d'ÉTIQUETTE (`$queryRaw`, `$executeRaw`, `Prisma.sql`)
 # n'ont droit, elles, qu'à la position d'étiquette d'un gabarit. Ce que ces motifs ne
@@ -140,7 +145,9 @@
 #     BLANCHE, écrites en clair ; toute autre apparition de la valeur — membre hors liste,
 #     membre calculé, déstructuration de `Prisma` ou liaison du namespace par déstructuration,
 #     renommage à l'import ou au ré-export, clé `Prisma:`, clause d'héritage, alias, argument,
-#     valeur rendue, ré-export — est refusée. Les positions de TYPE restent libres.
+#     valeur rendue, ré-export — est refusée. Les positions de TYPE restent libres POUR CETTE LISTE
+#     BLANCHE, et non dans le fichier : un argument de type dont le chemin commence au chevron est
+#     refusé par les bras JSX (`Promise<Prisma.X>`), prix déclaré du 11e tour.
 # Elle refuse en plus, comme CLASSES, les ÉCHAPPEMENTS (bras `&echappement`), les
 # INTERPOLATIONS BRUTES (bras `&interpolation-brute`), les noms `$queryRawUnsafe` et
 # `$executeRawUnsafe` écrits en clair où qu'ils soient, toute liaison IMPORT-EQUALS (`import x =
@@ -149,9 +156,26 @@
 # runtime par l'objet module.
 # L'ALIAS DU NAMESPACE transmis hors de sa liaison — paramètre, objet, variable, valeur rendue,
 # ré-export depuis `src/` — est FERMÉ par la liste blanche : c'est une apparition de la valeur
-# hors liste. Reste OUVERT un module HORS de `src/` qui ré-exporte le namespace ou ses membres
-# sous un autre nom (limite c de la règle n° 2), et l'objet module d'un spécifieur du client
-# qui quitte sa liaison, non suivi pour les membres du RUNTIME (limite d de la règle n° 2).
+# hors liste.
+#
+# CE QUE LES TOURS 10 À 14 ONT FERMÉ EN PLUS, et que cet en-tête taisait (relevé par une revue
+# `exactitude` sur `2cbfd75`) : le NOM D'ÉLÉMENT JSX portant le namespace, qualifié ou non, alias
+# non-ASCII, commentaire ou blanc Unicode dans le chemin, balise fermante et membre aliasé hors de
+# vue comprises ; le RELAIS EN BLOC (`export *`) dont le spécifieur désigne le client, un module
+# `prisma`/`db` ou le runtime ; tout SOUS-CHEMIN du client cité comme spécifieur
+# (`@prisma/client/runtime/…`, `.prisma/…`), la seule écriture admise étant `'@prisma/client'` ;
+# la DÉSTRUCTURATION d'une méthode brute, que le nom soit nu ou écrit en chaîne, en clé, en
+# paramètre, nichée, dans un `for…of` ou un motif de tableau ; et la FORGE d'un `Sql` — membre ou
+# clé `strings`, la même en chaîne ou en gabarit, `__proto__`, `Object.create`,
+# `Object.defineProperty`, `Object.defineProperties`, `Object.setPrototypeOf` et `Reflect.*`.
+#
+# RESTE OUVERT, et la formulation d'avant était trop large : un module HORS de `src/` qui
+# ré-exporte le namespace ou ses membres sous un autre nom (limite c de la règle n° 2). La limite d
+# — l'objet module du client qui quitte sa liaison, non suivi pour les membres du RUNTIME — n'est
+# plus ouverte par son chemin d'entrée : les sous-chemins du runtime sont refusés comme spécifieurs
+# et le relais en bloc l'est aussi, donc l'objet module ne s'obtient plus depuis `src/`. Ce qui
+# reste d'elle est le SUIVI lui-même, qui n'existe pas : un objet module obtenu autrement — par un
+# module hors `src/`, limite c — ne serait pas suivi.
 # LIMITE DÉCLARÉE, à côté des limites de chaque règle : la gate N'EST PAS une barrière contre
 # une obfuscation DÉLIBÉRÉE au-delà de ces formes et de ces classes — nom construit à
 # l'exécution (`String.fromCharCode`, `atob`, `split('').reverse().join('')`, tableau indexé),
@@ -493,9 +517,14 @@ rules:
       #   Prisma }`, chaînage optionnel ou non nul, et `C.Prisma` par l'objet module. La
       #   résolution d'alias de semgrep rattache à ce nom un `import { Prisma as P }` : `P.sql`
       #   est refusé comme `P.raw` (mesuré), seule l'écriture en clair `Prisma.<nom>` passe. Les
-      #   positions de TYPE restent libres : l'AST de semgrep 1.176.1 ne rend pas `Prisma.X`
-      #   d'une annotation, d'une assertion `as` ou d'une contrainte de générique comme une
-      #   valeur (mesuré) — sauf `typeof Prisma…`, qui LIT la valeur (prix ci-dessous).
+      #   positions de TYPE restent libres POUR CE BRAS : l'AST de semgrep 1.176.1 ne rend pas
+      #   `Prisma.X` d'une annotation, d'une assertion `as` ou d'une contrainte de générique comme
+      #   une valeur (mesuré) — sauf `typeof Prisma…`, qui LIT la valeur (prix ci-dessous).
+      #   ⚠️ Ce silence N'EST PLUS celui du fichier : depuis le 11e tour, les bras JSX refusent un
+      #   argument de type dont le chemin commence AU chevron (`Promise<Prisma.X>`,
+      #   `Promise<N.Prisma.X>`), et l'alias de type le porte. `Map<string, Prisma.X>` reste muet,
+      #   le chemin n'y commençant pas au chevron. Dire « les positions de type restent libres » sans
+      #   cette réserve était faux, dans le sens restrictif — relevé par une revue `exactitude`.
       - patterns:
           - pattern-either:
               - pattern: $C.Prisma
@@ -661,6 +690,14 @@ rules:
       #   (`src/server/evenement/journal.ts:98`, « `$executeRaw`, pas `$queryRaw` : … »). L'accent
       #   grave qui ferme la citation le sauve — le même piège que la citation du client en prose,
       #   corrigé au tour précédent. Mesuré, pas supposé.
+      #
+      #   SON PRIX, QUI N'ÉTAIT PAS DÉCLARÉ (revue `exactitude` sur `2cbfd75`) : une SIGNATURE DE
+      #   PROPRIÉTÉ de type écrite `{ $queryRaw: (s: TemplateStringsArray) => unknown }` est refusée,
+      #   parce que son nom est suivi d'un deux-points comme celui d'une clé de liaison. La forme
+      #   MÉTHODE (`{ $queryRaw(...): unknown }`) ne l'est pas, et c'est celle dont le bac est plein.
+      #   Aucune occurrence sous `src/` (mesuré) ; le remède, si le cas se présente, est d'écrire la
+      #   méthode plutôt que la propriété. Un prix non déclaré est un piège pour qui viendra après,
+      #   même quand il ne coûte rien aujourd'hui — c'est pour cela qu'il est écrit ici.
       - pattern-regex: |-
           \$(?:queryRaw|executeRaw|queryRawUnsafe|executeRawUnsafe)(?![\p{ID_Continue}$\x{200C}\x{200D}])(?:[\t\n\x0B\f\r\x{0085}\x{200B}\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)*(?:[:,}]|=(?![=>]))
       # — LE NOM ÉCRIT EN CHAÎNE, en CLÉ de déstructuration (14e tour, revue `securite` sur

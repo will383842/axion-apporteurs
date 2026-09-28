@@ -40,6 +40,7 @@ import {
   fichiersPresents,
   fichiersDuBac,
   jugerEnsemble,
+  jugerPreuve,
   jugerReel,
   jumeauxNosem,
   verifierImage,
@@ -125,22 +126,23 @@ describe('REQ-QA-011 → REQ-SEC-008 — le bac : chaque forme plantée est nomm
    * MORDE. Une déclaration qui ne correspond plus à rien est aussi trompeuse qu'une contamination
    * cachée : elle laisse croire qu'on surveille encore.
    *
-   * Cette assertion est la JUMELLE de `jugerPreuve` (familles `faux_positif` et `admission_muette`) :
-   * les deux lisent la même règle, et c'est voulu — le banc la fait rougir à la gate, ce test la fait
-   * rougir ici. Le champ et sa seconde face ont été relus par la lentille `securite` sur `b9579bf`
-   * (« il ne vaut que pour le banc, pas d'objection ») ; ce test les SUIT, il ne les élargit pas.
+   * LA RÈGLE EST APPELÉE, PAS RECOPIÉE (RM-01). Une première rédaction rejouait ici le calcul de
+   * `jugerPreuve` — même filtre, même comparaison, écrits deux fois. Deux copies d'une règle
+   * divergent, et c'est celle du TEST qui resterait verte en cachant la dérive de celle qui garde.
+   * Ce test appelle donc `jugerPreuve` avec le bac que la gate lui donne (`fichiersDuBac()`), et
+   * n'assertionne qu'une chose : aucune faute des deux familles concernées ne NOMME ce fichier.
+   * Relevé par une revue `exactitude` sur `2cbfd75`. Le champ et sa seconde face ont été relus par
+   * la lentille `securite` sur `b9579bf` (« il ne vaut que pour le banc, pas d'objection »).
    */
   it.each(CONTRE_TEMOINS.map((t) => [t.nom, t] as const))(
     'REQ-QA-011 → REQ-SEC-008 — contre-témoin %s : AUCUN constat, sauf un refus DÉCLARÉ qui mord',
     (_nom, t) => {
-      const constats = preuve.passage.sortie!.results.filter((c) => c.path === t.chemin);
-      const admises = t.reglesAdmises.map((r) => `${PREFIXE_MAISON}${r}`);
-      expect(
-        constats
-          .filter((c) => !admises.includes(c.check_id))
-          .map((c) => `${c.check_id}:${c.start.line}`)
-      ).toEqual([]);
-      expect(admises.filter((id) => !constats.some((c) => c.check_id === id))).toEqual([]);
+      const fautes = jugerPreuve(preuve.passage, fichiersDuBac()).filter(
+        (f) =>
+          (f.famille === 'faux_positif' || f.famille === 'admission_muette') &&
+          f.message.includes(t.chemin)
+      );
+      expect(fautes.map((f) => `[${f.famille}] ${f.message}`)).toEqual([]);
     }
   );
 
