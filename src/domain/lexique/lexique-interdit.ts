@@ -25,7 +25,8 @@
  *
  * DEUX PORTÉES, PARCE QUE DEUX EXIGENCES.
  *   — `depot` : les termes de REQ-GOV-017, refusés dans TOUT le périmètre qu'elle nomme —
- *     `prisma/**`, `messages/**`, `src/**\/*.tsx`, les gabarits d'e-mail et les ADR de Partners.
+ *     `prisma/**`, `messages/**`, tout fichier `.tsx` sous `src/`, les gabarits d'e-mail et les
+ *     ADR de Partners.
  *     Ce sont les quatre mots qui trahissent une intention de pilotage jusque dans un document
  *     interne : commercial, objectif, quota, classement.
  *   — `apporteur` : le vocabulaire bien plus large de REQ-JUR-037, refusé dans « tout ce qui est

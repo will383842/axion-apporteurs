@@ -51,6 +51,7 @@ import { fusionnerMain, trierLesConflits } from '../../../scripts/vues/fusion';
 import { etapesDeLaPorteA } from '../../../scripts/prevol';
 import { ETAPES_LENTES, etapesRapides } from '../../../scripts/prevol';
 import {
+  codeInchange,
   configDeLaPr,
   desactivationsDeStryker,
   fichiersAMuter,
@@ -683,6 +684,209 @@ describe('REQ-QA-002 — `passer()` : la passe entière, mesures injectées', ()
       lireRapport: () => null,
     });
     expect(tombe.code).toBe(1);
+  });
+});
+
+describe('REQ-QA-002 — `mutation:pr` écarte un diff de commentaires seuls, jugé par les JETONS', () => {
+  const F = 'src/domain/a.ts';
+  const avant = [
+    '/** Doc. */',
+    'export function f(a: number, b: number): number {',
+    '  // somme',
+    '  /* bloc */',
+    '  return a',
+    '    * b;',
+    '}',
+    "export const s = '// x';",
+    'export const t = (a: number) => `v${a} // x`;',
+    'export const r = /[//]a/;',
+    '',
+  ].join('\n');
+  const remplacer = (de: string, par: string): string => avant.split(de).join(par);
+
+  it('REQ-QA-002 — ligne //, bloc /* */ et JSDoc changés, blancs compris : code inchangé', () => {
+    const apres = remplacer('/** Doc. */', '/**\n * Doc reformulée.\n */')
+      .split('// somme')
+      .join('// produit, pas somme')
+      .split('/* bloc */')
+      .join('/* bloc\n     sur deux lignes */\n');
+    expect(codeInchange(avant, apres, F)).toBe(true);
+  });
+
+  it('REQ-QA-002 — une ligne de CODE qui commence par `*` change : code changé', () => {
+    expect(codeInchange(avant, remplacer('    * b;', '    * a;'), F)).toBe(false);
+  });
+
+  it('REQ-QA-002 — une chaîne, un gabarit ou une regex qui ressemblent à un commentaire changent : code changé', () => {
+    expect(codeInchange(avant, remplacer("'// x'", "'// y'"), F)).toBe(false);
+    expect(codeInchange(avant, remplacer('} // x`', '} // y`'), F)).toBe(false);
+    expect(codeInchange(avant, remplacer('/[//]a/', '/[//]b/'), F)).toBe(false);
+  });
+
+  it('REQ-QA-002 — fichier ajouté ou base illisible (base null) : code changé, jamais écarté par défaut', () => {
+    expect(codeInchange(null, avant, F)).toBe(false);
+  });
+
+  // L'INSERTION AUTOMATIQUE DE POINT-VIRGULE (revues `exactitude` 5328789820 et `securite`
+  // 5328796307, PR 82) : un saut de ligne — seul, ou DANS un commentaire bloc — après `return`,
+  // `throw`, `break`/`continue` étiquetés, ou avant un `++` postfixe, change ce que le code FAIT
+  // sans qu'aucun jeton ne change. `garde(false)` ne lève plus : la garde s'ouvre.
+  const garde = [
+    'declare function exiger(ok: boolean): boolean;',
+    'export function garde(ok: boolean): boolean {',
+    '  return exiger(ok);',
+    '}',
+    'export function lever(e: Error): never {',
+    '  throw e;',
+    '}',
+    'export function boucle(xs: number[][]): number {',
+    '  let n = 0;',
+    '  dehors: for (const l of xs) {',
+    '    for (const x of l) {',
+    '      if (x < 0) continue dehors;',
+    '      if (x > 9) break dehors;',
+    '      n += x;',
+    '    }',
+    '  }',
+    '  return n;',
+    '}',
+    'let i = 0;',
+    'export const inc = (): number => i++;',
+    '',
+  ].join('\n');
+  const dans = (de: string, par: string): string => garde.split(de).join(par);
+
+  it('REQ-QA-002 — `return` + commentaire bloc À SAUT DE LIGNE, ou saut de ligne seul : code changé (muté)', () => {
+    expect(codeInchange(garde, dans('return exiger(ok);', 'return /*\n  */ exiger(ok);'), F)).toBe(
+      false
+    );
+    expect(codeInchange(garde, dans('return exiger(ok);', 'return\n    exiger(ok);'), F)).toBe(
+      false
+    );
+  });
+
+  it('REQ-QA-002 — `throw`, `break`/`continue` étiquetés, `++` postfixe séparés par un saut de ligne : code changé (muté)', () => {
+    expect(codeInchange(garde, dans('throw e;', 'throw /*\n */ e;'), F)).toBe(false);
+    expect(codeInchange(garde, dans('throw e;', 'throw\n    e;'), F)).toBe(false);
+    expect(codeInchange(garde, dans('break dehors;', 'break /*\n */ dehors;'), F)).toBe(false);
+    expect(codeInchange(garde, dans('continue dehors;', 'continue\n dehors;'), F)).toBe(false);
+    expect(codeInchange(garde, dans('i++;', 'i /*\n */ ++;'), F)).toBe(false);
+    expect(codeInchange(garde, dans('i++;', 'i\n++;'), F)).toBe(false);
+  });
+
+  it('REQ-QA-002 — commentaire ligne ou bloc SUR UNE LIGNE, même après `return` : code inchangé (écarté)', () => {
+    expect(codeInchange(garde, dans('return exiger(ok);', 'return /* c */ exiger(ok);'), F)).toBe(
+      true
+    );
+    expect(
+      codeInchange(
+        garde,
+        dans('  return exiger(ok);', '  // la garde\n  return exiger(ok); // fin'),
+        F
+      )
+    ).toBe(true);
+    expect(codeInchange(garde, dans('throw e;', 'throw /* e */ e;'), F)).toBe(true);
+  });
+
+  // UN COMMENTAIRE QUI PORTE UNE DIRECTIVE EST DU CODE (revue `exactitude` 5328984956, PR 82) :
+  // un pragma `@jsx` change la transformation JSX, un `@ts-expect-error` ce que le compilateur
+  // accepte, un `istanbul ignore` ou un `@__PURE__` ce que l'outil fait du code qui suit. Son
+  // texte entre dans la comparaison ; un commentaire ordinaire, non.
+  const X = 'src/lib/vue.tsx';
+  const jsx = [
+    '/** Rendu. */',
+    'declare function h(...a: unknown[]): unknown;',
+    'export const v = <p>x</p>;',
+    'export const w = (n: number): number => n + 1;',
+    '',
+  ].join('\n');
+  const dansJsx = (de: string, par: string): string => jsx.split(de).join(par);
+
+  it('REQ-QA-002 — un pragma `@jsx` qui remplace un commentaire, ou qui change : code changé (muté)', () => {
+    const avecPragma = dansJsx('/** Rendu. */', '/** @jsx h */');
+    expect(codeInchange(jsx, avecPragma, X)).toBe(false);
+    expect(codeInchange(avecPragma, dansJsx('/** Rendu. */', '/** @jsx autre */'), X)).toBe(false);
+    expect(codeInchange(jsx, dansJsx('/** Rendu. */', '/** @jsxImportSource preact */'), X)).toBe(
+      false
+    );
+  });
+
+  it('REQ-QA-002 — `@ts-expect-error`, `istanbul ignore`, `@__PURE__`, `/// <reference` ajoutés : code changé (muté)', () => {
+    const ligne = 'export const w = (n: number): number => n + 1;';
+    expect(codeInchange(jsx, dansJsx(ligne, `// @ts-expect-error\n${ligne}`), X)).toBe(false);
+    expect(codeInchange(jsx, dansJsx(ligne, `/* istanbul ignore next */\n${ligne}`), X)).toBe(
+      false
+    );
+    expect(codeInchange(jsx, dansJsx('=> n + 1', '=> /* @__PURE__ */ n + 1'), X)).toBe(false);
+    expect(codeInchange(jsx, `/// <reference types="node" />\n${jsx}`, X)).toBe(false);
+    // En FIN de fichier, derrière le dernier jeton : la directive est lue aussi.
+    expect(codeInchange(jsx, `${jsx}// eslint-disable-next-line\n`, X)).toBe(false);
+  });
+
+  it('REQ-QA-002 — un commentaire ORDINAIRE changé à côté d’un pragma : code inchangé (écarté)', () => {
+    const avecPragma = dansJsx('/** Rendu. */', '/** @jsx h */\n// rendu');
+    expect(codeInchange(avecPragma, avecPragma.replace('// rendu', '// rendu, reformulé'), X)).toBe(
+      true
+    );
+    expect(codeInchange(jsx, dansJsx('/** Rendu. */', '/** Rendu du paragraphe. */'), X)).toBe(
+      true
+    );
+  });
+
+  const mesures = (lireBase: (base: string, f: string) => string | null, tete: string) => {
+    let lance = 0;
+    const r = () =>
+      passer('origin/main', {
+        fichiersDeLaPr: () => [F],
+        lire: () => tete,
+        lireBase,
+        texteConfig: JSON.stringify({ thresholds: { break: 80 } }),
+        lancerStryker: () => (lance++, 0),
+        lireRapport: () => ({
+          files: {
+            [F]: {
+              mutants: [
+                {
+                  id: '0',
+                  mutatorName: 'X',
+                  status: 'Killed',
+                  location: { start: { line: 1, column: 1 } },
+                },
+              ],
+            },
+          },
+        }),
+      });
+    return { r, lances: () => lance };
+  };
+
+  it('REQ-QA-002 — passer() : diff de commentaires seuls → ÉCARTÉ avec motif, Stryker non lancé', () => {
+    const m = mesures(() => avant, remplacer('// somme', '// produit'));
+    const r = m.r();
+    expect(r.code).toBe(0);
+    expect(m.lances()).toBe(0);
+    expect(r.lignes.join('\n')).toContain(`écarté : ${F} — diff de commentaires seuls`);
+  });
+
+  it('REQ-QA-002 — passer() : fichier ajouté, base illisible ou lecture qui lève → MUTÉ', () => {
+    for (const lireBase of [
+      () => null,
+      () => {
+        throw new Error('git show impossible');
+      },
+    ]) {
+      const m = mesures(lireBase, avant);
+      expect(m.r().code).toBe(0);
+      expect(m.lances()).toBe(1);
+    }
+  });
+
+  it('REQ-QA-002 — passer() : un `// Stryker disable` AJOUTÉ par un diff de commentaires seuls fait échouer la passe', () => {
+    const m = mesures(() => avant, remplacer('// somme', '// Stryker disable next-line all'));
+    const r = m.r();
+    expect(r.code).toBe(1);
+    expect(m.lances()).toBe(0);
+    expect(r.lignes.join('\n')).toContain(`${F}:3`);
   });
 });
 

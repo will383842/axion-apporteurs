@@ -7,10 +7,10 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `330afa1` — 2026-09-28T20:38:31+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #185 (un contrôle requis rouge ou une revue manquante) · 2. #82 (un conflit avec `main`) |
+| Où est `main` ? | `fc8775e` — 2026-09-28T21:33:43+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #82 (un contrôle requis rouge ou une revue manquante) · 2. #187 (un contrôle requis rouge ou une revue manquante) |
 | Qui tient quoi ? | QA-T07 (A05) · GOV-057 (A01) · GOV-103 (A01) |
-| Où en est la phase ? | phase 0 — 64/117 tâches, reste 42.60 j |
+| Où en est la phase ? | phase 0 — 64/117 tâches, reste 43.10 j |
 | Le prochain pas | QA-T07 — Gate sécurité : semgrep |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
 | Dernière entrée de journal | PR #185 — 2026-09-28 |
@@ -19,7 +19,7 @@
 
 ## Phase courante : 0
 
-64/117 tâches terminées · reste 42.60 j estimés.
+64/117 tâches terminées · reste 43.10 j estimés.
 
 ## Tâches
 
@@ -60,8 +60,8 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #185 — feat(GOV-103): la forme t/ du motif de branch admet les majuscules | `t/gov-103` | un contrôle requis rouge ou une revue manquante |
-| 2 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un contrôle requis rouge ou une revue manquante |
+| 2 | #187 — chore(GOV-012): registre rattrape, douze taches livrees par quatre PR fusionnees passent fusionnee | `t/registre-rattrapage-6` | un contrôle requis rouge ou une revue manquante |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -85,13 +85,13 @@ Dérivé de `git log` sur `docs/adr/`, restreint au jour du dernier atterrissage
 
 ## Prochain pas
 
-**QA-T07** — Gate sécurité : semgrep (0.5 j) : 25 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
+**QA-T07** — Gate sécurité : semgrep (1 j) : 25 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
 Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeStateStatus` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage —, la tâche ensuite. L’ordre de la file se corrige à la rubrique « File de fusion », jamais ici.
 
 ## Dernier atterrissage
 
-`origin/main` = `330afa1` (2026-09-28T20:38:31+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `fc8775e` (2026-09-28T21:33:43+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
@@ -161,7 +161,7 @@ montre l'autre face, rassurante : avec une attestation entièrement VRAIE mais u
 fausse, `controlerLePerimetre` refuse, nomme `tache_etrangere_au_lot`, et `docs/tasks.json` reste
 octet pour octet identique — GOV-041 tient.
 
-… 3 entrée(s) affichée(s) sur 77 ; les 74 plus ancienne(s) se lisent dans `docs/journal/`.
+… 3 entrée(s) affichée(s) sur 78 ; les 75 plus ancienne(s) se lisent dans `docs/journal/`.
 
 ## Dette déclarée
 

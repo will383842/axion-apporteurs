@@ -16,7 +16,7 @@
 
 **334 exigences actives · 117 réputées testées · 117 couvertes · 0 orphelines.**
 
-291 tâches, dont 103 livrées · 145 fichiers de test exécutés par `vitest` sur 145 présents.
+291 tâches, dont 103 livrées · 146 fichiers de test exécutés par `vitest` sur 146 présents.
 
 ## Exigences réputées testées
 
@@ -106,7 +106,7 @@
 | `REQ-QA-002` | `GOV-101`, `QA-T01`, `QA-T30` | `tests/unit/ci/aucune-gate-en-continue-on-error.spec.ts`, `tests/unit/gouvernance/relectures-sans-defaut.spec.ts`, `tests/unit/qualite/score-de-mutation.spec.ts` | couverte |
 | `REQ-QA-006` | `QA-T02` | `tests/integration/harnais-testcontainers.spec.ts`, `tests/integration/rate-limit-redis.spec.ts`, `tests/unit/ci/integration-collectee-par-gate-a.spec.ts` | couverte |
 | `REQ-QA-007` | `INT-T01a`, `INT-T01b`, `INT-T01c` | `tests/unit/integration/contrat-hash.spec.ts` | couverte |
-| `REQ-QA-013` | `GOV-059`, `GOV-061`, `GOV-062`, `GOV-063`, `GOV-076`, `GOV-083`, `QA-T00`, `QA-T01`, `QA-T07`, `QA-T28` | `tests/unit/ci/aucune-gate-en-continue-on-error.spec.ts`, `tests/unit/gouvernance/formes-voisines-des-interdits.spec.ts`, `tests/unit/gouvernance/porte-a-presente-active-effective.spec.ts`, `tests/unit/gouvernance/revendication-par-branche.spec.ts`, `tests/unit/gouvernance/tout-check-est-cable.spec.ts`, `tests/unit/gouvernance/un-nom-une-garde.spec.ts`, `tests/unit/gouvernance/une-gate-sans-script-n-est-pas-une-gate-conforme.spec.ts` | couverte |
+| `REQ-QA-013` | `GOV-059`, `GOV-061`, `GOV-062`, `GOV-063`, `GOV-076`, `GOV-083`, `QA-T00`, `QA-T01`, `QA-T07`, `QA-T28` | `tests/unit/ci/aucune-gate-en-continue-on-error.spec.ts`, `tests/unit/gouvernance/formes-voisines-des-interdits.spec.ts`, `tests/unit/gouvernance/porte-a-presente-active-effective.spec.ts`, `tests/unit/gouvernance/revendication-par-branche.spec.ts`, `tests/unit/gouvernance/tout-check-est-cable.spec.ts`, `tests/unit/gouvernance/un-nom-une-garde.spec.ts`, `tests/unit/gouvernance/une-gate-sans-script-n-est-pas-une-gate-conforme.spec.ts`, `tests/unit/qualite/semgrep-regles-maison.spec.ts` | couverte |
 | `REQ-QA-014` | `GOV-039`, `GOV-085`, `QA-T03` | `tests/unit/gouvernance/titres-de-test-resolvent.spec.ts`, `tests/unit/gouvernance/tracabilite.spec.ts`, `tests/unit/gouvernance/trace-dit-ce-qu-elle-ne-couvre-pas.spec.ts`, `tests/unit/qualite/req-check.spec.ts` | couverte |
 | `REQ-QA-016` | `QA-T16`, `UX-P0-03` | `tests/a11y/axe.spec.ts` | couverte |
 | `REQ-QA-019` | `QA-T04` | `tests/integration/sondes-de-vie.spec.ts` | couverte |
@@ -577,6 +577,7 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | `tests/unit/qualite/red-first.spec.ts` | oui | `REQ-CPL-022` |
 | `tests/unit/qualite/req-check.spec.ts` | oui | `REQ-QA-014` |
 | `tests/unit/qualite/score-de-mutation.spec.ts` | oui | `REQ-QA-002` |
+| `tests/unit/qualite/semgrep-regles-maison.spec.ts` | oui | `REQ-QA-011`, `REQ-QA-013`, `REQ-SEC-008` |
 | `tests/unit/qualite/sondes-client-unique.spec.ts` | oui | `REQ-QA-020` |
 | `tests/unit/securite/chiffrement-avec-aad.spec.ts` | oui | `REQ-SEC-024` |
 | `tests/unit/securite/connexion-actions.spec.ts` | oui | `REQ-SEC-001` |

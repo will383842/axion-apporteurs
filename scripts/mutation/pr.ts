@@ -26,6 +26,28 @@
  * lanceur, configuration de vitest, parallélisme — tout est hérité. Ne changent que `mutate`, le
  * mode incrémental, le fichier incrémental et le rapport, écrits sous `reports/mutation/` (ignoré).
  *
+ * UN DIFF DE COMMENTAIRES SEULS N'EST PAS MUTÉ, ET EST NOMMÉ (`codeInchange`) : il faut que la
+ * STRUCTURE du fichier soit la même à la base de fusion et dans l'arbre — lue par l'analyseur de
+ * TypeScript, jamais par une heuristique de ligne : la suite préfixe de TOUS les nœuds de l'arbre,
+ * le texte de chaque jeton, et pour chaque jeton la présence d'un saut de ligne qui le précède,
+ * commentaires compris. Les jetons SEULS ne suffisent pas : un saut de ligne — seul, ou DANS un
+ * commentaire bloc — après `return`, `throw`, `break`/`continue` étiquetés ou avant un `++`/`--`
+ * postfixe déclenche l'insertion automatique d'un point-virgule, et change ce que le code fait
+ * sans changer un jeton (revues `exactitude` 5328789820 et `securite` 5328796307, PR 82). Et un
+ * commentaire qui porte une DIRECTIVE est du code (revue `exactitude` 5328984956, PR 82) : un
+ * pragma `@jsx`, `@jsxRuntime`, `@jsxImportSource` ou `@jsxFrag` change la transformation JSX,
+ * un `@ts-ignore`, `@ts-expect-error`, `@ts-nocheck` ou `@ts-check` ce que le compilateur
+ * accepte, un `eslint-disable`/`eslint-enable`, `istanbul ignore`, `c8 ignore`, `v8 ignore`,
+ * `Stryker disable`, un commentaire magique `webpack…`, `@vitest-environment`, `@__PURE__` /
+ * `#__PURE__` ou une directive `/// <reference …>` ce que l'outil fait du code — son TEXTE, à
+ * sa place (devant tel jeton), entre dans la comparaison (liste complète, et volontairement
+ * large : `DIRECTIVE_DE_COMMENTAIRE`). Seul le diff qui laisse cette structure intacte est
+ * écarté : un commentaire ORDINAIRE changé, déplacé ou ajouté qui n'introduit ni ne retire de
+ * saut de ligne devant un jeton. Tout autre diff — un saut de ligne ajouté ou retiré devant un
+ * jeton, même sans effet, une directive ajoutée, retirée, déplacée ou changée — est MUTÉ. Base
+ * illisible ou fichier ajouté : MUTÉ (échec fermé). Un `// Stryker disable` ajouté par un tel
+ * diff garde le fichier dans la passe, où la désactivation le fait échouer.
+ *
  * LE VERDICT est celui du lecteur unique du rapport (`scripts/mutation/rapport.ts`, `decider`) :
  * score sous le seuil → 1, survivants NOMMÉS ; rapport absent ou vide → 1. Stryker en échec → 1.
  */
@@ -33,6 +55,7 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import ts from 'typescript';
 import { CHEMIN_CONFIG, decider, lireSeuil } from './rapport';
 
 /**
@@ -60,6 +83,19 @@ const MOTIF_DU_RESTE_DU_PRODUIT =
   'code de surface Next (route, page, proxy, instrumentation, configuration, contenu) : ses tests ' +
   'le jugent au rendu ou en navigateur, hors du processus que Stryker instrumente';
 
+export const MOTIF_COMMENTAIRES_SEULS =
+  'diff de commentaires seuls : ni la structure, ni les jetons, ni les sauts de ligne devant un jeton, ni une directive de commentaire ne changent entre la base de fusion et l’arbre';
+
+/**
+ * Un commentaire qui porte une DIRECTIVE — pragma JSX, directive TypeScript, désactivation de
+ * linter, de couverture ou de Stryker, commentaire magique d'empaqueteur, environnement de test,
+ * annotation de pureté, directive triple barre oblique — change ce que la chaîne d'outils fait du
+ * code : il compte comme CODE (voir l'en-tête). Large à dessein : un commentaire ordinaire qui
+ * cite l'un de ces mots est muté aussi, ce qui ne coûte qu'une passe (échec fermé).
+ */
+export const DIRECTIVE_DE_COMMENTAIRE =
+  /@jsx(?:Runtime|ImportSource|Frag)?\b|@ts-(?:ignore|expect-error|nocheck|check)\b|\beslint\b|^\/\*\s*(?:globals?|exported)\b|\b(?:istanbul|c8|v8)\s+ignore\b|\bStryker\s+(?:disable|restore)\b|\b(?:webpack|turbopack)[A-Z]\w*|@vite-ignore\b|@vitest-environment\b|@refresh\s+reset\b|[@#]__(?:PURE|NO_SIDE_EFFECTS|INLINE|NOINLINE|KEY)__|^\/\/\/\s*<(?:reference|amd-module|amd-dependency)\b/i;
+
 const estUnSource = (f: string): boolean =>
   /\.tsx?$/.test(f) && !/\.(spec|test)\.tsx?$/.test(f) && !f.endsWith('.d.ts');
 
@@ -84,6 +120,98 @@ export function fichiersAMuter(fichiers: readonly string[]): {
           : []
     );
   return { mutes, ecartes };
+}
+
+/**
+ * La STRUCTURE d'un source, commentaires retirés : la suite préfixe de TOUS les nœuds de l'arbre
+ * syntaxique (leur `kind`, ouvert puis fermé), le texte de chaque feuille, et pour chaque feuille
+ * le fait qu'un SAUT DE LIGNE la précède — dans le blanc OU dans un commentaire (le
+ * `hasPrecedingLineBreak` de TypeScript, recalculé sur l'arbre). Les feuilles SEULES ne
+ * suffisaient pas (revues `exactitude` 5328789820 et `securite` 5328796307, PR 82) : `return`,
+ * un commentaire bloc qui contient un saut de ligne, puis `exiger(ok);`, a les mêmes jetons que
+ * `return exiger(ok);`, mais l'insertion automatique de point-virgule en fait
+ * `return; exiger(ok);` — un `ReturnStatement` vide suivi d'un `ExpressionStatement`, que la
+ * structure voit, quelle qu'en soit la cause (commentaire bloc à saut de ligne ou saut de ligne
+ * seul, après `return`, `throw`, `break`/`continue` étiquetés, avant un `++`/`--` postfixe).
+ * L'arbre, pas le scanner seul : lui lirait `// x` dans la queue d'un gabarit après `${…}` ou
+ * dans une classe de regex (`/[//]/`) comme un commentaire. Les nœuds JSDoc sont sautés.
+ * Un commentaire qui porte une DIRECTIVE (`DIRECTIVE_DE_COMMENTAIRE`) entre, lui, avec son texte
+ * et à sa place : devant la feuille dont il précède le jeton, ou en fin de fichier. Les
+ * commentaires sont lus dans la trivia de chaque feuille — de son début complet à son jeton —,
+ * que l'arbre a déjà délimitée : aucune chaîne ni regex ne peut y passer pour un commentaire.
+ */
+function jetonsDeCode(texte: string, fichier: string): string[] {
+  const sf = ts.createSourceFile(
+    fichier,
+    texte,
+    ts.ScriptTarget.Latest,
+    true,
+    fichier.endsWith('.tsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS
+  );
+  const directives = (debut: number, fin: number): string[] => {
+    const sc = ts.createScanner(
+      ts.ScriptTarget.Latest,
+      false,
+      ts.LanguageVariant.Standard,
+      texte.slice(debut, fin)
+    );
+    const trouvees: string[] = [];
+    for (let k = sc.scan(); k !== ts.SyntaxKind.EndOfFileToken; k = sc.scan()) {
+      const commentaire =
+        k === ts.SyntaxKind.SingleLineCommentTrivia || k === ts.SyntaxKind.MultiLineCommentTrivia;
+      if (commentaire && DIRECTIVE_DE_COMMENTAIRE.test(sc.getTokenText())) {
+        trouvees.push(`✎${sc.getTokenText()}`);
+      }
+    }
+    return trouvees;
+  };
+  const jetons: string[] = [];
+  const visiter = (n: ts.Node): void => {
+    if (n.kind >= ts.SyntaxKind.FirstJSDocNode && n.kind <= ts.SyntaxKind.LastJSDocNode) return;
+    const enfants = n.getChildren(sf);
+    if (enfants.length === 0) {
+      const t = n.getText(sf);
+      if (t === '') return;
+      const saut = /[\r\n\u2028\u2029]/.test(texte.slice(n.getFullStart(), n.getStart(sf)));
+      jetons.push(...directives(n.getFullStart(), n.getStart(sf)));
+      jetons.push(`${n.kind}:${saut ? '⏎' : ''}${t}`);
+      return;
+    }
+    jetons.push(`(${n.kind}`);
+    enfants.forEach(visiter);
+    jetons.push(`)${n.kind}`);
+  };
+  visiter(sf);
+  // La trivia de fin de fichier : le jeton de fin n'a pas de texte, la boucle ne l'a pas lue.
+  jetons.push(...directives(sf.endOfFileToken.getFullStart(), texte.length));
+  return jetons;
+}
+
+/**
+ * Vrai si le diff de `fichier` entre `base` et `tete` ne touche QUE des commentaires et des
+ * blancs, sans rien changer de la structure ni des sauts de ligne qui précèdent un jeton (voir
+ * `jetonsDeCode`).
+ * `base` null (fichier ajouté, base illisible) → faux : on ne s'écarte jamais par défaut.
+ */
+export function codeInchange(base: string | null, tete: string, fichier: string): boolean {
+  if (base === null) return false;
+  const a = jetonsDeCode(base, fichier);
+  const b = jetonsDeCode(tete, fichier);
+  return a.length === b.length && a.every((j, i) => j === b[i]);
+}
+
+/** Le texte de `fichier` à la base de fusion avec `base`, ou null (échec fermé : il sera muté). */
+function lireLaBase(base: string, fichier: string): string | null {
+  try {
+    const mb = execFileSync('git', ['merge-base', base, 'HEAD'], { encoding: 'utf8' }).trim();
+    return execFileSync('git', ['show', `${mb}:${fichier}`], {
+      encoding: 'utf8',
+      maxBuffer: 64e6,
+      stdio: ['ignore', 'pipe', 'ignore'],
+    });
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -156,6 +284,8 @@ export function fichiersDeLaPr(base: string): string[] | null {
 export type Mesures = {
   fichiersDeLaPr?: (base: string) => string[] | null;
   lire?: (chemin: string) => string;
+  /** Le texte d'un fichier à la base de fusion, ou null s'il y est absent ou illisible. */
+  lireBase?: (base: string, chemin: string) => string | null;
   texteConfig?: string;
   /** Lance Stryker sur la configuration écrite ; rend son code de sortie. */
   lancerStryker?: (config: object) => number | null;
@@ -195,7 +325,24 @@ export function passer(base: string, m: Mesures = {}): { code: 0 | 1; lignes: st
       ],
     };
   }
-  const { mutes, ecartes } = fichiersAMuter(fichiers);
+  const tri = fichiersAMuter(fichiers);
+  const lire = m.lire ?? ((f: string) => readFileSync(f, 'utf8'));
+  const lireBase = m.lireBase ?? lireLaBase;
+  const commentairesSeuls = (f: string): boolean => {
+    try {
+      const tete = lire(f);
+      if (desactivationsDeStryker([f], () => tete).length > 0) return false;
+      return codeInchange(lireBase(base, f), tete, f);
+    } catch {
+      return false;
+    }
+  };
+  const inchanges = tri.mutes.filter(commentairesSeuls);
+  const mutes = tri.mutes.filter((f) => !inchanges.includes(f));
+  const ecartes = [
+    ...tri.ecartes,
+    ...inchanges.map((fichier) => ({ fichier, motif: MOTIF_COMMENTAIRES_SEULS })),
+  ];
   const lignes = ecartes.map((e) => `   · écarté : ${e.fichier} — ${e.motif}`);
   if (mutes.length === 0) {
     return {
@@ -207,10 +354,7 @@ export function passer(base: string, m: Mesures = {}): { code: 0 | 1; lignes: st
       ],
     };
   }
-  const desactivations = desactivationsDeStryker(
-    mutes,
-    m.lire ?? ((f: string) => readFileSync(f, 'utf8'))
-  );
+  const desactivations = desactivationsDeStryker(mutes, lire);
   if (desactivations.length > 0) {
     return {
       code: 1,
