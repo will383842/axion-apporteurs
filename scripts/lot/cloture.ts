@@ -47,7 +47,8 @@
 
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
-import { join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import {
   DEPOT_LOCAL,
   PASSIF_SANS_ATTESTATION,
@@ -295,6 +296,11 @@ function poserLaLivraison(t: Tache, attestation: Attestation): string {
  * LE MOTIF DE `branch`, LU DANS LE SCHÉMA — jamais recopié (RM-01). Lu à l'APPEL, pas à l'import :
  * importer ce module n'a aucun effet. Un schéma qui porterait zéro ou plusieurs motifs distincts
  * pour `branch` est une ambiguïté, et elle est refusée plutôt que tranchée au hasard.
+ *
+ * LE SCHÉMA EST DU CODE, PAS UNE DONNÉE DU DÉPÔT TRAITÉ : il se résout depuis la racine de CE module
+ * (deux niveaux au-dessus de `scripts/lot/`), jamais depuis le répertoire courant. Lu depuis le
+ * répertoire courant, le motif était introuvable dès que la clôture tournait sur un autre arbre —
+ * le dépôt jetable des témoins du script entier a rougi en ENOENT.
  */
 function motifDeBranche(): RegExp {
   const motifs = new Set<string>();
@@ -308,7 +314,8 @@ function motifDeBranche(): RegExp {
       parcourir(v);
     }
   };
-  parcourir(JSON.parse(readFileSync(CHEMIN_SCHEMA_DES_TACHES, 'utf8')));
+  const racineDuCode = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
+  parcourir(JSON.parse(readFileSync(join(racineDuCode, CHEMIN_SCHEMA_DES_TACHES), 'utf8')));
   if (motifs.size !== 1) {
     throw new Error(
       `${CHEMIN_SCHEMA_DES_TACHES} porte ${motifs.size} motif(s) distinct(s) pour \`branch\` : ` +
