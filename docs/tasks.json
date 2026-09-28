@@ -3129,11 +3129,11 @@
       "externe": null,
       "estimateDays": 1,
       "statut": "a_faire",
-      "owner": null,
+      "owner": "A01",
       "lot": null,
       "branch": null,
       "pr": null,
-      "issue": null,
+      "issue": 198,
       "attempts": 0,
       "motif": null,
       "acceptance": "TACHE CHARNIERE DU CLOISONNEMENT — 8 exigences. (1) TOUTE lecture et TOUTE ecriture de l'espace apporteur passent par une couche d'acces qui INJECTE l'identifiant d'apporteur de la session dans la clause de filtrage ; aucun import direct du client de base sous `src/app/(espace)/**` ni sous `src/server/espace/**` (REQ-SEC-008, REQ-QA-011). La regle semgrep qui le tient est celle livree par QA-T07 : cette tache la CONSOMME, elle n'en ecrit pas une seconde. (2) UN TEST DE CLOISONNEMENT EN BOITE NOIRE, BLOQUANT, appelle CHAQUE route et CHAQUE action de serveur de l'espace avec l'identifiant d'un AUTRE apporteur, documents PDF compris, et exige un 404 STRICTEMENT IDENTIQUE a celui d'un identifiant inexistant (REQ-SEC-009, REQ-QA-010, REQ-ARG-029, REQ-UX-006). Identique veut dire : meme corps, meme en-tetes significatifs, meme duree observable. (3) UNE GARDE STATIQUE FAIT ROUGIR LA CI SI UNE ROUTE OU UNE ACTION NEUVE N'EST PAS DANS LA LISTE DES CAS : la liste se DERIVE du disque et se confronte a la liste declaree ; une route neuve non listee est un trou, pas un oubli. (4) Le message de collision et la reponse « deja suivie » ne contiennent NI identifiant, NI nom, NI date de depot, NI stade de l'autre apporteur — seule une date de fin est admise (REQ-QA-012), et une comparaison de forme de la reponse le prouve. (5) TEMOIN A DEUX FACES : une route ajoutee sans son cas de cloisonnement fait sortir la garde statique en code non nul et nomme la route ; le depot complet la fait sortir en zero avec le compte des routes et des actions reellement confrontees. (6) TEMOIN A DEUX FACES sur l'indistinction : la reponse a un identifiant d'un autre apporteur et celle a un identifiant inexistant sont comparees octet a octet.",
@@ -9699,7 +9699,9 @@
         "REQ-GOV-021": [
           "tests/unit/gouvernance/une-tache-en-cours-appartient-a-un-lot.spec.ts"
         ]
-      }
+      },
+      "issue": 196,
+      "owner": "A01"
     },
     {
       "id": "GOV-050",
@@ -10504,7 +10506,9 @@
         "REQ-INT-004": [
           "tests/unit/gouvernance/grammaire-des-zones-de-prose.spec.ts"
         ]
-      }
+      },
+      "issue": 197,
+      "owner": "A01"
     },
     {
       "id": "GOV-070",

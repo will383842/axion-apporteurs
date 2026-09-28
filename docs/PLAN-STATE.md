@@ -7,13 +7,13 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `ea85dfa` — 2026-09-29T00:50:40+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #188 (un conflit avec `main`) |
-| Qui tient quoi ? | QA-T07 (A05) · GOV-040 (A01) · GOV-052 (A01) · GOV-064 (A01) · GOV-071 (A01) · GOV-104 (A01) |
+| Où est `main` ? | `055590b` — 2026-09-29T01:17:40+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #199 (un contrôle requis rouge ou une revue manquante) |
+| Qui tient quoi ? | QA-T07 (A05) · SEC-05 (A01) · GOV-040 (A01) · GOV-049 (A01) · GOV-052 (A01) · GOV-064 (A01) · GOV-069 (A01) · GOV-071 (A01) · GOV-104 (A01) |
 | Où en est la phase ? | phase 0 — 76/118 tâches, reste 35.85 j |
 | Le prochain pas | QA-T07 — Gate sécurité : semgrep |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
-| Dernière entrée de journal | PR #195 — 2026-09-28 |
+| Dernière entrée de journal | PR #200 — 2026-09-28 |
 
 **Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
@@ -60,7 +60,7 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #188 — fix(GOV-104): la cloture lit la declaration dans le commit de fusion et juge l'atterrissage sur la branche par defaut | `t/gov-104b` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #199 — chore(GOV-012): registre rattrape, huit taches livrees par trois PR passent fusionnee, quatre suites versees | `t/registre-rattrapage-7` | un contrôle requis rouge ou une revue manquante |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -71,9 +71,12 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 | Tâche | Revendiquée par | Issue | Statut |
 | --- | --- | --- | --- |
 | QA-T07 — Gate sécurité : semgrep | A05 | #69 | `a_faire` |
+| SEC-05 — Couche d'accès `forApporteur | A01 | #198 | `a_faire` |
 | GOV-040 — Le registre d'exemptions n'a AUCUNE des deux surfaces qui arment une machine | A01 | #189 | `a_faire` |
+| GOV-049 — Une tache en cours sans lot est invisible de TOUTES les gardes, et c'est ce lot qui l'a rencontre | A01 | #196 | `a_faire` |
 | GOV-052 — L'entree de journal d'une PR n'est exigee qu'APRES sa fusion : la seule victime possible est main | A01 | #191 | `a_faire` |
 | GOV-064 — Deux chemins suivis distincts peuvent se confondre dans la source unique du perimetre | A01 | #194 | `a_faire` |
+| GOV-069 — La garde des termes interdits decoupe SQL, Prisma et prose avec une grammaire maison incomplete | A01 | #197 | `a_faire` |
 | GOV-071 — Les gardes lexicale et d'identifiants ne decoupent pas les mots comme le rendu les affiche | A01 | #192 | `a_faire` |
 | GOV-104 — La cloture d'une tache seule lit sa declaration dans un corps de PR reecrivable apres la fusion, et juge l'atterrissage sur la base de la PR | A01 | #186 | `a_faire` |
 
@@ -93,13 +96,32 @@ Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeS
 
 ## Dernier atterrissage
 
-`origin/main` = `ea85dfa` (2026-09-29T00:50:40+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `055590b` (2026-09-29T01:17:40+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
 ## Journal
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
+
+### PR #200 — 2026-09-28 — feat(SEC-05): lot L0-12 — cloisonnement par apporteur, une grammaire des zones de prose, une tache en cours appartient a un lot
+
+**Fait.** Trois tâches, un commit chacune. SEC-05 : la couche d'accès `forApporteur` injecte
+l'apporteur de la session dans chaque `where`, que l'appelant peut restreindre sans jamais le
+remplacer ; elle refuse d'écrire l'identifiant, l'apporteur et les relations, et répond à un
+identifiant étranger exactement comme à un identifiant inexistant (404 identique à l'octet). Une
+garde statique confronte chaque route et action de l'espace à ses cas d'accès. GOV-069 : une seule
+grammaire découpe SQL, Prisma et prose pour la garde des termes interdits, et une construction jamais
+refermée est refusée en la nommant. GOV-049 : une tâche `en_cours` porte un lot, ou la preuve
+d'une livraison seule ; aucune forme de nom de branche n'en exempte.
+
+**Reste.** Aucune route de l'espace ne reçoit encore d'identifiant de ressource : l'attaque boîte
+noire est jouée sur chaque méthode de la couche, et attend les écrans. « Même durée observable » est
+prouvée par la structure (une requête au texte identique), pas par une mesure de temps. GOV-069
+approche la continuation paresseuse des citations et les blocs HTML.
+
+**Appris.** Une garde de cloisonnement se prouve par ses brèches : sans la couche, la batterie en
+relève sept par modèle ; avec elle, zéro, et la ligne de l'apporteur reste lisible et modifiable.
 
 ### PR #195 — 2026-09-28 — chore(GOV-052): lot L0-11 — six gardes de gouvernance qui laissaient passer ce qu'elles devaient voir
 
@@ -139,26 +161,7 @@ dernière, GOV-074 (#168), n'était livrée qu'en partie et entre dans le lot L0
 fusionnée par écrasement, et la fusion de `main` n'a plus su réconcilier cinq fichiers. Une branche
 construite sur une autre branche de PR se reconstruit ; elle ne se fusionne pas.
 
-### PR #187 — 2026-09-28 — chore(GOV-012): registre rattrape, douze taches livrees par quatre PR fusionnees passent fusionnee
-
-**Fait.** Sixième rattrapage du registre, et le premier par le chemin outillé de GOV-057 :
-`pnpm lot:cloture -- --tache <id> --pr <n> --owner <Axx>`, une fois par tâche. Douze tâches livrées
-passaient encore `a_faire` : les six de la PR #114 (lot L0-02), les quatre de la PR #175 (lot
-L0-09), GOV-057 (#182) et GOV-103 (#185). Chaque tâche a été confrontée par l'outil à la
-déclaration de sa PR — titre ou ligne `Lot:` — avant toute écriture. Le SHA, l'instant et la
-branche viennent de la forge, et l'atterrissage est l'ascendance du SHA sur la base. Le
-propriétaire posé est celui de la ligne `Auteur:` de chaque PR, quand la tâche n'en portait pas.
-Phase 0 : 64/117 → 76/117, reste 42,60 j → 34,35 j.
-
-**Reste.** Les six tâches de #114 n'étaient closables qu'une fois le motif de `branch` élargi
-(#185) : leur branche est `t/lot-L0-02`. Et ce rattrapage lit encore la déclaration dans le corps
-des PR : GOV-104 la lira dans le message du commit de fusion, et ces anciennes fusions n'y portent
-pas `Lot:`. C'est pourquoi ce rattrapage passe avant GOV-104.
-
-**Appris.** Le composeur proposait cinq de ces douze tâches pour le lot suivant : un registre en
-retard ne coûte pas un compteur faux, il fait refaire du travail livré.
-
-… 3 entrée(s) affichée(s) sur 81 ; les 78 plus ancienne(s) se lisent dans `docs/journal/`.
+… 3 entrée(s) affichée(s) sur 82 ; les 79 plus ancienne(s) se lisent dans `docs/journal/`.
 
 ## Dette déclarée
 
