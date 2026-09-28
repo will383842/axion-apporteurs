@@ -10119,7 +10119,9 @@
       "paths": [
         "scripts/gates/gov-conventions.ts",
         ".github/workflows/ci.yml",
-        "tests/unit/gouvernance/porte-a-presente-active-effective.spec.ts"
+        "tests/unit/gouvernance/porte-a-presente-active-effective.spec.ts",
+        "tests/unit/gouvernance/gardes-transposees.spec.ts",
+        "scripts/gates/registre-des-refus.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -10582,7 +10584,8 @@
         "scripts/plan-state/build.ts",
         "scripts/gates/gov-lecons.ts",
         "scripts/gates/gov-attributions.ts",
-        "tests/unit/gouvernance/une-seule-grammaire-de-journal.spec.ts"
+        "tests/unit/gouvernance/une-seule-grammaire-de-journal.spec.ts",
+        "tests/unit/gouvernance/attributions-resolvent.spec.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -10941,7 +10944,9 @@
       "zone": "gouvernance",
       "paths": [
         "scripts/gates/gov-conventions.ts",
-        "tests/unit/gouvernance/une-gate-sans-script-n-est-pas-une-gate-conforme.spec.ts"
+        "tests/unit/gouvernance/une-gate-sans-script-n-est-pas-une-gate-conforme.spec.ts",
+        "tests/unit/gouvernance/gardes-transposees.spec.ts",
+        "tests/unit/gouvernance/perimetre-des-gardes-derive-du-disque.spec.ts"
       ],
       "schema": false,
       "sensible": [],

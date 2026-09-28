@@ -25,14 +25,13 @@ import { LIVREE } from '../../../scripts/lot/avancement';
 import {
   analyser,
   ANCRE_JOURNAL,
+  entreesDuDossier,
   caractereAdmis,
   chargerSources,
-  COUPE_ETAT,
   entreesDeJournal,
   HORS_ASCII_ADMIS,
   prouver,
   SourceIllisible,
-  TITRE_ETAT,
   CITATIONS_DECLAREES,
   DETTE_GATE_NON_RECIPROQUE,
 } from '../../../scripts/gates/gov-attributions';
@@ -566,58 +565,37 @@ describe('REQ-GOV-021 — sur le dépôt réel, la garde lit ses sources EN ENTI
     ]);
   });
 
-  it('F2/F3 — gov:etat et plan-state lisent le journal par les MÊMES expressions que la garde, source ET drapeaux, et leur lecture rejouée rend les MÊMES titres', () => {
-    const LITTERAL = String.raw`\/((?:[^/\\\n]|\\.)+)\/([dgimsuvy]*)`;
-    const journaux = fichiersSuivis().filter(
-      (f) => f.startsWith('docs/journal/') && f.endsWith('.md') && f !== 'docs/journal/README.md'
-    );
+  it('F2/F3 — gov:etat, plan-state et gov:lecons IMPORTENT la grammaire de la garde (GOV-073), et leur lecture rend les MÊMES titres', () => {
+    // Ce témoin extrayait chaque expression locale et exigeait son égalité avec celles d'ici : une égalité
+    // PARTIELLE, que GOV-073 remplace. Il n'y a plus d'expression locale à extraire — les trois lecteurs
+    // importent `entreesDuDossier` — et c'est ce que ce témoin exige désormais, puis il REJOUE la lecture.
     const parGarde = [...entreesDeJournal(chargerSources(fichiersSuivis()).journal).values()]
-      .map((e) => e.split('\n')[0] as string)
+      .map((e) => e.split(String.fromCharCode(10))[0] as string)
       .sort();
     expect(
       parGarde.length,
       'aucune entrée de journal : l’égalité ne prouverait rien'
     ).toBeGreaterThan(0);
-    for (const lecteur of ['scripts/gates/gov-etat.ts', 'scripts/plan-state/build.ts']) {
+    for (const lecteur of [
+      'scripts/gates/gov-etat.ts',
+      'scripts/plan-state/build.ts',
+      'scripts/gates/gov-lecons.ts',
+    ]) {
       const code = lireReel(lecteur);
-      const coupe = new RegExp(String.raw`\.split\(` + LITTERAL + String.raw`\)\.slice\(1\)`).exec(
-        code
+      expect(code, `${lecteur} n’importe plus la grammaire unique`).toMatch(
+        /\bentreesDuDossier\b[^;]*from '[./]+(?:gates\/)?gov-attributions'/
       );
-      const titre = new RegExp(LITTERAL + String.raw`\.exec\(bloc\)`).exec(code);
-      expect(
-        coupe,
-        `${lecteur} ne coupe plus le journal par une expression lisible ici`
-      ).not.toBeNull();
-      expect(
-        titre,
-        `${lecteur} ne lit plus le titre d’un bloc par une expression lisible ici`
-      ).not.toBeNull();
-      expect([coupe![1], coupe![2]], `${lecteur} : la coupe`).toEqual([
-        COUPE_ETAT.source,
-        COUPE_ETAT.flags,
-      ]);
-      expect([titre![1], titre![2]], `${lecteur} : le titre`).toEqual([
-        TITRE_ETAT.source,
-        TITRE_ETAT.flags,
-      ]);
-      // Sa lecture, REJOUÉE avec ses propres expressions, fichier par fichier : les mêmes titres, dans les deux sens.
-      const sienneCoupe = new RegExp(coupe![1] as string, coupe![2]);
-      const sienTitre = new RegExp(titre![1] as string, titre![2]);
-      const parLui = journaux
-        .flatMap((f) =>
-          lireReel(f)
-            .split(sienneCoupe)
-            .slice(1)
-            .flatMap((bloc) => {
-              const m = sienTitre.exec(bloc);
-              return m ? [`${ANCRE_JOURNAL}${m[1]} — ${m[2]} — ${m[3]}`] : [];
-            })
-        )
-        .sort();
-      expect(parLui, `${lecteur} et la garde ne lisent pas les mêmes titres d’entrée`).toEqual(
-        parGarde
+      expect(code, `${lecteur} garde une coupe locale du journal`).not.toMatch(
+        /split\(\/\^## (?:\/m\)\.slice|\(\?=PR)/
       );
     }
+    const parLaGrammaire = entreesDuDossier()
+      .map((e) => `${ANCRE_JOURNAL}${e.pr} — ${e.date} — ${e.titre}`)
+      .sort();
+    expect(
+      parLaGrammaire,
+      'la grammaire unique et la garde ne lisent pas les mêmes titres d’entrée'
+    ).toEqual(parGarde.map((t) => t.trimEnd()));
   });
 
   it('la LISTE D’AUTORISATION du journal n’est pas élargie en silence : la règle de caractère admet EXACTEMENT l’ASCII imprimable et ces caractères-là', () => {

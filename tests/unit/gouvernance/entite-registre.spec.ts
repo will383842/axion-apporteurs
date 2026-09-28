@@ -38,7 +38,7 @@
  * rouverte, c'est la sentinelle qui redevient obligatoire, sans qu'une ligne de code bouge.
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -67,6 +67,9 @@ import {
 import {
   FAMILLES,
   FAMILLES_CORPS_PUBLIE,
+  causesEmises,
+  famillesMulticauses,
+  prouverCorpsPublie,
   IBANS_TEMOINS_ETRANGERS,
   IBAN_TEMOIN,
   PORTEE_DES_NUMEROS_PUBLICS,
@@ -3481,3 +3484,98 @@ function ibanSynthetique(pays: string, corps: string): string {
   }
   throw new Error(`aucune clé mod-97 valide pour ${pays}…${corps} : le témoin ne mesurerait rien`);
 }
+
+// ── la non-vacuité du banc du corps publié, au grain de la CAUSE ─────────────────────────────
+/**
+ * LA MESURE D'OUVERTURE, REJOUÉE ET NON RECOPIÉE. Le 2026-09-23, la lentille `mutation` de la PR
+ * #112 a retiré du banc `--corps-publie --prove` le témoin de la révision illisible SANS exemption :
+ * le banc est sorti en zéro, en imprimant que ses six familles rougissaient chacune sur son témoin.
+ * Le garde-fou de non-vacuité était au grain de la FAMILLE, et `revisions_non_lues` porte QUATRE
+ * causes : une seule suffisait à la déclarer couverte. Le grain descend ici à la CAUSE, et le compte
+ * des causes se DÉRIVE du code qui les émet.
+ */
+describe('REQ-GOV-031 — le banc du corps publié : un témoin par CAUSE, dérivée du code', () => {
+  /** Le banc, joué avec un filtre sur ses témoins — sa sortie captée, jamais affichée. */
+  function banc(garder: (t: { famille: string; cause: string }) => boolean): {
+    code: number;
+    sortie: string;
+  } {
+    const lignes: string[] = [];
+    const log = vi
+      .spyOn(console, 'log')
+      .mockImplementation((...a) => void lignes.push(a.join(' ')));
+    const err = vi
+      .spyOn(console, 'error')
+      .mockImplementation((...a) => void lignes.push(a.join(' ')));
+    try {
+      return { code: prouverCorpsPublie(garder), sortie: lignes.join('\n') };
+    } finally {
+      log.mockRestore();
+      err.mockRestore();
+    }
+  }
+
+  it('REQ-GOV-031 — les causes se DÉRIVENT du code : `revisions_non_lues` en émet QUATRE, chacune nommée', () => {
+    const emises = causesEmises();
+    const revisions = emises.filter((c) => c.famille === 'revisions_non_lues');
+    expect(revisions.length).toBe(4);
+    expect(new Set(revisions.map((c) => c.cause)).size).toBe(4);
+    // Aucun site d'émission sans cause : un message ajouté sans elle échapperait au grain.
+    expect(emises.filter((c) => c.cause === null)).toEqual([]);
+    // Chaque famille du corps publié émet au moins une cause.
+    for (const f of FAMILLES_CORPS_PUBLIE) expect(emises.some((c) => c.famille === f)).toBe(true);
+  });
+
+  it('REQ-GOV-031 — CONTRE-TÉMOIN : le banc complet passe', () => {
+    expect(banc(() => true).code).toBe(0);
+  });
+
+  it('REQ-GOV-031 — MUTANT REJOUÉ : sans le témoin de la révision illisible SANS exemption, le banc sort en non nul et NOMME la cause', () => {
+    const r = banc((t) => t.cause !== 'revision_illisible');
+    expect(r.code).not.toBe(0);
+    expect(r.sortie).toContain('revision_illisible');
+    expect(r.sortie).toContain('revisions_non_lues');
+  });
+
+  it('REQ-GOV-031 — chacune des QUATRE causes de `revisions_non_lues` est gardée : son retrait seul fait rougir', () => {
+    const causes = causesEmises()
+      .filter((c) => c.famille === 'revisions_non_lues')
+      .map((c) => c.cause as string);
+    for (const cause of causes) {
+      const r = banc((t) => t.cause !== cause);
+      expect(r.code, cause).not.toBe(0);
+      expect(r.sortie, cause).toContain(cause);
+    }
+  });
+
+  it('REQ-GOV-031 — CONTRE-TÉMOIN : une famille à cause UNIQUE n’est pas rendue plus exigeante', () => {
+    // `lecture_impossible` n'émet qu'une cause et porte deux témoins : en garder UN suffit, comme
+    // au grain de la famille. Le changement de grain n'exige rien de plus d'une famille simple.
+    const uniques = causesEmises().filter((c) => c.famille === 'lecture_impossible');
+    expect(uniques.length).toBe(1);
+    let vus = 0;
+    const r = banc((t) => t.famille !== 'lecture_impossible' || vus++ === 0);
+    expect(vus).toBeGreaterThan(1);
+    expect(r.code).toBe(0);
+  });
+
+  it('REQ-GOV-031 — la sortie IMPRIME le compte des causes et celui des causes témoignées, côte à côte', () => {
+    const n = causesEmises().length;
+    const { code, sortie } = lancer('--corps-publie', '--prove');
+    expect(code).toBe(0);
+    expect(sortie).toContain(`${n} cause(s) émise(s) par le code, ${n} avec leur témoin`);
+  });
+
+  it('REQ-GOV-031 — le balayage NOMME les familles du dépôt qui portent plusieurs causes, avec leur compte', () => {
+    const multiples = famillesMulticauses();
+    const ici = multiples.find(
+      (m) => m.fichier === 'scripts/gates/gov-entite.ts' && m.famille === 'revisions_non_lues'
+    );
+    expect(ici?.sites).toBe(4);
+    // Le balayage est RENDU : un compte qu'on calcule sans l'imprimer ne se relit pas.
+    console.log(
+      `familles à plusieurs causes : ${multiples.length}\n` +
+        multiples.map((m) => `   ${m.fichier} › ${m.famille} : ${m.sites}`).join('\n')
+    );
+  });
+});

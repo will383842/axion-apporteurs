@@ -16,7 +16,8 @@
  * formée, à clé dupliquée, porteuse d'un octet NUL) la fait REFUSER en se nommant. *Une exemption tue ment.*
  */
 
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
+import { basename, join } from 'node:path';
 import { fichiersSuivisOuRefus } from '../lot/fichiers-suivis';
 import { referencePr, DEPOTS, DEPOT_LOCAL, type Attestation } from '../lot/attestation';
 import { LIVREE } from '../lot/avancement';
@@ -438,11 +439,10 @@ function nommeLeLot(entree: string, lot: string): boolean {
 }
 
 /**
- * LA GRAMMAIRE D'UNE ENTRÉE, telle que `gov-etat.ts` la lit — et `plan-state/build.ts`, à l'identique : ils
- * COUPENT chaque fichier du journal sur `COUPE_ETAT`, puis prennent pour titre de chaque bloc la PREMIÈRE
- * ligne où `TITRE_ETAT` trouve « PR #<n> — AAAA-MM-JJ — <titre> ». N'IMPORTE QUELLE ligne du bloc (drapeau
- * `m`), date EXIGÉE. Ces modules ne s'importent pas (ils sortent du processus) : `attributions-resolvent.spec.ts`
- * extrait leurs deux expressions, SOURCE ET DRAPEAUX, exige l'égalité avec celles-ci, et rejoue leur lecture.
+ * LES DEUX PIÈCES DE LA GRAMMAIRE D'UNE ENTRÉE : la COUPE (un titre de niveau 2) et le TITRE d'entrée
+ * « PR #<n> — AAAA-MM-JJ — <titre> ». Elles ne se lisent plus séparément : `MOTIF_TITRE` les joint en UNE
+ * ligne entière, et `lireLeJournal` — importée par les quatre lecteurs (GOV-073) — est la seule à les
+ * appliquer. `TITRE_ETAT` seul ne sert plus qu'à REFUSER un titre écrit hors d'un titre.
  */
 export const COUPE_ETAT = /^## /m;
 export const TITRE_ETAT = /^PR #(\d+) — (\d{4}-\d{2}-\d{2}) — (.*)$/m;
@@ -465,6 +465,187 @@ function ancreDeJournal(pr: number | string): string {
 
 /** Le titre d'une entrée : une ligne ENTIÈRE, la coupe de gov:etat puis son titre, date comprise. */
 const MOTIF_TITRE = new RegExp('^' + COUPE_ETAT.source.slice(1) + TITRE_ETAT.source.slice(1));
+
+// ── LA GRAMMAIRE DU JOURNAL : une seule, importée par ses quatre lecteurs (GOV-073) ────────────
+
+/**
+ * 🔑 QUATRE LECTEURS, UNE GRAMMAIRE. `gov:etat`, `plan-state:build`, `gov:lecons` et cette garde lisent
+ * les mêmes entrées de `docs/journal/`. Chacun avait la sienne : deux coupaient sur les titres de niveau 2
+ * puis cherchaient le titre d'entrée sur N'IMPORTE QUELLE ligne du bloc, un troisième coupait sur
+ * « PR # » sans exiger la date, et cette garde avait son propre motif, ligne à ligne, et RETAPAIT le
+ * plancher. Trois faux verdicts sont nés de ces écarts. La grammaire vit ici parce que ce module est le
+ * seul des quatre qui s'importe sans effet ; les trois autres l'importent, et aucun motif local ne
+ * subsiste (`une-seule-grammaire-de-journal.spec.ts`).
+ *
+ * CE QU'ELLE DIT :
+ *   — une ENTRÉE commence à une ligne `## PR #<n> — AAAA-MM-JJ — <titre>` ENTIÈRE, et son corps court
+ *     jusqu'au titre de niveau 2 suivant. Les fins de ligne CRLF sont lues comme LF ;
+ *   — une ligne qui RESSEMBLE à un titre d'entrée sans en avoir la forme exacte — un titre qui s'ouvre
+ *     par « PR » à un autre niveau ou dans une autre écriture, ou le titre écrit hors d'un titre — est
+ *     une entrée MALFORMÉE : aucun lecteur ne la lit à moitié, les quatre la REFUSENT sous le même nom,
+ *     `REFUS_JOURNAL` ;
+ *   — le PLANCHER s'écrit UNE fois, sur une ligne qui ne porte que lui, hors de tout commentaire HTML.
+ */
+export const REFUS_JOURNAL = 'entree_de_journal_malformee';
+/** Le dossier du journal, et son mode d'emploi — qui porte le plancher et aucune entrée. */
+export const DOSSIER_DU_JOURNAL = 'docs/journal';
+export const GUIDE_DU_JOURNAL = `${DOSSIER_DU_JOURNAL}/README.md`;
+
+/**
+ * LA LIGNE DU PLANCHER, écrite UNE fois pour les deux lecteurs qui la lisent (`gov:etat`, cette garde).
+ * Le drapeau `g` est celui de son usage : on compte ses occurrences, et on refuse s'il y en a plus d'une.
+ */
+export const MOTIF_PLANCHER = /Plancher\s*:\s*le journal couvre les PR de numéro \*\*> (\d+)\*\*/g;
+
+/** Une entrée : son numéro, sa date, son titre, son CORPS (la ligne de titre sans `## `, puis le reste). */
+export interface EntreeDeJournal {
+  readonly pr: number;
+  readonly date: string;
+  readonly titre: string;
+  readonly corps: string;
+  readonly fichier: string;
+  readonly ligne: number;
+}
+export interface LigneMalformee {
+  readonly fichier: string;
+  readonly ligne: number;
+  readonly texte: string;
+}
+export interface LectureDuJournal {
+  readonly entrees: readonly EntreeDeJournal[];
+  readonly malformees: readonly LigneMalformee[];
+}
+
+/** Un titre de n'importe quel niveau qui s'ouvre par « PR » : le rendu l'affiche comme une entrée. */
+const TITRE_QUI_S_OUVRE_PAR_PR = /^#{1,6}[ \t]*PR\b/;
+
+/**
+ * LA LECTURE, PURE : les entrées de fichiers donnés, et les lignes MALFORMÉES. Aucune lecture du disque
+ * ici — les quatre lecteurs lui passent ce qu'ils ont lu, chacun par sa population (le disque pour trois
+ * d'entre eux, l'index pour cette garde : `docs/journal/` n'a pas de fichier hors index).
+ */
+export function lireLeJournal(
+  fichiers: readonly { fichier: string; texte: string }[]
+): LectureDuJournal {
+  const entrees: EntreeDeJournal[] = [];
+  const malformees: LigneMalformee[] = [];
+  for (const { fichier, texte } of fichiers) {
+    let courante: { tete: Omit<EntreeDeJournal, 'corps'>; lignes: string[] } | null = null;
+    const clore = (): void => {
+      if (courante) entrees.push({ ...courante.tete, corps: courante.lignes.join('\n') });
+      courante = null;
+    };
+    texte.split(/\r?\n/).forEach((ligne, i) => {
+      const titre = MOTIF_TITRE.exec(ligne);
+      if (titre) {
+        clore();
+        courante = {
+          tete: {
+            pr: Number(titre[1]),
+            date: titre[2] as string,
+            titre: (titre[3] ?? '').trim(),
+            fichier,
+            ligne: i + 1,
+          },
+          lignes: [ligne.slice(COUPE_ETAT.source.length - 1)],
+        };
+        return;
+      }
+      if (TITRE_QUI_S_OUVRE_PAR_PR.test(ligne) || TITRE_ETAT.test(ligne)) {
+        malformees.push({ fichier, ligne: i + 1, texte: ligne });
+      }
+      if (COUPE_ETAT.test(ligne)) {
+        clore();
+        return;
+      }
+      if (courante) courante.lignes.push(ligne);
+    });
+    clore();
+  }
+  return { entrees, malformees };
+}
+
+/** Le refus des entrées malformées, sous son NOM — le même, quel que soit le lecteur. */
+export class JournalMalforme extends Error {
+  readonly malformees: readonly LigneMalformee[];
+  constructor(malformees: readonly LigneMalformee[]) {
+    super(
+      `${REFUS_JOURNAL} — ${malformees.length} ligne(s) du journal ressemblent à un titre d'entrée sans ` +
+        `en avoir la forme exacte « ## PR #<n> — AAAA-MM-JJ — <titre> » : ` +
+        malformees.map((m) => `${m.fichier}:${m.ligne} « ${m.texte.slice(0, 80)} »`).join(' ; ') +
+        `. Le rendu l'affiche comme l'entrée d'une PR ; aucun lecteur du journal ne la lit à moitié. ` +
+        `Récris la ligne dans la forme exacte, ou retire-lui son allure de titre.`
+    );
+    this.name = 'JournalMalforme';
+    this.malformees = malformees;
+    // Le nom du refus et ses lignes suffisent : une trace de pile n'apprend rien sur le journal.
+    this.stack = `${this.name}: ${this.message}`;
+  }
+}
+
+/** Refuse une lecture qui porte une ligne malformée — jamais une lecture à moitié. */
+export function exigerUnJournalBienForme(lecture: LectureDuJournal): readonly EntreeDeJournal[] {
+  if (lecture.malformees.length > 0) throw new JournalMalforme(lecture.malformees);
+  return lecture.entrees;
+}
+
+/**
+ * Les entrées du DOSSIER du journal, pour les trois lecteurs qui lisent le disque. Tous les `.md` sauf le
+ * mode d'emploi, dans l'ordre des noms ; une ligne malformée fait REFUSER (`JournalMalforme`).
+ */
+export function entreesDuDossier(dossier = DOSSIER_DU_JOURNAL): readonly EntreeDeJournal[] {
+  const noms = readdirSync(dossier)
+    .filter((n) => n.endsWith('.md') && n !== basename(GUIDE_DU_JOURNAL))
+    .sort();
+  return exigerUnJournalBienForme(
+    lireLeJournal(noms.map((n) => ({ fichier: n, texte: readFileSync(join(dossier, n), 'utf8') })))
+  );
+}
+
+/** La ligne que chaque lecteur imprime : le compte des entrées RÉELLEMENT lues. */
+export function ligneDuJournal(entrees: number): string {
+  return `journal — ${entrees} entrée(s) lue(s) par la grammaire unique (\`${DOSSIER_DU_JOURNAL}/\`)`;
+}
+
+/**
+ * LE PLANCHER, lu une seule fois pour les deux lecteurs qui en dépendent. Refus — jamais un choix :
+ * introuvable ; écrit plusieurs fois (un commentaire HTML invisible au rendu compte, et c'était la
+ * faille : un lecteur prenait la PREMIÈRE occurrence, masquée). Sur l'unique occurrence, deux REFUS que
+ * le lecteur prononce — jamais une lecture : `horsLigne`, le message si sa ligne porte autre chose que
+ * le plancher ; `masque`, si elle est dans un commentaire HTML. Cette garde les prononce à leur place
+ * dans sa liste d'autorisation, qui nomme d'abord la ligne qui OUVRE un conteneur ; `gov:etat` d'emblée.
+ */
+export function plancherDuJournal(
+  texte: string
+):
+  | { plancher: number; index: number; ligne: number; masque: boolean; horsLigne: string | null }
+  | { refus: string } {
+  const trouves = [...texte.matchAll(MOTIF_PLANCHER)];
+  if (trouves.length !== 1) {
+    return {
+      refus:
+        trouves.length === 0
+          ? `le plancher du journal est introuvable dans ${GUIDE_DU_JOURNAL} (forme attendue : « Plancher : le journal couvre les PR de numéro **> <n>** »).`
+          : `le plancher du journal est écrit ${trouves.length} fois dans ${GUIDE_DU_JOURNAL} (${trouves.map((p) => `> ${p[1]}`).join(', ')}) : ` +
+            `la garde ne choisit pas laquelle fait foi, et une ligne invisible au rendu en fait partie peut-être.`,
+    };
+  }
+  const trouve = trouves[0] as RegExpMatchArray & { index: number };
+  const ligne = texte.slice(0, trouve.index).split('\n').length - 1;
+  const texteDeLaLigne = (texte.split('\n')[ligne] ?? '').replace(/\r$/, '');
+  const horsLigne = MOTIF_LIGNE_DE_PLANCHER.test(texteDeLaLigne)
+    ? null
+    : `${GUIDE_DU_JOURNAL}:${ligne + 1} — la ligne du plancher (« > ${trouve[1]} ») porte autre chose que le plancher : ` +
+      `« ${texteDeLaLigne.slice(0, 80)} ». Ce nombre EXEMPTE des tâches de toute attestation de lot, et ce qui entoure ` +
+      `le plancher sur sa ligne peut le retirer du rendu sans rien retirer du texte — GitHub JETTE une cellule ` +
+      `de tableau au-delà des colonnes déclarées, met un titre de lien en infobulle, avale un commentaire. ` +
+      `La ligne du plancher ne porte donc QUE le plancher.`;
+  // Un commentaire HTML fermé, ou ouvert et jamais refermé, masque ce qu'il contient.
+  const avant = texte.slice(0, trouve.index);
+  const ouvert = avant.lastIndexOf('<!--');
+  const masque = ouvert >= 0 && avant.indexOf('-->', ouvert) < 0;
+  return { plancher: Number(trouve[1]), index: trouve.index, ligne, masque, horsLigne };
+}
 
 /**
  * 🔑 LA LISTE D'AUTORISATION DU JOURNAL — ses caractères. Les formes de Markdown qui AFFICHENT un titre sont
@@ -587,17 +768,14 @@ const JOURNAL_REFUSE: readonly {
  */
 export function entreesDeJournal(journal: string): Map<string, string> {
   const par = new Map<string, string[]>();
-  let courant: string | null = null;
-  for (const ligne of journal.split('\n')) {
-    const m = MOTIF_TITRE.exec(ligne);
-    if (m) {
-      courant = m[1] as string;
-      const deja = par.get(courant);
-      if (deja) deja[0] = `${deja[0]} ${ligne}`;
-      else par.set(courant, [ligne]);
-      continue;
-    }
-    if (courant) (par.get(courant) as string[]).push(ligne);
+  for (const e of lireLeJournal([{ fichier: 'journal', texte: journal }]).entrees) {
+    const [titre, ...corps] = e.corps.split('\n');
+    const ligneDeTitre = `${COUPE_ETAT.source.slice(1)}${titre as string}`;
+    const deja = par.get(String(e.pr));
+    if (deja) {
+      deja[0] = `${deja[0]} ${ligneDeTitre}`;
+      deja.push(...corps);
+    } else par.set(String(e.pr), [ligneDeTitre, ...corps]);
   }
   return new Map([...par].map(([k, v]) => [k, v.join('\n')]));
 }
@@ -1867,7 +2045,7 @@ export class SourceIllisible extends Error {
   }
 }
 
-const README_JOURNAL = 'docs/journal/README.md';
+const README_JOURNAL = GUIDE_DU_JOURNAL;
 
 /**
  * La ligne du plancher, sous la forme que `gov-etat.ts` lit aussi. Ce module ne l'exporte pas (il
@@ -1877,7 +2055,7 @@ const README_JOURNAL = 'docs/journal/README.md';
  * fois, mais dans un conteneur que le rendu n'affiche pas, la LIGNE QUI OUVRE ce conteneur fait
  * refuser la liste d'autorisation, qui lit ce README comme tout autre fichier du journal.
  */
-const MOTIF_PLANCHER = /Plancher\s*:\s*le journal couvre les PR de numéro \*\*> (\d+)\*\*/g;
+// Le motif du plancher vit avec la grammaire du journal (`MOTIF_PLANCHER`, GOV-073) : écrit une fois.
 
 /**
  * 🔑 CE QUI CACHERAIT LE PLANCHER — AUCUNE ÉNUMÉRATION DE CONTENEURS. DEUX RÈGLES, TOUTES DEUX DÉRIVÉES.
@@ -2066,38 +2244,28 @@ export function chargerSources(
     );
   }
   const texteDuReadme = texte(README_JOURNAL);
-  const planchers = [...texteDuReadme.matchAll(MOTIF_PLANCHER)];
-  if (planchers.length !== 1) {
-    throw new SourceIllisible(
-      planchers.length === 0
-        ? `le plancher du journal est introuvable dans ${README_JOURNAL} (forme attendue : « Plancher : le journal couvre les PR de numéro **> <n>** »).`
-        : `le plancher du journal est écrit ${planchers.length} fois dans ${README_JOURNAL} (${planchers.map((p) => `> ${p[1]}`).join(', ')}) : ` +
-            `la garde ne choisit pas laquelle fait foi, et une ligne invisible au rendu en fait partie peut-être.`
-    );
-  }
-  const plancher = planchers[0] as RegExpExecArray;
+  // Le plancher, par la lecture PARTAGÉE avec `gov:etat` (GOV-073) : une fois, sur sa ligne seule.
+  const plancherLu = plancherDuJournal(texteDuReadme);
+  if ('refus' in plancherLu) throw new SourceIllisible(plancherLu.refus);
+  const plancher = [String(plancherLu.plancher), String(plancherLu.plancher)] as const;
   // La ligne où le plancher est écrit, dans le README : la seule que la liste d'autorisation ne juge
   // pas — parce qu'une règle plus stricte la juge, et qu'elle est dérivée du même motif.
-  const ligneDuPlancher = texteDuReadme.slice(0, plancher.index).split('\n').length - 1;
+  const ligneDuPlancher = plancherLu.ligne;
   const textesDeJournal = new Map<string, string>();
   for (const f of journaux) {
     const lignes = (f === README_JOURNAL ? texteDuReadme : texte(f)).split('\n');
     lignes.forEach((ligne, i) => {
+      // Jugée plus strictement, par la règle PARTAGÉE : elle ne porte QUE le plancher.
       if (f === README_JOURNAL && i === ligneDuPlancher) {
-        if (MOTIF_LIGNE_DE_PLANCHER.test(ligne)) return;
-        throw new SourceIllisible(
-          `${f}:${i + 1} — la ligne du plancher (« > ${plancher[1]} ») porte autre chose que le plancher : ` +
-            `« ${ligne.slice(0, 80)} ». Ce nombre EXEMPTE des tâches de toute attestation de lot, et ce qui entoure ` +
-            `le plancher sur sa ligne peut le retirer du rendu sans rien retirer du texte — GitHub JETTE une cellule ` +
-            `de tableau au-delà des colonnes déclarées, met un titre de lien en infobulle, avale un commentaire. ` +
-            `La ligne du plancher ne porte donc QUE le plancher.`
-        );
+        if (plancherLu.horsLigne === null) return;
+        throw new SourceIllisible(plancherLu.horsLigne);
       }
       for (const regle of JOURNAL_REFUSE) {
         const porte = regle.porte(ligne);
         if (porte === false) continue;
         throw new SourceIllisible(
-          `${f}:${i + 1} porte ${regle.quoi} — ici ${JSON.stringify(porte)}, dans « ${ligne.slice(0, 80)} ». ` +
+          (f === README_JOURNAL ? '' : `${REFUS_JOURNAL} — `) +
+            `${f}:${i + 1} porte ${regle.quoi} — ici ${JSON.stringify(porte)}, dans « ${ligne.slice(0, 80)} ». ` +
             (f === README_JOURNAL
               ? `Ce fichier porte le PLANCHER (« > ${plancher[1]} »), qui EXEMPTE des tâches de toute attestation de lot : ` +
                 `le dépôt publié doit l'AFFICHER là où la garde le lit.`
@@ -2107,13 +2275,30 @@ export function chargerSources(
     });
     textesDeJournal.set(f, lignes.join('\n'));
   }
+  if (plancherLu.masque) {
+    throw new SourceIllisible(
+      `${README_JOURNAL}:${ligneDuPlancher + 1} — le plancher (« > ${plancher[1]} ») est MASQUÉ dans un commentaire HTML : ` +
+        `le dépôt publié ne l'affiche pas, et la garde ne lit pas ce que le rendu cache.`
+    );
+  }
+  // Les ENTRÉES, par la grammaire unique : une ligne malformée fait refuser sous son nom (GOV-073).
+  try {
+    exigerUnJournalBienForme(
+      lireLeJournal(
+        fichiersDEntrees.map((f) => ({ fichier: f, texte: textesDeJournal.get(f) as string }))
+      )
+    );
+  } catch (e) {
+    if (e instanceof JournalMalforme) throw new SourceIllisible(e.message);
+    throw e;
+  }
 
   return {
     taches: tableau<Tache>('docs/tasks.json', 'taches'),
     gates: tableau<Gate>('docs/gates.json', 'gates'),
     postes: tableau<Poste>('docs/agents.json', 'postes'),
     journal: fichiersDEntrees.map((f) => textesDeJournal.get(f) as string).join('\n'),
-    plancherJournal: Number(plancher[1]),
+    plancherJournal: plancherLu.plancher,
     // TOUT fichier suivi de `scripts/` et `tests/`, quelle que soit son extension : l'acceptance dit
     // « tout fichier suivi », et un filtre d'extension est un périmètre qui s'ampute en silence.
     entetes: suivis
@@ -3971,7 +4156,9 @@ function principal(): { code: number; lignes: string[] } {
       ],
     };
   }
-  return rendre(analyser(sources));
+  const rendu = rendre(analyser(sources));
+  const lues = lireLeJournal([{ fichier: 'journal', texte: sources.journal }]).entrees.length;
+  return { ...rendu, lignes: [...rendu.lignes, `   ${ligneDuJournal(lues)}`] };
 }
 
 if (process.argv[1] !== undefined && /gov-attributions[.](ts|js)$/.test(process.argv[1])) {
