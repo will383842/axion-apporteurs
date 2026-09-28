@@ -589,7 +589,8 @@ rules:
       #   pas. Prix ci-dessous : un argument de type écrit `Prisma.X` directement.
       - pattern-regex: |-
           <(?:[\t\n\x0B\f\r\x{0085}\x{200B}\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)*Prisma(?![\p{ID_Continue}$\x{200C}\x{200D}])
-      # — LE NOM D'ÉLÉMENT JSX **QUALIFIÉ** (11e tour, mesure publiée en `issuecomment-5861172534`).
+      # — LE NOM D'ÉLÉMENT JSX **QUALIFIÉ** (11e tour, mesure publiée en `issuecomment-5861172534`,
+      #   puis CORRIGÉ au 12e tour par la revue `securite` sur `b9579bf`).
       #   Les trois bras ci-dessus laissaient passer `<C.Prisma.raw />` sous
       #   `import * as C from '@prisma/client'` : l'AST parce que `metavariable-regex` sur `$EL` ne
       #   mord plus au-delà de DEUX segments (`<C.Prisma.raw />` et `<a.b.Prisma.raw />` muets,
@@ -597,19 +598,33 @@ rules:
       #   pas le préfixe ; le bras des sous-chemins parce que l'import est EXACTEMENT
       #   `'@prisma/client'`. Ce cas n'était donc fermé par RIEN.
       #
-      #   Les deux motifs ci-dessous franchissent les segments et portent une GARDE ARRIÈRE : un
-      #   chevron collé à un identifiant, une parenthèse ou un crochet fermants ouvre des arguments
-      #   de type, jamais un élément — sauf derrière un mot-clé d'expression, énuméré. Le second
-      #   motif prend le cas où le namespace est ALIASÉ hors de vue (`<L.raw>`, runtime) en jugeant
-      #   le MEMBRE. Mesuré sur sept cas (image épinglée 1.176.1) : rouges `<C.Prisma.raw />`,
-      #   `<Prisma.raw />`, `<L.raw>{e}</L.raw>`, `<a.b.Prisma.raw />` ; muets `<PrismaCard />`,
-      #   `Promise<Prisma.X>`, `Promise<N.Prisma.X>`.
+      #   CE QUE LA PREMIÈRE VERSION LISAIT MAL, et pourquoi ce n'était pas un détail. Elle
+      #   s'écrivait en ASCII (`[A-Za-z0-9_$]`, `\s`) alors que les autres bras textuels de cette
+      #   règle lisent `\p{ID_Continue}` et la classe des blancs Unicode ET des commentaires.
+      #   Quatre formes passaient, mesurées par la revue `securite` : un alias non-ASCII
+      #   (`<Cé.Prisma.raw />`), un commentaire dans le chemin (`<C/**/.Prisma.raw />`), un blanc
+      #   insécable avant le point, et `else<C.Prisma.raw />` — que la GARDE ARRIÈRE refusait, sa
+      #   liste de mots-clés ne portant ni `else`, ni `do`, `in`, `of`, `typeof`, `void`, `delete`,
+      #   `new`, `instanceof`. Une liste de mots-clés est un inventaire, et un inventaire s'oublie.
       #
-      #   CE BRAS NE REMPLACE PAS LE PRÉCÉDENT, et les deux sont voulus : sa garde arrière lui
-      #   fait manquer l'élément écrit dans le TEXTE d'un enfant (`<b>x<Prisma.raw /></b>`), que le
-      #   bras au texte prend. Aucun des deux ne contient l'autre.
-      - pattern-regex: '(?:(?<![A-Za-z0-9_$)\]])|(?<=\breturn)|(?<=\byield)|(?<=\bdefault)|(?<=\bawait)|(?<=\bcase)|(?<=\bthrow))<\s*/?\s*(?:[A-Za-z0-9_$]+\s*\.\s*)*Prisma\s*\.'
-      - pattern-regex: '(?:(?<![A-Za-z0-9_$)\]])|(?<=\breturn)|(?<=\byield)|(?<=\bdefault)|(?<=\bawait)|(?<=\bcase)|(?<=\bthrow))<\s*/?\s*(?:[A-Za-z0-9_$]+\s*\.\s*)+(?:raw|Sql|sqltag|join|makeTypedQueryFactory)\s*(?=[\s/>])'
+      #   LA GARDE ARRIÈRE EST DONC ABANDONNÉE : aucune exemption par le contexte, comme le bras au
+      #   texte qui précède. Son PRIX est déjà payé par celui-ci — un argument de type écrit
+      #   `Prisma.X` directement est refusé, l'alias de type le porte — et s'étend maintenant au
+      #   générique QUALIFIÉ (`Promise<N.Prisma.X>`) : témoin `prix-generique-prisma-qualifie`.
+      #   Payer deux fois le même prix ne coûte rien de plus ; oublier un mot-clé, si.
+      #
+      #   LIMITE DÉCLARÉE, mesurée et non contournée : le chevron doit être suivi du chemin, donc
+      #   `Map<string, Prisma.X>` reste muet — le chemin n'y commence pas au chevron. Fermer cela
+      #   demanderait de refuser `Prisma.` partout dans un `.tsx`, ce que la liste blanche de la
+      #   règle admet par ailleurs pour de bonnes raisons. Ce bras ferme le NOM D'ÉLÉMENT, pas
+      #   toute mention du namespace.
+      #
+      #   Le second motif prend le cas où le namespace est ALIASÉ hors de vue (`<L.raw>`, runtime)
+      #   en jugeant le MEMBRE, et non le namespace.
+      - pattern-regex: |-
+          <(?:[\t\n\x0B\f\r\x{0085}\x{200B}\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)*/?(?:[\t\n\x0B\f\r\x{0085}\x{200B}\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)*(?:[\p{ID_Continue}$\x{200C}\x{200D}]+(?:[\t\n\x0B\f\r\x{0085}\x{200B}\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)*\.(?:[\t\n\x0B\f\r\x{0085}\x{200B}\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)*)*Prisma(?:[\t\n\x0B\f\r\x{0085}\x{200B}\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)*\.
+      - pattern-regex: |-
+          <(?:[\t\n\x0B\f\r\x{0085}\x{200B}\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)*/?(?:[\t\n\x0B\f\r\x{0085}\x{200B}\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)*(?:[\p{ID_Continue}$\x{200C}\x{200D}]+(?:[\t\n\x0B\f\r\x{0085}\x{200B}\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)*\.(?:[\t\n\x0B\f\r\x{0085}\x{200B}\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)*)+(?:raw|Sql|sqltag|join|makeTypedQueryFactory)(?![\p{ID_Continue}$\x{200C}\x{200D}])
       # — LES FONCTIONS D'ÉTIQUETTE hors de la position d'étiquette. Une étiquette est un appel
       #   pour l'AST de semgrep (mesuré : `Prisma.sql(...)` matche `Prisma.sql`…``) ; c'est
       #   donc la RÉFÉRENCE qui est jugée, et admise seulement DANS son propre gabarit étiqueté,

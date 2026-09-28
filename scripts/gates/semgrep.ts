@@ -1416,6 +1416,62 @@ const FORMES_SQL: readonly { nom: string; lignes: string[]; fautive: number; ext
     ],
     fautive: 2,
   },
+  // ── Les QUATRE FORMES que la première version du bras qualifié laissait passer, mesurées par la
+  //    revue `securite` sur `b9579bf` : elle lisait en ASCII et sans commentaire là où les autres
+  //    bras de la règle lisent `\p{ID_Continue}` et la classe blancs Unicode + commentaires, et sa
+  //    garde arrière exemptait tout mot-clé absent de sa liste. ──
+  {
+    // Un alias NON-ASCII : `[A-Za-z0-9_$]` ne voit pas le `é`, `\p{ID_Continue}` si.
+    nom: 'jsx-namespace-aliase-non-ascii',
+    ext: 'tsx',
+    lignes: ["import * as Cé from '@prisma/client';", 'export const E = () => <Cé.Prisma.raw />;'],
+    fautive: 2,
+  },
+  {
+    // Un COMMENTAIRE planté dans le chemin. Le parseur l'ignore ; un motif qui ne l'admet pas non.
+    nom: 'jsx-namespace-commentaire-dans-le-chemin',
+    ext: 'tsx',
+    lignes: [
+      "import * as C from '@prisma/client';",
+      'export const E = () => <C/**/.Prisma.raw />;',
+    ],
+    fautive: 2,
+  },
+  {
+    // Un blanc Unicode avant le point : `\s` ne le prend pas, `\p{Zs}` si. L'espace fine ici,
+    // l'insécable et l'idéographique dans la même classe.
+    nom: 'jsx-namespace-blanc-unicode',
+    ext: 'tsx',
+    lignes: [
+      "import * as C from '@prisma/client';",
+      `export const E = () => <C${FINE}.Prisma.raw />;`,
+    ],
+    fautive: 2,
+  },
+  {
+    // Un mot-clé COLLÉ au chevron, absent de l'ancienne liste. `else` ici ; `do`, `in`, `of`,
+    // `typeof`, `void`, `delete`, `new` et `instanceof` manquaient aussi. C'est cette forme qui a
+    // fait abandonner la garde arrière : un inventaire de mots-clés s'oublie, une absence
+    // d'exemption ne s'oublie pas.
+    nom: 'jsx-mot-cle-colle-au-chevron',
+    ext: 'tsx',
+    lignes: [
+      "import * as C from '@prisma/client';",
+      'export function E(x: boolean) { if (x) return null; else<C.Prisma.raw />; return null; }',
+    ],
+    fautive: 2,
+  },
+  {
+    // Le PRIX de cet abandon, nommé : un argument de type QUALIFIÉ dont le chemin commence AU
+    // chevron est refusé, comme l'était déjà `Promise<Prisma.X>` non qualifié. L'alias de type le
+    // porte — c'est ce que fait le contre-témoin `sql/jsx-et-generiques`.
+    nom: 'prix-generique-prisma-qualifie',
+    lignes: [
+      "import type * as N from '@prisma/client';",
+      'export const c = (p: Promise<N.Prisma.InputJsonObject>) => p;',
+    ],
+    fautive: 2,
+  },
   // Une fonction d'ÉTIQUETTE appelée sans gabarit : le tableau de « morceaux » est du TEXTE.
   {
     nom: 'prisma-sql-appel',
@@ -2091,13 +2147,13 @@ export const CONTRE_TEMOINS: readonly FichierDuBac[] = [
       'export const c = (p: Promise<Json>, q: Prisma.InputJsonObject[]) => [p, q];',
       'export const d = (n: number) => <div data-n={n}><Prismatique /><span /></div>;',
       'export const e = (m: Map<string, Json>) => m;',
-      // Le PRIX que le bras au chemin qualifié N'A PAS payé (11e tour) : un argument de type
-      // QUALIFIÉ reste muet, parce que son chevron est collé au mot qui le précède et que seule
-      // une liste fermée de mots-clés d'expression lève cette garde. Sans ce contre-témoin, rien
-      // ne distinguerait le bras d'un refus de tous les génériques.
+      // La LIMITE du bras au chemin qualifié, écrite ici pour qu'elle soit tenue : le chemin doit
+      // commencer AU chevron. Dans `Map<string, N.Prisma.X>` il commence après une virgule, donc
+      // le bras se taît. (Le générique où il commence bien au chevron, lui, est refusé : témoin
+      // `prix-generique-prisma-qualifie`. Ces deux lignes sont donc muettes, et c'est mesuré.)
       "import type * as N from '@prisma/client';",
-      'export const f = (p: Promise<N.Prisma.InputJsonObject>) => p;',
-      'export const g = (p: Map<string, N.Prisma.InputJsonObject>) => p;',
+      'export const f = (p: Map<string, N.Prisma.InputJsonObject>) => p;',
+      'export const g = (p: Record<string, N.Prisma.InputJsonObject>) => p;',
     ],
     null,
     0
