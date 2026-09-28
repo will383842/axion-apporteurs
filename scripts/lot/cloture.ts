@@ -649,6 +649,13 @@ export function livraisonDepuisLaForge(e: {
 }): Livraison {
   const sha = e.vue.state === 'MERGED' ? (e.vue.mergeCommit?.oid ?? null) : null;
   const lignes = e.messageDuCommit === null ? null : e.messageDuCommit.split('\n');
+  // LE CORPS NE DÉCLARE QUE S'IL EST RÉDUIT À LA SEULE LIGNE `Lot:` que le pas 6 y recopie. Sans
+  // `--body`, la forge compose ce corps avec les messages des commits : un « Lot: X » écrit dans un
+  // commit par le développeur déclarerait X (lentille `securite`, #188). Tout autre corps ne
+  // déclare rien, et la PR ne livre alors que la tâche de son titre — échec fermé.
+  const utiles = lignes === null ? [] : lignes.slice(1).filter((l) => l.trim() !== '');
+  const corps =
+    lignes === null ? null : utiles.length === 1 && /^Lot:/.test(utiles[0]!) ? utiles[0]! : '';
   return {
     pr: e.pr,
     sha,
@@ -658,7 +665,7 @@ export function livraisonDepuisLaForge(e: {
       sha !== null &&
       (e.faceALaBrancheParDefaut === 'identical' || e.faceALaBrancheParDefaut === 'ahead'),
     titre: lignes === null ? null : (lignes[0] ?? null),
-    corps: lignes === null ? null : lignes.slice(1).join('\n'),
+    corps,
   };
 }
 
@@ -666,9 +673,16 @@ export function livraisonDepuisLaForge(e: {
  * LA LIVRAISON LUE SUR LA FORGE, pour `--tache`. Rien n'est tapé par l'opérateur hormis le numéro :
  * tout vient de la forge, dans le dépôt DE LA TÂCHE (`DEPOTS`). Trois lectures : la PR, le message
  * du commit de fusion, et l'ascendance de ce commit sur la branche par défaut.
+ *
+ * `lire` est INJECTÉ (GOV-104) : c'est ce qui permet à un témoin de juger les APPELS — la
+ * comparaison vise la branche par défaut lue sur la forge, jamais la base que la PR a choisie.
+ * Sans lui, remettre `baseRefName` dans l'appel laissait tous les tests verts.
  */
-function livraisonSurLaForge(depot: string, pr: number): Livraison {
-  const lire = (args: string[]) => execFileSync('gh', args, { encoding: 'utf8' }).trim();
+export function livraisonSurLaForge(
+  depot: string,
+  pr: number,
+  lire: (args: string[]) => string = (args) => execFileSync('gh', args, { encoding: 'utf8' }).trim()
+): Livraison {
   const vue = JSON.parse(
     lire([
       'pr',

@@ -8,14 +8,14 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `20a4c9f` — 2026-09-28T23:32:53+02:00 |
-| Qu’est-ce qui est en vol ? | aucune PR ouverte |
+| Qu’est-ce qui est en vol ? | 1. #188 (un contrôle requis rouge ou une revue manquante) |
 | Qui tient quoi ? | QA-T07 (A05) · GOV-104 (A01) |
 | Où en est la phase ? | phase 0 — 76/118 tâches, reste 35.85 j |
 | Le prochain pas | QA-T07 — Gate sécurité : semgrep |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
 | Dernière entrée de journal | PR #188 — 2026-09-28 |
 
-**Ce qu’on tape maintenant.** `pnpm lot:composer` pour composer le lot suivant, puis revendiquer ses tâches par `gh issue edit`. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : 0
 
@@ -58,7 +58,9 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 
 ## File de fusion
 
-Aucune PR ouverte.
+| # | PR | Branche | Ce qui la bloque |
+| --- | --- | --- | --- |
+| 1 | #188 — fix(GOV-104): la cloture lit la declaration dans le commit de fusion et juge l'atterrissage sur la branche par defaut | `t/gov-104b` | un contrôle requis rouge ou une revue manquante |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -106,8 +108,9 @@ entrent au registre des décisions, et la charte cite `RACINES_DE_LA_GARDE_DES_R
 recopier leur nombre. L'instant des témoins qui lisent le registre réel a une seule définition.
 
 **Reste.** Les fusions antérieures au pas 6 ne portent pas `Lot:` dans leur commit : leurs tâches
-secondaires ne se clôturent plus par `--tache`, et c'est voulu (échec fermé). Les douze tâches
-concernées ont été closes avant, par la PR #187.
+secondaires ne se clôturent plus par `--tache`, et c'est voulu (échec fermé). Sur les vingt-cinq
+tâches secondaires de ces fusions, vingt-quatre sont closes, huit d'entre elles par la PR #187 ; la
+dernière, GOV-074 (#168), n'était livrée qu'en partie et entre dans le lot L0-11.
 
 **Appris.** Cette branche a dû être reconstruite depuis `main` : elle portait les commits d'une PR
 fusionnée par écrasement, et la fusion de `main` n'a plus su réconcilier cinq fichiers. Une branche

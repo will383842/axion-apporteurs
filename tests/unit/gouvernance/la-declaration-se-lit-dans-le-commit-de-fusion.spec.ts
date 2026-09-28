@@ -22,6 +22,7 @@ import {
   cloturerLeLot,
   cloturerUneTacheSeule,
   livraisonDepuisLaForge,
+  livraisonSurLaForge,
   type Tache,
 } from '../../../scripts/lot/cloture';
 import { DEPOT_LOCAL } from '../../../scripts/lot/attestation';
@@ -112,6 +113,79 @@ describe('REQ-GOV-026 — la déclaration se lit dans le commit de fusion, immua
   });
 });
 
+describe('REQ-GOV-026 — la forge est interrogée sur la branche PAR DÉFAUT, jamais sur la base de la PR', () => {
+  /**
+   * UNE FORGE SIMULÉE QUI ENREGISTRE CE QU'ON LUI DEMANDE. La PR a été fusionnée dans une base
+   * (`branche-de-la-pr`) qui n'est pas la branche par défaut (`main`). Le témoin juge l'APPEL : la
+   * comparaison doit viser `main`. Remettre `baseRefName` dans l'appel le fait rougir — c'est la
+   * face que la relecture `exactitude` de #188 a trouvée muette.
+   */
+  function forge(message: string) {
+    const appels: string[][] = [];
+    const lire = (args: string[]): string => {
+      appels.push(args);
+      if (args[0] === 'pr') {
+        return JSON.stringify({
+          state: 'MERGED',
+          mergeCommit: { oid: SHA },
+          mergedAt: '2026-09-20T10:00:00Z',
+          headRefName: 't/une-branche',
+          baseRefName: 'branche-de-la-pr',
+        });
+      }
+      if (args[0] === 'repo') return 'main';
+      if (args[1]?.includes('/commits/')) return message;
+      if (args[1]?.includes('/compare/')) return 'ahead';
+      throw new Error(`appel inattendu : ${args.join(' ')}`);
+    };
+    return { appels, lire };
+  }
+
+  it('REQ-GOV-026 — TÉMOIN : la comparaison vise la branche par défaut lue sur la forge, pas la base de la PR', () => {
+    const { appels, lire } = forge('fix(GOV-001): x (#900)\n');
+    livraisonSurLaForge('will383842/axion-apporteurs', 900, lire);
+    const comparaisons = appels.filter((a) => a[1]?.includes('/compare/'));
+    expect(comparaisons).toHaveLength(1);
+    expect(comparaisons[0]![1]).toMatch(/\.\.\.main$/);
+    expect(appels.flat().join(' ')).not.toContain('branche-de-la-pr');
+  });
+
+  it('REQ-GOV-026 — TÉMOIN : la branche par défaut est LUE sur la forge du dépôt de la tâche', () => {
+    const { appels, lire } = forge('fix(GOV-001): x (#900)\n');
+    livraisonSurLaForge('will383842/axion-ia', 900, lire);
+    const repo = appels.find((a) => a[0] === 'repo');
+    expect(repo).toBeDefined();
+    expect(repo).toContain('will383842/axion-ia');
+    expect(repo!.join(' ')).toContain('defaultBranchRef');
+  });
+});
+
+describe('REQ-GOV-026 — `Lot:` ne se lit que s’il est la SEULE ligne du corps du message', () => {
+  const doc = lireDoc();
+  const [portee, secondaire] = deuxTachesSeules(doc);
+  const livraisonAvec = (message: string) =>
+    livraisonDepuisLaForge({
+      pr: 900,
+      vue: vueDeLaForge(`fix(${portee.id}): x`, ''),
+      messageDuCommit: message,
+      faceALaBrancheParDefaut: 'ahead',
+    });
+
+  it('REQ-GOV-026 — TÉMOIN : un `Lot:` écrit dans un commit, que la forge recopie dans le message, ne déclare rien', () => {
+    // Sans `--body`, la forge compose le message d'écrasement avec les messages des commits : un
+    // développeur qui écrit « Lot: X » dans un commit déclarerait X (lentille `securite`, #188).
+    const l = livraisonAvec(
+      `fix(${portee.id}): x (#900)\n\n* fix: un commit\n\nLot: ${secondaire.id}\n\n* fix: un autre\n`
+    );
+    expect(l.corps ?? '').not.toContain(secondaire.id);
+  });
+
+  it('REQ-GOV-026 — CONTRE-TÉMOIN : le corps réduit à la seule ligne `Lot:` recopiée par le pas 6 déclare', () => {
+    const l = livraisonAvec(`fix(${portee.id}): x (#900)\n\nLot: ${secondaire.id}\n`);
+    expect(l.corps).toContain(secondaire.id);
+  });
+});
+
 describe('REQ-GOV-026 — l’atterrissage se juge sur la branche PAR DÉFAUT', () => {
   const doc = lireDoc();
   const [portee] = deuxTachesSeules(doc);
@@ -189,7 +263,10 @@ describe('REQ-GOV-021 — la commande de fusion recopie `Lot:` dans le message d
         .split('\n')
         .filter((l) => l.includes('gh pr merge') && l.includes('--squash'));
       expect(lignes.length, f).toBeGreaterThan(0);
-      for (const l of lignes) expect(l, f).toContain('--body');
+      for (const l of lignes) {
+        expect(l, f).toContain('--body');
+        expect(l, f).toContain('--subject');
+      }
     }
   });
 

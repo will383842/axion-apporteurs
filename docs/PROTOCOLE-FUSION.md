@@ -217,6 +217,7 @@ silencieuse ; celle-là se conteste sur sa seule ligne de sortie.
 ```bash
 gh pr view <numéro> --json mergeStateStatus -q .mergeStateStatus \
   && gh pr merge <numéro> --squash --match-head-commit <sha-de-tête> \
+       --subject "$(gh pr view <numéro> --json title -q .title) (#<numéro>)" \
        --body "$(gh pr view <numéro> --json body -q .body | grep -m1 '^Lot:')" --delete-branch
 ```
 
@@ -230,8 +231,11 @@ si la tête a bougé depuis le pas 5.
 **`--body` recopie la ligne `Lot:` dans le message du commit d'écrasement (GOV-104).** Le corps de
 la PR reste modifiable après la fusion ; le message du commit, non. C'est ce message, et lui seul,
 que `lot:cloture --tache` lit pour savoir quelles tâches la PR a livrées : une ligne `Lot:` ajoutée
-au corps après coup ne fait rien clore. Une PR à une seule tâche porte `Lot:` vide, et son titre
-suffit.
+au corps après coup ne fait rien clore, et la clôture ne lit `Lot:` que s'il est la SEULE ligne du
+corps de ce message : une ligne `Lot:` écrite dans un commit, que la forge recopierait sans
+`--body`, ne déclare rien. Une PR à une seule tâche porte `Lot:` vide, et son titre suffit.
+`--subject` impose le titre de la PR : pour une PR à un seul commit, la forge prendrait sinon le
+titre du commit, qui peut ne nommer aucune tâche.
 
 ### Pas 7 — L'atterrissage, avant la fusion suivante
 
