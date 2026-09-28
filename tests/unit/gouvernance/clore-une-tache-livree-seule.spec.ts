@@ -104,8 +104,16 @@ function livraisonDe(t: Tache, doc: Doc, surcharge: Partial<Livraison> = {}): Li
     fusionneeAt: QUAND,
     branch: t.branch ?? `t/${t.id.toLowerCase()}`,
     atterri: true,
+    // Ce que la PR DÉCLARE livrer : son titre nomme la tâche, son champ `Lot:` est vide.
+    titre: `fix(${t.id}): une livraison`,
+    corps: 'Lot:\n',
     ...surcharge,
   };
+}
+
+/** Une AUTRE tâche du registre que `t`, pour composer une PR qui ne la déclare pas. */
+function uneAutreTache(doc: Doc, t: Tache): Tache {
+  return doc.taches.find((x) => x.id !== t.id && !x.lot && x.statut === 'a_faire')!;
 }
 
 const fautesDuRegistre = (doc: Doc) =>
@@ -245,6 +253,46 @@ describe('REQ-GOV-021 — chaque refus du chemin outillé est nommé, et un refu
         return { tacheId: t.id, livraison: livraisonDe(t, doc, { branch: null }) };
       })
     ).toEqual(['branche_absente']);
+  });
+
+  it('REQ-GOV-021 — TÉMOIN tache_etrangere_a_la_pr : une PR qui ne déclare pas la tâche ne la clôt pas', () => {
+    // Relevé par la lentille `securite` sur #182 : `--tache GOV-064 --pr 180` passait `fusionnee`
+    // avec l'attestation d'une PR qui ne l'avait jamais portée, et `gov:tasks` restait à zéro.
+    expect(
+      refus((doc) => {
+        const t = revendiquee(doc);
+        const autre = uneAutreTache(doc, t);
+        return {
+          tacheId: t.id,
+          livraison: livraisonDe(t, doc, { titre: `fix(${autre.id}): autre chose` }),
+        };
+      })
+    ).toEqual(['tache_etrangere_a_la_pr']);
+  });
+
+  it('REQ-GOV-021 — TÉMOIN tache_etrangere_a_la_pr : une PR dont on ne sait pas lire la déclaration ne clôt rien', () => {
+    // Une absence n'est pas une autorisation : sans titre ni corps, rien ne dit ce que la PR porte.
+    expect(
+      refus((doc) => {
+        const t = revendiquee(doc);
+        return { tacheId: t.id, livraison: livraisonDe(t, doc, { titre: null, corps: null }) };
+      })
+    ).toEqual(['tache_etrangere_a_la_pr']);
+  });
+
+  it('REQ-GOV-021 — CONTRE-TÉMOIN : une tâche nommée par le champ `Lot:` d’une PR titrée pour une autre est close', () => {
+    const doc = lireDoc();
+    const t = revendiquee(doc);
+    const autre = uneAutreTache(doc, t);
+    cloturerUneTacheSeule({
+      tacheId: t.id,
+      livraison: livraisonDe(t, doc, {
+        titre: `fix(${autre.id}): une PR de lot`,
+        corps: `Lot: ${t.id}\n`,
+      }),
+      taches: doc.taches,
+    });
+    expect(t.statut).toBe('fusionnee');
   });
 
   it('REQ-GOV-021 — TÉMOIN branche_hors_motif : une branche que le schéma refuserait n’est pas écrite', () => {

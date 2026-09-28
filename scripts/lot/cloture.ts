@@ -61,6 +61,7 @@ import {
 } from './attestation';
 import { LIVREE } from './avancement';
 import { outilHorsDepot } from './chemins-de-tache';
+import { CHEMIN_SCHEMA_DES_TACHES, idDuTitre, lireLeLot, tachesDeLaPr } from './revues';
 
 export interface Tache {
   id: string;
@@ -290,8 +291,6 @@ function poserLaLivraison(t: Tache, attestation: Attestation): string {
   return `${t.id} → fusionnee (${ref ?? 'aucune référence de PR'}, sha ${attestation.sha})`;
 }
 
-const CHEMIN_SCHEMA_DES_TACHES = 'scripts/lot/tasks.schema.json';
-
 /**
  * LE MOTIF DE `branch`, LU DANS LE SCHÉMA — jamais recopié (RM-01). Lu à l'APPEL, pas à l'import :
  * importer ce module n'a aucun effet. Un schéma qui porterait zéro ou plusieurs motifs distincts
@@ -328,6 +327,10 @@ export interface Livraison {
   branch?: string | null;
   /** L'atterrissage vérifié (pas 7). Une PR fusionnée qui n'a pas atterri n'est pas livrée. */
   atterri?: boolean;
+  /** Le titre de la PR, lu sur la forge : il nomme UNE tâche (`idDuTitre`). */
+  titre?: string | null;
+  /** Le corps de la PR, lu sur la forge : son champ `Lot:` nomme les autres (`lireLeLot`). */
+  corps?: string | null;
 }
 
 /**
@@ -345,6 +348,7 @@ export interface Livraison {
  *   - `livraison_non_atterrie`  — même doctrine que le mode `--lot` ;
  *   - `branche_absente`         — sans elle, l'état écrit serait refusé par le schéma ;
  *   - `branche_hors_motif`      — la branche que le motif du schéma refuserait (lu, pas recopié) ;
+ *   - `tache_etrangere_a_la_pr` — la PR ne déclare la tâche ni par son titre, ni par `Lot:` ;
  *   - `attestation_incomplete`  — pr, SHA entier et instant de fusion, les trois ou rien ;
  *   - `proprietaire_absent`     — `fusionnee` exige `owner`, et le script ne l'invente pas.
  */
@@ -378,6 +382,29 @@ export function cloturerUneTacheSeule(options: {
     refus.push({
       famille: 'tache_deja_livree',
       message: `${t.id} est déjà \`${t.statut}\` : la re-clore écraserait son attestation.`,
+    });
+  }
+  // LA PR DOIT DÉCLARER LA TÂCHE (lentille `securite`, #182). Sans ce refus, `--tache X --pr N`
+  // attachait N'IMPORTE QUELLE PR fusionnée à n'importe quelle tâche hors lot : l'attestation
+  // était vraie, la garde restait à zéro, et la livraison était fausse. La déclaration est lue
+  // par le lecteur UNIQUE de ce dépôt (`tachesDeLaPr` : titre, `Lot:`, `pr` déjà écrit), jamais
+  // par une seconde grammaire (RM-01). Un corps illisible ou absent ne déclare RIEN.
+  const lot = lireLeLot(livraison.corps ?? '');
+  const declarees = tachesDeLaPr(
+    taches,
+    livraison.pr ?? null,
+    idDuTitre(livraison.titre ?? null),
+    lot.ids
+  );
+  if (!declarees.some((x) => x.id === t.id)) {
+    refus.push({
+      famille: 'tache_etrangere_a_la_pr',
+      message:
+        `${t.id} : la PR livrée ne déclare pas cette tâche — ni son titre ` +
+        `(« ${livraison.titre ?? 'absent'} »), ni son champ \`Lot:\`` +
+        (lot.malForme ? ` (illisible : ${lot.malForme})` : '') +
+        '. Clore une tâche sur l’attestation d’une PR qui ne l’a pas portée écrirait une ' +
+        'livraison fausse avec une preuve vraie.',
     });
   }
   if (livraison.atterri !== true) {
@@ -595,7 +622,7 @@ function livraisonSurLaForge(depot: string, pr: number): Livraison {
       '-R',
       depot,
       '--json',
-      'state,mergeCommit,mergedAt,headRefName,baseRefName',
+      'state,mergeCommit,mergedAt,headRefName,baseRefName,title,body',
     ],
     { encoding: 'utf8' }
   );
@@ -605,6 +632,8 @@ function livraisonSurLaForge(depot: string, pr: number): Livraison {
     mergedAt: string | null;
     headRefName: string;
     baseRefName: string;
+    title: string;
+    body: string;
   };
   const sha = v.state === 'MERGED' ? (v.mergeCommit?.oid ?? null) : null;
   let atterri = false;
@@ -616,7 +645,15 @@ function livraisonSurLaForge(depot: string, pr: number): Livraison {
     ).trim();
     atterri = statut === 'identical' || statut === 'ahead';
   }
-  return { pr, sha, fusionneeAt: v.mergedAt, branch: v.headRefName, atterri };
+  return {
+    pr,
+    sha,
+    fusionneeAt: v.mergedAt,
+    branch: v.headRefName,
+    atterri,
+    titre: v.title,
+    corps: v.body,
+  };
 }
 
 function cloreUneTacheSeule(
