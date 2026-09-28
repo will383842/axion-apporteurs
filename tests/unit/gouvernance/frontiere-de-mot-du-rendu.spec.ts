@@ -1,0 +1,313 @@
+// @req REQ-GOV-017
+// @req REQ-JUR-037
+// @req REQ-GOV-003
+/**
+ * GOV-071 — les gardes lexicale et d'identifiants découpent le texte sur sa forme RENDUE.
+ *
+ * LE DÉFAUT. Les deux gardes cherchaient leurs termes dans la SOURCE brute, ligne à ligne. Or le
+ * lecteur ne lit pas la source : il lit le rendu. Une mise en forme tapée à la main À L'INTÉRIEUR
+ * d'un mot — une emphase Markdown, une balise vide, une entité, un caractère invisible, une
+ * expression JSX vide — coupe le mot dans la source et le laisse ENTIER à l'écran. Les deux gardes
+ * voyaient deux fragments et rendaient « ✅ » ; l'apporteur, lui, lisait le terme interdit.
+ *
+ * LA MESURE. Une seule fonction rend les lignes (`lignesRendues`, dans `lexique-apporteurs.ts`),
+ * importée par `gov-identifiants.ts` : les deux gardes ne peuvent plus découper différemment.
+ *
+ * CE QUE CE FICHIER ÉPROUVE, famille de rendu par famille de rendu (RM-02) : un témoin dont la
+ * source coupe le terme et que le rendu affiche entier, qui DOIT rougir dans les deux gardes ; et
+ * un contre-témoin voisin qui DOIT rester vert. Puis le témoin à deux faces, en lançant les deux
+ * gardes pour de vrai : sortie non nulle sur un dépôt jetable qui porte le témoin, sortie nulle
+ * sur le dépôt réel, avec ses comptes.
+ *
+ * ⚠️ Aucune étiquette nue n'est TAPÉE ici : la garde des identifiants lit ce fichier. L'étiquette
+ * est ASSEMBLÉE à l'exécution, et le terme du lexique est LU dans la SSOT (RM-01).
+ */
+import { afterAll, describe, it, expect } from 'vitest';
+import { execFileSync } from 'node:child_process';
+import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join, resolve } from 'node:path';
+import {
+  MOTIFS,
+  MOTIF_GABARIT,
+  controler,
+  lignesRendues,
+  motifDeLaForme,
+  vueDeFixture,
+  type FichierVu,
+} from '../../../scripts/gates/lexique-apporteurs';
+import { MOTIF_NU, analyserContenu, fautesDeLigne } from '../../../scripts/gates/gov-identifiants';
+import { famillesPourPortee } from '../../../src/domain/lexique/lexique-interdit';
+import { fichiersSuivis } from '../../../scripts/lot/fichiers-suivis';
+
+// ── les termes, lus et assemblés — jamais tapés ─────────────────────────────
+
+/** Un terme du lexique de portée `depot`, LU dans la SSOT : il vaut donc dans un ADR comme dans l'espace. */
+const FORME = famillesPourPortee('depot')
+  .flatMap((f) => f.formes)
+  .find((f) => /^[a-z]{8,}$/.test(f))!;
+const [AVANT, MILIEU, APRES] = [FORME.slice(0, 3), FORME.slice(3, 5), FORME.slice(5)];
+
+/** L'étiquette de relecteur, assemblée : une lettre de la classe, un chiffre. */
+const LETTRE = 'D';
+const CHIFFRE = '3';
+const ETIQUETTE = LETTRE + CHIFFRE;
+
+const ADR_TEMOIN = 'docs/adr/9999-temoin.md';
+const ESPACE_TEMOIN = 'src/app/(espace)/temoin.tsx';
+
+/**
+ * Les familles de rendu. Chacune coupe la SOURCE à l'intérieur du mot et le laisse entier à
+ * l'écran. `coupe(a, b)` rend la source qui colle `a` et `b` sous cette mise en forme.
+ */
+type FamilleDeRendu = {
+  nom: string;
+  fichier: string;
+  coupe: (a: string, b: string) => string;
+  /** Le voisin qui doit rester vert : même mise en forme, mais le rendu SÉPARE, ou ne rend pas. */
+  contreTemoin: (a: string, b: string) => string;
+};
+
+const FAMILLES_DE_RENDU: FamilleDeRendu[] = [
+  {
+    nom: 'emphase Markdown au milieu du mot',
+    fichier: ADR_TEMOIN,
+    coupe: (a, b) => `${a}**${b.slice(0, 1)}**${b.slice(1)}`,
+    // Dans un bloc de code, le Markdown ne rend rien : les astérisques restent à l'écran.
+    contreTemoin: (a, b) => '```\n' + `${a}**${b.slice(0, 1)}**${b.slice(1)}` + '\n```',
+  },
+  {
+    nom: 'trait d’union conditionnel (invisible)',
+    fichier: ESPACE_TEMOIN,
+    coupe: (a, b) => `<p>Votre ${a}­${b}</p>`,
+    // Une espace, elle, se voit : les deux fragments restent deux mots.
+    contreTemoin: (a, b) => `<p>Votre ${a}­ ${b}</p>`,
+  },
+  {
+    nom: 'espace de largeur nulle',
+    fichier: ADR_TEMOIN,
+    coupe: (a, b) => `Le tableau affiche ${a}​${b} en tête.`,
+    contreTemoin: (a, b) => `Le tableau affiche ${a}​, ${b} en tête.`,
+  },
+  {
+    nom: 'entité HTML numérique',
+    fichier: ESPACE_TEMOIN,
+    coupe: (a, b) => `<p>Votre ${a}&#${b.codePointAt(0)};${b.slice(1)}</p>`,
+    // Une entité qui rend une PONCTUATION sépare : elle ne recolle rien.
+    contreTemoin: (a, b) => `<p>Votre ${a}&amp;${b}</p>`,
+  },
+  {
+    nom: 'balise vide au milieu du mot',
+    fichier: ESPACE_TEMOIN,
+    coupe: (a, b) => `<p>Votre ${a}<b></b>${b}</p>`,
+    // Une balise de BLOC passe à la ligne au rendu : elle sépare, elle ne recolle rien.
+    contreTemoin: (a, b) => `<dl><dt>${a}</dt><dt>${b}</dt></dl>`,
+  },
+  {
+    nom: 'expression JSX vide',
+    fichier: ESPACE_TEMOIN,
+    coupe: (a, b) => `<p>Votre ${a}{''}${b}</p>`,
+    // `{' '}` rend une espace : deux mots.
+    contreTemoin: (a, b) => `<p>Votre ${a}{' '}${b}</p>`,
+  },
+];
+
+/** Les fautes lexicales d'une source placée à un chemin donné. */
+const fautesLexicales = (chemin: string, contenu: string) =>
+  controler(vueDeFixture([{ chemin, contenu } satisfies FichierVu])).fautes;
+
+/** Les fautes d'identifiant d'une source placée à un chemin donné, au pipeline COMPLET de la garde. */
+const fautesIdentifiant = (chemin: string, contenu: string) =>
+  analyserContenu(contenu, chemin, (l, f, i) => fautesDeLigne(l, f, i, MOTIF_NU)).fautes;
+
+// ── 1. la source coupe, le rendu recolle : les deux gardes voient le terme ──
+
+describe('GOV-071 — chaque famille de rendu : témoin rouge, contre-témoin vert (RM-02)', () => {
+  for (const r of FAMILLES_DE_RENDU) {
+    it(`REQ-GOV-017 / REQ-JUR-037 : ${r.nom} — la garde lexicale voit le terme que la source coupe`, () => {
+      const source = r.coupe(AVANT, MILIEU + APRES);
+      // La source coupe VRAIMENT le terme : sans rendu, rien ne le trouverait.
+      expect(motifDeLaForme(FORME).test(source), 'la source porte déjà le terme entier').toBe(
+        false
+      );
+      const fautes = fautesLexicales(r.fichier, source);
+      expect(fautes.map((f) => f.message).join('\n')).toContain(`${r.fichier}:`);
+      expect(fautes.map((f) => f.message).join('\n')).toContain(`« ${FORME} »`);
+    });
+
+    it(`REQ-GOV-017 / REQ-JUR-037 : ${r.nom} — son contre-témoin reste vert`, () => {
+      expect(fautesLexicales(r.fichier, r.contreTemoin(AVANT, MILIEU + APRES))).toEqual([]);
+    });
+
+    it(`REQ-GOV-003 : ${r.nom} — la garde des identifiants voit l'étiquette que la source coupe`, () => {
+      const source = r.coupe(LETTRE, CHIFFRE);
+      expect(new RegExp(MOTIF_NU.source).test(source), 'la source porte déjà l’étiquette').toBe(
+        false
+      );
+      const messages = fautesIdentifiant(r.fichier, source).map((f) => f.message);
+      expect(messages.join('\n')).toContain(`« ${ETIQUETTE} »`);
+    });
+
+    it(`REQ-GOV-003 : ${r.nom} — son contre-témoin reste vert`, () => {
+      expect(fautesIdentifiant(r.fichier, r.contreTemoin(LETTRE, CHIFFRE))).toEqual([]);
+    });
+  }
+});
+
+// ── 2. le découpage vit à un seul endroit (RM-01) ────────────────────────────
+
+describe('GOV-071 — une seule fonction rend les lignes, importée par les deux gardes', () => {
+  it('REQ-GOV-003 : gov-identifiants importe le rendu de la garde lexicale et n’en définit aucun', () => {
+    const source = readFileSync('scripts/gates/gov-identifiants.ts', 'utf8');
+    expect(source).toMatch(
+      /import\s*\{[^}]*\blignesRendues\b[^}]*\}\s*from\s*'\.\/lexique-apporteurs'/
+    );
+    expect(source).not.toMatch(/function\s+lignesRendues\b/);
+    expect(source).toMatch(/lignesRendues\(/);
+  });
+
+  it('REQ-GOV-017 : la garde lexicale rend chaque fichier avant d’y chercher un terme', () => {
+    const source = readFileSync('scripts/gates/lexique-apporteurs.ts', 'utf8');
+    expect(source).toMatch(/export function lignesRendues\(/);
+    // Deux lecteurs du contenu : le lexique et le gabarit. Les deux passent par le rendu.
+    expect((source.match(/lignesRendues\(f\.chemin, f\.contenu\)/g) ?? []).length).toBe(2);
+  });
+
+  it('REQ-GOV-017 : le rendu garde le compte des lignes — le numéro nommé est celui de la source', () => {
+    const contenu = ['ligne un', '```', 'dans un bloc', '```', 'ligne cinq'].join('\n');
+    expect(lignesRendues(ADR_TEMOIN, contenu)).toHaveLength(5);
+  });
+});
+
+// ── 3. citer n'est pas se servir : la documentation garde son contre-exemple ──
+
+describe('GOV-071 — un document qui EXPLIQUE la règle garde le droit d’écrire son contre-exemple', () => {
+  const coupeMd = FAMILLES_DE_RENDU[0]!.coupe;
+
+  it('REQ-GOV-017 : le terme et sa forme coupée, entre accents graves, restent verts', () => {
+    // Aucun marqueur de dénégation dans ces phrases : le vert doit venir de la CITATION seule.
+    const doc = [
+      `Le contre-exemple s'écrit \`${FORME}\` dans la règle.`,
+      `La forme coupée \`${coupeMd(AVANT, MILIEU + APRES)}\` recolle au rendu.`,
+    ].join('\n');
+    const r = controler(vueDeFixture([{ chemin: ADR_TEMOIN, contenu: doc }]));
+    expect(r.fautes).toEqual([]);
+    expect(r.exemptions.filter((e) => e.genre === 'citation').length).toBeGreaterThan(0);
+  });
+
+  it('REQ-JUR-037 : la même forme coupée HORS accents graves rougit — c’est bien le code qui la protège', () => {
+    const doc = `La forme coupée ${coupeMd(AVANT, MILIEU + APRES)} recolle au rendu.`;
+    expect(fautesLexicales(ADR_TEMOIN, doc).length).toBeGreaterThan(0);
+  });
+
+  it('REQ-GOV-003 : l’étiquette coupée, entre accents graves, reste verte', () => {
+    const doc = `La forme coupée \`${coupeMd(LETTRE, CHIFFRE)}\` recolle au rendu.`;
+    expect(fautesIdentifiant('docs/exemple.md', doc)).toEqual([]);
+  });
+
+  it('REQ-GOV-003 : la même étiquette coupée HORS accents graves rougit', () => {
+    const doc = `La forme coupée ${coupeMd(LETTRE, CHIFFRE)} recolle au rendu.`;
+    expect(fautesIdentifiant('docs/exemple.md', doc).length).toBeGreaterThan(0);
+  });
+});
+
+// ── 4. le témoin à deux faces : les deux gardes, lancées pour de vrai ────────
+
+const TSX = resolve('node_modules/tsx/dist/cli.mjs');
+const GARDES = {
+  lexique: resolve('scripts/gates/lexique-apporteurs.ts'),
+  identifiants: resolve('scripts/gates/gov-identifiants.ts'),
+} as const;
+
+function lancer(garde: string, cwd: string): { code: number; sortie: string } {
+  try {
+    const sortie = execFileSync(process.execPath, [TSX, garde], {
+      cwd,
+      encoding: 'utf8',
+      stdio: 'pipe',
+    });
+    return { code: 0, sortie };
+  } catch (e) {
+    const err = e as { status?: number; stdout?: string; stderr?: string };
+    return { code: err.status ?? -1, sortie: `${err.stdout ?? ''}${err.stderr ?? ''}` };
+  }
+}
+
+const JETABLES: string[] = [];
+afterAll(() => {
+  for (const d of JETABLES) rmSync(d, { recursive: true, force: true });
+});
+
+/**
+ * Un dépôt jetable qui satisfait le périmètre ATTENDU de la garde lexicale : pour chaque motif
+ * attendu, un fichier RÉEL du dépôt qui le prend (lu, pas inventé — RM-01). Sans lui, la garde
+ * rougirait pour `perimetre_vide`, et le témoin mesurerait autre chose que le rendu.
+ */
+function depotJetable(): string {
+  const depot = mkdtempSync(join(tmpdir(), 'temoin-rendu-'));
+  JETABLES.push(depot);
+  const suivis = fichiersSuivis();
+  for (const m of [...MOTIFS.filter((x) => x.attendu), MOTIF_GABARIT]) {
+    const reel = suivis.find((c) => m.reg.test(c));
+    if (reel === undefined) throw new Error(`aucun fichier réel pour le motif attendu ${m.nom}`);
+    mkdirSync(join(depot, dirname(reel)), { recursive: true });
+    copyFileSync(reel, join(depot, reel));
+  }
+  for (const args of [
+    ['init', '-q'],
+    ['add', '-A'],
+  ]) {
+    execFileSync('git', args, { cwd: depot, stdio: 'ignore' });
+  }
+  return depot;
+}
+
+describe('GOV-071 — le témoin à deux faces', () => {
+  it('REQ-GOV-017 / REQ-GOV-003 : un texte coupé dans la source, entier au rendu, fait sortir les DEUX gardes en non nul, fichier, ligne et terme nommés', () => {
+    const depot = depotJetable();
+
+    // Le contre-témoin du harnais : le même dépôt SANS le témoin sort en zéro dans les deux
+    // gardes. Sans lui, un rouge dû au harnais se lirait comme un rouge dû au rendu.
+    for (const g of Object.values(GARDES)) {
+      const r = lancer(g, depot);
+      expect(r.code, `${g} rougit déjà sans le témoin :\n${r.sortie}`).toBe(0);
+    }
+
+    const coupeMd = FAMILLES_DE_RENDU[0]!.coupe;
+    const temoin = [
+      '# Témoin',
+      '',
+      `Le tableau affiche votre ${coupeMd(AVANT, MILIEU + APRES)} du mois, conforme à ${coupeMd(LETTRE, CHIFFRE)}.`,
+    ].join('\n');
+    mkdirSync(join(depot, 'docs/adr'), { recursive: true });
+    writeFileSync(join(depot, ADR_TEMOIN), temoin, 'utf8');
+    execFileSync('git', ['add', '-A'], { cwd: depot, stdio: 'ignore' });
+
+    const lexique = lancer(GARDES.lexique, depot);
+    expect(lexique.code, lexique.sortie).not.toBe(0);
+    expect(lexique.sortie).toContain(`${ADR_TEMOIN}:3`);
+    expect(lexique.sortie).toContain(`« ${FORME} »`);
+
+    const identifiants = lancer(GARDES.identifiants, depot);
+    expect(identifiants.code, identifiants.sortie).not.toBe(0);
+    expect(identifiants.sortie).toContain(`${ADR_TEMOIN}:3`);
+    expect(identifiants.sortie).toContain(`« ${ETIQUETTE} »`);
+  }, 180_000);
+
+  it('REQ-JUR-037 / REQ-GOV-003 : les textes du dépôt font sortir les deux gardes en zéro, avec le compte des fichiers et des termes confrontés', () => {
+    const lexique = lancer(GARDES.lexique, process.cwd());
+    expect(lexique.code, lexique.sortie).toBe(0);
+    const fichiersLexique = Number(/(\d+) fichier\(s\) balayé\(s\)/.exec(lexique.sortie)?.[1]);
+    const formes = Number(/(\d+) formes appliquées/.exec(lexique.sortie)?.[1]);
+    expect(fichiersLexique).toBeGreaterThan(0);
+    expect(formes).toBeGreaterThan(0);
+    expect(lexique.sortie).toMatch(/\d+ occurrence\(s\) vue\(s\)/);
+
+    const identifiants = lancer(GARDES.identifiants, process.cwd());
+    expect(identifiants.code, identifiants.sortie).toBe(0);
+    const fichiersId = Number(/(\d+) fichier\(s\) balayé\(s\)/.exec(identifiants.sortie)?.[1]);
+    const jetons = Number(/(\d+) jeton\(s\) confronté\(s\)/.exec(identifiants.sortie)?.[1]);
+    expect(fichiersId).toBeGreaterThan(0);
+    expect(jetons).toBeGreaterThan(0);
+  }, 180_000);
+});
