@@ -1286,10 +1286,7 @@ const FORMES_SQL: readonly { nom: string; lignes: string[]; fautive: number; ext
   },
   {
     nom: 'client-genere-point-prisma',
-    lignes: [
-      "import type { Prisma } from '.prisma/client/index';",
-      'export type T = Prisma.Sql;',
-    ],
+    lignes: ["import type { Prisma } from '.prisma/client/index';", 'export type T = Prisma.Sql;'],
     fautive: 1,
   },
   // ── Le RELAIS EN BLOC (même revue) : `export *`, avec ou sans `as`, dont le spécifieur désigne
@@ -1332,10 +1329,7 @@ const FORMES_SQL: readonly { nom: string; lignes: string[]; fautive: number; ext
   {
     nom: 'jsx-element-prisma',
     ext: 'tsx',
-    lignes: [
-      "import { Prisma } from '@prisma/client';",
-      'export const E = () => <Prisma.raw />;',
-    ],
+    lignes: ["import { Prisma } from '@prisma/client';", 'export const E = () => <Prisma.raw />;'],
     fautive: 2,
   },
   {
@@ -1385,10 +1379,7 @@ const FORMES_SQL: readonly { nom: string; lignes: string[]; fautive: number; ext
   {
     nom: 'jsx-namespace-aliase',
     ext: 'tsx',
-    lignes: [
-      "import * as C from '@prisma/client';",
-      'export const E = () => <C.Prisma.raw />;',
-    ],
+    lignes: ["import * as C from '@prisma/client';", 'export const E = () => <C.Prisma.raw />;'],
     fautive: 2,
   },
   {
@@ -2065,10 +2056,7 @@ export const CONTRE_TEMOINS: readonly FichierDuBac[] = [
   fichier(
     'sql/consommateur-du-relais',
     'src/lib/sql/consommateur-du-relais.ts',
-    [
-      "import { raw } from './relais-runtime';",
-      'export const fragment = (x: string) => raw(x);',
-    ],
+    ["import { raw } from './relais-runtime';", 'export const fragment = (x: string) => raw(x);'],
     null,
     0
   ),
