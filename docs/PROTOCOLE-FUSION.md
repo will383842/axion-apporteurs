@@ -259,7 +259,9 @@ tâche, et l'atterrissage est l'ascendance de ce SHA sur la branche de base. La 
 `fusionnee` avec ses trois preuves — `pr`, `branch`, attestation au SHA entier — et **aucun lot
 n'est inventé**. Une tâche rangée dans un lot est refusée (`tache_d_un_lot`) : elle se clôt par son
 lot, sinon ce chemin contournerait le contrôle de périmètre. Écrire `docs/tasks.json` à la main
-reste refusé : la garde `gov:tasks` rougit sur une tâche `fusionnee` sans `branch`.
+reste hors protocole. La garde `gov:tasks` en rattrape la forme la plus probable, une tâche
+`fusionnee` sans `branch`, mais pas toutes : une main qui recopie les trois preuves passerait. Ce
+chemin est donc le seul qui PRODUIT ces preuves depuis la forge, et non la seule écriture possible.
 
 ---
 

@@ -247,6 +247,20 @@ describe('REQ-GOV-021 — chaque refus du chemin outillé est nommé, et un refu
     ).toEqual(['branche_absente']);
   });
 
+  it('REQ-GOV-021 — TÉMOIN branche_hors_motif : une branche que le schéma refuserait n’est pas écrite', () => {
+    // Écrite, elle rendrait le registre rouge, et `tache_deja_livree` interdirait ensuite de
+    // re-clore pour la corriger : le refus doit tomber AVANT, sur le motif lu dans le schéma.
+    expect(
+      refus((doc) => {
+        const t = revendiquee(doc);
+        return {
+          tacheId: t.id,
+          livraison: livraisonDe(t, doc, { branch: 'feature/sans-prefixe-reconnu' }),
+        };
+      })
+    ).toEqual(['branche_hors_motif']);
+  });
+
   it('REQ-GOV-021 — TÉMOIN attestation_incomplete : sans le SHA entier, rien ne retrouverait le commit', () => {
     expect(
       refus((doc) => {

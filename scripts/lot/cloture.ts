@@ -290,6 +290,35 @@ function poserLaLivraison(t: Tache, attestation: Attestation): string {
   return `${t.id} → fusionnee (${ref ?? 'aucune référence de PR'}, sha ${attestation.sha})`;
 }
 
+const CHEMIN_SCHEMA_DES_TACHES = 'scripts/lot/tasks.schema.json';
+
+/**
+ * LE MOTIF DE `branch`, LU DANS LE SCHÉMA — jamais recopié (RM-01). Lu à l'APPEL, pas à l'import :
+ * importer ce module n'a aucun effet. Un schéma qui porterait zéro ou plusieurs motifs distincts
+ * pour `branch` est une ambiguïté, et elle est refusée plutôt que tranchée au hasard.
+ */
+function motifDeBranche(): RegExp {
+  const motifs = new Set<string>();
+  const parcourir = (n: unknown): void => {
+    if (!n || typeof n !== 'object') return;
+    for (const [cle, v] of Object.entries(n as Record<string, unknown>)) {
+      if (cle === 'branch' && v && typeof v === 'object') {
+        const p = (v as { pattern?: unknown }).pattern;
+        if (typeof p === 'string') motifs.add(p);
+      }
+      parcourir(v);
+    }
+  };
+  parcourir(JSON.parse(readFileSync(CHEMIN_SCHEMA_DES_TACHES, 'utf8')));
+  if (motifs.size !== 1) {
+    throw new Error(
+      `${CHEMIN_SCHEMA_DES_TACHES} porte ${motifs.size} motif(s) distinct(s) pour \`branch\` : ` +
+        'la clôture ne sait pas lequel appliquer.'
+    );
+  }
+  return new RegExp([...motifs][0]!);
+}
+
 /** Ce que la forge rend d'une PR fusionnée, pour une tâche close seule. */
 export interface Livraison {
   pr?: number | null;
@@ -315,6 +344,7 @@ export interface Livraison {
  *   - `tache_deja_livree`       — re-clore écraserait une attestation déjà posée ;
  *   - `livraison_non_atterrie`  — même doctrine que le mode `--lot` ;
  *   - `branche_absente`         — sans elle, l'état écrit serait refusé par le schéma ;
+ *   - `branche_hors_motif`      — la branche que le motif du schéma refuserait (lu, pas recopié) ;
  *   - `attestation_incomplete`  — pr, SHA entier et instant de fusion, les trois ou rien ;
  *   - `proprietaire_absent`     — `fusionnee` exige `owner`, et le script ne l'invente pas.
  */
@@ -354,7 +384,7 @@ export function cloturerUneTacheSeule(options: {
     refus.push({
       famille: 'livraison_non_atterrie',
       message:
-        `${t.id} : l'atterrissage de la PR ${livraison.pr ?? '?'} n'est pas vérifié (pas 7 du ` +
+        `${t.id} : l'atterrissage de sa PR n'est pas vérifié (pas 7 du ` +
         'protocole). Une PR fusionnée dont personne ne sait si elle est en ligne n’est pas livrée.',
     });
   }
@@ -364,6 +394,16 @@ export function cloturerUneTacheSeule(options: {
       message:
         `${t.id} : la livraison ne porte pas la branche fusionnée. \`fusionnee\` l'exige (schéma), ` +
         'et elle se lit sur la forge (`headRefName`), elle ne se tape pas.',
+    });
+  }
+  if (livraison.branch && !motifDeBranche().test(livraison.branch)) {
+    refus.push({
+      famille: 'branche_hors_motif',
+      message:
+        `${t.id} : la branche « ${livraison.branch} » est refusée par le motif de \`branch\` de ` +
+        `${CHEMIN_SCHEMA_DES_TACHES}. Écrite, elle rendrait le registre rouge, et la tâche, une fois ` +
+        '`fusionnee`, ne pourrait plus être re-close pour la corriger. Le motif se décide par ADR ' +
+        '(partners/ADR-0007), pas ici.',
     });
   }
   const numero = livraison.pr ?? null;
@@ -542,7 +582,8 @@ function rattraperLePasse(aBlanc: boolean): void {
  * LA LIVRAISON LUE SUR LA FORGE, pour `--tache`. Rien n'est tapé par l'opérateur hormis le numéro :
  * le SHA, l'instant et la branche viennent de `gh pr view`, dans le dépôt DE LA TÂCHE (`DEPOTS`).
  * L'atterrissage est l'ascendance du commit de fusion sur la branche de base, lue par l'API de
- * comparaison — le repli daté du pas 7 tant que rien n'est déployé.
+ * comparaison. C'est PLUS FAIBLE que le repli daté du pas 7, qui exige aussi `gate-a` verte sur
+ * `main` : ce mode établit que le commit est dans l'historique de la base, pas qu'il y est vert.
  */
 function livraisonSurLaForge(depot: string, pr: number): Livraison {
   const brut = execFileSync(
