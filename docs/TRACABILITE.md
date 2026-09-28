@@ -14,9 +14,9 @@
 > **« Réputée testée » est DÉRIVÉ, pas lu.** Le registre ne porte aucune échelle de
 > maturité : une exigence l’est dès qu’une des tâches qui la portent est livrée.
 
-**334 exigences actives · 107 réputées testées · 107 couvertes · 0 orphelines.**
+**334 exigences actives · 117 réputées testées · 117 couvertes · 0 orphelines.**
 
-290 tâches, dont 98 livrées · 143 fichiers de test exécutés par `vitest` sur 143 présents.
+290 tâches, dont 103 livrées · 143 fichiers de test exécutés par `vitest` sur 143 présents.
 
 ## Exigences réputées testées
 
@@ -49,6 +49,7 @@
 | `REQ-DM-037` | `DM-02` | `tests/unit/domaine/gardes-de-schema.spec.ts` | couverte |
 | `REQ-DM-038` | `DM-01`, `DM-02` | `tests/integration/index-partiels.spec.ts`, `tests/unit/domaine/gardes-de-schema.spec.ts`, `tests/unit/domaine/schema-centimes.spec.ts`, `tests/unit/gouvernance/glossaire-enums.spec.ts` | couverte |
 | `REQ-DM-041` | `DM-01`, `DM-20` | `tests/integration/journal.spec.ts`, `tests/unit/domaine/journal-charge-fermee.spec.ts` | couverte |
+| `REQ-EXT-028` | `JUR-T02` | `tests/unit/juridique/seuils-ssot.spec.ts` | couverte |
 | `REQ-GOV-001` | `GOV-001`, `GOV-072` | `tests/unit/gouvernance/gardes.spec.ts`, `tests/unit/gouvernance/une-cle-ecrite-deux-fois.spec.ts` | couverte |
 | `REQ-GOV-002` | `GOV-002` | `tests/unit/gouvernance/preseance.spec.ts` | couverte |
 | `REQ-GOV-003` | `GOV-003`, `GOV-005`, `GOV-025`, `GOV-028`, `GOV-037`, `GOV-071`, `GOV-074`, `GOV-084` | `tests/unit/gouvernance/attributions-resolvent.spec.ts`, `tests/unit/gouvernance/citation-json-vs-prose.spec.ts`, `tests/unit/gouvernance/exemptions-par-occurrence.spec.ts`, `tests/unit/gouvernance/gardes.spec.ts`, `tests/unit/gouvernance/identifiants-nus-positions-limites.spec.ts` | couverte |
@@ -87,12 +88,20 @@
 | `REQ-INT-021` | `INT-T09` | `tests/integration/api-gouv.spec.ts` | couverte |
 | `REQ-INT-022` | `INT-T10` | `tests/unit/email/emetteur.spec.ts` | couverte |
 | `REQ-INT-023` | `INT-T10` | `tests/integration/webhook-rebonds.spec.ts`, `tests/unit/email/courriels-migration.spec.ts`, `tests/unit/email/rebonds.spec.ts` | couverte |
+| `REQ-INT-024` | `INT-T14` | `tests/unit/integration/notif-sans-pii.spec.ts` | couverte |
 | `REQ-INT-026` | `INT-T11` | `tests/integration/adaptateur-mcp.spec.ts`, `tests/unit/securite/webhook-signature.spec.ts` | couverte |
 | `REQ-INT-029` | `INT-T01a`, `INT-T27-A` | `tests/unit/integration/contrat-hash.spec.ts`, `tests/unit/integration/contrat-v2-frontiere.spec.ts`, `tests/unit/securite/webhook-signature.spec.ts` | couverte |
 | `REQ-INT-032` | `DM-15`, `INT-T01b`, `INT-T01c`, `INT-T05`, `INT-T22`, `INT-T26`, `INT-T27-A` | `tests/unit/integration/contrat-v2-frontiere.spec.ts` | couverte |
 | `REQ-JUR-003` | `JUR-T01`, `JUR-T01b` | `tests/unit/contrat/contract-template-complete.spec.ts` | couverte |
 | `REQ-JUR-007` | `DM-25`, `JUR-T01`, `JUR-T01b`, `T-ARG-033` | `tests/unit/contrat/contract-template-complete.spec.ts` | couverte |
+| `REQ-JUR-015` | `JUR-T02` | `tests/unit/juridique/seuils-ssot.spec.ts` | couverte |
 | `REQ-JUR-023` | `DM-23`, `JUR-T01`, `SEC-12` | `tests/unit/contrat/contract-template-complete.spec.ts` | couverte |
+| `REQ-JUR-029` | `DM-11`, `JUR-T02`, `T-ARG-033` | `tests/unit/juridique/seuils-ssot.spec.ts` | couverte |
+| `REQ-JUR-031` | `JUR-T24`, `JUR-T27`, `JUR-T28`, `SEC-14`, `SEC-15`, `UX-P1-12` | `tests/unit/contrat/contrat-sobre.spec.ts` | couverte |
+| `REQ-JUR-034` | `JUR-T26` | `tests/unit/juridique/charte-relationnelle.spec.ts` | couverte |
+| `REQ-JUR-035` | `JUR-T26` | `tests/unit/juridique/charte-relationnelle.spec.ts` | couverte |
+| `REQ-JUR-036` | `JUR-T26` | `tests/unit/juridique/charte-relationnelle.spec.ts` | couverte |
+| `REQ-JUR-037` | `GOV-071`, `JUR-T26` | `tests/unit/gouvernance/lexique.spec.ts`, `tests/unit/juridique/charte-relationnelle.spec.ts` | couverte |
 | `REQ-QA-001` | `GOV-076`, `QA-T01` | `tests/unit/ci/aucune-gate-en-continue-on-error.spec.ts`, `tests/unit/gouvernance/formes-voisines-des-interdits.spec.ts` | couverte |
 | `REQ-QA-002` | `GOV-101`, `QA-T01`, `QA-T30` | `tests/unit/ci/aucune-gate-en-continue-on-error.spec.ts`, `tests/unit/gouvernance/relectures-sans-defaut.spec.ts`, `tests/unit/qualite/score-de-mutation.spec.ts` | couverte |
 | `REQ-QA-006` | `QA-T02` | `tests/integration/harnais-testcontainers.spec.ts`, `tests/integration/rate-limit-redis.spec.ts`, `tests/unit/ci/integration-collectee-par-gate-a.spec.ts` | couverte |
@@ -115,6 +124,7 @@
 | `REQ-SEC-012` | `SEC-07` | `tests/integration/frontiere.spec.ts` | couverte |
 | `REQ-SEC-013` | `INT-T09` | `tests/unit/integration/recherche-entreprises-repli.spec.ts` | couverte |
 | `REQ-SEC-016` | `SEC-03`, `SEC-10` | `tests/integration/rate-limit-redis.spec.ts`, `tests/unit/securite/lien-magique-compteurs.spec.ts`, `tests/unit/securite/lien-magique-indistinction.spec.ts`, `tests/unit/securite/lien-magique-production.spec.ts`, `tests/unit/securite/rate-famille.spec.ts` | couverte |
+| `REQ-SEC-023` | `SEC-17` | `tests/integration/utilisateurs-console.spec.ts`, `tests/unit/securite/matrice-des-roles.spec.ts` | couverte |
 | `REQ-SEC-024` | `SEC-08` | `tests/unit/securite/chiffrement-avec-aad.spec.ts` | couverte |
 | `REQ-SEC-028` | `SEC-01` | `tests/integration/adaptateur-mcp.spec.ts`, `tests/unit/securite/env-boot.spec.ts` | couverte |
 | `REQ-SEC-029` | `SEC-02` | `tests/unit/securite/headers.spec.ts` | couverte |
@@ -239,7 +249,6 @@
 | `REQ-EXT-025` | 1 | `DM-23`, `T-ARG-037`, `UX-P2-07` | — |
 | `REQ-EXT-026` | 1 | `DM-23` | — |
 | `REQ-EXT-027` | 1 | `DM-23`, `UX-P1-14` | — |
-| `REQ-EXT-028` | 0 | `JUR-T02` | `tests/unit/juridique/seuils-ssot.spec.ts` |
 | `REQ-EXT-029` | 2 | `UX-P2-04` | — |
 | `REQ-INT-001` | 0 | `INT-T02` | `axionia/src/server/partners-sync/__tests__/outbox-produit-des-evenements-valides.spec.ts` |
 | `REQ-INT-005` | -1 | `INT-T01b`, `INT-T05` | `axionia/src/server/partners-sync/__tests__/producteurs-facturation.spec.ts`, `axionia/src/server/partners/__tests__/commission.spec.ts`, `axionia/src/server/partners/__tests__/derivation-ht.spec.ts`, `axionia/src/server/partners/__tests__/enveloppe.spec.ts`, `axionia/src/server/partners/__tests__/fixtures-et-frontiere.spec.ts`, `axionia/src/server/partners/__tests__/payloads.spec.ts`, `axionia/src/server/partners/__tests__/transcription-du-contrat.spec.ts` |
@@ -253,7 +262,6 @@
 | `REQ-INT-016` | 2 | `INT-T17`, `T-ARG-030` | — |
 | `REQ-INT-017` | 0 | `DM-03-A`, `DM-03-P` | `axionia/src/server/partners-sync/__tests__/grille-export.spec.ts`, `tests/integration/grille-versionnee.spec.ts`, `tests/unit/domaine/grille-import.spec.ts` |
 | `REQ-INT-019` | 1 | `INT-T12`, `INT-T24` | — |
-| `REQ-INT-024` | 0 | `INT-T14` | `tests/unit/integration/notif-sans-pii.spec.ts` |
 | `REQ-INT-025` | 3 | `UX-P3-01` | — |
 | `REQ-INT-027` | 1 | `INT-T13`, `INT-T17` | — |
 | `REQ-INT-030` | 1 | `INT-T08-A`, `INT-T08-P`, `QA-T19` | — |
@@ -268,21 +276,14 @@
 | `REQ-JUR-011` | 1 | `SEC-16` | — |
 | `REQ-JUR-012` | 1 | `JUR-T13`, `UX-P1-11` | `textes-apporteurs-charte-relationnelle.spec.ts` |
 | `REQ-JUR-013` | 1 | `JUR-T13`, `UX-P1-11` | `textes-apporteurs-charte-relationnelle.spec.ts` |
-| `REQ-JUR-015` | 0 | `JUR-T02` | `tests/unit/juridique/seuils-ssot.spec.ts` |
 | `REQ-JUR-020` | 2 | `DM-16` | — |
 | `REQ-JUR-022` | 1 | `DM-11` | `tests/unit/domaine/kyc-reference-piece-rib.spec.ts` |
 | `REQ-JUR-024` | 0 | `JUR-T03` | `axionia/src/content/__tests__/vocabulaire-apporteur.spec.ts` |
 | `REQ-JUR-025` | 0 | `EXT-T01`, `JUR-T04`, `T-ARG-033` | `tests/unit/juridique/registre-rgpd.spec.ts` |
 | `REQ-JUR-028` | 1 | `SEC-21` | — |
-| `REQ-JUR-029` | 0 | `DM-11`, `JUR-T02`, `T-ARG-033` | `tests/unit/domaine/kyc-reference-piece-rib.spec.ts`, `tests/unit/juridique/seuils-ssot.spec.ts` |
 | `REQ-JUR-030` | 3 | `JUR-T22` | — |
-| `REQ-JUR-031` | 0 | `JUR-T24`, `JUR-T27`, `JUR-T28`, `SEC-14`, `SEC-15`, `UX-P1-12` | `tests/unit/contrat/contrat-sobre.spec.ts` |
 | `REQ-JUR-032` | 1 | `JUR-T24` | — |
 | `REQ-JUR-033` | 1 | `JUR-T25`, `UX-P1-10`, `UX-P3-06` | — |
-| `REQ-JUR-034` | 0 | `JUR-T26` | `tests/unit/juridique/charte-relationnelle.spec.ts` |
-| `REQ-JUR-035` | 0 | `JUR-T26` | `tests/unit/juridique/charte-relationnelle.spec.ts` |
-| `REQ-JUR-036` | 0 | `JUR-T26` | `tests/unit/juridique/charte-relationnelle.spec.ts` |
-| `REQ-JUR-037` | 0 | `GOV-071`, `JUR-T26` | `tests/unit/gouvernance/frontiere-de-mot-du-rendu.spec.ts`, `tests/unit/juridique/charte-relationnelle.spec.ts` |
 | `REQ-JUR-038` | 3 | `GOV-022` | — |
 | `REQ-JUR-039` | 1 | `JUR-T30`, `UX-P1-10` | — |
 | `REQ-JUR-040` | 1 | `JUR-T30`, `SEC-14` | — |
@@ -313,7 +314,6 @@
 | `REQ-SEC-020` | 1 | `SEC-12`, `SEC-14` | — |
 | `REQ-SEC-021` | 1 | `SEC-16` | — |
 | `REQ-SEC-022` | 0 | `DM-10-P`, `DM-25`, `SEC-05`, `SEC-12`, `SEC-16` | `tests/integration/idor.spec.ts`, `tests/unit/securite/acces-scope.spec.ts` |
-| `REQ-SEC-023` | 0 | `SEC-17` | `tests/integration/utilisateurs-console.spec.ts`, `tests/unit/securite/matrice-des-roles.spec.ts` |
 | `REQ-SEC-025` | 2 | `SEC-22` | — |
 | `REQ-SEC-026` | 1 | `DM-11` | `tests/unit/domaine/kyc-reference-piece-rib.spec.ts` |
 | `REQ-SEC-030` | 0 | `DM-20`, `JUR-T04` | `tests/unit/juridique/registre-rgpd.spec.ts` |
@@ -414,20 +414,20 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | 5 | 15 | 5 |
 | 6 | 1 | 1 |
 | 7 | 2 | 0 |
-| 8 | 13 | 4 |
+| 8 | 13 | 5 |
 | 9 | 36 | 13 |
 | 10 | 7 | 1 |
 | 11 | 5 | 1 |
 | 12 | 13 | 3 |
-| 13 | 32 | 8 |
-| 14 | 17 | 1 |
+| 13 | 32 | 9 |
+| 14 | 17 | 2 |
 | 15 | 23 | 5 |
-| 16 | 8 | 1 |
-| 17 | 21 | 4 |
+| 16 | 8 | 2 |
+| 17 | 21 | 5 |
 | 18 | 4 | 1 |
 | 19 | 1 | 0 |
 | 20 | 3 | 0 |
-| 21 | 11 | 2 |
+| 21 | 11 | 4 |
 
 | Étape | Exigences | Dont réputées testées |
 | ---: | ---: | ---: |
@@ -437,12 +437,12 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | 4 | 16 | 7 |
 | 5 | 17 | 5 |
 | 6 | 3 | 1 |
-| 7 | 57 | 14 |
+| 7 | 57 | 15 |
 | 8 | 12 | 3 |
-| 9 | 23 | 8 |
+| 9 | 23 | 9 |
 | 10 | 67 | 16 |
-| 11 | 30 | 6 |
-| 12 | 14 | 2 |
+| 11 | 30 | 7 |
+| 12 | 14 | 5 |
 
 ## Fichiers de test
 
