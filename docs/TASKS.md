@@ -13,7 +13,7 @@
 | Phase | Taches | Jours | Terminees |
 | --- | ---: | ---: | ---: |
 | -1 — Gouvernance (prealable bloquant) | 39 | 23.75 | 39 |
-| 0 — Socle technique | 117 | 90.35 | 64 |
+| 0 — Socle technique | 117 | 90.35 | 76 |
 | 1 — Operationnel | 62 | 48.00 | 0 |
 | 2 — Argent | 45 | 33.50 | 0 |
 | 3 — Pilotage et conformite | 28 | 25.25 | 0 |
@@ -984,7 +984,7 @@ Couvre : `REQ-GOV-012`, `REQ-GOV-024`
 
 **Tests.** `tests/unit/gouvernance/cliquet-nomme-chaque-refus.spec.ts`
 
-### GOV-046 — Un septieme faux vert de la meme famille, sans porteur ni temoin de famille
+### GOV-046 — Un septieme faux vert de la meme famille, sans porteur ni temoin de famille ✅ **fusionnee**
 
 `0.5 j` · zone `gouvernance` · depend de `GOV-019`
 
@@ -1004,7 +1004,7 @@ Couvre : `REQ-GOV-013`
 
 **Tests.** `tests/unit/gouvernance/prevol-existe-et-refuse.spec.ts`
 
-### GOV-048 — La garde des affirmations envoie le code de CE depot dans le registre du depot VOISIN
+### GOV-048 — La garde des affirmations envoie le code de CE depot dans le registre du depot VOISIN ✅ **fusionnee**
 
 `0.5 j` · zone `gouvernance` · depend de `GOV-038`
 
@@ -1166,7 +1166,7 @@ Couvre : `REQ-GOV-021`
 
 **Tests.** `tests/unit/gouvernance/composeur-et-fichiers-d-une-pr.spec.ts`
 
-### GOV-057 — Le pas 8 du protocole de fusion ne sait pas clore une tache livree seule, hors de tout lot
+### GOV-057 — Le pas 8 du protocole de fusion ne sait pas clore une tache livree seule, hors de tout lot ✅ **fusionnee**
 
 `1 j` · zone `gouvernance` · depend de `GOV-041`, `GOV-042`
 
@@ -1206,7 +1206,7 @@ Couvre : `REQ-GOV-006`, `REQ-GOV-015`, `REQ-GOV-024`
 
 **Tests.** `tests/unit/gouvernance/plan-state-lecteur-unique.spec.ts`
 
-### GOV-061 — Aucune garde ne prouve que chaque etape de la porte A est presente, active et effective
+### GOV-061 — Aucune garde ne prouve que chaque etape de la porte A est presente, active et effective ✅ **fusionnee**
 
 `1.5 j` · zone `gouvernance` · depend de `GOV-044`
 
@@ -1326,7 +1326,7 @@ Couvre : `REQ-GOV-001`, `REQ-GOV-032`
 
 **Tests.** `tests/unit/gouvernance/une-cle-ecrite-deux-fois.spec.ts`
 
-### GOV-073 — Quatre scripts lisent une entree de journal, chacun avec sa propre grammaire
+### GOV-073 — Quatre scripts lisent une entree de journal, chacun avec sa propre grammaire ✅ **fusionnee**
 
 `1 j` · zone `gouvernance` · aucune dependance
 
@@ -1356,7 +1356,7 @@ Couvre : `REQ-GOV-021`
 
 **Tests.** `tests/unit/gouvernance/aucun-chemin-gabarit.spec.ts`
 
-### GOV-076 — Les interdits du domaine ne couvrent pas les formes voisines des imports et des appels qu'ils visent
+### GOV-076 — Les interdits du domaine ne couvrent pas les formes voisines des imports et des appels qu'ils visent ✅ **fusionnee**
 
 `0.75 j` · zone `gouvernance` · depend de `QA-T01`
 
@@ -1376,7 +1376,7 @@ Couvre : `REQ-GOV-011`, `REQ-GOV-013`
 
 **Tests.** `tests/unit/gouvernance/aucune-revue-n-est-pas-toutes-refusent.spec.ts` · `tests/unit/gouvernance/lentilles-selon-le-risque.spec.ts`
 
-### GOV-078 — Une demande de fusion qui reecrit la prose d'une tache sensible n'a jamais a produire de scenario d'attaque
+### GOV-078 — Une demande de fusion qui reecrit la prose d'une tache sensible n'a jamais a produire de scenario d'attaque ✅ **fusionnee**
 
 `0.75 j` · zone `gouvernance` · aucune dependance
 
@@ -1406,7 +1406,7 @@ Couvre : `REQ-GOV-021`, `REQ-GOV-024`
 
 **Tests.** `tests/unit/gouvernance/raison-de-dette-resolue.spec.ts`
 
-### GOV-082 — Une liste vide rendue avec le code zero est lue comme une reponse, et fabrique 53 fautes
+### GOV-082 — Une liste vide rendue avec le code zero est lue comme une reponse, et fabrique 53 fautes ✅ **fusionnee**
 
 `0.5 j` · zone `gouvernance` · depend de `GOV-043`
 
@@ -1430,7 +1430,7 @@ A LIVRER. (1) UNE LISTE VIDE RENDUE AVEC LE CODE ZERO EST UN REFUS NOMME — `ti
 
 **Tests.** `tests/unit/gouvernance/une-liste-vide-n-est-pas-une-reponse.spec.ts`
 
-### GOV-083 — Une gate dont le script est absent du disque est ecartee en silence par la garde qui devrait la voir
+### GOV-083 — Une gate dont le script est absent du disque est ecartee en silence par la garde qui devrait la voir ✅ **fusionnee**
 
 `0.5 j` · zone `gouvernance` · depend de `GOV-044`
 
@@ -1460,7 +1460,7 @@ Couvre : `REQ-QA-014`, `REQ-GOV-032`
 
 **Tests.** `tests/unit/gouvernance/un-rendu-n-officialise-pas-une-attribution.spec.ts`
 
-### GOV-086 — Un etat cible declare sans l'operation qui y mene est une divergence qu'aucune garde ne voit
+### GOV-086 — Un etat cible declare sans l'operation qui y mene est une divergence qu'aucune garde ne voit ✅ **fusionnee**
 
 `0.25 j` · zone `gouvernance` · aucune dependance
 
@@ -1580,7 +1580,7 @@ Couvre : `REQ-GOV-031`, `REQ-CPL-001`
 
 **Tests.** `tests/unit/gouvernance/entite-registre.spec.ts`
 
-### GOV-094 — La non-vacuite d un banc de preuve est au grain de la FAMILLE : retirer un temoin d une cause NEUVE laisse le banc vert et bavard
+### GOV-094 — La non-vacuite d un banc de preuve est au grain de la FAMILLE : retirer un temoin d une cause NEUVE laisse le banc vert et bavard ✅ **fusionnee**
 
 `0.5 j` · zone `gouvernance` · aucune dependance
 
@@ -1753,7 +1753,7 @@ Couvre : `REQ-INT-032`, `REQ-INT-029`
 
 **Tests.** `axionia/src/server/partners-sync/__tests__/route-coordonnees.spec.ts`
 
-### GOV-103 — Le motif de branch refuse une branche reelle de la forge, et six taches livrees ne peuvent pas etre closes
+### GOV-103 — Le motif de branch refuse une branche reelle de la forge, et six taches livrees ne peuvent pas etre closes ✅ **fusionnee**
 
 `0.5 j` · zone `gouvernance` · aucune dependance
 
