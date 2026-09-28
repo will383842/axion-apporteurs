@@ -164,6 +164,10 @@
 # énumération. Les deux sont muets, et la revue les a classés DETTE et non motif de refus —
 # aucun nom n'y est écrit, donc aucun motif textuel ou AST ne peut les voir. C'est exactement le
 # périmètre que cette limite décrit : ce qui ne s'écrit pas ne se lit pas.
+# Troisième exemple, du même ordre (15e tour) : `` { [`${""}$queryRaw`]: q2 } `` — une
+# interpolation VIDE suffit à empêcher semgrep de replier le gabarit en constante. Le nom y est
+# pourtant lisible à l'œil nu ; c'est la frontière entre ce qu'une gate voit et ce qu'un relecteur
+# voit, et elle est ici, pas ailleurs.
 rules:
   # REQ-SEC-008 (texte en vigueur ; REQ-QA-011 y est absorbée) : aucun import direct du client de
   # base sous l'espace apporteur. `import type` compris — l'espace reçoit ses types de la couche
@@ -680,11 +684,41 @@ rules:
       #      deux-points — littéralement la forme qu'on cherche. Troisième fois que ce piège se
       #      présente dans cette PR.
       #
-      #   CE QUI TIENT : le nom ENTRE GUILLEMETS ET DANS DES ACCOLADES. Ni la prose ni l'étiquette
-      #   par crochets n'en ont ; un motif d'objet en a toujours. La contrainte n'est pas un
-      #   inventaire de contextes — c'est la structure même d'un motif de liaison.
+      #   3. Le nom entre guillemets ET DANS DES ACCOLADES (`\{[^{}]*['"`]\$queryRaw['"`][^{}]*\}`).
+      #      REJETÉ : compter les accolades exige qu'AUCUNE autre accolade ne sépare la clé de celles
+      #      du motif, et cinq formes passaient. C'était encore un inventaire.
+      #
+      #   CE QUI TIENT, AU QUATRIÈME ESSAI — et la leçon est la même que deux fois avant : compter
+      #   les accolades était ENCORE un inventaire. Le motif précédent exigeait qu'aucune autre
+      #   accolade ne sépare la clé de celles du motif, et cinq formes passaient (mesuré) :
+      #     const { opts = {}, '$queryRaw': q2 } = p;   const { '$queryRaw': q2, opts = {} } = p;
+      #     const K = '$queryRaw'; const { [K]: q2 } = p;
+      #     Object.getOwnPropertyDescriptor(Object.getPrototypeOf(p), '$queryRaw')!.value.call(p, …)
+      #
+      #   On juge donc, ici encore, CE QUI SUIT LE NOM : une clé de motif d'objet est suivie d'un
+      #   deux-points, que le nom soit cité entre apostrophes ou guillemets doubles, ou placé entre
+      #   crochets. L'ACCENT GRAVE n'est admis QUE dans les crochets — et c'est ce qui garde muette
+      #   la prose de `src/server/evenement/journal.ts:98`, qui cite le nom entre accents graves,
+      #   sans crochet, devant un deux-points français. Une clé de motif ne s'écrit jamais entre
+      #   accents graves hors de `[…]`. Rien à compter, rien à énumérer.
       - pattern-regex: |-
-          \{[^{}]*['"`]\$(?:queryRaw|executeRaw|queryRawUnsafe|executeRawUnsafe)['"`][^{}]*\}
+          ['"]\$(?:queryRaw|executeRaw|queryRawUnsafe|executeRawUnsafe)['"](?:[\t\n\x0B\f\r\x{0085}\x{200B}\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)*:
+      - pattern-regex: |-
+          \[(?:[\t\n\x0B\f\r\x{0085}\x{200B}\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)*['"`]\$(?:queryRaw|executeRaw|queryRawUnsafe|executeRawUnsafe)['"`](?:[\t\n\x0B\f\r\x{0085}\x{200B}\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)*\](?:[\t\n\x0B\f\r\x{0085}\x{200B}\x{2028}\x{2029}\x{FEFF}\p{Zs}]|/\*(?:[^*]|\*(?!/))*\*/|//[^\n\r\x{2028}\x{2029}]*)*:
+      # — LE NOM EN CHAÎNE, PARTOUT AILLEURS, moins la seule écriture légitime (14e tour, piste
+      #   corrigée par la revue `securite` : c'est elle qui a trouvé l'exception à poser).
+      #   Le littéral de chaîne est refusé où qu'il soit — donc aussi quand il est nommé d'abord et
+      #   passé en clé calculée ensuite (`const K = '$queryRaw'; const { [K]: q2 } = p`), et quand il
+      #   sert à lire un descripteur de propriété sur le prototype. `pattern-not-inside` retire la
+      #   SEULE forme légitime : l'étiquette écrite par crochets, `p['$queryRaw']`SELECT 1``, qui
+      #   est un gabarit étiqueté ordinaire — contre-témoin `sql/voisins` ligne 8. Ne pas retirer
+      #   cette forme a été mon erreur du tour précédent, et c'est le banc qui l'a dite.
+      - patterns:
+          - pattern-either:
+              - pattern: '"$queryRaw"'
+              - pattern: '"$executeRaw"'
+          - pattern-not-inside: $O["$queryRaw"]`...`
+          - pattern-not-inside: $O["$executeRaw"]`...`
       # — LA FORGE D'UN `Sql` (même revue, témoins c04, c05, c10). Un `Sql` légitime naît d'une
       #   étiquette ; ces trois formes en fabriquent un, ou dénaturent un vrai, puis le passent à
       #   une étiquette permise — l'injection entre par l'INTERPOLATION, que la règle croyait sûre :

@@ -1679,6 +1679,54 @@ const FORMES_SQL: readonly { nom: string; lignes: string[]; fautive: number; ext
     ],
     fautive: 2,
   },
+  // ── LES CINQ FORMES DU 15e TOUR (revue `securite` sur `307061f`) : elles ont montré que compter
+  //    les accolades était ENCORE un inventaire de contextes. Une AUTRE paire d'accolades entre la
+  //    clé et celles du motif — une valeur par défaut `opts = {}` — suffisait à passer. Le critère
+  //    est redevenu ce qui SUIT le nom : un deux-points. ──
+  {
+    // Une valeur par défaut AVANT la clé fautive : `{}` referme avant qu'on arrive au nom.
+    nom: 'cle-en-chaine-apres-un-defaut',
+    lignes: [
+      'declare const p: { $queryRaw(s: TemplateStringsArray): unknown; opts?: object };',
+      "const { opts = {}, '$queryRaw': q2 } = p;",
+      'export const lire = (x: string) => [opts, q2.call(p, [`SELECT ${x}`])];',
+    ],
+    fautive: 2,
+  },
+  {
+    // Et APRÈS, en guillemets DOUBLES et sur `$executeRaw` : le bras ne distingue ni l'ordre ni la
+    // sorte de guillemet, et les deux méthodes brutes sont dans la même liste.
+    nom: 'cle-en-chaine-avant-un-defaut',
+    lignes: [
+      'declare const p: { $executeRaw(s: TemplateStringsArray): unknown; opts?: object };',
+      'const { "$executeRaw": x2, opts = {} } = p;',
+      'export const ecrire = (x: string) => [opts, x2.call(p, [`DELETE ${x}`])];',
+    ],
+    fautive: 2,
+  },
+  {
+    // Le nom NOMMÉ D'ABORD, puis passé en clé calculée : aucune clé n'est écrite dans le motif.
+    // C'est le littéral de chaîne, où qu'il soit, qui est refusé.
+    nom: 'nom-en-chaine-puis-cle-calculee',
+    lignes: [
+      'declare const p: { $queryRaw(s: TemplateStringsArray): unknown };',
+      "const K = '$queryRaw';",
+      'const { [K]: q2 } = p;',
+      'export const lire = (x: string) => q2.call(p, [`SELECT ${x}`]);',
+    ],
+    fautive: 2,
+  },
+  {
+    // Le DESCRIPTEUR DE PROPRIÉTÉ lu sur le prototype : pas une accolade dans toute l'expression.
+    nom: 'descripteur-de-propriete',
+    lignes: [
+      'declare const p: { $queryRaw(s: TemplateStringsArray): unknown };',
+      'export const lire = (x: string) =>',
+      "  (Object.getOwnPropertyDescriptor(Object.getPrototypeOf(p), '$queryRaw')?.value as",
+      '    ((s: unknown) => unknown))?.call(p, [`SELECT ${x}`]);',
+    ],
+    fautive: 3,
+  },
   {
     // Le MEMBRE du runtime derrière un import par DÉFAUT, en nom d'élément JSX : rien ne dit
     //  `Prisma` dans le nom. Fermé par le bras qui juge le membre — et désormais TÉMOIGNÉ : une
