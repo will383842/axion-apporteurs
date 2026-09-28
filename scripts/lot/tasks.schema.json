@@ -188,6 +188,46 @@
           }
         },
         {
+          "_commentaire": [
+            "REQ-GOV-021 — UNE TÂCHE `en_cours` APPARTIENT À UN LOT, OU PORTE LA PREUVE D'UNE LIVRAISON SEULE.",
+            "La liste des tâches d'une clôture se DÉRIVE du champ `lot` : une tâche `en_cours` à `lot` vide",
+            "n'est vue par aucune clôture et resterait `en_cours` pour toujours. Jumelle de la clause",
+            "précédente (`owner` et `branch` requis dès `en_cours`).",
+            "PORTÉE : `en_cours` SEUL. Les tâches livrées seules (`fusionnee`, `lot: null`) sont le choix",
+            "mesuré du plan ; leur inventer un lot fabriquerait l'enregistrement que la règle protège.",
+            "L'EXEMPTION NE SE LIT PAS SUR LE NOM DE LA BRANCHE. `branch` est une chaîne que l'auteur",
+            "choisit : renommer une branche de lot à la forme `t/…` ne dispense de rien. Seule une PREUVE",
+            "exempte : `pr` (ce dépôt) ou `attestation` (un autre dépôt, qui ne porte jamais `pr`), avec",
+            "`branch`. Le SHA d'atterrissage n'existe pas encore pour une tâche en vol : il est exigé à la",
+            "livraison par l'attestation, pas ici. La sortie de la garde le dit : les trois `required`",
+            "manquants (`lot`, `pr`, `attestation`) sont listés, jamais une forme de branche.",
+            "CAS LAISSÉ OUVERT : le symétrique, un `lot` porté par une tâche `a_faire`, n'est pas refusé."
+          ],
+          "if": { "properties": { "statut": { "const": "en_cours" } }, "required": ["statut"] },
+          "then": {
+            "anyOf": [
+              {
+                "required": ["lot"],
+                "properties": { "lot": { "type": "string", "minLength": 1 } }
+              },
+              {
+                "required": ["pr", "branch"],
+                "properties": {
+                  "pr": { "type": "integer", "minimum": 1 },
+                  "branch": { "type": "string" }
+                }
+              },
+              {
+                "required": ["attestation", "branch"],
+                "properties": {
+                  "attestation": { "type": "object" },
+                  "branch": { "type": "string" }
+                }
+              }
+            ]
+          }
+        },
+        {
           "_commentaire": "Une tâche ATTRIBUÉE doit porter son critère d'acceptation et ses tests : c'est ce qui rend la revue et `req:check` possibles. Avant l'attribution, les deux champs sont facultatifs.",
           "if": {
             "properties": {
