@@ -7,9 +7,9 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `9ed1f98` — 2026-09-28T17:37:27+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #181 (un conflit avec `main`) · 2. #82 (état `UNKNOWN`) · 3. #182 (état `UNKNOWN`) · 4. #185 (état `UNKNOWN`) |
-| Qui tient quoi ? | QA-T07 (A05) |
+| Où est `main` ? | `f59bc40` — 2026-09-28T18:38:24+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #82 (état `UNKNOWN`) · 2. #182 (état `UNKNOWN`) · 3. #185 (état `UNKNOWN`) |
+| Qui tient quoi ? | QA-T07 (A05) · GOV-057 (A01) |
 | Où en est la phase ? | phase 0 — 64/116 tâches, reste 42.10 j |
 | Le prochain pas | QA-T07 — Gate sécurité : semgrep |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
@@ -60,10 +60,9 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #181 — chore(GOV-012): registre rattrape, cinq taches livrees par deux PR fusionnees passent fusionnee | `t/gov-cloture-l0-07-l0-10` | un conflit avec `main` — à résoudre avant tout |
-| 2 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | état `UNKNOWN` — à qualifier à la main |
-| 3 | #182 — fix(GOV-057): lot:cloture --tache clot une tache livree seule, sans inventer de lot | `t/gov-057` | état `UNKNOWN` — à qualifier à la main |
-| 4 | #185 — feat(GOV-103): la forme t/ du motif de branch admet les majuscules | `t/gov-103` | état `UNKNOWN` — à qualifier à la main |
+| 1 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | état `UNKNOWN` — à qualifier à la main |
+| 2 | #182 — fix(GOV-057): lot:cloture --tache clot une tache livree seule, sans inventer de lot | `t/gov-057` | état `UNKNOWN` — à qualifier à la main |
+| 3 | #185 — feat(GOV-103): la forme t/ du motif de branch admet les majuscules | `t/gov-103` | état `UNKNOWN` — à qualifier à la main |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -74,6 +73,7 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 | Tâche | Revendiquée par | Issue | Statut |
 | --- | --- | --- | --- |
 | QA-T07 — Gate sécurité : semgrep | A05 | #69 | `a_faire` |
+| GOV-057 — Le pas 8 du protocole de fusion ne sait pas clore une tache livree seule, hors de tout lot | A01 | #183 | `a_faire` |
 
 ⚠️ **12 revendication(s) périmée(s)** — GOV-042, GOV-045, GOV-050, GOV-051, GOV-053, GOV-054, GOV-055, GOV-060, GOV-072, GOV-079, GOV-093, INT-T01c : leur issue porte encore un label `owner:` alors que la tâche est livrée. `pnpm lot:cloture` écrit `docs/tasks.json` mais n’efface pas les labels ; la dette appartient à GOV-012.
 
@@ -91,7 +91,7 @@ Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeS
 
 ## Dernier atterrissage
 
-`origin/main` = `9ed1f98` (2026-09-28T17:37:27+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `f59bc40` (2026-09-28T18:38:24+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 

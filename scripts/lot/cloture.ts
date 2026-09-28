@@ -2,8 +2,10 @@
  * cloture.ts — écrit dans `docs/tasks.json` le résultat d'un lot. C'est le SEUL écrivain de statut.
  *
  * USAGE   : pnpm lot:cloture -- --lot <lotId> [--owner <Axx>] [--commit]
+ *           pnpm lot:cloture -- --tache <id> --pr <n> [--owner <Axx>] [--commit]   (tâche seule, GOV-057)
  * ENTRÉES : docs/lots/<lotId>/lot.json (le PÉRIMÈTRE du lot) · docs/lots/<lotId>/resultat.json (le
- *           rendu du workflow, écrit tel quel par la session à la fin de l'étape 4 du SKILL)
+ *           rendu du workflow, écrit tel quel par la session à la fin de l'étape 4 du SKILL) ·
+ *           en mode `--tache`, la PR lue sur la forge (`gh pr view`) : sha, instant, branche
  * SORTIE  : docs/tasks.json mis à jour (statut, pr, branch, owner, lot, attempts, motif)
  *
  * POURQUOI CE SCRIPT EXISTE
@@ -34,7 +36,8 @@
  *
  * ⛔ DEUX MODES, ET L'IMPORT N'EN EST PAS UN. Tout ce qui lit des fichiers, des arguments, ou écrit,
  * vit dans `principal()`, appelé sous `LANCE_EN_SCRIPT` : importer ce module n'a AUCUN effet. La
- * règle, elle, est exportée — `controlerLePerimetre()`, `perimetreDuLot()`, `cloturerLeLot()` — et
+ * règle, elle, est exportée — `controlerLePerimetre()`, `perimetreDuLot()`, `cloturerLeLot()`,
+ * `cloturerUneTacheSeule()` — et
  * c'est elle que la spécification APPELLE. Ce n'est pas du confort : tant que le module lisait
  * `process.argv` à l'import, `import` levait `Argument --lot manquant.` à la collecte, aucun test ne
  * pouvait atteindre sa règle, et le seul témoin possible aurait été la lecture du TEXTE de ce
@@ -58,6 +61,7 @@ import {
 } from './attestation';
 import { LIVREE } from './avancement';
 import { outilHorsDepot } from './chemins-de-tache';
+import { CHEMIN_SCHEMA_DES_TACHES, idDuTitre, lireLeLot, tachesDeLaPr } from './revues';
 
 export interface Tache {
   id: string;
@@ -214,6 +218,245 @@ export class ErreurDeCloture extends Error {
   }
 }
 
+function messageAttestationIncomplete(
+  t: Tache,
+  numero: number | null,
+  sha: string | null,
+  quand: string | null
+): string {
+  const depot = t.repo ?? DEPOT_LOCAL;
+  const ou =
+    depot === DEPOT_LOCAL
+      ? 'vit dans CE dépôt'
+      : `vit dans ${depotDeLaTache(t as { repo: string }) ?? `repo « ${depot} »`}`;
+  return (
+    `${t.id} ${ou} et passerait \`fusionnee\` sans attestation complète : ` +
+    `pr=${numero ?? 'absent'}, sha=${sha ?? 'absent'}, fusionneeAt=${quand ?? 'absent'}. ` +
+    'Le release manager rend les trois : `gh pr view <n> --json number,mergeCommit,mergedAt` ' +
+    'dans le dépôt concerné. Sans le SHA, plus personne ne retrouverait le commit d’atterrissage.'
+  );
+}
+
+/**
+ * POSE UNE LIVRAISON ATTESTÉE — l'unique écriture de `fusionnee`, que la tâche soit close par son lot
+ * ou seule (GOV-057) : deux chemins d'entrée, une seule forme écrite (RM-01).
+ *
+ * L'attestation inter-dépôt (GOV-038). Une livraison hors de ce dépôt ne laisse ICI aucune trace :
+ * ni PR qui résout, ni commit dans cet historique. Le SHA du commit de fusion est la seule valeur
+ * qu'aucun autre dépôt ne réattribue ; sans lui, le backlog affirmerait une livraison introuvable.
+ * GOV-042 — LE REFUS VAUT AUSSI POUR CE DÉPÔT : une tâche locale passait `fusionnee` avec un `pr` nu,
+ * et rien ne conservait le commit qui l'avait fait atterrir. La MÊME attestation est exigée ici ;
+ * seul le `pr` diffère : écrit ici, il résout, et l'attestation porte le même numéro.
+ *
+ * Le script ne s'écrit jamais un état que `pnpm gov:tasks` refuserait : il le vérifie avant de le
+ * poser. Sans ce contrôle, la faute serait découverte en CI, sur un fichier déjà commité par le seul
+ * écrivain autorisé — et personne d'autre n'a le droit de le corriger.
+ */
+function poserLaLivraison(t: Tache, attestation: Attestation): string {
+  const depot = t.repo ?? DEPOT_LOCAL;
+  t.pr = depot === DEPOT_LOCAL ? attestation.pr : null;
+  t.attestation = { ...attestation };
+  t.statut = 'fusionnee';
+  t.motif = null;
+
+  const fautes = controlerAttestation(
+    {
+      id: t.id,
+      repo: depot,
+      statut: t.statut,
+      pr: t.pr,
+      branch: t.branch,
+      attestation: t.attestation,
+    },
+    true,
+    // L'INSTANT est celui de la clôture. Le SHA vient du release manager : son existence, sa PR, sa
+    // fusion et son ascendance se résolvent EN LIGNE (`gov-attestation.ts --en-ligne`), jamais par
+    // l'arbre qui clôt, qui n'a pas forcément reçu ce commit.
+    { maintenant: Date.now() }
+  );
+  if (fautes.length > 0) {
+    throw new Error(
+      `${t.id} : l'attestation écrite serait refusée par \`pnpm gov:tasks\` —\n` +
+        fautes.map((f) => `  [${f.famille}] ${f.message}`).join('\n')
+    );
+  }
+
+  const ref = referencePr({
+    id: t.id,
+    repo: depot,
+    statut: t.statut,
+    pr: t.pr,
+    attestation: t.attestation,
+  });
+  return `${t.id} → fusionnee (${ref ?? 'aucune référence de PR'}, sha ${attestation.sha})`;
+}
+
+/**
+ * LE MOTIF DE `branch`, LU DANS LE SCHÉMA — jamais recopié (RM-01). Lu à l'APPEL, pas à l'import :
+ * importer ce module n'a aucun effet. Un schéma qui porterait zéro ou plusieurs motifs distincts
+ * pour `branch` est une ambiguïté, et elle est refusée plutôt que tranchée au hasard.
+ */
+function motifDeBranche(): RegExp {
+  const motifs = new Set<string>();
+  const parcourir = (n: unknown): void => {
+    if (!n || typeof n !== 'object') return;
+    for (const [cle, v] of Object.entries(n as Record<string, unknown>)) {
+      if (cle === 'branch' && v && typeof v === 'object') {
+        const p = (v as { pattern?: unknown }).pattern;
+        if (typeof p === 'string') motifs.add(p);
+      }
+      parcourir(v);
+    }
+  };
+  parcourir(JSON.parse(readFileSync(CHEMIN_SCHEMA_DES_TACHES, 'utf8')));
+  if (motifs.size !== 1) {
+    throw new Error(
+      `${CHEMIN_SCHEMA_DES_TACHES} porte ${motifs.size} motif(s) distinct(s) pour \`branch\` : ` +
+        'la clôture ne sait pas lequel appliquer.'
+    );
+  }
+  return new RegExp([...motifs][0]!);
+}
+
+/** Ce que la forge rend d'une PR fusionnée, pour une tâche close seule. */
+export interface Livraison {
+  pr?: number | null;
+  sha?: string | null;
+  fusionneeAt?: string | null;
+  /** La branche FUSIONNÉE, lue sur la forge (`headRefName`) — jamais tapée. */
+  branch?: string | null;
+  /** L'atterrissage vérifié (pas 7). Une PR fusionnée qui n'a pas atterri n'est pas livrée. */
+  atterri?: boolean;
+  /** Le titre de la PR, lu sur la forge : il nomme UNE tâche (`idDuTitre`). */
+  titre?: string | null;
+  /** Le corps de la PR, lu sur la forge : son champ `Lot:` nomme les autres (`lireLeLot`). */
+  corps?: string | null;
+}
+
+/**
+ * CLORE UNE TÂCHE LIVRÉE SEULE, HORS DE TOUT LOT (GOV-057) — `--tache <id> --pr <n>`.
+ *
+ * Six tâches ont été livrées sans lot, et le mode `--lot` ne savait pas les clore : il ÉCRIT
+ * `t.lot`, il TIRE son périmètre de ce même champ, et rien ne posait `branch`, que le schéma exige
+ * de `fusionnee`. Il restait deux gestes, tous deux fautifs : inventer un lot, ou écrire le registre
+ * à la main. Ce mode ferme les deux. Il ne touche JAMAIS `t.lot`, il pose `branch` depuis la
+ * livraison, et il refuse AVANT toute écriture, avec une famille nommée :
+ *   - `tache_inconnue`          — l'identifiant n'est pas au registre ;
+ *   - `tache_d_un_lot`          — la tâche est rangée dans un lot : elle se clôt par lui, sinon ce
+ *                                 mode contournerait le contrôle de périmètre de GOV-041 ;
+ *   - `tache_deja_livree`       — re-clore écraserait une attestation déjà posée ;
+ *   - `livraison_non_atterrie`  — même doctrine que le mode `--lot` ;
+ *   - `branche_absente`         — sans elle, l'état écrit serait refusé par le schéma ;
+ *   - `branche_hors_motif`      — la branche que le motif du schéma refuserait (lu, pas recopié) ;
+ *   - `tache_etrangere_a_la_pr` — la PR ne déclare la tâche ni par son titre, ni par `Lot:` ;
+ *   - `attestation_incomplete`  — pr, SHA entier et instant de fusion, les trois ou rien ;
+ *   - `proprietaire_absent`     — `fusionnee` exige `owner`, et le script ne l'invente pas.
+ */
+export function cloturerUneTacheSeule(options: {
+  tacheId: string;
+  livraison: Livraison;
+  taches: Tache[];
+  owner?: string;
+}): { journal: string[] } {
+  const { tacheId, livraison, taches, owner = '' } = options;
+  const t = taches.find((x) => x.id === tacheId);
+  if (!t) {
+    throw new ErreurDeCloture([
+      {
+        famille: 'tache_inconnue',
+        message: `${tacheId} n'est pas dans docs/tasks.json : rien à clore.`,
+      },
+    ]);
+  }
+
+  const refus: RefusDeCloture[] = [];
+  if (t.lot) {
+    refus.push({
+      famille: 'tache_d_un_lot',
+      message:
+        `${t.id} est rangée dans le lot ${t.lot} : elle se clôt par \`--lot ${t.lot}\`, qui ` +
+        'vérifie le périmètre du lot (GOV-041). La clore seule contournerait ce contrôle.',
+    });
+  }
+  if (LIVREE.has(t.statut)) {
+    refus.push({
+      famille: 'tache_deja_livree',
+      message: `${t.id} est déjà \`${t.statut}\` : la re-clore écraserait son attestation.`,
+    });
+  }
+  // LA PR DOIT DÉCLARER LA TÂCHE (lentille `securite`, #182). Sans ce refus, `--tache X --pr N`
+  // attachait N'IMPORTE QUELLE PR fusionnée à n'importe quelle tâche hors lot : l'attestation
+  // était vraie, la garde restait à zéro, et la livraison était fausse. La déclaration est lue
+  // par le lecteur UNIQUE de ce dépôt (`tachesDeLaPr` : titre, `Lot:`, `pr` déjà écrit), jamais
+  // par une seconde grammaire (RM-01). Un corps illisible ou absent ne déclare RIEN.
+  const lot = lireLeLot(livraison.corps ?? '');
+  const declarees = tachesDeLaPr(
+    taches,
+    livraison.pr ?? null,
+    idDuTitre(livraison.titre ?? null),
+    lot.ids
+  );
+  if (!declarees.some((x) => x.id === t.id)) {
+    refus.push({
+      famille: 'tache_etrangere_a_la_pr',
+      message:
+        `${t.id} : la PR livrée ne déclare pas cette tâche — ni son titre ` +
+        `(« ${livraison.titre ?? 'absent'} »), ni son champ \`Lot:\`` +
+        (lot.malForme ? ` (illisible : ${lot.malForme})` : '') +
+        '. Clore une tâche sur l’attestation d’une PR qui ne l’a pas portée écrirait une ' +
+        'livraison fausse avec une preuve vraie.',
+    });
+  }
+  if (livraison.atterri !== true) {
+    refus.push({
+      famille: 'livraison_non_atterrie',
+      message:
+        `${t.id} : l'atterrissage de sa PR n'est pas vérifié (pas 7 du ` +
+        'protocole). Une PR fusionnée dont personne ne sait si elle est en ligne n’est pas livrée.',
+    });
+  }
+  if (!livraison.branch) {
+    refus.push({
+      famille: 'branche_absente',
+      message:
+        `${t.id} : la livraison ne porte pas la branche fusionnée. \`fusionnee\` l'exige (schéma), ` +
+        'et elle se lit sur la forge (`headRefName`), elle ne se tape pas.',
+    });
+  }
+  if (livraison.branch && !motifDeBranche().test(livraison.branch)) {
+    refus.push({
+      famille: 'branche_hors_motif',
+      message:
+        `${t.id} : la branche « ${livraison.branch} » est refusée par le motif de \`branch\` de ` +
+        `${CHEMIN_SCHEMA_DES_TACHES}. Écrite, elle rendrait le registre rouge, et la tâche, une fois ` +
+        '`fusionnee`, ne pourrait plus être re-close pour la corriger. Le motif se décide par ADR ' +
+        '(partners/ADR-0007), pas ici.',
+    });
+  }
+  const numero = livraison.pr ?? null;
+  const sha = livraison.sha ?? null;
+  const quand = livraison.fusionneeAt ?? null;
+  if (numero == null || sha == null || quand == null) {
+    refus.push({
+      famille: 'attestation_incomplete',
+      message: messageAttestationIncomplete(t, numero, sha, quand),
+    });
+  }
+  if (!t.owner && !owner) {
+    refus.push({
+      famille: 'proprietaire_absent',
+      message:
+        `${t.id} n'a pas de propriétaire, et aucun \`--owner <Axx>\` n'est fourni : ` +
+        '`fusionnee` l’exige, et le script ne l’invente pas.',
+    });
+  }
+  if (refus.length > 0) throw new ErreurDeCloture(refus);
+
+  t.branch = livraison.branch!;
+  if (!t.owner) t.owner = owner;
+  return { journal: [poserLaLivraison(t, { pr: numero!, sha: sha!, fusionneeAt: quand! })] };
+}
+
 /**
  * Applique le rendu aux tâches. MUTE `taches`, et ne mute RIEN si un refus est levé : le contrôle de
  * périmètre s'exécute d'abord, entièrement, avant la première écriture.
@@ -267,72 +510,13 @@ export function cloturerLeLot(options: {
             'Passe `--owner <Axx>` (celui de la revendication) et vérifie que le développeur a rendu sa branche.'
         );
       }
-
-      // ── l'attestation inter-dépôt (GOV-038) ──────────────────────────────────
-      // Une livraison hors de ce dépôt ne laisse ICI aucune trace : ni PR qui résout, ni commit dans
-      // cet historique. Le SHA du commit de fusion est la seule valeur qu'aucun autre dépôt ne
-      // réattribue ; sans lui, le backlog affirmerait une livraison introuvable. Le script REFUSE
-      // plutôt que d'écrire un `pr` nu — c'est la même doctrine que le refus ci-dessus sur `owner`.
-      // GOV-042 — LE REFUS VAUT AUSSI POUR CE DÉPÔT. Il ne s'armait qu'ailleurs, et une tâche
-      // locale passait `fusionnee` avec un `pr` nu : rien ne conservait le commit qui l'avait fait
-      // atterrir. La MÊME attestation est exigée ici — aucune seconde forme (RM-01) ; seul le `pr`
-      // diffère : écrit ici, il résout, et l'attestation porte le même numéro.
       const numero = r.fusion?.pr ?? r.dev?.pr ?? null;
       const sha = r.fusion?.sha ?? null;
       const quand = r.fusion?.fusionneeAt ?? null;
       if (numero == null || sha == null || quand == null) {
-        const ou =
-          depotDeCetteTache === DEPOT_LOCAL
-            ? 'vit dans CE dépôt'
-            : `vit dans ${depotDeLaTache(t as { repo: string }) ?? `repo « ${depotDeCetteTache} »`}`;
-        throw new Error(
-          `${id} ${ou} et passerait \`fusionnee\` sans attestation complète : ` +
-            `pr=${numero ?? 'absent'}, sha=${sha ?? 'absent'}, fusionneeAt=${quand ?? 'absent'}. ` +
-            'Le release manager rend les trois : `gh pr view <n> --json number,mergeCommit,mergedAt` ' +
-            'dans le dépôt concerné. Sans le SHA, plus personne ne retrouverait le commit d’atterrissage.'
-        );
+        throw new Error(messageAttestationIncomplete(t, numero, sha, quand));
       }
-      t.pr = depotDeCetteTache === DEPOT_LOCAL ? numero : null;
-      t.attestation = { pr: numero, sha, fusionneeAt: quand };
-
-      t.statut = 'fusionnee';
-      t.motif = null;
-
-      // Le script ne s'écrit jamais un état que `pnpm gov:tasks` refuserait : il le vérifie avant de
-      // le poser. Sans ce contrôle, la faute serait découverte en CI, sur un fichier déjà commité par
-      // le seul écrivain autorisé — et personne d'autre n'a le droit de le corriger.
-      const fautes = controlerAttestation(
-        {
-          id,
-          repo: depotDeCetteTache,
-          statut: t.statut,
-          pr: t.pr,
-          branch: t.branch,
-          attestation: t.attestation,
-        },
-        true,
-        // L'INSTANT est celui de la clôture. Le SHA vient du release manager : son existence, sa
-        // PR, sa fusion et son ascendance se résolvent EN LIGNE (`gov-attestation.ts --en-ligne`),
-        // jamais par l'arbre qui clôt, qui n'a pas forcément reçu ce commit.
-        { maintenant: Date.now() }
-      );
-      if (fautes.length > 0) {
-        throw new Error(
-          `${id} : l'attestation écrite serait refusée par \`pnpm gov:tasks\` —\n` +
-            fautes.map((f) => `  [${f.famille}] ${f.message}`).join('\n')
-        );
-      }
-
-      const ref = referencePr({
-        id,
-        repo: depotDeCetteTache,
-        statut: t.statut,
-        pr: t.pr,
-        attestation: t.attestation,
-      });
-      journal.push(
-        `${id} → fusionnee (${ref ?? 'aucune référence de PR'}, sha ${r.fusion?.sha ?? '?'})`
-      );
+      journal.push(poserLaLivraison(t, { pr: numero, sha, fusionneeAt: quand }));
       continue;
     }
 
@@ -421,9 +605,95 @@ function rattraperLePasse(aBlanc: boolean): void {
   if (horsPassif.length > 0) process.exitCode = 1;
 }
 
+/**
+ * LA LIVRAISON LUE SUR LA FORGE, pour `--tache`. Rien n'est tapé par l'opérateur hormis le numéro :
+ * le SHA, l'instant et la branche viennent de `gh pr view`, dans le dépôt DE LA TÂCHE (`DEPOTS`).
+ * L'atterrissage est l'ascendance du commit de fusion sur la branche de base, lue par l'API de
+ * comparaison. C'est PLUS FAIBLE que le repli daté du pas 7, qui exige aussi `gate-a` verte sur
+ * `main` : ce mode établit que le commit est dans l'historique de la base, pas qu'il y est vert.
+ */
+function livraisonSurLaForge(depot: string, pr: number): Livraison {
+  const brut = execFileSync(
+    'gh',
+    [
+      'pr',
+      'view',
+      String(pr),
+      '-R',
+      depot,
+      '--json',
+      'state,mergeCommit,mergedAt,headRefName,baseRefName,title,body',
+    ],
+    { encoding: 'utf8' }
+  );
+  const v = JSON.parse(brut) as {
+    state: string;
+    mergeCommit: { oid: string } | null;
+    mergedAt: string | null;
+    headRefName: string;
+    baseRefName: string;
+    title: string;
+    body: string;
+  };
+  const sha = v.state === 'MERGED' ? (v.mergeCommit?.oid ?? null) : null;
+  let atterri = false;
+  if (sha) {
+    const statut = execFileSync(
+      'gh',
+      ['api', `repos/${depot}/compare/${sha}...${v.baseRefName}`, '--jq', '.status'],
+      { encoding: 'utf8' }
+    ).trim();
+    atterri = statut === 'identical' || statut === 'ahead';
+  }
+  return {
+    pr,
+    sha,
+    fusionneeAt: v.mergedAt,
+    branch: v.headRefName,
+    atterri,
+    titre: v.title,
+    corps: v.body,
+  };
+}
+
+function cloreUneTacheSeule(
+  tacheId: string,
+  pr: number,
+  owner: string,
+  doitCommiter: boolean
+): void {
+  const doc = JSON.parse(readFileSync('docs/tasks.json', 'utf8')) as {
+    version: number;
+    taches: Tache[];
+  };
+  const t = doc.taches.find((x) => x.id === tacheId);
+  const depot = depotDeLaTache({ repo: t?.repo ?? DEPOT_LOCAL });
+  if (!depot) {
+    throw new Error(`${tacheId} : son dépôt n'a pas de coordonnée de forge — rien à lire.`);
+  }
+  const livraison = t ? livraisonSurLaForge(depot, pr) : { pr };
+  const { journal } = cloturerUneTacheSeule({ tacheId, livraison, taches: doc.taches, owner });
+
+  writeFileSync('docs/tasks.json', JSON.stringify(doc, null, 2) + '\n');
+  console.log(`Clôture de la tâche seule ${tacheId} :`);
+  for (const l of journal) console.log(`  ${l}`);
+  if (doitCommiter) {
+    execFileSync('git', ['add', 'docs/tasks.json'], { stdio: 'inherit' });
+    execFileSync('git', ['commit', '-m', `chore(lot): clôture de ${tacheId}, livrée seule`], {
+      stdio: 'inherit',
+    });
+  }
+}
+
 function principal(): void {
   if (process.argv.includes('--rattraper-attestations')) {
     rattraperLePasse(process.argv.includes('--a-blanc'));
+    return;
+  }
+  if (process.argv.includes('--tache')) {
+    const pr = Number(arg('pr'));
+    if (!Number.isInteger(pr) || pr < 1) throw new Error('--pr attend un numéro de PR entier.');
+    cloreUneTacheSeule(arg('tache'), pr, arg('owner', ''), process.argv.includes('--commit'));
     return;
   }
   const lotId = arg('lot');
