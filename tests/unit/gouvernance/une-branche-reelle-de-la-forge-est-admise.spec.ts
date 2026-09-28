@@ -6,7 +6,7 @@
  * `t/`. La PR #114 a été fusionnée depuis `t/lot-L0-02` : `reclasser.mjs`, qui lit ce motif dans le
  * schéma, rendait `branche_de_la_forge_refusee`, et les six tâches livrées par cette PR restaient
  * `a_faire` avec leur code sur `main`. La seule autre issue — écrire une branche fictive en
- * minuscules — est celle que l'ADR-0007 écarte : le champ deviendrait décoratif.
+ * minuscules — est celle que partners/ADR-0007 écarte : le champ deviendrait décoratif.
  *
  * CE QUE CE FICHIER TIENT. (a) La branche réelle de #114 passe le schéma. Elle est LUE dans le
  * corps de l'amendement de l'ADR, pas tapée ici. (b) Le motif reste FERMÉ : une branche sans
