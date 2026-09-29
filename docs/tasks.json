@@ -13723,7 +13723,9 @@
         "tests/unit/qualite/un-seul-producteur-de-deploiement.spec.ts",
         "Dockerfile",
         "package.json",
-        "scripts/gates/gov-conventions.ts"
+        "scripts/gates/gov-conventions.ts",
+        "tests/unit/qualite/pipeline-image.spec.ts",
+        "tests/unit/qualite/build-sans-base.spec.ts"
       ],
       "schema": false,
       "sensible": [],
