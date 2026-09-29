@@ -3713,9 +3713,9 @@
       "repo": "axionia",
       "zone": "juridique",
       "paths": [
-        "axionia/src/content/commercial-offer.ts",
         "axionia/scripts/gates/vocab-public.ts",
-        "axionia/src/content/__tests__/vocabulaire-apporteur.spec.ts"
+        "axionia/src/content/__tests__/vocabulaire-apporteur.spec.ts",
+        "axionia/src/content/recrutement/commercial-offer.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -3736,7 +3736,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "`COMMERCIAL_OPPORTUNITY` corrigé (l. 103 et 274 de `commercial-offer.ts`, « n'a parfois même pas à avancer les fonds ») sans lire le drapeau `QUALIOPI_CERTIFICATION_OBTENUE` ; formulation SSOT = phrase validée par Will le 2026-08-19 ; gate lexicale INCONDITIONNELLE sur « prise en charge à 100 % », « financé par Qualiopi », « sans avance de frais », « Qualiopi » nu et toute périphrase ; liste d'exclusion `src/content/keywords/**` (« commercial » toléré seulement là et dans une phrase de désambiguïsation) et badge « N°1 en France » (assumé par Will, hors périmètre).",
+      "acceptance": "`COMMERCIAL_OPPORTUNITY` corrigé (l. 103 et 274 de `commercial-offer.ts`, « n'a parfois même pas à avancer les fonds ») sans lire le drapeau `QUALIOPI_CERTIFICATION_OBTENUE` ; formulation SSOT = phrase validée par Will le 2026-08-19 ; gate lexicale INCONDITIONNELLE sur « prise en charge à 100 % », « financé par Qualiopi », « sans avance de frais », « Qualiopi » nu et toute périphrase ; liste d'exclusion `src/content/keywords/**` (« commercial » toléré seulement là et dans une phrase de désambiguïsation) et badge « N°1 en France » (assumé par Will, hors périmètre). AVENANT A01 du 2026-09-29 (decision de Will, reponse en session -66 le 2026-09-29, relevee par la lentille exactitude sur axion-ia #1220) : « commercial » n est PAS un mot interdit, il designe les apporteurs ; la gate lexicale ne le refuse donc nulle part, et la liste d exclusion ne le concerne plus. Le fichier corrige est src/content/recrutement/commercial-offer.ts, et non src/content/commercial-offer.ts, qui n existe pas dans axion-ia : les paths sont corriges en consequence.",
       "tests": {
         "REQ-JUR-001": [
           "axionia/src/content/__tests__/vocabulaire-apporteur.spec.ts"
