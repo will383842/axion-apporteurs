@@ -11,7 +11,8 @@
 > **Réponses de Williams du 2026-09-29 (session -d7), appliquées dans tout le plan** : question 1
 > (rien à faire sur l'annonce axion-ia), question 2 (art. 3.5 retenu, art. 3.3 c) rejeté), question 13
 > (pas d'avocat, aucune exception), question 20 (option A : GOV-117) et question 21 (GOV-116). Leur
-> texte daté est au §9.
+> texte daté est au §9, avec le sort des décisions du ticket #220 et la question 22, ouverte (lieu de
+> travail des conseillers).
 >
 > **Pourquoi il existe.** `docs/DECISIONS.md`, `docs/GLOSSAIRE.md` et `docs/PRESEANCE.md` ne s'écrivent
 > que dans un lot dédié du `gardien-spec` lancé avec `--settings` surchargé (`docs/CONVENTIONS.md` §8,
@@ -842,7 +843,8 @@ Aucune n'est faite ici : chacune devient le travail d'une tâche.
 Chaque question commence par l'hypothèse qui s'applique sans réponse. Là où aucune HYP n'existe, la
 question le dit et donne l'option conservatrice (`docs/DECISIONS.md` §5). Une réponse datée remplit la
 colonne « Tranchée » de l'hypothèse visée. **Les questions 1, 2, 13, 20 et 21 ont reçu la réponse datée
-de Williams le 2026-09-29 (session -d7)** ; les autres restent ouvertes.
+de Williams le 2026-09-29 (session -d7)** ; les autres restent ouvertes, dont la question 22 ajoutée le
+même jour.
 
 1. **RÉPONSE DE WILLIAMS, 2026-09-29 (session -d7) : RIEN À FAIRE.** L'annonce axion-ia « Responsable du
    réseau commercial » reste indépendante de Partners. Elle sort des actions, des bloqueurs et des
@@ -852,7 +854,8 @@ de Williams le 2026-09-29 (session -d7)** ; les autres restent ouvertes.
 2. **RÉPONSE DE WILLIAMS, 2026-09-29 (session -d7) : ART. 3.5 RETENU, ART. 3.3 c) REJETÉ.** Ses mots :
    « l'apporteur voit que l'entreprise est déjà faite par quelqu'un d'autre, pour éviter deux commissions
    à verser (les commerciaux d'Axion-IA sont aussi commissionnés sur les ventes), comme si c'était un
-   autre apporteur ». HYP-W19-CONCOURS est tranchée. Conséquences écrites dans tout le plan : côté
+   autre apporteur ». HYP-W19-CONCOURS est tranchée. Williams a confirmé que cette réponse fait foi : elle
+   remplace le point 8 du ticket #220 (« antériorité de la Société »). Conséquences écrites dans tout le plan : côté
    apporteur, une prise en charge par un conseiller est indiscernable d'une occupation par un autre
    apporteur (même issue de dépôt, même texte, mêmes états visibles, mêmes délais, même réponse de
    l'API 1 et de « Vérifier une entreprise ») ; aucune valeur `anteriorite_suivi` dans `IssueDepot` ni
@@ -950,6 +953,21 @@ de Williams le 2026-09-29 (session -d7)** ; les autres restent ouvertes.
     GOV-116 (phase 0, §5), versée sur la branche W19, écrit, documente et teste le lot dédié du
     `gardien-spec` avec `--settings` surchargé. GOV-112 en dépend ; l'écriture humaine par Williams n'est
     plus la voie prévue.
+22. **OUVERTE. Lieu de travail des conseillers : console Partners (plan actuel) ou CRM Pro (ticket
+    will383842/axion-apporteurs#220) ?** (Ajoutée le 2026-09-29.) Le plan suppose la console Partners.
+    L'autre option ferait travailler les conseillers dans le CRM Pro d'axion-ia, avec écriture dans le
+    registre d'antériorité de Partners. Une analyse est en cours ; le plan n'est pas réécrit sur ce point
+    tant que Williams n'a pas répondu. Par défaut : console Partners.
+
+**Ticket #220 (décisions de Williams du 2026-09-29, ouvert depuis la session CRM Pro).** Williams a
+confirmé que la question 2 fait foi : le point 8 du ticket (« antériorité de la Société ») est
+**remplacé** par la réponse à la question 2 (indiscernable d'un autre apporteur, art. 3.5). Deux autres
+décisions du ticket sont à intégrer par un **chantier séparé**, sans modifier le reste de ce plan :
+
+- une durée de suivi de **6 mois au lieu de 12** ; W19 reste compatible, parce qu'il emploie la
+  variable `{{FENETRE_MOIS}}` du gabarit et jamais la valeur en dur (les « 12 mois » de ce plan se
+  lisent comme la valeur de cette variable à la date de rédaction) ;
+- un **SIRET obligatoire au dépôt**.
 
 ## 10. Chiffrage et effet sur les dates
 
