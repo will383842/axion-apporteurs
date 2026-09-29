@@ -251,3 +251,26 @@ export const SEUILS = {
 } as const satisfies Record<string, Seuil>;
 
 export type NomDeSeuil = keyof typeof SEUILS;
+
+/**
+ * Les PARAMÈTRES du calcul qui ne sont ni un délai ni un montant — sourcés et datés comme les seuils
+ * (RM-10), mais hors de `SEUILS` : la garde des seuils ne connaît que les durées et les montants, et
+ * un ratio n'est ni l'un ni l'autre. L'étendre aux ratios est une suite, pas un détour.
+ */
+export type Parametre = {
+  readonly valeur: number;
+  readonly unite: 'points_de_base';
+  readonly source: string;
+  readonly verifieLe: string;
+};
+
+export const PARAMETRES = {
+  // Le plafond d'une commission, en points de base du HT de la ligne : 10 000 = 100 %. Au-delà, la
+  // ligne est bloquée `commission_sup_ht`, et seule une décision journalisée la relève.
+  PLAFOND_COMMISSION_BPS: {
+    valeur: 10_000,
+    unite: 'points_de_base',
+    source: 'REQ-ARG-007 (paramètre, défaut 100 %) ; avenant A01 du 2026-09-29 sur DM-04',
+    verifieLe: '2026-09-29',
+  },
+} as const satisfies Record<string, Parametre>;

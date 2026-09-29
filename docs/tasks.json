@@ -2583,7 +2583,8 @@
         "src/domain/commission/calcul.ts",
         "tests/unit/domaine/conservation.spec.ts",
         "tests/unit/domaine/commission-calcul.spec.ts",
-        "docs/gates.json"
+        "docs/gates.json",
+        "src/domain/seuils/ssot.ts"
       ],
       "schema": false,
       "sensible": [
@@ -2613,7 +2614,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "TACHE SENSIBLE — argent et attribution. UN REFUS DE LA LENTILLE SECURITE Y VAUT VETO. (1) Le calcul de commission est une FONCTION PURE de `src/domain/**` : aucune entree-sortie, aucune horloge, aucune lecture de la base. Sa signature prend une version de grille, une activite de facturation, un nombre de journees eventuellement nul et un montant HT en centimes, et rend soit un montant en centimes, soit un BLOCAGE motive (REQ-DM-015). (2) LES CINQ VALEURS D'ACTIVITE SONT COUVERTES, et un cas sans bareme produit le blocage « bareme introuvable » — jamais zero. Zero est un montant ; l'absence de bareme n'en est pas un. (3) LE FORFAIT SE COMPTE UNE FOIS PAR COMMANDE PORTANT LE PALIER, JAMAIS MULTIPLIE PAR LES JOURNEES (REQ-ARG-006, corrige le 2026-09-03 : la formule anterieure doublait la commission). Un test nomme cette correction et la tient. (4) LE PRORATA EST ENTIER ET S'ECRIT UNE SEULE FOIS DANS LE DEPOT : part acquise au ieme encaissement = partie entiere de (commission totale en centimes x cumul encaisse TTC en centimes / montant TTC net de la facture en centimes) moins la somme des parts deja acquises ; numerateur et denominateur sont de MEME NATURE (REQ-DM-017, REQ-ARG-004). (5) INVARIANTS PROUVES, PAS POSTULES : a facture soldee la somme des parts vaut exactement la commission totale ; aucune part n'est negative ; aucune part ne depasse la commission totale ; toute permutation de l'ordre des encaissements d'un meme dossier rend le meme etat final. (6) PLAFOND : une commission superieure au pourcentage plafond du montant HT de la ligne bloque la ligne avec le motif d'enum prevu, et ce blocage ne se leve que par une decision journalisee (REQ-ARG-007, REQ-ARG-017). (7) TEMOIN A DEUX FACES : un jeu de bac d'essai ou l'arrondi est fait en flottant, puis un ou le denominateur est un montant HT quand le numerateur est TTC, font sortir les tests d'invariant en code non nul et NOMMENT l'invariant rompu et l'ecart en centimes ; l'implementation du depot les fait sortir en zero sur le meme jeu.",
+      "acceptance": "TACHE SENSIBLE — argent et attribution. UN REFUS DE LA LENTILLE SECURITE Y VAUT VETO. (1) Le calcul de commission est une FONCTION PURE de `src/domain/**` : aucune entree-sortie, aucune horloge, aucune lecture de la base. Sa signature prend une version de grille, une activite de facturation, un nombre de journees eventuellement nul et un montant HT en centimes, et rend soit un montant en centimes, soit un BLOCAGE motive (REQ-DM-015). (2) LES CINQ VALEURS D'ACTIVITE SONT COUVERTES, et un cas sans bareme produit le blocage « bareme introuvable » — jamais zero. Zero est un montant ; l'absence de bareme n'en est pas un. (3) LE FORFAIT SE COMPTE UNE FOIS PAR COMMANDE PORTANT LE PALIER, JAMAIS MULTIPLIE PAR LES JOURNEES (REQ-ARG-006, corrige le 2026-09-03 : la formule anterieure doublait la commission). Un test nomme cette correction et la tient. (4) LE PRORATA EST ENTIER ET S'ECRIT UNE SEULE FOIS DANS LE DEPOT : part acquise au ieme encaissement = partie entiere de (commission totale en centimes x cumul encaisse TTC en centimes / montant TTC net de la facture en centimes) moins la somme des parts deja acquises ; numerateur et denominateur sont de MEME NATURE (REQ-DM-017, REQ-ARG-004). (5) INVARIANTS PROUVES, PAS POSTULES : a facture soldee la somme des parts vaut exactement la commission totale ; aucune part n'est negative ; aucune part ne depasse la commission totale ; toute permutation de l'ordre des encaissements d'un meme dossier rend le meme etat final. (6) PLAFOND : une commission superieure au pourcentage plafond du montant HT de la ligne bloque la ligne avec le motif d'enum prevu, et ce blocage ne se leve que par une decision journalisee (REQ-ARG-007, REQ-ARG-017). (7) TEMOIN A DEUX FACES : un jeu de bac d'essai ou l'arrondi est fait en flottant, puis un ou le denominateur est un montant HT quand le numerateur est TTC, font sortir les tests d'invariant en code non nul et NOMMENT l'invariant rompu et l'ecart en centimes ; l'implementation du depot les fait sortir en zero sur le meme jeu. AVENANT A01 du 2026-09-29 (arbitrage sur le stop motive de l auteur, RM-01) : la signature porte sur l identifiant de commission (commissionId) que le producteur a resolu et sur la version de grille importee par DM-03-P ; l activite et le nombre de journees restent des entrees, mais ne choisissent JAMAIS le bareme (le choix vit une seule fois, dans axionia, idPourActivite). Le point (2) se lit ainsi : pour chacune des cinq valeurs d activite, le resultat ne depend que de commissionId, et un commissionId nul ou absent de la grille bloque (a_qualifier). Le plafond de REQ-ARG-007 (defaut 100 %) entre dans la SSOT des seuils avec sa source et sa date, dans la meme PR. Les cinq valeurs d ActiviteFacturation ne sont pas ecrites au glossaire par cette tache : le gardien-spec les verse.",
       "tests": {
         "REQ-ARG-004": [
           "tests/unit/domaine/conservation.spec.ts"
@@ -13328,8 +13329,8 @@
           "tests/unit/gouvernance/aucun-script-de-garde-orphelin.spec.ts"
         ]
       },
-      "issue": null,
-      "owner": null,
+      "issue": 229,
+      "owner": "A01",
       "branch": null,
       "pr": null,
       "attestation": null,
@@ -13430,8 +13431,8 @@
           "tests/unit/gouvernance/une-tache-en-cours-appartient-a-un-lot.spec.ts"
         ]
       },
-      "issue": null,
-      "owner": null,
+      "issue": 227,
+      "owner": "A01",
       "branch": null,
       "pr": null,
       "attestation": null,

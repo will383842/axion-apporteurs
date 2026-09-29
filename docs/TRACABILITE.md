@@ -16,7 +16,7 @@
 
 **334 exigences actives · 122 réputées testées · 122 couvertes · 0 orphelines.**
 
-308 tâches, dont 134 livrées · 162 fichiers de test exécutés par `vitest` sur 162 présents.
+308 tâches, dont 134 livrées · 164 fichiers de test exécutés par `vitest` sur 164 présents.
 
 ## Exigences réputées testées
 
@@ -481,6 +481,8 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | `tests/unit/domaine/apporteur-population-is-test.spec.ts` | oui | `REQ-CPL-020` |
 | `tests/unit/domaine/apporteur-score-fige.spec.ts` | oui | `REQ-DM-035`, `REQ-QA-035` |
 | `tests/unit/domaine/apporteur-snapshot-candidature.spec.ts` | oui | `REQ-DM-035` |
+| `tests/unit/domaine/commission-calcul.spec.ts` | oui | `REQ-ARG-006`, `REQ-ARG-007`, `REQ-ARG-017`, `REQ-DM-015`, `REQ-DM-040` |
+| `tests/unit/domaine/conservation.spec.ts` | oui | `REQ-ARG-004`, `REQ-DM-017` |
 | `tests/unit/domaine/etats-occupants.spec.ts` | oui | `REQ-DM-003`, `REQ-DM-006` |
 | `tests/unit/domaine/gardes-de-schema.spec.ts` | oui | `REQ-DM-001`, `REQ-DM-003`, `REQ-DM-037`, `REQ-DM-038`, `REQ-JUR-027` |
 | `tests/unit/domaine/grille-import.spec.ts` | oui | `REQ-ARG-031`, `REQ-DM-014`, `REQ-INT-017` |
