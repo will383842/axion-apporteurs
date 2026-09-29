@@ -13,7 +13,7 @@
  *      implémentation, une portée qui est une RACINE et jamais une extension, une lecture confrontée
  *      à git, et la conclusion « hors famille » de la garde dérivée du même prédicat ;
  *   3. ce que les deux gardes ont RÉELLEMENT LU — chemin, et contenu PAR EMPREINTE — confronté à une
- *      lecture indépendante (`git ls-files`, octets relus sur le disque dans le test), sur une population
+ *      lecture indépendante (`git ls-files`, blobs de l'index relus dans le test), sur une population
  *      générée, sur le dépôt réel et sur des dépôts jetables, jusqu'à la DERNIÈRE ligne d'un fichier de
  *      plus d'un mébioctet ; les comptes imprimés en viennent ;
  *   4. la LIGNE : LF la termine, et toute autre fin de ligne qu'un consommateur coupe est refusée ;
@@ -99,14 +99,9 @@ function avecFichier(chemin: string, contenu: string): Vue {
 
 const temoin = (id: string): Temoin => TEMOINS.find((t) => t.id === id)!;
 
-/**
- * LA LECTURE INDÉPENDANTE : les fichiers que git suit, et les OCTETS que le disque en rend, relus dans
- * le test, jamais par la garde. Le disque et non le blob : la garde lit le disque, et un fichier modifié
- * non commité les fait diverger légitimement. Les entrées de sous-module (mode 160000) ne sont pas des
- * fichiers. Le contenu se confronte par EMPREINTE : une taille égale ne dit rien d'octets remplacés.
- */
-function suivisEtOctets(cwd: string): Map<string, Buffer> {
-  const chemins = execFileSync('git', ['-c', 'core.quotepath=false', 'ls-files', '-s', '-z'], {
+/** Les entrées de l'index hors sous-modules (mode 160000, qui ne sont pas des fichiers) : chemin et objet. */
+function entreesDeLIndex(cwd: string): { chemin: string; objet: string }[] {
+  return execFileSync('git', ['-c', 'core.quotepath=false', 'ls-files', '-s', '-z'], {
     cwd,
     encoding: 'utf8',
   })
@@ -114,15 +109,50 @@ function suivisEtOctets(cwd: string): Map<string, Buffer> {
     .filter(Boolean)
     .map((e) => e.split('\t') as [string, string])
     .filter(([meta]) => !meta.startsWith('160000 '))
-    .map(([, chemin]) => chemin);
-  return new Map(chemins.map((chemin) => [chemin, readFileSync(join(cwd, chemin))]));
+    .map(([meta, chemin]) => ({ chemin, objet: meta.split(' ')[1]! }));
+}
+
+/**
+ * LA LECTURE INDÉPENDANTE, côté DISQUE : les fichiers que git suit, et les OCTETS que le disque en
+ * rend, relus dans le test. C'est ce que lit `partners:schema:enums`. Le contenu se confronte par
+ * EMPREINTE : une taille égale ne dit rien d'octets remplacés.
+ */
+function suivisEtOctets(cwd: string): Map<string, Buffer> {
+  return new Map(
+    entreesDeLIndex(cwd).map(({ chemin }) => [chemin, readFileSync(join(cwd, chemin))])
+  );
+}
+
+/**
+ * LA LECTURE INDÉPENDANTE, côté INDEX : les octets de l'objet que l'index associe à chaque chemin,
+ * redemandés ici à `git cat-file --batch`, jamais par la garde. C'est ce que lit `gov:termes-interdits` :
+ * un fichier déclaré inchangé dans l'index a un disque propre et un blob fautif, et la CI juge le blob.
+ */
+function suivisEtBlobs(cwd: string): Map<string, Buffer> {
+  const entrees = entreesDeLIndex(cwd);
+  const sortie = execFileSync('git', ['cat-file', '--batch'], {
+    cwd,
+    input: entrees.map((e) => `${e.objet}\n`).join(''),
+    maxBuffer: 2 ** 30,
+  });
+  const blobs = new Map<string, Buffer>();
+  let i = 0;
+  for (const { chemin, objet } of entrees) {
+    const fin = sortie.indexOf(0x0a, i);
+    const [oid, , taille] = sortie.subarray(i, fin).toString('utf8').split(' ');
+    expect(oid, chemin).toBe(objet);
+    blobs.set(chemin, sortie.subarray(fin + 1, fin + 1 + Number(taille)));
+    i = fin + 1 + Number(taille) + 1;
+  }
+  expect(i).toBe(sortie.length);
+  return blobs;
 }
 
 /** L'empreinte d'un contenu : l'oracle de « lu en entier », là où une taille égale laisserait passer des octets remplacés. */
 const sha256 = (contenu: Uint8Array | string): string =>
   createHash('sha256').update(contenu).digest('hex');
 
-/** Les comptes qu'une garde qui lit tout sous ses racines DOIT imprimer, calculés depuis git et le disque. */
+/** Les comptes qu'une garde qui lit tout sous ses racines DOIT imprimer, calculés depuis git et les blobs de l'index. */
 function perimetreAttendu(fichiers: Map<string, Uint8Array>, racines: readonly string[]) {
   const parRacine = racines.map((racine) => ({ racine, n: 0, octets: 0 }));
   let hors = 0;
@@ -213,23 +243,24 @@ function gros(derniere: string): string {
 }
 
 /**
- * F6' — lancé depuis la racine d'un dépôt : la vue de la garde, le texte qu'elle a PARCOURU
- * et la lecture de `partners:schema:enums` sont confrontés, fichier par fichier et PAR EMPREINTE, aux
- * octets que le disque rend à ce test.
+ * F6' — lancé depuis la racine d'un dépôt : la vue de la garde et le texte qu'elle a PARCOURU sont
+ * confrontés, fichier par fichier et PAR EMPREINTE, aux blobs de l'index relus par ce test ; la
+ * lecture de `partners:schema:enums`, aux octets que le disque rend à ce test.
  */
 function confronterAuDisque(): void {
+  const index = suivisEtBlobs('.');
   const disque = suivisEtOctets('.');
-  const empreinte = (chemin: string): string => sha256(disque.get(chemin)!);
+  const empreinte = (chemin: string): string => sha256(index.get(chemin)!);
   const racines = racinesDeLaGarde(readFileSync('docs/GLOSSAIRE.md', 'utf8'));
 
   const vue = vueDuDepot();
-  expect(vue.fichiers.map((f) => f.chemin).sort()).toEqual([...disque.keys()].sort());
+  expect(vue.fichiers.map((f) => f.chemin).sort()).toEqual([...index.keys()].sort());
   for (const f of vue.fichiers)
     expect('octets' in f ? sha256(f.octets) : f.erreur, f.chemin).toBe(empreinte(f.chemin));
 
   const { examines } = examiner(vue);
   expect(examines.map((x) => x.chemin).sort()).toEqual(
-    [...disque.keys()].filter((c) => racines.some((r) => c.startsWith(r))).sort()
+    [...index.keys()].filter((c) => racines.some((r) => c.startsWith(r))).sort()
   );
   for (const x of examines) expect(x.empreinte, x.chemin).toBe(empreinte(x.chemin));
 
@@ -237,7 +268,7 @@ function confronterAuDisque(): void {
   expect(lus.map((f) => f.chemin).sort()).toEqual(
     [...disque.keys()].filter(dansLesRacinesCode).sort()
   );
-  for (const f of lus) expect(sha256(f.contenu), f.chemin).toBe(empreinte(f.chemin));
+  for (const f of lus) expect(sha256(f.contenu), f.chemin).toBe(sha256(disque.get(f.chemin)!));
 }
 
 function depotJetable(prefixe: string, fichiers: Record<string, string | Uint8Array>): string {
@@ -353,10 +384,6 @@ describe('REQ-DM-003 — la famille des listes d’états a UNE SEULE implément
         }
       }
     }
-  });
-
-  it('REQ-DM-003 : la lecture de partners:schema:enums est l’ensemble des suivis de sa portée, chaque contenu à l’empreinte du disque', () => {
-    confronterAuDisque();
   });
 
   it('REQ-DM-003 : partners:schema:enums juge la DERNIÈRE ligne d’un fichier de plus d’un mébioctet', () => {
@@ -547,7 +574,8 @@ describe('GOV-030 — les sources, et les fixtures ÉGALES aux sources réelles'
 });
 
 describe('GOV-030 — ce que la garde a EXAMINÉ, confronté à une lecture indépendante', () => {
-  it('REQ-INT-004 : la vue du dépôt porte TOUS les fichiers suivis, et elle comme le texte parcouru ont l’empreinte du disque', () => {
+  // UNE épreuve, pour les deux gardes : elle portait deux titres et tournait deux fois sur le même dépôt.
+  it('REQ-INT-004, REQ-DM-003 : la vue du dépôt porte TOUS les fichiers suivis, elle et le texte parcouru à l’empreinte du blob ; la lecture de partners:schema:enums, à celle du disque', () => {
     confronterAuDisque();
   });
 
@@ -902,7 +930,7 @@ describe('GOV-030 — la preuve : population du SEUL registre, décision PURE', 
 });
 
 describe('GOV-030 — la garde : décision PURE, et sortie vue sur de vrais dépôts', () => {
-  it('REQ-INT-004 : une vue fautive rend 1 ; le dépôt rend 0 et la ligne de commande imprime les comptes de git et du disque', () => {
+  it('REQ-INT-004 : une vue fautive rend 1 ; le dépôt rend 0 et la ligne de commande imprime les comptes de git et des blobs', () => {
     expect(decisionDeLaGarde(temoin('modele_dans_le_code').vue()).code).toBe(1);
     const reel = decisionDeLaGarde(vueDuDepot());
     expect(reel.code, reel.lignes.join('\n')).toBe(0);
@@ -910,7 +938,7 @@ describe('GOV-030 — la garde : décision PURE, et sortie vue sur de vrais dép
     expect(code).toBe(0);
     expect(sortie).toContain(reel.lignes[0]);
     const attendu = perimetreAttendu(
-      suivisEtOctets('.'),
+      suivisEtBlobs('.'),
       racinesDeLaGarde(readFileSync('docs/GLOSSAIRE.md', 'utf8'))
     );
     expect(sortie).toContain(attendu.perimetre);
@@ -933,7 +961,7 @@ describe('GOV-030 — la garde : décision PURE, et sortie vue sur de vrais dép
       const propre = lancerDans(depot, resolve(SCRIPT));
       expect(propre.code, propre.sortie).toBe(0);
       const attendu = perimetreAttendu(
-        suivisEtOctets(depot),
+        suivisEtBlobs(depot),
         racinesDeLaGarde(readFileSync('docs/GLOSSAIRE.md', 'utf8'))
       );
       expect(propre.sortie).toContain(attendu.perimetre);

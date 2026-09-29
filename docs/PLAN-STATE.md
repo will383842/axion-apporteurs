@@ -9,29 +9,29 @@
 | --- | --- |
 | Où est `main` ? | `c60e2f3` — 2026-09-29T07:25:51+02:00 |
 | Qu’est-ce qui est en vol ? | aucune PR ouverte |
-| Qui tient quoi ? | GOV-058 (A01) · GOV-081 (A01) · GOV-106 (A01) · GOV-107 (A01) · GOV-108 (A01) |
-| Où en est la phase ? | phase 0 — 84/122 tâches, reste 32.60 j |
+| Qui tient quoi ? | GOV-049 (A01) · GOV-075 (A01) · GOV-110 (A01) |
+| Où en est la phase ? | phase 0 — 91/125 tâches, reste 29.25 j |
 | Le prochain pas | QA-T05 — Pipeline GHCR privé → Coolify pull |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
-| Dernière entrée de journal | PR #206 — 2026-09-29 |
+| Dernière entrée de journal | PR #211 — 2026-09-29 |
 
 **Ce qu’on tape maintenant.** `pnpm lot:composer` pour composer le lot suivant, puis revendiquer ses tâches par `gh issue edit`. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : 0
 
-84/122 tâches terminées · reste 32.60 j estimés.
+91/125 tâches terminées · reste 29.25 j estimés.
 
 ## Tâches
 
 | Statut | Nombre | Détail |
 | --- | --- | --- |
 | `proposee` | 0 | — |
-| `a_faire` | 171 | QA-T05, QA-T11, QA-T06, QA-T12, QA-T13, DM-03-A, DM-03-P, DM-04, INT-T02, INT-T03, INT-T04, INT-T05 … (12 affichées sur 171 — liste complète : `docs/TASKS.md`) |
+| `a_faire` | 167 | QA-T05, QA-T11, QA-T06, QA-T12, QA-T13, DM-03-A, DM-03-P, DM-04, INT-T02, INT-T03, INT-T04, INT-T05 … (12 affichées sur 167 — liste complète : `docs/TASKS.md`) |
 | `en_cours` | 0 | — |
 | `bloquee` | 0 | — |
 | `attente_externe` | 2 | JUR-T01b · JUR-T01c |
 | `en_revue` | 0 | — |
-| `fusionnee` | 123 | GOV-000, GOV-007, GOV-001, GOV-018, GOV-008, GOV-002, GOV-003, GOV-004, GOV-005, GOV-006, GOV-009, GOV-010 … (12 affichées sur 123 — liste complète : `docs/TASKS.md`) |
+| `fusionnee` | 130 | GOV-000, GOV-007, GOV-001, GOV-018, GOV-008, GOV-002, GOV-003, GOV-004, GOV-005, GOV-006, GOV-009, GOV-010 … (12 affichées sur 130 — liste complète : `docs/TASKS.md`) |
 | `deployee` | 0 | — |
 | `verifiee` | 0 | — |
 
@@ -68,11 +68,9 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 
 | Tâche | Revendiquée par | Issue | Statut |
 | --- | --- | --- | --- |
-| GOV-058 — Les decisions de gouvernance prises le 2026-09-15 ne sont ecrites nulle part dans le depot | A01 | #201 | `a_faire` |
-| GOV-081 — Une affirmation du code sur le registre est devenue fausse le jour ou le registre a change | A01 | #202 | `a_faire` |
-| GOV-106 — La garde lexicale juge le texte rendu par expressions regulieres : la JSX et le Markdown rendent a l'ecran des mots qu'elle ne voit pas | A01 | #203 | `a_faire` |
-| GOV-107 — Le titre qui declare une livraison se lit dans la premiere ligne du message d'ecrasement, et seul --subject le tient | A01 | #204 | `a_faire` |
-| GOV-108 — RM-15 se dit la seule redaction de l'obligation de journal, et deux documents la redigent encore sans la citer | A01 | #205 | `a_faire` |
+| GOV-049 — Une tache en cours sans lot est invisible de TOUTES les gardes, et c'est ce lot qui l'a rencontre | A01 | #196 | `a_faire` |
+| GOV-075 — Des taches livrees gardent un chemin gabarit, et une tache livree omet un fichier qu'elle a modifie | A01 | #208 | `a_faire` |
+| GOV-110 — La cloture compare le sujet du commit de fusion au titre ACTUEL de la PR : un renommage apres la fusion le rendrait conforme | A01 | #210 | `a_faire` |
 
 ⚠️ **13 revendication(s) périmée(s)** — QA-T07, GOV-042, GOV-045, GOV-050, GOV-051, GOV-053, GOV-054, GOV-055, GOV-060, GOV-072, GOV-079, GOV-093, INT-T01c : leur issue porte encore un label `owner:` alors que la tâche est livrée. `pnpm lot:cloture` écrit `docs/tasks.json` mais n’efface pas les labels ; la dette appartient à GOV-012.
 
@@ -84,7 +82,7 @@ Dérivé de `git log` sur `docs/adr/`, restreint au jour du dernier atterrissage
 
 ## Prochain pas
 
-**QA-T05** — Pipeline GHCR privé → Coolify pull (1 j) : 20 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
+**QA-T05** — Pipeline GHCR privé → Coolify pull (1 j) : 17 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
 Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeStateStatus` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage —, la tâche ensuite. L’ordre de la file se corrige à la rubrique « File de fusion », jamais ici.
 
@@ -98,65 +96,56 @@ Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
 
-### PR #206 — 2026-09-29 — chore(GOV-106): lot L0-13 — la garde lexicale juge le rendu, la regle d'arret est ecrite, la cloture confronte le titre
+### PR #211 — 2026-09-29 — fix(GOV-110): la cloture confronte le sujet d'ecrasement au titre que la PR portait a l'instant de la fusion
 
-**Fait.** Cinq tâches, un commit chacune. GOV-106 : la garde lexicale juge le texte que la JSX et
-le Markdown affichent, par l'arbre syntaxique ; des constructions qui rendaient à l'écran un terme
-interdit sans être vues le sont maintenant. GOV-058 : `partners/ADR-0025` écrit la règle d'arrêt
-décidée le 2026-09-15, avec ses sources, et dit ce qui n'a pas été retrouvé. GOV-081 : une raison
-de dette qui nomme une tâche absente de sa gate rougit (`raison_perimee`). GOV-107 : la première
-ligne du message d'écrasement ne déclare que si elle est le titre de la PR suivi de son numéro.
-GOV-108 : le journal et la reprise renvoient à RM-15, et l'arbre du journal se lit avec `-z`.
+**Fait.** La clôture d'une tâche seule attendait, pour première ligne du commit d'écrasement, le
+titre ACTUEL de la PR, qui reste modifiable après la fusion. Elle lit maintenant les renommages dans
+la chronologie de la PR et retient le titre en vigueur à `mergedAt`. Un renommage postérieur est
+sans effet. Une chronologie illisible fait refuser la clôture, sans repli sur le titre actuel.
 
-**Reste.** La garde lexicale ne devine pas une valeur qui n'est pas constante, ni ce qu'un
-composant rend lui-même ; les homoglyphes restent à juger. `partners/ADR-0025` est proposé :
-l'articulation de la règle d'arrêt avec W14 (règle 2) est rendue à Will. Le titre d'une PR reste
-modifiable après sa fusion.
+**Reste.** La commande réelle a été jouée en lecture sur la PR #207, renommée avant sa fusion. Le
+cas d'une PR renommée après sa fusion n'est éprouvé que par la forge simulée.
 
-**Appris.** Les témoins d'une forme de contournement sont entrés dans le même commit que son
-correctif, jamais avant ; ils sont publics depuis la poussée de la branche, puisque le dépôt l'est.
-Les formes sont écrites dans le spec, public depuis cette poussée ; ni les messages de commit ni
-ce journal ne les énumèrent. La divulgation que porte le spec est jugée par la lentille `securite`.
+**Appris.** Une donnée lue « maintenant » pour juger un fait passé doit être relue à l'instant de
+ce fait : sinon, la preuve dépend de ce que la forge laisse encore modifier.
 
-### PR #199 — 2026-09-28 — chore(GOV-012): registre rattrape, huit taches livrees par trois PR passent fusionnee, quatre suites versees
+### PR #209 — 2026-09-29 — fix(GOV-075): aucun chemin gabarit la ou il ment, treize taches livrees reparees
 
-**Fait.** Septième rattrapage, et le premier où la déclaration est lue dans le message du commit
-d'écrasement (GOV-104) : les six tâches du lot L0-11 (#195), GOV-104 (#188) et QA-T07 (#82) passent
-`fusionnee` par `lot:cloture --tache`, chacune confrontée au titre ou à la ligne `Lot:` de ce
-message. GOV-074 et GOV-085 gardent leur propriétaire A05, QA-T07 aussi. Quatre suites relevées par
-les deux lentilles sont versées : GOV-105 (volet non livré de GOV-064), GOV-106 (la garde lexicale
-par l'arbre syntaxique, témoins tenus hors dépôt jusqu'à la fusion), GOV-107 (le titre du message
-confronté à celui de la PR) et GOV-108 (une seule rédaction de l'obligation de journal). Phase 0 :
-76/118 → 84/122, reste 35,85 j → 32,60 j.
+**Fait.** Un chemin gabarit dit « pas encore connu ». Sur une tâche livrée, c'est faux. La garde
+`gov:attributions` refuse désormais un gabarit sur une tâche livrée, sans statut, sans phase, ou de
+phase inférieure ou égale à la phase courante (famille `chemin_gabarit`). Les treize tâches livrées
+qui en portaient reçoivent leurs chemins réels, confrontés au disque et à l'historique git, par
+`ajouter-path` puis `retirer-path`. GOV-036 déclare les deux fichiers que son commit modifiait. La
+liste figée des gabarits tolérés est vide, donc elle est supprimée.
 
-**Reste.** GOV-064 est close pour son code : son volet (3), la mesure de ce que la forge accepte au
-dépôt, n'est pas livré, et c'est GOV-105 qui le porte. JUR-T04 n'est pas close : le registre de
-l'article 30 et l'AIPD sont écrits sur sa branche, mais une trentaine de réponses juridiques
-appartiennent à Will.
+**Reste.** Un gabarit de phase future est compté et imprimé, pas refusé. La garde rougira `main` au
+passage de phase tant que le lot préparatoire n'aura pas écrit les chemins de la phase suivante, et
+c'est voulu : un avenant A01 à l'acceptance le dit, le volet « aucun gabarit, quelle que soit la
+phase » n'étant pas tenu pour les phases futures. Les chemins repris de la vue dérivée n'avaient
+pas tous été confirmés par git : la lentille `exactitude` en a démontré trois faux (INT-T01b,
+GOV-002, GOV-017a), retirés dans cette PR au vu des commits de livraison.
 
-**Appris.** Un outil durci se vérifie sur une vraie fusion : la ligne `Lot:` de #195, recopiée par
-le pas 6 dans le message d'écrasement, a été lue telle quelle par la clôture.
+**Appris.** Un masque tolérant cache plus que ce qu'il nomme : le retirer a fait apparaître treize
+citations et deux gates non réciproques que personne n'avait déclarées.
 
-### PR #195 — 2026-09-28 — chore(GOV-052): lot L0-11 — six gardes de gouvernance qui laissaient passer ce qu'elles devaient voir
+### PR #207 — 2026-09-29 — chore(GOV-012): registre rattrape, sept taches closes, SEC-05 sensible, trois suites versees
 
-**Fait.** Six tâches, un commit chacune. GOV-052 : `gov:pr --pr` exige l'entrée de journal AVANT
-la fusion, et refuse une entrée pour une PR non fusionnée ; RM-15 la pose. GOV-040 : le registre
-qui peut absoudre un rouge de la porte A passe sous `deny`. GOV-074 : une seule clé d'occurrence
-pour les trois registres de `gov:attributions`. GOV-071 : les gardes lexicale et d'identifiants
-jugent le texte rendu, par une seule fonction. GOV-085 : un rendu n'officialise plus une
-attribution fausse ; la source et la vue sont deux questions. GOV-064 : deux entrées distinctes de
-l'index ne se confondent plus sous un même chemin.
+**Fait.** Le registre rattrape les PR #200 et #206 : sept tâches closes par `lot:cloture --tache`,
+avec l'attestation lue dans le commit de fusion sur la branche par défaut. `SEC-05.sensible` passe
+de vide à `rgpd` et `espace`, relevés par les deux lentilles : la tâche cloisonne les données de
+l'espace apporteur.
+Trois suites versées `a_faire` : GOV-109 (expressions constantes de la JSX que la garde lexicale ne
+voit pas encore), GOV-110 (titre attendu à l'instant de la fusion, pas au moment de la clôture),
+GOV-111 (options de lecture, filtres de relation et lignes entières dans le cloisonnement).
 
-**Reste.** GOV-052 ne s'évalue que sous `--pr` : l'événement `pull_request` de la CI ne la joue pas.
-GOV-040 ne ferme que Write et Edit, pas l'écriture par le shell. GOV-071 laisse passer une balise
-à attributs et la concaténation de chaînes, limites écrites dans le code. GOV-064 refuse désormais
-un nom de fichier légitime qui n'est pas de l'UTF-8.
+**Reste.** Les trois suites sont à revendiquer et à livrer. Le détail des formes de GOV-109 est tenu
+hors dépôt jusqu'à son correctif ; aucune acceptance ne les cite.
 
-**Appris.** Les six tâches ont été écrites en parallèle par des agents, coupés par une limite
-d'usage puis repris : chaque commit a été rejoué sur `main` par son seul diff propre, et les vues
-rendues une fois, à la fin. Un `git add -A` d'urgence avait embarqué des vues dans chaque branche.
+**Appris.** `poser-champ` n'écrit qu'un champ vide, et un tableau vide n'est pas vide pour lui :
+corriger une valeur déjà posée passe par `reecrire-champ`, qui exige un motif. Ce motif est
+consigné au journal des réécritures, tenu hors dépôt ; le registre ne le porte pas (`motif` nul).
 
-… 3 entrée(s) affichée(s) sur 83 ; les 80 plus ancienne(s) se lisent dans `docs/journal/`.
+… 3 entrée(s) affichée(s) sur 87 ; les 84 plus ancienne(s) se lisent dans `docs/journal/`.
 
 ## Dette déclarée
 

@@ -8,12 +8,12 @@
 >
 > Une tache = une PR, **≤ 1,5 jour**. Le plafond est porte par la garde `gov:tasks`.
 
-**296 taches · 225.35 j estimes.**
+**299 taches · 227.85 j estimes.**
 
 | Phase | Taches | Jours | Terminees |
 | --- | ---: | ---: | ---: |
 | -1 — Gouvernance (prealable bloquant) | 39 | 23.75 | 39 |
-| 0 — Socle technique | 122 | 94.85 | 84 |
+| 0 — Socle technique | 125 | 97.35 | 91 |
 | 1 — Operationnel | 62 | 48.00 | 0 |
 | 2 — Argent | 45 | 33.50 | 0 |
 | 3 — Pilotage et conformite | 28 | 25.25 | 0 |
@@ -732,9 +732,9 @@ Couvre : `REQ-SEC-003`, `REQ-SEC-004`
 
 **Tests.** `tests/unit/securite/revocation.spec.ts`
 
-### SEC-05 — Couche d'accès `forApporteur
+### SEC-05 — Couche d'accès `forApporteur ✅ **fusionnee**
 
-`1 j` · zone `securite` · depend de `QA-T07`, `SEC-04`
+`1 j` · zone `securite` · sensible : rgpd, espace · depend de `QA-T07`, `SEC-04`
 
 Couvre : `REQ-ARG-029`, `REQ-QA-010`, `REQ-QA-011`, `REQ-QA-012`, `REQ-SEC-008`, `REQ-SEC-009`, `REQ-SEC-022`, `REQ-UX-006`
 
@@ -1176,7 +1176,7 @@ Couvre : `REQ-GOV-014`, `REQ-GOV-026`, `REQ-GOV-021`
 
 **Tests.** `tests/unit/gouvernance/clore-une-tache-livree-seule.spec.ts`
 
-### GOV-058 — Les decisions de gouvernance prises le 2026-09-15 ne sont ecrites nulle part dans le depot
+### GOV-058 — Les decisions de gouvernance prises le 2026-09-15 ne sont ecrites nulle part dans le depot ✅ **fusionnee**
 
 `0.75 j` · zone `gouvernance` · aucune dependance
 
@@ -1286,7 +1286,7 @@ Couvre : `REQ-GOV-024`, `REQ-GOV-031`, `REQ-DM-003`
 
 **Tests.** `tests/unit/gouvernance/une-seule-politique-d-illisibilite.spec.ts`
 
-### GOV-069 — La garde des termes interdits decoupe SQL, Prisma et prose avec une grammaire maison incomplete
+### GOV-069 — La garde des termes interdits decoupe SQL, Prisma et prose avec une grammaire maison incomplete ✅ **fusionnee**
 
 `1.5 j` · zone `gouvernance` · sensible : attribution · aucune dependance
 
@@ -1352,7 +1352,7 @@ Couvre : `REQ-GOV-021`, `REQ-GOV-003`
 
 Couvre : `REQ-GOV-021`
 
-**Acceptation.** ETAT MESURE LE 2026-09-16 : 50 des 68 taches de phase 0 portent un chemin GABARIT — un chemin qui n'existe pas, construit sur l'identifiant de la tache — auxquelles s'ajoutent treize taches DEJA LIVREES dans le meme etat, et 54 attributions figees qui en dependent. GOV-007 et GOV-005 ne listent pas leurs propres gardes ; GOV-036 a modifie un fichier qu'elle n'a pas dans ses chemins. ⚠️ CE QUE CETTE TACHE NE PORTE PLUS : la reparation des 50 chemins de phase 0 est faite par le lot preparatoire, AVANT toute composition — sans elle le composeur prouve une disjonction qui n'existe pas. Ce qui reste ici est le PASSE et la GARDE : les treize taches livrees, le fichier omis par GOV-036, et la reduction des deux listes figees dans le MEME diff que la reparation, sans quoi une famille de dette perimee s'arme. A livrer : (1) plus aucun chemin gabarit dans le registre, quelle que soit la phase ; (2) une garde qui REFUSE un chemin construit sur l'identifiant de sa propre tache ; (3) les listes figees reduites a ce qui reste. TEMOIN A DEUX FACES : une tache dont le chemin vaut son propre identifiant fait sortir la garde en code non nul et la NOMME ; le registre repare la fait sortir en zero, avec le compte des taches et des chemins reellement confrontes.
+**Acceptation.** ETAT MESURE LE 2026-09-16 : 50 des 68 taches de phase 0 portent un chemin GABARIT — un chemin qui n'existe pas, construit sur l'identifiant de la tache — auxquelles s'ajoutent treize taches DEJA LIVREES dans le meme etat, et 54 attributions figees qui en dependent. GOV-007 et GOV-005 ne listent pas leurs propres gardes ; GOV-036 a modifie un fichier qu'elle n'a pas dans ses chemins. ⚠️ CE QUE CETTE TACHE NE PORTE PLUS : la reparation des 50 chemins de phase 0 est faite par le lot preparatoire, AVANT toute composition — sans elle le composeur prouve une disjonction qui n'existe pas. Ce qui reste ici est le PASSE et la GARDE : les treize taches livrees, le fichier omis par GOV-036, et la reduction des deux listes figees dans le MEME diff que la reparation, sans quoi une famille de dette perimee s'arme. A livrer : (1) plus aucun chemin gabarit dans le registre, quelle que soit la phase ; (2) une garde qui REFUSE un chemin construit sur l'identifiant de sa propre tache ; (3) les listes figees reduites a ce qui reste. TEMOIN A DEUX FACES : une tache dont le chemin vaut son propre identifiant fait sortir la garde en code non nul et la NOMME ; le registre repare la fait sortir en zero, avec le compte des taches et des chemins reellement confrontes. AVENANT A01 du 2026-09-29 (PR #209, releve de la lentille exactitude) : le volet (1) est restreint aux taches livrees et a celles de phase inferieure ou egale a la phase courante. Les gabarits de phase future (121 le 2026-09-29 : 60 en phase 1, 40 en phase 2, 21 en phase 3) sont admis, comptes et imprimes par la garde ; elle rougit main au passage de phase tant que le lot preparatoire de la phase suivante ne les a pas repares. Motif : la reparation des chemins d une phase appartient a son lot preparatoire, comme ci-dessus pour la phase 0.
 
 **Tests.** `tests/unit/gouvernance/aucun-chemin-gabarit.spec.ts`
 
@@ -1396,7 +1396,7 @@ Couvre : `REQ-GOV-032`, `REQ-GOV-026`
 
 **Tests.** `tests/unit/gouvernance/aucune-troncature-muette.spec.ts`
 
-### GOV-081 — Une affirmation du code sur le registre est devenue fausse le jour ou le registre a change
+### GOV-081 — Une affirmation du code sur le registre est devenue fausse le jour ou le registre a change ✅ **fusionnee**
 
 `0.1 j` · zone `gouvernance` · depend de `GOV-074`
 
@@ -1783,7 +1783,7 @@ Couvre : `REQ-GOV-031`
 
 **Tests.** `tests/unit/gouvernance/deux-chemins-ne-se-confondent-pas.spec.ts`
 
-### GOV-106 — La garde lexicale juge le texte rendu par expressions regulieres : la JSX et le Markdown rendent a l'ecran des mots qu'elle ne voit pas
+### GOV-106 — La garde lexicale juge le texte rendu par expressions regulieres : la JSX et le Markdown rendent a l'ecran des mots qu'elle ne voit pas ✅ **fusionnee**
 
 `1.5 j` · zone `gouvernance` · sensible : espace · depend de `GOV-071`
 
@@ -1793,7 +1793,7 @@ Couvre : `REQ-GOV-017`, `REQ-JUR-037`, `REQ-GOV-003`
 
 **Tests.** `tests/unit/gouvernance/frontiere-de-mot-du-rendu.spec.ts`
 
-### GOV-107 — Le titre qui declare une livraison se lit dans la premiere ligne du message d'ecrasement, et seul --subject le tient
+### GOV-107 — Le titre qui declare une livraison se lit dans la premiere ligne du message d'ecrasement, et seul --subject le tient ✅ **fusionnee**
 
 `0.5 j` · zone `gouvernance` · depend de `GOV-104`
 
@@ -1803,7 +1803,7 @@ Couvre : `REQ-GOV-026`
 
 **Tests.** `tests/unit/gouvernance/la-declaration-se-lit-dans-le-commit-de-fusion.spec.ts`
 
-### GOV-108 — RM-15 se dit la seule redaction de l'obligation de journal, et deux documents la redigent encore sans la citer
+### GOV-108 — RM-15 se dit la seule redaction de l'obligation de journal, et deux documents la redigent encore sans la citer ✅ **fusionnee**
 
 `0.5 j` · zone `gouvernance` · depend de `GOV-052`
 
@@ -1812,6 +1812,36 @@ Couvre : `REQ-GOV-023`
 **Acceptation.** Releve par la lentille exactitude sur la PR #195 : RM-15 affirme etre la seule redaction de l'obligation d'entree de journal, alors que docs/journal/README.md et docs/REPRISE-SESSION.md la redigent encore sans la citer. A livrer : ces deux documents renvoient a RM-15 au lieu de redire la regle, et un temoin rougit si une autre redaction reapparait. Dette connexe de la lentille securite : journalALaReference liste l'arbre sans -z ni core.quotepath=false ; un nom d'entree non ASCII y serait mal lu. A corriger avec son temoin.
 
 **Tests.** `tests/unit/gouvernance/une-pr-porte-son-entree-de-journal.spec.ts`
+
+### GOV-109 — La garde lexicale ne s'arrete pas au texte litteral : des expressions constantes de la JSX rendent encore a l'ecran un terme qu'elle ne voit pas
+
+`1 j` · zone `gouvernance` · sensible : espace · depend de `GOV-106`
+
+Couvre : `REQ-GOV-017`, `REQ-JUR-037`
+
+**Acceptation.** Releve par la lentille securite sur la PR #206, formes tenues HORS DEPOT (dossier de reprise, fichier confidentiel) : apres GOV-106, une famille d'expressions dont la valeur est connue sans execution affiche encore un terme du lexique interdit. A livrer : la garde evalue, par l'AST de TypeScript, toute expression JSX dont la valeur rendue est constante, comme React la rend, au lieu d'une liste de formes. TEMOINS : chaque forme du fichier confidentiel rougit ; les temoins entrent dans le meme commit que le correctif, jamais avant, et ni l acceptance, ni les messages de commit, ni le journal ne les enumerent.
+
+**Tests.** `tests/unit/gouvernance/frontiere-de-mot-du-rendu.spec.ts`
+
+### GOV-110 — La cloture compare le sujet du commit de fusion au titre ACTUEL de la PR : un renommage apres la fusion le rendrait conforme
+
+`0.5 j` · zone `gouvernance` · depend de `GOV-107`
+
+Couvre : `REQ-GOV-026`
+
+**Acceptation.** Releve par la lentille securite sur la PR #206 : livraisonDepuisLaForge attend pour premiere ligne du commit d'ecrasement le titre de la PR tel qu'il est AU MOMENT DE LA CLOTURE ; le titre reste modifiable apres la fusion. A livrer : le titre attendu est celui que la PR portait a l'instant de mergedAt (dernier renommage anterieur a la fusion, lu dans la chronologie de la PR), et un renommage posterieur est sans effet. TEMOIN rouge d'abord : un renommage posterieur a la fusion ne change pas le verdict.
+
+**Tests.** `tests/unit/gouvernance/la-declaration-se-lit-dans-le-commit-de-fusion.spec.ts`
+
+### GOV-111 — Le cloisonnement par apporteur juge les donnees ecrites et les filtres simples, pas encore les options de lecture ni les filtres de relation
+
+`1 j` · zone `securite` · sensible : rgpd · depend de `SEC-05`
+
+Couvre : `REQ-SEC-008`, `REQ-SEC-009`
+
+**Acceptation.** Dettes relevees par la lentille securite sur la PR #200 (SEC-05), non bloquantes pour sa fusion : la couche forApporteur juge les donnees ecrites et le where de premier niveau, mais pas encore toutes les options de lecture que la methode lister transmet au client, ni les filtres qui traversent une relation, et elle rend des lignes entieres la ou une selection explicite suffirait. A livrer : une liste blanche des options de lecture acceptees, le refus (famille REFUS.forme) de tout filtre de relation qui sortirait du perimetre de l'apporteur, et une selection explicite des champs rendus ; 404 toujours indistinct. TEMOINS rouges d'abord, dont un sur le vrai serialiseur de Prisma en integration. ECHEANCE : les filtres de relation sont fermes au plus tard a l arrivee du premier modele partage entre apporteurs (REQ-SEC-022).
+
+**Tests.** `tests/unit/securite/acces-scope.spec.ts` · `tests/integration/idor.spec.ts`
 
 ## Phase 1 — Operationnel
 

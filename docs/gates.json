@@ -563,7 +563,7 @@
       ],
       "verifie": "liste des routes derivee du systeme de fichiers ; chaque route appelee avec l'id d'un autre apporteur rend un 404 byte-identique a un id inexistant, PDF inclus ; DTO Zod strict (etendue en phase 2 par UX-P2-06)",
       "fixtureRouge": "retirer un where d'une route de l'espace",
-      "preuveRouge": null
+      "preuveRouge": "npx vitest run tests/integration/idor.spec.ts sous le mutant de la fixtureRouge (SEC-05, 2026-09-29 : la conjonction de l apporteur retiree du where de src/server/acces/for-apporteur.ts) -> Tests 12 failed | 18 passed (30) : sur chacun des 6 modeles cloisonnes, REQ-SEC-009 « expected [ 'lecture', 'liste', …(5) ] to deeply equal [] » (lecture, liste, liste ciblee par id et par apporteur, compte, modification acceptee et ecrite) et REQ-ARG-029 « expected { statut: 200, …(2) } to deeply equal { Object (statut, entetes, ...) } » (l id d un autre apporteur rend 200 la ou l inexistant rend 404) ; ROUGE avant le code : Failed to load url ../../src/server/acces/for-apporteur. Temoins a deux faces dans la meme spec : la vue sans where releve les 7 breches sur chaque modele, forApporteur aucune ; la garde statique sort en 1 et nomme page /mes-entreprises/:id, action telechargerDocument et GET /documents/:id/pdf plantes sans cas, et en 0 sur le depot (« idor:check — ✓ 2 routes et 2 actions confrontees ») ; code restaure, 30/30"
     },
     {
       "id": "sec:semgrep",

@@ -57,7 +57,6 @@ const cas = (d: DetteGate): Sources => ({
   entetes: [],
   citations: [],
   dettesGate: [d],
-  dettesGabarit: [],
   dettesLot: [],
   exemptionsFigees: [],
 });
