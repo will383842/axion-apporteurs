@@ -7,9 +7,9 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `5af85de` — 2026-09-29T18:43:13+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #242 (un contrôle requis rouge ou une revue manquante) · 2. #245 (un contrôle requis rouge ou une revue manquante) · 3. #248 (un contrôle requis rouge ou une revue manquante) · 4. #244 (un conflit avec `main`) |
-| Qui tient quoi ? | GOV-062 (A01) |
+| Où est `main` ? | `3d9006b` — 2026-09-29T19:09:07+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #242 (un conflit avec `main`) · 2. #244 (un conflit avec `main`) · 3. #248 (un conflit avec `main`) |
+| Qui tient quoi ? | QA-T11 (A01) · GOV-062 (A01) |
 | Où en est la phase ? | phase 0 — 102/129 tâches, reste 21.75 j |
 | Le prochain pas | QA-T11 — Gate D migrations : base vierge, dump N-1, migrate diff vide, image N-1, lint expand/contract |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
@@ -60,10 +60,9 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #242 — feat(JUR-T34): la politique de confidentialite de l'espace, tiree du registre de l'article 30 et acceptee a la premiere connexion | `t/jur-t34` | un contrôle requis rouge ou une revue manquante |
-| 2 | #245 — feat(QA-T11): porte D, expand puis contract contre le code deploye, vidage N-1 seme, diff vide | `t/qa-t11` | un contrôle requis rouge ou une revue manquante |
-| 3 | #248 — feat(GOV-124): une lentille pour une PR sans risque, derivee et fermee, deux pour tout le reste | `t/gov-124-lentille` | un contrôle requis rouge ou une revue manquante |
-| 4 | #244 — docs(GOV-017a): confirmation du depot par e-mail — plan W20 et quatorze taches versees en phase 1, sans DECISIONS ni REQ nouvelles | `t/w20-confirmation-email` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #242 — feat(JUR-T34): la politique de confidentialite de l'espace, tiree du registre de l'article 30 et acceptee a la premiere connexion | `t/jur-t34` | un conflit avec `main` — à résoudre avant tout |
+| 2 | #244 — docs(GOV-017a): confirmation du depot par e-mail — plan W20 et quatorze taches versees en phase 1, sans DECISIONS ni REQ nouvelles | `t/w20-confirmation-email` | un conflit avec `main` — à résoudre avant tout |
+| 3 | #248 — feat(GOV-124): une lentille pour une PR sans risque, derivee et fermee, deux pour tout le reste | `t/gov-124-lentille` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -73,6 +72,7 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 
 | Tâche | Revendiquée par | Issue | Statut |
 | --- | --- | --- | --- |
+| QA-T11 — Gate D migrations : base vierge, dump N-1, migrate diff vide, image N-1, lint expand/contract | A01 | #243 | `a_faire` |
 | GOV-062 — L'outillage qui execute la porte A n'est pas garde : configuration du gestionnaire, correctifs, actions tierces | A01 | #240 | `a_faire` |
 
 ⚠️ **13 revendication(s) périmée(s)** — QA-T07, GOV-042, GOV-045, GOV-050, GOV-051, GOV-053, GOV-054, GOV-055, GOV-060, GOV-072, GOV-079, GOV-093, INT-T01c : leur issue porte encore un label `owner:` alors que la tâche est livrée. `pnpm lot:cloture` écrit `docs/tasks.json` mais n’efface pas les labels ; la dette appartient à GOV-012.
@@ -91,7 +91,7 @@ Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeS
 
 ## Dernier atterrissage
 
-`origin/main` = `5af85de` (2026-09-29T18:43:13+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `3d9006b` (2026-09-29T19:09:07+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
@@ -110,6 +110,18 @@ INT-T27-A pour être close.
 
 **Appris.** Une clôture se juge avec ses dépendances : une tâche livrée par une PR fusionnée
 reste ouverte tant que sa dépendance ne l'est pas, sinon le registre ment sur l'ordre.
+
+### PR #245 — 2026-09-29 — feat(QA-T11): porte D, expand puis contract contre le code deploye, vidage N-1 seme, diff vide
+
+**Fait.** La porte D confronte les migrations de la PR au code déployé : une colonne encore lue
+ne se supprime pas, et le refus nomme son lecteur. Elle migre une base vierge et un vidage N-1
+semé, exige un diff vide sans ligne perdue, et démarre l'image N-1 sur le schéma migré.
+
+**Reste.** Les étapes Docker ne sont prouvées qu'en CI. La détection d'une lecture par
+co-occurrence peut rougir à tort sur un homonyme : elle échoue fermé.
+
+**Appris.** Une migration additive passe trivialement sur une base vide. Sans vidage semé, la
+porte D serait un vert qui ment : le semis est le cœur de la porte, pas un détail.
 
 ### PR #244 — 2026-09-29 — docs(GOV-017a): confirmation du depot par e-mail — plan W20 et quatorze taches versees en phase 1, sans DECISIONS ni REQ nouvelles
 
@@ -140,21 +152,7 @@ titre.
 nommés et non du champ `paths` ; et une tâche qui nomme comme preuve un test existant qui ne cite pas
 l'exigence rougit `gov:trace` : il faut nommer un test neuf.
 
-### PR #241 — 2026-09-29 — fix(GOV-062): l'outillage qui execute la porte A est juge, sept points nommes
-
-**Fait.** La porte A juge l'outillage qui l'exécute, en sept points dont chacun a sa famille :
-réglage du gestionnaire, chemins réservés à `role:architecte`, correctifs, actions tierces, étape
-qui réécrit l'arbre, commande intégrée, environnement hérité. La réserve du §7 est accordée dans la
-source des agents, et la fiche de l'architecte est rendue par son générateur.
-
-**Reste.** Les lentilles relisent la tête. La modification de `.claude/agents/` et la correction
-du témoin de `gov:pr` ont chacune été autorisées par Williams, une seule fois.
-
-**Appris.** Un témoin qui décrit un risque peut heurter une réserve ajoutée plus tard : le cas
-6 quater mesurait le risque d'un fichier racine, et la réserve du §7 l'a fait rougir. Le témoin
-porte désormais le label que la réserve exige.
-
-… 3 entrée(s) affichée(s) sur 105 ; les 102 plus ancienne(s) se lisent dans `docs/journal/`.
+… 3 entrée(s) affichée(s) sur 106 ; les 103 plus ancienne(s) se lisent dans `docs/journal/`.
 
 ## Dette déclarée
 

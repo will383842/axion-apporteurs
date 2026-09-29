@@ -226,6 +226,17 @@ jobs:
         run: pnpm partners:migrations:additive
       - name: La garde des migrations sait rougir
         run: pnpm partners:migrations:additive:prove
+      # QA-T11, REQ-QA-021. La PORTE D : les migrations de la PR confrontees au code DEPLOYE
+      # (expand puis contract), puis base vierge et vidage N-1 SEME, migres, `migrate diff` vide,
+      # aucune ligne perdue, et l image N-1 demarree sur le schema N. La logique vit dans
+      # `scripts/gates/gate-d.sh` ; la base N-1 se lit dans l historique (`fetch-depth: 0`). Sa
+      # preuve d abord : un bac d essai qui supprime une colonne encore lue doit sortir en non nul
+      # en nommant la colonne et le fichier. Pas de `continue-on-error` : une porte qui tolere son
+      # echec ne garde rien.
+      - name: La porte D sait rougir — une colonne encore lue, supprimee, est nommee
+        run: pnpm gate-d:prove
+      - name: Porte D — expand/contract, base vierge, vidage N-1 seme, diff vide, image N-1
+        run: pnpm gate-d
       # GOV-030 : la garde des TERMES INTERDITS que des documents invoquaient sans qu'elle existe
       # (`docs/GLOSSAIRE.md`, `docs/CONVENTIONS.md` §2, RM-01 et RM-06, `packages/contracts/events.ts`,
       # REQ-GOV-001, `docs/GATES.md`). BLOQUANTE : pas de `continue-on-error` — la famille
