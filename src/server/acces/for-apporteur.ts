@@ -101,7 +101,32 @@ export const REFUS = {
   identifiant: 'acces_identifiant_d_apporteur_invalide',
   cle: 'acces_ecriture_d_une_cle_refusee',
   reference: 'acces_reference_hors_session',
+  forme: 'acces_ecriture_d_une_forme_refusee',
 } as const;
+
+/**
+ * UNE SEULE LECTURE DES DONNÉES À ÉCRIRE (lentille `securite`, #200). Le contrôle ne juge que les
+ * propriétés PROPRES, alors que le sérialiseur de Prisma parcourt les arguments par `for…in` et
+ * ENVOIE aussi les propriétés héritées : `Object.create({ apporteurId: AUTRE })` passait le
+ * contrôle et déplaçait la ligne. Un accesseur, lu deux fois, rendait au contrôle une valeur et à
+ * l'écriture une autre. Seul un objet simple — prototype `Object.prototype` ou `null` — fait de
+ * propriétés de DONNÉES est admis, et c'est son instantané, et lui seul, qui est contrôlé puis écrit.
+ */
+function instantane(data: unknown): Record<string, unknown> {
+  // Un seul contrôle de forme, par le prototype : une chaîne ou un nombre ont le leur, `null` et
+  // `undefined` n'en ont aucun et sont refusés avant d'être interrogés.
+  const prototype: unknown =
+    data === null || data === undefined ? undefined : Object.getPrototypeOf(data);
+  if (prototype !== Object.prototype && prototype !== null) throw new Error(REFUS.forme);
+  const copie: Record<string, unknown> = {};
+  for (const [cle, descripteur] of Object.entries(Object.getOwnPropertyDescriptors(data))) {
+    // Un accesseur, ou une propriété non énumérable, est refusé : l'un se lit deux fois, l'autre
+    // serait tu au contrôle et au sérialiseur — le dire vaut mieux que le taire.
+    if (!('value' in descripteur) || !descripteur.enumerable) throw new Error(REFUS.forme);
+    copie[cle] = descripteur.value as unknown;
+  }
+  return copie;
+}
 
 // ── les vues ─────────────────────────────────────────────────────────────────────────────────────
 
@@ -265,13 +290,17 @@ function cloisonner<R, W, C, U, O>(
       return delegue.count({ where: portee(where ?? {}) });
     },
     async creer(data) {
-      await verifier(data as object);
-      return delegue.create({ data: { ...data, apporteurId } });
+      const propre = instantane(data);
+      await verifier(propre);
+      const ecrite: unknown = { ...propre, apporteurId };
+      return delegue.create({ data: ecrite as C });
     },
     async modifier(id, data) {
+      const propre = instantane(data);
       if (!estUnUuid(id)) return 'introuvable';
-      await verifier(data as object);
-      const { count } = await delegue.updateMany({ where: portee({ id }), data });
+      await verifier(propre);
+      const ecrite: unknown = propre;
+      const { count } = await delegue.updateMany({ where: portee({ id }), data: ecrite as U });
       return count === 1 ? 'modifiee' : 'introuvable';
     },
   };
