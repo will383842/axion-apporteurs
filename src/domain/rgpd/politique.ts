@@ -99,8 +99,11 @@ const refus = (motif: string): Error => new Error(motif);
 
 // ── la lecture du Markdown ──────────────────────────────────────────────────────────────────────
 
-/** L'apostrophe typographique et l'apostrophe droite sont la même lettre pour un nom de rubrique. */
-const normaliser = (s: string): string => s.replace(/’/g, "'").trim();
+/**
+ * L'apostrophe typographique et l'apostrophe droite sont la même lettre pour un nom de rubrique.
+ * Aucun `trim` : `cellules` rend déjà chaque cellule rognée.
+ */
+const normaliser = (s: string): string => s.replace(/’/g, "'");
 
 function cellules(ligne: string): string[] {
   return ligne
@@ -109,8 +112,11 @@ function cellules(ligne: string): string[] {
     .map((c) => c.trim());
 }
 
-/** La cellule `i` d'une ligne, vide si la ligne est trop courte. */
-const cellule = (ligne: readonly string[], i: number): string => ligne.slice(i, i + 1).join('');
+/**
+ * La cellule `i` d'une ligne, vide si la ligne est trop courte. `join()` sans séparateur : la
+ * tranche porte au plus un élément, un séparateur n'y aurait aucun effet.
+ */
+const cellule = (ligne: readonly string[], i: number): string => ligne.slice(i, i + 1).join();
 
 /** Les lignes d'une section : de la ligne qui satisfait `debut` à la prochaine qui satisfait `fin`. */
 function section(lignes: readonly string[], debut: RegExp, fin: RegExp, nom: string): string[] {
@@ -145,7 +151,8 @@ function resoudre(texte: string): string {
 /** Une cellule en segments : le texte, puis chaque manque déclaré avec sa question. */
 function segments(contenu: string): Segment[] {
   const morceaux = resoudre(contenu).split(MARQUE_A_COMPLETER);
-  const avant = morceaux.slice(0, 1).join('').trim();
+  // Un seul élément au plus : `join()` sans séparateur, comme dans `cellule`.
+  const avant = morceaux.slice(0, 1).join().trim();
   const texte: Segment[] = avant === '' ? [] : [{ type: 'texte', texte: avant }];
   const manques = morceaux.slice(1).map((m): Segment => ({
     type: 'a_completer',
