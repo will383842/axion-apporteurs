@@ -8,12 +8,12 @@
 >
 > Une tache = une PR, **≤ 1,5 jour**. Le plafond est porte par la garde `gov:tasks`.
 
-**329 taches · 256.35 j estimes.**
+**330 taches · 256.85 j estimes.**
 
 | Phase | Taches | Jours | Terminees |
 | --- | ---: | ---: | ---: |
 | -1 — Gouvernance (prealable bloquant) | 39 | 23.75 | 39 |
-| 0 — Socle technique | 131 | 99.35 | 104 |
+| 0 — Socle technique | 132 | 99.85 | 104 |
 | 1 — Operationnel | 78 | 67.50 | 0 |
 | 2 — Argent | 45 | 33.50 | 0 |
 | 3 — Pilotage et conformite | 36 | 32.25 | 0 |
@@ -1902,6 +1902,16 @@ Couvre : `REQ-GOV-011`
 **Acceptation.** Releve par la lentille securite sur la PR #248 (GOV-124), a fermer AVANT le premier usage d'une lentille unique. tests/ est autorise en entier : une tache gouvernance ou qualite non sensible peut donc affaiblir, sous la seule lentille exactitude, le temoin d'une garde (tests/unit/gouvernance/, dont celui de la regle des lentilles et celui de la garde des revues), et ni red-first ni la mutation ne le voient. A LIVRER : tests/unit/gouvernance/, tests/unit/securite/ et tests/integration/ entrent dans EXCLUS_D_UNE_LENTILLE ; l'ADR 0026 le dit. TEMOIN rouge d'abord : une PR qui ne touche que tests/unit/gouvernance/une-lentille-pour-une-pr-sans-risque.spec.ts exige deux lentilles ; un test hors de ces trois dossiers reste a une lentille. AVENANT A01 du 2026-09-29 (dette bloquante de la lentille exactitude sur la PR #250) : la regle est INVERSEE dans tests/. Seul tests/a11y/ reste autorise a une lentille (tests/unit/qualite/ porte les temoins de gardes de securite et du processus, releve de la lentille securite sur la PR #250) ; le domaine, le contrat, le juridique, l integration, la gouvernance, la securite, tests/gov, tests/fixtures et tout dossier a venir valent deux lentilles. TEMOIN : un test de domaine, une fixture de grille ou un test juridique exigent deux lentilles.
 
 **Tests.** `tests/unit/gouvernance/une-lentille-pour-une-pr-sans-risque.spec.ts`
+
+### GOV-127 — Le passif declare de la declaration : une livraison nommee a la fusion mais au squash non conforme se clot sur arbitrage ecrit
+
+`0.5 j` · zone `gouvernance` · depend de `GOV-125`
+
+Couvre : `REQ-GOV-026`
+
+**Acceptation.** EXCEPTION AU GEL, arbitrage -d7 sur delegation de Williams du 2026-09-29 : elle bloque la Phase 0 a 100 %. CONSTAT : INT-T02 (axion-ia #1180, sha f158408, en production) est refusee par lot:cloture (tache_etrangere_a_la_pr, titre_d_ecrasement_non_conforme) : la PR portait le titre feat(INT-T02) a l instant de la fusion, mais le squash a pris pour premiere ligne feat(partners): ... (INT-T02) (#1180), une livraison anterieure a la convention de declaration cote axion-ia. INT-T27-A et INT-T26, livrees et en production, en dependent. A LIVRER : (1) une liste FERMEE et datee, PASSIF_DE_LA_DECLARATION, dans scripts/lot/cloture.ts, avec UNE seule entree : INT-T02, PR axion-ia #1180, sha complet f158408, motif de l arbitrage et mesure du patch propre (8f1d7d4 equivalent a 6bfd50b : 19 fichiers, seul le contexte de worker.ts differe). (2) L entree ne leve les deux refus QUE si la tache, la PR, le sha complet coincident ET si le titre a l instant de la fusion (chronologie de la forge) declare la tache. (3) Toute autre livraison garde les deux refus a l identique ; aucun drapeau de ligne de commande ne leve rien ; aucune autre regle n est assouplie. (4) TEMOINS rouges d abord : INT-T02 passe ; la meme livraison avec un autre sha, une autre PR ou un titre a la fusion qui ne declare pas la tache est refusee ; une livraison hors liste au squash non conforme est refusee. (5) Deux lentilles (scripts/lot/). Puis INT-T02, INT-T27-A et INT-T26 sont closes par un rattrapage.
+
+**Tests.** `tests/unit/gouvernance/le-passif-de-la-declaration-est-ferme.spec.ts`
 
 ## Phase 1 — Operationnel
 
