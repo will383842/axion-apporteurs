@@ -3145,10 +3145,7 @@ export function baseIntrouvableRefusee(
  * absent ou illisible vaut checkout de la forge, donc refus sur une demande de fusion (lentille
  * `securite`, PR #235) — l'illisible ne se lit jamais en « pas la forge ».
  */
-export function estLeCheckoutDeLaForge(
-  espace: string | undefined = process.env['GITHUB_WORKSPACE'],
-  cwd?: string
-): boolean {
+export function estLeCheckoutDeLaForge(espace: string | undefined, cwd?: string): boolean {
   if (espace === undefined || espace === '') return true;
   try {
     const racine = execFileSync('git', ['rev-parse', '--show-toplevel'], {
@@ -3187,7 +3184,7 @@ export function lireUnivers(): Univers {
     baseRequise: baseIntrouvableRefusee(
       base === null,
       process.env['GITHUB_EVENT_NAME'],
-      estLeCheckoutDeLaForge()
+      estLeCheckoutDeLaForge(process.env['GITHUB_WORKSPACE'])
     ),
   };
 }
