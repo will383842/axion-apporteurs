@@ -106,13 +106,20 @@ contact rencontré, envoyé quinze minutes après le dépôt, et l'appel devient
 neuf exigences proposées et sept amendements y sont écrits, avec quinze questions à Williams et leurs
 valeurs par défaut. Quatorze tâches entrent au registre en phase 1, `a_faire`, en ne citant que des
 exigences existantes : UX-P1-40 à UX-P1-43, DM-40, DM-41, DM-43, SEC-40, SEC-41, INT-T40, JUR-T40,
-JUR-T41, QA-T40 et QA-T41. Quatorze tâches existantes sont amendées, dont JUR-T01b, qui porte la règle
-de confirmation tacite proposée, à arbitrer par Williams. Chiffrage : phase 1, 16,25 j.
+JUR-T41, QA-T40 et QA-T41. Quatorze tâches existantes sont amendées. Le même jour, Williams a tranché
+la question 2 : sans réponse du contact ni appel concluant, l'entreprise reste réservée et le dépôt est
+réputé confirmé trente jours après la réception de l'e-mail ; le délai ne commence pas tant qu'un rebond
+n'est pas corrigé. Il a confirmé les valeurs par défaut des quatorze autres questions et demandé un seul
+badge d'état dans « Mes entreprises » et sur la carte du dépôt. Cette réponse est reportée dans le plan
+et dans DM-24, JUR-T01b, JUR-T09, JUR-T40, UX-P1-05 (quinzième tâche amendée), UX-P1-40, UX-P1-41,
+UX-P1-43, QA-T40 et QA-T41. Chiffrage : phase 1, 17,5 j (16,25 j au versement, +1,25 j pour le badge et
+la correction qui fait repartir le délai).
 
 **Reste.** La passe gardien-spec : inscrire les HYP-W20 au §2 de `docs/DECISIONS.md` et les exigences
 au registre, puis porter leurs identifiants dans `reqs` et `hyp` des tâches versées par le verbe de
-GOV-117, dans le lot dédié de GOV-112 après GOV-116 (question 14). Les réponses de Williams aux quinze
-questions. Aucune tâche W20 n'est livrée par cette PR, et aucune ne doit être clôturée à cause de son
+GOV-117, dans le lot dédié de GOV-112 après GOV-116 (question 14). Les réponses de Williams aux
+questions 16 et 17, nées de sa réponse à la question 2 (date avant l'envoi effectif, fuseau de
+l'apporteur). Aucune tâche W20 n'est livrée par cette PR, et aucune ne doit être clôturée à cause de son
 titre.
 
 **Appris.** Une tâche versée sans `tests{}` fait échouer `lot:paths`, qui dérive ses chemins des tests
