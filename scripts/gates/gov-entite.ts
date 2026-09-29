@@ -46,7 +46,7 @@
 
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, realpathSync } from 'node:fs';
 import ts from 'typescript';
 
 import {
@@ -82,7 +82,27 @@ export type Univers = {
   exigences: string;
   /** Tous les fichiers suivis par git, lus dans leur blob et décodés en UTF-8 : c'est là qu'une valeur peut fuir. */
   fichiers: Fichier[];
+  /**
+   * GOV-066 — CE QUE LA FORGE SERT AU-DELÀ DE LA TÊTE. Chaque commit poussé par une PR reste lisible
+   * sur un dépôt PUBLIC, même après une fusion par écrasement (les références de PR le servent), et
+   * réécrire l'historique n'en retire rien. Ce sont les fichiers AJOUTÉS OU MODIFIÉS par chaque
+   * commit de la base (merge-base avec `main`) à la tête, lus tels qu'ils étaient à ce commit ; un
+   * fichier identique à celui de la tête n'y est pas, il est déjà jugé. Absent : aucun commit lu.
+   */
+  fichiersDesCommits?: FichierDUnCommit[];
+  /** Le nombre de commits de la PR réellement lus, imprimé au vert. */
+  commitsLus?: number;
+  /** Aucun point de divergence avec `main` n'a été trouvé : la plage de la PR n'a pas pu être lue. */
+  baseIntrouvable?: boolean;
+  /**
+   * La garde tourne sur le checkout de la forge d'une demande de fusion : la base y est EXIGÉE, et
+   * son absence est un refus (`source_illisible`), rendu par le canal des fautes. Absent : non exigée.
+   */
+  baseRequise?: boolean;
 };
+
+/** Un fichier tel qu'il était à un commit de la PR, qui n'est plus sous cette forme dans la tête. */
+export type FichierDUnCommit = Fichier & { commit: string };
 
 /**
  * Une faute. `cause` distingue les messages DISTINCTS qu'une même famille sait émettre (GOV-094) :
@@ -739,6 +759,15 @@ export function controler(u: Univers): Faute[] {
   const fautes: Faute[] = [];
   const ajouter = (famille: string, message: string) => fautes.push({ famille, message });
 
+  if (u.baseIntrouvable === true && u.baseRequise === true) {
+    ajouter(
+      'source_illisible',
+      `aucun point de divergence avec main dans ce clone : les commits de la demande de fusion ne ` +
+        `peuvent pas être lus, et « 0 commit lu » serait un vert qui ment (GOV-066). La porte A ` +
+        `clone tout l'historique (fetch-depth: 0).`
+    );
+  }
+
   for (const champ of CHAMPS) {
     const v = valeur(u.registre, champ.cle);
 
@@ -874,7 +903,9 @@ export function controler(u: Univers): Faute[] {
     );
   }
 
-  for (const fichier of u.fichiers) {
+  // GOV-066 — le même jugement, pour la tête et pour chaque commit de la PR : `lieu` nomme ce qui
+  // est lu (le chemin, ou le chemin et le commit), la logique ne lit que `fichier.chemin`.
+  const jugerFichier = (fichier: Fichier, lieu: string): void => {
     // Ce que la garde ne sait pas lire EN ENTIER, elle ne le juge pas sur ses seules suites ASCII :
     // le décodage UTF-8 garde un octet NUL et rend toute séquence invalide en U+FFFD. Un REFUS,
     // sans exemption : il n'existe pas de fichier qu'on ait le droit de ne pas lire.
@@ -886,7 +917,7 @@ export function controler(u: Univers): Faute[] {
     if (illisible !== null) {
       ajouter(
         'contenu_illisible',
-        `${fichier.chemin} — la garde ne sait pas lire ce fichier EN ENTIER : il porte ${illisible}. ` +
+        `${lieu} — la garde ne sait pas lire ce fichier EN ENTIER : il porte ${illisible}. ` +
           `Texte UTF-16, contenu compressé, archive, image ou base de données : une coordonnée y ` +
           `échapperait à toute forme, dans un dépôt PUBLIC (REQ-GOV-031). Convertis-le en texte ` +
           `UTF-8, ou retire-le du suivi.`
@@ -905,7 +936,7 @@ export function controler(u: Univers): Faute[] {
     if (nonPublie !== null) {
       ajouter(
         'contenu_publie_non_lu',
-        `${fichier.chemin} — le dépôt ne publie pas ce que la garde a lu : ${nonPublie}. La forge sert ` +
+        `${lieu} — le dépôt ne publie pas ce que la garde a lu : ${nonPublie}. La forge sert ` +
           `le contenu réel à qui le demande, et le blob que la garde lit n'en porte que le pointeur : ` +
           `une coordonnée y échapperait à toute forme, dans un dépôt PUBLIC (REQ-GOV-031). Suis le ` +
           `fichier en clair, sans filtre, ou retire-le du suivi.`
@@ -921,7 +952,7 @@ export function controler(u: Univers): Faute[] {
         if (fichier.contenu.includes(v)) {
           ajouter(
             'valeur_recopiee',
-            `${fichier.chemin} — \`${champ.cle}\` (${champ.libelle}) est RECOPIÉE ici. Une seule ` +
+            `${lieu} — \`${champ.cle}\` (${champ.libelle}) est RECOPIÉE ici. Une seule ` +
               `source (RM-01) : \`import { entiteContractante } from 'src/config/entite'\`. C'est ` +
               `cette lecture, et rien d'autre, qui fait que le SIREN du contrat, celui du mandat ` +
               `et celui du virement sont le même octet (REQ-CPL-001).`
@@ -936,7 +967,7 @@ export function controler(u: Univers): Faute[] {
       : coordonneesDe(fichier.contenu, code, fichier.chemin, notres)) {
       ajouter(
         'coordonnee_en_clair',
-        `${fichier.chemin} — coordonnée en clair « ${coordonnee} ». Ces valeurs vivent dans ` +
+        `${lieu} — coordonnée en clair « ${coordonnee} ». Ces valeurs vivent dans ` +
           `\`${CHEMIN_REGISTRE}\` ou dans une variable d'environnement, jamais dans un fichier ` +
           `versionné d'un dépôt PUBLIC (REQ-GOV-031).`
       );
@@ -947,12 +978,20 @@ export function controler(u: Univers): Faute[] {
       if (fichier.contenu.includes('exigerEntiteRenseignee')) continue;
       ajouter(
         'point_de_sortie_sans_refus',
-        `${fichier.chemin} — ce fichier a le nom d'un point de sortie (« ${point.libelle} ») et ` +
+        `${lieu} — ce fichier a le nom d'un point de sortie (« ${point.libelle} ») et ` +
           `n'appelle pas \`exigerEntiteRenseignee('${point.id}')\`. Sans cet appel, un contrat, un ` +
           `mandat, un virement ou une déclaration peut partir avec \`${SENTINELLE}\` imprimé ` +
           `dessus. Les champs que ce point exige sont déclarés dans \`src/config/entite.ts\`.`
       );
     }
+  };
+  for (const fichier of u.fichiers) jugerFichier(fichier, fichier.chemin);
+  for (const f of u.fichiersDesCommits ?? []) {
+    jugerFichier(
+      f,
+      `${f.chemin} au commit ${f.commit.slice(0, 7)} de la PR (plus sous cette forme dans la tête, ` +
+        `mais servi par la forge : REQ-GOV-031, GOV-066)`
+    );
   }
 
   return fautes;
@@ -2992,6 +3031,133 @@ export function blobsDe(
  * pas indexée. Un fichier suivi absent du disque a déjà été refusé par `fichiersSuivisOuRefus`
  * (`perimetre_entame`).
  */
+/**
+ * GOV-066 — LES FICHIERS DE CHAQUE COMMIT ENTRE `base` ET `tete` : ajoutés ou modifiés par ce
+ * commit, lus tels qu'ils étaient alors, sauf ceux dont le contenu est celui de la tête (déjà jugés).
+ * Pure vis-à-vis de l'arbre de travail : elle ne lit que des objets git. `cwd` sert au banc d'essai.
+ */
+export function fichiersDesCommits(
+  base: string,
+  tete = 'HEAD',
+  cwd?: string
+): { fichiers: FichierDUnCommit[]; commits: number } {
+  const git = (args: string[]): Buffer =>
+    execFileSync('git', args, { cwd, maxBuffer: 256 * 1024 * 1024 });
+  const commits = git(['rev-list', '--reverse', `${base}..${tete}`])
+    .toString('utf8')
+    .split('\n')
+    .filter((x) => x.trim() !== '');
+  const fichiers: FichierDUnCommit[] = [];
+  const vus = new Set<string>();
+  for (const commit of commits) {
+    // UN COMMIT DE FUSION SE LIT AUSSI (refus de la lentille `exactitude`, PR #235). Sans option,
+    // `diff-tree` ne rend RIEN pour une fusion ; or chaque PR intègre `main` par une fusion, et un
+    // conflit s'y résout DANS ce commit. `--cc` rend exactement les fichiers que la résolution a
+    // produits (différents de TOUS les parents) : ce qui vient d'un parent a déjà été jugé.
+    const parents =
+      git(['rev-list', '--parents', '-n', '1', commit]).toString('utf8').trim().split(' ').length -
+      1;
+    const chemins = git(
+      parents > 1
+        ? ['diff-tree', '--no-commit-id', '-r', '--cc', '--name-only', '-z', commit]
+        : [
+            'diff-tree',
+            '--no-commit-id',
+            '-r',
+            '--root',
+            '--diff-filter=AM',
+            '--name-only',
+            '-z',
+            commit,
+          ]
+    )
+      .toString('utf8')
+      .split('\0')
+      .filter((x) => x !== '');
+    for (const chemin of chemins) {
+      let objet: string;
+      try {
+        objet = git(['rev-parse', `${commit}:${chemin}`])
+          .toString('utf8')
+          .trim();
+      } catch {
+        continue; // supprimé par ce commit (une résolution de fusion peut retirer) : rien à lire
+      }
+      let objetTete = '';
+      try {
+        objetTete = git(['rev-parse', `${tete}:${chemin}`])
+          .toString('utf8')
+          .trim();
+      } catch {
+        // absent de la tête : il est d'autant plus à juger
+      }
+      if (objet === objetTete || vus.has(objet)) continue;
+      vus.add(objet);
+      fichiers.push({ chemin, contenu: git(['cat-file', 'blob', objet]).toString('utf8'), commit });
+    }
+  }
+  return { fichiers, commits: commits.length };
+}
+
+/** La base de la PR : le point de divergence avec `main` (`origin/main`, sinon `main`) ; `null` sans lui. */
+function baseDeLaPr(): string | null {
+  for (const ref of ['origin/main', 'main']) {
+    try {
+      return execFileSync('git', ['merge-base', 'HEAD', ref], { encoding: 'utf8' }).trim();
+    } catch {
+      // référence absente : la suivante
+    }
+  }
+  return null;
+}
+
+/**
+ * GOV-066 — CE QUE LA GARDE NE LIT PAS, ÉCRIT LÀ OÙ ELLE IMPRIME SON VERT. Elle lit la tête et chaque
+ * commit de la PR ; elle ne lit PAS l'historique déjà fusionné (jugé en son temps, par la PR qui l'a
+ * porté), ni les archives que la forge compose avec les attributs d'export (`export-subst`,
+ * `export-ignore`), dont le contenu servi peut différer du blob.
+ */
+export const LIMITE_DE_L_HISTORIQUE =
+  "Lu : la tête et chaque commit de la PR. Non lu : l'historique déjà fusionné, jugé par la PR qui l'a porté, " +
+  "les archives que la forge compose avec les attributs d'export (export-subst, export-ignore), " +
+  'et un commit retiré de la branche par un push forcé : il sort de la plage lue, pas de la forge.';
+
+/**
+ * GOV-066 (relevé de la lentille `securite`, PR #235) — SUR UNE DEMANDE DE FUSION, UNE BASE
+ * INTROUVABLE N'EST PAS « ZÉRO COMMIT À LIRE ». Sans point de divergence avec `main`, la plage est
+ * vide et le vert dirait « 0 commit lu » d'une PR qui en porte : la garde refuse, par le canal des
+ * fautes (`source_illisible`). Hors demande de fusion (poste local, `main`), la tête seule est
+ * jugée, et le vert le dit. Un banc d'essai jetable (un clone hors de `GITHUB_WORKSPACE`, qui hérite
+ * de l'environnement de la forge et peut avoir une origine sans `origin/main`) n'est pas le checkout
+ * de la PR : il n'est pas refusé pour cela.
+ */
+export function baseIntrouvableRefusee(
+  baseIntrouvable: boolean,
+  declencheur: string | undefined,
+  estLeCheckoutDeLaForge: boolean
+): boolean {
+  return baseIntrouvable && declencheur === 'pull_request' && estLeCheckoutDeLaForge;
+}
+
+/**
+ * Le dépôt jugé est-il le checkout de la forge (`GITHUB_WORKSPACE`), et non un banc d'essai ? Seul un
+ * banc PROUVÉ (un dépôt lisible hors de l'espace de travail lisible) en sort : un espace de travail
+ * absent ou illisible vaut checkout de la forge, donc refus sur une demande de fusion (lentille
+ * `securite`, PR #235) — l'illisible ne se lit jamais en « pas la forge ».
+ */
+export function estLeCheckoutDeLaForge(espace: string | undefined, cwd?: string): boolean {
+  if (espace === undefined || espace === '') return true;
+  try {
+    const racine = execFileSync('git', ['rev-parse', '--show-toplevel'], {
+      encoding: 'utf8',
+      ...(cwd === undefined ? {} : { cwd }),
+    }).trim();
+    return realpathSync(racine) === realpathSync(espace);
+  } catch {
+    return true;
+  }
+}
+
 export function lireUnivers(): Univers {
   const entrees = entreesSuivies();
   const chemins = entrees.map((e) => e.chemin);
@@ -3005,11 +3171,21 @@ export function lireUnivers(): Univers {
       ...(filtre === undefined ? {} : { filtre }),
     };
   });
+  const base = baseDeLaPr();
+  const pr = base === null ? { fichiers: [], commits: 0 } : fichiersDesCommits(base);
   return {
     registre: registreDuDepot(),
     decisions: readFileSync(CHEMIN_DECISIONS, 'utf8'),
     exigences: readFileSync(CHEMIN_EXIGENCES, 'utf8'),
     fichiers,
+    fichiersDesCommits: pr.fichiers,
+    commitsLus: pr.commits,
+    baseIntrouvable: base === null,
+    baseRequise: baseIntrouvableRefusee(
+      base === null,
+      process.env['GITHUB_EVENT_NAME'],
+      estLeCheckoutDeLaForge(process.env['GITHUB_WORKSPACE'])
+    ),
   };
 }
 
@@ -3751,12 +3927,15 @@ if (APPELE_DIRECTEMENT) {
       `✅ gov:entite — \`${CHEMIN_REGISTRE}\` conforme : ${CHAMPS.length} champs, ` +
         `${arretes} arrêté(s) et attesté(s) par leur ligne de décision, ${attente.length} à la ` +
         `sentinelle, ${secrets.length} secret(s) qui ne prennent jamais d'autre valeur ici. ` +
-        `${univers.fichiers.length} fichier(s) suivi(s) lu(s) en entier, ${CODES_PAYS.length} codes ` +
+        `${univers.fichiers.length} fichier(s) suivi(s) lu(s) en entier, ` +
+        `${univers.commitsLus ?? 0} commit(s) de la PR lu(s) (${univers.fichiersDesCommits?.length ?? 0} fichier(s) ` +
+        `sous une forme que la tête n'a plus), ${CODES_PAYS.length} codes ` +
         `de région dérivés de l'ICU du runtime, ` +
         `${identifiantsApparriables(univers.registre).length} identifiant(s) du registre confronté(s) ` +
         `à chacun : aucune coordonnée reconnue par la forme, aucune ` +
         `valeur recopiée, aucun point de sortie sans refus.\n   ⚠️ ${LIMITE_DE_LA_FORME}` +
-        `\n   ⚠️ ${PORTEE_DES_NUMEROS_PUBLICS}`
+        `\n   ⚠️ ${PORTEE_DES_NUMEROS_PUBLICS}` +
+        `\n   ⚠️ ${LIMITE_DE_L_HISTORIQUE}`
     );
     console.log(
       `   ⚠️ Cette garde n'AUTORISE pas la mise en service pour autant : ` +

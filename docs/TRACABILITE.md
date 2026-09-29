@@ -16,7 +16,7 @@
 
 **334 exigences actives · 122 réputées testées · 122 couvertes · 0 orphelines.**
 
-311 tâches, dont 134 livrées · 168 fichiers de test exécutés par `vitest` sur 168 présents.
+311 tâches, dont 134 livrées · 169 fichiers de test exécutés par `vitest` sur 169 présents.
 
 ## Exigences réputées testées
 
@@ -78,7 +78,7 @@
 | `REQ-GOV-028` | `GOV-019` | `tests/unit/gouvernance/poids-du-bundle-garde-vraiment.spec.ts` | couverte |
 | `REQ-GOV-029` | `GOV-014`, `GOV-051`, `GOV-061`, `GOV-062`, `GOV-076` | `tests/unit/gouvernance/comparer-un-chemin-c-est-le-normaliser.spec.ts`, `tests/unit/gouvernance/formes-voisines-des-interdits.spec.ts`, `tests/unit/gouvernance/gardes-transposees.spec.ts`, `tests/unit/gouvernance/porte-a-presente-active-effective.spec.ts` | couverte |
 | `REQ-GOV-030` | `GOV-002` | `tests/unit/gouvernance/preseance.spec.ts` | couverte |
-| `REQ-GOV-031` | `CPL-T01`, `GOV-000`, `GOV-036`, `GOV-040`, `GOV-064`, `GOV-065`, `GOV-066`, `GOV-067`, `GOV-068`, `GOV-089`, `GOV-092`, `GOV-094`, `GOV-105` | `tests/unit/gouvernance/deux-chemins-ne-se-confondent-pas.spec.ts`, `tests/unit/gouvernance/entite-registre.spec.ts`, `tests/unit/gouvernance/gardes.spec.ts` | couverte |
+| `REQ-GOV-031` | `CPL-T01`, `GOV-000`, `GOV-036`, `GOV-040`, `GOV-064`, `GOV-065`, `GOV-066`, `GOV-067`, `GOV-068`, `GOV-089`, `GOV-092`, `GOV-094`, `GOV-105` | `tests/unit/gouvernance/deux-chemins-ne-se-confondent-pas.spec.ts`, `tests/unit/gouvernance/entite-registre.spec.ts`, `tests/unit/gouvernance/gardes.spec.ts`, `tests/unit/gouvernance/perimetre-de-ce-que-la-forge-sert.spec.ts` | couverte |
 | `REQ-GOV-032` | `GOV-024`, `GOV-035`, `GOV-053`, `GOV-055`, `GOV-072`, `GOV-079`, `GOV-085`, `GOV-087`, `GOV-090`, `GOV-101` | `tests/unit/gouvernance/aucune-troncature-muette.spec.ts`, `tests/unit/gouvernance/corps-de-pr-couvre.spec.ts`, `tests/unit/gouvernance/couverture-attendue.spec.ts`, `tests/unit/gouvernance/plan-state-rubrique-exemptee.spec.ts`, `tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts`, `tests/unit/gouvernance/relectures-sans-defaut.spec.ts`, `tests/unit/gouvernance/tete-de-pr-concorde.spec.ts`, `tests/unit/gouvernance/un-rendu-n-officialise-pas-une-attribution.spec.ts`, `tests/unit/gouvernance/une-cle-ecrite-deux-fois.spec.ts`, `tests/unit/gouvernance/volatilite-par-ligne.spec.ts`, `tests/unit/gouvernance/vues-derivees.spec.ts` | couverte |
 | `REQ-GOV-033` | `GOV-029` | `tests/unit/gouvernance/lot-identifiant-unique.spec.ts` | couverte |
 | `REQ-INT-003` | `GOV-088`, `INT-T01a` | `tests/unit/gouvernance/termes-interdits.spec.ts`, `tests/unit/integration/contrat-hash.spec.ts` | couverte |
@@ -541,6 +541,7 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | `tests/unit/gouvernance/lot-identifiant-unique.spec.ts` | oui | `REQ-GOV-033` |
 | `tests/unit/gouvernance/paths-derives.spec.ts` | oui | `REQ-GOV-021`, `REQ-GOV-025` |
 | `tests/unit/gouvernance/perf-budgets-refuse-un-perimetre-absent.spec.ts` | oui | `REQ-GOV-012` |
+| `tests/unit/gouvernance/perimetre-de-ce-que-la-forge-sert.spec.ts` | oui | `REQ-GOV-031` |
 | `tests/unit/gouvernance/perimetre-des-gardes-derive-du-disque.spec.ts` | oui | `REQ-GOV-010`, `REQ-GOV-012` |
 | `tests/unit/gouvernance/plan-state-frais.spec.ts` | oui | `REQ-GOV-006`, `REQ-GOV-023` |
 | `tests/unit/gouvernance/plan-state-lecteur-unique.spec.ts` | oui | `REQ-GOV-006`, `REQ-GOV-015`, `REQ-GOV-024` |
