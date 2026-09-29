@@ -13295,8 +13295,8 @@
           "tests/unit/gouvernance/une-tache-en-cours-appartient-a-un-lot.spec.ts"
         ]
       },
-      "issue": null,
-      "owner": null,
+      "issue": 227,
+      "owner": "A01",
       "branch": null,
       "pr": null,
       "attestation": null,
