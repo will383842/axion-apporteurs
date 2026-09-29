@@ -162,3 +162,22 @@ describe('REQ-ARG-004, REQ-DM-017 — le prorata entier, invariants prouvés sur
     expect(partsDuProrata(100, 1_000, [600, 600])).toEqual([60, 40]);
   });
 });
+
+describe('REQ-DM-017 — un prorata sur une donnée fausse n’a pas de valeur par défaut', () => {
+  it('REQ-DM-017 : une commission négative ou non entière, un TTC net nul, un encaissement nul lèvent, nommés', () => {
+    expect(() => partsDuProrata(-1, 1_000, [1_000])).toThrow(
+      new RangeError('prorata : la commission totale doit être un entier de centimes ≥ 0')
+    );
+    expect(() => partsDuProrata(1.5, 1_000, [1_000])).toThrow(RangeError);
+    expect(() => partsDuProrata(100, 0, [1_000])).toThrow(
+      new RangeError('prorata : le TTC net de la facture doit être un entier de centimes > 0')
+    );
+    expect(() => partsDuProrata(100, 1_000, [500, 0])).toThrow(
+      new RangeError("prorata : l'encaissement 1 doit être un entier de centimes > 0")
+    );
+  });
+
+  it('REQ-DM-017 : une commission nulle se répartit en parts nulles, jamais négatives', () => {
+    expect(partsDuProrata(0, 1_000, [400, 600])).toEqual([0, 0]);
+  });
+});
