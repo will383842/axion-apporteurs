@@ -85,7 +85,7 @@
       ],
       "tools": ["Read", "Write", "Edit", "Grep", "Glob", "Bash"],
       "ecrit": "oui",
-      "cheminsReserves": ["docs/adr/**"]
+      "cheminsReserves": ["docs/adr/**", "package.json", "patches/**", "pnpm-lock.yaml"]
     },
     {
       "code": "A03",

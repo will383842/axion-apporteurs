@@ -2,12 +2,12 @@
   "version": 1,
   "resume": {
     "_methode": "une PAIRE est comptée quand l'intersection des deux `paths[]` n'est pas vide, par égalité de chaîne. ⚠️ Elle ne lit PAS le champ `paths` des tâches : deux tâches peuvent y figurer comme « sans intersection » alors que leurs `paths` déclarés se recouvrent — c'est le cas de GOV-025 et GOV-028, qui partagent `scripts/gates/gov-identifiants.ts`. Le composeur, lui, compare bien `t.paths` : cette vue ne dit donc pas ce qu'il fera. Ces trois totaux sont écrits par `scripts/lot/paths-proposes.ts` et par rien d'autre ; `tsx scripts/lot/paths-proposes.ts --check` échoue si le fichier rendu en diverge.",
-    "tachesCouvertes": 325,
+    "tachesCouvertes": 327,
     "pairesEnIntersection": 4580,
-    "cheminsDeclares": 869,
-    "cheminsDistincts": 565,
+    "cheminsDeclares": 871,
+    "cheminsDistincts": 567,
     "cheminsPartages": 111,
-    "tachesSansAucuneIntersection": 101,
+    "tachesSansAucuneIntersection": 103,
     "listeDesTachesIsolees": [
       "QA-T08",
       "QA-T12",
@@ -109,7 +109,9 @@
       "UX-P1-42",
       "UX-P1-43",
       "QA-T40",
-      "QA-T41"
+      "QA-T41",
+      "GOV-123",
+      "GOV-124"
     ],
     "cheminsLesPlusPartages": [
       {
@@ -1692,6 +1694,12 @@
     ],
     "QA-T41": [
       "tests/integration/attaque-fraude-a-la-confirmation.spec.ts"
+    ],
+    "GOV-123": [
+      "tests/unit/gouvernance/vues-rendues-apres-fusion.spec.ts"
+    ],
+    "GOV-124": [
+      "tests/unit/gouvernance/une-lentille-pour-une-pr-sans-risque.spec.ts"
     ]
   }
 }

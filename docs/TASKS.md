@@ -8,12 +8,12 @@
 >
 > Une tache = une PR, **≤ 1,5 jour**. Le plafond est porte par la garde `gov:tasks`.
 
-**325 taches · 252.35 j estimes.**
+**327 taches · 254.60 j estimes.**
 
 | Phase | Taches | Jours | Terminees |
 | --- | ---: | ---: | ---: |
 | -1 — Gouvernance (prealable bloquant) | 39 | 23.75 | 39 |
-| 0 — Socle technique | 127 | 95.85 | 102 |
+| 0 — Socle technique | 129 | 98.10 | 102 |
 | 1 — Operationnel | 78 | 67.00 | 0 |
 | 2 — Argent | 45 | 33.50 | 0 |
 | 3 — Pilotage et conformite | 36 | 32.25 | 0 |
@@ -1862,6 +1862,26 @@ Couvre : `REQ-QA-033`
 **Acceptation.** Scindee de QA-T05 le 2026-09-29 (recommandation A01, autopilote autorise par Will) : la partie qui depend d'un tiers. DEPEND D'UN TIERS : l'adresse de la plateforme de deploiement, un jeton de son API pose en secret du depot, et un jeton de lecture des paquets de la forge pose cote plateforme ; aucun n'existe au 2026-09-29. A livrer : (1) apres la publication de l'image par la forge (QA-T05), la plateforme est declenchee et TIRE l'image etiquetee sha-<7>, elle ne construit rien ; (2) UN SEUL PRODUCTEUR DE DEPLOIEMENT A LA FOIS : concurrence par environnement, fusion en avance rapide seulement, et atterrissage verifie AVANT la fusion suivante : l'en-tete de build servi (x-partners-build-sha) porte le sha fusionne, mesure par pnpm deploy:verify <sha> (REQ-QA-033) ; (3) l'en-tete de build est pose par l'application a partir du sha injecte a la construction de l'image. TEMOIN A DEUX FACES : deploy:verify sur un sha non atterri sort en code non nul en nommant les deux sha ; sur le sha servi, il sort en zero.
 
 **Tests.** `tests/unit/qualite/un-seul-producteur-de-deploiement.spec.ts`
+
+### GOV-123 — Les vues derivees ne sont plus dans les PR : les gardes jugent les sources, et le rendu se fait sur main apres chaque fusion
+
+`1.5 j` · zone `gouvernance` · aucune dependance
+
+Couvre : `REQ-GOV-032`, `REQ-GOV-006`
+
+**Acceptation.** EXCEPTION AU GEL DE LA GOUVERNANCE, decision de Williams du 2026-09-29 (vers 18 h), confirmee directement dans la session A01, priorite juste apres la PR #239. CONSTAT : chaque fusion fait diverger les vues derivees des autres PR (docs/PLAN-STATE.md, docs/TRACABILITE.md, docs/TASKS.md, docs/REQUIREMENTS.md, docs/paths-proposes.json, docs/GATES.md, index des ADR), ce qui relance leur porte A et leurs reconfirmations (la PR #230 trois fois le 2026-09-29, puis #239, #241 et #242). A LIVRER : (1) une PR ne porte plus de vue derivee ; les gardes de PR jugent les SOURCES (registres, requirements, gates.json, ADR), jamais l'egalite d'une vue commitee. (2) Le rendu se fait sur main, par la voie la plus simple et la plus sure, choisie et ecrite dans la PR : soit un job apres fusion qui rend et commite les vues, soit des vues rendues a la volee et non commitees. (3) Si un job commite sur main, exigences de la lentille securite, chacune avec son temoin : GITHUB_TOKEN en contents: write seulement, sur push de main seulement, dans un job separe de tout code de PR (patron du job publier de deploy.yml ; persist-credentials: false partout ailleurs) ; le commit est limite a une liste FERMEE de chemins de vues, verifiee par le job, qui refuse tout autre chemin ; le rendu est reproductible (la porte A suivante le relance et obtient un diff vide) ; les scripts de rendu sont lus sur main, jamais sur une branche ; le contournement de la protection de main est limite a ce seul acteur, reglage que Williams pose lui-meme sur la forge. (4) Une vue illisible ou en derive sur main est un rouge de la porte A de main, qui nomme la vue. TEMOIN a deux faces : deux PR qui ajoutent chacune une tache ne sont plus en conflit apres la fusion de l'une ; un commit de rendu qui toucherait un chemin hors de la liste fermee est refuse en le nommant.
+
+**Tests.** `tests/unit/gouvernance/vues-rendues-apres-fusion.spec.ts`
+
+### GOV-124 — Une seule lentille pour une PR sans risque, derivee par risqueDeLaPr ; deux pour tout le reste et dans le doute
+
+`0.75 j` · zone `gouvernance` · aucune dependance
+
+Couvre : `REQ-GOV-011`, `REQ-GOV-013`
+
+**Acceptation.** EXCEPTION AU GEL DE LA GOUVERNANCE, decision de Williams du 2026-09-29 (vers 18 h), confirmee directement dans la session A01, priorite juste apres la PR #239. Elle amende W16 (partners/ADR-0024, deux lentilles partout) : un avenant ou une ADR le dit, par l'architecte. A LIVRER : (1) lentillesExigees rend UNE lentille quand risqueDeLaPr classe la PR ordinaire, et DEUX (exactitude et securite) sinon ; l'avis schema reste exige des que la PR touche au schema. (2) Le classement est DERIVE (fichiers, labels, taches, lot), jamais declare par l'auteur ; il est FERME : une liste de fichiers illisible ou incomplete, une tache non resolue ou un registre de base illisible valent deux lentilles. (3) Restent a deux lentilles : src/, l'argent, l'attribution, la securite, le juridique, les donnees, le processus des gardes (garde des revues, .github/, racine du depot, config/, package.json) et toute tache sensible ou schema. Une seule lentille ne vaut que pour des documents, des tests et l'outillage interne sans effet sur ces zones. (4) La lentille unique est nommee par la regle (celle qui fait foi), et son refus bloque. TEMOINS rouges d'abord : une PR de documentation seule exige une lentille ; la meme PR qui ajoute un fichier sous src/ ou sous scripts/gates/ en exige deux ; une liste de fichiers incomplete en exige deux.
+
+**Tests.** `tests/unit/gouvernance/une-lentille-pour-une-pr-sans-risque.spec.ts`
 
 ## Phase 1 — Operationnel
 
