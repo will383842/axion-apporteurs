@@ -13194,8 +13194,8 @@
           "tests/unit/gouvernance/frontiere-de-mot-du-rendu.spec.ts"
         ]
       },
-      "issue": null,
-      "owner": null,
+      "issue": 266,
+      "owner": "A01",
       "branch": null,
       "pr": null,
       "attestation": null,
