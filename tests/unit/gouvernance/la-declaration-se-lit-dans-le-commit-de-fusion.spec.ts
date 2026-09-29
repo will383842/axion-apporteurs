@@ -466,9 +466,23 @@ describe('REQ-GOV-026 — le titre attendu est celui que la PR portait à l’in
     }
   });
 
-  it('REQ-GOV-026 — TÉMOIN : un renommage à l’instant même de la fusion compte comme antérieur', () => {
-    const l = livraisonAvec(apres, [renommage(FUSION, apres, avant)], `${avant} (#900)\n`);
-    expect(l.titre).toBe(`${avant} (#900)`);
+  // GOV-122 — L'ÉGALITÉ À LA SECONDE EST INDÉCIDABLE. La forge horodate à la seconde, et `mergedAt`
+  // suit d'environ une seconde l'écriture du commit de fusion (mesure écrite dans `gov-etat.ts`) :
+  // un renommage daté de la seconde même de la fusion peut précéder ou suivre le commit. La clôture
+  // refuse (échec fermé) au lieu de parier sur l'un des deux titres.
+  it('REQ-GOV-026 — TÉMOIN : un renommage à la seconde même de la fusion est indécidable, et la clôture refuse', () => {
+    for (const lu of [avant, apres]) {
+      const l = livraisonAvec(apres, [renommage(FUSION, apres, avant)], `${lu} (#900)\n`);
+      expect(l.titre ?? null, lu).toBeNull();
+      expect(l.titreNonConforme, lu).toEqual({ lu: `${lu} (#900)`, attendu: null });
+      expect(familles(portee.id, l), lu).toContain('titre_d_ecrasement_non_conforme');
+    }
+  });
+
+  it('REQ-GOV-026 — TÉMOIN : une date de renommage illisible rend la chronologie illisible, et la clôture refuse', () => {
+    const l = livraisonAvec(apres, [renommage('pas une date', avant, apres)], `${avant} (#900)\n`);
+    expect(l.titre ?? null).toBeNull();
+    expect(l.titreNonConforme).toEqual({ lu: `${avant} (#900)`, attendu: null });
   });
 
   it('REQ-GOV-026 — TÉMOIN : une chronologie illisible REFUSE, sans repli sur le titre actuel', () => {
@@ -538,6 +552,8 @@ describe('REQ-GOV-026 — le titre attendu est celui que la PR portait à l’in
       ligne({ createdAt: FUSION, currentTitle: avant }),
       ligne({ previousTitle: avant, currentTitle: avant }),
       [ligne(renommage(FUSION, apres, avant)), ligne({ createdAt: FUSION })].join('\n'),
+      // GOV-122 — une date de renommage qui ne se lit pas : la chronologie est illisible, jamais NaN.
+      ligne(renommage('pas une date', avant, apres)),
     ]) {
       const l = livraisonSurLaForge('will383842/axion-apporteurs', 900, forge(c).lire);
       expect(l.titre ?? null, String(c)).toBeNull();

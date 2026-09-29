@@ -363,7 +363,8 @@ export interface Livraison {
  *   - `branche_hors_motif`      — la branche que le motif du schéma refuserait (lu, pas recopié) ;
  *   - `tache_etrangere_a_la_pr` — la PR ne déclare la tâche ni par son titre, ni par `Lot:` ;
  *   - `titre_d_ecrasement_non_conforme` — la première ligne du message d'écrasement n'est pas
- *                                 exactement le titre de la PR suivi de ` (#<n>)` (GOV-107) ;
+ *                                 exactement le titre que la PR portait à l'instant de la fusion,
+ *                                 suivi de ` (#<n>)` (GOV-107, GOV-110) ;
  *   - `attestation_incomplete`  — pr, SHA entier et instant de fusion, les trois ou rien ;
  *   - `proprietaire_absent`     — `fusionnee` exige `owner`, et le script ne l'invente pas.
  */
@@ -432,7 +433,7 @@ export function cloturerUneTacheSeule(options: {
       famille: 'titre_d_ecrasement_non_conforme',
       message:
         `${t.id} : la première ligne du message d'écrasement (« ${lu ?? 'absente'} ») n'est pas ` +
-        `exactement le titre de la PR lu sur la forge suivi de son numéro (« ${attendu ?? 'titre absent de la forge'} »). ` +
+        `exactement le titre que la PR portait à l'instant de la fusion, lu dans sa chronologie sur la forge, suivi de son numéro (« ${attendu ?? 'titre indécidable ou absent de la forge'} »). ` +
         'Hors `--subject`, cette ligne est le sujet d’un commit, écrit par le développeur : elle ne ' +
         'déclare rien (pas 6 du protocole).',
     });
@@ -675,9 +676,17 @@ export interface RenommageDeTitre {
 /**
  * LE TITRE QUE LA PR PORTAIT À L'INSTANT DE LA FUSION. Le titre d'une PR reste modifiable après la
  * fusion (lentille `securite`, #206) : le titre actuel ne prouve rien. C'est le titre d'après du
- * dernier renommage antérieur ou égal à `mergedAt` ; sans renommage antérieur, le titre d'origine,
- * c'est-à-dire le titre d'avant du premier renommage ; sans aucun renommage, le titre actuel. Une
- * chronologie illisible (`null`) ne rend AUCUN titre : jamais un repli sur le titre actuel.
+ * dernier renommage STRICTEMENT antérieur à `mergedAt` ; sans renommage antérieur, le titre
+ * d'origine, c'est-à-dire le titre d'avant du premier renommage ; sans aucun renommage, le titre
+ * actuel. Une chronologie illisible (`null`) ne rend AUCUN titre : jamais un repli sur le titre
+ * actuel.
+ *
+ * GOV-122 — DEUX CAS SANS TITRE, ÉCHEC FERMÉ. (1) Un renommage daté de la SECONDE MÊME de la fusion
+ * est indécidable : la forge horodate à la seconde, et `mergedAt` suit d'environ une seconde
+ * l'écriture du commit de fusion (mesure écrite dans `gov-etat.ts`) ; il peut précéder ou suivre
+ * le commit, et parier sur l'un des deux titres serait déclarer sans preuve. (2) Une date illisible,
+ * celle d'un renommage ou celle de la fusion quand il y a des renommages à situer, rend la
+ * chronologie illisible. Dans les deux cas : aucun titre, et la clôture refuse.
  */
 function titreALaFusion(
   titreActuel: string | null,
@@ -686,10 +695,14 @@ function titreALaFusion(
 ): string | null {
   if (renommages === null) return null;
   const fusion = Date.parse(String(mergedAt));
+  const dates = renommages.map((r) => Date.parse(r.createdAt));
+  if (renommages.length > 0 && (!Number.isFinite(fusion) || dates.some((d) => !Number.isFinite(d))))
+    return null;
+  if (dates.some((d) => Math.floor(d / 1000) === Math.floor(fusion / 1000))) return null;
   const ordonnes = [...renommages].sort(
     (a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt)
   );
-  const anterieurs = ordonnes.filter((r) => Date.parse(r.createdAt) <= fusion);
+  const anterieurs = ordonnes.filter((r) => Date.parse(r.createdAt) < fusion);
   if (anterieurs.length > 0) return anterieurs[anterieurs.length - 1]!.currentTitle;
   return ordonnes.length > 0 ? ordonnes[0]!.previousTitle : titreActuel;
 }
@@ -832,8 +845,11 @@ function renommagesSurLaForge(
       .split('\n')
       .filter((l) => l.trim() !== '');
     const renommages = lignes.map((l) => JSON.parse(l) as Record<string, unknown>);
-    const complets = renommages.every((r) =>
-      ['createdAt', 'previousTitle', 'currentTitle'].every((k) => typeof r[k] === 'string')
+    const complets = renommages.every(
+      (r) =>
+        ['createdAt', 'previousTitle', 'currentTitle'].every((k) => typeof r[k] === 'string') &&
+        // GOV-122 — une date qui ne se lit pas rend la chronologie illisible : jamais NaN.
+        Number.isFinite(Date.parse(r['createdAt'] as string))
     );
     return complets ? (renommages as unknown as RenommageDeTitre[]) : null;
   } catch {
