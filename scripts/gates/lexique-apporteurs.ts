@@ -71,6 +71,24 @@
  * où `docs/REPRISE-SESSION.md` est entré dans le dépôt, six identifiants nus qui y dormaient
  * depuis des sessions ont rougi d'un coup, sans qu'aucun ait été écrit ce jour-là.
  *
+ * CE QU'ELLE ÉVALUE DANS LA JSX (GOV-109). Une expression entre accolades n'est pas reconnue sur
+ * une liste de formes : elle est ÉVALUÉE par l'AST de TypeScript, dans la sémantique de
+ * JavaScript, et rendue comme React la rend (`valeursPossibles`, `affichage`). Sont constants :
+ * les littéraux (chaîne, nombre, booléen, `null`, `undefined`, `void`), les gabarits dont chaque
+ * substitution est constante, `+`, les unaires `-` `+` `!`, `&&` `||` `??` dont la gauche est
+ * constante, le ternaire, les tableaux (React rend les éléments bout à bout, rien pour `null`,
+ * `undefined` et les booléens), les parenthèses et les annotations de type, et les constantes
+ * locales `const X = …` du même fichier. Un ternaire dont la condition est INCONNUE mais dont les
+ * deux branches sont constantes a deux affichages possibles : la ligne est rendue une fois pour
+ * chacun, et CHACUN est jugé — la négation écrite dans une branche n'exempte pas l'autre.
+ *   ⚠️ LIMITES DÉCLARÉES. Ce qui n'est pas constant n'est PAS jugé : il reste écrit, et sépare.
+ *   Donc : une variable, un paramètre, un appel, une propriété, un import, une constante d'un
+ *   autre fichier ; un nom lié plus d'une fois dans le fichier (il pourrait désigner l'autre
+ *   liaison) ; `&&` ou `||` dont la gauche est inconnue ; un ternaire dont une branche est
+ *   inconnue ; un tableau étalé (`...`) ; au-delà de `MAX_VALEURS_POSSIBLES` affichages possibles
+ *   pour une même expression. Ce qu'un composant fait de ses enfants n'est pas lu non plus. Seul
+ *   un test du rendu à l'exécution jugerait ces cas.
+ *
  * INVARIANT DE LA PREUVE (RM-11). `--prove` ne touche pas au dépôt et ne le lit pas : la vue est
  * INJECTÉE. Une preuve qui lirait les fichiers réels verdirait ou rougirait au gré de ce que le
  * dépôt contient le jour où elle tourne, et ne dirait plus rien de la garde.
@@ -486,6 +504,11 @@ type Retouche = {
   par: string;
   /** Ce qui QUITTE l'écran mais reste LU par la garde : attributs d'une balise effacée, cible d'un lien. */
   traine?: string;
+  /**
+   * GOV-109 — les AUTRES affichages possibles, quand une condition inconnue choisit entre des
+   * branches constantes : la ligne est rendue une fois par affichage, et chacune est jugée.
+   */
+  variantes?: string[];
 };
 
 /**
@@ -540,10 +563,116 @@ function appliquerRetouches(source: string, retouches: Retouche[]): string {
   return out + clore();
 }
 
-/** Une valeur CONSTANTE de JavaScript, telle que l'expression la produit ; `undefined` si elle ne l'est pas. */
-type Constante = { v: string | number | boolean | null | undefined };
+/**
+ * GOV-109 — une valeur CONSTANTE de JavaScript, telle que l'expression la produit sans exécution.
+ * Un tableau est une valeur : React en rend les éléments bout à bout.
+ */
+type Valeur = string | number | boolean | null | undefined | readonly Valeur[];
+type Primitive = Exclude<Valeur, readonly Valeur[]>;
 
-function constante(e: ts.Expression): Constante | undefined {
+/**
+ * Le plafond des valeurs POSSIBLES d'une expression (une condition inconnue donne deux branches,
+ * et deux conditions dans une même concaténation, quatre). Au-delà, l'expression n'est pas jugée :
+ * ⚠️ LIMITE DÉCLARÉE dans l'en-tête.
+ */
+const MAX_VALEURS_POSSIBLES = 16;
+
+/**
+ * Les constantes nommées d'un fichier : `const X = …`, résolues quand le nom n'est lié qu'UNE fois
+ * dans le fichier (aucun paramètre, aucune autre variable, aucun import du même nom). Un nom lié
+ * deux fois pourrait désigner l'autre liaison à l'endroit du rendu : il n'est pas résolu.
+ */
+type Contexte = { constantes: ReadonlyMap<string, ts.Expression>; enCours: Set<string> };
+
+const SANS_CONTEXTE = (): Contexte => ({ constantes: new Map(), enCours: new Set() });
+
+function constantesDuFichier(sf: ts.SourceFile): Contexte {
+  const liaisons = new Map<string, number>();
+  const lier = (nom: ts.BindingName | undefined): void => {
+    if (nom === undefined) return;
+    if (ts.isIdentifier(nom)) {
+      liaisons.set(nom.text, (liaisons.get(nom.text) ?? 0) + 1);
+      return;
+    }
+    for (const el of nom.elements) if (!ts.isOmittedExpression(el)) lier(el.name);
+  };
+  const candidates = new Map<string, ts.Expression>();
+  const visiter = (n: ts.Node): void => {
+    if (ts.isVariableDeclaration(n)) {
+      lier(n.name);
+      const liste = n.parent;
+      if (
+        ts.isIdentifier(n.name) &&
+        n.initializer !== undefined &&
+        ts.isVariableDeclarationList(liste) &&
+        (liste.flags & ts.NodeFlags.Const) !== 0
+      ) {
+        candidates.set(n.name.text, n.initializer);
+      }
+    } else if (ts.isParameter(n)) {
+      lier(n.name);
+    } else if (
+      ts.isFunctionDeclaration(n) ||
+      ts.isFunctionExpression(n) ||
+      ts.isClassDeclaration(n) ||
+      ts.isClassExpression(n) ||
+      ts.isEnumDeclaration(n) ||
+      ts.isImportEqualsDeclaration(n) ||
+      ts.isImportClause(n) ||
+      ts.isImportSpecifier(n) ||
+      ts.isNamespaceImport(n)
+    ) {
+      const nom = n.name;
+      if (nom !== undefined && ts.isIdentifier(nom)) lier(nom);
+    }
+    ts.forEachChild(n, visiter);
+  };
+  visiter(sf);
+  const constantes = new Map<string, ts.Expression>();
+  for (const [nom, init] of candidates) if (liaisons.get(nom) === 1) constantes.set(nom, init);
+  return { constantes, enCours: new Set() };
+}
+
+/** `String(v)` de JavaScript, tableaux compris (`[1, [2, null]]` → « 1,2, »). */
+function enChaine(v: Valeur): string {
+  if (Array.isArray(v)) {
+    return v.map((x: Valeur) => (x === null || x === undefined ? '' : enChaine(x))).join(',');
+  }
+  return String(v);
+}
+
+const primitive = (v: Valeur): Primitive => (Array.isArray(v) ? enChaine(v) : (v as Primitive));
+
+const vrai = (v: Valeur): boolean => Array.isArray(v) || Boolean(v);
+
+/** Le produit de listes de valeurs possibles, ou `undefined` au-delà du plafond. */
+function produit(listes: readonly (readonly Valeur[])[]): Valeur[][] | undefined {
+  let acc: Valeur[][] = [[]];
+  for (const l of listes) {
+    const suivant: Valeur[][] = [];
+    for (const a of acc) for (const v of l) suivant.push([...a, v]);
+    if (suivant.length > MAX_VALEURS_POSSIBLES) return undefined;
+    acc = suivant;
+  }
+  return acc;
+}
+
+/** Des listes de valeurs possibles, bout à bout, ou `undefined` si l'une manque ou au-delà du plafond. */
+function union(...listes: (readonly Valeur[] | undefined)[]): Valeur[] | undefined {
+  const out: Valeur[] = [];
+  for (const l of listes) {
+    if (l === undefined) return undefined;
+    out.push(...l);
+  }
+  return out.length > MAX_VALEURS_POSSIBLES ? undefined : out;
+}
+
+/**
+ * Les valeurs POSSIBLES d'une expression, toutes constantes, dans la sémantique de JavaScript ;
+ * `undefined` dès qu'une seule ne l'est pas. Une seule valeur, sauf là où une condition inconnue
+ * choisit entre deux branches constantes : les deux sont alors possibles, et les deux se jugent.
+ */
+function valeursPossibles(e: ts.Expression, ctx: Contexte): Valeur[] | undefined {
   if (
     ts.isParenthesizedExpression(e) ||
     ts.isAsExpression(e) ||
@@ -551,40 +680,114 @@ function constante(e: ts.Expression): Constante | undefined {
     ts.isNonNullExpression(e) ||
     ts.isTypeAssertionExpression(e)
   ) {
-    return constante(e.expression);
+    return valeursPossibles(e.expression, ctx);
   }
-  if (ts.isStringLiteral(e) || ts.isNoSubstitutionTemplateLiteral(e)) return { v: e.text };
-  if (ts.isNumericLiteral(e)) return { v: Number(e.text) };
-  if (e.kind === ts.SyntaxKind.NullKeyword) return { v: null };
-  if (e.kind === ts.SyntaxKind.TrueKeyword) return { v: true };
-  if (e.kind === ts.SyntaxKind.FalseKeyword) return { v: false };
-  if (ts.isIdentifier(e) && e.text === 'undefined') return { v: undefined };
-  if (ts.isVoidExpression(e)) return { v: undefined };
-  if (ts.isTemplateExpression(e)) {
-    let s = e.head.text;
-    for (const span of e.templateSpans) {
-      const c = constante(span.expression);
-      if (c === undefined) return undefined;
-      s += String(c.v) + span.literal.text;
+  if (ts.isStringLiteral(e) || ts.isNoSubstitutionTemplateLiteral(e)) return [e.text];
+  if (ts.isNumericLiteral(e)) return [Number(e.text)];
+  if (e.kind === ts.SyntaxKind.NullKeyword) return [null];
+  if (e.kind === ts.SyntaxKind.TrueKeyword) return [true];
+  if (e.kind === ts.SyntaxKind.FalseKeyword) return [false];
+  if (ts.isVoidExpression(e)) return [undefined];
+  if (ts.isIdentifier(e)) {
+    if (e.text === 'undefined') return [undefined];
+    const init = ctx.constantes.get(e.text);
+    if (init === undefined || ctx.enCours.has(e.text)) return undefined;
+    ctx.enCours.add(e.text);
+    try {
+      return valeursPossibles(init, ctx);
+    } finally {
+      ctx.enCours.delete(e.text);
     }
-    return { v: s };
   }
-  if (ts.isBinaryExpression(e) && e.operatorToken.kind === ts.SyntaxKind.PlusToken) {
-    const g = constante(e.left);
-    const d = constante(e.right);
-    if (g === undefined || d === undefined) return undefined;
-    if (typeof g.v === 'number' && typeof d.v === 'number') return { v: g.v + d.v };
-    if (typeof g.v === 'string' || typeof d.v === 'string') return { v: String(g.v) + String(d.v) };
+  if (ts.isPrefixUnaryExpression(e)) {
+    const vs = valeursPossibles(e.operand, ctx);
+    if (vs === undefined) return undefined;
+    if (e.operator === ts.SyntaxKind.MinusToken) return vs.map((v) => -Number(primitive(v)));
+    if (e.operator === ts.SyntaxKind.PlusToken) return vs.map((v) => Number(primitive(v)));
+    if (e.operator === ts.SyntaxKind.ExclamationToken) return vs.map((v) => !vrai(v));
     return undefined;
+  }
+  if (ts.isTemplateExpression(e)) {
+    const listes: Valeur[][] = [];
+    for (const s of e.templateSpans) {
+      const l = valeursPossibles(s.expression, ctx);
+      if (l === undefined) return undefined;
+      listes.push(l);
+    }
+    return produit(listes)?.map(
+      (vs) =>
+        e.head.text + vs.map((v, k) => enChaine(v) + e.templateSpans[k]!.literal.text).join('')
+    );
+  }
+  if (ts.isArrayLiteralExpression(e)) {
+    const listes: Valeur[][] = [];
+    for (const el of e.elements) {
+      if (ts.isSpreadElement(el)) return undefined;
+      if (ts.isOmittedExpression(el)) {
+        listes.push([undefined]);
+        continue;
+      }
+      const l = valeursPossibles(el, ctx);
+      if (l === undefined) return undefined;
+      listes.push(l);
+    }
+    return produit(listes);
+  }
+  if (ts.isConditionalExpression(e)) {
+    const conditions = valeursPossibles(e.condition, ctx);
+    if (conditions !== undefined && conditions.every(vrai))
+      return valeursPossibles(e.whenTrue, ctx);
+    if (conditions !== undefined && !conditions.some(vrai))
+      return valeursPossibles(e.whenFalse, ctx);
+    // Condition inconnue (ou tantôt vraie, tantôt fausse) : les DEUX branches se rendent.
+    return union(valeursPossibles(e.whenTrue, ctx), valeursPossibles(e.whenFalse, ctx));
+  }
+  if (ts.isBinaryExpression(e)) {
+    const op = e.operatorToken.kind;
+    if (
+      op === ts.SyntaxKind.AmpersandAmpersandToken ||
+      op === ts.SyntaxKind.BarBarToken ||
+      op === ts.SyntaxKind.QuestionQuestionToken
+    ) {
+      const gauches = valeursPossibles(e.left, ctx);
+      if (gauches === undefined) return undefined;
+      const prendDroite = (g: Valeur): boolean =>
+        op === ts.SyntaxKind.AmpersandAmpersandToken
+          ? vrai(g)
+          : op === ts.SyntaxKind.BarBarToken
+            ? !vrai(g)
+            : g === null || g === undefined;
+      const restent = gauches.filter((g) => !prendDroite(g));
+      if (restent.length === gauches.length) return restent;
+      return union(restent, valeursPossibles(e.right, ctx));
+    }
+    if (op === ts.SyntaxKind.PlusToken) {
+      const g = valeursPossibles(e.left, ctx);
+      const d = valeursPossibles(e.right, ctx);
+      if (g === undefined || d === undefined) return undefined;
+      return produit([g, d])?.map(([a, b]) => {
+        const x = primitive(a);
+        const y = primitive(b);
+        return typeof x === 'string' || typeof y === 'string'
+          ? String(x) + String(y)
+          : Number(x) + Number(y);
+      });
+    }
   }
   return undefined;
 }
 
-/** Ce que React AFFICHE d'une constante : rien pour `null`, `undefined` et les booléens. */
-function affichage(c: Constante): string {
-  return c.v === null || c.v === undefined || typeof c.v === 'boolean' ? '' : String(c.v);
+/** Ce que React AFFICHE d'une valeur : rien pour `null`, `undefined` et les booléens ; un tableau, bout à bout. */
+function affichage(v: Valeur): string {
+  if (Array.isArray(v)) return v.map((x: Valeur) => affichage(x)).join('');
+  return v === null || v === undefined || typeof v === 'boolean' ? '' : String(v);
 }
 
+/** Les affichages POSSIBLES d'une expression constante, sans doublon ; `undefined` si elle ne l'est pas. */
+function affichagesPossibles(e: ts.Expression, ctx: Contexte): string[] | undefined {
+  const vs = valeursPossibles(e, ctx);
+  return vs === undefined ? undefined : [...new Set(vs.map(affichage))];
+}
 const EST_EN_LIGNE: ReadonlySet<string> = new Set(BALISES_EN_LIGNE);
 
 /**
@@ -638,12 +841,13 @@ function sansParentheses(e: ts.Expression): ts.Expression {
 
 /**
  * Les retouches d'un fichier JSX, lues dans l'AST. Chaque ENFANT d'un élément ou d'un fragment est
- * rendu : le texte (mis au propre), l'expression constante (sa valeur ; rien pour `null`, `false`,
- * `true`, `undefined`), l'expression vide ou commentaire seul (rien), l'élément JSX entre
- * accolades, et les balises des éléments en ligne et des fragments (effacées, attributs en
- * traîne). Une balise de BLOC reste : elle sépare. ⚠️ LIMITE DÉCLARÉE : une expression dont la
- * valeur n'est pas constante (variable, appel, condition) n'est pas inventée — elle reste écrite,
- * et sépare ; seul un test du rendu à l'exécution la jugerait.
+ * rendu : le texte (mis au propre), l'expression constante (sa valeur évaluée, GOV-109 ; ses
+ * affichages possibles quand une condition inconnue choisit entre des branches constantes),
+ * l'expression vide ou commentaire seul (rien), l'élément JSX entre accolades, et les balises des
+ * éléments en ligne et des fragments (effacées, attributs en traîne). Une balise de BLOC reste :
+ * elle sépare. ⚠️ LIMITE DÉCLARÉE (en-tête) : une expression dont la valeur n'est pas constante
+ * n'est pas inventée — elle reste écrite, et sépare ; seul un test du rendu à l'exécution la
+ * jugerait.
  */
 function retouchesJsx(chemin: string, contenu: string): Retouche[] {
   const sf = ts.createSourceFile(
@@ -653,6 +857,7 @@ function retouchesJsx(chemin: string, contenu: string): Retouche[] {
     true,
     /\.jsx$/.test(chemin) ? ts.ScriptKind.JSX : ts.ScriptKind.TSX
   );
+  const ctx = constantesDuFichier(sf);
   const r: Retouche[] = [];
   const effacer = (n: ts.Node, traine?: string): void => {
     r.push({ debut: n.getStart(sf), fin: n.end, par: '', ...(traine ? { traine } : {}) });
@@ -665,7 +870,8 @@ function retouchesJsx(chemin: string, contenu: string): Retouche[] {
     if (ts.isJsxText(c) || ts.isJsxFragment(c)) return true;
     if (ts.isJsxElement(c)) return estEnLigneJsx(c.openingElement.tagName);
     if (ts.isJsxSelfClosingElement(c)) return estBaliseEnLigne(c.tagName.getText(sf));
-    if (c.expression === undefined || constante(c.expression) !== undefined) return true;
+    if (c.expression === undefined || affichagesPossibles(c.expression, ctx) !== undefined)
+      return true;
     const x = sansParentheses(c.expression);
     return ts.isJsxElement(x) || ts.isJsxFragment(x) || ts.isJsxSelfClosingElement(x);
   };
@@ -692,9 +898,15 @@ function retouchesJsx(chemin: string, contenu: string): Retouche[] {
         else if (avant && apres) effacer(c, interieur);
         return;
       }
-      const v = constante(c.expression);
-      if (v !== undefined) {
-        r.push({ debut: c.getStart(sf), fin: c.end, par: affichage(v) });
+      const vus = affichagesPossibles(c.expression, ctx);
+      if (vus !== undefined) {
+        const [par = '', ...variantes] = vus;
+        r.push({
+          debut: c.getStart(sf),
+          fin: c.end,
+          par,
+          ...(variantes.length > 0 ? { variantes } : {}),
+        });
         return;
       }
       const x = sansParentheses(c.expression);
@@ -940,8 +1152,8 @@ function constanteDeSource(expression: string): string | undefined {
   const [instruction] = sf.statements;
   if (sf.statements.length !== 1 || instruction === undefined) return undefined;
   if (!ts.isExpressionStatement(instruction)) return undefined;
-  const c = constante(instruction.expression);
-  return c === undefined ? undefined : affichage(c);
+  const vus = affichagesPossibles(instruction.expression, SANS_CONTEXTE());
+  return vus?.length === 1 ? vus[0] : undefined;
 }
 
 /**
@@ -956,20 +1168,38 @@ export function lignesRendues(chemin: string, contenu: string): string[] {
     : /\.(tsx|jsx)$/.test(chemin)
       ? retouchesJsx(chemin, contenu)
       : [];
-  const rendu = retouches.length > 0 ? appliquerRetouches(contenu, retouches) : contenu;
   const effacables = effacablesPour(chemin);
-  let dansUnBloc = false;
-  return rendu.split('\n').map((ligne) => {
-    if (markdown && /^\s{0,3}(```|~~~)/.test(ligne)) {
-      dansUnBloc = !dansUnBloc;
-      return ligne.replace(INVISIBLES, '');
-    }
-    if (dansUnBloc) return ligne.replace(INVISIBLES, '');
-    if (!markdown) return rendreFragment(ligne, effacables);
-    return morceauxMarkdown(ligne)
-      .map(([t, code]) => (code ? t.replace(INVISIBLES, '') : rendreFragment(t, effacables)))
-      .join('');
-  });
+  const rendre = (choisies: Retouche[]): string[] => {
+    const rendu = choisies.length > 0 ? appliquerRetouches(contenu, choisies) : contenu;
+    let dansUnBloc = false;
+    return rendu.split('\n').map((ligne) => {
+      if (markdown && /^\s{0,3}(```|~~~)/.test(ligne)) {
+        dansUnBloc = !dansUnBloc;
+        return ligne.replace(INVISIBLES, '');
+      }
+      if (dansUnBloc) return ligne.replace(INVISIBLES, '');
+      if (!markdown) return rendreFragment(ligne, effacables);
+      return morceauxMarkdown(ligne)
+        .map(([t, code]) => (code ? t.replace(INVISIBLES, '') : rendreFragment(t, effacables)))
+        .join('');
+    });
+  };
+  // GOV-109 : une retouche à plusieurs affichages possibles (une condition inconnue entre des
+  // branches constantes) fait rendre le fichier une fois par affichage ; la ligne rendue les porte
+  // tous, séparés par une barre — un SÉPARATEUR DE SEGMENT : la négation d'une variante n'exempte
+  // pas l'autre. Le rendu k prend le k-ième affichage de chaque retouche (le dernier, s'il en a
+  // moins) : chaque affichage est jugé au moins une fois, dans le contexte réel de sa ligne.
+  const tours = Math.max(1, ...retouches.map((r) => 1 + (r.variantes?.length ?? 0)));
+  if (tours === 1) return rendre(retouches);
+  const rendus = Array.from({ length: tours }, (_, k) =>
+    rendre(
+      retouches.map((r) => {
+        const affichages = [r.par, ...(r.variantes ?? [])];
+        return { ...r, par: affichages[Math.min(k, affichages.length - 1)]! };
+      })
+    )
+  );
+  return rendus[0]!.map((_, i) => [...new Set(rendus.map((l) => l[i]!))].join(' | '));
 }
 
 // ── la vue et le contrôle ────────────────────────────────────────────────────
