@@ -214,7 +214,7 @@ function confronter(d: Derivation, cas: readonly Cas[]): { code: 0 | 1; sortie: 
   };
 }
 
-describe('REQ-QA-010 — garde statique : une surface neuve de l’espace sans cas est un trou', () => {
+describe('REQ-QA-010 → REQ-SEC-009 — garde statique : une surface neuve de l’espace sans cas est un trou', () => {
   let bac: string;
 
   beforeAll(() => {
@@ -226,14 +226,14 @@ describe('REQ-QA-010 — garde statique : une surface neuve de l’espace sans c
     if (bac) rmSync(bac, { recursive: true, force: true });
   });
 
-  it('REQ-QA-010 : TÉMOIN À DEUX FACES — le dépôt réel sort en 0 avec le compte des routes et des actions confrontées', () => {
+  it('REQ-QA-010 → REQ-SEC-009 : TÉMOIN À DEUX FACES — le dépôt réel sort en 0 avec le compte des routes et des actions confrontées', () => {
     const { code, sortie } = confronter(deriverSurfaces(RACINE), IDOR_CASES);
     console.log(sortie);
     expect(sortie).toBe('idor:check — ✓ 2 routes et 2 actions confrontées');
     expect(code).toBe(0);
   });
 
-  it('REQ-QA-010 : TÉMOIN À DEUX FACES — une route paramétrée plantée sans son cas fait sortir en 1 et la nomme', () => {
+  it('REQ-QA-010 → REQ-SEC-009 : TÉMOIN À DEUX FACES — une route paramétrée plantée sans son cas fait sortir en 1 et la nomme', () => {
     const dossier = join(bac, 'src/app/(espace)/(onglets)/mes-entreprises/[id]');
     mkdirSync(dossier, { recursive: true });
     writeFileSync(join(dossier, 'page.tsx'), 'export default function P() { return null; }\n');
@@ -243,7 +243,7 @@ describe('REQ-QA-010 — garde statique : une surface neuve de l’espace sans c
     expect(sortie).toContain('surface sans cas de cloisonnement : page /mes-entreprises/:id');
   });
 
-  it('REQ-QA-010 : une action neuve dans un fichier « use server » et un gestionnaire de route neuf, sans cas, sont nommés', () => {
+  it('REQ-QA-010 → REQ-SEC-009 : une action neuve dans un fichier « use server » et un gestionnaire de route neuf, sans cas, sont nommés', () => {
     const dossier = join(bac, 'src/server/espace/documents');
     mkdirSync(dossier, { recursive: true });
     writeFileSync(
@@ -261,7 +261,7 @@ describe('REQ-QA-010 — garde statique : une surface neuve de l’espace sans c
     expect(sortie).toContain('surface sans cas de cloisonnement : GET /documents/:id/pdf');
   });
 
-  it('REQ-QA-010 : un fichier que la dérivation ne sait pas lire n’est pas deviné — il fait sortir en 1, nommé', () => {
+  it('REQ-QA-010 → REQ-SEC-009 : un fichier que la dérivation ne sait pas lire n’est pas deviné — il fait sortir en 1, nommé', () => {
     const dossier = join(bac, 'src/server/espace');
     mkdirSync(dossier, { recursive: true });
     writeFileSync(
@@ -283,7 +283,7 @@ describe('REQ-QA-010 — garde statique : une surface neuve de l’espace sans c
     );
   });
 
-  it('REQ-QA-010 : un cas déclaré dont la surface a disparu du disque est périmé — sortie en 1', () => {
+  it('REQ-QA-010 → REQ-SEC-009 : un cas déclaré dont la surface a disparu du disque est périmé — sortie en 1', () => {
     const { code, sortie } = confronter(deriverSurfaces(bac), [
       ...IDOR_CASES,
       { surface: 'page /disparue', cloisonnement: 'sans_ressource', motif: 'témoin' },
@@ -292,7 +292,7 @@ describe('REQ-QA-010 — garde statique : une surface neuve de l’espace sans c
     expect(sortie).toContain('cas déclaré sans surface sur le disque : page /disparue');
   });
 
-  it('REQ-QA-010 : la dérivation ignore les dossiers privés, les groupes et les emplacements parallèles comme le routeur', () => {
+  it('REQ-QA-010 → REQ-SEC-009 : la dérivation ignore les dossiers privés, les groupes et les emplacements parallèles comme le routeur', () => {
     expect(cheminDUrl('src/app/(espace)/(onglets)/@modal/plus/page.tsx')).toBe('/plus');
     expect(cheminDUrl('src/app/(espace)/_interne/page.tsx')).toBeNull();
     expect(cheminDUrl('src/app/(espace)/aide/[...reste]/page.tsx')).toBe('/aide/*reste');
