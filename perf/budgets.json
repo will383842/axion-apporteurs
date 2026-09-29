@@ -38,6 +38,12 @@
       "path": ".next/server/app/(espace)/connexion/[jeton]/page_client-reference-manifest.js",
       "limit": "75 KB",
       "gzip": true
+    },
+    {
+      "name": "/confidentialite",
+      "path": ".next/static/chunks/app/(espace)/confidentialite/page*.js",
+      "limit": "75 KB",
+      "gzip": true
     }
   ],
   "socle": {
