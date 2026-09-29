@@ -8,14 +8,14 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `7ff56c8` — 2026-09-29T11:44:53+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #225 (un contrôle requis rouge ou une revue manquante) · 2. #226 (un contrôle requis rouge ou une revue manquante) · 3. #218 (un conflit avec `main`) · 4. #221 (brouillon) |
+| Qu’est-ce qui est en vol ? | 1. #225 (rien) · 2. #226 (rien) · 3. #218 (un contrôle requis rouge ou une revue manquante) · 4. #221 (un contrôle requis rouge ou une revue manquante) |
 | Qui tient quoi ? | QA-T05 (A01) |
 | Où en est la phase ? | phase 0 — 95/131 tâches, reste 29.00 j |
-| Le prochain pas | QA-T05 — Pipeline GHCR privé → Coolify pull |
+| Le prochain pas | fusionner #225, puis QA-T05 — Pipeline GHCR privé → Coolify pull |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
 | Dernière entrée de journal | PR #221 — 2026-09-29 |
 
-**Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** `gh pr view 225 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : 0
 
@@ -60,10 +60,10 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #225 — fix(GOV-119): une fusion posterieure au clone est nommee et comptee, pas un rouge de la porte A | `t/gov-119` | un contrôle requis rouge ou une revue manquante |
-| 2 | #226 — fix(GOV-122): un renommage a la seconde de la fusion est indecidable, une date illisible rend la chronologie illisible | `t/gov-122` | un contrôle requis rouge ou une revue manquante |
-| 3 | #218 — feat(DM-04): commission et prorata en fonction pure, entiers exacts, bareme choisi par commissionId | `t/dm-04` | un conflit avec `main` — à résoudre avant tout |
-| 4 | #221 — feat(QA-T05): la forge construit, juge puis publie l'image, la plateforme ne fera plus que la tirer | `t/qa-t05` | brouillon — hors file tant qu’il n’est pas prêt |
+| 1 | #225 — fix(GOV-119): une fusion posterieure au clone est nommee et comptee, pas un rouge de la porte A | `t/gov-119` | rien — fusionnable maintenant |
+| 2 | #226 — fix(GOV-122): un renommage a la seconde de la fusion est indecidable, une date illisible rend la chronologie illisible | `t/gov-122` | rien — fusionnable maintenant |
+| 3 | #218 — feat(DM-04): commission et prorata en fonction pure, entiers exacts, bareme choisi par commissionId | `t/dm-04` | un contrôle requis rouge ou une revue manquante |
+| 4 | #221 — feat(QA-T05): la forge construit, juge puis publie l'image, la plateforme ne fera plus que la tirer | `t/qa-t05` | un contrôle requis rouge ou une revue manquante |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -84,6 +84,8 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 Dérivé de `git log` sur `docs/adr/`, restreint au jour du dernier atterrissage. Une décision de Will n’est pas un ADR : elle vit au registre `docs/DECISIONS.md`, tranchée ou tenue par une hypothèse datée.
 
 ## Prochain pas
+
+**Fusionner #225** — elle est en tête de file et ne bloque sur rien.
 
 **QA-T05** — Pipeline GHCR privé → Coolify pull (1 j) : 19 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 

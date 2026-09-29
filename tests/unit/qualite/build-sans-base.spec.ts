@@ -7,12 +7,14 @@
  * c'est une DIVERGENCE ASSUMÉE, écrite ici pour qu'elle ne soit pas réintroduite par imitation.
  *
  * DEUX PREUVES, DEUX LIEUX :
- *   — l'ACTE vit dans `.github/workflows/deploy.yml` : l'image se construit sans aucune variable,
- *     puis une page qui lit la base au rendu fait échouer le build, qui la NOMME. Ce fichier exige
- *     que ces deux étapes existent et qu'elles ne soient pas vidées ;
- *   — la FORME vit ici : ni le Dockerfile, ni un workflow, ni le code ne porte de valeur de
- *     substitution, et aucun client de base n'est enveloppé dans un mandataire qui court-circuite
- *     ses requêtes. Chaque règle a sa face rouge, jouée sur une copie mutée.
+ *   — l'ACTE vit dans la forge : `.github/workflows/deploy.yml` lance `image:construire` (l'image
+ *     se construit sans aucune variable), puis `image:temoin-build-sans-base` (une page qui lit la
+ *     base au rendu fait échouer le build, qui la NOMME). Ce fichier exige que les deux étapes
+ *     existent, que les scripts exécutent exactement ce qui est jugé, et que le témoin ne soit pas
+ *     vidé ;
+ *   — la FORME vit ici : ni le Dockerfile, ni un workflow, ni un script, ni le code ne porte de
+ *     valeur de substitution, et aucun client de base n'est enveloppé dans un mandataire qui
+ *     court-circuite ses requêtes. Chaque règle a sa face rouge, jouée sur une copie mutée.
  *
  * Ce qu'elle ne voit pas : une valeur de substitution construite par concaténation. Elle lit des
  * littéraux ; l'acte, dans la forge, reste la preuve de fond.
@@ -23,6 +25,8 @@ import { fichiersSuivis } from '../../../scripts/lot/fichiers-suivis';
 
 const DOCKERFILE = 'Dockerfile';
 const WORKFLOW = '.github/workflows/deploy.yml';
+const PAQUET = 'package.json';
+const TEMOIN = 'scripts/image/temoin-build-sans-base.sh';
 
 /** Une VALEUR de substitution de build — jamais le simple nom du patron, qu'un commentaire cite. */
 const SUBSTITUTION = [
@@ -54,14 +58,22 @@ function fautesDeFichier(chemin: string, texte: string): string[] {
   return f;
 }
 
-function fautesDeLActe(workflow: string): string[] {
+/** L'ACTE : le workflow lance les deux scripts, et chacun exécute exactement ce qui est jugé. */
+function fautesDeLActe(workflow: string, paquet: string, temoinSh: string): string[] {
   const f: string[] = [];
-  if (!/docker build --tag partners:construite \.\s*$/m.test(workflow))
+  const scripts = (JSON.parse(paquet) as { scripts: Record<string, string> }).scripts;
+  if (
+    !/run: pnpm image:construire\s*$/m.test(workflow) ||
+    scripts['image:construire'] !== 'docker build --tag partners:construite .'
+  )
     f.push('build_sans_base_absent : le workflow ne construit pas l’image sans variable');
   const temoin =
-    /\$queryRaw/.test(workflow) &&
-    /if docker build --tag partners-temoin/.test(workflow) &&
-    /grep -q "temoin-build-sans-base"/.test(workflow);
+    /run: pnpm image:temoin-build-sans-base\s*$/m.test(workflow) &&
+    scripts['image:temoin-build-sans-base'] === `sh ${TEMOIN}` &&
+    /\$queryRaw/.test(temoinSh) &&
+    /if docker build --tag partners-temoin/.test(temoinSh) &&
+    /grep -q "temoin-build-sans-base"/.test(temoinSh) &&
+    /prerender\|DATABASE_URL/.test(temoinSh);
   if (!temoin)
     f.push(
       'build_sans_base_sans_face_rouge : aucune page qui lit la base au rendu n’est exigée en échec nommé'
@@ -71,20 +83,21 @@ function fautesDeLActe(workflow: string): string[] {
 
 describe('REQ-QA-032 — le build réussit sans base, et ne triche pas pour y arriver (QA-T05)', () => {
   const suivis = fichiersSuivis().filter(perimetre);
+  const dockerfile = readFileSync(DOCKERFILE, 'utf8');
+  const workflow = readFileSync(WORKFLOW, 'utf8');
+  const paquet = readFileSync(PAQUET, 'utf8');
+  const temoinSh = readFileSync(TEMOIN, 'utf8');
 
   it('REQ-QA-032 — aucun fichier du périmètre ne porte de substitution ni de mandataire, et le compte est dit', () => {
-    expect(suivis).toContain(DOCKERFILE);
-    expect(suivis).toContain(WORKFLOW);
+    for (const attendu of [DOCKERFILE, WORKFLOW, PAQUET, TEMOIN]) expect(suivis).toContain(attendu);
     const fautes = suivis.flatMap((c) => fautesDeFichier(c, readFileSync(c, 'utf8')));
     expect(fautes, `${suivis.length} fichier(s) lu(s)`).toEqual([]);
   });
 
   it('REQ-QA-032 — l’acte est dans la forge : build sans variable, puis face rouge nommée', () => {
-    expect(fautesDeLActe(readFileSync(WORKFLOW, 'utf8'))).toEqual([]);
+    expect(fautesDeLActe(workflow, paquet, temoinSh)).toEqual([]);
   });
 
-  const dockerfile = readFileSync(DOCKERFILE, 'utf8');
-  const workflow = readFileSync(WORKFLOW, 'utf8');
   const mutants: [string, string, string, string][] = [
     [
       'une adresse de base factice posée dans l’image',
@@ -105,9 +118,9 @@ describe('REQ-QA-032 — le build réussit sans base, et ne triche pas pour y ar
       'substitution_de_build',
     ],
     [
-      'une variable de base passée au build par le workflow',
-      WORKFLOW,
-      workflow.replace(
+      'une variable de base passée au build par le script de construction',
+      PAQUET,
+      paquet.replace(
         'docker build --tag partners:construite .',
         'docker build --build-arg DATABASE_URL=x --tag partners:construite .'
       ),
@@ -126,14 +139,26 @@ describe('REQ-QA-032 — le build réussit sans base, et ne triche pas pour y ar
     });
   }
 
-  it('REQ-QA-032 — TÉMOIN : la face rouge du build retirée du workflow rougit', () => {
-    const sansTemoin = workflow.replace(
+  it('REQ-QA-032 — TÉMOIN : le témoin du build qui n’exige plus l’échec rougit', () => {
+    const sansEchec = temoinSh.replace(
       /if docker build --tag partners-temoin/,
       'docker build --tag partners-temoin'
     );
-    expect(sansTemoin).not.toBe(workflow);
+    expect(sansEchec).not.toBe(temoinSh);
     expect(
-      fautesDeLActe(sansTemoin).some((x) => x.startsWith('build_sans_base_sans_face_rouge'))
+      fautesDeLActe(workflow, paquet, sansEchec).some((x) =>
+        x.startsWith('build_sans_base_sans_face_rouge')
+      )
+    ).toBe(true);
+  });
+
+  it('REQ-QA-032 — TÉMOIN : le workflow qui ne lance plus la face rouge rougit', () => {
+    const sansEtape = workflow.replace('run: pnpm image:temoin-build-sans-base', 'run: pnpm lint');
+    expect(sansEtape).not.toBe(workflow);
+    expect(
+      fautesDeLActe(sansEtape, paquet, temoinSh).some((x) =>
+        x.startsWith('build_sans_base_sans_face_rouge')
+      )
     ).toBe(true);
   });
 });

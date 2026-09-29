@@ -2252,7 +2252,11 @@
         "scripts/gates/gate-c.sh",
         "tests/unit/qualite/pipeline-image.spec.ts",
         "tests/unit/qualite/build-sans-base.spec.ts",
-        "docs/gates.json"
+        "docs/gates.json",
+        "package.json",
+        "scripts/image/temoin-build-sans-base.sh",
+        "scripts/image/temoin-porte-c.sh",
+        "scripts/image/publier.sh"
       ],
       "schema": false,
       "sensible": [],
