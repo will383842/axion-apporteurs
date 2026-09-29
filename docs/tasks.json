@@ -2363,7 +2363,8 @@
         "scripts/preview/",
         "package.json",
         "tests/unit/qualite/pipeline-image.spec.ts",
-        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts"
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts",
+        "docker-entrypoint.sh"
       ],
       "schema": true,
       "sensible": [],

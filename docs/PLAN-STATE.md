@@ -8,14 +8,14 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `0db2bca0` — 2026-09-30T00:01:49+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #263 (un contrôle requis rouge ou une revue manquante) · 2. #267 (un contrôle requis rouge ou une revue manquante) · 3. #268 (un contrôle requis rouge ou une revue manquante) · 4. #271 (un contrôle requis rouge ou une revue manquante) · 5. #272 (un contrôle requis rouge ou une revue manquante) · 6. #275 (un contrôle requis rouge ou une revue manquante) · 7. #262 (un conflit avec `main`) |
+| Qu’est-ce qui est en vol ? | 1. #267 (rien) · 2. #263 (un contrôle requis rouge ou une revue manquante) · 3. #268 (un contrôle requis rouge ou une revue manquante) · 4. #271 (un contrôle requis rouge ou une revue manquante) · 5. #272 (un contrôle requis rouge ou une revue manquante) · 6. #275 (un contrôle requis rouge ou une revue manquante) · 7. #262 (un conflit avec `main`) |
 | Qui tient quoi ? | GOV-117 (A01) |
 | Où en est la phase ? | phase 0 — 116/133 tâches, reste 13.00 j |
-| Le prochain pas | QA-T06 — Preview par PR sur Coolify, base éphémère, seed déterministe |
+| Le prochain pas | fusionner #267, puis QA-T06 — Preview par PR sur Coolify, base éphémère, seed déterministe |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
 | Dernière entrée de journal | PR #271 — 2026-09-30 |
 
-**Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** `gh pr view 267 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : 0
 
@@ -60,8 +60,8 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #263 — feat(QA-T20): le poids charge par route se lit dans les manifestes de Next 16, zero octet est une faute | `t/qa-t20` | un contrôle requis rouge ou une revue manquante |
-| 2 | #267 — fix(GOV-109): la garde lexicale evalue toute expression JSX constante comme React la rend | `t/gov-109` | un contrôle requis rouge ou une revue manquante |
+| 1 | #267 — fix(GOV-109): la garde lexicale evalue toute expression JSX constante comme React la rend | `t/gov-109` | rien — fusionnable maintenant |
+| 2 | #263 — feat(QA-T20): le poids charge par route se lit dans les manifestes de Next 16, zero octet est une faute | `t/qa-t20` | un contrôle requis rouge ou une revue manquante |
 | 3 | #268 — feat(QA-T34): la plateforme tire sha-7 apres publier, un seul producteur, l'atterrissage lu sur x-partners-build-sha | `t/qa-t34` | un contrôle requis rouge ou une revue manquante |
 | 4 | #271 — chore(GOV-012): registre rattrape, JUR-T03 close, chiffrement client des sauvegardes, paths de QA-T12 et JUR-T29 | `t/registre-rattrapage-16` | un contrôle requis rouge ou une revue manquante |
 | 5 | #272 — feat(QA-T50): base, cache et application crees s'ils manquent, variables posees depuis les secrets, aucune valeur imprimee | `t/qa-t50` | un contrôle requis rouge ou une revue manquante |
@@ -87,6 +87,8 @@ Aucun ADR daté du 2026-09-30 (jour du dernier atterrissage).
 Dérivé de `git log` sur `docs/adr/`, restreint au jour du dernier atterrissage. Une décision de Will n’est pas un ADR : elle vit au registre `docs/DECISIONS.md`, tranchée ou tenue par une hypothèse datée.
 
 ## Prochain pas
+
+**Fusionner #267** — elle est en tête de file et ne bloque sur rien.
 
 **QA-T06** — Preview par PR sur Coolify, base éphémère, seed déterministe (1 j) : 13 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
