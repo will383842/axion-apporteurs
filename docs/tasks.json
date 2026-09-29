@@ -2531,7 +2531,8 @@
         "tests/integration/grille-versionnee.spec.ts",
         "scripts/gates/gov-derivation.ts",
         "prisma/migrations/",
-        "prisma/seed/02-grilles-commission.ts"
+        "prisma/seed/02-grilles-commission.ts",
+        "tests/fixtures/axionia/commissions.v1.pseudonymise.json"
       ],
       "schema": true,
       "sensible": [
