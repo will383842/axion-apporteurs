@@ -118,8 +118,8 @@ modifiable après sa fusion.
 
 **Appris.** Les témoins d'une forme de contournement sont entrés dans le même commit que son
 correctif, jamais avant ; ils sont publics depuis la poussée de la branche, puisque le dépôt l'est.
-Les corps de PR, les messages de commit et ce journal ne les énumèrent pas. La divulgation que
-porte le spec est jugée par la lentille `securite`.
+Les formes sont écrites dans le spec, public depuis cette poussée ; ni les messages de commit ni
+ce journal ne les énumèrent. La divulgation que porte le spec est jugée par la lentille `securite`.
 
 ### PR #199 — 2026-09-28 — chore(GOV-012): registre rattrape, huit taches livrees par trois PR passent fusionnee, quatre suites versees
 
