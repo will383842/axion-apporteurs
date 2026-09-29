@@ -2,12 +2,12 @@
   "version": 1,
   "resume": {
     "_methode": "une PAIRE est comptée quand l'intersection des deux `paths[]` n'est pas vide, par égalité de chaîne. ⚠️ Elle ne lit PAS le champ `paths` des tâches : deux tâches peuvent y figurer comme « sans intersection » alors que leurs `paths` déclarés se recouvrent — c'est le cas de GOV-025 et GOV-028, qui partagent `scripts/gates/gov-identifiants.ts`. Le composeur, lui, compare bien `t.paths` : cette vue ne dit donc pas ce qu'il fera. Ces trois totaux sont écrits par `scripts/lot/paths-proposes.ts` et par rien d'autre ; `tsx scripts/lot/paths-proposes.ts --check` échoue si le fichier rendu en diverge.",
-    "tachesCouvertes": 301,
+    "tachesCouvertes": 303,
     "pairesEnIntersection": 4526,
-    "cheminsDeclares": 833,
-    "cheminsDistincts": 535,
+    "cheminsDeclares": 835,
+    "cheminsDistincts": 537,
     "cheminsPartages": 107,
-    "tachesSansAucuneIntersection": 86,
+    "tachesSansAucuneIntersection": 88,
     "listeDesTachesIsolees": [
       "QA-T08",
       "QA-T12",
@@ -94,7 +94,9 @@
       "GOV-101",
       "INT-T26",
       "INT-T27-A",
-      "GOV-103"
+      "GOV-103",
+      "GOV-116",
+      "GOV-117"
     ],
     "cheminsLesPlusPartages": [
       {
@@ -1593,6 +1595,12 @@
     ],
     "GOV-115": [
       "tests/unit/gouvernance/registre-lecteur-unique.spec.ts"
+    ],
+    "GOV-116": [
+      "tests/unit/gouvernance/lot-dedie-gardien-spec.spec.ts"
+    ],
+    "GOV-117": [
+      "tests/unit/gouvernance/reqs-hyp-zone-d-une-tache.spec.ts"
     ]
   }
 }
