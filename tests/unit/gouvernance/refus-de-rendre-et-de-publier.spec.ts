@@ -856,6 +856,13 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
         'est vu sortir en 0 sur le dépôt dans la même spec ; ⛔ ce témoin d’effet ne vit pas dans ' +
         '`REFUS`. Dette DÉCLARÉE.',
     },
+    'scripts/deploiement/provisionner.ts': {
+      total: 3,
+      porte: 3,
+      temoins: 0,
+      raison:
+        'QA-T50 — REQ-INT-031, le provisionnement de la plateforme depuis les secrets du depot. `process.exitCode` pose sur le code du provisionnement (0 cree, deja present ou saute ; 1 secret hors regle ou refus de la plateforme) et sur 1 en cas d erreur, dont une adresse interne absente de la reponse. Chaque issue est vue sur le binaire contre une plateforme factice locale (provisionnement-coolify.spec.ts) ; aucun temoin ne vit dans `REFUS`. N importe pas `fichiersSuivisOuRefus`. Dette DECLAREE.',
+    },
     'scripts/vues/fusion.ts': {
       total: 1,
       porte: 1,
