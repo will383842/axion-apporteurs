@@ -283,6 +283,12 @@ jobs:
         run: pnpm jur:grille-chiffree
       - name: La garde de la grille chiffree sait rougir
         run: pnpm jur:grille-chiffree:prove
+      # DM-03-P (REQ-DM-014, RM-01) : la grille publiee par axionia n a qu un ecrivain, l import qui
+      # confronte chaque ligne a son empreinte ; la fixture est celle du producteur, pseudonymisee.
+      - name: Grille publiee — un seul ecrivain, une fixture derivee du producteur
+        run: pnpm gov:derivation
+      - name: La garde de derivation de la grille sait rougir
+        run: pnpm gov:derivation:prove
       # JUR-T02 (REQ-JUR-015, REQ-EXT-028, RM-10) : chaque delai et chaque seuil du contrat vit dans
       # la SSOT src/domain/seuils/ssot.ts, source et date a l appui. Aucun litteral de duree ou de
       # montant de seuil hors d elle dans src/, aucun preavis indexe sur l anciennete, et le gabarit
