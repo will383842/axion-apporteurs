@@ -386,8 +386,8 @@ REQ-SEC-030 et REQ-CPL-009 (JUR-T32), REQ-UX-002 et REQ-SEC-022 (DM-30).
 
 ## 5. Tâches nouvelles
 
-Trente-trois tâches. **GOV-112 et GOV-115 sont versées par la PR qui porte ce fichier** ; les trente et une
-autres le seront par GOV-115, en un seul `--depuis`, une fois les exigences qu'elles citent inscrites par
+Trente-deux tâches (le plan disait « les 31 autres » : on en compte 30, liste ci-dessous, rectifié à la
+transcription). **GOV-112 et GOV-115 sont versées par la PR qui porte ce fichier** ; les trente autres le seront par GOV-115, en un seul `--depuis`, une fois les exigences qu'elles citent inscrites par
 GOV-112 (`verser-tache` refuse une REQ inexistante). Chaque ligne donne : phase · poste · zone · schéma ·
 sensible · hypothèses · externe · estimation · dépendances · exigences · chemins, puis l'acceptance.
 
