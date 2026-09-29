@@ -109,4 +109,11 @@ export const ETATS_VIDES_ESPACE: Readonly<Record<string, EtatVide>> = {
     phrase: 'Un lien de connexion ne sert qu’une fois. Un nouveau lien peut vous être envoyé.',
     action: { libelle: "M'envoyer un nouveau lien", route: null },
   },
+  // JUR-T34 : la politique se lit dans le registre ; vide, c'est qu'aucun destinataire n'y est nommé.
+  '/confidentialite': {
+    titre: 'Aucun destinataire nommé',
+    phrase:
+      'Le registre des traitements ne nomme encore aucun prestataire ni organisme qui reçoive vos données.',
+    action: RETOUR_ACCUEIL,
+  },
 };

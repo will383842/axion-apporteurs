@@ -34,6 +34,12 @@
       "path": ".next/static/chunks/app/(espace)/connexion/\\[jeton\\]/**/*.js",
       "limit": "75 KB",
       "gzip": true
+    },
+    {
+      "name": "/confidentialite",
+      "path": ".next/static/chunks/app/(espace)/confidentialite/page*.js",
+      "limit": "75 KB",
+      "gzip": true
     }
   ]
 }
