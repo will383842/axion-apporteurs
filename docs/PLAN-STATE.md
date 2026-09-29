@@ -7,31 +7,31 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `476135a` — 2026-09-29T17:21:45+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #239 (rien) · 2. #245 (un contrôle requis rouge ou une revue manquante) · 3. #241 (un conflit avec `main`) · 4. #242 (un conflit avec `main`) |
-| Qui tient quoi ? | QA-T05 (A01) · QA-T11 (A01) · JUR-T04 (A01) · GOV-066 (A01) · GOV-122 (A01) · GOV-118 (A01) · GOV-119 (A01) · GOV-121 (A01) |
-| Où en est la phase ? | phase 0 — 95/136 tâches, reste 32.75 j |
-| Le prochain pas | fusionner #239, puis QA-T05 — Pipeline GHCR privé → Coolify pull |
+| Où est `main` ? | `b34b959` — 2026-09-29T18:00:27+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #241 (un contrôle requis rouge ou une revue manquante) · 2. #242 (un contrôle requis rouge ou une revue manquante) · 3. #244 (un contrôle requis rouge ou une revue manquante) · 4. #246 (un contrôle requis rouge ou une revue manquante) · 5. #245 (un conflit avec `main`) |
+| Qui tient quoi ? | QA-T11 (A01) |
+| Où en est la phase ? | phase 0 — 102/127 tâches, reste 19.50 j |
+| Le prochain pas | QA-T11 — Gate D migrations : base vierge, dump N-1, migrate diff vide, image N-1, lint expand/contract |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
 | Dernière entrée de journal | PR #245 — 2026-09-29 |
 
-**Ce qu’on tape maintenant.** `gh pr view 239 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : 0
 
-95/136 tâches terminées · reste 32.75 j estimés.
+102/127 tâches terminées · reste 19.50 j estimés.
 
 ## Tâches
 
 | Statut | Nombre | Détail |
 | --- | --- | --- |
 | `proposee` | 0 | — |
-| `a_faire` | 175 | QA-T05, QA-T11, QA-T06, QA-T12, QA-T13, DM-03-A, DM-03-P, DM-04, INT-T02, INT-T03, INT-T04, INT-T05 … (12 affichées sur 175 — liste complète : `docs/TASKS.md`) |
+| `a_faire` | 168 | QA-T11, QA-T06, QA-T12, QA-T13, DM-03-A, DM-03-P, DM-04, INT-T02, INT-T03, INT-T04, INT-T05, INT-T22 … (12 affichées sur 168 — liste complète : `docs/TASKS.md`) |
 | `en_cours` | 0 | — |
 | `bloquee` | 0 | — |
 | `attente_externe` | 2 | JUR-T01b · JUR-T01c |
 | `en_revue` | 0 | — |
-| `fusionnee` | 134 | GOV-000, GOV-007, GOV-001, GOV-018, GOV-008, GOV-002, GOV-003, GOV-004, GOV-005, GOV-006, GOV-009, GOV-010 … (12 affichées sur 134 — liste complète : `docs/TASKS.md`) |
+| `fusionnee` | 141 | GOV-000, GOV-007, GOV-001, GOV-018, GOV-008, GOV-002, GOV-003, GOV-004, GOV-005, GOV-006, GOV-009, GOV-010 … (12 affichées sur 141 — liste complète : `docs/TASKS.md`) |
 | `deployee` | 0 | — |
 | `verifiee` | 0 | — |
 
@@ -60,10 +60,11 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #239 — chore(GOV-012): registre rattrape, sept taches closes, gel de la gouvernance, avenants JUR-T03 et INT-T27-A | `t/registre-rattrapage-11` | rien — fusionnable maintenant |
-| 2 | #245 — feat(QA-T11): porte D, expand puis contract contre le code deploye, vidage N-1 seme, diff vide | `t/qa-t11` | un contrôle requis rouge ou une revue manquante |
-| 3 | #241 — fix(GOV-062): l'outillage qui execute la porte A est juge, sept points nommes | `t/gov-062` | un conflit avec `main` — à résoudre avant tout |
-| 4 | #242 — feat(JUR-T34): la politique de confidentialite de l'espace, tiree du registre de l'article 30 et acceptee a la premiere connexion | `t/jur-t34` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #241 — fix(GOV-062): l'outillage qui execute la porte A est juge, sept points nommes | `t/gov-062` | un contrôle requis rouge ou une revue manquante |
+| 2 | #242 — feat(JUR-T34): la politique de confidentialite de l'espace, tiree du registre de l'article 30 et acceptee a la premiere connexion | `t/jur-t34` | un contrôle requis rouge ou une revue manquante |
+| 3 | #244 — docs(GOV-017a): confirmation du depot par e-mail — plan W20 et quatorze taches versees en phase 1, sans DECISIONS ni REQ nouvelles | `t/w20-confirmation-email` | un contrôle requis rouge ou une revue manquante |
+| 4 | #246 — chore(GOV-012): GOV-123 et GOV-124 versees, exception au gel decidee par Williams | `t/registre-rattrapage-12` | un contrôle requis rouge ou une revue manquante |
+| 5 | #245 — feat(QA-T11): porte D, expand puis contract contre le code deploye, vidage N-1 seme, diff vide | `t/qa-t11` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -73,14 +74,7 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 
 | Tâche | Revendiquée par | Issue | Statut |
 | --- | --- | --- | --- |
-| QA-T05 — Pipeline GHCR privé → Coolify pull | A01 | #222 | `a_faire` |
 | QA-T11 — Gate D migrations : base vierge, dump N-1, migrate diff vide, image N-1, lint expand/contract | A01 | #243 | `a_faire` |
-| JUR-T04 — Registre RGPD, LIA, AIPD, mention art. 14, politique de confidentialité | A01 | #232 | `a_faire` |
-| GOV-066 — La garde d'entite juge l'index publie, pas tout ce que la forge sert du depot | A01 | #234 | `a_faire` |
-| GOV-122 — La cloture retient un renommage fait dans la seconde meme de la fusion, et une date illisible y devient NaN au lieu d'un refus | A01 | #224 | `a_faire` |
-| GOV-118 — La garde des attributions reconnait un gabarit a son nom, et reste verte si elle ne confronte aucun script de garde | A01 | #229 | `a_faire` |
-| GOV-119 — La porte A d'une PR rougit quand une AUTRE PR fusionne pendant son execution | A01 | #223 | `a_faire` |
-| GOV-121 — Le temoin de la preuve de vol ne joue que la cle absente, jamais owner ou branch a null, la forme reelle du registre | A01 | #227 | `a_faire` |
 
 ⚠️ **13 revendication(s) périmée(s)** — QA-T07, GOV-042, GOV-045, GOV-050, GOV-051, GOV-053, GOV-054, GOV-055, GOV-060, GOV-072, GOV-079, GOV-093, INT-T01c : leur issue porte encore un label `owner:` alors que la tâche est livrée. `pnpm lot:cloture` écrit `docs/tasks.json` mais n’efface pas les labels ; la dette appartient à GOV-012.
 
@@ -92,15 +86,13 @@ Dérivé de `git log` sur `docs/adr/`, restreint au jour du dernier atterrissage
 
 ## Prochain pas
 
-**Fusionner #239** — elle est en tête de file et ne bloque sur rien.
-
-**QA-T05** — Pipeline GHCR privé → Coolify pull (1 j) : 21 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
+**QA-T11** — Gate D migrations : base vierge, dump N-1, migrate diff vide, image N-1, lint expand/contract (1 j) : 13 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
 Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeStateStatus` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage —, la tâche ensuite. L’ordre de la file se corrige à la rubrique « File de fusion », jamais ici.
 
 ## Dernier atterrissage
 
-`origin/main` = `476135a` (2026-09-29T17:21:45+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `b34b959` (2026-09-29T18:00:27+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
@@ -120,6 +112,22 @@ co-occurrence peut rougir à tort sur un homonyme : elle échoue fermé.
 **Appris.** Une migration additive passe trivialement sur une base vide. Sans vidage semé, la
 porte D serait un vert qui ment : le semis est le cœur de la porte, pas un détail.
 
+### PR #239 — 2026-09-29 — chore(GOV-012): registre rattrape, sept taches closes, gel de la gouvernance, avenants JUR-T03 et INT-T27-A
+
+**Fait.** Onzième rattrapage. GOV-119, GOV-122, GOV-121, GOV-118, JUR-T04, QA-T05 et GOV-066 passent
+`fusionnee` par `lot:cloture --tache`, chacune attestée par son commit d'écrasement. Deux avenants
+A01 lèvent des dettes de la lentille exactitude sur axion-ia. JUR-T03 consigne la décision de Will
+sur « commercial » et corrige son path. INT-T27-A porte la transcription du contrat v2 et chaque
+fichier que sa PR modifie. Le gel de la gouvernance, décidé par Williams, reporte huit tâches
+GOV en phase 3 et avance GOV-111 en phase 1.
+
+**Reste.** DM-03-P et DM-04 attendent la fusion de DM-03-A (axion-ia #1181). INT-T02 est refusée
+par la clôture : sa PR ne la déclare ni par son titre ni par sa ligne `Lot:`, et sa branche sort du
+motif. Il faut un rattrapage par ADR.
+
+**Appris.** Une clôture qui passe seule peut rendre le registre rouge par une dépendance encore
+ouverte dans l'autre dépôt : `gov:tasks` se rejoue après chaque clôture, pas seulement à la fin.
+
 ### PR #237 — 2026-09-29 — feat(INT-T26): la candidature recue cree un apporteur candidat, coordonnees tirees et chiffrees, rattachement par empreinte
 
 **Fait.** Une candidature reçue d'axionia devient un apporteur `candidat`. Le snapshot figé et le
@@ -136,19 +144,7 @@ entrent dans `env.ts` : un quatrième path, signalé au rattrapage.
 **Appris.** Une erreur typée `AttenteDeDependance` suffit au travail de fond pour distinguer
 « attendre » de « échouer ». Le traitement n'a rien à savoir de la file.
 
-### PR #235 — 2026-09-29 — fix(GOV-066): la garde d'entite juge chaque commit de la PR, pas seulement la tete, et ecrit ce qu'elle ne lit pas
-
-**Fait.** La garde des coordonnées ne juge plus seulement la tête : chaque commit poussé par la PR
-est lu, fichier ajouté ou modifié par commit, tel qu'il était. Une coordonnée ajoutée puis retirée
-avant la porte A est nommée avec son commit. Ce qu'elle ne lit pas est écrit et imprimé.
-
-**Reste.** L'historique déjà fusionné n'est pas relu : chaque commit y a été jugé par sa PR, à
-partir de celle-ci. Les archives composées avec les attributs d'export ne sont pas lues.
-
-**Appris.** Sur un dépôt public, la tête n'est pas ce qui est publié : chaque commit d'une PR l'est,
-même écrasé à la fusion.
-
-… 3 entrée(s) affichée(s) sur 102 ; les 99 plus ancienne(s) se lisent dans `docs/journal/`.
+… 3 entrée(s) affichée(s) sur 103 ; les 100 plus ancienne(s) se lisent dans `docs/journal/`.
 
 ## Dette déclarée
 
