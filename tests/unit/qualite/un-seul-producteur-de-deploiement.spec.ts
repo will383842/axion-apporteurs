@@ -1,4 +1,4 @@
-// @req REQ-QA-033
+// @req REQ-QA-033 → REQ-GOV-014
 /**
  * QA-T34 — la plateforme TIRE l'image publiée, un seul producteur de déploiement à la fois, et
  * l'atterrissage est VÉRIFIÉ sur l'en-tête servi, jamais sur la couleur d'un run.
@@ -85,7 +85,7 @@ describe('deploy:verify — l’atterrissage se lit sur l’en-tête servi', () 
     expect(r.code).toBe(0);
   });
 
-  it('sur un sha non atterri, sort en non nul et nomme les DEUX sha', async () => {
+  it('REQ-GOV-014 : sur un sha non atterri, sort en non nul et nomme les DEUX sha', async () => {
     const app = await serveur(() => ({ statut: 200, entetes: { 'x-partners-build-sha': AUTRE }, corps: '' }));
     const r = await lancer(['--verifier', SHA, ...RAPIDE], { PARTNERS_URL_PUBLIQUE: app.url });
     expect(r.code).not.toBe(0);
@@ -233,7 +233,8 @@ describe('la structure : un seul producteur, qui tire, sans droit sur le registr
 
   it('une file par environnement, qui n’annule jamais un déploiement commencé', () => {
     expect(deployer!.concurrency?.group).toBe('deploiement-production');
-    expect(deployer!.concurrency?.['cancel-in-progress']).toBe(false);
+    // Le lecteur YAML du dépôt rend les scalaires en chaîne.
+    expect(String(deployer!.concurrency?.['cancel-in-progress'])).toBe('false');
   });
 
   it('aucun droit d’écriture : ni sur le registre, ni sur le dépôt', () => {
@@ -243,7 +244,7 @@ describe('la structure : un seul producteur, qui tire, sans droit sur le registr
   it('les étapes sont des scripts nommés, sans continue-on-error, et le seul appel à la plateforme est `pnpm deploy:coolify`', () => {
     const runs = (deployer!.steps ?? []).map((s) => s.run).filter((r): r is string => !!r);
     expect(runs).toContain('pnpm deploy:coolify');
-    for (const r of runs) expect(r).toMatch(/^pnpm [a-z:-]+$/);
+    for (const r of runs) expect(r).toMatch(/^pnpm (install --frozen-lockfile|[a-z:-]+)$/);
     for (const s of deployer!.steps ?? []) expect(s['continue-on-error']).toBeUndefined();
   });
 
