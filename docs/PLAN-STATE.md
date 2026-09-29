@@ -60,7 +60,7 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #217 — test(GOV-049): une tache en_cours hors lot porte la preuve de son vol, et la clause a enfin un temoin rouge | `t/gov-049-visibilite` | un contrôle requis rouge ou une revue manquante |
+| 1 | #217 — test(GOV-049): une tache en cours hors lot porte la preuve de son vol, et la clause a enfin un temoin rouge | `t/gov-049-visibilite` | un contrôle requis rouge ou une revue manquante |
 | 2 | #214 — feat(DM-03-P): la grille publiee par axionia est importee version par version, chaque ligne confrontee a son empreinte | `t/dm-03-p` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
@@ -100,7 +100,7 @@ Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
 
-### PR #217 — 2026-09-29 — test(GOV-049): une tache en_cours hors lot porte la preuve de son vol, et la clause a enfin un temoin rouge
+### PR #217 — 2026-09-29 — test(GOV-049): une tache en cours hors lot porte la preuve de son vol, et la clause a enfin un temoin rouge
 
 **Fait.** L'acceptance de GOV-049 est réécrite par un avenant A01, sur l'arbitrage de Will. Une
 tâche `en_cours` porte un lot, ou la preuve de son vol : `owner` et `branch`. Le schéma l'exigeait
