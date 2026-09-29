@@ -122,9 +122,19 @@ Pro, et Partners garde le registre et décide par l'API 3. Quatre tâches entren
 sort. Chiffrage : chantier W19 21,0 j, lot transverse « confort de la console pour tous les rôles »
 15,7 j, total Partners 36,7 j.
 
+Les quatre réserves de la lentille `securite`, qui a accepté la PR sur `830a648`, sont versées au
+plan et au registre. L'identité du conseiller à l'API 3 devient une hypothèse de confiance envers le
+CRM Pro, écrite dans l'ADR INT-T28 (HYP-W19-IDENTITE-CRM : vingt et une HYP au lieu de vingt). La
+limite de la Société, qui borne un CRM Pro compromis, devient fixe, égale à celle d'un apporteur, au
+lieu de croître avec le nombre de conseillers (HYP-W19-LIMITES). QA-T31 gagne une clause jumelle sur
+le temps de réponse et l'instant des notifications. SEC-34 porte une alerte de volume agrégée, active
+sans condition ; l'alerte par conseiller reste liée à HYP-W19-CSE. L'acceptance de GOV-116 porte la
+relecture du processus par la lentille `securite`. GOV-112 et GOV-115 sont réécrites en conséquence.
+
 **Reste.** Tout le chantier : GOV-116 puis GOV-112 écrivent `docs/DECISIONS.md`, `docs/GLOSSAIRE.md`
 et `docs/PRESEANCE.md`, que cette PR ne touche pas ; GOV-117 puis GOV-115 versent les trente-deux
-autres tâches. Aucune tâche W19 n'est livrée par cette PR.
+autres tâches. Aucune tâche W19 n'est livrée par cette PR. Les estimations de QA-T31 et de SEC-34
+ne sont pas rechiffrées après les réserves : GOV-115 les relit au versement.
 
 **Appris.** Un titre de PR doit nommer une tâche du registre, et une PR sur une tâche `a_faire`
 non revendiquée rougit `gov:etat` : une PR de plan qui verse ses tâches sans les livrer se titre sur
