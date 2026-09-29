@@ -607,7 +607,7 @@ Une exigence sans tâche n'est portée par personne : `gov:requirements` la nomm
 - **REQ-QA-032** — Aucun code de Partners ne contient la chaîne stub.invalid ni de Proxy Prisma court-circuitant ; `pnpm build` réussit sans DATABASE_URL (aucune page ne touche la base au build) ; une garde CI le prouve.
   <br>_phase 0 · tâches : `QA-T05`_ · _source : AGENTS.md ADR 0026 + QA-F20_
 - **REQ-QA-033** → **absorbée par REQ-GOV-014** — Un seul producteur de déploiement à la fois : concurrency GitHub par environnement, fusion sur main en --ff-only, l'atterrissage vérifié (x-partners-build-sha == sha fusionné) avant la fusion suivante ; un script `deploy:verify` le mesure. _(source : règle maison « une fusion à la fois » · mémoire deploy-famine)_ **→ ABSORBÉE par REQ-GOV-014** (annexe de dédoublonnage, fusion appliquée par GOV-001, 2026-09-03) : **le texte en vigueur est celui de REQ-GOV-014** ; l'identifiant est conservé — et non supprimé — pour que les tâches qui le citent continuent de résoudre. **→ voir REQ-GOV-014.**
-  <br>_phase 0 · tâches : `QA-T05`_ · _source : critique de complétude (2026-09-03)_
+  <br>_phase 0 · tâches : `QA-T34`_ · _source : critique de complétude (2026-09-03)_
 - **REQ-QA-034** — Cinq runbooks existent dans `docs/runbooks/` (rollback, migration échouée, webhook gave_up / secret désynchronisé, commission manquante, lot mensuel bloqué) ; chacun porte un bloc « Exécuté le : <date> · environnement : preview · SHA · résultat » ; gate : runbook sans bloc d'exécution daté → rouge ; le bloc est renouvelé à chaque modification du runbook.
   <br>_étape 10 · phase 0 · tâches : `QA-T13`, `QA-T25`_ · _source : nouvelle (prompt : runbooks) · audit-outil-bout-en-bout §6.3 ; reformulation d'annexe appliquée le 2026-09-03_
 

@@ -8,12 +8,12 @@
 >
 > Une tache = une PR, **≤ 1,5 jour**. Le plafond est porte par la garde `gov:tasks`.
 
-**304 taches · 230.10 j estimes.**
+**305 taches · 230.60 j estimes.**
 
 | Phase | Taches | Jours | Terminees |
 | --- | ---: | ---: | ---: |
 | -1 — Gouvernance (prealable bloquant) | 39 | 23.75 | 39 |
-| 0 — Socle technique | 130 | 99.60 | 95 |
+| 0 — Socle technique | 131 | 100.10 | 95 |
 | 1 — Operationnel | 62 | 48.00 | 0 |
 | 2 — Argent | 45 | 33.50 | 0 |
 | 3 — Pilotage et conformite | 28 | 25.25 | 0 |
@@ -566,9 +566,9 @@ Couvre : `REQ-SEC-024`
 
 `1 j` · zone `qualite` · depend de `QA-T04` · decisions `HYP-E1-5`
 
-Couvre : `REQ-QA-018`, `REQ-QA-032`, `REQ-QA-033`
+Couvre : `REQ-QA-018`, `REQ-QA-032`
 
-**Acceptation.** DEPEND D'UN TIERS : serveur de deploiement dedie provisionne et cout valide par Will, plus un jeton de lecture de paquets sur la forge. Ce prerequis est NOMME ici parce qu'une tache qui attend un tiers sans le dire se declare bloquee trop tard. (1) L'image est construite par la forge, poussee sur le registre de conteneurs, etiquetee `latest` et `sha-<7>` ; la plateforme de deploiement ne fait plus que tirer l'image (REQ-QA-018). (2) UNE PORTE C BLOQUANTE demarre l'image avec une base et un cache ephemeres et exige `readyz` a 200 avec zero migration en attente en moins de 3 minutes. (3) AUCUN CODE DE PARTNERS NE CONTIENT LA CHAINE DE SUBSTITUTION DE BUILD utilisee par l'autre depot, ni de client mandataire qui court-circuite les requetes : `pnpm build` reussit SANS acces a la base, parce qu'aucune page ne touche la base au build (REQ-QA-032). C'est une DIVERGENCE ASSUMEE d'avec axionia, et elle s'ecrit ici pour qu'elle ne soit pas reintroduite par imitation. (4) UN SEUL PRODUCTEUR DE DEPLOIEMENT A LA FOIS : concurrence par environnement, fusion en avance rapide seulement, atterrissage verifie (l'en-tete de build servi porte le sha fusionne) AVANT la fusion suivante, mesure par une commande dediee (REQ-QA-033). (5) TEMOIN A DEUX FACES : une image construite a partir d'une tete dont une migration manque fait sortir la porte C en code non nul avec le compte de migrations en attente ; l'image de la tete du depot la fait sortir en zero. (6) TEMOIN A DEUX FACES sur le build sans base : `pnpm build` lance sans aucune variable de connexion sort en zero ; le meme build avec une page qui interroge la base au rendu sort en code non nul et nomme la page.
+**Acceptation.** DEPEND D'UN TIERS : serveur de deploiement dedie provisionne et cout valide par Will, plus un jeton de lecture de paquets sur la forge. Ce prerequis est NOMME ici parce qu'une tache qui attend un tiers sans le dire se declare bloquee trop tard. (1) L'image est construite par la forge, poussee sur le registre de conteneurs, etiquetee `latest` et `sha-<7>` ; la plateforme de deploiement ne fait plus que tirer l'image (REQ-QA-018). (2) UNE PORTE C BLOQUANTE demarre l'image avec une base et un cache ephemeres et exige `readyz` a 200 avec zero migration en attente en moins de 3 minutes. (3) AUCUN CODE DE PARTNERS NE CONTIENT LA CHAINE DE SUBSTITUTION DE BUILD utilisee par l'autre depot, ni de client mandataire qui court-circuite les requetes : `pnpm build` reussit SANS acces a la base, parce qu'aucune page ne touche la base au build (REQ-QA-032). C'est une DIVERGENCE ASSUMEE d'avec axionia, et elle s'ecrit ici pour qu'elle ne soit pas reintroduite par imitation. (4) UN SEUL PRODUCTEUR DE DEPLOIEMENT A LA FOIS : concurrence par environnement, fusion en avance rapide seulement, atterrissage verifie (l'en-tete de build servi porte le sha fusionne) AVANT la fusion suivante, mesure par une commande dediee (REQ-QA-033). (5) TEMOIN A DEUX FACES : une image construite a partir d'une tete dont une migration manque fait sortir la porte C en code non nul avec le compte de migrations en attente ; l'image de la tete du depot la fait sortir en zero. (6) TEMOIN A DEUX FACES sur le build sans base : `pnpm build` lance sans aucune variable de connexion sort en zero ; le meme build avec une page qui interroge la base au rendu sort en code non nul et nomme la page. AVENANT A01 du 2026-09-29 (scission recommandee par A01 dans l autopilote autorise par Will) : aucun acces a la plateforme de deploiement n existe au 2026-09-29 (ni adresse, ni jeton d API, ni jeton de lecture des paquets). Cette tache livre ce que la FORGE seule peut prouver : points (1), (2), (3), (5) et (6). Le point (4) (un seul producteur de deploiement, atterrissage verifie par l en-tete de build) et le tirage par la plateforme passent a QA-T34, avec REQ-QA-033. Precisions : (2) la porte C et ses deux faces tournent dans le job image du workflow de la forge, sur un executeur qui porte Docker ; la face rouge monte une migration cassee EN PLUS de celles de l image, puisque l entree de l image applique toute migration en attente avant de servir ; (6) la face rouge du build sans base est une page qui interroge la base au rendu, construite dans le meme job : le build echoue et la nomme. Les variables requises de la porte C se derivent de docs/env.md. Le Dockerfile et deploy-verify.ts ne sont pas modifies par cette livraison : ils sortent des paths, deploy-verify.ts passant a QA-T34. Le registre des gates reste dans les paths : les textes de gate-c et de gate-deploiement y sont corriges pour dire ce qui est reellement verifie.
 
 **Tests.** `tests/unit/qualite/pipeline-image.spec.ts` · `tests/unit/qualite/build-sans-base.spec.ts`
 
@@ -1892,6 +1892,16 @@ Couvre : `REQ-GOV-021`
 **Acceptation.** Releve par les deux lentilles sur la PR #217 (GOV-049), non bloquant a la fusion. (1) Les deux faces rouges retirent la cle, et ne jouent donc que la moitie required de la clause jumelle du schema ; le registre porte owner: null et branch: null, que refusent la moitie type de la clause et ses motifs. A livrer : deux faces de plus, owner: null puis branch: null sur une tache en_cours hors lot, chacune refusee et nommee. (2) Le docblock de la specification dit qu'AUCUN temoin ne voyait la clause refuser : c'est inexact, clore-une-tache-livree-seule.spec.ts voit deja branch: null refuse sur une tache fusionnee. A corriger : aucun temoin ne la voyait refuser pour en_cours, ni pour owner.
 
 **Tests.** `tests/unit/gouvernance/une-tache-en-cours-appartient-a-un-lot.spec.ts`
+
+### QA-T34 — La plateforme tire l'image publiee, un seul producteur de deploiement a la fois, atterrissage verifie
+
+`0.5 j` · zone `qualite` · depend de `QA-T05`
+
+Couvre : `REQ-QA-033`
+
+**Acceptation.** Scindee de QA-T05 le 2026-09-29 (recommandation A01, autopilote autorise par Will) : la partie qui depend d'un tiers. DEPEND D'UN TIERS : l'adresse de la plateforme de deploiement, un jeton de son API pose en secret du depot, et un jeton de lecture des paquets de la forge pose cote plateforme ; aucun n'existe au 2026-09-29. A livrer : (1) apres la publication de l'image par la forge (QA-T05), la plateforme est declenchee et TIRE l'image etiquetee sha-<7>, elle ne construit rien ; (2) UN SEUL PRODUCTEUR DE DEPLOIEMENT A LA FOIS : concurrence par environnement, fusion en avance rapide seulement, et atterrissage verifie AVANT la fusion suivante : l'en-tete de build servi (x-partners-build-sha) porte le sha fusionne, mesure par pnpm deploy:verify <sha> (REQ-QA-033) ; (3) l'en-tete de build est pose par l'application a partir du sha injecte a la construction de l'image. TEMOIN A DEUX FACES : deploy:verify sur un sha non atterri sort en code non nul en nommant les deux sha ; sur le sha servi, il sort en zero.
+
+**Tests.** `tests/unit/qualite/un-seul-producteur-de-deploiement.spec.ts`
 
 ## Phase 1 — Operationnel
 
