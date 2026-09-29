@@ -8,12 +8,12 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `d65e749` — 2026-09-29T19:45:55+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #244 (un contrôle requis rouge ou une revue manquante) · 2. #250 (un contrôle requis rouge ou une revue manquante) · 3. #242 (un conflit avec `main`) |
+| Qu’est-ce qui est en vol ? | 1. #244 (un contrôle requis rouge ou une revue manquante) · 2. #250 (un contrôle requis rouge ou une revue manquante) · 3. #251 (un contrôle requis rouge ou une revue manquante) · 4. #242 (un conflit avec `main`) |
 | Qui tient quoi ? | GOV-124 (A01) |
 | Où en est la phase ? | phase 0 — 104/130 tâches, reste 20.25 j |
 | Le prochain pas | QA-T06 — Preview par PR sur Coolify, base éphémère, seed déterministe |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
-| Dernière entrée de journal | PR #248 — 2026-09-29 |
+| Dernière entrée de journal | PR #251 — 2026-09-29 |
 
 **Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
@@ -62,7 +62,8 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 | --- | --- | --- | --- |
 | 1 | #244 — docs(GOV-017a): confirmation du depot par e-mail — plan W20 et quatorze taches versees en phase 1, sans DECISIONS ni REQ nouvelles | `t/w20-confirmation-email` | un contrôle requis rouge ou une revue manquante |
 | 2 | #250 — feat(GOV-126): le temoin d'une garde vaut la garde, tests de gouvernance, securite et integration a deux lentilles | `t/gov-126` | un contrôle requis rouge ou une revue manquante |
-| 3 | #242 — feat(JUR-T34): la politique de confidentialite de l'espace, tiree du registre de l'article 30 et acceptee a la premiere connexion | `t/jur-t34` | un conflit avec `main` — à résoudre avant tout |
+| 3 | #251 — chore(GOV-012): registre rattrape, HT encaisse tranche par Williams, paths du lot A et de JUR-T29, GOV-125 versee | `t/registre-rattrapage-13` | un contrôle requis rouge ou une revue manquante |
+| 4 | #242 — feat(JUR-T34): la politique de confidentialite de l'espace, tiree du registre de l'article 30 et acceptee a la premiere connexion | `t/jur-t34` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -78,7 +79,7 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 
 ## Décisions du jour
 
-`docs/adr/0025-les-decisions-de-gouvernance-de-will-s-ecrivent-en-adr.md` — partners/ADR-0025 — Les décisions de gouvernance de Will s'écrivent en ADR : la règle d'arrêt du 2026-09-15 et les arbitrages des 15 et 16 septembre
+`docs/adr/0025-les-decisions-de-gouvernance-de-will-s-ecrivent-en-adr.md` — partners/ADR-0025 — Les décisions de gouvernance de Will s'écrivent en ADR : la règle d'arrêt du 2026-09-15 et les arbitrages des 15 et 16 septembre · `docs/adr/0026-une-lentille-pour-une-pr-sans-risque.md` — partners/ADR-0026 — Une lentille pour une PR sans risque, deux pour tout le reste et dans le doute
 
 Dérivé de `git log` sur `docs/adr/`, restreint au jour du dernier atterrissage. Une décision de Will n’est pas un ADR : elle vit au registre `docs/DECISIONS.md`, tranchée ou tenue par une hypothèse datée.
 
@@ -97,6 +98,21 @@ Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la
 ## Journal
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
+
+### PR #251 — 2026-09-29 — chore(GOV-012): registre rattrape, HT encaisse tranche par Williams, paths du lot A et de JUR-T29, GOV-125 versee
+
+**Fait.** Treizième rattrapage. Williams a tranché le HT encaissé : axion-ia le calcule pour chaque
+paiement, et REQ-INT-005 et INT-T05 sont amendées dans ce sens. INT-T22 prend pour déclencheur
+l'action « prêt à signer », par la préséance d'une décision de Williams. Les chemins du lot A et de
+JUR-T29 sont ceux que la forge et les gardes ont mesurés. GOV-062 et QA-T11 sont closes.
+
+**Reste.** GOV-125, versée ici : tant que le motif de branche ignore les branches d'axion-ia,
+DM-03-A, INT-T02 et INT-T27-A, pourtant en production, ne peuvent pas être closes, ni les tâches
+qui en dépendent.
+
+**Appris.** Deux exigences actives peuvent se contredire sans qu'aucune garde ne le voie : c'est un
+auteur, au moment de coder, qui l'a relevé. La contradiction se tranche par une décision écrite,
+jamais par l'acceptance la plus récente.
 
 ### PR #248 — 2026-09-29 — feat(GOV-124): une lentille pour une PR sans risque, derivee et fermee, deux pour tout le reste
 
@@ -122,19 +138,7 @@ INT-T27-A pour être close.
 **Appris.** Une clôture se juge avec ses dépendances : une tâche livrée par une PR fusionnée
 reste ouverte tant que sa dépendance ne l'est pas, sinon le registre ment sur l'ordre.
 
-### PR #245 — 2026-09-29 — feat(QA-T11): porte D, expand puis contract contre le code deploye, vidage N-1 seme, diff vide
-
-**Fait.** La porte D confronte les migrations de la PR au code déployé : une colonne encore lue
-ne se supprime pas, et le refus nomme son lecteur. Elle migre une base vierge et un vidage N-1
-semé, exige un diff vide sans ligne perdue, et démarre l'image N-1 sur le schéma migré.
-
-**Reste.** Les étapes Docker ne sont prouvées qu'en CI. La détection d'une lecture par
-co-occurrence peut rougir à tort sur un homonyme : elle échoue fermé.
-
-**Appris.** Une migration additive passe trivialement sur une base vide. Sans vidage semé, la
-porte D serait un vert qui ment : le semis est le cœur de la porte, pas un détail.
-
-… 3 entrée(s) affichée(s) sur 106 ; les 103 plus ancienne(s) se lisent dans `docs/journal/`.
+… 3 entrée(s) affichée(s) sur 107 ; les 104 plus ancienne(s) se lisent dans `docs/journal/`.
 
 ## Dette déclarée
 
