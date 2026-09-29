@@ -4063,7 +4063,8 @@
         "docs/gates.json",
         "scripts/gates/perf-budgets.ts",
         "package.json",
-        "perf/budgets.json"
+        "perf/budgets.json",
+        "scripts/gates/gov-conventions.ts"
       ],
       "schema": false,
       "sensible": [],
