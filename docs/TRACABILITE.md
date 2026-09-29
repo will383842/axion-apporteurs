@@ -16,7 +16,7 @@
 
 **334 exigences actives · 122 réputées testées · 122 couvertes · 0 orphelines.**
 
-310 tâches, dont 134 livrées · 166 fichiers de test exécutés par `vitest` sur 166 présents.
+311 tâches, dont 134 livrées · 168 fichiers de test exécutés par `vitest` sur 168 présents.
 
 ## Exigences réputées testées
 
@@ -394,7 +394,7 @@
 | `REQ-QA-011` | `REQ-SEC-008` | `QA-T07`, `SEC-05` |
 | `REQ-QA-012` | `REQ-SEC-022` | `SEC-05`, `SEC-16` |
 | `REQ-QA-031` | `REQ-UX-033` | `QA-T16`, `QA-T20`, `QA-T20b` |
-| `REQ-QA-033` | `REQ-GOV-014` | `QA-T05` |
+| `REQ-QA-033` | `REQ-GOV-014` | `QA-T34` |
 | `REQ-SEC-007` | `REQ-DM-012` | `SEC-11` |
 | `REQ-SEC-011` | `REQ-DM-036` | `DM-15`, `SEC-06` |
 | `REQ-SEC-015` | `REQ-DM-010` | `SEC-12` |
@@ -591,8 +591,10 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | `tests/unit/juridique/charte-relationnelle.spec.ts` | oui | `REQ-JUR-034`, `REQ-JUR-035`, `REQ-JUR-036`, `REQ-JUR-037` |
 | `tests/unit/juridique/registre-rgpd.spec.ts` | oui | `REQ-CPL-009`, `REQ-JUR-009`, `REQ-JUR-025`, `REQ-SEC-030` |
 | `tests/unit/juridique/seuils-ssot.spec.ts` | oui | `REQ-EXT-028`, `REQ-JUR-015`, `REQ-JUR-029` |
+| `tests/unit/qualite/build-sans-base.spec.ts` | oui | `REQ-QA-032` |
 | `tests/unit/qualite/env-fail-fast.spec.ts` | oui | `REQ-CPL-021`, `REQ-QA-030` |
 | `tests/unit/qualite/journal-redige.spec.ts` | oui | `REQ-QA-024` |
+| `tests/unit/qualite/pipeline-image.spec.ts` | oui | `REQ-QA-018` |
 | `tests/unit/qualite/red-first.spec.ts` | oui | `REQ-CPL-022` |
 | `tests/unit/qualite/req-check.spec.ts` | oui | `REQ-QA-014` |
 | `tests/unit/qualite/score-de-mutation.spec.ts` | oui | `REQ-QA-002` |

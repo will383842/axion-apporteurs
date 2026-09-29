@@ -7,10 +7,10 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `6a15106` — 2026-09-29T14:22:18+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #221 (état `UNKNOWN`) · 2. #235 (état `UNKNOWN`) |
-| Qui tient quoi ? | JUR-T04 (A01) · GOV-066 (A01) · GOV-122 (A01) · GOV-118 (A01) · GOV-119 (A01) · GOV-121 (A01) |
-| Où en est la phase ? | phase 0 — 95/135 tâches, reste 32.25 j |
+| Où est `main` ? | `c92e400` — 2026-09-29T15:17:11+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #235 (un conflit avec `main`) |
+| Qui tient quoi ? | QA-T05 (A01) · JUR-T04 (A01) · GOV-066 (A01) · GOV-122 (A01) · GOV-118 (A01) · GOV-119 (A01) · GOV-121 (A01) |
+| Où en est la phase ? | phase 0 — 95/136 tâches, reste 32.75 j |
 | Le prochain pas | QA-T05 — Pipeline GHCR privé → Coolify pull |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
 | Dernière entrée de journal | PR #235 — 2026-09-29 |
@@ -19,14 +19,14 @@
 
 ## Phase courante : 0
 
-95/135 tâches terminées · reste 32.25 j estimés.
+95/136 tâches terminées · reste 32.75 j estimés.
 
 ## Tâches
 
 | Statut | Nombre | Détail |
 | --- | --- | --- |
 | `proposee` | 0 | — |
-| `a_faire` | 174 | QA-T05, QA-T11, QA-T06, QA-T12, QA-T13, DM-03-A, DM-03-P, DM-04, INT-T02, INT-T03, INT-T04, INT-T05 … (12 affichées sur 174 — liste complète : `docs/TASKS.md`) |
+| `a_faire` | 175 | QA-T05, QA-T11, QA-T06, QA-T12, QA-T13, DM-03-A, DM-03-P, DM-04, INT-T02, INT-T03, INT-T04, INT-T05 … (12 affichées sur 175 — liste complète : `docs/TASKS.md`) |
 | `en_cours` | 0 | — |
 | `bloquee` | 0 | — |
 | `attente_externe` | 2 | JUR-T01b · JUR-T01c |
@@ -60,8 +60,7 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #221 — feat(QA-T05): la forge construit, juge puis publie l'image, la plateforme ne fera plus que la tirer | `t/qa-t05` | état `UNKNOWN` — à qualifier à la main |
-| 2 | #235 — fix(GOV-066): la garde d'entite juge chaque commit de la PR, pas seulement la tete, et ecrit ce qu'elle ne lit pas | `t/gov-066` | état `UNKNOWN` — à qualifier à la main |
+| 1 | #235 — fix(GOV-066): la garde d'entite juge chaque commit de la PR, pas seulement la tete, et ecrit ce qu'elle ne lit pas | `t/gov-066` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -71,6 +70,7 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 
 | Tâche | Revendiquée par | Issue | Statut |
 | --- | --- | --- | --- |
+| QA-T05 — Pipeline GHCR privé → Coolify pull | A01 | #222 | `a_faire` |
 | JUR-T04 — Registre RGPD, LIA, AIPD, mention art. 14, politique de confidentialité | A01 | #232 | `a_faire` |
 | GOV-066 — La garde d'entite juge l'index publie, pas tout ce que la forge sert du depot | A01 | #234 | `a_faire` |
 | GOV-122 — La cloture retient un renommage fait dans la seconde meme de la fusion, et une date illisible y devient NaN au lieu d'un refus | A01 | #224 | `a_faire` |
@@ -94,7 +94,7 @@ Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeS
 
 ## Dernier atterrissage
 
-`origin/main` = `6a15106` (2026-09-29T14:22:18+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `c92e400` (2026-09-29T15:17:11+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
@@ -137,7 +137,7 @@ scripts de garde lue et vide est un refus, et le périmètre de la famille est �
 **Appris.** Distinguer une dimension non lue d'une dimension lue et vide coûte une valeur de plus,
 `undefined` à côté de `[]` ; sans elle, le plancher aurait fait rougir tous les cas de preuve.
 
-… 3 entrée(s) affichée(s) sur 99 ; les 96 plus ancienne(s) se lisent dans `docs/journal/`.
+… 3 entrée(s) affichée(s) sur 100 ; les 97 plus ancienne(s) se lisent dans `docs/journal/`.
 
 ## Dette déclarée
 

@@ -251,7 +251,7 @@
       "phase": -1,
       "script": "scripts/gates/deploy-verify.ts",
       "tache": "GOV-000",
-      "verifie": "un seul producteur (release-manager, fusion serialisee auTour) ; aucune concurrency avec cancel-in-progress ; squash + required_linear_history ; x-partners-build-sha == sha avant la fusion suivante ; purge de cache ; smoke readyz (protocole et protection de main en phase -1, deploy:verify en phase 0 par QA-T05)",
+      "verifie": "un seul producteur (release-manager, fusion serialisee auTour) ; aucune concurrency avec cancel-in-progress ; squash + required_linear_history ; x-partners-build-sha == sha avant la fusion suivante ; purge de cache ; smoke readyz (protocole et protection de main en phase -1, deploy:verify en phase 0 par QA-T34)",
       "fixtureRouge": "lancer deploy:verify sur un sha non atterri",
       "preuveRouge": null
     },
@@ -973,7 +973,7 @@
       "phase": 0,
       "script": "scripts/gates/gate-c.sh",
       "tache": "QA-T05",
-      "verifie": "image demarree, readyz 200, migrations_pending 0 en <= 3 min, webhook signe de test -> 200, migration cassee -> exit en < 60 s ; pnpm deploy:verify <sha> lit x-partners-build-sha",
+      "verifie": "image construite par la forge sans aucune variable de base ni de cache, demarree avec une base et un cache ephemeres : readyz 200, migrations saines et toutes appliquees, en <= 3 min ; une migration cassee en plus fait sortir la porte en code non nul avec le compte des migrations en attente (job image de .github/workflows/deploy.yml). Ne verifie PAS le webhook signe de test (non livre a ce jour) ; deploy:verify appartient a la tache qui branche la plateforme de deploiement",
       "fixtureRouge": "livrer une migration cassee",
       "preuveRouge": null
     },
