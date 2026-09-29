@@ -3116,9 +3116,9 @@ export const LIMITE_DE_L_HISTORIQUE =
  */
 export function baseIntrouvableRefusee(
   baseIntrouvable: boolean,
-  evenement: string | undefined
+  declencheur: string | undefined
 ): boolean {
-  return baseIntrouvable && evenement === 'pull_request';
+  return baseIntrouvable && declencheur === 'pull_request';
 }
 
 export function lireUnivers(): Univers {
