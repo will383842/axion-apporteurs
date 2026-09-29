@@ -34,19 +34,16 @@ function fautesDuPipeline(texte: string): string[] {
   const e = etapes(texte);
   const indice = (p: (x: Etape) => boolean) => e.findIndex(p);
 
-  const construire = indice((x) =>
-    /docker build --tag "partners:\$GITHUB_SHA" \.\s*$/m.test(x.corps)
-  );
-  const porteVerte = indice((x) => /gate-c\.sh "partners:\$GITHUB_SHA"\s*$/m.test(x.corps));
+  const construire = indice((x) => /docker build --tag partners:construite \.\s*$/m.test(x.corps));
+  const porteVerte = indice((x) => /gate-c\.sh partners:construite\s*$/m.test(x.corps));
   const porteRouge = indice(
     (x) =>
-      /gate-c\.sh "partners:\$GITHUB_SHA" "\$CASSEE"/.test(x.corps) &&
-      /then[\s\S]*exit 1/.test(x.corps)
+      /gate-c\.sh partners:construite "\$CASSEE"/.test(x.corps) && /then[\s\S]*exit 1/.test(x.corps)
   );
   const publier = indice((x) => /docker push/.test(x.corps));
 
   if (construire < 0)
-    f.push('construction_absente : aucune étape ne construit l’image partners:$GITHUB_SHA');
+    f.push('construction_absente : aucune étape ne construit l’image partners:construite');
   if (porteVerte < 0)
     f.push('porte_c_absente : aucune étape ne joue gate-c.sh sur l’image construite');
   if (porteRouge < 0)
@@ -96,7 +93,7 @@ describe('REQ-QA-018 — la forge construit, juge, puis publie l’image (QA-T05
         const e = etapes(t);
         const pub = e.find((x) => /docker push/.test(x.corps))!;
         const sansPub = t.replace('\n' + pub.corps, '');
-        const ancre = e.find((x) => /gate-c\.sh "partners:\$GITHUB_SHA"\s*$/m.test(x.corps))!;
+        const ancre = e.find((x) => /gate-c\.sh partners:construite\s*$/m.test(x.corps))!;
         return sansPub.replace('\n' + ancre.corps, '\n' + pub.corps + '\n' + ancre.corps);
       },
       'publication_avant_preuve',
@@ -120,8 +117,8 @@ describe('REQ-QA-018 — la forge construit, juge, puis publie l’image (QA-T05
       'la face rouge de la porte C qui ne vérifie plus l’échec',
       (t) =>
         t.replace(
-          /if sh scripts\/gates\/gate-c\.sh "partners:\$GITHUB_SHA" "\$CASSEE"/,
-          'sh scripts/gates/gate-c.sh "partners:$GITHUB_SHA"'
+          /if sh scripts\/gates\/gate-c\.sh partners:construite "\$CASSEE"/,
+          'sh scripts/gates/gate-c.sh partners:construite'
         ),
       'porte_c_sans_face_rouge',
     ],

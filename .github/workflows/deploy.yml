@@ -43,7 +43,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: L image se construit sans aucune variable de base ni de cache
-        run: docker build --tag "partners:$GITHUB_SHA" .
+        run: docker build --tag partners:construite .
 
       - name: Le build sans base sait rougir — une page qui lit la base au rendu est nommee
         run: |
@@ -71,14 +71,14 @@ jobs:
           echo "✅ build sans base — la page qui lit la base au rendu fait echouer le build, et elle est nommee."
 
       - name: Porte C — l image demarre, readyz 200, zero migration en attente, en moins de 3 min
-        run: sh scripts/gates/gate-c.sh "partners:$GITHUB_SHA"
+        run: sh scripts/gates/gate-c.sh partners:construite
 
       - name: La porte C sait rougir — une migration cassee sort en non nul, avec le compte
         run: |
           CASSEE="$RUNNER_TEMP/99999999999999_temoin_casse"
           mkdir -p "$CASSEE"
           printf 'ALTER TABLE table_qui_n_existe_pas ADD COLUMN x integer;\n' > "$CASSEE/migration.sql"
-          if sh scripts/gates/gate-c.sh "partners:$GITHUB_SHA" "$CASSEE" > "$RUNNER_TEMP/porte-c-rouge.txt" 2>&1; then
+          if sh scripts/gates/gate-c.sh partners:construite "$CASSEE" > "$RUNNER_TEMP/porte-c-rouge.txt" 2>&1; then
             cat "$RUNNER_TEMP/porte-c-rouge.txt"
             echo "❌ la porte C est restee verte sur une migration cassee."
             exit 1
@@ -99,8 +99,8 @@ jobs:
           REGISTRE="ghcr.io/$GITHUB_REPOSITORY"
           COURT=$(printf '%s' "$GITHUB_SHA" | cut -c1-7)
           printf '%s' "$JETON" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
-          docker tag "partners:$GITHUB_SHA" "$REGISTRE:sha-$COURT"
-          docker tag "partners:$GITHUB_SHA" "$REGISTRE:latest"
+          docker tag partners:construite "$REGISTRE:sha-$COURT"
+          docker tag partners:construite "$REGISTRE:latest"
           docker push "$REGISTRE:sha-$COURT"
           docker push "$REGISTRE:latest"
           echo "✅ publie : $REGISTRE:sha-$COURT et $REGISTRE:latest"

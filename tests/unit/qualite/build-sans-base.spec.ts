@@ -56,7 +56,7 @@ function fautesDeFichier(chemin: string, texte: string): string[] {
 
 function fautesDeLActe(workflow: string): string[] {
   const f: string[] = [];
-  if (!/docker build --tag "partners:\$GITHUB_SHA" \.\s*$/m.test(workflow))
+  if (!/docker build --tag partners:construite \.\s*$/m.test(workflow))
     f.push('build_sans_base_absent : le workflow ne construit pas l’image sans variable');
   const temoin =
     /\$queryRaw/.test(workflow) &&
@@ -108,8 +108,8 @@ describe('REQ-QA-032 — le build réussit sans base, et ne triche pas pour y ar
       'une variable de base passée au build par le workflow',
       WORKFLOW,
       workflow.replace(
-        'docker build --tag "partners:$GITHUB_SHA" .',
-        'docker build --build-arg DATABASE_URL=x --tag "partners:$GITHUB_SHA" .'
+        'docker build --tag partners:construite .',
+        'docker build --build-arg DATABASE_URL=x --tag partners:construite .'
       ),
       'substitution_de_build',
     ],
