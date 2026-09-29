@@ -568,6 +568,37 @@ describe('REQ-SEC-008 — le vrai sérialiseur de Prisma ne reçoit que ce que l
     }
   );
 
+  // UNE PROPRIÉTÉ PROPRE `__proto__`, telle que `JSON.parse` la produit d'un corps de requête
+  // (lentille `securite`, second refus sur #200). Une copie construite par AFFECTATION voyait son
+  // prototype remplacé : le contrôle ne voyait rien, et le sérialiseur envoyait les clés héritées.
+  it.each([
+    ['modifier', 'jetonDepot', `{"kid":"x","__proto__":{"apporteurId":"${B}"}}`],
+    ['creer', 'jetonDepot', `{"kid":"x","__proto__":{"apporteurId":"${B}"}}`],
+    ['modifier', 'sessionEspace', `{"__proto__":{"lienMagiqueId":"${B}"}}`],
+  ] as const)(
+    'REQ-SEC-008 : par la couche, %s d’un corps JSON portant `__proto__` (%s) est refusé, et RIEN n’est envoyé',
+    async (methode, modele, corps) => {
+      const { client, envois } = clientIntercepte();
+      const vue = forApporteur(client as unknown as ClientCloisonnable, A)[modele];
+      const data: unknown = JSON.parse(corps);
+      const appel =
+        methode === 'creer' ? vue.creer(data as never) : vue.modifier(randomUUID(), data as never);
+      expect(await refusDe(appel)).toBe(REFUS.forme);
+      expect(envois).toEqual([]);
+    }
+  );
+
+  it.each(['constructor', 'toString', 'hasOwnProperty'])(
+    'REQ-SEC-008 : une clé `%s`, membre du prototype des objets, est refusée comme `__proto__`',
+    async (cle) => {
+      const { client, envois } = clientIntercepte();
+      const data: unknown = JSON.parse(`{"kid":"x","${cle}":{"apporteurId":"${B}"}}`);
+      const vue = forApporteur(client as unknown as ClientCloisonnable, A).jetonDepot;
+      expect(await refusDe(vue.modifier(randomUUID(), data as never))).toBe(REFUS.forme);
+      expect(envois).toEqual([]);
+    }
+  );
+
   it('REQ-SEC-008 : CONTRE-TÉMOIN — par la couche, un objet simple part avec l’apporteur de la session', async () => {
     const { client, envois } = clientIntercepte();
     const simple: Record<string, unknown> = { kid: '0123abcd' };

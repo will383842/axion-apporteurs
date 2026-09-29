@@ -118,14 +118,22 @@ function instantane(data: unknown): Record<string, unknown> {
   const prototype: unknown =
     data === null || data === undefined ? undefined : Object.getPrototypeOf(data);
   if (prototype !== Object.prototype && prototype !== null) throw new Error(REFUS.forme);
-  const copie: Record<string, unknown> = {};
+  // LA COPIE NE PASSE JAMAIS PAR UNE AFFECTATION (second refus `securite` sur #200). Une
+  // propriété PROPRE nommée comme un membre du prototype des objets — `JSON.parse` en produit une
+  // d'un simple corps de requête — affectée par `copie[cle] = …`, REMPLAÇAIT le prototype de la
+  // copie : le contrôle ne voyait rien, et le sérialiseur envoyait les clés héritées. Toute clé que
+  // porte `Object.prototype` est refusée d'entrée, sans en écrire aucune : la gate semgrep des
+  // règles maison interdit ces noms en chaîne dans `src/`, et c'est l'objet lui-même qui les
+  // énumère. La copie est bâtie par `Object.fromEntries`, qui DÉFINIT chaque clé.
+  const entrees: [string, unknown][] = [];
   for (const [cle, descripteur] of Object.entries(Object.getOwnPropertyDescriptors(data))) {
     // Un accesseur, ou une propriété non énumérable, est refusé : l'un se lit deux fois, l'autre
     // serait tu au contrôle et au sérialiseur — le dire vaut mieux que le taire.
     if (!('value' in descripteur) || !descripteur.enumerable) throw new Error(REFUS.forme);
-    copie[cle] = descripteur.value as unknown;
+    if (Object.hasOwn(Object.prototype, cle)) throw new Error(REFUS.forme);
+    entrees.push([cle, descripteur.value as unknown]);
   }
-  return copie;
+  return Object.fromEntries(entrees);
 }
 
 // ── les vues ─────────────────────────────────────────────────────────────────────────────────────
