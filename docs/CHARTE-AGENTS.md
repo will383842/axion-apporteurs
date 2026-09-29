@@ -84,7 +84,9 @@ la question à Will ou à l'expert-comptable.
 **A02 · `architecte` — la forme des données et des contrats.**
 *Fait.* `prisma/schema.prisma` et les migrations ; `packages/contracts/` — les onze événements et les deux
 API, consommés des deux côtés, avec leur hash. Rédige les ADR : une question de conception non tranchée par
-les documents s'y règle, jamais par un choix silencieux dans une PR. Sur toute PR portant le label `schema`,
+les documents s'y règle, jamais par un choix silencieux dans une PR. Une décision de gouvernance de Will s'y
+consigne aussi, datée et sourcée, et ce qui n'est pas retrouvé s'y écrit « non retrouvé » (`partners/ADR-0025`) ;
+A03 l'indexe. Sur toute PR portant le label `schema`,
 il **tient la troisième lentille**, après `exactitude` et `securite`, et son approbation est **bloquante** —
 sa fiche `.claude/agents/architecte.md` le dit dans ces termes : une PR `schema` reçoit **trois** lentilles
 (décision de Will du 2026-09-26, `partners/ADR-0024`).
@@ -169,7 +171,8 @@ dans un worktree.
 **A09 · `relecteur` — une lentille, un avis.**
 *Fait.* Reçoit la tâche, le numéro de PR et **sa** lentille — `exactitude` ou `securite` (§6) — et ne lit que
 sous celle-là, une fois la porte A **verte** sur la tête à relire. Vérifie d'abord que le test annoncé comme rouge porte réellement sur la REQ et que le
-message verbatim est plausible au vu du test écrit. Chaque motif de refus cite **un fichier et une ligne**.
+message verbatim est plausible au vu du test écrit. Chaque motif de refus cite **un fichier et une ligne** ;
+celui qui bloque porte en plus la panne fabriquée et vue qui le démontre (§6, règle d'arrêt, `partners/ADR-0025`).
 Ouvre sa revue GitHub par la ligne `A09 · <sa lentille>` : c'est ce que `gov:pr` compte (§8).
 *Jamais.* Ne modifie rien (il n'a ni Write ni Edit, c'est volontaire). Ne relit pas une PR dont il est
 l'auteur — ce cas ne peut pas se produire, faute d'outil d'écriture. Ne propose pas de réécriture complète :
@@ -352,9 +355,18 @@ les données**, où qu'elle soit écrite. Une inexactitude de **prose** — corp
 commentaire, docblock — qui ne porte sur aucun des trois **n'est pas un motif de refus** : la lentille rend
 `Verdict: accepte` et nomme l'inexactitude dans sa revue comme une **dette**, avec le fichier et la ligne ; elle
 se corrige au passage suivant sur ce fichier. C'est d'abord la règle de la lentille `exactitude`, qui
-confronte le code aux REQ. ⚠️ `gov:pr` ne distingue pas les motifs : **tout** `Verdict: refuse` bloque. La règle
+confronte le code aux REQ. ⚠️ `gov:pr` ne distingue pas les motifs : **tout** `Verdict: refuse` bloque, et c'est
+pourquoi la règle d'arrêt ci-dessous (`partners/ADR-0025`) s'applique avant de rendre le verdict. La règle
 tient donc dans la main de la lentille, pas dans la garde — refuser pour une prose hors de ces trois domaines
 est une faute de la lentille, pas un refus que la garde saurait déclasser.
+
+**Quand un refus bloque : la règle d'arrêt** (décision de Will du 2026-09-15, `partners/ADR-0025`). Un refus
+ne bloque que sur un écart démontré et ouvert — une panne fabriquée et vue, où une vraie faute passe en exit 0
+sur ce que le code prétend garder (`partners/ADR-0025`). Tout autre motif, dont un cas limite ou une limite
+déjà déclarée, est une **dette** : la lentille rend `Verdict: accepte` et la nomme dans son avis, avec le
+fichier et la ligne. ⚠️ Pour une affirmation fausse de prose sur la sécurité, l'argent ou les données, que la
+règle précédente range parmi les motifs de refus, aucune source ne dit si la démonstration est exigée : ce
+point est rendu à Will (`partners/ADR-0025`, « Reste à faire »).
 
 **La troisième lentille sur une PR `schema`.** Toute PR touchant `prisma/**` ou `packages/contracts/**` porte
 le label `schema`. Sur cette PR, **A02 tient la troisième lentille**, `schema`, après `exactitude` et
@@ -366,7 +378,7 @@ les fichiers mutables de la PR, en porte A, et nomme chaque survivant `fichier:l
 nommés et écartés : leur preuve de mutation est leur `--prove`, joué en porte A. A10 reste appelé sur demande.
 
 **Le veto.** Sur **toute** PR, le refus de la lentille `securite` **bloque à lui seul** (décision de Will du
-2026-09-18). Aucune majorité ne le rattrape, ni aucune autre : `gov:pr` refuse la fusion sur tout refus rendu,
+2026-09-18) — un refus au sens de la règle d'arrêt, que le veto ne lève pas (`partners/ADR-0025`). Aucune majorité ne le rattrape, ni aucune autre : `gov:pr` refuse la fusion sur tout refus rendu,
 qu'il vienne d'une lentille exigée ou non — on n'est pas obligé de demander une lentille, on ne peut pas
 l'ignorer une fois rendue. Un veto se justifie par un scénario d'attaque, jamais par une préférence de style.
 Sur une tâche dont le champ `sensible` contient `argent`, `attribution`, `auth`, `espace` ou `rgpd` — ou dont

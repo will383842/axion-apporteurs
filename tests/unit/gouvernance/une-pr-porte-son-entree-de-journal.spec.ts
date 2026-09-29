@@ -27,7 +27,10 @@
  * l'arbre, le jugement — et le câblage de `prParGh()` est tenu par un témoin de SOURCE.
  */
 import { describe, it, expect } from 'vitest';
-import { readFileSync, readdirSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 import {
   controler,
@@ -228,5 +231,83 @@ describe('REQ-GOV-023 — la lecture de l’arbre, le câblage et la source uniq
     const lecons = readFileSync('docs/LECONS.md', 'utf8');
     const lec15 = lecons.split(/^### LEC-15 — /m)[1]!.split(/^### /m)[0]!;
     expect(/^- \*\*Règle maison\.\*\*(.+)$/m.exec(lec15)?.[1]).toContain('RM-15');
+  });
+});
+
+describe('REQ-GOV-023 — RM-15 est la SEULE rédaction de l’obligation d’entrée de journal', () => {
+  /**
+   * GOV-108 — RM-15 affirme être la seule rédaction de l'obligation, et deux documents la
+   * rédigeaient encore sans la citer. Ils y RENVOIENT désormais. Une rédaction se reconnaît à ce
+   * qu'elle PRESCRIT le moment ou le lieu de l'entrée : un paragraphe qui parle d'une entrée et
+   * dit « précédée », « avant la fusion », « sur la branche », « se pousse » ou « même push ».
+   */
+  const RENVOIS = ['docs/journal/README.md', 'docs/REPRISE-SESSION.md'];
+  const ENTREE = /entr[ée]e/i;
+  const PRESCRIT = [
+    /pr[ée]c[ée]d/i,
+    /avant (la|sa) fusion/i,
+    /sur (la|sa) (propre )?branche/i,
+    /se pousse/i,
+    /m[êe]me push/i,
+  ];
+  /** Les paragraphes qui rédigent l'obligation — un paragraphe tient entre deux lignes vides. */
+  const redactions = (texte: string): string[] =>
+    texte.split(/\r?\n\s*\r?\n/).filter((p) => ENTREE.test(p) && PRESCRIT.some((m) => m.test(p)));
+  /** L'énoncé de RM-15, lu chez lui : c'est la rédaction qu'une copie ferait réapparaître. */
+  const rm15 = readFileSync('docs/REGLES-MAISON.md', 'utf8')
+    .split(/^## RM-15 — /m)[1]!
+    .split(/^---$/m)[0]!;
+  const enonce = /^\*\*Énoncé\.\*\*[\s\S]*?(?=\r?\n\s*\r?\n)/m.exec(rm15)![0];
+
+  it('REQ-GOV-023 · TÉMOIN : l’énoncé de RM-15 recopié dans un document est vu comme une autre rédaction', () => {
+    expect(redactions(enonce)).toHaveLength(1);
+    for (const f of RENVOIS) {
+      const texte = readFileSync(f, 'utf8');
+      const recopie = `${texte}\n\n${enonce}\n`;
+      expect(redactions(recopie).length, f).toBe(redactions(texte).length + 1);
+    }
+  });
+
+  it('REQ-GOV-023 · les deux documents renvoient à RM-15 et ne rédigent plus l’obligation', () => {
+    for (const f of RENVOIS) {
+      const texte = readFileSync(f, 'utf8');
+      expect(texte, f).toContain('RM-15');
+      expect(redactions(texte), f).toEqual([]);
+    }
+  });
+});
+
+describe('REQ-GOV-023 — l’arbre du journal se lit octet pour octet, nom non ASCII compris', () => {
+  it('REQ-GOV-023 · TÉMOIN : une entrée au nom non ASCII est lue, sous son nom exact', () => {
+    // Sans `-z` ni `core.quotepath=false`, git rend ce nom entre guillemets et en octets
+    // échappés : il ne finit plus par `.md`, et l'entrée disparaît du journal sans un mot.
+    const racine = mkdtempSync(join(tmpdir(), 'journal-non-ascii-'));
+    try {
+      const git = (...args: string[]) =>
+        execFileSync('git', ['-c', 'core.autocrlf=false', ...args], {
+          cwd: racine,
+          stdio: ['ignore', 'pipe', 'ignore'],
+        });
+      git('init', '-q');
+      mkdirSync(join(racine, 'docs', 'journal'), { recursive: true });
+      const nom = '2026-09-entrée-été.md';
+      const texte = '## PR #1 — 2026-09-01 — un titre\n';
+      writeFileSync(join(racine, 'docs', 'journal', nom), texte);
+      git('add', '.');
+      git(
+        '-c',
+        'user.name=temoin',
+        '-c',
+        'user.email=temoin@example.invalid',
+        'commit',
+        '-qm',
+        'x'
+      );
+      expect(journalALaReference('HEAD', racine)).toEqual([
+        { fichier: `docs/journal/${nom}`, texte },
+      ]);
+    } finally {
+      rmSync(racine, { recursive: true, force: true });
+    }
   });
 });

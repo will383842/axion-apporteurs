@@ -10076,7 +10076,9 @@
         "REQ-GOV-013": [
           "tests/unit/gouvernance/decisions-de-gouvernance-ecrites.spec.ts"
         ]
-      }
+      },
+      "issue": 201,
+      "owner": "A01"
     },
     {
       "id": "GOV-059",
@@ -11031,7 +11033,9 @@
         "REQ-GOV-024": [
           "tests/unit/gouvernance/raison-de-dette-resolue.spec.ts"
         ]
-      }
+      },
+      "issue": 202,
+      "owner": "A01"
     },
     {
       "id": "GOV-082",
@@ -12770,7 +12774,9 @@
         "REQ-GOV-003": [
           "tests/unit/gouvernance/frontiere-de-mot-du-rendu.spec.ts"
         ]
-      }
+      },
+      "issue": 203,
+      "owner": "A01"
     },
     {
       "id": "GOV-107",
@@ -12799,7 +12805,9 @@
         "REQ-GOV-026": [
           "tests/unit/gouvernance/la-declaration-se-lit-dans-le-commit-de-fusion.spec.ts"
         ]
-      }
+      },
+      "issue": 204,
+      "owner": "A01"
     },
     {
       "id": "GOV-108",
@@ -12830,7 +12838,9 @@
         "REQ-GOV-023": [
           "tests/unit/gouvernance/une-pr-porte-son-entree-de-journal.spec.ts"
         ]
-      }
+      },
+      "issue": 205,
+      "owner": "A01"
     }
   ]
 }

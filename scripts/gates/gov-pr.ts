@@ -364,16 +364,30 @@ export function journalDeLaPr(
  * sera fusionné, sans ce qu'un brouillon non commité y ajouterait. Illisible → `null`, jamais `[]` :
  * une absence n'est pas un journal vide.
  */
-export function journalALaReference(ref: string): { fichier: string; texte: string }[] | null {
+export function journalALaReference(
+  ref: string,
+  racine?: string
+): { fichier: string; texte: string }[] | null {
   const git = (args: string[]): string =>
     execFileSync('git', args, {
+      cwd: racine,
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'ignore'],
       maxBuffer: 64e6,
     });
   try {
-    return git(['ls-tree', '--name-only', `${ref}:${DOSSIER_DU_JOURNAL}`])
-      .split('\n')
+    // GOV-108 — `-z` rend chaque nom tel quel, séparé par NUL : sans lui, git cite un nom non
+    // ASCII entre guillemets en octets échappés, il ne finit plus par `.md`, et l'entrée
+    // disparaît du journal sans un mot. `core.quotepath=false` est la ceinture, si `-z` sautait.
+    return git([
+      '-c',
+      'core.quotepath=false',
+      'ls-tree',
+      '-z',
+      '--name-only',
+      `${ref}:${DOSSIER_DU_JOURNAL}`,
+    ])
+      .split('\0')
       .filter((n) => n.endsWith('.md'))
       .map((n) => {
         const fichier = `${DOSSIER_DU_JOURNAL}/${n}`;

@@ -7,13 +7,13 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `07b8d29` — 2026-09-29T02:25:30+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #200 (un contrôle requis rouge ou une revue manquante) · 2. #206 (un contrôle requis rouge ou une revue manquante) |
-| Qui tient quoi ? | SEC-05 (A01) · GOV-049 (A01) · GOV-069 (A01) |
+| Où est `main` ? | `ab82029` — 2026-09-29T04:05:42+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #200 (un conflit avec `main`) |
+| Qui tient quoi ? | SEC-05 (A01) · GOV-049 (A01) · GOV-058 (A01) · GOV-069 (A01) · GOV-081 (A01) · GOV-106 (A01) · GOV-107 (A01) · GOV-108 (A01) |
 | Où en est la phase ? | phase 0 — 84/122 tâches, reste 32.60 j |
 | Le prochain pas | QA-T05 — Pipeline GHCR privé → Coolify pull |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
-| Dernière entrée de journal | PR #200 — 2026-09-28 |
+| Dernière entrée de journal | PR #206 — 2026-09-29 |
 
 **Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
@@ -60,8 +60,7 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #200 — feat(SEC-05): lot L0-12 — cloisonnement par apporteur, une grammaire des zones de prose | `lot/L0-12-gouvernance` | un contrôle requis rouge ou une revue manquante |
-| 2 | #206 — chore(GOV-106): lot L0-13 — la garde lexicale juge le rendu, la regle d'arret est ecrite, la cloture confronte le titre | `lot/L0-13-gouvernance` | un contrôle requis rouge ou une revue manquante |
+| 1 | #200 — feat(SEC-05): lot L0-12 — cloisonnement par apporteur, une grammaire des zones de prose | `lot/L0-12-gouvernance` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -73,7 +72,12 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 | --- | --- | --- | --- |
 | SEC-05 — Couche d'accès `forApporteur | A01 | #198 | `a_faire` |
 | GOV-049 — Une tache en cours sans lot est invisible de TOUTES les gardes, et c'est ce lot qui l'a rencontre | A01 | #196 | `a_faire` |
+| GOV-058 — Les decisions de gouvernance prises le 2026-09-15 ne sont ecrites nulle part dans le depot | A01 | #201 | `a_faire` |
 | GOV-069 — La garde des termes interdits decoupe SQL, Prisma et prose avec une grammaire maison incomplete | A01 | #197 | `a_faire` |
+| GOV-081 — Une affirmation du code sur le registre est devenue fausse le jour ou le registre a change | A01 | #202 | `a_faire` |
+| GOV-106 — La garde lexicale juge le texte rendu par expressions regulieres : la JSX et le Markdown rendent a l'ecran des mots qu'elle ne voit pas | A01 | #203 | `a_faire` |
+| GOV-107 — Le titre qui declare une livraison se lit dans la premiere ligne du message d'ecrasement, et seul --subject le tient | A01 | #204 | `a_faire` |
+| GOV-108 — RM-15 se dit la seule redaction de l'obligation de journal, et deux documents la redigent encore sans la citer | A01 | #205 | `a_faire` |
 
 ⚠️ **13 revendication(s) périmée(s)** — QA-T07, GOV-042, GOV-045, GOV-050, GOV-051, GOV-053, GOV-054, GOV-055, GOV-060, GOV-072, GOV-079, GOV-093, INT-T01c : leur issue porte encore un label `owner:` alors que la tâche est livrée. `pnpm lot:cloture` écrit `docs/tasks.json` mais n’efface pas les labels ; la dette appartient à GOV-012.
 
@@ -91,13 +95,33 @@ Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeS
 
 ## Dernier atterrissage
 
-`origin/main` = `07b8d29` (2026-09-29T02:25:30+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `ab82029` (2026-09-29T04:05:42+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
 ## Journal
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
+
+### PR #206 — 2026-09-29 — chore(GOV-106): lot L0-13 — la garde lexicale juge le rendu, la regle d'arret est ecrite, la cloture confronte le titre
+
+**Fait.** Cinq tâches, un commit chacune. GOV-106 : la garde lexicale juge le texte que la JSX et
+le Markdown affichent, par l'arbre syntaxique ; des constructions qui rendaient à l'écran un terme
+interdit sans être vues le sont maintenant. GOV-058 : `partners/ADR-0025` écrit la règle d'arrêt
+décidée le 2026-09-15, avec ses sources, et dit ce qui n'a pas été retrouvé. GOV-081 : une raison
+de dette qui nomme une tâche absente de sa gate rougit (`raison_perimee`). GOV-107 : la première
+ligne du message d'écrasement ne déclare que si elle est le titre de la PR suivi de son numéro.
+GOV-108 : le journal et la reprise renvoient à RM-15, et l'arbre du journal se lit avec `-z`.
+
+**Reste.** La garde lexicale ne devine pas une valeur qui n'est pas constante, ni ce qu'un
+composant rend lui-même ; les homoglyphes restent à juger. `partners/ADR-0025` est proposé :
+l'articulation de la règle d'arrêt avec W14 (règle 2) est rendue à Will. Le titre d'une PR reste
+modifiable après sa fusion.
+
+**Appris.** Les témoins d'une forme de contournement sont entrés dans le même commit que son
+correctif, jamais avant ; ils sont publics depuis la poussée de la branche, puisque le dépôt l'est.
+Les formes sont écrites dans le spec, public depuis cette poussée ; ni les messages de commit ni
+ce journal ne les énumèrent. La divulgation que porte le spec est jugée par la lentille `securite`.
 
 ### PR #200 — 2026-09-28 — feat(SEC-05): lot L0-12 — cloisonnement par apporteur, une grammaire des zones de prose
 
@@ -136,26 +160,7 @@ appartiennent à Will.
 **Appris.** Un outil durci se vérifie sur une vraie fusion : la ligne `Lot:` de #195, recopiée par
 le pas 6 dans le message d'écrasement, a été lue telle quelle par la clôture.
 
-### PR #195 — 2026-09-28 — chore(GOV-052): lot L0-11 — six gardes de gouvernance qui laissaient passer ce qu'elles devaient voir
-
-**Fait.** Six tâches, un commit chacune. GOV-052 : `gov:pr --pr` exige l'entrée de journal AVANT
-la fusion, et refuse une entrée pour une PR non fusionnée ; RM-15 la pose. GOV-040 : le registre
-qui peut absoudre un rouge de la porte A passe sous `deny`. GOV-074 : une seule clé d'occurrence
-pour les trois registres de `gov:attributions`. GOV-071 : les gardes lexicale et d'identifiants
-jugent le texte rendu, par une seule fonction. GOV-085 : un rendu n'officialise plus une
-attribution fausse ; la source et la vue sont deux questions. GOV-064 : deux entrées distinctes de
-l'index ne se confondent plus sous un même chemin.
-
-**Reste.** GOV-052 ne s'évalue que sous `--pr` : l'événement `pull_request` de la CI ne la joue pas.
-GOV-040 ne ferme que Write et Edit, pas l'écriture par le shell. GOV-071 laisse passer une balise
-à attributs et la concaténation de chaînes, limites écrites dans le code. GOV-064 refuse désormais
-un nom de fichier légitime qui n'est pas de l'UTF-8.
-
-**Appris.** Les six tâches ont été écrites en parallèle par des agents, coupés par une limite
-d'usage puis repris : chaque commit a été rejoué sur `main` par son seul diff propre, et les vues
-rendues une fois, à la fin. Un `git add -A` d'urgence avait embarqué des vues dans chaque branche.
-
-… 3 entrée(s) affichée(s) sur 83 ; les 80 plus ancienne(s) se lisent dans `docs/journal/`.
+… 3 entrée(s) affichée(s) sur 84 ; les 81 plus ancienne(s) se lisent dans `docs/journal/`.
 
 ## Dette déclarée
 

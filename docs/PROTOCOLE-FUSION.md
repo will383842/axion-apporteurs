@@ -110,7 +110,10 @@ de l'architecte quand la PR touche au schéma (décision de Will du 2026-09-26, 
 `partners/ADR-0024`, `docs/CHARTE-AGENTS.md` §6) ; la mutation n'est plus un avis d'agent, elle
 est mesurée par Stryker en porte A (`pnpm mutation:pr`) —, l'auteur qui ne s'auto-approuve pas, les
 sept premières cases de la DoD, le bloc ROUGE/VERT, et la section « Attaque » si la tâche est
-`sensible`. Sur toute PR, le refus de la lentille `securite` vaut **veto**, à lui seul.
+`sensible`. Sur toute PR, le refus de la lentille `securite` vaut **veto**, à lui seul — et un
+`Verdict: refuse` n'est rendu, par cette lentille comme par l'autre, que sur un écart démontré et
+ouvert ; tout autre motif est une dette nommée dans l'avis, et ne bloque pas (règle d'arrêt du
+2026-09-15, `partners/ADR-0025`).
 
 ### Pas 3 — Les gates, sur le commit qui sera fusionné
 
