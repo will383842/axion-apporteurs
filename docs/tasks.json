@@ -2256,7 +2256,8 @@
         "package.json",
         "scripts/image/temoin-build-sans-base.sh",
         "scripts/image/temoin-porte-c.sh",
-        "scripts/image/publier.sh"
+        "scripts/image/publier.sh",
+        "tests/unit/gouvernance/clore-une-tache-livree-seule.spec.ts"
       ],
       "schema": false,
       "sensible": [],

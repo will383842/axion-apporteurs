@@ -60,10 +60,20 @@ const chemins = cheminsSchema(readFileSync(CHEMIN_CHARTE, 'utf8'));
  * (RM-01). « Sans propriétaire » n'est pas un confort : la fusion de #181 a livré la tâche jusque-là
  * première éligible, la suivante était déjà revendiquée, et le témoin qui promet « jamais
  * revendiquée » la prenait.
+ * « Dont chaque dépendance est livrée » non plus : le 2026-09-29, la revendication de QA-T05 a fait
+ * de QA-T11, qui en dépend, la première éligible ; la clôturer rougissait en `dep_non_livree`, à
+ * raison, et le témoin échouait pour une raison qui n'était pas la sienne. Une tâche livrée seule
+ * l'est sur une base où ses dépendances le sont déjà.
  */
 function tacheSeule(doc: Doc): Tache {
+  const livree = (id: string) => LIVREE.has(doc.taches.find((y) => y.id === id)?.statut ?? '');
   const t = doc.taches.find(
-    (x) => x.statut === 'a_faire' && !x.lot && !x.owner && (x.repo ?? DEPOT_LOCAL) === DEPOT_LOCAL
+    (x) =>
+      x.statut === 'a_faire' &&
+      !x.lot &&
+      !x.owner &&
+      (x.repo ?? DEPOT_LOCAL) === DEPOT_LOCAL &&
+      ((x as { deps?: string[] }).deps ?? []).every(livree)
   );
   if (!t) throw new Error('aucune tâche de ce dépôt à faire hors lot : le témoin n’a plus d’objet');
   return t;
