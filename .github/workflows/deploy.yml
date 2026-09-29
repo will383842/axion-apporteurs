@@ -8,7 +8,16 @@
 # Chaque étape est un script de `package.json`, sous la forme fermée que les gardes exigent : la
 # logique vit dans `scripts/image/` et `scripts/gates/gate-c.sh`, jamais en ligne ici.
 #
-# CE QUE CE WORKFLOW PROUVE, ET DANS QUEL ORDRE :
+# DEUX JOBS, ET C'EST LA SÉCURITÉ QUI LE VEUT (refus de la lentille `securite` sur la PR #221) :
+#   — `image` tourne sur les demandes de fusion ET sur `main` : il ne porte QUE `contents: read`. Le
+#     code d'une demande de fusion (scripts, Dockerfile) s'y exécute ; un jeton capable de publier
+#     y serait à sa portée, et `checkout` le persisterait dans `.git/config` ;
+#   — `publier` ne tourne QUE sur un `push` vers `main`, APRÈS `image`, et il est le SEUL à porter
+#     `packages: write`. Il reconstruit l'image et rejoue la porte C avant de pousser : l'image
+#     publiée est celle qui vient d'être prouvée, dans le même job.
+#   Chaque `checkout` pose `persist-credentials: false`.
+#
+# CE QUE `image` PROUVE, DANS CET ORDRE :
 #   1. `image:construire` — l'image se construit SANS AUCUNE variable de base ni de cache : aucun
 #      `--build-arg`, et le Dockerfile n'en pose pas. C'est une divergence ASSUMÉE d'avec l'autre
 #      dépôt, qui substitue une adresse factice au build ; elle est écrite ici pour ne pas être
@@ -18,9 +27,7 @@
 #   3. `gate-c` — la porte C, face VERTE : l'image démarre avec une base et un cache éphémères,
 #      `readyz` rend 200, zéro migration en attente, en moins de trois minutes ;
 #   4. `gate-c:prove` — la porte C, face ROUGE : la même image, une migration cassée en plus, fait
-#      sortir la porte en code non nul avec le compte des migrations en attente ;
-#   5. `image:publier` — sur `main` seulement, APRÈS les quatre preuves. Le script refuse aussi de
-#      publier hors de `main`.
+#      sortir la porte en code non nul avec le compte des migrations en attente.
 #
 # `cancel-in-progress: false` : une publication commencée n'est jamais tuée par la suivante — une
 # image à moitié poussée sur `latest` serait pire qu'une image en retard.
@@ -42,9 +49,9 @@ jobs:
     if: ${{ github.event.pull_request.merged != true }}
     permissions:
       contents: read
-      packages: write
     steps:
       - uses: actions/checkout@v4
+        with: { persist-credentials: false }
       # La version de pnpm vient de `packageManager` dans package.json — une seule source.
       - uses: pnpm/action-setup@v4
 
@@ -60,8 +67,26 @@ jobs:
       - name: La porte C sait rougir — une migration cassee sort en non nul, avec le compte
         run: pnpm gate-c:prove
 
-      - name: Publier sur le registre — latest et sha-7, sur main seulement
-        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+  publier:
+    runs-on: ubuntu-latest
+    needs: image
+    # Sur `main` seulement : jamais sur une demande de fusion, dont le code s'exécuterait ici.
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - uses: pnpm/action-setup@v4
+
+      - name: L image publiee est reconstruite ici
+        run: pnpm image:construire
+
+      - name: Et prouvee ici, par la porte C, avant d etre poussee
+        run: pnpm gate-c
+
+      - name: Publier sur le registre — latest et sha-7
         env:
           JETON: ${{ secrets.GITHUB_TOKEN }}
         run: pnpm image:publier

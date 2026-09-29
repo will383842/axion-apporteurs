@@ -2,12 +2,13 @@
 /**
  * L'IMAGE EST CONSTRUITE, JUGÉE PUIS PUBLIÉE PAR LA FORGE — QA-T05 (REQ-QA-018).
  *
- * `.github/workflows/deploy.yml` est lu ici pour ce qu'il FAIT, dans l'ordre : construire, jouer
- * les deux faces de la porte C, et seulement alors publier `latest` et `sha-<7>`, sur `main`
- * seulement. Chaque étape est un script de `package.json` (forme fermée des gardes) : la chaîne est
- * suivie jusqu'au fichier qu'il exécute. La porte C elle-même tourne dans le job : ce fichier ne
- * lance aucun conteneur, il tient la FORME qui fait que la porte ne peut pas être contournée —
- * une publication placée avant elle, ou ouverte aux demandes de fusion, rougit en se nommant.
+ * `.github/workflows/deploy.yml` est lu ici pour ce qu'il FAIT, job par job. `image` construit et
+ * joue les deux faces de la porte C, sur les demandes de fusion comme sur `main`, avec un jeton qui
+ * ne sait que LIRE. `publier` ne tourne que sur un `push` vers `main`, après `image`, reconstruit et
+ * reprouve l'image, puis la pousse `latest` et `sha-<7>` : il est le SEUL à porter
+ * `packages: write` (refus de la lentille `securite` sur la PR #221 — le code d'une demande de
+ * fusion s'exécute dans le job qui la juge, et un jeton capable de publier y serait à sa portée).
+ * Chaque étape est un script de `package.json` : la chaîne est suivie jusqu'au fichier exécuté.
  *
  * Chaque règle a sa face rouge, jouée sur une copie mutée des vraies sources.
  */
@@ -29,7 +30,7 @@ const REEL: Sources = {
   temoinPorteC: readFileSync('scripts/image/temoin-porte-c.sh', 'utf8'),
 };
 
-/** Ce que chaque étape du job doit exécuter, EXACTEMENT. */
+/** Ce que chaque étape doit exécuter, EXACTEMENT. */
 const ATTENDUS: Record<string, string> = {
   'image:construire': 'docker build --tag partners:construite .',
   'gate-c': 'sh scripts/gates/gate-c.sh partners:construite',
@@ -37,24 +38,30 @@ const ATTENDUS: Record<string, string> = {
   'image:publier': 'sh scripts/image/publier.sh',
 };
 
-type Etape = { nom: string; corps: string };
-
-/** Les étapes du job, dans l'ordre, découpées sur `- name:` ou `- uses:`. */
-function etapes(texte: string): Etape[] {
-  return texte
-    .split(/\n(?=\s{6}- (?:name|uses):)/)
-    .slice(1)
-    .map((b) => ({ nom: /- (?:name|uses):\s*(.+)/.exec(b)?.[1]?.trim() ?? '', corps: b }));
+/** Les jobs du workflow : leur nom et leur texte, découpés sur `  <nom>:` sous `jobs:`. */
+function jobs(texte: string): Map<string, string> {
+  const corps = texte.slice(texte.indexOf('\njobs:'));
+  const m = new Map<string, string>();
+  for (const bloc of corps.split(/\n(?= {2}[a-z][\w-]*:\s*$)/m).slice(1)) {
+    const nom = /^ {2}([a-z][\w-]*):/.exec(bloc)?.[1];
+    if (nom) m.set(nom, bloc);
+  }
+  return m;
 }
 
 const echapper = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+/** L'indice de l'étape qui lance `pnpm <script>` dans un job, -1 si aucune. */
+function rang(job: string, script: string): number {
+  const etapes = job.split(/\n(?=\s{6}- (?:name|uses):)/).slice(1);
+  return etapes.findIndex((e) => new RegExp(`run: pnpm ${echapper(script)}\\s*$`, 'm').test(e));
+}
 
 /** Les fautes du pipeline : chacune NOMME la règle qu'elle viole. */
 function fautesDuPipeline(s: Sources): string[] {
   const f: string[] = [];
-  const e = etapes(s.workflow);
-  const indice = (script: string) =>
-    e.findIndex((x) => new RegExp(`run: pnpm ${echapper(script)}\\s*$`, 'm').test(x.corps));
+  const j = jobs(s.workflow);
+  const image = j.get('image') ?? '';
+  const publier = j.get('publier') ?? '';
 
   for (const [script, valeur] of Object.entries(ATTENDUS)) {
     if (s.scripts[script] !== valeur)
@@ -62,30 +69,60 @@ function fautesDuPipeline(s: Sources): string[] {
         `script_altere : ${script} vaut « ${s.scripts[script] ?? 'absent'} », attendu « ${valeur} »`
       );
   }
-  const construire = indice('image:construire');
-  const porteVerte = indice('gate-c');
-  const porteRouge = indice('gate-c:prove');
-  const publier = indice('image:publier');
-  if (construire < 0) f.push('construction_absente : aucune étape ne lance image:construire');
-  if (porteVerte < 0) f.push('porte_c_absente : aucune étape ne lance gate-c');
-  if (porteRouge < 0) f.push('porte_c_sans_face_rouge : aucune étape ne lance gate-c:prove');
-  if (publier < 0) f.push('publication_absente : aucune étape ne lance image:publier');
-  if (publier >= 0) {
-    const p = e[publier]!.corps;
-    if (!/github\.event_name == 'push'/.test(p) || !/refs\/heads\/main/.test(p))
-      f.push('publication_hors_main : l’étape de publication n’est pas gardée par push sur main');
-    if (!/JETON: \$\{\{ secrets\.GITHUB_TOKEN \}\}/.test(p))
-      f.push('connexion_au_registre : le jeton de publication n’est pas GITHUB_TOKEN');
-    if (/secrets\.(?!GITHUB_TOKEN\b)/.test(p))
-      f.push('secret_tiers : la publication lit un autre secret que GITHUB_TOKEN');
-    for (const [nom, i] of [
-      ['la construction', construire],
-      ['la porte C', porteVerte],
-      ['la face rouge de la porte C', porteRouge],
-    ] as const) {
-      if (i >= 0 && i > publier) f.push(`publication_avant_preuve : la publication précède ${nom}`);
-    }
+  if (!image) f.push('job_image_absent : aucun job `image`');
+  if (!publier) f.push('job_publier_absent : aucun job `publier`');
+
+  // Le job de preuve : les quatre étapes, un jeton qui ne sait que lire.
+  for (const script of [
+    'image:construire',
+    'image:temoin-build-sans-base',
+    'gate-c',
+    'gate-c:prove',
+  ])
+    if (image && rang(image, script) < 0)
+      f.push(`preuve_absente : le job image ne lance pas ${script}`);
+  if (!/if: \$\{\{ github\.event\.pull_request\.merged != true \}\}/.test(image))
+    f.push(
+      'garde_de_fusion_absente : le job image mesure aussi une demande de fusion déjà fusionnée'
+    );
+
+  // LE JETON QUI PUBLIE : seul `publier` le porte, et `publier` ne tourne jamais sur une PR.
+  for (const [nom, texte] of j) {
+    if (nom !== 'publier' && /packages:\s*write/.test(texte))
+      f.push(
+        `jeton_de_publication_expose : le job ${nom}, atteint par pull_request, porte packages: write`
+      );
   }
+  if (publier) {
+    if (
+      !/if: \$\{\{ github\.event_name == 'push' && github\.ref == 'refs\/heads\/main' \}\}/.test(
+        publier
+      )
+    )
+      f.push('publication_hors_main : le job publier n’est pas gardé par push sur main');
+    if (!/needs: image\s*$/m.test(publier))
+      f.push('publication_avant_preuve : le job publier ne dépend pas du job image');
+    const c = rang(publier, 'image:construire');
+    const p = rang(publier, 'gate-c');
+    const pub = rang(publier, 'image:publier');
+    if (c < 0 || p < 0 || pub < 0 || !(c < p && p < pub))
+      f.push(
+        'publication_avant_preuve : publier ne reconstruit et ne reprouve pas l’image AVANT de la pousser'
+      );
+    if (!/packages:\s*write/.test(publier))
+      f.push('publication_sans_droit : le job publier ne porte pas packages: write');
+    if (!/JETON: \$\{\{ secrets\.GITHUB_TOKEN \}\}/.test(publier))
+      f.push('connexion_au_registre : le jeton de publication n’est pas GITHUB_TOKEN');
+  }
+  if (/secrets\.(?!GITHUB_TOKEN\b)/.test(s.workflow))
+    f.push('secret_tiers : le workflow lit un autre secret que GITHUB_TOKEN');
+
+  // Aucun checkout ne laisse le jeton dans `.git/config`.
+  const checkouts =
+    s.workflow.match(/- uses: actions\/checkout@[^\n]*(?:\n\s+with:[^\n]*)?/g) ?? [];
+  if (checkouts.length === 0 || checkouts.some((c) => !/persist-credentials: false/.test(c)))
+    f.push('jeton_persiste : un checkout ne pose pas persist-credentials: false');
+
   if (!/docker push "\$REGISTRE:latest"/.test(s.publier))
     f.push('etiquette_latest_absente : publier.sh ne pousse pas latest');
   if (!/cut -c1-7/.test(s.publier) || !/docker push "\$REGISTRE:sha-\$COURT"/.test(s.publier))
@@ -105,35 +142,55 @@ function fautesDuPipeline(s: Sources): string[] {
     );
   if (/cancel-in-progress:\s*true/.test(s.workflow))
     f.push('publication_annulable : cancel-in-progress: true tuerait une publication commencée');
-  if (!/if: \$\{\{ github\.event\.pull_request\.merged != true \}\}/.test(s.workflow))
-    f.push('garde_de_fusion_absente : le job mesure aussi une demande de fusion déjà fusionnée');
   return f;
 }
 
 describe('REQ-QA-018 — la forge construit, juge, puis publie l’image (QA-T05)', () => {
-  it('REQ-QA-018 — les vraies sources ne portent aucune faute, et le job compte ses étapes', () => {
+  it('REQ-QA-018 — les vraies sources ne portent aucune faute, et les deux jobs sont lus', () => {
     expect(fautesDuPipeline(REEL)).toEqual([]);
-    expect(etapes(REEL.workflow).length).toBeGreaterThanOrEqual(7);
+    expect([...jobs(REEL.workflow).keys()]).toEqual(['image', 'publier']);
   });
 
-  const deplacerLaPublicationAvantLaPorte = (t: string): string => {
-    const e = etapes(t);
-    const pub = e.find((x) => /run: pnpm image:publier/.test(x.corps))!;
-    const ancre = e.find((x) => /run: pnpm gate-c\s*$/m.test(x.corps))!;
-    return t
-      .replace('\n' + pub.corps, '')
-      .replace('\n' + ancre.corps, '\n' + pub.corps + '\n' + ancre.corps);
-  };
   const mutants: [string, (s: Sources) => Sources, string][] = [
     [
-      'la publication déplacée AVANT la porte C',
-      (s) => ({ ...s, workflow: deplacerLaPublicationAvantLaPorte(s.workflow) }),
+      'packages: write posé sur le job de preuve, atteint par pull_request',
+      (s) => ({
+        ...s,
+        workflow: s.workflow.replace(
+          '    permissions:\n      contents: read\n    steps:',
+          '    permissions:\n      contents: read\n      packages: write\n    steps:'
+        ),
+      }),
+      'jeton_de_publication_expose',
+    ],
+    [
+      'un checkout qui persiste le jeton',
+      (s) => ({
+        ...s,
+        workflow: s.workflow.replace('with: { persist-credentials: false }', 'with: {}'),
+      }),
+      'jeton_persiste',
+    ],
+    [
+      'le job publier ouvert aux demandes de fusion',
+      (s) => ({ ...s, workflow: s.workflow.replace("github.event_name == 'push' && ", '') }),
+      'publication_hors_main',
+    ],
+    [
+      'le job publier sans dépendance au job de preuve',
+      (s) => ({ ...s, workflow: s.workflow.replace('    needs: image\n', '') }),
       'publication_avant_preuve',
     ],
     [
-      'l’étape de publication ouverte aux demandes de fusion',
-      (s) => ({ ...s, workflow: s.workflow.replace("github.event_name == 'push' && ", '') }),
-      'publication_hors_main',
+      'le job publier qui pousse avant de reprouver',
+      (s) => ({
+        ...s,
+        workflow: s.workflow.replace(
+          '        run: pnpm gate-c\n\n      - name: Publier',
+          '        run: pnpm lint\n\n      - name: Publier'
+        ),
+      }),
+      'publication_avant_preuve',
     ],
     [
       'publier.sh qui ne refuse plus hors de main',
