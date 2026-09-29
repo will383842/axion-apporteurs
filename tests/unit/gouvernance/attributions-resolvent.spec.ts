@@ -32,9 +32,11 @@ import {
   entreesDeJournal,
   HORS_ASCII_ADMIS,
   prouver,
+  rendre,
   SourceIllisible,
   CITATIONS_DECLAREES,
   DETTE_GATE_NON_RECIPROQUE,
+  type Sources,
   type Tache,
 } from '../../../scripts/gates/gov-attributions';
 
@@ -745,101 +747,79 @@ describe('REQ-GOV-021 — sur le dépôt réel, la garde lit ses sources EN ENTI
     ).toEqual([]);
   });
 
-  it('un site NEUF — en-tête d’un fichier neuf, gate neuve, occurrence de plus sur un site en dette, gate ou chaîne figée repointée vers un AUTRE script — nommant une tâche LIVRÉE à path gabarit est une faute nommée', () => {
-    const s = chargerSources(fichiersSuivis());
-    const livreeGabarit = (reel: boolean) =>
-      s.taches.find(
-        (t) =>
-          LIVREE.has(t.statut ?? '') &&
-          (t.paths ?? []).some((p) => posix.basename(p) === t.id) &&
-          (t.paths ?? []).some((p) => posix.basename(p) !== t.id) === reel
-      );
-    const pure = livreeGabarit(false);
-    const mixte = livreeGabarit(true);
-    expect(
-      pure && mixte,
-      'aucune tâche livrée à path gabarit, pure ou mixte : le témoin ne distinguerait rien'
-    ).toBeTruthy();
+  /**
+   * Rejoué sur FIXTURES : le dépôt ne porte plus aucune tâche livrée à path gabarit, et la dette qui
+   * en figeait les occurrences n'existe plus. Chaque attribution que ce témoin faisait rougir rougit
+   * encore — et le gabarit lui-même est refusé, pour la tâche pure comme pour la mixte.
+   */
+  it('REQ-GOV-021 — un site NEUF — en-tête d’un fichier neuf, gate neuve, occurrence de plus sur un site déjà nommé, gate ou chaîne repointée vers un AUTRE script — nommant une tâche LIVRÉE à path gabarit est une faute nommée', () => {
     const NEUF = 'scripts/gates/sonde-neuve.ts';
-    // Une occurrence DE PLUS sur un site dont l'exemption existe déjà : un en-tête réel qui nomme une
-    // tâche livrée à gabarit. L'identifiant est AJOUTÉ au bout de la ligne qui le porte : rien n'est retiré.
-    const parId = new Map(s.taches.map((t) => [t.id, t]));
-    const aGabarit = (id: string) => {
-      const t = parId.get(id);
-      return (
-        t !== undefined &&
-        LIVREE.has(t.statut ?? '') &&
-        (t.paths ?? []).some((p) => posix.basename(p) === t.id)
-      );
+    const EXISTANT = 'scripts/gates/porte.ts';
+    const base: Tache = { id: 'GOV-100', paths: [EXISTANT], tests: {}, statut: 'fusionnee' };
+    const pure: Tache = { ...base, id: 'GOV-003', paths: ['docs/gouvernance/GOV-003'] };
+    const mixte: Tache = {
+      ...base,
+      id: 'GOV-007',
+      paths: ['docs/gouvernance/GOV-007', 'prisma/schema.prisma'],
     };
-    const existante = analyser(s).exemptions.find(
-      (e) =>
-        aGabarit(e.tache) && e.nature !== 'contexte' && /^(scripts|tests)\/.*:\d+$/.test(e.site)
-    );
-    expect(
-      existante,
-      'aucune exemption d’en-tête sur une tâche livrée à gabarit : le témoin « occurrence de plus » ne porterait sur rien'
-    ).toBeDefined();
-    const fichierExistant = existante!.site.replace(/:\d+$/, '');
-    const ligneExistante = Number(existante!.site.slice(fichierExistant.length + 1)) - 1;
-    const entetes = [
-      ...s.entetes.map((e) =>
-        e.fichier === fichierExistant
-          ? {
-              ...e,
-              lignes: e.lignes.map((l, i) =>
-                i === ligneExistante ? `${l} ${existante!.tache}` : l
-              ),
-            }
-          : e
-      ),
-      { fichier: NEUF, lignes: [`// portée par ${pure!.id}`, `// étendue par ${mixte!.id}`] },
-    ];
-    // Une gate FIGÉE en dette, et une gate dont une chaîne FIGÉE nomme une tâche livrée à gabarit, REPOINTÉES vers
-    // un autre script : le lieu n'a pas bougé, le fichier jugé si. Chacune est retrouvée par le site que la garde imprime.
-    const exemptions = analyser(s).exemptions;
-    const scriptDe = (g: (typeof s.gates)[number]) => g.script.split('#')[0] as string;
-    const gateFigee = exemptions.find((e) => e.nature === 'dette_gabarit_livree_gate');
-    const proseFigee = exemptions.find(
-      (e) => e.nature === 'dette_gabarit_livree_mention' && e.site.startsWith('docs/gates.json:')
-    );
-    const gA = s.gates.find(
-      (g) =>
-        gateFigee !== undefined && gateFigee.site === `docs/gates.json:${g.id} (${scriptDe(g)})`
-    );
-    const gP = s.gates.find(
-      (g) => proseFigee !== undefined && proseFigee.site.startsWith(`docs/gates.json:${g.id}.`)
-    );
-    expect(
-      gA && gP,
-      'aucune gate figée, ou aucune chaîne figée de docs/gates.json : le témoin « même lieu, autre script » ne porterait sur rien'
-    ).toBeTruthy();
-    const gates = [
-      ...s.gates.map((g) => (g === gA || g === gP ? { ...g, script: NEUF } : g)),
-      { id: 'sonde-neuve-pure', script: NEUF, tache: pure!.id },
-      { id: 'sonde-neuve-mixte', script: NEUF, tache: mixte!.id },
-    ];
-    const { fautes } = analyser({ ...s, entetes, gates });
+    const voisine: Tache = { ...base, id: 'GOV-101', paths: ['scripts/gates/autre.ts'] };
+    const gA = {
+      id: 'gov:identifiants',
+      script: 'scripts/gates/gov-identifiants.ts',
+      tache: pure.id,
+    };
+    const gP = {
+      id: 'g',
+      script: 'scripts/gates/autre.ts',
+      tache: voisine.id,
+      verifie: `étendue par ${pure.id}`,
+    };
+    const s: Sources = {
+      taches: [base, pure, mixte, voisine],
+      gates: [
+        { ...gA, script: NEUF },
+        { ...gP, script: NEUF },
+        { id: 'sonde-neuve-pure', script: NEUF, tache: pure.id },
+        { id: 'sonde-neuve-mixte', script: NEUF, tache: mixte.id },
+      ],
+      postes: [],
+      journal: '',
+      plancherJournal: 0,
+      // Une occurrence DE PLUS au bout de la ligne qui nommait déjà la tâche livrée : rien n'est retiré.
+      entetes: [
+        { fichier: EXISTANT, lignes: [`// étendue par ${pure.id} ${pure.id}`] },
+        { fichier: NEUF, lignes: [`// portée par ${pure.id}`, `// étendue par ${mixte.id}`] },
+      ],
+      citations: [],
+      dettesGate: [],
+      dettesLot: [],
+      exemptionsFigees: [],
+    };
+    const { fautes } = analyser(s);
     const vue = (famille: string, ...noms: string[]) =>
       fautes.some((f) => f.famille === famille && noms.every((n) => f.message.includes(n)));
     const aveugles = [
-      ['mention_hors_paths', `${NEUF}:1`, pure!.id],
-      ['mention_hors_paths', `${NEUF}:2`, mixte!.id],
-      ['gate_non_reciproque', 'sonde-neuve-pure', pure!.id],
-      ['gate_non_reciproque', 'sonde-neuve-mixte', mixte!.id],
-      ['mention_hors_paths', `${fichierExistant}:`, existante!.tache],
-      ['gate_non_reciproque', `« ${gA!.id} »`, gateFigee!.tache, NEUF],
-      [
-        'mention_hors_paths',
-        `docs/gates.json:${gP!.id}.`,
-        proseFigee!.tache,
-        `et ${NEUF} n'est ni`,
-      ],
+      ['mention_hors_paths', `${NEUF}:1`, pure.id],
+      ['mention_hors_paths', `${NEUF}:2`, mixte.id],
+      ['gate_non_reciproque', 'sonde-neuve-pure', pure.id],
+      ['gate_non_reciproque', 'sonde-neuve-mixte', mixte.id],
+      ['mention_hors_paths', `${EXISTANT}:1`, pure.id],
+      ['gate_non_reciproque', `« ${gA.id} »`, pure.id, NEUF],
+      ['mention_hors_paths', `docs/gates.json:${gP.id}.`, pure.id, `et ${NEUF} n'est ni`],
+      ['chemin_gabarit', pure.id, 'docs/gouvernance/GOV-003'],
+      ['chemin_gabarit', mixte.id, 'docs/gouvernance/GOV-007'],
     ].filter(([famille, ...noms]) => !vue(famille as string, ...noms));
     expect(
       aveugles,
       'ces attributions NEUVES à une tâche livrée à path gabarit n’ont fait rougir personne'
     ).toEqual([]);
+    expect(
+      fautes.filter(
+        (f) => f.famille === 'mention_hors_paths' && f.message.includes(`${EXISTANT}:1`)
+      ),
+      'les DEUX occurrences de la ligne ne sont pas jugées chacune'
+    ).toHaveLength(2);
+    expect(rendre(analyser(s)).code).toBe(1);
   });
 
   /**
@@ -883,10 +863,12 @@ describe('REQ-GOV-021 — sur le dépôt réel, la garde lit ses sources EN ENTI
       const partage = gates.filter((x) => scriptDe(x) === scriptDe(g)).length > 1;
       return `docs/gates.json(${scriptDe(g)})${partage ? `@${g.id as string}` : ''}${champ}`;
     };
-    // Une tâche LIVRÉE (ou sans statut) ne relève plus de « pas encore connu » : le dépôt vert la range sous sa dette figée.
+    // Une tâche LIVRÉE (ou sans statut) ne relève plus de « pas encore connu » : aucune exemption ne
+    // l'absout, et son gabarit est refusé. Le recompte la range sous un nom qu'aucune nature ne porte :
+    // la voir ici fait diverger les deux listes.
     const nature = (lieu: 'gate' | 'mention', t: T) =>
       t.statut === undefined || LIVREE.has(t.statut)
-        ? `dette_gabarit_livree_${lieu}`
+        ? `jamais_exemptee_${lieu}`
         : `${lieu}_paths_${reels(t).length === 0 ? 'non_resolus' : 'en_partie_gabarit'}`;
     // Une mention est un JETON entier qui désigne une tâche, casse et traits d'union repliés : le
     // trait d'union, l'insécable, le tiret numérique, le demi-cadratin et le signe moins.
@@ -960,11 +942,7 @@ describe('REQ-GOV-021 — sur le dépôt réel, la garde lit ses sources EN ENTI
     // Chaque site est comparé ENTIER : un en-tête à sa ligne, une chaîne de docs/gates.json par son
     // lieu, son champ et son script.
     const rendues = exemptions
-      .filter((e) =>
-        /^(gate|mention)_paths_(non_resolus|en_partie_gabarit)$|^dette_gabarit_livree_(gate|mention)$/.test(
-          e.nature
-        )
-      )
+      .filter((e) => /^(gate|mention)_paths_(non_resolus|en_partie_gabarit)$/.test(e.nature))
       .map((e) => `${e.nature} ${e.tache} @ ${e.site}`);
     expect(
       attendues.length,

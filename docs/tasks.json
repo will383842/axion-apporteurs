@@ -8,7 +8,25 @@
       "repo": "partners",
       "zone": "gouvernance",
       "paths": [
-        "docs/gouvernance/GOV-000"
+        "package.json",
+        "README.md",
+        ".github/workflows/ci.yml",
+        ".claude/settings.json",
+        ".claude/agents/",
+        ".claude/skills/lot/SKILL.md",
+        "scripts/lot/composer.ts",
+        "scripts/lot/cloture.ts",
+        "scripts/lot/lot.workflow.js",
+        "scripts/lot/tasks.schema.json",
+        "scripts/plan-state/build.ts",
+        "scripts/gates/hook-env.js",
+        "docs/tasks.json",
+        "scripts/gates/gov-autonomie.ts",
+        "scripts/gates/gov-publication.ts",
+        "docs/gates.json",
+        "tests/unit/gouvernance/autonomie.spec.ts",
+        "tests/unit/gouvernance/aucun-workflow-ne-pousse-sur-main.spec.ts",
+        "tests/unit/gouvernance/gardes.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -55,8 +73,13 @@
       "repo": "partners",
       "zone": "gouvernance",
       "paths": [
-        "docs/gouvernance/GOV-007",
-        "prisma/schema.prisma"
+        "prisma/schema.prisma",
+        "docs/CHARTE-AGENTS.md",
+        ".github/PULL_REQUEST_TEMPLATE.md",
+        ".github/CODEOWNERS",
+        "scripts/gates/gov-pr.ts",
+        "docs/gates.json",
+        "tests/gov/charte-pr.spec.ts"
       ],
       "schema": true,
       "sensible": [],
@@ -103,7 +126,13 @@
       "repo": "partners",
       "zone": "gouvernance",
       "paths": [
-        "docs/gouvernance/GOV-001"
+        "docs/REQUIREMENTS.md",
+        "docs/requirements.json",
+        "docs/REQUIREMENTS-ANNEXE-FUSIONS.md",
+        "scripts/gates/gov-requirements.ts",
+        "docs/gates.json",
+        "tests/unit/gouvernance/gardes.spec.ts",
+        "tests/unit/gouvernance/inventaire-prouve.spec.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -255,7 +284,10 @@
       "repo": "partners",
       "zone": "gouvernance",
       "paths": [
-        "docs/gouvernance/GOV-002"
+        "docs/PRESEANCE.md",
+        "scripts/gates/gov-preseance.ts",
+        "docs/gates.json",
+        "tests/unit/gouvernance/preseance.spec.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -294,7 +326,10 @@
       "repo": "partners",
       "zone": "gouvernance",
       "paths": [
-        "docs/gouvernance/GOV-003"
+        "scripts/gates/gov-identifiants.ts",
+        "docs/gates.json",
+        "tests/unit/gouvernance/gardes.spec.ts",
+        "scripts/gates/gov-tasks.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -334,7 +369,10 @@
       "repo": "partners",
       "zone": "gouvernance",
       "paths": [
-        "docs/gouvernance/GOV-004"
+        "docs/AFFIRMATIONS-AXIONIA.md",
+        "scripts/gates/gov-sonde.ts",
+        "docs/gates.json",
+        "tests/unit/gouvernance/affirmations-verifiees.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -371,8 +409,11 @@
       "repo": "partners",
       "zone": "gouvernance",
       "paths": [
-        "docs/gouvernance/GOV-005",
-        "prisma/schema.prisma"
+        "prisma/schema.prisma",
+        "docs/DECISIONS.md",
+        "scripts/gates/gov-hypotheses.ts",
+        "docs/gates.json",
+        "tests/unit/gouvernance/gardes.spec.ts"
       ],
       "schema": true,
       "sensible": [],
@@ -476,7 +517,11 @@
       "repo": "partners",
       "zone": "gouvernance",
       "paths": [
-        "docs/gouvernance/GOV-009"
+        "docs/adr/",
+        "scripts/gates/gov-adr.ts",
+        "docs/gates.json",
+        "tests/unit/gouvernance/adr-index-derive.spec.ts",
+        "scripts/adr/index.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -752,7 +797,14 @@
       "repo": "partners",
       "zone": "gouvernance",
       "paths": [
-        "docs/gouvernance/GOV-015"
+        "docs/tiers/recherche-entreprises.md",
+        "docs/tiers/docuseal.md",
+        "docs/tiers/zeptomail.md",
+        "docs/tiers/telegram.md",
+        "docs/tiers/urssaf.md",
+        "docs/tiers/tiime.md",
+        "tests/unit/gouvernance/fiches-tiers.spec.ts",
+        "tests/unit/gouvernance/fiches-tiers.controles.ts"
       ],
       "schema": false,
       "sensible": [
@@ -857,7 +909,14 @@
       "repo": "axionia",
       "zone": "integration",
       "paths": [
-        "axionia/INT-T01b"
+        "axionia/scripts/partners/fixtures.ts",
+        "axionia/src/server/partners/__tests__/enveloppe.spec.ts",
+        "axionia/src/server/partners/__tests__/payloads.spec.ts",
+        "axionia/src/server/partners/__tests__/commission.spec.ts",
+        "axionia/src/server/partners/__tests__/fixtures-et-frontiere.spec.ts",
+        "axionia/src/server/partners/__tests__/derivation-ht.spec.ts",
+        "axionia/src/server/partners/__tests__/transcription-du-contrat.spec.ts",
+        "axionia/src/server/partners/contrat/"
       ],
       "schema": true,
       "sensible": [],
@@ -954,7 +1013,11 @@
       "repo": "partners",
       "zone": "gouvernance",
       "paths": [
-        "docs/gouvernance/GOV-017a"
+        "docs/tasks.json",
+        "scripts/gates/gov-tasks.ts",
+        "docs/gates.json",
+        "tests/unit/gouvernance/paths-derives.spec.ts",
+        "tests/gov/charte-pr.spec.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -1003,7 +1066,13 @@
       "repo": "partners",
       "zone": "gouvernance",
       "paths": [
-        "docs/gouvernance/GOV-017b"
+        "docs/tasks.json",
+        "scripts/lot/tasks.schema.json",
+        "scripts/gates/gov-tasks.ts",
+        "docs/paths-proposes.json",
+        "scripts/lot/paths-proposes.ts",
+        "tests/unit/gouvernance/paths-derives.spec.ts",
+        "tests/gov/charte-pr.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -1184,7 +1253,11 @@
       "repo": "partners",
       "zone": "qualite",
       "paths": [
-        "scripts/gates/QA-T00"
+        "docs/gates.json",
+        ".github/workflows/nightly.yml",
+        "scripts/gates/gates-derivees.ts",
+        "scripts/gates/gates-prouvees.ts",
+        "tests/unit/gouvernance/tout-check-est-cable.spec.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -9041,7 +9114,9 @@
       "repo": "partners",
       "zone": "gouvernance",
       "paths": [
-        "scripts/gates/gov-entite.ts"
+        "scripts/gates/gov-entite.ts",
+        "scripts/lot/fichiers-suivis.ts",
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -10787,7 +10862,10 @@
       "paths": [
         "docs/tasks.json",
         "scripts/gates/gov-attributions.ts",
-        "tests/unit/gouvernance/aucun-chemin-gabarit.spec.ts"
+        "tests/unit/gouvernance/aucun-chemin-gabarit.spec.ts",
+        "tests/unit/gouvernance/attributions-resolvent.spec.ts",
+        "tests/unit/gouvernance/exemptions-par-occurrence.spec.ts",
+        "tests/unit/gouvernance/raison-de-dette-resolue.spec.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -10801,12 +10879,14 @@
       "externe": null,
       "estimateDays": 1.5,
       "statut": "a_faire",
-      "acceptance": "ETAT MESURE LE 2026-09-16 : 50 des 68 taches de phase 0 portent un chemin GABARIT — un chemin qui n'existe pas, construit sur l'identifiant de la tache — auxquelles s'ajoutent treize taches DEJA LIVREES dans le meme etat, et 54 attributions figees qui en dependent. GOV-007 et GOV-005 ne listent pas leurs propres gardes ; GOV-036 a modifie un fichier qu'elle n'a pas dans ses chemins. ⚠️ CE QUE CETTE TACHE NE PORTE PLUS : la reparation des 50 chemins de phase 0 est faite par le lot preparatoire, AVANT toute composition — sans elle le composeur prouve une disjonction qui n'existe pas. Ce qui reste ici est le PASSE et la GARDE : les treize taches livrees, le fichier omis par GOV-036, et la reduction des deux listes figees dans le MEME diff que la reparation, sans quoi une famille de dette perimee s'arme. A livrer : (1) plus aucun chemin gabarit dans le registre, quelle que soit la phase ; (2) une garde qui REFUSE un chemin construit sur l'identifiant de sa propre tache ; (3) les listes figees reduites a ce qui reste. TEMOIN A DEUX FACES : une tache dont le chemin vaut son propre identifiant fait sortir la garde en code non nul et la NOMME ; le registre repare la fait sortir en zero, avec le compte des taches et des chemins reellement confrontes.",
+      "acceptance": "ETAT MESURE LE 2026-09-16 : 50 des 68 taches de phase 0 portent un chemin GABARIT — un chemin qui n'existe pas, construit sur l'identifiant de la tache — auxquelles s'ajoutent treize taches DEJA LIVREES dans le meme etat, et 54 attributions figees qui en dependent. GOV-007 et GOV-005 ne listent pas leurs propres gardes ; GOV-036 a modifie un fichier qu'elle n'a pas dans ses chemins. ⚠️ CE QUE CETTE TACHE NE PORTE PLUS : la reparation des 50 chemins de phase 0 est faite par le lot preparatoire, AVANT toute composition — sans elle le composeur prouve une disjonction qui n'existe pas. Ce qui reste ici est le PASSE et la GARDE : les treize taches livrees, le fichier omis par GOV-036, et la reduction des deux listes figees dans le MEME diff que la reparation, sans quoi une famille de dette perimee s'arme. A livrer : (1) plus aucun chemin gabarit dans le registre, quelle que soit la phase ; (2) une garde qui REFUSE un chemin construit sur l'identifiant de sa propre tache ; (3) les listes figees reduites a ce qui reste. TEMOIN A DEUX FACES : une tache dont le chemin vaut son propre identifiant fait sortir la garde en code non nul et la NOMME ; le registre repare la fait sortir en zero, avec le compte des taches et des chemins reellement confrontes. AVENANT A01 du 2026-09-29 (PR #209, releve de la lentille exactitude) : le volet (1) est restreint aux taches livrees et a celles de phase inferieure ou egale a la phase courante. Les gabarits de phase future (121 le 2026-09-29 : 60 en phase 1, 40 en phase 2, 21 en phase 3) sont admis, comptes et imprimes par la garde ; elle rougit main au passage de phase tant que le lot preparatoire de la phase suivante ne les a pas repares. Motif : la reparation des chemins d une phase appartient a son lot preparatoire, comme ci-dessus pour la phase 0.",
       "tests": {
         "REQ-GOV-021": [
           "tests/unit/gouvernance/aucun-chemin-gabarit.spec.ts"
         ]
-      }
+      },
+      "issue": 208,
+      "owner": "A01"
     },
     {
       "id": "GOV-076",
