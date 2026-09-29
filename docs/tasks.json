@@ -14466,8 +14466,8 @@
           "tests/unit/gouvernance/une-tache-axionia-se-clot-sur-sa-branche.spec.ts"
         ]
       },
-      "issue": null,
-      "owner": null,
+      "issue": 252,
+      "owner": "A01",
       "branch": null,
       "pr": null,
       "attestation": null,
@@ -14503,6 +14503,41 @@
         ]
       },
       "issue": 249,
+      "owner": "A01",
+      "branch": null,
+      "pr": null,
+      "attestation": null,
+      "motif": null
+    },
+    {
+      "id": "GOV-127",
+      "titre": "Le passif declare de la declaration : une livraison nommee a la fusion mais au squash non conforme se clot sur arbitrage ecrit",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "scripts/lot/cloture.ts",
+        "tests/unit/gouvernance/le-passif-de-la-declaration-est-ferme.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "GOV-125"
+      ],
+      "reqs": [
+        "REQ-GOV-026"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "acceptance": "EXCEPTION AU GEL, arbitrage -d7 sur delegation de Williams du 2026-09-29 : elle bloque la Phase 0 a 100 %. CONSTAT : INT-T02 (axion-ia #1180, sha f158408, en production) est refusee par lot:cloture (tache_etrangere_a_la_pr, titre_d_ecrasement_non_conforme) : la PR portait le titre feat(INT-T02) a l instant de la fusion, mais le squash a pris pour premiere ligne feat(partners): ... (INT-T02) (#1180), une livraison anterieure a la convention de declaration cote axion-ia. INT-T27-A et INT-T26, livrees et en production, en dependent. A LIVRER : (1) une liste FERMEE et datee, PASSIF_DE_LA_DECLARATION, dans scripts/lot/cloture.ts, avec UNE seule entree : INT-T02, PR axion-ia #1180, sha complet f158408, motif de l arbitrage et mesure du patch propre (8f1d7d4 equivalent a 6bfd50b : 19 fichiers, seul le contexte de worker.ts differe). (2) L entree ne leve les deux refus QUE si la tache, la PR, le sha complet coincident ET si le titre a l instant de la fusion (chronologie de la forge) declare la tache. (3) Toute autre livraison garde les deux refus a l identique ; aucun drapeau de ligne de commande ne leve rien ; aucune autre regle n est assouplie. (4) TEMOINS rouges d abord : INT-T02 passe ; la meme livraison avec un autre sha, une autre PR ou un titre a la fusion qui ne declare pas la tache est refusee ; une livraison hors liste au squash non conforme est refusee. (5) Deux lentilles (scripts/lot/). Puis INT-T02, INT-T27-A et INT-T26 sont closes par un rattrapage.",
+      "tests": {
+        "REQ-GOV-026": [
+          "tests/unit/gouvernance/le-passif-de-la-declaration-est-ferme.spec.ts"
+        ]
+      },
+      "issue": 256,
       "owner": "A01",
       "branch": null,
       "pr": null,
