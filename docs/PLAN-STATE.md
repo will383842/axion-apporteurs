@@ -7,31 +7,31 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `14a8594` — 2026-09-29T10:16:33+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #217 (un contrôle requis rouge ou une revue manquante) · 2. #214 (un conflit avec `main`) |
-| Qui tient quoi ? | GOV-049 (A01) · GOV-075 (A01) · GOV-084 (A01) · GOV-110 (A01) |
-| Où en est la phase ? | phase 0 — 91/125 tâches, reste 29.25 j |
+| Où est `main` ? | `50b0b9c` — 2026-09-29T11:30:15+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #218 (un contrôle requis rouge ou une revue manquante) · 2. #219 (un conflit avec `main`) · 3. #221 (brouillon) |
+| Qui tient quoi ? | aucune tâche revendiquée |
+| Où en est la phase ? | phase 0 — 95/130 tâches, reste 28.50 j |
 | Le prochain pas | QA-T05 — Pipeline GHCR privé → Coolify pull |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
-| Dernière entrée de journal | PR #217 — 2026-09-29 |
+| Dernière entrée de journal | PR #219 — 2026-09-29 |
 
 **Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : 0
 
-91/125 tâches terminées · reste 29.25 j estimés.
+95/130 tâches terminées · reste 28.50 j estimés.
 
 ## Tâches
 
 | Statut | Nombre | Détail |
 | --- | --- | --- |
 | `proposee` | 0 | — |
-| `a_faire` | 167 | QA-T05, QA-T11, QA-T06, QA-T12, QA-T13, DM-03-A, DM-03-P, DM-04, INT-T02, INT-T03, INT-T04, INT-T05 … (12 affichées sur 167 — liste complète : `docs/TASKS.md`) |
+| `a_faire` | 168 | QA-T05, QA-T11, QA-T06, QA-T12, QA-T13, DM-03-A, DM-03-P, DM-04, INT-T02, INT-T03, INT-T04, INT-T05 … (12 affichées sur 168 — liste complète : `docs/TASKS.md`) |
 | `en_cours` | 0 | — |
 | `bloquee` | 0 | — |
 | `attente_externe` | 2 | JUR-T01b · JUR-T01c |
 | `en_revue` | 0 | — |
-| `fusionnee` | 130 | GOV-000, GOV-007, GOV-001, GOV-018, GOV-008, GOV-002, GOV-003, GOV-004, GOV-005, GOV-006, GOV-009, GOV-010 … (12 affichées sur 130 — liste complète : `docs/TASKS.md`) |
+| `fusionnee` | 134 | GOV-000, GOV-007, GOV-001, GOV-018, GOV-008, GOV-002, GOV-003, GOV-004, GOV-005, GOV-006, GOV-009, GOV-010 … (12 affichées sur 134 — liste complète : `docs/TASKS.md`) |
 | `deployee` | 0 | — |
 | `verifiee` | 0 | — |
 
@@ -60,8 +60,9 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #217 — test(GOV-049): une tache en cours hors lot porte la preuve de son vol, et la clause a enfin un temoin rouge | `t/gov-049-visibilite` | un contrôle requis rouge ou une revue manquante |
-| 2 | #214 — feat(DM-03-P): la grille publiee par axionia est importee version par version, chaque ligne confrontee a son empreinte | `t/dm-03-p` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #218 — feat(DM-04): commission et prorata en fonction pure, entiers exacts, bareme choisi par commissionId | `t/dm-04` | un contrôle requis rouge ou une revue manquante |
+| 2 | #219 — chore(GOV-012): registre rattrape, quatre taches closes, cinq suites versees | `t/registre-rattrapage-10` | un conflit avec `main` — à résoudre avant tout |
+| 3 | #221 — feat(QA-T05): la forge construit, juge puis publie l'image, la plateforme ne fera plus que la tirer | `t/qa-t05` | brouillon — hors file tant qu’il n’est pas prêt |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -69,12 +70,7 @@ Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partn
 
 Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’issue, posés par l’orchestrateur au §3 de `.claude/skills/lot/SKILL.md` (revendication **en vol**), et le champ `owner` de `docs/tasks.json`, écrit par `pnpm lot:cloture` seul (revendication **consolidée**). Cette rubrique les REND ; corriger une revendication fausse se fait dans l’une des deux sources, jamais ici.
 
-| Tâche | Revendiquée par | Issue | Statut |
-| --- | --- | --- | --- |
-| GOV-049 — Une tache en cours sans lot est invisible de TOUTES les gardes, et c'est ce lot qui l'a rencontre | A01 | #196 | `a_faire` |
-| GOV-075 — Des taches livrees gardent un chemin gabarit, et une tache livree omet un fichier qu'elle a modifie | A01 | #208 | `a_faire` |
-| GOV-084 — Neuf scripts de garde suivis ne sont revendiques par aucune tache | A01 | #212 | `a_faire` |
-| GOV-110 — La cloture compare le sujet du commit de fusion au titre ACTUEL de la PR : un renommage apres la fusion le rendrait conforme | A01 | #210 | `a_faire` |
+Aucune tâche revendiquée. Un agent ne prend jamais une tâche non revendiquée (REQ-GOV-007) : la revendication passe par l’orchestrateur.
 
 ⚠️ **13 revendication(s) périmée(s)** — QA-T07, GOV-042, GOV-045, GOV-050, GOV-051, GOV-053, GOV-054, GOV-055, GOV-060, GOV-072, GOV-079, GOV-093, INT-T01c : leur issue porte encore un label `owner:` alors que la tâche est livrée. `pnpm lot:cloture` écrit `docs/tasks.json` mais n’efface pas les labels ; la dette appartient à GOV-012.
 
@@ -86,19 +82,32 @@ Dérivé de `git log` sur `docs/adr/`, restreint au jour du dernier atterrissage
 
 ## Prochain pas
 
-**QA-T05** — Pipeline GHCR privé → Coolify pull (1 j) : 17 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
+**QA-T05** — Pipeline GHCR privé → Coolify pull (1 j) : 19 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
 Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeStateStatus` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage —, la tâche ensuite. L’ordre de la file se corrige à la rubrique « File de fusion », jamais ici.
 
 ## Dernier atterrissage
 
-`origin/main` = `14a8594` (2026-09-29T10:16:33+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `50b0b9c` (2026-09-29T11:30:15+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
 ## Journal
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
+
+### PR #219 — 2026-09-29 — chore(GOV-012): registre rattrape, quatre taches closes, cinq suites versees
+
+**Fait.** Dixième rattrapage. GOV-075, GOV-110, GOV-084 et GOV-049 passent `fusionnee` par
+`lot:cloture --tache`, chacune attestée par son commit d'écrasement. Cinq suites sont versées
+`a_faire`, de GOV-118 à GOV-122 : toutes sont des relevés non bloquants des deux lentilles, et
+l'une est une mesure faite sur la porte A de la PR #209.
+
+**Reste.** Les suites versées. GOV-119 est la plus coûteuse à laisser courir : tant qu'elle n'est
+pas livrée, une fusion pendant la porte A d'une autre PR peut faire rougir celle-ci.
+
+**Appris.** Une acceptance qui cite un fichier et sa ligne affirme un fait daté : la sonde exige
+alors son repère. Nommer le fichier sans la ligne suffit à dire où regarder.
 
 ### PR #217 — 2026-09-29 — test(GOV-049): une tache en cours hors lot porte la preuve de son vol, et la clause a enfin un temoin rouge
 
@@ -127,20 +136,7 @@ l'affaire de la traçabilité, pas de celle-ci.
 `main` en donne deux. Un compte recopié dans une acceptance vieillit, et c'est la garde qui le rend
 vrai à chaque passage.
 
-### PR #211 — 2026-09-29 — fix(GOV-110): la cloture confronte le sujet d'ecrasement au titre que la PR portait a l'instant de la fusion
-
-**Fait.** La clôture d'une tâche seule attendait, pour première ligne du commit d'écrasement, le
-titre ACTUEL de la PR, qui reste modifiable après la fusion. Elle lit maintenant les renommages dans
-la chronologie de la PR et retient le titre en vigueur à `mergedAt`. Un renommage postérieur est
-sans effet. Une chronologie illisible fait refuser la clôture, sans repli sur le titre actuel.
-
-**Reste.** La commande réelle a été jouée en lecture sur la PR #207, renommée avant sa fusion. Le
-cas d'une PR renommée après sa fusion n'est éprouvé que par la forge simulée.
-
-**Appris.** Une donnée lue « maintenant » pour juger un fait passé doit être relue à l'instant de
-ce fait : sinon, la preuve dépend de ce que la forge laisse encore modifier.
-
-… 3 entrée(s) affichée(s) sur 89 ; les 86 plus ancienne(s) se lisent dans `docs/journal/`.
+… 3 entrée(s) affichée(s) sur 91 ; les 88 plus ancienne(s) se lisent dans `docs/journal/`.
 
 ## Dette déclarée
 
