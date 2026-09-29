@@ -10531,7 +10531,9 @@
         "REQ-GOV-031": [
           "tests/unit/gouvernance/perimetre-de-ce-que-la-forge-sert.spec.ts"
         ]
-      }
+      },
+      "issue": 234,
+      "owner": "A01"
     },
     {
       "id": "GOV-067",
