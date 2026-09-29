@@ -2273,11 +2273,11 @@
       ],
       "externe": null,
       "estimateDays": 1,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "owner": "A01",
       "lot": null,
-      "branch": null,
-      "pr": null,
+      "branch": "t/qa-t05",
+      "pr": 221,
       "issue": 222,
       "attempts": 0,
       "motif": null,
@@ -2289,6 +2289,11 @@
         "REQ-QA-032": [
           "tests/unit/qualite/build-sans-base.spec.ts"
         ]
+      },
+      "attestation": {
+        "pr": 221,
+        "sha": "c92e40057345ace0bf46fdbb7e5613cdfd60b23a",
+        "fusionneeAt": "2026-09-29T13:17:12Z"
       }
     },
     {
@@ -3708,9 +3713,9 @@
       "repo": "axionia",
       "zone": "juridique",
       "paths": [
-        "axionia/src/content/commercial-offer.ts",
         "axionia/scripts/gates/vocab-public.ts",
-        "axionia/src/content/__tests__/vocabulaire-apporteur.spec.ts"
+        "axionia/src/content/__tests__/vocabulaire-apporteur.spec.ts",
+        "axionia/src/content/recrutement/commercial-offer.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -3731,7 +3736,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "`COMMERCIAL_OPPORTUNITY` corrigé (l. 103 et 274 de `commercial-offer.ts`, « n'a parfois même pas à avancer les fonds ») sans lire le drapeau `QUALIOPI_CERTIFICATION_OBTENUE` ; formulation SSOT = phrase validée par Will le 2026-08-19 ; gate lexicale INCONDITIONNELLE sur « prise en charge à 100 % », « financé par Qualiopi », « sans avance de frais », « Qualiopi » nu et toute périphrase ; liste d'exclusion `src/content/keywords/**` (« commercial » toléré seulement là et dans une phrase de désambiguïsation) et badge « N°1 en France » (assumé par Will, hors périmètre).",
+      "acceptance": "`COMMERCIAL_OPPORTUNITY` corrigé (l. 103 et 274 de `commercial-offer.ts`, « n'a parfois même pas à avancer les fonds ») sans lire le drapeau `QUALIOPI_CERTIFICATION_OBTENUE` ; formulation SSOT = phrase validée par Will le 2026-08-19 ; gate lexicale INCONDITIONNELLE sur « prise en charge à 100 % », « financé par Qualiopi », « sans avance de frais », « Qualiopi » nu et toute périphrase ; liste d'exclusion `src/content/keywords/**` (« commercial » toléré seulement là et dans une phrase de désambiguïsation) et badge « N°1 en France » (assumé par Will, hors périmètre). AVENANT A01 du 2026-09-29 (decision de Will, reponse en session -66 le 2026-09-29, relevee par la lentille exactitude sur axion-ia #1220) : « commercial » n est PAS un mot interdit, il designe les apporteurs ; la gate lexicale ne le refuse donc nulle part, et la liste d exclusion ne le concerne plus. Le fichier corrige est src/content/recrutement/commercial-offer.ts, et non src/content/commercial-offer.ts, qui n existe pas dans axion-ia : les paths sont corriges en consequence.",
       "tests": {
         "REQ-JUR-001": [
           "axionia/src/content/__tests__/vocabulaire-apporteur.spec.ts"
@@ -3772,11 +3777,11 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 1.5,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "owner": "A01",
       "lot": null,
-      "branch": null,
-      "pr": null,
+      "branch": "t/jur-t04",
+      "pr": 233,
       "issue": 232,
       "attempts": 0,
       "motif": null,
@@ -3794,6 +3799,11 @@
         "REQ-SEC-030": [
           "tests/unit/juridique/registre-rgpd.spec.ts"
         ]
+      },
+      "attestation": {
+        "pr": 233,
+        "sha": "6245830f72258d7f41f0b95affbb0bee49163e6c",
+        "fusionneeAt": "2026-09-29T12:03:27Z"
       }
     },
     {
@@ -10366,7 +10376,7 @@
     {
       "id": "GOV-063",
       "titre": "L'homonymie de la chaine de gardes n'a pas d'ADR, et son entree de registre n'a ni alias ni preuve rouge",
-      "phase": 0,
+      "phase": 3,
       "repo": "partners",
       "zone": "gouvernance",
       "paths": [
@@ -10404,7 +10414,7 @@
       "externe": null,
       "estimateDays": 0.75,
       "statut": "a_faire",
-      "acceptance": "UNE MEME GARDE PORTE TROIS NOMS : la chaine declaree dans `package.json`, le script qui l'execute reellement, et l'usage ecrit en tete du fichier. C'est le defaut que GOV-030 a ferme UNE FOIS et qui repousse par un autre bout. Faits mesures : l'entree du registre n'a pas d'alias, si bien que la reconnaissance de l'appel tient au litteral d'un COMMENTAIRE — un faux rouge deja rencontre ; et sa preuve rouge vaut vide. AGGRAVANT HORS DEPOT : aucun outil n'ecrit le champ d'alias, ni ne pose une PREMIERE valeur sur un champ vide du registre ; ces deux verbes sont a ecrire avant que la tache puisse se fermer, et c'est ecrit ici pour qu'on ne le decouvre pas au dernier moment. A livrer : (1) un ADR qui tranche entre renommer la chaine et renommer l'entree — l'identifiant est cite par six documents, il ne se change pas dans une demande de fusion ; (2) l'alias pose, la preuve rouge posee ; (3) la reconnaissance de l'appel ne lit plus un commentaire. TEMOIN A DEUX FACES : le nom retire du workflow fait sortir la garde en code non nul et le NOMME ; le meme nom present seulement dans un commentaire la fait AUSSI sortir en code non nul — c'est la face qui manque aujourd'hui ; le workflow du depot la fait sortir en zero.",
+      "acceptance": "UNE MEME GARDE PORTE TROIS NOMS : la chaine declaree dans `package.json`, le script qui l'execute reellement, et l'usage ecrit en tete du fichier. C'est le defaut que GOV-030 a ferme UNE FOIS et qui repousse par un autre bout. Faits mesures : l'entree du registre n'a pas d'alias, si bien que la reconnaissance de l'appel tient au litteral d'un COMMENTAIRE — un faux rouge deja rencontre ; et sa preuve rouge vaut vide. AGGRAVANT HORS DEPOT : aucun outil n'ecrit le champ d'alias, ni ne pose une PREMIERE valeur sur un champ vide du registre ; ces deux verbes sont a ecrire avant que la tache puisse se fermer, et c'est ecrit ici pour qu'on ne le decouvre pas au dernier moment. A livrer : (1) un ADR qui tranche entre renommer la chaine et renommer l'entree — l'identifiant est cite par six documents, il ne se change pas dans une demande de fusion ; (2) l'alias pose, la preuve rouge posee ; (3) la reconnaissance de l'appel ne lit plus un commentaire. TEMOIN A DEUX FACES : le nom retire du workflow fait sortir la garde en code non nul et le NOMME ; le meme nom present seulement dans un commentaire la fait AUSSI sortir en code non nul — c'est la face qui manque aujourd'hui ; le workflow du depot la fait sortir en zero. REPORTÉE APRÈS LANCEMENT — gel de la gouvernance, décision de Williams du 2026-09-29 : dette non bloquante, reclassée en phase 3.",
       "tests": {
         "REQ-GOV-008": [
           "tests/unit/gouvernance/un-nom-une-garde.spec.ts"
@@ -10461,7 +10471,7 @@
     {
       "id": "GOV-065",
       "titre": "La reconnaissance d'une coordonnee bancaire ne couvre qu'une partie de ses representations",
-      "phase": 0,
+      "phase": 3,
       "repo": "partners",
       "zone": "gouvernance",
       "paths": [
@@ -10483,7 +10493,7 @@
       "externe": null,
       "estimateDays": 1.5,
       "statut": "a_faire",
-      "acceptance": "LA FORME NE RECONNAIT QU'UNE ECRITURE CANONIQUE. Des familles entieres de representation sont declarees NON reconnues, et la liste de ce qui n'est pas reconnu N'EST PAS CLOSE — ce qui veut dire qu'un vert de cette garde ne dit pas ce qu'on croit qu'il dit sur un depot PUBLIC. ⚠️ AUCUNE DE CES REPRESENTATIONS N'EST DECRITE ICI : elles vivent hors depot, et l'acceptance publique ne les nomme ni ne les compte. A livrer : (1) la liste CLOSE des representations ADMISES, ecrite a UN SEUL endroit du code, citee sans recopie par `docs/gates.json` et imprimee a chaque vert ; (2) un refus NOMME pour tout ce qui sort de cette liste — la garde refuse ce qu'elle ne sait pas juger, elle ne le laisse pas passer ; (3) la limite de la forme imprimee avec chaque vert : « aucune coordonnee » sans ses limites se lit comme une absence prouvee, et c'est le defaut que GOV-036 a deja corrige une fois. TEMOIN A DEUX FACES : des temoins couvrant CHAQUE famille admise font sortir la garde en code non nul, un par un, et NOMMENT la famille ; le depot reel la fait sortir en zero, avec le compte des fichiers et des familles reellement confrontes. Les temoins vivent dans le depot sous une forme qui n'est pas une donnee reelle.",
+      "acceptance": "LA FORME NE RECONNAIT QU'UNE ECRITURE CANONIQUE. Des familles entieres de representation sont declarees NON reconnues, et la liste de ce qui n'est pas reconnu N'EST PAS CLOSE — ce qui veut dire qu'un vert de cette garde ne dit pas ce qu'on croit qu'il dit sur un depot PUBLIC. ⚠️ AUCUNE DE CES REPRESENTATIONS N'EST DECRITE ICI : elles vivent hors depot, et l'acceptance publique ne les nomme ni ne les compte. A livrer : (1) la liste CLOSE des representations ADMISES, ecrite a UN SEUL endroit du code, citee sans recopie par `docs/gates.json` et imprimee a chaque vert ; (2) un refus NOMME pour tout ce qui sort de cette liste — la garde refuse ce qu'elle ne sait pas juger, elle ne le laisse pas passer ; (3) la limite de la forme imprimee avec chaque vert : « aucune coordonnee » sans ses limites se lit comme une absence prouvee, et c'est le defaut que GOV-036 a deja corrige une fois. TEMOIN A DEUX FACES : des temoins couvrant CHAQUE famille admise font sortir la garde en code non nul, un par un, et NOMMENT la famille ; le depot reel la fait sortir en zero, avec le compte des fichiers et des familles reellement confrontes. Les temoins vivent dans le depot sous une forme qui n'est pas une donnee reelle. REPORTÉE APRÈS LANCEMENT — gel de la gouvernance, décision de Williams du 2026-09-29 : dette non bloquante, reclassée en phase 3.",
       "tests": {
         "REQ-GOV-031": [
           "tests/unit/gouvernance/limite-de-la-forme-close.spec.ts"
@@ -10515,7 +10525,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 1,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "REQ-GOV-031 vise « tout ce qui est pousse » ; la garde ne juge que l'index de la tete. L'historique, et les archives que la forge produit a partir d'attributs d'export, ne sont pas lus. Sur un depot PUBLIC, la difference n'est pas theorique : ce qui a ete pousse une fois reste lisible, et la lecon deja payee dit que reecrire l'historique ne retire RIEN. A TRANCHER, ET LE LIVRABLE DIT LEQUEL : ou bien la garde juge CHAQUE commit pousse et pas seulement la tete, ou bien la limite est ECRITE dans l'exigence, dans `docs/gates.json` et dans le vert imprime. Les deux reponses sont admissibles ; laisser l'exigence promettre ce que la garde ne fait pas ne l'est pas — c'est la famille des affirmations devenues fausses que `gov:sonde` existe pour marquer. TEMOIN A DEUX FACES : un depot de bac d'essai dont la tete est propre mais dont un commit anterieur ne l'est pas fait sortir la garde en code non nul dans la variante « chaque commit », et sort en zero dans la variante « limite ecrite » — auquel cas le vert IMPRIME la limite ; le depot reel sort en zero dans les deux variantes, avec le compte des commits reellement lus.",
       "tests": {
         "REQ-GOV-031": [
@@ -10523,12 +10533,20 @@
         ]
       },
       "issue": 234,
-      "owner": "A01"
+      "owner": "A01",
+      "branch": "t/gov-066",
+      "pr": 235,
+      "attestation": {
+        "pr": 235,
+        "sha": "fa90f835210269e0692f433bc3cdf42af092eeda",
+        "fusionneeAt": "2026-09-29T14:41:40Z"
+      },
+      "motif": null
     },
     {
       "id": "GOV-067",
       "titre": "La lecture par empreinte de la garde d'entite n'est eprouvee ni par son mode de preuve ni sous Windows",
-      "phase": 0,
+      "phase": 3,
       "repo": "partners",
       "zone": "gouvernance",
       "paths": [
@@ -10551,7 +10569,7 @@
       "externe": null,
       "estimateDays": 1,
       "statut": "a_faire",
-      "acceptance": "MESURE PAR MUTATION : sous quatorze mutants de la couche de LECTURE, le mode de preuve de la garde reste a ZERO mutant tue — seule la suite de tests les tue, et deux d'entre eux seulement sous Linux. Autrement dit, le mode de preuve, qui est ce qu'on regarde pour croire la garde armee, ne voit rien de la couche qui lui donne ses octets. Faits joints : un temoin est saute sous Windows sans controle positif, donc il ne prouve rien la ou il tourne ; un sous-module leve une erreur SANS famille de refus, donc hors du canal de refus ; les sources du registre sont lues sur le disque et non dans le contenu juge ; et deux echecs fermes de configuration d'arbre ne sont pas mesures. A livrer : un temoin PUR du decoupage de la lecture et un de l'etage superieur, tous deux dans le mode de preuve ; chaque erreur de lecture rattachee a une famille de refus nommee ; le temoin saute sous Windows double d'un controle positif qui, lui, tourne partout. TEMOIN A DEUX FACES : le mode de preuve lance sur la garde du depot tue les quatorze mutants et sort en zero ; le meme lance sur une copie dont la couche de lecture est amputee sort en code non nul et NOMME les mutants survivants.",
+      "acceptance": "MESURE PAR MUTATION : sous quatorze mutants de la couche de LECTURE, le mode de preuve de la garde reste a ZERO mutant tue — seule la suite de tests les tue, et deux d'entre eux seulement sous Linux. Autrement dit, le mode de preuve, qui est ce qu'on regarde pour croire la garde armee, ne voit rien de la couche qui lui donne ses octets. Faits joints : un temoin est saute sous Windows sans controle positif, donc il ne prouve rien la ou il tourne ; un sous-module leve une erreur SANS famille de refus, donc hors du canal de refus ; les sources du registre sont lues sur le disque et non dans le contenu juge ; et deux echecs fermes de configuration d'arbre ne sont pas mesures. A livrer : un temoin PUR du decoupage de la lecture et un de l'etage superieur, tous deux dans le mode de preuve ; chaque erreur de lecture rattachee a une famille de refus nommee ; le temoin saute sous Windows double d'un controle positif qui, lui, tourne partout. TEMOIN A DEUX FACES : le mode de preuve lance sur la garde du depot tue les quatorze mutants et sort en zero ; le meme lance sur une copie dont la couche de lecture est amputee sort en code non nul et NOMME les mutants survivants. REPORTÉE APRÈS LANCEMENT — gel de la gouvernance, décision de Williams du 2026-09-29 : dette non bloquante, reclassée en phase 3.",
       "tests": {
         "REQ-GOV-012": [
           "tests/unit/gouvernance/lecture-par-empreinte-eprouvee.spec.ts"
@@ -10564,7 +10582,7 @@
     {
       "id": "GOV-068",
       "titre": "Trois gardes ont trois politiques pour un fichier qu'elles ne savent pas lire",
-      "phase": 0,
+      "phase": 3,
       "repo": "partners",
       "zone": "gouvernance",
       "paths": [
@@ -10591,7 +10609,7 @@
       "externe": null,
       "estimateDays": 1.5,
       "statut": "a_faire",
-      "acceptance": "TROIS GARDES, TROIS REPONSES A LA MEME QUESTION. La garde des termes interdits REFUSE ce qu'elle ne sait pas lire. La garde d'entite le CLASSE par les octets du contenu indexe, avec un refus nomme. La garde de schema et d'enums lit TOUT comme de l'UTF-8 : un fichier encode autrement, portant une liste d'etats, sort en ZERO — et un repertoire lui fait remonter une erreur systeme brute, hors de tout canal de refus. La convergence avait ete renvoyee « a la seconde demande de fusion » et n'a pas ete faite. Trois politiques pour un meme fait, c'est deux de trop, et celle qui rend zero est celle qui garde les etats occupants. A livrer : UNE primitive unique d'illisibilite, dans `fichiers-suivis.ts`, importee par les trois gardes ; aucune des trois ne garde sa propre reponse. TEMOIN A DEUX FACES : un fichier encode autrement qu'en UTF-8 et portant une liste d'etats, puis un repertoire passe la ou un fichier est attendu, font sortir CHACUNE des trois gardes en code non nul avec le MEME nom de refus ; les fichiers du depot les font sortir en zero, chacune imprimant le compte des fichiers reellement lus.",
+      "acceptance": "TROIS GARDES, TROIS REPONSES A LA MEME QUESTION. La garde des termes interdits REFUSE ce qu'elle ne sait pas lire. La garde d'entite le CLASSE par les octets du contenu indexe, avec un refus nomme. La garde de schema et d'enums lit TOUT comme de l'UTF-8 : un fichier encode autrement, portant une liste d'etats, sort en ZERO — et un repertoire lui fait remonter une erreur systeme brute, hors de tout canal de refus. La convergence avait ete renvoyee « a la seconde demande de fusion » et n'a pas ete faite. Trois politiques pour un meme fait, c'est deux de trop, et celle qui rend zero est celle qui garde les etats occupants. A livrer : UNE primitive unique d'illisibilite, dans `fichiers-suivis.ts`, importee par les trois gardes ; aucune des trois ne garde sa propre reponse. TEMOIN A DEUX FACES : un fichier encode autrement qu'en UTF-8 et portant une liste d'etats, puis un repertoire passe la ou un fichier est attendu, font sortir CHACUNE des trois gardes en code non nul avec le MEME nom de refus ; les fichiers du depot les font sortir en zero, chacune imprimant le compte des fichiers reellement lus. REPORTÉE APRÈS LANCEMENT — gel de la gouvernance, décision de Williams du 2026-09-29 : dette non bloquante, reclassée en phase 3.",
       "tests": {
         "REQ-GOV-024": [
           "tests/unit/gouvernance/une-seule-politique-d-illisibilite.spec.ts"
@@ -10651,7 +10669,7 @@
     {
       "id": "GOV-070",
       "titre": "L'ADR du perimetre des listes d'etats reste propose : ses assertions ne sont verifiees par aucune garde",
-      "phase": 0,
+      "phase": 3,
       "repo": "partners",
       "zone": "gouvernance",
       "paths": [
@@ -10676,7 +10694,7 @@
       "externe": null,
       "estimateDays": 0.75,
       "statut": "a_faire",
-      "acceptance": "L'ADR qui fixe le perimetre de la garde des listes d'etats est reste au statut PROPOSE. Or `gov:adr` ne juge le texte et les assertions qu'a partir du statut ACCEPTE : l'ADR existe, personne ne le verifie, et une de ses assertions — une portee amputee — survit a la mutation. Des arbitrages qui m'ont ete renvoyes restent ouverts et doivent etre tranches ICI, pas laisses au lecteur suivant : les racines hors de la famille des listes d'etats (`messages/`, `docs/adr/`, le paquet de contrats), la casse des identifiants, et le sort des fichiers Markdown places sous `src/`. Fait joint : un compte ecrit dans l'ADR sur les commentaires du schema est FAUX, et c'est la quatrieme fois qu'un compte tape ne tient pas dans ce depot. A livrer : les trois arbitrages tranches et ecrits ; le compte faux corrige ou derive ; l'ADR passe au statut accepte, donc soumis a sa garde. TEMOIN A DEUX FACES : une assertion de l'ADR rendue fausse par une modification du code fait sortir `gov:adr` en code non nul et NOMME l'assertion ; l'ADR et le code du depot la font sortir en zero, avec le compte des assertions reellement confrontees — un ADR propose ne comptait pour aucune.",
+      "acceptance": "L'ADR qui fixe le perimetre de la garde des listes d'etats est reste au statut PROPOSE. Or `gov:adr` ne juge le texte et les assertions qu'a partir du statut ACCEPTE : l'ADR existe, personne ne le verifie, et une de ses assertions — une portee amputee — survit a la mutation. Des arbitrages qui m'ont ete renvoyes restent ouverts et doivent etre tranches ICI, pas laisses au lecteur suivant : les racines hors de la famille des listes d'etats (`messages/`, `docs/adr/`, le paquet de contrats), la casse des identifiants, et le sort des fichiers Markdown places sous `src/`. Fait joint : un compte ecrit dans l'ADR sur les commentaires du schema est FAUX, et c'est la quatrieme fois qu'un compte tape ne tient pas dans ce depot. A livrer : les trois arbitrages tranches et ecrits ; le compte faux corrige ou derive ; l'ADR passe au statut accepte, donc soumis a sa garde. TEMOIN A DEUX FACES : une assertion de l'ADR rendue fausse par une modification du code fait sortir `gov:adr` en code non nul et NOMME l'assertion ; l'ADR et le code du depot la font sortir en zero, avec le compte des assertions reellement confrontees — un ADR propose ne comptait pour aucune. REPORTÉE APRÈS LANCEMENT — gel de la gouvernance, décision de Williams du 2026-09-29 : dette non bloquante, reclassée en phase 3.",
       "tests": {
         "REQ-GOV-009": [
           "tests/unit/gouvernance/adr-assertion-existe.spec.ts"
@@ -11386,7 +11404,7 @@
     {
       "id": "GOV-087",
       "titre": "Un amendement de chemins a moitie applique ne rougit nulle part",
-      "phase": 0,
+      "phase": 3,
       "repo": "partners",
       "zone": "gouvernance",
       "paths": [
@@ -11407,7 +11425,7 @@
       "externe": null,
       "estimateDays": 0.5,
       "statut": "a_faire",
-      "acceptance": "EPROUVE SUR BAC DEDIE LE 2026-09-17, ET C'EST UNE MESURE, PAS UNE CRAINTE. Une sequence d'ecritures sur les chemins d'une tache — ajouter l'un, retirer l'autre — peut s'interrompre entre les deux. L'etat qui reste porte alors un CHEMIN FANTOME : un chemin qui ne correspond a AUCUN fichier suivi. Mesure : ni `lot:paths`, ni `lot:paths:check`, ni `gov:tasks`, ni `gov:attributions` ne rougissent dessus. Les quatre sortent en zero. Le registre decrit un monde qui n'existe pas, et quatre gardes le certifient. POURQUOI CE TROU EST PLUS LARGE QUE SA CAUSE : il ne demande PAS qu'une ecriture s'interrompe. Un chemin tape a la main, un fichier renomme sans que le registre suive, une garde deplacee d'un repertoire a l'autre produisent le meme etat — et c'est exactement ce qu'on a trouve sur GOV-044, dont le registre nommait `scripts/gates/gov-gates.ts` depuis sa creation, un fichier qui n'a JAMAIS existe. La cause n'etait pas une ecriture interrompue ; le symptome, si. LA NUANCE QUI DECIDE DE LA FORME DE LA GARDE, et il faut la tenir : un chemin qui n'existe pas encore est LEGITIME — c'est le cas de la quasi-totalite des chemins de la phase 0, que leurs taches vont CREER. Une garde qui refuserait tout chemin absent du disque bloquerait le backlog entier des demain. A LIVRER. (1) Le refus porte sur ce qu'on peut trancher sans deviner : un chemin d'une tache LIVREE qui ne correspond a aucun fichier suivi est un refus NOMME — la tache est finie, ses fichiers devraient etre la. Pour une tache non livree, l'absence est normale et la garde le DIT au lieu de se taire. (2) Le compte des chemins encore inexistants est IMPRIME a chaque vert, par phase : « aucun chemin fantome » sans ce compte se lirait comme une absence prouvee, et c'est la cinquieme fois que ce depot rencontre cette forme. (3) TEMOIN A DEUX FACES : une tache livree a qui l'on donne un chemin qui ne correspond a aucun fichier suivi fait sortir la garde en code non nul et NOMME la tache et le chemin ; le registre du depot la fait sortir en zero. CONTRE-TEMOIN OBLIGATOIRE : les chemins des taches `a_faire`, qui n'existent legitimement pas, restent VERTS — un refus qui les condamnerait arreterait la phase 0 le jour de sa livraison.",
+      "acceptance": "EPROUVE SUR BAC DEDIE LE 2026-09-17, ET C'EST UNE MESURE, PAS UNE CRAINTE. Une sequence d'ecritures sur les chemins d'une tache — ajouter l'un, retirer l'autre — peut s'interrompre entre les deux. L'etat qui reste porte alors un CHEMIN FANTOME : un chemin qui ne correspond a AUCUN fichier suivi. Mesure : ni `lot:paths`, ni `lot:paths:check`, ni `gov:tasks`, ni `gov:attributions` ne rougissent dessus. Les quatre sortent en zero. Le registre decrit un monde qui n'existe pas, et quatre gardes le certifient. POURQUOI CE TROU EST PLUS LARGE QUE SA CAUSE : il ne demande PAS qu'une ecriture s'interrompe. Un chemin tape a la main, un fichier renomme sans que le registre suive, une garde deplacee d'un repertoire a l'autre produisent le meme etat — et c'est exactement ce qu'on a trouve sur GOV-044, dont le registre nommait `scripts/gates/gov-gates.ts` depuis sa creation, un fichier qui n'a JAMAIS existe. La cause n'etait pas une ecriture interrompue ; le symptome, si. LA NUANCE QUI DECIDE DE LA FORME DE LA GARDE, et il faut la tenir : un chemin qui n'existe pas encore est LEGITIME — c'est le cas de la quasi-totalite des chemins de la phase 0, que leurs taches vont CREER. Une garde qui refuserait tout chemin absent du disque bloquerait le backlog entier des demain. A LIVRER. (1) Le refus porte sur ce qu'on peut trancher sans deviner : un chemin d'une tache LIVREE qui ne correspond a aucun fichier suivi est un refus NOMME — la tache est finie, ses fichiers devraient etre la. Pour une tache non livree, l'absence est normale et la garde le DIT au lieu de se taire. (2) Le compte des chemins encore inexistants est IMPRIME a chaque vert, par phase : « aucun chemin fantome » sans ce compte se lirait comme une absence prouvee, et c'est la cinquieme fois que ce depot rencontre cette forme. (3) TEMOIN A DEUX FACES : une tache livree a qui l'on donne un chemin qui ne correspond a aucun fichier suivi fait sortir la garde en code non nul et NOMME la tache et le chemin ; le registre du depot la fait sortir en zero. CONTRE-TEMOIN OBLIGATOIRE : les chemins des taches `a_faire`, qui n'existent legitimement pas, restent VERTS — un refus qui les condamnerait arreterait la phase 0 le jour de sa livraison. REPORTÉE APRÈS LANCEMENT — gel de la gouvernance, décision de Williams du 2026-09-29 : dette non bloquante, reclassée en phase 3.",
       "tests": {
         "REQ-GOV-021": [
           "tests/unit/gouvernance/un-chemin-fantome-est-un-refus.spec.ts"
@@ -12684,7 +12702,11 @@
       "zone": "integration",
       "paths": [
         "src/server/integrations/axionia/candidature-recue.ts",
-        "tests/integration/candidature-recue.spec.ts"
+        "tests/integration/candidature-recue.spec.ts",
+        "src/server/queue/workers/evenement-recu.ts",
+        "src/app/api/webhooks/axionia/route.ts",
+        "tests/unit/integration/candidature-recue.spec.ts",
+        "src/lib/env.ts"
       ],
       "schema": false,
       "sensible": [
@@ -12729,7 +12751,27 @@
       "paths": [
         "axionia/src/app/api/partners/candidatures/[candidatureId]/coordonnees/route.ts",
         "axionia/src/server/partners-sync/coordonnees.ts",
-        "axionia/src/server/partners-sync/__tests__/route-coordonnees.spec.ts"
+        "axionia/src/server/partners-sync/__tests__/route-coordonnees.spec.ts",
+        "axionia/.prettierignore",
+        "axionia/scripts/partners/fixtures.ts",
+        "axionia/src/server/partners-sync/__tests__/outbox-produit-des-evenements-valides.spec.ts",
+        "axionia/src/server/partners-sync/outbox.ts",
+        "axionia/src/server/partners-sync/relecture.ts",
+        "axionia/src/server/partners/__tests__/contrat-schema.ts",
+        "axionia/src/server/partners/__tests__/enveloppe.spec.ts",
+        "axionia/src/server/partners/__tests__/fixtures-conformes-au-contrat.spec.ts",
+        "axionia/src/server/partners/__tests__/fixtures-et-frontiere.spec.ts",
+        "axionia/src/server/partners/__tests__/payloads.spec.ts",
+        "axionia/src/server/partners/__tests__/transcription-du-contrat.spec.ts",
+        "axionia/src/server/partners/contrat.ts",
+        "axionia/src/server/partners/contrat/contracts.sha256",
+        "axionia/src/server/partners/contrat/contracts.v1.json",
+        "axionia/src/server/partners/contrat/contracts.v2.json",
+        "axionia/src/server/partners/contrat/empreinte.ts",
+        "axionia/src/server/partners/contrat/fixtures.v2.json",
+        "axionia/src/server/partners/enveloppe.ts",
+        "axionia/src/server/partners/payloads.ts",
+        "axionia/tests/integration/partners-sync/outbox-transactionnelle.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -12755,7 +12797,7 @@
           "axionia/src/server/partners-sync/__tests__/route-coordonnees.spec.ts"
         ]
       },
-      "acceptance": "DEPOT AXIONIA — la PR porte l'etiquette de depot et suit le runbook de fusion d'axionia. TACHE SENSIBLE — donnees personnelles. Cadrage de l'architecte du 2026-09-26 (partners/ADR-0023). AUCUNE MIGRATION : la route lit `Submission` et `partners_sync_outbox`, elle n'ecrit aucune table ; son journal d'appel passe par le journal structure d'axionia. (1) `GET /api/partners/candidatures/{candidatureId}/coordonnees` verifie une signature HMAC-SHA-256 de l'horodatage et de la requete sous le secret d'integration dedie, tolerance 300 s, comparaison a temps constant, liste d'autorisation d'adresses reseau ; toute requete non signee, mal signee ou hors fenetre est refusee et n'a lu aucune ligne. (2) PORTEE : la route ne repond que pour une candidature effectivement emise vers Partners (une ligne existe dans `partners_sync_outbox` pour ce `candidatureId`) ; un identifiant non emis rend EXACTEMENT la meme reponse qu'un identifiant inexistant, corps et statut compares octet a octet. (3) REPONSE FERMEE : `{nom, prenom, email, telephone}`, dechiffres depuis les colonnes chiffrees de `Submission` au moment de la reponse, chaque champ nul s'il est absent, aucun autre champ ; son schema est celui de `packages/contracts/api.ts` (INT-T01c), jamais retape. Aucun cache. (4) JOURNAL SANS CLAIR : chaque appel journalise l'identifiant de candidature, l'empreinte de l'adresse reseau et le resultat, jamais une coordonnee ; un test inspecte la ligne de journal. (5) INERTIE : sans le drapeau d'activation de la synchronisation, la route rend la reponse d'un identifiant inexistant. (6) TEMOIN A DEUX FACES : une candidature emise rend ses quatre champs et rien d'autre ; la meme requete pour une candidature non emise, puis avec une signature fausse, ne rend aucune coordonnee et le test le prouve sur le corps. (7) DÉBIT PLAFONNÉ PAR CANDIDATURE (partners/ADR-0023 : la route sert au traitement, elle n'est pas un annuaire) : au plus 5 lectures réussies par `candidatureId` sur 24 heures glissantes, par le limiteur à conduite sur panne déclarée `refuser` ; au-delà, la réponse est celle d'un identifiant inexistant et l'écart est journalisé et alerté. Le plafond laisse passer les rejeux légitimes de Partners après une panne de son côté ; il interdit la lecture répétée. TÉMOIN : la sixième lecture d'une même candidature dans les 24 heures ne rend aucune coordonnée, et la première lecture d'une autre candidature passe."
+      "acceptance": "DEPOT AXIONIA — la PR porte l'etiquette de depot et suit le runbook de fusion d'axionia. TACHE SENSIBLE — donnees personnelles. Cadrage de l'architecte du 2026-09-26 (partners/ADR-0023). AUCUNE MIGRATION : la route lit `Submission` et `partners_sync_outbox`, elle n'ecrit aucune table ; son journal d'appel passe par le journal structure d'axionia. (1) `GET /api/partners/candidatures/{candidatureId}/coordonnees` verifie une signature HMAC-SHA-256 de l'horodatage et de la requete sous le secret d'integration dedie, tolerance 300 s, comparaison a temps constant, liste d'autorisation d'adresses reseau ; toute requete non signee, mal signee ou hors fenetre est refusee et n'a lu aucune ligne. (2) PORTEE : la route ne repond que pour une candidature effectivement emise vers Partners (une ligne existe dans `partners_sync_outbox` pour ce `candidatureId`) ; un identifiant non emis rend EXACTEMENT la meme reponse qu'un identifiant inexistant, corps et statut compares octet a octet. (3) REPONSE FERMEE : `{nom, prenom, email, telephone}`, dechiffres depuis les colonnes chiffrees de `Submission` au moment de la reponse, chaque champ nul s'il est absent, aucun autre champ ; son schema est celui de `packages/contracts/api.ts` (INT-T01c), jamais retape. Aucun cache. (4) JOURNAL SANS CLAIR : chaque appel journalise l'identifiant de candidature, l'empreinte de l'adresse reseau et le resultat, jamais une coordonnee ; un test inspecte la ligne de journal. (5) INERTIE : sans le drapeau d'activation de la synchronisation, la route rend la reponse d'un identifiant inexistant. (6) TEMOIN A DEUX FACES : une candidature emise rend ses quatre champs et rien d'autre ; la meme requete pour une candidature non emise, puis avec une signature fausse, ne rend aucune coordonnee et le test le prouve sur le corps. (7) DÉBIT PLAFONNÉ PAR CANDIDATURE (partners/ADR-0023 : la route sert au traitement, elle n'est pas un annuaire) : au plus 5 lectures réussies par `candidatureId` sur 24 heures glissantes, par le limiteur à conduite sur panne déclarée `refuser` ; au-delà, la réponse est celle d'un identifiant inexistant et l'écart est journalisé et alerté. Le plafond laisse passer les rejeux légitimes de Partners après une panne de son côté ; il interdit la lecture répétée. TÉMOIN : la sixième lecture d'une même candidature dans les 24 heures ne rend aucune coordonnée, et la première lecture d'une autre candidature passe. AVENANT A01 du 2026-09-29 (dette de la lentille exactitude sur axion-ia #1223 ; decision de la session -66 sur delegation explicite de Will du 2026-09-29) : INT-T27-A porte AUSSI la transcription du contrat v2 dans axion-ia, confiee au premier consommateur libre parce qu INT-T22 est bloquee par la collision #1221. Livre en plus : contracts.v2.json remplace contracts.v1.json, son empreinte (contracts.sha256) et ses fixtures, le lecteur du contrat, l enveloppe et les charges alignes sur la v2, et le producteur de la file de sortie. TEMOIN : chaque fixture est jugee contre le contrat publie (fixtures-conformes-au-contrat.spec.ts) ; une charge qui emet un nom de champ absent du contrat, comme amountHtCents au lieu de montantHtCents pour paiement.recu, fait rougir le test en nommant le champ. Les paths couvrent chaque fichier modifie par #1223, lus sur la forge a la tete 13f3282."
     },
     {
       "id": "GOV-103",
@@ -12850,7 +12892,7 @@
     {
       "id": "GOV-105",
       "titre": "La forge accepte-t-elle au depot une entree d'index que la source unique refuse desormais : le volet (3) de GOV-064 n'est ni mesure ni ecrit",
-      "phase": 0,
+      "phase": 3,
       "repo": "partners",
       "zone": "gouvernance",
       "paths": [
@@ -12871,7 +12913,7 @@
       "externe": null,
       "estimateDays": 0.5,
       "statut": "a_faire",
-      "acceptance": "Releve par la lentille exactitude sur la PR #195 : l'acceptance de GOV-064 demandait (3) de mesurer si la forge accepte au depot une entree d'index au nom non UTF-8, et de l'ecrire. Ce n'est pas fait : la source unique la refuse desormais cote poste, mais ce que la forge accepte ou refuse n'est pas connu. A livrer : la mesure, faite dans un depot JETABLE et prive, jamais dans ce depot public ; son resultat ecrit dans le commentaire de la source unique, sans la forme exacte de l'entree ; et, si la forge l'accepte, un temoin qui prouve que la porte A la refuse quand meme. La forme precise reste hors depot.",
+      "acceptance": "Releve par la lentille exactitude sur la PR #195 : l'acceptance de GOV-064 demandait (3) de mesurer si la forge accepte au depot une entree d'index au nom non UTF-8, et de l'ecrire. Ce n'est pas fait : la source unique la refuse desormais cote poste, mais ce que la forge accepte ou refuse n'est pas connu. A livrer : la mesure, faite dans un depot JETABLE et prive, jamais dans ce depot public ; son resultat ecrit dans le commentaire de la source unique, sans la forme exacte de l'entree ; et, si la forge l'accepte, un temoin qui prouve que la porte A la refuse quand meme. La forme precise reste hors depot. REPORTÉE APRÈS LANCEMENT — gel de la gouvernance, décision de Williams du 2026-09-29 : dette non bloquante, reclassée en phase 3.",
       "tests": {
         "REQ-GOV-031": [
           "tests/unit/gouvernance/deux-chemins-ne-se-confondent-pas.spec.ts"
@@ -13091,7 +13133,7 @@
     {
       "id": "GOV-111",
       "titre": "Le cloisonnement par apporteur juge les donnees ecrites et les filtres simples, pas encore les options de lecture ni les filtres de relation",
-      "phase": 0,
+      "phase": 1,
       "repo": "partners",
       "zone": "securite",
       "paths": [
@@ -13286,7 +13328,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "Releve par les deux lentilles sur la PR #211 (GOV-110), non bloquant a la fusion. (1) titreALaFusion compare avec <= a mergedAt, a la seconde : un renommage horodate dans la seconde meme de la fusion est retenu comme anterieur, alors que l'acceptance de GOV-110 dit anterieur. A livrer : un renommage de meme horodatage que la fusion n'est pas tenu pour anterieur, ou l'egalite est refusee comme indecidable ; le choix est ecrit. (2) Un createdAt ou un mergedAt qui n'est pas une date passe le filtre des renommages complets et produit NaN, alors que le docblock promet null : la chronologie illisible doit rendre null, et la cloture refuser. (3) La prose et le message de refus parlent encore du titre de la PR la ou la regle lit desormais le titre a l'instant de la fusion. TEMOINS rouges d'abord : un renommage a la seconde de la fusion ; une date illisible dans la chronologie.",
       "tests": {
         "REQ-GOV-026": [
@@ -13295,9 +13337,13 @@
       },
       "issue": 224,
       "owner": "A01",
-      "branch": null,
-      "pr": null,
-      "attestation": null,
+      "branch": "t/gov-122",
+      "pr": 226,
+      "attestation": {
+        "pr": 226,
+        "sha": "75b5e8db8ca6597ede338623d779bb4e05ed66ea",
+        "fusionneeAt": "2026-09-29T10:29:03Z"
+      },
       "motif": null
     },
     {
@@ -13322,7 +13368,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "Releve par la lentille securite sur les PR #209 (GOV-075) et #216 (GOV-084), non bloquant a la fusion. (1) estGabarit reconnait un chemin gabarit a sa FORME (le dernier segment vaut l'identifiant de sa tache) : un vrai fichier nomme ainsi serait pris pour un gabarit. A livrer : la regle est confrontee au disque (un gabarit n'existe pas), ou la limite est ecrite en tete de la garde avec son temoin. (2) La famille script_de_garde_sans_porteur n'a pas de plancher : si l'index ne rend aucun fichier sous scripts/gates/, la garde confronte zero script et reste verte. A livrer : zero script confronte est un refus nomme. (3) Elle prend tout fichier suivi sous scripts/gates/, pas seulement les scripts : dire dans l'en-tete si c'est voulu, ou filtrer. TEMOINS rouges d'abord pour (1) et (2).",
       "tests": {
         "REQ-GOV-021": [
@@ -13331,9 +13377,13 @@
       },
       "issue": 229,
       "owner": "A01",
-      "branch": null,
-      "pr": null,
-      "attestation": null,
+      "branch": "t/gov-118",
+      "pr": 231,
+      "attestation": {
+        "pr": 231,
+        "sha": "c4b0e3fa2a6620db70d8f680a67f93fe7e318b41",
+        "fusionneeAt": "2026-09-29T11:31:05Z"
+      },
       "motif": null
     },
     {
@@ -13355,7 +13405,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "Mesure le 2026-09-29 sur la PR #209 (run 36523369124) : la PR #211 a fusionne pendant la porte A de #209 ; gov:etat a lu cette fusion sur la forge et exige son commit dans le clone du job, qui ne le portait pas (github_illisible : le commit de fusion 911f326 est absent du clone). Deux tests d'etat reel (REQ-GOV-006, REQ-GOV-007) ont rougi sans rien devoir au delta de #209. Releve par la lentille exactitude. A livrer : la porte A d'une PR ne depend pas de l'etat des AUTRES PR a l'instant ou elle tourne ; ce que gov:etat lit sur la forge est borne a la base du clone, ou l'absence d'un commit posterieur a cette base est une exemption nommee et comptee, jamais un rouge. TEMOIN rouge d'abord : une fusion posterieure a la base du clone, lue sur une forge simulee, ne fait plus rougir la garde ; une fusion anterieure dont le commit manque rougit toujours.",
       "tests": {
         "REQ-GOV-006": [
@@ -13364,15 +13414,19 @@
       },
       "issue": 223,
       "owner": "A01",
-      "branch": null,
-      "pr": null,
-      "attestation": null,
+      "branch": "t/gov-119",
+      "pr": 225,
+      "attestation": {
+        "pr": 225,
+        "sha": "b3d7572e5ea469a9e9352445d0c322c09916e44d",
+        "fusionneeAt": "2026-09-29T10:12:09Z"
+      },
       "motif": null
     },
     {
       "id": "GOV-120",
       "titre": "INT-T01b declare huit chemins, sa PR de livraison en a modifie vingt",
-      "phase": 0,
+      "phase": 3,
       "repo": "partners",
       "zone": "gouvernance",
       "paths": [
@@ -13391,7 +13445,7 @@
       "externe": null,
       "estimateDays": 0.5,
       "statut": "a_faire",
-      "acceptance": "Releve par la lentille exactitude sur la PR #209, mesure le 2026-09-29 sur la PR axion-ia #998 (commit de fusion 41d71a7, attestation d'INT-T01b) : la PR a modifie vingt fichiers, dont src/server/partners/contrat.ts, commission.ts, config.ts, enveloppe.ts, frontiere.ts, ht.ts, payloads.ts et package.json ; les paths d'INT-T01b en declarent huit. Et INT-T01b porte schema: true alors qu'aucun de ces vingt fichiers n'est un chemin de schema au sens de ce depot : a verifier avant de le changer. A livrer : (1) les paths d'INT-T01b recoivent les fichiers reellement modifies, confrontes a la liste de la forge, par les outils de registre ; (2) le drapeau schema est tranche, avec sa source ; (3) une garde confronte, pour toute tache livree ailleurs et attestee, ses paths aux fichiers de la PR attestee, et nomme l'ecart. TEMOIN rouge d'abord : une attestation dont la PR a touche un fichier que la tache ne declare pas.",
+      "acceptance": "Releve par la lentille exactitude sur la PR #209, mesure le 2026-09-29 sur la PR axion-ia #998 (commit de fusion 41d71a7, attestation d'INT-T01b) : la PR a modifie vingt fichiers, dont src/server/partners/contrat.ts, commission.ts, config.ts, enveloppe.ts, frontiere.ts, ht.ts, payloads.ts et package.json ; les paths d'INT-T01b en declarent huit. Et INT-T01b porte schema: true alors qu'aucun de ces vingt fichiers n'est un chemin de schema au sens de ce depot : a verifier avant de le changer. A livrer : (1) les paths d'INT-T01b recoivent les fichiers reellement modifies, confrontes a la liste de la forge, par les outils de registre ; (2) le drapeau schema est tranche, avec sa source ; (3) une garde confronte, pour toute tache livree ailleurs et attestee, ses paths aux fichiers de la PR attestee, et nomme l'ecart. TEMOIN rouge d'abord : une attestation dont la PR a touche un fichier que la tache ne declare pas. REPORTÉE APRÈS LANCEMENT — gel de la gouvernance, décision de Williams du 2026-09-29 : dette non bloquante, reclassée en phase 3.",
       "tests": {
         "REQ-GOV-021": [
           "tests/unit/gouvernance/une-livraison-declare-ce-qu-elle-a-touche.spec.ts"
@@ -13424,7 +13478,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.25,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "Releve par les deux lentilles sur la PR #217 (GOV-049), non bloquant a la fusion. (1) Les deux faces rouges retirent la cle, et ne jouent donc que la moitie required de la clause jumelle du schema ; le registre porte owner: null et branch: null, que refusent la moitie type de la clause et ses motifs. A livrer : deux faces de plus, owner: null puis branch: null sur une tache en_cours hors lot, chacune refusee et nommee. (2) Le docblock de la specification dit qu'AUCUN temoin ne voyait la clause refuser : c'est inexact, clore-une-tache-livree-seule.spec.ts voit deja branch: null refuse sur une tache fusionnee. A corriger : aucun temoin ne la voyait refuser pour en_cours, ni pour owner.",
       "tests": {
         "REQ-GOV-021": [
@@ -13433,9 +13487,13 @@
       },
       "issue": 227,
       "owner": "A01",
-      "branch": null,
-      "pr": null,
-      "attestation": null,
+      "branch": "t/gov-121",
+      "pr": 228,
+      "attestation": {
+        "pr": 228,
+        "sha": "067b12152aecd345bca0e1edde897ea72a1a5e92",
+        "fusionneeAt": "2026-09-29T11:14:41Z"
+      },
       "motif": null
     },
     {
