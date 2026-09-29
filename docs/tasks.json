@@ -2508,10 +2508,10 @@
       ],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
-      "owner": null,
+      "statut": "fusionnee",
+      "owner": "A01",
       "lot": null,
-      "branch": null,
+      "branch": "feat/partners-dm-03-a-grille",
       "pr": null,
       "issue": null,
       "attempts": 0,
@@ -2533,6 +2533,11 @@
         "REQ-JUR-019": [
           "axionia/src/server/partners-sync/__tests__/grille-export.spec.ts"
         ]
+      },
+      "attestation": {
+        "pr": 1181,
+        "sha": "2f38aa2352277d57920102f37608d05b812d44ba",
+        "fusionneeAt": "2026-09-29T14:49:30Z"
       }
     },
     {
@@ -2568,11 +2573,11 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
-      "owner": null,
+      "statut": "fusionnee",
+      "owner": "A01",
       "lot": null,
-      "branch": null,
-      "pr": null,
+      "branch": "t/dm-03-p",
+      "pr": 214,
       "issue": null,
       "attempts": 0,
       "motif": null,
@@ -2587,6 +2592,11 @@
         "REQ-INT-017": [
           "tests/unit/domaine/grille-import.spec.ts"
         ]
+      },
+      "attestation": {
+        "pr": 214,
+        "sha": "50b0b9ce6b5009381610a55f74455138b8bd4605",
+        "fusionneeAt": "2026-09-29T09:30:15Z"
       }
     },
     {
@@ -2622,11 +2632,11 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.75,
-      "statut": "a_faire",
-      "owner": null,
+      "statut": "fusionnee",
+      "owner": "A01",
       "lot": null,
-      "branch": null,
-      "pr": null,
+      "branch": "t/dm-04",
+      "pr": 218,
       "issue": null,
       "attempts": 0,
       "motif": null,
@@ -2653,6 +2663,11 @@
         "REQ-DM-040": [
           "tests/unit/domaine/commission-calcul.spec.ts"
         ]
+      },
+      "attestation": {
+        "pr": 218,
+        "sha": "0687957a6cef0f24c6ac34e6fff305b93c2e56a6",
+        "fusionneeAt": "2026-09-29T10:58:20Z"
       }
     },
     {
@@ -3748,7 +3763,16 @@
       "paths": [
         "axionia/scripts/gates/vocab-public.ts",
         "axionia/src/content/__tests__/vocabulaire-apporteur.spec.ts",
-        "axionia/src/content/recrutement/commercial-offer.ts"
+        "axionia/src/content/recrutement/commercial-offer.ts",
+        "axionia/scripts/qualiopi/isolation-check.ts",
+        "axionia/src/app/[locale]/apporteur-affaires-independant-formation-ia-entreprise/page.tsx",
+        "axionia/src/app/[locale]/devenir-commercial-ia/candidature/page.tsx",
+        "axionia/src/app/[locale]/devenir-commercial-ia/page.tsx",
+        "axionia/src/app/[locale]/memo-isere/page.tsx",
+        "axionia/src/components/recrutement/FacebookLandingPage.tsx",
+        "axionia/src/components/recrutement/PartenaireLandingPage.tsx",
+        "axionia/src/components/services/devenir-commercial/CommercialContactBand.tsx",
+        "axionia/tests/unit/ci/le-tunnel-apporteur-ne-dit-jamais-agent-commercial.spec.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -4081,8 +4105,7 @@
         "axionia/src/content/recrutement/tunnel-facebook.ts",
         "axionia/src/components/services/devenir-commercial/CommercialFounder.tsx",
         "axionia/src/components/services/devenir-commercial/CommercialHowItWorks.tsx",
-        "axionia/src/components/services/devenir-commercial/CommercialProductsEarnings.tsx",
-        "axionia/src/lib/email/templates/apporteur-issue-echange.tsx"
+        "axionia/src/components/services/devenir-commercial/CommercialProductsEarnings.tsx"
       ],
       "schema": false,
       "sensible": [
@@ -14407,7 +14430,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.75,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "EXCEPTION AU GEL DE LA GOUVERNANCE, decision de Williams du 2026-09-29 (vers 18 h), confirmee directement dans la session A01, priorite juste apres la PR #239. Elle amende W16 (partners/ADR-0024, deux lentilles partout) : un avenant ou une ADR le dit, par l'architecte. A LIVRER : (1) lentillesExigees rend UNE lentille quand risqueDeLaPr classe la PR ordinaire, et DEUX (exactitude et securite) sinon ; l'avis schema reste exige des que la PR touche au schema. (2) Le classement est DERIVE (fichiers, labels, taches, lot), jamais declare par l'auteur ; il est FERME : une liste de fichiers illisible ou incomplete, une tache non resolue ou un registre de base illisible valent deux lentilles. (3) Restent a deux lentilles : src/, l'argent, l'attribution, la securite, le juridique, les donnees, le processus des gardes (garde des revues, .github/, racine du depot, config/, package.json) et toute tache sensible ou schema. Une seule lentille ne vaut que pour des documents, des tests et l'outillage interne sans effet sur ces zones. (4) La lentille unique est nommee par la regle (celle qui fait foi), et son refus bloque. TEMOINS rouges d'abord : une PR de documentation seule exige une lentille ; la meme PR qui ajoute un fichier sous src/ ou sous scripts/gates/ en exige deux ; une liste de fichiers incomplete en exige deux.",
       "tests": {
         "REQ-GOV-011": [
@@ -14419,9 +14442,13 @@
       },
       "issue": 247,
       "owner": "A01",
-      "branch": null,
-      "pr": null,
-      "attestation": null,
+      "branch": "t/gov-124-lentille",
+      "pr": 248,
+      "attestation": {
+        "pr": 248,
+        "sha": "d65e7498d4b938f4d5ea106d9d3c62d651e95c7f",
+        "fusionneeAt": "2026-09-29T17:45:55Z"
+      },
       "motif": null
     },
     {
@@ -14445,7 +14472,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "DETTE BLOQUANTE, admise malgre le gel de la gouvernance parce qu'elle bloque la cloture de taches d'argent livrees. Mesure le 2026-09-29 : lot:cloture refuse DM-03-A (axion-ia #1181, branche feat/partners-dm-03-a-grille, en production sur 41966e0) et INT-T02 (axion-ia #1180, branche feat/partners-int-t02-outbox), famille branche_hors_motif, parce que le motif de branch de scripts/lot/tasks.schema.json (partners/ADR-0007) n'accepte que t/ et lot/, les formes de Partners. DM-03-P et DM-04, livrees dans Partners, restent donc a_faire (dep_non_livree), et chaque tache du depot axionia livree par une branche feat/ ou fix/ y sera bloquee. A LIVRER : (1) pour une tache dont repo vaut axionia, le motif de branch accepte les formes de branche d'axion-ia, lues dans sa convention et jamais inventees, ou la branche n'est pas ecrite et la preuve reste l'attestation (commit d'ecrasement et atterrissage) ; le choix est ecrit dans une ADR qui amende partners/ADR-0007. (2) Une tache de Partners garde le motif ferme actuel. (3) TEMOIN a deux faces, rouge d'abord : la cloture d'une tache axionia livree par feat/partners-x passe ; une tache partners livree par feat/x reste refusee (branche_hors_motif). (4) Puis DM-03-A, INT-T02, DM-03-P et DM-04 sont closes par un rattrapage.",
       "tests": {
         "REQ-GOV-026": [
@@ -14454,9 +14481,13 @@
       },
       "issue": 252,
       "owner": "A01",
-      "branch": null,
-      "pr": null,
-      "attestation": null,
+      "branch": "t/gov-125-motif",
+      "pr": 253,
+      "attestation": {
+        "pr": 253,
+        "sha": "4a1d9404d7f7f830fba198701301b3d8c80167dc",
+        "fusionneeAt": "2026-09-29T19:24:41Z"
+      },
       "motif": null
     },
     {
@@ -14481,7 +14512,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.25,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "Releve par la lentille securite sur la PR #248 (GOV-124), a fermer AVANT le premier usage d'une lentille unique. tests/ est autorise en entier : une tache gouvernance ou qualite non sensible peut donc affaiblir, sous la seule lentille exactitude, le temoin d'une garde (tests/unit/gouvernance/, dont celui de la regle des lentilles et celui de la garde des revues), et ni red-first ni la mutation ne le voient. A LIVRER : tests/unit/gouvernance/, tests/unit/securite/ et tests/integration/ entrent dans EXCLUS_D_UNE_LENTILLE ; l'ADR 0026 le dit. TEMOIN rouge d'abord : une PR qui ne touche que tests/unit/gouvernance/une-lentille-pour-une-pr-sans-risque.spec.ts exige deux lentilles ; un test hors de ces trois dossiers reste a une lentille. AVENANT A01 du 2026-09-29 (dette bloquante de la lentille exactitude sur la PR #250) : la regle est INVERSEE dans tests/. Seul tests/a11y/ reste autorise a une lentille (tests/unit/qualite/ porte les temoins de gardes de securite et du processus, releve de la lentille securite sur la PR #250) ; le domaine, le contrat, le juridique, l integration, la gouvernance, la securite, tests/gov, tests/fixtures et tout dossier a venir valent deux lentilles. TEMOIN : un test de domaine, une fixture de grille ou un test juridique exigent deux lentilles.",
       "tests": {
         "REQ-GOV-011": [
@@ -14490,9 +14521,13 @@
       },
       "issue": 249,
       "owner": "A01",
-      "branch": null,
-      "pr": null,
-      "attestation": null,
+      "branch": "t/gov-126",
+      "pr": 250,
+      "attestation": {
+        "pr": 250,
+        "sha": "85437a57246dbbadf7c8a8c347703d2d0d720ac6",
+        "fusionneeAt": "2026-09-29T18:26:12Z"
+      },
       "motif": null
     }
   ]

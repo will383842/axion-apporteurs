@@ -13,7 +13,7 @@
 | Phase | Taches | Jours | Terminees |
 | --- | ---: | ---: | ---: |
 | -1 — Gouvernance (prealable bloquant) | 39 | 23.75 | 39 |
-| 0 — Socle technique | 131 | 99.35 | 104 |
+| 0 — Socle technique | 131 | 99.35 | 110 |
 | 1 — Operationnel | 78 | 67.00 | 0 |
 | 2 — Argent | 45 | 33.50 | 0 |
 | 3 — Pilotage et conformite | 36 | 32.25 | 0 |
@@ -612,7 +612,7 @@ Couvre : `REQ-QA-022`, `REQ-QA-030`, `REQ-QA-034`
 
 **Tests.** `tests/unit/qualite/retour-arriere.spec.ts` · `tests/unit/qualite/runbooks-exerces.spec.ts`
 
-### DM-03-A — Export de la grille : GrilleCommission versionnée dérivée de COMMERCIAL_COMMISSIONS + extension SSOT
+### DM-03-A — Export de la grille : GrilleCommission versionnée dérivée de COMMERCIAL_COMMISSIONS + extension SSOT ✅ **fusionnee**
 
 `0.5 j` · zone `domaine` · `axionia` · sensible : argent · depend de `INT-T01b` · decisions `DEC-BEB-A12`, `HYP-W6`, `W6`
 
@@ -622,7 +622,7 @@ Couvre : `REQ-ARG-031`, `REQ-DM-014`, `REQ-GOV-019`, `REQ-INT-017`, `REQ-JUR-019
 
 **Tests.** `axionia/src/server/partners-sync/__tests__/grille-export.spec.ts`
 
-### DM-03-P — Import de la grille côté Partners : `GrilleCommission` versionnée, `partners:grille:check`
+### DM-03-P — Import de la grille côté Partners : `GrilleCommission` versionnée, `partners:grille:check` ✅ **fusionnee**
 
 `0.5 j` · zone `domaine` · `schema` · sensible : argent · depend de `DM-01`, `DM-03-A`
 
@@ -632,7 +632,7 @@ Couvre : `REQ-ARG-031`, `REQ-DM-014`, `REQ-INT-017`
 
 **Tests.** `tests/unit/domaine/grille-import.spec.ts` · `tests/integration/grille-versionnee.spec.ts`
 
-### DM-04 — Fonction pure de calcul de commission et de prorata entier
+### DM-04 — Fonction pure de calcul de commission et de prorata entier ✅ **fusionnee**
 
 `0.75 j` · zone `domaine` · sensible : argent, attribution · depend de `DM-03-P`
 
@@ -1873,7 +1873,7 @@ Couvre : `REQ-GOV-032`, `REQ-GOV-006`
 
 **Tests.** `tests/unit/gouvernance/vues-rendues-apres-fusion.spec.ts`
 
-### GOV-124 — Une seule lentille pour une PR sans risque, derivee par risqueDeLaPr ; deux pour tout le reste et dans le doute
+### GOV-124 — Une seule lentille pour une PR sans risque, derivee par risqueDeLaPr ; deux pour tout le reste et dans le doute ✅ **fusionnee**
 
 `0.75 j` · zone `gouvernance` · aucune dependance
 
@@ -1883,7 +1883,7 @@ Couvre : `REQ-GOV-011`, `REQ-GOV-013`
 
 **Tests.** `tests/unit/gouvernance/une-lentille-pour-une-pr-sans-risque.spec.ts`
 
-### GOV-125 — Une tache livree dans axion-ia ne peut pas etre close : le motif de branche du registre ne connait que les branches de Partners
+### GOV-125 — Une tache livree dans axion-ia ne peut pas etre close : le motif de branche du registre ne connait que les branches de Partners ✅ **fusionnee**
 
 `0.5 j` · zone `gouvernance` · aucune dependance
 
@@ -1893,7 +1893,7 @@ Couvre : `REQ-GOV-026`
 
 **Tests.** `tests/unit/gouvernance/une-tache-axionia-se-clot-sur-sa-branche.spec.ts`
 
-### GOV-126 — Le temoin d'une garde vaut la garde : les tests de gouvernance, de securite et d'integration restent a deux lentilles
+### GOV-126 — Le temoin d'une garde vaut la garde : les tests de gouvernance, de securite et d'integration restent a deux lentilles ✅ **fusionnee**
 
 `0.25 j` · zone `gouvernance` · depend de `GOV-124`
 
