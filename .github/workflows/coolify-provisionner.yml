@@ -1,0 +1,57 @@
+# Provisionnement de Partners sur la plateforme — QA-T50 (REQ-INT-031).
+#
+# À LA MAIN SEULEMENT (`workflow_dispatch`) : il crée des ressources et y pose des secrets, rien ne
+# doit le lancer par effet de bord d'une fusion ou d'une demande de fusion.
+#
+#   — `contents: read` seul : ce job ne pousse rien ;
+#   — chaque secret applicatif vient du secret du dépôt de MÊME nom (`src/lib/env.ts` en est la
+#     source, le test la confronte à cette liste), par l'environnement de l'étape, jamais en
+#     argument ; la configuration facultative vient des variables du dépôt ;
+#   — `DATABASE_URL` et `REDIS_URL` ne sont PAS ici : elles viennent des bases que le script crée ;
+#   — un secret absent : le provisionnement est SAUTÉ et chaque absent est nommé en `::warning::`
+#     (arbitrage -d7 sur délégation de Williams du 2026-09-29).
+#
+# La logique vit dans `scripts/deploiement/provisionner.ts` ; aucune valeur n'y est imprimée.
+name: Provisionnement Coolify
+
+on:
+  workflow_dispatch:
+
+jobs:
+  provisionner:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: provisionnement-production
+      cancel-in-progress: false
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - uses: pnpm/action-setup@v4
+      - run: pnpm install --frozen-lockfile
+
+      - name: Base, cache et application crees s ils manquent, puis variables posees depuis les secrets
+        env:
+          COOLIFY_URL: ${{ secrets.COOLIFY_URL }}
+          COOLIFY_API_TOKEN: ${{ secrets.COOLIFY_API_TOKEN }}
+          COOLIFY_SERVER_UUID: ${{ vars.COOLIFY_SERVER_UUID }}
+          PARTNERS_URL_PUBLIQUE: ${{ vars.PARTNERS_URL_PUBLIQUE }}
+          SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
+          MAGIC_LINK_SECRET: ${{ secrets.MAGIC_LINK_SECRET }}
+          DEPOSIT_TOKEN_SECRET: ${{ secrets.DEPOSIT_TOKEN_SECRET }}
+          AXIONIA_WEBHOOK_SECRET: ${{ secrets.AXIONIA_WEBHOOK_SECRET }}
+          AXIONIA_API_TOKEN: ${{ secrets.AXIONIA_API_TOKEN }}
+          DOCUSEAL_WEBHOOK_SECRET: ${{ secrets.DOCUSEAL_WEBHOOK_SECRET }}
+          PII_ENCRYPTION_KEY: ${{ secrets.PII_ENCRYPTION_KEY }}
+          IP_HASH_SALT: ${{ secrets.IP_HASH_SALT }}
+          PII_HASH_KEY: ${{ secrets.PII_HASH_KEY }}
+          PARTNERS_MCP_SHARED_SECRET: ${{ secrets.PARTNERS_MCP_SHARED_SECRET }}
+          ZEPTOMAIL_WEBHOOK_SECRET: ${{ secrets.ZEPTOMAIL_WEBHOOK_SECRET }}
+          AXIONIA_RELECTURE_SECRET: ${{ secrets.AXIONIA_RELECTURE_SECRET }}
+          LOG_LEVEL: ${{ vars.LOG_LEVEL }}
+          SENTRY_DSN: ${{ vars.SENTRY_DSN }}
+          PARTNERS_EMAIL_DMARC_VERIFIE: ${{ vars.PARTNERS_EMAIL_DMARC_VERIFIE }}
+          PARTNERS_EMAIL_EXPEDITEUR: ${{ vars.PARTNERS_EMAIL_EXPEDITEUR }}
+          AXIONIA_BASE_URL: ${{ vars.AXIONIA_BASE_URL }}
+        run: pnpm coolify:provisionner

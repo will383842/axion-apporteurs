@@ -74,7 +74,9 @@ async function plateforme(options: {
       if (options.statut !== 200) return repondre(options.statut, { message: 'Unauthenticated.' });
       const m = req.method;
       if (m === 'GET' && chemin === '/api/v1/projects')
-        return repondre(200, [{ id: 1, uuid: 'projet-1', name: 'Axion-Partners', description: '' }]);
+        return repondre(200, [
+          { id: 1, uuid: 'projet-1', name: 'Axion-Partners', description: '' },
+        ]);
       if (m === 'GET' && chemin === '/api/v1/servers')
         return repondre(200, [{ uuid: 'serveur-1', name: 'localhost' }]);
       if (m === 'GET' && chemin === '/api/v1/applications') return repondre(200, p.applications);
@@ -98,7 +100,10 @@ async function plateforme(options: {
           b.type === 'redis'
             ? `redis://default:mdp-cache-factice@${b.uuid}:6379/0`
             : `postgres://postgres:mdp-base-factice@${b.uuid}:5432/postgres`;
-        return repondre(200, options.adresseInterne ? { uuid: b.uuid, internal_db_url: url } : { uuid: b.uuid });
+        return repondre(
+          200,
+          options.adresseInterne ? { uuid: b.uuid, internal_db_url: url } : { uuid: b.uuid }
+        );
       }
       const envs = /^\/api\/v1\/applications\/([\w-]+)\/envs\/bulk$/.exec(chemin);
       if (m === 'PATCH' && envs) {
@@ -121,7 +126,9 @@ function secretsApplicatifs(): Record<string, string> {
   const e: Record<string, string> = {};
   NOMS_DES_SECRETS.forEach((nom, i) => {
     e[nom] =
-      nom === 'PII_ENCRYPTION_KEY' ? i.toString(16).padStart(64, 'a') : `valeur-factice-${i}-`.padEnd(40, 'x');
+      nom === 'PII_ENCRYPTION_KEY'
+        ? i.toString(16).padStart(64, 'a')
+        : `valeur-factice-${i}-`.padEnd(40, 'x');
   });
   return e;
 }
@@ -130,7 +137,12 @@ function lancer(env: Record<string, string>): Promise<{ code: number; sortie: st
   return new Promise((resoudre) => {
     const propre: NodeJS.ProcessEnv = { ...process.env };
     for (const k of Object.keys(propre)) {
-      if (k.startsWith('COOLIFY_') || k === 'GITHUB_SHA' || NOMS_DES_SECRETS.includes(k) || NOMS_DE_CONFIGURATION.includes(k))
+      if (
+        k.startsWith('COOLIFY_') ||
+        k === 'GITHUB_SHA' ||
+        NOMS_DES_SECRETS.includes(k) ||
+        NOMS_DE_CONFIGURATION.includes(k)
+      )
         delete propre[k];
     }
     const p = spawn(process.execPath, [TSX, SCRIPT], { env: { ...propre, ...env } });
@@ -161,7 +173,13 @@ describe('REQ-INT-031 — sans ses secrets, le provisionnement est SAUTÉ et nom
 
   it('un secret applicatif absent : lui seul est nommé, et la plateforme n’est pas appelée', async () => {
     const p = await plateforme(PLATEFORME_VIDE);
-    const env = { ...secretsApplicatifs(), COOLIFY_URL: p.url, COOLIFY_API_TOKEN: 'jeton-factice-plateforme', PARTNERS_URL_PUBLIQUE: 'https://partners.exemple.fr', GITHUB_SHA: SHA };
+    const env: Record<string, string> = {
+      ...secretsApplicatifs(),
+      COOLIFY_URL: p.url,
+      COOLIFY_API_TOKEN: 'jeton-factice-plateforme',
+      PARTNERS_URL_PUBLIQUE: 'https://partners.exemple.fr',
+      GITHUB_SHA: SHA,
+    };
     const manquant = NOMS_DES_SECRETS[0]!;
     delete env[manquant];
     const r = await lancer(env);
@@ -175,7 +193,13 @@ describe('REQ-INT-031 — sans ses secrets, le provisionnement est SAUTÉ et nom
 describe('REQ-INT-031 — une valeur hors règle est refusée avant tout appel', () => {
   it('un secret trop court : code non nul, la variable nommée, la valeur tue, rien appelé', async () => {
     const p = await plateforme(PLATEFORME_VIDE);
-    const env = { ...secretsApplicatifs(), COOLIFY_URL: p.url, COOLIFY_API_TOKEN: 'jeton-factice-plateforme', PARTNERS_URL_PUBLIQUE: 'https://partners.exemple.fr', GITHUB_SHA: SHA };
+    const env: Record<string, string> = {
+      ...secretsApplicatifs(),
+      COOLIFY_URL: p.url,
+      COOLIFY_API_TOKEN: 'jeton-factice-plateforme',
+      PARTNERS_URL_PUBLIQUE: 'https://partners.exemple.fr',
+      GITHUB_SHA: SHA,
+    };
     env.SESSION_SECRET = 'court-et-secret';
     const r = await lancer(env);
     expect(r.code).not.toBe(0);
@@ -188,7 +212,13 @@ describe('REQ-INT-031 — une valeur hors règle est refusée avant tout appel',
 describe('REQ-INT-031 — sur une plateforme vide, tout est créé puis les variables posées', () => {
   it('base, cache et application créés ; DATABASE_URL et REDIS_URL viennent des bases ; aucune valeur imprimée', async () => {
     const p = await plateforme(PLATEFORME_VIDE);
-    const env = { ...secretsApplicatifs(), COOLIFY_URL: p.url, COOLIFY_API_TOKEN: 'jeton-factice-plateforme', PARTNERS_URL_PUBLIQUE: 'https://partners.exemple.fr', GITHUB_SHA: SHA };
+    const env: Record<string, string> = {
+      ...secretsApplicatifs(),
+      COOLIFY_URL: p.url,
+      COOLIFY_API_TOKEN: 'jeton-factice-plateforme',
+      PARTNERS_URL_PUBLIQUE: 'https://partners.exemple.fr',
+      GITHUB_SHA: SHA,
+    };
     const r = await lancer(env);
     expect(r.code).toBe(0);
     sansValeurDeSecret(r.sortie, env);
@@ -199,7 +229,8 @@ describe('REQ-INT-031 — sur une plateforme vide, tout est créé puis les vari
       '/api/v1/databases/redis',
       '/api/v1/applications/dockerimage',
     ]);
-    const app = p.appels.find((a) => a.chemin === '/api/v1/applications/dockerimage')!.corps as Record<string, unknown>;
+    const app = p.appels.find((a) => a.chemin === '/api/v1/applications/dockerimage')!
+      .corps as Record<string, unknown>;
     expect(app).toMatchObject({
       project_uuid: 'projet-1',
       server_uuid: 'serveur-1',
@@ -212,13 +243,27 @@ describe('REQ-INT-031 — sur une plateforme vide, tout est créé puis les vari
       domains: 'https://partners.exemple.fr',
       instant_deploy: false,
     });
-    const pg = p.appels.find((a) => a.chemin === '/api/v1/databases/postgresql')!.corps as Record<string, unknown>;
-    expect(pg).toMatchObject({ project_uuid: 'projet-1', server_uuid: 'serveur-1', is_public: false, instant_deploy: true });
+    const pg = p.appels.find((a) => a.chemin === '/api/v1/databases/postgresql')!.corps as Record<
+      string,
+      unknown
+    >;
+    expect(pg).toMatchObject({
+      project_uuid: 'projet-1',
+      server_uuid: 'serveur-1',
+      is_public: false,
+      instant_deploy: true,
+    });
 
-    const posees = new Map((p.envs.get(p.applications[0]!.uuid) ?? []).map((v) => [v.key, v.value]));
+    const posees = new Map(
+      (p.envs.get(p.applications[0]!.uuid) ?? []).map((v) => [v.key, v.value])
+    );
     for (const nom of NOMS_DES_SECRETS) expect(posees.get(nom)).toBe(env[nom]);
-    expect(posees.get('DATABASE_URL')).toMatch(/^postgres:\/\/postgres:mdp-base-factice@base-\d+:5432\/postgres$/);
-    expect(posees.get('REDIS_URL')).toMatch(/^redis:\/\/default:mdp-cache-factice@base-\d+:6379\/0$/);
+    expect(posees.get('DATABASE_URL')).toMatch(
+      /^postgres:\/\/postgres:mdp-base-factice@base-\d+:5432\/postgres$/
+    );
+    expect(posees.get('REDIS_URL')).toMatch(
+      /^redis:\/\/default:mdp-cache-factice@base-\d+:6379\/0$/
+    );
     expect(posees.get('PARTNERS_ENV')).toBe('production');
     expect(posees.has('NOTIFY_SINK')).toBe(false);
     for (const a of p.appels) expect(a.auth).toBe('Bearer jeton-factice-plateforme');
@@ -226,7 +271,13 @@ describe('REQ-INT-031 — sur une plateforme vide, tout est créé puis les vari
 
   it('relancé : rien n’est recréé, c’est dit, et les variables sont reposées', async () => {
     const p = await plateforme(PLATEFORME_VIDE);
-    const env = { ...secretsApplicatifs(), COOLIFY_URL: p.url, COOLIFY_API_TOKEN: 'jeton-factice-plateforme', PARTNERS_URL_PUBLIQUE: 'https://partners.exemple.fr', GITHUB_SHA: SHA };
+    const env: Record<string, string> = {
+      ...secretsApplicatifs(),
+      COOLIFY_URL: p.url,
+      COOLIFY_API_TOKEN: 'jeton-factice-plateforme',
+      PARTNERS_URL_PUBLIQUE: 'https://partners.exemple.fr',
+      GITHUB_SHA: SHA,
+    };
     expect((await lancer(env)).code).toBe(0);
     const avant = p.appels.filter((a) => a.methode === 'POST').length;
     const r = await lancer(env);
@@ -240,7 +291,13 @@ describe('REQ-INT-031 — sur une plateforme vide, tout est créé puis les vari
 describe('REQ-INT-031 — ce que la plateforme ne dit pas n’est jamais deviné', () => {
   it('une base sans adresse interne dans la réponse : ROUGE, le champ nommé, aucune variable posée', async () => {
     const p = await plateforme({ ...PLATEFORME_VIDE, adresseInterne: false });
-    const env = { ...secretsApplicatifs(), COOLIFY_URL: p.url, COOLIFY_API_TOKEN: 'jeton-factice-plateforme', PARTNERS_URL_PUBLIQUE: 'https://partners.exemple.fr', GITHUB_SHA: SHA };
+    const env: Record<string, string> = {
+      ...secretsApplicatifs(),
+      COOLIFY_URL: p.url,
+      COOLIFY_API_TOKEN: 'jeton-factice-plateforme',
+      PARTNERS_URL_PUBLIQUE: 'https://partners.exemple.fr',
+      GITHUB_SHA: SHA,
+    };
     const r = await lancer(env);
     expect(r.code).not.toBe(0);
     expect(r.sortie).toContain('internal_db_url');
@@ -249,7 +306,13 @@ describe('REQ-INT-031 — ce que la plateforme ne dit pas n’est jamais deviné
 
   it('plateforme en 401 : ROUGE, statut nommé, jeton jamais imprimé', async () => {
     const p = await plateforme({ ...PLATEFORME_VIDE, statut: 401 });
-    const env = { ...secretsApplicatifs(), COOLIFY_URL: p.url, COOLIFY_API_TOKEN: 'jeton-factice-plateforme', PARTNERS_URL_PUBLIQUE: 'https://partners.exemple.fr', GITHUB_SHA: SHA };
+    const env: Record<string, string> = {
+      ...secretsApplicatifs(),
+      COOLIFY_URL: p.url,
+      COOLIFY_API_TOKEN: 'jeton-factice-plateforme',
+      PARTNERS_URL_PUBLIQUE: 'https://partners.exemple.fr',
+      GITHUB_SHA: SHA,
+    };
     const r = await lancer(env);
     expect(r.code).not.toBe(0);
     expect(r.sortie).toContain('401');
@@ -257,7 +320,13 @@ describe('REQ-INT-031 — ce que la plateforme ne dit pas n’est jamais deviné
   });
 
   it('une adresse de plateforme en clair hors de la boucle locale est refusée', async () => {
-    const env = { ...secretsApplicatifs(), COOLIFY_URL: 'http://coolify.exemple.fr', COOLIFY_API_TOKEN: 'jeton-factice-plateforme', PARTNERS_URL_PUBLIQUE: 'https://partners.exemple.fr', GITHUB_SHA: SHA };
+    const env: Record<string, string> = {
+      ...secretsApplicatifs(),
+      COOLIFY_URL: 'http://coolify.exemple.fr',
+      COOLIFY_API_TOKEN: 'jeton-factice-plateforme',
+      PARTNERS_URL_PUBLIQUE: 'https://partners.exemple.fr',
+      GITHUB_SHA: SHA,
+    };
     const r = await lancer(env);
     expect(r.code).not.toBe(0);
     expect(r.sortie).toContain('https');
@@ -265,10 +334,15 @@ describe('REQ-INT-031 — ce que la plateforme ne dit pas n’est jamais deviné
 });
 
 describe('REQ-INT-031 — le workflow : manuel, sans droit, chaque secret par son nom', () => {
-  type Job = { permissions?: Record<string, string>; steps?: { run?: string; env?: Record<string, string> }[] };
+  type Job = {
+    permissions?: Record<string, string>;
+    steps?: { run?: string; env?: Record<string, string> }[];
+  };
   let wf: { on?: unknown; jobs?: Record<string, Job> } = {};
   beforeAll(async () => {
-    wf = (await lireYaml(readFileSync('.github/workflows/coolify-provisionner.yml', 'utf8'))) as typeof wf;
+    wf = (await lireYaml(
+      readFileSync('.github/workflows/coolify-provisionner.yml', 'utf8')
+    )) as typeof wf;
   });
 
   it('ne se déclenche QUE à la main', () => {
@@ -286,7 +360,9 @@ describe('REQ-INT-031 — le workflow : manuel, sans droit, chaque secret par so
   });
 
   it('chaque secret applicatif vient du secret du dépôt de MÊME nom ; la configuration facultative, des variables', () => {
-    const etape = (Object.values(wf.jobs ?? {})[0]!.steps ?? []).find((s) => s.run === 'pnpm coolify:provisionner');
+    const etape = (Object.values(wf.jobs ?? {})[0]!.steps ?? []).find(
+      (s) => s.run === 'pnpm coolify:provisionner'
+    );
     const env = etape?.env ?? {};
     for (const nom of NOMS_DES_SECRETS) expect(env[nom]).toBe(`\${{ secrets.${nom} }}`);
     for (const nom of NOMS_FACULTATIFS.filter((n) => n !== 'PARTNERS_ENV'))
