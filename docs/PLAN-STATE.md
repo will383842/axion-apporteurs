@@ -7,9 +7,9 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `067b121` — 2026-09-29T13:14:40+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #231 (un contrôle requis rouge ou une revue manquante) · 2. #235 (un contrôle requis rouge ou une revue manquante) · 3. #221 (un conflit avec `main`) · 4. #230 (un conflit avec `main`) · 5. #233 (un conflit avec `main`) |
-| Qui tient quoi ? | GOV-066 (A01) · GOV-122 (A01) · GOV-119 (A01) · GOV-121 (A01) |
+| Où est `main` ? | `c4b0e3f` — 2026-09-29T13:31:04+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #230 (un contrôle requis rouge ou une revue manquante) · 2. #233 (un contrôle requis rouge ou une revue manquante) · 3. #221 (un conflit avec `main`) · 4. #235 (un conflit avec `main`) |
+| Qui tient quoi ? | GOV-066 (A01) · GOV-122 (A01) · GOV-118 (A01) · GOV-119 (A01) · GOV-121 (A01) |
 | Où en est la phase ? | phase 0 — 95/130 tâches, reste 28.50 j |
 | Le prochain pas | QA-T05 — Pipeline GHCR privé → Coolify pull |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
@@ -60,11 +60,10 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #231 — fix(GOV-118): un gabarit qui existe est un chemin reel, zero script de garde confronte est un refus | `t/gov-118` | un contrôle requis rouge ou une revue manquante |
-| 2 | #235 — fix(GOV-066): la garde d'entite juge chaque commit de la PR, pas seulement la tete, et ecrit ce qu'elle ne lit pas | `t/gov-066` | un contrôle requis rouge ou une revue manquante |
+| 1 | #230 — docs(GOV-012): conseillers salaries — plan W19 et taches versees (GOV-112, GOV-115 a GOV-117), sans DECISIONS ni GLOSSAIRE | `t/archi-commerciaux-salaries` | un contrôle requis rouge ou une revue manquante |
+| 2 | #233 — feat(JUR-T04): registre de l'article 30 et AIPD, sources et derives du schema, la page de confidentialite scindee | `t/jur-t04` | un contrôle requis rouge ou une revue manquante |
 | 3 | #221 — feat(QA-T05): la forge construit, juge puis publie l'image, la plateforme ne fera plus que la tirer | `t/qa-t05` | un conflit avec `main` — à résoudre avant tout |
-| 4 | #230 — docs(GOV-012): conseillers salaries — plan W19 et taches versees (GOV-112, GOV-115 a GOV-117), sans DECISIONS ni GLOSSAIRE | `t/archi-commerciaux-salaries` | un conflit avec `main` — à résoudre avant tout |
-| 5 | #233 — feat(JUR-T04): registre de l'article 30 et AIPD, sources et derives du schema, la page de confidentialite scindee | `t/jur-t04` | un conflit avec `main` — à résoudre avant tout |
+| 4 | #235 — fix(GOV-066): la garde d'entite juge chaque commit de la PR, pas seulement la tete, et ecrit ce qu'elle ne lit pas | `t/gov-066` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -76,6 +75,7 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 | --- | --- | --- | --- |
 | GOV-066 — La garde d'entite juge l'index publie, pas tout ce que la forge sert du depot | A01 | #234 | `a_faire` |
 | GOV-122 — La cloture retient un renommage fait dans la seconde meme de la fusion, et une date illisible y devient NaN au lieu d'un refus | A01 | #224 | `a_faire` |
+| GOV-118 — La garde des attributions reconnait un gabarit a son nom, et reste verte si elle ne confronte aucun script de garde | A01 | #229 | `a_faire` |
 | GOV-119 — La porte A d'une PR rougit quand une AUTRE PR fusionne pendant son execution | A01 | #223 | `a_faire` |
 | GOV-121 — Le temoin de la preuve de vol ne joue que la cle absente, jamais owner ou branch a null, la forme reelle du registre | A01 | #227 | `a_faire` |
 
@@ -95,7 +95,7 @@ Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeS
 
 ## Dernier atterrissage
 
-`origin/main` = `067b121` (2026-09-29T13:14:40+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `c4b0e3f` (2026-09-29T13:31:04+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
@@ -115,6 +115,17 @@ partir de celle-ci. Les archives composées avec les attributs d'export ne sont 
 **Appris.** Sur un dépôt public, la tête n'est pas ce qui est publié : chaque commit d'une PR l'est,
 même écrasé à la fusion.
 
+### PR #231 — 2026-09-29 — fix(GOV-118): un gabarit qui existe est un chemin reel, zero script de garde confronte est un refus
+
+**Fait.** La garde des attributions ne reconnaît plus un gabarit à sa seule forme : un chemin qui
+existe dans les fichiers suivis, comme fichier ou comme dossier, est un chemin réel. Une liste de
+scripts de garde lue et vide est un refus, et le périmètre de la famille est écrit.
+
+**Reste.** Rien sur ces trois points.
+
+**Appris.** Distinguer une dimension non lue d'une dimension lue et vide coûte une valeur de plus,
+`undefined` à côté de `[]` ; sans elle, le plancher aurait fait rougir tous les cas de preuve.
+
 ### PR #228 — 2026-09-29 — test(GOV-121): la preuve de vol est jouee a null, la forme reelle du registre, et le docblock dit juste
 
 **Fait.** Le témoin de la preuve de vol joue maintenant `owner: null` et `branch: null`, la forme
@@ -127,18 +138,7 @@ où un témoin voisin existait.
 **Appris.** Retirer une clé et la mettre à `null` ne jugent pas la même moitié d'une règle : un
 témoin doit jouer la forme que les données prennent vraiment.
 
-### PR #226 — 2026-09-29 — fix(GOV-122): un renommage a la seconde de la fusion est indecidable, une date illisible rend la chronologie illisible
-
-**Fait.** La clôture d'une tâche seule ne retient plus un renommage daté de la seconde même de la
-fusion : l'instant est indécidable, et elle refuse. Une date illisible dans la chronologie rend
-celle-ci illisible au lieu de produire NaN. La prose parle du titre à l'instant de la fusion.
-
-**Reste.** Rien sur ces trois points.
-
-**Appris.** Une égalité à la seconde n'est pas un cas limite théorique quand la source horodate à la
-seconde et que deux de ses dates sont décalées d'une seconde : c'est le cas courant.
-
-… 3 entrée(s) affichée(s) sur 96 ; les 93 plus ancienne(s) se lisent dans `docs/journal/`.
+… 3 entrée(s) affichée(s) sur 97 ; les 94 plus ancienne(s) se lisent dans `docs/journal/`.
 
 ## Dette déclarée
 
