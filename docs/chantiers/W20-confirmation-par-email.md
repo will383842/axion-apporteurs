@@ -3,7 +3,7 @@
 > **Statut : PLAN, versé en partie au registre.** Ce fichier est la source d'entrée du chantier W20,
 > décidé par Williams le 2026-09-29 (session -d7) et placé en **phase 1**. La PR qui le porte **verse
 > quatorze tâches** `a_faire` en phase 1 (§5), en ne citant que des exigences **existantes**, et
-> **amende quatorze tâches existantes** (§6) par `hors-depot/reecrire-champ.mjs` et
+> **amende quatorze tâches existantes** (§6), quinze depuis le 2026-09-29 (UX-P1-05, après la réponse de Williams), par `hors-depot/reecrire-champ.mjs` et
 > `hors-depot/poser-champ.mjs` (texte brut, `--si-inchange`, motif consigné). Elle n'écrit ni
 > `docs/DECISIONS.md`, ni `docs/GLOSSAIRE.md`, ni `docs/PRESEANCE.md`, ni `docs/requirements.json` :
 > les hypothèses du §2 et les exigences du §3 y entreront par la **passe gardien-spec**, dans le lot
@@ -12,6 +12,13 @@
 > **Ce qu'il ne décide pas.** Le principe est la décision de Williams. Chaque modalité non dite par
 > Williams est une hypothèse par défaut, lue « par défaut : … (HYP-W20-X) », réversible, et ouverte
 > tant que la question du §9 qui la vise n'a pas reçu de réponse datée.
+>
+> **Réponses de Williams du 2026-09-29 (session -d7).** Williams a tranché la question 2 (confirmation
+> tacite : trente jours à compter de la **réception** de l'e-mail, délai qui ne commence pas tant qu'un
+> rebond n'est pas corrigé) et a confirmé les valeurs par défaut des quatorze autres questions telles
+> qu'elles sont écrites au §9. Il a aussi posé une exigence d'expérience : l'apporteur n'a rien à
+> retenir, un seul badge d'état le lui montre (HYP-W20-BADGE, §4). Les questions 16 et 17, nées de cette
+> réponse, restent ouvertes avec leur valeur par défaut.
 >
 > **Identifiants.** Bloc réservé à W20, pour ne pas croiser les auteurs en cours (session -bf :
 > UX-P1-21+, DM-33+, SEC-35+, INT-T29+, JUR-T36+, QA-T35+ ; W19 : UX-P1-16 à UX-P1-20, SEC-29 à
@@ -79,8 +86,12 @@ aléatoire et des cas ciblés. Contenu, rendu vérifiable :
    intégrés aux contrôles existants (SEC-14, REQ-SEC-017 : **aucun effet défavorable automatique**).
 8. **Conseillers salariés (W19)** : pas d'e-mail automatique par défaut (HYP-W20-SALARIES).
 9. **Contrat, art. 3.2** : la confirmation se fait par clic du contact **ou** par contact d'Axion-IA.
-   La confirmation tacite à 30 jours est revue au §2 (HYP-W20-TACITE), marquée « à arbitrer par
-   Williams », et portée dans l'acceptance de JUR-T01b et de JUR-T09.
+   **Confirmation tacite, tranchée par Williams le 2026-09-29 (question 2)** : au bout de 30 jours sans
+   réponse du contact et sans appel concluant, l'entreprise reste réservée à l'apporteur, le dépôt est
+   réputé confirmé ; **sauf rebond** : tant que l'e-mail revient en erreur et que l'apporteur n'a pas
+   corrigé l'adresse, le délai ne commence pas. Le délai court de la **réception** de l'e-mail, c'est-à-dire
+   d'un envoi sans rebond (HYP-W20-TACITE). Portée dans DM-24, JUR-T40, JUR-T01b et JUR-T09. Aucune
+   commission sans paiement réel : la confirmation tacite réserve l'entreprise, elle ne paie rien.
 10. **Expérience** fluide, intuitive, moderne, sans friction (exigence transverse de Williams) ;
     REQ-UX-001 (au plus 8 interactions, 90 s) respectée ; cinq états par écran ; mobile impeccable.
 
@@ -102,20 +113,21 @@ passe gardien-spec les portera dans `hyp` par le verbe de GOV-117.
 | --- | --- | --- | --- | --- | --- | --- |
 | HYP-W20-DELAI | Délai avant envoi (3) | `DELAI_AVANT_ENVOI_CONFIRMATION_MINUTES` = 15, SSOT (`src/domain/seuils/ssot.ts`). Le délai court de l'horodatage serveur du dépôt (REQ-DM-005), y compris pour un dépôt hors ligne ou par lien privé, reçu plus tard (UX-P1-03) | paramètre | 1 | — | Williams, 2026-09-29 : 15 minutes |
 | HYP-W20-ANNULATION | Annuler ou corriger (3) | Le dépôt occupe l'entreprise dès sa réception : l'horodatage ne dépend pas de l'envoi de l'e-mail. Pendant le délai, « Annuler » fait passer l'attribution à `annulee` (valeur existante de REQ-DM-006) par un événement, libère l'entreprise sur-le-champ et n'emporte **aucune** autre conséquence : ce n'est ni un refus, ni un signal, ni une ligne comptée. « Corriger » ne porte que sur le contact et le contexte : c'est une **révision tracée** (ancienne valeur conservée, chiffrée), qui ne change pas `deposeeAt` ; changer d'entreprise n'est pas une correction (annuler, puis déposer). Après le délai, plus d'annulation ni de correction libre par l'apporteur, hors rebond (HYP-W20-REBOND) | migration | 1 | DM-40 | — |
-| HYP-W20-DESTINATAIRE | Adresse de l'envoi (3) | L'e-mail part vers l'adresse **saisie pour le contact**, jamais vers une adresse tirée d'un autre registre (catalogue du CRM Pro, fiche entreprise, standard). Une adresse de forme générique saisie pour le contact (du type accueil ou contact de l'entreprise) est **acceptée** et reçoit l'e-mail ; elle ajoute la raison « adresse générique » (question 5) | paramètre | 1 | — | — |
-| HYP-W20-SOURCE | Clic « Oui » (5) | Un clic « Oui » confirme l'attribution comme une Qualification `confirme` : passage à `active`, `confirmeeAt` posée à l'instant du clic, `fenetreFinAt` qui court de cette date. Sa source est `courriel`, à côté de `appel` (REQ-DM-008 amendée). **Exception** : un clic émis depuis la même empreinte d'IP qu'une session récente de l'apporteur n'est **pas retenu** comme confirmation ; le dépôt reste `provisoire`, passe en tête de la liste d'appels, et rien d'autre ne se produit (aucune Anomalie, aucun score, aucune suspension, rien de visible par l'apporteur) (question 3) | avenant | 1 | premier DocuSeal | — |
-| HYP-W20-NON | Clic « Non » (5) | Le lien « Non » ouvre une page qui demande de confirmer en un second geste (« Je confirme n'avoir eu aucun échange avec <apporteur> ») : c'est l'indication **expresse** de l'art. 3.7. Ce second geste vaut `non_confirme` : attribution `invalidee`, entrée console qui ouvre la **faculté** de suspension (SEC-15), notification à l'apporteur avec la catégorie et sans le nom de la personne qui a répondu ; l'extrait de la réponse lui est communiqué sur demande (REQ-DM-008) | avenant | 1 | premier DocuSeal | Williams, 2026-09-29 : « Non » invalide selon les règles de `non_confirme` (le second geste est une modalité proposée) |
-| HYP-W20-LIEN | Validité des liens (4) | Deux jetons par demande (« Oui », « Non »), aléatoires, stockés **hachés**, à usage unique : la première réponse fait foi pour les deux. Un lien reste valable tant que l'attribution est `provisoire`, et au plus `CONFIRMATION_TACITE_JOURS`. L'ouverture d'un lien (requête GET) **ne change rien** : seule l'action sur la page (requête POST) répond, pour que les analyseurs de liens des messageries ne répondent jamais à la place du contact. Après une réponse, la page dit « Votre réponse a bien été enregistrée » ; changer d'avis passe par un échange humain avec Axion-IA | migration | 1 | SEC-40 | — |
+| HYP-W20-DESTINATAIRE | Adresse de l'envoi (3) | L'e-mail part vers l'adresse **saisie pour le contact**, jamais vers une adresse tirée d'un autre registre (catalogue du CRM Pro, fiche entreprise, standard). Une adresse de forme générique saisie pour le contact (du type accueil ou contact de l'entreprise) est **acceptée** et reçoit l'e-mail ; elle ajoute la raison « adresse générique » (question 5) | paramètre | 1 | — | Par défaut, confirmée par Williams le 2026-09-29 (question 5) |
+| HYP-W20-SOURCE | Clic « Oui » (5) | Un clic « Oui » confirme l'attribution comme une Qualification `confirme` : passage à `active`, `confirmeeAt` posée à l'instant du clic, `fenetreFinAt` qui court de cette date. Sa source est `courriel`, à côté de `appel` (REQ-DM-008 amendée). **Exception** : un clic émis depuis la même empreinte d'IP qu'une session récente de l'apporteur n'est **pas retenu** comme confirmation ; le dépôt reste `provisoire`, passe en tête de la liste d'appels, et rien d'autre ne se produit (aucune Anomalie, aucun score, aucune suspension, rien de visible par l'apporteur) (question 3) | avenant | 1 | premier DocuSeal | Par défaut, confirmée par Williams le 2026-09-29 (question 3) |
+| HYP-W20-NON | Clic « Non » (5) | Le lien « Non » ouvre une page qui demande de confirmer en un second geste (« Je confirme n'avoir eu aucun échange avec <apporteur> ») : c'est l'indication **expresse** de l'art. 3.7. Ce second geste vaut `non_confirme` : attribution `invalidee`, entrée console qui ouvre la **faculté** de suspension (SEC-15), notification à l'apporteur avec la catégorie et sans le nom de la personne qui a répondu ; l'extrait de la réponse lui est communiqué sur demande (REQ-DM-008) | avenant | 1 | premier DocuSeal | Williams, 2026-09-29 : « Non » invalide selon les règles de `non_confirme` ; second geste et invalidation directe, valeur par défaut de la question 4, confirmés le 2026-09-29 |
+| HYP-W20-LIEN | Validité des liens (4) | Deux jetons par demande (« Oui », « Non »), aléatoires, stockés **hachés**, à usage unique : la première réponse fait foi pour les deux. Un lien reste valable tant que l'attribution est `provisoire`, et au plus jusqu'à l'échéance de la confirmation tacite (HYP-W20-TACITE) ; les jetons d'une demande en rebond sont révoqués à la correction. L'ouverture d'un lien (requête GET) **ne change rien** : seule l'action sur la page (requête POST) répond, pour que les analyseurs de liens des messageries ne répondent jamais à la place du contact. Après une réponse, la page dit « Votre réponse a bien été enregistrée » ; changer d'avis passe par un échange humain avec Axion-IA | migration | 1 | SEC-40 | — |
 | HYP-W20-SANS-REPONSE | Délai sans réponse (5) | `CONFIRMATION_SANS_REPONSE_JOURS_OUVRES` = 5, SSOT, jours ouvrés du calendrier de CPL-T13. Passé ce délai sans clic, le dépôt entre dans la liste d'appels ; le délai court de l'envoi effectif de l'e-mail, pas du dépôt | paramètre | 1 | — | Williams, 2026-09-29 : 5 jours ouvrés |
-| HYP-W20-APPELS | Échantillon et appels ciblés (6) | Le tirage de l'échantillon est fait **au dépôt**, par un générateur cryptographique, stocké avec la demande et jamais servi à l'espace : l'apporteur ne peut ni le prévoir ni le rejouer. Appels ciblés : sans réponse (HYP-W20-SANS-REPONSE), rebond non corrigé, raison de vérification suggérée, premiers dépôts d'un nouvel apporteur. Taux d'échantillon et nombre de premiers dépôts : paramètres dont la valeur vit **hors dépôt** (REQ-GOV-031), comme les réglages des contrôles de SEC-14 ; seules les clés sont dans la SSOT (question 12) | paramètre | 1 | — | Williams, 2026-09-29 : le principe et les valeurs par défaut (tenues hors dépôt) |
-| HYP-W20-VERIFICATION | Raisons de vérification (7) | Liste fermée de raisons, affichées **en console seulement**, dans la liste d'appels et la fiche de qualification : adresse webmail, adresse générique, domaine différent du site de l'entreprise, e-mail ou téléphone du contact égal à celui de l'apporteur (empreintes HMAC, REQ-SEC-024), même contact sur plusieurs entreprises, clic depuis la même empreinte d'IP que la session de l'apporteur, rebond. Une raison **trie** la liste d'appels et n'a aucun autre effet : aucune Anomalie, aucune entrée dans le score de SEC-14, aucune notification, aucune alerte Telegram, aucun DTO de l'espace. **La rafale de dépôts et les premiers dépôts sont des critères de tri, jamais des raisons affichées** : REQ-SEC-017 et REQ-SEC-021 excluent le rythme de toute alerte, et ne le laissent subsister que comme critère de priorisation d'une revue humaine (question 6) | paramètre | 1 | — | — |
-| HYP-W20-REBOND | Rebond (4) | Un rebond définitif (webhook d'INT-T10) met la demande en `rebond`, place le dépôt en tête de la liste d'appels, et affiche à l'apporteur, dans l'espace et par e-mail, un message **informatif** qui propose de corriger l'adresse. Une correction après rebond crée une nouvelle demande (nouveaux jetons, anciens révoqués) qui part sans nouveau délai d'annulation. Corrections après rebond bornées par `CORRECTIONS_ADRESSE_MAX` = 2, SSOT ; au-delà, le dépôt reste dans la liste d'appels | paramètre | 1 | — | — |
-| HYP-W20-TACITE | Confirmation tacite (9) | **À ARBITRER PAR WILLIAMS.** Proposition : l'attribution est **réputée confirmée trente jours après la déclaration** lorsque, dans ce délai, l'entreprise n'a ni confirmé l'échange, ni indiqué ne pas connaître l'apporteur, **que ce soit en réponse à l'e-mail ou lors d'un appel**, et que le contact ait été tenté ou non. Motif : avec l'e-mail, un contact est **toujours** tenté dans les 15 minutes ; la phrase actuelle (« passé un délai de trente jours sans que ce contact ait été tenté ») ne jouerait donc plus jamais, et la seule règle restante serait celle de l'alinéa 3, mal articulée avec elle. La proposition garde ce que l'apporteur a aujourd'hui (le silence de l'entreprise ne lui coûte rien), écrit le cas de l'e-mail, et reste l'unique conséquence attachée au silence (REQ-DM-042). Alternative, non retenue par défaut : suspendre le délai tant que l'e-mail est en rebond non corrigé et qu'aucun appel n'a abouti (question 2) | avenant | 1 | premier DocuSeal | — |
-| HYP-W20-PREMIER-CONTACT | Point de départ de la péremption | `premierContactAt` (contrat art. 3.4, « première prise de contact de la Société ») est posé par la **première réponse** du contact — un clic, ou un appel qui l'a joint — et **pas** par l'envoi de l'e-mail : un e-mail resté sans réponse n'est pas un contact « qui a eu lieu » (art. 3.4 al. 2). Le chrono de péremption de DM-13 ne change pas de règle, seulement de source (question 10) | avenant | 1 | premier DocuSeal | — |
-| HYP-W20-IDENTITE-APPORTEUR | Ce que l'e-mail dit de l'apporteur (4) | L'e-mail nomme l'apporteur par ses prénom et nom, jamais par ses coordonnées. Il ne donne **pas la date du contact** : `dateContact` n'est recueillie qu'aux fins de l'art. 3.7 et n'a que deux lectures autorisées (REQ-JUR-040) ; l'e-mail dit « récemment ». Le contrat informe l'apporteur que son nom est communiqué à la personne qu'il déclare (JUR-T40) (questions 7 et 8) | avenant | 1 | premier DocuSeal | — |
-| HYP-W20-CONTEXTE | Le contexte dans l'e-mail (1, 4) | Le contexte est **facultatif**, au plus `CONTEXTE_DEPOT_CARACTERES_MAX` = 140 caractères, SSOT. Tout champ saisi par l'apporteur et repris dans l'e-mail (nom du contact, contexte) est rendu en **texte brut**, échappé, sans lien cliquable (une adresse web y est neutralisée), sans HTML (question 1) | paramètre | 1 | — | — |
-| HYP-W20-OPPOSITION | Lien d'opposition (4) | Le lien d'opposition vaut pour **la personne** : ses empreintes d'e-mail et de téléphone entrent dans une liste d'opposition, et ni e-mail ni appel d'Axion-IA ne lui parvient plus au titre de Partners. Le dépôt suit alors le régime « ne se prononce pas » (art. 3.2 al. 3). L'opposition de la personne n'est pas l'opposition au démarchage **de l'entreprise** (art. 3.3 bis d), qui reste un motif de refus distinct (question 9) | migration | 1 | DM-40 | — |
-| HYP-W20-SALARIES | Conseillers salariés (8) | Une prise en charge par un conseiller salarié (W19, DM-30, phase 2) **ne crée aucune demande de confirmation** et n'envoie aucun e-mail automatique. Réversible : un paramètre activerait la même demande pour les conseillers sans changer le schéma (question 11) | paramètre | 2 | DM-30 | Williams, 2026-09-29 : pas d'e-mail par défaut |
+| HYP-W20-APPELS | Échantillon et appels ciblés (6) | Le tirage de l'échantillon est fait **au dépôt**, par un générateur cryptographique, stocké avec la demande et jamais servi à l'espace : l'apporteur ne peut ni le prévoir ni le rejouer. Appels ciblés : sans réponse (HYP-W20-SANS-REPONSE), rebond non corrigé, raison de vérification suggérée, premiers dépôts d'un nouvel apporteur. Taux d'échantillon et nombre de premiers dépôts : paramètres dont la valeur vit **hors dépôt** (REQ-GOV-031), comme les réglages des contrôles de SEC-14 ; seules les clés sont dans la SSOT (question 12) | paramètre | 1 | — | Williams, 2026-09-29 : le principe et les valeurs par défaut (tenues hors dépôt) ; valeur par défaut de la question 12 confirmée le 2026-09-29 |
+| HYP-W20-VERIFICATION | Raisons de vérification (7) | Liste fermée de raisons, affichées **en console seulement**, dans la liste d'appels et la fiche de qualification : adresse webmail, adresse générique, domaine différent du site de l'entreprise, e-mail ou téléphone du contact égal à celui de l'apporteur (empreintes HMAC, REQ-SEC-024), même contact sur plusieurs entreprises, clic depuis la même empreinte d'IP que la session de l'apporteur, rebond. Une raison **trie** la liste d'appels et n'a aucun autre effet : aucune Anomalie, aucune entrée dans le score de SEC-14, aucune notification, aucune alerte Telegram, aucun DTO de l'espace. **La rafale de dépôts et les premiers dépôts sont des critères de tri, jamais des raisons affichées** : REQ-SEC-017 et REQ-SEC-021 excluent le rythme de toute alerte, et ne le laissent subsister que comme critère de priorisation d'une revue humaine (question 6) | paramètre | 1 | — | Par défaut, confirmée par Williams le 2026-09-29 (question 6) |
+| HYP-W20-REBOND | Rebond (4) | Un rebond définitif (webhook d'INT-T10) met la demande en `rebond`, place le dépôt en tête de la liste d'appels, et affiche à l'apporteur, dans l'espace et par e-mail, un message **informatif** qui propose de corriger l'adresse. Une correction après rebond crée une nouvelle demande (nouveaux jetons, anciens révoqués) qui part sans nouveau délai d'annulation. Corrections après rebond bornées par `CORRECTIONS_ADRESSE_MAX` = 2, SSOT ; au-delà, le dépôt reste dans la liste d'appels et l'action « Corriger l'adresse » disparaît. **Tant que le rebond n'est pas corrigé, le délai de la confirmation tacite ne commence pas** (HYP-W20-TACITE) ; après correction, l'e-mail repart, le délai court de ce nouvel envoi s'il ne rebondit pas, et l'apporteur reçoit une notification informative (clé de la table SSOT des notifications, UX-P1-10, `faitCourirUnDelai: false`) | paramètre | 1 | — | Williams, 2026-09-29 : un rebond non corrigé empêche le délai tacite de commencer (question 2) ; le reste par défaut |
+| HYP-W20-TACITE | Confirmation tacite (9) | **Tranchée par Williams le 2026-09-29 (session -d7, question 2).** Au bout de `CONFIRMATION_TACITE_JOURS` (= 30, SSOT) sans réponse du contact et sans appel concluant, l'entreprise reste réservée à l'apporteur : l'attribution est **réputée confirmée**. Le délai court de la **réception** de l'e-mail de confirmation, c'est-à-dire de l'envoi effectif d'une demande à laquelle aucun rebond n'est rattaché (`recueAt`, dérivée de la demande, jamais saisie). **Sauf rebond** : tant que la demande est en `rebond` et que l'apporteur n'a pas corrigé l'adresse, le délai **ne commence pas** ; la correction fait repartir l'e-mail, et le délai court de ce nouvel envoi s'il ne rebondit pas. Un rebond rattaché après coup à un envoi lui retire sa qualité de réception : le délai n'avait pas commencé. « Appel concluant » : une Qualification `confirme` ou `non_confirme` ; `injoignable` et `ne_se_souvient_pas` ne le sont pas. La promotion reste l'**unique** conséquence attachée au silence (REQ-DM-042) ; elle réserve l'entreprise et ne crée aucune commission, qui ne naît que d'un paiement réel. La proposition initiale (délai compté de la déclaration, que le contact ait été tenté ou non) est écartée | avenant | 1 | premier DocuSeal | Williams, 2026-09-29 : 30 jours à compter de la réception de l'e-mail, délai non commencé tant qu'un rebond n'est pas corrigé |
+| HYP-W20-BADGE | Ce que l'apporteur voit (exigence d'expérience) | Dans « Mes entreprises » (UX-P1-05) et sur la carte du dépôt (UX-P1-43), **un seul badge** d'état, avec sa date et au plus une action, dérivé côté serveur par une fonction pure, horloge injectée, partie de `statutApporteur` (REQ-UX-004) : 🟢 « Confirmée » (attribution `active`, par clic, appel ou confirmation tacite) ; 🟡 « En attente de confirmation · réservée pour vous jusqu'au <date> » (`provisoire` hors rebond non corrigé, y compris clic non retenu, sans réponse, `injoignable`, `ne_se_souvient_pas` : rien d'autre n'est visible) ; 🔴 « E-mail non reçu par le contact », action unique « Corriger l'adresse » (demande en `rebond` non corrigé ; sans action au-delà de `CORRECTIONS_ADRESSE_MAX`) ; ⚪ « Non confirmée par le contact » (`invalidee` par `non_confirme`). La date est le jour de l'échéance tacite (`recueAt` + `CONFIRMATION_TACITE_JOURS`), écrite en toutes lettres (« 29 octobre 2026 ») dans le fuseau de l'apporteur ; le badge passe seul à 🟢 le jour affiché. Une seule phrase d'aide, sous 🟡 et 🔴 : « Sans réponse de votre contact, l'entreprise reste réservée pour vous 30 jours après la réception de notre e-mail. », le nombre lu de la SSOT. Textes dans la SSOT de micro-copy, garde lexicale verte ; chaque badge porte son libellé, la pastille est décorative (`aria-hidden`), la couleur n'est jamais seule porteuse du sens. Avant l'envoi effectif, et pendant un envoi retenu, 🟡 sans date (question 16) ; fuseau Europe/Paris tant que l'apporteur n'a pas de fuseau propre (question 17) | paramètre | 1 | UX-P1-05 | Williams, 2026-09-29 : un badge, quatre états, une date, au plus une action, une phrase d'aide ; les points des questions 16 et 17 par défaut |
+| HYP-W20-PREMIER-CONTACT | Point de départ de la péremption | `premierContactAt` (contrat art. 3.4, « première prise de contact de la Société ») est posé par la **première réponse** du contact — un clic, ou un appel qui l'a joint — et **pas** par l'envoi de l'e-mail : un e-mail resté sans réponse n'est pas un contact « qui a eu lieu » (art. 3.4 al. 2). Le chrono de péremption de DM-13 ne change pas de règle, seulement de source (question 10) | avenant | 1 | premier DocuSeal | Par défaut, confirmée par Williams le 2026-09-29 (question 10) |
+| HYP-W20-IDENTITE-APPORTEUR | Ce que l'e-mail dit de l'apporteur (4) | L'e-mail nomme l'apporteur par ses prénom et nom, jamais par ses coordonnées. Il ne donne **pas la date du contact** : `dateContact` n'est recueillie qu'aux fins de l'art. 3.7 et n'a que deux lectures autorisées (REQ-JUR-040) ; l'e-mail dit « récemment ». Le contrat informe l'apporteur que son nom est communiqué à la personne qu'il déclare (JUR-T40) (questions 7 et 8) | avenant | 1 | premier DocuSeal | Par défaut, confirmée par Williams le 2026-09-29 (questions 7 et 8) |
+| HYP-W20-CONTEXTE | Le contexte dans l'e-mail (1, 4) | Le contexte est **facultatif**, au plus `CONTEXTE_DEPOT_CARACTERES_MAX` = 140 caractères, SSOT. Tout champ saisi par l'apporteur et repris dans l'e-mail (nom du contact, contexte) est rendu en **texte brut**, échappé, sans lien cliquable (une adresse web y est neutralisée), sans HTML (question 1) | paramètre | 1 | — | Par défaut, confirmée par Williams le 2026-09-29 (question 1) |
+| HYP-W20-OPPOSITION | Lien d'opposition (4) | Le lien d'opposition vaut pour **la personne** : ses empreintes d'e-mail et de téléphone entrent dans une liste d'opposition, et ni e-mail ni appel d'Axion-IA ne lui parvient plus au titre de Partners. Le dépôt suit alors le régime « ne se prononce pas » (art. 3.2 al. 3). L'opposition de la personne n'est pas l'opposition au démarchage **de l'entreprise** (art. 3.3 bis d), qui reste un motif de refus distinct (question 9) | migration | 1 | DM-40 | Par défaut, confirmée par Williams le 2026-09-29 (question 9) |
+| HYP-W20-SALARIES | Conseillers salariés (8) | Une prise en charge par un conseiller salarié (W19, DM-30, phase 2) **ne crée aucune demande de confirmation** et n'envoie aucun e-mail automatique. Réversible : un paramètre activerait la même demande pour les conseillers sans changer le schéma (question 11) | paramètre | 2 | DM-30 | Williams, 2026-09-29 : pas d'e-mail par défaut ; question 11 confirmée le 2026-09-29 |
 
 ## 3. Exigences nouvelles et amendées
 
@@ -198,6 +210,22 @@ sans défilement ; « Non » demande un second geste explicite ; information de 
 d'opposition sur la page. Cinq états : question posée, réponse enregistrée, déjà répondu, lien inconnu
 ou expiré (même état, sans oracle), erreur réseau avec reprise.
 
+**REQ-UX-062 — Le badge d'état de la confirmation (exigence d'expérience de Williams, 2026-09-29).**
+L'apporteur n'a rien à retenir : dans « Mes entreprises » et sur la carte du dépôt, chaque dépôt en phase
+de confirmation porte **un seul** badge, avec sa date et au plus une action, dérivé serveur par une
+fonction pure exhaustive, horloge injectée (HYP-W20-BADGE) : 🟢 « Confirmée » ; 🟡 « En attente de
+confirmation · réservée pour vous jusqu'au <date> », date en toutes lettres dans le fuseau de
+l'apporteur, qui passe seul à 🟢 le jour affiché ; 🔴 « E-mail non reçu par le contact », action unique
+« Corriger l'adresse », après laquelle l'e-mail repart, le délai démarre et l'apporteur est notifié
+(UX-P1-10) ; ⚪ « Non confirmée par le contact ». Une seule phrase d'aide : « Sans réponse de votre
+contact, l'entreprise reste réservée pour vous 30 jours après la réception de notre e-mail. » Textes dans
+la SSOT de micro-copy, garde lexicale verte (aucune consigne, aucun « obligatoire ») ; chaque badge a son
+libellé, la couleur n'est jamais seule porteuse du sens. Aucune raison de vérification, aucun tirage
+d'échantillon, aucun clic non retenu n'est lisible dans le badge. Cinq états par écran. Tests : un cas par
+badge ; bascule 🟡 → 🟢 à l'échéance, horloge figée, y compris une échéance à 23 h 59 ; date écrite
+identique au changement d'heure ; rebond → 🔴 ; correction → 🟡 avec la nouvelle date ; une valeur d'état
+sans badge fait échouer le typecheck.
+
 **REQ-JUR-060 — Ce que dit l'e-mail au contact.** L'e-mail est envoyé depuis une adresse humaine d'un
 domaine authentifié (REQ-INT-022). Il nomme l'apporteur (prénom et nom), l'entreprise et le contexte s'il
 existe, sans date du contact (REQ-JUR-040) ; il porte les deux liens, l'information de l'art. 14 (identité
@@ -216,9 +244,22 @@ autre que ceux-là. Le texte envoyé est versionné et la version est journalis�
 - **REQ-DM-008** — ajouter : « Une confirmation a une **source** : `appel` (Qualification) ou `courriel`
   (réponse au lien, REQ-DM-061). Les deux ont les mêmes effets sur l'attribution ; `non_confirme` peut
   naître d'un appel ou d'un « Non » confirmé en second geste. »
-- **REQ-DM-042** — remplacer la condition « sans Qualification `confirme` ni `non_confirme` » par « sans
-  confirmation ni `non_confirme`, par appel ou par courriel », et la motivation par la règle de
-  HYP-W20-TACITE une fois tranchée.
+- **REQ-DM-042** — règle tranchée par Williams le 2026-09-29 (HYP-W20-TACITE). Remplacer la condition
+  « provisoire dont l'enregistrement remonte à plus de `CONFIRMATION_TACITE_JOURS` sans Qualification
+  `confirme` ni `non_confirme` » par : « `provisoire` dont la demande de confirmation a été **reçue**
+  depuis plus de `CONFIRMATION_TACITE_JOURS`, sans confirmation ni `non_confirme`, par appel ou par
+  courriel. La réception est l'envoi effectif d'une demande à laquelle aucun rebond n'est rattaché
+  (`recueAt`). **Le délai ne commence pas tant que la demande est en rebond non corrigé** ; la
+  correction de l'adresse par l'apporteur fait repartir l'e-mail, et le délai court de ce nouvel envoi
+  s'il ne rebondit pas ; un rebond rattaché après coup retire à l'envoi sa qualité de réception. » La
+  motivation devient l'art. 3.2 amendé (JUR-T40). Tests frontière ajoutés : réception à J, J+29 aucune
+  promotion, J+30 une seule ; rebond à J+1 non corrigé, J+90 aucune promotion ; correction à J+10 puis
+  envoi sans rebond, promotion à J+40 et pas avant ; clic « Oui » ou appel `confirme` avant l'échéance,
+  aucune promotion tacite.
+- **REQ-UX-004 et REQ-UX-023** — pour un dépôt en phase de confirmation, le libellé de `statutApporteur`
+  est le badge de REQ-UX-062, et la phrase « prochaine étape » est sa phrase d'aide ; les phrases de
+  REQ-UX-023 ne s'y ajoutent pas, et « Nous vous appelons d'abord (vérification prioritaire) » n'est
+  jamais affichée pour une raison de vérification W20 (HYP-W20-VERIFICATION).
 - **REQ-UX-022** — préciser que `aQualifierDepuis` est posée à l'**entrée dans la liste d'appels**
   (REQ-DM-062), et non plus au dépôt, pour les dépôts confirmés par e-mail en premier lieu : le SLA de
   48 h ouvrées porte sur un appel à passer, pas sur un dépôt que personne n'a à appeler.
@@ -248,7 +289,29 @@ jusque-là. » et deux actions « Annuler » et « Corriger ». Annuler demande 
 la même carte (pas de fenêtre modale). Après l'heure, la carte dit « E-mail envoyé à <Prénom Nom> » ;
 puis « <Prénom Nom> a confirmé votre échange » à la réponse. Rebond : « L'e-mail n'a pas pu être remis à
 <adresse>. Si vous avez une autre adresse pour <Prénom Nom>, vous pouvez la corriger ici. Axion-IA
-pourra aussi l'appeler. » Cinq états : délai en cours, envoyé, confirmé, rebond, erreur.
+pourra aussi l'appeler. » Cinq états : délai en cours, envoyé, confirmé, rebond, erreur. Passé le délai
+avant envoi, la carte porte le badge de REQ-UX-062 et plus rien d'autre : en rebond, l'action unique est
+« Corriger l'adresse » ; la correction enregistrée, l'e-mail repart, le badge redevient 🟡 avec sa
+nouvelle date, et l'apporteur reçoit une notification informative (UX-P1-10).
+
+**Espace apporteur, « Mes entreprises » et carte du dépôt : le badge (UX-P1-05, UX-P1-43,
+HYP-W20-BADGE).** L'apporteur n'a rien à retenir, l'écran le lui montre. Chaque ligne porte **un seul**
+badge, sa date et au plus une action :
+
+| Badge | Quand | Date | Action |
+| --- | --- | --- | --- |
+| 🟢 « Confirmée » | attribution `active` : clic « Oui » retenu, appel `confirme` ou confirmation tacite | — | — |
+| 🟡 « En attente de confirmation · réservée pour vous jusqu'au <date> » | `provisoire`, e-mail reçu (envoyé sans rebond), sans réponse ni appel concluant | jour de l'échéance, en toutes lettres, fuseau de l'apporteur ; passe seul à 🟢 ce jour-là | — |
+| 🔴 « E-mail non reçu par le contact » | demande en `rebond` non corrigé ; le délai ne court pas | — | « Corriger l'adresse » (absente au-delà de `CORRECTIONS_ADRESSE_MAX`) |
+| ⚪ « Non confirmée par le contact » | `invalidee` par `non_confirme` (« Non » en second geste, ou appel) | — | — |
+
+Phrase d'aide unique, sous 🟡 et 🔴 : « Sans réponse de votre contact, l'entreprise reste réservée pour
+vous 30 jours après la réception de notre e-mail. » Chaque badge a son libellé écrit ; la pastille de
+couleur est décorative et n'est jamais seule porteuse du sens (REQ-UX-017). Aucun tirage, aucune raison
+de vérification, aucun clic non retenu n'y paraît. Avant l'envoi effectif (délai de 15 minutes, envoi
+retenu), 🟡 sans date (question 16). Cinq états de « Mes entreprises » : liste, vide (guide vers le
+premier dépôt, REQ-UX-019), chargement, erreur avec reprise, hors ligne (dernière liste connue, avec son
+heure). Cinq états de la carte du dépôt : ceux de UX-P1-43 ci-dessus.
 
 **Page publique du contact (`/confirmer/<jeton>`, UX-P1-42).** « Bonjour <Prénom Nom>. <Prénom Nom de
 l'apporteur> nous indique avoir échangé avec vous récemment au sujet de <Entreprise>. Est-ce exact ? »
@@ -281,12 +344,14 @@ Chaque ligne : phase · zone · schéma · sensible · estimation · dépendance
 Défauts : repo `partners`, `hyp` vide sauf mention, `externe` null.
 
 #### UX-P1-40 — Maquettes W20 : dépôt révisé, page de réponse du contact, « À appeler aujourd'hui »
-- 1 · espace · non · [] · 1 j · deps : — · reqs : REQ-UX-001, REQ-UX-019, REQ-UX-022
-- Chemins : `docs/maquettes/deposer.html`, `docs/maquettes/confirmation-contact.html`, `docs/maquettes/file-qualification.html`, `docs/maquettes/VALIDATION.md`, `docs/ESPACE-ROUTES.md`, `tests/unit/espace/maquettes-confirmation-par-courriel.spec.ts` · label `role:ux-redaction`
+- 1 · espace · non · [] · 1,25 j (1 j au versement, +0,25 j pour le badge, 2026-09-29) · deps : — · reqs : REQ-UX-001, REQ-UX-019, REQ-UX-022
+- Chemins : `docs/maquettes/deposer.html`, `docs/maquettes/confirmation-contact.html`, `docs/maquettes/file-qualification.html`, `docs/maquettes/mes-entreprises.html` (ajouté le 2026-09-29), `docs/maquettes/VALIDATION.md`, `docs/ESPACE-ROUTES.md`, `tests/unit/espace/maquettes-confirmation-par-courriel.spec.ts` · label `role:ux-redaction`
 - Acceptance : maquette `deposer.html` révisée (champs du §4, message, bouton nommé, carte « Annuler /
   Corriger », rebond) et **décompte des interactions écrit sur la maquette** (REQ-UX-001) ; nouvelle
   `confirmation-contact.html` (cinq états, 320 à 414 px, deux thèmes) ; `file-qualification.html` gagne
-  « À appeler aujourd'hui ». La route `/confirmer/<jeton>` entre dans `ESPACE-ROUTES.md`. Validation de
+  « À appeler aujourd'hui » ; `mes-entreprises.html` (validée le 2026-09-19 pour UX-P1-05) gagne les quatre
+  badges de REQ-UX-062, leur date, l'action « Corriger l'adresse » et la phrase d'aide, et se revalide.
+  La route `/confirmer/<jeton>` entre dans `ESPACE-ROUTES.md`. Validation de
   Williams consignée dans `VALIDATION.md` avant toute tâche d'écran W20.
 
 #### UX-P1-41 — Micro-copy W20 dans la SSOT : message, bouton, annulation, rebond, e-mail et page du contact, raisons de console
@@ -294,8 +359,10 @@ Défauts : repo `partners`, `hyp` vide sauf mention, `externe` null.
 - Chemins : `src/content/micro-copy/espace/confirmation-du-depot.ts`, `src/content/micro-copy/public/confirmation-contact.ts`, `src/content/micro-copy/courriels/confirmation-contact.ts`, `src/content/micro-copy/console/a-appeler.ts`, `tests/unit/micro-copy/confirmation-par-courriel.spec.ts`
 - Acceptance : réalise la part texte de REQ-UX-060, REQ-UX-061 et REQ-JUR-060. Aucun texte recopié hors
   SSOT ; gabarits à variables (prénom, nom, entreprise, heure), rendus sans HTML des valeurs saisies
-  (HYP-W20-CONTEXTE). Garde lexicale verte sur tout texte vu par l'apporteur ; aucun impératif de
-  méthode, aucun « obligatoire ». Témoin : un texte « vous devez confirmer » dans le fichier → rouge.
+  (HYP-W20-CONTEXTE). Textes du badge de REQ-UX-062 (quatre libellés, action « Corriger l'adresse »,
+  phrase d'aide, notification de l'e-mail reparti) ; fin du message « Axion-IA pourra aussi
+  l'appeler. » (question 15, confirmée). Garde lexicale verte sur tout texte vu par l'apporteur ; aucun
+  impératif de méthode, aucun « obligatoire ». Témoin : un texte « vous devez confirmer » dans le fichier → rouge.
 
 #### DM-40 — Demande de confirmation par e-mail : schéma, états, délai d'annulation, correction tracée
 - 1 · domaine · **oui** · [attribution, rgpd] · 1,5 j · hyp : HYP-C1 · deps : DM-07, DM-08, CPL-T13, INT-T10, JUR-T02 · reqs : REQ-DM-008, REQ-DM-031, REQ-SEC-024, REQ-DM-005
@@ -350,19 +417,26 @@ Défauts : repo `partners`, `hyp` vide sauf mention, `externe` null.
   (E2E mobile-chrome) ; axe-core sans violation sérieuse ; aucune ressource tierce chargée.
 
 #### UX-P1-43 — Annuler ou corriger un dépôt pendant le délai, corriger l'adresse après un rebond
-- 1 · espace · non · [attribution, espace] · 1 j · deps : UX-P1-02, DM-40, INT-T40, UX-P1-41 · reqs : REQ-UX-002, REQ-UX-019, REQ-JUR-039
+- 1 · espace · non · [attribution, espace] · 1,25 j (1 j au versement, +0,25 j pour la correction qui fait repartir l'e-mail et le délai, 2026-09-29) · deps : UX-P1-02, DM-40, INT-T40, UX-P1-41, UX-P1-05 · reqs : REQ-UX-002, REQ-UX-019, REQ-JUR-039
 - Chemins : `src/components/espace/depot-avant-envoi.tsx`, `src/server/confirmation/annulation.ts`, `tests/unit/espace/annuler-ou-corriger.spec.ts`, `tests/e2e/espace/annuler-ou-corriger.spec.ts`
 - Acceptance : réalise la part « après le dépôt » de REQ-UX-060 (HYP-W20-ANNULATION, HYP-W20-REBOND).
   Annuler en au plus 2 interactions depuis la carte ; un refus serveur passé l'échéance dit pourquoi, sans
   erreur brute ; cloisonnement : l'annulation d'un dépôt d'un autre apporteur rend le 404 identique
-  (REQ-SEC-009).
+  (REQ-SEC-009). Passé le délai, la carte porte le badge de REQ-UX-062 (composant de UX-P1-05) ; « Corriger
+  l'adresse » en rebond crée la nouvelle demande, l'e-mail repart, le délai tacite démarre à sa réception,
+  et une notification informative prévient l'apporteur (UX-P1-10).
 
-#### JUR-T40 — Gabarit de contrat v1 : art. 3.2 (clic ou contact d'Axion-IA, règle tacite), 3.4, 3.7 et information de l'apporteur sur son nom
+#### JUR-T40 — Gabarit de contrat v1 : art. 3.2 (clic ou contact d'Axion-IA, règle tacite tranchée), 3.4, 3.7 et information de l'apporteur sur son nom
 - 1 · juridique · non · [] · 0,5 j · hyp : HYP-C1 · deps : JUR-T01 · reqs : REQ-JUR-003, REQ-DM-042, REQ-JUR-009
 - Chemins : `docs/contrat/CONTRAT-APPORTEUR-V1.md`, `tests/unit/contrat/confirmation-au-contrat.spec.ts`
 - Acceptance : art. 3.2 : confirmation par la réponse du contact à la demande de la Société (clic) **ou**
-  lors d'une prise de contact de la Société ; confirmation tacite réécrite selon HYP-W20-TACITE, **à
-  arbitrer par Williams** avant le premier DocuSeal ; art. 3.4 : « première prise de contact » lue selon
+  lors d'une prise de contact de la Société ; confirmation tacite réécrite selon HYP-W20-TACITE,
+  **tranchée par Williams le 2026-09-29**, texte proposé : « À défaut de réponse de l'entreprise et de
+  prise de contact concluante dans un délai de trente jours à compter de la réception de la demande de
+  confirmation, l'attribution est réputée confirmée. La demande est réputée reçue lorsqu'elle a été
+  envoyée à l'adresse déclarée sans être retournée en erreur ; tant qu'elle revient en erreur et que
+  l'Apporteur n'a pas communiqué une adresse corrigée, ce délai ne court pas. Cette confirmation est la
+  seule conséquence attachée au silence de l'entreprise. » ; art. 3.4 : « première prise de contact » lue selon
   HYP-W20-PREMIER-CONTACT ; art. 3.7 : la réponse par clic est journalisée avec sa date, la personne
   destinataire et ses termes ; l'apporteur est informé que ses prénom et nom sont communiqués à la
   personne qu'il déclare (HYP-W20-IDENTITE-APPORTEUR). Identifiants de clause inchangés (REQ-JUR-003).
@@ -377,22 +451,25 @@ Défauts : repo `partners`, `hyp` vide sauf mention, `externe` null.
   s'écrit « À compléter », avec sa question.
 
 #### QA-T40 — E2E W20 : dépôt complet en au plus 8 interactions, annulation, envoi à l'échéance, réponses, rebond, liste d'appels
-- 1 · qualite · non · [] · 1,25 j · deps : QA-T16, UX-P1-02, UX-P1-07, UX-P1-42, UX-P1-43, INT-T40, DM-41 · reqs : REQ-QA-017, REQ-UX-001, REQ-DM-008, REQ-QA-027
+- 1 · qualite · non · [] · 1,5 j (1,25 j au versement, +0,25 j pour la bascule du badge et le rebond corrigé, 2026-09-29) · deps : QA-T16, UX-P1-02, UX-P1-07, UX-P1-42, UX-P1-43, INT-T40, DM-41 · reqs : REQ-QA-017, REQ-UX-001, REQ-DM-008, REQ-QA-027
 - Chemins : `tests/e2e/espace/depot-avec-confirmation-par-courriel.spec.ts`, `tests/e2e/console/a-appeler-aujourd-hui.spec.ts`
 - Acceptance : parcours mobile (iPhone et Pixel) avec horloge simulée : dépôt en au plus 8 interactions
   et 90 s, contact complet ; annulation avant l'échéance → aucun envoi ; échéance → un envoi ; « Oui » →
   confirmée dans l'espace ; « Non » → issue de non-confirmation ; rebond → message et correction ; la
-  console montre le dépôt dans « À appeler aujourd'hui » au bon rang.
+  console montre le dépôt dans « À appeler aujourd'hui » au bon rang. Horloge figée : badge 🟡 avec sa
+  date en toutes lettres, bascule 🟡 → 🟢 le jour affiché, rebond → 🔴, correction → e-mail reparti, 🟡
+  avec la nouvelle date et notification ; aucune bascule tant que le rebond n'est pas corrigé.
 
 #### QA-T41 — Témoins d'attaque : fraude à la confirmation
 - 1 · qualite · non · [attribution, rgpd] · 1 j · deps : SEC-40, SEC-41, DM-41, INT-T40, UX-P1-42 · reqs : REQ-SEC-017, REQ-SEC-024, REQ-DM-008
 - Chemins : `tests/integration/attaque-fraude-a-la-confirmation.spec.ts`
 - Acceptance : un témoin par scénario du §8 (risques 1 à 5), chacun vu rouge sur une mutation de la
-  garde qu'il vise ; aucun détail de réglage des contrôles dans le test (REQ-GOV-031).
+  garde qu'il vise ; plus un témoin du contact inventé : une adresse qui rebondit ne fait jamais courir
+  le délai tacite, et une mutation qui le fait partir de l'envoi ou du dépôt rougit ; aucun détail de réglage des contrôles dans le test (REQ-GOV-031).
 
 ## 6. Tâches existantes amendées
 
-Toutes par la PR qui porte ce fichier, par `hors-depot/reecrire-champ.mjs` (acceptance présente) ou
+Toutes par la PR qui porte ce fichier (UX-P1-05 ajoutée le 2026-09-29, après la réponse de Williams), par `hors-depot/reecrire-champ.mjs` (acceptance présente) ou
 `hors-depot/poser-champ.mjs` (acceptance absente, sous la forme « Contraintes W20 à intégrer : … »),
 texte brut, `--si-inchange`, motif consigné. Aucune écriture de `reqs`, `hyp` ni `zone` : le verbe de
 GOV-117 n'existe pas encore.
@@ -405,13 +482,14 @@ GOV-117 n'existe pas encore.
 | DM-08 | réécriture d'acceptance | transitions `provisoire → annulee` (annulation dans le délai), `provisoire → active` (clic retenu), `provisoire → invalidee` (« Non » confirmé), dans la matrice, par genre de transition | 1,25 → 1,5 j |
 | DM-09 | réécriture d'acceptance | la Qualification reste append-only ; une confirmation par clic compte pour la dérivation du palier comme une Qualification `confirme` | inchangée |
 | DM-13 | pose d'acceptance | péremption comptée depuis la première réponse (HYP-W20-PREMIER-CONTACT) ; e-mail J+5 de REQ-UX-038 « sans confirmation » | inchangée |
-| DM-24 | réécriture d'acceptance | condition « sans confirmation ni `non_confirme`, par appel ou par courriel » ; règle HYP-W20-TACITE à arbitrer par Williams | 0,5 → 0,75 j |
+| DM-24 | réécriture d'acceptance, dépendance DM-40 | condition « sans confirmation ni `non_confirme`, par appel ou par courriel » ; règle HYP-W20-TACITE tranchée le 2026-09-29 : délai compté de la réception (`recueAt`), non commencé pendant un rebond non corrigé, bascule le jour affiché par le badge | 0,5 → 0,75 j au versement, → 1 j le 2026-09-29 (lecture de la demande, rebond, correction, échéance au jour affiché) |
 | SEC-12 | pose d'acceptance | contrôle serveur des quatre coordonnées ; nouveau texte versionné de la case (REQ-JUR-008) ; « Vérifier » ne crée aucune demande | 1,25 → 1,5 j |
 | SEC-14 | réécriture d'acceptance | les raisons de vérification W20 n'entrent pas dans le score ; pas de double comptage avec « contact générique » | inchangée |
 | SEC-15 | réécriture d'acceptance | un « Non » par e-mail ouvre la même entrée console qu'un `non_confirme` par appel ; les faits notifiés citent la réponse et sa date | inchangée |
 | SEC-16 | pose d'acceptance | « Vérifier une entreprise » n'envoie jamais d'e-mail et ne crée aucune demande : témoin | inchangée |
-| JUR-T09 | pose d'acceptance | l'information de l'art. 14 est portée par l'e-mail de confirmation (REQ-JUR-060) et le script d'appel ; texte fusionné, lien d'opposition, journal ; règle HYP-W20-TACITE rappelée | 0,5 → 0,75 j |
-| JUR-T01b | réécriture d'acceptance, dépendance JUR-T40 | la relecture du gabarit v1 par Williams porte aussi l'art. 3.2 de W20 et la règle tacite HYP-W20-TACITE, à arbitrer | inchangée (0 j) |
+| JUR-T09 | pose d'acceptance, puis réécriture le 2026-09-29 | l'information de l'art. 14 est portée par l'e-mail de confirmation (REQ-JUR-060) et le script d'appel ; texte fusionné, lien d'opposition, journal ; règle HYP-W20-TACITE tranchée rappelée | 0,5 → 0,75 j |
+| JUR-T01b | réécriture d'acceptance, dépendance JUR-T40 | la relecture du gabarit v1 par Williams porte aussi l'art. 3.2 de W20, dont le texte de la règle tacite tranchée le 2026-09-29 (réception de l'e-mail, délai non commencé pendant un rebond non corrigé) | inchangée (0 j) |
+| UX-P1-05 | pose d'acceptance, dépendances DM-40 et DM-24 (2026-09-29) | le badge unique de REQ-UX-062 : quatre états, date en toutes lettres, action « Corriger l'adresse », phrase d'aide, cinq états de l'écran | 1 → 1,25 j |
 | QA-T16 | pose d'acceptance | le parcours de REQ-QA-017 se mesure avec les quatre coordonnées du contact ; le parcours W20 complet est dans QA-T40 | inchangée |
 
 ## 7. Compatibilité
@@ -477,63 +555,101 @@ réécrit.
 
 ## 9. Questions à Williams
 
-Chaque question commence par la valeur qui s'applique sans réponse.
+Chaque question commence par la valeur qui s'applique sans réponse. Les questions 1 à 15 ont reçu leur
+réponse le 2026-09-29 ; les questions 16 et 17, nées de cette réponse, restent ouvertes.
 
 1. **Par défaut : le contexte est facultatif**, au plus 140 caractères. Exigé, il ferait dépasser le
    budget de REQ-UX-001 d'une interaction. (HYP-W20-CONTEXTE)
-2. **Par défaut : réputée confirmée à 30 jours de la déclaration si ni réponse ni appel concluant**,
+   **Réponse (2026-09-29)** : acceptée par défaut, confirmée par Williams le 2026-09-29.
+2. **Proposition initiale (écartée) : réputée confirmée à 30 jours de la déclaration si ni réponse ni appel concluant**,
    que le contact ait été tenté ou non (HYP-W20-TACITE). Alternative : suspendre le délai tant que
    l'e-mail est en rebond non corrigé et qu'aucun appel n'a abouti — plus protectrice pour la Société
-   contre un contact inventé, moins favorable à l'apporteur, et à écrire au contrat. **À arbitrer.**
+   contre un contact inventé, moins favorable à l'apporteur, et à écrire au contrat.
+   **Réponse de Williams (2026-09-29, session -d7)** : au bout de 30 jours sans réponse du contact et
+   sans appel concluant, l'entreprise reste réservée à l'apporteur, le dépôt est réputé confirmé ; **sauf
+   si l'e-mail revient en erreur** : le délai ne commence pas tant que l'apporteur n'a pas corrigé
+   l'adresse. Le délai court de la **réception** de l'e-mail, c'est-à-dire d'un envoi sans rebond.
+   Inchangé : aucune commission sans paiement réel ; appels au hasard et ciblés ; alertes « vérification
+   suggérée ». Portée dans HYP-W20-TACITE, REQ-DM-042, DM-24, JUR-T40, JUR-T01b, JUR-T09, et dans
+   le badge de REQ-UX-062 (HYP-W20-BADGE).
 3. **Par défaut : un clic depuis la même empreinte d'IP que la session de l'apporteur n'est pas retenu**
    (le dépôt reste provisoire et part en tête des appels). Alternative : le retenir, et appeler.
    (HYP-W20-SOURCE)
+   **Réponse (2026-09-29)** : acceptée par défaut, confirmée par Williams le 2026-09-29.
 4. **Par défaut : le « Non » confirmé en second geste invalide directement**, comme vous l'avez décidé.
    Alternative : appeler d'abord quand une raison de vérification existe. (HYP-W20-NON)
+   **Réponse (2026-09-29)** : acceptée par défaut, confirmée par Williams le 2026-09-29.
 5. **Par défaut : une adresse générique saisie pour le contact est acceptée**, reçoit l'e-mail et porte
    la raison « adresse générique ». Alternative : l'écran propose, sans bloquer, de saisir l'adresse
    directe. (HYP-W20-DESTINATAIRE)
+   **Réponse (2026-09-29)** : acceptée par défaut, confirmée par Williams le 2026-09-29.
 6. **Par défaut : la rafale et les premiers dépôts trient la liste d'appels sans être affichés comme
    « Vérification suggérée »** : REQ-SEC-017 et REQ-SEC-021 excluent le rythme de toute alerte.
    Alternative : les afficher, ce qui demande d'amender ces deux exigences. (HYP-W20-VERIFICATION)
+   **Réponse (2026-09-29)** : acceptée par défaut, confirmée par Williams le 2026-09-29.
 7. **Par défaut : l'e-mail nomme l'apporteur par ses prénom et nom.** Alternative : prénom seul.
    (HYP-W20-IDENTITE-APPORTEUR)
+   **Réponse (2026-09-29)** : acceptée par défaut, confirmée par Williams le 2026-09-29.
 8. **Par défaut : l'e-mail ne donne pas la date du contact** (REQ-JUR-040). (HYP-W20-IDENTITE-APPORTEUR)
+   **Réponse (2026-09-29)** : acceptée par défaut, confirmée par Williams le 2026-09-29.
 9. **Par défaut : le lien d'opposition vaut pour la personne**, pas pour l'entreprise.
    (HYP-W20-OPPOSITION)
+   **Réponse (2026-09-29)** : acceptée par défaut, confirmée par Williams le 2026-09-29.
 10. **Par défaut : la péremption de 90 jours part de la première réponse du contact**, pas de l'envoi de
     l'e-mail. (HYP-W20-PREMIER-CONTACT)
+    **Réponse (2026-09-29)** : acceptée par défaut, confirmée par Williams le 2026-09-29.
 11. **Par défaut : aucun e-mail pour les conseillers salariés** (votre décision), réversible par un
     paramètre. (HYP-W20-SALARIES)
+    **Réponse (2026-09-29)** : acceptée par défaut, confirmée par Williams le 2026-09-29.
 12. **Par défaut : le taux d'échantillon et le nombre de premiers dépôts appelés vivent hors dépôt**,
     comme les réglages des contrôles de SEC-14 : le dépôt est public (REQ-GOV-031), et publier la part
     des dépôts appelés dirait au fraudeur ses chances. Seules les clés sont dans la SSOT. Alternative :
     les écrire dans la SSOT publique, comme le délai de 15 minutes. (HYP-W20-APPELS)
+    **Réponse (2026-09-29)** : acceptée par défaut, confirmée par Williams le 2026-09-29.
 13. **Par défaut : l'e-mail à l'apporteur de REQ-UX-038 (« nous n'avons pas encore pu joindre ») est
     maintenu**, déclenché par l'absence de confirmation à J+5 ouvrés. Alternative : le retirer, la carte
     de l'espace disant déjà l'état de la demande.
+    **Réponse (2026-09-29)** : acceptée par défaut, confirmée par Williams le 2026-09-29.
 14. **Par défaut : la passe gardien-spec W20** (hypothèses du §2, exigences du §3, `reqs` et `hyp` des
     tâches versées) **se fait dans le même lot dédié que GOV-112**, après GOV-116, sans tâche GOV
     nouvelle (gel de la gouvernance) ; l'avenant de l'acceptance de GOV-112 s'écrit quand vous le
     confirmez. Alternative : une tâche dédiée, ce que le gel interdit aujourd'hui.
+    **Réponse (2026-09-29)** : acceptée par défaut, confirmée par Williams le 2026-09-29. L'avenant de
+    l'acceptance de GOV-112 n'est pas écrit par cette passe : la gouvernance est gelée, aucune tâche GOV
+    n'est touchée ; il s'écrira à la levée du gel.
 15. **Par défaut : le message se termine par « Axion-IA pourra aussi l'appeler. »** au lieu de « Elle
     pourra aussi être contactée par téléphone. », pour ne pas supposer le genre du contact ; le reste de
     votre texte est repris mot pour mot. Alternative : votre texte tel quel, avec « Il ou elle ».
+    **Réponse (2026-09-29)** : acceptée par défaut, confirmée par Williams le 2026-09-29.
+16. **Ouverte, née de la réponse à la question 2. Par défaut : avant l'envoi effectif** (délai de 15
+    minutes, ou envoi retenu par le relais, REQ-INT-023), **le délai tacite ne court pas et le badge 🟡
+    ne porte pas de date.** Un envoi retenu est un incident d'exploitation, visible en console et jamais
+    imputé à l'apporteur. Alternative : faire courir le délai de l'échéance d'envoi prévue, même retenue.
+    (HYP-W20-BADGE, HYP-W20-TACITE)
+17. **Ouverte, née de l'exigence d'expérience. Par défaut : le « fuseau de l'apporteur » est Europe/Paris**,
+    fuseau unique du métier (REQ-CPL-013), tant que l'apporteur n'a pas de fuseau propre ; en ajouter un
+    toucherait le schéma. Alternative : un fuseau par apporteur, pris de son profil. (HYP-W20-BADGE)
 
 ## 10. Chiffrage
 
-**Phase 1 : 16,25 j**, dont 14,25 j de tâches nouvelles et 2,0 j d'amendements.
+**Phase 1 : 17,5 j**, dont 15,0 j de tâches nouvelles et 2,5 j d'amendements. Au versement : 16,25 j
+(14,25 + 2,0) ; **+1,25 j le 2026-09-29**, après la réponse de Williams à la question 2 et son exigence
+d'expérience : le badge et la correction qui fait repartir le délai ajoutent du travail réel à UX-P1-40
+(maquette de « Mes entreprises »), UX-P1-43 (correction, nouvel envoi, notification), QA-T40 (bascule
+horloge figée, rebond corrigé), DM-24 (délai lu de la réception, rebond) et UX-P1-05 (badge). Inchangées :
+UX-P1-41 (six textes de plus dans la SSOT), JUR-T40 (le texte est tranché, plus d'alternative à rédiger),
+QA-T41 (un témoin de plus dans le même fichier), JUR-T01b et JUR-T09.
 
 | Ensemble | Tâches | Jours |
 | --- | --- | --- |
-| Écrans et textes | UX-P1-40 (1), UX-P1-41 (0,75), UX-P1-42 (1), UX-P1-43 (1) | 3,75 |
+| Écrans et textes | UX-P1-40 (1,25), UX-P1-41 (0,75), UX-P1-42 (1), UX-P1-43 (1,25) | 4,25 |
 | Domaine | DM-40 (1,5), DM-41 (1,25), DM-43 (1) | 3,75 |
 | Sécurité | SEC-40 (1), SEC-41 (1,25) | 2,25 |
 | Intégration | INT-T40 (1,25) | 1,25 |
 | Juridique | JUR-T40 (0,5), JUR-T41 (0,5) | 1,0 |
-| Qualité | QA-T40 (1,25), QA-T41 (1) | 2,25 |
-| Amendements | UX-P1-02 (+0,25), UX-P1-06 (+0,25), UX-P1-07 (+0,5), DM-08 (+0,25), DM-24 (+0,25), SEC-12 (+0,25), JUR-T09 (+0,25) | 2,0 |
-| **Total phase 1** | | **16,25** |
+| Qualité | QA-T40 (1,5), QA-T41 (1) | 2,5 |
+| Amendements | UX-P1-02 (+0,25), UX-P1-06 (+0,25), UX-P1-07 (+0,5), DM-08 (+0,25), DM-24 (+0,5), SEC-12 (+0,25), JUR-T09 (+0,25), UX-P1-05 (+0,25) | 2,5 |
+| **Total phase 1** | | **17,5** |
 
 Hors chiffrage : la passe gardien-spec W20 (environ 0,5 j, dans le lot dédié de GOV-112, question 14),
 et la validation des maquettes par Williams. **Effet sur les dates** : W20 allonge la phase 1 ; il ne
