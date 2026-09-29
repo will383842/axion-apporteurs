@@ -2,11 +2,11 @@
   "version": 1,
   "resume": {
     "_methode": "une PAIRE est comptée quand l'intersection des deux `paths[]` n'est pas vide, par égalité de chaîne. ⚠️ Elle ne lit PAS le champ `paths` des tâches : deux tâches peuvent y figurer comme « sans intersection » alors que leurs `paths` déclarés se recouvrent — c'est le cas de GOV-025 et GOV-028, qui partagent `scripts/gates/gov-identifiants.ts`. Le composeur, lui, compare bien `t.paths` : cette vue ne dit donc pas ce qu'il fera. Ces trois totaux sont écrits par `scripts/lot/paths-proposes.ts` et par rien d'autre ; `tsx scripts/lot/paths-proposes.ts --check` échoue si le fichier rendu en diverge.",
-    "tachesCouvertes": 299,
-    "pairesEnIntersection": 4515,
-    "cheminsDeclares": 831,
-    "cheminsDistincts": 535,
-    "cheminsPartages": 107,
+    "tachesCouvertes": 304,
+    "pairesEnIntersection": 4520,
+    "cheminsDeclares": 836,
+    "cheminsDistincts": 537,
+    "cheminsPartages": 109,
     "tachesSansAucuneIntersection": 86,
     "listeDesTachesIsolees": [
       "QA-T08",
@@ -42,7 +42,6 @@
       "GOV-046",
       "GOV-047",
       "GOV-048",
-      "GOV-049",
       "GOV-050",
       "GOV-051",
       "GOV-053",
@@ -73,7 +72,6 @@
       "GOV-081",
       "GOV-082",
       "GOV-083",
-      "GOV-084",
       "GOV-085",
       "GOV-086",
       "GOV-087",
@@ -94,7 +92,9 @@
       "GOV-101",
       "INT-T26",
       "INT-T27-A",
-      "GOV-103"
+      "GOV-103",
+      "GOV-119",
+      "GOV-120"
     ],
     "cheminsLesPlusPartages": [
       {
@@ -1587,6 +1587,21 @@
     "GOV-111": [
       "tests/unit/securite/acces-scope.spec.ts",
       "tests/integration/idor.spec.ts"
+    ],
+    "GOV-122": [
+      "tests/unit/gouvernance/la-declaration-se-lit-dans-le-commit-de-fusion.spec.ts"
+    ],
+    "GOV-118": [
+      "tests/unit/gouvernance/aucun-script-de-garde-orphelin.spec.ts"
+    ],
+    "GOV-119": [
+      "tests/unit/gouvernance/la-porte-a-ne-depend-pas-des-autres-pr.spec.ts"
+    ],
+    "GOV-120": [
+      "tests/unit/gouvernance/une-livraison-declare-ce-qu-elle-a-touche.spec.ts"
+    ],
+    "GOV-121": [
+      "tests/unit/gouvernance/une-tache-en-cours-appartient-a-un-lot.spec.ts"
     ]
   }
 }
