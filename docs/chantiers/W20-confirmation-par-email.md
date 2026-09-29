@@ -279,7 +279,7 @@ Défauts : repo `partners`, `hyp` vide sauf mention, `externe` null.
 
 #### UX-P1-40 — Maquettes W20 : dépôt révisé, page de réponse du contact, « À appeler aujourd'hui »
 - 1 · espace · non · [] · 1 j · deps : — · reqs : REQ-UX-001, REQ-UX-019, REQ-UX-022
-- Chemins : `docs/maquettes/deposer.html`, `docs/maquettes/confirmation-contact.html`, `docs/maquettes/file-qualification.html`, `docs/maquettes/VALIDATION.md`, `docs/ESPACE-ROUTES.md` · label `role:ux-redaction`
+- Chemins : `docs/maquettes/deposer.html`, `docs/maquettes/confirmation-contact.html`, `docs/maquettes/file-qualification.html`, `docs/maquettes/VALIDATION.md`, `docs/ESPACE-ROUTES.md`, `tests/unit/espace/maquettes-confirmation-par-courriel.spec.ts` · label `role:ux-redaction`
 - Acceptance : maquette `deposer.html` révisée (champs du §4, message, bouton nommé, carte « Annuler /
   Corriger », rebond) et **décompte des interactions écrit sur la maquette** (REQ-UX-001) ; nouvelle
   `confirmation-contact.html` (cinq états, 320 à 414 px, deux thèmes) ; `file-qualification.html` gagne
@@ -356,7 +356,7 @@ Défauts : repo `partners`, `hyp` vide sauf mention, `externe` null.
 
 #### JUR-T40 — Gabarit de contrat v1 : art. 3.2 (clic ou contact d'Axion-IA, règle tacite), 3.4, 3.7 et information de l'apporteur sur son nom
 - 1 · juridique · non · [] · 0,5 j · hyp : HYP-C1 · deps : JUR-T01 · reqs : REQ-JUR-003, REQ-DM-042, REQ-JUR-009
-- Chemins : `docs/contrat/CONTRAT-APPORTEUR-V1.md`
+- Chemins : `docs/contrat/CONTRAT-APPORTEUR-V1.md`, `tests/unit/contrat/confirmation-au-contrat.spec.ts`
 - Acceptance : art. 3.2 : confirmation par la réponse du contact à la demande de la Société (clic) **ou**
   lors d'une prise de contact de la Société ; confirmation tacite réécrite selon HYP-W20-TACITE, **à
   arbitrer par Williams** avant le premier DocuSeal ; art. 3.4 : « première prise de contact » lue selon
@@ -366,7 +366,7 @@ Défauts : repo `partners`, `hyp` vide sauf mention, `externe` null.
 
 #### JUR-T41 — Registre de l'article 30 et AIPD : TRT-TIERS gagne la confirmation par e-mail
 - 1 · juridique · non · [rgpd] · 0,5 j · deps : JUR-T04, DM-40 · reqs : REQ-JUR-009, REQ-DM-031
-- Chemins : `docs/rgpd/registre-article-30.md`, `docs/rgpd/aipd.md`
+- Chemins : `docs/rgpd/registre-article-30.md`, `docs/rgpd/aipd.md`, `tests/unit/juridique/confirmation-par-courriel-au-registre.spec.ts`
 - Acceptance : TRT-TIERS : finalité « confirmation de l'échange par e-mail », données (réponse,
   horodatage, empreinte d'IP du clic, jetons hachés), destinataire (relais d'envoi déjà listé), durées,
   opposition (HYP-W20-OPPOSITION) ; l'AIPD nomme le risque d'un e-mail parti à une mauvaise adresse et sa
