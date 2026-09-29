@@ -19,8 +19,9 @@
  *      personnelle au sens des conventions du schéma (bloc chiffré `Bytes`, empreinte de courriel, de
  *      téléphone ou d'adresse réseau, lien vers un apporteur ou un utilisateur de la console).
  *   4. Les fiches tiers du dépôt ont chacune leur ligne au registre des destinataires ; le push web
- *      et Telegram y sont des sous-traitants hors Union européenne dont la charge ne porte aucune
- *      donnée personnelle (acceptation de la tâche, REQ-SEC-033).
+ *      et Telegram y sont des sous-traitants hors Union européenne dont la charge ne porte ni
+ *      coordonnée ni montant (REQ-SEC-033), mais un identifiant pseudonymisé : le registre le dit,
+ *      et dit que le transfert doit être encadré (relevé de la lentille `securite`, PR #233).
  *   5. L'analyse d'impact (`docs/rgpd/aipd.md`) couvre les quatre objets de REQ-CPL-009, ne se dit
  *      signée qu'avec une date et un signataire, et porte la mise en balance de l'intérêt légitime.
  *   6. L'entité responsable n'est pas recopiée : le registre renvoie à `config/entite.json` (W1).
@@ -407,7 +408,7 @@ describe('tiers rencontré et destinataires', () => {
     }
   });
 
-  it('REQ-JUR-025 — le push web et Telegram sont des sous-traitants hors Union européenne, charge sans donnée personnelle', () => {
+  it('REQ-JUR-025 — le push web et Telegram sont des sous-traitants hors Union européenne, charge sans coordonnée ni montant, identifiant pseudonymisé et transfert à encadrer', () => {
     const lignes = lignesDeTableau(section(REGISTRE, '4.'));
     for (const fiche of ['docs/tiers/push-web.md', 'docs/tiers/telegram.md']) {
       const l = lignes.find((x) => (x[1] ?? '').replace(/`/g, '') === fiche);
@@ -415,7 +416,9 @@ describe('tiers rencontré et destinataires', () => {
       const texte = (l ?? []).join(' ');
       expect(texte).toMatch(/sous-traitant/);
       expect(texte).toMatch(/hors Union européenne/);
-      expect(texte).toMatch(/aucune donnée personnelle/);
+      expect(texte).toMatch(/pseudonymisée/);
+      expect(texte).toMatch(/encadr/);
+      expect(texte).not.toMatch(/aucune donnée personnelle/);
       expect(texte).toContain('REQ-SEC-033');
     }
   });
@@ -449,7 +452,7 @@ describe('analyse d’impact (AIPD)', () => {
     }
   });
 
-  it('REQ-CPL-009 — l’AIPD ne se dit signée qu’avec une date et un signataire, et sinon bloque le premier dépôt réel', () => {
+  it('REQ-CPL-009 — l’AIPD ne se dit signée qu’avec une date et un signataire, et, non signée, ÉCRIT qu’elle conditionne le premier dépôt réel (la garde qui le bloque est JUR-T35)', () => {
     const signature = section(AIPD, 'Signature');
     const etat = /^État : (.+)$/m.exec(signature)?.[1] ?? '';
     expect(etat).not.toBe('');

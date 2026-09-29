@@ -68,6 +68,8 @@
 | --- | --- | --- |
 | Push web | Sous-traitant hors Union européenne, opt-in explicite ; charge utile sans coordonnées de tiers ni montant. Service, pays et encadrement du transfert : À compléter — source manquante. Question : quel service, quel pays, et quel encadrement Will retient-il ? | docs/tiers/push-web.md · REQ-UX-014 · REQ-SEC-033 |
 | Telegram | Sous-traitant hors Union européenne pour les alertes de console ; aucune coordonnée, aucun lien de console. Pays et encadrement du transfert : À compléter — source manquante. Question : quel pays, et quel encadrement Will retient-il ? | docs/tiers/telegram.md · REQ-INT-024 · REQ-SEC-033 |
+| Suivi des erreurs (Sentry) | Transfert CANDIDAT : la région du compte n'est pas connue, et les erreurs serveur caviardées peuvent encore porter un identifiant. À compléter — source manquante. Question : quelle région, et faut-il une fiche tiers et un contrat de sous-traitance ? | src/lib/sentry.ts · REQ-QA-024 |
+| Sauvegardes | Transfert CANDIDAT : la région du conteneur de stockage n'est pas connue, et la sauvegarde est une copie complète de la base. À compléter — source manquante. Question : quelle région, et quel encadrement si elle est hors de l'Union ? | docs/tiers/cloudflare-r2.md · REQ-QA-023 |
 
 ## 4. Évaluation des risques
 

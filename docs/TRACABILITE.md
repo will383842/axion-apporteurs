@@ -16,7 +16,7 @@
 
 **334 exigences actives · 122 réputées testées · 122 couvertes · 0 orphelines.**
 
-305 tâches, dont 134 livrées · 163 fichiers de test exécutés par `vitest` sur 163 présents.
+306 tâches, dont 134 livrées · 163 fichiers de test exécutés par `vitest` sur 163 présents.
 
 ## Exigences réputées testées
 
@@ -178,7 +178,7 @@
 | `REQ-CPL-006` | 1 | `CPL-T06` | — |
 | `REQ-CPL-007` | 2 | `INT-T23`, `UX-P2-05` | — |
 | `REQ-CPL-008` | 1 | `SEC-12` | — |
-| `REQ-CPL-009` | 0 | `JUR-T04` | `tests/unit/juridique/registre-rgpd.spec.ts` |
+| `REQ-CPL-009` | 0 | `JUR-T04`, `JUR-T35` | `tests/unit/juridique/aucun-depot-reel-sans-aipd-signee.spec.ts`, `tests/unit/juridique/registre-rgpd.spec.ts` |
 | `REQ-CPL-010` | 2 | `CPL-T12`, `T-ARG-010` | — |
 | `REQ-CPL-011` | 2 | `CPL-T11`, `CPL-T23`, `T-ARG-015` | — |
 | `REQ-CPL-014` | 2 | `CPL-T14-A`, `CPL-T14-P` | — |

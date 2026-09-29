@@ -3780,7 +3780,7 @@
       "issue": 232,
       "attempts": 0,
       "motif": null,
-      "acceptance": "push PWA (APNs/FCM) et Telegram = sous-traitants hors UE, payload sans PII, registre art. 30 + AIPD. AVENANT A01 du 2026-09-29 (decision de Will : scinder). La page de confidentialite de l espace exigeait des fichiers hors des paths de cette tache : elle passe a JUR-T34, versee dans la meme PR, qui porte aussi l affichage et l acceptation de REQ-JUR-025. Cette tache livre le registre de l article 30 et l AIPD : chaque rubrique rattachee a une source, ou declaree « A completer — source manquante » avec sa question ; les donnees stockees derivees du schema dans les deux sens ; le service de push web et Telegram inscrits comme sous-traitants hors Union europeenne, charge utile sans donnee personnelle ; l AIPD non signee, sa mise en balance sans conclusion. Les questions juridiques ouvertes restent a Will. Le registre compte TROIS traitements ; les questions du chantier des conseillers salaries y sont ecrites en questions ouvertes, sans quatrieme traitement, qui viendra avec sa propre tache.",
+      "acceptance": "push PWA (APNs/FCM) et Telegram = sous-traitants hors UE, payload sans PII, registre art. 30 + AIPD. AVENANT A01 du 2026-09-29 (decision de Will : scinder). La page de confidentialite de l espace exigeait des fichiers hors des paths de cette tache : elle passe a JUR-T34, versee dans la meme PR, qui porte aussi l affichage et l acceptation de REQ-JUR-025. Cette tache livre le registre de l article 30 et l AIPD : chaque rubrique rattachee a une source, ou declaree « A completer — source manquante » avec sa question ; les donnees stockees derivees du schema dans les deux sens ; le service de push web et Telegram inscrits comme sous-traitants hors Union europeenne, charge utile sans donnee personnelle ; l AIPD non signee, sa mise en balance sans conclusion. Les questions juridiques ouvertes restent a Will. Le registre compte TROIS traitements ; les questions du chantier des conseillers salaries y sont ecrites en questions ouvertes, sans quatrieme traitement, qui viendra avec sa propre tache. Precision de l avenant (releve de la lentille exactitude sur la PR #233) : la condition « AIPD signee avant le premier depot reel » de REQ-CPL-009 n est PAS gardee par cette tache, qui livre l AIPD et ecrit la condition ; sa garde passe a JUR-T35, versee dans la meme PR. De REQ-JUR-025, cette tache garde le CONTENU que la politique de confidentialite derive (base legale, durees, sous-traitants, droits, dans le registre) ; l affichage et l acceptation passent a JUR-T34.",
       "tests": {
         "REQ-CPL-009": [
           "tests/unit/juridique/registre-rgpd.spec.ts"
@@ -13330,6 +13330,43 @@
       "tests": {
         "REQ-JUR-025": [
           "tests/unit/juridique/politique-de-confidentialite.spec.ts"
+        ]
+      },
+      "issue": null,
+      "owner": null,
+      "branch": null,
+      "pr": null,
+      "attestation": null,
+      "motif": null
+    },
+    {
+      "id": "JUR-T35",
+      "titre": "Aucun depot reel tant que l'AIPD n'est pas signee : la condition de REQ-CPL-009 recoit sa garde",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "juridique",
+      "paths": [
+        "scripts/gates/aipd-signee.ts",
+        "tests/unit/juridique/aucun-depot-reel-sans-aipd-signee.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [
+        "rgpd"
+      ],
+      "deps": [
+        "JUR-T04"
+      ],
+      "reqs": [
+        "REQ-CPL-009"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "acceptance": "Releve par la lentille exactitude sur la PR #233 (JUR-T04) : REQ-CPL-009 exige l'AIPD signee AVANT le premier depot reel, et rien ne le bloquait ; JUR-T04 livre l'AIPD et ecrit la condition, sans la garder. A livrer : une garde qui refuse la mise en service des depots reels (le premier depot hors environnement de demonstration) tant que docs/rgpd/aipd.md ne porte pas l'etat « signee le <date> par <signataire> ». Le point d'application (demarrage, porte de deploiement ou drapeau de mise en service) est choisi et ecrit ; il ne depend pas d'un texte que l'auteur d'une demande de fusion peut modifier seul. TEMOIN A DEUX FACES : AIPD non signee, la mise en service des depots reels est refusee en nommant la condition ; AIPD signee avec date et signataire, elle est admise.",
+      "tests": {
+        "REQ-CPL-009": [
+          "tests/unit/juridique/aucun-depot-reel-sans-aipd-signee.spec.ts"
         ]
       },
       "issue": null,

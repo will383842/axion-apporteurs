@@ -8,13 +8,13 @@
 >
 > Une tache = une PR, **≤ 1,5 jour**. Le plafond est porte par la garde `gov:tasks`.
 
-**305 taches · 230.85 j estimes.**
+**306 taches · 231.35 j estimes.**
 
 | Phase | Taches | Jours | Terminees |
 | --- | ---: | ---: | ---: |
 | -1 — Gouvernance (prealable bloquant) | 39 | 23.75 | 39 |
 | 0 — Socle technique | 131 | 100.35 | 95 |
-| 1 — Operationnel | 62 | 48.00 | 0 |
+| 1 — Operationnel | 63 | 48.50 | 0 |
 | 2 — Argent | 45 | 33.50 | 0 |
 | 3 — Pilotage et conformite | 28 | 25.25 | 0 |
 
@@ -828,7 +828,7 @@ Couvre : `REQ-JUR-001`, `REQ-JUR-002`, `REQ-JUR-024`
 
 Couvre : `REQ-CPL-009`, `REQ-JUR-009`, `REQ-JUR-025`, `REQ-SEC-030`
 
-**Acceptation.** push PWA (APNs/FCM) et Telegram = sous-traitants hors UE, payload sans PII, registre art. 30 + AIPD. AVENANT A01 du 2026-09-29 (decision de Will : scinder). La page de confidentialite de l espace exigeait des fichiers hors des paths de cette tache : elle passe a JUR-T34, versee dans la meme PR, qui porte aussi l affichage et l acceptation de REQ-JUR-025. Cette tache livre le registre de l article 30 et l AIPD : chaque rubrique rattachee a une source, ou declaree « A completer — source manquante » avec sa question ; les donnees stockees derivees du schema dans les deux sens ; le service de push web et Telegram inscrits comme sous-traitants hors Union europeenne, charge utile sans donnee personnelle ; l AIPD non signee, sa mise en balance sans conclusion. Les questions juridiques ouvertes restent a Will. Le registre compte TROIS traitements ; les questions du chantier des conseillers salaries y sont ecrites en questions ouvertes, sans quatrieme traitement, qui viendra avec sa propre tache.
+**Acceptation.** push PWA (APNs/FCM) et Telegram = sous-traitants hors UE, payload sans PII, registre art. 30 + AIPD. AVENANT A01 du 2026-09-29 (decision de Will : scinder). La page de confidentialite de l espace exigeait des fichiers hors des paths de cette tache : elle passe a JUR-T34, versee dans la meme PR, qui porte aussi l affichage et l acceptation de REQ-JUR-025. Cette tache livre le registre de l article 30 et l AIPD : chaque rubrique rattachee a une source, ou declaree « A completer — source manquante » avec sa question ; les donnees stockees derivees du schema dans les deux sens ; le service de push web et Telegram inscrits comme sous-traitants hors Union europeenne, charge utile sans donnee personnelle ; l AIPD non signee, sa mise en balance sans conclusion. Les questions juridiques ouvertes restent a Will. Le registre compte TROIS traitements ; les questions du chantier des conseillers salaries y sont ecrites en questions ouvertes, sans quatrieme traitement, qui viendra avec sa propre tache. Precision de l avenant (releve de la lentille exactitude sur la PR #233) : la condition « AIPD signee avant le premier depot reel » de REQ-CPL-009 n est PAS gardee par cette tache, qui livre l AIPD et ecrit la condition ; sa garde passe a JUR-T35, versee dans la meme PR. De REQ-JUR-025, cette tache garde le CONTENU que la politique de confidentialite derive (base legale, durees, sous-traitants, droits, dans le registre) ; l affichage et l acceptation passent a JUR-T34.
 
 **Tests.** `tests/unit/juridique/registre-rgpd.spec.ts`
 
@@ -2360,6 +2360,16 @@ Couvre : `REQ-DM-046`
 **Acceptation.** (1) Sur chacune des fixtures ENREGISTRÉES d'INT-T09, le code NAF stocké sur l'attribution égale `activite_principale` de la fixture — jamais `activite_principale_naf25`, que REQ-INT-021 n'énumère pas. (2) Dépôt en repli manuel → code NAF nul ; le formulaire de dépôt ne porte aucun champ de code NAF. (3) La reprise, déclenchée à la fermeture du disjoncteur, complète les codes nuls par un nouvel appel au tiers (fixture) et n'écrase jamais un code déjà présent. (4) Un tiers qui ne rend pas le code laisse le champ nul (« non renseigné »), sans valeur par défaut. (5) TÉMOIN : une reprise qui écrirait une valeur par défaut fait rougir le test (4).
 
 **Tests.** `tests/unit/domaine/code-naf-au-depot.spec.ts`
+
+### JUR-T35 — Aucun depot reel tant que l'AIPD n'est pas signee : la condition de REQ-CPL-009 recoit sa garde
+
+`0.5 j` · zone `juridique` · sensible : rgpd · depend de `JUR-T04`
+
+Couvre : `REQ-CPL-009`
+
+**Acceptation.** Releve par la lentille exactitude sur la PR #233 (JUR-T04) : REQ-CPL-009 exige l'AIPD signee AVANT le premier depot reel, et rien ne le bloquait ; JUR-T04 livre l'AIPD et ecrit la condition, sans la garder. A livrer : une garde qui refuse la mise en service des depots reels (le premier depot hors environnement de demonstration) tant que docs/rgpd/aipd.md ne porte pas l'etat « signee le <date> par <signataire> ». Le point d'application (demarrage, porte de deploiement ou drapeau de mise en service) est choisi et ecrit ; il ne depend pas d'un texte que l'auteur d'une demande de fusion peut modifier seul. TEMOIN A DEUX FACES : AIPD non signee, la mise en service des depots reels est refusee en nommant la condition ; AIPD signee avec date et signataire, elle est admise.
+
+**Tests.** `tests/unit/juridique/aucun-depot-reel-sans-aipd-signee.spec.ts`
 
 ## Phase 2 — Argent
 
