@@ -7,9 +7,9 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `911f326` — 2026-09-29T06:54:00+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #209 (un conflit avec `main`) |
-| Qui tient quoi ? | GOV-049 (A01) · GOV-075 (A01) · GOV-110 (A01) |
+| Où est `main` ? | `c60e2f3` — 2026-09-29T07:25:51+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #214 (un contrôle requis rouge ou une revue manquante) |
+| Qui tient quoi ? | GOV-049 (A01) · GOV-075 (A01) · GOV-084 (A01) · GOV-110 (A01) |
 | Où en est la phase ? | phase 0 — 91/125 tâches, reste 29.25 j |
 | Le prochain pas | QA-T05 — Pipeline GHCR privé → Coolify pull |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
@@ -60,7 +60,7 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #209 — fix(GOV-075): aucun chemin gabarit la ou il ment, treize taches livrees reparees | `t/gov-075` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #214 — feat(DM-03-P): la grille publiee par axionia est importee version par version, chaque ligne confrontee a son empreinte | `t/dm-03-p` | un contrôle requis rouge ou une revue manquante |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -72,6 +72,7 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 | --- | --- | --- | --- |
 | GOV-049 — Une tache en cours sans lot est invisible de TOUTES les gardes, et c'est ce lot qui l'a rencontre | A01 | #196 | `a_faire` |
 | GOV-075 — Des taches livrees gardent un chemin gabarit, et une tache livree omet un fichier qu'elle a modifie | A01 | #208 | `a_faire` |
+| GOV-084 — Neuf scripts de garde suivis ne sont revendiques par aucune tache | A01 | #212 | `a_faire` |
 | GOV-110 — La cloture compare le sujet du commit de fusion au titre ACTUEL de la PR : un renommage apres la fusion le rendrait conforme | A01 | #210 | `a_faire` |
 
 ⚠️ **13 revendication(s) périmée(s)** — QA-T07, GOV-042, GOV-045, GOV-050, GOV-051, GOV-053, GOV-054, GOV-055, GOV-060, GOV-072, GOV-079, GOV-093, INT-T01c : leur issue porte encore un label `owner:` alors que la tâche est livrée. `pnpm lot:cloture` écrit `docs/tasks.json` mais n’efface pas les labels ; la dette appartient à GOV-012.
@@ -90,7 +91,7 @@ Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeS
 
 ## Dernier atterrissage
 
-`origin/main` = `911f326` (2026-09-29T06:54:00+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `c60e2f3` (2026-09-29T07:25:51+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
