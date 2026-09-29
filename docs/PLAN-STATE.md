@@ -60,7 +60,7 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #207 — chore(registre): rattrapage 8 — sept clotures, SEC-05 sensible, trois suites versees | `t/registre-rattrapage-8` | un contrôle requis rouge ou une revue manquante |
+| 1 | #207 — chore(GOV-012): registre rattrape, sept taches closes, SEC-05 sensible, trois suites versees | `t/registre-rattrapage-8` | un contrôle requis rouge ou une revue manquante |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -100,7 +100,8 @@ Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écr
 
 **Fait.** Le registre rattrape les PR #200 et #206 : sept tâches closes par `lot:cloture --tache`,
 avec l'attestation lue dans le commit de fusion sur la branche par défaut. `SEC-05.sensible` passe
-de vide à `rgpd`, relevé par la lentille `exactitude` : la tâche cloisonne des données d'apporteurs.
+de vide à `rgpd` et `espace`, relevés par les deux lentilles : la tâche cloisonne les données de
+l'espace apporteur.
 Trois suites versées `a_faire` : GOV-109 (expressions constantes de la JSX que la garde lexicale ne
 voit pas encore), GOV-110 (titre attendu à l'instant de la fusion, pas au moment de la clôture),
 GOV-111 (options de lecture, filtres de relation et lignes entières dans le cloisonnement).
@@ -109,7 +110,8 @@ GOV-111 (options de lecture, filtres de relation et lignes entières dans le clo
 hors dépôt jusqu'à son correctif ; aucune acceptance ne les cite.
 
 **Appris.** `poser-champ` n'écrit qu'un champ vide, et un tableau vide n'est pas vide pour lui :
-corriger une valeur déjà posée passe par `reecrire-champ`, qui exige un motif consigné.
+corriger une valeur déjà posée passe par `reecrire-champ`, qui exige un motif. Ce motif est
+consigné au journal des réécritures, tenu hors dépôt ; le registre ne le porte pas (`motif` nul).
 
 ### PR #206 — 2026-09-29 — chore(GOV-106): lot L0-13 — la garde lexicale juge le rendu, la regle d'arret est ecrite, la cloture confronte le titre
 
