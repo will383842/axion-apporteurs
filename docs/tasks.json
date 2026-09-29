@@ -2398,7 +2398,10 @@
         ".github/workflows/backup.yml",
         "docs/runbooks/sauvegarde.md",
         "tests/unit/qualite/sauvegarde-et-exercice.spec.ts",
-        ".github/workflows/nightly.yml"
+        ".github/workflows/nightly.yml",
+        "scripts/sauvegarde/",
+        "package.json",
+        "src/domain/seuils/ssot.ts"
       ],
       "schema": false,
       "sensible": [],

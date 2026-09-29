@@ -8,7 +8,7 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `1bcc412` — 2026-09-29T23:41:15+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #263 (un contrôle requis rouge ou une revue manquante) · 2. #261 (un conflit avec `main`) · 3. #262 (un conflit avec `main`) · 4. #267 (un conflit avec `main`) · 5. #268 (un conflit avec `main`) |
+| Qu’est-ce qui est en vol ? | 1. #261 (un contrôle requis rouge ou une revue manquante) · 2. #263 (un contrôle requis rouge ou une revue manquante) · 3. #268 (un contrôle requis rouge ou une revue manquante) · 4. #262 (un conflit avec `main`) · 5. #267 (un conflit avec `main`) |
 | Qui tient quoi ? | GOV-117 (A01) |
 | Où en est la phase ? | phase 0 — 115/133 tâches, reste 14.00 j |
 | Le prochain pas | QA-T06 — Preview par PR sur Coolify, base éphémère, seed déterministe |
@@ -60,11 +60,11 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #263 — feat(QA-T20): le poids charge par route se lit dans les manifestes de Next 16, zero octet est une faute | `t/qa-t20` | un contrôle requis rouge ou une revue manquante |
-| 2 | #261 — chore(GOV-012): registre rattrape, INT-T02 INT-T27-A et INT-T26 closes, REQ-DM-021 amendee, JUR-T36 versee | `t/registre-rattrapage-15` | un conflit avec `main` — à résoudre avant tout |
-| 3 | #262 — feat(GOV-116): le lot dedie du gardien-spec, procedure exacte lancee par Williams, reglages rendus depuis le projet | `t/gov-116` | un conflit avec `main` — à résoudre avant tout |
-| 4 | #267 — fix(GOV-109): la garde lexicale evalue toute expression JSX constante comme React la rend | `t/gov-109` | un conflit avec `main` — à résoudre avant tout |
-| 5 | #268 — feat(QA-T34): la plateforme tire sha-7 apres publier, un seul producteur, l'atterrissage lu sur x-partners-build-sha | `t/qa-t34` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #261 — chore(GOV-012): registre rattrape, INT-T02 INT-T27-A et INT-T26 closes, REQ-DM-021 amendee, JUR-T36 versee | `t/registre-rattrapage-15` | un contrôle requis rouge ou une revue manquante |
+| 2 | #263 — feat(QA-T20): le poids charge par route se lit dans les manifestes de Next 16, zero octet est une faute | `t/qa-t20` | un contrôle requis rouge ou une revue manquante |
+| 3 | #268 — feat(QA-T34): la plateforme tire sha-7 apres publier, un seul producteur, l'atterrissage lu sur x-partners-build-sha | `t/qa-t34` | un contrôle requis rouge ou une revue manquante |
+| 4 | #262 — feat(GOV-116): le lot dedie du gardien-spec, procedure exacte lancee par Williams, reglages rendus depuis le projet | `t/gov-116` | un conflit avec `main` — à résoudre avant tout |
+| 5 | #267 — fix(GOV-109): la garde lexicale evalue toute expression JSX constante comme React la rend | `t/gov-109` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
