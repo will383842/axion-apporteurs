@@ -18,11 +18,11 @@ attendait deux avis, et les deux lentilles étaient le goulot du chantier. Le m�
 Williams a décidé, en exception au gel de la gouvernance : « une seule lentille pour les PR sans
 risque (docs, tests, outillage interne), deux lentilles pour tout le reste ». Il l'a confirmé
 directement dans la session A01. Les deux lentilles ont annoncé leurs exigences avant le code : un
-classement dérivé et fermé, et ce qui est illisible vaut deux.
+niveau de risque dérivé et fermé, et ce qui est illisible vaut deux.
 
 ## Décision
 
-1. `lentillesExigees()` rend **une** lentille, `exactitude`, quand `risqueDeLaPr()` classe la PR
+1. `lentillesExigees()` rend **une** lentille, `exactitude`, quand `risqueDeLaPr()` juge la PR
    ordinaire **et** pose `uneLentille`. Dans tous les autres cas, elle rend les deux (`exactitude`,
    `securite`), plus `schema` dès que la PR touche au schéma.
 2. `uneLentille` est **dérivé** dans `risqueDeLaPr()`, jamais déclaré par l'auteur. Il n'est vrai que si
@@ -62,7 +62,7 @@ qui touche aussi la garde concernée, sous `scripts/gates/`, donc à deux lentil
 - **Élargir le risque « ordinaire » actuel** : il laisse ordinaires des fichiers de `src/` hors zone
   sensible et des `scripts/gates/*` hors de la garde des revues (dette nommée dans `revues.ts`).
   Une lentille y serait trop peu.
-- **Un label posé par l'auteur** : le classement serait déclaré, pas dérivé.
+- **Un label posé par l'auteur** : le niveau de risque serait déclaré, pas dérivé.
 
 ## Ce qui le vérifie
 
