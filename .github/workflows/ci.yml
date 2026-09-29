@@ -329,6 +329,17 @@ jobs:
         run: pnpm perf:budgets:prove
       - name: Les budgets sur le disque sont le rendu de leur exigence
         run: pnpm perf:budgets:verifier
+      # QA-T20, REQ-UX-033. Le poids que le navigateur charge VRAIMENT, route par route, lu dans les
+      # manifestes de Next 16 (`.next/static/chunks/app/` n est pas produit sous Turbopack : les
+      # anciens globs mesuraient zero octet). Une faute de MESURE rougit toujours ; un DEPASSEMENT
+      # est nomme et annote, non bloquant jusqu a QA-T20b (`--bloquant`, prouve ci-dessous). Pas
+      # de `continue-on-error`.
+      - name: La mesure du poids par route sait rougir, y compris sur zero octet
+        run: pnpm perf:bundle:prove
+      - name: Construire l application pour la mesure
+        run: pnpm perf:bundle:construire
+      - name: Poids par route de l espace — JS propre et socle commun
+        run: pnpm perf:bundle
       # SEC-10, REQ-SEC-016. Tout compteur de debit est declare au registre unique, sous l un des
       # cinq prefixes, avec sa conduite sur panne REQUISE ; la garde EXECUTE chaque compteur contre
       # un cache qui leve et confronte le verdict a la conduite declaree. Le vert imprime les
