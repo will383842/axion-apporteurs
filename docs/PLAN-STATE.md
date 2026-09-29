@@ -7,15 +7,15 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `3d9006b` — 2026-09-29T19:09:07+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #242 (rien) · 2. #244 (rien) · 3. #248 (rien) |
-| Qui tient quoi ? | aucune tâche revendiquée |
+| Où est `main` ? | `d65e749` — 2026-09-29T19:45:55+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #244 (un contrôle requis rouge ou une revue manquante) · 2. #250 (un contrôle requis rouge ou une revue manquante) · 3. #242 (un conflit avec `main`) |
+| Qui tient quoi ? | GOV-124 (A01) |
 | Où en est la phase ? | phase 0 — 104/130 tâches, reste 20.25 j |
-| Le prochain pas | fusionner #242, puis QA-T06 — Preview par PR sur Coolify, base éphémère, seed déterministe |
+| Le prochain pas | QA-T06 — Preview par PR sur Coolify, base éphémère, seed déterministe |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
-| Dernière entrée de journal | PR #246 — 2026-09-29 |
+| Dernière entrée de journal | PR #248 — 2026-09-29 |
 
-**Ce qu’on tape maintenant.** `gh pr view 242 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : 0
 
@@ -60,9 +60,9 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #242 — feat(JUR-T34): la politique de confidentialite de l'espace, tiree du registre de l'article 30 et acceptee a la premiere connexion | `t/jur-t34` | rien — fusionnable maintenant |
-| 2 | #244 — docs(GOV-017a): confirmation du depot par e-mail — plan W20 et quatorze taches versees en phase 1, sans DECISIONS ni REQ nouvelles | `t/w20-confirmation-email` | rien — fusionnable maintenant |
-| 3 | #248 — feat(GOV-124): une lentille pour une PR sans risque, derivee et fermee, deux pour tout le reste | `t/gov-124-lentille` | rien — fusionnable maintenant |
+| 1 | #244 — docs(GOV-017a): confirmation du depot par e-mail — plan W20 et quatorze taches versees en phase 1, sans DECISIONS ni REQ nouvelles | `t/w20-confirmation-email` | un contrôle requis rouge ou une revue manquante |
+| 2 | #250 — feat(GOV-126): le temoin d'une garde vaut la garde, tests de gouvernance, securite et integration a deux lentilles | `t/gov-126` | un contrôle requis rouge ou une revue manquante |
+| 3 | #242 — feat(JUR-T34): la politique de confidentialite de l'espace, tiree du registre de l'article 30 et acceptee a la premiere connexion | `t/jur-t34` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -70,7 +70,9 @@ Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partn
 
 Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’issue, posés par l’orchestrateur au §3 de `.claude/skills/lot/SKILL.md` (revendication **en vol**), et le champ `owner` de `docs/tasks.json`, écrit par `pnpm lot:cloture` seul (revendication **consolidée**). Cette rubrique les REND ; corriger une revendication fausse se fait dans l’une des deux sources, jamais ici.
 
-Aucune tâche revendiquée. Un agent ne prend jamais une tâche non revendiquée (REQ-GOV-007) : la revendication passe par l’orchestrateur.
+| Tâche | Revendiquée par | Issue | Statut |
+| --- | --- | --- | --- |
+| GOV-124 — Une seule lentille pour une PR sans risque, derivee par risqueDeLaPr ; deux pour tout le reste et dans le doute | A01 | #247 | `a_faire` |
 
 ⚠️ **13 revendication(s) périmée(s)** — QA-T07, GOV-042, GOV-045, GOV-050, GOV-051, GOV-053, GOV-054, GOV-055, GOV-060, GOV-072, GOV-079, GOV-093, INT-T01c : leur issue porte encore un label `owner:` alors que la tâche est livrée. `pnpm lot:cloture` écrit `docs/tasks.json` mais n’efface pas les labels ; la dette appartient à GOV-012.
 
@@ -82,21 +84,31 @@ Dérivé de `git log` sur `docs/adr/`, restreint au jour du dernier atterrissage
 
 ## Prochain pas
 
-**Fusionner #242** — elle est en tête de file et ne bloque sur rien.
-
 **QA-T06** — Preview par PR sur Coolify, base éphémère, seed déterministe (1 j) : 14 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
 Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeStateStatus` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage —, la tâche ensuite. L’ordre de la file se corrige à la rubrique « File de fusion », jamais ici.
 
 ## Dernier atterrissage
 
-`origin/main` = `3d9006b` (2026-09-29T19:09:07+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `d65e749` (2026-09-29T19:45:55+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
 ## Journal
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
+
+### PR #248 — 2026-09-29 — feat(GOV-124): une lentille pour une PR sans risque, derivee et fermee, deux pour tout le reste
+
+**Fait.** Une PR de documentation, de tests ou d'outillage des vues, en zone gouvernance ou
+qualité, n'exige plus que la lentille exactitude. Le classement est dérivé par le calcul du risque,
+jamais déclaré, et tout ce qu'il ne sait pas lire vaut deux lentilles.
+
+**Reste.** L'architecte accepte l'ADR 0026. Aucune dérivation ne lit l'intention d'un texte : la
+limite est écrite dans l'ADR.
+
+**Appris.** Une liste d'autorisation doit exclure ce qui nourrit son propre calcul : sans cela, une
+PR relue par une seule lentille aurait pu ramener à une lentille toutes les PR suivantes d'une tâche.
 
 ### PR #246 — 2026-09-29 — chore(GOV-012): GOV-123 et GOV-124 versees, exception au gel decidee par Williams
 
@@ -122,21 +134,7 @@ co-occurrence peut rougir à tort sur un homonyme : elle échoue fermé.
 **Appris.** Une migration additive passe trivialement sur une base vide. Sans vidage semé, la
 porte D serait un vert qui ment : le semis est le cœur de la porte, pas un détail.
 
-### PR #241 — 2026-09-29 — fix(GOV-062): l'outillage qui execute la porte A est juge, sept points nommes
-
-**Fait.** La porte A juge l'outillage qui l'exécute, en sept points dont chacun a sa famille :
-réglage du gestionnaire, chemins réservés à `role:architecte`, correctifs, actions tierces, étape
-qui réécrit l'arbre, commande intégrée, environnement hérité. La réserve du §7 est accordée dans la
-source des agents, et la fiche de l'architecte est rendue par son générateur.
-
-**Reste.** Les lentilles relisent la tête. La modification de `.claude/agents/` et la correction
-du témoin de `gov:pr` ont chacune été autorisées par Williams, une seule fois.
-
-**Appris.** Un témoin qui décrit un risque peut heurter une réserve ajoutée plus tard : le cas
-6 quater mesurait le risque d'un fichier racine, et la réserve du §7 l'a fait rougir. Le témoin
-porte désormais le label que la réserve exige.
-
-… 3 entrée(s) affichée(s) sur 105 ; les 102 plus ancienne(s) se lisent dans `docs/journal/`.
+… 3 entrée(s) affichée(s) sur 106 ; les 103 plus ancienne(s) se lisent dans `docs/journal/`.
 
 ## Dette déclarée
 
