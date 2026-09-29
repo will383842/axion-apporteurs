@@ -281,9 +281,30 @@ function abandonGithub(commande: string, e: unknown): never {
   process.exit(1);
 }
 
+/**
+ * GOV-119 — UNE FUSION POSTÉRIEURE AU CLONE. La porte A d'une PR tourne sur un clone pris à un
+ * instant ; une AUTRE PR peut fusionner pendant qu'elle tourne. La forge rend alors une fusion
+ * dont le commit n'est pas dans le clone, et ce n'est pas une illisibilité : c'est le futur de ce
+ * clone. Mesuré deux fois le 2026-09-29 (portes A des PR #209 et #219).
+ */
+export type FusionPosterieure = { numero: number; mergedAt: string };
+
+/**
+ * La date du dernier commit de la branche par défaut que porte ce clone : la borne au-delà de
+ * laquelle une fusion lui est postérieure. `origin/main` d'abord (la porte A clone tout, les
+ * branches distantes comprises), `HEAD` à défaut.
+ */
+function dateDeLaBaseDuClone(): string | null {
+  return (
+    git(['log', '-1', '--format=%cI', 'origin/main']) ?? git(['log', '-1', '--format=%cI', 'HEAD'])
+  );
+}
+
 function lireGithub(): {
   prOuvertes: PrOuverte[];
   prFusionnees: PrFusionnee[];
+  posterieures: FusionPosterieure[];
+  baseDuClone: string | null;
   revendications: Map<number, string[]>;
   revendicationsParTitre: Map<string, number[]>;
 } {
@@ -301,7 +322,12 @@ function lireGithub(): {
     abandonGithub('gh pr list --state open', e);
   }
 
-  let brutFusionnees: { number: number; title: string; mergeCommit: { oid: string } | null }[];
+  let brutFusionnees: {
+    number: number;
+    title: string;
+    mergeCommit: { oid: string } | null;
+    mergedAt?: string;
+  }[];
   try {
     brutFusionnees = JSON.parse(
       gh([
@@ -310,7 +336,7 @@ function lireGithub(): {
         '--state',
         'merged',
         '--json',
-        'number,title,mergeCommit',
+        'number,title,mergeCommit,mergedAt',
         '--limit',
         '100',
       ])
@@ -328,13 +354,24 @@ function lireGithub(): {
    * été régénéré DANS ce commit même. Les deux dates viennent maintenant de la même horloge.
    */
   const prFusionnees: PrFusionnee[] = [];
+  const posterieures: FusionPosterieure[] = [];
+  const baseDuClone = dateDeLaBaseDuClone();
   for (const p of brutFusionnees) {
     const oid = p.mergeCommit?.oid;
     if (!oid) continue; // fusionnée sans commit lisible (branche supprimée côté forge) : hors portée
     const date = git(['log', '-1', '--format=%cI', oid]);
     if (!date) {
+      // Postérieure au clone : hors de ce que CETTE porte peut juger — nommée, comptée, jamais un
+      // rouge. Une date illisible, d'un côté ou de l'autre, ne vaut PAS « postérieure » (échec fermé).
+      const fusion = Date.parse(p.mergedAt ?? '');
+      const base = Date.parse(baseDuClone ?? '');
+      if (Number.isFinite(fusion) && Number.isFinite(base) && fusion > base) {
+        posterieures.push({ numero: p.number, mergedAt: p.mergedAt as string });
+        continue;
+      }
       console.error(
-        `❌ gov:etat — [github_illisible] le commit de fusion \`${oid}\` (PR #${p.number}) est absent du clone.\n` +
+        `❌ gov:etat — [github_illisible] le commit de fusion \`${oid}\` (PR #${p.number}) est absent du clone, ` +
+          `et sa fusion (${p.mergedAt ?? 'date absente'}) n'est pas postérieure à la base du clone (${baseDuClone ?? 'illisible'}).\n` +
           '   La fraîcheur de PLAN-STATE ne peut pas être jugée. Le job doit poser `fetch-depth: 0` sur actions/checkout.'
       );
       process.exit(1);
@@ -365,7 +402,14 @@ function lireGithub(): {
     }
   }
 
-  return { prOuvertes, prFusionnees, revendications, revendicationsParTitre };
+  return {
+    prOuvertes,
+    prFusionnees,
+    posterieures,
+    baseDuClone,
+    revendications,
+    revendicationsParTitre,
+  };
 }
 
 // ── les neuf familles ────────────────────────────────────────────────────────
@@ -870,6 +914,13 @@ const etat: Etat = {
 
 if (!horsLigne) {
   const lu = lireGithub();
+  if (lu.posterieures.length > 0) {
+    console.log(
+      `⚠️ ${lu.posterieures.length} fusion(s) postérieure(s) au clone (base ${lu.baseDuClone}), hors de ce que ` +
+        `cette porte peut juger — leur commit n'est pas encore dans ce clone (GOV-119) :`
+    );
+    lu.posterieures.forEach((x) => console.log(`   • PR #${x.numero}, fusionnée ${x.mergedAt}`));
+  }
   etat.prOuvertes = lu.prOuvertes;
   etat.prFusionnees = lu.prFusionnees;
   etat.revendications = lu.revendications;
