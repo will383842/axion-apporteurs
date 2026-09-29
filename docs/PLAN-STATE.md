@@ -8,7 +8,7 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `fa90f83` — 2026-09-29T16:41:40+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #237 (un contrôle requis rouge ou une revue manquante) · 2. #239 (un conflit avec `main`) · 3. #241 (un conflit avec `main`) |
+| Qu’est-ce qui est en vol ? | 1. #237 (un contrôle requis rouge ou une revue manquante) · 2. #239 (un contrôle requis rouge ou une revue manquante) · 3. #241 (un conflit avec `main`) |
 | Qui tient quoi ? | aucune tâche revendiquée |
 | Où en est la phase ? | phase 0 — 102/127 tâches, reste 19.50 j |
 | Le prochain pas | QA-T11 — Gate D migrations : base vierge, dump N-1, migrate diff vide, image N-1, lint expand/contract |
@@ -61,7 +61,7 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
 | 1 | #237 — feat(INT-T26): la candidature recue cree un apporteur candidat, coordonnees tirees et chiffrees, rattachement par empreinte | `t/int-t26` | un contrôle requis rouge ou une revue manquante |
-| 2 | #239 — chore(GOV-012): registre rattrape, six taches closes, avenants JUR-T03 et INT-T27-A | `t/registre-rattrapage-11` | un conflit avec `main` — à résoudre avant tout |
+| 2 | #239 — chore(GOV-012): registre rattrape, sept taches closes, gel de la gouvernance, avenants JUR-T03 et INT-T27-A | `t/registre-rattrapage-11` | un contrôle requis rouge ou une revue manquante |
 | 3 | #241 — fix(GOV-062): l'outillage qui execute la porte A est juge, sept points nommes | `t/gov-062` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
@@ -96,13 +96,14 @@ Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
 
-### PR #239 — 2026-09-29 — chore(GOV-012): registre rattrape, six taches closes, avenants JUR-T03 et INT-T27-A
+### PR #239 — 2026-09-29 — chore(GOV-012): registre rattrape, sept taches closes, gel de la gouvernance, avenants JUR-T03 et INT-T27-A
 
-**Fait.** Onzième rattrapage. GOV-119, GOV-122, GOV-121, GOV-118, JUR-T04 et QA-T05 passent
+**Fait.** Onzième rattrapage. GOV-119, GOV-122, GOV-121, GOV-118, JUR-T04, QA-T05 et GOV-066 passent
 `fusionnee` par `lot:cloture --tache`, chacune attestée par son commit d'écrasement. Deux avenants
 A01 lèvent des dettes de la lentille exactitude sur axion-ia. JUR-T03 consigne la décision de Will
 sur « commercial » et corrige son path. INT-T27-A porte la transcription du contrat v2 et chaque
-fichier que sa PR modifie.
+fichier que sa PR modifie. Le gel de la gouvernance, décidé par Williams, reporte huit tâches
+GOV en phase 3 et avance GOV-111 en phase 1.
 
 **Reste.** DM-03-P et DM-04 attendent la fusion de DM-03-A (axion-ia #1181). INT-T02 est refusée
 par la clôture : sa PR ne la déclare ni par son titre ni par sa ligne `Lot:`, et sa branche sort du
