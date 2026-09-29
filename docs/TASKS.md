@@ -1843,7 +1843,7 @@ Couvre : `REQ-SEC-008`, `REQ-SEC-009`
 
 **Tests.** `tests/unit/securite/acces-scope.spec.ts` · `tests/integration/idor.spec.ts`
 
-### GOV-117 — La cloture retient un renommage fait dans la seconde meme de la fusion, et une date illisible y devient NaN au lieu d'un refus
+### GOV-122 — La cloture retient un renommage fait dans la seconde meme de la fusion, et une date illisible y devient NaN au lieu d'un refus
 
 `0.5 j` · zone `gouvernance` · depend de `GOV-110`
 

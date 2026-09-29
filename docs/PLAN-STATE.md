@@ -100,7 +100,7 @@ Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écr
 
 **Fait.** Dixième rattrapage. GOV-075, GOV-110, GOV-084 et GOV-049 passent `fusionnee` par
 `lot:cloture --tache`, chacune attestée par son commit d'écrasement. Cinq suites sont versées
-`a_faire`, de GOV-117 à GOV-121 : toutes sont des relevés non bloquants des deux lentilles, et
+`a_faire`, de GOV-118 à GOV-122 : toutes sont des relevés non bloquants des deux lentilles, et
 l'une est une mesure faite sur la porte A de la PR #209.
 
 **Reste.** Les suites versées. GOV-119 est la plus coûteuse à laisser courir : tant qu'elle n'est

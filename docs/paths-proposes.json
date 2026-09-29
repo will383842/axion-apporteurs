@@ -1588,7 +1588,7 @@
       "tests/unit/securite/acces-scope.spec.ts",
       "tests/integration/idor.spec.ts"
     ],
-    "GOV-117": [
+    "GOV-122": [
       "tests/unit/gouvernance/la-declaration-se-lit-dans-le-commit-de-fusion.spec.ts"
     ],
     "GOV-118": [
