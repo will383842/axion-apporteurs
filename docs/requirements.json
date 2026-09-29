@@ -273,7 +273,7 @@
     {
       "id": "REQ-DM-018",
       "domaine": "domaine-donnees",
-      "texte": "Le HT encaissé est fourni par axionia dans le webhook (amountHtCents dérivé de facture.montantHtCents / montantTtcCents, repli montantHtCents + montantTvaCents si montantTtcCents null) ; Partners n'infère jamais un taux de TVA.",
+      "texte": "Le HT encaissé est fourni par axionia dans le webhook (montantHtCents dérivé de facture.montantHtCents / montantTtcCents, repli montantHtCents + montantTvaCents si montantTtcCents null) ; Partners n'infère jamais un taux de TVA. Nom du champ aligné sur le contrat v2 (montantHtCents) le 2026-09-29, décision de Williams : REQ-DM-018 et le contrat v2 prévalent.",
       "source": "tableaux-de-bord §2.4, B2 ; nouvelle (F-DM-03)",
       "statut": "active",
       "remplaceePar": null,
@@ -1836,7 +1836,7 @@
     {
       "id": "REQ-INT-005",
       "domaine": "integration",
-      "texte": "`paiement.recu` porte `paymentId, factureId, clientId (bénéficiaire, jamais destinataire), siren, montantEncaisseTtcCents, factureMontantHtCents, factureMontantTtcCents, regimeTva, totalEncaisseTtcCents, paidAt, provider` ; Partners dérive le HT encaissé en centimes, arrondi vers le bas, et le dernier encaissement soldant la facture absorbe le reliquat de sorte que Σ HT dérivés = factureMontantHtCents.",
+      "texte": "`paiement.recu` porte `paymentId, factureId, clientId (bénéficiaire, jamais destinataire), siren, montantEncaisseTtcCents, montantHtCents, factureMontantHtCents, factureMontantTtcCents, regimeTva, totalEncaisseTtcCents, paidAt, provider` ; axionia calcule le HT encaissé de chaque paiement en centimes (REQ-DM-018), arrondi vers le bas, et le dernier encaissement soldant la facture absorbe le reliquat, de sorte que Σ HT encaissés = factureMontantHtCents ; Partners reçoit ce HT, ne le dérive pas et n'infère jamais un taux de TVA. Amendée par décision de Williams du 2026-09-29 : REQ-DM-018 et le contrat v2 prévalent.",
       "source": "tableaux-de-bord §2.4, R13 ; INT-F03",
       "statut": "active",
       "remplaceePar": null,
@@ -4216,7 +4216,8 @@
         "GOV-104",
         "GOV-107",
         "GOV-110",
-        "GOV-122"
+        "GOV-122",
+        "GOV-125"
       ]
     },
     {
