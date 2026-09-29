@@ -7,10 +7,10 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `476135a` — 2026-09-29T17:21:45+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #239 (un conflit avec `main`) · 2. #241 (un conflit avec `main`) · 3. #242 (un conflit avec `main`) |
+| Où est `main` ? | `b34b959` — 2026-09-29T18:00:27+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #241 (un contrôle requis rouge ou une revue manquante) · 2. #242 (un conflit avec `main`) · 3. #244 (un conflit avec `main`) · 4. #245 (un conflit avec `main`) |
 | Qui tient quoi ? | aucune tâche revendiquée |
-| Où en est la phase ? | phase 0 — 102/127 tâches, reste 19.50 j |
+| Où en est la phase ? | phase 0 — 102/129 tâches, reste 21.75 j |
 | Le prochain pas | QA-T11 — Gate D migrations : base vierge, dump N-1, migrate diff vide, image N-1, lint expand/contract |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
 | Dernière entrée de journal | PR #239 — 2026-09-29 |
@@ -19,14 +19,14 @@
 
 ## Phase courante : 0
 
-102/127 tâches terminées · reste 19.50 j estimés.
+102/129 tâches terminées · reste 21.75 j estimés.
 
 ## Tâches
 
 | Statut | Nombre | Détail |
 | --- | --- | --- |
 | `proposee` | 0 | — |
-| `a_faire` | 168 | QA-T11, QA-T06, QA-T12, QA-T13, DM-03-A, DM-03-P, DM-04, INT-T02, INT-T03, INT-T04, INT-T05, INT-T22 … (12 affichées sur 168 — liste complète : `docs/TASKS.md`) |
+| `a_faire` | 170 | QA-T11, QA-T06, QA-T12, QA-T13, DM-03-A, DM-03-P, DM-04, INT-T02, INT-T03, INT-T04, INT-T05, INT-T22 … (12 affichées sur 170 — liste complète : `docs/TASKS.md`) |
 | `en_cours` | 0 | — |
 | `bloquee` | 0 | — |
 | `attente_externe` | 2 | JUR-T01b · JUR-T01c |
@@ -60,9 +60,10 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #239 — chore(GOV-012): registre rattrape, sept taches closes, gel de la gouvernance, avenants JUR-T03 et INT-T27-A | `t/registre-rattrapage-11` | un conflit avec `main` — à résoudre avant tout |
-| 2 | #241 — fix(GOV-062): l'outillage qui execute la porte A est juge, sept points nommes | `t/gov-062` | un conflit avec `main` — à résoudre avant tout |
-| 3 | #242 — feat(JUR-T34): la politique de confidentialite de l'espace, tiree du registre de l'article 30 et acceptee a la premiere connexion | `t/jur-t34` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #241 — fix(GOV-062): l'outillage qui execute la porte A est juge, sept points nommes | `t/gov-062` | un contrôle requis rouge ou une revue manquante |
+| 2 | #242 — feat(JUR-T34): la politique de confidentialite de l'espace, tiree du registre de l'article 30 et acceptee a la premiere connexion | `t/jur-t34` | un conflit avec `main` — à résoudre avant tout |
+| 3 | #244 — docs(GOV-017a): confirmation du depot par e-mail — plan W20 et quatorze taches versees en phase 1, sans DECISIONS ni REQ nouvelles | `t/w20-confirmation-email` | un conflit avec `main` — à résoudre avant tout |
+| 4 | #245 — feat(QA-T11): porte D, expand puis contract contre le code deploye, vidage N-1 seme, diff vide | `t/qa-t11` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -82,13 +83,13 @@ Dérivé de `git log` sur `docs/adr/`, restreint au jour du dernier atterrissage
 
 ## Prochain pas
 
-**QA-T11** — Gate D migrations : base vierge, dump N-1, migrate diff vide, image N-1, lint expand/contract (1 j) : 13 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
+**QA-T11** — Gate D migrations : base vierge, dump N-1, migrate diff vide, image N-1, lint expand/contract (1 j) : 15 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
 Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeStateStatus` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage —, la tâche ensuite. L’ordre de la file se corrige à la rubrique « File de fusion », jamais ici.
 
 ## Dernier atterrissage
 
-`origin/main` = `476135a` (2026-09-29T17:21:45+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `b34b959` (2026-09-29T18:00:27+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
