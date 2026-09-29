@@ -3,8 +3,15 @@
 > **Statut : PROPOSITION DE PLAN, pas encore au registre.** Ce fichier est la **source d'entrée** de
 > deux tâches versées au backlog par la même PR : **GOV-112** (inscrire la décision, les hypothèses,
 > les exigences et le glossaire) et **GOV-115** (verser les tâches W19, amender les tâches existantes,
-> poser REQ-UX-047 sur les tâches d'écran). Il ne décide rien : le principe est la décision de Will du
-> 2026-09-29, le plan est celui de l'architecte (A02) après cinq lentilles, et ce fichier le **transcrit**.
+> poser REQ-UX-047 sur les tâches d'écran). La même PR verse aussi deux tâches d'outillage :
+> **GOV-116** (le lot dédié du `gardien-spec`) et **GOV-117** (écrire `reqs`, `hyp` et `zone` d'une
+> tâche existante). Il ne décide rien : le principe est la décision de Will du 2026-09-29, le plan est
+> celui de l'architecte (A02) après cinq lentilles, et ce fichier le **transcrit**.
+>
+> **Réponses de Williams du 2026-09-29 (session -d7), appliquées dans tout le plan** : question 1
+> (rien à faire sur l'annonce axion-ia), question 2 (art. 3.5 retenu, art. 3.3 c) rejeté), question 13
+> (pas d'avocat, aucune exception), question 20 (option A : GOV-117) et question 21 (GOV-116). Leur
+> texte daté est au §9.
 >
 > **Pourquoi il existe.** `docs/DECISIONS.md`, `docs/GLOSSAIRE.md` et `docs/PRESEANCE.md` ne s'écrivent
 > que dans un lot dédié du `gardien-spec` lancé avec `--settings` surchargé (`docs/CONVENTIONS.md` §8,
@@ -17,9 +24,9 @@
 >
 > **Le lot dédié n'existe pas encore (constaté le 2026-09-29).** Aucune commande, aucun fichier de
 > réglages ne lance le `gardien-spec` avec `--settings` surchargé ; `partners/ADR-0019` range ce
-> mécanisme en « reste à faire ». **GOV-116** est réservé à la tâche qui l'écrira et le testera ; elle
-> n'est pas versée ici. GOV-112, et toute tâche W19 qui écrit `docs/GLOSSAIRE.md`, `docs/DECISIONS.md`
-> ou `docs/PRESEANCE.md`, dépendent donc de ce mécanisme **ou** d'une écriture humaine par Williams.
+> mécanisme en « reste à faire ». Williams a choisi, le 2026-09-29, que **GOV-116** l'écrive, le
+> documente et le teste (§5, question 21). GOV-112, et toute tâche W19 qui écrit `docs/GLOSSAIRE.md`,
+> `docs/DECISIONS.md` ou `docs/PRESEANCE.md`, dépendent donc de GOV-116.
 >
 > **Identifiants.** Tous les identifiants de tâche, d'exigence et d'hypothèse ci-dessous sont des
 > **jetons provisoires**, libres à `c60e2f3` (vérifié le 2026-09-29), fixés à la dernière fusion de
@@ -59,22 +66,34 @@
 - deux chaînes d'argent disjointes ;
 - tout le travail propre aux salariés part en phase 2.
 
-**Le changement de fond (juriste, gardien-spec, sécurité).** Le plan initial assimilait la Société à
-« un autre Apporteur » (art. 3.5) et promettait une indistinction octet à octet. Cette voie avait trois
-défauts : elle place la Société en concurrente de ses cocontractants ; elle fuit par l'état `active`
-immédiat ; l'API 1 ne peut pas la tenir.
+**Le choix de Williams sur le concours (question 2, réponse du 2026-09-29, session -d7).** L'architecte
+proposait un nouvel art. 3.3 c) : la prise en charge par la Société devenait une antériorité de la
+Société, avec un refus motivé et une valeur `anteriorite_suivi`. **Williams le rejette et retient
+l'art. 3.5**, où la Société est traitée comme un autre apporteur. Ses mots : « l'apporteur voit que
+l'entreprise est déjà faite par quelqu'un d'autre, pour éviter deux commissions à verser (les
+commerciaux d'Axion-IA sont aussi commissionnés sur les ventes), comme si c'était un autre apporteur ».
+Conséquences :
 
-Elle est remplacée par la voie de la transparence contractuelle, hypothèse par défaut : un nouvel
-art. **3.3 c)**. L'entreprise que la Société a elle-même « prise en charge » (sens défini au §2, distinct
-de la prise en charge financière de l'art. 9) est une **antériorité de la Société**. L'apporteur reçoit alors le refus motivé et contestable qui existe déjà
-(texte `DEJA_CONNUE`, `src/content/micro-copy/espace/issues-depot.ts:55-63`, partagé par les
-antériorités, REQ-UX-002) :
+- côté apporteur, une prise en charge par un conseiller est **INDISCERNABLE** d'une occupation par un
+  autre apporteur : même issue de dépôt, même texte, mêmes états visibles, mêmes délais, et même
+  réponse de l'API 1 et de « Vérifier une entreprise » (REQ-SEC-042) ;
+- **aucune valeur nouvelle** `anteriorite_suivi` dans `IssueDepot` ni `MotifRefusDepot` ;
+- un seul bénéficiaire par attribution (question 7 : par défaut, pas de double rémunération) ;
+- le contrat (JUR-T31, art. 3.5) dit en termes généraux que l'entreprise peut être déjà prise « par un
+  autre apporteur ou par la Société ou ses préposés », sans que l'outil révèle jamais qui.
 
-- `IssueDepot` et `MotifRefusDepot` gagnent une valeur `anteriorite_suivi`, par décision tracée ;
-- la contestation reçoit une attestation d'antériorité tirée du journal chaîné.
+**Les trois défauts que le plan reprochait à 3.5 deviennent des exigences de conception** :
 
-L'identité et la nature salariée du préposé ne sont jamais révélées. Il n'y a plus de file d'apporteurs
-derrière la Société.
+- (i) fuite par l'état `active` immédiat : la prise en charge suit la même chronologie et les mêmes
+  états visibles qu'un dépôt d'apporteur (HYP-W19-CYCLE, DM-08) ;
+- (ii) tenue par l'API 1 : même réponse qu'une attribution d'apporteur, sous un test d'indistinction
+  (REQ-INT-014 amendée, QA-T31) ;
+- (iii) la Société concurrente de ses cocontractants : risque **accepté par Williams** (§11), borné par
+  les garde-fous anti-abus ci-dessous (limites, délai après un acte d'apporteur, fenêtre du rang 1,
+  quatre yeux).
+
+L'identité et la nature salariée du préposé ne sont jamais révélées. Une file d'apporteurs se forme
+derrière une prise en charge comme derrière un apporteur ; le conseiller, lui, n'entre jamais en file.
 
 **Vocabulaire distinct de celui de l'apporteur (REQ-JUR-044)** : « prendre en charge une entreprise »,
 événement `prise_en_charge_par_la_societe`. Cela lève aussi le conflit avec GLOSSAIRE §6 (déposer ou
@@ -93,10 +112,11 @@ déclarer).
 
 **Droit du variable (juriste)** : un plan n'est actif qu'après son acceptation par le salarié et n'est
 jamais rétroactif ; le sort du variable à la sortie et la régularisation sont posés en HYP ; information
-du CSE, ou constat écrit qu'il n'y en a pas, avant la mise en service (HYP-W19-CSE) ; les points de droit
-social sont soumis à Williams et ne sont pas tranchés par le juriste. Un avis en droit social n'intervient
-que si Williams accorde l'exception de la question 13 à « pas d'avocat sur le projet » (`docs/DECISIONS.md`
-§5) ; sinon, arbitrage de Williams, option conservatrice par défaut.
+du CSE, ou constat écrit qu'il n'y en a pas, avant la mise en service (HYP-W19-CSE). **Pas d'avocat, et
+aucune exception à `docs/DECISIONS.md` §5 (question 13, réponse de Williams du 2026-09-29)** : aucun avis
+en droit social n'est attendu. Chaque point de droit social (statut, VRP, clause de variable, sortie,
+CSE) prend l'option la plus prudente par défaut, marquée « à arbitrer par Williams », et ne bloque
+aucune tâche (table du §9, question 13).
 
 **L'exigence d'expérience de Williams est outillée et chiffrée pour TOUS les rôles** :
 
@@ -108,14 +128,16 @@ que si Williams accorde l'exception de la question 13 à « pas d'avocat sur le 
 - Des producteurs de maquettes : UX-P1-18, UX-P1-19, UX-P2-14, UX-P2-15 et UX-P3-13.
 - Cadre de console réactif à 375 px, code à 6 chiffres à la connexion de console, recherche globale et
   page « Votre rôle ».
-- Une passe `reecrire-champ` pose REQ-UX-047 sur les tâches d'écran `a_faire` existantes, avant que
-  GOV-113 rougisse : 45 à `c60e2f3` (46 mesurées, moins JUR-T04, nommée parce que sa branche
+- Une passe de GOV-115 écrit REQ-UX-047 dans le champ `reqs` des tâches d'écran `a_faire` existantes,
+  par le verbe que livre GOV-117 (question 20, option A), avant que GOV-113 rougisse : 45 à `c60e2f3` (46 mesurées, moins JUR-T04, nommée parce que sa branche
   `t/jur-t04` est en travail). La liste est re-mesurée à la fusion de `main` : la scission de JUR-T04
   décidée par Williams le 2026-09-29 crée une tâche d'écran `/confidentialite` qui y entre.
 
-**Coût : 35,95 j** (16,5 dans le plan initial), plus 0,5 j optionnel (JUR-T03) : 15,7 j de corrections
-transverses pour tous les rôles, dont 4,2 j d'ajustement REQ-UX-047 des écrans existants ; 20,25 j propres
-aux salariés. Chemin critique : 22,00 → 22,75 j (DM-07 +0,5, DM-08 +0,25).
+**Coût : 37,45 j** (16,5 dans le plan initial, 35,95 avant les réponses du 2026-09-29), plus 0,5 j
+optionnel (JUR-T03) : 15,7 j de corrections transverses pour tous les rôles, dont 4,2 j d'ajustement
+REQ-UX-047 des écrans existants ; 20,0 j propres aux salariés (JUR-T33 réduite de 0,25 j) ; 1,75 j
+d'outillage du registre (GOV-116 à 1 j, GOV-117 à 0,75 j). Chemin critique : 22,00 → 22,75 j (DM-07 +0,5,
+DM-08 +0,25), à recalculer par GOV-115 avec GOV-116 et GOV-117 en amont (§10).
 
 ## 2. Nom du rôle
 
@@ -129,7 +151,8 @@ restent ceux de l'apporteur (REQ-JUR-044, GLOSSAIRE §6).
 
 - **« conseiller salarié »** : utilisateur de console au rôle `conseiller_salarie`, préposé de la Société.
 - **« prise en charge (Société) »** : l'acte horodaté par le serveur par lequel un préposé de la Société
-  inscrit une entreprise comme connue de la Société, au sens de l'art. 3.3 c) du contrat. **Ce n'est
+  inscrit une entreprise comme prise par la Société, au sens de l'art. 3.5 amendé du contrat
+  (entreprise déjà prise « par un autre apporteur ou par la Société ou ses préposés »). **Ce n'est
   jamais la prise en charge financière** d'une prestation par un financeur (OPCO, CPF), sens que le
   contrat emploie déjà à l'art. 9 (`docs/contrat/CONTRAT-APPORTEUR-V1.md:490` et `:493`) : ce sens
   financier va dans la colonne « Interdits » de l'entrée. Le libellé de l'entrée est toujours « prise en
@@ -171,9 +194,9 @@ Alternatives proposées à Williams : `vendeur_salarie`, ou `charge_affaires` (d
 ## 3. La décision à tracer
 
 À écrire par la session `gardien-spec` que Williams lance, dans GOV-112 : `docs/DECISIONS.md` est en
-`deny` Write/Edit (`.claude/settings.json:96-103`). Ce lancement suppose le mécanisme du lot dédié
-avec `--settings` surchargé, qui n'existe pas encore (GOV-116, réservé) ; à défaut, Williams écrit
-lui-même. Aucun mot de la doctrine de `gov:publication` (`scripts/gates/gov-publication.ts:33-41`) ne
+`deny` Write/Edit (`.claude/settings.json:96-103`). Ce lancement passe par le mécanisme du lot dédié
+avec `--settings` surchargé, qui n'existe pas encore : Williams a choisi le 2026-09-29 que GOV-116
+l'écrive et le teste (question 21), et GOV-112 en dépend. Aucun mot de la doctrine de `gov:publication` (`scripts/gates/gov-publication.ts:33-41`) ne
 doit y figurer.
 
 ### §1 — une ligne, cinq colonnes
@@ -184,7 +207,7 @@ pas reçu de réponse datée.
 
 | Id | Décision | Contenu | Phase | Propriétaire |
 | --- | --- | --- | --- | --- |
-| **W19** ✅ *principe tranché 2026-09-29* | Conseillers salariés dans Partners, strictement séparés des apporteurs | **Principe tranché par Will le 2026-09-29 : deux populations, un seul registre d'entreprises, deux chaînes d'argent, cloisonnement strict entre les deux populations.** Les modalités ci-dessous sont des hypothèses par défaut, non tranchées. **(a) Rôle et cloisonnement.** Par défaut : le salarié est un utilisateur de console au rôle `conseiller_salarie` (HYP-W19-NOM-ROLE). Par défaut : il n'entre jamais dans l'espace, n'a aucun droit hérité et ne voit que ses prises en charge (HYP-W19-VISIBILITE). Aucun écran, e-mail ni document de l'espace ne le nomme, ne le compare ni ne le mesure. Par défaut : seuls le contrat et la notice RGPD en parlent, au titre des « préposés de la Société » et du « personnel de la Société » (REQ-JUR-043, REQ-SEC-041, REQ-SEC-042 ; question 14). **(b) Une seule base d'entreprises.** Même base, même index d'occupation par SIREN, même horodatage serveur (REQ-DM-048 ; par défaut : HYP-W19-PORTEUR). L'acte du conseiller est une prise en charge (Société), au vocabulaire distinct (REQ-JUR-044). Par défaut : vue par l'apporteur, c'est une antériorité de la Société (art. 3.3 c, HYP-W19-CONCOURS ; question 2), avec refus motivé et contestable. Par défaut : mêmes bornes que l'apporteur, la Société comptant comme un seul porteur, avec un délai d'attente, une fenêtre réservée au rang 1, des limites par conseiller et par Société et une clause de non-exploitation (HYP-W19-CYCLE, HYP-W19-CARENCE, HYP-W19-LIMITES, HYP-W19-NON-EXPLOITATION, HYP-W19-DEPART, HYP-W19-SOURCE ; questions 4 et 5). **(c) La part variable passe par un export paie.** Aucune ligne de commission, aucun relevé, aucune autofacture, aucun lot, aucune DAS2, aucun parrainage. Par défaut : le plan de part variable est accepté par le salarié, jamais rétroactif, validé à quatre yeux, et vit hors dépôt ; il n'est jamais indexé sur l'activité des apporteurs (REQ-ARG-036, REQ-ARG-037, REQ-ARG-038, REQ-JUR-045, HYP-W19-PART-VARIABLE, HYP-W19-VARIABLE-SORTIE, HYP-W19-REGULARISATION, HYP-W19-QUATRE-YEUX, HYP-W19-FORMAT-PAIE, HYP-W19-DROITS-PAIE ; questions 6 à 8). **(d) Protections de l'apporteur inchangées.** REQ-JUR-*, garde lexicale, aucune instruction, aucun contrôle d'activité. Par défaut : une personne n'appartient qu'à une seule population (REQ-CPL-030, HYP-W19-ANTI-CUMUL, HYP-W19-ROLE-MOUVANT ; question 9). Par défaut : aucun objectif, chiffré ou non, ni classement de conseiller (HYP-W19-OBJECTIFS ; question 10). Par défaut : le CSE est informé, ou un constat écrit dit qu'il n'y en a pas, avant la mise en service (HYP-W19-CSE ; question 14). **(e) Exigence transverse.** Chaque rôle a une navigation dérivée de la matrice, un accueil par phase et des écrans dont le budget est mesuré et le premier usage testé (REQ-UX-047, REQ-UX-048). Par défaut : HYP-W19-SESSION-CONSOLE, HYP-W19-HORS-LIGNE et HYP-W19-A11Y-CONSEILLER (questions 15, 16 et 18) | 1 et 2 (principe tranché, modalités par défaut) | Will |
+| **W19** ✅ *principe tranché 2026-09-29* | Conseillers salariés dans Partners, strictement séparés des apporteurs | **Principe tranché par Will le 2026-09-29 : deux populations, un seul registre d'entreprises, deux chaînes d'argent, cloisonnement strict entre les deux populations.** Les modalités ci-dessous sont des hypothèses par défaut, non tranchées. **(a) Rôle et cloisonnement.** Par défaut : le salarié est un utilisateur de console au rôle `conseiller_salarie` (HYP-W19-NOM-ROLE). Par défaut : il n'entre jamais dans l'espace, n'a aucun droit hérité et ne voit que ses prises en charge (HYP-W19-VISIBILITE). Aucun écran, e-mail ni document de l'espace ne le nomme, ne le compare ni ne le mesure. Par défaut : seuls le contrat et la notice RGPD en parlent, au titre des « préposés de la Société » et du « personnel de la Société » (REQ-JUR-043, REQ-SEC-041, REQ-SEC-042 ; question 14). **(b) Une seule base d'entreprises.** Même base, même index d'occupation par SIREN, même horodatage serveur (REQ-DM-048 ; par défaut : HYP-W19-PORTEUR). L'acte du conseiller est une prise en charge (Société), au vocabulaire distinct (REQ-JUR-044). Tranché par Williams le 2026-09-29 (question 2) : vue par l'apporteur, c'est une occupation indiscernable de celle d'un autre apporteur (art. 3.5 amendé, HYP-W19-CONCOURS), avec les mêmes issue, texte, états, délais et réponses de l'API 1 et de « Vérifier » ; l'art. 3.3 c) est rejeté ; un seul bénéficiaire par attribution. Par défaut : mêmes bornes que l'apporteur, la Société comptant comme un seul porteur, avec un délai d'attente, une fenêtre réservée au rang 1, des limites par conseiller et par Société et une clause de non-exploitation (HYP-W19-CYCLE, HYP-W19-CARENCE, HYP-W19-LIMITES, HYP-W19-NON-EXPLOITATION, HYP-W19-DEPART, HYP-W19-SOURCE ; questions 4 et 5). **(c) La part variable passe par un export paie.** Aucune ligne de commission, aucun relevé, aucune autofacture, aucun lot, aucune DAS2, aucun parrainage. Par défaut : le plan de part variable est accepté par le salarié, jamais rétroactif, validé à quatre yeux, et vit hors dépôt ; il n'est jamais indexé sur l'activité des apporteurs (REQ-ARG-036, REQ-ARG-037, REQ-ARG-038, REQ-JUR-045, HYP-W19-PART-VARIABLE, HYP-W19-VARIABLE-SORTIE, HYP-W19-REGULARISATION, HYP-W19-QUATRE-YEUX, HYP-W19-FORMAT-PAIE, HYP-W19-DROITS-PAIE ; questions 6 à 8). **(d) Protections de l'apporteur inchangées.** REQ-JUR-*, garde lexicale, aucune instruction, aucun contrôle d'activité. Par défaut : une personne n'appartient qu'à une seule population (REQ-CPL-030, HYP-W19-ANTI-CUMUL, HYP-W19-ROLE-MOUVANT ; question 9). Par défaut : aucun objectif, chiffré ou non, ni classement de conseiller (HYP-W19-OBJECTIFS ; question 10). Par défaut : le CSE est informé, ou un constat écrit dit qu'il n'y en a pas, avant la mise en service (HYP-W19-CSE ; question 14). **(e) Exigence transverse.** Chaque rôle a une navigation dérivée de la matrice, un accueil par phase et des écrans dont le budget est mesuré et le premier usage testé (REQ-UX-047, REQ-UX-048). Par défaut : HYP-W19-SESSION-CONSOLE, HYP-W19-HORS-LIGNE et HYP-W19-A11Y-CONSEILLER (questions 15, 16 et 18) | 1 et 2 (principe tranché, modalités par défaut) | Will |
 
 ### §2 — vingt-trois lignes, sept colonnes
 
@@ -192,9 +215,9 @@ pas reçu de réponse datée.
 | --- | --- | --- | --- | --- | --- | --- |
 | HYP-W19-NOM-ROLE | Nom du rôle (a) | `conseiller_salarie`, « Conseiller salarié » ; acte « prendre en charge » | migration | 2 | SEC-31 | — |
 | HYP-W19-PORTEUR | Porteur (b) | Une seule table `attributions`. `apporteur_id` XOR `utilisateur_console_id` (patron SEC-17). Grille présente si et seulement si le porteur est un apporteur. `CanalDepot.console` si et seulement si le porteur est un conseiller, si et seulement si `jeton_depot_id IS NULL`. Un déclencheur exige un `conseiller_salarie` non désactivé | migration | 1 | DM-07 | — |
-| HYP-W19-CONCOURS | Concours avec l'apporteur (b) | Art. 3.3 c) : une prise en charge horodatée par la Société est une antériorité de la Société pendant sa durée. Refus motivé et contestation sous 15 jours avec attestation d'antériorité du journal, sans identité. `IssueDepot` et `MotifRefusDepot` gagnent `anteriorite_suivi`, affichée avec le texte `DEJA_CONNUE`. Aucune file derrière la Société. Alternative non retenue : art. 3.5 avec indistinction | avenant | 1 | premier DocuSeal | — |
+| HYP-W19-CONCOURS | Concours avec l'apporteur (b) | Art. 3.5 amendé : vue par l'apporteur, une prise en charge par un préposé de la Société est une occupation par « un autre apporteur ou par la Société ou ses préposés », indiscernable de celle d'un apporteur : même issue de dépôt, même texte, mêmes états visibles, mêmes délais, même réponse de l'API 1 et de « Vérifier ». Aucune valeur nouvelle d'`IssueDepot` ni de `MotifRefusDepot`. Une file d'apporteurs se forme derrière elle comme derrière un apporteur. Un seul bénéficiaire par attribution. Le contrat le dit en termes généraux ; l'outil ne révèle jamais qui occupe. Alternative rejetée : art. 3.3 c) (antériorité de la Société, `anteriorite_suivi`) | avenant | 1 | premier DocuSeal | Williams, 2026-09-29 (question 2) : art. 3.5 |
 | HYP-W19-NON-EXPLOITATION | Non-exploitation (b) | La Société n'utilise ni les vérifications, ni les déclarations refusées ou en attente, ni les coordonnées déclarées par un apporteur pour prendre en charge une entreprise. Techniquement : délai `RESERVE_APRES_ACTE_APPORTEUR_JOURS` = 30 (SSOT) | avenant | 1 | premier DocuSeal | — |
-| HYP-W19-CYCLE | Cycle (b) | Naissance directement `active` par `prise_en_charge_par_la_societe` (`confirmeeAt` = `deposeeAt`). Ni qualification, ni confirmation tacite, ni `non_confirme`, ni gel, ni `figee_resiliation`, ni contestation, ni file. Péremption de 90 jours depuis `deposeeAt`, jamais suspendue. Fenêtre de 12 mois sans reconduction. Prolongation W9 identique à celle de l'apporteur. Hors palier, taux et capacité. Les bornes de 90 jours et de 12 mois s'écrivent aussi au contrat (JUR-T31 (2)) : après signature, les changer demande un avenant | migration | 1 | DM-08 ; premier DocuSeal | — |
+| HYP-W19-CYCLE | Cycle (b) | Naissance par `prise_en_charge_par_la_societe`. Vue de l'espace et de l'API 1, la prise en charge suit la MÊME chronologie, les MÊMES états visibles et les MÊMES délais qu'un dépôt d'apporteur (exigence de conception de la question 2) : même état d'entrée, passage à `active` au même délai que la confirmation d'un dépôt, par l'horloge serveur et sans qualifieur ; même date « jusqu'au » au même moment. En interne : ni qualification par un qualifieur, ni `non_confirme`, ni gel, ni `figee_resiliation`, ni contestation, ni rang en file pour le conseiller ; aucune de ces différences ne se voit de l'espace. Péremption de 90 jours et fenêtre de 12 mois sans reconduction, aux mêmes règles visibles que l'apporteur. Prolongation W9 identique à celle de l'apporteur. Hors palier, taux et capacité. Les bornes de 90 jours et de 12 mois s'écrivent aussi au contrat (JUR-T31 (2)) : après signature, les changer demande un avenant | migration | 1 | DM-08 ; premier DocuSeal | — |
 | HYP-W19-CARENCE | Délai d'attente (b) | Aucun conseiller ne prend en charge un SIREN libéré depuis moins de `CARENCE_CONSEILLER_JOURS` = 90, quel que soit le porteur sortant, la Société comptant comme un seul porteur. SIREN fermé aux conseillers pendant la fenêtre `FILE_FENETRE_REDECLARATION_JOURS` d'un rang 1. Borne écrite au contrat v1 par JUR-T31 (2), son porteur : la changer après signature demande un avenant | avenant | 1 | premier DocuSeal | — |
 | HYP-W19-LIMITES | Volume (b) | Limite par conseiller, égale à la limite de l'apporteur, et limite de la Société, égale à la limite de l'apporteur × nombre de conseillers actifs (SSOT). Anomalie console au-delà d'un seuil journalier. Le mot « quota » n'est jamais employé (famille `quota` du lexique interdit, `src/domain/lexique/lexique-interdit.ts:109-116`). Le contrat ne donne aucune valeur de limite : l'hypothèse reste un paramètre | paramètre | 2 | — | — |
 | HYP-W19-DEPART | Départ (b) | À la désactivation, les prises en charge sans suite (ni rendez-vous ni devis) deviennent `perimee` sous 15 jours. Les autres courent jusqu'à leur terme, sans prolongation. Réaffectation seulement de conseiller à conseiller, par `admin`, motivée, validée à quatre yeux, notifiée au conseiller dépossédé. Jamais vers ou depuis un apporteur | migration | 1 | DM-08 | — |
@@ -202,14 +225,14 @@ pas reçu de réponse datée.
 | HYP-W19-ROLE-MOUVANT | Changement de rôle (d) | Refus de quitter `conseiller_salarie` tant que la personne porte une attribution occupante. Refus d'y passer depuis `qualifieur` ou `admin` avant `DELAI_CHANGEMENT_POPULATION_JOURS` = 180 (SSOT). Contrôle anti-cumul à tout passage vers ce rôle | paramètre | 2 | — | — |
 | HYP-W19-ANTI-CUMUL | Une personne, une population (d) | Contrôle croisé de l'empreinte de courriel (même domaine, `src/server/securite/pii.ts:298-302`), téléphone sur décision de Will. C'est un signal, pas une protection. Candidature d'un conseiller actif : BLOQUÉE jusqu'à revue humaine. Apporteur embauché : contrat résilié avant l'activation du compte, commissions acquises versées par la chaîne des apporteurs, aucune attribution transférée. Ni parrain ni filleul | paramètre | 2 | — | — |
 | HYP-W19-PART-VARIABLE | Part variable (c) | Plan versionné par conseiller, jamais dans le dépôt. Actif seulement après `accepte_at` et l'empreinte du document présenté. Date d'effet au moins égale à l'acceptation et au jour courant, et postérieure à la dernière période exportée. Fait générateur : `paiement.recu` sur une attribution du conseiller lui-même, jamais un agrégat du réseau. Aucune lecture de `COMMERCIAL_COMMISSIONS` ni du champ `commission` de `devis.signe` | migration | 2 | T-ARG-040 | — |
-| HYP-W19-VARIABLE-SORTIE | Variable après départ (c) | Un encaissement postérieur au départ reste dû au sortant et part dans la dernière période ouverte, puis clôture. À confirmer par un avis en droit social si Williams accorde l'exception de la question 13 ; sinon arbitrage de Williams, option conservatrice par défaut (`docs/DECISIONS.md` §5) | migration | 2 | T-ARG-040 | — |
+| HYP-W19-VARIABLE-SORTIE | Variable après départ (c) | Un encaissement postérieur au départ reste dû au sortant et part dans la dernière période ouverte, puis clôture. Point de droit social : option la plus prudente par défaut, à arbitrer par Williams ; aucun avis extérieur (question 13, `docs/DECISIONS.md` §5) ; ne bloque aucune tâche | migration | 2 | T-ARG-040 | — |
 | HYP-W19-REGULARISATION | Avoir ou impayé (c) | Ligne négative reportée sur la période suivante, jamais sur un export figé, jamais exportée comme une retenue | paramètre | 2 | — | — |
 | HYP-W19-QUATRE-YEUX | Séparation des fonctions (c) | Plan, réaffectation et validation de l'export : l'auteur et le validateur sont deux personnes distinctes, parmi les `admin` et `comptable` (patron REQ-CPL-010). Création d'un admin : validée par un autre admin s'il en existe un. Toute création d'admin ou de conseiller, et toute réaffectation, est notifiée à tous les admins | paramètre | 2 | — | — |
 | HYP-W19-FORMAT-PAIE | Format (c) | CSV générique par période : matricule, période, rubrique, montant « à porter en paie », référence opaque. Empreinte stockée, ré-export identique à l'octet | paramètre | 2 | — | — |
 | HYP-W19-DROITS-PAIE | Droits (c) | `action:exporter_paie` et `ecran:parts_variables` pour `admin` et `comptable`, avec step-up et journal. Le conseiller ne voit que sa propre part | paramètre | 2 | — | — |
 | HYP-W19-VISIBILITE | Ce que le conseiller voit (a) | Ses prises en charge seulement. Pour le reste, « non disponible », SANS mois, SANS identité, stade ni population, pour toutes les causes. Pas de responsable des conseillers en V1 | paramètre | 2 | — | — |
 | HYP-W19-OBJECTIFS | Pilotage (d) | Aucun objectif, chiffré ou non, ni classement de conseiller. Onglets séparés. Le lecteur ne voit que des agrégats, et une cellule de moins de 3 conseillers est masquée. Vue nominative réservée à l'admin, avec journal de lecture | paramètre | 3 | — | — |
-| HYP-W19-CSE | Information préalable (d) | Information du CSE, ou constat écrit et daté par Will qu'il n'y en a pas, avant la mise en service de DM-30 et UX-P2-11. Aucun indicateur d'activité du conseiller n'est restitué | paramètre | 2 | DM-30 | — |
+| HYP-W19-CSE | Information préalable (d) | Information du CSE, ou constat écrit et daté par Will qu'il n'y en a pas, avant la mise en service de DM-30 et UX-P2-11. Point de droit social : option la plus prudente, à arbitrer par Williams (question 13) ; condition de mise en service, qui ne bloque la livraison d'aucune tâche. Aucun indicateur d'activité du conseiller n'est restitué | paramètre | 2 | mise en service de DM-30 et UX-P2-11 | — |
 | HYP-W19-SESSION-CONSOLE | Session de console (e) | 12 heures au plus, expiration après 8 heures d'inactivité (SSOT `durees.ts`, sourcée). Pas d'option « rester connecté ». Reconnexion par lien ou code en au plus 3 interactions, qui ramène à l'URL demandée. REQ-SEC-003 recentrée sur l'espace | paramètre | 1 | — | — |
 | HYP-W19-HORS-LIGNE | Conseiller sans réseau (e) | Pas de brouillon persistant : message clair, saisie gardée à l'écran, aucune occupation avant l'horodatage serveur | paramètre | 2 | — | — |
 | HYP-W19-A11Y-CONSEILLER | Cibles et corps de texte du conseiller (e) | Écrans du conseiller et barre inférieure de la console quand le rôle est `conseiller_salarie` : cibles d'au moins 48 px, corps de texte d'au moins 16 px, valeurs en SSOT (`BUDGETS_UX`, `src/domain/seuils/ssot.ts`), citées et jamais recopiées par REQ-UX-047, UX-P1-16 et UX-P2-11. Les autres rôles de console gardent REQ-UX-018 | paramètre | 2 | — | — |
@@ -234,10 +257,12 @@ console de rôle `conseiller_salarie` non désactivé.
   rôle vit dans une autre table.
 - Une seule table `attributions`, avec CHECK XOR, un index d'occupation unique par SIREN et l'horodatage de
   transaction (REQ-DM-005), communs aux deux porteurs.
-- L'attribution du conseiller naît `active`. Sa péremption court depuis `deposeeAt`, sans suspension. Sa
-  fenêtre de 12 mois n'est pas reconduite. W9 s'applique à l'identique.
-- Elle n'entre jamais en file : CHECK `rang_attente IS NULL OR apporteur_id IS NOT NULL`, idem pour
-  `peremption_suspendue_at`.
+- Vue de l'espace et de l'API 1, l'attribution du conseiller suit la même chronologie, les mêmes états
+  visibles et les mêmes délais que celle d'un apporteur (HYP-W19-CYCLE). Sa fenêtre de 12 mois n'est
+  pas reconduite. W9 s'applique à l'identique. Ce qui diffère en interne (aucun qualifieur, aucune
+  confirmation par un apporteur, aucun rang) ne se voit jamais de l'espace.
+- Le conseiller n'entre jamais en file : CHECK `rang_attente IS NULL OR apporteur_id IS NOT NULL`. Une
+  file d'apporteurs se forme derrière sa prise en charge comme derrière un apporteur (art. 3.5).
 - Pour la non-reconduction et le délai d'attente, la Société compte comme UN seul porteur : aucun
   conseiller ne reprend un SIREN libéré depuis moins de `CARENCE_CONSEILLER_JOURS`, quel que soit le porteur
   sortant. Le SIREN est aussi fermé aux conseillers pendant la fenêtre de redéclaration d'un rang 1, et
@@ -264,24 +289,30 @@ contestation, anomalie, suspension, gel, IBAN, lot, DAS2, vérifications d'appor
   Le rôle est relu à chaque requête (`src/server/roles/require-role.ts:70-73`) et il est modifiable
   (SEC-30). Un test ne tient pas face à un changement de rôle postérieur à l'écriture.
 
-**REQ-SEC-042** — Aucune réponse de l'espace ne révèle l'identité, le rôle ni la nature salariée de la
-personne qui a pris en charge une entreprise pour la Société.
-- L'issue `anteriorite_suivi` et l'état de « Vérifier » d'un SIREN pris en charge par la Société sont
-  identiques octet à octet à ceux d'une antériorité client ou devis : même texte `DEJA_CONNUE`, état
-  `non_disponible`, pas de date. C'est vrai à J+0 comme après une prolongation W9.
+**REQ-SEC-042** — Aucune réponse de l'espace ni de l'API 1 ne distingue une entreprise prise en charge par
+un conseiller d'une entreprise occupée par un autre apporteur, ni ne révèle l'identité, le rôle ou la
+nature salariée de la personne qui l'a prise en charge pour la Société.
+- L'issue de dépôt, son texte, l'état de « Vérifier », la date « jusqu'au » et les délais servis à un
+  apporteur sur un SIREN pris en charge sont identiques octet à octet à ceux d'un SIREN occupé par un
+  apporteur au même stade et aux mêmes dates. C'est vrai à J+0, au passage à `active`, après une
+  prolongation W9 et à la libération, notifications au rang 1 comprises.
+- Aucune valeur nouvelle d'`IssueDepot` ni de `MotifRefusDepot` (question 2).
 - Aucune clé ni valeur de DTO de l'espace ne porte la population.
-- L'API 1, servie à la Société elle-même, est HORS de cette égalité. Elle garde une forme identique et une
-  sémantique écrite (REQ-INT-014).
-- Porteurs : SEC-16, DM-30, DM-31, QA-T31.
-- *Justification* : l'indistinction totale avec un apporteur était fausse par construction : REQ-UX-007
-  n'affiche la date que pour `active`, et la Société naît `active`. L'API 1 ne pouvait pas y satisfaire
-  (`src/server/integrations/api-entrante.ts:95-113`). La voie 3.3 c) s'aligne sur le précédent REQ-UX-002
-  (« l'apporteur ne sait pas laquelle » des antériorités, `issues-depot.ts:54`).
+- L'API 1 est DANS cette égalité : elle rend la même réponse que pour une attribution d'apporteur au même
+  stade (REQ-INT-014 amendée).
+- Porteurs : SEC-16, DM-08, DM-30, DM-31, INT-T07-P, QA-T31.
+- *Justification* : décision de Williams du 2026-09-29 (question 2, art. 3.5). Les deux objections du plan
+  deviennent des exigences : REQ-UX-007 n'affiche la date que pour `active`, donc la prise en charge doit
+  devenir `active` au même moment qu'un dépôt d'apporteur (HYP-W19-CYCLE) ; l'API 1
+  (`src/server/integrations/api-entrante.ts:95-113`) doit rendre la même réponse, sous un test
+  d'indistinction.
 
 **REQ-JUR-043** — Aucun écran, e-mail, notification, document ni export destiné à un apporteur ne nomme,
 ne compare ni ne mesure un conseiller salarié.
 - Exceptions EXPLICITES, par défaut et soumises à Williams (question 14) : le contrat (`docs/contrat/**`),
-  qui parle des « préposés de la Société », écrit en toutes lettres pour ne pas se confondre avec les
+  dont l'art. 3.5 amendé dit, en termes généraux et sans jamais désigner l'occupant d'une entreprise
+  donnée, qu'elle peut être déjà prise « par un autre apporteur ou par la Société ou ses préposés »,
+  écrit en toutes lettres pour ne pas se confondre avec les
   « préposés » de l'apporteur de l'art. 1 (`docs/contrat/CONTRAT-APPORTEUR-V1.md:92`), précédent qui
   mentionne déjà les salariés de la Société (`:84`) ; et la notice RGPD de l'apporteur, qui décrit la
   finalité « contrôle d'incompatibilité avec le personnel de la Société » sans nommer personne.
@@ -290,15 +321,16 @@ ne compare ni ne mesure un conseiller salarié.
 - Aucune action d'un conseiller ne produit de message vers un apporteur.
 - Porteurs : GOV-114, JUR-T32, QA-T31.
 - *Justification* : la version initiale interdisait ce que la transparence RGPD (finalité nouvelle du
-  contrôle croisé, art. 13 et 6.4 RGPD, à confirmer) et l'art. 3.3 c) imposent de dire.
+  contrôle croisé, art. 13 et 6.4 RGPD, à confirmer) et l'art. 3.5 amendé imposent de dire.
 
 **REQ-JUR-044** — L'acte d'un conseiller n'emprunte ni le vocabulaire, ni le formulaire, ni les issues de
 l'apporteur.
 - Console : « prendre en charge une entreprise », événement `prise_en_charge_par_la_societe`, enum
   `IssuePriseEnCharge` distinct d'`IssueDepot`.
 - Jamais « déposer », « déclarer », « réservée » ni « commission ».
-- Au contrat, c'est une connaissance propre de la Société (art. 3.3 c), jamais « la déclaration d'un autre
-  Apporteur ».
+- Au contrat, l'art. 3.5 amendé nomme « la Société ou ses préposés » à côté des autres apporteurs, en
+  termes généraux ; l'acte d'un préposé n'y est jamais « une déclaration ». Côté apporteur, l'issue est
+  celle du concours entre apporteurs (question 2) ; c'est côté console que le vocabulaire diffère.
 - Porteurs : DM-30, UX-P2-11, JUR-T31.
 - *Justification* : indice de « service organisé » soulevé par le juriste (Cass. soc. 13 nov. 1996, à
   confirmer). Un processus au libellé identique rapprocherait l'apporteur du préposé. Le moteur
@@ -306,11 +338,11 @@ l'apporteur.
 
 **REQ-JUR-045** — Aucune rémunération de salarié, dans Partners comme dans axion-ia, n'est indexée sur
 l'activité, le volume ou la performance des apporteurs. Le fait générateur du variable d'un conseiller est
-une attribution qu'il porte lui-même. Porteurs : T-ARG-040 et JUR-T03 (extension, sous réserve de Williams).
-- *Justification* : l'annonce publiée d'axion-ia `careers-gen/responsable-reseau-commercial.json` dit
-  « variable indexé sur la performance du réseau », « tu fixes les objectifs ». `pricing.ts:828` (axion-ia)
-  emploie « réseau commercial » pour désigner les apporteurs. C'est une preuve publique de direction du
-  réseau.
+une attribution qu'il porte lui-même. Porteur : T-ARG-040.
+- *Justification* : un variable de salarié indexé sur l'activité des apporteurs serait un indice de
+  direction du réseau ; `pricing.ts:828` (axion-ia) emploie « réseau commercial » pour désigner les
+  apporteurs. L'annonce de recrutement d'axion-ia n'est pas une preuve retenue ici : Williams la déclare
+  indépendante de Partners (question 1, 2026-09-29).
 
 **REQ-ARG-036** — La part variable vit dans des tables propres, avec une FK vers `utilisateurs_console`
 seulement : `plans_part_variable`, `lignes_part_variable`, `exports_paie`, et `matricule_chiffre` sur
@@ -415,24 +447,25 @@ phase et statut (prévue ou livrée), REQ, maquette.
 | REQ-UX-019 | L'état vide déclaré par écran devient la déclaration des cinq états de REQ-UX-047 (point 3), pour l'espace et la console. `ux-exhaustivite` lit aussi `docs/CONSOLE-ROUTES.md`. | Pas deux standards (gardien-spec, lentille UX). La garde actuelle ne vérifie que l'état vide par route (`scripts/gates/etats-vides.ts:1-4`). |
 | REQ-SEC-003 | La session de 30 jours et `apporteurs.sessionVersion` visent l'espace. La session de console suit HYP-W19-SESSION-CONSOLE (12 h au plus, 8 h d'inactivité), avec une `sessionVersion` sur `utilisateurs_console`, incrémentée au changement de rôle, à la désactivation et à la demande. | `src/server/auth/durees.ts:19` applique 30 jours aux deux populations. `jugerAcces` ne compare aucune version (`src/server/roles/require-role.ts:66-73`). Le conseiller travaille sur un téléphone qui peut se perdre. |
 | REQ-SEC-023 | L'enum passe à `{ admin, qualifieur, comptable, lecteur, conseiller_salarie }`, sans aucun des sept droits réservés. Amendement daté W19, écrit **dans la PR de SEC-31**, avec l'enum, GLOSSAIRE l.124 et §7 (sans le marqueur des synonymes interdits). | `scripts/gates/schema-enums.ts:65-66` impose l'égalité entre l'enum et le glossaire. `gov-check.ts:269` transformerait un marqueur §7 en interdit sec sur `src/**`. |
-| REQ-UX-002, REQ-SEC-022 | Ajout de la catégorie 3.3 c) : `anteriorite_suivi` dans `ISSUES_DEPOT`, `ISSUES_DE_REFUS` et `MotifRefusDepot`, affichée avec le texte commun `DEJA_CONNUE`, horodatage `rien_a_votre_nom`, avec lien de contestation. Écrit **dans la PR de DM-30**, qui ajoute la valeur. | `src/domain/depot/issue-depot.ts:3-10` aligne l'enum un pour un sur les articles 3.3 et 3.3 bis, et `ux-exhaustivite` le relit dans les deux sens. |
-| REQ-UX-007 | Un SIREN pris en charge par la Société est rendu à l'apporteur comme une antériorité client : `non_disponible`, sans date. Cela ne tranche pas la contradiction 4 ou 5 états, que le gardien-spec règle avant SEC-16. | `docs/GLOSSAIRE.md:117` (4 états, un client existant rendu `non_disponible`) contre REQ-UX-007 (5 états). |
+| REQ-UX-002, REQ-SEC-022 | **AUCUN amendement** (question 2 : art. 3.5, art. 3.3 c) rejeté). Aucune valeur `anteriorite_suivi` ; les deux enums restent alignés un pour un sur les articles 3.3 et 3.3 bis, à douze valeurs. Le dépôt d'un apporteur sur un SIREN pris en charge reçoit l'issue existante d'une occupation par un apporteur. | `src/domain/depot/issue-depot.ts:3-10` aligne l'enum un pour un sur les articles 3.3 et 3.3 bis, et `ux-exhaustivite` le relit dans les deux sens : une valeur propre à la Société la distinguerait. |
+| REQ-UX-007 | Un SIREN pris en charge par un conseiller est rendu à l'apporteur comme un SIREN occupé par un autre apporteur au même stade : même état (`suivie_place_disponible` ou `suivie_file_complete`), même date « jusqu'au », au même moment. Cela ne tranche pas la contradiction 4 ou 5 états, que le gardien-spec règle avant SEC-16. | Question 2 (art. 3.5). `docs/GLOSSAIRE.md:117` (4 états) contre REQ-UX-007 (5 états). |
 | REQ-DM-014 | « Contrat, Attribution *dont le porteur est un apporteur* et LigneCommission référencent une version » ; une attribution de conseiller ne référence aucune grille. | `COMMERCIAL_COMMISSIONS` est la grille des apporteurs (axion-ia `pricing.ts:808-809`). |
-| REQ-DM-004, REQ-DM-007, REQ-DM-008, REQ-DM-009, REQ-DM-012, REQ-DM-042 | Une phrase de portée chacune. DM-004 : la file est réservée aux apporteurs, et aucune file ne se forme derrière une prise en charge de la Société (refus 3.3 c). DM-007 : pour un porteur conseiller, la péremption court depuis `deposeeAt`, sans suspension. DM-008 : qualification, `non_confirme` et gel ne concernent que l'apporteur. DM-009 : palier et taux se dérivent des seules qualifications d'apporteurs. DM-012 : la limite comptée sur l'identité concerne l'apporteur ; celle du conseiller suit HYP-W19-LIMITES. DM-042 : la confirmation tacite est réservée à l'apporteur. | Table un pour un demandée par le gardien-spec. Le texte de REQ-DM-012 (code de parrainage, jetons, quota) ne traite pas de la confirmation tacite. |
-| REQ-DM-021, REQ-DM-043 | DM-021 : la résolution d'un encaissement aiguille d'abord selon le porteur ; un porteur conseiller délègue à la chaîne de part variable et crée zéro LigneCommission. DM-043 : l'annulation n'a lieu que si `connueDepuisAt < deposeeAt` ; pour un porteur conseiller, information en console seulement ; la contestation d'un refus `anteriorite_suivi` reçoit une attestation d'antériorité tirée du journal chaîné. | Évite l'auto-attribution par antériorité (lentille sécurité). Une contestation doit avoir une preuve (lentille juriste). |
-| REQ-INT-014 | Une attribution de conseiller répond `attribuee`, avec `until` et `apporteurRef: null`, documenté comme « porté par la Société ». Jamais `libre`, jamais un champ de plus. Le consommateur axion-ia (INT-T07-A) ne calcule aucune commission d'apporteur et n'alerte pas « attribuée à un apporteur ». | Voie (i) retenue face à la contradiction relevée par deux lentilles : l'API 1 est servie à la Société elle-même (`api-entrante.ts:95-113`). |
+| REQ-DM-004, REQ-DM-007, REQ-DM-008, REQ-DM-009, REQ-DM-012, REQ-DM-042 | Une phrase de portée chacune. DM-004 : la file est réservée aux apporteurs ; elle se forme derrière une prise en charge de la Société comme derrière un apporteur (art. 3.5), et la fenêtre du rang 1 est fermée aux conseillers. DM-007 : pour un porteur conseiller, la péremption suit les mêmes délais visibles que pour un apporteur (HYP-W19-CYCLE). DM-008 : qualification, `non_confirme` et gel ne concernent que l'apporteur ; l'état visible d'une prise en charge suit la même chronologie qu'un dépôt. DM-009 : palier et taux se dérivent des seules qualifications d'apporteurs. DM-012 : la limite comptée sur l'identité concerne l'apporteur ; celle du conseiller suit HYP-W19-LIMITES. DM-042 : la confirmation tacite est réservée à l'apporteur ; le passage visible d'une prise en charge à `active` suit le même délai. | Table un pour un demandée par le gardien-spec. Le texte de REQ-DM-012 (code de parrainage, jetons, quota) ne traite pas de la confirmation tacite. |
+| REQ-DM-021, REQ-DM-043 | DM-021 : la résolution d'un encaissement aiguille d'abord selon le porteur ; un porteur conseiller délègue à la chaîne de part variable et crée zéro LigneCommission. DM-043 : l'annulation n'a lieu que si `connueDepuisAt < deposeeAt` ; pour un porteur conseiller, information en console seulement. | Évite l'auto-attribution par antériorité (lentille sécurité). La clause d'attestation d'un refus `anteriorite_suivi` tombe avec la valeur (question 2). |
+| REQ-INT-014 | Une attribution de conseiller répond comme une attribution d'apporteur au même stade : `attribuee`, `until`, et une `apporteurRef` opaque de même forme que celle d'un apporteur. Jamais `libre`, jamais un champ de plus, jamais une valeur qui distingue la population. Test d'indistinction (QA-T31). Le consommateur axion-ia (INT-T07-A) ne peut pas distinguer : aucune commission d'apporteur n'est versée sur la foi de l'API 1, la chaîne d'argent de Partners aiguillant par porteur réel (REQ-DM-021). | Question 2 : « même réponse de l'API 1 ». La voie « `apporteurRef: null`, porté par la Société » du plan est abandonnée : elle distinguait la population (`api-entrante.ts:95-113`). |
 | REQ-QA-016 | Les parcours du `conseiller_salarie` et le cadre de console à 375 px s'exécutent aussi sur mobile-safari et mobile-chrome. Un spec de `console/conseiller/**` sans projet mobile fait rougir la CI. | La console n'est jouée que sur bureau (`playwright.config.ts:40`). |
 | REQ-GOV-031 | Extension : plans de part variable, montants et matricules des salariés n'entrent jamais dans le dépôt ni dans les journaux (valeurs factices dans les seeds). Témoin ajouté à `gov:publication`. | W13 couvre l'économie du réseau, pas la paie ; une rémunération individuelle est une donnée personnelle. |
 | REQ-SEC-030, REQ-CPL-009 | SEC-030 : quatre traitements, dont un dédié aux conseillers ; le traitement des apporteurs gagne la finalité « contrôle d'incompatibilité avec le personnel de la Société ». CPL-009 : 5e objet de l'AIPD, « gestion des prises en charge et calcul de la rémunération variable des conseillers », signé avant la première prise en charge. Porteur : JUR-T32, **après la fusion de JUR-T04**. | L'intitulé initial « évaluation et surveillance de l'activité » contredisait HYP-W19-OBJECTIFS. `t/jur-t04:tests/unit/juridique/registre-rgpd.spec.ts:258` (`toHaveLength(3)`) : le fichier n'existe que sur la branche poussée de JUR-T04, pas sur `main`. |
 | REQ-UX-042, REQ-SEC-039, REQ-DM-023 | UX-042 : dimension « origine » dans chaque agrégat, onglets séparés ; le lecteur ne voit que des agrégats de conseillers, avec masquage sous 3. SEC-039 : écrire une note interne est refusé au conseiller. DM-023 : un conseiller n'est ni parrain ni filleul. | Ni force de vente unique reconstituée, ni mesure nominative d'un salarié pour un rôle qui n'en a pas besoin (lentille sécurité). |
 
 **Réparties hors de GOV-112** (elles s'écrivent avec le code qui les porte) : REQ-SEC-023 (SEC-31),
-REQ-SEC-030 et REQ-CPL-009 (JUR-T32), REQ-UX-002 et REQ-SEC-022 (DM-30).
+REQ-SEC-030 et REQ-CPL-009 (JUR-T32). REQ-UX-002 et REQ-SEC-022 ne sont plus amendées (question 2).
 
 ## 5. Tâches nouvelles
 
-Trente-deux tâches (le plan disait « les 31 autres » : on en compte 30, liste ci-dessous, rectifié à la
-transcription). **GOV-112 et GOV-115 sont versées par la PR qui porte ce fichier** ; les trente autres le seront par GOV-115, en un seul `--depuis`, une fois les exigences qu'elles citent inscrites par
+Trente-quatre tâches (le plan disait « les 31 autres » : on en compte 30, liste ci-dessous, rectifié à la
+transcription ; GOV-116 et GOV-117 s'y ajoutent après les réponses de Williams du 2026-09-29). **GOV-112,
+GOV-115, GOV-116 et GOV-117 sont versées par la PR qui porte ce fichier** ; les trente autres le seront par GOV-115, en un seul `--depuis`, une fois les exigences qu'elles citent inscrites par
 GOV-112 (`verser-tache` refuse une REQ inexistante). Chaque ligne donne : phase · poste · zone · schéma ·
 sensible · hypothèses · externe · estimation · dépendances · exigences · chemins, puis l'acceptance.
 **Règle de défaut, pour tout champ qu'une ligne ne donne pas** (champs obligatoires de
@@ -448,15 +481,27 @@ sensible · hypothèses · externe · estimation · dépendances · exigences ·
 
 #### GOV-112 — Inscrire la décision W19 : §1, 23 HYP, REQ nouvelles et amendées, glossaire (conseiller salarié, prise en charge (Société), plan de part variable, ActiviteFacturation)
 - **Méta** : phase 0 · `gardien-spec` · zone gouvernance · repo partners · schema false · sensible [attribution, argent, auth] · hyp [] · externe null · 0,5 j · label `role:gardien-spec`
-- **Deps** : — au registre. **Dépend du mécanisme du lot dédié avec `--settings` surchargé (GOV-116, réservé, non versé), ou d'une écriture humaine par Williams** des trois fichiers réservés · **Reqs** : REQ-GOV-015
+- **Deps** : GOV-116 (le lot dédié avec `--settings` surchargé ; décision de Williams du 2026-09-29, question 21) · **Reqs** : REQ-GOV-015
 - **Paths** : `docs/DECISIONS.md`, `docs/requirements.json`, `docs/GLOSSAIRE.md`, `docs/PRESEANCE.md`, `docs/TRACABILITE.md`, `docs/PLAN-STATE.md`, `docs/journal/`
 - **Acceptance** : versée au registre, voir `docs/tasks.json`.
 
 #### GOV-115 — Verser les tâches W19, amender les tâches existantes, poser REQ-UX-047 sur les tâches d'écran à faire
 - **Méta** : phase 0 · `gardien-spec` · zone gouvernance · repo partners · schema false · sensible [] · hyp [] · externe null · 0,75 j · label `role:gardien-spec`
-- **Deps** : GOV-112 · **Reqs** : REQ-GOV-015 (REQ-UX-047 n'existe pas encore et `reqs` n'est écrivable par aucun verbe après versement : GOV-115 la cite dans son acceptance, §6)
+- **Deps** : GOV-112, GOV-117 (la passe REQ-UX-047 et les écritures de `reqs`, `hyp` et `zone` du §6 passent par son verbe) · **Reqs** : REQ-GOV-015 (REQ-UX-047 n'existe qu'après GOV-112 ; une fois GOV-117 fusionnée, les champs `reqs` s'écrivent directement, §6)
 - **Paths** : `docs/tasks.json`, `docs/TASKS.md`, `docs/TRACABILITE.md`, `docs/paths-proposes.json`, `docs/PLAN-STATE.md`, `docs/journal/`
 - **Acceptance** : versée au registre, voir `docs/tasks.json`.
+
+#### GOV-116 — Lot dédié du gardien-spec avec `--settings` surchargé : procédure, réglages, preuve qu'il écrit les trois fichiers réservés et eux seuls, preuve qu'une session ordinaire reste bloquée
+- **Méta** : phase 0 · A01 gouvernance · zone gouvernance · repo partners · schema false · sensible [] · hyp [] · externe null · 1 j · label `role:gardien-spec`
+- **Deps** : — · **Reqs** : REQ-GOV-010 (le gardien du spec seul à modifier DECISIONS, GLOSSAIRE et PRESEANCE)
+- **Paths** : `docs/CONVENTIONS.md`, `docs/CHARTE-AGENTS.md`, `docs/adr/`, `scripts/lot/lot-dedie-gardien-spec.ts`, `config/lot-dedie-gardien-spec.settings.json`, `tests/unit/gouvernance/lot-dedie-gardien-spec.spec.ts`, `package.json`, `docs/journal/`
+- **Acceptance** : versée au registre, voir `docs/tasks.json`. Résumé : décision de Williams du 2026-09-29 (question 21). Le mécanisme est nommé (`docs/CONVENTIONS.md` §8, `docs/CHARTE-AGENTS.md` §7) mais n'existe nulle part, et un fichier passé par `claude --settings` s'ajoute aux réglages sans lever un `deny` déjà présent dans `.claude/settings.json`. (a) Procédure exacte : commande, dossier de lancement, fichier de réglages, lancée par Williams seul. (b) Preuve qu'elle permet d'écrire `docs/DECISIONS.md`, `docs/GLOSSAIRE.md` et `docs/PRESEANCE.md`, et UNIQUEMENT eux. (c) Preuve qu'une session ordinaire reste bloquée. (d) Documentation dans CONVENTIONS §8 et dans l'ADR concerné. Si la solution touche `.claude/settings.json` (réservé à GOV-000/GOV-023), Williams applique ou approuve lui-même ce changement.
+
+#### GOV-117 — Outil d'écriture du registre : écrire `reqs`, `hyp` et `zone` d'une tâche existante, validés contre le schéma, les REQ et les HYP existantes, et journalisés
+- **Méta** : phase 0 · A01 gouvernance · zone gouvernance · repo partners · schema false · sensible [] · hyp [] · externe null · 0,75 j · label `role:gardien-spec`
+- **Deps** : — · **Reqs** : REQ-GOV-021 (chaque tâche porte ses REQ couvertes et ses dépendances)
+- **Paths** : `scripts/lot/chemins-de-tache.ts`, `docs/journal/`. Le changement lui-même vit hors dépôt (`hors-depot/outils-backlog.mjs`, `hors-depot/reecrire-champ.mjs`, `hors-depot/poser-champ.mjs`) ; le dépôt n'en porte que l'inventaire daté des verbes et le journal.
+- **Acceptance** : versée au registre, voir `docs/tasks.json`. Résumé : réponse de Williams du 2026-09-29 (question 20, option A). `CHAMPS_ECRIVABLES` gagne `reqs`, `hyp` et `zone` pour `tasks.json`, sans rouvrir aucun champ d'attribution. Garde-fous : valeur validée contre `scripts/lot/tasks.schema.json` ; toute REQ citée existe dans `docs/requirements.json` et n'est pas citée deux fois ; toute HYP citée a une ligne dans la §2 de `docs/DECISIONS.md` ; la cohérence de phase est rejouée ; `exigences[].taches` et `phase` sont redérivés après une écriture de `reqs`, et relus sur le disque ; motif obligatoire, `--si-inchange`, ligne au journal des réécritures. Chaque refus a son témoin vu rouge.
 
 ### Phase 1
 
@@ -496,17 +541,17 @@ sensible · hypothèses · externe · estimation · dépendances · exigences ·
 - **Paths** : `src/components/console/recherche.tsx`, `src/server/console/recherche.ts`, `src/app/(console)/console/votre-role/page.tsx`, `tests/integration/recherche-console.spec.ts`
 - **Acceptance** : (1) Un champ de recherche dans le cadre, avec le raccourci « / ». Il cherche par SIREN, par nom d'entreprise et, pour un apporteur, par courriel exact via l'empreinte (SEC-08). Aucune recherche sur un nom chiffré. (2) Les résultats sont filtrés par la matrice et la couche d'accès. Témoin : un rôle sans droit sur les apporteurs n'en voit aucun. (3) La page « Votre rôle » est dérivée du GLOSSAIRE §7, jamais retapée. (4) REQ-UX-047 : de n'importe quel écran à une fiche en ≤ 3 interactions. État « aucun résultat » guidant, cinq états.
 
-#### UX-P1-17 — Micro-copy de l'antériorité : le texte DEJA_CONNUE couvre la prise en charge (Société) de l'art. 3.3 c), sans révéler qui
+#### UX-P1-17 — Micro-copy de l'occupation : une entreprise prise en charge par un conseiller reçoit les formules existantes d'une occupation par un apporteur, sans rien révéler
 - **Méta** : phase 1 · `ux-redaction` · zone espace · label `role:ux-redaction` · revue juriste · externe will · 0,5 j
 - **Deps** : UX-P0-01, GOV-115, JUR-T31 · **Reqs** : REQ-SEC-042, REQ-UX-002, REQ-JUR-043
-- **Paths** : `src/content/micro-copy/espace/issues-depot.ts`, `docs/maquettes/deposer.html`, `docs/maquettes/entreprise.html`, `docs/maquettes/VALIDATION.md`, `tests/unit/espace/vocabulaire-et-micro-copy.spec.ts`
-- **Acceptance** : CAS HYP-W19-CONCOURS par défaut (3.3 c). (1) `DEJA_CONNUE.pourquoi` (`issues-depot.ts:55-63`) reste vrai pour les trois antériorités sans les distinguer. Proposition : « Axion-IA connaissait déjà cette entreprise avant votre dépôt (contrat, article 3.3). » Il garde le lien de contestation. Jamais le verbe « suivre » pour une entreprise (relecture juridique du 2026-09-19, `issues-depot.ts:7`, `vocabulaire.ts:9-11`). (2) `dejaReservee` (`vocabulaire.ts:39`) est inchangé : seul un apporteur occupe au sens de l'espace. (3) Test : aucun texte de `src/content/micro-copy/espace/**` ne contient un nom de rôle de console ni une forme composée du nom du rôle (famille `population_interne` de GOV-114) ; « salarié » et « conseiller » seuls ne sont pas visés. Témoin vert : « former ses salariés » (`etats-vides.ts:24`) passe. Témoin rouge : « suivi », « suivie » ou « suivait » dans `issues-depot.ts` fait rougir. (4) Will dit si ce changement de micro-copy est substantiel. S'il l'est, revalidation groupée le même jour, pour ne pas bloquer UX-P1-01/02. CAS ALTERNATIF (3.5, indistinction) : l'écran reprend les formules existantes `FORMULES.dejaReservee` et `FORMULES.finDuDroit` (`vocabulaire.ts:39-40`), sans nouvelle tournure ni « suivre », avec les maquettes entreprise, deposer et mes-entreprises revalidées.
+- **Paths** : `src/content/micro-copy/espace/vocabulaire.ts`, `docs/maquettes/deposer.html`, `docs/maquettes/entreprise.html`, `docs/maquettes/mes-entreprises.html`, `docs/maquettes/VALIDATION.md`, `tests/unit/espace/vocabulaire-et-micro-copy.spec.ts`
+- **Acceptance** : CAS HYP-W19-CONCOURS TRANCHÉ (art. 3.5, Williams, 2026-09-29, question 2). (1) L'écran reprend les formules existantes `FORMULES.dejaReservee` et `FORMULES.finDuDroit` (`vocabulaire.ts:39-40`), sans nouvelle tournure ni le verbe « suivre » pour une entreprise (relecture juridique du 2026-09-19, `issues-depot.ts:7`, `vocabulaire.ts:9-11`). Aucune formule propre à la Société. (2) `DEJA_CONNUE` (`issues-depot.ts:55-63`) est INCHANGÉ : il reste le texte des seules antériorités client et devis de l'art. 3.3. (3) Test : aucun texte de `src/content/micro-copy/espace/**` ne contient un nom de rôle de console ni une forme composée du nom du rôle (famille `population_interne` de GOV-114) ; « salarié » et « conseiller » seuls ne sont pas visés. Témoin vert : « former ses salariés » (`etats-vides.ts:24`) passe. Témoin rouge : une formule qui nomme la Société comme occupante, ou « suivi », « suivie » ou « suivait » dans `vocabulaire.ts`, fait rougir. (4) Les maquettes entreprise, deposer et mes-entreprises sont relues : aucune ne distingue un occupant conseiller. Will dit si une revalidation est nécessaire ; si oui, revalidation groupée le même jour, pour ne pas bloquer UX-P1-01/02.
 
 #### GOV-113 — Garde UX des écrans : REQ-UX-047, maquette validée et cinq états pour toute tâche d'écran, console comprise ; BUDGETS_UX en SSOT
 - **Méta** : phase 1 · A01 gouvernance · zone gouvernance · label `role:gardien-spec` pour `gates.json` · 0,75 j
-- **Deps** : GOV-115 · **Reqs** : REQ-UX-047, REQ-UX-019
+- **Deps** : GOV-115, GOV-117 · **Reqs** : REQ-UX-047, REQ-UX-019
 - **Paths** : `scripts/gates/maquettes-validees.ts`, `scripts/gates/ux-exhaustivite.ts`, `scripts/gates/ux-ecrans.ts`, `src/domain/seuils/ssot.ts`, `tests/unit/gouvernance/ux-ecrans.spec.ts`, `docs/gates.json`
-- **Acceptance** : (1) Toute tâche `a_faire` ayant un chemin sous `src/app/(espace|console)`, ou désignée dans `ESPACE-ROUTES` ou `CONSOLE-ROUTES`, cite REQ-UX-047 et a une ligne de validation, quel que soit son préfixe. « Cite » se lit dans le champ `reqs` ; si Williams refuse la question 20, la garde accepte comme repli la citation de REQ-UX-047 dans l'acceptance, et ce repli est nommé dans son message. Le motif `IDENTIFIANT` (`maquettes-validees.ts:96`) est élargi. (2) `ux-exhaustivite` exige les cinq états et lit `CONSOLE-ROUTES`. (3) Chaque gabarit de `table-ssot.ts` a un seul appel à l'action, et son libellé vient de la SSOT. (4) `BUDGETS_UX` est une seule source, dans `ssot.ts` : 3 et 8 interactions, 3 tabulations, 2 s, 10 s ; le profil réseau « 4G ralentie » (débit descendant, débit montant, latence, chacun sourcé et daté) ; les cibles et le corps de texte de HYP-W19-A11Y-CONSEILLER. (5) Témoin à deux faces : une tâche de console sans validation rougit et nomme la tâche. (6) La garde n'est pas rétroactive sur les tâches fusionnées. Elle n'est armée qu'après la fusion de GOV-115. (7) L'entrée `gates.json` passe par `hors-depot/ajouter-entree.mjs`.
+- **Acceptance** : (1) Toute tâche `a_faire` ayant un chemin sous `src/app/(espace|console)`, ou désignée dans `ESPACE-ROUTES` ou `CONSOLE-ROUTES`, cite REQ-UX-047 et a une ligne de validation, quel que soit son préfixe. « Cite » se lit dans le champ `reqs` SEUL, écrit par le verbe de GOV-117 (question 20, option A) : aucun repli par l'acceptance. Le motif `IDENTIFIANT` (`maquettes-validees.ts:96`) est élargi. (2) `ux-exhaustivite` exige les cinq états et lit `CONSOLE-ROUTES`. (3) Chaque gabarit de `table-ssot.ts` a un seul appel à l'action, et son libellé vient de la SSOT. (4) `BUDGETS_UX` est une seule source, dans `ssot.ts` : 3 et 8 interactions, 3 tabulations, 2 s, 10 s ; le profil réseau « 4G ralentie » (débit descendant, débit montant, latence, chacun sourcé et daté) ; les cibles et le corps de texte de HYP-W19-A11Y-CONSEILLER. (5) Témoin à deux faces : une tâche de console sans validation rougit et nomme la tâche. (6) La garde n'est pas rétroactive sur les tâches fusionnées. Elle n'est armée qu'après la fusion de GOV-115. (7) L'entrée `gates.json` passe par `hors-depot/ajouter-entree.mjs`.
 
 #### QA-T33 — Fixture Playwright « budget de gestes » : comptage des interactions, chrono de la première action, visible sans défilement
 - **Méta** : phase 1 · lead qualité · zone qualite (test écrit par un autre agent que les auteurs des écrans) · 0,75 j
@@ -514,17 +559,17 @@ sensible · hypothèses · externe · estimation · dépendances · exigences ·
 - **Paths** : `tests/e2e/fixtures/budget-de-gestes.ts`, `tests/unit/qualite/budget-de-gestes.spec.ts`, `playwright.config.ts`
 - **Acceptance** : (1) La fixture `budgetDeGestes` compte les clics, les saisies et les tabulations, et lit ses seuils dans `BUDGETS_UX`. (2) Chrono de la première action cliquable sur le profil « 4G ralentie » lu dans `BUDGETS_UX`. (3) Assertion « visible sans défilement » à 375×667 et 1280×800. (4) Témoin rouge : un parcours de 9 saisies échoue face au budget de 8. (5) Les projets mobile-safari et mobile-chrome sont disponibles pour `console/**`.
 
-#### JUR-T31 — Contrat v1 : art. 3.3 c) « prise en charge (Société) », bornes de la Société, attestation d'antériorité, clause de non-exploitation, avant le premier DocuSeal
-- **Méta** : phase 1 · juriste · zone juridique · hyp [HYP-W19-CONCOURS, HYP-W19-NON-EXPLOITATION, HYP-W19-CARENCE] · externe will · 0,75 j
-- **Deps** : GOV-115 · **Reqs** : REQ-SEC-022, REQ-DM-048, REQ-JUR-044, REQ-DM-043
+#### JUR-T31 — Contrat v1 : art. 3.5 amendé (entreprise déjà prise par un autre apporteur ou par la Société ou ses préposés), bornes de la Société, clause de non-exploitation, avant le premier DocuSeal
+- **Méta** : phase 1 · juriste · zone juridique · hyp [HYP-W19-CONCOURS, HYP-W19-NON-EXPLOITATION, HYP-W19-CARENCE] · externe will (validation du texte) · 0,75 j
+- **Deps** : GOV-115 · **Reqs** : REQ-SEC-042, REQ-DM-048, REQ-JUR-044, REQ-DM-043
 - **Paths** : `docs/contrat/CONTRAT-APPORTEUR-V1.md`, `tests/unit/contrat/contract-template-complete.spec.ts`
-- **Acceptance** : (1) Nouvel art. 3.3 c) : « entreprise que la Société a elle-même prise en charge, par un acte horodaté par son serveur, pendant la durée de cette prise en charge ». L'article définit l'expression « prise en charge », au sens du présent article, et la distingue de la prise en charge financière d'une prestation par un financeur (art. 9). Jamais le mot « suivi ». Même refus motivé et même contestation sous 15 jours que 3.3. C'est la connaissance propre de la Société, jamais « la déclaration d'un autre Apporteur ». (2) Bornes de la Société, tous préposés confondus, écrites avec les variables du gabarit et jamais en dur (RM-10) : `{{PEREMPTION_JOURS}}` jours, `{{FENETRE_MOIS}}` mois, pas de reconduction, délai d'attente de `{{CARENCE_CONSEILLER_JOURS}}` jours après toute libération (variable nouvelle, déclarée au gabarit), SIREN fermé pendant la fenêtre d'un rang 1. (3) Clause de non-exploitation (HYP-W19-NON-EXPLOITATION). (4) La contestation reçoit une attestation d'antériorité : horodatage et empreinte du maillon, sans identité. Mention du mode de preuve face à la Société elle-même. (5) Le contrat dit « préposés de la Société » en toutes lettres, pour lever l'homonymie avec les « préposés » de l'apporteur à l'art. 1 (`CONTRAT-APPORTEUR-V1.md:92`), jamais le mot que GLOSSAIRE §8 interdit pour l'apporteur. (6) La variante 3.5 (indistinction) est écrite pour l'arbitrage. (7) `contract-template-complete.spec.ts` reste vert. (8) L'arbitrage de Will est daté dans la colonne « Tranchée » avant INT-T12. La note d'analyse hors dépôt sur l'indice de service organisé est relue. (9) Aucun point non sourcé présenté comme un fait.
+- **Acceptance** : ARBITRAGE RENDU : art. 3.5 retenu, art. 3.3 c) rejeté (Williams, 2026-09-29, question 2). (1) L'art. 3.5 est amendé en termes généraux : l'entreprise peut être déjà prise « par un autre apporteur ou par la Société ou ses préposés » ; l'effet pour l'apporteur est le même quel que soit l'occupant ; la Société ne révèle jamais qui occupe une entreprise donnée. Aucun art. 3.3 c), aucune catégorie de refus nouvelle. Jamais le mot « suivi ». L'acte d'un préposé n'est jamais « une déclaration ». (2) Bornes de la Société, tous préposés confondus, écrites avec les variables du gabarit et jamais en dur (RM-10) : les mêmes durées qu'une attribution d'apporteur (`{{PEREMPTION_JOURS}}` jours, `{{FENETRE_MOIS}}` mois), pas de reconduction, délai d'attente de `{{CARENCE_CONSEILLER_JOURS}}` jours après toute libération (variable nouvelle, déclarée au gabarit), entreprise fermée à la Société pendant la fenêtre d'un rang 1. (3) Clause de non-exploitation (HYP-W19-NON-EXPLOITATION). (4) Le mode de preuve de l'horodatage (journal chaîné) est le même quel que soit l'occupant, et ne révèle pas qui. (5) Le contrat dit « préposés de la Société » en toutes lettres, pour lever l'homonymie avec les « préposés » de l'apporteur à l'art. 1 (`CONTRAT-APPORTEUR-V1.md:92`), jamais le mot que GLOSSAIRE §8 interdit pour l'apporteur. (6) `contract-template-complete.spec.ts` reste vert. (7) L'arbitrage de Williams est daté dans la colonne « Tranchée » de HYP-W19-CONCOURS ; le texte amendé est validé par Williams avant INT-T12. La note d'analyse hors dépôt sur l'indice de service organisé est relue. (8) Aucun point non sourcé présenté comme un fait ; un point de droit non tranché prend l'option la plus prudente, marquée « à arbitrer par Williams » (question 13 : pas d'avocat).
 
-#### JUR-T33 — Inventaire axion-ia des surfaces « commercial » : espace ressources, rôle d'un salarié qui fait des devis, champ commission, annonce, catégories d'emplois
-- **Méta** : phase 1 · juriste · zone juridique · repo partners (lecture seule d'axion-ia, écriture dans `docs/tiers/` de ce dépôt ; ce n'est pas une tâche du poste A08) · aucune écriture dans axion-ia · 0,5 j
-- **Deps** : GOV-115 · **Reqs** : REQ-JUR-043, REQ-JUR-045
+#### JUR-T33 — Inventaire axion-ia de la PR #1202 : candidature à un poste salarié affichée sur la fiche d'un apporteur, personne laissée dans le tunnel des apporteurs
+- **Méta** : phase 1 · juriste · zone juridique · repo partners (lecture seule d'axion-ia, écriture dans `docs/tiers/` de ce dépôt ; ce n'est pas une tâche du poste A08) · aucune écriture dans axion-ia · 0,25 j
+- **Deps** : GOV-115 · **Reqs** : REQ-JUR-043, REQ-CPL-030
 - **Paths** : `docs/tiers/axionia-populations.md`
-- **Acceptance** : Constat avec `chemin:ligne` pour chaque point : (1) destinataires de `DocumentRecipientRole.commercial` et `EquipeRole` (axion-ia `prisma/schema.prisma:8167-8170`, `visibility-mapping.ts:18`) ; (2) `AdminRole` qu'aurait un conseiller qui fait des devis, et son accès aux candidatures (axion-ia `prisma/schema.prisma:177-189`, `JobApplication.assignedToId`) ; (3) affichage du champ `commission` d'un `devis.signe` sur un SIREN pris en charge par la Société ; (4) état de l'annonce « Responsable du réseau commercial » et de `careers/categories.ts:88-96` ; (5) lien croisé ou SSO entre les deux consoles ; (6) le cadre « A postulé pour un poste de commercial SALARIÉ » de la fiche apporteur et `details.candidatureSalariee`, ajoutés par la PR axion-ia #1202 (fusionnée le 2026-09-28, incluse dans `a12e58165`) : la personne reste dans le tunnel des apporteurs, canal de mélange des deux populations ; on ne demande pas de défaire la PR. Chaque point se termine par une question à Williams, avec recommandation. Aucune modification d'axion-ia.
+- **Acceptance** : Périmètre réduit par la réponse de Williams à la question 1 (2026-09-29) : JUR-T33 n'inventorie plus que la PR axion-ia #1202, sans rien exiger sur l'annonce de recrutement « Responsable du réseau commercial », qui reste indépendante de Partners et n'est pas inventoriée. Constat avec `chemin:ligne` : le cadre « A postulé pour un poste de commercial SALARIÉ » de la fiche apporteur et `details.candidatureSalariee`, ajoutés par la PR axion-ia #1202 (fusionnée le 2026-09-28, incluse dans `a12e58165`) ; la personne reste dans le tunnel des apporteurs, canal de mélange des deux populations (REQ-CPL-030). On ne demande pas de défaire la PR. Le constat se termine par une question à Williams, avec recommandation. Aucune modification d'axion-ia. Les autres surfaces d'axion-ia (espace ressources, rôle d'un salarié qui fait des devis, champ `commission`, lien croisé) relèvent de la question 12, posée directement à Williams.
 
 ### Phase 2
 
@@ -551,25 +596,25 @@ sensible · hypothèses · externe · estimation · dépendances · exigences ·
 - **Méta** : phase 2 · lead sécurité · zone securite · sensible [auth, rgpd] · hyp [HYP-W19-ANTI-CUMUL] · 0,75 j
 - **Deps** : SEC-31, INT-T26, SEC-18, DM-31 · **Reqs** : REQ-CPL-030, REQ-SEC-017
 - **Paths** : `src/domain/population/exclusivite.ts`, `src/server/integrations/axionia/candidature-recue.ts`, `src/server/console/utilisateurs/creer.ts`, `tests/integration/exclusivite-des-populations.spec.ts`
-- **Acceptance** : (1) La création d'un conseiller, ou le passage vers ce rôle, dont l'empreinte de courriel (domaine `partners.empreinte.v1`, `pii.ts:298-302`) correspond à un apporteur non résilié est refusé avec un motif nommé. Téléphone seulement si Will le décide. (2) Une candidature (INT-T26, fonction unique) ou une saisie EXT-T03 qui correspond à un conseiller actif est BLOQUÉE : ni activation ni DocuSeal avant la revue humaine. Une anomalie console est ouverte. (3) Apporteur embauché : son contrat doit être résilié avant l'activation du compte. Ses droits acquis restent dans la chaîne des apporteurs, et aucune attribution n'est transférée (témoin). (4) Aucune réponse ne révèle la population. (5) Signal admin « SIREN vérifié par un conseiller puis déposé par un apporteur sous N jours ». Il est sans effet sur l'apporteur et actif seulement après HYP-W19-CSE tranchée. (6) Témoins à deux faces dans chaque sens.
+- **Acceptance** : (1) La création d'un conseiller, ou le passage vers ce rôle, dont l'empreinte de courriel (domaine `partners.empreinte.v1`, `pii.ts:298-302`) correspond à un apporteur non résilié est refusé avec un motif nommé. Téléphone seulement si Will le décide. (2) Une candidature (INT-T26, fonction unique) ou une saisie EXT-T03 qui correspond à un conseiller actif est BLOQUÉE : ni activation ni DocuSeal avant la revue humaine. Une anomalie console est ouverte. (3) Apporteur embauché : son contrat doit être résilié avant l'activation du compte. Ses droits acquis restent dans la chaîne des apporteurs, et aucune attribution n'est transférée (témoin). (4) Aucune réponse ne révèle la population. (5) Signal admin « SIREN vérifié par un conseiller puis déposé par un apporteur sous N jours ». Il est sans effet sur l'apporteur, et n'est activé qu'une fois la condition HYP-W19-CSE remplie ; la livraison de la tâche n'en dépend pas. (6) Témoins à deux faces dans chaque sens.
 
-#### DM-30 — Prise en charge d'une entreprise par un conseiller : transaction commune, bornes de la Société, limites, délais, `anteriorite_suivi` côté apporteur
-- **Méta** : phase 2 · lead domaine · zone domaine · sensible [attribution] · hyp [HYP-W19-CYCLE, HYP-W19-CARENCE, HYP-W19-LIMITES, HYP-W19-SOURCE, HYP-W19-NON-EXPLOITATION, HYP-W19-CSE, HYP-W19-PORTEUR, HYP-W19-DEPART] (PORTEUR et DEPART à titre PROVISOIRE, faute de verbe qui écrive `hyp` sur DM-07 et DM-08. Écart de phase nommé : l'arbitrage est réclamé par DM-30 en phase 2, alors que ces hypothèses sont à trancher avant DM-07 et DM-08 en phase 1. Le repli disparaît si Williams accorde la question 20) · label `role:gardien-spec` pour REQ-UX-002 et REQ-SEC-022 · 1,5 j
-- **Deps** : SEC-32, SEC-12, SEC-16, DM-10-P, DM-08, JUR-T31 · **Reqs** : REQ-DM-048, REQ-SEC-042, REQ-JUR-044, REQ-SEC-014, REQ-DM-005, REQ-UX-002, REQ-SEC-022
-- **Paths** : `src/domain/depot/prise-en-charge.ts`, `src/domain/depot/issue-prise-en-charge.ts`, `src/domain/depot/issue-depot.ts`, `src/content/micro-copy/espace/issues-depot.ts`, `src/server/console/conseiller/prendre-en-charge.ts`, `src/server/securite/rate-limit.ts`, `src/domain/seuils/ssot.ts`, `tests/unit/domaine/prise-en-charge.spec.ts`, `tests/integration/prise-en-charge.spec.ts`, `docs/requirements.json`
-- **Acceptance** : TÂCHE SENSIBLE (attribution). (1) La tâche APPELLE la transaction de SEC-12 sans la recopier : verrou SIREN, index, horodatage, antériorité DM-10-P, établissement cessé, liste 3.3 bis (b) et registre d'opposition (témoin nommé pour l'opposition). (2) Rôle `conseiller_salarie` actif, lu dans la session, sinon `role_refuse`. Naissance `active` par `prise_en_charge_par_la_societe`, canal `console`. (3) `IssuePriseEnCharge` renvoie `non_disponible`, SANS mois et sans identité, dans tous ces cas : SIREN occupé ; délai d'attente après toute libération (témoin : relais A → B à J+90 refusé) ; fenêtre d'un rang 1 (témoin : rang 1 notifié, prise en charge à J+1 refusée) ; moins de `RESERVE_APRES_ACTE_APPORTEUR_JOURS` après une vérification ou un dépôt refusé d'un apporteur. (4) Limites par conseiller (verrou par `utilisateurConsoleId`) et par Société, en SSOT (HYP-W19-LIMITES). Anomalie au-delà du seuil journalier. (5) Côté apporteur : `anteriorite_suivi` ajoutée à `ISSUES_DEPOT` et `ISSUES_DE_REFUS`. Texte `DEJA_CONNUE`, `rien_a_votre_nom`, lien de contestation. REQ-UX-002 et REQ-SEC-022 amendées dans la même PR. `ux-exhaustivite` verte à 13 valeurs. (6) Case d'information du tiers exigée côté serveur. Origine de la collecte (art. 13) au journal. (7) Course mixte : 20 concurrents, apporteurs et conseillers, donnent exactement un occupant. (8) Pas de mise en service avant HYP-W19-CSE et l'AIPD tranchées.
+#### DM-30 — Prise en charge d'une entreprise par un conseiller : transaction commune, bornes de la Société, limites, délais, indistinction côté apporteur
+- **Méta** : phase 2 · lead domaine · zone domaine · sensible [attribution] · hyp [HYP-W19-CYCLE, HYP-W19-CARENCE, HYP-W19-LIMITES, HYP-W19-SOURCE, HYP-W19-NON-EXPLOITATION, HYP-W19-CSE, HYP-W19-CONCOURS] (HYP-W19-PORTEUR et HYP-W19-DEPART sont écrites sur DM-07 et DM-08 par le verbe de GOV-117, question 20 : plus de port provisoire par DM-30) · 1,5 j
+- **Deps** : SEC-32, SEC-12, SEC-16, DM-10-P, DM-08, JUR-T31 · **Reqs** : REQ-DM-048, REQ-SEC-042, REQ-JUR-044, REQ-SEC-014, REQ-DM-005
+- **Paths** : `src/domain/depot/prise-en-charge.ts`, `src/domain/depot/issue-prise-en-charge.ts`, `src/server/console/conseiller/prendre-en-charge.ts`, `src/server/securite/rate-limit.ts`, `src/domain/seuils/ssot.ts`, `tests/unit/domaine/prise-en-charge.spec.ts`, `tests/integration/prise-en-charge.spec.ts`
+- **Acceptance** : TÂCHE SENSIBLE (attribution). (1) La tâche APPELLE la transaction de SEC-12 sans la recopier : verrou SIREN, index, horodatage, antériorité DM-10-P, établissement cessé, liste 3.3 bis (b) et registre d'opposition (témoin nommé pour l'opposition). (2) Rôle `conseiller_salarie` actif, lu dans la session, sinon `role_refuse`. Naissance par `prise_en_charge_par_la_societe`, canal `console` ; l'état visible depuis l'espace et l'API 1 suit la chronologie d'un dépôt d'apporteur (HYP-W19-CYCLE, machine de DM-08). (3) `IssuePriseEnCharge` renvoie `non_disponible`, SANS mois et sans identité, dans tous ces cas : SIREN occupé ; délai d'attente après toute libération (témoin : relais A → B à J+90 refusé) ; fenêtre d'un rang 1 (témoin : rang 1 notifié, prise en charge à J+1 refusée) ; moins de `RESERVE_APRES_ACTE_APPORTEUR_JOURS` après une vérification ou un dépôt refusé d'un apporteur. (4) Limites par conseiller (verrou par `utilisateurConsoleId`) et par Société, en SSOT (HYP-W19-LIMITES). Anomalie au-delà du seuil journalier. (5) Côté apporteur (question 2, art. 3.5) : AUCUNE valeur ajoutée à `IssueDepot`, `MotifRefusDepot` ni `ISSUES_DE_REFUS` ; `ux-exhaustivite` reste verte à 12 valeurs. Le dépôt d'un apporteur sur un SIREN pris en charge reçoit l'issue d'une occupation par un apporteur (`en_attente` au rang 1 ou 2, ou `file_complete`), et « Vérifier » le même état et la même date. Témoin d'indistinction, repris par QA-T31 : corps identiques octet à octet face à un occupant apporteur au même stade et aux mêmes dates. (6) Case d'information du tiers exigée côté serveur. Origine de la collecte (art. 13) au journal. (7) Course mixte : 20 concurrents, apporteurs et conseillers, donnent exactement un occupant. (8) Mise en service après l'AIPD signée et la condition HYP-W19-CSE remplie ; ni l'une ni l'autre ne bloque la livraison de la tâche.
 
-#### DM-31 — « Vérifier » du conseiller et attestation d'antériorité : DTO minimal, limites par conseiller et par Société, signal de balayage
+#### DM-31 — « Vérifier » du conseiller : DTO minimal, limites par conseiller et par Société, signal de balayage, aucune réponse d'apporteur qui distingue l'occupant
 - **Méta** : phase 2 · lead domaine · zone domaine · sensible [attribution, rgpd] · hyp [HYP-W19-VISIBILITE] · 1 j
 - **Deps** : DM-30 · **Reqs** : REQ-SEC-042, REQ-SEC-041, REQ-DM-043, REQ-SEC-016
-- **Paths** : `src/server/console/conseiller/verifier.ts`, `src/server/console/contestation/attestation.ts`, `src/server/securite/rate-limit.ts`, `tests/integration/verifier-conseiller.spec.ts`, `tests/unit/domaine/attestation-anteriorite.spec.ts`
-- **Acceptance** : (1) Réutilise la fonction de SEC-16. Le DTO rend trois réponses : libre ; pris en charge par vous jusqu'en <mois> ; non disponible (sans mois), pour toutes les causes, client ou devis d'Axion-IA compris. Une réponse « connue d'Axion-IA » distincte laisserait déduire qu'un SIREN « non disponible » et non client est tenu par un apporteur (HYP-W19-VISIBILITE ; question 10). (2) Journal dans `verifications` avec le porteur XOR. Limites `verif:console-identite` et `verif:console-societe` (surPanne : refuser). Aucune lecture croisée entre populations. (3) Signal « séquence ou balayage de SIREN » : anomalie admin, active seulement après HYP-W19-CSE. (4) La contestation d'un `anteriorite_suivi` produit une attestation d'antériorité (horodatage et empreinte du maillon, sans identité), servie à la console pour la réponse motivée sous 15 jours. (5) Aucune référence à une tâche inexistante.
+- **Paths** : `src/server/console/conseiller/verifier.ts`, `src/server/securite/rate-limit.ts`, `tests/integration/verifier-conseiller.spec.ts`
+- **Acceptance** : (1) Réutilise la fonction de SEC-16. Le DTO rend trois réponses : libre ; pris en charge par vous jusqu'en <mois> ; non disponible (sans mois), pour toutes les causes, client ou devis d'Axion-IA compris. Une réponse « connue d'Axion-IA » distincte laisserait déduire qu'un SIREN « non disponible » et non client est tenu par un apporteur (HYP-W19-VISIBILITE ; question 10). (2) Journal dans `verifications` avec le porteur XOR. Limites `verif:console-identite` et `verif:console-societe` (surPanne : refuser). Aucune lecture croisée entre populations. (3) Signal « séquence ou balayage de SIREN » : anomalie admin, activée une fois la condition HYP-W19-CSE remplie (la livraison n'en dépend pas). (4) Aucune réponse, preuve d'horodatage ni pièce servie à un apporteur ne distingue un occupant conseiller d'un occupant apporteur (question 2) ; il n'existe pas d'attestation propre à la Société. (5) Aucune référence à une tâche inexistante.
 
 #### UX-P2-11 — Espace de travail du conseiller, mobile d'abord : accueil, Vérifier / Prendre en charge, Mes entreprises, Aide
 - **Méta** : phase 2 · lead console · zone console · hyp [HYP-W19-HORS-LIGNE, HYP-W19-A11Y-CONSEILLER] · 1 j
 - **Deps** : DM-31, UX-P1-16, JUR-T32, UX-P2-15 · **Reqs** : REQ-UX-047, REQ-UX-048, REQ-QA-016, REQ-SEC-041, REQ-JUR-044
 - **Paths** : `src/app/(console)/console/conseiller/`, `src/content/micro-copy/console/conseiller.ts`, `tests/e2e/console/conseiller/`
-- **Acceptance** : (1) Quatre entrées : « Vérifier / Prendre en charge », « Mes entreprises », « Ma part variable », « Aide ». Aucune entrée d'apporteur. (2) L'accueil montre ses prises en charge triées par échéance, un champ Vérifier et « à échéance dans 15 jours ». Tout est dérivé des dates. Rien n'est mémorisé de ses visites ni de son activité. (3) REQ-UX-047 sur mobile-safari et mobile-chrome : de l'accueil à la prise en charge confirmée en ≤ 8 interactions et ≤ 90 s. Autocomplétion INT-T09 et repli « je ne trouve pas ». Cibles et corps de texte de HYP-W19-A11Y-CONSEILLER, lus dans `BUDGETS_UX`. (4) Chaque issue dit quoi faire. Libellés sans « déposer », « déclarer », « réservée », « commission », « équipe » ni « objectif ». (5) Hors ligne selon HYP-W19-HORS-LIGNE. (6) La notice et la déclaration s'affichent à la première connexion et comptent dans le budget. (7) Cinq états, REQ-UX-018, maquette UX-P2-15, test de premier usage par un conseiller. (8) Mise en service conditionnée par JUR-T32 (AIPD) et HYP-W19-CSE.
+- **Acceptance** : (1) Quatre entrées : « Vérifier / Prendre en charge », « Mes entreprises », « Ma part variable », « Aide ». Aucune entrée d'apporteur. (2) L'accueil montre ses prises en charge triées par échéance, un champ Vérifier et « à échéance dans 15 jours ». Tout est dérivé des dates. Rien n'est mémorisé de ses visites ni de son activité. (3) REQ-UX-047 sur mobile-safari et mobile-chrome : de l'accueil à la prise en charge confirmée en ≤ 8 interactions et ≤ 90 s. Autocomplétion INT-T09 et repli « je ne trouve pas ». Cibles et corps de texte de HYP-W19-A11Y-CONSEILLER, lus dans `BUDGETS_UX`. (4) Chaque issue dit quoi faire. Libellés sans « déposer », « déclarer », « réservée », « commission », « équipe » ni « objectif ». (5) Hors ligne selon HYP-W19-HORS-LIGNE. (6) La notice et la déclaration s'affichent à la première connexion et comptent dans le budget. (7) Cinq états, REQ-UX-018, maquette UX-P2-15, test de premier usage par un conseiller. (8) Mise en service conditionnée par JUR-T32 (AIPD) et HYP-W19-CSE ; la livraison de la tâche n'en dépend pas.
 
 #### UX-P2-12 — Fiche conseiller (admin) : plans de part variable, réaffectation motivée en masse, anomalies
 - **Méta** : phase 2 · lead console · zone console · sensible [argent, attribution] · 1 j
@@ -595,17 +640,17 @@ sensible · hypothèses · externe · estimation · dépendances · exigences ·
 - **Paths** : `docs/maquettes/conseiller-accueil.html`, `docs/maquettes/prise-en-charge.html`, `docs/maquettes/part-variable.html`, `docs/maquettes/export-paie.html`, `docs/maquettes/fiche-conseiller.html`, `docs/maquettes/VALIDATION.md`
 - **Acceptance** : (1) Écrans du conseiller en 375×667 d'abord, puis sur bureau. Écrans admin et comptable en 1280×800 et 375. (2) Vocabulaire REQ-JUR-044. Aucun terme de l'apporteur. (3) Cinq états et deux thèmes. (4) Validation groupée de Will.
 
-#### QA-T31 — Témoins à trois populations : antériorité indistincte côté apporteur, absence d'oracle côté conseiller, forme de l'API 1
+#### QA-T31 — Témoins d'indistinction à trois populations : côté apporteur octet à octet face à un occupant apporteur, absence d'oracle côté conseiller, même réponse de l'API 1
 - **Méta** : phase 2 · lead qualité · zone qualite (autre agent que l'auteur du code) · 0,75 j
 - **Deps** : DM-31, SEC-32, INT-T07-P · **Reqs** : REQ-SEC-042, REQ-SEC-009, REQ-INT-014, REQ-DM-048
 - **Paths** : `tests/integration/trois-populations.spec.ts`, `tests/integration/idor.spec.ts`, `tests/integration/frontiere.spec.ts`, `tests/unit/securite/acces-scope.spec.ts`
-- **Acceptance** : (1) Seed : deux apporteurs et deux conseillers. (2) Le dépôt d'un apporteur sur un SIREN pris en charge donne un corps identique octet à octet à une antériorité client ou devis. Vérifier renvoie `non_disponible`, identique à un SIREN client. Contrôlé à J+0 et après une prolongation W9, avec des dates réelles. (3) Aucune clé de DTO de l'espace ne porte un segment de population. (4) Côté conseiller, `non_disponible` est identique quelle que soit la cause : apporteur, autre conseiller, client ou devis d'Axion-IA, délai d'attente, fenêtre du rang 1, acte d'apporteur récent. (5) API 1 : forme identique, `attribuee` et `apporteurRef: null`, aucun champ de plus. (6) Chaque témoin est vu rouge d'abord.
+- **Acceptance** : Exigence de Williams (question 2, 2026-09-29) : une prise en charge est indiscernable d'une occupation par un autre apporteur. (1) Seed : deux apporteurs et deux conseillers, et deux SIREN jumeaux, l'un pris en charge par un conseiller, l'autre occupé par un apporteur, aux mêmes dates. (2) TEST D'INDISTINCTION OCTET À OCTET côté apporteur : pour les deux SIREN jumeaux, le dépôt d'un apporteur, « Vérifier une entreprise », l'écran « entreprise », et la notification au rang 1 à la libération donnent des réponses identiques octet à octet (statut HTTP, corps, en-têtes applicatifs), une fois neutralisés le seul SIREN et le seul nom d'entreprise, et rien d'autre. Contrôlé à J+0, au passage à `active`, après une prolongation W9 et à la libération, avec des dates réelles. Aucune valeur `anteriorite_suivi` n'existe. (3) Aucune clé ni valeur de DTO de l'espace ne porte un segment de population. (4) Côté conseiller, `non_disponible` est identique quelle que soit la cause : apporteur, autre conseiller, client ou devis d'Axion-IA, délai d'attente, fenêtre du rang 1, acte d'apporteur récent. (5) API 1 : pour les deux SIREN jumeaux, réponse identique octet à octet hors la seule valeur opaque d'`apporteurRef`, de même forme ; `attribuee`, même `until`, aucun champ de plus. (6) Chaque témoin est vu rouge d'abord : une formule propre à la Société, un état `active` avancé, ou une `apporteurRef` nulle fait rougir.
 
 #### JUR-T32 — RGPD des conseillers : quatrième traitement, finalité d'incompatibilité côté apporteurs, AIPD 5e objet, CSE, notice, durées
 - **Méta** : phase 2 · juriste (registre et notice, sur des points tranchés) · points de droit social en HYP arbitrés par Will · zone juridique · label `role:gardien-spec` pour `requirements.json` · 1 j
 - **Deps** : JUR-T04, SEC-31, et la tâche de la page `/confidentialite` née de la scission de JUR-T04 décidée par Williams le 2026-09-29 (identifiant relevé à la fusion de `main`, JUR-T34 ou au-delà) · **Reqs** : REQ-SEC-030, REQ-CPL-009, REQ-JUR-043
 - **Paths** : `docs/rgpd/registre-article-30.md`, `docs/rgpd/aipd.md`, `tests/unit/juridique/registre-rgpd.spec.ts`, `src/domain/seuils/ssot.ts`, `src/content/micro-copy/console/notice-conseiller.ts`, `src/app/(espace)/confidentialite/page.tsx`, `docs/requirements.json`
-- **Acceptance** : (1) REQ-SEC-030 passe à quatre traitements par le verbe. Le test passe à 4. Traitement des conseillers : finalités, base légale, données minimales (matricule, éléments variables ; jamais NIR, fixe ni RIB), destinataire avec sa fiche `docs/tiers/`. (2) Le traitement des apporteurs gagne la finalité « contrôle d'incompatibilité avec le personnel de la Société ». La notice de l'apporteur (page `/confidentialite`) la mentionne sans nommer personne, si Williams la retient (question 14). (3) REQ-CPL-009 : 5e objet, « gestion des prises en charge et calcul de la rémunération variable ». Il est signé avant la première prise en charge. (4) HYP-W19-CSE : information ou consultation du CSE, ou constat écrit de Will qu'il n'y en a pas, daté, BLOQUANT pour la mise en service de DM-30 et UX-P2-11. (5) Notice du conseiller accusée à la première connexion, avec version et date. (6) Durées dans `ssot.ts` sous un marqueur HYP, dont les justificatifs de variable pendant au moins la prescription salariale (à confirmer). (7) Vérification qu'aucun écran ne restitue un indicateur d'activité d'un conseiller. (8) Origine art. 13 ou art. 14 dans TRT-TIERS. (9) Tout point de droit social non sourcé est marqué « À compléter », avec sa question.
+- **Acceptance** : (1) REQ-SEC-030 passe à quatre traitements par le verbe. Le test passe à 4. Traitement des conseillers : finalités, base légale, données minimales (matricule, éléments variables ; jamais NIR, fixe ni RIB), destinataire avec sa fiche `docs/tiers/`. (2) Le traitement des apporteurs gagne la finalité « contrôle d'incompatibilité avec le personnel de la Société ». La notice de l'apporteur (page `/confidentialite`) la mentionne sans nommer personne, si Williams la retient (question 14). (3) REQ-CPL-009 : 5e objet, « gestion des prises en charge et calcul de la rémunération variable ». Il est signé avant la première prise en charge. (4) HYP-W19-CSE : information ou consultation du CSE, ou constat écrit de Will qu'il n'y en a pas, daté, condition de la mise en service de DM-30 et UX-P2-11 ; elle ne bloque la livraison d'aucune tâche (question 13). (5) Notice du conseiller accusée à la première connexion, avec version et date. (6) Durées dans `ssot.ts` sous un marqueur HYP, dont les justificatifs de variable pendant au moins la prescription salariale (à confirmer). (7) Vérification qu'aucun écran ne restitue un indicateur d'activité d'un conseiller. (8) Origine art. 13 ou art. 14 dans TRT-TIERS. (9) Tout point de droit social non sourcé prend l'option la plus prudente, marquée « à arbitrer par Williams », avec sa question ; aucun avis extérieur n'est attendu (question 13) et aucun ne bloque la tâche.
 
 #### T-ARG-040 — Chaîne de part variable : plan accepté et non rétroactif, matricule chiffré, lignes nées de l'encaissement, régularisation, tables immuables
 - **Méta** : phase 2 · lead argent · zone argent · schema true (label `schema`) · sensible [argent, attribution, rgpd] · hyp [HYP-W19-PART-VARIABLE, HYP-W19-VARIABLE-SORTIE, HYP-W19-REGULARISATION] · label `role:gardien-spec` pour `docs/GLOSSAIRE.md` (fichier réservé : lot dédié avec `--settings` surchargé, GOV-116, ou écriture humaine par Williams) · 1,5 j
@@ -648,7 +693,8 @@ sensible · hypothèses · externe · estimation · dépendances · exigences ·
 ## 6. Tâches existantes à amender
 
 Toutes par GOV-115, par `hors-depot/reecrire-champ.mjs` (ou `hors-depot/poser-champ.mjs` pour une
-acceptance encore absente), avec motif et `--si-inchange`. **Aucune n'est amendée par la PR qui porte ce
+acceptance encore absente), avec motif et `--si-inchange` ; `reqs`, `hyp` et `zone` par le même outil
+une fois étendu par GOV-117 (question 20, option A). **Aucune n'est amendée par la PR qui porte ce
 fichier** : les exigences qu'elles citeraient n'existent pas encore (GOV-112).
 
 **Les lignes « À la pose de son acceptance » ne sont pas différées.** Sur chaque tâche cible dont
@@ -657,37 +703,35 @@ DM-13, DM-15, T-ARG-015, T-ARG-016, T-ARG-018, DM-19, T-ARG-035), GOV-115 les é
 `hors-depot/poser-champ.mjs`, sous la forme « Contraintes W19 à intégrer : … », que l'auteur de
 l'acceptance reprend. Ce fichier ne devient historique qu'une fois ces lignes posées.
 
-> ⚠️ **TROU D'OUTILLAGE, MESURÉ À LA TRANSCRIPTION (2026-09-29), que le plan ne voyait pas.** Les verbes
+> ⚠️ **TROU D'OUTILLAGE, MESURÉ À LA TRANSCRIPTION (2026-09-29), FERMÉ PAR GOV-117.** Les verbes
 > hors dépôt n'écrivent sur une tâche existante que `titre`, `acceptance`, `tests`, `sensible`, `deps`,
 > `estimateDays` et `schema` (`CHAMPS_ECRIVABLES` de `hors-depot/outils-backlog.mjs`) ; `paths` passe par
 > `hors-depot/ajouter-path.mjs` et `hors-depot/retirer-path.mjs`. **Aucun verbe n'écrit `reqs`, `hyp` ni
 > `zone`.** Or ce tableau en demande sur DM-07, DM-08, JUR-T01b, INT-T12, les dix tâches qui passent en
 > zone `console`, et les tâches de la passe REQ-UX-047. Écrire ces champs à la main contournerait le
-> `deny` de `docs/tasks.json`. GOV-115 ne peut donc les appliquer qu'après une extension de la liste des
-> champs écrivables, geste sur les outils hors dépôt qui relève de Will ; à défaut, elle applique
-> `acceptance`, `deps` et `estimateDays` (la référence à REQ-UX-047 s'écrit alors dans l'acceptance), et
-> la dette est NOMMÉE : GOV-113 (1) lit, en repli déclaré, la citation de REQ-UX-047 dans l'acceptance ;
-> les dix tâches de console gardent leur zone `espace` au registre, et leur acceptance écrit le reclassement
-> en zone `console` et leurs chemins réels ; HYP-W19-PORTEUR et HYP-W19-DEPART restent portées par DM-30 à
-> titre provisoire. C'est la question 20 du §9.
+> `deny` de `docs/tasks.json`. **Williams a retenu l'option A le 2026-09-29 (question 20)** : GOV-117
+> étend l'outil à ces trois champs, et GOV-115 en dépend. Il n'y a donc plus de repli : REQ-UX-047 s'écrit
+> dans le champ `reqs` (jamais seulement dans l'acceptance), les dix tâches de console passent en zone
+> `console` au registre, et HYP-W19-PORTEUR et HYP-W19-DEPART sont écrites dans le champ `hyp` de DM-07 et
+> DM-08, leurs vrais porteurs.
 
 | Tâche(s) | Changement |
 | --- | --- |
-| DM-07 | AVANT toute revendication. hyp [HYP-W19-PORTEUR, HYP-W19-CYCLE], reqs + REQ-DM-048, estimateDays 1 → 1,5 (chemin critique). (1) `CanalDepot` reçoit `console`. (2) `apporteurId` devient nullable et `utilisateurConsoleId` est ajouté (nullable, FK Restrict, index). Contraintes : CHECK XOR des deux porteurs ; CHECK grille présente si et seulement si le porteur est un apporteur ; CHECK canal `console` si et seulement si le porteur est un conseiller, et alors `jeton_depot_id IS NULL` ; CHECK sur `rang_attente` et `peremption_suspendue_at` réservés à l'apporteur. (3) DÉCLENCHEUR : `utilisateur_console_id` désigne un utilisateur de rôle `conseiller_salarie` non désactivé ; au moment de DM-07, aucune valeur ne passe tant que SEC-31 n'est pas là. (4) `depots_refuses` et `personnes_declarees` restent réservées aux apporteurs. (5) Témoins : attribution d'apporteur sans grille refusée ; attribution de conseiller avec grille refusée ; porteur de rôle qualifieur refusé ; apporteur puis conseiller sur le même SIREN refusé, et inversement. |
-| DM-08 | hyp [HYP-W19-CYCLE, HYP-W19-DEPART], estimateDays 1,25 → 1,5. (1) Entrée dérivée « type de porteur ». (2) Événement de naissance `prise_en_charge_par_la_societe` (null → active, `confirmeeAt` = `deposeeAt`). (3) Refus typé, pour un conseiller, de : confirmation tacite, `non_confirme`, gel, `figee_resiliation`, rang, contestation. (4) Prolongation W9 identique à celle de l'apporteur. (5) Événement `porteur_reaffecte {de, vers, acteurId, motif}`, de conseiller à conseiller seulement. (6) Désactivation : les prises en charge sans suite passent `perimee` sous 15 jours. (7) Test exhaustif des triplets (état, événement, type de porteur). Les 13 valeurs d'`EtatAttribution` sont inchangées. |
+| DM-07 | AVANT toute revendication. hyp [HYP-W19-PORTEUR, HYP-W19-CYCLE] et reqs + REQ-DM-048 par le verbe de GOV-117, estimateDays 1 → 1,5 (chemin critique). (1) `CanalDepot` reçoit `console`. (2) `apporteurId` devient nullable et `utilisateurConsoleId` est ajouté (nullable, FK Restrict, index). Contraintes : CHECK XOR des deux porteurs ; CHECK grille présente si et seulement si le porteur est un apporteur ; CHECK canal `console` si et seulement si le porteur est un conseiller, et alors `jeton_depot_id IS NULL` ; CHECK sur `rang_attente` réservé à l'apporteur ; `peremption_suspendue_at` suit HYP-W19-CYCLE (mêmes délais visibles). (3) DÉCLENCHEUR : `utilisateur_console_id` désigne un utilisateur de rôle `conseiller_salarie` non désactivé ; au moment de DM-07, aucune valeur ne passe tant que SEC-31 n'est pas là. (4) `depots_refuses` et `personnes_declarees` restent réservées aux apporteurs. (5) Témoins : attribution d'apporteur sans grille refusée ; attribution de conseiller avec grille refusée ; porteur de rôle qualifieur refusé ; apporteur puis conseiller sur le même SIREN refusé, et inversement. |
+| DM-08 | hyp [HYP-W19-CYCLE, HYP-W19-DEPART] par le verbe de GOV-117, reqs + REQ-SEC-042, estimateDays 1,25 → 1,5. (1) Entrée dérivée « type de porteur ». (2) Événement de naissance `prise_en_charge_par_la_societe`. Vu de l'espace et de l'API 1, l'état suit la même chronologie qu'un dépôt d'apporteur (question 2, HYP-W19-CYCLE) : même état d'entrée, passage à `active` au même délai que la confirmation d'un dépôt, par l'horloge serveur et sans qualifieur. (3) Refus typé, pour un conseiller, de : confirmation tacite par un apporteur, `non_confirme`, gel, `figee_resiliation`, rang, contestation ; aucun de ces refus ne se voit de l'espace. (4) Prolongation W9 identique à celle de l'apporteur. (5) Événement `porteur_reaffecte {de, vers, acteurId, motif}`, de conseiller à conseiller seulement. (6) Désactivation : les prises en charge sans suite passent `perimee` sous 15 jours. (7) Test exhaustif des triplets (état, événement, type de porteur), et test : à chaque stade, l'état visible d'une prise en charge égale celui d'un dépôt d'apporteur aux mêmes dates. Les 13 valeurs d'`EtatAttribution` sont inchangées. |
 | DM-12 | Sans changer l'estimation. `verifications` reçoit le porteur XOR. `decide_par_id`, `traite_par_id` et `repondue_par_id` ne désignent jamais un conseiller : DÉCLENCHEUR, et non une assertion de test. |
-| DM-09, DM-13, DM-24 | DM-09 : palier, taux et `verificationPrioritaire` se dérivent des seules qualifications d'apporteurs (témoin de volume). DM-13 (acceptance à poser) : péremption du conseiller depuis `deposeeAt`, sans suspension ; expiration à 12 mois ; la fin notifie le rang 1 ; le délai d'attente de la Société démarre à toute libération. DM-24 : ne sélectionne jamais un porteur conseiller (témoin à deux faces). |
+| DM-09, DM-13, DM-24 | DM-09 : palier, taux et `verificationPrioritaire` se dérivent des seules qualifications d'apporteurs (témoin de volume). DM-13 (acceptance à poser) : péremption et expiration à 12 mois du conseiller aux mêmes délais visibles que l'apporteur (HYP-W19-CYCLE) ; la fin notifie le rang 1 ; le délai d'attente de la Société démarre à toute libération. DM-24 : ne sélectionne jamais un porteur conseiller (témoin à deux faces). |
 | DM-25 | L'annulation n'a lieu que si `connueDepuisAt < deposeeAt` (témoin : un devis postérieur n'annule rien). Pour un porteur conseiller, information en console seulement. |
-| SEC-12 | À la pose de son acceptance : la file est réservée aux apporteurs ; le verrou de limite vaut par porteur (`apporteurId`, ou `utilisateurConsoleId` pour DM-30) ; le verrou SIREN est commun ; la transaction est exposée comme une fonction réutilisable, avec un point d'extension pour l'issue d'antériorité ; aucune valeur `anteriorite_suivi` avant DM-30. |
-| SEC-16 | À la pose de son acceptance : un SIREN occupé par la Société est rendu `non_disponible`, comme un client. Faire trancher d'abord, par le gardien-spec, la contradiction 4 états (`docs/GLOSSAIRE.md:117`) / 5 états (REQ-UX-007) / binaire (REQ-JUR-011). |
-| INT-T07-P | À la pose de son acceptance : une attribution de conseiller répond `attribuee`, avec `until` et `apporteurRef: null`, documenté « porté par la Société ». Test de forme refusant tout champ de plus. Le déplacement vers `packages/contracts/` est RETIRÉ du chantier : il imposerait `schema: true` et une copie à hash identique côté axion-ia, non chiffrées. |
+| SEC-12 | À la pose de son acceptance : la file est réservée aux apporteurs, et elle se forme derrière une prise en charge comme derrière un apporteur ; le verrou de limite vaut par porteur (`apporteurId`, ou `utilisateurConsoleId` pour DM-30) ; le verrou SIREN est commun ; la transaction est exposée comme une fonction réutilisable ; l'issue d'un dépôt sur une prise en charge est celle d'une occupation par un apporteur ; jamais de valeur `anteriorite_suivi` (question 2). |
+| SEC-16 | À la pose de son acceptance : un SIREN pris en charge par un conseiller est rendu comme un SIREN occupé par un apporteur au même stade (même état, même date « jusqu'au », question 2). Faire trancher d'abord, par le gardien-spec, la contradiction 4 états (`docs/GLOSSAIRE.md:117`) / 5 états (REQ-UX-007) / binaire (REQ-JUR-011). |
+| INT-T07-P | À la pose de son acceptance : une attribution de conseiller répond comme une attribution d'apporteur au même stade : `attribuee`, `until`, `apporteurRef` opaque de même forme (question 2 : même réponse de l'API 1). Test de forme refusant tout champ de plus, et test d'indistinction repris par QA-T31. Aucune commission d'apporteur n'est déduite de l'API 1 côté axion-ia : la chaîne d'argent de Partners aiguille par porteur réel (REQ-DM-021). Le déplacement vers `packages/contracts/` est RETIRÉ du chantier : il imposerait `schema: true` et une copie à hash identique côté axion-ia, non chiffrées. |
 | DM-04 | **AUCUN amendement par GOV-115 (arbitrage rendu le 2026-09-29).** La signature de l'avenant A01 est RETENUE : `grille: ContenuGrille` et `commissionId`, champ `kind` (`flat`, `percent`, `scale`) de la grille DM-03-P, plafond de REQ-ARG-007 en SSOT et `src/domain/seuils/ssot.ts` dans les paths (commits `46968b5` et `2dd080d` de la session qui tient DM-04, branche `t/dm-04`). Seule cette session réécrit l'entrée DM-04, par sa propre PR. La part variable ne touche pas DM-04 : T-ARG-040 (3) traduit le plan de part variable en `ContenuGrille` par un adaptateur de phase 2. Les cinq valeurs d'`ActiviteFacturation` que l'avenant laisse au gardien-spec entrent au glossaire par GOV-112 (§2). |
-| JUR-T03 | (a) Correction du chemin, qui est `axionia/src/content/recrutement/commercial-offer.ts` (le chemin déclaré `axionia/src/content/commercial-offer.ts` n'existe pas). (b) Extension RECOMMANDÉE comme obligatoire (+0,5 j, 1 → 1,5), sous réserve de Williams : titre et héros en « apporteur d'affaires » (`commercial-offer.ts:76`) ; retrait des mots-clés « offre d'emploi » et « poste de commercial » (`:369`, `:386`) ; `careers/categories.ts:88-96` ne renvoie plus vers `/devenir-commercial-ia` ; REQ-JUR-045 portée sur l'annonce « Responsable du réseau commercial » (réécriture en « équipe salariée », variable jamais indexé sur le réseau), si Williams le décide. |
-| JUR-T01b, INT-T12 | deps + JUR-T31, hyp + HYP-W19-CONCOURS. Aucun DocuSeal avant l'arbitrage daté de l'art. 3.3 c) et de la clause de non-exploitation. |
-| UX-P1-01, UX-P1-02 | deps + UX-P1-17, QA-T33 (UX-P1-18 n'est pas requise : espace). Budget REQ-UX-001 mesuré par la fixture QA-T33. Test : aucune issue ne nomme un rôle de console. ⚠️ Par UX-P1-17, ces deux écrans héritent du bloqueur externe JUR-T31 (arbitrage daté de Williams) ; le chemin critique n'en est pas affecté (recalcul : 22,75 j inchangés). |
+| JUR-T03 | (a) Correction du chemin, qui est `axionia/src/content/recrutement/commercial-offer.ts` (le chemin déclaré `axionia/src/content/commercial-offer.ts` n'existe pas). (b) Extension RECOMMANDÉE comme obligatoire (+0,5 j, 1 → 1,5), sous réserve de Williams : titre et héros en « apporteur d'affaires » (`commercial-offer.ts:76`) ; retrait des mots-clés « offre d'emploi » et « poste de commercial » (`:369`, `:386`) ; `careers/categories.ts:88-96` ne renvoie plus vers `/devenir-commercial-ia`. L'annonce de recrutement « Responsable du réseau commercial » n'y entre pas : Williams la déclare indépendante de Partners (question 1, 2026-09-29). |
+| JUR-T01b, INT-T12 | deps + JUR-T31, hyp + HYP-W19-CONCOURS (par le verbe de GOV-117). Aucun DocuSeal avant la fusion de JUR-T31 : art. 3.5 amendé et clause de non-exploitation validés par Williams. L'arbitrage de principe est rendu (question 2, 2026-09-29). |
+| UX-P1-01, UX-P1-02 | deps + UX-P1-17, QA-T33 (UX-P1-18 n'est pas requise : espace). Budget REQ-UX-001 mesuré par la fixture QA-T33. Test : aucune issue ne nomme un rôle de console, et aucune ne distingue un occupant conseiller. ⚠️ Par UX-P1-17, ces deux écrans héritent du bloqueur externe JUR-T31 (validation du texte par Williams) ; le chemin critique n'en est pas affecté (recalcul : 22,75 j inchangés). |
 | UX-P1-04 | À la pose de son acceptance : un lien d'apporteur consommé redirige en une action vers « / » ou vers l'URL demandée, bornée aux chemins relatifs de l'espace. Fin du cul-de-sac de `src/app/(espace)/connexion/ecran.tsx:76-82`. Le mécanisme du code à 6 chiffres est écrit pour être réutilisé par SEC-29. |
-| UX-P1-06, UX-P1-07, UX-P1-12, UX-P1-13, EXT-T02a, UX-P2-03, UX-P2-05, UX-P3-04, UX-P3-05, T-ARG-035 | La zone passe de `espace` à `console` (si la question 20 est refusée : écrit dans l'acceptance de chaque tâche, dette nommée ci-dessus) (UX-P1-06 est aujourd'hui en zone `espace`, vérifié), avec des chemins réels sous `src/app/(console)/console/…` ; deps + UX-P1-16 et la tâche de maquettes de la phase (UX-P1-19, UX-P2-14, UX-P3-13) ; chaque tâche ajoute son droit `ecran:*` et cite REQ-UX-047 et REQ-UX-048. En plus : UX-P1-07 : aucune prise en charge dans la file ; UX-P1-13 : filtre « amenée par » (pastille avec icône et mot), aucun droit pour le conseiller ; UX-P2-03 : test d'absence de toute ligne de conseiller ; UX-P3-05 : devient l'accueil « à traiter aujourd'hui » de l'admin quand il est livré. ⚠️ `zone` et `reqs` ne sont écrivables par aucun verbe (encadré ci-dessus). |
-| Les tâches d'écran à faire (45 à `c60e2f3`) | Par la passe de GOV-115 : toute tâche `a_faire` ayant un chemin sous `src/app`, SAUF les trente tâches W19 versées par GOV-115 (elles citent déjà REQ-UX-047) et SAUF JUR-T04 (nommée : sa branche `t/jur-t04` est en travail, pas de rétroactivité). Chacune reçoit reqs + REQ-UX-047, son droit `ecran:*`, sa dépendance de maquette, +0,1 j (42 tâches, 4,2 j, à `c60e2f3`), et une ligne « geste principal : … ; budget : … » dans son acceptance, ou une dette nommée par tâche quand le geste n'est pas encore connu. EXT-T01, EXT-T09 et UX-P3-12, déjà à 1,5 j, absorbent le coût grâce à la fixture QA-T33. La liste est MESURÉE à la fusion de `main` et jointe à la PR ; elle n'est pas recopiée ici. La tâche `/confidentialite` née de la scission de JUR-T04 y entre si elle existe alors : l'écart de décompte est nommé. |
+| UX-P1-06, UX-P1-07, UX-P1-12, UX-P1-13, EXT-T02a, UX-P2-03, UX-P2-05, UX-P3-04, UX-P3-05, T-ARG-035 | La zone passe de `espace` à `console` au registre, par le verbe de GOV-117 (question 20, option A) (UX-P1-06 est aujourd'hui en zone `espace`, vérifié), avec des chemins réels sous `src/app/(console)/console/…` ; deps + UX-P1-16 et la tâche de maquettes de la phase (UX-P1-19, UX-P2-14, UX-P3-13) ; chaque tâche ajoute son droit `ecran:*` et cite REQ-UX-047 et REQ-UX-048. En plus : UX-P1-07 : aucune prise en charge dans la file ; UX-P1-13 : filtre « amenée par » (pastille avec icône et mot), aucun droit pour le conseiller ; UX-P2-03 : test d'absence de toute ligne de conseiller ; UX-P3-05 : devient l'accueil « à traiter aujourd'hui » de l'admin quand il est livré. `zone` et `reqs` s'écrivent par le verbe de GOV-117 (encadré ci-dessus). |
+| Les tâches d'écran à faire (45 à `c60e2f3`) | Par la passe de GOV-115, qui DÉPEND de GOV-117 : toute tâche `a_faire` ayant un chemin sous `src/app`, SAUF les trente tâches W19 versées par GOV-115 (elles citent déjà REQ-UX-047) et SAUF JUR-T04 (nommée : sa branche `t/jur-t04` est en travail, pas de rétroactivité). Chacune reçoit REQ-UX-047 dans son champ `reqs` (par le verbe de GOV-117, jamais par une simple citation dans l'acceptance), son droit `ecran:*`, sa dépendance de maquette, +0,1 j (42 tâches, 4,2 j, à `c60e2f3`), et une ligne « geste principal : … ; budget : … » dans son acceptance, ou une dette nommée par tâche quand le geste n'est pas encore connu. EXT-T01, EXT-T09 et UX-P3-12, déjà à 1,5 j, absorbent le coût grâce à la fixture QA-T33. La liste est MESURÉE à la fusion de `main` et jointe à la PR ; elle n'est pas recopiée ici. La tâche `/confidentialite` née de la scission de JUR-T04 y entre si elle existe alors : l'écart de décompte est nommé. |
 | DM-15 | À la pose de son acceptance, sans changer l'estimation : le premier geste aiguille selon le porteur, par un POINT D'EXTENSION nommé (patron SEC-12) que DM-15 livre et teste avec un délégué factice ; un porteur conseiller y branche T-ARG-040, qui dépend de DM-15 : DM-15 ne teste donc pas la délégation réelle. Témoin nommé. |
 | T-ARG-015, T-ARG-016, T-ARG-018, DM-19, T-ARG-035 | À la pose de leurs acceptances : types fermés à `apporteurId` NOT NULL, et test d'absence de toute donnée de conseiller dans le relevé, l'autofacture, le pain.001, la DAS2 et le registre « Commissions ». |
 | T-ARG-037, DM-23, DM-16 | T-ARG-037 : repli à 60 jours réservé aux apporteurs ; garde AST dans les deux sens. DM-23 : GrilleModele, GrilleContrat et contrats réservés aux apporteurs (témoin). DM-16 : un conseiller n'est ni parrain ni filleul, dans les deux sens. |
@@ -711,26 +755,30 @@ Aucune n'est faite ici : chacune devient le travail d'une tâche.
 | La session de 30 jours de REQ-SEC-003 s'applique aussi à la console, sans `sessionVersion` pour les utilisateurs de console. | `src/server/auth/durees.ts:18-19` ; `src/server/roles/require-role.ts:66-73` ; `prisma/schema.prisma:290-304` | avant phase 1 | SEC-29 (durée), SEC-30 (`sessionVersion`) |
 | Console : navigation non filtrée par rôle dans les maquettes, aucune maquette de console validée, aucune tâche qui les produise. Les accueils envisagés ne sont livrés qu'en phase 2 ou 3. | `docs/maquettes/file-qualification.html:800-806` ; `docs/maquettes/VALIDATION.md:21-26` (« — ») ; seule UX-P0-02 (fusionnée, espace) produit des maquettes ; UX-P2-03 en phase 2, UX-P3-04 et UX-P3-05 en phase 3 ; `src/server/roles/matrice.ts:31-39` n'a aucun droit `ecran:*` | avant phase 1 | UX-P1-18, UX-P1-19, UX-P1-16 |
 | Garde des maquettes limitée aux identifiants UX-P* : des écrans de console peuvent être codés sans maquette. Plusieurs tâches d'écran de console sont classées en zone `espace`. | `scripts/gates/maquettes-validees.ts:96` ; `docs/tasks.json` : UX-P1-06, UX-P1-12, EXT-T02a et UX-P3-05 en zone `espace` (vérifié), acceptances vides | avant phase 1 | GOV-113, GOV-115 |
-| Le contrat v1 ne connaît que l'antériorité client ou devis (3.3) et le concours entre apporteurs (3.5). Une prise en charge par la Société n'a aucune base écrite. `IssueDepot` est aligné un pour un sur 3.3 et 3.3 bis : un 3.3 c) implique une 13e valeur. | `docs/contrat/CONTRAT-APPORTEUR-V1.md:131-145` et `:172-178` ; `src/domain/depot/issue-depot.ts:3-10` et `:16-29` ; `issues-depot.ts:54-63` | avant phase 1 | JUR-T31 (texte), DM-30 (valeur d'enum, phase 2) |
+| Le contrat v1 ne connaît que l'antériorité client ou devis (3.3) et le concours entre apporteurs (3.5). Une prise en charge par la Société n'a aucune base écrite. Williams retient l'art. 3.5 (question 2) : il est amendé pour dire, en termes généraux, que l'entreprise peut être déjà prise « par un autre apporteur ou par la Société ou ses préposés ». `IssueDepot` reste aligné un pour un sur 3.3 et 3.3 bis : aucune 13e valeur. | `docs/contrat/CONTRAT-APPORTEUR-V1.md:131-145` et `:172-178` ; `src/domain/depot/issue-depot.ts:3-10` et `:16-29` | avant phase 1 | JUR-T31 (texte), DM-30 et QA-T31 (indistinction, phase 2) |
+| Le lot dédié du `gardien-spec` avec `--settings` surchargé est nommé mais n'existe nulle part ; un fichier passé par `claude --settings` s'ajoute aux réglages sans lever un `deny` déjà présent. | `docs/CONVENTIONS.md` §8 ; `docs/CHARTE-AGENTS.md` §7 ; `partners/ADR-0019` (« reste à faire ») ; `.claude/settings.json:96-103` | avant la suite de la phase 0 | GOV-116 |
+| Aucun verbe hors dépôt n'écrit `reqs`, `hyp` ni `zone` d'une tâche existante. | `CHAMPS_ECRIVABLES` de `hors-depot/outils-backlog.mjs` | avant la suite de la phase 0 | GOV-117 |
 | Le rôle console est figé à quatre valeurs (enum, REQ-SEC-023, GLOSSAIRE l.124 et §7, test littéral). | `prisma/schema.prisma:59-66` ; `src/server/roles/matrice.ts:27-28` ; `tests/unit/securite/matrice-des-roles.spec.ts:78` et `:96-111` ; `docs/GLOSSAIRE.md:124` | plus tard | SEC-31 |
 | La garde lexicale a des limites de lecture sur les identifiants composés, et aucune famille de portée apporteur ne nomme la population salariée ; `import_console` ne reconnaît que le segment `console`. Correction sur le patron GOV-109, témoins hors dépôt. | `src/domain/lexique/lexique-interdit.ts` (10 familles) ; `scripts/gates/jur-aucun-agregat-reseau.ts:121` ; `scripts/lot/revues.ts:1214-1248` ; acceptance de GOV-109 | plus tard | GOV-114 |
 | Couche d'accès : `CLES_REFUSEES` doit refuser `utilisateurConsoleId`, et il faut un cloisonnement par ligne côté console. | `src/server/acces/for-apporteur.ts:233-265` ; `src/server/roles/require-role.ts:106-131` | plus tard | SEC-32 |
 | Point unique de création d'un Apporteur : y greffer le contrôle croisé du courriel et le blocage de la candidature d'un conseiller actif. Aucun téléphone ni matricule n'existe pour un utilisateur de console. | `prisma/schema.prisma:178`, `:295`, `:290-304` ; `docs/tasks.json` INT-T26 (3) ; `src/server/securite/pii.ts:298-302` | plus tard | SEC-33, T-ARG-040 (matricule) |
-| axion-ia : la copy publique appelle « commercial » l'apporteur. L'annonce salariée « Responsable du réseau commercial » fixe des objectifs et indexe un variable sur le réseau. L'espace ressources connaît un destinataire « commercial ». `AdminRole` n'a aucun rôle restreint pour un salarié qui fait des devis. | axion-ia `src/content/recrutement/commercial-offer.ts:76`, `:369`, `:386` ; `careers/categories.ts:88-96` ; `careers-gen/responsable-reseau-commercial.json` ; `pricing.ts:828` ; `prisma/schema.prisma:8167-8170`, `:177-189` ; `visibility-mapping.ts:18` (constats sur `a12e58165`) | avant la suite de la phase 0 | JUR-T03 (extension), JUR-T33 (inventaire) ; l'annonce relève de Williams, hors registre Partners |
+| axion-ia : la copy publique appelle « commercial » l'apporteur. La PR axion-ia #1202 affiche sur la fiche d'un apporteur une candidature à un poste salarié et laisse la personne dans le tunnel des apporteurs. L'espace ressources connaît un destinataire « commercial ». `AdminRole` n'a aucun rôle restreint pour un salarié qui fait des devis. L'annonce de recrutement d'axion-ia n'est pas un constat de ce plan (question 1). | axion-ia `src/content/recrutement/commercial-offer.ts:76`, `:369`, `:386` ; `careers/categories.ts:88-96` ; `pricing.ts:828` ; `prisma/schema.prisma:8167-8170`, `:177-189` ; `visibility-mapping.ts:18` (constats sur `a12e58165`) | avant la suite de la phase 0 | JUR-T03 (extension, question 11), JUR-T33 (PR #1202 seule) ; les autres surfaces relèvent de la question 12 |
 
 ## 8. Consignes aux auteurs en cours
 
-1. **Identifiants réservés au chantier W19** — ne les prenez pas : GOV-112 à GOV-116 (GOV-116 est réservé
-   à la tâche future qui écrira et testera le lot dédié avec `--settings` surchargé), SEC-29 à SEC-33,
-   UX-P1-16 à UX-P1-20, UX-P2-10 à UX-P2-15, UX-P3-13, JUR-T31 à JUR-T33, DM-30, DM-31, T-ARG-040 à
-   T-ARG-042, QA-T31 à QA-T33. Ce sont des jetons, fixés à la dernière fusion de `main` dans la branche de
-   GOV-112 et GOV-115. **Aucune garde ne les protège** : seules GOV-112 et GOV-115 existent au registre,
-   et `verser-tache` ne refuse qu'un identifiant déjà présent dans l'arbre où il tourne. **Premiers
-   numéros libres pour toute autre tâche : GOV-117, SEC-34, UX-P1-21, UX-P2-16, UX-P3-14, JUR-T34, DM-32,
-   T-ARG-043, QA-T34** (les autres familles ne sont pas touchées : INT-T28, EXT-T12, CPL-T24). Deux
-   versements sont imminents : la page `/confidentialite` issue de la scission de JUR-T04 prend JUR-T34 ou
-   au-delà, et toute nouvelle GOV prend GOV-117 ou au-delà. GOV-115 vérifie, à sa fusion de `main`,
-   qu'aucun jeton n'a été pris.
+1. **Identifiants réservés au chantier W19** — ne les prenez pas : GOV-112 à GOV-117 (GOV-116, le lot
+   dédié avec `--settings` surchargé, et GOV-117, l'écriture de `reqs`, `hyp` et `zone`, sont versées sur
+   la branche W19), SEC-29 à SEC-33, UX-P1-16 à UX-P1-20, UX-P2-10 à UX-P2-15, UX-P3-13, JUR-T31 à
+   JUR-T33, DM-30, DM-31, T-ARG-040 à T-ARG-042, QA-T31 à QA-T33. Ce sont des jetons, fixés à la dernière
+   fusion de `main` dans la branche de GOV-112 et GOV-115. **Aucune garde ne les protège** : seules
+   GOV-112, GOV-115, GOV-116 et GOV-117 existent au registre de la branche, et `verser-tache` ne refuse
+   qu'un identifiant déjà présent dans l'arbre où il tourne. **Numéros GOV des autres sessions** (consigne
+   du coordinateur, 2026-09-29) : GOV-118 à GOV-122 sont versées par la PR #219 de la session -bf, non
+   fusionnée ; la session -bf prend ses nouvelles GOV de **GOV-123 à GOV-149**, la session -66 à partir de
+   **GOV-150**. **Premiers numéros libres des autres familles : SEC-34, UX-P1-21, UX-P2-16, UX-P3-14,
+   JUR-T34, DM-32, T-ARG-043, QA-T34** (les autres familles ne sont pas touchées : INT-T28, EXT-T12,
+   CPL-T24). Un versement est imminent : la page `/confidentialite` issue de la scission de JUR-T04 prend
+   JUR-T34 ou au-delà. GOV-115 vérifie, à sa fusion de `main`, qu'aucun jeton n'a été pris.
 2. **DM-03-A** (axion-ia) : n'ajoutez rien pour les salariés. `COMMERCIAL_COMMISSIONS` reste la grille des
    seuls apporteurs, et le commentaire « Barème de commission du réseau apporteurs » est juste : gardez-le.
    `/api/partners/grille` ne publie que cette grille.
@@ -741,7 +789,12 @@ Aucune n'est faite ici : chacune devient le travail d'une tâche.
    `wip:`, sans PR si elle n'est pas prête) pour que l'avenant ne vive pas que sur un poste. N'écrivez pas
    les cinq valeurs d'`ActiviteFacturation` au glossaire : GOV-112 les verse.
 4 bis. **DM-07** : ne la revendiquez pas avant que GOV-115 l'ait amendée (§6 : porteur XOR, CHECK,
-   déclencheur, estimation 1 → 1,5).
+   déclencheur, estimation 1 → 1,5, `hyp` et `reqs` écrits par le verbe de GOV-117).
+4 ter. **SEC-12, SEC-16, DM-08, DM-13, INT-T07-P** (question 2, art. 3.5) : côté apporteur, une prise en
+   charge par un conseiller est indiscernable d'une occupation par un autre apporteur (même issue, texte,
+   états visibles, délais, même réponse de l'API 1 et de « Vérifier »). Aucun point d'extension pour une
+   issue d'antériorité de la Société, aucune valeur `anteriorite_suivi`, aucune `apporteurRef: null` pour
+   la Société.
 5. **INT-T02 à INT-T05** (axion-ia) : le contrat d'événements v2 est INCHANGÉ. N'ajoutez aucun champ
    vendeur, auteur de devis, salarié ou population, et n'ouvrez pas de v3. Partners résout par le SIREN. Le
    champ `commission` de `devis.signe` reste calculé sur la grille des apporteurs.
@@ -764,7 +817,9 @@ Aucune n'est faite ici : chacune devient le travail d'une tâche.
 10. **JUR-T03 et JUR-T29** : attendez la réponse de Williams sur l'extension de JUR-T03, et prenez le chemin
     corrigé `src/content/recrutement/commercial-offer.ts`.
 11. **Tous les auteurs de la phase 0** : n'ajoutez aucune valeur à `ConsoleRole`, `IssueDepot`,
-    `MotifRefusDepot`, `CanalDepot` ni `AgregatJournal`. Ne touchez pas au GLOSSAIRE §7. N'écrivez jamais le
+    `MotifRefusDepot`, `CanalDepot` ni `AgregatJournal` (W19 n'ajoutera jamais de valeur à `IssueDepot`
+    ni à `MotifRefusDepot` : question 2). Aucun point de droit social n'attend d'avocat (question 13) :
+    prenez l'option la plus prudente, écrivez « à arbitrer par Williams », et ne bloquez rien. Ne touchez pas au GLOSSAIRE §7. N'écrivez jamais le
     marqueur des synonymes interdits suivi de termes entre accents graves sans lancer
     `gov:termes-interdits`. Aucun identifiant ne doit contenir un terme du lexique interdit, quelle que soit
     la casse ou la composition : un vert de la garde n'est pas une permission. N'éditez pas
@@ -775,7 +830,9 @@ Aucune n'est faite ici : chacune devient le travail d'une tâche.
 13. **Auteurs des GOV en cours** (GOV-062, GOV-109, GOV-110 ; GOV-084 est fusionnée, #216) : rien à changer. GOV-114 dépendra de
     GOV-109 et en reprendra le patron des témoins hors dépôt.
 14. **Coordination** : GOV-112 puis GOV-115 écrivent `docs/tasks.json` et `docs/requirements.json`. Elles ne
-    s'ouvrent que lorsqu'aucune PR de clôture n'est ouverte (RM-13). En cas de conflit, passez par
+    s'ouvrent que lorsqu'aucune PR de clôture n'est ouverte (RM-13) : la PR #219 de la session -bf en est
+    une, donc **aucune PR W19 ne s'ouvre avant sa fusion**, et `pnpm vues:fusion` intègre alors GOV-118 à
+    GOV-122. En cas de conflit, passez par
     `hors-depot/fusionner-registre.mjs`. Un conflit de vue dérivée se résout par `pnpm vues:fusion`,
     jamais à la main.
 15. **Relais** : chaque session reçoit ce §8 EN ENTIER, points 11 et 14 compris, pas un résumé.
@@ -784,23 +841,28 @@ Aucune n'est faite ici : chacune devient le travail d'une tâche.
 
 Chaque question commence par l'hypothèse qui s'applique sans réponse. Là où aucune HYP n'existe, la
 question le dit et donne l'option conservatrice (`docs/DECISIONS.md` §5). Une réponse datée remplit la
-colonne « Tranchée » de l'hypothèse visée.
+colonne « Tranchée » de l'hypothèse visée. **Les questions 1, 2, 13, 20 et 21 ont reçu la réponse datée
+de Williams le 2026-09-29 (session -d7)** ; les autres restent ouvertes.
 
-1. **URGENT. Par défaut : aucune HYP ; option conservatrice, dépublier l'annonce tant que vous n'avez pas
-   décidé.** L'annonce axion-ia « Responsable du réseau commercial » est publiée. Elle dit « tu fixes les
-   objectifs », parle de KPI et d'un « variable indexé sur la performance du réseau ». Si ce poste encadre
-   les apporteurs, l'architecte recommande fermement de la dépublier tout de suite : c'est une preuve
-   publique de direction du réseau, qu'aucune correction dans Partners ne neutralise. S'il n'encadre que des
-   salariés, il faut la réécrire en « équipe salariée », sans « réseau », et le variable ne doit jamais être
-   indexé sur les apporteurs (REQ-JUR-045). Par ailleurs, la PR axion-ia #1202 (fusionnée le 2026-09-28)
-   affiche sur la fiche d'un apporteur « A postulé pour un poste de commercial SALARIÉ » et le laisse dans
-   le tunnel des apporteurs : c'est un canal de mélange des deux populations, inventorié par JUR-T33, sans
-   demander de la défaire. Que décidez-vous ?
-2. **Par défaut : art. 3.3 c) (HYP-W19-CONCOURS), avenant, à trancher avant le premier DocuSeal.** La prise
-   en charge (Société) est une antériorité de la Société ; l'apporteur reçoit le refus « déjà connue de la
-   Société », motivé et contestable, avec une attestation horodatée sans identité. Autre option : l'art. 3.5,
-   où la Société est « un autre apporteur » et où tout est indistinct ; le juriste la juge déséquilibrée et
-   moins loyale, et elle fuit techniquement. Laquelle retenez-vous ?
+1. **RÉPONSE DE WILLIAMS, 2026-09-29 (session -d7) : RIEN À FAIRE.** L'annonce axion-ia « Responsable du
+   réseau commercial » reste indépendante de Partners. Elle sort des actions, des bloqueurs et des
+   questions de ce plan, et aucune tâche W19 n'exige rien sur elle. JUR-T33 n'inventorie plus que la PR
+   axion-ia #1202 (fusionnée le 2026-09-28), qui affiche sur la fiche d'un apporteur une candidature à un
+   poste salarié et laisse la personne dans le tunnel des apporteurs, sans demander de la défaire.
+2. **RÉPONSE DE WILLIAMS, 2026-09-29 (session -d7) : ART. 3.5 RETENU, ART. 3.3 c) REJETÉ.** Ses mots :
+   « l'apporteur voit que l'entreprise est déjà faite par quelqu'un d'autre, pour éviter deux commissions
+   à verser (les commerciaux d'Axion-IA sont aussi commissionnés sur les ventes), comme si c'était un
+   autre apporteur ». HYP-W19-CONCOURS est tranchée. Conséquences écrites dans tout le plan : côté
+   apporteur, une prise en charge par un conseiller est indiscernable d'une occupation par un autre
+   apporteur (même issue de dépôt, même texte, mêmes états visibles, mêmes délais, même réponse de
+   l'API 1 et de « Vérifier une entreprise ») ; aucune valeur `anteriorite_suivi` dans `IssueDepot` ni
+   `MotifRefusDepot` ; un seul bénéficiaire par attribution ; le contrat (JUR-T31, art. 3.5) dit en termes
+   généraux que l'entreprise peut être déjà prise « par un autre apporteur ou par la Société ou ses
+   préposés », sans que l'outil révèle jamais qui. Les trois défauts reprochés à 3.5 deviennent des
+   exigences de conception : (i) même chronologie et mêmes états visibles qu'un dépôt d'apporteur
+   (HYP-W19-CYCLE, DM-08) ; (ii) même réponse de l'API 1, sous un test d'indistinction (REQ-INT-014,
+   QA-T31) ; (iii) risque « Société concurrente de ses cocontractants » accepté par Williams (§11,
+   risque 5), avec les garde-fous anti-abus prévus.
 3. **Par défaut : `conseiller_salarie`, affiché « Conseiller salarié », dont l'acte est « prendre en charge
    une entreprise » (HYP-W19-NOM-ROLE).** Le validez-vous ? Alternatives : `vendeur_salarie`, ou
    `charge_affaires` (déconseillé).
@@ -820,7 +882,9 @@ colonne « Tranchée » de l'hypothèse visée.
    la période suivante, jamais en retenue) et HYP-W19-FORMAT-PAIE (Partners n'exporte que le brut « à porter
    en paie »).** Retenez-vous l'encaissement plutôt que la signature, et ces quatre défauts ?
 7. **Par défaut : un seul bénéficiaire par attribution (REQ-JUR-045, HYP-W19-PART-VARIABLE).** Un conseiller
-   ne touche aucun variable sur une entreprise portée par un apporteur. D'accord ?
+   ne touche aucun variable sur une entreprise portée par un apporteur. D'accord ? (La réponse à la
+   question 2, « pour éviter deux commissions à verser », va dans le sens de ce défaut ; il reste un
+   défaut tant que la question 7 n'a pas sa réponse datée.)
 8. **Par défaut : HYP-W19-FORMAT-PAIE (CSV générique) et HYP-W19-QUATRE-YEUX ; aucune HYP pour le
    destinataire de l'export, option conservatrice : l'export reste téléchargé par un admin ou un comptable,
    jamais envoyé.** Qui reçoit l'export (logiciel, cabinet) et sous quel format ? Combien de personnes
@@ -841,10 +905,17 @@ colonne « Tranchée » de l'hypothèse visée.
     croisé ni SSO.** Quel rôle donner, dans axion-ia, à un conseiller qui établit des devis : un rôle
     restreint, sans accès aux candidatures d'apporteurs ? Qui sont les destinataires « commercial » de
     l'espace ressources ? Voulez-vous un lien croisé ou un SSO entre les deux consoles ?
-13. **Par défaut : pas d'avocat (`docs/DECISIONS.md` §5) ; les points de droit social sont arbitrés par vous,
-    option conservatrice.** Rendez-vous OBLIGATOIRE, avant T-ARG-040 et DM-30, une exception limitée à ce
-    chantier : un avis en droit social (statut, VRP ou non, clause de variable, sortie, CSE) et sur
-    l'art. 3.3 c) ? Sans cette exception, aucun avis n'est attendu ni bloquant.
+13. **RÉPONSE DE WILLIAMS, 2026-09-29 (session -d7) : PAS D'AVOCAT, ET PAS D'EXCEPTION À `docs/DECISIONS.md`
+    §5.** L'avis en droit social est retiré de tout le plan. Chaque point de droit social prend l'option la
+    plus prudente par défaut, marquée « à arbitrer par Williams », et ne bloque aucune tâche :
+
+    | Point | Option la plus prudente, par défaut | Où elle s'applique |
+    | --- | --- | --- |
+    | Statut | Contrat de travail écrit ; rien dans Partners ne présume l'exclusion d'un statut protecteur. À arbitrer par Williams | JUR-T32 |
+    | VRP | Le statut VRP est tenu pour possible (L.7313-1 et suivants C. trav., à confirmer) : aucune règle de Partners ne repose sur son exclusion. À arbitrer par Williams | JUR-T32, T-ARG-040 |
+    | Clause de variable | Accord écrit du salarié avant tout effet, jamais rétroactive, jamais modifiée unilatéralement (REQ-ARG-038). À arbitrer par Williams | T-ARG-040, T-ARG-042 |
+    | Sortie | Un encaissement postérieur au départ reste dû au sortant (HYP-W19-VARIABLE-SORTIE). À arbitrer par Williams | T-ARG-040 |
+    | CSE | Information du CSE, ou constat écrit et daté qu'il n'y en a pas, avant la mise en service ; condition de mise en service, jamais un blocage de tâche (HYP-W19-CSE). À arbitrer par Williams | JUR-T32, DM-30, UX-P2-11 |
 14. **Par défaut : HYP-W19-CSE (pas de mise en service sans information du CSE ou votre constat écrit qu'il
     n'y en a pas) ; aucune HYP pour la base légale, option conservatrice : exécution du contrat de travail,
     à confirmer.** Quel est l'effectif, et existe-t-il un CSE ? Quelle base légale retenez-vous pour la part
@@ -863,31 +934,43 @@ colonne « Tranchée » de l'hypothèse visée.
     HYP-W19-A11Y-CONSEILLER (cibles de 48 px, corps d'au moins 16 px).** Gardez-vous cette règle, ou
     voulez-vous WCAG 2.2 AA complet partout ? Validez-vous les valeurs du conseiller ?
 19. **Par défaut : les conseillers ne travaillent qu'à partir de la phase 2, et toutes les corrections
-    transverses restent au plan.** Le chantier complet coûte 35,95 j, dont 15,7 j de corrections
+    transverses restent au plan.** Le chantier complet coûte 37,45 j (35,95 j avant les réponses du
+    2026-09-29 : GOV-116 et GOV-117 ajoutées, JUR-T33 réduite), dont 15,7 j de corrections
     d'expérience pour tous les rôles. Le validez-vous ? Sinon, faut-il reporter une partie des corrections
     transverses (par exemple UX-P1-20 ou UX-P3-13) ?
-20. **Par défaut : pas d'extension ; `reqs`, `hyp` et `zone` s'écrivent dans les acceptances et la dette est
-    nommée (§6).** (Ajoutée à la transcription.) Aucun verbe hors dépôt n'écrit `reqs`, `hyp` ni `zone`
-    d'une tâche existante. Autorisez-vous l'extension de la liste des champs écrivables de
-    `hors-depot/outils-backlog.mjs` à ces trois champs (motif obligatoire et journal, comme les autres),
-    avant GOV-115 ? Sans elle, GOV-113 lit la citation de REQ-UX-047 dans l'acceptance en repli déclaré,
-    et HYP-W19-PORTEUR et HYP-W19-DEPART restent portées par DM-30 à titre provisoire.
+20. **RÉPONSE DE WILLIAMS, 2026-09-29 (session -d7) : OPTION A, EXTENSION.** L'outil d'écriture du
+    registre (`hors-depot/reecrire-champ.mjs` et `hors-depot/poser-champ.mjs`, ou leur équivalent) est
+    étendu aux champs `reqs`, `hyp` et `zone` d'une tâche existante, par **GOV-117** (phase 0, §5), versée
+    sur la branche W19. Garde-fous : validation contre le schéma, REQ et HYP existantes, journal des
+    réécritures. Le repli « citation dans l'acceptance » est retiré de GOV-113 et de GOV-115 : les champs
+    s'écrivent directement une fois GOV-117 fusionnée, la passe REQ-UX-047 dépend de GOV-117, et
+    HYP-W19-PORTEUR et HYP-W19-DEPART sont écrites sur DM-07 et DM-08.
+21. **RÉPONSE DE WILLIAMS, 2026-09-29 (session -d7) : GOV-116.** (Ajoutée après la transcription ; la
+    question était restée ouverte : faut-il un lot dédié outillé, ou une écriture par Williams lui-même ?)
+    GOV-116 (phase 0, §5), versée sur la branche W19, écrit, documente et teste le lot dédié du
+    `gardien-spec` avec `--settings` surchargé. GOV-112 en dépend ; l'écriture humaine par Williams n'est
+    plus la voie prévue.
 
 ## 10. Chiffrage et effet sur les dates
 
-**Total : 35,95 j**, plus 0,5 j optionnel (JUR-T03). Base mesurée : registre à `c60e2f3`, environ 136 j
-restent estimés ; chemin critique à 22,00 j, dont 11,75 j restants (`docs/PLAN-STATE.md:40-44`). Les phases
-sont des barrières : le composeur ne rend éligible que la phase courante (`scripts/lot/composer.ts:11` et
-`:173`).
+**Total : 37,45 j** (35,95 j avant les réponses de Williams du 2026-09-29), plus 0,5 j optionnel (JUR-T03).
+Base mesurée : registre à `c60e2f3`, environ 136 j restent estimés ; chemin critique à 22,00 j, dont 11,75 j
+restants (`docs/PLAN-STATE.md:40-44`). Les phases sont des barrières : le composeur ne rend éligible que la
+phase courante (`scripts/lot/composer.ts:11` et `:173`).
 
-- **Phase 0 : +1,25 j** (GOV-112 à 0,5 j, GOV-115 à 0,75 j), plus 0,5 j optionnel si JUR-T03 est étendue ;
-  environ +0,1 à +0,4 jour calendaire. Rien ne change pour DM-03-A, DM-03-P, les INT ni JUR-T04.
-- **Phase 1 : +13,5 j.** 9,0 j de corrections transverses pour tous les rôles de console : SEC-29 (1,25),
+- **Phase 0 : +3,0 j** (GOV-116 à 1 j, GOV-117 à 0,75 j, GOV-112 à 0,5 j, GOV-115 à 0,75 j), plus 0,5 j
+  optionnel si JUR-T03 est étendue. Chaîne : GOV-116 → GOV-112 → GOV-115, soit 2,25 j, GOV-117 courant en
+  parallèle de GOV-116 et attendue par GOV-115. Environ +0,3 à +1,0 jour calendaire si cette chaîne court en
+  parallèle du reste de la phase 0, jusqu'à +2,25 si elle en devient le dernier chemin (non re-mesuré ici).
+  S'y ajoute l'attente de la fusion de la PR #219 (PR de clôture, RM-13) avant l'ouverture de la PR W19.
+  Rien ne change pour DM-03-A, DM-03-P, les INT ni JUR-T04.
+- **Phase 1 : +13,25 j.** 9,0 j de corrections transverses pour tous les rôles de console : SEC-29 (1,25),
   SEC-30 (1,5), UX-P1-18 (1), UX-P1-19 (1,5), UX-P1-16 (1,5), UX-P1-20 (0,75), GOV-113 (0,75), QA-T33 (0,75).
-  2,0 j de passe REQ-UX-047 : 20 écrans × 0,1 j. 2,5 j propres à W19 : UX-P1-17 (0,5), JUR-T31 (0,75), JUR-T33
-  (0,5), DM-07 (+0,5), DM-08 (+0,25). Chemin critique : 22,00 → **22,75 j**, reste 11,75 → 12,50 j. Démarrage
-  de la phase 2 décalé d'environ **+1,4 à +4,2 jours calendaires**, au débit repris du plan initial (non
-  re-mesuré ici).
+  2,0 j de passe REQ-UX-047 : 20 écrans × 0,1 j. 2,25 j propres à W19 : UX-P1-17 (0,5), JUR-T31 (0,75),
+  JUR-T33 (0,25, réduite à la seule PR axion-ia #1202 par la question 1), DM-07 (+0,5), DM-08 (+0,25).
+  Chemin critique : 22,00 → **22,75 j**, reste 11,75 → 12,50 j, à recalculer par GOV-115 (4) avec GOV-116 et
+  GOV-117 en amont. Démarrage de la phase 2 décalé d'environ **+1,4 à +4,2 jours calendaires**, au débit
+  repris du plan initial (non re-mesuré ici).
 - **Phase 2 : +18,6 j.** 16,5 j W19, UX-P2-14 (1 j) et 1,1 j de passe REQ-UX-047. Branche prise en charge :
   GOV-114 → SEC-31 → SEC-32 → DM-30 → DM-31 → UX-P2-11 → QA-T31, soit 7,0 j, contre 7,5 j restants sur le
   chemin de la phase 2 : la marge n'est que de 0,5 j. Branche argent après DM-15 : T-ARG-040 → T-ARG-042 →
@@ -895,44 +978,58 @@ sont des barrières : le composeur ne rend éligible que la phase courante (`scr
   débit limite, compter **+1,9 à +5,8 jours calendaires**. Sérialisation réelle : SEC-31 et T-ARG-040
   écrivent le schéma, et une seule tâche `schema` passe par lot.
 - **Phase 3 : +2,6 j** (UX-P3-13 à 1,5 j, passe à 1,1 j), soit +0,3 à +0,8 jour calendaire.
-- **Si le débit est limitant sur tout le projet** : +3,7 à +11,2 jours calendaires.
+- **Si le débit est limitant sur tout le projet** : +3,9 à +13,1 jours calendaires (somme des
+  fourchettes de phase ci-dessus, non re-mesurée).
 
-**Bloqueurs externes nouveaux** : validations groupées des maquettes par Will (cinq séances) ; arbitrage de
-l'art. 3.3 c), qui conditionne JUR-T01b et INT-T12, déjà premier bloqueur de date, et, par UX-P1-17, les
-écrans d'espace UX-P1-01 et UX-P1-02 (chemin critique inchangé) ; HYP-W19-CSE, qui conditionne la mise en
-service des conseillers. Un avis en droit social n'est un bloqueur que si Williams accorde l'exception de
-la question 13 ; tant qu'elle n'est pas tranchée, il n'en est pas un (`docs/DECISIONS.md` §5).
+**Bloqueurs externes nouveaux** : validations groupées des maquettes par Will (cinq séances) ; validation par
+Williams du texte de l'art. 3.5 amendé (JUR-T31), qui conditionne JUR-T01b et INT-T12, déjà premier bloqueur
+de date, et, par UX-P1-17, les écrans d'espace UX-P1-01 et UX-P1-02 (chemin critique inchangé) — l'arbitrage
+de principe est rendu (question 2) ; HYP-W19-CSE, qui conditionne la mise en service des conseillers, jamais
+la livraison d'une tâche. **Aucun avis en droit social n'est un bloqueur** : pas d'avocat, pas d'exception
+(question 13, `docs/DECISIONS.md` §5). L'annonce de recrutement d'axion-ia n'est pas un bloqueur (question 1).
 
-**Bloqueur d'outillage** : GOV-112 attend le lot dédié avec `--settings` surchargé (GOV-116, réservé, non
-versé) ou une écriture humaine par Williams des trois fichiers réservés.
+**Bloqueurs d'outillage** : GOV-112 attend GOV-116 (le lot dédié avec `--settings` surchargé, question 21) ;
+GOV-115, sa passe REQ-UX-047 et ses écritures de `reqs`, `hyp` et `zone` attendent GOV-117 (question 20).
+Si la solution de GOV-116 touche `.claude/settings.json`, Williams applique ou approuve lui-même ce changement.
 
-**Répartition** : 15,7 j de corrections d'expérience pour tous les rôles existants, 20,25 j propres aux
-salariés. C'est une projection, pas un engagement : aucune mesure n'existe de l'écart entre l'estimé et le
-réel, et les estimations de phase 1 précèdent leurs acceptances.
+**Répartition** : 15,7 j de corrections d'expérience pour tous les rôles existants, 20,0 j propres aux
+salariés, 1,75 j d'outillage du registre (GOV-116, GOV-117). C'est une projection, pas un engagement : aucune
+mesure n'existe de l'écart entre l'estimé et le réel, et les estimations de phase 1 précèdent leurs
+acceptances.
 
 ## 11. Risques
 
-1. **« Service organisé »** (objection du juriste, acceptée en partie) : le vocabulaire, le formulaire, les
-   issues et la qualification contractuelle diffèrent désormais (REQ-JUR-044, art. 3.3 c). Le MOTEUR
-   anti-doublon (index, transaction, horodatage) reste commun, parce que c'est le principe (b) posé par
-   Williams et la seule façon d'éviter deux occupants. Le risque résiduel reste à évaluer par la note
-   d'analyse hors dépôt, et par un avis en droit social seulement si la question 13 l'accorde.
-2. **Formule unique datée, identique des deux côtés** (objection UX, rejetée) : avec
-   l'art. 3.3 c), l'apporteur reçoit « déjà connue de la Société », comme pour toute antériorité, et le
-   conseiller « non disponible » sans mois, à la demande de la sécurité (oracle). Unifier leur libellé
-   révélerait la population. Le support s'appuie sur la carte des issues, pas sur le libellé.
+1. **« Service organisé »** (objection du juriste, acceptée en partie) : côté console, le vocabulaire, le
+   formulaire et les issues du conseiller diffèrent de ceux de l'apporteur (REQ-JUR-044) ; côté apporteur,
+   l'issue est celle du concours entre apporteurs (art. 3.5, question 2). Le MOTEUR anti-doublon (index,
+   transaction, horodatage) reste commun, parce que c'est le principe (b) posé par Williams et la seule façon
+   d'éviter deux occupants. Le risque résiduel reste à évaluer par la note d'analyse hors dépôt ; il n'y a
+   pas d'avis extérieur (question 13) : option la plus prudente, à arbitrer par Williams.
+2. **Formule unique datée, identique des deux côtés** (objection UX, rejetée) : l'apporteur reçoit la
+   formule d'une occupation par un apporteur, datée comme elle (art. 3.5), et le conseiller « non
+   disponible » sans mois, à la demande de la sécurité (oracle). Unifier leur libellé révélerait la
+   population. Le support s'appuie sur la carte des issues, pas sur le libellé.
 3. **Délai après un acte d'apporteur** : un apporteur malveillant pourrait bloquer la Société 30 jours sur un
    SIREN en le vérifiant. C'est borné par la limite de vérification journalière de REQ-UX-007 et accepté,
    parce que la protection de l'apporteur l'emporte. Réponse uniforme « non disponible » : aucun oracle.
-4. **Contrat** : si le gabarit v1 part en DocuSeal avant JUR-T31, l'art. 3.3 c) et la clause de
+4. **Contrat** : si le gabarit v1 part en DocuSeal avant JUR-T31, l'art. 3.5 amendé et la clause de
    non-exploitation deviennent un avenant à faire re-signer par tout le réseau. D'où INT-T12 et JUR-T01b qui
    dépendent de JUR-T31.
-5. **Annonce publique d'axion-ia** : tant qu'elle reste en ligne sous sa forme actuelle, le principe (d) est
-   fragilisé quoi que fasse Partners. Hors du registre Partners, cela relève de la seule décision de Williams
-   (question 1).
+5. **La Société concurrente de ses cocontractants — RISQUE ACCEPTÉ PAR WILLIAMS (question 2, 2026-09-29).**
+   Avec l'art. 3.5, la Société peut occuper, par ses préposés, une entreprise qu'un apporteur visait, sans
+   que l'apporteur le sache. Williams l'accepte pour éviter deux rémunérations sur une même vente. Garde-fous
+   anti-abus maintenus : limites par conseiller et par Société (HYP-W19-LIMITES) ; délai de
+   `RESERVE_APRES_ACTE_APPORTEUR_JOURS` après une vérification ou un dépôt refusé d'un apporteur, et clause
+   de non-exploitation (HYP-W19-NON-EXPLOITATION) ; fenêtre du rang 1 fermée aux conseillers et Société
+   comptée comme un seul porteur (HYP-W19-CARENCE) ; quatre yeux sur les plans, les réaffectations et
+   l'export paie (HYP-W19-QUATRE-YEUX).
+5 bis. **API 1 indistincte** : axion-ia croit l'entreprise tenue par un apporteur. Aucune commission
+   d'apporteur ne doit en être déduite côté axion-ia : Partners calcule et verse selon le porteur réel
+   (REQ-DM-021), et INT-T07-P le vérifie. Le champ `commission` de `devis.signe` reste un calcul d'axion-ia
+   sur la grille des apporteurs (§8, point 5) ; son affichage relève de la question 12.
 6. **Collision de registre** : GOV-112 et GOV-115 écrivent `tasks.json` et `requirements.json` pendant que
-   deux sessions codent. Parade : jetons fixés au dernier rebase, identifiants réservés (§8),
-   `fusionner-registre`, RM-13.
+   deux sessions codent. Parade : jetons fixés au dernier rebase, identifiants réservés et plages GOV par
+   session (§8), `fusionner-registre`, RM-13 (aucune PR W19 avant la fusion de la PR #219).
 7. **Gel de la phase 1** : si GOV-113 s'arme avant la passe de GOV-115, ou si les validations groupées de Will
    tardent, les écrans de console deviennent inattribuables. GOV-113 dépend donc de GOV-115, et les séances de
    validation sont planifiées dans UX-P1-18 et UX-P1-19.
@@ -943,8 +1040,9 @@ réel, et les estimations de phase 1 précèdent leurs acceptances.
 10. **Session de console courte** : friction pour le conseiller sur le terrain, compensée par le code à
     6 chiffres et le retour à l'URL demandée. Si Williams juge 12 h trop court, c'est un paramètre.
 11. **Droit du travail et RGPD** : sans information du CSE, ou sans constat écrit, et sans AIPD, les
-    conseillers ne sont pas mis en service. Plusieurs références restent à confirmer, car elles ne sont pas
-    sourcées dans le dépôt : Cass. soc. 13 nov. 1996, art. 1171, 1104 et 1112-1 C. civ., art. 6.4 et 13 RGPD,
+    conseillers ne sont pas mis en service ; aucune tâche n'en est bloquée. Plusieurs références restent à
+    confirmer par Williams, sans avis extérieur (question 13), car elles ne sont pas sourcées dans le dépôt :
+    Cass. soc. 13 nov. 1996, art. 1171, 1104 et 1112-1 C. civ., art. 6.4 et 13 RGPD,
     L.1222-4, L.2312-38, L.3245-1, L.3251-1 et L.7313-11 C. trav.
 12. **Anti-cumul par empreinte** : c'est un signal contournable (seconde adresse, prête-nom), pas une
     protection. La défense repose sur la déclaration de conflit d'intérêts et sur la revue humaine.
@@ -952,9 +1050,9 @@ réel, et les estimations de phase 1 précèdent leurs acceptances.
     glissement de 0,5 j la fait passer sur le chemin critique.
 14. **Glissement** : si Williams avance les conseillers en phase 1, la phase 1 prend environ 17 j de plus et
     la phase 2 démarre d'autant plus tard.
-15. **Chiffrage** : 35,95 j au lieu des 16,5 j du plan initial. L'écart vient surtout des corrections
+15. **Chiffrage** : 37,45 j au lieu des 16,5 j du plan initial. L'écart vient surtout des corrections
     d'expérience pour tous les rôles (15,7 j, dont 4,2 j de passe sur les écrans existants et 5 j de
-    maquettes). Reporter UX-P1-20 ou UX-P3-13 est possible, mais réduit l'exigence « sans formation ».
+    maquettes), et de 1,75 j d'outillage du registre (GOV-116, GOV-117). Reporter UX-P1-20 ou UX-P3-13 est possible, mais réduit l'exigence « sans formation ».
 
 ## 12. Expérience par population
 
@@ -964,9 +1062,9 @@ sans fonctions parasites d'un autre rôle.
 
 | Population | Parcours clés | Frictions corrigées | Tâches porteuses |
 | --- | --- | --- | --- |
-| **Apporteur d'affaires** (espace, mobile) | Recevoir le lien ou le code, puis entrer dans l'espace en une action, sur l'URL demandée. Vérifier puis déposer : au plus 8 interactions et 90 s (REQ-UX-001), mesurés par la fixture QA-T33. Chaque issue dit pourquoi et quoi faire. Une entreprise prise en charge (Société) donne « déjà connue de la Société », avec la possibilité de contester et une preuve horodatée. Consulter « Mes entreprises ». Ne jamais rien voir d'un salarié. | Cul-de-sac après le lien (`ecran.tsx:76-82`) : redirection directe. Refus opaque face à la Société : motif contractuel (3.3 c), contestation et attestation. Liste « Plus » incohérente, 6 contre 5 entrées : liste dérivée. Teinte « versé » confondue avec l'accent en thème sombre. Seuils de REQ-UX-017 (48 px, corps de 18 px) protégés contre toute régression. Test de premier usage par une personne de 45 à 68 ans. Page publique d'axion-ia qui décrit l'activité comme un métier salarié : JUR-T03. | UX-P1-04, UX-P1-17, UX-P1-08, UX-P1-01, UX-P1-02, QA-T33, JUR-T31, JUR-T03, QA-T31 |
+| **Apporteur d'affaires** (espace, mobile) | Recevoir le lien ou le code, puis entrer dans l'espace en une action, sur l'URL demandée. Vérifier puis déposer : au plus 8 interactions et 90 s (REQ-UX-001), mesurés par la fixture QA-T33. Chaque issue dit pourquoi et quoi faire. Une entreprise prise en charge par un conseiller se présente exactement comme une entreprise occupée par un autre apporteur : mêmes formules, mêmes états, même date, même file (art. 3.5, question 2). Consulter « Mes entreprises ». Ne jamais rien voir d'un salarié. | Cul-de-sac après le lien (`ecran.tsx:76-82`) : redirection directe. Aucune issue propre à la Société : l'apporteur lit l'occupation qu'il connaît déjà, et le contrat (art. 3.5 amendé) dit que l'occupant peut être la Société ou ses préposés. Liste « Plus » incohérente, 6 contre 5 entrées : liste dérivée. Teinte « versé » confondue avec l'accent en thème sombre. Seuils de REQ-UX-017 (48 px, corps de 18 px) protégés contre toute régression. Test de premier usage par une personne de 45 à 68 ans. Page publique d'axion-ia qui décrit l'activité comme un métier salarié : JUR-T03. | UX-P1-04, UX-P1-17, UX-P1-08, UX-P1-01, UX-P1-02, QA-T33, JUR-T31, JUR-T03, QA-T31 |
 | **Conseiller salarié** (console, mobile d'abord) | Invitation, puis premier accès : notice et déclaration en au plus 3 gestes, puis son accueil : ses entreprises triées par échéance, un champ Vérifier, « à échéance dans 15 jours ». Vérifier puis prendre en charge en au plus 8 interactions et 90 s sur téléphone, avec autocomplétion et repli manuel. Avis par e-mail à J-15 et à la fin. « Ma part variable » avec la base de calcul ligne par ligne et le plan accepté. Quatre entrées de navigation, barre inférieure en mobile. | Aucun rôle, aucune connexion ni aucun écran n'existaient. Aucun rappel avant la perte d'une entreprise : avis à J-15. Console seulement sur bureau : cadre à 375 px, cibles et corps de HYP-W19-A11Y-CONSEILLER, projets mobiles. Réponse opaque sur une entreprise occupée : « non disponible », uniforme et assumé. Vocabulaire parasite de l'apporteur (déposer, commission, lot, objectif) : retiré. Aucun contrôle de son calcul de variable : base par ligne. Aucune mesure de son activité. | SEC-29, SEC-30, SEC-31, SEC-32, DM-30, DM-31, UX-P2-11, UX-P2-13, UX-P2-10, UX-P2-15, JUR-T32 |
 | **Administrateur** (console) | Accueil « à traiter aujourd'hui », avec repli sur Utilisateurs en phase 1. Inviter en au plus 4 interactions, l'écran expliquant chaque rôle en une phrase. Désactiver avec effet immédiat. Recherche globale depuis tout écran (« / »), en au plus 3 interactions vers une fiche. Fiche conseiller : saisir un plan en au plus 6 interactions, réaffecter en masse en au plus 5, avec aperçu. Valider l'acte d'une autre personne. Totaux par origine, sans classement mêlé. | Utilisateurs créés seulement par le seed : écran d'administration. Aucune carte des routes ni navigation par métier : navigation dérivée. Accueil sur un écran inexistant en phase 1 : repli guidant. Aucun écran d'accès refusé. Réaffectation et plan de part variable sans écran : UX-P2-12. Risque de tout faire seul : quatre yeux et notifications. Page « Votre rôle ». | SEC-30, UX-P1-16, UX-P1-18, UX-P1-20, UX-P2-12, T-ARG-042, GOV-113 |
-| **Qualifieur** (console) | Arrivée directe sur la file de qualification, triée. Fiche en ligne en au plus 6 interactions (REQ-UX-021). Recherche par SIREN. Aucune entrée d'un autre métier. La réponse à une contestation d'antériorité s'appuie sur l'attestation générée. | La maquette montrait les lots au qualifieur (`file-qualification.html:800-806`) : navigation filtrée. Aucune maquette validée de ses écrans : UX-P1-19. Les prises en charge de la Société n'entrent jamais dans sa file. Un qualifieur ne peut pas devenir conseiller avant un délai, ce qui protège les apporteurs dont il a vu les dépôts. | UX-P1-16, UX-P1-19, UX-P1-07, UX-P1-06, DM-09, DM-31, SEC-31 |
+| **Qualifieur** (console) | Arrivée directe sur la file de qualification, triée. Fiche en ligne en au plus 6 interactions (REQ-UX-021). Recherche par SIREN. Aucune entrée d'un autre métier. | La maquette montrait les lots au qualifieur (`file-qualification.html:800-806`) : navigation filtrée. Aucune maquette validée de ses écrans : UX-P1-19. Les prises en charge de la Société n'entrent jamais dans sa file. Un qualifieur ne peut pas devenir conseiller avant un délai, ce qui protège les apporteurs dont il a vu les dépôts. | UX-P1-16, UX-P1-19, UX-P1-07, UX-P1-06, DM-09, DM-31, SEC-31 |
 | **Comptable** (console) | Phase 1 : accueil de repli guidant, qui dit que le lot du mois arrive en phase 2 et ce qui est déjà consultable. Phase 2 : arrivée sur le lot du mois, approbation et pain.001. « Export paie » est une entrée distincte sous « Argent » : valider l'acte d'une autre personne et exporter en au plus 4 interactions. La régénération est motivée. | La maquette montrait la qualification au comptable : navigation filtrée. Accueil sur un écran inexistant en phase 1 : repli. Risque de ranger la paie dans le lot SEPA : écrans et tables séparés. Aucune séparation des fonctions : quatre yeux. | UX-P1-16, UX-P1-18, UX-P2-03, UX-P2-14, T-ARG-041, T-ARG-042, UX-P2-10 |
 | **Lecteur** (console) | Phase 1 : repli sur Apporteurs en lecture seule si le droit existe, sinon un état guidant. Phase 3 : pilotage, avec les onglets « Réseau d'apporteurs » et « Conseillers salariés ». Ce dernier ne montre que des agrégats, masqués sous 3. Aucun montant individuel, aucun export, aucune donnée de paie. | Accueil sur le pilotage, qui n'est livré qu'en phase 3 : repli. Tableau nominatif de salariés visible par un rôle qui n'en a pas besoin : agrégats seulement. Maquettes de la phase 3 produites (UX-P3-13). | UX-P1-16, DM-29, UX-P3-07, UX-P3-09, UX-P3-13 |
