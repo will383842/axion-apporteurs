@@ -111,7 +111,7 @@ toujours ; un dépassement est nommé, non bloquant, et `--bloquant` prouve déj
 étapes entrent dans gate-a, figées au constat de la porte A. L'entrée `perf:bundle` du registre des
 gardes porte sa nouvelle définition et sa preuve rouge.
 
-**Reste.** Le texte de REQ-UX-033 dit encore « First Load JS ≤ 75 KB » : l'amendement, selon
+**Reste.** Le texte de REQ-UX-033 dit encore « First Load JS au plus 75 KB » : l'amendement, selon
 l'arbitrage, appartient au gardien de la spécification. LCP, CLS et INP ne sont pas mesurés : `lhci`
 n'est ni installé ni lancé, et `collect.url` reste vide ; c'est l'armement bloquant qui les portera.
 Le champ `path` d'une entrée de `perf/budgets.json` nomme désormais le manifeste lu, mais aucune garde
@@ -120,7 +120,7 @@ ne vérifie qu'il désigne le bon fichier : le mesureur dérive ce chemin de la 
 **Appris.** Sous Next 16, qui construit avec Turbopack, `.next/static/chunks/app/` n'existe plus :
 les paquets sont plats et nommés par empreinte. Tout glob par route écrit du temps de webpack mesure
 zéro octet, et reste donc vert sans rien garder. Deuxième fait mesuré : sur une page serveur sans
-aucun code client, le runtime React 19 + Next 16 pèse déjà 129 523 o gz. « First Load JS ≤ 75 KB »
+aucun code client, le runtime React 19 + Next 16 pèse déjà 129 523 o gz. « First Load JS au plus 75 KB »
 était donc infaisable au sens littéral, et une garde qui l'aurait appliqué n'aurait jamais pu être
 armée. Troisième fait : `next start` impose `NODE_ENV=production`, et la validation de
 l'environnement refuse alors les secrets préfixés `dev_`, même factices. Pour démarrer le serveur en
