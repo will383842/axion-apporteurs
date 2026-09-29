@@ -1,4 +1,5 @@
 'use client';
+// use-client: Next impose un composant client pour la frontiere d'erreur, et navigator.onLine ne se lit que dans le navigateur.
 /**
  * Les états d'erreur et hors ligne de la politique de confidentialité (JUR-T34). Le cadriciel exige
  * un composant client pour la frontière d'erreur : il distingue l'appareil hors ligne d'une erreur
