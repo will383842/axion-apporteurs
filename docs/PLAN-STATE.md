@@ -8,7 +8,7 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `53e765e` — 2026-09-29T20:48:22+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #242 (rien) · 2. #253 (un contrôle requis rouge ou une revue manquante) · 3. #254 (un contrôle requis rouge ou une revue manquante) |
+| Qu’est-ce qui est en vol ? | 1. #242 (rien) · 2. #253 (rien) · 3. #254 (un contrôle requis rouge ou une revue manquante) |
 | Qui tient quoi ? | GOV-124 (A01) · GOV-126 (A01) |
 | Où en est la phase ? | phase 0 — 104/131 tâches, reste 20.50 j |
 | Le prochain pas | fusionner #242, puis QA-T06 — Preview par PR sur Coolify, base éphémère, seed déterministe |
@@ -61,7 +61,7 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
 | 1 | #242 — feat(JUR-T34): la politique de confidentialite de l'espace, tiree du registre de l'article 30 et acceptee a la premiere connexion | `t/jur-t34` | rien — fusionnable maintenant |
-| 2 | #253 — feat(GOV-125): le motif de branche depend du depot de la tache, une tache axionia se clot sur sa branche | `t/gov-125-motif` | un contrôle requis rouge ou une revue manquante |
+| 2 | #253 — feat(GOV-125): le motif de branche depend du depot de la tache, une tache axionia se clot sur sa branche | `t/gov-125-motif` | rien — fusionnable maintenant |
 | 3 | #254 — docs(GOV-017a): W20, questions 18 et 19 tranchees — aucune tacite d'une demande signalee, liberee apres 3 injoignables ou 45 jours | `t/w20-q18-q19` | un contrôle requis rouge ou une revue manquante |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
@@ -119,13 +119,16 @@ du même jour : les précisions de la libération (45 jours depuis la première 
 `injoignable`, rebond non corrigé libéré de même, état `perimee`, badge et notification) sont validées,
 et le redépôt en boucle est fermé par une carence : le même apporteur ne redépose pas le même SIREN
 pendant 30 jours, 90 après une deuxième libération, sans sanction et sans valeur d'enum nouvelle
-(HYP-W20-CARENCE-REDEPOT, REQ-DM-063, question 20 ouverte sur la présentation du refus). DM-13, SEC-41,
+(HYP-W20-CARENCE-REDEPOT, REQ-DM-063). Question 20 tranchée le même jour par -d7 sur délégation de
+Williams, défaut retenu : pendant la carence, le redépôt n'atteint pas le formulaire, l'écran dit « Vous
+pourrez déposer cette entreprise à nouveau à partir du (date). » sans bouton « Déposer », une requête
+forgée reçoit une erreur serveur qui n'est pas une issue de dépôt, consigne W19 maintenue ; la carence
+reste à 90 jours au-delà de deux libérations. DM-13, SEC-41,
 JUR-T40, JUR-T01b, QA-T40, QA-T41 et GOV-112 réécrites de nouveau ; DM-13 passe à 1,25 j. Phase 1 :
 18,0 j.
 
 **Reste.** La passe gardien-spec de GOV-112 écrit HYP-W20-LIBERATION et REQ-DM-063 avec les autres.
-La question 20 : comment montrer le redépôt refusé pendant la carence, aucune issue existante ne
-convenant (par défaut, le redépôt n'atteint pas le formulaire). Questions 16 et 17 toujours ouvertes. Aucune tâche W20 n'est livrée par cette PR.
+Désigner la tâche d'écran qui affiche le texte de la carence. Questions 16 et 17 toujours ouvertes. Aucune tâche W20 n'est livrée par cette PR.
 
 **Appris.** Borner une attente change aussi le texte qui disait « la seule conséquence du silence » :
 la phrase vivait dans l'exigence, le contrat proposé et la relecture du contrat, et une seule copie
