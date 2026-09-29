@@ -248,6 +248,15 @@ export const SEUILS = {
     renvois: [],
     verifieLe: LE,
   },
+  // QA-T12 : au-delà, le travail de nuit rougit — une sauvegarde qu'on ne restaure pas n'en est pas une.
+  EXERCICE_DE_RESTAURATION_MAX_JOURS: {
+    valeur: 35,
+    unite: 'jours',
+    source:
+      'acceptation QA-T12 (REQ-QA-023) ; arbitrage -d7 sur délégation de Williams du 2026-09-29',
+    renvois: [],
+    verifieLe: '2026-09-29',
+  },
 } as const satisfies Record<string, Seuil>;
 
 export type NomDeSeuil = keyof typeof SEUILS;
