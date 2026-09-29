@@ -84,6 +84,6 @@ Tenir `prisma/schema.prisma`, les migrations et `packages/contracts/` — les on
 
 - **Outils** : Read, Write, Edit, Grep, Glob, Bash
 - **Écrit ?** oui
-- **Chemins réservés** (label `role:architecte`) : `docs/adr/**`
+- **Chemins réservés** (label `role:architecte`) : `docs/adr/**`, `package.json`, `patches/**`, `pnpm-lock.yaml`
 
 <!-- agents:fin -->
