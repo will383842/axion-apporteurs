@@ -1,5 +1,5 @@
 /**
- * Le traitement de `candidature.recue` — INT-T26 (REQ-INT-032, REQ-DM-035, REQ-QA-035 ;
+ * Le traitement d'une candidature reçue d'axionia — INT-T26 (REQ-INT-032, REQ-DM-035, REQ-QA-035 ;
  * partners/ADR-0022, partners/ADR-0023).
  *
  * UN SEUL CRÉATEUR. Ce module est le seul chemin par lequel un `Apporteur` naît d'une candidature :
