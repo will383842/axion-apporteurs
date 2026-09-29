@@ -7,9 +7,9 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `7ff56c8` — 2026-09-29T11:44:53+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #225 (un contrôle requis rouge ou une revue manquante) · 2. #226 (un contrôle requis rouge ou une revue manquante) · 3. #218 (un conflit avec `main`) · 4. #221 (brouillon) |
-| Qui tient quoi ? | GOV-122 (A01) |
+| Où est `main` ? | `b3d7572` — 2026-09-29T12:12:09+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #221 (un conflit avec `main`) · 2. #226 (un conflit avec `main`) · 3. #218 (état `UNKNOWN`) |
+| Qui tient quoi ? | GOV-122 (A01) · GOV-119 (A01) |
 | Où en est la phase ? | phase 0 — 95/130 tâches, reste 28.50 j |
 | Le prochain pas | QA-T05 — Pipeline GHCR privé → Coolify pull |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
@@ -60,10 +60,9 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #225 — fix(GOV-119): une fusion posterieure au clone est nommee et comptee, pas un rouge de la porte A | `t/gov-119` | un contrôle requis rouge ou une revue manquante |
-| 2 | #226 — fix(GOV-122): un renommage a la seconde de la fusion est indecidable, une date illisible rend la chronologie illisible | `t/gov-122` | un contrôle requis rouge ou une revue manquante |
-| 3 | #218 — feat(DM-04): commission et prorata en fonction pure, entiers exacts, bareme choisi par commissionId | `t/dm-04` | un conflit avec `main` — à résoudre avant tout |
-| 4 | #221 — feat(QA-T05): la forge construit, juge puis publie l'image, la plateforme ne fera plus que la tirer | `t/qa-t05` | brouillon — hors file tant qu’il n’est pas prêt |
+| 1 | #221 — feat(QA-T05): la forge construit, juge puis publie l'image, la plateforme ne fera plus que la tirer | `t/qa-t05` | un conflit avec `main` — à résoudre avant tout |
+| 2 | #226 — fix(GOV-122): un renommage a la seconde de la fusion est indecidable, une date illisible rend la chronologie illisible | `t/gov-122` | un conflit avec `main` — à résoudre avant tout |
+| 3 | #218 — feat(DM-04): commission et prorata en fonction pure, entiers exacts, bareme choisi par commissionId | `t/dm-04` | état `UNKNOWN` — à qualifier à la main |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -74,6 +73,7 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 | Tâche | Revendiquée par | Issue | Statut |
 | --- | --- | --- | --- |
 | GOV-122 — La cloture retient un renommage fait dans la seconde meme de la fusion, et une date illisible y devient NaN au lieu d'un refus | A01 | #224 | `a_faire` |
+| GOV-119 — La porte A d'une PR rougit quand une AUTRE PR fusionne pendant son execution | A01 | #223 | `a_faire` |
 
 ⚠️ **13 revendication(s) périmée(s)** — QA-T07, GOV-042, GOV-045, GOV-050, GOV-051, GOV-053, GOV-054, GOV-055, GOV-060, GOV-072, GOV-079, GOV-093, INT-T01c : leur issue porte encore un label `owner:` alors que la tâche est livrée. `pnpm lot:cloture` écrit `docs/tasks.json` mais n’efface pas les labels ; la dette appartient à GOV-012.
 
@@ -91,7 +91,7 @@ Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeS
 
 ## Dernier atterrissage
 
-`origin/main` = `7ff56c8` (2026-09-29T11:44:53+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `b3d7572` (2026-09-29T12:12:09+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
@@ -110,6 +110,18 @@ celle-ci illisible au lieu de produire NaN. La prose parle du titre à l'instant
 **Appris.** Une égalité à la seconde n'est pas un cas limite théorique quand la source horodate à la
 seconde et que deux de ses dates sont décalées d'une seconde : c'est le cas courant.
 
+### PR #225 — 2026-09-29 — fix(GOV-119): une fusion posterieure au clone est nommee et comptee, pas un rouge de la porte A
+
+**Fait.** `gov:etat` ne rougit plus quand une autre PR fusionne pendant la porte A d'une PR. Une
+fusion dont le commit manque au clone, et dont la date est postérieure à la base de ce clone, est
+nommée et comptée ; une fusion antérieure au commit absent, ou une date illisible, reste un rouge.
+
+**Reste.** Rien sur ce point. La porte A continue de lire la forge : elle voit seulement que le
+futur de son clone n'est pas une illisibilité.
+
+**Appris.** Le même rouge a coûté deux portes A dans la journée avant d'être versé. Une gate qui
+dépend de l'instant où elle tourne mesure la file, pas la PR.
+
 ### PR #219 — 2026-09-29 — chore(GOV-012): registre rattrape, quatre taches closes, cinq suites versees
 
 **Fait.** Dixième rattrapage. GOV-075, GOV-110, GOV-084 et GOV-049 passent `fusionnee` par
@@ -123,20 +135,7 @@ pas livrée, une fusion pendant la porte A d'une autre PR peut faire rougir cell
 **Appris.** Une acceptance qui cite un fichier et sa ligne affirme un fait daté : la sonde exige
 alors son repère. Nommer le fichier sans la ligne suffit à dire où regarder.
 
-### PR #217 — 2026-09-29 — test(GOV-049): une tache en cours hors lot porte la preuve de son vol, et la clause a enfin un temoin rouge
-
-**Fait.** L'acceptance de GOV-049 est réécrite par un avenant A01, sur l'arbitrage de Will. Une
-tâche `en_cours` porte un lot, ou la preuve de son vol : `owner` et `branch`. Le schéma l'exigeait
-déjà ; aucun témoin ne le voyait refuser. Il en a un, sur une tâche hors de tout lot, et sa
-capacité à rougir est mesurée par mutation.
-
-**Reste.** Rien sur cette règle. La première rédaction, qui exigeait un lot, est abandonnée : elle
-contredisait le témoin d'une tâche en vol.
-
-**Appris.** Une prémisse qui tombe ne rend pas une tâche vide : elle déplace ce qu'il faut prouver.
-Ici, la règle tenait déjà ; c'est son témoin qui manquait.
-
-… 3 entrée(s) affichée(s) sur 92 ; les 89 plus ancienne(s) se lisent dans `docs/journal/`.
+… 3 entrée(s) affichée(s) sur 93 ; les 90 plus ancienne(s) se lisent dans `docs/journal/`.
 
 ## Dette déclarée
 
