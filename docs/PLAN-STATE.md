@@ -7,8 +7,8 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `0d31086` — 2026-09-29T22:21:14+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #254 (un contrôle requis rouge ou une revue manquante) · 2. #259 (un contrôle requis rouge ou une revue manquante) · 3. #242 (un conflit avec `main`) |
+| Où est `main` ? | `6d36f60` — 2026-09-29T22:44:33+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #242 (un contrôle requis rouge ou une revue manquante) · 2. #261 (un contrôle requis rouge ou une revue manquante) · 3. #259 (un conflit avec `main`) |
 | Qui tient quoi ? | GOV-117 (A01) · GOV-127 (A01) |
 | Où en est la phase ? | phase 0 — 110/132 tâches, reste 17.75 j |
 | Le prochain pas | QA-T06 — Preview par PR sur Coolify, base éphémère, seed déterministe |
@@ -37,11 +37,11 @@
 
 ## Chemin critique
 
-**25.25 j** sur 25 taches enchainees — duree PLANCHER du projet. Aucune flotte d'agents ne la raccourcit : ces taches ne peuvent pas se faire en parallele.
+**26.00 j** sur 26 taches enchainees — duree PLANCHER du projet. Aucune flotte d'agents ne la raccourcit : ces taches ne peuvent pas se faire en parallele.
 
-~~GOV-000~~ (1 j, ph -1) → ~~GOV-007~~ (0.5 j, ph -1) → ~~GOV-012~~ (0.5 j, ph -1) → ~~GOV-013~~ (0.25 j, ph -1) → ~~GOV-014~~ (1 j, ph -1) → ~~QA-T01~~ (0.5 j, ph 0) → ~~DM-01~~ (1 j, ph 0) → ~~DM-02~~ (1.5 j, ph 0) → ~~SEC-08~~ (1 j, ph 0) → ~~SEC-03~~ (1 j, ph 0) → ~~SEC-04~~ (1 j, ph 0) → ~~SEC-17~~ (1 j, ph 0) → DM-07 (1 j, ph 1) → DM-08 (1.5 j, ph 1) → DM-12 (0.5 j, ph 1) → SEC-11 (1 j, ph 1) → SEC-12 (1.5 j, ph 1) → SEC-14 (1 j, ph 1) → SEC-15 (1 j, ph 1) → DM-41 (1.25 j, ph 1) → SEC-41 (1.25 j, ph 1) → DM-43 (1 j, ph 1) → UX-P1-07 (1.5 j, ph 1) → QA-T16 (1 j, ph 1) → QA-T40 (1.5 j, ph 1)
+~~GOV-000~~ (1 j, ph -1) → ~~GOV-007~~ (0.5 j, ph -1) → ~~GOV-012~~ (0.5 j, ph -1) → ~~GOV-013~~ (0.25 j, ph -1) → ~~GOV-014~~ (1 j, ph -1) → ~~QA-T01~~ (0.5 j, ph 0) → ~~DM-01~~ (1 j, ph 0) → ~~DM-02~~ (1.5 j, ph 0) → ~~SEC-08~~ (1 j, ph 0) → ~~SEC-03~~ (1 j, ph 0) → ~~SEC-04~~ (1 j, ph 0) → ~~SEC-17~~ (1 j, ph 0) → DM-07 (1 j, ph 1) → DM-08 (1.5 j, ph 1) → DM-12 (0.5 j, ph 1) → SEC-11 (1 j, ph 1) → SEC-12 (1.5 j, ph 1) → SEC-14 (1 j, ph 1) → SEC-15 (1 j, ph 1) → DM-41 (1.25 j, ph 1) → SEC-41 (1.25 j, ph 1) → DM-13 (1.25 j, ph 1) → UX-P1-01 (1 j, ph 1) → UX-P1-08 (1 j, ph 1) → UX-P3-02 (1 j, ph 3) → UX-P3-12 (1.5 j, ph 3)
 
-Reste sur ce chemin : **15.00 j**.
+Reste sur ce chemin : **15.75 j**.
 
 ## Bloquées
 
@@ -60,9 +60,9 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #254 — docs(GOV-017a): W20, questions 18 et 19 tranchees — aucune tacite d'une demande signalee, liberee apres 3 injoignables ou 45 jours | `t/w20-q18-q19` | un contrôle requis rouge ou une revue manquante |
-| 2 | #259 — feat(GOV-117): l'outil du registre ecrit reqs, hyp et zone d'une tache, valides contre le schema et les registres | `t/gov-117` | un contrôle requis rouge ou une revue manquante |
-| 3 | #242 — feat(JUR-T34): la politique de confidentialite de l'espace, tiree du registre de l'article 30 et acceptee a la premiere connexion | `t/jur-t34` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #242 — feat(JUR-T34): la politique de confidentialite de l'espace, tiree du registre de l'article 30 et acceptee a la premiere connexion | `t/jur-t34` | un contrôle requis rouge ou une revue manquante |
+| 2 | #261 — chore(GOV-012): registre rattrape, INT-T02 INT-T27-A et INT-T26 closes, REQ-DM-021 amendee, JUR-T36 versee | `t/registre-rattrapage-15` | un contrôle requis rouge ou une revue manquante |
+| 3 | #259 — feat(GOV-117): l'outil du registre ecrit reqs, hyp et zone d'une tache, valides contre le schema et les registres | `t/gov-117` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -91,7 +91,7 @@ Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeS
 
 ## Dernier atterrissage
 
-`origin/main` = `0d31086` (2026-09-29T22:21:14+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `6d36f60` (2026-09-29T22:44:33+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
@@ -133,7 +133,7 @@ arbitrée demande un outil, GOV-127. INT-T27-A et INT-T26 attendent derrière el
 **Appris.** Un arbitrage ne suffit pas quand aucun outil ne sait l'écrire : le registre ne s'édite
 pas à la main, et l'exception doit elle-même devenir une règle écrite, fermée et testée.
 
-… 3 entrée(s) affichée(s) sur 113 ; les 110 plus ancienne(s) se lisent dans `docs/journal/`.
+… 3 entrée(s) affichée(s) sur 114 ; les 111 plus ancienne(s) se lisent dans `docs/journal/`.
 
 ## Dette déclarée
 
