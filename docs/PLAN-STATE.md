@@ -7,15 +7,15 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `c92e400` — 2026-09-29T15:17:11+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #235 (rien) · 2. #237 (rien) · 3. #239 (un contrôle requis rouge ou une revue manquante) |
-| Qui tient quoi ? | QA-T05 (A01) · JUR-T04 (A01) · GOV-062 (A01) · GOV-122 (A01) · GOV-118 (A01) · GOV-119 (A01) · GOV-121 (A01) |
+| Où est `main` ? | `fa90f83` — 2026-09-29T16:41:40+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #237 (un contrôle requis rouge ou une revue manquante) · 2. #239 (un contrôle requis rouge ou une revue manquante) · 3. #242 (un contrôle requis rouge ou une revue manquante) · 4. #241 (un conflit avec `main`) |
+| Qui tient quoi ? | QA-T05 (A01) · JUR-T04 (A01) · GOV-062 (A01) · GOV-066 (A01) · GOV-122 (A01) · GOV-118 (A01) · GOV-119 (A01) · GOV-121 (A01) |
 | Où en est la phase ? | phase 0 — 95/136 tâches, reste 32.75 j |
-| Le prochain pas | fusionner #235, puis QA-T05 — Pipeline GHCR privé → Coolify pull |
+| Le prochain pas | QA-T05 — Pipeline GHCR privé → Coolify pull |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
-| Dernière entrée de journal | PR #233 — 2026-09-29 |
+| Dernière entrée de journal | PR #241 — 2026-09-29 |
 
-**Ce qu’on tape maintenant.** `gh pr view 235 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : 0
 
@@ -60,9 +60,10 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #235 — fix(GOV-066): la garde d'entite juge chaque commit de la PR, pas seulement la tete, et ecrit ce qu'elle ne lit pas | `t/gov-066` | rien — fusionnable maintenant |
-| 2 | #237 — feat(INT-T26): la candidature recue cree un apporteur candidat, coordonnees tirees et chiffrees, rattachement par empreinte | `t/int-t26` | rien — fusionnable maintenant |
-| 3 | #239 — chore(GOV-012): registre rattrape, six taches closes, avenants JUR-T03 et INT-T27-A | `t/registre-rattrapage-11` | un contrôle requis rouge ou une revue manquante |
+| 1 | #237 — feat(INT-T26): la candidature recue cree un apporteur candidat, coordonnees tirees et chiffrees, rattachement par empreinte | `t/int-t26` | un contrôle requis rouge ou une revue manquante |
+| 2 | #239 — chore(GOV-012): registre rattrape, sept taches closes, gel de la gouvernance, avenants JUR-T03 et INT-T27-A | `t/registre-rattrapage-11` | un contrôle requis rouge ou une revue manquante |
+| 3 | #242 — feat(JUR-T34): la politique de confidentialite de l'espace, tiree du registre de l'article 30 et acceptee a la premiere connexion | `t/jur-t34` | un contrôle requis rouge ou une revue manquante |
+| 4 | #241 — fix(GOV-062): l'outillage qui execute la porte A est juge, sept points nommes | `t/gov-062` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -75,6 +76,7 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 | QA-T05 — Pipeline GHCR privé → Coolify pull | A01 | #222 | `a_faire` |
 | JUR-T04 — Registre RGPD, LIA, AIPD, mention art. 14, politique de confidentialité | A01 | #232 | `a_faire` |
 | GOV-062 — L'outillage qui execute la porte A n'est pas garde : configuration du gestionnaire, correctifs, actions tierces | A01 | #240 | `a_faire` |
+| GOV-066 — La garde d'entite juge l'index publie, pas tout ce que la forge sert du depot | A01 | #234 | `a_faire` |
 | GOV-122 — La cloture retient un renommage fait dans la seconde meme de la fusion, et une date illisible y devient NaN au lieu d'un refus | A01 | #224 | `a_faire` |
 | GOV-118 — La garde des attributions reconnait un gabarit a son nom, et reste verte si elle ne confronte aucun script de garde | A01 | #229 | `a_faire` |
 | GOV-119 — La porte A d'une PR rougit quand une AUTRE PR fusionne pendant son execution | A01 | #223 | `a_faire` |
@@ -90,21 +92,45 @@ Dérivé de `git log` sur `docs/adr/`, restreint au jour du dernier atterrissage
 
 ## Prochain pas
 
-**Fusionner #235** — elle est en tête de file et ne bloque sur rien.
-
 **QA-T05** — Pipeline GHCR privé → Coolify pull (1 j) : 21 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
 Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeStateStatus` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage —, la tâche ensuite. L’ordre de la file se corrige à la rubrique « File de fusion », jamais ici.
 
 ## Dernier atterrissage
 
-`origin/main` = `c92e400` (2026-09-29T15:17:11+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `fa90f83` (2026-09-29T16:41:40+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
 ## Journal
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
+
+### PR #241 — 2026-09-29 — fix(GOV-062): l'outillage qui execute la porte A est juge, sept points nommes
+
+**Fait.** La porte A juge l'outillage qui l'exécute, en sept points dont chacun a sa famille :
+réglage du gestionnaire, chemins réservés à `role:architecte`, correctifs, actions tierces, étape
+qui réécrit l'arbre, commande intégrée, environnement hérité. La réserve du §7 est accordée dans la
+source des agents, et la fiche de l'architecte est rendue par son générateur.
+
+**Reste.** Les lentilles relisent la tête. La modification de `.claude/agents/` et la correction
+du témoin de `gov:pr` ont chacune été autorisées par Williams, une seule fois.
+
+**Appris.** Un témoin qui décrit un risque peut heurter une réserve ajoutée plus tard : le cas
+6 quater mesurait le risque d'un fichier racine, et la réserve du §7 l'a fait rougir. Le témoin
+porte désormais le label que la réserve exige.
+
+### PR #235 — 2026-09-29 — fix(GOV-066): la garde d'entite juge chaque commit de la PR, pas seulement la tete, et ecrit ce qu'elle ne lit pas
+
+**Fait.** La garde des coordonnées ne juge plus seulement la tête : chaque commit poussé par la PR
+est lu, fichier ajouté ou modifié par commit, tel qu'il était. Une coordonnée ajoutée puis retirée
+avant la porte A est nommée avec son commit. Ce qu'elle ne lit pas est écrit et imprimé.
+
+**Reste.** L'historique déjà fusionné n'est pas relu : chaque commit y a été jugé par sa PR, à
+partir de celle-ci. Les archives composées avec les attributs d'export ne sont pas lues.
+
+**Appris.** Sur un dépôt public, la tête n'est pas ce qui est publié : chaque commit d'une PR l'est,
+même écrasé à la fusion.
 
 ### PR #233 — 2026-09-29 — feat(JUR-T04): registre de l'article 30 et AIPD, sources et derives du schema, la page de confidentialite scindee
 
@@ -118,45 +144,7 @@ et les huit questions du chantier des conseillers salariés, écrites sans crée
 **Appris.** La garde dérivée du schéma a vu seule la table arrivée entre la rédaction et la PR : un
 registre qui se confronte au schéma ne vieillit pas en silence.
 
-### PR #231 — 2026-09-29 — fix(GOV-118): un gabarit qui existe est un chemin reel, zero script de garde confronte est un refus
-
-**Fait.** La garde des attributions ne reconnaît plus un gabarit à sa seule forme : un chemin qui
-existe dans les fichiers suivis, comme fichier ou comme dossier, est un chemin réel. Une liste de
-scripts de garde lue et vide est un refus, et le périmètre de la famille est écrit.
-
-**Reste.** Rien sur ces trois points.
-
-**Appris.** Distinguer une dimension non lue d'une dimension lue et vide coûte une valeur de plus,
-`undefined` à côté de `[]` ; sans elle, le plancher aurait fait rougir tous les cas de preuve.
-
-### PR #230 — 2026-09-29 — docs(GOV-012): conseillers salaries — plan W19 et taches versees (GOV-112, GOV-115 a GOV-117), sans DECISIONS ni GLOSSAIRE
-
-**Fait.** Le plan du chantier W19 est versé dans `docs/chantiers/W19-conseillers-salaries.md`, avec
-les réponses de Williams du 2026-09-29, dont la question 22 : les conseillers travaillent dans le CRM
-Pro, et Partners garde le registre et décide par l'API 3. Quatre tâches entrent au registre `a_faire`
-(GOV-112, GOV-115, GOV-116, GOV-117) ; INT-T28, SEC-34 et DM-32 sont ajoutées au plan, UX-P2-11 en
-sort. Chiffrage : chantier W19 21,0 j, lot transverse « confort de la console pour tous les rôles »
-15,7 j, total Partners 36,7 j.
-
-Les quatre réserves de la lentille `securite`, qui a accepté la PR sur `830a648`, sont versées au
-plan et au registre. L'identité du conseiller à l'API 3 devient une hypothèse de confiance envers le
-CRM Pro, écrite dans l'ADR INT-T28 (HYP-W19-IDENTITE-CRM : vingt et une HYP au lieu de vingt). La
-limite de la Société, qui borne un CRM Pro compromis, devient fixe, égale à celle d'un apporteur, au
-lieu de croître avec le nombre de conseillers (HYP-W19-LIMITES). QA-T31 gagne une clause jumelle sur
-le temps de réponse et l'instant des notifications. SEC-34 porte une alerte de volume agrégée, active
-sans condition ; l'alerte par conseiller reste liée à HYP-W19-CSE. L'acceptance de GOV-116 porte la
-relecture du processus par la lentille `securite`. GOV-112 et GOV-115 sont réécrites en conséquence.
-
-**Reste.** Tout le chantier : GOV-116 puis GOV-112 écrivent `docs/DECISIONS.md`, `docs/GLOSSAIRE.md`
-et `docs/PRESEANCE.md`, que cette PR ne touche pas ; GOV-117 puis GOV-115 versent les trente-deux
-autres tâches. Aucune tâche W19 n'est livrée par cette PR. Les estimations de QA-T31 et de SEC-34
-ne sont pas rechiffrées après les réserves : GOV-115 les relit au versement.
-
-**Appris.** Un titre de PR doit nommer une tâche du registre, et une PR sur une tâche `a_faire`
-non revendiquée rougit `gov:etat` : une PR de plan qui verse ses tâches sans les livrer se titre sur
-une tâche déjà livrée, comme la PR #219 sur GOV-012, jamais sur l'une des tâches qu'elle verse.
-
-… 3 entrée(s) affichée(s) sur 99 ; les 96 plus ancienne(s) se lisent dans `docs/journal/`.
+… 3 entrée(s) affichée(s) sur 101 ; les 98 plus ancienne(s) se lisent dans `docs/journal/`.
 
 ## Dette déclarée
 
