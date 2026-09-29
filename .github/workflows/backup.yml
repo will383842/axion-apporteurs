@@ -1,0 +1,85 @@
+# La sauvegarde de Partners et son exercice — QA-T12 (REQ-QA-023).
+#
+# La base n'est pas publique : la PLATEFORME produit le vidage horaire et le dépose dans R2 sous
+# `partners/` (arbitrage -d7 sur délégation de Williams du 2026-09-29). Ce workflow :
+#   — chaque heure, CHIFFRE côté client ce qui a été déposé en clair, puis efface le clair ;
+#   — chaque mois, EXERCE le dernier vidage chiffré sur un Postgres éphémère, écrit le verdict
+#     sous `partners/exercices/`, et alerte sur échec ;
+#   — à la main, PROGRAMME la sauvegarde horaire de la base sur la plateforme.
+# La logique vit dans `scripts/sauvegarde/` ; aucune valeur n'y est imprimée. Secret absent :
+# SAUTÉ, chaque absent nommé en `::warning::`. `contents: read` seul : rien n'est poussé.
+name: Sauvegarde
+
+on:
+  schedule:
+    - cron: "23 * * * *"
+    - cron: "41 4 1 * *"
+  workflow_dispatch:
+    inputs:
+      geste:
+        description: "rechiffrer, exercice ou configurer"
+        required: true
+        default: "exercice"
+
+concurrency:
+  group: sauvegarde-production
+  cancel-in-progress: false
+
+jobs:
+  rechiffrer:
+    if: ${{ github.event.schedule == '23 * * * *' || inputs.geste == 'rechiffrer' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - uses: pnpm/action-setup@v4
+      - run: pnpm install --frozen-lockfile
+      - name: Chiffrer cote client ce que la plateforme a depose, puis effacer le clair
+        env:
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+          PARTNERS_BACKUP_PASSPHRASE: ${{ secrets.PARTNERS_BACKUP_PASSPHRASE }}
+        run: pnpm sauvegarde:rechiffrer
+
+  exercice:
+    if: ${{ github.event.schedule == '41 4 1 * *' || inputs.geste == 'exercice' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - uses: pnpm/action-setup@v4
+      - run: pnpm install --frozen-lockfile
+      - name: Restaurer le dernier vidage chiffre sur un Postgres ephemere, juger, alerter sur echec
+        env:
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+          PARTNERS_BACKUP_PASSPHRASE: ${{ secrets.PARTNERS_BACKUP_PASSPHRASE }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: pnpm sauvegarde:exercice
+
+  configurer:
+    if: ${{ inputs.geste == 'configurer' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - uses: pnpm/action-setup@v4
+      - run: pnpm install --frozen-lockfile
+      - name: Programmer la sauvegarde horaire de la base vers R2 sur la plateforme
+        env:
+          COOLIFY_URL: ${{ secrets.COOLIFY_URL }}
+          COOLIFY_API_TOKEN: ${{ secrets.COOLIFY_API_TOKEN }}
+          COOLIFY_DB_UUID: ${{ vars.COOLIFY_DB_UUID }}
+          COOLIFY_S3_STORAGE_UUID: ${{ vars.COOLIFY_S3_STORAGE_UUID }}
+        run: pnpm sauvegarde:configurer

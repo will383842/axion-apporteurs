@@ -120,3 +120,26 @@ jobs:
         run: pnpm mutation:prove
       - name: Stryker sur src/domain, seuil declare dans stryker.config.json
         run: pnpm mutation
+
+  # QA-T12 (REQ-QA-023) : une sauvegarde qu on ne restaure pas n en est pas une. Rouge si le dernier
+  # exercice reussi est plus vieux que le seuil de la SSOT (`EXERCICE_DE_RESTAURATION_MAX_JOURS`),
+  # s il a echoue, ou s il n y en a aucun. Secrets R2 absents : SAUTE, chaque absent nomme.
+  sauvegarde-fraicheur:
+    name: Sauvegarde — le dernier exercice de restauration est recent et reussi
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - name: Fraicheur de l exercice de restauration
+        env:
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+        run: pnpm sauvegarde:fraicheur

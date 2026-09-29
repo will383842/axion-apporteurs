@@ -151,7 +151,12 @@
     "gate-c:prove": "sh scripts/image/temoin-porte-c.sh",
     "gate-d": "sh scripts/gates/gate-d.sh",
     "gate-d:prove": "sh scripts/gates/gate-d.sh --prove",
-    "image:publier": "sh scripts/image/publier.sh"
+    "image:publier": "sh scripts/image/publier.sh",
+    "sauvegarde:exercice-local": "tsx scripts/sauvegarde/exercice.ts",
+    "sauvegarde:rechiffrer": "tsx scripts/sauvegarde/cycle.ts rechiffrer",
+    "sauvegarde:exercice": "tsx scripts/sauvegarde/cycle.ts exercice",
+    "sauvegarde:fraicheur": "tsx scripts/sauvegarde/cycle.ts fraicheur",
+    "sauvegarde:configurer": "tsx scripts/sauvegarde/cycle.ts configurer"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.13.0",

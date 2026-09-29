@@ -4,9 +4,7 @@
  * USAGE : pnpm sauvegarde:exercice -- --vidage <fichier> [--verdict <sortie.json>]
  *             restaure le vidage chiffré sur un Postgres ÉPHÉMÈRE, juge, écrit le verdict ;
  *             code 0 si réussi, 1 sinon. Clé : PARTNERS_BACKUP_PASSPHRASE.
- *         pnpm sauvegarde:fraicheur -- --verdict <verdict.json> --now <ISO>
- *             code 1 si le dernier verdict est absent, en échec ou plus vieux que le seuil de la
- *             SSOT (`EXERCICE_DE_RESTAURATION_MAX_JOURS`).
+ *         La fraîcheur, le rechiffrement et l'exercice du dernier vidage R2 : `cycle.ts`.
  *
  * UNE SAUVEGARDE QU'ON NE RESTAURE PAS N'EST PAS UNE SAUVEGARDE. L'exercice, dans cet ordre :
  *   1. refuse un vidage sans chiffrement client, et déchiffre (AES-256-GCM, `chiffrement.ts`) : un
@@ -26,11 +24,10 @@
  */
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
-import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { PostgreSqlContainer } from '@testcontainers/postgresql';
 import { IMAGE_BASE, prismaCli, RACINE } from '../../tests/integration/harnais';
-import { SEUILS } from '../../src/domain/seuils/ssot';
 import { dechiffrer, estChiffre } from './chiffrement';
 
 export type Verdict = {
@@ -149,39 +146,12 @@ export async function exercer(fichier: string, schema: string, phrase: string): 
   }
 }
 
-/** Le verdict sur le disque, ou `null` s'il manque ou ne se lit pas : les deux font rougir. */
-function lireVerdict(chemin: string): Verdict | null {
-  if (!existsSync(chemin)) return null;
-  try {
-    return JSON.parse(readFileSync(chemin, 'utf8')) as Verdict;
-  } catch {
-    return null;
-  }
-}
-
 function arg(nom: string): string | undefined {
   const i = process.argv.indexOf(nom);
   return i >= 0 ? process.argv[i + 1] : undefined;
 }
 
 async function principal(): Promise<number> {
-  if (process.argv.includes('--fraicheur')) {
-    const chemin = arg('--verdict');
-    const now = arg('--now');
-    if (!chemin || !now) throw new Error('usage : --fraicheur --verdict <fichier> --now <ISO>');
-    const v = lireVerdict(chemin);
-    const seuil = SEUILS.EXERCICE_DE_RESTAURATION_MAX_JOURS.valeur;
-    const j = jugerFraicheur(v, new Date(now), seuil);
-    if (j.ok) {
-      console.log(
-        `✅ sauvegarde:fraicheur — dernier exercice réussi il y a ${j.ageJours} jour(s), seuil ${seuil}`
-      );
-      return 0;
-    }
-    console.error(`❌ sauvegarde:fraicheur — ${j.motif}`);
-    return 1;
-  }
-
   const fichier = arg('--vidage');
   if (!fichier) throw new Error('usage : --vidage <fichier> [--verdict <sortie.json>]');
   const phrase = process.env.PARTNERS_BACKUP_PASSPHRASE ?? '';
