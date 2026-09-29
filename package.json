@@ -29,6 +29,8 @@
     "plan-state:build": "tsx scripts/plan-state/build.ts",
     "plan-state:verifier": "tsx scripts/plan-state/build.ts --verifier",
     "vues:fusion": "tsx scripts/vues/fusion.ts",
+    "lot:gardien-spec": "tsx scripts/lot/lot-dedie-gardien-spec.ts",
+    "lot:gardien-spec:verifier": "tsx scripts/lot/lot-dedie-gardien-spec.ts --verifier",
     "gov:tasks:render": "tsx scripts/gates/gov-tasks.ts --render",
     "gov:identifiants": "tsx scripts/gates/gov-identifiants.ts",
     "gov:identifiants:prove": "tsx scripts/gates/gov-identifiants.ts --prove",

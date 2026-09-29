@@ -121,13 +121,23 @@
 
 | Fichier                                      | Écrivain                                                             |
 | -------------------------------------------- | -------------------------------------------------------------------- |
-| `docs/DECISIONS.md`, `docs/GLOSSAIRE.md`, `docs/PRESEANCE.md` | `gardien-spec`, lot dédié avec `--settings` surchargé |
+| `docs/DECISIONS.md`, `docs/GLOSSAIRE.md`, `docs/PRESEANCE.md` | `gardien-spec`, lot dédié du gardien-spec (procédure ci-dessous) |
 | `docs/requirements.json`                     | `gardien-spec` — la **source** ; `docs/REQUIREMENTS.md` en est la VUE |
 | `docs/gates.json`                            | `gardien-spec` — la **source** ; `docs/GATES.md` en est la VUE        |
 | `docs/tasks.json`                            | `gardien-spec` / A01 (composition), jamais un développeur             |
 | `prisma/**`, `packages/contracts/**`         | PR `schema`, approbation `architecte` bloquante                       |
 | `docs/adr/**`                                | `architecte` accepte ; `documentaliste` indexe                        |
 | `.claude/settings.json`, `.claude/agents/**` | lot dédié GOV-000 / GOV-023 (`pnpm gov:agents`)                       |
+
+> **Le lot dédié du gardien-spec — la procédure (GOV-116, `partners/ADR-0028`).** Qui : **Williams
+> seul** ; aucun agent ne le lance pour lui, aucune session ne se le délègue. Où : à la racine du dépôt,
+> sur une branche `t/<slug>` dédiée. Commande : `claude --setting-sources user --settings
+> config/lot-dedie-gardien-spec.settings.json` (`pnpm lot:gardien-spec` l'imprime). Elle **écarte** les
+> réglages du projet et locaux, parce qu'un fichier passé par `--settings` s'ajoute sans lever un `deny`
+> ; le fichier du lot, **rendu** depuis `.claude/settings.json` (`--rendre`), en porte toutes les
+> interdictions et tous les hooks, sauf l'écriture des trois fichiers ci-dessus. `pnpm
+> lot:gardien-spec:verifier` rougit sur une dérive, et sur toute règle de ces trois fichiers qu'une
+> session ordinaire n'aurait pas en `deny`. La PR du lot joint une trace datée de l'exécution.
 
 > ⚠️ **Les VUES ne sont pas réservées — `partners/ADR-0019`, 2026-09-22.** `docs/PLAN-STATE.md`,
 > `docs/REQUIREMENTS.md`, `docs/TASKS.md`, `docs/GATES.md`, `docs/TRACABILITE.md` et

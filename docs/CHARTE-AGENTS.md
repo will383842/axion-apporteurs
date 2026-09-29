@@ -454,7 +454,7 @@ doit passer devant un relecteur comme une décision, pas comme une ligne de conf
 
 | Chemin réservé | Poste | Label exigé | Où la règle est écrite |
 | --- | --- | --- | --- |
-| `docs/DECISIONS.md`, `docs/GLOSSAIRE.md`, `docs/PRESEANCE.md` | A01 | `role:gardien-spec` | `docs/CONVENTIONS.md` §8, lot dédié avec `--settings` surchargé |
+| `docs/DECISIONS.md`, `docs/GLOSSAIRE.md`, `docs/PRESEANCE.md` | A01 | `role:gardien-spec` | `docs/CONVENTIONS.md` §8, lot dédié du gardien-spec (`pnpm lot:gardien-spec`, GOV-116, `partners/ADR-0028`) |
 | `docs/requirements.json` (**source** — `docs/REQUIREMENTS.md` en est la VUE — non réservée) | A01 | `role:gardien-spec` | `partners/ADR-0019` ; `docs/CONVENTIONS.md` §8 |
 | `docs/gates.json` (**source** — `docs/GATES.md` en est la VUE — non réservée) | A01, par le verbe `hors-depot/ajouter-entree.mjs` | `role:gardien-spec` | `partners/ADR-0019` ; `.claude/settings.json` porte déjà `deny` sur `Write` et `Edit` de ce fichier |
 | `docs/tasks.json` | A01 (composition), jamais un développeur | `role:gardien-spec` | `docs/CONVENTIONS.md` §8 |

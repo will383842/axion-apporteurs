@@ -7,7 +7,7 @@
 >
 > `0000-gabarit.md` est le moule, pas un ADR : il n’est pas indexé.
 
-**27 ADR · 19 `propose`, 8 `accepte`, 0 `remplace`.**
+**28 ADR · 20 `propose`, 8 `accepte`, 0 `remplace`.**
 
 | ADR | Titre | Statut | Date | Tâche |
 | --- | --- | --- | --- | --- |
@@ -38,3 +38,4 @@
 | [`partners/ADR-0025`](0025-les-decisions-de-gouvernance-de-will-s-ecrivent-en-adr.md) | Les décisions de gouvernance de Will s'écrivent en ADR : la règle d'arrêt du 2026-09-15 et les arbitrages des 15 et 16 septembre | `propose` | 2026-09-29 | GOV-058 |
 | [`partners/ADR-0026`](0026-une-lentille-pour-une-pr-sans-risque.md) | Une lentille pour une PR sans risque, deux pour tout le reste et dans le doute | `propose` | 2026-09-29 | GOV-124 |
 | [`partners/ADR-0027`](0027-le-motif-de-branche-depend-du-depot-de-la-tache.md) | Le motif de branche dépend du dépôt de la tâche | `propose` | 2026-09-29 | GOV-125 |
+| [`partners/ADR-0028`](0028-le-lot-dedie-du-gardien-spec.md) | Le lot dédié du gardien-spec : écarter les réglages du projet, ouvrir trois fichiers | `propose` | 2026-09-29 | GOV-116 |
