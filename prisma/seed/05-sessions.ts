@@ -54,3 +54,12 @@ export async function semerSession(
   });
   return { lienMagiqueId: lien.id, sessionId: session.id };
 }
+
+/**
+ * Le module par défaut du chargeur (`prisma/seed.ts`) : il ne sème AUCUNE session. Une session
+ * appartient à un apporteur, et aucun module du semeur ne sème encore d'apporteur : la tâche qui
+ * livrera ce module appellera `semerSession` avec les jetons et l'instant du contexte.
+ */
+export default async function semerParDefaut(): Promise<void> {
+  // Rien à semer : voir ci-dessus.
+}

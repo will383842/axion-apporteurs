@@ -28,16 +28,19 @@ import {
   type ModuleDeSemis,
 } from '../../prisma/seed';
 import { clesPii } from '../../src/server/securite/pii';
+import { NOMS_DES_SECRETS } from '../../src/lib/env';
+import { semerUtilisateurConsole } from '../../prisma/seed/06-console';
 
 const TSX = join(RACINE, 'node_modules/tsx/dist/cli.mjs');
 const SEMEUR = join(RACINE, 'prisma/seed.ts');
 const INSTANT = new Date('2026-09-30T00:00:00Z');
-/** Des clés factices, propres à ce test : jamais celles d'un environnement réel. */
-const ENV_CLES = {
-  PII_ENCRYPTION_KEY: 'a1'.repeat(32),
-  PII_HASH_KEY: 'cle-factice-empreintes-semeur-deterministe-0001',
-  IP_HASH_SALT: 'cle-factice-adresses-semeur-deterministe-00001',
-};
+/** Un jeu de secrets factices, VALIDE pour `src/lib/env.ts`, propre à ce test : dérivé des noms, jamais tapé. */
+const ENV_CLES: Record<string, string> = Object.fromEntries(
+  NOMS_DES_SECRETS.map((nom, i) => [
+    nom,
+    nom === 'PII_ENCRYPTION_KEY' ? 'a1'.repeat(32) : `factice-semeur-${i}-`.padEnd(40, 'x'),
+  ])
+);
 
 let pg: StartedPostgreSqlContainer;
 const urls: Record<string, string> = {};
@@ -112,14 +115,14 @@ describe('REQ-QA-015 — la comparaison voit ce qu’un semeur non déterministe
     const lisantLHorloge: ModuleDeSemis = {
       nom: '99-horloge-du-poste',
       semer: async (prisma, ctx) => {
-        await prisma.utilisateurConsole.create({
-          data: {
-            id: ctx.uuid('console/horloge'),
-            role: 'lecteur',
-            emailChiffre: Buffer.from([1]),
-            emailHash: `horloge-${process.hrtime.bigint()}`,
-            creeAt: new Date(),
-          },
+        // Le producteur réel, et la seule faute : l'instant lu sur l'horloge du poste.
+        await semerUtilisateurConsole(prisma, {
+          id: ctx.uuid('console/horloge'),
+          role: 'lecteur',
+          email: 'horloge@preview.invalid',
+          nom: null,
+          creeAt: new Date(),
+          cles: ctx.cles,
         });
       },
     };
