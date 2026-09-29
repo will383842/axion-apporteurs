@@ -274,6 +274,9 @@ de version (REQ-CPL-024).
 Quatorze tâches, **toutes versées en phase 1 par la PR qui porte ce fichier**, `a_faire`, sans
 attribution. Elles ne citent que des exigences existantes ; l'identifiant de l'exigence nouvelle du §3
 qu'elles réalisent est dit dans leur acceptance, et la passe gardien-spec l'ajoutera à `reqs`.
+Chacune porte son champ `tests{}` (exigence citée → fichier de test à écrire), posé par
+`hors-depot/poser-champ.mjs` : `docs/paths-proposes.json` en dérive ses chemins, et `gov:trace` refuse
+qu'une tâche nomme comme preuve un test existant qui ne cite pas l'exigence.
 Chaque ligne : phase · zone · schéma · sensible · estimation · dépendances · exigences · chemins.
 Défauts : repo `partners`, `hyp` vide sauf mention, `externe` null.
 
