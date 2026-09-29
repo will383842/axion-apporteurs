@@ -4075,9 +4075,13 @@
         "axionia/src/components/recrutement/FacebookLandingPage.tsx",
         "axionia/src/components/recrutement/PartenaireLandingPage.tsx",
         "axionia/src/app/[locale]/apporteur-affaires-independant-formation-ia-entreprise/page.tsx",
-        "axionia/src/app/[locale]/devenir-commercial-ia/page.tsx",
-        "axionia/src/app/[locale]/devenir-commercial-ia/candidature/page.tsx",
-        "axionia/package.json"
+        "axionia/package.json",
+        "axionia/src/content/recrutement/partenaire-landings.ts",
+        "axionia/src/content/recrutement/tunnel-facebook.ts",
+        "axionia/src/components/services/devenir-commercial/CommercialFounder.tsx",
+        "axionia/src/components/services/devenir-commercial/CommercialHowItWorks.tsx",
+        "axionia/src/components/services/devenir-commercial/CommercialProductsEarnings.tsx",
+        "axionia/src/lib/email/templates/apporteur-issue-echange.tsx"
       ],
       "schema": false,
       "sensible": [
