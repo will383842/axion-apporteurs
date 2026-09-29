@@ -92,6 +92,8 @@ export type Univers = {
   fichiersDesCommits?: FichierDUnCommit[];
   /** Le nombre de commits de la PR réellement lus, imprimé au vert. */
   commitsLus?: number;
+  /** Aucun point de divergence avec `main` n'a été trouvé : la plage de la PR n'a pas pu être lue. */
+  baseIntrouvable?: boolean;
 };
 
 /** Un fichier tel qu'il était à un commit de la PR, qui n'est plus sous cette forme dans la tête. */
@@ -3034,23 +3036,39 @@ export function fichiersDesCommits(
   const fichiers: FichierDUnCommit[] = [];
   const vus = new Set<string>();
   for (const commit of commits) {
-    const chemins = git([
-      'diff-tree',
-      '--no-commit-id',
-      '-r',
-      '--root',
-      '--diff-filter=AM',
-      '--name-only',
-      '-z',
-      commit,
-    ])
+    // UN COMMIT DE FUSION SE LIT AUSSI (refus de la lentille `exactitude`, PR #235). Sans option,
+    // `diff-tree` ne rend RIEN pour une fusion ; or chaque PR intègre `main` par une fusion, et un
+    // conflit s'y résout DANS ce commit. `--cc` rend exactement les fichiers que la résolution a
+    // produits (différents de TOUS les parents) : ce qui vient d'un parent a déjà été jugé.
+    const parents =
+      git(['rev-list', '--parents', '-n', '1', commit]).toString('utf8').trim().split(' ').length -
+      1;
+    const chemins = git(
+      parents > 1
+        ? ['diff-tree', '--no-commit-id', '-r', '--cc', '--name-only', '-z', commit]
+        : [
+            'diff-tree',
+            '--no-commit-id',
+            '-r',
+            '--root',
+            '--diff-filter=AM',
+            '--name-only',
+            '-z',
+            commit,
+          ]
+    )
       .toString('utf8')
       .split('\0')
       .filter((x) => x !== '');
     for (const chemin of chemins) {
-      const objet = git(['rev-parse', `${commit}:${chemin}`])
-        .toString('utf8')
-        .trim();
+      let objet: string;
+      try {
+        objet = git(['rev-parse', `${commit}:${chemin}`])
+          .toString('utf8')
+          .trim();
+      } catch {
+        continue; // supprimé par ce commit (une résolution de fusion peut retirer) : rien à lire
+      }
       let objetTete = '';
       try {
         objetTete = git(['rev-parse', `${tete}:${chemin}`])
@@ -3087,7 +3105,21 @@ function baseDeLaPr(): string | null {
  */
 export const LIMITE_DE_L_HISTORIQUE =
   "Lu : la tête et chaque commit de la PR. Non lu : l'historique déjà fusionné, jugé par la PR qui l'a porté, " +
-  "et les archives que la forge compose avec les attributs d'export (export-subst, export-ignore).";
+  "les archives que la forge compose avec les attributs d'export (export-subst, export-ignore), " +
+  'et un commit retiré de la branche par un push forcé : il sort de la plage lue, pas de la forge.';
+
+/**
+ * GOV-066 (relevé de la lentille `securite`, PR #235) — SUR UNE DEMANDE DE FUSION, UNE BASE
+ * INTROUVABLE N'EST PAS « ZÉRO COMMIT À LIRE ». Sans point de divergence avec `main`, la plage est
+ * vide et le vert dirait « 0 commit lu » d'une PR qui en porte : la garde refuse. Hors demande de
+ * fusion (poste local, `main`), la tête seule est jugée, et le vert le dit.
+ */
+export function baseIntrouvableRefusee(
+  baseIntrouvable: boolean,
+  evenement: string | undefined
+): boolean {
+  return baseIntrouvable && evenement === 'pull_request';
+}
 
 export function lireUnivers(): Univers {
   const entrees = entreesSuivies();
@@ -3111,6 +3143,7 @@ export function lireUnivers(): Univers {
     fichiers,
     fichiersDesCommits: pr.fichiers,
     commitsLus: pr.commits,
+    baseIntrouvable: base === null,
   };
 }
 
@@ -3831,6 +3864,16 @@ if (APPELE_DIRECTEMENT) {
     process.exit(prouver());
   } else {
     const univers = lireUnivers();
+    if (
+      baseIntrouvableRefusee(univers.baseIntrouvable === true, process.env['GITHUB_EVENT_NAME'])
+    ) {
+      console.error(
+        `❌ gov:entite — [source_illisible] aucun point de divergence avec main dans ce clone : les ` +
+          `commits de la demande de fusion ne peuvent pas être lus, et « 0 commit lu » serait un vert ` +
+          `qui ment (GOV-066). La porte A clone tout l'historique (fetch-depth: 0).`
+      );
+      process.exit(1);
+    }
     const fautes = controler(univers);
     if (fautes.length > 0) {
       // TOUTES les fautes : une liste tronquée tairait le nom d'un fichier refusé.

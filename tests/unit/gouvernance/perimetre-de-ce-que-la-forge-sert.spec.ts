@@ -22,6 +22,7 @@ import {
   IBAN_TEMOIN,
   LIMITE_DE_L_HISTORIQUE,
   UNIVERS_CONFORME,
+  baseIntrouvableRefusee,
   controler,
   fichiersDesCommits,
 } from '../../../scripts/gates/gov-entite';
@@ -49,7 +50,54 @@ unlinkSync(join(BAC, 'notes.txt'));
 git('add', '-A');
 git('commit', '-q', '-m', 'propre');
 
+// SECOND BANC — UNE RÉSOLUTION DE FUSION (refus de la lentille `exactitude`, PR #235). Chaque PR
+// intègre `main` par une fusion ; un conflit s'y résout DANS le commit de fusion, et `diff-tree` sans
+// option n'en rend rien. Ici, la résolution écrit une coordonnée, et le commit suivant la retire.
+const BAC2 = mkdtempSync(join(tmpdir(), 'gov-066-fusion-'));
+afterAll(() => rmSync(BAC2, { recursive: true, force: true }));
+const git2 = (...args: string[]) =>
+  execFileSync('git', ['-c', 'user.name=banc', '-c', 'user.email=banc@exemple.invalid', ...args], {
+    cwd: BAC2,
+    encoding: 'utf8',
+  }).trim();
+const ecrire2 = (texte: string) => writeFileSync(join(BAC2, 'vue.md'), texte);
+git2('init', '-q', '-b', 'main');
+ecrire2('v0\n');
+git2('add', '.');
+git2('commit', '-q', '-m', 'base');
+const BASE2 = git2('rev-parse', 'HEAD');
+git2('checkout', '-q', '-b', 'pr');
+ecrire2('v-pr\n');
+git2('commit', '-q', '-am', 'la PR');
+git2('checkout', '-q', 'main');
+ecrire2('v-main\n');
+git2('commit', '-q', '-am', 'main avance');
+git2('checkout', '-q', 'pr');
+try {
+  git2('merge', '-q', '--no-edit', 'main');
+} catch {
+  // conflit attendu sur vue.md : il se résout DANS le commit de fusion
+}
+ecrire2(`v-resolue ${IBAN_TEMOIN}\n`);
+git2('add', 'vue.md');
+git2('commit', '-q', '--no-edit');
+const FUSION = git2('rev-parse', 'HEAD');
+ecrire2('v-finale\n');
+git2('commit', '-q', '-am', 'propre');
+
 describe('REQ-GOV-031 — la garde d’entité juge chaque commit de la PR, pas seulement la tête (GOV-066)', () => {
+  it('REQ-GOV-031 — TÉMOIN : une coordonnée écrite par une RÉSOLUTION DE FUSION puis retirée est lue, et nommée avec le commit de fusion', () => {
+    const { fichiers } = fichiersDesCommits(BASE2, 'HEAD', BAC2);
+    const deLaFusion = fichiers.filter((f) => f.commit === FUSION);
+    expect(deLaFusion.map((f) => f.chemin)).toEqual(['vue.md']);
+    expect(deLaFusion[0]!.contenu).toContain(IBAN_TEMOIN);
+    const fautes = controler({ ...UNIVERS_CONFORME, fichiersDesCommits: fichiers }).filter(
+      (f) => f.famille === 'coordonnee_en_clair'
+    );
+    expect(fautes).toHaveLength(1);
+    expect(fautes[0]!.message).toContain(FUSION.slice(0, 7));
+  });
+
   it('REQ-GOV-031 — les fichiers de chaque commit sont lus, la tête étant propre', () => {
     const { fichiers, commits } = fichiersDesCommits(BASE, 'HEAD', BAC);
     expect(commits).toBe(2);
@@ -80,5 +128,13 @@ describe('REQ-GOV-031 — la garde d’entité juge chaque commit de la PR, pas 
   it('REQ-GOV-031 — la limite est ÉCRITE : ce qui n’est pas lu est nommé', () => {
     expect(LIMITE_DE_L_HISTORIQUE).toMatch(/historique déjà fusionné/);
     expect(LIMITE_DE_L_HISTORIQUE).toMatch(/attributs d'export/);
+    expect(LIMITE_DE_L_HISTORIQUE).toMatch(/push forcé/);
+  });
+
+  it('REQ-GOV-031 — TÉMOIN : sur une demande de fusion, une base introuvable est un refus, pas « zéro commit lu »', () => {
+    expect(baseIntrouvableRefusee(true, 'pull_request')).toBe(true);
+    expect(baseIntrouvableRefusee(false, 'pull_request')).toBe(false);
+    expect(baseIntrouvableRefusee(true, 'push')).toBe(false);
+    expect(baseIntrouvableRefusee(true, undefined)).toBe(false);
   });
 });
