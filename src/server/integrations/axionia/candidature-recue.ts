@@ -129,6 +129,17 @@ export type ResultatCandidature = 'cree' | 'rattache';
 /** Le client transactionnel dont ce traitement a besoin, et rien d'autre. */
 export type ClientCandidature = Pick<PrismaClient, '$transaction'>;
 
+/** Ce que `colonnesPii` rend pour un apporteur, sous les types que Prisma 5 attend (`Bytes` = Buffer). */
+type ColonnesApporteur = {
+  readonly id: string;
+  readonly nomChiffre?: Buffer | null;
+  readonly prenomChiffre?: Buffer | null;
+  readonly emailChiffre?: Buffer | null;
+  readonly emailHash?: string | null;
+  readonly telephoneChiffre?: Buffer | null;
+  readonly phoneHash?: string | null;
+};
+
 export async function traiterCandidatureRecue(
   prisma: ClientCandidature,
   recu: { readonly id: string; readonly charge: unknown },
@@ -181,16 +192,7 @@ export async function traiterCandidatureRecue(
               telephone: coordonnees.telephone,
             },
             d.cles
-          ) as unknown as Pick<
-            Prisma.ApporteurUncheckedCreateInput,
-            | 'id'
-            | 'nomChiffre'
-            | 'prenomChiffre'
-            | 'emailChiffre'
-            | 'emailHash'
-            | 'telephoneChiffre'
-            | 'phoneHash'
-          >),
+          ) as unknown as ColonnesApporteur),
         },
       });
       resultat = 'cree';
