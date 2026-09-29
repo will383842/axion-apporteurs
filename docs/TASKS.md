@@ -8,12 +8,12 @@
 >
 > Une tache = une PR, **≤ 1,5 jour**. Le plafond est porte par la garde `gov:tasks`.
 
-**292 taches · 222.35 j estimes.**
+**296 taches · 225.35 j estimes.**
 
 | Phase | Taches | Jours | Terminees |
 | --- | ---: | ---: | ---: |
 | -1 — Gouvernance (prealable bloquant) | 39 | 23.75 | 39 |
-| 0 — Socle technique | 118 | 91.85 | 76 |
+| 0 — Socle technique | 122 | 94.85 | 84 |
 | 1 — Operationnel | 62 | 48.00 | 0 |
 | 2 — Argent | 45 | 33.50 | 0 |
 | 3 — Pilotage et conformite | 28 | 25.25 | 0 |
@@ -522,7 +522,7 @@ Couvre : `REQ-QA-014`
 
 **Tests.** `tests/unit/qualite/req-check.spec.ts`
 
-### QA-T07 — Gate sécurité : semgrep
+### QA-T07 — Gate sécurité : semgrep ✅ **fusionnee**
 
 `1 j` · zone `qualite` · depend de `QA-T01`
 
@@ -922,7 +922,7 @@ Couvre : `REQ-QA-014`
 
 **Tests.** `tests/unit/gouvernance/titres-de-test-resolvent.spec.ts`
 
-### GOV-040 — Le registre d'exemptions n'a AUCUNE des deux surfaces qui arment une machine
+### GOV-040 — Le registre d'exemptions n'a AUCUNE des deux surfaces qui arment une machine ✅ **fusionnee**
 
 `0.5 j` · zone `gouvernance` · depend de `GOV-023`
 
@@ -1054,7 +1054,7 @@ Couvre : `REQ-GOV-029`
 
 **Tests.** `tests/unit/gouvernance/comparer-un-chemin-c-est-le-normaliser.spec.ts`
 
-### GOV-052 — L'entree de journal d'une PR n'est exigee qu'APRES sa fusion : la seule victime possible est main
+### GOV-052 — L'entree de journal d'une PR n'est exigee qu'APRES sa fusion : la seule victime possible est main ✅ **fusionnee**
 
 `0.5 j` · zone `gouvernance` · depend de `GOV-073`
 
@@ -1236,7 +1236,7 @@ Couvre : `REQ-GOV-008`, `REQ-GOV-012`, `REQ-QA-013`
 
 **Tests.** `tests/unit/gouvernance/un-nom-une-garde.spec.ts`
 
-### GOV-064 — Deux chemins suivis distincts peuvent se confondre dans la source unique du perimetre
+### GOV-064 — Deux chemins suivis distincts peuvent se confondre dans la source unique du perimetre ✅ **fusionnee**
 
 `1 j` · zone `gouvernance` · sensible : argent · aucune dependance
 
@@ -1306,7 +1306,7 @@ Couvre : `REQ-GOV-008`, `REQ-GOV-009`, `REQ-DM-003`
 
 **Tests.** `tests/unit/gouvernance/adr-assertion-existe.spec.ts` · `tests/unit/gouvernance/adr-0011-perimetre.spec.ts`
 
-### GOV-071 — Les gardes lexicale et d'identifiants ne decoupent pas les mots comme le rendu les affiche
+### GOV-071 — Les gardes lexicale et d'identifiants ne decoupent pas les mots comme le rendu les affiche ✅ **fusionnee**
 
 `0.75 j` · zone `gouvernance` · sensible : espace · aucune dependance
 
@@ -1336,7 +1336,7 @@ Couvre : `REQ-GOV-023`, `REQ-GOV-024`
 
 **Tests.** `tests/unit/gouvernance/une-seule-grammaire-de-journal.spec.ts`
 
-### GOV-074 — Les exemptions de la garde des attributions se rangent par site, pas par occurrence
+### GOV-074 — Les exemptions de la garde des attributions se rangent par site, pas par occurrence ✅ **fusionnee**
 
 `1 j` · zone `gouvernance` · aucune dependance
 
@@ -1450,7 +1450,7 @@ Couvre : `REQ-GOV-021`, `REQ-GOV-003`
 
 **Tests.** `tests/unit/gouvernance/aucun-script-de-garde-orphelin.spec.ts`
 
-### GOV-085 — Le geste que le rouge prescrit eteint le rouge en rendant vraie l'attribution qu'il denonce
+### GOV-085 — Le geste que le rouge prescrit eteint le rouge en rendant vraie l'attribution qu'il denonce ✅ **fusionnee**
 
 `0.5 j` · zone `gouvernance` · depend de `GOV-082`
 
@@ -1763,7 +1763,7 @@ Couvre : `REQ-GOV-026`
 
 **Tests.** `tests/unit/gouvernance/une-branche-reelle-de-la-forge-est-admise.spec.ts`
 
-### GOV-104 — La cloture d'une tache seule lit sa declaration dans un corps de PR reecrivable apres la fusion, et juge l'atterrissage sur la base de la PR
+### GOV-104 — La cloture d'une tache seule lit sa declaration dans un corps de PR reecrivable apres la fusion, et juge l'atterrissage sur la base de la PR ✅ **fusionnee**
 
 `1 j` · zone `gouvernance` · depend de `GOV-057`
 
@@ -1772,6 +1772,46 @@ Couvre : `REQ-GOV-026`, `REQ-GOV-021`
 **Acceptation.** Dettes des deux lentilles sur la PR #182 (GOV-057), et decision de Will du 2026-09-28 de les corriger. (1) SECURITE : `lot:cloture --tache` lit la declaration (titre, `Lot:`) dans le CORPS de la PR, que l'auteur peut reecrire apres la fusion ; une tache non portee pourrait alors etre declaree apres coup. La declaration se lit desormais dans le MESSAGE DU COMMIT DE FUSION, immuable : le pas 6 du protocole recopie la ligne `Lot:` du corps dans le message d'ecrasement (`gh pr merge --body`), et la cloture ne lit plus jamais le corps. Temoin : un corps de PR qui declare une tache que le commit ne declare pas ne la clot PAS. (2) SECURITE : l'atterrissage etait juge par ascendance sur `baseRefName` ; il l'est desormais sur la branche PAR DEFAUT du depot de la tache, lue sur la forge. Temoin : une PR fusionnee dans une autre base que la branche par defaut n'est pas atterrie. (3) Le mode `--lot` refuse lui aussi une branche hors du motif du schema, avant ecriture (temoin). (4) Le pas 8 dit qu'une PR doit declarer la tache qu'elle clot, et ce que cela implique pour une tache d'un autre depot. (5) `docs/DECISIONS.md` porte la decision W17 (motif de branch, GOV-103) et W18 (ce durcissement). (6) `docs/CHARTE-AGENTS.md` cite `RACINES_DE_LA_GARDE_DES_REVUES` au lieu de recopier « trois racines » (RM-01). LIMITE DECLAREE : les PR fusionnees avant ce durcissement ne portent pas `Lot:` dans leur commit ; leurs taches secondaires sont closes AVANT cette PR, par le rattrapage qui suit #182.
 
 **Tests.** `tests/unit/gouvernance/la-declaration-se-lit-dans-le-commit-de-fusion.spec.ts`
+
+### GOV-105 — La forge accepte-t-elle au depot une entree d'index que la source unique refuse desormais : le volet (3) de GOV-064 n'est ni mesure ni ecrit
+
+`0.5 j` · zone `gouvernance` · sensible : argent · depend de `GOV-064`
+
+Couvre : `REQ-GOV-031`
+
+**Acceptation.** Releve par la lentille exactitude sur la PR #195 : l'acceptance de GOV-064 demandait (3) de mesurer si la forge accepte au depot une entree d'index au nom non UTF-8, et de l'ecrire. Ce n'est pas fait : la source unique la refuse desormais cote poste, mais ce que la forge accepte ou refuse n'est pas connu. A livrer : la mesure, faite dans un depot JETABLE et prive, jamais dans ce depot public ; son resultat ecrit dans le commentaire de la source unique, sans la forme exacte de l'entree ; et, si la forge l'accepte, un temoin qui prouve que la porte A la refuse quand meme. La forme precise reste hors depot.
+
+**Tests.** `tests/unit/gouvernance/deux-chemins-ne-se-confondent-pas.spec.ts`
+
+### GOV-106 — La garde lexicale juge le texte rendu par expressions regulieres : la JSX et le Markdown rendent a l'ecran des mots qu'elle ne voit pas
+
+`1.5 j` · zone `gouvernance` · sensible : espace · depend de `GOV-071`
+
+Couvre : `REQ-GOV-017`, `REQ-JUR-037`, `REQ-GOV-003`
+
+**Acceptation.** Releve par la lentille securite sur la PR #195, formes tenues HORS DEPOT (dossier de reprise, fichier confidentiel) : plusieurs constructions de la JSX et du Markdown affichent a l'ecran un terme du lexique interdit que lignesRendues() ne reconstitue pas. A livrer : le rendu de la JSX par l'AST de TypeScript (texte et litteraux de chaine, expressions constantes, fragments), et du Markdown par son arbre, a la place des expressions regulieres ; une seule fonction pour les deux gardes (RM-01). TEMOINS : chaque forme du fichier confidentiel rougit sur la nouvelle garde ; les temoins ne sont commites qu'avec le correctif, dans la meme PR, et leur detail n'apparait dans AUCUN texte public avant sa fusion. Dettes connexes a juger : les homoglyphes.
+
+**Tests.** `tests/unit/gouvernance/frontiere-de-mot-du-rendu.spec.ts`
+
+### GOV-107 — Le titre qui declare une livraison se lit dans la premiere ligne du message d'ecrasement, et seul --subject le tient
+
+`0.5 j` · zone `gouvernance` · depend de `GOV-104`
+
+Couvre : `REQ-GOV-026`
+
+**Acceptation.** Releve par la lentille securite sur la PR #188 : hors --subject, une PR a un seul commit prend pour titre d'ecrasement le sujet du commit, ecrit par le developpeur, qui peut nommer une autre tache. A livrer : la cloture exige que la premiere ligne du message soit exactement le titre de la PR suivi de ` (#<n>)`, lu sur la forge, et refuse sinon (echec ferme, famille nommee). TEMOIN : un message dont la premiere ligne nomme une autre tache que le titre de la PR ne declare rien ; CONTRE-TEMOIN : la forme que le pas 6 produit declare.
+
+**Tests.** `tests/unit/gouvernance/la-declaration-se-lit-dans-le-commit-de-fusion.spec.ts`
+
+### GOV-108 — RM-15 se dit la seule redaction de l'obligation de journal, et deux documents la redigent encore sans la citer
+
+`0.5 j` · zone `gouvernance` · depend de `GOV-052`
+
+Couvre : `REQ-GOV-023`
+
+**Acceptation.** Releve par la lentille exactitude sur la PR #195 : RM-15 affirme etre la seule redaction de l'obligation d'entree de journal, alors que docs/journal/README.md et docs/REPRISE-SESSION.md la redigent encore sans la citer. A livrer : ces deux documents renvoient a RM-15 au lieu de redire la regle, et un temoin rougit si une autre redaction reapparait. Dette connexe de la lentille securite : journalALaReference liste l'arbre sans -z ni core.quotepath=false ; un nom d'entree non ASCII y serait mal lu. A corriger avec son temoin.
+
+**Tests.** `tests/unit/gouvernance/une-pr-porte-son-entree-de-journal.spec.ts`
 
 ## Phase 1 — Operationnel
 
