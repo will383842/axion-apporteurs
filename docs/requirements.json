@@ -265,7 +265,7 @@
     {
       "id": "REQ-DM-018",
       "domaine": "domaine-donnees",
-      "texte": "Le HT encaissé est fourni par axionia dans le webhook (amountHtCents dérivé de facture.montantHtCents / montantTtcCents, repli montantHtCents + montantTvaCents si montantTtcCents null) ; Partners n'infère jamais un taux de TVA.",
+      "texte": "Le HT encaissé est fourni par axionia dans le webhook (montantHtCents dérivé de facture.montantHtCents / montantTtcCents, repli montantHtCents + montantTvaCents si montantTtcCents null) ; Partners n'infère jamais un taux de TVA. Nom du champ aligné sur le contrat v2 (montantHtCents) le 2026-09-29, décision de Williams : REQ-DM-018 et le contrat v2 prévalent.",
       "source": "tableaux-de-bord §2.4, B2 ; nouvelle (F-DM-03)",
       "statut": "active",
       "remplaceePar": null,
