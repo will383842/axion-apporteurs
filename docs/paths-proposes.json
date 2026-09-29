@@ -2,12 +2,12 @@
   "version": 1,
   "resume": {
     "_methode": "une PAIRE est comptée quand l'intersection des deux `paths[]` n'est pas vide, par égalité de chaîne. ⚠️ Elle ne lit PAS le champ `paths` des tâches : deux tâches peuvent y figurer comme « sans intersection » alors que leurs `paths` déclarés se recouvrent — c'est le cas de GOV-025 et GOV-028, qui partagent `scripts/gates/gov-identifiants.ts`. Le composeur, lui, compare bien `t.paths` : cette vue ne dit donc pas ce qu'il fera. Ces trois totaux sont écrits par `scripts/lot/paths-proposes.ts` et par rien d'autre ; `tsx scripts/lot/paths-proposes.ts --check` échoue si le fichier rendu en diverge.",
-    "tachesCouvertes": 313,
+    "tachesCouvertes": 314,
     "pairesEnIntersection": 4531,
-    "cheminsDeclares": 845,
-    "cheminsDistincts": 544,
+    "cheminsDeclares": 846,
+    "cheminsDistincts": 545,
     "cheminsPartages": 109,
-    "tachesSansAucuneIntersection": 93,
+    "tachesSansAucuneIntersection": 94,
     "listeDesTachesIsolees": [
       "QA-T08",
       "QA-T12",
@@ -101,7 +101,8 @@
       "JUR-T35",
       "QA-T34",
       "GOV-123",
-      "GOV-124"
+      "GOV-124",
+      "GOV-125"
     ],
     "cheminsLesPlusPartages": [
       {
@@ -1636,6 +1637,9 @@
     ],
     "GOV-124": [
       "tests/unit/gouvernance/une-lentille-pour-une-pr-sans-risque.spec.ts"
+    ],
+    "GOV-125": [
+      "tests/unit/gouvernance/une-tache-axionia-se-clot-sur-sa-branche.spec.ts"
     ]
   }
 }

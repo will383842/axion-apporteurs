@@ -14,9 +14,9 @@
 > **« Réputée testée » est DÉRIVÉ, pas lu.** Le registre ne porte aucune échelle de
 > maturité : une exigence l’est dès qu’une des tâches qui la portent est livrée.
 
-**334 exigences actives · 128 réputées testées · 128 couvertes · 0 orphelines.**
+**334 exigences actives · 129 réputées testées · 129 couvertes · 0 orphelines.**
 
-313 tâches, dont 141 livrées · 173 fichiers de test exécutés par `vitest` sur 173 présents.
+314 tâches, dont 143 livrées · 173 fichiers de test exécutés par `vitest` sur 173 présents.
 
 ## Exigences réputées testées
 
@@ -74,7 +74,7 @@
 | `REQ-GOV-023` | `GOV-008`, `GOV-018`, `GOV-052`, `GOV-073`, `GOV-091`, `GOV-108` | `tests/unit/gouvernance/plan-state-frais.spec.ts`, `tests/unit/gouvernance/regles-maison.spec.ts`, `tests/unit/gouvernance/une-pr-porte-son-entree-de-journal.spec.ts`, `tests/unit/gouvernance/une-seule-grammaire-de-journal.spec.ts` | couverte |
 | `REQ-GOV-024` | `GOV-018`, `GOV-026`, `GOV-045`, `GOV-060`, `GOV-068`, `GOV-073`, `GOV-081` | `tests/unit/gouvernance/cliquet-nomme-chaque-refus.spec.ts`, `tests/unit/gouvernance/plan-state-lecteur-unique.spec.ts`, `tests/unit/gouvernance/raison-de-dette-resolue.spec.ts`, `tests/unit/gouvernance/regles-maison.spec.ts`, `tests/unit/gouvernance/une-seule-grammaire-de-journal.spec.ts` | couverte |
 | `REQ-GOV-025` | `GOV-017a`, `GOV-017b`, `GOV-038` | `tests/unit/gouvernance/attestation-inter-depot.spec.ts`, `tests/unit/gouvernance/paths-derives.spec.ts` | couverte |
-| `REQ-GOV-026` | `GOV-001`, `GOV-020`, `GOV-038`, `GOV-041`, `GOV-042`, `GOV-057`, `GOV-079`, `GOV-086`, `GOV-103`, `GOV-104`, `GOV-107`, `GOV-110`, `GOV-122` | `tests/unit/gouvernance/attestation-inter-depot.spec.ts`, `tests/unit/gouvernance/aucune-troncature-muette.spec.ts`, `tests/unit/gouvernance/clore-une-tache-livree-seule.spec.ts`, `tests/unit/gouvernance/cloture-refuse-ce-qu-elle-n-a-pas-mesure.spec.ts`, `tests/unit/gouvernance/inventaire-prouve.spec.ts`, `tests/unit/gouvernance/la-declaration-se-lit-dans-le-commit-de-fusion.spec.ts`, `tests/unit/gouvernance/un-etat-cible-porte-son-operation.spec.ts`, `tests/unit/gouvernance/un-statut-fusionnee-porte-sa-preuve.spec.ts`, `tests/unit/gouvernance/une-branche-reelle-de-la-forge-est-admise.spec.ts` | couverte |
+| `REQ-GOV-026` | `GOV-001`, `GOV-020`, `GOV-038`, `GOV-041`, `GOV-042`, `GOV-057`, `GOV-079`, `GOV-086`, `GOV-103`, `GOV-104`, `GOV-107`, `GOV-110`, `GOV-122`, `GOV-125` | `tests/unit/gouvernance/attestation-inter-depot.spec.ts`, `tests/unit/gouvernance/aucune-troncature-muette.spec.ts`, `tests/unit/gouvernance/clore-une-tache-livree-seule.spec.ts`, `tests/unit/gouvernance/cloture-refuse-ce-qu-elle-n-a-pas-mesure.spec.ts`, `tests/unit/gouvernance/inventaire-prouve.spec.ts`, `tests/unit/gouvernance/la-declaration-se-lit-dans-le-commit-de-fusion.spec.ts`, `tests/unit/gouvernance/un-etat-cible-porte-son-operation.spec.ts`, `tests/unit/gouvernance/un-statut-fusionnee-porte-sa-preuve.spec.ts`, `tests/unit/gouvernance/une-branche-reelle-de-la-forge-est-admise.spec.ts` | couverte |
 | `REQ-GOV-027` | `CPL-T01`, `CPL-T23`, `GOV-017a`, `GOV-017b`, `GOV-022` | `tests/gov/charte-pr.spec.ts`, `tests/unit/gouvernance/verrou-de-phase.spec.ts` | couverte |
 | `REQ-GOV-028` | `GOV-019` | `tests/unit/gouvernance/poids-du-bundle-garde-vraiment.spec.ts` | couverte |
 | `REQ-GOV-029` | `GOV-014`, `GOV-051`, `GOV-061`, `GOV-062`, `GOV-076` | `tests/unit/gouvernance/comparer-un-chemin-c-est-le-normaliser.spec.ts`, `tests/unit/gouvernance/formes-voisines-des-interdits.spec.ts`, `tests/unit/gouvernance/gardes-transposees.spec.ts`, `tests/unit/gouvernance/outillage-de-la-porte-a.spec.ts`, `tests/unit/gouvernance/porte-a-presente-active-effective.spec.ts` | couverte |
@@ -116,6 +116,7 @@
 | `REQ-QA-018` | `QA-T05` | `tests/unit/qualite/pipeline-image.spec.ts` | couverte |
 | `REQ-QA-019` | `QA-T04` | `tests/integration/sondes-de-vie.spec.ts` | couverte |
 | `REQ-QA-020` | `QA-T04` | `tests/integration/sondes-de-vie.spec.ts`, `tests/unit/qualite/sondes-client-unique.spec.ts` | couverte |
+| `REQ-QA-021` | `QA-T11` | `tests/integration/migrations-additives.spec.ts`, `tests/unit/qualite/porte-d.spec.ts` | couverte |
 | `REQ-QA-024` | `QA-T08` | `tests/unit/qualite/journal-redige.spec.ts` | couverte |
 | `REQ-QA-027` | `CPL-T13`, `DM-13`, `T-ARG-015` | `tests/unit/domaine/temps-horloge-et-feries.spec.ts` | couverte |
 | `REQ-QA-028` | `INT-T09` | `tests/integration/api-gouv.spec.ts` | couverte |
@@ -301,7 +302,6 @@
 | `REQ-QA-005` | 2 | `QA-T28`, `QA-T29` | — |
 | `REQ-QA-015` | 0 | `QA-T06` | `tests/integration/semeur-deterministe.spec.ts`, `tests/unit/qualite/preview-par-pr.spec.ts` |
 | `REQ-QA-017` | 1 | `QA-T16` | — |
-| `REQ-QA-021` | 0 | `QA-T11` | `tests/integration/migrations-additives.spec.ts` |
 | `REQ-QA-022` | 0 | `QA-T13` | `tests/unit/qualite/retour-arriere.spec.ts`, `tests/unit/qualite/runbooks-exerces.spec.ts` |
 | `REQ-QA-023` | 0 | `QA-T12` | `tests/unit/qualite/sauvegarde-et-exercice.spec.ts` |
 | `REQ-QA-025` | 1 | `QA-T19` | — |
