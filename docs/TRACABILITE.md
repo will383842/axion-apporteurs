@@ -16,7 +16,7 @@
 
 **334 exigences actives · 117 réputées testées · 117 couvertes · 0 orphelines.**
 
-296 tâches, dont 123 livrées · 153 fichiers de test exécutés par `vitest` sur 153 présents.
+296 tâches, dont 123 livrées · 156 fichiers de test exécutés par `vitest` sur 156 présents.
 
 ## Exigences réputées testées
 
@@ -39,7 +39,7 @@
 | `REQ-CPL-026` | `CPL-T13` | `tests/unit/domaine/seuil-prioritaire.spec.ts` | couverte |
 | `REQ-CPL-027` | `DM-06`, `JUR-T24`, `UX-P1-12`, `UX-P3-06` | `tests/unit/domaine/apporteur-activite.spec.ts`, `tests/unit/domaine/apporteur-matrice-et-statuts.spec.ts` | couverte |
 | `REQ-DM-001` | `DM-01`, `DM-02` | `tests/integration/index-partiels.spec.ts`, `tests/unit/domaine/gardes-de-schema.spec.ts`, `tests/unit/domaine/schema-centimes.spec.ts` | couverte |
-| `REQ-DM-003` | `DM-02`, `DM-07`, `GOV-006`, `GOV-030`, `GOV-068`, `GOV-069`, `GOV-070` | `tests/integration/index-partiels.spec.ts`, `tests/unit/domaine/etats-occupants.spec.ts`, `tests/unit/domaine/gardes-de-schema.spec.ts`, `tests/unit/gouvernance/glossaire-enums.spec.ts`, `tests/unit/gouvernance/termes-interdits.spec.ts` | couverte |
+| `REQ-DM-003` | `DM-02`, `DM-07`, `GOV-006`, `GOV-030`, `GOV-068`, `GOV-069`, `GOV-070` | `tests/integration/index-partiels.spec.ts`, `tests/unit/domaine/etats-occupants.spec.ts`, `tests/unit/domaine/gardes-de-schema.spec.ts`, `tests/unit/gouvernance/glossaire-enums.spec.ts`, `tests/unit/gouvernance/grammaire-des-zones-de-prose.spec.ts`, `tests/unit/gouvernance/termes-interdits.spec.ts` | couverte |
 | `REQ-DM-010` | `DM-06`, `DM-09`, `JUR-T24`, `SEC-12` | `tests/unit/domaine/apporteur-matrice-et-statuts.spec.ts` | couverte |
 | `REQ-DM-011` | `DM-06`, `DM-18`, `SEC-19` | `tests/unit/domaine/apporteur-matrice-et-statuts.spec.ts` | couverte |
 | `REQ-DM-012` | `DM-06` | `tests/integration/apporteur-jeton-depot.spec.ts`, `tests/unit/domaine/apporteur-identifiants.spec.ts` | couverte |
@@ -81,7 +81,7 @@
 | `REQ-GOV-032` | `GOV-024`, `GOV-035`, `GOV-053`, `GOV-055`, `GOV-072`, `GOV-079`, `GOV-085`, `GOV-087`, `GOV-090`, `GOV-101` | `tests/unit/gouvernance/aucune-troncature-muette.spec.ts`, `tests/unit/gouvernance/corps-de-pr-couvre.spec.ts`, `tests/unit/gouvernance/couverture-attendue.spec.ts`, `tests/unit/gouvernance/plan-state-rubrique-exemptee.spec.ts`, `tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts`, `tests/unit/gouvernance/relectures-sans-defaut.spec.ts`, `tests/unit/gouvernance/tete-de-pr-concorde.spec.ts`, `tests/unit/gouvernance/un-rendu-n-officialise-pas-une-attribution.spec.ts`, `tests/unit/gouvernance/une-cle-ecrite-deux-fois.spec.ts`, `tests/unit/gouvernance/volatilite-par-ligne.spec.ts`, `tests/unit/gouvernance/vues-derivees.spec.ts` | couverte |
 | `REQ-GOV-033` | `GOV-029` | `tests/unit/gouvernance/lot-identifiant-unique.spec.ts` | couverte |
 | `REQ-INT-003` | `GOV-088`, `INT-T01a` | `tests/unit/gouvernance/termes-interdits.spec.ts`, `tests/unit/integration/contrat-hash.spec.ts` | couverte |
-| `REQ-INT-004` | `GOV-030`, `GOV-069`, `GOV-088`, `INT-T01a`, `INT-T01c`, `INT-T05` | `tests/unit/gouvernance/termes-interdits.spec.ts`, `tests/unit/integration/contrat-hash.spec.ts` | couverte |
+| `REQ-INT-004` | `GOV-030`, `GOV-069`, `GOV-088`, `INT-T01a`, `INT-T01c`, `INT-T05` | `tests/unit/gouvernance/grammaire-des-zones-de-prose.spec.ts`, `tests/unit/gouvernance/termes-interdits.spec.ts`, `tests/unit/integration/contrat-hash.spec.ts` | couverte |
 | `REQ-INT-011` | `INT-T21-A`, `INT-T21-P`, `SEC-06` | `tests/integration/webhook-verdicts.spec.ts`, `tests/unit/integration/evenement-recu-travail.spec.ts` | couverte |
 | `REQ-INT-014` | `INT-T07-A`, `INT-T07-P`, `SEC-07` | `tests/integration/frontiere.spec.ts` | couverte |
 | `REQ-INT-020` | `INT-T09` | `tests/integration/api-gouv.spec.ts`, `tests/unit/integration/recherche-entreprises-repli.spec.ts` | couverte |
@@ -457,6 +457,7 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | `tests/integration/apporteur-jeton-depot.spec.ts` | oui | `REQ-DM-012` |
 | `tests/integration/frontiere.spec.ts` | oui | `REQ-INT-014`, `REQ-SEC-012` |
 | `tests/integration/harnais-testcontainers.spec.ts` | oui | `REQ-QA-006` |
+| `tests/integration/idor.spec.ts` | oui | `REQ-ARG-029`, `REQ-QA-010`, `REQ-SEC-008`, `REQ-SEC-009`, `REQ-UX-006` |
 | `tests/integration/index-partiels.spec.ts` | oui | `REQ-DM-001`, `REQ-DM-003`, `REQ-DM-038` |
 | `tests/integration/journal.spec.ts` | oui | `REQ-DM-024`, `REQ-DM-041`, `REQ-JUR-026`, `REQ-SEC-027` |
 | `tests/integration/lien-magique.spec.ts` | oui | `REQ-SEC-001`, `REQ-SEC-002` |
@@ -523,6 +524,7 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | `tests/unit/gouvernance/gardes.spec.ts` | oui | `REQ-GOV-001`, `REQ-GOV-003`, `REQ-GOV-015`, `REQ-GOV-031` |
 | `tests/unit/gouvernance/glossaire-enums.spec.ts` | oui | `REQ-DM-003`, `REQ-DM-038`, `REQ-GOV-016`, `REQ-JUR-027` |
 | `tests/unit/gouvernance/gov-pr-lit-une-pr-de-lot.spec.ts` | oui | `REQ-GOV-007`, `REQ-GOV-021` |
+| `tests/unit/gouvernance/grammaire-des-zones-de-prose.spec.ts` | oui | `REQ-DM-003`, `REQ-INT-004` |
 | `tests/unit/gouvernance/identifiants-nus-positions-limites.spec.ts` | oui | `REQ-GOV-003` |
 | `tests/unit/gouvernance/integration-livrable.spec.ts` | oui | — |
 | `tests/unit/gouvernance/inventaire-prouve.spec.ts` | oui | `REQ-GOV-026` |
@@ -586,6 +588,7 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | `tests/unit/qualite/score-de-mutation.spec.ts` | oui | `REQ-QA-002` |
 | `tests/unit/qualite/semgrep-regles-maison.spec.ts` | oui | `REQ-QA-011`, `REQ-QA-013`, `REQ-SEC-008` |
 | `tests/unit/qualite/sondes-client-unique.spec.ts` | oui | `REQ-QA-020` |
+| `tests/unit/securite/acces-scope.spec.ts` | oui | `REQ-QA-011`, `REQ-QA-012`, `REQ-SEC-008`, `REQ-SEC-022` |
 | `tests/unit/securite/chiffrement-avec-aad.spec.ts` | oui | `REQ-SEC-024` |
 | `tests/unit/securite/connexion-actions.spec.ts` | oui | `REQ-SEC-001` |
 | `tests/unit/securite/connexion-ecran.spec.ts` | oui | `REQ-SEC-001`, `REQ-SEC-002` |
