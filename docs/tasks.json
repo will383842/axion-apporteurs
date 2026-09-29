@@ -10329,7 +10329,8 @@
         "scripts/gates/gov-conventions.ts",
         ".github/workflows/ci.yml",
         "docs/agents.json",
-        ".claude/agents/architecte.md"
+        ".claude/agents/architecte.md",
+        "scripts/gates/gov-pr.ts"
       ],
       "schema": false,
       "sensible": [],
