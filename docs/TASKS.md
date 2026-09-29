@@ -8,12 +8,12 @@
 >
 > Une tache = une PR, **≤ 1,5 jour**. Le plafond est porte par la garde `gov:tasks`.
 
-**327 taches · 254.60 j estimes.**
+**328 taches · 254.85 j estimes.**
 
 | Phase | Taches | Jours | Terminees |
 | --- | ---: | ---: | ---: |
 | -1 — Gouvernance (prealable bloquant) | 39 | 23.75 | 39 |
-| 0 — Socle technique | 129 | 98.10 | 102 |
+| 0 — Socle technique | 130 | 98.35 | 102 |
 | 1 — Operationnel | 78 | 67.00 | 0 |
 | 2 — Argent | 45 | 33.50 | 0 |
 | 3 — Pilotage et conformite | 36 | 32.25 | 0 |
@@ -1880,6 +1880,16 @@ Couvre : `REQ-GOV-032`, `REQ-GOV-006`
 Couvre : `REQ-GOV-011`, `REQ-GOV-013`
 
 **Acceptation.** EXCEPTION AU GEL DE LA GOUVERNANCE, decision de Williams du 2026-09-29 (vers 18 h), confirmee directement dans la session A01, priorite juste apres la PR #239. Elle amende W16 (partners/ADR-0024, deux lentilles partout) : un avenant ou une ADR le dit, par l'architecte. A LIVRER : (1) lentillesExigees rend UNE lentille quand risqueDeLaPr classe la PR ordinaire, et DEUX (exactitude et securite) sinon ; l'avis schema reste exige des que la PR touche au schema. (2) Le classement est DERIVE (fichiers, labels, taches, lot), jamais declare par l'auteur ; il est FERME : une liste de fichiers illisible ou incomplete, une tache non resolue ou un registre de base illisible valent deux lentilles. (3) Restent a deux lentilles : src/, l'argent, l'attribution, la securite, le juridique, les donnees, le processus des gardes (garde des revues, .github/, racine du depot, config/, package.json) et toute tache sensible ou schema. Une seule lentille ne vaut que pour des documents, des tests et l'outillage interne sans effet sur ces zones. (4) La lentille unique est nommee par la regle (celle qui fait foi), et son refus bloque. TEMOINS rouges d'abord : une PR de documentation seule exige une lentille ; la meme PR qui ajoute un fichier sous src/ ou sous scripts/gates/ en exige deux ; une liste de fichiers incomplete en exige deux.
+
+**Tests.** `tests/unit/gouvernance/une-lentille-pour-une-pr-sans-risque.spec.ts`
+
+### GOV-126 — Le temoin d'une garde vaut la garde : les tests de gouvernance, de securite et d'integration restent a deux lentilles
+
+`0.25 j` · zone `gouvernance` · depend de `GOV-124`
+
+Couvre : `REQ-GOV-011`
+
+**Acceptation.** Releve par la lentille securite sur la PR #248 (GOV-124), a fermer AVANT le premier usage d'une lentille unique. tests/ est autorise en entier : une tache gouvernance ou qualite non sensible peut donc affaiblir, sous la seule lentille exactitude, le temoin d'une garde (tests/unit/gouvernance/, dont celui de la regle des lentilles et celui de la garde des revues), et ni red-first ni la mutation ne le voient. A LIVRER : tests/unit/gouvernance/, tests/unit/securite/ et tests/integration/ entrent dans EXCLUS_D_UNE_LENTILLE ; l'ADR 0026 le dit. TEMOIN rouge d'abord : une PR qui ne touche que tests/unit/gouvernance/une-lentille-pour-une-pr-sans-risque.spec.ts exige deux lentilles ; un test hors de ces trois dossiers reste a une lentille. AVENANT A01 du 2026-09-29 (dette bloquante de la lentille exactitude sur la PR #250) : la regle est INVERSEE dans tests/. Seul tests/a11y/ reste autorise a une lentille (tests/unit/qualite/ porte les temoins de gardes de securite et du processus, releve de la lentille securite sur la PR #250) ; le domaine, le contrat, le juridique, l integration, la gouvernance, la securite, tests/gov, tests/fixtures et tout dossier a venir valent deux lentilles. TEMOIN : un test de domaine, une fixture de grille ou un test juridique exigent deux lentilles.
 
 **Tests.** `tests/unit/gouvernance/une-lentille-pour-une-pr-sans-risque.spec.ts`
 

@@ -7,26 +7,26 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `d65e749` — 2026-09-29T19:45:55+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #244 (un contrôle requis rouge ou une revue manquante) · 2. #250 (un contrôle requis rouge ou une revue manquante) · 3. #251 (un contrôle requis rouge ou une revue manquante) · 4. #242 (un conflit avec `main`) |
-| Qui tient quoi ? | QA-T11 (A01) · GOV-062 (A01) · GOV-124 (A01) |
-| Où en est la phase ? | phase 0 — 102/129 tâches, reste 21.75 j |
+| Où est `main` ? | `d13c426` — 2026-09-29T20:09:09+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #250 (un contrôle requis rouge ou une revue manquante) · 2. #251 (un contrôle requis rouge ou une revue manquante) · 3. #242 (un conflit avec `main`) |
+| Qui tient quoi ? | QA-T11 (A01) · GOV-062 (A01) · GOV-124 (A01) · GOV-126 (A01) |
+| Où en est la phase ? | phase 0 — 102/130 tâches, reste 22.00 j |
 | Le prochain pas | QA-T11 — Gate D migrations : base vierge, dump N-1, migrate diff vide, image N-1, lint expand/contract |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
-| Dernière entrée de journal | PR #248 — 2026-09-29 |
+| Dernière entrée de journal | PR #250 — 2026-09-29 |
 
 **Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : 0
 
-102/129 tâches terminées · reste 21.75 j estimés.
+102/130 tâches terminées · reste 22.00 j estimés.
 
 ## Tâches
 
 | Statut | Nombre | Détail |
 | --- | --- | --- |
 | `proposee` | 0 | — |
-| `a_faire` | 184 | QA-T11, QA-T06, QA-T12, QA-T13, DM-03-A, DM-03-P, DM-04, INT-T02, INT-T03, INT-T04, INT-T05, INT-T22 … (12 affichées sur 184 — liste complète : `docs/TASKS.md`) |
+| `a_faire` | 185 | QA-T11, QA-T06, QA-T12, QA-T13, DM-03-A, DM-03-P, DM-04, INT-T02, INT-T03, INT-T04, INT-T05, INT-T22 … (12 affichées sur 185 — liste complète : `docs/TASKS.md`) |
 | `en_cours` | 0 | — |
 | `bloquee` | 0 | — |
 | `attente_externe` | 2 | JUR-T01b · JUR-T01c |
@@ -60,10 +60,9 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #244 — docs(GOV-017a): confirmation du depot par e-mail — plan W20 et quatorze taches versees en phase 1, sans DECISIONS ni REQ nouvelles | `t/w20-confirmation-email` | un contrôle requis rouge ou une revue manquante |
-| 2 | #250 — feat(GOV-126): le temoin d'une garde vaut la garde, tests de gouvernance, securite et integration a deux lentilles | `t/gov-126` | un contrôle requis rouge ou une revue manquante |
-| 3 | #251 — chore(GOV-012): registre rattrape, HT encaisse tranche par Williams, paths du lot A et de JUR-T29, GOV-125 versee | `t/registre-rattrapage-13` | un contrôle requis rouge ou une revue manquante |
-| 4 | #242 — feat(JUR-T34): la politique de confidentialite de l'espace, tiree du registre de l'article 30 et acceptee a la premiere connexion | `t/jur-t34` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #250 — feat(GOV-126): le temoin d'une garde vaut la garde, tests de gouvernance, securite et integration a deux lentilles | `t/gov-126` | un contrôle requis rouge ou une revue manquante |
+| 2 | #251 — chore(GOV-012): registre rattrape, HT encaisse tranche par Williams, paths du lot A et de JUR-T29, GOV-125 versee | `t/registre-rattrapage-13` | un contrôle requis rouge ou une revue manquante |
+| 3 | #242 — feat(JUR-T34): la politique de confidentialite de l'espace, tiree du registre de l'article 30 et acceptee a la premiere connexion | `t/jur-t34` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -76,6 +75,7 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 | QA-T11 — Gate D migrations : base vierge, dump N-1, migrate diff vide, image N-1, lint expand/contract | A01 | #243 | `a_faire` |
 | GOV-062 — L'outillage qui execute la porte A n'est pas garde : configuration du gestionnaire, correctifs, actions tierces | A01 | #240 | `a_faire` |
 | GOV-124 — Une seule lentille pour une PR sans risque, derivee par risqueDeLaPr ; deux pour tout le reste et dans le doute | A01 | #247 | `a_faire` |
+| GOV-126 — Le temoin d'une garde vaut la garde : les tests de gouvernance, de securite et d'integration restent a deux lentilles | A01 | #249 | `a_faire` |
 
 ⚠️ **13 revendication(s) périmée(s)** — QA-T07, GOV-042, GOV-045, GOV-050, GOV-051, GOV-053, GOV-054, GOV-055, GOV-060, GOV-072, GOV-079, GOV-093, INT-T01c : leur issue porte encore un label `owner:` alors que la tâche est livrée. `pnpm lot:cloture` écrit `docs/tasks.json` mais n’efface pas les labels ; la dette appartient à GOV-012.
 
@@ -93,13 +93,24 @@ Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeS
 
 ## Dernier atterrissage
 
-`origin/main` = `d65e749` (2026-09-29T19:45:55+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `d13c426` (2026-09-29T20:09:09+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
 ## Journal
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
+
+### PR #250 — 2026-09-29 — feat(GOV-126): le temoin d'une garde vaut la garde, tests de gouvernance, securite et integration a deux lentilles
+
+**Fait.** Les tests de gouvernance, de sécurité et d'intégration restent à deux lentilles : une PR
+qui ne toucherait que le témoin d'une garde ne peut plus l'affaiblir sous une seule relecture.
+
+**Reste.** Aucune PR n'a encore été fusionnée à une seule lentille : la règle entre en usage avec
+cette fermeture.
+
+**Appris.** Un témoin fait partie de la garde qu'il prouve : l'autoriser à une lentille, c'était
+autoriser la garde elle-même par un détour.
 
 ### PR #248 — 2026-09-29 — feat(GOV-124): une lentille pour une PR sans risque, derivee et fermee, deux pour tout le reste
 
@@ -125,19 +136,7 @@ INT-T27-A pour être close.
 **Appris.** Une clôture se juge avec ses dépendances : une tâche livrée par une PR fusionnée
 reste ouverte tant que sa dépendance ne l'est pas, sinon le registre ment sur l'ordre.
 
-### PR #245 — 2026-09-29 — feat(QA-T11): porte D, expand puis contract contre le code deploye, vidage N-1 seme, diff vide
-
-**Fait.** La porte D confronte les migrations de la PR au code déployé : une colonne encore lue
-ne se supprime pas, et le refus nomme son lecteur. Elle migre une base vierge et un vidage N-1
-semé, exige un diff vide sans ligne perdue, et démarre l'image N-1 sur le schéma migré.
-
-**Reste.** Les étapes Docker ne sont prouvées qu'en CI. La détection d'une lecture par
-co-occurrence peut rougir à tort sur un homonyme : elle échoue fermé.
-
-**Appris.** Une migration additive passe trivialement sur une base vide. Sans vidage semé, la
-porte D serait un vert qui ment : le semis est le cœur de la porte, pas un détail.
-
-… 3 entrée(s) affichée(s) sur 107 ; les 104 plus ancienne(s) se lisent dans `docs/journal/`.
+… 3 entrée(s) affichée(s) sur 108 ; les 105 plus ancienne(s) se lisent dans `docs/journal/`.
 
 ## Dette déclarée
 
