@@ -7,9 +7,9 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `0db2bca0` — 2026-09-30T00:01:49+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #263 (un contrôle requis rouge ou une revue manquante) · 2. #267 (un contrôle requis rouge ou une revue manquante) · 3. #268 (un contrôle requis rouge ou une revue manquante) · 4. #271 (un contrôle requis rouge ou une revue manquante) · 5. #272 (un contrôle requis rouge ou une revue manquante) · 6. #262 (un conflit avec `main`) |
-| Qui tient quoi ? | GOV-117 (A01) |
+| Où est `main` ? | `dc6cfcb9` — 2026-09-30T00:49:30+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #263 (un conflit avec `main`) · 2. #268 (un conflit avec `main`) · 3. #272 (un conflit avec `main`) · 4. #262 (état `UNKNOWN`) · 5. #271 (état `UNKNOWN`) · 6. #275 (état `UNKNOWN`) |
+| Qui tient quoi ? | GOV-109 (A01) · GOV-117 (A01) |
 | Où en est la phase ? | phase 0 — 116/133 tâches, reste 13.00 j |
 | Le prochain pas | QA-T06 — Preview par PR sur Coolify, base éphémère, seed déterministe |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
@@ -60,12 +60,12 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #263 — feat(QA-T20): le poids charge par route se lit dans les manifestes de Next 16, zero octet est une faute | `t/qa-t20` | un contrôle requis rouge ou une revue manquante |
-| 2 | #267 — fix(GOV-109): la garde lexicale evalue toute expression JSX constante comme React la rend | `t/gov-109` | un contrôle requis rouge ou une revue manquante |
-| 3 | #268 — feat(QA-T34): la plateforme tire sha-7 apres publier, un seul producteur, l'atterrissage lu sur x-partners-build-sha | `t/qa-t34` | un contrôle requis rouge ou une revue manquante |
-| 4 | #271 — chore(GOV-012): registre rattrape, JUR-T03 close, chiffrement client des sauvegardes, paths de QA-T12 et JUR-T29 | `t/registre-rattrapage-16` | un contrôle requis rouge ou une revue manquante |
-| 5 | #272 — feat(QA-T50): base, cache et application crees s'ils manquent, variables posees depuis les secrets, aucune valeur imprimee | `t/qa-t50` | un contrôle requis rouge ou une revue manquante |
-| 6 | #262 — feat(GOV-116): le lot dedie du gardien-spec, procedure exacte lancee par Williams, reglages rendus depuis le projet | `t/gov-116` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #263 — feat(QA-T20): le poids charge par route se lit dans les manifestes de Next 16, zero octet est une faute | `t/qa-t20` | un conflit avec `main` — à résoudre avant tout |
+| 2 | #268 — feat(QA-T34): la plateforme tire sha-7 apres publier, un seul producteur, l'atterrissage lu sur x-partners-build-sha | `t/qa-t34` | un conflit avec `main` — à résoudre avant tout |
+| 3 | #272 — feat(QA-T50): base, cache et application crees s'ils manquent, variables posees depuis les secrets, aucune valeur imprimee | `t/qa-t50` | un conflit avec `main` — à résoudre avant tout |
+| 4 | #262 — feat(GOV-116): le lot dedie du gardien-spec, procedure exacte lancee par Williams, reglages rendus depuis le projet | `t/gov-116` | état `UNKNOWN` — à qualifier à la main |
+| 5 | #271 — chore(GOV-012): registre rattrape, JUR-T03 close, chiffrement client des sauvegardes, paths de QA-T12 et JUR-T29 | `t/registre-rattrapage-16` | état `UNKNOWN` — à qualifier à la main |
+| 6 | #275 — feat(GOV-123): les vues derivees sortent de git et se rendent a la volee, fin des conflits de vues entre PR | `t/gov-123-vues` | état `UNKNOWN` — à qualifier à la main |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -75,6 +75,7 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 
 | Tâche | Revendiquée par | Issue | Statut |
 | --- | --- | --- | --- |
+| GOV-109 — La garde lexicale ne s'arrete pas au texte litteral : des expressions constantes de la JSX rendent encore a l'ecran un terme qu'elle ne voit pas | A01 | #266 | `a_faire` |
 | GOV-117 — L'outil d'écriture du registre écrit reqs, hyp et zone d'une tâche existante, validés contre le schéma, les REQ et les HYP existantes, et journalisés | A01 | #258 | `a_faire` |
 
 ⚠️ **13 revendication(s) périmée(s)** — QA-T07, GOV-042, GOV-045, GOV-050, GOV-051, GOV-053, GOV-054, GOV-055, GOV-060, GOV-072, GOV-079, GOV-093, INT-T01c : leur issue porte encore un label `owner:` alors que la tâche est livrée. `pnpm lot:cloture` écrit `docs/tasks.json` mais n’efface pas les labels ; la dette appartient à GOV-012.
@@ -93,7 +94,7 @@ Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeS
 
 ## Dernier atterrissage
 
-`origin/main` = `0db2bca0` (2026-09-30T00:01:49+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `dc6cfcb9` (2026-09-30T00:49:30+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
@@ -112,6 +113,18 @@ chemins de QA-T12 et de JUR-T29 suivent ce que leurs auteurs ont mesuré.
 **Appris.** Une condition de mise en service écrite dans un runbook seul se perd : écrite dans
 l'acceptance, elle a un témoin et bloque réellement.
 
+### PR #267 — 2026-09-29 — fix(GOV-109): la garde lexicale evalue toute expression JSX constante comme React la rend
+
+**Fait.** La garde du lexique évalue désormais la valeur rendue de toute expression JSX constante,
+ternaires compris, avec les deux branches jugées, au lieu d'une liste de formes. Ce qu'elle ne peut
+pas évaluer est écrit dans son en-tête.
+
+**Reste.** Les expressions non constantes, et ce qu'un composant fait de ses enfants, restent hors
+de la garde : c'est la relecture qui les voit.
+
+**Appris.** Une liste de formes interdites se contourne par la forme suivante : évaluer la valeur
+rendue ferme toute la famille d'un coup.
+
 ### PR #261 — 2026-09-29 — chore(GOV-012): registre rattrape, INT-T02 INT-T27-A et INT-T26 closes, REQ-DM-021 amendee, JUR-T36 versee
 
 **Fait.** Quinzième rattrapage. INT-T02 se clôt par l'unique entrée du passif déclaré, et INT-T27-A
@@ -123,18 +136,7 @@ JUR-T36 porte la dette bloquante de mise en service relevée par la lentille jur
 **Appris.** Trois tâches livrées et en production restaient ouvertes à cause d'une seule déclaration
 non conforme : une dépendance bloquée gèle toute la chaîne qui la suit.
 
-### PR #259 — 2026-09-29 — feat(GOV-117): l'outil du registre ecrit reqs, hyp et zone d'une tache, valides contre le schema et les registres
-
-**Fait.** Les outils hors dépôt savent écrire les exigences, les hypothèses et la zone d'une tâche,
-avec sept refus nommés et les exigences redérivées après chaque écriture. Un témoin du dépôt montre
-que les gardes prennent une écriture qui passerait sans l'outil.
-
-**Reste.** GOV-115 peut désormais écrire les tâches de W19 dans leurs champs.
-
-**Appris.** Une dérivation copiée dans un seul outil finit par diverger des autres : l'extraire en une
-fonction unique a aussi réparé la phase des exigences, que le versement ne dérivait pas.
-
-… 3 entrée(s) affichée(s) sur 117 ; les 114 plus ancienne(s) se lisent dans `docs/journal/`.
+… 3 entrée(s) affichée(s) sur 118 ; les 115 plus ancienne(s) se lisent dans `docs/journal/`.
 
 ## Dette déclarée
 
