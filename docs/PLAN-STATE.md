@@ -8,14 +8,14 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `53e765e` — 2026-09-29T20:48:22+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #242 (un contrôle requis rouge ou une revue manquante) · 2. #253 (un contrôle requis rouge ou une revue manquante) · 3. #254 (un contrôle requis rouge ou une revue manquante) |
+| Qu’est-ce qui est en vol ? | 1. #242 (rien) · 2. #253 (un contrôle requis rouge ou une revue manquante) · 3. #254 (un contrôle requis rouge ou une revue manquante) |
 | Qui tient quoi ? | GOV-124 (A01) · GOV-126 (A01) |
 | Où en est la phase ? | phase 0 — 104/131 tâches, reste 20.50 j |
-| Le prochain pas | QA-T06 — Preview par PR sur Coolify, base éphémère, seed déterministe |
+| Le prochain pas | fusionner #242, puis QA-T06 — Preview par PR sur Coolify, base éphémère, seed déterministe |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
 | Dernière entrée de journal | PR #254 — 2026-09-29 |
 
-**Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** `gh pr view 242 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : 0
 
@@ -60,7 +60,7 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #242 — feat(JUR-T34): la politique de confidentialite de l'espace, tiree du registre de l'article 30 et acceptee a la premiere connexion | `t/jur-t34` | un contrôle requis rouge ou une revue manquante |
+| 1 | #242 — feat(JUR-T34): la politique de confidentialite de l'espace, tiree du registre de l'article 30 et acceptee a la premiere connexion | `t/jur-t34` | rien — fusionnable maintenant |
 | 2 | #253 — feat(GOV-125): le motif de branche depend du depot de la tache, une tache axionia se clot sur sa branche | `t/gov-125-motif` | un contrôle requis rouge ou une revue manquante |
 | 3 | #254 — docs(GOV-017a): W20, questions 18 et 19 tranchees — aucune tacite d'une demande signalee, liberee apres 3 injoignables ou 45 jours | `t/w20-q18-q19` | un contrôle requis rouge ou une revue manquante |
 
@@ -84,6 +84,8 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 Dérivé de `git log` sur `docs/adr/`, restreint au jour du dernier atterrissage. Une décision de Will n’est pas un ADR : elle vit au registre `docs/DECISIONS.md`, tranchée ou tenue par une hypothèse datée.
 
 ## Prochain pas
+
+**Fusionner #242** — elle est en tête de file et ne bloque sur rien.
 
 **QA-T06** — Preview par PR sur Coolify, base éphémère, seed déterministe (1 j) : 14 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
@@ -109,21 +111,25 @@ lentille securite : sans appel concluant, la demande signalée est libérée, sa
 paramètres de la SSOT ; l'entreprise redevient disponible, l'apporteur reçoit une notification neutre et
 peut redéposer aux règles ordinaires. Au plan : HYP-W20-TACITE mise à jour, HYP-W20-LIBERATION créée,
 REQ-DM-063 proposée, REQ-DM-042, REQ-DM-008, REQ-SEC-060, REQ-DM-062 et REQ-UX-062 mises à jour, badge
-⚪ « Réservation terminée », risque 1 point ii fermé, réponses datées au §9. Au registre, par
+« Réservation terminée », risque 1 point ii fermé, réponses datées au §9. Au registre, par
 `reecrire-champ` : acceptances de DM-24, DM-13, SEC-41, UX-P1-05, UX-P1-41, UX-P1-43, JUR-T40,
-JUR-T01b, QA-T40, QA-T41 et avenant (8) de GOV-112 ; dépendances DM-13 ← DM-40, SEC-41, UX-P1-10 et
-DM-24 ← SEC-41 ; DM-13 passe de 0,75 à 1 j. Phase 1 : 17,75 j.
+JUR-T01b, QA-T40, QA-T41 et avenant (8) de GOV-112 ; dépendances : DM-13 dépend de DM-40, SEC-41, UX-P1-10 et
+DM-24 de SEC-41 ; DM-13 passe de 0,75 à 1 j. Puis les arbitrages de -d7 sur délégation de Williams
+du même jour : les précisions de la libération (45 jours depuis la première demande, seuls les
+`injoignable`, rebond non corrigé libéré de même, état `perimee`, badge et notification) sont validées,
+et le redépôt en boucle est fermé par une carence : le même apporteur ne redépose pas le même SIREN
+pendant 30 jours, 90 après une deuxième libération, sans sanction et sans valeur d'enum nouvelle
+(HYP-W20-CARENCE-REDEPOT, REQ-DM-063, question 20 ouverte sur la présentation du refus). DM-13, SEC-41,
+JUR-T40, JUR-T01b, QA-T40, QA-T41 et GOV-112 réécrites de nouveau ; DM-13 passe à 1,25 j. Phase 1 :
+18,0 j.
 
 **Reste.** La passe gardien-spec de GOV-112 écrit HYP-W20-LIBERATION et REQ-DM-063 avec les autres.
-Les précisions par défaut de HYP-W20-LIBERATION (45 jours comptés de la première demande, seuls les
-`injoignable` comptent, rebond non corrigé libéré de même, état `perimee`, libellé et notification)
-attendent la relecture de Williams. Le redépôt en boucle d'une adresse muette reste possible, borné à
-chaque tour ; le limiter serait une modalité nouvelle, à décider par Williams. Questions 16 et 17
-toujours ouvertes. Aucune tâche W20 n'est livrée par cette PR.
+La question 20 : comment montrer le redépôt refusé pendant la carence, aucune issue existante ne
+convenant (par défaut, le redépôt n'atteint pas le formulaire). Questions 16 et 17 toujours ouvertes. Aucune tâche W20 n'est livrée par cette PR.
 
 **Appris.** Borner une attente change aussi le texte qui disait « la seule conséquence du silence » :
 la phrase vivait dans l'exigence, le contrat proposé et la relecture du contrat, et une seule copie
-oubliée aurait promis le contraire de la règle. Un test qui disait « toujours 🔴 à 60 jours » est
+oubliée aurait promis le contraire de la règle. Un test qui disait « toujours rouge à 60 jours » est
 devenu faux par la même réponse : une borne se relit dans tous les témoins datés.
 
 ### PR #251 — 2026-09-29 — chore(GOV-012): registre rattrape, HT encaisse tranche par Williams, paths du lot A et de JUR-T29, GOV-125 versee

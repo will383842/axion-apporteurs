@@ -44,6 +44,15 @@
 > REQ-DM-008, REQ-SEC-060, REQ-DM-062 et REQ-UX-062, au §8 (risque 1, point ii, fermé) et dans DM-24,
 > DM-13, SEC-41, UX-P1-05, UX-P1-41, UX-P1-43, JUR-T40, JUR-T01b, QA-T40, QA-T41 et l'avenant de GOV-112.
 >
+> **Arbitrages de -d7 sur délégation de Williams du 2026-09-29.** Les précisions (a) à (c) de
+> HYP-W20-LIBERATION, l'état `perimee`, le badge ⚪ et le texte de la notification sont validés. Le
+> redépôt en boucle est fermé par une **carence** : après une libération sans confirmation, le même
+> apporteur ne peut pas redéposer la même entreprise (SIREN) pendant
+> `CARENCE_REDEPOT_APRES_LIBERATION_JOURS` = 30 jours, portés à 90 jours après une deuxième libération du
+> même couple ; les autres apporteurs ne sont pas concernés ; texte neutre, sans sanction
+> (HYP-W20-CARENCE-REDEPOT, REQ-DM-063). Aucune issue de dépôt existante ne convient au redépôt refusé :
+> la question 20 est ouverte, aucune valeur n'est ajoutée à `IssueDepot` ni à `MotifRefusDepot`.
+>
 > **Identifiants.** Bloc réservé à W20, pour ne pas croiser les auteurs en cours (session -bf :
 > UX-P1-21+, DM-33+, SEC-35+, INT-T29+, JUR-T36+, QA-T35+ ; W19 : UX-P1-16 à UX-P1-20, SEC-29 à
 > SEC-34, DM-30 à DM-32, QA-T31 à QA-T33, JUR-T31 à JUR-T33) : **UX-P1-40+, DM-40+, SEC-40+,
@@ -153,10 +162,11 @@ passe gardien-spec les portera dans `hyp` par le verbe de GOV-117.
 | HYP-W20-LIEN | Validité des liens (4) | Deux jetons par demande (« Oui », « Non »), aléatoires, stockés **hachés**, à usage unique : la première réponse fait foi pour les deux. Un lien reste valable tant que l'attribution est `provisoire`, et au plus jusqu'à l'échéance de la confirmation tacite (HYP-W20-TACITE) ; les jetons d'une demande en rebond sont révoqués à la correction. L'ouverture d'un lien (requête GET) **ne change rien** : seule l'action sur la page (requête POST) répond, pour que les analyseurs de liens des messageries ne répondent jamais à la place du contact. Après une réponse, la page dit « Votre réponse a bien été enregistrée » ; changer d'avis passe par un échange humain avec Axion-IA | migration | 1 | SEC-40 | — |
 | HYP-W20-SANS-REPONSE | Délai sans réponse (5) | `CONFIRMATION_SANS_REPONSE_JOURS_OUVRES` = 5, SSOT, jours ouvrés du calendrier de CPL-T13. Passé ce délai sans clic, le dépôt entre dans la liste d'appels ; le délai court de l'envoi effectif de l'e-mail, pas du dépôt | paramètre | 1 | — | Williams, 2026-09-29 : 5 jours ouvrés |
 | HYP-W20-APPELS | Échantillon et appels ciblés (6) | Le tirage de l'échantillon est fait **au dépôt**, par un générateur cryptographique, stocké avec la demande et jamais servi à l'espace : l'apporteur ne peut ni le prévoir ni le rejouer. Appels ciblés : sans réponse (HYP-W20-SANS-REPONSE), rebond non corrigé, raison de vérification suggérée, premiers dépôts d'un nouvel apporteur. Taux d'échantillon et nombre de premiers dépôts : paramètres dont la valeur vit **hors dépôt** (REQ-GOV-031), comme les réglages des contrôles de SEC-14 ; seules les clés sont dans la SSOT (question 12) | paramètre | 1 | — | Williams, 2026-09-29 : le principe et les valeurs par défaut (tenues hors dépôt) ; valeur par défaut de la question 12 confirmée le 2026-09-29 |
-| HYP-W20-VERIFICATION | Raisons de vérification (7) | Liste fermée de raisons, affichées **en console seulement**, dans la liste d'appels et la fiche de qualification : adresse webmail, adresse générique, domaine différent du site de l'entreprise, e-mail ou téléphone du contact égal à celui de l'apporteur (empreintes HMAC, REQ-SEC-024), même contact sur plusieurs entreprises, clic depuis la même empreinte d'IP que la session de l'apporteur, rebond. Une raison **trie** la liste d'appels (en tête) et **rend la demande signalée** : un clic « Oui » n'y est pas retenu (HYP-W20-SOURCE), le silence ne la confirme jamais (HYP-W20-TACITE, question 18, tranchée par Williams le 2026-09-29) et, sans appel concluant, elle est libérée au premier des deux termes de HYP-W20-LIBERATION (question 19). Ce n'est pas un effet défavorable au sens de REQ-SEC-017 : l'attribution reste `provisoire` et réservée, rien n'est retiré à l'apporteur, et la confirmation passe par la revue humaine que REQ-SEC-017 permet, un appel de la Société. La libération (HYP-W20-LIBERATION) n'en est pas un non plus, par décision de Williams du 2026-09-29 (question 19) : elle ne sanctionne rien, n'ouvre ni Anomalie ni suspension, n'impute rien à l'apporteur ni au contact, et borne dans le temps une réservation que personne n'a pu confirmer ; l'apporteur peut redéposer aux conditions ordinaires. Elle n'a aucun autre effet : aucune Anomalie, aucune entrée dans le score de SEC-14, aucune notification, aucune alerte Telegram, aucun DTO de l'espace : seul l'état du badge « appel attendu » en est dérivé côté serveur (HYP-W20-BADGE), jamais la raison, leur nombre ni le clic non retenu ; la notification de la libération (HYP-W20-LIBERATION) ne nomme ni la raison ni la vérification. **La rafale de dépôts et les premiers dépôts sont des critères de tri, jamais des raisons affichées** : REQ-SEC-017 et REQ-SEC-021 excluent le rythme de toute alerte, et ne le laissent subsister que comme critère de priorisation d'une revue humaine (question 6) | paramètre | 1 | — | Par défaut, confirmée par Williams le 2026-09-29 (question 6) |
+| HYP-W20-VERIFICATION | Raisons de vérification (7) | Liste fermée de raisons, affichées **en console seulement**, dans la liste d'appels et la fiche de qualification : adresse webmail, adresse générique, domaine différent du site de l'entreprise, e-mail ou téléphone du contact égal à celui de l'apporteur (empreintes HMAC, REQ-SEC-024), même contact sur plusieurs entreprises, clic depuis la même empreinte d'IP que la session de l'apporteur, rebond. Une raison **trie** la liste d'appels (en tête) et **rend la demande signalée** : un clic « Oui » n'y est pas retenu (HYP-W20-SOURCE), le silence ne la confirme jamais (HYP-W20-TACITE, question 18, tranchée par Williams le 2026-09-29) et, sans appel concluant, elle est libérée au premier des deux termes de HYP-W20-LIBERATION (question 19). Ce n'est pas un effet défavorable au sens de REQ-SEC-017 : l'attribution reste `provisoire` et réservée, rien n'est retiré à l'apporteur, et la confirmation passe par la revue humaine que REQ-SEC-017 permet, un appel de la Société. La libération (HYP-W20-LIBERATION) n'en est pas un non plus, par décision de Williams du 2026-09-29 (question 19) : elle ne sanctionne rien, n'ouvre ni Anomalie ni suspension, n'impute rien à l'apporteur ni au contact, et borne dans le temps une réservation que personne n'a pu confirmer ; l'apporteur peut redéposer aux conditions ordinaires, après la carence de HYP-W20-CARENCE-REDEPOT, qui ne vise que lui et cette entreprise. Elle n'a aucun autre effet : aucune Anomalie, aucune entrée dans le score de SEC-14, aucune notification, aucune alerte Telegram, aucun DTO de l'espace : seul l'état du badge « appel attendu » en est dérivé côté serveur (HYP-W20-BADGE), jamais la raison, leur nombre ni le clic non retenu ; la notification de la libération (HYP-W20-LIBERATION) ne nomme ni la raison ni la vérification. **La rafale de dépôts et les premiers dépôts sont des critères de tri, jamais des raisons affichées** : REQ-SEC-017 et REQ-SEC-021 excluent le rythme de toute alerte, et ne le laissent subsister que comme critère de priorisation d'une revue humaine (question 6) | paramètre | 1 | — | Par défaut, confirmée par Williams le 2026-09-29 (question 6) |
 | HYP-W20-REBOND | Rebond (4) | Un rebond définitif (webhook d'INT-T10) met la demande en `rebond`, place le dépôt en tête de la liste d'appels, et affiche à l'apporteur, dans l'espace et par e-mail, un message **informatif** qui propose de corriger l'adresse. Une correction après rebond crée une nouvelle demande (nouveaux jetons, anciens révoqués) qui part sans nouveau délai d'annulation. Corrections après rebond bornées par `CORRECTIONS_ADRESSE_MAX` = 2, SSOT ; au-delà, le dépôt reste dans la liste d'appels et l'action « Corriger l'adresse » disparaît. **Tant que le rebond n'est pas corrigé, le délai de la confirmation tacite ne commence pas** (HYP-W20-TACITE) ; après correction, l'e-mail repart, le délai court de ce nouvel envoi s'il ne rebondit pas, et l'apporteur reçoit une notification informative (clé de la table SSOT des notifications, UX-P1-10, `faitCourirUnDelai: false`) | paramètre | 1 | — | Williams, 2026-09-29 : un rebond non corrigé empêche le délai tacite de commencer (question 2) ; le reste par défaut |
 | HYP-W20-TACITE | Confirmation tacite (9) | **Tranchée par Williams le 2026-09-29 (session -d7, question 2).** Au bout de `CONFIRMATION_TACITE_JOURS` (= 30, SSOT) sans réponse du contact et sans appel concluant, l'entreprise reste réservée à l'apporteur : l'attribution est **réputée confirmée**. Le délai court de la **réception** de l'e-mail de confirmation, c'est-à-dire de l'envoi effectif d'une demande à laquelle aucun rebond n'est rattaché (`recueAt`, dérivée de la demande, jamais saisie). **Sauf rebond** : tant que la demande est en `rebond` et que l'apporteur n'a pas corrigé l'adresse, le délai **ne commence pas** ; la correction fait repartir l'e-mail, et le délai court de ce nouvel envoi s'il ne rebondit pas. Un rebond rattaché après coup à un envoi lui retire sa qualité de réception : le délai n'avait pas commencé. « Appel concluant » : une Qualification `confirme` ou `non_confirme` ; `injoignable` et `ne_se_souvient_pas` ne le sont pas. Pour une demande non signalée, la promotion reste l'**unique** conséquence attachée au silence (REQ-DM-042) ; pour une demande signalée, c'est la libération de HYP-W20-LIBERATION, sans sanction (question 19) ; la promotion réserve l'entreprise et ne crée aucune commission, qui ne naît que d'un paiement réel. La proposition initiale (délai compté de la déclaration, que le contact ait été tenté ou non) est écartée. **Demande signalée, tranchée par Williams le 2026-09-29 (question 18, née de la correction de sécurité du même jour)** : une demande qui porte une raison de vérification (HYP-W20-VERIFICATION) à l'échéance n'est **jamais** promue par le seul silence ; elle reste `provisoire`, en tête de la liste d'appels, jusqu'à un appel concluant (`confirme` la confirme, `non_confirme` l'invalide), puis suit le régime ordinaire, péremption comprise (REQ-DM-007) ; **sans appel concluant, elle est libérée** au premier des deux termes de HYP-W20-LIBERATION (question 19). Sans cette règle, une adresse que l'apporteur contrôle et laisse muette ne rebondit pas, l'appel au numéro saisi finit `injoignable`, non concluant, et la tacite confirme au trentième jour | avenant | 1 | premier DocuSeal | Williams, 2026-09-29 : 30 jours à compter de la réception de l'e-mail, délai non commencé tant qu'un rebond n'est pas corrigé (question 2) ; aucune confirmation tacite d'une demande signalée, valeur par défaut retenue (question 18) |
-| HYP-W20-LIBERATION | Libération d'une demande signalée (question 19) | **Tranchée par Williams le 2026-09-29 (session -d7, question 19, proposée par la lentille securite, valeurs recommandées acceptées).** Une attribution `provisoire` dont la demande est **signalée** (HYP-W20-VERIFICATION) et qui n'a reçu aucun appel concluant (Qualification `confirme` ou `non_confirme`) est **libérée** automatiquement au **premier** des deux termes : la `LIBERATION_SIGNALEE_INJOIGNABLE_MAX`-ième Qualification `injoignable` (= 3, SSOT), ou `LIBERATION_SIGNALEE_JOURS` jours (= 45, SSOT) après l'**envoi** de la demande. Les deux valeurs sont des paramètres de la SSOT (`src/domain/seuils/ssot.ts`), modifiables ; leur source est l'art. 3.2 amendé (JUR-T40), et changer une valeur change aussi le gabarit du contrat. Effets, dans une seule transaction, par le passage « tout ce qui est dû à l'instant t » (REQ-QA-027) : l'attribution passe en `perimee` (valeur existante de REQ-DM-006, déjà comptée parmi les états qui libèrent une entreprise et font courir la purge de REQ-SEC-030) par un événement propre `liberee_sans_confirmation` (un type de journal par genre de transition, partners/ADR-0022), distinct de la péremption de REQ-DM-007 (`peremptionAt` reste null) ; la demande passe en `expiree` et ses jetons sont révoqués ; l'entreprise **redevient disponible** aux conditions ordinaires d'une libération, file d'attente comprise (art. 3.5, DM-13) ; l'apporteur reçoit une **notification neutre** (clé de la table SSOT des notifications, UX-P1-10, `faitCourirUnDelai: false`, texte dans la SSOT de micro-copy, garde lexicale verte, aucune consigne), texte proposé : « La réservation de <Entreprise> a pris fin sans confirmation. L'entreprise est de nouveau disponible. » ; le badge devient ⚪ « Réservation terminée · l'entreprise est de nouveau disponible » (HYP-W20-BADGE). **Aucune sanction** : aucune suspension, aucune Anomalie, aucune entrée dans le score de SEC-14, aucun signal défavorable, rien d'imputé à l'apporteur ni au contact, et la notification ne nomme ni la raison, ni la vérification, ni le nombre d'appels. L'apporteur peut redéposer l'entreprise ensuite : le nouveau dépôt suit les règles ordinaires (nouvelle demande, jugée sur ses propres raisons à l'instant de son envoi et de ses clics). **Précisions par défaut, non dites par Williams, réversibles** : (a) les 45 jours courent de l'envoi effectif de la **première** demande de l'attribution ; une correction d'adresse après rebond ne les fait pas repartir, sans quoi deux corrections (`CORRECTIONS_ADRESSE_MAX`) tripleraient la réservation ; une demande encore `planifiee` ou `retenue` n'a pas été envoyée, et le délai ne court pas (question 16) ; (b) seules les Qualifications `injoignable` comptent, jamais `ne_se_souvient_pas` ni un e-mail sans réponse (DM-13, point 3) ; (c) une demande en rebond non corrigé porte la raison « rebond », elle est donc signalée et relève de la libération | paramètre | 1 | — | Williams, 2026-09-29 (question 19) : 3 tentatives `injoignable` ou 45 jours après l'envoi, au premier terme, sans sanction, notification neutre, redépôt aux règles ordinaires ; les précisions (a) à (c) et le libellé du badge par défaut |
+| HYP-W20-LIBERATION | Libération d'une demande signalée (question 19) | **Tranchée par Williams le 2026-09-29 (session -d7, question 19, proposée par la lentille securite, valeurs recommandées acceptées).** Une attribution `provisoire` dont la demande est **signalée** (HYP-W20-VERIFICATION) et qui n'a reçu aucun appel concluant (Qualification `confirme` ou `non_confirme`) est **libérée** automatiquement au **premier** des deux termes : la `LIBERATION_SIGNALEE_INJOIGNABLE_MAX`-ième Qualification `injoignable` (= 3, SSOT), ou `LIBERATION_SIGNALEE_JOURS` jours (= 45, SSOT) après l'**envoi** de la demande. Les deux valeurs sont des paramètres de la SSOT (`src/domain/seuils/ssot.ts`), modifiables ; leur source est l'art. 3.2 amendé (JUR-T40), et changer une valeur change aussi le gabarit du contrat. Effets, dans une seule transaction, par le passage « tout ce qui est dû à l'instant t » (REQ-QA-027) : l'attribution passe en `perimee` (valeur existante de REQ-DM-006, déjà comptée parmi les états qui libèrent une entreprise et font courir la purge de REQ-SEC-030) par un événement propre `liberee_sans_confirmation` (un type de journal par genre de transition, partners/ADR-0022), distinct de la péremption de REQ-DM-007 (`peremptionAt` reste null) ; la demande passe en `expiree` et ses jetons sont révoqués ; l'entreprise **redevient disponible** aux conditions ordinaires d'une libération, file d'attente comprise (art. 3.5, DM-13) ; l'apporteur reçoit une **notification neutre** (clé de la table SSOT des notifications, UX-P1-10, `faitCourirUnDelai: false`, texte dans la SSOT de micro-copy, garde lexicale verte, aucune consigne), texte proposé : « La réservation de <Entreprise> a pris fin sans confirmation. L'entreprise est de nouveau disponible. » ; le badge devient ⚪ « Réservation terminée · l'entreprise est de nouveau disponible » (HYP-W20-BADGE). **Aucune sanction** : aucune suspension, aucune Anomalie, aucune entrée dans le score de SEC-14, aucun signal défavorable, rien d'imputé à l'apporteur ni au contact, et la notification ne nomme ni la raison, ni la vérification, ni le nombre d'appels. L'apporteur peut redéposer l'entreprise à l'issue de la carence de HYP-W20-CARENCE-REDEPOT : le nouveau dépôt suit les règles ordinaires (nouvelle demande, jugée sur ses propres raisons à l'instant de son envoi et de ses clics). **Précisions arbitrées par -d7 sur délégation de Williams du 2026-09-29, réversibles** : (a) les 45 jours courent de l'envoi effectif de la **première** demande de l'attribution ; une correction d'adresse après rebond ne les fait pas repartir, sans quoi deux corrections (`CORRECTIONS_ADRESSE_MAX`) tripleraient la réservation ; une demande encore `planifiee` ou `retenue` n'a pas été envoyée, et le délai ne court pas (question 16) ; (b) seules les Qualifications `injoignable` comptent, jamais `ne_se_souvient_pas` ni un e-mail sans réponse (DM-13, point 3) ; (c) une demande en rebond non corrigé porte la raison « rebond », elle est donc signalée et relève de la libération | paramètre | 1 | — | Williams, 2026-09-29 (question 19) : 3 tentatives `injoignable` ou 45 jours après l'envoi, au premier terme, sans sanction, notification neutre, redépôt aux règles ordinaires ; les précisions (a) à (c), l'état `perimee`, le libellé du badge et le texte de la notification : arbitrage -d7 sur délégation de Williams du 2026-09-29 |
+| HYP-W20-CARENCE-REDEPOT | Redépôt après libération (arbitrage -d7) | **Arbitrage de -d7 sur délégation de Williams du 2026-09-29**, qui ferme le redépôt en boucle (§8, risque 1). Après une libération sans confirmation (HYP-W20-LIBERATION), le **même** apporteur ne peut pas déposer à nouveau la **même** entreprise, au niveau du SIREN (tous ses établissements), pendant `CARENCE_REDEPOT_APRES_LIBERATION_JOURS` (= 30, SSOT) jours à compter de la libération ; après une deuxième libération du même couple apporteur et SIREN, la carence est de `CARENCE_REDEPOT_APRES_SECONDE_LIBERATION_JOURS` (= 90, SSOT) jours. Les autres apporteurs ne sont pas concernés : l'entreprise leur est de nouveau disponible, file d'attente comprise. La carence est **dérivée** des attributions libérées par `liberee_sans_confirmation` (aucune colonne nouvelle), par un prédicat pur, horloge injectée, lu au dépôt côté serveur. Ce n'est **pas une sanction** : aucune suspension, aucune Anomalie, aucune entrée au score de SEC-14, aucun signal, rien d'autre que ce délai sur ce couple ; texte neutre, sans consigne, garde lexicale verte, dans la SSOT de micro-copy. **Aucune valeur nouvelle** d'`IssueDepot` ni de `MotifRefusDepot` (consigne W19) : aucune issue existante ne convient, et la manière de montrer le refus est la question 20, ouverte avec sa valeur par défaut. Précision par défaut de ce plan : au-delà de deux libérations du même couple, la carence reste de 90 jours. Les deux valeurs sont écrites à l'art. 3.2 amendé (JUR-T40), source des clés de la SSOT | paramètre | 1 | — | Arbitrage -d7 sur délégation de Williams, 2026-09-29 : 30 jours, 90 après une deuxième libération, même apporteur et même SIREN seulement, neutre, sans valeur d'enum nouvelle ; au-delà de la deuxième, par défaut ; présentation du refus ouverte (question 20) |
 | HYP-W20-BADGE | Ce que l'apporteur voit (exigence d'expérience) | Dans « Mes entreprises » (UX-P1-05) et sur la carte du dépôt (UX-P1-43), **un seul badge** d'état, avec sa date et au plus une action, dérivé côté serveur par une fonction pure, horloge injectée, partie de `statutApporteur` (REQ-UX-004) : 🟢 « Confirmée » (attribution `active`, par clic, appel ou confirmation tacite) ; 🟡 « En attente de confirmation · réservée pour vous jusqu'au <date> » (`provisoire` hors rebond non corrigé et hors demande signalée, y compris sans réponse, `injoignable`, `ne_se_souvient_pas` : rien d'autre n'est visible) ; 🟡 « En attente de confirmation — Axion-IA va appeler votre contact » (demande **signalée**, clic non retenu compris, correction de sécurité du 2026-09-29 et question 18) : **sans date tacite ni phrase d'aide**, formulation neutre, sans consigne, dans la SSOT de micro-copy ; garantie d'expérience de l'apporteur honnête (un artisan sur Gmail, par exemple) : ces dépôts sont appelés **en priorité**, en tête de la liste d'appels ; le badge ne dit ni la raison, ni leur nombre ; 🔴 « E-mail non reçu par le contact », action unique « Corriger l'adresse » (demande en `rebond` non corrigé ; sans action au-delà de `CORRECTIONS_ADRESSE_MAX`) ; ⚪ « Non confirmée par le contact » (`invalidee` par `non_confirme`) ; ⚪ « Réservation terminée · l'entreprise est de nouveau disponible » (attribution libérée, HYP-W20-LIBERATION, question 19 : `perimee` par l'événement `liberee_sans_confirmation`), **sans date, sans action, sans phrase d'aide**, formulation neutre qui ne dit ni la raison, ni la vérification, ni le nombre d'appels. La date est le jour de l'échéance tacite (`recueAt` + `CONFIRMATION_TACITE_JOURS`), écrite en toutes lettres (« 29 octobre 2026 ») dans le fuseau de l'apporteur ; le badge passe seul à 🟢 le jour affiché. 🔴 prime sur le libellé de la demande signalée tant que le rebond n'est pas corrigé. Une seule phrase d'aide, sous le 🟡 daté et sous 🔴, jamais sous le libellé de la demande signalée : « Sans réponse de votre contact, l'entreprise reste réservée pour vous 30 jours après la réception de notre e-mail. », le nombre lu de la SSOT. Textes dans la SSOT de micro-copy, garde lexicale verte ; chaque badge porte son libellé, la pastille est décorative (`aria-hidden`), la couleur n'est jamais seule porteuse du sens. Avant l'envoi effectif, et pendant un envoi retenu, 🟡 sans date (question 16) ; fuseau Europe/Paris tant que l'apporteur n'a pas de fuseau propre (question 17) | paramètre | 1 | UX-P1-05 | Williams, 2026-09-29 : un badge, quatre états, une date, au plus une action, une phrase d'aide ; les points des questions 16 et 17 par défaut ; le libellé de la demande signalée, sans date, suit la réponse à la question 18 (2026-09-29) ; l'état après libération suit la réponse à la question 19 (2026-09-29), son libellé est par défaut |
 | HYP-W20-PREMIER-CONTACT | Point de départ de la péremption | `premierContactAt` (contrat art. 3.4, « première prise de contact de la Société ») est posé par la **première réponse** du contact — un clic retenu, ou un appel qui l'a joint ; un clic non retenu sur une demande signalée ne le pose pas — et **pas** par l'envoi de l'e-mail : un e-mail resté sans réponse n'est pas un contact « qui a eu lieu » (art. 3.4 al. 2). Le chrono de péremption de DM-13 ne change pas de règle, seulement de source (question 10) | avenant | 1 | premier DocuSeal | Par défaut, confirmée par Williams le 2026-09-29 (question 10) |
 | HYP-W20-IDENTITE-APPORTEUR | Ce que l'e-mail dit de l'apporteur (4) | L'e-mail nomme l'apporteur par ses prénom et nom, jamais par ses coordonnées. Il ne donne **pas la date du contact** : `dateContact` n'est recueillie qu'aux fins de l'art. 3.7 et n'a que deux lectures autorisées (REQ-JUR-040) ; l'e-mail dit « récemment ». Le contrat informe l'apporteur que son nom est communiqué à la personne qu'il déclare (JUR-T40) (questions 7 et 8) | avenant | 1 | premier DocuSeal | Par défaut, confirmée par Williams le 2026-09-29 (questions 7 et 8) |
@@ -213,7 +223,8 @@ priorité égale, `aQualifierDepuis` croissant. Le tri est une fonction pure, ho
 cas par entrée ; ordre de tri ; un dépôt confirmé par clic n'y figure jamais ; un dépôt libéré n'y
 figure plus.
 
-**REQ-DM-063 — La libération d'une demande signalée (réponse de Williams du 2026-09-29, question 19).**
+**REQ-DM-063 — La libération d'une demande signalée et la carence de redépôt (réponse de Williams du
+2026-09-29 à la question 19, arbitrages de -d7 sur sa délégation le même jour).**
 Une attribution `provisoire` dont la demande de confirmation est signalée (REQ-SEC-060) et qui n'a reçu
 aucune Qualification `confirme` ni `non_confirme` est libérée, par le passage « tout ce qui est dû à
 l'instant t » (REQ-QA-027), horloge injectée, au premier des deux termes : la
@@ -225,13 +236,23 @@ l'attribution, qu'une correction d'adresse ne fait pas repartir. Dans la même t
 file d'attente comprise ; notification neutre à l'apporteur (table SSOT des notifications,
 `faitCourirUnDelai: false`, garde lexicale). **Aucune sanction** : aucune suspension, aucune Anomalie,
 aucune entrée dans le score de SEC-14, rien d'imputé à personne ; la notification ne dit ni la raison ni
-la vérification. Un nouveau dépôt de la même entreprise par le même apporteur suit les règles ordinaires.
-Tests, horloge figée : deux `injoignable` → rien ; le troisième → libérée au passage suivant, une seule
+la vérification. **Carence** (HYP-W20-CARENCE-REDEPOT) : pendant
+`CARENCE_REDEPOT_APRES_LIBERATION_JOURS` (= 30, SSOT) jours après la libération, ou
+`CARENCE_REDEPOT_APRES_SECONDE_LIBERATION_JOURS` (= 90, SSOT) jours après une deuxième libération du même
+couple, le même apporteur ne peut pas déposer la même entreprise (SIREN) ; le serveur refuse sans rien
+écrire ni horodater, par un prédicat pur dérivé des libérations, sans valeur nouvelle d'`IssueDepot` ni de
+`MotifRefusDepot` (présentation : question 20) ; les autres apporteurs ne sont pas concernés ; aucune
+sanction, texte neutre. Passé la carence, un nouveau dépôt suit les règles ordinaires. Tests, horloge
+figée : deux `injoignable` → rien ; le troisième → libérée au passage suivant, une seule
 fois ; envoi à J sans appel : J+45 moins une minute → rien, J+45 → libérée ; `ne_se_souvient_pas` ×3 → rien ; appel `confirme` à
 J+40 → `active`, aucune libération ; demande non signalée, trois `injoignable` → aucune libération ;
 correction d'adresse à J+30 → libération toujours à J+45 ; libération → aucune Anomalie, aucune
-suspension, aucun signal, une seule notification ; deux passages → un seul événement ; redépôt après
-libération → nouvelle attribution `provisoire` et nouvelle demande.
+suspension, aucun signal, une seule notification ; deux passages → un seul événement ; redépôt du même
+apporteur à J+29 après la libération → refusé, rien d'écrit, aucun horodatage ; à J+30 → nouvelle
+attribution `provisoire` et nouvelle demande ; deuxième libération du même couple → refus à J+89, dépôt
+à J+90 ; un autre apporteur dépose la même entreprise le jour de la libération → accepté ; même
+apporteur, autre SIREN → accepté ; même SIREN, autre établissement → refusé pendant la carence ; le refus
+n'ouvre ni Anomalie, ni suspension, ni signal.
 
 **REQ-SEC-060 — Les raisons de vérification suggérée.** Les raisons forment un enum fermé
 (HYP-W20-VERIFICATION). Elles ne sont lues que par la liste d'appels et la fiche de qualification de la
@@ -240,7 +261,8 @@ aucune confirmation tacite (REQ-DM-042 amendée, question 18, tranchée le 2026-
 sans appel concluant (REQ-DM-063, question 19). Seuls l'état « appel attendu » du badge de REQ-UX-062
 et, après libération, l'état « Réservation terminée » en sont dérivés côté serveur, jamais la raison ;
 la libération n'est pas un effet défavorable au sens de REQ-SEC-017 (décision de Williams du
-2026-09-29 : aucune sanction, aucune Anomalie, aucune suspension, redépôt aux règles ordinaires) ; garde AST : aucune raison n'atteint un DTO de l'espace, le score de SEC-14, une Anomalie, une
+2026-09-29 : aucune sanction, aucune Anomalie, aucune suspension ; redépôt aux règles ordinaires après la
+carence de -d7, qui ne vise que le même apporteur et la même entreprise) ; garde AST : aucune raison n'atteint un DTO de l'espace, le score de SEC-14, une Anomalie, une
 notification ou une alerte ; le rythme et le nombre de dépôts n'entrent dans aucune raison (REQ-SEC-017,
 REQ-SEC-021, REQ-JUR-031). Comparaisons par empreintes HMAC seulement (REQ-SEC-024). Tests : un témoin
 positif et un négatif par raison ; une raison lue depuis `src/app/(espace)/` → rouge ; une raison
@@ -411,8 +433,11 @@ ni action, ni phrase d'aide, et ne dit ni la raison, ni la vérification, ni le 
 notification qui l'accompagne est une clé de la table SSOT des notifications (UX-P1-10,
 `faitCourirUnDelai: false`), informative et sans consigne, garde lexicale verte ; texte proposé :
 « La réservation de <Entreprise> a pris fin sans confirmation. L'entreprise est de nouveau disponible. »
-L'apporteur peut redéposer l'entreprise depuis « Vérifier une entreprise », comme toute entreprise
-libre : le nouveau dépôt suit les règles ordinaires.
+Les autres apporteurs peuvent la déposer aussitôt. Le même apporteur peut la redéposer à l'issue de la
+carence (30 jours, 90 après une deuxième libération, HYP-W20-CARENCE-REDEPOT) ; le nouveau dépôt suit
+alors les règles ordinaires. Pendant la carence, par défaut (question 20), « Vérifier une entreprise » et
+la carte Entreprise lui disent, sans consigne : « Vous pourrez déposer cette entreprise à nouveau à
+partir du <date>. », et ne proposent pas « Déposer ».
 
 **Page publique du contact (`/confirmer/<jeton>`, UX-P1-42).** « Bonjour <Prénom Nom>. <Prénom Nom de
 l'apporteur> nous indique avoir échangé avec vous récemment au sujet de <Entreprise>. Est-ce exact ? »
@@ -553,11 +578,15 @@ Défauts : repo `partners`, `hyp` vide sauf mention, `externe` null.
   court pas. Lorsque la demande fait l'objet d'une vérification et qu'aucune prise de contact concluante
   n'a eu lieu, l'attribution prend fin après trois tentatives de prise de contact restées sans réponse ou
   à l'expiration d'un délai de quarante-cinq jours à compter de l'envoi de la demande, selon ce qui
-  survient en premier, sans aucune conséquence pour l'Apporteur, qui peut déclarer à nouveau l'entreprise
-  dans les conditions ordinaires. La confirmation réputée acquise et, pour une demande qui fait l'objet
+  survient en premier. Cette fin n'emporte aucune autre conséquence pour l'Apporteur que celle-ci : il ne
+  peut déclarer à nouveau la même entreprise qu'à l'expiration d'un délai de trente jours, porté à
+  quatre-vingt-dix jours lorsque l'attribution de cette entreprise a déjà pris fin une première fois dans
+  les mêmes conditions ; la déclaration de cette entreprise par un autre Apporteur n'en est pas affectée.
+  La confirmation réputée acquise et, pour une demande qui fait l'objet
   d'une vérification, la fin de l'attribution sont les seules conséquences attachées au silence de
   l'entreprise. » (la réserve de la vérification suit la réponse de Williams à la question 18, la fin
-  de l'attribution sa réponse à la question 19, 2026-09-29 ; les deux nombres sont ceux de la SSOT) ; art. 3.4 : « première prise de contact » lue selon
+  de l'attribution sa réponse à la question 19, 2026-09-29, et le délai avant une nouvelle déclaration
+  l'arbitrage de -d7 sur sa délégation, même jour ; les quatre nombres sont ceux de la SSOT) ; art. 3.4 : « première prise de contact » lue selon
   HYP-W20-PREMIER-CONTACT ; art. 3.7 : la réponse par clic est journalisée avec sa date, la personne
   destinataire et ses termes ; l'apporteur est informé que ses prénom et nom sont communiqués à la
   personne qu'il déclare (HYP-W20-IDENTITE-APPORTEUR). Identifiants de clause inchangés (REQ-JUR-003).
@@ -585,7 +614,8 @@ Défauts : repo `partners`, `hyp` vide sauf mention, `externe` null.
   en tête de « À appeler aujourd'hui ». Témoins de la réponse à la question 19 (2026-09-29), horloge
   figée : une demande signalée qui reçoit trois appels `injoignable` est libérée, badge ⚪ « Réservation
   terminée », une notification ; une demande signalée sans appel est libérée 45 jours après l'envoi, et
-  pas avant ; un redépôt de la même entreprise repart aux règles ordinaires ; un rebond jamais corrigé
+  pas avant ; un redépôt de la même entreprise par le même apporteur est refusé pendant la carence de 30
+  jours et repart aux règles ordinaires ensuite, un autre apporteur la dépose aussitôt ; un rebond jamais corrigé
   ne passe jamais à 🟢 et finit libéré 45 jours après l'envoi.
 
 #### QA-T41 — Témoins d'attaque : fraude à la confirmation
@@ -601,6 +631,9 @@ Défauts : repo `partners`, `hyp` vide sauf mention, `externe` null.
   `injoignable` → libérée ; 45 jours après l'envoi → libérée, et une mutation qui fait repartir le délai
   à la correction d'adresse rougit ; la libération n'ouvre ni Anomalie, ni suspension, ni signal, et une
   mutation qui en pose un rougit ; une notification neutre, une seule, sans raison ni vérification.
+  Témoins de la carence (arbitrage -d7 du 2026-09-29), chacun vu rouge sur sa mutation : redépôt du même
+  apporteur et du même SIREN pendant la carence → refusé sans écriture ; deuxième libération → carence de
+  90 jours ; un autre apporteur n'est jamais bloqué ; le refus ne pose aucune Anomalie ni suspension.
 
 ## 6. Tâches existantes amendées
 
@@ -625,7 +658,7 @@ acceptance ne lit aucune exigence W20.
 | UX-P1-07 | titre réécrit, pose d'acceptance, dépendance DM-43 | « À appeler aujourd'hui » intégrée à la file, tri de REQ-DM-062, SLA sur l'entrée dans la liste | 1 → 1,5 j |
 | DM-08 | réécriture d'acceptance | transitions `provisoire → annulee` (annulation dans le délai), `provisoire → active` (clic retenu), `provisoire → invalidee` (« Non » confirmé), dans la matrice, par genre de transition | 1,25 → 1,5 j |
 | DM-09 | réécriture d'acceptance | la Qualification reste append-only ; une confirmation par clic compte pour la dérivation du palier comme une Qualification `confirme` | inchangée |
-| DM-13 | pose d'acceptance, puis réécriture et dépendances DM-40, SEC-41 et UX-P1-10 le 2026-09-29 (question 19) | péremption comptée depuis la première réponse (HYP-W20-PREMIER-CONTACT) ; e-mail J+5 de REQ-UX-038 « sans confirmation » ; libération d'une demande signalée sans appel concluant (REQ-DM-063, HYP-W20-LIBERATION) : trois `injoignable` ou 45 jours après l'envoi, `perimee` par `liberee_sans_confirmation`, notification neutre, aucune sanction | 0,75 → 1 j le 2026-09-29 (un terme de plus au passage, une transition, une clé de notification, leurs témoins) |
+| DM-13 | pose d'acceptance, puis réécriture et dépendances DM-40, SEC-41 et UX-P1-10 le 2026-09-29 (question 19) | péremption comptée depuis la première réponse (HYP-W20-PREMIER-CONTACT) ; e-mail J+5 de REQ-UX-038 « sans confirmation » ; libération d'une demande signalée sans appel concluant (REQ-DM-063, HYP-W20-LIBERATION) : trois `injoignable` ou 45 jours après l'envoi, `perimee` par `liberee_sans_confirmation`, notification neutre, aucune sanction ; carence de redépôt du même apporteur sur le même SIREN (HYP-W20-CARENCE-REDEPOT, arbitrage -d7) | 0,75 → 1 j le 2026-09-29 (un terme de plus au passage, une transition, une clé de notification, leurs témoins), → 1,25 j le même jour (carence : prédicat, refus serveur, deux paramètres, témoins) |
 | DM-24 | réécriture d'acceptance, dépendance DM-40 | condition « sans confirmation ni `non_confirme`, par appel ou par courriel » ; règle HYP-W20-TACITE tranchée le 2026-09-29 : délai compté de la réception (`recueAt`), non commencé pendant un rebond non corrigé, bascule le jour affiché par le badge ; correction de sécurité du 2026-09-29 : aucune promotion d'une demande signalée (question 18, tranchée le 2026-09-29), qui relève de la libération de DM-13 (question 19) ; dépendances GOV-112 et SEC-41 (prédicat « demande signalée », ajoutée le 2026-09-29) | 0,5 → 0,75 j au versement, → 1 j le 2026-09-29 (lecture de la demande, rebond, correction, échéance au jour affiché) |
 | SEC-12 | pose d'acceptance | contrôle serveur des quatre coordonnées ; nouveau texte versionné de la case (REQ-JUR-008) ; « Vérifier » ne crée aucune demande | 1,25 → 1,5 j |
 | SEC-14 | réécriture d'acceptance | les raisons de vérification W20 n'entrent pas dans le score ; pas de double comptage avec « contact générique » | inchangée |
@@ -635,7 +668,7 @@ acceptance ne lit aucune exigence W20.
 | JUR-T01b | réécriture d'acceptance, dépendance JUR-T40 | la relecture du gabarit v1 par Williams porte aussi l'art. 3.2 de W20, dont le texte de la règle tacite tranchée le 2026-09-29 (réception de l'e-mail, délai non commencé pendant un rebond non corrigé) et, depuis la correction de sécurité du 2026-09-29, la réserve de la demande qui fait l'objet d'une vérification, puis sa libération (question 19) | inchangée (0 j) |
 | UX-P1-05 | pose d'acceptance, dépendances DM-40 et DM-24 (2026-09-29) | le badge unique de REQ-UX-062 : quatre états, date en toutes lettres, action « Corriger l'adresse », phrase d'aide, cinq états de l'écran ; libellé de la demande signalée, sans date (2026-09-29) ; état ⚪ « Réservation terminée » après libération (question 19) ; dépendance GOV-112 | 1 → 1,25 j (l'état ajouté le 2026-09-29 est absorbé : un cas de plus dans la même fonction pure) |
 | QA-T16 | pose d'acceptance | le parcours de REQ-QA-017 se mesure avec les quatre coordonnées du contact ; le parcours W20 complet est dans QA-T40 | inchangée |
-| GOV-112 | avenant d'acceptance (2026-09-29, dette bloquante de la lentille exactitude) | écrit AUSSI, dans le même lot gardien-spec après GOV-116, les dix-huit HYP-W20 du §2 (HYP-W20-LIBERATION ajoutée le 2026-09-29, question 19), les onze exigences nouvelles du §3.1 (REQ-DM-060, REQ-DM-061, REQ-DM-062, REQ-DM-063 ajoutée le 2026-09-29, REQ-SEC-060, REQ-SEC-061, REQ-INT-060, REQ-UX-060, REQ-UX-061, REQ-UX-062, REQ-JUR-060) et les neuf amendements du §3.2 (REQ-UX-001, REQ-DM-008, REQ-DM-042, REQ-UX-004, REQ-UX-023, REQ-UX-022, REQ-UX-038, REQ-JUR-009, REQ-JUR-008), et les questions 18 et 19 avec leur réponse datée du 2026-09-29 ; aucune tâche GOV nouvelle | non rechiffrée ici (≈ 0,5 j, §10) |
+| GOV-112 | avenant d'acceptance (2026-09-29, dette bloquante de la lentille exactitude) | écrit AUSSI, dans le même lot gardien-spec après GOV-116, les dix-neuf HYP-W20 du §2 (HYP-W20-LIBERATION ajoutée le 2026-09-29, question 19, et HYP-W20-CARENCE-REDEPOT, arbitrage -d7 du même jour), les onze exigences nouvelles du §3.1 (REQ-DM-060, REQ-DM-061, REQ-DM-062, REQ-DM-063 ajoutée le 2026-09-29, REQ-SEC-060, REQ-SEC-061, REQ-INT-060, REQ-UX-060, REQ-UX-061, REQ-UX-062, REQ-JUR-060) et les neuf amendements du §3.2 (REQ-UX-001, REQ-DM-008, REQ-DM-042, REQ-UX-004, REQ-UX-023, REQ-UX-022, REQ-UX-038, REQ-JUR-009, REQ-JUR-008), les questions 18 et 19 avec leur réponse datée du 2026-09-29 et la question 20, ouverte avec sa valeur par défaut ; aucune tâche GOV nouvelle | non rechiffrée ici (≈ 0,5 j, §10) |
 
 ## 7. Compatibilité
 
@@ -687,14 +720,16 @@ réécrit.
    (REQ-DM-007). Il est désormais libéré après trois `injoignable` ou 45 jours après l'envoi, au premier
    terme (REQ-DM-063, HYP-W20-LIBERATION), sans aucune sanction ; l'entreprise redevient disponible,
    file d'attente comprise. Le rebond jamais corrigé, qui porte la raison « rebond », est borné de même.
-   **Ce qui en reste** : l'apporteur peut redéposer la même entreprise, et le nouveau dépôt suit les règles
-   ordinaires (réponse de Williams) ; un fraudeur qui redépose avec la même adresse muette obtient une
-   nouvelle réservation signalée, de nouveau bornée. Le cycle est borné par la file d'attente (un autre
-   apporteur inscrit passe avant le redépôt, art. 3.5), par l'appel prioritaire de chaque dépôt signalé et
-   par la raison « même contact sur plusieurs entreprises » ; aucune règle n'en limite le nombre. Le
-   redépôt n'est pas une reconduction au sens de l'art. 3.4 bis (il ouvre une attribution nouvelle, de
-   nouveau bornée), mais sa répétition touche l'intention de cet article (pas de portefeuille permanent) :
-   la limiter serait une modalité nouvelle, à décider par Williams, pas par ce plan. (iii) Le libellé « Axion-IA va
+   **Le redépôt en boucle, fermé le 2026-09-29 (arbitrage de -d7 sur délégation de Williams).** Un
+   fraudeur qui redéposait aussitôt avec la même adresse muette obtenait une nouvelle réservation
+   signalée, de nouveau bornée, sans limite de nombre : un portefeuille permanent par la répétition, que
+   l'art. 3.4 bis entend écarter. Fermé par la **carence** de HYP-W20-CARENCE-REDEPOT : le même apporteur
+   ne peut pas redéposer le même SIREN pendant 30 jours après la libération, 90 après une deuxième ;
+   pendant ce temps, l'entreprise est disponible pour tout autre apporteur, file d'attente comprise. Sur
+   un cycle, la réservation d'une adresse muette est donc au plus de 45 jours sur 75, puis de 45 sur 135.
+   La carence ne vise que ce couple, n'ouvre ni Anomalie ni suspension, et son texte est neutre ;
+   l'apporteur honnête jamais joint attend 30 jours avant de pouvoir redéposer, c'est son prix, et il est
+   nommé. Reste ouvert : la présentation du refus (question 20). (iii) Le libellé « Axion-IA va
    appeler votre contact » dit à l'apporteur qu'une vérification existe, jamais laquelle ; un fraudeur y
    apprend que son clic n'a pas compté, sans rien pouvoir en tirer, puisque aucun clic ne sera retenu sur
    cette demande.
@@ -739,7 +774,8 @@ réécrit.
 Chaque question commence par la valeur qui s'applique sans réponse. Les questions 1 à 15 ont reçu leur
 réponse le 2026-09-29 ; les questions 16 et 17, nées de cette réponse, restent ouvertes. La question 18,
 née de la correction de sécurité du même jour, et la question 19, proposée par la lentille securite, ont
-reçu leur réponse le 2026-09-29 vers 20 h (session -d7).
+reçu leur réponse le 2026-09-29 vers 20 h (session -d7). La question 20, née de l'arbitrage de -d7 sur
+la carence de redépôt, est ouverte avec sa valeur par défaut.
 
 1. **Par défaut : le contexte est facultatif**, au plus 140 caractères. Exigé, il ferait dépasser le
    budget de REQ-UX-001 d'une interaction. (HYP-W20-CONTEXTE)
@@ -845,19 +881,36 @@ reçu leur réponse le 2026-09-29 vers 20 h (session -d7).
     demande, selon ce qui arrive en premier. Les deux valeurs sont des paramètres de la SSOT, modifiables.
     L'entreprise redevient disponible. L'apporteur est informé par une notification neutre (SSOT des
     notifications, aucune consigne, garde lexicale). Il peut redéposer ensuite, et le nouveau dépôt suit
-    les règles ordinaires. Aucune suspension ni anomalie ne naît de cette libération. Précisions par
-    défaut, non dites par Williams et réversibles (HYP-W20-LIBERATION, points a à c) : les 45 jours
+    les règles ordinaires. Aucune suspension ni anomalie ne naît de cette libération. Précisions non
+    dites par Williams, arbitrées par -d7 sur sa délégation (ci-dessous), réversibles (HYP-W20-LIBERATION, points a à c) : les 45 jours
     courent de l'envoi de la première demande, qu'une correction d'adresse ne fait pas repartir ; seules
     les Qualifications `injoignable` comptent ; une demande en rebond non corrigé est signalée et relève
     de la libération ; le libellé du badge et le texte de la notification. Portée dans
     HYP-W20-LIBERATION, REQ-DM-063, REQ-DM-042, REQ-DM-008, REQ-SEC-060, REQ-DM-062, REQ-UX-062, DM-13,
     DM-24, SEC-41, UX-P1-05, UX-P1-41, UX-P1-43, JUR-T40, JUR-T01b, QA-T40, QA-T41 et l'avenant de
     GOV-112 ; le §8 (risque 1, point ii) en nomme ce qui reste (le redépôt répété).
+    **Arbitrages de -d7 sur délégation de Williams (2026-09-29)** : les précisions ci-dessus, l'état
+    `perimee`, le badge ⚪ et le texte de la notification sont validés ; le redépôt en boucle est fermé
+    par la carence de HYP-W20-CARENCE-REDEPOT (30 jours, 90 après une deuxième libération, même
+    apporteur et même SIREN seulement, sans sanction, sans valeur d'enum nouvelle).
+20. **Ouverte, née de l'arbitrage de -d7 du 2026-09-29 (carence de redépôt). Question : comment le
+    redépôt refusé pendant la carence est-il montré à l'apporteur ?** Aucune issue existante
+    d'`IssueDepot` ne convient : chacune nomme une autre catégorie (attente complète, antériorité client ou
+    devis, établissement fermé, hors périmètre, opposition au démarchage, suspension, vérification,
+    brouillon, enregistré), et l'employer dirait une raison fausse ; une valeur nouvelle est exclue par la
+    consigne W19 et, pour `MotifRefusDepot`, par REQ-SEC-022, qui l'aligne sur les catégories du contrat.
+    **Par défaut : le redépôt n'atteint pas le formulaire.** Pour l'apporteur en carence, « Vérifier une
+    entreprise » et la carte Entreprise disent, sans consigne : « Vous pourrez déposer cette entreprise à
+    nouveau à partir du <date>. », et ne proposent pas « Déposer » ; une requête de dépôt forgée reçoit
+    une erreur typée du serveur, hors `IssueDepot`, sans écriture ni horodatage (DM-13 porte le prédicat
+    et ce refus ; l'écran qui affiche le texte est désigné avec la réponse). Alternative : une valeur
+    `carence` d'`IssueDepot` et de `MotifRefusDepot`, adossée à l'art. 3.2 amendé, qui demande de lever
+    la consigne W19 et d'amender REQ-UX-002 et REQ-SEC-022. (HYP-W20-CARENCE-REDEPOT)
 
 ## 10. Chiffrage
 
-**Phase 1 : 17,75 j**, dont 15,0 j de tâches nouvelles et 2,75 j d'amendements (17,5 j avant la réponse de
-Williams à la question 19, +0,25 j à DM-13, ci-dessous). Au versement : 16,25 j
+**Phase 1 : 18,0 j**, dont 15,0 j de tâches nouvelles et 3,0 j d'amendements (17,5 j avant la réponse de
+Williams à la question 19, +0,25 j à DM-13 pour la libération, +0,25 j à DM-13 pour la carence, ci-dessous). Au versement : 16,25 j
 (14,25 + 2,0) ; **+1,25 j le 2026-09-29**, après la réponse de Williams à la question 2 et son exigence
 d'expérience : le badge et la correction qui fait repartir le délai ajoutent du travail réel à UX-P1-40
 (maquette de « Mes entreprises »), UX-P1-43 (correction, nouvel envoi, notification), QA-T40 (bascule
@@ -873,8 +926,8 @@ QA-T41 (un témoin de plus dans le même fichier), JUR-T01b et JUR-T09.
 | Intégration | INT-T40 (1,25) | 1,25 |
 | Juridique | JUR-T40 (0,5), JUR-T41 (0,5) | 1,0 |
 | Qualité | QA-T40 (1,5), QA-T41 (1) | 2,5 |
-| Amendements | UX-P1-02 (+0,25), UX-P1-06 (+0,25), UX-P1-07 (+0,5), DM-08 (+0,25), DM-24 (+0,5), SEC-12 (+0,25), JUR-T09 (+0,25), UX-P1-05 (+0,25), DM-13 (+0,25) | 2,75 |
-| **Total phase 1** | | **17,75** |
+| Amendements | UX-P1-02 (+0,25), UX-P1-06 (+0,25), UX-P1-07 (+0,5), DM-08 (+0,25), DM-24 (+0,5), SEC-12 (+0,25), JUR-T09 (+0,25), UX-P1-05 (+0,25), DM-13 (+0,5) | 3,0 |
+| **Total phase 1** | | **18,0** |
 
 **Correction de sécurité du 2026-09-29 : aucun rechiffrage.** Elle simplifie la règle du clic (un
 prédicat « demande signalée » au lieu d'un cas d'empreinte d'IP), ajoute un libellé à la SSOT et au
@@ -890,6 +943,12 @@ UX-P1-41 (un libellé et un texte de notification), UX-P1-43 (le badge est celui
 (un lecteur de plus du même prédicat), DM-24 (la question 18 retient la règle déjà écrite), JUR-T40 (une
 phrase de l'art. 3.2), JUR-T01b (relecture), QA-T40 et QA-T41 (des témoins dans des fichiers déjà
 nommés).
+
+**Arbitrage de -d7 du 2026-09-29, carence de redépôt : +0,25 j, à DM-13 (1 → 1,25 j).** Travail réel :
+un prédicat pur de carence dérivé des libérations, lu au dépôt côté serveur, deux paramètres de la
+SSOT, le refus sans écriture et ses témoins. Absorbé : JUR-T40 et JUR-T01b (une phrase de l'art. 3.2),
+QA-T40 et QA-T41 (des témoins dans les mêmes fichiers). L'écran qui montre la carence attend la
+réponse à la question 20 et n'est pas chiffré ici.
 
 Hors chiffrage : la passe gardien-spec W20 (environ 0,5 j, dans le lot dédié de GOV-112, question 14,
 porteur écrit par l'avenant du 2026-09-29),
