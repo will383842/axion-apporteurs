@@ -663,6 +663,38 @@ export interface VueDeLaForge {
 }
 
 /**
+ * Un renommage du titre de la PR, lu dans sa chronologie (`event == "renamed"`) : l'instant, le
+ * titre d'avant (`rename.from`) et le titre d'après (`rename.to`).
+ */
+export interface RenommageDeTitre {
+  createdAt: string;
+  previousTitle: string;
+  currentTitle: string;
+}
+
+/**
+ * LE TITRE QUE LA PR PORTAIT À L'INSTANT DE LA FUSION. Le titre d'une PR reste modifiable après la
+ * fusion (lentille `securite`, #206) : le titre actuel ne prouve rien. C'est le titre d'après du
+ * dernier renommage antérieur ou égal à `mergedAt` ; sans renommage antérieur, le titre d'origine,
+ * c'est-à-dire le titre d'avant du premier renommage ; sans aucun renommage, le titre actuel. Une
+ * chronologie illisible (`null`) ne rend AUCUN titre : jamais un repli sur le titre actuel.
+ */
+function titreALaFusion(
+  titreActuel: string | null,
+  renommages: readonly RenommageDeTitre[] | null,
+  mergedAt: string | null
+): string | null {
+  if (renommages === null) return null;
+  const fusion = Date.parse(String(mergedAt));
+  const ordonnes = [...renommages].sort(
+    (a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt)
+  );
+  const anterieurs = ordonnes.filter((r) => Date.parse(r.createdAt) <= fusion);
+  if (anterieurs.length > 0) return anterieurs[anterieurs.length - 1]!.currentTitle;
+  return ordonnes.length > 0 ? ordonnes[0]!.previousTitle : titreActuel;
+}
+
+/**
  * LA LIVRAISON, COMPOSÉE DE CE QUE LA FORGE REND — la règle, sans I/O, pour qu'un témoin l'appelle.
  *
  * GOV-104 — LA DÉCLARATION SE LIT DANS LE COMMIT DE FUSION. Le titre et le champ `Lot:` étaient lus
@@ -681,6 +713,8 @@ export function livraisonDepuisLaForge(e: {
   vue: VueDeLaForge;
   messageDuCommit: string | null;
   faceALaBrancheParDefaut: string | null;
+  /** Les renommages du titre, lus dans la chronologie de la PR ; `null` si elle est illisible. */
+  renommages: readonly RenommageDeTitre[] | null;
 }): Livraison {
   const sha = e.vue.state === 'MERGED' ? (e.vue.mergeCommit?.oid ?? null) : null;
   const lignes = e.messageDuCommit === null ? null : e.messageDuCommit.split('\n');
@@ -691,7 +725,12 @@ export function livraisonDepuisLaForge(e: {
   // GOV-107 — LA PREMIÈRE LIGNE EST EXACTEMENT LE TITRE DE LA PR SUIVI DE ` (#<n>)`, ce que le
   // pas 6 pose par `--subject`. Toute autre ligne — sujet d'un commit, numéro différent, titre
   // absent de la vue — ne déclare RIEN, ni par elle, ni par le `Lot:` qui la suit : échec fermé.
-  const titreDeLaForge = typeof e.vue.title === 'string' && e.vue.title !== '' ? e.vue.title : null;
+  // Le titre comparé est celui de l'instant de la fusion, pas le titre actuel (`titreALaFusion`).
+  const titreDeLaForge = titreALaFusion(
+    typeof e.vue.title === 'string' && e.vue.title !== '' ? e.vue.title : null,
+    e.renommages,
+    e.vue.mergedAt
+  );
   const attendu = titreDeLaForge === null ? null : `${titreDeLaForge} (#${e.pr})`;
   const premiere = lignes === null ? null : (lignes[0] ?? null);
   const conforme = premiere !== null && attendu !== null && premiere === attendu;
@@ -745,6 +784,7 @@ export function livraisonSurLaForge(
       vue,
       messageDuCommit: null,
       faceALaBrancheParDefaut: null,
+      renommages: null,
     });
   }
   const parDefaut = lire([
@@ -766,7 +806,39 @@ export function livraisonSurLaForge(
       '--jq',
       '.status',
     ]),
+    renommages: renommagesSurLaForge(depot, pr, lire),
   });
+}
+
+/**
+ * LES RENOMMAGES DU TITRE, LUS DANS LA CHRONOLOGIE DE LA PR (`issues/<n>/timeline`, toutes les
+ * pages), un objet JSON par ligne. Une lecture qui échoue, une ligne qui n'est pas un renommage
+ * complet : `null`, et la clôture refuse (échec fermé).
+ */
+function renommagesSurLaForge(
+  depot: string,
+  pr: number,
+  lire: (args: string[]) => string
+): RenommageDeTitre[] | null {
+  try {
+    const lignes = lire([
+      'api',
+      `repos/${depot}/issues/${pr}/timeline?per_page=100`,
+      '--paginate',
+      '--jq',
+      '.[] | select(.event == "renamed") | ' +
+        '{createdAt: .created_at, previousTitle: .rename.from, currentTitle: .rename.to} | tojson',
+    ])
+      .split('\n')
+      .filter((l) => l.trim() !== '');
+    const renommages = lignes.map((l) => JSON.parse(l) as Record<string, unknown>);
+    const complets = renommages.every((r) =>
+      ['createdAt', 'previousTitle', 'currentTitle'].every((k) => typeof r[k] === 'string')
+    );
+    return complets ? (renommages as unknown as RenommageDeTitre[]) : null;
+  } catch {
+    return null;
+  }
 }
 
 function cloreUneTacheSeule(

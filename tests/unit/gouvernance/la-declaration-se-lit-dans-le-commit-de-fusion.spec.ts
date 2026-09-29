@@ -69,6 +69,7 @@ describe('REQ-GOV-026 — la déclaration se lit dans le commit de fusion, immua
       // …que le commit de fusion, lui, ne déclare pas.
       messageDuCommit: `fix(${portee.id}): x (#900)\n\nLot:\n`,
       faceALaBrancheParDefaut: 'ahead',
+      renommages: [],
     });
     expect(() =>
       cloturerUneTacheSeule({
@@ -89,6 +90,7 @@ describe('REQ-GOV-026 — la déclaration se lit dans le commit de fusion, immua
       vue: vueDeLaForge(`fix(${portee.id}): x`, ''),
       messageDuCommit: `fix(${portee.id}): x (#900)\n\nLot: ${secondaire.id}\n`,
       faceALaBrancheParDefaut: 'identical',
+      renommages: [],
     });
     cloturerUneTacheSeule({
       tacheId: secondaire.id,
@@ -107,6 +109,7 @@ describe('REQ-GOV-026 — la déclaration se lit dans le commit de fusion, immua
       vue: vueDeLaForge(`fix(${portee.id}): x`, ''),
       messageDuCommit: null,
       faceALaBrancheParDefaut: 'ahead',
+      renommages: [],
     });
     expect(livraison.titre ?? null).toBeNull();
     expect(livraison.corps ?? null).toBeNull();
@@ -139,6 +142,7 @@ describe('REQ-GOV-026 — la forge est interrogée sur la branche PAR DÉFAUT, j
       if (args[0] === 'repo') return 'main';
       if (args[1]?.includes('/commits/')) return message;
       if (args[1]?.includes('/compare/')) return 'ahead';
+      if (args[1]?.includes('/timeline')) return '';
       throw new Error(`appel inattendu : ${args.join(' ')}`);
     };
     return { appels, lire };
@@ -199,6 +203,7 @@ describe('REQ-GOV-026 — la première ligne du message est EXACTEMENT le titre 
       vue: { ...vueDeLaForge('', ''), title: titre as string },
       messageDuCommit: message,
       faceALaBrancheParDefaut: 'ahead',
+      renommages: [],
     });
   const familles = (tacheId: string, livraison: ReturnType<typeof livraisonAvec>) => {
     const d = lireDoc();
@@ -264,6 +269,7 @@ describe('REQ-GOV-026 — `Lot:` ne se lit que s’il est la SEULE ligne du corp
       vue: vueDeLaForge(`fix(${portee.id}): x`, ''),
       messageDuCommit: message,
       faceALaBrancheParDefaut: 'ahead',
+      renommages: [],
     });
 
   it('REQ-GOV-026 — TÉMOIN : un `Lot:` écrit dans un commit, que la forge recopie dans le message, ne déclare rien', () => {
@@ -290,6 +296,7 @@ describe('REQ-GOV-026 — l’atterrissage se juge sur la branche PAR DÉFAUT', 
       vue: vueDeLaForge(`fix(${portee.id}): x`, ''),
       messageDuCommit: `fix(${portee.id}): x (#900)\n`,
       faceALaBrancheParDefaut: face,
+      renommages: [],
     }).atterri;
 
   it('REQ-GOV-026 — TÉMOIN : un commit absent de la branche par défaut n’a pas atterri', () => {
@@ -369,5 +376,172 @@ describe('REQ-GOV-021 — la commande de fusion recopie `Lot:` dans le message d
     const charte = readFileSync('docs/CHARTE-AGENTS.md', 'utf8');
     expect(charte).not.toContain('ses trois racines');
     expect(charte).toContain('RACINES_DE_LA_GARDE_DES_REVUES');
+  });
+});
+
+describe('REQ-GOV-026 — le titre attendu est celui que la PR portait à l’instant de la fusion', () => {
+  /**
+   * LE DÉFAUT, relevé par la lentille `securite` sur la PR #206. La première ligne du message
+   * d'écrasement était comparée au titre ACTUEL de la PR, qui reste modifiable après la fusion :
+   * renommer la PR après coup rendait conforme un sujet qui ne l'était pas à la fusion, et rendait
+   * non conforme celui qui l'était. Le titre attendu est lu dans la chronologie de la PR : le
+   * dernier renommage antérieur ou égal à `mergedAt`, sinon le titre d'origine.
+   */
+  const doc = lireDoc();
+  const [portee, autre] = deuxTachesSeules(doc);
+  const FUSION = '2026-09-20T10:00:00Z';
+  const renommage = (createdAt: string, previousTitle: string, currentTitle: string) => ({
+    createdAt,
+    previousTitle,
+    currentTitle,
+  });
+  const livraisonAvec = (
+    titreActuel: string,
+    renommages: ReturnType<typeof renommage>[] | null,
+    message: string
+  ) =>
+    livraisonDepuisLaForge({
+      pr: 900,
+      vue: { ...vueDeLaForge(titreActuel, ''), mergedAt: FUSION },
+      messageDuCommit: message,
+      faceALaBrancheParDefaut: 'ahead',
+      renommages,
+    });
+  const familles = (tacheId: string, livraison: ReturnType<typeof livraisonAvec>) => {
+    const d = lireDoc();
+    try {
+      cloturerUneTacheSeule({ tacheId, livraison, taches: d.taches, owner: unProprietaire(d) });
+    } catch (e) {
+      if (e instanceof ErreurDeCloture) return e.refus.map((r) => r.famille);
+      throw e;
+    }
+    return [];
+  };
+  const avant = `fix(${portee.id}): x`;
+  const apres = `fix(${autre.id}): x`;
+
+  it('REQ-GOV-026 — TÉMOIN : un renommage POSTÉRIEUR à la fusion ne rend pas conforme le sujet du nouveau titre', () => {
+    const l = livraisonAvec(
+      apres,
+      [renommage('2026-09-21T08:00:00Z', avant, apres)],
+      `${apres} (#900)\n`
+    );
+    expect(l.titre ?? null).toBeNull();
+    expect(l.titreNonConforme).toEqual({ lu: `${apres} (#900)`, attendu: `${avant} (#900)` });
+    expect(familles(autre.id, l)).toContain('titre_d_ecrasement_non_conforme');
+  });
+
+  it('REQ-GOV-026 — TÉMOIN : un renommage POSTÉRIEUR à la fusion laisse conforme le sujet du titre d’avant', () => {
+    const l = livraisonAvec(
+      apres,
+      [renommage('2026-09-21T08:00:00Z', avant, apres)],
+      `${avant} (#900)\n`
+    );
+    expect(l.titre).toBe(`${avant} (#900)`);
+    expect(familles(portee.id, l)).toEqual([]);
+  });
+
+  it('REQ-GOV-026 — TÉMOIN : plusieurs renommages postérieurs, dans le désordre : le titre d’origine est celui du premier', () => {
+    const l = livraisonAvec(
+      'z',
+      [renommage('2026-09-22T08:00:00Z', 'y', 'z'), renommage('2026-09-21T08:00:00Z', avant, 'y')],
+      `${avant} (#900)\n`
+    );
+    expect(l.titre).toBe(`${avant} (#900)`);
+  });
+
+  it('REQ-GOV-026 — TÉMOIN : un renommage ANTÉRIEUR à la fusion est pris en compte, le titre d’origine ne l’est plus', () => {
+    const renommages = [
+      renommage('2026-09-20T11:00:00Z', avant, 'plus tard'),
+      renommage('2026-09-19T08:00:00Z', 'origine', 'milieu'),
+      renommage('2026-09-20T09:00:00Z', 'milieu', avant),
+    ];
+    expect(livraisonAvec('plus tard', renommages, `${avant} (#900)\n`).titre).toBe(
+      `${avant} (#900)`
+    );
+    for (const lu of ['origine', 'milieu', 'plus tard']) {
+      const l = livraisonAvec('plus tard', renommages, `${lu} (#900)\n`);
+      expect(l.titre ?? null, lu).toBeNull();
+      expect(l.titreNonConforme?.attendu, lu).toBe(`${avant} (#900)`);
+    }
+  });
+
+  it('REQ-GOV-026 — TÉMOIN : un renommage à l’instant même de la fusion compte comme antérieur', () => {
+    const l = livraisonAvec(apres, [renommage(FUSION, apres, avant)], `${avant} (#900)\n`);
+    expect(l.titre).toBe(`${avant} (#900)`);
+  });
+
+  it('REQ-GOV-026 — TÉMOIN : une chronologie illisible REFUSE, sans repli sur le titre actuel', () => {
+    const l = livraisonAvec(avant, null, `${avant} (#900)\n`);
+    expect(l.titre ?? null).toBeNull();
+    expect(l.corps ?? null).toBeNull();
+    expect(l.titreNonConforme).toEqual({ lu: `${avant} (#900)`, attendu: null });
+    expect(familles(portee.id, l)).toContain('titre_d_ecrasement_non_conforme');
+  });
+
+  it('REQ-GOV-026 — CONTRE-TÉMOIN : sans aucun renommage, le titre attendu est le titre actuel', () => {
+    const l = livraisonAvec(avant, [], `${avant} (#900)\n`);
+    expect(l.titre).toBe(`${avant} (#900)`);
+    expect(l.titreNonConforme ?? null).toBeNull();
+  });
+
+  /** Une forge simulée dont la chronologie est fournie telle quelle, ou dont la lecture échoue. */
+  function forge(chronologie: string | Error) {
+    const appels: string[][] = [];
+    const lire = (args: string[]): string => {
+      appels.push(args);
+      if (args[0] === 'pr') return JSON.stringify({ ...vueDeLaForge(apres, ''), mergedAt: FUSION });
+      if (args[0] === 'repo') return 'main';
+      if (args[1]?.includes('/commits/')) return `${avant} (#900)\n`;
+      if (args[1]?.includes('/compare/')) return 'ahead';
+      if (args[1]?.includes('/timeline')) {
+        if (chronologie instanceof Error) throw chronologie;
+        return chronologie;
+      }
+      throw new Error(`appel inattendu : ${args.join(' ')}`);
+    };
+    return { appels, lire };
+  }
+  const ligne = (o: unknown) => JSON.stringify(o);
+
+  it('REQ-GOV-026 — TÉMOIN : par la forge simulée, la chronologie de la PR est lue et un renommage postérieur est sans effet', () => {
+    const { appels, lire } = forge(
+      [
+        ligne(renommage('2026-09-21T08:00:00Z', avant, 'y')),
+        '  ',
+        ligne(renommage('2026-09-22T08:00:00Z', 'y', apres)),
+      ].join('\n')
+    );
+    const l = livraisonSurLaForge('will383842/axion-ia', 900, lire);
+    expect(l.titre).toBe(`${avant} (#900)`);
+    const chrono = appels.find((a) => a[1]?.includes('/timeline'))!;
+    expect(chrono[0]).toBe('api');
+    expect(chrono[1]).toMatch(/^repos\/will383842\/axion-ia\/issues\/900\/timeline(\?|$)/);
+    expect(chrono).toContain('--paginate');
+    const jq = chrono[chrono.indexOf('--jq') + 1]!;
+    for (const morceau of [
+      'select(.event == "renamed")',
+      '.created_at',
+      '.rename.from',
+      '.rename.to',
+      'tojson',
+    ])
+      expect(jq, morceau).toContain(morceau);
+  });
+
+  it('REQ-GOV-026 — TÉMOIN : par la forge simulée, une chronologie qui ne se lit pas REFUSE', () => {
+    for (const c of [
+      new Error('gh: HTTP 502'),
+      'pas du json',
+      'null',
+      ligne({ createdAt: FUSION, previousTitle: avant }),
+      ligne({ createdAt: FUSION, currentTitle: avant }),
+      ligne({ previousTitle: avant, currentTitle: avant }),
+      [ligne(renommage(FUSION, apres, avant)), ligne({ createdAt: FUSION })].join('\n'),
+    ]) {
+      const l = livraisonSurLaForge('will383842/axion-apporteurs', 900, forge(c).lire);
+      expect(l.titre ?? null, String(c)).toBeNull();
+      expect(l.titreNonConforme?.attendu ?? null, String(c)).toBeNull();
+    }
   });
 });

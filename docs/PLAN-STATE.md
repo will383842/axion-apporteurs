@@ -7,15 +7,15 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `5b2a9b2` — 2026-09-29T05:23:52+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #209 (rien) · 2. #211 (un contrôle requis rouge ou une revue manquante) |
-| Qui tient quoi ? | GOV-049 (A01) · GOV-075 (A01) |
+| Où est `main` ? | `911f326` — 2026-09-29T06:54:00+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #209 (un conflit avec `main`) |
+| Qui tient quoi ? | GOV-049 (A01) · GOV-075 (A01) · GOV-110 (A01) |
 | Où en est la phase ? | phase 0 — 91/125 tâches, reste 29.25 j |
-| Le prochain pas | fusionner #209, puis QA-T05 — Pipeline GHCR privé → Coolify pull |
+| Le prochain pas | QA-T05 — Pipeline GHCR privé → Coolify pull |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
-| Dernière entrée de journal | PR #209 — 2026-09-29 |
+| Dernière entrée de journal | PR #211 — 2026-09-29 |
 
-**Ce qu’on tape maintenant.** `gh pr view 209 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : 0
 
@@ -60,8 +60,7 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #209 — fix(GOV-075): aucun chemin gabarit la ou il ment, treize taches livrees reparees | `t/gov-075` | rien — fusionnable maintenant |
-| 2 | #211 — fix(GOV-110): la cloture confronte le sujet d'ecrasement au titre que la PR portait a l'instant de la fusion | `t/gov-110` | un contrôle requis rouge ou une revue manquante |
+| 1 | #209 — fix(GOV-075): aucun chemin gabarit la ou il ment, treize taches livrees reparees | `t/gov-075` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -73,6 +72,7 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 | --- | --- | --- | --- |
 | GOV-049 — Une tache en cours sans lot est invisible de TOUTES les gardes, et c'est ce lot qui l'a rencontre | A01 | #196 | `a_faire` |
 | GOV-075 — Des taches livrees gardent un chemin gabarit, et une tache livree omet un fichier qu'elle a modifie | A01 | #208 | `a_faire` |
+| GOV-110 — La cloture compare le sujet du commit de fusion au titre ACTUEL de la PR : un renommage apres la fusion le rendrait conforme | A01 | #210 | `a_faire` |
 
 ⚠️ **13 revendication(s) périmée(s)** — QA-T07, GOV-042, GOV-045, GOV-050, GOV-051, GOV-053, GOV-054, GOV-055, GOV-060, GOV-072, GOV-079, GOV-093, INT-T01c : leur issue porte encore un label `owner:` alors que la tâche est livrée. `pnpm lot:cloture` écrit `docs/tasks.json` mais n’efface pas les labels ; la dette appartient à GOV-012.
 
@@ -84,21 +84,32 @@ Dérivé de `git log` sur `docs/adr/`, restreint au jour du dernier atterrissage
 
 ## Prochain pas
 
-**Fusionner #209** — elle est en tête de file et ne bloque sur rien.
-
 **QA-T05** — Pipeline GHCR privé → Coolify pull (1 j) : 17 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
 Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeStateStatus` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage —, la tâche ensuite. L’ordre de la file se corrige à la rubrique « File de fusion », jamais ici.
 
 ## Dernier atterrissage
 
-`origin/main` = `5b2a9b2` (2026-09-29T05:23:52+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `911f326` (2026-09-29T06:54:00+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
 ## Journal
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
+
+### PR #211 — 2026-09-29 — fix(GOV-110): la cloture confronte le sujet d'ecrasement au titre que la PR portait a l'instant de la fusion
+
+**Fait.** La clôture d'une tâche seule attendait, pour première ligne du commit d'écrasement, le
+titre ACTUEL de la PR, qui reste modifiable après la fusion. Elle lit maintenant les renommages dans
+la chronologie de la PR et retient le titre en vigueur à `mergedAt`. Un renommage postérieur est
+sans effet. Une chronologie illisible fait refuser la clôture, sans repli sur le titre actuel.
+
+**Reste.** La commande réelle a été jouée en lecture sur la PR #207, renommée avant sa fusion. Le
+cas d'une PR renommée après sa fusion n'est éprouvé que par la forge simulée.
+
+**Appris.** Une donnée lue « maintenant » pour juger un fait passé doit être relue à l'instant de
+ce fait : sinon, la preuve dépend de ce que la forge laisse encore modifier.
 
 ### PR #209 — 2026-09-29 — fix(GOV-075): aucun chemin gabarit la ou il ment, treize taches livrees reparees
 
@@ -136,27 +147,7 @@ hors dépôt jusqu'à son correctif ; aucune acceptance ne les cite.
 corriger une valeur déjà posée passe par `reecrire-champ`, qui exige un motif. Ce motif est
 consigné au journal des réécritures, tenu hors dépôt ; le registre ne le porte pas (`motif` nul).
 
-### PR #206 — 2026-09-29 — chore(GOV-106): lot L0-13 — la garde lexicale juge le rendu, la regle d'arret est ecrite, la cloture confronte le titre
-
-**Fait.** Cinq tâches, un commit chacune. GOV-106 : la garde lexicale juge le texte que la JSX et
-le Markdown affichent, par l'arbre syntaxique ; des constructions qui rendaient à l'écran un terme
-interdit sans être vues le sont maintenant. GOV-058 : `partners/ADR-0025` écrit la règle d'arrêt
-décidée le 2026-09-15, avec ses sources, et dit ce qui n'a pas été retrouvé. GOV-081 : une raison
-de dette qui nomme une tâche absente de sa gate rougit (`raison_perimee`). GOV-107 : la première
-ligne du message d'écrasement ne déclare que si elle est le titre de la PR suivi de son numéro.
-GOV-108 : le journal et la reprise renvoient à RM-15, et l'arbre du journal se lit avec `-z`.
-
-**Reste.** La garde lexicale ne devine pas une valeur qui n'est pas constante, ni ce qu'un
-composant rend lui-même ; les homoglyphes restent à juger. `partners/ADR-0025` est proposé :
-l'articulation de la règle d'arrêt avec W14 (règle 2) est rendue à Will. Le titre d'une PR reste
-modifiable après sa fusion.
-
-**Appris.** Les témoins d'une forme de contournement sont entrés dans le même commit que son
-correctif, jamais avant ; ils sont publics depuis la poussée de la branche, puisque le dépôt l'est.
-Les formes sont écrites dans le spec, public depuis cette poussée ; ni les messages de commit ni
-ce journal ne les énumèrent. La divulgation que porte le spec est jugée par la lentille `securite`.
-
-… 3 entrée(s) affichée(s) sur 86 ; les 83 plus ancienne(s) se lisent dans `docs/journal/`.
+… 3 entrée(s) affichée(s) sur 87 ; les 84 plus ancienne(s) se lisent dans `docs/journal/`.
 
 ## Dette déclarée
 
