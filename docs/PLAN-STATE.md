@@ -8,7 +8,7 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `0db2bca0` — 2026-09-30T00:01:49+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #263 (un contrôle requis rouge ou une revue manquante) · 2. #267 (un contrôle requis rouge ou une revue manquante) · 3. #268 (un contrôle requis rouge ou une revue manquante) · 4. #271 (un contrôle requis rouge ou une revue manquante) · 5. #272 (un contrôle requis rouge ou une revue manquante) · 6. #262 (un conflit avec `main`) |
+| Qu’est-ce qui est en vol ? | 1. #263 (un contrôle requis rouge ou une revue manquante) · 2. #267 (un contrôle requis rouge ou une revue manquante) · 3. #268 (un contrôle requis rouge ou une revue manquante) · 4. #271 (un contrôle requis rouge ou une revue manquante) · 5. #272 (un contrôle requis rouge ou une revue manquante) · 6. #275 (un contrôle requis rouge ou une revue manquante) · 7. #262 (un conflit avec `main`) |
 | Qui tient quoi ? | GOV-117 (A01) |
 | Où en est la phase ? | phase 0 — 116/133 tâches, reste 13.00 j |
 | Le prochain pas | QA-T06 — Preview par PR sur Coolify, base éphémère, seed déterministe |
@@ -65,7 +65,8 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 | 3 | #268 — feat(QA-T34): la plateforme tire sha-7 apres publier, un seul producteur, l'atterrissage lu sur x-partners-build-sha | `t/qa-t34` | un contrôle requis rouge ou une revue manquante |
 | 4 | #271 — chore(GOV-012): registre rattrape, JUR-T03 close, chiffrement client des sauvegardes, paths de QA-T12 et JUR-T29 | `t/registre-rattrapage-16` | un contrôle requis rouge ou une revue manquante |
 | 5 | #272 — feat(QA-T50): base, cache et application crees s'ils manquent, variables posees depuis les secrets, aucune valeur imprimee | `t/qa-t50` | un contrôle requis rouge ou une revue manquante |
-| 6 | #262 — feat(GOV-116): le lot dedie du gardien-spec, procedure exacte lancee par Williams, reglages rendus depuis le projet | `t/gov-116` | un conflit avec `main` — à résoudre avant tout |
+| 6 | #275 — feat(GOV-123): les vues derivees sortent de git et se rendent a la volee, fin des conflits de vues entre PR | `t/gov-123-vues` | un contrôle requis rouge ou une revue manquante |
+| 7 | #262 — feat(GOV-116): le lot dedie du gardien-spec, procedure exacte lancee par Williams, reglages rendus depuis le projet | `t/gov-116` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 

@@ -2359,7 +2359,11 @@
         "tests/integration/semeur-deterministe.spec.ts",
         "tests/unit/qualite/preview-par-pr.spec.ts",
         ".github/workflows/ci.yml",
-        "prisma/seed/"
+        "prisma/seed/",
+        "scripts/preview/",
+        "package.json",
+        "tests/unit/qualite/pipeline-image.spec.ts",
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts"
       ],
       "schema": true,
       "sensible": [],
