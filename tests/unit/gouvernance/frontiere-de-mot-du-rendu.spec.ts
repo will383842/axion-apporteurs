@@ -591,6 +591,20 @@ describe('GOV-109 — ce qui reste admis, ce qui n’est pas jugé', () => {
     expect(messages.join('\n')).toContain(`« ${FORME} »`);
   });
 
+  it('REQ-JUR-037 : TÉMOIN — deux ternaires voisins, une moitié du terme chacun : la paire CROISÉE est jugée', () => {
+    // Refus de la lentille `exactitude` (PR #267) : les affichages d'une même ligne se combinent en
+    // produit ; la paire de rangs différents (c vrai, d faux) est celle que React affiche.
+    const source = enP(`{c ? '${AVANT}' : 'zz'}{d ? 'yy' : '${MILIEU + APRES}'}`);
+    const messages = fautesLexicales(ESPACE_TEMOIN, source).map((f) => f.message);
+    expect(messages.join('\n')).toContain(`« ${FORME} »`);
+  });
+
+  it('REQ-JUR-037 : TÉMOIN — la paire croisée est jugée aussi sur deux lignes sources voisines', () => {
+    const source = `<p>\n  {c ? '${AVANT}' : 'zz'}\n  {d ? 'yy' : '${MILIEU + APRES}'}\n</p>`;
+    const messages = fautesLexicales(ESPACE_TEMOIN, source).map((f) => f.message);
+    expect(messages.join('\n')).toContain(`« ${FORME} »`);
+  });
+
   it('REQ-GOV-017 : une expression dont une branche n’est pas constante n’est pas jugée — elle sépare', () => {
     const source = enP(`${AVANT}{etat ? '${deb(MILIEU)}' : valeur}${fin(MILIEU) + APRES}`);
     expect(fautesLexicales(ESPACE_TEMOIN, source)).toEqual([]);

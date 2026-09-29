@@ -80,14 +80,17 @@
  * `undefined` et les booléens), les parenthèses et les annotations de type, et les constantes
  * locales `const X = …` du même fichier. Un ternaire dont la condition est INCONNUE mais dont les
  * deux branches sont constantes a deux affichages possibles : la ligne est rendue une fois pour
- * chacun, et CHACUN est jugé — la négation écrite dans une branche n'exempte pas l'autre.
+ * chacun, et CHACUN est jugé — la négation écrite dans une branche n'exempte pas l'autre. Les
+ * affichages de plusieurs expressions d'une MÊME ligne rendue se COMBINENT : toutes leurs
+ * combinaisons sont rendues (refus de la lentille `exactitude`, PR #267 : deux ternaires voisins
+ * portant chacun une moitié d'un terme).
  *   ⚠️ LIMITES DÉCLARÉES. Ce qui n'est pas constant n'est PAS jugé : il reste écrit, et sépare.
- *   Donc : une variable, un paramètre, un appel, une propriété, un import, une constante d'un
- *   autre fichier ; un nom lié plus d'une fois dans le fichier (il pourrait désigner l'autre
- *   liaison) ; `&&` ou `||` dont la gauche est inconnue ; un ternaire dont une branche est
- *   inconnue ; un tableau étalé (`...`) ; au-delà de `MAX_VALEURS_POSSIBLES` affichages possibles
- *   pour une même expression. Ce qu'un composant fait de ses enfants n'est pas lu non plus. Seul
- *   un test du rendu à l'exécution jugerait ces cas.
+ *   Donc : une valeur venue d'ailleurs que du fichier ou de l'expression elle-même, une liaison
+ *   ambiguë, une condition inconnue devant un opérande seul, un ternaire dont une branche est
+ *   inconnue, un tableau étalé, et une expression ou une ligne aux affichages trop nombreux
+ *   (au-delà d'un plafond, une ligne n'est plus jugée qu'affichage par affichage). Ce qu'un
+ *   composant fait de ses enfants n'est pas lu non plus. Seul un test du rendu à l'exécution
+ *   jugerait ces cas.
  *
  * INVARIANT DE LA PREUVE (RM-11). `--prove` ne touche pas au dépôt et ne le lit pas : la vue est
  * INJECTÉE. Une preuve qui lirait les fichiers réels verdirait ou rougirait au gré de ce que le
@@ -529,9 +532,14 @@ const traineLisible = (s: string): string =>
  * ajoutée en fin de cette même ligne, séparée par une espace. Deux retouches qui se chevauchent :
  * la première gagne, la seconde est ignorée — elle ne peut rien recoller de plus.
  */
-function appliquerRetouches(source: string, retouches: Retouche[]): string {
+function appliquerRetouches(
+  source: string,
+  retouches: Retouche[],
+  lignes?: Map<Retouche, number>
+): string {
   const triees = [...retouches].sort((x, y) => x.debut - y.debut || x.fin - y.fin);
   let out = '';
+  let sauts = 0;
   let pos = 0;
   let enAttente = 0;
   let traine: string[] = [];
@@ -545,6 +553,7 @@ function appliquerRetouches(source: string, retouches: Retouche[]): string {
         continue;
       }
       out += (traine.length > 0 ? ' ' + traine.join(' ') : '') + '\n' + '\n'.repeat(enAttente);
+      sauts += 1 + enAttente;
       enAttente = 0;
       traine = [];
     }
@@ -553,6 +562,7 @@ function appliquerRetouches(source: string, retouches: Retouche[]): string {
   for (const r of triees) {
     if (r.debut < pos) continue;
     copier(r.debut);
+    lignes?.set(r, sauts);
     out += r.par.replace(/\r?\n/g, ' ');
     enAttente += source.slice(r.debut, r.fin).split('\n').length - 1;
     const t = r.traine === undefined ? '' : traineLisible(r.traine);
@@ -1187,18 +1197,41 @@ export function lignesRendues(chemin: string, contenu: string): string[] {
   // GOV-109 : une retouche à plusieurs affichages possibles (une condition inconnue entre des
   // branches constantes) fait rendre le fichier une fois par affichage ; la ligne rendue les porte
   // tous, séparés par une barre — un SÉPARATEUR DE SEGMENT : la négation d'une variante n'exempte
-  // pas l'autre. Le rendu k prend le k-ième affichage de chaque retouche (le dernier, s'il en a
-  // moins) : chaque affichage est jugé au moins une fois, dans le contexte réel de sa ligne.
-  const tours = Math.max(1, ...retouches.map((r) => 1 + (r.variantes?.length ?? 0)));
-  if (tours === 1) return rendre(retouches);
-  const rendus = Array.from({ length: tours }, (_, k) =>
-    rendre(
-      retouches.map((r) => {
-        const affichages = [r.par, ...(r.variantes ?? [])];
-        return { ...r, par: affichages[Math.min(k, affichages.length - 1)]! };
-      })
-    )
-  );
+  // pas l'autre. Les retouches d'une MÊME ligne rendue se combinent : leurs affichages sont pris en
+  // PRODUIT (refus de la lentille `exactitude`, PR #267 : deux ternaires voisins portant chacun une
+  // moitié d'un terme ne rendaient que les paires de même rang). Au-delà du plafond, une ligne
+  // retombe sur un affichage par rendu : ⚠️ LIMITE DÉCLARÉE dans l'en-tête.
+  const multiples = retouches.filter((r) => (r.variantes?.length ?? 0) > 0);
+  if (multiples.length === 0) return rendre(retouches);
+  const ligneDe = new Map<Retouche, number>();
+  appliquerRetouches(contenu, retouches, ligneDe);
+  const parLigne = new Map<number, Retouche[]>();
+  for (const r of multiples) {
+    const l = ligneDe.get(r) ?? -1;
+    parLigne.set(l, [...(parLigne.get(l) ?? []), r]);
+  }
+  /** Pour chaque ligne : la liste des combinaisons (un affichage par retouche de la ligne). */
+  const combinaisons = [...parLigne.values()].map((groupe) => {
+    const affichages = groupe.map((r) => [r.par, ...(r.variantes ?? [])]);
+    const tout = produit(affichages);
+    if (tout !== undefined) return { groupe, choix: tout as unknown as string[][] };
+    const tours = Math.max(...affichages.map((x) => x.length));
+    return {
+      groupe,
+      choix: Array.from({ length: tours }, (_, k) =>
+        affichages.map((x) => x[Math.min(k, x.length - 1)]!)
+      ),
+    };
+  });
+  const tours = Math.max(1, ...combinaisons.map((c) => c.choix.length));
+  const rendus = Array.from({ length: tours }, (_, k) => {
+    const par = new Map<Retouche, string>();
+    for (const { groupe, choix } of combinaisons) {
+      const c = choix[Math.min(k, choix.length - 1)]!;
+      groupe.forEach((r, i) => par.set(r, c[i]!));
+    }
+    return rendre(retouches.map((r) => (par.has(r) ? { ...r, par: par.get(r)! } : r)));
+  });
   return rendus[0]!.map((_, i) => [...new Set(rendus.map((l) => l[i]!))].join(' | '));
 }
 
