@@ -149,6 +149,16 @@ export async function exercer(fichier: string, schema: string, phrase: string): 
   }
 }
 
+/** Le verdict sur le disque, ou `null` s'il manque ou ne se lit pas : les deux font rougir. */
+function lireVerdict(chemin: string): Verdict | null {
+  if (!existsSync(chemin)) return null;
+  try {
+    return JSON.parse(readFileSync(chemin, 'utf8')) as Verdict;
+  } catch {
+    return null;
+  }
+}
+
 function arg(nom: string): string | undefined {
   const i = process.argv.indexOf(nom);
   return i >= 0 ? process.argv[i + 1] : undefined;
@@ -159,12 +169,7 @@ async function principal(): Promise<number> {
     const chemin = arg('--verdict');
     const now = arg('--now');
     if (!chemin || !now) throw new Error('usage : --fraicheur --verdict <fichier> --now <ISO>');
-    let v: Verdict | null = null;
-    try {
-      v = existsSync(chemin) ? (JSON.parse(readFileSync(chemin, 'utf8')) as Verdict) : null;
-    } catch {
-      v = null;
-    }
+    const v = lireVerdict(chemin);
     const seuil = SEUILS.EXERCICE_DE_RESTAURATION_MAX_JOURS.valeur;
     const j = jugerFraicheur(v, new Date(now), seuil);
     if (j.ok) {
