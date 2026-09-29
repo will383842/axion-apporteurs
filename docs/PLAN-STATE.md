@@ -8,12 +8,12 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `4a1d940` — 2026-09-29T21:24:40+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #242 (un conflit avec `main`) · 2. #254 (un conflit avec `main`) |
+| Qu’est-ce qui est en vol ? | 1. #254 (un contrôle requis rouge ou une revue manquante) · 2. #255 (un contrôle requis rouge ou une revue manquante) · 3. #242 (un conflit avec `main`) |
 | Qui tient quoi ? | aucune tâche revendiquée |
 | Où en est la phase ? | phase 0 — 110/131 tâches, reste 17.25 j |
 | Le prochain pas | QA-T06 — Preview par PR sur Coolify, base éphémère, seed déterministe |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
-| Dernière entrée de journal | PR #253 — 2026-09-29 |
+| Dernière entrée de journal | PR #255 — 2026-09-29 |
 
 **Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
@@ -60,8 +60,9 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #242 — feat(JUR-T34): la politique de confidentialite de l'espace, tiree du registre de l'article 30 et acceptee a la premiere connexion | `t/jur-t34` | un conflit avec `main` — à résoudre avant tout |
-| 2 | #254 — docs(GOV-017a): W20, questions 18 et 19 tranchees — aucune tacite d'une demande signalee, liberee apres 3 injoignables ou 45 jours | `t/w20-q18-q19` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #254 — docs(GOV-017a): W20, questions 18 et 19 tranchees — aucune tacite d'une demande signalee, liberee apres 3 injoignables ou 45 jours | `t/w20-q18-q19` | un contrôle requis rouge ou une revue manquante |
+| 2 | #255 — chore(GOV-012): registre rattrape, six taches closes dont DM-03-A livree dans axion-ia, paths de JUR-T03 et JUR-T29 | `t/registre-rattrapage-14` | un contrôle requis rouge ou une revue manquante |
+| 3 | #242 — feat(JUR-T34): la politique de confidentialite de l'espace, tiree du registre de l'article 30 et acceptee a la premiere connexion | `t/jur-t34` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -95,6 +96,18 @@ Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
 
+### PR #255 — 2026-09-29 — chore(GOV-012): registre rattrape, six taches closes dont DM-03-A livree dans axion-ia, paths de JUR-T03 et JUR-T29
+
+**Fait.** Quatorzième rattrapage. Avec le motif de branche par dépôt, DM-03-A, livrée dans axion-ia et
+en production, se clôt enfin, et DM-03-P et DM-04 avec elle. GOV-124, GOV-125 et GOV-126 sont closes.
+Les chemins de JUR-T03 et de JUR-T29 sont ceux que la forge et la garde ont mesurés.
+
+**Reste.** INT-T02 : sa PR nomme la tâche, mais sous une forme que la clôture refuse. L'exception
+arbitrée demande un outil, GOV-127. INT-T27-A et INT-T26 attendent derrière elle.
+
+**Appris.** Un arbitrage ne suffit pas quand aucun outil ne sait l'écrire : le registre ne s'édite
+pas à la main, et l'exception doit elle-même devenir une règle écrite, fermée et testée.
+
 ### PR #253 — 2026-09-29 — feat(GOV-125): le motif de branche depend du depot de la tache, une tache axionia se clot sur sa branche
 
 **Fait.** Le motif de branche du registre dépend désormais du dépôt de la tâche. Une tâche d'axion-ia
@@ -122,18 +135,7 @@ qui en dépendent.
 auteur, au moment de coder, qui l'a relevé. La contradiction se tranche par une décision écrite,
 jamais par l'acceptance la plus récente.
 
-### PR #250 — 2026-09-29 — feat(GOV-126): le temoin d'une garde vaut la garde, tests de gouvernance, securite et integration a deux lentilles
-
-**Fait.** Les tests de gouvernance, de sécurité et d'intégration restent à deux lentilles : une PR
-qui ne toucherait que le témoin d'une garde ne peut plus l'affaiblir sous une seule relecture.
-
-**Reste.** Aucune PR n'a encore été fusionnée à une seule lentille : la règle entre en usage avec
-cette fermeture.
-
-**Appris.** Un témoin fait partie de la garde qu'il prouve : l'autoriser à une lentille, c'était
-autoriser la garde elle-même par un détour.
-
-… 3 entrée(s) affichée(s) sur 110 ; les 107 plus ancienne(s) se lisent dans `docs/journal/`.
+… 3 entrée(s) affichée(s) sur 111 ; les 108 plus ancienne(s) se lisent dans `docs/journal/`.
 
 ## Dette déclarée
 
