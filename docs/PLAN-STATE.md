@@ -7,10 +7,10 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `c4b0e3f` — 2026-09-29T13:31:04+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #221 (un conflit avec `main`) · 2. #230 (un conflit avec `main`) · 3. #233 (un conflit avec `main`) · 4. #235 (un conflit avec `main`) |
+| Où est `main` ? | `6245830` — 2026-09-29T14:03:27+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #230 (un conflit avec `main`) · 2. #221 (état `UNKNOWN`) · 3. #235 (état `UNKNOWN`) |
 | Qui tient quoi ? | JUR-T04 (A01) · GOV-122 (A01) · GOV-118 (A01) · GOV-119 (A01) · GOV-121 (A01) |
-| Où en est la phase ? | phase 0 — 95/131 tâches, reste 29.25 j |
+| Où en est la phase ? | phase 0 — 95/135 tâches, reste 32.25 j |
 | Le prochain pas | QA-T05 — Pipeline GHCR privé → Coolify pull |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
 | Dernière entrée de journal | PR #233 — 2026-09-29 |
@@ -19,14 +19,14 @@
 
 ## Phase courante : 0
 
-95/131 tâches terminées · reste 29.25 j estimés.
+95/135 tâches terminées · reste 32.25 j estimés.
 
 ## Tâches
 
 | Statut | Nombre | Détail |
 | --- | --- | --- |
 | `proposee` | 0 | — |
-| `a_faire` | 170 | QA-T05, QA-T11, QA-T06, QA-T12, QA-T13, DM-03-A, DM-03-P, DM-04, INT-T02, INT-T03, INT-T04, INT-T05 … (12 affichées sur 170 — liste complète : `docs/TASKS.md`) |
+| `a_faire` | 174 | QA-T05, QA-T11, QA-T06, QA-T12, QA-T13, DM-03-A, DM-03-P, DM-04, INT-T02, INT-T03, INT-T04, INT-T05 … (12 affichées sur 174 — liste complète : `docs/TASKS.md`) |
 | `en_cours` | 0 | — |
 | `bloquee` | 0 | — |
 | `attente_externe` | 2 | JUR-T01b · JUR-T01c |
@@ -60,10 +60,9 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #221 — feat(QA-T05): la forge construit, juge puis publie l'image, la plateforme ne fera plus que la tirer | `t/qa-t05` | un conflit avec `main` — à résoudre avant tout |
-| 2 | #230 — docs(GOV-012): conseillers salaries — plan W19 et taches versees (GOV-112, GOV-115 a GOV-117), sans DECISIONS ni GLOSSAIRE | `t/archi-commerciaux-salaries` | un conflit avec `main` — à résoudre avant tout |
-| 3 | #233 — feat(JUR-T04): registre de l'article 30 et AIPD, sources et derives du schema, la page de confidentialite scindee | `t/jur-t04` | un conflit avec `main` — à résoudre avant tout |
-| 4 | #235 — fix(GOV-066): la garde d'entite juge chaque commit de la PR, pas seulement la tete, et ecrit ce qu'elle ne lit pas | `t/gov-066` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #230 — docs(GOV-012): conseillers salaries — plan W19 et taches versees (GOV-112, GOV-115 a GOV-117), sans DECISIONS ni GLOSSAIRE | `t/archi-commerciaux-salaries` | un conflit avec `main` — à résoudre avant tout |
+| 2 | #221 — feat(QA-T05): la forge construit, juge puis publie l'image, la plateforme ne fera plus que la tirer | `t/qa-t05` | état `UNKNOWN` — à qualifier à la main |
+| 3 | #235 — fix(GOV-066): la garde d'entite juge chaque commit de la PR, pas seulement la tete, et ecrit ce qu'elle ne lit pas | `t/gov-066` | état `UNKNOWN` — à qualifier à la main |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -89,13 +88,13 @@ Dérivé de `git log` sur `docs/adr/`, restreint au jour du dernier atterrissage
 
 ## Prochain pas
 
-**QA-T05** — Pipeline GHCR privé → Coolify pull (1 j) : 19 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
+**QA-T05** — Pipeline GHCR privé → Coolify pull (1 j) : 21 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
 Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeStateStatus` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage —, la tâche ensuite. L’ordre de la file se corrige à la rubrique « File de fusion », jamais ici.
 
 ## Dernier atterrissage
 
-`origin/main` = `c4b0e3f` (2026-09-29T13:31:04+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `6245830` (2026-09-29T14:03:27+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
@@ -126,19 +125,34 @@ scripts de garde lue et vide est un refus, et le périmètre de la famille est �
 **Appris.** Distinguer une dimension non lue d'une dimension lue et vide coûte une valeur de plus,
 `undefined` à côté de `[]` ; sans elle, le plancher aurait fait rougir tous les cas de preuve.
 
-### PR #228 — 2026-09-29 — test(GOV-121): la preuve de vol est jouee a null, la forme reelle du registre, et le docblock dit juste
+### PR #230 — 2026-09-29 — docs(GOV-012): conseillers salaries — plan W19 et taches versees (GOV-112, GOV-115 a GOV-117), sans DECISIONS ni GLOSSAIRE
 
-**Fait.** Le témoin de la preuve de vol joue maintenant `owner: null` et `branch: null`, la forme
-que porte réellement le registre, en plus de la clé absente. Mesuré par mutation : sans la moitié
-« type » de la clause, les deux faces neuves échouent. Le docblock ne dit plus « aucun témoin » là
-où un témoin voisin existait.
+**Fait.** Le plan du chantier W19 est versé dans `docs/chantiers/W19-conseillers-salaries.md`, avec
+les réponses de Williams du 2026-09-29, dont la question 22 : les conseillers travaillent dans le CRM
+Pro, et Partners garde le registre et décide par l'API 3. Quatre tâches entrent au registre `a_faire`
+(GOV-112, GOV-115, GOV-116, GOV-117) ; INT-T28, SEC-34 et DM-32 sont ajoutées au plan, UX-P2-11 en
+sort. Chiffrage : chantier W19 21,0 j, lot transverse « confort de la console pour tous les rôles »
+15,7 j, total Partners 36,7 j.
 
-**Reste.** Rien sur ce témoin.
+Les quatre réserves de la lentille `securite`, qui a accepté la PR sur `830a648`, sont versées au
+plan et au registre. L'identité du conseiller à l'API 3 devient une hypothèse de confiance envers le
+CRM Pro, écrite dans l'ADR INT-T28 (HYP-W19-IDENTITE-CRM : vingt et une HYP au lieu de vingt). La
+limite de la Société, qui borne un CRM Pro compromis, devient fixe, égale à celle d'un apporteur, au
+lieu de croître avec le nombre de conseillers (HYP-W19-LIMITES). QA-T31 gagne une clause jumelle sur
+le temps de réponse et l'instant des notifications. SEC-34 porte une alerte de volume agrégée, active
+sans condition ; l'alerte par conseiller reste liée à HYP-W19-CSE. L'acceptance de GOV-116 porte la
+relecture du processus par la lentille `securite`. GOV-112 et GOV-115 sont réécrites en conséquence.
 
-**Appris.** Retirer une clé et la mettre à `null` ne jugent pas la même moitié d'une règle : un
-témoin doit jouer la forme que les données prennent vraiment.
+**Reste.** Tout le chantier : GOV-116 puis GOV-112 écrivent `docs/DECISIONS.md`, `docs/GLOSSAIRE.md`
+et `docs/PRESEANCE.md`, que cette PR ne touche pas ; GOV-117 puis GOV-115 versent les trente-deux
+autres tâches. Aucune tâche W19 n'est livrée par cette PR. Les estimations de QA-T31 et de SEC-34
+ne sont pas rechiffrées après les réserves : GOV-115 les relit au versement.
 
-… 3 entrée(s) affichée(s) sur 97 ; les 94 plus ancienne(s) se lisent dans `docs/journal/`.
+**Appris.** Un titre de PR doit nommer une tâche du registre, et une PR sur une tâche `a_faire`
+non revendiquée rougit `gov:etat` : une PR de plan qui verse ses tâches sans les livrer se titre sur
+une tâche déjà livrée, comme la PR #219 sur GOV-012, jamais sur l'une des tâches qu'elle verse.
+
+… 3 entrée(s) affichée(s) sur 98 ; les 95 plus ancienne(s) se lisent dans `docs/journal/`.
 
 ## Dette déclarée
 
