@@ -8,12 +8,12 @@
 >
 > Une tache = une PR, **≤ 1,5 jour**. Le plafond est porte par la garde `gov:tasks`.
 
-**299 taches · 227.85 j estimes.**
+**304 taches · 230.10 j estimes.**
 
 | Phase | Taches | Jours | Terminees |
 | --- | ---: | ---: | ---: |
 | -1 — Gouvernance (prealable bloquant) | 39 | 23.75 | 39 |
-| 0 — Socle technique | 125 | 97.35 | 91 |
+| 0 — Socle technique | 130 | 99.60 | 95 |
 | 1 — Operationnel | 62 | 48.00 | 0 |
 | 2 — Argent | 45 | 33.50 | 0 |
 | 3 — Pilotage et conformite | 28 | 25.25 | 0 |
@@ -1014,7 +1014,7 @@ Couvre : `REQ-GOV-004`
 
 **Tests.** `tests/unit/gouvernance/sonde-distingue-les-deux-depots.spec.ts`
 
-### GOV-049 — Une tache en cours sans lot est invisible de TOUTES les gardes, et c'est ce lot qui l'a rencontre
+### GOV-049 — Une tache en cours sans lot est invisible de TOUTES les gardes, et c'est ce lot qui l'a rencontre ✅ **fusionnee**
 
 `0.5 j` · zone `gouvernance` · depend de `GOV-038`
 
@@ -1346,7 +1346,7 @@ Couvre : `REQ-GOV-021`, `REQ-GOV-003`
 
 **Tests.** `tests/unit/gouvernance/exemptions-par-occurrence.spec.ts`
 
-### GOV-075 — Des taches livrees gardent un chemin gabarit, et une tache livree omet un fichier qu'elle a modifie
+### GOV-075 — Des taches livrees gardent un chemin gabarit, et une tache livree omet un fichier qu'elle a modifie ✅ **fusionnee**
 
 `1.5 j` · zone `gouvernance` · depend de `GOV-074`
 
@@ -1440,7 +1440,7 @@ Couvre : `REQ-GOV-012`, `REQ-QA-013`
 
 **Tests.** `tests/unit/gouvernance/une-gate-sans-script-n-est-pas-une-gate-conforme.spec.ts`
 
-### GOV-084 — Neuf scripts de garde suivis ne sont revendiques par aucune tache
+### GOV-084 — Neuf scripts de garde suivis ne sont revendiques par aucune tache ✅ **fusionnee**
 
 `0.5 j` · zone `gouvernance` · depend de `GOV-074`
 
@@ -1823,7 +1823,7 @@ Couvre : `REQ-GOV-017`, `REQ-JUR-037`
 
 **Tests.** `tests/unit/gouvernance/frontiere-de-mot-du-rendu.spec.ts`
 
-### GOV-110 — La cloture compare le sujet du commit de fusion au titre ACTUEL de la PR : un renommage apres la fusion le rendrait conforme
+### GOV-110 — La cloture compare le sujet du commit de fusion au titre ACTUEL de la PR : un renommage apres la fusion le rendrait conforme ✅ **fusionnee**
 
 `0.5 j` · zone `gouvernance` · depend de `GOV-107`
 
@@ -1842,6 +1842,56 @@ Couvre : `REQ-SEC-008`, `REQ-SEC-009`
 **Acceptation.** Dettes relevees par la lentille securite sur la PR #200 (SEC-05), non bloquantes pour sa fusion : la couche forApporteur juge les donnees ecrites et le where de premier niveau, mais pas encore toutes les options de lecture que la methode lister transmet au client, ni les filtres qui traversent une relation, et elle rend des lignes entieres la ou une selection explicite suffirait. A livrer : une liste blanche des options de lecture acceptees, le refus (famille REFUS.forme) de tout filtre de relation qui sortirait du perimetre de l'apporteur, et une selection explicite des champs rendus ; 404 toujours indistinct. TEMOINS rouges d'abord, dont un sur le vrai serialiseur de Prisma en integration. ECHEANCE : les filtres de relation sont fermes au plus tard a l arrivee du premier modele partage entre apporteurs (REQ-SEC-022).
 
 **Tests.** `tests/unit/securite/acces-scope.spec.ts` · `tests/integration/idor.spec.ts`
+
+### GOV-117 — La cloture retient un renommage fait dans la seconde meme de la fusion, et une date illisible y devient NaN au lieu d'un refus
+
+`0.5 j` · zone `gouvernance` · depend de `GOV-110`
+
+Couvre : `REQ-GOV-026`
+
+**Acceptation.** Releve par les deux lentilles sur la PR #211 (GOV-110), non bloquant a la fusion. (1) titreALaFusion compare avec <= a mergedAt, a la seconde : un renommage horodate dans la seconde meme de la fusion est retenu comme anterieur, alors que l'acceptance de GOV-110 dit anterieur. A livrer : un renommage de meme horodatage que la fusion n'est pas tenu pour anterieur, ou l'egalite est refusee comme indecidable ; le choix est ecrit. (2) Un createdAt ou un mergedAt qui n'est pas une date passe le filtre des renommages complets et produit NaN, alors que le docblock promet null : la chronologie illisible doit rendre null, et la cloture refuser. (3) La prose et le message de refus parlent encore du titre de la PR la ou la regle lit desormais le titre a l'instant de la fusion. TEMOINS rouges d'abord : un renommage a la seconde de la fusion ; une date illisible dans la chronologie.
+
+**Tests.** `tests/unit/gouvernance/la-declaration-se-lit-dans-le-commit-de-fusion.spec.ts`
+
+### GOV-118 — La garde des attributions reconnait un gabarit a son nom, et reste verte si elle ne confronte aucun script de garde
+
+`0.5 j` · zone `gouvernance` · depend de `GOV-084`
+
+Couvre : `REQ-GOV-021`
+
+**Acceptation.** Releve par la lentille securite sur les PR #209 (GOV-075) et #216 (GOV-084), non bloquant a la fusion. (1) estGabarit reconnait un chemin gabarit a sa FORME (le dernier segment vaut l'identifiant de sa tache) : un vrai fichier nomme ainsi serait pris pour un gabarit. A livrer : la regle est confrontee au disque (un gabarit n'existe pas), ou la limite est ecrite en tete de la garde avec son temoin. (2) La famille script_de_garde_sans_porteur n'a pas de plancher : si l'index ne rend aucun fichier sous scripts/gates/, la garde confronte zero script et reste verte. A livrer : zero script confronte est un refus nomme. (3) Elle prend tout fichier suivi sous scripts/gates/, pas seulement les scripts : dire dans l'en-tete si c'est voulu, ou filtrer. TEMOINS rouges d'abord pour (1) et (2).
+
+**Tests.** `tests/unit/gouvernance/aucun-script-de-garde-orphelin.spec.ts`
+
+### GOV-119 — La porte A d'une PR rougit quand une AUTRE PR fusionne pendant son execution
+
+`0.5 j` · zone `gouvernance` · aucune dependance
+
+Couvre : `REQ-GOV-006`
+
+**Acceptation.** Mesure le 2026-09-29 sur la PR #209 (run 36523369124) : la PR #211 a fusionne pendant la porte A de #209 ; gov:etat a lu cette fusion sur la forge et exige son commit dans le clone du job, qui ne le portait pas (github_illisible : le commit de fusion 911f326 est absent du clone). Deux tests d'etat reel (REQ-GOV-006, REQ-GOV-007) ont rougi sans rien devoir au delta de #209. Releve par la lentille exactitude. A livrer : la porte A d'une PR ne depend pas de l'etat des AUTRES PR a l'instant ou elle tourne ; ce que gov:etat lit sur la forge est borne a la base du clone, ou l'absence d'un commit posterieur a cette base est une exemption nommee et comptee, jamais un rouge. TEMOIN rouge d'abord : une fusion posterieure a la base du clone, lue sur une forge simulee, ne fait plus rougir la garde ; une fusion anterieure dont le commit manque rougit toujours.
+
+**Tests.** `tests/unit/gouvernance/la-porte-a-ne-depend-pas-des-autres-pr.spec.ts`
+
+### GOV-120 — INT-T01b declare huit chemins, sa PR de livraison en a modifie vingt
+
+`0.5 j` · zone `gouvernance` · depend de `GOV-075`
+
+Couvre : `REQ-GOV-021`
+
+**Acceptation.** Releve par la lentille exactitude sur la PR #209, mesure le 2026-09-29 sur la PR axion-ia #998 (commit de fusion 41d71a7, attestation d'INT-T01b) : la PR a modifie vingt fichiers, dont src/server/partners/contrat.ts, commission.ts, config.ts, enveloppe.ts, frontiere.ts, ht.ts, payloads.ts et package.json ; les paths d'INT-T01b en declarent huit. Et INT-T01b porte schema: true alors qu'aucun de ces vingt fichiers n'est un chemin de schema au sens de ce depot : a verifier avant de le changer. A livrer : (1) les paths d'INT-T01b recoivent les fichiers reellement modifies, confrontes a la liste de la forge, par les outils de registre ; (2) le drapeau schema est tranche, avec sa source ; (3) une garde confronte, pour toute tache livree ailleurs et attestee, ses paths aux fichiers de la PR attestee, et nomme l'ecart. TEMOIN rouge d'abord : une attestation dont la PR a touche un fichier que la tache ne declare pas.
+
+**Tests.** `tests/unit/gouvernance/une-livraison-declare-ce-qu-elle-a-touche.spec.ts`
+
+### GOV-121 — Le temoin de la preuve de vol ne joue que la cle absente, jamais owner ou branch a null, la forme reelle du registre
+
+`0.25 j` · zone `gouvernance` · depend de `GOV-049`
+
+Couvre : `REQ-GOV-021`
+
+**Acceptation.** Releve par les deux lentilles sur la PR #217 (GOV-049), non bloquant a la fusion. (1) Les deux faces rouges retirent la cle, et ne jouent donc que la moitie required de la clause jumelle du schema ; le registre porte owner: null et branch: null, que refusent la moitie type de la clause et ses motifs. A livrer : deux faces de plus, owner: null puis branch: null sur une tache en_cours hors lot, chacune refusee et nommee. (2) Le docblock de la specification dit qu'AUCUN temoin ne voyait la clause refuser : c'est inexact, clore-une-tache-livree-seule.spec.ts voit deja branch: null refuse sur une tache fusionnee. A corriger : aucun temoin ne la voyait refuser pour en_cours, ni pour owner.
+
+**Tests.** `tests/unit/gouvernance/une-tache-en-cours-appartient-a-un-lot.spec.ts`
 
 ## Phase 1 — Operationnel
 
