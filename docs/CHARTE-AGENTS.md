@@ -308,7 +308,7 @@ dérivation.
 GOV-124), qui amende `W16`. Une PR que `risqueDeLaPr` classe ordinaire, dont chaque fichier est sous
 `RACINES_A_UNE_LENTILLE` (documents, tests, outillage des vues ; jamais `scripts/lot/`) hors
 `EXCLUS_D_UNE_LENTILLE` (registres du calcul, textes du processus) et chaque tâche en zone de
-`ZONES_A_UNE_LENTILLE` (gouvernance, qualité), ne reçoit que l'avis `exactitude`, dont le refus bloque.
+`ZONES_A_UNE_LENTILLE` (gouvernance, qualité), ne reçoit que l'avis `exactitude`, sous la règle d'arrêt commune.
 Le classement est dérivé, jamais déclaré ; tout ce que la règle ne sait pas lire vaut deux lentilles.
 
 **Les relectures démarrent quand la porte A est verte** sur la tête à relire, et le développeur

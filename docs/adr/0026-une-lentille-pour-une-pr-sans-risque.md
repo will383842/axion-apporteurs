@@ -49,8 +49,9 @@ niveau de risque dérivé et fermé, et ce qui est illisible vaut deux.
 
 ## Conséquences
 
-Une PR de documentation, de tests ou d'outillage des vues n'attend plus qu'un avis. Le refus
-d'`exactitude` y bloque seul. La lentille `securite` garde son veto sur tout le reste.
+Une PR de documentation, de tests ou d'outillage des vues n'attend plus qu'un avis, celui
+d'`exactitude`, sous la règle d'arrêt commune (`partners/ADR-0025`). La lentille `securite` garde son
+veto sur tout le reste.
 
 **Limite déclarée, dépôt public** (relevé de la lentille `securite`, PR #246). Une PR de documentation
 ou de tests peut, sans toucher au code, décrire la limite d'une garde (une forme de contournement) ou
