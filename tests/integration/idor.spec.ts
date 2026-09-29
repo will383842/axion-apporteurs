@@ -241,7 +241,7 @@ describe('REQ-QA-010 → REQ-SEC-009 — garde statique : une surface neuve de l
   it('REQ-QA-010 → REQ-SEC-009 : TÉMOIN À DEUX FACES — le dépôt réel sort en 0 avec le compte des routes et des actions confrontées', () => {
     const { code, sortie } = confronter(deriverSurfaces(RACINE), IDOR_CASES);
     console.log(sortie);
-    expect(sortie).toBe('idor:check — ✓ 2 routes et 2 actions confrontées');
+    expect(sortie).toBe('idor:check — ✓ 3 routes et 3 actions confrontées');
     expect(code).toBe(0);
   });
 
