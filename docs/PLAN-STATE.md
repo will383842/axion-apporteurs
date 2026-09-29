@@ -8,12 +8,12 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `0db2bca0` — 2026-09-30T00:01:49+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #263 (un contrôle requis rouge ou une revue manquante) · 2. #267 (un contrôle requis rouge ou une revue manquante) · 3. #268 (un contrôle requis rouge ou une revue manquante) · 4. #271 (un contrôle requis rouge ou une revue manquante) · 5. #262 (un conflit avec `main`) |
+| Qu’est-ce qui est en vol ? | 1. #263 (un contrôle requis rouge ou une revue manquante) · 2. #267 (un contrôle requis rouge ou une revue manquante) · 3. #268 (un contrôle requis rouge ou une revue manquante) · 4. #271 (un contrôle requis rouge ou une revue manquante) · 5. #272 (un contrôle requis rouge ou une revue manquante) · 6. #262 (un conflit avec `main`) |
 | Qui tient quoi ? | GOV-117 (A01) |
 | Où en est la phase ? | phase 0 — 115/133 tâches, reste 14.00 j |
 | Le prochain pas | QA-T06 — Preview par PR sur Coolify, base éphémère, seed déterministe |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
-| Dernière entrée de journal | PR #261 — 2026-09-29 |
+| Dernière entrée de journal | PR #272 — 2026-09-30 |
 
 **Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
@@ -64,7 +64,8 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 | 2 | #267 — fix(GOV-109): la garde lexicale evalue toute expression JSX constante comme React la rend | `t/gov-109` | un contrôle requis rouge ou une revue manquante |
 | 3 | #268 — feat(QA-T34): la plateforme tire sha-7 apres publier, un seul producteur, l'atterrissage lu sur x-partners-build-sha | `t/qa-t34` | un contrôle requis rouge ou une revue manquante |
 | 4 | #271 — chore(GOV-012): registre rattrape, JUR-T03 close, chiffrement client des sauvegardes, paths de QA-T12 et JUR-T29 | `t/registre-rattrapage-16` | un contrôle requis rouge ou une revue manquante |
-| 5 | #262 — feat(GOV-116): le lot dedie du gardien-spec, procedure exacte lancee par Williams, reglages rendus depuis le projet | `t/gov-116` | un conflit avec `main` — à résoudre avant tout |
+| 5 | #272 — feat(QA-T50): base, cache et application crees s'ils manquent, variables posees depuis les secrets, aucune valeur imprimee | `t/qa-t50` | un contrôle requis rouge ou une revue manquante |
+| 6 | #262 — feat(GOV-116): le lot dedie du gardien-spec, procedure exacte lancee par Williams, reglages rendus depuis le projet | `t/gov-116` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -100,6 +101,25 @@ Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
 
+### PR #272 — 2026-09-30 — feat(QA-T50): base, cache et application crees s'ils manquent, variables posees depuis les secrets, aucune valeur imprimee
+
+**Fait.** Un workflow déclenchable à la main seulement prépare Partners sur la plateforme, dans le
+projet existant. Il juge d'abord les secrets par la règle du démarrage, puis crée la base Postgres
+séparée, le cache et l'application s'ils manquent, et pose toutes les variables en une fois. Les
+adresses des bases sont lues sur la plateforme, jamais tirées d'un secret, et masquées dans la forge
+dès leur lecture. Sans ses secrets, il est sauté et nomme chaque absent. Relancé, il ne recrée rien.
+
+**Reste.** L'exécution réelle attend les secrets de Williams. Trois secrets applicatifs manquent
+aussi au dépôt, et l'application refuse de démarrer sans eux. La documentation de la plateforme ne
+décrit pas la réponse qui porte l'adresse interne d'une base : le champ lu est une hypothèse, tenue
+en échec fermé, que la première exécution confirmera. La fiche tiers de la plateforme n'a pas encore
+les extraits de l'API.
+
+**Appris.** La documentation officielle de la plateforme laisse plusieurs réponses non décrites
+(« Content is very complex. Will be implemented later. ») : la liste des bases, le détail d'une base,
+la liste des sauvegardes. Un script qui en dépend doit refuser toute forme qu'il ne reconnaît pas, en
+nommant le champ, plutôt que de deviner une adresse ou un mot de passe.
+
 ### PR #261 — 2026-09-29 — chore(GOV-012): registre rattrape, INT-T02 INT-T27-A et INT-T26 closes, REQ-DM-021 amendee, JUR-T36 versee
 
 **Fait.** Quinzième rattrapage. INT-T02 se clôt par l'unique entrée du passif déclaré, et INT-T27-A
@@ -122,18 +142,7 @@ que les gardes prennent une écriture qui passerait sans l'outil.
 **Appris.** Une dérivation copiée dans un seul outil finit par diverger des autres : l'extraire en une
 fonction unique a aussi réparé la phase des exigences, que le versement ne dérivait pas.
 
-### PR #257 — 2026-09-29 — feat(GOV-127): le passif declare de la declaration, une liste fermee a une entree levee sur arbitrage ecrit
-
-**Fait.** La clôture reçoit un passif déclaré de la déclaration : une liste fermée, datée, à une
-seule entrée. Elle lève les deux refus pour INT-T02, livrée avant la convention côté axion-ia, et pour
-elle seule, parce que sa PR nommait la tâche à l'instant de la fusion.
-
-**Reste.** Le rattrapage qui clôt INT-T02, puis INT-T27-A et INT-T26, livrées et en production.
-
-**Appris.** Une exception se prouve avant de s'écrire : les accords portaient sur une tête antérieure
-à la tête fusionnée, et seule la comparaison du patch propre a établi que c'était la même livraison.
-
-… 3 entrée(s) affichée(s) sur 116 ; les 113 plus ancienne(s) se lisent dans `docs/journal/`.
+… 3 entrée(s) affichée(s) sur 117 ; les 114 plus ancienne(s) se lisent dans `docs/journal/`.
 
 ## Dette déclarée
 
