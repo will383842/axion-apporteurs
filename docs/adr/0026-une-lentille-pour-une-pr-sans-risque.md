@@ -42,7 +42,11 @@ niveau de risque dérivé et fermé, et ce qui est illisible vaut deux.
    protocole de fusion, `docs/adr/` et les schémas des registres ; et, relevé de la même lentille sur la
    PR #248, ce que `src/` ou une garde lit et le juridique : `docs/contrat/`, `docs/rgpd/` (lu à
    l'exécution par la page de confidentialité), `docs/tiers/`, `docs/GLOSSAIRE.md`, `docs/PRESEANCE.md`
-   et `docs/env.md`. C'est un relevé de la lentille
+   et `docs/env.md`.
+6. **Le témoin d'une garde vaut la garde** (GOV-126, relevé de la lentille `securite` sur la PR #248) :
+   `tests/unit/gouvernance/`, `tests/unit/securite/` et `tests/integration/` valent deux lentilles. Sinon,
+   une PR de tests relue par une seule lentille pourrait affaiblir le témoin d'une garde, ce que ni
+   `red-first` ni la mutation ne voient. C'est un relevé de la lentille
    `exactitude` sur la PR #246 : relu par une seule lentille, un `sensible` retiré d'une tâche ferait
    passer à une lentille toutes ses PR suivantes, sans `securite`. Les rattrapages du registre restent
    donc à deux lentilles.

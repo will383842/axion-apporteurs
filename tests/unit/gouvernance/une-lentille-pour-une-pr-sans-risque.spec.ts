@@ -215,4 +215,17 @@ describe('REQ-GOV-011 — une PR sans risque n’exige qu’une lentille, dériv
       expect(lentilles({ fichiers: [f] }).exigees, f).toEqual(['exactitude', 'securite']);
     }
   });
+
+  it('REQ-GOV-011 — TÉMOIN : le témoin d’une garde vaut la garde — tests de gouvernance, de sécurité et d’intégration à DEUX lentilles (GOV-126)', () => {
+    for (const f of [
+      'tests/unit/gouvernance/une-lentille-pour-une-pr-sans-risque.spec.ts',
+      'tests/unit/securite/x.spec.ts',
+      'tests/integration/idor.spec.ts',
+    ]) {
+      expect(LECTEUR.fichierAUneLentille(f), f).toBe(false);
+      expect(lentilles({ fichiers: [f] }).exigees, f).toEqual(['exactitude', 'securite']);
+    }
+    // Contre-témoin : un test hors de ces trois dossiers reste à une lentille.
+    expect(LECTEUR.fichierAUneLentille('tests/unit/qualite/x.spec.ts')).toBe(true);
+  });
 });

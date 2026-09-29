@@ -7,10 +7,10 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `3d9006b` — 2026-09-29T19:09:07+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #242 (un conflit avec `main`) · 2. #244 (un conflit avec `main`) · 3. #248 (un conflit avec `main`) |
-| Qui tient quoi ? | QA-T11 (A01) · GOV-062 (A01) · GOV-124 (A01) |
-| Où en est la phase ? | phase 0 — 102/129 tâches, reste 21.75 j |
+| Où est `main` ? | `d65e749` — 2026-09-29T19:45:55+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #242 (un conflit avec `main`) · 2. #244 (un conflit avec `main`) |
+| Qui tient quoi ? | QA-T11 (A01) · GOV-062 (A01) · GOV-124 (A01) · GOV-126 (A01) |
+| Où en est la phase ? | phase 0 — 102/130 tâches, reste 22.00 j |
 | Le prochain pas | QA-T11 — Gate D migrations : base vierge, dump N-1, migrate diff vide, image N-1, lint expand/contract |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
 | Dernière entrée de journal | PR #248 — 2026-09-29 |
@@ -19,14 +19,14 @@
 
 ## Phase courante : 0
 
-102/129 tâches terminées · reste 21.75 j estimés.
+102/130 tâches terminées · reste 22.00 j estimés.
 
 ## Tâches
 
 | Statut | Nombre | Détail |
 | --- | --- | --- |
 | `proposee` | 0 | — |
-| `a_faire` | 170 | QA-T11, QA-T06, QA-T12, QA-T13, DM-03-A, DM-03-P, DM-04, INT-T02, INT-T03, INT-T04, INT-T05, INT-T22 … (12 affichées sur 170 — liste complète : `docs/TASKS.md`) |
+| `a_faire` | 171 | QA-T11, QA-T06, QA-T12, QA-T13, DM-03-A, DM-03-P, DM-04, INT-T02, INT-T03, INT-T04, INT-T05, INT-T22 … (12 affichées sur 171 — liste complète : `docs/TASKS.md`) |
 | `en_cours` | 0 | — |
 | `bloquee` | 0 | — |
 | `attente_externe` | 2 | JUR-T01b · JUR-T01c |
@@ -62,7 +62,6 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 | --- | --- | --- | --- |
 | 1 | #242 — feat(JUR-T34): la politique de confidentialite de l'espace, tiree du registre de l'article 30 et acceptee a la premiere connexion | `t/jur-t34` | un conflit avec `main` — à résoudre avant tout |
 | 2 | #244 — docs(GOV-017a): confirmation du depot par e-mail — plan W20 et quatorze taches versees en phase 1, sans DECISIONS ni REQ nouvelles | `t/w20-confirmation-email` | un conflit avec `main` — à résoudre avant tout |
-| 3 | #248 — feat(GOV-124): une lentille pour une PR sans risque, derivee et fermee, deux pour tout le reste | `t/gov-124-lentille` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -75,6 +74,7 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 | QA-T11 — Gate D migrations : base vierge, dump N-1, migrate diff vide, image N-1, lint expand/contract | A01 | #243 | `a_faire` |
 | GOV-062 — L'outillage qui execute la porte A n'est pas garde : configuration du gestionnaire, correctifs, actions tierces | A01 | #240 | `a_faire` |
 | GOV-124 — Une seule lentille pour une PR sans risque, derivee par risqueDeLaPr ; deux pour tout le reste et dans le doute | A01 | #247 | `a_faire` |
+| GOV-126 — Le temoin d'une garde vaut la garde : les tests de gouvernance, de securite et d'integration restent a deux lentilles | A01 | #249 | `a_faire` |
 
 ⚠️ **13 revendication(s) périmée(s)** — QA-T07, GOV-042, GOV-045, GOV-050, GOV-051, GOV-053, GOV-054, GOV-055, GOV-060, GOV-072, GOV-079, GOV-093, INT-T01c : leur issue porte encore un label `owner:` alors que la tâche est livrée. `pnpm lot:cloture` écrit `docs/tasks.json` mais n’efface pas les labels ; la dette appartient à GOV-012.
 
@@ -92,7 +92,7 @@ Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeS
 
 ## Dernier atterrissage
 
-`origin/main` = `3d9006b` (2026-09-29T19:09:07+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `d65e749` (2026-09-29T19:45:55+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 

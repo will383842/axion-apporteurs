@@ -1430,6 +1430,10 @@ export const EXCLUS_D_UNE_LENTILLE: readonly string[] = [
   'docs/GLOSSAIRE.md',
   'docs/PRESEANCE.md',
   'docs/env.md',
+  // GOV-126 (relevé de la lentille securite sur la PR #248) : le témoin d'une garde vaut la garde.
+  'tests/unit/gouvernance/',
+  'tests/unit/securite/',
+  'tests/integration/',
   'scripts/lot/tasks.schema.json',
   'scripts/lot/requirements.schema.json',
 ];
