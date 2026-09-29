@@ -378,6 +378,10 @@ export const REFUS_NOMMES: Readonly<Record<string, readonly string[]>> = {
   'scripts/gates/migrations-additive.ts': [
     "module › si LANCE_EN_SCRIPT › si process.argv.includes('--prove') › si echecs.length > 0 › (1)",
     'module › si LANCE_EN_SCRIPT › si verdict.fautes.length > 0 › (1)',
+    // QA-T11 : la porte D — le semis sans table, l'usage de `--pr`, la colonne encore lue.
+    "module › si LANCE_EN_SCRIPT && argument('--semis') !== undefined › (s.tables.length > 0 ? 0 : 1)",
+    "module › si LANCE_EN_SCRIPT && process.argv.includes('--pr') › si base === undefined || deploye === undefined › (2)",
+    "module › si LANCE_EN_SCRIPT && process.argv.includes('--pr') › si v.fautes.length > 0 › (1)",
   ],
   'scripts/gates/perf-budgets.ts': [
     'lireVue › si !existsSync(c) › (1)',

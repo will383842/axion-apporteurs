@@ -5,6 +5,9 @@
  * USAGE : pnpm partners:migrations:additive           (échoue sur toute migration destructive)
  *         pnpm partners:migrations:additive --prove   (un témoin par famille, cible dans la migration
  *                                                      du MILIEU ; contre-témoins verts)
+ *         tsx scripts/gates/migrations-additive.ts --pr --base <sha> --deploye <arbre N−1>
+ *             [--en-plus <dossier de migration>] [--tables-touchees <fichier>]   (porte D)
+ *         tsx scripts/gates/migrations-additive.ts --requete-schema | --semis <catalogue.json>
  *
  * CE QU'ELLE TIENT. REQ-DM-037 : « Les migrations sont additives (aucune suppression de colonne ni
  * changement d'enum destructif sans ADR). » Une migration fusionnée se rejoue sur une base qui porte
@@ -40,29 +43,45 @@
  *
  * CE QU'ELLE NE FAIT PAS. Elle ne juge pas les données (`DELETE`, `UPDATE`, `TRUNCATE` : REQ-DM-037
  * parle du schéma), ni un SQL assemblé hors d'un `EXECUTE`. Le dump N−1 et le `migrate diff` vide
- * relèvent de la Gate D de la zone qualité, qui importe cette garde au lieu d'en écrire une seconde.
+ * relèvent de la porte D (`scripts/gates/gate-d.sh`), qui importe cette garde.
  *
  * ⚠️ ET SURTOUT, CINQ FORMES DE `DROP` QU'ELLE NE VOIT PAS, mesurées le 2026-09-22 : `ALTER TABLE …
  * DROP CONSTRAINT`, `DROP VIEW`, `DROP MATERIALIZED VIEW`, `DROP SEQUENCE`, `DROP DATABASE` sortent
  * en 0. Ce n'est écrit ici que parce que le registre annonçait « DROP, RENAME et NOT NULL sans
  * défaut interdits hors ADR » — plus large que ce que ces lignes tiennent : un relecteur qui lit le
  * registre avant le code croyait protégé ce qui ne l'est pas. Le texte du registre est désormais
- * resserré forme par forme ; ÉLARGIR la garde à ces cinq-là appartient à `QA-T11`, qui la porte.
- * Les deux vont ensemble : le jour où elles rougissent, le registre change dans le même commit.
+ * resserré forme par forme. QA-T11 ne les élargit PAS : son acceptation ne le demande pas, et le
+ * témoin qui épingle ces cinq sorties en 0 (`tests/unit/domaine/gardes-de-schema.spec.ts`) est hors
+ * de ses chemins. Les deux vont ensemble : le jour où elles rougissent, le registre et ce témoin
+ * changent dans le même commit.
+ *
+ * LA PORTE D (QA-T11, REQ-QA-021) importe cette garde au lieu d'en écrire une seconde. `--pr` lit
+ * les migrations de la PR — ajoutées ou modifiées depuis la base, PAS le schéma final — et
+ * confronte chaque suppression, renommage ou non-nullité sans défaut au code DÉPLOYÉ (l'arbre de la
+ * base) : une colonne encore lue fait rougir `lue_par_le_code_deploye` en nommant la colonne et le
+ * fichier qui la lit, et AUCUNE ADR ne l'absout — une décision ne rend pas au code N−1 la colonne
+ * qu'il lit. LECTURE PAR CO-OCCURRENCE : un fichier lit une colonne s'il nomme son champ (ou sa
+ * colonne) ET son modèle (ou sa table). Un homonyme dans un fichier qui nomme aussi le modèle fait
+ * rougir à tort : l'échec est fermé. `--semis` et `--requete-schema` servent le semeur du vidage
+ * N−1 (`scripts/lib/semis-porte-d.ts`) ; la chaîne Docker vit dans `scripts/gates/gate-d.sh`.
  *
  * INVARIANT DE LA PREUVE (RM-11). `--prove` ne lit rien du dépôt : chaque témoin est une vue
  * injectée de TROIS migrations, la faute posée dans celle du MILIEU.
  */
 
-import { readFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { basename, join } from 'node:path';
 import { fichiersSuivisOuRefus } from '../lot/fichiers-suivis';
 import {
   ErreurLecturePrisma,
   lireMigrationSql,
+  lireSchemaPrisma,
   type InstructionSql,
   type JetonSql,
 } from '../lot/lecteur-prisma';
 import { entrees } from '../adr/index';
+import { REQUETE_SCHEMA, semis, type SchemaVu } from '../lib/semis-porte-d';
 
 export type Migration = { chemin: string; contenu: string };
 export type AdrConnue = { numero: string; statut: string };
@@ -162,7 +181,7 @@ function actions(t: JetonSql[], debut: number): JetonSql[][] {
   return sortie.filter((a) => a.length > 0);
 }
 
-type Constat = { famille: string; ligne: number; objet: string; quoi: string };
+export type Constat = { famille: string; ligne: number; objet: string; quoi: string };
 
 /** Les tables créées par une migration : un `ADD COLUMN … NOT NULL` y est légitime. */
 function tablesCreees(instructions: InstructionSql[]): Set<string> {
@@ -534,6 +553,170 @@ export function controler(vue: Vue): Verdict {
   };
 }
 
+// ── la porte D : les migrations de la PR confrontées au code déployé ─────────
+
+export type FichierDeploye = { chemin: string; contenu: string };
+export type VuePr = {
+  /** Les migrations ajoutées ou modifiées par la PR — jamais le schéma final. */
+  migrations: Migration[];
+  /** Toutes les migrations suivies : la protection du journal s'en dérive. */
+  toutes: Migration[];
+  /** `prisma/schema.prisma` et `src/**` de l'arbre DÉPLOYÉ (la base de la PR). */
+  schemaDeploye: string;
+  codeDeploye: FichierDeploye[];
+};
+export type VerdictPr = {
+  fautes: Faute[];
+  migrations: number;
+  confrontes: number;
+  fichiersLus: number;
+  /** Les tables du schéma déployé que les migrations de la PR modifient : elles doivent être semées. */
+  tablesTouchees: string[];
+};
+
+const FAMILLES_CONTRACT = new Set([
+  'suppression_de_colonne',
+  'suppression_de_table',
+  'renommage',
+  'non_null_sans_defaut',
+]);
+
+const motDe = (terme: string): RegExp =>
+  new RegExp(`(?<![A-Za-z0-9_$])${terme.replace(/[$]/g, '\\$')}(?![A-Za-z0-9_$])`);
+
+/** Le premier fichier qui nomme un des `termes` ET une des `ancres`, et la ligne du terme. */
+function lecture(
+  code: FichierDeploye[],
+  termes: string[],
+  ancres: string[]
+): { chemin: string; ligne: number; terme: string } | undefined {
+  for (const f of code) {
+    if (!ancres.some((a) => motDe(a).test(f.contenu))) continue;
+    const lignes = f.contenu.split('\n');
+    for (const terme of termes) {
+      const n = lignes.findIndex((l) => motDe(terme).test(l));
+      if (n >= 0) return { chemin: f.chemin, ligne: n + 1, terme };
+    }
+  }
+  return undefined;
+}
+
+/** Les tables qu'une migration modifie (`ALTER TABLE`, `UPDATE`). */
+function tablesModifiees(contenu: string): string[] {
+  const sortie: string[] = [];
+  for (const instr of lireMigrationSql(contenu)) {
+    const t = instr.jetons;
+    let k = -1;
+    if (estMot(t[0], 'ALTER') && estMot(t[1], 'TABLE')) k = sauterSi(t, 2);
+    else if (estMot(t[0], 'UPDATE')) k = 1;
+    if (k < 0) continue;
+    if (estMot(t[k], 'ONLY')) k++;
+    sortie.push(nomQualifie(t, k).nom);
+  }
+  return sortie;
+}
+
+export function confronterAuCodeDeploye(vue: VuePr): VerdictPr {
+  const fautes: Faute[] = [];
+  const protection = protectionsDe(vue.toutes);
+  const modeles = lireSchemaPrisma(vue.schemaDeploye).modeles;
+  const code = [...vue.codeDeploye].sort((a, b) => a.chemin.localeCompare(b.chemin));
+  const touchees = new Set<string>();
+  let confrontes = 0;
+  for (const m of vue.migrations) {
+    let constats: Constat[];
+    try {
+      constats = constatsDuSql(m.contenu, 1, false, protection);
+      for (const t of tablesModifiees(m.contenu)) touchees.add(t);
+    } catch (e) {
+      if (!(e instanceof ErreurLecturePrisma)) throw e;
+      fautes.push({
+        famille: 'migration_illisible',
+        chemin: m.chemin,
+        ligne: e.ligne,
+        message: `${m.chemin}:${e.ligne} — ${e.message} : la porte D ne confronte pas ce qu'elle n'a pas lu.`,
+      });
+      continue;
+    }
+    for (const c of constats.filter((x) => FAMILLES_CONTRACT.has(x.famille))) {
+      confrontes++;
+      const [table = '', colonne] = c.objet.split('.');
+      const modele = modeles.find((x) => x.table === table);
+      if (modele === undefined) continue;
+      const ancres = [modele.nom.charAt(0).toLowerCase() + modele.nom.slice(1), modele.nom, table];
+      const champ = modele.champs.find((x) => x.colonne === colonne);
+      const lu =
+        champ === undefined
+          ? lecture(code, ancres, ancres)
+          : lecture(code, [...new Set([champ.nom, champ.colonne])], ancres);
+      if (lu === undefined) continue;
+      fautes.push({
+        famille: 'lue_par_le_code_deploye',
+        chemin: m.chemin,
+        ligne: c.ligne,
+        message:
+          `${m.chemin}:${c.ligne} — ${c.quoi} sur ${c.objet}, encore lue par le code déployé : ` +
+          `${lu.chemin}:${lu.ligne} (« ${lu.terme} »). EXPAND PUIS CONTRACT : la version N−1 tourne ` +
+          'pendant le déploiement et lirait ce qui n’existe plus. Retirez d’abord la lecture, ' +
+          'livrez, puis la migration ; aucune ADR n’absout cette faute.',
+      });
+    }
+  }
+  const tables = new Set(modeles.map((x) => x.table));
+  return {
+    fautes,
+    migrations: vue.migrations.length,
+    confrontes,
+    fichiersLus: code.length,
+    tablesTouchees: [...touchees].filter((t) => tables.has(t)).sort(),
+  };
+}
+
+/** Les fichiers `.ts`/`.tsx` sous `src/` d'un arbre extrait, tests exclus. */
+export function codeDeLArbre(racine: string): FichierDeploye[] {
+  const sortie: FichierDeploye[] = [];
+  const parcourir = (rel: string): void => {
+    for (const e of readdirSync(join(racine, rel), { withFileTypes: true })) {
+      const chemin = `${rel}/${e.name}`;
+      if (e.isDirectory()) parcourir(chemin);
+      else if (/\.tsx?$/.test(e.name) && !/\.(spec|test)\.tsx?$/.test(e.name)) {
+        sortie.push({ chemin, contenu: readFileSync(join(racine, chemin), 'utf8') });
+      }
+    }
+  };
+  if (existsSync(join(racine, 'src'))) parcourir('src');
+  return sortie;
+}
+
+/** La vue de la PR : les migrations du diff `base..HEAD`, et l'arbre déployé extrait. */
+export function vueDeLaPr(base: string, deploye: string, enPlus: string | undefined): VuePr {
+  const diff = execFileSync(
+    'git',
+    ['diff', '--name-only', '-z', '--diff-filter=AMR', base, 'HEAD', '--', 'prisma/migrations/'],
+    { encoding: 'utf8' }
+  );
+  const migrations = diff
+    .split('\0')
+    .filter((c) => c.endsWith('.sql'))
+    .sort()
+    .map((chemin) => ({ chemin, contenu: readFileSync(chemin, 'utf8') }));
+  const bac: Migration[] =
+    enPlus === undefined
+      ? []
+      : [
+          {
+            chemin: `prisma/migrations/${basename(enPlus)}/migration.sql`,
+            contenu: readFileSync(join(enPlus, 'migration.sql'), 'utf8'),
+          },
+        ];
+  return {
+    migrations: [...migrations, ...bac],
+    toutes: [...vueDuDepot().migrations, ...bac],
+    schemaDeploye: readFileSync(join(deploye, 'prisma', 'schema.prisma'), 'utf8'),
+    codeDeploye: codeDeLArbre(deploye),
+  };
+}
+
 // ── la vue du dépôt ──────────────────────────────────────────────────────────
 
 /** Toutes les migrations SUIVIES, lues par la source unique du périmètre, et les ADR du dépôt. */
@@ -772,6 +955,51 @@ const CONTRE_TEMOINS: { quoi: string; vue: () => Vue }[] = [
 
 /** Ancrée dossier + nom + fin, extension FACULTATIVE : invoquée sans `.ts`, elle juge quand même. */
 const LANCE_EN_SCRIPT = /[\\/]gates[\\/]migrations-additive(\.ts)?$/.test(process.argv[1] ?? '');
+
+const argument = (nom: string): string | undefined => {
+  const i = process.argv.indexOf(nom);
+  return i < 0 ? undefined : process.argv[i + 1];
+};
+
+if (LANCE_EN_SCRIPT && process.argv.includes('--requete-schema')) {
+  process.stdout.write(`${REQUETE_SCHEMA}\n`);
+  process.exit(0);
+}
+
+if (LANCE_EN_SCRIPT && argument('--semis') !== undefined) {
+  const s = semis(JSON.parse(readFileSync(argument('--semis')!, 'utf8')) as SchemaVu);
+  process.stdout.write(s.sql);
+  console.error(`porte D — semis : ${s.tables.length} table(s), ${s.candidats} candidat(s).`);
+  process.exit(s.tables.length > 0 ? 0 : 1);
+}
+
+if (LANCE_EN_SCRIPT && process.argv.includes('--pr')) {
+  const base = argument('--base');
+  const deploye = argument('--deploye');
+  if (base === undefined || deploye === undefined) {
+    console.error(
+      '❌ porte D — usage : --pr --base <sha> --deploye <arbre N−1> [--en-plus <dossier>]'
+    );
+    process.exit(2);
+  }
+  const v = confronterAuCodeDeploye(vueDeLaPr(base, deploye, argument('--en-plus')));
+  const fichierTables = argument('--tables-touchees');
+  if (fichierTables !== undefined) {
+    writeFileSync(fichierTables, v.tablesTouchees.map((t) => `${t}\n`).join(''));
+  }
+  if (v.fautes.length > 0) {
+    console.error(`❌ porte D — ${v.fautes.length} faute(s) d'expand/contract :`);
+    for (const f of v.fautes) console.error(`   [${f.famille}] ${f.message}`);
+    process.exit(1);
+  }
+  console.log(
+    `✅ porte D — ${v.migrations} migration(s) de la PR confrontée(s) au code déployé ` +
+      `(${base.slice(0, 7)}) : ${v.confrontes} suppression(s), renommage(s) ou non-nullité(s) ` +
+      `jugée(s) contre ${v.fichiersLus} fichier(s) de src/, aucune colonne encore lue ; ` +
+      `table(s) touchée(s) : ${v.tablesTouchees.join(', ') || 'aucune'}.`
+  );
+  process.exit(0);
+}
 
 if (LANCE_EN_SCRIPT) {
   if (process.argv.includes('--prove')) {
