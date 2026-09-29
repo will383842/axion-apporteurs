@@ -3115,7 +3115,10 @@
         "docs/gates.json"
       ],
       "schema": false,
-      "sensible": [],
+      "sensible": [
+        "rgpd",
+        "espace"
+      ],
       "deps": [
         "QA-T07",
         "SEC-04"
@@ -3133,11 +3136,11 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 1,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "owner": "A01",
       "lot": null,
-      "branch": null,
-      "pr": null,
+      "branch": "lot/L0-12-gouvernance",
+      "pr": 200,
       "issue": 198,
       "attempts": 0,
       "motif": null,
@@ -3167,6 +3170,11 @@
         "REQ-UX-006": [
           "tests/integration/idor.spec.ts"
         ]
+      },
+      "attestation": {
+        "pr": 200,
+        "sha": "a5a8b5367c7370d23d7df2b6cc1aa2b6cc42877a",
+        "fusionneeAt": "2026-09-29T02:32:25Z"
       }
     },
     {
@@ -10064,7 +10072,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.75,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "Plusieurs decisions de gouvernance vivent UNIQUEMENT hors depot : la regle d'arret (un refus ne bloque que sur un ecart demontre et ouvert), qui coche les cases 3 et 8 de la definition de termine, la sortie de deux livrables de GOV-037, le choix du nom de la garde des termes interdits. Pendant ce temps la charte et le protocole disent encore qu'un refus bloque : LE DEPOT CONTREDIT LA REGLE APPLIQUEE, et c'est le lecteur suivant qui paiera. `docs/DECISIONS.md` est un registre PRODUIT, sans ecrivain : il ne convient pas. A livrer : (1) un lieu nomme pour une decision de gouvernance — un ADR de `docs/adr/partners/` — et l'ecrivain qui l'y met ; (2) les decisions du 15 et du 16 septembre ecrites, datees, avec leur portee et leur reversibilite ; (3) la charte et le protocole mis en accord avec elles, dans le meme diff. TEMOIN A DEUX FACES : une copie de travail ou la charte affirme qu'un refus bloque alors que l'ADR en vigueur dit le contraire fait sortir la garde en code non nul et NOMME les deux endroits ; l'etat du depot une fois accorde la fait sortir en zero, avec le compte des affirmations reellement confrontees.",
       "tests": {
         "REQ-GOV-008": [
@@ -10078,7 +10086,15 @@
         ]
       },
       "issue": 201,
-      "owner": "A01"
+      "owner": "A01",
+      "branch": "lot/L0-13-gouvernance",
+      "pr": 206,
+      "attestation": {
+        "pr": 206,
+        "sha": "ab820293c188143c27dfcd836cfe3faf037c98ee",
+        "fusionneeAt": "2026-09-29T02:05:42Z"
+      },
+      "motif": null
     },
     {
       "id": "GOV-059",
@@ -10525,7 +10541,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 1.5,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "LA GARDE DECOUPE LE TEXTE AVEC SA PROPRE GRAMMAIRE, et cette grammaire ignore des constructions VALIDES. Faits mesures : les grammaires SQL et Prisma ne connaissent ni les litteraux de chaine ni les commentaires imbriques de PostgreSQL — un terme interdit peut donc rester dans du SQL REELLEMENT EXECUTE, et c'est la ou vivent les etats occupants d'une attribution ; en prose, une zone d'accents graves ouverte sur plusieurs lignes ou ouverte dans un titre est mal appariee ; une fermeture de bloc est reconnue la ou le rendu Markdown n'en voit pas ; aucune ligne longue n'est eprouvee. Restes joints a fermer : une branche morte, une epreuve executee deux fois, deux mutants survivants, et un fichier declare inchange qui ressort vert en local. A livrer : une grammaire qui reconnait les constructions valides des trois langages vises, ecrite a un seul endroit, et un refus qui NOMME la construction quand elle n'est pas reconnue plutot que de la traverser. TEMOIN A DEUX FACES : un fichier SQL portant un terme interdit dans une chaine, puis dans un commentaire imbrique, puis une prose dont la zone d'accents graves s'ouvre dans un titre, font sortir la garde en code non nul et NOMMENT le fichier et la ligne ; le depot la fait sortir en zero, avec le compte des fichiers et des zones reellement decoupes.",
       "tests": {
         "REQ-DM-003": [
@@ -10536,7 +10552,15 @@
         ]
       },
       "issue": 197,
-      "owner": "A01"
+      "owner": "A01",
+      "branch": "lot/L0-12-gouvernance",
+      "pr": 200,
+      "attestation": {
+        "pr": 200,
+        "sha": "a5a8b5367c7370d23d7df2b6cc1aa2b6cc42877a",
+        "fusionneeAt": "2026-09-29T02:32:25Z"
+      },
+      "motif": null
     },
     {
       "id": "GOV-070",
@@ -11024,7 +11048,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.1,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "PETITE TACHE, FAMILLE CONNUE. Dans `scripts/gates/gov-attributions.ts`, le registre des dettes de reciprocite porte, pour l'entree de la garde de derivation, une raison qui dit que le registre « ecrit noir sur blanc » qu'une certaine re-attribution viderait un temoin, en NOMMANT la tache. Le lot preparatoire a amende cette prose du registre : la tache nommee n'y figure plus. L'affirmation du code est donc DEVENUE FAUSSE, sans qu'aucune ligne du code ait bouge. AUCUN ROUGE NE LA SIGNALE, et c'est precisement ce qui la rend dangereuse : les raisons de ce registre ne sont jugees que sur leur LONGUEUR — vingt caracteres suffisent, la verite n'est pas mesuree. C'est mot pour mot ce que `gov:sonde` interdit de garder en silence pour les affirmations sur l'autre depot, applique cette fois a une affirmation du depot sur LUI-MEME. A livrer : (1) la raison ne nomme plus une tache qu'elle ne controle pas — elle DERIVE la designation du registre, ou elle parle de « la tache successeur » sans la nommer, ce qui reste vrai quelle qu'elle soit (RM-01) ; (2) UNE GARDE, et c'est elle qui vaut le detour : toute raison de ce registre qui cite un identifiant de tache est confrontee au registre — si l'identifiant ne s'y trouve plus a l'endroit annonce, la garde ROUGIT. Une raison ne doit pas pouvoir devenir fausse en silence deux fois. TEMOIN A DEUX FACES : une raison qui nomme une tache absente de l'endroit qu'elle designe fait sortir la garde en code non nul et NOMME l'entree et l'identifiant ; le registre du depot la fait sortir en zero, avec le compte des raisons reellement confrontees. ⚠️ Elle partage `scripts/gates/gov-attributions.ts` avec GOV-073, GOV-074 et GOV-075 : elle ne peut pas entrer dans leur lot, et elle passe APRES GOV-074, qui redefinit les listes que cette raison commente.",
       "tests": {
         "REQ-GOV-021": [
@@ -11035,7 +11059,15 @@
         ]
       },
       "issue": 202,
-      "owner": "A01"
+      "owner": "A01",
+      "branch": "lot/L0-13-gouvernance",
+      "pr": 206,
+      "attestation": {
+        "pr": 206,
+        "sha": "ab820293c188143c27dfcd836cfe3faf037c98ee",
+        "fusionneeAt": "2026-09-29T02:05:42Z"
+      },
+      "motif": null
     },
     {
       "id": "GOV-082",
@@ -12762,7 +12794,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 1.5,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "Releve par la lentille securite sur la PR #195, formes tenues HORS DEPOT (dossier de reprise, fichier confidentiel) : plusieurs constructions de la JSX et du Markdown affichent a l'ecran un terme du lexique interdit que lignesRendues() ne reconstitue pas. A livrer : le rendu de la JSX par l'AST de TypeScript (texte et litteraux de chaine, expressions constantes, fragments), et du Markdown par son arbre, a la place des expressions regulieres ; une seule fonction pour les deux gardes (RM-01). TEMOINS : chaque forme du fichier confidentiel rougit sur la nouvelle garde ; les temoins ne sont commites qu'avec le correctif, dans la meme PR, et leur detail n'apparait dans AUCUN texte public avant sa fusion. Dettes connexes a juger : les homoglyphes.",
       "tests": {
         "REQ-GOV-017": [
@@ -12776,7 +12808,15 @@
         ]
       },
       "issue": 203,
-      "owner": "A01"
+      "owner": "A01",
+      "branch": "lot/L0-13-gouvernance",
+      "pr": 206,
+      "attestation": {
+        "pr": 206,
+        "sha": "ab820293c188143c27dfcd836cfe3faf037c98ee",
+        "fusionneeAt": "2026-09-29T02:05:42Z"
+      },
+      "motif": null
     },
     {
       "id": "GOV-107",
@@ -12799,7 +12839,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "Releve par la lentille securite sur la PR #188 : hors --subject, une PR a un seul commit prend pour titre d'ecrasement le sujet du commit, ecrit par le developpeur, qui peut nommer une autre tache. A livrer : la cloture exige que la premiere ligne du message soit exactement le titre de la PR suivi de ` (#<n>)`, lu sur la forge, et refuse sinon (echec ferme, famille nommee). TEMOIN : un message dont la premiere ligne nomme une autre tache que le titre de la PR ne declare rien ; CONTRE-TEMOIN : la forme que le pas 6 produit declare.",
       "tests": {
         "REQ-GOV-026": [
@@ -12807,7 +12847,15 @@
         ]
       },
       "issue": 204,
-      "owner": "A01"
+      "owner": "A01",
+      "branch": "lot/L0-13-gouvernance",
+      "pr": 206,
+      "attestation": {
+        "pr": 206,
+        "sha": "ab820293c188143c27dfcd836cfe3faf037c98ee",
+        "fusionneeAt": "2026-09-29T02:05:42Z"
+      },
+      "motif": null
     },
     {
       "id": "GOV-108",
@@ -12832,7 +12880,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "Releve par la lentille exactitude sur la PR #195 : RM-15 affirme etre la seule redaction de l'obligation d'entree de journal, alors que docs/journal/README.md et docs/REPRISE-SESSION.md la redigent encore sans la citer. A livrer : ces deux documents renvoient a RM-15 au lieu de redire la regle, et un temoin rougit si une autre redaction reapparait. Dette connexe de la lentille securite : journalALaReference liste l'arbre sans -z ni core.quotepath=false ; un nom d'entree non ASCII y serait mal lu. A corriger avec son temoin.",
       "tests": {
         "REQ-GOV-023": [
@@ -12840,7 +12888,133 @@
         ]
       },
       "issue": 205,
-      "owner": "A01"
+      "owner": "A01",
+      "branch": "lot/L0-13-gouvernance",
+      "pr": 206,
+      "attestation": {
+        "pr": 206,
+        "sha": "ab820293c188143c27dfcd836cfe3faf037c98ee",
+        "fusionneeAt": "2026-09-29T02:05:42Z"
+      },
+      "motif": null
+    },
+    {
+      "id": "GOV-109",
+      "titre": "La garde lexicale ne s'arrete pas au texte litteral : des expressions constantes de la JSX rendent encore a l'ecran un terme qu'elle ne voit pas",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "scripts/gates/lexique-apporteurs.ts",
+        "tests/unit/gouvernance/frontiere-de-mot-du-rendu.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [
+        "espace"
+      ],
+      "deps": [
+        "GOV-106"
+      ],
+      "reqs": [
+        "REQ-GOV-017",
+        "REQ-JUR-037"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1,
+      "statut": "a_faire",
+      "acceptance": "Releve par la lentille securite sur la PR #206, formes tenues HORS DEPOT (dossier de reprise, fichier confidentiel) : apres GOV-106, une famille d'expressions dont la valeur est connue sans execution affiche encore un terme du lexique interdit. A livrer : la garde evalue, par l'AST de TypeScript, toute expression JSX dont la valeur rendue est constante, comme React la rend, au lieu d'une liste de formes. TEMOINS : chaque forme du fichier confidentiel rougit ; les temoins entrent dans le meme commit que le correctif, jamais avant, et ni l acceptance, ni les messages de commit, ni le journal ne les enumerent.",
+      "tests": {
+        "REQ-GOV-017": [
+          "tests/unit/gouvernance/frontiere-de-mot-du-rendu.spec.ts"
+        ],
+        "REQ-JUR-037": [
+          "tests/unit/gouvernance/frontiere-de-mot-du-rendu.spec.ts"
+        ]
+      },
+      "issue": null,
+      "owner": null,
+      "branch": null,
+      "pr": null,
+      "attestation": null,
+      "motif": null
+    },
+    {
+      "id": "GOV-110",
+      "titre": "La cloture compare le sujet du commit de fusion au titre ACTUEL de la PR : un renommage apres la fusion le rendrait conforme",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "scripts/lot/cloture.ts",
+        "tests/unit/gouvernance/la-declaration-se-lit-dans-le-commit-de-fusion.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "GOV-107"
+      ],
+      "reqs": [
+        "REQ-GOV-026"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "acceptance": "Releve par la lentille securite sur la PR #206 : livraisonDepuisLaForge attend pour premiere ligne du commit d'ecrasement le titre de la PR tel qu'il est AU MOMENT DE LA CLOTURE ; le titre reste modifiable apres la fusion. A livrer : le titre attendu est celui que la PR portait a l'instant de mergedAt (dernier renommage anterieur a la fusion, lu dans la chronologie de la PR), et un renommage posterieur est sans effet. TEMOIN rouge d'abord : un renommage posterieur a la fusion ne change pas le verdict.",
+      "tests": {
+        "REQ-GOV-026": [
+          "tests/unit/gouvernance/la-declaration-se-lit-dans-le-commit-de-fusion.spec.ts"
+        ]
+      },
+      "issue": null,
+      "owner": null,
+      "branch": null,
+      "pr": null,
+      "attestation": null,
+      "motif": null
+    },
+    {
+      "id": "GOV-111",
+      "titre": "Le cloisonnement par apporteur juge les donnees ecrites et les filtres simples, pas encore les options de lecture ni les filtres de relation",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "securite",
+      "paths": [
+        "src/server/acces/for-apporteur.ts",
+        "tests/unit/securite/acces-scope.spec.ts",
+        "tests/integration/idor.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [
+        "rgpd"
+      ],
+      "deps": [
+        "SEC-05"
+      ],
+      "reqs": [
+        "REQ-SEC-008",
+        "REQ-SEC-009"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1,
+      "statut": "a_faire",
+      "acceptance": "Dettes relevees par la lentille securite sur la PR #200 (SEC-05), non bloquantes pour sa fusion : la couche forApporteur juge les donnees ecrites et le where de premier niveau, mais pas encore toutes les options de lecture que la methode lister transmet au client, ni les filtres qui traversent une relation, et elle rend des lignes entieres la ou une selection explicite suffirait. A livrer : une liste blanche des options de lecture acceptees, le refus (famille REFUS.forme) de tout filtre de relation qui sortirait du perimetre de l'apporteur, et une selection explicite des champs rendus ; 404 toujours indistinct. TEMOINS rouges d'abord, dont un sur le vrai serialiseur de Prisma en integration. ECHEANCE : les filtres de relation sont fermes au plus tard a l arrivee du premier modele partage entre apporteurs (REQ-SEC-022).",
+      "tests": {
+        "REQ-SEC-008": [
+          "tests/unit/securite/acces-scope.spec.ts"
+        ],
+        "REQ-SEC-009": [
+          "tests/integration/idor.spec.ts"
+        ]
+      },
+      "issue": null,
+      "owner": null,
+      "branch": null,
+      "pr": null,
+      "attestation": null,
+      "motif": null
     }
   ]
 }
