@@ -2249,12 +2249,15 @@
       "zone": "qualite",
       "paths": [
         ".github/workflows/deploy.yml",
-        "Dockerfile",
         "scripts/gates/gate-c.sh",
         "tests/unit/qualite/pipeline-image.spec.ts",
         "tests/unit/qualite/build-sans-base.spec.ts",
         "docs/gates.json",
-        "scripts/gates/deploy-verify.ts"
+        "package.json",
+        "scripts/image/temoin-build-sans-base.sh",
+        "scripts/image/temoin-porte-c.sh",
+        "scripts/image/publier.sh",
+        "tests/unit/gouvernance/clore-une-tache-livree-seule.spec.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -2263,8 +2266,7 @@
       ],
       "reqs": [
         "REQ-QA-018",
-        "REQ-QA-032",
-        "REQ-QA-033"
+        "REQ-QA-032"
       ],
       "hyp": [
         "HYP-E1-5"
@@ -2272,23 +2274,20 @@
       "externe": null,
       "estimateDays": 1,
       "statut": "a_faire",
-      "owner": null,
+      "owner": "A01",
       "lot": null,
       "branch": null,
       "pr": null,
-      "issue": null,
+      "issue": 222,
       "attempts": 0,
       "motif": null,
-      "acceptance": "DEPEND D'UN TIERS : serveur de deploiement dedie provisionne et cout valide par Will, plus un jeton de lecture de paquets sur la forge. Ce prerequis est NOMME ici parce qu'une tache qui attend un tiers sans le dire se declare bloquee trop tard. (1) L'image est construite par la forge, poussee sur le registre de conteneurs, etiquetee `latest` et `sha-<7>` ; la plateforme de deploiement ne fait plus que tirer l'image (REQ-QA-018). (2) UNE PORTE C BLOQUANTE demarre l'image avec une base et un cache ephemeres et exige `readyz` a 200 avec zero migration en attente en moins de 3 minutes. (3) AUCUN CODE DE PARTNERS NE CONTIENT LA CHAINE DE SUBSTITUTION DE BUILD utilisee par l'autre depot, ni de client mandataire qui court-circuite les requetes : `pnpm build` reussit SANS acces a la base, parce qu'aucune page ne touche la base au build (REQ-QA-032). C'est une DIVERGENCE ASSUMEE d'avec axionia, et elle s'ecrit ici pour qu'elle ne soit pas reintroduite par imitation. (4) UN SEUL PRODUCTEUR DE DEPLOIEMENT A LA FOIS : concurrence par environnement, fusion en avance rapide seulement, atterrissage verifie (l'en-tete de build servi porte le sha fusionne) AVANT la fusion suivante, mesure par une commande dediee (REQ-QA-033). (5) TEMOIN A DEUX FACES : une image construite a partir d'une tete dont une migration manque fait sortir la porte C en code non nul avec le compte de migrations en attente ; l'image de la tete du depot la fait sortir en zero. (6) TEMOIN A DEUX FACES sur le build sans base : `pnpm build` lance sans aucune variable de connexion sort en zero ; le meme build avec une page qui interroge la base au rendu sort en code non nul et nomme la page.",
+      "acceptance": "DEPEND D'UN TIERS : serveur de deploiement dedie provisionne et cout valide par Will, plus un jeton de lecture de paquets sur la forge. Ce prerequis est NOMME ici parce qu'une tache qui attend un tiers sans le dire se declare bloquee trop tard. (1) L'image est construite par la forge, poussee sur le registre de conteneurs, etiquetee `latest` et `sha-<7>` ; la plateforme de deploiement ne fait plus que tirer l'image (REQ-QA-018). (2) UNE PORTE C BLOQUANTE demarre l'image avec une base et un cache ephemeres et exige `readyz` a 200 avec zero migration en attente en moins de 3 minutes. (3) AUCUN CODE DE PARTNERS NE CONTIENT LA CHAINE DE SUBSTITUTION DE BUILD utilisee par l'autre depot, ni de client mandataire qui court-circuite les requetes : `pnpm build` reussit SANS acces a la base, parce qu'aucune page ne touche la base au build (REQ-QA-032). C'est une DIVERGENCE ASSUMEE d'avec axionia, et elle s'ecrit ici pour qu'elle ne soit pas reintroduite par imitation. (4) UN SEUL PRODUCTEUR DE DEPLOIEMENT A LA FOIS : concurrence par environnement, fusion en avance rapide seulement, atterrissage verifie (l'en-tete de build servi porte le sha fusionne) AVANT la fusion suivante, mesure par une commande dediee (REQ-QA-033). (5) TEMOIN A DEUX FACES : une image construite a partir d'une tete dont une migration manque fait sortir la porte C en code non nul avec le compte de migrations en attente ; l'image de la tete du depot la fait sortir en zero. (6) TEMOIN A DEUX FACES sur le build sans base : `pnpm build` lance sans aucune variable de connexion sort en zero ; le meme build avec une page qui interroge la base au rendu sort en code non nul et nomme la page. AVENANT A01 du 2026-09-29 (scission recommandee par A01 dans l autopilote autorise par Will) : aucun acces a la plateforme de deploiement n existe au 2026-09-29 (ni adresse, ni jeton d API, ni jeton de lecture des paquets). Cette tache livre ce que la FORGE seule peut prouver : points (1), (2), (3), (5) et (6). Le point (4) (un seul producteur de deploiement, atterrissage verifie par l en-tete de build) et le tirage par la plateforme passent a QA-T34, avec REQ-QA-033. Precisions : (2) la porte C et ses deux faces tournent dans le job image du workflow de la forge, sur un executeur qui porte Docker ; la face rouge monte une migration cassee EN PLUS de celles de l image, puisque l entree de l image applique toute migration en attente avant de servir ; (6) la face rouge du build sans base est une page qui interroge la base au rendu, construite dans le meme job : le build echoue et la nomme. Les variables requises de la porte C se derivent de docs/env.md. Le Dockerfile et deploy-verify.ts ne sont pas modifies par cette livraison : ils sortent des paths, deploy-verify.ts passant a QA-T34. Le registre des gates reste dans les paths : les textes de gate-c et de gate-deploiement y sont corriges pour dire ce qui est reellement verifie.",
       "tests": {
         "REQ-QA-018": [
           "tests/unit/qualite/pipeline-image.spec.ts"
         ],
         "REQ-QA-032": [
           "tests/unit/qualite/build-sans-base.spec.ts"
-        ],
-        "REQ-QA-033": [
-          "tests/unit/qualite/pipeline-image.spec.ts"
         ]
       }
     },
@@ -13503,6 +13502,43 @@
       "tests": {
         "REQ-CPL-009": [
           "tests/unit/juridique/aucun-depot-reel-sans-aipd-signee.spec.ts"
+        ]
+      },
+      "issue": null,
+      "owner": null,
+      "branch": null,
+      "pr": null,
+      "attestation": null,
+      "motif": null
+    },
+    {
+      "id": "QA-T34",
+      "titre": "La plateforme tire l'image publiee, un seul producteur de deploiement a la fois, atterrissage verifie",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "qualite",
+      "paths": [
+        ".github/workflows/deploy.yml",
+        "scripts/gates/deploy-verify.ts",
+        "next.config.ts",
+        "tests/unit/qualite/un-seul-producteur-de-deploiement.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "QA-T05"
+      ],
+      "reqs": [
+        "REQ-QA-033"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "acceptance": "Scindee de QA-T05 le 2026-09-29 (recommandation A01, autopilote autorise par Will) : la partie qui depend d'un tiers. DEPEND D'UN TIERS : l'adresse de la plateforme de deploiement, un jeton de son API pose en secret du depot, et un jeton de lecture des paquets de la forge pose cote plateforme ; aucun n'existe au 2026-09-29. A livrer : (1) apres la publication de l'image par la forge (QA-T05), la plateforme est declenchee et TIRE l'image etiquetee sha-<7>, elle ne construit rien ; (2) UN SEUL PRODUCTEUR DE DEPLOIEMENT A LA FOIS : concurrence par environnement, fusion en avance rapide seulement, et atterrissage verifie AVANT la fusion suivante : l'en-tete de build servi (x-partners-build-sha) porte le sha fusionne, mesure par pnpm deploy:verify <sha> (REQ-QA-033) ; (3) l'en-tete de build est pose par l'application a partir du sha injecte a la construction de l'image. TEMOIN A DEUX FACES : deploy:verify sur un sha non atterri sort en code non nul en nommant les deux sha ; sur le sha servi, il sort en zero.",
+      "tests": {
+        "REQ-QA-033": [
+          "tests/unit/qualite/un-seul-producteur-de-deploiement.spec.ts"
         ]
       },
       "issue": null,
