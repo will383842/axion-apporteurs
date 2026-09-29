@@ -2452,7 +2452,9 @@
         "scripts/gates/runbooks-exerces.ts",
         "scripts/gates/deploy-verify.ts",
         "package.json",
-        ".github/workflows/nightly.yml"
+        ".github/workflows/nightly.yml",
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts",
+        "tests/integration/sondes-de-vie.spec.ts"
       ],
       "schema": false,
       "sensible": [],
