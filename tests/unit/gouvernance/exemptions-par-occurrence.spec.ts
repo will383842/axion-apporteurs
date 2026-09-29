@@ -130,8 +130,9 @@ describe('REQ-GOV-021 — une exemption sans second producteur est FIGÉE, occur
 
 /**
  * LE DÉFAUT RESTANT : TROIS CLÉS POUR UN MÊME LIEU, ET DEUX D'ENTRE ELLES AU GRAIN DU SITE.
- *   — `DETTE_GABARIT_LIVREE` figeait un SITE et un NOMBRE : une mention déplacée d'une ligne à
- *     l'autre du même en-tête gardait le compte, donc restait absoute sans avoir été vue ;
+ *   — la dette des tâches livrées à gabarit (retirée depuis : ces gabarits sont réparés, et refusés)
+ *     figeait un SITE et un NOMBRE : une mention déplacée d'une ligne à l'autre du même en-tête
+ *     gardait le compte, donc restait absoute sans avoir été vue ;
  *   — une chaîne de `docs/gates.json` se rangeait sous le chemin de la gate (déclarations), sous
  *     la gate ET son script (dette figée), ou sous le script SEUL (exemptions figées) : repointer le
  *     script laissait la déclaration absoudre une mention jugée contre un AUTRE fichier, et deux
@@ -145,41 +146,71 @@ describe('REQ-GOV-021 — une seule clé par occurrence, pour chaque registre', 
   const ids = new Set(SOURCES.taches.map((t) => t.id));
   const jetons = (l: string) => l.split(/[^A-Za-z0-9-]+/).filter((j) => ids.has(j));
 
-  it('REQ-GOV-021 — TÉMOIN : une mention FIGÉE en dette gabarit, déplacée à une autre ligne du même en-tête, rougit à sa nouvelle ligne', () => {
-    // Une dette d'en-tête dont la ligne ne porte QUE cet identifiant, avant la vingtième.
-    const e = exemptions.find((x) => {
-      if (x.nature !== 'dette_gabarit_livree_mention' || !/:\d+$/.test(x.site)) return false;
-      const fichier = x.site.replace(/:\d+$/, '');
-      const n = Number(x.site.slice(fichier.length + 1));
-      const lignes = SOURCES.entetes.find((h) => h.fichier === fichier)?.lignes ?? [];
-      return (
-        n < 20 &&
-        lignes.length >= 20 &&
-        jetons(lignes[n - 1] as string).length === 1 &&
-        jetons(lignes[19] as string).length === 0
-      );
+  /**
+   * Rejoué sur FIXTURES : la dette des tâches livrées à gabarit, qui figeait ces occurrences, n'existe
+   * plus — le dépôt n'en porte aucune. Le même déplacement se joue sur le registre qui reste
+   * (`exemptionsFigees`), à la même clé (fichier, ligne) ; et la tâche livrée à gabarit, déplacée
+   * pareil, rougit à sa nouvelle ligne sans qu'aucun registre ne puisse l'absoudre.
+   */
+  it('REQ-GOV-021 — TÉMOIN : une mention FIGÉE, déplacée à une autre ligne du même en-tête, rougit à sa nouvelle ligne', () => {
+    const FICHIER = 'scripts/gates/porte.ts';
+    const proprio: Tache = { id: 'GOV-100', paths: [FICHIER], tests: {}, statut: 'fusionnee' };
+    const courante: Tache = {
+      ...proprio,
+      id: 'GOV-102',
+      paths: ['scripts/gates/ancre.ts'],
+      statut: 'a_faire',
+      phase: 0,
+    };
+    const future: Tache = {
+      ...proprio,
+      id: 'GOV-003',
+      paths: ['docs/gouvernance/GOV-003'],
+      statut: 'a_faire',
+      phase: 1,
+    };
+    const livree: Tache = {
+      ...proprio,
+      id: 'GOV-004',
+      paths: ['docs/gouvernance/GOV-004'],
+      statut: 'fusionnee',
+    };
+    // La mention, à la ligne 3 puis déplacée à la 20e, dernière lue.
+    const lignes = (n: number, id: string) =>
+      Array.from({ length: 20 }, (_, i) => (i === n - 1 ? ` * voir ${id}.` : ' *'));
+    const cas = (id: string, n: number): Sources => ({
+      taches: [proprio, courante, future],
+      gates: [],
+      postes: [],
+      journal: '',
+      plancherJournal: 0,
+      entetes: [{ fichier: FICHIER, lignes: lignes(n, id) }],
+      citations: [],
+      dettesGate: [],
+      dettesLot: [],
+      exemptionsFigees: [
+        { nature: 'mention_paths_non_resolus', tache: future.id, site: `${FICHIER}:3` },
+      ],
     });
-    expect(
-      e,
-      'aucune dette gabarit d’en-tête à déplacer : le témoin ne porte sur rien'
-    ).toBeDefined();
-    const fichier = e!.site.replace(/:\d+$/, '');
-    const n = Number(e!.site.slice(fichier.length + 1));
-    const entetes = SOURCES.entetes.map((h) =>
-      h.fichier === fichier
-        ? {
-            ...h,
-            lignes: h.lignes.map((l, i) =>
-              i === n - 1 ? l.replace(e!.tache, '') : i === 19 ? ` * voir ${e!.tache}.` : l
-            ),
-          }
-        : h
-    );
-    const r = verdict({ ...SOURCES, entetes });
+    // Contre-témoin : à sa ligne figée, la mention est absoute.
+    expect(verdict(cas(future.id, 3)).code).toBe(0);
+    // Témoin : déplacée, elle rougit à sa nouvelle ligne, et l'entrée figée ne sert plus.
+    const r = verdict(cas(future.id, 20));
     expect(r.code).toBe(1);
     const l = r.lignes.join('\n');
-    expect(l).toContain(`${fichier}:20`);
+    expect(l).toContain(`${FICHIER}:20`);
+    expect(l).toContain('exemption_non_figee');
     expect(l).toContain('dette_perimee');
+    // Témoin : la tâche LIVRÉE à gabarit, au même endroit, rougit à sa ligne — et son gabarit aussi.
+    const livr = verdict({
+      ...cas(livree.id, 20),
+      taches: [proprio, courante, future, livree],
+      exemptionsFigees: [],
+    });
+    expect(livr.code).toBe(1);
+    const ll = livr.lignes.join('\n');
+    expect(ll).toContain(`[mention_hors_paths] ${FICHIER}:20`);
+    expect(ll).toContain('[chemin_gabarit]');
   });
 
   /** Une gate dont une chaîne porte une déclaration `contexte`, et cette déclaration. */
