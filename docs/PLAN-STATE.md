@@ -8,12 +8,12 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `581a3fb` — 2026-09-29T23:05:26+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #242 (un contrôle requis rouge ou une revue manquante) · 2. #263 (un contrôle requis rouge ou une revue manquante) · 3. #267 (un contrôle requis rouge ou une revue manquante) · 4. #261 (un conflit avec `main`) · 5. #262 (un conflit avec `main`) |
+| Qu’est-ce qui est en vol ? | 1. #242 (un contrôle requis rouge ou une revue manquante) · 2. #263 (un contrôle requis rouge ou une revue manquante) · 3. #267 (un contrôle requis rouge ou une revue manquante) · 4. #268 (un contrôle requis rouge ou une revue manquante) · 5. #261 (un conflit avec `main`) · 6. #262 (un conflit avec `main`) |
 | Qui tient quoi ? | GOV-117 (A01) · GOV-127 (A01) |
 | Où en est la phase ? | phase 0 — 110/132 tâches, reste 17.75 j |
 | Le prochain pas | QA-T06 — Preview par PR sur Coolify, base éphémère, seed déterministe |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
-| Dernière entrée de journal | PR #259 — 2026-09-29 |
+| Dernière entrée de journal | PR #268 — 2026-09-29 |
 
 **Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
@@ -63,8 +63,9 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 | 1 | #242 — feat(JUR-T34): la politique de confidentialite de l'espace, tiree du registre de l'article 30 et acceptee a la premiere connexion | `t/jur-t34` | un contrôle requis rouge ou une revue manquante |
 | 2 | #263 — feat(QA-T20): le poids charge par route se lit dans les manifestes de Next 16, zero octet est une faute | `t/qa-t20` | un contrôle requis rouge ou une revue manquante |
 | 3 | #267 — fix(GOV-109): la garde lexicale evalue toute expression JSX constante comme React la rend | `t/gov-109` | un contrôle requis rouge ou une revue manquante |
-| 4 | #261 — chore(GOV-012): registre rattrape, INT-T02 INT-T27-A et INT-T26 closes, REQ-DM-021 amendee, JUR-T36 versee | `t/registre-rattrapage-15` | un conflit avec `main` — à résoudre avant tout |
-| 5 | #262 — feat(GOV-116): le lot dedie du gardien-spec, procedure exacte lancee par Williams, reglages rendus depuis le projet | `t/gov-116` | un conflit avec `main` — à résoudre avant tout |
+| 4 | #268 — feat(QA-T34): la plateforme tire sha-7 apres publier, un seul producteur, l'atterrissage lu sur x-partners-build-sha | `t/qa-t34` | un contrôle requis rouge ou une revue manquante |
+| 5 | #261 — chore(GOV-012): registre rattrape, INT-T02 INT-T27-A et INT-T26 closes, REQ-DM-021 amendee, JUR-T36 versee | `t/registre-rattrapage-15` | un conflit avec `main` — à résoudre avant tout |
+| 6 | #262 — feat(GOV-116): le lot dedie du gardien-spec, procedure exacte lancee par Williams, reglages rendus depuis le projet | `t/gov-116` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -101,6 +102,31 @@ Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
 
+### PR #268 — 2026-09-29 — feat(QA-T34): la plateforme tire sha-7 apres publier, un seul producteur, l'atterrissage lu sur x-partners-build-sha
+
+**Fait.** L'image porte le sha de son commit, et l'application le sert dans `x-partners-build-sha`.
+`pnpm deploy:verify` lit cet en-tête : c'est enfin la commande que le pas 7 du protocole de fusion
+nommait sans qu'elle existe. Le job `deployer` tourne après `publier`, sur `main` seulement, dans une
+file par environnement qui n'annule jamais un déploiement commencé. Il pose l'étiquette `sha-<7>` sur
+l'application de la plateforme, déclenche, puis lit l'atterrissage. Sans ses secrets, il est sauté et
+nomme chacun d'eux. Deux gardes de la tâche d'image sont amendées au plus étroit : le script de
+construction admet `--build-arg GITHUB_SHA`, et `deployer` ne lit que les trois secrets de la
+plateforme.
+
+**Reste.** L'exercice réel attend les accès de Williams. Il lui faut les secrets `COOLIFY_URL`,
+`COOLIFY_API_TOKEN` et `COOLIFY_APP_UUID`, et la variable de dépôt `PARTNERS_URL_PUBLIQUE` ; l'image
+est publique, aucun jeton de lecture des paquets n'est nécessaire. La tâche reste ouverte jusqu'au
+premier déploiement tiré et vérifié. La fiche tiers de la plateforme n'a pas encore les extraits de
+l'API lus ce jour, qui sont cités dans l'en-tête du script. L'entrée `gate-deploiement` du registre
+des gardes reste attribuée à la tâche du socle : le verbe ne réécrit pas ce champ.
+
+**Appris.** La documentation officielle de la plateforme décrit aujourd'hui le déclenchement en
+`POST /api/v1/deploy`, là où des exemples plus anciens l'appellent en `GET`. Recopier un exemple
+aurait produit un appel refusé. Autre fait mesuré : sous Windows, un `process.exit()` qui coupe des
+sockets `fetch` encore ouvertes fait planter Node (code 3221226505, soit 0xC0000409), et le code rendu
+n'est plus celui du script. Un script qui fait du réseau pose `process.exitCode` et laisse le
+processus finir.
+
 ### PR #259 — 2026-09-29 — feat(GOV-117): l'outil du registre ecrit reqs, hyp et zone d'une tache, valides contre le schema et les registres
 
 **Fait.** Les outils hors dépôt savent écrire les exigences, les hypothèses et la zone d'une tâche,
@@ -123,19 +149,7 @@ elle seule, parce que sa PR nommait la tâche à l'instant de la fusion.
 **Appris.** Une exception se prouve avant de s'écrire : les accords portaient sur une tête antérieure
 à la tête fusionnée, et seule la comparaison du patch propre a établi que c'était la même livraison.
 
-### PR #255 — 2026-09-29 — chore(GOV-012): registre rattrape, six taches closes dont DM-03-A livree dans axion-ia, paths de JUR-T03 et JUR-T29
-
-**Fait.** Quatorzième rattrapage. Avec le motif de branche par dépôt, DM-03-A, livrée dans axion-ia et
-en production, se clôt enfin, et DM-03-P et DM-04 avec elle. GOV-124, GOV-125 et GOV-126 sont closes.
-Les chemins de JUR-T03 et de JUR-T29 sont ceux que la forge et la garde ont mesurés.
-
-**Reste.** INT-T02 : sa PR nomme la tâche, mais sous une forme que la clôture refuse. L'exception
-arbitrée demande un outil, GOV-127. INT-T27-A et INT-T26 attendent derrière elle.
-
-**Appris.** Un arbitrage ne suffit pas quand aucun outil ne sait l'écrire : le registre ne s'édite
-pas à la main, et l'exception doit elle-même devenir une règle écrite, fermée et testée.
-
-… 3 entrée(s) affichée(s) sur 114 ; les 111 plus ancienne(s) se lisent dans `docs/journal/`.
+… 3 entrée(s) affichée(s) sur 115 ; les 112 plus ancienne(s) se lisent dans `docs/journal/`.
 
 ## Dette déclarée
 
