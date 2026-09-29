@@ -120,17 +120,20 @@ describe('REQ-GOV-026 — la forge est interrogée sur la branche PAR DÉFAUT, j
    * comparaison doit viser `main`. Remettre `baseRefName` dans l'appel le fait rougir — c'est la
    * face que la relecture `exactitude` de #188 a trouvée muette.
    */
-  function forge(message: string) {
+  function forge(message: string, titre = 'fix(GOV-001): x') {
     const appels: string[][] = [];
     const lire = (args: string[]): string => {
       appels.push(args);
       if (args[0] === 'pr') {
+        // La forge ne rend `title` que si l'appel le DEMANDE : une vue qui l'oublie le perd.
+        const champs = (args[args.indexOf('--json') + 1] ?? '').split(',');
         return JSON.stringify({
           state: 'MERGED',
           mergeCommit: { oid: SHA },
           mergedAt: '2026-09-20T10:00:00Z',
           headRefName: 't/une-branche',
           baseRefName: 'branche-de-la-pr',
+          ...(champs.includes('title') ? { title: titre } : {}),
         });
       }
       if (args[0] === 'repo') return 'main';
@@ -157,6 +160,98 @@ describe('REQ-GOV-026 — la forge est interrogée sur la branche PAR DÉFAUT, j
     expect(repo).toBeDefined();
     expect(repo).toContain('will383842/axion-ia');
     expect(repo!.join(' ')).toContain('defaultBranchRef');
+  });
+
+  it('REQ-GOV-026 — TÉMOIN : la vue de la PR DEMANDE son titre à la forge', () => {
+    const { appels, lire } = forge('fix(GOV-001): x (#900)\n');
+    livraisonSurLaForge('will383842/axion-apporteurs', 900, lire);
+    const vue = appels.find((a) => a[0] === 'pr')!;
+    expect(vue[vue.indexOf('--json') + 1]!.split(',')).toContain('title');
+  });
+
+  it('REQ-GOV-026 — TÉMOIN : par la forge simulée, un commit titré pour une autre tâche que la PR ne déclare rien', () => {
+    const { lire } = forge('fix(GOV-002): autre (#900)\n', 'fix(GOV-001): x');
+    const l = livraisonSurLaForge('will383842/axion-apporteurs', 900, lire);
+    expect(l.titre ?? null).toBeNull();
+    expect(l.titreNonConforme).toBeTruthy();
+  });
+
+  it('REQ-GOV-026 — CONTRE-TÉMOIN : par la forge simulée, la forme du pas 6 déclare le titre de la PR', () => {
+    const { lire } = forge('fix(GOV-001): x (#900)\n', 'fix(GOV-001): x');
+    const l = livraisonSurLaForge('will383842/axion-apporteurs', 900, lire);
+    expect(l.titre).toBe('fix(GOV-001): x (#900)');
+    expect(l.titreNonConforme ?? null).toBeNull();
+  });
+});
+
+describe('REQ-GOV-026 — la première ligne du message est EXACTEMENT le titre de la PR suivi de ` (#<n>)`', () => {
+  /**
+   * LE DÉFAUT, relevé par la lentille `securite` sur la PR #188. Hors `--subject`, une PR à un seul
+   * commit prend pour titre d'écrasement le SUJET DU COMMIT, que le développeur écrit : il peut y
+   * nommer une autre tâche que celle du titre de la PR. La première ligne ne déclare donc que si
+   * elle est, octet pour octet, ce que le pas 6 y pose : le titre lu sur la forge, puis ` (#<n>)`.
+   */
+  const doc = lireDoc();
+  const [portee, autre] = deuxTachesSeules(doc);
+  const livraisonAvec = (titre: unknown, message: string) =>
+    livraisonDepuisLaForge({
+      pr: 900,
+      vue: { ...vueDeLaForge('', ''), title: titre as string },
+      messageDuCommit: message,
+      faceALaBrancheParDefaut: 'ahead',
+    });
+  const familles = (tacheId: string, livraison: ReturnType<typeof livraisonAvec>) => {
+    const d = lireDoc();
+    try {
+      cloturerUneTacheSeule({ tacheId, livraison, taches: d.taches, owner: unProprietaire(d) });
+    } catch (e) {
+      if (e instanceof ErreurDeCloture) return e.refus.map((r) => r.famille);
+      throw e;
+    }
+    return [];
+  };
+
+  it('REQ-GOV-026 — TÉMOIN : une première ligne qui nomme une autre tâche que le titre de la PR ne déclare rien, refus nommé', () => {
+    const l = livraisonAvec(
+      `fix(${portee.id}): x`,
+      `fix(${autre.id}): x (#900)\n\nLot: ${autre.id}\n`
+    );
+    expect(l.titre ?? null).toBeNull();
+    expect(l.corps ?? null).toBeNull();
+    expect(familles(autre.id, l)).toContain('titre_d_ecrasement_non_conforme');
+    expect(familles(autre.id, l)).toContain('tache_etrangere_a_la_pr');
+  });
+
+  it('REQ-GOV-026 — TÉMOIN : le titre sans ` (#<n>)`, ou suivi d’un autre numéro, ne déclare rien', () => {
+    for (const m of [
+      `fix(${portee.id}): x\n`,
+      `fix(${portee.id}): x (#901)\n`,
+      `fix(${portee.id}): x (#900) \n`,
+      `fix(${portee.id}): x (#900)suite\n`,
+    ]) {
+      const l = livraisonAvec(`fix(${portee.id}): x`, m);
+      expect(l.titre ?? null, m).toBeNull();
+      expect(familles(portee.id, l), m).toContain('titre_d_ecrasement_non_conforme');
+    }
+  });
+
+  it('REQ-GOV-026 — TÉMOIN : un titre de PR absent de la vue ferme la déclaration (échec fermé)', () => {
+    for (const titre of [undefined, null, '']) {
+      const l = livraisonAvec(titre, `fix(${portee.id}): x (#900)\n`);
+      expect(l.titre ?? null, String(titre)).toBeNull();
+      expect(familles(portee.id, l), String(titre)).toContain('titre_d_ecrasement_non_conforme');
+    }
+  });
+
+  it('REQ-GOV-026 — CONTRE-TÉMOIN : la forme que le pas 6 produit déclare, et la tâche est close', () => {
+    const l = livraisonAvec(
+      `fix(${portee.id}): x`,
+      `fix(${portee.id}): x (#900)\n\nLot: ${autre.id}\n`
+    );
+    expect(l.titre).toBe(`fix(${portee.id}): x (#900)`);
+    expect(l.corps).toContain(autre.id);
+    expect(familles(portee.id, l)).toEqual([]);
+    expect(familles(autre.id, l)).toEqual([]);
   });
 });
 

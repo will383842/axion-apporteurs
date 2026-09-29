@@ -338,6 +338,12 @@ export interface Livraison {
   titre?: string | null;
   /** Le corps de la PR, lu sur la forge : son champ `Lot:` nomme les autres (`lireLeLot`). */
   corps?: string | null;
+  /**
+   * GOV-107 — posé quand la première ligne du message d'écrasement n'est pas EXACTEMENT le titre de
+   * la PR lu sur la forge suivi de ` (#<n>)` : la ligne lue et la ligne attendue. La livraison ne
+   * déclare alors rien, et la clôture refuse sous `titre_d_ecrasement_non_conforme`.
+   */
+  titreNonConforme?: { lu: string | null; attendu: string | null } | null;
 }
 
 /**
@@ -356,6 +362,8 @@ export interface Livraison {
  *   - `branche_absente`         — sans elle, l'état écrit serait refusé par le schéma ;
  *   - `branche_hors_motif`      — la branche que le motif du schéma refuserait (lu, pas recopié) ;
  *   - `tache_etrangere_a_la_pr` — la PR ne déclare la tâche ni par son titre, ni par `Lot:` ;
+ *   - `titre_d_ecrasement_non_conforme` — la première ligne du message d'écrasement n'est pas
+ *                                 exactement le titre de la PR suivi de ` (#<n>)` (GOV-107) ;
  *   - `attestation_incomplete`  — pr, SHA entier et instant de fusion, les trois ou rien ;
  *   - `proprietaire_absent`     — `fusionnee` exige `owner`, et le script ne l'invente pas.
  */
@@ -412,6 +420,21 @@ export function cloturerUneTacheSeule(options: {
         (lot.malForme ? ` (illisible : ${lot.malForme})` : '') +
         '. Clore une tâche sur l’attestation d’une PR qui ne l’a pas portée écrirait une ' +
         'livraison fausse avec une preuve vraie.',
+    });
+  }
+  // GOV-107 — LA PREMIÈRE LIGNE N'EST PAS CELLE QUE LE PAS 6 POSE. Hors `--subject`, une PR à un
+  // seul commit prend pour titre d'écrasement le sujet du commit, écrit par le développeur : il
+  // peut nommer une autre tâche que le titre de la PR (lentille `securite`, #188). La livraison
+  // ne déclare alors rien ; ce refus NOMME pourquoi, en plus de `tache_etrangere_a_la_pr`.
+  if (livraison.titreNonConforme) {
+    const { lu, attendu } = livraison.titreNonConforme;
+    refus.push({
+      famille: 'titre_d_ecrasement_non_conforme',
+      message:
+        `${t.id} : la première ligne du message d'écrasement (« ${lu ?? 'absente'} ») n'est pas ` +
+        `exactement le titre de la PR lu sur la forge suivi de son numéro (« ${attendu ?? 'titre absent de la forge'} »). ` +
+        'Hors `--subject`, cette ligne est le sujet d’un commit, écrit par le développeur : elle ne ' +
+        'déclare rien (pas 6 du protocole).',
     });
   }
   if (livraison.atterri !== true) {
@@ -632,6 +655,11 @@ export interface VueDeLaForge {
   mergeCommit: { oid: string } | null;
   mergedAt: string | null;
   headRefName: string;
+  /**
+   * GOV-107 — le titre de la PR, lu sur la forge. Il ne DÉCLARE rien par lui-même : il sert
+   * seulement à vérifier que la première ligne du message d'écrasement est bien celle du pas 6.
+   */
+  title?: string | null;
 }
 
 /**
@@ -660,9 +688,17 @@ export function livraisonDepuisLaForge(e: {
   // `--body`, la forge compose ce corps avec les messages des commits : un « Lot: X » écrit dans un
   // commit par le développeur déclarerait X (lentille `securite`, #188). Tout autre corps ne
   // déclare rien, et la PR ne livre alors que la tâche de son titre — échec fermé.
-  const utiles = lignes === null ? [] : lignes.slice(1).filter((l) => l.trim() !== '');
-  const corps =
-    lignes === null ? null : utiles.length === 1 && /^Lot:/.test(utiles[0]!) ? utiles[0]! : '';
+  // GOV-107 — LA PREMIÈRE LIGNE EST EXACTEMENT LE TITRE DE LA PR SUIVI DE ` (#<n>)`, ce que le
+  // pas 6 pose par `--subject`. Toute autre ligne — sujet d'un commit, numéro différent, titre
+  // absent de la vue — ne déclare RIEN, ni par elle, ni par le `Lot:` qui la suit : échec fermé.
+  const titreDeLaForge = typeof e.vue.title === 'string' && e.vue.title !== '' ? e.vue.title : null;
+  const attendu = titreDeLaForge === null ? null : `${titreDeLaForge} (#${e.pr})`;
+  const premiere = lignes === null ? null : (lignes[0] ?? null);
+  const conforme = premiere !== null && attendu !== null && premiere === attendu;
+  const titreNonConforme = lignes !== null && !conforme ? { lu: premiere, attendu } : null;
+  const declare = lignes !== null && conforme;
+  const utiles = declare ? lignes.slice(1).filter((l) => l.trim() !== '') : [];
+  const corps = !declare ? null : utiles.length === 1 && /^Lot:/.test(utiles[0]!) ? utiles[0]! : '';
   return {
     pr: e.pr,
     sha,
@@ -671,8 +707,9 @@ export function livraisonDepuisLaForge(e: {
     atterri:
       sha !== null &&
       (e.faceALaBrancheParDefaut === 'identical' || e.faceALaBrancheParDefaut === 'ahead'),
-    titre: lignes === null ? null : (lignes[0] ?? null),
+    titre: declare ? premiere : null,
     corps,
+    titreNonConforme,
   };
 }
 
@@ -698,7 +735,7 @@ export function livraisonSurLaForge(
       '-R',
       depot,
       '--json',
-      'state,mergeCommit,mergedAt,headRefName',
+      'state,mergeCommit,mergedAt,headRefName,title',
     ])
   ) as VueDeLaForge;
   const sha = vue.state === 'MERGED' ? (vue.mergeCommit?.oid ?? null) : null;
