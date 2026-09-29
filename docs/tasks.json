@@ -10366,7 +10366,9 @@
         "REQ-GOV-029": [
           "tests/unit/gouvernance/outillage-de-la-porte-a.spec.ts"
         ]
-      }
+      },
+      "issue": 240,
+      "owner": "A01"
     },
     {
       "id": "GOV-063",
