@@ -36,6 +36,12 @@ export const PARAMETRES_PREVIEW = {
     source: 'HYP-E1-5 (docs/DECISIONS.md) ; acceptation QA-T06, point 3',
     verifieLe: '2026-09-30',
   },
+  /** L'horloge du semis des previews : FIXE, pour que toutes les previews portent les mêmes données. */
+  INSTANT_DE_SEMIS: {
+    valeur: '2026-01-01T00:00:00.000Z',
+    source: 'acceptation QA-T06, point 8 (horloge injectée)',
+    verifieLe: '2026-09-30',
+  },
   DUREE_DE_VIE_HEURES: {
     valeur: 48,
     source: 'HYP-E1-5 (docs/DECISIONS.md) ; acceptation QA-T06',
@@ -227,6 +233,7 @@ async function attribuer(): Promise<number> {
         { key: 'REDIS_URL', value: cache },
         { key: 'NOTIFY_SINK', value: 'true' },
         { key: 'PARTNERS_ENV', value: 'preview' },
+        { key: 'SEMEUR_INSTANT', value: PARAMETRES_PREVIEW.INSTANT_DE_SEMIS.valeur },
       ],
     });
   } else {
