@@ -2401,7 +2401,8 @@
         ".github/workflows/nightly.yml",
         "scripts/sauvegarde/",
         "package.json",
-        "src/domain/seuils/ssot.ts"
+        "src/domain/seuils/ssot.ts",
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -4080,7 +4081,8 @@
         "scripts/gates/perf-budgets.ts",
         "package.json",
         "perf/budgets.json",
-        "scripts/gates/gov-conventions.ts"
+        "scripts/gates/gov-conventions.ts",
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -13764,7 +13766,8 @@
         "package.json",
         "scripts/gates/gov-conventions.ts",
         "tests/unit/qualite/pipeline-image.spec.ts",
-        "tests/unit/qualite/build-sans-base.spec.ts"
+        "tests/unit/qualite/build-sans-base.spec.ts",
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -14696,7 +14699,8 @@
       "paths": [
         ".github/workflows/coolify-provisionner.yml",
         "scripts/deploiement/provisionner.ts",
-        "tests/unit/qualite/provisionnement-coolify.spec.ts"
+        "tests/unit/qualite/provisionnement-coolify.spec.ts",
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts"
       ],
       "schema": false,
       "sensible": [],
