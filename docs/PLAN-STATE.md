@@ -8,14 +8,14 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `3d9006b` — 2026-09-29T19:09:07+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #242 (un conflit avec `main`) · 2. #244 (un conflit avec `main`) · 3. #248 (un conflit avec `main`) |
+| Qu’est-ce qui est en vol ? | 1. #242 (rien) · 2. #244 (rien) · 3. #248 (rien) |
 | Qui tient quoi ? | QA-T11 (A01) · GOV-062 (A01) |
 | Où en est la phase ? | phase 0 — 102/129 tâches, reste 21.75 j |
-| Le prochain pas | QA-T11 — Gate D migrations : base vierge, dump N-1, migrate diff vide, image N-1, lint expand/contract |
+| Le prochain pas | fusionner #242, puis QA-T11 — Gate D migrations : base vierge, dump N-1, migrate diff vide, image N-1, lint expand/contract |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
 | Dernière entrée de journal | PR #246 — 2026-09-29 |
 
-**Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** `gh pr view 242 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : 0
 
@@ -60,9 +60,9 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #242 — feat(JUR-T34): la politique de confidentialite de l'espace, tiree du registre de l'article 30 et acceptee a la premiere connexion | `t/jur-t34` | un conflit avec `main` — à résoudre avant tout |
-| 2 | #244 — docs(GOV-017a): confirmation du depot par e-mail — plan W20 et quatorze taches versees en phase 1, sans DECISIONS ni REQ nouvelles | `t/w20-confirmation-email` | un conflit avec `main` — à résoudre avant tout |
-| 3 | #248 — feat(GOV-124): une lentille pour une PR sans risque, derivee et fermee, deux pour tout le reste | `t/gov-124-lentille` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #242 — feat(JUR-T34): la politique de confidentialite de l'espace, tiree du registre de l'article 30 et acceptee a la premiere connexion | `t/jur-t34` | rien — fusionnable maintenant |
+| 2 | #244 — docs(GOV-017a): confirmation du depot par e-mail — plan W20 et quatorze taches versees en phase 1, sans DECISIONS ni REQ nouvelles | `t/w20-confirmation-email` | rien — fusionnable maintenant |
+| 3 | #248 — feat(GOV-124): une lentille pour une PR sans risque, derivee et fermee, deux pour tout le reste | `t/gov-124-lentille` | rien — fusionnable maintenant |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -84,6 +84,8 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 Dérivé de `git log` sur `docs/adr/`, restreint au jour du dernier atterrissage. Une décision de Will n’est pas un ADR : elle vit au registre `docs/DECISIONS.md`, tranchée ou tenue par une hypothèse datée.
 
 ## Prochain pas
+
+**Fusionner #242** — elle est en tête de file et ne bloque sur rien.
 
 **QA-T11** — Gate D migrations : base vierge, dump N-1, migrate diff vide, image N-1, lint expand/contract (1 j) : 15 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
@@ -139,18 +141,29 @@ n'est pas corrigé. Il a confirmé les valeurs par défaut des quatorze autres q
 badge d'état dans « Mes entreprises » et sur la carte du dépôt. Cette réponse est reportée dans le plan
 et dans DM-24, JUR-T01b, JUR-T09, JUR-T40, UX-P1-05 (quinzième tâche amendée), UX-P1-40, UX-P1-41,
 UX-P1-43, QA-T40 et QA-T41. Chiffrage : phase 1, 17,5 j (16,25 j au versement, +1,25 j pour le badge et
-la correction qui fait repartir le délai).
+la correction qui fait repartir le délai). Correction du 2026-09-29, après le refus de la lentille
+securite sur `2340a63` : sur une demande qui porte une raison de vérification, un clic « Oui » n'est plus
+retenu et, par défaut, le silence ne confirme plus ; seul un appel concluant confirme, le dépôt part en
+tête de la liste d'appels et le badge dit « Axion-IA va vous rappeler votre contact », sans date. Le
+risque 1 du §8 est réécrit (ce qui reste possible, pourquoi c'est borné). Portée dans DM-41, SEC-41,
+DM-24, UX-P1-05, UX-P1-43, UX-P1-40, UX-P1-41, QA-T40, QA-T41, JUR-T40, JUR-T01b et JUR-T09. Même
+correction, après la dette bloquante de la lentille exactitude : l'acceptance de GOV-112 porte un avenant
+qui lui fait écrire les dix-sept HYP-W20, les dix exigences nouvelles et les neuf amendements W20 dans
+son lot, après GOV-116, et vingt et une tâches W20 dépendent désormais de GOV-112. Aucun rechiffrage.
 
 **Reste.** La passe gardien-spec : inscrire les HYP-W20 au §2 de `docs/DECISIONS.md` et les exigences
 au registre, puis porter leurs identifiants dans `reqs` et `hyp` des tâches versées par le verbe de
 GOV-117, dans le lot dédié de GOV-112 après GOV-116 (question 14). Les réponses de Williams aux
 questions 16 et 17, nées de sa réponse à la question 2 (date avant l'envoi effectif, fuseau de
-l'apporteur). Aucune tâche W20 n'est livrée par cette PR, et aucune ne doit être clôturée à cause de son
+l'apporteur), puis à la question 18 (une demande signalée devient-elle confirmée après trente jours de
+silence ? par défaut, non). Aucune tâche W20 n'est livrée par cette PR, et aucune ne doit être clôturée à cause de son
 titre.
 
 **Appris.** Une tâche versée sans `tests{}` fait échouer `lot:paths`, qui dérive ses chemins des tests
 nommés et non du champ `paths` ; et une tâche qui nomme comme preuve un test existant qui ne cite pas
-l'exigence rougit `gov:trace` : il faut nommer un test neuf.
+l'exigence rougit `gov:trace` : il faut nommer un test neuf. Un signal qui ne fait que trier ne ferme
+rien : tant qu'une confirmation automatique (clic ou silence) reste ouverte sur le cas signalé, le
+fraudeur passe par elle, et c'est la règle de confirmation qu'il faut fermer, pas la liste d'appels.
 
 … 3 entrée(s) affichée(s) sur 106 ; les 103 plus ancienne(s) se lisent dans `docs/journal/`.
 
