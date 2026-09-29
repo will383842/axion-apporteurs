@@ -19,7 +19,7 @@ import { readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { controler, schemaSansChemin, type Tache } from '../../../scripts/gates/gov-tasks';
 import { chargerRegistre, CHEMIN_REGISTRE } from '../../../scripts/lot/registre-decisions';
-import { cheminsSchema } from '../../../scripts/lot/revues';
+import { cheminsSchema, touche } from '../../../scripts/lot/revues';
 
 const SCHEMA = JSON.parse(readFileSync('scripts/lot/tasks.schema.json', 'utf8')) as object;
 const REGISTRE = chargerRegistre(CHEMIN_REGISTRE);
@@ -32,9 +32,19 @@ function backlog(): { version: number; taches: Tache[] } {
     taches: Tache[];
   };
 }
-/** Une tâche `a_faire`, la seule mutée : rien d'autre ne doit rougir (RM-11). */
+/**
+ * Une tâche `a_faire`, la seule mutée : rien d'autre ne doit rougir (RM-11). Elle ne porte AUCUN
+ * chemin de schéma : sinon, passer son `schema` à faux ferait rougir ses propres chemins, et le témoin
+ * compterait plus d'une faute (mesuré le 2026-09-29 : QA-T06, première tâche `a_faire`, porte
+ * `prisma/seed.ts`).
+ */
 function aFaire(d: { taches: Tache[] }): Tache {
-  return d.taches.find((t) => t.statut === 'a_faire' && t.repo === 'partners')!;
+  return d.taches.find(
+    (t) =>
+      t.statut === 'a_faire' &&
+      t.repo === 'partners' &&
+      !(t.paths ?? []).some((p) => CHEMINS.some((c) => touche(c, [p])))
+  )!;
 }
 const deLaFamille = (d: unknown, chemins: readonly string[] = CHEMINS) =>
   controler(d, SCHEMA, REGISTRE, chemins).filter((f) => f.famille === FAMILLE);
