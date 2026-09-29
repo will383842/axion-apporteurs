@@ -2744,7 +2744,15 @@
         "axionia/prisma/schema.prisma",
         "axionia/scripts/gates/cliquet-ecrivains.ts",
         "axionia/src/server/partners-sync/__tests__/producteurs-client.spec.ts",
-        "axionia/src/server/partners-sync/__tests__/cliquet-ecrivains.spec.ts"
+        "axionia/src/server/partners-sync/__tests__/cliquet-ecrivains.spec.ts",
+        "axionia/src/server/actions/qualiopi/clients.ts",
+        "axionia/src/server/qualiopi/crm/contact-facturation.ts",
+        "axionia/src/server/qualiopi/crm/porte-client.ts",
+        "axionia/src/features/dossier-client/fusionner.ts",
+        "axionia/src/features/dossier-client/defaire-fusion.ts",
+        "axionia/scripts/visio/deriver-siren.ts",
+        "axionia/tests/unit/ci/cliquet-ecrivains-client.spec.ts",
+        "axionia/src/server/partners-sync/producteurs/facturation.ts"
       ],
       "schema": true,
       "sensible": [
