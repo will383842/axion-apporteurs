@@ -7,8 +7,8 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `840ace7` — 2026-09-29T10:46:44+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #214 (un contrôle requis rouge ou une revue manquante) · 2. #219 (un contrôle requis rouge ou une revue manquante) · 3. #218 (un conflit avec `main`) |
+| Où est `main` ? | `50b0b9c` — 2026-09-29T11:30:15+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #218 (un contrôle requis rouge ou une revue manquante) · 2. #219 (un conflit avec `main`) · 3. #221 (brouillon) |
 | Qui tient quoi ? | aucune tâche revendiquée |
 | Où en est la phase ? | phase 0 — 95/130 tâches, reste 28.50 j |
 | Le prochain pas | QA-T05 — Pipeline GHCR privé → Coolify pull |
@@ -60,9 +60,9 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #214 — feat(DM-03-P): la grille publiee par axionia est importee version par version, chaque ligne confrontee a son empreinte | `t/dm-03-p` | un contrôle requis rouge ou une revue manquante |
-| 2 | #219 — chore(GOV-012): registre rattrape, quatre taches closes, cinq suites versees | `t/registre-rattrapage-10` | un contrôle requis rouge ou une revue manquante |
-| 3 | #218 — feat(DM-04): commission et prorata en fonction pure, entiers exacts, bareme choisi par commissionId | `t/dm-04` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #218 — feat(DM-04): commission et prorata en fonction pure, entiers exacts, bareme choisi par commissionId | `t/dm-04` | un contrôle requis rouge ou une revue manquante |
+| 2 | #219 — chore(GOV-012): registre rattrape, quatre taches closes, cinq suites versees | `t/registre-rattrapage-10` | un conflit avec `main` — à résoudre avant tout |
+| 3 | #221 — feat(QA-T05): la forge construit, juge puis publie l'image, la plateforme ne fera plus que la tirer | `t/qa-t05` | brouillon — hors file tant qu’il n’est pas prêt |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -88,7 +88,7 @@ Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeS
 
 ## Dernier atterrissage
 
-`origin/main` = `840ace7` (2026-09-29T10:46:44+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `50b0b9c` (2026-09-29T11:30:15+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
@@ -136,7 +136,7 @@ l'affaire de la traçabilité, pas de celle-ci.
 `main` en donne deux. Un compte recopié dans une acceptance vieillit, et c'est la garde qui le rend
 vrai à chaque passage.
 
-… 3 entrée(s) affichée(s) sur 90 ; les 87 plus ancienne(s) se lisent dans `docs/journal/`.
+… 3 entrée(s) affichée(s) sur 91 ; les 88 plus ancienne(s) se lisent dans `docs/journal/`.
 
 ## Dette déclarée
 

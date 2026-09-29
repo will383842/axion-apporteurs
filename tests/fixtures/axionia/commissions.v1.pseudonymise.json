@@ -1,0 +1,299 @@
+{
+  "Source": "GÉNÉRÉE — ne pas éditer à la main. Producteur : axion-ia, scripts/gates/grille-check.ts --fixture-pseudonymisee (export de la grille, PR axion-ia #1181, commit 73a9def1d). Méthode : la dernière publication commissions.v1.json, montants et taux non nuls remplacés par leur rang, empreinte du contenu, empreintes de ligne et version d'événement recalculées par le producteur sur les seules valeurs pseudonymisées (pseudonymiserPublication). Aucune valeur de la grille réelle (PRESEANCE §3.4), rien de tapé à la main (RM-03). Régénérer : dans axion-ia, pnpm exec tsx scripts/gates/grille-check.ts --fixture-pseudonymisee.",
+  "publication": {
+    "version": 1,
+    "publieeAt": "2026-09-26T23:08:01.251Z",
+    "hash": "41472e272ac9a0acccc8c7d8652fa5c985ab257a1575435a0206acff3c66201b",
+    "empreintesLignes": {
+      "commissions": {
+        "com-audit": "12d919f5546db4d2821f9996647bf176282e2d88daef4882957a0b9e84d365dc",
+        "com-formation-1j": "c42b67fb4c826caf1f8a08121accf19609b56de97be67d332de9481166897b48",
+        "com-formation-2j": "e6d8bd51c438155cef6e930b7c2f3925896db771c87163f114d319afd3d835ce",
+        "com-formation-3j": "2276f3bb6a6407cf35f17166ec7d10f89f32914b7fbdc45d6dfa155d9479ab77",
+        "com-integration": "aef46f477347683906320f9b70eef1d00db07b6a2fb5cf7703470bb4efceefc9",
+        "com-un-a-un": "324ad04963cebab1fe859d3f67334c542bb0eae2b70a87c5ee9b7a2a94b4df35"
+      },
+      "paliers": {
+        "audit-cible": "481fc66d4dfac0301666f37b10290f0c025698fd4ac00a7c4413b8f8381b1f67",
+        "audit-flash": "023d9d4db9383f5efc5db4574a10863518987bcc3a2c77006c8c4684c440c6bc",
+        "audit-strategique-eti": "9316ba2c4713ee2fca14ca7543d5c1657734ba1e96023aa5829c6f6686fb7309",
+        "audit-strategique-pme": "1920ccd57e080b2707ac625732aaddfe50913251165b0796f2bd9bf5ec0daea4",
+        "codage-web": "ba92119fa7251949d8f025a148b57958bff5656b2812aa15a1288d90029ff75a",
+        "impl-grand-programme": "3b7b9fe704535daceb58991ffebad38ea80b53008cb6685d19954c12cdee028d",
+        "impl-ia-custom": "05cb586ba18955d73a3abed1ab02cfabe2db4ba1d313a3c68f06dc3d97fd2f32",
+        "impl-mission-eti": "75b3e58165d62f67d183e10bf3a9325523ea36d0ffbc5cf80db2fc743758ff7a",
+        "impl-mission-pme": "202966418f5baeab70e1713f5b8482ae56b69fbea015163b2c9f78fca645bde5",
+        "impl-poc": "70d44157dcffd9ba5b65db950574e015bdaf9036913358d1da68d0432a002dfd",
+        "intervention-4h": "6029e71b932a8584eb52ed8367c38a8b140f0ac52f7394140a6c7410c4b8f976",
+        "intervention-approfondie": "fe56d7bfe17ec4ba21a5579f1029a12af2121a7cb7715acf9fb6dc2824bedddb",
+        "intervention-claude": "38bd3497a7dd848bd57f1b5a684d4e7db74ba2311b3c43f7516bf04dcaead1c2",
+        "intervention-conference": "7b1b4906e9615f41837d55fa89db086b2f79e48b7057f5f0fa6ad2db875ff77b",
+        "intervention-dirigeant-vision": "4d811e45046ddf01a99471c5921504b78e85c8750ff2dee8182fd5124dbf95d5",
+        "intervention-dirigeant-vision-2j": "d5461a6ea89adbbe6b48667a95c98837063c1a242c134d78d193fc4aafad59ec",
+        "intervention-dirigeants": "dfd1ea601e9702d8f136b124f014a63e1d2d4323ce5c1e6c54a96fe896fe38fd",
+        "intervention-essentielle": "73954b1fbf16342056caf6ae62a14a8f7a1e30fc85b3c7d81492bf533049cf2a",
+        "intervention-membre-equipe": "b89022ed5d157a8fea2fcd69c65881f089489a720f14a297c8773dba1ed6b18a",
+        "intervention-membre-equipe-2j": "632b4155d8d0ece2d53c0051c895d70abb1fb6ccb5eca93eaa2be176284d1da3",
+        "intervention-sur-demande": "63dd2147c79e699947c9d621949edb8408f909f8744fd1bfaa9965ee9630ff1b",
+        "intervention-temps": "3de96e48bfc0aaafebfc9d5858e397da0eedff63f79fede34df8699f43b2adfa",
+        "maintenance-standard": "7d654273ad41bd733c0f565a34704792d5bca072ac413c0f0ead388e83d64fac",
+        "un-a-un-recurrent": "f8986f951193d4ad067be71b9c3ee3a113038cdb25a60e9598e1a7c17417129c"
+      }
+    },
+    "contenu": {
+      "schema": 1,
+      "unites": {
+        "montant": "centimes_ht",
+        "taux": "points_de_base"
+      },
+      "grilleVersionEvenement": "50c786a6ff18",
+      "commissions": [
+        {
+          "commissionId": "com-audit",
+          "libelleFr": "Audit en entreprise",
+          "kind": "percent",
+          "montantCents": null,
+          "tauxBps": 1
+        },
+        {
+          "commissionId": "com-formation-1j",
+          "libelleFr": "Formation 1 jour",
+          "kind": "flat",
+          "montantCents": 2,
+          "tauxBps": null
+        },
+        {
+          "commissionId": "com-formation-2j",
+          "libelleFr": "Formation 2 jours",
+          "kind": "flat",
+          "montantCents": 3,
+          "tauxBps": null
+        },
+        {
+          "commissionId": "com-formation-3j",
+          "libelleFr": "Formation 3 jours et +",
+          "kind": "flat",
+          "montantCents": 4,
+          "tauxBps": null
+        },
+        {
+          "commissionId": "com-integration",
+          "libelleFr": "Intégration & automatisation IA",
+          "kind": "percent",
+          "montantCents": null,
+          "tauxBps": 5
+        },
+        {
+          "commissionId": "com-un-a-un",
+          "libelleFr": "Intervention 1-to-1 (dirigeant ou collaborateur)",
+          "kind": "scale",
+          "montantCents": null,
+          "tauxBps": null
+        }
+      ],
+      "paliers": [
+        {
+          "tierId": "audit-cible",
+          "categorie": "audit",
+          "commissionId": "com-audit",
+          "statut": "taux",
+          "baremeIndefini": null
+        },
+        {
+          "tierId": "audit-flash",
+          "categorie": "audit",
+          "commissionId": "com-audit",
+          "statut": "taux",
+          "baremeIndefini": null
+        },
+        {
+          "tierId": "audit-strategique-eti",
+          "categorie": "audit",
+          "commissionId": "com-audit",
+          "statut": "taux",
+          "baremeIndefini": null
+        },
+        {
+          "tierId": "audit-strategique-pme",
+          "categorie": "audit",
+          "commissionId": "com-audit",
+          "statut": "taux",
+          "baremeIndefini": null
+        },
+        {
+          "tierId": "codage-web",
+          "categorie": "codage",
+          "commissionId": null,
+          "statut": "bareme_indefini",
+          "baremeIndefini": {
+            "depuis": "2026-09-27",
+            "motif": "hors_perimetre_w6"
+          }
+        },
+        {
+          "tierId": "impl-grand-programme",
+          "categorie": "implementation",
+          "commissionId": "com-integration",
+          "statut": "taux",
+          "baremeIndefini": null
+        },
+        {
+          "tierId": "impl-ia-custom",
+          "categorie": "implementation",
+          "commissionId": "com-integration",
+          "statut": "taux",
+          "baremeIndefini": null
+        },
+        {
+          "tierId": "impl-mission-eti",
+          "categorie": "implementation",
+          "commissionId": "com-integration",
+          "statut": "taux",
+          "baremeIndefini": null
+        },
+        {
+          "tierId": "impl-mission-pme",
+          "categorie": "implementation",
+          "commissionId": "com-integration",
+          "statut": "taux",
+          "baremeIndefini": null
+        },
+        {
+          "tierId": "impl-poc",
+          "categorie": "implementation",
+          "commissionId": "com-integration",
+          "statut": "taux",
+          "baremeIndefini": null
+        },
+        {
+          "tierId": "intervention-4h",
+          "categorie": "interventions",
+          "commissionId": null,
+          "statut": "bareme_indefini",
+          "baremeIndefini": {
+            "depuis": "2026-09-27",
+            "motif": "palier_sans_bareme"
+          }
+        },
+        {
+          "tierId": "intervention-approfondie",
+          "categorie": "interventions",
+          "commissionId": "com-formation-2j",
+          "statut": "taux",
+          "baremeIndefini": null
+        },
+        {
+          "tierId": "intervention-claude",
+          "categorie": "interventions",
+          "commissionId": "com-formation-1j",
+          "statut": "taux",
+          "baremeIndefini": null
+        },
+        {
+          "tierId": "intervention-conference",
+          "categorie": "interventions",
+          "commissionId": null,
+          "statut": "bareme_indefini",
+          "baremeIndefini": {
+            "depuis": "2026-09-27",
+            "motif": "hors_perimetre_w6"
+          }
+        },
+        {
+          "tierId": "intervention-dirigeant-vision",
+          "categorie": "interventions",
+          "commissionId": "com-un-a-un",
+          "statut": "bareme_indefini",
+          "baremeIndefini": {
+            "depuis": "2026-09-27",
+            "motif": "bareme_non_publie"
+          }
+        },
+        {
+          "tierId": "intervention-dirigeant-vision-2j",
+          "categorie": "interventions",
+          "commissionId": "com-un-a-un",
+          "statut": "bareme_indefini",
+          "baremeIndefini": {
+            "depuis": "2026-09-27",
+            "motif": "bareme_non_publie"
+          }
+        },
+        {
+          "tierId": "intervention-dirigeants",
+          "categorie": "interventions",
+          "commissionId": "com-un-a-un",
+          "statut": "bareme_indefini",
+          "baremeIndefini": {
+            "depuis": "2026-09-27",
+            "motif": "bareme_non_publie"
+          }
+        },
+        {
+          "tierId": "intervention-essentielle",
+          "categorie": "interventions",
+          "commissionId": "com-formation-1j",
+          "statut": "taux",
+          "baremeIndefini": null
+        },
+        {
+          "tierId": "intervention-membre-equipe",
+          "categorie": "interventions",
+          "commissionId": "com-un-a-un",
+          "statut": "bareme_indefini",
+          "baremeIndefini": {
+            "depuis": "2026-09-27",
+            "motif": "bareme_non_publie"
+          }
+        },
+        {
+          "tierId": "intervention-membre-equipe-2j",
+          "categorie": "interventions",
+          "commissionId": "com-un-a-un",
+          "statut": "bareme_indefini",
+          "baremeIndefini": {
+            "depuis": "2026-09-27",
+            "motif": "bareme_non_publie"
+          }
+        },
+        {
+          "tierId": "intervention-sur-demande",
+          "categorie": "interventions",
+          "commissionId": null,
+          "statut": "bareme_indefini",
+          "baremeIndefini": {
+            "depuis": "2026-09-27",
+            "motif": "hors_perimetre_w6"
+          }
+        },
+        {
+          "tierId": "intervention-temps",
+          "categorie": "interventions",
+          "commissionId": "com-formation-1j",
+          "statut": "taux",
+          "baremeIndefini": null
+        },
+        {
+          "tierId": "maintenance-standard",
+          "categorie": "maintenance",
+          "commissionId": null,
+          "statut": "bareme_indefini",
+          "baremeIndefini": {
+            "depuis": "2026-09-27",
+            "motif": "hors_perimetre_w6"
+          }
+        },
+        {
+          "tierId": "un-a-un-recurrent",
+          "categorie": "hors_categories",
+          "commissionId": null,
+          "statut": "bareme_indefini",
+          "baremeIndefini": {
+            "depuis": "2026-09-27",
+            "motif": "hors_perimetre_w6"
+          }
+        }
+      ]
+    }
+  }
+}
