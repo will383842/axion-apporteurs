@@ -10,10 +10,13 @@
  * `un-etat-cible-porte-son-operation.spec.ts` tient qu'une tâche prise avec sa branche et sans
  * `pr` est EN VOL. Exiger un lot contredirait ce second témoin.
  *
- * CE QUI MANQUAIT : la preuve de vol elle-même n'avait aucun témoin ROUGE. La clause jumelle du
- * schéma exige `owner` et `branch` dès `en_cours`, et rien ne la voyait refuser. Ce fichier la
- * confronte sur une tâche HORS DE TOUT LOT, prise au registre réel par un critère (RM-01) :
- *   (a) ROUGE — sans `branch`, puis sans `owner`, la famille `schema` refuse et NOMME la tâche ;
+ * CE QUI MANQUAIT : la preuve de vol elle-même n'avait aucun témoin ROUGE pour `en_cours`. La
+ * clause jumelle du schéma exige `owner` et `branch` dès `en_cours` ; un témoin voisin la voyait
+ * déjà refuser `branch: null` sur une tâche LIVRÉE (`clore-une-tache-livree-seule.spec.ts`), aucun
+ * ne la voyait refuser pour `en_cours`, ni pour `owner`. Ce fichier la confronte sur une tâche HORS
+ * DE TOUT LOT, prise au registre réel par un critère (RM-01) :
+ *   (a) ROUGE — clé absente, puis clé à `null` (la forme réelle du registre), pour `branch` et pour
+ *       `owner` : la famille `schema` refuse et NOMME la tâche ;
  *   (b) VERT — avec les deux, aucune faute : la tâche est en vol, sans lot, et c'est légitime.
  */
 import { describe, it, expect } from 'vitest';
@@ -72,6 +75,24 @@ describe('REQ-GOV-021 — une tâche en_cours hors de tout lot porte la preuve d
   it('REQ-GOV-021 — TÉMOIN : sans `owner`, la validation refuse et nomme la tâche', () => {
     const { doc, index, tache } = enVolHorsLot();
     delete (tache as { owner?: string | null }).owner;
+    const siennes = surLaTache(doc, index);
+    expect(siennes.length).toBeGreaterThan(0);
+    expect(siennes.map((f) => f.message).join('\n')).toContain('owner');
+  });
+
+  // GOV-121 — LA FORME RÉELLE DU REGISTRE est la clé présente à `null`, pas la clé absente : c'est
+  // la moitié « type » de la clause qui la refuse, et elle n'avait aucun témoin sur `en_cours`.
+  it('REQ-GOV-021 — TÉMOIN : `branch: null`, la validation refuse et nomme la tâche', () => {
+    const { doc, index, tache } = enVolHorsLot();
+    (tache as { branch?: string | null }).branch = null;
+    const siennes = surLaTache(doc, index);
+    expect(siennes.length).toBeGreaterThan(0);
+    expect(siennes.map((f) => f.message).join('\n')).toContain('branch');
+  });
+
+  it('REQ-GOV-021 — TÉMOIN : `owner: null`, la validation refuse et nomme la tâche', () => {
+    const { doc, index, tache } = enVolHorsLot();
+    (tache as { owner?: string | null }).owner = null;
     const siennes = surLaTache(doc, index);
     expect(siennes.length).toBeGreaterThan(0);
     expect(siennes.map((f) => f.message).join('\n')).toContain('owner');
