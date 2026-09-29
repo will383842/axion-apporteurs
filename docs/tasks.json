@@ -10867,7 +10867,8 @@
         "scripts/gates/gov-attributions.ts",
         "tests/unit/gouvernance/aucun-chemin-gabarit.spec.ts",
         "tests/unit/gouvernance/attributions-resolvent.spec.ts",
-        "tests/unit/gouvernance/exemptions-par-occurrence.spec.ts"
+        "tests/unit/gouvernance/exemptions-par-occurrence.spec.ts",
+        "tests/unit/gouvernance/raison-de-dette-resolue.spec.ts"
       ],
       "schema": false,
       "sensible": [],
