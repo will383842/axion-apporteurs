@@ -139,7 +139,7 @@ futur de son clone n'est pas une illisibilité.
 **Appris.** Le même rouge a coûté deux portes A dans la journée avant d'être versé. Une gate qui
 dépend de l'instant où elle tourne mesure la file, pas la PR.
 
-… 3 entrée(s) affichée(s) sur 94 ; les 91 plus ancienne(s) se lisent dans `docs/journal/`.
+… 3 entrée(s) affichée(s) sur 95 ; les 92 plus ancienne(s) se lisent dans `docs/journal/`.
 
 ## Dette déclarée
 
