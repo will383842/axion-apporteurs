@@ -10232,7 +10232,9 @@
         "tests/unit/gouvernance/gardes-transposees.spec.ts",
         "docs/CHARTE-AGENTS.md",
         "package.json",
-        "tests/unit/gouvernance/outillage-de-la-porte-a.spec.ts"
+        "tests/unit/gouvernance/outillage-de-la-porte-a.spec.ts",
+        "scripts/gates/gov-conventions.ts",
+        ".github/workflows/ci.yml"
       ],
       "schema": false,
       "sensible": [],
