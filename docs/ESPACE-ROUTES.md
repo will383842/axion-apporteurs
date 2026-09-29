@@ -48,6 +48,12 @@
 | `/connexion` | Demande de lien magique (message identique que l'adresse existe ou non) | REQ-SEC-001, REQ-SEC-016 | SEC-03 |
 | `/connexion/<jeton>` | Consommation du lien (usage unique) ; page dédiée si déjà consommé ; code à 6 chiffres en repli | REQ-UX-015 | UX-P1-04 |
 
+## Hors des onglets
+
+| Route | Rôle | REQ | Tâche |
+| --- | --- | --- | --- |
+| `/confidentialite` | Politique de confidentialité dérivée du registre de l'article 30 ; lisible sans session ; acceptée à la première connexion, puis à chaque nouvelle version | REQ-JUR-025 | JUR-T34 |
+
 ## Règles qui s'appliquent à toutes les routes
 
 1. **Mobile d'abord** : cibles ≥ 48 px, corps ≥ 18 px, reflow à 320 px et zoom 200 %, `axe` = 0.

@@ -10,6 +10,11 @@
  * Une consommation qui ouvre la session remet son jeton au navigateur dans le cookie `__Host-` de
  * SEC-04 (REQ-SEC-003, `COOKIE_DE_SESSION`), AVANT la redirection ; un lien invalide n'en pose aucun.
  *
+ * PREMIÈRE CONNEXION (JUR-T34, REQ-JUR-025) : une session ouverte dont l'apporteur n'a pas accepté la
+ * version courante de la politique de confidentialité mène à `/confidentialite` au lieu de l'issue
+ * habituelle. Une politique ou une base illisibles ne bloquent pas la connexion
+ * (`destinationDeLOuverture`).
+ *
  * NON FAIT ICI, ET NOMMÉ : l'envoi réel du courriel appartient à INT-T10 (voir
  * `dependancesDuProcessus`).
  */
@@ -26,6 +31,11 @@ import {
 import { COOKIE_DE_SESSION } from '../../../server/auth/session';
 import { clesPii } from '../../../server/securite/pii';
 import { evaluerPotDeMiel } from '../../../server/securite/pot-de-miel';
+import {
+  destinationDeLOuverture,
+  lireLaPolitique,
+  portsDuProcessus,
+} from '../../../server/rgpd/acceptation';
 
 const texte = (valeur: FormDataEntryValue | null): string | null =>
   typeof valeur === 'string' ? valeur : null;
@@ -49,6 +59,14 @@ export async function consommerUnLienDeConnexion(jeton: string): Promise<void> {
   if (resultat.etat === 'ouverte') {
     const { nom, attributs } = COOKIE_DE_SESSION;
     (await cookies()).set(nom, resultat.jetonSession, attributs);
+    redirect(
+      await destinationDeLOuverture(
+        resultat.jetonSession,
+        () => lireLaPolitique(),
+        () => portsDuProcessus(d),
+        (motif) => d.journal.warn(motif)
+      )
+    );
   }
   redirect(`/connexion?issue=${resultat.etat}`);
 }
