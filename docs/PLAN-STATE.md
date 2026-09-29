@@ -7,9 +7,9 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `85437a5` — 2026-09-29T20:26:12+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #251 (un contrôle requis rouge ou une revue manquante) · 2. #242 (un conflit avec `main`) |
-| Qui tient quoi ? | GOV-124 (A01) · GOV-126 (A01) |
+| Où est `main` ? | `53e765e` — 2026-09-29T20:48:22+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #242 (un contrôle requis rouge ou une revue manquante) |
+| Qui tient quoi ? | GOV-124 (A01) · GOV-125 (A01) · GOV-126 (A01) |
 | Où en est la phase ? | phase 0 — 104/131 tâches, reste 20.50 j |
 | Le prochain pas | QA-T06 — Preview par PR sur Coolify, base éphémère, seed déterministe |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
@@ -60,8 +60,7 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #251 — chore(GOV-012): registre rattrape, HT encaisse tranche par Williams, paths du lot A et de JUR-T29, GOV-125 versee | `t/registre-rattrapage-13` | un contrôle requis rouge ou une revue manquante |
-| 2 | #242 — feat(JUR-T34): la politique de confidentialite de l'espace, tiree du registre de l'article 30 et acceptee a la premiere connexion | `t/jur-t34` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #242 — feat(JUR-T34): la politique de confidentialite de l'espace, tiree du registre de l'article 30 et acceptee a la premiere connexion | `t/jur-t34` | un contrôle requis rouge ou une revue manquante |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -72,6 +71,7 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 | Tâche | Revendiquée par | Issue | Statut |
 | --- | --- | --- | --- |
 | GOV-124 — Une seule lentille pour une PR sans risque, derivee par risqueDeLaPr ; deux pour tout le reste et dans le doute | A01 | #247 | `a_faire` |
+| GOV-125 — Une tache livree dans axion-ia ne peut pas etre close : le motif de branche du registre ne connait que les branches de Partners | A01 | #252 | `a_faire` |
 | GOV-126 — Le temoin d'une garde vaut la garde : les tests de gouvernance, de securite et d'integration restent a deux lentilles | A01 | #249 | `a_faire` |
 
 ⚠️ **13 revendication(s) périmée(s)** — QA-T07, GOV-042, GOV-045, GOV-050, GOV-051, GOV-053, GOV-054, GOV-055, GOV-060, GOV-072, GOV-079, GOV-093, INT-T01c : leur issue porte encore un label `owner:` alors que la tâche est livrée. `pnpm lot:cloture` écrit `docs/tasks.json` mais n’efface pas les labels ; la dette appartient à GOV-012.
@@ -90,7 +90,7 @@ Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeS
 
 ## Dernier atterrissage
 
-`origin/main` = `85437a5` (2026-09-29T20:26:12+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `53e765e` (2026-09-29T20:48:22+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
