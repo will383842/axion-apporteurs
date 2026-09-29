@@ -661,7 +661,8 @@
         "tests/integration/adaptateur-mcp.spec.ts",
         "tests/unit/gouvernance/clore-une-tache-livree-seule.spec.ts",
         "tests/unit/gouvernance/une-branche-reelle-de-la-forge-est-admise.spec.ts",
-        "tests/unit/gouvernance/gov-pr-lit-une-pr-de-lot.spec.ts"
+        "tests/unit/gouvernance/gov-pr-lit-une-pr-de-lot.spec.ts",
+        "tests/unit/gouvernance/tasks-schema-et-paths.spec.ts"
       ],
       "schema": false,
       "sensible": [
