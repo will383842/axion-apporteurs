@@ -55,6 +55,7 @@
 import { execFileSync } from 'node:child_process';
 import { readFileSync, existsSync } from 'node:fs';
 import { LIVREE as LIVREE_DERIVEE, verifierExhaustivite } from '../lot/avancement';
+import { dateDUneVue } from '../vues/rendre-apres-fusion';
 import {
   DOSSIER_DU_JOURNAL,
   GUIDE_DU_JOURNAL,
@@ -136,7 +137,10 @@ type PrFusionnee = { numero: number; titre: string; dateCommitIso: string };
 
 type Etat = {
   planState: string;
-  /** Date du dernier commit qui a touché `docs/PLAN-STATE.md`. `null` = jamais commité. */
+  /**
+   * Date de `docs/PLAN-STATE.md` (GOV-123, `dateDUneVue`) : rendu à la volée, celle de `HEAD` ; encore
+   * commité (branche d'avant GOV-123), celle de son dernier commit. `null` = absent du disque.
+   */
   planStateDateIso: string | null;
   entrees: Entree[];
   plancherPr: number;
@@ -515,14 +519,14 @@ function controler(e: Etat): Faute[] {
       if (e.planStateDateIso === null) {
         f.push({
           famille: 'plan_state_perime',
-          message: `\`${CHEMIN_PLAN_STATE}\` n'a aucun commit : l'état vivant n'a jamais été écrit.`,
+          message: `\`${CHEMIN_PLAN_STATE}\` n'a pas de date : l'état vivant n'est ni rendu ni commité (\`pnpm vues:rendre\`).`,
         });
       } else if (Date.parse(e.planStateDateIso) < Date.parse(derniere.dateCommitIso)) {
         f.push({
           famille: 'plan_state_perime',
           message:
             `\`${CHEMIN_PLAN_STATE}\` date du ${e.planStateDateIso}, la dernière fusion (PR #${derniere.numero}) ` +
-            `du ${derniere.dateCommitIso} : l'état vivant décrit un passé. Relance \`pnpm plan-state:build\` et commite-le.`,
+            `du ${derniere.dateCommitIso} : l'état vivant décrit un passé. Relance \`pnpm vues:rendre\`.`,
         });
       }
     }
@@ -901,7 +905,7 @@ if (iNow >= 0) {
 
 const etat: Etat = {
   planState: readFileSync(CHEMIN_PLAN_STATE, 'utf8'),
-  planStateDateIso: git(['log', '-1', '--format=%cI', '--', CHEMIN_PLAN_STATE]),
+  planStateDateIso: dateDUneVue(CHEMIN_PLAN_STATE, git),
   entrees: lireJournal(),
   plancherPr: lirePlancher(),
   taches: lireTaches(),
@@ -950,7 +954,7 @@ const fautes = controler(etat);
 if (fautes.length === 0) {
   console.log(`✅ gov:etat — ${evaluees.length} familles évaluées sur ${FAMILLES.length}.`);
   console.log(
-    `   Lu : \`${CHEMIN_PLAN_STATE}\` (dernier commit ${etat.planStateDateIso ?? 'jamais commité'}) · ` +
+    `   Lu : \`${CHEMIN_PLAN_STATE}\` (daté ${etat.planStateDateIso ?? 'absent — `pnpm vues:rendre` n’a pas tourné'}) · ` +
       `\`${CHEMIN_JOURNAL}/\` (${etat.entrees.length} entrée(s), plancher PR > ${etat.plancherPr}) · ` +
       (horsLigne
         ? 'GitHub NON LU'

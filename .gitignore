@@ -68,3 +68,15 @@ Thumbs.db
 
 # ── Lots de travail (générés par le composeur, propres à une session) ──
 docs/lots/
+
+# ── Vues dérivées — RENDUES À LA VOLÉE, jamais commitées (GOV-123, REQ-GOV-032) ──
+#     Chacune se rend depuis sa source par `pnpm vues:rendre` ; la porte A le fait
+#     avant toute garde qui en lit une. `pnpm vues:hors-git` refuse une PR qui en
+#     remettrait une sous git. La liste fait foi dans `scripts/vues/vues.ts`.
+docs/TRACABILITE.md
+docs/TASKS.md
+docs/REQUIREMENTS.md
+docs/paths-proposes.json
+docs/GATES.md
+docs/adr/INDEX.md
+docs/PLAN-STATE.md

@@ -1,8 +1,14 @@
 /**
- * vues.ts — LES VUES DÉRIVÉES COMMITÉES DU DÉPÔT, nommées une fois (GOV-101, REQ-GOV-032).
+ * vues.ts — LES VUES DÉRIVÉES DU DÉPÔT, nommées une fois (GOV-101, REQ-GOV-032).
  *
- * POURQUOI UNE LISTE. Deux lecteurs en ont besoin, et ils divergeraient s'ils la tapaient chacun :
+ * DEPUIS GOV-123, ELLES NE SONT PLUS COMMITÉES : `.gitignore` les écarte, `pnpm vues:rendre` les
+ * rend à la volée (deux fois, octet par octet), et `pnpm vues:hors-git` refuse qu'une PR en remette
+ * une sous git (`scripts/vues/rendre-apres-fusion.ts`). Ce qui suit sur l'empreinte et sur la
+ * fusion vaut pour les branches ouvertes avant GOV-123, qui les portent encore.
  *
+ * POURQUOI UNE LISTE. Ses lecteurs divergeraient s'ils la tapaient chacun :
+ *
+ *   — `scripts/vues/rendre-apres-fusion.ts` : le rendu, dans cet ordre, et la garde de l'index ;
  *   — `scripts/vues/fusion.ts` (`pnpm vues:fusion`) : un conflit de fusion qui ne porte QUE sur
  *     ces fichiers se résout en les RÉGÉNÉRANT, dans cet ordre ;
  *   — `scripts/lot/revues.ts` (`empreinteDuPatch`) : l'empreinte du diff propre à une PR les
@@ -17,8 +23,8 @@
  * l'empreinte. Ce que cela ouvre est borné : ces zones portent déjà, par construction, du texte que
  * la forge contrôle — le titre de n'importe quelle PR, sur un dépôt public —, et le vérificateur y
  * refuse tout ce qui sortirait de la zone au rendu (`horsDeSaZone`, `scripts/plan-state/build.ts`).
- * Les six autres vues sont comparées entières par leur vérificateur. Le remède complet est de sortir
- * PLAN-STATE des PR (`partners/ADR-0024`, « Reste à faire »).
+ * Les six autres vues sont comparées entières par leur vérificateur. Le remède complet — sortir
+ * PLAN-STATE des PR (`partners/ADR-0024`, « Reste à faire ») — est livré par GOV-123.
  *
  * L'ORDRE EST CELUI DU RENDU : `docs/PLAN-STATE.md` en DERNIER, il lit le journal, le backlog et
  * la traçabilité (même règle que `scripts/prevol.ts`).

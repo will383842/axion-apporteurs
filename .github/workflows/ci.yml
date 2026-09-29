@@ -72,6 +72,14 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: pnpm }
       - run: pnpm install --frozen-lockfile
+      # GOV-123, REQ-GOV-032. Les vues derivees ne sont plus commitees : elles se RENDENT ici,
+      # avant toute etape qui en lit une, puis une seconde fois pour que deux rendus identiques
+      # octet par octet soient exiges (la vue non reproductible est nommee). Aucun jeton : les
+      # lectures de la forge de PLAN-STATE echouent de la meme facon aux deux rendus.
+      - name: Les vues derivees sont rendues, et le rendu est reproductible
+        run: pnpm vues:rendre
+      - name: Aucune vue derivee sous git — une PR qui en rajoute une est refusee, le fichier nomme
+        run: pnpm vues:hors-git
       - name: Regle de publication (depot public)
         run: pnpm gov:publication
       - name: La garde de publication sait rougir

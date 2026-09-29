@@ -2591,6 +2591,15 @@ export const PORTE_A_FIGEE: PorteFigee = {
       cles: { with: { 'node-version': '22', cache: 'pnpm' } },
     },
     { nom: 'run: pnpm install --frozen-lockfile', run: 'pnpm install --frozen-lockfile' },
+    // GOV-123 : les vues se rendent AVANT toute étape qui en lit une ; aucune ne revient sous git.
+    {
+      nom: 'Les vues derivees sont rendues, et le rendu est reproductible',
+      run: 'pnpm vues:rendre',
+    },
+    {
+      nom: 'Aucune vue derivee sous git — une PR qui en rajoute une est refusee, le fichier nomme',
+      run: 'pnpm vues:hors-git',
+    },
     { nom: 'Regle de publication (depot public)', run: 'pnpm gov:publication' },
     { nom: 'La garde de publication sait rougir', run: 'pnpm gov:publication:prove' },
     { nom: 'Identifiants qualifies', run: 'pnpm gov:identifiants' },
