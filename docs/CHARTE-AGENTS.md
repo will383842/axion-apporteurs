@@ -297,12 +297,20 @@ sur les deux cas.
 remplace celle du 2026-09-25 (`partners/ADR-0021`, GOV-097). Les avis sont portés par A09, un par lentille :
 `exactitude` (le code fait-il exactement ce que disent les REQ citées, ni plus ni moins, sans retaper une valeur
 qui existe ailleurs — RM-01) et `securite` (cloisonnement, défaut = refus, 404 byte-identique, PII, journal,
-idempotence, absence d'oracle). **Toute PR reçoit ces deux-là, quel que soit son risque** ; une PR de schéma
+idempotence, absence d'oracle). **Toute PR reçoit ces deux-là**, sauf la PR sans risque (ci-après) ; une PR de schéma
 reçoit en plus l'avis de l'architecte (ci-dessous). Il n'y a plus de lentille `simplicite`, et plus d'avis
 `mutation` : la mutation est **mesurée** par Stryker en porte A (`pnpm mutation:pr`), sur les fichiers de
 `src/domain/`, `src/server/` et `src/lib/` que la PR touche. `lentillesExigees()`
 (`scripts/lot/revues.ts`) est la seule
-dérivation. **Les relectures démarrent quand la porte A est verte** sur la tête à relire, et le développeur
+dérivation.
+
+**Une lentille pour une PR sans risque** — décision de Williams du 2026-09-29 (`partners/ADR-0026`,
+GOV-124), qui amende `W16`. Une PR que `risqueDeLaPr` classe ordinaire, dont chaque fichier est sous
+`RACINES_A_UNE_LENTILLE` (documents, tests, outillage du registre et des vues) et chaque tâche en zone de
+`ZONES_A_UNE_LENTILLE` (gouvernance, qualité), ne reçoit que l'avis `exactitude`, dont le refus bloque.
+Le classement est dérivé, jamais déclaré ; tout ce que la règle ne sait pas lire vaut deux lentilles.
+
+**Les relectures démarrent quand la porte A est verte** sur la tête à relire, et le développeur
 passe `pnpm pre-gate` avant d'ouvrir sa PR (`docs/PROTOCOLE-FUSION.md`, « Avant la file »).
 
 **Le risque, qui ne compte plus de lentille.** Il reste dérivé par `risqueDeLaPr()` (`scripts/lot/revues.ts`),
