@@ -16,7 +16,7 @@
 
 **334 exigences actives · 122 réputées testées · 122 couvertes · 0 orphelines.**
 
-304 tâches, dont 134 livrées · 164 fichiers de test exécutés par `vitest` sur 164 présents.
+306 tâches, dont 134 livrées · 165 fichiers de test exécutés par `vitest` sur 165 présents.
 
 ## Exigences réputées testées
 
@@ -178,7 +178,7 @@
 | `REQ-CPL-006` | 1 | `CPL-T06` | — |
 | `REQ-CPL-007` | 2 | `INT-T23`, `UX-P2-05` | — |
 | `REQ-CPL-008` | 1 | `SEC-12` | — |
-| `REQ-CPL-009` | 0 | `JUR-T04` | `tests/unit/juridique/registre-rgpd.spec.ts` |
+| `REQ-CPL-009` | 0 | `JUR-T04`, `JUR-T35` | `tests/unit/juridique/aucun-depot-reel-sans-aipd-signee.spec.ts`, `tests/unit/juridique/registre-rgpd.spec.ts` |
 | `REQ-CPL-010` | 2 | `CPL-T12`, `T-ARG-010` | — |
 | `REQ-CPL-011` | 2 | `CPL-T11`, `CPL-T23`, `T-ARG-015` | — |
 | `REQ-CPL-014` | 2 | `CPL-T14-A`, `CPL-T14-P` | — |
@@ -283,7 +283,7 @@
 | `REQ-JUR-020` | 2 | `DM-16` | — |
 | `REQ-JUR-022` | 1 | `DM-11` | `tests/unit/domaine/kyc-reference-piece-rib.spec.ts` |
 | `REQ-JUR-024` | 0 | `JUR-T03` | `axionia/src/content/__tests__/vocabulaire-apporteur.spec.ts` |
-| `REQ-JUR-025` | 0 | `EXT-T01`, `JUR-T04`, `T-ARG-033` | `tests/unit/juridique/registre-rgpd.spec.ts` |
+| `REQ-JUR-025` | 0 | `EXT-T01`, `JUR-T04`, `JUR-T34`, `T-ARG-033` | `tests/unit/juridique/politique-de-confidentialite.spec.ts`, `tests/unit/juridique/registre-rgpd.spec.ts` |
 | `REQ-JUR-028` | 1 | `SEC-21` | — |
 | `REQ-JUR-030` | 3 | `JUR-T22` | — |
 | `REQ-JUR-032` | 1 | `JUR-T24` | — |
@@ -588,6 +588,7 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | `tests/unit/integration/notif-sans-pii.spec.ts` | oui | `REQ-INT-024` |
 | `tests/unit/integration/recherche-entreprises-repli.spec.ts` | oui | `REQ-INT-020`, `REQ-SEC-013`, `REQ-UX-020` |
 | `tests/unit/juridique/charte-relationnelle.spec.ts` | oui | `REQ-JUR-034`, `REQ-JUR-035`, `REQ-JUR-036`, `REQ-JUR-037` |
+| `tests/unit/juridique/registre-rgpd.spec.ts` | oui | `REQ-CPL-009`, `REQ-JUR-009`, `REQ-JUR-025`, `REQ-SEC-030` |
 | `tests/unit/juridique/seuils-ssot.spec.ts` | oui | `REQ-EXT-028`, `REQ-JUR-015`, `REQ-JUR-029` |
 | `tests/unit/qualite/env-fail-fast.spec.ts` | oui | `REQ-CPL-021`, `REQ-QA-030` |
 | `tests/unit/qualite/journal-redige.spec.ts` | oui | `REQ-QA-024` |
