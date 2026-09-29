@@ -1477,6 +1477,16 @@ export const CITATIONS_DECLAREES: Citation[] = [
       'vraies sont GOV-017a et GOV-017b. Fichier hors des paths de GOV-037.',
   },
   {
+    ou: 'scripts/lot/tasks.schema.json',
+    ligne: 18,
+    id: 'GOV-017a',
+    nature: 'contexte',
+    raison:
+      '« ne sont PAS requis à la conversion (GOV-017a) » date la règle par la tâche qui a converti ' +
+      'le backlog. Le schéma a été créé par GOV-000 (72c40a7) et la livraison de GOV-017a ne le ' +
+      'touche pas : GOV-017a est nommée comme voisine, jamais comme propriétaire.',
+  },
+  {
     ou: 'docs/gates.json(.github/workflows/nightly.yml).verifie',
     ligne: 1,
     id: 'INT-T08',

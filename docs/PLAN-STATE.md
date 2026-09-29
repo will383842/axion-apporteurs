@@ -8,14 +8,14 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `5b2a9b2` — 2026-09-29T05:23:52+02:00 |
-| Qu’est-ce qui est en vol ? | aucune PR ouverte |
+| Qu’est-ce qui est en vol ? | 1. #209 (rien) · 2. #211 (un contrôle requis rouge ou une revue manquante) |
 | Qui tient quoi ? | GOV-049 (A01) · GOV-075 (A01) |
 | Où en est la phase ? | phase 0 — 91/125 tâches, reste 29.25 j |
-| Le prochain pas | QA-T05 — Pipeline GHCR privé → Coolify pull |
+| Le prochain pas | fusionner #209, puis QA-T05 — Pipeline GHCR privé → Coolify pull |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
 | Dernière entrée de journal | PR #209 — 2026-09-29 |
 
-**Ce qu’on tape maintenant.** `pnpm lot:composer` pour composer le lot suivant, puis revendiquer ses tâches par `gh issue edit`. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** `gh pr view 209 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : 0
 
@@ -58,7 +58,10 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 
 ## File de fusion
 
-Aucune PR ouverte.
+| # | PR | Branche | Ce qui la bloque |
+| --- | --- | --- | --- |
+| 1 | #209 — fix(GOV-075): aucun chemin gabarit la ou il ment, treize taches livrees reparees | `t/gov-075` | rien — fusionnable maintenant |
+| 2 | #211 — fix(GOV-110): la cloture confronte le sujet d'ecrasement au titre que la PR portait a l'instant de la fusion | `t/gov-110` | un contrôle requis rouge ou une revue manquante |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -80,6 +83,8 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 Dérivé de `git log` sur `docs/adr/`, restreint au jour du dernier atterrissage. Une décision de Will n’est pas un ADR : elle vit au registre `docs/DECISIONS.md`, tranchée ou tenue par une hypothèse datée.
 
 ## Prochain pas
+
+**Fusionner #209** — elle est en tête de file et ne bloque sur rien.
 
 **QA-T05** — Pipeline GHCR privé → Coolify pull (1 j) : 17 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
@@ -106,7 +111,10 @@ liste figée des gabarits tolérés est vide, donc elle est supprimée.
 
 **Reste.** Un gabarit de phase future est compté et imprimé, pas refusé. La garde rougira `main` au
 passage de phase tant que le lot préparatoire n'aura pas écrit les chemins de la phase suivante, et
-c'est voulu. Les chemins repris de la vue dérivée n'ont pas tous été confirmés un à un par git.
+c'est voulu : un avenant A01 à l'acceptance le dit, le volet « aucun gabarit, quelle que soit la
+phase » n'étant pas tenu pour les phases futures. Les chemins repris de la vue dérivée n'avaient
+pas tous été confirmés par git : la lentille `exactitude` en a démontré trois faux (INT-T01b,
+GOV-002, GOV-017a), retirés dans cette PR au vu des commits de livraison.
 
 **Appris.** Un masque tolérant cache plus que ce qu'il nomme : le retirer a fait apparaître treize
 citations et deux gates non réciproques que personne n'avait déclarées.
