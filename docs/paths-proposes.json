@@ -2,12 +2,12 @@
   "version": 1,
   "resume": {
     "_methode": "une PAIRE est comptée quand l'intersection des deux `paths[]` n'est pas vide, par égalité de chaîne. ⚠️ Elle ne lit PAS le champ `paths` des tâches : deux tâches peuvent y figurer comme « sans intersection » alors que leurs `paths` déclarés se recouvrent — c'est le cas de GOV-025 et GOV-028, qui partagent `scripts/gates/gov-identifiants.ts`. Le composeur, lui, compare bien `t.paths` : cette vue ne dit donc pas ce qu'il fera. Ces trois totaux sont écrits par `scripts/lot/paths-proposes.ts` et par rien d'autre ; `tsx scripts/lot/paths-proposes.ts --check` échoue si le fichier rendu en diverge.",
-    "tachesCouvertes": 313,
-    "pairesEnIntersection": 4531,
-    "cheminsDeclares": 845,
-    "cheminsDistincts": 544,
-    "cheminsPartages": 109,
-    "tachesSansAucuneIntersection": 93,
+    "tachesCouvertes": 328,
+    "pairesEnIntersection": 4581,
+    "cheminsDeclares": 872,
+    "cheminsDistincts": 567,
+    "cheminsPartages": 112,
+    "tachesSansAucuneIntersection": 102,
     "listeDesTachesIsolees": [
       "QA-T08",
       "QA-T12",
@@ -15,7 +15,6 @@
       "DM-03-A",
       "INT-T04",
       "INT-T22",
-      "JUR-T04",
       "CPL-T13",
       "INT-T07-A",
       "INT-T08-P",
@@ -100,8 +99,18 @@
       "JUR-T34",
       "JUR-T35",
       "QA-T34",
-      "GOV-123",
-      "GOV-124"
+      "UX-P1-40",
+      "UX-P1-41",
+      "SEC-40",
+      "INT-T40",
+      "DM-41",
+      "DM-43",
+      "SEC-41",
+      "UX-P1-42",
+      "UX-P1-43",
+      "QA-T40",
+      "QA-T41",
+      "GOV-123"
     ],
     "cheminsLesPlusPartages": [
       {
@@ -110,7 +119,7 @@
       },
       {
         "chemin": "prisma/schema.prisma",
-        "taches": 47
+        "taches": 48
       },
       {
         "chemin": ".github/workflows/ci.yml",
@@ -1631,10 +1640,67 @@
     "QA-T34": [
       "tests/unit/qualite/un-seul-producteur-de-deploiement.spec.ts"
     ],
+    "UX-P1-40": [
+      "tests/unit/espace/maquettes-confirmation-par-courriel.spec.ts"
+    ],
+    "UX-P1-41": [
+      "tests/unit/micro-copy/confirmation-par-courriel.spec.ts"
+    ],
+    "DM-40": [
+      "tests/integration/demande-de-confirmation.spec.ts",
+      "tests/unit/domaine/demande-de-confirmation.spec.ts",
+      "prisma/schema.prisma"
+    ],
+    "SEC-40": [
+      "tests/unit/securite/jetons-de-confirmation.spec.ts",
+      "tests/integration/jetons-de-confirmation.spec.ts"
+    ],
+    "INT-T40": [
+      "tests/integration/envoi-differe-de-la-confirmation.spec.ts",
+      "tests/unit/email/gabarit-confirmation-contact.spec.ts"
+    ],
+    "DM-41": [
+      "tests/unit/domaine/reponse-du-contact.spec.ts",
+      "tests/integration/reponse-du-contact.spec.ts"
+    ],
+    "DM-43": [
+      "tests/unit/domaine/liste-d-appels.spec.ts",
+      "tests/integration/liste-d-appels.spec.ts"
+    ],
+    "SEC-41": [
+      "tests/unit/securite/verification-suggeree.spec.ts",
+      "tests/integration/verification-suggeree.spec.ts"
+    ],
+    "UX-P1-42": [
+      "tests/unit/public/page-de-confirmation.spec.ts",
+      "tests/e2e/public/confirmation-contact.spec.ts"
+    ],
+    "UX-P1-43": [
+      "tests/unit/espace/annuler-ou-corriger.spec.ts",
+      "tests/e2e/espace/annuler-ou-corriger.spec.ts"
+    ],
+    "JUR-T40": [
+      "tests/unit/contrat/contract-template-complete.spec.ts",
+      "tests/unit/contrat/confirmation-au-contrat.spec.ts"
+    ],
+    "JUR-T41": [
+      "tests/unit/juridique/registre-rgpd.spec.ts",
+      "tests/unit/juridique/confirmation-par-courriel-au-registre.spec.ts"
+    ],
+    "QA-T40": [
+      "tests/e2e/espace/depot-avec-confirmation-par-courriel.spec.ts",
+      "tests/e2e/console/a-appeler-aujourd-hui.spec.ts"
+    ],
+    "QA-T41": [
+      "tests/integration/attaque-fraude-a-la-confirmation.spec.ts"
+    ],
     "GOV-123": [
       "tests/unit/gouvernance/vues-rendues-apres-fusion.spec.ts"
     ],
     "GOV-124": [
+      "tests/unit/gouvernance/une-lentille-pour-une-pr-sans-risque.spec.ts"
+    ],
+    "GOV-126": [
       "tests/unit/gouvernance/une-lentille-pour-une-pr-sans-risque.spec.ts"
     ]
   }

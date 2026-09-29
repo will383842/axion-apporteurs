@@ -1380,7 +1380,81 @@ export type Risque = {
   niveau: 'eleve' | 'ordinaire';
   schema: boolean;
   raisons: readonly string[];
+  /**
+   * GOV-124 — UNE SEULE LENTILLE SUFFIT. Posé à `true` par `risqueDeLaPr` SEULEMENT, sur une PR
+   * ordinaire dont chaque fichier et chaque tâche passent la liste d'AUTORISATION
+   * (`RACINES_A_UNE_LENTILLE`, `ZONES_A_UNE_LENTILLE`). Absent ou `false` : deux lentilles.
+   */
+  uneLentille?: boolean;
 };
+
+/**
+ * GOV-124 — CE QU'UNE SEULE LENTILLE PEUT RELIRE : des documents, des tests et l'outillage interne
+ * des vues. Décision de Williams du 2026-09-29, qui amende W16 (`partners/ADR-0024`).
+ * C'est une liste d'AUTORISATION, donc FERMÉE : tout chemin qu'elle ne nomme pas — `src/`,
+ * `scripts/gates/`, `scripts/image/`, `prisma/`, `config/`, la racine, un dossier caché, et tout
+ * dossier à venir — vaut deux lentilles. La garde des revues (`scripts/lot/revues.ts` et ses
+ * appelants) reste élevée par `risqueDeLaPr` avant même que cette liste soit lue.
+ */
+export const RACINES_A_UNE_LENTILLE: readonly string[] = [
+  'docs/',
+  // GOV-126 (relevés des lentilles sur la PR #250) : dans tests/, une liste d'AUTORISATION
+  // courte. Le domaine, le contrat, le juridique, l'intégration, la gouvernance, la sécurité, les
+  // fixtures d'un dépôt public et tout dossier à venir valent deux lentilles.
+  // tests/unit/qualite/ n'y est PAS (relevé de la lentille securite sur la PR #250) : il porte les
+  // témoins de gardes de sécurité et du processus (image, journal, secrets, red-first, mutation).
+  'tests/a11y/',
+  'scripts/vues/',
+  'scripts/plan-state/',
+];
+
+/**
+ * `scripts/lot/` n'y est PAS (relevé de la lentille `exactitude`) : il porte la garde des revues, la
+ * clôture et les écrivains du registre, qui décident des lentilles, du statut et de l'attestation.
+ *
+ * GOV-124 — CE QUE LA LISTE D'AUTORISATION NE COUVRE JAMAIS, même sous `docs/`
+ * (relevé de la lentille `exactitude` sur la PR #246) : les REGISTRES qui nourrissent ce calcul et
+ * les textes qui fixent le processus. Relu par une seule lentille, un changement de `sensible` ou de
+ * `zone` dans `docs/tasks.json` ferait passer à une lentille toutes les PR suivantes de la tâche,
+ * sans `securite`. Un chemin égal, ou un préfixe qui finit par `/`.
+ */
+export const EXCLUS_D_UNE_LENTILLE: readonly string[] = [
+  'docs/tasks.json',
+  'docs/requirements.json',
+  'docs/DECISIONS.md',
+  'docs/agents.json',
+  'docs/gates.json',
+  'docs/CHARTE-AGENTS.md',
+  'docs/CONVENTIONS.md',
+  'docs/PROTOCOLE-FUSION.md',
+  'docs/adr/',
+  // Relevé de la lentille exactitude sur la PR #248 : ce que src/ ou une garde LIT, et le juridique.
+  'docs/contrat/',
+  'docs/rgpd/',
+  'docs/tiers/',
+  'docs/GLOSSAIRE.md',
+  'docs/PRESEANCE.md',
+  'docs/env.md',
+  // GOV-126 (relevé de la lentille securite sur la PR #248) : le témoin d'une garde vaut la garde.
+  'tests/unit/gouvernance/',
+  'tests/unit/securite/',
+  'tests/integration/',
+  'scripts/lot/tasks.schema.json',
+  'scripts/lot/requirements.schema.json',
+];
+
+/** GOV-124 — un fichier qu'une seule lentille peut relire : autorisé, et jamais exclu. */
+export function fichierAUneLentille(f: string): boolean {
+  const exclu = EXCLUS_D_UNE_LENTILLE.some((x) => (x.endsWith('/') ? f.startsWith(x) : f === x));
+  return !exclu && RACINES_A_UNE_LENTILLE.some((r) => f.startsWith(r));
+}
+
+/**
+ * GOV-124 — LES ZONES DE TÂCHE qu'une seule lentille peut relire. Fermée : l'argent, la sécurité,
+ * le juridique, les données du domaine, l'espace, la console, l'intégration et le déploiement
+ * restent à deux lentilles, comme une zone absente ou inconnue.
+ */
+export const ZONES_A_UNE_LENTILLE: readonly string[] = ['gouvernance', 'qualite'];
 
 /**
  * LE TITRE D'UNE PR : `<type>(<ID-TÂCHE>): <titre>` (`docs/CONVENTIONS.md` §5). Écrit UNE fois :
@@ -1680,6 +1754,8 @@ export function risqueDeLaPr(e: EntreeDuRisque): Risque {
 
   let tachesSchema = false;
   const prouvees: string[] = [];
+  // GOV-124 : chaque tâche résolue (tête ET base) doit être d'une zone à une lentille.
+  let zonesAUneLentille = true;
   for (const idT of ids) {
     const surLaTete = e.taches.find((t) => t.id === idT);
     const surLaBase = e.tachesBase?.find((t) => t.id === idT);
@@ -1691,6 +1767,9 @@ export function risqueDeLaPr(e: EntreeDuRisque): Risque {
     for (const [ou, t] of versions) {
       if (t === undefined) continue;
       if (t.schema === true) tachesSchema = true;
+      if (typeof t.zone !== 'string' || !ZONES_A_UNE_LENTILLE.includes(t.zone)) {
+        zonesAUneLentille = false;
+      }
       const ecart = tacheAElever(t);
       if (ecart !== null) {
         ordinaire = false;
@@ -1737,9 +1816,15 @@ export function risqueDeLaPr(e: EntreeDuRisque): Risque {
     if (raisons.length === 0) raisons.push('la PR touche au schéma');
     return { niveau: 'eleve', schema, raisons };
   }
+  const uneLentille =
+    ids.length > 0 &&
+    zonesAUneLentille &&
+    e.fichiers.length > 0 &&
+    e.fichiers.every(fichierAUneLentille);
   return {
     niveau: 'ordinaire',
     schema: false,
+    uneLentille,
     raisons: [
       prouvees.join(', '),
       `${e.fichiers.length} fichier(s) hors zones sensibles, hors tâches sensibles et hors processus`,
@@ -1759,6 +1844,10 @@ export function risqueDeLaPr(e: EntreeDuRisque): Risque {
  * `=== true`. Une valeur imprévue exige donc l'architecte.
  */
 export function lentillesExigees(risque: Risque): { toutes: readonly string[] } {
+  // GOV-124 : la branche courte se PROUVE (trois égalités strictes), la longue est le défaut.
+  if (risque.niveau === 'ordinaire' && risque.schema === false && risque.uneLentille === true) {
+    return { toutes: [LENTILLE_DE_LA_PROSE] };
+  }
   return {
     toutes: risque.schema === false ? [...DEUX_PREMIERES] : [...DEUX_PREMIERES, LENTILLE_SCHEMA],
   };
@@ -1769,7 +1858,8 @@ export function direLeRisque(risque: Risque): string {
   const exigees = lentillesExigees(risque).toutes;
   return (
     `risque ${risque.niveau === 'ordinaire' ? 'ordinaire' : 'élevé'} ` +
-    `(${exigees.length} lentilles exigées : ${exigees.join(', ')}) — ${risque.raisons.join(' ; ')}`
+    `(${exigees.length} lentille${exigees.length > 1 ? 's' : ''} exigée${exigees.length > 1 ? 's' : ''} : ` +
+    `${exigees.join(', ')}) — ${risque.raisons.join(' ; ')}`
   );
 }
 
