@@ -371,11 +371,11 @@ describe('REQ-SEC-008 — la couche échoue FERMÉE sur un identifiant douteux',
   );
 });
 
-describe('REQ-QA-011 — la liste des modèles cloisonnés est confrontée au schéma généré', () => {
+describe('REQ-QA-011 → REQ-SEC-008 — la liste des modèles cloisonnés est confrontée au schéma généré', () => {
   const modeles = Prisma.dmmf.datamodel.models;
   const delegue = (nom: string) => nom.charAt(0).toLowerCase() + nom.slice(1);
 
-  it('REQ-QA-011 : les modèles cloisonnés sont EXACTEMENT ceux du schéma qui portent `apporteurId`', () => {
+  it('REQ-QA-011 → REQ-SEC-008 : les modèles cloisonnés sont EXACTEMENT ceux du schéma qui portent `apporteurId`', () => {
     const portantApporteur = modeles
       .filter((m) => m.fields.some((f) => f.name === 'apporteurId'))
       .map((m) => delegue(m.name))
@@ -385,7 +385,7 @@ describe('REQ-QA-011 — la liste des modèles cloisonnés est confrontée au sc
   });
 
   it.each(MODELES_CLOISONNES)(
-    'REQ-QA-011 : %s — `id`, chaque relation et chaque clé étrangère sont refusées ou déclarées en référence vérifiée',
+    'REQ-QA-011 → REQ-SEC-008 : %s — `id`, chaque relation et chaque clé étrangère sont refusées ou déclarées en référence vérifiée',
     (modele) => {
       const m = modeles.find((x) => delegue(x.name) === modele)!;
       const relations = m.fields.filter((f) => f.kind === 'object');
@@ -404,7 +404,7 @@ describe('REQ-QA-011 — la liste des modèles cloisonnés est confrontée au sc
     }
   );
 
-  it('REQ-QA-011 : toute clé étrangère vers une AUTRE table cloisonnée est une référence vérifiée, jamais un simple refus silencieux', () => {
+  it('REQ-QA-011 → REQ-SEC-008 : toute clé étrangère vers une AUTRE table cloisonnée est une référence vérifiée, jamais un simple refus silencieux', () => {
     for (const modele of MODELES_CLOISONNES) {
       const m = modeles.find((x) => delegue(x.name) === modele)!;
       for (const f of m.fields.filter((x) => x.kind === 'object')) {
@@ -477,7 +477,7 @@ describe('REQ-SEC-022 — une ressource étrangère répond 404, identique à l�
   });
 });
 
-describe('REQ-QA-012 — l’occupation d’un autre apporteur ne révèle que sa date de fin', () => {
+describe('REQ-QA-012 → REQ-SEC-022 — l’occupation d’un autre apporteur ne révèle que sa date de fin', () => {
   /** La forme d'une réponse : ses clés, triées, récursivement. */
   function forme(v: unknown): unknown {
     if (v === null || typeof v !== 'object' || v instanceof Date) return typeof v;
@@ -499,7 +499,7 @@ describe('REQ-QA-012 — l’occupation d’un autre apporteur ne révèle que s
     finAt: new Date('2026-12-01T00:00:00Z'),
   };
 
-  it('REQ-QA-012 : TÉMOIN À DEUX FACES — la vue livrée a la forme admise ; une projection qui recopie la ligne rougit à la même comparaison', () => {
+  it('REQ-QA-012 → REQ-SEC-022 : TÉMOIN À DEUX FACES — la vue livrée a la forme admise ; une projection qui recopie la ligne rougit à la même comparaison', () => {
     const vue = vueDeLOccupationEtrangere(ligneEtrangere);
     expect(forme(vue)).toEqual(FORME_ADMISE);
     expect(vue).toEqual({ finAt: ligneEtrangere.finAt });
@@ -507,7 +507,7 @@ describe('REQ-QA-012 — l’occupation d’un autre apporteur ne révèle que s
     expect(forme(fuyante)).not.toEqual(FORME_ADMISE);
   });
 
-  it('REQ-QA-012 : ni identifiant, ni nom, ni code, ni date de dépôt, ni stade ne traversent — même sérialisés', () => {
+  it('REQ-QA-012 → REQ-SEC-022 : ni identifiant, ni nom, ni code, ni date de dépôt, ni stade ne traversent — même sérialisés', () => {
     const texte = JSON.stringify(vueDeLOccupationEtrangere(ligneEtrangere));
     for (const secret of [
       ligneEtrangere.id,
@@ -522,7 +522,7 @@ describe('REQ-QA-012 — l’occupation d’un autre apporteur ne révèle que s
     expect(texte).toBe(`{"finAt":"${ligneEtrangere.finAt.toISOString()}"}`);
   });
 
-  it('REQ-QA-012 : une occupation sans date de fin rend une date de fin nulle, rien de plus', () => {
+  it('REQ-QA-012 → REQ-SEC-022 : une occupation sans date de fin rend une date de fin nulle, rien de plus', () => {
     expect(vueDeLOccupationEtrangere({ ...ligneEtrangere, finAt: null })).toEqual({ finAt: null });
   });
 });
