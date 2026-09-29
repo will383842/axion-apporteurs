@@ -311,3 +311,143 @@ describe('GOV-071 — le témoin à deux faces', () => {
     expect(jetons).toBeGreaterThan(0);
   }, 180_000);
 });
+
+// ── 5. GOV-106 : le rendu par l'ARBRE, et non par des expressions régulières ──
+
+/**
+ * GOV-106 — la JSX se rend par l'AST de TypeScript, le Markdown par son arbre en ligne. Chaque
+ * forme ci-dessous est une CONSTRUCTION que le rendu recolle et que la découpe par expressions
+ * régulières laissait coupée. Le terme reste ASSEMBLÉ à l'exécution depuis la SSOT : la forme
+ * est une fonction de `(a, b)`, jamais un mot tapé.
+ */
+const MD_TEMOIN = ADR_TEMOIN;
+const deb = (b: string) => b.slice(0, 1);
+const fin = (b: string) => b.slice(1);
+const enP = (s: string) => `<p>Votre ${s}</p>`;
+
+const FORMES_DE_L_ARBRE: FamilleDeRendu[] = [
+  ...(['"', "'", '`'] as const).map((q): FamilleDeRendu => ({
+    nom: `JSX — littéral de chaîne constant entre accolades (délimiteur ${q})`,
+    fichier: ESPACE_TEMOIN,
+    coupe: (a, b) => enP(`${a}{${q}${deb(b)}${q}}${fin(b)}`),
+    // La VALEUR compte : une espace dans le littéral, et le rendu sépare.
+    contreTemoin: (a, b) => enP(`${a}{${q} ${deb(b)}${q}}${fin(b)}`),
+  })),
+  ...(['null', 'false', 'undefined'] as const).map((v): FamilleDeRendu => ({
+    nom: `JSX — expression qui ne rend rien (${v})`,
+    fichier: ESPACE_TEMOIN,
+    coupe: (a, b) => enP(`${a}{${v}}${b}`),
+    // Dans une valeur d'attribut en chaîne, les accolades sont du TEXTE : elles séparent.
+    contreTemoin: (a, b) => `<p title="${a}{${v}}${b}">Votre compte</p>`,
+  })),
+  {
+    nom: 'JSX — fragment au milieu du mot',
+    fichier: ESPACE_TEMOIN,
+    coupe: (a, b) => enP(`${a}<>${deb(b)}</>${fin(b)}`),
+    // Dans un commentaire du code, rien n'est rendu : les chevrons restent et séparent.
+    contreTemoin: (a, b) => `// ${a}<>${deb(b)}</>${fin(b)}\n${enP('compte')}`,
+  },
+  {
+    nom: 'JSX — composant au milieu du mot',
+    fichier: ESPACE_TEMOIN,
+    coupe: (a, b) => enP(`${a}<Trans>${deb(b)}</Trans>${fin(b)}`),
+    // Une balise de BLOC passe à la ligne : elle sépare.
+    contreTemoin: (a, b) => `<div>Votre ${a}<div>${deb(b)}</div>${fin(b)}</div>`,
+  },
+  {
+    nom: 'JSX — balise en ligne AVEC attribut au milieu du mot',
+    fichier: ESPACE_TEMOIN,
+    coupe: (a, b) => enP(`${a}<span className="a">${deb(b)}</span>${fin(b)}`),
+    contreTemoin: (a, b) => `<div>Votre ${a}<div className="a">${deb(b)}</div>${fin(b)}</div>`,
+  },
+  {
+    nom: 'JSX — balise en ligne coupée sur deux lignes',
+    fichier: ESPACE_TEMOIN,
+    coupe: (a, b) => `<p>\n  Votre ${a}<span\n    className="a">${deb(b)}</span>${fin(b)}\n</p>`,
+    contreTemoin: (a, b) =>
+      `<div>\n  Votre ${a}<div\n    className="a">${deb(b)}</div>${fin(b)}\n</div>`,
+  },
+  {
+    nom: 'Markdown — lien au milieu du mot',
+    fichier: MD_TEMOIN,
+    coupe: (a, b) => `Le tableau affiche ${a}[${deb(b)}](https://x)${fin(b)} en tête.`,
+    // Entre accents graves, le lien n'est pas rendu : les crochets restent à l'écran.
+    contreTemoin: (a, b) => `Le tableau affiche \`${a}[${deb(b)}](https://x)${fin(b)}\` en tête.`,
+  },
+  {
+    nom: 'Markdown — balise en ligne AVEC attribut au milieu du mot',
+    fichier: MD_TEMOIN,
+    coupe: (a, b) => `Le tableau affiche ${a}<a href="x">${deb(b)}</a>${fin(b)} en tête.`,
+    contreTemoin: (a, b) =>
+      `Le tableau affiche \`${a}<a href="x">${deb(b)}</a>${fin(b)}\` en tête.`,
+  },
+  {
+    nom: 'Markdown — balise en ligne coupée sur deux lignes',
+    fichier: MD_TEMOIN,
+    coupe: (a, b) => `Le tableau affiche ${a}<a\nhref="x">${deb(b)}</a>${fin(b)} en tête.`,
+    // Dans un bloc de code clôturé, rien n'est rendu.
+    contreTemoin: (a, b) => '```\n' + `${a}<a\nhref="x">${deb(b)}</a>${fin(b)}` + '\n```',
+  },
+];
+
+describe('GOV-106 — chaque forme que l’arbre recolle : témoin rouge, contre-témoin vert (RM-02)', () => {
+  for (const r of FORMES_DE_L_ARBRE) {
+    it(`REQ-GOV-017 / REQ-JUR-037 : ${r.nom} — la garde lexicale voit le terme`, () => {
+      const source = r.coupe(AVANT, MILIEU + APRES);
+      expect(motifDeLaForme(FORME).test(source), 'la source porte déjà le terme entier').toBe(
+        false
+      );
+      const messages = fautesLexicales(r.fichier, source)
+        .map((f) => f.message)
+        .join('\n');
+      // Le numéro nommé est celui de la ligne SOURCE où le mot commence.
+      const ligne = source.split('\n').findIndex((l) => l.includes(AVANT)) + 1;
+      expect(messages).toContain(`${r.fichier}:${ligne} `);
+      expect(messages).toContain(`« ${FORME} »`);
+    });
+
+    it(`REQ-GOV-017 / REQ-JUR-037 : ${r.nom} — son contre-témoin reste vert`, () => {
+      expect(fautesLexicales(r.fichier, r.contreTemoin(AVANT, MILIEU + APRES))).toEqual([]);
+    });
+
+    it(`REQ-GOV-003 : ${r.nom} — la garde des identifiants voit l'étiquette`, () => {
+      const source = r.coupe(LETTRE, CHIFFRE);
+      expect(new RegExp(MOTIF_NU.source).test(source), 'la source porte déjà l’étiquette').toBe(
+        false
+      );
+      const messages = fautesIdentifiant(r.fichier, source).map((f) => f.message);
+      expect(messages.join('\n')).toContain(`« ${ETIQUETTE} »`);
+    });
+
+    it(`REQ-GOV-003 : ${r.nom} — son contre-témoin reste vert`, () => {
+      expect(fautesIdentifiant(r.fichier, r.contreTemoin(LETTRE, CHIFFRE))).toEqual([]);
+    });
+
+    it(`REQ-GOV-017 : ${r.nom} — le rendu garde une ligne pour une ligne`, () => {
+      const source = r.coupe(AVANT, MILIEU + APRES);
+      expect(lignesRendues(r.fichier, source)).toHaveLength(source.split('\n').length);
+    });
+  }
+});
+
+describe('GOV-106 — ce que le rendu retire de l’écran, la garde le lit encore', () => {
+  it('REQ-JUR-037 : le terme porté par un attribut d’une balise effacée reste jugé', () => {
+    const source = enP(`${AVANT}<span title="${FORME}">${MILIEU}</span>${APRES}`);
+    expect(fautesLexicales(ESPACE_TEMOIN, source).length).toBeGreaterThan(0);
+  });
+
+  it('REQ-JUR-037 : le terme porté par la cible d’un lien Markdown reste jugé', () => {
+    const source = `Voir [la page](https://x.test/${FORME}) du mois.`;
+    expect(fautesLexicales(MD_TEMOIN, source).length).toBeGreaterThan(0);
+  });
+
+  it('REQ-GOV-017 : la concaténation constante de chaînes dans une expression JSX est rendue', () => {
+    const source = enP(`{'${AVANT}' + '${MILIEU}'}${APRES}`);
+    expect(fautesLexicales(ESPACE_TEMOIN, source).length).toBeGreaterThan(0);
+  });
+
+  it('REQ-GOV-017 : une expression dont la valeur est inconnue n’est pas inventée — elle sépare', () => {
+    const source = enP(`${AVANT}{valeur}${MILIEU + APRES}`);
+    expect(fautesLexicales(ESPACE_TEMOIN, source)).toEqual([]);
+  });
+});
