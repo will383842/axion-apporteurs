@@ -74,8 +74,22 @@
  *     commandes intégrées ont été relevées sur cette version —, et un script qui porte le nom d'une
  *     commande intégrée de pnpm (hors `test`, que `pnpm test` lance réellement) est refusé — au
  *     tour 5, un nom hérité d'`Object.prototype` compte pour une commande intégrée.
+ *   • les sept familles `outillage_*` (GOV-062, `POINTS_DE_L_OUTILLAGE`) — la porte A était gardée,
+ *     ce qui la FAIT TOURNER ne l'était pas : réglage du gestionnaire au niveau du projet, chemins
+ *     de l'outillage non réservés, correctifs et surcharges de version, actions tierces, étape qui
+ *     réécrit l'arbre avant une garde, commande intégrée prise pour un script, environnement hérité.
+ *     Chaque refus NOMME son point, et le vert imprime le compte des points RÉELLEMENT confrontés.
  *
  * ── CE QU'ELLE NE FAIT PAS, ET LE DIT ───────────────────────────────────────────────────────
+ *
+ *   — L'OUTILLAGE, AUX LIMITES MESURÉES : les actions tierces sont admises par ÉTIQUETTE (`@v4`) ;
+ *     le relevé dit le commit qu'elle désignait, la garde ne vérifie pas hors ligne qu'elle le
+ *     désigne encore, et `nightly.yml` n'est pas confronté. Une écriture de l'arbre n'est vue que
+ *     par un drapeau (`ECRIT_L_ARBRE`) : un code qui écrit depuis l'intérieur d'un script ne l'est
+ *     pas. `GITHUB_ENV` n'est cherché que dans les sources `.ts` non exemptées, les scripts de
+ *     `package.json` et les commandes du job. Une charte ou un verrou NON SUIVI n'est pas confronté
+ *     — le rendu le dit ; `gov:pr` refuse une charte absente, `pnpm install --frozen-lockfile` un
+ *     verrou absent.
  *
  *   — ⚠️ LIMITE DE LA PORTE A, AU PRIX PAYÉ : une faute qui fait SAUTER le job `gate-a` (un `if:`
  *     toujours faux au niveau du job) saute AUSSI l'étape qui lance cette garde, et un job requis
@@ -130,7 +144,7 @@
  */
 
 import { fichiersSuivisOuRefus } from '../lot/fichiers-suivis';
-import { outilHorsDepot } from '../lot/chemins-de-tache';
+import { cheminsReserves, outilHorsDepot } from '../lot/chemins-de-tache';
 import { LIVREE } from '../lot/avancement';
 import { existsSync, readFileSync } from 'node:fs';
 import { parsers as analyseursYaml } from 'prettier/plugins/yaml';
@@ -228,12 +242,59 @@ export interface Vue {
    * pas confrontée, et `confronterLaPorteA` le REFUSE (`porte_a_illisible`) plutôt que de verdir.
    */
   readonly porteA?: PorteFigee;
+  /**
+   * LE CONSTAT DE L'OUTILLAGE QUI EXÉCUTE LA PORTE A (GOV-062). ABSENT = aucun des sept points n'est
+   * confronté, et `confronterLOutillage` le REFUSE, point par point, plutôt que de verdir.
+   */
+  readonly outillage?: OutillageFige;
+  /** Le texte de `docs/CHARTE-AGENTS.md` : son §7 dit quels chemins sont réservés (point 2). */
+  readonly charte?: string;
+  /** Le texte de `pnpm-lock.yaml` : ses réglages, ses surcharges et ses correctifs (points 1 et 3). */
+  readonly verrou?: string;
 }
 
 export interface Faute {
   readonly famille: string;
   readonly message: string;
 }
+
+/**
+ * LES SEPT POINTS DE L'OUTILLAGE QUI EXÉCUTE LA PORTE A — une famille par point, et le LIBELLÉ que
+ * chaque refus porte en tête : le refus NOMME le point. Le compte que le vert imprime se DÉRIVE de
+ * cette liste et de ce qui a réellement été lu (RM-01), jamais d'un nombre tapé.
+ */
+export const POINTS_DE_L_OUTILLAGE = [
+  {
+    famille: 'outillage_reglage_du_gestionnaire',
+    point: 'point 1 — réglage du gestionnaire de paquets posé au niveau du projet',
+  },
+  {
+    famille: 'outillage_chemin_non_reserve',
+    point: 'point 2 — chemin de l’outillage non réservé au §7 de la charte',
+  },
+  {
+    famille: 'outillage_correctif_ou_surcharge',
+    point: 'point 3 — dépendance corrigée ou version surchargée',
+  },
+  {
+    famille: 'outillage_action_tierce',
+    point: 'point 4 — action tierce appelée par le workflow de la porte A',
+  },
+  {
+    famille: 'outillage_etape_amont_ecrivante',
+    point: 'point 5 — étape qui réécrit l’arbre de travail avant une garde',
+  },
+  {
+    famille: 'outillage_commande_integree',
+    point: 'point 6 — commande intégrée de pnpm prise pour un script',
+  },
+  {
+    famille: 'outillage_environnement_herite',
+    point: 'point 7 — environnement hérité par ce qui lance l’outil',
+  },
+] as const;
+
+export type FamilleDeLOutillage = (typeof POINTS_DE_L_OUTILLAGE)[number]['famille'];
 
 export const FAMILLES = [
   'use_server_export_interdit',
@@ -256,6 +317,7 @@ export const FAMILLES = [
   'script_repointe',
   'porte_a_illisible',
   'perimetre_vide_sans_motif',
+  ...POINTS_DE_L_OUTILLAGE.map((p) => p.famille),
 ] as const;
 
 /**
@@ -1268,6 +1330,556 @@ export function lignesDeLaPorteA(c: ConfrontationDeLaPorteA): string[] {
   ];
 }
 
+// ── l'outillage qui EXÉCUTE la porte A : sept points (GOV-062, REQ-QA-013, REQ-GOV-010) ─────
+
+/**
+ * LE CONSTAT DE L'OUTILLAGE. Comme `PorteFigee`, ce n'est pas une seconde source : c'est ce que le
+ * dépôt porte, relevé, et confronté à lui à chaque exécution. Changer l'outillage se fait donc en
+ * DEUX endroits, dans le même diff, et le diff de ce constat est ce qu'un relecteur lit.
+ */
+export interface OutillageFige {
+  /** Les clés de PREMIER NIVEAU de `package.json` — ni plus, ni moins (point 1). */
+  readonly clesDuPaquet: readonly string[];
+  /** Le verrou : ses clés de premier niveau et ses lignes de réglage, telles qu'écrites (point 1). */
+  readonly verrou: { readonly cles: readonly string[]; readonly reglages: readonly string[] };
+  /**
+   * LES ACTIONS TIERCES ADMISES (point 4), par la référence exacte que le workflow écrit. Chacune
+   * porte le commit que sa référence désignait le jour du relevé, et son mode d'exécution lu dans
+   * son `action.yml` à ce commit : `docker` — une action qui embarque sa propre image — est refusé.
+   */
+  readonly actions: Readonly<
+    Record<string, { readonly commit: string; readonly execution: string; readonly releve: string }>
+  >;
+}
+
+/** Les chemins de l'outillage que la charte doit RÉSERVER (point 2) ; un dossier finit par `/`. */
+export const CHEMINS_DE_L_OUTILLAGE = ['package.json', 'pnpm-lock.yaml', 'patches/'] as const;
+/**
+ * Un chemin réservé tel que `cheminsReserves` le rend COUVRE-t-il ce fichier ? Le prédicat de `gov:pr`
+ * (`touche`, `scripts/lot/revues.ts`), réécrit ici parce que l'importer ferait de cette garde un
+ * importeur de `revues.ts`, donc un membre de la garde des revues. La seconde écriture est CONFRONTÉE à
+ * la première par `tests/unit/gouvernance/outillage-de-la-porte-a.spec.ts`, sur les formes limites.
+ */
+export function reserveCouvre(reserve: string, fichier: string): boolean {
+  const c = reserve.replace(/\/$/, '');
+  return fichier === reserve || fichier === c || fichier.startsWith(c + '/');
+}
+/** La charte dont le §7 réserve ces chemins — lue par `cheminsReserves`, le lecteur de `gov:pr`. */
+export const CHEMIN_DE_LA_CHARTE = 'docs/CHARTE-AGENTS.md';
+export const CHEMIN_DU_VERROU = 'pnpm-lock.yaml';
+/** Le dossier où pnpm range les correctifs de `pnpm patch-commit` (point 3). */
+export const DOSSIER_DES_CORRECTIFS = 'patches/';
+/** Les clés de `package.json` qui corrigent une dépendance ou surchargent sa version (point 3). */
+export const CLES_DE_SURCHARGE_DU_PAQUET = ['overrides', 'resolutions', 'pnpm'] as const;
+/** Les clés du verrou qui portent une surcharge, un correctif ou l'empreinte d'un `.pnpmfile.cjs`. */
+export const CLES_DE_SURCHARGE_DU_VERROU = [
+  'overrides',
+  'patchedDependencies',
+  'pnpmfileChecksum',
+  'packageExtensionsChecksum',
+] as const;
+/** La seule installation admise : elle fige ce qui s'installe au verrou. */
+export const INSTALLATION_DE_LA_PORTE_A = 'pnpm install --frozen-lockfile';
+
+/**
+ * CE QUI RÉÉCRIT L'ARBRE DE TRAVAIL (point 5) : les drapeaux d'écriture des outils du dépôt
+ * (`--write`/`-w` de Prettier, `--fix` d'ESLint, `--render`/`--rendre`/`--ecrire…` des vues de ce
+ * dépôt) et les sous-commandes de git qui changent l'arbre ou l'index. ⚠️ C'est une LISTE, donc une
+ * limite : un code qui écrit sans drapeau, depuis l'intérieur d'un script, n'est pas vu ici.
+ */
+const ECRIT_L_ARBRE =
+  /(?:^|\s)(?:--write|-w|--fix|--render|--rendre|--ecrire[\w-]*)(?=[\s=]|$)|\bgit\s+(?:-\S+\s+)*(?:checkout|switch|reset|restore|stash|apply|am|clean|pull|merge|rebase|cherry-pick|rm|mv|commit|submodule|worktree)\b/;
+
+/**
+ * UNE VARIABLE QUI CONFIGURE LE LANCEUR (point 7) : tout réglage npm/pnpm passé par
+ * l'environnement (`npm_config_*`, `pnpm_config_*`, quelle que soit la casse), `NODE_OPTIONS` (un
+ * `--require` y charge du code avant l'outil), `NODE_PATH`, et les réglages de Corepack. Une seule
+ * définition, lue par la garde ET par le témoin qui lance l'outil (`environnementDuTemoin`).
+ */
+const VARIABLE_DU_LANCEUR = /^(?:(?:npm|pnpm)_config_.+|node_options|node_path|corepack_.+)$/i;
+
+export function estUneVariableDuLanceur(nom: string): boolean {
+  return VARIABLE_DU_LANCEUR.test(nom);
+}
+
+/**
+ * L'ENVIRONNEMENT D'UN TÉMOIN QUI LANCE L'OUTIL : celui qu'il hérite, MOINS chaque variable du
+ * lanceur. Un témoin qui hérite `npm_config_script_shell` ou `NODE_OPTIONS` du poste mesure le
+ * lanceur du poste, pas celui de la porte A.
+ */
+export function environnementDuTemoin(
+  herite: Readonly<Record<string, string | undefined>>
+): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [k, v] of Object.entries(herite)) {
+    if (v !== undefined && !estUneVariableDuLanceur(k)) out[k] = v;
+  }
+  return out;
+}
+
+/** Les fichiers par lesquels une étape écrit l'environnement ou le `PATH` des étapes SUIVANTES. */
+const ECRIT_L_ENVIRONNEMENT_SUIVANT = /\bGITHUB_(?:ENV|PATH)\b/;
+
+/**
+ * Le verrou lu À LA LETTRE, sans analyseur : ses clés de premier niveau, et ses lignes de réglage —
+ * une valeur écrite sur la ligne d'une clé de premier niveau, ou une ligne du bloc `settings:`.
+ */
+export function lireLeVerrou(texte: string): { cles: string[]; reglages: string[] } {
+  const cles: string[] = [];
+  const reglages: string[] = [];
+  let bloc: string | null = null;
+  for (const ligne of texte.split(/\r?\n/)) {
+    const haut = /^([A-Za-z][\w-]*):(.*)$/.exec(ligne);
+    if (haut) {
+      bloc = haut[1]!;
+      cles.push(bloc);
+      const valeur = haut[2]!.trim();
+      if (valeur !== '') reglages.push(`${bloc}: ${valeur}`);
+    } else if (bloc === 'settings' && /^\s+\S/.test(ligne)) {
+      reglages.push(`settings.${ligne.trim()}`);
+    }
+  }
+  return { cles, reglages };
+}
+
+export interface PointConfronte {
+  readonly famille: FamilleDeLOutillage;
+  readonly point: string;
+  /** Le point a-t-il RÉELLEMENT été confronté ? Faux quand sa source n'est pas suivie. */
+  readonly confronte: boolean;
+  /** Ce que le point a lu, compté — ou, s'il n'est pas confronté, pourquoi. */
+  readonly lu: string;
+}
+
+export interface ConfrontationDeLOutillage {
+  readonly points: readonly PointConfronte[];
+  /** Le nombre de points RÉELLEMENT confrontés — le compte que le vert imprime. */
+  readonly confrontes: number;
+  readonly fautes: readonly Faute[];
+}
+
+/** Les commandes d'un départ, plus la VALEUR de chaque script qu'elles nomment, et ses `pre`/`post`. */
+function commandesSuivies(
+  depart: readonly string[],
+  scripts: Readonly<Record<string, string>>
+): string[] {
+  const out = [...depart];
+  const file = [...depart];
+  const vus = new Set<string>();
+  while (file.length > 0) {
+    for (const s of commandesNommees(file.pop()!).scripts) {
+      for (const n of [`pre${s}`, s, `post${s}`]) {
+        if (vus.has(n) || !Object.hasOwn(scripts, n)) continue;
+        vus.add(n);
+        out.push(scripts[n]!);
+        file.push(scripts[n]!);
+      }
+    }
+  }
+  return out;
+}
+
+/** Le mot qu'une commande `pnpm …` donne à pnpm, s'il en donne un : son premier mot hors option. */
+function motsPnpm(commande: string): { mot: string; segment: string }[] {
+  const out: { mot: string; segment: string }[] = [];
+  for (const segment of commande.split(/\r?\n|&&|\|\||[;|&()]/)) {
+    const mots = segment.trim().split(/\s+/).filter(Boolean);
+    let i = 0;
+    while (i < mots.length && /^[A-Za-z_][A-Za-z0-9_]*=/.test(mots[i]!)) i++;
+    if (mots[i] !== 'pnpm') continue;
+    const mot = mots.slice(i + 1).find((m) => !m.startsWith('-'));
+    if (mot !== undefined) out.push({ mot, segment: segment.trim() });
+  }
+  return out;
+}
+
+/**
+ * LES SEPT POINTS DE L'OUTILLAGE, CONFRONTÉS (REQ-QA-013, REQ-GOV-010). La porte A est gardée
+ * étape par étape (`confronterLaPorteA`) ; ce qui la FAIT TOURNER ne l'était pas :
+ *   1. le réglage du gestionnaire posé au niveau du projet — les clés de premier niveau de
+ *      `package.json` et les réglages du verrou, figés (les fichiers `.npmrc`, `pnpm-workspace.yaml`,
+ *      `.pnpmfile.cjs` et la clé `pnpm` de la racine restent jugés par `porte_a_alteree`) ;
+ *   2. les chemins de l'outillage — `package.json`, le verrou, les correctifs — RÉSERVÉS au §7 de
+ *      la charte, lus par le lecteur même de `gov:pr` (`cheminsReserves`), et le prédicat de `touche` (`reserveCouvre`) ;
+ *   3. les dépendances corrigées et les surcharges de version : clés de `package.json` et du verrou,
+ *      fichiers suivis sous `patches/` — figés ABSENTS ;
+ *   4. les actions tierces du workflow de la porte A : au relevé, aucune image embarquée
+ *      (`docker://`, action `docker`, `container:`, `services:`), aucun workflow tiers réutilisé ;
+ *   5. une étape qui réécrit l'arbre avant une garde : aucune action appelée après la première
+ *      commande, aucune commande — suivie à travers `package.json` et les crochets d'installation —
+ *      qui porte un drapeau d'écriture ;
+ *   6. une commande intégrée de pnpm prise pour un script : un script qui en porte le nom, ou une
+ *      étape qui en lance une hors de l'installation figée et de `test` ;
+ *   7. l'environnement hérité : aucune variable du lanceur dans un `env:` du workflow, et aucun
+ *      code ni script qui écrive l'environnement des étapes suivantes (`GITHUB_ENV`, `GITHUB_PATH`).
+ * Un point dont la source n'est pas SUIVIE n'est pas compté et le rendu le dit : jamais « tout est
+ * gardé ». Un constat absent, un `package.json` ou un workflow illisible : refus NOMMÉ, point par point.
+ */
+export async function confronterLOutillage(vue: Vue): Promise<ConfrontationDeLOutillage> {
+  const fautes: Faute[] = [];
+  const lus = new Map<FamilleDeLOutillage, { confronte: boolean; lu: string }>();
+  const libelleDe = (f: FamilleDeLOutillage): string =>
+    POINTS_DE_L_OUTILLAGE.find((p) => p.famille === f)!.point;
+  const refuser = (f: FamilleDeLOutillage, message: string): void => {
+    fautes.push({ famille: f, message: `${libelleDe(f)} : ${message}` });
+  };
+  const rendre = (): ConfrontationDeLOutillage => {
+    const points = POINTS_DE_L_OUTILLAGE.map((p) => ({
+      famille: p.famille,
+      point: p.point,
+      ...(lus.get(p.famille) ?? { confronte: false, lu: 'non lu' }),
+    }));
+    return { points, confrontes: points.filter((p) => p.confronte).length, fautes };
+  };
+  const refuserTout = (pourquoi: string): ConfrontationDeLOutillage => {
+    for (const p of POINTS_DE_L_OUTILLAGE) {
+      refuser(p.famille, `${pourquoi} : on ne déclare pas gardé ce qu'on n'a pas lu.`);
+      lus.set(p.famille, { confronte: false, lu: pourquoi });
+    }
+    return rendre();
+  };
+
+  const fige = vue.outillage;
+  if (fige === undefined)
+    return refuserTout('aucun constat de l’outillage n’est fourni à la garde');
+  let pkg: Record<string, unknown>;
+  try {
+    const lu: unknown = JSON.parse(vue.packageJson || '{}');
+    pkg = estObjet(lu) ? lu : {};
+  } catch {
+    return refuserTout('`package.json` est illisible');
+  }
+  const scripts = scriptsDuPaquet(vue.packageJson);
+  const fichier = vue.workflows.find((w) => w.chemin === WORKFLOW_DE_LA_PORTE_A);
+  let workflow: unknown;
+  try {
+    workflow = fichier === undefined ? undefined : await lireYaml(fichier.source);
+  } catch {
+    workflow = undefined;
+  }
+  if (!estObjet(workflow)) {
+    return refuserTout(`\`${WORKFLOW_DE_LA_PORTE_A}\` n'est pas suivi, ou il est illisible`);
+  }
+  const suivis = new Set(vue.fichiersSuivis);
+  const verrouSuivi = suivis.has(CHEMIN_DU_VERROU) && (vue.verrou ?? '') !== '';
+  const verrou = verrouSuivi ? lireLeVerrou(vue.verrou!) : { cles: [], reglages: [] };
+  const aRetenir =
+    'Si le changement est VOULU, fige-le dans `OUTILLAGE_FIGE` ' +
+    '(`scripts/gates/gov-conventions.ts`), dans le même diff.';
+  const surchargeDuVerrou = (cle: string): boolean =>
+    (CLES_DE_SURCHARGE_DU_VERROU as readonly string[]).includes(cle);
+
+  // ── 1. le réglage du gestionnaire posé au niveau du projet ──
+  {
+    const f = 'outillage_reglage_du_gestionnaire' as const;
+    const surchargeDuPaquet = (k: string): boolean =>
+      (CLES_DE_SURCHARGE_DU_PAQUET as readonly string[]).includes(k);
+    const cles = Object.keys(pkg).filter((k) => !surchargeDuPaquet(k));
+    for (const k of cles.filter((k) => !fige.clesDuPaquet.includes(k))) {
+      refuser(
+        f,
+        `\`package.json\` porte la clé de premier niveau \`${k}\`, que le constat ignore. pnpm lit ` +
+          `le manifeste de la racine pour TOUTES les étapes : une clé ajoutée peut changer ce que ` +
+          `chacune exécute sans toucher au workflow. ${aRetenir}`
+      );
+    }
+    for (const k of fige.clesDuPaquet.filter((k) => !Object.hasOwn(pkg, k))) {
+      refuser(
+        f,
+        `\`package.json\` ne porte plus la clé \`${k}\`, que le constat fige. ${aRetenir}`
+      );
+    }
+    if (verrouSuivi) {
+      for (const k of verrou.cles.filter((k) => !surchargeDuVerrou(k))) {
+        if (!fige.verrou.cles.includes(k)) {
+          refuser(
+            f,
+            `\`${CHEMIN_DU_VERROU}\` porte la clé \`${k}\`, que le constat ignore. ${aRetenir}`
+          );
+        }
+      }
+      for (const k of fige.verrou.cles.filter((k) => !verrou.cles.includes(k))) {
+        refuser(f, `\`${CHEMIN_DU_VERROU}\` ne porte plus la clé \`${k}\`. ${aRetenir}`);
+      }
+      const reglages = verrou.reglages.filter((r) => !surchargeDuVerrou(r.split(':')[0]!));
+      const ajoutes = reglages.filter((r) => !fige.verrou.reglages.includes(r));
+      const retires = fige.verrou.reglages.filter((r) => !reglages.includes(r));
+      if (ajoutes.length > 0 || retires.length > 0) {
+        refuser(
+          f,
+          `les réglages de \`${CHEMIN_DU_VERROU}\` ne sont plus ceux du constat — lus en plus : ` +
+            `${JSON.stringify(ajoutes)}, absents : ${JSON.stringify(retires)}. Un réglage écrit au ` +
+            `verrou dit comment le gestionnaire a résolu TOUT l'arbre installé. ${aRetenir}`
+        );
+      }
+    }
+    lus.set(f, {
+      confronte: true,
+      lu:
+        `${Object.keys(pkg).length} clé(s) de premier niveau de \`package.json\`, ` +
+        (verrouSuivi
+          ? `${verrou.cles.length} clé(s) et ${verrou.reglages.length} ligne(s) de réglage du verrou`
+          : `verrou NON suivi, donc non lu — \`${INSTALLATION_DE_LA_PORTE_A}\` le refuse absent`),
+    });
+  }
+
+  // ── 2. les chemins de l'outillage, réservés au §7 de la charte ──
+  {
+    const f = 'outillage_chemin_non_reserve' as const;
+    if (suivis.has(CHEMIN_DE_LA_CHARTE) && (vue.charte ?? '') !== '') {
+      const reserves = cheminsReserves(vue.charte!);
+      for (const chemin of CHEMINS_DE_L_OUTILLAGE) {
+        const sonde = chemin.endsWith('/') ? `${chemin}exemple.patch` : chemin;
+        if (reserves.some((r) => r.chemins.some((c) => reserveCouvre(c, sonde)))) continue;
+        refuser(
+          f,
+          `\`${chemin}\` n'est réservé par aucune ligne du §7 de \`${CHEMIN_DE_LA_CHARTE}\` que ` +
+            `\`gov:pr\` sache lire (éprouvé sur \`${sonde}\`). Une PR qui le change changerait ce ` +
+            `que TOUTES les étapes exécutent sans exiger le label d'aucun poste. Un dossier ` +
+            `s'écrit \`dossier/**\` : \`dossier/*\` ne couvre rien.`
+        );
+      }
+      lus.set(f, {
+        confronte: true,
+        lu: `${CHEMINS_DE_L_OUTILLAGE.length} chemin(s) éprouvé(s) contre ${reserves.length} ligne(s) réservée(s) du §7`,
+      });
+    } else {
+      lus.set(f, {
+        confronte: false,
+        lu: `\`${CHEMIN_DE_LA_CHARTE}\` n'est pas suivi — \`gov:pr\`, qui le lit, refuse alors de juger`,
+      });
+    }
+  }
+
+  // ── 3. les dépendances corrigées et les surcharges de version ──
+  {
+    const f = 'outillage_correctif_ou_surcharge' as const;
+    for (const k of CLES_DE_SURCHARGE_DU_PAQUET.filter((k) => Object.hasOwn(pkg, k))) {
+      refuser(
+        f,
+        `\`package.json\` porte la clé \`${k}\` : elle remplace la version, ou le code, d'une ` +
+          `dépendance que le verrou ne dit plus seul. Le constat la fige ABSENTE.`
+      );
+    }
+    for (const k of verrou.cles.filter(surchargeDuVerrou)) {
+      refuser(
+        f,
+        `\`${CHEMIN_DU_VERROU}\` porte la section \`${k}\` : une dépendance y est corrigée ou ` +
+          `surchargée. Le constat la fige ABSENTE.`
+      );
+    }
+    const correctifs = vue.fichiersSuivis.filter((c) => reserveCouvre(DOSSIER_DES_CORRECTIFS, c));
+    for (const c of correctifs) {
+      refuser(
+        f,
+        `\`${c}\` est un correctif suivi : \`pnpm install\` l'applique au code d'une dépendance ` +
+          `avant toutes les gardes. Le constat fige \`${DOSSIER_DES_CORRECTIFS}\` VIDE.`
+      );
+    }
+    lus.set(f, {
+      confronte: true,
+      lu:
+        `${CLES_DE_SURCHARGE_DU_PAQUET.length} clé(s) de \`package.json\`, ` +
+        `${verrouSuivi ? `${CLES_DE_SURCHARGE_DU_VERROU.length} section(s) du verrou` : 'verrou NON suivi'}, ` +
+        `${vue.fichiersSuivis.length} fichier(s) suivi(s) confrontés à \`${DOSSIER_DES_CORRECTIFS}\``,
+    });
+  }
+
+  const jobs = estObjet(workflow.jobs) ? workflow.jobs : {};
+  const nomDuJob = vue.porteA?.job ?? PORTE_A_FIGEE.job;
+  const job = jobs[nomDuJob];
+  const etapes: Record<string, unknown>[] =
+    estObjet(job) && Array.isArray(job.steps) ? job.steps.filter(estObjet) : [];
+
+  // ── 4. les actions tierces du workflow de la porte A ──
+  {
+    const f = 'outillage_action_tierce' as const;
+    const appelees = new Set<string>();
+    let appels = 0;
+    for (const [nom, j] of Object.entries(jobs)) {
+      if (!estObjet(j)) continue;
+      for (const cle of ['container', 'services'] as const) {
+        if (Object.hasOwn(j, cle)) {
+          refuser(
+            f,
+            `le job \`${nom}\` porte \`${cle}:\` : il exécute ses étapes dans une IMAGE que rien ne lit.`
+          );
+        }
+      }
+      if (typeof j.uses === 'string' && !j.uses.startsWith('./')) {
+        refuser(f, `le job \`${nom}\` réutilise le workflow tiers \`${j.uses}\`, que rien ne lit.`);
+      }
+      for (const e of Array.isArray(j.steps) ? j.steps.filter(estObjet) : []) {
+        if (typeof e.uses !== 'string') continue;
+        const uses = e.uses.trim();
+        if (uses.startsWith('./')) continue;
+        appels += 1;
+        appelees.add(uses);
+        if (uses.startsWith('docker://')) {
+          refuser(
+            f,
+            `\`${uses}\` embarque sa propre IMAGE : le code qu'elle exécute ne se lit nulle part.`
+          );
+          continue;
+        }
+        const releve = Object.hasOwn(fige.actions, uses) ? fige.actions[uses] : undefined;
+        if (releve === undefined) {
+          refuser(
+            f,
+            `\`${uses}\` (job \`${nom}\`) n'est pas au relevé des actions admises : ni son commit ni ` +
+              `son mode d'exécution n'ont été lus sur la forge. ${aRetenir}`
+          );
+        } else if (!/^(?:node\d+|composite)$/.test(releve.execution)) {
+          refuser(
+            f,
+            `\`${uses}\` s'exécute en \`${releve.execution}\` : une action qui embarque sa propre ` +
+              `image exécute un code que rien ne lit.`
+          );
+        }
+      }
+    }
+    for (const uses of Object.keys(fige.actions).filter((u) => !appelees.has(u))) {
+      refuser(f, `\`${uses}\` est au relevé et n'est plus appelée : une entrée morte. ${aRetenir}`);
+    }
+    lus.set(f, {
+      confronte: true,
+      lu: `${appels} appel(s) d'action lu(s) dans ${Object.keys(jobs).length} job(s), ${Object.keys(fige.actions).length} action(s) au relevé`,
+    });
+  }
+
+  // ── 5. une étape qui réécrit l'arbre avant une garde ──
+  {
+    const f = 'outillage_etape_amont_ecrivante' as const;
+    let premiereCommande: number | null = null;
+    let commandes = 0;
+    for (const [i, e] of etapes.entries()) {
+      const nom = nomDEtape(e);
+      if (typeof e.uses === 'string' && premiereCommande !== null) {
+        refuser(
+          f,
+          `l'étape « ${nom} » appelle une action APRÈS la première commande du job : elle peut ` +
+            `réécrire l'arbre que les gardes suivantes mesurent. Les actions précèdent toute commande.`
+        );
+      }
+      if (typeof e.run !== 'string') continue;
+      premiereCommande ??= i;
+      const run = e.run.trim();
+      const crochets = run === INSTALLATION_DE_LA_PORTE_A ? [...CROCHETS_D_INSTALLATION] : [];
+      const depart = [
+        run,
+        ...crochets.filter((c) => Object.hasOwn(scripts, c)).map((c) => scripts[c]!),
+      ];
+      for (const c of commandesSuivies(depart, scripts)) {
+        commandes += 1;
+        if (!ECRIT_L_ARBRE.test(c)) continue;
+        refuser(
+          f,
+          `l'étape « ${nom} » exécute \`${c}\`, qui RÉÉCRIT l'arbre de travail : les gardes qui la ` +
+            `suivent mesurent l'arbre réécrit, pas celui de la PR.`
+        );
+      }
+    }
+    lus.set(f, {
+      confronte: etapes.length > 0,
+      lu: `${etapes.length} étape(s) du job \`${nomDuJob}\`, ${commandes} commande(s) suivie(s) à travers \`package.json\``,
+    });
+  }
+
+  // ── 6. une commande intégrée de pnpm prise pour un script ──
+  {
+    const f = 'outillage_commande_integree' as const;
+    const masque = (n: string): boolean =>
+      COMMANDES_INTEGREES_DE_PNPM.has(n) && !SCRIPTS_LANCES_PAR_LEUR_COMMANDE_INTEGREE.has(n);
+    for (const n of Object.keys(scripts).filter(masque)) {
+      refuser(
+        f,
+        `le script \`${n}\` de \`package.json\` porte le nom d'une commande intégrée : ` +
+          `\`pnpm ${n}\` exécute la commande, jamais le script. Renommez-le.`
+      );
+    }
+    let lancees = 0;
+    for (const e of etapes) {
+      if (typeof e.run !== 'string') continue;
+      for (const c of commandesSuivies([e.run.trim()], scripts)) {
+        for (const { mot, segment } of motsPnpm(c)) {
+          lancees += 1;
+          if (segment === INSTALLATION_DE_LA_PORTE_A) continue;
+          if (mot === 'run' || mot === 'run-script' || !masque(mot)) continue;
+          refuser(
+            f,
+            `l'étape « ${nomDEtape(e)} » exécute \`${segment}\` : \`${mot}\` est une commande ` +
+              `intégrée de pnpm, pas un script du dépôt — son statut n'est celui d'aucune garde.`
+          );
+        }
+      }
+    }
+    lus.set(f, {
+      confronte: true,
+      lu: `${Object.keys(scripts).length} script(s) de \`package.json\`, ${lancees} lancement(s) \`pnpm\` des étapes`,
+    });
+  }
+
+  // ── 7. l'environnement hérité par ce qui lance l'outil ──
+  {
+    const f = 'outillage_environnement_herite' as const;
+    const envs: { ou: string; env: unknown }[] = [{ ou: 'le workflow', env: workflow.env }];
+    for (const [nom, j] of Object.entries(jobs)) {
+      if (!estObjet(j)) continue;
+      envs.push({ ou: `le job \`${nom}\``, env: j.env });
+      for (const e of Array.isArray(j.steps) ? j.steps.filter(estObjet) : []) {
+        envs.push({ ou: `l'étape « ${nomDEtape(e)} »`, env: e.env });
+      }
+    }
+    let variables = 0;
+    for (const { ou, env } of envs) {
+      if (!estObjet(env)) continue;
+      for (const k of Object.keys(env)) {
+        variables += 1;
+        if (!estUneVariableDuLanceur(k)) continue;
+        refuser(
+          f,
+          `${ou} pose \`${k}\` : une variable du lanceur change ce que CHAQUE \`pnpm <script>\` ` +
+            `exécute — un shell, un \`--require\`, un réglage —, et aucun constat ne la rend sûre.`
+        );
+      }
+    }
+    const ecrivains = [
+      ...vue.sources
+        .filter((s) => ECRIT_L_ENVIRONNEMENT_SUIVANT.test(s.source))
+        .map((s) => `\`${s.chemin}\``),
+      ...Object.entries(scripts)
+        .filter(([, v]) => ECRIT_L_ENVIRONNEMENT_SUIVANT.test(v))
+        .map(([n]) => `le script \`${n}\``),
+      ...etapes
+        .filter((e) => typeof e.run === 'string' && ECRIT_L_ENVIRONNEMENT_SUIVANT.test(e.run))
+        .map((e) => `l'étape « ${nomDEtape(e)} »`),
+    ];
+    for (const ou of ecrivains) {
+      refuser(
+        f,
+        `${ou} nomme \`GITHUB_ENV\` ou \`GITHUB_PATH\` : écrire ce fichier pose une variable, ou un ` +
+          `binaire, dans l'environnement de TOUTES les étapes suivantes, hors de tout \`env:\` figé.`
+      );
+    }
+    lus.set(f, {
+      confronte: true,
+      lu:
+        `${envs.length} niveau(x) d'\`env:\`, ${variables} variable(s) lue(s), ` +
+        `${vue.sources.length} source(s) et ${Object.keys(scripts).length} script(s) confrontés à GITHUB_ENV/GITHUB_PATH`,
+    });
+  }
+
+  return rendre();
+}
+
+/** Le décompte de l'outillage, RENDU : le compte DÉRIVÉ, et ce que chaque point a lu — ou pas. */
+export function lignesDeLOutillage(c: ConfrontationDeLOutillage): string[] {
+  return [
+    `OUTILLAGE — ${c.confrontes} point(s) sur ${c.points.length} confronté(s) à leur constat :`,
+    ...c.points.map((p) => `   • ${p.point} : ${p.confronte ? p.lu : `NON confronté — ${p.lu}`}`),
+  ];
+}
+
 // ── le périmètre, dit et compté ──────────────────────────────────────────────────────────────
 
 export interface PerimetreVu extends Perimetre {
@@ -1925,6 +2537,9 @@ export function lireVue(): Vue {
     perimetres: PERIMETRES_DECLARES,
     passifSansScript: PASSIF_SANS_SCRIPT,
     porteA: PORTE_A_FIGEE,
+    outillage: OUTILLAGE_FIGE,
+    charte: lire(CHEMIN_DE_LA_CHARTE),
+    verrou: lire(CHEMIN_DU_VERROU),
   };
 }
 
@@ -2307,6 +2922,54 @@ export const PORTE_A_FIGEE: PorteFigee = {
   gestionnaire: GESTIONNAIRE_RELEVE,
 };
 
+/**
+ * LE CONSTAT DE L'OUTILLAGE (GOV-062), relevé sur `package.json`, `pnpm-lock.yaml` et
+ * `.github/workflows/ci.yml` le 2026-09-29. Les actions tierces ont été relevées sur la forge ce
+ * jour-là : `gh api repos/<dépôt>/git/ref/tags/v4` (l'étiquette annotée de `pnpm/action-setup`
+ * déréférencée par `git/tags/<sha>`), puis `runs.using` lu dans `action.yml` à ce commit.
+ * ⚠️ LIMITE : une étiquette se déplace. Ce relevé dit ce qu'elle désignait, la garde ne peut pas
+ * vérifier hors ligne qu'elle le désigne encore ; épingler le workflow au commit fermerait ce trou.
+ */
+export const OUTILLAGE_FIGE: OutillageFige = {
+  clesDuPaquet: [
+    'name',
+    'version',
+    'private',
+    'description',
+    'license',
+    'packageManager',
+    'engines',
+    'scripts',
+    'devDependencies',
+    'dependencies',
+  ],
+  verrou: {
+    cles: ['lockfileVersion', 'settings', 'importers', 'packages', 'snapshots'],
+    reglages: [
+      "lockfileVersion: '9.0'",
+      'settings.autoInstallPeers: true',
+      'settings.excludeLinksFromLockfile: false',
+    ],
+  },
+  actions: {
+    'actions/checkout@v4': {
+      commit: '11d5960a326750d5838078e36cf38b85af677262',
+      execution: 'node20',
+      releve: '2026-09-29',
+    },
+    'pnpm/action-setup@v4': {
+      commit: 'b906affcce14559ad1aafd4ab0e942779e9f58b1',
+      execution: 'node20',
+      releve: '2026-09-29',
+    },
+    'actions/setup-node@v4': {
+      commit: '49933ea5288caeca8642d1e84afbd3f7d6820020',
+      execution: 'node20',
+      releve: '2026-09-29',
+    },
+  },
+};
+
 export const PASSIF_SANS_SCRIPT: Readonly<Record<string, string>> = {
   detectPii:
     'tâche porteuse livrée ; la tâche du harnais MCP, livrée elle aussi, déclarait ce chemin dans ' +
@@ -2349,6 +3012,18 @@ const PKG_CONFORME = JSON.stringify({
   },
   devDependencies: { eslint: '^9.36.0', prettier: '^3.6.2' },
 });
+
+/** Le verrou de la vue de référence : ses réglages, sans surcharge ni correctif. */
+const VERROU_CONFORME =
+  "lockfileVersion: '9.0'\n\nsettings:\n  autoInstallPeers: true\n" +
+  '  excludeLinksFromLockfile: false\n\nimporters:\n\n  .: {}\n';
+
+/** Le §7 de la charte de la vue de référence : les chemins de l'outillage, réservés. */
+const CHARTE_CONFORME =
+  '## 7. Fichiers réservés\n\n| Chemin réservé | Poste | Label exigé | Où la règle est écrite |\n' +
+  '| --- | --- | --- | --- |\n' +
+  '| `package.json`, `pnpm-lock.yaml`, `patches/**` | A02 | `role:architecte` | constat |\n\n' +
+  '## 8. Suite\n';
 
 /** Le constat de la porte A de la vue de référence : les trois étapes de `CI_CONFORME`, figées. */
 export const PORTE_CONFORME: PorteFigee = {
@@ -2416,11 +3091,27 @@ export const VUE_CONFORME: Vue = {
   ],
   perimetres: PERIMETRES_DECLARES,
   porteA: PORTE_CONFORME,
+  outillage: {
+    clesDuPaquet: Object.keys(JSON.parse(PKG_CONFORME) as Record<string, unknown>),
+    verrou: lireLeVerrou(VERROU_CONFORME),
+    actions: {},
+  },
 };
 
 function variante(patch: Partial<Vue>): Vue {
   return { ...VUE_CONFORME, ...patch };
 }
+
+/**
+ * La vue de référence de l'OUTILLAGE : la vue conforme, plus la charte et le verrou SUIVIS. Sur
+ * elle, les sept points sont confrontés et aucun ne rougit ; chaque témoin en dérive par UNE
+ * variation (RM-11).
+ */
+export const VUE_OUTILLAGE_CONFORME: Vue = variante({
+  charte: CHARTE_CONFORME,
+  verrou: VERROU_CONFORME,
+  fichiersSuivis: [...VUE_CONFORME.fichiersSuivis, CHEMIN_DE_LA_CHARTE, CHEMIN_DU_VERROU],
+});
 
 const TEMOINS: ReadonlyArray<{ famille: string; libelle: string; vue: Vue }> = [
   {
@@ -3159,7 +3850,165 @@ const CONTRE_TEMOINS_PORTE_A: ReadonlyArray<{ libelle: string; vue: Vue }> = [
   },
 ];
 
+/**
+ * LES TÉMOINS DE L'OUTILLAGE (GOV-062) : chacun dérive `VUE_OUTILLAGE_CONFORME` d'UNE variation, et
+ * la confrontation doit rougir la famille de son point. Au moins un par point.
+ */
+const OUTIL_EN = (patch: Partial<Vue>): Vue => ({ ...VUE_OUTILLAGE_CONFORME, ...patch });
+const OUTIL_CI = (de: string, par: string): Vue =>
+  OUTIL_EN({
+    workflows: [{ chemin: WORKFLOW_DE_LA_PORTE_A, source: CI_CONFORME.replace(de, par) }],
+  });
+const OUTIL_PKG = (plus: Record<string, unknown>): Vue =>
+  OUTIL_EN({
+    packageJson: JSON.stringify({ ...(JSON.parse(PKG_CONFORME) as object), ...plus }),
+  });
+const TEMOINS_OUTILLAGE: ReadonlyArray<{
+  famille: FamilleDeLOutillage;
+  libelle: string;
+  vue: Vue;
+}> = [
+  {
+    famille: 'outillage_reglage_du_gestionnaire',
+    libelle: 'un réglage du verrou changé au niveau du projet',
+    vue: OUTIL_EN({
+      verrou: VERROU_CONFORME.replace(
+        'excludeLinksFromLockfile: false',
+        'excludeLinksFromLockfile: true'
+      ),
+    }),
+  },
+  {
+    famille: 'outillage_reglage_du_gestionnaire',
+    libelle: 'une clé de premier niveau ajoutée à `package.json`',
+    vue: OUTIL_PKG({ type: 'module' }),
+  },
+  {
+    famille: 'outillage_chemin_non_reserve',
+    libelle: 'le dossier des correctifs retiré des chemins réservés',
+    vue: OUTIL_EN({ charte: CHARTE_CONFORME.replace(', `patches/**`', '') }),
+  },
+  {
+    famille: 'outillage_chemin_non_reserve',
+    libelle: 'un dossier écrit `patches/*`, forme que `gov:pr` ne sait pas lire',
+    vue: OUTIL_EN({ charte: CHARTE_CONFORME.replace('`patches/**`', '`patches/*`') }),
+  },
+  {
+    famille: 'outillage_correctif_ou_surcharge',
+    libelle: 'une surcharge de version par `resolutions`',
+    vue: OUTIL_PKG({ resolutions: { eslint: '9.0.0' } }),
+  },
+  {
+    famille: 'outillage_correctif_ou_surcharge',
+    libelle: 'un correctif suivi sous `patches/`',
+    vue: OUTIL_EN({
+      fichiersSuivis: [...VUE_OUTILLAGE_CONFORME.fichiersSuivis, 'patches/eslint.patch'],
+    }),
+  },
+  {
+    famille: 'outillage_action_tierce',
+    libelle: 'une action qui embarque sa propre image',
+    vue: OUTIL_CI('      - name: Lint\n', '      - uses: docker://alpine:3\n      - name: Lint\n'),
+  },
+  {
+    famille: 'outillage_action_tierce',
+    libelle: 'une action hors du relevé',
+    vue: OUTIL_CI(
+      '      - name: Lint\n',
+      '      - uses: actions/checkout@main\n      - name: Lint\n'
+    ),
+  },
+  {
+    famille: 'outillage_etape_amont_ecrivante',
+    libelle: 'une commande qui réécrit l’arbre avant une garde',
+    vue: OUTIL_CI('        run: pnpm lint\n', '        run: pnpm lint --fix\n'),
+  },
+  {
+    famille: 'outillage_etape_amont_ecrivante',
+    libelle: 'une action appelée après la première commande',
+    vue: OUTIL_CI(
+      '      - name: Conventions transposees\n',
+      '      - uses: ./.github/actions/maj\n      - name: Conventions transposees\n'
+    ),
+  },
+  {
+    famille: 'outillage_commande_integree',
+    libelle: 'un script nommé comme une commande intégrée',
+    vue: OUTIL_PKG({
+      scripts: {
+        ...(JSON.parse(PKG_CONFORME) as { scripts: object }).scripts,
+        ls: 'tsx scripts/gates/gov-conventions.ts',
+      },
+    }),
+  },
+  {
+    famille: 'outillage_commande_integree',
+    libelle: 'une étape qui lance une commande intégrée',
+    vue: OUTIL_CI('        run: pnpm lint\n', '        run: pnpm exec eslint .\n'),
+  },
+  {
+    famille: 'outillage_environnement_herite',
+    libelle: 'une variable du lanceur dans l’`env:` d’une étape',
+    vue: OUTIL_CI(
+      '        run: pnpm lint\n',
+      '        run: pnpm lint\n        env:\n          NODE_OPTIONS: --require ./x.js\n'
+    ),
+  },
+  {
+    famille: 'outillage_environnement_herite',
+    libelle: 'un code qui écrit l’environnement des étapes suivantes',
+    vue: OUTIL_EN({
+      sources: [
+        ...VUE_OUTILLAGE_CONFORME.sources,
+        { chemin: 'scripts/lot/preparer.ts', source: 'ecrire(process.env.GITHUB_ENV);\n' },
+      ],
+    }),
+  },
+];
+
+const CONTRE_TEMOINS_OUTILLAGE: ReadonlyArray<{ libelle: string; vue: Vue }> = [
+  { libelle: 'la vue de référence de l’outillage', vue: VUE_OUTILLAGE_CONFORME },
+  {
+    libelle: 'une variable qui ne configure pas le lanceur',
+    vue: OUTIL_CI(
+      '        run: pnpm lint\n',
+      '        run: pnpm lint\n        env:\n          TZ: UTC\n'
+    ),
+  },
+  {
+    libelle: 'un `.npmrc` hors de la racine, que pnpm ne lit pas à la racine',
+    vue: OUTIL_EN({
+      fichiersSuivis: [...VUE_OUTILLAGE_CONFORME.fichiersSuivis, 'packages/contracts/.npmrc'],
+    }),
+  },
+];
+
 async function prouver(): Promise<number> {
+  for (const t of TEMOINS_OUTILLAGE) {
+    const fautes = (await confronterLOutillage(t.vue)).fautes.filter(
+      (f) => f.famille === t.famille
+    );
+    const point = POINTS_DE_L_OUTILLAGE.find((p) => p.famille === t.famille)!.point;
+    if (fautes.length === 0 || fautes.some((f) => !f.message.includes(point))) {
+      console.error(
+        `❌ Le témoin de l'outillage « ${t.libelle} » n'a PAS fait rougir ${t.famille} en nommant son point.`
+      );
+      return 1;
+    }
+  }
+  // Seules les familles de l'OUTILLAGE sont lues ici : un `env:` ajouté à une étape rougit AUSSI la
+  // porte A (`porte_a_alteree`), et c'est son travail, pas un faux positif de ces sept points.
+  for (const c of CONTRE_TEMOINS_OUTILLAGE) {
+    const o = await confronterLOutillage(c.vue);
+    const fautes = o.fautes;
+    if (fautes.length > 0 || o.confrontes !== POINTS_DE_L_OUTILLAGE.length) {
+      console.error(
+        `❌ Faux positif de l'outillage : « ${c.libelle} » a rougi ou n'a pas tout lu.`
+      );
+      if (fautes.length > 0) console.error(`   ${fautes[0]!.famille} — ${fautes[0]!.message}`);
+      return 1;
+    }
+  }
   for (const t of TEMOINS_PORTE_A) {
     const familles = (await confronterLaPorteA(t.vue)).fautes.map((f) => f.famille);
     if (!familles.includes(t.famille)) {
@@ -3199,7 +4048,10 @@ async function prouver(): Promise<number> {
     }
   }
   const sansTemoin = FAMILLES.filter(
-    (f) => !TEMOINS.some((t) => t.famille === f) && !TEMOINS_PORTE_A.some((t) => t.famille === f)
+    (f) =>
+      !TEMOINS.some((t) => t.famille === f) &&
+      !TEMOINS_PORTE_A.some((t) => t.famille === f) &&
+      !TEMOINS_OUTILLAGE.some((t) => t.famille === f)
   );
   if (sansTemoin.length > 0) {
     console.error(`❌ Famille(s) sans témoin : ${sansTemoin.join(', ')}.`);
@@ -3210,8 +4062,9 @@ async function prouver(): Promise<number> {
   );
   console.log(`   ${FAMILLES.map((f) => '• ' + f).join('\n   ')}`);
   console.log(
-    `   ${TEMOINS.length + TEMOINS_PORTE_A.length} témoins rouges, ` +
-      `${CONTRE_TEMOINS.length + CONTRE_TEMOINS_PORTE_A.length} contre-témoins verts — dont la vue conforme.`
+    `   ${TEMOINS.length + TEMOINS_PORTE_A.length + TEMOINS_OUTILLAGE.length} témoins rouges, ` +
+      `${CONTRE_TEMOINS.length + CONTRE_TEMOINS_PORTE_A.length + CONTRE_TEMOINS_OUTILLAGE.length} ` +
+      `contre-témoins verts — dont la vue conforme.`
   );
   return 0;
 }
@@ -3291,7 +4144,9 @@ if (APPELE_DIRECTEMENT) {
       direLeDisqueEtLeRegistre(vue);
       const porte = await confronterLaPorteA(vue);
       for (const l of lignesDeLaPorteA(porte)) console.log(l);
-      const fautes = [...controler(vue), ...porte.fautes];
+      const outillage = await confronterLOutillage(vue);
+      for (const l of lignesDeLOutillage(outillage)) console.log(l);
+      const fautes = [...controler(vue), ...porte.fautes, ...outillage.fautes];
       if (fautes.length === 0) {
         console.log(
           `✅ gov:conventions — ${FAMILLES.length} familles vérifiées (REQ-GOV-018, REQ-GOV-029), ` +

@@ -46,6 +46,10 @@ import prettierEslint from 'eslint-config-prettier';
 import {
   controler,
   confronterLaPorteA,
+  confronterLOutillage,
+  environnementDuTemoin,
+  estUneVariableDuLanceur,
+  VUE_OUTILLAGE_CONFORME,
   perimetresDe,
   FAMILLES,
   VUE_CONFORME,
@@ -558,6 +562,76 @@ describe('REQ-GOV-029 — la garde retenue rougit sur un témoin, famille par fa
   it('porte_a_illisible — une vue sans constat de la porte A', async () => {
     const vue = variante({ porteA: undefined });
     expect(await porte(vue)).toEqual(['porte_a_illisible']);
+  });
+
+  // ── l'outillage qui exécute la porte A : un témoin par point, sur `confronterLOutillage` ──
+  // Le corps de la preuve vit dans `outillage-de-la-porte-a.spec.ts` ; ceux-ci sont les témoins que
+  // la règle « chaque famille déclarée a été exercée ici » exige. Chacun est UNE variation de la vue
+  // de référence de l'outillage, et ne rougit QUE sa famille.
+  const outillage = async (vue: Vue): Promise<string[]> =>
+    [...new Set((await confronterLOutillage(vue)).fautes.map((f) => f.famille))].sort();
+  const outil = (patch: Partial<Vue>): Vue => ({ ...VUE_OUTILLAGE_CONFORME, ...patch });
+  const outilCi = (de: string, par: string): Vue =>
+    outil({
+      workflows: [{ chemin: '.github/workflows/ci.yml', source: CI_CONFORME.replace(de, par) }],
+    });
+  const outilPkg = (plus: Record<string, unknown>): Vue =>
+    outil({
+      packageJson: JSON.stringify({ ...(JSON.parse(VUE_CONFORME.packageJson) as object), ...plus }),
+    });
+
+  it('REQ-GOV-029 — la vue de référence de l’outillage ne rougit aucun des sept points', async () => {
+    expect(await outillage(VUE_OUTILLAGE_CONFORME)).toEqual([]);
+  });
+
+  it('REQ-GOV-029 — outillage_reglage_du_gestionnaire : une clé de premier niveau ajoutée à `package.json`', async () => {
+    const vue = outilPkg({ type: 'module' });
+    expect(await outillage(vue)).toEqual(['outillage_reglage_du_gestionnaire']);
+  });
+
+  it('REQ-GOV-029 — outillage_chemin_non_reserve : le dossier des correctifs retiré du §7', async () => {
+    const charte = (VUE_OUTILLAGE_CONFORME.charte ?? '').replace(', `patches/**`', '');
+    expect(await outillage(outil({ charte }))).toEqual(['outillage_chemin_non_reserve']);
+  });
+
+  it('REQ-GOV-029 — outillage_correctif_ou_surcharge : une surcharge de version par `resolutions`', async () => {
+    const vue = outilPkg({ resolutions: { eslint: '9.0.0' } });
+    expect(await outillage(vue)).toEqual(['outillage_correctif_ou_surcharge']);
+  });
+
+  it('REQ-GOV-029 — outillage_action_tierce : une action qui embarque sa propre image', async () => {
+    const vue = outilCi(
+      '      - name: Lint\n',
+      '      - uses: docker://alpine:3\n      - name: Lint\n'
+    );
+    expect(await outillage(vue)).toEqual(['outillage_action_tierce']);
+  });
+
+  it('REQ-GOV-029 — outillage_etape_amont_ecrivante : une commande qui réécrit l’arbre', async () => {
+    const vue = outilCi('        run: pnpm lint\n', '        run: pnpm lint --fix\n');
+    expect(await outillage(vue)).toEqual(['outillage_etape_amont_ecrivante']);
+  });
+
+  it('REQ-GOV-029 — outillage_commande_integree : une étape qui lance une commande intégrée', async () => {
+    const vue = outilCi('        run: pnpm lint\n', '        run: pnpm exec eslint .\n');
+    expect(await outillage(vue)).toEqual(['outillage_commande_integree']);
+  });
+
+  it('REQ-GOV-029 — outillage_environnement_herite : une variable du lanceur dans un `env:`', async () => {
+    const vue = outilCi(
+      '        run: pnpm lint\n',
+      '        run: pnpm lint\n        env:\n          npm_config_script_shell: sh\n'
+    );
+    expect(await outillage(vue)).toEqual(['outillage_environnement_herite']);
+  });
+
+  it('REQ-GOV-029 — le témoin de l’ACTE ne transmet à `pnpm` aucune variable du lanceur', () => {
+    // L'environnement que `lancerActe` passe réellement, recompté ici : la garde le juge en CI (les
+    // `env:` du workflow), ce témoin-ci le juge sur le poste qui lance la suite.
+    const herite = { ...process.env, npm_config_script_shell: 'sh', NODE_OPTIONS: '--require x' };
+    expect(Object.keys(environnementDuTemoin(herite)).filter(estUneVariableDuLanceur)).toEqual([]);
+    expect(Object.keys(ENVIRONNEMENT_DE_L_ACTE).filter(estUneVariableDuLanceur)).toEqual([]);
+    expect(Object.keys(ENVIRONNEMENT_DE_L_ACTE).length).toBeGreaterThan(0);
   });
 
   it('chaque famille déclarée a été exercée par au moins un témoin de ce fichier', () => {
@@ -1283,11 +1357,19 @@ function arbreJetable(
 
 /**
  * L'ACTE d'une étape de Gate A, À LA LETTRE : `pnpm <script>` — la commande que `fautesDActe` exige
- * de `ci.yml` —, lancée par un shell dans `racine`, sous l'environnement du test. C'est `pnpm` qui
- * trouve le binaire et lui passe les arguments du `package.json`, comme en CI.
+ * de `ci.yml` —, lancée par un shell dans `racine`, sous l'environnement du test MOINS chaque variable
+ * du lanceur (`environnementDuTemoin`, la définition même de la garde) : un `npm_config_script_shell`
+ * ou un `NODE_OPTIONS` hérité du poste ferait mesurer le lanceur du poste, pas celui de la porte A.
+ * C'est `pnpm` qui trouve le binaire et lui passe les arguments du `package.json`, comme en CI.
  */
+const ENVIRONNEMENT_DE_L_ACTE = environnementDuTemoin(process.env);
 function lancerActe(racine: string, script: string): { code: number | null; sortie: string } {
-  const r = spawnSync(`pnpm ${script}`, { cwd: racine, shell: true, encoding: 'utf8' });
+  const r = spawnSync(`pnpm ${script}`, {
+    cwd: racine,
+    shell: true,
+    encoding: 'utf8',
+    env: ENVIRONNEMENT_DE_L_ACTE as NodeJS.ProcessEnv,
+  });
   return { code: r.status, sortie: `${r.stdout ?? ''}${r.stderr ?? ''}`.split('\\').join('/') };
 }
 
