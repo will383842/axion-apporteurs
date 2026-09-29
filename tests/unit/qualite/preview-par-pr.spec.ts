@@ -18,6 +18,7 @@
  */
 import { describe, it, expect, beforeAll } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import { join } from 'node:path';
 import { lireYaml } from '../../../scripts/lib/lire-yaml';
 import {
@@ -192,5 +193,31 @@ describe('REQ-QA-015 — le workflow de preview tient les six conditions', () =>
 
   it('REQ-QA-015 : aucune étape n’est tolérée en échec', () => {
     expect(texte).not.toMatch(/continue-on-error/);
+  });
+});
+
+describe('REQ-QA-015 — la preview est semée à son démarrage, et seule la preview peut l’être', () => {
+  const entree = (env: Record<string, string>) =>
+    spawnSync('sh', ['docker-entrypoint.sh', 'true'], {
+      encoding: 'utf8',
+      // SKIP_MIGRATE=1 : ce témoin juge la garde du semis, pas la migration (aucune base ici).
+      env: { PATH: process.env.PATH ?? '', SKIP_MIGRATE: '1', ...env },
+    });
+
+  it('REQ-QA-015 : un instant de semis hors preview refuse le démarrage, en le nommant', () => {
+    const r = entree({ SEMEUR_INSTANT: '2026-01-01T00:00:00.000Z', PARTNERS_ENV: 'production' });
+    expect(r.status).not.toBe(0);
+    expect(r.stderr).toMatch(/preview/);
+  });
+
+  it('REQ-QA-015 : sans instant de semis, l’entrée lance le serveur comme avant', () => {
+    expect(entree({ PARTNERS_ENV: 'production' }).status).toBe(0);
+  });
+
+  it('REQ-QA-015 : la preview reçoit un instant de semis FIXE, le même pour toutes', () => {
+    expect(PARAMETRES_PREVIEW.INSTANT_DE_SEMIS.valeur).toMatch(
+      /^\d{4}-\d{2}-\d{2}T00:00:00\.000Z$/
+    );
+    expect(readFileSync('scripts/preview/preview.ts', 'utf8')).toMatch(/key: 'SEMEUR_INSTANT'/);
   });
 });
