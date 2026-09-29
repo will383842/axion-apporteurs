@@ -169,14 +169,14 @@ function sansValeurDeSecret(brute: string, env: Record<string, string>) {
 const PLATEFORME_VIDE = { statut: 200, adresseInterne: true, applications: [], bases: [] };
 
 describe('REQ-INT-031 — sans ses secrets, le provisionnement est SAUTÉ et nomme chacun', () => {
-  it('secrets de la plateforme absents : code 0, chacun nommé, rien appelé', async () => {
+  it('REQ-INT-031 : secrets de la plateforme absents : code 0, chacun nommé, rien appelé', async () => {
     const r = await lancer({ ...secretsApplicatifs(), GITHUB_SHA: SHA });
     expect(r.code).toBe(0);
     for (const nom of ['COOLIFY_URL', 'COOLIFY_API_TOKEN', 'PARTNERS_URL_PUBLIQUE'])
       expect(r.sortie).toContain(`::warning title=coolify:provisionner::${nom}`);
   });
 
-  it('un secret applicatif absent : lui seul est nommé, et la plateforme n’est pas appelée', async () => {
+  it('REQ-INT-031 : un secret applicatif absent : lui seul est nommé, et la plateforme n’est pas appelée', async () => {
     const p = await plateforme(PLATEFORME_VIDE);
     const env: Record<string, string> = {
       ...secretsApplicatifs(),
@@ -196,7 +196,7 @@ describe('REQ-INT-031 — sans ses secrets, le provisionnement est SAUTÉ et nom
 });
 
 describe('REQ-INT-031 — une valeur hors règle est refusée avant tout appel', () => {
-  it('un secret trop court : code non nul, la variable nommée, la valeur tue, rien appelé', async () => {
+  it('REQ-INT-031 : un secret trop court : code non nul, la variable nommée, la valeur tue, rien appelé', async () => {
     const p = await plateforme(PLATEFORME_VIDE);
     const env: Record<string, string> = {
       ...secretsApplicatifs(),
@@ -215,7 +215,7 @@ describe('REQ-INT-031 — une valeur hors règle est refusée avant tout appel',
 });
 
 describe('REQ-INT-031 — sur une plateforme vide, tout est créé puis les variables posées', () => {
-  it('base, cache et application créés ; DATABASE_URL et REDIS_URL viennent des bases ; aucune valeur imprimée', async () => {
+  it('REQ-INT-031 : base, cache et application créés ; DATABASE_URL et REDIS_URL viennent des bases ; aucune valeur imprimée', async () => {
     const p = await plateforme(PLATEFORME_VIDE);
     const env: Record<string, string> = {
       ...secretsApplicatifs(),
@@ -274,7 +274,7 @@ describe('REQ-INT-031 — sur une plateforme vide, tout est créé puis les vari
     for (const a of p.appels) expect(a.auth).toBe('Bearer jeton-factice-plateforme');
   });
 
-  it('relancé : rien n’est recréé, c’est dit, et les variables sont reposées', async () => {
+  it('REQ-INT-031 : relancé : rien n’est recréé, c’est dit, et les variables sont reposées', async () => {
     const p = await plateforme(PLATEFORME_VIDE);
     const env: Record<string, string> = {
       ...secretsApplicatifs(),
@@ -294,7 +294,7 @@ describe('REQ-INT-031 — sur une plateforme vide, tout est créé puis les vari
 });
 
 describe('REQ-INT-031 — dans la forge, chaque valeur dérivée est masquée dès sa lecture', () => {
-  it('DATABASE_URL et REDIS_URL sont déclarées ::add-mask:: AVANT l’annonce de la pose des variables', async () => {
+  it('REQ-INT-031 : DATABASE_URL et REDIS_URL sont déclarées ::add-mask:: AVANT l’annonce de la pose des variables', async () => {
     const p = await plateforme(PLATEFORME_VIDE);
     const env: Record<string, string> = {
       ...secretsApplicatifs(),
@@ -318,7 +318,7 @@ describe('REQ-INT-031 — dans la forge, chaque valeur dérivée est masquée d�
 });
 
 describe('REQ-INT-031 — ce que la plateforme ne dit pas n’est jamais deviné', () => {
-  it('une base sans adresse interne dans la réponse : ROUGE, le champ nommé, aucune variable posée', async () => {
+  it('REQ-INT-031 : une base sans adresse interne dans la réponse : ROUGE, le champ nommé, aucune variable posée', async () => {
     const p = await plateforme({ ...PLATEFORME_VIDE, adresseInterne: false });
     const env: Record<string, string> = {
       ...secretsApplicatifs(),
@@ -333,7 +333,7 @@ describe('REQ-INT-031 — ce que la plateforme ne dit pas n’est jamais deviné
     expect(p.appels.filter((a) => a.methode === 'PATCH')).toEqual([]);
   });
 
-  it('plateforme en 401 : ROUGE, statut nommé, jeton jamais imprimé', async () => {
+  it('REQ-INT-031 : plateforme en 401 : ROUGE, statut nommé, jeton jamais imprimé', async () => {
     const p = await plateforme({ ...PLATEFORME_VIDE, statut: 401 });
     const env: Record<string, string> = {
       ...secretsApplicatifs(),
@@ -348,7 +348,7 @@ describe('REQ-INT-031 — ce que la plateforme ne dit pas n’est jamais deviné
     sansValeurDeSecret(r.sortie, env);
   });
 
-  it('une adresse de plateforme en clair hors de la boucle locale est refusée', async () => {
+  it('REQ-INT-031 : une adresse de plateforme en clair hors de la boucle locale est refusée', async () => {
     const env: Record<string, string> = {
       ...secretsApplicatifs(),
       COOLIFY_URL: 'http://coolify.exemple.fr',
@@ -374,11 +374,11 @@ describe('REQ-INT-031 — le workflow : manuel, sans droit, chaque secret par so
     )) as typeof wf;
   });
 
-  it('ne se déclenche QUE à la main', () => {
+  it('REQ-INT-031 : ne se déclenche QUE à la main', () => {
     expect(Object.keys(wf.on as Record<string, unknown>)).toEqual(['workflow_dispatch']);
   });
 
-  it('un seul job, contents: read seul, et son étape est `pnpm coolify:provisionner`', () => {
+  it('REQ-INT-031 : un seul job, contents: read seul, et son étape est `pnpm coolify:provisionner`', () => {
     const jobs = Object.values(wf.jobs ?? {});
     expect(jobs).toHaveLength(1);
     expect(jobs[0]!.permissions).toEqual({ contents: 'read' });
@@ -388,7 +388,7 @@ describe('REQ-INT-031 — le workflow : manuel, sans droit, chaque secret par so
     ]);
   });
 
-  it('chaque secret applicatif vient du secret du dépôt de MÊME nom ; la configuration facultative, des variables', () => {
+  it('REQ-INT-031 : chaque secret applicatif vient du secret du dépôt de MÊME nom ; la configuration facultative, des variables', () => {
     const etape = (Object.values(wf.jobs ?? {})[0]!.steps ?? []).find(
       (s) => s.run === 'pnpm coolify:provisionner'
     );
