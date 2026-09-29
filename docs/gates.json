@@ -253,7 +253,7 @@
       "tache": "GOV-000",
       "verifie": "un seul producteur (release-manager, fusion serialisee auTour) ; aucune concurrency avec cancel-in-progress ; squash + required_linear_history ; x-partners-build-sha == sha avant la fusion suivante ; purge de cache ; smoke readyz (protocole et protection de main en phase -1, deploy:verify en phase 0 par QA-T34)",
       "fixtureRouge": "lancer deploy:verify sur un sha non atterri",
-      "preuveRouge": null
+      "preuveRouge": "tests/unit/qualite/un-seul-producteur-de-deploiement.spec.ts vu ROUGE avant le code (commit 5b2378f) : 21 tests rouges, dont « AssertionError: expected 1 to be 2 // Object.is equality » (sans PARTNERS_URL_PUBLIQUE, deploy:verify doit sortir en 2, indetermine). Temoin a deux faces sur un vrai serveur HTTP local : pnpm deploy:verify <sha> contre un en-tete x-partners-build-sha qui sert un autre sha -> EXIT=1, les deux sha nommes (attendu, servi) ; sans en-tete -> EXIT=1, « en-tete x-partners-build-sha absent » ; contre le sha servi -> EXIT=0. pnpm deploy:coolify : secrets absents -> SAUTE, EXIT=0, un ::warning:: par secret manquant ; plateforme en 401 -> EXIT=1, statut nomme, jeton jamais imprime ; plateforme qui accepte -> PATCH docker_registry_image_tag sha-<7> PUIS POST /api/v1/deploy, puis atterrissage lu ; image jamais servie -> EXIT=1, les deux sha nommes ; adresse en clair hors boucle locale -> refus. Rouge constate par: A05"
     },
     {
       "id": "notify-sink-hors-prod",
