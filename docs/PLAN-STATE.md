@@ -7,15 +7,15 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `a5a8b53` — 2026-09-29T04:32:24+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #207 (un contrôle requis rouge ou une revue manquante) |
-| Qui tient quoi ? | GOV-049 (A01) |
+| Où est `main` ? | `5b2a9b2` — 2026-09-29T05:23:52+02:00 |
+| Qu’est-ce qui est en vol ? | aucune PR ouverte |
+| Qui tient quoi ? | GOV-049 (A01) · GOV-075 (A01) |
 | Où en est la phase ? | phase 0 — 91/125 tâches, reste 29.25 j |
 | Le prochain pas | QA-T05 — Pipeline GHCR privé → Coolify pull |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
-| Dernière entrée de journal | PR #207 — 2026-09-29 |
+| Dernière entrée de journal | PR #209 — 2026-09-29 |
 
-**Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** `pnpm lot:composer` pour composer le lot suivant, puis revendiquer ses tâches par `gh issue edit`. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : 0
 
@@ -58,9 +58,7 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 
 ## File de fusion
 
-| # | PR | Branche | Ce qui la bloque |
-| --- | --- | --- | --- |
-| 1 | #207 — chore(GOV-012): registre rattrape, sept taches closes, SEC-05 sensible, trois suites versees | `t/registre-rattrapage-8` | un contrôle requis rouge ou une revue manquante |
+Aucune PR ouverte.
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -71,8 +69,9 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 | Tâche | Revendiquée par | Issue | Statut |
 | --- | --- | --- | --- |
 | GOV-049 — Une tache en cours sans lot est invisible de TOUTES les gardes, et c'est ce lot qui l'a rencontre | A01 | #196 | `a_faire` |
+| GOV-075 — Des taches livrees gardent un chemin gabarit, et une tache livree omet un fichier qu'elle a modifie | A01 | #208 | `a_faire` |
 
-⚠️ **20 revendication(s) périmée(s)** — QA-T07, SEC-05, GOV-042, GOV-045, GOV-050, GOV-051, GOV-053, GOV-054, GOV-055, GOV-058, GOV-060, GOV-069, GOV-072, GOV-079, GOV-081, GOV-093, INT-T01c, GOV-106, GOV-107, GOV-108 : leur issue porte encore un label `owner:` alors que la tâche est livrée. `pnpm lot:cloture` écrit `docs/tasks.json` mais n’efface pas les labels ; la dette appartient à GOV-012.
+⚠️ **13 revendication(s) périmée(s)** — QA-T07, GOV-042, GOV-045, GOV-050, GOV-051, GOV-053, GOV-054, GOV-055, GOV-060, GOV-072, GOV-079, GOV-093, INT-T01c : leur issue porte encore un label `owner:` alors que la tâche est livrée. `pnpm lot:cloture` écrit `docs/tasks.json` mais n’efface pas les labels ; la dette appartient à GOV-012.
 
 ## Décisions du jour
 
@@ -88,13 +87,29 @@ Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeS
 
 ## Dernier atterrissage
 
-`origin/main` = `a5a8b53` (2026-09-29T04:32:24+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `5b2a9b2` (2026-09-29T05:23:52+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
 ## Journal
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
+
+### PR #209 — 2026-09-29 — fix(GOV-075): aucun chemin gabarit la ou il ment, treize taches livrees reparees
+
+**Fait.** Un chemin gabarit dit « pas encore connu ». Sur une tâche livrée, c'est faux. La garde
+`gov:attributions` refuse désormais un gabarit sur une tâche livrée, sans statut, sans phase, ou de
+phase inférieure ou égale à la phase courante (famille `chemin_gabarit`). Les treize tâches livrées
+qui en portaient reçoivent leurs chemins réels, confrontés au disque et à l'historique git, par
+`ajouter-path` puis `retirer-path`. GOV-036 déclare les deux fichiers que son commit modifiait. La
+liste figée des gabarits tolérés est vide, donc elle est supprimée.
+
+**Reste.** Un gabarit de phase future est compté et imprimé, pas refusé. La garde rougira `main` au
+passage de phase tant que le lot préparatoire n'aura pas écrit les chemins de la phase suivante, et
+c'est voulu. Les chemins repris de la vue dérivée n'ont pas tous été confirmés un à un par git.
+
+**Appris.** Un masque tolérant cache plus que ce qu'il nomme : le retirer a fait apparaître treize
+citations et deux gates non réciproques que personne n'avait déclarées.
 
 ### PR #207 — 2026-09-29 — chore(GOV-012): registre rattrape, sept taches closes, SEC-05 sensible, trois suites versees
 
@@ -133,25 +148,7 @@ correctif, jamais avant ; ils sont publics depuis la poussée de la branche, pui
 Les formes sont écrites dans le spec, public depuis cette poussée ; ni les messages de commit ni
 ce journal ne les énumèrent. La divulgation que porte le spec est jugée par la lentille `securite`.
 
-### PR #200 — 2026-09-28 — feat(SEC-05): lot L0-12 — cloisonnement par apporteur, une grammaire des zones de prose
-
-**Fait.** Deux tâches, un commit chacune. SEC-05 : la couche d'accès `forApporteur` injecte
-l'apporteur de la session dans chaque `where`, que l'appelant peut restreindre sans jamais le
-remplacer ; elle refuse d'écrire l'identifiant, l'apporteur et les relations, et répond à un
-identifiant étranger exactement comme à un identifiant inexistant (404 identique à l'octet). Une
-garde statique confronte chaque route et action de l'espace à ses cas d'accès. GOV-069 : une seule
-grammaire découpe SQL, Prisma et prose pour la garde des termes interdits, et une construction jamais
-refermée est refusée en la nommant.
-
-**Reste.** GOV-049 est sortie du lot : sa clause « une tâche en cours porte un lot » contredisait un témoin livré par GOV-086 (une tâche prise, avec sa branche et sans PR, est en vol), et sa prémisse est tombée avec GOV-057, qui sait clore une tâche seule. Elle reste à faire, à re-arbitrer. Aucune route de l'espace ne reçoit encore d'identifiant de ressource : l'attaque boîte
-noire est jouée sur chaque méthode de la couche, et attend les écrans. « Même durée observable » est
-prouvée par la structure (une requête au texte identique), pas par une mesure de temps. GOV-069
-approche la continuation paresseuse des citations et les blocs HTML.
-
-**Appris.** Une garde de cloisonnement se prouve par ses brèches : sans la couche, la batterie en
-relève sept par modèle ; avec elle, zéro, et la ligne de l'apporteur reste lisible et modifiable.
-
-… 3 entrée(s) affichée(s) sur 85 ; les 82 plus ancienne(s) se lisent dans `docs/journal/`.
+… 3 entrée(s) affichée(s) sur 86 ; les 83 plus ancienne(s) se lisent dans `docs/journal/`.
 
 ## Dette déclarée
 

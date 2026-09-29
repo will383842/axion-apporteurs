@@ -10887,7 +10887,9 @@
         "REQ-GOV-021": [
           "tests/unit/gouvernance/aucun-chemin-gabarit.spec.ts"
         ]
-      }
+      },
+      "issue": 208,
+      "owner": "A01"
     },
     {
       "id": "GOV-076",
