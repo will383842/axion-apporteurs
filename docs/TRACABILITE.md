@@ -16,7 +16,7 @@
 
 **334 exigences actives · 122 réputées testées · 122 couvertes · 0 orphelines.**
 
-299 tâches, dont 130 livrées · 159 fichiers de test exécutés par `vitest` sur 159 présents.
+299 tâches, dont 130 livrées · 161 fichiers de test exécutés par `vitest` sur 161 présents.
 
 ## Exigences réputées testées
 
@@ -456,6 +456,7 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | `tests/integration/api-gouv.spec.ts` | oui | `REQ-INT-020`, `REQ-INT-021`, `REQ-QA-028` |
 | `tests/integration/apporteur-jeton-depot.spec.ts` | oui | `REQ-DM-012` |
 | `tests/integration/frontiere.spec.ts` | oui | `REQ-INT-014`, `REQ-SEC-012` |
+| `tests/integration/grille-versionnee.spec.ts` | oui | `REQ-DM-014` |
 | `tests/integration/harnais-testcontainers.spec.ts` | oui | `REQ-QA-006` |
 | `tests/integration/idor.spec.ts` | oui | `REQ-ARG-029`, `REQ-QA-010`, `REQ-SEC-008`, `REQ-SEC-009`, `REQ-UX-006` |
 | `tests/integration/index-partiels.spec.ts` | oui | `REQ-DM-001`, `REQ-DM-003`, `REQ-DM-038` |
@@ -482,6 +483,7 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | `tests/unit/domaine/apporteur-snapshot-candidature.spec.ts` | oui | `REQ-DM-035` |
 | `tests/unit/domaine/etats-occupants.spec.ts` | oui | `REQ-DM-003`, `REQ-DM-006` |
 | `tests/unit/domaine/gardes-de-schema.spec.ts` | oui | `REQ-DM-001`, `REQ-DM-003`, `REQ-DM-037`, `REQ-DM-038`, `REQ-JUR-027` |
+| `tests/unit/domaine/grille-import.spec.ts` | oui | `REQ-ARG-031`, `REQ-DM-014`, `REQ-INT-017` |
 | `tests/unit/domaine/journal-chaine.spec.ts` | oui | `REQ-DM-024` |
 | `tests/unit/domaine/journal-charge-fermee.spec.ts` | oui | `REQ-DM-041` |
 | `tests/unit/domaine/schema-centimes.spec.ts` | oui | `REQ-DM-001`, `REQ-DM-038` |

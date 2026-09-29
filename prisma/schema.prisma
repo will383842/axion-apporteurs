@@ -488,3 +488,22 @@ model SuppressionCourriel {
 
   @@map("suppressions_courriel")
 }
+
+// ── DM-03-P : la grille de commission publiée par axionia ───────────────────────────────────────
+
+/// Chaque version de la grille publiée par axionia (REQ-DM-014), importée telle quelle par
+/// `src/server/grille/import.ts` : `contenuJson` est le contenu REÇU, `hash` l'empreinte
+/// qu'axionia a calculée — rien n'est retapé ici (REQ-ARG-031, RM-01). Cible des clés étrangères
+/// de DM-07 et DM-23, vers UNE version, jamais vers la grille « courante ». Immuable : la base
+/// refuse UPDATE, DELETE et TRUNCATE (déclencheurs en SQL brut dans la migration).
+model GrilleCommission {
+  id          String   @id @default(uuid()) @db.Uuid
+  /// Le N de `commissions.v<N>.json`.
+  version     Int      @unique
+  hash        String   @unique @db.Char(64)
+  contenuJson Json     @map("contenu_json")
+  publieeAt   DateTime @map("publiee_at") @db.Timestamptz(3)
+  importeeAt  DateTime @map("importee_at") @db.Timestamptz(3)
+
+  @@map("grilles_commission")
+}

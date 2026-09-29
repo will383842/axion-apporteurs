@@ -7,8 +7,8 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `14a8594` — 2026-09-29T10:16:33+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #217 (un contrôle requis rouge ou une revue manquante) · 2. #214 (un conflit avec `main`) |
+| Où est `main` ? | `840ace7` — 2026-09-29T10:46:44+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #218 (des contrôles encore en cours) · 2. #214 (un conflit avec `main`) |
 | Qui tient quoi ? | GOV-049 (A01) · GOV-075 (A01) · GOV-084 (A01) · GOV-110 (A01) |
 | Où en est la phase ? | phase 0 — 91/125 tâches, reste 29.25 j |
 | Le prochain pas | QA-T05 — Pipeline GHCR privé → Coolify pull |
@@ -60,7 +60,7 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #217 — test(GOV-049): une tache en cours hors lot porte la preuve de son vol, et la clause a enfin un temoin rouge | `t/gov-049-visibilite` | un contrôle requis rouge ou une revue manquante |
+| 1 | #218 — feat(DM-04): commission et prorata en fonction pure, entiers exacts, bareme choisi par commissionId | `t/dm-04` | des contrôles encore en cours |
 | 2 | #214 — feat(DM-03-P): la grille publiee par axionia est importee version par version, chaque ligne confrontee a son empreinte | `t/dm-03-p` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
@@ -92,7 +92,7 @@ Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeS
 
 ## Dernier atterrissage
 
-`origin/main` = `14a8594` (2026-09-29T10:16:33+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `840ace7` (2026-09-29T10:46:44+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
@@ -127,20 +127,25 @@ l'affaire de la traçabilité, pas de celle-ci.
 `main` en donne deux. Un compte recopié dans une acceptance vieillit, et c'est la garde qui le rend
 vrai à chaque passage.
 
-### PR #211 — 2026-09-29 — fix(GOV-110): la cloture confronte le sujet d'ecrasement au titre que la PR portait a l'instant de la fusion
+### PR #214 — 2026-09-29 — feat(DM-03-P): la grille publiee par axionia est importee version par version, chaque ligne confrontee a son empreinte
 
-**Fait.** La clôture d'une tâche seule attendait, pour première ligne du commit d'écrasement, le
-titre ACTUEL de la PR, qui reste modifiable après la fusion. Elle lit maintenant les renommages dans
-la chronologie de la PR et retient le titre en vigueur à `mergedAt`. Un renommage postérieur est
-sans effet. Une chronologie illisible fait refuser la clôture, sans repli sur le titre actuel.
+**Fait.** Table `grilles_commission`, immuable par ses déclencheurs. L'import est son seul écrivain :
+il confronte chaque ligne et le contenu entier aux empreintes publiées, n'écrit jamais deux fois la
+même version et refuse deux publications contradictoires. La fixture est émise par le producteur
+réel, pseudonymisée par lui, version d'événement comprise.
 
-**Reste.** La commande réelle a été jouée en lecture sur la PR #207, renommée avant sa fusion. Le
-cas d'une PR renommée après sa fusion n'est éprouvé que par la forge simulée.
+**Reste.** La PR dépend de DM-03-A (axion-ia #1181), non fusionnée : le format consommé est celui
+de sa tête. Le test d'intégration n'a pas tourné sur ce poste, faute de Docker : la porte A le juge.
+La garde `gov:derivation` n'est pas armée ici : l'armer rendait vides trois témoins de
+`gardes-transposees.spec.ts` et exigeait de figer ses étapes dans `gov-conventions.ts`. Elle part en
+suite, script prêt, chez le `gardien-spec`.
 
-**Appris.** Une donnée lue « maintenant » pour juger un fait passé doit être relue à l'instant de
-ce fait : sinon, la preuve dépend de ce que la forge laisse encore modifier.
+**Appris.** Nommer la ligne qui a changé demande une empreinte par ligne. Une empreinte unique dit
+seulement que le contenu a changé, et il faudrait une copie de référence pour trouver quelle ligne.
+Et pseudonymiser une donnée, c'est aussi recalculer chaque empreinte qui en dérive : une empreinte
+courte d'un petit espace de valeurs se renverse par énumération.
 
-… 3 entrée(s) affichée(s) sur 89 ; les 86 plus ancienne(s) se lisent dans `docs/journal/`.
+… 3 entrée(s) affichée(s) sur 90 ; les 87 plus ancienne(s) se lisent dans `docs/journal/`.
 
 ## Dette déclarée
 
