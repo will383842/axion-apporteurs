@@ -96,6 +96,7 @@ ou un utilisateur de la console) : le test le vérifie aussi.
 | `identites_facturation` | TRT-APPORTEURS | À compléter — source manquante. Question : l'identité de facturation suit-elle la conservation des autofactures qui la portent, ou une autre durée ? | table `identites_facturation` · REQ-JUR-029 · REQ-ARG-018 |
 | `evenements_recus` | aucune donnée personnelle | 10 ans | HYP-A02-RETENTION · REQ-INT-029 |
 | `battements` | aucune donnée personnelle | sans purge | HYP-A02-RETENTION |
+| `grilles_commission` | aucune donnée personnelle | sans purge : chaque version reste la preuve du barème appliqué, et la base refuse toute suppression | table `grilles_commission` · REQ-DM-014 |
 | `courriels_envoyes` | TRT-APPORTEURS, TRT-TIERS, TRT-CONSOLE | 5 ans après la fin de la relation | HYP-A02-RETENTION · REQ-JUR-009 |
 | `suppressions_courriel` | TRT-APPORTEURS, TRT-TIERS, TRT-CONSOLE | tant que l'adresse est supprimée | HYP-A02-RETENTION · REQ-INT-023 |
 
@@ -125,6 +126,21 @@ fiche. La qualification reprend celle de la fiche ; ce que la fiche laisse à co
 Chaque « À compléter — source manquante » des sections 1 à 4 porte sa question sur sa propre ligne ;
 elles s'adressent toutes à Will, qui arbitre les questions juridiques du projet (`docs/DECISIONS.md` §5).
 Les réponses entrent au registre des décisions, puis ici, avec leur identifiant.
+
+**Questions ouvertes du chantier des conseillers salariés (W19).** Ce registre ne décrit encore
+aucun traitement de conseillers : il en compte trois, et le quatrième entrera avec la tâche qui le
+porte, après la fusion de celle-ci. Ces questions sont écrites ici pour qu'aucune ne soit perdue d'ici
+là ; elles s'adressent à Will, comme les autres.
+
+- Quelle est la base légale du traitement des données des conseillers salariés ?
+- Qui est le destinataire de l'export paie, et à quel titre ?
+- Quelles sont les données minimales du traitement des conseillers ?
+- Quelles durées de conservation, dont la prescription salariale ?
+- Le CSE doit-il être informé, ou constate-t-on par écrit qu'il n'y en a pas ?
+- Quel est le cinquième objet de l'AIPD, pour ce traitement ?
+- L'information des conseillers relève-t-elle de l'article 13 ou de l'article 14 ?
+- Comment écrire la finalité « contrôle d'incompatibilité » avec le personnel de la Société, dans le
+  traitement des apporteurs, sans nommer personne ?
 
 ## 6. Ce que ce registre ne contient pas encore
 

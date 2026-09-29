@@ -3753,7 +3753,6 @@
       "paths": [
         "docs/rgpd/registre-article-30.md",
         "docs/rgpd/aipd.md",
-        "src/app/(espace)/confidentialite/page.tsx",
         "tests/unit/juridique/registre-rgpd.spec.ts"
       ],
       "schema": false,
@@ -3774,14 +3773,14 @@
       "externe": null,
       "estimateDays": 1.5,
       "statut": "a_faire",
-      "owner": null,
+      "owner": "A01",
       "lot": null,
       "branch": null,
       "pr": null,
-      "issue": null,
+      "issue": 232,
       "attempts": 0,
       "motif": null,
-      "acceptance": "push PWA (APNs/FCM) et Telegram = sous-traitants hors UE, payload sans PII, registre art. 30 + AIPD.",
+      "acceptance": "push PWA (APNs/FCM) et Telegram = sous-traitants hors UE, payload sans PII, registre art. 30 + AIPD. AVENANT A01 du 2026-09-29 (decision de Will : scinder). La page de confidentialite de l espace exigeait des fichiers hors des paths de cette tache : elle passe a JUR-T34, versee dans la meme PR, qui porte aussi l affichage et l acceptation de REQ-JUR-025. Cette tache livre le registre de l article 30 et l AIPD : chaque rubrique rattachee a une source, ou declaree « A completer — source manquante » avec sa question ; les donnees stockees derivees du schema dans les deux sens ; le service de push web et Telegram inscrits comme sous-traitants hors Union europeenne, charge utile sans donnee personnelle ; l AIPD non signee, sa mise en balance sans conclusion. Les questions juridiques ouvertes restent a Will. Le registre compte TROIS traitements ; les questions du chantier des conseillers salaries y sont ecrites en questions ouvertes, sans quatrieme traitement, qui viendra avec sa propre tache.",
       "tests": {
         "REQ-CPL-009": [
           "tests/unit/juridique/registre-rgpd.spec.ts"
