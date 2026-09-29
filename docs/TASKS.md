@@ -2149,7 +2149,7 @@ Couvre : `REQ-SEC-003`, `REQ-UX-015`
 
 ### UX-P1-01 — Écran unique Entreprise : recherche, carte 4 états, « Déposer » pré-remplie, compteur 30/j
 
-`1 j` · zone `espace` · sensible : attribution, espace · depend de `INT-T09`, `SEC-16`, `UX-P0-01`, `UX-P0-02`
+`1 j` · zone `espace` · sensible : attribution, espace · depend de `INT-T09`, `SEC-16`, `UX-P0-01`, `UX-P0-02`, `DM-13`
 
 Couvre : `REQ-UX-001`, `REQ-UX-007`
 
@@ -2157,7 +2157,7 @@ Couvre : `REQ-UX-001`, `REQ-UX-007`
 
 ### UX-P1-02 — Formulaire de dépôt : autocomplétion < 300 ms, tolérance, ville, repli, **rendu de chaque issue de `IssueDepot`**, case facultative de lien d'intérêt
 
-`1.25 j` · zone `espace` · sensible : attribution, espace · depend de `INT-T09`, `SEC-12`, `UX-P0-01`, `GOV-112`
+`1.25 j` · zone `espace` · sensible : attribution, espace · depend de `INT-T09`, `SEC-12`, `UX-P0-01`, `GOV-112`, `DM-13`
 
 Couvre : `REQ-UX-001`, `REQ-UX-002`, `REQ-UX-039`
 
