@@ -7,13 +7,13 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `911f326` — 2026-09-29T06:54:00+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #209 (un conflit avec `main`) |
-| Qui tient quoi ? | GOV-049 (A01) · GOV-075 (A01) · GOV-110 (A01) |
+| Où est `main` ? | `c60e2f3` — 2026-09-29T07:25:51+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #214 (un contrôle requis rouge ou une revue manquante) · 2. #216 (un contrôle requis rouge ou une revue manquante) |
+| Qui tient quoi ? | GOV-049 (A01) · GOV-075 (A01) · GOV-084 (A01) · GOV-110 (A01) |
 | Où en est la phase ? | phase 0 — 91/125 tâches, reste 29.25 j |
 | Le prochain pas | QA-T05 — Pipeline GHCR privé → Coolify pull |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
-| Dernière entrée de journal | PR #211 — 2026-09-29 |
+| Dernière entrée de journal | PR #216 — 2026-09-29 |
 
 **Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
@@ -60,7 +60,8 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #209 — fix(GOV-075): aucun chemin gabarit la ou il ment, treize taches livrees reparees | `t/gov-075` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #214 — feat(DM-03-P): la grille publiee par axionia est importee version par version, chaque ligne confrontee a son empreinte | `t/dm-03-p` | un contrôle requis rouge ou une revue manquante |
+| 2 | #216 — feat(GOV-084): tout script de garde suivi a une tache porteuse, deux barrieres rattachees a GOV-000 | `t/gov-084` | un contrôle requis rouge ou une revue manquante |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -72,6 +73,7 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 | --- | --- | --- | --- |
 | GOV-049 — Une tache en cours sans lot est invisible de TOUTES les gardes, et c'est ce lot qui l'a rencontre | A01 | #196 | `a_faire` |
 | GOV-075 — Des taches livrees gardent un chemin gabarit, et une tache livree omet un fichier qu'elle a modifie | A01 | #208 | `a_faire` |
+| GOV-084 — Neuf scripts de garde suivis ne sont revendiques par aucune tache | A01 | #212 | `a_faire` |
 | GOV-110 — La cloture compare le sujet du commit de fusion au titre ACTUEL de la PR : un renommage apres la fusion le rendrait conforme | A01 | #210 | `a_faire` |
 
 ⚠️ **13 revendication(s) périmée(s)** — QA-T07, GOV-042, GOV-045, GOV-050, GOV-051, GOV-053, GOV-054, GOV-055, GOV-060, GOV-072, GOV-079, GOV-093, INT-T01c : leur issue porte encore un label `owner:` alors que la tâche est livrée. `pnpm lot:cloture` écrit `docs/tasks.json` mais n’efface pas les labels ; la dette appartient à GOV-012.
@@ -90,13 +92,27 @@ Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeS
 
 ## Dernier atterrissage
 
-`origin/main` = `911f326` (2026-09-29T06:54:00+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `c60e2f3` (2026-09-29T07:25:51+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
 ## Journal
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
+
+### PR #216 — 2026-09-29 — feat(GOV-084): tout script de garde suivi a une tache porteuse, deux barrieres rattachees a GOV-000
+
+**Fait.** `gov:attributions` refuse désormais un script suivi sous `scripts/gates/` que nulle tâche
+ne déclare (famille `script_de_garde_sans_porteur`). La liste vient de l'index git, jamais d'une
+liste tapée, et le vert imprime le compte des scripts confrontés : 49. Les deux derniers orphelins,
+`gh-sur.js` et `git-push-sur.js`, rejoignent GOV-000, qui porte leur appelant et leur garde.
+
+**Reste.** Rien sur cette garde. Le cas « une tâche déclare un script qui n'existe plus » est
+l'affaire de la traçabilité, pas de celle-ci.
+
+**Appris.** L'acceptance comptait neuf orphelins le 2026-09-16 ; la mesure refaite à la tête de
+`main` en donne deux. Un compte recopié dans une acceptance vieillit, et c'est la garde qui le rend
+vrai à chaque passage.
 
 ### PR #211 — 2026-09-29 — fix(GOV-110): la cloture confronte le sujet d'ecrasement au titre que la PR portait a l'instant de la fusion
 
@@ -130,24 +146,7 @@ GOV-002, GOV-017a), retirés dans cette PR au vu des commits de livraison.
 **Appris.** Un masque tolérant cache plus que ce qu'il nomme : le retirer a fait apparaître treize
 citations et deux gates non réciproques que personne n'avait déclarées.
 
-### PR #207 — 2026-09-29 — chore(GOV-012): registre rattrape, sept taches closes, SEC-05 sensible, trois suites versees
-
-**Fait.** Le registre rattrape les PR #200 et #206 : sept tâches closes par `lot:cloture --tache`,
-avec l'attestation lue dans le commit de fusion sur la branche par défaut. `SEC-05.sensible` passe
-de vide à `rgpd` et `espace`, relevés par les deux lentilles : la tâche cloisonne les données de
-l'espace apporteur.
-Trois suites versées `a_faire` : GOV-109 (expressions constantes de la JSX que la garde lexicale ne
-voit pas encore), GOV-110 (titre attendu à l'instant de la fusion, pas au moment de la clôture),
-GOV-111 (options de lecture, filtres de relation et lignes entières dans le cloisonnement).
-
-**Reste.** Les trois suites sont à revendiquer et à livrer. Le détail des formes de GOV-109 est tenu
-hors dépôt jusqu'à son correctif ; aucune acceptance ne les cite.
-
-**Appris.** `poser-champ` n'écrit qu'un champ vide, et un tableau vide n'est pas vide pour lui :
-corriger une valeur déjà posée passe par `reecrire-champ`, qui exige un motif. Ce motif est
-consigné au journal des réécritures, tenu hors dépôt ; le registre ne le porte pas (`motif` nul).
-
-… 3 entrée(s) affichée(s) sur 87 ; les 84 plus ancienne(s) se lisent dans `docs/journal/`.
+… 3 entrée(s) affichée(s) sur 88 ; les 85 plus ancienne(s) se lisent dans `docs/journal/`.
 
 ## Dette déclarée
 

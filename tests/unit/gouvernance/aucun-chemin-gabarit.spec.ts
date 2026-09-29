@@ -38,6 +38,8 @@ const VIDE: Sources = {
   dettesGate: [],
   dettesLot: [],
   exemptionsFigees: [],
+  // GOV-084 : sans tâche, chaque script suivi de `scripts/gates/` serait un script sans porteur.
+  scriptsDeGarde: [],
 };
 
 /** Une tâche de la phase 0, NON LIVRÉE, aux chemins réels : elle fixe la phase courante. */
