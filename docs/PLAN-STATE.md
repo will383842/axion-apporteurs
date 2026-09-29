@@ -60,7 +60,7 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #200 — feat(SEC-05): lot L0-12 — cloisonnement par apporteur, une grammaire des zones de prose, une tache en cours appartient a un lot | `lot/L0-12-gouvernance` | un contrôle requis rouge ou une revue manquante |
+| 1 | #200 — feat(SEC-05): lot L0-12 — cloisonnement par apporteur, une grammaire des zones de prose | `lot/L0-12-gouvernance` | un contrôle requis rouge ou une revue manquante |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -108,7 +108,7 @@ garde statique confronte chaque route et action de l'espace à ses cas d'accès.
 grammaire découpe SQL, Prisma et prose pour la garde des termes interdits, et une construction jamais
 refermée est refusée en la nommant.
 
-**Reste.** GOV-049 est sortie du lot : sa clause `en_cours ⇒ lot` contredisait un témoin livré par GOV-086 (une tâche prise, avec sa branche et sans PR, est en vol), et sa prémisse est tombée avec GOV-057, qui sait clore une tâche seule. Elle reste à faire, à re-arbitrer. Aucune route de l'espace ne reçoit encore d'identifiant de ressource : l'attaque boîte
+**Reste.** GOV-049 est sortie du lot : sa clause « une tâche en cours porte un lot » contredisait un témoin livré par GOV-086 (une tâche prise, avec sa branche et sans PR, est en vol), et sa prémisse est tombée avec GOV-057, qui sait clore une tâche seule. Elle reste à faire, à re-arbitrer. Aucune route de l'espace ne reçoit encore d'identifiant de ressource : l'attaque boîte
 noire est jouée sur chaque méthode de la couche, et attend les écrans. « Même durée observable » est
 prouvée par la structure (une requête au texte identique), pas par une mesure de temps. GOV-069
 approche la continuation paresseuse des citations et les blocs HTML.
