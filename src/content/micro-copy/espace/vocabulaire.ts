@@ -103,3 +103,48 @@ export const CONNEXION = {
       'Voici votre lien de connexion. Il ne sert qu’une fois et expire rapidement. Si vous n’avez rien demandé, ignorez ce message.',
   },
 } as const;
+
+/**
+ * La politique de confidentialité de l'espace (JUR-T34, REQ-JUR-025). Seuls les TITRES et les
+ * phrases de l'écran vivent ici : le contenu de la politique — durées, destinataires, base légale —
+ * se lit dans le registre des traitements à l'affichage, il ne s'écrit nulle part ailleurs. Ce que
+ * le registre n'a pas encore tranché s'affiche « À compléter », avec la question posée.
+ * L'état vide de l'écran (aucun destinataire nommé) est celui de `/confidentialite`
+ * (`etats-vides.ts`).
+ */
+export const CONFIDENTIALITE = {
+  titre: 'Vos données personnelles',
+  phrase:
+    'Ce que la Société fait de vos données, combien de temps elle les garde, à qui elle les confie, et vos droits. Chaque information vient du registre des traitements de la Société.',
+  rubriques: {
+    finalite: 'Pourquoi vos données sont utilisées',
+    baseLegale: 'Ce qui autorise leur utilisation',
+    duree: 'Combien de temps elles sont gardées',
+    destinataires: 'Qui peut les consulter',
+    transferts: 'Si elles sont envoyées à l’étranger',
+    droits: 'Vos droits, et comment les exercer',
+  },
+  tiers: {
+    titre: 'Les prestataires et organismes qui reçoivent vos données',
+    qualite: 'À quel titre',
+    donnees: 'Ce qui leur est confié',
+    localisation: 'Où elles sont traitées',
+  },
+  aCompleter: 'À compléter',
+  question: 'Question en attente de réponse :',
+  accord: {
+    phrase: 'Votre espace s’ouvre une fois cette politique acceptée.',
+    action: 'J’accepte cette politique',
+  },
+  acceptee: 'Vous avez accepté cette politique.',
+  chargement: 'Chargement de la politique de confidentialité…',
+  erreur: {
+    titre: 'La politique ne s’affiche pas',
+    phrase: 'La politique de confidentialité n’a pas pu être affichée. Réessayez un peu plus tard.',
+    action: 'Réessayer',
+  },
+  horsLigne: {
+    titre: 'Vous êtes hors ligne',
+    phrase: 'La politique de confidentialité s’affichera dès le retour du réseau.',
+  },
+} as const;

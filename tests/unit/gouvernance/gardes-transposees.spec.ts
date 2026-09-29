@@ -659,7 +659,10 @@ describe('REQ-GOV-029 — le périmètre est DIT, jamais tu', () => {
     expect(sortie).toContain('PÉRIMÈTRE');
     // La tâche successeur est écrite dans la sortie, pas seulement dans le code : c'est elle
     // qu'un relecteur cherche quand il se demande qui reprend une garde différée.
-    expect(sortie).toMatch(/reprise par [A-Z]/);
+    // Chaque périmètre VIDE nomme sa reprise ; aucun vide n'est aussi un état légitime (JUR-T34 a
+    // ouvert le premier composant « use client », la frontière d'erreur que Next impose).
+    const vides = sortie.split('\n').filter((l) => l.includes('— VIDE'));
+    for (const l of vides) expect(l).toMatch(/reprise par [A-Z]/);
   });
 
   it('est verte sur l’état du dépôt', () => {
