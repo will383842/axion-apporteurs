@@ -8,12 +8,12 @@
 >
 > Une tache = une PR, **≤ 1,5 jour**. Le plafond est porte par la garde `gov:tasks`.
 
-**332 taches · 257.85 j estimes.**
+**333 taches · 258.35 j estimes.**
 
 | Phase | Taches | Jours | Terminees |
 | --- | ---: | ---: | ---: |
 | -1 — Gouvernance (prealable bloquant) | 39 | 23.75 | 39 |
-| 0 — Socle technique | 133 | 100.35 | 115 |
+| 0 — Socle technique | 134 | 100.85 | 115 |
 | 1 — Operationnel | 79 | 68.00 | 0 |
 | 2 — Argent | 45 | 33.50 | 0 |
 | 3 — Pilotage et conformite | 36 | 32.25 | 0 |
@@ -1922,6 +1922,16 @@ Couvre : `REQ-INT-031`
 **Acceptation.** Versee a la demande de la session -50 (mise en ligne), sur demande de -d7 : aucune tache du registre ne portait le provisionnement, REQ-INT-031 n etant rattachee qu a INT-T02 cote axionia. (1) Un declenchement manuel cree, s ils n existent pas, dans le projet Coolify Axion-Partners, l application de type image Docker (ghcr.io/will383842/axion-apporteurs, etiquette sha-<7>, sonde /api/readyz) et une base Postgres 16 separee ; il est idempotent : relance, il ne cree rien et le dit. (2) Chaque variable de docs/env.md est posee depuis le secret du depot de meme nom, jamais en argument ni en clair dans le journal du run ; DATABASE_URL vient de la base creee. (3) Un secret absent : SAUTE avec un ::warning:: par secret nomme. (4) TEMOIN A DEUX FACES sur une plateforme factice locale : secrets absents, alors saute et nomme ; plateforme en 401, alors code non nul et jeton jamais imprime. Deux lentilles (workflow et secrets).
 
 **Tests.** `tests/unit/qualite/provisionnement-coolify.spec.ts`
+
+### GOV-128 — Le passif de la declaration lit aussi la ligne Lot: du squash immuable : une PR de lot au corps enrichi se clot sur arbitrage ecrit
+
+`0.5 j` · zone `gouvernance` · depend de `GOV-127`
+
+Couvre : `REQ-GOV-026`
+
+**Acceptation.** EXCEPTION AU GEL, arbitrage -d7 sur delegation de Williams du 2026-09-30 : elle bloque deux clotures de phase 0. CONSTAT : INT-T04 et INT-T05 (axion-ia #1228, sha 3fb76aa) sont refusees par lot:cloture (tache_etrangere_a_la_pr) : la premiere ligne du squash est conforme, mais le corps porte, apres la ligne Lot: INT-T04, INT-T05, un paragraphe et un trailer ; or le corps ne declare que s il est reduit a la seule ligne Lot: (GOV-104), et le titre feat(INT-T04, INT-T05) ne nomme aucune tache a lui seul. Condition verifiee : les deux accords A09 sont publies sur la tete fusionnee 7eb1bf3. A LIVRER : (1) deux entrees au PASSIF_DE_LA_DECLARATION, INT-T04 et INT-T05, PR axion-ia #1228, sha complet 3fb76aa, declarees par la ligne Lot: et non par le titre. (2) Une telle entree ne leve le refus QUE si la tache, la PR et le sha complet coincident, si la premiere ligne du squash est conforme, et si la ligne Lot: qui la suit dans le message immuable nomme la tache. (3) Toute autre livraison garde les refus a l identique ; les entrees par titre gardent leur regle ; aucun drapeau ne leve rien ; aucune regle generale n est assouplie. (4) TEMOINS rouges d abord : INT-T04 et INT-T05 passent ; un autre sha, une autre PR, une tache absente de la ligne Lot:, un squash sans ligne Lot: ou a premiere ligne non conforme sont refuses. (5) Deux lentilles (scripts/lot/). Puis INT-T04 et INT-T05 sont closes par un rattrapage.
+
+**Tests.** `tests/unit/gouvernance/le-passif-de-la-declaration-est-ferme.spec.ts`
 
 ## Phase 1 — Operationnel
 

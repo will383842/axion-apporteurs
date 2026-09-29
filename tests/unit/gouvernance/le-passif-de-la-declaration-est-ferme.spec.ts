@@ -176,7 +176,6 @@ describe('REQ-GOV-026 — une entrée du passif peut être déclarée par la lig
   });
 });
 
-
 describe('REQ-GOV-026 — la ligne Lot: du squash est lue dans le message immuable, jamais dans le corps de la PR (GOV-128)', () => {
   const vue = {
     state: 'MERGED',
@@ -205,7 +204,9 @@ describe('REQ-GOV-026 — la ligne Lot: du squash est lue dans le message immuab
 
   it('REQ-GOV-026 — TÉMOIN : une première ligne non conforme, ou une ligne Lot: qui ne suit pas le titre, ne donne rien', () => {
     expect(lire('wip (#1228)\n\nLot: INT-T04, INT-T05\n').lotDuSquash).toBeNull();
-    expect(lire(`${vue.title} (#1228)\n\nAcceptée.\nLot: INT-T04, INT-T05\n`).lotDuSquash).toBeNull();
+    expect(
+      lire(`${vue.title} (#1228)\n\nAcceptée.\nLot: INT-T04, INT-T05\n`).lotDuSquash
+    ).toBeNull();
     expect(lire(null).lotDuSquash).toBeNull();
   });
 });
