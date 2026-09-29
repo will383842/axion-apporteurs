@@ -13248,7 +13248,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 1,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "Releve par la lentille securite sur la PR #206, formes tenues HORS DEPOT (dossier de reprise, fichier confidentiel) : apres GOV-106, une famille d'expressions dont la valeur est connue sans execution affiche encore un terme du lexique interdit. A livrer : la garde evalue, par l'AST de TypeScript, toute expression JSX dont la valeur rendue est constante, comme React la rend, au lieu d'une liste de formes. TEMOINS : chaque forme du fichier confidentiel rougit ; les temoins entrent dans le meme commit que le correctif, jamais avant, et ni l acceptance, ni les messages de commit, ni le journal ne les enumerent.",
       "tests": {
         "REQ-GOV-017": [
@@ -13259,10 +13259,14 @@
         ]
       },
       "issue": null,
-      "owner": null,
-      "branch": null,
-      "pr": null,
-      "attestation": null,
+      "owner": "A01",
+      "branch": "t/gov-109",
+      "pr": 267,
+      "attestation": {
+        "pr": 267,
+        "sha": "dc6cfcb9da3bb73b25fa7cab714893d274e1cc78",
+        "fusionneeAt": "2026-09-29T22:49:31Z"
+      },
       "motif": null
     },
     {
@@ -13464,7 +13468,7 @@
       "deps": [],
       "hyp": [],
       "externe": null,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "paths": [
         "scripts/lot/chemins-de-tache.ts",
         "docs/journal/",
@@ -13481,7 +13485,15 @@
         ]
       },
       "issue": 258,
-      "owner": "A01"
+      "owner": "A01",
+      "branch": "t/gov-117",
+      "pr": 259,
+      "attestation": {
+        "pr": 259,
+        "sha": "581a3fb7a8e04847a4671fa8291fc6a62246edc0",
+        "fusionneeAt": "2026-09-29T21:05:27Z"
+      },
+      "motif": null
     },
     {
       "id": "GOV-122",

@@ -13,7 +13,7 @@
 | Phase | Taches | Jours | Terminees |
 | --- | ---: | ---: | ---: |
 | -1 — Gouvernance (prealable bloquant) | 39 | 23.75 | 39 |
-| 0 — Socle technique | 133 | 100.35 | 116 |
+| 0 — Socle technique | 133 | 100.35 | 118 |
 | 1 — Operationnel | 79 | 68.00 | 0 |
 | 2 — Argent | 45 | 33.50 | 0 |
 | 3 — Pilotage et conformite | 36 | 32.25 | 0 |
@@ -1743,7 +1743,7 @@ Couvre : `REQ-GOV-023`
 
 **Tests.** `tests/unit/gouvernance/une-pr-porte-son-entree-de-journal.spec.ts`
 
-### GOV-109 — La garde lexicale ne s'arrete pas au texte litteral : des expressions constantes de la JSX rendent encore a l'ecran un terme qu'elle ne voit pas
+### GOV-109 — La garde lexicale ne s'arrete pas au texte litteral : des expressions constantes de la JSX rendent encore a l'ecran un terme qu'elle ne voit pas ✅ **fusionnee**
 
 `1 j` · zone `gouvernance` · sensible : espace · depend de `GOV-106`
 
@@ -1793,7 +1793,7 @@ Couvre : `REQ-GOV-010`
 
 **Tests.** `tests/unit/gouvernance/lot-dedie-gardien-spec.spec.ts`
 
-### GOV-117 — L'outil d'écriture du registre écrit reqs, hyp et zone d'une tâche existante, validés contre le schéma, les REQ et les HYP existantes, et journalisés
+### GOV-117 — L'outil d'écriture du registre écrit reqs, hyp et zone d'une tâche existante, validés contre le schéma, les REQ et les HYP existantes, et journalisés ✅ **fusionnee**
 
 `0.75 j` · zone `gouvernance` · aucune dependance
 
