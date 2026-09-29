@@ -13,7 +13,7 @@
 | Où en est la phase ? | phase 0 — 95/136 tâches, reste 32.75 j |
 | Le prochain pas | QA-T05 — Pipeline GHCR privé → Coolify pull |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
-| Dernière entrée de journal | PR #235 — 2026-09-29 |
+| Dernière entrée de journal | PR #237 — 2026-09-29 |
 
 **Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
@@ -105,6 +105,22 @@ Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
 
+### PR #237 — 2026-09-29 — feat(INT-T26): la candidature recue cree un apporteur candidat, coordonnees tirees et chiffrees, rattachement par empreinte
+
+**Fait.** Une candidature reçue d'axionia devient un apporteur `candidat`. Le snapshot figé et le
+passage de l'événement à `traite` se font dans une seule transaction. Les coordonnées ne voyagent
+pas dans la charge : elles sont tirées à la route signée d'axionia, validées contre le `$defs`
+publié du contrat v2, puis chiffrées. Une personne déjà connue par son courriel, son téléphone ou
+la même candidature est rattachée, pas doublée. Si la route ne répond pas, l'événement attend
+`coordonnees:<id>` et le travail de fond le reprend.
+
+**Reste.** La route côté axionia (INT-T27-A, axion-ia#1223) n'est pas encore en production. D'ici
+là, toute candidature attend, ce qui est l'état voulu. Le secret de relecture et l'URL d'axionia
+entrent dans `env.ts` : un quatrième path, signalé au rattrapage.
+
+**Appris.** Une erreur typée `AttenteDeDependance` suffit au travail de fond pour distinguer
+« attendre » de « échouer ». Le traitement n'a rien à savoir de la file.
+
 ### PR #235 — 2026-09-29 — fix(GOV-066): la garde d'entite juge chaque commit de la PR, pas seulement la tete, et ecrit ce qu'elle ne lit pas
 
 **Fait.** La garde des coordonnées ne juge plus seulement la tête : chaque commit poussé par la PR
@@ -129,18 +145,7 @@ et les huit questions du chantier des conseillers salariés, écrites sans crée
 **Appris.** La garde dérivée du schéma a vu seule la table arrivée entre la rédaction et la PR : un
 registre qui se confronte au schéma ne vieillit pas en silence.
 
-### PR #231 — 2026-09-29 — fix(GOV-118): un gabarit qui existe est un chemin reel, zero script de garde confronte est un refus
-
-**Fait.** La garde des attributions ne reconnaît plus un gabarit à sa seule forme : un chemin qui
-existe dans les fichiers suivis, comme fichier ou comme dossier, est un chemin réel. Une liste de
-scripts de garde lue et vide est un refus, et le périmètre de la famille est écrit.
-
-**Reste.** Rien sur ces trois points.
-
-**Appris.** Distinguer une dimension non lue d'une dimension lue et vide coûte une valeur de plus,
-`undefined` à côté de `[]` ; sans elle, le plancher aurait fait rougir tous les cas de preuve.
-
-… 3 entrée(s) affichée(s) sur 100 ; les 97 plus ancienne(s) se lisent dans `docs/journal/`.
+… 3 entrée(s) affichée(s) sur 101 ; les 98 plus ancienne(s) se lisent dans `docs/journal/`.
 
 ## Dette déclarée
 

@@ -102,6 +102,10 @@ export const schemaSecrets = z.object({
   // INT-T10 (REQ-INT-023, REQ-SEC-010) : la clé qui authentifie les webhooks de rebonds du relais de
   // courriel — un secret dédié par source, dans CETTE liste pour les règles de REQ-SEC-028.
   ZEPTOMAIL_WEBHOOK_SECRET: secret,
+  // INT-T26 (REQ-INT-032, partners/ADR-0023) : le secret DÉDIÉ qui signe les lectures de Partners
+  // chez axionia (relecture, coordonnées d'un candidat) — la même valeur que le
+  // `PARTNERS_RELECTURE_SECRET` d'axionia, distincte du secret des webhooks.
+  AXIONIA_RELECTURE_SECRET: secret,
 });
 
 export type Secrets = z.infer<typeof schemaSecrets>;
@@ -162,6 +166,9 @@ export const schemaConfiguration = z.object({
   // INT-T10 (REQ-INT-022) : l'adresse HUMAINE d'expédition, du domaine d'envoi ; sa forme est jugée
   // par `configurationDeLEmetteur` (`src/server/integrations/zeptomail/emetteur.ts`).
   PARTNERS_EMAIL_EXPEDITEUR: nette.optional(),
+  // INT-T26 (REQ-INT-032) : l'adresse d'axionia pour les lectures de Partners. Absente, le canal est
+  // fermé de ce côté : une candidature reçue attend ses coordonnées, rien ne part.
+  AXIONIA_BASE_URL: urlDe(['https:']).optional(),
 });
 
 export type Configuration = z.infer<typeof schemaConfiguration>;
@@ -345,6 +352,8 @@ const ROLES: Record<NomDeVariable, string> = {
   PARTNERS_MCP_SHARED_SECRET: 'serrure de la porte MCP `POST /api/mcp`, en-tête `x-mcp-secret`',
   ZEPTOMAIL_WEBHOOK_SECRET:
     'authentifie les webhooks de rebonds du relais de courriel, en-tête `Producer-Signature`',
+  AXIONIA_RELECTURE_SECRET:
+    "signe les lectures de Partners chez axionia (coordonnées d'un candidat), en-tête `x-partners-signature`",
   DATABASE_URL: 'la base Postgres ; `readyz` la sonde',
   REDIS_URL: 'le cache Redis ; `readyz` le sonde',
   NOTIFY_SINK: "retient toute notification dans le journal au lieu de l'envoyer",
@@ -355,6 +364,8 @@ const ROLES: Record<NomDeVariable, string> = {
     "ouvre l'envoi automatique des courriels ; absente ou `false`, aucun courriel ne part (REQ-INT-022)",
   PARTNERS_EMAIL_EXPEDITEUR:
     "adresse humaine d'expédition, du sous-domaine d'envoi ; jamais une adresse sans réponse",
+  AXIONIA_BASE_URL:
+    "adresse d'axionia pour les lectures de Partners ; absente, aucune coordonnée n'est tirée",
 };
 
 /** La règle de forme, dite une fois par espèce de variable — celle que le schéma applique. */
@@ -375,6 +386,7 @@ function regleDe(nom: NomDeVariable): string {
         .options.map((n) => `\`${n}\``)
         .join(', ');
     case 'SENTRY_DSN':
+    case 'AXIONIA_BASE_URL':
       return 'URL `https:`';
     case 'PARTNERS_EMAIL_DMARC_VERIFIE':
       return schemaConfiguration.shape.PARTNERS_EMAIL_DMARC_VERIFIE.unwrap()
