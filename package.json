@@ -149,6 +149,8 @@
     "image:temoin-build-sans-base": "sh scripts/image/temoin-build-sans-base.sh",
     "gate-c": "sh scripts/gates/gate-c.sh partners:construite",
     "gate-c:prove": "sh scripts/image/temoin-porte-c.sh",
+    "gate-d": "sh scripts/gates/gate-d.sh",
+    "gate-d:prove": "sh scripts/gates/gate-d.sh --prove",
     "image:publier": "sh scripts/image/publier.sh"
   },
   "devDependencies": {
