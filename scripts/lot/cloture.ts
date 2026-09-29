@@ -361,6 +361,57 @@ export interface Livraison {
   titreNonConforme?: { lu: string | null; attendu: string | null } | null;
 }
 
+/** Une livraison au PASSIF DÉCLARÉ de la déclaration (GOV-127) : une entrée, une tâche, une PR. */
+export interface EntreeDuPassifDeLaDeclaration {
+  tache: string;
+  depot: 'axionia' | 'partners';
+  pr: number;
+  /** Le commit d'écrasement COMPLET : la levée ne vaut que pour CETTE livraison. */
+  sha: string;
+  date: string;
+  arbitrage: string;
+}
+
+/**
+ * GOV-127 — LE PASSIF DÉCLARÉ DE LA DÉCLARATION. Une liste FERMÉE et datée, sur le patron du passif
+ * de GOV-042 : la SEULE place où `tache_etrangere_a_la_pr` et `titre_d_ecrasement_non_conforme`
+ * peuvent être levés. Une entrée ne lève rien si le titre que la PR portait À L'INSTANT DE LA FUSION
+ * (lu dans sa chronologie sur la forge) ne déclare pas la tâche ; toute livraison hors de cette liste
+ * garde les deux refus. Ajouter une entrée est une décision : elle passe par un arbitrage écrit et par
+ * les deux lentilles, jamais par un drapeau de la ligne de commande.
+ */
+export const PASSIF_DE_LA_DECLARATION: readonly EntreeDuPassifDeLaDeclaration[] = [
+  {
+    tache: 'INT-T02',
+    depot: 'axionia',
+    pr: 1180,
+    sha: 'f158408b6a0473f99f2df9b47cece3515234cbfe',
+    date: '2026-09-29',
+    arbitrage:
+      'arbitrage -d7 sur délégation de Williams du 2026-09-29 : livraison antérieure à la convention de déclaration côté axion-ia ; la PR nomme la tâche (titre à la fusion « feat(INT-T02): … », squash « … (INT-T02) (#1180) ») ; accords A09 et production vérifiés ; patch propre 8f1d7d4 ≡ 6bfd50b vérifié (19 fichiers, seul le contexte de worker.ts diffère) ; exception unique, aucune règle assouplie',
+  },
+];
+
+/**
+ * La livraison est-elle au passif déclaré ? Il faut que TOUT coïncide : la tâche, la PR, le sha
+ * complet, et que le titre à l'instant de la fusion déclare la tâche. Sinon : `null`, les refus restent.
+ */
+export function passifDeLaDeclaration(
+  tacheId: string,
+  livraison: Livraison,
+  passif: readonly EntreeDuPassifDeLaDeclaration[] = PASSIF_DE_LA_DECLARATION
+): EntreeDuPassifDeLaDeclaration | null {
+  const entree = passif.find(
+    (e) => e.tache === tacheId && e.pr === livraison.pr && e.sha === livraison.sha
+  );
+  if (!entree) return null;
+  const aLaFusion = (livraison.titreNonConforme?.attendu ?? livraison.titre ?? '').replace(
+    /\s*\(#\d+\)\s*$/,
+    ''
+  );
+  return idDuTitre(aLaFusion) === tacheId ? entree : null;
+}
+
 /**
  * CLORE UNE TÂCHE LIVRÉE SEULE, HORS DE TOUT LOT (GOV-057) — `--tache <id> --pr <n>`.
  *
@@ -427,7 +478,9 @@ export function cloturerUneTacheSeule(options: {
     idDuTitre(livraison.titre ?? null),
     lot.ids
   );
-  if (!declarees.some((x) => x.id === t.id)) {
+  // GOV-127 : seul le passif déclaré, fermé et daté, lève les deux refus de la déclaration.
+  const passif = passifDeLaDeclaration(t.id, livraison);
+  if (!passif && !declarees.some((x) => x.id === t.id)) {
     refus.push({
       famille: 'tache_etrangere_a_la_pr',
       message:
@@ -442,7 +495,7 @@ export function cloturerUneTacheSeule(options: {
   // seul commit prend pour titre d'écrasement le sujet du commit, écrit par le développeur : il
   // peut nommer une autre tâche que le titre de la PR (lentille `securite`, #188). La livraison
   // ne déclare alors rien ; ce refus NOMME pourquoi, en plus de `tache_etrangere_a_la_pr`.
-  if (livraison.titreNonConforme) {
+  if (!passif && livraison.titreNonConforme) {
     const { lu, attendu } = livraison.titreNonConforme;
     refus.push({
       famille: 'titre_d_ecrasement_non_conforme',
