@@ -7,13 +7,13 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `6a15106` — 2026-09-29T14:22:18+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #235 (un contrôle requis rouge ou une revue manquante) · 2. #221 (un conflit avec `main`) |
+| Où est `main` ? | `c92e400` — 2026-09-29T15:17:11+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #235 (un contrôle requis rouge ou une revue manquante) |
 | Qui tient quoi ? | QA-T05 (A01) · JUR-T04 (A01) · GOV-122 (A01) · GOV-118 (A01) · GOV-119 (A01) · GOV-121 (A01) |
 | Où en est la phase ? | phase 0 — 95/136 tâches, reste 32.75 j |
 | Le prochain pas | QA-T05 — Pipeline GHCR privé → Coolify pull |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
-| Dernière entrée de journal | PR #233 — 2026-09-29 |
+| Dernière entrée de journal | PR #237 — 2026-09-29 |
 
 **Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
@@ -61,7 +61,6 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
 | 1 | #235 — fix(GOV-066): la garde d'entite juge chaque commit de la PR, pas seulement la tete, et ecrit ce qu'elle ne lit pas | `t/gov-066` | un contrôle requis rouge ou une revue manquante |
-| 2 | #221 — feat(QA-T05): la forge construit, juge puis publie l'image, la plateforme ne fera plus que la tirer | `t/qa-t05` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -94,13 +93,29 @@ Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeS
 
 ## Dernier atterrissage
 
-`origin/main` = `6a15106` (2026-09-29T14:22:18+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `c92e400` (2026-09-29T15:17:11+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
 ## Journal
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
+
+### PR #237 — 2026-09-29 — feat(INT-T26): la candidature recue cree un apporteur candidat, coordonnees tirees et chiffrees, rattachement par empreinte
+
+**Fait.** Une candidature reçue d'axionia devient un apporteur `candidat`. Le snapshot figé et le
+passage de l'événement à `traite` se font dans une seule transaction. Les coordonnées ne voyagent
+pas dans la charge : elles sont tirées à la route signée d'axionia, validées contre le `$defs`
+publié du contrat v2, puis chiffrées. Une personne déjà connue par son courriel, son téléphone ou
+la même candidature est rattachée, pas doublée. Si la route ne répond pas, l'événement attend
+`coordonnees:<id>` et le travail de fond le reprend.
+
+**Reste.** La route côté axionia (INT-T27-A, axion-ia#1223) n'est pas encore en production. D'ici
+là, toute candidature attend, ce qui est l'état voulu. Le secret de relecture et l'URL d'axionia
+entrent dans `env.ts` : un quatrième path, signalé au rattrapage.
+
+**Appris.** Une erreur typée `AttenteDeDependance` suffit au travail de fond pour distinguer
+« attendre » de « échouer ». Le traitement n'a rien à savoir de la file.
 
 ### PR #233 — 2026-09-29 — feat(JUR-T04): registre de l'article 30 et AIPD, sources et derives du schema, la page de confidentialite scindee
 
@@ -125,34 +140,7 @@ scripts de garde lue et vide est un refus, et le périmètre de la famille est �
 **Appris.** Distinguer une dimension non lue d'une dimension lue et vide coûte une valeur de plus,
 `undefined` à côté de `[]` ; sans elle, le plancher aurait fait rougir tous les cas de preuve.
 
-### PR #230 — 2026-09-29 — docs(GOV-012): conseillers salaries — plan W19 et taches versees (GOV-112, GOV-115 a GOV-117), sans DECISIONS ni GLOSSAIRE
-
-**Fait.** Le plan du chantier W19 est versé dans `docs/chantiers/W19-conseillers-salaries.md`, avec
-les réponses de Williams du 2026-09-29, dont la question 22 : les conseillers travaillent dans le CRM
-Pro, et Partners garde le registre et décide par l'API 3. Quatre tâches entrent au registre `a_faire`
-(GOV-112, GOV-115, GOV-116, GOV-117) ; INT-T28, SEC-34 et DM-32 sont ajoutées au plan, UX-P2-11 en
-sort. Chiffrage : chantier W19 21,0 j, lot transverse « confort de la console pour tous les rôles »
-15,7 j, total Partners 36,7 j.
-
-Les quatre réserves de la lentille `securite`, qui a accepté la PR sur `830a648`, sont versées au
-plan et au registre. L'identité du conseiller à l'API 3 devient une hypothèse de confiance envers le
-CRM Pro, écrite dans l'ADR INT-T28 (HYP-W19-IDENTITE-CRM : vingt et une HYP au lieu de vingt). La
-limite de la Société, qui borne un CRM Pro compromis, devient fixe, égale à celle d'un apporteur, au
-lieu de croître avec le nombre de conseillers (HYP-W19-LIMITES). QA-T31 gagne une clause jumelle sur
-le temps de réponse et l'instant des notifications. SEC-34 porte une alerte de volume agrégée, active
-sans condition ; l'alerte par conseiller reste liée à HYP-W19-CSE. L'acceptance de GOV-116 porte la
-relecture du processus par la lentille `securite`. GOV-112 et GOV-115 sont réécrites en conséquence.
-
-**Reste.** Tout le chantier : GOV-116 puis GOV-112 écrivent `docs/DECISIONS.md`, `docs/GLOSSAIRE.md`
-et `docs/PRESEANCE.md`, que cette PR ne touche pas ; GOV-117 puis GOV-115 versent les trente-deux
-autres tâches. Aucune tâche W19 n'est livrée par cette PR. Les estimations de QA-T31 et de SEC-34
-ne sont pas rechiffrées après les réserves : GOV-115 les relit au versement.
-
-**Appris.** Un titre de PR doit nommer une tâche du registre, et une PR sur une tâche `a_faire`
-non revendiquée rougit `gov:etat` : une PR de plan qui verse ses tâches sans les livrer se titre sur
-une tâche déjà livrée, comme la PR #219 sur GOV-012, jamais sur l'une des tâches qu'elle verse.
-
-… 3 entrée(s) affichée(s) sur 99 ; les 96 plus ancienne(s) se lisent dans `docs/journal/`.
+… 3 entrée(s) affichée(s) sur 100 ; les 97 plus ancienne(s) se lisent dans `docs/journal/`.
 
 ## Dette déclarée
 
