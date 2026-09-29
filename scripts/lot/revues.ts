@@ -1398,7 +1398,11 @@ export type Risque = {
  */
 export const RACINES_A_UNE_LENTILLE: readonly string[] = [
   'docs/',
-  'tests/',
+  // GOV-126 (relevé de la lentille exactitude sur la PR #250) : dans tests/, une liste d'AUTORISATION
+  // courte. Le domaine, le contrat, le juridique, l'intégration, la gouvernance, la sécurité, les
+  // fixtures d'un dépôt public et tout dossier à venir valent deux lentilles.
+  'tests/unit/qualite/',
+  'tests/a11y/',
   'scripts/vues/',
   'scripts/plan-state/',
 ];

@@ -167,7 +167,8 @@ describe('REQ-GOV-011 — une PR sans risque n’exige qu’une lentille, dériv
   it('REQ-GOV-011 — la liste d’autorisation est FERMÉE et écrite', () => {
     expect([...LECTEUR.RACINES_A_UNE_LENTILLE]).toEqual([
       'docs/',
-      'tests/',
+      'tests/unit/qualite/',
+      'tests/a11y/',
       'scripts/vues/',
       'scripts/plan-state/',
     ]);
@@ -227,5 +228,23 @@ describe('REQ-GOV-011 — une PR sans risque n’exige qu’une lentille, dériv
     }
     // Contre-témoin : un test hors de ces trois dossiers reste à une lentille.
     expect(LECTEUR.fichierAUneLentille('tests/unit/qualite/x.spec.ts')).toBe(true);
+  });
+
+  it('REQ-GOV-011 — TÉMOIN : dans tests/, seuls qualite et a11y restent à une lentille ; le domaine, le contrat, le juridique et les fixtures en exigent DEUX (GOV-126)', () => {
+    for (const f of [
+      'tests/unit/domaine/prorata.spec.ts',
+      'tests/unit/contrat/x.spec.ts',
+      'tests/unit/juridique/x.spec.ts',
+      'tests/unit/integration/x.spec.ts',
+      'tests/unit/espace/x.spec.ts',
+      'tests/unit/ci/x.spec.ts',
+      'tests/gov/x.spec.ts',
+      'tests/fixtures/grille.json',
+      'tests/setup.ts',
+    ]) {
+      expect(LECTEUR.fichierAUneLentille(f), f).toBe(false);
+      expect(lentilles({ fichiers: [f] }).exigees, f).toEqual(['exactitude', 'securite']);
+    }
+    expect(LECTEUR.fichierAUneLentille('tests/a11y/x.spec.ts')).toBe(true);
   });
 });
