@@ -10,7 +10,7 @@
 | Où est `main` ? | `c92e400` — 2026-09-29T15:17:11+02:00 |
 | Qu’est-ce qui est en vol ? | 1. #235 (rien) · 2. #237 (rien) · 3. #239 (un contrôle requis rouge ou une revue manquante) · 4. #241 (un contrôle requis rouge ou une revue manquante) |
 | Qui tient quoi ? | aucune tâche revendiquée |
-| Où en est la phase ? | phase 0 — 101/136 tâches, reste 28.50 j |
+| Où en est la phase ? | phase 0 — 101/127 tâches, reste 20.50 j |
 | Le prochain pas | fusionner #235, puis QA-T11 — Gate D migrations : base vierge, dump N-1, migrate diff vide, image N-1, lint expand/contract |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
 | Dernière entrée de journal | PR #239 — 2026-09-29 |
@@ -19,7 +19,7 @@
 
 ## Phase courante : 0
 
-101/136 tâches terminées · reste 28.50 j estimés.
+101/127 tâches terminées · reste 20.50 j estimés.
 
 ## Tâches
 
@@ -85,7 +85,7 @@ Dérivé de `git log` sur `docs/adr/`, restreint au jour du dernier atterrissage
 
 **Fusionner #235** — elle est en tête de file et ne bloque sur rien.
 
-**QA-T11** — Gate D migrations : base vierge, dump N-1, migrate diff vide, image N-1, lint expand/contract (1 j) : 21 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
+**QA-T11** — Gate D migrations : base vierge, dump N-1, migrate diff vide, image N-1, lint expand/contract (1 j) : 14 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
 Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeStateStatus` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage —, la tâche ensuite. L’ordre de la file se corrige à la rubrique « File de fusion », jamais ici.
 
