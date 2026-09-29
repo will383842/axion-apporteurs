@@ -31,7 +31,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
-import { Prisma, PrismaClient } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import {
   CLES_REFUSEES,
   CORPS_INTROUVABLE,
@@ -528,86 +528,37 @@ describe('REQ-QA-012 → REQ-SEC-022 — l’occupation d’un autre apporteur n
 });
 
 /**
- * LE VRAI SÉRIALISEUR DE PRISMA, INTERCEPTÉ AU MOTEUR (lentille `securite`, #200). Le faux client
- * de ce fichier ne voit pas ce que Prisma envoie : son sérialiseur parcourt les arguments par
- * `for…in`, et une clé héritée PART vers la base. On construit un vrai client, on remplace la seule
- * méthode du moteur qui parle à la base, et on lit ce qu'elle aurait reçu. Aucune base n'est ouverte.
+ * LES MÊMES REFUS, SUR LE FAUX CLIENT. Les témoins sur le VRAI sérialiseur de Prisma vivent dans
+ * `tests/integration/idor.spec.ts` : instancier `PrismaClient` dans un test unitaire fait paniquer
+ * le moteur dans le bac à sable de Stryker. Ici, la preuve est qu'aucun appel ne part.
  */
-describe('REQ-SEC-008 — le vrai sérialiseur de Prisma ne reçoit que ce que la couche a jugé', () => {
-  function clientIntercepte(): { client: PrismaClient; envois: string[] } {
-    process.env.DATABASE_URL ??= 'postgresql://temoin:temoin@127.0.0.1:1/temoin';
-    const client = new PrismaClient();
-    const envois: string[] = [];
-    const moteur = (
-      client as unknown as { _engine: { request: (...a: unknown[]) => Promise<unknown> } }
-    )._engine;
-    moteur.request = (...args: unknown[]) => {
-      envois.push(JSON.stringify(args[0]));
-      return Promise.reject(new Error('moteur intercepté par le témoin'));
-    };
-    return { client, envois };
-  }
-
-  it('REQ-SEC-008 : TÉMOIN DU BANC — sans la couche, le vrai sérialiseur ENVOIE une clé héritée', async () => {
-    const { client, envois } = clientIntercepte();
-    await client.jetonDepot
-      .updateMany({ where: { id: randomUUID() }, data: Object.create({ apporteurId: B }) as never })
-      .catch(() => undefined);
-    expect(envois.join('\n')).toContain(B);
-  });
-
-  it.each(['creer', 'modifier'] as const)(
-    'REQ-SEC-008 : par la couche, %s d’une clé héritée n’envoie RIEN au moteur',
-    async (methode) => {
-      const { client, envois } = clientIntercepte();
-      const vue = forApporteur(client as unknown as ClientCloisonnable, A).jetonDepot;
-      const data = Object.create({ apporteurId: B }) as never;
-      const appel = methode === 'creer' ? vue.creer(data) : vue.modifier(randomUUID(), data);
-      expect(await refusDe(appel)).toBe(REFUS.forme);
-      expect(envois).toEqual([]);
-    }
-  );
-
-  // UNE PROPRIÉTÉ PROPRE `__proto__`, telle que `JSON.parse` la produit d'un corps de requête
-  // (lentille `securite`, second refus sur #200). Une copie construite par AFFECTATION voyait son
-  // prototype remplacé : le contrôle ne voyait rien, et le sérialiseur envoyait les clés héritées.
+describe('REQ-SEC-008 — un corps JSON qui touche au prototype est refusé avant tout appel', () => {
   it.each([
     ['modifier', 'jetonDepot', `{"kid":"x","__proto__":{"apporteurId":"${B}"}}`],
     ['creer', 'jetonDepot', `{"kid":"x","__proto__":{"apporteurId":"${B}"}}`],
     ['modifier', 'sessionEspace', `{"__proto__":{"lienMagiqueId":"${B}"}}`],
   ] as const)(
-    'REQ-SEC-008 : par la couche, %s d’un corps JSON portant `__proto__` (%s) est refusé, et RIEN n’est envoyé',
+    'REQ-SEC-008 : %s d’un corps JSON portant `__proto__` (%s) est refusé, sans rien appeler',
     async (methode, modele, corps) => {
-      const { client, envois } = clientIntercepte();
-      const vue = forApporteur(client as unknown as ClientCloisonnable, A)[modele];
+      const { client, appels } = fauxClient();
+      const vue = forApporteur(client, A)[modele];
       const data: unknown = JSON.parse(corps);
       const appel =
         methode === 'creer' ? vue.creer(data as never) : vue.modifier(randomUUID(), data as never);
       expect(await refusDe(appel)).toBe(REFUS.forme);
-      expect(envois).toEqual([]);
+      expect(appels).toEqual([]);
     }
   );
 
   it.each(['constructor', 'toString', 'hasOwnProperty'])(
     'REQ-SEC-008 : une clé `%s`, membre du prototype des objets, est refusée comme `__proto__`',
     async (cle) => {
-      const { client, envois } = clientIntercepte();
+      const { client, appels } = fauxClient();
       const data: unknown = JSON.parse(`{"kid":"x","${cle}":{"apporteurId":"${B}"}}`);
-      const vue = forApporteur(client as unknown as ClientCloisonnable, A).jetonDepot;
-      expect(await refusDe(vue.modifier(randomUUID(), data as never))).toBe(REFUS.forme);
-      expect(envois).toEqual([]);
+      expect(
+        await refusDe(forApporteur(client, A).jetonDepot.modifier(randomUUID(), data as never))
+      ).toBe(REFUS.forme);
+      expect(appels).toEqual([]);
     }
   );
-
-  it('REQ-SEC-008 : CONTRE-TÉMOIN — par la couche, un objet simple part avec l’apporteur de la session', async () => {
-    const { client, envois } = clientIntercepte();
-    const simple: Record<string, unknown> = { kid: '0123abcd' };
-    await forApporteur(client as unknown as ClientCloisonnable, A)
-      .jetonDepot.modifier(randomUUID(), simple as never)
-      .catch(() => undefined);
-    const envoye = envois.join('\n');
-    expect(envoye).toContain('0123abcd');
-    expect(envoye).toContain(A);
-    expect(envoye).not.toContain(B);
-  });
 });
