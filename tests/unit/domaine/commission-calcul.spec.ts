@@ -88,7 +88,11 @@ describe('REQ-DM-015 — une fonction pure : un montant en centimes, ou un bloca
   });
 
   it('REQ-DM-015 : un pourcentage vaut round(tauxBps × HT / 10 000 bps), en entiers', () => {
-    const pct = ligneDe('percent');
+    // Le taux le plus élevé de la grille : un taux de 1 bps ne distinguerait pas un produit d'un quotient.
+    const pct = grille.commissions
+      .filter((c) => c.kind === 'percent')
+      .reduce((a, b) => (b.tauxBps! > a.tauxBps! ? b : a));
+    expect(pct.tauxBps).toBeGreaterThan(1);
     const base = BPS_MAX; // 100 % en points de base
     // HT choisi pour tomber sur un demi-centime : l'arrondi va au centime supérieur.
     const ht = base / 2;
