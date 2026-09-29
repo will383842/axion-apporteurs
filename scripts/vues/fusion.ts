@@ -122,8 +122,12 @@ export function fusionnerMain(d: Demande): Issue {
         );
       }
       for (const v of vues) {
-        // La base a RETIRÉ la vue de l'index (GOV-123) : elle en sort ici aussi, le disque la garde.
-        if (essayer('cat-file', '-e', `MERGE_HEAD:${v}`)) git('checkout', '--theirs', '--', v);
+        // Une vue que l'UN des deux côtés a RETIRÉE de l'index (GOV-123) en sort ici aussi, le
+        // disque la garde : la branche qui l'a retirée ne la remet jamais sous git en fusionnant une
+        // base plus ancienne, et une branche plus ancienne la perd en fusionnant la base.
+        const suivieIci = essayer('cat-file', '-e', `HEAD:${v}`);
+        const suivieEnBase = essayer('cat-file', '-e', `MERGE_HEAD:${v}`);
+        if (suivieIci && suivieEnBase) git('checkout', '--theirs', '--', v);
         else git('rm', '-q', '--cached', '--', v);
       }
       lignes.push(`   conflit sur ${vues.length} vue(s) seule(s) : ${vues.join(', ')} — rendues.`);
