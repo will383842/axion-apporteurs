@@ -39,7 +39,10 @@ niveau de risque dérivé et fermé, et ce qui est illisible vaut deux.
 5. **Les registres du calcul et les textes du processus valent deux lentilles, même sous `docs/`**
    (`EXCLUS_D_UNE_LENTILLE`). Il s'agit de `docs/tasks.json`, `docs/requirements.json`,
    `docs/DECISIONS.md`, `docs/agents.json`, `docs/gates.json`, la charte, les conventions, le
-   protocole de fusion, `docs/adr/` et les schémas des registres. C'est un relevé de la lentille
+   protocole de fusion, `docs/adr/` et les schémas des registres ; et, relevé de la même lentille sur la
+   PR #248, ce que `src/` ou une garde lit et le juridique : `docs/contrat/`, `docs/rgpd/` (lu à
+   l'exécution par la page de confidentialité), `docs/tiers/`, `docs/GLOSSAIRE.md`, `docs/PRESEANCE.md`
+   et `docs/env.md`. C'est un relevé de la lentille
    `exactitude` sur la PR #246 : relu par une seule lentille, un `sensible` retiré d'une tâche ferait
    passer à une lentille toutes ses PR suivantes, sans `securite`. Les rattrapages du registre restent
    donc à deux lentilles.

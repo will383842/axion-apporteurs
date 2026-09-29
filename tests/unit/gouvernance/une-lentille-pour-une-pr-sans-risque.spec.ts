@@ -202,4 +202,17 @@ describe('REQ-GOV-011 — une PR sans risque n’exige qu’une lentille, dériv
     }
     expect(LECTEUR.fichierAUneLentille('docs/journal/2026-09-pr-1.md')).toBe(true);
   });
+
+  it('REQ-GOV-011 — TÉMOIN : une PR qui ne touche que docs/rgpd/registre-article-30.md, lu à l’exécution par src/, en exige DEUX', () => {
+    for (const f of [
+      'docs/rgpd/registre-article-30.md',
+      'docs/contrat/CONTRAT-APPORTEUR-V1.md',
+      'docs/tiers/zeptomail.md',
+      'docs/GLOSSAIRE.md',
+      'docs/PRESEANCE.md',
+      'docs/env.md',
+    ]) {
+      expect(lentilles({ fichiers: [f] }).exigees, f).toEqual(['exactitude', 'securite']);
+    }
+  });
 });

@@ -1423,6 +1423,13 @@ export const EXCLUS_D_UNE_LENTILLE: readonly string[] = [
   'docs/CONVENTIONS.md',
   'docs/PROTOCOLE-FUSION.md',
   'docs/adr/',
+  // Relevé de la lentille exactitude sur la PR #248 : ce que src/ ou une garde LIT, et le juridique.
+  'docs/contrat/',
+  'docs/rgpd/',
+  'docs/tiers/',
+  'docs/GLOSSAIRE.md',
+  'docs/PRESEANCE.md',
+  'docs/env.md',
   'scripts/lot/tasks.schema.json',
   'scripts/lot/requirements.schema.json',
 ];
