@@ -7,9 +7,9 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `b34b959` — 2026-09-29T18:00:27+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #241 (un contrôle requis rouge ou une revue manquante) · 2. #246 (un contrôle requis rouge ou une revue manquante) · 3. #242 (un conflit avec `main`) · 4. #244 (un conflit avec `main`) · 5. #245 (un conflit avec `main`) |
-| Qui tient quoi ? | aucune tâche revendiquée |
+| Où est `main` ? | `603e7f0` — 2026-09-29T18:16:13+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #242 (un conflit avec `main`) · 2. #244 (un conflit avec `main`) · 3. #245 (un conflit avec `main`) · 4. #246 (un conflit avec `main`) |
+| Qui tient quoi ? | GOV-062 (A01) |
 | Où en est la phase ? | phase 0 — 102/129 tâches, reste 21.75 j |
 | Le prochain pas | QA-T11 — Gate D migrations : base vierge, dump N-1, migrate diff vide, image N-1, lint expand/contract |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
@@ -60,11 +60,10 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #241 — fix(GOV-062): l'outillage qui execute la porte A est juge, sept points nommes | `t/gov-062` | un contrôle requis rouge ou une revue manquante |
-| 2 | #246 — chore(GOV-012): GOV-123 et GOV-124 versees, exception au gel decidee par Williams | `t/registre-rattrapage-12` | un contrôle requis rouge ou une revue manquante |
-| 3 | #242 — feat(JUR-T34): la politique de confidentialite de l'espace, tiree du registre de l'article 30 et acceptee a la premiere connexion | `t/jur-t34` | un conflit avec `main` — à résoudre avant tout |
-| 4 | #244 — docs(GOV-017a): confirmation du depot par e-mail — plan W20 et quatorze taches versees en phase 1, sans DECISIONS ni REQ nouvelles | `t/w20-confirmation-email` | un conflit avec `main` — à résoudre avant tout |
-| 5 | #245 — feat(QA-T11): porte D, expand puis contract contre le code deploye, vidage N-1 seme, diff vide | `t/qa-t11` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #242 — feat(JUR-T34): la politique de confidentialite de l'espace, tiree du registre de l'article 30 et acceptee a la premiere connexion | `t/jur-t34` | un conflit avec `main` — à résoudre avant tout |
+| 2 | #244 — docs(GOV-017a): confirmation du depot par e-mail — plan W20 et quatorze taches versees en phase 1, sans DECISIONS ni REQ nouvelles | `t/w20-confirmation-email` | un conflit avec `main` — à résoudre avant tout |
+| 3 | #245 — feat(QA-T11): porte D, expand puis contract contre le code deploye, vidage N-1 seme, diff vide | `t/qa-t11` | un conflit avec `main` — à résoudre avant tout |
+| 4 | #246 — chore(GOV-012): GOV-123 et GOV-124 versees, exception au gel decidee par Williams | `t/registre-rattrapage-12` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -72,7 +71,9 @@ Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partn
 
 Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’issue, posés par l’orchestrateur au §3 de `.claude/skills/lot/SKILL.md` (revendication **en vol**), et le champ `owner` de `docs/tasks.json`, écrit par `pnpm lot:cloture` seul (revendication **consolidée**). Cette rubrique les REND ; corriger une revendication fausse se fait dans l’une des deux sources, jamais ici.
 
-Aucune tâche revendiquée. Un agent ne prend jamais une tâche non revendiquée (REQ-GOV-007) : la revendication passe par l’orchestrateur.
+| Tâche | Revendiquée par | Issue | Statut |
+| --- | --- | --- | --- |
+| GOV-062 — L'outillage qui execute la porte A n'est pas garde : configuration du gestionnaire, correctifs, actions tierces | A01 | #240 | `a_faire` |
 
 ⚠️ **13 revendication(s) périmée(s)** — QA-T07, GOV-042, GOV-045, GOV-050, GOV-051, GOV-053, GOV-054, GOV-055, GOV-060, GOV-072, GOV-079, GOV-093, INT-T01c : leur issue porte encore un label `owner:` alors que la tâche est livrée. `pnpm lot:cloture` écrit `docs/tasks.json` mais n’efface pas les labels ; la dette appartient à GOV-012.
 
@@ -90,7 +91,7 @@ Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeS
 
 ## Dernier atterrissage
 
-`origin/main` = `b34b959` (2026-09-29T18:00:27+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `603e7f0` (2026-09-29T18:16:13+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
@@ -110,6 +111,20 @@ INT-T27-A pour être close.
 **Appris.** Une clôture se juge avec ses dépendances : une tâche livrée par une PR fusionnée
 reste ouverte tant que sa dépendance ne l'est pas, sinon le registre ment sur l'ordre.
 
+### PR #241 — 2026-09-29 — fix(GOV-062): l'outillage qui execute la porte A est juge, sept points nommes
+
+**Fait.** La porte A juge l'outillage qui l'exécute, en sept points dont chacun a sa famille :
+réglage du gestionnaire, chemins réservés à `role:architecte`, correctifs, actions tierces, étape
+qui réécrit l'arbre, commande intégrée, environnement hérité. La réserve du §7 est accordée dans la
+source des agents, et la fiche de l'architecte est rendue par son générateur.
+
+**Reste.** Les lentilles relisent la tête. La modification de `.claude/agents/` et la correction
+du témoin de `gov:pr` ont chacune été autorisées par Williams, une seule fois.
+
+**Appris.** Un témoin qui décrit un risque peut heurter une réserve ajoutée plus tard : le cas
+6 quater mesurait le risque d'un fichier racine, et la réserve du §7 l'a fait rougir. Le témoin
+porte désormais le label que la réserve exige.
+
 ### PR #239 — 2026-09-29 — chore(GOV-012): registre rattrape, sept taches closes, gel de la gouvernance, avenants JUR-T03 et INT-T27-A
 
 **Fait.** Onzième rattrapage. GOV-119, GOV-122, GOV-121, GOV-118, JUR-T04, QA-T05 et GOV-066 passent
@@ -126,23 +141,7 @@ motif. Il faut un rattrapage par ADR.
 **Appris.** Une clôture qui passe seule peut rendre le registre rouge par une dépendance encore
 ouverte dans l'autre dépôt : `gov:tasks` se rejoue après chaque clôture, pas seulement à la fin.
 
-### PR #237 — 2026-09-29 — feat(INT-T26): la candidature recue cree un apporteur candidat, coordonnees tirees et chiffrees, rattachement par empreinte
-
-**Fait.** Une candidature reçue d'axionia devient un apporteur `candidat`. Le snapshot figé et le
-passage de l'événement à `traite` se font dans une seule transaction. Les coordonnées ne voyagent
-pas dans la charge : elles sont tirées à la route signée d'axionia, validées contre le `$defs`
-publié du contrat v2, puis chiffrées. Une personne déjà connue par son courriel, son téléphone ou
-la même candidature est rattachée, pas doublée. Si la route ne répond pas, l'événement attend
-`coordonnees:<id>` et le travail de fond le reprend.
-
-**Reste.** La route côté axionia (INT-T27-A, axion-ia#1223) n'est pas encore en production. D'ici
-là, toute candidature attend, ce qui est l'état voulu. Le secret de relecture et l'URL d'axionia
-entrent dans `env.ts` : un quatrième path, signalé au rattrapage.
-
-**Appris.** Une erreur typée `AttenteDeDependance` suffit au travail de fond pour distinguer
-« attendre » de « échouer ». Le traitement n'a rien à savoir de la file.
-
-… 3 entrée(s) affichée(s) sur 103 ; les 100 plus ancienne(s) se lisent dans `docs/journal/`.
+… 3 entrée(s) affichée(s) sur 104 ; les 101 plus ancienne(s) se lisent dans `docs/journal/`.
 
 ## Dette déclarée
 

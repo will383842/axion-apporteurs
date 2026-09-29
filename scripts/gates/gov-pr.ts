@@ -2726,7 +2726,12 @@ if (LANCE_EN_SCRIPT) {
       {
         // cas 6 quater (GOV-077) — un fichier de configuration à la racine : quatre lentilles.
         quoi: 'GOV-101 — PR élevée, deux lentilles suffisent : cas 6 quater (GOV-077) — un fichier de configuration à la (voir le commentaire)',
-        cas: () => [copieDepot(), RACINE_AU_MILIEU()],
+        // GOV-062 : `package.json` et `pnpm-lock.yaml` sont parmi ces fichiers racine, et le §7 les
+        // réserve à `role:architecte`. La PR porte donc ce label : le cas mesure le risque, pas la réserve.
+        cas: () => {
+          const p = RACINE_AU_MILIEU();
+          return [copieDepot(), { ...p, labels: [...p.labels, 'role:architecte'] }];
+        },
       },
       {
         // (GOV-077, second refus de `securite`) — la liste de la FORGE plus courte que ce que la PR

@@ -463,6 +463,16 @@ dans la dernière colonne, et c'est à ce titre qu'ils entrent ici (RM-01) :
 | `docs/LECONS.md` | A03 | `role:documentaliste` | `docs/REGLES-MAISON.md`, section « Leçons » (l.181-185) — aucune fiche de `.claude/agents/` ne porte ce chemin |
 | `docs/maquettes/**` | A06 | `role:ux-redaction` | fiche `.claude/agents/ux-redaction.md` (validation de Will avant attribution) |
 
+Trois chemins de plus, qui viennent d'une décision d'A01 du 2026-09-29 : l'outillage qui exécute la porte A.
+Le manifeste, le verrou et les correctifs du gestionnaire de paquets changent ce que CHAQUE étape exécute sans
+toucher au workflow ; changer une dépendance est une décision d'architecture. Un dossier s'écrit `dossier/**`,
+seule forme que `gov:pr` sache lire (`dossier/*` ne couvre aucun fichier). `pnpm gov:conventions` exige que
+chacun de ces chemins reste réservé ici (famille `outillage_chemin_non_reserve`) :
+
+| Chemin réservé | Poste | Label exigé | Où la règle est écrite |
+| --- | --- | --- | --- |
+| `package.json`, `pnpm-lock.yaml`, `patches/**` | A02 | `role:architecte` | décision d'A01 du 2026-09-29 ; `scripts/gates/gov-conventions.ts` (`CHEMINS_DE_L_OUTILLAGE`) |
+
 La ligne `.claude/**` porte `—` : **aucun label ne l'ouvre**, parce qu'aucun agent en session n'a le droit
 d'écrire ces fichiers. `gov:pr` ne compte donc pas de label sur elle ; ce qui la garde, c'est le `deny` de
 `.claude/settings.json`, et la garde `gov:autonomie` **le jour où elle sera écrite** (`docs/gates.json` :
