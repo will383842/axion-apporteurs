@@ -661,7 +661,8 @@
         "tests/integration/adaptateur-mcp.spec.ts",
         "tests/unit/gouvernance/clore-une-tache-livree-seule.spec.ts",
         "tests/unit/gouvernance/une-branche-reelle-de-la-forge-est-admise.spec.ts",
-        "tests/unit/gouvernance/gov-pr-lit-une-pr-de-lot.spec.ts"
+        "tests/unit/gouvernance/gov-pr-lit-une-pr-de-lot.spec.ts",
+        "tests/unit/gouvernance/tasks-schema-et-paths.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -2326,11 +2327,11 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 1,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "owner": "A01",
       "lot": null,
-      "branch": null,
-      "pr": null,
+      "branch": "t/qa-t11",
+      "pr": 245,
       "issue": 243,
       "attempts": 0,
       "motif": null,
@@ -2339,6 +2340,11 @@
         "REQ-QA-021": [
           "tests/integration/migrations-additives.spec.ts"
         ]
+      },
+      "attestation": {
+        "pr": 245,
+        "sha": "3d9006b68b3c05f3838af3a3aad74f3e2b585519",
+        "fusionneeAt": "2026-09-29T17:09:07Z"
       }
     },
     {
@@ -2764,7 +2770,14 @@
       "zone": "integration",
       "paths": [
         "axionia/src/server/partners-sync/producteurs/devis.ts",
-        "axionia/src/server/partners-sync/__tests__/producteur-devis.spec.ts"
+        "axionia/src/server/partners-sync/__tests__/producteur-devis.spec.ts",
+        "axionia/scripts/gates/cliquet-ecrivains.ts",
+        "axionia/tests/unit/ci/cliquet-ecrivains-devis.spec.ts",
+        "axionia/src/app/api/docuseal/webhook/route.ts",
+        "axionia/src/server/actions/qualiopi/devis.ts",
+        "axionia/src/server/actions/qualiopi/piece-signature.ts",
+        "axionia/src/server/partners/payloads.ts",
+        "axionia/package.json"
       ],
       "schema": false,
       "sensible": [
@@ -2809,7 +2822,15 @@
         "axionia/src/server/partners-sync/producteurs/facturation.ts",
         "axionia/prisma/schema.prisma",
         "axionia/src/server/partners-sync/__tests__/producteurs-facturation.spec.ts",
-        "axionia/scripts/gates/cliquet-ecrivains.ts"
+        "axionia/scripts/gates/cliquet-ecrivains.ts",
+        "axionia/tests/unit/ci/cliquet-ecrivains-facturation.spec.ts",
+        "axionia/src/server/actions/qualiopi/factures-inter.ts",
+        "axionia/src/server/qualiopi/coaching-1to1/facturation-1to1.ts",
+        "axionia/src/server/qualiopi/financements/facturation-service.ts",
+        "axionia/src/server/qualiopi/financements/facture-formation-emission.ts",
+        "axionia/src/server/qualiopi/financements/facture-libre.ts",
+        "axionia/src/server/qualiopi/financements/plan-recurrent.ts",
+        "axionia/src/server/qualiopi/financements/dossier-financement.ts"
       ],
       "schema": true,
       "sensible": [
@@ -2841,7 +2862,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "DEPOT AXIONIA. TACHE SENSIBLE — argent et authentification. UN REFUS DE LA LENTILLE SECURITE Y VAUT VETO. (1) Les evenements `facture.emise`, `avoir.emis`, `paiement.recu` et `paiement.rembourse` sont produits par la fonction d'emission unique, et le cliquet nominatif couvre leurs ecrivains (REQ-INT-007). (2) LES NOMS SONT CEUX DES MODELES REELS D'AXIONIA (Client, Devis, FactureFormation, Payment) : aucun evenement ne reference un modele qui n'existe pas, et la liste des types est FERMEE par le contrat, onze depuis INT-T01c (REQ-INT-004). (3) `paiement.recu` porte l'identifiant de paiement, l'identifiant de facture, l'identifiant de CLIENT BENEFICIAIRE — jamais le destinataire de la facture —, le SIREN, le montant encaisse TTC, les montants HT et TTC de la facture, le regime de TVA, le cumul encaisse TTC, la date d'encaissement et le fournisseur d'encaissement (REQ-INT-005) ; Partners derive le HT encaisse, il ne le recoit pas. (4) BENEFICIAIRE, JAMAIS DESTINATAIRE : quand un tiers payeur regle la facture d'une entreprise, c'est l'entreprise beneficiaire qui porte l'attribution. Une confusion des deux verse la commission a la mauvaise personne, et c'est le defaut le plus couteux de cette famille. (5) Une resolution de client impossible produit une ligne non resolue ALERTEE, jamais un evenement ignore (REQ-ARG-030) ; les encaissements de plusieurs payeurs sur les factures d'une meme prestation se proratisent sans cas particulier (REQ-ARG-005). (6) `facture.emise` transporte le destinataire tel que defini cote axionia et l'echeance de financeur attendue ; Partners stocke le type de payeur dans un enum GENERE depuis le meme fichier de contrat partage, jamais retape (REQ-DM-039). (7) `facture.annulee` et `financement.mis_a_jour` entrent au contrat par INT-T01c (dependance, changement en lockstep cote Partners) ; INT-T05 les PRODUIT par la fonction d'emission unique (REQ-INT-032). (8) TEMOIN A DEUX FACES : une charge de bac d'essai portant l'identifiant du DESTINATAIRE la ou le contrat exige le BENEFICIAIRE est refusee au schema et nomme le champ ; la charge conforme passe. Et une charge ou le HT encaisse est transmis au lieu d'etre derive est refusee, avec le nom du champ en trop.",
+      "acceptance": "DEPOT AXIONIA. TACHE SENSIBLE — argent et authentification. UN REFUS DE LA LENTILLE SECURITE Y VAUT VETO. (1) Les evenements `facture.emise`, `avoir.emis`, `paiement.recu` et `paiement.rembourse` sont produits par la fonction d'emission unique, et le cliquet nominatif couvre leurs ecrivains (REQ-INT-007). (2) LES NOMS SONT CEUX DES MODELES REELS D'AXIONIA (Client, Devis, FactureFormation, Payment) : aucun evenement ne reference un modele qui n'existe pas, et la liste des types est FERMEE par le contrat, onze depuis INT-T01c (REQ-INT-004). (3) `paiement.recu` porte l'identifiant de paiement, l'identifiant de facture, l'identifiant de CLIENT BENEFICIAIRE — jamais le destinataire de la facture —, le SIREN, le montant encaisse TTC, les montants HT et TTC de la facture, le regime de TVA, le cumul encaisse TTC, la date d'encaissement et le fournisseur d'encaissement (REQ-INT-005) ; le HT encaisse de chaque paiement (montantHtCents) est calcule par axionia, le dernier encaissement absorbant le reliquat (REQ-DM-018, REQ-INT-005 amendee). (4) BENEFICIAIRE, JAMAIS DESTINATAIRE : quand un tiers payeur regle la facture d'une entreprise, c'est l'entreprise beneficiaire qui porte l'attribution. Une confusion des deux verse la commission a la mauvaise personne, et c'est le defaut le plus couteux de cette famille. (5) Une resolution de client impossible produit une ligne non resolue ALERTEE, jamais un evenement ignore (REQ-ARG-030) ; les encaissements de plusieurs payeurs sur les factures d'une meme prestation se proratisent sans cas particulier (REQ-ARG-005). (6) `facture.emise` transporte le destinataire tel que defini cote axionia et l'echeance de financeur attendue ; Partners stocke le type de payeur dans un enum GENERE depuis le meme fichier de contrat partage, jamais retape (REQ-DM-039). (7) `facture.annulee` et `financement.mis_a_jour` entrent au contrat par INT-T01c (dependance, changement en lockstep cote Partners) ; INT-T05 les PRODUIT par la fonction d'emission unique (REQ-INT-032). (8) TEMOIN A DEUX FACES : une charge de bac d'essai portant l'identifiant du DESTINATAIRE la ou le contrat exige le BENEFICIAIRE est refusee au schema et nomme le champ ; la charge conforme passe. AVENANT A01 du 2026-09-29 (decision de Williams, confirmee dans la session A01) : REQ-DM-018 et le contrat v2 prevalent, axionia calcule le HT de chaque paiement et le dernier paiement solde le reliquat ; les phrases contraires de (3) et (8) sont retirees, la face BENEFICIAIRE different du DESTINATAIRE du temoin est conservee. AVENANT A01 du 2026-09-29 (mesure de la session -66 sur la PR axion-ia #1228) : paiement.rembourse et facture.annulee n ont aujourd hui AUCUN ecrivain dans src/ ; leurs fonctions d emission existent et sont testees, et le cliquet nominatif mesure 0 ecrivain : il rougira le jour ou un ecrivain naitra sans passer par elles.",
       "tests": {
         "REQ-ARG-001": [
           "axionia/src/server/partners-sync/__tests__/producteurs-facturation.spec.ts"
@@ -2878,7 +2899,13 @@
       "paths": [
         "axionia/src/server/partners-sync/producteurs/candidature.ts",
         "axionia/src/server/partners-sync/__tests__/producteur-candidature.spec.ts",
-        "axionia/scripts/gates/cliquet-ecrivains.ts"
+        "axionia/scripts/gates/cliquet-ecrivains.ts",
+        "axionia/src/features/admin-submissions/transitions.ts",
+        "axionia/src/features/admin-submissions/reply-actions.ts",
+        "axionia/src/features/admin-submissions/reads.ts",
+        "axionia/src/app/[locale]/(admin)/[adminPrefix]/submissions/_v2/SubmissionRowActions.tsx",
+        "axionia/src/app/[locale]/(admin)/[adminPrefix]/submissions/_v2/SubmissionsV2.tsx",
+        "axionia/tests/unit/ci/cliquet-ecrivains-candidature.spec.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -2894,7 +2921,7 @@
       ],
       "hyp": [],
       "externe": null,
-      "estimateDays": 0.5,
+      "estimateDays": 1,
       "statut": "a_faire",
       "owner": null,
       "lot": null,
@@ -2903,7 +2930,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "émission depuis l'écrivain de `Submission` (cliquet nominatif) ; payload `{candidatureId, reponsesJson, scoreInitial, scorePartsJson, scoreBaremeVersion, sourceCanal, utm, campagneId, parrainCodeCapture}`. Le type `candidature.recue` entre au contrat par INT-T01c (dependance). Le payload ne porte aucune coordonnee du candidat : Partners les tire par la route de coordonnees d'axionia (INT-T01c, partners/ADR-0023).",
+      "acceptance": "émission depuis l'écrivain de `Submission` (cliquet nominatif) ; payload `{candidatureId, reponsesJson, scoreInitial, scorePartsJson, scoreBaremeVersion, sourceCanal, utm, campagneId, parrainCodeCapture}`. Le type `candidature.recue` entre au contrat par INT-T01c (dependance). Le payload ne porte aucune coordonnee du candidat : Partners les tire par la route de coordonnees d'axionia (INT-T01c, partners/ADR-0023). AVENANT A01 du 2026-09-29 (arbitrage par la PRESEANCE : l ADR 0051 section c d axion-ia, ACCEPTEE, porte la decision B1 de Williams du 2026-09-19 et l emporte sur cette acceptance ; contradiction relevee par la session -66) : l envoi vers Partners part au clic PRET A SIGNER, jamais a la reception d un dossier. Cette action n existant pas dans axion-ia (verifie sur main f8753cd), INT-T22 la CREE : une transition de la fiche candidat (une Submission), a cote de Sans suite, executee par une action serveur gardee par role et un bouton reserve aux candidats apporteurs, qui emet candidature.recue dans sa transaction. Le cliquet nominatif vise CET ecrivain, et non celui de Submission. Estimation portee de 0,5 j a 1 j.",
       "tests": {
         "REQ-CPL-015": [
           "axionia/src/server/partners-sync/__tests__/producteur-candidature.spec.ts"
@@ -4042,9 +4069,20 @@
       "repo": "axionia",
       "zone": "juridique",
       "paths": [
-        "axionia/src/content/commercial-offer.ts",
         "axionia/scripts/gates/jur-copy-indicative.ts",
-        "axionia/src/content/__tests__/remuneration-indicative.spec.ts"
+        "axionia/src/content/__tests__/remuneration-indicative.spec.ts",
+        "axionia/src/content/recrutement/commercial-offer.ts",
+        "axionia/src/app/[locale]/memo-isere/page.tsx",
+        "axionia/src/components/recrutement/FacebookLandingPage.tsx",
+        "axionia/src/components/recrutement/PartenaireLandingPage.tsx",
+        "axionia/src/app/[locale]/apporteur-affaires-independant-formation-ia-entreprise/page.tsx",
+        "axionia/package.json",
+        "axionia/src/content/recrutement/partenaire-landings.ts",
+        "axionia/src/content/recrutement/tunnel-facebook.ts",
+        "axionia/src/components/services/devenir-commercial/CommercialFounder.tsx",
+        "axionia/src/components/services/devenir-commercial/CommercialHowItWorks.tsx",
+        "axionia/src/components/services/devenir-commercial/CommercialProductsEarnings.tsx",
+        "axionia/src/lib/email/templates/apporteur-issue-echange.tsx"
       ],
       "schema": false,
       "sensible": [
@@ -10392,7 +10430,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 1.5,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "LA PORTE A EST GARDEE, CE QUI LA FAIT TOURNER NE L'EST PAS. Rien de ce qui suit n'est juge aujourd'hui : un reglage du gestionnaire de paquets pose au niveau du projet, qui agit sur TOUTES les etapes alors que le temoin ne l'exerce que pour deux d'entre elles ; le repertoire de correctifs, `package.json` et le fichier de verrouillage, qui ne sont pas des chemins reserves ; les dependances corrigees et les surcharges de version, qui ne sont pas lues ; les actions tierces appelees par le workflow, y compris celles qui embarquent leur propre image ; une etape amont qui reecrit l'arbre de travail avant les gardes ; un script qui porte le nom d'une commande integree ; et l'environnement herite par le temoin qui lance l'outil. A livrer : chacun de ces sept points est juge, et le refus NOMME le point. TEMOIN A DEUX FACES : sept copies de travail, une par point, font sortir la garde en code non nul en nommant le point ; le depot la fait sortir en zero, et le vert imprime le compte des sept points reellement confrontes — jamais « tout est garde ».",
       "tests": {
         "REQ-QA-013": [
@@ -10406,7 +10444,15 @@
         ]
       },
       "issue": 240,
-      "owner": "A01"
+      "owner": "A01",
+      "branch": "t/gov-062",
+      "pr": 241,
+      "attestation": {
+        "pr": 241,
+        "sha": "603e7f0c42bf291c3dd8c9ce01420b27e6b0c16a",
+        "fusionneeAt": "2026-09-29T16:16:13Z"
+      },
+      "motif": null
     },
     {
       "id": "GOV-063",
@@ -14387,6 +14433,41 @@
       },
       "issue": 247,
       "owner": "A01",
+      "branch": null,
+      "pr": null,
+      "attestation": null,
+      "motif": null
+    },
+    {
+      "id": "GOV-125",
+      "titre": "Une tache livree dans axion-ia ne peut pas etre close : le motif de branche du registre ne connait que les branches de Partners",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "scripts/lot/tasks.schema.json",
+        "scripts/lot/cloture.ts",
+        "docs/adr/",
+        "tests/unit/gouvernance/une-tache-axionia-se-clot-sur-sa-branche.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [],
+      "reqs": [
+        "REQ-GOV-026"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "acceptance": "DETTE BLOQUANTE, admise malgre le gel de la gouvernance parce qu'elle bloque la cloture de taches d'argent livrees. Mesure le 2026-09-29 : lot:cloture refuse DM-03-A (axion-ia #1181, branche feat/partners-dm-03-a-grille, en production sur 41966e0) et INT-T02 (axion-ia #1180, branche feat/partners-int-t02-outbox), famille branche_hors_motif, parce que le motif de branch de scripts/lot/tasks.schema.json (partners/ADR-0007) n'accepte que t/ et lot/, les formes de Partners. DM-03-P et DM-04, livrees dans Partners, restent donc a_faire (dep_non_livree), et chaque tache du depot axionia livree par une branche feat/ ou fix/ y sera bloquee. A LIVRER : (1) pour une tache dont repo vaut axionia, le motif de branch accepte les formes de branche d'axion-ia, lues dans sa convention et jamais inventees, ou la branche n'est pas ecrite et la preuve reste l'attestation (commit d'ecrasement et atterrissage) ; le choix est ecrit dans une ADR qui amende partners/ADR-0007. (2) Une tache de Partners garde le motif ferme actuel. (3) TEMOIN a deux faces, rouge d'abord : la cloture d'une tache axionia livree par feat/partners-x passe ; une tache partners livree par feat/x reste refusee (branche_hors_motif). (4) Puis DM-03-A, INT-T02, DM-03-P et DM-04 sont closes par un rattrapage.",
+      "tests": {
+        "REQ-GOV-026": [
+          "tests/unit/gouvernance/une-tache-axionia-se-clot-sur-sa-branche.spec.ts"
+        ]
+      },
+      "issue": null,
+      "owner": null,
       "branch": null,
       "pr": null,
       "attestation": null,

@@ -7,31 +7,31 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `85437a5` — 2026-09-29T20:26:12+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #251 (rien) · 2. #242 (un conflit avec `main`) |
-| Qui tient quoi ? | QA-T11 (A01) · GOV-062 (A01) · JUR-T34 (A01) · GOV-124 (A01) · GOV-126 (A01) |
-| Où en est la phase ? | phase 0 — 102/130 tâches, reste 22.00 j |
-| Le prochain pas | fusionner #251, puis QA-T11 — Gate D migrations : base vierge, dump N-1, migrate diff vide, image N-1, lint expand/contract |
+| Où est `main` ? | `53e765e` — 2026-09-29T20:48:22+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #242 (état `UNKNOWN`) |
+| Qui tient quoi ? | JUR-T34 (A01) · GOV-124 (A01) · GOV-126 (A01) |
+| Où en est la phase ? | phase 0 — 104/131 tâches, reste 20.50 j |
+| Le prochain pas | QA-T06 — Preview par PR sur Coolify, base éphémère, seed déterministe |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
-| Dernière entrée de journal | PR #250 — 2026-09-29 |
+| Dernière entrée de journal | PR #251 — 2026-09-29 |
 
-**Ce qu’on tape maintenant.** `gh pr view 251 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : 0
 
-102/130 tâches terminées · reste 22.00 j estimés.
+104/131 tâches terminées · reste 20.50 j estimés.
 
 ## Tâches
 
 | Statut | Nombre | Détail |
 | --- | --- | --- |
 | `proposee` | 0 | — |
-| `a_faire` | 185 | QA-T11, QA-T06, QA-T12, QA-T13, DM-03-A, DM-03-P, DM-04, INT-T02, INT-T03, INT-T04, INT-T05, INT-T22 … (12 affichées sur 185 — liste complète : `docs/TASKS.md`) |
+| `a_faire` | 184 | QA-T06, QA-T12, QA-T13, DM-03-A, DM-03-P, DM-04, INT-T02, INT-T03, INT-T04, INT-T05, INT-T22, JUR-T03 … (12 affichées sur 184 — liste complète : `docs/TASKS.md`) |
 | `en_cours` | 0 | — |
 | `bloquee` | 0 | — |
 | `attente_externe` | 2 | JUR-T01b · JUR-T01c |
 | `en_revue` | 0 | — |
-| `fusionnee` | 141 | GOV-000, GOV-007, GOV-001, GOV-018, GOV-008, GOV-002, GOV-003, GOV-004, GOV-005, GOV-006, GOV-009, GOV-010 … (12 affichées sur 141 — liste complète : `docs/TASKS.md`) |
+| `fusionnee` | 143 | GOV-000, GOV-007, GOV-001, GOV-018, GOV-008, GOV-002, GOV-003, GOV-004, GOV-005, GOV-006, GOV-009, GOV-010 … (12 affichées sur 143 — liste complète : `docs/TASKS.md`) |
 | `deployee` | 0 | — |
 | `verifiee` | 0 | — |
 
@@ -60,8 +60,7 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #251 — chore(GOV-012): registre rattrape, HT encaisse tranche par Williams, paths du lot A et de JUR-T29, GOV-125 versee | `t/registre-rattrapage-13` | rien — fusionnable maintenant |
-| 2 | #242 — feat(JUR-T34): la politique de confidentialite de l'espace, tiree du registre de l'article 30 et acceptee a la premiere connexion | `t/jur-t34` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #242 — feat(JUR-T34): la politique de confidentialite de l'espace, tiree du registre de l'article 30 et acceptee a la premiere connexion | `t/jur-t34` | état `UNKNOWN` — à qualifier à la main |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -71,8 +70,6 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 
 | Tâche | Revendiquée par | Issue | Statut |
 | --- | --- | --- | --- |
-| QA-T11 — Gate D migrations : base vierge, dump N-1, migrate diff vide, image N-1, lint expand/contract | A01 | #243 | `a_faire` |
-| GOV-062 — L'outillage qui execute la porte A n'est pas garde : configuration du gestionnaire, correctifs, actions tierces | A01 | #240 | `a_faire` |
 | JUR-T34 — La politique de confidentialite de l'espace : affichee, acceptee a la premiere connexion, tiree du registre de l'article 30 | A01 | #238 | `a_faire` |
 | GOV-124 — Une seule lentille pour une PR sans risque, derivee par risqueDeLaPr ; deux pour tout le reste et dans le doute | A01 | #247 | `a_faire` |
 | GOV-126 — Le temoin d'une garde vaut la garde : les tests de gouvernance, de securite et d'integration restent a deux lentilles | A01 | #249 | `a_faire` |
@@ -81,27 +78,40 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 
 ## Décisions du jour
 
-`docs/adr/0025-les-decisions-de-gouvernance-de-will-s-ecrivent-en-adr.md` — partners/ADR-0025 — Les décisions de gouvernance de Will s'écrivent en ADR : la règle d'arrêt du 2026-09-15 et les arbitrages des 15 et 16 septembre
+`docs/adr/0025-les-decisions-de-gouvernance-de-will-s-ecrivent-en-adr.md` — partners/ADR-0025 — Les décisions de gouvernance de Will s'écrivent en ADR : la règle d'arrêt du 2026-09-15 et les arbitrages des 15 et 16 septembre · `docs/adr/0026-une-lentille-pour-une-pr-sans-risque.md` — partners/ADR-0026 — Une lentille pour une PR sans risque, deux pour tout le reste et dans le doute
 
 Dérivé de `git log` sur `docs/adr/`, restreint au jour du dernier atterrissage. Une décision de Will n’est pas un ADR : elle vit au registre `docs/DECISIONS.md`, tranchée ou tenue par une hypothèse datée.
 
 ## Prochain pas
 
-**Fusionner #251** — elle est en tête de file et ne bloque sur rien.
-
-**QA-T11** — Gate D migrations : base vierge, dump N-1, migrate diff vide, image N-1, lint expand/contract (1 j) : 15 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
+**QA-T06** — Preview par PR sur Coolify, base éphémère, seed déterministe (1 j) : 14 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
 Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeStateStatus` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage —, la tâche ensuite. L’ordre de la file se corrige à la rubrique « File de fusion », jamais ici.
 
 ## Dernier atterrissage
 
-`origin/main` = `85437a5` (2026-09-29T20:26:12+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `53e765e` (2026-09-29T20:48:22+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
 ## Journal
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
+
+### PR #251 — 2026-09-29 — chore(GOV-012): registre rattrape, HT encaisse tranche par Williams, paths du lot A et de JUR-T29, GOV-125 versee
+
+**Fait.** Treizième rattrapage. Williams a tranché le HT encaissé : axion-ia le calcule pour chaque
+paiement, et REQ-INT-005 et INT-T05 sont amendées dans ce sens. INT-T22 prend pour déclencheur
+l'action « prêt à signer », par la préséance d'une décision de Williams. Les chemins du lot A et de
+JUR-T29 sont ceux que la forge et les gardes ont mesurés. GOV-062 et QA-T11 sont closes.
+
+**Reste.** GOV-125, versée ici : tant que le motif de branche ignore les branches d'axion-ia,
+DM-03-A, INT-T02 et INT-T27-A, pourtant en production, ne peuvent pas être closes, ni les tâches
+qui en dépendent.
+
+**Appris.** Deux exigences actives peuvent se contredire sans qu'aucune garde ne le voie : c'est un
+auteur, au moment de coder, qui l'a relevé. La contradiction se tranche par une décision écrite,
+jamais par l'acceptance la plus récente.
 
 ### PR #250 — 2026-09-29 — feat(GOV-126): le temoin d'une garde vaut la garde, tests de gouvernance, securite et integration a deux lentilles
 
@@ -126,19 +136,7 @@ limite est écrite dans l'ADR.
 **Appris.** Une liste d'autorisation doit exclure ce qui nourrit son propre calcul : sans cela, une
 PR relue par une seule lentille aurait pu ramener à une lentille toutes les PR suivantes d'une tâche.
 
-### PR #246 — 2026-09-29 — chore(GOV-012): GOV-123 et GOV-124 versees, exception au gel decidee par Williams
-
-**Fait.** Deux tâches versées, en exception au gel décidée par Williams. GOV-123 sort les vues
-dérivées des PR et les rend sur main après chaque fusion. GOV-124 ramène à une lentille la
-relecture d'une PR que le risque dérivé classe ordinaire.
-
-**Reste.** Les deux tâches à coder, en priorité. INT-T26 attend la fusion de sa dépendance
-INT-T27-A pour être close.
-
-**Appris.** Une clôture se juge avec ses dépendances : une tâche livrée par une PR fusionnée
-reste ouverte tant que sa dépendance ne l'est pas, sinon le registre ment sur l'ordre.
-
-… 3 entrée(s) affichée(s) sur 109 ; les 106 plus ancienne(s) se lisent dans `docs/journal/`.
+… 3 entrée(s) affichée(s) sur 110 ; les 107 plus ancienne(s) se lisent dans `docs/journal/`.
 
 ## Dette déclarée
 
