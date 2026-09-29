@@ -8,12 +8,12 @@
 >
 > Une tache = une PR, **≤ 1,5 jour**. Le plafond est porte par la garde `gov:tasks`.
 
-**304 taches · 230.10 j estimes.**
+**305 taches · 230.85 j estimes.**
 
 | Phase | Taches | Jours | Terminees |
 | --- | ---: | ---: | ---: |
 | -1 — Gouvernance (prealable bloquant) | 39 | 23.75 | 39 |
-| 0 — Socle technique | 130 | 99.60 | 95 |
+| 0 — Socle technique | 131 | 100.35 | 95 |
 | 1 — Operationnel | 62 | 48.00 | 0 |
 | 2 — Argent | 45 | 33.50 | 0 |
 | 3 — Pilotage et conformite | 28 | 25.25 | 0 |
@@ -828,7 +828,7 @@ Couvre : `REQ-JUR-001`, `REQ-JUR-002`, `REQ-JUR-024`
 
 Couvre : `REQ-CPL-009`, `REQ-JUR-009`, `REQ-JUR-025`, `REQ-SEC-030`
 
-**Acceptation.** push PWA (APNs/FCM) et Telegram = sous-traitants hors UE, payload sans PII, registre art. 30 + AIPD.
+**Acceptation.** push PWA (APNs/FCM) et Telegram = sous-traitants hors UE, payload sans PII, registre art. 30 + AIPD. AVENANT A01 du 2026-09-29 (decision de Will : scinder). La page de confidentialite de l espace exigeait des fichiers hors des paths de cette tache : elle passe a JUR-T34, versee dans la meme PR, qui porte aussi l affichage et l acceptation de REQ-JUR-025. Cette tache livre le registre de l article 30 et l AIPD : chaque rubrique rattachee a une source, ou declaree « A completer — source manquante » avec sa question ; les donnees stockees derivees du schema dans les deux sens ; le service de push web et Telegram inscrits comme sous-traitants hors Union europeenne, charge utile sans donnee personnelle ; l AIPD non signee, sa mise en balance sans conclusion. Les questions juridiques ouvertes restent a Will. Le registre compte TROIS traitements ; les questions du chantier des conseillers salaries y sont ecrites en questions ouvertes, sans quatrieme traitement, qui viendra avec sa propre tache.
 
 **Tests.** `tests/unit/juridique/registre-rgpd.spec.ts`
 
@@ -1892,6 +1892,16 @@ Couvre : `REQ-GOV-021`
 **Acceptation.** Releve par les deux lentilles sur la PR #217 (GOV-049), non bloquant a la fusion. (1) Les deux faces rouges retirent la cle, et ne jouent donc que la moitie required de la clause jumelle du schema ; le registre porte owner: null et branch: null, que refusent la moitie type de la clause et ses motifs. A livrer : deux faces de plus, owner: null puis branch: null sur une tache en_cours hors lot, chacune refusee et nommee. (2) Le docblock de la specification dit qu'AUCUN temoin ne voyait la clause refuser : c'est inexact, clore-une-tache-livree-seule.spec.ts voit deja branch: null refuse sur une tache fusionnee. A corriger : aucun temoin ne la voyait refuser pour en_cours, ni pour owner.
 
 **Tests.** `tests/unit/gouvernance/une-tache-en-cours-appartient-a-un-lot.spec.ts`
+
+### JUR-T34 — La politique de confidentialite de l'espace : affichee, acceptee a la premiere connexion, tiree du registre de l'article 30
+
+`0.75 j` · zone `juridique` · sensible : rgpd · depend de `JUR-T04`
+
+Couvre : `REQ-JUR-025`
+
+**Acceptation.** Scindee de JUR-T04 le 2026-09-29 (decision de Will) : la page exigeait des fichiers hors des paths de JUR-T04. A livrer : l'espace apporteur affiche une politique de confidentialite propre a Partners (base legale, durees, sous-traitants, droits) et la fait accepter a la premiere connexion (REQ-JUR-025). Son contenu se DERIVE du registre de l'article 30 livre par JUR-T04 : aucune duree, aucun sous-traitant n'est retape dans la page, et une rubrique encore « A completer » dans le registre s'affiche comme telle, jamais inventee. La page ne dit RIEN des conseillers salaries : leur information passe par un autre canal. Exigence transverse : lisible sans formation, sur mobile d'abord, avec ses etats vide, chargement, erreur et hors ligne nommes. TEMOIN A DEUX FACES : une duree changee dans le registre change la page sans toucher la page ; une page qui retape une duree ou un sous-traitant absent du registre fait rougir le temoin en nommant la valeur.
+
+**Tests.** `tests/unit/juridique/politique-de-confidentialite.spec.ts`
 
 ## Phase 1 — Operationnel
 

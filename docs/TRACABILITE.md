@@ -16,7 +16,7 @@
 
 **334 exigences actives · 122 réputées testées · 122 couvertes · 0 orphelines.**
 
-304 tâches, dont 134 livrées · 163 fichiers de test exécutés par `vitest` sur 163 présents.
+305 tâches, dont 134 livrées · 163 fichiers de test exécutés par `vitest` sur 163 présents.
 
 ## Exigences réputées testées
 
@@ -283,7 +283,7 @@
 | `REQ-JUR-020` | 2 | `DM-16` | — |
 | `REQ-JUR-022` | 1 | `DM-11` | `tests/unit/domaine/kyc-reference-piece-rib.spec.ts` |
 | `REQ-JUR-024` | 0 | `JUR-T03` | `axionia/src/content/__tests__/vocabulaire-apporteur.spec.ts` |
-| `REQ-JUR-025` | 0 | `EXT-T01`, `JUR-T04`, `T-ARG-033` | `tests/unit/juridique/registre-rgpd.spec.ts` |
+| `REQ-JUR-025` | 0 | `EXT-T01`, `JUR-T04`, `JUR-T34`, `T-ARG-033` | `tests/unit/juridique/politique-de-confidentialite.spec.ts`, `tests/unit/juridique/registre-rgpd.spec.ts` |
 | `REQ-JUR-028` | 1 | `SEC-21` | — |
 | `REQ-JUR-030` | 3 | `JUR-T22` | — |
 | `REQ-JUR-032` | 1 | `JUR-T24` | — |

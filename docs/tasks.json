@@ -13300,6 +13300,44 @@
       "pr": null,
       "attestation": null,
       "motif": null
+    },
+    {
+      "id": "JUR-T34",
+      "titre": "La politique de confidentialite de l'espace : affichee, acceptee a la premiere connexion, tiree du registre de l'article 30",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "juridique",
+      "paths": [
+        "src/app/(espace)/confidentialite/page.tsx",
+        "src/app/(espace)/confidentialite/layout.tsx",
+        "tests/unit/juridique/politique-de-confidentialite.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [
+        "rgpd"
+      ],
+      "deps": [
+        "JUR-T04"
+      ],
+      "reqs": [
+        "REQ-JUR-025"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.75,
+      "statut": "a_faire",
+      "acceptance": "Scindee de JUR-T04 le 2026-09-29 (decision de Will) : la page exigeait des fichiers hors des paths de JUR-T04. A livrer : l'espace apporteur affiche une politique de confidentialite propre a Partners (base legale, durees, sous-traitants, droits) et la fait accepter a la premiere connexion (REQ-JUR-025). Son contenu se DERIVE du registre de l'article 30 livre par JUR-T04 : aucune duree, aucun sous-traitant n'est retape dans la page, et une rubrique encore « A completer » dans le registre s'affiche comme telle, jamais inventee. La page ne dit RIEN des conseillers salaries : leur information passe par un autre canal. Exigence transverse : lisible sans formation, sur mobile d'abord, avec ses etats vide, chargement, erreur et hors ligne nommes. TEMOIN A DEUX FACES : une duree changee dans le registre change la page sans toucher la page ; une page qui retape une duree ou un sous-traitant absent du registre fait rougir le temoin en nommant la valeur.",
+      "tests": {
+        "REQ-JUR-025": [
+          "tests/unit/juridique/politique-de-confidentialite.spec.ts"
+        ]
+      },
+      "issue": null,
+      "owner": null,
+      "branch": null,
+      "pr": null,
+      "attestation": null,
+      "motif": null
     }
   ]
 }

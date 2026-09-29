@@ -2,12 +2,12 @@
   "version": 1,
   "resume": {
     "_methode": "une PAIRE est comptée quand l'intersection des deux `paths[]` n'est pas vide, par égalité de chaîne. ⚠️ Elle ne lit PAS le champ `paths` des tâches : deux tâches peuvent y figurer comme « sans intersection » alors que leurs `paths` déclarés se recouvrent — c'est le cas de GOV-025 et GOV-028, qui partagent `scripts/gates/gov-identifiants.ts`. Le composeur, lui, compare bien `t.paths` : cette vue ne dit donc pas ce qu'il fera. Ces trois totaux sont écrits par `scripts/lot/paths-proposes.ts` et par rien d'autre ; `tsx scripts/lot/paths-proposes.ts --check` échoue si le fichier rendu en diverge.",
-    "tachesCouvertes": 304,
+    "tachesCouvertes": 305,
     "pairesEnIntersection": 4520,
-    "cheminsDeclares": 836,
-    "cheminsDistincts": 537,
+    "cheminsDeclares": 837,
+    "cheminsDistincts": 538,
     "cheminsPartages": 109,
-    "tachesSansAucuneIntersection": 86,
+    "tachesSansAucuneIntersection": 87,
     "listeDesTachesIsolees": [
       "QA-T08",
       "QA-T12",
@@ -94,7 +94,8 @@
       "INT-T27-A",
       "GOV-103",
       "GOV-119",
-      "GOV-120"
+      "GOV-120",
+      "JUR-T34"
     ],
     "cheminsLesPlusPartages": [
       {
@@ -1602,6 +1603,9 @@
     ],
     "GOV-121": [
       "tests/unit/gouvernance/une-tache-en-cours-appartient-a-un-lot.spec.ts"
+    ],
+    "JUR-T34": [
+      "tests/unit/juridique/politique-de-confidentialite.spec.ts"
     ]
   }
 }
