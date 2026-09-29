@@ -1398,7 +1398,12 @@ export type Risque = {
  */
 export const RACINES_A_UNE_LENTILLE: readonly string[] = [
   'docs/',
-  'tests/',
+  // GOV-126 (relevés des lentilles sur la PR #250) : dans tests/, une liste d'AUTORISATION
+  // courte. Le domaine, le contrat, le juridique, l'intégration, la gouvernance, la sécurité, les
+  // fixtures d'un dépôt public et tout dossier à venir valent deux lentilles.
+  // tests/unit/qualite/ n'y est PAS (relevé de la lentille securite sur la PR #250) : il porte les
+  // témoins de gardes de sécurité et du processus (image, journal, secrets, red-first, mutation).
+  'tests/a11y/',
   'scripts/vues/',
   'scripts/plan-state/',
 ];
@@ -1430,6 +1435,10 @@ export const EXCLUS_D_UNE_LENTILLE: readonly string[] = [
   'docs/GLOSSAIRE.md',
   'docs/PRESEANCE.md',
   'docs/env.md',
+  // GOV-126 (relevé de la lentille securite sur la PR #248) : le témoin d'une garde vaut la garde.
+  'tests/unit/gouvernance/',
+  'tests/unit/securite/',
+  'tests/integration/',
   'scripts/lot/tasks.schema.json',
   'scripts/lot/requirements.schema.json',
 ];

@@ -7,10 +7,10 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `d13c426` — 2026-09-29T20:09:09+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #242 (un conflit avec `main`) · 2. #250 (un conflit avec `main`) · 3. #251 (un conflit avec `main`) |
-| Qui tient quoi ? | GOV-124 (A01) |
-| Où en est la phase ? | phase 0 — 104/130 tâches, reste 20.25 j |
+| Où est `main` ? | `85437a5` — 2026-09-29T20:26:12+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #242 (un conflit avec `main`) · 2. #251 (un conflit avec `main`) |
+| Qui tient quoi ? | GOV-124 (A01) · GOV-126 (A01) |
+| Où en est la phase ? | phase 0 — 104/131 tâches, reste 20.50 j |
 | Le prochain pas | QA-T06 — Preview par PR sur Coolify, base éphémère, seed déterministe |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
 | Dernière entrée de journal | PR #251 — 2026-09-29 |
@@ -19,14 +19,14 @@
 
 ## Phase courante : 0
 
-104/130 tâches terminées · reste 20.25 j estimés.
+104/131 tâches terminées · reste 20.50 j estimés.
 
 ## Tâches
 
 | Statut | Nombre | Détail |
 | --- | --- | --- |
 | `proposee` | 0 | — |
-| `a_faire` | 183 | QA-T06, QA-T12, QA-T13, DM-03-A, DM-03-P, DM-04, INT-T02, INT-T03, INT-T04, INT-T05, INT-T22, JUR-T03 … (12 affichées sur 183 — liste complète : `docs/TASKS.md`) |
+| `a_faire` | 184 | QA-T06, QA-T12, QA-T13, DM-03-A, DM-03-P, DM-04, INT-T02, INT-T03, INT-T04, INT-T05, INT-T22, JUR-T03 … (12 affichées sur 184 — liste complète : `docs/TASKS.md`) |
 | `en_cours` | 0 | — |
 | `bloquee` | 0 | — |
 | `attente_externe` | 2 | JUR-T01b · JUR-T01c |
@@ -61,8 +61,7 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
 | 1 | #242 — feat(JUR-T34): la politique de confidentialite de l'espace, tiree du registre de l'article 30 et acceptee a la premiere connexion | `t/jur-t34` | un conflit avec `main` — à résoudre avant tout |
-| 2 | #250 — feat(GOV-126): le temoin d'une garde vaut la garde, tests de gouvernance, securite et integration a deux lentilles | `t/gov-126` | un conflit avec `main` — à résoudre avant tout |
-| 3 | #251 — chore(GOV-012): registre rattrape, HT encaisse tranche par Williams, paths du lot A et de JUR-T29, GOV-125 versee | `t/registre-rattrapage-13` | un conflit avec `main` — à résoudre avant tout |
+| 2 | #251 — chore(GOV-012): registre rattrape, HT encaisse tranche par Williams, paths du lot A et de JUR-T29, GOV-125 versee | `t/registre-rattrapage-13` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -73,6 +72,7 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 | Tâche | Revendiquée par | Issue | Statut |
 | --- | --- | --- | --- |
 | GOV-124 — Une seule lentille pour une PR sans risque, derivee par risqueDeLaPr ; deux pour tout le reste et dans le doute | A01 | #247 | `a_faire` |
+| GOV-126 — Le temoin d'une garde vaut la garde : les tests de gouvernance, de securite et d'integration restent a deux lentilles | A01 | #249 | `a_faire` |
 
 ⚠️ **13 revendication(s) périmée(s)** — QA-T07, GOV-042, GOV-045, GOV-050, GOV-051, GOV-053, GOV-054, GOV-055, GOV-060, GOV-072, GOV-079, GOV-093, INT-T01c : leur issue porte encore un label `owner:` alors que la tâche est livrée. `pnpm lot:cloture` écrit `docs/tasks.json` mais n’efface pas les labels ; la dette appartient à GOV-012.
 
@@ -90,7 +90,7 @@ Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeS
 
 ## Dernier atterrissage
 
-`origin/main` = `d13c426` (2026-09-29T20:09:09+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `85437a5` (2026-09-29T20:26:12+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
@@ -113,6 +113,17 @@ qui en dépendent.
 auteur, au moment de coder, qui l'a relevé. La contradiction se tranche par une décision écrite,
 jamais par l'acceptance la plus récente.
 
+### PR #250 — 2026-09-29 — feat(GOV-126): le temoin d'une garde vaut la garde, tests de gouvernance, securite et integration a deux lentilles
+
+**Fait.** Les tests de gouvernance, de sécurité et d'intégration restent à deux lentilles : une PR
+qui ne toucherait que le témoin d'une garde ne peut plus l'affaiblir sous une seule relecture.
+
+**Reste.** Aucune PR n'a encore été fusionnée à une seule lentille : la règle entre en usage avec
+cette fermeture.
+
+**Appris.** Un témoin fait partie de la garde qu'il prouve : l'autoriser à une lentille, c'était
+autoriser la garde elle-même par un détour.
+
 ### PR #248 — 2026-09-29 — feat(GOV-124): une lentille pour une PR sans risque, derivee et fermee, deux pour tout le reste
 
 **Fait.** Une PR de documentation, de tests ou d'outillage des vues, en zone gouvernance ou
@@ -125,19 +136,7 @@ limite est écrite dans l'ADR.
 **Appris.** Une liste d'autorisation doit exclure ce qui nourrit son propre calcul : sans cela, une
 PR relue par une seule lentille aurait pu ramener à une lentille toutes les PR suivantes d'une tâche.
 
-### PR #246 — 2026-09-29 — chore(GOV-012): GOV-123 et GOV-124 versees, exception au gel decidee par Williams
-
-**Fait.** Deux tâches versées, en exception au gel décidée par Williams. GOV-123 sort les vues
-dérivées des PR et les rend sur main après chaque fusion. GOV-124 ramène à une lentille la
-relecture d'une PR que le risque dérivé classe ordinaire.
-
-**Reste.** Les deux tâches à coder, en priorité. INT-T26 attend la fusion de sa dépendance
-INT-T27-A pour être close.
-
-**Appris.** Une clôture se juge avec ses dépendances : une tâche livrée par une PR fusionnée
-reste ouverte tant que sa dépendance ne l'est pas, sinon le registre ment sur l'ordre.
-
-… 3 entrée(s) affichée(s) sur 108 ; les 105 plus ancienne(s) se lisent dans `docs/journal/`.
+… 3 entrée(s) affichée(s) sur 109 ; les 106 plus ancienne(s) se lisent dans `docs/journal/`.
 
 ## Dette déclarée
 

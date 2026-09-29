@@ -8,12 +8,12 @@
 >
 > Une tache = une PR, **≤ 1,5 jour**. Le plafond est porte par la garde `gov:tasks`.
 
-**328 taches · 255.60 j estimes.**
+**329 taches · 255.85 j estimes.**
 
 | Phase | Taches | Jours | Terminees |
 | --- | ---: | ---: | ---: |
 | -1 — Gouvernance (prealable bloquant) | 39 | 23.75 | 39 |
-| 0 — Socle technique | 130 | 99.10 | 104 |
+| 0 — Socle technique | 131 | 99.35 | 104 |
 | 1 — Operationnel | 78 | 67.00 | 0 |
 | 2 — Argent | 45 | 33.50 | 0 |
 | 3 — Pilotage et conformite | 36 | 32.25 | 0 |
@@ -1892,6 +1892,16 @@ Couvre : `REQ-GOV-026`
 **Acceptation.** DETTE BLOQUANTE, admise malgre le gel de la gouvernance parce qu'elle bloque la cloture de taches d'argent livrees. Mesure le 2026-09-29 : lot:cloture refuse DM-03-A (axion-ia #1181, branche feat/partners-dm-03-a-grille, en production sur 41966e0) et INT-T02 (axion-ia #1180, branche feat/partners-int-t02-outbox), famille branche_hors_motif, parce que le motif de branch de scripts/lot/tasks.schema.json (partners/ADR-0007) n'accepte que t/ et lot/, les formes de Partners. DM-03-P et DM-04, livrees dans Partners, restent donc a_faire (dep_non_livree), et chaque tache du depot axionia livree par une branche feat/ ou fix/ y sera bloquee. A LIVRER : (1) pour une tache dont repo vaut axionia, le motif de branch accepte les formes de branche d'axion-ia, lues dans sa convention et jamais inventees, ou la branche n'est pas ecrite et la preuve reste l'attestation (commit d'ecrasement et atterrissage) ; le choix est ecrit dans une ADR qui amende partners/ADR-0007. (2) Une tache de Partners garde le motif ferme actuel. (3) TEMOIN a deux faces, rouge d'abord : la cloture d'une tache axionia livree par feat/partners-x passe ; une tache partners livree par feat/x reste refusee (branche_hors_motif). (4) Puis DM-03-A, INT-T02, DM-03-P et DM-04 sont closes par un rattrapage.
 
 **Tests.** `tests/unit/gouvernance/une-tache-axionia-se-clot-sur-sa-branche.spec.ts`
+
+### GOV-126 — Le temoin d'une garde vaut la garde : les tests de gouvernance, de securite et d'integration restent a deux lentilles
+
+`0.25 j` · zone `gouvernance` · depend de `GOV-124`
+
+Couvre : `REQ-GOV-011`
+
+**Acceptation.** Releve par la lentille securite sur la PR #248 (GOV-124), a fermer AVANT le premier usage d'une lentille unique. tests/ est autorise en entier : une tache gouvernance ou qualite non sensible peut donc affaiblir, sous la seule lentille exactitude, le temoin d'une garde (tests/unit/gouvernance/, dont celui de la regle des lentilles et celui de la garde des revues), et ni red-first ni la mutation ne le voient. A LIVRER : tests/unit/gouvernance/, tests/unit/securite/ et tests/integration/ entrent dans EXCLUS_D_UNE_LENTILLE ; l'ADR 0026 le dit. TEMOIN rouge d'abord : une PR qui ne touche que tests/unit/gouvernance/une-lentille-pour-une-pr-sans-risque.spec.ts exige deux lentilles ; un test hors de ces trois dossiers reste a une lentille. AVENANT A01 du 2026-09-29 (dette bloquante de la lentille exactitude sur la PR #250) : la regle est INVERSEE dans tests/. Seul tests/a11y/ reste autorise a une lentille (tests/unit/qualite/ porte les temoins de gardes de securite et du processus, releve de la lentille securite sur la PR #250) ; le domaine, le contrat, le juridique, l integration, la gouvernance, la securite, tests/gov, tests/fixtures et tout dossier a venir valent deux lentilles. TEMOIN : un test de domaine, une fixture de grille ou un test juridique exigent deux lentilles.
+
+**Tests.** `tests/unit/gouvernance/une-lentille-pour-une-pr-sans-risque.spec.ts`
 
 ## Phase 1 — Operationnel
 
