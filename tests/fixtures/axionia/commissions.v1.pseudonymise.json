@@ -1,5 +1,5 @@
 {
-  "Source": "GÉNÉRÉE — ne pas éditer à la main. Producteur : axion-ia, scripts/gates/grille-check.ts --fixture-pseudonymisee (DM-03-A, PR axion-ia #1181, commit SHA_ICI). Méthode : la dernière publication commissions.v1.json, montants et taux non nuls remplacés par leur rang, empreinte du contenu et empreintes de ligne recalculées par le producteur (pseudonymiserPublication). Aucune valeur de la grille réelle (PRESEANCE §3.4), rien de tapé à la main (RM-03). Régénérer : dans axion-ia, pnpm exec tsx scripts/gates/grille-check.ts --fixture-pseudonymisee.",
+  "Source": "GÉNÉRÉE — ne pas éditer à la main. Producteur : axion-ia, scripts/gates/grille-check.ts --fixture-pseudonymisee (DM-03-A, PR axion-ia #1181, commit 000e0271b). Méthode : la dernière publication commissions.v1.json, montants et taux non nuls remplacés par leur rang, empreinte du contenu et empreintes de ligne recalculées par le producteur (pseudonymiserPublication). Aucune valeur de la grille réelle (PRESEANCE §3.4), rien de tapé à la main (RM-03). Régénérer : dans axion-ia, pnpm exec tsx scripts/gates/grille-check.ts --fixture-pseudonymisee.",
   "publication": {
     "version": 1,
     "publieeAt": "2026-09-26T23:08:01.251Z",

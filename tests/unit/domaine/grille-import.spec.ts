@@ -1,4 +1,4 @@
-// @req REQ-ARG-031
+// @req REQ-ARG-031 → REQ-DM-014
 // @req REQ-INT-017
 /**
  * La grille publiée par axionia, confrontée par Partners avant tout import — DM-03-P.
@@ -46,7 +46,7 @@ function publiee(): Record<string, unknown> {
 const lue = (): PublicationGrille => lirePublication(publiee());
 
 describe('REQ-ARG-031, REQ-INT-017 — la publication du producteur est confrontée ligne à ligne', () => {
-  it('la publication du producteur : aucune faute, sur un périmètre NON vide', () => {
+  it('REQ-ARG-031, REQ-INT-017 : la publication du producteur : aucune faute, sur un périmètre NON vide', () => {
     const pub = lue();
     const verdict = verifierPublication(pub);
     expect(verdict.fautes).toEqual([]);
@@ -57,7 +57,7 @@ describe('REQ-ARG-031, REQ-INT-017 — la publication du producteur est confront
     expect(pub.contenu.paliers.length).toBeGreaterThan(0);
   });
 
-  it('TÉMOIN — un centime changé sans toucher les empreintes : la ligne de barème est NOMMÉE', () => {
+  it('REQ-ARG-031, REQ-INT-017 — TÉMOIN : un centime changé sans toucher les empreintes : la ligne de barème est NOMMÉE', () => {
     const pub = lue();
     const cible = pub.contenu.commissions.find((c) => c.montantCents !== null);
     expect(cible, 'la fixture doit porter un forfait').toBeDefined();

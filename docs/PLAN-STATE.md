@@ -7,13 +7,13 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `911f326` — 2026-09-29T06:54:00+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #209 (un conflit avec `main`) |
+| Où est `main` ? | `c60e2f3` — 2026-09-29T07:25:51+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #214 (un contrôle requis rouge ou une revue manquante) |
 | Qui tient quoi ? | GOV-049 (A01) · GOV-075 (A01) · GOV-110 (A01) |
 | Où en est la phase ? | phase 0 — 91/125 tâches, reste 29.25 j |
 | Le prochain pas | QA-T05 — Pipeline GHCR privé → Coolify pull |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
-| Dernière entrée de journal | PR #211 — 2026-09-29 |
+| Dernière entrée de journal | PR #214 — 2026-09-29 |
 
 **Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
@@ -60,7 +60,7 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #209 — fix(GOV-075): aucun chemin gabarit la ou il ment, treize taches livrees reparees | `t/gov-075` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #214 — feat(DM-03-P): la grille publiee par axionia est importee version par version, chaque ligne confrontee a son empreinte | `t/dm-03-p` | un contrôle requis rouge ou une revue manquante |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -90,13 +90,27 @@ Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeS
 
 ## Dernier atterrissage
 
-`origin/main` = `911f326` (2026-09-29T06:54:00+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `c60e2f3` (2026-09-29T07:25:51+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
 ## Journal
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
+
+### PR #214 — 2026-09-29 — feat(DM-03-P): la grille publiee par axionia est importee version par version, chaque ligne confrontee a son empreinte
+
+**Fait.** Table `grilles_commission`, immuable par ses déclencheurs. L'import est son seul écrivain :
+il confronte chaque ligne et le contenu entier aux empreintes publiées, n'écrit jamais deux fois la
+même version et refuse deux publications contradictoires. La garde `gov:derivation` est réarmée sur
+la grille. La fixture est émise par le producteur réel, pseudonymisée par lui.
+
+**Reste.** La PR dépend de DM-03-A (axion-ia #1181), non fusionnée : le format consommé est celui
+de sa tête. Le test d'intégration n'a pas tourné sur ce poste, faute de Docker : la porte A le juge.
+La preuve rouge de `gov:derivation` reste à inscrire au registre des gates par le `gardien-spec`.
+
+**Appris.** Nommer la ligne qui a changé demande une empreinte par ligne. Une empreinte unique dit
+seulement que le contenu a changé, et il faudrait une copie de référence pour trouver quelle ligne.
 
 ### PR #211 — 2026-09-29 — fix(GOV-110): la cloture confronte le sujet d'ecrasement au titre que la PR portait a l'instant de la fusion
 
@@ -130,24 +144,7 @@ GOV-002, GOV-017a), retirés dans cette PR au vu des commits de livraison.
 **Appris.** Un masque tolérant cache plus que ce qu'il nomme : le retirer a fait apparaître treize
 citations et deux gates non réciproques que personne n'avait déclarées.
 
-### PR #207 — 2026-09-29 — chore(GOV-012): registre rattrape, sept taches closes, SEC-05 sensible, trois suites versees
-
-**Fait.** Le registre rattrape les PR #200 et #206 : sept tâches closes par `lot:cloture --tache`,
-avec l'attestation lue dans le commit de fusion sur la branche par défaut. `SEC-05.sensible` passe
-de vide à `rgpd` et `espace`, relevés par les deux lentilles : la tâche cloisonne les données de
-l'espace apporteur.
-Trois suites versées `a_faire` : GOV-109 (expressions constantes de la JSX que la garde lexicale ne
-voit pas encore), GOV-110 (titre attendu à l'instant de la fusion, pas au moment de la clôture),
-GOV-111 (options de lecture, filtres de relation et lignes entières dans le cloisonnement).
-
-**Reste.** Les trois suites sont à revendiquer et à livrer. Le détail des formes de GOV-109 est tenu
-hors dépôt jusqu'à son correctif ; aucune acceptance ne les cite.
-
-**Appris.** `poser-champ` n'écrit qu'un champ vide, et un tableau vide n'est pas vide pour lui :
-corriger une valeur déjà posée passe par `reecrire-champ`, qui exige un motif. Ce motif est
-consigné au journal des réécritures, tenu hors dépôt ; le registre ne le porte pas (`motif` nul).
-
-… 3 entrée(s) affichée(s) sur 87 ; les 84 plus ancienne(s) se lisent dans `docs/journal/`.
+… 3 entrée(s) affichée(s) sur 88 ; les 85 plus ancienne(s) se lisent dans `docs/journal/`.
 
 ## Dette déclarée
 

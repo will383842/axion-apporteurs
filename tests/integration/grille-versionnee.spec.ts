@@ -57,7 +57,7 @@ describe('REQ-DM-014 — une grille importée est une version, et une version ne
     expect(diff).toContain('No difference detected');
   });
 
-  it('TÉMOIN — un centime changé sans toucher aux empreintes : refusé, la ligne NOMMÉE, rien écrit', async () => {
+  it('REQ-DM-014 — TÉMOIN : un centime changé sans toucher aux empreintes : refusé, la ligne NOMMÉE, rien écrit', async () => {
     const brut = publiee();
     const forfait = brut.contenu.commissions.find((c) => c.montantCents !== null)!;
     forfait.montantCents! += 1;
@@ -70,7 +70,7 @@ describe('REQ-DM-014 — une grille importée est une version, et une version ne
     expect(await compte()).toBe(0);
   });
 
-  it('la publication du producteur s’importe, par le semeur, avec le compte des lignes confrontées', async () => {
+  it('REQ-DM-014 : la publication du producteur s’importe, par le semeur, avec le compte des lignes confrontées', async () => {
     const brut = publiee();
     const r = await semerGrilleCommission(base.prisma, brut, IMPORTEE_AT);
     expect(r).toEqual({
@@ -90,7 +90,7 @@ describe('REQ-DM-014 — une grille importée est une version, et une version ne
     expect(empreinteGrille(ligne!.contenu)).toBe(ligne!.hash);
   });
 
-  it('TÉMOIN — le second import de la même empreinte n’écrit rien, et le dit', async () => {
+  it('REQ-DM-014 — TÉMOIN : le second import de la même empreinte n’écrit rien, et le dit', async () => {
     const r = await importerGrille(base.prisma, publiee(), new Date('2026-09-30T00:00:00.000Z'));
     expect(r.statut).toBe('deja_importee');
     expect(await compte()).toBe(1);
@@ -114,7 +114,7 @@ describe('REQ-DM-014 — une grille importée est une version, et une version ne
     ['DELETE', `DELETE FROM grilles_commission`],
     ['TRUNCATE', `TRUNCATE grilles_commission`],
   ])(
-    'TÉMOIN — %s d’une version importée est refusé par la base, déclencheur nommé',
+    'REQ-DM-014 — TÉMOIN : %s d’une version importée est refusé par la base, déclencheur nommé',
     async (op, sql) => {
       await expect(base.prisma.$executeRawUnsafe(sql)).rejects.toThrow(
         new RegExp(`grilles_commission_immuable : ${op} refusé`)
