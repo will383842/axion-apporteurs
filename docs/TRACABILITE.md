@@ -16,7 +16,7 @@
 
 **334 exigences actives · 137 réputées testées · 137 couvertes · 0 orphelines.**
 
-330 tâches, dont 149 livrées · 179 fichiers de test exécutés par `vitest` sur 179 présents.
+332 tâches, dont 154 livrées · 179 fichiers de test exécutés par `vitest` sur 179 présents.
 
 ## Exigences réputées testées
 
@@ -107,7 +107,7 @@
 | `REQ-JUR-009` | `INT-T40`, `JUR-T04`, `JUR-T09`, `JUR-T40`, `JUR-T41`, `UX-P1-42` | `tests/unit/juridique/registre-rgpd.spec.ts` | couverte |
 | `REQ-JUR-015` | `JUR-T02` | `tests/unit/juridique/seuils-ssot.spec.ts` | couverte |
 | `REQ-JUR-023` | `DM-23`, `JUR-T01`, `SEC-12` | `tests/unit/contrat/contract-template-complete.spec.ts` | couverte |
-| `REQ-JUR-025` | `EXT-T01`, `JUR-T04`, `JUR-T34`, `T-ARG-033` | `tests/unit/juridique/politique-de-confidentialite.spec.ts`, `tests/unit/juridique/registre-rgpd.spec.ts` | couverte |
+| `REQ-JUR-025` | `EXT-T01`, `JUR-T04`, `JUR-T34`, `JUR-T36`, `T-ARG-033` | `tests/unit/juridique/politique-de-confidentialite.spec.ts`, `tests/unit/juridique/registre-rgpd.spec.ts` | couverte |
 | `REQ-JUR-029` | `DM-11`, `JUR-T02`, `T-ARG-033` | `tests/unit/juridique/seuils-ssot.spec.ts` | couverte |
 | `REQ-JUR-031` | `DM-43`, `JUR-T24`, `JUR-T27`, `JUR-T28`, `SEC-14`, `SEC-15`, `SEC-41`, `UX-P1-12` | `tests/unit/contrat/contrat-sobre.spec.ts` | couverte |
 | `REQ-JUR-034` | `JUR-T26` | `tests/unit/juridique/charte-relationnelle.spec.ts` | couverte |
@@ -275,7 +275,7 @@
 | `REQ-INT-025` | 3 | `UX-P3-01` | — |
 | `REQ-INT-027` | 1 | `INT-T13`, `INT-T17` | — |
 | `REQ-INT-030` | 1 | `INT-T08-A`, `INT-T08-P`, `QA-T19` | — |
-| `REQ-INT-031` | 0 | `INT-T02` | `axionia/src/server/partners-sync/__tests__/outbox-produit-des-evenements-valides.spec.ts` |
+| `REQ-INT-031` | 0 | `INT-T02`, `QA-T50` | `axionia/src/server/partners-sync/__tests__/outbox-produit-des-evenements-valides.spec.ts`, `tests/unit/qualite/provisionnement-coolify.spec.ts` |
 | `REQ-JUR-001` | 0 | `JUR-T03`, `JUR-T29` | `axionia/src/content/__tests__/remuneration-indicative.spec.ts`, `axionia/src/content/__tests__/vocabulaire-apporteur.spec.ts` |
 | `REQ-JUR-002` | 0 | `JUR-T03`, `JUR-T29` | `axionia/src/content/__tests__/remuneration-indicative.spec.ts`, `axionia/src/content/__tests__/vocabulaire-apporteur.spec.ts` |
 | `REQ-JUR-004` | 1 | `INT-T12`, `INT-T23` | — |

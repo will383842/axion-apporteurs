@@ -316,7 +316,7 @@
     {
       "id": "REQ-DM-021",
       "domaine": "domaine-donnees",
-      "texte": "La résolution d'un encaissement cherche l'attribution occupante du `siren` du client bénéficiaire résolu par axionia (facture ?? session ?? enrollment ?? dossier ; jamais le SIRET du destinataire ou du payeur), sinon un RattachementManuel actif ; un événement sans `siren`, sans clientId ou sans facture est accepté, crée une ligne `bloquee` motif `non_resolue` (enum `MotifBlocage`, REQ-ARG-017) et une Anomalie visible en console — jamais un silence, jamais un rejet.",
+      "texte": "La résolution d'un encaissement cherche l'attribution occupante du `siren` du client bénéficiaire résolu par axionia (facture ?? enrollment ?? session ?? dossier — une inscription sans client descend à la session, et un bénéficiaire sans SIREN lisible part `non_resolue` avec alerte, jamais une devinette ; jamais le SIRET du destinataire ou du payeur), sinon un RattachementManuel actif ; un événement sans `siren`, sans clientId ou sans facture est accepté, crée une ligne `bloquee` motif `non_resolue` (enum `MotifBlocage`, REQ-ARG-017) et une Anomalie visible en console — jamais un silence, jamais un rejet. Ordre amendé le 2026-09-29 : arbitrage -d7 sur délégation de Williams du 2026-09-29 (l'inscription, employeur du participant, passe avant la session).",
       "source": "fonctionnement R13 ; tableaux-de-bord B11 ; anti-abus F12 ; nouvelle (F-DM-04) ; texte décidé de l'annexe de dédoublonnage, remis le 2026-09-19 (décision de Will)",
       "statut": "active",
       "remplaceePar": null,
@@ -2232,7 +2232,8 @@
       "etape": 5,
       "phase": 0,
       "taches": [
-        "INT-T02"
+        "INT-T02",
+        "QA-T50"
       ]
     },
     {
@@ -2609,6 +2610,7 @@
         "EXT-T01",
         "JUR-T04",
         "JUR-T34",
+        "JUR-T36",
         "T-ARG-033"
       ]
     },
@@ -3180,7 +3182,7 @@
     {
       "id": "REQ-UX-033",
       "domaine": "produit-ux",
-      "texte": "Le bundle First Load JS de chaque route de l'espace apporteur est ≤ 75 KB gz — budget absolu, `size-limit` bloquant en CI dès le squelette (REQ-GOV-028), et mesure à la main avant/après consignée dans toute PR qui touche une route ; LHCI lab mobile (profil 4G lente) sur les 6 routes clés : LCP ≤ 1 800 ms, CLS = 0, INP ≤ 100 ms ; accessibilité selon REQ-UX-017.",
+      "texte": "Le JS PROPRE à chaque route de l'espace apporteur (ses fichiers d'entrée, hors socle commun) est ≤ 75 KB gz — budget absolu ; le socle commun à toutes les routes (runtime React et Next) a son propre plafond, mesuré puis majoré de 10 %, écrit dans perf/budgets.json avec sa mesure, son sha et sa date ; `size-limit` bloquant en CI dès le squelette (REQ-GOV-028), et mesure à la main avant/après consignée dans toute PR qui touche une route ; LHCI lab mobile (profil 4G lente) sur les 6 routes clés : LCP ≤ 1 800 ms, CLS = 0, INP ≤ 100 ms ; accessibilité selon REQ-UX-017. Amendée le 2026-09-29 : arbitrage -d7 sur délégation de Williams du 2026-09-29 (option 2) — sous Next 16, le First Load JS d'une page sans code client mesure déjà environ 130 KiB gz, au-delà des 75 KB à lui seul.",
       "source": "AGENTS.md ; tableaux-de-bord §6.2 ; audit-outil §12.3 point 6 ; texte décidé de l'annexe de dédoublonnage, remis le 2026-09-19 (décision de Will)",
       "statut": "active",
       "remplaceePar": null,
