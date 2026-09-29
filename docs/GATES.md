@@ -19,12 +19,12 @@
 
 | Phase | Ce qu'elle est | Gates | Prouvées | Restent à prouver |
 | ----- | -------------- | ----: | -------: | ----------------: |
-| -1 | Socle de gouvernance | 40 | 27 | 13 |
+| -1 | Socle de gouvernance | 40 | 28 | 12 |
 | 0 | Fondations, sécurité, charte | 43 | 32 | 11 |
 | 1 | Parcours, attribution, intégrations | 21 | 3 | 18 |
 | 2 | Argent et versements | 11 | 0 | 11 |
 | 3 | Clôture et obligations annuelles | 3 | 0 | 3 |
-| **Total** | | **118** | **62** | **56** |
+| **Total** | | **118** | **63** | **55** |
 
 La phase d'une gate est celle **à la sortie de laquelle** elle doit exister, être bloquante et
 avoir rougi. Une gate sans phase entière n'entre dans le périmètre d'aucune sortie :
@@ -35,7 +35,7 @@ avoir rougi. Une gate sans phase entière n'entre dans le périmètre d'aucune s
 Ce sont les seules dont on a la trace d'un échec provoqué. La colonne « Preuve rouge » est le
 champ `preuveRouge` du registre, recopié verbatim par le rendu.
 
-### Phase -1 — armées (27)
+### Phase -1 — armées (28)
 
 | Gate | Tâche | Script | Alias | Preuve rouge |
 | ---- | ----- | ------ | ----- | ------------ |
@@ -55,6 +55,7 @@ champ `preuveRouge` du registre, recopié verbatim par le rendu.
 | `gates:prouvees` | QA-T00 | `scripts/gates/gates-prouvees.ts` | — | 10 familles, un temoin chacune, 8 contre-temoins verts, 5 temoins de forme (pnpm gates:prouvees:prove) |
 | `partners:contrat:hash` | INT-T01a | `tests/unit/integration/contrat-hash.spec.ts` | — | renommage de `occurred_at` en `occurredAt` dans packages/contracts/enveloppe.ts, 2026-09-03 : 4 cas sur 9 rouges + `contracts:export --verifier` rouge sur les 3 artefacts |
 | `GATE-JUR-TEXTES-APPORTEURS` | GOV-013 | `scripts/gates/lexique-apporteurs.ts` | `GATE-UX-JARGON`, `gov:lexique` | pnpm gov:lexique:prove — 13 familles rougissent chacune sur son temoin (dont gabarit_liste_noire, et jargon_interne, REQ-UX-003, ajoutee par UX-P0-01), 8 positions limites rougissent, 6 controles positifs rougissent (dont la phrase de l'art. 19 retouchee d'un mot et une renonciation NIEE dans le gabarit), 14 contre-temoins restent verts, dont la phrase de partners/ADR-0009 « valeurs du monde reel » verbatim et l'art. 19 du gabarit verbatim. Temoin du binaire sur le depot (JUR-T01, 2026-09-19) : « L'Apporteur renonce a toute indemnite. » ajoute en tete de l'art. 11.3 du gabarit -> EXIT=1, « [gabarit_liste_noire] docs/contrat/CONTRAT-APPORTEUR-V1.md:530 — « renonce » dans le gabarit de contrat » |
+| `gate-deploiement` | GOV-000 | `scripts/gates/deploy-verify.ts` | — | tests/unit/qualite/un-seul-producteur-de-deploiement.spec.ts vu ROUGE avant le code (commit 5b2378f) : 21 tests rouges, dont « AssertionError: expected 1 to be 2 // Object.is equality » (sans PARTNERS_URL_PUBLIQUE, deploy:verify doit sortir en 2, indetermine). Temoin a deux faces sur un vrai serveur HTTP local : pnpm deploy:verify <sha> contre un en-tete x-partners-build-sha qui sert un autre sha -> EXIT=1, les deux sha nommes (attendu, servi) ; sans en-tete -> EXIT=1, « en-tete x-partners-build-sha absent » ; contre le sha servi -> EXIT=0. pnpm deploy:coolify : secrets absents -> SAUTE, EXIT=0, un ::warning:: par secret manquant ; plateforme en 401 -> EXIT=1, statut nomme, jeton jamais imprime ; plateforme qui accepte -> PATCH docker_registry_image_tag sha-<7> PUIS POST /api/v1/deploy, puis atterrissage lu ; image jamais servie -> EXIT=1, les deux sha nommes ; adresse en clair hors boucle locale -> refus. Rouge constate par: A05 |
 | `G-SEC-GATE-A-BLOQUANTE` | CPL-T01 | `tests/unit/gouvernance/entite-registre.spec.ts` | — | le cas mute le YAML EN MEMOIRE (ci.yml est reserve) et exige que l'etape « Le corps PUBLIE de la PR ne porte aucune coordonnee » ressorte NOMMEE ; un temoin positif verifie que le bloc extrait est bien celui qui porte gov:entite:corps, et la fonction LEVE si le job gate-a est introuvable — sans quoi elle rendrait une liste vide, donc vert |
 | `gov:publication` | GOV-000 | `scripts/gates/gov-publication.ts` | — | pnpm gov:publication:prove — 7 familles vues rougir, 5 contre-temoins vus rester verts |
 | `gov:requirements` | GOV-001 | `scripts/gates/gov-requirements.ts` | — | pnpm gov:requirements:prove — 16 familles, chacune vue rougir sur son temoin ; et, depuis GOV-024, le mode --verifie-rendu vu rougir en famille vue_perimee sur une vue perime d'UNE exigence, l'ecart nomme « 353 pour 354 », et vu rester vert sur le depot a jour. ⚠️ 2026-09-17, GOV-039 : les CINQ familles neuves (annexe_sans_fusion, fusion_survivante_inconnue, fusion_absorbee_non_marquee, texte_decide_perdu, dette_texte_decide_perimee) ont chacune leur temoin, et les trois qui portent sur une fusion frappent une fusion du MILIEU de l'annexe, jamais la derniere — un temoin construit contre le dernier element d'une liste ne distingue pas « toutes » de « la derniere ». Le rouge d'origine, vu AVANT le correctif et colle verbatim dans le corps de la PR : « REQ-QA-014 : l'arbitrage decide porte « it() », que le texte applique ne reprend pas », et la meme ligne pour « Couvre: REQ-… » |
@@ -114,7 +115,7 @@ champ `preuveRouge` du registre, recopié verbatim par le rendu.
 
 ## 3. Ce qui reste à prouver
 
-Aucune de ces **56** entrées ne porte de `preuveRouge` : personne ne les a vues rougir.
+Aucune de ces **55** entrées ne porte de `preuveRouge` : personne ne les a vues rougir.
 Le périmètre d'un appel est celui de SA phase : `pnpm gates:prouvees --phase -1` ne juge que les
 gates de phase -1, `--phase 0` y ajoute celles de phase 0, et ainsi de suite. Le compte des manques
 n'est pas recopié ici : il se lit dans la sortie de la commande, famille par famille, et il change à
@@ -128,7 +129,7 @@ dans une passe séparée, et se cumulent avec les précédentes. Une même gate 
 dans quatre familles au plus. Ce paragraphe décrit le code ; aucune garde ne l’apparie — la
 sortie de la commande, elle, fait foi.
 
-### Phase -1 — socle de gouvernance (13)
+### Phase -1 — socle de gouvernance (12)
 
 | Gate | Tâche | Script | Alias |
 | ---- | ----- | ------ | ----- |
@@ -139,7 +140,6 @@ sortie de la commande, elle, fait foi.
 | `detectPii` | INT-T01a | `scripts/gates/detect-pii.ts` | — |
 | `gov:contrat` | INT-T01a | `scripts/gates/contrat-epingle.ts` | — |
 | `gate-a` | GOV-000 | `.github/workflows/ci.yml#gate-a` | — |
-| `gate-deploiement` | GOV-000 | `scripts/gates/deploy-verify.ts` | — |
 | `notify-sink-hors-prod` | GOV-000 | `scripts/gates/hook-env.js` | — |
 | `gate-nightly` | QA-T00 | `.github/workflows/nightly.yml` | — |
 | `gov:derivation` | GOV-014 | `scripts/gates/gov-derivation.ts` | — |
