@@ -73,7 +73,11 @@ function tacheSeule(doc: Doc): Tache {
       !x.lot &&
       !x.owner &&
       (x.repo ?? DEPOT_LOCAL) === DEPOT_LOCAL &&
-      ((x as { deps?: string[] }).deps ?? []).every(livree)
+      ((x as { deps?: string[] }).deps ?? []).every(livree) &&
+      // Une tâche attribuée doit porter son acceptance et ses tests (schéma) : sans eux, la clôture
+      // rougirait sur le schéma, pour une raison qui n'est pas celle du témoin.
+      Boolean((x as { acceptance?: string }).acceptance) &&
+      Object.keys((x as { tests?: Record<string, unknown> }).tests ?? {}).length > 0
   );
   if (!t) throw new Error('aucune tâche de ce dépôt à faire hors lot : le témoin n’a plus d’objet');
   return t;
