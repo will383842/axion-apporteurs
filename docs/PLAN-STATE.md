@@ -7,9 +7,9 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `14a8594` — 2026-09-29T10:16:33+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #218 (des contrôles encore en cours) · 2. #217 (un contrôle requis rouge ou une revue manquante) · 3. #214 (un conflit avec `main`) |
-| Qui tient quoi ? | GOV-049 (A01) · GOV-075 (A01) · GOV-110 (A01) |
+| Où est `main` ? | `50b0b9c` — 2026-09-29T11:30:15+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #218 (un conflit avec `main`) · 2. #219 (état `UNKNOWN`) · 3. #221 (brouillon) |
+| Qui tient quoi ? | GOV-049 (A01) · GOV-075 (A01) · GOV-084 (A01) · GOV-110 (A01) |
 | Où en est la phase ? | phase 0 — 91/125 tâches, reste 29.25 j |
 | Le prochain pas | QA-T05 — Pipeline GHCR privé → Coolify pull |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
@@ -60,9 +60,9 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #218 — feat(DM-04): commission et prorata en fonction pure, entiers exacts, bareme choisi par commissionId | `t/dm-04` | des contrôles encore en cours |
-| 2 | #217 — test(GOV-049): une tache en cours hors lot porte la preuve de son vol, et la clause a enfin un temoin rouge | `t/gov-049-visibilite` | un contrôle requis rouge ou une revue manquante |
-| 3 | #214 — feat(DM-03-P): la grille publiee par axionia est importee version par version, chaque ligne confrontee a son empreinte | `t/dm-03-p` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #218 — feat(DM-04): commission et prorata en fonction pure, entiers exacts, bareme choisi par commissionId | `t/dm-04` | un conflit avec `main` — à résoudre avant tout |
+| 2 | #219 — chore(GOV-012): registre rattrape, quatre taches closes, cinq suites versees | `t/registre-rattrapage-10` | état `UNKNOWN` — à qualifier à la main |
+| 3 | #221 — feat(QA-T05): la forge construit, juge puis publie l'image, la plateforme ne fera plus que la tirer | `t/qa-t05` | brouillon — hors file tant qu’il n’est pas prêt |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -74,6 +74,7 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 | --- | --- | --- | --- |
 | GOV-049 — Une tache en cours sans lot est invisible de TOUTES les gardes, et c'est ce lot qui l'a rencontre | A01 | #196 | `a_faire` |
 | GOV-075 — Des taches livrees gardent un chemin gabarit, et une tache livree omet un fichier qu'elle a modifie | A01 | #208 | `a_faire` |
+| GOV-084 — Neuf scripts de garde suivis ne sont revendiques par aucune tache | A01 | #212 | `a_faire` |
 | GOV-110 — La cloture compare le sujet du commit de fusion au titre ACTUEL de la PR : un renommage apres la fusion le rendrait conforme | A01 | #210 | `a_faire` |
 
 ⚠️ **13 revendication(s) périmée(s)** — QA-T07, GOV-042, GOV-045, GOV-050, GOV-051, GOV-053, GOV-054, GOV-055, GOV-060, GOV-072, GOV-079, GOV-093, INT-T01c : leur issue porte encore un label `owner:` alors que la tâche est livrée. `pnpm lot:cloture` écrit `docs/tasks.json` mais n’efface pas les labels ; la dette appartient à GOV-012.
@@ -92,7 +93,7 @@ Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeS
 
 ## Dernier atterrissage
 
-`origin/main` = `14a8594` (2026-09-29T10:16:33+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `50b0b9c` (2026-09-29T11:30:15+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
@@ -115,38 +116,34 @@ les montants. Les cinq valeurs d'activité entrent au glossaire par le `gardien-
 **Appris.** Un taux de test égal à 1 ne distingue pas un produit d'un quotient. La mutation l'a
 montré : le témoin se juge désormais sur le taux le plus élevé de la grille.
 
-### PR #214 — 2026-09-29 — feat(DM-03-P): la grille publiee par axionia est importee version par version, chaque ligne confrontee a son empreinte
+### PR #217 — 2026-09-29 — test(GOV-049): une tache en cours hors lot porte la preuve de son vol, et la clause a enfin un temoin rouge
 
-**Fait.** Table `grilles_commission`, immuable par ses déclencheurs. L'import est son seul écrivain :
-il confronte chaque ligne et le contenu entier aux empreintes publiées, n'écrit jamais deux fois la
-même version et refuse deux publications contradictoires. La fixture est émise par le producteur
-réel, pseudonymisée par lui, version d'événement comprise.
+**Fait.** L'acceptance de GOV-049 est réécrite par un avenant A01, sur l'arbitrage de Will. Une
+tâche `en_cours` porte un lot, ou la preuve de son vol : `owner` et `branch`. Le schéma l'exigeait
+déjà ; aucun témoin ne le voyait refuser. Il en a un, sur une tâche hors de tout lot, et sa
+capacité à rougir est mesurée par mutation.
 
-**Reste.** La PR dépend de DM-03-A (axion-ia #1181), non fusionnée : le format consommé est celui
-de sa tête. Le test d'intégration n'a pas tourné sur ce poste, faute de Docker : la porte A le juge.
-La garde `gov:derivation` n'est pas armée ici : l'armer rendait vides trois témoins de
-`gardes-transposees.spec.ts` et exigeait de figer ses étapes dans `gov-conventions.ts`. Elle part en
-suite, script prêt, chez le `gardien-spec`.
+**Reste.** Rien sur cette règle. La première rédaction, qui exigeait un lot, est abandonnée : elle
+contredisait le témoin d'une tâche en vol.
 
-**Appris.** Nommer la ligne qui a changé demande une empreinte par ligne. Une empreinte unique dit
-seulement que le contenu a changé, et il faudrait une copie de référence pour trouver quelle ligne.
-Et pseudonymiser une donnée, c'est aussi recalculer chaque empreinte qui en dérive : une empreinte
-courte d'un petit espace de valeurs se renverse par énumération.
+**Appris.** Une prémisse qui tombe ne rend pas une tâche vide : elle déplace ce qu'il faut prouver.
+Ici, la règle tenait déjà ; c'est son témoin qui manquait.
 
-### PR #211 — 2026-09-29 — fix(GOV-110): la cloture confronte le sujet d'ecrasement au titre que la PR portait a l'instant de la fusion
+### PR #216 — 2026-09-29 — feat(GOV-084): tout script de garde suivi a une tache porteuse, deux barrieres rattachees a GOV-000
 
-**Fait.** La clôture d'une tâche seule attendait, pour première ligne du commit d'écrasement, le
-titre ACTUEL de la PR, qui reste modifiable après la fusion. Elle lit maintenant les renommages dans
-la chronologie de la PR et retient le titre en vigueur à `mergedAt`. Un renommage postérieur est
-sans effet. Une chronologie illisible fait refuser la clôture, sans repli sur le titre actuel.
+**Fait.** `gov:attributions` refuse désormais un script suivi sous `scripts/gates/` que nulle tâche
+ne déclare (famille `script_de_garde_sans_porteur`). La liste vient de l'index git, jamais d'une
+liste tapée, et le vert imprime le compte des scripts confrontés : 49. Les deux derniers orphelins,
+`gh-sur.js` et `git-push-sur.js`, rejoignent GOV-000, qui porte leur appelant et leur garde.
 
-**Reste.** La commande réelle a été jouée en lecture sur la PR #207, renommée avant sa fusion. Le
-cas d'une PR renommée après sa fusion n'est éprouvé que par la forge simulée.
+**Reste.** Rien sur cette garde. Le cas « une tâche déclare un script qui n'existe plus » est
+l'affaire de la traçabilité, pas de celle-ci.
 
-**Appris.** Une donnée lue « maintenant » pour juger un fait passé doit être relue à l'instant de
-ce fait : sinon, la preuve dépend de ce que la forge laisse encore modifier.
+**Appris.** L'acceptance comptait neuf orphelins le 2026-09-16 ; la mesure refaite à la tête de
+`main` en donne deux. Un compte recopié dans une acceptance vieillit, et c'est la garde qui le rend
+vrai à chaque passage.
 
-… 3 entrée(s) affichée(s) sur 89 ; les 86 plus ancienne(s) se lisent dans `docs/journal/`.
+… 3 entrée(s) affichée(s) sur 91 ; les 88 plus ancienne(s) se lisent dans `docs/journal/`.
 
 ## Dette déclarée
 
