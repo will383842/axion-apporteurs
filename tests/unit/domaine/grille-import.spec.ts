@@ -45,8 +45,8 @@ function publiee(): Record<string, unknown> {
 
 const lue = (): PublicationGrille => lirePublication(publiee());
 
-describe('REQ-ARG-031, REQ-INT-017 — la publication du producteur est confrontée ligne à ligne', () => {
-  it('REQ-ARG-031, REQ-INT-017 : la publication du producteur : aucune faute, sur un périmètre NON vide', () => {
+describe('REQ-ARG-031 → REQ-DM-014, REQ-INT-017 — la publication du producteur est confrontée ligne à ligne', () => {
+  it('REQ-ARG-031 → REQ-DM-014, REQ-INT-017 : la publication du producteur : aucune faute, sur un périmètre NON vide', () => {
     const pub = lue();
     const verdict = verifierPublication(pub);
     expect(verdict.fautes).toEqual([]);
@@ -57,7 +57,7 @@ describe('REQ-ARG-031, REQ-INT-017 — la publication du producteur est confront
     expect(pub.contenu.paliers.length).toBeGreaterThan(0);
   });
 
-  it('REQ-ARG-031, REQ-INT-017 — TÉMOIN : un centime changé sans toucher les empreintes : la ligne de barème est NOMMÉE', () => {
+  it('REQ-ARG-031 → REQ-DM-014, REQ-INT-017 — TÉMOIN : un centime changé sans toucher les empreintes : la ligne de barème est NOMMÉE', () => {
     const pub = lue();
     const cible = pub.contenu.commissions.find((c) => c.montantCents !== null);
     expect(cible, 'la fixture doit porter un forfait').toBeDefined();
@@ -112,7 +112,7 @@ describe('REQ-ARG-031, REQ-INT-017 — la publication du producteur est confront
   });
 });
 
-describe('REQ-ARG-031 — la forme est fermée : rien n’est complété, tout défaut est nommé', () => {
+describe('REQ-ARG-031 → REQ-DM-014 — la forme est fermée : rien n’est complété, tout défaut est nommé', () => {
   /** Une publication brute dont on force un champ hors contrat : le type ne l’admettrait pas. */
   type Brute = PublicationGrille & Record<string, unknown>;
   const refusee = (muter: (p: Brute) => void): string => {
