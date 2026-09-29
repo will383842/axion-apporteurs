@@ -140,6 +140,14 @@ describe('REQ-ARG-031 → REQ-DM-014 — la forme est fermée : rien n’est com
   it('un forfait sans montant est refusé', () => {
     expect(refusee((p) => (forfait(p).montantCents = null))).toMatch(/montantCents requis/);
   });
+  it('un forfait qui porte AUSSI un taux est refusé : une ligne ne cumule jamais deux barèmes', () => {
+    expect(refusee((p) => (forfait(p).tauxBps = pourcentage(p).tauxBps))).toMatch(
+      /tauxBps interdit/
+    );
+  });
+  it('une publication qui n’est pas un objet est refusée, et le défaut est situé à la racine', () => {
+    expect(() => lirePublication(null)).toThrow(/\(racine\) :/);
+  });
   it('un taux au-delà de 100 % est refusé', () => {
     expect(refusee((p) => (pourcentage(p).tauxBps = BPS_MAX + 1))).toMatch(/tauxBps/);
   });

@@ -8,7 +8,7 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `c60e2f3` — 2026-09-29T07:25:51+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #214 (un contrôle requis rouge ou une revue manquante) |
+| Qu’est-ce qui est en vol ? | 1. #214 (un contrôle requis rouge ou une revue manquante) · 2. #216 (un contrôle requis rouge ou une revue manquante) |
 | Qui tient quoi ? | GOV-049 (A01) · GOV-075 (A01) · GOV-110 (A01) |
 | Où en est la phase ? | phase 0 — 91/125 tâches, reste 29.25 j |
 | Le prochain pas | QA-T05 — Pipeline GHCR privé → Coolify pull |
@@ -61,6 +61,7 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
 | 1 | #214 — feat(DM-03-P): la grille publiee par axionia est importee version par version, chaque ligne confrontee a son empreinte | `t/dm-03-p` | un contrôle requis rouge ou une revue manquante |
+| 2 | #216 — feat(GOV-084): tout script de garde suivi a une tache porteuse, deux barrieres rattachees a GOV-000 | `t/gov-084` | un contrôle requis rouge ou une revue manquante |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -103,7 +104,7 @@ Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écr
 **Fait.** Table `grilles_commission`, immuable par ses déclencheurs. L'import est son seul écrivain :
 il confronte chaque ligne et le contenu entier aux empreintes publiées, n'écrit jamais deux fois la
 même version et refuse deux publications contradictoires. La fixture est émise par le producteur
-réel, pseudonymisée par lui.
+réel, pseudonymisée par lui, version d'événement comprise.
 
 **Reste.** La PR dépend de DM-03-A (axion-ia #1181), non fusionnée : le format consommé est celui
 de sa tête. Le test d'intégration n'a pas tourné sur ce poste, faute de Docker : la porte A le juge.
@@ -113,6 +114,8 @@ suite, script prêt, chez le `gardien-spec`.
 
 **Appris.** Nommer la ligne qui a changé demande une empreinte par ligne. Une empreinte unique dit
 seulement que le contenu a changé, et il faudrait une copie de référence pour trouver quelle ligne.
+Et pseudonymiser une donnée, c'est aussi recalculer chaque empreinte qui en dérive : une empreinte
+courte d'un petit espace de valeurs se renverse par énumération.
 
 ### PR #211 — 2026-09-29 — fix(GOV-110): la cloture confronte le sujet d'ecrasement au titre que la PR portait a l'instant de la fusion
 
