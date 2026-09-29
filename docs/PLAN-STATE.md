@@ -7,9 +7,9 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `0687957` — 2026-09-29T12:58:19+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #221 (un conflit avec `main`) · 2. #228 (un conflit avec `main`) · 3. #230 (un conflit avec `main`) · 4. #231 (un conflit avec `main`) · 5. #233 (un conflit avec `main`) |
-| Qui tient quoi ? | GOV-122 (A01) · GOV-119 (A01) · GOV-121 (A01) |
+| Où est `main` ? | `067b121` — 2026-09-29T13:14:40+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #231 (un contrôle requis rouge ou une revue manquante) · 2. #221 (un conflit avec `main`) · 3. #230 (un conflit avec `main`) · 4. #233 (un conflit avec `main`) |
+| Qui tient quoi ? | GOV-066 (A01) · GOV-122 (A01) · GOV-119 (A01) · GOV-121 (A01) |
 | Où en est la phase ? | phase 0 — 95/130 tâches, reste 28.50 j |
 | Le prochain pas | QA-T05 — Pipeline GHCR privé → Coolify pull |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
@@ -60,11 +60,10 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #221 — feat(QA-T05): la forge construit, juge puis publie l'image, la plateforme ne fera plus que la tirer | `t/qa-t05` | un conflit avec `main` — à résoudre avant tout |
-| 2 | #228 — test(GOV-121): la preuve de vol est jouee a null, la forme reelle du registre, et le docblock dit juste | `t/gov-121` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #231 — fix(GOV-118): un gabarit qui existe est un chemin reel, zero script de garde confronte est un refus | `t/gov-118` | un contrôle requis rouge ou une revue manquante |
+| 2 | #221 — feat(QA-T05): la forge construit, juge puis publie l'image, la plateforme ne fera plus que la tirer | `t/qa-t05` | un conflit avec `main` — à résoudre avant tout |
 | 3 | #230 — docs(GOV-012): conseillers salaries — plan W19 et taches versees (GOV-112, GOV-115 a GOV-117), sans DECISIONS ni GLOSSAIRE | `t/archi-commerciaux-salaries` | un conflit avec `main` — à résoudre avant tout |
-| 4 | #231 — fix(GOV-118): un gabarit qui existe est un chemin reel, zero script de garde confronte est un refus | `t/gov-118` | un conflit avec `main` — à résoudre avant tout |
-| 5 | #233 — feat(JUR-T04): registre de l'article 30 et AIPD, sources et derives du schema, la page de confidentialite scindee | `t/jur-t04` | un conflit avec `main` — à résoudre avant tout |
+| 4 | #233 — feat(JUR-T04): registre de l'article 30 et AIPD, sources et derives du schema, la page de confidentialite scindee | `t/jur-t04` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -74,6 +73,7 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 
 | Tâche | Revendiquée par | Issue | Statut |
 | --- | --- | --- | --- |
+| GOV-066 — La garde d'entite juge l'index publie, pas tout ce que la forge sert du depot | A01 | #234 | `a_faire` |
 | GOV-122 — La cloture retient un renommage fait dans la seconde meme de la fusion, et une date illisible y devient NaN au lieu d'un refus | A01 | #224 | `a_faire` |
 | GOV-119 — La porte A d'une PR rougit quand une AUTRE PR fusionne pendant son execution | A01 | #223 | `a_faire` |
 | GOV-121 — Le temoin de la preuve de vol ne joue que la cle absente, jamais owner ou branch a null, la forme reelle du registre | A01 | #227 | `a_faire` |
@@ -94,7 +94,7 @@ Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeS
 
 ## Dernier atterrissage
 
-`origin/main` = `0687957` (2026-09-29T12:58:19+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `067b121` (2026-09-29T13:14:40+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
