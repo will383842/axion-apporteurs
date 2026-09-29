@@ -14700,7 +14700,8 @@
         ".github/workflows/coolify-provisionner.yml",
         "scripts/deploiement/provisionner.ts",
         "tests/unit/qualite/provisionnement-coolify.spec.ts",
-        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts"
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts",
+        "package.json"
       ],
       "schema": false,
       "sensible": [],
