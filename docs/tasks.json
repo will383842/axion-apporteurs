@@ -4134,7 +4134,8 @@
         "axionia/src/components/services/devenir-commercial/CommercialHowItWorks.tsx",
         "axionia/src/components/services/devenir-commercial/CommercialProductsEarnings.tsx",
         "axionia/src/app/[locale]/devenir-commercial-ia/page.tsx",
-        "axionia/src/app/[locale]/devenir-commercial-ia/candidature/page.tsx"
+        "axionia/src/app/[locale]/devenir-commercial-ia/candidature/page.tsx",
+        "axionia/src/components/services/devenir-commercial/CommercialProcess.tsx"
       ],
       "schema": false,
       "sensible": [

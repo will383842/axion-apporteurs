@@ -8,7 +8,7 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `0db2bca0` — 2026-09-30T00:01:49+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #263 (un conflit avec `main`) · 2. #268 (un conflit avec `main`) · 3. #262 (état `UNKNOWN`) · 4. #267 (état `UNKNOWN`) |
+| Qu’est-ce qui est en vol ? | 1. #262 (un conflit avec `main`) · 2. #263 (un conflit avec `main`) · 3. #267 (un conflit avec `main`) · 4. #268 (un conflit avec `main`) |
 | Qui tient quoi ? | GOV-117 (A01) |
 | Où en est la phase ? | phase 0 — 116/133 tâches, reste 13.00 j |
 | Le prochain pas | QA-T06 — Preview par PR sur Coolify, base éphémère, seed déterministe |
@@ -60,10 +60,10 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #263 — feat(QA-T20): le poids charge par route se lit dans les manifestes de Next 16, zero octet est une faute | `t/qa-t20` | un conflit avec `main` — à résoudre avant tout |
-| 2 | #268 — feat(QA-T34): la plateforme tire sha-7 apres publier, un seul producteur, l'atterrissage lu sur x-partners-build-sha | `t/qa-t34` | un conflit avec `main` — à résoudre avant tout |
-| 3 | #262 — feat(GOV-116): le lot dedie du gardien-spec, procedure exacte lancee par Williams, reglages rendus depuis le projet | `t/gov-116` | état `UNKNOWN` — à qualifier à la main |
-| 4 | #267 — fix(GOV-109): la garde lexicale evalue toute expression JSX constante comme React la rend | `t/gov-109` | état `UNKNOWN` — à qualifier à la main |
+| 1 | #262 — feat(GOV-116): le lot dedie du gardien-spec, procedure exacte lancee par Williams, reglages rendus depuis le projet | `t/gov-116` | un conflit avec `main` — à résoudre avant tout |
+| 2 | #263 — feat(QA-T20): le poids charge par route se lit dans les manifestes de Next 16, zero octet est une faute | `t/qa-t20` | un conflit avec `main` — à résoudre avant tout |
+| 3 | #267 — fix(GOV-109): la garde lexicale evalue toute expression JSX constante comme React la rend | `t/gov-109` | un conflit avec `main` — à résoudre avant tout |
+| 4 | #268 — feat(QA-T34): la plateforme tire sha-7 apres publier, un seul producteur, l'atterrissage lu sur x-partners-build-sha | `t/qa-t34` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
