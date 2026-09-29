@@ -8,12 +8,12 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `53e765e` — 2026-09-29T20:48:22+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #242 (un contrôle requis rouge ou une revue manquante) · 2. #253 (un contrôle requis rouge ou une revue manquante) |
+| Qu’est-ce qui est en vol ? | 1. #242 (un contrôle requis rouge ou une revue manquante) · 2. #253 (un contrôle requis rouge ou une revue manquante) · 3. #254 (un contrôle requis rouge ou une revue manquante) |
 | Qui tient quoi ? | GOV-124 (A01) · GOV-126 (A01) |
 | Où en est la phase ? | phase 0 — 104/131 tâches, reste 20.50 j |
 | Le prochain pas | QA-T06 — Preview par PR sur Coolify, base éphémère, seed déterministe |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
-| Dernière entrée de journal | PR #251 — 2026-09-29 |
+| Dernière entrée de journal | PR #254 — 2026-09-29 |
 
 **Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
@@ -62,6 +62,7 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 | --- | --- | --- | --- |
 | 1 | #242 — feat(JUR-T34): la politique de confidentialite de l'espace, tiree du registre de l'article 30 et acceptee a la premiere connexion | `t/jur-t34` | un contrôle requis rouge ou une revue manquante |
 | 2 | #253 — feat(GOV-125): le motif de branche depend du depot de la tache, une tache axionia se clot sur sa branche | `t/gov-125-motif` | un contrôle requis rouge ou une revue manquante |
+| 3 | #254 — docs(GOV-017a): W20, questions 18 et 19 tranchees — aucune tacite d'une demande signalee, liberee apres 3 injoignables ou 45 jours | `t/w20-q18-q19` | un contrôle requis rouge ou une revue manquante |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -98,6 +99,33 @@ Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
 
+### PR #254 — 2026-09-29 — docs(GOV-017a): W20, questions 18 et 19 tranchees — aucune tacite d'une demande signalee, liberee apres 3 injoignables ou 45 jours
+
+**Fait.** Les réponses de Williams du 2026-09-29, vers 20 h (session -d7), sont reportées dans
+`docs/chantiers/W20-confirmation-par-email.md` et au registre. Question 18 : la valeur par défaut est
+retenue, une demande signalée n'est jamais confirmée par le seul silence. Question 19, proposée par la
+lentille securite : sans appel concluant, la demande signalée est libérée, sans aucune sanction, après
+3 appels `injoignable` ou 45 jours après l'envoi, au premier terme ; les deux valeurs sont des
+paramètres de la SSOT ; l'entreprise redevient disponible, l'apporteur reçoit une notification neutre et
+peut redéposer aux règles ordinaires. Au plan : HYP-W20-TACITE mise à jour, HYP-W20-LIBERATION créée,
+REQ-DM-063 proposée, REQ-DM-042, REQ-DM-008, REQ-SEC-060, REQ-DM-062 et REQ-UX-062 mises à jour, badge
+⚪ « Réservation terminée », risque 1 point ii fermé, réponses datées au §9. Au registre, par
+`reecrire-champ` : acceptances de DM-24, DM-13, SEC-41, UX-P1-05, UX-P1-41, UX-P1-43, JUR-T40,
+JUR-T01b, QA-T40, QA-T41 et avenant (8) de GOV-112 ; dépendances DM-13 ← DM-40, SEC-41, UX-P1-10 et
+DM-24 ← SEC-41 ; DM-13 passe de 0,75 à 1 j. Phase 1 : 17,75 j.
+
+**Reste.** La passe gardien-spec de GOV-112 écrit HYP-W20-LIBERATION et REQ-DM-063 avec les autres.
+Les précisions par défaut de HYP-W20-LIBERATION (45 jours comptés de la première demande, seuls les
+`injoignable` comptent, rebond non corrigé libéré de même, état `perimee`, libellé et notification)
+attendent la relecture de Williams. Le redépôt en boucle d'une adresse muette reste possible, borné à
+chaque tour ; le limiter serait une modalité nouvelle, à décider par Williams. Questions 16 et 17
+toujours ouvertes. Aucune tâche W20 n'est livrée par cette PR.
+
+**Appris.** Borner une attente change aussi le texte qui disait « la seule conséquence du silence » :
+la phrase vivait dans l'exigence, le contrat proposé et la relecture du contrat, et une seule copie
+oubliée aurait promis le contraire de la règle. Un test qui disait « toujours 🔴 à 60 jours » est
+devenu faux par la même réponse : une borne se relit dans tous les témoins datés.
+
 ### PR #251 — 2026-09-29 — chore(GOV-012): registre rattrape, HT encaisse tranche par Williams, paths du lot A et de JUR-T29, GOV-125 versee
 
 **Fait.** Treizième rattrapage. Williams a tranché le HT encaissé : axion-ia le calcule pour chaque
@@ -124,19 +152,7 @@ cette fermeture.
 **Appris.** Un témoin fait partie de la garde qu'il prouve : l'autoriser à une lentille, c'était
 autoriser la garde elle-même par un détour.
 
-### PR #248 — 2026-09-29 — feat(GOV-124): une lentille pour une PR sans risque, derivee et fermee, deux pour tout le reste
-
-**Fait.** Une PR de documentation, de tests ou d'outillage des vues, en zone gouvernance ou
-qualité, n'exige plus que la lentille exactitude. Le classement est dérivé par le calcul du risque,
-jamais déclaré, et tout ce qu'il ne sait pas lire vaut deux lentilles.
-
-**Reste.** L'architecte accepte l'ADR 0026. Aucune dérivation ne lit l'intention d'un texte : la
-limite est écrite dans l'ADR.
-
-**Appris.** Une liste d'autorisation doit exclure ce qui nourrit son propre calcul : sans cela, une
-PR relue par une seule lentille aurait pu ramener à une lentille toutes les PR suivantes d'une tâche.
-
-… 3 entrée(s) affichée(s) sur 109 ; les 106 plus ancienne(s) se lisent dans `docs/journal/`.
+… 3 entrée(s) affichée(s) sur 110 ; les 107 plus ancienne(s) se lisent dans `docs/journal/`.
 
 ## Dette déclarée
 
