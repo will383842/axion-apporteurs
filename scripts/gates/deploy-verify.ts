@@ -222,6 +222,95 @@ async function commandeDeclencher(argv: string[]): Promise<number> {
   return verifier(sha, publique, options(argv));
 }
 
+/** `readyz` servi par l'adresse publique : 200, ou le statut qui en tient lieu. */
+async function readyz(base: URL): Promise<number> {
+  try {
+    const r = await fetch(new URL('/api/readyz', base), { redirect: 'manual', cache: 'no-store' });
+    await r.body?.cancel();
+    return r.status;
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * QA-T13 (REQ-QA-022) — le retour arrière : `SKIP_MIGRATE=1`, étiquette `sha-<cible>`, déploiement,
+ * puis VÉRIFICATION de l'en-tête servi ET de `readyz`. `SKIP_MIGRATE` est remis à `0` QUOI QU'IL
+ * ARRIVE : l'entrée n'honore que `1` (`docker-entrypoint.sh`), et une échappatoire laissée en place
+ * ferait démarrer l'image suivante sur un schéma qu'elle n'a pas migré (runbook, étape 5).
+ * Le sha cible vient de l'environnement de l'étape (`SHA_CIBLE`), jamais d'une commande interpolée,
+ * et il est jugé AVANT tout appel.
+ */
+async function commandeRetourArriere(argv: string[]): Promise<number> {
+  const cible = (process.env.SHA_CIBLE ?? '').toLowerCase();
+  if (!SHA_COMPLET.test(cible)) {
+    throw new Error('SHA_CIBLE doit être un sha de 40 caractères hexadécimaux');
+  }
+  const manquants = SECRETS_DU_DEPLOIEMENT.filter((n) => (process.env[n] ?? '') === '');
+  if (manquants.length > 0) {
+    for (const n of manquants) {
+      console.log(
+        `::warning title=deploy:retour-arriere::${n} absent — retour arrière SAUTÉ (arbitrage -d7 du 2026-09-29)`
+      );
+    }
+    console.log(`⚠ SAUTÉ : ${manquants.join(', ')}. Rien n'a été redéployé.`);
+    return 0;
+  }
+  const lire = (n: (typeof SECRETS_DU_DEPLOIEMENT)[number]): string => process.env[n] ?? '';
+  const plateforme = adresseSure(lire('COOLIFY_URL'), 'COOLIFY_URL');
+  const publique = adresseSure(lire('PARTNERS_URL_PUBLIQUE'), 'PARTNERS_URL_PUBLIQUE');
+  const jeton = lire('COOLIFY_API_TOKEN');
+  const racine = plateforme.href.replace(/\/+$/, '');
+  const uuid = encodeURIComponent(lire('COOLIFY_APP_UUID'));
+  const variables = new URL(`${racine}/api/v1/applications/${uuid}/envs/bulk`);
+  const poser = (valeur: '0' | '1') =>
+    appel(variables, 'PATCH', jeton, { data: [{ key: 'SKIP_MIGRATE', value: valeur }] });
+
+  let code: 0 | 1 = 1;
+  try {
+    const s0 = await poser('1');
+    if (s0 < 200 || s0 > 299) {
+      console.error(`❌ la plateforme refuse SKIP_MIGRATE=1 : HTTP ${s0}`);
+      return 1;
+    }
+    const etiquette = `sha-${cible.slice(0, 7)}`;
+    const s1 = await appel(new URL(`${racine}/api/v1/applications/${uuid}`), 'PATCH', jeton, {
+      docker_registry_image_tag: etiquette,
+    });
+    if (s1 < 200 || s1 > 299) {
+      console.error(`❌ la plateforme refuse l'étiquette ${etiquette} : HTTP ${s1}`);
+      return 1;
+    }
+    const s2 = await appel(
+      new URL(`${racine}/api/v1/deploy?uuid=${uuid}&force=false`),
+      'POST',
+      jeton
+    );
+    if (s2 < 200 || s2 > 299) {
+      console.error(`❌ la plateforme refuse le déploiement : HTTP ${s2}`);
+      return 1;
+    }
+    if ((await verifier(cible, publique, options(argv))) !== 0) return 1;
+    const sante = await readyz(publique);
+    if (sante !== 200) {
+      console.error(
+        `❌ readyz répond ${sante || 'rien'} après le retour arrière : rien n'est remis en place`
+      );
+      return 1;
+    }
+    console.log(`✅ retour arrière sur ${etiquette} : en-tête et readyz vérifiés`);
+    code = 0;
+    return 0;
+  } finally {
+    const s3 = await poser('0');
+    if (s3 < 200 || s3 > 299) {
+      console.error(`❌ SKIP_MIGRATE n'a pas pu être remis à 0 (HTTP ${s3}) : à retirer À LA MAIN`);
+    } else if (code === 0) {
+      console.log('   SKIP_MIGRATE remis à 0 : le déploiement suivant migrera.');
+    }
+  }
+}
+
 const APPELE_DIRECTEMENT = /deploy-verify\.ts$/.test(process.argv[1] ?? '');
 
 if (APPELE_DIRECTEMENT) {
@@ -230,14 +319,16 @@ if (APPELE_DIRECTEMENT) {
     ? commandeDeclencher
     : argv.includes('--verifier')
       ? commandeVerifier
-      : null;
+      : argv.includes('--retour-arriere')
+        ? commandeRetourArriere
+        : null;
   if (mode === null) {
-    console.error('usage : deploy-verify.ts --verifier [<sha>] | --declencher');
+    console.error('usage : deploy-verify.ts --verifier [<sha>] | --declencher | --retour-arriere');
     process.exit(1);
   }
   // `exitCode`, jamais `process.exit()` ici : couper des sockets de `fetch` encore ouvertes fait
   // planter Node sous Windows (0xC0000409, mesuré le 2026-09-29) — le code rendu ne serait plus le nôtre.
-  mode(argv.filter((a) => a !== '--declencher' && a !== '--verifier')).then(
+  mode(argv.filter((a) => !['--declencher', '--verifier', '--retour-arriere'].includes(a))).then(
     (code) => {
       process.exitCode = code;
     },

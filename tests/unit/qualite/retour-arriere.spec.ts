@@ -83,7 +83,11 @@ const application = (sha: string | null, readyz: number) =>
   serveur((a) =>
     a.chemin === '/api/readyz'
       ? { statut: readyz, entetes: {}, corps: '{}' }
-      : { statut: 200, entetes: sha ? { 'x-partners-build-sha': sha } : {}, corps: '' }
+      : {
+          statut: 200,
+          entetes: (sha ? { 'x-partners-build-sha': sha } : {}) as Record<string, string>,
+          corps: '',
+        }
   );
 const envs = (p: { appels: Appel[] }) =>
   p.appels
