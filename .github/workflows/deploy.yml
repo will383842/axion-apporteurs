@@ -1,0 +1,106 @@
+# L'image d'Axion Partners, construite par la forge — QA-T05 (REQ-QA-018, REQ-QA-032).
+#
+# La forge CONSTRUIT l'image, la JUGE (porte C), puis la PUBLIE sur son registre de conteneurs,
+# étiquetée `latest` et `sha-<7>`. La plateforme de déploiement ne fera plus que la tirer : elle
+# ne construit rien. Le tirage lui-même, et la vérification de l'atterrissage (l'en-tête de build
+# servi porte le sha fusionné), appartiennent à la tâche qui branche la plateforme (QA-T34).
+#
+# CE QUE CE WORKFLOW PROUVE, ET DANS QUEL ORDRE :
+#   1. l'image se construit SANS AUCUNE variable de base ni de cache : aucun `--build-arg`, et le
+#      Dockerfile n'en pose pas. C'est une divergence ASSUMÉE d'avec l'autre dépôt, qui substitue
+#      une adresse factice au build ; elle est écrite ici pour ne pas être réintroduite par
+#      imitation (REQ-QA-032) ;
+#   2. la face ROUGE du même point : une page qui interroge la base au rendu fait échouer le build,
+#      et l'échec NOMME la page ;
+#   3. la porte C, face VERTE : l'image démarre avec une base et un cache éphémères, `readyz` rend
+#      200, zéro migration en attente, en moins de trois minutes ;
+#   4. la porte C, face ROUGE : la même image, une migration cassée en plus, fait sortir la porte en
+#      code non nul avec le compte des migrations en attente ;
+#   5. sur `main` seulement : la publication. Elle ne vient qu'APRÈS les quatre preuves.
+#
+# `cancel-in-progress: false` : une publication commencée n'est jamais tuée par la suivante — une
+# image à moitié poussée sur `latest` serait pire qu'une image en retard.
+name: Image
+
+on:
+  pull_request:
+  push: { branches: [main] }
+
+concurrency:
+  group: image-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  image:
+    runs-on: ubuntu-latest
+    # Même garde que la porte A : une demande de fusion DÉJÀ fusionnée n'a plus rien à mesurer, et
+    # le diff fusionné se mesure au run `push: main` du même sha.
+    if: ${{ github.event.pull_request.merged != true }}
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: L image se construit sans aucune variable de base ni de cache
+        run: docker build --tag "partners:$GITHUB_SHA" .
+
+      - name: Le build sans base sait rougir — une page qui lit la base au rendu est nommee
+        run: |
+          PAGE=src/app/temoin-build-sans-base/page.tsx
+          mkdir -p "$(dirname "$PAGE")"
+          printf '%s\n' \
+            "import { PrismaClient } from '@prisma/client';" \
+            "export default async function Page() {" \
+            "  const lignes = await new PrismaClient().\$queryRaw\`SELECT 1\`;" \
+            "  return <p>{JSON.stringify(lignes)}</p>;" \
+            "}" > "$PAGE"
+          if docker build --tag partners-temoin . > "$RUNNER_TEMP/build-temoin.txt" 2>&1; then
+            echo "❌ le build a reussi alors qu une page lit la base au rendu : le temoin ne mesure rien."
+            exit 1
+          fi
+          # L'echec doit NOMMER la page ET venir du rendu ou de la base — pas d'une autre cause
+          # (une erreur de type sur le fichier temoin nommerait aussi la page, et ne prouverait rien).
+          if ! grep -q "temoin-build-sans-base" "$RUNNER_TEMP/build-temoin.txt" \
+            || ! grep -q -i -E "prerender|DATABASE_URL" "$RUNNER_TEMP/build-temoin.txt"; then
+            tail -40 "$RUNNER_TEMP/build-temoin.txt"
+            echo "❌ le build a echoue sans nommer la page qui lit la base au rendu."
+            exit 1
+          fi
+          rm -rf "$(dirname "$PAGE")"
+          echo "✅ build sans base — la page qui lit la base au rendu fait echouer le build, et elle est nommee."
+
+      - name: Porte C — l image demarre, readyz 200, zero migration en attente, en moins de 3 min
+        run: sh scripts/gates/gate-c.sh "partners:$GITHUB_SHA"
+
+      - name: La porte C sait rougir — une migration cassee sort en non nul, avec le compte
+        run: |
+          CASSEE="$RUNNER_TEMP/99999999999999_temoin_casse"
+          mkdir -p "$CASSEE"
+          printf 'ALTER TABLE table_qui_n_existe_pas ADD COLUMN x integer;\n' > "$CASSEE/migration.sql"
+          if sh scripts/gates/gate-c.sh "partners:$GITHUB_SHA" "$CASSEE" > "$RUNNER_TEMP/porte-c-rouge.txt" 2>&1; then
+            cat "$RUNNER_TEMP/porte-c-rouge.txt"
+            echo "❌ la porte C est restee verte sur une migration cassee."
+            exit 1
+          fi
+          if ! grep -q "migration(s) en attente" "$RUNNER_TEMP/porte-c-rouge.txt"; then
+            cat "$RUNNER_TEMP/porte-c-rouge.txt"
+            echo "❌ la porte C a echoue sans donner le compte des migrations en attente."
+            exit 1
+          fi
+          echo "✅ porte C — la migration cassee fait sortir la porte en non nul :"
+          grep "migration(s) en attente" "$RUNNER_TEMP/porte-c-rouge.txt"
+
+      - name: Publier sur le registre — latest et sha-7, sur main seulement
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        env:
+          JETON: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          REGISTRE="ghcr.io/$GITHUB_REPOSITORY"
+          COURT=$(printf '%s' "$GITHUB_SHA" | cut -c1-7)
+          printf '%s' "$JETON" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          docker tag "partners:$GITHUB_SHA" "$REGISTRE:sha-$COURT"
+          docker tag "partners:$GITHUB_SHA" "$REGISTRE:latest"
+          docker push "$REGISTRE:sha-$COURT"
+          docker push "$REGISTRE:latest"
+          echo "✅ publie : $REGISTRE:sha-$COURT et $REGISTRE:latest"
