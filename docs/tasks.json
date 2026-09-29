@@ -13095,6 +13095,77 @@
       "pr": null,
       "attestation": null,
       "motif": null
+    },
+    {
+      "id": "GOV-112",
+      "titre": "Inscrire la décision W19 de Will (2026-09-29) : ligne §1, vingt-deux hypothèses HYP-W19-*, douze exigences nouvelles et leurs amendements, glossaire (conseiller salarié, prise en charge par la Société)",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "docs/DECISIONS.md",
+        "docs/requirements.json",
+        "docs/REQUIREMENTS.md",
+        "docs/GLOSSAIRE.md",
+        "docs/PRESEANCE.md",
+        "docs/TRACABILITE.md",
+        "docs/PLAN-STATE.md",
+        "docs/journal/"
+      ],
+      "schema": false,
+      "sensible": [
+        "attribution",
+        "argent",
+        "auth"
+      ],
+      "deps": [],
+      "reqs": [
+        "REQ-GOV-015"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "acceptance": "TÂCHE D'ÉCRITURE DU REGISTRE, AUCUN CODE (patron GOV-098). Source d'entrée : `docs/chantiers/W19-conseillers-salaries.md` (§2, §3 et §4), transcription du plan de l'architecte ; on la relit, on ne la recopie pas à l'aveugle. Lot dédié du gardien-spec lancé par Will avec `--settings` surchargé (`docs/CONVENTIONS.md` §8) : `docs/DECISIONS.md`, `docs/GLOSSAIRE.md` et `docs/PRESEANCE.md` ne s'écrivent pas autrement. Tâche sensible : section « Attaque » jouée sur le texte. (1) `docs/DECISIONS.md` porte W19 en §1 (tranchée le 2026-09-29, propriétaire Will) et les vingt-deux lignes HYP-W19-* en §2, chacune avec sa réversibilité ; HYP-W19-CONCOURS et HYP-W19-NON-EXPLOITATION portent « premier DocuSeal ». Aucun mot de la doctrine de `gov:publication`. HYP-C4 et PRESEANCE §3.2 sont alignés sur REQ-DM-004. `pnpm gov:identifiants` sort 0. (2) `docs/requirements.json` reçoit REQ-DM-048, REQ-SEC-041, REQ-SEC-042, REQ-JUR-043, REQ-JUR-044, REQ-JUR-045, REQ-ARG-036, REQ-ARG-037, REQ-ARG-038, REQ-CPL-030, REQ-UX-047 et REQ-UX-048, chacune testable et citant W19, avec `taches: []` et `phase: null`. ⚠️ Aucun verbe hors dépôt ne sait encore AJOUTER une exigence (docblock de `hors-depot/ajouter-entree.mjs`) : le geste se fait dans le lot surchargé, comme GOV-098, ou après qu'un verbe a été habillé ; jamais à la main hors de ce lot. (3) Les amendements passent par `hors-depot/reecrire-champ.mjs`, avec motif et `--si-inchange`, au mot près du texte décidé : REQ-DM-004, 007, 008, 009, 012, 014, 021, 042 et 043, REQ-INT-014, REQ-QA-016, REQ-GOV-031, REQ-UX-007, 019 et 042, REQ-SEC-003 et 039, REQ-DM-023. Le libellé de portée suit la table un pour un du §4.2 de la source. Sont EXCLUES, parce qu'elles s'écrivent avec le code qui les porte : REQ-SEC-023 (SEC-31), REQ-SEC-030 et REQ-CPL-009 (JUR-T32), REQ-UX-002 et REQ-SEC-022 (DM-30). (4) GLOSSAIRE §8 : entrées « conseiller salarié » et « prise en charge (Société) », les interdits dans la colonne « Interdits », SANS le marqueur des synonymes interdits ni accents graves (le marqueur transforme les termes entre accents graves en interdits secs sur `src/**`, `MARQUEUR_SYNONYMES` de `scripts/gates/gov-check.ts`). Entrée « entreprise connue » alignée sur REQ-DM-029. §7 et `ConsoleRole` INCHANGÉS. (5) `pnpm gov:publication`, `pnpm gov:termes-interdits`, `pnpm gov:requirements`, `pnpm gov:requirements:verifie-rendu` et `pnpm gov:hypotheses` sortent 0. ⚠️ ORDRE : dès que les hypothèses de réversibilité migration ou avenant sont écrites, `gov:hypotheses` exige un porteur pour chacune (famille `decision_irreversible_sans_porteur`), et ces porteurs sont versés par GOV-115. GOV-112 et GOV-115 partent donc dans la MÊME PR, un commit par tâche, GOV-112 d'abord (patron GOV-098, qui a inscrit sa décision et versé ses tâches ensemble). (6) Les identifiants du chantier sont des jetons, fixés après le dernier `git rebase origin/main`, dépendances et acceptances comprises. PR ouverte seulement en l'absence de PR de clôture (RM-13). Entrée de journal (Fait / Reste / Appris), puis vues dans l'ordre de VUES_DERIVEES, PLAN-STATE en dernier. (7) Les vingt questions du §9 de la source sont posées à Will ; une réponse datée remplit la colonne « Tranchée » de l'hypothèse qu'elle tranche, et rien n'est tranché sans elle.",
+      "tests": {
+        "REQ-GOV-015": [
+          "tests/unit/gouvernance/registre-lecteur-unique.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "GOV-115",
+      "titre": "Verser les tâches W19, amender les tâches existantes et poser REQ-UX-047 sur les tâches d'écran à faire",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "docs/tasks.json",
+        "docs/TASKS.md",
+        "docs/TRACABILITE.md",
+        "docs/paths-proposes.json",
+        "docs/PLAN-STATE.md",
+        "docs/journal/",
+        "docs/chantiers/W19-conseillers-salaries.md"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "GOV-112"
+      ],
+      "reqs": [
+        "REQ-GOV-015"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.75,
+      "statut": "a_faire",
+      "acceptance": "AUCUN CODE. Source d'entrée : `docs/chantiers/W19-conseillers-salaries.md` (§5 et §6). Label `role:gardien-spec`. Même PR que GOV-112, commit suivant (voir le point (5) de GOV-112). REQ-UX-047, qui fonde la passe (3), n'existe qu'après GOV-112 : elle est citée ici, et non dans `reqs`, faute de verbe qui écrive ce champ après versement. (0) PRÉALABLE, MESURÉ LE 2026-09-29 : les verbes hors dépôt n'écrivent sur une tâche existante que titre, acceptance, tests, sensible, deps, estimateDays et schema (`CHAMPS_ECRIVABLES` de `hors-depot/outils-backlog.mjs`), et `paths` par `hors-depot/ajouter-path.mjs` et `hors-depot/retirer-path.mjs`. AUCUN n'écrit `reqs`, `hyp` ni `zone`. Les ajouts de reqs et hyp du §6 et le passage de dix tâches en zone console attendent donc la réponse de Will à la question 20 de la source ; à défaut, ils s'écrivent dans les acceptances et la dette est versée. Jamais à la main. (1) Les trente et une autres tâches W19 du §5 sont versées par `hors-depot/verser-tache.mjs` dans un seul `--depuis`, chacune avec zone, repo, schema, sensible, hyp, externe et estimateDays conformes à `scripts/lot/tasks.schema.json`, puis `tests` par `hors-depot/poser-champ.mjs`. Chaque hypothèse de réversibilité migration ou avenant est citée dans le champ hyp d'au moins une tâche : parmi les versées, SEC-31 porte HYP-W19-NOM-ROLE, JUR-T31 porte HYP-W19-CONCOURS et HYP-W19-NON-EXPLOITATION, T-ARG-040 porte HYP-W19-PART-VARIABLE et HYP-W19-VARIABLE-SORTIE ; HYP-W19-PORTEUR, HYP-W19-CYCLE et HYP-W19-DEPART ont pour porteurs DM-07 et DM-08, déjà au registre, et suivent le préalable (0) — à défaut de verbe, DM-30 les porte à titre provisoire et l'écart est nommé dans la PR. (2) Amendements des tâches existantes du §6 par `hors-depot/reecrire-champ.mjs` ou `hors-depot/poser-champ.mjs` (acceptance, deps, estimateDays), avec motif et `--si-inchange`. Le chemin de JUR-T03 est corrigé par ajouter-path et retirer-path. DM-04 : l'acceptance en vigueur au rebase est RÉCONCILIÉE avec le point (1) du plan et l'écart tranché par A01, jamais écrasé. Aucune tâche revendiquée n'est amendée sans l'accord de la session qui la tient. (3) Passe REQ-UX-047 : toute tâche a_faire dont un chemin est sous `src/app`, hors tâche en cours, reçoit la référence à REQ-UX-047, son droit `ecran:*` et sa dépendance de maquette, et +0,1 j, sauf les tâches déjà à 1,5 j qui l'absorbent grâce à la fixture QA-T33. La liste est MESURÉE au rebase et jointe à la PR (45 à c60e2f3). (4) `pnpm gov:tasks`, `pnpm gov:requirements` et `pnpm gov:hypotheses` sortent 0. Chemin critique recalculé (22,75 j attendus par le plan) et écart nommé s'il diffère. (5) Rebase juste avant l'ouverture ; conflit de registre par `hors-depot/fusionner-registre.mjs`, jamais à la main. L'en-tête de la source est marqué « versé par GOV-115 » : elle devient historique, les registres font foi.",
+      "tests": {
+        "REQ-GOV-015": [
+          "tests/unit/gouvernance/registre-lecteur-unique.spec.ts"
+        ]
+      }
     }
   ]
 }

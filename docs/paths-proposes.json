@@ -2,9 +2,9 @@
   "version": 1,
   "resume": {
     "_methode": "une PAIRE est comptée quand l'intersection des deux `paths[]` n'est pas vide, par égalité de chaîne. ⚠️ Elle ne lit PAS le champ `paths` des tâches : deux tâches peuvent y figurer comme « sans intersection » alors que leurs `paths` déclarés se recouvrent — c'est le cas de GOV-025 et GOV-028, qui partagent `scripts/gates/gov-identifiants.ts`. Le composeur, lui, compare bien `t.paths` : cette vue ne dit donc pas ce qu'il fera. Ces trois totaux sont écrits par `scripts/lot/paths-proposes.ts` et par rien d'autre ; `tsx scripts/lot/paths-proposes.ts --check` échoue si le fichier rendu en diverge.",
-    "tachesCouvertes": 299,
-    "pairesEnIntersection": 4515,
-    "cheminsDeclares": 831,
+    "tachesCouvertes": 301,
+    "pairesEnIntersection": 4526,
+    "cheminsDeclares": 833,
     "cheminsDistincts": 535,
     "cheminsPartages": 107,
     "tachesSansAucuneIntersection": 86,
@@ -110,15 +110,15 @@
         "taches": 10
       },
       {
+        "chemin": "tests/unit/gouvernance/registre-lecteur-unique.spec.ts",
+        "taches": 7
+      },
+      {
         "chemin": "tests/unit/gouvernance/entite-registre.spec.ts",
         "taches": 6
       },
       {
         "chemin": ".github/workflows/nightly.yml",
-        "taches": 5
-      },
-      {
-        "chemin": "docs/contrat/CONTRAT-APPORTEUR-V1.md",
         "taches": 5
       }
     ],
@@ -1587,6 +1587,12 @@
     "GOV-111": [
       "tests/unit/securite/acces-scope.spec.ts",
       "tests/integration/idor.spec.ts"
+    ],
+    "GOV-112": [
+      "tests/unit/gouvernance/registre-lecteur-unique.spec.ts"
+    ],
+    "GOV-115": [
+      "tests/unit/gouvernance/registre-lecteur-unique.spec.ts"
     ]
   }
 }
