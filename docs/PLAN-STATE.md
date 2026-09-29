@@ -8,12 +8,12 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `7ff56c8` — 2026-09-29T11:44:53+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #218 (un conflit avec `main`) · 2. #221 (brouillon) |
+| Qu’est-ce qui est en vol ? | 1. #225 (un contrôle requis rouge ou une revue manquante) · 2. #218 (un conflit avec `main`) · 3. #221 (brouillon) |
 | Qui tient quoi ? | GOV-119 (A01) |
 | Où en est la phase ? | phase 0 — 95/130 tâches, reste 28.50 j |
 | Le prochain pas | QA-T05 — Pipeline GHCR privé → Coolify pull |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
-| Dernière entrée de journal | PR #219 — 2026-09-29 |
+| Dernière entrée de journal | PR #225 — 2026-09-29 |
 
 **Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
@@ -60,8 +60,9 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #218 — feat(DM-04): commission et prorata en fonction pure, entiers exacts, bareme choisi par commissionId | `t/dm-04` | un conflit avec `main` — à résoudre avant tout |
-| 2 | #221 — feat(QA-T05): la forge construit, juge puis publie l'image, la plateforme ne fera plus que la tirer | `t/qa-t05` | brouillon — hors file tant qu’il n’est pas prêt |
+| 1 | #225 — fix(GOV-119): une fusion posterieure au clone est nommee et comptee, pas un rouge de la porte A | `t/gov-119` | un contrôle requis rouge ou une revue manquante |
+| 2 | #218 — feat(DM-04): commission et prorata en fonction pure, entiers exacts, bareme choisi par commissionId | `t/dm-04` | un conflit avec `main` — à résoudre avant tout |
+| 3 | #221 — feat(QA-T05): la forge construit, juge puis publie l'image, la plateforme ne fera plus que la tirer | `t/qa-t05` | brouillon — hors file tant qu’il n’est pas prêt |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -97,6 +98,18 @@ Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
 
+### PR #225 — 2026-09-29 — fix(GOV-119): une fusion posterieure au clone est nommee et comptee, pas un rouge de la porte A
+
+**Fait.** `gov:etat` ne rougit plus quand une autre PR fusionne pendant la porte A d'une PR. Une
+fusion dont le commit manque au clone, et dont la date est postérieure à la base de ce clone, est
+nommée et comptée ; une fusion antérieure au commit absent, ou une date illisible, reste un rouge.
+
+**Reste.** Rien sur ce point. La porte A continue de lire la forge : elle voit seulement que le
+futur de son clone n'est pas une illisibilité.
+
+**Appris.** Le même rouge a coûté deux portes A dans la journée avant d'être versé. Une gate qui
+dépend de l'instant où elle tourne mesure la file, pas la PR.
+
 ### PR #219 — 2026-09-29 — chore(GOV-012): registre rattrape, quatre taches closes, cinq suites versees
 
 **Fait.** Dixième rattrapage. GOV-075, GOV-110, GOV-084 et GOV-049 passent `fusionnee` par
@@ -123,21 +136,7 @@ contredisait le témoin d'une tâche en vol.
 **Appris.** Une prémisse qui tombe ne rend pas une tâche vide : elle déplace ce qu'il faut prouver.
 Ici, la règle tenait déjà ; c'est son témoin qui manquait.
 
-### PR #216 — 2026-09-29 — feat(GOV-084): tout script de garde suivi a une tache porteuse, deux barrieres rattachees a GOV-000
-
-**Fait.** `gov:attributions` refuse désormais un script suivi sous `scripts/gates/` que nulle tâche
-ne déclare (famille `script_de_garde_sans_porteur`). La liste vient de l'index git, jamais d'une
-liste tapée, et le vert imprime le compte des scripts confrontés : 49. Les deux derniers orphelins,
-`gh-sur.js` et `git-push-sur.js`, rejoignent GOV-000, qui porte leur appelant et leur garde.
-
-**Reste.** Rien sur cette garde. Le cas « une tâche déclare un script qui n'existe plus » est
-l'affaire de la traçabilité, pas de celle-ci.
-
-**Appris.** L'acceptance comptait neuf orphelins le 2026-09-16 ; la mesure refaite à la tête de
-`main` en donne deux. Un compte recopié dans une acceptance vieillit, et c'est la garde qui le rend
-vrai à chaque passage.
-
-… 3 entrée(s) affichée(s) sur 91 ; les 88 plus ancienne(s) se lisent dans `docs/journal/`.
+… 3 entrée(s) affichée(s) sur 92 ; les 89 plus ancienne(s) se lisent dans `docs/journal/`.
 
 ## Dette déclarée
 
