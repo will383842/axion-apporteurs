@@ -4068,9 +4068,16 @@
       "repo": "axionia",
       "zone": "juridique",
       "paths": [
-        "axionia/src/content/commercial-offer.ts",
         "axionia/scripts/gates/jur-copy-indicative.ts",
-        "axionia/src/content/__tests__/remuneration-indicative.spec.ts"
+        "axionia/src/content/__tests__/remuneration-indicative.spec.ts",
+        "axionia/src/content/recrutement/commercial-offer.ts",
+        "axionia/src/app/[locale]/memo-isere/page.tsx",
+        "axionia/src/components/recrutement/FacebookLandingPage.tsx",
+        "axionia/src/components/recrutement/PartenaireLandingPage.tsx",
+        "axionia/src/app/[locale]/apporteur-affaires-independant-formation-ia-entreprise/page.tsx",
+        "axionia/src/app/[locale]/devenir-commercial-ia/page.tsx",
+        "axionia/src/app/[locale]/devenir-commercial-ia/candidature/page.tsx",
+        "axionia/package.json"
       ],
       "schema": false,
       "sensible": [
