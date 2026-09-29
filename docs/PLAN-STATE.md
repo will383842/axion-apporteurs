@@ -7,8 +7,8 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `b3d7572` — 2026-09-29T12:12:09+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #221 (un conflit avec `main`) · 2. #226 (un conflit avec `main`) · 3. #218 (état `UNKNOWN`) |
+| Où est `main` ? | `75b5e8d` — 2026-09-29T12:29:03+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #221 (un contrôle requis rouge ou une revue manquante) · 2. #228 (un contrôle requis rouge ou une revue manquante) · 3. #218 (un conflit avec `main`) · 4. #230 (un conflit avec `main`) · 5. #231 (un conflit avec `main`) |
 | Qui tient quoi ? | GOV-122 (A01) · GOV-119 (A01) |
 | Où en est la phase ? | phase 0 — 95/130 tâches, reste 28.50 j |
 | Le prochain pas | QA-T05 — Pipeline GHCR privé → Coolify pull |
@@ -60,9 +60,11 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #221 — feat(QA-T05): la forge construit, juge puis publie l'image, la plateforme ne fera plus que la tirer | `t/qa-t05` | un conflit avec `main` — à résoudre avant tout |
-| 2 | #226 — fix(GOV-122): un renommage a la seconde de la fusion est indecidable, une date illisible rend la chronologie illisible | `t/gov-122` | un conflit avec `main` — à résoudre avant tout |
-| 3 | #218 — feat(DM-04): commission et prorata en fonction pure, entiers exacts, bareme choisi par commissionId | `t/dm-04` | état `UNKNOWN` — à qualifier à la main |
+| 1 | #221 — feat(QA-T05): la forge construit, juge puis publie l'image, la plateforme ne fera plus que la tirer | `t/qa-t05` | un contrôle requis rouge ou une revue manquante |
+| 2 | #228 — test(GOV-121): la preuve de vol est jouee a null, la forme reelle du registre, et le docblock dit juste | `t/gov-121` | un contrôle requis rouge ou une revue manquante |
+| 3 | #218 — feat(DM-04): commission et prorata en fonction pure, entiers exacts, bareme choisi par commissionId | `t/dm-04` | un conflit avec `main` — à résoudre avant tout |
+| 4 | #230 — docs(GOV-012): conseillers salaries — plan W19 et taches versees (GOV-112, GOV-115 a GOV-117), sans DECISIONS ni GLOSSAIRE | `t/archi-commerciaux-salaries` | un conflit avec `main` — à résoudre avant tout |
+| 5 | #231 — fix(GOV-118): un gabarit qui existe est un chemin reel, zero script de garde confronte est un refus | `t/gov-118` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -91,7 +93,7 @@ Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeS
 
 ## Dernier atterrissage
 
-`origin/main` = `b3d7572` (2026-09-29T12:12:09+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `75b5e8d` (2026-09-29T12:29:03+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
@@ -135,7 +137,7 @@ pas livrée, une fusion pendant la porte A d'une autre PR peut faire rougir cell
 **Appris.** Une acceptance qui cite un fichier et sa ligne affirme un fait daté : la sonde exige
 alors son repère. Nommer le fichier sans la ligne suffit à dire où regarder.
 
-… 3 entrée(s) affichée(s) sur 93 ; les 90 plus ancienne(s) se lisent dans `docs/journal/`.
+… 3 entrée(s) affichée(s) sur 94 ; les 91 plus ancienne(s) se lisent dans `docs/journal/`.
 
 ## Dette déclarée
 
