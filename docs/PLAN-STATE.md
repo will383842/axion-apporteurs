@@ -8,12 +8,12 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `fa90f83` — 2026-09-29T16:41:40+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #237 (un contrôle requis rouge ou une revue manquante) · 2. #239 (un contrôle requis rouge ou une revue manquante) · 3. #241 (un conflit avec `main`) |
+| Qu’est-ce qui est en vol ? | 1. #237 (un contrôle requis rouge ou une revue manquante) · 2. #239 (un contrôle requis rouge ou une revue manquante) · 3. #242 (un contrôle requis rouge ou une revue manquante) · 4. #241 (un conflit avec `main`) |
 | Qui tient quoi ? | QA-T05 (A01) · JUR-T04 (A01) · GOV-066 (A01) · GOV-122 (A01) · GOV-118 (A01) · GOV-119 (A01) · GOV-121 (A01) · JUR-T34 (A01) |
 | Où en est la phase ? | phase 0 — 95/136 tâches, reste 32.75 j |
 | Le prochain pas | QA-T05 — Pipeline GHCR privé → Coolify pull |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
-| Dernière entrée de journal | PR #235 — 2026-09-29 |
+| Dernière entrée de journal | PR #242 — 2026-09-29 |
 
 **Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
@@ -62,7 +62,8 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 | --- | --- | --- | --- |
 | 1 | #237 — feat(INT-T26): la candidature recue cree un apporteur candidat, coordonnees tirees et chiffrees, rattachement par empreinte | `t/int-t26` | un contrôle requis rouge ou une revue manquante |
 | 2 | #239 — chore(GOV-012): registre rattrape, sept taches closes, gel de la gouvernance, avenants JUR-T03 et INT-T27-A | `t/registre-rattrapage-11` | un contrôle requis rouge ou une revue manquante |
-| 3 | #241 — fix(GOV-062): l'outillage qui execute la porte A est juge, sept points nommes | `t/gov-062` | un conflit avec `main` — à résoudre avant tout |
+| 3 | #242 — feat(JUR-T34): la politique de confidentialite de l'espace, tiree du registre de l'article 30 et acceptee a la premiere connexion | `t/jur-t34` | un contrôle requis rouge ou une revue manquante |
+| 4 | #241 — fix(GOV-062): l'outillage qui execute la porte A est juge, sept points nommes | `t/gov-062` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -105,6 +106,20 @@ Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
 
+### PR #242 — 2026-09-29 — feat(JUR-T34): la politique de confidentialite de l'espace, tiree du registre de l'article 30 et acceptee a la premiere connexion
+
+**Fait.** L'espace affiche une politique de confidentialité tirée du registre de l'article 30,
+sans en retaper une durée ni un sous-traitant. Une rubrique encore « À compléter » s'affiche
+telle quelle. La première connexion mène à l'accord, qui n'écrit que la version affichée, pour
+l'apporteur de la session.
+
+**Reste.** Le registre porte encore des formulations internes que l'apporteur lira : « attribution »,
+« à confirmer par Will », des renvois de section. Elles se reformulent dans le registre.
+
+**Appris.** Une page qui dérive son texte d'un document interne hérite de son vocabulaire : le
+lexique de l'espace ne voit pas un texte lu à l'exécution. Le registre devient une source lue par
+l'apporteur, et il s'écrit désormais pour lui.
+
 ### PR #235 — 2026-09-29 — fix(GOV-066): la garde d'entite juge chaque commit de la PR, pas seulement la tete, et ecrit ce qu'elle ne lit pas
 
 **Fait.** La garde des coordonnées ne juge plus seulement la tête : chaque commit poussé par la PR
@@ -129,18 +144,7 @@ et les huit questions du chantier des conseillers salariés, écrites sans crée
 **Appris.** La garde dérivée du schéma a vu seule la table arrivée entre la rédaction et la PR : un
 registre qui se confronte au schéma ne vieillit pas en silence.
 
-### PR #231 — 2026-09-29 — fix(GOV-118): un gabarit qui existe est un chemin reel, zero script de garde confronte est un refus
-
-**Fait.** La garde des attributions ne reconnaît plus un gabarit à sa seule forme : un chemin qui
-existe dans les fichiers suivis, comme fichier ou comme dossier, est un chemin réel. Une liste de
-scripts de garde lue et vide est un refus, et le périmètre de la famille est écrit.
-
-**Reste.** Rien sur ces trois points.
-
-**Appris.** Distinguer une dimension non lue d'une dimension lue et vide coûte une valeur de plus,
-`undefined` à côté de `[]` ; sans elle, le plancher aurait fait rougir tous les cas de preuve.
-
-… 3 entrée(s) affichée(s) sur 100 ; les 97 plus ancienne(s) se lisent dans `docs/journal/`.
+… 3 entrée(s) affichée(s) sur 101 ; les 98 plus ancienne(s) se lisent dans `docs/journal/`.
 
 ## Dette déclarée
 
