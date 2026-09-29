@@ -20,11 +20,11 @@
 | Phase | Ce qu'elle est | Gates | Prouvées | Restent à prouver |
 | ----- | -------------- | ----: | -------: | ----------------: |
 | -1 | Socle de gouvernance | 40 | 27 | 13 |
-| 0 | Fondations, sécurité, charte | 43 | 32 | 11 |
+| 0 | Fondations, sécurité, charte | 43 | 33 | 10 |
 | 1 | Parcours, attribution, intégrations | 21 | 3 | 18 |
 | 2 | Argent et versements | 11 | 0 | 11 |
 | 3 | Clôture et obligations annuelles | 3 | 0 | 3 |
-| **Total** | | **118** | **62** | **56** |
+| **Total** | | **118** | **63** | **55** |
 
 La phase d'une gate est celle **à la sortie de laquelle** elle doit exister, être bloquante et
 avoir rougi. Une gate sans phase entière n'entre dans le périmètre d'aucune sortie :
@@ -67,7 +67,7 @@ champ `preuveRouge` du registre, recopié verbatim par le rendu.
 | `gov:attributions` | GOV-037 | `scripts/gates/gov-attributions.ts` | — | pnpm gov:attributions:prove — les 4 retraits de dette FORCES : reinserees, gov:attributions sort en 1 sur dette_perimee (revue securite 5235809231, PR 48, 2026-09-17) |
 | `gov:attestation` | GOV-038 | `scripts/gates/gov-attestation.ts` | — | PR 33 (GOV-038) — sha 0000...0000 vu passer gov:tasks puis rejete en HTTP 422 par gov:attestation --en-ligne |
 
-### Phase 0 — armées (32)
+### Phase 0 — armées (33)
 
 | Gate | Tâche | Script | Alias | Preuve rouge |
 | ---- | ----- | ------ | ----- | ------------ |
@@ -98,6 +98,7 @@ champ `preuveRouge` du registre, recopié verbatim par le rendu.
 | `GATE-UX-A11Y` | UX-P0-03 | `tests/a11y/axe.spec.ts` | — | tests/a11y/*.spec.ts vus ROUGES avant le harnais le 2026-09-25 (Failed to load url ../../playwright.config). Page-piege (bouton de 24 px, texte de 14 px a 2,17:1, bloc de 600 px) : chacune des trois passes rougit en la nommant, dans un test toujours joue ; A11Y_BAC=1 npx vitest run tests/a11y -> 3 fichiers en echec, 3 tests rouges nommant tests/a11y/bac/piege.html et button#bouton-24, main > p.contraste-faible, main > div.largeur-fixe ; sans A11Y_BAC -> 8 tests verts, 8 surfaces, 16 mesures au premier plan sur 16, 530 cibles mesurees. Rouge constate par: A05 |
 | `GATE-UX-CIBLES` | UX-P0-03 | `tests/a11y/cibles.spec.ts` | — | tests/a11y/*.spec.ts vus ROUGES avant le harnais le 2026-09-25 (Failed to load url ../../playwright.config). Page-piege (bouton de 24 px, texte de 14 px a 2,17:1, bloc de 600 px) : chacune des trois passes rougit en la nommant, dans un test toujours joue ; A11Y_BAC=1 npx vitest run tests/a11y -> 3 fichiers en echec, 3 tests rouges nommant tests/a11y/bac/piege.html et button#bouton-24, main > p.contraste-faible, main > div.largeur-fixe ; sans A11Y_BAC -> 8 tests verts, 8 surfaces, 16 mesures au premier plan sur 16, 530 cibles mesurees. Rouge constate par: A05 |
 | `GATE-UX-REFLOW` | UX-P0-03 | `tests/a11y/reflow.spec.ts` | — | tests/a11y/*.spec.ts vus ROUGES avant le harnais le 2026-09-25 (Failed to load url ../../playwright.config). Page-piege (bouton de 24 px, texte de 14 px a 2,17:1, bloc de 600 px) : chacune des trois passes rougit en la nommant, dans un test toujours joue ; A11Y_BAC=1 npx vitest run tests/a11y -> 3 fichiers en echec, 3 tests rouges nommant tests/a11y/bac/piege.html et button#bouton-24, main > p.contraste-faible, main > div.largeur-fixe ; sans A11Y_BAC -> 8 tests verts, 8 surfaces, 16 mesures au premier plan sur 16, 530 cibles mesurees. Rouge constate par: A05 |
+| `perf:bundle` | QA-T20 | `scripts/gates/bundle-par-route.ts` | `GATE-UX-BUNDLE` | pnpm perf:bundle:prove — 7 familles rougissent chacune sur son temoin (build_absent, manifeste_absent, manifeste_illisible, paquet_introuvable, mesure_nulle, budget_depasse et socle_depasse sous --bloquant), 2 contre-temoins verts (route legere sous --bloquant, depassement sans --bloquant). budget-par-route.spec.ts vu ROUGE avant le code : « Error: Failed to load url ../../../scripts/gates/bundle-par-route (resolved id: ../../../scripts/gates/bundle-par-route) ». Binaire sur le depot (2026-09-29) : un module client de ~105 Ko gz importe dans src/app/(espace)/connexion/page.tsx, puis next build -> perf:bundle --bloquant EXIT=1, « [budget_depasse] /connexion : 104899 o gz pour un plafond de 76800 o », /connexion/[jeton] non nommee (3651 o) ; sans --bloquant EXIT=0 ; depot intact EXIT=0, socle 129523 o, 3651 o propres par route. Rouge constate par: A05 |
 | `maquettes-validees` | UX-P0-02 | `scripts/gates/maquettes-validees.ts` | — | pnpm gov:maquettes-validees:prove — 9 familles, un temoin chacune, 3 contre-temoins verts ; les temoins validation_partielle, ligne_mal_formee et ecran_attribue_sans_validation portent sur la ligne du MILIEU d'un tableau de trois. Et tests/unit/espace/maquettes-validees.spec.ts vu ROUGE avant la garde le 2026-09-19 (« Failed to load url ../../../scripts/gates/maquettes-validees »), puis quatre mutants de la garde tues par la spec : valideur ignore (1 echec), proprietaire ignore (1), seule la derniere ligne lue (4), index.html non exempte (3) |
 | `mutation` | QA-T30 | `scripts/gates/stryker.sh` | — | pnpm mutation:prove — 3 familles rougissent chacune sur son temoin (rapport_illisible, seuil_absent, score_sous_le_seuil), 1 contre-temoin vert (quatre mutants tues sur cinq contre une rupture a 80 pour cent). Temoin a deux faces de la chaine ENTIERE (scripts/gates/stryker.sh, Stryker, le lecteur) sur un projet jetable, tests/unit/qualite/score-de-mutation.spec.ts : un test prive de ses assertions -> sortie non nulle, famille score_sous_le_seuil, src/domain/plafond.ts:2 Survived nomme ; le meme test avec ses assertions -> sortie 0. Spec vue ROUGE avant le lecteur : Failed to load url ../../../scripts/gates/mutation. Passe complete du depot le 2026-09-25 avec une rupture a 80 : sortie 1, mesure 79,38 pour cent. Rupture alignee a 79 : le lecteur sort en 0 en nommant les 363 non detectes. Rouge constate par: A05 |
 | `red-first` | CPL-T22 | `scripts/gates/red-first.ts` | — | pnpm red-first:prove — 3 familles rougissent chacune sur son temoin (test_deja_vert_sur_main, no_red_first_sans_justification, non_execute_sur_main), 1 contre-temoin vert ; binaire sur un depot git jetable (tests/unit/qualite/red-first.spec.ts) : une branche qui ajoute un test deja vert contre main -> exit 1 nommant tests/somme.spec.ts, une branche dont le test nouveau rougit contre main -> exit 0 et l'arbre de la base retire. Sur la PR du lot L0-03 elle-meme, la garde a d'abord rougi sur sa propre spec (marqueur cite en prose pris pour une directive nue) : la directive ouvre desormais une ligne de commentaire. Spec vue ROUGE avant la garde : Failed to load url ../../../scripts/gates/red-first. Rouge constate par: A05 |
@@ -114,7 +115,7 @@ champ `preuveRouge` du registre, recopié verbatim par le rendu.
 
 ## 3. Ce qui reste à prouver
 
-Aucune de ces **56** entrées ne porte de `preuveRouge` : personne ne les a vues rougir.
+Aucune de ces **55** entrées ne porte de `preuveRouge` : personne ne les a vues rougir.
 Le périmètre d'un appel est celui de SA phase : `pnpm gates:prouvees --phase -1` ne juge que les
 gates de phase -1, `--phase 0` y ajoute celles de phase 0, et ainsi de suite. Le compte des manques
 n'est pas recopié ici : il se lit dans la sortie de la commande, famille par famille, et il change à
@@ -146,7 +147,7 @@ sortie de la commande, elle, fait foi.
 | `fixtures:source` | INT-T01a | `scripts/gates/fixtures-source.ts` | — |
 | `gov:plan-state` | GOV-008 | `tests/unit/gouvernance/plan-state-frais.spec.ts` | — |
 
-### Phase 0 — fondations, sécurité, charte (11)
+### Phase 0 — fondations, sécurité, charte (10)
 
 | Gate | Tâche | Script | Alias |
 | ---- | ----- | ------ | ----- |
@@ -156,7 +157,6 @@ sortie de la commande, elle, fait foi.
 | `inertie` | INT-T02 | `axionia/scripts/gates/inertie.ts` | — |
 | `jur:copy-indicative` | JUR-T29 | `axionia/scripts/gates/jur-copy-indicative.ts` | — |
 | `GATE-JUR-VOCAB-PUBLIC` | JUR-T03 | `axionia/scripts/gates/vocab-public.ts` | — |
-| `perf:bundle` | QA-T20 | `scripts/gates/bundle-par-route.ts` | `GATE-UX-BUNDLE` |
 | `gate-sec` | QA-T07 | `.github/workflows/ci.yml#gate-sec` | — |
 | `gate-b` | QA-T02 | `.github/workflows/ci.yml#gate-b` | — |
 | `gate-c` | QA-T05 | `scripts/gates/gate-c.sh` | — |
