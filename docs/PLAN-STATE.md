@@ -8,12 +8,12 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `581a3fb` — 2026-09-29T23:05:26+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #242 (un contrôle requis rouge ou une revue manquante) · 2. #261 (un conflit avec `main`) · 3. #262 (un conflit avec `main`) |
+| Qu’est-ce qui est en vol ? | 1. #242 (un contrôle requis rouge ou une revue manquante) · 2. #263 (un contrôle requis rouge ou une revue manquante) · 3. #261 (un conflit avec `main`) · 4. #262 (un conflit avec `main`) |
 | Qui tient quoi ? | GOV-117 (A01) · GOV-127 (A01) |
 | Où en est la phase ? | phase 0 — 110/132 tâches, reste 17.75 j |
 | Le prochain pas | QA-T06 — Preview par PR sur Coolify, base éphémère, seed déterministe |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
-| Dernière entrée de journal | PR #259 — 2026-09-29 |
+| Dernière entrée de journal | PR #263 — 2026-09-29 |
 
 **Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
@@ -61,8 +61,9 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
 | 1 | #242 — feat(JUR-T34): la politique de confidentialite de l'espace, tiree du registre de l'article 30 et acceptee a la premiere connexion | `t/jur-t34` | un contrôle requis rouge ou une revue manquante |
-| 2 | #261 — chore(GOV-012): registre rattrape, INT-T02 INT-T27-A et INT-T26 closes, REQ-DM-021 amendee, JUR-T36 versee | `t/registre-rattrapage-15` | un conflit avec `main` — à résoudre avant tout |
-| 3 | #262 — feat(GOV-116): le lot dedie du gardien-spec, procedure exacte lancee par Williams, reglages rendus depuis le projet | `t/gov-116` | un conflit avec `main` — à résoudre avant tout |
+| 2 | #263 — feat(QA-T20): le poids charge par route se lit dans les manifestes de Next 16, zero octet est une faute | `t/qa-t20` | un contrôle requis rouge ou une revue manquante |
+| 3 | #261 — chore(GOV-012): registre rattrape, INT-T02 INT-T27-A et INT-T26 closes, REQ-DM-021 amendee, JUR-T36 versee | `t/registre-rattrapage-15` | un conflit avec `main` — à résoudre avant tout |
+| 4 | #262 — feat(GOV-116): le lot dedie du gardien-spec, procedure exacte lancee par Williams, reglages rendus depuis le projet | `t/gov-116` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -99,6 +100,32 @@ Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
 
+### PR #263 — 2026-09-29 — feat(QA-T20): le poids charge par route se lit dans les manifestes de Next 16, zero octet est une faute
+
+**Fait.** `pnpm perf:bundle` mesure, route par route, ce que le navigateur charge au premier rendu de
+l'espace. La mesure lit `build-manifest.json` et le manifeste client de chaque page, sans jamais les
+exécuter, et elle a été recoupée contre les `<script src>` servis par `next start`. Le JS propre à une
+route se juge contre les 75 KB dérivés du registre ; le socle commun se juge contre sa mesure datée
+plus 10 % (arbitrage -d7 sur délégation de Williams du 2026-09-29). Une faute de mesure rougit
+toujours ; un dépassement est nommé, non bloquant, et `--bloquant` prouve déjà qu'il rougit. Trois
+étapes entrent dans gate-a, figées au constat de la porte A. L'entrée `perf:bundle` du registre des
+gardes porte sa nouvelle définition et sa preuve rouge.
+
+**Reste.** Le texte de REQ-UX-033 dit encore « First Load JS ≤ 75 KB » : l'amendement, selon
+l'arbitrage, appartient au gardien de la spécification. LCP, CLS et INP ne sont pas mesurés : `lhci`
+n'est ni installé ni lancé, et `collect.url` reste vide ; c'est l'armement bloquant qui les portera.
+Le champ `path` d'une entrée de `perf/budgets.json` nomme désormais le manifeste lu, mais aucune garde
+ne vérifie qu'il désigne le bon fichier : le mesureur dérive ce chemin de la page, pas de ce champ.
+
+**Appris.** Sous Next 16, qui construit avec Turbopack, `.next/static/chunks/app/` n'existe plus :
+les paquets sont plats et nommés par empreinte. Tout glob par route écrit du temps de webpack mesure
+zéro octet, et reste donc vert sans rien garder. Deuxième fait mesuré : sur une page serveur sans
+aucun code client, le runtime React 19 + Next 16 pèse déjà 129 523 o gz. « First Load JS ≤ 75 KB »
+était donc infaisable au sens littéral, et une garde qui l'aurait appliqué n'aurait jamais pu être
+armée. Troisième fait : `next start` impose `NODE_ENV=production`, et la validation de
+l'environnement refuse alors les secrets préfixés `dev_`, même factices. Pour démarrer le serveur en
+local, il faut des valeurs factices sans ce préfixe.
+
 ### PR #259 — 2026-09-29 — feat(GOV-117): l'outil du registre ecrit reqs, hyp et zone d'une tache, valides contre le schema et les registres
 
 **Fait.** Les outils hors dépôt savent écrire les exigences, les hypothèses et la zone d'une tâche,
@@ -121,19 +148,7 @@ elle seule, parce que sa PR nommait la tâche à l'instant de la fusion.
 **Appris.** Une exception se prouve avant de s'écrire : les accords portaient sur une tête antérieure
 à la tête fusionnée, et seule la comparaison du patch propre a établi que c'était la même livraison.
 
-### PR #255 — 2026-09-29 — chore(GOV-012): registre rattrape, six taches closes dont DM-03-A livree dans axion-ia, paths de JUR-T03 et JUR-T29
-
-**Fait.** Quatorzième rattrapage. Avec le motif de branche par dépôt, DM-03-A, livrée dans axion-ia et
-en production, se clôt enfin, et DM-03-P et DM-04 avec elle. GOV-124, GOV-125 et GOV-126 sont closes.
-Les chemins de JUR-T03 et de JUR-T29 sont ceux que la forge et la garde ont mesurés.
-
-**Reste.** INT-T02 : sa PR nomme la tâche, mais sous une forme que la clôture refuse. L'exception
-arbitrée demande un outil, GOV-127. INT-T27-A et INT-T26 attendent derrière elle.
-
-**Appris.** Un arbitrage ne suffit pas quand aucun outil ne sait l'écrire : le registre ne s'édite
-pas à la main, et l'exception doit elle-même devenir une règle écrite, fermée et testée.
-
-… 3 entrée(s) affichée(s) sur 114 ; les 111 plus ancienne(s) se lisent dans `docs/journal/`.
+… 3 entrée(s) affichée(s) sur 115 ; les 112 plus ancienne(s) se lisent dans `docs/journal/`.
 
 ## Dette déclarée
 
