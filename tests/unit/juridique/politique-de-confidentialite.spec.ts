@@ -609,6 +609,10 @@ describe('REQ-JUR-025 — le témoin de la page, pièce à pièce', () => {
     expect(retapees('via Stripe.', '', ['Stripe'])).toEqual([
       'prestataire retapé dans la page : « Stripe » (absente du registre)',
     ]);
+    // Un nom qui porte un caractère d'expression régulière se cherche à la lettre.
+    expect(retapees('via Relais (courriel).', '', ['Relais (courriel)'])).toEqual([
+      'prestataire retapé dans la page : « Relais (courriel) » (absente du registre)',
+    ]);
   });
 
   it('REQ-JUR-025 — sans section 4 lisible ni catalogue, la page ne se voit reprocher aucun nom', async () => {
