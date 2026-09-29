@@ -14,9 +14,9 @@
 > **« Réputée testée » est DÉRIVÉ, pas lu.** Le registre ne porte aucune échelle de
 > maturité : une exigence l’est dès qu’une des tâches qui la portent est livrée.
 
-**334 exigences actives · 117 réputées testées · 117 couvertes · 0 orphelines.**
+**334 exigences actives · 122 réputées testées · 122 couvertes · 0 orphelines.**
 
-296 tâches, dont 123 livrées · 156 fichiers de test exécutés par `vitest` sur 156 présents.
+299 tâches, dont 130 livrées · 156 fichiers de test exécutés par `vitest` sur 156 présents.
 
 ## Exigences réputées testées
 
@@ -24,6 +24,7 @@
 | --- | --- | --- | --- |
 | `REQ-ARG-002` | `INT-T01b`, `SEC-06`, `T-ARG-022` | `tests/integration/webhook-verdicts.spec.ts`, `tests/unit/securite/evenements-recus-migration.spec.ts` | couverte |
 | `REQ-ARG-003` | `SEC-06`, `T-ARG-022` | `tests/integration/webhook-verdicts.spec.ts`, `tests/unit/integration/evenement-recu-travail.spec.ts` | couverte |
+| `REQ-ARG-029` | `INT-T17`, `SEC-05` | `tests/integration/idor.spec.ts` | couverte |
 | `REQ-CPL-001` | `CPL-T01`, `GOV-089`, `GOV-092`, `T-ARG-018` | `tests/unit/gouvernance/entite-registre.spec.ts` | couverte |
 | `REQ-CPL-002` | `CPL-T01`, `GOV-015`, `T-ARG-018` | `tests/unit/gouvernance/entite-registre.spec.ts`, `tests/unit/gouvernance/fiches-tiers.spec.ts` | couverte |
 | `REQ-CPL-003` | `CPL-T01` | `tests/unit/gouvernance/entite-registre.spec.ts` | couverte |
@@ -65,14 +66,14 @@
 | `REQ-GOV-014` | `GOV-000`, `GOV-012`, `GOV-057` | `tests/unit/gouvernance/aucun-workflow-ne-pousse-sur-main.spec.ts`, `tests/unit/gouvernance/clore-une-tache-livree-seule.spec.ts`, `tests/unit/gouvernance/tout-check-est-cable.spec.ts` | couverte |
 | `REQ-GOV-015` | `GOV-005`, `GOV-022`, `GOV-027`, `GOV-060`, `GOV-098`, `GOV-099`, `GOV-100`, `GOV-102`, `JUR-T01b` | `tests/unit/gouvernance/gardes.spec.ts`, `tests/unit/gouvernance/plan-state-lecteur-unique.spec.ts`, `tests/unit/gouvernance/registre-lecteur-unique.spec.ts` | couverte |
 | `REQ-GOV-016` | `GOV-006`, `GOV-088` | `tests/unit/gouvernance/glossaire-enums.spec.ts`, `tests/unit/gouvernance/termes-interdits.spec.ts` | couverte |
-| `REQ-GOV-017` | `GOV-013`, `GOV-071`, `GOV-106` | `tests/unit/gouvernance/frontiere-de-mot-du-rendu.spec.ts`, `tests/unit/gouvernance/lexique.spec.ts` | couverte |
+| `REQ-GOV-017` | `GOV-013`, `GOV-071`, `GOV-106`, `GOV-109` | `tests/unit/gouvernance/frontiere-de-mot-du-rendu.spec.ts`, `tests/unit/gouvernance/lexique.spec.ts` | couverte |
 | `REQ-GOV-018` | `GOV-014`, `GOV-031` | `tests/unit/gouvernance/gardes-transposees.spec.ts` | couverte |
 | `REQ-GOV-021` | `GOV-017a`, `GOV-017b`, `GOV-024`, `GOV-027`, `GOV-037`, `GOV-041`, `GOV-049`, `GOV-050`, `GOV-056`, `GOV-057`, `GOV-074`, `GOV-075`, `GOV-078`, `GOV-080`, `GOV-081`, `GOV-084`, `GOV-086`, `GOV-087`, `GOV-096`, `GOV-104` | `tests/unit/gouvernance/attributions-resolvent.spec.ts`, `tests/unit/gouvernance/clore-une-tache-livree-seule.spec.ts`, `tests/unit/gouvernance/cloture-refuse-ce-qu-elle-n-a-pas-mesure.spec.ts`, `tests/unit/gouvernance/composeur-et-fichiers-d-une-pr.spec.ts`, `tests/unit/gouvernance/exemptions-par-occurrence.spec.ts`, `tests/unit/gouvernance/gov-pr-lit-une-pr-de-lot.spec.ts`, `tests/unit/gouvernance/la-declaration-se-lit-dans-le-commit-de-fusion.spec.ts`, `tests/unit/gouvernance/paths-derives.spec.ts`, `tests/unit/gouvernance/raison-de-dette-resolue.spec.ts`, `tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts`, `tests/unit/gouvernance/registre-lecteur-unique.spec.ts`, `tests/unit/gouvernance/scenario-d-attaque-exige.spec.ts`, `tests/unit/gouvernance/un-etat-cible-porte-son-operation.spec.ts`, `tests/unit/gouvernance/un-path-designe-ce-depot-ci.spec.ts`, `tests/unit/gouvernance/vues-derivees.spec.ts` | couverte |
 | `REQ-GOV-022` | `GOV-015` | `tests/unit/gouvernance/fiches-tiers.spec.ts` | couverte |
 | `REQ-GOV-023` | `GOV-008`, `GOV-018`, `GOV-052`, `GOV-073`, `GOV-091`, `GOV-108` | `tests/unit/gouvernance/plan-state-frais.spec.ts`, `tests/unit/gouvernance/regles-maison.spec.ts`, `tests/unit/gouvernance/une-pr-porte-son-entree-de-journal.spec.ts`, `tests/unit/gouvernance/une-seule-grammaire-de-journal.spec.ts` | couverte |
 | `REQ-GOV-024` | `GOV-018`, `GOV-026`, `GOV-045`, `GOV-060`, `GOV-068`, `GOV-073`, `GOV-081` | `tests/unit/gouvernance/cliquet-nomme-chaque-refus.spec.ts`, `tests/unit/gouvernance/plan-state-lecteur-unique.spec.ts`, `tests/unit/gouvernance/raison-de-dette-resolue.spec.ts`, `tests/unit/gouvernance/regles-maison.spec.ts`, `tests/unit/gouvernance/une-seule-grammaire-de-journal.spec.ts` | couverte |
 | `REQ-GOV-025` | `GOV-017a`, `GOV-017b`, `GOV-038` | `tests/unit/gouvernance/attestation-inter-depot.spec.ts`, `tests/unit/gouvernance/paths-derives.spec.ts` | couverte |
-| `REQ-GOV-026` | `GOV-001`, `GOV-020`, `GOV-038`, `GOV-041`, `GOV-042`, `GOV-057`, `GOV-079`, `GOV-086`, `GOV-103`, `GOV-104`, `GOV-107` | `tests/unit/gouvernance/attestation-inter-depot.spec.ts`, `tests/unit/gouvernance/aucune-troncature-muette.spec.ts`, `tests/unit/gouvernance/clore-une-tache-livree-seule.spec.ts`, `tests/unit/gouvernance/cloture-refuse-ce-qu-elle-n-a-pas-mesure.spec.ts`, `tests/unit/gouvernance/inventaire-prouve.spec.ts`, `tests/unit/gouvernance/la-declaration-se-lit-dans-le-commit-de-fusion.spec.ts`, `tests/unit/gouvernance/un-etat-cible-porte-son-operation.spec.ts`, `tests/unit/gouvernance/un-statut-fusionnee-porte-sa-preuve.spec.ts`, `tests/unit/gouvernance/une-branche-reelle-de-la-forge-est-admise.spec.ts` | couverte |
+| `REQ-GOV-026` | `GOV-001`, `GOV-020`, `GOV-038`, `GOV-041`, `GOV-042`, `GOV-057`, `GOV-079`, `GOV-086`, `GOV-103`, `GOV-104`, `GOV-107`, `GOV-110` | `tests/unit/gouvernance/attestation-inter-depot.spec.ts`, `tests/unit/gouvernance/aucune-troncature-muette.spec.ts`, `tests/unit/gouvernance/clore-une-tache-livree-seule.spec.ts`, `tests/unit/gouvernance/cloture-refuse-ce-qu-elle-n-a-pas-mesure.spec.ts`, `tests/unit/gouvernance/inventaire-prouve.spec.ts`, `tests/unit/gouvernance/la-declaration-se-lit-dans-le-commit-de-fusion.spec.ts`, `tests/unit/gouvernance/un-etat-cible-porte-son-operation.spec.ts`, `tests/unit/gouvernance/un-statut-fusionnee-porte-sa-preuve.spec.ts`, `tests/unit/gouvernance/une-branche-reelle-de-la-forge-est-admise.spec.ts` | couverte |
 | `REQ-GOV-027` | `CPL-T01`, `CPL-T23`, `GOV-017a`, `GOV-017b`, `GOV-022` | `tests/gov/charte-pr.spec.ts`, `tests/unit/gouvernance/verrou-de-phase.spec.ts` | couverte |
 | `REQ-GOV-028` | `GOV-019` | `tests/unit/gouvernance/poids-du-bundle-garde-vraiment.spec.ts` | couverte |
 | `REQ-GOV-029` | `GOV-014`, `GOV-051`, `GOV-061`, `GOV-062`, `GOV-076` | `tests/unit/gouvernance/comparer-un-chemin-c-est-le-normaliser.spec.ts`, `tests/unit/gouvernance/formes-voisines-des-interdits.spec.ts`, `tests/unit/gouvernance/gardes-transposees.spec.ts`, `tests/unit/gouvernance/porte-a-presente-active-effective.spec.ts` | couverte |
@@ -101,7 +102,7 @@
 | `REQ-JUR-034` | `JUR-T26` | `tests/unit/juridique/charte-relationnelle.spec.ts` | couverte |
 | `REQ-JUR-035` | `JUR-T26` | `tests/unit/juridique/charte-relationnelle.spec.ts` | couverte |
 | `REQ-JUR-036` | `JUR-T26` | `tests/unit/juridique/charte-relationnelle.spec.ts` | couverte |
-| `REQ-JUR-037` | `GOV-071`, `GOV-106`, `JUR-T26` | `tests/unit/gouvernance/frontiere-de-mot-du-rendu.spec.ts`, `tests/unit/gouvernance/lexique.spec.ts`, `tests/unit/juridique/charte-relationnelle.spec.ts` | couverte |
+| `REQ-JUR-037` | `GOV-071`, `GOV-106`, `GOV-109`, `JUR-T26` | `tests/unit/gouvernance/frontiere-de-mot-du-rendu.spec.ts`, `tests/unit/gouvernance/lexique.spec.ts`, `tests/unit/juridique/charte-relationnelle.spec.ts` | couverte |
 | `REQ-QA-001` | `GOV-076`, `QA-T01` | `tests/unit/ci/aucune-gate-en-continue-on-error.spec.ts`, `tests/unit/gouvernance/formes-voisines-des-interdits.spec.ts` | couverte |
 | `REQ-QA-002` | `GOV-101`, `QA-T01`, `QA-T30` | `tests/unit/ci/aucune-gate-en-continue-on-error.spec.ts`, `tests/unit/gouvernance/relectures-sans-defaut.spec.ts`, `tests/unit/qualite/score-de-mutation.spec.ts` | couverte |
 | `REQ-QA-006` | `QA-T02` | `tests/integration/harnais-testcontainers.spec.ts`, `tests/integration/rate-limit-redis.spec.ts`, `tests/unit/ci/integration-collectee-par-gate-a.spec.ts` | couverte |
@@ -120,10 +121,13 @@
 | `REQ-SEC-002` | `SEC-03` | `tests/integration/lien-magique.spec.ts`, `tests/unit/securite/connexion-ecran.spec.ts`, `tests/unit/securite/lien-magique-compteurs.spec.ts`, `tests/unit/securite/lien-magique-indistinction.spec.ts`, `tests/unit/securite/lien-magique-production.spec.ts`, `tests/unit/securite/rate-famille.spec.ts` | couverte |
 | `REQ-SEC-003` | `SEC-04`, `SEC-19`, `UX-P1-04` | `tests/integration/sessions-revocables.spec.ts`, `tests/unit/securite/revocation.spec.ts` | couverte |
 | `REQ-SEC-004` | `SEC-04`, `SEC-22` | `tests/integration/sessions-revocables.spec.ts`, `tests/unit/securite/revocation.spec.ts` | couverte |
+| `REQ-SEC-008` | `GOV-111`, `SEC-05` | `tests/integration/idor.spec.ts`, `tests/unit/qualite/semgrep-regles-maison.spec.ts`, `tests/unit/securite/acces-scope.spec.ts` | couverte |
+| `REQ-SEC-009` | `GOV-111`, `SEC-05`, `UX-P2-06` | `tests/integration/idor.spec.ts` | couverte |
 | `REQ-SEC-010` | `SEC-06` | `tests/unit/securite/webhook-signature.spec.ts` | couverte |
 | `REQ-SEC-012` | `SEC-07` | `tests/integration/frontiere.spec.ts` | couverte |
 | `REQ-SEC-013` | `INT-T09` | `tests/unit/integration/recherche-entreprises-repli.spec.ts` | couverte |
 | `REQ-SEC-016` | `SEC-03`, `SEC-10` | `tests/integration/rate-limit-redis.spec.ts`, `tests/unit/securite/lien-magique-compteurs.spec.ts`, `tests/unit/securite/lien-magique-indistinction.spec.ts`, `tests/unit/securite/lien-magique-production.spec.ts`, `tests/unit/securite/rate-famille.spec.ts` | couverte |
+| `REQ-SEC-022` | `DM-10-P`, `DM-25`, `SEC-05`, `SEC-12`, `SEC-16` | `tests/unit/espace/vocabulaire-et-micro-copy.spec.ts`, `tests/unit/securite/acces-scope.spec.ts` | couverte |
 | `REQ-SEC-023` | `SEC-17` | `tests/integration/utilisateurs-console.spec.ts`, `tests/unit/securite/matrice-des-roles.spec.ts` | couverte |
 | `REQ-SEC-024` | `SEC-08` | `tests/unit/securite/chiffrement-avec-aad.spec.ts` | couverte |
 | `REQ-SEC-028` | `SEC-01` | `tests/integration/adaptateur-mcp.spec.ts`, `tests/unit/securite/env-boot.spec.ts` | couverte |
@@ -131,6 +135,7 @@
 | `REQ-SEC-035` | `SEC-10` | `tests/unit/securite/rate-famille.spec.ts` | couverte |
 | `REQ-UX-002` | `DM-25`, `SEC-12`, `UX-P0-01`, `UX-P0-01b`, `UX-P1-02`, `UX-P3-05` | `tests/unit/espace/vocabulaire-et-micro-copy.spec.ts` | couverte |
 | `REQ-UX-003` | `UX-P0-01`, `UX-P0-01b`, `UX-P1-10`, `UX-P3-02` | `tests/unit/espace/vocabulaire-et-micro-copy.spec.ts` | couverte |
+| `REQ-UX-006` | `DM-16`, `SEC-05`, `UX-P2-04`, `UX-P2-06`, `UX-P2-09` | `tests/integration/idor.spec.ts` | couverte |
 | `REQ-UX-008` | `UX-P0-02`, `UX-P1-08` | `tests/unit/espace/maquettes-validees.spec.ts` | couverte |
 | `REQ-UX-017` | `UX-P0-02`, `UX-P0-03` | `tests/a11y/cibles.spec.ts`, `tests/a11y/reflow.spec.ts`, `tests/unit/espace/maquettes-validees.spec.ts` | couverte |
 | `REQ-UX-018` | `UX-P0-03`, `UX-P3-04` | `tests/a11y/axe.spec.ts` | couverte |
@@ -166,7 +171,6 @@
 | `REQ-ARG-026` | 2 | `DM-18`, `T-ARG-033`, `T-ARG-038` | — |
 | `REQ-ARG-027` | 2 | `DM-15`, `T-ARG-010`, `T-ARG-035` | — |
 | `REQ-ARG-028` | 2 | `T-ARG-016`, `T-ARG-034` | — |
-| `REQ-ARG-029` | 0 | `INT-T17`, `SEC-05` | `tests/integration/idor.spec.ts`, `tests/unit/securite/acces-scope.spec.ts` |
 | `REQ-ARG-032` | 2 | `UX-P2-01` | — |
 | `REQ-ARG-033` | 2 | `T-ARG-010`, `T-ARG-016` | — |
 | `REQ-ARG-034` | 2 | `JUR-T16`, `T-ARG-015`, `T-ARG-039` | — |
@@ -305,15 +309,12 @@
 | `REQ-QA-034` | 0 | `QA-T13`, `QA-T25` | `tests/unit/qualite/retour-arriere.spec.ts`, `tests/unit/qualite/runbooks-exerces.spec.ts` |
 | `REQ-SEC-005` | 1 | `SEC-11`, `SEC-19`, `UX-P1-11` | — |
 | `REQ-SEC-006` | 1 | `SEC-11` | — |
-| `REQ-SEC-008` | 0 | `SEC-05` | `tests/integration/idor.spec.ts`, `tests/unit/securite/acces-scope.spec.ts` |
-| `REQ-SEC-009` | 0 | `SEC-05`, `UX-P2-06` | `tests/integration/idor.spec.ts`, `tests/unit/securite/acces-scope.spec.ts` |
 | `REQ-SEC-014` | 1 | `DM-07`, `SEC-12` | — |
 | `REQ-SEC-017` | 1 | `SEC-14` | — |
 | `REQ-SEC-018` | 1 | `SEC-15` | — |
 | `REQ-SEC-019` | 1 | `SEC-15`, `SEC-28` | — |
 | `REQ-SEC-020` | 1 | `SEC-12`, `SEC-14` | — |
 | `REQ-SEC-021` | 1 | `SEC-16` | — |
-| `REQ-SEC-022` | 0 | `DM-10-P`, `DM-25`, `SEC-05`, `SEC-12`, `SEC-16` | `tests/integration/idor.spec.ts`, `tests/unit/securite/acces-scope.spec.ts` |
 | `REQ-SEC-025` | 2 | `SEC-22` | — |
 | `REQ-SEC-026` | 1 | `DM-11` | `tests/unit/domaine/kyc-reference-piece-rib.spec.ts` |
 | `REQ-SEC-030` | 0 | `DM-20`, `JUR-T04` | `tests/unit/juridique/registre-rgpd.spec.ts` |
@@ -329,7 +330,6 @@
 | `REQ-UX-001` | 1 | `UX-P1-01`, `UX-P1-02` | — |
 | `REQ-UX-004` | 1 | `UX-P1-05` | — |
 | `REQ-UX-005` | 2 | `UX-P2-01`, `UX-P2-06` | — |
-| `REQ-UX-006` | 0 | `DM-16`, `SEC-05`, `UX-P2-04`, `UX-P2-06`, `UX-P2-09` | `tests/integration/idor.spec.ts`, `tests/unit/espace/mes-filleuls-liste.spec.ts`, `tests/unit/securite/acces-scope.spec.ts` |
 | `REQ-UX-007` | 1 | `SEC-16`, `UX-P1-01` | — |
 | `REQ-UX-009` | 2 | `UX-P2-02` | — |
 | `REQ-UX-010` | 2 | `UX-P2-01` | — |
@@ -414,13 +414,13 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | 5 | 15 | 5 |
 | 6 | 1 | 1 |
 | 7 | 2 | 0 |
-| 8 | 13 | 5 |
-| 9 | 36 | 13 |
+| 8 | 13 | 7 |
+| 9 | 36 | 14 |
 | 10 | 7 | 1 |
 | 11 | 5 | 1 |
 | 12 | 13 | 3 |
 | 13 | 32 | 9 |
-| 14 | 17 | 2 |
+| 14 | 17 | 3 |
 | 15 | 23 | 5 |
 | 16 | 8 | 2 |
 | 17 | 21 | 5 |
@@ -437,11 +437,11 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | 4 | 16 | 7 |
 | 5 | 17 | 5 |
 | 6 | 3 | 1 |
-| 7 | 57 | 15 |
+| 7 | 57 | 17 |
 | 8 | 12 | 3 |
 | 9 | 23 | 9 |
-| 10 | 67 | 16 |
-| 11 | 30 | 7 |
+| 10 | 67 | 17 |
+| 11 | 30 | 8 |
 | 12 | 14 | 5 |
 
 ## Fichiers de test
