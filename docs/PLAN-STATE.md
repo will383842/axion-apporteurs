@@ -7,15 +7,15 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `53e765e` — 2026-09-29T20:48:22+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #242 (rien) · 2. #253 (rien) · 3. #254 (un contrôle requis rouge ou une revue manquante) |
+| Où est `main` ? | `4a1d940` — 2026-09-29T21:24:40+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #242 (un conflit avec `main`) · 2. #254 (un conflit avec `main`) |
 | Qui tient quoi ? | GOV-124 (A01) · GOV-126 (A01) |
 | Où en est la phase ? | phase 0 — 104/131 tâches, reste 20.50 j |
-| Le prochain pas | fusionner #242, puis QA-T06 — Preview par PR sur Coolify, base éphémère, seed déterministe |
+| Le prochain pas | QA-T06 — Preview par PR sur Coolify, base éphémère, seed déterministe |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
 | Dernière entrée de journal | PR #254 — 2026-09-29 |
 
-**Ce qu’on tape maintenant.** `gh pr view 242 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : 0
 
@@ -60,9 +60,8 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #242 — feat(JUR-T34): la politique de confidentialite de l'espace, tiree du registre de l'article 30 et acceptee a la premiere connexion | `t/jur-t34` | rien — fusionnable maintenant |
-| 2 | #253 — feat(GOV-125): le motif de branche depend du depot de la tache, une tache axionia se clot sur sa branche | `t/gov-125-motif` | rien — fusionnable maintenant |
-| 3 | #254 — docs(GOV-017a): W20, questions 18 et 19 tranchees — aucune tacite d'une demande signalee, liberee apres 3 injoignables ou 45 jours | `t/w20-q18-q19` | un contrôle requis rouge ou une revue manquante |
+| 1 | #242 — feat(JUR-T34): la politique de confidentialite de l'espace, tiree du registre de l'article 30 et acceptee a la premiere connexion | `t/jur-t34` | un conflit avec `main` — à résoudre avant tout |
+| 2 | #254 — docs(GOV-017a): W20, questions 18 et 19 tranchees — aucune tacite d'une demande signalee, liberee apres 3 injoignables ou 45 jours | `t/w20-q18-q19` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -85,15 +84,13 @@ Dérivé de `git log` sur `docs/adr/`, restreint au jour du dernier atterrissage
 
 ## Prochain pas
 
-**Fusionner #242** — elle est en tête de file et ne bloque sur rien.
-
 **QA-T06** — Preview par PR sur Coolify, base éphémère, seed déterministe (1 j) : 14 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
 Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeStateStatus` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage —, la tâche ensuite. L’ordre de la file se corrige à la rubrique « File de fusion », jamais ici.
 
 ## Dernier atterrissage
 
-`origin/main` = `53e765e` (2026-09-29T20:48:22+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `4a1d940` (2026-09-29T21:24:40+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
@@ -128,7 +125,8 @@ JUR-T40, JUR-T01b, QA-T40, QA-T41 et GOV-112 réécrites de nouveau ; DM-13 pass
 18,0 j.
 
 **Reste.** La passe gardien-spec de GOV-112 écrit HYP-W20-LIBERATION et REQ-DM-063 avec les autres.
-Désigner la tâche d'écran qui affiche le texte de la carence. Questions 16 et 17 toujours ouvertes. Aucune tâche W20 n'est livrée par cette PR.
+Questions 16 et 17 toujours ouvertes. L'écran de la carence est tranché par le même arbitrage : UX-P1-02
+(formulaire de dépôt) et la carte « Vérifier » UX-P1-01, dont les acceptances le portent. Aucune tâche W20 n'est livrée par cette PR.
 
 **Appris.** Borner une attente change aussi le texte qui disait « la seule conséquence du silence » :
 la phrase vivait dans l'exigence, le contrat proposé et la relecture du contrat, et une seule copie

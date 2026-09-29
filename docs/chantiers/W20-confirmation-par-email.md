@@ -4,7 +4,8 @@
 > décidé par Williams le 2026-09-29 (session -d7) et placé en **phase 1**. La PR qui le porte **verse
 > quatorze tâches** `a_faire` en phase 1 (§5), en ne citant que des exigences **existantes**, et
 > **amende quatorze tâches existantes** (§6), quinze depuis le 2026-09-29 (UX-P1-05, après la réponse de Williams),
-> seize depuis la correction du 2026-09-29 (avenant de GOV-112, porteur de la passe gardien-spec W20), par `hors-depot/reecrire-champ.mjs` et
+> seize depuis la correction du 2026-09-29 (avenant de GOV-112, porteur de la passe gardien-spec W20),
+> dix-sept depuis l'arbitrage -d7 du 2026-09-29 sur la question 20 (UX-P1-01), par `hors-depot/reecrire-champ.mjs` et
 > `hors-depot/poser-champ.mjs` (texte brut, `--si-inchange`, motif consigné). Elle n'écrit ni
 > `docs/DECISIONS.md`, ni `docs/GLOSSAIRE.md`, ni `docs/PRESEANCE.md`, ni `docs/requirements.json` :
 > les hypothèses du §2 et les exigences du §3 y entreront par la **passe gardien-spec**, dans le lot
@@ -51,7 +52,8 @@
 > `CARENCE_REDEPOT_APRES_LIBERATION_JOURS` = 30 jours, portés à 90 jours après une deuxième libération du
 > même couple ; les autres apporteurs ne sont pas concernés ; texte neutre, sans sanction
 > (HYP-W20-CARENCE-REDEPOT, REQ-DM-063). Aucune issue de dépôt existante ne convient au redépôt refusé :
-> la question 20 est ouverte, aucune valeur n'est ajoutée à `IssueDepot` ni à `MotifRefusDepot`.
+> la question 20 est tranchée (arbitrage -d7 du 2026-09-29, défaut retenu), aucune valeur n'est ajoutée
+> à `IssueDepot` ni à `MotifRefusDepot` ; le texte de la carence est porté par UX-P1-02 et UX-P1-01.
 >
 > **Identifiants.** Bloc réservé à W20, pour ne pas croiser les auteurs en cours (session -bf :
 > UX-P1-21+, DM-33+, SEC-35+, INT-T29+, JUR-T36+, QA-T35+ ; W19 : UX-P1-16 à UX-P1-20, SEC-29 à
@@ -241,7 +243,8 @@ la vérification. **Carence** (HYP-W20-CARENCE-REDEPOT) : pendant
 `CARENCE_REDEPOT_APRES_SECONDE_LIBERATION_JOURS` (= 90, SSOT) jours après une deuxième libération du même
 couple, le même apporteur ne peut pas déposer la même entreprise (SIREN) ; le serveur refuse sans rien
 écrire ni horodater, par un prédicat pur dérivé des libérations, sans valeur nouvelle d'`IssueDepot` ni de
-`MotifRefusDepot` (présentation : question 20) ; les autres apporteurs ne sont pas concernés ; aucune
+`MotifRefusDepot` (présentation : question 20, tranchée (arbitrage -d7 du 2026-09-29), portée par UX-P1-02
+et UX-P1-01) ; les autres apporteurs ne sont pas concernés ; aucune
 sanction, texte neutre. Passé la carence, un nouveau dépôt suit les règles ordinaires. Tests, horloge
 figée : deux `injoignable` → rien ; le troisième → libérée au passage suivant, une seule
 fois ; envoi à J sans appel : J+45 moins une minute → rien, J+45 → libérée ; `ne_se_souvient_pas` ×3 → rien ; appel `confirme` à
@@ -435,8 +438,8 @@ notification qui l'accompagne est une clé de la table SSOT des notifications (U
 « La réservation de <Entreprise> a pris fin sans confirmation. L'entreprise est de nouveau disponible. »
 Les autres apporteurs peuvent la déposer aussitôt. Le même apporteur peut la redéposer à l'issue de la
 carence (30 jours, 90 après une deuxième libération, HYP-W20-CARENCE-REDEPOT) ; le nouveau dépôt suit
-alors les règles ordinaires. Pendant la carence, par défaut (question 20), « Vérifier une entreprise » et
-la carte Entreprise lui disent, sans consigne : « Vous pourrez déposer cette entreprise à nouveau à
+alors les règles ordinaires. Pendant la carence (question 20, tranchée (arbitrage -d7 du 2026-09-29)), le
+formulaire de dépôt (UX-P1-02) et la carte « Vérifier » (UX-P1-01) lui disent, sans consigne : « Vous pourrez déposer cette entreprise à nouveau à
 partir du <date>. », et ne proposent pas « Déposer ».
 
 **Page publique du contact (`/confirmer/<jeton>`, UX-P1-42).** « Bonjour <Prénom Nom>. <Prénom Nom de
@@ -653,7 +656,8 @@ acceptance ne lit aucune exigence W20.
 
 | Tâche | Geste | Ce qui change | Estimation |
 | --- | --- | --- | --- |
-| UX-P1-02 | pose d'acceptance | formulaire du §4 : quatre coordonnées exigées, contexte facultatif, message informatif, bouton nommé, décompte REQ-UX-001 | 1 → 1,25 j |
+| UX-P1-01 | réécriture d'acceptance (2026-09-29, arbitrage -d7, question 20) | la carte « Vérifier » d'une entreprise en carence pour cet apporteur dit « Vous pourrez déposer cette entreprise à nouveau à partir du <date>. », sans bouton « Déposer » | inchangée |
+| UX-P1-02 | pose d'acceptance, puis réécriture (2026-09-29, arbitrage -d7, question 20) | formulaire du §4 : quatre coordonnées exigées, contexte facultatif, message informatif, bouton nommé, décompte REQ-UX-001 ; pendant la carence, le formulaire n'est pas atteint, même texte, sans bouton « Déposer » ; une soumission forgée reçoit une erreur serveur hors `IssueDepot` | 1 → 1,25 j (carence absorbée) |
 | UX-P1-06 | pose d'acceptance | la fiche affiche l'état de la demande et la raison de vérification ; l'appel est la seconde source de confirmation | 1 → 1,25 j |
 | UX-P1-07 | titre réécrit, pose d'acceptance, dépendance DM-43 | « À appeler aujourd'hui » intégrée à la file, tri de REQ-DM-062, SLA sur l'entrée dans la liste | 1 → 1,5 j |
 | DM-08 | réécriture d'acceptance | transitions `provisoire → annulee` (annulation dans le délai), `provisoire → active` (clic retenu), `provisoire → invalidee` (« Non » confirmé), dans la matrice, par genre de transition | 1,25 → 1,5 j |
@@ -729,7 +733,8 @@ réécrit.
    un cycle, la réservation d'une adresse muette est donc au plus de 45 jours sur 75, puis de 45 sur 135.
    La carence ne vise que ce couple, n'ouvre ni Anomalie ni suspension, et son texte est neutre ;
    l'apporteur honnête jamais joint attend 30 jours avant de pouvoir redéposer, c'est son prix, et il est
-   nommé. Reste ouvert : la présentation du refus (question 20). (iii) Le libellé « Axion-IA va
+   nommé. La présentation du refus est tranchée (arbitrage -d7 du 2026-09-29, question 20) : le
+   redépôt n'atteint pas le formulaire (UX-P1-02, UX-P1-01). (iii) Le libellé « Axion-IA va
    appeler votre contact » dit à l'apporteur qu'une vérification existe, jamais laquelle ; un fraudeur y
    apprend que son clic n'a pas compté, sans rien pouvoir en tirer, puisque aucun clic ne sera retenu sur
    cette demande.
@@ -903,7 +908,7 @@ la carence de redépôt, est tranchée le même jour par -d7 sur délégation de
     entreprise » et la carte Entreprise disent, sans consigne : « Vous pourrez déposer cette entreprise à
     nouveau à partir du <date>. », et ne proposent pas « Déposer » ; une requête de dépôt forgée reçoit
     une erreur typée du serveur, hors `IssueDepot`, sans écriture ni horodatage (DM-13 porte le prédicat
-    et ce refus ; l'écran qui affiche le texte est désigné avec la réponse). Alternative : une valeur
+    et ce refus ; l'écran qui affiche le texte est désigné avec la réponse : UX-P1-02 et UX-P1-01). Alternative : une valeur
     `carence` d'`IssueDepot` et de `MotifRefusDepot`, adossée à l'art. 3.2 amendé, qui demande de lever
     la consigne W19 et d'amender REQ-UX-002 et REQ-SEC-022. (HYP-W20-CARENCE-REDEPOT)
     **Réponse (arbitrage de -d7 sur délégation de Williams, 2026-09-29)** : le défaut est retenu. Pendant
@@ -911,7 +916,9 @@ la carence de redépôt, est tranchée le même jour par -d7 sur délégation de
     entreprise à nouveau à partir du <date>. », sans bouton « Déposer » ; une requête forgée reçoit une
     erreur serveur qui n'est pas une issue de dépôt. Aucune valeur nouvelle d'`IssueDepot` ni de
     `MotifRefusDepot` : la consigne W19 est maintenue. Le défaut « au-delà de deux libérations, la
-    carence reste à 90 jours » est validé par le même arbitrage.
+    carence reste à 90 jours » est validé par le même arbitrage. L'écran qui porte le texte, par le même
+    arbitrage : UX-P1-02 (formulaire de dépôt), avec la carte « Vérifier » UX-P1-01 quand l'entreprise y
+    est consultée.
 
 ## 10. Chiffrage
 
@@ -953,8 +960,9 @@ nommés).
 **Arbitrage de -d7 du 2026-09-29, carence de redépôt : +0,25 j, à DM-13 (1 → 1,25 j).** Travail réel :
 un prédicat pur de carence dérivé des libérations, lu au dépôt côté serveur, deux paramètres de la
 SSOT, le refus sans écriture et ses témoins. Absorbé : JUR-T40 et JUR-T01b (une phrase de l'art. 3.2),
-QA-T40 et QA-T41 (des témoins dans les mêmes fichiers). L'écran qui montre la carence attend la
-réponse à la question 20 et n'est pas chiffré ici.
+QA-T40 et QA-T41 (des témoins dans les mêmes fichiers). L'écran qui montre la carence est
+tranché (arbitrage -d7 du 2026-09-29, question 20) : UX-P1-02 et UX-P1-01, estimations inchangées (un
+texte et l'absence d'un bouton, absorbés).
 
 Hors chiffrage : la passe gardien-spec W20 (environ 0,5 j, dans le lot dédié de GOV-112, question 14,
 porteur écrit par l'avenant du 2026-09-29),
