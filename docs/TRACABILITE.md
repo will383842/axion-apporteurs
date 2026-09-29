@@ -14,9 +14,9 @@
 > **« Réputée testée » est DÉRIVÉ, pas lu.** Le registre ne porte aucune échelle de
 > maturité : une exigence l’est dès qu’une des tâches qui la portent est livrée.
 
-**334 exigences actives · 129 réputées testées · 129 couvertes · 0 orphelines.**
+**334 exigences actives · 137 réputées testées · 137 couvertes · 0 orphelines.**
 
-330 tâches, dont 143 livrées · 177 fichiers de test exécutés par `vitest` sur 177 présents.
+330 tâches, dont 149 livrées · 177 fichiers de test exécutés par `vitest` sur 177 présents.
 
 ## Exigences réputées testées
 
@@ -24,6 +24,9 @@
 | --- | --- | --- | --- |
 | `REQ-ARG-002` | `INT-T01b`, `SEC-06`, `T-ARG-022` | `tests/integration/webhook-verdicts.spec.ts`, `tests/unit/securite/evenements-recus-migration.spec.ts` | couverte |
 | `REQ-ARG-003` | `SEC-06`, `T-ARG-022` | `tests/integration/webhook-verdicts.spec.ts`, `tests/unit/integration/evenement-recu-travail.spec.ts` | couverte |
+| `REQ-ARG-004` | `DM-04`, `T-ARG-036`, `T-ARG-037` | `tests/unit/domaine/conservation.spec.ts` | couverte |
+| `REQ-ARG-007` | `DM-04` | `tests/unit/domaine/commission-calcul.spec.ts` | couverte |
+| `REQ-ARG-017` | `CPL-T12`, `DM-04`, `T-ARG-010`, `T-ARG-015`, `T-ARG-039`, `UX-P2-01` | `tests/unit/domaine/commission-calcul.spec.ts` | couverte |
 | `REQ-ARG-029` | `INT-T17`, `SEC-05` | `tests/integration/idor.spec.ts` | couverte |
 | `REQ-CPL-001` | `CPL-T01`, `GOV-089`, `GOV-092`, `T-ARG-018` | `tests/unit/gouvernance/entite-registre.spec.ts` | couverte |
 | `REQ-CPL-002` | `CPL-T01`, `GOV-015`, `T-ARG-018` | `tests/unit/gouvernance/entite-registre.spec.ts`, `tests/unit/gouvernance/fiches-tiers.spec.ts` | couverte |
@@ -45,11 +48,15 @@
 | `REQ-DM-010` | `DM-06`, `DM-09`, `JUR-T24`, `SEC-12` | `tests/unit/domaine/apporteur-matrice-et-statuts.spec.ts` | couverte |
 | `REQ-DM-011` | `DM-06`, `DM-18`, `SEC-19` | `tests/unit/domaine/apporteur-matrice-et-statuts.spec.ts` | couverte |
 | `REQ-DM-012` | `DM-06` | `tests/integration/apporteur-jeton-depot.spec.ts`, `tests/unit/domaine/apporteur-identifiants.spec.ts` | couverte |
+| `REQ-DM-014` | `DM-03-A`, `DM-03-P`, `GOV-080` | `tests/integration/grille-versionnee.spec.ts`, `tests/unit/domaine/grille-import.spec.ts` | couverte |
+| `REQ-DM-015` | `DM-04` | `tests/unit/domaine/commission-calcul.spec.ts` | couverte |
+| `REQ-DM-017` | `DM-04`, `DM-15` | `tests/unit/domaine/conservation.spec.ts` | couverte |
 | `REQ-DM-024` | `DM-01`, `DM-20` | `tests/integration/journal.spec.ts`, `tests/unit/domaine/journal-chaine.spec.ts` | couverte |
 | `REQ-DM-035` | `DM-06`, `INT-T22`, `INT-T26` | `tests/integration/candidature-recue.spec.ts`, `tests/unit/domaine/apporteur-score-fige.spec.ts`, `tests/unit/domaine/apporteur-snapshot-candidature.spec.ts`, `tests/unit/integration/candidature-recue.spec.ts` | couverte |
 | `REQ-DM-036` | `GOV-088`, `SEC-06` | `tests/integration/webhook.spec.ts`, `tests/unit/gouvernance/termes-interdits.spec.ts`, `tests/unit/securite/evenements-recus-migration.spec.ts` | couverte |
 | `REQ-DM-037` | `DM-02` | `tests/unit/domaine/gardes-de-schema.spec.ts` | couverte |
 | `REQ-DM-038` | `DM-01`, `DM-02` | `tests/integration/index-partiels.spec.ts`, `tests/unit/domaine/gardes-de-schema.spec.ts`, `tests/unit/domaine/schema-centimes.spec.ts`, `tests/unit/gouvernance/glossaire-enums.spec.ts` | couverte |
+| `REQ-DM-040` | `DM-04`, `INT-T01b` | `tests/unit/domaine/commission-calcul.spec.ts` | couverte |
 | `REQ-DM-041` | `DM-01`, `DM-20` | `tests/integration/journal.spec.ts`, `tests/unit/domaine/journal-charge-fermee.spec.ts` | couverte |
 | `REQ-EXT-028` | `JUR-T02` | `tests/unit/juridique/seuils-ssot.spec.ts` | couverte |
 | `REQ-GOV-001` | `GOV-001`, `GOV-072` | `tests/unit/gouvernance/gardes.spec.ts`, `tests/unit/gouvernance/une-cle-ecrite-deux-fois.spec.ts` | couverte |
@@ -86,6 +93,7 @@
 | `REQ-INT-004` | `GOV-030`, `GOV-069`, `GOV-088`, `INT-T01a`, `INT-T01c`, `INT-T05` | `tests/unit/gouvernance/grammaire-des-zones-de-prose.spec.ts`, `tests/unit/gouvernance/termes-interdits.spec.ts`, `tests/unit/integration/contrat-hash.spec.ts` | couverte |
 | `REQ-INT-011` | `INT-T21-A`, `INT-T21-P`, `SEC-06` | `tests/integration/webhook-verdicts.spec.ts`, `tests/unit/integration/evenement-recu-travail.spec.ts` | couverte |
 | `REQ-INT-014` | `INT-T07-A`, `INT-T07-P`, `SEC-07` | `tests/integration/frontiere.spec.ts` | couverte |
+| `REQ-INT-017` | `DM-03-A`, `DM-03-P` | `tests/unit/domaine/grille-import.spec.ts` | couverte |
 | `REQ-INT-020` | `INT-T09` | `tests/integration/api-gouv.spec.ts`, `tests/unit/integration/recherche-entreprises-repli.spec.ts` | couverte |
 | `REQ-INT-021` | `INT-T09` | `tests/integration/api-gouv.spec.ts` | couverte |
 | `REQ-INT-022` | `INT-T10`, `INT-T40` | `tests/unit/email/emetteur.spec.ts` | couverte |
@@ -156,9 +164,7 @@
 
 | Exigence | Phase | Tâches porteuses | Tests déclarés |
 | --- | ---: | --- | --- |
-| `REQ-ARG-004` | 0 | `DM-04`, `T-ARG-036`, `T-ARG-037` | `tests/unit/domaine/commission-calcul.spec.ts`, `tests/unit/domaine/conservation.spec.ts` |
 | `REQ-ARG-005` | -1 | `DM-15`, `INT-T01b`, `INT-T05` | `axionia/src/server/partners-sync/__tests__/producteurs-facturation.spec.ts`, `axionia/src/server/partners/__tests__/commission.spec.ts`, `axionia/src/server/partners/__tests__/derivation-ht.spec.ts`, `axionia/src/server/partners/__tests__/enveloppe.spec.ts`, `axionia/src/server/partners/__tests__/fixtures-et-frontiere.spec.ts`, `axionia/src/server/partners/__tests__/payloads.spec.ts`, `axionia/src/server/partners/__tests__/transcription-du-contrat.spec.ts` |
-| `REQ-ARG-007` | 0 | `DM-04` | `tests/unit/domaine/commission-calcul.spec.ts`, `tests/unit/domaine/conservation.spec.ts` |
 | `REQ-ARG-008` | 2 | `DM-15`, `T-ARG-037` | — |
 | `REQ-ARG-010` | 2 | `DM-15` | — |
 | `REQ-ARG-012` | 2 | `DM-16` | — |
@@ -166,7 +172,6 @@
 | `REQ-ARG-014` | 2 | `T-ARG-015` | — |
 | `REQ-ARG-015` | 2 | `T-ARG-015`, `T-ARG-033`, `T-ARG-038` | — |
 | `REQ-ARG-016` | 2 | `JUR-T16`, `T-ARG-015`, `T-ARG-032`, `T-ARG-038` | — |
-| `REQ-ARG-017` | 0 | `CPL-T12`, `DM-04`, `T-ARG-010`, `T-ARG-015`, `T-ARG-039`, `UX-P2-01` | `tests/unit/domaine/commission-calcul.spec.ts`, `tests/unit/domaine/conservation.spec.ts` |
 | `REQ-ARG-018` | 1 | `JUR-T01c`, `T-ARG-016`, `T-ARG-038`, `T-ARG-039` | — |
 | `REQ-ARG-019` | 2 | `T-ARG-017` | — |
 | `REQ-ARG-020` | 2 | `T-ARG-018` | — |
@@ -204,10 +209,7 @@
 | `REQ-DM-008` | 1 | `DM-09`, `DM-24`, `DM-40`, `DM-41`, `QA-T40`, `QA-T41`, `SEC-40`, `UX-P1-42` | `tests/e2e/console/a-appeler-aujourd-hui.spec.ts`, `tests/e2e/espace/depot-avec-confirmation-par-courriel.spec.ts`, `tests/e2e/public/confirmation-contact.spec.ts`, `tests/integration/attaque-fraude-a-la-confirmation.spec.ts`, `tests/integration/demande-de-confirmation.spec.ts`, `tests/integration/jetons-de-confirmation.spec.ts`, `tests/integration/reponse-du-contact.spec.ts`, `tests/unit/domaine/demande-de-confirmation.spec.ts`, `tests/unit/domaine/depot-au-dela-du-seuil.spec.ts`, `tests/unit/domaine/reponse-du-contact.spec.ts`, `tests/unit/public/page-de-confirmation.spec.ts`, `tests/unit/securite/jetons-de-confirmation.spec.ts` |
 | `REQ-DM-009` | 1 | `DM-09` | `tests/unit/domaine/depot-au-dela-du-seuil.spec.ts` |
 | `REQ-DM-013` | 1 | `DM-11`, `DM-23`, `INT-T23` | `tests/unit/domaine/kyc-reference-piece-rib.spec.ts` |
-| `REQ-DM-014` | 0 | `DM-03-A`, `DM-03-P`, `GOV-080` | `axionia/src/server/partners-sync/__tests__/grille-export.spec.ts`, `tests/integration/grille-versionnee.spec.ts`, `tests/unit/domaine/grille-import.spec.ts`, `tests/unit/gouvernance/mention-de-gate-resolue.spec.ts` |
-| `REQ-DM-015` | 0 | `DM-04` | `tests/unit/domaine/commission-calcul.spec.ts`, `tests/unit/domaine/conservation.spec.ts` |
 | `REQ-DM-016` | 2 | `DM-15` | — |
-| `REQ-DM-017` | 0 | `DM-04`, `DM-15` | `tests/unit/domaine/commission-calcul.spec.ts`, `tests/unit/domaine/conservation.spec.ts` |
 | `REQ-DM-018` | -1 | `DM-15`, `INT-T01b` | `axionia/src/server/partners/__tests__/commission.spec.ts`, `axionia/src/server/partners/__tests__/derivation-ht.spec.ts`, `axionia/src/server/partners/__tests__/enveloppe.spec.ts`, `axionia/src/server/partners/__tests__/fixtures-et-frontiere.spec.ts`, `axionia/src/server/partners/__tests__/payloads.spec.ts`, `axionia/src/server/partners/__tests__/transcription-du-contrat.spec.ts` |
 | `REQ-DM-019` | 2 | `DM-15` | — |
 | `REQ-DM-020` | 2 | `T-ARG-010` | — |
@@ -225,7 +227,6 @@
 | `REQ-DM-033` | 1 | `DM-12`, `SEC-14` | — |
 | `REQ-DM-034` | 1 | `DM-12`, `T-ARG-035` | — |
 | `REQ-DM-039` | -1 | `INT-T01b`, `INT-T05` | `axionia/src/server/partners-sync/__tests__/producteurs-facturation.spec.ts`, `axionia/src/server/partners/__tests__/commission.spec.ts`, `axionia/src/server/partners/__tests__/derivation-ht.spec.ts`, `axionia/src/server/partners/__tests__/enveloppe.spec.ts`, `axionia/src/server/partners/__tests__/fixtures-et-frontiere.spec.ts`, `axionia/src/server/partners/__tests__/payloads.spec.ts`, `axionia/src/server/partners/__tests__/transcription-du-contrat.spec.ts` |
-| `REQ-DM-040` | -1 | `DM-04`, `INT-T01b` | `axionia/src/server/partners/__tests__/commission.spec.ts`, `axionia/src/server/partners/__tests__/derivation-ht.spec.ts`, `axionia/src/server/partners/__tests__/enveloppe.spec.ts`, `axionia/src/server/partners/__tests__/fixtures-et-frontiere.spec.ts`, `axionia/src/server/partners/__tests__/payloads.spec.ts`, `axionia/src/server/partners/__tests__/transcription-du-contrat.spec.ts`, `tests/unit/domaine/commission-calcul.spec.ts`, `tests/unit/domaine/conservation.spec.ts` |
 | `REQ-DM-042` | 1 | `DM-13`, `DM-24`, `DM-41`, `JUR-T40` | `tests/integration/reponse-du-contact.spec.ts`, `tests/unit/contrat/confirmation-au-contrat.spec.ts`, `tests/unit/contrat/contract-template-complete.spec.ts`, `tests/unit/domaine/reponse-du-contact.spec.ts` |
 | `REQ-DM-043` | 1 | `DM-25` | — |
 | `REQ-DM-044` | 2 | `DM-26` | `tests/integration/changement-de-parrain.spec.ts`, `tests/unit/domaine/changement-de-parrain.spec.ts` |
@@ -270,7 +271,6 @@
 | `REQ-INT-013` | 1 | `INT-T08-A`, `INT-T08-P` | — |
 | `REQ-INT-015` | 0 | `INT-T03`, `INT-T07-A`, `INT-T07-P` | `axionia/src/server/partners-sync/__tests__/cliquet-ecrivains.spec.ts`, `axionia/src/server/partners-sync/__tests__/producteurs-client.spec.ts` |
 | `REQ-INT-016` | 2 | `INT-T17`, `T-ARG-030` | — |
-| `REQ-INT-017` | 0 | `DM-03-A`, `DM-03-P` | `axionia/src/server/partners-sync/__tests__/grille-export.spec.ts`, `tests/integration/grille-versionnee.spec.ts`, `tests/unit/domaine/grille-import.spec.ts` |
 | `REQ-INT-019` | 1 | `INT-T12`, `INT-T24` | — |
 | `REQ-INT-025` | 3 | `UX-P3-01` | — |
 | `REQ-INT-027` | 1 | `INT-T13`, `INT-T17` | — |
@@ -419,11 +419,11 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | 10 | 7 | 1 |
 | 11 | 5 | 1 |
 | 12 | 13 | 4 |
-| 13 | 32 | 9 |
+| 13 | 32 | 14 |
 | 14 | 17 | 3 |
-| 15 | 23 | 5 |
+| 15 | 23 | 6 |
 | 16 | 8 | 2 |
-| 17 | 21 | 5 |
+| 17 | 21 | 6 |
 | 18 | 4 | 1 |
 | 19 | 1 | 0 |
 | 20 | 3 | 0 |
@@ -439,8 +439,8 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | 6 | 3 | 1 |
 | 7 | 57 | 19 |
 | 8 | 12 | 4 |
-| 9 | 23 | 9 |
-| 10 | 67 | 17 |
+| 9 | 23 | 11 |
+| 10 | 67 | 23 |
 | 11 | 30 | 8 |
 | 12 | 14 | 5 |
 
