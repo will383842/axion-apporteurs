@@ -2578,6 +2578,7 @@
       "taches": [
         "EXT-T01",
         "JUR-T04",
+        "JUR-T34",
         "T-ARG-033"
       ]
     },
@@ -4366,7 +4367,8 @@
       "etape": 7,
       "phase": 0,
       "taches": [
-        "JUR-T04"
+        "JUR-T04",
+        "JUR-T35"
       ]
     },
     {
