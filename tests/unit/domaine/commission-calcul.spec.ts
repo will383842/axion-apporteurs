@@ -178,7 +178,7 @@ describe('REQ-DM-015 — une fonction pure : un montant en centimes, ou un bloca
 });
 
 describe('REQ-ARG-007, REQ-ARG-017 — le plafond, lu dans la SSOT des seuils', () => {
-  it('REQ-ARG-007, REQ-ARG-017 — TÉMOIN : une commission supérieure au plafond du HT bloque (commission_sup_ht)', () => {
+  it('REQ-ARG-007, REQ-ARG-017 — TÉMOIN : une commission supérieure au plafond du HT bloque (commission_sup_ht), montant établi PORTÉ', () => {
     const flat = ligneDe('flat');
     // Un HT d'un centime de moins que le forfait : le forfait dépasse 100 % du HT.
     expect(
@@ -194,6 +194,8 @@ describe('REQ-ARG-007, REQ-ARG-017 — le plafond, lu dans la SSOT des seuils', 
       statut: 'bloquee',
       commissionId: flat.commissionId,
       motifBlocage: 'commission_sup_ht',
+      // REQ-ARG-017 (A-5) : la ligne est payée au montant établi, il ne se perd pas au blocage.
+      montantCents: flat.montantCents,
     });
     // Contre-témoin : au plafond exactement, la ligne passe.
     expect(

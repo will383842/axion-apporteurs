@@ -42,13 +42,25 @@ export type VerdictCommission =
   | {
       readonly statut: 'bloquee';
       readonly commissionId: string | null;
-      readonly motifBlocage: MotifBlocageCalcul;
+      readonly motifBlocage: 'a_qualifier';
+    }
+  | {
+      /**
+       * Au-delà du plafond, la ligne est bloquée, mais son montant est ÉTABLI et porté : REQ-ARG-017
+       * (A-5) veut qu'elle soit payée à ce montant, l'écart éventuel se corrigeant par ajustement.
+       * Le jeter obligerait le versement à le recalculer — une seconde source.
+       */
+      readonly statut: 'bloquee';
+      readonly commissionId: string;
+      readonly motifBlocage: 'commission_sup_ht';
+      readonly montantCents: number;
     };
 
-const bloquee = (
-  commissionId: string | null,
-  motifBlocage: MotifBlocageCalcul
-): VerdictCommission => ({ statut: 'bloquee', commissionId, motifBlocage });
+const bloquee = (commissionId: string | null): VerdictCommission => ({
+  statut: 'bloquee',
+  commissionId,
+  motifBlocage: 'a_qualifier',
+});
 
 /** round(taux × HT / 100 %), au demi-centime supérieur, en entiers exacts (HT ≥ 0). */
 function pourcentage(tauxBps: number, montantHtCents: number): number {
@@ -58,12 +70,12 @@ function pourcentage(tauxBps: number, montantHtCents: number): number {
 
 export function calculerCommission(e: EntreeCalcul): VerdictCommission {
   const { commissionId, montantHtCents } = e;
-  if (commissionId === null) return bloquee(null, 'a_qualifier');
+  if (commissionId === null) return bloquee(null);
   if (!Number.isSafeInteger(montantHtCents) || montantHtCents < 0) {
-    return bloquee(commissionId, 'a_qualifier');
+    return bloquee(commissionId);
   }
   const ligne = e.grille.commissions.find((c) => c.commissionId === commissionId);
-  if (ligne === undefined) return bloquee(commissionId, 'a_qualifier');
+  if (ligne === undefined) return bloquee(commissionId);
 
   let montantCents: number;
   if (ligne.kind === 'flat' && ligne.montantCents !== null) {
@@ -71,13 +83,13 @@ export function calculerCommission(e: EntreeCalcul): VerdictCommission {
   } else if (ligne.kind === 'percent' && ligne.tauxBps !== null) {
     montantCents = pourcentage(ligne.tauxBps, montantHtCents);
   } else {
-    return bloquee(commissionId, 'a_qualifier');
+    return bloquee(commissionId);
   }
 
   // Plafond : montant > plafond × HT, comparé en entiers exacts.
   const plafond = BigInt(PARAMETRES.PLAFOND_COMMISSION_BPS.valeur);
   if (BigInt(montantCents) * BigInt(BPS_MAX) > plafond * BigInt(montantHtCents)) {
-    return bloquee(commissionId, 'commission_sup_ht');
+    return { statut: 'bloquee', commissionId, motifBlocage: 'commission_sup_ht', montantCents };
   }
   return { statut: 'calculee', commissionId, montantCents };
 }
