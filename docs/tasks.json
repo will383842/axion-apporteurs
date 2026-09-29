@@ -13452,7 +13452,9 @@
         "REQ-GOV-021": [
           "tests/unit/gouvernance/reqs-hyp-zone-d-une-tache.spec.ts"
         ]
-      }
+      },
+      "issue": 258,
+      "owner": "A01"
     },
     {
       "id": "GOV-122",
@@ -13652,7 +13654,21 @@
       "paths": [
         "src/app/(espace)/confidentialite/page.tsx",
         "src/app/(espace)/confidentialite/layout.tsx",
-        "tests/unit/juridique/politique-de-confidentialite.spec.ts"
+        "tests/unit/juridique/politique-de-confidentialite.spec.ts",
+        "src/domain/rgpd/politique.ts",
+        "src/server/rgpd/acceptation.ts",
+        "src/app/(espace)/confidentialite/ecran.tsx",
+        "src/app/(espace)/confidentialite/actions.ts",
+        "src/app/(espace)/confidentialite/loading.tsx",
+        "src/app/(espace)/confidentialite/error.tsx",
+        "src/app/(espace)/connexion/actions.ts",
+        "src/content/micro-copy/espace/vocabulaire.ts",
+        "src/content/micro-copy/espace/etats-vides.ts",
+        "docs/ESPACE-ROUTES.md",
+        "tests/integration/idor.spec.ts",
+        "tests/unit/espace/vocabulaire-et-micro-copy.spec.ts",
+        "perf/budgets.json",
+        "tests/unit/gouvernance/gardes-transposees.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -13674,8 +13690,8 @@
           "tests/unit/juridique/politique-de-confidentialite.spec.ts"
         ]
       },
-      "issue": null,
-      "owner": null,
+      "issue": 238,
+      "owner": "A01",
       "branch": null,
       "pr": null,
       "attestation": null,

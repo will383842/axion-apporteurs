@@ -701,6 +701,10 @@ describe('REQ-UX-002 — snapshot des libellés de l’espace, sans date, sans n
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › /connexion/<jeton> › titre : Ce lien a déjà servi
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › /connexion/<jeton> › phrase : Un lien de connexion ne sert qu’une fois. Un nouveau lien peut vous être envoyé.
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › /connexion/<jeton> › action › libelle : M'envoyer un nouveau lien
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /confidentialite › titre : Aucun destinataire nommé
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /confidentialite › phrase : Le registre des traitements ne nomme encore aucun prestataire ni organisme qui reçoive vos données.
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /confidentialite › action › libelle : Retour à l'accueil
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /confidentialite › action › route : /
       espace/vocabulaire.ts › FORMULES › droitACommissionJusquau : Votre droit à commission sur cette entreprise court jusqu'au {dateFin}.
       espace/vocabulaire.ts › FORMULES › dejaReservee : déjà réservée pour un autre apporteur
       espace/vocabulaire.ts › FORMULES › finDuDroit : si ce droit prend fin
@@ -737,7 +741,30 @@ describe('REQ-UX-002 — snapshot des libellés de l’espace, sans date, sans n
       espace/vocabulaire.ts › CONNEXION › arrivee › action : Utiliser mon lien
       espace/vocabulaire.ts › CONNEXION › arrivee › ouverte : Votre lien de connexion a bien été utilisé.
       espace/vocabulaire.ts › CONNEXION › courriel › sujet : Votre lien de connexion à votre espace
-      espace/vocabulaire.ts › CONNEXION › courriel › corps : Voici votre lien de connexion. Il ne sert qu’une fois et expire rapidement. Si vous n’avez rien demandé, ignorez ce message."
+      espace/vocabulaire.ts › CONNEXION › courriel › corps : Voici votre lien de connexion. Il ne sert qu’une fois et expire rapidement. Si vous n’avez rien demandé, ignorez ce message.
+      espace/vocabulaire.ts › CONFIDENTIALITE › titre : Vos données personnelles
+      espace/vocabulaire.ts › CONFIDENTIALITE › phrase : Ce que la Société fait de vos données, combien de temps elle les garde, à qui elle les confie, et vos droits. Chaque information vient du registre des traitements de la Société.
+      espace/vocabulaire.ts › CONFIDENTIALITE › rubriques › finalite : Pourquoi vos données sont utilisées
+      espace/vocabulaire.ts › CONFIDENTIALITE › rubriques › baseLegale : Ce qui autorise leur utilisation
+      espace/vocabulaire.ts › CONFIDENTIALITE › rubriques › duree : Combien de temps elles sont gardées
+      espace/vocabulaire.ts › CONFIDENTIALITE › rubriques › destinataires : Qui peut les consulter
+      espace/vocabulaire.ts › CONFIDENTIALITE › rubriques › transferts : Si elles sont envoyées à l’étranger
+      espace/vocabulaire.ts › CONFIDENTIALITE › rubriques › droits : Vos droits, et comment les exercer
+      espace/vocabulaire.ts › CONFIDENTIALITE › tiers › titre : Les prestataires et organismes qui reçoivent vos données
+      espace/vocabulaire.ts › CONFIDENTIALITE › tiers › qualite : À quel titre
+      espace/vocabulaire.ts › CONFIDENTIALITE › tiers › donnees : Ce qui leur est confié
+      espace/vocabulaire.ts › CONFIDENTIALITE › tiers › localisation : Où elles sont traitées
+      espace/vocabulaire.ts › CONFIDENTIALITE › aCompleter : À compléter
+      espace/vocabulaire.ts › CONFIDENTIALITE › question : Question en attente de réponse :
+      espace/vocabulaire.ts › CONFIDENTIALITE › accord › phrase : Votre espace s’ouvre une fois cette politique acceptée.
+      espace/vocabulaire.ts › CONFIDENTIALITE › accord › action : J’accepte cette politique
+      espace/vocabulaire.ts › CONFIDENTIALITE › acceptee : Vous avez accepté cette politique.
+      espace/vocabulaire.ts › CONFIDENTIALITE › chargement : Chargement de la politique de confidentialité…
+      espace/vocabulaire.ts › CONFIDENTIALITE › erreur › titre : La politique ne s’affiche pas
+      espace/vocabulaire.ts › CONFIDENTIALITE › erreur › phrase : La politique de confidentialité n’a pas pu être affichée. Réessayez un peu plus tard.
+      espace/vocabulaire.ts › CONFIDENTIALITE › erreur › action : Réessayer
+      espace/vocabulaire.ts › CONFIDENTIALITE › horsLigne › titre : Vous êtes hors ligne
+      espace/vocabulaire.ts › CONFIDENTIALITE › horsLigne › phrase : La politique de confidentialité s’affichera dès le retour du réseau."
     `);
   });
 

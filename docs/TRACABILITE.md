@@ -16,7 +16,7 @@
 
 **334 exigences actives · 137 réputées testées · 137 couvertes · 0 orphelines.**
 
-332 tâches, dont 153 livrées · 176 fichiers de test exécutés par `vitest` sur 176 présents.
+332 tâches, dont 153 livrées · 178 fichiers de test exécutés par `vitest` sur 178 présents.
 
 ## Exigences réputées testées
 
@@ -76,7 +76,7 @@
 | `REQ-GOV-016` | `GOV-006`, `GOV-088` | `tests/unit/gouvernance/glossaire-enums.spec.ts`, `tests/unit/gouvernance/termes-interdits.spec.ts` | couverte |
 | `REQ-GOV-017` | `GOV-013`, `GOV-071`, `GOV-106`, `GOV-109` | `tests/unit/gouvernance/frontiere-de-mot-du-rendu.spec.ts`, `tests/unit/gouvernance/lexique.spec.ts` | couverte |
 | `REQ-GOV-018` | `GOV-014`, `GOV-031` | `tests/unit/gouvernance/gardes-transposees.spec.ts` | couverte |
-| `REQ-GOV-021` | `GOV-017a`, `GOV-017b`, `GOV-024`, `GOV-027`, `GOV-037`, `GOV-041`, `GOV-049`, `GOV-050`, `GOV-056`, `GOV-057`, `GOV-074`, `GOV-075`, `GOV-078`, `GOV-080`, `GOV-081`, `GOV-084`, `GOV-086`, `GOV-087`, `GOV-096`, `GOV-104`, `GOV-117`, `GOV-118`, `GOV-120`, `GOV-121` | `tests/unit/gouvernance/attributions-resolvent.spec.ts`, `tests/unit/gouvernance/aucun-chemin-gabarit.spec.ts`, `tests/unit/gouvernance/aucun-script-de-garde-orphelin.spec.ts`, `tests/unit/gouvernance/clore-une-tache-livree-seule.spec.ts`, `tests/unit/gouvernance/cloture-refuse-ce-qu-elle-n-a-pas-mesure.spec.ts`, `tests/unit/gouvernance/composeur-et-fichiers-d-une-pr.spec.ts`, `tests/unit/gouvernance/exemptions-par-occurrence.spec.ts`, `tests/unit/gouvernance/gov-pr-lit-une-pr-de-lot.spec.ts`, `tests/unit/gouvernance/la-declaration-se-lit-dans-le-commit-de-fusion.spec.ts`, `tests/unit/gouvernance/paths-derives.spec.ts`, `tests/unit/gouvernance/raison-de-dette-resolue.spec.ts`, `tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts`, `tests/unit/gouvernance/registre-lecteur-unique.spec.ts`, `tests/unit/gouvernance/scenario-d-attaque-exige.spec.ts`, `tests/unit/gouvernance/un-etat-cible-porte-son-operation.spec.ts`, `tests/unit/gouvernance/un-path-designe-ce-depot-ci.spec.ts`, `tests/unit/gouvernance/une-tache-en-cours-appartient-a-un-lot.spec.ts`, `tests/unit/gouvernance/vues-derivees.spec.ts` | couverte |
+| `REQ-GOV-021` | `GOV-017a`, `GOV-017b`, `GOV-024`, `GOV-027`, `GOV-037`, `GOV-041`, `GOV-049`, `GOV-050`, `GOV-056`, `GOV-057`, `GOV-074`, `GOV-075`, `GOV-078`, `GOV-080`, `GOV-081`, `GOV-084`, `GOV-086`, `GOV-087`, `GOV-096`, `GOV-104`, `GOV-117`, `GOV-118`, `GOV-120`, `GOV-121` | `tests/unit/gouvernance/attributions-resolvent.spec.ts`, `tests/unit/gouvernance/aucun-chemin-gabarit.spec.ts`, `tests/unit/gouvernance/aucun-script-de-garde-orphelin.spec.ts`, `tests/unit/gouvernance/clore-une-tache-livree-seule.spec.ts`, `tests/unit/gouvernance/cloture-refuse-ce-qu-elle-n-a-pas-mesure.spec.ts`, `tests/unit/gouvernance/composeur-et-fichiers-d-une-pr.spec.ts`, `tests/unit/gouvernance/exemptions-par-occurrence.spec.ts`, `tests/unit/gouvernance/gov-pr-lit-une-pr-de-lot.spec.ts`, `tests/unit/gouvernance/la-declaration-se-lit-dans-le-commit-de-fusion.spec.ts`, `tests/unit/gouvernance/paths-derives.spec.ts`, `tests/unit/gouvernance/raison-de-dette-resolue.spec.ts`, `tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts`, `tests/unit/gouvernance/registre-lecteur-unique.spec.ts`, `tests/unit/gouvernance/reqs-hyp-zone-d-une-tache.spec.ts`, `tests/unit/gouvernance/scenario-d-attaque-exige.spec.ts`, `tests/unit/gouvernance/un-etat-cible-porte-son-operation.spec.ts`, `tests/unit/gouvernance/un-path-designe-ce-depot-ci.spec.ts`, `tests/unit/gouvernance/une-tache-en-cours-appartient-a-un-lot.spec.ts`, `tests/unit/gouvernance/vues-derivees.spec.ts` | couverte |
 | `REQ-GOV-022` | `GOV-015` | `tests/unit/gouvernance/fiches-tiers.spec.ts` | couverte |
 | `REQ-GOV-023` | `GOV-008`, `GOV-018`, `GOV-052`, `GOV-073`, `GOV-091`, `GOV-108` | `tests/unit/gouvernance/plan-state-frais.spec.ts`, `tests/unit/gouvernance/regles-maison.spec.ts`, `tests/unit/gouvernance/une-pr-porte-son-entree-de-journal.spec.ts`, `tests/unit/gouvernance/une-seule-grammaire-de-journal.spec.ts` | couverte |
 | `REQ-GOV-024` | `GOV-018`, `GOV-026`, `GOV-045`, `GOV-060`, `GOV-068`, `GOV-073`, `GOV-081` | `tests/unit/gouvernance/cliquet-nomme-chaque-refus.spec.ts`, `tests/unit/gouvernance/plan-state-lecteur-unique.spec.ts`, `tests/unit/gouvernance/raison-de-dette-resolue.spec.ts`, `tests/unit/gouvernance/regles-maison.spec.ts`, `tests/unit/gouvernance/une-seule-grammaire-de-journal.spec.ts` | couverte |
@@ -107,7 +107,7 @@
 | `REQ-JUR-009` | `INT-T40`, `JUR-T04`, `JUR-T09`, `JUR-T40`, `JUR-T41`, `UX-P1-42` | `tests/unit/juridique/registre-rgpd.spec.ts` | couverte |
 | `REQ-JUR-015` | `JUR-T02` | `tests/unit/juridique/seuils-ssot.spec.ts` | couverte |
 | `REQ-JUR-023` | `DM-23`, `JUR-T01`, `SEC-12` | `tests/unit/contrat/contract-template-complete.spec.ts` | couverte |
-| `REQ-JUR-025` | `EXT-T01`, `JUR-T04`, `JUR-T34`, `JUR-T36`, `T-ARG-033` | `tests/unit/juridique/registre-rgpd.spec.ts` | couverte |
+| `REQ-JUR-025` | `EXT-T01`, `JUR-T04`, `JUR-T34`, `JUR-T36`, `T-ARG-033` | `tests/unit/juridique/politique-de-confidentialite.spec.ts`, `tests/unit/juridique/registre-rgpd.spec.ts` | couverte |
 | `REQ-JUR-029` | `DM-11`, `JUR-T02`, `T-ARG-033` | `tests/unit/juridique/seuils-ssot.spec.ts` | couverte |
 | `REQ-JUR-031` | `DM-43`, `JUR-T24`, `JUR-T27`, `JUR-T28`, `SEC-14`, `SEC-15`, `SEC-41`, `UX-P1-12` | `tests/unit/contrat/contrat-sobre.spec.ts` | couverte |
 | `REQ-JUR-034` | `JUR-T26` | `tests/unit/juridique/charte-relationnelle.spec.ts` | couverte |
@@ -560,6 +560,7 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | `tests/unit/gouvernance/registre-lecteur-unique.spec.ts` | oui | `REQ-GOV-015`, `REQ-GOV-021` |
 | `tests/unit/gouvernance/regles-maison.spec.ts` | oui | `REQ-GOV-023`, `REQ-GOV-024` |
 | `tests/unit/gouvernance/relectures-sans-defaut.spec.ts` | oui | `REQ-GOV-011`, `REQ-GOV-013`, `REQ-GOV-032`, `REQ-QA-002` |
+| `tests/unit/gouvernance/reqs-hyp-zone-d-une-tache.spec.ts` | oui | `REQ-GOV-021` |
 | `tests/unit/gouvernance/revendication-par-branche.spec.ts` | oui | `REQ-GOV-007`, `REQ-QA-013` |
 | `tests/unit/gouvernance/revues-lecteur-unique.spec.ts` | oui | `REQ-GOV-010`, `REQ-GOV-011` |
 | `tests/unit/gouvernance/scenario-d-attaque-exige.spec.ts` | oui | `REQ-GOV-011`, `REQ-GOV-021` |
@@ -596,6 +597,7 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | `tests/unit/integration/notif-sans-pii.spec.ts` | oui | `REQ-INT-024` |
 | `tests/unit/integration/recherche-entreprises-repli.spec.ts` | oui | `REQ-INT-020`, `REQ-SEC-013`, `REQ-UX-020` |
 | `tests/unit/juridique/charte-relationnelle.spec.ts` | oui | `REQ-JUR-034`, `REQ-JUR-035`, `REQ-JUR-036`, `REQ-JUR-037` |
+| `tests/unit/juridique/politique-de-confidentialite.spec.ts` | oui | `REQ-JUR-025` |
 | `tests/unit/juridique/registre-rgpd.spec.ts` | oui | `REQ-CPL-009`, `REQ-JUR-009`, `REQ-JUR-025`, `REQ-SEC-030` |
 | `tests/unit/juridique/seuils-ssot.spec.ts` | oui | `REQ-EXT-028`, `REQ-JUR-015`, `REQ-JUR-029` |
 | `tests/unit/qualite/build-sans-base.spec.ts` | oui | `REQ-QA-032` |
