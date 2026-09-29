@@ -7,13 +7,13 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `c60e2f3` — 2026-09-29T07:25:51+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #214 (un contrôle requis rouge ou une revue manquante) · 2. #216 (un contrôle requis rouge ou une revue manquante) |
+| Où est `main` ? | `14a8594` — 2026-09-29T10:16:33+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #218 (des contrôles encore en cours) · 2. #217 (un contrôle requis rouge ou une revue manquante) · 3. #214 (un conflit avec `main`) |
 | Qui tient quoi ? | GOV-049 (A01) · GOV-075 (A01) · GOV-110 (A01) |
 | Où en est la phase ? | phase 0 — 91/125 tâches, reste 29.25 j |
 | Le prochain pas | QA-T05 — Pipeline GHCR privé → Coolify pull |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
-| Dernière entrée de journal | PR #214 — 2026-09-29 |
+| Dernière entrée de journal | PR #218 — 2026-09-29 |
 
 **Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
@@ -60,8 +60,9 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #214 — feat(DM-03-P): la grille publiee par axionia est importee version par version, chaque ligne confrontee a son empreinte | `t/dm-03-p` | un contrôle requis rouge ou une revue manquante |
-| 2 | #216 — feat(GOV-084): tout script de garde suivi a une tache porteuse, deux barrieres rattachees a GOV-000 | `t/gov-084` | un contrôle requis rouge ou une revue manquante |
+| 1 | #218 — feat(DM-04): commission et prorata en fonction pure, entiers exacts, bareme choisi par commissionId | `t/dm-04` | des contrôles encore en cours |
+| 2 | #217 — test(GOV-049): une tache en cours hors lot porte la preuve de son vol, et la clause a enfin un temoin rouge | `t/gov-049-visibilite` | un contrôle requis rouge ou une revue manquante |
+| 3 | #214 — feat(DM-03-P): la grille publiee par axionia est importee version par version, chaque ligne confrontee a son empreinte | `t/dm-03-p` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -91,13 +92,28 @@ Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeS
 
 ## Dernier atterrissage
 
-`origin/main` = `c60e2f3` (2026-09-29T07:25:51+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `14a8594` (2026-09-29T10:16:33+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
 ## Journal
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
+
+### PR #218 — 2026-09-29 — feat(DM-04): commission et prorata en fonction pure, entiers exacts, bareme choisi par commissionId
+
+**Fait.** Le calcul d'une commission est une fonction pure : il lit le barème dans la version de
+grille importée, par l'identifiant que le producteur a résolu. Un forfait compte une fois, un
+pourcentage s'arrondit en entiers, un cas sans barème bloque, un dépassement du plafond bloque. Le
+prorata est cumulatif, en entiers exacts : quatre invariants tenus sur cinq cents tirages. Le
+plafond vit dans la SSOT, sourcé et daté.
+
+**Reste.** La PR est empilée sur l'import de la grille (#214) et se fusionne après lui. Le plafond
+est rangé sous `PARAMETRES` et non sous `SEUILS` : la garde des seuils ne connaît que les durées et
+les montants. Les cinq valeurs d'activité entrent au glossaire par le `gardien-spec`.
+
+**Appris.** Un taux de test égal à 1 ne distingue pas un produit d'un quotient. La mutation l'a
+montré : le témoin se juge désormais sur le taux le plus élevé de la grille.
 
 ### PR #214 — 2026-09-29 — feat(DM-03-P): la grille publiee par axionia est importee version par version, chaque ligne confrontee a son empreinte
 
@@ -130,26 +146,7 @@ cas d'une PR renommée après sa fusion n'est éprouvé que par la forge simulé
 **Appris.** Une donnée lue « maintenant » pour juger un fait passé doit être relue à l'instant de
 ce fait : sinon, la preuve dépend de ce que la forge laisse encore modifier.
 
-### PR #209 — 2026-09-29 — fix(GOV-075): aucun chemin gabarit la ou il ment, treize taches livrees reparees
-
-**Fait.** Un chemin gabarit dit « pas encore connu ». Sur une tâche livrée, c'est faux. La garde
-`gov:attributions` refuse désormais un gabarit sur une tâche livrée, sans statut, sans phase, ou de
-phase inférieure ou égale à la phase courante (famille `chemin_gabarit`). Les treize tâches livrées
-qui en portaient reçoivent leurs chemins réels, confrontés au disque et à l'historique git, par
-`ajouter-path` puis `retirer-path`. GOV-036 déclare les deux fichiers que son commit modifiait. La
-liste figée des gabarits tolérés est vide, donc elle est supprimée.
-
-**Reste.** Un gabarit de phase future est compté et imprimé, pas refusé. La garde rougira `main` au
-passage de phase tant que le lot préparatoire n'aura pas écrit les chemins de la phase suivante, et
-c'est voulu : un avenant A01 à l'acceptance le dit, le volet « aucun gabarit, quelle que soit la
-phase » n'étant pas tenu pour les phases futures. Les chemins repris de la vue dérivée n'avaient
-pas tous été confirmés par git : la lentille `exactitude` en a démontré trois faux (INT-T01b,
-GOV-002, GOV-017a), retirés dans cette PR au vu des commits de livraison.
-
-**Appris.** Un masque tolérant cache plus que ce qu'il nomme : le retirer a fait apparaître treize
-citations et deux gates non réciproques que personne n'avait déclarées.
-
-… 3 entrée(s) affichée(s) sur 88 ; les 85 plus ancienne(s) se lisent dans `docs/journal/`.
+… 3 entrée(s) affichée(s) sur 89 ; les 86 plus ancienne(s) se lisent dans `docs/journal/`.
 
 ## Dette déclarée
 
