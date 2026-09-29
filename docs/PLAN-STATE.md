@@ -8,12 +8,12 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `53e765e` — 2026-09-29T20:48:22+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #242 (un contrôle requis rouge ou une revue manquante) |
+| Qu’est-ce qui est en vol ? | 1. #242 (un contrôle requis rouge ou une revue manquante) · 2. #253 (un contrôle requis rouge ou une revue manquante) |
 | Qui tient quoi ? | GOV-124 (A01) · GOV-125 (A01) · GOV-126 (A01) |
 | Où en est la phase ? | phase 0 — 104/131 tâches, reste 20.50 j |
 | Le prochain pas | QA-T06 — Preview par PR sur Coolify, base éphémère, seed déterministe |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
-| Dernière entrée de journal | PR #251 — 2026-09-29 |
+| Dernière entrée de journal | PR #253 — 2026-09-29 |
 
 **Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
@@ -61,6 +61,7 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
 | 1 | #242 — feat(JUR-T34): la politique de confidentialite de l'espace, tiree du registre de l'article 30 et acceptee a la premiere connexion | `t/jur-t34` | un contrôle requis rouge ou une revue manquante |
+| 2 | #253 — feat(GOV-125): le motif de branche depend du depot de la tache, une tache axionia se clot sur sa branche | `t/gov-125-motif` | un contrôle requis rouge ou une revue manquante |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -78,7 +79,7 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 
 ## Décisions du jour
 
-`docs/adr/0025-les-decisions-de-gouvernance-de-will-s-ecrivent-en-adr.md` — partners/ADR-0025 — Les décisions de gouvernance de Will s'écrivent en ADR : la règle d'arrêt du 2026-09-15 et les arbitrages des 15 et 16 septembre · `docs/adr/0026-une-lentille-pour-une-pr-sans-risque.md` — partners/ADR-0026 — Une lentille pour une PR sans risque, deux pour tout le reste et dans le doute
+`docs/adr/0025-les-decisions-de-gouvernance-de-will-s-ecrivent-en-adr.md` — partners/ADR-0025 — Les décisions de gouvernance de Will s'écrivent en ADR : la règle d'arrêt du 2026-09-15 et les arbitrages des 15 et 16 septembre · `docs/adr/0026-une-lentille-pour-une-pr-sans-risque.md` — partners/ADR-0026 — Une lentille pour une PR sans risque, deux pour tout le reste et dans le doute · `docs/adr/0027-le-motif-de-branche-depend-du-depot-de-la-tache.md` — partners/ADR-0027 — Le motif de branche dépend du dépôt de la tâche
 
 Dérivé de `git log` sur `docs/adr/`, restreint au jour du dernier atterrissage. Une décision de Will n’est pas un ADR : elle vit au registre `docs/DECISIONS.md`, tranchée ou tenue par une hypothèse datée.
 
@@ -97,6 +98,18 @@ Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la
 ## Journal
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
+
+### PR #253 — 2026-09-29 — feat(GOV-125): le motif de branche depend du depot de la tache, une tache axionia se clot sur sa branche
+
+**Fait.** Le motif de branche du registre dépend désormais du dépôt de la tâche. Une tâche d'axion-ia
+se clôt sur une branche d'axion-ia, dont seule la forme est jugée ; une tâche de Partners garde les
+deux formes fermées. La clôture et l'outil hors dépôt lisent la même règle.
+
+**Reste.** Le rattrapage qui clôt les tâches d'axion-ia livrées et en production, puis celles de
+Partners qui en dépendaient.
+
+**Appris.** Un motif fermé qui ne connaît qu'un dépôt bloque en silence tout ce qui se livre dans
+l'autre : la dette ne s'est vue qu'au moment de clore une tâche d'argent déjà en production.
 
 ### PR #251 — 2026-09-29 — chore(GOV-012): registre rattrape, HT encaisse tranche par Williams, paths du lot A et de JUR-T29, GOV-125 versee
 
@@ -124,19 +137,7 @@ cette fermeture.
 **Appris.** Un témoin fait partie de la garde qu'il prouve : l'autoriser à une lentille, c'était
 autoriser la garde elle-même par un détour.
 
-### PR #248 — 2026-09-29 — feat(GOV-124): une lentille pour une PR sans risque, derivee et fermee, deux pour tout le reste
-
-**Fait.** Une PR de documentation, de tests ou d'outillage des vues, en zone gouvernance ou
-qualité, n'exige plus que la lentille exactitude. Le classement est dérivé par le calcul du risque,
-jamais déclaré, et tout ce qu'il ne sait pas lire vaut deux lentilles.
-
-**Reste.** L'architecte accepte l'ADR 0026. Aucune dérivation ne lit l'intention d'un texte : la
-limite est écrite dans l'ADR.
-
-**Appris.** Une liste d'autorisation doit exclure ce qui nourrit son propre calcul : sans cela, une
-PR relue par une seule lentille aurait pu ramener à une lentille toutes les PR suivantes d'une tâche.
-
-… 3 entrée(s) affichée(s) sur 109 ; les 106 plus ancienne(s) se lisent dans `docs/journal/`.
+… 3 entrée(s) affichée(s) sur 110 ; les 107 plus ancienne(s) se lisent dans `docs/journal/`.
 
 ## Dette déclarée
 
