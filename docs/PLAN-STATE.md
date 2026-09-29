@@ -13,7 +13,7 @@
 | Où en est la phase ? | phase 0 — 95/131 tâches, reste 29.00 j |
 | Le prochain pas | QA-T05 — Pipeline GHCR privé → Coolify pull |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
-| Dernière entrée de journal | PR #219 — 2026-09-29 |
+| Dernière entrée de journal | PR #221 — 2026-09-29 |
 
 **Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
@@ -99,6 +99,19 @@ Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
 
+### PR #221 — 2026-09-29 — feat(QA-T05): la forge construit, juge puis publie l'image, la plateforme ne fera plus que la tirer
+
+**Fait.** La forge construit l'image sans aucune variable de base, prouve qu'une page qui lit la
+base au rendu fait échouer le build en se nommant, joue la porte C sur ses deux faces (base et
+cache éphémères, puis une migration cassée en plus), et publie `latest` et `sha-<7>` sur `main`
+seulement, après ces quatre preuves.
+
+**Reste.** QA-T34, versée ici : le tirage par la plateforme, le producteur unique de déploiement et
+l'atterrissage vérifié par l'en-tête de build. Aucun accès à la plateforme n'existe encore.
+
+**Appris.** Ouvrir la PR en brouillon a fait tourner la porte C en forge avant la fin du travail :
+une gate qui a besoin de Docker se prouve là où Docker existe.
+
 ### PR #219 — 2026-09-29 — chore(GOV-012): registre rattrape, quatre taches closes, cinq suites versees
 
 **Fait.** Dixième rattrapage. GOV-075, GOV-110, GOV-084 et GOV-049 passent `fusionnee` par
@@ -125,21 +138,7 @@ contredisait le témoin d'une tâche en vol.
 **Appris.** Une prémisse qui tombe ne rend pas une tâche vide : elle déplace ce qu'il faut prouver.
 Ici, la règle tenait déjà ; c'est son témoin qui manquait.
 
-### PR #216 — 2026-09-29 — feat(GOV-084): tout script de garde suivi a une tache porteuse, deux barrieres rattachees a GOV-000
-
-**Fait.** `gov:attributions` refuse désormais un script suivi sous `scripts/gates/` que nulle tâche
-ne déclare (famille `script_de_garde_sans_porteur`). La liste vient de l'index git, jamais d'une
-liste tapée, et le vert imprime le compte des scripts confrontés : 49. Les deux derniers orphelins,
-`gh-sur.js` et `git-push-sur.js`, rejoignent GOV-000, qui porte leur appelant et leur garde.
-
-**Reste.** Rien sur cette garde. Le cas « une tâche déclare un script qui n'existe plus » est
-l'affaire de la traçabilité, pas de celle-ci.
-
-**Appris.** L'acceptance comptait neuf orphelins le 2026-09-16 ; la mesure refaite à la tête de
-`main` en donne deux. Un compte recopié dans une acceptance vieillit, et c'est la garde qui le rend
-vrai à chaque passage.
-
-… 3 entrée(s) affichée(s) sur 91 ; les 88 plus ancienne(s) se lisent dans `docs/journal/`.
+… 3 entrée(s) affichée(s) sur 92 ; les 89 plus ancienne(s) se lisent dans `docs/journal/`.
 
 ## Dette déclarée
 
