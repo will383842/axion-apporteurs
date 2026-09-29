@@ -13,7 +13,7 @@
 | Phase | Taches | Jours | Terminees |
 | --- | ---: | ---: | ---: |
 | -1 — Gouvernance (prealable bloquant) | 39 | 23.75 | 39 |
-| 0 — Socle technique | 132 | 99.85 | 110 |
+| 0 — Socle technique | 132 | 99.85 | 114 |
 | 1 — Operationnel | 78 | 67.00 | 0 |
 | 2 — Argent | 45 | 33.50 | 0 |
 | 3 — Pilotage et conformite | 36 | 32.25 | 0 |
@@ -642,7 +642,7 @@ Couvre : `REQ-ARG-004`, `REQ-ARG-006`, `REQ-ARG-007`, `REQ-ARG-017`, `REQ-DM-015
 
 **Tests.** `tests/unit/domaine/conservation.spec.ts` · `tests/unit/domaine/commission-calcul.spec.ts`
 
-### INT-T02 — Outbox Partners côté axionia
+### INT-T02 — Outbox Partners côté axionia ✅ **fusionnee**
 
 `1 j` · zone `integration` · `axionia` · `schema` · depend de `INT-T01b`
 
@@ -1673,7 +1673,7 @@ Couvre : `REQ-INT-004`, `REQ-INT-032`, `REQ-QA-007`
 
 **Tests.** `tests/unit/integration/contrat-hash.spec.ts` · `tests/unit/integration/contrat-v2-frontiere.spec.ts`
 
-### INT-T26 — Consommateur Partners de `candidature.recue` : apporteur `candidat`, coordonnées tirées et chiffrées, rattachement par empreinte
+### INT-T26 — Consommateur Partners de `candidature.recue` : apporteur `candidat`, coordonnées tirées et chiffrées, rattachement par empreinte ✅ **fusionnee**
 
 `1 j` · zone `integration` · sensible : rgpd · depend de `SEC-06`, `INT-T01c`, `INT-T27-A`, `SEC-03`, `SEC-04`, `DM-06`
 
@@ -1683,7 +1683,7 @@ Couvre : `REQ-INT-032`, `REQ-DM-035`, `REQ-QA-035`
 
 **Tests.** `tests/integration/candidature-recue.spec.ts`
 
-### INT-T27-A — Route axionia des coordonnées d'un candidat émis vers Partners : HMAC, portée limitée aux candidatures émises, réponse fermée, journal sans clair
+### INT-T27-A — Route axionia des coordonnées d'un candidat émis vers Partners : HMAC, portée limitée aux candidatures émises, réponse fermée, journal sans clair ✅ **fusionnee**
 
 `1 j` · zone `integration` · `axionia` · sensible : rgpd · depend de `INT-T02`, `INT-T01c`
 
@@ -1903,7 +1903,7 @@ Couvre : `REQ-GOV-011`
 
 **Tests.** `tests/unit/gouvernance/une-lentille-pour-une-pr-sans-risque.spec.ts`
 
-### GOV-127 — Le passif declare de la declaration : une livraison nommee a la fusion mais au squash non conforme se clot sur arbitrage ecrit
+### GOV-127 — Le passif declare de la declaration : une livraison nommee a la fusion mais au squash non conforme se clot sur arbitrage ecrit ✅ **fusionnee**
 
 `0.5 j` · zone `gouvernance` · depend de `GOV-125`
 

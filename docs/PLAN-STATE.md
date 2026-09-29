@@ -8,9 +8,9 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `8d6d219` — 2026-09-29T22:00:53+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #254 (un conflit avec `main`) · 2. #255 (un conflit avec `main`) · 3. #242 (état `UNKNOWN`) |
-| Qui tient quoi ? | GOV-127 (A01) |
-| Où en est la phase ? | phase 0 — 110/132 tâches, reste 17.75 j |
+| Qu’est-ce qui est en vol ? | 1. #254 (un contrôle requis rouge ou une revue manquante) · 2. #255 (un contrôle requis rouge ou une revue manquante) · 3. #242 (un conflit avec `main`) |
+| Qui tient quoi ? | aucune tâche revendiquée |
+| Où en est la phase ? | phase 0 — 114/132 tâches, reste 14.25 j |
 | Le prochain pas | QA-T06 — Preview par PR sur Coolify, base éphémère, seed déterministe |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
 | Dernière entrée de journal | PR #257 — 2026-09-29 |
@@ -19,19 +19,19 @@
 
 ## Phase courante : 0
 
-110/132 tâches terminées · reste 17.75 j estimés.
+114/132 tâches terminées · reste 14.25 j estimés.
 
 ## Tâches
 
 | Statut | Nombre | Détail |
 | --- | --- | --- |
 | `proposee` | 0 | — |
-| `a_faire` | 179 | QA-T06, QA-T12, QA-T13, INT-T02, INT-T03, INT-T04, INT-T05, INT-T22, JUR-T03, QA-T20, JUR-T29, DM-07 … (12 affichées sur 179 — liste complète : `docs/TASKS.md`) |
+| `a_faire` | 175 | QA-T06, QA-T12, QA-T13, INT-T03, INT-T04, INT-T05, INT-T22, JUR-T03, QA-T20, JUR-T29, DM-07, DM-08 … (12 affichées sur 175 — liste complète : `docs/TASKS.md`) |
 | `en_cours` | 0 | — |
 | `bloquee` | 0 | — |
 | `attente_externe` | 2 | JUR-T01b · JUR-T01c |
 | `en_revue` | 0 | — |
-| `fusionnee` | 149 | GOV-000, GOV-007, GOV-001, GOV-018, GOV-008, GOV-002, GOV-003, GOV-004, GOV-005, GOV-006, GOV-009, GOV-010 … (12 affichées sur 149 — liste complète : `docs/TASKS.md`) |
+| `fusionnee` | 153 | GOV-000, GOV-007, GOV-001, GOV-018, GOV-008, GOV-002, GOV-003, GOV-004, GOV-005, GOV-006, GOV-009, GOV-010 … (12 affichées sur 153 — liste complète : `docs/TASKS.md`) |
 | `deployee` | 0 | — |
 | `verifiee` | 0 | — |
 
@@ -60,9 +60,9 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #254 — docs(GOV-017a): W20, questions 18 et 19 tranchees — aucune tacite d'une demande signalee, liberee apres 3 injoignables ou 45 jours | `t/w20-q18-q19` | un conflit avec `main` — à résoudre avant tout |
-| 2 | #255 — chore(GOV-012): registre rattrape, six taches closes dont DM-03-A livree dans axion-ia, paths de JUR-T03 et JUR-T29 | `t/registre-rattrapage-14` | un conflit avec `main` — à résoudre avant tout |
-| 3 | #242 — feat(JUR-T34): la politique de confidentialite de l'espace, tiree du registre de l'article 30 et acceptee a la premiere connexion | `t/jur-t34` | état `UNKNOWN` — à qualifier à la main |
+| 1 | #254 — docs(GOV-017a): W20, questions 18 et 19 tranchees — aucune tacite d'une demande signalee, liberee apres 3 injoignables ou 45 jours | `t/w20-q18-q19` | un contrôle requis rouge ou une revue manquante |
+| 2 | #255 — chore(GOV-012): registre rattrape, six taches closes dont DM-03-A livree dans axion-ia, paths de JUR-T03 et JUR-T29 | `t/registre-rattrapage-14` | un contrôle requis rouge ou une revue manquante |
+| 3 | #242 — feat(JUR-T34): la politique de confidentialite de l'espace, tiree du registre de l'article 30 et acceptee a la premiere connexion | `t/jur-t34` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -70,9 +70,7 @@ Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partn
 
 Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’issue, posés par l’orchestrateur au §3 de `.claude/skills/lot/SKILL.md` (revendication **en vol**), et le champ `owner` de `docs/tasks.json`, écrit par `pnpm lot:cloture` seul (revendication **consolidée**). Cette rubrique les REND ; corriger une revendication fausse se fait dans l’une des deux sources, jamais ici.
 
-| Tâche | Revendiquée par | Issue | Statut |
-| --- | --- | --- | --- |
-| GOV-127 — Le passif declare de la declaration : une livraison nommee a la fusion mais au squash non conforme se clot sur arbitrage ecrit | A01 | #256 | `a_faire` |
+Aucune tâche revendiquée. Un agent ne prend jamais une tâche non revendiquée (REQ-GOV-007) : la revendication passe par l’orchestrateur.
 
 ⚠️ **13 revendication(s) périmée(s)** — QA-T07, GOV-042, GOV-045, GOV-050, GOV-051, GOV-053, GOV-054, GOV-055, GOV-060, GOV-072, GOV-079, GOV-093, INT-T01c : leur issue porte encore un label `owner:` alors que la tâche est livrée. `pnpm lot:cloture` écrit `docs/tasks.json` mais n’efface pas les labels ; la dette appartient à GOV-012.
 
@@ -84,7 +82,7 @@ Dérivé de `git log` sur `docs/adr/`, restreint au jour du dernier atterrissage
 
 ## Prochain pas
 
-**QA-T06** — Preview par PR sur Coolify, base éphémère, seed déterministe (1 j) : 12 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
+**QA-T06** — Preview par PR sur Coolify, base éphémère, seed déterministe (1 j) : 14 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
 Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeStateStatus` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage —, la tâche ensuite. L’ordre de la file se corrige à la rubrique « File de fusion », jamais ici.
 

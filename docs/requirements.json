@@ -316,7 +316,7 @@
     {
       "id": "REQ-DM-021",
       "domaine": "domaine-donnees",
-      "texte": "La résolution d'un encaissement cherche l'attribution occupante du `siren` du client bénéficiaire résolu par axionia (facture ?? session ?? enrollment ?? dossier ; jamais le SIRET du destinataire ou du payeur), sinon un RattachementManuel actif ; un événement sans `siren`, sans clientId ou sans facture est accepté, crée une ligne `bloquee` motif `non_resolue` (enum `MotifBlocage`, REQ-ARG-017) et une Anomalie visible en console — jamais un silence, jamais un rejet.",
+      "texte": "La résolution d'un encaissement cherche l'attribution occupante du `siren` du client bénéficiaire résolu par axionia (facture ?? enrollment ?? session ?? dossier — une inscription sans client descend à la session, et un bénéficiaire sans SIREN lisible part `non_resolue` avec alerte, jamais une devinette ; jamais le SIRET du destinataire ou du payeur), sinon un RattachementManuel actif ; un événement sans `siren`, sans clientId ou sans facture est accepté, crée une ligne `bloquee` motif `non_resolue` (enum `MotifBlocage`, REQ-ARG-017) et une Anomalie visible en console — jamais un silence, jamais un rejet. Ordre amendé le 2026-09-29 : arbitrage -d7 sur délégation de Williams du 2026-09-29 (l'inscription, employeur du participant, passe avant la session).",
       "source": "fonctionnement R13 ; tableaux-de-bord B11 ; anti-abus F12 ; nouvelle (F-DM-04) ; texte décidé de l'annexe de dédoublonnage, remis le 2026-09-19 (décision de Will)",
       "statut": "active",
       "remplaceePar": null,
