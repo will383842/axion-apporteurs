@@ -8,12 +8,12 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `b3d7572` — 2026-09-29T12:12:09+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #218 (un contrôle requis rouge ou une revue manquante) · 2. #221 (un contrôle requis rouge ou une revue manquante) · 3. #226 (un contrôle requis rouge ou une revue manquante) · 4. #228 (un contrôle requis rouge ou une revue manquante) |
+| Qu’est-ce qui est en vol ? | 1. #218 (un contrôle requis rouge ou une revue manquante) · 2. #221 (un contrôle requis rouge ou une revue manquante) · 3. #226 (un contrôle requis rouge ou une revue manquante) · 4. #228 (un contrôle requis rouge ou une revue manquante) · 5. #230 (un contrôle requis rouge ou une revue manquante) |
 | Qui tient quoi ? | GOV-119 (A01) |
 | Où en est la phase ? | phase 0 — 95/134 tâches, reste 31.50 j |
 | Le prochain pas | QA-T05 — Pipeline GHCR privé → Coolify pull |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
-| Dernière entrée de journal | PR #225 — 2026-09-29 |
+| Dernière entrée de journal | PR #230 — 2026-09-29 |
 
 **Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
@@ -64,6 +64,7 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 | 2 | #221 — feat(QA-T05): la forge construit, juge puis publie l'image, la plateforme ne fera plus que la tirer | `t/qa-t05` | un contrôle requis rouge ou une revue manquante |
 | 3 | #226 — fix(GOV-122): un renommage a la seconde de la fusion est indecidable, une date illisible rend la chronologie illisible | `t/gov-122` | un contrôle requis rouge ou une revue manquante |
 | 4 | #228 — test(GOV-121): la preuve de vol est jouee a null, la forme reelle du registre, et le docblock dit juste | `t/gov-121` | un contrôle requis rouge ou une revue manquante |
+| 5 | #230 — docs(GOV-012): conseillers salaries — plan W19 et taches versees (GOV-112, GOV-115 a GOV-117), sans DECISIONS ni GLOSSAIRE | `t/archi-commerciaux-salaries` | un contrôle requis rouge ou une revue manquante |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -99,6 +100,23 @@ Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
 
+### PR #230 — 2026-09-29 — docs(GOV-012): conseillers salaries — plan W19 et taches versees (GOV-112, GOV-115 a GOV-117), sans DECISIONS ni GLOSSAIRE
+
+**Fait.** Le plan du chantier W19 est versé dans `docs/chantiers/W19-conseillers-salaries.md`, avec
+les réponses de Williams du 2026-09-29, dont la question 22 : les conseillers travaillent dans le CRM
+Pro, et Partners garde le registre et décide par l'API 3. Quatre tâches entrent au registre `a_faire`
+(GOV-112, GOV-115, GOV-116, GOV-117) ; INT-T28, SEC-34 et DM-32 sont ajoutées au plan, UX-P2-11 en
+sort. Chiffrage : chantier W19 21,0 j, lot transverse « confort de la console pour tous les rôles »
+15,7 j, total Partners 36,7 j.
+
+**Reste.** Tout le chantier : GOV-116 puis GOV-112 écrivent `docs/DECISIONS.md`, `docs/GLOSSAIRE.md`
+et `docs/PRESEANCE.md`, que cette PR ne touche pas ; GOV-117 puis GOV-115 versent les trente-deux
+autres tâches. Aucune tâche W19 n'est livrée par cette PR.
+
+**Appris.** Un titre de PR doit nommer une tâche du registre, et une PR sur une tâche `a_faire`
+non revendiquée rougit `gov:etat` : une PR de plan qui verse ses tâches sans les livrer se titre sur
+une tâche déjà livrée, comme la PR #219 sur GOV-012, jamais sur l'une des tâches qu'elle verse.
+
 ### PR #225 — 2026-09-29 — fix(GOV-119): une fusion posterieure au clone est nommee et comptee, pas un rouge de la porte A
 
 **Fait.** `gov:etat` ne rougit plus quand une autre PR fusionne pendant la porte A d'une PR. Une
@@ -124,20 +142,7 @@ pas livrée, une fusion pendant la porte A d'une autre PR peut faire rougir cell
 **Appris.** Une acceptance qui cite un fichier et sa ligne affirme un fait daté : la sonde exige
 alors son repère. Nommer le fichier sans la ligne suffit à dire où regarder.
 
-### PR #217 — 2026-09-29 — test(GOV-049): une tache en cours hors lot porte la preuve de son vol, et la clause a enfin un temoin rouge
-
-**Fait.** L'acceptance de GOV-049 est réécrite par un avenant A01, sur l'arbitrage de Will. Une
-tâche `en_cours` porte un lot, ou la preuve de son vol : `owner` et `branch`. Le schéma l'exigeait
-déjà ; aucun témoin ne le voyait refuser. Il en a un, sur une tâche hors de tout lot, et sa
-capacité à rougir est mesurée par mutation.
-
-**Reste.** Rien sur cette règle. La première rédaction, qui exigeait un lot, est abandonnée : elle
-contredisait le témoin d'une tâche en vol.
-
-**Appris.** Une prémisse qui tombe ne rend pas une tâche vide : elle déplace ce qu'il faut prouver.
-Ici, la règle tenait déjà ; c'est son témoin qui manquait.
-
-… 3 entrée(s) affichée(s) sur 92 ; les 89 plus ancienne(s) se lisent dans `docs/journal/`.
+… 3 entrée(s) affichée(s) sur 93 ; les 90 plus ancienne(s) se lisent dans `docs/journal/`.
 
 ## Dette déclarée
 
