@@ -132,9 +132,11 @@ describe('REQ-GOV-031 — la garde d’entité juge chaque commit de la PR, pas 
   });
 
   it('REQ-GOV-031 — TÉMOIN : sur une demande de fusion, une base introuvable est un refus, pas « zéro commit lu »', () => {
-    expect(baseIntrouvableRefusee(true, 'pull_request')).toBe(true);
-    expect(baseIntrouvableRefusee(false, 'pull_request')).toBe(false);
-    expect(baseIntrouvableRefusee(true, 'push')).toBe(false);
-    expect(baseIntrouvableRefusee(true, undefined)).toBe(false);
+    expect(baseIntrouvableRefusee(true, 'pull_request', true)).toBe(true);
+    expect(baseIntrouvableRefusee(false, 'pull_request', true)).toBe(false);
+    expect(baseIntrouvableRefusee(true, 'push', true)).toBe(false);
+    expect(baseIntrouvableRefusee(true, undefined, true)).toBe(false);
+    // Un banc d'essai jetable, sans origine, qui hérite de l'environnement de la forge : pas refusé.
+    expect(baseIntrouvableRefusee(true, 'pull_request', false)).toBe(false);
   });
 });

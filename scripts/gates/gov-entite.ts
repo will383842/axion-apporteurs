@@ -3112,13 +3112,26 @@ export const LIMITE_DE_L_HISTORIQUE =
  * GOV-066 (relevé de la lentille `securite`, PR #235) — SUR UNE DEMANDE DE FUSION, UNE BASE
  * INTROUVABLE N'EST PAS « ZÉRO COMMIT À LIRE ». Sans point de divergence avec `main`, la plage est
  * vide et le vert dirait « 0 commit lu » d'une PR qui en porte : la garde refuse. Hors demande de
- * fusion (poste local, `main`), la tête seule est jugée, et le vert le dit.
+ * fusion (poste local, `main`), la tête seule est jugée, et le vert le dit. Un dépôt SANS ORIGINE
+ * (un banc d'essai jetable, qui hérite de l'environnement de la forge) n'est pas le clone d'une PR :
+ * il n'est pas refusé pour cela.
  */
 export function baseIntrouvableRefusee(
   baseIntrouvable: boolean,
-  declencheur: string | undefined
+  declencheur: string | undefined,
+  aUneOrigine: boolean
 ): boolean {
-  return baseIntrouvable && declencheur === 'pull_request';
+  return baseIntrouvable && declencheur === 'pull_request' && aUneOrigine;
+}
+
+/** Le clone a-t-il une origine distante ? Un banc d'essai jetable n'en a pas. */
+function aUneOrigineDistante(): boolean {
+  try {
+    execFileSync('git', ['remote', 'get-url', 'origin'], { stdio: 'ignore' });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export function lireUnivers(): Univers {
@@ -3865,7 +3878,11 @@ if (APPELE_DIRECTEMENT) {
   } else {
     const univers = lireUnivers();
     if (
-      baseIntrouvableRefusee(univers.baseIntrouvable === true, process.env['GITHUB_EVENT_NAME'])
+      baseIntrouvableRefusee(
+        univers.baseIntrouvable === true,
+        process.env['GITHUB_EVENT_NAME'],
+        aUneOrigineDistante()
+      )
     ) {
       console.error(
         `❌ gov:entite — [source_illisible] aucun point de divergence avec main dans ce clone : les ` +
