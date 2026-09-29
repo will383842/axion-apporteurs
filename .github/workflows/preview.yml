@@ -1,0 +1,94 @@
+# Une preview par PR — QA-T06 (REQ-QA-015), arbitrage -d7 sur délégation de Williams du 2026-09-29,
+# option (B) sous six conditions, tenues par `tests/unit/qualite/preview-par-pr.spec.ts` :
+#
+#   `publier-image` — APRÈS le workflow `Image` réussi sur une PR du MÊME dépôt (jamais une
+#     fourche) : reconstruit l'image depuis la tête de la PR et la pousse dans le SEUL paquet de
+#     preview (`…/axion-apporteurs-preview:pr-<n>-<sha7>`). Il exécute le code de la PR, et c'est
+#     pourquoi il ne lit AUCUN autre secret que le jeton de la forge, borné à `packages: write`.
+#   `deployer` — job SÉPARÉ : il n'extrait que la branche principale, lit le numéro et le sha comme
+#     des DONNÉES, et seul détient le jeton de plateforme dédié aux previews. Une décision à la fois
+#     (`preview-attribution`) : jamais plus de deux previews ; une troisième PR attend.
+#   `detruire` — à la fermeture de la PR (`pull_request_target` : le code de la BASE, jamais celui
+#     de la PR) : application, base, cache et étiquettes de preview supprimés.
+#
+# Secrets absents : chaque geste est SAUTÉ et nomme chaque absent en `::warning::`.
+name: Preview
+
+on:
+  workflow_run:
+    workflows: [Image]
+    types: [completed]
+  pull_request_target:
+    types: [closed]
+
+jobs:
+  publier-image:
+    if: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_repository.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - run: pnpm install --frozen-lockfile
+      - name: Publier l image de la PR dans le seul paquet de preview
+        env:
+          JETON: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMERO: ${{ github.event.workflow_run.pull_requests[0].number }}
+          TETE: ${{ github.event.workflow_run.head_sha }}
+        run: pnpm preview:publier-image
+
+  deployer:
+    needs: publier-image
+    runs-on: ubuntu-latest
+    concurrency:
+      group: preview-attribution
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - run: pnpm install --frozen-lockfile
+      - name: Creer ou mettre a jour la preview sous le plafond, et commenter son adresse
+        env:
+          COOLIFY_URL: ${{ secrets.COOLIFY_URL }}
+          COOLIFY_PREVIEW_TOKEN: ${{ secrets.COOLIFY_PREVIEW_TOKEN }}
+          COOLIFY_SERVER_UUID: ${{ vars.COOLIFY_SERVER_UUID }}
+          PREVIEW_DOMAINE: ${{ vars.PREVIEW_DOMAINE }}
+          PR_NUMERO: ${{ github.event.workflow_run.pull_requests[0].number }}
+          TETE: ${{ github.event.workflow_run.head_sha }}
+          GH_TOKEN: ${{ github.token }}
+        run: pnpm preview:attribuer
+
+  detruire:
+    if: ${{ github.event_name == 'pull_request_target' && github.event.action == 'closed' }}
+    runs-on: ubuntu-latest
+    concurrency:
+      group: preview-attribution
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - run: pnpm install --frozen-lockfile
+      - name: Detruire l application, la base, le cache et les etiquettes de la preview
+        env:
+          COOLIFY_URL: ${{ secrets.COOLIFY_URL }}
+          COOLIFY_PREVIEW_TOKEN: ${{ secrets.COOLIFY_PREVIEW_TOKEN }}
+          PR_NUMERO: ${{ github.event.pull_request.number }}
+          GH_TOKEN: ${{ github.token }}
+        run: pnpm preview:detruire

@@ -154,7 +154,8 @@ describe('REQ-QA-015 — le workflow de preview tient les six conditions', () =>
   it('REQ-QA-015 : (4) deployer est séparé, n’extrait que la branche principale, et seul détient le jeton de preview', () => {
     const d = job('deployer');
     expect([d.needs].flat()).toContain('publier-image');
-    expect(d.permissions).toEqual({ contents: 'read' });
+    // `pull-requests: write` : l'URL de la preview est commentée sur la PR (acceptation, point 2).
+    expect(d.permissions).toEqual({ contents: 'read', 'pull-requests': 'write' });
     const checkout = (d.steps ?? []).find((s) => s.uses?.startsWith('actions/checkout'));
     expect(checkout?.with?.ref).toBe('${{ github.event.repository.default_branch }}');
     expect([...new Set(secretsDe(d))].sort()).toEqual([
