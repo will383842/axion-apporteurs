@@ -239,3 +239,4 @@ _(rien à consolider — vingt-quatre leçons au journal. Consolidation du 2026-
 - **JUR-T34** (PR #242) — historique des versions acceptées de la politique ; micro-copie « Votre espace s'ouvre… ».
 - **GOV-117** (PR #259) — l'acceptance (7) cite `gov:tasks` là où la garde est `gov:requirements` ; pas d'option `--abaisse-le-risque` pour les outils hors dépôt.
 - **QA-T34** — `docs/gates.json`, porte de déploiement : le champ `tache` reste GOV-000 (non écrivable par les outils, voulu) alors que QA-T34 livre `deploy-verify`.
+- **GOV-128** (PR #278) — le champ `date` d'une entrée du passif n'est pas documenté : pour #1228, c'est la date de l'arbitrage (2026-09-30), la fusion étant du 2026-09-29 en UTC.
