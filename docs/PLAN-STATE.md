@@ -8,12 +8,12 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `840ace7` — 2026-09-29T10:46:44+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #214 (un contrôle requis rouge ou une revue manquante) · 2. #218 (un conflit avec `main`) |
+| Qu’est-ce qui est en vol ? | 1. #214 (un contrôle requis rouge ou une revue manquante) · 2. #219 (un contrôle requis rouge ou une revue manquante) · 3. #218 (un conflit avec `main`) |
 | Qui tient quoi ? | aucune tâche revendiquée |
 | Où en est la phase ? | phase 0 — 95/130 tâches, reste 28.50 j |
 | Le prochain pas | QA-T05 — Pipeline GHCR privé → Coolify pull |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
-| Dernière entrée de journal | PR #217 — 2026-09-29 |
+| Dernière entrée de journal | PR #219 — 2026-09-29 |
 
 **Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
@@ -61,7 +61,8 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
 | 1 | #214 — feat(DM-03-P): la grille publiee par axionia est importee version par version, chaque ligne confrontee a son empreinte | `t/dm-03-p` | un contrôle requis rouge ou une revue manquante |
-| 2 | #218 — feat(DM-04): commission et prorata en fonction pure, entiers exacts, bareme choisi par commissionId | `t/dm-04` | un conflit avec `main` — à résoudre avant tout |
+| 2 | #219 — chore(GOV-012): registre rattrape, quatre taches closes, cinq suites versees | `t/registre-rattrapage-10` | un contrôle requis rouge ou une revue manquante |
+| 3 | #218 — feat(DM-04): commission et prorata en fonction pure, entiers exacts, bareme choisi par commissionId | `t/dm-04` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -95,6 +96,19 @@ Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
 
+### PR #219 — 2026-09-29 — chore(GOV-012): registre rattrape, quatre taches closes, cinq suites versees
+
+**Fait.** Dixième rattrapage. GOV-075, GOV-110, GOV-084 et GOV-049 passent `fusionnee` par
+`lot:cloture --tache`, chacune attestée par son commit d'écrasement. Cinq suites sont versées
+`a_faire`, de GOV-117 à GOV-121 : toutes sont des relevés non bloquants des deux lentilles, et
+l'une est une mesure faite sur la porte A de la PR #209.
+
+**Reste.** Les suites versées. GOV-119 est la plus coûteuse à laisser courir : tant qu'elle n'est
+pas livrée, une fusion pendant la porte A d'une autre PR peut faire rougir celle-ci.
+
+**Appris.** Une acceptance qui cite un fichier et sa ligne affirme un fait daté : la sonde exige
+alors son repère. Nommer le fichier sans la ligne suffit à dire où regarder.
+
 ### PR #217 — 2026-09-29 — test(GOV-049): une tache en cours hors lot porte la preuve de son vol, et la clause a enfin un temoin rouge
 
 **Fait.** L'acceptance de GOV-049 est réécrite par un avenant A01, sur l'arbitrage de Will. Une
@@ -122,20 +136,7 @@ l'affaire de la traçabilité, pas de celle-ci.
 `main` en donne deux. Un compte recopié dans une acceptance vieillit, et c'est la garde qui le rend
 vrai à chaque passage.
 
-### PR #211 — 2026-09-29 — fix(GOV-110): la cloture confronte le sujet d'ecrasement au titre que la PR portait a l'instant de la fusion
-
-**Fait.** La clôture d'une tâche seule attendait, pour première ligne du commit d'écrasement, le
-titre ACTUEL de la PR, qui reste modifiable après la fusion. Elle lit maintenant les renommages dans
-la chronologie de la PR et retient le titre en vigueur à `mergedAt`. Un renommage postérieur est
-sans effet. Une chronologie illisible fait refuser la clôture, sans repli sur le titre actuel.
-
-**Reste.** La commande réelle a été jouée en lecture sur la PR #207, renommée avant sa fusion. Le
-cas d'une PR renommée après sa fusion n'est éprouvé que par la forge simulée.
-
-**Appris.** Une donnée lue « maintenant » pour juger un fait passé doit être relue à l'instant de
-ce fait : sinon, la preuve dépend de ce que la forge laisse encore modifier.
-
-… 3 entrée(s) affichée(s) sur 89 ; les 86 plus ancienne(s) se lisent dans `docs/journal/`.
+… 3 entrée(s) affichée(s) sur 90 ; les 87 plus ancienne(s) se lisent dans `docs/journal/`.
 
 ## Dette déclarée
 
