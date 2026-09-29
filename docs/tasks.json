@@ -13415,7 +13415,9 @@
         "REQ-GOV-021": [
           "tests/unit/gouvernance/reqs-hyp-zone-d-une-tache.spec.ts"
         ]
-      }
+      },
+      "issue": 258,
+      "owner": "A01"
     },
     {
       "id": "GOV-122",

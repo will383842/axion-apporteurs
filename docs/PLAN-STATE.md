@@ -7,13 +7,13 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `6d36f60` — 2026-09-29T22:44:33+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #261 (un contrôle requis rouge ou une revue manquante) · 2. #242 (un conflit avec `main`) · 3. #259 (un conflit avec `main`) |
-| Qui tient quoi ? | JUR-T34 (A01) · GOV-127 (A01) |
+| Où est `main` ? | `581a3fb` — 2026-09-29T23:05:26+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #242 (un conflit avec `main`) · 2. #261 (un conflit avec `main`) · 3. #262 (un conflit avec `main`) |
+| Qui tient quoi ? | GOV-117 (A01) · JUR-T34 (A01) · GOV-127 (A01) |
 | Où en est la phase ? | phase 0 — 110/132 tâches, reste 17.75 j |
 | Le prochain pas | QA-T06 — Preview par PR sur Coolify, base éphémère, seed déterministe |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
-| Dernière entrée de journal | PR #257 — 2026-09-29 |
+| Dernière entrée de journal | PR #259 — 2026-09-29 |
 
 **Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
@@ -60,9 +60,9 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #261 — chore(GOV-012): registre rattrape, INT-T02 INT-T27-A et INT-T26 closes, REQ-DM-021 amendee, JUR-T36 versee | `t/registre-rattrapage-15` | un contrôle requis rouge ou une revue manquante |
-| 2 | #242 — feat(JUR-T34): la politique de confidentialite de l'espace, tiree du registre de l'article 30 et acceptee a la premiere connexion | `t/jur-t34` | un conflit avec `main` — à résoudre avant tout |
-| 3 | #259 — feat(GOV-117): l'outil du registre ecrit reqs, hyp et zone d'une tache, valides contre le schema et les registres | `t/gov-117` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #242 — feat(JUR-T34): la politique de confidentialite de l'espace, tiree du registre de l'article 30 et acceptee a la premiere connexion | `t/jur-t34` | un conflit avec `main` — à résoudre avant tout |
+| 2 | #261 — chore(GOV-012): registre rattrape, INT-T02 INT-T27-A et INT-T26 closes, REQ-DM-021 amendee, JUR-T36 versee | `t/registre-rattrapage-15` | un conflit avec `main` — à résoudre avant tout |
+| 3 | #262 — feat(GOV-116): le lot dedie du gardien-spec, procedure exacte lancee par Williams, reglages rendus depuis le projet | `t/gov-116` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -72,6 +72,7 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 
 | Tâche | Revendiquée par | Issue | Statut |
 | --- | --- | --- | --- |
+| GOV-117 — L'outil d'écriture du registre écrit reqs, hyp et zone d'une tâche existante, validés contre le schéma, les REQ et les HYP existantes, et journalisés | A01 | #258 | `a_faire` |
 | JUR-T34 — La politique de confidentialite de l'espace : affichee, acceptee a la premiere connexion, tiree du registre de l'article 30 | A01 | #238 | `a_faire` |
 | GOV-127 — Le passif declare de la declaration : une livraison nommee a la fusion mais au squash non conforme se clot sur arbitrage ecrit | A01 | #256 | `a_faire` |
 
@@ -91,13 +92,24 @@ Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeS
 
 ## Dernier atterrissage
 
-`origin/main` = `6d36f60` (2026-09-29T22:44:33+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `581a3fb` (2026-09-29T23:05:26+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
 ## Journal
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
+
+### PR #259 — 2026-09-29 — feat(GOV-117): l'outil du registre ecrit reqs, hyp et zone d'une tache, valides contre le schema et les registres
+
+**Fait.** Les outils hors dépôt savent écrire les exigences, les hypothèses et la zone d'une tâche,
+avec sept refus nommés et les exigences redérivées après chaque écriture. Un témoin du dépôt montre
+que les gardes prennent une écriture qui passerait sans l'outil.
+
+**Reste.** GOV-115 peut désormais écrire les tâches de W19 dans leurs champs.
+
+**Appris.** Une dérivation copiée dans un seul outil finit par diverger des autres : l'extraire en une
+fonction unique a aussi réparé la phase des exigences, que le versement ne dérivait pas.
 
 ### PR #257 — 2026-09-29 — feat(GOV-127): le passif declare de la declaration, une liste fermee a une entree levee sur arbitrage ecrit
 
@@ -122,42 +134,7 @@ arbitrée demande un outil, GOV-127. INT-T27-A et INT-T26 attendent derrière el
 **Appris.** Un arbitrage ne suffit pas quand aucun outil ne sait l'écrire : le registre ne s'édite
 pas à la main, et l'exception doit elle-même devenir une règle écrite, fermée et testée.
 
-### PR #254 — 2026-09-29 — docs(GOV-017a): W20, questions 18 et 19 tranchees — aucune tacite d'une demande signalee, liberee apres 3 injoignables ou 45 jours
-
-**Fait.** Les réponses de Williams du 2026-09-29, vers 20 h (session -d7), sont reportées dans
-`docs/chantiers/W20-confirmation-par-email.md` et au registre. Question 18 : la valeur par défaut est
-retenue, une demande signalée n'est jamais confirmée par le seul silence. Question 19, proposée par la
-lentille securite : sans appel concluant, la demande signalée est libérée, sans aucune sanction, après
-3 appels `injoignable` ou 45 jours après l'envoi, au premier terme ; les deux valeurs sont des
-paramètres de la SSOT ; l'entreprise redevient disponible, l'apporteur reçoit une notification neutre et
-peut redéposer aux règles ordinaires. Au plan : HYP-W20-TACITE mise à jour, HYP-W20-LIBERATION créée,
-REQ-DM-063 proposée, REQ-DM-042, REQ-DM-008, REQ-SEC-060, REQ-DM-062 et REQ-UX-062 mises à jour, badge
-« Réservation terminée », risque 1 point ii fermé, réponses datées au §9. Au registre, par
-`reecrire-champ` : acceptances de DM-24, DM-13, SEC-41, UX-P1-05, UX-P1-41, UX-P1-43, JUR-T40,
-JUR-T01b, QA-T40, QA-T41 et avenant (8) de GOV-112 ; dépendances : DM-13 dépend de DM-40, SEC-41, UX-P1-10 et
-DM-24 de SEC-41 ; DM-13 passe de 0,75 à 1 j. Puis les arbitrages de -d7 sur délégation de Williams
-du même jour : les précisions de la libération (45 jours depuis la première demande, seuls les
-`injoignable`, rebond non corrigé libéré de même, état `perimee`, badge et notification) sont validées,
-et le redépôt en boucle est fermé par une carence : le même apporteur ne redépose pas le même SIREN
-pendant 30 jours, 90 après une deuxième libération, sans sanction et sans valeur d'enum nouvelle
-(HYP-W20-CARENCE-REDEPOT, REQ-DM-063). Question 20 tranchée le même jour par -d7 sur délégation de
-Williams, défaut retenu : pendant la carence, le redépôt n'atteint pas le formulaire, l'écran dit « Vous
-pourrez déposer cette entreprise à nouveau à partir du (date). » sans bouton « Déposer », une requête
-forgée reçoit une erreur serveur qui n'est pas une issue de dépôt, consigne W19 maintenue ; la carence
-reste à 90 jours au-delà de deux libérations. DM-13, SEC-41,
-JUR-T40, JUR-T01b, QA-T40, QA-T41 et GOV-112 réécrites de nouveau ; DM-13 passe à 1,25 j. Phase 1 :
-18,0 j.
-
-**Reste.** La passe gardien-spec de GOV-112 écrit HYP-W20-LIBERATION et REQ-DM-063 avec les autres.
-Questions 16 et 17 toujours ouvertes. L'écran de la carence est tranché par le même arbitrage : UX-P1-02
-(formulaire de dépôt) et la carte « Vérifier » UX-P1-01, dont les acceptances le portent. Aucune tâche W20 n'est livrée par cette PR.
-
-**Appris.** Borner une attente change aussi le texte qui disait « la seule conséquence du silence » :
-la phrase vivait dans l'exigence, le contrat proposé et la relecture du contrat, et une seule copie
-oubliée aurait promis le contraire de la règle. Un test qui disait « toujours rouge à 60 jours » est
-devenu faux par la même réponse : une borne se relit dans tous les témoins datés.
-
-… 3 entrée(s) affichée(s) sur 114 ; les 111 plus ancienne(s) se lisent dans `docs/journal/`.
+… 3 entrée(s) affichée(s) sur 115 ; les 112 plus ancienne(s) se lisent dans `docs/journal/`.
 
 ## Dette déclarée
 
