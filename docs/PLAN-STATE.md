@@ -7,26 +7,26 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `b34b959` — 2026-09-29T18:00:27+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #244 (un conflit avec `main`) · 2. #241 (état `UNKNOWN`) · 3. #242 (état `UNKNOWN`) · 4. #245 (état `UNKNOWN`) |
+| Où est `main` ? | `603e7f0` — 2026-09-29T18:16:13+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #242 (un conflit avec `main`) · 2. #244 (un conflit avec `main`) · 3. #245 (un conflit avec `main`) · 4. #246 (un conflit avec `main`) |
 | Qui tient quoi ? | GOV-062 (A01) |
-| Où en est la phase ? | phase 0 — 102/127 tâches, reste 19.50 j |
+| Où en est la phase ? | phase 0 — 102/129 tâches, reste 21.75 j |
 | Le prochain pas | QA-T11 — Gate D migrations : base vierge, dump N-1, migrate diff vide, image N-1, lint expand/contract |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
-| Dernière entrée de journal | PR #241 — 2026-09-29 |
+| Dernière entrée de journal | PR #246 — 2026-09-29 |
 
 **Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : 0
 
-102/127 tâches terminées · reste 19.50 j estimés.
+102/129 tâches terminées · reste 21.75 j estimés.
 
 ## Tâches
 
 | Statut | Nombre | Détail |
 | --- | --- | --- |
 | `proposee` | 0 | — |
-| `a_faire` | 168 | QA-T11, QA-T06, QA-T12, QA-T13, DM-03-A, DM-03-P, DM-04, INT-T02, INT-T03, INT-T04, INT-T05, INT-T22 … (12 affichées sur 168 — liste complète : `docs/TASKS.md`) |
+| `a_faire` | 170 | QA-T11, QA-T06, QA-T12, QA-T13, DM-03-A, DM-03-P, DM-04, INT-T02, INT-T03, INT-T04, INT-T05, INT-T22 … (12 affichées sur 170 — liste complète : `docs/TASKS.md`) |
 | `en_cours` | 0 | — |
 | `bloquee` | 0 | — |
 | `attente_externe` | 2 | JUR-T01b · JUR-T01c |
@@ -60,10 +60,10 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #244 — docs(GOV-017a): confirmation du depot par e-mail — plan W20 et quatorze taches versees en phase 1, sans DECISIONS ni REQ nouvelles | `t/w20-confirmation-email` | un conflit avec `main` — à résoudre avant tout |
-| 2 | #241 — fix(GOV-062): l'outillage qui execute la porte A est juge, sept points nommes | `t/gov-062` | état `UNKNOWN` — à qualifier à la main |
-| 3 | #242 — feat(JUR-T34): la politique de confidentialite de l'espace, tiree du registre de l'article 30 et acceptee a la premiere connexion | `t/jur-t34` | état `UNKNOWN` — à qualifier à la main |
-| 4 | #245 — feat(QA-T11): porte D, expand puis contract contre le code deploye, vidage N-1 seme, diff vide | `t/qa-t11` | état `UNKNOWN` — à qualifier à la main |
+| 1 | #242 — feat(JUR-T34): la politique de confidentialite de l'espace, tiree du registre de l'article 30 et acceptee a la premiere connexion | `t/jur-t34` | un conflit avec `main` — à résoudre avant tout |
+| 2 | #244 — docs(GOV-017a): confirmation du depot par e-mail — plan W20 et quatorze taches versees en phase 1, sans DECISIONS ni REQ nouvelles | `t/w20-confirmation-email` | un conflit avec `main` — à résoudre avant tout |
+| 3 | #245 — feat(QA-T11): porte D, expand puis contract contre le code deploye, vidage N-1 seme, diff vide | `t/qa-t11` | un conflit avec `main` — à résoudre avant tout |
+| 4 | #246 — chore(GOV-012): GOV-123 et GOV-124 versees, exception au gel decidee par Williams | `t/registre-rattrapage-12` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -85,19 +85,31 @@ Dérivé de `git log` sur `docs/adr/`, restreint au jour du dernier atterrissage
 
 ## Prochain pas
 
-**QA-T11** — Gate D migrations : base vierge, dump N-1, migrate diff vide, image N-1, lint expand/contract (1 j) : 13 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
+**QA-T11** — Gate D migrations : base vierge, dump N-1, migrate diff vide, image N-1, lint expand/contract (1 j) : 15 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
 Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeStateStatus` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage —, la tâche ensuite. L’ordre de la file se corrige à la rubrique « File de fusion », jamais ici.
 
 ## Dernier atterrissage
 
-`origin/main` = `b34b959` (2026-09-29T18:00:27+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `603e7f0` (2026-09-29T18:16:13+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
 ## Journal
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
+
+### PR #246 — 2026-09-29 — chore(GOV-012): GOV-123 et GOV-124 versees, exception au gel decidee par Williams
+
+**Fait.** Deux tâches versées, en exception au gel décidée par Williams. GOV-123 sort les vues
+dérivées des PR et les rend sur main après chaque fusion. GOV-124 ramène à une lentille la
+relecture d'une PR que le risque dérivé classe ordinaire.
+
+**Reste.** Les deux tâches à coder, en priorité. INT-T26 attend la fusion de sa dépendance
+INT-T27-A pour être close.
+
+**Appris.** Une clôture se juge avec ses dépendances : une tâche livrée par une PR fusionnée
+reste ouverte tant que sa dépendance ne l'est pas, sinon le registre ment sur l'ordre.
 
 ### PR #241 — 2026-09-29 — fix(GOV-062): l'outillage qui execute la porte A est juge, sept points nommes
 
@@ -129,23 +141,7 @@ motif. Il faut un rattrapage par ADR.
 **Appris.** Une clôture qui passe seule peut rendre le registre rouge par une dépendance encore
 ouverte dans l'autre dépôt : `gov:tasks` se rejoue après chaque clôture, pas seulement à la fin.
 
-### PR #237 — 2026-09-29 — feat(INT-T26): la candidature recue cree un apporteur candidat, coordonnees tirees et chiffrees, rattachement par empreinte
-
-**Fait.** Une candidature reçue d'axionia devient un apporteur `candidat`. Le snapshot figé et le
-passage de l'événement à `traite` se font dans une seule transaction. Les coordonnées ne voyagent
-pas dans la charge : elles sont tirées à la route signée d'axionia, validées contre le `$defs`
-publié du contrat v2, puis chiffrées. Une personne déjà connue par son courriel, son téléphone ou
-la même candidature est rattachée, pas doublée. Si la route ne répond pas, l'événement attend
-`coordonnees:<id>` et le travail de fond le reprend.
-
-**Reste.** La route côté axionia (INT-T27-A, axion-ia#1223) n'est pas encore en production. D'ici
-là, toute candidature attend, ce qui est l'état voulu. Le secret de relecture et l'URL d'axionia
-entrent dans `env.ts` : un quatrième path, signalé au rattrapage.
-
-**Appris.** Une erreur typée `AttenteDeDependance` suffit au travail de fond pour distinguer
-« attendre » de « échouer ». Le traitement n'a rien à savoir de la file.
-
-… 3 entrée(s) affichée(s) sur 103 ; les 100 plus ancienne(s) se lisent dans `docs/journal/`.
+… 3 entrée(s) affichée(s) sur 104 ; les 101 plus ancienne(s) se lisent dans `docs/journal/`.
 
 ## Dette déclarée
 
