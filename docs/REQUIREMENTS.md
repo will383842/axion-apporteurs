@@ -388,7 +388,7 @@ Une exigence sans tâche n'est portée par personne : `gov:requirements` la nomm
 - **REQ-INT-030** — Un tableau de santé de l'intégration (des deux côtés) montre : lignes pending/failed/gave_up, âge de la plus ancienne, dernier événement émis/reçu par type, dernier passage de réconciliation et ses écarts ; alerte si pending > 15 min ou silence > 7 j avec activité.
   <br>_phase 1 · tâches : `INT-T08-A`, `INT-T08-P`, `QA-T19`_ · _source : crm-sync/health.ts (dérivé) ; INT-F22_
 - **REQ-INT-031** — Les secrets d'intégration (webhook, MCP, DocuSeal, ZeptoMail) ne transitent jamais en clair dans une conversation ou un dépôt ; ils sont posés via les secrets GitHub → workflow `coolify-poser-variable.yml` → Coolify.
-  <br>_module 5 · étape 5 · phase 0 · tâches : `INT-T02`_ · _source : ADR 0046 (« MCP_SHARED_SECRET »), mémoire jeton Calendly_
+  <br>_module 5 · étape 5 · phase 0 · tâches : `INT-T02`, `QA-T50`_ · _source : ADR 0046 (« MCP_SHARED_SECRET »), mémoire jeton Calendly_
 
 ### juridique
 

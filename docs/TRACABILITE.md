@@ -16,7 +16,7 @@
 
 **334 exigences actives · 137 réputées testées · 137 couvertes · 0 orphelines.**
 
-331 tâches, dont 153 livrées · 176 fichiers de test exécutés par `vitest` sur 176 présents.
+332 tâches, dont 153 livrées · 176 fichiers de test exécutés par `vitest` sur 176 présents.
 
 ## Exigences réputées testées
 
@@ -275,7 +275,7 @@
 | `REQ-INT-025` | 3 | `UX-P3-01` | — |
 | `REQ-INT-027` | 1 | `INT-T13`, `INT-T17` | — |
 | `REQ-INT-030` | 1 | `INT-T08-A`, `INT-T08-P`, `QA-T19` | — |
-| `REQ-INT-031` | 0 | `INT-T02` | `axionia/src/server/partners-sync/__tests__/outbox-produit-des-evenements-valides.spec.ts` |
+| `REQ-INT-031` | 0 | `INT-T02`, `QA-T50` | `axionia/src/server/partners-sync/__tests__/outbox-produit-des-evenements-valides.spec.ts`, `tests/unit/qualite/provisionnement-coolify.spec.ts` |
 | `REQ-JUR-001` | 0 | `JUR-T03`, `JUR-T29` | `axionia/src/content/__tests__/remuneration-indicative.spec.ts`, `axionia/src/content/__tests__/vocabulaire-apporteur.spec.ts` |
 | `REQ-JUR-002` | 0 | `JUR-T03`, `JUR-T29` | `axionia/src/content/__tests__/remuneration-indicative.spec.ts`, `axionia/src/content/__tests__/vocabulaire-apporteur.spec.ts` |
 | `REQ-JUR-004` | 1 | `INT-T12`, `INT-T23` | — |

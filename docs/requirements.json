@@ -2232,7 +2232,8 @@
       "etape": 5,
       "phase": 0,
       "taches": [
-        "INT-T02"
+        "INT-T02",
+        "QA-T50"
       ]
     },
     {

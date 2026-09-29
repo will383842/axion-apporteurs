@@ -7,26 +7,26 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `6d36f60` — 2026-09-29T22:44:33+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #259 (rien) · 2. #242 (un contrôle requis rouge ou une revue manquante) · 3. #261 (un contrôle requis rouge ou une revue manquante) · 4. #262 (un conflit avec `main`) |
+| Où est `main` ? | `581a3fb` — 2026-09-29T23:05:26+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #242 (un contrôle requis rouge ou une revue manquante) · 2. #263 (un contrôle requis rouge ou une revue manquante) · 3. #261 (un conflit avec `main`) · 4. #262 (un conflit avec `main`) |
 | Qui tient quoi ? | aucune tâche revendiquée |
-| Où en est la phase ? | phase 0 — 114/132 tâches, reste 14.25 j |
-| Le prochain pas | fusionner #259, puis QA-T06 — Preview par PR sur Coolify, base éphémère, seed déterministe |
+| Où en est la phase ? | phase 0 — 114/133 tâches, reste 14.75 j |
+| Le prochain pas | QA-T06 — Preview par PR sur Coolify, base éphémère, seed déterministe |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
 | Dernière entrée de journal | PR #261 — 2026-09-29 |
 
-**Ce qu’on tape maintenant.** `gh pr view 259 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : 0
 
-114/132 tâches terminées · reste 14.25 j estimés.
+114/133 tâches terminées · reste 14.75 j estimés.
 
 ## Tâches
 
 | Statut | Nombre | Détail |
 | --- | --- | --- |
 | `proposee` | 0 | — |
-| `a_faire` | 176 | QA-T06, QA-T12, QA-T13, INT-T03, INT-T04, INT-T05, INT-T22, JUR-T03, QA-T20, JUR-T29, DM-07, DM-08 … (12 affichées sur 176 — liste complète : `docs/TASKS.md`) |
+| `a_faire` | 177 | QA-T06, QA-T12, QA-T13, INT-T03, INT-T04, INT-T05, INT-T22, JUR-T03, QA-T20, JUR-T29, DM-07, DM-08 … (12 affichées sur 177 — liste complète : `docs/TASKS.md`) |
 | `en_cours` | 0 | — |
 | `bloquee` | 0 | — |
 | `attente_externe` | 2 | JUR-T01b · JUR-T01c |
@@ -60,9 +60,9 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #259 — feat(GOV-117): l'outil du registre ecrit reqs, hyp et zone d'une tache, valides contre le schema et les registres | `t/gov-117` | rien — fusionnable maintenant |
-| 2 | #242 — feat(JUR-T34): la politique de confidentialite de l'espace, tiree du registre de l'article 30 et acceptee a la premiere connexion | `t/jur-t34` | un contrôle requis rouge ou une revue manquante |
-| 3 | #261 — chore(GOV-012): registre rattrape, INT-T02 INT-T27-A et INT-T26 closes, REQ-DM-021 amendee, JUR-T36 versee | `t/registre-rattrapage-15` | un contrôle requis rouge ou une revue manquante |
+| 1 | #242 — feat(JUR-T34): la politique de confidentialite de l'espace, tiree du registre de l'article 30 et acceptee a la premiere connexion | `t/jur-t34` | un contrôle requis rouge ou une revue manquante |
+| 2 | #263 — feat(QA-T20): le poids charge par route se lit dans les manifestes de Next 16, zero octet est une faute | `t/qa-t20` | un contrôle requis rouge ou une revue manquante |
+| 3 | #261 — chore(GOV-012): registre rattrape, INT-T02 INT-T27-A et INT-T26 closes, REQ-DM-021 amendee, JUR-T36 versee | `t/registre-rattrapage-15` | un conflit avec `main` — à résoudre avant tout |
 | 4 | #262 — feat(GOV-116): le lot dedie du gardien-spec, procedure exacte lancee par Williams, reglages rendus depuis le projet | `t/gov-116` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
@@ -83,15 +83,13 @@ Dérivé de `git log` sur `docs/adr/`, restreint au jour du dernier atterrissage
 
 ## Prochain pas
 
-**Fusionner #259** — elle est en tête de file et ne bloque sur rien.
-
 **QA-T06** — Preview par PR sur Coolify, base éphémère, seed déterministe (1 j) : 14 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
 Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeStateStatus` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage —, la tâche ensuite. L’ordre de la file se corrige à la rubrique « File de fusion », jamais ici.
 
 ## Dernier atterrissage
 
-`origin/main` = `6d36f60` (2026-09-29T22:44:33+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `581a3fb` (2026-09-29T23:05:26+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
