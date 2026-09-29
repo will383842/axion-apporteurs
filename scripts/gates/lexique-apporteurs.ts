@@ -77,6 +77,7 @@
  */
 
 import { readFileSync, existsSync } from 'node:fs';
+import ts from 'typescript';
 import {
   LEXIQUE_INTERDIT,
   LISTE_NOIRE_GABARIT,
@@ -284,21 +285,23 @@ export function zonesCitees(ligne: string): [number, number][] {
  *     rendent une lettre, un chiffre ou un invisible (`&#101;`, `&shy;`, `&eacute;`), les balises
  *     EN LIGNE sans attribut (`<b>`, `<span>`…) et les commentaires HTML collés dans un mot ;
  *   — en Markdown (`.md`, `.mdx`) : l'emphase et le barré (`*`, `**`, `***`, `~`, `~~`) ;
- *   — en JSX (`.tsx`, `.jsx`, `.mdx`) : l'expression vide (chaîne vide, accolades vides ou
- *     commentaire seul entre accolades).
+ *   — en JSX (`.tsx`, `.jsx`) et en Markdown : la STRUCTURE, rendue par l'arbre (GOV-106, plus
+ *     bas : `retouchesJsx`, `retouchesMarkdown`), et non plus par des expressions régulières.
  *
  * CE QU'IL NE REND PAS, EXPRÈS. En Markdown, un bloc de code et un code en ligne s'affichent TELS
  * QUELS : leur contenu n'est pas rendu (seuls les invisibles y sont effacés, puisqu'ils ne se
  * voient pas davantage). C'est ce qui laisse une documentation écrire son contre-exemple entre
  * accents graves — `com**m**ercial` y reste des astérisques, et le lecteur les voit.
  *
- * CE QU'IL NE COUVRE PAS, ET QUI EST DIT. Une balise AVEC attributs n'est pas effacée : ses
- * attributs peuvent porter du texte lu (un `title`, un `aria-label`), et l'effacer le soustrairait
- * à la garde. La concaténation de chaînes dans du code (`'com' + 'mercial'`) n'est pas un rendu :
- * elle n'est pas couverte. Le suivi des blocs clôturés est une bascule, sans appariement de
- * longueur de clôture.
+ * CE QU'IL NE COUVRE PAS, ET QUI EST DIT. Hors de l'arbre (chaîne de code, JSON, e-mail), une
+ * balise AVEC attributs n'est pas effacée. Dans l'arbre, elle l'est, et ses attributs passent en
+ * TRAÎNE de ligne (GOV-106) : un `title`, un `aria-label` restent lus. La concaténation de chaînes
+ * hors JSX (`'com' + 'mercial'` dans du code) n'est pas un rendu : elle n'est pas couverte. Le
+ * suivi des blocs clôturés est une bascule, sans appariement de longueur de clôture.
  *
- * Le rendu garde une ligne pour une ligne : le numéro qu'une garde nomme est celui de la source.
+ * Le rendu garde une ligne pour une ligne : le numéro qu'une garde nomme est celui de la source,
+ * celle où le mot recollé COMMENCE (GOV-106 : une retouche qui efface un saut de ligne rend ce
+ * saut en fin de ligne, voir `appliquerRetouches`).
  */
 const LETTRE_OU_CHIFFRE = '\\p{L}\\p{N}';
 const INVISIBLES = /\p{Default_Ignorable_Code_Point}/gu;
@@ -390,17 +393,18 @@ const BALISES_EN_LIGNE = [
 ];
 const BALISE_EN_LIGNE_OU_COMMENTAIRE = `<\\/?(?:${BALISES_EN_LIGNE.join('|')})\\s*\\/?>|<!--.*?-->`;
 const EMPHASE_MARKDOWN = '\\*{1,3}|~{1,2}';
-const EXPRESSION_JSX_VIDE = '\\{\\s*(?:\'\'|""|``|\\/\\*.*?\\*\\/)?\\s*\\}';
 
 /**
  * Ce qui s'efface ENTRE deux lettres ou chiffres — et seulement là : ailleurs, la mise en forme
  * ne colle rien. La lettre de gauche ne doit pas suivre une barre oblique inverse : dans du code,
  * `\n` est un saut de ligne, pas la lettre « n » (mesuré : `\n<details>` d'un gabarit de test).
+ * GOV-106 : ce passage ne rend plus la structure de la JSX ni du Markdown — l'arbre s'en charge.
+ * Il reste pour ce qu'aucun arbre ne lit ici : le HTML tapé dans une chaîne de code, un JSON, un
+ * gabarit d'e-mail.
  */
 function effacablesPour(chemin: string): RegExp {
   const formes = [BALISE_EN_LIGNE_OU_COMMENTAIRE];
   if (/\.mdx?$/.test(chemin)) formes.push(EMPHASE_MARKDOWN);
-  if (/\.(tsx|jsx|mdx)$/.test(chemin)) formes.push(EXPRESSION_JSX_VIDE);
   return new RegExp(
     `(?<=(?<!\\\\)[${LETTRE_OU_CHIFFRE}])(?:${formes.join('|')})+(?=[${LETTRE_OU_CHIFFRE}])`,
     'giu'
@@ -460,15 +464,502 @@ function morceauxMarkdown(ligne: string): [string, boolean][] {
   return out;
 }
 
+// ── GOV-106 : la STRUCTURE se rend par l'arbre, et non par des expressions régulières ──────
+
+/**
+ * 🔴 LE DÉFAUT. GOV-071 rendait la structure par expressions régulières, ligne à ligne : ce
+ * qu'elles ne décrivaient pas restait dans la ligne et SÉPARAIT le mot, alors que l'écran le
+ * recollait. Toute construction que le rendu efface ou remplace — une expression JSX constante,
+ * un fragment, un composant, une balise à attributs, un lien Markdown, une balise coupée sur deux
+ * lignes — laissait passer un terme que l'apporteur lit entier.
+ *
+ * LA MESURE. La structure se lit dans l'ARBRE : la JSX par l'AST du compilateur TypeScript (déjà
+ * une dépendance du dépôt), le Markdown par son arbre EN LIGNE (paragraphe par paragraphe : code
+ * en ligne, liens, balises, commentaires). L'arbre produit des RETOUCHES de la source ;
+ * `appliquerRetouches` les pose en gardant une ligne pour une ligne. Le passage caractère par
+ * caractère (`rendreFragment` : entités, invisibles, emphase) vient APRÈS, sur la ligne retouchée.
+ */
+type Retouche = {
+  debut: number;
+  fin: number;
+  /** Ce que l'écran affiche à la place. Jamais de saut de ligne. */
+  par: string;
+  /** Ce qui QUITTE l'écran mais reste LU par la garde : attributs d'une balise effacée, cible d'un lien. */
+  traine?: string;
+};
+
+/**
+ * Les délimiteurs de citation (`zonesCitees`) et de code en ligne ne passent pas dans la traîne :
+ * un guillemet de traîne pourrait s'apparier à un guillemet orphelin de la ligne, et faire d'un
+ * terme rendu une « citation » exemptée.
+ */
+const traineLisible = (s: string): string =>
+  s
+    .replace(/["`«»]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+/**
+ * Pose les retouches, une ligne pour une ligne. Les sauts de ligne qu'une retouche efface sont
+ * rendus au PREMIER saut de ligne conservé qui la suit : le mot recollé reste sur la ligne source
+ * où il commence, et les lignes d'après gardent leur numéro (vides s'il le faut). La traîne est
+ * ajoutée en fin de cette même ligne, séparée par une espace. Deux retouches qui se chevauchent :
+ * la première gagne, la seconde est ignorée — elle ne peut rien recoller de plus.
+ */
+function appliquerRetouches(source: string, retouches: Retouche[]): string {
+  const triees = [...retouches].sort((x, y) => x.debut - y.debut || x.fin - y.fin);
+  let out = '';
+  let pos = 0;
+  let enAttente = 0;
+  let traine: string[] = [];
+  const clore = (): string =>
+    (traine.length > 0 ? ' ' + traine.join(' ') : '') + '\n'.repeat(enAttente);
+  const copier = (jusque: number): void => {
+    for (let k = pos; k < jusque; k++) {
+      const c = source[k]!;
+      if (c !== '\n') {
+        out += c;
+        continue;
+      }
+      out += (traine.length > 0 ? ' ' + traine.join(' ') : '') + '\n' + '\n'.repeat(enAttente);
+      enAttente = 0;
+      traine = [];
+    }
+    pos = jusque;
+  };
+  for (const r of triees) {
+    if (r.debut < pos) continue;
+    copier(r.debut);
+    out += r.par.replace(/\r?\n/g, ' ');
+    enAttente += source.slice(r.debut, r.fin).split('\n').length - 1;
+    const t = r.traine === undefined ? '' : traineLisible(r.traine);
+    if (t !== '') traine.push(t);
+    pos = r.fin;
+  }
+  copier(source.length);
+  return out + clore();
+}
+
+/** Une valeur CONSTANTE de JavaScript, telle que l'expression la produit ; `undefined` si elle ne l'est pas. */
+type Constante = { v: string | number | boolean | null | undefined };
+
+function constante(e: ts.Expression): Constante | undefined {
+  if (
+    ts.isParenthesizedExpression(e) ||
+    ts.isAsExpression(e) ||
+    ts.isSatisfiesExpression(e) ||
+    ts.isNonNullExpression(e) ||
+    ts.isTypeAssertionExpression(e)
+  ) {
+    return constante(e.expression);
+  }
+  if (ts.isStringLiteral(e) || ts.isNoSubstitutionTemplateLiteral(e)) return { v: e.text };
+  if (ts.isNumericLiteral(e)) return { v: Number(e.text) };
+  if (e.kind === ts.SyntaxKind.NullKeyword) return { v: null };
+  if (e.kind === ts.SyntaxKind.TrueKeyword) return { v: true };
+  if (e.kind === ts.SyntaxKind.FalseKeyword) return { v: false };
+  if (ts.isIdentifier(e) && e.text === 'undefined') return { v: undefined };
+  if (ts.isVoidExpression(e)) return { v: undefined };
+  if (ts.isTemplateExpression(e)) {
+    let s = e.head.text;
+    for (const span of e.templateSpans) {
+      const c = constante(span.expression);
+      if (c === undefined) return undefined;
+      s += String(c.v) + span.literal.text;
+    }
+    return { v: s };
+  }
+  if (ts.isBinaryExpression(e) && e.operatorToken.kind === ts.SyntaxKind.PlusToken) {
+    const g = constante(e.left);
+    const d = constante(e.right);
+    if (g === undefined || d === undefined) return undefined;
+    if (typeof g.v === 'number' && typeof d.v === 'number') return { v: g.v + d.v };
+    if (typeof g.v === 'string' || typeof d.v === 'string') return { v: String(g.v) + String(d.v) };
+    return undefined;
+  }
+  return undefined;
+}
+
+/** Ce que React AFFICHE d'une constante : rien pour `null`, `undefined` et les booléens. */
+function affichage(c: Constante): string {
+  return c.v === null || c.v === undefined || typeof c.v === 'boolean' ? '' : String(c.v);
+}
+
+const EST_EN_LIGNE: ReadonlySet<string> = new Set(BALISES_EN_LIGNE);
+
+/**
+ * Une balise JSX qui se rend EN LIGNE, donc transparente : une balise HTML de la liste en ligne,
+ * ou un COMPOSANT (nom capitalisé ou qualifié). ⚠️ LIMITE DÉCLARÉE : ce qu'un composant rend n'est
+ * pas lu ; il est supposé rendre ses enfants en ligne, là où ils sont écrits — c'est le cas des
+ * composants de traduction et de mise en forme, et c'est le sens qui ne laisse rien passer.
+ */
+function estEnLigneJsx(nom: ts.JsxTagNameExpression): boolean {
+  const texte = nom.getText();
+  if (/^[a-z][a-z0-9]*$/.test(texte)) return EST_EN_LIGNE.has(texte);
+  return /^[A-Z_$]/.test(texte) || texte.includes('.');
+}
+
+/**
+ * La mise au propre du texte JSX (la règle du compilateur JSX) : un blanc qui contient un saut de
+ * ligne, en TÊTE ou en QUEUE d'un texte, disparaît — il colle le texte à son voisin. Un saut de
+ * ligne intérieur devient une espace : il sépare déjà dans la source, rien n'est à retoucher.
+ * La retouche n'est posée que du côté d'un voisin TRANSPARENT : contre une balise de bloc, qui
+ * sépare de toute façon, elle ne recollerait rien et ne ferait que remonter des lignes.
+ */
+function retouchesDuTexteJsx(
+  t: ts.JsxText,
+  source: string,
+  r: Retouche[],
+  avant: boolean,
+  apres: boolean
+): void {
+  const brut = source.slice(t.pos, t.end);
+  if (!brut.includes('\n')) return;
+  if (/^\s*$/.test(brut)) {
+    if (avant && apres) r.push({ debut: t.pos, fin: t.end, par: '' });
+    return;
+  }
+  const tete = /^[^\S\n]*\n\s*/.exec(brut)?.[0];
+  if (avant && tete !== undefined) r.push({ debut: t.pos, fin: t.pos + tete.length, par: '' });
+  const queue = /\s*\n[^\S\n]*$/.exec(brut)?.[0];
+  if (apres && queue !== undefined) r.push({ debut: t.end - queue.length, fin: t.end, par: '' });
+}
+
+/** Le nom d'une balise HTML en ligne, en minuscules comme la JSX l'exige d'une balise native. */
+const estBaliseEnLigne = (nom: string): boolean =>
+  /^[a-z][a-z0-9]*$/.test(nom) && EST_EN_LIGNE.has(nom);
+
+/** L'expression d'une accolade, sans parenthèses. */
+function sansParentheses(e: ts.Expression): ts.Expression {
+  let x = e;
+  while (ts.isParenthesizedExpression(x)) x = x.expression;
+  return x;
+}
+
+/**
+ * Les retouches d'un fichier JSX, lues dans l'AST. Chaque ENFANT d'un élément ou d'un fragment est
+ * rendu : le texte (mis au propre), l'expression constante (sa valeur ; rien pour `null`, `false`,
+ * `true`, `undefined`), l'expression vide ou commentaire seul (rien), l'élément JSX entre
+ * accolades, et les balises des éléments en ligne et des fragments (effacées, attributs en
+ * traîne). Une balise de BLOC reste : elle sépare. ⚠️ LIMITE DÉCLARÉE : une expression dont la
+ * valeur n'est pas constante (variable, appel, condition) n'est pas inventée — elle reste écrite,
+ * et sépare ; seul un test du rendu à l'exécution la jugerait.
+ */
+function retouchesJsx(chemin: string, contenu: string): Retouche[] {
+  const sf = ts.createSourceFile(
+    chemin,
+    contenu,
+    ts.ScriptTarget.Latest,
+    true,
+    /\.jsx$/.test(chemin) ? ts.ScriptKind.JSX : ts.ScriptKind.TSX
+  );
+  const r: Retouche[] = [];
+  const effacer = (n: ts.Node, traine?: string): void => {
+    r.push({ debut: n.getStart(sf), fin: n.end, par: '', ...(traine ? { traine } : {}) });
+  };
+  const attributsDe = (o: ts.JsxOpeningElement | ts.JsxSelfClosingElement): string | undefined =>
+    o.attributes.properties.length > 0 ? o.attributes.getText(sf) : undefined;
+
+  /** Un enfant dont le rendu COLLE à ses voisins : texte, valeur, fragment, balise en ligne. */
+  const transparent = (c: ts.JsxChild): boolean => {
+    if (ts.isJsxText(c) || ts.isJsxFragment(c)) return true;
+    if (ts.isJsxElement(c)) return estEnLigneJsx(c.openingElement.tagName);
+    if (ts.isJsxSelfClosingElement(c)) return estBaliseEnLigne(c.tagName.getText(sf));
+    if (c.expression === undefined || constante(c.expression) !== undefined) return true;
+    const x = sansParentheses(c.expression);
+    return ts.isJsxElement(x) || ts.isJsxFragment(x) || ts.isJsxSelfClosingElement(x);
+  };
+
+  const enfants = (liste: readonly ts.JsxChild[], parentTransparent: boolean): void => {
+    liste.forEach((c, k) => {
+      const avant = k > 0 ? transparent(liste[k - 1]!) : parentTransparent;
+      const apres = k < liste.length - 1 ? transparent(liste[k + 1]!) : parentTransparent;
+      enfant(c, avant, apres);
+    });
+  };
+
+  const enfant = (c: ts.JsxChild, avant: boolean, apres: boolean): void => {
+    if (ts.isJsxText(c)) {
+      retouchesDuTexteJsx(c, contenu, r, avant, apres);
+      return;
+    }
+    if (ts.isJsxExpression(c)) {
+      if (c.expression === undefined) {
+        // Vide ou commentaire seul : rien à l'écran. Un commentaire n'est effacé que COLLÉ entre
+        // deux voisins qui se rendent — son texte en traîne ; ailleurs, il reste lu à sa ligne.
+        const interieur = contenu.slice(c.getStart(sf) + 1, c.end - 1);
+        if (interieur.trim() === '') effacer(c);
+        else if (avant && apres) effacer(c, interieur);
+        return;
+      }
+      const v = constante(c.expression);
+      if (v !== undefined) {
+        r.push({ debut: c.getStart(sf), fin: c.end, par: affichage(v) });
+        return;
+      }
+      const x = sansParentheses(c.expression);
+      if (ts.isJsxElement(x) || ts.isJsxFragment(x) || ts.isJsxSelfClosingElement(x)) {
+        r.push({ debut: c.getStart(sf), fin: x.getStart(sf), par: '' });
+        r.push({ debut: x.end, fin: c.end, par: '' });
+        enfant(x, avant, apres);
+        return;
+      }
+      visiter(c.expression);
+      return;
+    }
+    if (ts.isJsxFragment(c)) {
+      effacer(c.openingFragment);
+      effacer(c.closingFragment);
+      enfants(c.children, true);
+      return;
+    }
+    if (ts.isJsxSelfClosingElement(c)) {
+      // Un composant auto-fermant rend ce qu'on ne lit pas : il reste, et sépare.
+      if (estBaliseEnLigne(c.tagName.getText(sf))) effacer(c, attributsDe(c));
+      else ts.forEachChild(c, visiter);
+      return;
+    }
+    if (ts.isJsxElement(c)) {
+      const enLigne = estEnLigneJsx(c.openingElement.tagName);
+      if (enLigne) {
+        effacer(c.openingElement, attributsDe(c.openingElement));
+        effacer(c.closingElement);
+      } else {
+        ts.forEachChild(c.openingElement, visiter);
+      }
+      enfants(c.children, enLigne);
+    }
+  };
+
+  /** Une racine JSX garde ses propres balises (elles touchent du code, pas du texte) ; ses enfants se rendent. */
+  const visiter = (n: ts.Node): void => {
+    if (ts.isJsxElement(n)) {
+      ts.forEachChild(n.openingElement, visiter);
+      enfants(n.children, false);
+      return;
+    }
+    if (ts.isJsxFragment(n)) {
+      enfants(n.children, false);
+      return;
+    }
+    ts.forEachChild(n, visiter);
+  };
+  visiter(sf);
+  return r;
+}
+
+/** La fin d'une suite d'accents graves ouverte en `i` : la suite de MÊME longueur, ou -1. */
+function finDuCodeEnLigne(s: string, i: number, borne: number): number {
+  let n = 0;
+  while (s[i + n] === '`') n++;
+  for (let j = i + n; j < borne;) {
+    if (s[j] !== '`') {
+      j++;
+      continue;
+    }
+    let m = 0;
+    while (s[j + m] === '`') m++;
+    if (m === n) return j + m;
+    j += m;
+  }
+  return -1;
+}
+
+/** Le délimiteur fermant apparié à celui ouvert en `i` (profondeur, échappements, code en ligne), ou -1. */
+function fermant(s: string, i: number, borne: number, ouvre: string, ferme: string): number {
+  let profondeur = 0;
+  for (let j = i; j < borne; j++) {
+    const c = s[j];
+    if (c === '\\') {
+      j++;
+      continue;
+    }
+    if (c === '`') {
+      const f = finDuCodeEnLigne(s, j, borne);
+      if (f !== -1) j = f - 1;
+      continue;
+    }
+    if (c === ouvre) profondeur++;
+    else if (c === ferme && --profondeur === 0) return j;
+  }
+  return -1;
+}
+
+/** Une balise HTML en ligne (ou un commentaire), attributs et sauts de ligne compris. */
+const BALISE_HTML =
+  /<\/?([A-Za-z][A-Za-z0-9-]*)((?:\s+[^\s"'>/=]+(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s"'=<>`]+))?)*)\s*\/?>/y;
+
+const COLLE_A_UN_MOT = /^[\p{L}\p{N}]$/u;
+
+const etiquetteDeReference = (s: string): string => s.trim().replace(/\s+/g, ' ').toLowerCase();
+
+/**
+ * Les retouches d'un Markdown, lues dans son arbre EN LIGNE, paragraphe par paragraphe (hors blocs
+ * clôturés) — un paragraphe entier, parce qu'une balise ou un lien peut s'y couper sur plusieurs
+ * lignes. Le code en ligne n'est PAS rendu : il s'affiche tel quel, et c'est lui qui laisse une
+ * documentation écrire son contre-exemple. Rendus : le lien (`[texte](cible)`, `[texte][ref]`,
+ * `[ref]` défini) → son texte, la cible en traîne ; la balise HTML en ligne → effacée, attributs
+ * en traîne ; le commentaire HTML collé dans un mot → rien, son contenu en traîne (ailleurs, il
+ * reste lu à sa ligne) ; en `.mdx`, l'expression constante entre accolades →
+ * sa valeur, et le composant → transparent. Une image reste : elle ne rend pas son texte.
+ * ⚠️ LIMITES DÉCLARÉES : pas de bloc de code indenté, pas de HTML de bloc multi-paragraphe, pas
+ * d'appariement de longueur des clôtures — comme GOV-071.
+ */
+function retouchesMarkdown(contenu: string, mdx: boolean): Retouche[] {
+  const r: Retouche[] = [];
+  const definies = new Set<string>();
+  for (const m of contenu.matchAll(/^ {0,3}\[([^\]\n]+)\]:[ \t]*\S/gm)) {
+    definies.add(etiquetteDeReference(m[1]!));
+  }
+
+  const paragraphes: [number, number][] = [];
+  let offset = 0;
+  let dansUnBloc = false;
+  let debut = -1;
+  for (const ligne of contenu.split('\n')) {
+    const cloture = /^\s{0,3}(```|~~~)/.test(ligne);
+    if (cloture || dansUnBloc || ligne.trim() === '') {
+      if (debut !== -1) paragraphes.push([debut, offset - 1]);
+      debut = -1;
+      if (cloture) dansUnBloc = !dansUnBloc;
+    } else if (debut === -1) {
+      debut = offset;
+    }
+    offset += ligne.length + 1;
+  }
+  if (debut !== -1) paragraphes.push([debut, contenu.length]);
+
+  for (const [a, b] of paragraphes) {
+    const sauts = new Map<number, number>();
+    for (let i = a; i < b;) {
+      const saut = sauts.get(i);
+      if (saut !== undefined) {
+        i = saut;
+        continue;
+      }
+      const c = contenu[i];
+      if (c === '\\') {
+        i += 2;
+        continue;
+      }
+      if (c === '`') {
+        const f = finDuCodeEnLigne(contenu, i, b);
+        if (f !== -1) {
+          i = f;
+          continue;
+        }
+        while (contenu[i] === '`') i++;
+        continue;
+      }
+      if (c === '<') {
+        if (contenu.startsWith('<!--', i)) {
+          const f = contenu.indexOf('-->', i + 4);
+          if (f !== -1 && f + 3 <= b) {
+            // Un commentaire ne s'efface que COLLÉ dans un mot, son contenu en traîne : ailleurs,
+            // il reste où il est, et la garde continue de le lire à sa ligne.
+            const colle = COLLE_A_UN_MOT.test(contenu[i - 1] ?? '');
+            if (colle && COLLE_A_UN_MOT.test(contenu[f + 3] ?? '')) {
+              r.push({ debut: i, fin: f + 3, par: '', traine: contenu.slice(i + 4, f) });
+            }
+            i = f + 3;
+            continue;
+          }
+        }
+        BALISE_HTML.lastIndex = i;
+        const m = BALISE_HTML.exec(contenu);
+        if (m !== null && m.index + m[0].length <= b) {
+          const nom = m[1]!;
+          const enLigne = EST_EN_LIGNE.has(nom.toLowerCase()) || (mdx && /^[A-Z]/.test(nom));
+          if (enLigne) {
+            const attributs = (m[2] ?? '').trim();
+            r.push({
+              debut: i,
+              fin: i + m[0].length,
+              par: '',
+              ...(attributs !== '' ? { traine: m[0] } : {}),
+            });
+          }
+          i += m[0].length;
+          continue;
+        }
+        i++;
+        continue;
+      }
+      if (c === '!' && contenu[i + 1] === '[') {
+        // Une image : son texte ne s'affiche pas en ligne. Elle reste, et sépare.
+        i += 2;
+        continue;
+      }
+      if (c === '[') {
+        const f = fermant(contenu, i, b, '[', ']');
+        if (f !== -1) {
+          let finLien = -1;
+          if (contenu[f + 1] === '(') {
+            const p = fermant(contenu, f + 1, b, '(', ')');
+            if (p !== -1) finLien = p + 1;
+          } else if (contenu[f + 1] === '[') {
+            const p = fermant(contenu, f + 1, b, '[', ']');
+            if (p !== -1) finLien = p + 1;
+          } else if (definies.has(etiquetteDeReference(contenu.slice(i + 1, f)))) {
+            finLien = f + 1;
+          }
+          if (finLien !== -1) {
+            r.push({ debut: i, fin: i + 1, par: '' });
+            r.push({ debut: f, fin: finLien, par: '', traine: contenu.slice(f + 1, finLien) });
+            sauts.set(f, finLien);
+          }
+        }
+        i++;
+        continue;
+      }
+      if (mdx && c === '{') {
+        const f = fermant(contenu, i, b, '{', '}');
+        if (f !== -1) {
+          const v = constanteDeSource(contenu.slice(i + 1, f));
+          if (v !== undefined) r.push({ debut: i, fin: f + 1, par: v });
+          i = f + 1;
+          continue;
+        }
+      }
+      i++;
+    }
+  }
+  return r;
+}
+
+/** L'affichage d'une expression MDX : vide ou commentaire seul → rien ; constante → sa valeur. */
+function constanteDeSource(expression: string): string | undefined {
+  if (expression.replace(/\/\*[\s\S]*?\*\//g, '').trim() === '') return '';
+  const sf = ts.createSourceFile(
+    'x.tsx',
+    `(${expression}\n)`,
+    ts.ScriptTarget.Latest,
+    false,
+    ts.ScriptKind.TSX
+  );
+  const [instruction] = sf.statements;
+  if (sf.statements.length !== 1 || instruction === undefined) return undefined;
+  if (!ts.isExpressionStatement(instruction)) return undefined;
+  const c = constante(instruction.expression);
+  return c === undefined ? undefined : affichage(c);
+}
+
 /**
  * LE rendu d'un fichier, ligne pour ligne — la seule découpe des deux gardes. `chemin` décide de
  * ce qui se rend : c'est l'extension qui dit si `**` est une emphase ou une multiplication.
+ * GOV-106 : la structure d'abord, par l'arbre (JSX ou Markdown), puis les caractères.
  */
 export function lignesRendues(chemin: string, contenu: string): string[] {
   const markdown = /\.mdx?$/.test(chemin);
+  const retouches = markdown
+    ? retouchesMarkdown(contenu, /\.mdx$/.test(chemin))
+    : /\.(tsx|jsx)$/.test(chemin)
+      ? retouchesJsx(chemin, contenu)
+      : [];
+  const rendu = retouches.length > 0 ? appliquerRetouches(contenu, retouches) : contenu;
   const effacables = effacablesPour(chemin);
   let dansUnBloc = false;
-  return contenu.split('\n').map((ligne) => {
+  return rendu.split('\n').map((ligne) => {
     if (markdown && /^\s{0,3}(```|~~~)/.test(ligne)) {
       dansUnBloc = !dansUnBloc;
       return ligne.replace(INVISIBLES, '');

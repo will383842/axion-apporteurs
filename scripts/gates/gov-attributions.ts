@@ -214,6 +214,7 @@ export const FAMILLES = [
   'citation_perimee',
   'dette_perimee',
   'declaration_sans_raison',
+  'raison_perimee',
   'exemption_non_figee',
 ] as const;
 export type Famille = (typeof FAMILLES)[number];
@@ -246,8 +247,17 @@ const NATURES = [
 ] as const;
 export type Nature = (typeof NATURES)[number];
 export type Exemption = { nature: Nature; tache: string; site: string; motif: string };
-/** `occurrences` : les mentions d'identifiant RÉELLEMENT confrontées, comptées par `analyser`. */
-export type Verdict = { fautes: Faute[]; exemptions: Exemption[]; occurrences?: number };
+/**
+ * `occurrences` : les mentions d'identifiant RÉELLEMENT confrontées, comptées par `analyser`.
+ * `raisonsConfrontees` : les raisons de `DETTE_GATE_NON_RECIPROQUE` qui citent au moins une tâche, et
+ * dont chaque citation a été confrontée à l'entrée de `docs/gates.json` qu'elles désignent.
+ */
+export type Verdict = {
+  fautes: Faute[];
+  exemptions: Exemption[];
+  occurrences?: number;
+  raisonsConfrontees?: number;
+};
 
 /**
  * LES NATURES SANS SECOND PRODUCTEUR (GOV-074). Les autres sont tenues par un registre qui fige
@@ -1224,7 +1234,39 @@ export function analyser(s: Sources): Verdict {
     );
   }
 
-  return { fautes, exemptions, occurrences };
+  // ── (6) une raison qui NOMME une tâche dit vrai à l'endroit qu'elle désigne ──
+  // La longueur ne juge pas le sens. Une raison qui affirme ce que dit l'entrée de sa gate, en nommant
+  // une tâche, devient fausse le jour où cette entrée change — sans qu'aucune ligne du code bouge.
+  // Chaque identifiant qu'elle cite est donc cherché dans l'entrée de `docs/gates.json` de sa gate
+  // (clés, valeurs, à toute profondeur) : absent, la raison rougit en nommant l'entrée et l'identifiant.
+  let raisonsConfrontees = 0;
+  const citeesPar = (texte: string): string[] => [
+    ...new Set(
+      [...texte.matchAll(motif)]
+        .map((m) => m[0])
+        .filter((b) => b !== '')
+        .map(canonique)
+    ),
+  ];
+  for (const d of s.dettesGate) {
+    const citees = citeesPar(d.raison);
+    if (citees.length === 0) continue;
+    raisonsConfrontees++;
+    const entree = s.gates.find((g) => g.id === d.gate && g.script.split('#')[0] === d.script);
+    const portees = new Set(entree === undefined ? [] : citeesPar(JSON.stringify(entree)));
+    for (const id of citees) {
+      if (portees.has(id)) continue;
+      dire(
+        'raison_perimee',
+        `DETTE_GATE_NON_RECIPROQUE — la raison de « ${d.gate} » -> « ${d.tache} » nomme « ${id} », que ` +
+          `l'entrée « ${d.gate} » de docs/gates.json ne porte ${entree === undefined ? 'pas : entrée introuvable' : 'plus'}. ` +
+          `Une raison qui nomme une tâche qu'elle ne contrôle pas devient fausse en silence : dérive la ` +
+          `désignation du registre, ou ne la nomme pas.`
+      );
+    }
+  }
+
+  return { fautes, exemptions, occurrences, raisonsConfrontees };
 }
 
 // ── les registres : ce qui est DÉCLARÉ est vu, nommé, compté, et ne dort pas ──
@@ -1269,9 +1311,9 @@ export const DETTE_GATE_NON_RECIPROQUE: DetteGate[] = [
     script: 'scripts/gates/gov-derivation.ts',
     raison:
       'gate DIFFÉRÉE, et son attribution est VOULUE : le script n’existe pas, GOV-014 ne peut donc ' +
-      'pas le déclarer, et le registre écrit noir sur blanc que la ré-attribuer à DM-03-A viderait ' +
-      'le témoin de gardes-transposees.spec.ts. Le jour où DM-03-A arme la garde, `dette_perimee` ' +
-      'réclamera cette ligne.',
+      'pas le déclarer, et le registre écrit noir sur blanc que la ré-attribuer à sa tâche successeur ' +
+      'viderait le témoin de gardes-transposees.spec.ts. Le jour où la tâche successeur arme la ' +
+      'garde, `dette_perimee` réclamera cette ligne.',
   },
 ];
 
@@ -2314,12 +2356,19 @@ export function chargerSources(
 
 // ── le verdict RENDU : une seule fonction, pour la garde et pour la preuve ────
 
-function rendreVert(exemptions: Exemption[], occurrences?: number): string[] {
+function rendreVert(
+  exemptions: Exemption[],
+  occurrences?: number,
+  raisonsConfrontees?: number
+): string[] {
   const lignes = [
     `✅ gov:attributions — aucune attribution rompue (${FAMILLES.length} familles). ` +
       (occurrences === undefined
         ? ''
         : `${occurrences} occurrence(s) d’identifiant confrontée(s) dans les en-têtes et docs/gates.json. `) +
+      (raisonsConfrontees === undefined
+        ? ''
+        : `${raisonsConfrontees} raison(s) de DETTE_GATE_NON_RECIPROQUE confrontée(s) à l’entrée de leur gate. `) +
       `${exemptions.length} exemption(s), chacune imprimée sous la rubrique de sa nature : une exemption tue serait un vert qui ment.`,
   ];
   for (const nature of NATURES) {
@@ -2338,11 +2387,12 @@ function rendreVert(exemptions: Exemption[], occurrences?: number): string[] {
  * CHAQUE cas : un témoin dont le verdict rendu sort 0, ou qui imprime une bannière de succès, fait
  * rougir la preuve — quelle que soit sa famille.
  */
-function rendre({ fautes, exemptions, occurrences }: Verdict): {
+export function rendre({ fautes, exemptions, occurrences, raisonsConfrontees }: Verdict): {
   code: number;
   lignes: string[];
 } {
-  if (fautes.length === 0) return { code: 0, lignes: rendreVert(exemptions, occurrences) };
+  if (fautes.length === 0)
+    return { code: 0, lignes: rendreVert(exemptions, occurrences, raisonsConfrontees) };
   const lignes = [
     `❌ gov:attributions — ${fautes.length} attribution(s) rompue(s) (REQ-GOV-021, REQ-GOV-003) :\n`,
   ];
@@ -3102,6 +3152,24 @@ const TEMOINS: Temoin[] = [
       ],
     },
     nomme: ['detectPii'],
+  },
+  // ── (6) une raison qui nomme une tâche ──
+  {
+    famille: 'raison_perimee',
+    quoi: 'une raison de dette nomme une tâche que l’entrée de sa gate ne porte pas',
+    sources: {
+      taches: [{ ...T_RESOLUE, paths: ['packages/contracts/'] }, T_VOISINE],
+      gates: [PII],
+      dettesGate: [
+        {
+          gate: 'detectPii',
+          tache: 'GOV-100',
+          script: 'scripts/gates/detect-pii.ts',
+          raison: 'le registre écrit que la ré-attribuer à GOV-101 viderait le témoin',
+        },
+      ],
+    },
+    nomme: ['detectPii', 'GOV-101'],
   },
 ];
 
