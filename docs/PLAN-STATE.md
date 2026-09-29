@@ -8,12 +8,12 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `0db2bca0` — 2026-09-30T00:01:49+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #262 (un conflit avec `main`) · 2. #263 (un conflit avec `main`) · 3. #267 (un conflit avec `main`) · 4. #268 (un conflit avec `main`) |
+| Qu’est-ce qui est en vol ? | 1. #263 (un contrôle requis rouge ou une revue manquante) · 2. #268 (un contrôle requis rouge ou une revue manquante) · 3. #271 (un contrôle requis rouge ou une revue manquante) · 4. #262 (un conflit avec `main`) · 5. #267 (un conflit avec `main`) |
 | Qui tient quoi ? | GOV-117 (A01) |
 | Où en est la phase ? | phase 0 — 116/133 tâches, reste 13.00 j |
 | Le prochain pas | QA-T06 — Preview par PR sur Coolify, base éphémère, seed déterministe |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
-| Dernière entrée de journal | PR #261 — 2026-09-29 |
+| Dernière entrée de journal | PR #271 — 2026-09-30 |
 
 **Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
@@ -60,10 +60,11 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #262 — feat(GOV-116): le lot dedie du gardien-spec, procedure exacte lancee par Williams, reglages rendus depuis le projet | `t/gov-116` | un conflit avec `main` — à résoudre avant tout |
-| 2 | #263 — feat(QA-T20): le poids charge par route se lit dans les manifestes de Next 16, zero octet est une faute | `t/qa-t20` | un conflit avec `main` — à résoudre avant tout |
-| 3 | #267 — fix(GOV-109): la garde lexicale evalue toute expression JSX constante comme React la rend | `t/gov-109` | un conflit avec `main` — à résoudre avant tout |
-| 4 | #268 — feat(QA-T34): la plateforme tire sha-7 apres publier, un seul producteur, l'atterrissage lu sur x-partners-build-sha | `t/qa-t34` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #263 — feat(QA-T20): le poids charge par route se lit dans les manifestes de Next 16, zero octet est une faute | `t/qa-t20` | un contrôle requis rouge ou une revue manquante |
+| 2 | #268 — feat(QA-T34): la plateforme tire sha-7 apres publier, un seul producteur, l'atterrissage lu sur x-partners-build-sha | `t/qa-t34` | un contrôle requis rouge ou une revue manquante |
+| 3 | #271 — chore(GOV-012): registre rattrape, JUR-T03 close, chiffrement client des sauvegardes, paths de QA-T12 et JUR-T29 | `t/registre-rattrapage-16` | un contrôle requis rouge ou une revue manquante |
+| 4 | #262 — feat(GOV-116): le lot dedie du gardien-spec, procedure exacte lancee par Williams, reglages rendus depuis le projet | `t/gov-116` | un conflit avec `main` — à résoudre avant tout |
+| 5 | #267 — fix(GOV-109): la garde lexicale evalue toute expression JSX constante comme React la rend | `t/gov-109` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -99,6 +100,17 @@ Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
 
+### PR #271 — 2026-09-30 — chore(GOV-012): registre rattrape, JUR-T03 close, chiffrement client des sauvegardes, paths de QA-T12 et JUR-T29
+
+**Fait.** Seizième rattrapage. JUR-T03 est close après vérification de sa mise en production. Les
+sauvegardes de Partners devront être chiffrées côté client avant la première donnée réelle. Les
+chemins de QA-T12 et de JUR-T29 suivent ce que leurs auteurs ont mesuré.
+
+**Reste.** La levée de l'exception « 500 € nu » attend la confirmation de Williams.
+
+**Appris.** Une condition de mise en service écrite dans un runbook seul se perd : écrite dans
+l'acceptance, elle a un témoin et bloque réellement.
+
 ### PR #261 — 2026-09-29 — chore(GOV-012): registre rattrape, INT-T02 INT-T27-A et INT-T26 closes, REQ-DM-021 amendee, JUR-T36 versee
 
 **Fait.** Quinzième rattrapage. INT-T02 se clôt par l'unique entrée du passif déclaré, et INT-T27-A
@@ -121,18 +133,7 @@ que les gardes prennent une écriture qui passerait sans l'outil.
 **Appris.** Une dérivation copiée dans un seul outil finit par diverger des autres : l'extraire en une
 fonction unique a aussi réparé la phase des exigences, que le versement ne dérivait pas.
 
-### PR #257 — 2026-09-29 — feat(GOV-127): le passif declare de la declaration, une liste fermee a une entree levee sur arbitrage ecrit
-
-**Fait.** La clôture reçoit un passif déclaré de la déclaration : une liste fermée, datée, à une
-seule entrée. Elle lève les deux refus pour INT-T02, livrée avant la convention côté axion-ia, et pour
-elle seule, parce que sa PR nommait la tâche à l'instant de la fusion.
-
-**Reste.** Le rattrapage qui clôt INT-T02, puis INT-T27-A et INT-T26, livrées et en production.
-
-**Appris.** Une exception se prouve avant de s'écrire : les accords portaient sur une tête antérieure
-à la tête fusionnée, et seule la comparaison du patch propre a établi que c'était la même livraison.
-
-… 3 entrée(s) affichée(s) sur 116 ; les 113 plus ancienne(s) se lisent dans `docs/journal/`.
+… 3 entrée(s) affichée(s) sur 117 ; les 114 plus ancienne(s) se lisent dans `docs/journal/`.
 
 ## Dette déclarée
 
