@@ -35,6 +35,13 @@ classement dérivé et fermé, et ce qui est illisible vaut deux.
    racine, les dossiers cachés, et tout dossier à venir. Toute zone qu'elles ne nomment pas aussi :
    l'argent, la sécurité, le juridique, les données du domaine, l'intégration, le déploiement.
 4. La garde des revues reste à deux lentilles : `risqueDeLaPr()` l'élève avant de lire la liste.
+5. **Les registres du calcul et les textes du processus valent deux lentilles, même sous `docs/`**
+   (`EXCLUS_D_UNE_LENTILLE`). Il s'agit de `docs/tasks.json`, `docs/requirements.json`,
+   `docs/DECISIONS.md`, `docs/agents.json`, `docs/gates.json`, la charte, les conventions, le
+   protocole de fusion, `docs/adr/` et les schémas des registres. C'est un relevé de la lentille
+   `exactitude` sur la PR #246 : relu par une seule lentille, un `sensible` retiré d'une tâche ferait
+   passer à une lentille toutes ses PR suivantes, sans `securite`. Les rattrapages du registre restent
+   donc à deux lentilles.
 
 ## Conséquences
 
