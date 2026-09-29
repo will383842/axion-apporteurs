@@ -7,13 +7,13 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `476135a` — 2026-09-29T17:21:45+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #239 (un conflit avec `main`) · 2. #241 (un conflit avec `main`) · 3. #242 (un conflit avec `main`) |
-| Qui tient quoi ? | aucune tâche revendiquée |
+| Où est `main` ? | `b34b959` — 2026-09-29T18:00:27+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #244 (un conflit avec `main`) · 2. #241 (état `UNKNOWN`) · 3. #242 (état `UNKNOWN`) · 4. #245 (état `UNKNOWN`) |
+| Qui tient quoi ? | GOV-062 (A01) |
 | Où en est la phase ? | phase 0 — 102/127 tâches, reste 19.50 j |
 | Le prochain pas | QA-T11 — Gate D migrations : base vierge, dump N-1, migrate diff vide, image N-1, lint expand/contract |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
-| Dernière entrée de journal | PR #239 — 2026-09-29 |
+| Dernière entrée de journal | PR #241 — 2026-09-29 |
 
 **Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
@@ -60,9 +60,10 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #239 — chore(GOV-012): registre rattrape, sept taches closes, gel de la gouvernance, avenants JUR-T03 et INT-T27-A | `t/registre-rattrapage-11` | un conflit avec `main` — à résoudre avant tout |
-| 2 | #241 — fix(GOV-062): l'outillage qui execute la porte A est juge, sept points nommes | `t/gov-062` | un conflit avec `main` — à résoudre avant tout |
-| 3 | #242 — feat(JUR-T34): la politique de confidentialite de l'espace, tiree du registre de l'article 30 et acceptee a la premiere connexion | `t/jur-t34` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #244 — docs(GOV-017a): confirmation du depot par e-mail — plan W20 et quatorze taches versees en phase 1, sans DECISIONS ni REQ nouvelles | `t/w20-confirmation-email` | un conflit avec `main` — à résoudre avant tout |
+| 2 | #241 — fix(GOV-062): l'outillage qui execute la porte A est juge, sept points nommes | `t/gov-062` | état `UNKNOWN` — à qualifier à la main |
+| 3 | #242 — feat(JUR-T34): la politique de confidentialite de l'espace, tiree du registre de l'article 30 et acceptee a la premiere connexion | `t/jur-t34` | état `UNKNOWN` — à qualifier à la main |
+| 4 | #245 — feat(QA-T11): porte D, expand puis contract contre le code deploye, vidage N-1 seme, diff vide | `t/qa-t11` | état `UNKNOWN` — à qualifier à la main |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -70,7 +71,9 @@ Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partn
 
 Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’issue, posés par l’orchestrateur au §3 de `.claude/skills/lot/SKILL.md` (revendication **en vol**), et le champ `owner` de `docs/tasks.json`, écrit par `pnpm lot:cloture` seul (revendication **consolidée**). Cette rubrique les REND ; corriger une revendication fausse se fait dans l’une des deux sources, jamais ici.
 
-Aucune tâche revendiquée. Un agent ne prend jamais une tâche non revendiquée (REQ-GOV-007) : la revendication passe par l’orchestrateur.
+| Tâche | Revendiquée par | Issue | Statut |
+| --- | --- | --- | --- |
+| GOV-062 — L'outillage qui execute la porte A n'est pas garde : configuration du gestionnaire, correctifs, actions tierces | A01 | #240 | `a_faire` |
 
 ⚠️ **13 revendication(s) périmée(s)** — QA-T07, GOV-042, GOV-045, GOV-050, GOV-051, GOV-053, GOV-054, GOV-055, GOV-060, GOV-072, GOV-079, GOV-093, INT-T01c : leur issue porte encore un label `owner:` alors que la tâche est livrée. `pnpm lot:cloture` écrit `docs/tasks.json` mais n’efface pas les labels ; la dette appartient à GOV-012.
 
@@ -88,13 +91,27 @@ Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeS
 
 ## Dernier atterrissage
 
-`origin/main` = `476135a` (2026-09-29T17:21:45+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `b34b959` (2026-09-29T18:00:27+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
 ## Journal
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
+
+### PR #241 — 2026-09-29 — fix(GOV-062): l'outillage qui execute la porte A est juge, sept points nommes
+
+**Fait.** La porte A juge l'outillage qui l'exécute, en sept points dont chacun a sa famille :
+réglage du gestionnaire, chemins réservés à `role:architecte`, correctifs, actions tierces, étape
+qui réécrit l'arbre, commande intégrée, environnement hérité. La réserve du §7 est accordée dans la
+source des agents, et la fiche de l'architecte est rendue par son générateur.
+
+**Reste.** Les lentilles relisent la tête. La modification de `.claude/agents/` et la correction
+du témoin de `gov:pr` ont chacune été autorisées par Williams, une seule fois.
+
+**Appris.** Un témoin qui décrit un risque peut heurter une réserve ajoutée plus tard : le cas
+6 quater mesurait le risque d'un fichier racine, et la réserve du §7 l'a fait rougir. Le témoin
+porte désormais le label que la réserve exige.
 
 ### PR #239 — 2026-09-29 — chore(GOV-012): registre rattrape, sept taches closes, gel de la gouvernance, avenants JUR-T03 et INT-T27-A
 
@@ -128,19 +145,7 @@ entrent dans `env.ts` : un quatrième path, signalé au rattrapage.
 **Appris.** Une erreur typée `AttenteDeDependance` suffit au travail de fond pour distinguer
 « attendre » de « échouer ». Le traitement n'a rien à savoir de la file.
 
-### PR #235 — 2026-09-29 — fix(GOV-066): la garde d'entite juge chaque commit de la PR, pas seulement la tete, et ecrit ce qu'elle ne lit pas
-
-**Fait.** La garde des coordonnées ne juge plus seulement la tête : chaque commit poussé par la PR
-est lu, fichier ajouté ou modifié par commit, tel qu'il était. Une coordonnée ajoutée puis retirée
-avant la porte A est nommée avec son commit. Ce qu'elle ne lit pas est écrit et imprimé.
-
-**Reste.** L'historique déjà fusionné n'est pas relu : chaque commit y a été jugé par sa PR, à
-partir de celle-ci. Les archives composées avec les attributs d'export ne sont pas lues.
-
-**Appris.** Sur un dépôt public, la tête n'est pas ce qui est publié : chaque commit d'une PR l'est,
-même écrasé à la fusion.
-
-… 3 entrée(s) affichée(s) sur 102 ; les 99 plus ancienne(s) se lisent dans `docs/journal/`.
+… 3 entrée(s) affichée(s) sur 103 ; les 100 plus ancienne(s) se lisent dans `docs/journal/`.
 
 ## Dette déclarée
 
