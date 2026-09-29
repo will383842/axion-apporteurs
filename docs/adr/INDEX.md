@@ -7,7 +7,7 @@
 >
 > `0000-gabarit.md` est le moule, pas un ADR : il n’est pas indexé.
 
-**25 ADR · 17 `propose`, 8 `accepte`, 0 `remplace`.**
+**26 ADR · 18 `propose`, 8 `accepte`, 0 `remplace`.**
 
 | ADR | Titre | Statut | Date | Tâche |
 | --- | --- | --- | --- | --- |
@@ -36,3 +36,4 @@
 | [`partners/ADR-0023`](0023-route-des-coordonnees-de-candidature.md) | Les coordonnées d'un candidat se tirent par une route HMAC d'axionia, jamais par un événement | `propose` | 2026-09-26 | INT-T01c |
 | [`partners/ADR-0024`](0024-deux-lentilles-mutation-par-stryker-et-relectures-sans-defaut.md) | Deux lentilles partout, la mutation mesurée par Stryker, et les relectures qui ne corrigent aucun défaut | `propose` | 2026-09-26 | GOV-101 |
 | [`partners/ADR-0025`](0025-les-decisions-de-gouvernance-de-will-s-ecrivent-en-adr.md) | Les décisions de gouvernance de Will s'écrivent en ADR : la règle d'arrêt du 2026-09-15 et les arbitrages des 15 et 16 septembre | `propose` | 2026-09-29 | GOV-058 |
+| [`partners/ADR-0027`](0027-le-motif-de-branche-depend-du-depot-de-la-tache.md) | Le motif de branche dépend du dépôt de la tâche | `propose` | 2026-09-29 | GOV-125 |

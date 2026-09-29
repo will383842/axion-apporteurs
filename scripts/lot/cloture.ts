@@ -302,27 +302,42 @@ function poserLaLivraison(t: Tache, attestation: Attestation): string {
  * répertoire courant, le motif était introuvable dès que la clôture tournait sur un autre arbre —
  * le dépôt jetable des témoins du script entier a rougi en ENOENT.
  */
-function motifDeBranche(): RegExp {
-  const motifs = new Set<string>();
+export function motifDeBranche(repo?: string | null): RegExp {
+  // GOV-125 (partners/ADR-0027) — LE MOTIF DÉPEND DU DÉPÔT DE LA TÂCHE. Il vit dans UNE règle de
+  // `$defs.tache.allOf` : `if repo = axionia` → `then` (branche d'axion-ia), sinon `else` (les deux
+  // formes fermées de Partners). Toute autre place d'un motif de `branch` est un refus : deux
+  // sources divergeraient (RM-01).
+  const racineDuCode = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
+  const schema = JSON.parse(readFileSync(join(racineDuCode, CHEMIN_SCHEMA_DES_TACHES), 'utf8')) as {
+    $defs?: { tache?: { allOf?: unknown[] } };
+  };
+  const motifs: string[] = [];
   const parcourir = (n: unknown): void => {
     if (!n || typeof n !== 'object') return;
     for (const [cle, v] of Object.entries(n as Record<string, unknown>)) {
       if (cle === 'branch' && v && typeof v === 'object') {
-        const p = (v as { pattern?: unknown }).pattern;
-        if (typeof p === 'string') motifs.add(p);
+        const pat = (v as { pattern?: unknown }).pattern;
+        if (typeof pat === 'string') motifs.push(pat);
       }
       parcourir(v);
     }
   };
-  const racineDuCode = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
-  parcourir(JSON.parse(readFileSync(join(racineDuCode, CHEMIN_SCHEMA_DES_TACHES), 'utf8')));
-  if (motifs.size !== 1) {
+  parcourir(schema);
+  type Cote = { properties?: { branch?: { pattern?: unknown } } };
+  type Regle = { if?: { properties?: { repo?: { const?: unknown } } }; then?: Cote; else?: Cote };
+  const regle = (schema.$defs?.tache?.allOf ?? []).find(
+    (r): r is Regle => (r as Regle)?.if?.properties?.repo?.const === 'axionia'
+  );
+  const axionia = regle?.then?.properties?.branch?.pattern;
+  const partners = regle?.else?.properties?.branch?.pattern;
+  if (typeof axionia !== 'string' || typeof partners !== 'string' || motifs.length !== 2) {
     throw new Error(
-      `${CHEMIN_SCHEMA_DES_TACHES} porte ${motifs.size} motif(s) distinct(s) pour \`branch\` : ` +
-        'la clôture ne sait pas lequel appliquer.'
+      `${CHEMIN_SCHEMA_DES_TACHES} ne porte pas la règle de branche par dépôt (GOV-125) : ` +
+        `${motifs.length} motif(s) de \`branch\` trouvés, deux attendus, dans \`then\` et \`else\`. ` +
+        'La clôture ne sait pas lequel appliquer.'
     );
   }
-  return new RegExp([...motifs][0]!);
+  return new RegExp(repo === 'axionia' ? axionia : partners);
 }
 
 /** Ce que la forge rend d'une PR fusionnée, pour une tâche close seule. */
@@ -454,7 +469,7 @@ export function cloturerUneTacheSeule(options: {
         'et elle se lit sur la forge (`headRefName`), elle ne se tape pas.',
     });
   }
-  if (livraison.branch && !motifDeBranche().test(livraison.branch)) {
+  if (livraison.branch && !motifDeBranche(t.repo).test(livraison.branch)) {
     refus.push({
       famille: 'branche_hors_motif',
       message:
@@ -507,7 +522,8 @@ export function cloturerLeLot(options: {
   // re-clore. Le motif est lu dans le schéma, par la même fonction (RM-01).
   for (const r of rendu.resultats ?? []) {
     const branche = r?.dev?.branch;
-    if (branche && !motifDeBranche().test(branche)) {
+    const depot = taches.find((t) => t.id === r?.dev?.taskId)?.repo;
+    if (branche && !motifDeBranche(depot).test(branche)) {
       refus.push({
         famille: 'branche_hors_motif',
         message:
