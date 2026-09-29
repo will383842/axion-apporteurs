@@ -16,7 +16,7 @@
 
 **334 exigences actives · 128 réputées testées · 128 couvertes · 0 orphelines.**
 
-311 tâches, dont 141 livrées · 168 fichiers de test exécutés par `vitest` sur 168 présents.
+311 tâches, dont 141 livrées · 170 fichiers de test exécutés par `vitest` sur 170 présents.
 
 ## Exigences réputées testées
 
@@ -46,7 +46,7 @@
 | `REQ-DM-011` | `DM-06`, `DM-18`, `SEC-19` | `tests/unit/domaine/apporteur-matrice-et-statuts.spec.ts` | couverte |
 | `REQ-DM-012` | `DM-06` | `tests/integration/apporteur-jeton-depot.spec.ts`, `tests/unit/domaine/apporteur-identifiants.spec.ts` | couverte |
 | `REQ-DM-024` | `DM-01`, `DM-20` | `tests/integration/journal.spec.ts`, `tests/unit/domaine/journal-chaine.spec.ts` | couverte |
-| `REQ-DM-035` | `DM-06`, `INT-T22`, `INT-T26` | `tests/unit/domaine/apporteur-score-fige.spec.ts`, `tests/unit/domaine/apporteur-snapshot-candidature.spec.ts` | couverte |
+| `REQ-DM-035` | `DM-06`, `INT-T22`, `INT-T26` | `tests/integration/candidature-recue.spec.ts`, `tests/unit/domaine/apporteur-score-fige.spec.ts`, `tests/unit/domaine/apporteur-snapshot-candidature.spec.ts`, `tests/unit/integration/candidature-recue.spec.ts` | couverte |
 | `REQ-DM-036` | `GOV-088`, `SEC-06` | `tests/integration/webhook.spec.ts`, `tests/unit/gouvernance/termes-interdits.spec.ts`, `tests/unit/securite/evenements-recus-migration.spec.ts` | couverte |
 | `REQ-DM-037` | `DM-02` | `tests/unit/domaine/gardes-de-schema.spec.ts` | couverte |
 | `REQ-DM-038` | `DM-01`, `DM-02` | `tests/integration/index-partiels.spec.ts`, `tests/unit/domaine/gardes-de-schema.spec.ts`, `tests/unit/domaine/schema-centimes.spec.ts`, `tests/unit/gouvernance/glossaire-enums.spec.ts` | couverte |
@@ -93,7 +93,7 @@
 | `REQ-INT-024` | `INT-T14` | `tests/unit/integration/notif-sans-pii.spec.ts` | couverte |
 | `REQ-INT-026` | `INT-T11` | `tests/integration/adaptateur-mcp.spec.ts`, `tests/unit/securite/webhook-signature.spec.ts` | couverte |
 | `REQ-INT-029` | `INT-T01a`, `INT-T27-A` | `tests/unit/integration/contrat-hash.spec.ts`, `tests/unit/integration/contrat-v2-frontiere.spec.ts`, `tests/unit/securite/webhook-signature.spec.ts` | couverte |
-| `REQ-INT-032` | `DM-15`, `INT-T01b`, `INT-T01c`, `INT-T05`, `INT-T22`, `INT-T26`, `INT-T27-A` | `tests/unit/integration/contrat-v2-frontiere.spec.ts` | couverte |
+| `REQ-INT-032` | `DM-15`, `INT-T01b`, `INT-T01c`, `INT-T05`, `INT-T22`, `INT-T26`, `INT-T27-A` | `tests/integration/candidature-recue.spec.ts`, `tests/unit/integration/candidature-recue.spec.ts`, `tests/unit/integration/contrat-v2-frontiere.spec.ts` | couverte |
 | `REQ-JUR-003` | `JUR-T01`, `JUR-T01b` | `tests/unit/contrat/contract-template-complete.spec.ts` | couverte |
 | `REQ-JUR-007` | `DM-25`, `JUR-T01`, `JUR-T01b`, `T-ARG-033` | `tests/unit/contrat/contract-template-complete.spec.ts` | couverte |
 | `REQ-JUR-009` | `JUR-T04`, `JUR-T09` | `tests/unit/juridique/registre-rgpd.spec.ts` | couverte |
@@ -121,7 +121,7 @@
 | `REQ-QA-028` | `INT-T09` | `tests/integration/api-gouv.spec.ts` | couverte |
 | `REQ-QA-030` | `QA-T04`, `QA-T13` | `tests/integration/sondes-de-vie.spec.ts`, `tests/unit/qualite/env-fail-fast.spec.ts` | couverte |
 | `REQ-QA-032` | `QA-T05` | `tests/unit/qualite/build-sans-base.spec.ts` | couverte |
-| `REQ-QA-035` | `DM-06`, `INT-T22`, `INT-T26` | `tests/unit/domaine/apporteur-score-fige.spec.ts` | couverte |
+| `REQ-QA-035` | `DM-06`, `INT-T22`, `INT-T26` | `tests/integration/candidature-recue.spec.ts`, `tests/unit/domaine/apporteur-score-fige.spec.ts`, `tests/unit/integration/candidature-recue.spec.ts` | couverte |
 | `REQ-SEC-001` | `SEC-03` | `tests/integration/lien-magique.spec.ts`, `tests/unit/domaine/apporteur-acces-espace.spec.ts`, `tests/unit/securite/connexion-actions.spec.ts`, `tests/unit/securite/connexion-ecran.spec.ts`, `tests/unit/securite/lien-magique-compteurs.spec.ts`, `tests/unit/securite/lien-magique-depot.spec.ts`, `tests/unit/securite/lien-magique-indistinction.spec.ts`, `tests/unit/securite/lien-magique-migration.spec.ts`, `tests/unit/securite/lien-magique-production.spec.ts` | couverte |
 | `REQ-SEC-002` | `SEC-03` | `tests/integration/lien-magique.spec.ts`, `tests/unit/securite/connexion-ecran.spec.ts`, `tests/unit/securite/lien-magique-compteurs.spec.ts`, `tests/unit/securite/lien-magique-indistinction.spec.ts`, `tests/unit/securite/lien-magique-production.spec.ts`, `tests/unit/securite/rate-famille.spec.ts` | couverte |
 | `REQ-SEC-003` | `SEC-04`, `SEC-19`, `UX-P1-04` | `tests/integration/sessions-revocables.spec.ts`, `tests/unit/securite/revocation.spec.ts` | couverte |
@@ -455,6 +455,7 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | `tests/integration/adaptateur-mcp.spec.ts` | oui | `REQ-INT-026`, `REQ-SEC-028` |
 | `tests/integration/api-gouv.spec.ts` | oui | `REQ-INT-020`, `REQ-INT-021`, `REQ-QA-028` |
 | `tests/integration/apporteur-jeton-depot.spec.ts` | oui | `REQ-DM-012` |
+| `tests/integration/candidature-recue.spec.ts` | oui | `REQ-DM-035`, `REQ-INT-032`, `REQ-QA-035` |
 | `tests/integration/frontiere.spec.ts` | oui | `REQ-INT-014`, `REQ-SEC-012` |
 | `tests/integration/grille-versionnee.spec.ts` | oui | `REQ-DM-014` |
 | `tests/integration/harnais-testcontainers.spec.ts` | oui | `REQ-QA-006` |
@@ -583,6 +584,7 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | `tests/unit/gouvernance/verrou-de-phase.spec.ts` | oui | `REQ-GOV-027` |
 | `tests/unit/gouvernance/volatilite-par-ligne.spec.ts` | oui | `REQ-GOV-032` |
 | `tests/unit/gouvernance/vues-derivees.spec.ts` | oui | `REQ-GOV-006`, `REQ-GOV-021`, `REQ-GOV-032` |
+| `tests/unit/integration/candidature-recue.spec.ts` | oui | `REQ-DM-035`, `REQ-INT-032`, `REQ-QA-035` |
 | `tests/unit/integration/contrat-hash.spec.ts` | oui | `REQ-GOV-020`, `REQ-INT-003`, `REQ-INT-004`, `REQ-INT-029`, `REQ-QA-007` |
 | `tests/unit/integration/contrat-v2-frontiere.spec.ts` | oui | `REQ-INT-029`, `REQ-INT-032` |
 | `tests/unit/integration/evenement-recu-travail.spec.ts` | oui | `REQ-ARG-003`, `REQ-INT-011`, `REQ-QA-026` |

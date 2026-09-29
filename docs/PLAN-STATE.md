@@ -7,8 +7,8 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `fa90f83` — 2026-09-29T16:41:40+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #237 (un contrôle requis rouge ou une revue manquante) · 2. #239 (un contrôle requis rouge ou une revue manquante) · 3. #241 (un conflit avec `main`) |
+| Où est `main` ? | `476135a` — 2026-09-29T17:21:45+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #239 (un conflit avec `main`) · 2. #241 (un conflit avec `main`) · 3. #242 (un conflit avec `main`) |
 | Qui tient quoi ? | aucune tâche revendiquée |
 | Où en est la phase ? | phase 0 — 102/127 tâches, reste 19.50 j |
 | Le prochain pas | QA-T11 — Gate D migrations : base vierge, dump N-1, migrate diff vide, image N-1, lint expand/contract |
@@ -60,9 +60,9 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #237 — feat(INT-T26): la candidature recue cree un apporteur candidat, coordonnees tirees et chiffrees, rattachement par empreinte | `t/int-t26` | un contrôle requis rouge ou une revue manquante |
-| 2 | #239 — chore(GOV-012): registre rattrape, sept taches closes, gel de la gouvernance, avenants JUR-T03 et INT-T27-A | `t/registre-rattrapage-11` | un contrôle requis rouge ou une revue manquante |
-| 3 | #241 — fix(GOV-062): l'outillage qui execute la porte A est juge, sept points nommes | `t/gov-062` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #239 — chore(GOV-012): registre rattrape, sept taches closes, gel de la gouvernance, avenants JUR-T03 et INT-T27-A | `t/registre-rattrapage-11` | un conflit avec `main` — à résoudre avant tout |
+| 2 | #241 — fix(GOV-062): l'outillage qui execute la porte A est juge, sept points nommes | `t/gov-062` | un conflit avec `main` — à résoudre avant tout |
+| 3 | #242 — feat(JUR-T34): la politique de confidentialite de l'espace, tiree du registre de l'article 30 et acceptee a la premiere connexion | `t/jur-t34` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -88,7 +88,7 @@ Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeS
 
 ## Dernier atterrissage
 
-`origin/main` = `fa90f83` (2026-09-29T16:41:40+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `476135a` (2026-09-29T17:21:45+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
@@ -112,6 +112,22 @@ motif. Il faut un rattrapage par ADR.
 **Appris.** Une clôture qui passe seule peut rendre le registre rouge par une dépendance encore
 ouverte dans l'autre dépôt : `gov:tasks` se rejoue après chaque clôture, pas seulement à la fin.
 
+### PR #237 — 2026-09-29 — feat(INT-T26): la candidature recue cree un apporteur candidat, coordonnees tirees et chiffrees, rattachement par empreinte
+
+**Fait.** Une candidature reçue d'axionia devient un apporteur `candidat`. Le snapshot figé et le
+passage de l'événement à `traite` se font dans une seule transaction. Les coordonnées ne voyagent
+pas dans la charge : elles sont tirées à la route signée d'axionia, validées contre le `$defs`
+publié du contrat v2, puis chiffrées. Une personne déjà connue par son courriel, son téléphone ou
+la même candidature est rattachée, pas doublée. Si la route ne répond pas, l'événement attend
+`coordonnees:<id>` et le travail de fond le reprend.
+
+**Reste.** La route côté axionia (INT-T27-A, axion-ia#1223) n'est pas encore en production. D'ici
+là, toute candidature attend, ce qui est l'état voulu. Le secret de relecture et l'URL d'axionia
+entrent dans `env.ts` : un quatrième path, signalé au rattrapage.
+
+**Appris.** Une erreur typée `AttenteDeDependance` suffit au travail de fond pour distinguer
+« attendre » de « échouer ». Le traitement n'a rien à savoir de la file.
+
 ### PR #235 — 2026-09-29 — fix(GOV-066): la garde d'entite juge chaque commit de la PR, pas seulement la tete, et ecrit ce qu'elle ne lit pas
 
 **Fait.** La garde des coordonnées ne juge plus seulement la tête : chaque commit poussé par la PR
@@ -124,19 +140,7 @@ partir de celle-ci. Les archives composées avec les attributs d'export ne sont 
 **Appris.** Sur un dépôt public, la tête n'est pas ce qui est publié : chaque commit d'une PR l'est,
 même écrasé à la fusion.
 
-### PR #233 — 2026-09-29 — feat(JUR-T04): registre de l'article 30 et AIPD, sources et derives du schema, la page de confidentialite scindee
-
-**Fait.** Le registre de l'article 30 décrit trois traitements, chaque rubrique rattachée à sa source
-ou déclarée à compléter avec sa question ; ses données stockées se dérivent du schéma dans les deux
-sens. L'AIPD est posée, non signée. La page de confidentialité passe à JUR-T34, versée ici.
-
-**Reste.** Les réponses juridiques, toutes rendues à Will : durées, sous-traitants, localisations,
-et les huit questions du chantier des conseillers salariés, écrites sans créer leur traitement.
-
-**Appris.** La garde dérivée du schéma a vu seule la table arrivée entre la rédaction et la PR : un
-registre qui se confronte au schéma ne vieillit pas en silence.
-
-… 3 entrée(s) affichée(s) sur 101 ; les 98 plus ancienne(s) se lisent dans `docs/journal/`.
+… 3 entrée(s) affichée(s) sur 102 ; les 99 plus ancienne(s) se lisent dans `docs/journal/`.
 
 ## Dette déclarée
 

@@ -12702,7 +12702,11 @@
       "zone": "integration",
       "paths": [
         "src/server/integrations/axionia/candidature-recue.ts",
-        "tests/integration/candidature-recue.spec.ts"
+        "tests/integration/candidature-recue.spec.ts",
+        "src/server/queue/workers/evenement-recu.ts",
+        "src/app/api/webhooks/axionia/route.ts",
+        "tests/unit/integration/candidature-recue.spec.ts",
+        "src/lib/env.ts"
       ],
       "schema": false,
       "sensible": [

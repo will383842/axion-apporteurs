@@ -70,6 +70,19 @@ export interface DepotDuTravail {
 export type Dispatch = (recu: EvenementATraiter) => Promise<void>;
 
 /**
+ * Levée par un traitement qui attend une dépendance qui n'est PAS un événement — une route d'axionia
+ * indisponible (INT-T26 : `coordonnees:<candidatureId>`, partners/ADR-0023). L'événement passe
+ * `en_attente_dependance` avec cette référence, jamais `en_erreur` : ce n'est pas une panne du
+ * traitement, et il sera repris (`reprendre`, en tête de passage).
+ */
+export class AttenteDeDependance extends Error {
+  constructor(readonly ref: string) {
+    super('en_attente_dependance');
+    this.name = 'AttenteDeDependance';
+  }
+}
+
+/**
  * Les dépendances de REQ-INT-011, et elles seules : le champ de la charge qui désigne le parent,
  * l'espace de référence du parent, et les types qui le font exister.
  */
@@ -126,9 +139,15 @@ export async function passerLeTravail(d: {
   depot: DepotDuTravail;
   dispatch: Dispatch;
   maintenant: () => Date;
+  /**
+   * Repasse `recu` les événements qui attendent une dépendance NON événementielle (une route) ;
+   * rend leur nombre. Appelée une fois, en tête de passage : aucun parent ne les réveillera.
+   */
+  reprendre?: () => Promise<number>;
 }): Promise<CompteursDuPassage> {
   const compteurs: CompteursDuPassage = { traites: 0, enAttente: 0, enErreur: 0, reveilles: 0 };
   try {
+    if (d.reprendre) compteurs.reveilles += await d.reprendre();
     for (;;) {
       const lot = await d.depot.aTraiter();
       if (lot.length === 0) break;
@@ -173,6 +192,11 @@ async function traiterUn(
   try {
     await d.dispatch(e);
   } catch (erreur) {
+    if (erreur instanceof AttenteDeDependance) {
+      compteurs.enAttente += 1;
+      await d.depot.marquer(e.id, { statut: 'en_attente_dependance', dependanceRef: erreur.ref });
+      return;
+    }
     compteurs.enErreur += 1;
     await d.depot.marquer(e.id, {
       statut: 'en_erreur',
@@ -190,6 +214,21 @@ async function traiterUn(
 
 /** La taille d'un lot lu par `aTraiter` : un passage en lit autant qu'il en faut, lot après lot. */
 const LOT = 100;
+
+/**
+ * La reprise des attentes dont la référence commence par `prefixe` (INT-T26 : `coordonnees:`) :
+ * elles repassent `recu`. Une par passage, jamais en boucle : un échec les remet en attente, et le
+ * passage suivant les reprendra.
+ */
+export function reprendreLesAttentes(prisma: PrismaClient, prefixe: string): () => Promise<number> {
+  return async () => {
+    const r = await prisma.evenementRecu.updateMany({
+      where: { statut: 'en_attente_dependance', dependanceRef: { startsWith: prefixe } },
+      data: { statut: 'recu', dependanceRef: null },
+    });
+    return r.count;
+  };
+}
 
 export function depotDuTravail(prisma: PrismaClient): DepotDuTravail {
   return {
