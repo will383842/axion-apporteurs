@@ -28,8 +28,8 @@ niveau de risque dérivé et fermé, et ce qui est illisible vaut deux.
 2. `uneLentille` est **dérivé** dans `risqueDeLaPr()`, jamais déclaré par l'auteur. Il n'est vrai que si
    toutes ces conditions tiennent : au moins une tâche est résolue ; chaque tâche résolue, sur la tête
    comme sur la base, est d'une zone de `ZONES_A_UNE_LENTILLE` (gouvernance, qualité) ; le diff n'est
-   pas vide ; chaque fichier est sous `RACINES_A_UNE_LENTILLE` (`docs/`, `tests/unit/qualite/`,
-   `tests/a11y/`, `scripts/vues/`, `scripts/plan-state/`). `scripts/lot/` n'y est pas : il porte la
+   pas vide ; chaque fichier est sous `RACINES_A_UNE_LENTILLE` (`docs/`, `tests/a11y/`,
+   `scripts/vues/`, `scripts/plan-state/`). `scripts/lot/` n'y est pas : il porte la
    garde des revues, la clôture et les écrivains du registre.
 3. Les deux listes sont des listes d'**autorisation**, donc fermées. Tout chemin qu'elles ne nomment
    pas reste à deux lentilles : `src/`, `scripts/gates/`, `scripts/lot/`, `scripts/image/`, `prisma/`, `config/`, la
@@ -46,8 +46,9 @@ niveau de risque dérivé et fermé, et ce qui est illisible vaut deux.
    lentille, un `sensible` retiré d'une tâche ferait passer à une lentille toutes ses PR suivantes,
    sans `securite`. Les rattrapages du registre restent donc à deux lentilles.
 6. **Le témoin d'une garde vaut la garde** (GOV-126, relevés des lentilles `securite` sur la PR #248
-   et `exactitude` sur la PR #250). Dans `tests/`, seuls `tests/unit/qualite/` et `tests/a11y/` sont
-   autorisés à une lentille. Le domaine (prorata, commission, grille), le contrat, le juridique,
+   et `exactitude` sur la PR #250). Dans `tests/`, seul `tests/a11y/` est autorisé à une
+   lentille : `tests/unit/qualite/` porte les témoins de gardes de sécurité et du processus (image,
+   journal, secrets, `red-first`, mutation). Le domaine (prorata, commission, grille), le contrat, le juridique,
    l'intégration, la gouvernance, la sécurité, les fixtures d'un dépôt public et tout dossier à venir
    valent deux lentilles. Sinon, une PR de tests relue par une seule lentille pourrait affaiblir le
    témoin d'une garde ou d'un invariant d'argent, ce que ni `red-first` ni la mutation ne voient.

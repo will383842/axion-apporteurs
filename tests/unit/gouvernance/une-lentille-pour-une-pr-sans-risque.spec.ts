@@ -54,11 +54,7 @@ describe('REQ-GOV-011 — une PR sans risque n’exige qu’une lentille, dériv
     const { exigees } = lentilles({
       titre: 'test(QA-T11): un témoin de plus',
       taches: [QUALITE],
-      fichiers: [
-        'tests/unit/qualite/x.spec.ts',
-        'scripts/vues/fusion.ts',
-        'scripts/plan-state/build.ts',
-      ],
+      fichiers: ['tests/a11y/x.spec.ts', 'scripts/vues/fusion.ts', 'scripts/plan-state/build.ts'],
     });
     expect(exigees).toEqual(['exactitude']);
   });
@@ -167,7 +163,6 @@ describe('REQ-GOV-011 — une PR sans risque n’exige qu’une lentille, dériv
   it('REQ-GOV-011 — la liste d’autorisation est FERMÉE et écrite', () => {
     expect([...LECTEUR.RACINES_A_UNE_LENTILLE]).toEqual([
       'docs/',
-      'tests/unit/qualite/',
       'tests/a11y/',
       'scripts/vues/',
       'scripts/plan-state/',
@@ -227,10 +222,10 @@ describe('REQ-GOV-011 — une PR sans risque n’exige qu’une lentille, dériv
       expect(lentilles({ fichiers: [f] }).exigees, f).toEqual(['exactitude', 'securite']);
     }
     // Contre-témoin : un test hors de ces trois dossiers reste à une lentille.
-    expect(LECTEUR.fichierAUneLentille('tests/unit/qualite/x.spec.ts')).toBe(true);
+    expect(LECTEUR.fichierAUneLentille('tests/a11y/x.spec.ts')).toBe(true);
   });
 
-  it('REQ-GOV-011 — TÉMOIN : dans tests/, seuls qualite et a11y restent à une lentille ; le domaine, le contrat, le juridique et les fixtures en exigent DEUX (GOV-126)', () => {
+  it('REQ-GOV-011 — TÉMOIN : dans tests/, seul a11y reste à une lentille ; le domaine, le contrat, le juridique, les fixtures et les témoins de qualité en exigent DEUX (GOV-126)', () => {
     for (const f of [
       'tests/unit/domaine/prorata.spec.ts',
       'tests/unit/contrat/x.spec.ts',
@@ -241,6 +236,8 @@ describe('REQ-GOV-011 — une PR sans risque n’exige qu’une lentille, dériv
       'tests/gov/x.spec.ts',
       'tests/fixtures/grille.json',
       'tests/setup.ts',
+      'tests/unit/qualite/pipeline-image.spec.ts',
+      'tests/unit/qualite/journal-redige.spec.ts',
     ]) {
       expect(LECTEUR.fichierAUneLentille(f), f).toBe(false);
       expect(lentilles({ fichiers: [f] }).exigees, f).toEqual(['exactitude', 'securite']);
