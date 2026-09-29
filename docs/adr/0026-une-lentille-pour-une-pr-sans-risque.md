@@ -28,10 +28,11 @@ classement dérivé et fermé, et ce qui est illisible vaut deux.
 2. `uneLentille` est **dérivé** dans `risqueDeLaPr()`, jamais déclaré par l'auteur. Il n'est vrai que si
    toutes ces conditions tiennent : au moins une tâche est résolue ; chaque tâche résolue, sur la tête
    comme sur la base, est d'une zone de `ZONES_A_UNE_LENTILLE` (gouvernance, qualité) ; le diff n'est
-   pas vide ; chaque fichier est sous `RACINES_A_UNE_LENTILLE` (`docs/`, `tests/`, `scripts/lot/`,
-   `scripts/vues/`, `scripts/plan-state/`).
+   pas vide ; chaque fichier est sous `RACINES_A_UNE_LENTILLE` (`docs/`, `tests/`, `scripts/vues/`,
+   `scripts/plan-state/`). `scripts/lot/` n'y est pas : il porte la garde des revues, la clôture et
+   les écrivains du registre.
 3. Les deux listes sont des listes d'**autorisation**, donc fermées. Tout chemin qu'elles ne nomment
-   pas reste à deux lentilles : `src/`, `scripts/gates/`, `scripts/image/`, `prisma/`, `config/`, la
+   pas reste à deux lentilles : `src/`, `scripts/gates/`, `scripts/lot/`, `scripts/image/`, `prisma/`, `config/`, la
    racine, les dossiers cachés, et tout dossier à venir. Toute zone qu'elles ne nomment pas aussi :
    l'argent, la sécurité, le juridique, les données du domaine, l'intégration, le déploiement.
 4. La garde des revues reste à deux lentilles : `risqueDeLaPr()` l'élève avant de lire la liste.

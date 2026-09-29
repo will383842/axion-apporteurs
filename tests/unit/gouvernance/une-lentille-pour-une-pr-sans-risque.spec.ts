@@ -86,9 +86,17 @@ describe('REQ-GOV-011 — une PR sans risque n’exige qu’une lentille, dériv
     }
   });
 
-  it('REQ-GOV-011 — la garde des revues reste à deux, même sous scripts/lot/', () => {
-    const { exigees } = lentilles({ fichiers: ['scripts/lot/revues.ts'] });
-    expect(exigees).toEqual(['exactitude', 'securite']);
+  it('REQ-GOV-011 — TÉMOIN : scripts/lot/ entier vaut deux lentilles — garde des revues, clôture, écrivains du registre', () => {
+    for (const f of [
+      'scripts/lot/revues.ts',
+      'scripts/lot/corps-de-pr.ts',
+      'scripts/lot/cloture.ts',
+      'scripts/lot/attestation.ts',
+      'scripts/lot/chemins-de-tache.ts',
+    ]) {
+      expect(LECTEUR.fichierAUneLentille(f), f).toBe(false);
+      expect(lentilles({ fichiers: [f] }).exigees, f).toEqual(['exactitude', 'securite']);
+    }
   });
 
   it('REQ-GOV-011 — TÉMOIN : une liste de fichiers incomplète en exige DEUX', () => {
@@ -160,7 +168,6 @@ describe('REQ-GOV-011 — une PR sans risque n’exige qu’une lentille, dériv
     expect([...LECTEUR.RACINES_A_UNE_LENTILLE]).toEqual([
       'docs/',
       'tests/',
-      'scripts/lot/',
       'scripts/vues/',
       'scripts/plan-state/',
     ]);

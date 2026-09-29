@@ -1390,7 +1390,7 @@ export type Risque = {
 
 /**
  * GOV-124 — CE QU'UNE SEULE LENTILLE PEUT RELIRE : des documents, des tests et l'outillage interne
- * du registre et des vues. Décision de Williams du 2026-09-29, qui amende W16 (`partners/ADR-0024`).
+ * des vues. Décision de Williams du 2026-09-29, qui amende W16 (`partners/ADR-0024`).
  * C'est une liste d'AUTORISATION, donc FERMÉE : tout chemin qu'elle ne nomme pas — `src/`,
  * `scripts/gates/`, `scripts/image/`, `prisma/`, `config/`, la racine, un dossier caché, et tout
  * dossier à venir — vaut deux lentilles. La garde des revues (`scripts/lot/revues.ts` et ses
@@ -1399,13 +1399,15 @@ export type Risque = {
 export const RACINES_A_UNE_LENTILLE: readonly string[] = [
   'docs/',
   'tests/',
-  'scripts/lot/',
   'scripts/vues/',
   'scripts/plan-state/',
 ];
 
 /**
- * GOV-124 — CE QUE LA LISTE D'AUTORISATION NE COUVRE JAMAIS, même sous `docs/` ou `scripts/lot/`
+ * `scripts/lot/` n'y est PAS (relevé de la lentille `exactitude`) : il porte la garde des revues, la
+ * clôture et les écrivains du registre, qui décident des lentilles, du statut et de l'attestation.
+ *
+ * GOV-124 — CE QUE LA LISTE D'AUTORISATION NE COUVRE JAMAIS, même sous `docs/`
  * (relevé de la lentille `exactitude` sur la PR #246) : les REGISTRES qui nourrissent ce calcul et
  * les textes qui fixent le processus. Relu par une seule lentille, un changement de `sensible` ou de
  * `zone` dans `docs/tasks.json` ferait passer à une lentille toutes les PR suivantes de la tâche,

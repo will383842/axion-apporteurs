@@ -306,7 +306,7 @@ dérivation.
 
 **Une lentille pour une PR sans risque** — décision de Williams du 2026-09-29 (`partners/ADR-0026`,
 GOV-124), qui amende `W16`. Une PR que `risqueDeLaPr` classe ordinaire, dont chaque fichier est sous
-`RACINES_A_UNE_LENTILLE` (documents, tests, outillage du registre et des vues) et chaque tâche en zone de
+`RACINES_A_UNE_LENTILLE` (documents, tests, outillage des vues ; jamais `scripts/lot/`) et chaque tâche en zone de
 `ZONES_A_UNE_LENTILLE` (gouvernance, qualité), ne reçoit que l'avis `exactitude`, dont le refus bloque.
 Le classement est dérivé, jamais déclaré ; tout ce que la règle ne sait pas lire vaut deux lentilles.
 
