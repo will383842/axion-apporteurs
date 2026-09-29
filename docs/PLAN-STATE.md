@@ -8,12 +8,12 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `0d31086` — 2026-09-29T22:21:14+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #254 (un contrôle requis rouge ou une revue manquante) · 2. #242 (un conflit avec `main`) |
+| Qu’est-ce qui est en vol ? | 1. #254 (un contrôle requis rouge ou une revue manquante) · 2. #259 (un contrôle requis rouge ou une revue manquante) · 3. #242 (un conflit avec `main`) |
 | Qui tient quoi ? | GOV-117 (A01) · GOV-127 (A01) |
 | Où en est la phase ? | phase 0 — 110/132 tâches, reste 17.75 j |
 | Le prochain pas | QA-T06 — Preview par PR sur Coolify, base éphémère, seed déterministe |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
-| Dernière entrée de journal | PR #257 — 2026-09-29 |
+| Dernière entrée de journal | PR #259 — 2026-09-29 |
 
 **Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
@@ -61,7 +61,8 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
 | 1 | #254 — docs(GOV-017a): W20, questions 18 et 19 tranchees — aucune tacite d'une demande signalee, liberee apres 3 injoignables ou 45 jours | `t/w20-q18-q19` | un contrôle requis rouge ou une revue manquante |
-| 2 | #242 — feat(JUR-T34): la politique de confidentialite de l'espace, tiree du registre de l'article 30 et acceptee a la premiere connexion | `t/jur-t34` | un conflit avec `main` — à résoudre avant tout |
+| 2 | #259 — feat(GOV-117): l'outil du registre ecrit reqs, hyp et zone d'une tache, valides contre le schema et les registres | `t/gov-117` | un contrôle requis rouge ou une revue manquante |
+| 3 | #242 — feat(JUR-T34): la politique de confidentialite de l'espace, tiree du registre de l'article 30 et acceptee a la premiere connexion | `t/jur-t34` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -98,6 +99,17 @@ Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
 
+### PR #259 — 2026-09-29 — feat(GOV-117): l'outil du registre ecrit reqs, hyp et zone d'une tache, valides contre le schema et les registres
+
+**Fait.** Les outils hors dépôt savent écrire les exigences, les hypothèses et la zone d'une tâche,
+avec sept refus nommés et les exigences redérivées après chaque écriture. Un témoin du dépôt montre
+que les gardes prennent une écriture qui passerait sans l'outil.
+
+**Reste.** GOV-115 peut désormais écrire les tâches de W19 dans leurs champs.
+
+**Appris.** Une dérivation copiée dans un seul outil finit par diverger des autres : l'extraire en une
+fonction unique a aussi réparé la phase des exigences, que le versement ne dérivait pas.
+
 ### PR #257 — 2026-09-29 — feat(GOV-127): le passif declare de la declaration, une liste fermee a une entree levee sur arbitrage ecrit
 
 **Fait.** La clôture reçoit un passif déclaré de la déclaration : une liste fermée, datée, à une
@@ -121,19 +133,7 @@ arbitrée demande un outil, GOV-127. INT-T27-A et INT-T26 attendent derrière el
 **Appris.** Un arbitrage ne suffit pas quand aucun outil ne sait l'écrire : le registre ne s'édite
 pas à la main, et l'exception doit elle-même devenir une règle écrite, fermée et testée.
 
-### PR #253 — 2026-09-29 — feat(GOV-125): le motif de branche depend du depot de la tache, une tache axionia se clot sur sa branche
-
-**Fait.** Le motif de branche du registre dépend désormais du dépôt de la tâche. Une tâche d'axion-ia
-se clôt sur une branche d'axion-ia, dont seule la forme est jugée ; une tâche de Partners garde les
-deux formes fermées. La clôture et l'outil hors dépôt lisent la même règle.
-
-**Reste.** Le rattrapage qui clôt les tâches d'axion-ia livrées et en production, puis celles de
-Partners qui en dépendaient.
-
-**Appris.** Un motif fermé qui ne connaît qu'un dépôt bloque en silence tout ce qui se livre dans
-l'autre : la dette ne s'est vue qu'au moment de clore une tâche d'argent déjà en production.
-
-… 3 entrée(s) affichée(s) sur 112 ; les 109 plus ancienne(s) se lisent dans `docs/journal/`.
+… 3 entrée(s) affichée(s) sur 113 ; les 110 plus ancienne(s) se lisent dans `docs/journal/`.
 
 ## Dette déclarée
 
