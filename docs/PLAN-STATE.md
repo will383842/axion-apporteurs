@@ -9,9 +9,9 @@
 | --- | --- |
 | Où est `main` ? | `b34b959` — 2026-09-29T18:00:27+02:00 |
 | Qu’est-ce qui est en vol ? | 1. #241 (un contrôle requis rouge ou une revue manquante) · 2. #242 (un conflit avec `main`) · 3. #244 (un conflit avec `main`) · 4. #245 (un conflit avec `main`) |
-| Qui tient quoi ? | QA-T05 (A01) · JUR-T04 (A01) · GOV-066 (A01) · GOV-122 (A01) · GOV-118 (A01) · GOV-119 (A01) · GOV-121 (A01) |
-| Où en est la phase ? | phase 0 — 95/136 tâches, reste 32.75 j |
-| Le prochain pas | QA-T05 — Pipeline GHCR privé → Coolify pull |
+| Qui tient quoi ? | aucune tâche revendiquée |
+| Où en est la phase ? | phase 0 — 102/127 tâches, reste 19.50 j |
+| Le prochain pas | QA-T11 — Gate D migrations : base vierge, dump N-1, migrate diff vide, image N-1, lint expand/contract |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
 | Dernière entrée de journal | PR #244 — 2026-09-29 |
 
@@ -19,19 +19,19 @@
 
 ## Phase courante : 0
 
-95/136 tâches terminées · reste 32.75 j estimés.
+102/127 tâches terminées · reste 19.50 j estimés.
 
 ## Tâches
 
 | Statut | Nombre | Détail |
 | --- | --- | --- |
 | `proposee` | 0 | — |
-| `a_faire` | 189 | QA-T05, QA-T11, QA-T06, QA-T12, QA-T13, DM-03-A, DM-03-P, DM-04, INT-T02, INT-T03, INT-T04, INT-T05 … (12 affichées sur 189 — liste complète : `docs/TASKS.md`) |
+| `a_faire` | 182 | QA-T11, QA-T06, QA-T12, QA-T13, DM-03-A, DM-03-P, DM-04, INT-T02, INT-T03, INT-T04, INT-T05, INT-T22 … (12 affichées sur 182 — liste complète : `docs/TASKS.md`) |
 | `en_cours` | 0 | — |
 | `bloquee` | 0 | — |
 | `attente_externe` | 2 | JUR-T01b · JUR-T01c |
 | `en_revue` | 0 | — |
-| `fusionnee` | 134 | GOV-000, GOV-007, GOV-001, GOV-018, GOV-008, GOV-002, GOV-003, GOV-004, GOV-005, GOV-006, GOV-009, GOV-010 … (12 affichées sur 134 — liste complète : `docs/TASKS.md`) |
+| `fusionnee` | 141 | GOV-000, GOV-007, GOV-001, GOV-018, GOV-008, GOV-002, GOV-003, GOV-004, GOV-005, GOV-006, GOV-009, GOV-010 … (12 affichées sur 141 — liste complète : `docs/TASKS.md`) |
 | `deployee` | 0 | — |
 | `verifiee` | 0 | — |
 
@@ -71,15 +71,7 @@ Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partn
 
 Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’issue, posés par l’orchestrateur au §3 de `.claude/skills/lot/SKILL.md` (revendication **en vol**), et le champ `owner` de `docs/tasks.json`, écrit par `pnpm lot:cloture` seul (revendication **consolidée**). Cette rubrique les REND ; corriger une revendication fausse se fait dans l’une des deux sources, jamais ici.
 
-| Tâche | Revendiquée par | Issue | Statut |
-| --- | --- | --- | --- |
-| QA-T05 — Pipeline GHCR privé → Coolify pull | A01 | #222 | `a_faire` |
-| JUR-T04 — Registre RGPD, LIA, AIPD, mention art. 14, politique de confidentialité | A01 | #232 | `a_faire` |
-| GOV-066 — La garde d'entite juge l'index publie, pas tout ce que la forge sert du depot | A01 | #234 | `a_faire` |
-| GOV-122 — La cloture retient un renommage fait dans la seconde meme de la fusion, et une date illisible y devient NaN au lieu d'un refus | A01 | #224 | `a_faire` |
-| GOV-118 — La garde des attributions reconnait un gabarit a son nom, et reste verte si elle ne confronte aucun script de garde | A01 | #229 | `a_faire` |
-| GOV-119 — La porte A d'une PR rougit quand une AUTRE PR fusionne pendant son execution | A01 | #223 | `a_faire` |
-| GOV-121 — Le temoin de la preuve de vol ne joue que la cle absente, jamais owner ou branch a null, la forme reelle du registre | A01 | #227 | `a_faire` |
+Aucune tâche revendiquée. Un agent ne prend jamais une tâche non revendiquée (REQ-GOV-007) : la revendication passe par l’orchestrateur.
 
 ⚠️ **13 revendication(s) périmée(s)** — QA-T07, GOV-042, GOV-045, GOV-050, GOV-051, GOV-053, GOV-054, GOV-055, GOV-060, GOV-072, GOV-079, GOV-093, INT-T01c : leur issue porte encore un label `owner:` alors que la tâche est livrée. `pnpm lot:cloture` écrit `docs/tasks.json` mais n’efface pas les labels ; la dette appartient à GOV-012.
 
@@ -91,7 +83,7 @@ Dérivé de `git log` sur `docs/adr/`, restreint au jour du dernier atterrissage
 
 ## Prochain pas
 
-**QA-T05** — Pipeline GHCR privé → Coolify pull (1 j) : 21 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
+**QA-T11** — Gate D migrations : base vierge, dump N-1, migrate diff vide, image N-1, lint expand/contract (1 j) : 13 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
 Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeStateStatus` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage —, la tâche ensuite. L’ordre de la file se corrige à la rubrique « File de fusion », jamais ici.
 
@@ -127,6 +119,22 @@ titre.
 nommés et non du champ `paths` ; et une tâche qui nomme comme preuve un test existant qui ne cite pas
 l'exigence rougit `gov:trace` : il faut nommer un test neuf.
 
+### PR #239 — 2026-09-29 — chore(GOV-012): registre rattrape, sept taches closes, gel de la gouvernance, avenants JUR-T03 et INT-T27-A
+
+**Fait.** Onzième rattrapage. GOV-119, GOV-122, GOV-121, GOV-118, JUR-T04, QA-T05 et GOV-066 passent
+`fusionnee` par `lot:cloture --tache`, chacune attestée par son commit d'écrasement. Deux avenants
+A01 lèvent des dettes de la lentille exactitude sur axion-ia. JUR-T03 consigne la décision de Will
+sur « commercial » et corrige son path. INT-T27-A porte la transcription du contrat v2 et chaque
+fichier que sa PR modifie. Le gel de la gouvernance, décidé par Williams, reporte huit tâches
+GOV en phase 3 et avance GOV-111 en phase 1.
+
+**Reste.** DM-03-P et DM-04 attendent la fusion de DM-03-A (axion-ia #1181). INT-T02 est refusée
+par la clôture : sa PR ne la déclare ni par son titre ni par sa ligne `Lot:`, et sa branche sort du
+motif. Il faut un rattrapage par ADR.
+
+**Appris.** Une clôture qui passe seule peut rendre le registre rouge par une dépendance encore
+ouverte dans l'autre dépôt : `gov:tasks` se rejoue après chaque clôture, pas seulement à la fin.
+
 ### PR #237 — 2026-09-29 — feat(INT-T26): la candidature recue cree un apporteur candidat, coordonnees tirees et chiffrees, rattachement par empreinte
 
 **Fait.** Une candidature reçue d'axionia devient un apporteur `candidat`. Le snapshot figé et le
@@ -143,19 +151,7 @@ entrent dans `env.ts` : un quatrième path, signalé au rattrapage.
 **Appris.** Une erreur typée `AttenteDeDependance` suffit au travail de fond pour distinguer
 « attendre » de « échouer ». Le traitement n'a rien à savoir de la file.
 
-### PR #235 — 2026-09-29 — fix(GOV-066): la garde d'entite juge chaque commit de la PR, pas seulement la tete, et ecrit ce qu'elle ne lit pas
-
-**Fait.** La garde des coordonnées ne juge plus seulement la tête : chaque commit poussé par la PR
-est lu, fichier ajouté ou modifié par commit, tel qu'il était. Une coordonnée ajoutée puis retirée
-avant la porte A est nommée avec son commit. Ce qu'elle ne lit pas est écrit et imprimé.
-
-**Reste.** L'historique déjà fusionné n'est pas relu : chaque commit y a été jugé par sa PR, à
-partir de celle-ci. Les archives composées avec les attributs d'export ne sont pas lues.
-
-**Appris.** Sur un dépôt public, la tête n'est pas ce qui est publié : chaque commit d'une PR l'est,
-même écrasé à la fusion.
-
-… 3 entrée(s) affichée(s) sur 102 ; les 99 plus ancienne(s) se lisent dans `docs/journal/`.
+… 3 entrée(s) affichée(s) sur 103 ; les 100 plus ancienne(s) se lisent dans `docs/journal/`.
 
 ## Dette déclarée
 
