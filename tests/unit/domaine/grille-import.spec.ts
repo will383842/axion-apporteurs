@@ -17,12 +17,19 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   BPS_MAX,
+  decisionDImport,
   empreinteGrille,
   lirePublication,
   PublicationIllisible,
   verifierPublication,
   type PublicationGrille,
+  type VersionImportee,
 } from '../../../src/domain/commission/grille';
+import {
+  CLE_VERROU_IMPORT,
+  ImportGrilleRefuse,
+  importerGrille,
+} from '../../../src/server/grille/import';
 
 const FIXTURE = join(
   __dirname,
@@ -68,6 +75,9 @@ describe('REQ-ARG-031 → REQ-DM-014, REQ-INT-017 — la publication du producte
       ['empreinte_du_contenu', null],
     ]);
     expect(fautes[0]!.message).toMatch(/empreinte annoncée [0-9a-f]{64} ≠ recalculée [0-9a-f]{64}/);
+    expect(fautes[1]!.message).toMatch(
+      /^v1 : empreinte annoncée [0-9a-f]{64} ≠ recalculée [0-9a-f]{64}$/
+    );
   });
 
   it('TÉMOIN — un palier qui change de barème : le palier est nommé', () => {
@@ -92,7 +102,16 @@ describe('REQ-ARG-031 → REQ-DM-014, REQ-INT-017 — la publication du producte
       empreintesLignes: { ...pub.empreintesLignes, commissions: annoncees },
       contenu: { ...pub.contenu, paliers: [...pub.contenu.paliers, pub.contenu.paliers[0]!] },
     };
-    const familles = verifierPublication(trafiquee).fautes.map((f) => `${f.famille} ${f.ligne}`);
+    const fautes = verifierPublication(trafiquee).fautes;
+    const familles = fautes.map((f) => `${f.famille} ${f.ligne}`);
+    const messages = fautes.map((f) => f.message).join('\n');
+    expect(messages).toContain(
+      `commission:${premiere!.commissionId} n'a aucune empreinte annoncée`
+    );
+    expect(messages).toContain(
+      'commission:commission-fantome a une empreinte annoncée mais aucune ligne'
+    );
+    expect(messages).toContain(`palier:${pub.contenu.paliers[0]!.tierId} figure deux fois`);
     expect(familles).toContain(`ligne_sans_empreinte commission:${premiere!.commissionId}`);
     expect(familles).toContain('empreinte_sans_ligne commission:commission-fantome');
     expect(familles).toContain(`ligne_en_double palier:${pub.contenu.paliers[0]!.tierId}`);
@@ -122,6 +141,8 @@ describe('REQ-ARG-031 → REQ-DM-014 — la forme est fermée : rien n’est com
       lirePublication(brut);
     } catch (e) {
       expect(e).toBeInstanceOf(PublicationIllisible);
+      expect((e as Error).name).toBe('PublicationIllisible');
+      expect((e as Error).message).toMatch(/^publication de grille illisible : /);
       return (e as Error).message;
     }
     throw new Error('la publication altérée a été acceptée');
@@ -142,8 +163,16 @@ describe('REQ-ARG-031 → REQ-DM-014 — la forme est fermée : rien n’est com
   });
   it('un forfait qui porte AUSSI un taux est refusé : une ligne ne cumule jamais deux barèmes', () => {
     expect(refusee((p) => (forfait(p).tauxBps = pourcentage(p).tauxBps))).toMatch(
-      /tauxBps interdit/
+      /contenu\.commissions\.\d+\.tauxBps : commission « [^»]+ » \(flat\) : tauxBps interdit/
     );
+  });
+  it('un palier « taux » qui porte un barème indéfini est refusé', () => {
+    expect(
+      refusee((p) => {
+        const palier = p.contenu.paliers.find((x) => x.statut === 'taux')!;
+        (palier as Record<string, unknown>).baremeIndefini = { depuis: null, motif: 'non_declare' };
+      })
+    ).toMatch(/baremeIndefini : un palier « taux » ne porte aucun barème indéfini/);
   });
   it('une publication qui n’est pas un objet est refusée, et le défaut est situé à la racine', () => {
     expect(() => lirePublication(null)).toThrow(/\(racine\) :/);
@@ -153,5 +182,123 @@ describe('REQ-ARG-031 → REQ-DM-014 — la forme est fermée : rien n’est com
   });
   it('une empreinte qui n’est pas un SHA-256 hexadécimal est refusée', () => {
     expect(refusee((p) => (p.hash = 'abc'))).toMatch(/^.*hash/);
+  });
+});
+
+describe('REQ-ARG-031 → REQ-DM-014 — une version importée ne se réécrit jamais', () => {
+  const pub = { version: 3, hash: 'a'.repeat(64) };
+
+  it('REQ-ARG-031 → REQ-DM-014 : rien en base → à écrire ; même version, même empreinte → déjà importée', () => {
+    expect(decisionDImport(pub, [])).toEqual({ statut: 'a_ecrire' });
+    expect(decisionDImport(pub, [{ version: 2, hash: 'b'.repeat(64) }])).toEqual({
+      statut: 'a_ecrire',
+    });
+    expect(decisionDImport(pub, [{ ...pub }])).toEqual({ statut: 'deja_importee' });
+  });
+
+  it('REQ-ARG-031 → REQ-DM-014 — TÉMOIN : un numéro ou une empreinte déjà pris ailleurs se contredisent, nommément', () => {
+    expect(decisionDImport(pub, [{ version: 3, hash: 'c'.repeat(64) }])).toEqual({
+      statut: 'contradictoire',
+      messages: [
+        `v3 est déjà importée sous l'empreinte ${'c'.repeat(64)} : une version importée n'est jamais réécrite`,
+      ],
+    });
+    expect(decisionDImport(pub, [{ version: 1, hash: pub.hash }])).toEqual({
+      statut: 'contradictoire',
+      messages: [`l'empreinte ${pub.hash} est déjà importée comme v1, pas v3`],
+    });
+  });
+});
+
+describe('REQ-ARG-031 → REQ-DM-014 — l’import : confronter, verrouiller, décider, écrire', () => {
+  /** Un client simulé qui ENREGISTRE ce qu'on lui fait, et rend les versions qu'on lui donne. */
+  function client(existantes: VersionImportee[]) {
+    const journal: { verrou: unknown[]; lecture: unknown; ecrit: unknown[] } = {
+      verrou: [],
+      lecture: null,
+      ecrit: [],
+    };
+    const tx = {
+      $executeRaw: (morceaux: TemplateStringsArray, ...valeurs: unknown[]) => {
+        journal.verrou.push(morceaux.join('?'), ...valeurs);
+        return Promise.resolve(1);
+      },
+      grilleCommission: {
+        findMany: (args: unknown) => {
+          journal.lecture = args;
+          return Promise.resolve(existantes);
+        },
+        create: (args: { data: unknown }) => {
+          journal.ecrit.push(args.data);
+          return Promise.resolve(args.data);
+        },
+      },
+    };
+    const prisma = { $transaction: (fn: (t: typeof tx) => unknown) => fn(tx) };
+    return { prisma: prisma as unknown as Parameters<typeof importerGrille>[0], journal };
+  }
+  const A = new Date('2026-09-29T08:00:00.000Z');
+
+  it('REQ-ARG-031 → REQ-DM-014 : la publication du producteur est écrite TELLE QUELLE, sous verrou', async () => {
+    const brut = publiee();
+    const pub = lirePublication(brut);
+    const { prisma, journal } = client([]);
+    expect(await importerGrille(prisma, brut, A)).toEqual({
+      statut: 'importee',
+      version: pub.version,
+      hash: pub.hash,
+      lignesConfrontees: pub.contenu.commissions.length + pub.contenu.paliers.length,
+    });
+    expect(journal.verrou).toEqual([
+      'SELECT pg_advisory_xact_lock(hashtext(?))',
+      CLE_VERROU_IMPORT,
+    ]);
+    expect(CLE_VERROU_IMPORT).toBe('grilles_commission');
+    expect(journal.lecture).toEqual({
+      where: { OR: [{ version: pub.version }, { hash: pub.hash }] },
+      select: { version: true, hash: true },
+    });
+    expect(journal.ecrit).toEqual([
+      {
+        version: pub.version,
+        hash: pub.hash,
+        contenuJson: pub.contenu,
+        publieeAt: new Date(pub.publieeAt),
+        importeeAt: A,
+      },
+    ]);
+  });
+
+  it('REQ-ARG-031 → REQ-DM-014 — TÉMOIN : déjà importée → rien d’écrit ; contradictoire → refus nommé, rien d’écrit', async () => {
+    const brut = publiee();
+    const pub = lirePublication(brut);
+    const deja = client([{ version: pub.version, hash: pub.hash }]);
+    expect(await importerGrille(deja.prisma, brut, A)).toMatchObject({ statut: 'deja_importee' });
+    expect(deja.journal.ecrit).toEqual([]);
+
+    const autre = client([{ version: pub.version, hash: 'd'.repeat(64) }]);
+    const refus = await importerGrille(autre.prisma, brut, A).catch((e: unknown) => e);
+    expect(refus).toBeInstanceOf(ImportGrilleRefuse);
+    expect((refus as Error).name).toBe('ImportGrilleRefuse');
+    expect((refus as Error).message).toBe(
+      `import de grille refusé : v${pub.version} est déjà importée sous l'empreinte ${'d'.repeat(64)} : une version importée n'est jamais réécrite`
+    );
+    expect((refus as ImportGrilleRefuse).fautes).toEqual([
+      { ligne: null, message: expect.stringContaining(`v${pub.version} est déjà importée`) },
+    ]);
+    expect(autre.journal.ecrit).toEqual([]);
+  });
+
+  it('REQ-ARG-031 → REQ-DM-014 — TÉMOIN : une ligne altérée est refusée AVANT toute transaction', async () => {
+    const brut = publiee() as PublicationGrille;
+    const forfait = brut.contenu.commissions.find((c) => c.montantCents !== null)!;
+    forfait.montantCents! += 1;
+    const { prisma, journal } = client([]);
+    const refus = await importerGrille(prisma, brut, A).catch((e: unknown) => e);
+    expect((refus as ImportGrilleRefuse).fautes.map((f) => f.ligne)).toEqual([
+      `commission:${forfait.commissionId}`,
+      null,
+    ]);
+    expect(journal).toEqual({ verrou: [], lecture: null, ecrit: [] });
   });
 });

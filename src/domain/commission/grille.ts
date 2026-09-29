@@ -137,7 +137,7 @@ export function lirePublication(brut: unknown): PublicationGrille {
 
 /** SHA-256 hexadécimal de la forme canonique : la MÊME règle que l'export d'axionia. */
 export function empreinteGrille(valeur: unknown): string {
-  return createHash('sha256').update(canonique(valeur), 'utf8').digest('hex');
+  return createHash('sha256').update(canonique(valeur)).digest('hex');
 }
 
 export type FauteGrille = {
@@ -230,4 +230,37 @@ export function verifierPublication(pub: PublicationGrille): VerdictGrille {
     });
   }
   return { lignesConfrontees: commissions.length + paliers.length, fautes };
+}
+
+/** Une version déjà en base : son numéro et son empreinte, rien d'autre. */
+export type VersionImportee = { readonly version: number; readonly hash: string };
+
+export type DecisionImport =
+  | { readonly statut: 'a_ecrire' }
+  | { readonly statut: 'deja_importee' }
+  | { readonly statut: 'contradictoire'; readonly messages: readonly string[] };
+
+/**
+ * Que faire d'une publication VÉRIFIÉE, au vu des versions déjà en base (acceptation 4) : la même
+ * version sous la même empreinte est déjà là, et ne s'écrit pas deux fois ; un numéro connu sous
+ * une autre empreinte, ou une empreinte connue sous un autre numéro, se contredisent et se
+ * refusent nommément — une version importée n'est jamais réécrite.
+ */
+export function decisionDImport(
+  pub: Pick<PublicationGrille, 'version' | 'hash'>,
+  existantes: readonly VersionImportee[]
+): DecisionImport {
+  const pertinentes = existantes.filter((e) => e.version === pub.version || e.hash === pub.hash);
+  if (pertinentes.some((e) => e.version === pub.version && e.hash === pub.hash)) {
+    return { statut: 'deja_importee' };
+  }
+  if (pertinentes.length === 0) return { statut: 'a_ecrire' };
+  return {
+    statut: 'contradictoire',
+    messages: pertinentes.map((e) =>
+      e.version === pub.version
+        ? `v${pub.version} est déjà importée sous l'empreinte ${e.hash} : une version importée n'est jamais réécrite`
+        : `l'empreinte ${pub.hash} est déjà importée comme v${e.version}, pas v${pub.version}`
+    ),
+  };
 }
