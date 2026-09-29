@@ -8,7 +8,7 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `476135a` — 2026-09-29T17:21:45+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #239 (un contrôle requis rouge ou une revue manquante) · 2. #244 (un contrôle requis rouge ou une revue manquante) · 3. #241 (un conflit avec `main`) · 4. #242 (un conflit avec `main`) |
+| Qu’est-ce qui est en vol ? | 1. #239 (un contrôle requis rouge ou une revue manquante) · 2. #241 (un conflit avec `main`) · 3. #242 (un conflit avec `main`) |
 | Qui tient quoi ? | QA-T05 (A01) · JUR-T04 (A01) · GOV-066 (A01) · GOV-122 (A01) · GOV-118 (A01) · GOV-119 (A01) · GOV-121 (A01) |
 | Où en est la phase ? | phase 0 — 95/136 tâches, reste 32.75 j |
 | Le prochain pas | QA-T05 — Pipeline GHCR privé → Coolify pull |
@@ -61,9 +61,8 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
 | 1 | #239 — chore(GOV-012): registre rattrape, sept taches closes, gel de la gouvernance, avenants JUR-T03 et INT-T27-A | `t/registre-rattrapage-11` | un contrôle requis rouge ou une revue manquante |
-| 2 | #244 — docs(GOV-012): confirmation du depot par e-mail — plan W20 et quatorze taches versees en phase 1, sans DECISIONS ni REQ nouvelles | `t/w20-confirmation-email` | un contrôle requis rouge ou une revue manquante |
-| 3 | #241 — fix(GOV-062): l'outillage qui execute la porte A est juge, sept points nommes | `t/gov-062` | un conflit avec `main` — à résoudre avant tout |
-| 4 | #242 — feat(JUR-T34): la politique de confidentialite de l'espace, tiree du registre de l'article 30 et acceptee a la premiere connexion | `t/jur-t34` | un conflit avec `main` — à résoudre avant tout |
+| 2 | #241 — fix(GOV-062): l'outillage qui execute la porte A est juge, sept points nommes | `t/gov-062` | un conflit avec `main` — à résoudre avant tout |
+| 3 | #242 — feat(JUR-T34): la politique de confidentialite de l'espace, tiree du registre de l'article 30 et acceptee a la premiere connexion | `t/jur-t34` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -105,7 +104,7 @@ Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
 
-### PR #244 — 2026-09-29 — docs(GOV-012): confirmation du depot par e-mail — plan W20 et quatorze taches versees en phase 1, sans DECISIONS ni REQ nouvelles
+### PR #244 — 2026-09-29 — docs(GOV-017a): confirmation du depot par e-mail — plan W20 et quatorze taches versees en phase 1, sans DECISIONS ni REQ nouvelles
 
 **Fait.** Le plan du chantier W20, décidé par Williams le 2026-09-29 (session -d7), est versé dans
 `docs/chantiers/W20-confirmation-par-email.md` : le dépôt est confirmé d'abord par un e-mail au
