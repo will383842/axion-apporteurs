@@ -866,6 +866,18 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
         'rendu en échec, et 0 sur un conflit de vue seule, dans un VRAI dépôt git jetable ' +
         '(relectures-sans-defaut.spec.ts) ; le binaire lui-même n’est pas lancé. Dette DÉCLARÉE.',
     },
+    'scripts/vues/rendre-apres-fusion.ts': {
+      total: 1,
+      porte: 1,
+      temoins: 0,
+      raison:
+        '`pnpm vues:rendre` et `pnpm vues:hors-git`. `process.exit(issue.code)` : sortie ' +
+        'TERMINALE à code variable, commune aux deux modes. Les décisions (`rendreDeuxFois`, ' +
+        '`jugerHorsGit`) sont vues rendre 1 en nommant la vue (rendu en échec, vue absente, deux ' +
+        'rendus différents, vue sous git, vue non ignorée) et 0 sur leurs contre-témoins ' +
+        '(vues-rendues-apres-fusion.spec.ts) ; le binaire est lancé par la porte A, pas par un ' +
+        'test. Dette DÉCLARÉE.',
+    },
     'scripts/mutation/pr.ts': {
       total: 1,
       porte: 1,

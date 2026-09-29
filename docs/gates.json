@@ -1149,6 +1149,24 @@
       "fixtureRouge": "retirer une seule sortie non nulle d'un fichier declare : cliquet-nomme-chaque-refus.spec.ts nomme l'identite retiree et elle seule",
       "preuveRouge": "PR 168 (GOV-045) — commit rouge 3314671, puis 106 mutants tues chacun par son nom",
       "horsCi": "Module importe, pas un binaire : il n'a pas de mode de lancement propre. Ses regles sont jouees par cliquet-nomme-chaque-refus.spec.ts et par le cliquet de refus-de-rendre-et-de-publier.spec.ts, que pnpm test lance en porte A."
+    },
+    {
+      "id": "vues:rendre",
+      "phase": 0,
+      "script": "scripts/vues/rendre-apres-fusion.ts",
+      "tache": "GOV-123",
+      "verifie": "les vues derivees de VUES_DERIVEES (scripts/vues/vues.ts) ne sont plus commitees : la porte A les REND avant toute etape qui en lit une, dans l'ordre (docs/PLAN-STATE.md en dernier), puis les rend une SECONDE fois et compare les octets. Un rendu en echec, une vue absente apres son rendu, ou deux rendus successifs qui different d'un octet sont un rouge qui NOMME la vue et l'octet du premier ecart. Les verificateurs de chaque vue (gov:trace:verifier, gov:tasks:verifie-rendu, gov:requirements:verifie-rendu, lot:paths:check, gov:gates-derivees, gov:adr, plan-state:verifier) la suivent et confrontent ce rendu a ses sources ; leurs temoins rouges sur vue perimee restent dans leurs specs. CE QU'ELLE NE VOIT PAS : sur un poste authentifie, une PR qui change d'etat entre les deux rendus fait differer PLAN-STATE (zones lues sur la forge) ; en porte A l'etape n'a aucun jeton et les deux lectures echouent pareillement.",
+      "fixtureRouge": "un rendu qui ecrit un compteur de passage dans une vue : les deux rendus different, la vue et l octet sont nommes",
+      "preuveRouge": "tests/unit/gouvernance/vues-rendues-apres-fusion.spec.ts, bloc « le rendu est reproductible » : temoins rouges (rendus differents, rendu en echec, vue absente) et contre-temoin vert. ROUGE mesure AVANT le code : la spec rougissait sur ci.yml sans etape pnpm vues:rendre et sur les sept vues encore suivies par git."
+    },
+    {
+      "id": "vues:hors-git",
+      "phase": 0,
+      "script": "scripts/vues/rendre-apres-fusion.ts",
+      "tache": "GOV-123",
+      "verifie": "aucune vue derivee de VUES_DERIVEES n'est suivie par git (perimetre : fichiersSuivisOuRefus), et .gitignore les ecarte toutes. Une PR qui en rajoute une, meme par git add -f, est refusee en NOMMANT le fichier ([vue_sous_git]) ; une vue que .gitignore n'ecarte plus est nommee ([vue_non_ignoree]). C'est la face rouge du temoin de GOV-123 ; la face verte — deux branches qui ajoutent chacune une tache au registre ne sont plus en conflit — est jouee dans un vrai depot git jetable par la meme spec.",
+      "fixtureRouge": "un index qui suit docs/TASKS.md : [vue_sous_git] nomme docs/TASKS.md",
+      "preuveRouge": "tests/unit/gouvernance/vues-rendues-apres-fusion.spec.ts, bloc « aucune vue derivee sous git » : ROUGE mesure AVANT le code sur le depot (les sept vues suivies), puis temoins rouges nommant le fichier et contre-temoin vert."
     }
   ]
 }
