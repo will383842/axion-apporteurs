@@ -8,14 +8,14 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `c92e400` — 2026-09-29T15:17:11+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #235 (un contrôle requis rouge ou une revue manquante) · 2. #237 (un contrôle requis rouge ou une revue manquante) |
+| Qu’est-ce qui est en vol ? | 1. #235 (rien) · 2. #237 (rien) · 3. #239 (un contrôle requis rouge ou une revue manquante) · 4. #241 (un contrôle requis rouge ou une revue manquante) |
 | Qui tient quoi ? | aucune tâche revendiquée |
 | Où en est la phase ? | phase 0 — 101/136 tâches, reste 28.50 j |
-| Le prochain pas | QA-T11 — Gate D migrations : base vierge, dump N-1, migrate diff vide, image N-1, lint expand/contract |
+| Le prochain pas | fusionner #235, puis QA-T11 — Gate D migrations : base vierge, dump N-1, migrate diff vide, image N-1, lint expand/contract |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
-| Dernière entrée de journal | PR #233 — 2026-09-29 |
+| Dernière entrée de journal | PR #239 — 2026-09-29 |
 
-**Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** `gh pr view 235 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : 0
 
@@ -60,8 +60,10 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #235 — fix(GOV-066): la garde d'entite juge chaque commit de la PR, pas seulement la tete, et ecrit ce qu'elle ne lit pas | `t/gov-066` | un contrôle requis rouge ou une revue manquante |
-| 2 | #237 — feat(INT-T26): la candidature recue cree un apporteur candidat, coordonnees tirees et chiffrees, rattachement par empreinte | `t/int-t26` | un contrôle requis rouge ou une revue manquante |
+| 1 | #235 — fix(GOV-066): la garde d'entite juge chaque commit de la PR, pas seulement la tete, et ecrit ce qu'elle ne lit pas | `t/gov-066` | rien — fusionnable maintenant |
+| 2 | #237 — feat(INT-T26): la candidature recue cree un apporteur candidat, coordonnees tirees et chiffrees, rattachement par empreinte | `t/int-t26` | rien — fusionnable maintenant |
+| 3 | #239 — chore(GOV-012): registre rattrape, six taches closes, avenants JUR-T03 et INT-T27-A | `t/registre-rattrapage-11` | un contrôle requis rouge ou une revue manquante |
+| 4 | #241 — fix(GOV-062): l'outillage qui execute la porte A est juge, sept points nommes | `t/gov-062` | un contrôle requis rouge ou une revue manquante |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -81,6 +83,8 @@ Dérivé de `git log` sur `docs/adr/`, restreint au jour du dernier atterrissage
 
 ## Prochain pas
 
+**Fusionner #235** — elle est en tête de file et ne bloque sur rien.
+
 **QA-T11** — Gate D migrations : base vierge, dump N-1, migrate diff vide, image N-1, lint expand/contract (1 j) : 21 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
 Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeStateStatus` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage —, la tâche ensuite. L’ordre de la file se corrige à la rubrique « File de fusion », jamais ici.
@@ -94,6 +98,21 @@ Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la
 ## Journal
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
+
+### PR #239 — 2026-09-29 — chore(GOV-012): registre rattrape, six taches closes, avenants JUR-T03 et INT-T27-A
+
+**Fait.** Onzième rattrapage. GOV-119, GOV-122, GOV-121, GOV-118, JUR-T04 et QA-T05 passent
+`fusionnee` par `lot:cloture --tache`, chacune attestée par son commit d'écrasement. Deux avenants
+A01 lèvent des dettes de la lentille exactitude sur axion-ia. JUR-T03 consigne la décision de Will
+sur « commercial » et corrige son path. INT-T27-A porte la transcription du contrat v2 et chaque
+fichier que sa PR modifie.
+
+**Reste.** DM-03-P et DM-04 attendent la fusion de DM-03-A (axion-ia #1181). INT-T02 est refusée
+par la clôture : sa PR ne la déclare ni par son titre ni par sa ligne `Lot:`, et sa branche sort du
+motif. Il faut un rattrapage par ADR.
+
+**Appris.** Une clôture qui passe seule peut rendre le registre rouge par une dépendance encore
+ouverte dans l'autre dépôt : `gov:tasks` se rejoue après chaque clôture, pas seulement à la fin.
 
 ### PR #233 — 2026-09-29 — feat(JUR-T04): registre de l'article 30 et AIPD, sources et derives du schema, la page de confidentialite scindee
 
@@ -118,34 +137,7 @@ scripts de garde lue et vide est un refus, et le périmètre de la famille est �
 **Appris.** Distinguer une dimension non lue d'une dimension lue et vide coûte une valeur de plus,
 `undefined` à côté de `[]` ; sans elle, le plancher aurait fait rougir tous les cas de preuve.
 
-### PR #230 — 2026-09-29 — docs(GOV-012): conseillers salaries — plan W19 et taches versees (GOV-112, GOV-115 a GOV-117), sans DECISIONS ni GLOSSAIRE
-
-**Fait.** Le plan du chantier W19 est versé dans `docs/chantiers/W19-conseillers-salaries.md`, avec
-les réponses de Williams du 2026-09-29, dont la question 22 : les conseillers travaillent dans le CRM
-Pro, et Partners garde le registre et décide par l'API 3. Quatre tâches entrent au registre `a_faire`
-(GOV-112, GOV-115, GOV-116, GOV-117) ; INT-T28, SEC-34 et DM-32 sont ajoutées au plan, UX-P2-11 en
-sort. Chiffrage : chantier W19 21,0 j, lot transverse « confort de la console pour tous les rôles »
-15,7 j, total Partners 36,7 j.
-
-Les quatre réserves de la lentille `securite`, qui a accepté la PR sur `830a648`, sont versées au
-plan et au registre. L'identité du conseiller à l'API 3 devient une hypothèse de confiance envers le
-CRM Pro, écrite dans l'ADR INT-T28 (HYP-W19-IDENTITE-CRM : vingt et une HYP au lieu de vingt). La
-limite de la Société, qui borne un CRM Pro compromis, devient fixe, égale à celle d'un apporteur, au
-lieu de croître avec le nombre de conseillers (HYP-W19-LIMITES). QA-T31 gagne une clause jumelle sur
-le temps de réponse et l'instant des notifications. SEC-34 porte une alerte de volume agrégée, active
-sans condition ; l'alerte par conseiller reste liée à HYP-W19-CSE. L'acceptance de GOV-116 porte la
-relecture du processus par la lentille `securite`. GOV-112 et GOV-115 sont réécrites en conséquence.
-
-**Reste.** Tout le chantier : GOV-116 puis GOV-112 écrivent `docs/DECISIONS.md`, `docs/GLOSSAIRE.md`
-et `docs/PRESEANCE.md`, que cette PR ne touche pas ; GOV-117 puis GOV-115 versent les trente-deux
-autres tâches. Aucune tâche W19 n'est livrée par cette PR. Les estimations de QA-T31 et de SEC-34
-ne sont pas rechiffrées après les réserves : GOV-115 les relit au versement.
-
-**Appris.** Un titre de PR doit nommer une tâche du registre, et une PR sur une tâche `a_faire`
-non revendiquée rougit `gov:etat` : une PR de plan qui verse ses tâches sans les livrer se titre sur
-une tâche déjà livrée, comme la PR #219 sur GOV-012, jamais sur l'une des tâches qu'elle verse.
-
-… 3 entrée(s) affichée(s) sur 99 ; les 96 plus ancienne(s) se lisent dans `docs/journal/`.
+… 3 entrée(s) affichée(s) sur 100 ; les 97 plus ancienne(s) se lisent dans `docs/journal/`.
 
 ## Dette déclarée
 
