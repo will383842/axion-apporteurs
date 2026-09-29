@@ -26,3 +26,7 @@ n'a donc rien à faire au redémarrage de l'ancienne image, et elle ne doit pas 
 - Aucune commande manuelle contre la base de production (`docs/CONVENTIONS.md` §7).
 - Aucune autre valeur que `1` : toute autre valeur n'est pas l'échappatoire, et la migration est
   tentée.
+
+## Exécuté le
+
+Exécuté le : — · environnement : — · SHA : — · résultat : —
