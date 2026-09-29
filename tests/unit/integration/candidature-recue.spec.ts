@@ -199,7 +199,7 @@ describe('REQ-DM-035, REQ-QA-035 — un apporteur `candidat` naît, figé, dans 
       phoneHash: empreinteRecherche('telephone', COORDONNEES.telephone!, CLES),
       prenomChiffre: null,
     });
-    expect(Buffer.isBuffer(cree['emailChiffre'])).toBe(true);
+    expect(cree['emailChiffre']).toBeInstanceOf(Uint8Array);
     // Aucun clair : ni le nom, ni l'adresse, ni le téléphone ne sont écrits tels quels.
     const texte = JSON.stringify(cree, (_k, v: unknown) =>
       Buffer.isBuffer(v) ? v.toString('latin1') : v

@@ -129,10 +129,6 @@ export type ResultatCandidature = 'cree' | 'rattache';
 /** Le client transactionnel dont ce traitement a besoin, et rien d'autre. */
 export type ClientCandidature = Pick<PrismaClient, '$transaction'>;
 
-/** Les octets d'un bloc chiffré, sous la forme que Prisma attend pour une colonne `Bytes`. */
-const octets = (v: Uint8Array | null | undefined) =>
-  v === undefined ? undefined : v === null ? null : Buffer.from(v);
-
 export async function traiterCandidatureRecue(
   prisma: ClientCandidature,
   recu: { readonly id: string; readonly charge: unknown },
@@ -161,20 +157,8 @@ export async function traiterCandidatureRecue(
 
     let resultat: ResultatCandidature = 'rattache';
     if (existant === null) {
-      const id = randomUUID();
-      const colonnes = colonnesPii(
-        { modele: MODELE_APPORTEUR, id },
-        {
-          nom: coordonnees.nom,
-          prenom: coordonnees.prenom,
-          email: coordonnees.email,
-          telephone: coordonnees.telephone,
-        },
-        d.cles
-      );
       await tx.apporteur.create({
         data: {
-          id,
           statut: 'candidat',
           codeParrainage: genererCodeParrainage(d.aleatoire),
           isTest: false,
@@ -186,12 +170,27 @@ export async function traiterCandidatureRecue(
           sourceCanal: snapshot.sourceCanal,
           parrainCodeCapture: snapshot.parrainCodeCapture,
           creeAt: d.maintenant(),
-          nomChiffre: octets(colonnes.nomChiffre),
-          prenomChiffre: octets(colonnes.prenomChiffre),
-          emailChiffre: octets(colonnes.emailChiffre),
-          emailHash: colonnes.emailHash ?? null,
-          telephoneChiffre: octets(colonnes.telephoneChiffre),
-          phoneHash: colonnes.phoneHash ?? null,
+          // Les blocs et empreintes naissent de colonnesPii, ÉTALÉ (garde securite:schema-pii) ;
+          // `id` vient de lui aussi. Prisma 5 accepte un Uint8Array là où il type Buffer.
+          ...(colonnesPii(
+            { modele: MODELE_APPORTEUR, id: randomUUID() },
+            {
+              nom: coordonnees.nom,
+              prenom: coordonnees.prenom,
+              email: coordonnees.email,
+              telephone: coordonnees.telephone,
+            },
+            d.cles
+          ) as unknown as Pick<
+            Prisma.ApporteurUncheckedCreateInput,
+            | 'id'
+            | 'nomChiffre'
+            | 'prenomChiffre'
+            | 'emailChiffre'
+            | 'emailHash'
+            | 'telephoneChiffre'
+            | 'phoneHash'
+          >),
         },
       });
       resultat = 'cree';
