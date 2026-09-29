@@ -186,21 +186,21 @@ async function principal(argv: string[]): Promise<number> {
     }
     const ecarts = await avec(a, (pa) => avec(b, (pb) => comparerBases(pa, pb, cles)));
     if (ecarts.length > 0) {
-      process.stderr.write(`❌ semeur — ${ecarts.length} table(s) divergent entre les deux bases :` + '
-');
-      for (const e of ecarts) process.stderr.write(`   ${e.table} : ${e.motif}` + '
-');
+      process.stderr.write(
+        `❌ semeur — ${ecarts.length} table(s) divergent entre les deux bases :\n`
+      );
+      for (const e of ecarts) process.stderr.write(`   ${e.table} : ${e.motif}\n`);
       return 1;
     }
-    process.stdout.write(`✅ semeur — ${nombreDeTables()} table(s) confrontée(s), aucune divergence.` + '
-');
+    process.stdout.write(
+      `✅ semeur — ${nombreDeTables()} table(s) confrontée(s), aucune divergence.\n`
+    );
     return 0;
   }
   const url = process.env.DATABASE_URL ?? '';
   if (url === '') throw new Error('DATABASE_URL est exigée');
   const semes = await avec(url, (p) => semer(p, ctx));
-  process.stdout.write(`✅ semeur — ${semes.length} module(s) exécuté(s) : ${semes.join(', ')}` + '
-');
+  process.stdout.write(`✅ semeur — ${semes.length} module(s) exécuté(s) : ${semes.join(', ')}\n`);
   return 0;
 }
 
@@ -212,8 +212,7 @@ if (APPELE_DIRECTEMENT) {
       process.exitCode = code;
     },
     (e: Error) => {
-      process.stderr.write(`❌ ${e.message}` + '
-');
+      process.stderr.write(`❌ ${e.message}\n`);
       process.exitCode = 1;
     }
   );
