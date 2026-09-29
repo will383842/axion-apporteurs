@@ -9,7 +9,7 @@
 | --- | --- |
 | Où est `main` ? | `4a1d940` — 2026-09-29T21:24:40+02:00 |
 | Qu’est-ce qui est en vol ? | 1. #242 (un conflit avec `main`) · 2. #254 (un conflit avec `main`) |
-| Qui tient quoi ? | GOV-124 (A01) · GOV-126 (A01) |
+| Qui tient quoi ? | GOV-124 (A01) · GOV-125 (A01) · GOV-126 (A01) |
 | Où en est la phase ? | phase 0 — 104/131 tâches, reste 20.50 j |
 | Le prochain pas | QA-T06 — Preview par PR sur Coolify, base éphémère, seed déterministe |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
@@ -72,6 +72,7 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 | Tâche | Revendiquée par | Issue | Statut |
 | --- | --- | --- | --- |
 | GOV-124 — Une seule lentille pour une PR sans risque, derivee par risqueDeLaPr ; deux pour tout le reste et dans le doute | A01 | #247 | `a_faire` |
+| GOV-125 — Une tache livree dans axion-ia ne peut pas etre close : le motif de branche du registre ne connait que les branches de Partners | A01 | #252 | `a_faire` |
 | GOV-126 — Le temoin d'une garde vaut la garde : les tests de gouvernance, de securite et d'integration restent a deux lentilles | A01 | #249 | `a_faire` |
 
 ⚠️ **13 revendication(s) périmée(s)** — QA-T07, GOV-042, GOV-045, GOV-050, GOV-051, GOV-053, GOV-054, GOV-055, GOV-060, GOV-072, GOV-079, GOV-093, INT-T01c : leur issue porte encore un label `owner:` alors que la tâche est livrée. `pnpm lot:cloture` écrit `docs/tasks.json` mais n’efface pas les labels ; la dette appartient à GOV-012.
@@ -133,6 +134,18 @@ la phrase vivait dans l'exigence, le contrat proposé et la relecture du contrat
 oubliée aurait promis le contraire de la règle. Un test qui disait « toujours rouge à 60 jours » est
 devenu faux par la même réponse : une borne se relit dans tous les témoins datés.
 
+### PR #253 — 2026-09-29 — feat(GOV-125): le motif de branche depend du depot de la tache, une tache axionia se clot sur sa branche
+
+**Fait.** Le motif de branche du registre dépend désormais du dépôt de la tâche. Une tâche d'axion-ia
+se clôt sur une branche d'axion-ia, dont seule la forme est jugée ; une tâche de Partners garde les
+deux formes fermées. La clôture et l'outil hors dépôt lisent la même règle.
+
+**Reste.** Le rattrapage qui clôt les tâches d'axion-ia livrées et en production, puis celles de
+Partners qui en dépendaient.
+
+**Appris.** Un motif fermé qui ne connaît qu'un dépôt bloque en silence tout ce qui se livre dans
+l'autre : la dette ne s'est vue qu'au moment de clore une tâche d'argent déjà en production.
+
 ### PR #251 — 2026-09-29 — chore(GOV-012): registre rattrape, HT encaisse tranche par Williams, paths du lot A et de JUR-T29, GOV-125 versee
 
 **Fait.** Treizième rattrapage. Williams a tranché le HT encaissé : axion-ia le calcule pour chaque
@@ -148,18 +161,7 @@ qui en dépendent.
 auteur, au moment de coder, qui l'a relevé. La contradiction se tranche par une décision écrite,
 jamais par l'acceptance la plus récente.
 
-### PR #250 — 2026-09-29 — feat(GOV-126): le temoin d'une garde vaut la garde, tests de gouvernance, securite et integration a deux lentilles
-
-**Fait.** Les tests de gouvernance, de sécurité et d'intégration restent à deux lentilles : une PR
-qui ne toucherait que le témoin d'une garde ne peut plus l'affaiblir sous une seule relecture.
-
-**Reste.** Aucune PR n'a encore été fusionnée à une seule lentille : la règle entre en usage avec
-cette fermeture.
-
-**Appris.** Un témoin fait partie de la garde qu'il prouve : l'autoriser à une lentille, c'était
-autoriser la garde elle-même par un détour.
-
-… 3 entrée(s) affichée(s) sur 110 ; les 107 plus ancienne(s) se lisent dans `docs/journal/`.
+… 3 entrée(s) affichée(s) sur 111 ; les 108 plus ancienne(s) se lisent dans `docs/journal/`.
 
 ## Dette déclarée
 

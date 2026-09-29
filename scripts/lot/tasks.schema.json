@@ -133,8 +133,7 @@
         "lot": { "type": ["string", "null"] },
         "branch": {
           "type": ["string", "null"],
-          "pattern": "^(t/[A-Za-z0-9][A-Za-z0-9._-]*|lot/[A-Za-z0-9][A-Za-z0-9._/-]*)$",
-          "description": "Deux formes, et deux seulement (partners/ADR-0007) : `lot/<id>-<suffixe>` — la forme normale, un lot une branche une PR, un commit par tache ; `t/<slug>` — la forme derogatoire, pour une tache livree seule. Le motif reste ferme : sans prefixe reconnu, la garde gov:tasks rougit. Avant l ADR le motif n acceptait que `t/`, et `pnpm lot:cloture` — seul ecrivain du statut — produisait donc un document que le schema refusait."
+          "description": "Le motif depend du depot de la tache (GOV-125, partners/ADR-0027) : voir la regle de branche par depot dans allOf. Pour une tache de Partners : deux formes, et deux seulement (partners/ADR-0007) : `lot/<id>-<suffixe>` — la forme normale, un lot une branche une PR, un commit par tache ; `t/<slug>` — la forme derogatoire, pour une tache livree seule. Le motif reste ferme : sans prefixe reconnu, la garde gov:tasks rougit. Avant l ADR le motif n acceptait que `t/`, et `pnpm lot:cloture` — seul ecrivain du statut — produisait donc un document que le schema refusait."
         },
         "pr": {
           "type": ["integer", "null"],
@@ -180,6 +179,22 @@
         }
       },
       "allOf": [
+        {
+          "_commentaire": "GOV-125 (partners/ADR-0027) — LE MOTIF DE BRANCHE PAR DEPOT. Une tache de Partners garde les deux formes fermees de partners/ADR-0007 (t/ et lot/). Une tache d axionia porte la branche d axion-ia, dont le prefixe est libre par domaine : on n en juge que la forme, un prefixe en minuscules suivi d une barre ; la tache y est NOMMEE par le titre du commit d ecrasement ou par sa ligne Lot:, ce que la cloture verifie deja.",
+          "if": { "required": ["repo"], "properties": { "repo": { "const": "axionia" } } },
+          "then": {
+            "properties": {
+              "branch": { "pattern": "^[a-z][a-z0-9-]*/[A-Za-z0-9][A-Za-z0-9._/-]*$" }
+            }
+          },
+          "else": {
+            "properties": {
+              "branch": {
+                "pattern": "^(t/[A-Za-z0-9][A-Za-z0-9._-]*|lot/[A-Za-z0-9][A-Za-z0-9._/-]*)$"
+              }
+            }
+          }
+        },
         {
           "if": { "properties": { "statut": { "enum": ["en_cours", "en_revue", "fusionnee"] } } },
           "then": {
