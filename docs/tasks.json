@@ -10787,7 +10787,9 @@
       "paths": [
         "docs/tasks.json",
         "scripts/gates/gov-attributions.ts",
-        "tests/unit/gouvernance/aucun-chemin-gabarit.spec.ts"
+        "tests/unit/gouvernance/aucun-chemin-gabarit.spec.ts",
+        "tests/unit/gouvernance/attributions-resolvent.spec.ts",
+        "tests/unit/gouvernance/exemptions-par-occurrence.spec.ts"
       ],
       "schema": false,
       "sensible": [],
