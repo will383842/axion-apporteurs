@@ -101,6 +101,8 @@
       "Edit(docs/tasks.json)",
       "Write(docs/gates.json)",
       "Edit(docs/gates.json)",
+      "Write(config/exemptions-corps-publie.json)",
+      "Edit(config/exemptions-corps-publie.json)",
       "Write(.claude/settings.json)",
       "Edit(.claude/settings.json)"
     ]

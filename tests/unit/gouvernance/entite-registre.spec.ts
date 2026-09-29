@@ -3579,3 +3579,119 @@ describe('REQ-GOV-031 — le banc du corps publié : un témoin par CAUSE, déri
     );
   });
 });
+
+/**
+ * ── LE REGISTRE QUI ABSOUT N'ÉTAIT ARMÉ PAR AUCUNE MACHINE ────────────────────────────────────────
+ *
+ * 🔴 LE DÉFAUT, mesuré par la lentille `schema` sur la PR #31 : des cinq surfaces de gouvernance que
+ * `partners/ADR-0010` prend pour étalon, DEUX SEULEMENT arment une machine — le `deny` de
+ * `.claude/settings.json` et le label du §7 de la charte. Le registre d'exemptions, SEUL fichier du
+ * dépôt qui puisse ABSOUDRE un rouge bloquant de Gate A, n'obtenait NI L'UN NI L'AUTRE : la ligne
+ * de `.github/CODEOWNERS` est inerte (un attrape-tout y porte déjà le même propriétaire) et le label
+ * du §7 vaut « — ». Un agent en session pouvait donc écrire une ligne qui transforme un échec en
+ * vert, et aucune règle mécanique ne s'y opposait avant la revue.
+ *
+ * LA MESURE : le `deny` sur ce chemin, avec LES MÊMES VERBES que ceux qui protègent la matrice
+ * elle-même — et ce témoin, qui rougit si l'un d'eux disparaît.
+ *
+ * CE QUI EST DÉRIVÉ (RM-01) :
+ *   — le CHEMIN n'est pas tapé : il est celui que la garde `gov:entite` NOMME quand elle juge le
+ *     registre. Si le registre déménage, le témoin suit la garde, au lieu de protéger une adresse
+ *     vide pendant que le vrai fichier reste ouvert ;
+ *   — les VERBES ne sont pas tapés : ce sont ceux dont `.claude/settings.json` se protège lui-même.
+ *     Si la matrice apprend demain un verbe d'écriture de plus pour elle-même, le registre qui
+ *     absout est tenu de l'apprendre aussi.
+ *
+ * ⚠️ CE QUE CE TÉMOIN NE PROUVE PAS : un `deny` de permission ne lie que les sessions lancées avec
+ * cette matrice. Il n'empêche ni un `git commit` fait à la main, ni un lot lancé avec `--settings`
+ * surchargé — c'est précisément ce second chemin que le §7 désigne pour écrire les fichiers réservés.
+ * La lentille `securite`, qui juge toute PR, reste la protection de dernier rang.
+ */
+describe('REQ-GOV-031 — le registre qui peut ABSOUDRE un rouge est sous `deny`', () => {
+  const MATRICE = '.claude/settings.json';
+
+  /** Le chemin du registre, tel que la garde le NOMME en jugeant une ligne mal formée. */
+  function cheminDuRegistre(): string {
+    // Une ligne délibérément vide : la garde la refuse, et son refus NOMME le registre qu'elle lit.
+    const malformee: Exemption = {
+      pr: 0,
+      revision: '',
+      declaree: '',
+      par: '',
+      motif: '',
+      definitive: false,
+    };
+    const fautes = controlerRegistreExemptions([malformee]);
+    const nomme = fautes.map((f) => /`([^`]+)`/.exec(f.message)?.[1]).find(Boolean);
+    if (!nomme) throw new Error('la garde ne nomme plus le registre : chemin indérivable');
+    return nomme;
+  }
+
+  /** Les règles `deny` d'une matrice donnée en texte. */
+  function denyDe(brut: string): string[] {
+    const j = JSON.parse(brut) as { permissions?: { deny?: unknown } };
+    const d = j.permissions?.deny;
+    return Array.isArray(d) ? d.filter((r): r is string => typeof r === 'string') : [];
+  }
+
+  /** Les verbes dont la matrice se protège elle-même : `Verbe(.claude/settings.json)`. */
+  function verbesQuiProtegentLaMatrice(deny: readonly string[]): string[] {
+    const suffixe = `(${MATRICE})`;
+    return deny.filter((r) => r.endsWith(suffixe)).map((r) => r.slice(0, -suffixe.length));
+  }
+
+  /** Les règles attendues sur `chemin` et ABSENTES de `deny` : la liste vide est le vert. */
+  function reglesManquantes(deny: readonly string[], chemin: string): string[] {
+    return verbesQuiProtegentLaMatrice(deny)
+      .map((v) => `${v}(${chemin})`)
+      .filter((r) => !deny.includes(r));
+  }
+
+  const brut = readFileSync(MATRICE, 'utf8');
+  const deny = denyDe(brut);
+
+  it('REQ-GOV-031 — TÉMOIN POSITIF : le chemin se dérive de la garde, il existe, et la matrice a des verbes', () => {
+    // Deux zéros indiscernables : « aucune règle ne manque » et « je n'ai trouvé aucun verbe »
+    // rendent la même liste vide. On vérifie donc qu'il y a quelque chose à exiger.
+    const chemin = cheminDuRegistre();
+    expect(statSync(chemin).isFile(), `${chemin} n'est pas le fichier que la garde lit`).toBe(true);
+    expect(chemin).toBe(chemin.trim());
+    expect(verbesQuiProtegentLaMatrice(deny).length).toBeGreaterThan(0);
+  });
+
+  it('REQ-GOV-031 — la matrice RÉELLE refuse l’écriture du registre, par chaque verbe qui la protège elle-même', () => {
+    expect(reglesManquantes(deny, cheminDuRegistre())).toEqual([]);
+  });
+
+  it('REQ-GOV-031 — TÉMOIN ROUGE : retirer UNE seule des règles du registre rougit, en la nommant', () => {
+    const chemin = cheminDuRegistre();
+    const duRegistre = deny.filter((r) => r.endsWith(`(${chemin})`));
+    expect(duRegistre.length).toBeGreaterThan(0);
+    for (const retiree of duRegistre) {
+      const amputee = deny.filter((r) => r !== retiree);
+      expect(reglesManquantes(amputee, chemin), retiree).toEqual([retiree]);
+    }
+    // Et les retirer toutes rougit autant de fois qu'il y a de verbes.
+    const nue = deny.filter((r) => !duRegistre.includes(r));
+    expect(reglesManquantes(nue, chemin)).toEqual(duRegistre);
+  });
+
+  it('REQ-GOV-031 — TÉMOIN ROUGE : une matrice qui apprend un verbe pour elle-même l’exige du registre', () => {
+    const chemin = cheminDuRegistre();
+    const verbe = 'NotebookEdit';
+    const enrichie = [...deny, `${verbe}(${MATRICE})`];
+    expect(reglesManquantes(enrichie, chemin)).toEqual([`${verbe}(${chemin})`]);
+    // CONTRE-TÉMOIN : le verbe porté des deux côtés, le vert revient.
+    expect(reglesManquantes([...enrichie, `${verbe}(${chemin})`], chemin)).toEqual([]);
+  });
+
+  it('REQ-GOV-031 — CONTRE-TÉMOIN : un autre chemin sous `deny` ne tient pas lieu du registre', () => {
+    // Une règle posée sur un voisin — même dossier, même extension — ne couvre pas le registre :
+    // le test compare des chaînes exactes, il ne se laisse pas contenter par un préfixe.
+    const chemin = cheminDuRegistre();
+    const voisin = `${dirname(chemin)}/voisin.json`;
+    const nue = deny.filter((r) => !r.endsWith(`(${chemin})`));
+    const deVoisin = verbesQuiProtegentLaMatrice(nue).map((v) => `${v}(${voisin})`);
+    expect(reglesManquantes([...nue, ...deVoisin], chemin).length).toBe(deVoisin.length);
+  });
+});

@@ -175,17 +175,14 @@ les termes. Trouvé par la lentille `schema` **dans un fichier que la PR ne touc
 ⚠️ **`glossaire-enums.spec.ts` (GOV-006) n'existe toujours pas.** Tant qu'il n'est pas livré, le
 glossaire est une consigne, pas un contrôle.
 
-### Une obligation post-fusion n'est gardée par personne avant la fusion
+### L'entrée de journal d'une PR : lire RM-15
 
-REQ-GOV-023 exige qu'une PR fusionnée soit **précédée** de son entrée de journal. La PR #28 a été
-fusionnée sans la sienne : `gov:etat` ne voit `pr_fusionnee_sans_journal` que **lorsque la PR est
-fusionnée**, donc sur `main`, donc trop tard pour refuser quoi que ce soit — sa seule victime
-possible est la branche par défaut. La garde qui existe est un **détecteur d'incident, pas un
-garde-fou**. Coût mesuré de l'oubli : une PR entière (#29), sa Gate A, et un `main` rouge dans
-l'intervalle.
-
-**Conséquence pratique : l'entrée de journal s'écrit sur la branche du lot, dans le même push que le
-code.** Ne pas la remettre à la fin.
+L'obligation d'entrée de journal n'est pas rédigée ici : sa seule rédaction est **RM-15**
+(`docs/REGLES-MAISON.md`), qui dit aussi quelle garde la tient et ce qu'elle ne tient pas. Ce qui
+reste ici est l'incident qui l'a fait naître. La PR #28 a été fusionnée sans la sienne, et
+`gov:etat` n'a vu `pr_fusionnee_sans_journal` qu'une fois la PR sur `main`, trop tard pour refuser
+quoi que ce soit : un **détecteur d'incident, pas un garde-fou**. Coût mesuré de l'oubli : une PR
+entière (#29), sa Gate A, et un `main` rouge dans l'intervalle.
 
 ### Une Gate A locale verte ne dit rien du corps de la PR
 
@@ -327,7 +324,7 @@ git checkout -b lot/L<phase>-<seq>-integration
 #     · ROUGE avant VERT, message verbatim exigé dans le RENDU
 #     · un mode --prove avec témoins ET contre-témoins
 # → appliquer les diffs partagés EN UNE PASSE
-# → écrire l'ENTRÉE DE JOURNAL de la PR, sur la branche, avec le reste
+# → écrire l'ENTRÉE DE JOURNAL de la PR (RM-15), avec le reste
 # → régénérer les vues : lot:paths · adr:index · gov:gates-derivees --render
 #                        gov:trace --render · plan-state:build
 #   ⚠️ plan-state:build EN DERNIER, et APRÈS l'entrée de journal : PLAN-STATE REND le

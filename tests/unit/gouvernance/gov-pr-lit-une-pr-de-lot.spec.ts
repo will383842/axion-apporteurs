@@ -76,8 +76,10 @@ type TacheDuRegistre = TacheDeLot & {
 const LOT_L0_02 = ['GOV-046', 'GOV-048', 'GOV-076', 'GOV-078', 'GOV-082', 'GOV-086'] as const;
 
 /**
- * LE REGISTRE DU REJEU : le registre réel, où les six tâches de la PR #114 reprennent l'état
- * qu'elles avaient quand la garde a jugé cette PR — pas encore livrées, sans `pr` ni attestation.
+ * LE REGISTRE DU REJEU : le registre réel, où les six tâches de la PR #114 retrouvent, pour ce que
+ * la garde en lit, l'état qu'elles avaient quand elle a jugé cette PR : à faire, sans `pr` ni
+ * attestation. `branch`, `owner` et `motif` restent ceux de la clôture : `tachesDeLaPr` et
+ * `resoudreLeLot` ne les lisent pas.
  * Ce fichier rejoue une PR OUVERTE. Une fois le lot clos, le registre réel porte `pr: 114` sur les
  * six et les dit `fusionnee` : le titre seul les résout alors toutes, et `Lot:` les refuse comme
  * livrées. Le rejeu ne mesurerait plus la lecture du champ, mais l'avancement du registre. Seules

@@ -8,12 +8,12 @@
 >
 > Une tache = une PR, **≤ 1,5 jour**. Le plafond est porte par la garde `gov:tasks`.
 
-**291 taches · 221.35 j estimes.**
+**304 taches · 230.10 j estimes.**
 
 | Phase | Taches | Jours | Terminees |
 | --- | ---: | ---: | ---: |
 | -1 — Gouvernance (prealable bloquant) | 39 | 23.75 | 39 |
-| 0 — Socle technique | 117 | 90.85 | 76 |
+| 0 — Socle technique | 130 | 99.60 | 95 |
 | 1 — Operationnel | 62 | 48.00 | 0 |
 | 2 — Argent | 45 | 33.50 | 0 |
 | 3 — Pilotage et conformite | 28 | 25.25 | 0 |
@@ -522,7 +522,7 @@ Couvre : `REQ-QA-014`
 
 **Tests.** `tests/unit/qualite/req-check.spec.ts`
 
-### QA-T07 — Gate sécurité : semgrep
+### QA-T07 — Gate sécurité : semgrep ✅ **fusionnee**
 
 `1 j` · zone `qualite` · depend de `QA-T01`
 
@@ -732,9 +732,9 @@ Couvre : `REQ-SEC-003`, `REQ-SEC-004`
 
 **Tests.** `tests/unit/securite/revocation.spec.ts`
 
-### SEC-05 — Couche d'accès `forApporteur
+### SEC-05 — Couche d'accès `forApporteur ✅ **fusionnee**
 
-`1 j` · zone `securite` · depend de `QA-T07`, `SEC-04`
+`1 j` · zone `securite` · sensible : rgpd, espace · depend de `QA-T07`, `SEC-04`
 
 Couvre : `REQ-ARG-029`, `REQ-QA-010`, `REQ-QA-011`, `REQ-QA-012`, `REQ-SEC-008`, `REQ-SEC-009`, `REQ-SEC-022`, `REQ-UX-006`
 
@@ -922,7 +922,7 @@ Couvre : `REQ-QA-014`
 
 **Tests.** `tests/unit/gouvernance/titres-de-test-resolvent.spec.ts`
 
-### GOV-040 — Le registre d'exemptions n'a AUCUNE des deux surfaces qui arment une machine
+### GOV-040 — Le registre d'exemptions n'a AUCUNE des deux surfaces qui arment une machine ✅ **fusionnee**
 
 `0.5 j` · zone `gouvernance` · depend de `GOV-023`
 
@@ -1014,7 +1014,7 @@ Couvre : `REQ-GOV-004`
 
 **Tests.** `tests/unit/gouvernance/sonde-distingue-les-deux-depots.spec.ts`
 
-### GOV-049 — Une tache en cours sans lot est invisible de TOUTES les gardes, et c'est ce lot qui l'a rencontre
+### GOV-049 — Une tache en cours sans lot est invisible de TOUTES les gardes, et c'est ce lot qui l'a rencontre ✅ **fusionnee**
 
 `0.5 j` · zone `gouvernance` · depend de `GOV-038`
 
@@ -1030,7 +1030,7 @@ SECONDE CORRECTION — LE DISCRIMINANT N'EST PAS LA FORME DU NOM DE BRANCHE. Une
 
 ⚠️ L'ANGLE MORT QUE LA GARDE LIVREE DOIT FERMER EXPLICITEMENT — c'est le meme defaut, vu par l'autre bout. Si l'exemption se lisait sur le NOM de la branche, alors toute branche s'exempterait EN SE NOMMANT : il suffirait d'ouvrir une branche a la forme derogatoire pour qu'une tache reellement composee en lot cesse d'avoir besoin de son lot. Une cle d'exemption que le sujet controle lui-meme n'est pas une cle. La garde livree doit donc DIRE, dans son code et dans sa sortie, ce qui empeche une branche de s'exempter en se nommant : l'exemption se lit sur l'ETAT DU REGISTRE (aucun lot ne revendique cette tache) et sur l'ATTESTATION (`pr`, `branch`, sha), jamais sur une forme de chaine que l'auteur choisit. Temoin exige : une tache composee dans un lot, dont on renomme la branche a la forme derogatoire sans toucher au reste, reste ROUGE.
 
-TEMOINS EXIGES, TROIS FACES. (a) ROUGE : une tache `en_cours` rattachee a un lot dont le champ `lot` est vide fait sortir la validation du schema en code non nul et la NOMME. (b) VERT : les six taches livrees seules, dont INT-T01b sur sa branche `lot/`, restent VERTES sur l'etat reel du registre. (c) VERT : les taches `a_faire`, qui n'ont legitimement pas de lot, restent vertes — un refus qui les condamnerait bloquerait tout le backlog. A NOMMER dans l'acceptance de la livraison si le cas est laisse ouvert : le symetrique, un `lot` porte par une tache `a_faire`.
+TEMOINS EXIGES, TROIS FACES. (a) ROUGE : une tache `en_cours` rattachee a un lot dont le champ `lot` est vide fait sortir la validation du schema en code non nul et la NOMME. (b) VERT : les six taches livrees seules, dont INT-T01b sur sa branche `lot/`, restent VERTES sur l'etat reel du registre. (c) VERT : les taches `a_faire`, qui n'ont legitimement pas de lot, restent vertes — un refus qui les condamnerait bloquerait tout le backlog. A NOMMER dans l'acceptance de la livraison si le cas est laisse ouvert : le symetrique, un `lot` porte par une tache `a_faire`. AVENANT A01 du 2026-09-29 (re-arbitrage de Will le 2026-09-29 : reecrire l acceptance). La premisse d origine est tombee deux fois : GOV-057 clot une tache seule sans lui inventer de lot (cloturerUneTacheSeule, temoin clore-une-tache-livree-seule.spec.ts), et GOV-086 tient qu une tache prise avec sa branche et sans pr est EN VOL (un-etat-cible-porte-son-operation.spec.ts) ; exiger un lot des en_cours contredirait ce second temoin. La regle retenue : une tache en_cours porte un lot OU la preuve de son vol, owner et branch. La clause jumelle du schema l exige deja, et AUCUN temoin ne la voyait refuser. A livrer, et c est tout : aucune clause nouvelle au schema (elle serait vide) ; un temoin a deux faces sur une tache de ce depot hors de tout lot, prise au registre par un critere : ROUGE sans branch, puis sans owner, la famille schema nomme la tache ; VERT avec les deux, sans lot ni pr. Il passe deja contre main, il porte donc le marqueur @no-red-first ; sa capacite a rougir est mesuree par mutation (la clause desarmee, les deux faces rouges echouent). La branche de la premiere redaction (clause lot OU pr OU attestation) est abandonnee. Le chemin scripts/lot/tasks.schema.json sort des paths : cette livraison ne le modifie pas.
 
 **Tests.** `tests/unit/gouvernance/une-tache-en-cours-appartient-a-un-lot.spec.ts`
 
@@ -1054,7 +1054,7 @@ Couvre : `REQ-GOV-029`
 
 **Tests.** `tests/unit/gouvernance/comparer-un-chemin-c-est-le-normaliser.spec.ts`
 
-### GOV-052 — L'entree de journal d'une PR n'est exigee qu'APRES sa fusion : la seule victime possible est main
+### GOV-052 — L'entree de journal d'une PR n'est exigee qu'APRES sa fusion : la seule victime possible est main ✅ **fusionnee**
 
 `0.5 j` · zone `gouvernance` · depend de `GOV-073`
 
@@ -1176,7 +1176,7 @@ Couvre : `REQ-GOV-014`, `REQ-GOV-026`, `REQ-GOV-021`
 
 **Tests.** `tests/unit/gouvernance/clore-une-tache-livree-seule.spec.ts`
 
-### GOV-058 — Les decisions de gouvernance prises le 2026-09-15 ne sont ecrites nulle part dans le depot
+### GOV-058 — Les decisions de gouvernance prises le 2026-09-15 ne sont ecrites nulle part dans le depot ✅ **fusionnee**
 
 `0.75 j` · zone `gouvernance` · aucune dependance
 
@@ -1236,7 +1236,7 @@ Couvre : `REQ-GOV-008`, `REQ-GOV-012`, `REQ-QA-013`
 
 **Tests.** `tests/unit/gouvernance/un-nom-une-garde.spec.ts`
 
-### GOV-064 — Deux chemins suivis distincts peuvent se confondre dans la source unique du perimetre
+### GOV-064 — Deux chemins suivis distincts peuvent se confondre dans la source unique du perimetre ✅ **fusionnee**
 
 `1 j` · zone `gouvernance` · sensible : argent · aucune dependance
 
@@ -1286,7 +1286,7 @@ Couvre : `REQ-GOV-024`, `REQ-GOV-031`, `REQ-DM-003`
 
 **Tests.** `tests/unit/gouvernance/une-seule-politique-d-illisibilite.spec.ts`
 
-### GOV-069 — La garde des termes interdits decoupe SQL, Prisma et prose avec une grammaire maison incomplete
+### GOV-069 — La garde des termes interdits decoupe SQL, Prisma et prose avec une grammaire maison incomplete ✅ **fusionnee**
 
 `1.5 j` · zone `gouvernance` · sensible : attribution · aucune dependance
 
@@ -1306,7 +1306,7 @@ Couvre : `REQ-GOV-008`, `REQ-GOV-009`, `REQ-DM-003`
 
 **Tests.** `tests/unit/gouvernance/adr-assertion-existe.spec.ts` · `tests/unit/gouvernance/adr-0011-perimetre.spec.ts`
 
-### GOV-071 — Les gardes lexicale et d'identifiants ne decoupent pas les mots comme le rendu les affiche
+### GOV-071 — Les gardes lexicale et d'identifiants ne decoupent pas les mots comme le rendu les affiche ✅ **fusionnee**
 
 `0.75 j` · zone `gouvernance` · sensible : espace · aucune dependance
 
@@ -1336,7 +1336,7 @@ Couvre : `REQ-GOV-023`, `REQ-GOV-024`
 
 **Tests.** `tests/unit/gouvernance/une-seule-grammaire-de-journal.spec.ts`
 
-### GOV-074 — Les exemptions de la garde des attributions se rangent par site, pas par occurrence
+### GOV-074 — Les exemptions de la garde des attributions se rangent par site, pas par occurrence ✅ **fusionnee**
 
 `1 j` · zone `gouvernance` · aucune dependance
 
@@ -1346,13 +1346,13 @@ Couvre : `REQ-GOV-021`, `REQ-GOV-003`
 
 **Tests.** `tests/unit/gouvernance/exemptions-par-occurrence.spec.ts`
 
-### GOV-075 — Des taches livrees gardent un chemin gabarit, et une tache livree omet un fichier qu'elle a modifie
+### GOV-075 — Des taches livrees gardent un chemin gabarit, et une tache livree omet un fichier qu'elle a modifie ✅ **fusionnee**
 
 `1.5 j` · zone `gouvernance` · depend de `GOV-074`
 
 Couvre : `REQ-GOV-021`
 
-**Acceptation.** ETAT MESURE LE 2026-09-16 : 50 des 68 taches de phase 0 portent un chemin GABARIT — un chemin qui n'existe pas, construit sur l'identifiant de la tache — auxquelles s'ajoutent treize taches DEJA LIVREES dans le meme etat, et 54 attributions figees qui en dependent. GOV-007 et GOV-005 ne listent pas leurs propres gardes ; GOV-036 a modifie un fichier qu'elle n'a pas dans ses chemins. ⚠️ CE QUE CETTE TACHE NE PORTE PLUS : la reparation des 50 chemins de phase 0 est faite par le lot preparatoire, AVANT toute composition — sans elle le composeur prouve une disjonction qui n'existe pas. Ce qui reste ici est le PASSE et la GARDE : les treize taches livrees, le fichier omis par GOV-036, et la reduction des deux listes figees dans le MEME diff que la reparation, sans quoi une famille de dette perimee s'arme. A livrer : (1) plus aucun chemin gabarit dans le registre, quelle que soit la phase ; (2) une garde qui REFUSE un chemin construit sur l'identifiant de sa propre tache ; (3) les listes figees reduites a ce qui reste. TEMOIN A DEUX FACES : une tache dont le chemin vaut son propre identifiant fait sortir la garde en code non nul et la NOMME ; le registre repare la fait sortir en zero, avec le compte des taches et des chemins reellement confrontes.
+**Acceptation.** ETAT MESURE LE 2026-09-16 : 50 des 68 taches de phase 0 portent un chemin GABARIT — un chemin qui n'existe pas, construit sur l'identifiant de la tache — auxquelles s'ajoutent treize taches DEJA LIVREES dans le meme etat, et 54 attributions figees qui en dependent. GOV-007 et GOV-005 ne listent pas leurs propres gardes ; GOV-036 a modifie un fichier qu'elle n'a pas dans ses chemins. ⚠️ CE QUE CETTE TACHE NE PORTE PLUS : la reparation des 50 chemins de phase 0 est faite par le lot preparatoire, AVANT toute composition — sans elle le composeur prouve une disjonction qui n'existe pas. Ce qui reste ici est le PASSE et la GARDE : les treize taches livrees, le fichier omis par GOV-036, et la reduction des deux listes figees dans le MEME diff que la reparation, sans quoi une famille de dette perimee s'arme. A livrer : (1) plus aucun chemin gabarit dans le registre, quelle que soit la phase ; (2) une garde qui REFUSE un chemin construit sur l'identifiant de sa propre tache ; (3) les listes figees reduites a ce qui reste. TEMOIN A DEUX FACES : une tache dont le chemin vaut son propre identifiant fait sortir la garde en code non nul et la NOMME ; le registre repare la fait sortir en zero, avec le compte des taches et des chemins reellement confrontes. AVENANT A01 du 2026-09-29 (PR #209, releve de la lentille exactitude) : le volet (1) est restreint aux taches livrees et a celles de phase inferieure ou egale a la phase courante. Les gabarits de phase future (121 le 2026-09-29 : 60 en phase 1, 40 en phase 2, 21 en phase 3) sont admis, comptes et imprimes par la garde ; elle rougit main au passage de phase tant que le lot preparatoire de la phase suivante ne les a pas repares. Motif : la reparation des chemins d une phase appartient a son lot preparatoire, comme ci-dessus pour la phase 0.
 
 **Tests.** `tests/unit/gouvernance/aucun-chemin-gabarit.spec.ts`
 
@@ -1396,7 +1396,7 @@ Couvre : `REQ-GOV-032`, `REQ-GOV-026`
 
 **Tests.** `tests/unit/gouvernance/aucune-troncature-muette.spec.ts`
 
-### GOV-081 — Une affirmation du code sur le registre est devenue fausse le jour ou le registre a change
+### GOV-081 — Une affirmation du code sur le registre est devenue fausse le jour ou le registre a change ✅ **fusionnee**
 
 `0.1 j` · zone `gouvernance` · depend de `GOV-074`
 
@@ -1440,7 +1440,7 @@ Couvre : `REQ-GOV-012`, `REQ-QA-013`
 
 **Tests.** `tests/unit/gouvernance/une-gate-sans-script-n-est-pas-une-gate-conforme.spec.ts`
 
-### GOV-084 — Neuf scripts de garde suivis ne sont revendiques par aucune tache
+### GOV-084 — Neuf scripts de garde suivis ne sont revendiques par aucune tache ✅ **fusionnee**
 
 `0.5 j` · zone `gouvernance` · depend de `GOV-074`
 
@@ -1450,7 +1450,7 @@ Couvre : `REQ-GOV-021`, `REQ-GOV-003`
 
 **Tests.** `tests/unit/gouvernance/aucun-script-de-garde-orphelin.spec.ts`
 
-### GOV-085 — Le geste que le rouge prescrit eteint le rouge en rendant vraie l'attribution qu'il denonce
+### GOV-085 — Le geste que le rouge prescrit eteint le rouge en rendant vraie l'attribution qu'il denonce ✅ **fusionnee**
 
 `0.5 j` · zone `gouvernance` · depend de `GOV-082`
 
@@ -1762,6 +1762,136 @@ Couvre : `REQ-GOV-026`
 **Acceptation.** La PR #114 (lot L0-02) a ete fusionnee depuis la branche `t/lot-L0-02`. Le motif de `branch` fixe par partners/ADR-0007, `^(t/[a-z0-9][a-z0-9._-]*|lot/[A-Za-z0-9][A-Za-z0-9._/-]*)$`, refuse la majuscule apres `t/`. Consequence mesuree : `reclasser.mjs`, qui lit ce motif dans le schema, rend `branche_de_la_forge_refusee`, et les six taches livrees par #114 (GOV-046, GOV-048, GOV-076, GOV-078, GOV-082, GOV-086) restent `a_faire` alors que leur code est sur `main`. Ecrire une branche fictive en minuscules est exclu par l'ADR-0007 lui-meme (tableau des options ecartees) : le champ deviendrait decoratif. DECISION DE WILL DU 2026-09-28 : elargir le motif. A livrer : (1) la forme `t/` admet les majuscules, comme la forme `lot/` les admet deja ; le motif reste FERME, une branche sans prefixe reconnu reste refusee ; (2) l'ADR-0007 porte un amendement date qui cite la decision et la mesure. TEMOINS : (a) VERT, une tache `fusionnee` sur `t/lot-L0-02` passe la validation du schema ; (b) ROUGE, une branche sans prefixe reconnu reste refusee et nommee `schema` ; (c) VERT, l'etat reel du registre reste vert.
 
 **Tests.** `tests/unit/gouvernance/une-branche-reelle-de-la-forge-est-admise.spec.ts`
+
+### GOV-104 — La cloture d'une tache seule lit sa declaration dans un corps de PR reecrivable apres la fusion, et juge l'atterrissage sur la base de la PR ✅ **fusionnee**
+
+`1 j` · zone `gouvernance` · depend de `GOV-057`
+
+Couvre : `REQ-GOV-026`, `REQ-GOV-021`
+
+**Acceptation.** Dettes des deux lentilles sur la PR #182 (GOV-057), et decision de Will du 2026-09-28 de les corriger. (1) SECURITE : `lot:cloture --tache` lit la declaration (titre, `Lot:`) dans le CORPS de la PR, que l'auteur peut reecrire apres la fusion ; une tache non portee pourrait alors etre declaree apres coup. La declaration se lit desormais dans le MESSAGE DU COMMIT DE FUSION, immuable : le pas 6 du protocole recopie la ligne `Lot:` du corps dans le message d'ecrasement (`gh pr merge --body`), et la cloture ne lit plus jamais le corps. Temoin : un corps de PR qui declare une tache que le commit ne declare pas ne la clot PAS. (2) SECURITE : l'atterrissage etait juge par ascendance sur `baseRefName` ; il l'est desormais sur la branche PAR DEFAUT du depot de la tache, lue sur la forge. Temoin : une PR fusionnee dans une autre base que la branche par defaut n'est pas atterrie. (3) Le mode `--lot` refuse lui aussi une branche hors du motif du schema, avant ecriture (temoin). (4) Le pas 8 dit qu'une PR doit declarer la tache qu'elle clot, et ce que cela implique pour une tache d'un autre depot. (5) `docs/DECISIONS.md` porte la decision W17 (motif de branch, GOV-103) et W18 (ce durcissement). (6) `docs/CHARTE-AGENTS.md` cite `RACINES_DE_LA_GARDE_DES_REVUES` au lieu de recopier « trois racines » (RM-01). LIMITE DECLAREE : les PR fusionnees avant ce durcissement ne portent pas `Lot:` dans leur commit ; leurs taches secondaires sont closes AVANT cette PR, par le rattrapage qui suit #182.
+
+**Tests.** `tests/unit/gouvernance/la-declaration-se-lit-dans-le-commit-de-fusion.spec.ts`
+
+### GOV-105 — La forge accepte-t-elle au depot une entree d'index que la source unique refuse desormais : le volet (3) de GOV-064 n'est ni mesure ni ecrit
+
+`0.5 j` · zone `gouvernance` · sensible : argent · depend de `GOV-064`
+
+Couvre : `REQ-GOV-031`
+
+**Acceptation.** Releve par la lentille exactitude sur la PR #195 : l'acceptance de GOV-064 demandait (3) de mesurer si la forge accepte au depot une entree d'index au nom non UTF-8, et de l'ecrire. Ce n'est pas fait : la source unique la refuse desormais cote poste, mais ce que la forge accepte ou refuse n'est pas connu. A livrer : la mesure, faite dans un depot JETABLE et prive, jamais dans ce depot public ; son resultat ecrit dans le commentaire de la source unique, sans la forme exacte de l'entree ; et, si la forge l'accepte, un temoin qui prouve que la porte A la refuse quand meme. La forme precise reste hors depot.
+
+**Tests.** `tests/unit/gouvernance/deux-chemins-ne-se-confondent-pas.spec.ts`
+
+### GOV-106 — La garde lexicale juge le texte rendu par expressions regulieres : la JSX et le Markdown rendent a l'ecran des mots qu'elle ne voit pas ✅ **fusionnee**
+
+`1.5 j` · zone `gouvernance` · sensible : espace · depend de `GOV-071`
+
+Couvre : `REQ-GOV-017`, `REQ-JUR-037`, `REQ-GOV-003`
+
+**Acceptation.** Releve par la lentille securite sur la PR #195, formes tenues HORS DEPOT (dossier de reprise, fichier confidentiel) : plusieurs constructions de la JSX et du Markdown affichent a l'ecran un terme du lexique interdit que lignesRendues() ne reconstitue pas. A livrer : le rendu de la JSX par l'AST de TypeScript (texte et litteraux de chaine, expressions constantes, fragments), et du Markdown par son arbre, a la place des expressions regulieres ; une seule fonction pour les deux gardes (RM-01). TEMOINS : chaque forme du fichier confidentiel rougit sur la nouvelle garde ; les temoins ne sont commites qu'avec le correctif, dans la meme PR, et leur detail n'apparait dans AUCUN texte public avant sa fusion. Dettes connexes a juger : les homoglyphes.
+
+**Tests.** `tests/unit/gouvernance/frontiere-de-mot-du-rendu.spec.ts`
+
+### GOV-107 — Le titre qui declare une livraison se lit dans la premiere ligne du message d'ecrasement, et seul --subject le tient ✅ **fusionnee**
+
+`0.5 j` · zone `gouvernance` · depend de `GOV-104`
+
+Couvre : `REQ-GOV-026`
+
+**Acceptation.** Releve par la lentille securite sur la PR #188 : hors --subject, une PR a un seul commit prend pour titre d'ecrasement le sujet du commit, ecrit par le developpeur, qui peut nommer une autre tache. A livrer : la cloture exige que la premiere ligne du message soit exactement le titre de la PR suivi de ` (#<n>)`, lu sur la forge, et refuse sinon (echec ferme, famille nommee). TEMOIN : un message dont la premiere ligne nomme une autre tache que le titre de la PR ne declare rien ; CONTRE-TEMOIN : la forme que le pas 6 produit declare.
+
+**Tests.** `tests/unit/gouvernance/la-declaration-se-lit-dans-le-commit-de-fusion.spec.ts`
+
+### GOV-108 — RM-15 se dit la seule redaction de l'obligation de journal, et deux documents la redigent encore sans la citer ✅ **fusionnee**
+
+`0.5 j` · zone `gouvernance` · depend de `GOV-052`
+
+Couvre : `REQ-GOV-023`
+
+**Acceptation.** Releve par la lentille exactitude sur la PR #195 : RM-15 affirme etre la seule redaction de l'obligation d'entree de journal, alors que docs/journal/README.md et docs/REPRISE-SESSION.md la redigent encore sans la citer. A livrer : ces deux documents renvoient a RM-15 au lieu de redire la regle, et un temoin rougit si une autre redaction reapparait. Dette connexe de la lentille securite : journalALaReference liste l'arbre sans -z ni core.quotepath=false ; un nom d'entree non ASCII y serait mal lu. A corriger avec son temoin.
+
+**Tests.** `tests/unit/gouvernance/une-pr-porte-son-entree-de-journal.spec.ts`
+
+### GOV-109 — La garde lexicale ne s'arrete pas au texte litteral : des expressions constantes de la JSX rendent encore a l'ecran un terme qu'elle ne voit pas
+
+`1 j` · zone `gouvernance` · sensible : espace · depend de `GOV-106`
+
+Couvre : `REQ-GOV-017`, `REQ-JUR-037`
+
+**Acceptation.** Releve par la lentille securite sur la PR #206, formes tenues HORS DEPOT (dossier de reprise, fichier confidentiel) : apres GOV-106, une famille d'expressions dont la valeur est connue sans execution affiche encore un terme du lexique interdit. A livrer : la garde evalue, par l'AST de TypeScript, toute expression JSX dont la valeur rendue est constante, comme React la rend, au lieu d'une liste de formes. TEMOINS : chaque forme du fichier confidentiel rougit ; les temoins entrent dans le meme commit que le correctif, jamais avant, et ni l acceptance, ni les messages de commit, ni le journal ne les enumerent.
+
+**Tests.** `tests/unit/gouvernance/frontiere-de-mot-du-rendu.spec.ts`
+
+### GOV-110 — La cloture compare le sujet du commit de fusion au titre ACTUEL de la PR : un renommage apres la fusion le rendrait conforme ✅ **fusionnee**
+
+`0.5 j` · zone `gouvernance` · depend de `GOV-107`
+
+Couvre : `REQ-GOV-026`
+
+**Acceptation.** Releve par la lentille securite sur la PR #206 : livraisonDepuisLaForge attend pour premiere ligne du commit d'ecrasement le titre de la PR tel qu'il est AU MOMENT DE LA CLOTURE ; le titre reste modifiable apres la fusion. A livrer : le titre attendu est celui que la PR portait a l'instant de mergedAt (dernier renommage anterieur a la fusion, lu dans la chronologie de la PR), et un renommage posterieur est sans effet. TEMOIN rouge d'abord : un renommage posterieur a la fusion ne change pas le verdict.
+
+**Tests.** `tests/unit/gouvernance/la-declaration-se-lit-dans-le-commit-de-fusion.spec.ts`
+
+### GOV-111 — Le cloisonnement par apporteur juge les donnees ecrites et les filtres simples, pas encore les options de lecture ni les filtres de relation
+
+`1 j` · zone `securite` · sensible : rgpd · depend de `SEC-05`
+
+Couvre : `REQ-SEC-008`, `REQ-SEC-009`
+
+**Acceptation.** Dettes relevees par la lentille securite sur la PR #200 (SEC-05), non bloquantes pour sa fusion : la couche forApporteur juge les donnees ecrites et le where de premier niveau, mais pas encore toutes les options de lecture que la methode lister transmet au client, ni les filtres qui traversent une relation, et elle rend des lignes entieres la ou une selection explicite suffirait. A livrer : une liste blanche des options de lecture acceptees, le refus (famille REFUS.forme) de tout filtre de relation qui sortirait du perimetre de l'apporteur, et une selection explicite des champs rendus ; 404 toujours indistinct. TEMOINS rouges d'abord, dont un sur le vrai serialiseur de Prisma en integration. ECHEANCE : les filtres de relation sont fermes au plus tard a l arrivee du premier modele partage entre apporteurs (REQ-SEC-022).
+
+**Tests.** `tests/unit/securite/acces-scope.spec.ts` · `tests/integration/idor.spec.ts`
+
+### GOV-122 — La cloture retient un renommage fait dans la seconde meme de la fusion, et une date illisible y devient NaN au lieu d'un refus
+
+`0.5 j` · zone `gouvernance` · depend de `GOV-110`
+
+Couvre : `REQ-GOV-026`
+
+**Acceptation.** Releve par les deux lentilles sur la PR #211 (GOV-110), non bloquant a la fusion. (1) titreALaFusion compare avec <= a mergedAt, a la seconde : un renommage horodate dans la seconde meme de la fusion est retenu comme anterieur, alors que l'acceptance de GOV-110 dit anterieur. A livrer : un renommage de meme horodatage que la fusion n'est pas tenu pour anterieur, ou l'egalite est refusee comme indecidable ; le choix est ecrit. (2) Un createdAt ou un mergedAt qui n'est pas une date passe le filtre des renommages complets et produit NaN, alors que le docblock promet null : la chronologie illisible doit rendre null, et la cloture refuser. (3) La prose et le message de refus parlent encore du titre de la PR la ou la regle lit desormais le titre a l'instant de la fusion. TEMOINS rouges d'abord : un renommage a la seconde de la fusion ; une date illisible dans la chronologie.
+
+**Tests.** `tests/unit/gouvernance/la-declaration-se-lit-dans-le-commit-de-fusion.spec.ts`
+
+### GOV-118 — La garde des attributions reconnait un gabarit a son nom, et reste verte si elle ne confronte aucun script de garde
+
+`0.5 j` · zone `gouvernance` · depend de `GOV-084`
+
+Couvre : `REQ-GOV-021`
+
+**Acceptation.** Releve par la lentille securite sur les PR #209 (GOV-075) et #216 (GOV-084), non bloquant a la fusion. (1) estGabarit reconnait un chemin gabarit a sa FORME (le dernier segment vaut l'identifiant de sa tache) : un vrai fichier nomme ainsi serait pris pour un gabarit. A livrer : la regle est confrontee au disque (un gabarit n'existe pas), ou la limite est ecrite en tete de la garde avec son temoin. (2) La famille script_de_garde_sans_porteur n'a pas de plancher : si l'index ne rend aucun fichier sous scripts/gates/, la garde confronte zero script et reste verte. A livrer : zero script confronte est un refus nomme. (3) Elle prend tout fichier suivi sous scripts/gates/, pas seulement les scripts : dire dans l'en-tete si c'est voulu, ou filtrer. TEMOINS rouges d'abord pour (1) et (2).
+
+**Tests.** `tests/unit/gouvernance/aucun-script-de-garde-orphelin.spec.ts`
+
+### GOV-119 — La porte A d'une PR rougit quand une AUTRE PR fusionne pendant son execution
+
+`0.5 j` · zone `gouvernance` · aucune dependance
+
+Couvre : `REQ-GOV-006`
+
+**Acceptation.** Mesure le 2026-09-29 sur la PR #209 (run 36523369124) : la PR #211 a fusionne pendant la porte A de #209 ; gov:etat a lu cette fusion sur la forge et exige son commit dans le clone du job, qui ne le portait pas (github_illisible : le commit de fusion 911f326 est absent du clone). Deux tests d'etat reel (REQ-GOV-006, REQ-GOV-007) ont rougi sans rien devoir au delta de #209. Releve par la lentille exactitude. A livrer : la porte A d'une PR ne depend pas de l'etat des AUTRES PR a l'instant ou elle tourne ; ce que gov:etat lit sur la forge est borne a la base du clone, ou l'absence d'un commit posterieur a cette base est une exemption nommee et comptee, jamais un rouge. TEMOIN rouge d'abord : une fusion posterieure a la base du clone, lue sur une forge simulee, ne fait plus rougir la garde ; une fusion anterieure dont le commit manque rougit toujours.
+
+**Tests.** `tests/unit/gouvernance/la-porte-a-ne-depend-pas-des-autres-pr.spec.ts`
+
+### GOV-120 — INT-T01b declare huit chemins, sa PR de livraison en a modifie vingt
+
+`0.5 j` · zone `gouvernance` · depend de `GOV-075`
+
+Couvre : `REQ-GOV-021`
+
+**Acceptation.** Releve par la lentille exactitude sur la PR #209, mesure le 2026-09-29 sur la PR axion-ia #998 (commit de fusion 41d71a7, attestation d'INT-T01b) : la PR a modifie vingt fichiers, dont src/server/partners/contrat.ts, commission.ts, config.ts, enveloppe.ts, frontiere.ts, ht.ts, payloads.ts et package.json ; les paths d'INT-T01b en declarent huit. Et INT-T01b porte schema: true alors qu'aucun de ces vingt fichiers n'est un chemin de schema au sens de ce depot : a verifier avant de le changer. A livrer : (1) les paths d'INT-T01b recoivent les fichiers reellement modifies, confrontes a la liste de la forge, par les outils de registre ; (2) le drapeau schema est tranche, avec sa source ; (3) une garde confronte, pour toute tache livree ailleurs et attestee, ses paths aux fichiers de la PR attestee, et nomme l'ecart. TEMOIN rouge d'abord : une attestation dont la PR a touche un fichier que la tache ne declare pas.
+
+**Tests.** `tests/unit/gouvernance/une-livraison-declare-ce-qu-elle-a-touche.spec.ts`
+
+### GOV-121 — Le temoin de la preuve de vol ne joue que la cle absente, jamais owner ou branch a null, la forme reelle du registre
+
+`0.25 j` · zone `gouvernance` · depend de `GOV-049`
+
+Couvre : `REQ-GOV-021`
+
+**Acceptation.** Releve par les deux lentilles sur la PR #217 (GOV-049), non bloquant a la fusion. (1) Les deux faces rouges retirent la cle, et ne jouent donc que la moitie required de la clause jumelle du schema ; le registre porte owner: null et branch: null, que refusent la moitie type de la clause et ses motifs. A livrer : deux faces de plus, owner: null puis branch: null sur une tache en_cours hors lot, chacune refusee et nommee. (2) Le docblock de la specification dit qu'AUCUN temoin ne voyait la clause refuser : c'est inexact, clore-une-tache-livree-seule.spec.ts voit deja branch: null refuse sur une tache fusionnee. A corriger : aucun temoin ne la voyait refuser pour en_cours, ni pour owner.
+
+**Tests.** `tests/unit/gouvernance/une-tache-en-cours-appartient-a-un-lot.spec.ts`
 
 ## Phase 1 — Operationnel
 

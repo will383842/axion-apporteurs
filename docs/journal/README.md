@@ -32,8 +32,9 @@ quelque part, et le journal deviendrait une case à cocher.
 
 ## Quand elle s'écrit
 
-**Avant la fusion**, jamais après (REQ-GOV-023 : « toute PR fusionnée est *précédée* d'une entrée »).
-Le numéro de PR existe dès son ouverture ; l'entrée se pousse sur la branche de la PR, avec le reste.
+Ce fichier ne le dit pas : l'obligation a une seule rédaction, **RM-15** dans
+`docs/REGLES-MAISON.md`, qui nomme aussi la garde qui la tient. Ce fichier n'en porte que la forme
+d'une entrée, ci-dessus, et le plancher, ci-dessous.
 
 ## Plancher
 

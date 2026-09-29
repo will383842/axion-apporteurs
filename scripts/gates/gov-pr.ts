@@ -83,6 +83,14 @@ import {
   cheminsReserves,
   outilHorsDepot,
 } from '../lot/chemins-de-tache';
+// LA GRAMMAIRE DU JOURNAL ET SON PLANCHER, lus une fois pour tous leurs lecteurs (GOV-052) : cette
+// garde les importe, elle ne les réécrit pas.
+import {
+  DOSSIER_DU_JOURNAL,
+  GUIDE_DU_JOURNAL,
+  lireLeJournal,
+  plancherDuJournal,
+} from './gov-attributions';
 
 const CHEMIN_GABARIT = '.github/PULL_REQUEST_TEMPLATE.md';
 const CHEMIN_CODEOWNERS = '.github/CODEOWNERS';
@@ -310,7 +318,110 @@ export type Pr = {
   liste?: ListeDesFichiers | null;
   /** Témoins seulement : les mesures de la survie (GOV-095). Absentes en production (vrai `git`). */
   mesures?: MesuresDeSurvie;
+  /**
+   * LE JOURNAL DE LA TÊTE DE LA PR, et les PR que la forge dit fusionnées (GOV-052, RM-15).
+   * Fourni par `prParGh()` seul, c'est-à-dire sous `--pr` / `--apres-fusion`. ABSENT : le contexte
+   * ne le porte pas (événement de CI, fixtures d'autres familles) et les deux familles du journal
+   * ne s'évaluent pas. `null` : on a voulu le lire et on n'a pas pu — l'échec est FERMÉ.
+   */
+  journal?: JournalDeLaPr | null;
 };
+
+/**
+ * CE QUE LA GARDE SAIT DU JOURNAL AU MOMENT DE JUGER UNE PR (GOV-052). Les numéros des entrées sont
+ * lus par la grammaire UNIQUE (`lireLeJournal`, `scripts/gates/gov-attributions.ts`) et le plancher
+ * par sa lecture unique (`plancherDuJournal`) : rien n'est relu ici en prose, et le plancher se
+ * déplace dans `docs/journal/README.md`, à un seul endroit.
+ */
+export type JournalDeLaPr = {
+  entrees: number[];
+  plancher: { plancher: number } | { refus: string };
+  fusionnees: number[];
+};
+
+/**
+ * LA PARTIE PURE : des fichiers de `docs/journal/` (mode d'emploi compris) et la réponse de la forge,
+ * vers ce que `controler()` juge. Le mode d'emploi porte le plancher et aucune entrée.
+ */
+export function journalDeLaPr(
+  fichiers: readonly { fichier: string; texte: string }[],
+  fusionnees: readonly number[]
+): JournalDeLaPr {
+  const guide = fichiers.find((f) => f.fichier === GUIDE_DU_JOURNAL);
+  const lu = guide
+    ? plancherDuJournal(guide.texte)
+    : { refus: `${GUIDE_DU_JOURNAL} est absent de l'arbre : le plancher ne peut pas être lu.` };
+  return {
+    entrees: lireLeJournal(fichiers.filter((f) => f !== guide)).entrees.map((e) => e.pr),
+    plancher: 'refus' in lu ? { refus: lu.refus } : { plancher: lu.plancher },
+    fusionnees: [...fusionnees],
+  };
+}
+
+/**
+ * LE JOURNAL TEL QU'UN COMMIT LE PORTE — pas le disque. Sous `--pr`, la tête locale a été confrontée
+ * à celle de la forge (`jugerLesTetes`) : `HEAD` EST la branche de la PR, et ce qu'on lit est ce qui
+ * sera fusionné, sans ce qu'un brouillon non commité y ajouterait. Illisible → `null`, jamais `[]` :
+ * une absence n'est pas un journal vide.
+ */
+export function journalALaReference(
+  ref: string,
+  racine?: string
+): { fichier: string; texte: string }[] | null {
+  const git = (args: string[]): string =>
+    execFileSync('git', args, {
+      cwd: racine,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+      maxBuffer: 64e6,
+    });
+  try {
+    // GOV-108 — `-z` rend chaque nom tel quel, séparé par NUL : sans lui, git cite un nom non
+    // ASCII entre guillemets en octets échappés, il ne finit plus par `.md`, et l'entrée
+    // disparaît du journal sans un mot. `core.quotepath=false` est la ceinture, si `-z` sautait.
+    return git([
+      '-c',
+      'core.quotepath=false',
+      'ls-tree',
+      '-z',
+      '--name-only',
+      `${ref}:${DOSSIER_DU_JOURNAL}`,
+    ])
+      .split('\0')
+      .filter((n) => n.endsWith('.md'))
+      .map((n) => {
+        const fichier = `${DOSSIER_DU_JOURNAL}/${n}`;
+        return { fichier, texte: git(['show', `${ref}:${fichier}`]) };
+      });
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * LA RÉPONSE DE LA FORGE DÉPOUILLÉE : un numéro par ligne. Une ligne qui n'en est pas un, ou une
+ * réponse vide, LÈVE — une liste vide ferait de CHAQUE entrée du journal un fantôme, et une liste
+ * mal lue en ferait passer. On refuse plutôt que de juger sur une réponse qu'on ne comprend pas.
+ */
+export function numerosFusionnes(sortie: string): number[] {
+  const lignes = sortie
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0);
+  if (lignes.length === 0) {
+    throw new Error(
+      'la forge ne rend aucune PR fusionnée : réponse vide, le journal ne peut pas être confronté'
+    );
+  }
+  return lignes.map((l) => {
+    if (!/^\d+$/.test(l)) {
+      throw new Error(
+        `la forge rend « ${l.slice(0, 40)} » là où un numéro de PR fusionnée est attendu`
+      );
+    }
+    return Number(l);
+  });
+}
 /**
  * ⚠️ `paths` ET `tests` FONT PARTIE DE LA PROJECTION, et leur absence rendrait la famille
  * `fichier_hors_paths_des_taches` muette — exactement comme l'absence de `pr` a rendu DEUX
@@ -408,6 +519,12 @@ const FAMILLES = [
   'phase_gelee',
   'schema_sans_approbation',
   'dod_non_cochee',
+  // le journal de la tête (GOV-052, RM-15) — évalué seulement sous `--pr` / `--apres-fusion`, la
+  // commande d'AVANT la fusion : là où l'oubli est encore réparable sur la branche. La famille
+  // `pr_fusionnee_sans_journal` de `gov:etat` reste en place : elle nomme l'incident sur `main`,
+  // celle-ci l'empêche.
+  'pr_sans_entree_de_journal',
+  'journal_cite_une_pr_non_fusionnee',
 ];
 
 // ── lecture du gabarit et de la charte ───────────────────────────────────────
@@ -914,6 +1031,56 @@ export function controler(depot: Depot, pr: Pr | null): Faute[] {
 
   if (pr.revues === null) return fautes;
 
+  // ---- le journal de la tête (GOV-052, RM-15) --------------------------------
+  // LE DÉFAUT : la seule famille qui voyait une PR sans entrée de journal (`pr_fusionnee_sans_journal`,
+  // `gov:etat`) se lève sur `main`, APRÈS la fusion. Plus rien n'y est réparable sur la branche, et
+  // `main` rougit pour toutes les PR suivantes. LA MESURE : la même absence, jugée ici, sur la tête
+  // de la PR, avant la fusion. La garde CITE RM-15 et ne retape pas son énoncé.
+  if (pr.journal !== undefined) {
+    const numero = pr.numero ?? null;
+    if (pr.journal === null) {
+      ajouter(
+        'pr_sans_entree_de_journal',
+        `${DOSSIER_DU_JOURNAL}/ est illisible sur la tête de la PR : la présence de son entrée ne ` +
+          `peut pas être établie, et la garde ne déclare pas présent ce qu'elle n'a pas lu (RM-15).`
+      );
+    } else if ('refus' in pr.journal.plancher) {
+      ajouter(
+        'pr_sans_entree_de_journal',
+        `${pr.journal.plancher.refus} Sans plancher, la garde ne peut pas dire si l'entrée de la PR ` +
+          `est exigée (RM-15).`
+      );
+    } else if (numero === null) {
+      ajouter(
+        'pr_sans_entree_de_journal',
+        `La PR jugée n'a pas de numéro : son entrée de ${DOSSIER_DU_JOURNAL}/ ne peut pas être ` +
+          `cherchée (RM-15).`
+      );
+    } else if (numero > pr.journal.plancher.plancher && !pr.journal.entrees.includes(numero)) {
+      ajouter(
+        'pr_sans_entree_de_journal',
+        `PR #${numero} — aucune entrée de ${DOSSIER_DU_JOURNAL}/ ne porte ce numéro sur la tête de ` +
+          `la branche (RM-15, docs/REGLES-MAISON.md ; forme de l'entrée : ${GUIDE_DU_JOURNAL}).`
+      );
+    }
+    // LE TROU RÉCIPROQUE : une entrée pour une PR qui n'existe pas, ou jamais fusionnée, passait
+    // toutes les familles — le journal d'un dépôt PUBLIC affirmait un atterrissage qui n'a pas eu
+    // lieu. Seule la PR JUGÉE peut porter son entrée sans être encore fusionnée.
+    if (pr.journal !== null) {
+      const fusionnees = new Set(pr.journal.fusionnees);
+      const fantomes = [...new Set(pr.journal.entrees)]
+        .filter((n) => n !== numero && !fusionnees.has(n))
+        .sort((a, b) => a - b);
+      for (const n of fantomes) {
+        ajouter(
+          'journal_cite_une_pr_non_fusionnee',
+          `${DOSSIER_DU_JOURNAL}/ porte une entrée « PR #${n} », et la forge ne connaît aucune PR ` +
+            `#${n} fusionnée : l'entrée affirme un atterrissage qui n'a pas eu lieu (RM-15).`
+        );
+      }
+    }
+  }
+
   // ---- les revues (seulement sous `--pr <numero>`) ---------------------------
   /**
    * LA LECTURE DES REVUES N'EST PLUS ÉCRITE ICI. Elle est dans `scripts/lot/revues.ts`, importée
@@ -1202,7 +1369,7 @@ function prParGh(numero: string, moment: DemandeDeConcordance['moment'] = 'avant
     process.exit(1);
   }
 
-  return prDepuisLaForge({
+  const pr = prDepuisLaForge({
     numero,
     meta,
     entrees: entreesDeFichiers,
@@ -1213,6 +1380,34 @@ function prParGh(numero: string, moment: DemandeDeConcordance['moment'] = 'avant
     // absente en local) → `null` → risque ÉLEVÉ : le sens de défaillance reste fermé.
     tachesBase: projeter(tachesDeLaBase(refBase)),
   });
+  // LE JOURNAL DE LA TÊTE (GOV-052, RM-15). Avant fusion, `HEAD` vient d'être confrontée à la tête de
+  // la forge : c'est la branche de la PR. Après fusion, c'est le commit de fusion qui porte le
+  // journal atterri. Illisible → `null` → la famille rougit (échec fermé).
+  const arbre = journalALaReference(moment === 'apres-fusion' ? shaFusion : 'HEAD');
+  pr.journal = arbre === null ? null : journalDeLaPr(arbre, prFusionneesParLaForge());
+  return pr;
+}
+
+/**
+ * LES PR FUSIONNÉES DE CE DÉPÔT, selon la forge — l'autre moitié du trou réciproque (GOV-052).
+ * PAGINÉE : `gh pr list` plafonne sans erreur, et une liste tronquée ferait passer pour fantôme une
+ * PR ancienne réellement fusionnée. Une réponse illisible LÈVE (`numerosFusionnes`) : le `catch` de
+ * `--pr` la rend en refus, jamais en vert.
+ */
+function prFusionneesParLaForge(): number[] {
+  return numerosFusionnes(
+    execFileSync(
+      'gh',
+      [
+        'api',
+        '--paginate',
+        'repos/{owner}/{repo}/pulls?state=closed&per_page=100',
+        '--jq',
+        '.[] | select(.merged_at != null) | .number',
+      ],
+      { encoding: 'utf8', maxBuffer: 64e6 }
+    )
+  );
 }
 
 /**
@@ -1782,6 +1977,41 @@ if (LANCE_EN_SCRIPT) {
       return p;
     };
 
+    /**
+     * GOV-052 — LE JOURNAL DES TÉMOINS EST CELUI DU DÉPÔT (RM-03), lu sur le disque (jamais de `git`
+     * dans une fixture). La réponse de la forge est FABRIQUÉE : toute PR que le journal cite y est
+     * fusionnée. La PR jugée porte un numéro DÉRIVÉ que ni le journal ni le registre ne connaissent
+     * (un numéro porté par une tâche l'ajouterait aux tâches de la PR, et le contre-témoin rougirait
+     * pour une autre famille — RM-11) ; son entrée est posée, ou non : c'est la seule variable.
+     */
+    const JOURNAL_DU_DEPOT = readdirSync(DOSSIER_DU_JOURNAL)
+      .filter((n) => n.endsWith('.md'))
+      .map((n) => ({
+        fichier: `${DOSSIER_DU_JOURNAL}/${n}`,
+        texte: readFileSync(`${DOSSIER_DU_JOURNAL}/${n}`, 'utf8'),
+      }));
+    const LU_DU_DEPOT = journalDeLaPr(JOURNAL_DU_DEPOT, []);
+    const CITEES = [...new Set(LU_DU_DEPOT.entrees)];
+    const plancherDuDepot = LU_DU_DEPOT.plancher;
+    if ('refus' in plancherDuDepot || CITEES.length === 0) {
+      throw new Error(
+        `gov:pr --prove — le journal du dépôt n'a ni plancher lisible ni entrée : les témoins de ` +
+          `GOV-052 ne mesureraient rien.`
+      );
+    }
+    const PR_INCONNUE =
+      Math.max(plancherDuDepot.plancher, ...CITEES, ...depot.taches.map((t) => t.pr ?? 0)) + 1;
+    /** La PR conforme, jugée sous `--pr` avec le journal du dépôt, son entrée posée ou non. */
+    const PR_AVEC_JOURNAL = (avecSonEntree: boolean, fusionnees: number[] = CITEES): Pr => ({
+      ...copiePr(PR_TEMOIN),
+      numero: PR_INCONNUE,
+      journal: {
+        ...LU_DU_DEPOT,
+        entrees: avecSonEntree ? [...LU_DU_DEPOT.entrees, PR_INCONNUE] : [...LU_DU_DEPOT.entrees],
+        fusionnees: [...fusionnees],
+      },
+    });
+
     type Temoin = { famille: string; defaut: () => [Depot, Pr | null] };
     const TEMOINS: Temoin[] = [
       // ---- structure
@@ -2050,6 +2280,17 @@ if (LANCE_EN_SCRIPT) {
           return [d, p];
         },
       },
+      // ---- le journal de la tête (GOV-052) : la panne FABRIQUÉE, jamais constatée (RM-02)
+      {
+        famille: 'pr_sans_entree_de_journal',
+        defaut: () => [copieDepot(), PR_AVEC_JOURNAL(false)],
+      },
+      {
+        // Une PR que le journal cite et que la forge ne dit pas fusionnée : la liste des fusionnées
+        // est privée de la première PR journalisée.
+        famille: 'journal_cite_une_pr_non_fusionnee',
+        defaut: () => [copieDepot(), PR_AVEC_JOURNAL(true, CITEES.slice(1))],
+      },
       // ---- la PR, revues comprises
       {
         famille: 'dod_non_cochee',
@@ -2250,6 +2491,19 @@ if (LANCE_EN_SCRIPT) {
     const CONTRE_TEMOINS: { quoi: string; cas: () => [Depot, Pr | null] }[] = [
       { quoi: "le dépôt tel qu'il est, sans PR", cas: () => [depot, null] },
       { quoi: 'une PR conforme, revues comprises', cas: () => [depot, PR_TEMOIN] },
+      {
+        // GOV-052 — l'autre face des deux témoins du journal : la même PR, son entrée sur la tête,
+        // et chaque PR citée fusionnée selon la forge. Sans lui, une famille qui rougirait sur TOUT
+        // journal passerait pour la règle.
+        // Son entrée précède sa fusion : la PR JUGÉE, encore ouverte, n'est pas un fantôme.
+        quoi: 'une PR jugée sous --pr dont la tête porte son entrée de journal, avant sa fusion',
+        cas: () => [depot, PR_AVEC_JOURNAL(true)],
+      },
+      {
+        // GOV-052 — la même, jugée après sa fusion (`--apres-fusion`) : la forge la dit fusionnée.
+        quoi: 'une PR jugée après sa fusion dont la tête porte son entrée de journal',
+        cas: () => [depot, PR_AVEC_JOURNAL(true, [...CITEES, PR_INCONNUE])],
+      },
       {
         // Le socle des deux témoins de RÉÉCRITURE : la même PR, « sans objet », sur un registre
         // INCHANGÉ, reste verte. Sans lui, ces témoins pourraient rougir par une autre branche du

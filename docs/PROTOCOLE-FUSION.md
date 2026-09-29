@@ -110,7 +110,10 @@ de l'architecte quand la PR touche au schéma (décision de Will du 2026-09-26, 
 `partners/ADR-0024`, `docs/CHARTE-AGENTS.md` §6) ; la mutation n'est plus un avis d'agent, elle
 est mesurée par Stryker en porte A (`pnpm mutation:pr`) —, l'auteur qui ne s'auto-approuve pas, les
 sept premières cases de la DoD, le bloc ROUGE/VERT, et la section « Attaque » si la tâche est
-`sensible`. Sur toute PR, le refus de la lentille `securite` vaut **veto**, à lui seul.
+`sensible`. Sur toute PR, le refus de la lentille `securite` vaut **veto**, à lui seul — et un
+`Verdict: refuse` n'est rendu, par cette lentille comme par l'autre, que sur un écart démontré et
+ouvert ; tout autre motif est une dette nommée dans l'avis, et ne bloque pas (règle d'arrêt du
+2026-09-15, `partners/ADR-0025`).
 
 ### Pas 3 — Les gates, sur le commit qui sera fusionné
 
@@ -216,14 +219,26 @@ silencieuse ; celle-là se conteste sur sa seule ligne de sortie.
 **Commande.**
 ```bash
 gh pr view <numéro> --json mergeStateStatus -q .mergeStateStatus \
-  && gh pr merge <numéro> --squash --delete-branch
+  && gh pr merge <numéro> --squash --match-head-commit <sha-de-tête> \
+       --subject "$(gh pr view <numéro> --json title -q .title) (#<numéro>)" \
+       --body "$(gh pr view <numéro> --json body -q .body | grep -m1 '^Lot:')" --delete-branch
 ```
 
 **Ce qu'on lit.** `CLEAN` imprimé, puis la confirmation de fusion. Les deux dans la même sortie :
 c'est tout l'objet du pas. Séparer la lecture de l'action rouvre exactement la fenêtre par laquelle
 une PR passée `BEHIND` a été fusionnée deux fois. `--squash` et `--delete-branch` ne sont pas des
 préférences : le premier tient l'historique linéaire exigé par la protection de branche, le second
-évite qu'une branche de lot fusionnée reste poussable.
+évite qu'une branche de lot fusionnée reste poussable. `--match-head-commit` fait échouer la fusion
+si la tête a bougé depuis le pas 5.
+
+**`--body` recopie la ligne `Lot:` dans le message du commit d'écrasement (GOV-104).** Le corps de
+la PR reste modifiable après la fusion ; le message du commit, non. C'est ce message, et lui seul,
+que `lot:cloture --tache` lit pour savoir quelles tâches la PR a livrées : une ligne `Lot:` ajoutée
+au corps après coup ne fait rien clore, et la clôture ne lit `Lot:` que s'il est la SEULE ligne du
+corps de ce message : une ligne `Lot:` écrite dans un commit, que la forge recopierait sans
+`--body`, ne déclare rien. Une PR à une seule tâche porte `Lot:` vide, et son titre suffit.
+`--subject` impose le titre de la PR : pour une PR à un seul commit, la forge prendrait sinon le
+titre du commit, qui peut ne nommer aucune tâche.
 
 ### Pas 7 — L'atterrissage, avant la fusion suivante
 
@@ -255,7 +270,12 @@ PR suivante peut prendre le pas 1.
 **Cas de la tâche seule, livrée hors de tout lot (GOV-057).** La commande devient
 `pnpm lot:cloture -- --tache <id> --pr <numéro> [--owner <Axx>]`. On ne tape que le numéro : le SHA
 du commit de fusion, l'instant et la branche fusionnée sont lus sur la forge, dans le dépôt de la
-tâche, et l'atterrissage est l'ascendance de ce SHA sur la branche de base. La tâche ressort
+tâche, et l'atterrissage est l'ascendance de ce SHA sur la branche **par défaut** de ce dépôt
+(GOV-104), jamais sur la base que la PR a choisie. **La PR doit DÉCLARER la tâche** : son titre la
+nomme, ou la ligne `Lot:` que le pas 6 a recopiée dans le message du commit d'écrasement. Sinon la
+clôture refuse (`tache_etrangere_a_la_pr`) : l'attestation serait vraie et la livraison fausse. Une
+tâche d'un autre dépôt suit la même règle — une PR d'`axionia` dont le titre ne suit pas la forme
+`type(ID): …` et qui ne porte pas `Lot:` ne clôt rien, et c'est voulu. La tâche ressort
 `fusionnee` avec ses trois preuves — `pr`, `branch`, attestation au SHA entier — et **aucun lot
 n'est inventé**. Une tâche rangée dans un lot est refusée (`tache_d_un_lot`) : elle se clôt par son
 lot, sinon ce chemin contournerait le contrôle de périmètre. Écrire `docs/tasks.json` à la main

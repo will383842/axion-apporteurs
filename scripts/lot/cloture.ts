@@ -47,7 +47,8 @@
 
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
-import { join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import {
   DEPOT_LOCAL,
   PASSIF_SANS_ATTESTATION,
@@ -295,6 +296,11 @@ function poserLaLivraison(t: Tache, attestation: Attestation): string {
  * LE MOTIF DE `branch`, LU DANS LE SCHÉMA — jamais recopié (RM-01). Lu à l'APPEL, pas à l'import :
  * importer ce module n'a aucun effet. Un schéma qui porterait zéro ou plusieurs motifs distincts
  * pour `branch` est une ambiguïté, et elle est refusée plutôt que tranchée au hasard.
+ *
+ * LE SCHÉMA EST DU CODE, PAS UNE DONNÉE DU DÉPÔT TRAITÉ : il se résout depuis la racine de CE module
+ * (deux niveaux au-dessus de `scripts/lot/`), jamais depuis le répertoire courant. Lu depuis le
+ * répertoire courant, le motif était introuvable dès que la clôture tournait sur un autre arbre —
+ * le dépôt jetable des témoins du script entier a rougi en ENOENT.
  */
 function motifDeBranche(): RegExp {
   const motifs = new Set<string>();
@@ -308,7 +314,8 @@ function motifDeBranche(): RegExp {
       parcourir(v);
     }
   };
-  parcourir(JSON.parse(readFileSync(CHEMIN_SCHEMA_DES_TACHES, 'utf8')));
+  const racineDuCode = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
+  parcourir(JSON.parse(readFileSync(join(racineDuCode, CHEMIN_SCHEMA_DES_TACHES), 'utf8')));
   if (motifs.size !== 1) {
     throw new Error(
       `${CHEMIN_SCHEMA_DES_TACHES} porte ${motifs.size} motif(s) distinct(s) pour \`branch\` : ` +
@@ -331,6 +338,12 @@ export interface Livraison {
   titre?: string | null;
   /** Le corps de la PR, lu sur la forge : son champ `Lot:` nomme les autres (`lireLeLot`). */
   corps?: string | null;
+  /**
+   * GOV-107 — posé quand la première ligne du message d'écrasement n'est pas EXACTEMENT le titre de
+   * la PR lu sur la forge suivi de ` (#<n>)` : la ligne lue et la ligne attendue. La livraison ne
+   * déclare alors rien, et la clôture refuse sous `titre_d_ecrasement_non_conforme`.
+   */
+  titreNonConforme?: { lu: string | null; attendu: string | null } | null;
 }
 
 /**
@@ -349,6 +362,9 @@ export interface Livraison {
  *   - `branche_absente`         — sans elle, l'état écrit serait refusé par le schéma ;
  *   - `branche_hors_motif`      — la branche que le motif du schéma refuserait (lu, pas recopié) ;
  *   - `tache_etrangere_a_la_pr` — la PR ne déclare la tâche ni par son titre, ni par `Lot:` ;
+ *   - `titre_d_ecrasement_non_conforme` — la première ligne du message d'écrasement n'est pas
+ *                                 exactement le titre que la PR portait à l'instant de la fusion,
+ *                                 suivi de ` (#<n>)` (GOV-107, GOV-110) ;
  *   - `attestation_incomplete`  — pr, SHA entier et instant de fusion, les trois ou rien ;
  *   - `proprietaire_absent`     — `fusionnee` exige `owner`, et le script ne l'invente pas.
  */
@@ -405,6 +421,21 @@ export function cloturerUneTacheSeule(options: {
         (lot.malForme ? ` (illisible : ${lot.malForme})` : '') +
         '. Clore une tâche sur l’attestation d’une PR qui ne l’a pas portée écrirait une ' +
         'livraison fausse avec une preuve vraie.',
+    });
+  }
+  // GOV-107 — LA PREMIÈRE LIGNE N'EST PAS CELLE QUE LE PAS 6 POSE. Hors `--subject`, une PR à un
+  // seul commit prend pour titre d'écrasement le sujet du commit, écrit par le développeur : il
+  // peut nommer une autre tâche que le titre de la PR (lentille `securite`, #188). La livraison
+  // ne déclare alors rien ; ce refus NOMME pourquoi, en plus de `tache_etrangere_a_la_pr`.
+  if (livraison.titreNonConforme) {
+    const { lu, attendu } = livraison.titreNonConforme;
+    refus.push({
+      famille: 'titre_d_ecrasement_non_conforme',
+      message:
+        `${t.id} : la première ligne du message d'écrasement (« ${lu ?? 'absente'} ») n'est pas ` +
+        `exactement le titre que la PR portait à l'instant de la fusion, lu dans sa chronologie sur la forge, suivi de son numéro (« ${attendu ?? 'titre indécidable ou absent de la forge'} »). ` +
+        'Hors `--subject`, cette ligne est le sujet d’un commit, écrit par le développeur : elle ne ' +
+        'déclare rien (pas 6 du protocole).',
     });
   }
   if (livraison.atterri !== true) {
@@ -471,6 +502,20 @@ export function cloturerLeLot(options: {
   const { lotId, rendu, membres, taches, ownerParDefaut = '' } = options;
 
   const refus = controlerLePerimetre(lotId, rendu, membres);
+  // GOV-104 — LE MÊME REFUS QUE LE MODE `--tache`, ET AVANT TOUTE ÉCRITURE : une branche que le
+  // schéma refuse, écrite ici, rendrait le registre rouge sur une tâche qu'on ne pourrait plus
+  // re-clore. Le motif est lu dans le schéma, par la même fonction (RM-01).
+  for (const r of rendu.resultats ?? []) {
+    const branche = r?.dev?.branch;
+    if (branche && !motifDeBranche().test(branche)) {
+      refus.push({
+        famille: 'branche_hors_motif',
+        message:
+          `${r?.dev?.taskId ?? '?'} : la branche « ${branche} » est refusée par le motif de ` +
+          `\`branch\` de ${CHEMIN_SCHEMA_DES_TACHES}. Le motif se décide par ADR (partners/ADR-0007).`,
+      });
+    }
+  }
   if (refus.length > 0) throw new ErreurDeCloture(refus);
 
   const index = new Map(taches.map((t) => [t.id, t]));
@@ -605,55 +650,211 @@ function rattraperLePasse(aBlanc: boolean): void {
   if (horsPassif.length > 0) process.exitCode = 1;
 }
 
+/** Ce que `gh pr view` rend d'une PR. Le corps peut y figurer : il n'est JAMAIS lu (GOV-104). */
+export interface VueDeLaForge {
+  state: string;
+  mergeCommit: { oid: string } | null;
+  mergedAt: string | null;
+  headRefName: string;
+  /**
+   * GOV-107 — le titre de la PR, lu sur la forge. Il ne DÉCLARE rien par lui-même : il sert
+   * seulement à vérifier que la première ligne du message d'écrasement est bien celle du pas 6.
+   */
+  title?: string | null;
+}
+
+/**
+ * Un renommage du titre de la PR, lu dans sa chronologie (`event == "renamed"`) : l'instant, le
+ * titre d'avant (`rename.from`) et le titre d'après (`rename.to`).
+ */
+export interface RenommageDeTitre {
+  createdAt: string;
+  previousTitle: string;
+  currentTitle: string;
+}
+
+/**
+ * LE TITRE QUE LA PR PORTAIT À L'INSTANT DE LA FUSION. Le titre d'une PR reste modifiable après la
+ * fusion (lentille `securite`, #206) : le titre actuel ne prouve rien. C'est le titre d'après du
+ * dernier renommage STRICTEMENT antérieur à `mergedAt` ; sans renommage antérieur, le titre
+ * d'origine, c'est-à-dire le titre d'avant du premier renommage ; sans aucun renommage, le titre
+ * actuel. Une chronologie illisible (`null`) ne rend AUCUN titre : jamais un repli sur le titre
+ * actuel.
+ *
+ * GOV-122 — DEUX CAS SANS TITRE, ÉCHEC FERMÉ. (1) Un renommage daté de la SECONDE MÊME de la fusion
+ * est indécidable : la forge horodate à la seconde, et `mergedAt` suit d'environ une seconde
+ * l'écriture du commit de fusion (mesure écrite dans `gov-etat.ts`) ; il peut précéder ou suivre
+ * le commit, et parier sur l'un des deux titres serait déclarer sans preuve. (2) Une date illisible,
+ * celle d'un renommage ou celle de la fusion quand il y a des renommages à situer, rend la
+ * chronologie illisible. Dans les deux cas : aucun titre, et la clôture refuse.
+ */
+function titreALaFusion(
+  titreActuel: string | null,
+  renommages: readonly RenommageDeTitre[] | null,
+  mergedAt: string | null
+): string | null {
+  if (renommages === null) return null;
+  const fusion = Date.parse(String(mergedAt));
+  const dates = renommages.map((r) => Date.parse(r.createdAt));
+  if (renommages.length > 0 && (!Number.isFinite(fusion) || dates.some((d) => !Number.isFinite(d))))
+    return null;
+  if (dates.some((d) => Math.floor(d / 1000) === Math.floor(fusion / 1000))) return null;
+  const ordonnes = [...renommages].sort(
+    (a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt)
+  );
+  const anterieurs = ordonnes.filter((r) => Date.parse(r.createdAt) < fusion);
+  if (anterieurs.length > 0) return anterieurs[anterieurs.length - 1]!.currentTitle;
+  return ordonnes.length > 0 ? ordonnes[0]!.previousTitle : titreActuel;
+}
+
+/**
+ * LA LIVRAISON, COMPOSÉE DE CE QUE LA FORGE REND — la règle, sans I/O, pour qu'un témoin l'appelle.
+ *
+ * GOV-104 — LA DÉCLARATION SE LIT DANS LE COMMIT DE FUSION. Le titre et le champ `Lot:` étaient lus
+ * dans le CORPS de la PR, qui reste modifiable après la fusion : ajouter une tâche à `Lot:` suffisait
+ * à la faire clore sur une attestation qui ne l'a jamais portée (lentille `securite`, #182). Le
+ * message du commit d'écrasement, lui, est immuable, et le pas 6 y recopie `Lot:`. Un message
+ * absent ne déclare RIEN — jamais un repli sur le corps.
+ *
+ * GOV-104 — L'ATTERRISSAGE SE JUGE SUR LA BRANCHE PAR DÉFAUT du dépôt, pas sur `baseRefName`, que
+ * la PR choisit : une PR fusionnée dans une branche quelconque n'est pas livrée. `faceALaBrancheParDefaut`
+ * est le statut de `compare/<sha>...<défaut>` : `identical` ou `ahead` disent que le commit en est un
+ * ancêtre. C'est PLUS FAIBLE que le repli du pas 7, qui exige aussi `gate-a` verte sur `main`.
+ */
+export function livraisonDepuisLaForge(e: {
+  pr: number;
+  vue: VueDeLaForge;
+  messageDuCommit: string | null;
+  faceALaBrancheParDefaut: string | null;
+  /** Les renommages du titre, lus dans la chronologie de la PR ; `null` si elle est illisible. */
+  renommages: readonly RenommageDeTitre[] | null;
+}): Livraison {
+  const sha = e.vue.state === 'MERGED' ? (e.vue.mergeCommit?.oid ?? null) : null;
+  const lignes = e.messageDuCommit === null ? null : e.messageDuCommit.split('\n');
+  // LE CORPS NE DÉCLARE QUE S'IL EST RÉDUIT À LA SEULE LIGNE `Lot:` que le pas 6 y recopie. Sans
+  // `--body`, la forge compose ce corps avec les messages des commits : un « Lot: X » écrit dans un
+  // commit par le développeur déclarerait X (lentille `securite`, #188). Tout autre corps ne
+  // déclare rien, et la PR ne livre alors que la tâche de son titre — échec fermé.
+  // GOV-107 — LA PREMIÈRE LIGNE EST EXACTEMENT LE TITRE DE LA PR SUIVI DE ` (#<n>)`, ce que le
+  // pas 6 pose par `--subject`. Toute autre ligne — sujet d'un commit, numéro différent, titre
+  // absent de la vue — ne déclare RIEN, ni par elle, ni par le `Lot:` qui la suit : échec fermé.
+  // Le titre comparé est celui de l'instant de la fusion, pas le titre actuel (`titreALaFusion`).
+  const titreDeLaForge = titreALaFusion(
+    typeof e.vue.title === 'string' && e.vue.title !== '' ? e.vue.title : null,
+    e.renommages,
+    e.vue.mergedAt
+  );
+  const attendu = titreDeLaForge === null ? null : `${titreDeLaForge} (#${e.pr})`;
+  const premiere = lignes === null ? null : (lignes[0] ?? null);
+  const conforme = premiere !== null && attendu !== null && premiere === attendu;
+  const titreNonConforme = lignes !== null && !conforme ? { lu: premiere, attendu } : null;
+  const declare = lignes !== null && conforme;
+  const utiles = declare ? lignes.slice(1).filter((l) => l.trim() !== '') : [];
+  const corps = !declare ? null : utiles.length === 1 && /^Lot:/.test(utiles[0]!) ? utiles[0]! : '';
+  return {
+    pr: e.pr,
+    sha,
+    fusionneeAt: e.vue.mergedAt,
+    branch: e.vue.headRefName,
+    atterri:
+      sha !== null &&
+      (e.faceALaBrancheParDefaut === 'identical' || e.faceALaBrancheParDefaut === 'ahead'),
+    titre: declare ? premiere : null,
+    corps,
+    titreNonConforme,
+  };
+}
+
 /**
  * LA LIVRAISON LUE SUR LA FORGE, pour `--tache`. Rien n'est tapé par l'opérateur hormis le numéro :
- * le SHA, l'instant et la branche viennent de `gh pr view`, dans le dépôt DE LA TÂCHE (`DEPOTS`).
- * L'atterrissage est l'ascendance du commit de fusion sur la branche de base, lue par l'API de
- * comparaison. C'est PLUS FAIBLE que le repli daté du pas 7, qui exige aussi `gate-a` verte sur
- * `main` : ce mode établit que le commit est dans l'historique de la base, pas qu'il y est vert.
+ * tout vient de la forge, dans le dépôt DE LA TÂCHE (`DEPOTS`). Trois lectures : la PR, le message
+ * du commit de fusion, et l'ascendance de ce commit sur la branche par défaut.
+ *
+ * `lire` est INJECTÉ (GOV-104) : c'est ce qui permet à un témoin de juger les APPELS — la
+ * comparaison vise la branche par défaut lue sur la forge, jamais la base que la PR a choisie.
+ * Sans lui, remettre `baseRefName` dans l'appel laissait tous les tests verts.
  */
-function livraisonSurLaForge(depot: string, pr: number): Livraison {
-  const brut = execFileSync(
-    'gh',
-    [
+export function livraisonSurLaForge(
+  depot: string,
+  pr: number,
+  lire: (args: string[]) => string = (args) => execFileSync('gh', args, { encoding: 'utf8' }).trim()
+): Livraison {
+  const vue = JSON.parse(
+    lire([
       'pr',
       'view',
       String(pr),
       '-R',
       depot,
       '--json',
-      'state,mergeCommit,mergedAt,headRefName,baseRefName,title,body',
-    ],
-    { encoding: 'utf8' }
-  );
-  const v = JSON.parse(brut) as {
-    state: string;
-    mergeCommit: { oid: string } | null;
-    mergedAt: string | null;
-    headRefName: string;
-    baseRefName: string;
-    title: string;
-    body: string;
-  };
-  const sha = v.state === 'MERGED' ? (v.mergeCommit?.oid ?? null) : null;
-  let atterri = false;
-  if (sha) {
-    const statut = execFileSync(
-      'gh',
-      ['api', `repos/${depot}/compare/${sha}...${v.baseRefName}`, '--jq', '.status'],
-      { encoding: 'utf8' }
-    ).trim();
-    atterri = statut === 'identical' || statut === 'ahead';
+      'state,mergeCommit,mergedAt,headRefName,title',
+    ])
+  ) as VueDeLaForge;
+  const sha = vue.state === 'MERGED' ? (vue.mergeCommit?.oid ?? null) : null;
+  if (sha === null) {
+    return livraisonDepuisLaForge({
+      pr,
+      vue,
+      messageDuCommit: null,
+      faceALaBrancheParDefaut: null,
+      renommages: null,
+    });
   }
-  return {
+  const parDefaut = lire([
+    'repo',
+    'view',
+    depot,
+    '--json',
+    'defaultBranchRef',
+    '-q',
+    '.defaultBranchRef.name',
+  ]);
+  return livraisonDepuisLaForge({
     pr,
-    sha,
-    fusionneeAt: v.mergedAt,
-    branch: v.headRefName,
-    atterri,
-    titre: v.title,
-    corps: v.body,
-  };
+    vue,
+    messageDuCommit: lire(['api', `repos/${depot}/commits/${sha}`, '--jq', '.commit.message']),
+    faceALaBrancheParDefaut: lire([
+      'api',
+      `repos/${depot}/compare/${sha}...${parDefaut}`,
+      '--jq',
+      '.status',
+    ]),
+    renommages: renommagesSurLaForge(depot, pr, lire),
+  });
+}
+
+/**
+ * LES RENOMMAGES DU TITRE, LUS DANS LA CHRONOLOGIE DE LA PR (`issues/<n>/timeline`, toutes les
+ * pages), un objet JSON par ligne. Une lecture qui échoue, une ligne qui n'est pas un renommage
+ * complet : `null`, et la clôture refuse (échec fermé).
+ */
+function renommagesSurLaForge(
+  depot: string,
+  pr: number,
+  lire: (args: string[]) => string
+): RenommageDeTitre[] | null {
+  try {
+    const lignes = lire([
+      'api',
+      `repos/${depot}/issues/${pr}/timeline?per_page=100`,
+      '--paginate',
+      '--jq',
+      '.[] | select(.event == "renamed") | ' +
+        '{createdAt: .created_at, previousTitle: .rename.from, currentTitle: .rename.to} | tojson',
+    ])
+      .split('\n')
+      .filter((l) => l.trim() !== '');
+    const renommages = lignes.map((l) => JSON.parse(l) as Record<string, unknown>);
+    const complets = renommages.every(
+      (r) =>
+        ['createdAt', 'previousTitle', 'currentTitle'].every((k) => typeof r[k] === 'string') &&
+        // GOV-122 — une date qui ne se lit pas rend la chronologie illisible : jamais NaN.
+        Number.isFinite(Date.parse(r['createdAt'] as string))
+    );
+    return complets ? (renommages as unknown as RenommageDeTitre[]) : null;
+  } catch {
+    return null;
+  }
 }
 
 function cloreUneTacheSeule(

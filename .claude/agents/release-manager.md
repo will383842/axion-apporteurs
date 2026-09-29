@@ -23,7 +23,7 @@ gh pr view <n> --json mergeStateStatus,statusCheckRollup,author
 3. **Relis l'état ET fusionne dans le MÊME appel** : une PR verte peut passer BEHIND entre la vérification
    et le merge (c'est arrivé deux fois en une journée, ~40 min de gates perdues à chaque fois).
    ```bash
-   gh pr view <n> --json mergeStateStatus && gh pr merge <n> --squash --delete-branch
+   gh pr view <n> --json mergeStateStatus && gh pr merge <n> --squash --match-head-commit <sha> --subject "$(gh pr view <n> --json title -q .title) (#<n>)" --body "$(gh pr view <n> --json body -q .body | grep -m1 '^Lot:')" --delete-branch
    ```
 4. **Vérifie l'atterrissage** : `pnpm deploy:verify <sha>` — l'en-tête `x-partners-build-sha` doit valoir le
    sha fusionné. Tant que ce n'est pas vrai, **la PR suivante attend**.

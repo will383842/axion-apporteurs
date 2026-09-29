@@ -28,6 +28,8 @@
 
 import { fichiersSuivisOuRefus } from '../lot/fichiers-suivis';
 import { readFileSync, existsSync } from 'node:fs';
+// GOV-071 : LA découpe du rendu, partagée avec la garde lexicale — jamais recopiée (RM-01).
+import { lignesRendues } from './lexique-apporteurs';
 
 /**
  * Un identifiant nu : une lettre de relecteur suivie d'un ou deux chiffres.
@@ -467,15 +469,53 @@ export type Juge = (ligne: string, fichier: string, i: number) => Faute[];
  * les trois cas : un compte établi sur une autre liste de fichiers ne se compare à rien.
  */
 export function analyserAvec(fichiers: string[], juger: Juge): Faute[] {
+  return analyserAvecComptes(fichiers, juger).fautes;
+}
+
+/**
+ * GOV-071 — un contenu, jugé sur sa forme RENDUE.
+ *
+ * 🔴 LE DÉFAUT. Le contenu était découpé sur sa SOURCE brute : une étiquette coupée par une mise
+ * en forme — une lettre, `**`, un chiffre, `**` — s'affiche entière à l'écran, et la garde ne la
+ * voyait pas, faute de lettre collée à un chiffre dans la source. Le rendu vient de la garde
+ * lexicale (`lignesRendues`), IMPORTÉ et non recopié : les deux gardes découpent de la même façon.
+ *
+ * `jetons` compte les étiquettes de la classe vues dans le rendu AVANT neutralisation — codes de
+ * poste, citations et locutions légitimes compris : c'est le nombre de termes réellement
+ * CONFRONTÉS à la règle, et il distingue « aucune faute » de « rien regardé ».
+ */
+export function analyserContenu(
+  contenu: string,
+  fichier: string,
+  juger: Juge
+): { fautes: Faute[]; jetons: number } {
   const fautes: Faute[] = [];
+  let jetons = 0;
+  const candidat = new RegExp(MOTIF_NU.source, 'g');
+  lignesRendues(fichier, contenu).forEach((ligne, i) => {
+    jetons += (ligne.match(candidat) ?? []).length;
+    fautes.push(...juger(ligne, fichier, i));
+  });
+  return { fautes, jetons };
+}
+
+/** Le balayage, avec ce qu'il a réellement lu : fichiers balayés et jetons confrontés. */
+export function analyserAvecComptes(
+  fichiers: string[],
+  juger: Juge
+): { fautes: Faute[]; fichiers: number; jetons: number } {
+  const fautes: Faute[] = [];
+  let balayes = 0;
+  let jetons = 0;
   for (const f of fichiers) {
     if (EXEMPTS.some((r) => r.test(f))) continue;
     if (!FICHIERS.test(f) || !existsSync(f)) continue;
-    readFileSync(f, 'utf8')
-      .split('\n')
-      .forEach((ligne, i) => fautes.push(...juger(ligne, f, i)));
+    balayes += 1;
+    const r = analyserContenu(readFileSync(f, 'utf8'), f, juger);
+    fautes.push(...r.fautes);
+    jetons += r.jetons;
   }
-  return fautes;
+  return { fautes, fichiers: balayes, jetons };
 }
 
 export function analyser(fichiers: string[]): Faute[] {
@@ -1147,12 +1187,22 @@ function compter(): number {
 }
 
 function controler(): number {
-  const fautes = analyser(fichiersSuivis());
+  // GOV-071 : le verdict dit ce qu'il a lu — un vert sur zéro fichier ou zéro jeton ne dit rien.
+  const { fautes, fichiers, jetons } = analyserAvecComptes(fichiersSuivis(), (ligne, f, i) =>
+    fautesDeLigne(ligne, f, i, MOTIF_NU)
+  );
+  const comptes =
+    `${fichiers} fichier(s) balayé(s) sur leur forme rendue, ` +
+    `${jetons} jeton(s) confronté(s) à la règle`;
   if (fautes.length === 0) {
-    console.log('✅ gov:identifiants — aucun identifiant nu dans les fichiers suivis.');
+    console.log(
+      `✅ gov:identifiants — aucun identifiant nu dans les fichiers suivis (${comptes}).`
+    );
     return 0;
   }
-  console.error(`❌ gov:identifiants — ${fautes.length} identifiant(s) nu(s) (REQ-GOV-003) :\n`);
+  console.error(
+    `❌ gov:identifiants — ${fautes.length} identifiant(s) nu(s) (REQ-GOV-003 ; ${comptes}) :\n`
+  );
   fautes.slice(0, 25).forEach((f) => console.error('   ' + f.message));
   if (fautes.length > 25) console.error(`   … et ${fautes.length - 25} autre(s).`);
   return 1;

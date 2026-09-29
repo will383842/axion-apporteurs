@@ -2892,6 +2892,15 @@ export function filtresDepuisSortie(chemins: string[], sortie: string): Map<stri
         'des attributs est amputée, la garde ne sait pas quels fichiers le dépôt publie autrement.'
     );
   }
+  // 🔴 Un chemin demandé DEUX fois aurait vu sa seconde réponse écraser la première en silence :
+  // deux entrées confondues sous un nom partageraient un seul attribut (GOV-064). On refuse.
+  const doublon = chemins.find((c, i) => chemins.indexOf(c) !== i);
+  if (doublon !== undefined) {
+    throw new Error(
+      `git check-attr : le chemin « ${doublon} » est demandé deux fois — deux entrées se ` +
+        'confondent sous ce nom, et la garde ne saurait pas de laquelle vient l’attribut lu.'
+    );
+  }
   const filtres = new Map<string, string>();
   for (let i = 0; i < chemins.length; i += 1) {
     const valeur = champs[3 * i + 2]!;
@@ -2925,6 +2934,19 @@ export function blobsDe(
       `l'index porte ${enConflit.length} entrée(s) à un étage autre que 0 (conflit) : ` +
         `${enConflit.map((e) => `${e.chemin} (étage ${e.etage})`).join(', ')}. La garde ne sait pas quel blob sera publié.`
     );
+  }
+  // 🔴 LES BLOBS SONT INDEXÉS PAR CHEMIN : deux entrées sous le même nom, et la seconde écrasait la
+  // première en silence — les deux fichiers jugés sur le contenu d'UN seul, un IBAN derrière un
+  // leurre propre (GOV-064). La source unique les refuse déjà ; cette table ne s'y fie pas.
+  const vus = new Set<string>();
+  for (const { chemin } of entrees) {
+    if (vus.has(chemin)) {
+      throw new Error(
+        `deux entrées d'index portent le chemin « ${chemin} » : la garde jugerait l'une à la ` +
+          "place de l'autre. Elle refuse au lieu d'écraser."
+      );
+    }
+    vus.add(chemin);
   }
   const sortie = execFileSync('git', ['cat-file', '--batch'], {
     cwd,
