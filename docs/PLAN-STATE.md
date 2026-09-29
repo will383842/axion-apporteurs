@@ -8,12 +8,12 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `d65e749` — 2026-09-29T19:45:55+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #242 (un conflit avec `main`) · 2. #244 (un conflit avec `main`) |
+| Qu’est-ce qui est en vol ? | 1. #244 (un contrôle requis rouge ou une revue manquante) · 2. #250 (un contrôle requis rouge ou une revue manquante) · 3. #242 (un conflit avec `main`) |
 | Qui tient quoi ? | QA-T11 (A01) · GOV-062 (A01) · GOV-124 (A01) · GOV-126 (A01) |
 | Où en est la phase ? | phase 0 — 102/130 tâches, reste 22.00 j |
 | Le prochain pas | QA-T11 — Gate D migrations : base vierge, dump N-1, migrate diff vide, image N-1, lint expand/contract |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
-| Dernière entrée de journal | PR #248 — 2026-09-29 |
+| Dernière entrée de journal | PR #250 — 2026-09-29 |
 
 **Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
@@ -60,8 +60,9 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #242 — feat(JUR-T34): la politique de confidentialite de l'espace, tiree du registre de l'article 30 et acceptee a la premiere connexion | `t/jur-t34` | un conflit avec `main` — à résoudre avant tout |
-| 2 | #244 — docs(GOV-017a): confirmation du depot par e-mail — plan W20 et quatorze taches versees en phase 1, sans DECISIONS ni REQ nouvelles | `t/w20-confirmation-email` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #244 — docs(GOV-017a): confirmation du depot par e-mail — plan W20 et quatorze taches versees en phase 1, sans DECISIONS ni REQ nouvelles | `t/w20-confirmation-email` | un contrôle requis rouge ou une revue manquante |
+| 2 | #250 — feat(GOV-126): le temoin d'une garde vaut la garde, tests de gouvernance, securite et integration a deux lentilles | `t/gov-126` | un contrôle requis rouge ou une revue manquante |
+| 3 | #242 — feat(JUR-T34): la politique de confidentialite de l'espace, tiree du registre de l'article 30 et acceptee a la premiere connexion | `t/jur-t34` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -100,6 +101,17 @@ Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
 
+### PR #250 — 2026-09-29 — feat(GOV-126): le temoin d'une garde vaut la garde, tests de gouvernance, securite et integration a deux lentilles
+
+**Fait.** Les tests de gouvernance, de sécurité et d'intégration restent à deux lentilles : une PR
+qui ne toucherait que le témoin d'une garde ne peut plus l'affaiblir sous une seule relecture.
+
+**Reste.** Aucune PR n'a encore été fusionnée à une seule lentille : la règle entre en usage avec
+cette fermeture.
+
+**Appris.** Un témoin fait partie de la garde qu'il prouve : l'autoriser à une lentille, c'était
+autoriser la garde elle-même par un détour.
+
 ### PR #248 — 2026-09-29 — feat(GOV-124): une lentille pour une PR sans risque, derivee et fermee, deux pour tout le reste
 
 **Fait.** Une PR de documentation, de tests ou d'outillage des vues, en zone gouvernance ou
@@ -124,19 +136,7 @@ INT-T27-A pour être close.
 **Appris.** Une clôture se juge avec ses dépendances : une tâche livrée par une PR fusionnée
 reste ouverte tant que sa dépendance ne l'est pas, sinon le registre ment sur l'ordre.
 
-### PR #245 — 2026-09-29 — feat(QA-T11): porte D, expand puis contract contre le code deploye, vidage N-1 seme, diff vide
-
-**Fait.** La porte D confronte les migrations de la PR au code déployé : une colonne encore lue
-ne se supprime pas, et le refus nomme son lecteur. Elle migre une base vierge et un vidage N-1
-semé, exige un diff vide sans ligne perdue, et démarre l'image N-1 sur le schéma migré.
-
-**Reste.** Les étapes Docker ne sont prouvées qu'en CI. La détection d'une lecture par
-co-occurrence peut rougir à tort sur un homonyme : elle échoue fermé.
-
-**Appris.** Une migration additive passe trivialement sur une base vide. Sans vidage semé, la
-porte D serait un vert qui ment : le semis est le cœur de la porte, pas un détail.
-
-… 3 entrée(s) affichée(s) sur 106 ; les 103 plus ancienne(s) se lisent dans `docs/journal/`.
+… 3 entrée(s) affichée(s) sur 107 ; les 104 plus ancienne(s) se lisent dans `docs/journal/`.
 
 ## Dette déclarée
 
