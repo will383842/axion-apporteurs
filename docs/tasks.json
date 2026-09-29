@@ -4061,7 +4061,9 @@
         ".github/workflows/ci.yml",
         "tests/unit/qualite/budget-par-route.spec.ts",
         "docs/gates.json",
-        "scripts/gates/perf-budgets.ts"
+        "scripts/gates/perf-budgets.ts",
+        "package.json",
+        "perf/budgets.json"
       ],
       "schema": false,
       "sensible": [],
