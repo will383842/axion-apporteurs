@@ -64,7 +64,10 @@ function options(argv: string[]): Options {
     if (!Number.isInteger(n) || n < 0) throw new Error(`${nom} attend un entier positif`);
     return n;
   };
-  return { essais: Math.max(1, lire('--essais', ESSAIS_PAR_DEFAUT)), delaiMs: lire('--delai-ms', DELAI_PAR_DEFAUT_MS) };
+  return {
+    essais: Math.max(1, lire('--essais', ESSAIS_PAR_DEFAUT)),
+    delaiMs: lire('--delai-ms', DELAI_PAR_DEFAUT_MS),
+  };
 }
 
 /** https partout ; http n'est admis que sur la boucle locale (tests, serveur du poste). */
@@ -82,7 +85,11 @@ export function adresseSure(brut: string, nom: string): URL {
 
 async function enteteServi(base: URL): Promise<{ valeur: string | null; erreur: string | null }> {
   try {
-    const r = await fetch(new URL('/', base), { method: 'HEAD', redirect: 'manual', cache: 'no-store' });
+    const r = await fetch(new URL('/', base), {
+      method: 'HEAD',
+      redirect: 'manual',
+      cache: 'no-store',
+    });
     return { valeur: r.headers.get(ENTETE_DE_BUILD), erreur: null };
   } catch (e) {
     return { valeur: null, erreur: (e as Error).message };
@@ -96,7 +103,9 @@ export async function verifier(sha: string, base: URL, o: Options): Promise<0 | 
   for (let i = 1; i <= o.essais; i++) {
     dernier = await enteteServi(base);
     if (dernier.valeur?.toLowerCase() === sha) {
-      console.log(`✅ atterri : ${base.origin} sert ${ENTETE_DE_BUILD} = ${sha} (essai ${i}/${o.essais})`);
+      console.log(
+        `✅ atterri : ${base.origin} sert ${ENTETE_DE_BUILD} = ${sha} (essai ${i}/${o.essais})`
+      );
       return 0;
     }
     if (i < o.essais) await attendre(o.delaiMs);
@@ -114,10 +123,14 @@ export async function verifier(sha: string, base: URL, o: Options): Promise<0 | 
 }
 
 function shaDemande(argv: string[]): string {
-  const donne = argv.find((a, i) => !a.startsWith('--') && !['--essais', '--delai-ms'].includes(argv[i - 1] ?? ''));
+  const donne = argv.find(
+    (a, i) => !a.startsWith('--') && !['--essais', '--delai-ms'].includes(argv[i - 1] ?? '')
+  );
   const sha = (donne ?? process.env.GITHUB_SHA ?? '').toLowerCase();
   if (!SHA_COMPLET.test(sha)) {
-    throw new Error(`sha attendu : 40 caractères hexadécimaux (argument ou GITHUB_SHA), reçu « ${sha || 'rien'} »`);
+    throw new Error(
+      `sha attendu : 40 caractères hexadécimaux (argument ou GITHUB_SHA), reçu « ${sha || 'rien'} »`
+    );
   }
   return sha;
 }
@@ -135,7 +148,12 @@ async function commandeVerifier(argv: string[]): Promise<number> {
   return verifier(sha, adresseSure(brut, 'PARTNERS_URL_PUBLIQUE'), options(argv));
 }
 
-async function appel(url: URL, methode: 'PATCH' | 'POST', jeton: string, corps?: unknown): Promise<number> {
+async function appel(
+  url: URL,
+  methode: 'PATCH' | 'POST',
+  jeton: string,
+  corps?: unknown
+): Promise<number> {
   const r = await fetch(url, {
     method: methode,
     headers: {
@@ -155,7 +173,9 @@ async function commandeDeclencher(argv: string[]): Promise<number> {
   const manquants = SECRETS_DU_DEPLOIEMENT.filter((n) => (process.env[n] ?? '') === '');
   if (manquants.length > 0) {
     for (const n of manquants) {
-      console.log(`::warning title=deploy:coolify::${n} absent — déploiement SAUTÉ (arbitrage -d7 du 2026-09-29)`);
+      console.log(
+        `::warning title=deploy:coolify::${n} absent — déploiement SAUTÉ (arbitrage -d7 du 2026-09-29)`
+      );
     }
     console.log(
       `⚠ SAUTÉ : ${manquants.length} variable(s) manquante(s) : ${manquants.join(', ')}. ` +
@@ -163,22 +183,37 @@ async function commandeDeclencher(argv: string[]): Promise<number> {
     );
     return 0;
   }
-  const env = process.env as Record<(typeof SECRETS_DU_DEPLOIEMENT)[number], string>;
+  const lire = (n: (typeof SECRETS_DU_DEPLOIEMENT)[number]): string => process.env[n] ?? '';
+  const env = {
+    COOLIFY_URL: lire('COOLIFY_URL'),
+    COOLIFY_API_TOKEN: lire('COOLIFY_API_TOKEN'),
+    COOLIFY_APP_UUID: lire('COOLIFY_APP_UUID'),
+    PARTNERS_URL_PUBLIQUE: lire('PARTNERS_URL_PUBLIQUE'),
+  };
   const plateforme = adresseSure(env.COOLIFY_URL, 'COOLIFY_URL');
   const publique = adresseSure(env.PARTNERS_URL_PUBLIQUE, 'PARTNERS_URL_PUBLIQUE');
   const racine = plateforme.href.replace(/\/+$/, '');
   const uuid = encodeURIComponent(env.COOLIFY_APP_UUID);
   const etiquette = `sha-${sha.slice(0, 7)}`;
 
-  const s1 = await appel(new URL(`${racine}/api/v1/applications/${uuid}`), 'PATCH', env.COOLIFY_API_TOKEN, {
-    docker_registry_image_tag: etiquette,
-  });
+  const s1 = await appel(
+    new URL(`${racine}/api/v1/applications/${uuid}`),
+    'PATCH',
+    env.COOLIFY_API_TOKEN,
+    {
+      docker_registry_image_tag: etiquette,
+    }
+  );
   if (s1 < 200 || s1 > 299) {
     console.error(`❌ la plateforme refuse l'étiquette ${etiquette} : HTTP ${s1}`);
     return 1;
   }
   console.log(`   étiquette posée : ${etiquette}`);
-  const s2 = await appel(new URL(`${racine}/api/v1/deploy?uuid=${uuid}&force=false`), 'POST', env.COOLIFY_API_TOKEN);
+  const s2 = await appel(
+    new URL(`${racine}/api/v1/deploy?uuid=${uuid}&force=false`),
+    'POST',
+    env.COOLIFY_API_TOKEN
+  );
   if (s2 < 200 || s2 > 299) {
     console.error(`❌ la plateforme refuse le déploiement : HTTP ${s2}`);
     return 1;
@@ -191,7 +226,11 @@ const APPELE_DIRECTEMENT = /deploy-verify\.ts$/.test(process.argv[1] ?? '');
 
 if (APPELE_DIRECTEMENT) {
   const argv = process.argv.slice(2);
-  const mode = argv.includes('--declencher') ? commandeDeclencher : argv.includes('--verifier') ? commandeVerifier : null;
+  const mode = argv.includes('--declencher')
+    ? commandeDeclencher
+    : argv.includes('--verifier')
+      ? commandeVerifier
+      : null;
   if (mode === null) {
     console.error('usage : deploy-verify.ts --verifier [<sha>] | --declencher');
     process.exit(1);

@@ -46,7 +46,12 @@ async function serveur(
     let corps = '';
     req.on('data', (c) => (corps += c));
     req.on('end', () => {
-      const r: Requete = { methode: req.method ?? '', url: req.url ?? '', auth: req.headers.authorization, corps };
+      const r: Requete = {
+        methode: req.method ?? '',
+        url: req.url ?? '',
+        auth: req.headers.authorization,
+        corps,
+      };
       recues.push(r);
       const rep = repondre(r);
       res.writeHead(rep.statut, rep.entetes);
@@ -56,16 +61,21 @@ async function serveur(
   serveurs.push(s);
   await new Promise<void>((r) => s.listen(0, '127.0.0.1', () => r()));
   const adresse = s.address();
-  if (adresse === null || typeof adresse === 'string') throw new Error('adresse du serveur de test');
+  if (adresse === null || typeof adresse === 'string')
+    throw new Error('adresse du serveur de test');
   return { url: `http://127.0.0.1:${adresse.port}`, recues };
 }
 
 /** Asynchrone : le serveur de test tourne dans CE processus, un appel synchrone le bloquerait. */
-function lancer(args: string[], env: Record<string, string>): Promise<{ code: number; sortie: string }> {
+function lancer(
+  args: string[],
+  env: Record<string, string>
+): Promise<{ code: number; sortie: string }> {
   return new Promise((resoudre) => {
-    const propre: Record<string, string> = {};
-    for (const [k, v] of Object.entries(process.env)) {
-      if (v !== undefined && !/^(COOLIFY_|PARTNERS_URL_PUBLIQUE|GITHUB_SHA)/.test(k)) propre[k] = v;
+    // Aucune variable du poste ne fuit dans le témoin : ce que le test fait varier, il le pose (RM-11).
+    const propre: NodeJS.ProcessEnv = { ...process.env };
+    for (const k of Object.keys(propre)) {
+      if (/^(COOLIFY_|PARTNERS_URL_PUBLIQUE|GITHUB_SHA)/.test(k)) delete propre[k];
     }
     const p = spawn(process.execPath, [TSX, SCRIPT, ...args], { env: { ...propre, ...env } });
     let sortie = '';
@@ -79,14 +89,22 @@ const RAPIDE = ['--essais', '2', '--delai-ms', '50'];
 
 describe('deploy:verify — l’atterrissage se lit sur l’en-tête servi', () => {
   it('sur le sha servi, sort en zéro', async () => {
-    const app = await serveur(() => ({ statut: 200, entetes: { 'x-partners-build-sha': SHA }, corps: '' }));
+    const app = await serveur(() => ({
+      statut: 200,
+      entetes: { 'x-partners-build-sha': SHA },
+      corps: '',
+    }));
     const r = await lancer(['--verifier', SHA, ...RAPIDE], { PARTNERS_URL_PUBLIQUE: app.url });
     expect(r.sortie).toContain(SHA);
     expect(r.code).toBe(0);
   });
 
   it('REQ-GOV-014 : sur un sha non atterri, sort en non nul et nomme les DEUX sha', async () => {
-    const app = await serveur(() => ({ statut: 200, entetes: { 'x-partners-build-sha': AUTRE }, corps: '' }));
+    const app = await serveur(() => ({
+      statut: 200,
+      entetes: { 'x-partners-build-sha': AUTRE },
+      corps: '',
+    }));
     const r = await lancer(['--verifier', SHA, ...RAPIDE], { PARTNERS_URL_PUBLIQUE: app.url });
     expect(r.code).not.toBe(0);
     expect(r.sortie).toContain(SHA);
@@ -107,14 +125,23 @@ describe('deploy:verify — l’atterrissage se lit sur l’en-tête servi', () 
   });
 
   it('refuse un sha qui n’a pas quarante caractères hexadécimaux', async () => {
-    const r = await lancer(['--verifier', 'main', ...RAPIDE], { PARTNERS_URL_PUBLIQUE: 'http://127.0.0.1:1' });
+    const r = await lancer(['--verifier', 'main', ...RAPIDE], {
+      PARTNERS_URL_PUBLIQUE: 'http://127.0.0.1:1',
+    });
     expect(r.code).not.toBe(0);
     expect(r.sortie).toMatch(/sha/i);
   });
 
   it('lit le sha dans GITHUB_SHA quand aucun n’est donné', async () => {
-    const app = await serveur(() => ({ statut: 200, entetes: { 'x-partners-build-sha': SHA }, corps: '' }));
-    const r = await lancer(['--verifier', ...RAPIDE], { PARTNERS_URL_PUBLIQUE: app.url, GITHUB_SHA: SHA });
+    const app = await serveur(() => ({
+      statut: 200,
+      entetes: { 'x-partners-build-sha': SHA },
+      corps: '',
+    }));
+    const r = await lancer(['--verifier', ...RAPIDE], {
+      PARTNERS_URL_PUBLIQUE: app.url,
+      GITHUB_SHA: SHA,
+    });
     expect(r.code).toBe(0);
   });
 });
@@ -124,7 +151,12 @@ describe('deploy:coolify — la plateforme tire l’image, ou le saut est NOMMÉ
     const r = await lancer(['--declencher', ...RAPIDE], { GITHUB_SHA: SHA });
     expect(r.code).toBe(0);
     expect(r.sortie).toContain('::warning');
-    for (const nom of ['COOLIFY_URL', 'COOLIFY_API_TOKEN', 'COOLIFY_APP_UUID', 'PARTNERS_URL_PUBLIQUE']) {
+    for (const nom of [
+      'COOLIFY_URL',
+      'COOLIFY_API_TOKEN',
+      'COOLIFY_APP_UUID',
+      'PARTNERS_URL_PUBLIQUE',
+    ]) {
       expect(r.sortie).toContain(nom);
     }
   });
@@ -144,7 +176,11 @@ describe('deploy:coolify — la plateforme tire l’image, ou le saut est NOMMÉ
   });
 
   it('secrets présents, plateforme qui refuse : ROUGE, et le statut est nommé', async () => {
-    const coolify = await serveur(() => ({ statut: 401, entetes: {}, corps: '{"message":"Unauthenticated."}' }));
+    const coolify = await serveur(() => ({
+      statut: 401,
+      entetes: {},
+      corps: '{"message":"Unauthenticated."}',
+    }));
     const r = await lancer(['--declencher', ...RAPIDE], {
       GITHUB_SHA: SHA,
       COOLIFY_URL: coolify.url,
@@ -161,9 +197,18 @@ describe('deploy:coolify — la plateforme tire l’image, ou le saut est NOMMÉ
     const coolify = await serveur((q) =>
       q.methode === 'PATCH'
         ? { statut: 200, entetes: {}, corps: '{"uuid":"uuid-factice"}' }
-        : { statut: 200, entetes: {}, corps: '{"deployments":[{"message":"ok","resource_uuid":"uuid-factice","deployment_uuid":"d1"}]}' }
+        : {
+            statut: 200,
+            entetes: {},
+            corps:
+              '{"deployments":[{"message":"ok","resource_uuid":"uuid-factice","deployment_uuid":"d1"}]}',
+          }
     );
-    const app = await serveur(() => ({ statut: 200, entetes: { 'x-partners-build-sha': SHA }, corps: '' }));
+    const app = await serveur(() => ({
+      statut: 200,
+      entetes: { 'x-partners-build-sha': SHA },
+      corps: '',
+    }));
     const r = await lancer(['--declencher', ...RAPIDE], {
       GITHUB_SHA: SHA,
       COOLIFY_URL: coolify.url,
@@ -176,14 +221,24 @@ describe('deploy:coolify — la plateforme tire l’image, ou le saut est NOMMÉ
     expect(coolify.recues.map((q) => q.methode)).toEqual(['PATCH', 'POST']);
     const [patch, post] = coolify.recues;
     expect(patch!.url).toBe('/api/v1/applications/uuid-factice');
-    expect(JSON.parse(patch!.corps)).toEqual({ docker_registry_image_tag: `sha-${SHA.slice(0, 7)}` });
+    expect(JSON.parse(patch!.corps)).toEqual({
+      docker_registry_image_tag: `sha-${SHA.slice(0, 7)}`,
+    });
     expect(post!.url).toBe('/api/v1/deploy?uuid=uuid-factice&force=false');
     for (const q of coolify.recues) expect(q.auth).toBe('Bearer jeton-factice-de-test');
   });
 
   it('plateforme qui accepte mais image jamais servie : ROUGE, les deux sha nommés', async () => {
-    const coolify = await serveur(() => ({ statut: 200, entetes: {}, corps: '{"deployments":[]}' }));
-    const app = await serveur(() => ({ statut: 200, entetes: { 'x-partners-build-sha': AUTRE }, corps: '' }));
+    const coolify = await serveur(() => ({
+      statut: 200,
+      entetes: {},
+      corps: '{"deployments":[]}',
+    }));
+    const app = await serveur(() => ({
+      statut: 200,
+      entetes: { 'x-partners-build-sha': AUTRE },
+      corps: '',
+    }));
     const r = await lancer(['--declencher', ...RAPIDE], {
       GITHUB_SHA: SHA,
       COOLIFY_URL: coolify.url,
@@ -210,7 +265,12 @@ describe('deploy:coolify — la plateforme tire l’image, ou le saut est NOMMÉ
 });
 
 describe('la structure : un seul producteur, qui tire, sans droit sur le registre', () => {
-  type Etape = { run?: string; uses?: string; env?: Record<string, string>; ['continue-on-error']?: unknown };
+  type Etape = {
+    run?: string;
+    uses?: string;
+    env?: Record<string, string>;
+    ['continue-on-error']?: unknown;
+  };
   type Job = {
     needs?: string | string[];
     if?: string;
@@ -220,7 +280,9 @@ describe('la structure : un seul producteur, qui tire, sans droit sur le registr
   };
   let deployer: Job | undefined;
   beforeAll(async () => {
-    const wf = (await lireYaml(readFileSync('.github/workflows/deploy.yml', 'utf8'))) as { jobs: Record<string, Job> };
+    const wf = (await lireYaml(readFileSync('.github/workflows/deploy.yml', 'utf8'))) as {
+      jobs: Record<string, Job>;
+    };
     deployer = wf.jobs.deployer;
   });
 
@@ -256,12 +318,16 @@ describe('la structure : un seul producteur, qui tire, sans droit sur le registr
   });
 
   it('l’image est construite avec le sha du commit, et l’application le pose en en-tête', () => {
-    const pkg = JSON.parse(readFileSync('package.json', 'utf8')) as { scripts: Record<string, string> };
+    const pkg = JSON.parse(readFileSync('package.json', 'utf8')) as {
+      scripts: Record<string, string>;
+    };
     expect(pkg.scripts['image:construire']).toContain('--build-arg GITHUB_SHA');
     expect(pkg.scripts['deploy:verify']).toBe('tsx scripts/gates/deploy-verify.ts --verifier');
     expect(pkg.scripts['deploy:coolify']).toBe('tsx scripts/gates/deploy-verify.ts --declencher');
     const dockerfile = readFileSync('Dockerfile', 'utf8');
-    expect(dockerfile).toMatch(/ARG GITHUB_SHA\s+ENV PARTNERS_BUILD_SHA=\$\{?GITHUB_SHA\}?\s+RUN pnpm exec next build/);
+    expect(dockerfile).toMatch(
+      /ARG GITHUB_SHA\s+ENV PARTNERS_BUILD_SHA=\$\{?GITHUB_SHA\}?\s+RUN pnpm exec next build/
+    );
   });
 });
 
