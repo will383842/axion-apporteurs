@@ -32,7 +32,8 @@
  * ── CE QUI N'EST JAMAIS IMPRIMÉ ──────────────────────────────────────────────────────────────
  *
  * Aucune valeur : ni secret, ni jeton, ni adresse interne (elle porte le mot de passe de la base), ni
- * corps de réponse. Seuls les noms, les uuid et les statuts HTTP sortent.
+ * corps de réponse. Seuls les noms, les uuid et les statuts HTTP sortent. Dans la forge, chaque adresse
+ * interne est de plus déclarée à masquer (`::add-mask::`) dès sa lecture.
  */
 import {
   NOMS_DES_SECRETS,
@@ -210,6 +211,10 @@ export async function provisionner(env: NodeJS.ProcessEnv): Promise<0 | 1> {
         `${nom} : la réponse de GET /databases/{uuid} ne porte pas internal_db_url — aucune adresse n'est devinée`
       );
     }
+    // Dérivée, elle porte le mot de passe de la base : la forge la masque AVANT tout autre geste
+    // (exigence de la lentille `securite` sur la PR de registre). Les secrets du dépôt, eux, sont
+    // déjà masqués par la forge.
+    if (process.env.GITHUB_ACTIONS === 'true') console.log(`::add-mask::${url}`);
     return url;
   };
 

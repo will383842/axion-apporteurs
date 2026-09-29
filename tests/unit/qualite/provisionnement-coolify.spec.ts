@@ -153,7 +153,12 @@ function lancer(env: Record<string, string>): Promise<{ code: number; sortie: st
   });
 }
 
-function sansValeurDeSecret(sortie: string, env: Record<string, string>) {
+/** Les lignes `::add-mask::` sont le SEUL endroit où une valeur dérivée peut paraître : la forge les consomme. */
+function sansValeurDeSecret(brute: string, env: Record<string, string>) {
+  const sortie = brute
+    .split('\n')
+    .filter((l) => !l.startsWith('::add-mask::'))
+    .join('\n');
   for (const nom of [...NOMS_DES_SECRETS, 'COOLIFY_API_TOKEN']) {
     if (env[nom]) expect(sortie, `la valeur de ${nom} fuit`).not.toContain(env[nom]);
   }
@@ -285,6 +290,30 @@ describe('REQ-INT-031 — sur une plateforme vide, tout est créé puis les vari
     expect(p.appels.filter((a) => a.methode === 'POST').length).toBe(avant);
     expect(r.sortie).toMatch(/existe déjà/);
     expect(p.appels.filter((a) => a.methode === 'PATCH').length).toBe(2);
+  });
+});
+
+describe('REQ-INT-031 — dans la forge, chaque valeur dérivée est masquée dès sa lecture', () => {
+  it('DATABASE_URL et REDIS_URL sont déclarées ::add-mask:: AVANT l’annonce de la pose des variables', async () => {
+    const p = await plateforme(PLATEFORME_VIDE);
+    const env: Record<string, string> = {
+      ...secretsApplicatifs(),
+      COOLIFY_URL: p.url,
+      COOLIFY_API_TOKEN: 'jeton-factice-plateforme',
+      PARTNERS_URL_PUBLIQUE: 'https://partners.exemple.fr',
+      GITHUB_SHA: SHA,
+      GITHUB_ACTIONS: 'true',
+    };
+    const r = await lancer(env);
+    expect(r.code).toBe(0);
+    const lignes = r.sortie.split('\n');
+    const masques = lignes.filter((l) => l.startsWith('::add-mask::'));
+    expect(masques).toHaveLength(2);
+    expect(masques.some((l) => l.includes('mdp-base-factice'))).toBe(true);
+    expect(masques.some((l) => l.includes('mdp-cache-factice'))).toBe(true);
+    const annonce = lignes.findIndex((l) => l.includes('variable(s) posée(s)'));
+    expect(Math.max(...masques.map((m) => lignes.indexOf(m)))).toBeLessThan(annonce);
+    sansValeurDeSecret(r.sortie, env);
   });
 });
 
