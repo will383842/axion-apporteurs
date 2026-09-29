@@ -663,15 +663,20 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
         'périmètre et juge ; une copie renommée ne s’exécute pas.',
     },
     'scripts/gates/migrations-additive.ts': {
-      total: 2,
-      porte: 2,
+      total: 3,
+      porte: 5,
       temoins: 0,
       raison:
         'DM-02 — REQ-DM-037, migrations additives. Deux `process.exit(1)` : le `--prove` qui voit ' +
         'un témoin rester vert, et la sortie terminale sur faute non absoute. Témoins d’EFFET dans ' +
         'gardes-de-schema.spec.ts : un dépôt jetable dont la migration du MILIEU supprime une ' +
         'colonne sort en 1 en la nommant, le même absous par une ADR acceptée sort en 0 en ' +
-        'IMPRIMANT l’absolution, un dépôt sans migration sort en 1 (`perimetre_vide`).',
+        'IMPRIMANT l’absolution, un dépôt sans migration sort en 1 (`perimetre_vide`). QA-T11 ' +
+        '(REQ-QA-021) en AJOUTE trois, ceux de la porte D : `--pr` sans base ni arbre déployé ' +
+        '(usage, 2), `--pr` sur une colonne encore lue par le code déployé (1), `--semis` sur un ' +
+        'catalogue sans table (code variable). Témoins d’EFFET : `gate-d.sh --prove` (bac d’essai ' +
+        'qui supprime une colonne lue, sortie non nulle, colonne et fichier nommés) et ' +
+        'tests/integration/migrations-additives.spec.ts, qui lance le binaire sur ses deux faces.',
     },
     'scripts/gates/gov-entite.ts': {
       total: 6,

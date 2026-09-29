@@ -2045,6 +2045,15 @@ export const PORTE_A_FIGEE: PorteFigee = {
     { nom: 'La garde des centimes sait rougir', run: 'pnpm partners:schema:cents:prove' },
     { nom: 'Migrations additives', run: 'pnpm partners:migrations:additive' },
     { nom: 'La garde des migrations sait rougir', run: 'pnpm partners:migrations:additive:prove' },
+    // QA-T11 : la porte D et sa preuve, figées par la PR qui les ajoute à `gate-a`.
+    {
+      nom: 'La porte D sait rougir — une colonne encore lue, supprimee, est nommee',
+      run: 'pnpm gate-d:prove',
+    },
+    {
+      nom: 'Porte D — expand/contract, base vierge, vidage N-1 seme, diff vide, image N-1',
+      run: 'pnpm gate-d',
+    },
     {
       nom: 'Termes interdits — nomenclature, modeles d axionia et synonymes',
       run: 'pnpm gov:termes-interdits',
@@ -2248,6 +2257,8 @@ export const PORTE_A_FIGEE: PorteFigee = {
     'partners:schema:cents:prove': 'tsx scripts/gates/schema-cents.ts --prove',
     'partners:migrations:additive': 'tsx scripts/gates/migrations-additive.ts',
     'partners:migrations:additive:prove': 'tsx scripts/gates/migrations-additive.ts --prove',
+    'gate-d': 'sh scripts/gates/gate-d.sh',
+    'gate-d:prove': 'sh scripts/gates/gate-d.sh --prove',
     'gov:termes-interdits': 'tsx scripts/gates/gov-check.ts',
     'gov:termes-interdits:prove': 'tsx scripts/gates/gov-check.ts --prove',
     'gov:lexique': 'tsx scripts/gates/lexique-apporteurs.ts',

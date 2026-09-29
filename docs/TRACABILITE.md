@@ -16,7 +16,7 @@
 
 **334 exigences actives · 122 réputées testées · 122 couvertes · 0 orphelines.**
 
-311 tâches, dont 134 livrées · 168 fichiers de test exécutés par `vitest` sur 168 présents.
+311 tâches, dont 134 livrées · 170 fichiers de test exécutés par `vitest` sur 170 présents.
 
 ## Exigences réputées testées
 
@@ -462,6 +462,7 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | `tests/integration/index-partiels.spec.ts` | oui | `REQ-DM-001`, `REQ-DM-003`, `REQ-DM-038` |
 | `tests/integration/journal.spec.ts` | oui | `REQ-DM-024`, `REQ-DM-041`, `REQ-JUR-026`, `REQ-SEC-027` |
 | `tests/integration/lien-magique.spec.ts` | oui | `REQ-SEC-001`, `REQ-SEC-002` |
+| `tests/integration/migrations-additives.spec.ts` | oui | `REQ-QA-021` |
 | `tests/integration/rate-limit-redis.spec.ts` | oui | `REQ-QA-006`, `REQ-SEC-016` |
 | `tests/integration/sessions-revocables.spec.ts` | oui | `REQ-SEC-003`, `REQ-SEC-004` |
 | `tests/integration/sondes-de-vie.spec.ts` | oui | `REQ-QA-019`, `REQ-QA-020`, `REQ-QA-030` |
@@ -595,6 +596,7 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | `tests/unit/qualite/env-fail-fast.spec.ts` | oui | `REQ-CPL-021`, `REQ-QA-030` |
 | `tests/unit/qualite/journal-redige.spec.ts` | oui | `REQ-QA-024` |
 | `tests/unit/qualite/pipeline-image.spec.ts` | oui | `REQ-QA-018` |
+| `tests/unit/qualite/porte-d.spec.ts` | oui | `REQ-QA-021` |
 | `tests/unit/qualite/red-first.spec.ts` | oui | `REQ-CPL-022` |
 | `tests/unit/qualite/req-check.spec.ts` | oui | `REQ-QA-014` |
 | `tests/unit/qualite/score-de-mutation.spec.ts` | oui | `REQ-QA-002` |
