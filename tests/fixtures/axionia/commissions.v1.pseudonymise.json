@@ -1,9 +1,9 @@
 {
-  "Source": "GÉNÉRÉE — ne pas éditer à la main. Producteur : axion-ia, scripts/gates/grille-check.ts --fixture-pseudonymisee (export de la grille, PR axion-ia #1181, commit 000e0271b). Méthode : la dernière publication commissions.v1.json, montants et taux non nuls remplacés par leur rang, empreinte du contenu et empreintes de ligne recalculées par le producteur (pseudonymiserPublication). Aucune valeur de la grille réelle (PRESEANCE §3.4), rien de tapé à la main (RM-03). Régénérer : dans axion-ia, pnpm exec tsx scripts/gates/grille-check.ts --fixture-pseudonymisee.",
+  "Source": "GÉNÉRÉE — ne pas éditer à la main. Producteur : axion-ia, scripts/gates/grille-check.ts --fixture-pseudonymisee (export de la grille, PR axion-ia #1181, commit 73a9def1d). Méthode : la dernière publication commissions.v1.json, montants et taux non nuls remplacés par leur rang, empreinte du contenu, empreintes de ligne et version d'événement recalculées par le producteur sur les seules valeurs pseudonymisées (pseudonymiserPublication). Aucune valeur de la grille réelle (PRESEANCE §3.4), rien de tapé à la main (RM-03). Régénérer : dans axion-ia, pnpm exec tsx scripts/gates/grille-check.ts --fixture-pseudonymisee.",
   "publication": {
     "version": 1,
     "publieeAt": "2026-09-26T23:08:01.251Z",
-    "hash": "d3746e0860239c80ce4922306465c10beac18000aa83a24608a065fca34af114",
+    "hash": "41472e272ac9a0acccc8c7d8652fa5c985ab257a1575435a0206acff3c66201b",
     "empreintesLignes": {
       "commissions": {
         "com-audit": "12d919f5546db4d2821f9996647bf176282e2d88daef4882957a0b9e84d365dc",
@@ -46,7 +46,7 @@
         "montant": "centimes_ht",
         "taux": "points_de_base"
       },
-      "grilleVersionEvenement": "089825b6d328",
+      "grilleVersionEvenement": "50c786a6ff18",
       "commissions": [
         {
           "commissionId": "com-audit",
