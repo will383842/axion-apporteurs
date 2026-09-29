@@ -8,13 +8,13 @@
 >
 > Une tache = une PR, **≤ 1,5 jour**. Le plafond est porte par la garde `gov:tasks`.
 
-**330 taches · 256.35 j estimes.**
+**331 taches · 256.85 j estimes.**
 
 | Phase | Taches | Jours | Terminees |
 | --- | ---: | ---: | ---: |
 | -1 — Gouvernance (prealable bloquant) | 39 | 23.75 | 39 |
 | 0 — Socle technique | 132 | 99.85 | 114 |
-| 1 — Operationnel | 78 | 67.00 | 0 |
+| 1 — Operationnel | 79 | 67.50 | 0 |
 | 2 — Argent | 45 | 33.50 | 0 |
 | 3 — Pilotage et conformite | 36 | 32.25 | 0 |
 
@@ -2548,6 +2548,16 @@ Couvre : `REQ-SEC-017`, `REQ-SEC-024`, `REQ-DM-008`
 **Acceptation.** Source : docs/chantiers/W20-confirmation-par-email.md (décision de Williams du 2026-09-29, session -d7, phase 1). Un témoin par risque 1 à 5 du §8 du plan, chacun vu rouge sur une mutation de la garde qu'il vise : (1) coordonnées du contact égales à celles de l'apporteur → raison posée, confirmation par clic non retenue si elle vient de l'empreinte d'IP de l'apporteur ; (2) ouverture du lien par un analyseur de messagerie → aucune réponse enregistrée ; (3) nom ou contexte piégé (balise, adresse web) → rendu en texte brut dans l'e-mail, aucun lien cliquable ; (4) jeton rejoué ou forgé → sans effet, réponse identique ; (5) « Non » en un seul geste → rien. Aucun réglage des contrôles écrit dans le test (REQ-GOV-031). (6) Amendée le 2026-09-29 (réponse de Williams à la question 2 et exigence d'expérience, docs/chantiers/W20-confirmation-par-email.md §2, §4 et §9) : témoin du contact inventé — une adresse qui rebondit et n'est jamais corrigée ne fait jamais courir le délai tacite ; une mutation qui fait partir le délai de l'envoi ou du dépôt, ou qui ignore le rebond, rougit ; une correction vers l'adresse de l'apporteur lui-même porte la raison de vérification et ne change rien d'autre. (7) Correction de sécurité du 2026-09-29 (refus de la lentille securite sur 2340a63, docs/chantiers/W20-confirmation-par-email.md §2, §8 et question 18) : témoins vus rouges sur la mutation qui retient le clic ou promeut le silence — (a) une adresse webmail contrôlée par l'apporteur et un « Oui » depuis une autre IP donnent un dépôt toujours provisoire, en tête de liste ; (b) une demande signalée et silencieuse pendant trente jours reste non confirmée ; (c) un « Non » en second geste sur une demande signalée invalide toujours.
 
 **Tests.** `tests/integration/attaque-fraude-a-la-confirmation.spec.ts`
+
+### JUR-T36 — La politique de confidentialite publique n'affiche ni les questions internes du registre, ni un nom de personne, ni le vocabulaire interdit
+
+`0.5 j` · zone `juridique` · sensible : rgpd · depend de `JUR-T34`
+
+Couvre : `REQ-JUR-025`
+
+**Acceptation.** DETTE BLOQUANTE POUR LA MISE EN SERVICE, relevee par la lentille A07 juriste sur la PR #242 (JUR-T34), et deja signalee par la lentille securite. La page /confidentialite, lisible sans session, affiche le registre de l article 30 tel quel : les rubriques A completer y montrent la question interne posee a Williams, le prenom Will apparait (a confirmer par Will), et le mot attribution, refuse par le lexique de l espace, y est lu. A LIVRER : (1) la page n affiche jamais une question interne ni un nom de personne ; une rubrique encore A completer s affiche comme en cours de redaction, sans la question ; (2) aucun mot du lexique interdit de l espace n atteint la page, que la garde lexicale lise le texte a l execution ou que le registre soit reformule pour l apporteur ; (3) le choix est ecrit ; (4) TEMOIN rouge d abord : un registre de fixture qui porte une question interne, le prenom Will et le mot attribution produit une page qui n en montre aucun, et le temoin nomme ce qu il a filtre. Aucune mise en service de l espace avant cette tache. Dette apres lancement notee a part : l historique des versions acceptees, et la micro-copie Votre espace s ouvre une fois cette politique acceptee, inexacte tant qu aucune route ne verifie l accord hors connexion.
+
+**Tests.** `tests/unit/juridique/politique-publique-sans-note-interne.spec.ts`
 
 ## Phase 2 — Argent
 
