@@ -8,12 +8,12 @@
 >
 > Une tache = une PR, **≤ 1,5 jour**. Le plafond est porte par la garde `gov:tasks`.
 
-**328 taches · 255.10 j estimes.**
+**329 taches · 256.10 j estimes.**
 
 | Phase | Taches | Jours | Terminees |
 | --- | ---: | ---: | ---: |
 | -1 — Gouvernance (prealable bloquant) | 39 | 23.75 | 39 |
-| 0 — Socle technique | 130 | 98.35 | 102 |
+| 0 — Socle technique | 131 | 99.35 | 104 |
 | 1 — Operationnel | 78 | 67.25 | 0 |
 | 2 — Argent | 45 | 33.50 | 0 |
 | 3 — Pilotage et conformite | 36 | 32.25 | 0 |
@@ -572,7 +572,7 @@ Couvre : `REQ-QA-018`, `REQ-QA-032`
 
 **Tests.** `tests/unit/qualite/pipeline-image.spec.ts` · `tests/unit/qualite/build-sans-base.spec.ts`
 
-### QA-T11 — Gate D migrations : base vierge, dump N-1, migrate diff vide, image N-1, lint expand/contract
+### QA-T11 — Gate D migrations : base vierge, dump N-1, migrate diff vide, image N-1, lint expand/contract ✅ **fusionnee**
 
 `1 j` · zone `qualite` · depend de `QA-T05`
 
@@ -678,17 +678,17 @@ Couvre : `REQ-INT-006`, `REQ-INT-007`
 
 Couvre : `REQ-ARG-001`, `REQ-ARG-005`, `REQ-ARG-030`, `REQ-DM-039`, `REQ-INT-004`, `REQ-INT-005`, `REQ-INT-007`, `REQ-INT-032`
 
-**Acceptation.** DEPOT AXIONIA. TACHE SENSIBLE — argent et authentification. UN REFUS DE LA LENTILLE SECURITE Y VAUT VETO. (1) Les evenements `facture.emise`, `avoir.emis`, `paiement.recu` et `paiement.rembourse` sont produits par la fonction d'emission unique, et le cliquet nominatif couvre leurs ecrivains (REQ-INT-007). (2) LES NOMS SONT CEUX DES MODELES REELS D'AXIONIA (Client, Devis, FactureFormation, Payment) : aucun evenement ne reference un modele qui n'existe pas, et la liste des types est FERMEE par le contrat, onze depuis INT-T01c (REQ-INT-004). (3) `paiement.recu` porte l'identifiant de paiement, l'identifiant de facture, l'identifiant de CLIENT BENEFICIAIRE — jamais le destinataire de la facture —, le SIREN, le montant encaisse TTC, les montants HT et TTC de la facture, le regime de TVA, le cumul encaisse TTC, la date d'encaissement et le fournisseur d'encaissement (REQ-INT-005) ; Partners derive le HT encaisse, il ne le recoit pas. (4) BENEFICIAIRE, JAMAIS DESTINATAIRE : quand un tiers payeur regle la facture d'une entreprise, c'est l'entreprise beneficiaire qui porte l'attribution. Une confusion des deux verse la commission a la mauvaise personne, et c'est le defaut le plus couteux de cette famille. (5) Une resolution de client impossible produit une ligne non resolue ALERTEE, jamais un evenement ignore (REQ-ARG-030) ; les encaissements de plusieurs payeurs sur les factures d'une meme prestation se proratisent sans cas particulier (REQ-ARG-005). (6) `facture.emise` transporte le destinataire tel que defini cote axionia et l'echeance de financeur attendue ; Partners stocke le type de payeur dans un enum GENERE depuis le meme fichier de contrat partage, jamais retape (REQ-DM-039). (7) `facture.annulee` et `financement.mis_a_jour` entrent au contrat par INT-T01c (dependance, changement en lockstep cote Partners) ; INT-T05 les PRODUIT par la fonction d'emission unique (REQ-INT-032). (8) TEMOIN A DEUX FACES : une charge de bac d'essai portant l'identifiant du DESTINATAIRE la ou le contrat exige le BENEFICIAIRE est refusee au schema et nomme le champ ; la charge conforme passe. Et une charge ou le HT encaisse est transmis au lieu d'etre derive est refusee, avec le nom du champ en trop.
+**Acceptation.** DEPOT AXIONIA. TACHE SENSIBLE — argent et authentification. UN REFUS DE LA LENTILLE SECURITE Y VAUT VETO. (1) Les evenements `facture.emise`, `avoir.emis`, `paiement.recu` et `paiement.rembourse` sont produits par la fonction d'emission unique, et le cliquet nominatif couvre leurs ecrivains (REQ-INT-007). (2) LES NOMS SONT CEUX DES MODELES REELS D'AXIONIA (Client, Devis, FactureFormation, Payment) : aucun evenement ne reference un modele qui n'existe pas, et la liste des types est FERMEE par le contrat, onze depuis INT-T01c (REQ-INT-004). (3) `paiement.recu` porte l'identifiant de paiement, l'identifiant de facture, l'identifiant de CLIENT BENEFICIAIRE — jamais le destinataire de la facture —, le SIREN, le montant encaisse TTC, les montants HT et TTC de la facture, le regime de TVA, le cumul encaisse TTC, la date d'encaissement et le fournisseur d'encaissement (REQ-INT-005) ; le HT encaisse de chaque paiement (montantHtCents) est calcule par axionia, le dernier encaissement absorbant le reliquat (REQ-DM-018, REQ-INT-005 amendee). (4) BENEFICIAIRE, JAMAIS DESTINATAIRE : quand un tiers payeur regle la facture d'une entreprise, c'est l'entreprise beneficiaire qui porte l'attribution. Une confusion des deux verse la commission a la mauvaise personne, et c'est le defaut le plus couteux de cette famille. (5) Une resolution de client impossible produit une ligne non resolue ALERTEE, jamais un evenement ignore (REQ-ARG-030) ; les encaissements de plusieurs payeurs sur les factures d'une meme prestation se proratisent sans cas particulier (REQ-ARG-005). (6) `facture.emise` transporte le destinataire tel que defini cote axionia et l'echeance de financeur attendue ; Partners stocke le type de payeur dans un enum GENERE depuis le meme fichier de contrat partage, jamais retape (REQ-DM-039). (7) `facture.annulee` et `financement.mis_a_jour` entrent au contrat par INT-T01c (dependance, changement en lockstep cote Partners) ; INT-T05 les PRODUIT par la fonction d'emission unique (REQ-INT-032). (8) TEMOIN A DEUX FACES : une charge de bac d'essai portant l'identifiant du DESTINATAIRE la ou le contrat exige le BENEFICIAIRE est refusee au schema et nomme le champ ; la charge conforme passe. AVENANT A01 du 2026-09-29 (decision de Williams, confirmee dans la session A01) : REQ-DM-018 et le contrat v2 prevalent, axionia calcule le HT de chaque paiement et le dernier paiement solde le reliquat ; les phrases contraires de (3) et (8) sont retirees, la face BENEFICIAIRE different du DESTINATAIRE du temoin est conservee. AVENANT A01 du 2026-09-29 (mesure de la session -66 sur la PR axion-ia #1228) : paiement.rembourse et facture.annulee n ont aujourd hui AUCUN ecrivain dans src/ ; leurs fonctions d emission existent et sont testees, et le cliquet nominatif mesure 0 ecrivain : il rougira le jour ou un ecrivain naitra sans passer par elles.
 
 **Tests.** `axionia/src/server/partners-sync/__tests__/producteurs-facturation.spec.ts`
 
 ### INT-T22 — Producteur `candidature.recue`
 
-`0.5 j` · zone `integration` · `axionia` · depend de `INT-T02`, `INT-T01c`
+`1 j` · zone `integration` · `axionia` · depend de `INT-T02`, `INT-T01c`
 
 Couvre : `REQ-CPL-015`, `REQ-DM-035`, `REQ-INT-032`, `REQ-QA-035`
 
-**Acceptation.** émission depuis l'écrivain de `Submission` (cliquet nominatif) ; payload `{candidatureId, reponsesJson, scoreInitial, scorePartsJson, scoreBaremeVersion, sourceCanal, utm, campagneId, parrainCodeCapture}`. Le type `candidature.recue` entre au contrat par INT-T01c (dependance). Le payload ne porte aucune coordonnee du candidat : Partners les tire par la route de coordonnees d'axionia (INT-T01c, partners/ADR-0023).
+**Acceptation.** émission depuis l'écrivain de `Submission` (cliquet nominatif) ; payload `{candidatureId, reponsesJson, scoreInitial, scorePartsJson, scoreBaremeVersion, sourceCanal, utm, campagneId, parrainCodeCapture}`. Le type `candidature.recue` entre au contrat par INT-T01c (dependance). Le payload ne porte aucune coordonnee du candidat : Partners les tire par la route de coordonnees d'axionia (INT-T01c, partners/ADR-0023). AVENANT A01 du 2026-09-29 (arbitrage par la PRESEANCE : l ADR 0051 section c d axion-ia, ACCEPTEE, porte la decision B1 de Williams du 2026-09-19 et l emporte sur cette acceptance ; contradiction relevee par la session -66) : l envoi vers Partners part au clic PRET A SIGNER, jamais a la reception d un dossier. Cette action n existant pas dans axion-ia (verifie sur main f8753cd), INT-T22 la CREE : une transition de la fiche candidat (une Submission), a cote de Sans suite, executee par une action serveur gardee par role et un bouton reserve aux candidats apporteurs, qui emet candidature.recue dans sa transaction. Le cliquet nominatif vise CET ecrivain, et non celui de Submission. Estimation portee de 0,5 j a 1 j.
 
 **Tests.** `axionia/src/server/partners-sync/__tests__/producteur-candidature.spec.ts`
 
@@ -1216,7 +1216,7 @@ Couvre : `REQ-QA-013`, `REQ-GOV-012`, `REQ-GOV-029`
 
 **Tests.** `tests/unit/gouvernance/porte-a-presente-active-effective.spec.ts`
 
-### GOV-062 — L'outillage qui execute la porte A n'est pas garde : configuration du gestionnaire, correctifs, actions tierces
+### GOV-062 — L'outillage qui execute la porte A n'est pas garde : configuration du gestionnaire, correctifs, actions tierces ✅ **fusionnee**
 
 `1.5 j` · zone `gouvernance` · depend de `GOV-061`
 
@@ -1882,6 +1882,16 @@ Couvre : `REQ-GOV-011`, `REQ-GOV-013`
 **Acceptation.** EXCEPTION AU GEL DE LA GOUVERNANCE, decision de Williams du 2026-09-29 (vers 18 h), confirmee directement dans la session A01, priorite juste apres la PR #239. Elle amende W16 (partners/ADR-0024, deux lentilles partout) : un avenant ou une ADR le dit, par l'architecte. A LIVRER : (1) lentillesExigees rend UNE lentille quand risqueDeLaPr classe la PR ordinaire, et DEUX (exactitude et securite) sinon ; l'avis schema reste exige des que la PR touche au schema. (2) Le classement est DERIVE (fichiers, labels, taches, lot), jamais declare par l'auteur ; il est FERME : une liste de fichiers illisible ou incomplete, une tache non resolue ou un registre de base illisible valent deux lentilles. (3) Restent a deux lentilles : src/, l'argent, l'attribution, la securite, le juridique, les donnees, le processus des gardes (garde des revues, .github/, racine du depot, config/, package.json) et toute tache sensible ou schema. Une seule lentille ne vaut que pour des documents, des tests et l'outillage interne sans effet sur ces zones. (4) La lentille unique est nommee par la regle (celle qui fait foi), et son refus bloque. TEMOINS rouges d'abord : une PR de documentation seule exige une lentille ; la meme PR qui ajoute un fichier sous src/ ou sous scripts/gates/ en exige deux ; une liste de fichiers incomplete en exige deux.
 
 **Tests.** `tests/unit/gouvernance/une-lentille-pour-une-pr-sans-risque.spec.ts`
+
+### GOV-125 — Une tache livree dans axion-ia ne peut pas etre close : le motif de branche du registre ne connait que les branches de Partners
+
+`0.5 j` · zone `gouvernance` · aucune dependance
+
+Couvre : `REQ-GOV-026`
+
+**Acceptation.** DETTE BLOQUANTE, admise malgre le gel de la gouvernance parce qu'elle bloque la cloture de taches d'argent livrees. Mesure le 2026-09-29 : lot:cloture refuse DM-03-A (axion-ia #1181, branche feat/partners-dm-03-a-grille, en production sur 41966e0) et INT-T02 (axion-ia #1180, branche feat/partners-int-t02-outbox), famille branche_hors_motif, parce que le motif de branch de scripts/lot/tasks.schema.json (partners/ADR-0007) n'accepte que t/ et lot/, les formes de Partners. DM-03-P et DM-04, livrees dans Partners, restent donc a_faire (dep_non_livree), et chaque tache du depot axionia livree par une branche feat/ ou fix/ y sera bloquee. A LIVRER : (1) pour une tache dont repo vaut axionia, le motif de branch accepte les formes de branche d'axion-ia, lues dans sa convention et jamais inventees, ou la branche n'est pas ecrite et la preuve reste l'attestation (commit d'ecrasement et atterrissage) ; le choix est ecrit dans une ADR qui amende partners/ADR-0007. (2) Une tache de Partners garde le motif ferme actuel. (3) TEMOIN a deux faces, rouge d'abord : la cloture d'une tache axionia livree par feat/partners-x passe ; une tache partners livree par feat/x reste refusee (branche_hors_motif). (4) Puis DM-03-A, INT-T02, DM-03-P et DM-04 sont closes par un rattrapage.
+
+**Tests.** `tests/unit/gouvernance/une-tache-axionia-se-clot-sur-sa-branche.spec.ts`
 
 ### GOV-126 — Le temoin d'une garde vaut la garde : les tests de gouvernance, de securite et d'integration restent a deux lentilles
 
