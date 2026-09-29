@@ -107,7 +107,10 @@ export type Depassement = {
 
 /** `src/app/(espace)/connexion/page.tsx` → `server/app/(espace)/connexion/page_client-reference-manifest.js` */
 export function cheminDuManifeste(page: string): string {
-  const rel = page.split('\\').join('/').replace(/^src\/app\//, '');
+  const rel = page
+    .split('\\')
+    .join('/')
+    .replace(/^src\/app\//, '');
   return `server/app/${rel.replace(/page\.(tsx|ts|jsx|js)$/, 'page_client-reference-manifest.js')}`;
 }
 
@@ -160,15 +163,14 @@ export function mesurer(vue: VueBuild): Resultat {
   }
 
   const brut = vue.lire('build-manifest.json');
-  let racine: string[] | null = null;
-  let polyfills: string[] = [];
+  let bm: Record<string, unknown> | null = null;
   try {
-    const bm = brut ? (JSON.parse(brut.toString('utf8')) as Record<string, unknown>) : null;
-    racine = bm ? listeDeChaines(bm.rootMainFiles) : null;
-    polyfills = (bm && listeDeChaines(bm.polyfillFiles)) ?? [];
+    bm = brut ? (JSON.parse(brut.toString('utf8')) as Record<string, unknown>) : null;
   } catch {
-    racine = null;
+    // JSON illisible : `bm` reste nul, et la faute est nommée juste en dessous.
   }
+  const racine = bm ? listeDeChaines(bm.rootMainFiles) : null;
+  const polyfills = (bm && listeDeChaines(bm.polyfillFiles)) ?? [];
   if (racine === null) {
     return {
       mesures: [],
@@ -196,7 +198,11 @@ export function mesurer(vue: VueBuild): Resultat {
   let socle = 0;
   for (const f of duSocle) {
     const t = taille(f);
-    if (t === null) fautes.push({ famille: 'paquet_introuvable', message: `socle : ${f} cité par build-manifest.json, absent du disque` });
+    if (t === null)
+      fautes.push({
+        famille: 'paquet_introuvable',
+        message: `socle : ${f} cité par build-manifest.json, absent du disque`,
+      });
     else socle += t;
   }
 
@@ -211,18 +217,26 @@ export function mesurer(vue: VueBuild): Resultat {
     }
     const entrees = lireManifesteClient(texte.toString('utf8'));
     if (entrees === null) {
-      fautes.push({ famille: 'manifeste_illisible', message: `${route} : ${chemin} n'a pas la forme attendue` });
+      fautes.push({
+        famille: 'manifeste_illisible',
+        message: `${route} : ${chemin} n'a pas la forme attendue`,
+      });
       continue;
     }
     const fichiers = new Set(duSocle);
-    for (const liste of Object.values(entrees)) for (const f of liste) if (!exclus.has(f)) fichiers.add(f);
+    for (const liste of Object.values(entrees))
+      for (const f of liste) if (!exclus.has(f)) fichiers.add(f);
     let premierChargement = 0;
     let propre = 0;
     let manquant = false;
     for (const f of fichiers) {
       const t = taille(f);
       if (t === null) {
-        if (!duSocle.has(f)) fautes.push({ famille: 'paquet_introuvable', message: `${route} : ${f} cité par ${chemin}, absent du disque` });
+        if (!duSocle.has(f))
+          fautes.push({
+            famille: 'paquet_introuvable',
+            message: `${route} : ${f} cité par ${chemin}, absent du disque`,
+          });
         manquant = true;
         continue;
       }
@@ -249,7 +263,12 @@ export function depassements(r: Resultat, p: Plafonds): Depassement[] {
   }
   for (const m of r.mesures) {
     if (m.propre > p.routeOctets) {
-      d.push({ famille: 'budget_depasse', route: m.route, octets: m.propre, plafond: p.routeOctets });
+      d.push({
+        famille: 'budget_depasse',
+        route: m.route,
+        octets: m.propre,
+        plafond: p.routeOctets,
+      });
     }
   }
   return d;
@@ -263,7 +282,13 @@ export function codeDeSortie(r: Resultat, p: Plafonds, bloquant: boolean): 0 | 1
 
 // ── les plafonds : dérivés, jamais tapés (RM-01, RM-10) ──────────────────────────────────────
 
-type Socle = { mesureOctetsGz?: unknown; marge?: unknown; sha?: unknown; source?: unknown; verifieLe?: unknown };
+type Socle = {
+  mesureOctetsGz?: unknown;
+  marge?: unknown;
+  sha?: unknown;
+  source?: unknown;
+  verifieLe?: unknown;
+};
 
 /** Le plafond du socle : la mesure datée plus sa marge, lues dans `perf/budgets.json`. */
 export function plafondDuSocle(budgetsJson: string): { octets: number; libelle: string } {
@@ -289,7 +314,9 @@ export function plafondDuSocle(budgetsJson: string): { octets: number; libelle: 
 }
 
 function plafondsDuDepot(): { plafonds: Plafonds; libelleSocle: string; koRoute: number } {
-  const koRoute = seuilsDepuisRegistre(texteDeLExigence(readFileSync(CHEMIN_REGISTRE, 'utf8'))).plafondKoGz;
+  const koRoute = seuilsDepuisRegistre(
+    texteDeLExigence(readFileSync(CHEMIN_REGISTRE, 'utf8'))
+  ).plafondKoGz;
   const socle = plafondDuSocle(readFileSync(CHEMIN_BUDGETS, 'utf8'));
   return {
     plafonds: { routeOctets: koRoute * OCTETS_PAR_KO, socleOctets: socle.octets },
@@ -322,7 +349,10 @@ function buildDeFixture(f: {
 }): VueBuild {
   const disque = new Map<string, Buffer>();
   disque.set('BUILD_ID', Buffer.from('preuve'));
-  disque.set('build-manifest.json', Buffer.from(JSON.stringify({ rootMainFiles: f.racine, polyfillFiles: [] })));
+  disque.set(
+    'build-manifest.json',
+    Buffer.from(JSON.stringify({ rootMainFiles: f.racine, polyfillFiles: [] }))
+  );
   let g = 1;
   for (const [c, n] of Object.entries(f.tailles)) disque.set(c, octets(n, g++));
   for (const r of f.routes) {
@@ -351,31 +381,93 @@ function prouver(): number {
       tailles: { 'static/chunks/socle.js': socleLeger, 'static/chunks/page.js': leger },
     });
 
-  type Cas = { quoi: string; vue: VueBuild; bloquant: boolean; attendu: 0 | 1; famille: Famille | null };
+  type Cas = {
+    quoi: string;
+    vue: VueBuild;
+    bloquant: boolean;
+    attendu: 0 | 1;
+    famille: Famille | null;
+  };
   const cas: Cas[] = [
-    { quoi: 'contre-témoin : une route légère sur un socle sous son plafond, sous --bloquant', vue: juste(), bloquant: true, attendu: 0, famille: null },
+    {
+      quoi: 'contre-témoin : une route légère sur un socle sous son plafond, sous --bloquant',
+      vue: juste(),
+      bloquant: true,
+      attendu: 0,
+      famille: null,
+    },
     {
       quoi: 'contre-témoin : un dépassement sans --bloquant sort en zéro (QA-T20 non bloquant)',
       vue: buildDeFixture({
         racine: ['static/chunks/socle.js'],
         routes: [{ page: P, paquets: ['static/chunks/graphiques.js'] }],
-        tailles: { 'static/chunks/socle.js': socleLeger, 'static/chunks/graphiques.js': plafonds.routeOctets * 2 },
+        tailles: {
+          'static/chunks/socle.js': socleLeger,
+          'static/chunks/graphiques.js': plafonds.routeOctets * 2,
+        },
       }),
       bloquant: false,
       attendu: 0,
       famille: null,
     },
-    { quoi: 'aucun build', vue: { pages: [P], lire: () => null }, bloquant: false, attendu: 1, famille: 'build_absent' },
-    { quoi: 'manifeste de la route supprimé', vue: buildDeFixture({ racine: ['static/chunks/socle.js'], routes: [{ page: P, paquets: [] }], tailles: { 'static/chunks/socle.js': 100 }, sans: [cheminDuManifeste(P)] }), bloquant: false, attendu: 1, famille: 'manifeste_absent' },
-    { quoi: 'manifeste réécrit en code exécutable', vue: buildDeFixture({ racine: ['static/chunks/socle.js'], routes: [{ page: P, paquets: [] }], tailles: { 'static/chunks/socle.js': 100 }, manifesteBrut: { [P]: 'module.exports = {}' } }), bloquant: false, attendu: 1, famille: 'manifeste_illisible' },
-    { quoi: 'paquet cité et absent du disque', vue: buildDeFixture({ racine: ['static/chunks/socle.js'], routes: [{ page: P, paquets: ['static/chunks/fantome.js'] }], tailles: { 'static/chunks/socle.js': 100 } }), bloquant: false, attendu: 1, famille: 'paquet_introuvable' },
-    { quoi: 'aucun fichier trouvé — le piège des globs morts', vue: buildDeFixture({ racine: [], routes: [{ page: P, paquets: [] }], tailles: {} }), bloquant: false, attendu: 1, famille: 'mesure_nulle' },
+    {
+      quoi: 'aucun build',
+      vue: { pages: [P], lire: () => null },
+      bloquant: false,
+      attendu: 1,
+      famille: 'build_absent',
+    },
+    {
+      quoi: 'manifeste de la route supprimé',
+      vue: buildDeFixture({
+        racine: ['static/chunks/socle.js'],
+        routes: [{ page: P, paquets: [] }],
+        tailles: { 'static/chunks/socle.js': 100 },
+        sans: [cheminDuManifeste(P)],
+      }),
+      bloquant: false,
+      attendu: 1,
+      famille: 'manifeste_absent',
+    },
+    {
+      quoi: 'manifeste réécrit en code exécutable',
+      vue: buildDeFixture({
+        racine: ['static/chunks/socle.js'],
+        routes: [{ page: P, paquets: [] }],
+        tailles: { 'static/chunks/socle.js': 100 },
+        manifesteBrut: { [P]: 'module.exports = {}' },
+      }),
+      bloquant: false,
+      attendu: 1,
+      famille: 'manifeste_illisible',
+    },
+    {
+      quoi: 'paquet cité et absent du disque',
+      vue: buildDeFixture({
+        racine: ['static/chunks/socle.js'],
+        routes: [{ page: P, paquets: ['static/chunks/fantome.js'] }],
+        tailles: { 'static/chunks/socle.js': 100 },
+      }),
+      bloquant: false,
+      attendu: 1,
+      famille: 'paquet_introuvable',
+    },
+    {
+      quoi: 'aucun fichier trouvé — le piège des globs morts',
+      vue: buildDeFixture({ racine: [], routes: [{ page: P, paquets: [] }], tailles: {} }),
+      bloquant: false,
+      attendu: 1,
+      famille: 'mesure_nulle',
+    },
     {
       quoi: 'une librairie de graphiques importée dans une route, sous --bloquant',
       vue: buildDeFixture({
         racine: ['static/chunks/socle.js'],
         routes: [{ page: P, paquets: ['static/chunks/graphiques.js'] }],
-        tailles: { 'static/chunks/socle.js': socleLeger, 'static/chunks/graphiques.js': plafonds.routeOctets + 4096 },
+        tailles: {
+          'static/chunks/socle.js': socleLeger,
+          'static/chunks/graphiques.js': plafonds.routeOctets + 4096,
+        },
       }),
       bloquant: true,
       attendu: 1,
@@ -399,10 +491,16 @@ function prouver(): number {
   for (const c of cas) {
     const r = mesurer(c.vue);
     const code = codeDeSortie(r, plafonds, c.bloquant);
-    const familles = [...r.fautes.map((f) => f.famille), ...depassements(r, plafonds).map((d) => d.famille)];
-    const bon = code === c.attendu && (c.famille === null ? c.attendu === 0 : familles.includes(c.famille));
+    const familles = [
+      ...r.fautes.map((f) => f.famille),
+      ...depassements(r, plafonds).map((d) => d.famille),
+    ];
+    const bon =
+      code === c.attendu && (c.famille === null ? c.attendu === 0 : familles.includes(c.famille));
     if (c.famille) vues.add(c.famille);
-    console.log(`${bon ? '✅' : '❌'} ${c.quoi} → code ${code}${c.famille ? `, famille ${c.famille}` : ''}`);
+    console.log(
+      `${bon ? '✅' : '❌'} ${c.quoi} → code ${code}${c.famille ? `, famille ${c.famille}` : ''}`
+    );
     if (!bon) echecs++;
   }
   const muettes = FAMILLES.filter((f) => !vues.has(f));
@@ -414,7 +512,9 @@ function prouver(): number {
     console.error(`❌ perf:bundle --prove — ${echecs} témoin(s) en défaut`);
     return 1;
   }
-  console.log(`✅ perf:bundle --prove — ${FAMILLES.length} familles rougissent chacune sur son témoin, 2 contre-témoins verts.`);
+  console.log(
+    `✅ perf:bundle --prove — ${FAMILLES.length} familles rougissent chacune sur son témoin, 2 contre-témoins verts.`
+  );
   return 0;
 }
 
@@ -448,13 +548,19 @@ function controlerLeDepot(argv: string[]): number {
   const forge = process.env.GITHUB_ACTIONS === 'true';
 
   if (r.fautes.length > 0) {
-    console.error(`❌ perf:bundle — ${r.fautes.length} faute(s) de mesure sur ${pages.length} route(s) :`);
+    console.error(
+      `❌ perf:bundle — ${r.fautes.length} faute(s) de mesure sur ${pages.length} route(s) :`
+    );
     for (const f of r.fautes) console.error(`   [${f.famille}] ${f.message}`);
     return 1;
   }
 
-  console.log(`perf:bundle — ${r.mesures.length} route(s) de l'espace mesurée(s) dans \`${build}\` :`);
-  console.log(`   socle commun : ${r.socle} o gz, plafond ${plafonds.socleOctets} o (${libelleSocle})`);
+  console.log(
+    `perf:bundle — ${r.mesures.length} route(s) de l'espace mesurée(s) dans \`${build}\` :`
+  );
+  console.log(
+    `   socle commun : ${r.socle} o gz, plafond ${plafonds.socleOctets} o (${libelleSocle})`
+  );
   for (const m of r.mesures) {
     console.log(
       `   ${m.route} : ${m.propre} o gz propres (plafond ${koRoute} KB = ${plafonds.routeOctets} o), ` +
@@ -473,9 +579,13 @@ function controlerLeDepot(argv: string[]): number {
   }
   const code = codeDeSortie(r, plafonds, bloquant);
   if (d.length > 0 && !bloquant) {
-    console.log(`   Dépassement(s) NOMMÉ(S), non bloquant(s) jusqu'à l'armement bloquant ; \`--bloquant\` les ferait rougir.`);
+    console.log(
+      `   Dépassement(s) NOMMÉ(S), non bloquant(s) jusqu'à l'armement bloquant ; \`--bloquant\` les ferait rougir.`
+    );
   }
-  console.log(code === 0 ? '✅ perf:bundle' : `❌ perf:bundle — ${d.length} dépassement(s) sous --bloquant`);
+  console.log(
+    code === 0 ? '✅ perf:bundle' : `❌ perf:bundle — ${d.length} dépassement(s) sous --bloquant`
+  );
   return code;
 }
 

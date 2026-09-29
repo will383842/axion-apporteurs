@@ -135,7 +135,9 @@ describe('la mesure est celle que le navigateur charge', () => {
     const vue = vueDe({
       racine: ['static/chunks/r1.js'],
       polyfills: [],
-      routes: [{ page: PAGE_A, entrees: { a: ['static/chunks/r1.js'], b: ['static/chunks/r1.js'] } }],
+      routes: [
+        { page: PAGE_A, entrees: { a: ['static/chunks/r1.js'], b: ['static/chunks/r1.js'] } },
+      ],
       tailles: { 'static/chunks/r1.js': 5000 },
     });
     const m = mesurer(vue).mesures[0]!;
@@ -205,7 +207,12 @@ describe('ce qui ne se mesure pas est une faute, jamais zéro octet', () => {
   });
 
   it('mesure_nulle : aucun fichier trouvé, c’est le piège des globs morts — la garde ROUGIT', () => {
-    const vue = vueDe({ racine: [], polyfills: [], routes: [{ page: PAGE_A, entrees: {} }], tailles: {} });
+    const vue = vueDe({
+      racine: [],
+      polyfills: [],
+      routes: [{ page: PAGE_A, entrees: {} }],
+      tailles: {},
+    });
     const r = mesurer(vue);
     expect(r.fautes.map((f) => f.famille)).toEqual(['mesure_nulle']);
     expect(codeDeSortie(r, PLAFONDS_LARGES, false)).toBe(1);

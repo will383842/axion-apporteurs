@@ -2709,7 +2709,10 @@ export const PORTE_A_FIGEE: PorteFigee = {
       nom: 'Les budgets sur le disque sont le rendu de leur exigence',
       run: 'pnpm perf:budgets:verifier',
     },
-    { nom: 'La mesure du poids par route sait rougir, y compris sur zero octet', run: 'pnpm perf:bundle:prove' },
+    {
+      nom: 'La mesure du poids par route sait rougir, y compris sur zero octet',
+      run: 'pnpm perf:bundle:prove',
+    },
     { nom: 'Construire l application pour la mesure', run: 'pnpm perf:bundle:construire' },
     { nom: 'Poids par route de l espace — JS propre et socle commun', run: 'pnpm perf:bundle' },
     {
