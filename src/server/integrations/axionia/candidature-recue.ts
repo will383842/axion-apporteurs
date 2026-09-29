@@ -135,10 +135,10 @@ const octets = (v: Uint8Array | null | undefined) =>
 
 export async function traiterCandidatureRecue(
   prisma: ClientCandidature,
-  evenement: { readonly id: string; readonly charge: unknown },
+  recu: { readonly id: string; readonly charge: unknown },
   d: DependancesCandidature
 ): Promise<ResultatCandidature> {
-  const { snapshot } = snapshotDeCandidature(evenement.charge);
+  const { snapshot } = snapshotDeCandidature(recu.charge);
   const coordonnees = await d.tirer(snapshot.candidatureId);
   if (coordonnees === null || coordonnees.email === null) {
     throw new AttenteDeDependance(refDependanceCoordonnees(snapshot.candidatureId));
@@ -197,7 +197,7 @@ export async function traiterCandidatureRecue(
       resultat = 'cree';
     }
     await tx.evenementRecu.update({
-      where: { id: evenement.id },
+      where: { id: recu.id },
       data: { statut: 'traite', processedAt: d.maintenant(), dependanceRef: null },
     });
     return resultat;
