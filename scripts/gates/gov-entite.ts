@@ -46,7 +46,7 @@
 
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, realpathSync } from 'node:fs';
 import ts from 'typescript';
 
 import {
@@ -94,6 +94,11 @@ export type Univers = {
   commitsLus?: number;
   /** Aucun point de divergence avec `main` n'a été trouvé : la plage de la PR n'a pas pu être lue. */
   baseIntrouvable?: boolean;
+  /**
+   * La garde tourne sur le checkout de la forge d'une demande de fusion : la base y est EXIGÉE, et
+   * son absence est un refus (`source_illisible`), rendu par le canal des fautes. Absent : non exigée.
+   */
+  baseRequise?: boolean;
 };
 
 /** Un fichier tel qu'il était à un commit de la PR, qui n'est plus sous cette forme dans la tête. */
@@ -753,6 +758,15 @@ export function coordonneesDe(
 export function controler(u: Univers): Faute[] {
   const fautes: Faute[] = [];
   const ajouter = (famille: string, message: string) => fautes.push({ famille, message });
+
+  if (u.baseIntrouvable === true && u.baseRequise === true) {
+    ajouter(
+      'source_illisible',
+      `aucun point de divergence avec main dans ce clone : les commits de la demande de fusion ne ` +
+        `peuvent pas être lus, et « 0 commit lu » serait un vert qui ment (GOV-066). La porte A ` +
+        `clone tout l'historique (fetch-depth: 0).`
+    );
+  }
 
   for (const champ of CHAMPS) {
     const v = valeur(u.registre, champ.cle);
@@ -3111,26 +3125,39 @@ export const LIMITE_DE_L_HISTORIQUE =
 /**
  * GOV-066 (relevé de la lentille `securite`, PR #235) — SUR UNE DEMANDE DE FUSION, UNE BASE
  * INTROUVABLE N'EST PAS « ZÉRO COMMIT À LIRE ». Sans point de divergence avec `main`, la plage est
- * vide et le vert dirait « 0 commit lu » d'une PR qui en porte : la garde refuse. Hors demande de
- * fusion (poste local, `main`), la tête seule est jugée, et le vert le dit. Un dépôt SANS ORIGINE
- * (un banc d'essai jetable, qui hérite de l'environnement de la forge) n'est pas le clone d'une PR :
- * il n'est pas refusé pour cela.
+ * vide et le vert dirait « 0 commit lu » d'une PR qui en porte : la garde refuse, par le canal des
+ * fautes (`source_illisible`). Hors demande de fusion (poste local, `main`), la tête seule est
+ * jugée, et le vert le dit. Un banc d'essai jetable (un clone hors de `GITHUB_WORKSPACE`, qui hérite
+ * de l'environnement de la forge et peut avoir une origine sans `origin/main`) n'est pas le checkout
+ * de la PR : il n'est pas refusé pour cela.
  */
 export function baseIntrouvableRefusee(
   baseIntrouvable: boolean,
   declencheur: string | undefined,
-  aUneOrigine: boolean
+  estLeCheckoutDeLaForge: boolean
 ): boolean {
-  return baseIntrouvable && declencheur === 'pull_request' && aUneOrigine;
+  return baseIntrouvable && declencheur === 'pull_request' && estLeCheckoutDeLaForge;
 }
 
-/** Le clone a-t-il une origine distante ? Un banc d'essai jetable n'en a pas. */
-function aUneOrigineDistante(): boolean {
+/**
+ * Le dépôt jugé est-il le checkout de la forge (`GITHUB_WORKSPACE`), et non un banc d'essai ? Seul un
+ * banc PROUVÉ (un dépôt lisible hors de l'espace de travail lisible) en sort : un espace de travail
+ * absent ou illisible vaut checkout de la forge, donc refus sur une demande de fusion (lentille
+ * `securite`, PR #235) — l'illisible ne se lit jamais en « pas la forge ».
+ */
+export function estLeCheckoutDeLaForge(
+  espace: string | undefined = process.env['GITHUB_WORKSPACE'],
+  cwd?: string
+): boolean {
+  if (espace === undefined || espace === '') return true;
   try {
-    execFileSync('git', ['remote', 'get-url', 'origin'], { stdio: 'ignore' });
-    return true;
+    const racine = execFileSync('git', ['rev-parse', '--show-toplevel'], {
+      encoding: 'utf8',
+      ...(cwd === undefined ? {} : { cwd }),
+    }).trim();
+    return realpathSync(racine) === realpathSync(espace);
   } catch {
-    return false;
+    return true;
   }
 }
 
@@ -3157,6 +3184,11 @@ export function lireUnivers(): Univers {
     fichiersDesCommits: pr.fichiers,
     commitsLus: pr.commits,
     baseIntrouvable: base === null,
+    baseRequise: baseIntrouvableRefusee(
+      base === null,
+      process.env['GITHUB_EVENT_NAME'],
+      estLeCheckoutDeLaForge()
+    ),
   };
 }
 
@@ -3877,20 +3909,6 @@ if (APPELE_DIRECTEMENT) {
     process.exit(prouver());
   } else {
     const univers = lireUnivers();
-    if (
-      baseIntrouvableRefusee(
-        univers.baseIntrouvable === true,
-        process.env['GITHUB_EVENT_NAME'],
-        aUneOrigineDistante()
-      )
-    ) {
-      console.error(
-        `❌ gov:entite — [source_illisible] aucun point de divergence avec main dans ce clone : les ` +
-          `commits de la demande de fusion ne peuvent pas être lus, et « 0 commit lu » serait un vert ` +
-          `qui ment (GOV-066). La porte A clone tout l'historique (fetch-depth: 0).`
-      );
-      process.exit(1);
-    }
     const fautes = controler(univers);
     if (fautes.length > 0) {
       // TOUTES les fautes : une liste tronquée tairait le nom d'un fichier refusé.

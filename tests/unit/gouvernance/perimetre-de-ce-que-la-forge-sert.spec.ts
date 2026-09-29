@@ -24,6 +24,7 @@ import {
   UNIVERS_CONFORME,
   baseIntrouvableRefusee,
   controler,
+  estLeCheckoutDeLaForge,
   fichiersDesCommits,
 } from '../../../scripts/gates/gov-entite';
 
@@ -136,7 +137,27 @@ describe('REQ-GOV-031 — la garde d’entité juge chaque commit de la PR, pas 
     expect(baseIntrouvableRefusee(false, 'pull_request', true)).toBe(false);
     expect(baseIntrouvableRefusee(true, 'push', true)).toBe(false);
     expect(baseIntrouvableRefusee(true, undefined, true)).toBe(false);
-    // Un banc d'essai jetable, sans origine, qui hérite de l'environnement de la forge : pas refusé.
+    // Un banc d'essai jetable, hors du checkout de la forge, qui hérite de son environnement : pas refusé.
     expect(baseIntrouvableRefusee(true, 'pull_request', false)).toBe(false);
+  });
+
+  it('REQ-GOV-031 — TÉMOIN : le refus passe par le canal des fautes (`source_illisible`), jamais par une sortie à part', () => {
+    const fautes = controler({ ...UNIVERS_CONFORME, baseIntrouvable: true, baseRequise: true });
+    expect(fautes.map((f) => f.famille)).toEqual(['source_illisible']);
+    expect(fautes[0]!.message).toMatch(/0 commit lu/);
+    // Contre-témoin : base introuvable hors checkout de la forge, ou base trouvée : aucune faute.
+    expect(controler({ ...UNIVERS_CONFORME, baseIntrouvable: true })).toEqual([]);
+    expect(controler({ ...UNIVERS_CONFORME, baseIntrouvable: false, baseRequise: true })).toEqual(
+      []
+    );
+  });
+
+  it('REQ-GOV-031 — TÉMOIN : seul un banc PROUVÉ sort du checkout de la forge ; l’espace absent ou illisible vaut la forge', () => {
+    expect(estLeCheckoutDeLaForge(undefined, BAC)).toBe(true);
+    expect(estLeCheckoutDeLaForge('', BAC)).toBe(true);
+    expect(estLeCheckoutDeLaForge(join(BAC, 'inexistant'), BAC)).toBe(true);
+    expect(estLeCheckoutDeLaForge(BAC, BAC)).toBe(true);
+    // Le banc : un dépôt lisible, hors de l'espace de travail lisible.
+    expect(estLeCheckoutDeLaForge(BAC2, BAC)).toBe(false);
   });
 });
