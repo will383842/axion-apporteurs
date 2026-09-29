@@ -13,7 +13,7 @@
 | Phase | Taches | Jours | Terminees |
 | --- | ---: | ---: | ---: |
 | -1 — Gouvernance (prealable bloquant) | 39 | 23.75 | 39 |
-| 0 — Socle technique | 136 | 103.85 | 95 |
+| 0 — Socle technique | 136 | 103.85 | 101 |
 | 1 — Operationnel | 63 | 48.50 | 0 |
 | 2 — Argent | 45 | 33.50 | 0 |
 | 3 — Pilotage et conformite | 28 | 25.25 | 0 |
@@ -562,7 +562,7 @@ Couvre : `REQ-SEC-024`
 
 **Tests.** `tests/unit/securite/chiffrement-avec-aad.spec.ts`
 
-### QA-T05 — Pipeline GHCR privé → Coolify pull
+### QA-T05 — Pipeline GHCR privé → Coolify pull ✅ **fusionnee**
 
 `1 j` · zone `qualite` · depend de `QA-T04` · decisions `HYP-E1-5`
 
@@ -822,7 +822,7 @@ Couvre : `REQ-JUR-001`, `REQ-JUR-002`, `REQ-JUR-024`
 
 **Tests.** `axionia/src/content/__tests__/vocabulaire-apporteur.spec.ts`
 
-### JUR-T04 — Registre RGPD, LIA, AIPD, mention art. 14, politique de confidentialité
+### JUR-T04 — Registre RGPD, LIA, AIPD, mention art. 14, politique de confidentialité ✅ **fusionnee**
 
 `1.5 j` · zone `juridique` · sensible : attribution, rgpd · depend de `JUR-T02`
 
@@ -1883,7 +1883,7 @@ Couvre : `REQ-GOV-021`
 
 **Tests.** `tests/unit/gouvernance/reqs-hyp-zone-d-une-tache.spec.ts`
 
-### GOV-122 — La cloture retient un renommage fait dans la seconde meme de la fusion, et une date illisible y devient NaN au lieu d'un refus
+### GOV-122 — La cloture retient un renommage fait dans la seconde meme de la fusion, et une date illisible y devient NaN au lieu d'un refus ✅ **fusionnee**
 
 `0.5 j` · zone `gouvernance` · depend de `GOV-110`
 
@@ -1893,7 +1893,7 @@ Couvre : `REQ-GOV-026`
 
 **Tests.** `tests/unit/gouvernance/la-declaration-se-lit-dans-le-commit-de-fusion.spec.ts`
 
-### GOV-118 — La garde des attributions reconnait un gabarit a son nom, et reste verte si elle ne confronte aucun script de garde
+### GOV-118 — La garde des attributions reconnait un gabarit a son nom, et reste verte si elle ne confronte aucun script de garde ✅ **fusionnee**
 
 `0.5 j` · zone `gouvernance` · depend de `GOV-084`
 
@@ -1903,7 +1903,7 @@ Couvre : `REQ-GOV-021`
 
 **Tests.** `tests/unit/gouvernance/aucun-script-de-garde-orphelin.spec.ts`
 
-### GOV-119 — La porte A d'une PR rougit quand une AUTRE PR fusionne pendant son execution
+### GOV-119 — La porte A d'une PR rougit quand une AUTRE PR fusionne pendant son execution ✅ **fusionnee**
 
 `0.5 j` · zone `gouvernance` · aucune dependance
 
@@ -1923,7 +1923,7 @@ Couvre : `REQ-GOV-021`
 
 **Tests.** `tests/unit/gouvernance/une-livraison-declare-ce-qu-elle-a-touche.spec.ts`
 
-### GOV-121 — Le temoin de la preuve de vol ne joue que la cle absente, jamais owner ou branch a null, la forme reelle du registre
+### GOV-121 — Le temoin de la preuve de vol ne joue que la cle absente, jamais owner ou branch a null, la forme reelle du registre ✅ **fusionnee**
 
 `0.25 j` · zone `gouvernance` · depend de `GOV-049`
 

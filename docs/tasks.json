@@ -2273,11 +2273,11 @@
       ],
       "externe": null,
       "estimateDays": 1,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "owner": "A01",
       "lot": null,
-      "branch": null,
-      "pr": null,
+      "branch": "t/qa-t05",
+      "pr": 221,
       "issue": 222,
       "attempts": 0,
       "motif": null,
@@ -2289,6 +2289,11 @@
         "REQ-QA-032": [
           "tests/unit/qualite/build-sans-base.spec.ts"
         ]
+      },
+      "attestation": {
+        "pr": 221,
+        "sha": "c92e40057345ace0bf46fdbb7e5613cdfd60b23a",
+        "fusionneeAt": "2026-09-29T13:17:12Z"
       }
     },
     {
@@ -3772,11 +3777,11 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 1.5,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "owner": "A01",
       "lot": null,
-      "branch": null,
-      "pr": null,
+      "branch": "t/jur-t04",
+      "pr": 233,
       "issue": 232,
       "attempts": 0,
       "motif": null,
@@ -3794,6 +3799,11 @@
         "REQ-SEC-030": [
           "tests/unit/juridique/registre-rgpd.spec.ts"
         ]
+      },
+      "attestation": {
+        "pr": 233,
+        "sha": "6245830f72258d7f41f0b95affbb0bee49163e6c",
+        "fusionneeAt": "2026-09-29T12:03:27Z"
       }
     },
     {
@@ -13284,7 +13294,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "Releve par les deux lentilles sur la PR #211 (GOV-110), non bloquant a la fusion. (1) titreALaFusion compare avec <= a mergedAt, a la seconde : un renommage horodate dans la seconde meme de la fusion est retenu comme anterieur, alors que l'acceptance de GOV-110 dit anterieur. A livrer : un renommage de meme horodatage que la fusion n'est pas tenu pour anterieur, ou l'egalite est refusee comme indecidable ; le choix est ecrit. (2) Un createdAt ou un mergedAt qui n'est pas une date passe le filtre des renommages complets et produit NaN, alors que le docblock promet null : la chronologie illisible doit rendre null, et la cloture refuser. (3) La prose et le message de refus parlent encore du titre de la PR la ou la regle lit desormais le titre a l'instant de la fusion. TEMOINS rouges d'abord : un renommage a la seconde de la fusion ; une date illisible dans la chronologie.",
       "tests": {
         "REQ-GOV-026": [
@@ -13293,9 +13303,13 @@
       },
       "issue": 224,
       "owner": "A01",
-      "branch": null,
-      "pr": null,
-      "attestation": null,
+      "branch": "t/gov-122",
+      "pr": 226,
+      "attestation": {
+        "pr": 226,
+        "sha": "75b5e8db8ca6597ede338623d779bb4e05ed66ea",
+        "fusionneeAt": "2026-09-29T10:29:03Z"
+      },
       "motif": null
     },
     {
@@ -13320,7 +13334,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "Releve par la lentille securite sur les PR #209 (GOV-075) et #216 (GOV-084), non bloquant a la fusion. (1) estGabarit reconnait un chemin gabarit a sa FORME (le dernier segment vaut l'identifiant de sa tache) : un vrai fichier nomme ainsi serait pris pour un gabarit. A livrer : la regle est confrontee au disque (un gabarit n'existe pas), ou la limite est ecrite en tete de la garde avec son temoin. (2) La famille script_de_garde_sans_porteur n'a pas de plancher : si l'index ne rend aucun fichier sous scripts/gates/, la garde confronte zero script et reste verte. A livrer : zero script confronte est un refus nomme. (3) Elle prend tout fichier suivi sous scripts/gates/, pas seulement les scripts : dire dans l'en-tete si c'est voulu, ou filtrer. TEMOINS rouges d'abord pour (1) et (2).",
       "tests": {
         "REQ-GOV-021": [
@@ -13329,9 +13343,13 @@
       },
       "issue": 229,
       "owner": "A01",
-      "branch": null,
-      "pr": null,
-      "attestation": null,
+      "branch": "t/gov-118",
+      "pr": 231,
+      "attestation": {
+        "pr": 231,
+        "sha": "c4b0e3fa2a6620db70d8f680a67f93fe7e318b41",
+        "fusionneeAt": "2026-09-29T11:31:05Z"
+      },
       "motif": null
     },
     {
@@ -13353,7 +13371,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "Mesure le 2026-09-29 sur la PR #209 (run 36523369124) : la PR #211 a fusionne pendant la porte A de #209 ; gov:etat a lu cette fusion sur la forge et exige son commit dans le clone du job, qui ne le portait pas (github_illisible : le commit de fusion 911f326 est absent du clone). Deux tests d'etat reel (REQ-GOV-006, REQ-GOV-007) ont rougi sans rien devoir au delta de #209. Releve par la lentille exactitude. A livrer : la porte A d'une PR ne depend pas de l'etat des AUTRES PR a l'instant ou elle tourne ; ce que gov:etat lit sur la forge est borne a la base du clone, ou l'absence d'un commit posterieur a cette base est une exemption nommee et comptee, jamais un rouge. TEMOIN rouge d'abord : une fusion posterieure a la base du clone, lue sur une forge simulee, ne fait plus rougir la garde ; une fusion anterieure dont le commit manque rougit toujours.",
       "tests": {
         "REQ-GOV-006": [
@@ -13362,9 +13380,13 @@
       },
       "issue": 223,
       "owner": "A01",
-      "branch": null,
-      "pr": null,
-      "attestation": null,
+      "branch": "t/gov-119",
+      "pr": 225,
+      "attestation": {
+        "pr": 225,
+        "sha": "b3d7572e5ea469a9e9352445d0c322c09916e44d",
+        "fusionneeAt": "2026-09-29T10:12:09Z"
+      },
       "motif": null
     },
     {
@@ -13422,7 +13444,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.25,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "Releve par les deux lentilles sur la PR #217 (GOV-049), non bloquant a la fusion. (1) Les deux faces rouges retirent la cle, et ne jouent donc que la moitie required de la clause jumelle du schema ; le registre porte owner: null et branch: null, que refusent la moitie type de la clause et ses motifs. A livrer : deux faces de plus, owner: null puis branch: null sur une tache en_cours hors lot, chacune refusee et nommee. (2) Le docblock de la specification dit qu'AUCUN temoin ne voyait la clause refuser : c'est inexact, clore-une-tache-livree-seule.spec.ts voit deja branch: null refuse sur une tache fusionnee. A corriger : aucun temoin ne la voyait refuser pour en_cours, ni pour owner.",
       "tests": {
         "REQ-GOV-021": [
@@ -13431,9 +13453,13 @@
       },
       "issue": 227,
       "owner": "A01",
-      "branch": null,
-      "pr": null,
-      "attestation": null,
+      "branch": "t/gov-121",
+      "pr": 228,
+      "attestation": {
+        "pr": 228,
+        "sha": "067b12152aecd345bca0e1edde897ea72a1a5e92",
+        "fusionneeAt": "2026-09-29T11:14:41Z"
+      },
       "motif": null
     },
     {
