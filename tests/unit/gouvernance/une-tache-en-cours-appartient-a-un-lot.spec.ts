@@ -6,9 +6,9 @@
  * @no-red-first: la regle existe deja au schema (clause jumelle : en_cours exige owner et branch) ; ce fichier lui donne le temoin rouge qu'elle n'avait pas, sur une tache hors de tout lot.
  *
  * LA PRÉMISSE D'ORIGINE EST TOMBÉE. Une tâche `en_cours` sans lot n'est plus « invisible » :
- * GOV-057 la clôt seule (`cloturerUneTacheSeule`, témoin `clore-une-tache-livree-seule.spec.ts`),
- * et GOV-086 tient qu'une tâche prise avec sa branche et sans `pr` est EN VOL
- * (`un-etat-cible-porte-son-operation.spec.ts`). Exiger un lot contredirait ce second témoin.
+ * `cloturerUneTacheSeule` la clôt seule (témoin `clore-une-tache-livree-seule.spec.ts`), et
+ * `un-etat-cible-porte-son-operation.spec.ts` tient qu'une tâche prise avec sa branche et sans
+ * `pr` est EN VOL. Exiger un lot contredirait ce second témoin.
  *
  * CE QUI MANQUAIT : la preuve de vol elle-même n'avait aucun témoin ROUGE. La clause jumelle du
  * schéma exige `owner` et `branch` dès `en_cours`, et rien ne la voyait refuser. Ce fichier la
