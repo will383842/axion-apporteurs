@@ -8,12 +8,12 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `476135a` — 2026-09-29T17:21:45+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #239 (un contrôle requis rouge ou une revue manquante) · 2. #241 (un conflit avec `main`) · 3. #242 (un conflit avec `main`) |
+| Qu’est-ce qui est en vol ? | 1. #239 (un contrôle requis rouge ou une revue manquante) · 2. #244 (un contrôle requis rouge ou une revue manquante) · 3. #241 (un conflit avec `main`) · 4. #242 (un conflit avec `main`) |
 | Qui tient quoi ? | QA-T05 (A01) · JUR-T04 (A01) · GOV-066 (A01) · GOV-122 (A01) · GOV-118 (A01) · GOV-119 (A01) · GOV-121 (A01) |
 | Où en est la phase ? | phase 0 — 95/136 tâches, reste 32.75 j |
 | Le prochain pas | QA-T05 — Pipeline GHCR privé → Coolify pull |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
-| Dernière entrée de journal | PR #237 — 2026-09-29 |
+| Dernière entrée de journal | PR #244 — 2026-09-29 |
 
 **Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
@@ -61,8 +61,9 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
 | 1 | #239 — chore(GOV-012): registre rattrape, sept taches closes, gel de la gouvernance, avenants JUR-T03 et INT-T27-A | `t/registre-rattrapage-11` | un contrôle requis rouge ou une revue manquante |
-| 2 | #241 — fix(GOV-062): l'outillage qui execute la porte A est juge, sept points nommes | `t/gov-062` | un conflit avec `main` — à résoudre avant tout |
-| 3 | #242 — feat(JUR-T34): la politique de confidentialite de l'espace, tiree du registre de l'article 30 et acceptee a la premiere connexion | `t/jur-t34` | un conflit avec `main` — à résoudre avant tout |
+| 2 | #244 — docs(GOV-012): confirmation du depot par e-mail — plan W20 et quatorze taches versees en phase 1, sans DECISIONS ni REQ nouvelles | `t/w20-confirmation-email` | un contrôle requis rouge ou une revue manquante |
+| 3 | #241 — fix(GOV-062): l'outillage qui execute la porte A est juge, sept points nommes | `t/gov-062` | un conflit avec `main` — à résoudre avant tout |
+| 4 | #242 — feat(JUR-T34): la politique de confidentialite de l'espace, tiree du registre de l'article 30 et acceptee a la premiere connexion | `t/jur-t34` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -104,6 +105,28 @@ Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
 
+### PR #244 — 2026-09-29 — docs(GOV-012): confirmation du depot par e-mail — plan W20 et quatorze taches versees en phase 1, sans DECISIONS ni REQ nouvelles
+
+**Fait.** Le plan du chantier W20, décidé par Williams le 2026-09-29 (session -d7), est versé dans
+`docs/chantiers/W20-confirmation-par-email.md` : le dépôt est confirmé d'abord par un e-mail au
+contact rencontré, envoyé quinze minutes après le dépôt, et l'appel devient le dernier recours
+(échantillon aléatoire et appels ciblés, liste « À appeler aujourd'hui »). Seize hypothèses HYP-W20,
+neuf exigences proposées et sept amendements y sont écrits, avec quinze questions à Williams et leurs
+valeurs par défaut. Quatorze tâches entrent au registre en phase 1, `a_faire`, en ne citant que des
+exigences existantes : UX-P1-40 à UX-P1-43, DM-40, DM-41, DM-43, SEC-40, SEC-41, INT-T40, JUR-T40,
+JUR-T41, QA-T40 et QA-T41. Quatorze tâches existantes sont amendées, dont JUR-T01b, qui porte la règle
+de confirmation tacite proposée, à arbitrer par Williams. Chiffrage : phase 1, 16,25 j.
+
+**Reste.** La passe gardien-spec : inscrire les HYP-W20 au §2 de `docs/DECISIONS.md` et les exigences
+au registre, puis porter leurs identifiants dans `reqs` et `hyp` des tâches versées par le verbe de
+GOV-117, dans le lot dédié de GOV-112 après GOV-116 (question 14). Les réponses de Williams aux quinze
+questions. Aucune tâche W20 n'est livrée par cette PR, et aucune ne doit être clôturée à cause de son
+titre.
+
+**Appris.** Une tâche versée sans `tests{}` fait échouer `lot:paths`, qui dérive ses chemins des tests
+nommés et non du champ `paths` ; et une tâche qui nomme comme preuve un test existant qui ne cite pas
+l'exigence rougit `gov:trace` : il faut nommer un test neuf.
+
 ### PR #237 — 2026-09-29 — feat(INT-T26): la candidature recue cree un apporteur candidat, coordonnees tirees et chiffrees, rattachement par empreinte
 
 **Fait.** Une candidature reçue d'axionia devient un apporteur `candidat`. Le snapshot figé et le
@@ -132,19 +155,7 @@ partir de celle-ci. Les archives composées avec les attributs d'export ne sont 
 **Appris.** Sur un dépôt public, la tête n'est pas ce qui est publié : chaque commit d'une PR l'est,
 même écrasé à la fusion.
 
-### PR #233 — 2026-09-29 — feat(JUR-T04): registre de l'article 30 et AIPD, sources et derives du schema, la page de confidentialite scindee
-
-**Fait.** Le registre de l'article 30 décrit trois traitements, chaque rubrique rattachée à sa source
-ou déclarée à compléter avec sa question ; ses données stockées se dérivent du schéma dans les deux
-sens. L'AIPD est posée, non signée. La page de confidentialité passe à JUR-T34, versée ici.
-
-**Reste.** Les réponses juridiques, toutes rendues à Will : durées, sous-traitants, localisations,
-et les huit questions du chantier des conseillers salariés, écrites sans créer leur traitement.
-
-**Appris.** La garde dérivée du schéma a vu seule la table arrivée entre la rédaction et la PR : un
-registre qui se confronte au schéma ne vieillit pas en silence.
-
-… 3 entrée(s) affichée(s) sur 101 ; les 98 plus ancienne(s) se lisent dans `docs/journal/`.
+… 3 entrée(s) affichée(s) sur 102 ; les 99 plus ancienne(s) se lisent dans `docs/journal/`.
 
 ## Dette déclarée
 
