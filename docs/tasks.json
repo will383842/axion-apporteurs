@@ -20,6 +20,8 @@
         "scripts/lot/tasks.schema.json",
         "scripts/plan-state/build.ts",
         "scripts/gates/hook-env.js",
+        "scripts/gates/gh-sur.js",
+        "scripts/gates/git-push-sur.js",
         "docs/tasks.json",
         "scripts/gates/gov-autonomie.ts",
         "scripts/gates/gov-publication.ts",
@@ -11267,7 +11269,9 @@
         "REQ-GOV-003": [
           "tests/unit/gouvernance/aucun-script-de-garde-orphelin.spec.ts"
         ]
-      }
+      },
+      "issue": 212,
+      "owner": "A01"
     },
     {
       "id": "GOV-085",

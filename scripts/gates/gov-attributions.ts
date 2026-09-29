@@ -201,7 +201,17 @@ export type Sources = {
   dettesGate: DetteGate[];
   dettesLot: DetteLot[];
   exemptionsFigees: ExemptionFigee[];
+  /**
+   * GOV-084 — les fichiers SUIVIS sous `scripts/gates/`, dérivés de l'index git, jamais tapés.
+   * Absent vaut VIDE, comme toute dimension d'un cas (`completer`) : les cas écrits à la main par les
+   * spécifications n'ont pas à le porter. Le seul producteur réel, `chargerSources`, le remplit
+   * toujours, et `aucun-script-de-garde-orphelin.spec.ts` vérifie qu'il vaut la liste suivie.
+   */
+  scriptsDeGarde?: string[];
 };
+
+/** GOV-084 — le répertoire des scripts de garde, dont chaque fichier suivi doit avoir une tâche porteuse. */
+export const DOSSIER_DES_GARDES = 'scripts/gates/';
 
 /**
  * Toutes les familles de FAUTE. `--prove` exige qu'un témoin DÉCLARÉ pour chacune la fasse rougir,
@@ -221,6 +231,7 @@ export const FAMILLES = [
   'raison_perimee',
   'exemption_non_figee',
   'chemin_gabarit',
+  'script_de_garde_sans_porteur',
 ] as const;
 export type Famille = (typeof FAMILLES)[number];
 export type Faute = { famille: Famille; message: string };
@@ -262,6 +273,8 @@ export type Verdict = {
   occurrences?: number;
   raisonsConfrontees?: number;
   gabarits?: CompteDesGabarits;
+  /** GOV-084 — le nombre de scripts suivis sous `scripts/gates/` réellement confrontés au registre. */
+  scriptsDeGarde?: number;
 };
 
 /**
@@ -955,6 +968,20 @@ export function analyser(s: Sources): Verdict {
     }
   }
 
+  // ── (0 bis) GOV-084 — tout script de garde suivi a une tâche porteuse ──────────
+  // Un script que nulle tâche ne déclare (`paths` ou `tests{}`, entrée exacte ou répertoire) est une
+  // garde que personne ne porte. La liste vient de l'index git : un script neuf y entre de lui-même.
+  const scriptsDeGarde = s.scriptsDeGarde ?? [];
+  for (const script of scriptsDeGarde) {
+    if (s.taches.some((t) => couvre(t, script))) continue;
+    dire(
+      'script_de_garde_sans_porteur',
+      `${script} — script de garde suivi que nulle tâche de docs/tasks.json ne déclare. Personne ne le ` +
+        `porte : le jour où il casse, rien ne dit qui le répare ni contre quelle exigence il a été écrit. ` +
+        `Ajoute-le aux paths de la tâche qui l'a créé, ou de celle qui le garde.`
+    );
+  }
+
   // Le lieu d'une gate dans `docs/gates.json` : l'identifiant n'y entre que si son script est partagé.
   const porteursDuScript = new Map<string, number>();
   for (const g of s.gates) {
@@ -1321,7 +1348,14 @@ export function analyser(s: Sources): Verdict {
     }
   }
 
-  return { fautes, exemptions, occurrences, raisonsConfrontees, gabarits };
+  return {
+    fautes,
+    exemptions,
+    occurrences,
+    raisonsConfrontees,
+    gabarits,
+    scriptsDeGarde: scriptsDeGarde.length,
+  };
 }
 
 // ── les registres : ce qui est DÉCLARÉ est vu, nommé, compté, et ne dort pas ──
@@ -2403,6 +2437,7 @@ export function chargerSources(
     dettesGate: DETTE_GATE_NON_RECIPROQUE,
     dettesLot: DETTE_LOT_JOURNAL,
     exemptionsFigees: EXEMPTIONS_FIGEES,
+    scriptsDeGarde: suivis.filter((f) => f.startsWith(DOSSIER_DES_GARDES)),
   };
 }
 
@@ -2412,7 +2447,8 @@ function rendreVert(
   exemptions: Exemption[],
   occurrences?: number,
   raisonsConfrontees?: number,
-  gabarits?: CompteDesGabarits
+  gabarits?: CompteDesGabarits,
+  scriptsDeGarde?: number
 ): string[] {
   const lignes = [
     `✅ gov:attributions — aucune attribution rompue (${FAMILLES.length} familles). ` +
@@ -2431,6 +2467,12 @@ function rendreVert(
         `de tâches non livrées de phase future — des exemptions légitimes, refermées le jour de leur lot :`
     );
     gabarits.admis.forEach((a) => lignes.push(`      ${a.tache} — ${a.chemin} (phase ${a.phase})`));
+  }
+  if (scriptsDeGarde !== undefined) {
+    lignes.push(
+      `   · scripts de garde : ${scriptsDeGarde} script(s) de garde suivi(s) sous ${DOSSIER_DES_GARDES} ` +
+        `confronté(s) au registre, chacun déclaré par au moins une tâche.`
+    );
   }
   for (const nature of NATURES) {
     const siennes = exemptions.filter((e) => e.nature === nature);
@@ -2454,12 +2496,16 @@ export function rendre({
   occurrences,
   raisonsConfrontees,
   gabarits,
+  scriptsDeGarde,
 }: Verdict): {
   code: number;
   lignes: string[];
 } {
   if (fautes.length === 0)
-    return { code: 0, lignes: rendreVert(exemptions, occurrences, raisonsConfrontees, gabarits) };
+    return {
+      code: 0,
+      lignes: rendreVert(exemptions, occurrences, raisonsConfrontees, gabarits, scriptsDeGarde),
+    };
   const lignes = [
     `❌ gov:attributions — ${fautes.length} attribution(s) rompue(s) (REQ-GOV-021, REQ-GOV-003) :\n`,
   ];
@@ -2494,6 +2540,7 @@ function completer(p: Partial<Sources>): Sources {
     dettesGate: p.dettesGate ?? [],
     dettesLot: p.dettesLot ?? [],
     exemptionsFigees: p.exemptionsFigees ?? [],
+    scriptsDeGarde: p.scriptsDeGarde ?? [],
   };
 }
 
@@ -2775,6 +2822,20 @@ const TEMOINS: Temoin[] = [
       ],
     },
     nomme: ['GOV-004', 'phase courante est 2'],
+  },
+  // ── (0 bis) GOV-084 — un script de garde suivi sans tâche porteuse ──
+  {
+    famille: 'script_de_garde_sans_porteur',
+    quoi: 'un script de garde NEUF, suivi, au milieu de scripts portés, que nulle tâche ne déclare',
+    sources: {
+      taches: [T_RESOLUE],
+      scriptsDeGarde: [
+        'scripts/gates/porte.ts',
+        'scripts/gates/neuve.ts',
+        'scripts/gates/porte.ts',
+      ],
+    },
+    nomme: ['scripts/gates/neuve.ts', 'nulle tâche'],
   },
   // ── (1) et (4) : une tâche LIVRÉE qui garde un gabarit est jugée, et son gabarit refusé ──
   {
@@ -3239,6 +3300,26 @@ const TEMOINS: Temoin[] = [
  * occurrence. Une garde qui rougit sur tout ne dit rien de plus qu'une garde qui ne rougit jamais.
  */
 const CONTRE_TEMOINS: ContreTemoin[] = [
+  {
+    quoi: 'GOV-084 — des scripts de garde portés par une entrée exacte, par un répertoire, et par un tests{}',
+    sources: {
+      taches: [
+        T_RESOLUE,
+        { ...T_RESOLUE, id: 'GOV-101', paths: ['scripts/gates/lib/'] },
+        {
+          ...T_RESOLUE,
+          id: 'GOV-102',
+          paths: [],
+          tests: { 'REQ-GOV-900': ['scripts/gates/prouve.spec.ts#un cas'] },
+        },
+      ],
+      scriptsDeGarde: [
+        'scripts/gates/porte.ts',
+        'scripts/gates/lib/outil.ts',
+        'scripts/gates/prouve.spec.ts',
+      ],
+    },
+  },
   {
     quoi: 'une gate déclarée dans les paths de sa tâche',
     sources: { taches: [{ ...T_RESOLUE, paths: ['scripts/gates/detect-pii.ts'] }], gates: [PII] },
