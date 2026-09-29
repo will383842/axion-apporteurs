@@ -8,12 +8,12 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `b34b959` — 2026-09-29T18:00:27+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #241 (un contrôle requis rouge ou une revue manquante) · 2. #242 (un conflit avec `main`) · 3. #244 (un conflit avec `main`) · 4. #245 (un conflit avec `main`) |
+| Qu’est-ce qui est en vol ? | 1. #241 (un contrôle requis rouge ou une revue manquante) · 2. #246 (un contrôle requis rouge ou une revue manquante) · 3. #242 (un conflit avec `main`) · 4. #244 (un conflit avec `main`) · 5. #245 (un conflit avec `main`) |
 | Qui tient quoi ? | aucune tâche revendiquée |
 | Où en est la phase ? | phase 0 — 102/129 tâches, reste 21.75 j |
 | Le prochain pas | QA-T11 — Gate D migrations : base vierge, dump N-1, migrate diff vide, image N-1, lint expand/contract |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
-| Dernière entrée de journal | PR #239 — 2026-09-29 |
+| Dernière entrée de journal | PR #246 — 2026-09-29 |
 
 **Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
@@ -61,9 +61,10 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
 | 1 | #241 — fix(GOV-062): l'outillage qui execute la porte A est juge, sept points nommes | `t/gov-062` | un contrôle requis rouge ou une revue manquante |
-| 2 | #242 — feat(JUR-T34): la politique de confidentialite de l'espace, tiree du registre de l'article 30 et acceptee a la premiere connexion | `t/jur-t34` | un conflit avec `main` — à résoudre avant tout |
-| 3 | #244 — docs(GOV-017a): confirmation du depot par e-mail — plan W20 et quatorze taches versees en phase 1, sans DECISIONS ni REQ nouvelles | `t/w20-confirmation-email` | un conflit avec `main` — à résoudre avant tout |
-| 4 | #245 — feat(QA-T11): porte D, expand puis contract contre le code deploye, vidage N-1 seme, diff vide | `t/qa-t11` | un conflit avec `main` — à résoudre avant tout |
+| 2 | #246 — chore(GOV-012): GOV-123 et GOV-124 versees, exception au gel decidee par Williams | `t/registre-rattrapage-12` | un contrôle requis rouge ou une revue manquante |
+| 3 | #242 — feat(JUR-T34): la politique de confidentialite de l'espace, tiree du registre de l'article 30 et acceptee a la premiere connexion | `t/jur-t34` | un conflit avec `main` — à résoudre avant tout |
+| 4 | #244 — docs(GOV-017a): confirmation du depot par e-mail — plan W20 et quatorze taches versees en phase 1, sans DECISIONS ni REQ nouvelles | `t/w20-confirmation-email` | un conflit avec `main` — à résoudre avant tout |
+| 5 | #245 — feat(QA-T11): porte D, expand puis contract contre le code deploye, vidage N-1 seme, diff vide | `t/qa-t11` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -97,6 +98,18 @@ Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
 
+### PR #246 — 2026-09-29 — chore(GOV-012): GOV-123 et GOV-124 versees, exception au gel decidee par Williams
+
+**Fait.** Deux tâches versées, en exception au gel décidée par Williams. GOV-123 sort les vues
+dérivées des PR et les rend sur main après chaque fusion. GOV-124 ramène à une lentille la
+relecture d'une PR que le risque dérivé classe ordinaire.
+
+**Reste.** Les deux tâches à coder, en priorité. INT-T26 attend la fusion de sa dépendance
+INT-T27-A pour être close.
+
+**Appris.** Une clôture se juge avec ses dépendances : une tâche livrée par une PR fusionnée
+reste ouverte tant que sa dépendance ne l'est pas, sinon le registre ment sur l'ordre.
+
 ### PR #239 — 2026-09-29 — chore(GOV-012): registre rattrape, sept taches closes, gel de la gouvernance, avenants JUR-T03 et INT-T27-A
 
 **Fait.** Onzième rattrapage. GOV-119, GOV-122, GOV-121, GOV-118, JUR-T04, QA-T05 et GOV-066 passent
@@ -129,19 +142,7 @@ entrent dans `env.ts` : un quatrième path, signalé au rattrapage.
 **Appris.** Une erreur typée `AttenteDeDependance` suffit au travail de fond pour distinguer
 « attendre » de « échouer ». Le traitement n'a rien à savoir de la file.
 
-### PR #235 — 2026-09-29 — fix(GOV-066): la garde d'entite juge chaque commit de la PR, pas seulement la tete, et ecrit ce qu'elle ne lit pas
-
-**Fait.** La garde des coordonnées ne juge plus seulement la tête : chaque commit poussé par la PR
-est lu, fichier ajouté ou modifié par commit, tel qu'il était. Une coordonnée ajoutée puis retirée
-avant la porte A est nommée avec son commit. Ce qu'elle ne lit pas est écrit et imprimé.
-
-**Reste.** L'historique déjà fusionné n'est pas relu : chaque commit y a été jugé par sa PR, à
-partir de celle-ci. Les archives composées avec les attributs d'export ne sont pas lues.
-
-**Appris.** Sur un dépôt public, la tête n'est pas ce qui est publié : chaque commit d'une PR l'est,
-même écrasé à la fusion.
-
-… 3 entrée(s) affichée(s) sur 102 ; les 99 plus ancienne(s) se lisent dans `docs/journal/`.
+… 3 entrée(s) affichée(s) sur 103 ; les 100 plus ancienne(s) se lisent dans `docs/journal/`.
 
 ## Dette déclarée
 
