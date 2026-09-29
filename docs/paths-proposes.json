@@ -2,12 +2,12 @@
   "version": 1,
   "resume": {
     "_methode": "une PAIRE est comptée quand l'intersection des deux `paths[]` n'est pas vide, par égalité de chaîne. ⚠️ Elle ne lit PAS le champ `paths` des tâches : deux tâches peuvent y figurer comme « sans intersection » alors que leurs `paths` déclarés se recouvrent — c'est le cas de GOV-025 et GOV-028, qui partagent `scripts/gates/gov-identifiants.ts`. Le composeur, lui, compare bien `t.paths` : cette vue ne dit donc pas ce qu'il fera. Ces trois totaux sont écrits par `scripts/lot/paths-proposes.ts` et par rien d'autre ; `tsx scripts/lot/paths-proposes.ts --check` échoue si le fichier rendu en diverge.",
-    "tachesCouvertes": 305,
-    "pairesEnIntersection": 4520,
-    "cheminsDeclares": 837,
-    "cheminsDistincts": 538,
+    "tachesCouvertes": 311,
+    "pairesEnIntersection": 4531,
+    "cheminsDeclares": 843,
+    "cheminsDistincts": 542,
     "cheminsPartages": 109,
-    "tachesSansAucuneIntersection": 87,
+    "tachesSansAucuneIntersection": 91,
     "listeDesTachesIsolees": [
       "QA-T08",
       "QA-T12",
@@ -93,8 +93,12 @@
       "INT-T26",
       "INT-T27-A",
       "GOV-103",
+      "GOV-116",
+      "GOV-117",
       "GOV-119",
       "GOV-120",
+      "JUR-T34",
+      "JUR-T35",
       "QA-T34"
     ],
     "cheminsLesPlusPartages": [
@@ -111,15 +115,15 @@
         "taches": 10
       },
       {
+        "chemin": "tests/unit/gouvernance/registre-lecteur-unique.spec.ts",
+        "taches": 7
+      },
+      {
         "chemin": "tests/unit/gouvernance/entite-registre.spec.ts",
         "taches": 6
       },
       {
         "chemin": ".github/workflows/nightly.yml",
-        "taches": 5
-      },
-      {
-        "chemin": "docs/contrat/CONTRAT-APPORTEUR-V1.md",
         "taches": 5
       }
     ],
@@ -1589,6 +1593,18 @@
       "tests/unit/securite/acces-scope.spec.ts",
       "tests/integration/idor.spec.ts"
     ],
+    "GOV-112": [
+      "tests/unit/gouvernance/registre-lecteur-unique.spec.ts"
+    ],
+    "GOV-115": [
+      "tests/unit/gouvernance/registre-lecteur-unique.spec.ts"
+    ],
+    "GOV-116": [
+      "tests/unit/gouvernance/lot-dedie-gardien-spec.spec.ts"
+    ],
+    "GOV-117": [
+      "tests/unit/gouvernance/reqs-hyp-zone-d-une-tache.spec.ts"
+    ],
     "GOV-122": [
       "tests/unit/gouvernance/la-declaration-se-lit-dans-le-commit-de-fusion.spec.ts"
     ],
@@ -1603,6 +1619,12 @@
     ],
     "GOV-121": [
       "tests/unit/gouvernance/une-tache-en-cours-appartient-a-un-lot.spec.ts"
+    ],
+    "JUR-T34": [
+      "tests/unit/juridique/politique-de-confidentialite.spec.ts"
+    ],
+    "JUR-T35": [
+      "tests/unit/juridique/aucun-depot-reel-sans-aipd-signee.spec.ts"
     ],
     "QA-T34": [
       "tests/unit/qualite/un-seul-producteur-de-deploiement.spec.ts"
