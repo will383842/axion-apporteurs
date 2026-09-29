@@ -8,7 +8,7 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `50b0b9c` — 2026-09-29T11:30:15+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #218 (un conflit avec `main`) · 2. #219 (état `UNKNOWN`) · 3. #221 (brouillon) |
+| Qu’est-ce qui est en vol ? | 1. #218 (un contrôle requis rouge ou une revue manquante) · 2. #219 (un contrôle requis rouge ou une revue manquante) · 3. #221 (brouillon) |
 | Qui tient quoi ? | GOV-049 (A01) · GOV-075 (A01) · GOV-084 (A01) · GOV-110 (A01) |
 | Où en est la phase ? | phase 0 — 91/125 tâches, reste 29.25 j |
 | Le prochain pas | QA-T05 — Pipeline GHCR privé → Coolify pull |
@@ -60,8 +60,8 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #218 — feat(DM-04): commission et prorata en fonction pure, entiers exacts, bareme choisi par commissionId | `t/dm-04` | un conflit avec `main` — à résoudre avant tout |
-| 2 | #219 — chore(GOV-012): registre rattrape, quatre taches closes, cinq suites versees | `t/registre-rattrapage-10` | état `UNKNOWN` — à qualifier à la main |
+| 1 | #218 — feat(DM-04): commission et prorata en fonction pure, entiers exacts, bareme choisi par commissionId | `t/dm-04` | un contrôle requis rouge ou une revue manquante |
+| 2 | #219 — chore(GOV-012): registre rattrape, quatre taches closes, cinq suites versees | `t/registre-rattrapage-10` | un contrôle requis rouge ou une revue manquante |
 | 3 | #221 — feat(QA-T05): la forge construit, juge puis publie l'image, la plateforme ne fera plus que la tirer | `t/qa-t05` | brouillon — hors file tant qu’il n’est pas prêt |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
@@ -109,7 +109,7 @@ pourcentage s'arrondit en entiers, un cas sans barème bloque, un dépassement d
 prorata est cumulatif, en entiers exacts : quatre invariants tenus sur cinq cents tirages. Le
 plafond vit dans la SSOT, sourcé et daté.
 
-**Reste.** La PR est empilée sur l'import de la grille (#214) et se fusionne après lui. Le plafond
+**Reste.** Le plafond
 est rangé sous `PARAMETRES` et non sous `SEUILS` : la garde des seuils ne connaît que les durées et
 les montants. Les cinq valeurs d'activité entrent au glossaire par le `gardien-spec`.
 
