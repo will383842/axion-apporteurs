@@ -201,7 +201,28 @@ export type Sources = {
   dettesGate: DetteGate[];
   dettesLot: DetteLot[];
   exemptionsFigees: ExemptionFigee[];
+  /**
+   * GOV-084 — les fichiers SUIVIS sous `scripts/gates/`, dérivés de l'index git, jamais tapés.
+   * Absent vaut VIDE, comme toute dimension d'un cas (`completer`) : les cas écrits à la main par les
+   * spécifications n'ont pas à le porter. Le seul producteur réel, `chargerSources`, le remplit
+   * toujours, et `aucun-script-de-garde-orphelin.spec.ts` vérifie qu'il vaut la liste suivie.
+   */
+  scriptsDeGarde?: string[];
+  /**
+   * GOV-118 — les fichiers SUIVIS du dépôt : un chemin à la forme d'un gabarit qui y existe, comme
+   * fichier ou comme dossier, est un chemin RÉEL. Absent vaut « aucun fichier » : la forme décide
+   * seule, comme avant (les cas écrits à la main par les spécifications n'ont pas à le porter).
+   */
+  fichiersSuivis?: string[];
 };
+
+/**
+ * GOV-084 — le répertoire des scripts de garde, dont chaque fichier suivi doit avoir une tâche porteuse.
+ * GOV-118 — TOUT fichier suivi sous ce dossier, pas seulement les scripts exécutables, et c'est VOULU :
+ * une donnée, une bibliothèque ou un gabarit lus par une garde en font partie, et leur disparition la
+ * désarmerait aussi sûrement. Un fichier qui n'y a pas sa place se déplace ; il ne s'exempte pas.
+ */
+export const DOSSIER_DES_GARDES = 'scripts/gates/';
 
 /**
  * Toutes les familles de FAUTE. `--prove` exige qu'un témoin DÉCLARÉ pour chacune la fasse rougir,
@@ -221,6 +242,7 @@ export const FAMILLES = [
   'raison_perimee',
   'exemption_non_figee',
   'chemin_gabarit',
+  'script_de_garde_sans_porteur',
 ] as const;
 export type Famille = (typeof FAMILLES)[number];
 export type Faute = { famille: Famille; message: string };
@@ -262,6 +284,8 @@ export type Verdict = {
   occurrences?: number;
   raisonsConfrontees?: number;
   gabarits?: CompteDesGabarits;
+  /** GOV-084 — le nombre de scripts suivis sous `scripts/gates/` réellement confrontés au registre. */
+  scriptsDeGarde?: number;
 };
 
 /**
@@ -334,18 +358,35 @@ function sansAncre(valeur: string): string {
  * son gabarit lui-même est REFUSÉ (`chemin_gabarit`, voir `gabaritRefuse`). Un statut absent
  * n'exempte pas (prédicat fermé).
  */
-function estGabarit(t: Tache, chemin: string): boolean {
-  return chemin.slice(chemin.lastIndexOf('/') + 1) === t.id;
+function estGabarit(t: Tache, chemin: string, existe: Existe): boolean {
+  return chemin.slice(chemin.lastIndexOf('/') + 1) === t.id && !existe(chemin);
+}
+
+/**
+ * GOV-118 — « ce chemin existe-t-il dans les fichiers suivis, comme fichier ou comme dossier ? ».
+ * Un gabarit dit « pas encore connu » : un chemin qui existe est connu, quelle que soit sa forme.
+ */
+type Existe = (chemin: string) => boolean;
+function existeDans(suivis: readonly string[] | undefined): Existe {
+  const fichiers = new Set(suivis ?? []);
+  const dossiers = new Set<string>();
+  for (const x of fichiers) {
+    for (let i = x.indexOf('/'); i !== -1; i = x.indexOf('/', i + 1)) dossiers.add(x.slice(0, i));
+  }
+  return (chemin) => {
+    const c = chemin.replace(/\/$/, '');
+    return fichiers.has(c) || dossiers.has(c);
+  };
 }
 
 /** Les paths RÉELS d'une tâche : ceux qui ne sont pas un gabarit. */
-function pathsReels(t: Tache): string[] {
-  return (t.paths ?? []).filter((x) => !estGabarit(t, x));
+function pathsReels(t: Tache, existe: Existe): string[] {
+  return (t.paths ?? []).filter((x) => !estGabarit(t, x, existe));
 }
 
 /** La tâche garde au moins un path gabarit : une part de ce qu'elle touche n'est pas encore connue. */
-function aUnGabarit(t: Tache): boolean {
-  return (t.paths ?? []).some((x) => estGabarit(t, x));
+function aUnGabarit(t: Tache, existe: Existe): boolean {
+  return (t.paths ?? []).some((x) => estGabarit(t, x, existe));
 }
 
 /** Le gabarit dit encore « pas encore connu » : le statut est ÉCRIT, et il n'est pas livré (`LIVREE`, source unique). */
@@ -354,8 +395,8 @@ function pasEncoreLivree(t: Tache): boolean {
 }
 
 /** Ce qu'une faute ajoute quand la tâche jugée est livrée et garde un gabarit : pourquoi elle n'est pas exemptée. */
-function gabaritLivre(t: Tache): string {
-  return aUnGabarit(t) && !pasEncoreLivree(t)
+function gabaritLivre(t: Tache, existe: Existe): string {
+  return aUnGabarit(t, existe) && !pasEncoreLivree(t)
     ? ` ${t.id} est « ${t.statut ?? '(statut absent)'} » et garde un path gabarit : « pas encore connu » n'est plus vrai, ` +
         `et le gabarit lui-même est refusé (chemin_gabarit).`
     : '';
@@ -416,9 +457,9 @@ function gabaritRefuse(t: Tache, phaseCourante: number | undefined): string | nu
 }
 
 /** Le motif d'une exemption pour paths gabarit : les paths eux-mêmes, réels et gabarit, que le lecteur peut vérifier. */
-function pathsDe(t: Tache): string {
-  const gabarits = (t.paths ?? []).filter((x) => estGabarit(t, x));
-  return `paths réels : ${pathsReels(t).join(', ') || '(aucun)'} · gabarit : ${gabarits.join(', ')}`;
+function pathsDe(t: Tache, existe: Existe): string {
+  const gabarits = (t.paths ?? []).filter((x) => estGabarit(t, x, existe));
+  return `paths réels : ${pathsReels(t, existe).join(', ') || '(aucun)'} · gabarit : ${gabarits.join(', ')}`;
 }
 
 /** La surface qu'une tâche DÉCLARE toucher : ses `paths` et les fichiers de son `tests{}`. */
@@ -930,6 +971,7 @@ export function analyser(s: Sources): Verdict {
   let occurrences = 0;
 
   const parId = new Map(s.taches.map((t) => [t.id, t]));
+  const existe = existeDans(s.fichiersSuivis);
 
   // ── (0) aucun chemin construit sur l'identifiant de sa propre tâche, là où il ment ──
   // Chaque tâche et chaque chemin sont confrontés, et comptés : un vert sur un registre vide ne se
@@ -940,7 +982,7 @@ export function analyser(s: Sources): Verdict {
     gabarits.taches++;
     for (const chemin of t.paths ?? []) {
       gabarits.chemins++;
-      if (!estGabarit(t, chemin)) continue;
+      if (!estGabarit(t, chemin, existe)) continue;
       const refus = gabaritRefuse(t, phaseCourante);
       if (refus === null) {
         gabarits.admis.push({ tache: t.id, chemin, phase: t.phase as number });
@@ -953,6 +995,30 @@ export function analyser(s: Sources): Verdict {
           `(ajouter-path, puis retirer-path --gabarits).`
       );
     }
+  }
+
+  // ── (0 bis) GOV-084 — tout script de garde suivi a une tâche porteuse ──────────
+  // Un script que nulle tâche ne déclare (`paths` ou `tests{}`, entrée exacte ou répertoire) est une
+  // garde que personne ne porte. La liste vient de l'index git : un script neuf y entre de lui-même.
+  const scriptsDeGarde = s.scriptsDeGarde ?? [];
+  // GOV-118 — ZÉRO CONFRONTÉ N'EST PAS UN VERT. Une liste LUE (`chargerSources` la pose toujours) et
+  // vide dit que l'index n'a rien rendu sous `scripts/gates/` : la garde refuse au lieu de verdir.
+  // Absente, la dimension n'a pas été lue (un cas de preuve qui ne la déclare pas) : rien à juger.
+  if (s.scriptsDeGarde !== undefined && s.scriptsDeGarde.length === 0) {
+    dire(
+      'script_de_garde_sans_porteur',
+      `${DOSSIER_DES_GARDES} — aucun script de garde confronté : l'index n'a rendu aucun fichier suivi ` +
+        `sous ce dossier. Un vert sur zéro script ne se lirait pas autrement qu'un vert sur tous.`
+    );
+  }
+  for (const script of scriptsDeGarde) {
+    if (s.taches.some((t) => couvre(t, script))) continue;
+    dire(
+      'script_de_garde_sans_porteur',
+      `${script} — script de garde suivi que nulle tâche de docs/tasks.json ne déclare. Personne ne le ` +
+        `porte : le jour où il casse, rien ne dit qui le répare ni contre quelle exigence il a été écrit. ` +
+        `Ajoute-le aux paths de la tâche qui l'a créé, ou de celle qui le garde.`
+    );
   }
 
   // Le lieu d'une gate dans `docs/gates.json` : l'identifiant n'y entre que si son script est partagé.
@@ -995,12 +1061,14 @@ export function analyser(s: Sources): Verdict {
       exempter('dette_gate', t.id, site, dette.raison);
       continue;
     }
-    if (aUnGabarit(t) && pasEncoreLivree(t)) {
+    if (aUnGabarit(t, existe) && pasEncoreLivree(t)) {
       exempter(
-        pathsReels(t).length === 0 ? 'gate_paths_non_resolus' : 'gate_paths_en_partie_gabarit',
+        pathsReels(t, existe).length === 0
+          ? 'gate_paths_non_resolus'
+          : 'gate_paths_en_partie_gabarit',
         t.id,
         site,
-        pathsDe(t),
+        pathsDe(t, existe),
         lieuDe(g, '')
       );
       continue;
@@ -1010,7 +1078,7 @@ export function analyser(s: Sources): Verdict {
       `docs/gates.json — la gate « ${g.id} » déclare le porteur « ${g.tache} » pour ${chemin}, ` +
         `et ${g.tache} ne déclare ce fichier ni dans ses paths ni dans son tests{}. ` +
         `L'attribution n'est réciproque dans aucun sens.` +
-        gabaritLivre(t)
+        gabaritLivre(t, existe)
     );
   }
   for (const d of s.dettesGate) {
@@ -1198,14 +1266,14 @@ export function analyser(s: Sources): Verdict {
         exempter('contexte', m, situer, c.raison);
         continue;
       }
-      if (aUnGabarit(t) && pasEncoreLivree(t)) {
+      if (aUnGabarit(t, existe) && pasEncoreLivree(t)) {
         exempter(
-          pathsReels(t).length === 0
+          pathsReels(t, existe).length === 0
             ? 'mention_paths_non_resolus'
             : 'mention_paths_en_partie_gabarit',
           m,
           situer,
-          pathsDe(t),
+          pathsDe(t, existe),
           cle
         );
         continue;
@@ -1215,7 +1283,7 @@ export function analyser(s: Sources): Verdict {
         `${situer} — nomme « ${m} »${ecrit}, et ${fichier} n'est ni dans les paths ni dans le tests{} de ${m}. ` +
           `Le lecteur suivant ira chercher chez ${m} un fichier qui n'est pas à elle. Corrige le nom, ou ` +
           `DÉCLARE la mention en « contexte » dans CITATIONS_DECLAREES si la tâche est nommée comme voisine.` +
-          gabaritLivre(t)
+          gabaritLivre(t, existe)
       );
     }
   };
@@ -1321,7 +1389,14 @@ export function analyser(s: Sources): Verdict {
     }
   }
 
-  return { fautes, exemptions, occurrences, raisonsConfrontees, gabarits };
+  return {
+    fautes,
+    exemptions,
+    occurrences,
+    raisonsConfrontees,
+    gabarits,
+    scriptsDeGarde: scriptsDeGarde.length,
+  };
 }
 
 // ── les registres : ce qui est DÉCLARÉ est vu, nommé, compté, et ne dort pas ──
@@ -2403,6 +2478,8 @@ export function chargerSources(
     dettesGate: DETTE_GATE_NON_RECIPROQUE,
     dettesLot: DETTE_LOT_JOURNAL,
     exemptionsFigees: EXEMPTIONS_FIGEES,
+    scriptsDeGarde: suivis.filter((f) => f.startsWith(DOSSIER_DES_GARDES)),
+    fichiersSuivis: [...suivis],
   };
 }
 
@@ -2412,7 +2489,8 @@ function rendreVert(
   exemptions: Exemption[],
   occurrences?: number,
   raisonsConfrontees?: number,
-  gabarits?: CompteDesGabarits
+  gabarits?: CompteDesGabarits,
+  scriptsDeGarde?: number
 ): string[] {
   const lignes = [
     `✅ gov:attributions — aucune attribution rompue (${FAMILLES.length} familles). ` +
@@ -2431,6 +2509,12 @@ function rendreVert(
         `de tâches non livrées de phase future — des exemptions légitimes, refermées le jour de leur lot :`
     );
     gabarits.admis.forEach((a) => lignes.push(`      ${a.tache} — ${a.chemin} (phase ${a.phase})`));
+  }
+  if (scriptsDeGarde !== undefined) {
+    lignes.push(
+      `   · scripts de garde : ${scriptsDeGarde} script(s) de garde suivi(s) sous ${DOSSIER_DES_GARDES} ` +
+        `confronté(s) au registre, chacun déclaré par au moins une tâche.`
+    );
   }
   for (const nature of NATURES) {
     const siennes = exemptions.filter((e) => e.nature === nature);
@@ -2454,12 +2538,16 @@ export function rendre({
   occurrences,
   raisonsConfrontees,
   gabarits,
+  scriptsDeGarde,
 }: Verdict): {
   code: number;
   lignes: string[];
 } {
   if (fautes.length === 0)
-    return { code: 0, lignes: rendreVert(exemptions, occurrences, raisonsConfrontees, gabarits) };
+    return {
+      code: 0,
+      lignes: rendreVert(exemptions, occurrences, raisonsConfrontees, gabarits, scriptsDeGarde),
+    };
   const lignes = [
     `❌ gov:attributions — ${fautes.length} attribution(s) rompue(s) (REQ-GOV-021, REQ-GOV-003) :\n`,
   ];
@@ -2494,6 +2582,8 @@ function completer(p: Partial<Sources>): Sources {
     dettesGate: p.dettesGate ?? [],
     dettesLot: p.dettesLot ?? [],
     exemptionsFigees: p.exemptionsFigees ?? [],
+    scriptsDeGarde: p.scriptsDeGarde,
+    fichiersSuivis: p.fichiersSuivis,
   };
 }
 
@@ -2775,6 +2865,20 @@ const TEMOINS: Temoin[] = [
       ],
     },
     nomme: ['GOV-004', 'phase courante est 2'],
+  },
+  // ── (0 bis) GOV-084 — un script de garde suivi sans tâche porteuse ──
+  {
+    famille: 'script_de_garde_sans_porteur',
+    quoi: 'un script de garde NEUF, suivi, au milieu de scripts portés, que nulle tâche ne déclare',
+    sources: {
+      taches: [T_RESOLUE],
+      scriptsDeGarde: [
+        'scripts/gates/porte.ts',
+        'scripts/gates/neuve.ts',
+        'scripts/gates/porte.ts',
+      ],
+    },
+    nomme: ['scripts/gates/neuve.ts', 'nulle tâche'],
   },
   // ── (1) et (4) : une tâche LIVRÉE qui garde un gabarit est jugée, et son gabarit refusé ──
   {
@@ -3239,6 +3343,26 @@ const TEMOINS: Temoin[] = [
  * occurrence. Une garde qui rougit sur tout ne dit rien de plus qu'une garde qui ne rougit jamais.
  */
 const CONTRE_TEMOINS: ContreTemoin[] = [
+  {
+    quoi: 'GOV-084 — des scripts de garde portés par une entrée exacte, par un répertoire, et par un tests{}',
+    sources: {
+      taches: [
+        T_RESOLUE,
+        { ...T_RESOLUE, id: 'GOV-101', paths: ['scripts/gates/lib/'] },
+        {
+          ...T_RESOLUE,
+          id: 'GOV-102',
+          paths: [],
+          tests: { 'REQ-GOV-900': ['scripts/gates/prouve.spec.ts#un cas'] },
+        },
+      ],
+      scriptsDeGarde: [
+        'scripts/gates/porte.ts',
+        'scripts/gates/lib/outil.ts',
+        'scripts/gates/prouve.spec.ts',
+      ],
+    },
+  },
   {
     quoi: 'une gate déclarée dans les paths de sa tâche',
     sources: { taches: [{ ...T_RESOLUE, paths: ['scripts/gates/detect-pii.ts'] }], gates: [PII] },
