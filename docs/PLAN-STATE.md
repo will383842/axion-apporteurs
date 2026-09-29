@@ -7,15 +7,15 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `ab82029` — 2026-09-29T04:05:42+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #200 (un contrôle requis rouge ou une revue manquante) |
+| Où est `main` ? | `c60e2f3` — 2026-09-29T07:25:51+02:00 |
+| Qu’est-ce qui est en vol ? | aucune PR ouverte |
 | Qui tient quoi ? | GOV-058 (A01) · GOV-081 (A01) · GOV-106 (A01) · GOV-107 (A01) · GOV-108 (A01) |
 | Où en est la phase ? | phase 0 — 84/122 tâches, reste 32.60 j |
 | Le prochain pas | QA-T05 — Pipeline GHCR privé → Coolify pull |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
 | Dernière entrée de journal | PR #206 — 2026-09-29 |
 
-**Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** `pnpm lot:composer` pour composer le lot suivant, puis revendiquer ses tâches par `gh issue edit`. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : 0
 
@@ -58,9 +58,7 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 
 ## File de fusion
 
-| # | PR | Branche | Ce qui la bloque |
-| --- | --- | --- | --- |
-| 1 | #200 — feat(SEC-05): lot L0-12 — cloisonnement par apporteur, une grammaire des zones de prose | `lot/L0-12-gouvernance` | un contrôle requis rouge ou une revue manquante |
+Aucune PR ouverte.
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -92,7 +90,7 @@ Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeS
 
 ## Dernier atterrissage
 
-`origin/main` = `ab82029` (2026-09-29T04:05:42+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `c60e2f3` (2026-09-29T07:25:51+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 

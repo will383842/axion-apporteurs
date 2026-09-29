@@ -10234,7 +10234,9 @@
         "package.json",
         "tests/unit/gouvernance/outillage-de-la-porte-a.spec.ts",
         "scripts/gates/gov-conventions.ts",
-        ".github/workflows/ci.yml"
+        ".github/workflows/ci.yml",
+        "docs/agents.json",
+        ".claude/agents/architecte.md"
       ],
       "schema": false,
       "sensible": [],
