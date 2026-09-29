@@ -8,12 +8,12 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `5af85de` — 2026-09-29T18:43:13+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #242 (un contrôle requis rouge ou une revue manquante) · 2. #245 (un contrôle requis rouge ou une revue manquante) · 3. #244 (un conflit avec `main`) |
+| Qu’est-ce qui est en vol ? | 1. #242 (un contrôle requis rouge ou une revue manquante) · 2. #245 (un contrôle requis rouge ou une revue manquante) · 3. #248 (un contrôle requis rouge ou une revue manquante) · 4. #244 (un conflit avec `main`) |
 | Qui tient quoi ? | GOV-062 (A01) · GOV-124 (A01) |
 | Où en est la phase ? | phase 0 — 102/129 tâches, reste 21.75 j |
 | Le prochain pas | QA-T11 — Gate D migrations : base vierge, dump N-1, migrate diff vide, image N-1, lint expand/contract |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
-| Dernière entrée de journal | PR #246 — 2026-09-29 |
+| Dernière entrée de journal | PR #248 — 2026-09-29 |
 
 **Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
@@ -62,7 +62,8 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 | --- | --- | --- | --- |
 | 1 | #242 — feat(JUR-T34): la politique de confidentialite de l'espace, tiree du registre de l'article 30 et acceptee a la premiere connexion | `t/jur-t34` | un contrôle requis rouge ou une revue manquante |
 | 2 | #245 — feat(QA-T11): porte D, expand puis contract contre le code deploye, vidage N-1 seme, diff vide | `t/qa-t11` | un contrôle requis rouge ou une revue manquante |
-| 3 | #244 — docs(GOV-017a): confirmation du depot par e-mail — plan W20 et quatorze taches versees en phase 1, sans DECISIONS ni REQ nouvelles | `t/w20-confirmation-email` | un conflit avec `main` — à résoudre avant tout |
+| 3 | #248 — feat(GOV-124): une lentille pour une PR sans risque, derivee et fermee, deux pour tout le reste | `t/gov-124-lentille` | un contrôle requis rouge ou une revue manquante |
+| 4 | #244 — docs(GOV-017a): confirmation du depot par e-mail — plan W20 et quatorze taches versees en phase 1, sans DECISIONS ni REQ nouvelles | `t/w20-confirmation-email` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -79,7 +80,7 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 
 ## Décisions du jour
 
-`docs/adr/0025-les-decisions-de-gouvernance-de-will-s-ecrivent-en-adr.md` — partners/ADR-0025 — Les décisions de gouvernance de Will s'écrivent en ADR : la règle d'arrêt du 2026-09-15 et les arbitrages des 15 et 16 septembre
+`docs/adr/0025-les-decisions-de-gouvernance-de-will-s-ecrivent-en-adr.md` — partners/ADR-0025 — Les décisions de gouvernance de Will s'écrivent en ADR : la règle d'arrêt du 2026-09-15 et les arbitrages des 15 et 16 septembre · `docs/adr/0026-une-lentille-pour-une-pr-sans-risque.md` — partners/ADR-0026 — Une lentille pour une PR sans risque, deux pour tout le reste et dans le doute
 
 Dérivé de `git log` sur `docs/adr/`, restreint au jour du dernier atterrissage. Une décision de Will n’est pas un ADR : elle vit au registre `docs/DECISIONS.md`, tranchée ou tenue par une hypothèse datée.
 
@@ -98,6 +99,18 @@ Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la
 ## Journal
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
+
+### PR #248 — 2026-09-29 — feat(GOV-124): une lentille pour une PR sans risque, derivee et fermee, deux pour tout le reste
+
+**Fait.** Une PR de documentation, de tests ou d'outillage des vues, en zone gouvernance ou
+qualité, n'exige plus que la lentille exactitude. Le classement est dérivé par le calcul du risque,
+jamais déclaré, et tout ce qu'il ne sait pas lire vaut deux lentilles.
+
+**Reste.** L'architecte accepte l'ADR 0026. Aucune dérivation ne lit l'intention d'un texte : la
+limite est écrite dans l'ADR.
+
+**Appris.** Une liste d'autorisation doit exclure ce qui nourrit son propre calcul : sans cela, une
+PR relue par une seule lentille aurait pu ramener à une lentille toutes les PR suivantes d'une tâche.
 
 ### PR #246 — 2026-09-29 — chore(GOV-012): GOV-123 et GOV-124 versees, exception au gel decidee par Williams
 
@@ -125,23 +138,7 @@ du témoin de `gov:pr` ont chacune été autorisées par Williams, une seule foi
 6 quater mesurait le risque d'un fichier racine, et la réserve du §7 l'a fait rougir. Le témoin
 porte désormais le label que la réserve exige.
 
-### PR #239 — 2026-09-29 — chore(GOV-012): registre rattrape, sept taches closes, gel de la gouvernance, avenants JUR-T03 et INT-T27-A
-
-**Fait.** Onzième rattrapage. GOV-119, GOV-122, GOV-121, GOV-118, JUR-T04, QA-T05 et GOV-066 passent
-`fusionnee` par `lot:cloture --tache`, chacune attestée par son commit d'écrasement. Deux avenants
-A01 lèvent des dettes de la lentille exactitude sur axion-ia. JUR-T03 consigne la décision de Will
-sur « commercial » et corrige son path. INT-T27-A porte la transcription du contrat v2 et chaque
-fichier que sa PR modifie. Le gel de la gouvernance, décidé par Williams, reporte huit tâches
-GOV en phase 3 et avance GOV-111 en phase 1.
-
-**Reste.** DM-03-P et DM-04 attendent la fusion de DM-03-A (axion-ia #1181). INT-T02 est refusée
-par la clôture : sa PR ne la déclare ni par son titre ni par sa ligne `Lot:`, et sa branche sort du
-motif. Il faut un rattrapage par ADR.
-
-**Appris.** Une clôture qui passe seule peut rendre le registre rouge par une dépendance encore
-ouverte dans l'autre dépôt : `gov:tasks` se rejoue après chaque clôture, pas seulement à la fin.
-
-… 3 entrée(s) affichée(s) sur 104 ; les 101 plus ancienne(s) se lisent dans `docs/journal/`.
+… 3 entrée(s) affichée(s) sur 105 ; les 102 plus ancienne(s) se lisent dans `docs/journal/`.
 
 ## Dette déclarée
 
