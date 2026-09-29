@@ -8,7 +8,7 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `07b8d29` — 2026-09-29T02:25:30+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #200 (état `UNKNOWN`) |
+| Qu’est-ce qui est en vol ? | 1. #200 (un contrôle requis rouge ou une revue manquante) |
 | Qui tient quoi ? | SEC-05 (A01) · GOV-049 (A01) · GOV-069 (A01) |
 | Où en est la phase ? | phase 0 — 84/122 tâches, reste 32.60 j |
 | Le prochain pas | QA-T05 — Pipeline GHCR privé → Coolify pull |
@@ -60,7 +60,7 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #200 — feat(SEC-05): lot L0-12 — cloisonnement par apporteur, une grammaire des zones de prose, une tache en cours appartient a un lot | `lot/L0-12-gouvernance` | état `UNKNOWN` — à qualifier à la main |
+| 1 | #200 — feat(SEC-05): lot L0-12 — cloisonnement par apporteur, une grammaire des zones de prose, une tache en cours appartient a un lot | `lot/L0-12-gouvernance` | un contrôle requis rouge ou une revue manquante |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -98,18 +98,17 @@ Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
 
-### PR #200 — 2026-09-28 — feat(SEC-05): lot L0-12 — cloisonnement par apporteur, une grammaire des zones de prose, une tache en cours appartient a un lot
+### PR #200 — 2026-09-28 — feat(SEC-05): lot L0-12 — cloisonnement par apporteur, une grammaire des zones de prose
 
-**Fait.** Trois tâches, un commit chacune. SEC-05 : la couche d'accès `forApporteur` injecte
+**Fait.** Deux tâches, un commit chacune. SEC-05 : la couche d'accès `forApporteur` injecte
 l'apporteur de la session dans chaque `where`, que l'appelant peut restreindre sans jamais le
 remplacer ; elle refuse d'écrire l'identifiant, l'apporteur et les relations, et répond à un
 identifiant étranger exactement comme à un identifiant inexistant (404 identique à l'octet). Une
 garde statique confronte chaque route et action de l'espace à ses cas d'accès. GOV-069 : une seule
 grammaire découpe SQL, Prisma et prose pour la garde des termes interdits, et une construction jamais
-refermée est refusée en la nommant. GOV-049 : une tâche `en_cours` porte un lot, ou la preuve
-d'une livraison seule ; aucune forme de nom de branche n'en exempte.
+refermée est refusée en la nommant.
 
-**Reste.** Aucune route de l'espace ne reçoit encore d'identifiant de ressource : l'attaque boîte
+**Reste.** GOV-049 est sortie du lot : sa clause `en_cours ⇒ lot` contredisait un témoin livré par GOV-086 (une tâche prise, avec sa branche et sans PR, est en vol), et sa prémisse est tombée avec GOV-057, qui sait clore une tâche seule. Elle reste à faire, à re-arbitrer. Aucune route de l'espace ne reçoit encore d'identifiant de ressource : l'attaque boîte
 noire est jouée sur chaque méthode de la couche, et attend les écrans. « Même durée observable » est
 prouvée par la structure (une requête au texte identique), pas par une mesure de temps. GOV-069
 approche la continuation paresseuse des citations et les blocs HTML.
