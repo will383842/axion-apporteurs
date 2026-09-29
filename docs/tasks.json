@@ -10525,7 +10525,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 1,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "REQ-GOV-031 vise « tout ce qui est pousse » ; la garde ne juge que l'index de la tete. L'historique, et les archives que la forge produit a partir d'attributs d'export, ne sont pas lus. Sur un depot PUBLIC, la difference n'est pas theorique : ce qui a ete pousse une fois reste lisible, et la lecon deja payee dit que reecrire l'historique ne retire RIEN. A TRANCHER, ET LE LIVRABLE DIT LEQUEL : ou bien la garde juge CHAQUE commit pousse et pas seulement la tete, ou bien la limite est ECRITE dans l'exigence, dans `docs/gates.json` et dans le vert imprime. Les deux reponses sont admissibles ; laisser l'exigence promettre ce que la garde ne fait pas ne l'est pas — c'est la famille des affirmations devenues fausses que `gov:sonde` existe pour marquer. TEMOIN A DEUX FACES : un depot de bac d'essai dont la tete est propre mais dont un commit anterieur ne l'est pas fait sortir la garde en code non nul dans la variante « chaque commit », et sort en zero dans la variante « limite ecrite » — auquel cas le vert IMPRIME la limite ; le depot reel sort en zero dans les deux variantes, avec le compte des commits reellement lus.",
       "tests": {
         "REQ-GOV-031": [
@@ -10533,7 +10533,15 @@
         ]
       },
       "issue": 234,
-      "owner": "A01"
+      "owner": "A01",
+      "branch": "t/gov-066",
+      "pr": 235,
+      "attestation": {
+        "pr": 235,
+        "sha": "fa90f835210269e0692f433bc3cdf42af092eeda",
+        "fusionneeAt": "2026-09-29T14:41:40Z"
+      },
+      "motif": null
     },
     {
       "id": "GOV-067",

@@ -13,7 +13,7 @@
 | Phase | Taches | Jours | Terminees |
 | --- | ---: | ---: | ---: |
 | -1 — Gouvernance (prealable bloquant) | 39 | 23.75 | 39 |
-| 0 — Socle technique | 127 | 95.85 | 101 |
+| 0 — Socle technique | 127 | 95.85 | 102 |
 | 1 — Operationnel | 64 | 49.50 | 0 |
 | 2 — Argent | 45 | 33.50 | 0 |
 | 3 — Pilotage et conformite | 36 | 32.25 | 0 |
@@ -1236,7 +1236,7 @@ Couvre : `REQ-GOV-031`
 
 **Tests.** `tests/unit/gouvernance/deux-chemins-ne-se-confondent-pas.spec.ts`
 
-### GOV-066 — La garde d'entite juge l'index publie, pas tout ce que la forge sert du depot
+### GOV-066 — La garde d'entite juge l'index publie, pas tout ce que la forge sert du depot ✅ **fusionnee**
 
 `1 j` · zone `gouvernance` · sensible : argent · depend de `GOV-064`
 
