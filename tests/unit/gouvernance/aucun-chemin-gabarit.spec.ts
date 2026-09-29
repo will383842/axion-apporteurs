@@ -39,7 +39,8 @@ const VIDE: Sources = {
   dettesLot: [],
   exemptionsFigees: [],
   // GOV-084 : sans tâche, chaque script suivi de `scripts/gates/` serait un script sans porteur.
-  scriptsDeGarde: [],
+  // GOV-118 : la dimension est NON LUE (`undefined`), pas lue et vide — une liste vide est un refus.
+  scriptsDeGarde: undefined,
 };
 
 /** Une tâche de la phase 0, NON LIVRÉE, aux chemins réels : elle fixe la phase courante. */
@@ -99,6 +100,31 @@ describe('REQ-GOV-021 — TÉMOINS : le gabarit est refusé là où « pas encor
       'GOV-903',
       'GOV-904',
     ]);
+  });
+
+  // GOV-118 — un gabarit se reconnaissait à sa seule FORME : un vrai fichier nommé comme la tâche
+  // aurait été refusé comme un gabarit, ou exempté comme « pas encore connu ». La forme ne suffit
+  // plus : un chemin qui EXISTE dans les fichiers suivis, comme fichier ou comme dossier, est réel.
+  it('REQ-GOV-021 — TÉMOIN (GOV-118) : un chemin à la forme d’un gabarit qui EXISTE comme fichier suivi est un chemin réel', () => {
+    const t = gabarit('GOV-906', { statut: 'fusionnee' });
+    const reel = analyser({
+      ...VIDE,
+      fichiersSuivis: ['docs/gouvernance/GOV-906'],
+      taches: [ANCRE, t],
+    });
+    expect(reel.fautes.filter((f) => f.famille === 'chemin_gabarit')).toEqual([]);
+    const absent = analyser({ ...VIDE, fichiersSuivis: [], taches: [ANCRE, t] });
+    expect(absent.fautes.filter((f) => f.famille === 'chemin_gabarit')).toHaveLength(1);
+  });
+
+  it('REQ-GOV-021 — TÉMOIN (GOV-118) : un DOSSIER suivi au nom de la tâche est aussi un chemin réel', () => {
+    const t = gabarit('GOV-907', { statut: 'fusionnee' });
+    const v = analyser({
+      ...VIDE,
+      fichiersSuivis: ['docs/gouvernance/GOV-907/note.md'],
+      taches: [ANCRE, t],
+    });
+    expect(v.fautes.filter((f) => f.famille === 'chemin_gabarit')).toEqual([]);
   });
 
   it('REQ-GOV-021 — une tâche livrée qui garde DEUX gabarits est nommée pour chacun', () => {

@@ -31,6 +31,17 @@ describe('REQ-GOV-021 / REQ-GOV-003 — tout script de garde suivi a une tâche 
     expect(rendu.lignes.join('\n')).toContain('[script_de_garde_sans_porteur]');
   });
 
+  it('REQ-GOV-021 — TÉMOIN (GOV-118) : une liste de scripts LUE et VIDE fait sortir la garde en non nul — zéro confronté n’est pas un vert', () => {
+    const s = chargerSources(fichiersSuivis());
+    const verdict = analyser({ ...s, scriptsDeGarde: [] });
+    expect(rendre(verdict).code).toBe(1);
+    expect(
+      verdict.fautes.some(
+        (f) => f.famille === 'script_de_garde_sans_porteur' && f.message.includes('aucun script')
+      )
+    ).toBe(true);
+  });
+
   it('REQ-GOV-003 — le dépôt réel : chaque script suivi sous scripts/gates/ est confronté, tous ont un porteur, la garde sort en zéro et imprime le compte', () => {
     const suivis = fichiersSuivis();
     const s = chargerSources(suivis);
