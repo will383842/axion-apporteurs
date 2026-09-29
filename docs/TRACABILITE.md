@@ -16,7 +16,7 @@
 
 **334 exigences actives · 137 réputées testées · 137 couvertes · 0 orphelines.**
 
-330 tâches, dont 149 livrées · 176 fichiers de test exécutés par `vitest` sur 176 présents.
+330 tâches, dont 149 livrées · 177 fichiers de test exécutés par `vitest` sur 177 présents.
 
 ## Exigences réputées testées
 
@@ -598,6 +598,7 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | `tests/unit/juridique/charte-relationnelle.spec.ts` | oui | `REQ-JUR-034`, `REQ-JUR-035`, `REQ-JUR-036`, `REQ-JUR-037` |
 | `tests/unit/juridique/registre-rgpd.spec.ts` | oui | `REQ-CPL-009`, `REQ-JUR-009`, `REQ-JUR-025`, `REQ-SEC-030` |
 | `tests/unit/juridique/seuils-ssot.spec.ts` | oui | `REQ-EXT-028`, `REQ-JUR-015`, `REQ-JUR-029` |
+| `tests/unit/qualite/budget-par-route.spec.ts` | oui | `REQ-QA-031`, `REQ-UX-033` |
 | `tests/unit/qualite/build-sans-base.spec.ts` | oui | `REQ-QA-032` |
 | `tests/unit/qualite/env-fail-fast.spec.ts` | oui | `REQ-CPL-021`, `REQ-QA-030` |
 | `tests/unit/qualite/journal-redige.spec.ts` | oui | `REQ-QA-024` |

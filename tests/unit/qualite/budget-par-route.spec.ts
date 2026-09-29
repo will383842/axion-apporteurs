@@ -1,9 +1,9 @@
 // @req REQ-UX-033
-// @req REQ-QA-031
+// @req REQ-QA-031 → REQ-UX-033
 /**
  * `perf:bundle` — le poids que le navigateur charge VRAIMENT sur chaque route de l'espace.
  *
- * CE QUE CE FICHIER VISE. La garde `perf:budgets` (GOV-019) vérifie que chaque route A un budget ;
+ * CE QUE CE FICHIER VISE. La garde `perf:budgets` vérifie que chaque route A un budget ;
  * celle-ci vérifie qu'elle le TIENT. Trois pannes, toutes mesurées sur ce dépôt le 2026-09-29, sont
  * exercées ici plutôt que supposées :
  *
@@ -14,7 +14,7 @@
  *      mesure nulle est une FAUTE (`mesure_nulle`), jamais un succès.
  *   2. LE MANIFESTE QU'ON EXÉCUTERAIT. Le manifeste client d'une route est un fichier JavaScript ;
  *      il est LU (son objet JSON extrait), jamais exécuté, et une forme inconnue échoue fermé.
- *   3. LE DÉPASSEMENT QUI SE TAIRAIT. Jusqu'à QA-T20b, le dépassement n'arrête pas la CI — mais il
+ *   3. LE DÉPASSEMENT QUI SE TAIRAIT. Jusqu'à l'armement bloquant, le dépassement n'arrête pas la CI — mais il
  *      est NOMMÉ (route, octets, plafond), et le mode `--bloquant` prouve dès aujourd'hui qu'il
  *      rougit.
  *
@@ -108,7 +108,7 @@ const PAGE_B = 'src/app/(espace)/mes-entreprises/page.tsx';
 const PLAFONDS_LARGES = { routeOctets: 1_000_000, socleOctets: 1_000_000 };
 
 describe('la mesure est celle que le navigateur charge', () => {
-  it('somme les paquets communs et ceux de la route, en gzip, sans les polyfills noModule', () => {
+  it('REQ-UX-033 : somme les paquets communs et ceux de la route, en gzip, sans les polyfills noModule', () => {
     const vue = vueDe({
       racine: ['static/chunks/r1.js', 'static/chunks/r2.js'],
       polyfills: ['static/chunks/poly.js'],
@@ -225,7 +225,7 @@ describe('ce qui ne se mesure pas est une faute, jamais zéro octet', () => {
   });
 });
 
-describe('le dépassement : nommé aujourd’hui, bloquant sous --bloquant (QA-T20b)', () => {
+describe('le dépassement : nommé aujourd’hui, bloquant sous --bloquant (armement bloquant)', () => {
   const plafonds = { routeOctets: 10_000, socleOctets: 5_000 };
   const construire = (tailleRacine: number, tailleGraphiques: number) =>
     vueDe({

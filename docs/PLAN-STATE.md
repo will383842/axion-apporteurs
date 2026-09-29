@@ -7,8 +7,8 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `8d6d219` — 2026-09-29T22:00:53+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #254 (un conflit avec `main`) · 2. #255 (un conflit avec `main`) · 3. #242 (état `UNKNOWN`) |
+| Où est `main` ? | `6d36f60` — 2026-09-29T22:44:33+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #242 (un contrôle requis rouge ou une revue manquante) · 2. #259 (un contrôle requis rouge ou une revue manquante) · 3. #261 (un contrôle requis rouge ou une revue manquante) |
 | Qui tient quoi ? | GOV-127 (A01) |
 | Où en est la phase ? | phase 0 — 110/132 tâches, reste 17.75 j |
 | Le prochain pas | QA-T06 — Preview par PR sur Coolify, base éphémère, seed déterministe |
@@ -60,9 +60,9 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #254 — docs(GOV-017a): W20, questions 18 et 19 tranchees — aucune tacite d'une demande signalee, liberee apres 3 injoignables ou 45 jours | `t/w20-q18-q19` | un conflit avec `main` — à résoudre avant tout |
-| 2 | #255 — chore(GOV-012): registre rattrape, six taches closes dont DM-03-A livree dans axion-ia, paths de JUR-T03 et JUR-T29 | `t/registre-rattrapage-14` | un conflit avec `main` — à résoudre avant tout |
-| 3 | #242 — feat(JUR-T34): la politique de confidentialite de l'espace, tiree du registre de l'article 30 et acceptee a la premiere connexion | `t/jur-t34` | état `UNKNOWN` — à qualifier à la main |
+| 1 | #242 — feat(JUR-T34): la politique de confidentialite de l'espace, tiree du registre de l'article 30 et acceptee a la premiere connexion | `t/jur-t34` | un contrôle requis rouge ou une revue manquante |
+| 2 | #259 — feat(GOV-117): l'outil du registre ecrit reqs, hyp et zone d'une tache, valides contre le schema et les registres | `t/gov-117` | un contrôle requis rouge ou une revue manquante |
+| 3 | #261 — chore(GOV-012): registre rattrape, INT-T02 INT-T27-A et INT-T26 closes, REQ-DM-021 amendee, JUR-T36 versee | `t/registre-rattrapage-15` | un contrôle requis rouge ou une revue manquante |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -90,7 +90,7 @@ Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeS
 
 ## Dernier atterrissage
 
-`origin/main` = `8d6d219` (2026-09-29T22:00:53+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `6d36f60` (2026-09-29T22:44:33+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 

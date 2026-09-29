@@ -3,9 +3,9 @@
  * (REQ-UX-033, qui absorbe REQ-QA-031 ; tâche QA-T20 ; gate `perf:bundle`)
  *
  * USAGE : pnpm perf:bundle              mesure `.next`, NOMME les dépassements, sort en 0 s'il n'y a
- *                                       aucune faute de mesure (jusqu'à QA-T20b)
+ *                                       aucune faute de mesure (jusqu'à l'armement bloquant)
  *         pnpm perf:bundle:prove        un témoin par famille, des contre-témoins verts
- *         … --bloquant                  un dépassement fait sortir en 1 (ce que QA-T20b armera)
+ *         … --bloquant                  un dépassement fait sortir en 1 (ce que fera l'armement bloquant)
  *         … --build <dir>               un autre répertoire de build que `.next`
  *         … --pages <fichier>           une page à mesurer (répétable) ; défaut : les pages suivies
  *                                       sous `src/app/(espace)`, dérivées par `perf-budgets.ts`
@@ -44,7 +44,7 @@
  * Une faute de MESURE rougit toujours : pas de build, manifeste absent ou illisible, paquet cité
  * et absent du disque, mesure nulle. Un DÉPASSEMENT est nommé (route, octets, plafond) et, dans
  * la forge, annoté `::warning::` ; il ne rougit que sous `--bloquant`. C'est l'acceptation de
- * QA-T20 (« non bloquant jusqu'à QA-T20b ») ; ce n'est pas un `continue-on-error` : l'étape de CI
+ * QA-T20 (« non bloquant jusqu'à l'armement bloquant ») ; ce n'est pas un `continue-on-error` : l'étape de CI
  * rougit sur toute faute de mesure, et `--prove` montre dès aujourd'hui la face rouge du blocage.
  *
  * ── CE QU'ELLE NE FAIT PAS ───────────────────────────────────────────────────────────────────
@@ -52,7 +52,7 @@
  * Elle n'exécute jamais un manifeste : l'objet JSON en est EXTRAIT, et toute autre forme échoue
  * fermé (`manifeste_illisible`). Elle ne mesure ni le CSS, ni les paquets chargés à la demande
  * après le premier rendu (`import()` dynamique) — ce n'est pas du « First Load ». Elle ne lance ni
- * `lhci` ni Lighthouse : LCP, CLS et INP restent à QA-T20b.
+ * `lhci` ni Lighthouse : LCP, CLS et INP restent à l'armement bloquant.
  */
 
 import { readFileSync, existsSync } from 'node:fs';
@@ -473,7 +473,7 @@ function controlerLeDepot(argv: string[]): number {
   }
   const code = codeDeSortie(r, plafonds, bloquant);
   if (d.length > 0 && !bloquant) {
-    console.log(`   Dépassement(s) NOMMÉ(S), non bloquant(s) jusqu'à QA-T20b ; \`--bloquant\` les ferait rougir.`);
+    console.log(`   Dépassement(s) NOMMÉ(S), non bloquant(s) jusqu'à l'armement bloquant ; \`--bloquant\` les ferait rougir.`);
   }
   console.log(code === 0 ? '✅ perf:bundle' : `❌ perf:bundle — ${d.length} dépassement(s) sous --bloquant`);
   return code;
