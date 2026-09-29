@@ -13722,7 +13722,8 @@
         "next.config.ts",
         "tests/unit/qualite/un-seul-producteur-de-deploiement.spec.ts",
         "Dockerfile",
-        "package.json"
+        "package.json",
+        "scripts/gates/gov-conventions.ts"
       ],
       "schema": false,
       "sensible": [],
