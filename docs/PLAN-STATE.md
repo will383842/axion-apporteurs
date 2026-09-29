@@ -7,13 +7,13 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `0687957` — 2026-09-29T12:58:19+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #221 (un conflit avec `main`) · 2. #228 (un conflit avec `main`) · 3. #230 (un conflit avec `main`) · 4. #231 (un conflit avec `main`) · 5. #233 (un conflit avec `main`) |
-| Qui tient quoi ? | GOV-122 (A01) · GOV-119 (A01) · GOV-121 (A01) |
+| Où est `main` ? | `067b121` — 2026-09-29T13:14:40+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #231 (un conflit avec `main`) · 2. #221 (état `UNKNOWN`) · 3. #230 (état `UNKNOWN`) · 4. #233 (état `UNKNOWN`) |
+| Qui tient quoi ? | GOV-122 (A01) · GOV-118 (A01) · GOV-119 (A01) · GOV-121 (A01) |
 | Où en est la phase ? | phase 0 — 95/130 tâches, reste 28.50 j |
 | Le prochain pas | QA-T05 — Pipeline GHCR privé → Coolify pull |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
-| Dernière entrée de journal | PR #228 — 2026-09-29 |
+| Dernière entrée de journal | PR #231 — 2026-09-29 |
 
 **Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
@@ -60,11 +60,10 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #221 — feat(QA-T05): la forge construit, juge puis publie l'image, la plateforme ne fera plus que la tirer | `t/qa-t05` | un conflit avec `main` — à résoudre avant tout |
-| 2 | #228 — test(GOV-121): la preuve de vol est jouee a null, la forme reelle du registre, et le docblock dit juste | `t/gov-121` | un conflit avec `main` — à résoudre avant tout |
-| 3 | #230 — docs(GOV-012): conseillers salaries — plan W19 et taches versees (GOV-112, GOV-115 a GOV-117), sans DECISIONS ni GLOSSAIRE | `t/archi-commerciaux-salaries` | un conflit avec `main` — à résoudre avant tout |
-| 4 | #231 — fix(GOV-118): un gabarit qui existe est un chemin reel, zero script de garde confronte est un refus | `t/gov-118` | un conflit avec `main` — à résoudre avant tout |
-| 5 | #233 — feat(JUR-T04): registre de l'article 30 et AIPD, sources et derives du schema, la page de confidentialite scindee | `t/jur-t04` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #231 — fix(GOV-118): un gabarit qui existe est un chemin reel, zero script de garde confronte est un refus | `t/gov-118` | un conflit avec `main` — à résoudre avant tout |
+| 2 | #221 — feat(QA-T05): la forge construit, juge puis publie l'image, la plateforme ne fera plus que la tirer | `t/qa-t05` | état `UNKNOWN` — à qualifier à la main |
+| 3 | #230 — docs(GOV-012): conseillers salaries — plan W19 et taches versees (GOV-112, GOV-115 a GOV-117), sans DECISIONS ni GLOSSAIRE | `t/archi-commerciaux-salaries` | état `UNKNOWN` — à qualifier à la main |
+| 4 | #233 — feat(JUR-T04): registre de l'article 30 et AIPD, sources et derives du schema, la page de confidentialite scindee | `t/jur-t04` | état `UNKNOWN` — à qualifier à la main |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -75,6 +74,7 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 | Tâche | Revendiquée par | Issue | Statut |
 | --- | --- | --- | --- |
 | GOV-122 — La cloture retient un renommage fait dans la seconde meme de la fusion, et une date illisible y devient NaN au lieu d'un refus | A01 | #224 | `a_faire` |
+| GOV-118 — La garde des attributions reconnait un gabarit a son nom, et reste verte si elle ne confronte aucun script de garde | A01 | #229 | `a_faire` |
 | GOV-119 — La porte A d'une PR rougit quand une AUTRE PR fusionne pendant son execution | A01 | #223 | `a_faire` |
 | GOV-121 — Le temoin de la preuve de vol ne joue que la cle absente, jamais owner ou branch a null, la forme reelle du registre | A01 | #227 | `a_faire` |
 
@@ -94,13 +94,24 @@ Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeS
 
 ## Dernier atterrissage
 
-`origin/main` = `0687957` (2026-09-29T12:58:19+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `067b121` (2026-09-29T13:14:40+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
 ## Journal
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
+
+### PR #231 — 2026-09-29 — fix(GOV-118): un gabarit qui existe est un chemin reel, zero script de garde confronte est un refus
+
+**Fait.** La garde des attributions ne reconnaît plus un gabarit à sa seule forme : un chemin qui
+existe dans les fichiers suivis, comme fichier ou comme dossier, est un chemin réel. Une liste de
+scripts de garde lue et vide est un refus, et le périmètre de la famille est écrit.
+
+**Reste.** Rien sur ces trois points.
+
+**Appris.** Distinguer une dimension non lue d'une dimension lue et vide coûte une valeur de plus,
+`undefined` à côté de `[]` ; sans elle, le plancher aurait fait rougir tous les cas de preuve.
 
 ### PR #228 — 2026-09-29 — test(GOV-121): la preuve de vol est jouee a null, la forme reelle du registre, et le docblock dit juste
 
@@ -125,19 +136,7 @@ celle-ci illisible au lieu de produire NaN. La prose parle du titre à l'instant
 **Appris.** Une égalité à la seconde n'est pas un cas limite théorique quand la source horodate à la
 seconde et que deux de ses dates sont décalées d'une seconde : c'est le cas courant.
 
-### PR #225 — 2026-09-29 — fix(GOV-119): une fusion posterieure au clone est nommee et comptee, pas un rouge de la porte A
-
-**Fait.** `gov:etat` ne rougit plus quand une autre PR fusionne pendant la porte A d'une PR. Une
-fusion dont le commit manque au clone, et dont la date est postérieure à la base de ce clone, est
-nommée et comptée ; une fusion antérieure au commit absent, ou une date illisible, reste un rouge.
-
-**Reste.** Rien sur ce point. La porte A continue de lire la forge : elle voit seulement que le
-futur de son clone n'est pas une illisibilité.
-
-**Appris.** Le même rouge a coûté deux portes A dans la journée avant d'être versé. Une gate qui
-dépend de l'instant où elle tourne mesure la file, pas la PR.
-
-… 3 entrée(s) affichée(s) sur 95 ; les 92 plus ancienne(s) se lisent dans `docs/journal/`.
+… 3 entrée(s) affichée(s) sur 96 ; les 93 plus ancienne(s) se lisent dans `docs/journal/`.
 
 ## Dette déclarée
 
