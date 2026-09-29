@@ -8,14 +8,14 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `055590b` — 2026-09-29T01:17:40+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #199 (un contrôle requis rouge ou une revue manquante) |
+| Qu’est-ce qui est en vol ? | 1. #199 (rien) · 2. #200 (un contrôle requis rouge ou une revue manquante) |
 | Qui tient quoi ? | QA-T07 (A05) · SEC-05 (A01) · GOV-040 (A01) · GOV-049 (A01) · GOV-052 (A01) · GOV-064 (A01) · GOV-069 (A01) · GOV-071 (A01) · GOV-104 (A01) |
 | Où en est la phase ? | phase 0 — 76/118 tâches, reste 35.85 j |
-| Le prochain pas | QA-T07 — Gate sécurité : semgrep |
+| Le prochain pas | fusionner #199, puis QA-T07 — Gate sécurité : semgrep |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
 | Dernière entrée de journal | PR #200 — 2026-09-28 |
 
-**Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** `gh pr view 199 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : 0
 
@@ -60,7 +60,8 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #199 — chore(GOV-012): registre rattrape, huit taches livrees par trois PR passent fusionnee, quatre suites versees | `t/registre-rattrapage-7` | un contrôle requis rouge ou une revue manquante |
+| 1 | #199 — chore(GOV-012): registre rattrape, huit taches livrees par trois PR passent fusionnee, quatre suites versees | `t/registre-rattrapage-7` | rien — fusionnable maintenant |
+| 2 | #200 — feat(SEC-05): lot L0-12 — cloisonnement par apporteur, une grammaire des zones de prose, une tache en cours appartient a un lot | `lot/L0-12-gouvernance` | un contrôle requis rouge ou une revue manquante |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -89,6 +90,8 @@ Aucun ADR daté du 2026-09-29 (jour du dernier atterrissage).
 Dérivé de `git log` sur `docs/adr/`, restreint au jour du dernier atterrissage. Une décision de Will n’est pas un ADR : elle vit au registre `docs/DECISIONS.md`, tranchée ou tenue par une hypothèse datée.
 
 ## Prochain pas
+
+**Fusionner #199** — elle est en tête de file et ne bloque sur rien.
 
 **QA-T07** — Gate sécurité : semgrep (1 j) : 18 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
