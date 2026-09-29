@@ -7,15 +7,15 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `055590b` — 2026-09-29T01:17:40+02:00 |
-| Qu’est-ce qui est en vol ? | aucune PR ouverte |
-| Qui tient quoi ? | aucune tâche revendiquée |
+| Où est `main` ? | `07b8d29` — 2026-09-29T02:25:30+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #200 (un contrôle requis rouge ou une revue manquante) |
+| Qui tient quoi ? | GOV-058 (A01) · GOV-081 (A01) · GOV-106 (A01) · GOV-107 (A01) · GOV-108 (A01) |
 | Où en est la phase ? | phase 0 — 84/122 tâches, reste 32.60 j |
 | Le prochain pas | QA-T05 — Pipeline GHCR privé → Coolify pull |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
-| Dernière entrée de journal | PR #199 — 2026-09-28 |
+| Dernière entrée de journal | PR #206 — 2026-09-29 |
 
-**Ce qu’on tape maintenant.** `pnpm lot:composer` pour composer le lot suivant, puis revendiquer ses tâches par `gh issue edit`. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : 0
 
@@ -58,7 +58,9 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 
 ## File de fusion
 
-Aucune PR ouverte.
+| # | PR | Branche | Ce qui la bloque |
+| --- | --- | --- | --- |
+| 1 | #200 — feat(SEC-05): lot L0-12 — cloisonnement par apporteur, une grammaire des zones de prose | `lot/L0-12-gouvernance` | un contrôle requis rouge ou une revue manquante |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -66,13 +68,19 @@ Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partn
 
 Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’issue, posés par l’orchestrateur au §3 de `.claude/skills/lot/SKILL.md` (revendication **en vol**), et le champ `owner` de `docs/tasks.json`, écrit par `pnpm lot:cloture` seul (revendication **consolidée**). Cette rubrique les REND ; corriger une revendication fausse se fait dans l’une des deux sources, jamais ici.
 
-Aucune tâche revendiquée. Un agent ne prend jamais une tâche non revendiquée (REQ-GOV-007) : la revendication passe par l’orchestrateur.
+| Tâche | Revendiquée par | Issue | Statut |
+| --- | --- | --- | --- |
+| GOV-058 — Les decisions de gouvernance prises le 2026-09-15 ne sont ecrites nulle part dans le depot | A01 | #201 | `a_faire` |
+| GOV-081 — Une affirmation du code sur le registre est devenue fausse le jour ou le registre a change | A01 | #202 | `a_faire` |
+| GOV-106 — La garde lexicale juge le texte rendu par expressions regulieres : la JSX et le Markdown rendent a l'ecran des mots qu'elle ne voit pas | A01 | #203 | `a_faire` |
+| GOV-107 — Le titre qui declare une livraison se lit dans la premiere ligne du message d'ecrasement, et seul --subject le tient | A01 | #204 | `a_faire` |
+| GOV-108 — RM-15 se dit la seule redaction de l'obligation de journal, et deux documents la redigent encore sans la citer | A01 | #205 | `a_faire` |
 
-⚠️ **18 revendication(s) périmée(s)** — QA-T07, GOV-040, GOV-042, GOV-045, GOV-050, GOV-051, GOV-052, GOV-053, GOV-054, GOV-055, GOV-060, GOV-064, GOV-071, GOV-072, GOV-079, GOV-093, INT-T01c, GOV-104 : leur issue porte encore un label `owner:` alors que la tâche est livrée. `pnpm lot:cloture` écrit `docs/tasks.json` mais n’efface pas les labels ; la dette appartient à GOV-012.
+⚠️ **13 revendication(s) périmée(s)** — QA-T07, GOV-042, GOV-045, GOV-050, GOV-051, GOV-053, GOV-054, GOV-055, GOV-060, GOV-072, GOV-079, GOV-093, INT-T01c : leur issue porte encore un label `owner:` alors que la tâche est livrée. `pnpm lot:cloture` écrit `docs/tasks.json` mais n’efface pas les labels ; la dette appartient à GOV-012.
 
 ## Décisions du jour
 
-Aucun ADR daté du 2026-09-29 (jour du dernier atterrissage).
+`docs/adr/0025-les-decisions-de-gouvernance-de-will-s-ecrivent-en-adr.md` — partners/ADR-0025 — Les décisions de gouvernance de Will s'écrivent en ADR : la règle d'arrêt du 2026-09-15 et les arbitrages des 15 et 16 septembre
 
 Dérivé de `git log` sur `docs/adr/`, restreint au jour du dernier atterrissage. Une décision de Will n’est pas un ADR : elle vit au registre `docs/DECISIONS.md`, tranchée ou tenue par une hypothèse datée.
 
@@ -84,13 +92,31 @@ Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeS
 
 ## Dernier atterrissage
 
-`origin/main` = `055590b` (2026-09-29T01:17:40+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `07b8d29` (2026-09-29T02:25:30+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
 ## Journal
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
+
+### PR #206 — 2026-09-29 — chore(GOV-106): lot L0-13 — la garde lexicale juge le rendu, la regle d'arret est ecrite, la cloture confronte le titre
+
+**Fait.** Cinq tâches, un commit chacune. GOV-106 : la garde lexicale juge le texte que la JSX et
+le Markdown affichent, par l'arbre syntaxique ; des constructions qui rendaient à l'écran un terme
+interdit sans être vues le sont maintenant. GOV-058 : `partners/ADR-0025` écrit la règle d'arrêt
+décidée le 2026-09-15, avec ses sources, et dit ce qui n'a pas été retrouvé. GOV-081 : une raison
+de dette qui nomme une tâche absente de sa gate rougit (`raison_perimee`). GOV-107 : la première
+ligne du message d'écrasement ne déclare que si elle est le titre de la PR suivi de son numéro.
+GOV-108 : le journal et la reprise renvoient à RM-15, et l'arbre du journal se lit avec `-z`.
+
+**Reste.** La garde lexicale ne devine pas une valeur qui n'est pas constante, ni ce qu'un
+composant rend lui-même ; les homoglyphes restent à juger. `partners/ADR-0025` est proposé :
+l'articulation de la règle d'arrêt avec W14 (règle 2) est rendue à Will. Le titre d'une PR reste
+modifiable après sa fusion.
+
+**Appris.** Une forme de contournement se ferme sans se publier : les témoins sont entrés dans le
+même commit que le correctif, et aucun texte public ne les décrit.
 
 ### PR #199 — 2026-09-28 — chore(GOV-012): registre rattrape, huit taches livrees par trois PR passent fusionnee, quatre suites versees
 
@@ -130,26 +156,7 @@ un nom de fichier légitime qui n'est pas de l'UTF-8.
 d'usage puis repris : chaque commit a été rejoué sur `main` par son seul diff propre, et les vues
 rendues une fois, à la fin. Un `git add -A` d'urgence avait embarqué des vues dans chaque branche.
 
-### PR #188 — 2026-09-28 — fix(GOV-104): la cloture lit la declaration dans le commit de fusion et juge l'atterrissage sur la branche par defaut
-
-**Fait.** Les deux dettes de la lentille `securite` sur la PR #182, que Will a décidé de corriger
-(W18). La déclaration d'une livraison, titre et ligne `Lot:`, se lit dans le message du commit
-d'écrasement, immuable, et plus dans le corps de la PR, réécrivable après la fusion. Le pas 6 y
-recopie `Lot:` par `gh pr merge --body`. L'atterrissage se juge sur la branche par défaut du dépôt
-de la tâche, lue sur la forge. Le mode `--lot` refuse lui aussi une branche hors motif. W17 et W18
-entrent au registre des décisions, et la charte cite `RACINES_DE_LA_GARDE_DES_REVUES` au lieu de
-recopier leur nombre. L'instant des témoins qui lisent le registre réel a une seule définition.
-
-**Reste.** Les fusions antérieures au pas 6 ne portent pas `Lot:` dans leur commit : leurs tâches
-secondaires ne se clôturent plus par `--tache`, et c'est voulu (échec fermé). Sur les vingt-cinq
-tâches secondaires de ces fusions, vingt-quatre sont closes, huit d'entre elles par la PR #187 ; la
-dernière, GOV-074 (#168), n'était livrée qu'en partie et entre dans le lot L0-11.
-
-**Appris.** Cette branche a dû être reconstruite depuis `main` : elle portait les commits d'une PR
-fusionnée par écrasement, et la fusion de `main` n'a plus su réconcilier cinq fichiers. Une branche
-construite sur une autre branche de PR se reconstruit ; elle ne se fusionne pas.
-
-… 3 entrée(s) affichée(s) sur 82 ; les 79 plus ancienne(s) se lisent dans `docs/journal/`.
+… 3 entrée(s) affichée(s) sur 83 ; les 80 plus ancienne(s) se lisent dans `docs/journal/`.
 
 ## Dette déclarée
 
