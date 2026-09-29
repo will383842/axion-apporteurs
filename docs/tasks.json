@@ -13158,8 +13158,8 @@
           "tests/unit/gouvernance/la-declaration-se-lit-dans-le-commit-de-fusion.spec.ts"
         ]
       },
-      "issue": null,
-      "owner": null,
+      "issue": 224,
+      "owner": "A01",
       "branch": null,
       "pr": null,
       "attestation": null,
