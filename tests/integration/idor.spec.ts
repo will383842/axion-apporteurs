@@ -599,16 +599,33 @@ describe('REQ-ARG-029 — l’id d’un autre apporteur rend un 404 octet à oct
     expect(etranger.statut).toBe(200);
   });
 
+  /**
+   * LES REQUÊTES D'UN APPEL, LUES APRÈS QUE LEURS ÉVÉNEMENTS SONT ARRIVÉS. Prisma émet `query` de
+   * façon ASYNCHRONE : sur une machine plus lente, l'événement d'un appel arrivait après la remise
+   * à zéro du suivant, et la CI lisait 0 puis 2 requêtes là où il y en a une. On attend qu'au moins
+   * un événement soit arrivé, puis que le compte reste stable, avant de le lire.
+   */
+  async function requetesDe(appel: () => Promise<unknown>): Promise<string[]> {
+    requetes.length = 0;
+    await appel();
+    const limite = Date.now() + 5000;
+    while (requetes.length === 0 && Date.now() < limite) {
+      await new Promise((r) => setTimeout(r, 10));
+    }
+    let avant = -1;
+    while (avant !== requetes.length) {
+      avant = requetes.length;
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    return [...requetes];
+  }
+
   it.each(MODELES_CLOISONNES)(
     'REQ-UX-006 : %s — étranger et inexistant passent par UNE requête au texte SQL identique (aucun chemin plus court à chronométrer)',
     async (m) => {
       const vue = accesDe(journalise, A)[m];
-      requetes.length = 0;
-      await vue.trouver(lignes[m].b);
-      const pourEtranger = [...requetes];
-      requetes.length = 0;
-      await vue.trouver(randomUUID());
-      const pourInexistant = [...requetes];
+      const pourEtranger = await requetesDe(() => vue.trouver(lignes[m].b));
+      const pourInexistant = await requetesDe(() => vue.trouver(randomUUID()));
       expect(pourEtranger).toHaveLength(1);
       expect(pourEtranger).toEqual(pourInexistant);
       expect(pourEtranger[0]).toContain('"apporteur_id"');
