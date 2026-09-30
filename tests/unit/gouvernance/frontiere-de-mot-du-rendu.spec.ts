@@ -451,3 +451,167 @@ describe('GOV-106 — ce que le rendu retire de l’écran, la garde le lit enco
     expect(fautesLexicales(ESPACE_TEMOIN, source)).toEqual([]);
   });
 });
+
+// ── 6. GOV-109 : toute expression JSX dont la valeur rendue est CONSTANTE ────
+
+/**
+ * GOV-109 — la garde n'énumère plus des formes : elle ÉVALUE, par l'AST, toute expression JSX dont
+ * la valeur rendue est connue sans exécution, et la rend comme React la rend. Chaque témoin ci-
+ * dessous construit une valeur rendue qui porte le terme ENTIER, alors que la source le coupe ; le
+ * terme reste assemblé depuis la SSOT. Les formes du relevé de sécurité restent hors dépôt : ces
+ * témoins couvrent la FAMILLE (la sémantique), pas une liste.
+ */
+const CONSTANTE_LOCALE = (valeur: string, rendu: string) =>
+  `const PART = '${valeur}';\nexport const Temoin = () => ${rendu};`;
+
+const EXPRESSIONS_CONSTANTES: FamilleDeRendu[] = [
+  {
+    nom: 'gabarit avec substitution constante',
+    fichier: ESPACE_TEMOIN,
+    coupe: (a, b) => enP(`${a}{\`\${'${deb(b)}'}${fin(b)}\`}`),
+    contreTemoin: (a, b) => enP(`${a}{\`\${' ${deb(b)}'}${fin(b)}\`}`),
+  },
+  {
+    nom: 'concaténation de trois constantes',
+    fichier: ESPACE_TEMOIN,
+    coupe: (a, b) => enP(`{'${a}' + '${deb(b)}' + '${fin(b)}'}`),
+    contreTemoin: (a, b) => enP(`{'${a}' + ' ' + '${deb(b)}' + '${fin(b)}'}`),
+  },
+  {
+    nom: 'parenthèses imbriquées',
+    fichier: ESPACE_TEMOIN,
+    coupe: (a, b) => enP(`${a}{(('${deb(b)}'))}${fin(b)}`),
+    contreTemoin: (a, b) => enP(`${a}{((' ${deb(b)}'))}${fin(b)}`),
+  },
+  {
+    nom: 'ternaire à condition constante',
+    fichier: ESPACE_TEMOIN,
+    coupe: (a, b) => enP(`${a}{true ? '${deb(b)}' : ' '}${fin(b)}`),
+    // La branche qui porte le fragment n'est jamais rendue : l'écran montre une espace.
+    contreTemoin: (a, b) => enP(`${a}{false ? '${deb(b)}' : ' '}${fin(b)}`),
+  },
+  {
+    nom: 'ternaire à condition numérique constante',
+    fichier: ESPACE_TEMOIN,
+    coupe: (a, b) => enP(`${a}{1 ? '${deb(b)}' : ' '}${fin(b)}`),
+    contreTemoin: (a, b) => enP(`${a}{0 ? '${deb(b)}' : ' '}${fin(b)}`),
+  },
+  {
+    nom: 'ternaire à condition inconnue, le terme dans la PREMIÈRE branche',
+    fichier: ESPACE_TEMOIN,
+    coupe: (a, b) => enP(`${a}{etat ? '${deb(b)}' : ' '}${fin(b)}`),
+    contreTemoin: (a, b) => enP(`${a}{etat ? ' ' : ' '}${deb(b)}${fin(b)}`),
+  },
+  {
+    nom: 'ternaire à condition inconnue, le terme dans la SECONDE branche',
+    fichier: ESPACE_TEMOIN,
+    coupe: (a, b) => enP(`${a}{etat ? ' ' : '${deb(b)}'}${fin(b)}`),
+    contreTemoin: (a, b) => enP(`${a}{etat ? ' ' : ' ${deb(b)}'}${fin(b)}`),
+  },
+  {
+    nom: '&& à gauche constante et vraie',
+    fichier: ESPACE_TEMOIN,
+    coupe: (a, b) => enP(`${a}{true && '${deb(b)}'}${fin(b)}`),
+    contreTemoin: (a, b) => enP(`${a}{true && ' '}${deb(b)}${fin(b)}`),
+  },
+  {
+    nom: '|| à gauche constante et fausse',
+    fichier: ESPACE_TEMOIN,
+    coupe: (a, b) => enP(`${a}{'' || '${deb(b)}'}${fin(b)}`),
+    // La gauche est vraie : elle est rendue, et c'est une espace.
+    contreTemoin: (a, b) => enP(`${a}{' ' || '${deb(b)}'}${fin(b)}`),
+  },
+  {
+    nom: 'tableau de constantes rendu bout à bout',
+    fichier: ESPACE_TEMOIN,
+    coupe: (a, b) => enP(`{['${a}', '${deb(b)}', null, false, ['${fin(b)}']]}`),
+    contreTemoin: (a, b) => enP(`{['${a}', ' ', '${deb(b)}', '${fin(b)}']}`),
+  },
+  {
+    nom: 'constante locale du même fichier, résolue',
+    fichier: ESPACE_TEMOIN,
+    coupe: (a, b) => CONSTANTE_LOCALE(deb(b), enP(`${a}{PART}${fin(b)}`)),
+    // Le même nom lié DEUX fois (un paramètre) : la valeur n'est plus connue, rien n'est inventé.
+    contreTemoin: (a, b) =>
+      `const PART = '${deb(b)}';\nexport const Temoin = ({ PART }: { PART: string }) => ${enP(`${a}{PART}${fin(b)}`)};`,
+  },
+];
+
+describe('GOV-109 — chaque expression constante rendue : témoin rouge, contre-témoin vert (RM-02)', () => {
+  for (const r of EXPRESSIONS_CONSTANTES) {
+    it(`REQ-GOV-017 / REQ-JUR-037 : ${r.nom} — la garde lexicale voit le terme rendu`, () => {
+      const source = r.coupe(AVANT, MILIEU + APRES);
+      expect(motifDeLaForme(FORME).test(source), 'la source porte déjà le terme entier').toBe(
+        false
+      );
+      const messages = fautesLexicales(r.fichier, source)
+        .map((f) => f.message)
+        .join('\n');
+      const ligne = source.split('\n').findIndex((l) => l.includes(AVANT)) + 1;
+      expect(messages).toContain(`${r.fichier}:${ligne} `);
+      expect(messages).toContain(`« ${FORME} »`);
+    });
+
+    it(`REQ-GOV-017 / REQ-JUR-037 : ${r.nom} — son contre-témoin reste vert`, () => {
+      expect(fautesLexicales(r.fichier, r.contreTemoin(AVANT, MILIEU + APRES))).toEqual([]);
+    });
+
+    it(`REQ-GOV-017 : ${r.nom} — le rendu garde une ligne pour une ligne`, () => {
+      const source = r.coupe(AVANT, MILIEU + APRES);
+      expect(lignesRendues(r.fichier, source)).toHaveLength(source.split('\n').length);
+    });
+  }
+
+  it('REQ-GOV-003 : un nombre constant se rend en chiffres — l’étiquette recollée est vue', () => {
+    const source = enP(`${LETTRE}{${CHIFFRE}}`);
+    expect(new RegExp(MOTIF_NU.source).test(source)).toBe(false);
+    expect(
+      fautesIdentifiant(ESPACE_TEMOIN, source)
+        .map((f) => f.message)
+        .join('\n')
+    ).toContain(`« ${ETIQUETTE} »`);
+    expect(fautesIdentifiant(ESPACE_TEMOIN, enP(`${LETTRE}{' ' + ${CHIFFRE}}`))).toEqual([]);
+  });
+});
+
+describe('GOV-109 — ce qui reste admis, ce qui n’est pas jugé', () => {
+  it('REQ-JUR-037 : une négation déclarée, rendue par une expression constante, reste admise', () => {
+    const source = enP(`{'ni ' + '${AVANT}' + '${MILIEU + APRES}' + ' ni rien d’autre'}`);
+    expect(fautesLexicales(ESPACE_TEMOIN, source)).toEqual([]);
+  });
+
+  it('REQ-JUR-037 : les deux branches d’un ternaire inconnu, toutes deux niées, restent admises', () => {
+    const source = enP(`{etat ? 'ni ${AVANT}' : 'aucun ${AVANT}'}${MILIEU + APRES}`);
+    expect(fautesLexicales(ESPACE_TEMOIN, source)).toEqual([]);
+  });
+
+  it('REQ-JUR-037 : la négation d’une branche n’exempte pas l’autre — chaque affichage est jugé', () => {
+    const source = `<p>{etat ? 'aucun ' : ''}${AVANT}{'${MILIEU + APRES}'}</p>`;
+    const messages = fautesLexicales(ESPACE_TEMOIN, source).map((f) => f.message);
+    expect(messages.join('\n')).toContain(`« ${FORME} »`);
+  });
+
+  it('REQ-JUR-037 : TÉMOIN — deux ternaires voisins, une moitié du terme chacun : la paire CROISÉE est jugée', () => {
+    // Refus de la lentille `exactitude` (PR #267) : les affichages d'une même ligne se combinent en
+    // produit ; la paire de rangs différents (c vrai, d faux) est celle que React affiche.
+    const source = enP(`{c ? '${AVANT}' : 'zz'}{d ? 'yy' : '${MILIEU + APRES}'}`);
+    const messages = fautesLexicales(ESPACE_TEMOIN, source).map((f) => f.message);
+    expect(messages.join('\n')).toContain(`« ${FORME} »`);
+  });
+
+  it('REQ-JUR-037 : TÉMOIN — la paire croisée est jugée aussi sur deux lignes sources voisines', () => {
+    const source = `<p>\n  {c ? '${AVANT}' : 'zz'}\n  {d ? 'yy' : '${MILIEU + APRES}'}\n</p>`;
+    const messages = fautesLexicales(ESPACE_TEMOIN, source).map((f) => f.message);
+    expect(messages.join('\n')).toContain(`« ${FORME} »`);
+  });
+
+  it('REQ-GOV-017 : une expression dont une branche n’est pas constante n’est pas jugée — elle sépare', () => {
+    const source = enP(`${AVANT}{etat ? '${deb(MILIEU)}' : valeur}${fin(MILIEU) + APRES}`);
+    expect(fautesLexicales(ESPACE_TEMOIN, source)).toEqual([]);
+  });
+
+  it('REQ-GOV-017 : && dont la gauche est inconnue n’est pas jugé — elle sépare', () => {
+    const source = enP(`${AVANT}{etat && '${deb(MILIEU)}'}${fin(MILIEU) + APRES}`);
+    expect(fautesLexicales(ESPACE_TEMOIN, source)).toEqual([]);
+  });
+});
