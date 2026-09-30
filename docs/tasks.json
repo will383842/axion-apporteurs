@@ -2380,11 +2380,11 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 1,
-      "statut": "a_faire",
-      "owner": null,
+      "statut": "fusionnee",
+      "owner": "A05",
       "lot": null,
-      "branch": null,
-      "pr": null,
+      "branch": "t/qa-t06",
+      "pr": 281,
       "issue": null,
       "attempts": 0,
       "motif": null,
@@ -2394,6 +2394,11 @@
           "tests/integration/semeur-deterministe.spec.ts",
           "tests/unit/qualite/preview-par-pr.spec.ts"
         ]
+      },
+      "attestation": {
+        "pr": 281,
+        "sha": "f0c14455090f906e8714da05cf9d66d3f6ca9cbd",
+        "fusionneeAt": "2026-09-30T09:40:40Z"
       }
     },
     {
@@ -2428,11 +2433,11 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
-      "owner": null,
+      "statut": "fusionnee",
+      "owner": "A05",
       "lot": null,
-      "branch": null,
-      "pr": null,
+      "branch": "t/qa-t12",
+      "pr": 280,
       "issue": null,
       "attempts": 0,
       "motif": null,
@@ -2441,6 +2446,11 @@
         "REQ-QA-023": [
           "tests/unit/qualite/sauvegarde-et-exercice.spec.ts"
         ]
+      },
+      "attestation": {
+        "pr": 280,
+        "sha": "d99142a0b724c95d1e9a85bad76f6ba7a159af88",
+        "fusionneeAt": "2026-09-30T10:07:55Z"
       }
     },
     {
@@ -2478,11 +2488,11 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
-      "owner": null,
+      "statut": "fusionnee",
+      "owner": "A05",
       "lot": null,
-      "branch": null,
-      "pr": null,
+      "branch": "t/qa-t13",
+      "pr": 283,
       "issue": null,
       "attempts": 0,
       "motif": null,
@@ -2494,6 +2504,11 @@
         "REQ-QA-034": [
           "tests/unit/qualite/runbooks-exerces.spec.ts"
         ]
+      },
+      "attestation": {
+        "pr": 283,
+        "sha": "273d5c750cfff509747be3b881e1730a77ec8b1c",
+        "fusionneeAt": "2026-09-30T05:20:56Z"
       }
     },
     {
