@@ -3,6 +3,12 @@
 > Livré par QA-T04 (REQ-QA-019). Ce runbook est le SEUL emploi admis de l'échappatoire de migration :
 > `tests/integration/sondes-de-vie.spec.ts` refuse qu'un autre fichier qui s'exécute ou se déploie
 > l'écrive.
+>
+> **Où il s'exerce** (amendement (7)-(8) de QA-T13, 2026-09-30) : en `preview`, ou, faute de serveur
+> d'aperçus (décision de Williams), en `production-avant-donnees`. Dans ce second cas, l'exercice a lieu sur la
+> production STRICTEMENT avant la date de mise en service (`MISE_EN_SERVICE`,
+> `scripts/gates/runbooks-exerces.ts`), sur un semis synthétique, sans aucune donnée réelle. Les journaux
+> et les alertes de l'exercice sont vidés ou marqués. Le bloc « Exécuté le » en fin de fichier fait foi.
 
 ## Quand
 
@@ -22,9 +28,9 @@ la file du déploiement ordinaire : il attend un déploiement en cours, il ne l'
 motif (sha non servi, readyz, refus de la plateforme) avant tout autre geste.
 
 **Condition de mise en service** (arbitrage de la coordination sur délégation de Williams, 2026-09-30) :
-ce workflow ne vise que l'application de production, il ne s'exerce donc pas en preview. Il s'exerce
-une fois pour de vrai au premier déploiement réel, AVANT la première donnée réelle. En preview, c'est
-le geste à la main ci-dessous qui s'exerce, et le bloc « Exécuté le » en fin de fichier le trace.
+ce workflow ne vise que l'application de production. Exercé en `production-avant-donnees`, il lève
+cette condition. Sinon, il s'exerce une fois pour de vrai au premier déploiement réel, AVANT la première
+donnée réelle. En `preview`, c'est le geste à la main ci-dessous qui s'exerce.
 
 ## Geste — à la main, si la forge est indisponible
 

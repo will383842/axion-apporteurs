@@ -71,7 +71,7 @@ describe('REQ-QA-034 — le bloc d’exécution fait foi, et il suit le corps', 
       juger([{ chemin: 'docs/runbooks/essai.md', texte: exerce(CORPS, 'production') }]).map(
         (x) => x.famille
       )
-    ).toEqual(['hors_preview']);
+    ).toEqual(['environnement_hors_liste']);
   });
 
   it('REQ-QA-034 : une date ou un sha illisibles sont refusés', () => {
@@ -132,7 +132,7 @@ describe('REQ-QA-034 — production-avant-donnees, borné par la date de mise en
   });
 
   it('REQ-QA-034 : un environnement hors de la liste fermée est refusé, même avec une date posée', () => {
-    expect(juge(exerce(CORPS, 'local'), '2026-12-31')).toEqual(['hors_preview']);
+    expect(juge(exerce(CORPS, 'local'), '2026-12-31')).toEqual(['environnement_hors_liste']);
   });
 
   it('REQ-QA-034 : la liste des environnements est fermée à deux', () => {
@@ -152,7 +152,7 @@ describe('REQ-QA-034 — la liste des runbooks exigés, et la garde elle-même',
         'bloc_absent',
         'bloc_vide',
         'bloc_illisible',
-        'hors_preview',
+        'environnement_hors_liste',
         'corps_modifie_depuis_l_exercice',
         'runbook_absent',
         'mise_en_service_non_posee',

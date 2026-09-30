@@ -21,7 +21,7 @@
  *
  * AMENDEMENT (7)-(8) DE QA-T13 (2026-09-30). Williams a décidé qu'il n'y aurait pas de serveur
  * d'aperçus : les runbooks s'exercent alors sur la PRODUCTION, strictement avant la première donnée
- * réelle (plan B2, conditions de la lentille `securite`). La liste des environnements est FERMÉE
+ * réelle (plan de repli, conditions de la lentille `securite`). La liste des environnements est FERMÉE
  * (`ENVIRONNEMENTS_ADMIS`), et la garde ne croit pas une étiquette : `production-avant-donnees` n'est
  * admis que si `MISE_EN_SERVICE` est posée et que l'exercice lui est STRICTEMENT antérieur. Date
  * absente ou illisible : refus (échec fermé).
@@ -40,7 +40,7 @@ export const FAMILLES = [
   'bloc_absent',
   'bloc_vide',
   'bloc_illisible',
-  'hors_preview',
+  'environnement_hors_liste',
   'mise_en_service_non_posee',
   'exerce_apres_mise_en_service',
   'corps_modifie_depuis_l_exercice',
@@ -132,7 +132,7 @@ export function juger(
     }
     if (!(ENVIRONNEMENTS_ADMIS as readonly string[]).includes(m[2]!)) {
       fautes.push({
-        famille: 'hors_preview',
+        famille: 'environnement_hors_liste',
         message: `${chemin} : exercé en « ${m[2]} », hors de la liste fermée (${ENVIRONNEMENTS_ADMIS.join(' | ')})`,
       });
       continue;
@@ -177,7 +177,11 @@ function prouver(): number {
       'bloc_vide',
     ],
     ['date illisible', exerce(C).replace('2026-09-30', '30/09/2026'), 'bloc_illisible'],
-    ['exercé en production (hors liste fermée)', exerce(C, 'production'), 'hors_preview'],
+    [
+      'exercé en production (hors liste fermée)',
+      exerce(C, 'production'),
+      'environnement_hors_liste',
+    ],
     [
       'production-avant-donnees, date de mise en service absente',
       exerce(C, 'production-avant-donnees'),
