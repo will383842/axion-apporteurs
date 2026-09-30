@@ -22,7 +22,8 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createHmac, randomBytes, randomUUID } from 'node:crypto';
 import { TypeEvenementRecu } from '@prisma/client';
 import { demarrerBase, type Base } from './harnais';
-import { NOMS_DES_SECRETS } from '../../src/lib/env';
+import { NOMS_DES_SECRETS, kidDe } from '../../src/lib/env';
+import { ENTETE_KID_AXIONIA } from '../../packages/contracts/api';
 import { SCHEMA_VERSION, TYPES_EVENEMENT } from '../../packages/contracts/events';
 import { creerAlerteurPlafonne } from '../../src/server/securite/primitives-de-porte';
 import {
@@ -78,6 +79,8 @@ function signee(secret: string, corps: string, secondes: string): Request {
       [ENTETE_SIGNATURE]: createHmac('sha256', secret)
         .update(`${secondes}.${corps}`, 'utf8')
         .digest('hex'),
+      // QA-T52 : toujours le kid de la clé ATTENDUE ; un autre secret signe donc faux, sous le bon kid.
+      [ENTETE_KID_AXIONIA]: kidDe(SECRET),
     },
     body: corps,
   });
