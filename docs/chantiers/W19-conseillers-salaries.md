@@ -1,6 +1,15 @@
 # Chantier W19 — conseillers salariés dans Partners : le plan à inscrire
 
-> **Statut : PROPOSITION DE PLAN, pas encore au registre.** Ce fichier est la **source d'entrée** de
+> **Statut : VERSÉ PAR GOV-115 (2026-09-30). Ce fichier est désormais HISTORIQUE : les registres font
+> foi** (`docs/DECISIONS.md`, `docs/requirements.json`, `docs/tasks.json`, `docs/GLOSSAIRE.md`). Écarts
+> de transcription décidés par A01 et tracés dans la PR de GOV-112 et GOV-115 : la durée d'attribution
+> est de 6 mois depuis la décision de Williams du 2026-09-30 (REQ-DM-048 et DM-13 renvoient à
+> `FENETRE_MOIS`, aucun « 12 mois » recopié) ; les exigences nouvelles sont entrées par le verbe
+> `ajouter-exigence.mjs` en session ordinaire, le lot dédié de GOV-116 n'écrivant que les trois fichiers
+> réservés ; les fiches « externe will » portent la validation de Williams dans leur acceptance, avec
+> `externe` nul (patron UX-P1-40).
+>
+> **Statut d'origine : PROPOSITION DE PLAN, pas encore au registre.** Ce fichier est la **source d'entrée** de
 > deux tâches versées au backlog par la même PR : **GOV-112** (inscrire la décision, les hypothèses,
 > les exigences et le glossaire) et **GOV-115** (verser les tâches W19, amender les tâches existantes,
 > poser REQ-UX-047 sur les tâches d'écran). La même PR verse aussi deux tâches d'outillage :
