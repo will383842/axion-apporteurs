@@ -15307,7 +15307,7 @@
     {
       "id": "GOV-130",
       "titre": "Pas de serveur d'aperçus : la décision de Williams du 2026-09-30 tracée dans DECISIONS (HYP-E1-5) par le lot dédié",
-      "phase": 0,
+      "phase": 1,
       "repo": "partners",
       "zone": "gouvernance",
       "paths": [
@@ -15326,7 +15326,7 @@
       "externe": null,
       "estimateDays": 0.25,
       "statut": "a_faire",
-      "acceptance": "Décision de Williams du 2026-09-30 : pas de serveur dédié aux aperçus (l'équipe Coolify « previews » n'a aucun serveur ; le petit serveur dédié proposé par la lentille sécurité n'est pas retenu). Conséquences déjà portées au backlog : QA-T06 (4) en attente externe (aperçus inertes) et QA-T13 (5) en plan B (runbooks exercés sur la production avant toute donnée réelle, seule voie que la garde admet sans aperçus). Tâche porteuse nommée par la coordination sur #304, GOV-129 étant livrée en entier par #300. (1) Passe du lot dédié de GOV-116, lancé par Williams : dans `docs/DECISIONS.md`, la ligne HYP-E1-5 dit que les aperçus par PR ne sont pas servis tant qu'aucun serveur ne leur est rattaché (décision de Williams du 2026-09-30), sans rien retirer de ce qu'elle disait ; la colonne « Tranchée » ne porte qu'une date seule. (2) Trace datée du lot (date, branche, sha de départ) dans le corps de la PR. (3) `gov:tasks`, `gov:requirements` et `gov:hypotheses` sortent 0."
+      "acceptance": "Décision de Williams du 2026-09-30 : pas de serveur dédié aux aperçus (l'équipe Coolify « previews » n'a aucun serveur ; le petit serveur dédié proposé par la lentille sécurité n'est pas retenu). Conséquences déjà portées au backlog : QA-T06 (4) en attente externe (aperçus inertes) et QA-T13 (5) en plan B (runbooks exercés sur la production avant toute donnée réelle, seule voie que la garde admet sans aperçus). Tâche porteuse nommée par la coordination sur #304, GOV-129 étant livrée en entier par #300. (1) Passe du lot dédié de GOV-116, lancé par Williams : dans `docs/DECISIONS.md`, la ligne HYP-E1-5 dit que les aperçus par PR ne sont pas servis tant qu'aucun serveur ne leur est rattaché (décision de Williams du 2026-09-30), sans rien retirer de ce qu'elle disait ; la colonne « Tranchée » ne porte qu'une date seule. (2) Trace datée du lot (date, branche, sha de départ) dans le corps de la PR. (3) `gov:tasks`, `gov:requirements` et `gov:hypotheses` sortent 0. Phase 1 (arbitrage de la coordination du 2026-09-30) : la décision est déjà écrite, datée, dans les amendements de QA-T06 (4) et de QA-T13 (7) ; sa ligne au registre DECISIONS attend le prochain passage du lot dédié et ne retarde pas la clôture de la Phase 0. Même passe du lot : la décision de Williams du 2026-09-30 fixant la date PRÉVUE de mise en service au 2026-12-31 (provisoire ; `MISE_EN_SERVICE` est posée dans la SSOT par la PR de la garde de QA-T13) entre au registre, avec sa date seule en colonne « Tranchée »."
     },
     {
       "id": "SEC-29",
@@ -16706,7 +16706,7 @@
     {
       "id": "QA-T54",
       "titre": "Alerte close `deploiement_non_atterri` : un `deploy:verify` rouge après un déploiement alerte, sans donnée personnelle",
-      "phase": 0,
+      "phase": 1,
       "repo": "partners",
       "zone": "qualite",
       "paths": [
@@ -16728,7 +16728,7 @@
       "externe": null,
       "estimateDays": 0.5,
       "statut": "a_faire",
-      "acceptance": "Condition de mise en service posée par la lentille sécurité, relayée par la coordination le 2026-09-30 : PRÉALABLE FERME avant la première donnée réelle, sur le modèle de QA-T53 (`rechiffrement_echoue`). Aujourd'hui, un déploiement dont l'atterrissage n'est pas vérifié ne prévient personne. À LIVRER : (1) une catégorie d'alerte CLOSE `deploiement_non_atterri`, NEUVE (elle n'existe nulle part aujourd'hui), ajoutée à `CATEGORIES_ALERTE` (src/server/integrations/telegram/alertes.ts) avec son gabarit ; (2) tout échec de `deploy:verify` (scripts/gates/deploy-verify.ts) joué après un déploiement de `.github/workflows/deploy.yml` (sha servi différent du sha fusionné, `readyz` non prêt, en-tête `x-partners-build-sha` absent, délai dépassé) émet exactement une alerte `deploiement_non_atterri`, qui ne porte que le sha attendu, le sha servi et l'environnement, sans donnée personnelle ni secret ; le job reste rouge (l'alerte ne remplace pas l'échec) ; (3) TÉMOINS rouges d'abord : un atterrissage raté (sha servi ≠ sha fusionné) émet une alerte ; `readyz` non prêt émet une alerte ; un atterrissage réussi n'en émet aucune ; le message de l'alerte ne contient ni jeton ni URL de secret. (4) Le pas « alerte `deploiement_non_atterri` en service » entre dans la liste de mise en service (`docs/runbooks/mise-en-service.md`) par la PR qui livre cette tâche."
+      "acceptance": "Condition de mise en service posée par la lentille sécurité, relayée par la coordination le 2026-09-30 : PRÉALABLE FERME avant la première donnée réelle, sur le modèle de QA-T53 (`rechiffrement_echoue`). Aujourd'hui, un déploiement dont l'atterrissage n'est pas vérifié ne prévient personne. À LIVRER : (1) une catégorie d'alerte CLOSE `deploiement_non_atterri`, NEUVE (elle n'existe nulle part aujourd'hui), ajoutée à `CATEGORIES_ALERTE` (src/server/integrations/telegram/alertes.ts) avec son gabarit ; (2) tout échec de `deploy:verify` (scripts/gates/deploy-verify.ts) joué après un déploiement de `.github/workflows/deploy.yml` (sha servi différent du sha fusionné, `readyz` non prêt, en-tête `x-partners-build-sha` absent, délai dépassé) émet exactement une alerte `deploiement_non_atterri`, qui ne porte que le sha attendu, le sha servi et l'environnement, sans donnée personnelle ni secret ; le sha servi vient de l'en-tête `x-partners-build-sha` de la RÉPONSE, que contrôle quiconque sert le domaine : il n'entre dans l'alerte qu'après validation de forme (hexadécimal de 7 à 40 caractères), sinon il y est écrit « illisible » ; le job reste rouge (l'alerte ne remplace pas l'échec) ; (3) TÉMOINS rouges d'abord : un atterrissage raté (sha servi ≠ sha fusionné) émet une alerte ; `readyz` non prêt émet une alerte ; un atterrissage réussi n'en émet aucune ; le message de l'alerte ne contient ni jeton ni URL de secret ; un en-tête piégé (saut de ligne, balisage, URL) n'entre pas tel quel dans l'alerte, qui écrit « illisible ». (4) La case de cette alerte existe déjà dans la liste de mise en service (`docs/runbooks/mise-en-service.md`, écrite par la PR de la garde de QA-T13) : la PR qui livre cette tâche la rend vraie et la cite, sans en ajouter une seconde. Phase 1 (arbitrage de la coordination du 2026-09-30) : c'est une condition de mise en service, avant la première donnée réelle, et non un préalable à la clôture de la Phase 0."
     }
   ]
 }
