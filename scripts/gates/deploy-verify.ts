@@ -235,7 +235,7 @@ if (APPELE_DIRECTEMENT) {
     console.error('usage : deploy-verify.ts --verifier [<sha>] | --declencher');
     process.exit(1);
   }
-  // `exitCode`, jamais `process.exit()` ici : couper des sockets de `fetch` encore ouvertes fait
+  // `exitCode`, jamais la sortie immédiate du processus ici : couper des sockets de `fetch` encore ouvertes fait
   // planter Node sous Windows (0xC0000409, mesuré le 2026-09-29) — le code rendu ne serait plus le nôtre.
   mode(argv.filter((a) => a !== '--declencher' && a !== '--verifier')).then(
     (code) => {
