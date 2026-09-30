@@ -16,6 +16,13 @@ L'image fraîchement déployée sert mal, et l'on veut remettre en service l'ima
 migrations sont additives (REQ-DM-037) : le schéma déjà migré accepte l'ancienne image. La migration
 n'a donc rien à faire au redémarrage de l'ancienne image, et elle ne doit pas être rejouée par elle.
 
+**Pas de retour automatique** (arbitrage du 2026-09-30, accepté par la lentille `securite`) : la sonde
+de la plateforme est coupée sur l'application, parce que l'image n'a ni `curl` ni `wget`. Seul le
+HEALTHCHECK de l'image, en node, fait foi. Un nouveau conteneur malade donne donc une **coupure
+visible**, et non un retour automatique à l'ancien conteneur : le job `deployer` rougit (NON ATTERRI),
+et le geste est ce runbook. Mieux vaut une coupure qu'on voit qu'une mauvaise version servie en
+silence.
+
 ## Par la forge — le geste ordinaire (QA-T13, REQ-QA-022)
 
 Lancer le workflow `Retour arriere` à la main, avec le sha COMPLET de l'image à remettre en service.
