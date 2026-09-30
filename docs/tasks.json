@@ -15137,24 +15137,19 @@
       "acceptance": "Lot transverse « confort de la console pour tous les rôles ». Pourquoi, pour tous les rôles : les utilisateurs de console ne naissent aujourd'hui que par le seed ; aucun admin ne peut inviter un qualifieur ou un comptable, ni désactiver un départ avec effet immédiat. Rien ici ne suppose un conseiller. ELLE ÉCRIT LE SCHÉMA. (1) Migrations additives : `AgregatJournal.utilisateur_console` par ADD VALUE, non employé dans la même migration (partners/ADR-0022 §13), et `utilisateurs_console.session_version`. GLOSSAIRE aligné dans la même PR, par le lot dédié (GOV-116) ou par Williams, jamais hors de ce cadre. Événement `utilisateur_console_modifie {de, vers, acteurId}` dans la même transaction que tout changement. (2) `sessionVersion` incrémentée au changement de rôle, à la désactivation et à la demande. `jugerAcces` la compare, et toutes les sessions tombent à la requête suivante (témoin). (3) Droits `ecran:utilisateurs_console` et `action:gerer_utilisateur_console` réservés à admin, avec step-up déclaré dans la matrice. Pas d'auto-changement de rôle (refus nommé). (4) Une invitation expire (SSOT). Toute création d'admin est notifiée à tous les admins. Elle est validée par un autre admin s'il en existe un (HYP-W19-QUATRE-YEUX). (5) L'écran de création dit en une phrase, pour chaque rôle, ce qu'il voit et ne voit jamais, dérivée du GLOSSAIRE §7. (6) Témoins : changement sans événement → transaction échouée ; auto-promotion → refus. (7) REQ-UX-047 : inviter en ≤ 4 interactions, désactiver en ≤ 3 (E2E). Cinq états, maquette UX-P1-18.",
       "tests": {
         "REQ-SEC-023": [
-          "tests/integration/utilisateurs-console-administration.spec.ts",
-          "tests/unit/securite/matrice-des-roles.spec.ts"
+          "tests/integration/utilisateurs-console-administration.spec.ts"
         ],
         "REQ-SEC-003": [
-          "tests/integration/utilisateurs-console-administration.spec.ts",
-          "tests/unit/securite/matrice-des-roles.spec.ts"
+          "tests/integration/utilisateurs-console-administration.spec.ts"
         ],
         "REQ-DM-024": [
-          "tests/integration/utilisateurs-console-administration.spec.ts",
-          "tests/unit/securite/matrice-des-roles.spec.ts"
+          "tests/integration/utilisateurs-console-administration.spec.ts"
         ],
         "REQ-UX-048": [
-          "tests/integration/utilisateurs-console-administration.spec.ts",
-          "tests/unit/securite/matrice-des-roles.spec.ts"
+          "tests/integration/utilisateurs-console-administration.spec.ts"
         ],
         "REQ-UX-047": [
-          "tests/integration/utilisateurs-console-administration.spec.ts",
-          "tests/unit/securite/matrice-des-roles.spec.ts"
+          "tests/integration/utilisateurs-console-administration.spec.ts"
         ]
       }
     },
@@ -15349,18 +15344,7 @@
       "externe": null,
       "estimateDays": 0.5,
       "statut": "a_faire",
-      "acceptance": "CAS HYP-W19-CONCOURS TRANCHÉ (art. 3.5, Williams, 2026-09-29, question 2). (1) L'écran reprend les formules existantes `FORMULES.dejaReservee` et `FORMULES.finDuDroit` (`vocabulaire.ts:39-40`), sans nouvelle tournure ni le verbe « suivre » pour une entreprise (relecture juridique du 2026-09-19, `issues-depot.ts:7`, `vocabulaire.ts:9-11`). Aucune formule propre à la Société. (2) `DEJA_CONNUE` (`issues-depot.ts:55-63`) est INCHANGÉ : il reste le texte des seules antériorités client et devis de l'art. 3.3. (3) Test : aucun texte de `src/content/micro-copy/espace/**` ne contient un nom de rôle de console ni une forme composée du nom du rôle (famille `population_interne` de GOV-114) ; « salarié » et « conseiller » seuls ne sont pas visés. Témoin vert : « former ses salariés » (`etats-vides.ts:24`) passe. Témoin rouge : une formule qui nomme la Société comme occupante, ou « suivi », « suivie » ou « suivait » dans `vocabulaire.ts`, fait rougir. (4) Les maquettes entreprise, deposer et mes-entreprises sont relues : aucune ne distingue un occupant conseiller. Will dit si une revalidation est nécessaire ; si oui, revalidation groupée le même jour, pour ne pas bloquer UX-P1-01/02. La fiche W19 porte « externe will » : la validation de Williams est une étape de cette acceptance, pas un préalable ; la tâche reste éligible pour produire ce qu'il validera (patron UX-P1-40 ; le schéma lie un externe non nul au statut attente_externe, qui bloquerait le travail). Arbitrage A01 du 2026-09-30.",
-      "tests": {
-        "REQ-SEC-042": [
-          "tests/unit/espace/vocabulaire-et-micro-copy.spec.ts"
-        ],
-        "REQ-UX-002": [
-          "tests/unit/espace/vocabulaire-et-micro-copy.spec.ts"
-        ],
-        "REQ-JUR-043": [
-          "tests/unit/espace/vocabulaire-et-micro-copy.spec.ts"
-        ]
-      }
+      "acceptance": "CAS HYP-W19-CONCOURS TRANCHÉ (art. 3.5, Williams, 2026-09-29, question 2). (1) L'écran reprend les formules existantes `FORMULES.dejaReservee` et `FORMULES.finDuDroit` (`vocabulaire.ts:39-40`), sans nouvelle tournure ni le verbe « suivre » pour une entreprise (relecture juridique du 2026-09-19, `issues-depot.ts:7`, `vocabulaire.ts:9-11`). Aucune formule propre à la Société. (2) `DEJA_CONNUE` (`issues-depot.ts:55-63`) est INCHANGÉ : il reste le texte des seules antériorités client et devis de l'art. 3.3. (3) Test : aucun texte de `src/content/micro-copy/espace/**` ne contient un nom de rôle de console ni une forme composée du nom du rôle (famille `population_interne` de GOV-114) ; « salarié » et « conseiller » seuls ne sont pas visés. Témoin vert : « former ses salariés » (`etats-vides.ts:24`) passe. Témoin rouge : une formule qui nomme la Société comme occupante, ou « suivi », « suivie » ou « suivait » dans `vocabulaire.ts`, fait rougir. (4) Les maquettes entreprise, deposer et mes-entreprises sont relues : aucune ne distingue un occupant conseiller. Will dit si une revalidation est nécessaire ; si oui, revalidation groupée le même jour, pour ne pas bloquer UX-P1-01/02. La fiche W19 porte « externe will » : la validation de Williams est une étape de cette acceptance, pas un préalable ; la tâche reste éligible pour produire ce qu'il validera (patron UX-P1-40 ; le schéma lie un externe non nul au statut attente_externe, qui bloquerait le travail). Arbitrage A01 du 2026-09-30."
     },
     {
       "id": "GOV-113",
@@ -15463,21 +15447,7 @@
       "externe": null,
       "estimateDays": 0.75,
       "statut": "a_faire",
-      "acceptance": "ARBITRAGE RENDU : art. 3.5 retenu, art. 3.3 c) rejeté (Williams, 2026-09-29, question 2). (1) L'art. 3.5 est amendé en termes généraux : l'entreprise peut être déjà prise « par un autre apporteur ou par la Société ou ses préposés » ; l'effet pour l'apporteur est le même quel que soit l'occupant ; la Société ne révèle jamais qui occupe une entreprise donnée. Aucun art. 3.3 c), aucune catégorie de refus nouvelle. Jamais le mot « suivi ». L'acte d'un préposé n'est jamais « une déclaration ». (2) Bornes de la Société, tous préposés confondus, écrites avec les variables du gabarit et jamais en dur (RM-10) : les mêmes durées qu'une attribution d'apporteur (`{{PEREMPTION_JOURS}}` jours, `{{FENETRE_MOIS}}` mois), pas de reconduction, délai d'attente de `{{CARENCE_CONSEILLER_JOURS}}` jours après toute libération (variable nouvelle, déclarée au gabarit), entreprise fermée à la Société pendant la fenêtre d'un rang 1. (3) Clause de non-exploitation (HYP-W19-NON-EXPLOITATION). (4) Le mode de preuve de l'horodatage (journal chaîné) est le même quel que soit l'occupant, et ne révèle pas qui. (5) Le contrat dit « préposés de la Société » en toutes lettres, pour lever l'homonymie avec les « préposés » de l'apporteur à l'art. 1 (`CONTRAT-APPORTEUR-V1.md:92`), jamais le mot que GLOSSAIRE §8 interdit pour l'apporteur. (6) `contract-template-complete.spec.ts` reste vert. (7) L'arbitrage de Williams est daté dans la colonne « Tranchée » de HYP-W19-CONCOURS ; le texte amendé est validé par Williams avant INT-T12. La note d'analyse hors dépôt sur l'indice de service organisé est relue. (8) Aucun point non sourcé présenté comme un fait ; un point de droit non tranché prend l'option la plus prudente, marquée « à arbitrer par Williams » (question 13 : pas d'avocat). La fiche W19 porte « externe will » : la validation de Williams est une étape de cette acceptance, pas un préalable ; la tâche reste éligible pour produire ce qu'il validera (patron UX-P1-40 ; le schéma lie un externe non nul au statut attente_externe, qui bloquerait le travail). Arbitrage A01 du 2026-09-30.",
-      "tests": {
-        "REQ-SEC-042": [
-          "tests/unit/contrat/contract-template-complete.spec.ts"
-        ],
-        "REQ-DM-048": [
-          "tests/unit/contrat/contract-template-complete.spec.ts"
-        ],
-        "REQ-JUR-044": [
-          "tests/unit/contrat/contract-template-complete.spec.ts"
-        ],
-        "REQ-DM-043": [
-          "tests/unit/contrat/contract-template-complete.spec.ts"
-        ]
-      }
+      "acceptance": "ARBITRAGE RENDU : art. 3.5 retenu, art. 3.3 c) rejeté (Williams, 2026-09-29, question 2). (1) L'art. 3.5 est amendé en termes généraux : l'entreprise peut être déjà prise « par un autre apporteur ou par la Société ou ses préposés » ; l'effet pour l'apporteur est le même quel que soit l'occupant ; la Société ne révèle jamais qui occupe une entreprise donnée. Aucun art. 3.3 c), aucune catégorie de refus nouvelle. Jamais le mot « suivi ». L'acte d'un préposé n'est jamais « une déclaration ». (2) Bornes de la Société, tous préposés confondus, écrites avec les variables du gabarit et jamais en dur (RM-10) : les mêmes durées qu'une attribution d'apporteur (`{{PEREMPTION_JOURS}}` jours, `{{FENETRE_MOIS}}` mois), pas de reconduction, délai d'attente de `{{CARENCE_CONSEILLER_JOURS}}` jours après toute libération (variable nouvelle, déclarée au gabarit), entreprise fermée à la Société pendant la fenêtre d'un rang 1. (3) Clause de non-exploitation (HYP-W19-NON-EXPLOITATION). (4) Le mode de preuve de l'horodatage (journal chaîné) est le même quel que soit l'occupant, et ne révèle pas qui. (5) Le contrat dit « préposés de la Société » en toutes lettres, pour lever l'homonymie avec les « préposés » de l'apporteur à l'art. 1 (`CONTRAT-APPORTEUR-V1.md:92`), jamais le mot que GLOSSAIRE §8 interdit pour l'apporteur. (6) `contract-template-complete.spec.ts` reste vert. (7) L'arbitrage de Williams est daté dans la colonne « Tranchée » de HYP-W19-CONCOURS ; le texte amendé est validé par Williams avant INT-T12. La note d'analyse hors dépôt sur l'indice de service organisé est relue. (8) Aucun point non sourcé présenté comme un fait ; un point de droit non tranché prend l'option la plus prudente, marquée « à arbitrer par Williams » (question 13 : pas d'avocat). La fiche W19 porte « externe will » : la validation de Williams est une étape de cette acceptance, pas un préalable ; la tâche reste éligible pour produire ce qu'il validera (patron UX-P1-40 ; le schéma lie un externe non nul au statut attente_externe, qui bloquerait le travail). Arbitrage A01 du 2026-09-30."
     },
     {
       "id": "JUR-T33",
@@ -15571,25 +15541,7 @@
       "externe": null,
       "estimateDays": 0.75,
       "statut": "a_faire",
-      "acceptance": "(1) `gov:lexique` voit les formes d'identifiants de `prisma/**` et `src/**` que la note confidentielle hors dépôt décrit, en réutilisant `segments()`. Les témoins sont des formes CONFIDENTIELLES tenues hors dépôt, comme GOV-109 : ni l'acceptance, ni les commits, ni le journal ne les énumèrent ni n'en décrivent le mécanisme. Une seule exception déclarée, datée et justifiée : l'identifiant importé de la grille axion-ia, sur son fichier d'import. (2) Famille `population_interne`, portée apporteur, sur les seules formes COMPOSÉES du nom du rôle, jamais sur « conseiller » seul (`docs/tiers/banque.md:96`). Le cliquet de longueur passe sciemment à 11. Témoin dans la micro-copy de l'espace ; témoin vert : « former ses salariés » (`etats-vides.ts:24`) passe. (3) `import_console` : aucun fichier de l'espace, des e-mails apporteur ni de `src/server/pdf/**` n'importe `src/server/console/**`, `src/server/prise-en-charge/**`, `src/server/integrations/crm-pro/**`, `src/domain/part-variable/**`, `src/domain/statistiques/**` ni `src/domain/pilotage/**`. Un témoin par chemin. (4) `revues.ts` : segments sensibles `paie`, `part-variable`, `conseiller`, `prise-en-charge`, `crm-pro`. (5) Aucune portée réduite. Réduite par la question 22 : il n'existe plus de micro-copy de conseiller dans la console à couvrir.",
-      "tests": {
-        "REQ-GOV-017": [
-          "tests/unit/gouvernance/lexique.spec.ts",
-          "tests/unit/juridique/charte-relationnelle.spec.ts"
-        ],
-        "REQ-JUR-037": [
-          "tests/unit/gouvernance/lexique.spec.ts",
-          "tests/unit/juridique/charte-relationnelle.spec.ts"
-        ],
-        "REQ-JUR-043": [
-          "tests/unit/gouvernance/lexique.spec.ts",
-          "tests/unit/juridique/charte-relationnelle.spec.ts"
-        ],
-        "REQ-JUR-034": [
-          "tests/unit/gouvernance/lexique.spec.ts",
-          "tests/unit/juridique/charte-relationnelle.spec.ts"
-        ]
-      }
+      "acceptance": "(1) `gov:lexique` voit les formes d'identifiants de `prisma/**` et `src/**` que la note confidentielle hors dépôt décrit, en réutilisant `segments()`. Les témoins sont des formes CONFIDENTIELLES tenues hors dépôt, comme GOV-109 : ni l'acceptance, ni les commits, ni le journal ne les énumèrent ni n'en décrivent le mécanisme. Une seule exception déclarée, datée et justifiée : l'identifiant importé de la grille axion-ia, sur son fichier d'import. (2) Famille `population_interne`, portée apporteur, sur les seules formes COMPOSÉES du nom du rôle, jamais sur « conseiller » seul (`docs/tiers/banque.md:96`). Le cliquet de longueur passe sciemment à 11. Témoin dans la micro-copy de l'espace ; témoin vert : « former ses salariés » (`etats-vides.ts:24`) passe. (3) `import_console` : aucun fichier de l'espace, des e-mails apporteur ni de `src/server/pdf/**` n'importe `src/server/console/**`, `src/server/prise-en-charge/**`, `src/server/integrations/crm-pro/**`, `src/domain/part-variable/**`, `src/domain/statistiques/**` ni `src/domain/pilotage/**`. Un témoin par chemin. (4) `revues.ts` : segments sensibles `paie`, `part-variable`, `conseiller`, `prise-en-charge`, `crm-pro`. (5) Aucune portée réduite. Réduite par la question 22 : il n'existe plus de micro-copy de conseiller dans la console à couvrir."
     },
     {
       "id": "SEC-31",
@@ -15629,17 +15581,7 @@
       "externe": null,
       "estimateDays": 0.75,
       "statut": "a_faire",
-      "acceptance": "(1) `ALTER TYPE \"console_role\" ADD VALUE 'conseiller_salarie'`. Dans la même PR : GLOSSAIRE l.124, ligne §7 SANS le marqueur des synonymes interdits ni accents graves (`gov-check.ts:269`), et REQ-SEC-023 par le verbe. `partners:schema:enums` et `gov:termes-interdits` restent verts. (2) Le cliquet de `matrice-des-roles.spec.ts:78` est réécrit par un autre agent. Les droits sensibles sont calculés depuis `Object.values(ConsoleRole)`. (3) Test : aucun droit du rôle ne porte sur un écran ou une action d'apporteur. (4) Changement de rôle, avec témoins : on ne quitte pas `conseiller_salarie` en portant une attribution occupante ; on n'y entre pas depuis qualifieur ou admin avant `DELAI_CHANGEMENT_POPULATION_JOURS`. (5) À la création d'un conseiller par l'admin, une déclaration de conflit d'intérêts est enregistrée (version et date conservées) ; sa présentation au salarié, avec la notice, est une exigence du rôle CRM listée dans l'ADR INT-T28. (6) Seed d'un conseiller de démonstration, valeurs factices. (7) Aucune session de console n'est ouverte au rôle en V1 (question 22) : une connexion de console d'un `conseiller_salarie` mène à l'écran d'accès refusé d'UX-P1-16, qui renvoie au CRM Pro (témoin).",
-      "tests": {
-        "REQ-SEC-023": [
-          "tests/unit/securite/matrice-des-roles.spec.ts",
-          "tests/unit/gouvernance/glossaire-enums.spec.ts"
-        ],
-        "REQ-SEC-041": [
-          "tests/unit/securite/matrice-des-roles.spec.ts",
-          "tests/unit/gouvernance/glossaire-enums.spec.ts"
-        ]
-      }
+      "acceptance": "(1) `ALTER TYPE \"console_role\" ADD VALUE 'conseiller_salarie'`. Dans la même PR : GLOSSAIRE l.124, ligne §7 SANS le marqueur des synonymes interdits ni accents graves (`gov-check.ts:269`), et REQ-SEC-023 par le verbe. `partners:schema:enums` et `gov:termes-interdits` restent verts. (2) Le cliquet de `matrice-des-roles.spec.ts:78` est réécrit par un autre agent. Les droits sensibles sont calculés depuis `Object.values(ConsoleRole)`. (3) Test : aucun droit du rôle ne porte sur un écran ou une action d'apporteur. (4) Changement de rôle, avec témoins : on ne quitte pas `conseiller_salarie` en portant une attribution occupante ; on n'y entre pas depuis qualifieur ou admin avant `DELAI_CHANGEMENT_POPULATION_JOURS`. (5) À la création d'un conseiller par l'admin, une déclaration de conflit d'intérêts est enregistrée (version et date conservées) ; sa présentation au salarié, avec la notice, est une exigence du rôle CRM listée dans l'ADR INT-T28. (6) Seed d'un conseiller de démonstration, valeurs factices. (7) Aucune session de console n'est ouverte au rôle en V1 (question 22) : une connexion de console d'un `conseiller_salarie` mène à l'écran d'accès refusé d'UX-P1-16, qui renvoie au CRM Pro (témoin)."
     },
     {
       "id": "SEC-32",
@@ -16114,28 +16056,16 @@
       "acceptance": "Exigence de Williams (question 2, 2026-09-29) : une prise en charge est indiscernable d'une occupation par un autre apporteur. (1) Seed : deux apporteurs et deux conseillers, et deux SIREN jumeaux, l'un pris en charge par un conseiller, l'autre occupé par un apporteur, aux mêmes dates. (2) TEST D'INDISTINCTION OCTET À OCTET côté apporteur : pour les deux SIREN jumeaux, le dépôt d'un apporteur, « Vérifier une entreprise », l'écran « entreprise », et la notification au rang 1 à la libération donnent des réponses identiques octet à octet (statut HTTP, corps, en-têtes applicatifs), une fois neutralisés le seul SIREN et le seul nom d'entreprise, et rien d'autre. Contrôlé à J+0, au passage à `active`, après une prolongation W9 et à la libération, avec des dates réelles. Aucune valeur `anteriorite_suivi` n'existe. (3) Aucune clé ni valeur de DTO de l'espace ne porte un segment de population. (4) Côté conseiller, dans toute réponse de l'API 3, `non_disponible` est identique quelle que soit la cause : apporteur, autre conseiller, client ou devis d'Axion-IA, délai d'attente, fenêtre du rang 1, acte d'apporteur récent. (5) API 1 : pour les deux SIREN jumeaux, réponse identique octet à octet hors la seule valeur opaque d'`apporteurRef`, de même forme ; `attribuee`, même `until`, aucun champ de plus. (6) Chaque témoin est vu rouge d'abord : une formule propre à la Société, un état `active` avancé, ou une `apporteurRef` nulle fait rougir. (7) CLAUSE JUMELLE, HORS DU CORPS (relecture de la lentille `securite` sur #230 (`830a648`)) : l'égalité octet à octet ne couvre ni le temps de réponse ni l'instant des notifications, qui distingueraient l'occupant aussi sûrement qu'un octet. Pour les deux SIREN jumeaux : (a) TEMPS DE RÉPONSE : le dépôt, « Vérifier une entreprise », l'écran « entreprise » et l'API 1 font le MÊME travail jusqu'à la réponse, soit la même suite de requêtes au registre (nombre et forme, relevés par un compteur de requêtes), et aucune branche, lecture ni appel propre à la Société avant la réponse ; une mesure au chronomètre n'est pas un témoin stable en CI et ne remplace pas cette égalité : elle s'y ajoute en information (médianes sur des appels alternés, écart imprimé). (b) INSTANT DES NOTIFICATIONS : sous horloge figée, la notification au rang 1 à la libération, le passage à `active` et la date « jusqu'au » sont planifiés et émis au même instant, par la même tâche et le même lot d'envoi, quel que soit l'occupant ; les horodatages servis (corps, en-tête `Date`, courriel) sont identiques. Témoins vus rouges d'abord : une requête de plus propre à la Société, un délai artificiel sur une seule branche, ou une notification envoyée par un chemin propre à la Société font rougir.",
       "tests": {
         "REQ-SEC-042": [
-          "tests/integration/trois-populations.spec.ts",
-          "tests/integration/idor.spec.ts",
-          "tests/integration/frontiere.spec.ts",
-          "tests/unit/securite/acces-scope.spec.ts"
+          "tests/integration/trois-populations.spec.ts"
         ],
         "REQ-SEC-009": [
-          "tests/integration/trois-populations.spec.ts",
-          "tests/integration/idor.spec.ts",
-          "tests/integration/frontiere.spec.ts",
-          "tests/unit/securite/acces-scope.spec.ts"
+          "tests/integration/trois-populations.spec.ts"
         ],
         "REQ-INT-014": [
-          "tests/integration/trois-populations.spec.ts",
-          "tests/integration/idor.spec.ts",
-          "tests/integration/frontiere.spec.ts",
-          "tests/unit/securite/acces-scope.spec.ts"
+          "tests/integration/trois-populations.spec.ts"
         ],
         "REQ-DM-048": [
-          "tests/integration/trois-populations.spec.ts",
-          "tests/integration/idor.spec.ts",
-          "tests/integration/frontiere.spec.ts",
-          "tests/unit/securite/acces-scope.spec.ts"
+          "tests/integration/trois-populations.spec.ts"
         ]
       }
     },
@@ -16170,18 +16100,7 @@
       "externe": null,
       "estimateDays": 1,
       "statut": "a_faire",
-      "acceptance": "(1) REQ-SEC-030 passe à quatre traitements par le verbe. Le test passe à 4. Traitement des conseillers : finalités, base légale, données minimales (matricule, éléments variables ; jamais NIR, fixe ni RIB), destinataire avec sa fiche `docs/tiers/`. (1 bis) Le CRM Pro est inscrit comme système qui traite les données des conseillers (question 22) : ce qu'il reçoit et renvoie par l'API 3 (référence de conseiller, SIREN, réponses), où il est hébergé, qui y accède, avec la fiche `docs/tiers/crm-pro.md` d'INT-T28. (2) Le traitement des apporteurs gagne la finalité « contrôle d'incompatibilité avec le personnel de la Société ». La notice de l'apporteur (page `/confidentialite`) la mentionne sans nommer personne, si Williams la retient (question 14). (3) REQ-CPL-009 : 5e objet, « gestion des prises en charge et calcul de la rémunération variable ». Il est signé avant la première prise en charge. (4) HYP-W19-CSE : information ou consultation du CSE, ou constat écrit de Will qu'il n'y en a pas, daté, condition de la mise en service de DM-30 et de l'API 3 (SEC-34) ; elle ne bloque la livraison d'aucune tâche (question 13). (5) Notice du conseiller rédigée et versionnée dans Partners (`docs/rgpd/notice-conseiller.md`) ; sa présentation et son accusé à la première connexion au CRM Pro sont une exigence du rôle CRM listée dans l'ADR INT-T28, version et date conservées. (6) Durées dans `ssot.ts` sous un marqueur HYP, dont les justificatifs de variable pendant au moins la prescription salariale (à confirmer). (7) Vérification qu'aucun écran ne restitue un indicateur d'activité d'un conseiller. (8) Origine art. 13 ou art. 14 dans TRT-TIERS. (9) Tout point de droit social non sourcé prend l'option la plus prudente, marquée « à arbitrer par Williams », avec sa question ; aucun avis extérieur n'est attendu (question 13) et aucun ne bloque la tâche.",
-      "tests": {
-        "REQ-SEC-030": [
-          "tests/unit/juridique/registre-rgpd.spec.ts"
-        ],
-        "REQ-CPL-009": [
-          "tests/unit/juridique/registre-rgpd.spec.ts"
-        ],
-        "REQ-JUR-043": [
-          "tests/unit/juridique/registre-rgpd.spec.ts"
-        ]
-      }
+      "acceptance": "(1) REQ-SEC-030 passe à quatre traitements par le verbe. Le test passe à 4. Traitement des conseillers : finalités, base légale, données minimales (matricule, éléments variables ; jamais NIR, fixe ni RIB), destinataire avec sa fiche `docs/tiers/`. (1 bis) Le CRM Pro est inscrit comme système qui traite les données des conseillers (question 22) : ce qu'il reçoit et renvoie par l'API 3 (référence de conseiller, SIREN, réponses), où il est hébergé, qui y accède, avec la fiche `docs/tiers/crm-pro.md` d'INT-T28. (2) Le traitement des apporteurs gagne la finalité « contrôle d'incompatibilité avec le personnel de la Société ». La notice de l'apporteur (page `/confidentialite`) la mentionne sans nommer personne, si Williams la retient (question 14). (3) REQ-CPL-009 : 5e objet, « gestion des prises en charge et calcul de la rémunération variable ». Il est signé avant la première prise en charge. (4) HYP-W19-CSE : information ou consultation du CSE, ou constat écrit de Will qu'il n'y en a pas, daté, condition de la mise en service de DM-30 et de l'API 3 (SEC-34) ; elle ne bloque la livraison d'aucune tâche (question 13). (5) Notice du conseiller rédigée et versionnée dans Partners (`docs/rgpd/notice-conseiller.md`) ; sa présentation et son accusé à la première connexion au CRM Pro sont une exigence du rôle CRM listée dans l'ADR INT-T28, version et date conservées. (6) Durées dans `ssot.ts` sous un marqueur HYP, dont les justificatifs de variable pendant au moins la prescription salariale (à confirmer). (7) Vérification qu'aucun écran ne restitue un indicateur d'activité d'un conseiller. (8) Origine art. 13 ou art. 14 dans TRT-TIERS. (9) Tout point de droit social non sourcé prend l'option la plus prudente, marquée « à arbitrer par Williams », avec sa question ; aucun avis extérieur n'est attendu (question 13) et aucun ne bloque la tâche."
     },
     {
       "id": "T-ARG-040",
