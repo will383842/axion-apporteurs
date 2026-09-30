@@ -33,6 +33,8 @@
 import { execFileSync } from 'node:child_process';
 import { readFileSync, existsSync } from 'node:fs';
 import { DEPOT_LOCAL, MOTIF_SHA, depotDeLaTache, type Attestation } from '../lot/attestation';
+import { cheminsProposesDuDepot } from '../lot/paths-proposes';
+import { estUneVueDerivee } from '../vues/vues';
 
 /**
  * `--taches <chemin>` : juger un AUTRE backlog que celui du dépôt (GOV-038). Même motif que le
@@ -51,6 +53,12 @@ const CHEMIN_TACHES =
  */
 const CHEMIN_REGISTRE_TACHES = 'docs/tasks.json';
 const CHEMIN_SCHEMA = 'scripts/lot/tasks.schema.json';
+/**
+ * La VUE des chemins proposés — NOMMÉE dans les messages, jamais lue (GOV-123). Elle n'est plus sous
+ * git : lue sur le disque, elle prêtait à une tâche la preuve d'un rendu passé, et son absence
+ * faisait rougir la garde pour une raison qui n'est pas un défaut. Son contenu se DÉRIVE de sa
+ * source par le rendu même de la vue (`cheminsProposesDuDepot`, `scripts/lot/paths-proposes.ts`).
+ */
 const CHEMIN_PATHS = 'docs/paths-proposes.json';
 const CHEMIN_INVENTAIRE = 'docs/INVENTAIRE-CHANTIERS.md';
 const CHEMIN_EXIGENCES = 'docs/requirements.json';
@@ -127,7 +135,12 @@ const FAMILLES = [
 ];
 
 // ── ce qui compte comme preuve : un chemin qui existe, un SHA qui résout ─────
-const cheminExiste = (c: string): boolean => c.length > 0 && existsSync(c);
+/**
+ * Une VUE DÉRIVÉE n'est la preuve de rien (GOV-123) : hors de git, sa présence sur le disque dit
+ * seulement qu'un rendu a tourné ici, un jour — la même tâche aurait une preuve sur ce poste et pas
+ * sur un clone neuf. Sa source et son générateur, eux, sont des chemins comme les autres.
+ */
+const cheminExiste = (c: string): boolean => c.length > 0 && !estUneVueDerivee(c) && existsSync(c);
 
 const FORME_SHA = /^[0-9a-f]{7,40}$/i;
 const shasResolus = new Map<string, boolean>();
@@ -303,7 +316,7 @@ function controler(e: Etat): Faute[] {
     ajouter(
       'tache_preuve_manquante',
       `${t.id} est « ${t.statut} » (donc au moins « ${plancher} ») et ne porte AUCUNE preuve : ` +
-        `aucun de ses chemins n'existe sur le disque (${CHEMIN_TACHES} ni ${CHEMIN_PATHS}), et ` +
+        `aucun de ses chemins n'existe sur le disque (${CHEMIN_TACHES} ni ${CHEMIN_PATHS} rendu), et ` +
         `aucun commit ne cite ${t.id} en portée. Un état livré qui ne pointe vers rien est une ` +
         `affirmation sans objet.`
     );
@@ -383,7 +396,6 @@ for (const f of [
   CHEMIN_TACHES,
   CHEMIN_REGISTRE_TACHES,
   CHEMIN_SCHEMA,
-  CHEMIN_PATHS,
   CHEMIN_INVENTAIRE,
   CHEMIN_EXIGENCES,
 ]) {
@@ -399,7 +411,6 @@ const docTaches = lire(CHEMIN_TACHES) as { taches: Tache[] };
 const schema = lire(CHEMIN_SCHEMA) as {
   $defs?: { tache?: { properties?: { statut?: { enum?: string[] } } } };
 };
-const docPaths = lire(CHEMIN_PATHS) as { paths?: Record<string, string[]> };
 
 const etatDuDepot: Etat = {
   taches: docTaches.taches.map((t) => ({
@@ -412,7 +423,7 @@ const etatDuDepot: Etat = {
   registre: new Set(
     (lire(CHEMIN_REGISTRE_TACHES) as { taches: { id: string }[] }).taches.map((t) => t.id)
   ),
-  cheminsProposes: docPaths.paths ?? {},
+  cheminsProposes: cheminsProposesDuDepot(),
   statutsDuSchema: schema.$defs?.tache?.properties?.statut?.enum ?? [],
   chantiers: lireInventaire(readFileSync(CHEMIN_INVENTAIRE, 'utf8')),
   etiquettesDeLaReq: etiquettesDeLaReq(lire(CHEMIN_EXIGENCES)),

@@ -19,14 +19,14 @@ Ces valeurs vivent en configuration ou en base de données. La règle complète 
 Il est écrit **en autopilote** par une hiérarchie d'agents. Une session = un lot de tâches.
 
 ```bash
-pnpm plan-state:build     # régénère l'état vivant depuis tasks.json, les issues et git
+pnpm vues:rendre          # rend les vues dérivées (non commitées), l'état vivant en dernier
 pnpm lot:composer --phase -1 --repo partners --max 8
 # puis le workflow scripts/lot/lot.workflow.js
 ```
 
 | Document | Ce qu'il contient |
 | --- | --- |
-| `docs/PLAN-STATE.md` | L'état vivant — **dérivé**, jamais édité à la main |
+| `docs/PLAN-STATE.md` | L'état vivant — **dérivé**, jamais édité à la main ni commité (`pnpm vues:rendre`) |
 | `docs/DECISIONS.md` | Chaque décision : tranchée, ou hypothèse par défaut datée avec sa réversibilité |
 | `docs/CONVENTIONS.md` | Nommage, argent en centimes, branches, worktrees, pré-vol |
 | `docs/REGLES-MAISON.md` | Les règles qui ont déjà coûté cher |
