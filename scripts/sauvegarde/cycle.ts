@@ -34,8 +34,9 @@
  *     `s3_storage_uuid`), `GET /api/v1/databases/{uuid}/backups`, dont la réponse N'EST PAS
  *     documentée : toute forme non reconnue est refusée et nommée, jamais devinée.
  *   • Telegram : `POST https://api.telegram.org/bot<jeton>/sendMessage` (`chat_id`, `text`), par
- *     l'alerteur existant (`src/server/integrations/telegram/alertes.ts`, catégorie close
- *     `restauration_echouee`) : le message ne porte que la catégorie et un identifiant technique.
+ *     l'alerteur existant (`src/server/integrations/telegram/alertes.ts`, catégories closes
+ *     `restauration_echouee` et, QA-T53, `rechiffrement_echoue`) : le message ne porte que la
+ *     catégorie et un identifiant technique.
  */
 import { randomUUID } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
@@ -137,6 +138,41 @@ export async function rechiffrer(depot: Depot, phrase: string): Promise<{ rechif
     await depot.supprimer(o.cle);
   }
   return { rechiffres: clairs.length };
+}
+
+/**
+ * `rechiffrer`, et son échec ALERTE (QA-T53) : lecture, chiffrement, dépôt ou relecture, une alerte
+ * close `rechiffrement_echoue` part, une seule, puis l'échec remonte tel quel pour rougir le run.
+ * Le message ne porte qu'un identifiant technique : ni la clé du vidage, ni le motif.
+ */
+export async function rechiffrerOuAlerter(
+  depot: Depot,
+  phrase: string,
+  alerter: (objet: ObjetAlerte) => Promise<void>
+): Promise<{ rechiffres: number }> {
+  try {
+    return await rechiffrer(depot, phrase);
+  } catch (e) {
+    await alerter({ categorie: 'rechiffrement_echoue', id: randomUUID() });
+    throw e;
+  }
+}
+
+/**
+ * La garde des clairs, et son ALERTE (QA-T53) : c'est elle, et non l'échec de `rechiffrer`, qui
+ * tient la durée du clair — planificateur sauté, run retardé ou relecture en échec compris. Des
+ * clairs en souffrance émettent UNE alerte par jugement, pas une par clair : le détail est dans le
+ * run, nommé par `issueDesClairs`.
+ */
+export async function jugerLesClairs(
+  depot: Depot,
+  maintenant: Date,
+  seuilMinutes: number,
+  alerter: (objet: ObjetAlerte) => Promise<void>
+): Promise<{ vieux: ObjetDuDepot[]; juges: number }> {
+  const r = await clairsEnSouffrance(depot, maintenant, seuilMinutes);
+  if (r.vieux.length > 0) await alerter({ categorie: 'rechiffrement_echoue', id: randomUUID() });
+  return r;
 }
 
 export type OutilsDExercice = {
@@ -309,15 +345,68 @@ function notifieurTelegram(jeton: string, salon: string): Notifieur {
   };
 }
 
+const SECRETS_DU_CANAL = ['TELEGRAM_BOT_TOKEN', 'TELEGRAM_CHAT_ID'] as const;
+
+/**
+ * L'alerteur de la forge pour `rechiffrer` et la garde des clairs (QA-T53). Leur canal n'est PAS une
+ * condition pour juger : sans lui, la garde juge quand même, et l'alerte qui ne peut partir est
+ * NOMMÉE en `::error::`. Un envoi refusé par Telegram est nommé aussi, sans masquer l'échec qui
+ * l'a causé. `canalEteint` : la sauvegarde ACTIVÉE, un canal absent est une alarme éteinte, et le
+ * run rougit (même règle que les secrets du stockage, arbitrage -a2 du 2026-09-30).
+ */
+function alerteDeLaForge(commande: string): {
+  alerter: (objet: ObjetAlerte) => Promise<void>;
+  canalEteint: boolean;
+} {
+  const m = manquantes(SECRETS_DU_CANAL);
+  if (m.length) {
+    const activee = sauvegardeActivee();
+    if (activee)
+      for (const n of m)
+        console.error(`::error title=${commande}::${n} absent alors que la sauvegarde est ACTIVÉE`);
+    return {
+      canalEteint: activee,
+      alerter: async (o) => {
+        console.error(
+          `::error title=${commande}::alerte ${o.categorie} NON envoyée : ${m.join(', ')} absent(s)`
+        );
+      },
+    };
+  }
+  const alerteur = creerAlerteur({
+    notifieur: notifieurTelegram(
+      process.env.TELEGRAM_BOT_TOKEN ?? '',
+      process.env.TELEGRAM_CHAT_ID ?? ''
+    ),
+    horloge: { maintenant: () => Date.now() },
+    plafondParHeure: 1,
+  });
+  return {
+    canalEteint: false,
+    alerter: async (o) => {
+      await alerteur.alerter(o).catch((e: Error) => {
+        console.error(
+          `::error title=${commande}::alerte ${o.categorie} NON envoyée : ${e.message}`
+        );
+      });
+    },
+  };
+}
+
 async function commande(nom: string): Promise<number> {
   if (nom === 'rechiffrer') {
     const m = manquantes([...SECRETS_DU_STOCKAGE, 'PARTNERS_BACKUP_PASSPHRASE']);
     if (m.length) return sauter('sauvegarde:rechiffrer', m);
-    const r = await rechiffrer(depotR2(), process.env.PARTNERS_BACKUP_PASSPHRASE ?? '');
+    const a = alerteDeLaForge('sauvegarde:rechiffrer');
+    const r = await rechiffrerOuAlerter(
+      depotR2(),
+      process.env.PARTNERS_BACKUP_PASSPHRASE ?? '',
+      a.alerter
+    );
     console.log(
       `✅ sauvegarde:rechiffrer — ${r.rechiffres} vidage(s) chiffré(s) côté client, clair(s) effacé(s)`
     );
-    return 0;
+    return a.canalEteint ? 1 : 0;
   }
   if (nom === 'exercice') {
     const m = manquantes([
@@ -378,8 +467,9 @@ async function commande(nom: string): Promise<number> {
     // pour leur absence AVANT l'activation.
     if (m.length) return sauter('sauvegarde:clairs', m, sauvegardeActivee());
     const seuil = SEUILS.CLAIR_EN_DEPOT_MAX_MINUTES.valeur;
-    const r = await clairsEnSouffrance(depotR2(), new Date(), seuil);
-    return issueDesClairs(r, seuil);
+    const a = alerteDeLaForge('sauvegarde:clairs');
+    const r = await jugerLesClairs(depotR2(), new Date(), seuil, a.alerter);
+    return Math.max(issueDesClairs(r, seuil), a.canalEteint ? 1 : 0);
   }
   if (nom === 'configurer') return configurer();
   throw new Error('usage : cycle.ts rechiffrer | exercice | fraicheur | clairs | configurer');
