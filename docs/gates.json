@@ -1167,6 +1167,15 @@
       "verifie": "aucune vue derivee de VUES_DERIVEES n'est suivie par git (perimetre : fichiersSuivisOuRefus), et .gitignore les ecarte toutes. Une PR qui en rajoute une, meme par git add -f, est refusee en NOMMANT le fichier ([vue_sous_git]) ; une vue que .gitignore n'ecarte plus est nommee ([vue_non_ignoree]). C'est la face rouge du temoin de GOV-123 ; la face verte — deux branches qui ajoutent chacune une tache au registre ne sont plus en conflit — est jouee dans un vrai depot git jetable par la meme spec.",
       "fixtureRouge": "un index qui suit docs/TASKS.md : [vue_sous_git] nomme docs/TASKS.md",
       "preuveRouge": "tests/unit/gouvernance/vues-rendues-apres-fusion.spec.ts, bloc « aucune vue derivee sous git » : ROUGE mesure AVANT le code sur le depot (les sept vues suivies), puis temoins rouges nommant le fichier et contre-temoin vert."
+    },
+    {
+      "id": "runbooks:exerces",
+      "phase": 0,
+      "script": "scripts/gates/runbooks-exerces.ts",
+      "tache": "QA-T13",
+      "verifie": "chaque runbook du socle exige (retour arriere, migration echouee, secret desynchronise) porte, sous un titre « Execute le », UNE ligne « Execute le : AAAA-MM-JJ · environnement : preview · SHA : <7 a 40 hex> · corps : <12 hex> · resultat : <texte> ». corps est l EMPREINTE du runbook sans son bloc, prise au moment de l exercice : un corps modifie depuis ne correspond plus et le runbook est a re-exercer (plus strict qu une date confrontee a l historique, que le fait de noter l exercice modifie lui-meme). Familles : runbook_absent, bloc_absent, bloc_vide, bloc_illisible, hors_preview, corps_modifie_depuis_l_exercice. Le vert imprime le compte des runbooks confrontes. OU ELLE TOURNE (decoupe arbitree par -d7 sur delegation de Williams du 2026-09-30) : en nightly tant qu aucun runbook du socle n est exerce, en porte A des le premier exercice reel ; les trois runbooks du socle sont exerces reellement en preview avant la cloture de la phase 0. CE QU ELLE NE TIENT PAS : que l exercice ait eu lieu tel qu il est ecrit — la ligne se remplit a la main, apres l exercice.",
+      "fixtureRouge": "vider le bloc « Execute le » d un runbook du socle, ou modifier son corps sans refaire l exercice",
+      "preuveRouge": "pnpm runbooks:exerces:prove — 6 familles rougissent chacune sur son temoin (runbook absent, sans bloc, bloc vide, date illisible, exerce en production, corps modifie sans nouvel exercice), 1 contre-temoin vert. runbooks-exerces.spec.ts vu ROUGE avant le code : « Error: Failed to load url ../../../scripts/gates/runbooks-exerces (resolved id: ../../../scripts/gates/runbooks-exerces) ». Sur le depot (2026-09-30) : EXIT=1, trois runbooks nommes « [bloc_vide] … jamais exerce » — l etat attendu jusqu a l exercice reel. Rouge constate par: A05"
     }
   ]
 }
