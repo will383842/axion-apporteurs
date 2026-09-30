@@ -16,7 +16,7 @@
 
 **334 exigences actives · 137 réputées testées · 137 couvertes · 0 orphelines.**
 
-333 tâches, dont 160 livrées · 179 fichiers de test exécutés par `vitest` sur 179 présents.
+333 tâches, dont 160 livrées · 180 fichiers de test exécutés par `vitest` sur 180 présents.
 
 ## Exigences réputées testées
 
@@ -105,7 +105,7 @@
 | `REQ-JUR-003` | `JUR-T01`, `JUR-T01b`, `JUR-T40` | `tests/unit/contrat/contract-template-complete.spec.ts` | couverte |
 | `REQ-JUR-007` | `DM-25`, `JUR-T01`, `JUR-T01b`, `T-ARG-033` | `tests/unit/contrat/contract-template-complete.spec.ts` | couverte |
 | `REQ-JUR-009` | `INT-T40`, `JUR-T04`, `JUR-T09`, `JUR-T40`, `JUR-T41`, `UX-P1-42` | `tests/unit/juridique/registre-rgpd.spec.ts` | couverte |
-| `REQ-JUR-015` | `JUR-T02` | `tests/unit/juridique/seuils-ssot.spec.ts` | couverte |
+| `REQ-JUR-015` | `JUR-T02` | `tests/unit/juridique/seuils-ssot-en-processus.spec.ts`, `tests/unit/juridique/seuils-ssot.spec.ts` | couverte |
 | `REQ-JUR-023` | `DM-23`, `JUR-T01`, `SEC-12` | `tests/unit/contrat/contract-template-complete.spec.ts` | couverte |
 | `REQ-JUR-025` | `EXT-T01`, `JUR-T04`, `JUR-T34`, `JUR-T36`, `T-ARG-033` | `tests/unit/juridique/politique-de-confidentialite.spec.ts`, `tests/unit/juridique/registre-rgpd.spec.ts` | couverte |
 | `REQ-JUR-029` | `DM-11`, `JUR-T02`, `T-ARG-033` | `tests/unit/juridique/seuils-ssot.spec.ts` | couverte |
@@ -599,6 +599,7 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | `tests/unit/juridique/charte-relationnelle.spec.ts` | oui | `REQ-JUR-034`, `REQ-JUR-035`, `REQ-JUR-036`, `REQ-JUR-037` |
 | `tests/unit/juridique/politique-de-confidentialite.spec.ts` | oui | `REQ-JUR-025` |
 | `tests/unit/juridique/registre-rgpd.spec.ts` | oui | `REQ-CPL-009`, `REQ-JUR-009`, `REQ-JUR-025`, `REQ-SEC-030` |
+| `tests/unit/juridique/seuils-ssot-en-processus.spec.ts` | oui | `REQ-JUR-015` |
 | `tests/unit/juridique/seuils-ssot.spec.ts` | oui | `REQ-EXT-028`, `REQ-JUR-015`, `REQ-JUR-029` |
 | `tests/unit/qualite/build-sans-base.spec.ts` | oui | `REQ-QA-032` |
 | `tests/unit/qualite/env-fail-fast.spec.ts` | oui | `REQ-CPL-021`, `REQ-QA-030` |
