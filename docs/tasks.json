@@ -16673,8 +16673,17 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.25,
-      "statut": "a_faire",
-      "acceptance": "Décision de Williams du 2026-09-30 : la durée d'attribution (art. 3.4 al. 1) est de 6 mois, et non 12 ; HYP-E1-9 la porte depuis GOV-112 (#300), qui a aussi fait renvoyer REQ-DM-007, REQ-DM-048, REQ-ARG-009, REQ-JUR-015, REQ-EXT-020, DM-13 et JUR-T01b à `FENETRE_MOIS`. Tâche nommée à la demande de la lentille exactitude sur #300. (1) `FENETRE_MOIS` vaut 6 dans `src/domain/seuils/ssot.ts` (SSOT, RM-10), avec sa source datée, et la question JUR-T01-Q02 y est levée ; `ssot:seuils` et les témoins de la SSOT restent verts ; aucun « 12 » de la fenêtre d'attribution ne subsiste en dur (les 12 mois du parrainage, du jeton de dépôt, de la forclusion, des statistiques glissantes et du KYC ne changent PAS). (2) Passe du lot dédié de GOV-116, lancé par Williams : dans `docs/DECISIONS.md`, la ligne W9 (« au terme des 12 mois »), le texte W19 §1 (« 12 mois sans reconduction », bornes écrites au contrat) et HYP-W19-CYCLE (« fenêtre de 12 mois ») renvoient à la durée d'attribution (`FENETRE_MOIS`, 6 mois) ; trace datée du lot (date, branche, sha de départ) dans le corps de la PR. (3) Signalé à la session axion-ia, sans écriture dans axion-ia : `docs/contrat-apporteur-clauses.md` §1.4 y dit encore « douze (12) mois ». (4) `gov:tasks`, `gov:requirements` et `ssot:seuils` sortent 0."
+      "statut": "fusionnee",
+      "acceptance": "Décision de Williams du 2026-09-30 : la durée d'attribution (art. 3.4 al. 1) est de 6 mois, et non 12 ; HYP-E1-9 la porte depuis GOV-112 (#300), qui a aussi fait renvoyer REQ-DM-007, REQ-DM-048, REQ-ARG-009, REQ-JUR-015, REQ-EXT-020, DM-13 et JUR-T01b à `FENETRE_MOIS`. Tâche nommée à la demande de la lentille exactitude sur #300. (1) `FENETRE_MOIS` vaut 6 dans `src/domain/seuils/ssot.ts` (SSOT, RM-10), avec sa source datée, et la question JUR-T01-Q02 y est levée ; `ssot:seuils` et les témoins de la SSOT restent verts ; aucun « 12 » de la fenêtre d'attribution ne subsiste en dur (les 12 mois du parrainage, du jeton de dépôt, de la forclusion, des statistiques glissantes et du KYC ne changent PAS). (2) Passe du lot dédié de GOV-116, lancé par Williams : dans `docs/DECISIONS.md`, la ligne W9 (« au terme des 12 mois »), le texte W19 §1 (« 12 mois sans reconduction », bornes écrites au contrat) et HYP-W19-CYCLE (« fenêtre de 12 mois ») renvoient à la durée d'attribution (`FENETRE_MOIS`, 6 mois) ; trace datée du lot (date, branche, sha de départ) dans le corps de la PR. (3) Signalé à la session axion-ia, sans écriture dans axion-ia : `docs/contrat-apporteur-clauses.md` §1.4 y dit encore « douze (12) mois ». (4) `gov:tasks`, `gov:requirements` et `ssot:seuils` sortent 0.",
+      "branch": "t/gov-112",
+      "owner": "A01",
+      "pr": 300,
+      "attestation": {
+        "pr": 300,
+        "sha": "04a2b195aaa06f9e4f39a799f9f7ef3c0c404258",
+        "fusionneeAt": "2026-09-30T13:40:37Z"
+      },
+      "motif": null
     }
   ]
 }
