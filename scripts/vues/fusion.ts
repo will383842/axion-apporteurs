@@ -23,8 +23,15 @@
  *
  * POURQUOI PAS UN ROBOT QUI RÉGÉNÈRE LES VUES SUR `main`. `partners/ADR-0006` §4 (REQ-GOV-014) :
  * aucun workflow ne pousse sur la branche principale, et `aucun-workflow-ne-pousse-sur-main.spec.ts`
- * le tient. Sortir les vues des PR exigerait d'amender cette règle : c'est une décision de Will,
- * pas de cette commande (`partners/ADR-0024`).
+ * le tient.
+ *
+ * DEPUIS GOV-123, LES VUES NE SONT PLUS COMMITÉES (`scripts/vues/rendre-apres-fusion.ts`) : elles
+ * sont ignorées par `.gitignore` et rendues à la volée (`pnpm vues:rendre`). Deux branches ne se
+ * disputent donc plus une vue. La commande reste utile À LA TRANSITION : une branche ouverte avant
+ * GOV-123 porte encore ses vues, que `main` a retirées de l'index — conflit « modifiée d'un côté,
+ * supprimée de l'autre ». Une telle vue sort de l'index (`git rm --cached`) et reste sur le disque ;
+ * après le rendu, une vue que `.gitignore` écarte n'est plus ajoutée. Une vue encore suivie par la
+ * base (dépôt antérieur à GOV-123) est ajoutée comme avant.
  */
 import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
@@ -51,7 +58,7 @@ export function rendreLesVues(cwd?: string): boolean {
     process.stdout.write(`──▶ ${v.rendu}\n`);
     const r = spawnSync(v.rendu, { shell: true, stdio: 'inherit', ...(cwd ? { cwd } : {}) });
     if (r.status !== 0) {
-      console.error(`❌ vues:fusion — le rendu \`${v.rendu}\` a échoué (${v.chemin}).`);
+      console.error(`❌ vues — le rendu \`${v.rendu}\` a échoué (${v.chemin}).`);
       return false;
     }
   }
@@ -114,7 +121,15 @@ export function fusionnerMain(d: Demande): Issue {
             `dérivées : ${autres.join(', ')}. Fusion abandonnée ; ce conflit se résout à la main.`
         );
       }
-      for (const v of vues) git('checkout', '--theirs', '--', v);
+      for (const v of vues) {
+        // Une vue que l'UN des deux côtés a RETIRÉE de l'index (GOV-123) en sort ici aussi, le
+        // disque la garde : la branche qui l'a retirée ne la remet jamais sous git en fusionnant une
+        // base plus ancienne, et une branche plus ancienne la perd en fusionnant la base.
+        const suivieIci = essayer('cat-file', '-e', `HEAD:${v}`);
+        const suivieEnBase = essayer('cat-file', '-e', `MERGE_HEAD:${v}`);
+        if (suivieIci && suivieEnBase) git('checkout', '--theirs', '--', v);
+        else git('rm', '-q', '--cached', '--', v);
+      }
       lignes.push(`   conflit sur ${vues.length} vue(s) seule(s) : ${vues.join(', ')} — rendues.`);
     }
 
@@ -123,8 +138,11 @@ export function fusionnerMain(d: Demande): Issue {
         '❌ vues:fusion — un rendu de vue a échoué : fusion abandonnée, rien commité.'
       );
     }
-    const presentes = VUES_DERIVEES.map((v) => v.chemin).filter((c) =>
-      existsSync(join(d.cwd ?? '.', c))
+    // Une vue que `.gitignore` écarte n'est PAS ajoutée : elle se rend, elle ne se commite plus.
+    // `check-ignore` ne répond « ignorée » que pour un fichier hors de l'index : une vue encore
+    // suivie par la base (dépôt antérieur à GOV-123) est ajoutée comme avant.
+    const presentes = VUES_DERIVEES.map((v) => v.chemin).filter(
+      (c) => existsSync(join(d.cwd ?? '.', c)) && !essayer('check-ignore', '-q', '--', c)
     );
     if (presentes.length > 0) git('add', '--', ...presentes);
     const restants = git('diff', '--name-only', '--diff-filter=U').trim();

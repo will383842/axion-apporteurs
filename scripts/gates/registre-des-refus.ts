@@ -458,4 +458,5 @@ export const REFUS_NOMMES: Readonly<Record<string, readonly string[]>> = {
     'courir › ∅ › (1)',
   ],
   'scripts/vues/fusion.ts': ['module › si APPELE_DIRECTEMENT › (issue.code)'],
+  'scripts/vues/rendre-apres-fusion.ts': ['module › si APPELE_DIRECTEMENT › (issue.code)'],
 };
