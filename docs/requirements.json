@@ -3182,7 +3182,7 @@
     {
       "id": "REQ-UX-033",
       "domaine": "produit-ux",
-      "texte": "Le JS PROPRE à chaque route de l'espace apporteur (ses fichiers d'entrée, hors socle commun) est ≤ 75 KB gz — budget absolu ; le socle commun à toutes les routes (runtime React et Next) a son propre plafond, mesuré puis majoré de 10 %, écrit dans perf/budgets.json avec sa mesure, son sha et sa date ; `size-limit` bloquant en CI dès le squelette (REQ-GOV-028), et mesure à la main avant/après consignée dans toute PR qui touche une route ; LHCI lab mobile (profil 4G lente) sur les 6 routes clés : LCP ≤ 1 800 ms, CLS = 0, INP ≤ 100 ms ; accessibilité selon REQ-UX-017. Amendée le 2026-09-29 : arbitrage -d7 sur délégation de Williams du 2026-09-29 (option 2) — sous Next 16, le First Load JS d'une page sans code client mesure déjà environ 130 KiB gz, au-delà des 75 KB à lui seul.",
+      "texte": "Le JS PROPRE à chaque route de l'espace apporteur (ses fichiers d'entrée, hors socle commun) est ≤ 75 KB gz — budget absolu ; le socle commun à toutes les routes (runtime React et Next) a son propre plafond, mesuré puis majoré de 10 %, écrit dans perf/budgets.json avec sa mesure, son sha et sa date ; la mesure par route tourne en CI dès le squelette, en AVERTISSEMENT tant qu'aucune route de l'espace n'est livrée, et devient BLOQUANTE à la première route livrée (REQ-GOV-028 ; QA-T20b, dans la même phase que cette route) — jamais un état où le texte dit bloquant et le code non, et mesure à la main avant/après consignée dans toute PR qui touche une route ; LHCI lab mobile (profil 4G lente) sur les 6 routes clés : LCP ≤ 1 800 ms, CLS = 0, INP ≤ 100 ms ; accessibilité selon REQ-UX-017. Amendée le 2026-09-29 : arbitrage -d7 sur délégation de Williams du 2026-09-29 (option 2) — sous Next 16, le First Load JS d'une page sans code client mesure déjà environ 130 KiB gz, au-delà des 75 KB à lui seul. Précisé le 2026-09-30 (arbitrage A01 sur recommandation -d7, délégation de Williams du 2026-09-29) : période transitoire écrite, l'exigence prévaut sur l'acceptance d'une tâche.",
       "source": "AGENTS.md ; tableaux-de-bord §6.2 ; audit-outil §12.3 point 6 ; texte décidé de l'annexe de dédoublonnage, remis le 2026-09-19 (décision de Will)",
       "statut": "active",
       "remplaceePar": null,
@@ -4244,7 +4244,7 @@
     {
       "id": "REQ-GOV-028",
       "domaine": "gouvernance-agents",
-      "texte": "Les budgets de performance de Partners sont posés dans le dépôt (`size-limit` ≤ 75 KB gz par route de l'espace apporteur ; LHCI lab mobile LCP ≤ 1 800 ms, CLS = 0, INP ≤ 100 ms) et **bloquants dès la première route livrée** ; aucun cliquet n'est posé sous la mesure courante ; une garde vérifie que chaque route de l'espace a une entrée size-limit (route sans budget → rouge).",
+      "texte": "Les budgets de performance de Partners sont posés dans le dépôt (`size-limit` ≤ 75 KB gz par route de l'espace apporteur ; LHCI lab mobile LCP ≤ 1 800 ms, CLS = 0, INP ≤ 100 ms) et **bloquants dès la première route livrée** (avant elle, la mesure tourne en avertissement : il n'existe aucune route à juger) ; aucun cliquet n'est posé sous la mesure courante ; une garde vérifie que chaque route de l'espace a une entrée size-limit (route sans budget → rouge).",
       "source": "tableaux §6.2 ; AGENTS.md ; reformulation d'annexe appliquée le 2026-09-03",
       "statut": "active",
       "remplaceePar": null,

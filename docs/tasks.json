@@ -4131,7 +4131,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "budget 75 KB gz par route mesuré par script maison sur `.next/static/chunks/app/` (une entrée par route) ; non bloquant jusqu'à QA-T20b (seuil aligné d'abord, blocage ensuite).",
+      "acceptance": "budget 75 KB gz par route mesure par script maison sur `.next/static/chunks/app/` (une entree par route) ; en AVERTISSEMENT tant qu'aucune route de l'espace n'est livree, BLOQUANT a la premiere route livree par QA-T20b (seuil aligne d'abord, blocage ensuite), conformement a REQ-UX-033 et REQ-GOV-028 precisees le 2026-09-30.",
       "tests": {
         "REQ-QA-031": [
           "tests/unit/qualite/budget-par-route.spec.ts"
