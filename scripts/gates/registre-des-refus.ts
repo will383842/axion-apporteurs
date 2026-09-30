@@ -383,6 +383,9 @@ export const REFUS_NOMMES: Readonly<Record<string, readonly string[]>> = {
     "module › si LANCE_EN_SCRIPT && process.argv.includes('--pr') › si base === undefined || deploye === undefined › (2)",
     "module › si LANCE_EN_SCRIPT && process.argv.includes('--pr') › si v.fautes.length > 0 › (1)",
   ],
+  'scripts/gates/bundle-par-route.ts': [
+    "module › si APPELE_DIRECTEMENT › (argv.includes('--prove') ? prouver() : controlerLeDepot(arg…)",
+  ],
   'scripts/gates/perf-budgets.ts': [
     'lireVue › si !existsSync(c) › (1)',
     'module › si APPELE_DIRECTEMENT › si rendre || verifier › (rendreOuVerifier(verifier))',
