@@ -2591,6 +2591,15 @@ export const PORTE_A_FIGEE: PorteFigee = {
       cles: { with: { 'node-version': '22', cache: 'pnpm' } },
     },
     { nom: 'run: pnpm install --frozen-lockfile', run: 'pnpm install --frozen-lockfile' },
+    // GOV-123 : les vues se rendent AVANT toute étape qui en lit une ; aucune ne revient sous git.
+    {
+      nom: 'Les vues derivees sont rendues, et le rendu est reproductible',
+      run: 'pnpm vues:rendre',
+    },
+    {
+      nom: 'Aucune vue derivee sous git — une PR qui en rajoute une est refusee, le fichier nomme',
+      run: 'pnpm vues:hors-git',
+    },
     { nom: 'Regle de publication (depot public)', run: 'pnpm gov:publication' },
     { nom: 'La garde de publication sait rougir', run: 'pnpm gov:publication:prove' },
     { nom: 'Identifiants qualifies', run: 'pnpm gov:identifiants' },
@@ -2710,6 +2719,10 @@ export const PORTE_A_FIGEE: PorteFigee = {
       run: 'pnpm perf:budgets:verifier',
     },
     {
+      nom: 'La mesure du poids par route sait rougir, y compris sur zero octet',
+      run: 'pnpm perf:bundle:prove',
+    },
+    {
       nom: 'Compteurs de debit — conduite sur panne declaree et executee, famille close',
       run: 'pnpm securite:rate-famille',
     },
@@ -2758,6 +2771,8 @@ export const PORTE_A_FIGEE: PorteFigee = {
       cles: JETON_DE_LA_FORGE,
     },
     { nom: 'La garde de l etat vivant sait rougir', run: 'pnpm gov:etat:prove' },
+    { nom: 'Construire l application pour la mesure', run: 'pnpm perf:bundle:construire' },
+    { nom: 'Poids par route de l espace — JS propre et socle commun', run: 'pnpm perf:bundle' },
     // ── LES DOUZE ÉTAPES VENUES DE `main` PENDANT QUE CETTE BRANCHE VIVAIT (PR #165 et #180).
     //    CE QUI EST VERSIONNÉ ICI EST UNE COPIE FIGÉE, et c'est la raison d'être d'un constat : on
     //    ne confronte pas un workflow à lui-même. La dérivation dit COMMENT cette copie a été
@@ -2824,6 +2839,9 @@ export const PORTE_A_FIGEE: PorteFigee = {
   scripts: {
     'sec:semgrep': 'tsx scripts/gates/semgrep.ts',
     'sec:semgrep:prove': 'tsx scripts/gates/semgrep.ts --prove',
+    // GOV-123 : les deux étapes des vues, lancées par la porte A, figées comme les autres.
+    'vues:rendre': 'tsx scripts/vues/rendre-apres-fusion.ts',
+    'vues:hors-git': 'tsx scripts/vues/rendre-apres-fusion.ts --hors-git',
     'gov:publication': 'tsx scripts/gates/gov-publication.ts',
     'gov:publication:prove': 'tsx scripts/gates/gov-publication.ts --prove',
     'gov:identifiants': 'tsx scripts/gates/gov-identifiants.ts',
@@ -2887,6 +2905,9 @@ export const PORTE_A_FIGEE: PorteFigee = {
     'perf:budgets': 'tsx scripts/gates/perf-budgets.ts',
     'perf:budgets:prove': 'tsx scripts/gates/perf-budgets.ts --prove',
     'perf:budgets:verifier': 'tsx scripts/gates/perf-budgets.ts --verifier',
+    'perf:bundle': 'tsx scripts/gates/bundle-par-route.ts',
+    'perf:bundle:prove': 'tsx scripts/gates/bundle-par-route.ts --prove',
+    'perf:bundle:construire': 'next build',
     'securite:rate-famille': 'tsx scripts/gates/rate-famille.ts',
     'securite:rate-famille:prove': 'tsx scripts/gates/rate-famille.ts --prove',
     'gov:conventions': 'tsx scripts/gates/gov-conventions.ts',
@@ -2988,9 +3009,6 @@ export const PASSIF_SANS_SCRIPT: Readonly<Record<string, string>> = {
   'gov:contrat':
     'l’empreinte du contrat est tenue par `pnpm contracts:hash` (`scripts/contracts/export.ts ' +
     '--verifier`, câblé en porte A) ; ce nom de script n’a jamais existé : entrée à re-pointer.',
-  'gate-deploiement':
-    'tâche porteuse livrée ; le script de vérification d’atterrissage est déclaré par une tâche ' +
-    'de phase 0 non livrée, mais l’entrée reste attribuée à la tâche du socle : à ré-attribuer.',
   'gov:derivation':
     'garde DIFFÉRÉE par écrit (`docs/GARDES-AXIONIA.md` §2) et reprise par la tâche de la grille, ' +
     'qui déclare ce chemin ; son attribution d’origine est exigée par `gardes-transposees.spec.ts`.',

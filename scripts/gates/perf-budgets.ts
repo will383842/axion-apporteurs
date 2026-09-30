@@ -54,9 +54,12 @@
  *   • elle garde `perf/budgets.json` comme source des entrées et `lighthouserc.json` comme rendu ;
  *     elle y ajoute ce qui n'existe pas encore — `collect.url` (les URLs réelles, une par route,
  *     les segments dynamiques résolus sur une session de test) et `startServerCommand` ;
- *   • elle écrit le MESUREUR, `scripts/gates/bundle-par-route.ts`, qui somme les paquets de
- *     `.next/static/chunks/app/` route par route et les confronte au `limit` de chaque entrée.
- *     Cette garde-ci vérifie que chaque route A un budget ; celle-là vérifiera qu'elle le TIENT ;
+ *   • elle écrit le MESUREUR, `scripts/gates/bundle-par-route.ts` (`pnpm perf:bundle`). ⚠️ LIVRÉ
+ *     AUTREMENT QU'ANNONCÉ ICI : sous Next 16 (Turbopack), `.next/static/chunks/app/` n'est PAS
+ *     produit, et sommer ses paquets rendait 0 octet. Le mesureur lit les manifestes de Next
+ *     (`build-manifest.json`, `page_client-reference-manifest.js`) ; le champ `path` d'une entrée
+ *     nomme désormais ce manifeste. Cette garde-ci vérifie que chaque route A un budget ; celle-là
+ *     vérifie qu'elle le TIENT ;
  *   • ⚠️ `interaction-to-next-paint` : en navigation, Lighthouse ne mesure l'INP que si la page
  *     reçoit une interaction. Mesuré sur le dépôt voisin : `auditRan = 0` sur dix-huit passes
  *     (douze desktop, six mobile), assertion vacante — verte pour rien. L'assertion est posée ici
@@ -597,7 +600,7 @@ function prouver(): number {
   const routeFeinte = `${RACINE_ESPACE}/mes-entreprises/page.tsx`;
   const entreeJuste = {
     name: '/mes-entreprises',
-    path: '.next/static/chunks/app/(espace)/mes-entreprises/**/*.js',
+    path: '.next/server/app/(espace)/mes-entreprises/page_client-reference-manifest.js',
     limit: `${seuilsDepuisRegistre(vue.registre).plafondKoGz} KB`,
     gzip: true,
   };

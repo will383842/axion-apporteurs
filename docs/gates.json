@@ -253,7 +253,7 @@
       "tache": "GOV-000",
       "verifie": "un seul producteur (release-manager, fusion serialisee auTour) ; aucune concurrency avec cancel-in-progress ; squash + required_linear_history ; x-partners-build-sha == sha avant la fusion suivante ; purge de cache ; smoke readyz (protocole et protection de main en phase -1, deploy:verify en phase 0 par QA-T34)",
       "fixtureRouge": "lancer deploy:verify sur un sha non atterri",
-      "preuveRouge": null
+      "preuveRouge": "tests/unit/qualite/un-seul-producteur-de-deploiement.spec.ts vu ROUGE avant le code (commit 5b2378f) : 21 tests rouges, dont « AssertionError: expected 1 to be 2 // Object.is equality » (sans PARTNERS_URL_PUBLIQUE, deploy:verify doit sortir en 2, indetermine). Temoin a deux faces sur un vrai serveur HTTP local : pnpm deploy:verify <sha> contre un en-tete x-partners-build-sha qui sert un autre sha -> EXIT=1, les deux sha nommes (attendu, servi) ; sans en-tete -> EXIT=1, « en-tete x-partners-build-sha absent » ; contre le sha servi -> EXIT=0. pnpm deploy:coolify : secrets absents -> SAUTE, EXIT=0, un ::warning:: par secret manquant ; plateforme en 401 -> EXIT=1, statut nomme, jeton jamais imprime ; plateforme qui accepte -> PATCH docker_registry_image_tag sha-<7> PUIS POST /api/v1/deploy, puis atterrissage lu ; image jamais servie -> EXIT=1, les deux sha nommes ; adresse en clair hors boucle locale -> refus. Rouge constate par: A05"
     },
     {
       "id": "notify-sink-hors-prod",
@@ -928,9 +928,9 @@
       "alias": [
         "GATE-UX-BUNDLE"
       ],
-      "verifie": "budget 75 KB gz PAR ROUTE mesure par script maison sur .next/static/chunks/app/ (une entree par route ; jamais size-limit, qui somme les globs) plus LHCI lab mobile (LCP <= 1 800 ms, CLS 0, INP <= 100 ms) ; seuils poses apres premiere mesure (GOV-019), armes bloquants par QA-T20b ; continue-on-error interdit",
+      "verifie": "poids charge au premier rendu PAR ROUTE de l'espace, lu dans les manifestes de Next 16 (.next/build-manifest.json : rootMainFiles, polyfillFiles exclus car servis en noModule ; .next/server/app/<segments>/page_client-reference-manifest.js : entryJSFiles), jamais executes (objet JSON extrait, toute autre forme echoue ferme), gzip niveau 9, chaque fichier compte une fois par route. .next/static/chunks/app/ n'est PAS produit sous Turbopack : les anciens globs mesuraient zero octet. DEUX PLAFONDS (arbitrage -d7 sur delegation de Williams du 2026-09-29) : le JS PROPRE a chaque route (ses paquets hors du socle) contre le plafond derive de REQ-GOV-028 et pose par GOV-019 (75 KB gz, 1 KB = 1 024 o) ; le SOCLE commun (rootMainFiles, runtime React/Next) contre mesureOctetsGz x (1 + marge) lu dans perf/budgets.json, cle socle (129 523 o mesures sur 0d31086, marge 10 %), juge une fois. BLOQUANTE DES SA LIVRAISON (arbitrage -d7 du 2026-09-30, routes livrees et mesurees : aucun faux rouge) : aucun mode souple, rougissent une faute de MESURE (build_absent, manifeste_absent, manifeste_illisible, paquet_introuvable, mesure_nulle : zero octet = faute, jamais un succes), une route livree SANS entree dans perf/budgets.json (budget_absent), et tout DEPASSEMENT (budget_depasse, socle_depasse), nomme et annote ::error::. QA-T20b realigne le seuil sur l accueil de l espace sans desarmer ce blocage. continue-on-error interdit. CE QU'ELLE NE TIENT PAS : le CSS, les paquets charges a la demande apres le premier rendu, et LCP, CLS, INP (lhci n'est pas lance).",
       "fixtureRouge": "importer une librairie de graphiques dans une route de l'espace",
-      "preuveRouge": null
+      "preuveRouge": "pnpm perf:bundle:prove — 8 familles rougissent chacune sur son temoin (build_absent, manifeste_absent, manifeste_illisible, paquet_introuvable, mesure_nulle, budget_absent, budget_depasse, socle_depasse), 1 contre-temoin vert (route legere, budgetee, socle sous son plafond). budget-par-route.spec.ts vu ROUGE avant le code : « Error: Failed to load url ../../../scripts/gates/bundle-par-route (resolved id: ../../../scripts/gates/bundle-par-route) » ; puis, pour l'armement bloquant (2026-09-30), 16 tests sur 21 ROUGES contre le script non bloquant (« expected +0 to be 1 », familles sans budget_absent). Binaire sur le depot (2026-09-30, build de 5deb5a8 + armement) : perf:bundle EXIT=0, socle 129 523 o, /connexion et /connexion/[jeton] 3 651 o propres, /confidentialite 4 215 o ; l'entree /confidentialite retiree de perf/budgets.json -> EXIT=1, « [budget_absent] /confidentialite : livree sans entree dans perf/budgets.json » ; le 2026-09-29, un module client de ~105 Ko gz importe dans /connexion -> « [budget_depasse] /connexion : 104899 o gz pour un plafond de 76800 o ». Rouge constate par: A05"
     },
     {
       "id": "spec-espace-mobile",
@@ -1149,6 +1149,33 @@
       "fixtureRouge": "retirer une seule sortie non nulle d'un fichier declare : cliquet-nomme-chaque-refus.spec.ts nomme l'identite retiree et elle seule",
       "preuveRouge": "PR 168 (GOV-045) — commit rouge 3314671, puis 106 mutants tues chacun par son nom",
       "horsCi": "Module importe, pas un binaire : il n'a pas de mode de lancement propre. Ses regles sont jouees par cliquet-nomme-chaque-refus.spec.ts et par le cliquet de refus-de-rendre-et-de-publier.spec.ts, que pnpm test lance en porte A."
+    },
+    {
+      "id": "vues:rendre",
+      "phase": 0,
+      "script": "scripts/vues/rendre-apres-fusion.ts",
+      "tache": "GOV-123",
+      "verifie": "les vues derivees de VUES_DERIVEES (scripts/vues/vues.ts) ne sont plus commitees : la porte A les REND avant toute etape qui en lit une, dans l'ordre (docs/PLAN-STATE.md en dernier), puis les rend une SECONDE fois et compare les octets. Un rendu en echec, une vue absente apres son rendu, ou deux rendus successifs qui different d'un octet sont un rouge qui NOMME la vue et l'octet du premier ecart. Les verificateurs de chaque vue (gov:trace:verifier, gov:tasks:verifie-rendu, gov:requirements:verifie-rendu, lot:paths:check, gov:gates-derivees, gov:adr, plan-state:verifier) la suivent et confrontent ce rendu a ses sources ; leurs temoins rouges sur vue perimee restent dans leurs specs. CE QU'ELLE NE VOIT PAS : sur un poste authentifie, une PR qui change d'etat entre les deux rendus fait differer PLAN-STATE (zones lues sur la forge) ; en porte A l'etape n'a aucun jeton et les deux lectures echouent pareillement.",
+      "fixtureRouge": "un rendu qui ecrit un compteur de passage dans une vue : les deux rendus different, la vue et l octet sont nommes",
+      "preuveRouge": "tests/unit/gouvernance/vues-rendues-apres-fusion.spec.ts, bloc « le rendu est reproductible » : temoins rouges (rendus differents, rendu en echec, vue absente) et contre-temoin vert. ROUGE mesure AVANT le code : la spec rougissait sur ci.yml sans etape pnpm vues:rendre et sur les sept vues encore suivies par git."
+    },
+    {
+      "id": "vues:hors-git",
+      "phase": 0,
+      "script": "scripts/vues/rendre-apres-fusion.ts",
+      "tache": "GOV-123",
+      "verifie": "aucune vue derivee de VUES_DERIVEES n'est suivie par git (perimetre : fichiersSuivisOuRefus), et .gitignore les ecarte toutes. Une PR qui en rajoute une, meme par git add -f, est refusee en NOMMANT le fichier ([vue_sous_git]) ; une vue que .gitignore n'ecarte plus est nommee ([vue_non_ignoree]). C'est la face rouge du temoin de GOV-123 ; la face verte — deux branches qui ajoutent chacune une tache au registre ne sont plus en conflit — est jouee dans un vrai depot git jetable par la meme spec.",
+      "fixtureRouge": "un index qui suit docs/TASKS.md : [vue_sous_git] nomme docs/TASKS.md",
+      "preuveRouge": "tests/unit/gouvernance/vues-rendues-apres-fusion.spec.ts, bloc « aucune vue derivee sous git » : ROUGE mesure AVANT le code sur le depot (les sept vues suivies), puis temoins rouges nommant le fichier et contre-temoin vert."
+    },
+    {
+      "id": "runbooks:exerces",
+      "phase": 0,
+      "script": "scripts/gates/runbooks-exerces.ts",
+      "tache": "QA-T13",
+      "verifie": "chaque runbook du socle exige (retour arriere, migration echouee, secret desynchronise) porte, sous un titre « Execute le », UNE ligne « Execute le : AAAA-MM-JJ · environnement : preview · SHA : <7 a 40 hex> · corps : <12 hex> · resultat : <texte> ». corps est l EMPREINTE du runbook sans son bloc, prise au moment de l exercice : un corps modifie depuis ne correspond plus et le runbook est a re-exercer (plus strict qu une date confrontee a l historique, que le fait de noter l exercice modifie lui-meme). Familles : runbook_absent, bloc_absent, bloc_vide, bloc_illisible, hors_preview, corps_modifie_depuis_l_exercice. Le vert imprime le compte des runbooks confrontes. OU ELLE TOURNE (decoupe arbitree par -d7 sur delegation de Williams du 2026-09-30) : en nightly tant qu aucun runbook du socle n est exerce, en porte A des le premier exercice reel ; les trois runbooks du socle sont exerces reellement en preview avant la cloture de la phase 0. CE QU ELLE NE TIENT PAS : que l exercice ait eu lieu tel qu il est ecrit — la ligne se remplit a la main, apres l exercice.",
+      "fixtureRouge": "vider le bloc « Execute le » d un runbook du socle, ou modifier son corps sans refaire l exercice",
+      "preuveRouge": "pnpm runbooks:exerces:prove — 6 familles rougissent chacune sur son temoin (runbook absent, sans bloc, bloc vide, date illisible, exerce en production, corps modifie sans nouvel exercice), 1 contre-temoin vert. runbooks-exerces.spec.ts vu ROUGE avant le code : « Error: Failed to load url ../../../scripts/gates/runbooks-exerces (resolved id: ../../../scripts/gates/runbooks-exerces) ». Sur le depot (2026-09-30) : EXIT=1, trois runbooks nommes « [bloc_vide] … jamais exerce » — l etat attendu jusqu a l exercice reel. Rouge constate par: A05"
     }
   ]
 }

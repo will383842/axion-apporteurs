@@ -359,6 +359,12 @@ export interface Livraison {
    * déclare alors rien, et la clôture refuse sous `titre_d_ecrasement_non_conforme`.
    */
   titreNonConforme?: { lu: string | null; attendu: string | null } | null;
+  /**
+   * GOV-128 — la ligne `Lot:` qui SUIT une première ligne conforme dans le message d'écrasement,
+   * même quand d'autres lignes la suivent. Elle ne déclare RIEN par elle-même (`corps` reste la
+   * seule déclaration, GOV-104) : seule une entrée `par: 'lot'` du passif déclaré la lit.
+   */
+  lotDuSquash?: string | null;
 }
 
 /** Une livraison au PASSIF DÉCLARÉ de la déclaration (GOV-127) : une entrée, une tâche, une PR. */
@@ -370,6 +376,12 @@ export interface EntreeDuPassifDeLaDeclaration {
   sha: string;
   date: string;
   arbitrage: string;
+  /**
+   * GOV-128 — ce qui nomme la tâche dans la livraison : le titre à l'instant de la fusion (défaut,
+   * GOV-127), ou la ligne `Lot:` du message d'écrasement immuable, derrière une première ligne
+   * conforme. Une entrée par titre ne se lève jamais par la ligne `Lot:`, ni l'inverse.
+   */
+  par?: 'titre' | 'lot';
 }
 
 /**
@@ -379,6 +391,11 @@ export interface EntreeDuPassifDeLaDeclaration {
  * (lu dans sa chronologie sur la forge) ne déclare pas la tâche ; toute livraison hors de cette liste
  * garde les deux refus. Ajouter une entrée est une décision : elle passe par un arbitrage écrit et par
  * les deux lentilles, jamais par un drapeau de la ligne de commande.
+ *
+ * GOV-128 — une PR de LOT dont la première ligne du squash est conforme mais dont le corps porte, après
+ * la ligne `Lot:`, d'autres lignes ne déclare rien (GOV-104), et son titre à plusieurs tâches n'en
+ * nomme aucune (`idDuTitre`). Une entrée `par: 'lot'` la lève tâche par tâche, en lisant la ligne
+ * `Lot:` du message immuable, jamais le corps de la PR.
  */
 export const PASSIF_DE_LA_DECLARATION: readonly EntreeDuPassifDeLaDeclaration[] = [
   {
@@ -390,6 +407,16 @@ export const PASSIF_DE_LA_DECLARATION: readonly EntreeDuPassifDeLaDeclaration[] 
     arbitrage:
       'arbitrage -d7 sur délégation de Williams du 2026-09-29 : livraison antérieure à la convention de déclaration côté axion-ia ; la PR nomme la tâche (titre à la fusion « feat(INT-T02): … », squash « … (INT-T02) (#1180) ») ; accords A09 et production vérifiés ; patch propre 8f1d7d4 ≡ 6bfd50b vérifié (19 fichiers, seul le contexte de worker.ts diffère) ; exception unique, aucune règle assouplie',
   },
+  ...(['INT-T04', 'INT-T05'] as const).map((tache) => ({
+    tache,
+    depot: 'axionia' as const,
+    pr: 1228,
+    sha: '3fb76aa6f93a58aba79bae876169089bb0a505ed',
+    date: '2026-09-30',
+    par: 'lot' as const,
+    arbitrage:
+      'arbitrage -d7 sur délégation de Williams du 2026-09-30 : PR de lot (titre « feat(INT-T04, INT-T05): … ») dont le squash, à première ligne conforme, porte « Lot: INT-T04, INT-T05 » suivi d’un paragraphe et d’un trailer ; les deux accords A09 (exactitude, securite) sont publiés sur la tête fusionnée 7eb1bf3 ; exception unique, aucune règle assouplie',
+  })),
 ];
 
 /**
@@ -405,6 +432,12 @@ export function passifDeLaDeclaration(
     (e) => e.tache === tacheId && e.pr === livraison.pr && e.sha === livraison.sha
   );
   if (!entree) return null;
+  if (entree.par === 'lot') {
+    // Une première ligne non conforme ne déclare rien, ni par elle, ni par le `Lot:` qui la suit.
+    if (livraison.titreNonConforme || !livraison.titre || !livraison.lotDuSquash) return null;
+    const lot = lireLeLot(livraison.lotDuSquash);
+    return lot.malForme === null && lot.ids.includes(tacheId) ? entree : null;
+  }
   const aLaFusion = (livraison.titreNonConforme?.attendu ?? livraison.titre ?? '').replace(
     /\s*\(#\d+\)\s*$/,
     ''
@@ -820,6 +853,8 @@ export function livraisonDepuisLaForge(e: {
   const declare = lignes !== null && conforme;
   const utiles = declare ? lignes.slice(1).filter((l) => l.trim() !== '') : [];
   const corps = !declare ? null : utiles.length === 1 && /^Lot:/.test(utiles[0]!) ? utiles[0]! : '';
+  // GOV-128 : la ligne `Lot:` qui suit IMMÉDIATEMENT le titre conforme, lue pour le passif seul.
+  const lotDuSquash = declare && utiles.length > 0 && /^Lot:/.test(utiles[0]!) ? utiles[0]! : null;
   return {
     pr: e.pr,
     sha,
@@ -831,6 +866,7 @@ export function livraisonDepuisLaForge(e: {
     titre: declare ? premiere : null,
     corps,
     titreNonConforme,
+    lotDuSquash,
   };
 }
 

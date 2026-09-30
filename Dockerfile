@@ -19,10 +19,19 @@ COPY package.json pnpm-lock.yaml ./
 COPY prisma ./prisma
 RUN pnpm install --frozen-lockfile
 COPY . .
+# QA-T34 (REQ-QA-033) : le sha du commit, passé par `--build-arg GITHUB_SHA` (package.json,
+# `image:construire`), devient l'en-tête `x-partners-build-sha` (next.config.ts). Ce n'est PAS une
+# variable de base ni de cache : REQ-QA-032 n'interdit que celles-là au build. Absent (build du poste),
+# l'en-tête n'est pas posé.
+ARG GITHUB_SHA
+ENV PARTNERS_BUILD_SHA=${GITHUB_SHA}
 RUN pnpm exec next build
 
 FROM base AS execution
 ENV NODE_ENV=production
+# Le même sha à l'exécution : `next start` relit next.config.ts, qui doit rendre le même en-tête.
+ARG GITHUB_SHA
+ENV PARTNERS_BUILD_SHA=${GITHUB_SHA}
 # Le code appartient à root, en lecture seule pour l'utilisateur d'exécution : seul le cache de
 # Next (images optimisées, régénérations) doit être écrit par lui.
 COPY --from=construction /app /app

@@ -72,6 +72,14 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: pnpm }
       - run: pnpm install --frozen-lockfile
+      # GOV-123, REQ-GOV-032. Les vues derivees ne sont plus commitees : elles se RENDENT ici,
+      # avant toute etape qui en lit une, puis une seconde fois pour que deux rendus identiques
+      # octet par octet soient exiges (la vue non reproductible est nommee). Aucun jeton : les
+      # lectures de la forge de PLAN-STATE echouent de la meme facon aux deux rendus.
+      - name: Les vues derivees sont rendues, et le rendu est reproductible
+        run: pnpm vues:rendre
+      - name: Aucune vue derivee sous git — une PR qui en rajoute une est refusee, le fichier nomme
+        run: pnpm vues:hors-git
       - name: Regle de publication (depot public)
         run: pnpm gov:publication
       - name: La garde de publication sait rougir
@@ -329,6 +337,13 @@ jobs:
         run: pnpm perf:budgets:prove
       - name: Les budgets sur le disque sont le rendu de leur exigence
         run: pnpm perf:budgets:verifier
+      # QA-T20, REQ-UX-033. Le poids que le navigateur charge VRAIMENT, route par route, lu dans les
+      # manifestes de Next 16 (`.next/static/chunks/app/` n est pas produit sous Turbopack : les
+      # anciens globs mesuraient zero octet). BLOQUANTE des sa livraison (arbitrage -d7 du 2026-09-30) :
+      # une faute de MESURE, une route livree sans budget et tout DEPASSEMENT, de route ou du socle,
+      # rougissent ; aucun mode souple. Pas de `continue-on-error`.
+      - name: La mesure du poids par route sait rougir, y compris sur zero octet
+        run: pnpm perf:bundle:prove
       # SEC-10, REQ-SEC-016. Tout compteur de debit est declare au registre unique, sous l un des
       # cinq prefixes, avec sa conduite sur panne REQUISE ; la garde EXECUTE chaque compteur contre
       # un cache qui leve et confronte le verdict a la conduite declaree. Le vert imprime les
@@ -471,3 +486,10 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: La garde de l etat vivant sait rougir
         run: pnpm gov:etat:prove
+      # QA-T20 : construire puis mesurer, EN DERNIER. `next build` ecrit `.next/` et
+      # `next-env.d.ts` ; pose plus haut, il faisait rougir `format:check` sur un fichier genere
+      # (mesure en pre-vol le 2026-09-29). Aucune etape ne vient apres : aucune ne voit ces artefacts.
+      - name: Construire l application pour la mesure
+        run: pnpm perf:bundle:construire
+      - name: Poids par route de l espace — JS propre et socle commun
+        run: pnpm perf:bundle

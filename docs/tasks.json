@@ -662,7 +662,8 @@
         "tests/unit/gouvernance/clore-une-tache-livree-seule.spec.ts",
         "tests/unit/gouvernance/une-branche-reelle-de-la-forge-est-admise.spec.ts",
         "tests/unit/gouvernance/gov-pr-lit-une-pr-de-lot.spec.ts",
-        "tests/unit/gouvernance/tasks-schema-et-paths.spec.ts"
+        "tests/unit/gouvernance/tasks-schema-et-paths.spec.ts",
+        "docs/LECONS.md"
       ],
       "schema": false,
       "sensible": [
@@ -2359,7 +2360,14 @@
         "tests/integration/semeur-deterministe.spec.ts",
         "tests/unit/qualite/preview-par-pr.spec.ts",
         ".github/workflows/ci.yml",
-        "prisma/seed/"
+        "prisma/seed/",
+        "scripts/preview/",
+        "package.json",
+        "tests/unit/qualite/pipeline-image.spec.ts",
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts",
+        "docker-entrypoint.sh",
+        "scripts/gates/registre-des-refus.ts",
+        ".github/workflows/deploy.yml"
       ],
       "schema": true,
       "sensible": [],
@@ -2398,7 +2406,15 @@
         ".github/workflows/backup.yml",
         "docs/runbooks/sauvegarde.md",
         "tests/unit/qualite/sauvegarde-et-exercice.spec.ts",
-        ".github/workflows/nightly.yml"
+        ".github/workflows/nightly.yml",
+        "scripts/sauvegarde/",
+        "package.json",
+        "src/domain/seuils/ssot.ts",
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts",
+        "scripts/gates/registre-des-refus.ts",
+        "tests/unit/juridique/seuils-ssot-en-processus.spec.ts",
+        "src/domain/rgpd/politique.ts",
+        "scripts/gates/seuils-ssot.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -2420,7 +2436,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "DEPEND D'UN TIERS : espace de stockage objet et ses cles, prefixe dedie a Partners. (1) La base est sauvegardee TOUTES LES HEURES vers le stockage objet sous le prefixe `partners/` ; la perte de donnees acceptable et le delai de remise en service sont l'un et l'autre d'une heure (REQ-QA-023). (2) UN EXERCICE MENSUEL RESTAURE le dernier vidage sur un Postgres ephemere, verifie qu'au moins une ligne d'attribution existe et que l'etat des migrations est propre, et ALERTE en cas d'echec. (3) UNE SAUVEGARDE QU'ON NE RESTAURE PAS N'EST PAS UNE SAUVEGARDE : le resultat de l'exercice du mois est ecrit avec sa date, son empreinte de vidage et son verdict ; un exercice plus vieux que 35 jours fait rougir le travail de nuit. C'est la meme famille que la surveillance qui detecte sans prevenir. (4) TEMOIN A DEUX FACES : un vidage tronque d'un octet fait echouer la restauration de l'exercice, qui sort en code non nul et nomme l'echec ; le dernier vidage reel la fait sortir en zero avec le compte de lignes restaurees. (5) L'alerte ne contient ni coordonnee de tiers ni lien de console.",
+      "acceptance": "DEPEND D'UN TIERS : espace de stockage objet et ses cles, prefixe dedie a Partners. (1) La base est sauvegardee TOUTES LES HEURES vers le stockage objet sous le prefixe `partners/` ; la perte de donnees acceptable et le delai de remise en service sont l'un et l'autre d'une heure (REQ-QA-023). (2) UN EXERCICE MENSUEL RESTAURE le dernier vidage sur un Postgres ephemere, verifie qu'au moins une ligne d'attribution existe et que l'etat des migrations est propre, et ALERTE en cas d'echec. (3) UNE SAUVEGARDE QU'ON NE RESTAURE PAS N'EST PAS UNE SAUVEGARDE : le resultat de l'exercice du mois est ecrit avec sa date, son empreinte de vidage et son verdict ; un exercice plus vieux que 35 jours fait rougir le travail de nuit. C'est la meme famille que la surveillance qui detecte sans prevenir. (4) TEMOIN A DEUX FACES : un vidage tronque d'un octet fait echouer la restauration de l'exercice, qui sort en code non nul et nomme l'echec ; le dernier vidage reel la fait sortir en zero avec le compte de lignes restaurees. (5) L'alerte ne contient ni coordonnee de tiers ni lien de console. AVENANT A01 du 2026-09-29 (arbitrage -d7 sur delegation de Williams, volet sauvegardes de l AIPD de JUR-T04, relaye par la session -50) : les vidages horaires vont sur R2 (bucket axion-ia-backups, prefixe partners/), avec le chiffrement natif de R2 au repos et un jeton restreint a ce bucket et a ce prefixe. CONDITION DE MISE EN SERVICE, BLOQUANTE AVANT LA PREMIERE DONNEE REELLE en production : chiffrement COTE CLIENT par une cle propre a Partners (secret PARTNERS_BACKUP_PASSPHRASE, jamais celle d axion-ia) ; si le mecanisme de la plateforme ne sait pas chiffrer cote client, un job rechiffre le vidage avant son depot, faute de quoi la dette est nommee bloquante de mise en service dans le runbook de sauvegarde. TEMOIN : un vidage depose sans chiffrement client est refuse par l exercice mensuel, qui le nomme.",
       "tests": {
         "REQ-QA-023": [
           "tests/unit/qualite/sauvegarde-et-exercice.spec.ts"
@@ -2435,10 +2451,19 @@
       "zone": "qualite",
       "paths": [
         ".github/workflows/rollback.yml",
-        "docs/runbooks/rollback.md",
-        "docs/runbooks/socle.md",
         "tests/unit/qualite/retour-arriere.spec.ts",
-        "tests/unit/qualite/runbooks-exerces.spec.ts"
+        "tests/unit/qualite/runbooks-exerces.spec.ts",
+        "docs/runbooks/retour-arriere.md",
+        "docs/runbooks/migration-echouee.md",
+        "docs/runbooks/secret-desynchronise.md",
+        "scripts/gates/runbooks-exerces.ts",
+        "scripts/gates/deploy-verify.ts",
+        "package.json",
+        ".github/workflows/nightly.yml",
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts",
+        "tests/integration/sondes-de-vie.spec.ts",
+        "scripts/gates/registre-des-refus.ts",
+        "docs/gates.json"
       ],
       "schema": false,
       "sensible": [],
@@ -2448,7 +2473,6 @@
       ],
       "reqs": [
         "REQ-QA-022",
-        "REQ-QA-030",
         "REQ-QA-034"
       ],
       "hyp": [],
@@ -2462,13 +2486,10 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "(1) Un enclenchement manuel de retour arriere redeploie l'etiquette de la version precedente avec l'echappatoire de migration, puis VERIFIE `readyz` et l'en-tete de build servi (REQ-QA-022). Un retour arriere qui ne verifie pas ce qu'il a remis en place n'a rien remis en place. (2) LES CINQ RUNBOOKS de `docs/runbooks/` existent — retour arriere, migration echouee, evenement abandonne ou secret desynchronise, commission manquante, lot mensuel bloque — et CHACUN porte un bloc « Execute le : <date> · environnement : preview · SHA · resultat » (REQ-QA-034, REQ-QA-030). (3) L'EXERCICE SE FAIT EN PREVIEW, PAS SUR LE PAPIER : le bloc d'execution est rempli par une execution reelle, et une garde refuse un runbook dont le bloc est vide ou dont la date precede la derniere modification du runbook. (4) TEMOIN A DEUX FACES : un runbook dont on vide le bloc d'execution, puis un dont on modifie le corps sans refaire l'exercice, font sortir la garde en code non nul et NOMMENT le runbook ; les cinq runbooks exerces la font sortir en zero, et le vert imprime le compte des runbooks reellement confrontes. (5) `docs/runbooks/**` est reserve : la PR porte le label de documentation prevu par la charte.",
+      "acceptance": "(1) Un enclenchement manuel du workflow de retour arriere (`workflow_dispatch`, avec le SHA cible) redeploie l'image `sha-<cible>` avec `SKIP_MIGRATE=1`, VERIFIE `readyz` et l'en-tete `x-partners-build-sha` par `pnpm deploy:verify` (mode retour arriere), puis retire `SKIP_MIGRATE` (REQ-QA-022). Un retour arriere qui ne verifie pas ce qu'il a remis en place n'a rien remis en place. (2) LES TROIS RUNBOOKS DU SOCLE existent — `docs/runbooks/retour-arriere.md` (seul porteur de `SKIP_MIGRATE`), `docs/runbooks/migration-echouee.md`, `docs/runbooks/secret-desynchronise.md` — et CHACUN porte un bloc « Execute le : <date> · environnement : preview · SHA · resultat » (REQ-QA-034). Les runbooks commission manquante et lot mensuel bloque relevent de QA-T25. (3) La garde `scripts/gates/runbooks-exerces.ts` refuse un runbook dont le bloc est vide ou dont la date precede la derniere modification du runbook ; elle tourne en nightly et passe en porte A au premier exercice reel. (4) TEMOIN A DEUX FACES : un runbook dont on vide le bloc d'execution, puis un dont on modifie le corps sans refaire l'exercice, font sortir la garde en code non nul et NOMMENT le runbook ; les runbooks exerces la font sortir en zero, et le vert imprime le compte des runbooks reellement confrontes. (5) CONDITION posee sur delegation (2026-09-30) : les trois runbooks du socle sont EXERCES REELLEMENT en preview AVANT la cloture de la Phase 0, et la verification de fin de Phase 0 le controle. (6) `docs/runbooks/**` est reserve : la PR porte le label de documentation prevu par la charte.",
       "tests": {
         "REQ-QA-022": [
           "tests/unit/qualite/retour-arriere.spec.ts"
-        ],
-        "REQ-QA-030": [
-          "tests/unit/qualite/runbooks-exerces.spec.ts"
         ],
         "REQ-QA-034": [
           "tests/unit/qualite/runbooks-exerces.spec.ts"
@@ -2698,10 +2719,10 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 1,
-      "statut": "a_faire",
-      "owner": null,
+      "statut": "fusionnee",
+      "owner": "A01",
       "lot": null,
-      "branch": null,
+      "branch": "feat/partners-int-t02-outbox",
       "pr": null,
       "issue": null,
       "attempts": 0,
@@ -2726,7 +2747,12 @@
           "axionia/src/server/partners-sync/__tests__/outbox-produit-des-evenements-valides.spec.ts"
         ]
       },
-      "acceptance": "DEPOT AXIONIA — la PR porte l'etiquette de depot et suit le runbook de fusion d'axionia. (1) Tout evenement destine a Partners est ecrit dans une file de sortie PERSISTANTE, DANS LA TRANSACTION de l'ecriture metier qui le produit : un retour arriere metier ne laisse AUCUN evenement, une validation metier en laisse EXACTEMENT UN (REQ-INT-001). C'est la seule forme qui ne perd ni ne duplique. (2) Chaque requete sortante est signee sur « horodatage point corps exact », en-tetes dedies, et le recepteur refuse hors d'une fenetre de 300 s (REQ-INT-002). La signature porte sur le corps EXACT transmis, jamais sur un objet re-serialise. (3) INERTIE PAR DEFAUT : sans le drapeau d'activation, aucune ligne de file de sortie, aucun travail de fond, aucun appel reseau ; et au build du depot axionia — celui qui s'execute sans base reelle — aucun code d'integration ne s'execute (REQ-INT-008). (4) Le rejeu suit un recul exponentiel, 8 tentatives au plus, delai d'attente 10 s ; un refus definitif abandonne immediatement avec alerte, une indisponibilite ne compte pas de tentative ; apres abandon la ligne reste visible et rejouable a la main par identifiant d'evenement (REQ-INT-009). (5) Une route de relecture de la file de sortie permet a Partners de rattraper toute lacune a partir d'un numero de sequence, avec la charge EXACTE conservee (REQ-INT-012). (6) Aucun secret d'integration ne transite en clair dans le depot ni dans une conversation : ils sont poses par le chemin de secrets de la forge (REQ-INT-031). (7) TEMOIN A DEUX FACES : une transaction metier annulee apres ecriture de l'evenement laisse ZERO ligne de file de sortie et le test le prouve ; la meme transaction validee en laisse exactement une. Et sans le drapeau d'activation, un appel metier complet laisse zero ligne, zero travail, zero appel reseau, ce qui se mesure et ne se suppose pas. (8) `sequence` est attribuee par le relais, sous verrou consultatif, au premier envoi : monotonie GLOBALE et d'EMISSION (portee laissee ouverte a INT-T02 par partners/ADR-0008, tranchee par l'architecte le 2026-09-26) ; la route de relecture ne rend que des lignes numerotees ; un test fait valider deux transactions dans l'ordre inverse de leur creation et prouve qu'aucune ligne n'est sautee. (9) Le corps signe et transmis est stocke en TEXTE (`corps`), jamais en Json (jsonb reordonne les cles), et relu octet a octet par un test. (10) SCHEMA axionia (conventions d'axionia, patron `CrmSyncOutbox`, partners/ADR-0022) : enum `PartnersSyncStatus {pending, sent, failed, gave_up}` ; `PartnersSyncOutbox` -> `partners_sync_outbox` : `eventId` uuid unique, `eventType` VarChar(64) valide contre `TYPES_EVENEMENT` avant insertion (422 sinon), `subjectRef` VarChar(180), `sequence` BigInt unique nulle tant que la ligne n'a pas ete prise, `corps` Text, `status` (defaut `pending`), `attempts`, `lastError`, `lastAttemptAt`, `nextAttemptAt`, `sentAt`, `responseStatus`, `createdAt` ; index `(status, nextAttemptAt)` et `subjectRef`."
+      "acceptance": "DEPOT AXIONIA — la PR porte l'etiquette de depot et suit le runbook de fusion d'axionia. (1) Tout evenement destine a Partners est ecrit dans une file de sortie PERSISTANTE, DANS LA TRANSACTION de l'ecriture metier qui le produit : un retour arriere metier ne laisse AUCUN evenement, une validation metier en laisse EXACTEMENT UN (REQ-INT-001). C'est la seule forme qui ne perd ni ne duplique. (2) Chaque requete sortante est signee sur « horodatage point corps exact », en-tetes dedies, et le recepteur refuse hors d'une fenetre de 300 s (REQ-INT-002). La signature porte sur le corps EXACT transmis, jamais sur un objet re-serialise. (3) INERTIE PAR DEFAUT : sans le drapeau d'activation, aucune ligne de file de sortie, aucun travail de fond, aucun appel reseau ; et au build du depot axionia — celui qui s'execute sans base reelle — aucun code d'integration ne s'execute (REQ-INT-008). (4) Le rejeu suit un recul exponentiel, 8 tentatives au plus, delai d'attente 10 s ; un refus definitif abandonne immediatement avec alerte, une indisponibilite ne compte pas de tentative ; apres abandon la ligne reste visible et rejouable a la main par identifiant d'evenement (REQ-INT-009). (5) Une route de relecture de la file de sortie permet a Partners de rattraper toute lacune a partir d'un numero de sequence, avec la charge EXACTE conservee (REQ-INT-012). (6) Aucun secret d'integration ne transite en clair dans le depot ni dans une conversation : ils sont poses par le chemin de secrets de la forge (REQ-INT-031). (7) TEMOIN A DEUX FACES : une transaction metier annulee apres ecriture de l'evenement laisse ZERO ligne de file de sortie et le test le prouve ; la meme transaction validee en laisse exactement une. Et sans le drapeau d'activation, un appel metier complet laisse zero ligne, zero travail, zero appel reseau, ce qui se mesure et ne se suppose pas. (8) `sequence` est attribuee par le relais, sous verrou consultatif, au premier envoi : monotonie GLOBALE et d'EMISSION (portee laissee ouverte a INT-T02 par partners/ADR-0008, tranchee par l'architecte le 2026-09-26) ; la route de relecture ne rend que des lignes numerotees ; un test fait valider deux transactions dans l'ordre inverse de leur creation et prouve qu'aucune ligne n'est sautee. (9) Le corps signe et transmis est stocke en TEXTE (`corps`), jamais en Json (jsonb reordonne les cles), et relu octet a octet par un test. (10) SCHEMA axionia (conventions d'axionia, patron `CrmSyncOutbox`, partners/ADR-0022) : enum `PartnersSyncStatus {pending, sent, failed, gave_up}` ; `PartnersSyncOutbox` -> `partners_sync_outbox` : `eventId` uuid unique, `eventType` VarChar(64) valide contre `TYPES_EVENEMENT` avant insertion (422 sinon), `subjectRef` VarChar(180), `sequence` BigInt unique nulle tant que la ligne n'a pas ete prise, `corps` Text, `status` (defaut `pending`), `attempts`, `lastError`, `lastAttemptAt`, `nextAttemptAt`, `sentAt`, `responseStatus`, `createdAt` ; index `(status, nextAttemptAt)` et `subjectRef`.",
+      "attestation": {
+        "pr": 1180,
+        "sha": "f158408b6a0473f99f2df9b47cece3515234cbfe",
+        "fusionneeAt": "2026-09-29T12:16:26Z"
+      }
     },
     {
       "id": "INT-T03",
@@ -2739,7 +2765,15 @@
         "axionia/prisma/schema.prisma",
         "axionia/scripts/gates/cliquet-ecrivains.ts",
         "axionia/src/server/partners-sync/__tests__/producteurs-client.spec.ts",
-        "axionia/src/server/partners-sync/__tests__/cliquet-ecrivains.spec.ts"
+        "axionia/src/server/partners-sync/__tests__/cliquet-ecrivains.spec.ts",
+        "axionia/src/server/actions/qualiopi/clients.ts",
+        "axionia/src/server/qualiopi/crm/contact-facturation.ts",
+        "axionia/src/server/qualiopi/crm/porte-client.ts",
+        "axionia/src/features/dossier-client/fusionner.ts",
+        "axionia/src/features/dossier-client/defaire-fusion.ts",
+        "axionia/scripts/visio/deriver-siren.ts",
+        "axionia/tests/unit/ci/cliquet-ecrivains-client.spec.ts",
+        "axionia/src/server/partners-sync/producteurs/facturation.ts"
       ],
       "schema": true,
       "sensible": [
@@ -2809,10 +2843,10 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 1,
-      "statut": "a_faire",
-      "owner": null,
+      "statut": "fusionnee",
+      "owner": "A01",
       "lot": null,
-      "branch": null,
+      "branch": "partners/int-t04-devis-signe",
       "pr": null,
       "issue": null,
       "attempts": 0,
@@ -2825,6 +2859,11 @@
         "REQ-INT-007": [
           "axionia/src/server/partners-sync/__tests__/producteur-devis.spec.ts"
         ]
+      },
+      "attestation": {
+        "pr": 1228,
+        "sha": "3fb76aa6f93a58aba79bae876169089bb0a505ed",
+        "fusionneeAt": "2026-09-29T22:28:11Z"
       }
     },
     {
@@ -2845,7 +2884,10 @@
         "axionia/src/server/qualiopi/financements/facture-formation-emission.ts",
         "axionia/src/server/qualiopi/financements/facture-libre.ts",
         "axionia/src/server/qualiopi/financements/plan-recurrent.ts",
-        "axionia/src/server/qualiopi/financements/dossier-financement.ts"
+        "axionia/src/server/qualiopi/financements/dossier-financement.ts",
+        "axionia/src/server/partners/ht.ts",
+        "axionia/src/server/partners/__tests__/derivation-ht.spec.ts",
+        "axionia/src/server/partners/__tests__/payloads.spec.ts"
       ],
       "schema": true,
       "sensible": [
@@ -2869,10 +2911,10 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 1,
-      "statut": "a_faire",
-      "owner": null,
+      "statut": "fusionnee",
+      "owner": "A01",
       "lot": null,
-      "branch": null,
+      "branch": "partners/int-t04-devis-signe",
       "pr": null,
       "issue": null,
       "attempts": 0,
@@ -2903,6 +2945,11 @@
         "REQ-INT-032": [
           "axionia/src/server/partners-sync/__tests__/producteurs-facturation.spec.ts"
         ]
+      },
+      "attestation": {
+        "pr": 1228,
+        "sha": "3fb76aa6f93a58aba79bae876169089bb0a505ed",
+        "fusionneeAt": "2026-09-29T22:28:11Z"
       }
     },
     {
@@ -3785,10 +3832,10 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 1,
-      "statut": "a_faire",
-      "owner": null,
+      "statut": "fusionnee",
+      "owner": "A01",
       "lot": null,
-      "branch": null,
+      "branch": "jur/t03-copie-apporteur",
       "pr": null,
       "issue": null,
       "attempts": 0,
@@ -3804,6 +3851,11 @@
         "REQ-JUR-024": [
           "axionia/src/content/__tests__/vocabulaire-apporteur.spec.ts"
         ]
+      },
+      "attestation": {
+        "pr": 1220,
+        "sha": "b1eb57ea32d92da4f6fec5ec1caa740eb554c4d8",
+        "fusionneeAt": "2026-09-29T21:03:44Z"
       }
     },
     {
@@ -4053,7 +4105,12 @@
         ".github/workflows/ci.yml",
         "tests/unit/qualite/budget-par-route.spec.ts",
         "docs/gates.json",
-        "scripts/gates/perf-budgets.ts"
+        "scripts/gates/perf-budgets.ts",
+        "package.json",
+        "perf/budgets.json",
+        "scripts/gates/gov-conventions.ts",
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts",
+        "scripts/gates/registre-des-refus.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -4076,7 +4133,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "budget 75 KB gz par route mesuré par script maison sur `.next/static/chunks/app/` (une entrée par route) ; non bloquant jusqu'à QA-T20b (seuil aligné d'abord, blocage ensuite).",
+      "acceptance": "budget 75 KB gz par route mesure par script maison sur `.next/static/chunks/app/` (une entree par route) ; BLOQUANT des sa livraison (REQ-UX-033, REQ-GOV-028) : les routes deja livrees, dont /connexion et /confidentialite, sont jugees, et une route sans budget rougit. QA-T20b realigne ensuite le seuil sur la premiere mesure de l'accueil de l'espace (UX-P1-08), sans jamais desarmer le blocage.",
       "tests": {
         "REQ-QA-031": [
           "tests/unit/qualite/budget-par-route.spec.ts"
@@ -4105,7 +4162,12 @@
         "axionia/src/content/recrutement/tunnel-facebook.ts",
         "axionia/src/components/services/devenir-commercial/CommercialFounder.tsx",
         "axionia/src/components/services/devenir-commercial/CommercialHowItWorks.tsx",
-        "axionia/src/components/services/devenir-commercial/CommercialProductsEarnings.tsx"
+        "axionia/src/components/services/devenir-commercial/CommercialProductsEarnings.tsx",
+        "axionia/src/app/[locale]/devenir-commercial-ia/page.tsx",
+        "axionia/src/app/[locale]/devenir-commercial-ia/candidature/page.tsx",
+        "axionia/src/components/services/devenir-commercial/CommercialContactBand.tsx",
+        "axionia/src/lib/email/templates/apporteur-issue-echange.tsx",
+        "axionia/src/lib/email/templates/__tests__/l-issue-de-l-echange-apporteur-a-ses-trois-e-mails.spec.tsx"
       ],
       "schema": false,
       "sensible": [
@@ -4245,7 +4307,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "relecture du gabarit v1 et des décisions « avenant » (C1, C12, D9, D11, D14, horodatage E.1-12, point de départ E.1-9 `fenetreFinAt = confirmeeAt + 12 mois`, sort d'une ligne acquise bloquée pour KYC à 12 mois) reçue et consignée dans `docs/DECISIONS.md` avant INT-T12. 🔴 Complétée le 2026-09-29 (chantier W20, décision de Williams, session -d7, docs/chantiers/W20-confirmation-par-email.md §6). La relecture du gabarit v1 porte aussi l'art. 3.2 amendé par W20 (JUR-T40) : confirmation par le clic du contact en réponse à la demande de la Société OU lors d'une prise de contact de la Société, sauf lorsque la demande fait l'objet d'une vérification, auquel cas seule une prise de contact concluante de la Société vaut confirmation (Correction de sécurité du 2026-09-29 (refus de la lentille securite sur 2340a63, docs/chantiers/W20-confirmation-par-email.md §2, §8 et question 18)). Règle de confirmation tacite TRANCHÉE PAR WILLIAMS le 2026-09-29 (session -d7, question 2 du plan, HYP-W20-TACITE) : au bout de trente jours (CONFIRMATION_TACITE_JOURS) sans réponse du contact et sans appel concluant (Qualification confirme ou non_confirme), l'entreprise reste réservée à l'apporteur, l'attribution est réputée confirmée ; le délai court de la RÉCEPTION de l'e-mail de confirmation, c'est-à-dire d'un envoi sans rebond (recueAt) ; tant que l'e-mail revient en erreur et que l'apporteur n'a pas corrigé l'adresse, le délai NE COMMENCE PAS, et un rebond rattaché après coup retire à l'envoi sa qualité de réception. La confirmation tacite réserve l'entreprise et ne crée aucune commission : aucune commission sans paiement réel. Texte de l'art. 3.2 proposé par JUR-T40 et soumis à cette relecture : « À défaut de réponse de l'entreprise et de prise de contact concluante dans un délai de trente jours à compter de la réception de la demande de confirmation, l'attribution est réputée confirmée, sauf lorsque la demande fait l'objet d'une vérification, auquel cas seule une prise de contact concluante de la Société vaut confirmation. La demande est réputée reçue lorsqu'elle a été envoyée à l'adresse déclarée sans être retournée en erreur ; tant qu'elle revient en erreur et que l'Apporteur n'a pas communiqué une adresse corrigée, ce délai ne court pas. Cette confirmation est la seule conséquence attachée au silence de l'entreprise. » Elle porte encore la lecture de la « première prise de contact » de l'art. 3.4 (HYP-W20-PREMIER-CONTACT) et l'information de l'apporteur sur la communication de son nom (HYP-W20-IDENTITE-APPORTEUR).",
+      "acceptance": "relecture du gabarit v1 et des décisions « avenant » (C1, C12, D9, D11, D14, horodatage E.1-12, point de départ E.1-9 `fenetreFinAt = confirmeeAt + 12 mois`, sort d'une ligne acquise bloquée pour KYC à 12 mois) reçue et consignée dans `docs/DECISIONS.md` avant INT-T12. 🔴 Complétée le 2026-09-29 (chantier W20, décision de Williams, session -d7, docs/chantiers/W20-confirmation-par-email.md §6). La relecture du gabarit v1 porte aussi l'art. 3.2 amendé par W20 (JUR-T40) : confirmation par le clic du contact en réponse à la demande de la Société OU lors d'une prise de contact de la Société, sauf lorsque la demande fait l'objet d'une vérification, auquel cas seule une prise de contact concluante de la Société vaut confirmation (Correction de sécurité du 2026-09-29 (refus de la lentille securite sur 2340a63, docs/chantiers/W20-confirmation-par-email.md §2, §8 et question 18)). Règle de confirmation tacite TRANCHÉE PAR WILLIAMS le 2026-09-29 (session -d7, question 2 du plan, HYP-W20-TACITE) : au bout de trente jours (CONFIRMATION_TACITE_JOURS) sans réponse du contact et sans appel concluant (Qualification confirme ou non_confirme), l'entreprise reste réservée à l'apporteur, l'attribution est réputée confirmée ; le délai court de la RÉCEPTION de l'e-mail de confirmation, c'est-à-dire d'un envoi sans rebond (recueAt) ; tant que l'e-mail revient en erreur et que l'apporteur n'a pas corrigé l'adresse, le délai NE COMMENCE PAS, et un rebond rattaché après coup retire à l'envoi sa qualité de réception. La confirmation tacite réserve l'entreprise et ne crée aucune commission : aucune commission sans paiement réel. Texte de l'art. 3.2 proposé par JUR-T40 et soumis à cette relecture : « À défaut de réponse de l'entreprise et de prise de contact concluante dans un délai de trente jours à compter de la réception de la demande de confirmation, l'attribution est réputée confirmée, sauf lorsque la demande fait l'objet d'une vérification, auquel cas seule une prise de contact concluante de la Société vaut confirmation. La demande est réputée reçue lorsqu'elle a été envoyée à l'adresse déclarée sans être retournée en erreur ; tant qu'elle revient en erreur et que l'Apporteur n'a pas communiqué une adresse corrigée, ce délai ne court pas. Lorsque la demande fait l'objet d'une vérification et qu'aucune prise de contact concluante n'a eu lieu, l'attribution prend fin après trois tentatives de prise de contact restées sans réponse ou à l'expiration d'un délai de quarante-cinq jours à compter de l'envoi de la demande, selon ce qui survient en premier. Cette fin n'emporte aucune autre conséquence pour l'Apporteur que celle-ci : il ne peut déclarer à nouveau la même entreprise qu'à l'expiration d'un délai de trente jours, porté à quatre-vingt-dix jours lorsque l'attribution de cette entreprise a déjà pris fin une première fois dans les mêmes conditions ; la déclaration de cette entreprise par un autre Apporteur n'en est pas affectée. La confirmation réputée acquise et, pour une demande qui fait l'objet d'une vérification, la fin de l'attribution sont les seules conséquences attachées au silence de l'entreprise. » (texte mis à jour après les réponses de Williams du 2026-09-29 vers 20 h aux questions 18 et 19 du plan, puis l'arbitrage de -d7 sur sa délégation, même jour, pour le délai avant une nouvelle déclaration). Elle porte encore la lecture de la « première prise de contact » de l'art. 3.4 (HYP-W20-PREMIER-CONTACT) et l'information de l'apporteur sur la communication de son nom (HYP-W20-IDENTITE-APPORTEUR).",
       "tests": {
         "REQ-GOV-015": [
           "decisions-ouvertes.spec.ts"
@@ -4409,7 +4471,8 @@
         "DM-09",
         "JUR-T02",
         "DM-40",
-        "GOV-112"
+        "GOV-112",
+        "SEC-41"
       ],
       "reqs": [
         "REQ-DM-006",
@@ -4429,7 +4492,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "job de confirmation tacite, horloge injectée, qui promeut en `active` toute `provisoire` dont la demande de confirmation a été **reçue** depuis plus de `CONFIRMATION_TACITE_JOURS` (30) **sans confirmation ni `non_confirme`, par appel ou par courriel** — y compris `injoignable` et `ne_se_souvient_pas` —, écrit l'événement `attribution_etat_modifie` avec `evenement: 'confirmee_tacitement'` **dans la même transaction** (un type de journal par genre de transition, partners/ADR-0022, REQ-DM-042 amendée au §3.2 du plan W20, à inscrire par la passe gardien-spec) et fait courir `fenetreFinAt` à compter de cette date ; c'est la **seule** conséquence attachée au silence de l'entreprise. 🔴 Complétée le 2026-09-29 (chantier W20, décision de Williams, session -d7, docs/chantiers/W20-confirmation-par-email.md §6), puis amendée le 2026-09-29 (réponse de Williams à la question 2 et exigence d'expérience, docs/chantiers/W20-confirmation-par-email.md §2, §4 et §9). Un clic « Oui » retenu ou un « Non » confirmé (DM-41) empêchent la promotion comme une Qualification. Règle de confirmation tacite TRANCHÉE PAR WILLIAMS le 2026-09-29 (session -d7, question 2 du plan, HYP-W20-TACITE) : au bout de trente jours (CONFIRMATION_TACITE_JOURS) sans réponse du contact et sans appel concluant (Qualification confirme ou non_confirme), l'entreprise reste réservée à l'apporteur, l'attribution est réputée confirmée ; le délai court de la RÉCEPTION de l'e-mail de confirmation, c'est-à-dire d'un envoi sans rebond (recueAt) ; tant que l'e-mail revient en erreur et que l'apporteur n'a pas corrigé l'adresse, le délai NE COMMENCE PAS, et un rebond rattaché après coup retire à l'envoi sa qualité de réception. La confirmation tacite réserve l'entreprise et ne crée aucune commission : aucune commission sans paiement réel. (a) Le job lit la demande de confirmation (DM-40) : l'échéance est recueAt + CONFIRMATION_TACITE_JOURS, et non plus l'enregistrement du dépôt ; aucune échéance tant que la demande est planifiée, retenue ou en rebond non corrigé ; après correction de l'adresse, l'échéance part du nouvel envoi sans rebond. (b) La bascule a lieu le jour qu'affiche le badge de REQ-UX-062 (UX-P1-05) : passage « tout ce qui est dû à l'instant t » (REQ-QA-027), et non plus un passage quotidien unique, pour qu'une échéance à 23 h 59 soit promue le jour dit. (c) Tests frontière, horloge figée : réception à J, échéance moins une minute aucune promotion, échéance une seule ; rebond à J+1 non corrigé, J+90 aucune promotion ; correction à J+10 puis envoi sans rebond, promotion à J+40 et pas avant ; clic « Oui » ou appel confirme avant l'échéance, aucune promotion tacite ; deux passages, un seul événement. Le job reste la seule conséquence du silence. (d) Correction de sécurité du 2026-09-29 (refus de la lentille securite sur 2340a63, docs/chantiers/W20-confirmation-par-email.md §2, §8 et question 18) : par défaut, une demande SIGNALÉE (qui porte une raison de vérification de SEC-41 à l'échéance) n'est JAMAIS promue par le seul silence ; elle reste provisoire jusqu'à un appel concluant (confirme la confirme, non_confirme l'invalide), puis suit le régime ordinaire, péremption comprise. Témoins : demande signalée et silencieuse, J+30 et J+90 aucune promotion ; demande signalée puis appel confirme à J+35, active à J+35 ; une mutation qui promeut une demande signalée rougit. REQ-DM-042 amendée s'écrit par GOV-112 (dépendance)."
+      "acceptance": "job de confirmation tacite, horloge injectée, qui promeut en `active` toute `provisoire` dont la demande de confirmation a été **reçue** depuis plus de `CONFIRMATION_TACITE_JOURS` (30) **sans confirmation ni `non_confirme`, par appel ou par courriel** — y compris `injoignable` et `ne_se_souvient_pas` —, écrit l'événement `attribution_etat_modifie` avec `evenement: 'confirmee_tacitement'` **dans la même transaction** (un type de journal par genre de transition, partners/ADR-0022, REQ-DM-042 amendée au §3.2 du plan W20, à inscrire par la passe gardien-spec) et fait courir `fenetreFinAt` à compter de cette date ; c'est la **seule** conséquence attachée au silence de l'entreprise pour une demande non signalée ; pour une demande signalée, c'est la libération de DM-13 (question 19). 🔴 Complétée le 2026-09-29 (chantier W20, décision de Williams, session -d7, docs/chantiers/W20-confirmation-par-email.md §6), puis amendée le 2026-09-29 (réponse de Williams à la question 2 et exigence d'expérience, docs/chantiers/W20-confirmation-par-email.md §2, §4 et §9). Un clic « Oui » retenu ou un « Non » confirmé (DM-41) empêchent la promotion comme une Qualification. Règle de confirmation tacite TRANCHÉE PAR WILLIAMS le 2026-09-29 (session -d7, question 2 du plan, HYP-W20-TACITE) : au bout de trente jours (CONFIRMATION_TACITE_JOURS) sans réponse du contact et sans appel concluant (Qualification confirme ou non_confirme), l'entreprise reste réservée à l'apporteur, l'attribution est réputée confirmée ; le délai court de la RÉCEPTION de l'e-mail de confirmation, c'est-à-dire d'un envoi sans rebond (recueAt) ; tant que l'e-mail revient en erreur et que l'apporteur n'a pas corrigé l'adresse, le délai NE COMMENCE PAS, et un rebond rattaché après coup retire à l'envoi sa qualité de réception. La confirmation tacite réserve l'entreprise et ne crée aucune commission : aucune commission sans paiement réel. (a) Le job lit la demande de confirmation (DM-40) : l'échéance est recueAt + CONFIRMATION_TACITE_JOURS, et non plus l'enregistrement du dépôt ; aucune échéance tant que la demande est planifiée, retenue ou en rebond non corrigé ; après correction de l'adresse, l'échéance part du nouvel envoi sans rebond. (b) La bascule a lieu le jour qu'affiche le badge de REQ-UX-062 (UX-P1-05) : passage « tout ce qui est dû à l'instant t » (REQ-QA-027), et non plus un passage quotidien unique, pour qu'une échéance à 23 h 59 soit promue le jour dit. (c) Tests frontière, horloge figée : réception à J, échéance moins une minute aucune promotion, échéance une seule ; rebond à J+1 non corrigé, J+90 aucune promotion (la demande en rebond porte la raison « rebond », elle est signalée et DM-13 la libère 45 jours après l'envoi) ; correction à J+10 puis envoi sans rebond, promotion à J+40 et pas avant ; clic « Oui » ou appel confirme avant l'échéance, aucune promotion tacite ; deux passages, un seul événement. Pour une demande non signalée, le job reste la seule conséquence du silence. (d) Correction de sécurité du 2026-09-29 (refus de la lentille securite sur 2340a63, docs/chantiers/W20-confirmation-par-email.md §2, §8 et question 18) : une demande SIGNALÉE (qui porte une raison de vérification de SEC-41 à l'échéance) n'est JAMAIS promue par le seul silence ; elle reste provisoire jusqu'à un appel concluant (confirme la confirme, non_confirme l'invalide), puis suit le régime ordinaire, péremption comprise. TRANCHÉ PAR WILLIAMS le 2026-09-29 vers 20 h (session -d7, question 18) : la valeur par défaut est retenue, aucune confirmation tacite d'une demande signalée. Sans appel concluant, la demande signalée n'est pas promue mais LIBÉRÉE par DM-13 (question 19, tranchée le même jour : trois appels injoignable ou 45 jours après l'envoi, au premier terme, sans sanction) ; DM-24 et DM-13 lisent le même prédicat « demande signalée » de SEC-41 (dépendance ajoutée le 2026-09-29), et aucun des deux n'en recopie la règle. Témoins : demande signalée et silencieuse, J+30 aucune promotion, et à J+45 aucune promotion (la libération de DM-13 a lieu, pas une confirmation) ; demande signalée puis appel confirme à J+35, active à J+35 ; une mutation qui promeut une demande signalée rougit. REQ-DM-042 amendée s'écrit par GOV-112 (dépendance)."
     },
     {
       "id": "DM-25",
@@ -4538,7 +4601,8 @@
       "pr": null,
       "issue": null,
       "attempts": 0,
-      "motif": null
+      "motif": null,
+      "acceptance": "Client API 1 cote axionia : timeout 2 s, cache 5 min, echec ouvert (titre). (arbitrage A01 du 2026-09-30, suite de QA-T52 et INT-T41) : l'appel Bearer vers l'API entrante de Partners porte l'en-tete du kid du jeton, derive par kidDe et declare par le contrat (INT-T42) ; temoin : le kid emis change quand le jeton tourne."
     },
     {
       "id": "INT-T08-A",
@@ -4903,7 +4967,10 @@
         "CPL-T13",
         "DM-08",
         "DM-12",
-        "GOV-112"
+        "GOV-112",
+        "DM-40",
+        "SEC-41",
+        "UX-P1-10"
       ],
       "reqs": [
         "REQ-DM-004",
@@ -4916,7 +4983,7 @@
       ],
       "hyp": [],
       "externe": null,
-      "estimateDays": 0.75,
+      "estimateDays": 1.25,
       "statut": "a_faire",
       "owner": null,
       "lot": null,
@@ -4925,7 +4992,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "Contraintes W20 à intégrer (chantier W20, décision de Williams du 2026-09-29, session -d7, docs/chantiers/W20-confirmation-par-email.md §6) : (1) La péremption court de premierContactAt, posé par la PREMIÈRE RÉPONSE du contact (clic ou appel qui l'a joint), jamais par l'envoi de l'e-mail de confirmation (HYP-W20-PREMIER-CONTACT, contrat art. 3.4). (2) L'e-mail de REQ-UX-038 part à J+5 ouvrés SANS CONFIRMATION, par clic ou par appel, et non plus « sans qualification » (question 13 du plan). (3) « Injoignable ×3 » ne compte que les appels, jamais un e-mail sans réponse."
+      "acceptance": "Contraintes W20 à intégrer (chantier W20, décision de Williams du 2026-09-29, session -d7, docs/chantiers/W20-confirmation-par-email.md §6) : (1) La péremption court de premierContactAt, posé par la PREMIÈRE RÉPONSE du contact (clic ou appel qui l'a joint), jamais par l'envoi de l'e-mail de confirmation (HYP-W20-PREMIER-CONTACT, contrat art. 3.4). (2) L'e-mail de REQ-UX-038 part à J+5 ouvrés SANS CONFIRMATION, par clic ou par appel, et non plus « sans qualification » (question 13 du plan). (3) « Injoignable ×3 » ne compte que les appels, jamais un e-mail sans réponse. (4) Libération d'une demande signalée, réponse de Williams du 2026-09-29 vers 20 h (session -d7, question 19 du plan, proposée par la lentille securite ; HYP-W20-LIBERATION et REQ-DM-063 proposées au plan, écrites par GOV-112) : une attribution provisoire dont la demande de confirmation est SIGNALÉE (prédicat pur de SEC-41) et qui n'a reçu aucune Qualification confirme ni non_confirme est libérée, par le passage « tout ce qui est dû à l'instant t » (REQ-QA-027), horloge injectée, au PREMIER des deux termes : la LIBERATION_SIGNALEE_INJOIGNABLE_MAX-ième Qualification injoignable (= 3) ou LIBERATION_SIGNALEE_JOURS (= 45) jours après l'envoi effectif de la première demande de l'attribution (DM-40), qu'une correction d'adresse ne fait pas repartir. Les deux valeurs sont des paramètres de src/domain/seuils/ssot.ts, modifiables, de source contrat art. 3.2 (JUR-T40), jamais recopiées. Dans la même transaction : attribution perimee par l'événement attribution_etat_modifie avec evenement: 'liberee_sans_confirmation' (un type de journal par genre de transition, partners/ADR-0022 ; la transition provisoire → perimee entre dans la matrice de DM-08), distincte de la péremption (peremptionAt reste null) ; demande expiree, jetons révoqués ; entreprise de nouveau disponible, file d'attente comprise (fenêtre de redéclaration du rang 1, art. 3.5) ; une notification NEUTRE à l'apporteur, clé de la table SSOT des notifications (UX-P1-10, faitCourirUnDelai: false), texte de la SSOT de micro-copy (UX-P1-41), garde lexicale verte, aucune consigne, sans la raison, ni la vérification, ni le nombre d'appels. AUCUNE SANCTION : aucune suspension, aucune Anomalie, aucune entrée dans le score de SEC-14, aucun signal, rien d'imputé à l'apporteur ni au contact. Carence de redépôt, arbitrage de -d7 sur délégation de Williams du 2026-09-29 (HYP-W20-CARENCE-REDEPOT, au plan) : après une libération, le MÊME apporteur ne peut pas déposer la MÊME entreprise (SIREN, tous établissements) pendant CARENCE_REDEPOT_APRES_LIBERATION_JOURS (= 30) jours, ni pendant CARENCE_REDEPOT_APRES_SECONDE_LIBERATION_JOURS (= 90) jours après une deuxième libération du même couple (90 aussi au-delà, par défaut) ; prédicat pur, horloge injectée, dérivé des attributions libérées par liberee_sans_confirmation (aucune colonne nouvelle), lu au dépôt côté serveur ; le refus n'écrit rien et ne pose aucun horodatage ; les autres apporteurs ne sont pas concernés ; aucune sanction (ni suspension, ni Anomalie, ni signal), texte neutre de la SSOT de micro-copy. AUCUNE valeur nouvelle d'IssueDepot ni de MotifRefusDepot (consigne W19) : la présentation du refus est la question 20 du plan, ouverte ; par défaut, le redépôt n'atteint pas le formulaire et une requête forgée reçoit une erreur typée du serveur, hors IssueDepot. Passé la carence, un nouveau dépôt suit les règles ordinaires. Les précisions de la libération (45 jours depuis la première demande, seuls les injoignable, rebond non corrigé libéré de même, état perimee, badge et notification) sont validées par arbitrage de -d7 sur délégation de Williams du 2026-09-29. Seules les Qualifications injoignable comptent (point 3), ne_se_souvient_pas n'en est pas une, et une demande non signalée n'est jamais libérée par ce terme. Témoins, horloge figée : deux injoignable → rien ; le troisième → libérée au passage suivant, une seule fois ; envoi à J sans appel : J+45 moins une minute → rien, J+45 → libérée ; ne_se_souvient_pas ×3 → rien ; appel confirme à J+40 → active, aucune libération ; demande non signalée et trois injoignable → aucune libération ; correction d'adresse à J+30 → libération toujours à J+45 ; libération → aucune Anomalie, aucune suspension, une seule notification ; deux passages → un seul événement ; redépôt du même apporteur à J+29 après la libération → refusé, rien d'écrit ; à J+30 → nouvelle attribution provisoire et nouvelle demande ; deuxième libération du même couple → refus à J+89, dépôt à J+90 ; un autre apporteur le jour de la libération → accepté ; même apporteur, autre SIREN → accepté ; même SIREN, autre établissement → refusé pendant la carence ; le refus n'ouvre ni Anomalie ni suspension. Estimation portée de 0,75 à 1 j le 2026-09-29 (travail réel : un terme de plus, une transition, deux paramètres, une clé de notification et leurs témoins), puis à 1,25 j le même jour pour la carence (prédicat, refus serveur, deux paramètres, témoins) ; dépendances DM-40, SEC-41 et UX-P1-10 ajoutées le même jour."
     },
     {
       "id": "SEC-14",
@@ -5196,7 +5263,8 @@
         "REQ-INT-019",
         "REQ-JUR-004",
         "REQ-JUR-005",
-        "REQ-SEC-034"
+        "REQ-SEC-034",
+        "REQ-QA-030"
       ],
       "hyp": [
         "DEC-INT-001"
@@ -5211,7 +5279,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "ELLE ÉCRIT LE SCHÉMA (label `schema`, seule de sa famille dans son lot). Cadrage de l'architecte du 2026-09-26 sur délégation de Will (partners/ADR-0022) : ce que la tâche crée ; le comportement est celui de ses exigences. (1) `contrats` est créée par DM-23 (dépendance, conflit C1) ; INT-T12 crée `enveloppes_signature` : `enum StatutEnveloppe {envoyee, signee, refusee, expiree, annulee}` ; `contratId`, `submissionId` unique, `statut`, `emailHash` (l'adresse d'envoi en empreinte seule), `envoyeeAt`, `relancesEnvoyees` (0 à 3), `derniereRelanceAt`, `termineeAt` (nulle si et seulement si `envoyee`), `remplaceeParId` unique ; une seule enveloppe `envoyee` par contrat (`UNIQUE (contrat_id) WHERE statut = 'envoyee'`). (2) Elle ajoute à `type_evenement_recu` les valeurs DocuSeal réellement traitées : `submission_completed` (`submission.completed`), `form_declined` (`form.declined`), `submission_expired` (`submission.expired`), identifiant en snake_case et libellé de fil par `@map`. (3) INFORMATION EXTERNE REQUISE AVANT LE CODE : les noms d'événements émis, la forme exacte de la signature `<ts>.<hex64>` et l'emplacement de `metadata.apporteurId` sont consignés dans `docs/tiers/docuseal.md` avec une charge réelle enregistrée. Forme sûre : un type non listé rend 200 sans effet et est alerté, jamais traité par défaut."
+      "acceptance": "ELLE ÉCRIT LE SCHÉMA (label `schema`, seule de sa famille dans son lot). Cadrage de l'architecte du 2026-09-26 sur délégation de Will (partners/ADR-0022) : ce que la tâche crée ; le comportement est celui de ses exigences. (1) `contrats` est créée par DM-23 (dépendance, conflit C1) ; INT-T12 crée `enveloppes_signature` : `enum StatutEnveloppe {envoyee, signee, refusee, expiree, annulee}` ; `contratId`, `submissionId` unique, `statut`, `emailHash` (l'adresse d'envoi en empreinte seule), `envoyeeAt`, `relancesEnvoyees` (0 à 3), `derniereRelanceAt`, `termineeAt` (nulle si et seulement si `envoyee`), `remplaceeParId` unique ; une seule enveloppe `envoyee` par contrat (`UNIQUE (contrat_id) WHERE statut = 'envoyee'`). (2) Elle ajoute à `type_evenement_recu` les valeurs DocuSeal réellement traitées : `submission_completed` (`submission.completed`), `form_declined` (`form.declined`), `submission_expired` (`submission.expired`), identifiant en snake_case et libellé de fil par `@map`. (3) INFORMATION EXTERNE REQUISE AVANT LE CODE : les noms d'événements émis, la forme exacte de la signature `<ts>.<hex64>` et l'emplacement de `metadata.apporteurId` sont consignés dans `docs/tiers/docuseal.md` avec une charge réelle enregistrée. Forme sûre : un type non listé rend 200 sans effet et est alerté, jamais traité par défaut. AJOUT (arbitrage -d7 sur delegation de Williams du 2026-09-30, dette bloquante de la lentille securite) : DOCUSEAL_WEBHOOK_SECRET accepte une cle courante et une cle precedente, echeance de 24 h au plus ; DocuSeal n'envoyant pas de kid, les deux cles sont essayees, la courante d'abord, et le refus apres echeance est nomme ; temoin avant et apres echeance."
     },
     {
       "id": "INT-T13",
@@ -5508,7 +5576,8 @@
         "INT-T09",
         "SEC-16",
         "UX-P0-01",
-        "UX-P0-02"
+        "UX-P0-02",
+        "DM-13"
       ],
       "reqs": [
         "REQ-UX-001",
@@ -5525,7 +5594,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "route citée depuis `docs/ESPACE-ROUTES.md` (un champ sur `/`, résultat `/entreprise?q=`)."
+      "acceptance": "route citée depuis `docs/ESPACE-ROUTES.md` (un champ sur `/`, résultat `/entreprise?q=`). Carence de redépôt W20, arbitrage de -d7 sur délégation de Williams du 2026-09-29 (question 20 de docs/chantiers/W20-confirmation-par-email.md, tranchée, défaut retenu ; HYP-W20-CARENCE-REDEPOT) : quand l'apporteur consulte une entreprise qu'il ne peut pas redéposer pendant la carence de DM-13 (même apporteur, même SIREN : 30 jours après une libération sans confirmation, 90 après une deuxième et au-delà), la carte « Vérifier » dit, sans consigne, « Vous pourrez déposer cette entreprise à nouveau à partir du <date>. » (date en toutes lettres, fuseau de l'apporteur), texte de la SSOT de micro-copy, garde lexicale verte, et ne propose pas « Déposer ». Aucune valeur nouvelle d'IssueDepot ni de MotifRefusDepot (consigne W19 maintenue) ; la carte ne dit ni la raison, ni la vérification, ni le nombre d'appels ; pour tout autre apporteur, l'entreprise est disponible et « Déposer » est proposé. L'état est lu du prédicat de carence de DM-13, côté serveur. Tests : apporteur en carence → texte et aucun bouton « Déposer » ; autre apporteur → « Déposer » présent ; le jour de fin de carence → « Déposer » revient ; le DTO ne porte aucune raison."
     },
     {
       "id": "UX-P1-02",
@@ -5545,7 +5614,8 @@
         "INT-T09",
         "SEC-12",
         "UX-P0-01",
-        "GOV-112"
+        "GOV-112",
+        "DM-13"
       ],
       "reqs": [
         "REQ-UX-001",
@@ -5563,7 +5633,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "Contraintes W20 à intégrer (chantier W20, décision de Williams du 2026-09-29, session -d7, docs/chantiers/W20-confirmation-par-email.md §6) : (1) Après l'entreprise pré-remplie (SIRET affiché en lecture seule, jamais saisi deux fois), le contact rencontré : nom et prénom, fonction, e-mail et téléphone EXIGÉS, contexte facultatif et court (HYP-W20-CONTEXTE) ; un champ exigé n'est jamais marqué « obligatoire » (REQ-JUR-037), seuls les facultatifs portent « (facultatif) ». (2) Juste au-dessus du bouton, un message INFORMATIF, non bloquant, sans fenêtre modale, tiré de la SSOT de micro-copy (UX-P1-41) : « <Prénom Nom> (<Entreprise>) va recevoir un e-mail d'Axion-IA dans les 15 minutes pour confirmer votre échange. » suivi de la phrase sur le téléphone (question 15 du plan) ; il ne donne aucune consigne (REQ-JUR-039). (3) Le bouton se nomme « Déposer et prévenir <Prénom Nom> », replié en « Déposer et prévenir » si le nom est vide ou trop long à 320 px. (4) REQ-UX-001 tenue avec les quatre coordonnées : le décompte de la maquette UX-P1-40 est rejoué en E2E mobile (au plus 8 interactions, 90 s). (5) Maquette deposer.html révisée et validée par UX-P1-40 avant l'attribution. (6) Cinq états : vide, saisie, envoi, erreur par champ, hors ligne (le délai de 15 minutes court de la réception, REQ-UX-013). « Vérifier une entreprise » ne crée aucune demande de confirmation."
+      "acceptance": "Contraintes W20 à intégrer (chantier W20, décision de Williams du 2026-09-29, session -d7, docs/chantiers/W20-confirmation-par-email.md §6) : (1) Après l'entreprise pré-remplie (SIRET affiché en lecture seule, jamais saisi deux fois), le contact rencontré : nom et prénom, fonction, e-mail et téléphone EXIGÉS, contexte facultatif et court (HYP-W20-CONTEXTE) ; un champ exigé n'est jamais marqué « obligatoire » (REQ-JUR-037), seuls les facultatifs portent « (facultatif) ». (2) Juste au-dessus du bouton, un message INFORMATIF, non bloquant, sans fenêtre modale, tiré de la SSOT de micro-copy (UX-P1-41) : « <Prénom Nom> (<Entreprise>) va recevoir un e-mail d'Axion-IA dans les 15 minutes pour confirmer votre échange. » suivi de la phrase sur le téléphone (question 15 du plan) ; il ne donne aucune consigne (REQ-JUR-039). (3) Le bouton se nomme « Déposer et prévenir <Prénom Nom> », replié en « Déposer et prévenir » si le nom est vide ou trop long à 320 px. (4) REQ-UX-001 tenue avec les quatre coordonnées : le décompte de la maquette UX-P1-40 est rejoué en E2E mobile (au plus 8 interactions, 90 s). (5) Maquette deposer.html révisée et validée par UX-P1-40 avant l'attribution. (6) Cinq états : vide, saisie, envoi, erreur par champ, hors ligne (le délai de 15 minutes court de la réception, REQ-UX-013). « Vérifier une entreprise » ne crée aucune demande de confirmation. (7) Carence de redépôt W20, arbitrage de -d7 sur délégation de Williams du 2026-09-29 (question 20 du plan, tranchée, défaut retenu ; HYP-W20-CARENCE-REDEPOT) : pendant la carence de DM-13 (même apporteur, même SIREN : 30 jours après une libération sans confirmation, 90 après une deuxième et au-delà), le formulaire n'est pas atteint : l'accès au dépôt de cette entreprise par cet apporteur affiche, sans consigne, « Vous pourrez déposer cette entreprise à nouveau à partir du <date>. » (texte de la SSOT de micro-copy, le même que la carte « Vérifier » d'UX-P1-01, garde lexicale verte), sans formulaire ni bouton « Déposer ». Une soumission forgée reçoit une erreur serveur qui n'est PAS une issue d'IssueDepot (refus porté par DM-13, sans écriture ni horodatage), rendue sans erreur brute. Aucune valeur nouvelle d'IssueDepot ni de MotifRefusDepot : la consigne W19 est maintenue. Tests : apporteur en carence → texte, aucun formulaire ; soumission forgée → erreur serveur, aucune attribution, aucun horodatage, aucune issue de dépôt rendue ; autre apporteur → formulaire normal ; fin de carence → formulaire normal."
     },
     {
       "id": "UX-P1-03",
@@ -5639,7 +5709,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "Contraintes W20 à intégrer (chantier W20, réponse de Williams du 2026-09-29, session -d7, et son exigence d'expérience « facile à se souvenir et intuitif », docs/chantiers/W20-confirmation-par-email.md §4 et HYP-W20-BADGE) : l'apporteur n'a rien à retenir, l'écran le lui montre. (1) Chaque dépôt en phase de confirmation porte UN SEUL badge d'état, avec sa date et au plus une action, dérivé serveur par une fonction pure exhaustive, horloge injectée, partie de statutApporteur (REQ-UX-004) : 🟢 « Confirmée » (active : clic retenu, appel confirme ou confirmation tacite) ; 🟡 « En attente de confirmation · réservée pour vous jusqu'au <date> » (provisoire, e-mail reçu, sans réponse ni appel concluant, demande non signalée ; injoignable et ne_se_souvient_pas s'y lisent aussi, rien d'autre n'est visible) ; 🟡 « En attente de confirmation — Axion-IA va appeler votre contact » (demande SIGNALÉE, clic non retenu compris : sans date tacite ni phrase d'aide, formulation neutre, sans consigne, dans la SSOT de micro-copy ; Correction de sécurité du 2026-09-29 (refus de la lentille securite sur 2340a63, docs/chantiers/W20-confirmation-par-email.md §2, §8 et question 18)) ; 🔴 « E-mail non reçu par le contact », action unique « Corriger l'adresse » (rebond non corrigé ; action absente au-delà de CORRECTIONS_ADRESSE_MAX) ; ⚪ « Non confirmée par le contact » (invalidee par non_confirme). (2) La date est le jour de l'échéance tacite (recueAt + CONFIRMATION_TACITE_JOURS, DM-24), écrite en toutes lettres (« 29 octobre 2026 ») dans le fuseau de l'apporteur (Europe/Paris par défaut, question 17 du plan) ; le badge passe seul à 🟢 le jour affiché ; avant l'envoi effectif, 🟡 sans date (question 16). (3) 🔴 prime sur le libellé de la demande signalée tant que le rebond n'est pas corrigé. Une seule phrase d'aide, sous le 🟡 daté et sous 🔴, jamais sous le libellé de la demande signalée : « Sans réponse de votre contact, l'entreprise reste réservée pour vous 30 jours après la réception de notre e-mail. », le nombre lu de la SSOT. (4) Tous les textes viennent de la SSOT de micro-copy (UX-P1-41) et passent la garde lexicale : aucune consigne, aucun « obligatoire ». (5) Accessibilité : chaque badge a son libellé écrit, la pastille est décorative (aria-hidden), la couleur n'est jamais seule porteuse du sens ; axe-core sans violation sérieuse. (6) Aucune raison de vérification, aucun tirage d'échantillon, aucun clic non retenu n'atteint le DTO de l'espace (REQ-SEC-060 au plan) : seul l'état « appel attendu », dérivé côté serveur du prédicat de SEC-41, y arrive ; les phrases de REQ-UX-023 ne s'ajoutent pas au badge, et « vérification prioritaire » n'est jamais affichée pour une raison W20. (7) Cinq états de l'écran : liste, vide (guide vers le premier dépôt, REQ-UX-019), chargement, erreur avec reprise, hors ligne (dernière liste connue, avec son heure). (8) Le composant du badge est réutilisé tel quel par la carte du dépôt (UX-P1-43). Garantie d'expérience de l'apporteur honnête (un artisan sur Gmail, par exemple) : ces dépôts sont appelés en priorité (DM-43). Tests : un cas par badge ; demande signalée → libellé d'appel attendu, sans date, aucune bascule vers 🟢 à trente jours ; bascule 🟡 → 🟢 horloge figée, y compris une échéance à 23 h 59 et un changement d'heure ; rebond → 🔴 ; correction → 🟡 avec la nouvelle date ; une valeur d'état sans badge fait échouer le typecheck. Maquette mes-entreprises.html revalidée (UX-P1-40). REQ-UX-062 proposée au §3 du plan, écrite par GOV-112 (dépendance)."
+      "acceptance": "Contraintes W20 à intégrer (chantier W20, réponse de Williams du 2026-09-29, session -d7, et son exigence d'expérience « facile à se souvenir et intuitif », docs/chantiers/W20-confirmation-par-email.md §4 et HYP-W20-BADGE) : l'apporteur n'a rien à retenir, l'écran le lui montre. (1) Chaque dépôt en phase de confirmation porte UN SEUL badge d'état, avec sa date et au plus une action, dérivé serveur par une fonction pure exhaustive, horloge injectée, partie de statutApporteur (REQ-UX-004) : 🟢 « Confirmée » (active : clic retenu, appel confirme ou confirmation tacite) ; 🟡 « En attente de confirmation · réservée pour vous jusqu'au <date> » (provisoire, e-mail reçu, sans réponse ni appel concluant, demande non signalée ; injoignable et ne_se_souvient_pas s'y lisent aussi, rien d'autre n'est visible) ; 🟡 « En attente de confirmation — Axion-IA va appeler votre contact » (demande SIGNALÉE, clic non retenu compris : sans date tacite ni phrase d'aide, formulation neutre, sans consigne, dans la SSOT de micro-copy ; Correction de sécurité du 2026-09-29 (refus de la lentille securite sur 2340a63, docs/chantiers/W20-confirmation-par-email.md §2, §8 et question 18)) ; 🔴 « E-mail non reçu par le contact », action unique « Corriger l'adresse » (rebond non corrigé ; action absente au-delà de CORRECTIONS_ADRESSE_MAX) ; ⚪ « Non confirmée par le contact » (invalidee par non_confirme) ; ⚪ « Réservation terminée · l'entreprise est de nouveau disponible » (demande signalée libérée sans appel concluant par DM-13 : trois injoignable ou 45 jours après l'envoi, réponse de Williams du 2026-09-29 à la question 19 ; attribution perimee par liberee_sans_confirmation), sans date, sans action, sans phrase d'aide, libellé par défaut dans la SSOT de micro-copy, qui ne dit ni la raison, ni la vérification, ni le nombre d'appels. Le libellé de la demande signalée suit la réponse de Williams à la question 18 (même jour : aucune confirmation tacite). (2) La date est le jour de l'échéance tacite (recueAt + CONFIRMATION_TACITE_JOURS, DM-24), écrite en toutes lettres (« 29 octobre 2026 ») dans le fuseau de l'apporteur (Europe/Paris par défaut, question 17 du plan) ; le badge passe seul à 🟢 le jour affiché ; avant l'envoi effectif, 🟡 sans date (question 16). (3) 🔴 prime sur le libellé de la demande signalée tant que le rebond n'est pas corrigé. Une seule phrase d'aide, sous le 🟡 daté et sous 🔴, jamais sous le libellé de la demande signalée : « Sans réponse de votre contact, l'entreprise reste réservée pour vous 30 jours après la réception de notre e-mail. », le nombre lu de la SSOT. (4) Tous les textes viennent de la SSOT de micro-copy (UX-P1-41) et passent la garde lexicale : aucune consigne, aucun « obligatoire ». (5) Accessibilité : chaque badge a son libellé écrit, la pastille est décorative (aria-hidden), la couleur n'est jamais seule porteuse du sens ; axe-core sans violation sérieuse. (6) Aucune raison de vérification, aucun tirage d'échantillon, aucun clic non retenu n'atteint le DTO de l'espace (REQ-SEC-060 au plan) : seul l'état « appel attendu », dérivé côté serveur du prédicat de SEC-41, y arrive ; les phrases de REQ-UX-023 ne s'ajoutent pas au badge, et « vérification prioritaire » n'est jamais affichée pour une raison W20. (7) Cinq états de l'écran : liste, vide (guide vers le premier dépôt, REQ-UX-019), chargement, erreur avec reprise, hors ligne (dernière liste connue, avec son heure). (8) Le composant du badge est réutilisé tel quel par la carte du dépôt (UX-P1-43). Garantie d'expérience de l'apporteur honnête (un artisan sur Gmail, par exemple) : ces dépôts sont appelés en priorité (DM-43). Tests : un cas par badge ; demande signalée → libellé d'appel attendu, sans date, aucune bascule vers 🟢 à trente jours ; demande signalée libérée → ⚪ « Réservation terminée », sans date ni action, et aucune raison dans le DTO ; bascule 🟡 → 🟢 horloge figée, y compris une échéance à 23 h 59 et un changement d'heure ; rebond → 🔴 ; correction → 🟡 avec la nouvelle date ; une valeur d'état sans badge fait échouer le typecheck. Maquette mes-entreprises.html revalidée (UX-P1-40). REQ-UX-062 proposée au §3 du plan, écrite par GOV-112 (dépendance)."
     },
     {
       "id": "UX-P1-06",
@@ -5774,7 +5844,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "seuil aligné sur la première mesure de la première route de l'espace, puis bloquant."
+      "acceptance": "seuil realigne sur la premiere mesure de l'accueil de l'espace (UX-P1-08), jamais pose sous la mesure courante ; le blocage arme par QA-T20 reste arme."
     },
     {
       "id": "UX-P1-09",
@@ -7487,7 +7557,8 @@
       "repo": "partners",
       "zone": "qualite",
       "paths": [
-        "scripts/gates/QA-T25"
+        "docs/runbooks/commission-manquante.md",
+        "docs/runbooks/lot-mensuel-bloque.md"
       ],
       "schema": false,
       "sensible": [
@@ -7511,7 +7582,8 @@
       "pr": null,
       "issue": null,
       "attempts": 0,
-      "motif": null
+      "motif": null,
+      "acceptance": "(1) Les deux runbooks d'argent existent — `docs/runbooks/commission-manquante.md` et `docs/runbooks/lot-mensuel-bloque.md` — et CHACUN porte un bloc « Execute le : <date> · environnement : preview · SHA · resultat » rempli par une execution reelle en preview (REQ-QA-034). (2) La garde des runbooks exerces livree par QA-T13 les confronte : le vert imprime le compte des runbooks reellement confrontes, socle compris. (3) Chaque runbook designe les fonctions d'argent qu'il exerce (lot du mois, ligne de commission bloquee, rattachement manuel) par leur nom reel, jamais par une description. (4) `docs/runbooks/**` est reserve : la PR porte le label de documentation prevu par la charte."
     },
     {
       "id": "QA-T29",
@@ -12832,7 +12904,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 1,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "tests": {
         "REQ-INT-032": [
           "tests/integration/candidature-recue.spec.ts"
@@ -12844,7 +12916,16 @@
           "tests/integration/candidature-recue.spec.ts"
         ]
       },
-      "acceptance": "AUCUNE MIGRATION : elle écrit dans des tables créées ailleurs (partners/ADR-0022, une table un créateur). Cadrage de l'architecte du 2026-09-26. (1) Le travail de fond de SEC-06 traite `candidature.recue` : il crée l'`Apporteur` au statut `candidat` avec le snapshot FIGÉ de DM-06 (REQ-DM-035, REQ-QA-035), dans une seule transaction avec le passage de l'événement reçu à `traite`. (2) Il TIRE les coordonnées par la route de coordonnées d'axionia (INT-T01c, partners/ADR-0023) et les écrit par `colonnesPii` dans les colonnes chiffrées et les empreintes de `apporteurs` — jamais un clair en base ni au journal. (3) Il RATTACHE par `emailHash` puis `phoneHash` au lieu de créer un doublon (la règle de REQ-EXT-009, que EXT-T03 porte en phase 1 ; INT-T26 ne la cite pas, sans quoi la phase dérivée de l'exigence passerait à 0) : une seconde candidature de la même personne ne crée aucune ligne `apporteurs`. (4) Échec de la route de coordonnées : l'événement reste `en_attente_dependance` (`dependance_ref = 'coordonnees:<candidatureId>'`) et est rejoué ; aucun apporteur sans adresse n'est créé. (5) TÉMOIN À DEUX FACES : la même candidature livrée deux fois laisse UNE ligne `apporteurs`, compte de lignes à l'appui ; une route de coordonnées en panne laisse zéro ligne et un événement en attente, puis la reprise en crée exactement une."
+      "acceptance": "AUCUNE MIGRATION : elle écrit dans des tables créées ailleurs (partners/ADR-0022, une table un créateur). Cadrage de l'architecte du 2026-09-26. (1) Le travail de fond de SEC-06 traite `candidature.recue` : il crée l'`Apporteur` au statut `candidat` avec le snapshot FIGÉ de DM-06 (REQ-DM-035, REQ-QA-035), dans une seule transaction avec le passage de l'événement reçu à `traite`. (2) Il TIRE les coordonnées par la route de coordonnées d'axionia (INT-T01c, partners/ADR-0023) et les écrit par `colonnesPii` dans les colonnes chiffrées et les empreintes de `apporteurs` — jamais un clair en base ni au journal. (3) Il RATTACHE par `emailHash` puis `phoneHash` au lieu de créer un doublon (la règle de REQ-EXT-009, que EXT-T03 porte en phase 1 ; INT-T26 ne la cite pas, sans quoi la phase dérivée de l'exigence passerait à 0) : une seconde candidature de la même personne ne crée aucune ligne `apporteurs`. (4) Échec de la route de coordonnées : l'événement reste `en_attente_dependance` (`dependance_ref = 'coordonnees:<candidatureId>'`) et est rejoué ; aucun apporteur sans adresse n'est créé. (5) TÉMOIN À DEUX FACES : la même candidature livrée deux fois laisse UNE ligne `apporteurs`, compte de lignes à l'appui ; une route de coordonnées en panne laisse zéro ligne et un événement en attente, puis la reprise en crée exactement une.",
+      "branch": "t/int-t26",
+      "owner": "A01",
+      "pr": 237,
+      "attestation": {
+        "pr": 237,
+        "sha": "476135ac9afc87705742d50f0e88ef268fe39dbe",
+        "fusionneeAt": "2026-09-29T15:21:46Z"
+      },
+      "motif": null
     },
     {
       "id": "INT-T27-A",
@@ -12892,7 +12973,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 1,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "tests": {
         "REQ-INT-032": [
           "axionia/src/server/partners-sync/__tests__/route-coordonnees.spec.ts"
@@ -12901,7 +12982,16 @@
           "axionia/src/server/partners-sync/__tests__/route-coordonnees.spec.ts"
         ]
       },
-      "acceptance": "DEPOT AXIONIA — la PR porte l'etiquette de depot et suit le runbook de fusion d'axionia. TACHE SENSIBLE — donnees personnelles. Cadrage de l'architecte du 2026-09-26 (partners/ADR-0023). AUCUNE MIGRATION : la route lit `Submission` et `partners_sync_outbox`, elle n'ecrit aucune table ; son journal d'appel passe par le journal structure d'axionia. (1) `GET /api/partners/candidatures/{candidatureId}/coordonnees` verifie une signature HMAC-SHA-256 de l'horodatage et de la requete sous le secret d'integration dedie, tolerance 300 s, comparaison a temps constant, liste d'autorisation d'adresses reseau ; toute requete non signee, mal signee ou hors fenetre est refusee et n'a lu aucune ligne. (2) PORTEE : la route ne repond que pour une candidature effectivement emise vers Partners (une ligne existe dans `partners_sync_outbox` pour ce `candidatureId`) ; un identifiant non emis rend EXACTEMENT la meme reponse qu'un identifiant inexistant, corps et statut compares octet a octet. (3) REPONSE FERMEE : `{nom, prenom, email, telephone}`, dechiffres depuis les colonnes chiffrees de `Submission` au moment de la reponse, chaque champ nul s'il est absent, aucun autre champ ; son schema est celui de `packages/contracts/api.ts` (INT-T01c), jamais retape. Aucun cache. (4) JOURNAL SANS CLAIR : chaque appel journalise l'identifiant de candidature, l'empreinte de l'adresse reseau et le resultat, jamais une coordonnee ; un test inspecte la ligne de journal. (5) INERTIE : sans le drapeau d'activation de la synchronisation, la route rend la reponse d'un identifiant inexistant. (6) TEMOIN A DEUX FACES : une candidature emise rend ses quatre champs et rien d'autre ; la meme requete pour une candidature non emise, puis avec une signature fausse, ne rend aucune coordonnee et le test le prouve sur le corps. (7) DÉBIT PLAFONNÉ PAR CANDIDATURE (partners/ADR-0023 : la route sert au traitement, elle n'est pas un annuaire) : au plus 5 lectures réussies par `candidatureId` sur 24 heures glissantes, par le limiteur à conduite sur panne déclarée `refuser` ; au-delà, la réponse est celle d'un identifiant inexistant et l'écart est journalisé et alerté. Le plafond laisse passer les rejeux légitimes de Partners après une panne de son côté ; il interdit la lecture répétée. TÉMOIN : la sixième lecture d'une même candidature dans les 24 heures ne rend aucune coordonnée, et la première lecture d'une autre candidature passe. AVENANT A01 du 2026-09-29 (dette de la lentille exactitude sur axion-ia #1223 ; decision de la session -66 sur delegation explicite de Will du 2026-09-29) : INT-T27-A porte AUSSI la transcription du contrat v2 dans axion-ia, confiee au premier consommateur libre parce qu INT-T22 est bloquee par la collision #1221. Livre en plus : contracts.v2.json remplace contracts.v1.json, son empreinte (contracts.sha256) et ses fixtures, le lecteur du contrat, l enveloppe et les charges alignes sur la v2, et le producteur de la file de sortie. TEMOIN : chaque fixture est jugee contre le contrat publie (fixtures-conformes-au-contrat.spec.ts) ; une charge qui emet un nom de champ absent du contrat, comme amountHtCents au lieu de montantHtCents pour paiement.recu, fait rougir le test en nommant le champ. Les paths couvrent chaque fichier modifie par #1223, lus sur la forge a la tete 13f3282."
+      "acceptance": "DEPOT AXIONIA — la PR porte l'etiquette de depot et suit le runbook de fusion d'axionia. TACHE SENSIBLE — donnees personnelles. Cadrage de l'architecte du 2026-09-26 (partners/ADR-0023). AUCUNE MIGRATION : la route lit `Submission` et `partners_sync_outbox`, elle n'ecrit aucune table ; son journal d'appel passe par le journal structure d'axionia. (1) `GET /api/partners/candidatures/{candidatureId}/coordonnees` verifie une signature HMAC-SHA-256 de l'horodatage et de la requete sous le secret d'integration dedie, tolerance 300 s, comparaison a temps constant, liste d'autorisation d'adresses reseau ; toute requete non signee, mal signee ou hors fenetre est refusee et n'a lu aucune ligne. (2) PORTEE : la route ne repond que pour une candidature effectivement emise vers Partners (une ligne existe dans `partners_sync_outbox` pour ce `candidatureId`) ; un identifiant non emis rend EXACTEMENT la meme reponse qu'un identifiant inexistant, corps et statut compares octet a octet. (3) REPONSE FERMEE : `{nom, prenom, email, telephone}`, dechiffres depuis les colonnes chiffrees de `Submission` au moment de la reponse, chaque champ nul s'il est absent, aucun autre champ ; son schema est celui de `packages/contracts/api.ts` (INT-T01c), jamais retape. Aucun cache. (4) JOURNAL SANS CLAIR : chaque appel journalise l'identifiant de candidature, l'empreinte de l'adresse reseau et le resultat, jamais une coordonnee ; un test inspecte la ligne de journal. (5) INERTIE : sans le drapeau d'activation de la synchronisation, la route rend la reponse d'un identifiant inexistant. (6) TEMOIN A DEUX FACES : une candidature emise rend ses quatre champs et rien d'autre ; la meme requete pour une candidature non emise, puis avec une signature fausse, ne rend aucune coordonnee et le test le prouve sur le corps. (7) DÉBIT PLAFONNÉ PAR CANDIDATURE (partners/ADR-0023 : la route sert au traitement, elle n'est pas un annuaire) : au plus 5 lectures réussies par `candidatureId` sur 24 heures glissantes, par le limiteur à conduite sur panne déclarée `refuser` ; au-delà, la réponse est celle d'un identifiant inexistant et l'écart est journalisé et alerté. Le plafond laisse passer les rejeux légitimes de Partners après une panne de son côté ; il interdit la lecture répétée. TÉMOIN : la sixième lecture d'une même candidature dans les 24 heures ne rend aucune coordonnée, et la première lecture d'une autre candidature passe. AVENANT A01 du 2026-09-29 (dette de la lentille exactitude sur axion-ia #1223 ; decision de la session -66 sur delegation explicite de Will du 2026-09-29) : INT-T27-A porte AUSSI la transcription du contrat v2 dans axion-ia, confiee au premier consommateur libre parce qu INT-T22 est bloquee par la collision #1221. Livre en plus : contracts.v2.json remplace contracts.v1.json, son empreinte (contracts.sha256) et ses fixtures, le lecteur du contrat, l enveloppe et les charges alignes sur la v2, et le producteur de la file de sortie. TEMOIN : chaque fixture est jugee contre le contrat publie (fixtures-conformes-au-contrat.spec.ts) ; une charge qui emet un nom de champ absent du contrat, comme amountHtCents au lieu de montantHtCents pour paiement.recu, fait rougir le test en nommant le champ. Les paths couvrent chaque fichier modifie par #1223, lus sur la forge a la tete 13f3282.",
+      "branch": "partners/int-t27a-coordonnees",
+      "owner": "A01",
+      "pr": null,
+      "attestation": {
+        "pr": 1223,
+        "sha": "f8753cd02fcc877d5ba7b27ecc23849514ea28e5",
+        "fusionneeAt": "2026-09-29T16:45:50Z"
+      },
+      "motif": null
     },
     {
       "id": "GOV-103",
@@ -13178,7 +13268,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 1,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "Releve par la lentille securite sur la PR #206, formes tenues HORS DEPOT (dossier de reprise, fichier confidentiel) : apres GOV-106, une famille d'expressions dont la valeur est connue sans execution affiche encore un terme du lexique interdit. A livrer : la garde evalue, par l'AST de TypeScript, toute expression JSX dont la valeur rendue est constante, comme React la rend, au lieu d'une liste de formes. TEMOINS : chaque forme du fichier confidentiel rougit ; les temoins entrent dans le meme commit que le correctif, jamais avant, et ni l acceptance, ni les messages de commit, ni le journal ne les enumerent.",
       "tests": {
         "REQ-GOV-017": [
@@ -13188,11 +13278,15 @@
           "tests/unit/gouvernance/frontiere-de-mot-du-rendu.spec.ts"
         ]
       },
-      "issue": null,
-      "owner": null,
-      "branch": null,
-      "pr": null,
-      "attestation": null,
+      "issue": 266,
+      "owner": "A01",
+      "branch": "t/gov-109",
+      "pr": 267,
+      "attestation": {
+        "pr": 267,
+        "sha": "dc6cfcb9da3bb73b25fa7cab714893d274e1cc78",
+        "fusionneeAt": "2026-09-29T22:49:31Z"
+      },
       "motif": null
     },
     {
@@ -13308,7 +13402,7 @@
       "externe": null,
       "estimateDays": 0.5,
       "statut": "a_faire",
-      "acceptance": "TÂCHE D'ÉCRITURE DU REGISTRE, AUCUN CODE (patron GOV-098). Source d'entrée : `docs/chantiers/W19-conseillers-salaries.md` (§2, §3 et §4), transcription du plan de l'architecte ; on la relit, on ne la recopie pas à l'aveugle. DÉPENDANCE D'OUTILLAGE : `docs/DECISIONS.md`, `docs/GLOSSAIRE.md` et `docs/PRESEANCE.md` ne s'écrivent que dans un lot dédié du gardien-spec lancé avec `--settings` surchargé (`docs/CONVENTIONS.md` §8). Ce mécanisme n'existe pas encore (constaté le 2026-09-29 : aucune commande, aucun fichier de réglages ; `partners/ADR-0019` le range en « reste à faire »). Williams a choisi le 2026-09-29 (session -d7, question 21 de la source) que GOV-116 l'écrive, le documente et le teste : GOV-112 DÉPEND de GOV-116 (champ `deps`), et l'écriture humaine par Williams n'est plus la voie prévue. Tâche sensible : section « Attaque » jouée sur le texte. (1) `docs/DECISIONS.md` porte W19 en §1, propriétaire Will : SEUL le principe est tranché le 2026-09-29 (deux populations, un seul registre d'entreprises, deux chaînes d'argent, cloisonnement strict) ; chaque modalité se lit « par défaut : … (HYP-W19-X) » et reste ouverte jusqu'à la réponse datée de la question du §9 qui la vise. La ligne W19 porte la réponse de Williams du 2026-09-29 à la question 22 (option A) : les conseillers travaillent dans le CRM Pro, le registre d'antériorité unique reste dans Partners, qui décide, et seul Partners enregistre une prise en charge (console admin ou API 3). Les VINGT ET UNE lignes HYP-W19-* vont en §2, chacune avec sa réversibilité ; HYP-W19-SESSION-CONSOLE, HYP-W19-HORS-LIGNE et HYP-W19-A11Y-CONSEILLER n'y sont PAS inscrites (vingt-trois avant la question 22) : ce sont des exigences du rôle CRM, listées dans l'ADR de l'API 3 (INT-T28). HYP-W19-SOURCE a pour texte « seule une prise en charge enregistrée par Partners (console admin ou API 3) occupe un SIREN ; rien n'est déduit d'un statut CRM ni d'un devis », et sa colonne « Tranchée » porte Williams, 2026-09-29, question 22 ; HYP-W19-IDENTITE-CRM, entrée après la relecture de la lentille `securite` sur la PR #230 (tête `830a648`), est inscrite comme HYPOTHÈSE DE CONFIANCE envers le CRM Pro (l'identité du conseiller qui appelle l'API 3 est dérivée de la session CRM Pro authentifiée, jamais saisie ; Partners vérifie le jeton et le rattachement d'une référence active, pas la personne), réversibilité migration, phase 1, à trancher avant INT-T28, visée par la question 4 ; HYP-W19-LIMITES porte la valeur abaissée de la source : limite de la Société FIXE, égale à celle d'un apporteur quel que soit le nombre de conseillers actifs, parce que c'est elle qui borne un CRM Pro compromis ; HYP-W19-CONCOURS, HYP-W19-NON-EXPLOITATION et HYP-W19-CARENCE (avenant, porteur JUR-T31) portent « premier DocuSeal », HYP-W19-CYCLE porte « DM-08 ; premier DocuSeal ». HYP-W19-CONCOURS porte sa réponse datée dans la colonne « Tranchée » : Williams, 2026-09-29, question 2, art. 3.5 retenu et art. 3.3 c) rejeté ; son texte est celui de la source (côté apporteur, une prise en charge est indiscernable d'une occupation par un autre apporteur ; aucune valeur `anteriorite_suivi` ; un seul bénéficiaire par attribution ; le contrat le dit en termes généraux sans que l'outil révèle qui). HYP-W19-VARIABLE-SORTIE et HYP-W19-CSE ne renvoient à aucun avis extérieur (question 13). Aucun mot de la doctrine de `gov:publication`. HYP-C4 et PRESEANCE §3.2 sont alignés sur REQ-DM-004. `pnpm gov:identifiants` sort 0. (2) `docs/requirements.json` reçoit REQ-DM-048, REQ-SEC-041, REQ-SEC-042, REQ-JUR-043, REQ-JUR-044, REQ-JUR-045, REQ-ARG-036, REQ-ARG-037, REQ-ARG-038, REQ-CPL-030, REQ-UX-047 et REQ-UX-048, chacune testable et citant W19, avec `taches: []` et `phase: null`. ⚠️ Aucun verbe hors dépôt ne sait encore AJOUTER une exigence (docblock de `hors-depot/ajouter-entree.mjs`) : le geste se fait dans le lot surchargé, comme GOV-098, ou par Williams, ou après qu'un verbe a été habillé ; jamais à la main hors de ce cadre. (3) Les amendements passent par `hors-depot/reecrire-champ.mjs`, avec motif et `--si-inchange`, au mot près du texte décidé : REQ-DM-004, 007, 008, 009, 012, 014, 021, 042 et 043, REQ-INT-014, REQ-QA-016, REQ-GOV-031, REQ-UX-007, 019 et 042, REQ-SEC-003 et 039, REQ-DM-023. Le libellé de portée suit la table un pour un du §4.2 de la source, telle que réécrite après les réponses du 2026-09-29 (REQ-UX-007, REQ-INT-014, REQ-DM-004, 007, 008, 042 et 043 alignées sur l'art. 3.5 et l'indistinction). Sont EXCLUES, parce qu'elles s'écrivent avec le code qui les porte : REQ-SEC-023 (SEC-31), REQ-SEC-030 et REQ-CPL-009 (JUR-T32). REQ-UX-002 et REQ-SEC-022 ne sont PLUS amendées (question 2 : aucune valeur nouvelle). (4) GLOSSAIRE §8, entrées du §2 de la source : « conseiller salarié » ; « prise en charge (Société) », SEUL libellé, défini au sens de l'art. 3.5 amendé du contrat (entreprise déjà prise par la Société ou ses préposés) et distinct de la prise en charge financière d'une prestation par un financeur (art. 9 du contrat), ce sens financier allant dans la colonne « Interdits » ; « plan de part variable », terme canonique (« barème » n'est pas employé en ce sens, « barème maison » étant déjà un interdit de « grille ») ; les cinq valeurs d'`ActiviteFacturation` (`formation`, `un_a_un`, `audit`, `implementation`, `site_web`, relues dans la source axion-ia au versement), que l'avenant A01 de DM-04 laisse au gardien-spec. Les interdits vont dans la colonne « Interdits », SANS le marqueur des synonymes interdits ni accents graves (le marqueur transforme les termes entre accents graves en interdits secs sur `src/**`, `MARQUEUR_SYNONYMES` de `scripts/gates/gov-check.ts`). Entrée « entreprise connue » alignée sur REQ-DM-029. §7 et `ConsoleRole` INCHANGÉS. (5) `pnpm gov:publication`, `pnpm gov:termes-interdits`, `pnpm gov:requirements`, `pnpm gov:requirements:verifie-rendu` et `pnpm gov:hypotheses` sortent 0. ⚠️ ORDRE : dès que les hypothèses de réversibilité migration ou avenant sont écrites, `gov:hypotheses` exige un porteur pour chacune (famille `decision_irreversible_sans_porteur`), et ces porteurs sont versés par GOV-115. GOV-112 et GOV-115 partent donc dans la MÊME PR, un commit par tâche, GOV-112 d'abord (patron GOV-098, qui a inscrit sa décision et versé ses tâches ensemble). (6) Les identifiants du chantier sont des jetons, fixés à la dernière fusion de `main` dans la branche (`pnpm vues:fusion`, `docs/PROTOCOLE-FUSION.md`, jamais un rebase commit par commit), dépendances et acceptances comprises. GOV-116 et GOV-117 sont des tâches W19 versées sur la même branche ; GOV-118 à GOV-122 sont versées par la PR #219 de la session -bf ; la session -bf prend ses nouvelles GOV de GOV-123 à GOV-149, la session -66 à partir de GOV-150. PR ouverte seulement en l'absence de PR de clôture (RM-13) : pas avant la fusion de la PR #219, que `pnpm vues:fusion` intègre alors. Entrée de journal (Fait / Reste / Appris), puis vues dans l'ordre de VUES_DERIVEES, PLAN-STATE en dernier. (7) Les vingt-deux questions du §9 de la source sont inscrites. Les questions 1, 2, 12, 13, 20, 21 et 22 ont reçu la réponse datée de Williams le 2026-09-29 (session -d7) et sont inscrites comme telles : la question 12 est simplifiée (aucun accès du conseiller à axion-ia en V1) ; la réponse à la question 2 remplace le point 8 du ticket #220 ; la question 22 retient le CRM Pro (option A). Les questions 15, 16 et 18 sont inscrites comme sans objet dans Partners depuis la question 22 ; la question 19 est inscrite comme tranchée pour les corrections transverses, gardées au plan en lot « confort de la console pour tous les rôles », distinct du chantier salariés. La réponse de la gouvernance Partners au ticket #220 (§9 de la source) est inscrite sans aucun détail de sécurité. Les autres questions sont posées à Will, chacune ouverte par son hypothèse par défaut, et renvoient à une ligne §2 non tranchée, ou disent qu'aucune HYP n'existe et donnent l'option conservatrice (`docs/DECISIONS.md` §5). Aucun avis en droit social n'est attendu (question 13 : pas d'avocat, pas d'exception) : chaque point de droit social (statut, VRP, clause de variable, sortie, CSE) prend l'option la plus prudente, marquée « à arbitrer par Williams », et ne bloque aucune tâche. Une réponse datée remplit la colonne « Tranchée » de l'hypothèse qu'elle tranche, et rien n'est tranché sans elle. (8) AVENANT DU 2026-09-29, PASSE GARDIEN-SPEC W20 (dette bloquante de la lentille exactitude sur la PR #244, tête 2340a63 : la passe n'avait aucun porteur au registre ; question 14 de docs/chantiers/W20-confirmation-par-email.md, valeur par défaut confirmée par Williams le 2026-09-29). Ce n'est pas une tâche GOV nouvelle. Dans le MÊME lot dédié du gardien-spec, après GOV-116, GOV-112 écrit AUSSI, au mot près du plan W20 et en le relisant : (a) les dix-sept lignes HYP-W20 du §2 de la source au §2 de docs/DECISIONS.md (HYP-W20-DELAI, HYP-W20-ANNULATION, HYP-W20-DESTINATAIRE, HYP-W20-SOURCE, HYP-W20-NON, HYP-W20-LIEN, HYP-W20-SANS-REPONSE, HYP-W20-APPELS, HYP-W20-VERIFICATION, HYP-W20-REBOND, HYP-W20-TACITE, HYP-W20-BADGE, HYP-W20-PREMIER-CONTACT, HYP-W20-IDENTITE-APPORTEUR, HYP-W20-CONTEXTE, HYP-W20-OPPOSITION, HYP-W20-SALARIES), chacune avec sa réversibilité et sa colonne « Tranchée » ; (b) les dix exigences nouvelles du §3.1 de la source dans docs/requirements.json, avec taches: [] et phase: null : REQ-DM-060, REQ-DM-061, REQ-DM-062, REQ-SEC-060, REQ-SEC-061, REQ-INT-060, REQ-UX-060, REQ-UX-061, REQ-UX-062 et REQ-JUR-060 ; (c) les neuf amendements du §3.2 de la source, par hors-depot/reecrire-champ.mjs avec motif et --si-inchange : REQ-UX-001, REQ-DM-008, REQ-DM-042, REQ-UX-004, REQ-UX-023, REQ-UX-022, REQ-UX-038, REQ-JUR-009 et REQ-JUR-008 ; (d) les questions 16, 17 et 18 de la source, ouvertes avec leur valeur par défaut, et les questions 1 à 15 avec leur réponse datée. Les identifiants des exigences et des hypothèses W20 sont portés dans reqs et hyp des tâches W20 par le verbe de GOV-117, dans le même lot. Les tâches W20 qui s'appuient sur ces exigences dépendent de GOV-112 (champ deps, liste au §6 de la source). pnpm gov:requirements, pnpm gov:hypotheses et pnpm gov:identifiants sortent 0.",
+      "acceptance": "TÂCHE D'ÉCRITURE DU REGISTRE, AUCUN CODE (patron GOV-098). Source d'entrée : `docs/chantiers/W19-conseillers-salaries.md` (§2, §3 et §4), transcription du plan de l'architecte ; on la relit, on ne la recopie pas à l'aveugle. DÉPENDANCE D'OUTILLAGE : `docs/DECISIONS.md`, `docs/GLOSSAIRE.md` et `docs/PRESEANCE.md` ne s'écrivent que dans un lot dédié du gardien-spec lancé avec `--settings` surchargé (`docs/CONVENTIONS.md` §8). Ce mécanisme n'existe pas encore (constaté le 2026-09-29 : aucune commande, aucun fichier de réglages ; `partners/ADR-0019` le range en « reste à faire »). Williams a choisi le 2026-09-29 (session -d7, question 21 de la source) que GOV-116 l'écrive, le documente et le teste : GOV-112 DÉPEND de GOV-116 (champ `deps`), et l'écriture humaine par Williams n'est plus la voie prévue. Tâche sensible : section « Attaque » jouée sur le texte. (1) `docs/DECISIONS.md` porte W19 en §1, propriétaire Will : SEUL le principe est tranché le 2026-09-29 (deux populations, un seul registre d'entreprises, deux chaînes d'argent, cloisonnement strict) ; chaque modalité se lit « par défaut : … (HYP-W19-X) » et reste ouverte jusqu'à la réponse datée de la question du §9 qui la vise. La ligne W19 porte la réponse de Williams du 2026-09-29 à la question 22 (option A) : les conseillers travaillent dans le CRM Pro, le registre d'antériorité unique reste dans Partners, qui décide, et seul Partners enregistre une prise en charge (console admin ou API 3). Les VINGT ET UNE lignes HYP-W19-* vont en §2, chacune avec sa réversibilité ; HYP-W19-SESSION-CONSOLE, HYP-W19-HORS-LIGNE et HYP-W19-A11Y-CONSEILLER n'y sont PAS inscrites (vingt-trois avant la question 22) : ce sont des exigences du rôle CRM, listées dans l'ADR de l'API 3 (INT-T28). HYP-W19-SOURCE a pour texte « seule une prise en charge enregistrée par Partners (console admin ou API 3) occupe un SIREN ; rien n'est déduit d'un statut CRM ni d'un devis », et sa colonne « Tranchée » porte Williams, 2026-09-29, question 22 ; HYP-W19-IDENTITE-CRM, entrée après la relecture de la lentille `securite` sur la PR #230 (tête `830a648`), est inscrite comme HYPOTHÈSE DE CONFIANCE envers le CRM Pro (l'identité du conseiller qui appelle l'API 3 est dérivée de la session CRM Pro authentifiée, jamais saisie ; Partners vérifie le jeton et le rattachement d'une référence active, pas la personne), réversibilité migration, phase 1, à trancher avant INT-T28, visée par la question 4 ; HYP-W19-LIMITES porte la valeur abaissée de la source : limite de la Société FIXE, égale à celle d'un apporteur quel que soit le nombre de conseillers actifs, parce que c'est elle qui borne un CRM Pro compromis ; HYP-W19-CONCOURS, HYP-W19-NON-EXPLOITATION et HYP-W19-CARENCE (avenant, porteur JUR-T31) portent « premier DocuSeal », HYP-W19-CYCLE porte « DM-08 ; premier DocuSeal ». HYP-W19-CONCOURS porte sa réponse datée dans la colonne « Tranchée » : Williams, 2026-09-29, question 2, art. 3.5 retenu et art. 3.3 c) rejeté ; son texte est celui de la source (côté apporteur, une prise en charge est indiscernable d'une occupation par un autre apporteur ; aucune valeur `anteriorite_suivi` ; un seul bénéficiaire par attribution ; le contrat le dit en termes généraux sans que l'outil révèle qui). HYP-W19-VARIABLE-SORTIE et HYP-W19-CSE ne renvoient à aucun avis extérieur (question 13). Aucun mot de la doctrine de `gov:publication`. HYP-C4 et PRESEANCE §3.2 sont alignés sur REQ-DM-004. `pnpm gov:identifiants` sort 0. (2) `docs/requirements.json` reçoit REQ-DM-048, REQ-SEC-041, REQ-SEC-042, REQ-JUR-043, REQ-JUR-044, REQ-JUR-045, REQ-ARG-036, REQ-ARG-037, REQ-ARG-038, REQ-CPL-030, REQ-UX-047 et REQ-UX-048, chacune testable et citant W19, avec `taches: []` et `phase: null`. ⚠️ Aucun verbe hors dépôt ne sait encore AJOUTER une exigence (docblock de `hors-depot/ajouter-entree.mjs`) : le geste se fait dans le lot surchargé, comme GOV-098, ou par Williams, ou après qu'un verbe a été habillé ; jamais à la main hors de ce cadre. (3) Les amendements passent par `hors-depot/reecrire-champ.mjs`, avec motif et `--si-inchange`, au mot près du texte décidé : REQ-DM-004, 007, 008, 009, 012, 014, 021, 042 et 043, REQ-INT-014, REQ-QA-016, REQ-GOV-031, REQ-UX-007, 019 et 042, REQ-SEC-003 et 039, REQ-DM-023. Le libellé de portée suit la table un pour un du §4.2 de la source, telle que réécrite après les réponses du 2026-09-29 (REQ-UX-007, REQ-INT-014, REQ-DM-004, 007, 008, 042 et 043 alignées sur l'art. 3.5 et l'indistinction). Sont EXCLUES, parce qu'elles s'écrivent avec le code qui les porte : REQ-SEC-023 (SEC-31), REQ-SEC-030 et REQ-CPL-009 (JUR-T32). REQ-UX-002 et REQ-SEC-022 ne sont PLUS amendées (question 2 : aucune valeur nouvelle). (4) GLOSSAIRE §8, entrées du §2 de la source : « conseiller salarié » ; « prise en charge (Société) », SEUL libellé, défini au sens de l'art. 3.5 amendé du contrat (entreprise déjà prise par la Société ou ses préposés) et distinct de la prise en charge financière d'une prestation par un financeur (art. 9 du contrat), ce sens financier allant dans la colonne « Interdits » ; « plan de part variable », terme canonique (« barème » n'est pas employé en ce sens, « barème maison » étant déjà un interdit de « grille ») ; les cinq valeurs d'`ActiviteFacturation` (`formation`, `un_a_un`, `audit`, `implementation`, `site_web`, relues dans la source axion-ia au versement), que l'avenant A01 de DM-04 laisse au gardien-spec. Les interdits vont dans la colonne « Interdits », SANS le marqueur des synonymes interdits ni accents graves (le marqueur transforme les termes entre accents graves en interdits secs sur `src/**`, `MARQUEUR_SYNONYMES` de `scripts/gates/gov-check.ts`). Entrée « entreprise connue » alignée sur REQ-DM-029. §7 et `ConsoleRole` INCHANGÉS. (5) `pnpm gov:publication`, `pnpm gov:termes-interdits`, `pnpm gov:requirements`, `pnpm gov:requirements:verifie-rendu` et `pnpm gov:hypotheses` sortent 0. ⚠️ ORDRE : dès que les hypothèses de réversibilité migration ou avenant sont écrites, `gov:hypotheses` exige un porteur pour chacune (famille `decision_irreversible_sans_porteur`), et ces porteurs sont versés par GOV-115. GOV-112 et GOV-115 partent donc dans la MÊME PR, un commit par tâche, GOV-112 d'abord (patron GOV-098, qui a inscrit sa décision et versé ses tâches ensemble). (6) Les identifiants du chantier sont des jetons, fixés à la dernière fusion de `main` dans la branche (`pnpm vues:fusion`, `docs/PROTOCOLE-FUSION.md`, jamais un rebase commit par commit), dépendances et acceptances comprises. GOV-116 et GOV-117 sont des tâches W19 versées sur la même branche ; GOV-118 à GOV-122 sont versées par la PR #219 de la session -bf ; la session -bf prend ses nouvelles GOV de GOV-123 à GOV-149, la session -66 à partir de GOV-150. PR ouverte seulement en l'absence de PR de clôture (RM-13) : pas avant la fusion de la PR #219, que `pnpm vues:fusion` intègre alors. Entrée de journal (Fait / Reste / Appris), puis vues dans l'ordre de VUES_DERIVEES, PLAN-STATE en dernier. (7) Les vingt-deux questions du §9 de la source sont inscrites. Les questions 1, 2, 12, 13, 20, 21 et 22 ont reçu la réponse datée de Williams le 2026-09-29 (session -d7) et sont inscrites comme telles : la question 12 est simplifiée (aucun accès du conseiller à axion-ia en V1) ; la réponse à la question 2 remplace le point 8 du ticket #220 ; la question 22 retient le CRM Pro (option A). Les questions 15, 16 et 18 sont inscrites comme sans objet dans Partners depuis la question 22 ; la question 19 est inscrite comme tranchée pour les corrections transverses, gardées au plan en lot « confort de la console pour tous les rôles », distinct du chantier salariés. La réponse de la gouvernance Partners au ticket #220 (§9 de la source) est inscrite sans aucun détail de sécurité. Les autres questions sont posées à Will, chacune ouverte par son hypothèse par défaut, et renvoient à une ligne §2 non tranchée, ou disent qu'aucune HYP n'existe et donnent l'option conservatrice (`docs/DECISIONS.md` §5). Aucun avis en droit social n'est attendu (question 13 : pas d'avocat, pas d'exception) : chaque point de droit social (statut, VRP, clause de variable, sortie, CSE) prend l'option la plus prudente, marquée « à arbitrer par Williams », et ne bloque aucune tâche. Une réponse datée remplit la colonne « Tranchée » de l'hypothèse qu'elle tranche, et rien n'est tranché sans elle. (8) AVENANT DU 2026-09-29, PASSE GARDIEN-SPEC W20 (dette bloquante de la lentille exactitude sur la PR #244, tête 2340a63 : la passe n'avait aucun porteur au registre ; question 14 de docs/chantiers/W20-confirmation-par-email.md, valeur par défaut confirmée par Williams le 2026-09-29). Ce n'est pas une tâche GOV nouvelle. Dans le MÊME lot dédié du gardien-spec, après GOV-116, GOV-112 écrit AUSSI, au mot près du plan W20 et en le relisant : (a) les dix-neuf lignes HYP-W20 du §2 de la source au §2 de docs/DECISIONS.md (HYP-W20-DELAI, HYP-W20-ANNULATION, HYP-W20-DESTINATAIRE, HYP-W20-SOURCE, HYP-W20-NON, HYP-W20-LIEN, HYP-W20-SANS-REPONSE, HYP-W20-APPELS, HYP-W20-VERIFICATION, HYP-W20-REBOND, HYP-W20-TACITE, HYP-W20-LIBERATION (ajoutée le 2026-09-29 après la réponse de Williams à la question 19), HYP-W20-CARENCE-REDEPOT (ajoutée le même jour, arbitrage de -d7 sur délégation de Williams), HYP-W20-BADGE, HYP-W20-PREMIER-CONTACT, HYP-W20-IDENTITE-APPORTEUR, HYP-W20-CONTEXTE, HYP-W20-OPPOSITION, HYP-W20-SALARIES), chacune avec sa réversibilité et sa colonne « Tranchée » ; (b) les onze exigences nouvelles du §3.1 de la source dans docs/requirements.json, avec taches: [] et phase: null : REQ-DM-060, REQ-DM-061, REQ-DM-062, REQ-DM-063 (libération d'une demande signalée, ajoutée le 2026-09-29, question 19), REQ-SEC-060, REQ-SEC-061, REQ-INT-060, REQ-UX-060, REQ-UX-061, REQ-UX-062 et REQ-JUR-060 ; (c) les neuf amendements du §3.2 de la source, par hors-depot/reecrire-champ.mjs avec motif et --si-inchange : REQ-UX-001, REQ-DM-008, REQ-DM-042, REQ-UX-004, REQ-UX-023, REQ-UX-022, REQ-UX-038, REQ-JUR-009 et REQ-JUR-008 ; (d) les questions 16 et 17 de la source, ouvertes avec leur valeur par défaut, et les questions 1 à 15, 18, 19 et 20 avec leur réponse datée (18 et 19 : Williams, 2026-09-29 vers 20 h, session -d7 ; 20 : arbitrage de -d7 sur délégation de Williams du même jour, défaut retenu, le redépôt pendant la carence n'atteint pas le formulaire, aucune valeur nouvelle d'IssueDepot ni de MotifRefusDepot, consigne W19 maintenue), avec les arbitrages de -d7 sur sa délégation du même jour, dont la carence de 90 jours au-delà de deux libérations. Les identifiants des exigences et des hypothèses W20 sont portés dans reqs et hyp des tâches W20 par le verbe de GOV-117, dans le même lot. Les tâches W20 qui s'appuient sur ces exigences dépendent de GOV-112 (champ deps, liste au §6 de la source). pnpm gov:requirements, pnpm gov:hypotheses et pnpm gov:identifiants sortent 0.",
       "tests": {
         "REQ-GOV-015": [
           "tests/unit/gouvernance/registre-lecteur-unique.spec.ts"
@@ -13396,7 +13490,7 @@
       "deps": [],
       "hyp": [],
       "externe": null,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "paths": [
         "scripts/lot/chemins-de-tache.ts",
         "docs/journal/",
@@ -13411,7 +13505,17 @@
         "REQ-GOV-021": [
           "tests/unit/gouvernance/reqs-hyp-zone-d-une-tache.spec.ts"
         ]
-      }
+      },
+      "issue": 258,
+      "owner": "A01",
+      "branch": "t/gov-117",
+      "pr": 259,
+      "attestation": {
+        "pr": 259,
+        "sha": "581a3fb7a8e04847a4671fa8291fc6a62246edc0",
+        "fusionneeAt": "2026-09-29T21:05:27Z"
+      },
+      "motif": null
     },
     {
       "id": "GOV-122",
@@ -13611,7 +13715,21 @@
       "paths": [
         "src/app/(espace)/confidentialite/page.tsx",
         "src/app/(espace)/confidentialite/layout.tsx",
-        "tests/unit/juridique/politique-de-confidentialite.spec.ts"
+        "tests/unit/juridique/politique-de-confidentialite.spec.ts",
+        "src/domain/rgpd/politique.ts",
+        "src/server/rgpd/acceptation.ts",
+        "src/app/(espace)/confidentialite/ecran.tsx",
+        "src/app/(espace)/confidentialite/actions.ts",
+        "src/app/(espace)/confidentialite/loading.tsx",
+        "src/app/(espace)/confidentialite/error.tsx",
+        "src/app/(espace)/connexion/actions.ts",
+        "src/content/micro-copy/espace/vocabulaire.ts",
+        "src/content/micro-copy/espace/etats-vides.ts",
+        "docs/ESPACE-ROUTES.md",
+        "tests/integration/idor.spec.ts",
+        "tests/unit/espace/vocabulaire-et-micro-copy.spec.ts",
+        "perf/budgets.json",
+        "tests/unit/gouvernance/gardes-transposees.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -13626,18 +13744,22 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.75,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "Scindee de JUR-T04 le 2026-09-29 (decision de Will) : la page exigeait des fichiers hors des paths de JUR-T04. A livrer : l'espace apporteur affiche une politique de confidentialite propre a Partners (base legale, durees, sous-traitants, droits) et la fait accepter a la premiere connexion (REQ-JUR-025). Son contenu se DERIVE du registre de l'article 30 livre par JUR-T04 : aucune duree, aucun sous-traitant n'est retape dans la page, et une rubrique encore « A completer » dans le registre s'affiche comme telle, jamais inventee. La page ne dit RIEN des conseillers salaries : leur information passe par un autre canal. Exigence transverse : lisible sans formation, sur mobile d'abord, avec ses etats vide, chargement, erreur et hors ligne nommes. TEMOIN A DEUX FACES : une duree changee dans le registre change la page sans toucher la page ; une page qui retape une duree ou un sous-traitant absent du registre fait rougir le temoin en nommant la valeur.",
       "tests": {
         "REQ-JUR-025": [
           "tests/unit/juridique/politique-de-confidentialite.spec.ts"
         ]
       },
-      "issue": null,
-      "owner": null,
-      "branch": null,
-      "pr": null,
-      "attestation": null,
+      "issue": 238,
+      "owner": "A01",
+      "branch": "t/jur-t34",
+      "pr": 242,
+      "attestation": {
+        "pr": 242,
+        "sha": "1bcc41214822ea307001002ff68048f7afd6dd40",
+        "fusionneeAt": "2026-09-29T21:41:16Z"
+      },
       "motif": null
     },
     {
@@ -13687,7 +13809,14 @@
         ".github/workflows/deploy.yml",
         "scripts/gates/deploy-verify.ts",
         "next.config.ts",
-        "tests/unit/qualite/un-seul-producteur-de-deploiement.spec.ts"
+        "tests/unit/qualite/un-seul-producteur-de-deploiement.spec.ts",
+        "Dockerfile",
+        "package.json",
+        "scripts/gates/gov-conventions.ts",
+        "tests/unit/qualite/pipeline-image.spec.ts",
+        "tests/unit/qualite/build-sans-base.spec.ts",
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts",
+        "scripts/gates/registre-des-refus.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -13786,7 +13915,7 @@
         "REQ-JUR-012"
       ],
       "estimateDays": 0.75,
-      "acceptance": "Source : docs/chantiers/W20-confirmation-par-email.md (décision de Williams du 2026-09-29, session -d7, phase 1). Réalise la part texte de REQ-UX-060, REQ-UX-061 et REQ-JUR-060 (Exigence nouvelle proposée au §3 du plan, à inscrire par la passe gardien-spec puis à ajouter à `reqs` ; les HYP-W20 citées ici ne sont pas encore au §2 de docs/DECISIONS.md, elles entreront dans `hyp` par la même passe.). (1) Tous les textes W20 vivent dans la SSOT de micro-copy, en gabarits à variables (prénom, nom, entreprise, heure) ; aucun texte recopié ailleurs (RM-01). (2) Message avant le bouton, repris mot pour mot de la décision de Williams, sauf la fin proposée « Axion-IA pourra aussi l'appeler. » (question 15 du plan, valeur par défaut confirmée par Williams le 2026-09-29) : il INFORME et ne donne aucune consigne (REQ-JUR-039). (3) Un champ exigé n'est jamais marqué « obligatoire » (mot interdit par REQ-JUR-037) ; seuls les champs facultatifs portent « (facultatif) ». (4) Les valeurs saisies par l'apporteur et reprises dans l'e-mail sont rendues en texte brut, échappées, sans lien (HYP-W20-CONTEXTE). (5) Témoins : la garde lexicale reste verte sur tout texte vu par l'apporteur ; un texte « vous devez confirmer » posé dans le fichier la fait rougir. (6) Amendée le 2026-09-29 (réponse de Williams à la question 2 et exigence d'expérience, docs/chantiers/W20-confirmation-par-email.md §2, §4 et §9) : la SSOT porte aussi les quatre libellés du badge de REQ-UX-062, plus, depuis la correction de sécurité du 2026-09-29 (refus de la lentille securite sur 2340a63, docs/chantiers/W20-confirmation-par-email.md §2, §8 et question 18), le libellé de la demande signalée « En attente de confirmation — Axion-IA va appeler votre contact » (neutre, sans consigne, sans date), l'action « Corriger l'adresse », la phrase d'aide unique « Sans réponse de votre contact, l'entreprise reste réservée pour vous 30 jours après la réception de notre e-mail. » (le nombre interpolé depuis CONFIRMATION_TACITE_JOURS, jamais recopié) et le texte de la notification de l'e-mail reparti après correction ; la date en toutes lettres est formatée par une seule fonction, dans le fuseau de l'apporteur. Garde lexicale verte sur ces textes.",
+      "acceptance": "Source : docs/chantiers/W20-confirmation-par-email.md (décision de Williams du 2026-09-29, session -d7, phase 1). Réalise la part texte de REQ-UX-060, REQ-UX-061 et REQ-JUR-060 (Exigence nouvelle proposée au §3 du plan, à inscrire par la passe gardien-spec puis à ajouter à `reqs` ; les HYP-W20 citées ici ne sont pas encore au §2 de docs/DECISIONS.md, elles entreront dans `hyp` par la même passe.). (1) Tous les textes W20 vivent dans la SSOT de micro-copy, en gabarits à variables (prénom, nom, entreprise, heure) ; aucun texte recopié ailleurs (RM-01). (2) Message avant le bouton, repris mot pour mot de la décision de Williams, sauf la fin proposée « Axion-IA pourra aussi l'appeler. » (question 15 du plan, valeur par défaut confirmée par Williams le 2026-09-29) : il INFORME et ne donne aucune consigne (REQ-JUR-039). (3) Un champ exigé n'est jamais marqué « obligatoire » (mot interdit par REQ-JUR-037) ; seuls les champs facultatifs portent « (facultatif) ». (4) Les valeurs saisies par l'apporteur et reprises dans l'e-mail sont rendues en texte brut, échappées, sans lien (HYP-W20-CONTEXTE). (5) Témoins : la garde lexicale reste verte sur tout texte vu par l'apporteur ; un texte « vous devez confirmer » posé dans le fichier la fait rougir. (6) Amendée le 2026-09-29 (réponse de Williams à la question 2 et exigence d'expérience, docs/chantiers/W20-confirmation-par-email.md §2, §4 et §9) : la SSOT porte aussi les quatre libellés du badge de REQ-UX-062, plus, depuis la correction de sécurité du 2026-09-29 (refus de la lentille securite sur 2340a63, docs/chantiers/W20-confirmation-par-email.md §2, §8 et question 18), le libellé de la demande signalée « En attente de confirmation — Axion-IA va appeler votre contact » (neutre, sans consigne, sans date), l'action « Corriger l'adresse », la phrase d'aide unique « Sans réponse de votre contact, l'entreprise reste réservée pour vous 30 jours après la réception de notre e-mail. » (le nombre interpolé depuis CONFIRMATION_TACITE_JOURS, jamais recopié) et le texte de la notification de l'e-mail reparti après correction ; depuis les réponses de Williams du 2026-09-29 vers 20 h (session -d7, questions 18 et 19), le libellé ⚪ « Réservation terminée · l'entreprise est de nouveau disponible » (sans date, sans action, sans phrase d'aide) et le texte de la notification de libération, neutre et sans consigne, proposé : « La réservation de <Entreprise> a pris fin sans confirmation. L'entreprise est de nouveau disponible. », qui ne dit ni la raison, ni la vérification, ni le nombre d'appels ; la date en toutes lettres est formatée par une seule fonction, dans le fuseau de l'apporteur. Garde lexicale verte sur ces textes.",
       "tests": {
         "REQ-JUR-039": [
           "tests/unit/micro-copy/confirmation-par-courriel.spec.ts"
@@ -14081,7 +14210,7 @@
         "REQ-JUR-031"
       ],
       "estimateDays": 1.25,
-      "acceptance": "Source : docs/chantiers/W20-confirmation-par-email.md (décision de Williams du 2026-09-29, session -d7, phase 1). TÂCHE SENSIBLE. Réalise REQ-SEC-060 (Exigence nouvelle proposée au §3 du plan, à inscrire par la passe gardien-spec puis à ajouter à `reqs` ; les HYP-W20 citées ici ne sont pas encore au §2 de docs/DECISIONS.md, elles entreront dans `hyp` par la même passe.) ; hypothèse HYP-W20-VERIFICATION. (1) Enum fermé de raisons : adresse webmail (acceptée, jamais refusée), adresse générique, domaine différent du site de l'entreprise, e-mail ou téléphone du contact égal à celui de l'apporteur, même contact sur plusieurs entreprises, clic depuis la même empreinte d'IP que la session de l'apporteur, rebond. Comparaisons par empreintes HMAC seulement (REQ-SEC-024). (2) Une raison TRIE la liste d'appels (en tête) et rend la demande SIGNALÉE. Correction de sécurité du 2026-09-29 (refus de la lentille securite sur 2340a63, docs/chantiers/W20-confirmation-par-email.md §2, §8 et question 18) : la tâche expose un prédicat pur « demande signalée », lu par DM-41 (un clic « Oui » n'y est pas retenu), par DM-24 (aucune promotion tacite, valeur par défaut de la question 18) et par DM-43 (tête de liste) ; ce n'est pas un effet défavorable au sens de REQ-SEC-017, l'attribution restant provisoire et réservée, et la confirmation passant par la revue humaine d'un appel. Aucun autre effet : aucune Anomalie, aucune entrée dans le score de SEC-14, aucune notification, aucune alerte ; seul l'état « appel attendu » du badge de UX-P1-05 en est dérivé côté serveur, jamais la raison, leur nombre ni le clic non retenu. La raison « rebond » ne vaut que pour la demande en rebond : la demande née d'une correction est jugée sur sa propre adresse. (3) La rafale de dépôts et les premiers dépôts ne sont PAS des raisons affichées : critères de tri d'une revue humaine seulement (REQ-SEC-017, REQ-SEC-021, question 6 du plan). (4) Pas de double comptage avec le signal « contact générique » de SEC-14. (5) Garde AST et témoins : un témoin positif et un négatif par raison ; une raison lue depuis src/app/(espace)/ → rouge ; une valeur de rythme ajoutée à l'enum → rouge.",
+      "acceptance": "Source : docs/chantiers/W20-confirmation-par-email.md (décision de Williams du 2026-09-29, session -d7, phase 1). TÂCHE SENSIBLE. Réalise REQ-SEC-060 (Exigence nouvelle proposée au §3 du plan, à inscrire par la passe gardien-spec puis à ajouter à `reqs` ; les HYP-W20 citées ici ne sont pas encore au §2 de docs/DECISIONS.md, elles entreront dans `hyp` par la même passe.) ; hypothèse HYP-W20-VERIFICATION. (1) Enum fermé de raisons : adresse webmail (acceptée, jamais refusée), adresse générique, domaine différent du site de l'entreprise, e-mail ou téléphone du contact égal à celui de l'apporteur, même contact sur plusieurs entreprises, clic depuis la même empreinte d'IP que la session de l'apporteur, rebond. Comparaisons par empreintes HMAC seulement (REQ-SEC-024). (2) Une raison TRIE la liste d'appels (en tête) et rend la demande SIGNALÉE. Correction de sécurité du 2026-09-29 (refus de la lentille securite sur 2340a63, docs/chantiers/W20-confirmation-par-email.md §2, §8 et question 18) : la tâche expose un prédicat pur « demande signalée », lu par DM-41 (un clic « Oui » n'y est pas retenu), par DM-24 (aucune promotion tacite : valeur par défaut de la question 18, retenue par Williams le 2026-09-29 vers 20 h, session -d7), par DM-13 (libération d'une demande signalée sans appel concluant, après trois injoignable ou 45 jours après l'envoi : réponse de Williams à la question 19, même jour) et par DM-43 (tête de liste) ; ce n'est pas un effet défavorable au sens de REQ-SEC-017, l'attribution restant provisoire et réservée, et la confirmation passant par la revue humaine d'un appel. La libération n'est pas non plus un effet défavorable au sens de REQ-SEC-017, par décision de Williams (question 19) : elle ne sanctionne rien, n'ouvre ni Anomalie ni suspension, n'impute rien à personne, et l'apporteur peut redéposer aux règles ordinaires après la carence de DM-13 (arbitrage de -d7 du 2026-09-29), qui ne vise que lui et cette entreprise, sans sanction. Aucun autre effet : aucune Anomalie, aucune entrée dans le score de SEC-14, aucune notification, aucune alerte ; seuls l'état « appel attendu » du badge de UX-P1-05 et, après libération, l'état « Réservation terminée » en sont dérivés côté serveur, jamais la raison, leur nombre ni le clic non retenu ; la notification de libération (DM-13) ne porte ni la raison ni la vérification. La raison « rebond » ne vaut que pour la demande en rebond : la demande née d'une correction est jugée sur sa propre adresse. (3) La rafale de dépôts et les premiers dépôts ne sont PAS des raisons affichées : critères de tri d'une revue humaine seulement (REQ-SEC-017, REQ-SEC-021, question 6 du plan). (4) Pas de double comptage avec le signal « contact générique » de SEC-14. (5) Garde AST et témoins : un témoin positif et un négatif par raison ; une raison lue depuis src/app/(espace)/ → rouge ; une valeur de rythme ajoutée à l'enum → rouge ; une raison posée dans le texte ou la charge de la notification de libération → rouge.",
       "tests": {
         "REQ-SEC-017": [
           "tests/unit/securite/verification-suggeree.spec.ts"
@@ -14184,7 +14313,7 @@
         "REQ-JUR-039"
       ],
       "estimateDays": 1.25,
-      "acceptance": "Source : docs/chantiers/W20-confirmation-par-email.md (décision de Williams du 2026-09-29, session -d7, phase 1). Réalise la part « après le dépôt » de REQ-UX-060 (Exigence nouvelle proposée au §3 du plan, à inscrire par la passe gardien-spec puis à ajouter à `reqs` ; les HYP-W20 citées ici ne sont pas encore au §2 de docs/DECISIONS.md, elles entreront dans `hyp` par la même passe.) ; hypothèses HYP-W20-ANNULATION, HYP-W20-REBOND. (1) Après le dépôt, la carte de l'issue dit à quelle heure l'e-mail partira et propose « Annuler » et « Corriger » jusque-là ; annuler se confirme en place, sans fenêtre modale, en au plus 2 interactions. (2) Annuler → attribution annulee, entreprise libérée, aucune autre conséquence ; corriger ne porte que sur le contact et le contexte (révision tracée). (3) Après l'échéance : « E-mail envoyé », puis « confirmé » à la réponse ; en rebond, un message INFORMATIF propose de corriger l'adresse (REQ-JUR-039 : aucune consigne). (4) Un refus serveur passé l'échéance dit pourquoi, jamais une erreur brute. (5) Cloisonnement : annuler ou corriger le dépôt d'un autre apporteur rend le 404 identique à celui d'un identifiant inexistant (REQ-SEC-009). Cinq états : délai en cours, envoyé, confirmé, rebond, erreur. Exigence transverse de Williams : fluide, intuitif, moderne, sans friction, mobile d'abord, cinq états nommés. (6) Amendée le 2026-09-29 (réponse de Williams à la question 2 et exigence d'expérience, docs/chantiers/W20-confirmation-par-email.md §2, §4 et §9) : passé le délai avant envoi, la carte porte le badge unique de REQ-UX-062 (composant de UX-P1-05). En rebond non corrigé, 🔴 « E-mail non reçu par le contact » et l'action unique « Corriger l'adresse » : la correction est une révision tracée, crée la nouvelle demande (anciens jetons révoqués), l'e-mail repart au passage suivant du job d'INT-T40 sans nouveau délai d'annulation, le délai tacite démarre à sa réception, le badge redevient 🟡 avec sa nouvelle date, et l'apporteur reçoit une notification informative (clé de la table SSOT des notifications, UX-P1-10, faitCourirUnDelai false). Au-delà de CORRECTIONS_ADRESSE_MAX, l'action disparaît et le badge reste 🔴. (7) Correction de sécurité du 2026-09-29 (refus de la lentille securite sur 2340a63, docs/chantiers/W20-confirmation-par-email.md §2, §8 et question 18) : si la demande née de la correction est signalée (nouvelle adresse webmail, par exemple), la carte porte le libellé « En attente de confirmation — Axion-IA va appeler votre contact », sans date. Tests : correction → une seule nouvelle demande et une notification ; correction du dépôt d'un autre apporteur → 404 identique.",
+      "acceptance": "Source : docs/chantiers/W20-confirmation-par-email.md (décision de Williams du 2026-09-29, session -d7, phase 1). Réalise la part « après le dépôt » de REQ-UX-060 (Exigence nouvelle proposée au §3 du plan, à inscrire par la passe gardien-spec puis à ajouter à `reqs` ; les HYP-W20 citées ici ne sont pas encore au §2 de docs/DECISIONS.md, elles entreront dans `hyp` par la même passe.) ; hypothèses HYP-W20-ANNULATION, HYP-W20-REBOND. (1) Après le dépôt, la carte de l'issue dit à quelle heure l'e-mail partira et propose « Annuler » et « Corriger » jusque-là ; annuler se confirme en place, sans fenêtre modale, en au plus 2 interactions. (2) Annuler → attribution annulee, entreprise libérée, aucune autre conséquence ; corriger ne porte que sur le contact et le contexte (révision tracée). (3) Après l'échéance : « E-mail envoyé », puis « confirmé » à la réponse ; en rebond, un message INFORMATIF propose de corriger l'adresse (REQ-JUR-039 : aucune consigne). (4) Un refus serveur passé l'échéance dit pourquoi, jamais une erreur brute. (5) Cloisonnement : annuler ou corriger le dépôt d'un autre apporteur rend le 404 identique à celui d'un identifiant inexistant (REQ-SEC-009). Cinq états : délai en cours, envoyé, confirmé, rebond, erreur. Exigence transverse de Williams : fluide, intuitif, moderne, sans friction, mobile d'abord, cinq états nommés. (6) Amendée le 2026-09-29 (réponse de Williams à la question 2 et exigence d'expérience, docs/chantiers/W20-confirmation-par-email.md §2, §4 et §9) : passé le délai avant envoi, la carte porte le badge unique de REQ-UX-062 (composant de UX-P1-05). En rebond non corrigé, 🔴 « E-mail non reçu par le contact » et l'action unique « Corriger l'adresse » : la correction est une révision tracée, crée la nouvelle demande (anciens jetons révoqués), l'e-mail repart au passage suivant du job d'INT-T40 sans nouveau délai d'annulation, le délai tacite démarre à sa réception, le badge redevient 🟡 avec sa nouvelle date, et l'apporteur reçoit une notification informative (clé de la table SSOT des notifications, UX-P1-10, faitCourirUnDelai false). Au-delà de CORRECTIONS_ADRESSE_MAX, l'action disparaît et le badge reste 🔴. (7) Correction de sécurité du 2026-09-29 (refus de la lentille securite sur 2340a63, docs/chantiers/W20-confirmation-par-email.md §2, §8 et question 18) : si la demande née de la correction est signalée (nouvelle adresse webmail, par exemple), la carte porte le libellé « En attente de confirmation — Axion-IA va appeler votre contact », sans date. (8) Réponses de Williams du 2026-09-29 vers 20 h (session -d7, questions 18 et 19) : une demande signalée n'est jamais confirmée par le silence et, sans appel concluant, DM-13 la libère (trois injoignable ou 45 jours après l'envoi de la première demande, qu'une correction ne fait pas repartir) ; la carte porte alors le badge ⚪ « Réservation terminée · l'entreprise est de nouveau disponible » du composant de UX-P1-05, sans action : ni « Annuler », ni « Corriger », ni « Corriger l'adresse ». Tests : correction → une seule nouvelle demande et une notification ; demande libérée → badge ⚪ sans action, et une correction tentée après libération est refusée avec sa raison, sans erreur brute ; correction du dépôt d'un autre apporteur → 404 identique.",
       "tests": {
         "REQ-UX-002": [
           "tests/unit/espace/annuler-ou-corriger.spec.ts"
@@ -14224,7 +14353,7 @@
         "REQ-JUR-009"
       ],
       "estimateDays": 0.5,
-      "acceptance": "Source : docs/chantiers/W20-confirmation-par-email.md (décision de Williams du 2026-09-29, session -d7, phase 1). Poste A07 ; le rouge d'une garde éventuelle est produit par A10. (1) Art. 3.2 : l'attribution devient définitive lorsque l'entreprise confirme avoir échangé avec l'apporteur, en réponse à la demande de confirmation adressée par la Société OU lors d'une prise de contact de la Société, « … sauf lorsque la demande fait l'objet d'une vérification, auquel cas seule une prise de contact concluante de la Société vaut confirmation » (Correction de sécurité du 2026-09-29 (refus de la lentille securite sur 2340a63, docs/chantiers/W20-confirmation-par-email.md §2, §8 et question 18)). (2) Confirmation tacite réécrite selon HYP-W20-TACITE, TRANCHÉE PAR WILLIAMS le 2026-09-29 (session -d7, question 2 du plan). Texte proposé pour l'art. 3.2 : « À défaut de réponse de l'entreprise et de prise de contact concluante dans un délai de trente jours à compter de la réception de la demande de confirmation, l'attribution est réputée confirmée, sauf lorsque la demande fait l'objet d'une vérification, auquel cas seule une prise de contact concluante de la Société vaut confirmation. La demande est réputée reçue lorsqu'elle a été envoyée à l'adresse déclarée sans être retournée en erreur ; tant qu'elle revient en erreur et que l'Apporteur n'a pas communiqué une adresse corrigée, ce délai ne court pas. Cette confirmation est la seule conséquence attachée au silence de l'entreprise. » La réserve de la vérification dans la phrase tacite suit la valeur par défaut de la question 18 du plan. C'est la seule conséquence attachée au silence (REQ-DM-042, amendée par GOV-112, dépendance) ; elle ne crée aucune commission. L'alinéa actuel (« passé un délai de trente jours sans que ce contact ait été tenté ») est remplacé ; la phrase « s'efforce de prendre contact … deux jours ouvrés » est relue au regard des appels par échantillon (REQ-CPL-026). (3) Art. 3.4 : la « première prise de contact » est la première réponse de l'entreprise (HYP-W20-PREMIER-CONTACT). (4) Art. 3.7 : la réponse par clic est journalisée avec sa date, la personne destinataire et ses termes. (5) L'apporteur est informé que ses prénom et nom sont communiqués à la personne qu'il déclare (HYP-W20-IDENTITE-APPORTEUR). Identifiants de clause inchangés (REQ-JUR-003).",
+      "acceptance": "Source : docs/chantiers/W20-confirmation-par-email.md (décision de Williams du 2026-09-29, session -d7, phase 1). Poste A07 ; le rouge d'une garde éventuelle est produit par A10. (1) Art. 3.2 : l'attribution devient définitive lorsque l'entreprise confirme avoir échangé avec l'apporteur, en réponse à la demande de confirmation adressée par la Société OU lors d'une prise de contact de la Société, « … sauf lorsque la demande fait l'objet d'une vérification, auquel cas seule une prise de contact concluante de la Société vaut confirmation » (Correction de sécurité du 2026-09-29 (refus de la lentille securite sur 2340a63, docs/chantiers/W20-confirmation-par-email.md §2, §8 et question 18)). (2) Confirmation tacite réécrite selon HYP-W20-TACITE, TRANCHÉE PAR WILLIAMS le 2026-09-29 (session -d7, question 2 du plan). Texte proposé pour l'art. 3.2 : « À défaut de réponse de l'entreprise et de prise de contact concluante dans un délai de trente jours à compter de la réception de la demande de confirmation, l'attribution est réputée confirmée, sauf lorsque la demande fait l'objet d'une vérification, auquel cas seule une prise de contact concluante de la Société vaut confirmation. La demande est réputée reçue lorsqu'elle a été envoyée à l'adresse déclarée sans être retournée en erreur ; tant qu'elle revient en erreur et que l'Apporteur n'a pas communiqué une adresse corrigée, ce délai ne court pas. Lorsque la demande fait l'objet d'une vérification et qu'aucune prise de contact concluante n'a eu lieu, l'attribution prend fin après trois tentatives de prise de contact restées sans réponse ou à l'expiration d'un délai de quarante-cinq jours à compter de l'envoi de la demande, selon ce qui survient en premier. Cette fin n'emporte aucune autre conséquence pour l'Apporteur que celle-ci : il ne peut déclarer à nouveau la même entreprise qu'à l'expiration d'un délai de trente jours, porté à quatre-vingt-dix jours lorsque l'attribution de cette entreprise a déjà pris fin une première fois dans les mêmes conditions ; la déclaration de cette entreprise par un autre Apporteur n'en est pas affectée. La confirmation réputée acquise et, pour une demande qui fait l'objet d'une vérification, la fin de l'attribution sont les seules conséquences attachées au silence de l'entreprise. » La réserve de la vérification suit la réponse de Williams à la question 18 du plan (2026-09-29 vers 20 h, session -d7 : valeur par défaut retenue) et la fin de l'attribution sa réponse à la question 19 (même jour : libération après 3 injoignable ou 45 jours après l'envoi, sans sanction) ; le délai avant une nouvelle déclaration suit l'arbitrage de -d7 sur délégation de Williams (même jour) ; les quatre nombres sont ceux de la SSOT (LIBERATION_SIGNALEE_INJOIGNABLE_MAX, LIBERATION_SIGNALEE_JOURS, CARENCE_REDEPOT_APRES_LIBERATION_JOURS, CARENCE_REDEPOT_APRES_SECONDE_LIBERATION_JOURS), dont l'art. 3.2 est la source, et changer une valeur change le gabarit. Ce sont les seules conséquences attachées au silence (REQ-DM-042 amendée et REQ-DM-063 proposée, écrites par GOV-112, dépendance) ; elle ne crée aucune commission. L'alinéa actuel (« passé un délai de trente jours sans que ce contact ait été tenté ») est remplacé ; la phrase « s'efforce de prendre contact … deux jours ouvrés » est relue au regard des appels par échantillon (REQ-CPL-026). (3) Art. 3.4 : la « première prise de contact » est la première réponse de l'entreprise (HYP-W20-PREMIER-CONTACT). (4) Art. 3.7 : la réponse par clic est journalisée avec sa date, la personne destinataire et ses termes. (5) L'apporteur est informé que ses prénom et nom sont communiqués à la personne qu'il déclare (HYP-W20-IDENTITE-APPORTEUR). Identifiants de clause inchangés (REQ-JUR-003).",
       "tests": {
         "REQ-JUR-003": [
           "tests/unit/contrat/contract-template-complete.spec.ts"
@@ -14306,7 +14435,7 @@
         "REQ-QA-027"
       ],
       "estimateDays": 1.5,
-      "acceptance": "Source : docs/chantiers/W20-confirmation-par-email.md (décision de Williams du 2026-09-29, session -d7, phase 1). Parcours mobile (iPhone et Pixel), horloge simulée, relais d'envoi simulé : (1) dépôt de l'accueil à la confirmation en au plus 8 interactions et 90 s, avec les quatre coordonnées du contact (REQ-UX-001, REQ-QA-017) ; (2) annulation avant l'échéance → aucun envoi ; échéance → un envoi, un seul ; (3) « Oui » → attribution confirmée visible dans l'espace ; « Non » en second geste → issue de non-confirmation, aucune suspension ; (4) rebond → message informatif et correction ; (5) la console montre le dépôt dans « À appeler aujourd'hui » au rang attendu, avec sa raison. (6) Amendée le 2026-09-29 (réponse de Williams à la question 2 et exigence d'expérience, docs/chantiers/W20-confirmation-par-email.md §2, §4 et §9), horloge figée : (a) après réception, badge 🟡 « réservée pour vous jusqu'au <date> », date en toutes lettres ; à l'échéance moins une minute toujours 🟡, à l'échéance 🟢, le jour affiché ; (b) rebond → 🔴 et « Corriger l'adresse », 60 jours plus tard toujours 🔴 et aucune promotion ; (c) correction → e-mail reparti, une notification, 🟡 avec la nouvelle date, 🟢 trente jours après ce nouvel envoi et pas avant ; (d) un clic « Oui » avant l'échéance → 🟢 aussitôt, aucune promotion tacite ensuite. (7) Correction de sécurité du 2026-09-29 (refus de la lentille securite sur 2340a63, docs/chantiers/W20-confirmation-par-email.md §2, §8 et question 18), horloge figée : une demande signalée (adresse webmail) et silencieuse pendant trente jours reste non confirmée, porte « En attente de confirmation — Axion-IA va appeler votre contact » sans date, et figure en tête de « À appeler aujourd'hui » ; un appel confirme la fait passer à 🟢. Aucun test skippé.",
+      "acceptance": "Source : docs/chantiers/W20-confirmation-par-email.md (décision de Williams du 2026-09-29, session -d7, phase 1). Parcours mobile (iPhone et Pixel), horloge simulée, relais d'envoi simulé : (1) dépôt de l'accueil à la confirmation en au plus 8 interactions et 90 s, avec les quatre coordonnées du contact (REQ-UX-001, REQ-QA-017) ; (2) annulation avant l'échéance → aucun envoi ; échéance → un envoi, un seul ; (3) « Oui » → attribution confirmée visible dans l'espace ; « Non » en second geste → issue de non-confirmation, aucune suspension ; (4) rebond → message informatif et correction ; (5) la console montre le dépôt dans « À appeler aujourd'hui » au rang attendu, avec sa raison. (6) Amendée le 2026-09-29 (réponse de Williams à la question 2 et exigence d'expérience, docs/chantiers/W20-confirmation-par-email.md §2, §4 et §9), horloge figée : (a) après réception, badge 🟡 « réservée pour vous jusqu'au <date> », date en toutes lettres ; à l'échéance moins une minute toujours 🟡, à l'échéance 🟢, le jour affiché ; (b) rebond → 🔴 et « Corriger l'adresse », 44 jours après l'envoi toujours 🔴 et aucune promotion, et 45 jours après l'envoi la demande en rebond, signalée par la raison « rebond », est libérée (⚪, point 8), jamais promue ; (c) correction → e-mail reparti, une notification, 🟡 avec la nouvelle date, 🟢 trente jours après ce nouvel envoi et pas avant ; (d) un clic « Oui » avant l'échéance → 🟢 aussitôt, aucune promotion tacite ensuite. (7) Correction de sécurité du 2026-09-29 (refus de la lentille securite sur 2340a63, docs/chantiers/W20-confirmation-par-email.md §2, §8 et question 18), horloge figée : une demande signalée (adresse webmail) et silencieuse pendant trente jours reste non confirmée, porte « En attente de confirmation — Axion-IA va appeler votre contact » sans date, et figure en tête de « À appeler aujourd'hui » ; un appel confirme la fait passer à 🟢. (8) Réponses de Williams du 2026-09-29 vers 20 h (session -d7, questions 18 et 19), horloge figée : (a) une demande signalée qui reçoit trois appels injoignable depuis la console est libérée au passage suivant : badge ⚪ « Réservation terminée · l'entreprise est de nouveau disponible », une notification neutre dans l'espace, le dépôt sort de « À appeler aujourd'hui » ; (b) une demande signalée sans appel est libérée 45 jours après l'envoi, et pas à 44 ; (c) aucune suspension ni anomalie visible en console après la libération ; (d) carence (arbitrage de -d7 du 2026-09-29) : le même apporteur ne peut pas redéposer la même entreprise pendant 30 jours, l'écran le lui dit sans consigne et sans action « Déposer » (valeur par défaut de la question 20 du plan), un autre apporteur la dépose aussitôt ; à J+30, le redépôt donne une nouvelle attribution provisoire et une nouvelle demande, règles ordinaires. Aucun test skippé.",
       "tests": {
         "REQ-QA-017": [
           "tests/e2e/espace/depot-avec-confirmation-par-courriel.spec.ts"
@@ -14353,7 +14482,7 @@
         "REQ-DM-008"
       ],
       "estimateDays": 1,
-      "acceptance": "Source : docs/chantiers/W20-confirmation-par-email.md (décision de Williams du 2026-09-29, session -d7, phase 1). Un témoin par risque 1 à 5 du §8 du plan, chacun vu rouge sur une mutation de la garde qu'il vise : (1) coordonnées du contact égales à celles de l'apporteur → raison posée, confirmation par clic non retenue si elle vient de l'empreinte d'IP de l'apporteur ; (2) ouverture du lien par un analyseur de messagerie → aucune réponse enregistrée ; (3) nom ou contexte piégé (balise, adresse web) → rendu en texte brut dans l'e-mail, aucun lien cliquable ; (4) jeton rejoué ou forgé → sans effet, réponse identique ; (5) « Non » en un seul geste → rien. Aucun réglage des contrôles écrit dans le test (REQ-GOV-031). (6) Amendée le 2026-09-29 (réponse de Williams à la question 2 et exigence d'expérience, docs/chantiers/W20-confirmation-par-email.md §2, §4 et §9) : témoin du contact inventé — une adresse qui rebondit et n'est jamais corrigée ne fait jamais courir le délai tacite ; une mutation qui fait partir le délai de l'envoi ou du dépôt, ou qui ignore le rebond, rougit ; une correction vers l'adresse de l'apporteur lui-même porte la raison de vérification et ne change rien d'autre. (7) Correction de sécurité du 2026-09-29 (refus de la lentille securite sur 2340a63, docs/chantiers/W20-confirmation-par-email.md §2, §8 et question 18) : témoins vus rouges sur la mutation qui retient le clic ou promeut le silence — (a) une adresse webmail contrôlée par l'apporteur et un « Oui » depuis une autre IP donnent un dépôt toujours provisoire, en tête de liste ; (b) une demande signalée et silencieuse pendant trente jours reste non confirmée ; (c) un « Non » en second geste sur une demande signalée invalide toujours.",
+      "acceptance": "Source : docs/chantiers/W20-confirmation-par-email.md (décision de Williams du 2026-09-29, session -d7, phase 1). Un témoin par risque 1 à 5 du §8 du plan, chacun vu rouge sur une mutation de la garde qu'il vise : (1) coordonnées du contact égales à celles de l'apporteur → raison posée, confirmation par clic non retenue si elle vient de l'empreinte d'IP de l'apporteur ; (2) ouverture du lien par un analyseur de messagerie → aucune réponse enregistrée ; (3) nom ou contexte piégé (balise, adresse web) → rendu en texte brut dans l'e-mail, aucun lien cliquable ; (4) jeton rejoué ou forgé → sans effet, réponse identique ; (5) « Non » en un seul geste → rien. Aucun réglage des contrôles écrit dans le test (REQ-GOV-031). (6) Amendée le 2026-09-29 (réponse de Williams à la question 2 et exigence d'expérience, docs/chantiers/W20-confirmation-par-email.md §2, §4 et §9) : témoin du contact inventé — une adresse qui rebondit et n'est jamais corrigée ne fait jamais courir le délai tacite ; une mutation qui fait partir le délai de l'envoi ou du dépôt, ou qui ignore le rebond, rougit ; une correction vers l'adresse de l'apporteur lui-même porte la raison de vérification et ne change rien d'autre. (7) Correction de sécurité du 2026-09-29 (refus de la lentille securite sur 2340a63, docs/chantiers/W20-confirmation-par-email.md §2, §8 et question 18) : témoins vus rouges sur la mutation qui retient le clic ou promeut le silence — (a) une adresse webmail contrôlée par l'apporteur et un « Oui » depuis une autre IP donnent un dépôt toujours provisoire, en tête de liste ; (b) une demande signalée et silencieuse pendant trente jours reste non confirmée ; (c) un « Non » en second geste sur une demande signalée invalide toujours. (8) Réponses de Williams du 2026-09-29 vers 20 h (session -d7, questions 18 et 19) : témoins vus rouges sur leur mutation — (a) trois Qualifications injoignable sur une demande signalée → libérée (perimee par liberee_sans_confirmation), et une mutation qui ne libère pas, ou qui libère dès la deuxième, rougit ; (b) 45 jours après l'envoi sans appel concluant → libérée, et une mutation qui fait repartir le délai à la correction d'adresse, ou qui le compte de la réception, rougit ; (c) aucune sanction : la libération n'ouvre ni Anomalie, ni suspension, ni entrée au score de SEC-14, et une mutation qui en pose une rougit ; (d) notification : exactement une, neutre, sans raison ni vérification ni nombre d'appels, faitCourirUnDelai false, et une mutation qui y met la raison rougit ; (e) carence de redépôt (arbitrage de -d7 sur délégation de Williams du 2026-09-29), témoins vus rouges sur leur mutation : le fraudeur à l'adresse muette qui redépose le même SIREN pendant la carence est refusé sans rien écrire ni horodater, et une mutation qui accepte le dépôt rougit ; après une deuxième libération, la carence est de 90 jours, et une mutation qui la laisse à 30 rougit ; un autre apporteur n'est jamais bloqué, et une mutation qui étend la carence à tous rougit ; le refus ne pose ni Anomalie, ni suspension, ni signal ; même après la carence, le redépôt n'obtient jamais de confirmation par le silence. Aucun réglage des contrôles dans le test (REQ-GOV-031).",
       "tests": {
         "REQ-SEC-017": [
           "tests/integration/attaque-fraude-a-la-confirmation.spec.ts"
@@ -14380,7 +14509,30 @@
         "scripts/vues/fusion.ts",
         "scripts/gates/gov-conventions.ts",
         "docs/gates.json",
-        "tests/unit/gouvernance/vues-rendues-apres-fusion.spec.ts"
+        "tests/unit/gouvernance/vues-rendues-apres-fusion.spec.ts",
+        ".gitignore",
+        "README.md",
+        "docs/CHARTE-AGENTS.md",
+        "docs/CONVENTIONS.md",
+        "scripts/gates/gov-etat.ts",
+        "scripts/gates/registre-des-refus.ts",
+        "scripts/vues/vues.ts",
+        "scripts/prevol.ts",
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts",
+        "tests/unit/gouvernance/une-seule-grammaire-de-journal.spec.ts",
+        "docs/GATES.md",
+        "docs/PLAN-STATE.md",
+        "docs/REQUIREMENTS.md",
+        "docs/TASKS.md",
+        "docs/TRACABILITE.md",
+        "docs/adr/INDEX.md",
+        "docs/paths-proposes.json",
+        "scripts/lot/paths-proposes.ts",
+        "scripts/lot/integrer.ts",
+        "scripts/gates/gov-inventaire.ts",
+        "scripts/gates/gov-entite.ts",
+        "tests/unit/gouvernance/integration-livrable.spec.ts",
+        "tests/unit/gouvernance/entite-registre.spec.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -14392,7 +14544,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 1.5,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "EXCEPTION AU GEL DE LA GOUVERNANCE, decision de Williams du 2026-09-29 (vers 18 h), confirmee directement dans la session A01, priorite juste apres la PR #239. CONSTAT : chaque fusion fait diverger les vues derivees des autres PR (docs/PLAN-STATE.md, docs/TRACABILITE.md, docs/TASKS.md, docs/REQUIREMENTS.md, docs/paths-proposes.json, docs/GATES.md, index des ADR), ce qui relance leur porte A et leurs reconfirmations (la PR #230 trois fois le 2026-09-29, puis #239, #241 et #242). A LIVRER : (1) une PR ne porte plus de vue derivee ; les gardes de PR jugent les SOURCES (registres, requirements, gates.json, ADR), jamais l'egalite d'une vue commitee. (2) Le rendu se fait sur main, par la voie la plus simple et la plus sure, choisie et ecrite dans la PR : soit un job apres fusion qui rend et commite les vues, soit des vues rendues a la volee et non commitees. (3) Si un job commite sur main, exigences de la lentille securite, chacune avec son temoin : GITHUB_TOKEN en contents: write seulement, sur push de main seulement, dans un job separe de tout code de PR (patron du job publier de deploy.yml ; persist-credentials: false partout ailleurs) ; le commit est limite a une liste FERMEE de chemins de vues, verifiee par le job, qui refuse tout autre chemin ; le rendu est reproductible (la porte A suivante le relance et obtient un diff vide) ; les scripts de rendu sont lus sur main, jamais sur une branche ; le contournement de la protection de main est limite a ce seul acteur, reglage que Williams pose lui-meme sur la forge. (4) Une vue illisible ou en derive sur main est un rouge de la porte A de main, qui nomme la vue. TEMOIN a deux faces : deux PR qui ajoutent chacune une tache ne sont plus en conflit apres la fusion de l'une ; un commit de rendu qui toucherait un chemin hors de la liste fermee est refuse en le nommant.",
       "tests": {
         "REQ-GOV-032": [
@@ -14402,11 +14554,15 @@
           "tests/unit/gouvernance/vues-rendues-apres-fusion.spec.ts"
         ]
       },
-      "issue": null,
-      "owner": null,
-      "branch": null,
-      "pr": null,
-      "attestation": null,
+      "issue": 274,
+      "owner": "A01",
+      "branch": "t/gov-123-vues",
+      "pr": 275,
+      "attestation": {
+        "pr": 275,
+        "sha": "18efc1dfca1ae5c770670a9aaedb4f6260f60fb9",
+        "fusionneeAt": "2026-09-30T01:45:22Z"
+      },
       "motif": null
     },
     {
@@ -14553,7 +14709,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "EXCEPTION AU GEL, arbitrage -d7 sur delegation de Williams du 2026-09-29 : elle bloque la Phase 0 a 100 %. CONSTAT : INT-T02 (axion-ia #1180, sha f158408, en production) est refusee par lot:cloture (tache_etrangere_a_la_pr, titre_d_ecrasement_non_conforme) : la PR portait le titre feat(INT-T02) a l instant de la fusion, mais le squash a pris pour premiere ligne feat(partners): ... (INT-T02) (#1180), une livraison anterieure a la convention de declaration cote axion-ia. INT-T27-A et INT-T26, livrees et en production, en dependent. A LIVRER : (1) une liste FERMEE et datee, PASSIF_DE_LA_DECLARATION, dans scripts/lot/cloture.ts, avec UNE seule entree : INT-T02, PR axion-ia #1180, sha complet f158408, motif de l arbitrage et mesure du patch propre (8f1d7d4 equivalent a 6bfd50b : 19 fichiers, seul le contexte de worker.ts differe). (2) L entree ne leve les deux refus QUE si la tache, la PR, le sha complet coincident ET si le titre a l instant de la fusion (chronologie de la forge) declare la tache. (3) Toute autre livraison garde les deux refus a l identique ; aucun drapeau de ligne de commande ne leve rien ; aucune autre regle n est assouplie. (4) TEMOINS rouges d abord : INT-T02 passe ; la meme livraison avec un autre sha, une autre PR ou un titre a la fusion qui ne declare pas la tache est refusee ; une livraison hors liste au squash non conforme est refusee. (5) Deux lentilles (scripts/lot/). Puis INT-T02, INT-T27-A et INT-T26 sont closes par un rattrapage.",
       "tests": {
         "REQ-GOV-026": [
@@ -14562,6 +14718,297 @@
       },
       "issue": 256,
       "owner": "A01",
+      "branch": "t/gov-127",
+      "pr": 257,
+      "attestation": {
+        "pr": 257,
+        "sha": "8d6d21947e112ae10a53ed7c94560cd59f4be7d1",
+        "fusionneeAt": "2026-09-29T20:00:53Z"
+      },
+      "motif": null
+    },
+    {
+      "id": "JUR-T36",
+      "titre": "La politique de confidentialite publique n'affiche ni les questions internes du registre, ni un nom de personne, ni le vocabulaire interdit",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "juridique",
+      "paths": [
+        "src/domain/rgpd/politique.ts",
+        "src/app/(espace)/confidentialite/ecran.tsx",
+        "docs/rgpd/registre-article-30.md",
+        "tests/unit/juridique/politique-publique-sans-note-interne.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [
+        "rgpd"
+      ],
+      "deps": [
+        "JUR-T34"
+      ],
+      "reqs": [
+        "REQ-JUR-025"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "acceptance": "DETTE BLOQUANTE POUR LA MISE EN SERVICE, relevee par la lentille A07 juriste sur la PR #242 (JUR-T34), et deja signalee par la lentille securite. La page /confidentialite, lisible sans session, affiche le registre de l article 30 tel quel : les rubriques A completer y montrent la question interne posee a Williams, le prenom Will apparait (a confirmer par Will), et le mot attribution, refuse par le lexique de l espace, y est lu. A LIVRER : (1) la page n affiche jamais une question interne ni un nom de personne ; une rubrique encore A completer s affiche comme en cours de redaction, sans la question ; (2) aucun mot du lexique interdit de l espace n atteint la page, que la garde lexicale lise le texte a l execution ou que le registre soit reformule pour l apporteur ; (3) le choix est ecrit ; (4) TEMOIN rouge d abord : un registre de fixture qui porte une question interne, le prenom Will et le mot attribution produit une page qui n en montre aucun, et le temoin nomme ce qu il a filtre. Aucune mise en service de l espace avant cette tache. Dette apres lancement notee a part : l historique des versions acceptees, et la micro-copie Votre espace s ouvre une fois cette politique acceptee, inexacte tant qu aucune route ne verifie l accord hors connexion.",
+      "tests": {
+        "REQ-JUR-025": [
+          "tests/unit/juridique/politique-publique-sans-note-interne.spec.ts"
+        ]
+      },
+      "issue": null,
+      "owner": null,
+      "branch": null,
+      "pr": null,
+      "attestation": null,
+      "motif": null
+    },
+    {
+      "id": "QA-T50",
+      "titre": "Provisionnement Coolify : application, base Postgres separee et variables posees depuis les secrets du depot, jamais en clair",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "qualite",
+      "paths": [
+        ".github/workflows/coolify-provisionner.yml",
+        "scripts/deploiement/provisionner.ts",
+        "tests/unit/qualite/provisionnement-coolify.spec.ts",
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts",
+        "package.json",
+        "scripts/gates/registre-des-refus.ts"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "QA-T34"
+      ],
+      "reqs": [
+        "REQ-INT-031"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "acceptance": "Versee a la demande de la session -50 (mise en ligne), sur demande de -d7 : aucune tache du registre ne portait le provisionnement, REQ-INT-031 n etant rattachee qu a INT-T02 cote axionia. (1) Un declenchement manuel cree, s ils n existent pas, dans le projet Coolify Axion-Partners, l application de type image Docker (ghcr.io/will383842/axion-apporteurs, etiquette sha-<7>, sonde /api/readyz) et une base Postgres 16 separee ; il est idempotent : relance, il ne cree rien et le dit. (2) Chaque variable de docs/env.md est posee depuis le secret du depot de meme nom, jamais en argument ni en clair dans le journal du run ; DATABASE_URL vient de la base creee. (3) Un secret absent : le provisionnement, geste MANUEL, ECHOUE en code 1 avec un ::error:: par secret nomme (arbitrage -d7 du 2026-09-30 : un geste manuel sans ses secrets echoue, seul un planificateur peut sauter). (4) TEMOIN A DEUX FACES sur une plateforme factice locale : secrets absents, alors code 1 et chaque secret nomme ; plateforme en 401, alors code non nul et jeton jamais imprime. Deux lentilles (workflow et secrets).",
+      "tests": {
+        "REQ-INT-031": [
+          "tests/unit/qualite/provisionnement-coolify.spec.ts"
+        ]
+      },
+      "issue": null,
+      "owner": null,
+      "branch": null,
+      "pr": null,
+      "attestation": null,
+      "motif": null
+    },
+    {
+      "id": "GOV-128",
+      "titre": "Le passif de la declaration lit aussi la ligne Lot: du squash immuable : une PR de lot au corps enrichi se clot sur arbitrage ecrit",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "scripts/lot/cloture.ts",
+        "tests/unit/gouvernance/le-passif-de-la-declaration-est-ferme.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "GOV-127"
+      ],
+      "reqs": [
+        "REQ-GOV-026"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "fusionnee",
+      "acceptance": "EXCEPTION AU GEL, arbitrage -d7 sur delegation de Williams du 2026-09-30 : elle bloque deux clotures de phase 0. CONSTAT : INT-T04 et INT-T05 (axion-ia #1228, sha 3fb76aa) sont refusees par lot:cloture (tache_etrangere_a_la_pr) : la premiere ligne du squash est conforme, mais le corps porte, apres la ligne Lot: INT-T04, INT-T05, un paragraphe et un trailer ; or le corps ne declare que s il est reduit a la seule ligne Lot: (GOV-104), et le titre feat(INT-T04, INT-T05) ne nomme aucune tache a lui seul. Condition verifiee : les deux accords A09 sont publies sur la tete fusionnee 7eb1bf3. A LIVRER : (1) deux entrees au PASSIF_DE_LA_DECLARATION, INT-T04 et INT-T05, PR axion-ia #1228, sha complet 3fb76aa, declarees par la ligne Lot: et non par le titre. (2) Une telle entree ne leve le refus QUE si la tache, la PR et le sha complet coincident, si la premiere ligne du squash est conforme, et si la ligne Lot: qui la suit dans le message immuable nomme la tache. (3) Toute autre livraison garde les refus a l identique ; les entrees par titre gardent leur regle ; aucun drapeau ne leve rien ; aucune regle generale n est assouplie. (4) TEMOINS rouges d abord : INT-T04 et INT-T05 passent ; un autre sha, une autre PR, une tache absente de la ligne Lot:, un squash sans ligne Lot: ou a premiere ligne non conforme sont refuses. (5) Deux lentilles (scripts/lot/). Puis INT-T04 et INT-T05 sont closes par un rattrapage.",
+      "tests": {
+        "REQ-GOV-026": [
+          "tests/unit/gouvernance/le-passif-de-la-declaration-est-ferme.spec.ts"
+        ]
+      },
+      "issue": 277,
+      "owner": "A01",
+      "branch": "t/gov-128",
+      "pr": 278,
+      "attestation": {
+        "pr": 278,
+        "sha": "58ac665f2134b925aec000a2d81ba9509db46b17",
+        "fusionneeAt": "2026-09-29T23:56:28Z"
+      },
+      "motif": null
+    },
+    {
+      "id": "QA-T52",
+      "titre": "Rotation a double cle des secrets de webhook et du jeton d'API : cle courante et cle precedente acceptees 24 h, kid en en-tete",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "qualite",
+      "paths": [
+        "src/lib/env.ts",
+        "src/app/api/webhooks/axionia/route.ts",
+        "src/server/integrations/axionia/reception.ts",
+        "tests/unit/securite/rotation-des-secrets.spec.ts",
+        "docs/env.md",
+        "src/server/integrations/axionia/api-entrante.ts",
+        "docs/runbooks/secret-desynchronise.md",
+        "tests/unit/securite/webhook-signature.spec.ts",
+        "src/server/integrations/axionia/candidature-recue.ts",
+        "tests/integration/webhook.spec.ts",
+        "tests/integration/frontiere.spec.ts",
+        "tests/unit/integration/candidature-recue.spec.ts",
+        "tests/integration/webhook-verdicts.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [
+        "auth"
+      ],
+      "deps": [
+        "QA-T04",
+        "SEC-06",
+        "INT-T41"
+      ],
+      "reqs": [
+        "REQ-QA-030"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "acceptance": "DETTE BLOQUANTE (lentille securite, verdict de la PR 282 ; arbitrage -d7 sur delegation de Williams du 2026-09-30) : la double cle de rotation de REQ-QA-030 n'etait portee par aucune tache (tests/unit/qualite/env-fail-fast.spec.ts l. 20 l'annoncait a sa propre tache). Des webhooks entrants sont actifs des la phase 0 (SEC-06) : PREALABLE FERME de la mise en service, avant le premier webhook entrant en production. A LIVRER : (1) AXIONIA_WEBHOOK_SECRET et AXIONIA_API_TOKEN acceptent une cle courante et une cle precedente, declarees dans src/lib/env.ts et docs/env.md (genere) ; la cle precedente porte son echeance, au plus 24 h. (2) Le `kid` de l'en-tete, emis par axion-ia (INT-T41, dependance ferme) et declare par le contrat (INT-T42), choisit la cle ; un kid inconnu ou ABSENT est refuse, jamais essaye contre toutes les cles : le kid FACULTATIF au contrat (INT-T42) ne l'autorise pas (note de la lentille securite). (3) Apres l'echeance, la cle precedente est refusee, et le refus est nomme. (4) TEMOIN A DEUX FACES, rouge d'abord : une signature par la cle precedente passe avant l'echeance et echoue apres ; une signature par une cle inconnue ou un kid absent echoue ; la cle courante passe toujours. (5) Un runbook de rotation (docs/runbooks/secret-desynchronise.md, livre par QA-T13) cite la procedure. Deux lentilles. DocuSeal n'envoie pas de kid et n'a pas encore de recepteur : sa double cle sans kid (cle courante puis precedente essayees) releve de INT-T12 (arbitrage -d7 du 2026-09-30).",
+      "tests": {
+        "REQ-QA-030": [
+          "tests/unit/securite/rotation-des-secrets.spec.ts"
+        ]
+      },
+      "issue": null,
+      "owner": null,
+      "branch": null,
+      "pr": null,
+      "attestation": null,
+      "motif": null
+    },
+    {
+      "id": "INT-T41",
+      "titre": "axion-ia emet l'en-tete du kid, derive par kidDe, sur les webhooks signes vers Partners et sur l'appel Bearer",
+      "phase": 0,
+      "repo": "axionia",
+      "zone": "integration",
+      "paths": [
+        "axionia/src/server/partners/enveloppe.ts",
+        "axionia/src/server/partners-sync/relais.ts",
+        "axionia/src/server/partners-sync/coordonnees.ts",
+        "axionia/src/server/partners/contrat/contracts.v2.json",
+        "axionia/src/server/partners/contrat/contracts.sha256",
+        "axionia/src/server/partners-sync/__tests__/kid-emis.spec.ts",
+        "axionia/src/server/partners/contrat/fixtures.v2.json"
+      ],
+      "schema": false,
+      "sensible": [
+        "auth"
+      ],
+      "deps": [
+        "INT-T02",
+        "INT-T42"
+      ],
+      "reqs": [
+        "REQ-QA-030"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "acceptance": "Arbitrage -d7 sur delegation de Williams du 2026-09-30, prealable de QA-T52 (rotation a double cle, dette bloquante de la lentille securite). Auteur : -66. A LIVRER cote axion-ia : (1) chaque webhook signe vers Partners (signerCorps) porte l'en-tete du kid de la cle qui a signe ; (2) la reponse signee de coordonnees (coordonnees.ts) porte le meme en-tete ; l'appel Bearer vers l'API entrante de Partners n'existe pas encore, son kid releve de INT-T07-A qui le cree ; (3) le kid est derive de la valeur par kidDe (partners/ADR-0013 d.8), jamais configure a part ; (4) le nom de l'en-tete est celui que declare le contrat Partners (INT-T42, dependance ferme), recopie octet pour octet dans axion-ia ; (5) TEMOIN : un envoi signe par la cle courante porte son kid ; apres rotation, le kid emis change avec la cle. Les chemins reels remplacent le gabarit a la premiere PR.",
+      "tests": {
+        "REQ-QA-030": [
+          "axionia/src/server/partners-sync/__tests__/kid-emis.spec.ts"
+        ]
+      },
+      "issue": null,
+      "owner": null,
+      "branch": null,
+      "pr": null,
+      "attestation": null,
+      "motif": null
+    },
+    {
+      "id": "INT-T42",
+      "titre": "Contrat v2 : l'en-tete du kid est declare, facultatif et additif, pour les webhooks d'axion-ia et la reponse de coordonnees",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "integration",
+      "paths": [
+        "packages/contracts/",
+        "scripts/contracts/export.ts",
+        "tests/unit/integration/contrat-hash.spec.ts",
+        "tests/unit/integration/contrat-v2-frontiere.spec.ts",
+        "tests/unit/integration/contrat-en-tete-du-kid.spec.ts"
+      ],
+      "schema": true,
+      "sensible": [
+        "auth"
+      ],
+      "deps": [
+        "INT-T01c"
+      ],
+      "reqs": [
+        "REQ-QA-030"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.25,
+      "statut": "a_faire",
+      "acceptance": "Arbitrage A01 du 2026-09-30, sur la question de -66 (contrat en lockstep) et l'arbitrage -d7 sur QA-T52. Le contrat Partners est la source : l'en-tete du kid y est declare AVANT sa recopie dans axion-ia (INT-T41). A LIVRER : (1) un en-tete du kid, facultatif, ajoute aux en-tetes declares des webhooks d'axion-ia vers Partners et de la reponse de coordonnees ; (2) changement ADDITIF et facultatif, sans nouveau type d'evenement : le contrat reste en v2, et contracts.sha256 est recalcule par l'export ; (3) TEMOIN : le contrat exporte declare l'en-tete, l'empreinte suit, et un en-tete absent reste valide (facultatif). Auteur : -66, puis INT-T41 recopie le contrat octet pour octet. Lentille schema requise.",
+      "tests": {
+        "REQ-QA-030": [
+          "tests/unit/integration/contrat-en-tete-du-kid.spec.ts"
+        ]
+      },
+      "issue": null,
+      "owner": null,
+      "branch": null,
+      "pr": null,
+      "attestation": null,
+      "motif": null
+    },
+    {
+      "id": "QA-T53",
+      "titre": "Alerte close rechiffrement_echoue : l'echec du rechiffrement horaire des sauvegardes alerte Telegram",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "qualite",
+      "paths": [
+        "src/server/integrations/telegram/alertes.ts",
+        "scripts/sauvegarde/cycle.ts",
+        "tests/unit/qualite/alerte-rechiffrement-echoue.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "QA-T12",
+        "INT-T14"
+      ],
+      "reqs": [
+        "REQ-QA-023"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.25,
+      "statut": "a_faire",
+      "acceptance": "Arbitrage -d7 sur delegation de Williams du 2026-09-30, sur la condition bloquante de la lentille securite pour la PR de QA-T12. PREALABLE FERME avant la premiere donnee reelle, au meme rang que QA-T12. Auteur : -50. A LIVRER : (1) une categorie d'alerte CLOSE `rechiffrement_echoue` dans CATEGORIES_ALERTE (src/server/integrations/telegram/alertes.ts), avec son gabarit ; (2) tout echec de `rechiffrer` (scripts/sauvegarde/cycle.ts), lecture, chiffrement ou depot, emet cette alerte, sans aucune donnee personnelle ni chemin de vidage dans le message ; (3) la garde des clairs de QA-T12 (`clairsEnSouffrance`, meme fichier), jouee chaque nuit et apres chaque `rechiffrer`, emet la meme alerte close quand elle nomme un clair plus vieux que le seuil de la SSOT en minutes (src/domain/rgpd/politique.ts) : c'est elle, pas l'echec de `rechiffrer`, qui tient la duree du clair, y compris quand le planificateur saute faute de secrets ou qu'un run est retarde ou saute ; aucune borne horaire n'est recopiee ici, le seuil est celui de la SSOT ; (4) TEMOINS rouges d'abord : un rechiffrement qu'on fait echouer emet exactement une alerte `rechiffrement_echoue` ; un rechiffrement reussi n'en emet aucune ; un clair plus vieux que le seuil, planificateur saute, emet une alerte ; un clair plus jeune que le seuil n'en emet aucune.",
+      "tests": {
+        "REQ-QA-023": [
+          "tests/unit/qualite/alerte-rechiffrement-echoue.spec.ts"
+        ]
+      },
+      "issue": null,
+      "owner": null,
       "branch": null,
       "pr": null,
       "attestation": null,

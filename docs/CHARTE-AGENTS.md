@@ -19,7 +19,7 @@
 
 Un agent qui prend une tâche lit, **dans cet ordre**, avant d'écrire une ligne :
 
-1. `docs/PLAN-STATE.md` — où en est le projet, ce qui est bloqué (fichier dérivé, jamais édité à la main) ;
+1. `docs/PLAN-STATE.md` — où en est le projet, ce qui est bloqué (fichier dérivé, jamais édité à la main ni commité : `pnpm vues:rendre` le rend) ;
 2. `docs/REGLES-MAISON.md` — les douze règles `RM-nn` qui ont coûté cher ;
 3. `docs/CONVENTIONS.md` — nommage, argent en centimes, branches, worktrees, pré-vol ;
 4. **sa fiche de rôle**, `.claude/agents/<fiche>.md` ;
@@ -73,8 +73,8 @@ fiche sans ligne, sur une ligne sans fiche, et sur deux lignes qui porteraient l
 
 **A01 · `gardien-spec` — le gardien du spec.**
 *Fait.* Tient `docs/REQUIREMENTS.md`, `docs/DECISIONS.md`, `docs/GLOSSAIRE.md`, `docs/PRESEANCE.md`, la
-traçabilité générée et la copie figée de `docs/spec/`. Compose `docs/tasks.json`. Commite `docs/PLAN-STATE.md`,
-qui est dérivé. Refuse une PR sans REQ, un test sans annotation `// @req`, un identifiant nu, une REQ non
+traçabilité générée et la copie figée de `docs/spec/`. Compose `docs/tasks.json`. Ne commite plus `docs/PLAN-STATE.md`,
+qui est dérivé et rendu à la volée (`pnpm vues:rendre`, GOV-123). Refuse une PR sans REQ, un test sans annotation `// @req`, un identifiant nu, une REQ non
 testable. À chaque clôture de phase, vérifie que chaque REQ a un test annoté, existant et vert, que chaque
 module et chaque étape sont couverts, et rejoue les affirmations des documents contre le dépôt.
 *Jamais.* N'écrit pas de code applicatif. N'interprète pas seul une ambiguïté : il ouvre une ADR ou remonte

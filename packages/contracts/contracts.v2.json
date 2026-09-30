@@ -73,8 +73,12 @@
       "type": "object"
     },
     "api_coordonnees_candidature_reponse_entetes": {
-      "$comment": "Réponse axionia → Partners, signée comme un envoi : HMAC-SHA-256, sous le secret d'émission, de `<horodatage>.<corps exact>`.",
+      "$comment": "Réponse axionia → Partners, signée comme un envoi : HMAC-SHA-256, sous le secret d'émission, de `<horodatage>.<corps exact>`. `x-axionia-kid`, facultatif, désigne le secret employé.",
       "properties": {
+        "x-axionia-kid": {
+          "pattern": "^[0-9a-f]{8}$",
+          "type": "string"
+        },
         "x-axionia-signature": {
           "pattern": "^[0-9a-f]{64}$",
           "type": "string"
@@ -955,6 +959,28 @@
         "forme",
         "rembourseLe",
         "provider"
+      ],
+      "type": "object"
+    },
+    "webhook_entetes": {
+      "$comment": "Webhook axionia → Partners : HMAC-SHA-256, sous le secret d'émission, de `<horodatage>.<corps exact>` ; tolérance de 300 s. `x-axionia-kid`, facultatif, désigne le secret employé (kidDe, partners/ADR-0013 d.8).",
+      "properties": {
+        "x-axionia-kid": {
+          "pattern": "^[0-9a-f]{8}$",
+          "type": "string"
+        },
+        "x-axionia-signature": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "x-axionia-timestamp": {
+          "pattern": "^[0-9]{1,20}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "x-axionia-timestamp",
+        "x-axionia-signature"
       ],
       "type": "object"
     }

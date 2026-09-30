@@ -8,10 +8,10 @@
     "`src/app/(espace)/**/page.tsx`, annonce le nombre de routes balayees, et rougit des qu'une",
     "route apparait sans son entree ici.",
     "",
-    "CE QU'ON ECRIT A LA MAIN : `name` (la route, chemin Next) et `path` (les paquets de cette",
-    "route, un glob PAR ROUTE — jamais un glob qui ratisse toutes les routes, `size-limit` en",
-    "ferait une somme et le budget par route serait perdu ; c'est ce que dit deja l'entree",
-    "`perf:bundle` de docs/gates.json).",
+    "CE QU'ON ECRIT A LA MAIN : `name` (la route, chemin Next) et `path` (le manifeste client de cette",
+    "route, lu par `pnpm perf:bundle` : sous Next 16 (Turbopack) `.next/static/chunks/app/` n'est PAS",
+    "produit, les paquets sont plats ; les anciens globs ne designaient aucun fichier, et un mesureur",
+    "qui les suivrait rendrait 0 octet, donc un vert permanent — mesure le 2026-09-29, QA-T20).",
     "",
     "CE QU'ON N'ECRIT PAS : `limit`. Le plafond est DERIVE du texte de REQ-GOV-028 dans",
     "docs/requirements.json et ECRIT par `pnpm perf:budgets --rendre`. C'est ainsi qu'aucun cliquet",
@@ -20,20 +20,38 @@
     "vers le bas, `plafond_relache` vers le haut).",
     "",
     "`lighthouserc.json` (racine) est RENDU par la meme commande, depuis le meme texte d'exigence.",
-    "Ne jamais l'editer a la main : la garde compare le disque au rendu et rougit sur l'ecart."
+    "Ne jamais l'editer a la main : la garde compare le disque au rendu et rougit sur l'ecart.",
+    "",
+    "`socle` : le runtime React/Next commun a toutes les routes (`rootMainFiles`), juge UNE fois par",
+    "`pnpm perf:bundle` contre mesureOctetsGz x (1 + marge). Le plafond par route juge le JS PROPRE a",
+    "chaque route. Arbitrage -d7 sur delegation de Williams du 2026-09-29 ; revisable par decision seulement."
   ],
   "sizeLimit": [
     {
       "name": "/connexion",
-      "path": ".next/static/chunks/app/(espace)/connexion/page*.js",
+      "path": ".next/server/app/(espace)/connexion/page_client-reference-manifest.js",
       "limit": "75 KB",
       "gzip": true
     },
     {
       "name": "/connexion/[jeton]",
-      "path": ".next/static/chunks/app/(espace)/connexion/\\[jeton\\]/**/*.js",
+      "path": ".next/server/app/(espace)/connexion/[jeton]/page_client-reference-manifest.js",
+      "limit": "75 KB",
+      "gzip": true
+    },
+    {
+      "name": "/confidentialite",
+      "path": ".next/static/chunks/app/(espace)/confidentialite/page*.js",
       "limit": "75 KB",
       "gzip": true
     }
-  ]
+  ],
+  "socle": {
+    "mesureOctetsGz": 129523,
+    "marge": 0.1,
+    "sha": "0d31086",
+    "perimetre": "rootMainFiles de .next/build-manifest.json, 4 fichiers, gzip niveau 9",
+    "source": "arbitrage -d7 sur delegation de Williams du 2026-09-29",
+    "verifieLe": "2026-09-29"
+  }
 }

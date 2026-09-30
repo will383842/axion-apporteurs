@@ -222,3 +222,28 @@
 _(rien à consolider — vingt-quatre leçons au journal. Consolidation du 2026-09-05 par le `documentaliste` (A03) : les « appris » des PR #28, #29 et #30 sont devenus LEC-14 à LEC-16, et le lot `L-1-INT-a` a fourni LEC-17 à LEC-24. Une seule a fait règle — RM-14.)_
 
 <!-- a-consolider:fin -->
+
+## Après lancement
+
+> Dettes de relecture NON bloquantes, rangées ici par le gel de la gouvernance (décision de Williams
+> du 2026-09-29) : aucune ne devient tâche avant le lancement. Chacune cite sa tâche ou sa PR. Ce ne
+> sont pas des leçons : `gov:lecons` ne les lit pas, et aucune n'attend de consolidation.
+
+- **INT-T27-A** — `contracts.v1.json` n'est pas dans les `paths` de la tâche.
+- **GOV-062** (PR #241) — quatre limites déclarées : actions tirées par étiquette, `GITHUB_ENV` écrit hors `.ts`, `ECRIT_L_ARBRE`, `nightly.yml` non confronté.
+- **QA-T05 / QA-T06** — images Docker tirées par étiquette, non par empreinte.
+- **GOV-127** (PR #257) — le passif de la déclaration ne compare pas le champ `depot`.
+- **INT-T05** (axion-ia #1228) — cohérence du HT reçu non vérifiée côté Partners : la somme des HT des paiements ne doit pas dépasser le HT de la facture.
+- **JUR-T40** — `sensible` vide, à réexaminer.
+- **GOV-124** (PR #248) — l'exclusion d'une lentille est une liste, pas une règle dérivée : REGLES-MAISON, LECONS, maquettes/VALIDATION, ESPACE-ROUTES et journal/README restent à une lentille.
+- **JUR-T34** (PR #242) — historique des versions acceptées de la politique ; micro-copie « Votre espace s'ouvre… ».
+- **GOV-117** (PR #259) — l'acceptance (7) cite `gov:tasks` là où la garde est `gov:requirements` ; pas d'option `--abaisse-le-risque` pour les outils hors dépôt.
+- **QA-T34** — `docs/gates.json`, porte de déploiement : le champ `tache` reste GOV-000 (non écrivable par les outils, voulu) alors que QA-T34 livre `deploy-verify`.
+- **GOV-128** (PR #278) — le champ `date` d'une entrée du passif n'est pas documenté : pour #1228, c'est la date de l'arbitrage (2026-09-30), la fusion étant du 2026-09-29 en UTC.
+- **QA-T50** (PR #271, revue exactitude) — la section « Paths » du corps omet le témoin des refus et `package.json`.
+- **JUR-T29** (axion-ia #1232, revue exactitude) — l'expression OBJET de la garde `jur-copy-indicative` ne reconnaît ni entreprise, ni client, ni mois près d'un montant ; le test du courriel d'avant signature juge le fichier entier, et en français seulement ; « sans aucune limite » reste sous l'indicatif.
+- **GOV-123** (PR #275) — `dateDUneVue` date une vue hors git par HEAD, non par son rendu : `plan_state_perime` ne voit plus une vue périmée sur un poste (la CI rend avant de juger) ; `gov-etat` lit PLAN-STATE sans garde d'absence ; le gabarit de PR (case « PLAN-STATE régénéré »), CODEOWNERS (vues possédées, sources non) et REPRISE-SESSION décrivent encore des vues commitées ; deux témoins copient une vue du disque local.
+- **GOV-123** (PR #275, revue securite) — `nightly.yml` ne rend pas les vues avant ses gardes (une lecture de vue y serait un ENOENT, donc un échec fermé) ; la règle « toute garde qui décide lit la source, jamais une vue » n'a pas de contrôle propre.
+- **QA-T34** (PR #268) — fusionnée par A01 sur porte A verte et deux accords lus à la main, sans rejouer `gov:pr --pr 268`, qui était rouge (case 3 de la DoD vide ; un accord au format « Verdict : **accepte** » classé sans verdict). Les deux accords portaient bien sur la tête fusionnée : rien à défaire. Depuis, `gov:pr --pr <n>` vert précède chaque fusion.
+- **QA-T20** (PR #263, revue exactitude) — la déclaration du chemin `perf/budgets.json` le dit « lu par perf:bundle », ce qui est faux ; `/confidentialite` garde un ancien motif de chemin qui ne désigne plus rien.
+- **JUR-T29** (axion-ia #1240, arbitrage -d7) — la mention de l'AI Act ne reconnaît pas ses alias, dont « RIA » (règlement sur l'intelligence artificielle) : une formulation qui les emploie échappe à la garde.

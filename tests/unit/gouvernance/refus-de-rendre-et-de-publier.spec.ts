@@ -538,6 +538,13 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
         'un-statut-fusionnee-porte-sa-preuve.spec.ts ; les sorties du binaire, qui lance `gh`, ' +
         'n’ont pas de témoin d’effet : un témoin qui lance `gh` rendrait la suite intermittente.',
     },
+    'scripts/gates/bundle-par-route.ts': {
+      total: 1,
+      porte: 1,
+      temoins: 0,
+      raison:
+        'QA-T20 — REQ-UX-033, le poids charge par route lu dans les manifestes de Next 16. `process.exitCode = code` : sortie TERMINALE a code variable, commune a la mesure et a `--prove` — 0 quand la garde passe, 1 sur une faute de mesure, ou sur un depassement sous `--bloquant`. Les familles sont vues rougir sur des builds INJECTES (budget-par-route.spec.ts) et le binaire est vu sortir en 1 sur un build absent et sur un build sur disque sous `--bloquant`, dans la meme spec ; aucun temoin ne vit dans `REFUS`. Elle lit les pages de l espace sur le DISQUE, pas dans l index : elle n importe pas `fichiersSuivisOuRefus` et n a rien a faire dans `GARDES_QUI_BALAIENT` ; sans build, elle rougit en build_absent. Dette DECLAREE.',
+    },
     'scripts/gates/perf-budgets.ts': {
       total: 4,
       porte: 4,
@@ -820,6 +827,13 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
         '0 » a été posé et tué le 2026-09-22.',
     },
     // ── CPL-T22 : UNE sortie, à code VARIABLE ───────────────────────────────────────────────
+    'scripts/gates/deploy-verify.ts': {
+      total: 3,
+      porte: 3,
+      temoins: 0,
+      raison:
+        'QA-T34 — REQ-QA-033, l atterrissage lu sur l en-tete servi, et la plateforme qui tire sha-<7>. TROIS sorties : l usage refuse (1), et `process.exitCode` pose deux fois — le code du mode (0 atterri ou saute, 1 non atterri ou refus de la plateforme, 2 indetermine), et 1 sur une erreur. `exitCode` et non `process.exit()` : couper des sockets de `fetch` fait planter Node sous Windows. Chaque issue est vue sur le binaire contre de vrais serveurs HTTP locaux (un-seul-producteur-de-deploiement.spec.ts) ; aucun temoin ne vit dans `REFUS`. N importe pas `fichiersSuivisOuRefus`. Dette DECLAREE.',
+    },
     'scripts/gates/red-first.ts': {
       total: 1,
       porte: 1,
@@ -856,6 +870,13 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
         'est vu sortir en 0 sur le dépôt dans la même spec ; ⛔ ce témoin d’effet ne vit pas dans ' +
         '`REFUS`. Dette DÉCLARÉE.',
     },
+    'scripts/deploiement/provisionner.ts': {
+      total: 2,
+      porte: 2,
+      temoins: 0,
+      raison:
+        'QA-T50 — REQ-INT-031, le provisionnement de la plateforme depuis les secrets du depot. `process.exitCode` pose sur le code du provisionnement (0 cree, deja present ou saute ; 1 secret hors regle ou refus de la plateforme) et sur 1 en cas d erreur, dont une adresse interne absente de la reponse. Chaque issue est vue sur le binaire contre une plateforme factice locale (provisionnement-coolify.spec.ts) ; aucun temoin ne vit dans `REFUS`. N importe pas `fichiersSuivisOuRefus`. Dette DECLAREE.',
+    },
     'scripts/vues/fusion.ts': {
       total: 1,
       porte: 1,
@@ -865,6 +886,18 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
         'variable. La décision (`fusionnerMain`) est vue rendre 1 sur un conflit hors vue et sur un ' +
         'rendu en échec, et 0 sur un conflit de vue seule, dans un VRAI dépôt git jetable ' +
         '(relectures-sans-defaut.spec.ts) ; le binaire lui-même n’est pas lancé. Dette DÉCLARÉE.',
+    },
+    'scripts/vues/rendre-apres-fusion.ts': {
+      total: 1,
+      porte: 1,
+      temoins: 0,
+      raison:
+        '`pnpm vues:rendre` et `pnpm vues:hors-git`. `process.exit(issue.code)` : sortie ' +
+        'TERMINALE à code variable, commune aux deux modes. Les décisions (`rendreDeuxFois`, ' +
+        '`jugerHorsGit`) sont vues rendre 1 en nommant la vue (rendu en échec, vue absente, deux ' +
+        'rendus différents, vue sous git, vue non ignorée) et 0 sur leurs contre-témoins ' +
+        '(vues-rendues-apres-fusion.spec.ts) ; le binaire est lancé par la porte A, pas par un ' +
+        'test. Dette DÉCLARÉE.',
     },
     'scripts/mutation/pr.ts': {
       total: 1,
@@ -966,6 +999,13 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
         'l’impression) : vue absente, rubriques dues non déclarées (GOV-055, PR #158) et vue ' +
         'dérivée en `plan-state:verifier`, plafond de questions en rendu. La dérive de la vue est ' +
         'vue rougir par les specs de PLAN-STATE, qui ne vivent pas dans `REFUS`. Dette DÉCLARÉE.',
+    },
+    'scripts/gates/runbooks-exerces.ts': {
+      total: 1,
+      porte: 1,
+      temoins: 0,
+      raison:
+        'QA-T13 — REQ-QA-034, un runbook s exerce en preview. process.exitCode pose sur le code du controle ou de --prove : 0 quand chaque runbook exige est exerce en preview et que son corps n a pas change depuis, 1 sinon, le runbook nomme. Les familles sont vues rougir sur des runbooks FABRIQUES (runbooks-exerces.spec.ts) et --prove est vu sortir en 0 ; le binaire est vu sortir en 1 sur le depot tant qu aucun runbook du socle n est exerce ; aucun temoin ne vit dans REFUS. N importe pas fichiersSuivisOuRefus. Dette DECLAREE.',
     },
     'scripts/lot/cloture.ts': {
       total: 1,
@@ -1251,7 +1291,8 @@ describe('REQ-CPL-018 — la garde d’ARGENT sort en échec : témoin d’EFFET
     // CONTRÔLE POSITIF, qui a rougi sur `docs/DECISIONS.md` manquant — c'est exactement ce pour
     // quoi il existe : sans lui j'aurais lu un non-zéro dû à un fichier absent comme « la garde a
     // vu la coordonnée ».
-    for (const f of ['config/entite.json', 'docs/DECISIONS.md', 'docs/REQUIREMENTS.md']) {
+    // GOV-123 : la garde rend `docs/REQUIREMENTS.md` de sa SOURCE, `docs/requirements.json`.
+    for (const f of ['config/entite.json', 'docs/DECISIONS.md', 'docs/requirements.json']) {
       mkdirSync(join(depot, dirname(f)), { recursive: true });
       writeFileSync(join(depot, f), readFileSync(f, 'utf8'));
     }
@@ -1487,6 +1528,17 @@ function depotJetableAvec(fichiers: readonly string[]): string {
  * elles ne rendaient pas la gate fautive, elles la rendaient AVEUGLE.
  */
 function depotCompletJetable({ avecGit = true }: { avecGit?: boolean } = {}): string {
+  const depot = extraireLaTete();
+  if (avecGit) faireDeCeDossierUnDepot(depot);
+  const vue = join(depot, VUE_DE_TRACABILITE);
+  mkdirSync(dirname(vue), { recursive: true });
+  writeFileSync(vue, tracabiliteRendueDeLaTete());
+  if (avecGit) execFileSync('git', ['add', '-A'], { cwd: depot, stdio: 'ignore' });
+  return depot;
+}
+
+/** `git archive HEAD` extrait dans un dossier jetable, avec une jonction vers `node_modules`. */
+function extraireLaTete(): string {
   const depot = mkdtempSync(join(tmpdir(), 'temoin-complet-'));
   DEPOTS_JETABLES.push(depot);
   const tar = execFileSync('git', ['archive', 'HEAD'], { maxBuffer: 512e6, encoding: 'buffer' });
@@ -1495,8 +1547,30 @@ function depotCompletJetable({ avecGit = true }: { avecGit?: boolean } = {}): st
   execFileSync('tar', ['-x', '-f', 'depot.tar'], { cwd: depot });
   rmSync(chemin, { force: true });
   symlinkSync(resolve('node_modules'), join(depot, 'node_modules'), 'junction');
-  if (avecGit) faireDeCeDossierUnDepot(depot);
   return depot;
+}
+
+/**
+ * GOV-123 — LA PORTE A REND LES VUES AVANT DE LES LIRE (`pnpm vues:rendre`) ; le dépôt jetable
+ * aussi. `git archive HEAD` ne porte plus aucune vue, elles sont hors de git : sans
+ * `docs/TRACABILITE.md`, `gov:trace` refusait un dépôt SAIN (`vue_divergente`, « absent »), et
+ * le témoin ne mesurait plus rien. La vue est RENDUE par la gate elle-même, UNE fois, dans un
+ * dépôt extrait de la même tête — jamais recopiée du disque, où elle peut être périmée.
+ */
+const VUE_DE_TRACABILITE = 'docs/TRACABILITE.md';
+let tracabiliteDeLaTete: string | null = null;
+function tracabiliteRendueDeLaTete(): string {
+  if (tracabiliteDeLaTete !== null) return tracabiliteDeLaTete;
+  const depot = extraireLaTete();
+  faireDeCeDossierUnDepot(depot);
+  const r = lancerLaGate('scripts/gates/gov-trace.ts', depot, ['--render']);
+  const vue = join(depot, VUE_DE_TRACABILITE);
+  if (r.code !== 0 || !existsSync(vue)) {
+    throw new Error(`gov:trace --render n'a pas rendu ${VUE_DE_TRACABILITE} (code ${r.code}) :
+${r.sortie.slice(0, 600)}`);
+  }
+  tracabiliteDeLaTete = readFileSync(vue, 'utf8');
+  return tracabiliteDeLaTete;
 }
 
 /**
