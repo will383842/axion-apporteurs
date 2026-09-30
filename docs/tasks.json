@@ -14894,7 +14894,8 @@
         "axionia/src/server/partners-sync/coordonnees.ts",
         "axionia/src/server/partners/contrat/contracts.v2.json",
         "axionia/src/server/partners/contrat/contracts.sha256",
-        "axionia/src/server/partners-sync/__tests__/kid-emis.spec.ts"
+        "axionia/src/server/partners-sync/__tests__/kid-emis.spec.ts",
+        "axionia/src/server/partners/contrat/fixtures.v2.json"
       ],
       "schema": false,
       "sensible": [],
