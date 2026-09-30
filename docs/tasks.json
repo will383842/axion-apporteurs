@@ -2366,7 +2366,8 @@
         "tests/unit/qualite/pipeline-image.spec.ts",
         "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts",
         "docker-entrypoint.sh",
-        "scripts/gates/registre-des-refus.ts"
+        "scripts/gates/registre-des-refus.ts",
+        ".github/workflows/deploy.yml"
       ],
       "schema": true,
       "sensible": [],
@@ -2410,7 +2411,10 @@
         "package.json",
         "src/domain/seuils/ssot.ts",
         "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts",
-        "scripts/gates/registre-des-refus.ts"
+        "scripts/gates/registre-des-refus.ts",
+        "tests/unit/juridique/seuils-ssot-en-processus.spec.ts",
+        "src/domain/rgpd/politique.ts",
+        "scripts/gates/seuils-ssot.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -2458,7 +2462,8 @@
         ".github/workflows/nightly.yml",
         "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts",
         "tests/integration/sondes-de-vie.spec.ts",
-        "scripts/gates/registre-des-refus.ts"
+        "scripts/gates/registre-des-refus.ts",
+        "docs/gates.json"
       ],
       "schema": false,
       "sensible": [],
@@ -2468,7 +2473,6 @@
       ],
       "reqs": [
         "REQ-QA-022",
-        "REQ-QA-030",
         "REQ-QA-034"
       ],
       "hyp": [],
@@ -2482,13 +2486,10 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "(1) Un enclenchement manuel du workflow de retour arriere (`workflow_dispatch`, avec le SHA cible) redeploie l'image `sha-<cible>` avec `SKIP_MIGRATE=1`, VERIFIE `readyz` et l'en-tete `x-partners-build-sha` par `pnpm deploy:verify` (mode retour arriere), puis retire `SKIP_MIGRATE` (REQ-QA-022). Un retour arriere qui ne verifie pas ce qu'il a remis en place n'a rien remis en place. (2) LES TROIS RUNBOOKS DU SOCLE existent — `docs/runbooks/retour-arriere.md` (seul porteur de `SKIP_MIGRATE`), `docs/runbooks/migration-echouee.md`, `docs/runbooks/secret-desynchronise.md` — et CHACUN porte un bloc « Execute le : <date> · environnement : preview · SHA · resultat » (REQ-QA-034, REQ-QA-030). Les runbooks commission manquante et lot mensuel bloque relevent de QA-T25. (3) La garde `scripts/gates/runbooks-exerces.ts` refuse un runbook dont le bloc est vide ou dont la date precede la derniere modification du runbook ; elle tourne en nightly et passe en porte A au premier exercice reel. (4) TEMOIN A DEUX FACES : un runbook dont on vide le bloc d'execution, puis un dont on modifie le corps sans refaire l'exercice, font sortir la garde en code non nul et NOMMENT le runbook ; les runbooks exerces la font sortir en zero, et le vert imprime le compte des runbooks reellement confrontes. (5) CONDITION posee sur delegation (2026-09-30) : les trois runbooks du socle sont EXERCES REELLEMENT en preview AVANT la cloture de la Phase 0, et la verification de fin de Phase 0 le controle. (6) `docs/runbooks/**` est reserve : la PR porte le label de documentation prevu par la charte.",
+      "acceptance": "(1) Un enclenchement manuel du workflow de retour arriere (`workflow_dispatch`, avec le SHA cible) redeploie l'image `sha-<cible>` avec `SKIP_MIGRATE=1`, VERIFIE `readyz` et l'en-tete `x-partners-build-sha` par `pnpm deploy:verify` (mode retour arriere), puis retire `SKIP_MIGRATE` (REQ-QA-022). Un retour arriere qui ne verifie pas ce qu'il a remis en place n'a rien remis en place. (2) LES TROIS RUNBOOKS DU SOCLE existent — `docs/runbooks/retour-arriere.md` (seul porteur de `SKIP_MIGRATE`), `docs/runbooks/migration-echouee.md`, `docs/runbooks/secret-desynchronise.md` — et CHACUN porte un bloc « Execute le : <date> · environnement : preview · SHA · resultat » (REQ-QA-034). Les runbooks commission manquante et lot mensuel bloque relevent de QA-T25. (3) La garde `scripts/gates/runbooks-exerces.ts` refuse un runbook dont le bloc est vide ou dont la date precede la derniere modification du runbook ; elle tourne en nightly et passe en porte A au premier exercice reel. (4) TEMOIN A DEUX FACES : un runbook dont on vide le bloc d'execution, puis un dont on modifie le corps sans refaire l'exercice, font sortir la garde en code non nul et NOMMENT le runbook ; les runbooks exerces la font sortir en zero, et le vert imprime le compte des runbooks reellement confrontes. (5) CONDITION posee sur delegation (2026-09-30) : les trois runbooks du socle sont EXERCES REELLEMENT en preview AVANT la cloture de la Phase 0, et la verification de fin de Phase 0 le controle. (6) `docs/runbooks/**` est reserve : la PR porte le label de documentation prevu par la charte.",
       "tests": {
         "REQ-QA-022": [
           "tests/unit/qualite/retour-arriere.spec.ts"
-        ],
-        "REQ-QA-030": [
-          "tests/unit/qualite/runbooks-exerces.spec.ts"
         ],
         "REQ-QA-034": [
           "tests/unit/qualite/runbooks-exerces.spec.ts"
@@ -4124,15 +4125,15 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
-      "owner": null,
+      "statut": "fusionnee",
+      "owner": "A05",
       "lot": null,
-      "branch": null,
-      "pr": null,
+      "branch": "t/qa-t20",
+      "pr": 263,
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "budget 75 KB gz par route mesuré par script maison sur `.next/static/chunks/app/` (une entrée par route) ; non bloquant jusqu'à QA-T20b (seuil aligné d'abord, blocage ensuite).",
+      "acceptance": "budget 75 KB gz par route mesure par script maison sur `.next/static/chunks/app/` (une entree par route) ; BLOQUANT des sa livraison (REQ-UX-033, REQ-GOV-028) : les routes deja livrees, dont /connexion et /confidentialite, sont jugees, et une route sans budget rougit. QA-T20b realigne ensuite le seuil sur la premiere mesure de l'accueil de l'espace (UX-P1-08), sans jamais desarmer le blocage.",
       "tests": {
         "REQ-QA-031": [
           "tests/unit/qualite/budget-par-route.spec.ts"
@@ -4140,6 +4141,11 @@
         "REQ-UX-033": [
           "tests/unit/qualite/budget-par-route.spec.ts"
         ]
+      },
+      "attestation": {
+        "pr": 263,
+        "sha": "a89b061f37ca18b3e2e7531b3796119ed5251a68",
+        "fusionneeAt": "2026-09-30T03:35:01Z"
       }
     },
     {
@@ -4600,7 +4606,8 @@
       "pr": null,
       "issue": null,
       "attempts": 0,
-      "motif": null
+      "motif": null,
+      "acceptance": "Client API 1 cote axionia : timeout 2 s, cache 5 min, echec ouvert (titre). (arbitrage A01 du 2026-09-30, suite de QA-T52 et INT-T41) : l'appel Bearer vers l'API entrante de Partners porte l'en-tete du kid du jeton, derive par kidDe et declare par le contrat (INT-T42) ; temoin : le kid emis change quand le jeton tourne."
     },
     {
       "id": "INT-T08-A",
@@ -5261,7 +5268,8 @@
         "REQ-INT-019",
         "REQ-JUR-004",
         "REQ-JUR-005",
-        "REQ-SEC-034"
+        "REQ-SEC-034",
+        "REQ-QA-030"
       ],
       "hyp": [
         "DEC-INT-001"
@@ -5276,7 +5284,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "ELLE ÉCRIT LE SCHÉMA (label `schema`, seule de sa famille dans son lot). Cadrage de l'architecte du 2026-09-26 sur délégation de Will (partners/ADR-0022) : ce que la tâche crée ; le comportement est celui de ses exigences. (1) `contrats` est créée par DM-23 (dépendance, conflit C1) ; INT-T12 crée `enveloppes_signature` : `enum StatutEnveloppe {envoyee, signee, refusee, expiree, annulee}` ; `contratId`, `submissionId` unique, `statut`, `emailHash` (l'adresse d'envoi en empreinte seule), `envoyeeAt`, `relancesEnvoyees` (0 à 3), `derniereRelanceAt`, `termineeAt` (nulle si et seulement si `envoyee`), `remplaceeParId` unique ; une seule enveloppe `envoyee` par contrat (`UNIQUE (contrat_id) WHERE statut = 'envoyee'`). (2) Elle ajoute à `type_evenement_recu` les valeurs DocuSeal réellement traitées : `submission_completed` (`submission.completed`), `form_declined` (`form.declined`), `submission_expired` (`submission.expired`), identifiant en snake_case et libellé de fil par `@map`. (3) INFORMATION EXTERNE REQUISE AVANT LE CODE : les noms d'événements émis, la forme exacte de la signature `<ts>.<hex64>` et l'emplacement de `metadata.apporteurId` sont consignés dans `docs/tiers/docuseal.md` avec une charge réelle enregistrée. Forme sûre : un type non listé rend 200 sans effet et est alerté, jamais traité par défaut."
+      "acceptance": "ELLE ÉCRIT LE SCHÉMA (label `schema`, seule de sa famille dans son lot). Cadrage de l'architecte du 2026-09-26 sur délégation de Will (partners/ADR-0022) : ce que la tâche crée ; le comportement est celui de ses exigences. (1) `contrats` est créée par DM-23 (dépendance, conflit C1) ; INT-T12 crée `enveloppes_signature` : `enum StatutEnveloppe {envoyee, signee, refusee, expiree, annulee}` ; `contratId`, `submissionId` unique, `statut`, `emailHash` (l'adresse d'envoi en empreinte seule), `envoyeeAt`, `relancesEnvoyees` (0 à 3), `derniereRelanceAt`, `termineeAt` (nulle si et seulement si `envoyee`), `remplaceeParId` unique ; une seule enveloppe `envoyee` par contrat (`UNIQUE (contrat_id) WHERE statut = 'envoyee'`). (2) Elle ajoute à `type_evenement_recu` les valeurs DocuSeal réellement traitées : `submission_completed` (`submission.completed`), `form_declined` (`form.declined`), `submission_expired` (`submission.expired`), identifiant en snake_case et libellé de fil par `@map`. (3) INFORMATION EXTERNE REQUISE AVANT LE CODE : les noms d'événements émis, la forme exacte de la signature `<ts>.<hex64>` et l'emplacement de `metadata.apporteurId` sont consignés dans `docs/tiers/docuseal.md` avec une charge réelle enregistrée. Forme sûre : un type non listé rend 200 sans effet et est alerté, jamais traité par défaut. AJOUT (arbitrage -d7 sur delegation de Williams du 2026-09-30, dette bloquante de la lentille securite) : DOCUSEAL_WEBHOOK_SECRET accepte une cle courante et une cle precedente, echeance de 24 h au plus ; DocuSeal n'envoyant pas de kid, les deux cles sont essayees, la courante d'abord, et le refus apres echeance est nomme ; temoin avant et apres echeance."
     },
     {
       "id": "INT-T13",
@@ -5841,7 +5849,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "seuil aligné sur la première mesure de la première route de l'espace, puis bloquant."
+      "acceptance": "seuil realigne sur la premiere mesure de l'accueil de l'espace (UX-P1-08), jamais pose sous la mesure courante ; le blocage arme par QA-T20 reste arme."
     },
     {
       "id": "UX-P1-09",
@@ -14539,7 +14547,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 1.5,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "EXCEPTION AU GEL DE LA GOUVERNANCE, decision de Williams du 2026-09-29 (vers 18 h), confirmee directement dans la session A01, priorite juste apres la PR #239. CONSTAT : chaque fusion fait diverger les vues derivees des autres PR (docs/PLAN-STATE.md, docs/TRACABILITE.md, docs/TASKS.md, docs/REQUIREMENTS.md, docs/paths-proposes.json, docs/GATES.md, index des ADR), ce qui relance leur porte A et leurs reconfirmations (la PR #230 trois fois le 2026-09-29, puis #239, #241 et #242). A LIVRER : (1) une PR ne porte plus de vue derivee ; les gardes de PR jugent les SOURCES (registres, requirements, gates.json, ADR), jamais l'egalite d'une vue commitee. (2) Le rendu se fait sur main, par la voie la plus simple et la plus sure, choisie et ecrite dans la PR : soit un job apres fusion qui rend et commite les vues, soit des vues rendues a la volee et non commitees. (3) Si un job commite sur main, exigences de la lentille securite, chacune avec son temoin : GITHUB_TOKEN en contents: write seulement, sur push de main seulement, dans un job separe de tout code de PR (patron du job publier de deploy.yml ; persist-credentials: false partout ailleurs) ; le commit est limite a une liste FERMEE de chemins de vues, verifiee par le job, qui refuse tout autre chemin ; le rendu est reproductible (la porte A suivante le relance et obtient un diff vide) ; les scripts de rendu sont lus sur main, jamais sur une branche ; le contournement de la protection de main est limite a ce seul acteur, reglage que Williams pose lui-meme sur la forge. (4) Une vue illisible ou en derive sur main est un rouge de la porte A de main, qui nomme la vue. TEMOIN a deux faces : deux PR qui ajoutent chacune une tache ne sont plus en conflit apres la fusion de l'une ; un commit de rendu qui toucherait un chemin hors de la liste fermee est refuse en le nommant.",
       "tests": {
         "REQ-GOV-032": [
@@ -14551,9 +14559,13 @@
       },
       "issue": 274,
       "owner": "A01",
-      "branch": null,
-      "pr": null,
-      "attestation": null,
+      "branch": "t/gov-123-vues",
+      "pr": 275,
+      "attestation": {
+        "pr": 275,
+        "sha": "18efc1dfca1ae5c770670a9aaedb4f6260f60fb9",
+        "fusionneeAt": "2026-09-30T01:45:22Z"
+      },
       "motif": null
     },
     {
@@ -14783,7 +14795,7 @@
       "externe": null,
       "estimateDays": 0.5,
       "statut": "a_faire",
-      "acceptance": "Versee a la demande de la session -50 (mise en ligne), sur demande de -d7 : aucune tache du registre ne portait le provisionnement, REQ-INT-031 n etant rattachee qu a INT-T02 cote axionia. (1) Un declenchement manuel cree, s ils n existent pas, dans le projet Coolify Axion-Partners, l application de type image Docker (ghcr.io/will383842/axion-apporteurs, etiquette sha-<7>, sonde /api/readyz) et une base Postgres 16 separee ; il est idempotent : relance, il ne cree rien et le dit. (2) Chaque variable de docs/env.md est posee depuis le secret du depot de meme nom, jamais en argument ni en clair dans le journal du run ; DATABASE_URL vient de la base creee. (3) Un secret absent : SAUTE avec un ::warning:: par secret nomme. (4) TEMOIN A DEUX FACES sur une plateforme factice locale : secrets absents, alors saute et nomme ; plateforme en 401, alors code non nul et jeton jamais imprime. Deux lentilles (workflow et secrets).",
+      "acceptance": "Versee a la demande de la session -50 (mise en ligne), sur demande de -d7 : aucune tache du registre ne portait le provisionnement, REQ-INT-031 n etant rattachee qu a INT-T02 cote axionia. (1) Un declenchement manuel cree, s ils n existent pas, dans le projet Coolify Axion-Partners, l application de type image Docker (ghcr.io/will383842/axion-apporteurs, etiquette sha-<7>, sonde /api/readyz) et une base Postgres 16 separee ; il est idempotent : relance, il ne cree rien et le dit. (2) Chaque variable de docs/env.md est posee depuis le secret du depot de meme nom, jamais en argument ni en clair dans le journal du run ; DATABASE_URL vient de la base creee. (3) Un secret absent : le provisionnement, geste MANUEL, ECHOUE en code 1 avec un ::error:: par secret nomme (arbitrage -d7 du 2026-09-30 : un geste manuel sans ses secrets echoue, seul un planificateur peut sauter). (4) TEMOIN A DEUX FACES sur une plateforme factice locale : secrets absents, alors code 1 et chaque secret nomme ; plateforme en 401, alors code non nul et jeton jamais imprime. Deux lentilles (workflow et secrets).",
       "tests": {
         "REQ-INT-031": [
           "tests/unit/qualite/provisionnement-coolify.spec.ts"
@@ -14833,6 +14845,180 @@
         "sha": "58ac665f2134b925aec000a2d81ba9509db46b17",
         "fusionneeAt": "2026-09-29T23:56:28Z"
       },
+      "motif": null
+    },
+    {
+      "id": "QA-T52",
+      "titre": "Rotation a double cle des secrets de webhook et du jeton d'API : cle courante et cle precedente acceptees 24 h, kid en en-tete",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "qualite",
+      "paths": [
+        "src/lib/env.ts",
+        "src/app/api/webhooks/axionia/route.ts",
+        "src/server/integrations/axionia/reception.ts",
+        "tests/unit/securite/rotation-des-secrets.spec.ts",
+        "docs/env.md",
+        "src/server/integrations/axionia/api-entrante.ts",
+        "docs/runbooks/secret-desynchronise.md",
+        "tests/unit/securite/webhook-signature.spec.ts",
+        "src/server/integrations/axionia/candidature-recue.ts",
+        "tests/integration/webhook.spec.ts",
+        "tests/integration/frontiere.spec.ts",
+        "tests/unit/integration/candidature-recue.spec.ts",
+        "tests/integration/webhook-verdicts.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [
+        "auth"
+      ],
+      "deps": [
+        "QA-T04",
+        "SEC-06",
+        "INT-T41"
+      ],
+      "reqs": [
+        "REQ-QA-030"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "acceptance": "DETTE BLOQUANTE (lentille securite, verdict de la PR 282 ; arbitrage -d7 sur delegation de Williams du 2026-09-30) : la double cle de rotation de REQ-QA-030 n'etait portee par aucune tache (tests/unit/qualite/env-fail-fast.spec.ts l. 20 l'annoncait a sa propre tache). Des webhooks entrants sont actifs des la phase 0 (SEC-06) : PREALABLE FERME de la mise en service, avant le premier webhook entrant en production. A LIVRER : (1) AXIONIA_WEBHOOK_SECRET et AXIONIA_API_TOKEN acceptent une cle courante et une cle precedente, declarees dans src/lib/env.ts et docs/env.md (genere) ; la cle precedente porte son echeance, au plus 24 h. (2) Le `kid` de l'en-tete, emis par axion-ia (INT-T41, dependance ferme) et declare par le contrat (INT-T42), choisit la cle ; un kid inconnu ou ABSENT est refuse, jamais essaye contre toutes les cles : le kid FACULTATIF au contrat (INT-T42) ne l'autorise pas (note de la lentille securite). (3) Apres l'echeance, la cle precedente est refusee, et le refus est nomme. (4) TEMOIN A DEUX FACES, rouge d'abord : une signature par la cle precedente passe avant l'echeance et echoue apres ; une signature par une cle inconnue ou un kid absent echoue ; la cle courante passe toujours. (5) Un runbook de rotation (docs/runbooks/secret-desynchronise.md, livre par QA-T13) cite la procedure. Deux lentilles. DocuSeal n'envoie pas de kid et n'a pas encore de recepteur : sa double cle sans kid (cle courante puis precedente essayees) releve de INT-T12 (arbitrage -d7 du 2026-09-30).",
+      "tests": {
+        "REQ-QA-030": [
+          "tests/unit/securite/rotation-des-secrets.spec.ts"
+        ]
+      },
+      "issue": null,
+      "owner": null,
+      "branch": null,
+      "pr": null,
+      "attestation": null,
+      "motif": null
+    },
+    {
+      "id": "INT-T41",
+      "titre": "axion-ia emet l'en-tete du kid, derive par kidDe, sur les webhooks signes vers Partners et sur l'appel Bearer",
+      "phase": 0,
+      "repo": "axionia",
+      "zone": "integration",
+      "paths": [
+        "axionia/src/server/partners/enveloppe.ts",
+        "axionia/src/server/partners-sync/relais.ts",
+        "axionia/src/server/partners-sync/coordonnees.ts",
+        "axionia/src/server/partners/contrat/contracts.v2.json",
+        "axionia/src/server/partners/contrat/contracts.sha256",
+        "axionia/src/server/partners-sync/__tests__/kid-emis.spec.ts",
+        "axionia/src/server/partners/contrat/fixtures.v2.json"
+      ],
+      "schema": false,
+      "sensible": [
+        "auth"
+      ],
+      "deps": [
+        "INT-T02",
+        "INT-T42"
+      ],
+      "reqs": [
+        "REQ-QA-030"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "acceptance": "Arbitrage -d7 sur delegation de Williams du 2026-09-30, prealable de QA-T52 (rotation a double cle, dette bloquante de la lentille securite). Auteur : -66. A LIVRER cote axion-ia : (1) chaque webhook signe vers Partners (signerCorps) porte l'en-tete du kid de la cle qui a signe ; (2) la reponse signee de coordonnees (coordonnees.ts) porte le meme en-tete ; l'appel Bearer vers l'API entrante de Partners n'existe pas encore, son kid releve de INT-T07-A qui le cree ; (3) le kid est derive de la valeur par kidDe (partners/ADR-0013 d.8), jamais configure a part ; (4) le nom de l'en-tete est celui que declare le contrat Partners (INT-T42, dependance ferme), recopie octet pour octet dans axion-ia ; (5) TEMOIN : un envoi signe par la cle courante porte son kid ; apres rotation, le kid emis change avec la cle. Les chemins reels remplacent le gabarit a la premiere PR.",
+      "tests": {
+        "REQ-QA-030": [
+          "axionia/src/server/partners-sync/__tests__/kid-emis.spec.ts"
+        ]
+      },
+      "issue": null,
+      "owner": null,
+      "branch": null,
+      "pr": null,
+      "attestation": null,
+      "motif": null
+    },
+    {
+      "id": "INT-T42",
+      "titre": "Contrat v2 : l'en-tete du kid est declare, facultatif et additif, pour les webhooks d'axion-ia et la reponse de coordonnees",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "integration",
+      "paths": [
+        "packages/contracts/",
+        "scripts/contracts/export.ts",
+        "tests/unit/integration/contrat-hash.spec.ts",
+        "tests/unit/integration/contrat-v2-frontiere.spec.ts",
+        "tests/unit/integration/contrat-en-tete-du-kid.spec.ts"
+      ],
+      "schema": true,
+      "sensible": [
+        "auth"
+      ],
+      "deps": [
+        "INT-T01c"
+      ],
+      "reqs": [
+        "REQ-QA-030"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.25,
+      "statut": "fusionnee",
+      "acceptance": "Arbitrage A01 du 2026-09-30, sur la question de -66 (contrat en lockstep) et l'arbitrage -d7 sur QA-T52. Le contrat Partners est la source : l'en-tete du kid y est declare AVANT sa recopie dans axion-ia (INT-T41). A LIVRER : (1) un en-tete du kid, facultatif, ajoute aux en-tetes declares des webhooks d'axion-ia vers Partners et de la reponse de coordonnees ; (2) changement ADDITIF et facultatif, sans nouveau type d'evenement : le contrat reste en v2, et contracts.sha256 est recalcule par l'export ; (3) TEMOIN : le contrat exporte declare l'en-tete, l'empreinte suit, et un en-tete absent reste valide (facultatif). Auteur : -66, puis INT-T41 recopie le contrat octet pour octet. Lentille schema requise.",
+      "tests": {
+        "REQ-QA-030": [
+          "tests/unit/integration/contrat-en-tete-du-kid.spec.ts"
+        ]
+      },
+      "issue": null,
+      "owner": "A05",
+      "branch": "t/int-t42",
+      "pr": 287,
+      "attestation": {
+        "pr": 287,
+        "sha": "9a3ba2fe2a52bf5c5488514181f5359b2147f5d2",
+        "fusionneeAt": "2026-09-30T05:24:48Z"
+      },
+      "motif": null
+    },
+    {
+      "id": "QA-T53",
+      "titre": "Alerte close rechiffrement_echoue : l'echec du rechiffrement horaire des sauvegardes alerte Telegram",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "qualite",
+      "paths": [
+        "src/server/integrations/telegram/alertes.ts",
+        "scripts/sauvegarde/cycle.ts",
+        "tests/unit/qualite/alerte-rechiffrement-echoue.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "QA-T12",
+        "INT-T14"
+      ],
+      "reqs": [
+        "REQ-QA-023"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.25,
+      "statut": "a_faire",
+      "acceptance": "Arbitrage -d7 sur delegation de Williams du 2026-09-30, sur la condition bloquante de la lentille securite pour la PR de QA-T12. PREALABLE FERME avant la premiere donnee reelle, au meme rang que QA-T12. Auteur : -50. A LIVRER : (1) une categorie d'alerte CLOSE `rechiffrement_echoue` dans CATEGORIES_ALERTE (src/server/integrations/telegram/alertes.ts), avec son gabarit ; (2) tout echec de `rechiffrer` (scripts/sauvegarde/cycle.ts), lecture, chiffrement ou depot, emet cette alerte, sans aucune donnee personnelle ni chemin de vidage dans le message ; (3) la garde des clairs de QA-T12 (`clairsEnSouffrance`, meme fichier), jouee chaque nuit et apres chaque `rechiffrer`, emet la meme alerte close quand elle nomme un clair plus vieux que le seuil de la SSOT en minutes (src/domain/rgpd/politique.ts) : c'est elle, pas l'echec de `rechiffrer`, qui tient la duree du clair, y compris quand le planificateur saute faute de secrets ou qu'un run est retarde ou saute ; aucune borne horaire n'est recopiee ici, le seuil est celui de la SSOT ; (4) TEMOINS rouges d'abord : un rechiffrement qu'on fait echouer emet exactement une alerte `rechiffrement_echoue` ; un rechiffrement reussi n'en emet aucune ; un clair plus vieux que le seuil, planificateur saute, emet une alerte ; un clair plus jeune que le seuil n'en emet aucune.",
+      "tests": {
+        "REQ-QA-023": [
+          "tests/unit/qualite/alerte-rechiffrement-echoue.spec.ts"
+        ]
+      },
+      "issue": null,
+      "owner": null,
+      "branch": null,
+      "pr": null,
+      "attestation": null,
       "motif": null
     }
   ]

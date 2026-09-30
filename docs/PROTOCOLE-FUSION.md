@@ -248,7 +248,9 @@ une exception qui ne se renouvelle pas.
 
 ### Pas 7 — L'atterrissage, avant la fusion suivante
 
-**Commande.** `curl -sI https://<hôte-servi>/ | grep -i x-partners-build-sha`
+**Commande.** `pnpm deploy:verify <sha-d-ecrasement>` (lit `x-partners-build-sha` sur
+`PARTNERS_URL_PUBLIQUE` : 0 si c'est le sha, 1 si un autre sha est servi et les deux sont nommés, 2 si
+c'est indéterminé). À la main : `curl -sI https://<hôte-servi>/ | grep -i x-partners-build-sha`.
 
 **Ce qu'on lit.** L'en-tête `x-partners-build-sha` vaut l'empreinte du commit d'écrasement produit au
 pas 6. Tant que ce n'est pas vrai, la PR suivante **n'entre pas** dans la file. Un run rouge ne
@@ -256,12 +258,13 @@ suffit pas à conclure qu'un déploiement a échoué, et un run vert ne suffit p
 lieu : la vérité est cet en-tête. Une migration en échec, elle, laisse l'instance précédente servir —
 donc l'ancien sha — et c'est précisément ce que ce pas détecte.
 
-> ⚠️ **Aujourd'hui, en phase −1, rien n'est déployé** : il n'existe ni hôte servi ni en-tête à lire,
-> et `pnpm deploy:verify` — nommé par l'acceptation de GOV-000 et par `partners/ADR-0006` — n'est pas
-> encore déclaré dans `package.json`. Ce qui tient lieu d'atterrissage jusqu'au premier déploiement :
+> ⚠️ **Tant que la plateforme n'a pas ses secrets, rien n'est déployé** : `pnpm deploy:verify`
+> existe (QA-T34), mais le déploiement est sauté et nommé tant que l'adresse de la plateforme, son
+> jeton, l'uuid de l'application ou l'adresse publique manquent (arbitrage -d7 sur délégation de
+> Williams du 2026-09-29). Ce qui tient lieu d'atterrissage jusqu'au premier déploiement réel :
 > `git fetch origin && git log --oneline -1 origin/main` doit rendre l'empreinte d'écrasement, et le
-> run `Gate A` déclenché par le `push` sur `main` doit être vert. Ce repli est daté : il tombe le jour
-> où le script existe, et ce document est alors corrigé par la tâche qui le livre.
+> run `Gate A` déclenché par le `push` sur `main` doit être vert. Ce repli tombe au premier
+> déploiement réel ; ce paragraphe est alors retiré.
 
 ### Pas 8 — Attester, puis rendre le créneau
 

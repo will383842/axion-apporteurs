@@ -6,8 +6,9 @@
  * Tout est exercé contre une plateforme FACTICE, un vrai serveur HTTP local qui tient en mémoire les
  * projets, serveurs, applications, bases et variables — jamais un mock de `fetch`. Les faces :
  *
- *   1. secrets de la plateforme ou secrets applicatifs absents : SAUTÉ, code 0, chacun nommé en
- *      `::warning::` (arbitrage -d7 sur délégation de Williams du 2026-09-29) — rien n'est appelé ;
+ *   1. secrets de la plateforme ou secrets applicatifs absents : ÉCHEC, code 1, chacun nommé en
+ *      `::error::` — rien n'est appelé. Le provisionnement ne part qu'à la main : un vert qui n'a
+ *      rien créé ferait croire la production provisionnée (arbitrage -d7 du 2026-09-30) ;
  *   2. une valeur hors règle (`src/lib/env.ts`) : refusée AVANT tout appel, la variable nommée,
  *      jamais la valeur ;
  *   3. plateforme vide : la base, le cache et l'application sont créés, puis les variables posées ;
@@ -168,12 +169,13 @@ function sansValeurDeSecret(brute: string, env: Record<string, string>) {
 
 const PLATEFORME_VIDE = { statut: 200, adresseInterne: true, applications: [], bases: [] };
 
-describe('REQ-INT-031 — sans ses secrets, le provisionnement est SAUTÉ et nomme chacun', () => {
-  it('REQ-INT-031 : secrets de la plateforme absents : code 0, chacun nommé, rien appelé', async () => {
+describe('REQ-INT-031 — sans ses secrets, le provisionnement ÉCHOUE et nomme chacun', () => {
+  it('REQ-INT-031 : secrets de la plateforme absents : code 1, chacun nommé en erreur, rien appelé', async () => {
     const r = await lancer({ ...secretsApplicatifs(), GITHUB_SHA: SHA });
-    expect(r.code).toBe(0);
+    expect(r.code).toBe(1);
+    expect(r.sortie).not.toContain('SAUTÉ');
     for (const nom of ['COOLIFY_URL', 'COOLIFY_API_TOKEN', 'PARTNERS_URL_PUBLIQUE'])
-      expect(r.sortie).toContain(`::warning title=coolify:provisionner::${nom}`);
+      expect(r.sortie).toContain(`::error title=coolify:provisionner::${nom}`);
   });
 
   it('REQ-INT-031 : un secret applicatif absent : lui seul est nommé, et la plateforme n’est pas appelée', async () => {
@@ -188,9 +190,9 @@ describe('REQ-INT-031 — sans ses secrets, le provisionnement est SAUTÉ et nom
     const manquant = NOMS_DES_SECRETS[0]!;
     delete env[manquant];
     const r = await lancer(env);
-    expect(r.code).toBe(0);
-    expect(r.sortie).toContain(`::warning title=coolify:provisionner::${manquant}`);
-    expect(r.sortie).not.toContain(`::warning title=coolify:provisionner::${NOMS_DES_SECRETS[1]}`);
+    expect(r.code).toBe(1);
+    expect(r.sortie).toContain(`::error title=coolify:provisionner::${manquant}`);
+    expect(r.sortie).not.toContain(`::error title=coolify:provisionner::${NOMS_DES_SECRETS[1]}`);
     expect(p.appels).toEqual([]);
   });
 });
