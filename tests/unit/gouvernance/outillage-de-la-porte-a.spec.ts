@@ -35,6 +35,7 @@ import {
 } from '../../../scripts/gates/gov-conventions';
 import { cheminsReserves } from '../../../scripts/lot/chemins-de-tache';
 import { touche } from '../../../scripts/lot/revues';
+import { estObjet } from '../../../scripts/lib/lire-yaml';
 
 const RACINE = process.cwd();
 const SCRIPT = resolve(RACINE, 'scripts/gates/gov-conventions.ts');
@@ -439,4 +440,92 @@ describe('REQ-GOV-029 — TÉMOIN À DEUX FACES sur le binaire, une copie de tra
       `OUTILLAGE — ${POINTS_DE_L_OUTILLAGE.length} point(s) sur ${POINTS_DE_L_OUTILLAGE.length} confronté(s)`
     );
   }, 120_000);
+});
+
+/**
+ * REQ-QA-013 — L'AUDIT DES DÉPENDANCES DE PRODUCTION. L'exigence énumère
+ * `pnpm audit --prod --audit-level=high` parmi ce que la porte A exécute. Mesuré le 2026-09-30
+ * (VÉRIF-1, GOV-131) : aucune étape ne le lançait, et `next` 16.3.1 était servi en production avec
+ * trois vulnérabilités CRITIQUES (exécutions de code non authentifiées) sous une porte A verte.
+ *
+ * L'audit vit ICI, sous `pnpm test` (étape « Tests » de gate-a), et non dans une étape `run:` : le
+ * point 6 de l'outillage refuse qu'une étape lance une commande intégrée de pnpm, « qui n'a le
+ * statut d'aucune garde » — et ce témoin lui en donne un. La commande est celle de l'exigence, mot
+ * pour mot, en `--json` pour être JUGÉE et non lue à l'œil ; le jugement est une fonction pure,
+ * vue rougir sur un avis critique fictif et rester verte sur un avis modéré. Un rendu illisible
+ * LÈVE : l'audit qui n'a pas pu être fait n'est pas un audit vert (échec fermé).
+ */
+export const ARGUMENTS_D_AUDIT = ['audit', '--prod', '--audit-level=high', '--json'] as const;
+const GRAVITES_BLOQUANTES: ReadonlySet<string> = new Set(['high', 'critical']);
+
+interface Avis {
+  readonly module_name: string;
+  readonly severity: string;
+  readonly title: string;
+  readonly patched_versions: string;
+  readonly findings: ReadonlyArray<{ readonly version: string }>;
+}
+
+/** Le rendu de `pnpm audit --json`, ou une levée : un JSON absent ou sans `advisories` n'audite rien. */
+export function lireAudit(stdout: string): { avis: readonly Avis[] } {
+  let brut: unknown;
+  try {
+    brut = JSON.parse(stdout);
+  } catch {
+    throw new Error(`pnpm audit : rendu illisible (${stdout.trim().slice(0, 120) || 'vide'})`);
+  }
+  if (!estObjet(brut) || !estObjet(brut.advisories) || !estObjet(brut.metadata)) {
+    throw new Error('pnpm audit : rendu sans `advisories` ni `metadata` — rien n’a été audité');
+  }
+  return { avis: Object.values(brut.advisories) as Avis[] };
+}
+
+/** Les avis de gravité haute ou critique, NOMMÉS : module, version installée, gravité, correctif. */
+export function vulnerabilitesBloquantes(audit: { avis: readonly Avis[] }): string[] {
+  return audit.avis
+    .filter((a) => GRAVITES_BLOQUANTES.has(a.severity))
+    .map(
+      (a) =>
+        `${a.module_name}@${a.findings.map((f) => f.version).join(',')} — ${a.severity} — ` +
+        `${a.title} — corrigé en ${a.patched_versions}`
+    );
+}
+
+describe('REQ-QA-013 — la porte A AUDITE les dépendances de production', () => {
+  it('REQ-QA-013 — `pnpm audit --prod --audit-level=high --json` sur le dépôt : aucune vulnérabilité haute ou critique, et le vert imprime le compte des avis lus', () => {
+    const r = spawnSync('pnpm', [...ARGUMENTS_D_AUDIT], {
+      cwd: RACINE,
+      encoding: 'utf8',
+      env: environnementDuTemoin(process.env) as NodeJS.ProcessEnv,
+      shell: process.platform === 'win32',
+    });
+    // Le code de sortie de pnpm n'est pas lu : il vaut 1 dès qu'un avis existe, quelle que soit sa
+    // gravité, et 0 aussi quand rien n'a été lu. Seul le JSON, jugé, fait foi.
+    const audit = lireAudit(r.stdout ?? '');
+    const fautes = vulnerabilitesBloquantes(audit);
+    expect(fautes, `dépendances de production vulnérables (REQ-QA-013) :\n${fautes.join('\n')}`).toEqual([]);
+    console.info(`[GOV-062] audit des dépendances : ${audit.avis.length} avis lu(s), 0 haut ou critique`);
+  }, 180_000);
+
+  it('REQ-QA-013 — et ce témoin SAIT rougir : un avis critique (fictif) est nommé — module, version, gravité, correctif — et un avis modéré ne compte pas', () => {
+    const critique: Avis = {
+      module_name: 'paquet-fictif',
+      severity: 'critical',
+      title: 'Exécution de code à distance (fictive)',
+      patched_versions: '>=9.9.9',
+      findings: [{ version: '9.9.8' }],
+    };
+    const modere: Avis = { ...critique, module_name: 'autre-fictif', severity: 'moderate' };
+    expect(vulnerabilitesBloquantes({ avis: [modere] })).toEqual([]);
+    expect(vulnerabilitesBloquantes({ avis: [modere, critique] })).toEqual([
+      'paquet-fictif@9.9.8 — critical — Exécution de code à distance (fictive) — corrigé en >=9.9.9',
+    ]);
+    expect(vulnerabilitesBloquantes({ avis: [{ ...critique, severity: 'high' }] })).toHaveLength(1);
+  });
+
+  it('REQ-QA-013 — un rendu illisible, vide ou sans `advisories` LÈVE, jamais un vert', () => {
+    expect(() => lireAudit('')).toThrow(/illisible/);
+    expect(() => lireAudit('{"metadata":{}}')).toThrow(/rien n’a été audité/);
+    expect(lireAudit('{"advisories":{},"metadata":{"vulnerabilities":{}}}').avis).toEqual([]);
+  });
 });
