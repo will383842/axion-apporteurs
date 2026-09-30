@@ -474,6 +474,8 @@ const MANUELS: Record<string, string[]> = {
   ],
   'JUR-T27': ['docs/contrat/CONTRAT-APPORTEUR-V1.md'],
   'JUR-T28': ['docs/contrat/CONTRAT-APPORTEUR-V1.md', 'src/domain/apporteur/resiliation.ts'],
+  // GOV-129 (durée d'attribution de 6 mois) : sans fichier de test neuf, ses chemins sont ceux de sa fiche.
+  'GOV-129': ['src/domain/seuils/ssot.ts', 'docs/DECISIONS.md', 'docs/journal/'],
   // W19, versées par GOV-115 : sans fichier de test neuf, leurs chemins sont ceux de leur fiche (§5 de la source).
   'UX-P1-18': [
     'docs/CONSOLE-ROUTES.md',
