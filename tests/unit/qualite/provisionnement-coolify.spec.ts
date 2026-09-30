@@ -295,6 +295,94 @@ describe('REQ-INT-031 — sur une plateforme vide, tout est créé puis les vari
   });
 });
 
+// @req REQ-QA-030
+/**
+ * La double clé de rotation arrive jusqu'à la plateforme (lentille `exactitude`, refus de la PR 297) :
+ * sans le provisionnement, `<NOM>_PRECEDENT` et son échéance ne seraient jamais posés en production,
+ * et chaque envoi d'axionia sous l'ancienne clé serait refusé pour `kid` inconnu. Les deux variables
+ * sont FACULTATIVES, se posent ensemble ou pas du tout, et aucune valeur n'est imprimée.
+ */
+describe('REQ-QA-030 — la clé précédente et son échéance sont posées sur la plateforme, facultatives', () => {
+  const ROTATION = [
+    'AXIONIA_WEBHOOK_SECRET_PRECEDENT',
+    'AXIONIA_WEBHOOK_SECRET_PRECEDENT_ECHEANCE',
+    'AXIONIA_API_TOKEN_PRECEDENT',
+    'AXIONIA_API_TOKEN_PRECEDENT_ECHEANCE',
+  ];
+  /** Une échéance dans 12 h, au format que le démarrage exige. */
+  const dansDouzeHeures = () =>
+    new Date(Date.now() + 12 * 3_600_000).toISOString().replace(/\.\d{3}Z$/, 'Z');
+  const envDeBase = (url: string): Record<string, string> => ({
+    ...secretsApplicatifs(),
+    COOLIFY_URL: url,
+    COOLIFY_API_TOKEN: 'jeton-factice-plateforme',
+    PARTNERS_URL_PUBLIQUE: 'https://partners.exemple.fr',
+    GITHUB_SHA: SHA,
+  });
+  const posees = (p: Plateforme) => [...p.envs.values()][0] ?? [];
+
+  it('REQ-QA-030 : les deux paires présentes arrivent sur la plateforme, valeur pour valeur, sans être imprimées', async () => {
+    const p = await plateforme(PLATEFORME_VIDE);
+    const echeance = dansDouzeHeures();
+    const env = {
+      ...envDeBase(p.url),
+      AXIONIA_WEBHOOK_SECRET_PRECEDENT: 'ancien-secret-webhook-factice-'.padEnd(40, 'w'),
+      AXIONIA_WEBHOOK_SECRET_PRECEDENT_ECHEANCE: echeance,
+      AXIONIA_API_TOKEN_PRECEDENT: 'ancien-jeton-api-factice-'.padEnd(40, 'j'),
+      AXIONIA_API_TOKEN_PRECEDENT_ECHEANCE: echeance,
+    };
+    const r = await lancer(env);
+    expect(r.code).toBe(0);
+    const v = new Map(posees(p).map((x) => [x.key, x.value]));
+    for (const nom of ROTATION) expect(v.get(nom), nom).toBe(env[nom as keyof typeof env]);
+    expect(r.sortie).not.toContain(env.AXIONIA_WEBHOOK_SECRET_PRECEDENT);
+    expect(r.sortie).not.toContain(env.AXIONIA_API_TOKEN_PRECEDENT);
+    sansValeurDeSecret(r.sortie, env);
+  });
+
+  it('REQ-QA-030 : CONTRE-TÉMOIN — absentes, rien n’est posé et rien n’est refusé', async () => {
+    const p = await plateforme(PLATEFORME_VIDE);
+    const r = await lancer(envDeBase(p.url));
+    expect(r.code).toBe(0);
+    const cles = posees(p).map((x) => x.key);
+    for (const nom of ROTATION) expect(cles).not.toContain(nom);
+  });
+
+  it('REQ-QA-030 : une clé précédente sans son échéance : refus nommé AVANT tout appel, valeur tue', async () => {
+    const p = await plateforme(PLATEFORME_VIDE);
+    const ancienne = 'ancien-secret-webhook-factice-'.padEnd(40, 'w');
+    const r = await lancer({ ...envDeBase(p.url), AXIONIA_WEBHOOK_SECRET_PRECEDENT: ancienne });
+    expect(r.code).toBe(1);
+    expect(r.sortie).toContain('AXIONIA_WEBHOOK_SECRET_PRECEDENT_ECHEANCE');
+    expect(r.sortie).not.toContain(ancienne);
+    expect(p.appels).toEqual([]);
+  });
+
+  it('REQ-QA-030 : une échéance au-delà de 24 h : refus nommé avant tout appel', async () => {
+    const p = await plateforme(PLATEFORME_VIDE);
+    const r = await lancer({
+      ...envDeBase(p.url),
+      AXIONIA_API_TOKEN_PRECEDENT: 'ancien-jeton-api-factice-'.padEnd(40, 'j'),
+      AXIONIA_API_TOKEN_PRECEDENT_ECHEANCE: new Date(Date.now() + 48 * 3_600_000)
+        .toISOString()
+        .replace(/\.\d{3}Z$/, 'Z'),
+    });
+    expect(r.code).toBe(1);
+    expect(r.sortie).toContain('AXIONIA_API_TOKEN_PRECEDENT_ECHEANCE');
+    expect(p.appels).toEqual([]);
+  });
+
+  it('REQ-QA-030 : le workflow passe les quatre variables depuis les secrets de l’environnement production', async () => {
+    const wf = (await lireYaml(
+      readFileSync('.github/workflows/coolify-provisionner.yml', 'utf8')
+    )) as { jobs?: Record<string, { steps?: { run?: string; env?: Record<string, string> }[] }> };
+    const etape = (Object.values(wf.jobs ?? {})[0]!.steps ?? []).find(
+      (s) => s.run === 'pnpm coolify:provisionner'
+    );
+    for (const nom of ROTATION) expect(etape?.env?.[nom], nom).toBe(`\${{ secrets.${nom} }}`);
+  });
+});
+
 describe('REQ-INT-031 — dans la forge, chaque valeur dérivée est masquée dès sa lecture', () => {
   it('REQ-INT-031 : DATABASE_URL et REDIS_URL sont déclarées ::add-mask:: AVANT l’annonce de la pose des variables', async () => {
     const p = await plateforme(PLATEFORME_VIDE);

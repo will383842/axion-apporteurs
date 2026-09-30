@@ -16,7 +16,9 @@
  *   4. LIT l'adresse interne de chaque base et en fait `DATABASE_URL` et `REDIS_URL` : jamais un
  *      secret du dépôt, jamais une adresse devinée. Si la réponse ne porte pas `internal_db_url`, il
  *      s'arrête en rouge en nommant le champ.
- *   5. POSE toutes les variables en une fois (`PATCH …/envs/bulk`).
+ *   5. POSE toutes les variables en une fois (`PATCH …/envs/bulk`), dont la double clé de rotation
+ *      quand elle est présente (REQ-QA-030). Il POSE, il n'efface pas : une paire retirée des secrets
+ *      se retire aussi de l'application, à la main (runbook `secret-desynchronise.md`).
  *
  * ── API, LUE LE 2026-09-29 SUR LA DOCUMENTATION OFFICIELLE (RM-08) ───────────────────────────
  *
@@ -49,7 +51,10 @@
 import {
   NOMS_DES_SECRETS,
   NOMS_FACULTATIFS,
+  NOMS_EN_ROTATION,
+  variablesDeRotation,
   lireEnvironnement,
+  lireTrousseaux,
   formaterRefus,
 } from '../../src/lib/env';
 
@@ -178,6 +183,27 @@ export async function provisionner(env: NodeJS.ProcessEnv): Promise<0 | 1> {
     return 1;
   }
 
+  // La double clé de rotation (REQ-QA-030, refus de la PR 297) : `<NOM>_PRECEDENT` et son échéance,
+  // FACULTATIVES. Absentes, rien n'est posé ; présentes, elles sont jugées par la règle du démarrage
+  // (la paire ensemble, l'échéance à 24 h au plus, la clé distincte de tout secret) AVANT tout appel.
+  const rotation: Record<string, string> = {};
+  for (const nom of NOMS_EN_ROTATION) {
+    for (const v of Object.values(variablesDeRotation(nom))) {
+      if ((env[v] ?? '') !== '') rotation[v] = env[v] ?? '';
+    }
+  }
+  const tr = lireTrousseaux(
+    { ...secrets, ...rotation, NODE_ENV: 'production', PARTNERS_ENV: 'production' },
+    Date.now()
+  );
+  if (!tr.ok) {
+    console.error(
+      `❌ double clé refusée par la règle du démarrage (src/lib/env.ts) — rien n'est appelé :`
+    );
+    for (const r of tr.refus) console.error(`   ${formaterRefus(r)}`);
+    return 1;
+  }
+
   const sha = (env.GITHUB_SHA ?? '').toLowerCase();
   if (!/^[0-9a-f]{40}$/.test(sha)) throw new Refus('GITHUB_SHA doit être un sha de 40 caractères');
   const publique = adresseSure(env.PARTNERS_URL_PUBLIQUE ?? '', 'PARTNERS_URL_PUBLIQUE');
@@ -258,6 +284,7 @@ export async function provisionner(env: NodeJS.ProcessEnv): Promise<0 | 1> {
   const uuidCache = await assurerBase(NOM_CACHE, 'redis', {});
   const variables: { key: string; value: string }[] = [
     ...NOMS_DES_SECRETS.map((n) => ({ key: n, value: secrets[n] ?? '' })),
+    ...Object.entries(rotation).map(([key, value]) => ({ key, value })),
     { key: 'DATABASE_URL', value: await adresseInterne(uuidBase, NOM_BASE) },
     { key: 'REDIS_URL', value: await adresseInterne(uuidCache, NOM_CACHE) },
     { key: 'PARTNERS_ENV', value: 'production' },
