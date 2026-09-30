@@ -174,19 +174,18 @@ export const VUES = [
 /**
  * LE BACKLOG ET SES VUES RENDUES — écartés du balayage, et NOMMÉS.
  *
- * Ces trois fichiers portent la chaîne UNIQUEMENT parce que la tâche GOV-047 y est versée : son id,
- * ses `paths` et son acceptation. Les compter comme porteurs revient à mesurer la tâche au lieu du
+ * Ce fichier porte la chaîne UNIQUEMENT parce que la tâche GOV-047 y est versée : son id,
+ * ses `paths` et son acceptation. Le compter comme porteur revient à mesurer la tâche au lieu du
  * dépôt, et c'est la faute que les deux rédactions successives de l'acceptation ont commise.
+ *
+ * Les deux vues rendues du backlog (`docs/TASKS.md`, `docs/paths-proposes.json`) n'y sont plus :
+ * elles ne sont plus suivies par git (`scripts/vues/rendre-apres-fusion.ts`), donc hors du
+ * périmètre balayé — les y laisser ferait une exclusion qui n'exclut rien.
  */
 export const BACKLOG_ET_SES_VUES: Ecarte[] = [
   {
     nom: 'docs/tasks.json',
     motif: 'le backlog lui-même — GOV-047 y est versée, avec ses `paths` et son acceptation',
-  },
-  { nom: 'docs/TASKS.md', motif: 'vue rendue du backlog (`pnpm gov:tasks:render`)' },
-  {
-    nom: 'docs/paths-proposes.json',
-    motif: 'vue rendue des `paths` du backlog (`pnpm lot:paths`)',
   },
 ];
 
