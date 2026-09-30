@@ -304,6 +304,11 @@ export const REFUS_NOMMES: Readonly<Record<string, readonly string[]>> = {
     "module › si APPELE_DIRECTEMENT › si process.argv.includes('--prove') › (prouver())",
     "module › si APPELE_DIRECTEMENT › sinon process.argv.includes('--prove') › si fautes.length > 0 › (1)",
   ],
+  'scripts/gates/deploy-verify.ts': [
+    'module › si APPELE_DIRECTEMENT › si mode === null › (1)',
+    "mode(argv.filter((a) => a !== '--declencher' && a !== '--ve… › ∅ › (= code)",
+    "mode(argv.filter((a) => a !== '--declencher' && a !== '--ve… › ∅ › (= 1)",
+  ],
   'scripts/gates/gov-pr.ts': [
     'lireDepot › si !existsSync(f) › (1)',
     'prParGh › si !verdictTete.concordent › (1)',
