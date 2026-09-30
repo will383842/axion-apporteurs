@@ -1000,6 +1000,13 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
         'dérivée en `plan-state:verifier`, plafond de questions en rendu. La dérive de la vue est ' +
         'vue rougir par les specs de PLAN-STATE, qui ne vivent pas dans `REFUS`. Dette DÉCLARÉE.',
     },
+    'scripts/gates/runbooks-exerces.ts': {
+      total: 1,
+      porte: 1,
+      temoins: 0,
+      raison:
+        'QA-T13 — REQ-QA-034, un runbook s exerce en preview. process.exitCode pose sur le code du controle ou de --prove : 0 quand chaque runbook exige est exerce en preview et que son corps n a pas change depuis, 1 sinon, le runbook nomme. Les familles sont vues rougir sur des runbooks FABRIQUES (runbooks-exerces.spec.ts) et --prove est vu sortir en 0 ; le binaire est vu sortir en 1 sur le depot tant qu aucun runbook du socle n est exerce ; aucun temoin ne vit dans REFUS. N importe pas fichiersSuivisOuRefus. Dette DECLAREE.',
+    },
     'scripts/lot/cloture.ts': {
       total: 1,
       porte: 1,

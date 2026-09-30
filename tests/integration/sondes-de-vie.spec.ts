@@ -138,7 +138,8 @@ describe('REQ-QA-019 — l’entrée de l’image migre en bloquant, et son éch
 
   it('REQ-QA-019 : SKIP_MIGRATE ne s’écrit que dans l’entrée et le runbook de retour arrière, parmi les fichiers qui s’exécutent ou se déploient', () => {
     const RUNBOOK = 'docs/runbooks/retour-arriere.md';
-    const admis = new Set(['docker-entrypoint.sh', RUNBOOK]);
+    // QA-T13 : le workflow de retour arrière pose SKIP_MIGRATE=1 puis le remet à 0, par ce seul script.
+    const admis = new Set(['docker-entrypoint.sh', RUNBOOK, 'scripts/gates/deploy-verify.ts']);
     // Ce qui s'exécute ou se déploie : le code, les scripts, l'image, les workflows, les runbooks.
     const executables = fichiersSuivis().filter(sExecuteOuSeDeploie);
     // Les fichiers de déploiement qui n'existent pas encore sont DANS le périmètre dès aujourd'hui :
