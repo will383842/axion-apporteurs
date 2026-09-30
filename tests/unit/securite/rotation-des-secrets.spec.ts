@@ -82,8 +82,8 @@ describe('REQ-QA-030 — le kid choisit la clé, et la clé précédente meurt �
 });
 
 /** Un jeu de secrets valide et distinct, dérivé des noms, jamais tapé (même règle que les autres tests). */
-function secretsValides(): Record<string, string> {
-  const s: Record<string, string> = {
+function secretsValides() {
+  const s = {
     NODE_ENV: 'test',
     SESSION_SECRET: 'a'.repeat(32) + '-session',
     MAGIC_LINK_SECRET: 'a'.repeat(32) + '-lien',
