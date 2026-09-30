@@ -58,4 +58,4 @@ donnée réelle. En `preview`, c'est le geste à la main ci-dessous qui s'exerce
 
 ## Exécuté le
 
-Exécuté le : 2026-09-30 · environnement : production-avant-donnees · SHA : 88363221c375c59392540f25ed8a447f98db02c0 · corps : 980bcfa4f4d3 · résultat : vert, rollback.yml run 36736051182 depuis 6f0b3e9d, sha cible servi (essai 3/60), readyz 200, échappatoire retirée par l'étape always(), puis retour en avant par le déploiement de de2f9c13 (run 36737903234, readyz 200)
+Exécuté le : 2026-09-30 · environnement : production-avant-donnees · SHA : 88363221c375c59392540f25ed8a447f98db02c0 · corps : 980bcfa4f4d3 · résultat : vert, rollback.yml run 36736051182 depuis 6f0b3e9d, sha cible servi (essai 3/60), readyz 200, échappatoire remise à 0 par l'étape always(), puis retour en avant par le déploiement de de2f9c13 (run 36737903234, sha servi vérifié)
