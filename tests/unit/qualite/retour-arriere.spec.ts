@@ -95,19 +95,21 @@ const application = (sha: string | null, readyz: number) =>
  * (consignes de la lentille `securite` pour la livraison de QA-T13).
  */
 async function forge(ancetre: boolean, image: boolean): Promise<Record<string, string>> {
-  const f = await serveur((a) => {
-    if (a.chemin.startsWith('/repos/proprio/depot/compare/'))
-      return {
-        statut: 200,
-        entetes: { 'content-type': 'application/json' },
-        corps: JSON.stringify({ status: ancetre ? 'ahead' : 'diverged' }),
-      };
-    if (a.chemin.startsWith('/token'))
-      return { statut: 200, entetes: {}, corps: '{"token":"jeton-anonyme"}' };
-    if (a.chemin.startsWith('/v2/proprio/depot/manifests/sha-'))
-      return { statut: image ? 200 : 404, entetes: {}, corps: '' };
-    return { statut: 404, entetes: {}, corps: '' };
-  });
+  const f = await serveur(
+    (a): { statut: number; entetes: Record<string, string>; corps: string } => {
+      if (a.chemin.startsWith('/repos/proprio/depot/compare/'))
+        return {
+          statut: 200,
+          entetes: { 'content-type': 'application/json' },
+          corps: JSON.stringify({ status: ancetre ? 'ahead' : 'diverged' }),
+        };
+      if (a.chemin.startsWith('/token'))
+        return { statut: 200, entetes: {}, corps: '{"token":"jeton-anonyme"}' };
+      if (a.chemin.startsWith('/v2/proprio/depot/manifests/sha-'))
+        return { statut: image ? 200 : 404, entetes: {}, corps: '' };
+      return { statut: 404, entetes: {}, corps: '' };
+    }
+  );
   return {
     GITHUB_API_URL: f.url,
     PARTNERS_REGISTRE_URL: f.url,
