@@ -14,12 +14,11 @@
  * partagé dans `docs/paths-proposes.json`, il l'est ici, sans que personne n'ait à y penser.
  */
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
 import { cheminsPartages, estPartage } from '../../../scripts/lot/integrer';
+import { cheminsProposesDuDepot } from '../../../scripts/lot/paths-proposes';
 
-const vue = JSON.parse(readFileSync('docs/paths-proposes.json', 'utf8')) as {
-  paths: Record<string, string[]>;
-};
+// GOV-123 : la vue n'est plus sous git — on juge ce que sa SOURCE rend, comme `lot:integrer`.
+const vue = { paths: cheminsProposesDuDepot() };
 
 describe('lot:integrer — « partagé » est DÉRIVÉ du backlog, jamais tapé (RM-01)', () => {
   it('tout chemin qu’au moins deux tâches déclarent est partagé', () => {

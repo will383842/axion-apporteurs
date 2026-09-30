@@ -18,6 +18,7 @@ import { describe, it, expect } from 'vitest';
 import { execFileSync, spawnSync } from 'node:child_process';
 import {
   copyFileSync,
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -33,6 +34,7 @@ import {
   lireLeJournal,
   plancherDuJournal,
 } from '../../../scripts/gates/gov-attributions';
+import { CHEMINS_DES_VUES } from '../../../scripts/vues/rendre-apres-fusion';
 
 const RACINE = process.cwd();
 const TSX = resolve(RACINE, 'node_modules/tsx/dist/cli.mjs');
@@ -179,9 +181,14 @@ describe('REQ-GOV-023 — une entrée à la limite de la forme est lue IDENTIQUE
 
 function copieDeTravail(): string {
   const dir = mkdtempSync(join(tmpdir(), 'gov-073-'));
-  const suivis = execFileSync('git', ['ls-files'], { cwd: RACINE, encoding: 'utf8' })
-    .split(/\r?\n/)
-    .filter(Boolean);
+  // Les vues dérivées ne sont plus suivies par git : `pnpm vues:rendre` les écrit sur le disque,
+  // d'où elles sont copiées (`gov:etat` lit `docs/PLAN-STATE.md`).
+  const suivis = [
+    ...execFileSync('git', ['ls-files'], { cwd: RACINE, encoding: 'utf8' })
+      .split(/\r?\n/)
+      .filter(Boolean),
+    ...CHEMINS_DES_VUES.filter((v) => existsSync(join(RACINE, v))),
+  ];
   const utiles = (f: string) =>
     f.startsWith('docs/journal/') ||
     f.startsWith('docs/adr/') ||
