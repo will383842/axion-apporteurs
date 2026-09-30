@@ -14015,7 +14015,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "Scindee de QA-T05 le 2026-09-29 (recommandation A01, autopilote autorise par Will) : la partie qui depend d'un tiers. DEPEND D'UN TIERS : l'adresse de la plateforme de deploiement, un jeton de son API pose en secret du depot, et un jeton de lecture des paquets de la forge pose cote plateforme ; aucun n'existe au 2026-09-29. A livrer : (1) apres la publication de l'image par la forge (QA-T05), la plateforme est declenchee et TIRE l'image etiquetee sha-<7>, elle ne construit rien ; (2) UN SEUL PRODUCTEUR DE DEPLOIEMENT A LA FOIS : concurrence par environnement, fusion en avance rapide seulement, et atterrissage verifie AVANT la fusion suivante : l'en-tete de build servi (x-partners-build-sha) porte le sha fusionne, mesure par pnpm deploy:verify <sha> (REQ-QA-033) ; (3) l'en-tete de build est pose par l'application a partir du sha injecte a la construction de l'image. TEMOIN A DEUX FACES : deploy:verify sur un sha non atterri sort en code non nul en nommant les deux sha ; sur le sha servi, il sort en zero.",
       "tests": {
         "REQ-QA-033": [
@@ -14023,10 +14023,14 @@
         ]
       },
       "issue": null,
-      "owner": null,
-      "branch": null,
-      "pr": null,
-      "attestation": null,
+      "owner": "A01",
+      "branch": "t/qa-t34",
+      "pr": 268,
+      "attestation": {
+        "pr": 268,
+        "sha": "3a3008159e4c131aceb72164e7e4ea3449478fa9",
+        "fusionneeAt": "2026-09-30T02:00:07Z"
+      },
       "motif": null
     },
     {
