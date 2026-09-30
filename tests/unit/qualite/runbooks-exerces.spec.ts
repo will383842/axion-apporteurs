@@ -1,5 +1,4 @@
 // @req REQ-QA-034
-// @req REQ-QA-030
 /**
  * QA-T13 — un runbook s'exerce en preview, pas sur le papier (REQ-QA-034).
  *
