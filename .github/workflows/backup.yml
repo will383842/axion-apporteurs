@@ -46,6 +46,9 @@ jobs:
           R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
           R2_BUCKET: ${{ secrets.R2_BUCKET }}
           PARTNERS_BACKUP_PASSPHRASE: ${{ secrets.PARTNERS_BACKUP_PASSPHRASE }}
+          PARTNERS_SAUVEGARDE_ACTIVEE: ${{ vars.PARTNERS_SAUVEGARDE_ACTIVEE }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: pnpm sauvegarde:rechiffrer
       # Lentille exactitude, PR 280 : c'est cette garde, et non la cadence, qui tient la fenetre du
       # clair. Elle tourne meme si le rechiffrement a echoue : un clair garde doit etre nomme.
@@ -57,6 +60,8 @@ jobs:
           R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
           R2_BUCKET: ${{ secrets.R2_BUCKET }}
           PARTNERS_SAUVEGARDE_ACTIVEE: ${{ vars.PARTNERS_SAUVEGARDE_ACTIVEE }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: pnpm sauvegarde:clairs
 
   exercice:
