@@ -29,6 +29,17 @@
  *   (« Content is very complex. Will be implemented later. ») : le champ `internal_db_url` est une
  *   HYPOTHÈSE, tenue en échec fermé, que la première exécution réelle confirme ou infirme.
  *
+ * ── LIMITE DÉCLARÉE : UN HOMONYME UNIQUE AILLEURS EST RÉUTILISÉ ──────────────────────────────
+ *
+ * Les listes de la plateforme couvrent TOUS ses projets, et leur réponse ne documente pas le projet
+ * d'appartenance : le script ne peut pas filtrer par projet. Deux ressources ou plus du même nom
+ * font refuser, avant toute création (`unique`). Mais UNE SEULE ressource homonyme dans un AUTRE
+ * projet serait prise pour celle de Partners, et, pour une base, son adresse deviendrait la
+ * `DATABASE_URL` de production (lentille `exactitude`, PR 272). À VÉRIFIER AU PREMIER EXERCICE
+ * RÉEL : aucune ressource nommée `axion-partners-postgres`, `axion-partners-redis` ou
+ * `axion-partners` n'existe hors du projet `Axion-Partners` — et, si la réponse porte l'uuid du
+ * projet, filtrer dessus au lieu de le déclarer ici.
+ *
  * ── CE QUI N'EST JAMAIS IMPRIMÉ ──────────────────────────────────────────────────────────────
  *
  * Aucune valeur : ni secret, ni jeton, ni adresse interne (elle porte le mot de passe de la base), ni
