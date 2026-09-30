@@ -8,7 +8,7 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `dffcbbaf` — 2026-09-30T02:11:03+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #275 (un contrôle requis rouge ou une revue manquante) · 2. #279 (un contrôle requis rouge ou une revue manquante) · 3. #262 (un conflit avec `main`) · 4. #263 (un conflit avec `main`) · 5. #268 (un conflit avec `main`) · 6. #272 (un conflit avec `main`) |
+| Qu’est-ce qui est en vol ? | 1. #263 (un contrôle requis rouge ou une revue manquante) · 2. #268 (un contrôle requis rouge ou une revue manquante) · 3. #272 (un contrôle requis rouge ou une revue manquante) · 4. #275 (un contrôle requis rouge ou une revue manquante) · 5. #279 (un contrôle requis rouge ou une revue manquante) · 6. #280 (un contrôle requis rouge ou une revue manquante) · 7. #262 (un conflit avec `main`) |
 | Qui tient quoi ? | aucune tâche revendiquée |
 | Où en est la phase ? | phase 0 — 121/134 tâches, reste 9.25 j |
 | Le prochain pas | QA-T06 — Preview par PR sur Coolify, base éphémère, seed déterministe |
@@ -60,12 +60,13 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #275 — feat(GOV-123): les vues derivees sortent de git et se rendent a la volee, fin des conflits de vues entre PR | `t/gov-123-vues` | un contrôle requis rouge ou une revue manquante |
-| 2 | #279 — chore(GOV-012): registre rattrape, INT-T04 et INT-T05 closes par le passif, QA-T13 decoupee, paths de QA-T06 et JUR-T29 | `t/registre-rattrapage-17` | un contrôle requis rouge ou une revue manquante |
-| 3 | #262 — feat(GOV-116): le lot dedie du gardien-spec, procedure exacte lancee par Williams, reglages rendus depuis le projet | `t/gov-116` | un conflit avec `main` — à résoudre avant tout |
-| 4 | #263 — feat(QA-T20): le poids charge par route se lit dans les manifestes de Next 16, zero octet est une faute | `t/qa-t20` | un conflit avec `main` — à résoudre avant tout |
-| 5 | #268 — feat(QA-T34): la plateforme tire sha-7 apres publier, un seul producteur, l'atterrissage lu sur x-partners-build-sha | `t/qa-t34` | un conflit avec `main` — à résoudre avant tout |
-| 6 | #272 — feat(QA-T50): base, cache et application crees s'ils manquent, variables posees depuis les secrets, aucune valeur imprimee | `t/qa-t50` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #263 — feat(QA-T20): le poids charge par route se lit dans les manifestes de Next 16, zero octet est une faute | `t/qa-t20` | un contrôle requis rouge ou une revue manquante |
+| 2 | #268 — feat(QA-T34): la plateforme tire sha-7 apres publier, un seul producteur, l'atterrissage lu sur x-partners-build-sha | `t/qa-t34` | un contrôle requis rouge ou une revue manquante |
+| 3 | #272 — feat(QA-T50): base, cache et application crees s'ils manquent, variables posees depuis les secrets, aucune valeur imprimee | `t/qa-t50` | un contrôle requis rouge ou une revue manquante |
+| 4 | #275 — feat(GOV-123): les vues derivees sortent de git et se rendent a la volee, fin des conflits de vues entre PR | `t/gov-123-vues` | un contrôle requis rouge ou une revue manquante |
+| 5 | #279 — chore(GOV-012): registre rattrape, INT-T04 et INT-T05 closes par le passif, QA-T13 decoupee, paths de QA-T06 et JUR-T29 | `t/registre-rattrapage-17` | un contrôle requis rouge ou une revue manquante |
+| 6 | #280 — feat(QA-T12): sauvegarde chiffree cote client, exercice de restauration mensuel sur un Postgres ephemere, fraicheur nocturne | `t/qa-t12` | un contrôle requis rouge ou une revue manquante |
+| 7 | #262 — feat(GOV-116): le lot dedie du gardien-spec, procedure exacte lancee par Williams, reglages rendus depuis le projet | `t/gov-116` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 

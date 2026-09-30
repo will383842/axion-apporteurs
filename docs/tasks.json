@@ -2365,7 +2365,8 @@
         "package.json",
         "tests/unit/qualite/pipeline-image.spec.ts",
         "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts",
-        "docker-entrypoint.sh"
+        "docker-entrypoint.sh",
+        "scripts/gates/registre-des-refus.ts"
       ],
       "schema": true,
       "sensible": [],
@@ -2408,7 +2409,8 @@
         "scripts/sauvegarde/",
         "package.json",
         "src/domain/seuils/ssot.ts",
-        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts"
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts",
+        "scripts/gates/registre-des-refus.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -2455,7 +2457,8 @@
         "package.json",
         ".github/workflows/nightly.yml",
         "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts",
-        "tests/integration/sondes-de-vie.spec.ts"
+        "tests/integration/sondes-de-vie.spec.ts",
+        "scripts/gates/registre-des-refus.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -4105,7 +4108,8 @@
         "package.json",
         "perf/budgets.json",
         "scripts/gates/gov-conventions.ts",
-        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts"
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts",
+        "scripts/gates/registre-des-refus.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -13806,7 +13810,8 @@
         "scripts/gates/gov-conventions.ts",
         "tests/unit/qualite/pipeline-image.spec.ts",
         "tests/unit/qualite/build-sans-base.spec.ts",
-        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts"
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts",
+        "scripts/gates/registre-des-refus.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -14740,7 +14745,8 @@
         "scripts/deploiement/provisionner.ts",
         "tests/unit/qualite/provisionnement-coolify.spec.ts",
         "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts",
-        "package.json"
+        "package.json",
+        "scripts/gates/registre-des-refus.ts"
       ],
       "schema": false,
       "sensible": [],
