@@ -2398,7 +2398,11 @@
         ".github/workflows/backup.yml",
         "docs/runbooks/sauvegarde.md",
         "tests/unit/qualite/sauvegarde-et-exercice.spec.ts",
-        ".github/workflows/nightly.yml"
+        ".github/workflows/nightly.yml",
+        "scripts/sauvegarde/",
+        "package.json",
+        "src/domain/seuils/ssot.ts",
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -2420,7 +2424,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "DEPEND D'UN TIERS : espace de stockage objet et ses cles, prefixe dedie a Partners. (1) La base est sauvegardee TOUTES LES HEURES vers le stockage objet sous le prefixe `partners/` ; la perte de donnees acceptable et le delai de remise en service sont l'un et l'autre d'une heure (REQ-QA-023). (2) UN EXERCICE MENSUEL RESTAURE le dernier vidage sur un Postgres ephemere, verifie qu'au moins une ligne d'attribution existe et que l'etat des migrations est propre, et ALERTE en cas d'echec. (3) UNE SAUVEGARDE QU'ON NE RESTAURE PAS N'EST PAS UNE SAUVEGARDE : le resultat de l'exercice du mois est ecrit avec sa date, son empreinte de vidage et son verdict ; un exercice plus vieux que 35 jours fait rougir le travail de nuit. C'est la meme famille que la surveillance qui detecte sans prevenir. (4) TEMOIN A DEUX FACES : un vidage tronque d'un octet fait echouer la restauration de l'exercice, qui sort en code non nul et nomme l'echec ; le dernier vidage reel la fait sortir en zero avec le compte de lignes restaurees. (5) L'alerte ne contient ni coordonnee de tiers ni lien de console.",
+      "acceptance": "DEPEND D'UN TIERS : espace de stockage objet et ses cles, prefixe dedie a Partners. (1) La base est sauvegardee TOUTES LES HEURES vers le stockage objet sous le prefixe `partners/` ; la perte de donnees acceptable et le delai de remise en service sont l'un et l'autre d'une heure (REQ-QA-023). (2) UN EXERCICE MENSUEL RESTAURE le dernier vidage sur un Postgres ephemere, verifie qu'au moins une ligne d'attribution existe et que l'etat des migrations est propre, et ALERTE en cas d'echec. (3) UNE SAUVEGARDE QU'ON NE RESTAURE PAS N'EST PAS UNE SAUVEGARDE : le resultat de l'exercice du mois est ecrit avec sa date, son empreinte de vidage et son verdict ; un exercice plus vieux que 35 jours fait rougir le travail de nuit. C'est la meme famille que la surveillance qui detecte sans prevenir. (4) TEMOIN A DEUX FACES : un vidage tronque d'un octet fait echouer la restauration de l'exercice, qui sort en code non nul et nomme l'echec ; le dernier vidage reel la fait sortir en zero avec le compte de lignes restaurees. (5) L'alerte ne contient ni coordonnee de tiers ni lien de console. AVENANT A01 du 2026-09-29 (arbitrage -d7 sur delegation de Williams, volet sauvegardes de l AIPD de JUR-T04, relaye par la session -50) : les vidages horaires vont sur R2 (bucket axion-ia-backups, prefixe partners/), avec le chiffrement natif de R2 au repos et un jeton restreint a ce bucket et a ce prefixe. CONDITION DE MISE EN SERVICE, BLOQUANTE AVANT LA PREMIERE DONNEE REELLE en production : chiffrement COTE CLIENT par une cle propre a Partners (secret PARTNERS_BACKUP_PASSPHRASE, jamais celle d axion-ia) ; si le mecanisme de la plateforme ne sait pas chiffrer cote client, un job rechiffre le vidage avant son depot, faute de quoi la dette est nommee bloquante de mise en service dans le runbook de sauvegarde. TEMOIN : un vidage depose sans chiffrement client est refuse par l exercice mensuel, qui le nomme.",
       "tests": {
         "REQ-QA-023": [
           "tests/unit/qualite/sauvegarde-et-exercice.spec.ts"
@@ -3801,10 +3805,10 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 1,
-      "statut": "a_faire",
-      "owner": null,
+      "statut": "fusionnee",
+      "owner": "A01",
       "lot": null,
-      "branch": null,
+      "branch": "jur/t03-copie-apporteur",
       "pr": null,
       "issue": null,
       "attempts": 0,
@@ -3820,6 +3824,11 @@
         "REQ-JUR-024": [
           "axionia/src/content/__tests__/vocabulaire-apporteur.spec.ts"
         ]
+      },
+      "attestation": {
+        "pr": 1220,
+        "sha": "b1eb57ea32d92da4f6fec5ec1caa740eb554c4d8",
+        "fusionneeAt": "2026-09-29T21:03:44Z"
       }
     },
     {
@@ -4072,7 +4081,8 @@
         "scripts/gates/perf-budgets.ts",
         "package.json",
         "perf/budgets.json",
-        "scripts/gates/gov-conventions.ts"
+        "scripts/gates/gov-conventions.ts",
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -4124,7 +4134,10 @@
         "axionia/src/content/recrutement/tunnel-facebook.ts",
         "axionia/src/components/services/devenir-commercial/CommercialFounder.tsx",
         "axionia/src/components/services/devenir-commercial/CommercialHowItWorks.tsx",
-        "axionia/src/components/services/devenir-commercial/CommercialProductsEarnings.tsx"
+        "axionia/src/components/services/devenir-commercial/CommercialProductsEarnings.tsx",
+        "axionia/src/app/[locale]/devenir-commercial-ia/page.tsx",
+        "axionia/src/app/[locale]/devenir-commercial-ia/candidature/page.tsx",
+        "axionia/src/components/services/devenir-commercial/CommercialProcess.tsx"
       ],
       "schema": false,
       "sensible": [
@@ -13231,8 +13244,8 @@
           "tests/unit/gouvernance/frontiere-de-mot-du-rendu.spec.ts"
         ]
       },
-      "issue": null,
-      "owner": null,
+      "issue": 266,
+      "owner": "A01",
       "branch": null,
       "pr": null,
       "attestation": null,
@@ -13753,7 +13766,8 @@
         "package.json",
         "scripts/gates/gov-conventions.ts",
         "tests/unit/qualite/pipeline-image.spec.ts",
-        "tests/unit/qualite/build-sans-base.spec.ts"
+        "tests/unit/qualite/build-sans-base.spec.ts",
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -14702,7 +14716,9 @@
       "paths": [
         ".github/workflows/coolify-provisionner.yml",
         "scripts/deploiement/provisionner.ts",
-        "tests/unit/qualite/provisionnement-coolify.spec.ts"
+        "tests/unit/qualite/provisionnement-coolify.spec.ts",
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts",
+        "package.json"
       ],
       "schema": false,
       "sensible": [],
@@ -14724,6 +14740,41 @@
       },
       "issue": null,
       "owner": null,
+      "branch": null,
+      "pr": null,
+      "attestation": null,
+      "motif": null
+    },
+    {
+      "id": "GOV-128",
+      "titre": "Le passif de la declaration lit aussi la ligne Lot: du squash immuable : une PR de lot au corps enrichi se clot sur arbitrage ecrit",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "scripts/lot/cloture.ts",
+        "tests/unit/gouvernance/le-passif-de-la-declaration-est-ferme.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "GOV-127"
+      ],
+      "reqs": [
+        "REQ-GOV-026"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "acceptance": "EXCEPTION AU GEL, arbitrage -d7 sur delegation de Williams du 2026-09-30 : elle bloque deux clotures de phase 0. CONSTAT : INT-T04 et INT-T05 (axion-ia #1228, sha 3fb76aa) sont refusees par lot:cloture (tache_etrangere_a_la_pr) : la premiere ligne du squash est conforme, mais le corps porte, apres la ligne Lot: INT-T04, INT-T05, un paragraphe et un trailer ; or le corps ne declare que s il est reduit a la seule ligne Lot: (GOV-104), et le titre feat(INT-T04, INT-T05) ne nomme aucune tache a lui seul. Condition verifiee : les deux accords A09 sont publies sur la tete fusionnee 7eb1bf3. A LIVRER : (1) deux entrees au PASSIF_DE_LA_DECLARATION, INT-T04 et INT-T05, PR axion-ia #1228, sha complet 3fb76aa, declarees par la ligne Lot: et non par le titre. (2) Une telle entree ne leve le refus QUE si la tache, la PR et le sha complet coincident, si la premiere ligne du squash est conforme, et si la ligne Lot: qui la suit dans le message immuable nomme la tache. (3) Toute autre livraison garde les refus a l identique ; les entrees par titre gardent leur regle ; aucun drapeau ne leve rien ; aucune regle generale n est assouplie. (4) TEMOINS rouges d abord : INT-T04 et INT-T05 passent ; un autre sha, une autre PR, une tache absente de la ligne Lot:, un squash sans ligne Lot: ou a premiere ligne non conforme sont refuses. (5) Deux lentilles (scripts/lot/). Puis INT-T04 et INT-T05 sont closes par un rattrapage.",
+      "tests": {
+        "REQ-GOV-026": [
+          "tests/unit/gouvernance/le-passif-de-la-declaration-est-ferme.spec.ts"
+        ]
+      },
+      "issue": 277,
+      "owner": "A01",
       "branch": null,
       "pr": null,
       "attestation": null,
