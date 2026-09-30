@@ -22,7 +22,8 @@
 ## 2. Les exercices, en `production-avant-donnees`
 
 - [ ] `retour-arriere.md` exercé ; `rollback.yml` exercé pour de vrai (sha cible servi, `readyz` 200,
-      `SKIP_MIGRATE` RETIRÉ de l'application, et non laissé à une autre valeur).
+      la variable d'échappatoire de migration RETIRÉE de l'application, et non laissée à une autre
+      valeur : voir `retour-arriere.md`).
 - [ ] `migration-echouee.md` exercé ; ensuite, la base de production est **RECRÉÉE** (suppression puis
       provisionnement), semée à nouveau, et `deploy:verify` est vert.
 - [ ] `secret-desynchronise.md` exercé, de préférence par une rotation à double clé, canal d'axion-ia
