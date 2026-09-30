@@ -106,6 +106,12 @@ async function plateforme(options: {
           options.adresseInterne ? { uuid: b.uuid, internal_db_url: url } : { uuid: b.uuid }
         );
       }
+      const reglage = /^\/api\/v1\/applications\/([\w-]+)$/.exec(chemin);
+      if (m === 'PATCH' && reglage) {
+        if (!p.applications.some((a) => a.uuid === reglage[1]))
+          return repondre(404, { message: 'Not found.' });
+        return repondre(200, { uuid: reglage[1] });
+      }
       const envs = /^\/api\/v1\/applications\/([\w-]+)\/envs\/bulk$/.exec(chemin);
       if (m === 'PATCH' && envs) {
         p.envs.set(envs[1]!, (corps as { data: { key: string; value: string }[] }).data);
@@ -245,8 +251,7 @@ describe('REQ-INT-031 — sur une plateforme vide, tout est créé puis les vari
       docker_registry_image_name: 'ghcr.io/will383842/axion-apporteurs',
       docker_registry_image_tag: `sha-${SHA.slice(0, 7)}`,
       ports_exposes: '3000',
-      health_check_enabled: true,
-      health_check_path: '/api/readyz',
+      health_check_enabled: false,
       domains: 'https://partners.exemple.fr',
       instant_deploy: false,
     });
@@ -291,7 +296,74 @@ describe('REQ-INT-031 — sur une plateforme vide, tout est créé puis les vari
     expect(r.code).toBe(0);
     expect(p.appels.filter((a) => a.methode === 'POST').length).toBe(avant);
     expect(r.sortie).toMatch(/existe déjà/);
-    expect(p.appels.filter((a) => a.methode === 'PATCH').length).toBe(2);
+    // Par passage : le réglage de la sonde, puis les variables.
+    expect(p.appels.filter((a) => a.methode === 'PATCH').length).toBe(4);
+  });
+});
+
+/**
+ * PREMIER DÉPLOIEMENT RÉEL (2026-09-30) : Coolify a retiré le conteneur (« New container is not healthy,
+ * rolling back »). Sa sonde s'exécute DANS le conteneur par curl ou wget, que l'image n'a pas. Arbitrage
+ * de la coordination, accepté par la lentille `securite` : la sonde de Coolify est coupée, et le
+ * HEALTHCHECK natif de l'image (en node, Dockerfile) reste la sonde de vérité. Le réglage vise
+ * l'application Partners SEULE, à la création ET sur une application existante, sans effet si on relance.
+ */
+describe('REQ-INT-031 — la sonde de la plateforme est coupée sur l’application Partners seule', () => {
+  const envDeBase = (url: string): Record<string, string> => ({
+    ...secretsApplicatifs(),
+    COOLIFY_URL: url,
+    COOLIFY_API_TOKEN: 'jeton-factice-plateforme',
+    PARTNERS_URL_PUBLIQUE: 'https://partners.exemple.fr',
+    GITHUB_SHA: SHA,
+  });
+  const reglages = (p: Plateforme) =>
+    p.appels.filter(
+      (a) => a.methode === 'PATCH' && /^\/api\/v1\/applications\/[\w-]+$/.test(a.chemin)
+    );
+
+  it('REQ-INT-031 : une application EXISTANTE reçoit health_check_enabled=false, par son seul uuid', async () => {
+    const p = await plateforme({
+      ...PLATEFORME_VIDE,
+      applications: [
+        { uuid: 'app-partners', name: 'axion-partners' },
+        { uuid: 'app-voisine', name: 'axion-ia' },
+      ],
+      bases: [
+        { uuid: 'base-pg', name: 'axion-partners-postgres', type: 'postgresql' },
+        { uuid: 'base-redis', name: 'axion-partners-redis', type: 'redis' },
+      ],
+    });
+    const r = await lancer(envDeBase(p.url));
+    expect(r.code).toBe(0);
+    const faits = reglages(p);
+    expect(faits.map((a) => a.chemin)).toEqual(['/api/v1/applications/app-partners']);
+    expect(faits[0]!.corps).toEqual({ health_check_enabled: false });
+    // Jamais une base, jamais une autre application.
+    expect(p.appels.some((a) => a.methode === 'PATCH' && a.chemin.includes('app-voisine'))).toBe(
+      false
+    );
+    expect(p.appels.some((a) => a.methode === 'PATCH' && a.chemin.includes('/databases/'))).toBe(
+      false
+    );
+  });
+
+  it('REQ-INT-031 : une application CRÉÉE naît sans la sonde de la plateforme, et le réglage est reposé', async () => {
+    const p = await plateforme(PLATEFORME_VIDE);
+    expect((await lancer(envDeBase(p.url))).code).toBe(0);
+    const creee = p.appels.find((a) => a.chemin === '/api/v1/applications/dockerimage')!
+      .corps as Record<string, unknown>;
+    expect(creee.health_check_enabled).toBe(false);
+    const faits = reglages(p);
+    expect(faits).toHaveLength(1);
+    expect(faits[0]!.chemin).toBe(`/api/v1/applications/${p.applications[0]!.uuid}`);
+  });
+
+  it('REQ-INT-031 : le réglage passe AVANT la pose des variables', async () => {
+    const p = await plateforme(PLATEFORME_VIDE);
+    expect((await lancer(envDeBase(p.url))).code).toBe(0);
+    const patches = p.appels.filter((a) => a.methode === 'PATCH').map((a) => a.chemin);
+    expect(patches[0]).toMatch(/^\/api\/v1\/applications\/[\w-]+$/);
+    expect(patches[1]).toMatch(/\/envs\/bulk$/);
   });
 });
 

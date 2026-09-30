@@ -11,8 +11,10 @@
  *   2. JUGE les secrets applicatifs par la règle du démarrage (`lireEnvironnement`, `src/lib/env.ts`,
  *      en production) AVANT tout appel : une valeur qui ferait refuser le démarrage n'est jamais posée.
  *   3. TROUVE le projet `Axion-Partners` et le serveur ; CRÉE, s'ils n'existent pas sous leur nom, la
- *      base Postgres, le cache Redis et l'application (image `sha-<7>`, sonde `/api/readyz`, sans
- *      déploiement immédiat — le job `deployer` s'en charge). Relancé, il ne recrée rien et le DIT.
+ *      base Postgres, le cache Redis et l'application (image `sha-<7>`, sans déploiement immédiat — le
+ *      job `deployer` s'en charge). Relancé, il ne recrée rien et le DIT. La sonde de la PLATEFORME est
+ *      coupée sur l'application (création ET réglage à chaque passage) : le HEALTHCHECK natif de
+ *      l'image, en node, fait foi.
  *   4. LIT l'adresse interne de chaque base et en fait `DATABASE_URL` et `REDIS_URL` : jamais un
  *      secret du dépôt, jamais une adresse devinée. Si la réponse ne porte pas `internal_db_url`, il
  *      s'arrête en rouge en nommant le champ.
@@ -67,7 +69,6 @@ const NOM_CACHE = 'axion-partners-redis';
 /** PostgreSQL 16 : la version des bancs d'intégration du dépôt. */
 const IMAGE_BASE = 'postgres:16-alpine';
 const PORT = '3000';
-const SONDE = '/api/readyz';
 
 const SECRETS_DE_LA_PLATEFORME = [
   'COOLIFY_URL',
@@ -305,8 +306,7 @@ export async function provisionner(env: NodeJS.ProcessEnv): Promise<0 | 1> {
         docker_registry_image_name: IMAGE,
         docker_registry_image_tag: `sha-${sha.slice(0, 7)}`,
         ports_exposes: PORT,
-        health_check_enabled: true,
-        health_check_path: SONDE,
+        health_check_enabled: false,
         domains: publique.origin,
         instant_deploy: false,
       }),
@@ -314,6 +314,16 @@ export async function provisionner(env: NodeJS.ProcessEnv): Promise<0 | 1> {
     );
     console.log(`   ${NOM_APPLICATION} créée (${application})`);
   }
+
+  // La sonde de la PLATEFORME est coupée, sur l'application Partners SEULE (premier déploiement réel,
+  // 2026-09-30) : elle s'exécute dans le conteneur par curl ou wget, que l'image n'a pas, et Coolify
+  // retirait donc tout nouveau conteneur. La sonde de vérité est le HEALTHCHECK natif de l'image (en
+  // node, `Dockerfile`, sur `/api/readyz`), et `deploy:coolify` vérifie de l'extérieur le sha servi.
+  // Reposé à chaque passage : une application existante créée avec la sonde est corrigée.
+  await api('PATCH', `/applications/${encodeURIComponent(application)}`, {
+    health_check_enabled: false,
+  });
+  console.log(`   ${NOM_APPLICATION} : sonde de la plateforme coupée, celle de l'image fait foi`);
 
   await api('PATCH', `/applications/${encodeURIComponent(application)}/envs/bulk`, {
     data: variables,
