@@ -4160,7 +4160,9 @@
         "axionia/src/components/services/devenir-commercial/CommercialProductsEarnings.tsx",
         "axionia/src/app/[locale]/devenir-commercial-ia/page.tsx",
         "axionia/src/app/[locale]/devenir-commercial-ia/candidature/page.tsx",
-        "axionia/src/components/services/devenir-commercial/CommercialProcess.tsx"
+        "axionia/src/components/services/devenir-commercial/CommercialContactBand.tsx",
+        "axionia/src/lib/email/templates/apporteur-issue-echange.tsx",
+        "axionia/src/lib/email/templates/__tests__/l-issue-de-l-echange-apporteur-a-ses-trois-e-mails.spec.tsx"
       ],
       "schema": false,
       "sensible": [
