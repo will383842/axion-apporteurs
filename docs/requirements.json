@@ -53,7 +53,7 @@
     {
       "id": "REQ-DM-004",
       "domaine": "domaine-donnees",
-      "texte": "Au plus deux attributions `en_attente` par SIREN (index unique partiel sur (siren, rangAttente) WHERE statut = 'en_attente', CHECK rangAttente IN (1,2)) ; au-delà de deux, la déclaration **n'est pas conservée** et l'apporteur en est informé. 🔴 **La libération d'une occupante ne promeut plus rien automatiquement** (corrigé le 2026-09-03, M-26 — « lui revient automatiquement », sans terme et sans limite de nombre, rouvrait par la fenêtre la reconduction que l'art. 3.4 bis ferme par la porte, et permettait à un apporteur de se constituer une file d'attente permanente sur 300 SIREN) : la machine **notifie** l'apporteur dont la déclaration est au rang 1 et lui ouvre une fenêtre de **quinze jours** (`FILE_FENETRE_REDECLARATION_JOURS`, SSOT) pour **déclarer à nouveau** l'entreprise ; **aucune attribution ne naît d'une déclaration conservée sans nouvelle déclaration expresse**. À l'expiration de la fenêtre, la déclaration en attente est effacée et l'entreprise redevient librement déclarable par tous. Une déclaration en attente s'éteint en tout état de cause **douze mois** après son enregistrement (`FILE_EXPIRATION_MOIS`, SSOT). Tests frontière : J+14 la re-déclaration crée l'attribution, J+16 elle est traitée comme une déclaration ordinaire sur une entreprise libre ; deux passages du cron n'effacent qu'une fois.",
+      "texte": "Au plus deux attributions `en_attente` par SIREN (index unique partiel sur (siren, rangAttente) WHERE statut = 'en_attente', CHECK rangAttente IN (1,2)) ; au-delà de deux, la déclaration **n'est pas conservée** et l'apporteur en est informé. 🔴 **La libération d'une occupante ne promeut plus rien automatiquement** (corrigé le 2026-09-03, M-26 — « lui revient automatiquement », sans terme et sans limite de nombre, rouvrait par la fenêtre la reconduction que l'art. 3.4 bis ferme par la porte, et permettait à un apporteur de se constituer une file d'attente permanente sur 300 SIREN) : la machine **notifie** l'apporteur dont la déclaration est au rang 1 et lui ouvre une fenêtre de **quinze jours** (`FILE_FENETRE_REDECLARATION_JOURS`, SSOT) pour **déclarer à nouveau** l'entreprise ; **aucune attribution ne naît d'une déclaration conservée sans nouvelle déclaration expresse**. À l'expiration de la fenêtre, la déclaration en attente est effacée et l'entreprise redevient librement déclarable par tous. Une déclaration en attente s'éteint en tout état de cause **douze mois** après son enregistrement (`FILE_EXPIRATION_MOIS`, SSOT). Tests frontière : J+14 la re-déclaration crée l'attribution, J+16 elle est traitée comme une déclaration ordinaire sur une entreprise libre ; deux passages du cron n'effacent qu'une fois. Amendement W19 (décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §4.2) : la file est réservée aux apporteurs ; elle se forme derrière une prise en charge de la Société comme derrière un apporteur (art. 3.5), et la fenêtre du rang 1 est fermée aux conseillers.",
       "source": "anti-abus M2, C4 ; contrat art. 3.5 al. 2 et art. 3.4 bis ; synthèse du 2026-09-03, M-26",
       "statut": "active",
       "remplaceePar": null,
@@ -78,6 +78,7 @@
       "phase": 1,
       "taches": [
         "DM-07",
+        "DM-30",
         "DM-40"
       ]
     },
@@ -101,7 +102,7 @@
     {
       "id": "REQ-DM-007",
       "domaine": "domaine-donnees",
-      "texte": "`fenetreFinAt` (12 mois) et `peremptionAt` (`PEREMPTION_JOURS`, 90 j) sont des colonnes recalculées par la machine à chaque transition. 🔴 **Le chrono de péremption ne court qu'à compter du premier contact de la Société avec l'entreprise déclarée** (`premierContactAt`, posé par la Qualification) : `peremptionAt` est **null tant que ce contact n'a pas eu lieu** (chrono suspendu) et devient null définitivement dès qu'une suite existe (rdv_pris ou plus). L'attribution **n'expire pas** au titre de la péremption lorsque l'absence de rendez-vous, de devis et de commande est **imputable à la Société** : le marqueur `peremptionSuspendueMotifSociete` (posé par un rôle habilité, motivé, journalisé) neutralise le chrono, seule la fenêtre de 12 mois s'appliquant alors. Sans cette double règle, les trois événements qui sauvent l'attribution dépendent exclusivement de la Société et la péremption devient une condition potestative (art. 1304-2 et 1304-3 al. 1 C. civ.). Tests : dépôt sans contact à J+200 → `peremptionAt` null ; contact posé à J+200 → péremption à J+290 ; marqueur posé → aucun passage en `perimee` au cron.",
+      "texte": "`fenetreFinAt` (`FENETRE_MOIS` mois, 6 depuis la décision de Williams du 2026-09-30) et `peremptionAt` (`PEREMPTION_JOURS`, 90 j) sont des colonnes recalculées par la machine à chaque transition. 🔴 **Le chrono de péremption ne court qu'à compter du premier contact de la Société avec l'entreprise déclarée** (`premierContactAt`, posé par la Qualification) : `peremptionAt` est **null tant que ce contact n'a pas eu lieu** (chrono suspendu) et devient null définitivement dès qu'une suite existe (rdv_pris ou plus). L'attribution **n'expire pas** au titre de la péremption lorsque l'absence de rendez-vous, de devis et de commande est **imputable à la Société** : le marqueur `peremptionSuspendueMotifSociete` (posé par un rôle habilité, motivé, journalisé) neutralise le chrono, seule la fenêtre d'attribution (`FENETRE_MOIS`) s'appliquant alors. Sans cette double règle, les trois événements qui sauvent l'attribution dépendent exclusivement de la Société et la péremption devient une condition potestative (art. 1304-2 et 1304-3 al. 1 C. civ.). Tests : dépôt sans contact à J+200 → `peremptionAt` null ; contact posé à J+200 → péremption à J+290 ; marqueur posé → aucun passage en `perimee` au cron. Amendement W19 (décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §4.2) : pour un porteur conseiller, la péremption suit les mêmes délais visibles que pour un apporteur (HYP-W19-CYCLE).",
       "source": "anti-abus M4, C7 ; fonctionnement R4 ; contrat art. 3.4 al. 2 et 3 ; synthèse du 2026-09-03, A-6",
       "statut": "active",
       "remplaceePar": null,
@@ -116,7 +117,7 @@
     {
       "id": "REQ-DM-008",
       "domaine": "domaine-donnees",
-      "texte": "Une Qualification est une entité liée à une attribution avec `resultatContact` enum {confirme, non_confirme, injoignable, ne_se_souvient_pas} obligatoire, `interet` enum, `prochaineEtape` enum, `motifPerte` enum nullable, auteur et horodatage serveur ; elle est append-only (une nouvelle qualification ne modifie jamais la précédente). 🔴 **Seul `non_confirme` — le représentant de l'entreprise indique EXPRESSÉMENT n'avoir eu aucun échange avec l'apporteur — éteint l'attribution et ouvre l'article 3.7** ; `injoignable`, `ne_se_souvient_pas`, le changement d'interlocuteur et le refus de répondre **maintiennent l'attribution `provisoire`** et ne sont imputables à personne (aucune suspension, aucun signal défavorable, aucune invalidation). La Qualification journalise la **date**, la **personne interrogée** et les **termes** de la réponse ; l'extrait en est communiqué à l'apporteur sur sa demande (route dédiée, cloisonnée). Tests : chacune des quatre valeurs → état d'attribution attendu ; `injoignable` ×3 → aucune suspension.",
+      "texte": "Une Qualification est une entité liée à une attribution avec `resultatContact` enum {confirme, non_confirme, injoignable, ne_se_souvient_pas} obligatoire, `interet` enum, `prochaineEtape` enum, `motifPerte` enum nullable, auteur et horodatage serveur ; elle est append-only (une nouvelle qualification ne modifie jamais la précédente). 🔴 **Seul `non_confirme` — le représentant de l'entreprise indique EXPRESSÉMENT n'avoir eu aucun échange avec l'apporteur — éteint l'attribution et ouvre l'article 3.7** ; `injoignable`, `ne_se_souvient_pas`, le changement d'interlocuteur et le refus de répondre **maintiennent l'attribution `provisoire`** et ne sont imputables à personne (aucune suspension, aucun signal défavorable, aucune invalidation). La Qualification journalise la **date**, la **personne interrogée** et les **termes** de la réponse ; l'extrait en est communiqué à l'apporteur sur sa demande (route dédiée, cloisonnée). Tests : chacune des quatre valeurs → état d'attribution attendu ; `injoignable` ×3 → aucune suspension. Amendement W19 (décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §4.2) : qualification, `non_confirme` et gel ne concernent que l'apporteur ; l'état visible d'une prise en charge suit la même chronologie qu'un dépôt. Amendement W20 (décision de Will du 2026-09-29, docs/chantiers/W20-confirmation-par-email.md §3.2) : Une confirmation a une **source** : `appel` (Qualification) ou `courriel` (réponse au lien, REQ-DM-061). Les deux ont les mêmes effets sur l'attribution ; `non_confirme` peut naître d'un appel ou d'un « Non » confirmé en second geste. Sur une demande signalée (REQ-SEC-060), seule la source `appel` confirme. Une demande signalée qui n'a reçu aucun appel concluant est libérée selon REQ-DM-063 (trois `injoignable` ou 45 jours après l'envoi) : ce n'est pas une extinction au titre de l'art. 3.7, rien n'est imputé à personne, et `injoignable` reste sans effet sur une demande non signalée.",
       "source": "outil §8 ; anti-abus M1, C2 ; contrat art. 3.2 al. 3 et 3.7 al. 2 ; synthèse du 2026-09-03, A-3 et M-7",
       "statut": "active",
       "remplaceePar": null,
@@ -137,7 +138,7 @@
     {
       "id": "REQ-DM-009",
       "domaine": "domaine-donnees",
-      "texte": "Le taux de confirmation et le palier d'un apporteur sont dérivés par fonction pure des N dernières Qualifications (fenêtre glissante de 10) ; aucun compteur mutable n'est stocké.",
+      "texte": "Le taux de confirmation et le palier d'un apporteur sont dérivés par fonction pure des N dernières Qualifications (fenêtre glissante de 10) ; aucun compteur mutable n'est stocké. Amendement W19 (décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §4.2) : palier et taux se dérivent des seules qualifications d'apporteurs.",
       "source": "anti-abus M1, M3 ; outil §1.1",
       "statut": "active",
       "remplaceePar": null,
@@ -184,7 +185,7 @@
     {
       "id": "REQ-DM-012",
       "domaine": "domaine-donnees",
-      "texte": "Un apporteur porte deux identifiants distincts : `codeParrainage` public unique (lisible, non énumérable : préfixe `AX` + 6 caractères de l'alphabet **Crockford base32** — sans I, L, O ni U —, soit **30 bits aléatoires**, au-dessus des 25 exigés par REQ-SEC-037 ; décision du 2026-09-25, par délégation de Will, `HYP-DM06-CODE-PARRAINAGE`) et un ou plusieurs `JetonDepot` {tokenHash unique, creeAt, revoqueAt nullable, dernierUsageAt} ; le quota, les déclarations non confirmées et l'horodatage se comptent sur l'apporteur, jamais sur le code public (le mot « strike » est proscrit, décision du 2026-09-03).",
+      "texte": "Un apporteur porte deux identifiants distincts : `codeParrainage` public unique (lisible, non énumérable : préfixe `AX` + 6 caractères de l'alphabet **Crockford base32** — sans I, L, O ni U —, soit **30 bits aléatoires**, au-dessus des 25 exigés par REQ-SEC-037 ; décision du 2026-09-25, par délégation de Will, `HYP-DM06-CODE-PARRAINAGE`) et un ou plusieurs `JetonDepot` {tokenHash unique, creeAt, revoqueAt nullable, dernierUsageAt} ; le quota, les déclarations non confirmées et l'horodatage se comptent sur l'apporteur, jamais sur le code public (le mot « strike » est proscrit, décision du 2026-09-03). Amendement W19 (décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §4.2) : la limite comptée sur l'identité concerne l'apporteur ; celle du conseiller suit HYP-W19-LIMITES.",
       "source": "anti-abus M3, C6 ; outil §5 étape 6",
       "statut": "active",
       "remplaceePar": null,
@@ -214,7 +215,7 @@
     {
       "id": "REQ-DM-014",
       "domaine": "domaine-donnees",
-      "texte": "La grille de commission a une seule source, `axionia/src/content/pricing.ts` (`COMMERCIAL_COMMISSIONS`) ; un script d'export en produit `commissions.v<N>.json` et le hash SHA-256 de son JSON canonique ; Partners stocke chaque version dans l'entité versionnée GrilleCommission {version, contenuJson, hash, publieeAt}, dont le contenu est DÉRIVÉ de cet export et jamais retapé ; Contrat, Attribution et LigneCommission référencent une version ; l'écran Paramètres l'affiche en lecture seule (version, date, diff) ; le montant d'une ligne ne change jamais après publication d'une nouvelle grille ; gate des deux côtés : hash embarqué = hash recalculé depuis `pricing.ts`, sinon rouge.",
+      "texte": "La grille de commission a une seule source, `axionia/src/content/pricing.ts` (`COMMERCIAL_COMMISSIONS`) ; un script d'export en produit `commissions.v<N>.json` et le hash SHA-256 de son JSON canonique ; Partners stocke chaque version dans l'entité versionnée GrilleCommission {version, contenuJson, hash, publieeAt}, dont le contenu est DÉRIVÉ de cet export et jamais retapé ; Contrat, Attribution et LigneCommission référencent une version ; l'écran Paramètres l'affiche en lecture seule (version, date, diff) ; le montant d'une ligne ne change jamais après publication d'une nouvelle grille ; gate des deux côtés : hash embarqué = hash recalculé depuis `pricing.ts`, sinon rouge. Amendement W19 (décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §4.2) : « Contrat, Attribution *dont le porteur est un apporteur* et LigneCommission référencent une version » ; une attribution de conseiller ne référence aucune grille.",
       "source": "plan D3 ; outil §6.2 ; nouvelle (F-DM-09) ; texte décidé de l'annexe de dédoublonnage, remis le 2026-09-19 (décision de Will)",
       "statut": "active",
       "remplaceePar": null,
@@ -316,7 +317,7 @@
     {
       "id": "REQ-DM-021",
       "domaine": "domaine-donnees",
-      "texte": "La résolution d'un encaissement cherche l'attribution occupante du `siren` du client bénéficiaire résolu par axionia (facture ?? enrollment ?? session ?? dossier — une inscription sans client descend à la session, et un bénéficiaire sans SIREN lisible part `non_resolue` avec alerte, jamais une devinette ; jamais le SIRET du destinataire ou du payeur), sinon un RattachementManuel actif ; un événement sans `siren`, sans clientId ou sans facture est accepté, crée une ligne `bloquee` motif `non_resolue` (enum `MotifBlocage`, REQ-ARG-017) et une Anomalie visible en console — jamais un silence, jamais un rejet. Ordre amendé le 2026-09-29 : arbitrage -d7 sur délégation de Williams du 2026-09-29 (l'inscription, employeur du participant, passe avant la session).",
+      "texte": "La résolution d'un encaissement cherche l'attribution occupante du `siren` du client bénéficiaire résolu par axionia (facture ?? enrollment ?? session ?? dossier — une inscription sans client descend à la session, et un bénéficiaire sans SIREN lisible part `non_resolue` avec alerte, jamais une devinette ; jamais le SIRET du destinataire ou du payeur), sinon un RattachementManuel actif ; un événement sans `siren`, sans clientId ou sans facture est accepté, crée une ligne `bloquee` motif `non_resolue` (enum `MotifBlocage`, REQ-ARG-017) et une Anomalie visible en console — jamais un silence, jamais un rejet. Ordre amendé le 2026-09-29 : arbitrage -d7 sur délégation de Williams du 2026-09-29 (l'inscription, employeur du participant, passe avant la session). Amendement W19 (décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §4.2) : la résolution d'un encaissement aiguille d'abord selon le porteur ; un porteur conseiller délègue à la chaîne de part variable et crée zéro LigneCommission.",
       "source": "fonctionnement R13 ; tableaux-de-bord B11 ; anti-abus F12 ; nouvelle (F-DM-04) ; texte décidé de l'annexe de dédoublonnage, remis le 2026-09-19 (décision de Will)",
       "statut": "active",
       "remplaceePar": null,
@@ -325,7 +326,8 @@
       "phase": 0,
       "taches": [
         "DM-15",
-        "INT-T03"
+        "INT-T03",
+        "T-ARG-040"
       ]
     },
     {
@@ -346,7 +348,7 @@
     {
       "id": "REQ-DM-023",
       "domaine": "domaine-donnees",
-      "texte": "Parrainage {parrainId, filleulId unique, codeUtilise, captureAt, contratFilleulSigneAt, finAt = contratFilleulSigneAt + 12 mois, tauxPct versionné} avec CHECK parrainId <> filleulId ; chaque ligne `commission` ou `reprise` du filleul acquise avant finAt engendre une ligne `parrainage` avec sourceLigneId ; aucune ligne n'est jamais créée pour le parrain du parrain (test).",
+      "texte": "Parrainage {parrainId, filleulId unique, codeUtilise, captureAt, contratFilleulSigneAt, finAt = contratFilleulSigneAt + 12 mois, tauxPct versionné} avec CHECK parrainId <> filleulId ; chaque ligne `commission` ou `reprise` du filleul acquise avant finAt engendre une ligne `parrainage` avec sourceLigneId ; aucune ligne n'est jamais créée pour le parrain du parrain (test). Amendement W19 (décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §4.2) : un conseiller n'est ni parrain ni filleul.",
       "source": "plan §4.1 ; fonctionnement R8, §6 ; anti-abus F14 ; outil §12.1",
       "statut": "active",
       "remplaceePar": null,
@@ -369,7 +371,8 @@
       "phase": 0,
       "taches": [
         "DM-01",
-        "DM-20"
+        "DM-20",
+        "SEC-30"
       ]
     },
     {
@@ -616,7 +619,7 @@
     {
       "id": "REQ-DM-042",
       "domaine": "domaine-donnees",
-      "texte": "🔴 **Confirmation tacite à trente jours — le porteur manquant.** Le contrat promet depuis toujours qu'« à défaut de contact tenté dans les trente jours, l'attribution est réputée confirmée » (art. 3.2 al. 4) ; **aucune REQ, aucune tâche et aucun cron ne portaient cette promesse** — REQ-DM-006 ne promeut que sur qualification humaine, et une attribution `injoignable` n'avait alors ni terme ni horloge (constaté le 2026-09-03, M-7). Un cron quotidien, horloge injectée, promeut en `active` toute attribution `provisoire` dont l'enregistrement remonte à plus de `CONFIRMATION_TACITE_JOURS` (= 30, SSOT, contrat art. 3.2) **sans Qualification `confirme` ni `non_confirme`** ; il écrit l'événement `attribution_etat_modifie` avec `evenement: 'confirmee_tacitement'` (un type de journal par genre de transition, partners/ADR-0022) dans la même transaction et fait courir `fenetreFinAt` **à compter de cette date**. La promotion s'applique aussi aux attributions `injoignable` et `ne_se_souvient_pas` (REQ-DM-008). **C'est la seule conséquence attachée au défaut ou au retard de contact** : aucune autre sanction, aucun dédommagement, aucun signal. Tests frontière : J+29 aucune promotion, J+30 promotion unique ; deux passages du cron → une seule promotion et un seul événement ; une Qualification `non_confirme` posée à J+29 empêche la promotion.",
+      "texte": "🔴 **Confirmation tacite à trente jours — le porteur manquant.** Le contrat promet depuis toujours qu'« à défaut de contact tenté dans les trente jours, l'attribution est réputée confirmée » (art. 3.2 al. 4) ; **aucune REQ, aucune tâche et aucun cron ne portaient cette promesse** — REQ-DM-006 ne promeut que sur qualification humaine, et une attribution `injoignable` n'avait alors ni terme ni horloge (constaté le 2026-09-03, M-7). Un cron quotidien, horloge injectée, promeut en `active` toute attribution `provisoire` dont la demande de confirmation a été **reçue** depuis plus de `CONFIRMATION_TACITE_JOURS` (= 30, SSOT), sans confirmation ni `non_confirme`, par appel ou par courriel ; il écrit l'événement `attribution_etat_modifie` avec `evenement: 'confirmee_tacitement'` (un type de journal par genre de transition, partners/ADR-0022) dans la même transaction et fait courir `fenetreFinAt` **à compter de cette date**. La promotion s'applique aussi aux attributions `injoignable` et `ne_se_souvient_pas` (REQ-DM-008). La réception est l'envoi effectif d'une demande à laquelle aucun rebond n'est rattaché (`recueAt`). **Le délai ne commence pas tant que la demande est en rebond non corrigé** ; la correction de l'adresse par l'apporteur fait repartir l'e-mail, et le délai court de ce nouvel envoi s'il ne rebondit pas ; un rebond rattaché après coup retire à l'envoi sa qualité de réception. **Une demande qui porte une raison de vérification (REQ-SEC-060) à l'échéance n'est jamais promue par le silence** : elle reste `provisoire` jusqu'à une Qualification concluante, puis suit le régime ordinaire ; sans Qualification concluante, elle est libérée selon REQ-DM-063. Pour une demande non signalée, la promotion est la seule conséquence attachée au silence ; pour une demande signalée, c'est la libération, sans sanction. Tests frontière : J+29 aucune promotion, J+30 promotion unique ; deux passages du cron → une seule promotion et un seul événement ; une Qualification `non_confirme` posée à J+29 empêche la promotion. Amendement W20 (décision de Will du 2026-09-29, docs/chantiers/W20-confirmation-par-email.md §3.2) : règle tranchée par Williams le 2026-09-29 (HYP-W20-TACITE, réponses aux questions 18 et 19) ; la condition de promotion et la phrase « C'est la seule conséquence attachée au défaut ou au retard de contact » sont remplacées par le texte ci-dessus. La motivation devient l'art. 3.2 amendé (JUR-T40). Tests frontière ajoutés : réception à J, J+29 aucune promotion, J+30 une seule ; rebond à J+1 non corrigé, J+90 aucune promotion (la demande en rebond est signalée, libérée à J+45, REQ-DM-063) ; correction à J+10 puis envoi sans rebond, promotion à J+40 et pas avant ; clic « Oui » retenu ou appel `confirme` avant l'échéance, aucune promotion tacite ; demande signalée silencieuse, J+30 aucune promotion et, à J+45, libération et jamais de promotion ; demande signalée puis appel `confirme` à J+35, `active` à J+35. Amendement W19 (décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §4.2) : la confirmation tacite est réservée à l'apporteur ; le passage visible d'une prise en charge à `active` suit le même délai.",
       "source": "contrat art. 3.2 al. 3 et 4 ; synthèse du 2026-09-03, M-7",
       "statut": "active",
       "remplaceePar": null,
@@ -633,7 +636,7 @@
     {
       "id": "REQ-DM-043",
       "domaine": "domaine-donnees",
-      "texte": "🔴 **Antériorité établie APRÈS l'enregistrement, et contestation d'un refus.** L'article 3.3 réécrit (A-12) organise ce que le miroir asynchrone rend inévitable : lorsque l'antériorité est établie postérieurement à l'enregistrement, l'attribution est **annulée** (transition vers `annulee`, événement écrit), l'apporteur en est **informé avec le motif**, **aucune commission nouvelle n'est due** et **les commissions déjà acquises restent acquises** — aucune ligne `acquise` n'est reprise, aucun statut `dechue` n'existe (REQ-JUR-007). Un job quotidien rapproche les nouvelles lignes d'`EntrepriseConnue` des attributions occupantes et applique cette règle. **Tout refus de dépôt et toute annulation sont contestables par écrit** : la contestation ouvre une entrée console, la Société y **répond de façon motivée dans les quinze jours** (`REPONSE_CONTESTATION_JOURS`, SSOT) et la réponse est journalisée ; une contestation sans réponse à J+16 lève une alerte. Tests : ligne d'antériorité arrivée après le dépôt → attribution `annulee`, lignes acquises inchangées, e-mail motivé envoyé une seule fois ; rejeu du job → aucune double annulation ; contestation sans réponse à J+16 → alerte.",
+      "texte": "🔴 **Antériorité établie APRÈS l'enregistrement, et contestation d'un refus.** L'article 3.3 réécrit (A-12) organise ce que le miroir asynchrone rend inévitable : lorsque l'antériorité est établie postérieurement à l'enregistrement, l'attribution est **annulée** (transition vers `annulee`, événement écrit), l'apporteur en est **informé avec le motif**, **aucune commission nouvelle n'est due** et **les commissions déjà acquises restent acquises** — aucune ligne `acquise` n'est reprise, aucun statut `dechue` n'existe (REQ-JUR-007). Un job quotidien rapproche les nouvelles lignes d'`EntrepriseConnue` des attributions occupantes et applique cette règle. **Tout refus de dépôt et toute annulation sont contestables par écrit** : la contestation ouvre une entrée console, la Société y **répond de façon motivée dans les quinze jours** (`REPONSE_CONTESTATION_JOURS`, SSOT) et la réponse est journalisée ; une contestation sans réponse à J+16 lève une alerte. Tests : ligne d'antériorité arrivée après le dépôt → attribution `annulee`, lignes acquises inchangées, e-mail motivé envoyé une seule fois ; rejeu du job → aucune double annulation ; contestation sans réponse à J+16 → alerte. Amendement W19 (décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §4.2) : l'annulation n'a lieu que si `connueDepuisAt < deposeeAt` ; pour un porteur conseiller, information en console seulement.",
       "source": "contrat art. 3.3 et 3.3 bis ; synthèse du 2026-09-03, A-12",
       "statut": "active",
       "remplaceePar": null,
@@ -641,7 +644,9 @@
       "etape": 10,
       "phase": 1,
       "taches": [
-        "DM-25"
+        "DM-25",
+        "DM-31",
+        "JUR-T31"
       ]
     },
     {
@@ -675,7 +680,7 @@
     {
       "id": "REQ-SEC-003",
       "domaine": "anti-abus-securite",
-      "texte": "La session est un cookie `__Host-` HttpOnly Secure SameSite=Lax de 30 jours, enregistrée en base (hash, `revokedAt`, `lastSeenAt`, `ipHash`) ; `apporteurs.sessionVersion` est incrémenté à toute résiliation, à tout changement d'email ou d'IBAN et à toute révocation pour motif de sécurité (contrat art. 3.8), et invalide toutes les sessions antérieures ; la suspension ne l'incrémente pas et ne révoque aucune session (REQ-SEC-032, REQ-SEC-019, `HYP-SEC03-ACCES`).",
+      "texte": "La session est un cookie `__Host-` HttpOnly Secure SameSite=Lax de 30 jours, enregistrée en base (hash, `revokedAt`, `lastSeenAt`, `ipHash`) ; `apporteurs.sessionVersion` est incrémenté à toute résiliation, à tout changement d'email ou d'IBAN et à toute révocation pour motif de sécurité (contrat art. 3.8), et invalide toutes les sessions antérieures ; la suspension ne l'incrémente pas et ne révoque aucune session (REQ-SEC-032, REQ-SEC-019, `HYP-SEC03-ACCES`). Amendement W19 (décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §4.2) : La session de 30 jours et `apporteurs.sessionVersion` visent l'espace. La session de console est courte : durée maximale et expiration d'inactivité sont des paramètres sourcés de `durees.ts`, posés par SEC-29 et validés par Williams, avec une `sessionVersion` sur `utilisateurs_console`, incrémentée au changement de rôle, à la désactivation et à la demande. Lot transverse « confort de la console pour tous les rôles ».",
       "source": "audit-outil §5 étape 12 (« Accès coupé ») ; nouvelle",
       "statut": "active",
       "remplaceePar": null,
@@ -685,6 +690,8 @@
       "taches": [
         "SEC-04",
         "SEC-19",
+        "SEC-29",
+        "SEC-30",
         "UX-P1-04"
       ]
     },
@@ -774,7 +781,9 @@
       "phase": 0,
       "taches": [
         "GOV-111",
+        "QA-T31",
         "SEC-05",
+        "SEC-32",
         "UX-P2-06"
       ]
     },
@@ -847,6 +856,7 @@
       "phase": 1,
       "taches": [
         "DM-07",
+        "DM-30",
         "SEC-12"
       ]
     },
@@ -875,6 +885,7 @@
       "etape": 7,
       "phase": 0,
       "taches": [
+        "DM-31",
         "SEC-03",
         "SEC-10"
       ]
@@ -893,6 +904,7 @@
         "DM-43",
         "QA-T41",
         "SEC-14",
+        "SEC-33",
         "SEC-41"
       ]
     },
@@ -985,7 +997,9 @@
       "etape": 12,
       "phase": 0,
       "taches": [
-        "SEC-17"
+        "SEC-17",
+        "SEC-30",
+        "SEC-31"
       ]
     },
     {
@@ -1089,7 +1103,8 @@
       "phase": 0,
       "taches": [
         "DM-20",
-        "JUR-T04"
+        "JUR-T04",
+        "JUR-T32"
       ]
     },
     {
@@ -1213,7 +1228,7 @@
     {
       "id": "REQ-SEC-039",
       "domaine": "anti-abus-securite",
-      "texte": "La console porte des **notes internes** par apporteur, écrites et lues par les seuls rôles que la matrice autorise (REQ-SEC-023) ; chaque création, modification et suppression est un événement du journal chaîné. Elles ne sont **jamais affichées dans l'interface de l'espace ni portées par un DTO d'écran de l'espace** (aucun accès par `forApporteur`, garde statique), ni reprises dans un e-mail ou une alerte (REQ-INT-024), et n'alimentent aucun score ni aucun déclencheur (REQ-JUR-039). Donnée personnelle de l'apporteur, elles **sont incluses dans la réponse au droit d'accès** (export art. 15, REQ-UX-030, REQ-JUR-025), quel que soit le canal de la demande — Will en a été averti (`HYP-W15-NOTES`) : le **seul** chemin qui les lit hors de la console est la fonction d'export art. 15 du module RGPD (DM-20), **nommément exemptée** par la garde statique ; l'espace ne fait que servir le fichier produit, jamais un DTO de note. Chaque note y figure **horodatée**, son auteur désigné par son **rôle de console** (`ConsoleRole`), jamais par son nom. Décision W15 (6), 2026-09-25. Tests : aucun écran ni DTO d'écran de l'espace ne porte de note (**vue rougir** sur un témoin) ; la garde rougit sur tout lecteur des notes autre que la console et la fonction d'export exemptée ; rôle absent de la matrice → refus ; l'export art. 15 d'une fixture contient la note, horodatée, avec le rôle de son auteur et sans son nom ; journal vérifié.",
+      "texte": "La console porte des **notes internes** par apporteur, écrites et lues par les seuls rôles que la matrice autorise (REQ-SEC-023) ; chaque création, modification et suppression est un événement du journal chaîné. Elles ne sont **jamais affichées dans l'interface de l'espace ni portées par un DTO d'écran de l'espace** (aucun accès par `forApporteur`, garde statique), ni reprises dans un e-mail ou une alerte (REQ-INT-024), et n'alimentent aucun score ni aucun déclencheur (REQ-JUR-039). Donnée personnelle de l'apporteur, elles **sont incluses dans la réponse au droit d'accès** (export art. 15, REQ-UX-030, REQ-JUR-025), quel que soit le canal de la demande — Will en a été averti (`HYP-W15-NOTES`) : le **seul** chemin qui les lit hors de la console est la fonction d'export art. 15 du module RGPD (DM-20), **nommément exemptée** par la garde statique ; l'espace ne fait que servir le fichier produit, jamais un DTO de note. Chaque note y figure **horodatée**, son auteur désigné par son **rôle de console** (`ConsoleRole`), jamais par son nom. Décision W15 (6), 2026-09-25. Tests : aucun écran ni DTO d'écran de l'espace ne porte de note (**vue rougir** sur un témoin) ; la garde rougit sur tout lecteur des notes autre que la console et la fonction d'export exemptée ; rôle absent de la matrice → refus ; l'export art. 15 d'une fixture contient la note, horodatée, avec le rôle de son auteur et sans son nom ; journal vérifié. Amendement W19 (décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §4.2) : écrire une note interne est refusé au conseiller.",
       "source": "décision de Will du 2026-09-25, W15 (point 6)",
       "statut": "active",
       "remplaceePar": null,
@@ -1236,6 +1251,74 @@
       "phase": 3,
       "taches": [
         "UX-P3-09"
+      ]
+    },
+    {
+      "id": "REQ-SEC-041",
+      "domaine": "anti-abus-securite",
+      "texte": "Le rôle `conseiller_salarie` n'a aucun droit existant de la matrice et aucun écran ni aucune action sur les apporteurs : fiche, liste, lignée, notes, statistiques, exports, file, rattachement, contestation, anomalie, suspension, gel, IBAN, lot, DAS2, vérifications d'apporteurs. Toutes ses lectures passent par `forConseiller(utilisateurConsoleId)` ; l'identifiant vient de la référence de conseiller que présente l'API 3, rattachée par DM-32 et vérifiée active par Partners à chaque appel, jamais d'un paramètre libre ; la ligne d'un autre conseiller rend une réponse identique à celle d'une ligne inexistante. Aucune session de console n'est ouverte au rôle en V1 (question 22) : il n'a aucun écran dans Partners. Aucun `decide_par_id`, `traite_par_id` ni `repondue_par_id` ne désigne un conseiller (déclencheur). Changement de rôle : on ne quitte pas `conseiller_salarie` en portant une attribution occupante, et on n'y entre pas depuis qualifieur ou admin avant `DELAI_CHANGEMENT_POPULATION_JOURS`. Aucune lecture croisée de `verifications` entre populations.",
+      "source": "décision de Will du 2026-09-29, W19 (docs/chantiers/W19-conseillers-salaries.md §4.1) ; module et étape repris de REQ-SEC-023",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": 21,
+      "etape": 12,
+      "phase": 1,
+      "taches": [
+        "DM-31",
+        "DM-32",
+        "INT-T28",
+        "SEC-31",
+        "SEC-32",
+        "SEC-34"
+      ]
+    },
+    {
+      "id": "REQ-SEC-042",
+      "domaine": "anti-abus-securite",
+      "texte": "Aucune réponse de l'espace ni de l'API 1 ne distingue une entreprise prise en charge par un conseiller d'une entreprise occupée par un autre apporteur, ni ne révèle l'identité, le rôle ou la nature salariée de la personne qui l'a prise en charge pour la Société. L'issue de dépôt, son texte, l'état de « Vérifier », la date « jusqu'au » et les délais servis à un apporteur sur un SIREN pris en charge sont identiques octet à octet à ceux d'un SIREN occupé par un apporteur au même stade et aux mêmes dates : à J+0, au passage à `active`, après une prolongation W9 et à la libération, notifications au rang 1 comprises. Aucune valeur nouvelle d'`IssueDepot` ni de `MotifRefusDepot` (question 2). Aucune clé ni valeur de DTO de l'espace ne porte la population. L'API 1 est DANS cette égalité : elle rend la même réponse que pour une attribution d'apporteur au même stade (REQ-INT-014 amendée).",
+      "source": "décision de Will du 2026-09-29, W19 (docs/chantiers/W19-conseillers-salaries.md §4.1), question 2 (art. 3.5) ; module et étape repris de REQ-SEC-022",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": 9,
+      "etape": 7,
+      "phase": 1,
+      "taches": [
+        "DM-08",
+        "DM-30",
+        "DM-31",
+        "INT-T28",
+        "JUR-T31",
+        "QA-T31",
+        "SEC-34",
+        "UX-P1-17"
+      ]
+    },
+    {
+      "id": "REQ-SEC-060",
+      "domaine": "anti-abus-securite",
+      "texte": "**Les raisons de vérification suggérée.** Les raisons forment un enum fermé (HYP-W20-VERIFICATION). Elles ne sont lues que par la liste d'appels et la fiche de qualification de la console, et par les trois règles de la demande signalée : aucun clic « Oui » retenu (REQ-DM-061), aucune confirmation tacite (REQ-DM-042 amendée, question 18, tranchée le 2026-09-29) et la libération sans appel concluant (REQ-DM-063, question 19). Seuls l'état « appel attendu » du badge de REQ-UX-062 et, après libération, l'état « Réservation terminée » en sont dérivés côté serveur, jamais la raison ; la libération n'est pas un effet défavorable au sens de REQ-SEC-017 (décision de Williams du 2026-09-29 : aucune sanction, aucune Anomalie, aucune suspension ; redépôt aux règles ordinaires après la carence de -d7, qui ne vise que le même apporteur et la même entreprise) ; garde AST : aucune raison n'atteint un DTO de l'espace, le score de SEC-14, une Anomalie, une notification ou une alerte ; le rythme et le nombre de dépôts n'entrent dans aucune raison (REQ-SEC-017, REQ-SEC-021, REQ-JUR-031). Comparaisons par empreintes HMAC seulement (REQ-SEC-024). Tests : un témoin positif et un négatif par raison ; une raison lue depuis `src/app/(espace)/` → rouge ; une raison « rafale » dans l'enum → rouge ; une raison dans le texte ou la charge de la notification de libération → rouge.",
+      "source": "décision de Will du 2026-09-29, W20 (docs/chantiers/W20-confirmation-par-email.md §3.1), passe gardien-spec W20 portée par GOV-112 (8)(b) ; module et étape repris de REQ-DM-008",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": 12,
+      "etape": 8,
+      "phase": 1,
+      "taches": [
+        "SEC-41"
+      ]
+    },
+    {
+      "id": "REQ-SEC-061",
+      "domaine": "anti-abus-securite",
+      "texte": "**Les jetons de confirmation.** Deux jetons par demande, d'au moins 256 bits d'aléa, stockés hachés, à usage unique, expirant avec la demande. Réponse identique pour un jeton inconnu, expiré ou déjà consommé (aucun oracle sur l'existence d'une attribution). La page de réponse ne révèle que le nom de l'entreprise et le prénom et nom de l'apporteur. Débit limité par empreinte d'IP ; en-têtes `Referrer-Policy: no-referrer` et `X-Robots-Tag: noindex` ; aucun jeton dans un journal applicatif. Tests : rejeu → sans effet ; jeton forgé → même réponse qu'un jeton expiré, octet pour octet ; GET → aucune écriture.",
+      "source": "décision de Will du 2026-09-29, W20 (docs/chantiers/W20-confirmation-par-email.md §3.1), passe gardien-spec W20 portée par GOV-112 (8)(b) ; module et étape repris de REQ-DM-008",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": 12,
+      "etape": 8,
+      "phase": 1,
+      "taches": [
+        "SEC-40"
       ]
     },
     {
@@ -1280,6 +1363,7 @@
       "etape": null,
       "phase": 0,
       "taches": [
+        "QA-T32",
         "SEC-06",
         "T-ARG-022"
       ]
@@ -1364,7 +1448,7 @@
     {
       "id": "REQ-ARG-009",
       "domaine": "argent",
-      "texte": "Fenêtre : `dateRef = devis.signeAt ?? facture.emiseAt` ; une ligne n'est créée que si l'attribution est `active` ou `convertie` et dateRef ∈ [attribution.enregistreeLe, enregistreeLe + 12 mois] ; l'encaissement peut être postérieur à la fenêtre. _(source : fonctionnement §5.2, R2 ; audit-attribution §3.1 ; ARG-10)_ **→ ABSORBÉE par REQ-DM-022** (annexe de dédoublonnage, fusion appliquée par GOV-001, 2026-09-03) : **le texte en vigueur est celui de REQ-DM-022** ; l'identifiant est conservé — et non supprimé — pour que les tâches qui le citent continuent de résoudre. **→ voir REQ-DM-022.**",
+      "texte": "Fenêtre : `dateRef = devis.signeAt ?? facture.emiseAt` ; une ligne n'est créée que si l'attribution est `active` ou `convertie` et dateRef ∈ [attribution.enregistreeLe, enregistreeLe + `FENETRE_MOIS` mois] (6 mois depuis la décision de Williams du 2026-09-30) ; l'encaissement peut être postérieur à la fenêtre. _(source : fonctionnement §5.2, R2 ; audit-attribution §3.1 ; ARG-10)_ **→ ABSORBÉE par REQ-DM-022** (annexe de dédoublonnage, fusion appliquée par GOV-001, 2026-09-03) : **le texte en vigueur est celui de REQ-DM-022** ; l'identifiant est conservé — et non supprimé — pour que les tâches qui le citent continuent de résoudre. **→ voir REQ-DM-022.**",
       "source": "critique de complétude (2026-09-03)",
       "statut": "absorbee",
       "remplaceePar": "REQ-DM-022",
@@ -1772,6 +1856,55 @@
       ]
     },
     {
+      "id": "REQ-ARG-036",
+      "domaine": "argent",
+      "texte": "La part variable vit dans des tables propres, avec une FK vers `utilisateurs_console` seulement : `plans_part_variable`, `lignes_part_variable`, `exports_paie`, et `matricule_chiffre` sur `utilisateurs_console`. LigneCommission, Relevé, Autofacture, LotPaiement, pain.001, DAS2, parrainage, repli à 60 jours et seuils de versement n'acceptent qu'un apporteur. Le plan de part variable ne dérive jamais de `COMMERCIAL_COMMISSIONS` et n'entre pas dans le dépôt. Ni plan, ni montant, ni matricule dans pino.",
+      "source": "décision de Will du 2026-09-29, W19 (docs/chantiers/W19-conseillers-salaries.md §4.1) ; transverse : l'argent des salariés n'appartient à aucun module de l'audit des apporteurs",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": null,
+      "etape": null,
+      "phase": 2,
+      "taches": [
+        "QA-T32",
+        "T-ARG-040"
+      ]
+    },
+    {
+      "id": "REQ-ARG-037",
+      "domaine": "argent",
+      "texte": "L'export paie est produit par période. Il est figé et haché, son ré-export est identique à l'octet, et une régénération est motivée. Réservé à `admin` et `comptable`, avec step-up déclaré dans la matrice. Validé par une personne distincte de celle qui a modifié un plan ou réaffecté une attribution sur la période. Journalisé. Contenu : matricule, période, rubrique, montant « à porter en paie », référence opaque ; jamais une retenue, jamais sous `src/server/pdf/`, jamais envoyé par e-mail.",
+      "source": "décision de Will du 2026-09-29, W19 (docs/chantiers/W19-conseillers-salaries.md §4.1) ; transverse : l'argent des salariés n'appartient à aucun module de l'audit des apporteurs",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": null,
+      "etape": null,
+      "phase": 2,
+      "taches": [
+        "T-ARG-041",
+        "T-ARG-042",
+        "UX-P2-10"
+      ]
+    },
+    {
+      "id": "REQ-ARG-038",
+      "domaine": "argent",
+      "texte": "Un plan de part variable ne prend effet qu'après son acceptation par le conseiller : `accepte_at`, version et empreinte du document présenté. Sa date d'effet est au moins égale à l'acceptation et au jour courant, et postérieure à la dernière période exportée ; il n'est jamais rétroactif. Il est validé à quatre yeux. Les justificatifs par ligne (entreprise, devis, encaissement) sont conservés au moins pendant la durée de prescription salariale (3 ans, L.3245-1, à confirmer). Le sort des encaissements postérieurs au départ et des régularisations suit HYP-W19-VARIABLE-SORTIE et HYP-W19-REGULARISATION.",
+      "source": "décision de Will du 2026-09-29, W19 (docs/chantiers/W19-conseillers-salaries.md §4.1) ; transverse : l'argent des salariés n'appartient à aucun module de l'audit des apporteurs",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": null,
+      "etape": null,
+      "phase": 2,
+      "taches": [
+        "QA-T32",
+        "T-ARG-040",
+        "T-ARG-042",
+        "UX-P2-10",
+        "UX-P2-12"
+      ]
+    },
+    {
       "id": "REQ-INT-001",
       "domaine": "integration",
       "texte": "Tout événement axionia → Partners est écrit dans une outbox persistante DANS la transaction de l'écriture métier qui le produit ; un rollback métier ne laisse aucun événement, un commit métier laisse exactement un événement.",
@@ -1974,7 +2107,7 @@
     {
       "id": "REQ-INT-014",
       "domaine": "integration",
-      "texte": "API 1 `GET /attributions?siren=` : auth = jeton bearer dédié + allowlist IP + 60/min + **404 sans jeton** (REQ-SEC-012), route `/api/integrations/axionia/attributions?siren=` ; réponse **minimale** `{statut: libre|attribuee|cliente, until: 'AAAA-MM'|null, apporteurRef: opaque|null}` — **jamais nom, prénom, e-mail** (R3 : l'identité d'un apporteur ne traverse jamais la frontière) ; chaque appel journalisé (siren, ipHash, résultat) ; côté axionia, timeout 2 s, cache 5 min, échec ouvert : le devis se crée avec `attributionVerifiee=false` et une alerte, la vérification est rejouée par job.",
+      "texte": "API 1 `GET /attributions?siren=` : auth = jeton bearer dédié + allowlist IP + 60/min + **404 sans jeton** (REQ-SEC-012), route `/api/integrations/axionia/attributions?siren=` ; réponse **minimale** `{statut: libre|attribuee|cliente, until: 'AAAA-MM'|null, apporteurRef: opaque|null}` — **jamais nom, prénom, e-mail** (R3 : l'identité d'un apporteur ne traverse jamais la frontière) ; chaque appel journalisé (siren, ipHash, résultat) ; côté axionia, timeout 2 s, cache 5 min, échec ouvert : le devis se crée avec `attributionVerifiee=false` et une alerte, la vérification est rejouée par job. Amendement W19 (décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §4.2) : Une attribution de conseiller répond comme une attribution d'apporteur au même stade : `attribuee`, `until`, et une `apporteurRef` opaque de même forme que celle d'un apporteur. Jamais `libre`, jamais un champ de plus, jamais une valeur qui distingue la population. Test d'indistinction (QA-T31). Le consommateur axion-ia (INT-T07-A) ne peut pas distinguer : aucune commission d'apporteur n'est versée sur la foi de l'API 1, la chaîne d'argent de Partners aiguillant par porteur réel (REQ-DM-021).",
       "source": "audit-outil §2.3, §5 étape 9 ; audit anti-abus C13 ; INT-F11",
       "statut": "active",
       "remplaceePar": null,
@@ -1984,6 +2117,7 @@
       "taches": [
         "INT-T07-A",
         "INT-T07-P",
+        "QA-T31",
         "SEC-07"
       ]
     },
@@ -2345,7 +2479,7 @@
     {
       "id": "REQ-JUR-008",
       "domaine": "juridique",
-      "texte": "Le formulaire de dépôt exige la case « j'ai informé cette personne » (échec fermé : absente ou décochée = refus serveur, pas seulement client) et enregistre la version du texte de la case.",
+      "texte": "Le formulaire de dépôt exige la case « Cette personne sait qu'Axion-IA va la contacter. » (e-mail et téléphone) (échec fermé : absente ou décochée = refus serveur, pas seulement client) et enregistre la version du texte de la case. Amendement W20 (décision de Will du 2026-09-29, docs/chantiers/W20-confirmation-par-email.md §3.2) : le texte de la case devient « Cette personne sait qu'Axion-IA va la contacter. » (e-mail et téléphone) ; sa version est enregistrée, comme aujourd'hui.",
       "source": "plan §3.3 · audit SIREN P8",
       "statut": "active",
       "remplaceePar": null,
@@ -2359,7 +2493,7 @@
     {
       "id": "REQ-JUR-009",
       "domaine": "juridique",
-      "texte": "Axion-IA informe elle-même le prospect (art. 14 RGPD) au premier contact : la mention est affichée dans le script de qualification et un e-mail d'information est envoyé et journalisé au plus tard lors de la qualification.",
+      "texte": "Axion-IA informe elle-même le prospect (art. 14 RGPD) au premier contact : la mention est affichée dans le script de qualification et un e-mail d'information est envoyé et journalisé au plus tard lors de la qualification. Amendement W20 (décision de Will du 2026-09-29, docs/chantiers/W20-confirmation-par-email.md §3.2) : « au premier contact » : l'information de l'art. 14 est portée par l'e-mail de confirmation, envoyé dans les 15 minutes, et reste affichée dans le script de qualification pour les appels.",
       "source": "nouvelle (art. 14 RGPD)",
       "statut": "active",
       "remplaceePar": null,
@@ -2451,7 +2585,7 @@
     {
       "id": "REQ-JUR-015",
       "domaine": "juridique",
-      "texte": "Les seuils légaux (DAS2 2 400 €, vigilance 5 000 € HT, périodicité 6 mois, seuil de versement minimal, **préavis de résiliation ordinaire 30 j (`PREAVIS_JOURS`, contrat art. 11.1)**, fenêtres 12 mois attribution et 12 mois parrainage, péremption 90 j) vivent dans une seule SSOT avec source et date ; aucun littéral ailleurs ; un test échoue si une constante n'a pas de source. **La SSOT ne contient AUCUNE constante de gradation ni de délai de contradictoire : un test échoue si `CONTRADICTOIRE_JOURS` ou un seuil de strikes y apparaît** (décision du 2026-09-03). 🔴 **La SSOT ne portait que six littéraux quand le contrat en crée une vingtaine** (P-3) : chacun serait exécuté en dur par un cron et divergerait du contrat à la première modification. Elle est **étendue à TOUS les délais du contrat**, chaque constante nommée d'après son article — `PRISE_DE_CONTACT_JOURS_OUVRES = 2 // art. 3.2`, `CONFIRMATION_TACITE_JOURS = 30 // art. 3.2`, `FILE_FENETRE_REDECLARATION_JOURS = 15 // art. 3.5`, `FILE_EXPIRATION_MOIS = 12 // art. 3.5`, `SUSPENSION_MAX_JOURS = 15 // art. 3.7`, `ANTERIORITE_CLIENT_MOIS = 24` et `ANTERIORITE_DEVIS_MOIS = 6 // art. 3.3`, `PROLONGATION_DEVIS_MOIS = 3 // art. 3.4 (W9)`, `MISE_EN_DEMEURE_JOURS = 15 // art. 11.2`, `REPONSE_CONTESTATION_JOURS = 15 // art. 5.6 et 3.3`, `FORCLUSION_CONTESTATION_MOIS = 12 // art. 5.5`, `CONTESTATION_FACTURE_JOURS = 30 // art. 5.2`, `REPRISE_MOIS = 12 // art. 4.5`, `IMPUTATION_MOIS = 12`, `VERSEMENT_JOURS_OUVRES = 10` et `VERSEMENT_PLAFOND_JOURS = 60 // art. 5.3`, `PALIER_HORS_GRILLE_JOURS = 60 // annexe A1.7`, `MANDAT_DENONCIATION_JOURS = 30 // annexe 2.5`, `CONFIDENTIALITE_ANS = 2 // art. 9`, `FORCE_MAJEURE_MOIS = 3 // art. 15`. Le grep-test est **élargi aux valeurs 2, 3, 6, 15, 24 et 60** hors SSOT, et un **test de cohérence gabarit ↔ SSOT** (sur le modèle de REQ-EXT-028 a) rougit si une valeur rendue dans le contrat diffère de la constante. 🔴 **`PREAVIS_JOURS` est une constante UNIQUE, jamais indexée sur l'ancienneté** (M-16) : le contrat prévoyait « 30 jours la première année, augmenté d'un mois par année complète, plafond six mois » — la **structure exacte de L.134-11**, poussée au-delà de son maximum légal de trois mois, qui écrivait noir sur blanc que la relation est durable et prend de la valeur avec le temps ; et la SSOT ne portant qu'une valeur, la console aurait notifié 30 jours à un apporteur qui en avait six, mettant Axion-IA en rupture brutale **avec sa propre clause pour preuve**. Le préavis est désormais fixe quelle que soit l'ancienneté, stipulé au titre de L.442-1, II C. com. à l'exclusion de L.134-11 et suivants. Test : **toute fonction calculant un préavis à partir d'une ancienneté, d'une date d'entrée ou d'un nombre d'années → gate rouge**, vue rougir sur un témoin.",
+      "texte": "Les seuils légaux (DAS2 2 400 €, vigilance 5 000 € HT, périodicité 6 mois, seuil de versement minimal, **préavis de résiliation ordinaire 30 j (`PREAVIS_JOURS`, contrat art. 11.1)**, fenêtres `FENETRE_MOIS` attribution (6 mois depuis la décision de Williams du 2026-09-30) et 12 mois parrainage, péremption 90 j) vivent dans une seule SSOT avec source et date ; aucun littéral ailleurs ; un test échoue si une constante n'a pas de source. **La SSOT ne contient AUCUNE constante de gradation ni de délai de contradictoire : un test échoue si `CONTRADICTOIRE_JOURS` ou un seuil de strikes y apparaît** (décision du 2026-09-03). 🔴 **La SSOT ne portait que six littéraux quand le contrat en crée une vingtaine** (P-3) : chacun serait exécuté en dur par un cron et divergerait du contrat à la première modification. Elle est **étendue à TOUS les délais du contrat**, chaque constante nommée d'après son article — `PRISE_DE_CONTACT_JOURS_OUVRES = 2 // art. 3.2`, `CONFIRMATION_TACITE_JOURS = 30 // art. 3.2`, `FILE_FENETRE_REDECLARATION_JOURS = 15 // art. 3.5`, `FILE_EXPIRATION_MOIS = 12 // art. 3.5`, `SUSPENSION_MAX_JOURS = 15 // art. 3.7`, `ANTERIORITE_CLIENT_MOIS = 24` et `ANTERIORITE_DEVIS_MOIS = 6 // art. 3.3`, `PROLONGATION_DEVIS_MOIS = 3 // art. 3.4 (W9)`, `MISE_EN_DEMEURE_JOURS = 15 // art. 11.2`, `REPONSE_CONTESTATION_JOURS = 15 // art. 5.6 et 3.3`, `FORCLUSION_CONTESTATION_MOIS = 12 // art. 5.5`, `CONTESTATION_FACTURE_JOURS = 30 // art. 5.2`, `REPRISE_MOIS = 12 // art. 4.5`, `IMPUTATION_MOIS = 12`, `VERSEMENT_JOURS_OUVRES = 10` et `VERSEMENT_PLAFOND_JOURS = 60 // art. 5.3`, `PALIER_HORS_GRILLE_JOURS = 60 // annexe A1.7`, `MANDAT_DENONCIATION_JOURS = 30 // annexe 2.5`, `CONFIDENTIALITE_ANS = 2 // art. 9`, `FORCE_MAJEURE_MOIS = 3 // art. 15`. Le grep-test est **élargi aux valeurs 2, 3, 6, 15, 24 et 60** hors SSOT, et un **test de cohérence gabarit ↔ SSOT** (sur le modèle de REQ-EXT-028 a) rougit si une valeur rendue dans le contrat diffère de la constante. 🔴 **`PREAVIS_JOURS` est une constante UNIQUE, jamais indexée sur l'ancienneté** (M-16) : le contrat prévoyait « 30 jours la première année, augmenté d'un mois par année complète, plafond six mois » — la **structure exacte de L.134-11**, poussée au-delà de son maximum légal de trois mois, qui écrivait noir sur blanc que la relation est durable et prend de la valeur avec le temps ; et la SSOT ne portant qu'une valeur, la console aurait notifié 30 jours à un apporteur qui en avait six, mettant Axion-IA en rupture brutale **avec sa propre clause pour preuve**. Le préavis est désormais fixe quelle que soit l'ancienneté, stipulé au titre de L.442-1, II C. com. à l'exclusion de L.134-11 et suivants. Test : **toute fonction calculant un préavis à partir d'une ancienneté, d'une date d'entrée ou d'un nombre d'années → gate rouge**, vue rougir sur un témoin.",
       "source": "nouvelle (règle maison SSOT) · BOFiP ACTU-2024-00154 · contrat V1 · synthèse du 2026-09-03, P-3",
       "statut": "active",
       "remplaceePar": null,
@@ -2459,6 +2593,7 @@
       "etape": 12,
       "phase": 0,
       "taches": [
+        "GOV-129",
         "JUR-T02"
       ]
     },
@@ -2690,7 +2825,7 @@
     {
       "id": "REQ-UX-001",
       "domaine": "produit-ux",
-      "texte": "Le dépôt d'un contact depuis un téléphone compte ≤ 8 interactions (taps + champs) de l'accueil à l'écran de confirmation, avec une seule saisie de l'entreprise (nom + ville) et aucun champ SIREN/SIRET obligatoire ; vérifié par le test E2E mobile de REQ-QA-017 ; la mesure chrono sur appareil réel (iPhone, 4G) est ≤ 90 s et consignée (vidéo ou trace Playwright) dans la PR qui livre l'écran de dépôt.",
+      "texte": "Le dépôt d'un contact depuis un téléphone compte ≤ 8 interactions (taps + champs) de l'accueil à l'écran de confirmation, avec une seule saisie de l'entreprise (nom + ville) et aucun champ SIREN/SIRET obligatoire ; vérifié par le test E2E mobile de REQ-QA-017 ; la mesure chrono sur appareil réel (iPhone, 4G) est ≤ 90 s et consignée (vidéo ou trace Playwright) dans la PR qui livre l'écran de dépôt. Amendement W20 (décision de Will du 2026-09-29, docs/chantiers/W20-confirmation-par-email.md §3.2) : « Les quatre coordonnées du contact (nom, fonction, e-mail, téléphone) sont exigées et comptent dans le budget ; le contexte est facultatif et n'y compte pas ; la case d'information de REQ-JUR-008 est présentée cochée par défaut. Décompte de référence : saisie de l'entreprise (1), choix du résultat (2), nom (3), fonction (4), e-mail (5), téléphone (6), bouton « Déposer et prévenir » (7), soit une interaction de marge. » Le décompte est à confirmer sur la maquette UX-P1-40 ; si le passage par la carte Entreprise ajoute un geste (« Déposer »), il reste 8 sans marge.",
       "source": "fonctionnement §4.1-4.2 ; audit-attribution P4 ; audit-outil §12.3 point 1 ; reformulation d'annexe appliquée le 2026-09-03",
       "statut": "active",
       "remplaceePar": null,
@@ -2720,6 +2855,7 @@
         "UX-P0-01",
         "UX-P0-01b",
         "UX-P1-02",
+        "UX-P1-17",
         "UX-P1-43",
         "UX-P3-05"
       ]
@@ -2745,7 +2881,7 @@
     {
       "id": "REQ-UX-004",
       "domaine": "produit-ux",
-      "texte": "Le statut affiché à l'apporteur est dérivé par une fonction pure exhaustive `statutApporteur(EtatAttribution)` ; chaque état interne (dont provisoire, en_attente, invalidée, perdue, expirée, périmée) a un libellé, une couleur et une phrase « prochaine étape et par qui » ; l'ajout d'une valeur d'enum sans libellé fait échouer le typecheck et le test.",
+      "texte": "Le statut affiché à l'apporteur est dérivé par une fonction pure exhaustive `statutApporteur(EtatAttribution)` ; chaque état interne (dont provisoire, en_attente, invalidée, perdue, expirée, périmée) a un libellé, une couleur et une phrase « prochaine étape et par qui » ; l'ajout d'une valeur d'enum sans libellé fait échouer le typecheck et le test. Amendement W20 (décision de Will du 2026-09-29, docs/chantiers/W20-confirmation-par-email.md §3.2) : pour un dépôt en phase de confirmation, le libellé de `statutApporteur` est le badge de REQ-UX-062, et la phrase « prochaine étape » est sa phrase d'aide ; les phrases de REQ-UX-023 ne s'y ajoutent pas, et « Nous vous appelons d'abord (vérification prioritaire) » n'est jamais affichée pour une raison de vérification W20 (HYP-W20-VERIFICATION).",
       "source": "tableaux-de-bord §3.2 ; audit-outil §7 et §8",
       "statut": "active",
       "remplaceePar": null,
@@ -2792,7 +2928,7 @@
     {
       "id": "REQ-UX-007",
       "domaine": "produit-ux",
-      "texte": "« Vérifier une entreprise » retourne un des 5 états (libre, suivie_place_disponible, suivie_file_complete, deja_connue, non_disponible) ; la date « jusqu'au » n'est affichée que si l'attribution est `active` ; l'état ne distingue jamais « cliente » de « en discussion » ; 30 vérifications/jour, la 31e affiche un message et laisse « Déposer » actif.",
+      "texte": "« Vérifier une entreprise » retourne un des 5 états (libre, suivie_place_disponible, suivie_file_complete, deja_connue, non_disponible) ; la date « jusqu'au » n'est affichée que si l'attribution est `active` ; l'état ne distingue jamais « cliente » de « en discussion » ; 30 vérifications/jour, la 31e affiche un message et laisse « Déposer » actif. Amendement W19 (décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §4.2) : Un SIREN pris en charge par un conseiller est rendu à l'apporteur comme un SIREN occupé par un autre apporteur au même stade : même état (`suivie_place_disponible` ou `suivie_file_complete`), même date « jusqu'au », au même moment. Cela ne tranche pas la contradiction 4 ou 5 états, que le gardien-spec règle avant SEC-16.",
       "source": "audit-outil §1.3 et D5 ; anti-abus M1, M2 ; nouvelle (UX-04, UX-09)",
       "statut": "active",
       "remplaceePar": null,
@@ -2915,6 +3051,7 @@
       "etape": null,
       "phase": 1,
       "taches": [
+        "SEC-29",
         "UX-P1-04"
       ]
     },
@@ -2965,13 +3102,18 @@
       "phase": 0,
       "taches": [
         "UX-P0-03",
-        "UX-P3-04"
+        "UX-P1-16",
+        "UX-P1-18",
+        "UX-P1-19",
+        "UX-P2-14",
+        "UX-P3-04",
+        "UX-P3-13"
       ]
     },
     {
       "id": "REQ-UX-019",
       "domaine": "produit-ux",
-      "texte": "Chaque écran de l'espace et de la console a un état vide déclaré (titre, phrase, action principale) ; l'état vide de « Mes entreprises » guide vers le premier dépôt.",
+      "texte": "Chaque écran de l'espace et de la console a un état vide déclaré (titre, phrase, action principale) ; l'état vide de « Mes entreprises » guide vers le premier dépôt. Amendement W19 (décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §4.2) : L'état vide déclaré par écran devient la déclaration des cinq états de REQ-UX-047 (point 3), pour l'espace et la console. `ux-exhaustivite` lit aussi `docs/CONSOLE-ROUTES.md`.",
       "source": "audit-outil §12.3 point 4 ; plan §4.2 (J7)",
       "statut": "active",
       "remplaceePar": null,
@@ -2979,8 +3121,10 @@
       "etape": 7,
       "phase": 0,
       "taches": [
+        "GOV-113",
         "UX-P0-01",
         "UX-P1-08",
+        "UX-P1-16",
         "UX-P1-40",
         "UX-P1-42",
         "UX-P1-43"
@@ -3011,13 +3155,14 @@
       "etape": 8,
       "phase": 1,
       "taches": [
-        "UX-P1-06"
+        "UX-P1-06",
+        "UX-P1-19"
       ]
     },
     {
       "id": "REQ-UX-022",
       "domaine": "produit-ux",
-      "texte": "La file de qualification est triée vérification prioritaire > `aQualifierDepuis` croissant ; le chrono SLA (48 h ouvrées, calendrier fériés France) porte sur `aQualifierDepuis` (posée à l'entrée en provisoire, y compris par promotion), jamais sur `deposeLe`.",
+      "texte": "La file de qualification est triée vérification prioritaire > `aQualifierDepuis` croissant ; le chrono SLA (48 h ouvrées, calendrier fériés France) porte sur `aQualifierDepuis` (posée à l'entrée en provisoire, y compris par promotion), jamais sur `deposeLe`. Amendement W20 (décision de Will du 2026-09-29, docs/chantiers/W20-confirmation-par-email.md §3.2) : `aQualifierDepuis` est posée à l'**entrée dans la liste d'appels** (REQ-DM-062), et non plus au dépôt, pour les dépôts confirmés par e-mail en premier lieu : le SLA de 48 h ouvrées porte sur un appel à passer, pas sur un dépôt que personne n'a à appeler.",
       "source": "audit-outil §8, §9.2 ; anti-abus M2 ; nouvelle (UX-25)",
       "statut": "active",
       "remplaceePar": null,
@@ -3034,7 +3179,7 @@
     {
       "id": "REQ-UX-023",
       "domaine": "produit-ux",
-      "texte": "Côté apporteur, une attribution en qualification affiche l'une des phrases dérivées serveur : « Axion-IA appelle avant le [date] », « Axion-IA a tenté N fois, prochaine tentative le … », « Nous vous appelons d'abord (vérification prioritaire) », « Rendez-vous le … », « Proposition envoyée » ; l'état invalidée affiche un texte non accusatoire avec la date de re-déclaration possible.",
+      "texte": "Côté apporteur, une attribution en qualification affiche l'une des phrases dérivées serveur : « Axion-IA appelle avant le [date] », « Axion-IA a tenté N fois, prochaine tentative le … », « Nous vous appelons d'abord (vérification prioritaire) », « Rendez-vous le … », « Proposition envoyée » ; l'état invalidée affiche un texte non accusatoire avec la date de re-déclaration possible. Amendement W20 (décision de Will du 2026-09-29, docs/chantiers/W20-confirmation-par-email.md §3.2) : pour un dépôt en phase de confirmation, le libellé de `statutApporteur` est le badge de REQ-UX-062, et la phrase « prochaine étape » est sa phrase d'aide ; les phrases de REQ-UX-023 ne s'y ajoutent pas, et « Nous vous appelons d'abord (vérification prioritaire) » n'est jamais affichée pour une raison de vérification W20 (HYP-W20-VERIFICATION).",
       "source": "audit-outil §7 Mes entreprises, §8 SLA ; anti-abus M1",
       "statut": "active",
       "remplaceePar": null,
@@ -3459,7 +3604,7 @@
     {
       "id": "REQ-QA-016",
       "domaine": "qualite-ci-devops",
-      "texte": "Les E2E de l'espace apporteur s'executent sur les projets Playwright mobile-safari (iPhone 14 Pro) et mobile-chrome (Pixel 7) uniquement ; ceux de la console sur chromium desktop ; un spec d'espace sans projet mobile fait rougir la CI. ⚠️ Cette restriction porte sur les PARCOURS fonctionnels : elle ne s'applique pas aux passes d'accessibilite de REQ-UX-017, qui sont un controle de rendu et s'executent sur les deux profils, iPhone et desktop.",
+      "texte": "Les E2E de l'espace apporteur s'executent sur les projets Playwright mobile-safari (iPhone 14 Pro) et mobile-chrome (Pixel 7) uniquement ; ceux de la console sur chromium desktop ; un spec d'espace sans projet mobile fait rougir la CI. ⚠️ Cette restriction porte sur les PARCOURS fonctionnels : elle ne s'applique pas aux passes d'accessibilite de REQ-UX-017, qui sont un controle de rendu et s'executent sur les deux profils, iPhone et desktop. Amendement W19 (décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §4.2) : Le cadre de console à 375 px s'exécute aussi sur mobile-safari et mobile-chrome. Un spec du cadre de console sans projet mobile fait rougir la CI. Lot transverse « confort de la console pour tous les rôles » ; aucun parcours de conseiller n'existe dans Partners (question 22).",
       "source": "tableaux-de-bord §1 · audit-outil-bout-en-bout §12.3 + QA-F19",
       "statut": "active",
       "remplaceePar": null,
@@ -3468,6 +3613,7 @@
       "phase": 0,
       "taches": [
         "QA-T16",
+        "QA-T33",
         "UX-P0-03"
       ]
     },
@@ -4047,7 +4193,8 @@
         "GOV-013",
         "GOV-071",
         "GOV-106",
-        "GOV-109"
+        "GOV-109",
+        "GOV-114"
       ]
     },
     {
@@ -4141,7 +4288,8 @@
       "etape": 11,
       "phase": -1,
       "taches": [
-        "GOV-015"
+        "GOV-015",
+        "T-ARG-041"
       ]
     },
     {
@@ -4424,6 +4572,7 @@
       "phase": 0,
       "taches": [
         "JUR-T04",
+        "JUR-T32",
         "JUR-T35"
       ]
     },
@@ -4439,7 +4588,8 @@
       "phase": 2,
       "taches": [
         "CPL-T12",
-        "T-ARG-010"
+        "T-ARG-010",
+        "T-ARG-042"
       ]
     },
     {
@@ -4712,6 +4862,20 @@
       ]
     },
     {
+      "id": "REQ-INT-060",
+      "domaine": "integration",
+      "texte": "**L'envoi différé et le rebond.** Un job « tout ce qui est dû à l'instant t » (REQ-QA-027) envoie les demandes échues par l'émetteur d'INT-T10, qui retient l'envoi sans le drapeau DMARC (REQ-INT-022) ou vers une adresse supprimée (REQ-INT-023). Le webhook de rebond rattache le rebond à sa demande par l'identifiant du message, passe la demande en `rebond`, et déclenche la notification informative de l'apporteur (clé de la table SSOT des notifications). Tests : drapeau faux → aucune requête au relais, demande `retenue` visible ; rebond signé → `rebond` et une notification ; rebond mal signé → rien ; worker arrêté puis relancé → rattrapage sans doublon.",
+      "source": "décision de Will du 2026-09-29, W20 (docs/chantiers/W20-confirmation-par-email.md §3.1), passe gardien-spec W20 portée par GOV-112 (8)(b) ; transverse : aucun module ni étape",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": null,
+      "etape": null,
+      "phase": 1,
+      "taches": [
+        "INT-T40"
+      ]
+    },
+    {
       "id": "REQ-CPL-027",
       "domaine": "Annexe — passe de dédoublonnage (à appliquer par le Gardien du spec, GOV-001)",
       "texte": "`actif` (premier dépôt confirmé) et `dormant` (> 60 j sans dépôt, paramètre SSOT) sont **dérivés** par fonction pure, jamais stockés, et restent des indicateurs de **console** : **aucun message n'est envoyé à un apporteur en raison de son inactivité** (REQ-JUR-033, qui remplace toute relance de dormance par la lettre du réseau, identique pour tous, à intervalle fixe, dont le job d'envoi ne reçoit aucun filtre sur la date du dernier dépôt). La « relance de dormance » est retirée du produit le 2026-09-03.",
@@ -4741,6 +4905,22 @@
       "taches": [
         "INT-T23",
         "INT-T24"
+      ]
+    },
+    {
+      "id": "REQ-CPL-030",
+      "domaine": "complétude (REQ-CPL)",
+      "texte": "Une personne n'est pas à la fois apporteur non résilié et `conseiller_salarie` actif. Contrôle croisé de l'empreinte de courriel à la création d'un utilisateur de console, à tout passage vers `conseiller_salarie`, et à la création ou à l'activation d'un apporteur. Une candidature correspondant à un conseiller actif est BLOQUÉE jusqu'à revue humaine : aucune activation, aucun DocuSeal. Un apporteur embauché voit son contrat résilié avant l'activation de son compte ; ses droits acquis (art. 4) sont versés par la chaîne des apporteurs. Ce contrôle est un signal, pas une protection ; s'y ajoute une déclaration de conflit d'intérêts accusée à l'invitation. Aucune réponse ne révèle la population.",
+      "source": "décision de Will du 2026-09-29, W19 (docs/chantiers/W19-conseillers-salaries.md §4.1) ; module et étape repris de REQ-SEC-023",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": 21,
+      "etape": 12,
+      "phase": 1,
+      "taches": [
+        "DM-32",
+        "JUR-T33",
+        "SEC-33"
       ]
     },
     {
@@ -4790,7 +4970,7 @@
     {
       "id": "REQ-UX-038",
       "domaine": "Annexe — passe de dédoublonnage (à appliquer par le Gardien du spec, GOV-001)",
-      "texte": "Tout dépôt reçoit un accusé immédiat ; à J+5 ouvrés sans qualification, un e-mail automatique non accusatoire part **une seule fois** (« nous n'avons pas encore pu joindre … »).",
+      "texte": "Tout dépôt reçoit un accusé immédiat ; à J+5 ouvrés sans qualification, un e-mail automatique non accusatoire part **une seule fois** (« nous n'avons pas encore pu joindre … »). Amendement W20 (décision de Will du 2026-09-29, docs/chantiers/W20-confirmation-par-email.md §3.2) : l'e-mail « nous n'avons pas encore pu joindre » part à J+5 ouvrés **sans confirmation**, par clic ou par appel, et non plus « sans qualification » (question 13).",
       "source": "juges ; tableaux-de-bord §4.2 « le silence tue le réseau »",
       "statut": "active",
       "remplaceePar": null,
@@ -4833,7 +5013,7 @@
     {
       "id": "REQ-UX-042",
       "domaine": "produit-ux",
-      "texte": "L'écran **Statistiques** de la console rend, sur une période choisie : le nombre de **candidatures par canal** (REQ-CPL-015) ; le nombre d'**apporteurs par statut** (REQ-QA-004) ; la **part d'apporteurs actifs** parmi les apporteurs sous contrat, `actif`/`dormant` venant de la fonction de REQ-CPL-027 et n'étant recalculés nulle part ailleurs ; le **CA généré** et les **commissions** par apporteur, par lignée et par équipe (REQ-DM-045) ; et la **courbe mensuelle** de chacun de ces indicateurs. Les agrégats sont des fonctions pures du domaine, horloge injectée (REQ-CPL-013), montants en centimes HT (REQ-DM-001) ; les montants par apporteur sont réservés aux rôles que la matrice autorise, `lecteur` exclu (glossaire, rôle `lecteur`). Décision W15 (3), 2026-09-25. Tests : jeu de fixture à totaux connus → chaque indicateur égal à la valeur attendue ; équipes chevauchantes → leurs totaux ne sont jamais additionnés entre eux ; `lecteur` → aucune clé de montant par apporteur dans le DTO.",
+      "texte": "L'écran **Statistiques** de la console rend, sur une période choisie : le nombre de **candidatures par canal** (REQ-CPL-015) ; le nombre d'**apporteurs par statut** (REQ-QA-004) ; la **part d'apporteurs actifs** parmi les apporteurs sous contrat, `actif`/`dormant` venant de la fonction de REQ-CPL-027 et n'étant recalculés nulle part ailleurs ; le **CA généré** et les **commissions** par apporteur, par lignée et par équipe (REQ-DM-045) ; et la **courbe mensuelle** de chacun de ces indicateurs. Les agrégats sont des fonctions pures du domaine, horloge injectée (REQ-CPL-013), montants en centimes HT (REQ-DM-001) ; les montants par apporteur sont réservés aux rôles que la matrice autorise, `lecteur` exclu (glossaire, rôle `lecteur`). Décision W15 (3), 2026-09-25. Tests : jeu de fixture à totaux connus → chaque indicateur égal à la valeur attendue ; équipes chevauchantes → leurs totaux ne sont jamais additionnés entre eux ; `lecteur` → aucune clé de montant par apporteur dans le DTO. Amendement W19 (décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §4.2) : dimension « origine » dans chaque agrégat, onglets séparés ; le lecteur ne voit que des agrégats de conseillers, avec masquage sous 3.",
       "source": "décision de Will du 2026-09-25, W15 (point 3)",
       "statut": "active",
       "remplaceePar": null,
@@ -4842,7 +5022,8 @@
       "phase": 3,
       "taches": [
         "DM-29",
-        "UX-P3-07"
+        "UX-P3-07",
+        "UX-P3-13"
       ]
     },
     {
@@ -4899,6 +5080,152 @@
       "phase": 3,
       "taches": [
         "UX-P3-12"
+      ]
+    },
+    {
+      "id": "REQ-UX-047",
+      "domaine": "produit-ux",
+      "texte": "Toute tâche qui livre un écran de Partners (espace, console) porte dans son acceptance les huit points suivants ; le conseiller n'a aucun écran dans Partners (question 22), ses écrans sont ceux du CRM Pro, hors de cette exigence. (1) Le geste principal et son budget, lus dans la SSOT `BUDGETS_UX` (`src/domain/seuils/ssot.ts`) : consultation ≤ 3 interactions, saisie ≤ 8 ; une exigence existante plus stricte prime (REQ-UX-001, REQ-UX-021) ; mesure par la fixture QA-T33. (2) Première action : visible sans défilement à 375×667 (espace, console mobile) ou 1280×800 (console), atteinte en ≤ 3 tabulations, cliquable en ≤ 2 s sur le profil réseau « 4G ralentie » défini dans `BUDGETS_UX` (débit et latence, sourcés, posés par GOV-113). (3) Cinq états : nominal, vide qui montre le geste suivant, chargement, erreur qui dit quoi faire, accès refusé (REQ-UX-019 amendée). (4) Libellés tirés de la micro-copy SSOT du public et des termes du glossaire, sans identifiant technique. (5) Accessibilité et cibles : REQ-UX-017 (espace) et REQ-UX-018 (console) s'appliquent telles quelles, dans les deux thèmes. (6) Maquette produite par le poste `ux-redaction` et validée dans `docs/maquettes/VALIDATION.md`. (7) Écrans principaux, déclarés par la colonne « écran principal » de `docs/CONSOLE-ROUTES.md` et de `docs/ESPACE-ROUTES.md` : test de premier usage ; une personne du public, qui n'a jamais vu l'outil, reçoit une consigne d'une phrase ; on consigne le temps de première action (≤ 10 s), le temps total dans le budget, les hésitations et un verbatim ; par défaut (question 17) : si Williams fournit une personne du public, le test est joué par elle, sinon par un agent qui n'a pas écrit l'écran, et la trace consignée dit qu'aucune personne du public n'était disponible. (8) E-mails : un seul appel à l'action, libellé tiré de la SSOT, lien qui mène à l'écran utile.",
+      "source": "décision de Will du 2026-09-29, W19 (docs/chantiers/W19-conseillers-salaries.md §4.1), lot « confort de la console pour tous les rôles » ; transverse : aucun module ni étape",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": null,
+      "etape": null,
+      "phase": 1,
+      "taches": [
+        "EXT-T01",
+        "EXT-T02a",
+        "EXT-T02b",
+        "EXT-T03",
+        "EXT-T04",
+        "EXT-T05",
+        "EXT-T06",
+        "EXT-T07",
+        "EXT-T08",
+        "EXT-T09",
+        "EXT-T10",
+        "EXT-T11",
+        "GOV-113",
+        "JUR-T36",
+        "QA-T33",
+        "SEC-29",
+        "SEC-30",
+        "T-ARG-035",
+        "UX-P1-01",
+        "UX-P1-02",
+        "UX-P1-03",
+        "UX-P1-04",
+        "UX-P1-05",
+        "UX-P1-06",
+        "UX-P1-07",
+        "UX-P1-08",
+        "UX-P1-09",
+        "UX-P1-10",
+        "UX-P1-11",
+        "UX-P1-12",
+        "UX-P1-13",
+        "UX-P1-14",
+        "UX-P1-15",
+        "UX-P1-16",
+        "UX-P1-18",
+        "UX-P1-19",
+        "UX-P1-20",
+        "UX-P1-42",
+        "UX-P2-01",
+        "UX-P2-02",
+        "UX-P2-03",
+        "UX-P2-04",
+        "UX-P2-05",
+        "UX-P2-06",
+        "UX-P2-07",
+        "UX-P2-08",
+        "UX-P2-09",
+        "UX-P2-10",
+        "UX-P2-12",
+        "UX-P2-14",
+        "UX-P2-15",
+        "UX-P3-01",
+        "UX-P3-02",
+        "UX-P3-03",
+        "UX-P3-04",
+        "UX-P3-05",
+        "UX-P3-06",
+        "UX-P3-07",
+        "UX-P3-10",
+        "UX-P3-12",
+        "UX-P3-13"
+      ]
+    },
+    {
+      "id": "REQ-UX-048",
+      "domaine": "produit-ux",
+      "texte": "Carte des routes unique pour la console (`docs/CONSOLE-ROUTES.md`) : route, écran, rôle, phase et statut (prévue ou livrée), REQ, maquette. Navigation DÉRIVÉE des droits `ecran:*` de la matrice. Bureau : ≤ 7 entrées de premier niveau groupées par métier ; moins de 768 px : barre inférieure de ≤ 4 entrées plus un menu, sans défilement horizontal à 320 px. Accueil par rôle ET par phase : la première route livrée de la liste de préférence du rôle ; à défaut, un état vide guidant qui dit ce qui arrive et quand ; jamais de 404. Connexion propre à la console : lien et code à 6 chiffres, page « lien déjà utilisé » ; elle mène à l'accueil ou à l'URL demandée (chemin relatif `/console/`) en une action. Écran d'accès refusé qui explique quoi faire. Recherche globale bornée par la matrice. Page « Votre rôle » dérivée du GLOSSAIRE §7.",
+      "source": "décision de Will du 2026-09-29, W19 (docs/chantiers/W19-conseillers-salaries.md §4.1) ; module repris de REQ-UX-018 (console), sans étape",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": 17,
+      "etape": null,
+      "phase": 1,
+      "taches": [
+        "EXT-T02a",
+        "SEC-29",
+        "SEC-30",
+        "T-ARG-035",
+        "UX-P1-06",
+        "UX-P1-07",
+        "UX-P1-12",
+        "UX-P1-13",
+        "UX-P1-16",
+        "UX-P1-18",
+        "UX-P1-20",
+        "UX-P2-03",
+        "UX-P2-05",
+        "UX-P3-04",
+        "UX-P3-05"
+      ]
+    },
+    {
+      "id": "REQ-UX-060",
+      "domaine": "produit-ux",
+      "texte": "**Le formulaire de dépôt et son message.** Le formulaire porte l'entreprise pré-remplie (SIRET affiché, jamais saisi deux fois), le nom et prénom, la fonction, l'e-mail et le téléphone du contact, exigés côté serveur ; le contexte est facultatif et court. Au-dessus du bouton, un message informatif non bloquant, sans fenêtre modale, dit qui va recevoir l'e-mail, dans quel délai et pourquoi ; le bouton se nomme « Déposer et prévenir <Prénom Nom> ». Après l'envoi du formulaire, l'écran dit à quelle heure l'e-mail partira et propose « Annuler » et « Corriger » jusque-là. Tous les textes viennent de la SSOT de micro-copy et passent la garde lexicale (REQ-JUR-037) : aucun texte n'est une consigne, et un champ exigé n'est jamais marqué « obligatoire » (mot interdit par REQ-JUR-037 ; seuls les champs facultatifs portent « (facultatif) »). Budget : REQ-UX-001 amendée.",
+      "source": "décision de Will du 2026-09-29, W20 (docs/chantiers/W20-confirmation-par-email.md §3.1), passe gardien-spec W20 portée par GOV-112 (8)(b) ; module et étape repris de REQ-UX-001",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": 9,
+      "etape": 7,
+      "phase": 1,
+      "taches": [
+        "UX-P1-41",
+        "UX-P1-43"
+      ]
+    },
+    {
+      "id": "REQ-UX-061",
+      "domaine": "produit-ux",
+      "texte": "**La page de réponse du contact.** Page publique, hors session, mobile d'abord, qui passe REQ-UX-017 (cibles de 48 px, texte de 18 px, 320 px sans défilement horizontal). Deux actions visibles sans défilement ; « Non » demande un second geste explicite ; information de l'art. 14 et lien d'opposition sur la page. Cinq états : question posée, réponse enregistrée, déjà répondu, lien inconnu ou expiré (même état, sans oracle), erreur réseau avec reprise.",
+      "source": "décision de Will du 2026-09-29, W20 (docs/chantiers/W20-confirmation-par-email.md §3.1), passe gardien-spec W20 portée par GOV-112 (8)(b) ; module et étape repris de REQ-UX-022",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": 12,
+      "etape": 8,
+      "phase": 1,
+      "taches": [
+        "UX-P1-41",
+        "UX-P1-42"
+      ]
+    },
+    {
+      "id": "REQ-UX-062",
+      "domaine": "produit-ux",
+      "texte": "**Le badge d'état de la confirmation (exigence d'expérience de Williams, 2026-09-29).** L'apporteur n'a rien à retenir : dans « Mes entreprises » et sur la carte du dépôt, chaque dépôt en phase de confirmation porte **un seul** badge, avec sa date et au plus une action, dérivé serveur par une fonction pure exhaustive, horloge injectée (HYP-W20-BADGE) : 🟢 « Confirmée » ; 🟡 « En attente de confirmation · réservée pour vous jusqu'au <date> », date en toutes lettres dans le fuseau de l'apporteur, qui passe seul à 🟢 le jour affiché ; pour une demande signalée (REQ-SEC-060), 🟡 « En attente de confirmation — Axion-IA va appeler votre contact », sans date ni phrase d'aide, le dépôt étant appelé en priorité ; 🔴 « E-mail non reçu par le contact », action unique « Corriger l'adresse », après laquelle l'e-mail repart, le délai démarre et l'apporteur est notifié (UX-P1-10) ; ⚪ « Non confirmée par le contact » ; après une libération (REQ-DM-063), ⚪ « Réservation terminée · l'entreprise est de nouveau disponible », sans date, sans action ni phrase d'aide, qui ne dit ni la raison, ni la vérification, ni le nombre d'appels. Une seule phrase d'aide : « Sans réponse de votre contact, l'entreprise reste réservée pour vous 30 jours après la réception de notre e-mail. » Textes dans la SSOT de micro-copy, garde lexicale verte (aucune consigne, aucun « obligatoire ») ; chaque badge a son libellé, la couleur n'est jamais seule porteuse du sens. Aucune raison de vérification, aucun tirage d'échantillon, aucun clic non retenu n'est lisible dans le badge : le libellé de la demande signalée dit seulement qu'un appel est attendu. Cinq états par écran. Tests : un cas par badge ; demande signalée → libellé d'appel attendu, sans date, et aucune bascule vers 🟢 à trente jours ; demande signalée libérée → ⚪ « Réservation terminée », sans date ni action ; bascule 🟡 → 🟢 à l'échéance, horloge figée, y compris une échéance à 23 h 59 ; date écrite identique au changement d'heure ; rebond → 🔴 ; correction → 🟡 avec la nouvelle date ; une valeur d'état sans badge fait échouer le typecheck.",
+      "source": "décision de Will du 2026-09-29, W20 (docs/chantiers/W20-confirmation-par-email.md §3.1), passe gardien-spec W20 portée par GOV-112 (8)(b) ; module et étape repris de REQ-UX-022",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": 12,
+      "etape": 8,
+      "phase": 1,
+      "taches": [
+        "UX-P1-05"
       ]
     },
     {
@@ -4971,6 +5298,82 @@
       "taches": [
         "DM-29",
         "UX-P3-07"
+      ]
+    },
+    {
+      "id": "REQ-DM-048",
+      "domaine": "domaine-donnees",
+      "texte": "Le porteur d'une attribution est exclusif : soit un apporteur, soit un utilisateur de console de rôle `conseiller_salarie` non désactivé. Le rôle est vérifié par un DÉCLENCHEUR à l'INSERT et à l'UPDATE du porteur ; un CHECK ne suffit pas, le rôle vit dans une autre table. Une seule table `attributions`, avec CHECK XOR, un index d'occupation unique par SIREN et l'horodatage de transaction (REQ-DM-005), communs aux deux porteurs. Vue de l'espace et de l'API 1, l'attribution du conseiller suit la même chronologie, les mêmes états visibles et les mêmes délais que celle d'un apporteur (HYP-W19-CYCLE) ; sa fenêtre d'attribution (`FENETRE_MOIS`, SSOT) n'est pas reconduite ; W9 s'applique à l'identique ; ce qui diffère en interne (aucun qualifieur, aucune confirmation par un apporteur, aucun rang) ne se voit jamais de l'espace. Le conseiller n'entre jamais en file : CHECK `rang_attente IS NULL OR apporteur_id IS NOT NULL` ; une file d'apporteurs se forme derrière sa prise en charge comme derrière un apporteur (art. 3.5). Pour la non-reconduction et le délai d'attente, la Société compte comme UN seul porteur : aucun conseiller ne reprend un SIREN libéré depuis moins de `CARENCE_CONSEILLER_JOURS`, quel que soit le porteur sortant ; le SIREN est aussi fermé aux conseillers pendant la fenêtre de redéclaration d'un rang 1, et pendant `RESERVE_APRES_ACTE_APPORTEUR_JOURS` après une vérification ou un dépôt refusé d'un apporteur. Limites par conseiller et par Société (HYP-W19-LIMITES). Une prise en charge ne naît que dans Partners, par la console admin ou par l'API 3 ; aucun statut du CRM Pro n'occupe un SIREN (HYP-W19-SOURCE, question 22).",
+      "source": "décision de Will du 2026-09-29, W19 (docs/chantiers/W19-conseillers-salaries.md §4.1) ; la durée de la fenêtre suit la décision de Williams du 2026-09-30 (6 mois, art. 3.4 al. 1), d'où la référence à la SSOT plutôt qu'à un chiffre ; module et étape repris de REQ-DM-005",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": 9,
+      "etape": 7,
+      "phase": 1,
+      "taches": [
+        "DM-07",
+        "DM-30",
+        "INT-T28",
+        "JUR-T31",
+        "QA-T31",
+        "SEC-34",
+        "UX-P2-12"
+      ]
+    },
+    {
+      "id": "REQ-DM-060",
+      "domaine": "domaine-donnees",
+      "texte": "**La demande de confirmation par e-mail.** Tout dépôt d'un apporteur reçu par le serveur crée, dans la même transaction, une demande de confirmation liée à l'attribution. Elle part par e-mail `DELAI_AVANT_ENVOI_CONFIRMATION_MINUTES` après l'horodatage du dépôt (SSOT), vers l'adresse saisie pour le contact et jamais une autre. Pendant ce délai, l'apporteur peut annuler (attribution `annulee`, entreprise libérée, aucune autre conséquence) ou corriger le contact et le contexte (révision tracée, `deposeeAt` inchangé). « Vérifier une entreprise » ne crée jamais de demande ; une prise en charge par un conseiller salarié non plus (HYP-W20-SALARIES). États de la demande, enum fermé : `planifiee`, `annulee`, `envoyee`, `retenue` (envoi retenu par le relais, REQ-INT-023), `rebond`, `repondue_oui`, `repondue_non`, `clic_non_retenu`, `opposee`, `expiree`. Chaque changement écrit un événement dans la même transaction. Tests : annulation à T+14 min → `annulee`, aucun envoi ; T+16 min → envoi unique ; deux passages du job → un seul envoi ; « Vérifier » → aucune demande.",
+      "source": "décision de Will du 2026-09-29, W20 (docs/chantiers/W20-confirmation-par-email.md §3.1), passe gardien-spec W20 portée par GOV-112 (8)(b) ; module et étape repris de REQ-DM-008",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": 12,
+      "etape": 8,
+      "phase": 1,
+      "taches": [
+        "DM-40"
+      ]
+    },
+    {
+      "id": "REQ-DM-061",
+      "domaine": "domaine-donnees",
+      "texte": "**La réponse du contact.** Un « Oui » retenu confirme l'attribution (source `courriel`) ; un « Non » confirmé en second geste vaut `non_confirme` (REQ-DM-008, art. 3.7), avec les mêmes effets qu'au téléphone. La réponse est journalisée avec sa date, son destinataire et ses termes (libellé du bouton et version du texte de la page), et l'extrait en est communiqué à l'apporteur sur demande. La première réponse fait foi ; les suivantes affichent « déjà enregistrée » sans rien écrire. **Un « Oui » sur une demande signalée** (qui porte une raison de vérification de REQ-SEC-060 à l'instant du clic, dont le clic depuis la même empreinte d'IP qu'une session récente de l'apporteur) **n'est pas retenu** : la demande passe en `clic_non_retenu`, le clic est journalisé comme indice, l'attribution reste `provisoire` et part en tête de la liste d'appels ; seule une Qualification `confirme` la confirme (HYP-W20-SOURCE). Un « Non » confirmé en second geste est pris en compte sur une demande signalée comme sur une autre. Tests : Oui → `active` et `confirmeeAt` ; Non (second geste) → `invalidee` et entrée console, **aucune suspension automatique** ; GET seul → rien ; double POST → une seule réponse ; clic depuis l'empreinte de l'apporteur → `provisoire`, tête de liste ; adresse webmail contrôlée par l'apporteur et « Oui » depuis une autre IP → `provisoire`, tête de liste, `premierContactAt` non posé ; « Non » en second geste sur une demande signalée → `invalidee`.",
+      "source": "décision de Will du 2026-09-29, W20 (docs/chantiers/W20-confirmation-par-email.md §3.1), passe gardien-spec W20 portée par GOV-112 (8)(b) ; module et étape repris de REQ-DM-008",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": 12,
+      "etape": 8,
+      "phase": 1,
+      "taches": [
+        "DM-41"
+      ]
+    },
+    {
+      "id": "REQ-DM-062",
+      "domaine": "domaine-donnees",
+      "texte": "**La liste « À appeler aujourd'hui ».** Un dépôt `provisoire` entre dans la liste d'appels s'il est tiré dans l'échantillon, s'il fait partie des premiers dépôts d'un nouvel apporteur, si sa demande est en rebond non corrigé, si elle est restée sans réponse `CONFIRMATION_SANS_REPONSE_JOURS_OUVRES` après l'envoi, ou s'il porte une raison de vérification (REQ-SEC-060). Il en sort à la première réponse (clic retenu ou qualification) ; un clic non retenu ne l'en fait pas sortir, et un dépôt signalé n'en sort que par une qualification concluante ou par sa libération (REQ-DM-063). La liste est triée par priorité : raison de vérification, puis rebond, puis premiers dépôts et critères de tri de revue humaine, puis sans réponse, puis échantillon ; à priorité égale, `aQualifierDepuis` croissant. Le tri est une fonction pure, horloge injectée. Tests : un cas par entrée ; ordre de tri ; un dépôt confirmé par clic n'y figure jamais ; un dépôt libéré n'y figure plus.",
+      "source": "décision de Will du 2026-09-29, W20 (docs/chantiers/W20-confirmation-par-email.md §3.1), passe gardien-spec W20 portée par GOV-112 (8)(b) ; module et étape repris de REQ-DM-008",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": 12,
+      "etape": 8,
+      "phase": 1,
+      "taches": [
+        "DM-43"
+      ]
+    },
+    {
+      "id": "REQ-DM-063",
+      "domaine": "domaine-donnees",
+      "texte": "**La libération d'une demande signalée et la carence de redépôt (réponse de Williams du 2026-09-29 à la question 19, arbitrages de -d7 sur sa délégation le même jour).** Une attribution `provisoire` dont la demande de confirmation est signalée (REQ-SEC-060) et qui n'a reçu aucune Qualification `confirme` ni `non_confirme` est libérée, par le passage « tout ce qui est dû à l'instant t » (REQ-QA-027), horloge injectée, au premier des deux termes : la `LIBERATION_SIGNALEE_INJOIGNABLE_MAX`-ième Qualification `injoignable` (= 3, SSOT) ou `LIBERATION_SIGNALEE_JOURS` (= 45, SSOT) jours après l'envoi effectif de la première demande de l'attribution, qu'une correction d'adresse ne fait pas repartir. Dans la même transaction : attribution `perimee` par l'événement `liberee_sans_confirmation`, distinct de la péremption de REQ-DM-007 (`peremptionAt` reste null) ; demande `expiree`, jetons révoqués ; entreprise de nouveau disponible, file d'attente comprise ; notification neutre à l'apporteur (table SSOT des notifications, `faitCourirUnDelai: false`, garde lexicale). **Aucune sanction** : aucune suspension, aucune Anomalie, aucune entrée dans le score de SEC-14, rien d'imputé à personne ; la notification ne dit ni la raison ni la vérification. **Carence** (HYP-W20-CARENCE-REDEPOT) : pendant `CARENCE_REDEPOT_APRES_LIBERATION_JOURS` (= 30, SSOT) jours après la libération, ou `CARENCE_REDEPOT_APRES_SECONDE_LIBERATION_JOURS` (= 90, SSOT) jours après une deuxième libération du même couple, le même apporteur ne peut pas déposer la même entreprise (SIREN) ; le serveur refuse sans rien écrire ni horodater, par un prédicat pur dérivé des libérations, sans valeur nouvelle d'`IssueDepot` ni de `MotifRefusDepot` (présentation : question 20, tranchée (arbitrage -d7 du 2026-09-29), portée par UX-P1-02 et UX-P1-01) ; les autres apporteurs ne sont pas concernés ; aucune sanction, texte neutre. Passé la carence, un nouveau dépôt suit les règles ordinaires. Tests, horloge figée : deux `injoignable` → rien ; le troisième → libérée au passage suivant, une seule fois ; envoi à J sans appel : J+45 moins une minute → rien, J+45 → libérée ; `ne_se_souvient_pas` ×3 → rien ; appel `confirme` à J+40 → `active`, aucune libération ; demande non signalée, trois `injoignable` → aucune libération ; correction d'adresse à J+30 → libération toujours à J+45 ; libération → aucune Anomalie, aucune suspension, aucun signal, une seule notification ; deux passages → un seul événement ; redépôt du même apporteur à J+29 après la libération → refusé, rien d'écrit, aucun horodatage ; à J+30 → nouvelle attribution `provisoire` et nouvelle demande ; deuxième libération du même couple → refus à J+89, dépôt à J+90 ; un autre apporteur dépose la même entreprise le jour de la libération → accepté ; même apporteur, autre SIREN → accepté ; même SIREN, autre établissement → refusé pendant la carence ; le refus n'ouvre ni Anomalie, ni suspension, ni signal.",
+      "source": "décision de Will du 2026-09-29, W20 (docs/chantiers/W20-confirmation-par-email.md §3.1), passe gardien-spec W20 portée par GOV-112 (8)(b) ; module et étape repris de REQ-DM-042",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": 12,
+      "etape": 8,
+      "phase": 1,
+      "taches": [
+        "DM-13"
       ]
     },
     {
@@ -5262,7 +5665,7 @@
     {
       "id": "REQ-EXT-020",
       "domaine": "extensions du 2026-09-03 (REQ-EXT)",
-      "texte": "Si la prolongation de fenêtre est retenue (HYP-W9) : une attribution dont un devis est `en cours` au terme des 12 mois est prolongée **une seule fois de 3 mois**, automatiquement, les deux parties étant notifiées ; la prolongation est journalisée et visible dans la fiche.",
+      "texte": "Si la prolongation de fenêtre est retenue (HYP-W9) : une attribution dont un devis est `en cours` au terme de la fenêtre d'attribution (`FENETRE_MOIS`) est prolongée **une seule fois de 3 mois**, automatiquement, les deux parties étant notifiées ; la prolongation est journalisée et visible dans la fiche.",
       "source": "EXTENSIONS §3.3",
       "statut": "active",
       "remplaceePar": null,
@@ -5467,6 +5870,7 @@
       "etape": 7,
       "phase": 0,
       "taches": [
+        "GOV-114",
         "JUR-T26"
       ]
     },
@@ -5512,6 +5916,7 @@
         "GOV-071",
         "GOV-106",
         "GOV-109",
+        "GOV-114",
         "JUR-T26",
         "UX-P1-41"
       ]
@@ -5597,9 +6002,75 @@
       ]
     },
     {
+      "id": "REQ-JUR-043",
+      "domaine": "juridique",
+      "texte": "Aucun écran, e-mail, notification, document ni export destiné à un apporteur ne nomme, ne compare ni ne mesure un conseiller salarié. Exceptions EXPLICITES, par défaut et soumises à Williams (question 14) : le contrat (`docs/contrat/**`), dont l'art. 3.5 amendé dit, en termes généraux et sans jamais désigner l'occupant d'une entreprise donnée, qu'elle peut être déjà prise « par un autre apporteur ou par la Société ou ses préposés », écrit en toutes lettres pour ne pas se confondre avec les « préposés » de l'apporteur de l'art. 1 ; et la notice RGPD de l'apporteur, qui décrit la finalité « contrôle d'incompatibilité avec le personnel de la Société » sans nommer personne. Aucun tableau de console ne classe ensemble apporteurs et conseillers ; seuls des totaux par origine sont admis. Aucune action d'un conseiller ne produit de message vers un apporteur.",
+      "source": "décision de Will du 2026-09-29, W19 (docs/chantiers/W19-conseillers-salaries.md §4.1) ; transverse : aucun module ni étape",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": null,
+      "etape": null,
+      "phase": 1,
+      "taches": [
+        "GOV-114",
+        "JUR-T32",
+        "JUR-T33",
+        "UX-P1-17",
+        "UX-P2-13"
+      ]
+    },
+    {
+      "id": "REQ-JUR-044",
+      "domaine": "juridique",
+      "texte": "L'acte d'un conseiller n'emprunte ni le vocabulaire, ni le formulaire, ni les issues de l'apporteur. Console : « prendre en charge une entreprise », événement `prise_en_charge_par_la_societe`, enum `IssuePriseEnCharge` distinct d'`IssueDepot` ; jamais « déposer », « déclarer », « réservée » ni « commission ». API 3 et CRM Pro : le même vocabulaire (« prendre en charge », « à vous », « non disponible »), exigé par l'ADR INT-T28 pour le rôle CRM ; aucune route ni aucun champ de l'API 3 n'emprunte le vocabulaire de l'apporteur. Au contrat, l'art. 3.5 amendé nomme « la Société ou ses préposés » à côté des autres apporteurs, en termes généraux ; l'acte d'un préposé n'y est jamais « une déclaration ». Côté apporteur, l'issue est celle du concours entre apporteurs (question 2) ; c'est côté console que le vocabulaire diffère.",
+      "source": "décision de Will du 2026-09-29, W19 (docs/chantiers/W19-conseillers-salaries.md §4.1) ; transverse : aucun module ni étape",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": null,
+      "etape": null,
+      "phase": 1,
+      "taches": [
+        "DM-30",
+        "INT-T28",
+        "JUR-T31",
+        "SEC-34",
+        "UX-P2-15"
+      ]
+    },
+    {
+      "id": "REQ-JUR-045",
+      "domaine": "juridique",
+      "texte": "Aucune rémunération de salarié, dans Partners comme dans axion-ia, n'est indexée sur l'activité, le volume ou la performance des apporteurs. Le fait générateur du variable d'un conseiller est une attribution qu'il porte lui-même.",
+      "source": "décision de Will du 2026-09-29, W19 (docs/chantiers/W19-conseillers-salaries.md §4.1), question 1 ; transverse : aucun module ni étape",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": null,
+      "etape": null,
+      "phase": 2,
+      "taches": [
+        "T-ARG-040"
+      ]
+    },
+    {
+      "id": "REQ-JUR-060",
+      "domaine": "juridique",
+      "texte": "**Ce que dit l'e-mail au contact.** L'e-mail est envoyé depuis une adresse humaine d'un domaine authentifié (REQ-INT-022). Il nomme l'apporteur (prénom et nom), l'entreprise et le contexte s'il existe, sans date du contact (REQ-JUR-040) ; il porte les deux liens, l'information de l'art. 14 (identité du responsable, finalité, base légale, destinataires, durée, droits, source des données : l'apporteur) et un lien d'opposition. Il ne demande rien d'autre qu'un clic ; il ne contient ni pièce jointe ni lien autre que ceux-là. Le texte envoyé est versionné et la version est journalisée avec l'envoi.",
+      "source": "décision de Will du 2026-09-29, W20 (docs/chantiers/W20-confirmation-par-email.md §3.1), passe gardien-spec W20 portée par GOV-112 (8)(b) ; module et étape repris de REQ-JUR-009",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": 12,
+      "etape": 8,
+      "phase": 1,
+      "taches": [
+        "INT-T40",
+        "JUR-T09",
+        "UX-P1-41"
+      ]
+    },
+    {
       "id": "REQ-GOV-031",
       "domaine": "charte relationnelle (REQ-JUR-031 → 038)",
-      "texte": "🔴 **Règle de publication (dépôt PUBLIC, décision W13).** Le dépôt `axion-apporteurs` est public : tout ce qui y est poussé est définitivement lisible, y compris après un passage en privé (forks, caches, miroirs). Trois catégories n'y entrent **jamais** :",
+      "texte": "🔴 **Règle de publication (dépôt PUBLIC, décision W13).** Le dépôt `axion-apporteurs` est public : tout ce qui y est poussé est définitivement lisible, y compris après un passage en privé (forks, caches, miroirs). Trois catégories n'y entrent **jamais** : Amendement W19 (décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §4.2) : Extension : plans de part variable, montants et matricules des salariés n'entrent jamais dans le dépôt ni dans les journaux (valeurs factices dans les seeds). Témoin ajouté à `gov:publication`.",
       "source": "critique de complétude (2026-09-03)",
       "statut": "active",
       "remplaceePar": null,

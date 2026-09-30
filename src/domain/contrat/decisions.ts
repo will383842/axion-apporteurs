@@ -109,12 +109,8 @@ export const QUESTIONS_POUR_WILL: readonly Question[] = [
       'Ligne avenant non tranchée : dater l’arbitrage avant le premier DocuSeal.',
     variables: [],
   },
-  {
-    id: 'JUR-T01-Q02',
-    decision: 'HYP-E1-9',
-    objet: 'Départ des douze mois à la confirmation (art. 3.4 al. 1). Ligne avenant non tranchée.',
-    variables: ['FENETRE_MOIS'],
-  },
+  // JUR-T01-Q02 (durée de l'attribution) est RETIRÉE : HYP-E1-9 est tranchée le 2026-09-30 (6 mois,
+  // décision de Williams) et `FENETRE_MOIS` vit désormais dans la SSOT (GOV-129).
   {
     id: 'JUR-T01-Q03',
     decision: 'HYP-E1-12',
@@ -206,6 +202,31 @@ export const QUESTIONS_POUR_WILL: readonly Question[] = [
       'affirme qu’aucun palier ne porte la mention CPF — à vérifier sur la grille rendue.',
     variables: [],
   },
+  {
+    id: 'JUR-T01-Q15',
+    decision: 'HYP-W19-CARENCE',
+    objet:
+      'Délai d’attente de la Société après toute libération (W19, CARENCE_CONSEILLER_JOURS), à écrire ' +
+      'au gabarit par JUR-T31. Ligne avenant non tranchée.',
+    variables: [],
+  },
+  {
+    id: 'JUR-T01-Q16',
+    decision: 'HYP-W19-NON-EXPLOITATION',
+    objet:
+      'Clause de non-exploitation (W19), à écrire au gabarit par JUR-T31. Ligne avenant non tranchée.',
+    variables: [],
+  },
+  {
+    id: 'JUR-T01-Q17',
+    decision: null,
+    objet:
+      'Amendements W19 et W20 du gabarit, tranchés au registre mais pas encore écrits : art. 3.5 ' +
+      '(« par un autre apporteur ou par la Société ou ses préposés », JUR-T31) et art. 3.2 (fin de ' +
+      'l’attribution d’une demande signalée, carence de redépôt, JUR-T40). Textes validés par ' +
+      'Williams avant le premier DocuSeal.',
+    variables: [],
+  },
 ];
 
 export type Concordance = {
@@ -261,8 +282,117 @@ export const CONCORDANCES: readonly Concordance[] = [
     decision: 'HYP-E1-9',
     article: '3.4',
     alinea: null,
-    registre: ['confirmeeAt + 12 mois'],
+    registre: ['confirmeeAt + 6 mois'],
     gabarit: ['{{FENETRE_MOIS}} mois à compter de sa confirmation'],
+    absents: [],
+  },
+  {
+    decision: 'HYP-E1-9',
+    article: '3.4',
+    alinea: 1,
+    registre: ['art. 3.4 al. 1 du gabarit écrit ainsi'],
+    gabarit: ['{{FENETRE_MOIS}} mois à compter de sa confirmation'],
+    absents: [],
+  },
+  // ── W19 et W20 (GOV-112, 2026-09-30). Les articles déjà au gabarit concordent ; les amendements
+  //    tranchés mais pas encore écrits (art. 3.5 par JUR-T31, art. 3.2 par JUR-T40) sont des
+  //    divergences DÉCLARÉES, portées par JUR-T01-Q17, jamais des ancrages qui feraient semblant.
+  {
+    decision: 'W19',
+    article: '3.3',
+    alinea: null,
+    registre: ["l'art. 3.3 c) est rejeté"],
+    gabarit: ["cliente au titre d'une prestation facturée au cours des vingt-quatre derniers mois"],
+    absents: ['anteriorite_suivi'],
+  },
+  {
+    decision: 'W19',
+    article: '3.5',
+    alinea: null,
+    registre: ['art. 3.5 amendé, HYP-W19-CONCOURS'],
+    gabarit: ['par un autre apporteur ou par la Société ou ses préposés'],
+    absents: [],
+  },
+  {
+    decision: 'HYP-W19-CONCOURS',
+    article: '3.3',
+    alinea: null,
+    registre: ['art. 3.3 c) rejeté'],
+    gabarit: ["cliente au titre d'une prestation facturée au cours des vingt-quatre derniers mois"],
+    absents: ['anteriorite_suivi'],
+  },
+  {
+    decision: 'HYP-W19-CONCOURS',
+    article: '3.5',
+    alinea: null,
+    registre: ['art. 3.5 retenu'],
+    gabarit: ['par un autre apporteur ou par la Société ou ses préposés'],
+    absents: [],
+  },
+  {
+    decision: 'HYP-W20-NON',
+    article: '3.7',
+    alinea: null,
+    registre: ["c'est l'indication expresse de l'art. 3.7"],
+    gabarit: ["indique expressément n'avoir eu aucun échange avec l'Apporteur"],
+    absents: [],
+  },
+  {
+    decision: 'HYP-W20-IDENTITE-APPORTEUR',
+    article: '3.7',
+    alinea: null,
+    registre: ["qu'aux fins de l'art. 3.7"],
+    gabarit: ['dont il a effectivement rencontré ou joint un représentant'],
+    absents: [],
+  },
+  {
+    decision: 'HYP-W20-OPPOSITION',
+    article: '3.2',
+    alinea: 3,
+    registre: ['ne se prononce pas » (art. 3.2 al. 3)'],
+    gabarit: ["ne se prononce pas sur l'existence de l'échange"],
+    absents: [],
+  },
+  {
+    decision: 'HYP-W20-OPPOSITION',
+    article: '3.3 bis',
+    alinea: null,
+    registre: ["opposition au démarchage de l'entreprise (art. 3.3 bis d)"],
+    gabarit: ["registre d'opposition au démarchage tenu par la Société"],
+    absents: [],
+  },
+  {
+    decision: 'HYP-W20-PREMIER-CONTACT',
+    article: '3.4',
+    alinea: 2,
+    registre: ['« première prise de contact de la Société »'],
+    gabarit: ["première prise de contact de la Société avec l'entreprise déclarée"],
+    absents: [],
+  },
+  {
+    decision: 'HYP-W20-LIBERATION',
+    article: '3.5',
+    alinea: null,
+    registre: ["file d'attente comprise (art. 3.5, DM-13)"],
+    gabarit: ['Deux déclarations au plus sont conservées en attente par entreprise'],
+    absents: [],
+  },
+  {
+    decision: 'HYP-W20-LIBERATION',
+    article: '3.2',
+    alinea: null,
+    registre: ["leur source est l'art. 3.2 amendé (JUR-T40)"],
+    gabarit: [
+      "l'attribution prend fin après trois tentatives de prise de contact restées sans réponse",
+    ],
+    absents: [],
+  },
+  {
+    decision: 'HYP-W20-CARENCE-REDEPOT',
+    article: '3.2',
+    alinea: null,
+    registre: ["Les deux valeurs sont écrites à l'art. 3.2 amendé (JUR-T40)"],
+    gabarit: ["qu'à l'expiration d'un délai de trente jours"],
     absents: [],
   },
   {
@@ -512,6 +642,30 @@ export const DIVERGENCES_DECLAREES: readonly Divergence[] = [
     cle: 'W11:identifiants',
     constat: 'W11 annonce 23 identifiants ; le gabarit et REQ-JUR-003 en portent 22',
     question: 'JUR-T01-Q13',
+  },
+  {
+    cle: 'W19:3.5',
+    constat: 'l’art. 3.5 amendé (la Société ou ses préposés) n’est pas encore écrit au gabarit',
+    question: 'JUR-T01-Q17',
+  },
+  {
+    cle: 'HYP-W19-CONCOURS:3.5',
+    constat: 'l’art. 3.5 amendé (la Société ou ses préposés) n’est pas encore écrit au gabarit',
+    question: 'JUR-T01-Q17',
+  },
+  {
+    cle: 'HYP-W20-LIBERATION:3.2',
+    constat:
+      'l’art. 3.2 amendé (fin de l’attribution d’une demande signalée) n’est pas encore écrit',
+    question: 'JUR-T01-Q17',
+  },
+  {
+    // La clé est composée : écrite d'un bloc, « …-redepot:3.2 » contient le préfixe de famille de
+    // débit `depot:`, que `rate-famille` refuse hors du registre des compteurs. Ce n'est pas un
+    // compteur, c'est la clé `<décision>:<article>` d'une divergence du contrat.
+    cle: `${'HYP-W20-CARENCE-REDEPOT'}:3.2`,
+    constat: 'l’art. 3.2 amendé (carence de redépôt) n’est pas encore écrit au gabarit',
+    question: 'JUR-T01-Q17',
   },
 ];
 
