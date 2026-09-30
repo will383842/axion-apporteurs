@@ -526,12 +526,15 @@ function prouver(): number {
 
 /**
  * Les pages de l'espace, lues sur le DISQUE et non dans l'index git : la mesure porte sur ce que
- * `next build` a construit, c'est-à-dire sur l'arbre de travail. Un espace absent donne zéro page, et le
- * vert le DIT (« ZÉRO ROUTE »). La garde n'est donc pas de celles qui balaient l'index
- * (`GARDES_QUI_BALAIENT`) : sans build, elle rougit en `build_absent`, jamais sur un faux périmètre.
+ * `next build` a construit, c'est-à-dire sur l'arbre de travail. La garde n'est donc pas de celles qui
+ * balaient l'index (`GARDES_QUI_BALAIENT`) : sans build, elle rougit en `build_absent`.
+ * Un espace ABSENT est un REFUS, jamais une liste vide (GOV-046) : une liste vide rendrait « zéro
+ * route » vert sur un périmètre qu'on n'a pas su lire.
  */
 function pagesSurLeDisque(): string[] {
-  if (!existsSync(RACINE_ESPACE)) return [];
+  if (!existsSync(RACINE_ESPACE)) {
+    throw new Error(`périmètre absent : ${RACINE_ESPACE} n'existe pas — aucune route n'est jugée`);
+  }
   return (readdirSync(RACINE_ESPACE, { recursive: true }) as string[]).map(
     (f) => `${RACINE_ESPACE}/${String(f).split('\\').join('/')}`
   );
