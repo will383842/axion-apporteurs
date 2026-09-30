@@ -17,7 +17,7 @@
  *         pnpm lot:gardien-spec:verifier     rougit si le fichier dérive, ou si une session
  *                                            ordinaire n'est PAS bloquée sur les trois fichiers
  */
-import { readFileSync, realpathSync, writeFileSync } from 'node:fs';
+import { lstatSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
 
 export const CHEMIN_REGLAGES_DU_PROJET = '.claude/settings.json';
@@ -257,6 +257,16 @@ function place(absolu: string): string | null {
 
 export function jugerEcriture(chemin: string, racine: string): string | null {
   const vise = lecteur(resolve(racine, chemin));
+  // Un fichier visé qui est LUI-MÊME un lien est refusé, quelle que soit sa cible : un lien PENDANT
+  // (cible inexistante) n'a pas de chemin réel, retombait sur sa place, et `Write` l'aurait suivi
+  // pour créer la cible hors du lot (lentille securite sur f01fee3f).
+  let lien: boolean;
+  try {
+    lien = lstatSync(vise, { throwIfNoEntry: false })?.isSymbolicLink() ?? false;
+  } catch {
+    lien = true; // illisible : refusé, une absence de preuve n'est pas une autorisation
+  }
+  if (lien) return `écriture refusée dans le lot : « ${chemin} » est un lien symbolique.`;
   const reelVise = cheminReel(vise);
   for (const f of FICHIERS_DU_LOT) {
     const attendu = lecteur(resolve(racine, f));

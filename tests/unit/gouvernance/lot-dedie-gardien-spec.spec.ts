@@ -175,6 +175,22 @@ describe('REQ-GOV-010 — le confinement du lot est mécanique, pas une liste (l
     expect(jugerEcriture('docs/tasks.json', autre)).not.toBeNull();
   });
 
+  it('REQ-GOV-010 — la garde refuse un lien PENDANT nommé comme un fichier du lot (cible inexistante)', () => {
+    const autre = mkdtempSync(join(tmpdir(), 'lot-pendant-'));
+    mkdirSync(join(autre, 'docs'));
+    let lien = true;
+    try {
+      symlinkSync(join(autre, 'hors-du-lot.md'), join(autre, 'docs', 'PRESEANCE.md'));
+    } catch {
+      lien = false; // Windows sans le droit de créer un lien : le cas se juge en CI Linux.
+    }
+    if (lien) expect(jugerEcriture('docs/PRESEANCE.md', autre)).not.toBeNull();
+    // Contre-témoin : sans lien, le fichier du lot, même absent, s'écrit.
+    const sain = mkdtempSync(join(tmpdir(), 'lot-sain-'));
+    mkdirSync(join(sain, 'docs'));
+    expect(jugerEcriture('docs/PRESEANCE.md', sain)).toBeNull();
+  });
+
   it('REQ-GOV-010 — la garde laisse passer la lecture, git add des trois fichiers, commit et push sur t/*', () => {
     for (const c of [
       'git status',
