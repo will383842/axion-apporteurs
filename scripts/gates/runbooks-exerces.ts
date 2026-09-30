@@ -65,8 +65,9 @@ export const MISE_EN_SERVICE: {
   readonly source: string;
   readonly verifieLe: string;
 } = {
-  valeur: null,
-  source: 'à fixer par Williams avant l’enregistrement des exercices (amendement (8) de QA-T13)',
+  // Date PRÉVUE et provisoire : à ramener au jour de la première donnée réelle (mise-en-service.md, temps 5).
+  valeur: '2026-12-31',
+  source: 'décision de Williams du 2026-09-30 (16h17) : date prévue de mise en service, provisoire',
   verifieLe: '2026-09-30',
 };
 
