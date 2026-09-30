@@ -21,6 +21,7 @@
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
 import { productionDeclaree } from './notify';
+import { horlogeSysteme } from './horloge';
 
 /** Les seuls motifs qu'un refus peut porter. Aucun n'est construit à partir de la valeur. */
 export const MOTIFS_DE_REFUS = [
@@ -255,10 +256,13 @@ export function lireEnvironnement(source: Readonly<Record<string, string | undef
  * des secrets viennent d'abord, dans leur ordre ; aucun n'est perdu.
  */
 export function lireDemarrage(
-  source: Readonly<Record<string, string | undefined>>
+  source: Readonly<Record<string, string | undefined>>,
+  maintenantMs: number = horlogeSysteme.maintenant()
 ): LectureDuDemarrage {
   const secrets = lireEnvironnement(source);
   const refus: Refus[] = secrets.ok ? [] : [...secrets.refus];
+  // QA-T52 (REQ-QA-030) : une clé précédente mal posée refuse le démarrage comme un secret absent.
+  refus.push(...jugerLaRotation(source, maintenantMs).refus);
   const configuration = schemaConfiguration.safeParse(source);
   if (!configuration.success) {
     for (const issue of configuration.error.issues) {
@@ -386,9 +390,18 @@ export function lireTrousseaux(
   source: Readonly<Record<string, string | undefined>>,
   maintenantMs: number
 ): { ok: true; trousseaux: Record<NomEnRotation, Trousseau> } | { ok: false; refus: Refus[] } {
-  const refus: Refus[] = [];
   const secrets = lireEnvironnement(source);
-  if (!secrets.ok) refus.push(...secrets.refus);
+  const r = jugerLaRotation(source, maintenantMs);
+  const refus = [...(secrets.ok ? [] : secrets.refus), ...r.refus];
+  return refus.length > 0 ? { ok: false, refus } : { ok: true, trousseaux: r.trousseaux };
+}
+
+/** Les refus et les trousseaux de la rotation SEULE : les secrets courants sont jugés à part. */
+function jugerLaRotation(
+  source: Readonly<Record<string, string | undefined>>,
+  maintenantMs: number
+): { refus: Refus[]; trousseaux: Record<NomEnRotation, Trousseau> } {
+  const refus: Refus[] = [];
   const empreinte = (v: string) => createHash('sha256').update(v, 'utf8').digest('hex');
   const connues = new Map<string, string>();
   for (const n of NOMS_DES_SECRETS) {
@@ -440,7 +453,7 @@ export function lireTrousseaux(
     }
     trousseaux[nom] = { courante: source[nom] ?? '', precedente: { valeur: v, echeanceMs } };
   }
-  return refus.length > 0 ? { ok: false, refus } : { ok: true, trousseaux };
+  return { refus, trousseaux };
 }
 
 // ── docs/env.md : le RENDU du schéma (QA-T04, REQ-QA-030) ──────────────────────────────────────
@@ -547,6 +560,23 @@ export function documenterEnvironnement(): string {
     '| Variable | Présence | Règle | Rôle |',
     '| --- | --- | --- | --- |',
     ...lignes(NOMS_DE_CONFIGURATION),
+    '',
+    '## Rotation à double clé (REQ-QA-030)',
+    '',
+    "Pendant une rotation, l'ancienne valeur d'un secret reste acceptée jusqu'à son échéance, au plus",
+    "24 h. Le `kid` présenté dans l'en-tête, dérivé de la valeur (`kidDe`), choisit la clé : un `kid`",
+    "absent ou inconnu est refusé. Partners émet toujours sous la clé courante. Les deux variables d'une",
+    'paire se posent ensemble ; procédure : `docs/runbooks/secret-desynchronise.md`.',
+    '',
+    '| Variable | Présence | Règle | Rôle |',
+    '| --- | --- | --- | --- |',
+    ...NOMS_EN_ROTATION.flatMap((nom) => {
+      const v = variablesDeRotation(nom);
+      return [
+        `| \`${v.cle}\` | facultative, avec son échéance | au moins 32 octets, distincte de tous les secrets | ancienne valeur de \`${nom}\`, acceptée jusqu'à l'échéance |`,
+        `| \`${v.echeance}\` | facultative, avec sa clé | instant ISO 8601 UTC, au plus 24 h après le démarrage | fin d'acceptation de \`${v.cle}\` |`,
+      ];
+    }),
     '',
   ].join('\n');
 }

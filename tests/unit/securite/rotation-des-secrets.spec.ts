@@ -22,7 +22,9 @@ import {
   ROTATION_MAX_MS,
   NOMS_EN_ROTATION,
   cleDuKid,
+  documenterEnvironnement,
   kidDe,
+  lireDemarrage,
   lireTrousseaux,
   type Trousseau,
 } from '../../../src/lib/env';
@@ -203,5 +205,47 @@ describe('REQ-QA-030 — la clé précédente se déclare dans l’environnement
     expect(cleDuKid(lu.trousseaux.AXIONIA_WEBHOOK_SECRET, kidDe(PRECEDENTE), DEMARRAGE_MS)).toEqual(
       { ok: false, motif: 'cle_precedente_echue' }
     );
+  });
+});
+
+describe('REQ-QA-030 — le démarrage réel juge la rotation, et la documentation la dit', () => {
+  const configuration = {
+    DATABASE_URL: 'postgresql://u:p@localhost:5432/b',
+    REDIS_URL: 'redis://localhost:6379',
+    NOTIFY_SINK: 'true',
+  };
+
+  it('REQ-QA-030 : une clé précédente posée sans échéance refuse le démarrage, en la nommant', () => {
+    const lu = lireDemarrage(
+      { ...secretsValides(), ...configuration, AXIONIA_WEBHOOK_SECRET_PRECEDENT: PRECEDENTE },
+      DEMARRAGE_MS
+    );
+    expect(lu.ok).toBe(false);
+    if (lu.ok) return;
+    expect(lu.refus).toContainEqual({
+      variable: 'AXIONIA_WEBHOOK_SECRET_PRECEDENT_ECHEANCE',
+      motif: 'absente',
+    });
+  });
+
+  it('REQ-QA-030 : la même paire, complète et à 24 h, laisse démarrer', () => {
+    const lu = lireDemarrage(
+      {
+        ...secretsValides(),
+        ...configuration,
+        AXIONIA_WEBHOOK_SECRET_PRECEDENT: PRECEDENTE,
+        AXIONIA_WEBHOOK_SECRET_PRECEDENT_ECHEANCE: DANS_24_H,
+      },
+      DEMARRAGE_MS
+    );
+    expect(lu.ok).toBe(true);
+  });
+
+  it('REQ-QA-030 : docs/env.md nomme chaque variable de rotation, dérivée des noms en rotation', () => {
+    const doc = documenterEnvironnement();
+    for (const nom of NOMS_EN_ROTATION) {
+      expect(doc).toContain('`' + nom + '_PRECEDENT`');
+      expect(doc).toContain('`' + nom + '_PRECEDENT_ECHEANCE`');
+    }
   });
 });
