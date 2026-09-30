@@ -2719,6 +2719,10 @@ export const PORTE_A_FIGEE: PorteFigee = {
       run: 'pnpm perf:budgets:verifier',
     },
     {
+      nom: 'La mesure du poids par route sait rougir, y compris sur zero octet',
+      run: 'pnpm perf:bundle:prove',
+    },
+    {
       nom: 'Compteurs de debit — conduite sur panne declaree et executee, famille close',
       run: 'pnpm securite:rate-famille',
     },
@@ -2767,6 +2771,8 @@ export const PORTE_A_FIGEE: PorteFigee = {
       cles: JETON_DE_LA_FORGE,
     },
     { nom: 'La garde de l etat vivant sait rougir', run: 'pnpm gov:etat:prove' },
+    { nom: 'Construire l application pour la mesure', run: 'pnpm perf:bundle:construire' },
+    { nom: 'Poids par route de l espace — JS propre et socle commun', run: 'pnpm perf:bundle' },
     // ── LES DOUZE ÉTAPES VENUES DE `main` PENDANT QUE CETTE BRANCHE VIVAIT (PR #165 et #180).
     //    CE QUI EST VERSIONNÉ ICI EST UNE COPIE FIGÉE, et c'est la raison d'être d'un constat : on
     //    ne confronte pas un workflow à lui-même. La dérivation dit COMMENT cette copie a été
@@ -2899,6 +2905,9 @@ export const PORTE_A_FIGEE: PorteFigee = {
     'perf:budgets': 'tsx scripts/gates/perf-budgets.ts',
     'perf:budgets:prove': 'tsx scripts/gates/perf-budgets.ts --prove',
     'perf:budgets:verifier': 'tsx scripts/gates/perf-budgets.ts --verifier',
+    'perf:bundle': 'tsx scripts/gates/bundle-par-route.ts',
+    'perf:bundle:prove': 'tsx scripts/gates/bundle-par-route.ts --prove',
+    'perf:bundle:construire': 'next build',
     'securite:rate-famille': 'tsx scripts/gates/rate-famille.ts',
     'securite:rate-famille:prove': 'tsx scripts/gates/rate-famille.ts --prove',
     'gov:conventions': 'tsx scripts/gates/gov-conventions.ts',

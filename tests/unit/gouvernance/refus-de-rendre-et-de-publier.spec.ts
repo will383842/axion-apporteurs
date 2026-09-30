@@ -538,6 +538,13 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
         'un-statut-fusionnee-porte-sa-preuve.spec.ts ; les sorties du binaire, qui lance `gh`, ' +
         'n’ont pas de témoin d’effet : un témoin qui lance `gh` rendrait la suite intermittente.',
     },
+    'scripts/gates/bundle-par-route.ts': {
+      total: 1,
+      porte: 1,
+      temoins: 0,
+      raison:
+        'QA-T20 — REQ-UX-033, le poids charge par route lu dans les manifestes de Next 16. `process.exitCode = code` : sortie TERMINALE a code variable, commune a la mesure et a `--prove` — 0 quand la garde passe, 1 sur une faute de mesure, ou sur un depassement sous `--bloquant`. Les familles sont vues rougir sur des builds INJECTES (budget-par-route.spec.ts) et le binaire est vu sortir en 1 sur un build absent et sur un build sur disque sous `--bloquant`, dans la meme spec ; aucun temoin ne vit dans `REFUS`. Elle lit les pages de l espace sur le DISQUE, pas dans l index : elle n importe pas `fichiersSuivisOuRefus` et n a rien a faire dans `GARDES_QUI_BALAIENT` ; sans build, elle rougit en build_absent. Dette DECLAREE.',
+    },
     'scripts/gates/perf-budgets.ts': {
       total: 4,
       porte: 4,
@@ -999,6 +1006,13 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
         'l’impression) : vue absente, rubriques dues non déclarées (GOV-055, PR #158) et vue ' +
         'dérivée en `plan-state:verifier`, plafond de questions en rendu. La dérive de la vue est ' +
         'vue rougir par les specs de PLAN-STATE, qui ne vivent pas dans `REFUS`. Dette DÉCLARÉE.',
+    },
+    'scripts/gates/runbooks-exerces.ts': {
+      total: 1,
+      porte: 1,
+      temoins: 0,
+      raison:
+        'QA-T13 — REQ-QA-034, un runbook s exerce en preview. process.exitCode pose sur le code du controle ou de --prove : 0 quand chaque runbook exige est exerce en preview et que son corps n a pas change depuis, 1 sinon, le runbook nomme. Les familles sont vues rougir sur des runbooks FABRIQUES (runbooks-exerces.spec.ts) et --prove est vu sortir en 0 ; le binaire est vu sortir en 1 sur le depot tant qu aucun runbook du socle n est exerce ; aucun temoin ne vit dans REFUS. N importe pas fichiersSuivisOuRefus. Dette DECLAREE.',
     },
     'scripts/lot/cloture.ts': {
       total: 1,

@@ -1,0 +1,60 @@
+# Retour arrière de la production — QA-T13 (REQ-QA-022), runbook `docs/runbooks/retour-arriere.md`.
+#
+# Seul un sha déjà LIVRÉ est admis : ancêtre de la branche principale, et dont l image `sha-<7>` a été
+# publiée par le job `publier` — jamais une image de branche.
+#
+# À LA MAIN, avec le sha à remettre en service. Un retour arrière qui ne vérifie pas ce qu'il a remis
+# en place n'a rien remis en place : le script pose l'échappatoire de migration, étiquette et
+# déploie `sha-<cible>`, puis vérifie l'en-tête de build servi ET readyz, et remet l'échappatoire à
+# zéro quoi qu'il arrive.
+#
+#   — la MÊME file que le déploiement (`deploiement-production`, jamais annulée) : un seul
+#     producteur à la fois, un retour arrière n'écrase pas un déploiement en cours ;
+#   — le sha passe par l'environnement de l'étape, jamais interpolé dans une commande, et le script
+#     le juge avant tout appel ;
+#   — secrets absents : SAUTÉ, chaque absent nommé en `::warning::`.
+name: Retour arriere
+
+on:
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: "Sha complet (40 caracteres) de l image a remettre en service"
+        required: true
+
+jobs:
+  retour-arriere:
+    runs-on: ubuntu-latest
+    # Lentille securite : secrets dans l ENVIRONNEMENT `production`, jamais au niveau du depot, et
+    # declenchement manuel depuis la branche principale seulement.
+    if: ${{ github.ref == 'refs/heads/main' }}
+    environment: production
+    concurrency:
+      group: deploiement-production
+      cancel-in-progress: false
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - uses: pnpm/action-setup@v4
+      - run: pnpm install --frozen-lockfile
+      - name: Remettre en service l image cible, verifier l en-tete et readyz
+        env:
+          COOLIFY_URL: ${{ secrets.COOLIFY_URL }}
+          COOLIFY_API_TOKEN: ${{ secrets.COOLIFY_API_TOKEN }}
+          COOLIFY_APP_UUID: ${{ secrets.COOLIFY_APP_UUID }}
+          PARTNERS_URL_PUBLIQUE: ${{ vars.PARTNERS_URL_PUBLIQUE }}
+          SHA_CIBLE: ${{ inputs.sha }}
+          GH_TOKEN: ${{ github.token }}
+        run: pnpm deploy:retour-arriere
+
+      # Jouee MEME si l etape precedente a echoue ou a ete interrompue : l echappatoire ne survit
+      # jamais a un retour arriere (consigne de la lentille securite).
+      - name: Retirer l echappatoire de migration, quoi qu il soit arrive
+        if: ${{ always() }}
+        env:
+          COOLIFY_URL: ${{ secrets.COOLIFY_URL }}
+          COOLIFY_API_TOKEN: ${{ secrets.COOLIFY_API_TOKEN }}
+          COOLIFY_APP_UUID: ${{ secrets.COOLIFY_APP_UUID }}
+        run: pnpm deploy:retirer-echappatoire

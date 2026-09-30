@@ -116,6 +116,9 @@
     "perf:budgets:prove": "tsx scripts/gates/perf-budgets.ts --prove",
     "perf:budgets:rendre": "tsx scripts/gates/perf-budgets.ts --rendre",
     "perf:budgets:verifier": "tsx scripts/gates/perf-budgets.ts --verifier",
+    "perf:bundle": "tsx scripts/gates/bundle-par-route.ts",
+    "perf:bundle:prove": "tsx scripts/gates/bundle-par-route.ts --prove",
+    "perf:bundle:construire": "next build",
     "gov:conventions": "tsx scripts/gates/gov-conventions.ts",
     "gov:conventions:prove": "tsx scripts/gates/gov-conventions.ts --prove",
     "gov:identifiants:compter": "tsx scripts/gates/gov-identifiants.ts --compter",
@@ -159,9 +162,13 @@
     "preview:publier-image": "tsx scripts/preview/preview.ts publier-image",
     "preview:attribuer": "tsx scripts/preview/preview.ts attribuer",
     "preview:detruire": "tsx scripts/preview/preview.ts detruire",
+    "runbooks:exerces": "tsx scripts/gates/runbooks-exerces.ts",
+    "runbooks:exerces:prove": "tsx scripts/gates/runbooks-exerces.ts --prove",
     "coolify:provisionner": "tsx scripts/deploiement/provisionner.ts",
     "deploy:verify": "tsx scripts/gates/deploy-verify.ts --verifier",
-    "deploy:coolify": "tsx scripts/gates/deploy-verify.ts --declencher"
+    "deploy:coolify": "tsx scripts/gates/deploy-verify.ts --declencher",
+    "deploy:retour-arriere": "tsx scripts/gates/deploy-verify.ts --retour-arriere",
+    "deploy:retirer-echappatoire": "tsx scripts/gates/deploy-verify.ts --retirer-echappatoire"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.13.0",
