@@ -2412,7 +2412,9 @@
         "src/domain/seuils/ssot.ts",
         "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts",
         "scripts/gates/registre-des-refus.ts",
-        "tests/unit/juridique/seuils-ssot-en-processus.spec.ts"
+        "tests/unit/juridique/seuils-ssot-en-processus.spec.ts",
+        "src/domain/rgpd/politique.ts",
+        "scripts/gates/seuils-ssot.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -14788,7 +14790,7 @@
       "externe": null,
       "estimateDays": 0.5,
       "statut": "a_faire",
-      "acceptance": "Versee a la demande de la session -50 (mise en ligne), sur demande de -d7 : aucune tache du registre ne portait le provisionnement, REQ-INT-031 n etant rattachee qu a INT-T02 cote axionia. (1) Un declenchement manuel cree, s ils n existent pas, dans le projet Coolify Axion-Partners, l application de type image Docker (ghcr.io/will383842/axion-apporteurs, etiquette sha-<7>, sonde /api/readyz) et une base Postgres 16 separee ; il est idempotent : relance, il ne cree rien et le dit. (2) Chaque variable de docs/env.md est posee depuis le secret du depot de meme nom, jamais en argument ni en clair dans le journal du run ; DATABASE_URL vient de la base creee. (3) Un secret absent : SAUTE avec un ::warning:: par secret nomme. (4) TEMOIN A DEUX FACES sur une plateforme factice locale : secrets absents, alors saute et nomme ; plateforme en 401, alors code non nul et jeton jamais imprime. Deux lentilles (workflow et secrets).",
+      "acceptance": "Versee a la demande de la session -50 (mise en ligne), sur demande de -d7 : aucune tache du registre ne portait le provisionnement, REQ-INT-031 n etant rattachee qu a INT-T02 cote axionia. (1) Un declenchement manuel cree, s ils n existent pas, dans le projet Coolify Axion-Partners, l application de type image Docker (ghcr.io/will383842/axion-apporteurs, etiquette sha-<7>, sonde /api/readyz) et une base Postgres 16 separee ; il est idempotent : relance, il ne cree rien et le dit. (2) Chaque variable de docs/env.md est posee depuis le secret du depot de meme nom, jamais en argument ni en clair dans le journal du run ; DATABASE_URL vient de la base creee. (3) Un secret absent : le provisionnement, geste MANUEL, ECHOUE en code 1 avec un ::error:: par secret nomme (arbitrage -d7 du 2026-09-30 : un geste manuel sans ses secrets echoue, seul un planificateur peut sauter). (4) TEMOIN A DEUX FACES sur une plateforme factice locale : secrets absents, alors code 1 et chaque secret nomme ; plateforme en 401, alors code non nul et jeton jamais imprime. Deux lentilles (workflow et secrets).",
       "tests": {
         "REQ-INT-031": [
           "tests/unit/qualite/provisionnement-coolify.spec.ts"
