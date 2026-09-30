@@ -222,6 +222,88 @@ async function commandeDeclencher(argv: string[]): Promise<number> {
   return verifier(sha, publique, options(argv));
 }
 
+/**
+ * Consignes de la lentille `securite` pour la livraison de QA-T13 : on ne remet en service QUE ce que
+ * la chaîne de production a déjà livré. Le sha cible doit être un ANCÊTRE de la branche principale
+ * (API de comparaison de la forge : `status` vaut `ahead` ou `identical`), et son image `sha-<7>` doit
+ * avoir été PUBLIÉE par le job `publier` (manifeste présent dans le registre, lu anonymement : l'image
+ * est publique). Jamais une image de branche. Les deux contrôles précèdent tout appel à la plateforme,
+ * et échouent fermé.
+ */
+async function exigerUnShaLivre(cible: string): Promise<void> {
+  const depot = process.env.GITHUB_REPOSITORY ?? '';
+  const jetonForge = process.env.GH_TOKEN ?? '';
+  if (!/^[\w.-]+\/[\w.-]+$/.test(depot) || jetonForge === '') {
+    throw new Error(
+      'GITHUB_REPOSITORY et GH_TOKEN sont exigés pour vérifier que le sha a été livré'
+    );
+  }
+  const api = adresseSure(process.env.GITHUB_API_URL ?? 'https://api.github.com', 'GITHUB_API_URL');
+  const comparaison = await fetch(new URL(`/repos/${depot}/compare/${cible}...main`, api), {
+    headers: { authorization: `Bearer ${jetonForge}`, accept: 'application/vnd.github+json' },
+  });
+  const statut = comparaison.ok
+    ? ((await comparaison.json()) as { status?: unknown }).status
+    : (await comparaison.body?.cancel(), null);
+  if (statut !== 'ahead' && statut !== 'identical') {
+    throw new Error(
+      `le sha ${cible} n'est pas un ancêtre de main (comparaison : ${String(statut ?? comparaison.status)}) — refusé`
+    );
+  }
+  const registre = adresseSure(
+    process.env.PARTNERS_REGISTRE_URL ?? 'https://ghcr.io',
+    'PARTNERS_REGISTRE_URL'
+  );
+  const nom = depot.toLowerCase();
+  const etiquette = `sha-${cible.slice(0, 7)}`;
+  const t = await fetch(new URL(`/token?scope=repository:${nom}:pull`, registre));
+  const anonyme = t.ok
+    ? ((await t.json()) as { token?: unknown }).token
+    : (await t.body?.cancel(), null);
+  const manifeste = await fetch(new URL(`/v2/${nom}/manifests/${etiquette}`, registre), {
+    method: 'HEAD',
+    headers: {
+      ...(typeof anonyme === 'string' ? { authorization: `Bearer ${anonyme}` } : {}),
+      accept:
+        'application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.v2+json',
+    },
+  });
+  await manifeste.body?.cancel();
+  if (!manifeste.ok) {
+    throw new Error(
+      `l'image ${etiquette} n'a jamais été publiée (registre : HTTP ${manifeste.status}) — refusé`
+    );
+  }
+}
+
+/** L'échappatoire, remise à `0` — l'étape `if: always()` du workflow, jouée même après un échec. */
+async function commandeRetirerEchappatoire(): Promise<number> {
+  const manquants = SECRETS_DU_DEPLOIEMENT.filter(
+    (n) => n !== 'PARTNERS_URL_PUBLIQUE' && (process.env[n] ?? '') === ''
+  );
+  if (manquants.length > 0) {
+    console.log(
+      `⚠ SAUTÉ : ${manquants.join(', ')} — aucune échappatoire n'a pu être posée non plus.`
+    );
+    return 0;
+  }
+  const plateforme = adresseSure(process.env.COOLIFY_URL ?? '', 'COOLIFY_URL');
+  const racine = plateforme.href.replace(/\/+$/, '');
+  const uuid = encodeURIComponent(process.env.COOLIFY_APP_UUID ?? '');
+  const s = await appel(
+    new URL(`${racine}/api/v1/applications/${uuid}/envs/bulk`),
+    'PATCH',
+    process.env.COOLIFY_API_TOKEN ?? '',
+    { data: [{ key: 'SKIP_MIGRATE', value: '0' }] }
+  );
+  if (s < 200 || s > 299) {
+    console.error(`❌ SKIP_MIGRATE n'a pas pu être remis à 0 (HTTP ${s}) : à retirer À LA MAIN`);
+    return 1;
+  }
+  console.log('✅ SKIP_MIGRATE remis à 0 : le déploiement suivant migrera.');
+  return 0;
+}
+
 /** `readyz` servi par l'adresse publique : 200, ou le statut qui en tient lieu. */
 async function readyz(base: URL): Promise<number> {
   try {
@@ -260,6 +342,7 @@ async function commandeRetourArriere(argv: string[]): Promise<number> {
   const plateforme = adresseSure(lire('COOLIFY_URL'), 'COOLIFY_URL');
   const publique = adresseSure(lire('PARTNERS_URL_PUBLIQUE'), 'PARTNERS_URL_PUBLIQUE');
   const jeton = lire('COOLIFY_API_TOKEN');
+  await exigerUnShaLivre(cible);
   const racine = plateforme.href.replace(/\/+$/, '');
   const uuid = encodeURIComponent(lire('COOLIFY_APP_UUID'));
   const variables = new URL(`${racine}/api/v1/applications/${uuid}/envs/bulk`);
@@ -321,14 +404,23 @@ if (APPELE_DIRECTEMENT) {
       ? commandeVerifier
       : argv.includes('--retour-arriere')
         ? commandeRetourArriere
-        : null;
+        : argv.includes('--retirer-echappatoire')
+          ? commandeRetirerEchappatoire
+          : null;
   if (mode === null) {
-    console.error('usage : deploy-verify.ts --verifier [<sha>] | --declencher | --retour-arriere');
+    console.error(
+      'usage : deploy-verify.ts --verifier [<sha>] | --declencher | --retour-arriere | --retirer-echappatoire'
+    );
     process.exit(1);
   }
   // `exitCode`, jamais la sortie immédiate du processus ici : couper des sockets de `fetch` encore ouvertes fait
   // planter Node sous Windows (0xC0000409, mesuré le 2026-09-29) — le code rendu ne serait plus le nôtre.
-  mode(argv.filter((a) => !['--declencher', '--verifier', '--retour-arriere'].includes(a))).then(
+  mode(
+    argv.filter(
+      (a) =>
+        !['--declencher', '--verifier', '--retour-arriere', '--retirer-echappatoire'].includes(a)
+    )
+  ).then(
     (code) => {
       process.exitCode = code;
     },

@@ -156,7 +156,8 @@
     "runbooks:exerces:prove": "tsx scripts/gates/runbooks-exerces.ts --prove",
     "deploy:verify": "tsx scripts/gates/deploy-verify.ts --verifier",
     "deploy:coolify": "tsx scripts/gates/deploy-verify.ts --declencher",
-    "deploy:retour-arriere": "tsx scripts/gates/deploy-verify.ts --retour-arriere"
+    "deploy:retour-arriere": "tsx scripts/gates/deploy-verify.ts --retour-arriere",
+    "deploy:retirer-echappatoire": "tsx scripts/gates/deploy-verify.ts --retirer-echappatoire"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.13.0",
