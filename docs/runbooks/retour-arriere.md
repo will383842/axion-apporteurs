@@ -13,6 +13,9 @@ n'a donc rien à faire au redémarrage de l'ancienne image, et elle ne doit pas 
 ## Par la forge — le geste ordinaire (QA-T13, REQ-QA-022)
 
 Lancer le workflow `Retour arriere` à la main, avec le sha COMPLET de l'image à remettre en service.
+Il ne part que de la branche principale, et lit ses secrets dans l'**environnement GitHub
+`production`** (jamais au niveau du dépôt). Seul un sha déjà livré est admis : ancêtre de `main`, et
+dont l'image `sha-<7>` a été publiée.
 Il fait les étapes ci-dessous dans l'ordre, et VÉRIFIE : l'en-tête `x-partners-build-sha` servi vaut le
 sha cible, et `GET /api/readyz` répond 200. Il remet `SKIP_MIGRATE` à `0` quoi qu'il arrive. Il partage
 la file du déploiement ordinaire : il attend un déploiement en cours, il ne l'écrase pas. Rouge : lire son

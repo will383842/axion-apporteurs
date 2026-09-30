@@ -282,3 +282,14 @@ describe('REQ-QA-022 — le workflow : à la main, un sha, la file du déploieme
     expect(e?.env?.SHA_CIBLE).toBe('${{ inputs.sha }}');
   });
 });
+
+describe('REQ-QA-022 — le retour arrière ne part que de main, dans l’environnement production', () => {
+  it('REQ-QA-022 : environment: production, et la branche principale seulement', async () => {
+    const wf = (await lireYaml(readFileSync('.github/workflows/rollback.yml', 'utf8'))) as {
+      jobs?: Record<string, { environment?: unknown; if?: string }>;
+    };
+    const job = Object.values(wf.jobs ?? {})[0]!;
+    expect(job.environment).toBe('production');
+    expect(job.if).toContain("github.ref == 'refs/heads/main'");
+  });
+});

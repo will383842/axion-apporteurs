@@ -25,6 +25,10 @@ on:
 jobs:
   retour-arriere:
     runs-on: ubuntu-latest
+    # Lentille securite : secrets dans l ENVIRONNEMENT `production`, jamais au niveau du depot, et
+    # declenchement manuel depuis la branche principale seulement.
+    if: ${{ github.ref == 'refs/heads/main' }}
+    environment: production
     concurrency:
       group: deploiement-production
       cancel-in-progress: false
