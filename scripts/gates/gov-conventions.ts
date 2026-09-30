@@ -2833,6 +2833,9 @@ export const PORTE_A_FIGEE: PorteFigee = {
   scripts: {
     'sec:semgrep': 'tsx scripts/gates/semgrep.ts',
     'sec:semgrep:prove': 'tsx scripts/gates/semgrep.ts --prove',
+    // GOV-123 : les deux étapes des vues, lancées par la porte A, figées comme les autres.
+    'vues:rendre': 'tsx scripts/vues/rendre-apres-fusion.ts',
+    'vues:hors-git': 'tsx scripts/vues/rendre-apres-fusion.ts --hors-git',
     'gov:publication': 'tsx scripts/gates/gov-publication.ts',
     'gov:publication:prove': 'tsx scripts/gates/gov-publication.ts --prove',
     'gov:identifiants': 'tsx scripts/gates/gov-identifiants.ts',

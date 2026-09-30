@@ -1499,6 +1499,17 @@ function depotJetableAvec(fichiers: readonly string[]): string {
  * elles ne rendaient pas la gate fautive, elles la rendaient AVEUGLE.
  */
 function depotCompletJetable({ avecGit = true }: { avecGit?: boolean } = {}): string {
+  const depot = extraireLaTete();
+  if (avecGit) faireDeCeDossierUnDepot(depot);
+  const vue = join(depot, VUE_DE_TRACABILITE);
+  mkdirSync(dirname(vue), { recursive: true });
+  writeFileSync(vue, tracabiliteRendueDeLaTete());
+  if (avecGit) execFileSync('git', ['add', '-A'], { cwd: depot, stdio: 'ignore' });
+  return depot;
+}
+
+/** `git archive HEAD` extrait dans un dossier jetable, avec une jonction vers `node_modules`. */
+function extraireLaTete(): string {
   const depot = mkdtempSync(join(tmpdir(), 'temoin-complet-'));
   DEPOTS_JETABLES.push(depot);
   const tar = execFileSync('git', ['archive', 'HEAD'], { maxBuffer: 512e6, encoding: 'buffer' });
@@ -1507,8 +1518,30 @@ function depotCompletJetable({ avecGit = true }: { avecGit?: boolean } = {}): st
   execFileSync('tar', ['-x', '-f', 'depot.tar'], { cwd: depot });
   rmSync(chemin, { force: true });
   symlinkSync(resolve('node_modules'), join(depot, 'node_modules'), 'junction');
-  if (avecGit) faireDeCeDossierUnDepot(depot);
   return depot;
+}
+
+/**
+ * GOV-123 — LA PORTE A REND LES VUES AVANT DE LES LIRE (`pnpm vues:rendre`) ; le dépôt jetable
+ * aussi. `git archive HEAD` ne porte plus aucune vue, elles sont hors de git : sans
+ * `docs/TRACABILITE.md`, `gov:trace` refusait un dépôt SAIN (`vue_divergente`, « absent »), et
+ * le témoin ne mesurait plus rien. La vue est RENDUE par la gate elle-même, UNE fois, dans un
+ * dépôt extrait de la même tête — jamais recopiée du disque, où elle peut être périmée.
+ */
+const VUE_DE_TRACABILITE = 'docs/TRACABILITE.md';
+let tracabiliteDeLaTete: string | null = null;
+function tracabiliteRendueDeLaTete(): string {
+  if (tracabiliteDeLaTete !== null) return tracabiliteDeLaTete;
+  const depot = extraireLaTete();
+  faireDeCeDossierUnDepot(depot);
+  const r = lancerLaGate('scripts/gates/gov-trace.ts', depot, ['--render']);
+  const vue = join(depot, VUE_DE_TRACABILITE);
+  if (r.code !== 0 || !existsSync(vue)) {
+    throw new Error(`gov:trace --render n'a pas rendu ${VUE_DE_TRACABILITE} (code ${r.code}) :
+${r.sortie.slice(0, 600)}`);
+  }
+  tracabiliteDeLaTete = readFileSync(vue, 'utf8');
+  return tracabiliteDeLaTete;
 }
 
 /**

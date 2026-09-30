@@ -14477,7 +14477,13 @@
         "docs/TASKS.md",
         "docs/TRACABILITE.md",
         "docs/adr/INDEX.md",
-        "docs/paths-proposes.json"
+        "docs/paths-proposes.json",
+        "scripts/lot/paths-proposes.ts",
+        "scripts/lot/integrer.ts",
+        "scripts/gates/gov-inventaire.ts",
+        "scripts/gates/gov-entite.ts",
+        "tests/unit/gouvernance/integration-livrable.spec.ts",
+        "tests/unit/gouvernance/entite-registre.spec.ts"
       ],
       "schema": false,
       "sensible": [],

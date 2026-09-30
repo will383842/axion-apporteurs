@@ -59,6 +59,7 @@ import {
   type Registre,
 } from '../../src/config/entite';
 import { entreesSuiviesOuRefus, type EntreeSuivie } from '../lot/fichiers-suivis';
+import { lireLeRegistre, rendreVue } from './gov-requirements';
 import {
   CODES_PAYS,
   FORME_IBAN,
@@ -70,6 +71,26 @@ import {
 const CHEMIN_REGISTRE = 'config/entite.json';
 const CHEMIN_DECISIONS = 'docs/DECISIONS.md';
 const CHEMIN_EXIGENCES = 'docs/REQUIREMENTS.md';
+/**
+ * LA SOURCE de `docs/REQUIREMENTS.md` (GOV-123). La vue n'est plus sous git : sur le disque, c'est
+ * le rendu d'un jour passé, ou rien — un ENOENT brut, ou une ligne REQ-CPL-004 d'avant sa dernière
+ * correction, jugée comme si elle faisait foi. Le texte lu est donc RENDU de sa source par le rendu
+ * même de la vue (`rendreVue`, `scripts/gates/gov-requirements.ts`) ; les messages nomment la vue,
+ * dont c'est le texte exact.
+ */
+const CHEMIN_REGISTRE_EXIGENCES = 'docs/requirements.json';
+
+/**
+ * Le texte de `docs/REQUIREMENTS.md` tel que sa source le rend aujourd'hui. Un registre illisible
+ * rend le texte vide : chaque ancre y est alors introuvable, et c'est la famille `source_illisible`
+ * qui le dit, par le canal des fautes — jamais un vert.
+ */
+export function exigencesRenduesDeLaSource(texteDuRegistre: string): string {
+  const lu = lireLeRegistre(texteDuRegistre);
+  const doc = lu.doc as { exigences?: Parameters<typeof rendreVue>[0] } | null | undefined;
+  if (lu.illisible !== null || !Array.isArray(doc?.exigences)) return '';
+  return rendreVue(doc.exigences);
+}
 
 /** Un fichier suivi ; `filtre` porte la valeur de son attribut git `filter`, quand il en a un. */
 export type Fichier = { chemin: string; contenu: string; filtre?: string };
@@ -3176,7 +3197,7 @@ export function lireUnivers(): Univers {
   return {
     registre: registreDuDepot(),
     decisions: readFileSync(CHEMIN_DECISIONS, 'utf8'),
-    exigences: readFileSync(CHEMIN_EXIGENCES, 'utf8'),
+    exigences: exigencesRenduesDeLaSource(readFileSync(CHEMIN_REGISTRE_EXIGENCES, 'utf8')),
     fichiers,
     fichiersDesCommits: pr.fichiers,
     commitsLus: pr.commits,
