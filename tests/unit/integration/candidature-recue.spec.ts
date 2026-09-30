@@ -14,7 +14,7 @@ import { describe, expect, it } from 'vitest';
 import { TypeEvenementRecu } from '@prisma/client';
 import contrat from '../../../packages/contracts/contracts.v2.json';
 import { refDependanceCoordonnees } from '../../../packages/contracts/api';
-import { NOMS_DES_SECRETS } from '../../../src/lib/env';
+import { NOMS_DES_SECRETS, kidDe, type Trousseau } from '../../../src/lib/env';
 import {
   ENTETE_HORODATAGE_REQUETE,
   ENTETE_SIGNATURE_REQUETE,
@@ -53,21 +53,33 @@ const COORDONNEES: Coordonnees = {
 };
 
 /** Une réponse de la route, signée comme axionia la signe. */
-function reponseSignee(corps: string, secret = SECRET_EMISSION, statut = 200): Response {
+function reponseSignee(
+  corps: string,
+  secret = SECRET_EMISSION,
+  statut = 200,
+  kid: string | null = kidDe(secret)
+): Response {
   const t = String(Math.floor(MAINTENANT_MS / 1000));
   const sig = createHmac('sha256', secret).update(`${t}.${corps}`).digest('hex');
   return new Response(corps, {
     status: statut,
-    headers: { 'x-axionia-timestamp': t, 'x-axionia-signature': sig },
+    headers: {
+      'x-axionia-timestamp': t,
+      'x-axionia-signature': sig,
+      ...(kid === null ? {} : { 'x-axionia-kid': kid }),
+    },
   });
 }
+
+/** Le trousseau des réponses d'axionia : sa clé d'émission, sans rotation en cours. */
+const TROUSSEAU: Trousseau = { courante: SECRET_EMISSION, precedente: null };
 
 function client(repondre: (url: string, init: RequestInit) => Response | Promise<Response>) {
   const appels: { url: string; init: RequestInit }[] = [];
   const tirer = clientCoordonnees({
     urlAxionia: 'https://axion-ia.example',
     secretRelecture: SECRET_RELECTURE,
-    secretEmission: SECRET_EMISSION,
+    trousseauEmission: TROUSSEAU,
     appeler: (async (url: URL | string, init?: RequestInit) => {
       appels.push({ url: String(url), init: init ?? {} });
       return repondre(String(url), init ?? {});
@@ -121,7 +133,7 @@ describe('REQ-INT-032 — le client de la route des coordonnées', () => {
     const tirer = clientCoordonnees({
       urlAxionia: undefined,
       secretRelecture: SECRET_RELECTURE,
-      secretEmission: SECRET_EMISSION,
+      trousseauEmission: TROUSSEAU,
       appeler: (async () => {
         appels.push(1);
         return new Response();
@@ -316,5 +328,36 @@ describe('REQ-INT-032 — le travail de fond sait attendre une route, et la repr
       true
     );
     expect(PREFIXE_ATTENTE_COORDONNEES).toBe('coordonnees:');
+  });
+});
+
+describe('REQ-QA-030 — la réponse d’axionia est jugée sous la clé que désigne son kid', () => {
+  const PRECEDENTE = 'p'.repeat(40);
+  const corps = JSON.stringify(COORDONNEES);
+  const tirerAvec = (trousseau: Trousseau, reponse: Response) =>
+    clientCoordonnees({
+      urlAxionia: 'https://axion-ia.example',
+      secretRelecture: SECRET_RELECTURE,
+      trousseauEmission: trousseau,
+      appeler: (async () => reponse) as unknown as typeof fetch,
+      maintenantMs: () => MAINTENANT_MS,
+    })(CANDIDATURE);
+
+  it('REQ-QA-030 : signée par la clé précédente avant son échéance, la réponse est acceptée ; après, refusée', async () => {
+    const avant: Trousseau = {
+      courante: SECRET_EMISSION,
+      precedente: { valeur: PRECEDENTE, echeanceMs: MAINTENANT_MS + 1 },
+    };
+    const echue: Trousseau = {
+      courante: SECRET_EMISSION,
+      precedente: { valeur: PRECEDENTE, echeanceMs: MAINTENANT_MS },
+    };
+    expect(await tirerAvec(avant, reponseSignee(corps, PRECEDENTE))).toEqual(COORDONNEES);
+    expect(await tirerAvec(echue, reponseSignee(corps, PRECEDENTE))).toBeNull();
+  });
+
+  it('REQ-QA-030 : une réponse sans kid est refusée, même bien signée par la clé courante', async () => {
+    expect(await tirerAvec(TROUSSEAU, reponseSignee(corps, SECRET_EMISSION, 200, null))).toBeNull();
+    expect(await tirerAvec(TROUSSEAU, reponseSignee(corps))).toEqual(COORDONNEES);
   });
 });
