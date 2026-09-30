@@ -251,3 +251,5 @@ _(rien à consolider — vingt-quatre leçons au journal. Consolidation du 2026-
 - **JUR-T29** (axion-ia #1241, relevé par l'auteur) — `ai_act_trop_large` ne reconnaît pas l'alias « règlement européen sur l'IA » (complément de l'entrée « RIA » ci-dessus), et rougit à tort au pluriel (« Toutes les entreprises qui utilisent l'IA ont des obligations ») : il manque un contre-témoin.
 - **JUR-T29** (axion-ia #1241, relevé par l'auteur) — une exception excuse la ligne entière (`includes`) au lieu du seul fragment qu'elle vise.
 - **JUR-T29** (axion-ia #1241, relevé par l'auteur) — `{formatAmount(...)}` n'est pas vu quand la garde lit ligne à ligne ; il faut une fenêtre de ±2 lignes.
+- **QA-T12** (PR #280, revues exactitude et securite) — aucun témoin ne montre le refus de configurer la sauvegarde sans son signal d'activation.
+- **QA-T53** (PR #293, revues exactitude et securite) — aucun témoin n'exécute `alerteDeLaForge` (`scripts/sauvegarde/cycle.ts`), ni « sauvegarde activée et canal Telegram absent ⇒ le run rougit », ni « sans canal, la garde des clairs juge quand même », alors que `docs/runbooks/sauvegarde.md` et le journal de la PR 293 le promettent.

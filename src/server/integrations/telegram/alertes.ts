@@ -79,6 +79,13 @@ export const CATEGORIES_ALERTE = [
   'releve_bloque',
   /** `QA-T12` — l'échec de l'exercice mensuel de restauration (`REQ-QA-023`, `docs/tiers/telegram.md`). */
   'restauration_echouee',
+  /**
+   * `QA-T53` — un vidage resté en clair (`REQ-QA-023`) : tout échec du rechiffrement horaire, et la
+   * garde des clairs quand elle nomme un clair plus vieux que le seuil de la SSOT
+   * (`scripts/sauvegarde/cycle.ts`). Gabarit : `alerte`, la catégorie et un identifiant technique ;
+   * ni la clé du vidage ni le motif de l'échec n'entrent dans le message.
+   */
+  'rechiffrement_echoue',
   /** Le témoin de la garde `G-SEC-NOTIF` (`garde-sans-pii.ts`, `OBJET_TEMOIN`). */
   'temoin_garde',
 ] as const;
