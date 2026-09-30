@@ -8,13 +8,13 @@
 >
 > Une tache = une PR, **≤ 1,5 jour**. Le plafond est porte par la garde `gov:tasks`.
 
-**330 taches · 256.85 j estimes.**
+**333 taches · 258.35 j estimes.**
 
 | Phase | Taches | Jours | Terminees |
 | --- | ---: | ---: | ---: |
 | -1 — Gouvernance (prealable bloquant) | 39 | 23.75 | 39 |
-| 0 — Socle technique | 132 | 99.85 | 110 |
-| 1 — Operationnel | 78 | 67.50 | 0 |
+| 0 — Socle technique | 134 | 100.85 | 116 |
+| 1 — Operationnel | 79 | 68.00 | 0 |
 | 2 — Argent | 45 | 33.50 | 0 |
 | 3 — Pilotage et conformite | 36 | 32.25 | 0 |
 
@@ -598,7 +598,7 @@ Couvre : `REQ-QA-015`
 
 Couvre : `REQ-QA-023`
 
-**Acceptation.** DEPEND D'UN TIERS : espace de stockage objet et ses cles, prefixe dedie a Partners. (1) La base est sauvegardee TOUTES LES HEURES vers le stockage objet sous le prefixe `partners/` ; la perte de donnees acceptable et le delai de remise en service sont l'un et l'autre d'une heure (REQ-QA-023). (2) UN EXERCICE MENSUEL RESTAURE le dernier vidage sur un Postgres ephemere, verifie qu'au moins une ligne d'attribution existe et que l'etat des migrations est propre, et ALERTE en cas d'echec. (3) UNE SAUVEGARDE QU'ON NE RESTAURE PAS N'EST PAS UNE SAUVEGARDE : le resultat de l'exercice du mois est ecrit avec sa date, son empreinte de vidage et son verdict ; un exercice plus vieux que 35 jours fait rougir le travail de nuit. C'est la meme famille que la surveillance qui detecte sans prevenir. (4) TEMOIN A DEUX FACES : un vidage tronque d'un octet fait echouer la restauration de l'exercice, qui sort en code non nul et nomme l'echec ; le dernier vidage reel la fait sortir en zero avec le compte de lignes restaurees. (5) L'alerte ne contient ni coordonnee de tiers ni lien de console.
+**Acceptation.** DEPEND D'UN TIERS : espace de stockage objet et ses cles, prefixe dedie a Partners. (1) La base est sauvegardee TOUTES LES HEURES vers le stockage objet sous le prefixe `partners/` ; la perte de donnees acceptable et le delai de remise en service sont l'un et l'autre d'une heure (REQ-QA-023). (2) UN EXERCICE MENSUEL RESTAURE le dernier vidage sur un Postgres ephemere, verifie qu'au moins une ligne d'attribution existe et que l'etat des migrations est propre, et ALERTE en cas d'echec. (3) UNE SAUVEGARDE QU'ON NE RESTAURE PAS N'EST PAS UNE SAUVEGARDE : le resultat de l'exercice du mois est ecrit avec sa date, son empreinte de vidage et son verdict ; un exercice plus vieux que 35 jours fait rougir le travail de nuit. C'est la meme famille que la surveillance qui detecte sans prevenir. (4) TEMOIN A DEUX FACES : un vidage tronque d'un octet fait echouer la restauration de l'exercice, qui sort en code non nul et nomme l'echec ; le dernier vidage reel la fait sortir en zero avec le compte de lignes restaurees. (5) L'alerte ne contient ni coordonnee de tiers ni lien de console. AVENANT A01 du 2026-09-29 (arbitrage -d7 sur delegation de Williams, volet sauvegardes de l AIPD de JUR-T04, relaye par la session -50) : les vidages horaires vont sur R2 (bucket axion-ia-backups, prefixe partners/), avec le chiffrement natif de R2 au repos et un jeton restreint a ce bucket et a ce prefixe. CONDITION DE MISE EN SERVICE, BLOQUANTE AVANT LA PREMIERE DONNEE REELLE en production : chiffrement COTE CLIENT par une cle propre a Partners (secret PARTNERS_BACKUP_PASSPHRASE, jamais celle d axion-ia) ; si le mecanisme de la plateforme ne sait pas chiffrer cote client, un job rechiffre le vidage avant son depot, faute de quoi la dette est nommee bloquante de mise en service dans le runbook de sauvegarde. TEMOIN : un vidage depose sans chiffrement client est refuse par l exercice mensuel, qui le nomme.
 
 **Tests.** `tests/unit/qualite/sauvegarde-et-exercice.spec.ts`
 
@@ -642,7 +642,7 @@ Couvre : `REQ-ARG-004`, `REQ-ARG-006`, `REQ-ARG-007`, `REQ-ARG-017`, `REQ-DM-015
 
 **Tests.** `tests/unit/domaine/conservation.spec.ts` · `tests/unit/domaine/commission-calcul.spec.ts`
 
-### INT-T02 — Outbox Partners côté axionia
+### INT-T02 — Outbox Partners côté axionia ✅ **fusionnee**
 
 `1 j` · zone `integration` · `axionia` · `schema` · depend de `INT-T01b`
 
@@ -812,7 +812,7 @@ Couvre : `REQ-CPL-012`, `REQ-JUR-003`, `REQ-JUR-007`, `REQ-JUR-023`
 
 **Tests.** `tests/unit/contrat/contract-template-complete.spec.ts`
 
-### JUR-T03 — Corriger la copy publique d'axionia + garde lexicale des textes apporteurs et gate financement inconditionnelle
+### JUR-T03 — Corriger la copy publique d'axionia + garde lexicale des textes apporteurs et gate financement inconditionnelle ✅ **fusionnee**
 
 `1 j` · zone `juridique` · `axionia` · aucune dependance
 
@@ -1673,7 +1673,7 @@ Couvre : `REQ-INT-004`, `REQ-INT-032`, `REQ-QA-007`
 
 **Tests.** `tests/unit/integration/contrat-hash.spec.ts` · `tests/unit/integration/contrat-v2-frontiere.spec.ts`
 
-### INT-T26 — Consommateur Partners de `candidature.recue` : apporteur `candidat`, coordonnées tirées et chiffrées, rattachement par empreinte
+### INT-T26 — Consommateur Partners de `candidature.recue` : apporteur `candidat`, coordonnées tirées et chiffrées, rattachement par empreinte ✅ **fusionnee**
 
 `1 j` · zone `integration` · sensible : rgpd · depend de `SEC-06`, `INT-T01c`, `INT-T27-A`, `SEC-03`, `SEC-04`, `DM-06`
 
@@ -1683,7 +1683,7 @@ Couvre : `REQ-INT-032`, `REQ-DM-035`, `REQ-QA-035`
 
 **Tests.** `tests/integration/candidature-recue.spec.ts`
 
-### INT-T27-A — Route axionia des coordonnées d'un candidat émis vers Partners : HMAC, portée limitée aux candidatures émises, réponse fermée, journal sans clair
+### INT-T27-A — Route axionia des coordonnées d'un candidat émis vers Partners : HMAC, portée limitée aux candidatures émises, réponse fermée, journal sans clair ✅ **fusionnee**
 
 `1 j` · zone `integration` · `axionia` · sensible : rgpd · depend de `INT-T02`, `INT-T01c`
 
@@ -1843,7 +1843,7 @@ Couvre : `REQ-GOV-021`
 
 **Tests.** `tests/unit/gouvernance/une-tache-en-cours-appartient-a-un-lot.spec.ts`
 
-### JUR-T34 — La politique de confidentialite de l'espace : affichee, acceptee a la premiere connexion, tiree du registre de l'article 30
+### JUR-T34 — La politique de confidentialite de l'espace : affichee, acceptee a la premiere connexion, tiree du registre de l'article 30 ✅ **fusionnee**
 
 `0.75 j` · zone `juridique` · sensible : rgpd · depend de `JUR-T04`
 
@@ -1903,13 +1903,33 @@ Couvre : `REQ-GOV-011`
 
 **Tests.** `tests/unit/gouvernance/une-lentille-pour-une-pr-sans-risque.spec.ts`
 
-### GOV-127 — Le passif declare de la declaration : une livraison nommee a la fusion mais au squash non conforme se clot sur arbitrage ecrit
+### GOV-127 — Le passif declare de la declaration : une livraison nommee a la fusion mais au squash non conforme se clot sur arbitrage ecrit ✅ **fusionnee**
 
 `0.5 j` · zone `gouvernance` · depend de `GOV-125`
 
 Couvre : `REQ-GOV-026`
 
 **Acceptation.** EXCEPTION AU GEL, arbitrage -d7 sur delegation de Williams du 2026-09-29 : elle bloque la Phase 0 a 100 %. CONSTAT : INT-T02 (axion-ia #1180, sha f158408, en production) est refusee par lot:cloture (tache_etrangere_a_la_pr, titre_d_ecrasement_non_conforme) : la PR portait le titre feat(INT-T02) a l instant de la fusion, mais le squash a pris pour premiere ligne feat(partners): ... (INT-T02) (#1180), une livraison anterieure a la convention de declaration cote axion-ia. INT-T27-A et INT-T26, livrees et en production, en dependent. A LIVRER : (1) une liste FERMEE et datee, PASSIF_DE_LA_DECLARATION, dans scripts/lot/cloture.ts, avec UNE seule entree : INT-T02, PR axion-ia #1180, sha complet f158408, motif de l arbitrage et mesure du patch propre (8f1d7d4 equivalent a 6bfd50b : 19 fichiers, seul le contexte de worker.ts differe). (2) L entree ne leve les deux refus QUE si la tache, la PR, le sha complet coincident ET si le titre a l instant de la fusion (chronologie de la forge) declare la tache. (3) Toute autre livraison garde les deux refus a l identique ; aucun drapeau de ligne de commande ne leve rien ; aucune autre regle n est assouplie. (4) TEMOINS rouges d abord : INT-T02 passe ; la meme livraison avec un autre sha, une autre PR ou un titre a la fusion qui ne declare pas la tache est refusee ; une livraison hors liste au squash non conforme est refusee. (5) Deux lentilles (scripts/lot/). Puis INT-T02, INT-T27-A et INT-T26 sont closes par un rattrapage.
+
+**Tests.** `tests/unit/gouvernance/le-passif-de-la-declaration-est-ferme.spec.ts`
+
+### QA-T50 — Provisionnement Coolify : application, base Postgres separee et variables posees depuis les secrets du depot, jamais en clair
+
+`0.5 j` · zone `qualite` · depend de `QA-T34`
+
+Couvre : `REQ-INT-031`
+
+**Acceptation.** Versee a la demande de la session -50 (mise en ligne), sur demande de -d7 : aucune tache du registre ne portait le provisionnement, REQ-INT-031 n etant rattachee qu a INT-T02 cote axionia. (1) Un declenchement manuel cree, s ils n existent pas, dans le projet Coolify Axion-Partners, l application de type image Docker (ghcr.io/will383842/axion-apporteurs, etiquette sha-<7>, sonde /api/readyz) et une base Postgres 16 separee ; il est idempotent : relance, il ne cree rien et le dit. (2) Chaque variable de docs/env.md est posee depuis le secret du depot de meme nom, jamais en argument ni en clair dans le journal du run ; DATABASE_URL vient de la base creee. (3) Un secret absent : SAUTE avec un ::warning:: par secret nomme. (4) TEMOIN A DEUX FACES sur une plateforme factice locale : secrets absents, alors saute et nomme ; plateforme en 401, alors code non nul et jeton jamais imprime. Deux lentilles (workflow et secrets).
+
+**Tests.** `tests/unit/qualite/provisionnement-coolify.spec.ts`
+
+### GOV-128 — Le passif de la declaration lit aussi la ligne Lot: du squash immuable : une PR de lot au corps enrichi se clot sur arbitrage ecrit
+
+`0.5 j` · zone `gouvernance` · depend de `GOV-127`
+
+Couvre : `REQ-GOV-026`
+
+**Acceptation.** EXCEPTION AU GEL, arbitrage -d7 sur delegation de Williams du 2026-09-30 : elle bloque deux clotures de phase 0. CONSTAT : INT-T04 et INT-T05 (axion-ia #1228, sha 3fb76aa) sont refusees par lot:cloture (tache_etrangere_a_la_pr) : la premiere ligne du squash est conforme, mais le corps porte, apres la ligne Lot: INT-T04, INT-T05, un paragraphe et un trailer ; or le corps ne declare que s il est reduit a la seule ligne Lot: (GOV-104), et le titre feat(INT-T04, INT-T05) ne nomme aucune tache a lui seul. Condition verifiee : les deux accords A09 sont publies sur la tete fusionnee 7eb1bf3. A LIVRER : (1) deux entrees au PASSIF_DE_LA_DECLARATION, INT-T04 et INT-T05, PR axion-ia #1228, sha complet 3fb76aa, declarees par la ligne Lot: et non par le titre. (2) Une telle entree ne leve le refus QUE si la tache, la PR et le sha complet coincident, si la premiere ligne du squash est conforme, et si la ligne Lot: qui la suit dans le message immuable nomme la tache. (3) Toute autre livraison garde les refus a l identique ; les entrees par titre gardent leur regle ; aucun drapeau ne leve rien ; aucune regle generale n est assouplie. (4) TEMOINS rouges d abord : INT-T04 et INT-T05 passent ; un autre sha, une autre PR, une tache absente de la ligne Lot:, un squash sans ligne Lot: ou a premiere ligne non conforme sont refuses. (5) Deux lentilles (scripts/lot/). Puis INT-T04 et INT-T05 sont closes par un rattrapage.
 
 **Tests.** `tests/unit/gouvernance/le-passif-de-la-declaration-est-ferme.spec.ts`
 
@@ -2548,6 +2568,16 @@ Couvre : `REQ-SEC-017`, `REQ-SEC-024`, `REQ-DM-008`
 **Acceptation.** Source : docs/chantiers/W20-confirmation-par-email.md (décision de Williams du 2026-09-29, session -d7, phase 1). Un témoin par risque 1 à 5 du §8 du plan, chacun vu rouge sur une mutation de la garde qu'il vise : (1) coordonnées du contact égales à celles de l'apporteur → raison posée, confirmation par clic non retenue si elle vient de l'empreinte d'IP de l'apporteur ; (2) ouverture du lien par un analyseur de messagerie → aucune réponse enregistrée ; (3) nom ou contexte piégé (balise, adresse web) → rendu en texte brut dans l'e-mail, aucun lien cliquable ; (4) jeton rejoué ou forgé → sans effet, réponse identique ; (5) « Non » en un seul geste → rien. Aucun réglage des contrôles écrit dans le test (REQ-GOV-031). (6) Amendée le 2026-09-29 (réponse de Williams à la question 2 et exigence d'expérience, docs/chantiers/W20-confirmation-par-email.md §2, §4 et §9) : témoin du contact inventé — une adresse qui rebondit et n'est jamais corrigée ne fait jamais courir le délai tacite ; une mutation qui fait partir le délai de l'envoi ou du dépôt, ou qui ignore le rebond, rougit ; une correction vers l'adresse de l'apporteur lui-même porte la raison de vérification et ne change rien d'autre. (7) Correction de sécurité du 2026-09-29 (refus de la lentille securite sur 2340a63, docs/chantiers/W20-confirmation-par-email.md §2, §8 et question 18) : témoins vus rouges sur la mutation qui retient le clic ou promeut le silence — (a) une adresse webmail contrôlée par l'apporteur et un « Oui » depuis une autre IP donnent un dépôt toujours provisoire, en tête de liste ; (b) une demande signalée et silencieuse pendant trente jours reste non confirmée ; (c) un « Non » en second geste sur une demande signalée invalide toujours. (8) Réponses de Williams du 2026-09-29 vers 20 h (session -d7, questions 18 et 19) : témoins vus rouges sur leur mutation — (a) trois Qualifications injoignable sur une demande signalée → libérée (perimee par liberee_sans_confirmation), et une mutation qui ne libère pas, ou qui libère dès la deuxième, rougit ; (b) 45 jours après l'envoi sans appel concluant → libérée, et une mutation qui fait repartir le délai à la correction d'adresse, ou qui le compte de la réception, rougit ; (c) aucune sanction : la libération n'ouvre ni Anomalie, ni suspension, ni entrée au score de SEC-14, et une mutation qui en pose une rougit ; (d) notification : exactement une, neutre, sans raison ni vérification ni nombre d'appels, faitCourirUnDelai false, et une mutation qui y met la raison rougit ; (e) carence de redépôt (arbitrage de -d7 sur délégation de Williams du 2026-09-29), témoins vus rouges sur leur mutation : le fraudeur à l'adresse muette qui redépose le même SIREN pendant la carence est refusé sans rien écrire ni horodater, et une mutation qui accepte le dépôt rougit ; après une deuxième libération, la carence est de 90 jours, et une mutation qui la laisse à 30 rougit ; un autre apporteur n'est jamais bloqué, et une mutation qui étend la carence à tous rougit ; le refus ne pose ni Anomalie, ni suspension, ni signal ; même après la carence, le redépôt n'obtient jamais de confirmation par le silence. Aucun réglage des contrôles dans le test (REQ-GOV-031).
 
 **Tests.** `tests/integration/attaque-fraude-a-la-confirmation.spec.ts`
+
+### JUR-T36 — La politique de confidentialite publique n'affiche ni les questions internes du registre, ni un nom de personne, ni le vocabulaire interdit
+
+`0.5 j` · zone `juridique` · sensible : rgpd · depend de `JUR-T34`
+
+Couvre : `REQ-JUR-025`
+
+**Acceptation.** DETTE BLOQUANTE POUR LA MISE EN SERVICE, relevee par la lentille A07 juriste sur la PR #242 (JUR-T34), et deja signalee par la lentille securite. La page /confidentialite, lisible sans session, affiche le registre de l article 30 tel quel : les rubriques A completer y montrent la question interne posee a Williams, le prenom Will apparait (a confirmer par Will), et le mot attribution, refuse par le lexique de l espace, y est lu. A LIVRER : (1) la page n affiche jamais une question interne ni un nom de personne ; une rubrique encore A completer s affiche comme en cours de redaction, sans la question ; (2) aucun mot du lexique interdit de l espace n atteint la page, que la garde lexicale lise le texte a l execution ou que le registre soit reformule pour l apporteur ; (3) le choix est ecrit ; (4) TEMOIN rouge d abord : un registre de fixture qui porte une question interne, le prenom Will et le mot attribution produit une page qui n en montre aucun, et le temoin nomme ce qu il a filtre. Aucune mise en service de l espace avant cette tache. Dette apres lancement notee a part : l historique des versions acceptees, et la micro-copie Votre espace s ouvre une fois cette politique acceptee, inexacte tant qu aucune route ne verifie l accord hors connexion.
+
+**Tests.** `tests/unit/juridique/politique-publique-sans-note-interne.spec.ts`
 
 ## Phase 2 — Argent
 

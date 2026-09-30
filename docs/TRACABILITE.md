@@ -16,7 +16,7 @@
 
 **334 exigences actives · 137 réputées testées · 137 couvertes · 0 orphelines.**
 
-330 tâches, dont 149 livrées · 178 fichiers de test exécutés par `vitest` sur 178 présents.
+333 tâches, dont 155 livrées · 179 fichiers de test exécutés par `vitest` sur 179 présents.
 
 ## Exigences réputées testées
 
@@ -81,7 +81,7 @@
 | `REQ-GOV-023` | `GOV-008`, `GOV-018`, `GOV-052`, `GOV-073`, `GOV-091`, `GOV-108` | `tests/unit/gouvernance/plan-state-frais.spec.ts`, `tests/unit/gouvernance/regles-maison.spec.ts`, `tests/unit/gouvernance/une-pr-porte-son-entree-de-journal.spec.ts`, `tests/unit/gouvernance/une-seule-grammaire-de-journal.spec.ts` | couverte |
 | `REQ-GOV-024` | `GOV-018`, `GOV-026`, `GOV-045`, `GOV-060`, `GOV-068`, `GOV-073`, `GOV-081` | `tests/unit/gouvernance/cliquet-nomme-chaque-refus.spec.ts`, `tests/unit/gouvernance/plan-state-lecteur-unique.spec.ts`, `tests/unit/gouvernance/raison-de-dette-resolue.spec.ts`, `tests/unit/gouvernance/regles-maison.spec.ts`, `tests/unit/gouvernance/une-seule-grammaire-de-journal.spec.ts` | couverte |
 | `REQ-GOV-025` | `GOV-017a`, `GOV-017b`, `GOV-038` | `tests/unit/gouvernance/attestation-inter-depot.spec.ts`, `tests/unit/gouvernance/paths-derives.spec.ts` | couverte |
-| `REQ-GOV-026` | `GOV-001`, `GOV-020`, `GOV-038`, `GOV-041`, `GOV-042`, `GOV-057`, `GOV-079`, `GOV-086`, `GOV-103`, `GOV-104`, `GOV-107`, `GOV-110`, `GOV-122`, `GOV-125`, `GOV-127` | `tests/unit/gouvernance/attestation-inter-depot.spec.ts`, `tests/unit/gouvernance/aucune-troncature-muette.spec.ts`, `tests/unit/gouvernance/clore-une-tache-livree-seule.spec.ts`, `tests/unit/gouvernance/cloture-refuse-ce-qu-elle-n-a-pas-mesure.spec.ts`, `tests/unit/gouvernance/inventaire-prouve.spec.ts`, `tests/unit/gouvernance/la-declaration-se-lit-dans-le-commit-de-fusion.spec.ts`, `tests/unit/gouvernance/le-passif-de-la-declaration-est-ferme.spec.ts`, `tests/unit/gouvernance/un-etat-cible-porte-son-operation.spec.ts`, `tests/unit/gouvernance/un-statut-fusionnee-porte-sa-preuve.spec.ts`, `tests/unit/gouvernance/une-branche-reelle-de-la-forge-est-admise.spec.ts`, `tests/unit/gouvernance/une-tache-axionia-se-clot-sur-sa-branche.spec.ts` | couverte |
+| `REQ-GOV-026` | `GOV-001`, `GOV-020`, `GOV-038`, `GOV-041`, `GOV-042`, `GOV-057`, `GOV-079`, `GOV-086`, `GOV-103`, `GOV-104`, `GOV-107`, `GOV-110`, `GOV-122`, `GOV-125`, `GOV-127`, `GOV-128` | `tests/unit/gouvernance/attestation-inter-depot.spec.ts`, `tests/unit/gouvernance/aucune-troncature-muette.spec.ts`, `tests/unit/gouvernance/clore-une-tache-livree-seule.spec.ts`, `tests/unit/gouvernance/cloture-refuse-ce-qu-elle-n-a-pas-mesure.spec.ts`, `tests/unit/gouvernance/inventaire-prouve.spec.ts`, `tests/unit/gouvernance/la-declaration-se-lit-dans-le-commit-de-fusion.spec.ts`, `tests/unit/gouvernance/le-passif-de-la-declaration-est-ferme.spec.ts`, `tests/unit/gouvernance/un-etat-cible-porte-son-operation.spec.ts`, `tests/unit/gouvernance/un-statut-fusionnee-porte-sa-preuve.spec.ts`, `tests/unit/gouvernance/une-branche-reelle-de-la-forge-est-admise.spec.ts`, `tests/unit/gouvernance/une-tache-axionia-se-clot-sur-sa-branche.spec.ts` | couverte |
 | `REQ-GOV-027` | `CPL-T01`, `CPL-T23`, `GOV-017a`, `GOV-017b`, `GOV-022` | `tests/gov/charte-pr.spec.ts`, `tests/unit/gouvernance/verrou-de-phase.spec.ts` | couverte |
 | `REQ-GOV-028` | `GOV-019` | `tests/unit/gouvernance/poids-du-bundle-garde-vraiment.spec.ts` | couverte |
 | `REQ-GOV-029` | `GOV-014`, `GOV-051`, `GOV-061`, `GOV-062`, `GOV-076` | `tests/unit/gouvernance/comparer-un-chemin-c-est-le-normaliser.spec.ts`, `tests/unit/gouvernance/formes-voisines-des-interdits.spec.ts`, `tests/unit/gouvernance/gardes-transposees.spec.ts`, `tests/unit/gouvernance/outillage-de-la-porte-a.spec.ts`, `tests/unit/gouvernance/porte-a-presente-active-effective.spec.ts` | couverte |
@@ -107,7 +107,7 @@
 | `REQ-JUR-009` | `INT-T40`, `JUR-T04`, `JUR-T09`, `JUR-T40`, `JUR-T41`, `UX-P1-42` | `tests/unit/juridique/registre-rgpd.spec.ts` | couverte |
 | `REQ-JUR-015` | `JUR-T02` | `tests/unit/juridique/seuils-ssot.spec.ts` | couverte |
 | `REQ-JUR-023` | `DM-23`, `JUR-T01`, `SEC-12` | `tests/unit/contrat/contract-template-complete.spec.ts` | couverte |
-| `REQ-JUR-025` | `EXT-T01`, `JUR-T04`, `JUR-T34`, `T-ARG-033` | `tests/unit/juridique/politique-de-confidentialite.spec.ts`, `tests/unit/juridique/registre-rgpd.spec.ts` | couverte |
+| `REQ-JUR-025` | `EXT-T01`, `JUR-T04`, `JUR-T34`, `JUR-T36`, `T-ARG-033` | `tests/unit/juridique/politique-de-confidentialite.spec.ts`, `tests/unit/juridique/registre-rgpd.spec.ts` | couverte |
 | `REQ-JUR-029` | `DM-11`, `JUR-T02`, `T-ARG-033` | `tests/unit/juridique/seuils-ssot.spec.ts` | couverte |
 | `REQ-JUR-031` | `DM-43`, `JUR-T24`, `JUR-T27`, `JUR-T28`, `SEC-14`, `SEC-15`, `SEC-41`, `UX-P1-12` | `tests/unit/contrat/contrat-sobre.spec.ts` | couverte |
 | `REQ-JUR-034` | `JUR-T26` | `tests/unit/juridique/charte-relationnelle.spec.ts` | couverte |
@@ -275,7 +275,7 @@
 | `REQ-INT-025` | 3 | `UX-P3-01` | — |
 | `REQ-INT-027` | 1 | `INT-T13`, `INT-T17` | — |
 | `REQ-INT-030` | 1 | `INT-T08-A`, `INT-T08-P`, `QA-T19` | — |
-| `REQ-INT-031` | 0 | `INT-T02` | `axionia/src/server/partners-sync/__tests__/outbox-produit-des-evenements-valides.spec.ts` |
+| `REQ-INT-031` | 0 | `INT-T02`, `QA-T50` | `axionia/src/server/partners-sync/__tests__/outbox-produit-des-evenements-valides.spec.ts`, `tests/unit/qualite/provisionnement-coolify.spec.ts` |
 | `REQ-JUR-001` | 0 | `JUR-T03`, `JUR-T29` | `axionia/src/content/__tests__/remuneration-indicative.spec.ts`, `axionia/src/content/__tests__/vocabulaire-apporteur.spec.ts` |
 | `REQ-JUR-002` | 0 | `JUR-T03`, `JUR-T29` | `axionia/src/content/__tests__/remuneration-indicative.spec.ts`, `axionia/src/content/__tests__/vocabulaire-apporteur.spec.ts` |
 | `REQ-JUR-004` | 1 | `INT-T12`, `INT-T23` | — |
@@ -607,6 +607,7 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | `tests/unit/qualite/porte-d.spec.ts` | oui | `REQ-QA-021` |
 | `tests/unit/qualite/red-first.spec.ts` | oui | `REQ-CPL-022` |
 | `tests/unit/qualite/req-check.spec.ts` | oui | `REQ-QA-014` |
+| `tests/unit/qualite/sauvegarde-et-exercice.spec.ts` | oui | `REQ-QA-023` |
 | `tests/unit/qualite/score-de-mutation.spec.ts` | oui | `REQ-QA-002` |
 | `tests/unit/qualite/semgrep-regles-maison.spec.ts` | oui | `REQ-QA-011`, `REQ-QA-013`, `REQ-SEC-008` |
 | `tests/unit/qualite/sondes-client-unique.spec.ts` | oui | `REQ-QA-020` |

@@ -2,12 +2,12 @@
   "version": 1,
   "resume": {
     "_methode": "une PAIRE est comptée quand l'intersection des deux `paths[]` n'est pas vide, par égalité de chaîne. ⚠️ Elle ne lit PAS le champ `paths` des tâches : deux tâches peuvent y figurer comme « sans intersection » alors que leurs `paths` déclarés se recouvrent — c'est le cas de GOV-025 et GOV-028, qui partagent `scripts/gates/gov-identifiants.ts`. Le composeur, lui, compare bien `t.paths` : cette vue ne dit donc pas ce qu'il fera. Ces trois totaux sont écrits par `scripts/lot/paths-proposes.ts` et par rien d'autre ; `tsx scripts/lot/paths-proposes.ts --check` échoue si le fichier rendu en diverge.",
-    "tachesCouvertes": 330,
-    "pairesEnIntersection": 4581,
-    "cheminsDeclares": 874,
-    "cheminsDistincts": 569,
-    "cheminsPartages": 112,
-    "tachesSansAucuneIntersection": 104,
+    "tachesCouvertes": 333,
+    "pairesEnIntersection": 4582,
+    "cheminsDeclares": 877,
+    "cheminsDistincts": 571,
+    "cheminsPartages": 113,
+    "tachesSansAucuneIntersection": 105,
     "listeDesTachesIsolees": [
       "QA-T08",
       "QA-T12",
@@ -112,7 +112,8 @@
       "QA-T41",
       "GOV-123",
       "GOV-125",
-      "GOV-127"
+      "JUR-T36",
+      "QA-T50"
     ],
     "cheminsLesPlusPartages": [
       {
@@ -1709,6 +1710,15 @@
       "tests/unit/gouvernance/une-lentille-pour-une-pr-sans-risque.spec.ts"
     ],
     "GOV-127": [
+      "tests/unit/gouvernance/le-passif-de-la-declaration-est-ferme.spec.ts"
+    ],
+    "JUR-T36": [
+      "tests/unit/juridique/politique-publique-sans-note-interne.spec.ts"
+    ],
+    "QA-T50": [
+      "tests/unit/qualite/provisionnement-coolify.spec.ts"
+    ],
+    "GOV-128": [
       "tests/unit/gouvernance/le-passif-de-la-declaration-est-ferme.spec.ts"
     ]
   }

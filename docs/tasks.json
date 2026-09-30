@@ -2398,7 +2398,11 @@
         ".github/workflows/backup.yml",
         "docs/runbooks/sauvegarde.md",
         "tests/unit/qualite/sauvegarde-et-exercice.spec.ts",
-        ".github/workflows/nightly.yml"
+        ".github/workflows/nightly.yml",
+        "scripts/sauvegarde/",
+        "package.json",
+        "src/domain/seuils/ssot.ts",
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -2420,7 +2424,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "DEPEND D'UN TIERS : espace de stockage objet et ses cles, prefixe dedie a Partners. (1) La base est sauvegardee TOUTES LES HEURES vers le stockage objet sous le prefixe `partners/` ; la perte de donnees acceptable et le delai de remise en service sont l'un et l'autre d'une heure (REQ-QA-023). (2) UN EXERCICE MENSUEL RESTAURE le dernier vidage sur un Postgres ephemere, verifie qu'au moins une ligne d'attribution existe et que l'etat des migrations est propre, et ALERTE en cas d'echec. (3) UNE SAUVEGARDE QU'ON NE RESTAURE PAS N'EST PAS UNE SAUVEGARDE : le resultat de l'exercice du mois est ecrit avec sa date, son empreinte de vidage et son verdict ; un exercice plus vieux que 35 jours fait rougir le travail de nuit. C'est la meme famille que la surveillance qui detecte sans prevenir. (4) TEMOIN A DEUX FACES : un vidage tronque d'un octet fait echouer la restauration de l'exercice, qui sort en code non nul et nomme l'echec ; le dernier vidage reel la fait sortir en zero avec le compte de lignes restaurees. (5) L'alerte ne contient ni coordonnee de tiers ni lien de console.",
+      "acceptance": "DEPEND D'UN TIERS : espace de stockage objet et ses cles, prefixe dedie a Partners. (1) La base est sauvegardee TOUTES LES HEURES vers le stockage objet sous le prefixe `partners/` ; la perte de donnees acceptable et le delai de remise en service sont l'un et l'autre d'une heure (REQ-QA-023). (2) UN EXERCICE MENSUEL RESTAURE le dernier vidage sur un Postgres ephemere, verifie qu'au moins une ligne d'attribution existe et que l'etat des migrations est propre, et ALERTE en cas d'echec. (3) UNE SAUVEGARDE QU'ON NE RESTAURE PAS N'EST PAS UNE SAUVEGARDE : le resultat de l'exercice du mois est ecrit avec sa date, son empreinte de vidage et son verdict ; un exercice plus vieux que 35 jours fait rougir le travail de nuit. C'est la meme famille que la surveillance qui detecte sans prevenir. (4) TEMOIN A DEUX FACES : un vidage tronque d'un octet fait echouer la restauration de l'exercice, qui sort en code non nul et nomme l'echec ; le dernier vidage reel la fait sortir en zero avec le compte de lignes restaurees. (5) L'alerte ne contient ni coordonnee de tiers ni lien de console. AVENANT A01 du 2026-09-29 (arbitrage -d7 sur delegation de Williams, volet sauvegardes de l AIPD de JUR-T04, relaye par la session -50) : les vidages horaires vont sur R2 (bucket axion-ia-backups, prefixe partners/), avec le chiffrement natif de R2 au repos et un jeton restreint a ce bucket et a ce prefixe. CONDITION DE MISE EN SERVICE, BLOQUANTE AVANT LA PREMIERE DONNEE REELLE en production : chiffrement COTE CLIENT par une cle propre a Partners (secret PARTNERS_BACKUP_PASSPHRASE, jamais celle d axion-ia) ; si le mecanisme de la plateforme ne sait pas chiffrer cote client, un job rechiffre le vidage avant son depot, faute de quoi la dette est nommee bloquante de mise en service dans le runbook de sauvegarde. TEMOIN : un vidage depose sans chiffrement client est refuse par l exercice mensuel, qui le nomme.",
       "tests": {
         "REQ-QA-023": [
           "tests/unit/qualite/sauvegarde-et-exercice.spec.ts"
@@ -2698,10 +2702,10 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 1,
-      "statut": "a_faire",
-      "owner": null,
+      "statut": "fusionnee",
+      "owner": "A01",
       "lot": null,
-      "branch": null,
+      "branch": "feat/partners-int-t02-outbox",
       "pr": null,
       "issue": null,
       "attempts": 0,
@@ -2726,7 +2730,12 @@
           "axionia/src/server/partners-sync/__tests__/outbox-produit-des-evenements-valides.spec.ts"
         ]
       },
-      "acceptance": "DEPOT AXIONIA — la PR porte l'etiquette de depot et suit le runbook de fusion d'axionia. (1) Tout evenement destine a Partners est ecrit dans une file de sortie PERSISTANTE, DANS LA TRANSACTION de l'ecriture metier qui le produit : un retour arriere metier ne laisse AUCUN evenement, une validation metier en laisse EXACTEMENT UN (REQ-INT-001). C'est la seule forme qui ne perd ni ne duplique. (2) Chaque requete sortante est signee sur « horodatage point corps exact », en-tetes dedies, et le recepteur refuse hors d'une fenetre de 300 s (REQ-INT-002). La signature porte sur le corps EXACT transmis, jamais sur un objet re-serialise. (3) INERTIE PAR DEFAUT : sans le drapeau d'activation, aucune ligne de file de sortie, aucun travail de fond, aucun appel reseau ; et au build du depot axionia — celui qui s'execute sans base reelle — aucun code d'integration ne s'execute (REQ-INT-008). (4) Le rejeu suit un recul exponentiel, 8 tentatives au plus, delai d'attente 10 s ; un refus definitif abandonne immediatement avec alerte, une indisponibilite ne compte pas de tentative ; apres abandon la ligne reste visible et rejouable a la main par identifiant d'evenement (REQ-INT-009). (5) Une route de relecture de la file de sortie permet a Partners de rattraper toute lacune a partir d'un numero de sequence, avec la charge EXACTE conservee (REQ-INT-012). (6) Aucun secret d'integration ne transite en clair dans le depot ni dans une conversation : ils sont poses par le chemin de secrets de la forge (REQ-INT-031). (7) TEMOIN A DEUX FACES : une transaction metier annulee apres ecriture de l'evenement laisse ZERO ligne de file de sortie et le test le prouve ; la meme transaction validee en laisse exactement une. Et sans le drapeau d'activation, un appel metier complet laisse zero ligne, zero travail, zero appel reseau, ce qui se mesure et ne se suppose pas. (8) `sequence` est attribuee par le relais, sous verrou consultatif, au premier envoi : monotonie GLOBALE et d'EMISSION (portee laissee ouverte a INT-T02 par partners/ADR-0008, tranchee par l'architecte le 2026-09-26) ; la route de relecture ne rend que des lignes numerotees ; un test fait valider deux transactions dans l'ordre inverse de leur creation et prouve qu'aucune ligne n'est sautee. (9) Le corps signe et transmis est stocke en TEXTE (`corps`), jamais en Json (jsonb reordonne les cles), et relu octet a octet par un test. (10) SCHEMA axionia (conventions d'axionia, patron `CrmSyncOutbox`, partners/ADR-0022) : enum `PartnersSyncStatus {pending, sent, failed, gave_up}` ; `PartnersSyncOutbox` -> `partners_sync_outbox` : `eventId` uuid unique, `eventType` VarChar(64) valide contre `TYPES_EVENEMENT` avant insertion (422 sinon), `subjectRef` VarChar(180), `sequence` BigInt unique nulle tant que la ligne n'a pas ete prise, `corps` Text, `status` (defaut `pending`), `attempts`, `lastError`, `lastAttemptAt`, `nextAttemptAt`, `sentAt`, `responseStatus`, `createdAt` ; index `(status, nextAttemptAt)` et `subjectRef`."
+      "acceptance": "DEPOT AXIONIA — la PR porte l'etiquette de depot et suit le runbook de fusion d'axionia. (1) Tout evenement destine a Partners est ecrit dans une file de sortie PERSISTANTE, DANS LA TRANSACTION de l'ecriture metier qui le produit : un retour arriere metier ne laisse AUCUN evenement, une validation metier en laisse EXACTEMENT UN (REQ-INT-001). C'est la seule forme qui ne perd ni ne duplique. (2) Chaque requete sortante est signee sur « horodatage point corps exact », en-tetes dedies, et le recepteur refuse hors d'une fenetre de 300 s (REQ-INT-002). La signature porte sur le corps EXACT transmis, jamais sur un objet re-serialise. (3) INERTIE PAR DEFAUT : sans le drapeau d'activation, aucune ligne de file de sortie, aucun travail de fond, aucun appel reseau ; et au build du depot axionia — celui qui s'execute sans base reelle — aucun code d'integration ne s'execute (REQ-INT-008). (4) Le rejeu suit un recul exponentiel, 8 tentatives au plus, delai d'attente 10 s ; un refus definitif abandonne immediatement avec alerte, une indisponibilite ne compte pas de tentative ; apres abandon la ligne reste visible et rejouable a la main par identifiant d'evenement (REQ-INT-009). (5) Une route de relecture de la file de sortie permet a Partners de rattraper toute lacune a partir d'un numero de sequence, avec la charge EXACTE conservee (REQ-INT-012). (6) Aucun secret d'integration ne transite en clair dans le depot ni dans une conversation : ils sont poses par le chemin de secrets de la forge (REQ-INT-031). (7) TEMOIN A DEUX FACES : une transaction metier annulee apres ecriture de l'evenement laisse ZERO ligne de file de sortie et le test le prouve ; la meme transaction validee en laisse exactement une. Et sans le drapeau d'activation, un appel metier complet laisse zero ligne, zero travail, zero appel reseau, ce qui se mesure et ne se suppose pas. (8) `sequence` est attribuee par le relais, sous verrou consultatif, au premier envoi : monotonie GLOBALE et d'EMISSION (portee laissee ouverte a INT-T02 par partners/ADR-0008, tranchee par l'architecte le 2026-09-26) ; la route de relecture ne rend que des lignes numerotees ; un test fait valider deux transactions dans l'ordre inverse de leur creation et prouve qu'aucune ligne n'est sautee. (9) Le corps signe et transmis est stocke en TEXTE (`corps`), jamais en Json (jsonb reordonne les cles), et relu octet a octet par un test. (10) SCHEMA axionia (conventions d'axionia, patron `CrmSyncOutbox`, partners/ADR-0022) : enum `PartnersSyncStatus {pending, sent, failed, gave_up}` ; `PartnersSyncOutbox` -> `partners_sync_outbox` : `eventId` uuid unique, `eventType` VarChar(64) valide contre `TYPES_EVENEMENT` avant insertion (422 sinon), `subjectRef` VarChar(180), `sequence` BigInt unique nulle tant que la ligne n'a pas ete prise, `corps` Text, `status` (defaut `pending`), `attempts`, `lastError`, `lastAttemptAt`, `nextAttemptAt`, `sentAt`, `responseStatus`, `createdAt` ; index `(status, nextAttemptAt)` et `subjectRef`.",
+      "attestation": {
+        "pr": 1180,
+        "sha": "f158408b6a0473f99f2df9b47cece3515234cbfe",
+        "fusionneeAt": "2026-09-29T12:16:26Z"
+      }
     },
     {
       "id": "INT-T03",
@@ -2739,7 +2748,15 @@
         "axionia/prisma/schema.prisma",
         "axionia/scripts/gates/cliquet-ecrivains.ts",
         "axionia/src/server/partners-sync/__tests__/producteurs-client.spec.ts",
-        "axionia/src/server/partners-sync/__tests__/cliquet-ecrivains.spec.ts"
+        "axionia/src/server/partners-sync/__tests__/cliquet-ecrivains.spec.ts",
+        "axionia/src/server/actions/qualiopi/clients.ts",
+        "axionia/src/server/qualiopi/crm/contact-facturation.ts",
+        "axionia/src/server/qualiopi/crm/porte-client.ts",
+        "axionia/src/features/dossier-client/fusionner.ts",
+        "axionia/src/features/dossier-client/defaire-fusion.ts",
+        "axionia/scripts/visio/deriver-siren.ts",
+        "axionia/tests/unit/ci/cliquet-ecrivains-client.spec.ts",
+        "axionia/src/server/partners-sync/producteurs/facturation.ts"
       ],
       "schema": true,
       "sensible": [
@@ -2845,7 +2862,10 @@
         "axionia/src/server/qualiopi/financements/facture-formation-emission.ts",
         "axionia/src/server/qualiopi/financements/facture-libre.ts",
         "axionia/src/server/qualiopi/financements/plan-recurrent.ts",
-        "axionia/src/server/qualiopi/financements/dossier-financement.ts"
+        "axionia/src/server/qualiopi/financements/dossier-financement.ts",
+        "axionia/src/server/partners/ht.ts",
+        "axionia/src/server/partners/__tests__/derivation-ht.spec.ts",
+        "axionia/src/server/partners/__tests__/payloads.spec.ts"
       ],
       "schema": true,
       "sensible": [
@@ -3785,10 +3805,10 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 1,
-      "statut": "a_faire",
-      "owner": null,
+      "statut": "fusionnee",
+      "owner": "A01",
       "lot": null,
-      "branch": null,
+      "branch": "jur/t03-copie-apporteur",
       "pr": null,
       "issue": null,
       "attempts": 0,
@@ -3804,6 +3824,11 @@
         "REQ-JUR-024": [
           "axionia/src/content/__tests__/vocabulaire-apporteur.spec.ts"
         ]
+      },
+      "attestation": {
+        "pr": 1220,
+        "sha": "b1eb57ea32d92da4f6fec5ec1caa740eb554c4d8",
+        "fusionneeAt": "2026-09-29T21:03:44Z"
       }
     },
     {
@@ -4053,7 +4078,11 @@
         ".github/workflows/ci.yml",
         "tests/unit/qualite/budget-par-route.spec.ts",
         "docs/gates.json",
-        "scripts/gates/perf-budgets.ts"
+        "scripts/gates/perf-budgets.ts",
+        "package.json",
+        "perf/budgets.json",
+        "scripts/gates/gov-conventions.ts",
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -4105,7 +4134,10 @@
         "axionia/src/content/recrutement/tunnel-facebook.ts",
         "axionia/src/components/services/devenir-commercial/CommercialFounder.tsx",
         "axionia/src/components/services/devenir-commercial/CommercialHowItWorks.tsx",
-        "axionia/src/components/services/devenir-commercial/CommercialProductsEarnings.tsx"
+        "axionia/src/components/services/devenir-commercial/CommercialProductsEarnings.tsx",
+        "axionia/src/app/[locale]/devenir-commercial-ia/page.tsx",
+        "axionia/src/app/[locale]/devenir-commercial-ia/candidature/page.tsx",
+        "axionia/src/components/services/devenir-commercial/CommercialProcess.tsx"
       ],
       "schema": false,
       "sensible": [
@@ -12838,7 +12870,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 1,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "tests": {
         "REQ-INT-032": [
           "tests/integration/candidature-recue.spec.ts"
@@ -12850,7 +12882,16 @@
           "tests/integration/candidature-recue.spec.ts"
         ]
       },
-      "acceptance": "AUCUNE MIGRATION : elle écrit dans des tables créées ailleurs (partners/ADR-0022, une table un créateur). Cadrage de l'architecte du 2026-09-26. (1) Le travail de fond de SEC-06 traite `candidature.recue` : il crée l'`Apporteur` au statut `candidat` avec le snapshot FIGÉ de DM-06 (REQ-DM-035, REQ-QA-035), dans une seule transaction avec le passage de l'événement reçu à `traite`. (2) Il TIRE les coordonnées par la route de coordonnées d'axionia (INT-T01c, partners/ADR-0023) et les écrit par `colonnesPii` dans les colonnes chiffrées et les empreintes de `apporteurs` — jamais un clair en base ni au journal. (3) Il RATTACHE par `emailHash` puis `phoneHash` au lieu de créer un doublon (la règle de REQ-EXT-009, que EXT-T03 porte en phase 1 ; INT-T26 ne la cite pas, sans quoi la phase dérivée de l'exigence passerait à 0) : une seconde candidature de la même personne ne crée aucune ligne `apporteurs`. (4) Échec de la route de coordonnées : l'événement reste `en_attente_dependance` (`dependance_ref = 'coordonnees:<candidatureId>'`) et est rejoué ; aucun apporteur sans adresse n'est créé. (5) TÉMOIN À DEUX FACES : la même candidature livrée deux fois laisse UNE ligne `apporteurs`, compte de lignes à l'appui ; une route de coordonnées en panne laisse zéro ligne et un événement en attente, puis la reprise en crée exactement une."
+      "acceptance": "AUCUNE MIGRATION : elle écrit dans des tables créées ailleurs (partners/ADR-0022, une table un créateur). Cadrage de l'architecte du 2026-09-26. (1) Le travail de fond de SEC-06 traite `candidature.recue` : il crée l'`Apporteur` au statut `candidat` avec le snapshot FIGÉ de DM-06 (REQ-DM-035, REQ-QA-035), dans une seule transaction avec le passage de l'événement reçu à `traite`. (2) Il TIRE les coordonnées par la route de coordonnées d'axionia (INT-T01c, partners/ADR-0023) et les écrit par `colonnesPii` dans les colonnes chiffrées et les empreintes de `apporteurs` — jamais un clair en base ni au journal. (3) Il RATTACHE par `emailHash` puis `phoneHash` au lieu de créer un doublon (la règle de REQ-EXT-009, que EXT-T03 porte en phase 1 ; INT-T26 ne la cite pas, sans quoi la phase dérivée de l'exigence passerait à 0) : une seconde candidature de la même personne ne crée aucune ligne `apporteurs`. (4) Échec de la route de coordonnées : l'événement reste `en_attente_dependance` (`dependance_ref = 'coordonnees:<candidatureId>'`) et est rejoué ; aucun apporteur sans adresse n'est créé. (5) TÉMOIN À DEUX FACES : la même candidature livrée deux fois laisse UNE ligne `apporteurs`, compte de lignes à l'appui ; une route de coordonnées en panne laisse zéro ligne et un événement en attente, puis la reprise en crée exactement une.",
+      "branch": "t/int-t26",
+      "owner": "A01",
+      "pr": 237,
+      "attestation": {
+        "pr": 237,
+        "sha": "476135ac9afc87705742d50f0e88ef268fe39dbe",
+        "fusionneeAt": "2026-09-29T15:21:46Z"
+      },
+      "motif": null
     },
     {
       "id": "INT-T27-A",
@@ -12898,7 +12939,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 1,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "tests": {
         "REQ-INT-032": [
           "axionia/src/server/partners-sync/__tests__/route-coordonnees.spec.ts"
@@ -12907,7 +12948,16 @@
           "axionia/src/server/partners-sync/__tests__/route-coordonnees.spec.ts"
         ]
       },
-      "acceptance": "DEPOT AXIONIA — la PR porte l'etiquette de depot et suit le runbook de fusion d'axionia. TACHE SENSIBLE — donnees personnelles. Cadrage de l'architecte du 2026-09-26 (partners/ADR-0023). AUCUNE MIGRATION : la route lit `Submission` et `partners_sync_outbox`, elle n'ecrit aucune table ; son journal d'appel passe par le journal structure d'axionia. (1) `GET /api/partners/candidatures/{candidatureId}/coordonnees` verifie une signature HMAC-SHA-256 de l'horodatage et de la requete sous le secret d'integration dedie, tolerance 300 s, comparaison a temps constant, liste d'autorisation d'adresses reseau ; toute requete non signee, mal signee ou hors fenetre est refusee et n'a lu aucune ligne. (2) PORTEE : la route ne repond que pour une candidature effectivement emise vers Partners (une ligne existe dans `partners_sync_outbox` pour ce `candidatureId`) ; un identifiant non emis rend EXACTEMENT la meme reponse qu'un identifiant inexistant, corps et statut compares octet a octet. (3) REPONSE FERMEE : `{nom, prenom, email, telephone}`, dechiffres depuis les colonnes chiffrees de `Submission` au moment de la reponse, chaque champ nul s'il est absent, aucun autre champ ; son schema est celui de `packages/contracts/api.ts` (INT-T01c), jamais retape. Aucun cache. (4) JOURNAL SANS CLAIR : chaque appel journalise l'identifiant de candidature, l'empreinte de l'adresse reseau et le resultat, jamais une coordonnee ; un test inspecte la ligne de journal. (5) INERTIE : sans le drapeau d'activation de la synchronisation, la route rend la reponse d'un identifiant inexistant. (6) TEMOIN A DEUX FACES : une candidature emise rend ses quatre champs et rien d'autre ; la meme requete pour une candidature non emise, puis avec une signature fausse, ne rend aucune coordonnee et le test le prouve sur le corps. (7) DÉBIT PLAFONNÉ PAR CANDIDATURE (partners/ADR-0023 : la route sert au traitement, elle n'est pas un annuaire) : au plus 5 lectures réussies par `candidatureId` sur 24 heures glissantes, par le limiteur à conduite sur panne déclarée `refuser` ; au-delà, la réponse est celle d'un identifiant inexistant et l'écart est journalisé et alerté. Le plafond laisse passer les rejeux légitimes de Partners après une panne de son côté ; il interdit la lecture répétée. TÉMOIN : la sixième lecture d'une même candidature dans les 24 heures ne rend aucune coordonnée, et la première lecture d'une autre candidature passe. AVENANT A01 du 2026-09-29 (dette de la lentille exactitude sur axion-ia #1223 ; decision de la session -66 sur delegation explicite de Will du 2026-09-29) : INT-T27-A porte AUSSI la transcription du contrat v2 dans axion-ia, confiee au premier consommateur libre parce qu INT-T22 est bloquee par la collision #1221. Livre en plus : contracts.v2.json remplace contracts.v1.json, son empreinte (contracts.sha256) et ses fixtures, le lecteur du contrat, l enveloppe et les charges alignes sur la v2, et le producteur de la file de sortie. TEMOIN : chaque fixture est jugee contre le contrat publie (fixtures-conformes-au-contrat.spec.ts) ; une charge qui emet un nom de champ absent du contrat, comme amountHtCents au lieu de montantHtCents pour paiement.recu, fait rougir le test en nommant le champ. Les paths couvrent chaque fichier modifie par #1223, lus sur la forge a la tete 13f3282."
+      "acceptance": "DEPOT AXIONIA — la PR porte l'etiquette de depot et suit le runbook de fusion d'axionia. TACHE SENSIBLE — donnees personnelles. Cadrage de l'architecte du 2026-09-26 (partners/ADR-0023). AUCUNE MIGRATION : la route lit `Submission` et `partners_sync_outbox`, elle n'ecrit aucune table ; son journal d'appel passe par le journal structure d'axionia. (1) `GET /api/partners/candidatures/{candidatureId}/coordonnees` verifie une signature HMAC-SHA-256 de l'horodatage et de la requete sous le secret d'integration dedie, tolerance 300 s, comparaison a temps constant, liste d'autorisation d'adresses reseau ; toute requete non signee, mal signee ou hors fenetre est refusee et n'a lu aucune ligne. (2) PORTEE : la route ne repond que pour une candidature effectivement emise vers Partners (une ligne existe dans `partners_sync_outbox` pour ce `candidatureId`) ; un identifiant non emis rend EXACTEMENT la meme reponse qu'un identifiant inexistant, corps et statut compares octet a octet. (3) REPONSE FERMEE : `{nom, prenom, email, telephone}`, dechiffres depuis les colonnes chiffrees de `Submission` au moment de la reponse, chaque champ nul s'il est absent, aucun autre champ ; son schema est celui de `packages/contracts/api.ts` (INT-T01c), jamais retape. Aucun cache. (4) JOURNAL SANS CLAIR : chaque appel journalise l'identifiant de candidature, l'empreinte de l'adresse reseau et le resultat, jamais une coordonnee ; un test inspecte la ligne de journal. (5) INERTIE : sans le drapeau d'activation de la synchronisation, la route rend la reponse d'un identifiant inexistant. (6) TEMOIN A DEUX FACES : une candidature emise rend ses quatre champs et rien d'autre ; la meme requete pour une candidature non emise, puis avec une signature fausse, ne rend aucune coordonnee et le test le prouve sur le corps. (7) DÉBIT PLAFONNÉ PAR CANDIDATURE (partners/ADR-0023 : la route sert au traitement, elle n'est pas un annuaire) : au plus 5 lectures réussies par `candidatureId` sur 24 heures glissantes, par le limiteur à conduite sur panne déclarée `refuser` ; au-delà, la réponse est celle d'un identifiant inexistant et l'écart est journalisé et alerté. Le plafond laisse passer les rejeux légitimes de Partners après une panne de son côté ; il interdit la lecture répétée. TÉMOIN : la sixième lecture d'une même candidature dans les 24 heures ne rend aucune coordonnée, et la première lecture d'une autre candidature passe. AVENANT A01 du 2026-09-29 (dette de la lentille exactitude sur axion-ia #1223 ; decision de la session -66 sur delegation explicite de Will du 2026-09-29) : INT-T27-A porte AUSSI la transcription du contrat v2 dans axion-ia, confiee au premier consommateur libre parce qu INT-T22 est bloquee par la collision #1221. Livre en plus : contracts.v2.json remplace contracts.v1.json, son empreinte (contracts.sha256) et ses fixtures, le lecteur du contrat, l enveloppe et les charges alignes sur la v2, et le producteur de la file de sortie. TEMOIN : chaque fixture est jugee contre le contrat publie (fixtures-conformes-au-contrat.spec.ts) ; une charge qui emet un nom de champ absent du contrat, comme amountHtCents au lieu de montantHtCents pour paiement.recu, fait rougir le test en nommant le champ. Les paths couvrent chaque fichier modifie par #1223, lus sur la forge a la tete 13f3282.",
+      "branch": "partners/int-t27a-coordonnees",
+      "owner": "A01",
+      "pr": null,
+      "attestation": {
+        "pr": 1223,
+        "sha": "f8753cd02fcc877d5ba7b27ecc23849514ea28e5",
+        "fusionneeAt": "2026-09-29T16:45:50Z"
+      },
+      "motif": null
     },
     {
       "id": "GOV-103",
@@ -13194,8 +13244,8 @@
           "tests/unit/gouvernance/frontiere-de-mot-du-rendu.spec.ts"
         ]
       },
-      "issue": null,
-      "owner": null,
+      "issue": 266,
+      "owner": "A01",
       "branch": null,
       "pr": null,
       "attestation": null,
@@ -13646,7 +13696,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.75,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "Scindee de JUR-T04 le 2026-09-29 (decision de Will) : la page exigeait des fichiers hors des paths de JUR-T04. A livrer : l'espace apporteur affiche une politique de confidentialite propre a Partners (base legale, durees, sous-traitants, droits) et la fait accepter a la premiere connexion (REQ-JUR-025). Son contenu se DERIVE du registre de l'article 30 livre par JUR-T04 : aucune duree, aucun sous-traitant n'est retape dans la page, et une rubrique encore « A completer » dans le registre s'affiche comme telle, jamais inventee. La page ne dit RIEN des conseillers salaries : leur information passe par un autre canal. Exigence transverse : lisible sans formation, sur mobile d'abord, avec ses etats vide, chargement, erreur et hors ligne nommes. TEMOIN A DEUX FACES : une duree changee dans le registre change la page sans toucher la page ; une page qui retape une duree ou un sous-traitant absent du registre fait rougir le temoin en nommant la valeur.",
       "tests": {
         "REQ-JUR-025": [
@@ -13655,9 +13705,13 @@
       },
       "issue": 238,
       "owner": "A01",
-      "branch": null,
-      "pr": null,
-      "attestation": null,
+      "branch": "t/jur-t34",
+      "pr": 242,
+      "attestation": {
+        "pr": 242,
+        "sha": "1bcc41214822ea307001002ff68048f7afd6dd40",
+        "fusionneeAt": "2026-09-29T21:41:16Z"
+      },
       "motif": null
     },
     {
@@ -13707,7 +13761,13 @@
         ".github/workflows/deploy.yml",
         "scripts/gates/deploy-verify.ts",
         "next.config.ts",
-        "tests/unit/qualite/un-seul-producteur-de-deploiement.spec.ts"
+        "tests/unit/qualite/un-seul-producteur-de-deploiement.spec.ts",
+        "Dockerfile",
+        "package.json",
+        "scripts/gates/gov-conventions.ts",
+        "tests/unit/qualite/pipeline-image.spec.ts",
+        "tests/unit/qualite/build-sans-base.spec.ts",
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -14573,7 +14633,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "EXCEPTION AU GEL, arbitrage -d7 sur delegation de Williams du 2026-09-29 : elle bloque la Phase 0 a 100 %. CONSTAT : INT-T02 (axion-ia #1180, sha f158408, en production) est refusee par lot:cloture (tache_etrangere_a_la_pr, titre_d_ecrasement_non_conforme) : la PR portait le titre feat(INT-T02) a l instant de la fusion, mais le squash a pris pour premiere ligne feat(partners): ... (INT-T02) (#1180), une livraison anterieure a la convention de declaration cote axion-ia. INT-T27-A et INT-T26, livrees et en production, en dependent. A LIVRER : (1) une liste FERMEE et datee, PASSIF_DE_LA_DECLARATION, dans scripts/lot/cloture.ts, avec UNE seule entree : INT-T02, PR axion-ia #1180, sha complet f158408, motif de l arbitrage et mesure du patch propre (8f1d7d4 equivalent a 6bfd50b : 19 fichiers, seul le contexte de worker.ts differe). (2) L entree ne leve les deux refus QUE si la tache, la PR, le sha complet coincident ET si le titre a l instant de la fusion (chronologie de la forge) declare la tache. (3) Toute autre livraison garde les deux refus a l identique ; aucun drapeau de ligne de commande ne leve rien ; aucune autre regle n est assouplie. (4) TEMOINS rouges d abord : INT-T02 passe ; la meme livraison avec un autre sha, une autre PR ou un titre a la fusion qui ne declare pas la tache est refusee ; une livraison hors liste au squash non conforme est refusee. (5) Deux lentilles (scripts/lot/). Puis INT-T02, INT-T27-A et INT-T26 sont closes par un rattrapage.",
       "tests": {
         "REQ-GOV-026": [
@@ -14581,6 +14641,122 @@
         ]
       },
       "issue": 256,
+      "owner": "A01",
+      "branch": "t/gov-127",
+      "pr": 257,
+      "attestation": {
+        "pr": 257,
+        "sha": "8d6d21947e112ae10a53ed7c94560cd59f4be7d1",
+        "fusionneeAt": "2026-09-29T20:00:53Z"
+      },
+      "motif": null
+    },
+    {
+      "id": "JUR-T36",
+      "titre": "La politique de confidentialite publique n'affiche ni les questions internes du registre, ni un nom de personne, ni le vocabulaire interdit",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "juridique",
+      "paths": [
+        "src/domain/rgpd/politique.ts",
+        "src/app/(espace)/confidentialite/ecran.tsx",
+        "docs/rgpd/registre-article-30.md",
+        "tests/unit/juridique/politique-publique-sans-note-interne.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [
+        "rgpd"
+      ],
+      "deps": [
+        "JUR-T34"
+      ],
+      "reqs": [
+        "REQ-JUR-025"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "acceptance": "DETTE BLOQUANTE POUR LA MISE EN SERVICE, relevee par la lentille A07 juriste sur la PR #242 (JUR-T34), et deja signalee par la lentille securite. La page /confidentialite, lisible sans session, affiche le registre de l article 30 tel quel : les rubriques A completer y montrent la question interne posee a Williams, le prenom Will apparait (a confirmer par Will), et le mot attribution, refuse par le lexique de l espace, y est lu. A LIVRER : (1) la page n affiche jamais une question interne ni un nom de personne ; une rubrique encore A completer s affiche comme en cours de redaction, sans la question ; (2) aucun mot du lexique interdit de l espace n atteint la page, que la garde lexicale lise le texte a l execution ou que le registre soit reformule pour l apporteur ; (3) le choix est ecrit ; (4) TEMOIN rouge d abord : un registre de fixture qui porte une question interne, le prenom Will et le mot attribution produit une page qui n en montre aucun, et le temoin nomme ce qu il a filtre. Aucune mise en service de l espace avant cette tache. Dette apres lancement notee a part : l historique des versions acceptees, et la micro-copie Votre espace s ouvre une fois cette politique acceptee, inexacte tant qu aucune route ne verifie l accord hors connexion.",
+      "tests": {
+        "REQ-JUR-025": [
+          "tests/unit/juridique/politique-publique-sans-note-interne.spec.ts"
+        ]
+      },
+      "issue": null,
+      "owner": null,
+      "branch": null,
+      "pr": null,
+      "attestation": null,
+      "motif": null
+    },
+    {
+      "id": "QA-T50",
+      "titre": "Provisionnement Coolify : application, base Postgres separee et variables posees depuis les secrets du depot, jamais en clair",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "qualite",
+      "paths": [
+        ".github/workflows/coolify-provisionner.yml",
+        "scripts/deploiement/provisionner.ts",
+        "tests/unit/qualite/provisionnement-coolify.spec.ts",
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts",
+        "package.json"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "QA-T34"
+      ],
+      "reqs": [
+        "REQ-INT-031"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "acceptance": "Versee a la demande de la session -50 (mise en ligne), sur demande de -d7 : aucune tache du registre ne portait le provisionnement, REQ-INT-031 n etant rattachee qu a INT-T02 cote axionia. (1) Un declenchement manuel cree, s ils n existent pas, dans le projet Coolify Axion-Partners, l application de type image Docker (ghcr.io/will383842/axion-apporteurs, etiquette sha-<7>, sonde /api/readyz) et une base Postgres 16 separee ; il est idempotent : relance, il ne cree rien et le dit. (2) Chaque variable de docs/env.md est posee depuis le secret du depot de meme nom, jamais en argument ni en clair dans le journal du run ; DATABASE_URL vient de la base creee. (3) Un secret absent : SAUTE avec un ::warning:: par secret nomme. (4) TEMOIN A DEUX FACES sur une plateforme factice locale : secrets absents, alors saute et nomme ; plateforme en 401, alors code non nul et jeton jamais imprime. Deux lentilles (workflow et secrets).",
+      "tests": {
+        "REQ-INT-031": [
+          "tests/unit/qualite/provisionnement-coolify.spec.ts"
+        ]
+      },
+      "issue": null,
+      "owner": null,
+      "branch": null,
+      "pr": null,
+      "attestation": null,
+      "motif": null
+    },
+    {
+      "id": "GOV-128",
+      "titre": "Le passif de la declaration lit aussi la ligne Lot: du squash immuable : une PR de lot au corps enrichi se clot sur arbitrage ecrit",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "scripts/lot/cloture.ts",
+        "tests/unit/gouvernance/le-passif-de-la-declaration-est-ferme.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "GOV-127"
+      ],
+      "reqs": [
+        "REQ-GOV-026"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "acceptance": "EXCEPTION AU GEL, arbitrage -d7 sur delegation de Williams du 2026-09-30 : elle bloque deux clotures de phase 0. CONSTAT : INT-T04 et INT-T05 (axion-ia #1228, sha 3fb76aa) sont refusees par lot:cloture (tache_etrangere_a_la_pr) : la premiere ligne du squash est conforme, mais le corps porte, apres la ligne Lot: INT-T04, INT-T05, un paragraphe et un trailer ; or le corps ne declare que s il est reduit a la seule ligne Lot: (GOV-104), et le titre feat(INT-T04, INT-T05) ne nomme aucune tache a lui seul. Condition verifiee : les deux accords A09 sont publies sur la tete fusionnee 7eb1bf3. A LIVRER : (1) deux entrees au PASSIF_DE_LA_DECLARATION, INT-T04 et INT-T05, PR axion-ia #1228, sha complet 3fb76aa, declarees par la ligne Lot: et non par le titre. (2) Une telle entree ne leve le refus QUE si la tache, la PR et le sha complet coincident, si la premiere ligne du squash est conforme, et si la ligne Lot: qui la suit dans le message immuable nomme la tache. (3) Toute autre livraison garde les refus a l identique ; les entrees par titre gardent leur regle ; aucun drapeau ne leve rien ; aucune regle generale n est assouplie. (4) TEMOINS rouges d abord : INT-T04 et INT-T05 passent ; un autre sha, une autre PR, une tache absente de la ligne Lot:, un squash sans ligne Lot: ou a premiere ligne non conforme sont refuses. (5) Deux lentilles (scripts/lot/). Puis INT-T04 et INT-T05 sont closes par un rattrapage.",
+      "tests": {
+        "REQ-GOV-026": [
+          "tests/unit/gouvernance/le-passif-de-la-declaration-est-ferme.spec.ts"
+        ]
+      },
+      "issue": 277,
       "owner": "A01",
       "branch": null,
       "pr": null,
