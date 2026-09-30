@@ -14538,7 +14538,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 1.5,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "EXCEPTION AU GEL DE LA GOUVERNANCE, decision de Williams du 2026-09-29 (vers 18 h), confirmee directement dans la session A01, priorite juste apres la PR #239. CONSTAT : chaque fusion fait diverger les vues derivees des autres PR (docs/PLAN-STATE.md, docs/TRACABILITE.md, docs/TASKS.md, docs/REQUIREMENTS.md, docs/paths-proposes.json, docs/GATES.md, index des ADR), ce qui relance leur porte A et leurs reconfirmations (la PR #230 trois fois le 2026-09-29, puis #239, #241 et #242). A LIVRER : (1) une PR ne porte plus de vue derivee ; les gardes de PR jugent les SOURCES (registres, requirements, gates.json, ADR), jamais l'egalite d'une vue commitee. (2) Le rendu se fait sur main, par la voie la plus simple et la plus sure, choisie et ecrite dans la PR : soit un job apres fusion qui rend et commite les vues, soit des vues rendues a la volee et non commitees. (3) Si un job commite sur main, exigences de la lentille securite, chacune avec son temoin : GITHUB_TOKEN en contents: write seulement, sur push de main seulement, dans un job separe de tout code de PR (patron du job publier de deploy.yml ; persist-credentials: false partout ailleurs) ; le commit est limite a une liste FERMEE de chemins de vues, verifiee par le job, qui refuse tout autre chemin ; le rendu est reproductible (la porte A suivante le relance et obtient un diff vide) ; les scripts de rendu sont lus sur main, jamais sur une branche ; le contournement de la protection de main est limite a ce seul acteur, reglage que Williams pose lui-meme sur la forge. (4) Une vue illisible ou en derive sur main est un rouge de la porte A de main, qui nomme la vue. TEMOIN a deux faces : deux PR qui ajoutent chacune une tache ne sont plus en conflit apres la fusion de l'une ; un commit de rendu qui toucherait un chemin hors de la liste fermee est refuse en le nommant.",
       "tests": {
         "REQ-GOV-032": [
@@ -14550,9 +14550,13 @@
       },
       "issue": 274,
       "owner": "A01",
-      "branch": null,
-      "pr": null,
-      "attestation": null,
+      "branch": "t/gov-123-vues",
+      "pr": 275,
+      "attestation": {
+        "pr": 275,
+        "sha": "18efc1dfca1ae5c770670a9aaedb4f6260f60fb9",
+        "fusionneeAt": "2026-09-30T01:45:22Z"
+      },
       "motif": null
     },
     {
