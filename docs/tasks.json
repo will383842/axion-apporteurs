@@ -14858,7 +14858,8 @@
         "src/server/integrations/axionia/candidature-recue.ts",
         "tests/integration/webhook.spec.ts",
         "tests/integration/frontiere.spec.ts",
-        "tests/integration/candidature-recue.spec.ts"
+        "tests/unit/integration/candidature-recue.spec.ts",
+        "tests/integration/webhook-verdicts.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -14876,7 +14877,7 @@
       "externe": null,
       "estimateDays": 0.5,
       "statut": "a_faire",
-      "acceptance": "DETTE BLOQUANTE (lentille securite, verdict de la PR 282 ; arbitrage -d7 sur delegation de Williams du 2026-09-30) : la double cle de rotation de REQ-QA-030 n'etait portee par aucune tache (tests/unit/qualite/env-fail-fast.spec.ts l. 20 l'annoncait a sa propre tache). Des webhooks entrants sont actifs des la phase 0 (SEC-06) : PREALABLE FERME de la mise en service, avant le premier webhook entrant en production. A LIVRER : (1) AXIONIA_WEBHOOK_SECRET et AXIONIA_API_TOKEN acceptent une cle courante et une cle precedente, declarees dans src/lib/env.ts et docs/env.md (genere) ; la cle precedente porte son echeance, au plus 24 h. (2) Le `kid` de l'en-tete, emis par axion-ia (INT-T41, dependance ferme) et declare par le contrat (INT-T42), choisit la cle ; un kid inconnu est refuse, jamais essaye contre toutes les cles. (3) Apres l'echeance, la cle precedente est refusee, et le refus est nomme. (4) TEMOIN A DEUX FACES, rouge d'abord : une signature par la cle precedente passe avant l'echeance et echoue apres ; une signature par une cle inconnue ou un kid absent echoue ; la cle courante passe toujours. (5) Un runbook de rotation (docs/runbooks/secret-desynchronise.md, livre par QA-T13) cite la procedure. Deux lentilles. DocuSeal n'envoie pas de kid et n'a pas encore de recepteur : sa double cle sans kid (cle courante puis precedente essayees) releve de INT-T12 (arbitrage -d7 du 2026-09-30).",
+      "acceptance": "DETTE BLOQUANTE (lentille securite, verdict de la PR 282 ; arbitrage -d7 sur delegation de Williams du 2026-09-30) : la double cle de rotation de REQ-QA-030 n'etait portee par aucune tache (tests/unit/qualite/env-fail-fast.spec.ts l. 20 l'annoncait a sa propre tache). Des webhooks entrants sont actifs des la phase 0 (SEC-06) : PREALABLE FERME de la mise en service, avant le premier webhook entrant en production. A LIVRER : (1) AXIONIA_WEBHOOK_SECRET et AXIONIA_API_TOKEN acceptent une cle courante et une cle precedente, declarees dans src/lib/env.ts et docs/env.md (genere) ; la cle precedente porte son echeance, au plus 24 h. (2) Le `kid` de l'en-tete, emis par axion-ia (INT-T41, dependance ferme) et declare par le contrat (INT-T42), choisit la cle ; un kid inconnu ou ABSENT est refuse, jamais essaye contre toutes les cles : le kid FACULTATIF au contrat (INT-T42) ne l'autorise pas (note de la lentille securite). (3) Apres l'echeance, la cle precedente est refusee, et le refus est nomme. (4) TEMOIN A DEUX FACES, rouge d'abord : une signature par la cle precedente passe avant l'echeance et echoue apres ; une signature par une cle inconnue ou un kid absent echoue ; la cle courante passe toujours. (5) Un runbook de rotation (docs/runbooks/secret-desynchronise.md, livre par QA-T13) cite la procedure. Deux lentilles. DocuSeal n'envoie pas de kid et n'a pas encore de recepteur : sa double cle sans kid (cle courante puis precedente essayees) releve de INT-T12 (arbitrage -d7 du 2026-09-30).",
       "tests": {
         "REQ-QA-030": [
           "tests/unit/securite/rotation-des-secrets.spec.ts"
