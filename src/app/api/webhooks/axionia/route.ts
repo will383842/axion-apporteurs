@@ -13,7 +13,7 @@
 import { after } from 'next/server';
 import { PrismaClient, TypeEvenementRecu } from '@prisma/client';
 import { sourceAleatoireSysteme } from '../../../../domain/apporteur/identifiants';
-import { lireEnvironnement } from '../../../../lib/env';
+import { lireEnvironnement, lireTrousseaux } from '../../../../lib/env';
 import { horlogeSysteme } from '../../../../lib/horloge';
 import { creerJournal } from '../../../../lib/logger';
 import {
@@ -77,11 +77,13 @@ async function traiter(prisma: PrismaClient, recu: EvenementATraiter): Promise<v
   if (recu.eventType !== TypeEvenementRecu.candidature_recue) return;
   const lu = lireEnvironnement(process.env);
   if (!lu.ok) throw new Error('environnement_refuse');
+  const rotation = lireTrousseaux(process.env, horlogeSysteme.maintenant());
+  if (!rotation.ok) throw new Error('environnement_refuse');
   await traiterCandidatureRecue(prisma, recu, {
     tirer: clientCoordonnees({
       urlAxionia: process.env['AXIONIA_BASE_URL'],
       secretRelecture: lu.env.AXIONIA_RELECTURE_SECRET,
-      secretEmission: lu.env.AXIONIA_WEBHOOK_SECRET,
+      trousseauEmission: rotation.trousseaux.AXIONIA_WEBHOOK_SECRET,
       appeler: fetch,
       maintenantMs: () => horlogeSysteme.maintenant(),
     }),

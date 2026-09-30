@@ -24,7 +24,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createHash } from 'node:crypto';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
-import { NOMS_DES_SECRETS } from '../../src/lib/env';
+import { NOMS_DES_SECRETS, ROTATION_MAX_MS, kidDe } from '../../src/lib/env';
+import { ENTETE_KID_AXIONIA } from '../../packages/contracts/api';
 import type { SujetDeCompteur, VerdictDeLimite } from '../../src/server/securite/rate-limit';
 import type { HorlogeDePlancher } from '../../src/server/securite/pot-de-miel';
 import {
@@ -109,15 +110,18 @@ const SIREN_ATTRIBUE = '111111111';
 const REF = '0f8fad5b-d9cb-469f-a165-70867728950e';
 const BASE = 'http://partners.test/api/integrations/axionia';
 
+/** Le `kid` présenté est, par défaut, celui du BON jeton : un cas qui le fait varier le dit. */
 function requete(
   chemin: string,
   methode: string,
   adresse: string | null,
-  autorisation: string | null
+  autorisation: string | null,
+  kid: string | null = kidDe(JETON)
 ): Request {
   const entetes = new Headers();
   if (adresse !== null) entetes.set('x-forwarded-for', adresse);
   if (autorisation !== null) entetes.set('authorization', autorisation);
+  if (kid !== null) entetes.set(ENTETE_KID_AXIONIA, kid);
   return new Request(`${BASE}${chemin}`, { method: methode, headers: entetes });
 }
 
@@ -263,6 +267,19 @@ describe('REQ-SEC-012 — chaque route de la frontière, telle que Next la charg
         autorisation: `Bearer ${JETON}`,
       },
       { quoi: 'aucune adresse, BON jeton', adresse: null, autorisation: `Bearer ${JETON}` },
+      // QA-T52 (REQ-QA-030) : le kid choisit le jeton ; absent ou inconnu, le BON jeton est refusé.
+      {
+        quoi: 'BON jeton, sans kid',
+        adresse: ADRESSE_AUTORISEE,
+        autorisation: `Bearer ${JETON}`,
+        kid: null,
+      },
+      {
+        quoi: 'BON jeton, kid inconnu',
+        adresse: ADRESSE_AUTORISEE,
+        autorisation: `Bearer ${JETON}`,
+        kid: '00000000',
+      },
     ];
     const vus = new Set<string>();
     let confrontations = 0;
@@ -273,7 +290,7 @@ describe('REQ-SEC-012 — chaque route de la frontière, telle que Next la charg
           const rep = await methode(
             mod,
             m
-          )(requete(cheminDAppel(fichier), m, r.adresse, r.autorisation));
+          )(requete(cheminDAppel(fichier), m, r.adresse, r.autorisation, r.kid));
           const vu = await instantane(rep);
           expect(vu.statut, `${fichier} ${m} ${r.quoi}`).toBe(404);
           vus.add(JSON.stringify(vu));
@@ -297,7 +314,7 @@ describe('REQ-SEC-012 — chaque route de la frontière, telle que Next la charg
         for (const r of refuses) {
           const lignes: string[] = [];
           await traiterAppel(
-            requete(`/${route}?siren=${SIREN_LIBRE}`, m, r.adresse, r.autorisation),
+            requete(`/${route}?siren=${SIREN_LIBRE}`, m, r.adresse, r.autorisation, r.kid),
             route,
             productionAuPuits(lignes)
           );
@@ -404,6 +421,36 @@ describe('REQ-SEC-012 — la configuration échoue FERMÉE', () => {
       expect(lignes).toHaveLength(1);
     });
   }
+});
+
+describe('REQ-QA-030 — le jeton précédent vit jusqu’à son échéance, sous son propre kid', () => {
+  it('REQ-QA-030 : le jeton précédent passe l’authentification avant l’échéance, et est refusé à l’échéance', async () => {
+    const PRECEDENT = createHash('sha256').update('temoin.jeton-precedent').digest('hex');
+    const DEPART = 1_000_000;
+    const env = {
+      ...ENV_VALIDE,
+      AXIONIA_API_TOKEN_PRECEDENT: PRECEDENT,
+      AXIONIA_API_TOKEN_PRECEDENT_ECHEANCE: new Date(DEPART + 1000).toISOString(),
+    };
+    expect(DEPART + 1000).toBeLessThanOrEqual(DEPART + ROTATION_MAX_MS);
+    const resultat = async (instant: number): Promise<unknown> => {
+      const lignes: string[] = [];
+      await traiterAppel(
+        requete(
+          `/attributions?siren=${SIREN_LIBRE}`,
+          'GET',
+          ADRESSE_AUTORISEE,
+          `Bearer ${PRECEDENT}`,
+          kidDe(PRECEDENT)
+        ),
+        'attributions',
+        frontiere(async () => null, ADMIS, horlogeFactice(instant), lignes, env)
+      );
+      return (JSON.parse(lignes[0] ?? '{}') as { resultat?: unknown }).resultat;
+    };
+    expect(await resultat(DEPART + 999)).not.toBe('jeton_refuse');
+    expect(await resultat(DEPART + 1000)).toBe('jeton_refuse');
+  });
 });
 
 describe('REQ-SEC-012 — le débit : 60 par minute, après l’authentification', () => {

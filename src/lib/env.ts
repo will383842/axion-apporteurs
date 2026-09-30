@@ -21,6 +21,7 @@
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
 import { productionDeclaree } from './notify';
+import { horlogeSysteme } from './horloge';
 
 /** Les seuls motifs qu'un refus peut porter. Aucun n'est construit à partir de la valeur. */
 export const MOTIFS_DE_REFUS = [
@@ -31,6 +32,7 @@ export const MOTIFS_DE_REFUS = [
   'prefixe_interdit',
   'egale_a',
   'requise_hors_production',
+  'echeance_au_dela_de_24_h',
 ] as const;
 export type MotifDeRefus = (typeof MOTIFS_DE_REFUS)[number];
 
@@ -254,10 +256,13 @@ export function lireEnvironnement(source: Readonly<Record<string, string | undef
  * des secrets viennent d'abord, dans leur ordre ; aucun n'est perdu.
  */
 export function lireDemarrage(
-  source: Readonly<Record<string, string | undefined>>
+  source: Readonly<Record<string, string | undefined>>,
+  maintenantMs: number = horlogeSysteme.maintenant()
 ): LectureDuDemarrage {
   const secrets = lireEnvironnement(source);
   const refus: Refus[] = secrets.ok ? [] : [...secrets.refus];
+  // QA-T52 (REQ-QA-030) : une clé précédente mal posée refuse le démarrage comme un secret absent.
+  refus.push(...jugerLaRotation(source, maintenantMs).refus);
   const configuration = schemaConfiguration.safeParse(source);
   if (!configuration.success) {
     for (const issue of configuration.error.issues) {
@@ -325,6 +330,130 @@ export function kidDe(valeur: string): string {
     .update(`partners.kid.v1\u001f${valeur}`, 'utf8')
     .digest('hex')
     .slice(0, 8);
+}
+
+// ── La double clé de rotation (QA-T52, REQ-QA-030) ─────────────────────────────────────────────
+
+/** REQ-QA-030 : la clé précédente est acceptée « pendant 24 h », pas une milliseconde de plus. */
+export const ROTATION_MAX_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Les secrets qui tournent à double clé : ceux qu'axionia présente, avec le `kid` de la clé dans
+ * l'en-tête. `DOCUSEAL_WEBHOOK_SECRET` n'y est pas : il n'a aucun récepteur, et sa double clé sans
+ * `kid` (le tiers n'en pose pas) viendra avec lui (arbitrage -d7 du 2026-09-30).
+ */
+export const NOMS_EN_ROTATION = ['AXIONIA_WEBHOOK_SECRET', 'AXIONIA_API_TOKEN'] as const;
+export type NomEnRotation = (typeof NOMS_EN_ROTATION)[number];
+
+/** La clé précédente d'un secret : `<NOM>_PRECEDENT`, et son échéance `<NOM>_PRECEDENT_ECHEANCE`. */
+export const variablesDeRotation = (nom: NomEnRotation) =>
+  ({ cle: `${nom}_PRECEDENT`, echeance: `${nom}_PRECEDENT_ECHEANCE` }) as const;
+
+export type Trousseau = {
+  courante: string;
+  precedente: { valeur: string; echeanceMs: number } | null;
+};
+
+export type MotifDeCle = 'kid_absent' | 'kid_inconnu' | 'cle_precedente_echue';
+
+/**
+ * PURE. La clé que désigne le `kid` présenté. Jamais d'essai de toutes les clés : un `kid` absent
+ * ou inconnu est un refus nommé. La clé précédente meurt À son échéance ; la courante ne meurt pas.
+ */
+export function cleDuKid(
+  t: Trousseau,
+  kid: string | null,
+  maintenantMs: number
+):
+  | { ok: true; cle: string; laquelle: 'courante' | 'precedente' }
+  | { ok: false; motif: MotifDeCle } {
+  if (kid === null || kid === '') return { ok: false, motif: 'kid_absent' };
+  if (kid === kidDe(t.courante)) return { ok: true, cle: t.courante, laquelle: 'courante' };
+  if (t.precedente !== null && kid === kidDe(t.precedente.valeur)) {
+    return maintenantMs < t.precedente.echeanceMs
+      ? { ok: true, cle: t.precedente.valeur, laquelle: 'precedente' }
+      : { ok: false, motif: 'cle_precedente_echue' };
+  }
+  return { ok: false, motif: 'kid_inconnu' };
+}
+
+/** Un instant ISO 8601 en UTC, écrit en entier : ni fuseau local, ni date seule. */
+const INSTANT_UTC = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/;
+
+/**
+ * PURE. Les trousseaux des secrets en rotation, jugés au démarrage : la clé et son échéance se
+ * posent ENSEMBLE ; l'échéance est un instant UTC au plus à 24 h de `maintenantMs` (une échéance
+ * déjà passée est admise : la clé est aussitôt refusée) ; la clé précédente suit les règles d'un
+ * secret et diffère de TOUTES les autres valeurs. Les refus nomment la variable, jamais la valeur.
+ */
+export function lireTrousseaux(
+  source: Readonly<Record<string, string | undefined>>,
+  maintenantMs: number
+): { ok: true; trousseaux: Record<NomEnRotation, Trousseau> } | { ok: false; refus: Refus[] } {
+  const secrets = lireEnvironnement(source);
+  const r = jugerLaRotation(source, maintenantMs);
+  const refus = [...(secrets.ok ? [] : secrets.refus), ...r.refus];
+  return refus.length > 0 ? { ok: false, refus } : { ok: true, trousseaux: r.trousseaux };
+}
+
+/** Les refus et les trousseaux de la rotation SEULE : les secrets courants sont jugés à part. */
+function jugerLaRotation(
+  source: Readonly<Record<string, string | undefined>>,
+  maintenantMs: number
+): { refus: Refus[]; trousseaux: Record<NomEnRotation, Trousseau> } {
+  const refus: Refus[] = [];
+  const empreinte = (v: string) => createHash('sha256').update(v, 'utf8').digest('hex');
+  const connues = new Map<string, string>();
+  for (const n of NOMS_DES_SECRETS) {
+    const v = source[n];
+    if (v !== undefined && v !== '') connues.set(empreinte(v), n);
+  }
+  const trousseaux = Object.fromEntries(
+    NOMS_EN_ROTATION.map((n): [NomEnRotation, Trousseau] => [
+      n,
+      { courante: source[n] ?? '', precedente: null },
+    ])
+  ) as Record<NomEnRotation, Trousseau>;
+  for (const nom of NOMS_EN_ROTATION) {
+    const { cle, echeance } = variablesDeRotation(nom);
+    const v = source[cle];
+    const e = source[echeance];
+    if (v === undefined && e === undefined) continue;
+    if (v === undefined) {
+      refus.push({ variable: cle, motif: 'absente' });
+      continue;
+    }
+    if (e === undefined) {
+      refus.push({ variable: echeance, motif: 'absente' });
+      continue;
+    }
+    const lu = secret.safeParse(v);
+    if (!lu.success) {
+      refus.push({ variable: cle, motif: motifDe(lu.error.issues[0]!) });
+      continue;
+    }
+    if (!HORS_PRODUCTION.has(source.NODE_ENV ?? '') && PREFIXE_INTERDIT.test(v)) {
+      refus.push({ variable: cle, motif: 'prefixe_interdit' });
+      continue;
+    }
+    const deja = connues.get(empreinte(v));
+    if (deja !== undefined) {
+      refus.push({ variable: cle, motif: 'egale_a', avec: [deja] });
+      continue;
+    }
+    connues.set(empreinte(v), cle);
+    const echeanceMs = INSTANT_UTC.test(e) ? Date.parse(e) : Number.NaN;
+    if (Number.isNaN(echeanceMs)) {
+      refus.push({ variable: echeance, motif: 'format_invalide' });
+      continue;
+    }
+    if (echeanceMs > maintenantMs + ROTATION_MAX_MS) {
+      refus.push({ variable: echeance, motif: 'echeance_au_dela_de_24_h' });
+      continue;
+    }
+    trousseaux[nom] = { courante: source[nom] ?? '', precedente: { valeur: v, echeanceMs } };
+  }
+  return { refus, trousseaux };
 }
 
 // ── docs/env.md : le RENDU du schéma (QA-T04, REQ-QA-030) ──────────────────────────────────────
@@ -431,6 +560,23 @@ export function documenterEnvironnement(): string {
     '| Variable | Présence | Règle | Rôle |',
     '| --- | --- | --- | --- |',
     ...lignes(NOMS_DE_CONFIGURATION),
+    '',
+    '## Rotation à double clé (REQ-QA-030)',
+    '',
+    "Pendant une rotation, l'ancienne valeur d'un secret reste acceptée jusqu'à son échéance, au plus",
+    "24 h. Le `kid` présenté dans l'en-tête, dérivé de la valeur (`kidDe`), choisit la clé : un `kid`",
+    "absent ou inconnu est refusé. Partners émet toujours sous la clé courante. Les deux variables d'une",
+    'paire se posent ensemble ; procédure : `docs/runbooks/secret-desynchronise.md`.',
+    '',
+    '| Variable | Présence | Règle | Rôle |',
+    '| --- | --- | --- | --- |',
+    ...NOMS_EN_ROTATION.flatMap((nom) => {
+      const v = variablesDeRotation(nom);
+      return [
+        `| \`${v.cle}\` | facultative, avec son échéance | au moins 32 octets, distincte de tous les secrets | ancienne valeur de \`${nom}\`, acceptée jusqu'à l'échéance |`,
+        `| \`${v.echeance}\` | facultative, avec sa clé | instant ISO 8601 UTC, au plus 24 h après le démarrage | fin d'acceptation de \`${v.cle}\` |`,
+      ];
+    }),
     '',
   ].join('\n');
 }

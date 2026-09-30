@@ -14,7 +14,7 @@ import { describe, expect, it } from 'vitest';
 import { TypeEvenementRecu } from '@prisma/client';
 import contrat from '../../../packages/contracts/contracts.v2.json';
 import { refDependanceCoordonnees } from '../../../packages/contracts/api';
-import { NOMS_DES_SECRETS } from '../../../src/lib/env';
+import { NOMS_DES_SECRETS, kidDe, type Trousseau } from '../../../src/lib/env';
 import {
   ENTETE_HORODATAGE_REQUETE,
   ENTETE_SIGNATURE_REQUETE,
@@ -53,21 +53,33 @@ const COORDONNEES: Coordonnees = {
 };
 
 /** Une réponse de la route, signée comme axionia la signe. */
-function reponseSignee(corps: string, secret = SECRET_EMISSION, statut = 200): Response {
+function reponseSignee(
+  corps: string,
+  secret = SECRET_EMISSION,
+  statut = 200,
+  kid: string | null = kidDe(secret)
+): Response {
   const t = String(Math.floor(MAINTENANT_MS / 1000));
   const sig = createHmac('sha256', secret).update(`${t}.${corps}`).digest('hex');
   return new Response(corps, {
     status: statut,
-    headers: { 'x-axionia-timestamp': t, 'x-axionia-signature': sig },
+    headers: {
+      'x-axionia-timestamp': t,
+      'x-axionia-signature': sig,
+      ...(kid === null ? {} : { 'x-axionia-kid': kid }),
+    },
   });
 }
+
+/** Le trousseau des réponses d'axionia : sa clé d'émission, sans rotation en cours. */
+const TROUSSEAU: Trousseau = { courante: SECRET_EMISSION, precedente: null };
 
 function client(repondre: (url: string, init: RequestInit) => Response | Promise<Response>) {
   const appels: { url: string; init: RequestInit }[] = [];
   const tirer = clientCoordonnees({
     urlAxionia: 'https://axion-ia.example',
     secretRelecture: SECRET_RELECTURE,
-    secretEmission: SECRET_EMISSION,
+    trousseauEmission: TROUSSEAU,
     appeler: (async (url: URL | string, init?: RequestInit) => {
       appels.push({ url: String(url), init: init ?? {} });
       return repondre(String(url), init ?? {});
@@ -116,12 +128,25 @@ describe('REQ-INT-032 — le client de la route des coordonnées', () => {
     }
   );
 
+  it('REQ-INT-032 : l’appel est un GET qui refuse toute redirection et tout cache', async () => {
+    const { tirer, appels } = client(() => reponseSignee(JSON.stringify(COORDONNEES)));
+    await tirer(CANDIDATURE);
+    expect(appels[0]!.init).toMatchObject({ method: 'GET', redirect: 'error', cache: 'no-store' });
+  });
+
+  it('REQ-INT-032 — TÉMOIN : une réponse bien signée et conforme mais qui n’est pas un 200 est refusée', async () => {
+    const { tirer } = client(() =>
+      reponseSignee(JSON.stringify(COORDONNEES), SECRET_EMISSION, 201)
+    );
+    expect(await tirer(CANDIDATURE)).toBeNull();
+  });
+
   it('REQ-INT-032 : sans adresse d’axionia configurée, rien ne part', async () => {
     const appels: unknown[] = [];
     const tirer = clientCoordonnees({
       urlAxionia: undefined,
       secretRelecture: SECRET_RELECTURE,
-      secretEmission: SECRET_EMISSION,
+      trousseauEmission: TROUSSEAU,
       appeler: (async () => {
         appels.push(1);
         return new Response();
@@ -137,6 +162,7 @@ describe('REQ-INT-032 — le client de la route des coordonnées', () => {
 function base(existants: { emailHash?: string; phoneHash?: string; candidatureId?: string }[]) {
   const crees: Record<string, unknown>[] = [];
   const mises: unknown[] = [];
+  const recherches: unknown[] = [];
   const correspond = (where: Record<string, unknown>) => {
     const conditions = (where['OR'] as Record<string, unknown>[] | undefined) ?? [where];
     return existants.find((e) =>
@@ -147,8 +173,10 @@ function base(existants: { emailHash?: string; phoneHash?: string; candidatureId
   };
   const tx = {
     apporteur: {
-      findFirst: async (args: { where: Record<string, unknown> }) =>
-        correspond(args.where) ? { id: 'existant' } : null,
+      findFirst: async (args: { where: Record<string, unknown> }) => {
+        recherches.push(args);
+        return correspond(args.where) ? { id: 'existant' } : null;
+      },
       create: async (args: { data: Record<string, unknown> }) => {
         crees.push(args.data);
         return args.data;
@@ -168,7 +196,7 @@ function base(existants: { emailHash?: string; phoneHash?: string; candidatureId
       return fn(tx);
     },
   } as unknown as ClientCandidature;
-  return { prisma, crees, mises, transactions: () => transactions };
+  return { prisma, crees, mises, recherches, transactions: () => transactions };
 }
 
 const DEPS = (tirer: (id: string) => Promise<Coordonnees | null>) => ({
@@ -224,6 +252,47 @@ describe('REQ-DM-035, REQ-QA-035 — un apporteur `candidat` naît, figé, dans 
     ).toBe('rattache');
     expect(b.crees).toEqual([]);
     expect(b.mises).toHaveLength(1);
+  });
+
+  it('REQ-INT-032 : la recherche est exacte — courriel OU candidature d’abord, puis le seul téléphone, l’identifiant seul', async () => {
+    const b = base([]);
+    await traiterCandidatureRecue(
+      b.prisma,
+      EVENEMENT,
+      DEPS(async () => COORDONNEES)
+    );
+    const emailHash = empreinteRecherche('courriel', COORDONNEES.email!, CLES);
+    const phoneHash = empreinteRecherche('telephone', COORDONNEES.telephone!, CLES);
+    expect(b.recherches).toEqual([
+      { where: { OR: [{ emailHash }, { candidatureId: CANDIDATURE }] }, select: { id: true } },
+      { where: { phoneHash }, select: { id: true } },
+    ]);
+  });
+
+  it('REQ-INT-032 : sans téléphone, aucune recherche par téléphone, et aucune empreinte de téléphone écrite', async () => {
+    const b = base([]);
+    expect(
+      await traiterCandidatureRecue(
+        b.prisma,
+        EVENEMENT,
+        DEPS(async () => ({ ...COORDONNEES, telephone: null }))
+      )
+    ).toBe('cree');
+    expect(b.recherches).toHaveLength(1);
+    expect(b.crees[0]).toMatchObject({ phoneHash: null });
+  });
+
+  it('REQ-INT-032 : connue par sa seule candidature (autre courriel), elle est rattachée', async () => {
+    const b = base([{ candidatureId: CANDIDATURE }]);
+    expect(
+      await traiterCandidatureRecue(
+        b.prisma,
+        EVENEMENT,
+        DEPS(async () => COORDONNEES)
+      )
+    ).toBe('rattache');
+    expect(b.crees).toEqual([]);
+    expect(b.recherches).toHaveLength(1);
   });
 
   it('REQ-INT-032 : connue par son seul téléphone, elle est rattachée aussi', async () => {
@@ -316,5 +385,36 @@ describe('REQ-INT-032 — le travail de fond sait attendre une route, et la repr
       true
     );
     expect(PREFIXE_ATTENTE_COORDONNEES).toBe('coordonnees:');
+  });
+});
+
+describe('REQ-QA-030 — la réponse d’axionia est jugée sous la clé que désigne son kid', () => {
+  const PRECEDENTE = 'p'.repeat(40);
+  const corps = JSON.stringify(COORDONNEES);
+  const tirerAvec = (trousseau: Trousseau, reponse: Response) =>
+    clientCoordonnees({
+      urlAxionia: 'https://axion-ia.example',
+      secretRelecture: SECRET_RELECTURE,
+      trousseauEmission: trousseau,
+      appeler: (async () => reponse) as unknown as typeof fetch,
+      maintenantMs: () => MAINTENANT_MS,
+    })(CANDIDATURE);
+
+  it('REQ-QA-030 : signée par la clé précédente avant son échéance, la réponse est acceptée ; après, refusée', async () => {
+    const avant: Trousseau = {
+      courante: SECRET_EMISSION,
+      precedente: { valeur: PRECEDENTE, echeanceMs: MAINTENANT_MS + 1 },
+    };
+    const echue: Trousseau = {
+      courante: SECRET_EMISSION,
+      precedente: { valeur: PRECEDENTE, echeanceMs: MAINTENANT_MS },
+    };
+    expect(await tirerAvec(avant, reponseSignee(corps, PRECEDENTE))).toEqual(COORDONNEES);
+    expect(await tirerAvec(echue, reponseSignee(corps, PRECEDENTE))).toBeNull();
+  });
+
+  it('REQ-QA-030 : une réponse sans kid est refusée, même bien signée par la clé courante', async () => {
+    expect(await tirerAvec(TROUSSEAU, reponseSignee(corps, SECRET_EMISSION, 200, null))).toBeNull();
+    expect(await tirerAvec(TROUSSEAU, reponseSignee(corps))).toEqual(COORDONNEES);
   });
 });
