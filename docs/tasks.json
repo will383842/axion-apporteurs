@@ -2366,7 +2366,8 @@
         "tests/unit/qualite/pipeline-image.spec.ts",
         "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts",
         "docker-entrypoint.sh",
-        "scripts/gates/registre-des-refus.ts"
+        "scripts/gates/registre-des-refus.ts",
+        ".github/workflows/deploy.yml"
       ],
       "schema": true,
       "sensible": [],
