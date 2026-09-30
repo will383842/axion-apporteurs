@@ -60,7 +60,7 @@ function lancer(env: Record<string, string>): Promise<{ code: number; sortie: st
   return new Promise((resoudre) => {
     const propre: NodeJS.ProcessEnv = { ...process.env };
     for (const k of Object.keys(propre))
-      if (/^(COOLIFY_|PARTNERS_URL_PUBLIQUE|SHA_CIBLE|GITHUB_SHA)/.test(k)) delete propre[k];
+      if (/^(COOLIFY_|PARTNERS_|SHA_CIBLE|GITHUB_|GH_TOKEN)/.test(k)) delete propre[k];
     const p = spawn(
       process.execPath,
       [TSX, SCRIPT, '--retour-arriere', '--essais', '2', '--delai-ms', '50'],
@@ -89,6 +89,32 @@ const application = (sha: string | null, readyz: number) =>
           corps: '',
         }
   );
+/**
+ * La forge factice : l'API de comparaison de GitHub et le registre d'images, sur un même serveur. Le
+ * sha cible est-il un ANCÊTRE de la branche principale, et son image `sha-<7>` a-t-elle été publiée ?
+ * (consignes de la lentille `securite` pour la livraison de QA-T13).
+ */
+async function forge(ancetre: boolean, image: boolean): Promise<Record<string, string>> {
+  const f = await serveur((a) => {
+    if (a.chemin.startsWith('/repos/proprio/depot/compare/'))
+      return {
+        statut: 200,
+        entetes: { 'content-type': 'application/json' },
+        corps: JSON.stringify({ status: ancetre ? 'ahead' : 'diverged' }),
+      };
+    if (a.chemin.startsWith('/token'))
+      return { statut: 200, entetes: {}, corps: '{"token":"jeton-anonyme"}' };
+    if (a.chemin.startsWith('/v2/proprio/depot/manifests/sha-'))
+      return { statut: image ? 200 : 404, entetes: {}, corps: '' };
+    return { statut: 404, entetes: {}, corps: '' };
+  });
+  return {
+    GITHUB_API_URL: f.url,
+    PARTNERS_REGISTRE_URL: f.url,
+    GITHUB_REPOSITORY: 'proprio/depot',
+    GH_TOKEN: 'jeton-factice-forge',
+  };
+}
 const envs = (p: { appels: Appel[] }) =>
   p.appels
     .filter((a) => a.chemin === '/api/v1/applications/uuid-factice/envs/bulk')
@@ -99,6 +125,7 @@ describe('REQ-QA-022 — le retour arrière remet en place, puis le VÉRIFIE', (
     const coolify = await plateformeQuiAccepte();
     const app = await application(CIBLE, 200);
     const r = await lancer({
+      ...(await forge(true, true)),
       COOLIFY_URL: coolify.url,
       COOLIFY_API_TOKEN: 'jeton-factice-retour',
       COOLIFY_APP_UUID: 'uuid-factice',
@@ -127,6 +154,7 @@ describe('REQ-QA-022 — le retour arrière remet en place, puis le VÉRIFIE', (
     const coolify = await plateformeQuiAccepte();
     const app = await application(AUTRE, 200);
     const r = await lancer({
+      ...(await forge(true, true)),
       COOLIFY_URL: coolify.url,
       COOLIFY_API_TOKEN: 'j',
       COOLIFY_APP_UUID: 'uuid-factice',
@@ -143,6 +171,7 @@ describe('REQ-QA-022 — le retour arrière remet en place, puis le VÉRIFIE', (
     const coolify = await plateformeQuiAccepte();
     const app = await application(CIBLE, 503);
     const r = await lancer({
+      ...(await forge(true, true)),
       COOLIFY_URL: coolify.url,
       COOLIFY_API_TOKEN: 'j',
       COOLIFY_APP_UUID: 'uuid-factice',
@@ -152,6 +181,36 @@ describe('REQ-QA-022 — le retour arrière remet en place, puis le VÉRIFIE', (
     expect(r.code).not.toBe(0);
     expect(r.sortie).toMatch(/readyz/);
     expect(envs(coolify).at(-1)).toEqual([{ key: 'SKIP_MIGRATE', value: '0' }]);
+  });
+
+  it('REQ-QA-022 : un sha qui n’est pas un ancêtre de la branche principale est refusé avant tout appel à la plateforme', async () => {
+    const coolify = await plateformeQuiAccepte();
+    const r = await lancer({
+      ...(await forge(false, true)),
+      COOLIFY_URL: coolify.url,
+      COOLIFY_API_TOKEN: 'j',
+      COOLIFY_APP_UUID: 'uuid-factice',
+      PARTNERS_URL_PUBLIQUE: 'http://127.0.0.1:1',
+      SHA_CIBLE: CIBLE,
+    });
+    expect(r.code).not.toBe(0);
+    expect(r.sortie).toMatch(/ancêtre/);
+    expect(coolify.appels).toEqual([]);
+  });
+
+  it('REQ-QA-022 : un sha dont l’image n’a jamais été publiée est refusé avant tout appel à la plateforme', async () => {
+    const coolify = await plateformeQuiAccepte();
+    const r = await lancer({
+      ...(await forge(true, false)),
+      COOLIFY_URL: coolify.url,
+      COOLIFY_API_TOKEN: 'j',
+      COOLIFY_APP_UUID: 'uuid-factice',
+      PARTNERS_URL_PUBLIQUE: 'http://127.0.0.1:1',
+      SHA_CIBLE: CIBLE,
+    });
+    expect(r.code).not.toBe(0);
+    expect(r.sortie).toContain(`sha-${CIBLE.slice(0, 7)}`);
+    expect(coolify.appels).toEqual([]);
   });
 
   it('REQ-QA-022 : un sha cible illisible est refusé avant tout appel', async () => {
@@ -204,6 +263,14 @@ describe('REQ-QA-022 — le workflow : à la main, un sha, la file du déploieme
     expect(j.concurrency?.group).toBe('deploiement-production');
     expect(String(j.concurrency?.['cancel-in-progress'])).toBe('false');
     expect(j.permissions).toEqual({ contents: 'read' });
+  });
+
+  it('REQ-QA-022 : SKIP_MIGRATE est retiré par une étape à part, qui tourne même si le retour arrière a échoué', () => {
+    const etapes = Object.values(wf.jobs ?? {})[0]!.steps ?? [];
+    const i = etapes.findIndex((e) => e.run === 'pnpm deploy:retour-arriere');
+    const j = etapes.findIndex((e) => e.run === 'pnpm deploy:retirer-echappatoire');
+    expect(j).toBeGreaterThan(i);
+    expect((etapes[j] as { if?: string }).if).toBe('${{ always() }}');
   });
 
   it('REQ-QA-022 : le sha passe par l’environnement de l’étape, jamais interpolé dans une commande', () => {
