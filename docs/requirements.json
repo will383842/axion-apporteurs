@@ -1239,6 +1239,30 @@
       ]
     },
     {
+      "id": "REQ-SEC-041",
+      "domaine": "anti-abus-securite",
+      "texte": "Le rôle `conseiller_salarie` n'a aucun droit existant de la matrice et aucun écran ni aucune action sur les apporteurs : fiche, liste, lignée, notes, statistiques, exports, file, rattachement, contestation, anomalie, suspension, gel, IBAN, lot, DAS2, vérifications d'apporteurs. Toutes ses lectures passent par `forConseiller(utilisateurConsoleId)` ; l'identifiant vient de la référence de conseiller que présente l'API 3, rattachée par DM-32 et vérifiée active par Partners à chaque appel, jamais d'un paramètre libre ; la ligne d'un autre conseiller rend une réponse identique à celle d'une ligne inexistante. Aucune session de console n'est ouverte au rôle en V1 (question 22) : il n'a aucun écran dans Partners. Aucun `decide_par_id`, `traite_par_id` ni `repondue_par_id` ne désigne un conseiller (déclencheur). Changement de rôle : on ne quitte pas `conseiller_salarie` en portant une attribution occupante, et on n'y entre pas depuis qualifieur ou admin avant `DELAI_CHANGEMENT_POPULATION_JOURS`. Aucune lecture croisée de `verifications` entre populations.",
+      "source": "décision de Will du 2026-09-29, W19 (docs/chantiers/W19-conseillers-salaries.md §4.1) ; module et étape repris de REQ-SEC-023",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": 21,
+      "etape": 12,
+      "phase": null,
+      "taches": []
+    },
+    {
+      "id": "REQ-SEC-042",
+      "domaine": "anti-abus-securite",
+      "texte": "Aucune réponse de l'espace ni de l'API 1 ne distingue une entreprise prise en charge par un conseiller d'une entreprise occupée par un autre apporteur, ni ne révèle l'identité, le rôle ou la nature salariée de la personne qui l'a prise en charge pour la Société. L'issue de dépôt, son texte, l'état de « Vérifier », la date « jusqu'au » et les délais servis à un apporteur sur un SIREN pris en charge sont identiques octet à octet à ceux d'un SIREN occupé par un apporteur au même stade et aux mêmes dates : à J+0, au passage à `active`, après une prolongation W9 et à la libération, notifications au rang 1 comprises. Aucune valeur nouvelle d'`IssueDepot` ni de `MotifRefusDepot` (question 2). Aucune clé ni valeur de DTO de l'espace ne porte la population. L'API 1 est DANS cette égalité : elle rend la même réponse que pour une attribution d'apporteur au même stade (REQ-INT-014 amendée).",
+      "source": "décision de Will du 2026-09-29, W19 (docs/chantiers/W19-conseillers-salaries.md §4.1), question 2 (art. 3.5) ; module et étape repris de REQ-SEC-022",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": 9,
+      "etape": 7,
+      "phase": null,
+      "taches": []
+    },
+    {
       "id": "REQ-ARG-001",
       "domaine": "argent",
       "texte": "Une ligne de commission `acquise` n'est créée que par un événement `paiement.recu` (status succeeded, amountCents > 0). `devis.signe` et `facture.emise` ne créent jamais de ligne `acquise` (ils créent/actualisent l'attendu `en_attente_encaissement`). _(source : tableaux-de-bord §2.3 ; fonctionnement R7 ; audit-attribution P6)_ **→ ABSORBÉE par REQ-DM-016** (annexe de dédoublonnage, fusion appliquée par GOV-001, 2026-09-03) : **le texte en vigueur est celui de REQ-DM-016** ; l'identifiant est conservé — et non supprimé — pour que les tâches qui le citent continuent de résoudre. **→ voir REQ-DM-016.**",
@@ -1770,6 +1794,42 @@
         "T-ARG-038",
         "UX-P2-04"
       ]
+    },
+    {
+      "id": "REQ-ARG-036",
+      "domaine": "argent",
+      "texte": "La part variable vit dans des tables propres, avec une FK vers `utilisateurs_console` seulement : `plans_part_variable`, `lignes_part_variable`, `exports_paie`, et `matricule_chiffre` sur `utilisateurs_console`. LigneCommission, Relevé, Autofacture, LotPaiement, pain.001, DAS2, parrainage, repli à 60 jours et seuils de versement n'acceptent qu'un apporteur. Le plan de part variable ne dérive jamais de `COMMERCIAL_COMMISSIONS` et n'entre pas dans le dépôt. Ni plan, ni montant, ni matricule dans pino.",
+      "source": "décision de Will du 2026-09-29, W19 (docs/chantiers/W19-conseillers-salaries.md §4.1) ; transverse : l'argent des salariés n'appartient à aucun module de l'audit des apporteurs",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": null,
+      "etape": null,
+      "phase": null,
+      "taches": []
+    },
+    {
+      "id": "REQ-ARG-037",
+      "domaine": "argent",
+      "texte": "L'export paie est produit par période. Il est figé et haché, son ré-export est identique à l'octet, et une régénération est motivée. Réservé à `admin` et `comptable`, avec step-up déclaré dans la matrice. Validé par une personne distincte de celle qui a modifié un plan ou réaffecté une attribution sur la période. Journalisé. Contenu : matricule, période, rubrique, montant « à porter en paie », référence opaque ; jamais une retenue, jamais sous `src/server/pdf/`, jamais envoyé par e-mail.",
+      "source": "décision de Will du 2026-09-29, W19 (docs/chantiers/W19-conseillers-salaries.md §4.1) ; transverse : l'argent des salariés n'appartient à aucun module de l'audit des apporteurs",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": null,
+      "etape": null,
+      "phase": null,
+      "taches": []
+    },
+    {
+      "id": "REQ-ARG-038",
+      "domaine": "argent",
+      "texte": "Un plan de part variable ne prend effet qu'après son acceptation par le conseiller : `accepte_at`, version et empreinte du document présenté. Sa date d'effet est au moins égale à l'acceptation et au jour courant, et postérieure à la dernière période exportée ; il n'est jamais rétroactif. Il est validé à quatre yeux. Les justificatifs par ligne (entreprise, devis, encaissement) sont conservés au moins pendant la durée de prescription salariale (3 ans, L.3245-1, à confirmer). Le sort des encaissements postérieurs au départ et des régularisations suit HYP-W19-VARIABLE-SORTIE et HYP-W19-REGULARISATION.",
+      "source": "décision de Will du 2026-09-29, W19 (docs/chantiers/W19-conseillers-salaries.md §4.1) ; transverse : l'argent des salariés n'appartient à aucun module de l'audit des apporteurs",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": null,
+      "etape": null,
+      "phase": null,
+      "taches": []
     },
     {
       "id": "REQ-INT-001",
@@ -4744,6 +4804,18 @@
       ]
     },
     {
+      "id": "REQ-CPL-030",
+      "domaine": "complétude (REQ-CPL)",
+      "texte": "Une personne n'est pas à la fois apporteur non résilié et `conseiller_salarie` actif. Contrôle croisé de l'empreinte de courriel à la création d'un utilisateur de console, à tout passage vers `conseiller_salarie`, et à la création ou à l'activation d'un apporteur. Une candidature correspondant à un conseiller actif est BLOQUÉE jusqu'à revue humaine : aucune activation, aucun DocuSeal. Un apporteur embauché voit son contrat résilié avant l'activation de son compte ; ses droits acquis (art. 4) sont versés par la chaîne des apporteurs. Ce contrôle est un signal, pas une protection ; s'y ajoute une déclaration de conflit d'intérêts accusée à l'invitation. Aucune réponse ne révèle la population.",
+      "source": "décision de Will du 2026-09-29, W19 (docs/chantiers/W19-conseillers-salaries.md §4.1) ; module et étape repris de REQ-SEC-023",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": 21,
+      "etape": 12,
+      "phase": null,
+      "taches": []
+    },
+    {
       "id": "REQ-UX-036",
       "domaine": "Annexe — passe de dédoublonnage (à appliquer par le Gardien du spec, GOV-001)",
       "texte": "La fiche apporteur de la console porte 5 blocs : identité et KYC · activité et dormance · rendement (contacts → rdv → devis → signés, délais, CA, marge nette après commission) · conformité (pièces, échéances, cumul DAS2) · journal immuable. 🔴 **Elle n'expose AUCUN compteur de mises en demeure ni de suspensions** (M-17, REQ-JUR-031) : le journal immuable les rend lisibles une par une, avec leur date et leur motif — c'est le contrat qui l'exige (art. 11.2 : « aucune décision ne peut être fondée, en tout ou partie, sur le nombre de mises en demeure ou de suspensions antérieures ») —, mais **aucun total, aucun badge, aucun tri par nombre, aucun filtre « apporteurs les plus suspendus »** n'existe. `dormant` reste un indicateur de **console** et ne sort jamais vers l'apporteur (REQ-CPL-027, REQ-JUR-042). Tests : test d'absence sur le DTO de la fiche (aucune clé de comptage d'événements disciplinaires), **vu rougir** sur un témoin portant `nbSuspensions`.",
@@ -4902,6 +4974,30 @@
       ]
     },
     {
+      "id": "REQ-UX-047",
+      "domaine": "produit-ux",
+      "texte": "Toute tâche qui livre un écran de Partners (espace, console) porte dans son acceptance les huit points suivants ; le conseiller n'a aucun écran dans Partners (question 22), ses écrans sont ceux du CRM Pro, hors de cette exigence. (1) Le geste principal et son budget, lus dans la SSOT `BUDGETS_UX` (`src/domain/seuils/ssot.ts`) : consultation ≤ 3 interactions, saisie ≤ 8 ; une exigence existante plus stricte prime (REQ-UX-001, REQ-UX-021) ; mesure par la fixture QA-T33. (2) Première action : visible sans défilement à 375×667 (espace, console mobile) ou 1280×800 (console), atteinte en ≤ 3 tabulations, cliquable en ≤ 2 s sur le profil réseau « 4G ralentie » défini dans `BUDGETS_UX` (débit et latence, sourcés, posés par GOV-113). (3) Cinq états : nominal, vide qui montre le geste suivant, chargement, erreur qui dit quoi faire, accès refusé (REQ-UX-019 amendée). (4) Libellés tirés de la micro-copy SSOT du public et des termes du glossaire, sans identifiant technique. (5) Accessibilité et cibles : REQ-UX-017 (espace) et REQ-UX-018 (console) s'appliquent telles quelles, dans les deux thèmes. (6) Maquette produite par le poste `ux-redaction` et validée dans `docs/maquettes/VALIDATION.md`. (7) Écrans principaux, déclarés par la colonne « écran principal » de `docs/CONSOLE-ROUTES.md` et de `docs/ESPACE-ROUTES.md` : test de premier usage ; une personne du public, qui n'a jamais vu l'outil, reçoit une consigne d'une phrase ; on consigne le temps de première action (≤ 10 s), le temps total dans le budget, les hésitations et un verbatim ; par défaut (question 17) : si Williams fournit une personne du public, le test est joué par elle, sinon par un agent qui n'a pas écrit l'écran, et la trace consignée dit qu'aucune personne du public n'était disponible. (8) E-mails : un seul appel à l'action, libellé tiré de la SSOT, lien qui mène à l'écran utile.",
+      "source": "décision de Will du 2026-09-29, W19 (docs/chantiers/W19-conseillers-salaries.md §4.1), lot « confort de la console pour tous les rôles » ; transverse : aucun module ni étape",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": null,
+      "etape": null,
+      "phase": null,
+      "taches": []
+    },
+    {
+      "id": "REQ-UX-048",
+      "domaine": "produit-ux",
+      "texte": "Carte des routes unique pour la console (`docs/CONSOLE-ROUTES.md`) : route, écran, rôle, phase et statut (prévue ou livrée), REQ, maquette. Navigation DÉRIVÉE des droits `ecran:*` de la matrice. Bureau : ≤ 7 entrées de premier niveau groupées par métier ; moins de 768 px : barre inférieure de ≤ 4 entrées plus un menu, sans défilement horizontal à 320 px. Accueil par rôle ET par phase : la première route livrée de la liste de préférence du rôle ; à défaut, un état vide guidant qui dit ce qui arrive et quand ; jamais de 404. Connexion propre à la console : lien et code à 6 chiffres, page « lien déjà utilisé » ; elle mène à l'accueil ou à l'URL demandée (chemin relatif `/console/`) en une action. Écran d'accès refusé qui explique quoi faire. Recherche globale bornée par la matrice. Page « Votre rôle » dérivée du GLOSSAIRE §7.",
+      "source": "décision de Will du 2026-09-29, W19 (docs/chantiers/W19-conseillers-salaries.md §4.1) ; module repris de REQ-UX-018 (console), sans étape",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": 17,
+      "etape": null,
+      "phase": null,
+      "taches": []
+    },
+    {
       "id": "REQ-DM-041",
       "domaine": "Annexe — passe de dédoublonnage (à appliquer par le Gardien du spec, GOV-001)",
       "texte": "Le payload d'un événement du journal est un schéma Zod **fermé** par type : identifiants, hashes, enums, montants, horodatages — **jamais** nom, e-mail, téléphone, IBAN, adresse ; gate `journal:sans-pii` ; après un effacement de tiers, `verifierChaine()` reste vrai. **Porteurs : `DM-01` et `DM-20`** — cette exigence fondait la gate `journal:sans-pii` (phase 0) sans qu'aucune tâche ne la cite : la gate existait sans porteur (corrigé le 2026-09-03).",
@@ -4972,6 +5068,18 @@
         "DM-29",
         "UX-P3-07"
       ]
+    },
+    {
+      "id": "REQ-DM-048",
+      "domaine": "domaine-donnees",
+      "texte": "Le porteur d'une attribution est exclusif : soit un apporteur, soit un utilisateur de console de rôle `conseiller_salarie` non désactivé. Le rôle est vérifié par un DÉCLENCHEUR à l'INSERT et à l'UPDATE du porteur ; un CHECK ne suffit pas, le rôle vit dans une autre table. Une seule table `attributions`, avec CHECK XOR, un index d'occupation unique par SIREN et l'horodatage de transaction (REQ-DM-005), communs aux deux porteurs. Vue de l'espace et de l'API 1, l'attribution du conseiller suit la même chronologie, les mêmes états visibles et les mêmes délais que celle d'un apporteur (HYP-W19-CYCLE) ; sa fenêtre d'attribution (`FENETRE_MOIS`, SSOT) n'est pas reconduite ; W9 s'applique à l'identique ; ce qui diffère en interne (aucun qualifieur, aucune confirmation par un apporteur, aucun rang) ne se voit jamais de l'espace. Le conseiller n'entre jamais en file : CHECK `rang_attente IS NULL OR apporteur_id IS NOT NULL` ; une file d'apporteurs se forme derrière sa prise en charge comme derrière un apporteur (art. 3.5). Pour la non-reconduction et le délai d'attente, la Société compte comme UN seul porteur : aucun conseiller ne reprend un SIREN libéré depuis moins de `CARENCE_CONSEILLER_JOURS`, quel que soit le porteur sortant ; le SIREN est aussi fermé aux conseillers pendant la fenêtre de redéclaration d'un rang 1, et pendant `RESERVE_APRES_ACTE_APPORTEUR_JOURS` après une vérification ou un dépôt refusé d'un apporteur. Limites par conseiller et par Société (HYP-W19-LIMITES). Une prise en charge ne naît que dans Partners, par la console admin ou par l'API 3 ; aucun statut du CRM Pro n'occupe un SIREN (HYP-W19-SOURCE, question 22).",
+      "source": "décision de Will du 2026-09-29, W19 (docs/chantiers/W19-conseillers-salaries.md §4.1) ; la durée de la fenêtre suit la décision de Williams du 2026-09-30 (6 mois, art. 3.4 al. 1), d'où la référence à la SSOT plutôt qu'à un chiffre ; module et étape repris de REQ-DM-005",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": 9,
+      "etape": 7,
+      "phase": null,
+      "taches": []
     },
     {
       "id": "REQ-QA-035",
@@ -5595,6 +5703,42 @@
         "UX-P1-10",
         "UX-P1-12"
       ]
+    },
+    {
+      "id": "REQ-JUR-043",
+      "domaine": "juridique",
+      "texte": "Aucun écran, e-mail, notification, document ni export destiné à un apporteur ne nomme, ne compare ni ne mesure un conseiller salarié. Exceptions EXPLICITES, par défaut et soumises à Williams (question 14) : le contrat (`docs/contrat/**`), dont l'art. 3.5 amendé dit, en termes généraux et sans jamais désigner l'occupant d'une entreprise donnée, qu'elle peut être déjà prise « par un autre apporteur ou par la Société ou ses préposés », écrit en toutes lettres pour ne pas se confondre avec les « préposés » de l'apporteur de l'art. 1 ; et la notice RGPD de l'apporteur, qui décrit la finalité « contrôle d'incompatibilité avec le personnel de la Société » sans nommer personne. Aucun tableau de console ne classe ensemble apporteurs et conseillers ; seuls des totaux par origine sont admis. Aucune action d'un conseiller ne produit de message vers un apporteur.",
+      "source": "décision de Will du 2026-09-29, W19 (docs/chantiers/W19-conseillers-salaries.md §4.1) ; transverse : aucun module ni étape",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": null,
+      "etape": null,
+      "phase": null,
+      "taches": []
+    },
+    {
+      "id": "REQ-JUR-044",
+      "domaine": "juridique",
+      "texte": "L'acte d'un conseiller n'emprunte ni le vocabulaire, ni le formulaire, ni les issues de l'apporteur. Console : « prendre en charge une entreprise », événement `prise_en_charge_par_la_societe`, enum `IssuePriseEnCharge` distinct d'`IssueDepot` ; jamais « déposer », « déclarer », « réservée » ni « commission ». API 3 et CRM Pro : le même vocabulaire (« prendre en charge », « à vous », « non disponible »), exigé par l'ADR INT-T28 pour le rôle CRM ; aucune route ni aucun champ de l'API 3 n'emprunte le vocabulaire de l'apporteur. Au contrat, l'art. 3.5 amendé nomme « la Société ou ses préposés » à côté des autres apporteurs, en termes généraux ; l'acte d'un préposé n'y est jamais « une déclaration ». Côté apporteur, l'issue est celle du concours entre apporteurs (question 2) ; c'est côté console que le vocabulaire diffère.",
+      "source": "décision de Will du 2026-09-29, W19 (docs/chantiers/W19-conseillers-salaries.md §4.1) ; transverse : aucun module ni étape",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": null,
+      "etape": null,
+      "phase": null,
+      "taches": []
+    },
+    {
+      "id": "REQ-JUR-045",
+      "domaine": "juridique",
+      "texte": "Aucune rémunération de salarié, dans Partners comme dans axion-ia, n'est indexée sur l'activité, le volume ou la performance des apporteurs. Le fait générateur du variable d'un conseiller est une attribution qu'il porte lui-même.",
+      "source": "décision de Will du 2026-09-29, W19 (docs/chantiers/W19-conseillers-salaries.md §4.1), question 1 ; transverse : aucun module ni étape",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": null,
+      "etape": null,
+      "phase": null,
+      "taches": []
     },
     {
       "id": "REQ-GOV-031",
