@@ -78,6 +78,7 @@
       "phase": 1,
       "taches": [
         "DM-07",
+        "DM-30",
         "DM-40"
       ]
     },
@@ -325,7 +326,8 @@
       "phase": 0,
       "taches": [
         "DM-15",
-        "INT-T03"
+        "INT-T03",
+        "T-ARG-040"
       ]
     },
     {
@@ -369,7 +371,8 @@
       "phase": 0,
       "taches": [
         "DM-01",
-        "DM-20"
+        "DM-20",
+        "SEC-30"
       ]
     },
     {
@@ -641,7 +644,9 @@
       "etape": 10,
       "phase": 1,
       "taches": [
-        "DM-25"
+        "DM-25",
+        "DM-31",
+        "JUR-T31"
       ]
     },
     {
@@ -685,6 +690,8 @@
       "taches": [
         "SEC-04",
         "SEC-19",
+        "SEC-29",
+        "SEC-30",
         "UX-P1-04"
       ]
     },
@@ -774,7 +781,9 @@
       "phase": 0,
       "taches": [
         "GOV-111",
+        "QA-T31",
         "SEC-05",
+        "SEC-32",
         "UX-P2-06"
       ]
     },
@@ -847,6 +856,7 @@
       "phase": 1,
       "taches": [
         "DM-07",
+        "DM-30",
         "SEC-12"
       ]
     },
@@ -875,6 +885,7 @@
       "etape": 7,
       "phase": 0,
       "taches": [
+        "DM-31",
         "SEC-03",
         "SEC-10"
       ]
@@ -893,6 +904,7 @@
         "DM-43",
         "QA-T41",
         "SEC-14",
+        "SEC-33",
         "SEC-41"
       ]
     },
@@ -985,7 +997,9 @@
       "etape": 12,
       "phase": 0,
       "taches": [
-        "SEC-17"
+        "SEC-17",
+        "SEC-30",
+        "SEC-31"
       ]
     },
     {
@@ -1089,7 +1103,8 @@
       "phase": 0,
       "taches": [
         "DM-20",
-        "JUR-T04"
+        "JUR-T04",
+        "JUR-T32"
       ]
     },
     {
@@ -1247,8 +1262,15 @@
       "remplaceePar": null,
       "module": 21,
       "etape": 12,
-      "phase": null,
-      "taches": []
+      "phase": 1,
+      "taches": [
+        "DM-31",
+        "DM-32",
+        "INT-T28",
+        "SEC-31",
+        "SEC-32",
+        "SEC-34"
+      ]
     },
     {
       "id": "REQ-SEC-042",
@@ -1259,8 +1281,16 @@
       "remplaceePar": null,
       "module": 9,
       "etape": 7,
-      "phase": null,
-      "taches": []
+      "phase": 1,
+      "taches": [
+        "DM-30",
+        "DM-31",
+        "INT-T28",
+        "JUR-T31",
+        "QA-T31",
+        "SEC-34",
+        "UX-P1-17"
+      ]
     },
     {
       "id": "REQ-SEC-060",
@@ -1328,6 +1358,7 @@
       "etape": null,
       "phase": 0,
       "taches": [
+        "QA-T32",
         "SEC-06",
         "T-ARG-022"
       ]
@@ -1828,8 +1859,11 @@
       "remplaceePar": null,
       "module": null,
       "etape": null,
-      "phase": null,
-      "taches": []
+      "phase": 2,
+      "taches": [
+        "QA-T32",
+        "T-ARG-040"
+      ]
     },
     {
       "id": "REQ-ARG-037",
@@ -1840,8 +1874,12 @@
       "remplaceePar": null,
       "module": null,
       "etape": null,
-      "phase": null,
-      "taches": []
+      "phase": 2,
+      "taches": [
+        "T-ARG-041",
+        "T-ARG-042",
+        "UX-P2-10"
+      ]
     },
     {
       "id": "REQ-ARG-038",
@@ -1852,8 +1890,14 @@
       "remplaceePar": null,
       "module": null,
       "etape": null,
-      "phase": null,
-      "taches": []
+      "phase": 2,
+      "taches": [
+        "QA-T32",
+        "T-ARG-040",
+        "T-ARG-042",
+        "UX-P2-10",
+        "UX-P2-12"
+      ]
     },
     {
       "id": "REQ-INT-001",
@@ -2068,6 +2112,7 @@
       "taches": [
         "INT-T07-A",
         "INT-T07-P",
+        "QA-T31",
         "SEC-07"
       ]
     },
@@ -2804,6 +2849,7 @@
         "UX-P0-01",
         "UX-P0-01b",
         "UX-P1-02",
+        "UX-P1-17",
         "UX-P1-43",
         "UX-P3-05"
       ]
@@ -2999,6 +3045,7 @@
       "etape": null,
       "phase": 1,
       "taches": [
+        "SEC-29",
         "UX-P1-04"
       ]
     },
@@ -3049,7 +3096,12 @@
       "phase": 0,
       "taches": [
         "UX-P0-03",
-        "UX-P3-04"
+        "UX-P1-16",
+        "UX-P1-18",
+        "UX-P1-19",
+        "UX-P2-14",
+        "UX-P3-04",
+        "UX-P3-13"
       ]
     },
     {
@@ -3063,8 +3115,10 @@
       "etape": 7,
       "phase": 0,
       "taches": [
+        "GOV-113",
         "UX-P0-01",
         "UX-P1-08",
+        "UX-P1-16",
         "UX-P1-40",
         "UX-P1-42",
         "UX-P1-43"
@@ -3095,7 +3149,8 @@
       "etape": 8,
       "phase": 1,
       "taches": [
-        "UX-P1-06"
+        "UX-P1-06",
+        "UX-P1-19"
       ]
     },
     {
@@ -3552,6 +3607,7 @@
       "phase": 0,
       "taches": [
         "QA-T16",
+        "QA-T33",
         "UX-P0-03"
       ]
     },
@@ -4131,7 +4187,8 @@
         "GOV-013",
         "GOV-071",
         "GOV-106",
-        "GOV-109"
+        "GOV-109",
+        "GOV-114"
       ]
     },
     {
@@ -4225,7 +4282,8 @@
       "etape": 11,
       "phase": -1,
       "taches": [
-        "GOV-015"
+        "GOV-015",
+        "T-ARG-041"
       ]
     },
     {
@@ -4508,6 +4566,7 @@
       "phase": 0,
       "taches": [
         "JUR-T04",
+        "JUR-T32",
         "JUR-T35"
       ]
     },
@@ -4523,7 +4582,8 @@
       "phase": 2,
       "taches": [
         "CPL-T12",
-        "T-ARG-010"
+        "T-ARG-010",
+        "T-ARG-042"
       ]
     },
     {
@@ -4848,8 +4908,12 @@
       "remplaceePar": null,
       "module": 21,
       "etape": 12,
-      "phase": null,
-      "taches": []
+      "phase": 1,
+      "taches": [
+        "DM-32",
+        "JUR-T33",
+        "SEC-33"
+      ]
     },
     {
       "id": "REQ-UX-036",
@@ -4950,7 +5014,8 @@
       "phase": 3,
       "taches": [
         "DM-29",
-        "UX-P3-07"
+        "UX-P3-07",
+        "UX-P3-13"
       ]
     },
     {
@@ -5018,8 +5083,22 @@
       "remplaceePar": null,
       "module": null,
       "etape": null,
-      "phase": null,
-      "taches": []
+      "phase": 1,
+      "taches": [
+        "GOV-113",
+        "QA-T33",
+        "SEC-29",
+        "SEC-30",
+        "UX-P1-16",
+        "UX-P1-18",
+        "UX-P1-19",
+        "UX-P1-20",
+        "UX-P2-10",
+        "UX-P2-12",
+        "UX-P2-14",
+        "UX-P2-15",
+        "UX-P3-13"
+      ]
     },
     {
       "id": "REQ-UX-048",
@@ -5030,8 +5109,14 @@
       "remplaceePar": null,
       "module": 17,
       "etape": null,
-      "phase": null,
-      "taches": []
+      "phase": 1,
+      "taches": [
+        "SEC-29",
+        "SEC-30",
+        "UX-P1-16",
+        "UX-P1-18",
+        "UX-P1-20"
+      ]
     },
     {
       "id": "REQ-UX-060",
@@ -5150,8 +5235,15 @@
       "remplaceePar": null,
       "module": 9,
       "etape": 7,
-      "phase": null,
-      "taches": []
+      "phase": 1,
+      "taches": [
+        "DM-30",
+        "INT-T28",
+        "JUR-T31",
+        "QA-T31",
+        "SEC-34",
+        "UX-P2-12"
+      ]
     },
     {
       "id": "REQ-DM-060",
@@ -5695,6 +5787,7 @@
       "etape": 7,
       "phase": 0,
       "taches": [
+        "GOV-114",
         "JUR-T26"
       ]
     },
@@ -5740,6 +5833,7 @@
         "GOV-071",
         "GOV-106",
         "GOV-109",
+        "GOV-114",
         "JUR-T26",
         "UX-P1-41"
       ]
@@ -5833,8 +5927,14 @@
       "remplaceePar": null,
       "module": null,
       "etape": null,
-      "phase": null,
-      "taches": []
+      "phase": 1,
+      "taches": [
+        "GOV-114",
+        "JUR-T32",
+        "JUR-T33",
+        "UX-P1-17",
+        "UX-P2-13"
+      ]
     },
     {
       "id": "REQ-JUR-044",
@@ -5845,8 +5945,14 @@
       "remplaceePar": null,
       "module": null,
       "etape": null,
-      "phase": null,
-      "taches": []
+      "phase": 1,
+      "taches": [
+        "DM-30",
+        "INT-T28",
+        "JUR-T31",
+        "SEC-34",
+        "UX-P2-15"
+      ]
     },
     {
       "id": "REQ-JUR-045",
@@ -5857,8 +5963,10 @@
       "remplaceePar": null,
       "module": null,
       "etape": null,
-      "phase": null,
-      "taches": []
+      "phase": 2,
+      "taches": [
+        "T-ARG-040"
+      ]
     },
     {
       "id": "REQ-JUR-060",
