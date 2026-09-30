@@ -41,6 +41,9 @@
 - [ ] `configurer`, un vidage, `rechiffrer`, puis `exercice` : **verdict réussi** sous
       `partners/exercices/`.
 - [ ] La garde des clairs et la fraîcheur nocturne sont vertes.
+- [ ] `deploy.yml` alerte (catégorie close `deploiement_non_atterri`) sur un `deploy:verify` rouge
+      PROVOQUÉ, et l'alerte est REÇUE. Sans retour automatique de la plateforme, c'est ce rouge qui
+      voit un déploiement malade.
 
 ## 4. Les clés, juste avant l'ouverture
 
