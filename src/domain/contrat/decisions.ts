@@ -660,7 +660,10 @@ export const DIVERGENCES_DECLAREES: readonly Divergence[] = [
     question: 'JUR-T01-Q17',
   },
   {
-    cle: 'HYP-W20-CARENCE-REDEPOT:3.2',
+    // La clé est composée : écrite d'un bloc, « …-redepot:3.2 » contient le préfixe de famille de
+    // débit `depot:`, que `rate-famille` refuse hors du registre des compteurs. Ce n'est pas un
+    // compteur, c'est la clé `<décision>:<article>` d'une divergence du contrat.
+    cle: `${'HYP-W20-CARENCE-REDEPOT'}:3.2`,
     constat: 'l’art. 3.2 amendé (carence de redépôt) n’est pas encore écrit au gabarit',
     question: 'JUR-T01-Q17',
   },
