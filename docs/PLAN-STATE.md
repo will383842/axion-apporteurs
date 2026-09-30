@@ -8,12 +8,12 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `bedbaf7f` — 2026-09-30T02:50:29+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #268 (rien) · 2. #272 (rien) · 3. #263 (un contrôle requis rouge ou une revue manquante) · 4. #275 (un contrôle requis rouge ou une revue manquante) · 5. #280 (un contrôle requis rouge ou une revue manquante) · 6. #281 (un contrôle requis rouge ou une revue manquante) · 7. #262 (un conflit avec `main`) |
+| Qu’est-ce qui est en vol ? | 1. #268 (rien) · 2. #272 (rien) · 3. #263 (un contrôle requis rouge ou une revue manquante) · 4. #275 (un contrôle requis rouge ou une revue manquante) · 5. #280 (un contrôle requis rouge ou une revue manquante) · 6. #281 (un contrôle requis rouge ou une revue manquante) · 7. #282 (un contrôle requis rouge ou une revue manquante) · 8. #262 (un conflit avec `main`) |
 | Qui tient quoi ? | aucune tâche revendiquée |
 | Où en est la phase ? | phase 0 — 121/134 tâches, reste 9.25 j |
 | Le prochain pas | fusionner #268, puis QA-T06 — Preview par PR sur Coolify, base éphémère, seed déterministe |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
-| Dernière entrée de journal | PR #279 — 2026-09-30 |
+| Dernière entrée de journal | PR #282 — 2026-09-30 |
 
 **Ce qu’on tape maintenant.** `gh pr view 268 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
@@ -66,7 +66,8 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 | 4 | #275 — feat(GOV-123): les vues derivees sortent de git et se rendent a la volee, fin des conflits de vues entre PR | `t/gov-123-vues` | un contrôle requis rouge ou une revue manquante |
 | 5 | #280 — feat(QA-T12): sauvegarde chiffree cote client, exercice de restauration mensuel sur un Postgres ephemere, fraicheur nocturne | `t/qa-t12` | un contrôle requis rouge ou une revue manquante |
 | 6 | #281 — feat(QA-T06): preview par PR sous six conditions, semeur deterministe verifie sur deux bases, plafond de deux | `t/qa-t06` | un contrôle requis rouge ou une revue manquante |
-| 7 | #262 — feat(GOV-116): le lot dedie du gardien-spec, procedure exacte lancee par Williams, reglages rendus depuis le projet | `t/gov-116` | un conflit avec `main` — à résoudre avant tout |
+| 7 | #282 — chore(GOV-012): REQ-QA-030 rendue a QA-T04, QA-T13 declare le registre des gates, dettes apres lancement | `t/registre-rattrapage-18` | un contrôle requis rouge ou une revue manquante |
+| 8 | #262 — feat(GOV-116): le lot dedie du gardien-spec, procedure exacte lancee par Williams, reglages rendus depuis le projet | `t/gov-116` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -102,6 +103,16 @@ Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
 
+### PR #282 — 2026-09-30 — chore(GOV-012): REQ-QA-030 rendue a QA-T04, QA-T13 declare le registre des gates, dettes apres lancement
+
+**Fait.** REQ-QA-030 quitte QA-T13 pour rester à QA-T04, qui la teste. QA-T13 déclare le registre
+des gates pour sa nouvelle garde. Les dettes non bloquantes de JUR-T29 et de GOV-123 sont rangées.
+
+**Reste.** La clôture de JUR-T29 après la mise en production de axion-ia #1232.
+
+**Appris.** Une exigence se rend à la tâche qui la teste : la faire citer par un titre de test
+pour verdir la traçabilité serait mentir à la matrice.
+
 ### PR #279 — 2026-09-30 — chore(GOV-012): registre rattrape, INT-T04 et INT-T05 closes par le passif, QA-T13 decoupee, paths de QA-T06 et JUR-T29
 
 **Fait.** Cinq clôtures, dont INT-T04 et INT-T05 par le passif déclaré. QA-T13 est découpée : le
@@ -124,18 +135,7 @@ par axion-ia #1228 et en production.
 **Appris.** Un corps de squash enrichi d'une seule phrase suffit à ne plus rien déclarer : la
 consigne de fusion côté axion-ia est désormais un corps réduit à la seule ligne Lot:.
 
-### PR #271 — 2026-09-30 — chore(GOV-012): registre rattrape, JUR-T03 close, chiffrement client des sauvegardes, paths de QA-T12 et JUR-T29
-
-**Fait.** Seizième rattrapage. JUR-T03 est close après vérification de sa mise en production. Les
-sauvegardes de Partners devront être chiffrées côté client avant la première donnée réelle. Les
-chemins de QA-T12 et de JUR-T29 suivent ce que leurs auteurs ont mesuré.
-
-**Reste.** La levée de l'exception « 500 euros nu » attend la confirmation de Williams.
-
-**Appris.** Une condition de mise en service écrite dans un runbook seul se perd : écrite dans
-l'acceptance, elle a un témoin et bloque réellement.
-
-… 3 entrée(s) affichée(s) sur 120 ; les 117 plus ancienne(s) se lisent dans `docs/journal/`.
+… 3 entrée(s) affichée(s) sur 121 ; les 118 plus ancienne(s) se lisent dans `docs/journal/`.
 
 ## Dette déclarée
 
