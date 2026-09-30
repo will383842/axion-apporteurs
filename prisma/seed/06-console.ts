@@ -10,7 +10,11 @@
  * version de la session n'est pas écrite : la base la pose à 0 pour une session de la console.
  */
 
-import type { ConsoleRole, PrismaClient } from '@prisma/client';
+import {
+  ConsoleRole as ConsoleRoleEnum,
+  type ConsoleRole,
+  type PrismaClient,
+} from '@prisma/client';
 import { DUREES_AUTH } from '../../src/server/auth/durees';
 import { empreinteDeSession, empreinteDuJeton } from '../../src/server/auth/lien-magique';
 import { colonnesPii, type ClesPii } from '../../src/server/securite/pii';
@@ -91,4 +95,26 @@ export async function semerSessionConsole(
     select: { id: true },
   });
   return { lienMagiqueId: lien.id, sessionId: session.id };
+}
+
+/**
+ * Le module par défaut du chargeur (`prisma/seed.ts`) : UN administrateur de console, pour qu'une
+ * preview soit utilisable. Identifiant en uuid v5 de l'espace de noms fixe, rôle lu dans l'enum de
+ * Prisma, instant du contexte, adresse sous le domaine réservé `.invalid` (RFC 2606) : aucune
+ * personne réelle, aucune donnée de production. Le courriel et le nom passent par `colonnesPii`.
+ */
+export default async function semerParDefaut(
+  prisma: PrismaClient,
+  ctx: { maintenant: Date; uuid: (nom: string) => string; cles: ClesPii }
+): Promise<void> {
+  const id = ctx.uuid('console/administrateur-de-preview');
+  if (await prisma.utilisateurConsole.findUnique({ where: { id }, select: { id: true } })) return;
+  await semerUtilisateurConsole(prisma, {
+    id,
+    role: ConsoleRoleEnum.admin,
+    email: 'administrateur@preview.invalid',
+    nom: 'Administrateur de preview',
+    creeAt: ctx.maintenant,
+    cles: ctx.cles,
+  });
 }

@@ -21,3 +21,13 @@ export async function semerGrilleCommission(
 ): Promise<ResultatImport> {
   return importerGrille(prisma, publication, importeeAt);
 }
+
+/**
+ * Le module par défaut du chargeur (`prisma/seed.ts`) : il ne sème AUCUNE grille. Une grille ne se
+ * fabrique pas ; elle vient d'une publication d'axionia, ou de sa version pseudonymisée par le même
+ * producteur (RM-03), et le dépôt n'en porte aucune à ce jour. Le semeur l'importera le jour où la
+ * fixture existera, par `semerGrilleCommission`, avec l'instant du contexte.
+ */
+export default async function semerParDefaut(): Promise<void> {
+  // Rien à semer : voir ci-dessus.
+}
