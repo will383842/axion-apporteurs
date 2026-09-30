@@ -663,8 +663,8 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
         'périmètre et juge ; une copie renommée ne s’exécute pas.',
     },
     'scripts/preview/preview.ts': {
-      total: 4,
-      porte: 4,
+      total: 3,
+      porte: 3,
       temoins: 0,
       raison:
         'QA-T06 — REQ-QA-015, la preview par PR : publication de l image dans le seul paquet de preview, attribution sous plafond, destruction. process.exitCode pose sur l usage refuse, sur le code du geste et sur 1 en cas d erreur (cible hors du paquet de preview, refus de la plateforme, adresse interne absente). La decision du plafond et le refus de la cible de production sont vus sur des fonctions pures (preview-par-pr.spec.ts, pipeline-image.spec.ts) ; le binaire attend la plateforme ; aucun temoin ne vit dans REFUS. N importe pas fichiersSuivisOuRefus. Dette DECLAREE.',

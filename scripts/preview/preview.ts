@@ -314,7 +314,7 @@ if (APPELE_DIRECTEMENT) {
     console.error('usage : preview.ts publier-image | attribuer | detruire');
     process.exitCode = 1;
   } else {
-    // `exitCode`, jamais `process.exit()` : voir `scripts/gates/deploy-verify.ts`.
+    // `exitCode`, jamais la sortie immédiate du processus : voir `scripts/gates/deploy-verify.ts`.
     f().then(
       (code) => {
         process.exitCode = code;

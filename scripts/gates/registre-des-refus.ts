@@ -375,6 +375,11 @@ export const REFUS_NOMMES: Readonly<Record<string, readonly string[]>> = {
   'scripts/gates/maquettes-validees.ts': [
     "module › si LANCE_EN_SCRIPT › (process.argv.includes('--prove') ? prouver() : juger())",
   ],
+  'scripts/preview/preview.ts': [
+    'module › si APPELE_DIRECTEMENT › si !f › (= 1)',
+    'f().then › ∅ › (= code)',
+    'f().then › ∅ › (= 1)',
+  ],
   'scripts/gates/migrations-additive.ts': [
     "module › si LANCE_EN_SCRIPT › si process.argv.includes('--prove') › si echecs.length > 0 › (1)",
     'module › si LANCE_EN_SCRIPT › si verdict.fautes.length > 0 › (1)',
