@@ -439,3 +439,18 @@ describe('REQ-QA-023 — les secrets de production ne sont lus que dans l’envi
     ).toEqual([]);
   });
 });
+
+describe('REQ-QA-023 — le clair n’est effacé qu’une fois le chiffré relu et vérifié', () => {
+  it('REQ-QA-023 : un dépôt qui altère ce qu’il écrit : le clair est GARDÉ, et l’échec est nommé', async () => {
+    const d = depot({
+      [`${PREFIXES.depot}pg-dump-partners-2.dmp`]: {
+        contenu: Buffer.from('vidage-2'),
+        date: '2026-09-29T02:00:00Z',
+      },
+    });
+    const ecrireFidele = d.ecrire;
+    d.ecrire = async (cle, contenu) => ecrireFidele(cle, contenu.subarray(0, contenu.length - 1));
+    await expect(rechiffrer(d, CLE_CYCLE)).rejects.toThrow(/relu/);
+    expect(d.etat.has(`${PREFIXES.depot}pg-dump-partners-2.dmp`)).toBe(true);
+  });
+});
