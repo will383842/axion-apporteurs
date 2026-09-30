@@ -80,13 +80,18 @@ test vérifie pour que la version retenue reste celle qui tourne.
 ### 3.2 `collision` — deux apporteurs sur le même SIREN
 
 - **Version périmée.** Le second dépôt est refusé ; l'unicité est tenue par un index construit sur une
-  liste littérale de deux états.
+  liste littérale de deux états. Ou bien : la libération d'une occupante promeut automatiquement le dépôt
+  en attente (corrigé le 2026-09-03 par REQ-DM-004).
 - **Ce qui fait foi.** Au plus une attribution occupante par SIREN, tenue par un index unique partiel dont
   la liste des sept états occupants est projetée depuis la constante unique `ETATS_OCCUPANTS` ; le dépôt
-  suivant entre dans une file d'attente bornée avec promotion automatique ; ce qui est rendu à l'apporteur
-  ne dit ni qui, ni quand, ni où en est l'autre.
-- **Exigences porteuses.** **REQ-DM-003** (l'index), **REQ-SEC-014** (verrous et concurrence),
-  **REQ-SEC-022** et **REQ-JUR-011** (ce que le message ne révèle pas), avec `HYP-C4` pour la file.
+  suivant entre dans une file d'attente bornée à deux ; **la libération d'une occupante ne promeut rien
+  automatiquement** : l'apporteur au rang 1 est notifié et dispose d'une fenêtre de quinze jours
+  (`FILE_FENETRE_REDECLARATION_JOURS`) pour déposer à nouveau l'entreprise, faute de quoi sa place en file
+  est effacée et l'entreprise redevient librement déposable par tous ; ce qui est rendu à l'apporteur ne
+  dit ni qui, ni quand, ni où en est l'autre.
+- **Exigences porteuses.** **REQ-DM-003** (l'index), **REQ-DM-004** (la file et la fenêtre du rang 1),
+  **REQ-SEC-014** (verrous et concurrence), **REQ-SEC-022** et **REQ-JUR-011** (ce que le message ne
+  révèle pas), avec `HYP-C4` pour la file.
 - **Ce que le test vérifie.** RM-06 : un test lit `pg_indexes` et compare la définition de l'index en base
   à la constante `ETATS_OCCUPANTS`. L'index proposé par les documents sources couvrait **deux états sur
   sept**, ce qui laissait deux attributions vivantes coexister sur un même SIREN.
