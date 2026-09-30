@@ -13,7 +13,7 @@
 | Phase | Taches | Jours | Terminees |
 | --- | ---: | ---: | ---: |
 | -1 — Gouvernance (prealable bloquant) | 39 | 23.75 | 39 |
-| 0 — Socle technique | 134 | 100.85 | 116 |
+| 0 — Socle technique | 134 | 100.85 | 121 |
 | 1 — Operationnel | 79 | 68.00 | 0 |
 | 2 — Argent | 45 | 33.50 | 0 |
 | 3 — Pilotage et conformite | 36 | 32.25 | 0 |
@@ -662,7 +662,7 @@ Couvre : `REQ-DM-021`, `REQ-INT-007`, `REQ-INT-015`
 
 **Tests.** `axionia/src/server/partners-sync/__tests__/producteurs-client.spec.ts` · `axionia/src/server/partners-sync/__tests__/cliquet-ecrivains.spec.ts`
 
-### INT-T04 — Producteur `devis.signe` unifié
+### INT-T04 — Producteur `devis.signe` unifié ✅ **fusionnee**
 
 `1 j` · zone `integration` · `axionia` · sensible : argent · depend de `DM-03-A`, `INT-T02`
 
@@ -672,7 +672,7 @@ Couvre : `REQ-INT-006`, `REQ-INT-007`
 
 **Tests.** `axionia/src/server/partners-sync/__tests__/producteur-devis.spec.ts`
 
-### INT-T05 — Producteurs `facture.emise`, `facture.annulee`, `avoir.emis`, `paiement.recu`, `paiement.rembourse`
+### INT-T05 — Producteurs `facture.emise`, `facture.annulee`, `avoir.emis`, `paiement.recu`, `paiement.rembourse` ✅ **fusionnee**
 
 `1 j` · zone `integration` · `axionia` · `schema` · sensible : argent, auth · depend de `INT-T02`, `INT-T01c`
 
@@ -1743,7 +1743,7 @@ Couvre : `REQ-GOV-023`
 
 **Tests.** `tests/unit/gouvernance/une-pr-porte-son-entree-de-journal.spec.ts`
 
-### GOV-109 — La garde lexicale ne s'arrete pas au texte litteral : des expressions constantes de la JSX rendent encore a l'ecran un terme qu'elle ne voit pas
+### GOV-109 — La garde lexicale ne s'arrete pas au texte litteral : des expressions constantes de la JSX rendent encore a l'ecran un terme qu'elle ne voit pas ✅ **fusionnee**
 
 `1 j` · zone `gouvernance` · sensible : espace · depend de `GOV-106`
 
@@ -1793,7 +1793,7 @@ Couvre : `REQ-GOV-010`
 
 **Tests.** `tests/unit/gouvernance/lot-dedie-gardien-spec.spec.ts`
 
-### GOV-117 — L'outil d'écriture du registre écrit reqs, hyp et zone d'une tâche existante, validés contre le schéma, les REQ et les HYP existantes, et journalisés
+### GOV-117 — L'outil d'écriture du registre écrit reqs, hyp et zone d'une tâche existante, validés contre le schéma, les REQ et les HYP existantes, et journalisés ✅ **fusionnee**
 
 `0.75 j` · zone `gouvernance` · aucune dependance
 
@@ -1923,7 +1923,7 @@ Couvre : `REQ-INT-031`
 
 **Tests.** `tests/unit/qualite/provisionnement-coolify.spec.ts`
 
-### GOV-128 — Le passif de la declaration lit aussi la ligne Lot: du squash immuable : une PR de lot au corps enrichi se clot sur arbitrage ecrit
+### GOV-128 — Le passif de la declaration lit aussi la ligne Lot: du squash immuable : une PR de lot au corps enrichi se clot sur arbitrage ecrit ✅ **fusionnee**
 
 `0.5 j` · zone `gouvernance` · depend de `GOV-127`
 
