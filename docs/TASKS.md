@@ -13,7 +13,7 @@
 | Phase | Taches | Jours | Terminees |
 | --- | ---: | ---: | ---: |
 | -1 — Gouvernance (prealable bloquant) | 39 | 23.75 | 39 |
-| 0 — Socle technique | 134 | 100.85 | 115 |
+| 0 — Socle technique | 134 | 100.85 | 116 |
 | 1 — Operationnel | 79 | 68.00 | 0 |
 | 2 — Argent | 45 | 33.50 | 0 |
 | 3 — Pilotage et conformite | 36 | 32.25 | 0 |
@@ -598,7 +598,7 @@ Couvre : `REQ-QA-015`
 
 Couvre : `REQ-QA-023`
 
-**Acceptation.** DEPEND D'UN TIERS : espace de stockage objet et ses cles, prefixe dedie a Partners. (1) La base est sauvegardee TOUTES LES HEURES vers le stockage objet sous le prefixe `partners/` ; la perte de donnees acceptable et le delai de remise en service sont l'un et l'autre d'une heure (REQ-QA-023). (2) UN EXERCICE MENSUEL RESTAURE le dernier vidage sur un Postgres ephemere, verifie qu'au moins une ligne d'attribution existe et que l'etat des migrations est propre, et ALERTE en cas d'echec. (3) UNE SAUVEGARDE QU'ON NE RESTAURE PAS N'EST PAS UNE SAUVEGARDE : le resultat de l'exercice du mois est ecrit avec sa date, son empreinte de vidage et son verdict ; un exercice plus vieux que 35 jours fait rougir le travail de nuit. C'est la meme famille que la surveillance qui detecte sans prevenir. (4) TEMOIN A DEUX FACES : un vidage tronque d'un octet fait echouer la restauration de l'exercice, qui sort en code non nul et nomme l'echec ; le dernier vidage reel la fait sortir en zero avec le compte de lignes restaurees. (5) L'alerte ne contient ni coordonnee de tiers ni lien de console.
+**Acceptation.** DEPEND D'UN TIERS : espace de stockage objet et ses cles, prefixe dedie a Partners. (1) La base est sauvegardee TOUTES LES HEURES vers le stockage objet sous le prefixe `partners/` ; la perte de donnees acceptable et le delai de remise en service sont l'un et l'autre d'une heure (REQ-QA-023). (2) UN EXERCICE MENSUEL RESTAURE le dernier vidage sur un Postgres ephemere, verifie qu'au moins une ligne d'attribution existe et que l'etat des migrations est propre, et ALERTE en cas d'echec. (3) UNE SAUVEGARDE QU'ON NE RESTAURE PAS N'EST PAS UNE SAUVEGARDE : le resultat de l'exercice du mois est ecrit avec sa date, son empreinte de vidage et son verdict ; un exercice plus vieux que 35 jours fait rougir le travail de nuit. C'est la meme famille que la surveillance qui detecte sans prevenir. (4) TEMOIN A DEUX FACES : un vidage tronque d'un octet fait echouer la restauration de l'exercice, qui sort en code non nul et nomme l'echec ; le dernier vidage reel la fait sortir en zero avec le compte de lignes restaurees. (5) L'alerte ne contient ni coordonnee de tiers ni lien de console. AVENANT A01 du 2026-09-29 (arbitrage -d7 sur delegation de Williams, volet sauvegardes de l AIPD de JUR-T04, relaye par la session -50) : les vidages horaires vont sur R2 (bucket axion-ia-backups, prefixe partners/), avec le chiffrement natif de R2 au repos et un jeton restreint a ce bucket et a ce prefixe. CONDITION DE MISE EN SERVICE, BLOQUANTE AVANT LA PREMIERE DONNEE REELLE en production : chiffrement COTE CLIENT par une cle propre a Partners (secret PARTNERS_BACKUP_PASSPHRASE, jamais celle d axion-ia) ; si le mecanisme de la plateforme ne sait pas chiffrer cote client, un job rechiffre le vidage avant son depot, faute de quoi la dette est nommee bloquante de mise en service dans le runbook de sauvegarde. TEMOIN : un vidage depose sans chiffrement client est refuse par l exercice mensuel, qui le nomme.
 
 **Tests.** `tests/unit/qualite/sauvegarde-et-exercice.spec.ts`
 
@@ -812,7 +812,7 @@ Couvre : `REQ-CPL-012`, `REQ-JUR-003`, `REQ-JUR-007`, `REQ-JUR-023`
 
 **Tests.** `tests/unit/contrat/contract-template-complete.spec.ts`
 
-### JUR-T03 — Corriger la copy publique d'axionia + garde lexicale des textes apporteurs et gate financement inconditionnelle
+### JUR-T03 — Corriger la copy publique d'axionia + garde lexicale des textes apporteurs et gate financement inconditionnelle ✅ **fusionnee**
 
 `1 j` · zone `juridique` · `axionia` · aucune dependance
 
