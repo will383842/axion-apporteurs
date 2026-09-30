@@ -866,6 +866,18 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
         'rendu en échec, et 0 sur un conflit de vue seule, dans un VRAI dépôt git jetable ' +
         '(relectures-sans-defaut.spec.ts) ; le binaire lui-même n’est pas lancé. Dette DÉCLARÉE.',
     },
+    'scripts/vues/rendre-apres-fusion.ts': {
+      total: 1,
+      porte: 1,
+      temoins: 0,
+      raison:
+        '`pnpm vues:rendre` et `pnpm vues:hors-git`. `process.exit(issue.code)` : sortie ' +
+        'TERMINALE à code variable, commune aux deux modes. Les décisions (`rendreDeuxFois`, ' +
+        '`jugerHorsGit`) sont vues rendre 1 en nommant la vue (rendu en échec, vue absente, deux ' +
+        'rendus différents, vue sous git, vue non ignorée) et 0 sur leurs contre-témoins ' +
+        '(vues-rendues-apres-fusion.spec.ts) ; le binaire est lancé par la porte A, pas par un ' +
+        'test. Dette DÉCLARÉE.',
+    },
     'scripts/mutation/pr.ts': {
       total: 1,
       porte: 1,
@@ -1265,7 +1277,8 @@ describe('REQ-CPL-018 — la garde d’ARGENT sort en échec : témoin d’EFFET
     // CONTRÔLE POSITIF, qui a rougi sur `docs/DECISIONS.md` manquant — c'est exactement ce pour
     // quoi il existe : sans lui j'aurais lu un non-zéro dû à un fichier absent comme « la garde a
     // vu la coordonnée ».
-    for (const f of ['config/entite.json', 'docs/DECISIONS.md', 'docs/REQUIREMENTS.md']) {
+    // GOV-123 : la garde rend `docs/REQUIREMENTS.md` de sa SOURCE, `docs/requirements.json`.
+    for (const f of ['config/entite.json', 'docs/DECISIONS.md', 'docs/requirements.json']) {
       mkdirSync(join(depot, dirname(f)), { recursive: true });
       writeFileSync(join(depot, f), readFileSync(f, 'utf8'));
     }
@@ -1501,6 +1514,17 @@ function depotJetableAvec(fichiers: readonly string[]): string {
  * elles ne rendaient pas la gate fautive, elles la rendaient AVEUGLE.
  */
 function depotCompletJetable({ avecGit = true }: { avecGit?: boolean } = {}): string {
+  const depot = extraireLaTete();
+  if (avecGit) faireDeCeDossierUnDepot(depot);
+  const vue = join(depot, VUE_DE_TRACABILITE);
+  mkdirSync(dirname(vue), { recursive: true });
+  writeFileSync(vue, tracabiliteRendueDeLaTete());
+  if (avecGit) execFileSync('git', ['add', '-A'], { cwd: depot, stdio: 'ignore' });
+  return depot;
+}
+
+/** `git archive HEAD` extrait dans un dossier jetable, avec une jonction vers `node_modules`. */
+function extraireLaTete(): string {
   const depot = mkdtempSync(join(tmpdir(), 'temoin-complet-'));
   DEPOTS_JETABLES.push(depot);
   const tar = execFileSync('git', ['archive', 'HEAD'], { maxBuffer: 512e6, encoding: 'buffer' });
@@ -1509,8 +1533,30 @@ function depotCompletJetable({ avecGit = true }: { avecGit?: boolean } = {}): st
   execFileSync('tar', ['-x', '-f', 'depot.tar'], { cwd: depot });
   rmSync(chemin, { force: true });
   symlinkSync(resolve('node_modules'), join(depot, 'node_modules'), 'junction');
-  if (avecGit) faireDeCeDossierUnDepot(depot);
   return depot;
+}
+
+/**
+ * GOV-123 — LA PORTE A REND LES VUES AVANT DE LES LIRE (`pnpm vues:rendre`) ; le dépôt jetable
+ * aussi. `git archive HEAD` ne porte plus aucune vue, elles sont hors de git : sans
+ * `docs/TRACABILITE.md`, `gov:trace` refusait un dépôt SAIN (`vue_divergente`, « absent »), et
+ * le témoin ne mesurait plus rien. La vue est RENDUE par la gate elle-même, UNE fois, dans un
+ * dépôt extrait de la même tête — jamais recopiée du disque, où elle peut être périmée.
+ */
+const VUE_DE_TRACABILITE = 'docs/TRACABILITE.md';
+let tracabiliteDeLaTete: string | null = null;
+function tracabiliteRendueDeLaTete(): string {
+  if (tracabiliteDeLaTete !== null) return tracabiliteDeLaTete;
+  const depot = extraireLaTete();
+  faireDeCeDossierUnDepot(depot);
+  const r = lancerLaGate('scripts/gates/gov-trace.ts', depot, ['--render']);
+  const vue = join(depot, VUE_DE_TRACABILITE);
+  if (r.code !== 0 || !existsSync(vue)) {
+    throw new Error(`gov:trace --render n'a pas rendu ${VUE_DE_TRACABILITE} (code ${r.code}) :
+${r.sortie.slice(0, 600)}`);
+  }
+  tracabiliteDeLaTete = readFileSync(vue, 'utf8');
+  return tracabiliteDeLaTete;
 }
 
 /**

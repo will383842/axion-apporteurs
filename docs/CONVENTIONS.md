@@ -136,6 +136,15 @@
 > dérive. Ce sont les **sources** qui sont réservées — d'où l'entrée de `docs/requirements.json` et
 > de `docs/gates.json`, qui n'y étaient pas.
 >
+> ⚠️ **Les VUES ne sont plus COMMITÉES — GOV-123, 2026-09-29.** Les sept vues de `VUES_DERIVEES`
+> (`scripts/vues/vues.ts` : les six ci-dessus et `docs/paths-proposes.json`) sont écartées par
+> `.gitignore` et se **rendent à la volée** : `pnpm vues:rendre` les rend toutes, `docs/PLAN-STATE.md`
+> en dernier, deux fois, et rougit si les deux rendus diffèrent d'un octet. Après un clone, une
+> fusion ou un changement de source, on lance `pnpm vues:rendre` avant de les lire. La porte A le
+> fait en premier, avant toute garde qui en lit une ; `pnpm vues:hors-git` y refuse une PR qui en
+> remettrait une sous git, en nommant le fichier. Une PR ne porte donc plus de vue, et deux PR qui
+> ajoutent chacune une tâche ne sont plus en conflit sur `docs/TASKS.md` ou `docs/PLAN-STATE.md`.
+>
 > ⚠️ **« À l'octet près » n'est vrai que de ce qu'un générateur écrit SANS lire hors du dépôt**, et
 > `docs/PLAN-STATE.md` en lit (`gh`, `origin/main`). Ce que son `--verifier` compare et ce qu'il
 > laisse libre est écrit en toutes lettres dans `partners/ADR-0019`, sous « Ce que

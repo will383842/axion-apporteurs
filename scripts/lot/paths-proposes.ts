@@ -52,7 +52,7 @@
  */
 
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
-import { dirname } from 'node:path';
+import { dirname, join } from 'node:path';
 
 const CHEMIN_TACHES = 'docs/tasks.json';
 const CHEMIN_GATES = 'docs/gates.json';
@@ -502,10 +502,26 @@ function prefixe(repo: string, chemin: string): string {
   return chemin.startsWith('axionia/') ? chemin : `axionia/${chemin}`;
 }
 
-function construire() {
-  const taches = (JSON.parse(readFileSync(CHEMIN_TACHES, 'utf8')) as { taches: Tache[] }).taches;
-  const gates = (JSON.parse(readFileSync(CHEMIN_GATES, 'utf8')) as { gates: Gate[] }).gates;
+/** LES SOURCES de la vue, lues sous `racine` : `docs/tasks.json` et `docs/gates.json`. Jamais la vue. */
+export function sourcesDesPaths(racine = '.'): { taches: Tache[]; gates: Gate[] } {
+  const lire = (chemin: string): unknown =>
+    JSON.parse(readFileSync(join(racine, chemin), 'utf8')) as unknown;
+  return {
+    taches: (lire(CHEMIN_TACHES) as { taches: Tache[] }).taches,
+    gates: (lire(CHEMIN_GATES) as { gates: Gate[] }).gates,
+  };
+}
 
+/**
+ * LE RENDU de `docs/paths-proposes.json`, fonction PURE de ses deux sources.
+ *
+ * EXPORTÉE POUR SES LECTEURS (GOV-123). La vue n'est plus sous git : sur un disque, elle est celle
+ * du dernier rendu, ou absente. Un lecteur qui en tire une DÉCISION (`lot:integrer` refuse la copie
+ * d'un fichier partagé, `gov:inventaire` y compte des preuves) appelle donc ce rendu sur la source
+ * (`cheminsProposesDuDepot`) au lieu de lire le fichier : une vue périmée lui faisait COPIER un
+ * fichier devenu partagé depuis son dernier rendu, une vue absente lui levait un ENOENT brut.
+ */
+export function construire({ taches, gates }: { taches: Tache[]; gates: Gate[] }) {
   const parTache = new Map<string, Tache>(taches.map((t) => [t.id, t]));
 
   // [gardes] + [registre]
@@ -676,20 +692,32 @@ function construire() {
   return { version: 1, resume, paths };
 }
 
-const args = process.argv.slice(2);
-const iOut = args.indexOf('--out');
-const sortie = iOut === -1 ? SORTIE_PAR_DEFAUT : (args[iOut + 1] ?? SORTIE_PAR_DEFAUT);
-const rendu = JSON.stringify(construire(), null, 2) + '\n';
+/** Le `paths` de la vue, DÉRIVÉ de la source sous `racine` : ce que la vue porterait, fraîche. */
+export function cheminsProposesDuDepot(racine = '.'): Record<string, string[]> {
+  return construire(sourcesDesPaths(racine)).paths;
+}
 
-if (args.includes('--check')) {
-  const actuel = readFileSync(sortie, 'utf8');
-  if (actuel !== rendu) {
-    console.error(`${sortie} diverge de ce que la source produit. Relance sans --check.`);
-    process.exit(1);
+/**
+ * Le corps exécutable ne tourne que si ce fichier est LA commande : importé par `lot:integrer`,
+ * `gov:inventaire` ou un test, il n'écrit rien et ne sort pas.
+ */
+const LANCE_EN_LIGNE_DE_COMMANDE = /[\\/]paths-proposes\.[tj]s$/.test(process.argv[1] ?? '');
+if (LANCE_EN_LIGNE_DE_COMMANDE) {
+  const args = process.argv.slice(2);
+  const iOut = args.indexOf('--out');
+  const sortie = iOut === -1 ? SORTIE_PAR_DEFAUT : (args[iOut + 1] ?? SORTIE_PAR_DEFAUT);
+  const rendu = JSON.stringify(construire(sourcesDesPaths()), null, 2) + '\n';
+
+  if (args.includes('--check')) {
+    const actuel = readFileSync(sortie, 'utf8');
+    if (actuel !== rendu) {
+      console.error(`${sortie} diverge de ce que la source produit. Relance sans --check.`);
+      process.exit(1);
+    }
+    console.log(`${sortie} : à jour.`);
+  } else {
+    mkdirSync(dirname(sortie), { recursive: true });
+    writeFileSync(sortie, rendu);
+    console.log(`${sortie} écrit.`);
   }
-  console.log(`${sortie} : à jour.`);
-} else {
-  mkdirSync(dirname(sortie), { recursive: true });
-  writeFileSync(sortie, rendu);
-  console.log(`${sortie} écrit.`);
 }

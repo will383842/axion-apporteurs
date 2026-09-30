@@ -29,6 +29,8 @@
     "plan-state:build": "tsx scripts/plan-state/build.ts",
     "plan-state:verifier": "tsx scripts/plan-state/build.ts --verifier",
     "vues:fusion": "tsx scripts/vues/fusion.ts",
+    "vues:rendre": "tsx scripts/vues/rendre-apres-fusion.ts",
+    "vues:hors-git": "tsx scripts/vues/rendre-apres-fusion.ts --hors-git",
     "gov:tasks:render": "tsx scripts/gates/gov-tasks.ts --render",
     "gov:identifiants": "tsx scripts/gates/gov-identifiants.ts",
     "gov:identifiants:prove": "tsx scripts/gates/gov-identifiants.ts --prove",

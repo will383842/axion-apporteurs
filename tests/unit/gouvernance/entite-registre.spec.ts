@@ -110,6 +110,7 @@ import {
   estExemptDe,
   cleIbanValide,
   EXEMPTS,
+  exigencesRenduesDeLaSource,
   type Univers,
 } from '../../../scripts/gates/gov-entite';
 import type { EntreeSuivie } from '../../../scripts/lot/fichiers-suivis';
@@ -171,7 +172,8 @@ function familles(u: Univers): string[] {
 
 const registre = registreDuDepot();
 const DECISIONS = readFileSync('docs/DECISIONS.md', 'utf8');
-const EXIGENCES = readFileSync('docs/REQUIREMENTS.md', 'utf8');
+// GOV-123 : la vue n'est plus sous git — son texte est RENDU de sa source, comme dans la garde.
+const EXIGENCES = exigencesRenduesDeLaSource(readFileSync('docs/requirements.json', 'utf8'));
 
 // ── REQ-CPL-001 — l'entité est nommée, et les trois fixtures portent le même octet ────────────
 describe('REQ-CPL-001 — une seule source pour le SIREN et l’IBAN débiteur', () => {
@@ -3448,7 +3450,7 @@ function depotJetable(fichiers: Record<string, Buffer>): string {
 const SOURCES_DE_LA_GARDE = [
   'config/entite.json',
   'docs/DECISIONS.md',
-  'docs/REQUIREMENTS.md',
+  'docs/requirements.json',
 ] as const;
 
 /** La gate, lancée par `tsx` depuis la racine d'un dépôt, avec des variables en plus. */
