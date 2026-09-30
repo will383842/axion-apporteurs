@@ -8,8 +8,8 @@
 #     source, le test la confronte à cette liste), par l'environnement de l'étape, jamais en
 #     argument ; la configuration facultative vient des variables du dépôt ;
 #   — `DATABASE_URL` et `REDIS_URL` ne sont PAS ici : elles viennent des bases que le script crée ;
-#   — un secret absent : le provisionnement est SAUTÉ et chaque absent est nommé en `::warning::`
-#     (arbitrage -d7 sur délégation de Williams du 2026-09-29).
+#   — un secret absent : le provisionnement ÉCHOUE et chaque absent est nommé en `::error::`
+#     (arbitrage -d7 du 2026-09-30 : un geste manuel ne rend jamais un vert vide).
 #
 # La logique vit dans `scripts/deploiement/provisionner.ts` ; aucune valeur n'y est imprimée.
 name: Provisionnement Coolify
