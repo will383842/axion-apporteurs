@@ -13485,7 +13485,9 @@
         "config/lot-dedie-gardien-spec.settings.json",
         "tests/unit/gouvernance/lot-dedie-gardien-spec.spec.ts",
         "package.json",
-        "docs/journal/"
+        "docs/journal/",
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts",
+        "scripts/gates/registre-des-refus.ts"
       ],
       "reqs": [
         "REQ-GOV-010"
@@ -13496,7 +13498,9 @@
         "REQ-GOV-010": [
           "tests/unit/gouvernance/lot-dedie-gardien-spec.spec.ts"
         ]
-      }
+      },
+      "issue": 260,
+      "owner": "A01"
     },
     {
       "id": "GOV-117",

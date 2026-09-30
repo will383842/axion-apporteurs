@@ -22,8 +22,10 @@ réussi sur un vidage lu sous `partners/chiffres/` : l'exercice **refuse** tout 
    garde `pnpm sauvegarde:clairs` qui la tient : tout vidage en clair plus vieux que
    `CLAIR_EN_DEPOT_MAX_MINUTES` (SSOT : l'heure du rechiffrement plus le retard d'un run), ou dont la
    date est illisible, est nommé, et le geste sort en 1. Elle tourne après chaque rechiffrement, même
-   en échec, et chaque nuit. L'alerte Telegram sur cet échec est livrée par QA-T53, **préalable au même
-   rang**. Les colonnes de données personnelles sont déjà chiffrées dans la base, ce qui borne le
+   en échec, et chaque nuit. Tout échec de `rechiffrer`, et tout clair que la garde nomme, émettent
+   l'alerte Telegram close `rechiffrement_echoue` (QA-T53) : la catégorie et un identifiant technique,
+   jamais la clé du vidage. Sauvegarde activée, un canal absent (`TELEGRAM_BOT_TOKEN`,
+   `TELEGRAM_CHAT_ID`) est une alarme éteinte : le run rougit en le nommant. Les colonnes de données personnelles sont déjà chiffrées dans la base, ce qui borne le
    risque de cette fenêtre.
 2. **Aucune gestion des versions ni rétention d'objets** sur le préfixe `partners/` du bucket : sinon,
    le clair effacé survivrait en version antérieure. À vérifier dans le tableau de bord du bucket.

@@ -1,0 +1,115 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "_commentaire": [
+    "RENDU par scripts/lot/lot-dedie-gardien-spec.ts depuis .claude/settings.json — ne pas éditer.",
+    "Lot dédié du gardien-spec (GOV-116, partners/ADR-0028) : ouvre docs/DECISIONS.md, docs/GLOSSAIRE.md, docs/PRESEANCE.md et eux seuls.",
+    "Lancé par Williams SEUL, depuis la racine du dépôt : claude --setting-sources user --settings config/lot-dedie-gardien-spec.settings.json"
+  ],
+  "permissions": {
+    "defaultMode": "default",
+    "allow": [
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git show*)",
+      "Bash(gh pr view*)",
+      "Bash(gh pr checks*)",
+      "Bash(gh pr diff*)",
+      "Bash(gh run view*)",
+      "Write(docs/DECISIONS.md)",
+      "Edit(docs/DECISIONS.md)",
+      "Write(docs/GLOSSAIRE.md)",
+      "Edit(docs/GLOSSAIRE.md)",
+      "Write(docs/PRESEANCE.md)",
+      "Edit(docs/PRESEANCE.md)"
+    ],
+    "deny": [
+      "Bash(gh pr merge * --auto*)",
+      "Bash(gh pr merge * --admin*)",
+      "Bash(gh api * /branches/main/protection*)",
+      "Bash(gh api*branches/main/protection*)",
+      "Bash(gh api*-X DELETE*)",
+      "Bash(gh api*-X PUT*)",
+      "Bash(gh api*-X PATCH*)",
+      "Bash(gh api*--method DELETE*)",
+      "Bash(gh api*--method PUT*)",
+      "Bash(gh api*--method PATCH*)",
+      "Bash(gh issue edit * --remove-label owner:*)",
+      "Bash(gh issue edit * --remove-label en_cours*)",
+      "Bash(git push origin main*)",
+      "Bash(git push * main*)",
+      "Bash(git push * HEAD:main*)",
+      "Bash(git push * +main*)",
+      "Bash(git push *:main*)",
+      "Bash(git push *:refs/heads/main*)",
+      "Bash(git push *--force*)",
+      "Bash(git push *--mirror*)",
+      "Bash(git push --force*)",
+      "Bash(git push -f*)",
+      "Bash(git reset --hard*)",
+      "Bash(rm -rf *)",
+      "Bash(prisma migrate deploy*)",
+      "Bash(pnpm prisma migrate deploy*)",
+      "Bash(npx prisma migrate*)",
+      "Bash(pnpm exec prisma migrate*)",
+      "Bash(pnpm db:deploy*)",
+      "Bash(pnpm db:push*)",
+      "Bash(psql*)",
+      "Bash(curl * -X POST https://api.coolify*)",
+      "Write(docs/PLAN-STATE.md)",
+      "Edit(docs/PLAN-STATE.md)",
+      "Write(docs/REQUIREMENTS.md)",
+      "Edit(docs/REQUIREMENTS.md)",
+      "Write(docs/tasks.json)",
+      "Edit(docs/tasks.json)",
+      "Write(docs/gates.json)",
+      "Edit(docs/gates.json)",
+      "Write(config/exemptions-corps-publie.json)",
+      "Edit(config/exemptions-corps-publie.json)",
+      "Write(.claude/settings.json)",
+      "Edit(.claude/settings.json)",
+      "Bash(node:*)",
+      "Bash(npx:*)",
+      "Bash(pnpm:*)",
+      "Bash(npm:*)",
+      "Bash(tsx:*)",
+      "Bash(docker:*)",
+      "Bash(python:*)",
+      "Bash(python3:*)",
+      "Bash(gh api:*)",
+      "Bash(gh pr merge:*)",
+      "Bash(git merge:*)",
+      "Bash(git rebase:*)",
+      "Bash(git reset:*)",
+      "Bash(git checkout:*)",
+      "Bash(git restore:*)",
+      "PowerShell"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node scripts/gates/hook-env.js"
+          }
+        ]
+      },
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node --no-warnings \"$CLAUDE_PROJECT_DIR/scripts/lot/lot-dedie-gardien-spec.ts\" --garde || exit 2"
+          }
+        ]
+      }
+    ]
+  },
+  "env": {
+    "NOTIFY_SINK": "true",
+    "SEPA_EXPORT_ENABLED": "false"
+  }
+}
