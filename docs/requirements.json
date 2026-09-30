@@ -3663,7 +3663,7 @@
     {
       "id": "REQ-QA-030",
       "domaine": "qualite-ci-devops",
-      "texte": "`src/env.ts` valide strictement toutes les variables au démarrage (Zod) ; toute variable manquante empêche le démarrage (test : process exit ≠ 0) ; `docs/env.md` est généré depuis le schéma et une garde rougit s'il est périmé ; `AXIONIA_WEBHOOK_SECRET`, `DOCUSEAL_WEBHOOK_SECRET` et `AXIONIA_API_TOKEN` acceptent une clé courante et une clé précédente pendant 24 h (`kid` dans l'en-tête), avec un test qui prouve l'acceptation de l'ancienne clé avant l'échéance et son refus après.",
+      "texte": "`src/env.ts` valide strictement toutes les variables au démarrage (Zod) ; toute variable manquante empêche le démarrage (test : process exit ≠ 0) ; `docs/env.md` est généré depuis le schéma et une garde rougit s'il est périmé ; `AXIONIA_WEBHOOK_SECRET`, `DOCUSEAL_WEBHOOK_SECRET` et `AXIONIA_API_TOKEN` acceptent une clé courante et une clé précédente pendant 24 h (`kid` dans l'en-tête ; EXCEPTION NOMMÉE, liste fermée : DocuSeal (`DOCUSEAL_WEBHOOK_SECRET`), qui n'émet pas de `kid`, voit ses deux clés essayées, la courante d'abord ; `AXIONIA_WEBHOOK_SECRET` et `AXIONIA_API_TOKEN` exigent le `kid`, et son absence est un refus ; toute autre émission sans `kid` est refusée), avec un test qui prouve l'acceptation de l'ancienne clé avant l'échéance et son refus après. Précisée le 2026-09-30 (arbitrage -d7 sur délégation de Williams) : exception de DocuSeal seul, liste fermée, portée par INT-T12.",
       "source": "QA-F24 ; reformulation d'annexe appliquée le 2026-09-03",
       "statut": "active",
       "remplaceePar": null,
@@ -3671,6 +3671,7 @@
       "etape": 5,
       "phase": 0,
       "taches": [
+        "INT-T12",
         "INT-T41",
         "INT-T42",
         "QA-T04",
