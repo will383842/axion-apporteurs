@@ -2412,7 +2412,9 @@
         "src/domain/seuils/ssot.ts",
         "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts",
         "scripts/gates/registre-des-refus.ts",
-        "tests/unit/juridique/seuils-ssot-en-processus.spec.ts"
+        "tests/unit/juridique/seuils-ssot-en-processus.spec.ts",
+        "src/domain/rgpd/politique.ts",
+        "scripts/gates/seuils-ssot.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -14788,7 +14790,7 @@
       "externe": null,
       "estimateDays": 0.5,
       "statut": "a_faire",
-      "acceptance": "Versee a la demande de la session -50 (mise en ligne), sur demande de -d7 : aucune tache du registre ne portait le provisionnement, REQ-INT-031 n etant rattachee qu a INT-T02 cote axionia. (1) Un declenchement manuel cree, s ils n existent pas, dans le projet Coolify Axion-Partners, l application de type image Docker (ghcr.io/will383842/axion-apporteurs, etiquette sha-<7>, sonde /api/readyz) et une base Postgres 16 separee ; il est idempotent : relance, il ne cree rien et le dit. (2) Chaque variable de docs/env.md est posee depuis le secret du depot de meme nom, jamais en argument ni en clair dans le journal du run ; DATABASE_URL vient de la base creee. (3) Un secret absent : SAUTE avec un ::warning:: par secret nomme. (4) TEMOIN A DEUX FACES sur une plateforme factice locale : secrets absents, alors saute et nomme ; plateforme en 401, alors code non nul et jeton jamais imprime. Deux lentilles (workflow et secrets).",
+      "acceptance": "Versee a la demande de la session -50 (mise en ligne), sur demande de -d7 : aucune tache du registre ne portait le provisionnement, REQ-INT-031 n etant rattachee qu a INT-T02 cote axionia. (1) Un declenchement manuel cree, s ils n existent pas, dans le projet Coolify Axion-Partners, l application de type image Docker (ghcr.io/will383842/axion-apporteurs, etiquette sha-<7>, sonde /api/readyz) et une base Postgres 16 separee ; il est idempotent : relance, il ne cree rien et le dit. (2) Chaque variable de docs/env.md est posee depuis le secret du depot de meme nom, jamais en argument ni en clair dans le journal du run ; DATABASE_URL vient de la base creee. (3) Un secret absent : le provisionnement, geste MANUEL, ECHOUE en code 1 avec un ::error:: par secret nomme (arbitrage -d7 du 2026-09-30 : un geste manuel sans ses secrets echoue, seul un planificateur peut sauter). (4) TEMOIN A DEUX FACES sur une plateforme factice locale : secrets absents, alors code 1 et chaque secret nomme ; plateforme en 401, alors code non nul et jeton jamais imprime. Deux lentilles (workflow et secrets).",
       "tests": {
         "REQ-INT-031": [
           "tests/unit/qualite/provisionnement-coolify.spec.ts"
@@ -14964,6 +14966,43 @@
       "tests": {
         "REQ-QA-030": [
           "tests/unit/integration/contrat-en-tete-du-kid.spec.ts"
+        ]
+      },
+      "issue": null,
+      "owner": null,
+      "branch": null,
+      "pr": null,
+      "attestation": null,
+      "motif": null
+    },
+    {
+      "id": "QA-T53",
+      "titre": "Alerte close rechiffrement_echoue : l'echec du rechiffrement horaire des sauvegardes alerte Telegram",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "qualite",
+      "paths": [
+        "src/server/integrations/telegram/alertes.ts",
+        "scripts/sauvegarde/cycle.ts",
+        "tests/unit/qualite/alerte-rechiffrement-echoue.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "QA-T12",
+        "INT-T14"
+      ],
+      "reqs": [
+        "REQ-QA-023"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.25,
+      "statut": "a_faire",
+      "acceptance": "Arbitrage -d7 sur delegation de Williams du 2026-09-30, sur la condition bloquante de la lentille securite pour la PR de QA-T12. PREALABLE FERME avant la premiere donnee reelle, au meme rang que QA-T12. Auteur : -50. A LIVRER : (1) une categorie d'alerte CLOSE `rechiffrement_echoue` dans CATEGORIES_ALERTE (src/server/integrations/telegram/alertes.ts), avec son gabarit ; (2) tout echec de `rechiffrer` (scripts/sauvegarde/cycle.ts), lecture, chiffrement ou depot, emet cette alerte, sans aucune donnee personnelle ni chemin de vidage dans le message ; (3) la garde des clairs de QA-T12 (`clairsEnSouffrance`, meme fichier), jouee chaque nuit et apres chaque `rechiffrer`, emet la meme alerte close quand elle nomme un clair plus vieux que le seuil de la SSOT en minutes (src/domain/rgpd/politique.ts) : c'est elle, pas l'echec de `rechiffrer`, qui tient la duree du clair, y compris quand le planificateur saute faute de secrets ou qu'un run est retarde ou saute ; aucune borne horaire n'est recopiee ici, le seuil est celui de la SSOT ; (4) TEMOINS rouges d'abord : un rechiffrement qu'on fait echouer emet exactement une alerte `rechiffrement_echoue` ; un rechiffrement reussi n'en emet aucune ; un clair plus vieux que le seuil, planificateur saute, emet une alerte ; un clair plus jeune que le seuil n'en emet aucune.",
+      "tests": {
+        "REQ-QA-023": [
+          "tests/unit/qualite/alerte-rechiffrement-echoue.spec.ts"
         ]
       },
       "issue": null,
