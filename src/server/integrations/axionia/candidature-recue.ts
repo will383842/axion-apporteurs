@@ -35,6 +35,8 @@ import { snapshotDeCandidature } from '../../../domain/apporteur/snapshot-candid
 import { MODELE_APPORTEUR } from '../../auth/lien-magique-depot';
 import { AttenteDeDependance } from '../../queue/workers/evenement-recu';
 import { colonnesPii, empreinteRecherche, type ClesPii } from '../../securite/pii';
+import { ENTETE_KID_AXIONIA } from '../../../../packages/contracts/api';
+import type { Trousseau } from '../../../lib/env';
 import { ENTETE_HORODATAGE, ENTETE_SIGNATURE, verifierSignatureAxionia } from './reception';
 
 /** Les en-têtes de la REQUÊTE signée, tels que le contrat les publie (confrontés par le test). */
@@ -68,7 +70,8 @@ const reponseConforme = new Ajv({ strict: false }).compile<Coordonnees>(
 export function clientCoordonnees(c: {
   readonly urlAxionia: string | undefined;
   readonly secretRelecture: string;
-  readonly secretEmission: string;
+  /** Les clés sous lesquelles axionia signe sa réponse ; la sienne est choisie par `x-axionia-kid` (QA-T52). */
+  readonly trousseauEmission: Trousseau;
   readonly appeler: typeof fetch;
   readonly maintenantMs: () => number;
 }): TirerCoordonnees {
@@ -103,7 +106,8 @@ export function clientCoordonnees(c: {
       octets,
       reponse.headers.get(ENTETE_HORODATAGE),
       reponse.headers.get(ENTETE_SIGNATURE),
-      c.secretEmission,
+      reponse.headers.get(ENTETE_KID_AXIONIA),
+      c.trousseauEmission,
       c.maintenantMs()
     );
     if (!verdict.ok) return null;

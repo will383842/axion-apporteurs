@@ -38,3 +38,17 @@ posée est jugée comme les autres.
 | `PARTNERS_EMAIL_DMARC_VERIFIE` | facultative | `true`, `false` | ouvre l'envoi automatique des courriels ; absente ou `false`, aucun courriel ne part (REQ-INT-022) |
 | `PARTNERS_EMAIL_EXPEDITEUR` | facultative | non vide, sans espace en bordure | adresse humaine d'expédition, du sous-domaine d'envoi ; jamais une adresse sans réponse |
 | `AXIONIA_BASE_URL` | facultative | URL `https:` | adresse d'axionia pour les lectures de Partners ; absente, aucune coordonnée n'est tirée |
+
+## Rotation à double clé (REQ-QA-030)
+
+Pendant une rotation, l'ancienne valeur d'un secret reste acceptée jusqu'à son échéance, au plus
+24 h. Le `kid` présenté dans l'en-tête, dérivé de la valeur (`kidDe`), choisit la clé : un `kid`
+absent ou inconnu est refusé. Partners émet toujours sous la clé courante. Les deux variables d'une
+paire se posent ensemble ; procédure : `docs/runbooks/secret-desynchronise.md`.
+
+| Variable | Présence | Règle | Rôle |
+| --- | --- | --- | --- |
+| `AXIONIA_WEBHOOK_SECRET_PRECEDENT` | facultative, avec son échéance | au moins 32 octets, distincte de tous les secrets | ancienne valeur de `AXIONIA_WEBHOOK_SECRET`, acceptée jusqu'à l'échéance |
+| `AXIONIA_WEBHOOK_SECRET_PRECEDENT_ECHEANCE` | facultative, avec sa clé | instant ISO 8601 UTC, au plus 24 h après le démarrage | fin d'acceptation de `AXIONIA_WEBHOOK_SECRET_PRECEDENT` |
+| `AXIONIA_API_TOKEN_PRECEDENT` | facultative, avec son échéance | au moins 32 octets, distincte de tous les secrets | ancienne valeur de `AXIONIA_API_TOKEN`, acceptée jusqu'à l'échéance |
+| `AXIONIA_API_TOKEN_PRECEDENT_ECHEANCE` | facultative, avec sa clé | instant ISO 8601 UTC, au plus 24 h après le démarrage | fin d'acceptation de `AXIONIA_API_TOKEN_PRECEDENT` |
