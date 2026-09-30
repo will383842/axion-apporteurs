@@ -30,6 +30,8 @@
  * 0, avec une annotation `::warning::` PAR secret manquant — un `main` rouge en permanence sur une
  * attente connue finit désarmé (RM-02). Dès que les quatre existent, tout échec est ROUGE : refus de
  * la plateforme, ou image jamais servie dans le délai.
+ * Ce saut ne vaut QUE pour le déploiement d'un push sur `main`. Le retour arrière est un geste
+ * MANUEL d'incident (arbitrage -d7 du 2026-09-30) : sans ses secrets, il ÉCHOUE en les nommant.
  *
  * ── CE QUI N'EST JAMAIS IMPRIMÉ ──────────────────────────────────────────────────────────────
  *
@@ -328,15 +330,15 @@ async function commandeRetourArriere(argv: string[]): Promise<number> {
   if (!SHA_COMPLET.test(cible)) {
     throw new Error('SHA_CIBLE doit être un sha de 40 caractères hexadécimaux');
   }
+  // Un retour arrière est un geste MANUEL d'incident (arbitrage -d7 du 2026-09-30) : sans ses
+  // secrets, il ÉCHOUE en les nommant — jamais un vert qui n'aurait rien redéployé.
   const manquants = SECRETS_DU_DEPLOIEMENT.filter((n) => (process.env[n] ?? '') === '');
   if (manquants.length > 0) {
     for (const n of manquants) {
-      console.log(
-        `::warning title=deploy:retour-arriere::${n} absent — retour arrière SAUTÉ (arbitrage -d7 du 2026-09-29)`
-      );
+      console.log(`::error title=deploy:retour-arriere::${n} absent — retour arrière IMPOSSIBLE`);
     }
-    console.log(`⚠ SAUTÉ : ${manquants.join(', ')}. Rien n'a été redéployé.`);
-    return 0;
+    console.error(`❌ ${manquants.join(', ')} absent(s) : rien n'a été redéployé.`);
+    return 1;
   }
   const lire = (n: (typeof SECRETS_DU_DEPLOIEMENT)[number]): string => process.env[n] ?? '';
   const plateforme = adresseSure(lire('COOLIFY_URL'), 'COOLIFY_URL');

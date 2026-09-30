@@ -228,16 +228,20 @@ describe('REQ-QA-022 — le retour arrière remet en place, puis le VÉRIFIE', (
     expect(coolify.appels).toEqual([]);
   });
 
-  it('REQ-QA-022 : secrets absents : SAUTÉ, chaque absent nommé, rien appelé', async () => {
+  // Arbitrage -d7 du 2026-09-30 : le saut en code 0 ne valait que pour le déploiement d'un push sur
+  // main. Un retour arrière est un geste MANUEL d'incident : un vert qui n'a rien fait tromperait
+  // l'opérateur. Sans ses secrets, il ÉCHOUE, chacun nommé.
+  it('REQ-QA-022 : secrets absents : ÉCHEC (code non nul), chaque absent nommé en erreur, rien appelé', async () => {
     const r = await lancer({ SHA_CIBLE: CIBLE });
-    expect(r.code).toBe(0);
+    expect(r.code).not.toBe(0);
+    expect(r.sortie).not.toContain('SAUTÉ');
     for (const n of [
       'COOLIFY_URL',
       'COOLIFY_API_TOKEN',
       'COOLIFY_APP_UUID',
       'PARTNERS_URL_PUBLIQUE',
     ])
-      expect(r.sortie).toContain(n);
+      expect(r.sortie).toContain(`::error title=deploy:retour-arriere::${n} absent`);
   });
 });
 
