@@ -2390,7 +2390,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "DEPEND DE QA-T05 ET D'UN TIERS : quota de DEUX previews simultanees, duree de vie 48 h (hypothese du registre, non levee). (1) Chaque PR obtient un environnement de preview isole, base ephemere semee par un SEMEUR DETERMINISTE — jamais un vidage de production, et cette interdiction est gardee, pas seulement ecrite (REQ-QA-015). (2) L'URL de la preview est commentee sur la PR ; l'environnement est DETRUIT a la fermeture, base comprise, et une preview qui survit a sa PR est un defaut nomme. (3) LE PLAFOND DE DEUX EST TENU PAR LA MACHINE : une troisieme PR attend, elle ne cree pas une troisieme preview qui ferait tomber les deux autres. (4) Les tests de bout en bout et le balayage de securite authentifie s'executent CONTRE cette preview, pas contre la production. (5) TEMOIN A DEUX FACES : un semeur rendu non deterministe (deux executions, deux jeux de donnees) fait sortir la garde en code non nul et nomme la table qui diverge ; le semeur du depot la fait sortir en zero sur deux executions consecutives. (6) TEMOIN A DEUX FACES sur le plafond : trois demandes simultanees laissent exactement deux previews vivantes et une en attente, jamais trois. (7) `prisma/seed.ts` n'ecrit aucune table lui-meme : il execute dans l'ordre de leur prefixe les modules `prisma/seed/<NN>-<table>.ts`, chacun livre par la tache qui cree sa table (partners/ADR-0022). (8) Le semeur n'ecrit une donnee personnelle que par `colonnesPii` et des identifiants par uuid v5 d'un espace de noms fixe ; aucun `Date.now()`, horloge injectee. (9) Une valeur de vocabulaire ecrite par le semeur est lue dans l'enum Prisma, jamais tapee. AMENDEMENT du 2026-09-30 (décision de Williams : pas de serveur d'aperçus) : la condition (4) passe EN ATTENTE EXTERNE. Aucun aperçu n'est déployé tant qu'un serveur d'aperçus n'existe pas (aperçus inertes) ; les tests de bout en bout et le balayage de securite authentifie ne basculent JAMAIS vers la production portant des données réelles. Les runbooks du socle se tiennent selon QA-T13 (7).",
+      "acceptance": "DEPEND DE QA-T05 ET D'UN TIERS : quota de DEUX previews simultanees, duree de vie 48 h (hypothese du registre, non levee). (1) Chaque PR obtient un environnement de preview isole, base ephemere semee par un SEMEUR DETERMINISTE — jamais un vidage de production, et cette interdiction est gardee, pas seulement ecrite (REQ-QA-015). (2) L'URL de la preview est commentee sur la PR ; l'environnement est DETRUIT a la fermeture, base comprise, et une preview qui survit a sa PR est un defaut nomme. (3) LE PLAFOND DE DEUX EST TENU PAR LA MACHINE : une troisieme PR attend, elle ne cree pas une troisieme preview qui ferait tomber les deux autres. (4) Les tests de bout en bout et le balayage de securite authentifie s'executent CONTRE cette preview, pas contre la production. (5) TEMOIN A DEUX FACES : un semeur rendu non deterministe (deux executions, deux jeux de donnees) fait sortir la garde en code non nul et nomme la table qui diverge ; le semeur du depot la fait sortir en zero sur deux executions consecutives. (6) TEMOIN A DEUX FACES sur le plafond : trois demandes simultanees laissent exactement deux previews vivantes et une en attente, jamais trois. (7) `prisma/seed.ts` n'ecrit aucune table lui-meme : il execute dans l'ordre de leur prefixe les modules `prisma/seed/<NN>-<table>.ts`, chacun livre par la tache qui cree sa table (partners/ADR-0022). (8) Le semeur n'ecrit une donnee personnelle que par `colonnesPii` et des identifiants par uuid v5 d'un espace de noms fixe ; aucun `Date.now()`, horloge injectee. (9) Une valeur de vocabulaire ecrite par le semeur est lue dans l'enum Prisma, jamais tapee. AMENDEMENT du 2026-09-30 (décision de Williams : pas de serveur d'aperçus) : la condition (4) passe EN ATTENTE EXTERNE. Aucun aperçu n'est déployé tant qu'un serveur d'aperçus n'existe pas (aperçus inertes) ; les tests de bout en bout et le balayage de securite authentifie ne basculent JAMAIS vers la production portant des données réelles. Les runbooks du socle se tiennent selon QA-T13 (7). DETTE relevée le 2026-09-30 (relais de la coordination, PR du bilan de santé Coolify de QA-T50) : `scripts/preview/preview.ts` crée l'application d'aperçu avec `health_check_enabled: true`, réglage à réaligner sur celui retenu par QA-T50 pour la production. À corriger À L'ACTIVATION des aperçus, avec la levée de l'attente de (4), et pas avant : tant que les aperçus sont inertes, ce code ne s'exécute pas.",
       "tests": {
         "REQ-QA-015": [
           "tests/integration/semeur-deterministe.spec.ts",
@@ -13631,7 +13631,7 @@
       "deps": [],
       "hyp": [],
       "externe": null,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "paths": [
         "docs/CONVENTIONS.md",
         "docs/CHARTE-AGENTS.md",
@@ -13655,7 +13655,15 @@
         ]
       },
       "issue": 260,
-      "owner": "A01"
+      "owner": "A01",
+      "branch": "t/gov-116",
+      "pr": 262,
+      "attestation": {
+        "pr": 262,
+        "sha": "336eefc2b1cc0636432c28ea3c8167881269309b",
+        "fusionneeAt": "2026-09-30T10:35:08Z"
+      },
+      "motif": null
     },
     {
       "id": "GOV-117",
@@ -16689,6 +16697,33 @@
         "fusionneeAt": "2026-09-30T13:40:37Z"
       },
       "motif": null
+    },
+    {
+      "id": "QA-T54",
+      "titre": "Alerte close `deploiement_non_atterri` : un `deploy:verify` rouge après un déploiement alerte, sans donnée personnelle",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "qualite",
+      "paths": [
+        "src/server/integrations/telegram/alertes.ts",
+        "scripts/gates/deploy-verify.ts",
+        ".github/workflows/deploy.yml",
+        "tests/unit/qualite/alerte-deploiement-non-atterri.spec.ts",
+        "docs/runbooks/mise-en-service.md"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "QA-T53"
+      ],
+      "reqs": [
+        "REQ-QA-033"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "acceptance": "Condition de mise en service posée par la lentille sécurité, relayée par la coordination le 2026-09-30 : PRÉALABLE FERME avant la première donnée réelle, sur le modèle de QA-T53 (`rechiffrement_echoue`). Aujourd'hui, un déploiement dont l'atterrissage n'est pas vérifié ne prévient personne. À LIVRER : (1) une catégorie d'alerte CLOSE `deploiement_non_atterri`, NEUVE (elle n'existe nulle part aujourd'hui), ajoutée à `CATEGORIES_ALERTE` (src/server/integrations/telegram/alertes.ts) avec son gabarit ; (2) tout échec de `deploy:verify` (scripts/gates/deploy-verify.ts) joué après un déploiement de `.github/workflows/deploy.yml` (sha servi différent du sha fusionné, `readyz` non prêt, en-tête `x-partners-build-sha` absent, délai dépassé) émet exactement une alerte `deploiement_non_atterri`, qui ne porte que le sha attendu, le sha servi et l'environnement, sans donnée personnelle ni secret ; le job reste rouge (l'alerte ne remplace pas l'échec) ; (3) TÉMOINS rouges d'abord : un atterrissage raté (sha servi ≠ sha fusionné) émet une alerte ; `readyz` non prêt émet une alerte ; un atterrissage réussi n'en émet aucune ; le message de l'alerte ne contient ni jeton ni URL de secret. (4) Le pas « alerte `deploiement_non_atterri` en service » entre dans la liste de mise en service (`docs/runbooks/mise-en-service.md`) par la PR qui livre cette tâche."
     }
   ]
 }
