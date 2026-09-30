@@ -16696,7 +16696,12 @@
         "sha": "04a2b195aaa06f9e4f39a799f9f7ef3c0c404258",
         "fusionneeAt": "2026-09-30T13:40:37Z"
       },
-      "motif": null
+      "motif": null,
+      "tests": {
+        "REQ-JUR-015": [
+          "tests/unit/juridique/seuils-ssot.spec.ts"
+        ]
+      }
     },
     {
       "id": "QA-T54",

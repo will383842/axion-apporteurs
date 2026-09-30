@@ -548,6 +548,14 @@ const MANUELS: Record<string, string[]> = {
   'UX-P3-13': ['docs/maquettes/', 'docs/maquettes/VALIDATION.md'],
   // GOV-130 (pas de serveur d'aperçus, passe du lot dédié) : sans fichier de test neuf, ses chemins sont ceux de sa fiche.
   'GOV-130': ['docs/DECISIONS.md', 'docs/journal/'],
+  // QA-T54 (alerte deploiement_non_atterri) : son témoin n'existe pas encore, ses chemins sont ceux de sa fiche.
+  'QA-T54': [
+    'src/server/integrations/telegram/alertes.ts',
+    'scripts/gates/deploy-verify.ts',
+    '.github/workflows/deploy.yml',
+    'tests/unit/qualite/alerte-deploiement-non-atterri.spec.ts',
+    'docs/runbooks/mise-en-service.md',
+  ],
 };
 
 /**
