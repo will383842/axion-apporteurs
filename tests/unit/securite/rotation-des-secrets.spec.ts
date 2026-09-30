@@ -17,6 +17,7 @@
  *
  * RM-11 : chaque instant et chaque clé est posé explicitement dans le cas qui le fait varier.
  */
+import { readFileSync } from 'node:fs';
 import { describe, it, expect } from 'vitest';
 import {
   ROTATION_MAX_MS,
@@ -26,6 +27,7 @@ import {
   kidDe,
   lireDemarrage,
   lireTrousseaux,
+  variablesDeRotation,
   type Trousseau,
 } from '../../../src/lib/env';
 
@@ -247,5 +249,139 @@ describe('REQ-QA-030 — le démarrage réel juge la rotation, et la documentati
       expect(doc).toContain('`' + nom + '_PRECEDENT`');
       expect(doc).toContain('`' + nom + '_PRECEDENT_ECHEANCE`');
     }
+  });
+
+  it('REQ-QA-030 : docs/env.md est, octet pour octet, le rendu du schéma — rôle de chaque variable compris', () => {
+    // Le témoin de `tests/unit/qualite/` juge la même égalité ; celui-ci la rejoue EN PROCESSUS, là
+    // où le bac à sable de mutation la voit : une phrase de rôle modifiée dans le code rougit ici.
+    const surLeDisque = readFileSync('docs/env.md', 'utf8').replace(/\r\n/g, '\n');
+    expect(documenterEnvironnement()).toBe(surLeDisque);
+  });
+});
+
+describe('REQ-QA-030 — les règles de la rotation, valeur exacte par valeur exacte', () => {
+  const CLE = 'AXIONIA_API_TOKEN_PRECEDENT';
+  const ECHEANCE = 'AXIONIA_API_TOKEN_PRECEDENT_ECHEANCE';
+  const refusDe = (ajout: Record<string, string>, maintenant = DEMARRAGE_MS): unknown => {
+    const lu = lireTrousseaux({ ...secretsValides(), ...ajout }, maintenant);
+    return lu.ok ? [] : lu.refus;
+  };
+
+  it('REQ-QA-030 : 24 h valent 86 400 000 ms, et les variables se nomment `<NOM>_PRECEDENT` et `<NOM>_PRECEDENT_ECHEANCE`', () => {
+    expect(ROTATION_MAX_MS).toBe(86_400_000);
+    expect(variablesDeRotation('AXIONIA_API_TOKEN')).toEqual({ cle: CLE, echeance: ECHEANCE });
+    expect(variablesDeRotation('AXIONIA_WEBHOOK_SECRET')).toEqual({
+      cle: 'AXIONIA_WEBHOOK_SECRET_PRECEDENT',
+      echeance: 'AXIONIA_WEBHOOK_SECRET_PRECEDENT_ECHEANCE',
+    });
+  });
+
+  it('REQ-SEC-028 : kidDe — huit hexadécimaux d’une empreinte séparée par domaine, sur un vecteur fixe', () => {
+    expect(kidDe('valeur-temoin')).toBe('e5093494');
+  });
+
+  it.each([
+    ['sans millisecondes', '2026-09-30T12:00:00Z'],
+    ['avec trois chiffres de millisecondes', '2026-09-30T12:00:00.000Z'],
+  ])('REQ-QA-030 : une échéance UTC %s est lue', (_q, echeance) => {
+    expect(refusDe({ [CLE]: PRECEDENTE, [ECHEANCE]: echeance })).toEqual([]);
+  });
+
+  it.each([
+    ['date seule', '2026-09-30'],
+    ['sans fuseau', '2026-09-30T12:00:00'],
+    ['avec un décalage au lieu de Z', '2026-09-30T12:00:00+00:00'],
+    ['sans secondes', '2026-09-30T12:00Z'],
+    ['deux chiffres de millisecondes', '2026-09-30T12:00:00.00Z'],
+    ['quatre chiffres de millisecondes', '2026-09-30T12:00:00.0000Z'],
+    ['T minuscule', '2026-09-30t12:00:00Z'],
+    ['z minuscule', '2026-09-30T12:00:00z'],
+    ['espace à la place du T', '2026-09-30 12:00:00Z'],
+    ['un caractère devant', 'x2026-09-30T12:00:00Z'],
+    ['un caractère derrière', '2026-09-30T12:00:00Zx'],
+    ['année sur cinq chiffres', '12026-09-30T12:00:00Z'],
+    ['mois sur un chiffre', '2026-9-30T12:00:00Z'],
+    ['heure sur un chiffre', '2026-09-30T1:00:00Z'],
+    ['bonne forme, date impossible', '2026-13-45T12:00:00Z'],
+  ])('REQ-QA-030 : une échéance %s est refusée, seule, en format invalide', (_q, echeance) => {
+    expect(refusDe({ [CLE]: PRECEDENTE, [ECHEANCE]: echeance })).toEqual([
+      { variable: ECHEANCE, motif: 'format_invalide' },
+    ]);
+  });
+
+  it('REQ-QA-030 : chaque faute est un refus UNIQUE, qui nomme la bonne variable', () => {
+    expect(refusDe({ [CLE]: PRECEDENTE })).toEqual([{ variable: ECHEANCE, motif: 'absente' }]);
+    expect(refusDe({ [ECHEANCE]: DANS_24_H })).toEqual([{ variable: CLE, motif: 'absente' }]);
+    expect(refusDe({ [CLE]: 'courte', [ECHEANCE]: DANS_24_H })).toEqual([
+      { variable: CLE, motif: 'trop_courte' },
+    ]);
+    expect(refusDe({ [CLE]: ` ${PRECEDENTE}`, [ECHEANCE]: DANS_24_H })).toEqual([
+      { variable: CLE, motif: 'espace_en_bordure' },
+    ]);
+    expect(refusDe({ [CLE]: secretsValides().AXIONIA_API_TOKEN, [ECHEANCE]: DANS_24_H })).toEqual([
+      { variable: CLE, motif: 'egale_a', avec: ['AXIONIA_API_TOKEN'] },
+    ]);
+    expect(
+      refusDe({
+        [CLE]: PRECEDENTE,
+        [ECHEANCE]: new Date(DEMARRAGE_MS + ROTATION_MAX_MS + 1).toISOString(),
+      })
+    ).toEqual([{ variable: ECHEANCE, motif: 'echeance_au_dela_de_24_h' }]);
+  });
+
+  it('REQ-QA-030 : deux clés précédentes égales entre elles — la seconde est refusée, et nomme la première', () => {
+    expect(
+      refusDe({
+        AXIONIA_WEBHOOK_SECRET_PRECEDENT: PRECEDENTE,
+        AXIONIA_WEBHOOK_SECRET_PRECEDENT_ECHEANCE: DANS_24_H,
+        [CLE]: PRECEDENTE,
+        [ECHEANCE]: DANS_24_H,
+      })
+    ).toEqual([{ variable: CLE, motif: 'egale_a', avec: ['AXIONIA_WEBHOOK_SECRET_PRECEDENT'] }]);
+  });
+
+  it('REQ-SEC-028 : une clé précédente préfixée `dev_` ou `stub` est refusée en production, admise en développement et en test', () => {
+    for (const valeur of [`dev_${PRECEDENTE}`, `STUB${PRECEDENTE}`]) {
+      const ajout = { [CLE]: valeur, [ECHEANCE]: DANS_24_H };
+      expect(refusDe({ ...ajout, NODE_ENV: 'production' }), valeur).toEqual([
+        { variable: CLE, motif: 'prefixe_interdit' },
+      ]);
+      expect(refusDe({ ...ajout, NODE_ENV: 'development' }), valeur).toEqual([]);
+      expect(refusDe({ ...ajout, NODE_ENV: 'test' }), valeur).toEqual([]);
+    }
+  });
+
+  it('REQ-QA-030 : le trousseau lu porte la courante ET la précédente de CE secret, et rien pour l’autre', () => {
+    const lu = lireTrousseaux(
+      { ...secretsValides(), [CLE]: PRECEDENTE, [ECHEANCE]: DANS_24_H },
+      DEMARRAGE_MS
+    );
+    expect(lu).toEqual({
+      ok: true,
+      trousseaux: {
+        AXIONIA_WEBHOOK_SECRET: {
+          courante: secretsValides().AXIONIA_WEBHOOK_SECRET,
+          precedente: null,
+        },
+        AXIONIA_API_TOKEN: {
+          courante: secretsValides().AXIONIA_API_TOKEN,
+          precedente: { valeur: PRECEDENTE, echeanceMs: DEMARRAGE_MS + ROTATION_MAX_MS },
+        },
+      },
+    });
+  });
+
+  it('REQ-QA-030 : un secret courant en défaut ET une rotation en défaut — les deux refus, secrets d’abord', () => {
+    const lu = lireTrousseaux(
+      { ...secretsValides(), SESSION_SECRET: 'courte', [CLE]: PRECEDENTE },
+      DEMARRAGE_MS
+    );
+    expect(lu).toEqual({
+      ok: false,
+      refus: [
+        { variable: 'SESSION_SECRET', motif: 'trop_courte' },
+        { variable: ECHEANCE, motif: 'absente' },
+      ],
+    });
   });
 });
