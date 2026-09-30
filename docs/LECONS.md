@@ -222,3 +222,22 @@
 _(rien à consolider — vingt-quatre leçons au journal. Consolidation du 2026-09-05 par le `documentaliste` (A03) : les « appris » des PR #28, #29 et #30 sont devenus LEC-14 à LEC-16, et le lot `L-1-INT-a` a fourni LEC-17 à LEC-24. Une seule a fait règle — RM-14.)_
 
 <!-- a-consolider:fin -->
+
+## Après lancement
+
+> Dettes de relecture NON bloquantes, rangées ici par le gel de la gouvernance (décision de Williams
+> du 2026-09-29) : aucune ne devient tâche avant le lancement. Chacune cite sa tâche ou sa PR. Ce ne
+> sont pas des leçons : `gov:lecons` ne les lit pas, et aucune n'attend de consolidation.
+
+- **INT-T27-A** — `contracts.v1.json` n'est pas dans les `paths` de la tâche.
+- **GOV-062** (PR #241) — quatre limites déclarées : actions tirées par étiquette, `GITHUB_ENV` écrit hors `.ts`, `ECRIT_L_ARBRE`, `nightly.yml` non confronté.
+- **QA-T05 / QA-T06** — images Docker tirées par étiquette, non par empreinte.
+- **GOV-127** (PR #257) — le passif de la déclaration ne compare pas le champ `depot`.
+- **INT-T05** (axion-ia #1228) — cohérence du HT reçu non vérifiée côté Partners : la somme des HT des paiements ne doit pas dépasser le HT de la facture.
+- **JUR-T40** — `sensible` vide, à réexaminer.
+- **GOV-124** (PR #248) — l'exclusion d'une lentille est une liste, pas une règle dérivée : REGLES-MAISON, LECONS, maquettes/VALIDATION, ESPACE-ROUTES et journal/README restent à une lentille.
+- **JUR-T34** (PR #242) — historique des versions acceptées de la politique ; micro-copie « Votre espace s'ouvre… ».
+- **GOV-117** (PR #259) — l'acceptance (7) cite `gov:tasks` là où la garde est `gov:requirements` ; pas d'option `--abaisse-le-risque` pour les outils hors dépôt.
+- **QA-T34** — `docs/gates.json`, porte de déploiement : le champ `tache` reste GOV-000 (non écrivable par les outils, voulu) alors que QA-T34 livre `deploy-verify`.
+- **GOV-128** (PR #278) — le champ `date` d'une entrée du passif n'est pas documenté : pour #1228, c'est la date de l'arbitrage (2026-09-30), la fusion étant du 2026-09-29 en UTC.
+- **QA-T50** (PR #271, revue exactitude) — la section « Paths » du corps omet le témoin des refus et `package.json`.

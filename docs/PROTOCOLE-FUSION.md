@@ -240,6 +240,12 @@ corps de ce message : une ligne `Lot:` écrite dans un commit, que la forge reco
 `--subject` impose le titre de la PR : pour une PR à un seul commit, la forge prendrait sinon le
 titre du commit, qui peut ne nommer aucune tâche.
 
+**Le corps passé à `--body` est la ligne `Lot:` et RIEN d'autre, sur les deux dépôts.** Ni phrase
+d'accord, ni trailer `Co-Authored-By`. Mesuré sur axion-ia #1228 (squash `3fb76aa`) : un paragraphe
+ajouté sous `Lot: INT-T04, INT-T05` a suffi pour que le message ne déclare plus rien, et le titre à
+deux tâches n'en nomme aucune. Les deux clôtures n'ont passé que par le passif déclaré de `scripts/lot/cloture.ts`,
+une exception qui ne se renouvelle pas.
+
 ### Pas 7 — L'atterrissage, avant la fusion suivante
 
 **Commande.** `curl -sI https://<hôte-servi>/ | grep -i x-partners-build-sha`
