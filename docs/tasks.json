@@ -4494,7 +4494,8 @@
         "REQ-DM-042"
       ],
       "hyp": [
-        "HYP-C1"
+        "HYP-C1",
+        "HYP-W20-TACITE"
       ],
       "externe": null,
       "estimateDays": 1,
@@ -4994,9 +4995,14 @@
         "REQ-DM-031",
         "REQ-DM-042",
         "REQ-QA-027",
-        "REQ-UX-038"
+        "REQ-UX-038",
+        "REQ-DM-063"
       ],
-      "hyp": [],
+      "hyp": [
+        "HYP-W20-LIBERATION",
+        "HYP-W20-CARENCE-REDEPOT",
+        "HYP-W20-PREMIER-CONTACT"
+      ],
       "externe": null,
       "estimateDays": 1.25,
       "statut": "a_faire",
@@ -5448,7 +5454,8 @@
         "GOV-112"
       ],
       "reqs": [
-        "REQ-JUR-009"
+        "REQ-JUR-009",
+        "REQ-JUR-060"
       ],
       "hyp": [],
       "externe": null,
@@ -5718,9 +5725,12 @@
       ],
       "reqs": [
         "REQ-UX-004",
-        "REQ-UX-023"
+        "REQ-UX-023",
+        "REQ-UX-062"
       ],
-      "hyp": [],
+      "hyp": [
+        "HYP-W20-BADGE"
+      ],
       "externe": null,
       "estimateDays": 1.25,
       "statut": "a_faire",
@@ -13968,7 +13978,9 @@
       "repo": "partners",
       "schema": false,
       "sensible": [],
-      "hyp": [],
+      "hyp": [
+        "HYP-W20-CONTEXTE"
+      ],
       "externe": null,
       "statut": "a_faire",
       "phase": 1,
@@ -13991,7 +14003,10 @@
         "REQ-JUR-039",
         "REQ-JUR-037",
         "REQ-UX-003",
-        "REQ-JUR-012"
+        "REQ-JUR-012",
+        "REQ-UX-060",
+        "REQ-UX-061",
+        "REQ-JUR-060"
       ],
       "estimateDays": 0.75,
       "acceptance": "Source : docs/chantiers/W20-confirmation-par-email.md (décision de Williams du 2026-09-29, session -d7, phase 1). Réalise la part texte de REQ-UX-060, REQ-UX-061 et REQ-JUR-060 (Exigence nouvelle proposée au §3 du plan, à inscrire par la passe gardien-spec puis à ajouter à `reqs` ; les HYP-W20 citées ici ne sont pas encore au §2 de docs/DECISIONS.md, elles entreront dans `hyp` par la même passe.). (1) Tous les textes W20 vivent dans la SSOT de micro-copy, en gabarits à variables (prénom, nom, entreprise, heure) ; aucun texte recopié ailleurs (RM-01). (2) Message avant le bouton, repris mot pour mot de la décision de Williams, sauf la fin proposée « Axion-IA pourra aussi l'appeler. » (question 15 du plan, valeur par défaut confirmée par Williams le 2026-09-29) : il INFORME et ne donne aucune consigne (REQ-JUR-039). (3) Un champ exigé n'est jamais marqué « obligatoire » (mot interdit par REQ-JUR-037) ; seuls les champs facultatifs portent « (facultatif) ». (4) Les valeurs saisies par l'apporteur et reprises dans l'e-mail sont rendues en texte brut, échappées, sans lien (HYP-W20-CONTEXTE). (5) Témoins : la garde lexicale reste verte sur tout texte vu par l'apporteur ; un texte « vous devez confirmer » posé dans le fichier la fait rougir. (6) Amendée le 2026-09-29 (réponse de Williams à la question 2 et exigence d'expérience, docs/chantiers/W20-confirmation-par-email.md §2, §4 et §9) : la SSOT porte aussi les quatre libellés du badge de REQ-UX-062, plus, depuis la correction de sécurité du 2026-09-29 (refus de la lentille securite sur 2340a63, docs/chantiers/W20-confirmation-par-email.md §2, §8 et question 18), le libellé de la demande signalée « En attente de confirmation — Axion-IA va appeler votre contact » (neutre, sans consigne, sans date), l'action « Corriger l'adresse », la phrase d'aide unique « Sans réponse de votre contact, l'entreprise reste réservée pour vous 30 jours après la réception de notre e-mail. » (le nombre interpolé depuis CONFIRMATION_TACITE_JOURS, jamais recopié) et le texte de la notification de l'e-mail reparti après correction ; depuis les réponses de Williams du 2026-09-29 vers 20 h (session -d7, questions 18 et 19), le libellé ⚪ « Réservation terminée · l'entreprise est de nouveau disponible » (sans date, sans action, sans phrase d'aide) et le texte de la notification de libération, neutre et sans consigne, proposé : « La réservation de <Entreprise> a pris fin sans confirmation. L'entreprise est de nouveau disponible. », qui ne dit ni la raison, ni la vérification, ni le nombre d'appels ; la date en toutes lettres est formatée par une seule fonction, dans le fuseau de l'apporteur. Garde lexicale verte sur ces textes.",
@@ -14007,6 +14022,15 @@
         ],
         "REQ-JUR-012": [
           "tests/unit/micro-copy/confirmation-par-courriel.spec.ts"
+        ],
+        "REQ-UX-060": [
+          "tests/unit/micro-copy/confirmation-par-courriel.spec.ts"
+        ],
+        "REQ-UX-061": [
+          "tests/unit/micro-copy/confirmation-par-courriel.spec.ts"
+        ],
+        "REQ-JUR-060": [
+          "tests/unit/micro-copy/confirmation-par-courriel.spec.ts"
         ]
       }
     },
@@ -14018,7 +14042,12 @@
         "rgpd"
       ],
       "hyp": [
-        "HYP-C1"
+        "HYP-C1",
+        "HYP-W20-DELAI",
+        "HYP-W20-ANNULATION",
+        "HYP-W20-DESTINATAIRE",
+        "HYP-W20-OPPOSITION",
+        "HYP-W20-SALARIES"
       ],
       "externe": null,
       "statut": "a_faire",
@@ -14049,7 +14078,8 @@
         "REQ-DM-008",
         "REQ-DM-031",
         "REQ-SEC-024",
-        "REQ-DM-005"
+        "REQ-DM-005",
+        "REQ-DM-060"
       ],
       "estimateDays": 1.5,
       "acceptance": "Source : docs/chantiers/W20-confirmation-par-email.md (décision de Williams du 2026-09-29, session -d7, phase 1). ELLE ÉCRIT LE SCHÉMA (label schema, seule de sa famille dans son lot). Réalise REQ-DM-060 (Exigence nouvelle proposée au §3 du plan, à inscrire par la passe gardien-spec puis à ajouter à `reqs` ; les HYP-W20 citées ici ne sont pas encore au §2 de docs/DECISIONS.md, elles entreront dans `hyp` par la même passe.) ; hypothèses HYP-W20-DELAI, HYP-W20-ANNULATION, HYP-W20-DESTINATAIRE, HYP-W20-OPPOSITION, HYP-W20-SALARIES. (1) Tout dépôt d'un apporteur crée dans la même transaction une demande liée à l'attribution ; « Vérifier une entreprise » et une prise en charge par un conseiller salarié n'en créent jamais. (2) États de la demande en enum fermé (planifiee, annulee, envoyee, retenue, rebond, repondue_oui, repondue_non, clic_non_retenu, opposee, expiree) ; chaque changement écrit un événement dans la même transaction. (3) Deux jetons par demande, stockés hachés ; empreinte d'IP du clic tronquée et salée (REQ-SEC-024) ; révisions du contact et du contexte chiffrées, l'ancienne valeur conservée (correction tracée, deposeeAt inchangé). (4) Paramètres SSOT : délai avant envoi (15 minutes), délai sans réponse (5 jours ouvrés), longueur du contexte, corrections après rebond ; le taux d'échantillon et le nombre de premiers dépôts appelés ont leur clé, leur valeur vit hors dépôt (REQ-GOV-031). (5) La table ajoutée reçoit sa ligne au §3 du registre de l'article 30 dans la même PR, sinon tests/unit/juridique/registre-rgpd.spec.ts rougit. (6) Tests : annulation avant l'échéance → annulee, aucun envoi ; une demande par dépôt ; « Vérifier » → aucune demande.",
@@ -14065,6 +14095,10 @@
         ],
         "REQ-DM-005": [
           "tests/integration/demande-de-confirmation.spec.ts"
+        ],
+        "REQ-DM-060": [
+          "tests/integration/demande-de-confirmation.spec.ts",
+          "tests/unit/domaine/demande-de-confirmation.spec.ts"
         ]
       }
     },
@@ -14076,7 +14110,9 @@
         "auth",
         "rgpd"
       ],
-      "hyp": [],
+      "hyp": [
+        "HYP-W20-LIEN"
+      ],
       "externe": null,
       "statut": "a_faire",
       "phase": 1,
@@ -14094,7 +14130,8 @@
       ],
       "reqs": [
         "REQ-SEC-024",
-        "REQ-DM-008"
+        "REQ-DM-008",
+        "REQ-SEC-061"
       ],
       "estimateDays": 1,
       "acceptance": "Source : docs/chantiers/W20-confirmation-par-email.md (décision de Williams du 2026-09-29, session -d7, phase 1). TÂCHE SENSIBLE. Réalise REQ-SEC-061 (Exigence nouvelle proposée au §3 du plan, à inscrire par la passe gardien-spec puis à ajouter à `reqs` ; les HYP-W20 citées ici ne sont pas encore au §2 de docs/DECISIONS.md, elles entreront dans `hyp` par la même passe.) ; hypothèse HYP-W20-LIEN. (1) Aléa d'au moins 256 bits par jeton, stockage haché, usage unique : la première réponse fait foi pour les deux jetons de la demande ; expiration avec la demande. (2) L'ouverture du lien (GET) n'écrit RIEN : seule l'action sur la page (POST) répond, pour qu'aucun analyseur de liens de messagerie ne réponde à la place du contact. (3) Jeton inconnu, expiré ou déjà consommé : réponse identique octet pour octet, aucun oracle sur l'existence d'une attribution. (4) Débit limité par empreinte d'IP ; Referrer-Policy no-referrer et X-Robots-Tag noindex ; aucun jeton dans un journal applicatif. (5) TÉMOINS À DEUX FACES : jeton valide → une réponse ; rejoué, forgé, expiré → même réponse ; GET répété → aucune écriture.",
@@ -14103,6 +14140,10 @@
           "tests/unit/securite/jetons-de-confirmation.spec.ts"
         ],
         "REQ-DM-008": [
+          "tests/integration/jetons-de-confirmation.spec.ts"
+        ],
+        "REQ-SEC-061": [
+          "tests/unit/securite/jetons-de-confirmation.spec.ts",
           "tests/integration/jetons-de-confirmation.spec.ts"
         ]
       }
@@ -14114,7 +14155,9 @@
         "attribution",
         "rgpd"
       ],
-      "hyp": [],
+      "hyp": [
+        "HYP-W20-REBOND"
+      ],
       "externe": null,
       "statut": "a_faire",
       "phase": 1,
@@ -14139,7 +14182,9 @@
         "REQ-INT-022",
         "REQ-INT-023",
         "REQ-JUR-009",
-        "REQ-QA-027"
+        "REQ-QA-027",
+        "REQ-INT-060",
+        "REQ-JUR-060"
       ],
       "estimateDays": 1.25,
       "acceptance": "Source : docs/chantiers/W20-confirmation-par-email.md (décision de Williams du 2026-09-29, session -d7, phase 1). Réalise REQ-INT-060 et la part envoi de REQ-JUR-060 (Exigence nouvelle proposée au §3 du plan, à inscrire par la passe gardien-spec puis à ajouter à `reqs` ; les HYP-W20 citées ici ne sont pas encore au §2 de docs/DECISIONS.md, elles entreront dans `hyp` par la même passe.) ; hypothèse HYP-W20-REBOND. (1) Un job « tout ce qui est dû à l'instant t », horloge injectée (REQ-QA-027), envoie les demandes échues par l'émetteur d'INT-T10 : jamais avant l'échéance, jamais deux fois ; une demande annulée n'envoie rien. (2) Sans drapeau DMARC, ou vers une adresse supprimée, l'envoi est retenu et visible (REQ-INT-022, REQ-INT-023). (3) L'e-mail part depuis une adresse humaine, vers l'adresse saisie pour le contact et aucune autre ; multipart avec une version texte, aucune image distante, aucun pixel de suivi, aucun lien autre que les deux réponses et l'opposition ; la version du texte est journalisée avec l'envoi. (4) Le webhook de rebond rattache le rebond à sa demande par l'identifiant du message, passe la demande en rebond, et crée une notification INFORMATIVE de l'apporteur (clé de la table SSOT, faitCourirUnDelai false, REQ-JUR-039). (5) Témoins : drapeau faux → aucune requête au relais ; rebond mal signé → rien ; worker arrêté puis relancé → rattrapage sans doublon.",
@@ -14155,6 +14200,14 @@
         ],
         "REQ-QA-027": [
           "tests/integration/envoi-differe-de-la-confirmation.spec.ts"
+        ],
+        "REQ-INT-060": [
+          "tests/integration/envoi-differe-de-la-confirmation.spec.ts",
+          "tests/unit/email/gabarit-confirmation-contact.spec.ts"
+        ],
+        "REQ-JUR-060": [
+          "tests/integration/envoi-differe-de-la-confirmation.spec.ts",
+          "tests/unit/email/gabarit-confirmation-contact.spec.ts"
         ]
       }
     },
@@ -14165,7 +14218,10 @@
         "attribution"
       ],
       "hyp": [
-        "HYP-C1"
+        "HYP-C1",
+        "HYP-W20-SOURCE",
+        "HYP-W20-NON",
+        "HYP-W20-PREMIER-CONTACT"
       ],
       "externe": null,
       "statut": "a_faire",
@@ -14190,7 +14246,8 @@
         "REQ-DM-008",
         "REQ-DM-006",
         "REQ-SEC-018",
-        "REQ-DM-042"
+        "REQ-DM-042",
+        "REQ-DM-061"
       ],
       "estimateDays": 1.25,
       "acceptance": "Source : docs/chantiers/W20-confirmation-par-email.md (décision de Williams du 2026-09-29, session -d7, phase 1). Réalise REQ-DM-061 (Exigence nouvelle proposée au §3 du plan, à inscrire par la passe gardien-spec puis à ajouter à `reqs` ; les HYP-W20 citées ici ne sont pas encore au §2 de docs/DECISIONS.md, elles entreront dans `hyp` par la même passe.) ; hypothèses HYP-W20-SOURCE, HYP-W20-NON, HYP-W20-PREMIER-CONTACT, et HYP-C1 (le contrat devient la confirmation par clic OU par contact d'Axion-IA, JUR-T40). (1) Un « Oui » retenu confirme l'attribution comme une Qualification confirme : active, confirmeeAt à l'instant du clic, source courriel. (2) « Non » n'est retenu qu'au second geste explicite ; il vaut non_confirme avec les effets de REQ-DM-008 : attribution invalidee, entrée console qui ouvre la FACULTÉ de suspension de SEC-15, AUCUNE suspension automatique (REQ-SEC-018). (3) Correction de sécurité du 2026-09-29 (refus de la lentille securite sur 2340a63, docs/chantiers/W20-confirmation-par-email.md §2, §8 et question 18) : un « Oui » sur une demande SIGNALÉE, c'est-à-dire qui porte UNE raison de vérification de SEC-41 à l'instant du clic (adresse webmail, adresse générique, domaine différent du site de l'entreprise, contact égal à l'apporteur par empreinte, contact réutilisé, même empreinte d'IP qu'une session récente de l'apporteur, et toute autre raison de la liste), N'EST PAS retenu comme confirmation : la demande passe en clic_non_retenu, le clic est journalisé comme indice, l'attribution reste provisoire et part EN TÊTE de la liste d'appels ; seule une Qualification confirme d'un appel de la Société la confirme. Sans Anomalie, sans score, sans suspension ; le clic non retenu ne pose pas premierContactAt. Un « Non » en second geste reste pris en compte sur une demande signalée. Une raison apparue après un clic retenu n'a aucun effet rétroactif (question 3 du plan, élargie). (4) La réponse est journalisée avec sa date, son destinataire et ses termes (libellé et version du texte de la page) ; l'extrait est communiqué à l'apporteur sur demande. (5) premierContactAt est posé par la première réponse, jamais par l'envoi. (6) Transitions par la matrice de DM-08, événement dans la même transaction ; double POST → une seule réponse. (7) Témoins : adresse webmail contrôlée par l'apporteur et « Oui » depuis une autre IP → provisoire, tête de liste, premierContactAt non posé ; clic depuis l'empreinte d'IP de l'apporteur → provisoire ; « Non » en second geste sur une demande signalée → invalidee ; une mutation qui retient le clic d'une demande signalée rougit. REQ-DM-061 et REQ-DM-008 amendée s'écrivent par GOV-112 (dépendance).",
@@ -14206,6 +14263,10 @@
         ],
         "REQ-DM-042": [
           "tests/integration/reponse-du-contact.spec.ts"
+        ],
+        "REQ-DM-061": [
+          "tests/unit/domaine/reponse-du-contact.spec.ts",
+          "tests/integration/reponse-du-contact.spec.ts"
         ]
       }
     },
@@ -14215,7 +14276,10 @@
       "sensible": [
         "attribution"
       ],
-      "hyp": [],
+      "hyp": [
+        "HYP-W20-APPELS",
+        "HYP-W20-SANS-REPONSE"
+      ],
       "externe": null,
       "statut": "a_faire",
       "phase": 1,
@@ -14237,7 +14301,8 @@
         "REQ-UX-022",
         "REQ-SEC-017",
         "REQ-JUR-031",
-        "REQ-CPL-013"
+        "REQ-CPL-013",
+        "REQ-DM-062"
       ],
       "estimateDays": 1,
       "acceptance": "Source : docs/chantiers/W20-confirmation-par-email.md (décision de Williams du 2026-09-29, session -d7, phase 1). Réalise REQ-DM-062 (Exigence nouvelle proposée au §3 du plan, à inscrire par la passe gardien-spec puis à ajouter à `reqs` ; les HYP-W20 citées ici ne sont pas encore au §2 de docs/DECISIONS.md, elles entreront dans `hyp` par la même passe.) ; hypothèses HYP-W20-APPELS, HYP-W20-SANS-REPONSE. (1) Un dépôt provisoire entre dans la liste s'il est tiré dans l'échantillon, s'il fait partie des premiers dépôts d'un nouvel apporteur, si sa demande est en rebond non corrigé, sans réponse depuis le délai SSOT en jours ouvrés, ou s'il porte une raison de vérification de SEC-41 ; il en sort à la première réponse (clic retenu ou qualification). (2) Tri : raison de vérification, rebond, premiers dépôts et critères de tri de revue humaine, sans réponse, échantillon ; à égalité, aQualifierDepuis croissant. Fonction pure, horloge injectée, calendrier de CPL-T13. (3) Le tirage est fait au dépôt par un générateur cryptographique, stocké, jamais servi à l'espace ; valeurs lues d'une configuration hors dépôt ; clé absente = aucun échantillon et un avertissement d'exploitation, jamais une valeur devinée. (4) Aucun critère de rythme n'est une raison affichée (REQ-SEC-017, REQ-JUR-031). Tests : un cas par entrée, l'ordre de tri, un dépôt confirmé par clic n'y figure jamais.",
@@ -14253,6 +14318,10 @@
         ],
         "REQ-CPL-013": [
           "tests/integration/liste-d-appels.spec.ts"
+        ],
+        "REQ-DM-062": [
+          "tests/unit/domaine/liste-d-appels.spec.ts",
+          "tests/integration/liste-d-appels.spec.ts"
         ]
       }
     },
@@ -14263,7 +14332,9 @@
         "attribution",
         "rgpd"
       ],
-      "hyp": [],
+      "hyp": [
+        "HYP-W20-VERIFICATION"
+      ],
       "externe": null,
       "statut": "a_faire",
       "phase": 1,
@@ -14286,7 +14357,8 @@
         "REQ-SEC-036",
         "REQ-SEC-024",
         "REQ-SEC-021",
-        "REQ-JUR-031"
+        "REQ-JUR-031",
+        "REQ-SEC-060"
       ],
       "estimateDays": 1.25,
       "acceptance": "Source : docs/chantiers/W20-confirmation-par-email.md (décision de Williams du 2026-09-29, session -d7, phase 1). TÂCHE SENSIBLE. Réalise REQ-SEC-060 (Exigence nouvelle proposée au §3 du plan, à inscrire par la passe gardien-spec puis à ajouter à `reqs` ; les HYP-W20 citées ici ne sont pas encore au §2 de docs/DECISIONS.md, elles entreront dans `hyp` par la même passe.) ; hypothèse HYP-W20-VERIFICATION. (1) Enum fermé de raisons : adresse webmail (acceptée, jamais refusée), adresse générique, domaine différent du site de l'entreprise, e-mail ou téléphone du contact égal à celui de l'apporteur, même contact sur plusieurs entreprises, clic depuis la même empreinte d'IP que la session de l'apporteur, rebond. Comparaisons par empreintes HMAC seulement (REQ-SEC-024). (2) Une raison TRIE la liste d'appels (en tête) et rend la demande SIGNALÉE. Correction de sécurité du 2026-09-29 (refus de la lentille securite sur 2340a63, docs/chantiers/W20-confirmation-par-email.md §2, §8 et question 18) : la tâche expose un prédicat pur « demande signalée », lu par DM-41 (un clic « Oui » n'y est pas retenu), par DM-24 (aucune promotion tacite : valeur par défaut de la question 18, retenue par Williams le 2026-09-29 vers 20 h, session -d7), par DM-13 (libération d'une demande signalée sans appel concluant, après trois injoignable ou 45 jours après l'envoi : réponse de Williams à la question 19, même jour) et par DM-43 (tête de liste) ; ce n'est pas un effet défavorable au sens de REQ-SEC-017, l'attribution restant provisoire et réservée, et la confirmation passant par la revue humaine d'un appel. La libération n'est pas non plus un effet défavorable au sens de REQ-SEC-017, par décision de Williams (question 19) : elle ne sanctionne rien, n'ouvre ni Anomalie ni suspension, n'impute rien à personne, et l'apporteur peut redéposer aux règles ordinaires après la carence de DM-13 (arbitrage de -d7 du 2026-09-29), qui ne vise que lui et cette entreprise, sans sanction. Aucun autre effet : aucune Anomalie, aucune entrée dans le score de SEC-14, aucune notification, aucune alerte ; seuls l'état « appel attendu » du badge de UX-P1-05 et, après libération, l'état « Réservation terminée » en sont dérivés côté serveur, jamais la raison, leur nombre ni le clic non retenu ; la notification de libération (DM-13) ne porte ni la raison ni la vérification. La raison « rebond » ne vaut que pour la demande en rebond : la demande née d'une correction est jugée sur sa propre adresse. (3) La rafale de dépôts et les premiers dépôts ne sont PAS des raisons affichées : critères de tri d'une revue humaine seulement (REQ-SEC-017, REQ-SEC-021, question 6 du plan). (4) Pas de double comptage avec le signal « contact générique » de SEC-14. (5) Garde AST et témoins : un témoin positif et un négatif par raison ; une raison lue depuis src/app/(espace)/ → rouge ; une valeur de rythme ajoutée à l'enum → rouge ; une raison posée dans le texte ou la charge de la notification de libération → rouge.",
@@ -14305,6 +14377,10 @@
         ],
         "REQ-JUR-031": [
           "tests/unit/securite/verification-suggeree.spec.ts"
+        ],
+        "REQ-SEC-060": [
+          "tests/unit/securite/verification-suggeree.spec.ts",
+          "tests/integration/verification-suggeree.spec.ts"
         ]
       }
     },
@@ -14339,7 +14415,8 @@
         "REQ-JUR-009",
         "REQ-UX-017",
         "REQ-UX-019",
-        "REQ-DM-008"
+        "REQ-DM-008",
+        "REQ-UX-061"
       ],
       "estimateDays": 1,
       "acceptance": "Source : docs/chantiers/W20-confirmation-par-email.md (décision de Williams du 2026-09-29, session -d7, phase 1). Réalise REQ-UX-061 (Exigence nouvelle proposée au §3 du plan, à inscrire par la passe gardien-spec puis à ajouter à `reqs` ; les HYP-W20 citées ici ne sont pas encore au §2 de docs/DECISIONS.md, elles entreront dans `hyp` par la même passe.). Maquette confirmation-contact.html validée (UX-P1-40). (1) Hors session ; l'ouverture n'écrit rien, les boutons postent (SEC-40). (2) « Oui, nous avons échangé » en au plus 2 interactions depuis l'e-mail ; « Non » en 3, par un second geste explicite affiché en place, sans fenêtre modale. (3) Information de l'article 14 dépliable et lien d'opposition sur la page (JUR-T09). (4) La page ne montre que le nom de l'entreprise et les prénom et nom de l'apporteur. (5) Cinq états : question, merci, déjà répondu, lien inconnu ou expiré (un seul texte, sans oracle), erreur avec reprise. (6) REQ-UX-017 : axe-core sans violation sérieuse, cibles de 48 px, texte de 18 px, 320 px sans défilement horizontal ; aucune ressource tierce chargée. E2E mobile-chrome. Exigence transverse de Williams : fluide, intuitif, moderne, sans friction, mobile d'abord, cinq états nommés.",
@@ -14355,6 +14432,10 @@
         ],
         "REQ-DM-008": [
           "tests/e2e/public/confirmation-contact.spec.ts"
+        ],
+        "REQ-UX-061": [
+          "tests/unit/public/page-de-confirmation.spec.ts",
+          "tests/e2e/public/confirmation-contact.spec.ts"
         ]
       }
     },
@@ -14365,7 +14446,10 @@
         "attribution",
         "espace"
       ],
-      "hyp": [],
+      "hyp": [
+        "HYP-W20-ANNULATION",
+        "HYP-W20-REBOND"
+      ],
       "externe": null,
       "statut": "a_faire",
       "phase": 1,
@@ -14389,7 +14473,8 @@
       "reqs": [
         "REQ-UX-002",
         "REQ-UX-019",
-        "REQ-JUR-039"
+        "REQ-JUR-039",
+        "REQ-UX-060"
       ],
       "estimateDays": 1.25,
       "acceptance": "Source : docs/chantiers/W20-confirmation-par-email.md (décision de Williams du 2026-09-29, session -d7, phase 1). Réalise la part « après le dépôt » de REQ-UX-060 (Exigence nouvelle proposée au §3 du plan, à inscrire par la passe gardien-spec puis à ajouter à `reqs` ; les HYP-W20 citées ici ne sont pas encore au §2 de docs/DECISIONS.md, elles entreront dans `hyp` par la même passe.) ; hypothèses HYP-W20-ANNULATION, HYP-W20-REBOND. (1) Après le dépôt, la carte de l'issue dit à quelle heure l'e-mail partira et propose « Annuler » et « Corriger » jusque-là ; annuler se confirme en place, sans fenêtre modale, en au plus 2 interactions. (2) Annuler → attribution annulee, entreprise libérée, aucune autre conséquence ; corriger ne porte que sur le contact et le contexte (révision tracée). (3) Après l'échéance : « E-mail envoyé », puis « confirmé » à la réponse ; en rebond, un message INFORMATIF propose de corriger l'adresse (REQ-JUR-039 : aucune consigne). (4) Un refus serveur passé l'échéance dit pourquoi, jamais une erreur brute. (5) Cloisonnement : annuler ou corriger le dépôt d'un autre apporteur rend le 404 identique à celui d'un identifiant inexistant (REQ-SEC-009). Cinq états : délai en cours, envoyé, confirmé, rebond, erreur. Exigence transverse de Williams : fluide, intuitif, moderne, sans friction, mobile d'abord, cinq états nommés. (6) Amendée le 2026-09-29 (réponse de Williams à la question 2 et exigence d'expérience, docs/chantiers/W20-confirmation-par-email.md §2, §4 et §9) : passé le délai avant envoi, la carte porte le badge unique de REQ-UX-062 (composant de UX-P1-05). En rebond non corrigé, 🔴 « E-mail non reçu par le contact » et l'action unique « Corriger l'adresse » : la correction est une révision tracée, crée la nouvelle demande (anciens jetons révoqués), l'e-mail repart au passage suivant du job d'INT-T40 sans nouveau délai d'annulation, le délai tacite démarre à sa réception, le badge redevient 🟡 avec sa nouvelle date, et l'apporteur reçoit une notification informative (clé de la table SSOT des notifications, UX-P1-10, faitCourirUnDelai false). Au-delà de CORRECTIONS_ADRESSE_MAX, l'action disparaît et le badge reste 🔴. (7) Correction de sécurité du 2026-09-29 (refus de la lentille securite sur 2340a63, docs/chantiers/W20-confirmation-par-email.md §2, §8 et question 18) : si la demande née de la correction est signalée (nouvelle adresse webmail, par exemple), la carte porte le libellé « En attente de confirmation — Axion-IA va appeler votre contact », sans date. (8) Réponses de Williams du 2026-09-29 vers 20 h (session -d7, questions 18 et 19) : une demande signalée n'est jamais confirmée par le silence et, sans appel concluant, DM-13 la libère (trois injoignable ou 45 jours après l'envoi de la première demande, qu'une correction ne fait pas repartir) ; la carte porte alors le badge ⚪ « Réservation terminée · l'entreprise est de nouveau disponible » du composant de UX-P1-05, sans action : ni « Annuler », ni « Corriger », ni « Corriger l'adresse ». Tests : correction → une seule nouvelle demande et une notification ; demande libérée → badge ⚪ sans action, et une correction tentée après libération est refusée avec sa raison, sans erreur brute ; correction du dépôt d'un autre apporteur → 404 identique.",
@@ -14402,6 +14487,10 @@
         ],
         "REQ-JUR-039": [
           "tests/e2e/espace/annuler-ou-corriger.spec.ts"
+        ],
+        "REQ-UX-060": [
+          "tests/unit/espace/annuler-ou-corriger.spec.ts",
+          "tests/e2e/espace/annuler-ou-corriger.spec.ts"
         ]
       }
     },
@@ -14410,7 +14499,10 @@
       "schema": false,
       "sensible": [],
       "hyp": [
-        "HYP-C1"
+        "HYP-C1",
+        "HYP-W20-TACITE",
+        "HYP-W20-PREMIER-CONTACT",
+        "HYP-W20-IDENTITE-APPORTEUR"
       ],
       "externe": null,
       "statut": "a_faire",
@@ -14451,7 +14543,9 @@
       "sensible": [
         "rgpd"
       ],
-      "hyp": [],
+      "hyp": [
+        "HYP-W20-OPPOSITION"
+      ],
       "externe": null,
       "statut": "a_faire",
       "phase": 1,

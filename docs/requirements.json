@@ -1302,8 +1302,10 @@
       "remplaceePar": null,
       "module": 12,
       "etape": 8,
-      "phase": null,
-      "taches": []
+      "phase": 1,
+      "taches": [
+        "SEC-41"
+      ]
     },
     {
       "id": "REQ-SEC-061",
@@ -1314,8 +1316,10 @@
       "remplaceePar": null,
       "module": 12,
       "etape": 8,
-      "phase": null,
-      "taches": []
+      "phase": 1,
+      "taches": [
+        "SEC-40"
+      ]
     },
     {
       "id": "REQ-ARG-001",
@@ -4865,8 +4869,10 @@
       "remplaceePar": null,
       "module": null,
       "etape": null,
-      "phase": null,
-      "taches": []
+      "phase": 1,
+      "taches": [
+        "INT-T40"
+      ]
     },
     {
       "id": "REQ-CPL-027",
@@ -5148,8 +5154,11 @@
       "remplaceePar": null,
       "module": 9,
       "etape": 7,
-      "phase": null,
-      "taches": []
+      "phase": 1,
+      "taches": [
+        "UX-P1-41",
+        "UX-P1-43"
+      ]
     },
     {
       "id": "REQ-UX-061",
@@ -5160,8 +5169,11 @@
       "remplaceePar": null,
       "module": 12,
       "etape": 8,
-      "phase": null,
-      "taches": []
+      "phase": 1,
+      "taches": [
+        "UX-P1-41",
+        "UX-P1-42"
+      ]
     },
     {
       "id": "REQ-UX-062",
@@ -5172,8 +5184,10 @@
       "remplaceePar": null,
       "module": 12,
       "etape": 8,
-      "phase": null,
-      "taches": []
+      "phase": 1,
+      "taches": [
+        "UX-P1-05"
+      ]
     },
     {
       "id": "REQ-DM-041",
@@ -5276,8 +5290,10 @@
       "remplaceePar": null,
       "module": 12,
       "etape": 8,
-      "phase": null,
-      "taches": []
+      "phase": 1,
+      "taches": [
+        "DM-40"
+      ]
     },
     {
       "id": "REQ-DM-061",
@@ -5288,8 +5304,10 @@
       "remplaceePar": null,
       "module": 12,
       "etape": 8,
-      "phase": null,
-      "taches": []
+      "phase": 1,
+      "taches": [
+        "DM-41"
+      ]
     },
     {
       "id": "REQ-DM-062",
@@ -5300,8 +5318,10 @@
       "remplaceePar": null,
       "module": 12,
       "etape": 8,
-      "phase": null,
-      "taches": []
+      "phase": 1,
+      "taches": [
+        "DM-43"
+      ]
     },
     {
       "id": "REQ-DM-063",
@@ -5312,8 +5332,10 @@
       "remplaceePar": null,
       "module": 12,
       "etape": 8,
-      "phase": null,
-      "taches": []
+      "phase": 1,
+      "taches": [
+        "DM-13"
+      ]
     },
     {
       "id": "REQ-QA-035",
@@ -5999,8 +6021,12 @@
       "remplaceePar": null,
       "module": 12,
       "etape": 8,
-      "phase": null,
-      "taches": []
+      "phase": 1,
+      "taches": [
+        "INT-T40",
+        "JUR-T09",
+        "UX-P1-41"
+      ]
     },
     {
       "id": "REQ-GOV-031",
