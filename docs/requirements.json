@@ -1283,6 +1283,7 @@
       "etape": 7,
       "phase": 1,
       "taches": [
+        "DM-08",
         "DM-30",
         "DM-31",
         "INT-T28",
@@ -5085,18 +5086,28 @@
       "etape": null,
       "phase": 1,
       "taches": [
+        "EXT-T02a",
         "GOV-113",
         "QA-T33",
         "SEC-29",
         "SEC-30",
+        "T-ARG-035",
+        "UX-P1-06",
+        "UX-P1-07",
+        "UX-P1-12",
+        "UX-P1-13",
         "UX-P1-16",
         "UX-P1-18",
         "UX-P1-19",
         "UX-P1-20",
+        "UX-P2-03",
+        "UX-P2-05",
         "UX-P2-10",
         "UX-P2-12",
         "UX-P2-14",
         "UX-P2-15",
+        "UX-P3-04",
+        "UX-P3-05",
         "UX-P3-13"
       ]
     },
@@ -5111,11 +5122,21 @@
       "etape": null,
       "phase": 1,
       "taches": [
+        "EXT-T02a",
         "SEC-29",
         "SEC-30",
+        "T-ARG-035",
+        "UX-P1-06",
+        "UX-P1-07",
+        "UX-P1-12",
+        "UX-P1-13",
         "UX-P1-16",
         "UX-P1-18",
-        "UX-P1-20"
+        "UX-P1-20",
+        "UX-P2-03",
+        "UX-P2-05",
+        "UX-P3-04",
+        "UX-P3-05"
       ]
     },
     {
@@ -5237,6 +5258,7 @@
       "etape": 7,
       "phase": 1,
       "taches": [
+        "DM-07",
         "DM-30",
         "INT-T28",
         "JUR-T31",

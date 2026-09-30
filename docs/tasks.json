@@ -4292,7 +4292,8 @@
       "deps": [
         "CPL-T01",
         "JUR-T01",
-        "JUR-T40"
+        "JUR-T40",
+        "JUR-T31"
       ],
       "reqs": [
         "REQ-GOV-015",
@@ -4300,7 +4301,8 @@
         "REQ-JUR-007"
       ],
       "hyp": [
-        "W11"
+        "W11",
+        "HYP-W19-CONCOURS"
       ],
       "externe": "will",
       "estimateDays": 0,
@@ -4312,7 +4314,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "relecture du gabarit v1 et des décisions « avenant » (C1, C12, D9, D11, D14, horodatage E.1-12, point de départ E.1-9 `fenetreFinAt = confirmeeAt + 12 mois`, sort d'une ligne acquise bloquée pour KYC à 12 mois) reçue et consignée dans `docs/DECISIONS.md` avant INT-T12. 🔴 Complétée le 2026-09-29 (chantier W20, décision de Williams, session -d7, docs/chantiers/W20-confirmation-par-email.md §6). La relecture du gabarit v1 porte aussi l'art. 3.2 amendé par W20 (JUR-T40) : confirmation par le clic du contact en réponse à la demande de la Société OU lors d'une prise de contact de la Société, sauf lorsque la demande fait l'objet d'une vérification, auquel cas seule une prise de contact concluante de la Société vaut confirmation (Correction de sécurité du 2026-09-29 (refus de la lentille securite sur 2340a63, docs/chantiers/W20-confirmation-par-email.md §2, §8 et question 18)). Règle de confirmation tacite TRANCHÉE PAR WILLIAMS le 2026-09-29 (session -d7, question 2 du plan, HYP-W20-TACITE) : au bout de trente jours (CONFIRMATION_TACITE_JOURS) sans réponse du contact et sans appel concluant (Qualification confirme ou non_confirme), l'entreprise reste réservée à l'apporteur, l'attribution est réputée confirmée ; le délai court de la RÉCEPTION de l'e-mail de confirmation, c'est-à-dire d'un envoi sans rebond (recueAt) ; tant que l'e-mail revient en erreur et que l'apporteur n'a pas corrigé l'adresse, le délai NE COMMENCE PAS, et un rebond rattaché après coup retire à l'envoi sa qualité de réception. La confirmation tacite réserve l'entreprise et ne crée aucune commission : aucune commission sans paiement réel. Texte de l'art. 3.2 proposé par JUR-T40 et soumis à cette relecture : « À défaut de réponse de l'entreprise et de prise de contact concluante dans un délai de trente jours à compter de la réception de la demande de confirmation, l'attribution est réputée confirmée, sauf lorsque la demande fait l'objet d'une vérification, auquel cas seule une prise de contact concluante de la Société vaut confirmation. La demande est réputée reçue lorsqu'elle a été envoyée à l'adresse déclarée sans être retournée en erreur ; tant qu'elle revient en erreur et que l'Apporteur n'a pas communiqué une adresse corrigée, ce délai ne court pas. Lorsque la demande fait l'objet d'une vérification et qu'aucune prise de contact concluante n'a eu lieu, l'attribution prend fin après trois tentatives de prise de contact restées sans réponse ou à l'expiration d'un délai de quarante-cinq jours à compter de l'envoi de la demande, selon ce qui survient en premier. Cette fin n'emporte aucune autre conséquence pour l'Apporteur que celle-ci : il ne peut déclarer à nouveau la même entreprise qu'à l'expiration d'un délai de trente jours, porté à quatre-vingt-dix jours lorsque l'attribution de cette entreprise a déjà pris fin une première fois dans les mêmes conditions ; la déclaration de cette entreprise par un autre Apporteur n'en est pas affectée. La confirmation réputée acquise et, pour une demande qui fait l'objet d'une vérification, la fin de l'attribution sont les seules conséquences attachées au silence de l'entreprise. » (texte mis à jour après les réponses de Williams du 2026-09-29 vers 20 h aux questions 18 et 19 du plan, puis l'arbitrage de -d7 sur sa délégation, même jour, pour le délai avant une nouvelle déclaration). Elle porte encore la lecture de la « première prise de contact » de l'art. 3.4 (HYP-W20-PREMIER-CONTACT) et l'information de l'apporteur sur la communication de son nom (HYP-W20-IDENTITE-APPORTEUR).",
+      "acceptance": "relecture du gabarit v1 et des décisions « avenant » (C1, C12, D9, D11, D14, horodatage E.1-12, point de départ E.1-9 `fenetreFinAt = confirmeeAt + 12 mois`, sort d'une ligne acquise bloquée pour KYC à 12 mois) reçue et consignée dans `docs/DECISIONS.md` avant INT-T12. 🔴 Complétée le 2026-09-29 (chantier W20, décision de Williams, session -d7, docs/chantiers/W20-confirmation-par-email.md §6). La relecture du gabarit v1 porte aussi l'art. 3.2 amendé par W20 (JUR-T40) : confirmation par le clic du contact en réponse à la demande de la Société OU lors d'une prise de contact de la Société, sauf lorsque la demande fait l'objet d'une vérification, auquel cas seule une prise de contact concluante de la Société vaut confirmation (Correction de sécurité du 2026-09-29 (refus de la lentille securite sur 2340a63, docs/chantiers/W20-confirmation-par-email.md §2, §8 et question 18)). Règle de confirmation tacite TRANCHÉE PAR WILLIAMS le 2026-09-29 (session -d7, question 2 du plan, HYP-W20-TACITE) : au bout de trente jours (CONFIRMATION_TACITE_JOURS) sans réponse du contact et sans appel concluant (Qualification confirme ou non_confirme), l'entreprise reste réservée à l'apporteur, l'attribution est réputée confirmée ; le délai court de la RÉCEPTION de l'e-mail de confirmation, c'est-à-dire d'un envoi sans rebond (recueAt) ; tant que l'e-mail revient en erreur et que l'apporteur n'a pas corrigé l'adresse, le délai NE COMMENCE PAS, et un rebond rattaché après coup retire à l'envoi sa qualité de réception. La confirmation tacite réserve l'entreprise et ne crée aucune commission : aucune commission sans paiement réel. Texte de l'art. 3.2 proposé par JUR-T40 et soumis à cette relecture : « À défaut de réponse de l'entreprise et de prise de contact concluante dans un délai de trente jours à compter de la réception de la demande de confirmation, l'attribution est réputée confirmée, sauf lorsque la demande fait l'objet d'une vérification, auquel cas seule une prise de contact concluante de la Société vaut confirmation. La demande est réputée reçue lorsqu'elle a été envoyée à l'adresse déclarée sans être retournée en erreur ; tant qu'elle revient en erreur et que l'Apporteur n'a pas communiqué une adresse corrigée, ce délai ne court pas. Lorsque la demande fait l'objet d'une vérification et qu'aucune prise de contact concluante n'a eu lieu, l'attribution prend fin après trois tentatives de prise de contact restées sans réponse ou à l'expiration d'un délai de quarante-cinq jours à compter de l'envoi de la demande, selon ce qui survient en premier. Cette fin n'emporte aucune autre conséquence pour l'Apporteur que celle-ci : il ne peut déclarer à nouveau la même entreprise qu'à l'expiration d'un délai de trente jours, porté à quatre-vingt-dix jours lorsque l'attribution de cette entreprise a déjà pris fin une première fois dans les mêmes conditions ; la déclaration de cette entreprise par un autre Apporteur n'en est pas affectée. La confirmation réputée acquise et, pour une demande qui fait l'objet d'une vérification, la fin de l'attribution sont les seules conséquences attachées au silence de l'entreprise. » (texte mis à jour après les réponses de Williams du 2026-09-29 vers 20 h aux questions 18 et 19 du plan, puis l'arbitrage de -d7 sur sa délégation, même jour, pour le délai avant une nouvelle déclaration). Elle porte encore la lecture de la « première prise de contact » de l'art. 3.4 (HYP-W20-PREMIER-CONTACT) et l'information de l'apporteur sur la communication de son nom (HYP-W20-IDENTITE-APPORTEUR). Contraintes W19 à intégrer (GOV-115, décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §6) : Aucun DocuSeal avant la fusion de JUR-T31 : art. 3.5 amendé et clause de non-exploitation validés par Williams. L'arbitrage de principe est rendu (question 2, 2026-09-29).",
       "tests": {
         "REQ-GOV-015": [
           "decisions-ouvertes.spec.ts"
@@ -4400,11 +4402,15 @@
         "REQ-DM-005",
         "REQ-DM-030",
         "REQ-DM-031",
-        "REQ-SEC-014"
+        "REQ-SEC-014",
+        "REQ-DM-048"
       ],
-      "hyp": [],
+      "hyp": [
+        "HYP-W19-PORTEUR",
+        "HYP-W19-CYCLE"
+      ],
       "externe": null,
-      "estimateDays": 1,
+      "estimateDays": 1.5,
       "statut": "a_faire",
       "owner": null,
       "lot": null,
@@ -4413,7 +4419,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "ELLE ÉCRIT LE SCHÉMA (label `schema`, seule de sa famille dans son lot) ET PORTE TOUTE LA PERSISTANCE DU DÉPÔT (partners/ADR-0022, cadrage de l'architecte du 2026-09-26 sur délégation de Will). (1) Enums `CanalDepot {espace, lien_prive}`, `EtatAdministratif {actif, cesse}` (projection de « A » et « C »), `CategorieEntreprise {pme, eti, ge}`, `MotifRefusDepot` à sept valeurs exactement : `anteriorite_client`, `anteriorite_devis`, `etablissement_cesse`, `entreprise_hors_perimetre`, `file_complete`, `opposition_demarchage`, `insincerite` (REQ-SEC-022). (2) `Attribution` -> `attributions` : `apporteurId`, `statut EtatAttribution`, `rangAttente`, `siren` Char(9), `siret` Char(14) nullable, `grilleCommissionId` NOT NULL vers `grilles_commission` (REQ-DM-014), `canal`, `jetonDepotId` nullable, `deposeeAt` Timestamptz(6) posé par l'horloge de la TRANSACTION serveur, jamais fourni par le client (REQ-DM-005), `clientCapturedAt`, `dateContact` en date calendaire (REQ-JUR-040), `informationTiersVersion` (REQ-JUR-008), `verificationPrioritaire`, `ipHash` Char(16), `agentHash` Char(64) ; l'entreprise telle que rendue par l'API publique (REQ-DM-030, REQ-INT-021) : `raisonSociale`, `natureJuridique`, `codeNaf` (nul en repli, DM-28), `trancheEffectif`, `etatAdministratif`, `categorieEntreprise`, `codePostalChiffre`, `communeSiege`, `departement`, `region`, `latitudeMicrodeg` et `longitudeMicrodeg` en micro-degrés Int (EXT-T08 ; aucun Float, aucun Decimal), `dirigeantsJson` (empreinte et qualité seulement), `entrepriseAVerifier` (REQ-INT-020) ; le contact rencontré (REQ-DM-031), noms de `CHAMPS_PII` : `nomChiffre`, `prenomChiffre`, `nomHash` (type `nom_personne`), `emailChiffre`, `emailHash`, `telephoneChiffre`, `phoneHash`, `fonctionContact`, `contexteChiffre`, `personneDeclareeId` (UX-P1-15), `lienInteretDeclare` et `lienInteretPrecisionChiffre` (REQ-UX-039) ; le temps de la machine (REQ-DM-004, REQ-DM-007, REQ-UX-022) : `aQualifierDepuisAt`, `premierContactAt`, `confirmeeAt`, `fenetreFinAt`, `peremptionAt`, `peremptionSuspendueAt`, `peremptionSuspendueParId`, `peremptionSuspendueJustification`, `fenetreRedeclarationFinAt`, `purgeContactAt`, `contactPurgeAt`, et `versionQualification`, verrou optimiste de la fiche (REQ-CPL-024). Toutes les colonnes connues des phases 0 et 1 sont posées d'un coup, nulles si elles ne sont pas écrites à la naissance. (3) `DepotRefuse` -> `depots_refuses` : `apporteurId`, `siren`, `motif MotifRefusDepot`, `canal`, `refuseAt` — de quoi contester (REQ-DM-043), aucune coordonnée du contact. `PersonneDeclaree` -> `personnes_declarees` (REQ-CPL-029) : `apporteurId`, `nomChiffre`, `prenomChiffre`, `qualite`, `declareeAt`, `retireeAt`. Relations vers `Apporteur`, `GrilleCommission`, `JetonDepot`, `PersonneDeclaree` et `UtilisateurConsole` en `onDelete: Restrict`, écrites en entier. (4) SQL brut : l'index unique partiel occupant `ON attributions (siren) WHERE statut IN (...)` est GÉNÉRÉ depuis `ETATS_OCCUPANTS`, jamais tapé, et vérifié par `pg_indexes` ; `UNIQUE (siren, rang_attente) WHERE statut = 'en_attente'`, `rang_attente IN (1,2)` et `(statut = 'en_attente') = (rang_attente IS NOT NULL)` ; formes du SIREN et du SIRET, `left(siret,9) = siren` (REQ-DM-002), idem pour `depots_refuses.siren` ; forme du code NAF ; latitude entre -90000000 et 90000000, longitude entre -180000000 et 180000000, présentes ensemble ; `lien_interet_precision_chiffre` seulement si `lien_interet_declare` ; les trois colonnes de suspension de péremption présentes ensemble, justification d'au moins 20 caractères utiles ; empreintes hexadécimales. (5) `courriels_envoyes` reçoit `attribution_id` (clé étrangère `Restrict`, index) ; la valeur de journal `attribution_contact_purge` (agrégat `attribution`, charge `{purgeAt}`) entre au schéma et dans `charges.ts`. `CHAMPS_PII` gagne `codePostal`, `contexte` et `lienInteretPrecision` ; `NORMALISATIONS` gagne `nom_personne` et `agent` ; `projection.ts` (INT-T09) calcule l'empreinte des dirigeants par `empreinteRecherche('nom_personne', ...)` — aucune n'est encore stockée. Module du semeur `prisma/seed/10-attributions.ts`. (6) TÉMOIN À DEUX FACES sur la référence de grille (repris de DM-03-P, conflit C14) : une attribution créée sans version de grille est refusée par la base ; une attribution portant une version existante passe."
+      "acceptance": "ELLE ÉCRIT LE SCHÉMA (label `schema`, seule de sa famille dans son lot) ET PORTE TOUTE LA PERSISTANCE DU DÉPÔT (partners/ADR-0022, cadrage de l'architecte du 2026-09-26 sur délégation de Will). (1) Enums `CanalDepot {espace, lien_prive}`, `EtatAdministratif {actif, cesse}` (projection de « A » et « C »), `CategorieEntreprise {pme, eti, ge}`, `MotifRefusDepot` à sept valeurs exactement : `anteriorite_client`, `anteriorite_devis`, `etablissement_cesse`, `entreprise_hors_perimetre`, `file_complete`, `opposition_demarchage`, `insincerite` (REQ-SEC-022). (2) `Attribution` -> `attributions` : `apporteurId`, `statut EtatAttribution`, `rangAttente`, `siren` Char(9), `siret` Char(14) nullable, `grilleCommissionId` NOT NULL vers `grilles_commission` (REQ-DM-014), `canal`, `jetonDepotId` nullable, `deposeeAt` Timestamptz(6) posé par l'horloge de la TRANSACTION serveur, jamais fourni par le client (REQ-DM-005), `clientCapturedAt`, `dateContact` en date calendaire (REQ-JUR-040), `informationTiersVersion` (REQ-JUR-008), `verificationPrioritaire`, `ipHash` Char(16), `agentHash` Char(64) ; l'entreprise telle que rendue par l'API publique (REQ-DM-030, REQ-INT-021) : `raisonSociale`, `natureJuridique`, `codeNaf` (nul en repli, DM-28), `trancheEffectif`, `etatAdministratif`, `categorieEntreprise`, `codePostalChiffre`, `communeSiege`, `departement`, `region`, `latitudeMicrodeg` et `longitudeMicrodeg` en micro-degrés Int (EXT-T08 ; aucun Float, aucun Decimal), `dirigeantsJson` (empreinte et qualité seulement), `entrepriseAVerifier` (REQ-INT-020) ; le contact rencontré (REQ-DM-031), noms de `CHAMPS_PII` : `nomChiffre`, `prenomChiffre`, `nomHash` (type `nom_personne`), `emailChiffre`, `emailHash`, `telephoneChiffre`, `phoneHash`, `fonctionContact`, `contexteChiffre`, `personneDeclareeId` (UX-P1-15), `lienInteretDeclare` et `lienInteretPrecisionChiffre` (REQ-UX-039) ; le temps de la machine (REQ-DM-004, REQ-DM-007, REQ-UX-022) : `aQualifierDepuisAt`, `premierContactAt`, `confirmeeAt`, `fenetreFinAt`, `peremptionAt`, `peremptionSuspendueAt`, `peremptionSuspendueParId`, `peremptionSuspendueJustification`, `fenetreRedeclarationFinAt`, `purgeContactAt`, `contactPurgeAt`, et `versionQualification`, verrou optimiste de la fiche (REQ-CPL-024). Toutes les colonnes connues des phases 0 et 1 sont posées d'un coup, nulles si elles ne sont pas écrites à la naissance. (3) `DepotRefuse` -> `depots_refuses` : `apporteurId`, `siren`, `motif MotifRefusDepot`, `canal`, `refuseAt` — de quoi contester (REQ-DM-043), aucune coordonnée du contact. `PersonneDeclaree` -> `personnes_declarees` (REQ-CPL-029) : `apporteurId`, `nomChiffre`, `prenomChiffre`, `qualite`, `declareeAt`, `retireeAt`. Relations vers `Apporteur`, `GrilleCommission`, `JetonDepot`, `PersonneDeclaree` et `UtilisateurConsole` en `onDelete: Restrict`, écrites en entier. (4) SQL brut : l'index unique partiel occupant `ON attributions (siren) WHERE statut IN (...)` est GÉNÉRÉ depuis `ETATS_OCCUPANTS`, jamais tapé, et vérifié par `pg_indexes` ; `UNIQUE (siren, rang_attente) WHERE statut = 'en_attente'`, `rang_attente IN (1,2)` et `(statut = 'en_attente') = (rang_attente IS NOT NULL)` ; formes du SIREN et du SIRET, `left(siret,9) = siren` (REQ-DM-002), idem pour `depots_refuses.siren` ; forme du code NAF ; latitude entre -90000000 et 90000000, longitude entre -180000000 et 180000000, présentes ensemble ; `lien_interet_precision_chiffre` seulement si `lien_interet_declare` ; les trois colonnes de suspension de péremption présentes ensemble, justification d'au moins 20 caractères utiles ; empreintes hexadécimales. (5) `courriels_envoyes` reçoit `attribution_id` (clé étrangère `Restrict`, index) ; la valeur de journal `attribution_contact_purge` (agrégat `attribution`, charge `{purgeAt}`) entre au schéma et dans `charges.ts`. `CHAMPS_PII` gagne `codePostal`, `contexte` et `lienInteretPrecision` ; `NORMALISATIONS` gagne `nom_personne` et `agent` ; `projection.ts` (INT-T09) calcule l'empreinte des dirigeants par `empreinteRecherche('nom_personne', ...)` — aucune n'est encore stockée. Module du semeur `prisma/seed/10-attributions.ts`. (6) TÉMOIN À DEUX FACES sur la référence de grille (repris de DM-03-P, conflit C14) : une attribution créée sans version de grille est refusée par la base ; une attribution portant une version existante passe. Contraintes W19 à intégrer (GOV-115, décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §6) : (1) `CanalDepot` reçoit `console`. (2) `apporteurId` devient nullable et `utilisateurConsoleId` est ajouté (nullable, FK Restrict, index). Contraintes : CHECK XOR des deux porteurs ; CHECK grille présente si et seulement si le porteur est un apporteur ; CHECK canal `console` si et seulement si le porteur est un conseiller, et alors `jeton_depot_id IS NULL` ; CHECK sur `rang_attente` réservé à l'apporteur ; `peremption_suspendue_at` suit HYP-W19-CYCLE (mêmes délais visibles). (3) DÉCLENCHEUR : `utilisateur_console_id` désigne un utilisateur de rôle `conseiller_salarie` non désactivé ; au moment de DM-07, aucune valeur ne passe tant que SEC-31 n'est pas là. (4) `depots_refuses` et `personnes_declarees` restent réservées aux apporteurs. (5) Témoins : attribution d'apporteur sans grille refusée ; attribution de conseiller avec grille refusée ; porteur de rôle qualifieur refusé ; apporteur puis conseiller sur le même SIREN refusé, et inversement."
     },
     {
       "id": "DM-08",
@@ -4440,10 +4446,13 @@
         "REQ-DM-006",
         "REQ-DM-007",
         "REQ-DM-022",
-        "REQ-QA-004"
+        "REQ-QA-004",
+        "REQ-SEC-042"
       ],
       "hyp": [
-        "HYP-E1-9"
+        "HYP-E1-9",
+        "HYP-W19-CYCLE",
+        "HYP-W19-DEPART"
       ],
       "externe": null,
       "estimateDays": 1.5,
@@ -4455,7 +4464,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "ELLE ÉCRIT LE SCHÉMA (label `schema`, seule de sa famille dans son lot) : seul écrivain légitime de la matrice d'attribution (partners/ADR-0022, cadrage de l'architecte du 2026-09-26 sur délégation de Will). Le comportement de la machine est celui de ses exigences ; ce qui suit est ce qu'elle écrit au schéma. (1) Elle ajoute à `TypeEvenementJournal` deux valeurs par `ALTER TYPE type_evenement_journal ADD VALUE`, jamais employées dans la même migration : `attribution_etat_modifie` (agrégat `attribution`, charge fermée `{de: EtatAttribution | null, vers, evenement: z.enum(EVENEMENTS_ATTRIBUTION), acteurId?: uuid, lienInteret?: 'declare' | 'non_declare'}`) et `attribution_peremption_suspendue` (`{acteurId: uuid, suspendueAt}`). (2) UN TYPE PAR GENRE DE TRANSITION, PAS PAR TRANSITION : `EVENEMENTS_ATTRIBUTION` est exporté de `machine.ts` et lu par la charge ; ajouter un événement à la matrice modifie une charge Zod dans `charges.ts`, jamais le schéma. (3) La charge reste fermée (REQ-DM-041) : un booléen s'y écrit `z.enum(['oui','non'])`, aucune chaîne libre. 🔴 Complétée le 2026-09-29 (chantier W20, décision de Williams, session -d7, docs/chantiers/W20-confirmation-par-email.md §6). (4) La matrice gagne trois transitions W20, par genre et non par transition : provisoire → annulee (annulation par l'apporteur pendant le délai avant envoi, HYP-W20-ANNULATION), provisoire → active (clic « Oui » retenu, source courriel, HYP-W20-SOURCE), provisoire → invalidee (« Non » confirmé en second geste, valeur non_confirme, HYP-W20-NON). Une annulation après l'échéance est une transition absente de la matrice : erreur typée, rien n'est écrit (REQ-DM-006)."
+      "acceptance": "ELLE ÉCRIT LE SCHÉMA (label `schema`, seule de sa famille dans son lot) : seul écrivain légitime de la matrice d'attribution (partners/ADR-0022, cadrage de l'architecte du 2026-09-26 sur délégation de Will). Le comportement de la machine est celui de ses exigences ; ce qui suit est ce qu'elle écrit au schéma. (1) Elle ajoute à `TypeEvenementJournal` deux valeurs par `ALTER TYPE type_evenement_journal ADD VALUE`, jamais employées dans la même migration : `attribution_etat_modifie` (agrégat `attribution`, charge fermée `{de: EtatAttribution | null, vers, evenement: z.enum(EVENEMENTS_ATTRIBUTION), acteurId?: uuid, lienInteret?: 'declare' | 'non_declare'}`) et `attribution_peremption_suspendue` (`{acteurId: uuid, suspendueAt}`). (2) UN TYPE PAR GENRE DE TRANSITION, PAS PAR TRANSITION : `EVENEMENTS_ATTRIBUTION` est exporté de `machine.ts` et lu par la charge ; ajouter un événement à la matrice modifie une charge Zod dans `charges.ts`, jamais le schéma. (3) La charge reste fermée (REQ-DM-041) : un booléen s'y écrit `z.enum(['oui','non'])`, aucune chaîne libre. 🔴 Complétée le 2026-09-29 (chantier W20, décision de Williams, session -d7, docs/chantiers/W20-confirmation-par-email.md §6). (4) La matrice gagne trois transitions W20, par genre et non par transition : provisoire → annulee (annulation par l'apporteur pendant le délai avant envoi, HYP-W20-ANNULATION), provisoire → active (clic « Oui » retenu, source courriel, HYP-W20-SOURCE), provisoire → invalidee (« Non » confirmé en second geste, valeur non_confirme, HYP-W20-NON). Une annulation après l'échéance est une transition absente de la matrice : erreur typée, rien n'est écrit (REQ-DM-006). Contraintes W19 à intégrer (GOV-115, décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §6) : (1) Entrée dérivée « type de porteur ». (2) Événement de naissance `prise_en_charge_par_la_societe`. Vu de l'espace et de l'API 1, l'état suit la même chronologie qu'un dépôt d'apporteur (question 2, HYP-W19-CYCLE) : même état d'entrée, passage à `active` au même délai que la confirmation d'un dépôt, par l'horloge serveur et sans qualifieur. (3) Refus typé, pour un conseiller, de : confirmation tacite par un apporteur, `non_confirme`, gel, `figee_resiliation`, rang, contestation ; aucun de ces refus ne se voit de l'espace. (4) Prolongation W9 identique à celle de l'apporteur. (5) Événement `porteur_reaffecte {de, vers, acteurId, motif}`, de conseiller à conseiller seulement. (6) Désactivation : les prises en charge sans suite passent `perimee` sous 15 jours. (7) Test exhaustif des triplets (état, événement, type de porteur), et test : à chaque stade, l'état visible d'une prise en charge égale celui d'un dépôt d'apporteur aux mêmes dates. Les 13 valeurs d'`EtatAttribution` sont inchangées."
     },
     {
       "id": "DM-24",
@@ -4497,7 +4506,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "job de confirmation tacite, horloge injectée, qui promeut en `active` toute `provisoire` dont la demande de confirmation a été **reçue** depuis plus de `CONFIRMATION_TACITE_JOURS` (30) **sans confirmation ni `non_confirme`, par appel ou par courriel** — y compris `injoignable` et `ne_se_souvient_pas` —, écrit l'événement `attribution_etat_modifie` avec `evenement: 'confirmee_tacitement'` **dans la même transaction** (un type de journal par genre de transition, partners/ADR-0022, REQ-DM-042 amendée au §3.2 du plan W20, à inscrire par la passe gardien-spec) et fait courir `fenetreFinAt` à compter de cette date ; c'est la **seule** conséquence attachée au silence de l'entreprise pour une demande non signalée ; pour une demande signalée, c'est la libération de DM-13 (question 19). 🔴 Complétée le 2026-09-29 (chantier W20, décision de Williams, session -d7, docs/chantiers/W20-confirmation-par-email.md §6), puis amendée le 2026-09-29 (réponse de Williams à la question 2 et exigence d'expérience, docs/chantiers/W20-confirmation-par-email.md §2, §4 et §9). Un clic « Oui » retenu ou un « Non » confirmé (DM-41) empêchent la promotion comme une Qualification. Règle de confirmation tacite TRANCHÉE PAR WILLIAMS le 2026-09-29 (session -d7, question 2 du plan, HYP-W20-TACITE) : au bout de trente jours (CONFIRMATION_TACITE_JOURS) sans réponse du contact et sans appel concluant (Qualification confirme ou non_confirme), l'entreprise reste réservée à l'apporteur, l'attribution est réputée confirmée ; le délai court de la RÉCEPTION de l'e-mail de confirmation, c'est-à-dire d'un envoi sans rebond (recueAt) ; tant que l'e-mail revient en erreur et que l'apporteur n'a pas corrigé l'adresse, le délai NE COMMENCE PAS, et un rebond rattaché après coup retire à l'envoi sa qualité de réception. La confirmation tacite réserve l'entreprise et ne crée aucune commission : aucune commission sans paiement réel. (a) Le job lit la demande de confirmation (DM-40) : l'échéance est recueAt + CONFIRMATION_TACITE_JOURS, et non plus l'enregistrement du dépôt ; aucune échéance tant que la demande est planifiée, retenue ou en rebond non corrigé ; après correction de l'adresse, l'échéance part du nouvel envoi sans rebond. (b) La bascule a lieu le jour qu'affiche le badge de REQ-UX-062 (UX-P1-05) : passage « tout ce qui est dû à l'instant t » (REQ-QA-027), et non plus un passage quotidien unique, pour qu'une échéance à 23 h 59 soit promue le jour dit. (c) Tests frontière, horloge figée : réception à J, échéance moins une minute aucune promotion, échéance une seule ; rebond à J+1 non corrigé, J+90 aucune promotion (la demande en rebond porte la raison « rebond », elle est signalée et DM-13 la libère 45 jours après l'envoi) ; correction à J+10 puis envoi sans rebond, promotion à J+40 et pas avant ; clic « Oui » ou appel confirme avant l'échéance, aucune promotion tacite ; deux passages, un seul événement. Pour une demande non signalée, le job reste la seule conséquence du silence. (d) Correction de sécurité du 2026-09-29 (refus de la lentille securite sur 2340a63, docs/chantiers/W20-confirmation-par-email.md §2, §8 et question 18) : une demande SIGNALÉE (qui porte une raison de vérification de SEC-41 à l'échéance) n'est JAMAIS promue par le seul silence ; elle reste provisoire jusqu'à un appel concluant (confirme la confirme, non_confirme l'invalide), puis suit le régime ordinaire, péremption comprise. TRANCHÉ PAR WILLIAMS le 2026-09-29 vers 20 h (session -d7, question 18) : la valeur par défaut est retenue, aucune confirmation tacite d'une demande signalée. Sans appel concluant, la demande signalée n'est pas promue mais LIBÉRÉE par DM-13 (question 19, tranchée le même jour : trois appels injoignable ou 45 jours après l'envoi, au premier terme, sans sanction) ; DM-24 et DM-13 lisent le même prédicat « demande signalée » de SEC-41 (dépendance ajoutée le 2026-09-29), et aucun des deux n'en recopie la règle. Témoins : demande signalée et silencieuse, J+30 aucune promotion, et à J+45 aucune promotion (la libération de DM-13 a lieu, pas une confirmation) ; demande signalée puis appel confirme à J+35, active à J+35 ; une mutation qui promeut une demande signalée rougit. REQ-DM-042 amendée s'écrit par GOV-112 (dépendance)."
+      "acceptance": "job de confirmation tacite, horloge injectée, qui promeut en `active` toute `provisoire` dont la demande de confirmation a été **reçue** depuis plus de `CONFIRMATION_TACITE_JOURS` (30) **sans confirmation ni `non_confirme`, par appel ou par courriel** — y compris `injoignable` et `ne_se_souvient_pas` —, écrit l'événement `attribution_etat_modifie` avec `evenement: 'confirmee_tacitement'` **dans la même transaction** (un type de journal par genre de transition, partners/ADR-0022, REQ-DM-042 amendée au §3.2 du plan W20, à inscrire par la passe gardien-spec) et fait courir `fenetreFinAt` à compter de cette date ; c'est la **seule** conséquence attachée au silence de l'entreprise pour une demande non signalée ; pour une demande signalée, c'est la libération de DM-13 (question 19). 🔴 Complétée le 2026-09-29 (chantier W20, décision de Williams, session -d7, docs/chantiers/W20-confirmation-par-email.md §6), puis amendée le 2026-09-29 (réponse de Williams à la question 2 et exigence d'expérience, docs/chantiers/W20-confirmation-par-email.md §2, §4 et §9). Un clic « Oui » retenu ou un « Non » confirmé (DM-41) empêchent la promotion comme une Qualification. Règle de confirmation tacite TRANCHÉE PAR WILLIAMS le 2026-09-29 (session -d7, question 2 du plan, HYP-W20-TACITE) : au bout de trente jours (CONFIRMATION_TACITE_JOURS) sans réponse du contact et sans appel concluant (Qualification confirme ou non_confirme), l'entreprise reste réservée à l'apporteur, l'attribution est réputée confirmée ; le délai court de la RÉCEPTION de l'e-mail de confirmation, c'est-à-dire d'un envoi sans rebond (recueAt) ; tant que l'e-mail revient en erreur et que l'apporteur n'a pas corrigé l'adresse, le délai NE COMMENCE PAS, et un rebond rattaché après coup retire à l'envoi sa qualité de réception. La confirmation tacite réserve l'entreprise et ne crée aucune commission : aucune commission sans paiement réel. (a) Le job lit la demande de confirmation (DM-40) : l'échéance est recueAt + CONFIRMATION_TACITE_JOURS, et non plus l'enregistrement du dépôt ; aucune échéance tant que la demande est planifiée, retenue ou en rebond non corrigé ; après correction de l'adresse, l'échéance part du nouvel envoi sans rebond. (b) La bascule a lieu le jour qu'affiche le badge de REQ-UX-062 (UX-P1-05) : passage « tout ce qui est dû à l'instant t » (REQ-QA-027), et non plus un passage quotidien unique, pour qu'une échéance à 23 h 59 soit promue le jour dit. (c) Tests frontière, horloge figée : réception à J, échéance moins une minute aucune promotion, échéance une seule ; rebond à J+1 non corrigé, J+90 aucune promotion (la demande en rebond porte la raison « rebond », elle est signalée et DM-13 la libère 45 jours après l'envoi) ; correction à J+10 puis envoi sans rebond, promotion à J+40 et pas avant ; clic « Oui » ou appel confirme avant l'échéance, aucune promotion tacite ; deux passages, un seul événement. Pour une demande non signalée, le job reste la seule conséquence du silence. (d) Correction de sécurité du 2026-09-29 (refus de la lentille securite sur 2340a63, docs/chantiers/W20-confirmation-par-email.md §2, §8 et question 18) : une demande SIGNALÉE (qui porte une raison de vérification de SEC-41 à l'échéance) n'est JAMAIS promue par le seul silence ; elle reste provisoire jusqu'à un appel concluant (confirme la confirme, non_confirme l'invalide), puis suit le régime ordinaire, péremption comprise. TRANCHÉ PAR WILLIAMS le 2026-09-29 vers 20 h (session -d7, question 18) : la valeur par défaut est retenue, aucune confirmation tacite d'une demande signalée. Sans appel concluant, la demande signalée n'est pas promue mais LIBÉRÉE par DM-13 (question 19, tranchée le même jour : trois appels injoignable ou 45 jours après l'envoi, au premier terme, sans sanction) ; DM-24 et DM-13 lisent le même prédicat « demande signalée » de SEC-41 (dépendance ajoutée le 2026-09-29), et aucun des deux n'en recopie la règle. Témoins : demande signalée et silencieuse, J+30 aucune promotion, et à J+45 aucune promotion (la libération de DM-13 a lieu, pas une confirmation) ; demande signalée puis appel confirme à J+35, active à J+35 ; une mutation qui promeut une demande signalée rougit. REQ-DM-042 amendée s'écrit par GOV-112 (dépendance). Contraintes W19 à intégrer (GOV-115, décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §6) : ne sélectionne jamais un porteur conseiller (témoin à deux faces)."
     },
     {
       "id": "DM-25",
@@ -4538,7 +4547,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "un job quotidien rapproche les nouvelles lignes d'`EntrepriseConnue` des attributions occupantes ; en cas d'antériorité établie après coup, l'attribution passe `annulee` (événement écrit), l'apporteur est **informé avec le motif**, **aucune commission nouvelle n'est due** et **les commissions déjà acquises restent acquises** (aucune reprise, aucun `dechue` — REQ-JUR-007) ; **tout refus de dépôt et toute annulation sont contestables par écrit**, la contestation ouvre une entrée console et la Société **répond de façon motivée dans `REPONSE_CONTESTATION_JOURS` (15 j)**, réponse journalisée."
+      "acceptance": "un job quotidien rapproche les nouvelles lignes d'`EntrepriseConnue` des attributions occupantes ; en cas d'antériorité établie après coup, l'attribution passe `annulee` (événement écrit), l'apporteur est **informé avec le motif**, **aucune commission nouvelle n'est due** et **les commissions déjà acquises restent acquises** (aucune reprise, aucun `dechue` — REQ-JUR-007) ; **tout refus de dépôt et toute annulation sont contestables par écrit**, la contestation ouvre une entrée console et la Société **répond de façon motivée dans `REPONSE_CONTESTATION_JOURS` (15 j)**, réponse journalisée. Contraintes W19 à intégrer (GOV-115, décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §6) : L'annulation n'a lieu que si `connueDepuisAt < deposeeAt` (témoin : un devis postérieur n'annule rien). Pour un porteur conseiller, information en console seulement."
     },
     {
       "id": "INT-T07-P",
@@ -4573,7 +4582,8 @@
       "pr": null,
       "issue": null,
       "attempts": 0,
-      "motif": null
+      "motif": null,
+      "acceptance": "Contraintes W19 à intégrer (GOV-115, décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §6) : une attribution de conseiller répond comme une attribution d'apporteur au même stade : `attribuee`, `until`, `apporteurRef` opaque de même forme (question 2 : même réponse de l'API 1). Test de forme refusant tout champ de plus, et test d'indistinction repris par QA-T31. Aucune commission d'apporteur n'est déduite de l'API 1 côté axion-ia : la chaîne d'argent de Partners aiguille par porteur réel (REQ-DM-021). Le déplacement vers `packages/contracts/` est RETIRÉ du chantier : il imposerait `schema: true` et une copie à hash identique côté axion-ia, non chiffrées. AVENANT A01 du 2026-09-30 (condition de la lentille securite sur #297, QA-T52) : l'API entrante GET /attributions exige x-axionia-kid depuis QA-T52, mais contracts.v2 ne le déclare que sur les webhooks et la réponse de coordonnées (INT-T42). AVANT le premier client axion-ia de cette API (INT-T07-A), le contrat déclare x-axionia-kid pour GET /attributions, dérivé par kidDe(AXIONIA_API_TOKEN) ; sinon l'API refuse chaque appel (panne fermée). Témoin : un appel sans kid est refusé en le nommant, un appel au kid du jeton courant passe."
     },
     {
       "id": "INT-T07-A",
@@ -4764,7 +4774,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "Contraintes W20 à intégrer (chantier W20, décision de Williams du 2026-09-29, session -d7, docs/chantiers/W20-confirmation-par-email.md §6) : (1) Contrôle SERVEUR des quatre coordonnées du contact (nom et prénom, fonction, e-mail, téléphone) : absentes ou mal formées → refus nommé par champ, jamais silencieux ; une adresse webmail ou générique est ACCEPTÉE (HYP-W20-DESTINATAIRE). (2) Le texte de la case de REQ-JUR-008 devient « Cette personne sait qu'Axion-IA va la contacter. » (e-mail et téléphone), sa version est enregistrée. (3) Le dépôt crée sa demande de confirmation dans la même transaction (DM-40) ; « Vérifier une entreprise » n'en crée jamais. (4) Contexte borné par la SSOT, rendu en texte brut partout (HYP-W20-CONTEXTE)."
+      "acceptance": "Contraintes W20 à intégrer (chantier W20, décision de Williams du 2026-09-29, session -d7, docs/chantiers/W20-confirmation-par-email.md §6) : (1) Contrôle SERVEUR des quatre coordonnées du contact (nom et prénom, fonction, e-mail, téléphone) : absentes ou mal formées → refus nommé par champ, jamais silencieux ; une adresse webmail ou générique est ACCEPTÉE (HYP-W20-DESTINATAIRE). (2) Le texte de la case de REQ-JUR-008 devient « Cette personne sait qu'Axion-IA va la contacter. » (e-mail et téléphone), sa version est enregistrée. (3) Le dépôt crée sa demande de confirmation dans la même transaction (DM-40) ; « Vérifier une entreprise » n'en crée jamais. (4) Contexte borné par la SSOT, rendu en texte brut partout (HYP-W20-CONTEXTE). Contraintes W19 à intégrer (GOV-115, décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §6) : la file est réservée aux apporteurs, et elle se forme derrière une prise en charge comme derrière un apporteur ; le verrou de limite vaut par porteur (`apporteurId`, ou `utilisateurConsoleId` pour DM-30) ; le verrou SIREN est commun ; la transaction est exposée comme une fonction réutilisable ; l'issue d'un dépôt sur une prise en charge est celle d'une occupation par un apporteur ; jamais de valeur `anteriorite_suivi` (question 2)."
     },
     {
       "id": "DM-09",
@@ -4810,7 +4820,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "le seuil prioritaire est lu depuis `seuilPrioritaire()` de CPL-T13 (règle D3 : `min(palierConfiance, capaciteRestante)`, surcharge manuelle > 0 remplace le min), jamais recalculé ici ; **aucun compteur de gradation, aucun rang, aucun délai de « contradictoire »** (décision du 2026-09-03) — une déclaration `non_confirme` suspend, c'est SEC-15 qui porte la suspension. 🔴 **Complétée le 2026-09-03 (synthèse A-3 et M-7) : les QUATRE résultats de contact n'ont pas les mêmes effets.** Seul `non_confirme` — le représentant indique **expressément** n'avoir eu aucun échange — éteint l'attribution et ouvre l'article 3.7 ; `injoignable`, `ne_se_souvient_pas`, le changement d'interlocuteur et le refus de répondre **maintiennent l'attribution `provisoire`** et ne sont imputables à personne : aucune suspension, aucun signal défavorable, aucune invalidation. La Qualification **journalise la date, la personne interrogée et les termes** de la réponse, et l'extrait en est communiqué à l'apporteur sur sa demande (route cloisonnée). `premierContactAt` est posé ici et c'est lui qui démarre le chrono de péremption (DM-13). 🔴 **Complétée le 2026-09-25 (cadrage de DM-06, GOV-099).** DM-09 porte le TÉMOIN de REQ-DM-010 retiré de DM-06 : un dépôt au-delà du seuil de vérification prioritaire est ACCEPTÉ, horodaté et porte `verificationPrioritaire = true` ; le test vérifie l'acceptation, pas seulement le drapeau, et un témoin qui refuserait ce dépôt le fait rougir. 🔴 **Complétée le 2026-09-26 (cadrage de l'architecte sur délégation de Will, partners/ADR-0022, GOV-102).** ELLE ÉCRIT LE SCHÉMA (label `schema`, seule de sa famille dans son lot) : enums `InteretContact {eleve, moyen, faible, nul}`, `ProchaineEtape {rdv, rappeler, proposition, perdue, aucune}` et `MotifPerte {pas_de_besoin, deja_equipe, hors_cible, injoignable_definitif, autre}` — valeurs décidées sous `HYP-A02-VOCABULAIRE-QUALIFICATION`, aucune n'est `non_confirme` (une déclaration `non_confirme` mène à `invalidee`, REQ-UX-021 amendée) — avec `ResultatContact`. `Qualification` -> `qualifications`, APPEND-ONLY (REQ-DM-008) : `attributionId`, `resultatContact`, `interet` nullable, `prochaineEtape`, `motifPerte` nullable, `rdvAt`, `rappelerAt`, `personneInterrogeeChiffre` et `termesReponseChiffre` (données d'un tiers, chiffrées, purgées avec le contact, REQ-DM-031), `auteurId` vers `utilisateurs_console`, `creeAt` posé par la base en Timestamptz(6). CHECK : `(prochaine_etape = 'perdue') = (motif_perte IS NOT NULL)`, `rdv_at` exigé pour `rdv`, `rappeler_at` exigé pour `rappeler` ; déclencheur append-only dont la seule exception est la remise à NULL des deux colonnes chiffrées par la purge, toute autre colonne inchangée. `CHAMPS_PII` gagne `personneInterrogee` et `termesReponse`. Le compteur de tentatives « injoignable » est DÉRIVÉ du compte des qualifications, jamais stocké. Module du semeur `prisma/seed/11-qualifications.ts`. 🔴 Complétée le 2026-09-29 (chantier W20, décision de Williams, session -d7, docs/chantiers/W20-confirmation-par-email.md §6). La Qualification reste append-only et ne décrit que l'appel ; une confirmation par clic du contact (DM-41) compte pour la dérivation du palier exactement comme une Qualification confirme, et un « Non » confirmé comme un non_confirme. Aucune Qualification n'est fabriquée pour un clic : la source de la confirmation se lit sur la demande de confirmation (DM-40).",
+      "acceptance": "le seuil prioritaire est lu depuis `seuilPrioritaire()` de CPL-T13 (règle D3 : `min(palierConfiance, capaciteRestante)`, surcharge manuelle > 0 remplace le min), jamais recalculé ici ; **aucun compteur de gradation, aucun rang, aucun délai de « contradictoire »** (décision du 2026-09-03) — une déclaration `non_confirme` suspend, c'est SEC-15 qui porte la suspension. 🔴 **Complétée le 2026-09-03 (synthèse A-3 et M-7) : les QUATRE résultats de contact n'ont pas les mêmes effets.** Seul `non_confirme` — le représentant indique **expressément** n'avoir eu aucun échange — éteint l'attribution et ouvre l'article 3.7 ; `injoignable`, `ne_se_souvient_pas`, le changement d'interlocuteur et le refus de répondre **maintiennent l'attribution `provisoire`** et ne sont imputables à personne : aucune suspension, aucun signal défavorable, aucune invalidation. La Qualification **journalise la date, la personne interrogée et les termes** de la réponse, et l'extrait en est communiqué à l'apporteur sur sa demande (route cloisonnée). `premierContactAt` est posé ici et c'est lui qui démarre le chrono de péremption (DM-13). 🔴 **Complétée le 2026-09-25 (cadrage de DM-06, GOV-099).** DM-09 porte le TÉMOIN de REQ-DM-010 retiré de DM-06 : un dépôt au-delà du seuil de vérification prioritaire est ACCEPTÉ, horodaté et porte `verificationPrioritaire = true` ; le test vérifie l'acceptation, pas seulement le drapeau, et un témoin qui refuserait ce dépôt le fait rougir. 🔴 **Complétée le 2026-09-26 (cadrage de l'architecte sur délégation de Will, partners/ADR-0022, GOV-102).** ELLE ÉCRIT LE SCHÉMA (label `schema`, seule de sa famille dans son lot) : enums `InteretContact {eleve, moyen, faible, nul}`, `ProchaineEtape {rdv, rappeler, proposition, perdue, aucune}` et `MotifPerte {pas_de_besoin, deja_equipe, hors_cible, injoignable_definitif, autre}` — valeurs décidées sous `HYP-A02-VOCABULAIRE-QUALIFICATION`, aucune n'est `non_confirme` (une déclaration `non_confirme` mène à `invalidee`, REQ-UX-021 amendée) — avec `ResultatContact`. `Qualification` -> `qualifications`, APPEND-ONLY (REQ-DM-008) : `attributionId`, `resultatContact`, `interet` nullable, `prochaineEtape`, `motifPerte` nullable, `rdvAt`, `rappelerAt`, `personneInterrogeeChiffre` et `termesReponseChiffre` (données d'un tiers, chiffrées, purgées avec le contact, REQ-DM-031), `auteurId` vers `utilisateurs_console`, `creeAt` posé par la base en Timestamptz(6). CHECK : `(prochaine_etape = 'perdue') = (motif_perte IS NOT NULL)`, `rdv_at` exigé pour `rdv`, `rappeler_at` exigé pour `rappeler` ; déclencheur append-only dont la seule exception est la remise à NULL des deux colonnes chiffrées par la purge, toute autre colonne inchangée. `CHAMPS_PII` gagne `personneInterrogee` et `termesReponse`. Le compteur de tentatives « injoignable » est DÉRIVÉ du compte des qualifications, jamais stocké. Module du semeur `prisma/seed/11-qualifications.ts`. 🔴 Complétée le 2026-09-29 (chantier W20, décision de Williams, session -d7, docs/chantiers/W20-confirmation-par-email.md §6). La Qualification reste append-only et ne décrit que l'appel ; une confirmation par clic du contact (DM-41) compte pour la dérivation du palier exactement comme une Qualification confirme, et un « Non » confirmé comme un non_confirme. Aucune Qualification n'est fabriquée pour un clic : la source de la confirmation se lit sur la demande de confirmation (DM-40). Contraintes W19 à intégrer (GOV-115, décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §6) : palier, taux et `verificationPrioritaire` se dérivent des seules qualifications d'apporteurs (témoin de volume).",
       "tests": {
         "REQ-DM-010": [
           "tests/unit/domaine/depot-au-dela-du-seuil.spec.ts"
@@ -4952,7 +4962,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "ELLE ÉCRIT LE SCHÉMA (label `schema`, seule de sa famille dans son lot). Cadrage de l'architecte du 2026-09-26 sur délégation de Will (partners/ADR-0022) : ce que la tâche crée ; le comportement est celui de ses exigences. (1) Enums `TypeAnomalie {sincerite, appareil_inconnu, ramassage, auto_parrainage}` — aucune valeur de rythme (REQ-SEC-017, REQ-JUR-031, REQ-SEC-021 amendée) — et `ObjetContestation {refus_depot, annulation_attribution, demande_rattachement}`, avec `ResultatVerification` et `StatutAnomalie`. (2) `Verification` -> `verifications` (REQ-DM-032, REQ-SEC-021), append-only : `apporteurId`, `siren`, `resultat`, `ipHash` Char(16), `verifieeAt` ; le plafond de vérifications est un compte, jamais une colonne. `AlerteLiberation` -> `alertes_liberation` : `apporteurId`, `siren`, `creeAt`, `envoyeeAt`, unique tant que non envoyée (`WHERE envoyee_at IS NULL`). `Anomalie` -> `anomalies` (REQ-DM-033) : `type`, `score` (présent si et seulement si `sincerite`), `apporteurId`, `attributionId`, `statut`, `ouverteAt`, `traiteParId`, `traiteAt`, `justification` ; CHECK `(statut = 'ouverte') = (traite_at IS NULL)` et `(traite_at IS NULL) = (traite_par_id IS NULL)`. `RattachementManuel` -> `rattachements_manuels` (REQ-DM-034) : `attributionId`, `sirenCommande`, `justification` d'au moins 20 caractères utiles (renommée de `motif` : un texte libre ne porte jamais un nom de vocabulaire), `lienControleEtabliAt`, `lienControleSource` non vide, `decideParId`, `decideAt`, `revoqueAt` ; `UNIQUE (siren_commande) WHERE revoque_at IS NULL` ; le déclencheur `rattachement_lien_anterieur` refuse `lien_controle_etabli_at > attributions.deposee_at`. `Contestation` -> `contestations` (REQ-DM-043, et la DEMANDE de rattachement de REQ-DM-034) : `apporteurId`, `objet`, `depotRefuseId` (si et seulement si `refus_depot`, `attributionId` sinon), `texteChiffre`, `recueAt`, `reponseChiffre`, `repondueParId`, `repondueAt` (réponse présente ensemble) ; l'échéance de réponse est `recueAt` plus la durée SSOT, jamais stockée. (3) Journal : `anomalie_statut_modifie` et `contestation_modifiee` (agrégat `apporteur`, charge `{anomalieId | contestationId, de?, vers, acteurId?}`), `rattachement_manuel_modifie` (agrégat `attribution`, `{rattachementId, vers: 'decide' | 'revoque', acteurId}`). `CHAMPS_PII` gagne `texte` et `reponse`. Module du semeur `prisma/seed/12-console-cas.ts`."
+      "acceptance": "ELLE ÉCRIT LE SCHÉMA (label `schema`, seule de sa famille dans son lot). Cadrage de l'architecte du 2026-09-26 sur délégation de Will (partners/ADR-0022) : ce que la tâche crée ; le comportement est celui de ses exigences. (1) Enums `TypeAnomalie {sincerite, appareil_inconnu, ramassage, auto_parrainage}` — aucune valeur de rythme (REQ-SEC-017, REQ-JUR-031, REQ-SEC-021 amendée) — et `ObjetContestation {refus_depot, annulation_attribution, demande_rattachement}`, avec `ResultatVerification` et `StatutAnomalie`. (2) `Verification` -> `verifications` (REQ-DM-032, REQ-SEC-021), append-only : `apporteurId`, `siren`, `resultat`, `ipHash` Char(16), `verifieeAt` ; le plafond de vérifications est un compte, jamais une colonne. `AlerteLiberation` -> `alertes_liberation` : `apporteurId`, `siren`, `creeAt`, `envoyeeAt`, unique tant que non envoyée (`WHERE envoyee_at IS NULL`). `Anomalie` -> `anomalies` (REQ-DM-033) : `type`, `score` (présent si et seulement si `sincerite`), `apporteurId`, `attributionId`, `statut`, `ouverteAt`, `traiteParId`, `traiteAt`, `justification` ; CHECK `(statut = 'ouverte') = (traite_at IS NULL)` et `(traite_at IS NULL) = (traite_par_id IS NULL)`. `RattachementManuel` -> `rattachements_manuels` (REQ-DM-034) : `attributionId`, `sirenCommande`, `justification` d'au moins 20 caractères utiles (renommée de `motif` : un texte libre ne porte jamais un nom de vocabulaire), `lienControleEtabliAt`, `lienControleSource` non vide, `decideParId`, `decideAt`, `revoqueAt` ; `UNIQUE (siren_commande) WHERE revoque_at IS NULL` ; le déclencheur `rattachement_lien_anterieur` refuse `lien_controle_etabli_at > attributions.deposee_at`. `Contestation` -> `contestations` (REQ-DM-043, et la DEMANDE de rattachement de REQ-DM-034) : `apporteurId`, `objet`, `depotRefuseId` (si et seulement si `refus_depot`, `attributionId` sinon), `texteChiffre`, `recueAt`, `reponseChiffre`, `repondueParId`, `repondueAt` (réponse présente ensemble) ; l'échéance de réponse est `recueAt` plus la durée SSOT, jamais stockée. (3) Journal : `anomalie_statut_modifie` et `contestation_modifiee` (agrégat `apporteur`, charge `{anomalieId | contestationId, de?, vers, acteurId?}`), `rattachement_manuel_modifie` (agrégat `attribution`, `{rattachementId, vers: 'decide' | 'revoque', acteurId}`). `CHAMPS_PII` gagne `texte` et `reponse`. Module du semeur `prisma/seed/12-console-cas.ts`. Contraintes W19 à intégrer (GOV-115, décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §6) : Sans changer l'estimation. `verifications` reçoit le porteur XOR. `decide_par_id`, `traite_par_id` et `repondue_par_id` ne désignent jamais un conseiller : DÉCLENCHEUR, et non une assertion de test."
     },
     {
       "id": "DM-13",
@@ -4997,7 +5007,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "Contraintes W20 à intégrer (chantier W20, décision de Williams du 2026-09-29, session -d7, docs/chantiers/W20-confirmation-par-email.md §6) : (1) La péremption court de premierContactAt, posé par la PREMIÈRE RÉPONSE du contact (clic ou appel qui l'a joint), jamais par l'envoi de l'e-mail de confirmation (HYP-W20-PREMIER-CONTACT, contrat art. 3.4). (2) L'e-mail de REQ-UX-038 part à J+5 ouvrés SANS CONFIRMATION, par clic ou par appel, et non plus « sans qualification » (question 13 du plan). (3) « Injoignable ×3 » ne compte que les appels, jamais un e-mail sans réponse. (4) Libération d'une demande signalée, réponse de Williams du 2026-09-29 vers 20 h (session -d7, question 19 du plan, proposée par la lentille securite ; HYP-W20-LIBERATION et REQ-DM-063 proposées au plan, écrites par GOV-112) : une attribution provisoire dont la demande de confirmation est SIGNALÉE (prédicat pur de SEC-41) et qui n'a reçu aucune Qualification confirme ni non_confirme est libérée, par le passage « tout ce qui est dû à l'instant t » (REQ-QA-027), horloge injectée, au PREMIER des deux termes : la LIBERATION_SIGNALEE_INJOIGNABLE_MAX-ième Qualification injoignable (= 3) ou LIBERATION_SIGNALEE_JOURS (= 45) jours après l'envoi effectif de la première demande de l'attribution (DM-40), qu'une correction d'adresse ne fait pas repartir. Les deux valeurs sont des paramètres de src/domain/seuils/ssot.ts, modifiables, de source contrat art. 3.2 (JUR-T40), jamais recopiées. Dans la même transaction : attribution perimee par l'événement attribution_etat_modifie avec evenement: 'liberee_sans_confirmation' (un type de journal par genre de transition, partners/ADR-0022 ; la transition provisoire → perimee entre dans la matrice de DM-08), distincte de la péremption (peremptionAt reste null) ; demande expiree, jetons révoqués ; entreprise de nouveau disponible, file d'attente comprise (fenêtre de redéclaration du rang 1, art. 3.5) ; une notification NEUTRE à l'apporteur, clé de la table SSOT des notifications (UX-P1-10, faitCourirUnDelai: false), texte de la SSOT de micro-copy (UX-P1-41), garde lexicale verte, aucune consigne, sans la raison, ni la vérification, ni le nombre d'appels. AUCUNE SANCTION : aucune suspension, aucune Anomalie, aucune entrée dans le score de SEC-14, aucun signal, rien d'imputé à l'apporteur ni au contact. Carence de redépôt, arbitrage de -d7 sur délégation de Williams du 2026-09-29 (HYP-W20-CARENCE-REDEPOT, au plan) : après une libération, le MÊME apporteur ne peut pas déposer la MÊME entreprise (SIREN, tous établissements) pendant CARENCE_REDEPOT_APRES_LIBERATION_JOURS (= 30) jours, ni pendant CARENCE_REDEPOT_APRES_SECONDE_LIBERATION_JOURS (= 90) jours après une deuxième libération du même couple (90 aussi au-delà, par défaut) ; prédicat pur, horloge injectée, dérivé des attributions libérées par liberee_sans_confirmation (aucune colonne nouvelle), lu au dépôt côté serveur ; le refus n'écrit rien et ne pose aucun horodatage ; les autres apporteurs ne sont pas concernés ; aucune sanction (ni suspension, ni Anomalie, ni signal), texte neutre de la SSOT de micro-copy. AUCUNE valeur nouvelle d'IssueDepot ni de MotifRefusDepot (consigne W19) : la présentation du refus est la question 20 du plan, ouverte ; par défaut, le redépôt n'atteint pas le formulaire et une requête forgée reçoit une erreur typée du serveur, hors IssueDepot. Passé la carence, un nouveau dépôt suit les règles ordinaires. Les précisions de la libération (45 jours depuis la première demande, seuls les injoignable, rebond non corrigé libéré de même, état perimee, badge et notification) sont validées par arbitrage de -d7 sur délégation de Williams du 2026-09-29. Seules les Qualifications injoignable comptent (point 3), ne_se_souvient_pas n'en est pas une, et une demande non signalée n'est jamais libérée par ce terme. Témoins, horloge figée : deux injoignable → rien ; le troisième → libérée au passage suivant, une seule fois ; envoi à J sans appel : J+45 moins une minute → rien, J+45 → libérée ; ne_se_souvient_pas ×3 → rien ; appel confirme à J+40 → active, aucune libération ; demande non signalée et trois injoignable → aucune libération ; correction d'adresse à J+30 → libération toujours à J+45 ; libération → aucune Anomalie, aucune suspension, une seule notification ; deux passages → un seul événement ; redépôt du même apporteur à J+29 après la libération → refusé, rien d'écrit ; à J+30 → nouvelle attribution provisoire et nouvelle demande ; deuxième libération du même couple → refus à J+89, dépôt à J+90 ; un autre apporteur le jour de la libération → accepté ; même apporteur, autre SIREN → accepté ; même SIREN, autre établissement → refusé pendant la carence ; le refus n'ouvre ni Anomalie ni suspension. Estimation portée de 0,75 à 1 j le 2026-09-29 (travail réel : un terme de plus, une transition, deux paramètres, une clé de notification et leurs témoins), puis à 1,25 j le même jour pour la carence (prédicat, refus serveur, deux paramètres, témoins) ; dépendances DM-40, SEC-41 et UX-P1-10 ajoutées le même jour."
+      "acceptance": "Contraintes W20 à intégrer (chantier W20, décision de Williams du 2026-09-29, session -d7, docs/chantiers/W20-confirmation-par-email.md §6) : (1) La péremption court de premierContactAt, posé par la PREMIÈRE RÉPONSE du contact (clic ou appel qui l'a joint), jamais par l'envoi de l'e-mail de confirmation (HYP-W20-PREMIER-CONTACT, contrat art. 3.4). (2) L'e-mail de REQ-UX-038 part à J+5 ouvrés SANS CONFIRMATION, par clic ou par appel, et non plus « sans qualification » (question 13 du plan). (3) « Injoignable ×3 » ne compte que les appels, jamais un e-mail sans réponse. (4) Libération d'une demande signalée, réponse de Williams du 2026-09-29 vers 20 h (session -d7, question 19 du plan, proposée par la lentille securite ; HYP-W20-LIBERATION et REQ-DM-063 proposées au plan, écrites par GOV-112) : une attribution provisoire dont la demande de confirmation est SIGNALÉE (prédicat pur de SEC-41) et qui n'a reçu aucune Qualification confirme ni non_confirme est libérée, par le passage « tout ce qui est dû à l'instant t » (REQ-QA-027), horloge injectée, au PREMIER des deux termes : la LIBERATION_SIGNALEE_INJOIGNABLE_MAX-ième Qualification injoignable (= 3) ou LIBERATION_SIGNALEE_JOURS (= 45) jours après l'envoi effectif de la première demande de l'attribution (DM-40), qu'une correction d'adresse ne fait pas repartir. Les deux valeurs sont des paramètres de src/domain/seuils/ssot.ts, modifiables, de source contrat art. 3.2 (JUR-T40), jamais recopiées. Dans la même transaction : attribution perimee par l'événement attribution_etat_modifie avec evenement: 'liberee_sans_confirmation' (un type de journal par genre de transition, partners/ADR-0022 ; la transition provisoire → perimee entre dans la matrice de DM-08), distincte de la péremption (peremptionAt reste null) ; demande expiree, jetons révoqués ; entreprise de nouveau disponible, file d'attente comprise (fenêtre de redéclaration du rang 1, art. 3.5) ; une notification NEUTRE à l'apporteur, clé de la table SSOT des notifications (UX-P1-10, faitCourirUnDelai: false), texte de la SSOT de micro-copy (UX-P1-41), garde lexicale verte, aucune consigne, sans la raison, ni la vérification, ni le nombre d'appels. AUCUNE SANCTION : aucune suspension, aucune Anomalie, aucune entrée dans le score de SEC-14, aucun signal, rien d'imputé à l'apporteur ni au contact. Carence de redépôt, arbitrage de -d7 sur délégation de Williams du 2026-09-29 (HYP-W20-CARENCE-REDEPOT, au plan) : après une libération, le MÊME apporteur ne peut pas déposer la MÊME entreprise (SIREN, tous établissements) pendant CARENCE_REDEPOT_APRES_LIBERATION_JOURS (= 30) jours, ni pendant CARENCE_REDEPOT_APRES_SECONDE_LIBERATION_JOURS (= 90) jours après une deuxième libération du même couple (90 aussi au-delà, par défaut) ; prédicat pur, horloge injectée, dérivé des attributions libérées par liberee_sans_confirmation (aucune colonne nouvelle), lu au dépôt côté serveur ; le refus n'écrit rien et ne pose aucun horodatage ; les autres apporteurs ne sont pas concernés ; aucune sanction (ni suspension, ni Anomalie, ni signal), texte neutre de la SSOT de micro-copy. AUCUNE valeur nouvelle d'IssueDepot ni de MotifRefusDepot (consigne W19) : la présentation du refus est la question 20 du plan, ouverte ; par défaut, le redépôt n'atteint pas le formulaire et une requête forgée reçoit une erreur typée du serveur, hors IssueDepot. Passé la carence, un nouveau dépôt suit les règles ordinaires. Les précisions de la libération (45 jours depuis la première demande, seuls les injoignable, rebond non corrigé libéré de même, état perimee, badge et notification) sont validées par arbitrage de -d7 sur délégation de Williams du 2026-09-29. Seules les Qualifications injoignable comptent (point 3), ne_se_souvient_pas n'en est pas une, et une demande non signalée n'est jamais libérée par ce terme. Témoins, horloge figée : deux injoignable → rien ; le troisième → libérée au passage suivant, une seule fois ; envoi à J sans appel : J+45 moins une minute → rien, J+45 → libérée ; ne_se_souvient_pas ×3 → rien ; appel confirme à J+40 → active, aucune libération ; demande non signalée et trois injoignable → aucune libération ; correction d'adresse à J+30 → libération toujours à J+45 ; libération → aucune Anomalie, aucune suspension, une seule notification ; deux passages → un seul événement ; redépôt du même apporteur à J+29 après la libération → refusé, rien d'écrit ; à J+30 → nouvelle attribution provisoire et nouvelle demande ; deuxième libération du même couple → refus à J+89, dépôt à J+90 ; un autre apporteur le jour de la libération → accepté ; même apporteur, autre SIREN → accepté ; même SIREN, autre établissement → refusé pendant la carence ; le refus n'ouvre ni Anomalie ni suspension. Estimation portée de 0,75 à 1 j le 2026-09-29 (travail réel : un terme de plus, une transition, deux paramètres, une clé de notification et leurs témoins), puis à 1,25 j le même jour pour la carence (prédicat, refus serveur, deux paramètres, témoins) ; dépendances DM-40, SEC-41 et UX-P1-10 ajoutées le même jour. Contraintes W19 à intégrer (GOV-115, décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §6) : péremption et expiration du conseiller à la durée d'attribution (`FENETRE_MOIS`, SSOT ; 6 mois depuis la décision de Williams du 2026-09-30) aux mêmes délais visibles que l'apporteur (HYP-W19-CYCLE) ; la fin notifie le rang 1 ; le délai d'attente de la Société démarre à toute libération."
     },
     {
       "id": "SEC-14",
@@ -5161,7 +5171,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "Contraintes W20 à intégrer (chantier W20, décision de Williams du 2026-09-29, session -d7, docs/chantiers/W20-confirmation-par-email.md §6) : « Vérifier une entreprise » n'envoie JAMAIS d'e-mail et ne crée aucune demande de confirmation : seul un dépôt en crée une (DM-40). Témoin : une vérification, puis le compte des demandes et des envois → zéro."
+      "acceptance": "Contraintes W20 à intégrer (chantier W20, décision de Williams du 2026-09-29, session -d7, docs/chantiers/W20-confirmation-par-email.md §6) : « Vérifier une entreprise » n'envoie JAMAIS d'e-mail et ne crée aucune demande de confirmation : seul un dépôt en crée une (DM-40). Témoin : une vérification, puis le compte des demandes et des envois → zéro. Contraintes W19 à intégrer (GOV-115, décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §6) : un SIREN pris en charge par un conseiller est rendu comme un SIREN occupé par un apporteur au même stade (même état, même date « jusqu'au », question 2). Faire trancher d'abord, par le gardien-spec, la contradiction 4 états (`docs/GLOSSAIRE.md:117`) / 5 états (REQ-UX-007) / binaire (REQ-JUR-011)."
     },
     {
       "id": "SEC-18",
@@ -5261,7 +5271,8 @@
         "JUR-T01c",
         "SEC-03",
         "SEC-06",
-        "DM-23"
+        "DM-23",
+        "JUR-T31"
       ],
       "reqs": [
         "REQ-INT-018",
@@ -5272,7 +5283,8 @@
         "REQ-QA-030"
       ],
       "hyp": [
-        "DEC-INT-001"
+        "DEC-INT-001",
+        "HYP-W19-CONCOURS"
       ],
       "externe": null,
       "estimateDays": 1.5,
@@ -5284,7 +5296,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "ELLE ÉCRIT LE SCHÉMA (label `schema`, seule de sa famille dans son lot). Cadrage de l'architecte du 2026-09-26 sur délégation de Will (partners/ADR-0022) : ce que la tâche crée ; le comportement est celui de ses exigences. (1) `contrats` est créée par DM-23 (dépendance, conflit C1) ; INT-T12 crée `enveloppes_signature` : `enum StatutEnveloppe {envoyee, signee, refusee, expiree, annulee}` ; `contratId`, `submissionId` unique, `statut`, `emailHash` (l'adresse d'envoi en empreinte seule), `envoyeeAt`, `relancesEnvoyees` (0 à 3), `derniereRelanceAt`, `termineeAt` (nulle si et seulement si `envoyee`), `remplaceeParId` unique ; une seule enveloppe `envoyee` par contrat (`UNIQUE (contrat_id) WHERE statut = 'envoyee'`). (2) Elle ajoute à `type_evenement_recu` les valeurs DocuSeal réellement traitées : `submission_completed` (`submission.completed`), `form_declined` (`form.declined`), `submission_expired` (`submission.expired`), identifiant en snake_case et libellé de fil par `@map`. (3) INFORMATION EXTERNE REQUISE AVANT LE CODE : les noms d'événements émis, la forme exacte de la signature `<ts>.<hex64>` et l'emplacement de `metadata.apporteurId` sont consignés dans `docs/tiers/docuseal.md` avec une charge réelle enregistrée. Forme sûre : un type non listé rend 200 sans effet et est alerté, jamais traité par défaut. AJOUT (arbitrage -d7 sur delegation de Williams du 2026-09-30, dette bloquante de la lentille securite) : DOCUSEAL_WEBHOOK_SECRET accepte une cle courante et une cle precedente, echeance de 24 h au plus ; DocuSeal n'envoyant pas de kid, les deux cles sont essayees, la courante d'abord, et le refus apres echeance est nomme ; temoin avant et apres echeance."
+      "acceptance": "ELLE ÉCRIT LE SCHÉMA (label `schema`, seule de sa famille dans son lot). Cadrage de l'architecte du 2026-09-26 sur délégation de Will (partners/ADR-0022) : ce que la tâche crée ; le comportement est celui de ses exigences. (1) `contrats` est créée par DM-23 (dépendance, conflit C1) ; INT-T12 crée `enveloppes_signature` : `enum StatutEnveloppe {envoyee, signee, refusee, expiree, annulee}` ; `contratId`, `submissionId` unique, `statut`, `emailHash` (l'adresse d'envoi en empreinte seule), `envoyeeAt`, `relancesEnvoyees` (0 à 3), `derniereRelanceAt`, `termineeAt` (nulle si et seulement si `envoyee`), `remplaceeParId` unique ; une seule enveloppe `envoyee` par contrat (`UNIQUE (contrat_id) WHERE statut = 'envoyee'`). (2) Elle ajoute à `type_evenement_recu` les valeurs DocuSeal réellement traitées : `submission_completed` (`submission.completed`), `form_declined` (`form.declined`), `submission_expired` (`submission.expired`), identifiant en snake_case et libellé de fil par `@map`. (3) INFORMATION EXTERNE REQUISE AVANT LE CODE : les noms d'événements émis, la forme exacte de la signature `<ts>.<hex64>` et l'emplacement de `metadata.apporteurId` sont consignés dans `docs/tiers/docuseal.md` avec une charge réelle enregistrée. Forme sûre : un type non listé rend 200 sans effet et est alerté, jamais traité par défaut. AJOUT (arbitrage -d7 sur delegation de Williams du 2026-09-30, dette bloquante de la lentille securite) : DOCUSEAL_WEBHOOK_SECRET accepte une cle courante et une cle precedente, echeance de 24 h au plus ; DocuSeal n'envoyant pas de kid, les deux cles sont essayees, la courante d'abord, et le refus apres echeance est nomme ; temoin avant et apres echeance. Contraintes W19 à intégrer (GOV-115, décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §6) : Aucun DocuSeal avant la fusion de JUR-T31 : art. 3.5 amendé et clause de non-exploitation validés par Williams. L'arbitrage de principe est rendu (question 2, 2026-09-29)."
     },
     {
       "id": "INT-T13",
@@ -5561,7 +5573,8 @@
       "pr": null,
       "issue": null,
       "attempts": 0,
-      "motif": null
+      "motif": null,
+      "acceptance": "Contraintes W19 à intégrer (GOV-115, décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §6) : un lien d'apporteur consommé redirige en une action vers « / » ou vers l'URL demandée, bornée aux chemins relatifs de l'espace. Fin du cul-de-sac de `src/app/(espace)/connexion/ecran.tsx:76-82`. Le mécanisme du code à 6 chiffres est écrit pour être réutilisé par SEC-29."
     },
     {
       "id": "UX-P1-01",
@@ -5582,7 +5595,9 @@
         "SEC-16",
         "UX-P0-01",
         "UX-P0-02",
-        "DM-13"
+        "DM-13",
+        "UX-P1-17",
+        "QA-T33"
       ],
       "reqs": [
         "REQ-UX-001",
@@ -5599,7 +5614,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "route citée depuis `docs/ESPACE-ROUTES.md` (un champ sur `/`, résultat `/entreprise?q=`). Carence de redépôt W20, arbitrage de -d7 sur délégation de Williams du 2026-09-29 (question 20 de docs/chantiers/W20-confirmation-par-email.md, tranchée, défaut retenu ; HYP-W20-CARENCE-REDEPOT) : quand l'apporteur consulte une entreprise qu'il ne peut pas redéposer pendant la carence de DM-13 (même apporteur, même SIREN : 30 jours après une libération sans confirmation, 90 après une deuxième et au-delà), la carte « Vérifier » dit, sans consigne, « Vous pourrez déposer cette entreprise à nouveau à partir du <date>. » (date en toutes lettres, fuseau de l'apporteur), texte de la SSOT de micro-copy, garde lexicale verte, et ne propose pas « Déposer ». Aucune valeur nouvelle d'IssueDepot ni de MotifRefusDepot (consigne W19 maintenue) ; la carte ne dit ni la raison, ni la vérification, ni le nombre d'appels ; pour tout autre apporteur, l'entreprise est disponible et « Déposer » est proposé. L'état est lu du prédicat de carence de DM-13, côté serveur. Tests : apporteur en carence → texte et aucun bouton « Déposer » ; autre apporteur → « Déposer » présent ; le jour de fin de carence → « Déposer » revient ; le DTO ne porte aucune raison."
+      "acceptance": "route citée depuis `docs/ESPACE-ROUTES.md` (un champ sur `/`, résultat `/entreprise?q=`). Carence de redépôt W20, arbitrage de -d7 sur délégation de Williams du 2026-09-29 (question 20 de docs/chantiers/W20-confirmation-par-email.md, tranchée, défaut retenu ; HYP-W20-CARENCE-REDEPOT) : quand l'apporteur consulte une entreprise qu'il ne peut pas redéposer pendant la carence de DM-13 (même apporteur, même SIREN : 30 jours après une libération sans confirmation, 90 après une deuxième et au-delà), la carte « Vérifier » dit, sans consigne, « Vous pourrez déposer cette entreprise à nouveau à partir du <date>. » (date en toutes lettres, fuseau de l'apporteur), texte de la SSOT de micro-copy, garde lexicale verte, et ne propose pas « Déposer ». Aucune valeur nouvelle d'IssueDepot ni de MotifRefusDepot (consigne W19 maintenue) ; la carte ne dit ni la raison, ni la vérification, ni le nombre d'appels ; pour tout autre apporteur, l'entreprise est disponible et « Déposer » est proposé. L'état est lu du prédicat de carence de DM-13, côté serveur. Tests : apporteur en carence → texte et aucun bouton « Déposer » ; autre apporteur → « Déposer » présent ; le jour de fin de carence → « Déposer » revient ; le DTO ne porte aucune raison. Contraintes W19 à intégrer (GOV-115, décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §6) : Budget REQ-UX-001 mesuré par la fixture QA-T33. Test : aucune issue ne nomme un rôle de console, et aucune ne distingue un occupant conseiller. Par UX-P1-17, cet écran hérite du bloqueur externe JUR-T31 (validation du texte par Williams)."
     },
     {
       "id": "UX-P1-02",
@@ -5620,7 +5635,9 @@
         "SEC-12",
         "UX-P0-01",
         "GOV-112",
-        "DM-13"
+        "DM-13",
+        "UX-P1-17",
+        "QA-T33"
       ],
       "reqs": [
         "REQ-UX-001",
@@ -5638,7 +5655,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "Contraintes W20 à intégrer (chantier W20, décision de Williams du 2026-09-29, session -d7, docs/chantiers/W20-confirmation-par-email.md §6) : (1) Après l'entreprise pré-remplie (SIRET affiché en lecture seule, jamais saisi deux fois), le contact rencontré : nom et prénom, fonction, e-mail et téléphone EXIGÉS, contexte facultatif et court (HYP-W20-CONTEXTE) ; un champ exigé n'est jamais marqué « obligatoire » (REQ-JUR-037), seuls les facultatifs portent « (facultatif) ». (2) Juste au-dessus du bouton, un message INFORMATIF, non bloquant, sans fenêtre modale, tiré de la SSOT de micro-copy (UX-P1-41) : « <Prénom Nom> (<Entreprise>) va recevoir un e-mail d'Axion-IA dans les 15 minutes pour confirmer votre échange. » suivi de la phrase sur le téléphone (question 15 du plan) ; il ne donne aucune consigne (REQ-JUR-039). (3) Le bouton se nomme « Déposer et prévenir <Prénom Nom> », replié en « Déposer et prévenir » si le nom est vide ou trop long à 320 px. (4) REQ-UX-001 tenue avec les quatre coordonnées : le décompte de la maquette UX-P1-40 est rejoué en E2E mobile (au plus 8 interactions, 90 s). (5) Maquette deposer.html révisée et validée par UX-P1-40 avant l'attribution. (6) Cinq états : vide, saisie, envoi, erreur par champ, hors ligne (le délai de 15 minutes court de la réception, REQ-UX-013). « Vérifier une entreprise » ne crée aucune demande de confirmation. (7) Carence de redépôt W20, arbitrage de -d7 sur délégation de Williams du 2026-09-29 (question 20 du plan, tranchée, défaut retenu ; HYP-W20-CARENCE-REDEPOT) : pendant la carence de DM-13 (même apporteur, même SIREN : 30 jours après une libération sans confirmation, 90 après une deuxième et au-delà), le formulaire n'est pas atteint : l'accès au dépôt de cette entreprise par cet apporteur affiche, sans consigne, « Vous pourrez déposer cette entreprise à nouveau à partir du <date>. » (texte de la SSOT de micro-copy, le même que la carte « Vérifier » d'UX-P1-01, garde lexicale verte), sans formulaire ni bouton « Déposer ». Une soumission forgée reçoit une erreur serveur qui n'est PAS une issue d'IssueDepot (refus porté par DM-13, sans écriture ni horodatage), rendue sans erreur brute. Aucune valeur nouvelle d'IssueDepot ni de MotifRefusDepot : la consigne W19 est maintenue. Tests : apporteur en carence → texte, aucun formulaire ; soumission forgée → erreur serveur, aucune attribution, aucun horodatage, aucune issue de dépôt rendue ; autre apporteur → formulaire normal ; fin de carence → formulaire normal."
+      "acceptance": "Contraintes W20 à intégrer (chantier W20, décision de Williams du 2026-09-29, session -d7, docs/chantiers/W20-confirmation-par-email.md §6) : (1) Après l'entreprise pré-remplie (SIRET affiché en lecture seule, jamais saisi deux fois), le contact rencontré : nom et prénom, fonction, e-mail et téléphone EXIGÉS, contexte facultatif et court (HYP-W20-CONTEXTE) ; un champ exigé n'est jamais marqué « obligatoire » (REQ-JUR-037), seuls les facultatifs portent « (facultatif) ». (2) Juste au-dessus du bouton, un message INFORMATIF, non bloquant, sans fenêtre modale, tiré de la SSOT de micro-copy (UX-P1-41) : « <Prénom Nom> (<Entreprise>) va recevoir un e-mail d'Axion-IA dans les 15 minutes pour confirmer votre échange. » suivi de la phrase sur le téléphone (question 15 du plan) ; il ne donne aucune consigne (REQ-JUR-039). (3) Le bouton se nomme « Déposer et prévenir <Prénom Nom> », replié en « Déposer et prévenir » si le nom est vide ou trop long à 320 px. (4) REQ-UX-001 tenue avec les quatre coordonnées : le décompte de la maquette UX-P1-40 est rejoué en E2E mobile (au plus 8 interactions, 90 s). (5) Maquette deposer.html révisée et validée par UX-P1-40 avant l'attribution. (6) Cinq états : vide, saisie, envoi, erreur par champ, hors ligne (le délai de 15 minutes court de la réception, REQ-UX-013). « Vérifier une entreprise » ne crée aucune demande de confirmation. (7) Carence de redépôt W20, arbitrage de -d7 sur délégation de Williams du 2026-09-29 (question 20 du plan, tranchée, défaut retenu ; HYP-W20-CARENCE-REDEPOT) : pendant la carence de DM-13 (même apporteur, même SIREN : 30 jours après une libération sans confirmation, 90 après une deuxième et au-delà), le formulaire n'est pas atteint : l'accès au dépôt de cette entreprise par cet apporteur affiche, sans consigne, « Vous pourrez déposer cette entreprise à nouveau à partir du <date>. » (texte de la SSOT de micro-copy, le même que la carte « Vérifier » d'UX-P1-01, garde lexicale verte), sans formulaire ni bouton « Déposer ». Une soumission forgée reçoit une erreur serveur qui n'est PAS une issue d'IssueDepot (refus porté par DM-13, sans écriture ni horodatage), rendue sans erreur brute. Aucune valeur nouvelle d'IssueDepot ni de MotifRefusDepot : la consigne W19 est maintenue. Tests : apporteur en carence → texte, aucun formulaire ; soumission forgée → erreur serveur, aucune attribution, aucun horodatage, aucune issue de dépôt rendue ; autre apporteur → formulaire normal ; fin de carence → formulaire normal. Contraintes W19 à intégrer (GOV-115, décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §6) : Budget REQ-UX-001 mesuré par la fixture QA-T33. Test : aucune issue ne nomme un rôle de console, et aucune ne distingue un occupant conseiller. Par UX-P1-17, cet écran hérite du bloqueur externe JUR-T31 (validation du texte par Williams)."
     },
     {
       "id": "UX-P1-03",
@@ -5721,7 +5738,7 @@
       "titre": "Fiche de qualification console",
       "phase": 1,
       "repo": "partners",
-      "zone": "espace",
+      "zone": "console",
       "paths": [
         "src/app/UX-P1-06"
       ],
@@ -5732,11 +5749,15 @@
       "deps": [
         "DM-09",
         "SEC-17",
-        "GOV-112"
+        "GOV-112",
+        "UX-P1-16",
+        "UX-P1-19"
       ],
       "reqs": [
         "REQ-CPL-024",
-        "REQ-UX-021"
+        "REQ-UX-021",
+        "REQ-UX-047",
+        "REQ-UX-048"
       ],
       "hyp": [],
       "externe": null,
@@ -5749,14 +5770,14 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "Contraintes W20 à intégrer (chantier W20, décision de Williams du 2026-09-29, session -d7, docs/chantiers/W20-confirmation-par-email.md §6) : (1) La fiche montre, avant la zone de qualification, l'état de la demande de confirmation par e-mail (planifiée, envoyée, retenue, rebond, réponse avec son horodatage, clic non retenu) et la ou les raisons de « Vérification suggérée » de SEC-41, en clair. (2) L'appel devient la seconde source de confirmation, à côté du clic du contact (REQ-DM-008 amendée au plan) : une qualification sur un dépôt déjà confirmé par clic est refusée avec l'état courant. (3) Le script d'appel porte la mention de l'article 14 (JUR-T09). (4) Budget de REQ-UX-021 inchangé."
+      "acceptance": "Contraintes W20 à intégrer (chantier W20, décision de Williams du 2026-09-29, session -d7, docs/chantiers/W20-confirmation-par-email.md §6) : (1) La fiche montre, avant la zone de qualification, l'état de la demande de confirmation par e-mail (planifiée, envoyée, retenue, rebond, réponse avec son horodatage, clic non retenu) et la ou les raisons de « Vérification suggérée » de SEC-41, en clair. (2) L'appel devient la seconde source de confirmation, à côté du clic du contact (REQ-DM-008 amendée au plan) : une qualification sur un dépôt déjà confirmé par clic est refusée avec l'état courant. (3) Le script d'appel porte la mention de l'article 14 (JUR-T09). (4) Budget de REQ-UX-021 inchangé. Contraintes W19 à intégrer (GOV-115, décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §6) : écran de console : zone `console` au registre ; son droit `ecran:*` est ajouté à la matrice ; il cite REQ-UX-047 et REQ-UX-048 ; il dépend d'UX-P1-16 et de la maquette de sa phase (UX-P1-19). Son chemin réel sous `src/app/(console)/console/` est celui que fixe `docs/CONSOLE-ROUTES.md` (UX-P1-18) : le chemin gabarit du registre est remplacé à la revendication."
     },
     {
       "id": "UX-P1-07",
       "titre": "File de qualification : onglet « À appeler aujourd'hui » trié par priorité (W20), tri prioritaire > `aQualifierDepuis`, chrono SLA 48 h ouvrées, fiche inline, alertes",
       "phase": 1,
       "repo": "partners",
-      "zone": "espace",
+      "zone": "console",
       "paths": [
         "src/app/UX-P1-07"
       ],
@@ -5767,10 +5788,14 @@
         "DM-08",
         "UX-P1-06",
         "DM-43",
-        "GOV-112"
+        "GOV-112",
+        "UX-P1-16",
+        "UX-P1-19"
       ],
       "reqs": [
-        "REQ-UX-022"
+        "REQ-UX-022",
+        "REQ-UX-047",
+        "REQ-UX-048"
       ],
       "hyp": [],
       "externe": null,
@@ -5783,7 +5808,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "Contraintes W20 à intégrer (chantier W20, décision de Williams du 2026-09-29, session -d7, docs/chantiers/W20-confirmation-par-email.md §6) : (1) La file s'ouvre sur « À appeler aujourd'hui » : les dépôts de la liste d'appels de DM-43 (échantillon, premiers dépôts, rebond, sans réponse après le délai SSOT, raison de vérification), triés par priorité, chaque ligne portant sa raison en clair et le bouton tel:. (2) Un dépôt confirmé par clic n'y figure pas ; il en sort à la première réponse. (3) Le chrono SLA de 48 h ouvrées porte sur l'entrée dans la liste d'appels (REQ-UX-022 amendée au plan, à inscrire par la passe gardien-spec), jamais sur un dépôt que personne n'a à appeler. (4) La rafale et les premiers dépôts trient sans être affichés comme « Vérification suggérée » (REQ-SEC-017). (5) Cinq états : liste, vide (« Personne à appeler aujourd'hui »), chargement, erreur, conflit de version (REQ-CPL-024). Maquette file-qualification.html validée (UX-P1-40)."
+      "acceptance": "Contraintes W20 à intégrer (chantier W20, décision de Williams du 2026-09-29, session -d7, docs/chantiers/W20-confirmation-par-email.md §6) : (1) La file s'ouvre sur « À appeler aujourd'hui » : les dépôts de la liste d'appels de DM-43 (échantillon, premiers dépôts, rebond, sans réponse après le délai SSOT, raison de vérification), triés par priorité, chaque ligne portant sa raison en clair et le bouton tel:. (2) Un dépôt confirmé par clic n'y figure pas ; il en sort à la première réponse. (3) Le chrono SLA de 48 h ouvrées porte sur l'entrée dans la liste d'appels (REQ-UX-022 amendée au plan, à inscrire par la passe gardien-spec), jamais sur un dépôt que personne n'a à appeler. (4) La rafale et les premiers dépôts trient sans être affichés comme « Vérification suggérée » (REQ-SEC-017). (5) Cinq états : liste, vide (« Personne à appeler aujourd'hui »), chargement, erreur, conflit de version (REQ-CPL-024). Maquette file-qualification.html validée (UX-P1-40). Contraintes W19 à intégrer (GOV-115, décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §6) : écran de console : zone `console` au registre ; son droit `ecran:*` est ajouté à la matrice ; il cite REQ-UX-047 et REQ-UX-048 ; il dépend d'UX-P1-16 et de la maquette de sa phase (UX-P1-19). Son chemin réel sous `src/app/(console)/console/` est celui que fixe `docs/CONSOLE-ROUTES.md` (UX-P1-18) : le chemin gabarit du registre est remplacé à la revendication. Aucune prise en charge dans la file."
     },
     {
       "id": "UX-P1-08",
@@ -6017,7 +6042,7 @@
       "titre": "Console Apporteurs : liste, fiche 5 blocs",
       "phase": 1,
       "repo": "partners",
-      "zone": "espace",
+      "zone": "console",
       "paths": [
         "src/app/UX-P1-12"
       ],
@@ -6030,13 +6055,17 @@
         "DM-09",
         "SEC-15",
         "SEC-17",
-        "SEC-19"
+        "SEC-19",
+        "UX-P1-16",
+        "UX-P1-19"
       ],
       "reqs": [
         "REQ-CPL-027",
         "REQ-JUR-031",
         "REQ-JUR-042",
-        "REQ-UX-036"
+        "REQ-UX-036",
+        "REQ-UX-047",
+        "REQ-UX-048"
       ],
       "hyp": [],
       "externe": null,
@@ -6048,14 +6077,15 @@
       "pr": null,
       "issue": null,
       "attempts": 0,
-      "motif": null
+      "motif": null,
+      "acceptance": "Contraintes W19 à intégrer (GOV-115, décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §6) : écran de console : zone `console` au registre ; son droit `ecran:*` est ajouté à la matrice ; il cite REQ-UX-047 et REQ-UX-048 ; il dépend d'UX-P1-16 et de la maquette de sa phase (UX-P1-19). Son chemin réel sous `src/app/(console)/console/` est celui que fixe `docs/CONSOLE-ROUTES.md` (UX-P1-18) : le chemin gabarit du registre est remplacé à la revendication."
     },
     {
       "id": "UX-P1-13",
       "titre": "Console Attributions + Contrats : filtres état/département/apporteur, rattachement manuel motivé, versions signées",
       "phase": 1,
       "repo": "partners",
-      "zone": "espace",
+      "zone": "console",
       "paths": [
         "src/app/UX-P1-13"
       ],
@@ -6068,10 +6098,14 @@
         "DM-08",
         "DM-12",
         "INT-T12",
-        "SEC-17"
+        "SEC-17",
+        "UX-P1-16",
+        "UX-P1-19"
       ],
       "reqs": [
-        "REQ-UX-037"
+        "REQ-UX-037",
+        "REQ-UX-047",
+        "REQ-UX-048"
       ],
       "hyp": [],
       "externe": null,
@@ -6083,7 +6117,8 @@
       "pr": null,
       "issue": null,
       "attempts": 0,
-      "motif": null
+      "motif": null,
+      "acceptance": "Contraintes W19 à intégrer (GOV-115, décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §6) : écran de console : zone `console` au registre ; son droit `ecran:*` est ajouté à la matrice ; il cite REQ-UX-047 et REQ-UX-048 ; il dépend d'UX-P1-16 et de la maquette de sa phase (UX-P1-19). Son chemin réel sous `src/app/(console)/console/` est celui que fixe `docs/CONSOLE-ROUTES.md` (UX-P1-18) : le chemin gabarit du registre est remplacé à la revendication. Filtre « amenée par » (pastille avec icône et mot), aucun droit pour le conseiller."
     },
     {
       "id": "DM-23",
@@ -6132,7 +6167,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "`GrilleContrat` (une par contrat, figée à la signature, `Contrat.grilleId` **non nul**) et `GrilleModele` (jeu complet nommé et réutilisable : « Standard », « Tête de réseau », « Zone difficile »…) ; la granularité n'est pas la famille mais **le palier** — les quatre familles commissionnées (W6, tranchée le 2026-09-03) comptent **30 paliers vendables** dans `pricing.ts`, la durée y étant un axe distinct ; une ligne porte `commissionId` (nom de REQ-INT-006), `prestationFamille`, `type ∈ {forfait, pourcentage, aucune}`, `montantCents` entier si `forfait`, `tauxBps` entier en points de base si `pourcentage` (le point de base vaut un centième de pour cent), jamais un flottant, **`cpfEligible` Boolean NOT NULL dérivé de `pricing.ts` par le script d'export (jamais saisi — 🔴 ce champ MANQUAIT et toute la garde CPF de REQ-JUR-023 reposait dessus : la gate n'avait aucune donnée à lire, synthèse M-15)**, et `motifEcart` **obligatoire dès que la ligne diffère de la grille publiée** ; 🔴 **un forfait est dû UNE FOIS par commande portant le palier — la durée est déjà dans le palier, `montantCents` n'est jamais multiplié par les journées** (DM-04, synthèse A-2) ; les cinq familles non commissionnées (développement web, maintenance, coaching récurrent, conférences, interventions sur demande) n'ont aucune ligne et sont énoncées dans l'annexe 1 ; **séquence verrouillée** KYC complet → grille complète 30/30 → génération du contrat → envoi DocuSeal : la fonction de génération refuse une grille incomplète, la fonction d'envoi refuse un contrat sans grille figée ; annexe 1 **générée** depuis la grille, jamais retapée ; une grille figée ne se modifie que par avenant (INT-T23), les lignes de commission déjà nées gardant leur `grilleVersionId` ; un palier créé au catalogue **après** la signature n'existe dans aucune grille figée → ligne `bloquee` motif **`a_qualifier`** (le cas « barème indéfini » ; `bareme_indefini` n'est pas une valeur de l'enum, arbitrage l. 410), libellé apporteur « Prestation hors grille de commissions », jamais un taux deviné, jamais u 🔴 **Complétée le 2026-09-26 (cadrage de l'architecte sur délégation de Will, partners/ADR-0022, GOV-102).** **DM-23 CRÉE `contrats`** (conflit C1, REQ-DM-013 amendée) : `apporteurId`, `gabaritVersion`, `grilleCommissionId` NOT NULL, `grilleContratId` NOT NULL dès la naissance, `statut StatutContrat`, `signeAt`, `pdfHash`, `auditTrailHash`, `pdfCle`, `auditTrailCle`, `creeAt`, et `UNIQUE (apporteur_id) WHERE statut = 'signe'` ; ainsi que `grilles_modele`, `lignes_grille_modele`, `grilles_contrat` et `lignes_grille_contrat`. Une ligne : `commissionId`, `prestationFamille FamillePrestation`, `type TypeLigneGrille {forfait, pourcentage, aucune}`, `montantCents` Int, `tauxBps` Int, `cpfEligible`, et `ecartJustification` Text — le `motifEcart` des lignes précédentes : un texte libre ne s'appelle jamais `motif...` ni `palier...` (REQ-EXT-026 et REQ-EXT-027 amendées) ; CHECK `(type = 'forfait') = (montant_cents IS NOT NULL)`, `(type = 'pourcentage') = (taux_bps IS NOT NULL)`, `montant_cents > 0`, `taux_bps` entre 1 et 10000. Journal `contrat_statut_modifie` (`{de?, vers: StatutContrat, acteurId?}`) et `grille_contrat_modifiee` (`{grilleContratId, lignes: uuid[], acteurId}` : les identifiants des lignes modifiées, jamais un compte)."
+      "acceptance": "`GrilleContrat` (une par contrat, figée à la signature, `Contrat.grilleId` **non nul**) et `GrilleModele` (jeu complet nommé et réutilisable : « Standard », « Tête de réseau », « Zone difficile »…) ; la granularité n'est pas la famille mais **le palier** — les quatre familles commissionnées (W6, tranchée le 2026-09-03) comptent **30 paliers vendables** dans `pricing.ts`, la durée y étant un axe distinct ; une ligne porte `commissionId` (nom de REQ-INT-006), `prestationFamille`, `type ∈ {forfait, pourcentage, aucune}`, `montantCents` entier si `forfait`, `tauxBps` entier en points de base si `pourcentage` (le point de base vaut un centième de pour cent), jamais un flottant, **`cpfEligible` Boolean NOT NULL dérivé de `pricing.ts` par le script d'export (jamais saisi — 🔴 ce champ MANQUAIT et toute la garde CPF de REQ-JUR-023 reposait dessus : la gate n'avait aucune donnée à lire, synthèse M-15)**, et `motifEcart` **obligatoire dès que la ligne diffère de la grille publiée** ; 🔴 **un forfait est dû UNE FOIS par commande portant le palier — la durée est déjà dans le palier, `montantCents` n'est jamais multiplié par les journées** (DM-04, synthèse A-2) ; les cinq familles non commissionnées (développement web, maintenance, coaching récurrent, conférences, interventions sur demande) n'ont aucune ligne et sont énoncées dans l'annexe 1 ; **séquence verrouillée** KYC complet → grille complète 30/30 → génération du contrat → envoi DocuSeal : la fonction de génération refuse une grille incomplète, la fonction d'envoi refuse un contrat sans grille figée ; annexe 1 **générée** depuis la grille, jamais retapée ; une grille figée ne se modifie que par avenant (INT-T23), les lignes de commission déjà nées gardant leur `grilleVersionId` ; un palier créé au catalogue **après** la signature n'existe dans aucune grille figée → ligne `bloquee` motif **`a_qualifier`** (le cas « barème indéfini » ; `bareme_indefini` n'est pas une valeur de l'enum, arbitrage l. 410), libellé apporteur « Prestation hors grille de commissions », jamais un taux deviné, jamais u 🔴 **Complétée le 2026-09-26 (cadrage de l'architecte sur délégation de Will, partners/ADR-0022, GOV-102).** **DM-23 CRÉE `contrats`** (conflit C1, REQ-DM-013 amendée) : `apporteurId`, `gabaritVersion`, `grilleCommissionId` NOT NULL, `grilleContratId` NOT NULL dès la naissance, `statut StatutContrat`, `signeAt`, `pdfHash`, `auditTrailHash`, `pdfCle`, `auditTrailCle`, `creeAt`, et `UNIQUE (apporteur_id) WHERE statut = 'signe'` ; ainsi que `grilles_modele`, `lignes_grille_modele`, `grilles_contrat` et `lignes_grille_contrat`. Une ligne : `commissionId`, `prestationFamille FamillePrestation`, `type TypeLigneGrille {forfait, pourcentage, aucune}`, `montantCents` Int, `tauxBps` Int, `cpfEligible`, et `ecartJustification` Text — le `motifEcart` des lignes précédentes : un texte libre ne s'appelle jamais `motif...` ni `palier...` (REQ-EXT-026 et REQ-EXT-027 amendées) ; CHECK `(type = 'forfait') = (montant_cents IS NOT NULL)`, `(type = 'pourcentage') = (taux_bps IS NOT NULL)`, `montant_cents > 0`, `taux_bps` entre 1 et 10000. Journal `contrat_statut_modifie` (`{de?, vers: StatutContrat, acteurId?}`) et `grille_contrat_modifiee` (`{grilleContratId, lignes: uuid[], acteurId}` : les identifiants des lignes modifiées, jamais un compte). Contraintes W19 à intégrer (GOV-115, décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §6) : GrilleModele, GrilleContrat et contrats réservés aux apporteurs (témoin)."
     },
     {
       "id": "UX-P1-14",
@@ -6487,7 +6522,8 @@
       "pr": null,
       "issue": null,
       "attempts": 0,
-      "motif": null
+      "motif": null,
+      "acceptance": "Contraintes W19 à intégrer (GOV-115, décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §6) : sans changer l'estimation : le premier geste aiguille selon le porteur, par un POINT D'EXTENSION nommé (patron SEC-12) que DM-15 livre et teste avec un délégué factice ; un porteur conseiller y branche T-ARG-040, qui dépend de DM-15 : DM-15 ne teste donc pas la délégation réelle. Témoin nommé."
     },
     {
       "id": "DM-16",
@@ -6533,7 +6569,8 @@
       "pr": null,
       "issue": null,
       "attempts": 0,
-      "motif": null
+      "motif": null,
+      "acceptance": "Contraintes W19 à intégrer (GOV-115, décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §6) : un conseiller n'est ni parrain ni filleul, dans les deux sens."
     },
     {
       "id": "DM-18",
@@ -6617,7 +6654,8 @@
       "pr": null,
       "issue": null,
       "attempts": 0,
-      "motif": null
+      "motif": null,
+      "acceptance": "Contraintes W19 à intégrer (GOV-115, décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §6) : types fermés à `apporteurId` NOT NULL, et test d'absence de toute donnée de conseiller dans le relevé, l'autofacture, le pain.001, la DAS2 et le registre « Commissions »."
     },
     {
       "id": "T-ARG-016",
@@ -6658,7 +6696,8 @@
       "pr": null,
       "issue": null,
       "attempts": 0,
-      "motif": null
+      "motif": null,
+      "acceptance": "Contraintes W19 à intégrer (GOV-115, décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §6) : types fermés à `apporteurId` NOT NULL, et test d'absence de toute donnée de conseiller dans le relevé, l'autofacture, le pain.001, la DAS2 et le registre « Commissions »."
     },
     {
       "id": "SEC-22",
@@ -6766,7 +6805,8 @@
       "pr": null,
       "issue": null,
       "attempts": 0,
-      "motif": null
+      "motif": null,
+      "acceptance": "Contraintes W19 à intégrer (GOV-115, décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §6) : types fermés à `apporteurId` NOT NULL, et test d'absence de toute donnée de conseiller dans le relevé, l'autofacture, le pain.001, la DAS2 et le registre « Commissions »."
     },
     {
       "id": "T-ARG-019",
@@ -6832,7 +6872,8 @@
       "pr": null,
       "issue": null,
       "attempts": 0,
-      "motif": null
+      "motif": null,
+      "acceptance": "Contraintes W19 à intégrer (GOV-115, décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §6) : types fermés à `apporteurId` NOT NULL, et test d'absence de toute donnée de conseiller dans le relevé, l'autofacture, le pain.001, la DAS2 et le registre « Commissions »."
     },
     {
       "id": "T-ARG-032",
@@ -6878,7 +6919,7 @@
       "titre": "Console Lot de paiement : machine d'états, export unique, régénération motivée, rapprochement CSV",
       "phase": 2,
       "repo": "partners",
-      "zone": "espace",
+      "zone": "console",
       "paths": [
         "src/app/UX-P2-03"
       ],
@@ -6891,11 +6932,15 @@
         "JUR-T16",
         "SEC-17",
         "T-ARG-018",
-        "T-ARG-019"
+        "T-ARG-019",
+        "UX-P1-16",
+        "UX-P2-14"
       ],
       "reqs": [
         "REQ-UX-024",
-        "REQ-UX-025"
+        "REQ-UX-025",
+        "REQ-UX-047",
+        "REQ-UX-048"
       ],
       "hyp": [],
       "externe": null,
@@ -6907,7 +6952,8 @@
       "pr": null,
       "issue": null,
       "attempts": 0,
-      "motif": null
+      "motif": null,
+      "acceptance": "Contraintes W19 à intégrer (GOV-115, décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §6) : écran de console : zone `console` au registre ; son droit `ecran:*` est ajouté à la matrice ; il cite REQ-UX-047 et REQ-UX-048 ; il dépend d'UX-P1-16 et de la maquette de sa phase (UX-P2-14). Son chemin réel sous `src/app/(console)/console/` est celui que fixe `docs/CONSOLE-ROUTES.md` (UX-P1-18) : le chemin gabarit du registre est remplacé à la revendication. Test d'absence de toute ligne de conseiller."
     },
     {
       "id": "T-ARG-022",
@@ -7044,7 +7090,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "la fonction de calcul reçoit **la grille du contrat** sous lequel l'attribution a été confirmée, et rien d'autre ; aucun chemin de code ne lit la grille publiée (`GrilleCommission` importée par DM-03-P) pour calculer une ligne — cette dernière ne sert plus que de valeur par défaut à l'éditeur ; palier absent de la grille du contrat → ligne `bloquee` motif **`a_qualifier`** (cas « barème indéfini ») + alerte, **jamais un taux de repli immédiat, jamais 0** ; garde AST : toute lecture de la grille publiée hors du module d'import, de l'éditeur **et du cron de règlement à 60 jours** rougit. 🔴 **Deux corrections du 2026-09-03.** (a) **Le pivot de version est la date de CONFIRMATION de l'attribution, jamais `dateRef`** (REQ-ARG-008, synthèse M-9) : le contrat rattache la commission à la grille en vigueur à la confirmation, le code la rattachait à la signature du devis — **jusqu'à quinze mois séparent les deux, soit deux montants pour une même vente** ; le contrat est signé et plus protecteur, c'est lui qui gagne. (b) **Règlement à soixante jours** (annexe A1.7 réécrite, synthèse A-11) : `PALIER_HORS_GRILLE_JOURS` court depuis l'encaissement ; **à défaut de décision de la Société dans ce délai, la commission est due au taux ou au forfait que la GRILLE PUBLIÉE portait à la date de la vente** — un cron l'applique, écrit l'événement et débloque la ligne. Sans ce terme, la commission restait suspendue **indéfiniment à la seule volonté du débiteur** (art. 1304-2 C. civ.), les deux issues dépendant entièrement de la Société alors que l'art. 13.3 garantit à l'apporteur qu'il n'a pas à signer l'avenant. Ce repli est une **valeur écrite et opposable**, jamais un taux fabriqué par proximité de prix (arbitrage C-6)."
+      "acceptance": "la fonction de calcul reçoit **la grille du contrat** sous lequel l'attribution a été confirmée, et rien d'autre ; aucun chemin de code ne lit la grille publiée (`GrilleCommission` importée par DM-03-P) pour calculer une ligne — cette dernière ne sert plus que de valeur par défaut à l'éditeur ; palier absent de la grille du contrat → ligne `bloquee` motif **`a_qualifier`** (cas « barème indéfini ») + alerte, **jamais un taux de repli immédiat, jamais 0** ; garde AST : toute lecture de la grille publiée hors du module d'import, de l'éditeur **et du cron de règlement à 60 jours** rougit. 🔴 **Deux corrections du 2026-09-03.** (a) **Le pivot de version est la date de CONFIRMATION de l'attribution, jamais `dateRef`** (REQ-ARG-008, synthèse M-9) : le contrat rattache la commission à la grille en vigueur à la confirmation, le code la rattachait à la signature du devis — **jusqu'à quinze mois séparent les deux, soit deux montants pour une même vente** ; le contrat est signé et plus protecteur, c'est lui qui gagne. (b) **Règlement à soixante jours** (annexe A1.7 réécrite, synthèse A-11) : `PALIER_HORS_GRILLE_JOURS` court depuis l'encaissement ; **à défaut de décision de la Société dans ce délai, la commission est due au taux ou au forfait que la GRILLE PUBLIÉE portait à la date de la vente** — un cron l'applique, écrit l'événement et débloque la ligne. Sans ce terme, la commission restait suspendue **indéfiniment à la seule volonté du débiteur** (art. 1304-2 C. civ.), les deux issues dépendant entièrement de la Société alors que l'art. 13.3 garantit à l'apporteur qu'il n'a pas à signer l'avenant. Ce repli est une **valeur écrite et opposable**, jamais un taux fabriqué par proximité de prix (arbitrage C-6). Contraintes W19 à intégrer (GOV-115, décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §6) : repli à 60 jours réservé aux apporteurs ; garde AST dans les deux sens."
     },
     {
       "id": "UX-P2-07",
@@ -7234,7 +7280,7 @@
       "titre": "Paramètres console : grille lecture seule",
       "phase": 2,
       "repo": "partners",
-      "zone": "espace",
+      "zone": "console",
       "paths": [
         "src/app/UX-P2-05"
       ],
@@ -7245,12 +7291,16 @@
       "deps": [
         "DM-03-P",
         "DM-11",
-        "SEC-17"
+        "SEC-17",
+        "UX-P1-16",
+        "UX-P2-14"
       ],
       "reqs": [
         "REQ-CPL-007",
         "REQ-UX-011",
-        "REQ-UX-026"
+        "REQ-UX-026",
+        "REQ-UX-047",
+        "REQ-UX-048"
       ],
       "hyp": [],
       "externe": null,
@@ -7262,7 +7312,8 @@
       "pr": null,
       "issue": null,
       "attempts": 0,
-      "motif": null
+      "motif": null,
+      "acceptance": "Contraintes W19 à intégrer (GOV-115, décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §6) : écran de console : zone `console` au registre ; son droit `ecran:*` est ajouté à la matrice ; il cite REQ-UX-047 et REQ-UX-048 ; il dépend d'UX-P1-16 et de la maquette de sa phase (UX-P2-14). Son chemin réel sous `src/app/(console)/console/` est celui que fixe `docs/CONSOLE-ROUTES.md` (UX-P1-18) : le chemin gabarit du registre est remplacé à la revendication."
     },
     {
       "id": "UX-P2-06",
@@ -7443,7 +7494,7 @@
       "titre": "Console « Commissions » : registre filtrable, traçabilité snapshot, saisie journalisée des lignes bloquées, rattachement manuel",
       "phase": 2,
       "repo": "partners",
-      "zone": "argent",
+      "zone": "console",
       "paths": [
         "src/argent/T-ARG-035"
       ],
@@ -7456,13 +7507,17 @@
       "deps": [
         "DM-12",
         "DM-15",
-        "T-ARG-034"
+        "T-ARG-034",
+        "UX-P1-16",
+        "UX-P2-14"
       ],
       "reqs": [
         "REQ-ARG-006",
         "REQ-ARG-027",
         "REQ-ARG-030",
-        "REQ-DM-034"
+        "REQ-DM-034",
+        "REQ-UX-047",
+        "REQ-UX-048"
       ],
       "hyp": [],
       "externe": null,
@@ -7474,7 +7529,8 @@
       "pr": null,
       "issue": null,
       "attempts": 0,
-      "motif": null
+      "motif": null,
+      "acceptance": "Contraintes W19 à intégrer (GOV-115, décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §6) : écran de console : zone `console` au registre ; son droit `ecran:*` est ajouté à la matrice ; il cite REQ-UX-047 et REQ-UX-048 ; il dépend d'UX-P1-16 et de la maquette de sa phase (UX-P2-14). Son chemin réel sous `src/app/(console)/console/` est celui que fixe `docs/CONSOLE-ROUTES.md` (UX-P1-18) : le chemin gabarit du registre est remplacé à la revendication. types fermés à `apporteurId` NOT NULL, et test d'absence de toute donnée de conseiller dans le relevé, l'autofacture, le pain.001, la DAS2 et le registre « Commissions »."
     },
     {
       "id": "T-ARG-038",
@@ -7975,7 +8031,7 @@
       "titre": "Console Pilotage : funnel, Territoire tableau",
       "phase": 3,
       "repo": "partners",
-      "zone": "espace",
+      "zone": "console",
       "paths": [
         "src/app/UX-P3-04"
       ],
@@ -7986,11 +8042,15 @@
       "deps": [
         "CPL-T15",
         "INT-T05",
-        "SEC-17"
+        "SEC-17",
+        "UX-P1-16",
+        "UX-P3-13"
       ],
       "reqs": [
         "REQ-UX-018",
-        "REQ-UX-035"
+        "REQ-UX-035",
+        "REQ-UX-047",
+        "REQ-UX-048"
       ],
       "hyp": [],
       "externe": null,
@@ -8002,14 +8062,15 @@
       "pr": null,
       "issue": null,
       "attempts": 0,
-      "motif": null
+      "motif": null,
+      "acceptance": "Contraintes W19 à intégrer (GOV-115, décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §6) : écran de console : zone `console` au registre ; son droit `ecran:*` est ajouté à la matrice ; il cite REQ-UX-047 et REQ-UX-048 ; il dépend d'UX-P1-16 et de la maquette de sa phase (UX-P3-13). Son chemin réel sous `src/app/(console)/console/` est celui que fixe `docs/CONSOLE-ROUTES.md` (UX-P1-18) : le chemin gabarit du registre est remplacé à la revendication."
     },
     {
       "id": "UX-P3-05",
       "titre": "Console Conformité + Anomalies : apporteurs × pièces, échéances, DAS2, signaux F8, gel/levée par rôle",
       "phase": 3,
       "repo": "partners",
-      "zone": "espace",
+      "zone": "console",
       "paths": [
         "src/app/UX-P3-05"
       ],
@@ -8023,12 +8084,16 @@
         "DM-11",
         "DM-19",
         "SEC-14",
-        "SEC-17"
+        "SEC-17",
+        "UX-P1-16",
+        "UX-P3-13"
       ],
       "reqs": [
         "REQ-UX-002",
         "REQ-UX-024",
-        "REQ-UX-031"
+        "REQ-UX-031",
+        "REQ-UX-047",
+        "REQ-UX-048"
       ],
       "hyp": [],
       "externe": null,
@@ -8040,7 +8105,8 @@
       "pr": null,
       "issue": null,
       "attempts": 0,
-      "motif": null
+      "motif": null,
+      "acceptance": "Contraintes W19 à intégrer (GOV-115, décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §6) : écran de console : zone `console` au registre ; son droit `ecran:*` est ajouté à la matrice ; il cite REQ-UX-047 et REQ-UX-048 ; il dépend d'UX-P1-16 et de la maquette de sa phase (UX-P3-13). Son chemin réel sous `src/app/(console)/console/` est celui que fixe `docs/CONSOLE-ROUTES.md` (UX-P1-18) : le chemin gabarit du registre est remplacé à la revendication. Devient l'accueil « à traiter aujourd'hui » de l'admin quand il est livré."
     },
     {
       "id": "UX-P3-06",
@@ -8326,7 +8392,7 @@
       "titre": "Fiche prospect console : échanges, fiche de qualification, journal",
       "phase": 1,
       "repo": "partners",
-      "zone": "espace",
+      "zone": "console",
       "paths": [
         "src/app/EXT-T02a"
       ],
@@ -8337,11 +8403,15 @@
       ],
       "deps": [
         "EXT-T01",
-        "SEC-17"
+        "SEC-17",
+        "UX-P1-16",
+        "UX-P1-19"
       ],
       "reqs": [
         "REQ-EXT-003",
-        "REQ-EXT-005"
+        "REQ-EXT-005",
+        "REQ-UX-047",
+        "REQ-UX-048"
       ],
       "hyp": [],
       "externe": null,
@@ -8353,7 +8423,8 @@
       "pr": null,
       "issue": null,
       "attempts": 0,
-      "motif": null
+      "motif": null,
+      "acceptance": "Contraintes W19 à intégrer (GOV-115, décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §6) : écran de console : zone `console` au registre ; son droit `ecran:*` est ajouté à la matrice ; il cite REQ-UX-047 et REQ-UX-048 ; il dépend d'UX-P1-16 et de la maquette de sa phase (UX-P1-19). Son chemin réel sous `src/app/(console)/console/` est celui que fixe `docs/CONSOLE-ROUTES.md` (UX-P1-18) : le chemin gabarit du registre est remplacé à la revendication."
     },
     {
       "id": "EXT-T03",
@@ -13427,7 +13498,8 @@
         "docs/paths-proposes.json",
         "docs/PLAN-STATE.md",
         "docs/journal/",
-        "docs/chantiers/W19-conseillers-salaries.md"
+        "docs/chantiers/W19-conseillers-salaries.md",
+        "scripts/lot/paths-proposes.ts"
       ],
       "schema": false,
       "sensible": [],
