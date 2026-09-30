@@ -16,11 +16,11 @@ réussi sur un vidage lu sous `partners/chiffres/` : l'exercice **refuse** tout 
 
 **Et trois conditions de plus, avant la première donnée réelle** (lentille `securite`, PR 280) :
 
-1. **Une heure au plus en clair.** La plateforme dépose le vidage EN CLAIR sous `partners/` ; le
+1. **Aucun vidage en clair au-delà du seuil de la SSOT.** La plateforme dépose le vidage EN CLAIR sous `partners/` ; le
    rechiffrement horaire le chiffre puis l'efface. Ce n'est pas la cadence qui tient la fenêtre : un
    planificateur sauté, une relecture en échec ou un run retardé laissent un clair vivre. C'est la
    garde `pnpm sauvegarde:clairs` qui la tient : tout vidage en clair plus vieux que
-   `CLAIR_EN_DEPOT_MAX_MINUTES` (SSOT, 90 minutes, soit l'heure plus le retard d'un run), ou dont la
+   `CLAIR_EN_DEPOT_MAX_MINUTES` (SSOT : l'heure du rechiffrement plus le retard d'un run), ou dont la
    date est illisible, est nommé, et le geste sort en 1. Elle tourne après chaque rechiffrement, même
    en échec, et chaque nuit. L'alerte Telegram sur cet échec est livrée par QA-T53, **préalable au même
    rang**. Les colonnes de données personnelles sont déjà chiffrées dans la base, ce qui borne le
