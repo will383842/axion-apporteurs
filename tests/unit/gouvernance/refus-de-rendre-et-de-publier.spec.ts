@@ -538,6 +538,13 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
         'un-statut-fusionnee-porte-sa-preuve.spec.ts ; les sorties du binaire, qui lance `gh`, ' +
         'n’ont pas de témoin d’effet : un témoin qui lance `gh` rendrait la suite intermittente.',
     },
+    'scripts/gates/bundle-par-route.ts': {
+      total: 1,
+      porte: 1,
+      temoins: 0,
+      raison:
+        'QA-T20 — REQ-UX-033, le poids charge par route lu dans les manifestes de Next 16. `process.exitCode = code` : sortie TERMINALE a code variable, commune a la mesure et a `--prove` — 0 quand la garde passe, 1 sur une faute de mesure, ou sur un depassement sous `--bloquant`. Les familles sont vues rougir sur des builds INJECTES (budget-par-route.spec.ts) et le binaire est vu sortir en 1 sur un build absent et sur un build sur disque sous `--bloquant`, dans la meme spec ; aucun temoin ne vit dans `REFUS`. Elle lit les pages de l espace sur le DISQUE, pas dans l index : elle n importe pas `fichiersSuivisOuRefus` et n a rien a faire dans `GARDES_QUI_BALAIENT` ; sans build, elle rougit en build_absent. Dette DECLAREE.',
+    },
     'scripts/gates/perf-budgets.ts': {
       total: 4,
       porte: 4,
@@ -862,6 +869,13 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
         'nommant le contrôle 8 sur trois adaptateurs fautifs (adaptateur-mcp.spec.ts), et le binaire ' +
         'est vu sortir en 0 sur le dépôt dans la même spec ; ⛔ ce témoin d’effet ne vit pas dans ' +
         '`REFUS`. Dette DÉCLARÉE.',
+    },
+    'scripts/deploiement/provisionner.ts': {
+      total: 2,
+      porte: 2,
+      temoins: 0,
+      raison:
+        'QA-T50 — REQ-INT-031, le provisionnement de la plateforme depuis les secrets du depot. `process.exitCode` pose sur le code du provisionnement (0 cree, deja present ou saute ; 1 secret hors regle ou refus de la plateforme) et sur 1 en cas d erreur, dont une adresse interne absente de la reponse. Chaque issue est vue sur le binaire contre une plateforme factice locale (provisionnement-coolify.spec.ts) ; aucun temoin ne vit dans `REFUS`. N importe pas `fichiersSuivisOuRefus`. Dette DECLAREE.',
     },
     'scripts/vues/fusion.ts': {
       total: 1,

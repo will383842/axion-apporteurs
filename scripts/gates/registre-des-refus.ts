@@ -325,6 +325,10 @@ export const REFUS_NOMMES: Readonly<Record<string, readonly string[]>> = {
     'module › si LANCE_EN_SCRIPT › si iPr >= 0 || iApres >= 0 › catch › (1)',
     'module › si LANCE_EN_SCRIPT › (1)',
   ],
+  'scripts/deploiement/provisionner.ts': [
+    'provisionner(process.env).then › ∅ › (= code)',
+    'provisionner(process.env).then › ∅ › (= 1)',
+  ],
   'scripts/gates/gov-requirements.ts': [
     'sources › si !existsSync(f) › (1)',
     'sources › si refus.length > 0 › (1)',
@@ -387,6 +391,9 @@ export const REFUS_NOMMES: Readonly<Record<string, readonly string[]>> = {
     "module › si LANCE_EN_SCRIPT && argument('--semis') !== undefined › (s.tables.length > 0 ? 0 : 1)",
     "module › si LANCE_EN_SCRIPT && process.argv.includes('--pr') › si base === undefined || deploye === undefined › (2)",
     "module › si LANCE_EN_SCRIPT && process.argv.includes('--pr') › si v.fautes.length > 0 › (1)",
+  ],
+  'scripts/gates/bundle-par-route.ts': [
+    "module › si APPELE_DIRECTEMENT › (argv.includes('--prove') ? prouver() : controlerLeDepot(arg…)",
   ],
   'scripts/gates/perf-budgets.ts': [
     'lireVue › si !existsSync(c) › (1)',
