@@ -10,10 +10,9 @@
  * CE QUI N'Y FIGURE PAS, ET NE DOIT JAMAIS Y FIGURER. Aucune constante de gradation, aucun seuil de
  * manquements, aucun délai de « contradictoire » : retirés du produit le 2026-09-03 (`HYP-D11`).
  *
- * CE QUI N'Y FIGURE PAS ENCORE, ET POURQUOI. La durée de l'attribution (`{{FENETRE_MOIS}}`, art. 3.4
- * al. 1) est tenue par la question `JUR-T01-Q02`. `docs/DECISIONS.md` (`HYP-E1-9`) porte 12 mois ;
- * la décision de Will du 2026-09-22, à 6 mois, n'est pas encore au registre. La SSOT n'invente pas
- * une valeur que le registre ne porte pas. La fenêtre du parrainage vit en
+ * LA DURÉE DE L'ATTRIBUTION (`FENETRE_MOIS`, art. 3.4 al. 1) Y EST DEPUIS LE 2026-09-30 : 6 mois,
+ * décision de Williams, portée au registre par `HYP-E1-9` (tranchée ce jour) et écrite ici par
+ * GOV-129 ; la question `JUR-T01-Q02` qui la tenait est retirée. La fenêtre du parrainage vit en
  * configuration (`HYP-E1-19`, `src/domain/contrat/variables.ts`).
  *
  * Les montants sont en CENTIMES hors taxes (`docs/CONVENTIONS.md`, argent en centimes).
@@ -67,6 +66,13 @@ export const SEUILS = {
     source: 'contrat art. 3.3',
     renvois: art('3.3'),
     verifieLe: LE,
+  },
+  FENETRE_MOIS: {
+    valeur: 6,
+    unite: 'mois',
+    source: 'contrat art. 3.4 al. 1 (HYP-E1-9, décision de Williams du 2026-09-30)',
+    renvois: art('3.4'),
+    verifieLe: '2026-09-30',
   },
   PEREMPTION_JOURS: {
     valeur: 90,

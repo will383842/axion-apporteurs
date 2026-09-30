@@ -355,7 +355,8 @@ describe('REQ-JUR-003 — concordance du gabarit avec le registre des décisions
   it('REQ-JUR-003 — une ligne avenant ouverte sans question rougit', () => {
     const r = controlerConcordances({
       ...entree(gabarit()),
-      questions: QUESTIONS_POUR_WILL.filter((q) => q.decision !== 'HYP-E1-9'),
+      // HYP-C1 : un avenant toujours ouvert, porté par JUR-T01-Q01 (HYP-E1-9, tranchée le 2026-09-30, ne l'est plus).
+      questions: QUESTIONS_POUR_WILL.filter((q) => q.decision !== 'HYP-C1'),
     });
     expect(r.fautes.map((f) => f.famille)).toContain('avenant_sans_question');
   });
