@@ -39,7 +39,7 @@ fichier de plus :
    (`node`, `npx`, `pnpm`, `npm`, `tsx`, `docker`, `python`, `gh api`, `gh pr merge`,
    `git merge/rebase/reset/checkout/restore`).
 3. **Une session ordinaire reste bloquée.** `.claude/settings.json` porte en `deny` les six règles
-   d'écriture des trois fichiers. Cet ajout touche un fichier réservé : Williams l'applique lui-même.
+   d'écriture des trois fichiers. Cet ajout touche un fichier réservé : A01 l'a posé (`a878a31e`) sur autorisation explicite de Williams.
 4. `pnpm lot:gardien-spec:verifier` rougit si le fichier du lot dérive du rendu, et si une des six
    règles manque au `deny` du projet.
 5. **Le confinement est mécanique** (lentille securite, 2026-09-30). `--setting-sources user` charge
