@@ -37,11 +37,26 @@ const chemins = cheminsSchema(readFileSync(CHEMIN_CHARTE, 'utf8'));
 const MAINTENANT = instantDuRegistre('2026-09-29T00:00:00Z');
 const fautes = (doc: Doc) => controler(doc, schema, registre, chemins, vuesDeLaPasse(MAINTENANT));
 
-/** La première tâche de CE dépôt, à faire, rangée dans AUCUN lot : choisie, jamais nommée. */
+/**
+ * La première tâche de CE dépôt, à faire, rangée dans AUCUN lot, et qui porte déjà `acceptance` et
+ * `tests` : choisie, jamais nommée. Sans ces deux champs, que le schéma exige d'une tâche `en_cours`,
+ * le contre-témoin recevait des fautes étrangères à ce qu'il juge — c'est arrivé au rattrapage 23,
+ * quand la clôture de QA-T06, QA-T12 et QA-T13 a fait tomber le choix sur DM-07, qui n'en a pas.
+ */
+const aSesPreuves = (x: { acceptance?: unknown; tests?: Record<string, unknown> }): boolean =>
+  typeof x.acceptance === 'string' &&
+  x.acceptance.length > 0 &&
+  x.tests !== undefined &&
+  Object.keys(x.tests).length > 0;
+
 function enVolHorsLot(): { doc: Doc; index: number; tache: Tache } {
   const doc = lireDoc();
   const index = doc.taches.findIndex(
-    (x) => x.statut === 'a_faire' && !x.lot && (x.repo ?? DEPOT_LOCAL) === DEPOT_LOCAL
+    (x) =>
+      x.statut === 'a_faire' &&
+      !x.lot &&
+      (x.repo ?? DEPOT_LOCAL) === DEPOT_LOCAL &&
+      aSesPreuves(x as Tache & { acceptance?: unknown; tests?: Record<string, unknown> })
   );
   if (index < 0)
     throw new Error('aucune tâche de ce dépôt à faire hors lot : le témoin n’a plus d’objet');
