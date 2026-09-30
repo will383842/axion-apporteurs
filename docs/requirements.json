@@ -3672,6 +3672,7 @@
       "phase": 0,
       "taches": [
         "INT-T41",
+        "INT-T42",
         "QA-T04",
         "QA-T52"
       ]

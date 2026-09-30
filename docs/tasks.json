@@ -4599,7 +4599,8 @@
       "pr": null,
       "issue": null,
       "attempts": 0,
-      "motif": null
+      "motif": null,
+      "acceptance": "Client API 1 cote axionia : timeout 2 s, cache 5 min, echec ouvert (titre). (arbitrage A01 du 2026-09-30, suite de QA-T52 et INT-T41) : l'appel Bearer vers l'API entrante de Partners porte l'en-tete du kid du jeton, derive par kidDe et declare par le contrat (INT-T42) ; temoin : le kid emis change quand le jeton tourne."
     },
     {
       "id": "INT-T08-A",
@@ -14851,14 +14852,10 @@
         "tests/unit/securite/rotation-des-secrets.spec.ts",
         "docs/env.md",
         "src/server/integrations/axionia/api-entrante.ts",
-        "packages/contracts/api.ts",
-        "packages/contracts/enveloppe.ts",
-        "packages/contracts/contracts.v2.json",
-        "packages/contracts/contracts.sha256",
         "docs/runbooks/secret-desynchronise.md",
         "tests/unit/securite/webhook-signature.spec.ts"
       ],
-      "schema": true,
+      "schema": false,
       "sensible": [],
       "deps": [
         "QA-T04",
@@ -14872,7 +14869,7 @@
       "externe": null,
       "estimateDays": 0.5,
       "statut": "a_faire",
-      "acceptance": "DETTE BLOQUANTE (lentille securite, verdict de la PR 282 ; arbitrage -d7 sur delegation de Williams du 2026-09-30) : la double cle de rotation de REQ-QA-030 n'etait portee par aucune tache (tests/unit/qualite/env-fail-fast.spec.ts l. 20 l'annoncait a sa propre tache). Des webhooks entrants sont actifs des la phase 0 (SEC-06) : PREALABLE FERME de la mise en service, avant le premier webhook entrant en production. A LIVRER : (1) AXIONIA_WEBHOOK_SECRET et AXIONIA_API_TOKEN acceptent une cle courante et une cle precedente, declarees dans src/lib/env.ts et docs/env.md (genere) ; la cle precedente porte son echeance, au plus 24 h. (2) Le `kid` de l'en-tete, emis par axion-ia (INT-T41, dependance ferme) et declare dans packages/contracts, choisit la cle ; un kid inconnu est refuse, jamais essaye contre toutes les cles. (3) Apres l'echeance, la cle precedente est refusee, et le refus est nomme. (4) TEMOIN A DEUX FACES, rouge d'abord : une signature par la cle precedente passe avant l'echeance et echoue apres ; une signature par une cle inconnue ou un kid absent echoue ; la cle courante passe toujours. (5) Un runbook de rotation (docs/runbooks/secret-desynchronise.md, livre par QA-T13) cite la procedure. Deux lentilles. DocuSeal n'envoie pas de kid et n'a pas encore de recepteur : sa double cle sans kid (cle courante puis precedente essayees) releve de INT-T12 (arbitrage -d7 du 2026-09-30).",
+      "acceptance": "DETTE BLOQUANTE (lentille securite, verdict de la PR 282 ; arbitrage -d7 sur delegation de Williams du 2026-09-30) : la double cle de rotation de REQ-QA-030 n'etait portee par aucune tache (tests/unit/qualite/env-fail-fast.spec.ts l. 20 l'annoncait a sa propre tache). Des webhooks entrants sont actifs des la phase 0 (SEC-06) : PREALABLE FERME de la mise en service, avant le premier webhook entrant en production. A LIVRER : (1) AXIONIA_WEBHOOK_SECRET et AXIONIA_API_TOKEN acceptent une cle courante et une cle precedente, declarees dans src/lib/env.ts et docs/env.md (genere) ; la cle precedente porte son echeance, au plus 24 h. (2) Le `kid` de l'en-tete, emis par axion-ia (INT-T41, dependance ferme) et declare par le contrat (INT-T42), choisit la cle ; un kid inconnu est refuse, jamais essaye contre toutes les cles. (3) Apres l'echeance, la cle precedente est refusee, et le refus est nomme. (4) TEMOIN A DEUX FACES, rouge d'abord : une signature par la cle precedente passe avant l'echeance et echoue apres ; une signature par une cle inconnue ou un kid absent echoue ; la cle courante passe toujours. (5) Un runbook de rotation (docs/runbooks/secret-desynchronise.md, livre par QA-T13) cite la procedure. Deux lentilles. DocuSeal n'envoie pas de kid et n'a pas encore de recepteur : sa double cle sans kid (cle courante puis precedente essayees) releve de INT-T12 (arbitrage -d7 du 2026-09-30).",
       "tests": {
         "REQ-QA-030": [
           "tests/unit/securite/rotation-des-secrets.spec.ts"
@@ -14902,7 +14899,8 @@
       "schema": false,
       "sensible": [],
       "deps": [
-        "INT-T02"
+        "INT-T02",
+        "INT-T42"
       ],
       "reqs": [
         "REQ-QA-030"
@@ -14911,10 +14909,48 @@
       "externe": null,
       "estimateDays": 0.5,
       "statut": "a_faire",
-      "acceptance": "Arbitrage -d7 sur delegation de Williams du 2026-09-30, prealable de QA-T52 (rotation a double cle, dette bloquante de la lentille securite). Auteur : -66. A LIVRER cote axion-ia : (1) chaque webhook signe vers Partners (signerCorps) porte l'en-tete du kid de la cle qui a signe ; (2) l'appel Bearer vers l'API entrante de Partners porte l'en-tete du kid de son jeton ; (3) le kid est derive de la valeur par kidDe (partners/ADR-0013 d.8), jamais configure a part ; (4) le nom de l'en-tete est declare dans packages/contracts, et non recopie dans le code ; (5) TEMOIN : un envoi signe par la cle courante porte son kid ; apres rotation, le kid emis change avec la cle. Les chemins reels remplacent le gabarit a la premiere PR.",
+      "acceptance": "Arbitrage -d7 sur delegation de Williams du 2026-09-30, prealable de QA-T52 (rotation a double cle, dette bloquante de la lentille securite). Auteur : -66. A LIVRER cote axion-ia : (1) chaque webhook signe vers Partners (signerCorps) porte l'en-tete du kid de la cle qui a signe ; (2) la reponse signee de coordonnees (coordonnees.ts) porte le meme en-tete ; l'appel Bearer vers l'API entrante de Partners n'existe pas encore, son kid releve de INT-T07-A qui le cree ; (3) le kid est derive de la valeur par kidDe (partners/ADR-0013 d.8), jamais configure a part ; (4) le nom de l'en-tete est celui que declare le contrat Partners (INT-T42, dependance ferme), recopie octet pour octet dans axion-ia ; (5) TEMOIN : un envoi signe par la cle courante porte son kid ; apres rotation, le kid emis change avec la cle. Les chemins reels remplacent le gabarit a la premiere PR.",
       "tests": {
         "REQ-QA-030": [
           "axionia/src/server/partners-sync/__tests__/kid-emis.spec.ts"
+        ]
+      },
+      "issue": null,
+      "owner": null,
+      "branch": null,
+      "pr": null,
+      "attestation": null,
+      "motif": null
+    },
+    {
+      "id": "INT-T42",
+      "titre": "Contrat v2 : l'en-tete du kid est declare, facultatif et additif, pour les webhooks d'axion-ia et la reponse de coordonnees",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "integration",
+      "paths": [
+        "packages/contracts/",
+        "scripts/contracts/export.ts",
+        "tests/unit/integration/contrat-hash.spec.ts",
+        "tests/unit/integration/contrat-v2-frontiere.spec.ts",
+        "tests/unit/integration/contrat-en-tete-du-kid.spec.ts"
+      ],
+      "schema": true,
+      "sensible": [],
+      "deps": [
+        "INT-T01c"
+      ],
+      "reqs": [
+        "REQ-QA-030"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.25,
+      "statut": "a_faire",
+      "acceptance": "Arbitrage A01 du 2026-09-30, sur la question de -66 (contrat en lockstep) et l'arbitrage -d7 sur QA-T52. Le contrat Partners est la source : l'en-tete du kid y est declare AVANT sa recopie dans axion-ia (INT-T41). A LIVRER : (1) un en-tete du kid, facultatif, ajoute aux en-tetes declares des webhooks d'axion-ia vers Partners et de la reponse de coordonnees ; (2) changement ADDITIF et facultatif, sans nouveau type d'evenement : le contrat reste en v2, et contracts.sha256 est recalcule par l'export ; (3) TEMOIN : le contrat exporte declare l'en-tete, l'empreinte suit, et un en-tete absent reste valide (facultatif). Auteur : -66, puis INT-T41 recopie le contrat octet pour octet. Lentille schema requise.",
+      "tests": {
+        "REQ-QA-030": [
+          "tests/unit/integration/contrat-en-tete-du-kid.spec.ts"
         ]
       },
       "issue": null,
