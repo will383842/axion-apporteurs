@@ -157,6 +157,7 @@
     "gate-d": "sh scripts/gates/gate-d.sh",
     "gate-d:prove": "sh scripts/gates/gate-d.sh --prove",
     "image:publier": "sh scripts/image/publier.sh",
+    "coolify:provisionner": "tsx scripts/deploiement/provisionner.ts",
     "deploy:verify": "tsx scripts/gates/deploy-verify.ts --verifier",
     "deploy:coolify": "tsx scripts/gates/deploy-verify.ts --declencher"
   },
