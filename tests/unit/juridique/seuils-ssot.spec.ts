@@ -16,7 +16,8 @@
  *   4. COHÉRENCE GABARIT ↔ SSOT, sur le modèle de REQ-EXT-028 (a) : chaque valeur que le gabarit
  *      écrit dans l'article nommé par la constante est celle de la constante ; une variable
  *      `{{…}}` de genre `seuil` résout vers une constante, sauf celle qu'une question ouverte tient
- *      (`JUR-T01-Q02` tient `FENETRE_MOIS` : la SSOT n'invente pas sa valeur).
+ *      (aucune depuis le 2026-09-30 : `FENETRE_MOIS`, tenue jusque-là par `JUR-T01-Q02`, vaut 6
+ *      mois dans la SSOT, HYP-E1-9 tranchée).
  *
  * Chaque face est jouée des deux côtés : le dépôt réel sort sans faute, un témoin fait rougir.
  */

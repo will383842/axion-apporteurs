@@ -13532,7 +13532,9 @@
         "docs/PRESEANCE.md",
         "docs/TRACABILITE.md",
         "docs/PLAN-STATE.md",
-        "docs/journal/"
+        "docs/journal/",
+        "src/domain/contrat/decisions.ts",
+        "tests/unit/contrat/contract-template-complete.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -16603,7 +16605,8 @@
       "paths": [
         "src/domain/seuils/ssot.ts",
         "docs/DECISIONS.md",
-        "docs/journal/"
+        "docs/journal/",
+        "tests/unit/juridique/seuils-ssot.spec.ts"
       ],
       "schema": false,
       "sensible": [
