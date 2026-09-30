@@ -261,3 +261,29 @@ describe('REQ-QA-018 — la forge construit, juge, puis publie l’image (QA-T05
     });
   }
 });
+
+/**
+ * LA RÈGLE JUMELLE DE LA PREVIEW (QA-T06, arbitrage -d7 sur délégation de Williams du 2026-09-29,
+ * condition 6). `preview.yml` porte `packages: write` là où du code de PR s'exécute — c'est le prix
+ * de l'option (B). Ce jeton ne doit JAMAIS atteindre le paquet de production : aucun job de
+ * `preview.yml` ne lance `image:publier`, et la seule cible que son script sait écrire finit par
+ * `-preview` (`cibleDePreview`, `scripts/preview/preview.ts`).
+ */
+describe('REQ-QA-018 — la preview écrit dans son paquet, jamais dans celui de production', () => {
+  const PREVIEW = readFileSync('.github/workflows/preview.yml', 'utf8');
+
+  it('REQ-QA-018 : aucun job de preview ne lance la publication de production', () => {
+    expect(PREVIEW).not.toMatch(/image:publier\b/);
+    expect(PREVIEW).not.toMatch(
+      /secrets\.(?!GITHUB_TOKEN\b|COOLIFY_PREVIEW_URL\b|COOLIFY_PREVIEW_TOKEN\b)/
+    );
+  });
+
+  it('REQ-QA-018 : la cible de preview finit par -preview, et une cible de production est refusée', async () => {
+    const { cibleDePreview } = await import('../../../scripts/preview/preview');
+    expect(cibleDePreview('will383842/axion-apporteurs', 12, 'a'.repeat(40))).toBe(
+      'ghcr.io/will383842/axion-apporteurs-preview:pr-12-aaaaaaa'
+    );
+    expect(() => cibleDePreview('will383842/axion-apporteurs', 12, 'main')).toThrow();
+  });
+});

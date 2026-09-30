@@ -26,4 +26,19 @@ else
   fi
 fi
 
+# QA-T06 (REQ-QA-015) : une preview est SEMÉE, jamais copiée. Le semeur (`prisma/seed.ts`) ne tourne
+# que si un instant de semis est posé, et SEULEMENT en preview : ailleurs, le démarrage est refusé —
+# un semis en production écrirait des données d'essai à côté des données réelles. Le semeur est
+# idempotent : un redémarrage ne sème rien de plus.
+if [ -n "${SEMEUR_INSTANT:-}" ]; then
+  if [ "${PARTNERS_ENV:-}" != "preview" ]; then
+    echo "Demarrage refuse : SEMEUR_INSTANT n'est admise qu'en preview (PARTNERS_ENV=preview)." >&2
+    exit 1
+  fi
+  if ! node "$ICI/node_modules/tsx/dist/cli.mjs" prisma/seed.ts; then
+    echo "Demarrage refuse : le semis de la preview a echoue. Le serveur n'est pas lance." >&2
+    exit 1
+  fi
+fi
+
 exec "$@"
