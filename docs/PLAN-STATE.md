@@ -8,12 +8,12 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `bedbaf7f` — 2026-09-30T02:50:29+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #263 (un contrôle requis rouge ou une revue manquante) · 2. #268 (un contrôle requis rouge ou une revue manquante) · 3. #272 (un contrôle requis rouge ou une revue manquante) · 4. #280 (un contrôle requis rouge ou une revue manquante) · 5. #262 (un conflit avec `main`) · 6. #275 (un conflit avec `main`) |
+| Qu’est-ce qui est en vol ? | 1. #263 (un contrôle requis rouge ou une revue manquante) · 2. #268 (un contrôle requis rouge ou une revue manquante) · 3. #272 (un contrôle requis rouge ou une revue manquante) · 4. #280 (un contrôle requis rouge ou une revue manquante) · 5. #281 (un contrôle requis rouge ou une revue manquante) · 6. #262 (un conflit avec `main`) · 7. #275 (un conflit avec `main`) |
 | Qui tient quoi ? | aucune tâche revendiquée |
 | Où en est la phase ? | phase 0 — 121/134 tâches, reste 9.25 j |
 | Le prochain pas | QA-T06 — Preview par PR sur Coolify, base éphémère, seed déterministe |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
-| Dernière entrée de journal | PR #279 — 2026-09-30 |
+| Dernière entrée de journal | PR #281 — 2026-09-30 |
 
 **Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
@@ -64,8 +64,9 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 | 2 | #268 — feat(QA-T34): la plateforme tire sha-7 apres publier, un seul producteur, l'atterrissage lu sur x-partners-build-sha | `t/qa-t34` | un contrôle requis rouge ou une revue manquante |
 | 3 | #272 — feat(QA-T50): base, cache et application crees s'ils manquent, variables posees depuis les secrets, aucune valeur imprimee | `t/qa-t50` | un contrôle requis rouge ou une revue manquante |
 | 4 | #280 — feat(QA-T12): sauvegarde chiffree cote client, exercice de restauration mensuel sur un Postgres ephemere, fraicheur nocturne | `t/qa-t12` | un contrôle requis rouge ou une revue manquante |
-| 5 | #262 — feat(GOV-116): le lot dedie du gardien-spec, procedure exacte lancee par Williams, reglages rendus depuis le projet | `t/gov-116` | un conflit avec `main` — à résoudre avant tout |
-| 6 | #275 — feat(GOV-123): les vues derivees sortent de git et se rendent a la volee, fin des conflits de vues entre PR | `t/gov-123-vues` | un conflit avec `main` — à résoudre avant tout |
+| 5 | #281 — feat(QA-T06): preview par PR sous six conditions, semeur deterministe verifie sur deux bases, plafond de deux | `t/qa-t06` | un contrôle requis rouge ou une revue manquante |
+| 6 | #262 — feat(GOV-116): le lot dedie du gardien-spec, procedure exacte lancee par Williams, reglages rendus depuis le projet | `t/gov-116` | un conflit avec `main` — à résoudre avant tout |
+| 7 | #275 — feat(GOV-123): les vues derivees sortent de git et se rendent a la volee, fin des conflits de vues entre PR | `t/gov-123-vues` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -99,6 +100,24 @@ Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
 
+### PR #281 — 2026-09-30 — feat(QA-T06): preview par PR sous six conditions, semeur deterministe verifie sur deux bases, plafond de deux
+
+**Fait.** Le semeur exécute les modules de semis dans l'ordre de leur préfixe, avec un instant injecté,
+des identifiants dérivés d'un espace de noms fixe et les clés de l'environnement ; sa garde sème deux
+bases neuves et les compare table par table, colonnes chiffrées déchiffrées. Chaque PR du dépôt reçoit
+une preview isolée : image publiée dans un paquet distinct de celui de production, déploiement par un
+job qui n'exécute aucun code de la PR, deux previews au plus, destruction complète à la fermeture. Le
+point d'entrée sème la preview au démarrage, et refuse de démarrer si un semis est demandé ailleurs.
+
+**Reste.** L'exercice réel attend le jeton de la plateforme réservé aux previews et son domaine.
+L'effacement des previews de plus de quarante-huit heures n'est pas fait : la plateforme ne documente
+aucune date de création. Les tests de bout en bout et le balayage de sécurité contre la preview
+attendent une preview réelle. Une PR en attente n'est pas relancée d'office quand une place se libère.
+
+**Appris.** Le chiffrement des données personnelles tire un vecteur aléatoire : deux semis identiques
+donnent des octets chiffrés différents. Une garde de déterminisme qui compare les octets rougit à tort,
+et une garde qui les ignore laisse passer un clair tiré au hasard : il faut déchiffrer avant de comparer.
+
 ### PR #279 — 2026-09-30 — chore(GOV-012): registre rattrape, INT-T04 et INT-T05 closes par le passif, QA-T13 decoupee, paths de QA-T06 et JUR-T29
 
 **Fait.** Cinq clôtures, dont INT-T04 et INT-T05 par le passif déclaré. QA-T13 est découpée : le
@@ -121,18 +140,7 @@ par axion-ia #1228 et en production.
 **Appris.** Un corps de squash enrichi d'une seule phrase suffit à ne plus rien déclarer : la
 consigne de fusion côté axion-ia est désormais un corps réduit à la seule ligne Lot:.
 
-### PR #271 — 2026-09-30 — chore(GOV-012): registre rattrape, JUR-T03 close, chiffrement client des sauvegardes, paths de QA-T12 et JUR-T29
-
-**Fait.** Seizième rattrapage. JUR-T03 est close après vérification de sa mise en production. Les
-sauvegardes de Partners devront être chiffrées côté client avant la première donnée réelle. Les
-chemins de QA-T12 et de JUR-T29 suivent ce que leurs auteurs ont mesuré.
-
-**Reste.** La levée de l'exception « 500 euros nu » attend la confirmation de Williams.
-
-**Appris.** Une condition de mise en service écrite dans un runbook seul se perd : écrite dans
-l'acceptance, elle a un témoin et bloque réellement.
-
-… 3 entrée(s) affichée(s) sur 120 ; les 117 plus ancienne(s) se lisent dans `docs/journal/`.
+… 3 entrée(s) affichée(s) sur 121 ; les 118 plus ancienne(s) se lisent dans `docs/journal/`.
 
 ## Dette déclarée
 
