@@ -31,13 +31,11 @@
 ## 2. Les exercices, en `production-avant-donnees`
 
 - [ ] `retour-arriere.md` exercé ; `rollback.yml` exercé pour de vrai (sha cible servi, `readyz` 200,
-      la variable d'échappatoire de migration RETIRÉE de l'application, et non laissée à une autre
-      valeur : voir `retour-arriere.md`). _Porteur : Williams ou une session autorisée (gestes),
-      l'auteur (consignation)._ **Attention** : `rollback.yml` REMET la variable à 0, il ne la SUPPRIME
-      pas (journal du run 36736051182). Le retrait est donc un geste à part. _Porteur du retrait :
-      Williams, à la main sur la plateforme, tracé (date, capture) ; ou une tâche de code, versée par
-      A01 et rangée « avant mise en service », pour que `deploy:retirer-echappatoire` supprime la
-      variable au lieu de la remettre à 0._
+      variable d'échappatoire de migration REMISE À 0 par l'étape finale du workflow). 0 est sans
+      risque : l'entrée (`docker-entrypoint.sh`) ne saute la migration que sur la valeur `1` exacte.
+      Témoin : `tests/integration/sondes-de-vie.spec.ts`, cas REQ-QA-019 « … saute la migration, le dit
+      sur la sortie d'erreur, et lance le serveur » : une autre valeur (`true`) ne saute PAS la
+      migration. _Porteur : Williams ou une session autorisée (gestes), l'auteur (consignation)._
 - [ ] `migration-echouee.md` exercé ; ensuite, la base de production est **RECRÉÉE** (suppression puis
       provisionnement), semée à nouveau, et `deploy:verify` est vert. _Porteur : Williams (gestes),
       l'auteur (constats et consignation)._

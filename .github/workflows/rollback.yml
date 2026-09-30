@@ -50,8 +50,8 @@ jobs:
         run: pnpm deploy:retour-arriere
 
       # Jouee MEME si l etape precedente a echoue ou a ete interrompue : l echappatoire ne survit
-      # jamais a un retour arriere (consigne de la lentille securite).
-      - name: Retirer l echappatoire de migration, quoi qu il soit arrive
+      # jamais a 1 apres un retour arriere (consigne de la lentille securite) ; 0 est inerte.
+      - name: Remettre l echappatoire de migration a 0, quoi qu il soit arrive
         if: ${{ always() }}
         env:
           COOLIFY_URL: ${{ secrets.COOLIFY_URL }}
