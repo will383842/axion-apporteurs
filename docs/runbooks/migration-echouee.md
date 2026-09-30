@@ -1,7 +1,17 @@
 # Runbook — une migration échoue au déploiement
 
-> Livré par QA-T13 (REQ-QA-034), sur le comportement posé par QA-T04 (REQ-QA-019). À exercer en
-> preview avant la clôture de la phase 0 : le bloc « Exécuté le » en fin de fichier fait foi.
+> Livré par QA-T13 (REQ-QA-034), sur le comportement posé par QA-T04 (REQ-QA-019). À exercer avant la
+> clôture de la phase 0.
+>
+> **Où il s'exerce** (amendement (7)-(8) de QA-T13, 2026-09-30) : en `preview`, ou, faute de serveur
+> d'aperçus (décision de Williams), en `production-avant-donnees`. Dans ce second cas, l'exercice a lieu sur la
+> production STRICTEMENT avant la date de mise en service (`MISE_EN_SERVICE`,
+> `scripts/gates/runbooks-exerces.ts`), sur un semis synthétique, sans aucune donnée réelle. Les journaux
+> et les alertes de l'exercice sont vidés ou marqués. Le bloc « Exécuté le » en fin de fichier fait foi.
+>
+> En `production-avant-donnees`, après l'exercice, la base de production est **RECRÉÉE** (suppression,
+> puis provisionnement), semée à nouveau, et `pnpm deploy:verify` est vert. Aucune ligne
+> `_prisma_migrations` ni aucun objet de la migration cassée ne survit.
 
 ## Ce qui s'est passé, et ce qui ne s'est pas passé
 
