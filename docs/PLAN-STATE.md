@@ -7,10 +7,10 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `dffcbbaf` — 2026-09-30T02:11:03+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #263 (un contrôle requis rouge ou une revue manquante) · 2. #268 (un contrôle requis rouge ou une revue manquante) · 3. #272 (un contrôle requis rouge ou une revue manquante) · 4. #275 (un contrôle requis rouge ou une revue manquante) · 5. #279 (un contrôle requis rouge ou une revue manquante) · 6. #280 (un contrôle requis rouge ou une revue manquante) · 7. #262 (un conflit avec `main`) |
-| Qui tient quoi ? | GOV-109 (A01) · GOV-117 (A01) · GOV-128 (A01) |
-| Où en est la phase ? | phase 0 — 116/134 tâches, reste 13.50 j |
+| Où est `main` ? | `bedbaf7f` — 2026-09-30T02:50:29+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #263 (un contrôle requis rouge ou une revue manquante) · 2. #268 (un contrôle requis rouge ou une revue manquante) · 3. #272 (un contrôle requis rouge ou une revue manquante) · 4. #262 (un conflit avec `main`) · 5. #275 (un conflit avec `main`) · 6. #280 (un conflit avec `main`) |
+| Qui tient quoi ? | aucune tâche revendiquée |
+| Où en est la phase ? | phase 0 — 121/134 tâches, reste 9.25 j |
 | Le prochain pas | QA-T06 — Preview par PR sur Coolify, base éphémère, seed déterministe |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
 | Dernière entrée de journal | PR #280 — 2026-09-30 |
@@ -19,19 +19,19 @@
 
 ## Phase courante : 0
 
-116/134 tâches terminées · reste 13.50 j estimés.
+121/134 tâches terminées · reste 9.25 j estimés.
 
 ## Tâches
 
 | Statut | Nombre | Détail |
 | --- | --- | --- |
 | `proposee` | 0 | — |
-| `a_faire` | 176 | QA-T06, QA-T12, QA-T13, INT-T03, INT-T04, INT-T05, INT-T22, QA-T20, JUR-T29, DM-07, DM-08, DM-24 … (12 affichées sur 176 — liste complète : `docs/TASKS.md`) |
+| `a_faire` | 171 | QA-T06, QA-T12, QA-T13, INT-T03, INT-T22, QA-T20, JUR-T29, DM-07, DM-08, DM-24, DM-25, INT-T07-P … (12 affichées sur 171 — liste complète : `docs/TASKS.md`) |
 | `en_cours` | 0 | — |
 | `bloquee` | 0 | — |
 | `attente_externe` | 2 | JUR-T01b · JUR-T01c |
 | `en_revue` | 0 | — |
-| `fusionnee` | 155 | GOV-000, GOV-007, GOV-001, GOV-018, GOV-008, GOV-002, GOV-003, GOV-004, GOV-005, GOV-006, GOV-009, GOV-010 … (12 affichées sur 155 — liste complète : `docs/TASKS.md`) |
+| `fusionnee` | 160 | GOV-000, GOV-007, GOV-001, GOV-018, GOV-008, GOV-002, GOV-003, GOV-004, GOV-005, GOV-006, GOV-009, GOV-010 … (12 affichées sur 160 — liste complète : `docs/TASKS.md`) |
 | `deployee` | 0 | — |
 | `verifiee` | 0 | — |
 
@@ -63,10 +63,9 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 | 1 | #263 — feat(QA-T20): le poids charge par route se lit dans les manifestes de Next 16, zero octet est une faute | `t/qa-t20` | un contrôle requis rouge ou une revue manquante |
 | 2 | #268 — feat(QA-T34): la plateforme tire sha-7 apres publier, un seul producteur, l'atterrissage lu sur x-partners-build-sha | `t/qa-t34` | un contrôle requis rouge ou une revue manquante |
 | 3 | #272 — feat(QA-T50): base, cache et application crees s'ils manquent, variables posees depuis les secrets, aucune valeur imprimee | `t/qa-t50` | un contrôle requis rouge ou une revue manquante |
-| 4 | #275 — feat(GOV-123): les vues derivees sortent de git et se rendent a la volee, fin des conflits de vues entre PR | `t/gov-123-vues` | un contrôle requis rouge ou une revue manquante |
-| 5 | #279 — chore(GOV-012): registre rattrape, INT-T04 et INT-T05 closes par le passif, QA-T13 decoupee, paths de QA-T06 et JUR-T29 | `t/registre-rattrapage-17` | un contrôle requis rouge ou une revue manquante |
-| 6 | #280 — feat(QA-T12): sauvegarde chiffree cote client, exercice de restauration mensuel sur un Postgres ephemere, fraicheur nocturne | `t/qa-t12` | un contrôle requis rouge ou une revue manquante |
-| 7 | #262 — feat(GOV-116): le lot dedie du gardien-spec, procedure exacte lancee par Williams, reglages rendus depuis le projet | `t/gov-116` | un conflit avec `main` — à résoudre avant tout |
+| 4 | #262 — feat(GOV-116): le lot dedie du gardien-spec, procedure exacte lancee par Williams, reglages rendus depuis le projet | `t/gov-116` | un conflit avec `main` — à résoudre avant tout |
+| 5 | #275 — feat(GOV-123): les vues derivees sortent de git et se rendent a la volee, fin des conflits de vues entre PR | `t/gov-123-vues` | un conflit avec `main` — à résoudre avant tout |
+| 6 | #280 — feat(QA-T12): sauvegarde chiffree cote client, exercice de restauration mensuel sur un Postgres ephemere, fraicheur nocturne | `t/qa-t12` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -74,11 +73,7 @@ Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partn
 
 Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’issue, posés par l’orchestrateur au §3 de `.claude/skills/lot/SKILL.md` (revendication **en vol**), et le champ `owner` de `docs/tasks.json`, écrit par `pnpm lot:cloture` seul (revendication **consolidée**). Cette rubrique les REND ; corriger une revendication fausse se fait dans l’une des deux sources, jamais ici.
 
-| Tâche | Revendiquée par | Issue | Statut |
-| --- | --- | --- | --- |
-| GOV-109 — La garde lexicale ne s'arrete pas au texte litteral : des expressions constantes de la JSX rendent encore a l'ecran un terme qu'elle ne voit pas | A01 | #266 | `a_faire` |
-| GOV-117 — L'outil d'écriture du registre écrit reqs, hyp et zone d'une tâche existante, validés contre le schéma, les REQ et les HYP existantes, et journalisés | A01 | #258 | `a_faire` |
-| GOV-128 — Le passif de la declaration lit aussi la ligne Lot: du squash immuable : une PR de lot au corps enrichi se clot sur arbitrage ecrit | A01 | #277 | `a_faire` |
+Aucune tâche revendiquée. Un agent ne prend jamais une tâche non revendiquée (REQ-GOV-007) : la revendication passe par l’orchestrateur.
 
 ⚠️ **13 revendication(s) périmée(s)** — QA-T07, GOV-042, GOV-045, GOV-050, GOV-051, GOV-053, GOV-054, GOV-055, GOV-060, GOV-072, GOV-079, GOV-093, INT-T01c : leur issue porte encore un label `owner:` alors que la tâche est livrée. `pnpm lot:cloture` écrit `docs/tasks.json` mais n’efface pas les labels ; la dette appartient à GOV-012.
 
@@ -90,13 +85,13 @@ Dérivé de `git log` sur `docs/adr/`, restreint au jour du dernier atterrissage
 
 ## Prochain pas
 
-**QA-T06** — Preview par PR sur Coolify, base éphémère, seed déterministe (1 j) : 14 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
+**QA-T06** — Preview par PR sur Coolify, base éphémère, seed déterministe (1 j) : 9 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
 Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeStateStatus` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage —, la tâche ensuite. L’ordre de la file se corrige à la rubrique « File de fusion », jamais ici.
 
 ## Dernier atterrissage
 
-`origin/main` = `dffcbbaf` (2026-09-30T02:11:03+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `bedbaf7f` (2026-09-30T02:50:29+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
@@ -122,6 +117,17 @@ mais un vidage chiffré en GCM tronqué d'un octet échoue plus tôt, au déchif
 testent séparément. Et une erreur de restauration peut citer une ligne de données : le motif d'un échec
 ne reprend jamais la sortie brute, seulement l'étape et le code de sortie.
 
+### PR #279 — 2026-09-30 — chore(GOV-012): registre rattrape, INT-T04 et INT-T05 closes par le passif, QA-T13 decoupee, paths de QA-T06 et JUR-T29
+
+**Fait.** Cinq clôtures, dont INT-T04 et INT-T05 par le passif déclaré. QA-T13 est découpée : le
+socle et ses trois runbooks exercés avant la fin de la Phase 0, les runbooks d'argent à QA-T25.
+JUR-T29 déclare les fichiers réels de sa PR. Les dettes non bloquantes sont rangées dans LECONS.
+
+**Reste.** La clôture de JUR-T29 après la fusion et la mise en production de axion-ia #1232.
+
+**Appris.** Une clôture écrite sur une base qui ne porte pas la revendication de la tâche se perd
+à la fusion du registre : on clôt sur la base à jour, jamais avant.
+
 ### PR #278 — 2026-09-29 — feat(GOV-128): le passif de la declaration lit la ligne Lot: du squash immuable, deux entrees pour axion-ia 1228
 
 **Fait.** Le passif déclaré de la déclaration sait lire la ligne Lot: du message d'écrasement
@@ -133,18 +139,7 @@ par axion-ia #1228 et en production.
 **Appris.** Un corps de squash enrichi d'une seule phrase suffit à ne plus rien déclarer : la
 consigne de fusion côté axion-ia est désormais un corps réduit à la seule ligne Lot:.
 
-### PR #271 — 2026-09-30 — chore(GOV-012): registre rattrape, JUR-T03 close, chiffrement client des sauvegardes, paths de QA-T12 et JUR-T29
-
-**Fait.** Seizième rattrapage. JUR-T03 est close après vérification de sa mise en production. Les
-sauvegardes de Partners devront être chiffrées côté client avant la première donnée réelle. Les
-chemins de QA-T12 et de JUR-T29 suivent ce que leurs auteurs ont mesuré.
-
-**Reste.** La levée de l'exception « 500 euros nu » attend la confirmation de Williams.
-
-**Appris.** Une condition de mise en service écrite dans un runbook seul se perd : écrite dans
-l'acceptance, elle a un témoin et bloque réellement.
-
-… 3 entrée(s) affichée(s) sur 120 ; les 117 plus ancienne(s) se lisent dans `docs/journal/`.
+… 3 entrée(s) affichée(s) sur 121 ; les 118 plus ancienne(s) se lisent dans `docs/journal/`.
 
 ## Dette déclarée
 
