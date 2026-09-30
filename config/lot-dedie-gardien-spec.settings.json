@@ -6,49 +6,16 @@
     "Lancé par Williams SEUL, depuis la racine du dépôt : claude --setting-sources user --settings config/lot-dedie-gardien-spec.settings.json"
   ],
   "permissions": {
+    "defaultMode": "default",
     "allow": [
-      "Bash(pnpm *)",
-      "Bash(npx vitest *)",
-      "Bash(npx tsx*)",
-      "Bash(node scripts/*)",
       "Bash(git status*)",
       "Bash(git diff*)",
       "Bash(git log*)",
-      "Bash(git add*)",
-      "Bash(git commit*)",
-      "Bash(git fetch*)",
-      "Bash(git merge*)",
-      "Bash(git rebase*)",
-      "Bash(git checkout -b t/*)",
-      "Bash(git checkout -b lot/*)",
-      "Bash(git switch*)",
-      "Bash(git push -u origin t/*)",
-      "Bash(git push -u origin lot/*)",
-      "Bash(git push origin t/*)",
-      "Bash(git push origin lot/*)",
-      "Bash(git worktree add*)",
-      "Bash(git worktree list*)",
-      "Bash(git worktree prune*)",
-      "Bash(git worktree remove*)",
-      "Bash(gh pr create*)",
+      "Bash(git show*)",
       "Bash(gh pr view*)",
       "Bash(gh pr checks*)",
-      "Bash(gh pr review*)",
       "Bash(gh pr diff*)",
-      "Bash(gh pr merge*)",
-      "Bash(gh pr update-branch*)",
-      "Bash(gh issue list*)",
-      "Bash(gh issue view*)",
-      "Bash(gh issue create*)",
-      "Bash(gh issue edit*)",
-      "Bash(gh issue comment*)",
-      "Bash(gh label*)",
-      "Bash(gh repo view*)",
-      "Bash(gh api*)",
-      "Bash(gh run list*)",
       "Bash(gh run view*)",
-      "Bash(curl -sI*)",
-      "Bash(docker compose*)",
       "Write(docs/DECISIONS.md)",
       "Edit(docs/DECISIONS.md)",
       "Write(docs/GLOSSAIRE.md)",
@@ -100,7 +67,22 @@
       "Write(config/exemptions-corps-publie.json)",
       "Edit(config/exemptions-corps-publie.json)",
       "Write(.claude/settings.json)",
-      "Edit(.claude/settings.json)"
+      "Edit(.claude/settings.json)",
+      "Bash(node:*)",
+      "Bash(npx:*)",
+      "Bash(pnpm:*)",
+      "Bash(npm:*)",
+      "Bash(tsx:*)",
+      "Bash(docker:*)",
+      "Bash(python:*)",
+      "Bash(python3:*)",
+      "Bash(gh api:*)",
+      "Bash(gh pr merge:*)",
+      "Bash(git merge:*)",
+      "Bash(git rebase:*)",
+      "Bash(git reset:*)",
+      "Bash(git checkout:*)",
+      "Bash(git restore:*)"
     ]
   },
   "hooks": {
@@ -111,6 +93,15 @@
           {
             "type": "command",
             "command": "node scripts/gates/hook-env.js"
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit|MultiEdit|NotebookEdit|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node --no-warnings scripts/lot/lot-dedie-gardien-spec.ts --garde"
           }
         ]
       }

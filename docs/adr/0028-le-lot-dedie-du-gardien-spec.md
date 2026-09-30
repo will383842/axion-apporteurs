@@ -33,16 +33,32 @@ fichier de plus :
    réglages locaux. Le fichier du lot est **rendu** depuis `.claude/settings.json`
    (`scripts/lot/lot-dedie-gardien-spec.ts --rendre`) : il en reprend TOUTES les interdictions, tous
    les hooks et l'environnement, et n'ouvre que l'écriture des trois fichiers (`Write` et `Edit`).
+   Il ne reprend AUCUNE autorisation du projet : en `allow`, la lecture (`git status/diff/log/show`,
+   `gh pr view/checks/diff`, `gh run view`) et les six règles, rien d'autre. Il fixe le mode à
+   `default`, pour que tout le reste DEMANDE à Williams, et il refuse en plus les exécuteurs
+   (`node`, `npx`, `pnpm`, `npm`, `tsx`, `docker`, `python`, `gh api`, `gh pr merge`,
+   `git merge/rebase/reset/checkout/restore`).
 3. **Une session ordinaire reste bloquée.** `.claude/settings.json` porte en `deny` les six règles
    d'écriture des trois fichiers. Cet ajout touche un fichier réservé : Williams l'applique lui-même.
 4. `pnpm lot:gardien-spec:verifier` rougit si le fichier du lot dérive du rendu, et si une des six
    règles manque au `deny` du projet.
+5. **Le confinement est mécanique** (lentille securite, 2026-09-30). `--setting-sources user` charge
+   aussi `~/.claude/settings.json` : son mode et ses `allow` s'ajoutent à ceux du lot, et un
+   `deny` ne les borne que motif par motif. Un hook `PreToolUse` du lot
+   (`lot-dedie-gardien-spec.ts --garde`) juge donc chaque `Write`, `Edit`, `MultiEdit`,
+   `NotebookEdit` et `Bash`, quelle que soit la règle héritée. Une écriture passe si son chemin,
+   RÉSOLU puis suivi jusqu'au fichier réel, est l'un des trois fichiers, casse comprise (seule la
+   lettre de lecteur Windows est normalisée). Une commande passe si elle ne porte aucun
+   métacaractère et figure sur une liste : la lecture, `git add` des trois fichiers, `git commit -m`,
+   `git push` et `git switch -c` sur `t/*`, et `gh pr create`. Tout le reste est refusé, et le refus
+   est nommé.
 
 ## Conséquences
 
 GOV-112 peut s'écrire dans le lot. Une session ordinaire ne peut plus écrire le glossaire ni la
-préséance. Les réglages utilisateur de Williams restent chargés dans le lot : ils ne doivent pas
-porter d'autorisation sur un fichier réservé, ce que le dépôt ne peut pas vérifier.
+préséance. Les réglages utilisateur de Williams restent chargés dans le lot, mais la garde refuse
+toute écriture hors des trois fichiers et toute commande hors de la liste, quelles que soient leurs
+autorisations. Le lot ne fusionne pas : `gh pr merge` y est refusé.
 
 ## Alternatives écartées
 
@@ -55,6 +71,9 @@ porter d'autorisation sur un fichier réservé, ce que le dépôt ne peut pas v�
 
 `tests/unit/gouvernance/lot-dedie-gardien-spec.spec.ts` :
 - le lot ouvre les trois fichiers et eux seuls, garde tout autre `deny` et les hooks ;
+- le lot fixe le mode `default` et n'autorise sans demander aucun Bash qui exécute ou écrit ;
+- la garde refuse `docs/../docs/tasks.json`, `DOCS/Decisions.md`, un chemin absolu hors du lot, un
+  lien qui pointe ailleurs, et toute commande qui exécute, écrit, enchaîne ou sort de `t/*` ;
 - le fichier sur disque est le rendu exact ;
 - une session ordinaire porte les six règles en `deny`, et un projet qui en oublie une est nommé.
 
@@ -62,6 +81,5 @@ La trace datée de l'exécution réelle par Williams est jointe à la PR.
 
 ## Reste à faire
 
-Williams ajoute à `.claude/settings.json` les quatre règles `deny` qui manquent (`Write` et `Edit` de
-`docs/GLOSSAIRE.md` et de `docs/PRESEANCE.md`), lance le lot une fois et joint la trace. Puis
-l'architecte accepte cet ADR.
+Les quatre règles `deny` qui manquaient sont posées (commit `a878a31e`, sur autorisation explicite de
+Williams). Williams lance le lot une fois et joint la trace. Puis l'architecte accepte cet ADR.

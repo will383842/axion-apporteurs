@@ -17,7 +17,8 @@
  *         pnpm lot:gardien-spec:verifier     rougit si le fichier dérive, ou si une session
  *                                            ordinaire n'est PAS bloquée sur les trois fichiers
  */
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, realpathSync, writeFileSync } from 'node:fs';
+import { basename, dirname, join, resolve } from 'node:path';
 
 export const CHEMIN_REGLAGES_DU_PROJET = '.claude/settings.json';
 export const CHEMIN_REGLAGES_DU_LOT = 'config/lot-dedie-gardien-spec.settings.json';
@@ -38,6 +39,141 @@ export const REGLES_DU_LOT: readonly string[] = FICHIERS_DU_LOT.flatMap(reglesDE
 /** La commande exacte, lancée par Williams SEUL, depuis la racine du dépôt. */
 export const COMMANDE_DU_LOT = `claude --setting-sources user --settings ${CHEMIN_REGLAGES_DU_LOT}`;
 
+/**
+ * LE CONFINEMENT EST MÉCANIQUE, PAS UNE LISTE (lentille securite sur #262, 2026-09-30).
+ * `--setting-sources user` charge aussi `~/.claude/settings.json` : son `defaultMode` (« auto »
+ * chez Williams) et ses `allow`, qui S'AJOUTENT à ceux du lot. Un `deny` ne les borne que motif par
+ * motif, et `pnpm *`, `npx tsx*`, `node scripts/*` ou `docker compose*` écrivent n'importe quel
+ * fichier. Le lot fixe donc son mode, n'autorise sans demander que la LECTURE, refuse les
+ * exécuteurs, et un hook `PreToolUse` juge chaque écriture et chaque commande : ce qui n'est ni
+ * l'un des trois fichiers ni une commande de la liste est refusé, quelle que soit la règle
+ * héritée.
+ */
+export const MODE_DU_LOT = 'default';
+
+/** Ce que le lot autorise sans demander, en plus des six règles : lire, rien d'autre. */
+export const LECTURES_DU_LOT: readonly string[] = [
+  'Bash(git status*)',
+  'Bash(git diff*)',
+  'Bash(git log*)',
+  'Bash(git show*)',
+  'Bash(gh pr view*)',
+  'Bash(gh pr checks*)',
+  'Bash(gh pr diff*)',
+  'Bash(gh run view*)',
+];
+
+/** Les exécuteurs et les écritures détournées, refusés en plus des interdictions du projet. */
+export const DENY_DU_LOT: readonly string[] = [
+  'Bash(node:*)',
+  'Bash(npx:*)',
+  'Bash(pnpm:*)',
+  'Bash(npm:*)',
+  'Bash(tsx:*)',
+  'Bash(docker:*)',
+  'Bash(python:*)',
+  'Bash(python3:*)',
+  'Bash(gh api:*)',
+  'Bash(gh pr merge:*)',
+  'Bash(git merge:*)',
+  'Bash(git rebase:*)',
+  'Bash(git reset:*)',
+  'Bash(git checkout:*)',
+  'Bash(git restore:*)',
+];
+
+/** Le hook du lot : lancé par node (types effacés), sans dépendance. */
+export const COMMANDE_DE_LA_GARDE =
+  'node --no-warnings scripts/lot/lot-dedie-gardien-spec.ts --garde';
+export const OUTILS_D_ECRITURE = ['Write', 'Edit', 'MultiEdit', 'NotebookEdit'] as const;
+const MATCHER_DE_LA_GARDE = [...OUTILS_D_ECRITURE, 'Bash'].join('|');
+
+/** Toute commande portant l'un de ces caractères enchaîne, redirige ou substitue : refusée. */
+const METACARACTERES = /[;&|<>`$\n\r\\]/;
+const BRANCHE_T = 't\\/[A-Za-z0-9._-]+';
+
+/** Les seules commandes Bash que la garde laisse passer. Tout le reste est refusé. */
+export const COMMANDES_PERMISES: readonly RegExp[] = [
+  /^git (status|diff|log|show|fetch)( |$)/,
+  /^git add( docs\/(DECISIONS|GLOSSAIRE|PRESEANCE)\.md)+$/,
+  /^git commit -m "[^"]+"$/,
+  new RegExp(`^git push( -u)? origin ${BRANCHE_T}$`),
+  new RegExp(`^git switch -c ${BRANCHE_T}$`),
+  /^gh pr (view|checks|diff|create)( |$)/,
+  /^gh run (view|list)( |$)/,
+];
+
+/** Une option qui fait écrire une commande de lecture (`git diff --output=…`) : refusée. */
+const OPTION_QUI_ECRIT = /(^| )(--output|-o)(=| |$)/;
+
+/** `null` si la commande passe ; sinon, la raison du refus. */
+export function jugerCommande(commande: string): string | null {
+  const c = commande.trim();
+  if (METACARACTERES.test(c)) {
+    return `commande refusée dans le lot : elle enchaîne, redirige ou substitue (« ${c} »).`;
+  }
+  if (OPTION_QUI_ECRIT.test(c)) {
+    return `commande refusée dans le lot : l'option --output écrit un fichier (« ${c} »).`;
+  }
+  if (!COMMANDES_PERMISES.some((m) => m.test(c))) {
+    return (
+      `commande refusée dans le lot : hors de la liste (lire, git add des trois fichiers, ` +
+      `commit, push sur t/*, gh en lecture). Fais-la dans une session ordinaire (« ${c} »).`
+    );
+  }
+  return null;
+}
+
+function cheminReel(absolu: string): string | null {
+  try {
+    return realpathSync.native(absolu);
+  } catch {
+    try {
+      return join(realpathSync.native(dirname(absolu)), basename(absolu));
+    } catch {
+      return null;
+    }
+  }
+}
+
+/**
+ * `null` si l'écriture vise l'un des trois fichiers ; sinon, la raison du refus. Le chemin est
+ * RÉSOLU (`..`, chemin absolu) et comparé tel quel, casse comprise : `DOCS/Decisions.md` est
+ * refusé même là où le disque l'accepterait. Puis le chemin RÉEL (lien symbolique suivi) doit être
+ * celui du fichier : un lien nommé comme un fichier du lot et pointant ailleurs est refusé.
+ * Seule la LETTRE DE LECTEUR Windows est normalisée (`c:` et `C:` désignent le même disque, et
+ * l'outil comme le hook peuvent l'écrire différemment) ; le reste du chemin garde sa casse.
+ */
+const lecteur = (p: string): string => p.replace(/^[a-z]:/, (m) => m.toUpperCase());
+
+export function jugerEcriture(chemin: string, racine: string): string | null {
+  const vise = lecteur(resolve(racine, chemin));
+  const reelVise = cheminReel(vise);
+  for (const f of FICHIERS_DU_LOT) {
+    const attendu = lecteur(resolve(racine, f));
+    if (vise === attendu && reelVise !== null && reelVise === cheminReel(attendu)) return null;
+  }
+  return `écriture refusée dans le lot : seuls ${FICHIERS_DU_LOT.join(', ')} s'écrivent (« ${chemin} »).`;
+}
+
+type EntreeDeHook = {
+  tool_name?: string;
+  tool_input?: { command?: string; file_path?: string; notebook_path?: string };
+  cwd?: string;
+};
+
+/** Le jugement du hook sur une entrée : `null` = passe, sinon la raison du refus. */
+export function jugerOutil(entree: EntreeDeHook, racine: string): string | null {
+  const outil = entree.tool_name ?? '';
+  if ((OUTILS_D_ECRITURE as readonly string[]).includes(outil)) {
+    const chemin = entree.tool_input?.file_path ?? entree.tool_input?.notebook_path;
+    if (typeof chemin !== 'string') return `écriture refusée dans le lot : ${outil} sans chemin.`;
+    return jugerEcriture(chemin, racine);
+  }
+  if (outil === 'Bash') return jugerCommande(entree.tool_input?.command ?? '');
+  return null;
+}
+
 export type Reglages = {
   permissions?: { allow?: string[]; deny?: string[]; [k: string]: unknown };
   hooks?: unknown;
@@ -45,13 +181,17 @@ export type Reglages = {
   [k: string]: unknown;
 };
 
+type Crochet = { matcher?: string; hooks?: unknown[] };
+
 /**
- * Les réglages du lot, DÉRIVÉS de ceux du projet : mêmes interdictions moins les six règles du lot,
- * mêmes autorisations plus ces six règles, mêmes hooks, même environnement. Rien d'autre ne s'ouvre.
+ * Les réglages du lot, DÉRIVÉS de ceux du projet : les interdictions du projet moins les six règles
+ * du lot, plus les exécuteurs ; en `allow`, la lecture et les six règles SEULEMENT (les `allow` du
+ * projet n'y passent pas) ; le mode `default` ; les hooks du projet plus la garde du lot ; le même
+ * environnement. Tout le reste demande à Williams, et la garde refuse ce qui sort du lot.
  */
 export function reglagesDuLot(projet: Reglages): Reglages {
-  const allow = projet.permissions?.allow ?? [];
   const deny = projet.permissions?.deny ?? [];
+  const hooks = (projet.hooks ?? {}) as Record<string, Crochet[]>;
   return {
     $schema: projet['$schema'],
     _commentaire: [
@@ -60,11 +200,20 @@ export function reglagesDuLot(projet: Reglages): Reglages {
       `Lancé par Williams SEUL, depuis la racine du dépôt : ${COMMANDE_DU_LOT}`,
     ],
     permissions: {
-      ...projet.permissions,
-      allow: [...allow.filter((r) => !REGLES_DU_LOT.includes(r)), ...REGLES_DU_LOT],
-      deny: deny.filter((r) => !REGLES_DU_LOT.includes(r)),
+      defaultMode: MODE_DU_LOT,
+      allow: [...LECTURES_DU_LOT, ...REGLES_DU_LOT],
+      deny: [...deny.filter((r) => !REGLES_DU_LOT.includes(r)), ...DENY_DU_LOT],
     },
-    hooks: projet.hooks,
+    hooks: {
+      ...hooks,
+      PreToolUse: [
+        ...(hooks.PreToolUse ?? []),
+        {
+          matcher: MATCHER_DE_LA_GARDE,
+          hooks: [{ type: 'command', command: COMMANDE_DE_LA_GARDE }],
+        },
+      ],
+    },
     env: projet.env,
   };
 }
@@ -112,7 +261,21 @@ const LANCE = process.argv[1]
   ?.replace(/\\/g, '/')
   .endsWith('scripts/lot/lot-dedie-gardien-spec.ts');
 if (LANCE) {
-  if (process.argv.includes('--rendre')) {
+  if (process.argv.includes('--garde')) {
+    // Hook PreToolUse : code 0 = passe ; code 2 + message sur stderr = refusé. Une entrée
+    // illisible est refusée : une absence n'est pas une autorisation.
+    let raison: string | null;
+    try {
+      const entree = JSON.parse(readFileSync(0, 'utf8')) as EntreeDeHook;
+      raison = jugerOutil(entree, process.env.CLAUDE_PROJECT_DIR ?? entree.cwd ?? process.cwd());
+    } catch {
+      raison = 'entrée du hook illisible : refusé par la garde du lot.';
+    }
+    if (raison !== null) {
+      console.error(raison);
+      process.exit(2);
+    }
+  } else if (process.argv.includes('--rendre')) {
     writeFileSync(CHEMIN_REGLAGES_DU_LOT, rendre(lire(CHEMIN_REGLAGES_DU_PROJET)));
     console.log(`✅ ${CHEMIN_REGLAGES_DU_LOT} rendu depuis ${CHEMIN_REGLAGES_DU_PROJET}.`);
   } else if (process.argv.includes('--verifier')) {
