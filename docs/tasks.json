@@ -2497,7 +2497,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "(1) Un enclenchement manuel du workflow de retour arriere (`workflow_dispatch`, avec le SHA cible) redeploie l'image `sha-<cible>` avec `SKIP_MIGRATE=1`, VERIFIE `readyz` et l'en-tete `x-partners-build-sha` par `pnpm deploy:verify` (mode retour arriere), puis retire `SKIP_MIGRATE` (REQ-QA-022). Un retour arriere qui ne verifie pas ce qu'il a remis en place n'a rien remis en place. (2) LES TROIS RUNBOOKS DU SOCLE existent — `docs/runbooks/retour-arriere.md` (seul porteur de `SKIP_MIGRATE`), `docs/runbooks/migration-echouee.md`, `docs/runbooks/secret-desynchronise.md` — et CHACUN porte un bloc « Execute le : <date> · environnement : preview · SHA · resultat » (REQ-QA-034). Les runbooks commission manquante et lot mensuel bloque relevent de QA-T25. (3) La garde `scripts/gates/runbooks-exerces.ts` refuse un runbook dont le bloc est vide ou dont la date precede la derniere modification du runbook ; elle tourne en nightly et passe en porte A au premier exercice reel. (4) TEMOIN A DEUX FACES : un runbook dont on vide le bloc d'execution, puis un dont on modifie le corps sans refaire l'exercice, font sortir la garde en code non nul et NOMMENT le runbook ; les runbooks exerces la font sortir en zero, et le vert imprime le compte des runbooks reellement confrontes. (5) CONDITION posee sur delegation (2026-09-30) : les trois runbooks du socle sont EXERCES REELLEMENT en preview AVANT la cloture de la Phase 0, et la verification de fin de Phase 0 le controle. (6) `docs/runbooks/**` est reserve : la PR porte le label de documentation prevu par la charte.",
+      "acceptance": "(1) Un enclenchement manuel du workflow de retour arriere (`workflow_dispatch`, avec le SHA cible) redeploie l'image `sha-<cible>` avec `SKIP_MIGRATE=1`, VERIFIE `readyz` et l'en-tete `x-partners-build-sha` par `pnpm deploy:verify` (mode retour arriere), puis retire `SKIP_MIGRATE` (REQ-QA-022). Un retour arriere qui ne verifie pas ce qu'il a remis en place n'a rien remis en place. (2) LES TROIS RUNBOOKS DU SOCLE existent — `docs/runbooks/retour-arriere.md` (seul porteur de `SKIP_MIGRATE`), `docs/runbooks/migration-echouee.md`, `docs/runbooks/secret-desynchronise.md` — et CHACUN porte un bloc « Execute le : <date> · environnement : preview · SHA · resultat » (REQ-QA-034). Les runbooks commission manquante et lot mensuel bloque relevent de QA-T25. (3) La garde `scripts/gates/runbooks-exerces.ts` refuse un runbook dont le bloc est vide ou dont la date precede la derniere modification du runbook ; elle tourne en nightly et passe en porte A au premier exercice reel. (4) TEMOIN A DEUX FACES : un runbook dont on vide le bloc d'execution, puis un dont on modifie le corps sans refaire l'exercice, font sortir la garde en code non nul et NOMMENT le runbook ; les runbooks exerces la font sortir en zero, et le vert imprime le compte des runbooks reellement confrontes. (5) CONDITION posee sur delegation (2026-09-30) : les trois runbooks du socle sont EXERCES REELLEMENT en preview AVANT la cloture de la Phase 0, et la verification de fin de Phase 0 le controle. (6) `docs/runbooks/**` est reserve : la PR porte le label de documentation prevu par la charte. AVENANT du 2026-09-30 (arbitrage de la coordination sur délégation de Williams, 13 h 45) sur le point (5) : les trois runbooks du socle sont exercés en PREVIEW, le retour arrière y étant rejoué à la main ; « rollback.yml exercé en production » devient une CONDITION DE MISE EN SERVICE, écrite dans le runbook par #298, et non un préalable à la clôture de la Phase 0.",
       "tests": {
         "REQ-QA-022": [
           "tests/unit/qualite/retour-arriere.spec.ts"
@@ -4634,7 +4634,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "Client API 1 cote axionia : timeout 2 s, cache 5 min, echec ouvert (titre). (arbitrage A01 du 2026-09-30, suite de QA-T52 et INT-T41) : l'appel Bearer vers l'API entrante de Partners porte l'en-tete du kid du jeton, derive par kidDe et declare par le contrat (INT-T42) ; temoin : le kid emis change quand le jeton tourne."
+      "acceptance": "Client API 1 cote axionia : timeout 2 s, cache 5 min, echec ouvert (titre). (arbitrage A01 du 2026-09-30, suite de QA-T52 et INT-T41) : l'appel Bearer vers l'API entrante de Partners porte l'en-tete du kid du jeton, derive par kidDe et declare par le contrat POUR CETTE API : INT-T42 ne le declare que sur les webhooks et la reponse de coordonnees, et l'API entrante l'exige depuis QA-T52 ; avant le premier appel, x-axionia-kid (kidDe(AXIONIA_API_TOKEN)) est ajoute au contrat pour GET /attributions, sinon panne fermee (condition de la lentille securite sur #297, avenant A01 du 2026-09-30 ; porte cote Partners par INT-T07-P) ; temoin : le kid emis change quand le jeton tourne."
     },
     {
       "id": "INT-T08-A",
@@ -15165,7 +15165,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "Arbitrage -d7 sur delegation de Williams du 2026-09-30, prealable de QA-T52 (rotation a double cle, dette bloquante de la lentille securite). Auteur : -66. A LIVRER cote axion-ia : (1) chaque webhook signe vers Partners (signerCorps) porte l'en-tete du kid de la cle qui a signe ; (2) la reponse signee de coordonnees (coordonnees.ts) porte le meme en-tete ; l'appel Bearer vers l'API entrante de Partners n'existe pas encore, son kid releve de INT-T07-A qui le cree ; (3) le kid est derive de la valeur par kidDe (partners/ADR-0013 d.8), jamais configure a part ; (4) le nom de l'en-tete est celui que declare le contrat Partners (INT-T42, dependance ferme), recopie octet pour octet dans axion-ia ; (5) TEMOIN : un envoi signe par la cle courante porte son kid ; apres rotation, le kid emis change avec la cle. Les chemins reels remplacent le gabarit a la premiere PR.",
       "tests": {
         "REQ-QA-030": [
@@ -15173,10 +15173,14 @@
         ]
       },
       "issue": null,
-      "owner": null,
-      "branch": null,
+      "owner": "A01",
+      "branch": "partners/int-t41-kid",
       "pr": null,
-      "attestation": null,
+      "attestation": {
+        "pr": 1242,
+        "sha": "0d92bc238a5e3ad91abc93523d6812c49d99f349",
+        "fusionneeAt": "2026-09-30T10:37:35Z"
+      },
       "motif": null
     },
     {
@@ -15249,7 +15253,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.25,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "Arbitrage -d7 sur delegation de Williams du 2026-09-30, sur la condition bloquante de la lentille securite pour la PR de QA-T12. PREALABLE FERME avant la premiere donnee reelle, au meme rang que QA-T12. Auteur : -50. A LIVRER : (1) une categorie d'alerte CLOSE `rechiffrement_echoue` dans CATEGORIES_ALERTE (src/server/integrations/telegram/alertes.ts), avec son gabarit ; (2) tout echec de `rechiffrer` (scripts/sauvegarde/cycle.ts), lecture, chiffrement ou depot, emet cette alerte, sans aucune donnee personnelle ni chemin de vidage dans le message ; (3) la garde des clairs de QA-T12 (`clairsEnSouffrance`, meme fichier), jouee chaque nuit et apres chaque `rechiffrer`, emet la meme alerte close quand elle nomme un clair plus vieux que le seuil de la SSOT en minutes (src/domain/rgpd/politique.ts) : c'est elle, pas l'echec de `rechiffrer`, qui tient la duree du clair, y compris quand le planificateur saute faute de secrets ou qu'un run est retarde ou saute ; aucune borne horaire n'est recopiee ici, le seuil est celui de la SSOT ; (4) TEMOINS rouges d'abord : un rechiffrement qu'on fait echouer emet exactement une alerte `rechiffrement_echoue` ; un rechiffrement reussi n'en emet aucune ; un clair plus vieux que le seuil, planificateur saute, emet une alerte ; un clair plus jeune que le seuil n'en emet aucune.",
       "tests": {
         "REQ-QA-023": [
@@ -15257,10 +15261,14 @@
         ]
       },
       "issue": null,
-      "owner": null,
-      "branch": null,
-      "pr": null,
-      "attestation": null,
+      "owner": "A05",
+      "branch": "t/qa-t53",
+      "pr": 293,
+      "attestation": {
+        "pr": 293,
+        "sha": "00c39f64676194298885426146dc9d9109abbfe7",
+        "fusionneeAt": "2026-09-30T10:50:12Z"
+      },
       "motif": null
     },
     {
