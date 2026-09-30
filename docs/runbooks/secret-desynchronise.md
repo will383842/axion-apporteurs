@@ -22,6 +22,24 @@ la même valeur : un secret a été changé d'un seul côté.
 5. Les événements refusés pendant la désynchronisation n'ont PAS été enregistrés par Partners : les
    faire réémettre par le tiers, selon sa propre procédure (sa fiche dans `docs/tiers/`).
 
+## Rotation voulue d'un secret d'axionia, sans refus (QA-T52, REQ-QA-030)
+
+Pour `AXIONIA_WEBHOOK_SECRET` et `AXIONIA_API_TOKEN` : Partners accepte une clé courante et une clé
+précédente, et c'est le `kid` présenté par axionia (`x-axionia-kid`, dérivé de la valeur) qui choisit
+la clé. Un `kid` absent ou inconnu est refusé ; aucune clé n'est essayée au hasard. L'ordre compte :
+
+1. **Partners d'abord.** Poser dans les secrets du dépôt `<NOM>_PRECEDENT` = la valeur ACTUELLE,
+   `<NOM>_PRECEDENT_ECHEANCE` = un instant ISO 8601 UTC au plus 24 h après le déploiement, et `<NOM>` =
+   la NOUVELLE valeur. Les deux variables de la paire se posent ensemble, sinon le démarrage refuse en
+   les nommant (`docs/env.md`). Reporter par `Provisionnement Coolify`, redéployer, `pnpm deploy:verify`.
+2. **axionia ensuite.** Lui faire adopter la nouvelle valeur ; son `kid` suit, puisqu'il dérive de la
+   valeur. Jusqu'à l'échéance, un envoi encore signé par l'ancienne valeur passe sous l'ancien `kid`.
+3. **Vérifier** qu'un événement de test émis sous le nouveau `kid` est accepté.
+4. **Après l'échéance**, la clé précédente est refusée (motif `cle_precedente_echue`). Retirer les deux
+   variables `_PRECEDENT` avant le déploiement suivant.
+
+Inverser 1 et 2 fait refuser par Partners tout envoi d'axionia, pour `kid` inconnu, jusqu'à l'étape 1.
+
 ## Ce que ce runbook ne fait jamais
 
 - Aucune valeur de secret écrite dans un fichier, une PR, un journal ou une conversation.
