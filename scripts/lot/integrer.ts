@@ -12,8 +12,15 @@
  *
  * CE QUE FAIT CE SCRIPT
  *   - fichier NEUF, ou fichier appartenant en propre à la tâche  → copie directe ;
- *   - fichier PARTAGÉ (DÉRIVÉ de docs/paths-proposes.json)       → REFUS de la copie, et il dit
- *     précisément ce que le livrable voulait ajouter et ce qu'il aurait supprimé.
+ *   - fichier PARTAGÉ (DÉRIVÉ de la source de docs/paths-proposes.json) → REFUS de la copie, et il
+ *     dit précisément ce que le livrable voulait ajouter et ce qu'il aurait supprimé.
+ *
+ * LA SOURCE, JAMAIS LA VUE (GOV-123). `docs/paths-proposes.json` n'est plus sous git : sur le
+ * disque, c'est le rendu d'un jour passé, ou rien. Le lire, c'était COPIER un fichier devenu
+ * partagé depuis ce rendu (mesuré par la lentille exactitude sur la tête 1f75caa9, avec
+ * `le-passif-de-la-declaration-est-ferme.spec.ts`), et lever un ENOENT brut quand la vue n'a jamais
+ * été rendue. Les chemins partagés se dérivent donc de `docs/tasks.json` et `docs/gates.json` par
+ * la fonction qui rend la vue (`cheminsProposesDuDepot`, `scripts/lot/paths-proposes.ts`).
  *
  * Il ne fusionne pas les fichiers partagés à la place de l'humain : sur `package.json` un ajout est
  * trivial, sur `gardes.spec.ts` il demande de choisir quel `describe` porter. Le script REND VISIBLE,
@@ -26,6 +33,7 @@
 
 import { readFileSync, existsSync, mkdirSync, readdirSync, statSync, copyFileSync } from 'node:fs';
 import { join, dirname, relative, sep } from 'node:path';
+import { cheminsProposesDuDepot } from './paths-proposes';
 
 /**
  * Les chemins RÉSERVÉS en propre, quel que soit le nombre de tâches qui les écrivent. Ils sont en
@@ -128,10 +136,8 @@ function principal(): void {
     process.exit(2);
   }
 
-  const vue = JSON.parse(readFileSync('docs/paths-proposes.json', 'utf8')) as {
-    paths: Record<string, string[]>;
-  };
-  const PARTAGES = cheminsPartages(vue);
+  // La source, par le rendu de la vue — jamais le fichier de la vue, périmé ou absent (GOV-123).
+  const PARTAGES = cheminsPartages({ paths: cheminsProposesDuDepot() });
   const liste = fichiers(depuis);
   const copies: string[] = [];
   const refuses: { chemin: string; ajoute: number; supprime: string[] }[] = [];
@@ -158,7 +164,7 @@ function principal(): void {
 
   console.log(`lot:integrer — tâche ${tache}, ${liste.length} fichier(s) au livrable.`);
   console.log(
-    `   ${PARTAGES.length} chemin(s) partagé(s) dérivés de docs/paths-proposes.json ` +
+    `   ${PARTAGES.length} chemin(s) partagé(s) dérivés de docs/tasks.json et docs/gates.json ` +
       `(dont ${RESERVES.length} réservés en propre).`
   );
   console.log('');
