@@ -27,9 +27,9 @@ const MOTIF_SIGNATURE = '^[0-9a-f]{64}$';
 const MOTIF_KID = '^[0-9a-f]{8}$';
 
 /**
- * L'en-tête qui porte l'identifiant de la clé d'émission d'axionia (INT-T42). FACULTATIF et
- * ADDITIF : un envoi qui ne le porte pas reste conforme ; quand il le porte, Partners essaie
- * d'abord le secret dont le `kid` correspond, pendant une rotation à deux clés (QA-T52).
+ * L'en-tête qui porte l'identifiant de la clé d'émission d'axionia (INT-T42). FACULTATIF au
+ * SCHÉMA (additif, v2) ; le `kid` CHOISIT la clé de vérification, et pour axionia un `kid`
+ * absent ou inconnu est un refus, aucun autre secret n'est essayé (REQ-QA-030, QA-T52).
  */
 export const ENTETE_KID_AXIONIA = 'x-axionia-kid';
 
