@@ -546,6 +546,8 @@ const MANUELS: Record<string, string[]> = {
     'docs/requirements.json',
   ],
   'UX-P3-13': ['docs/maquettes/', 'docs/maquettes/VALIDATION.md'],
+  // GOV-130 (pas de serveur d'aperçus, passe du lot dédié) : sans fichier de test neuf, ses chemins sont ceux de sa fiche.
+  'GOV-130': ['docs/DECISIONS.md', 'docs/journal/'],
 };
 
 /**
