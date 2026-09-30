@@ -15175,7 +15175,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "DETTE BLOQUANTE (lentille securite, verdict de la PR 282 ; arbitrage -d7 sur delegation de Williams du 2026-09-30) : la double cle de rotation de REQ-QA-030 n'etait portee par aucune tache (tests/unit/qualite/env-fail-fast.spec.ts l. 20 l'annoncait a sa propre tache). Des webhooks entrants sont actifs des la phase 0 (SEC-06) : PREALABLE FERME de la mise en service, avant le premier webhook entrant en production. A LIVRER : (1) AXIONIA_WEBHOOK_SECRET et AXIONIA_API_TOKEN acceptent une cle courante et une cle precedente, declarees dans src/lib/env.ts et docs/env.md (genere) ; la cle precedente porte son echeance, au plus 24 h. (2) Le `kid` de l'en-tete, emis par axion-ia (INT-T41, dependance ferme) et declare par le contrat (INT-T42), choisit la cle ; un kid inconnu ou ABSENT est refuse, jamais essaye contre toutes les cles : le kid FACULTATIF au contrat (INT-T42) ne l'autorise pas (note de la lentille securite). (3) Apres l'echeance, la cle precedente est refusee, et le refus est nomme. (4) TEMOIN A DEUX FACES, rouge d'abord : une signature par la cle precedente passe avant l'echeance et echoue apres ; une signature par une cle inconnue ou un kid absent echoue ; la cle courante passe toujours. (5) Un runbook de rotation (docs/runbooks/secret-desynchronise.md, livre par QA-T13) cite la procedure. Deux lentilles. DocuSeal n'envoie pas de kid et n'a pas encore de recepteur : sa double cle sans kid (cle courante puis precedente essayees) releve de INT-T12 (arbitrage -d7 du 2026-09-30).",
       "tests": {
         "REQ-QA-030": [
@@ -15183,10 +15183,14 @@
         ]
       },
       "issue": null,
-      "owner": null,
-      "branch": null,
-      "pr": null,
-      "attestation": null,
+      "owner": "A01",
+      "branch": "t/qa-t52",
+      "pr": 297,
+      "attestation": {
+        "pr": 297,
+        "sha": "75602591378ef365ecdc84cb7bc09b355b67e9a7",
+        "fusionneeAt": "2026-09-30T16:23:24Z"
+      },
       "motif": null
     },
     {
@@ -16749,6 +16753,52 @@
       "estimateDays": 0.5,
       "statut": "a_faire",
       "acceptance": "Condition de mise en service posée par la lentille sécurité, relayée par la coordination le 2026-09-30 : PRÉALABLE FERME avant la première donnée réelle, sur le modèle de QA-T53 (`rechiffrement_echoue`). Aujourd'hui, un déploiement dont l'atterrissage n'est pas vérifié ne prévient personne. À LIVRER : (1) une catégorie d'alerte CLOSE `deploiement_non_atterri`, NEUVE (elle n'existe nulle part aujourd'hui), ajoutée à `CATEGORIES_ALERTE` (src/server/integrations/telegram/alertes.ts) avec son gabarit ; (2) tout échec de `deploy:verify` (scripts/gates/deploy-verify.ts) joué après un déploiement de `.github/workflows/deploy.yml` (sha servi différent du sha fusionné, `readyz` non prêt, en-tête `x-partners-build-sha` absent, délai dépassé) émet exactement une alerte `deploiement_non_atterri`, qui ne porte que le sha attendu, le sha servi et l'environnement, sans donnée personnelle ni secret ; le sha servi vient de l'en-tête `x-partners-build-sha` de la RÉPONSE, que contrôle quiconque sert le domaine : il n'entre dans l'alerte qu'après validation de forme (hexadécimal de 7 à 40 caractères), sinon il y est écrit « illisible » ; le job reste rouge (l'alerte ne remplace pas l'échec) ; (3) TÉMOINS rouges d'abord : un atterrissage raté (sha servi ≠ sha fusionné) émet une alerte ; `readyz` non prêt émet une alerte ; un atterrissage réussi n'en émet aucune ; le message de l'alerte ne contient ni jeton ni URL de secret ; un en-tête piégé (saut de ligne, balisage, URL) n'entre pas tel quel dans l'alerte, qui écrit « illisible ». (4) La case de cette alerte existe déjà dans la liste de mise en service (`docs/runbooks/mise-en-service.md`, écrite par la PR de la garde de QA-T13) : la PR qui livre cette tâche la rend vraie et la cite, sans en ajouter une seconde. Phase 1 (arbitrage de la coordination du 2026-09-30) : c'est une condition de mise en service, avant la première donnée réelle, et non un préalable à la clôture de la Phase 0."
+    },
+    {
+      "id": "GOV-131",
+      "titre": "Porte avant la Phase 1, V1 : vérification de bout en bout des phases −1 et 0 (prompt de Williams PROMPT-VERIF-1)",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "docs/journal/"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "QA-T52"
+      ],
+      "reqs": [
+        "REQ-GOV-027"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "acceptance": "Décision de Williams du 2026-09-30 : la Phase 1 ne s'ouvre qu'après DEUX vérifications menées avec SES prompts, V1 puis V2 ; arbitrage de la coordination du même jour : la porte est portée au registre par deux tâches de Phase 0, pour que la phase courante (dérivée des statuts) reste 0 tant qu'elle n'est pas franchie. Les 139 tâches de production de la Phase 0 sont livrées ; ces deux tâches sont la porte elle-même. (1) La session V1 exécute `_REPRISE-AXION-APPORTEURS/PROMPT-VERIF-1-BOUT-EN-BOUT.txt` : pour chaque tâche close des phases −1 et 0, « tenu / partiellement tenu / non tenu » avec preuve fichier:ligne, production comprise (en lecture seule). (2) Son rapport est publié dans `_REPRISE-AXION-APPORTEURS/VERIF-1-RAPPORT.md`, et chaque correctif qu'il retient passe par une PR ordinaire (deux lentilles) ou par le prochain rattrapage GOV-012. (3) La tâche se clôt quand le rapport est publié et que ses correctifs bloquants sont fusionnés ; elle ne s'invente aucune autre preuve."
+    },
+    {
+      "id": "GOV-132",
+      "titre": "Porte avant la Phase 1, V2 : vérification transversale et déblocage de la Phase 1 (prompt de Williams PROMPT-VERIF-2)",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "docs/journal/"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "GOV-131"
+      ],
+      "reqs": [
+        "REQ-GOV-027"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "acceptance": "Seconde moitié de la porte avant la Phase 1 (voir GOV-131). (1) La session V2 exécute `_REPRISE-AXION-APPORTEURS/PROMPT-VERIF-2-TRANSVERSALE-ET-PHASE-1.txt`, en partant du rapport de V1 sans refaire ce qu'il couvre. (2) Elle rédige la liste exacte des amendements de registre nécessaires au démarrage de la Phase 1 (chemins réels des tâches de Phase 1 à la place de leurs gabarits, que `gov:attributions` exige dès que la phase 1 devient courante ; déblocage de phase), versés en UN rattrapage GOV-012. (3) La clôture de GOV-132 VAUT verdict « feu vert Phase 1 » de V2, et c'est elle qui fait de la Phase 1 la phase courante au registre ; elle ne se clôt qu'avec ce verdict écrit. (4) Aussitôt après la clôture, rappel à Williams des renforts de Phase 1 (un auteur d'écrans et une lentille de plus, sur un autre ordinateur)."
     }
   ]
 }
