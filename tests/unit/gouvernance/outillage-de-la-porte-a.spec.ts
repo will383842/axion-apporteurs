@@ -503,8 +503,13 @@ describe('REQ-QA-013 — la porte A AUDITE les dépendances de production', () =
     // gravité, et 0 aussi quand rien n'a été lu. Seul le JSON, jugé, fait foi.
     const audit = lireAudit(r.stdout ?? '');
     const fautes = vulnerabilitesBloquantes(audit);
-    expect(fautes, `dépendances de production vulnérables (REQ-QA-013) :\n${fautes.join('\n')}`).toEqual([]);
-    console.info(`[GOV-062] audit des dépendances : ${audit.avis.length} avis lu(s), 0 haut ou critique`);
+    expect(
+      fautes,
+      `dépendances de production vulnérables (REQ-QA-013) :\n${fautes.join('\n')}`
+    ).toEqual([]);
+    console.info(
+      `[GOV-062] audit des dépendances : ${audit.avis.length} avis lu(s), 0 haut ou critique`
+    );
   }, 180_000);
 
   it('REQ-QA-013 — et ce témoin SAIT rougir : un avis critique (fictif) est nommé — module, version, gravité, correctif — et un avis modéré ne compte pas', () => {
