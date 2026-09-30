@@ -23,12 +23,26 @@ import { ouNul } from './payloads';
 const MOTIF_HORODATAGE = '^[0-9]{1,20}$';
 /** Une signature HMAC-SHA-256 en hexadécimal minuscule. */
 const MOTIF_SIGNATURE = '^[0-9a-f]{64}$';
+/** Un `kid` : huit caractères hexadécimaux minuscules (`kidDe`, partners/ADR-0013 d.8). */
+const MOTIF_KID = '^[0-9a-f]{8}$';
+
+/**
+ * L'en-tête qui porte l'identifiant de la clé d'émission d'axionia (INT-T42). FACULTATIF et
+ * ADDITIF : un envoi qui ne le porte pas reste conforme ; quand il le porte, Partners essaie
+ * d'abord le secret dont le `kid` correspond, pendant une rotation à deux clés (QA-T52).
+ */
+export const ENTETE_KID_AXIONIA = 'x-axionia-kid';
 
 /** Une valeur de coordonnée : une chaîne non vide, ou `null` si axionia ne la détient pas. */
 const coordonnee: FragmentSchema = ouNul({ type: 'string', minLength: 1 });
 
-/** Les en-têtes d'une signature, sous leur nom HTTP en minuscules. */
-function entetesSignes(horodatage: string, signature: string, portee: string): FragmentSchema {
+/** Les en-têtes d'une signature, sous leur nom HTTP en minuscules ; le `kid`, facultatif. */
+function entetesSignes(
+  horodatage: string,
+  signature: string,
+  portee: string,
+  kid?: string
+): FragmentSchema {
   return {
     type: 'object',
     $comment: portee,
@@ -36,9 +50,25 @@ function entetesSignes(horodatage: string, signature: string, portee: string): F
     properties: {
       [horodatage]: { type: 'string', pattern: MOTIF_HORODATAGE },
       [signature]: { type: 'string', pattern: MOTIF_SIGNATURE },
+      ...(kid === undefined ? {} : { [kid]: { type: 'string', pattern: MOTIF_KID } }),
     },
   };
 }
+
+/**
+ * Les en-têtes d'un WEBHOOK axionia → Partners (INT-T42) : HMAC-SHA-256, sous le secret
+ * d'émission, de `<horodatage>.<corps exact>` ; le `kid` de ce secret, facultatif.
+ */
+export const DEFS_WEBHOOK: Readonly<Record<string, FragmentSchema>> = {
+  webhook_entetes: entetesSignes(
+    'x-axionia-timestamp',
+    'x-axionia-signature',
+    "Webhook axionia → Partners : HMAC-SHA-256, sous le secret d'émission, de " +
+      '`<horodatage>.<corps exact>` ; tolérance de 300 s. `x-axionia-kid`, facultatif, désigne ' +
+      'le secret employé (kidDe, partners/ADR-0013 d.8).',
+    ENTETE_KID_AXIONIA
+  ),
+};
 
 export type ApiDuContrat = {
   /** La méthode et le chemin, paramètre entre accolades. */
@@ -82,7 +112,8 @@ export const API_COORDONNEES_CANDIDATURE: ApiDuContrat = {
       'x-axionia-timestamp',
       'x-axionia-signature',
       "Réponse axionia → Partners, signée comme un envoi : HMAC-SHA-256, sous le secret d'émission, " +
-        'de `<horodatage>.<corps exact>`.'
+        'de `<horodatage>.<corps exact>`. `x-axionia-kid`, facultatif, désigne le secret employé.',
+      ENTETE_KID_AXIONIA
     ),
     api_coordonnees_candidature_reponse: {
       type: 'object',
@@ -119,7 +150,7 @@ export function defsApi(): Record<string, FragmentSchema> {
       defs[nom] = schema;
     }
   }
-  return defs;
+  return { ...defs, ...DEFS_WEBHOOK };
 }
 
 /** Les noms de ces `$defs`. */
