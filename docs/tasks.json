@@ -2808,10 +2808,10 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
-      "owner": null,
+      "statut": "fusionnee",
+      "owner": "A01",
       "lot": null,
-      "branch": null,
+      "branch": "partners/int-t03-lotb",
       "pr": null,
       "issue": null,
       "attempts": 0,
@@ -2827,6 +2827,11 @@
         "REQ-INT-015": [
           "axionia/src/server/partners-sync/__tests__/producteurs-client.spec.ts"
         ]
+      },
+      "attestation": {
+        "pr": 1246,
+        "sha": "681cff202536ee68159e0228e86b9e4221d46757",
+        "fusionneeAt": "2026-09-30T14:14:11Z"
       }
     },
     {
