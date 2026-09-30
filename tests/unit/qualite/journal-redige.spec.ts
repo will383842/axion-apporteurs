@@ -23,6 +23,7 @@ import {
   cleProtegee,
   creerJournal,
   fluxCaviardant,
+  caviarderTexte,
 } from '../../../src/lib/logger';
 import { creerNotifieur, productionDeclaree, type Notification } from '../../../src/lib/notify';
 import {
@@ -503,6 +504,37 @@ function transportCapturant() {
 }
 
 describe('REQ-QA-024 — Sentry reçoit les erreurs par la même fonction de caviardage', () => {
+  it('REQ-QA-024 : le jeton d’un lien de CONNEXION (`/connexion/<jeton>`) est caviardé comme celui de dépôt — message, chemin d’erreur et Sentry', async () => {
+    // Mesuré le 2026-09-30 (VÉRIF-1, GOV-131) : `caviarderTexte` ne connaissait que `/d/<jeton>` ;
+    // l’URL du lien magique est `/connexion/<43 caractères base64url>`, et `onRequestError` écrit
+    // `chemin` au journal et à Sentry : un rendu en erreur de cette page publiait un jeton vivant.
+    const jeton = 'A'.repeat(20) + 'b-_' + '9'.repeat(20);
+    expect(jeton).toHaveLength(43);
+    expect(caviarderTexte(`refus sur /connexion/${jeton}`)).toBe('refus sur /connexion/[jeton]');
+    expect(caviarderTexte(`https://x.fr/connexion/${jeton}?x=1`)).toBe(
+      'https://x.fr/connexion/[jeton]?x=1'
+    );
+    // La page de demande, sans jeton, n’a rien à cacher : le motif exige un segment après le chemin.
+    expect(caviarderTexte('GET /connexion')).toBe('GET /connexion');
+    expect(caviarderTexte('GET /connexion/')).toBe('GET /connexion/');
+
+    const capture = transportCapturant();
+    const journal = sortieCapturee();
+    const composition = await composer(
+      { SENTRY_DSN: DSN_FICTIF, PARTNERS_ENV: 'test' },
+      { transport: capture.fabrique, sortie: journal.sortie }
+    );
+    await traiterErreurDeRequete(composition)(
+      new Error('rendu en échec'),
+      { path: `/connexion/${jeton}`, method: 'GET', headers: {} },
+      { routerKind: 'App Router', routePath: '/connexion/[jeton]', routeType: 'render' }
+    );
+    expect(capture.enveloppes).toHaveLength(1);
+    expect(capture.enveloppes[0] ?? '').not.toContain(jeton);
+    expect(capture.enveloppes[0] ?? '').toContain('"chemin":"/connexion/[jeton]"');
+    expect(journal.texte()).not.toContain(jeton);
+  });
+
   it('REQ-QA-024 : onRequestError — ni la valeur, ni le jeton, ni le cookie, ni l’adresse réseau', async () => {
     const capture = transportCapturant();
     const journal = sortieCapturee();
