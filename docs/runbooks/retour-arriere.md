@@ -21,6 +21,11 @@ sha cible, et `GET /api/readyz` répond 200. Il remet `SKIP_MIGRATE` à `0` quoi
 la file du déploiement ordinaire : il attend un déploiement en cours, il ne l'écrase pas. Rouge : lire son
 motif (sha non servi, readyz, refus de la plateforme) avant tout autre geste.
 
+**Condition de mise en service** (arbitrage de la coordination sur délégation de Williams, 2026-09-30) :
+ce workflow ne vise que l'application de production, il ne s'exerce donc pas en preview. Il s'exerce
+une fois pour de vrai au premier déploiement réel, AVANT la première donnée réelle. En preview, c'est
+le geste à la main ci-dessous qui s'exerce, et le bloc « Exécuté le » en fin de fichier le trace.
+
 ## Geste — à la main, si la forge est indisponible
 
 1. Sur la plateforme, choisir l'image précédente (son étiquette `sha-<court>`).
