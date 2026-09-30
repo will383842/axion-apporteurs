@@ -358,3 +358,40 @@ describe('l’en-tête de build posé par l’application', () => {
     await expect(entetes('pas-un-sha')).rejects.toThrow(/PARTNERS_BUILD_SHA/);
   });
 });
+
+/**
+ * CONSIGNE DE LA LENTILLE `securite` (refus des PR 268 et 272) : un secret de DÉPÔT est servi à tout
+ * workflow d'une PR de branche, avec le fichier de la PR, avant toute relecture ; et un déclenchement
+ * manuel part de n'importe quelle branche. Les secrets de production vivent donc dans l'ENVIRONNEMENT
+ * `production`, dont la règle de branche (« main seulement », réglage de la forge par Williams) est
+ * la vraie serrure. Ce témoin tient la moitié qui est dans le dépôt : AUCUN job, dans AUCUN workflow,
+ * ne lit un secret de production hors d'un job de l'environnement `production`.
+ */
+describe('REQ-QA-033 — les secrets de production ne sont lus que dans l’environnement production', () => {
+  const SECRETS_DE_PRODUCTION =
+    /secrets\.(COOLIFY_(?!PREVIEW_)[A-Z_]+|R2_[A-Z_]+|PARTNERS_BACKUP_PASSPHRASE|TELEGRAM_[A-Z_]+|SESSION_SECRET|MAGIC_LINK_SECRET|DEPOSIT_TOKEN_SECRET|AXIONIA_[A-Z_]+|DOCUSEAL_[A-Z_]+|PII_[A-Z_]+|IP_HASH_SALT|PARTNERS_MCP_SHARED_SECRET|ZEPTOMAIL_[A-Z_]+)\b/;
+
+  it('REQ-QA-033 : chaque job qui lit un secret de production porte `environment: production`', async () => {
+    const { readdirSync } = await import('node:fs');
+    const fautes: string[] = [];
+    let confrontes = 0;
+    for (const f of readdirSync('.github/workflows').filter((x) => /\.ya?ml$/.test(x))) {
+      const wf = (await lireYaml(readFileSync(`.github/workflows/${f}`, 'utf8'))) as {
+        jobs?: Record<string, { environment?: unknown }>;
+      };
+      for (const [nom, job] of Object.entries(wf.jobs ?? {})) {
+        if (!SECRETS_DE_PRODUCTION.test(JSON.stringify(job))) continue;
+        confrontes++;
+        const env = job.environment;
+        const nomEnv =
+          typeof env === 'object' && env !== null ? (env as { name?: unknown }).name : env;
+        if (nomEnv !== 'production') fautes.push(`${f} › ${nom}`);
+      }
+    }
+    expect(confrontes).toBeGreaterThan(0);
+    expect(
+      fautes,
+      `jobs qui lisent un secret de production hors de l'environnement production :\n${fautes.join('\n')}`
+    ).toEqual([]);
+  });
+});
