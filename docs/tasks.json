@@ -15138,7 +15138,8 @@
         "tests/integration/webhook-verdicts.spec.ts",
         ".github/workflows/coolify-provisionner.yml",
         "scripts/deploiement/provisionner.ts",
-        "tests/unit/qualite/provisionnement-coolify.spec.ts"
+        "tests/unit/qualite/provisionnement-coolify.spec.ts",
+        "tests/unit/securite/frontiere-axionia.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -15326,7 +15327,7 @@
       "externe": null,
       "estimateDays": 0.25,
       "statut": "a_faire",
-      "acceptance": "Décision de Williams du 2026-09-30 : pas de serveur dédié aux aperçus (l'équipe Coolify « previews » n'a aucun serveur ; le petit serveur dédié proposé par la lentille sécurité n'est pas retenu). Conséquences déjà portées au backlog : QA-T06 (4) en attente externe (aperçus inertes) et QA-T13 (5) en plan B (runbooks exercés sur la production avant toute donnée réelle, seule voie que la garde admet sans aperçus). Tâche porteuse nommée par la coordination sur #304, GOV-129 étant livrée en entier par #300. (1) Passe du lot dédié de GOV-116, lancé par Williams : dans `docs/DECISIONS.md`, la ligne HYP-E1-5 dit que les aperçus par PR ne sont pas servis tant qu'aucun serveur ne leur est rattaché (décision de Williams du 2026-09-30), sans rien retirer de ce qu'elle disait ; la colonne « Tranchée » ne porte qu'une date seule. (2) Trace datée du lot (date, branche, sha de départ) dans le corps de la PR. (3) `gov:tasks`, `gov:requirements` et `gov:hypotheses` sortent 0. Phase 1 (arbitrage de la coordination du 2026-09-30) : la décision est déjà écrite, datée, dans les amendements de QA-T06 (4) et de QA-T13 (7) ; sa ligne au registre DECISIONS attend le prochain passage du lot dédié et ne retarde pas la clôture de la Phase 0. Même passe du lot : la décision de Williams du 2026-09-30 fixant la date PRÉVUE de mise en service au 2026-12-31 (provisoire ; `MISE_EN_SERVICE` est posée dans la SSOT par la PR de la garde de QA-T13) entre au registre, avec sa date seule en colonne « Tranchée »."
+      "acceptance": "Décision de Williams du 2026-09-30 : pas de serveur dédié aux aperçus (l'équipe Coolify « previews » n'a aucun serveur ; le petit serveur dédié proposé par la lentille sécurité n'est pas retenu). Conséquences déjà portées au backlog : QA-T06 (4) en attente externe (aperçus inertes) et QA-T13 (5) en plan B (runbooks exercés sur la production avant toute donnée réelle, seule voie que la garde admet sans aperçus). Tâche porteuse nommée par la coordination sur #304, GOV-129 étant livrée en entier par #300. (1) Passe du lot dédié de GOV-116, lancé par Williams : dans `docs/DECISIONS.md`, la ligne HYP-E1-5 dit que les aperçus par PR ne sont pas servis tant qu'aucun serveur ne leur est rattaché (décision de Williams du 2026-09-30), sans rien retirer de ce qu'elle disait ; la colonne « Tranchée » ne porte qu'une date seule. (2) Trace datée du lot (date, branche, sha de départ) dans le corps de la PR. (3) `gov:tasks`, `gov:requirements` et `gov:hypotheses` sortent 0. Phase 1 (arbitrage de la coordination du 2026-09-30) : la décision est déjà écrite, datée, dans les amendements de QA-T06 (4) et de QA-T13 (7) ; sa ligne au registre DECISIONS attend le prochain passage du lot dédié et ne retarde pas la clôture de la Phase 0. Même passe du lot : la décision de Williams du 2026-09-30 fixant la date PRÉVUE de mise en service au 2026-12-31 (provisoire ; la constante `MISE_EN_SERVICE` vit dans `scripts/gates/runbooks-exerces.ts`, livrée par la PR de la garde de QA-T13 (#302)) entre au registre, avec sa date seule en colonne « Tranchée »."
     },
     {
       "id": "SEC-29",
