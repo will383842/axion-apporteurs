@@ -14972,6 +14972,43 @@
       "pr": null,
       "attestation": null,
       "motif": null
+    },
+    {
+      "id": "QA-T53",
+      "titre": "Alerte close rechiffrement_echoue : l'echec du rechiffrement horaire des sauvegardes alerte Telegram",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "qualite",
+      "paths": [
+        "src/server/integrations/telegram/alertes.ts",
+        "scripts/sauvegarde/cycle.ts",
+        "tests/unit/qualite/alerte-rechiffrement-echoue.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "QA-T12",
+        "INT-T14"
+      ],
+      "reqs": [
+        "REQ-QA-023"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.25,
+      "statut": "a_faire",
+      "acceptance": "Arbitrage -d7 sur delegation de Williams du 2026-09-30, sur la condition bloquante de la lentille securite pour la PR de QA-T12. PREALABLE FERME avant la premiere donnee reelle, au meme rang que QA-T12. Auteur : -50. A LIVRER : (1) une categorie d'alerte CLOSE `rechiffrement_echoue` dans CATEGORIES_ALERTE (src/server/integrations/telegram/alertes.ts), avec son gabarit ; (2) l'echec de `rechiffrer` (scripts/sauvegarde/cycle.ts) emet cette alerte, sans aucune donnee personnelle ni chemin de vidage dans le message ; (3) un vidage reste en clair plus d'une heure sans alerte est impossible : tout echec, lecture, chiffrement ou depot, alerte ; (4) TEMOIN rouge d'abord : un rechiffrement qu'on fait echouer emet exactement une alerte `rechiffrement_echoue` ; un rechiffrement reussi n'en emet aucune.",
+      "tests": {
+        "REQ-QA-023": [
+          "tests/unit/qualite/alerte-rechiffrement-echoue.spec.ts"
+        ]
+      },
+      "issue": null,
+      "owner": null,
+      "branch": null,
+      "pr": null,
+      "attestation": null,
+      "motif": null
     }
   ]
 }

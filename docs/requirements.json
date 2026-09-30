@@ -3567,7 +3567,8 @@
       "etape": null,
       "phase": 0,
       "taches": [
-        "QA-T12"
+        "QA-T12",
+        "QA-T53"
       ]
     },
     {
