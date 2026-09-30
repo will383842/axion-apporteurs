@@ -1018,6 +1018,19 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
         '(un-statut-fusionnee-porte-sa-preuve.spec.ts) ; la branche rouge n’a pas de témoin ' +
         'd’effet. Dette DÉCLARÉE.',
     },
+    'scripts/lot/lot-dedie-gardien-spec.ts': {
+      total: 2,
+      porte: 2,
+      // ZÉRO dans `REFUS` : les témoins d'effet vivent dans `lot-dedie-gardien-spec.spec.ts`.
+      temoins: 0,
+      raison:
+        'GOV-116 — REQ-GOV-010, le lot dédié du gardien-spec. `--garde` sort en 2 (le code qui ' +
+        'BLOQUE un outil dans un hook PreToolUse) sur toute écriture hors des trois fichiers, ' +
+        'toute commande hors liste, tout outil non nommé et toute entrée illisible : la commande ' +
+        'EXACTE du hook est jouée par bash et vue rendre 2, et 0 pour le lot. `--verifier` sort ' +
+        'en 1 sur un fichier du lot divergent ou une règle deny manquante au projet : le témoin ' +
+        '(c) nomme la règle oubliée.',
+    },
     'scripts/gates/seuils-ssot.ts': {
       total: 2,
       porte: 2,

@@ -236,19 +236,31 @@ function cheminReel(absolu: string): string | null {
 /**
  * `null` si l'écriture vise l'un des trois fichiers ; sinon, la raison du refus. Le chemin est
  * RÉSOLU (`..`, chemin absolu) et comparé tel quel, casse comprise : `DOCS/Decisions.md` est
- * refusé même là où le disque l'accepterait. Puis le chemin RÉEL (lien symbolique suivi) doit être
- * celui du fichier : un lien nommé comme un fichier du lot et pointant ailleurs est refusé.
+ * refusé même là où le disque l'accepterait. Puis le chemin RÉEL du fichier visé (lien suivi) doit
+ * être sa PLACE : son dossier réel, plus son nom. Un lien nommé comme un fichier du lot et pointant
+ * ailleurs a un chemin réel qui n'est pas sa place : refusé. (Comparer le chemin réel du visé à
+ * celui de l'attendu ne prouvait rien : c'est le même chemin, donc le même lien suivi — la CI
+ * Linux l'a montré, Windows ne sachant pas créer le lien du témoin.)
  * Seule la LETTRE DE LECTEUR Windows est normalisée (`c:` et `C:` désignent le même disque, et
  * l'outil comme le hook peuvent l'écrire différemment) ; le reste du chemin garde sa casse.
  */
 const lecteur = (p: string): string => p.replace(/^[a-z]:/, (m) => m.toUpperCase());
+
+/** La place d'un fichier : son dossier réel, plus son nom, SANS suivre le fichier lui-même. */
+function place(absolu: string): string | null {
+  try {
+    return join(realpathSync.native(dirname(absolu)), basename(absolu));
+  } catch {
+    return null;
+  }
+}
 
 export function jugerEcriture(chemin: string, racine: string): string | null {
   const vise = lecteur(resolve(racine, chemin));
   const reelVise = cheminReel(vise);
   for (const f of FICHIERS_DU_LOT) {
     const attendu = lecteur(resolve(racine, f));
-    if (vise === attendu && reelVise !== null && reelVise === cheminReel(attendu)) return null;
+    if (vise === attendu && reelVise !== null && reelVise === place(attendu)) return null;
   }
   return `écriture refusée dans le lot : seuls ${FICHIERS_DU_LOT.join(', ')} s'écrivent (« ${chemin} »).`;
 }
