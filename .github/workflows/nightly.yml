@@ -126,6 +126,9 @@ jobs:
   # s il a echoue, ou s il n y en a aucun. Secrets Cloudflare R2 absents : SAUTE, chaque absent nomme.
   sauvegarde-fraicheur:
     name: Sauvegarde — le dernier exercice de restauration est recent et reussi
+    # Lentille securite (refus des PR 268 et 272) : les secrets vivent dans l ENVIRONNEMENT
+    # `production`, jamais au niveau du depot ; un declenchement manuel ne part que de main.
+    environment: production
     runs-on: ubuntu-latest
     permissions:
       contents: read

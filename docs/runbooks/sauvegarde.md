@@ -30,7 +30,10 @@ l'étape et le code de sortie.
 
 ## Mise en place — une fois
 
-1. Poser les secrets du dépôt : `R2_ENDPOINT`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`,
+1. Créer l'**environnement GitHub `production`**, avec la règle de branche « main seulement », et y
+   poser les secrets — **jamais au niveau du dépôt** : un secret de dépôt est servi à tout workflow
+   d'une PR de branche, avec le fichier de la PR, avant toute relecture (lentille `securite`, refus
+   des PR 268 et 272). Les secrets : `R2_ENDPOINT`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`,
    `PARTNERS_BACKUP_PASSPHRASE` (au moins 32 caractères, tirée au hasard, conservée hors de la forge dans
    le coffre de Williams), `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` (un robot ou un salon **dédié** à
    Partners), `COOLIFY_URL`, `COOLIFY_API_TOKEN`.
