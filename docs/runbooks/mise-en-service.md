@@ -13,9 +13,10 @@
 
 ## 1. Avant les exercices
 
-- [ ] **Date de mise en service PRÉVUE posée** par Williams : `MISE_EN_SERVICE` dans
+- [x] **Date de mise en service PRÉVUE posée** par Williams : `MISE_EN_SERVICE` dans
       `scripts/gates/runbooks-exerces.ts` (valeur, source, date de vérification). Sans elle, aucun
       exercice `production-avant-donnees` n'est admis. _Porteur : Williams (décision), l'auteur (PR)._
+      **Fait le 2026-09-30** : `2026-12-31`, décision de Williams (16h17), posée par la PR 302.
 - [ ] Production provisionnée (`Provisionnement Coolify`), déployée, `pnpm deploy:verify <sha>` vert.
       _Porteur : Williams ou une session autorisée aux gestes de production._
 - [ ] Base de production semée de données SYNTHÉTIQUES seulement. _Porteur : Williams (plateforme)._
@@ -66,7 +67,7 @@
       constat de l'auteur._
 - [ ] `deploy.yml` alerte (catégorie close `deploiement_non_atterri`) sur un `deploy:verify` rouge
       PROVOQUÉ, et l'alerte est REÇUE. Sans retour automatique de la plateforme, c'est ce rouge qui
-      voit un déploiement malade. _Porteur : la tâche que verse A01 (code), Williams (réception)._
+      voit un déploiement malade. _Porteur : QA-T54 (code), Williams (réception)._
 
 ## 4. Les clés et l'entité, juste avant l'ouverture
 
@@ -83,10 +84,12 @@
       secrets de `production` ET de l'application sur la plateforme (le provisionnement pose, il
       n'efface pas). _Porteur : Williams._
 - [ ] **Registre de l'entité renseigné** (REQ-CPL-001) : `pnpm gov:entite` ne compte plus AUCUNE
-      sentinelle `A-RENSEIGNER`. Cinq champs se renseignent dans `config/entite.json` : `domaines.envoi`,
+      sentinelle `A-RENSEIGNER` parmi les champs NON secrets. Cinq champs se renseignent dans `config/entite.json` : `domaines.envoi`,
       `banqueReceptrice.bic`, `banqueReceptrice.jeuDeCaracteres`, `banqueReceptrice.espaceDeTest`,
       `banqueReceptrice.formatReleveCsv`. Deux champs arrivent par l'environnement `production`, et JAMAIS
-      par le dépôt, qui est public : `PARTNERS_IBAN_DEBITEUR` et `PARTNERS_BIC_DEBITEUR`. Tant qu'une
+      par le dépôt, qui est public : `PARTNERS_IBAN_DEBITEUR` et `PARTNERS_BIC_DEBITEUR`. Dans le fichier, ces
+      deux champs de `banqueDebitrice` gardent `A-RENSEIGNER` POUR TOUJOURS, et c'est voulu : la garde
+      ne les compte pas comme sentinelles. Tant qu'une
       sentinelle reste, les quatre points de sortie refusent : contrat, mandat, virement, export annuel.
       _Porteur : Williams (valeurs et décisions), l'auteur (PR du registre, garde verte)._
 - [ ] Base de production vidée de son semis synthétique, puis `deploy:verify` vert. _Porteur :
