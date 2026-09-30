@@ -97,8 +97,10 @@
 - [ ] `MISE_EN_SERVICE` ramenée au jour de la première donnée réelle, si celui-ci précède la date
       prévue. La date ne fait que reculer vers le réel ; un report plus tardif est une décision datée
       de Williams, tracée dans `docs/DECISIONS.md`. _Porteur : Williams (décision), l'auteur (PR)._
-- [ ] La double clé de rotation (PR 297, REQ-QA-030) est DÉPLOYÉE en production. _Porteur : la forge
-      (déploiement de la fusion), constat de l'auteur._
+- [x] La double clé de rotation (PR 297, REQ-QA-030) est DÉPLOYÉE en production. _Porteur : la forge
+      (déploiement de la fusion), constat de l'auteur._ **Fait le 2026-09-30** : `75602591` (squash de
+      la PR 297) atterri, run 36743836589 ; puis `a6545de9`, qui la contient, atterri, run 36750173679.
+      `https://apporteurs.axion-ia.com/api/readyz` répond 200 avec `X-Partners-Build-Sha: a6545de9…`.
 - [x] Le refus de lecture des coordonnées retirées (axion-ia, PR 1250) est DÉPLOYÉ en production côté
       axion-ia. _Porteur : la session axion-ia._ **Fait le 2026-09-30** : `2bbe3482` (squash de la PR
       1250) servi par axion-ia.com (`x-axion-build-sha`), run « Build & Deploy » 36735033118, job de
