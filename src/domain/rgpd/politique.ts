@@ -87,6 +87,7 @@ const COLONNES = {
 } as const;
 
 const UNITES: Readonly<Record<UniteDeSeuil, string>> = {
+  minutes: 'minutes',
   jours: 'jours',
   jours_ouvres: 'jours ouvrés',
   mois: 'mois',
