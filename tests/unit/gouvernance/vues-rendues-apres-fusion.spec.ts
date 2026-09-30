@@ -14,7 +14,7 @@
  *      le sont plus quand elle est ignorée ; `vues:fusion` fait passer une branche d'avant GOV-123 ;
  *   6. REQ-GOV-006 : la date de `docs/PLAN-STATE.md` rendu à la volée est celle de `HEAD`.
  */
-import { afterAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -290,6 +290,149 @@ describe('REQ-GOV-006 — la date de l’état vivant rendu à la volée', () =>
       // TÉMOIN ROUGE : absente du disque (le rendu n'a pas tourné) → aucune date.
       rmSync(join(d.dir, chemin));
       expect(dateDUneVue(chemin, git, existe)).toBeNull();
+    },
+    DELAI
+  );
+});
+
+/**
+ * LES LECTEURS DE VUE QUI EN TIRENT UNE DÉCISION (refus de la lentille exactitude, tête 1f75caa9).
+ * Une vue ignorée reste sur le disque telle qu'au dernier rendu : git ne la met plus à jour. Toute
+ * garde qui décide sur son CONTENU décide donc sur un passé, ou tombe sur un ENOENT brut si elle
+ * n'a jamais été rendue. Chaque témoin tourne dans un arbre de travail jetable de `HEAD` — les vues
+ * y sont ABSENTES par construction — puis avec une vue PÉRIMÉE écrite à la main, et exige que la
+ * décision ne bouge pas : elle se dérive de la source, jamais de la vue.
+ */
+describe('REQ-GOV-032 — une vue périmée ou absente ne change aucune décision', () => {
+  const RACINE = process.cwd();
+  const TSX = join(RACINE, 'node_modules/tsx/dist/cli.mjs');
+  const arbre = join(tmpdir(), `vue-perimee-${process.pid}-${Date.now()}`);
+  beforeAll(() => {
+    execFileSync('git', ['worktree', 'add', '-q', '--detach', arbre, 'HEAD'], { cwd: RACINE });
+  }, DELAI);
+  afterAll(() => {
+    spawnSync('git', ['worktree', 'remove', '--force', arbre], { cwd: RACINE });
+    rmSync(arbre, { recursive: true, force: true });
+  });
+
+  const lancer = (script: string, ...args: string[]): { code: number; sortie: string } => {
+    const r = spawnSync(process.execPath, [TSX, join(RACINE, script), ...args], {
+      cwd: arbre,
+      encoding: 'utf8',
+    });
+    return { code: r.status ?? 1, sortie: (r.stdout ?? '') + (r.stderr ?? '') };
+  };
+  const ecrire = (chemin: string, contenu: string): void => {
+    mkdirSync(join(arbre, chemin, '..'), { recursive: true });
+    writeFileSync(join(arbre, chemin), contenu);
+  };
+  const retirer = (chemin: string): void => rmSync(join(arbre, chemin), { force: true });
+
+  // Le fichier que c9 a nommé : partagé par GOV-127 et GOV-128 (leur `tests{}`), donc à REFUSER.
+  const PARTAGE = 'tests/unit/gouvernance/le-passif-de-la-declaration-est-ferme.spec.ts';
+  /** `lot:integrer` sur un livrable qui REMPLACE le fichier partagé ; rend la sortie et l'effet. */
+  const integrer = (): { code: number; sortie: string; copie: boolean } => {
+    const livrable = mkdtempSync(join(tmpdir(), 'livrable-'));
+    aNettoyer.push(livrable);
+    mkdirSync(join(livrable, PARTAGE, '..'), { recursive: true });
+    writeFileSync(join(livrable, PARTAGE), '// le livrable écrase tout\n');
+    const r = lancer('scripts/lot/integrer.ts', '--tache', 'GOV-123', '--depuis', livrable);
+    const copie = readFileSync(join(arbre, PARTAGE), 'utf8') === '// le livrable écrase tout\n';
+    execFileSync('git', ['checkout', '-q', '--', PARTAGE], { cwd: arbre });
+    return { ...r, copie };
+  };
+
+  it(
+    'REQ-GOV-032 — TÉMOIN ROUGE lot:integrer : vue paths-proposes.json ABSENTE → pas d’ENOENT, le partagé est refusé',
+    () => {
+      retirer('docs/paths-proposes.json');
+      const r = integrer();
+      expect(r.sortie).not.toContain('ENOENT');
+      expect(r.code, r.sortie).toBe(0);
+      expect(r.copie, 'le fichier partagé a été COPIÉ').toBe(false);
+      expect(r.sortie).toContain(`── ${PARTAGE}`);
+    },
+    DELAI
+  );
+
+  it(
+    'REQ-GOV-032 — TÉMOIN ROUGE lot:integrer : vue paths-proposes.json PÉRIMÉE (sans le partagé) → refusé quand même',
+    () => {
+      ecrire('docs/paths-proposes.json', JSON.stringify({ version: 1, resume: {}, paths: {} }));
+      const r = integrer();
+      retirer('docs/paths-proposes.json');
+      expect(r.code, r.sortie).toBe(0);
+      expect(r.copie, 'vue périmée : le fichier partagé a été COPIÉ').toBe(false);
+      expect(r.sortie).toContain(`── ${PARTAGE}`);
+    },
+    DELAI
+  );
+
+  type Rapport = { taches: { id: string; statut: string; preuves: string[] }[] };
+  const rapportInventaire = (): { code: number; sortie: string; rapport: Rapport | null } => {
+    const r = lancer('scripts/gates/gov-inventaire.ts', '--rapport');
+    const debut = r.sortie.indexOf('{');
+    const fin = r.sortie.lastIndexOf('}');
+    const rapport =
+      r.code === 0 && debut >= 0 ? (JSON.parse(r.sortie.slice(debut, fin + 1)) as Rapport) : null;
+    return { ...r, rapport };
+  };
+
+  it(
+    'REQ-GOV-032 — TÉMOIN ROUGE gov:inventaire : une preuve ne vient jamais d’une vue paths-proposes.json absente ou périmée',
+    () => {
+      retirer('docs/paths-proposes.json');
+      const absente = rapportInventaire();
+      expect(absente.sortie).not.toContain('introuvable');
+      expect(absente.code, absente.sortie).toBe(0);
+
+      // Une vue PÉRIMÉE qui prête à une tâche un chemin présent sur le disque qu'aucune source ne
+      // lui donne : si la garde lit la vue, ce chemin devient sa preuve.
+      const tache = absente.rapport!.taches.find((t) => t.statut === 'fusionnee')!;
+      ecrire('temoin-vue-perimee.txt', 'x\n');
+      ecrire(
+        'docs/paths-proposes.json',
+        JSON.stringify({
+          version: 1,
+          resume: {},
+          paths: { [tache.id]: ['temoin-vue-perimee.txt'] },
+        })
+      );
+      const perimee = rapportInventaire();
+      retirer('docs/paths-proposes.json');
+      retirer('temoin-vue-perimee.txt');
+      expect(perimee.code, perimee.sortie).toBe(0);
+      const preuves = perimee.rapport!.taches.find((t) => t.id === tache.id)!.preuves;
+      expect(preuves).not.toContain('chemin:temoin-vue-perimee.txt');
+      expect(perimee.rapport!.taches).toEqual(absente.rapport!.taches);
+    },
+    DELAI
+  );
+
+  /** Le verdict de gov:entite : son code et ses familles, sans la prose qui varie. */
+  const verdictEntite = (): { code: number; sortie: string; familles: string[] } => {
+    const r = lancer('scripts/gates/gov-entite.ts');
+    const familles = [...r.sortie.matchAll(/\[([a-z_]+)\]/g)].map((m) => m[1]!).sort();
+    return { ...r, familles };
+  };
+
+  it(
+    'REQ-GOV-032 — TÉMOIN ROUGE gov:entite : REQUIREMENTS.md absent ou périmé ne change pas le verdict',
+    () => {
+      retirer('docs/REQUIREMENTS.md');
+      const absente = verdictEntite();
+      expect(absente.sortie).not.toContain('ENOENT');
+      expect(absente.sortie).not.toContain('source_illisible');
+
+      // PÉRIMÉE : une vue d'avant REQ-CPL-004 et REQ-CPL-018, les deux exigences que la garde y relit.
+      ecrire('docs/REQUIREMENTS.md', '# Registre des exigences\n\n- **REQ-GOV-001** — autre.\n');
+      const perimee = verdictEntite();
+      retirer('docs/REQUIREMENTS.md');
+      expect(perimee.sortie).not.toContain('source_illisible');
+      expect({ code: perimee.code, familles: perimee.familles }).toEqual({
+        code: absente.code,
+        familles: absente.familles,
+      });
     },
     DELAI
   );
