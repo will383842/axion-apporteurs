@@ -367,11 +367,11 @@ describe('l’en-tête de build posé par l’application', () => {
  * la vraie serrure. Ce témoin tient la moitié qui est dans le dépôt : AUCUN job, dans AUCUN workflow,
  * ne lit un secret de production hors d'un job de l'environnement `production`.
  */
-describe('REQ-QA-033 — les secrets de production ne sont lus que dans l’environnement production', () => {
+describe('REQ-GOV-014 — les secrets de production ne sont lus que dans l’environnement production', () => {
   const SECRETS_DE_PRODUCTION =
     /secrets\.(COOLIFY_(?!PREVIEW_)[A-Z_]+|R2_[A-Z_]+|PARTNERS_BACKUP_PASSPHRASE|TELEGRAM_[A-Z_]+|SESSION_SECRET|MAGIC_LINK_SECRET|DEPOSIT_TOKEN_SECRET|AXIONIA_[A-Z_]+|DOCUSEAL_[A-Z_]+|PII_[A-Z_]+|IP_HASH_SALT|PARTNERS_MCP_SHARED_SECRET|ZEPTOMAIL_[A-Z_]+)\b/;
 
-  it('REQ-QA-033 : chaque job qui lit un secret de production porte `environment: production`', async () => {
+  it('REQ-GOV-014 : chaque job qui lit un secret de production porte `environment: production`', async () => {
     const { readdirSync } = await import('node:fs');
     const fautes: string[] = [];
     let confrontes = 0;
