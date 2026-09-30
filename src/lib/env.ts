@@ -395,12 +395,16 @@ export function lireTrousseaux(
     const v = source[n];
     if (v !== undefined && v !== '') connues.set(empreinte(v), n);
   }
-  const trousseaux = {} as Record<NomEnRotation, Trousseau>;
+  const trousseaux = Object.fromEntries(
+    NOMS_EN_ROTATION.map((n): [NomEnRotation, Trousseau] => [
+      n,
+      { courante: source[n] ?? '', precedente: null },
+    ])
+  ) as Record<NomEnRotation, Trousseau>;
   for (const nom of NOMS_EN_ROTATION) {
     const { cle, echeance } = variablesDeRotation(nom);
     const v = source[cle];
     const e = source[echeance];
-    trousseaux[nom] = { courante: source[nom] ?? '', precedente: null };
     if (v === undefined && e === undefined) continue;
     if (v === undefined) {
       refus.push({ variable: cle, motif: 'absente' });
