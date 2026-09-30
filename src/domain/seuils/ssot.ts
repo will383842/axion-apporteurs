@@ -19,7 +19,7 @@
  * Les montants sont en CENTIMES hors taxes (`docs/CONVENTIONS.md`, argent en centimes).
  */
 
-export type UniteDeSeuil = 'jours' | 'jours_ouvres' | 'mois' | 'ans' | 'centimes';
+export type UniteDeSeuil = 'minutes' | 'jours' | 'jours_ouvres' | 'mois' | 'ans' | 'centimes';
 
 /** Un endroit du contrat où la valeur est écrite : le corps du contrat, ou son annexe 2. */
 export type Renvoi = { readonly document: 'contrat' | 'annexe-2'; readonly unite: string };
@@ -247,6 +247,25 @@ export const SEUILS = {
       'REQ-JUR-029 (contrats, autofactures, relevés, preuves de paiement — valeur confrontée) — À RELIRE, non encore confronté : C. com. L.123-22',
     renvois: [],
     verifieLe: LE,
+  },
+  // QA-T12 : au-delà, le travail de nuit rougit — une sauvegarde qu'on ne restaure pas n'en est pas une.
+  EXERCICE_DE_RESTAURATION_MAX_JOURS: {
+    valeur: 35,
+    unite: 'jours',
+    source:
+      'acceptation QA-T12 (REQ-QA-023) ; arbitrage -d7 sur délégation de Williams du 2026-09-29',
+    renvois: [],
+    verifieLe: '2026-09-29',
+  },
+  // QA-T12 : un vidage déposé en clair et plus vieux que ce seuil est nommé, et le geste rougit. Le
+  // rechiffrement tourne chaque heure ; la demi-heure de plus absorbe le retard d'un run planifié.
+  CLAIR_EN_DEPOT_MAX_MINUTES: {
+    valeur: 90,
+    unite: 'minutes',
+    source:
+      'acceptation QA-T12 (REQ-QA-023), lentille exactitude PR 280 ; option A de -d7 sur délégation de Williams du 2026-09-30',
+    renvois: [],
+    verifieLe: '2026-09-30',
   },
 } as const satisfies Record<string, Seuil>;
 

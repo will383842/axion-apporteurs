@@ -14997,7 +14997,10 @@
       "paths": [
         "src/server/integrations/telegram/alertes.ts",
         "scripts/sauvegarde/cycle.ts",
-        "tests/unit/qualite/alerte-rechiffrement-echoue.spec.ts"
+        "tests/unit/qualite/alerte-rechiffrement-echoue.spec.ts",
+        ".github/workflows/backup.yml",
+        ".github/workflows/nightly.yml",
+        "docs/runbooks/sauvegarde.md"
       ],
       "schema": false,
       "sensible": [],
