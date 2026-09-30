@@ -663,7 +663,8 @@
         "tests/unit/gouvernance/une-branche-reelle-de-la-forge-est-admise.spec.ts",
         "tests/unit/gouvernance/gov-pr-lit-une-pr-de-lot.spec.ts",
         "tests/unit/gouvernance/tasks-schema-et-paths.spec.ts",
-        "docs/LECONS.md"
+        "docs/LECONS.md",
+        "tests/unit/gouvernance/une-tache-en-cours-appartient-a-un-lot.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -14881,7 +14882,10 @@
         "tests/integration/webhook.spec.ts",
         "tests/integration/frontiere.spec.ts",
         "tests/unit/integration/candidature-recue.spec.ts",
-        "tests/integration/webhook-verdicts.spec.ts"
+        "tests/integration/webhook-verdicts.spec.ts",
+        ".github/workflows/coolify-provisionner.yml",
+        "scripts/deploiement/provisionner.ts",
+        "tests/unit/qualite/provisionnement-coolify.spec.ts"
       ],
       "schema": false,
       "sensible": [
