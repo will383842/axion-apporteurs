@@ -201,7 +201,8 @@ describe('REQ-QA-015 — la preview est semée à son démarrage, et seule la pr
     spawnSync('sh', ['docker-entrypoint.sh', 'true'], {
       encoding: 'utf8',
       // SKIP_MIGRATE=1 : ce témoin juge la garde du semis, pas la migration (aucune base ici).
-      env: { PATH: process.env.PATH ?? '', SKIP_MIGRATE: '1', ...env },
+      // Un environnement MINIMAL, délibérément : rien du poste ne doit décider du verdict.
+      env: { PATH: process.env.PATH ?? '', SKIP_MIGRATE: '1', ...env } as NodeJS.ProcessEnv,
     });
 
   it('REQ-QA-015 : un instant de semis hors preview refuse le démarrage, en le nommant', () => {
