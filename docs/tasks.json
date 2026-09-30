@@ -5261,7 +5261,8 @@
         "REQ-INT-019",
         "REQ-JUR-004",
         "REQ-JUR-005",
-        "REQ-SEC-034"
+        "REQ-SEC-034",
+        "REQ-QA-030"
       ],
       "hyp": [
         "DEC-INT-001"
@@ -14860,7 +14861,9 @@
         "tests/integration/candidature-recue.spec.ts"
       ],
       "schema": false,
-      "sensible": [],
+      "sensible": [
+        "auth"
+      ],
       "deps": [
         "QA-T04",
         "SEC-06",
@@ -14902,7 +14905,9 @@
         "axionia/src/server/partners/contrat/fixtures.v2.json"
       ],
       "schema": false,
-      "sensible": [],
+      "sensible": [
+        "auth"
+      ],
       "deps": [
         "INT-T02",
         "INT-T42"
@@ -14941,7 +14946,9 @@
         "tests/unit/integration/contrat-en-tete-du-kid.spec.ts"
       ],
       "schema": true,
-      "sensible": [],
+      "sensible": [
+        "auth"
+      ],
       "deps": [
         "INT-T01c"
       ],
