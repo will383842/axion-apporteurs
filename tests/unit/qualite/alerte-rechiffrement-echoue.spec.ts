@@ -3,7 +3,7 @@
  * QA-T53 — L'ÉCHEC DU RECHIFFREMENT, ET LE CLAIR QUI DURE, ALERTENT.
  *
  * Arbitrage -d7 sur délégation de Williams du 2026-09-30 (condition bloquante de la lentille
- * `securite` pour la PR de QA-T12) : un vidage qui reste en clair est la pire issue de la sauvegarde,
+ * `securite` pour la PR 280) : un vidage qui reste en clair est la pire issue de la sauvegarde,
  * et un rouge dans l'onglet Actions ne réveille personne. Deux émetteurs, une seule catégorie close,
  * `rechiffrement_echoue` :
  *
