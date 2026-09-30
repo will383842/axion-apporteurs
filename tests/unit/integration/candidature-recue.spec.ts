@@ -128,6 +128,19 @@ describe('REQ-INT-032 — le client de la route des coordonnées', () => {
     }
   );
 
+  it('REQ-INT-032 : l’appel est un GET qui refuse toute redirection et tout cache', async () => {
+    const { tirer, appels } = client(() => reponseSignee(JSON.stringify(COORDONNEES)));
+    await tirer(CANDIDATURE);
+    expect(appels[0]!.init).toMatchObject({ method: 'GET', redirect: 'error', cache: 'no-store' });
+  });
+
+  it('REQ-INT-032 — TÉMOIN : une réponse bien signée et conforme mais qui n’est pas un 200 est refusée', async () => {
+    const { tirer } = client(() =>
+      reponseSignee(JSON.stringify(COORDONNEES), SECRET_EMISSION, 201)
+    );
+    expect(await tirer(CANDIDATURE)).toBeNull();
+  });
+
   it('REQ-INT-032 : sans adresse d’axionia configurée, rien ne part', async () => {
     const appels: unknown[] = [];
     const tirer = clientCoordonnees({
@@ -149,6 +162,7 @@ describe('REQ-INT-032 — le client de la route des coordonnées', () => {
 function base(existants: { emailHash?: string; phoneHash?: string; candidatureId?: string }[]) {
   const crees: Record<string, unknown>[] = [];
   const mises: unknown[] = [];
+  const recherches: unknown[] = [];
   const correspond = (where: Record<string, unknown>) => {
     const conditions = (where['OR'] as Record<string, unknown>[] | undefined) ?? [where];
     return existants.find((e) =>
@@ -159,8 +173,10 @@ function base(existants: { emailHash?: string; phoneHash?: string; candidatureId
   };
   const tx = {
     apporteur: {
-      findFirst: async (args: { where: Record<string, unknown> }) =>
-        correspond(args.where) ? { id: 'existant' } : null,
+      findFirst: async (args: { where: Record<string, unknown> }) => {
+        recherches.push(args);
+        return correspond(args.where) ? { id: 'existant' } : null;
+      },
       create: async (args: { data: Record<string, unknown> }) => {
         crees.push(args.data);
         return args.data;
@@ -180,7 +196,7 @@ function base(existants: { emailHash?: string; phoneHash?: string; candidatureId
       return fn(tx);
     },
   } as unknown as ClientCandidature;
-  return { prisma, crees, mises, transactions: () => transactions };
+  return { prisma, crees, mises, recherches, transactions: () => transactions };
 }
 
 const DEPS = (tirer: (id: string) => Promise<Coordonnees | null>) => ({
@@ -236,6 +252,47 @@ describe('REQ-DM-035, REQ-QA-035 — un apporteur `candidat` naît, figé, dans 
     ).toBe('rattache');
     expect(b.crees).toEqual([]);
     expect(b.mises).toHaveLength(1);
+  });
+
+  it('REQ-INT-032 : la recherche est exacte — courriel OU candidature d’abord, puis le seul téléphone, l’identifiant seul', async () => {
+    const b = base([]);
+    await traiterCandidatureRecue(
+      b.prisma,
+      EVENEMENT,
+      DEPS(async () => COORDONNEES)
+    );
+    const emailHash = empreinteRecherche('courriel', COORDONNEES.email!, CLES);
+    const phoneHash = empreinteRecherche('telephone', COORDONNEES.telephone!, CLES);
+    expect(b.recherches).toEqual([
+      { where: { OR: [{ emailHash }, { candidatureId: CANDIDATURE }] }, select: { id: true } },
+      { where: { phoneHash }, select: { id: true } },
+    ]);
+  });
+
+  it('REQ-INT-032 : sans téléphone, aucune recherche par téléphone, et aucune empreinte de téléphone écrite', async () => {
+    const b = base([]);
+    expect(
+      await traiterCandidatureRecue(
+        b.prisma,
+        EVENEMENT,
+        DEPS(async () => ({ ...COORDONNEES, telephone: null }))
+      )
+    ).toBe('cree');
+    expect(b.recherches).toHaveLength(1);
+    expect(b.crees[0]).toMatchObject({ phoneHash: null });
+  });
+
+  it('REQ-INT-032 : connue par sa seule candidature (autre courriel), elle est rattachée', async () => {
+    const b = base([{ candidatureId: CANDIDATURE }]);
+    expect(
+      await traiterCandidatureRecue(
+        b.prisma,
+        EVENEMENT,
+        DEPS(async () => COORDONNEES)
+      )
+    ).toBe('rattache');
+    expect(b.crees).toEqual([]);
+    expect(b.recherches).toHaveLength(1);
   });
 
   it('REQ-INT-032 : connue par son seul téléphone, elle est rattachée aussi', async () => {
