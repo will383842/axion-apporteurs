@@ -15,7 +15,8 @@
  */
 import { describe, it, expect } from 'vitest';
 import { createHash, createHmac, randomBytes, randomUUID } from 'node:crypto';
-import { NOMS_DES_SECRETS } from '../../../src/lib/env';
+import { NOMS_DES_SECRETS, kidDe, type Trousseau } from '../../../src/lib/env';
+import { ENTETE_KID_AXIONIA } from '../../../packages/contracts/api';
 import { TYPES_EVENEMENT, SCHEMA_VERSION } from '../../../packages/contracts/events';
 import { Prisma, type PrismaClient } from '@prisma/client';
 import {
@@ -98,12 +99,25 @@ function requete(corps: string, entetes: Record<string, string>): Request {
   });
 }
 
-function signee(secret: string, corps: string, secondes = String(MAINTENANT_S)): Request {
+/**
+ * Une requête signée par `secret`. Le `kid` est celui de ce secret, sauf quand le test présente un
+ * AUTRE secret sous le kid de la clé attendue : c'est alors la signature, et non le kid, qui est fausse.
+ */
+function signee(
+  secret: string,
+  corps: string,
+  secondes = String(MAINTENANT_S),
+  kid = kidDe(secret)
+): Request {
   return requete(corps, {
     [ENTETE_HORODATAGE]: secondes,
     [ENTETE_SIGNATURE]: signer(secret, secondes, corps),
+    [ENTETE_KID_AXIONIA]: kid,
   });
 }
+
+/** Un trousseau sans rotation en cours : la seule clé courante. */
+const seul = (secret: string): Trousseau => ({ courante: secret, precedente: null });
 
 /** Le dépôt en mémoire : il COMPTE, et il tient les deux unicités de la table. */
 function depotEnMemoire(): DepotDeReception & { lignes: EvenementAInscrire[] } {
@@ -157,21 +171,42 @@ describe('REQ-SEC-010 — la signature d’axionia, jugée seule', () => {
 
   it('REQ-SEC-010 : la signature du producteur est acceptée', () => {
     expect(
-      verifierSignatureAxionia(octets(corps), s, signer(secret, s, corps), secret, MAINTENANT_MS)
+      verifierSignatureAxionia(
+        octets(corps),
+        s,
+        signer(secret, s, corps),
+        kidDe(secret),
+        seul(secret),
+        MAINTENANT_MS
+      )
     ).toEqual({ ok: true });
   });
 
   it('REQ-SEC-010 : un autre secret est refusé en `signature_invalide`', () => {
     const autre = randomBytes(32).toString('hex');
     expect(
-      verifierSignatureAxionia(octets(corps), s, signer(autre, s, corps), secret, MAINTENANT_MS)
+      verifierSignatureAxionia(
+        octets(corps),
+        s,
+        signer(autre, s, corps),
+        kidDe(secret),
+        seul(secret),
+        MAINTENANT_MS
+      )
     ).toEqual({ ok: false, motif: 'signature_invalide' });
   });
 
   it('REQ-SEC-010 : un octet du corps changé est refusé', () => {
     const faux = JSON.stringify({ a: 2 });
     expect(
-      verifierSignatureAxionia(octets(faux), s, signer(secret, s, corps), secret, MAINTENANT_MS).ok
+      verifierSignatureAxionia(
+        octets(faux),
+        s,
+        signer(secret, s, corps),
+        kidDe(secret),
+        seul(secret),
+        MAINTENANT_MS
+      ).ok
     ).toBe(false);
   });
 
@@ -180,29 +215,53 @@ describe('REQ-SEC-010 — la signature d’axionia, jugée seule', () => {
     for (const decalage of [-300, 300]) {
       const t = String(MAINTENANT_S + decalage);
       expect(
-        verifierSignatureAxionia(octets(corps), t, signer(secret, t, corps), secret, MAINTENANT_MS)
+        verifierSignatureAxionia(
+          octets(corps),
+          t,
+          signer(secret, t, corps),
+          kidDe(secret),
+          seul(secret),
+          MAINTENANT_MS
+        )
       ).toEqual({ ok: true });
     }
     for (const decalage of [-301, 301]) {
       const t = String(MAINTENANT_S + decalage);
       expect(
-        verifierSignatureAxionia(octets(corps), t, signer(secret, t, corps), secret, MAINTENANT_MS)
+        verifierSignatureAxionia(
+          octets(corps),
+          t,
+          signer(secret, t, corps),
+          kidDe(secret),
+          seul(secret),
+          MAINTENANT_MS
+        )
       ).toEqual({ ok: false, motif: 'hors_fenetre' });
     }
   });
 
   it('REQ-SEC-010 : un en-tête absent est refusé, sans repli en clair', () => {
     expect(
-      verifierSignatureAxionia(octets(corps), null, signer(secret, s, corps), secret, MAINTENANT_MS)
+      verifierSignatureAxionia(
+        octets(corps),
+        null,
+        signer(secret, s, corps),
+        kidDe(secret),
+        seul(secret),
+        MAINTENANT_MS
+      )
     ).toEqual({ ok: false, motif: 'entete_absent' });
-    expect(verifierSignatureAxionia(octets(corps), s, null, secret, MAINTENANT_MS)).toEqual({
+    expect(
+      verifierSignatureAxionia(octets(corps), s, null, kidDe(secret), seul(secret), MAINTENANT_MS)
+    ).toEqual({
       ok: false,
       motif: 'entete_absent',
     });
     // Le secret lui-même, présenté comme signature : aucun repli en clair.
-    expect(verifierSignatureAxionia(octets(corps), s, secret, secret, MAINTENANT_MS).ok).toBe(
-      false
-    );
+    expect(
+      verifierSignatureAxionia(octets(corps), s, secret, kidDe(secret), seul(secret), MAINTENANT_MS)
+        .ok
+    ).toBe(false);
   });
 
   it('REQ-SEC-010 : sans horodatage, AUCUNE signature n’est acceptée — ni celle de l’instant présent, ni celle du corps seul', () => {
@@ -213,7 +272,14 @@ describe('REQ-SEC-010 — la signature d’axionia, jugée seule', () => {
     ];
     for (const signature of candidates) {
       expect(
-        verifierSignatureAxionia(octets(corps), null, signature, secret, MAINTENANT_MS)
+        verifierSignatureAxionia(
+          octets(corps),
+          null,
+          signature,
+          kidDe(secret),
+          seul(secret),
+          MAINTENANT_MS
+        )
       ).toEqual({ ok: false, motif: 'entete_absent' });
     }
   });
@@ -221,9 +287,79 @@ describe('REQ-SEC-010 — la signature d’axionia, jugée seule', () => {
   it('REQ-SEC-010 : un horodatage qui n’est pas fait de chiffres est refusé — « t.corps » doit se découper sans ambiguïté', () => {
     for (const t of ['1.5', '', ' 1', '-1', '1e9', String(MAINTENANT_S) + '.0']) {
       expect(
-        verifierSignatureAxionia(octets(corps), t, signer(secret, t, corps), secret, MAINTENANT_MS)
+        verifierSignatureAxionia(
+          octets(corps),
+          t,
+          signer(secret, t, corps),
+          kidDe(secret),
+          seul(secret),
+          MAINTENANT_MS
+        )
       ).toEqual({ ok: false, motif: 'horodatage_illisible' });
     }
+  });
+
+  it('REQ-QA-030 : un kid absent est refusé AVANT tout calcul, jamais remplacé par un essai des clés', () => {
+    expect(
+      verifierSignatureAxionia(
+        octets(corps),
+        s,
+        signer(secret, s, corps),
+        null,
+        seul(secret),
+        MAINTENANT_MS
+      )
+    ).toEqual({ ok: false, motif: 'kid_absent' });
+  });
+
+  it('REQ-QA-030 : un kid qui ne désigne aucune clé du trousseau est refusé', () => {
+    const autre = randomBytes(32).toString('hex');
+    expect(
+      verifierSignatureAxionia(
+        octets(corps),
+        s,
+        signer(autre, s, corps),
+        kidDe(autre),
+        seul(secret),
+        MAINTENANT_MS
+      )
+    ).toEqual({ ok: false, motif: 'kid_inconnu' });
+  });
+
+  it('REQ-QA-030 : la clé précédente signe jusqu’à son échéance, puis est refusée en le nommant', () => {
+    const precedente = randomBytes(32).toString('hex');
+    const t: Trousseau = {
+      courante: secret,
+      precedente: { valeur: precedente, echeanceMs: MAINTENANT_MS + 1 },
+    };
+    const sig = signer(precedente, s, corps);
+    expect(
+      verifierSignatureAxionia(octets(corps), s, sig, kidDe(precedente), t, MAINTENANT_MS)
+    ).toEqual({ ok: true });
+    expect(
+      verifierSignatureAxionia(octets(corps), s, sig, kidDe(precedente), t, MAINTENANT_MS + 1)
+    ).toEqual({
+      ok: false,
+      motif: 'cle_precedente_echue',
+    });
+  });
+
+  it('REQ-QA-030 : le kid de la courante avec une signature de la précédente est refusé en signature_invalide', () => {
+    const precedente = randomBytes(32).toString('hex');
+    const t: Trousseau = {
+      courante: secret,
+      precedente: { valeur: precedente, echeanceMs: MAINTENANT_MS + 1 },
+    };
+    expect(
+      verifierSignatureAxionia(
+        octets(corps),
+        s,
+        signer(precedente, s, corps),
+        kidDe(secret),
+        t,
+        MAINTENANT_MS
+      )
+    ).toEqual({ ok: false, motif: 'signature_invalide' });
   });
 
   it('REQ-SEC-010 : une signature en majuscules n’est pas la forme du producteur, elle est refusée', () => {
@@ -232,7 +368,8 @@ describe('REQ-SEC-010 — la signature d’axionia, jugée seule', () => {
         octets(corps),
         s,
         signer(secret, s, corps).toUpperCase(),
-        secret,
+        kidDe(secret),
+        seul(secret),
         MAINTENANT_MS
       ).ok
     ).toBe(false);
@@ -314,8 +451,9 @@ describe('REQ-SEC-010 — la route : témoin à deux faces, compté en lignes', 
       })
     );
     const autre = randomBytes(32).toString('hex');
-    const r1 = await b.recevoir(signee(autre, corps));
-    const r2 = await b.recevoir(signee(autre, corps));
+    const kid = kidDe(env.AXIONIA_WEBHOOK_SECRET!);
+    const r1 = await b.recevoir(signee(autre, corps, undefined, kid));
+    const r2 = await b.recevoir(signee(autre, corps, undefined, kid));
     expect([r1.status, r2.status]).toEqual([401, 401]);
     expect(b.depot.lignes).toHaveLength(0);
     expect(b.declenchements()).toBe(0);
@@ -1025,7 +1163,9 @@ describe('REQ-SEC-010 — la route, refus par refus', () => {
     ).toEqual([400, 'corps_illisible']);
     expect(
       await lu(
-        await b.recevoir(signee(randomBytes(32).toString('hex'), client({ client_id: 'a' })))
+        await b.recevoir(
+          signee(randomBytes(32).toString('hex'), client({ client_id: 'a' }), undefined, kidDe(s))
+        )
       )
     ).toEqual([401, 'signature_refusee']);
     expect(await lu(await b.recevoir(signee(s, '{pas du json')))).toEqual([422, 'hors_schema']);
@@ -1074,7 +1214,11 @@ describe('REQ-SEC-010 — la route, refus par refus', () => {
     const r = await b.recevoir(
       new Request('https://partners.test/api/webhooks/axionia', {
         method: 'POST',
-        headers: { [ENTETE_HORODATAGE]: t, [ENTETE_SIGNATURE]: signature },
+        headers: {
+          [ENTETE_HORODATAGE]: t,
+          [ENTETE_SIGNATURE]: signature,
+          [ENTETE_KID_AXIONIA]: kidDe(env.AXIONIA_WEBHOOK_SECRET!),
+        },
         body: octetsCorps,
       })
     );
@@ -1087,10 +1231,10 @@ describe('REQ-SEC-010 — la route, refus par refus', () => {
     const s = env.AXIONIA_WEBHOOK_SECRET!;
     const b = banc(env);
     const faux = randomBytes(32).toString('hex');
-    await b.recevoir(signee(faux, client({ client_id: 'a' })));
+    await b.recevoir(signee(faux, client({ client_id: 'a' }), undefined, kidDe(s)));
     await b.recevoir(signee(s, '{pas du json'));
     await b.recevoir(signee(s, client({ client_id: 'b' })));
-    await b.recevoir(signee(faux, client({ client_id: 'c' })));
+    await b.recevoir(signee(faux, client({ client_id: 'c' }), undefined, kidDe(s)));
     await b.recevoir(signee(s, '{pas du json'));
     expect(b.signaux.map((x) => [x.porte, x.motif])).toEqual([
       ['axionia', 'signature_invalide'],
