@@ -6,8 +6,8 @@
  *
  * ── CE QU'IL FAIT, DANS CET ORDRE ────────────────────────────────────────────────────────────
  *
- *   1. SAUTE, en code 0, avec un `::warning::` par nom, si un secret de la plateforme ou un secret
- *      applicatif manque (arbitrage -d7 sur délégation de Williams du 2026-09-29) : rien n'est appelé.
+ *   1. ÉCHOUE, en code 1, avec un `::error::` par nom, si un secret de la plateforme ou un secret
+ *      applicatif manque : rien n'est appelé. Geste MANUEL, jamais un vert vide (arbitrage -d7 du 2026-09-30).
  *   2. JUGE les secrets applicatifs par la règle du démarrage (`lireEnvironnement`, `src/lib/env.ts`,
  *      en production) AVANT tout appel : une valeur qui ferait refuser le démarrage n'est jamais posée.
  *   3. TROUVE le projet `Axion-Partners` et le serveur ; CRÉE, s'ils n'existent pas sous leur nom, la
@@ -155,15 +155,16 @@ export async function provisionner(env: NodeJS.ProcessEnv): Promise<0 | 1> {
   ];
   if ((env.GITHUB_SHA ?? '') === '') manquants.push('GITHUB_SHA');
   if (manquants.length > 0) {
+    // Le provisionnement ne part qu'à la main (workflow_dispatch) : sans ses secrets, il ÉCHOUE en
+    // les nommant. Un vert qui n'a rien créé ferait croire la production provisionnée (arbitrage -d7
+    // du 2026-09-30).
     for (const n of manquants) {
-      console.log(
-        `::warning title=coolify:provisionner::${n} absent — provisionnement SAUTÉ (arbitrage -d7 du 2026-09-29)`
-      );
+      console.log(`::error title=coolify:provisionner::${n} absent — provisionnement IMPOSSIBLE`);
     }
-    console.log(
-      `⚠ SAUTÉ : ${manquants.length} variable(s) manquante(s). Rien n'a été créé ni posé.`
+    console.error(
+      `❌ ${manquants.length} variable(s) manquante(s) : ${manquants.join(', ')}. Rien n'a été créé ni posé.`
     );
-    return 0;
+    return 1;
   }
 
   const secrets: Record<string, string> = {};
