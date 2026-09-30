@@ -1263,7 +1263,8 @@ describe('REQ-CPL-018 — la garde d’ARGENT sort en échec : témoin d’EFFET
     // CONTRÔLE POSITIF, qui a rougi sur `docs/DECISIONS.md` manquant — c'est exactement ce pour
     // quoi il existe : sans lui j'aurais lu un non-zéro dû à un fichier absent comme « la garde a
     // vu la coordonnée ».
-    for (const f of ['config/entite.json', 'docs/DECISIONS.md', 'docs/REQUIREMENTS.md']) {
+    // GOV-123 : la garde rend `docs/REQUIREMENTS.md` de sa SOURCE, `docs/requirements.json`.
+    for (const f of ['config/entite.json', 'docs/DECISIONS.md', 'docs/requirements.json']) {
       mkdirSync(join(depot, dirname(f)), { recursive: true });
       writeFileSync(join(depot, f), readFileSync(f, 'utf8'));
     }

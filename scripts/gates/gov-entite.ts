@@ -3197,7 +3197,10 @@ export function lireUnivers(): Univers {
   return {
     registre: registreDuDepot(),
     decisions: readFileSync(CHEMIN_DECISIONS, 'utf8'),
-    exigences: exigencesRenduesDeLaSource(readFileSync(CHEMIN_REGISTRE_EXIGENCES, 'utf8')),
+    // Une source absente rend un texte vide : `source_illisible` le dit, jamais un ENOENT brut.
+    exigences: exigencesRenduesDeLaSource(
+      existsSync(CHEMIN_REGISTRE_EXIGENCES) ? readFileSync(CHEMIN_REGISTRE_EXIGENCES, 'utf8') : ''
+    ),
     fichiers,
     fichiersDesCommits: pr.fichiers,
     commitsLus: pr.commits,
