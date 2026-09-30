@@ -3,7 +3,7 @@
 # La forge CONSTRUIT l'image, la JUGE (porte C), puis la PUBLIE sur son registre de conteneurs,
 # étiquetée `latest` et `sha-<7>`. La plateforme de déploiement ne fera plus que la tirer : elle
 # ne construit rien. Le tirage lui-même, et la vérification de l'atterrissage (l'en-tête de build
-# servi porte le sha fusionné), appartiennent à la tâche qui branche la plateforme (QA-T34).
+# servi porte le sha fusionné), sont le job `deployer` (QA-T34, REQ-QA-033), plus bas.
 #
 # Chaque étape est un script de `package.json`, sous la forme fermée que les gardes exigent : la
 # logique vit dans `scripts/image/` et `scripts/gates/gate-c.sh`, jamais en ligne ici.
@@ -90,3 +90,42 @@ jobs:
         env:
           JETON: ${{ secrets.GITHUB_TOKEN }}
         run: pnpm image:publier
+
+  # QA-T34 (REQ-QA-033) — LA PLATEFORME TIRE `sha-<7>`, UN SEUL PRODUCTEUR À LA FOIS.
+  #
+  #   — après `publier`, sur un `push` vers `main` seulement : l'image tirée est celle qui vient
+  #     d'être prouvée et poussée par ce même run ;
+  #   — `concurrency` PAR ENVIRONNEMENT, au niveau du job (jamais du workflow, RM-09), et
+  #     `cancel-in-progress: false` : un déploiement commencé n'est jamais tué par le suivant, qui
+  #     attend son tour ;
+  #   — `contents: read` seul : ce job ne pousse rien, ni image ni code ;
+  #   — les secrets arrivent par l'environnement de l'étape, jamais en argument ; absents, le
+  #     déploiement est SAUTÉ et chaque secret manquant est nommé en `::warning::` (arbitrage -d7 sur
+  #     délégation de Williams du 2026-09-29) ; présents, tout échec est rouge, y compris une image
+  #     jamais servie : `deploy:coolify` lit `x-partners-build-sha` jusqu'à ce qu'il vaille le sha.
+  deployer:
+    runs-on: ubuntu-latest
+    needs: publier
+    # Les secrets de la plateforme vivent dans l'ENVIRONNEMENT `production`, jamais au niveau du dépôt :
+    # un secret de dépôt est servi à tout workflow d'une PR de branche, avant relecture. La règle de
+    # branche de l'environnement (« main seulement », réglage de la forge) est la vraie serrure.
+    environment: production
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    concurrency:
+      group: deploiement-production
+      cancel-in-progress: false
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - uses: pnpm/action-setup@v4
+      - run: pnpm install --frozen-lockfile
+
+      - name: La plateforme tire sha-7, puis l atterrissage est lu sur l en-tete servi
+        env:
+          COOLIFY_URL: ${{ secrets.COOLIFY_URL }}
+          COOLIFY_API_TOKEN: ${{ secrets.COOLIFY_API_TOKEN }}
+          COOLIFY_APP_UUID: ${{ secrets.COOLIFY_APP_UUID }}
+          PARTNERS_URL_PUBLIQUE: ${{ vars.PARTNERS_URL_PUBLIQUE }}
+        run: pnpm deploy:coolify
