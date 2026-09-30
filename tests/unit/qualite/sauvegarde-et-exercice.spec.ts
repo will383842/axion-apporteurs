@@ -47,6 +47,7 @@ import { SEUILS } from '../../../src/domain/seuils/ssot';
 import { lireYaml } from '../../../scripts/lib/lire-yaml';
 import {
   rechiffrer,
+  clairsEnSouffrance,
   exercerLeDernier,
   issueDesSecretsAbsents,
   fraicheurDuDepot,
@@ -480,5 +481,55 @@ describe('REQ-QA-023 — un geste MANUEL sans ses secrets échoue ; seul le plan
           r.lignes.some((l) => l.startsWith(`::warning title=sauvegarde:exercice::${n} absent`))
         ).toBe(true);
     }
+  });
+});
+
+describe('REQ-QA-023 — TÉMOIN À DEUX FACES : aucun vidage ne reste en clair au-delà du seuil', () => {
+  // Lentille exactitude, PR 280 : « une heure au plus en clair » n’était tenu par rien — un
+  // planificateur sauté, une relecture en échec ou un run retardé laissaient le clair vivre.
+  const MAINTENANT = new Date('2026-09-30T06:00:00Z');
+  const SEUIL_MINUTES = 90;
+  const clair = (nom: string, date: string) => ({
+    [`${PREFIXES.depot}${nom}`]: { contenu: Buffer.from('c'), date },
+  });
+
+  it('REQ-QA-023 : un clair de 91 minutes est nommé ; un clair de 89 minutes ne l’est pas', async () => {
+    const d = depot({
+      ...clair('vieux.dmp', '2026-09-30T04:29:00Z'),
+      ...clair('frais.dmp', '2026-09-30T04:31:00Z'),
+    });
+    const r = await clairsEnSouffrance(d, MAINTENANT, SEUIL_MINUTES);
+    expect(r.vieux.map((o) => o.cle)).toEqual([`${PREFIXES.depot}vieux.dmp`]);
+    expect(r.juges).toBe(2);
+  });
+
+  it('REQ-QA-023 : CONTRE-TÉMOIN — les chiffrés et les verdicts, même anciens, ne sont jamais des clairs', async () => {
+    const d = depot({
+      [`${PREFIXES.chiffres}ancien.dmp.chiffre`]: {
+        contenu: Buffer.from('x'),
+        date: '2026-01-01T00:00:00Z',
+      },
+      [`${PREFIXES.exercices}2026-01-01.json`]: {
+        contenu: Buffer.from('{}'),
+        date: '2026-01-01T00:00:00Z',
+      },
+    });
+    const r = await clairsEnSouffrance(d, MAINTENANT, SEUIL_MINUTES);
+    expect(r).toEqual({ vieux: [], juges: 0 });
+  });
+
+  it('REQ-QA-023 : un clair dont la date est illisible est tenu pour vieux, jamais pour frais', async () => {
+    const d = depot(clair('sans-date.dmp', 'pas une date'));
+    const r = await clairsEnSouffrance(d, MAINTENANT, SEUIL_MINUTES);
+    expect(r.vieux.map((o) => o.cle)).toEqual([`${PREFIXES.depot}sans-date.dmp`]);
+  });
+
+  it('REQ-QA-023 : un clair GARDÉ par une relecture en échec finit nommé par la garde', async () => {
+    const d = depot(clair('garde.dmp', '2026-09-30T04:00:00Z'));
+    const ecrireFidele = d.ecrire;
+    d.ecrire = async (cle, contenu) => ecrireFidele(cle, contenu.subarray(0, contenu.length - 1));
+    await expect(rechiffrer(d, CLE_CYCLE)).rejects.toThrow(/relu/);
+    const r = await clairsEnSouffrance(d, MAINTENANT, SEUIL_MINUTES);
+    expect(r.vieux.map((o) => o.cle)).toEqual([`${PREFIXES.depot}garde.dmp`]);
   });
 });

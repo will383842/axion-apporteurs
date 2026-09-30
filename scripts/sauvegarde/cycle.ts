@@ -63,12 +63,36 @@ export interface Depot {
 
 const parDate = (a: ObjetDuDepot, b: ObjetDuDepot) => Date.parse(a.date) - Date.parse(b.date);
 
+/** Les vidages EN CLAIR : sous `partners/`, hors des deux sous-préfixes, ni chiffrés ni dossiers. */
+async function clairsDuDepot(depot: Depot): Promise<ObjetDuDepot[]> {
+  return (await depot.lister(PREFIXES.depot))
+    .filter((o) => !o.cle.startsWith(PREFIXES.chiffres) && !o.cle.startsWith(PREFIXES.exercices))
+    .filter((o) => !o.cle.endsWith(SUFFIXE_CHIFFRE) && !o.cle.endsWith('/'));
+}
+
+/**
+ * La garde des clairs (lentille `exactitude`, PR 280) : tout vidage en clair plus vieux que le
+ * seuil, ou dont la date est illisible, est NOMMÉ. C'est elle, et non la cadence du rechiffrement,
+ * qui tient la fenêtre du clair : un planificateur sauté, une relecture en échec ou un run retardé
+ * laissent un clair vivre, et elle le voit.
+ */
+export async function clairsEnSouffrance(
+  depot: Depot,
+  maintenant: Date,
+  seuilMinutes: number
+): Promise<{ vieux: ObjetDuDepot[]; juges: number }> {
+  const clairs = await clairsDuDepot(depot);
+  const limite = maintenant.getTime() - seuilMinutes * 60_000;
+  const vieux = clairs.filter((o) => {
+    const t = Date.parse(o.date);
+    return Number.isNaN(t) || t < limite;
+  });
+  return { vieux, juges: clairs.length };
+}
+
 /** Chaque vidage en clair déposé sous `partners/` (hors des deux sous-préfixes) : chiffré, puis effacé. */
 export async function rechiffrer(depot: Depot, phrase: string): Promise<{ rechiffres: number }> {
-  const clairs = (await depot.lister(PREFIXES.depot))
-    .filter((o) => !o.cle.startsWith(PREFIXES.chiffres) && !o.cle.startsWith(PREFIXES.exercices))
-    .filter((o) => !o.cle.endsWith(SUFFIXE_CHIFFRE) && !o.cle.endsWith('/'))
-    .sort(parDate);
+  const clairs = (await clairsDuDepot(depot)).sort(parDate);
   for (const o of clairs) {
     const clair = await depot.lire(o.cle);
     const cible = `${PREFIXES.chiffres}${basename(o.cle)}${SUFFIXE_CHIFFRE}`;
