@@ -473,9 +473,9 @@ describe('REQ-QA-023 — un geste MANUEL sans ses secrets échoue ; seul le plan
   });
 
   it('REQ-QA-023 : déclenché par le planificateur, le même manque est SAUTÉ en 0, chaque absent nommé en avertissement', () => {
-    for (const evenement of ['schedule', undefined]) {
-      const r = issueDesSecretsAbsents('sauvegarde:exercice', noms, evenement);
-      expect(r.code, String(evenement)).toBe(0);
+    for (const declencheur of ['schedule', undefined]) {
+      const r = issueDesSecretsAbsents('sauvegarde:exercice', noms, declencheur);
+      expect(r.code, String(declencheur)).toBe(0);
       for (const n of noms)
         expect(
           r.lignes.some((l) => l.startsWith(`::warning title=sauvegarde:exercice::${n} absent`))

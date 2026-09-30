@@ -172,9 +172,9 @@ function manquantes(noms: readonly string[]): string[] {
 export function issueDesSecretsAbsents(
   commande: string,
   noms: readonly string[],
-  evenement: string | undefined
+  declencheur: string | undefined
 ): { code: 0 | 1; lignes: string[] } {
-  if (evenement === 'workflow_dispatch') {
+  if (declencheur === 'workflow_dispatch') {
     return {
       code: 1,
       lignes: [
