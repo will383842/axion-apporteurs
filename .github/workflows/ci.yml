@@ -339,9 +339,9 @@ jobs:
         run: pnpm perf:budgets:verifier
       # QA-T20, REQ-UX-033. Le poids que le navigateur charge VRAIMENT, route par route, lu dans les
       # manifestes de Next 16 (`.next/static/chunks/app/` n est pas produit sous Turbopack : les
-      # anciens globs mesuraient zero octet). Une faute de MESURE rougit toujours ; un DEPASSEMENT
-      # est nomme et annote, non bloquant jusqu a l'armement bloquant (`--bloquant`, prouve ci-dessous). Pas
-      # de `continue-on-error`.
+      # anciens globs mesuraient zero octet). BLOQUANTE des sa livraison (arbitrage -d7 du 2026-09-30) :
+      # une faute de MESURE, une route livree sans budget et tout DEPASSEMENT, de route ou du socle,
+      # rougissent ; aucun mode souple. Pas de `continue-on-error`.
       - name: La mesure du poids par route sait rougir, y compris sur zero octet
         run: pnpm perf:bundle:prove
       # SEC-10, REQ-SEC-016. Tout compteur de debit est declare au registre unique, sous l un des

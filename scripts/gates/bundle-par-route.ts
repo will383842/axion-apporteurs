@@ -2,10 +2,8 @@
  * bundle-par-route.ts — le poids que le navigateur charge sur chaque route de l'espace apporteur.
  * (REQ-UX-033, qui absorbe REQ-QA-031 ; tâche QA-T20 ; gate `perf:bundle`)
  *
- * USAGE : pnpm perf:bundle              mesure `.next`, NOMME les dépassements, sort en 0 s'il n'y a
- *                                       aucune faute de mesure (jusqu'à l'armement bloquant)
- *         pnpm perf:bundle:prove        un témoin par famille, des contre-témoins verts
- *         … --bloquant                  un dépassement fait sortir en 1 (ce que fera l'armement bloquant)
+ * USAGE : pnpm perf:bundle              mesure `.next` et sort en 1 sur toute faute, dépassement compris
+ *         pnpm perf:bundle:prove        un témoin par famille, un contre-témoin vert
  *         … --build <dir>               un autre répertoire de build que `.next`
  *         … --pages <fichier>           une page à mesurer (répétable) ; défaut : les pages suivies
  *                                       sous `src/app/(espace)`, dérivées par `perf-budgets.ts`
@@ -39,20 +37,22 @@
  * à la route, c'est-à-dire ses paquets hors du socle ; le socle a son plafond à lui, lu dans
  * `perf/budgets.json` (clé `socle` : mesure, marge, sha, source et date), jugé UNE fois.
  *
- * ── CE QUI EST UNE FAUTE, ET CE QUI N'EST QU'UN DÉPASSEMENT ─────────────────────────────────
+ * ── BLOQUANTE DÈS SA LIVRAISON ─────────────────────────────────────────────────────────────
  *
- * Une faute de MESURE rougit toujours : pas de build, manifeste absent ou illisible, paquet cité
- * et absent du disque, mesure nulle. Un DÉPASSEMENT est nommé (route, octets, plafond) et, dans
- * la forge, annoté `::warning::` ; il ne rougit que sous `--bloquant`. C'est l'acceptation de
- * QA-T20 (« non bloquant jusqu'à l'armement bloquant ») ; ce n'est pas un `continue-on-error` : l'étape de CI
- * rougit sur toute faute de mesure, et `--prove` montre dès aujourd'hui la face rouge du blocage.
+ * Arbitrage -d7 sur délégation de Williams (2026-09-30) : des routes sont livrées et mesurées
+ * (`/connexion`, `/confidentialite`, 3,6 KB propres pour 75), le blocage ne fait donc aucun faux
+ * rouge. Il n'y a PAS de mode souple : un drapeau qu'on oublierait de passer serait un vert
+ * permanent. Rougissent : une faute de MESURE (pas de build, manifeste absent ou illisible, paquet
+ * cité et absent du disque, mesure nulle), une route livrée SANS BUDGET dans `perf/budgets.json`,
+ * et tout DÉPASSEMENT, de route ou du socle, nommé (route, octets, plafond) et annoté `::error::`
+ * dans la forge.
  *
  * ── CE QU'ELLE NE FAIT PAS ───────────────────────────────────────────────────────────────────
  *
  * Elle n'exécute jamais un manifeste : l'objet JSON en est EXTRAIT, et toute autre forme échoue
  * fermé (`manifeste_illisible`). Elle ne mesure ni le CSS, ni les paquets chargés à la demande
  * après le premier rendu (`import()` dynamique) — ce n'est pas du « First Load ». Elle ne lance ni
- * `lhci` ni Lighthouse : LCP, CLS et INP restent à l'armement bloquant.
+ * `lhci` ni Lighthouse : LCP, CLS et INP restent hors de cette garde.
  */
 
 import { readFileSync, existsSync, readdirSync } from 'node:fs';
@@ -77,6 +77,7 @@ export const FAMILLES = [
   'manifeste_illisible',
   'paquet_introuvable',
   'mesure_nulle',
+  'budget_absent',
   'budget_depasse',
   'socle_depasse',
 ] as const;
@@ -87,6 +88,8 @@ export type Faute = { famille: Famille; message: string };
 /** Un build vu par le mesureur : chemins RELATIFS au répertoire de build ; `null` = absent. */
 export type VueBuild = {
   pages: string[];
+  /** les routes qui ont une entrée dans `perf/budgets.json` : une page hors de cet ensemble est une faute */
+  budgetees: ReadonlySet<string>;
   lire: (chemin: string) => Buffer | null;
 };
 
@@ -142,7 +145,7 @@ export function lireManifesteClient(texte: string): Record<string, string[]> | n
   return entrees as Record<string, string[]>;
 }
 
-function nomDeRoute(page: string): string {
+export function nomDeRoute(page: string): string {
   const r = routesDeLEspace([page]);
   return r[0]?.route ?? page;
 }
@@ -213,6 +216,12 @@ export function mesurer(vue: VueBuild): Resultat {
   const mesures: Mesure[] = [];
   for (const page of vue.pages) {
     const route = nomDeRoute(page);
+    if (!vue.budgetees.has(route)) {
+      fautes.push({
+        famille: 'budget_absent',
+        message: `${route} : livrée sans entrée dans ${CHEMIN_BUDGETS}, donc sans plafond`,
+      });
+    }
     const chemin = cheminDuManifeste(page);
     const texte = vue.lire(chemin);
     if (texte === null) {
@@ -278,10 +287,8 @@ export function depassements(r: Resultat, p: Plafonds): Depassement[] {
   return d;
 }
 
-export function codeDeSortie(r: Resultat, p: Plafonds, bloquant: boolean): 0 | 1 {
-  if (r.fautes.length > 0) return 1;
-  if (bloquant && depassements(r, p).length > 0) return 1;
-  return 0;
+export function codeDeSortie(r: Resultat, p: Plafonds): 0 | 1 {
+  return r.fautes.length > 0 || depassements(r, p).length > 0 ? 1 : 0;
 }
 
 // ── les plafonds : dérivés, jamais tapés (RM-01, RM-10) ──────────────────────────────────────
@@ -350,6 +357,7 @@ function buildDeFixture(f: {
   tailles: Record<string, number>;
   sans?: string[];
   manifesteBrut?: Record<string, string>;
+  sansBudget?: string[];
 }): VueBuild {
   const disque = new Map<string, Buffer>();
   disque.set('BUILD_ID', Buffer.from('preuve'));
@@ -370,7 +378,10 @@ function buildDeFixture(f: {
     );
   }
   for (const c of f.sans ?? []) disque.delete(c);
-  return { pages: f.routes.map((r) => r.page), lire: (c) => disque.get(c) ?? null };
+  const pages = f.routes.map((r) => r.page);
+  const sansBudget = new Set(f.sansBudget ?? []);
+  const budgetees = new Set(pages.map(nomDeRoute).filter((r) => !sansBudget.has(r)));
+  return { pages, budgetees, lire: (c) => disque.get(c) ?? null };
 }
 
 function prouver(): number {
@@ -388,36 +399,19 @@ function prouver(): number {
   type Cas = {
     quoi: string;
     vue: VueBuild;
-    bloquant: boolean;
     attendu: 0 | 1;
     famille: Famille | null;
   };
   const cas: Cas[] = [
     {
-      quoi: 'contre-témoin : une route légère sur un socle sous son plafond, sous --bloquant',
+      quoi: 'contre-témoin : une route légère, budgétée, sur un socle sous son plafond',
       vue: juste(),
-      bloquant: true,
-      attendu: 0,
-      famille: null,
-    },
-    {
-      quoi: 'contre-témoin : un dépassement sans --bloquant sort en zéro (QA-T20 non bloquant)',
-      vue: buildDeFixture({
-        racine: ['static/chunks/socle.js'],
-        routes: [{ page: P, paquets: ['static/chunks/graphiques.js'] }],
-        tailles: {
-          'static/chunks/socle.js': socleLeger,
-          'static/chunks/graphiques.js': plafonds.routeOctets * 2,
-        },
-      }),
-      bloquant: false,
       attendu: 0,
       famille: null,
     },
     {
       quoi: 'aucun build',
-      vue: { pages: [P], lire: () => null },
-      bloquant: false,
+      vue: { pages: [P], budgetees: new Set([nomDeRoute(P)]), lire: () => null },
       attendu: 1,
       famille: 'build_absent',
     },
@@ -429,7 +423,6 @@ function prouver(): number {
         tailles: { 'static/chunks/socle.js': 100 },
         sans: [cheminDuManifeste(P)],
       }),
-      bloquant: false,
       attendu: 1,
       famille: 'manifeste_absent',
     },
@@ -441,7 +434,6 @@ function prouver(): number {
         tailles: { 'static/chunks/socle.js': 100 },
         manifesteBrut: { [P]: 'module.exports = {}' },
       }),
-      bloquant: false,
       attendu: 1,
       famille: 'manifeste_illisible',
     },
@@ -452,19 +444,28 @@ function prouver(): number {
         routes: [{ page: P, paquets: ['static/chunks/fantome.js'] }],
         tailles: { 'static/chunks/socle.js': 100 },
       }),
-      bloquant: false,
       attendu: 1,
       famille: 'paquet_introuvable',
     },
     {
       quoi: 'aucun fichier trouvé — le piège des globs morts',
       vue: buildDeFixture({ racine: [], routes: [{ page: P, paquets: [] }], tailles: {} }),
-      bloquant: false,
       attendu: 1,
       famille: 'mesure_nulle',
     },
     {
-      quoi: 'une librairie de graphiques importée dans une route, sous --bloquant',
+      quoi: 'une route livrée sans entrée dans perf/budgets.json',
+      vue: buildDeFixture({
+        racine: ['static/chunks/socle.js'],
+        routes: [{ page: P, paquets: ['static/chunks/page.js'] }],
+        tailles: { 'static/chunks/socle.js': socleLeger, 'static/chunks/page.js': leger },
+        sansBudget: [nomDeRoute(P)],
+      }),
+      attendu: 1,
+      famille: 'budget_absent',
+    },
+    {
+      quoi: 'une librairie de graphiques importée dans une route',
       vue: buildDeFixture({
         racine: ['static/chunks/socle.js'],
         routes: [{ page: P, paquets: ['static/chunks/graphiques.js'] }],
@@ -473,18 +474,16 @@ function prouver(): number {
           'static/chunks/graphiques.js': plafonds.routeOctets + 4096,
         },
       }),
-      bloquant: true,
       attendu: 1,
       famille: 'budget_depasse',
     },
     {
-      quoi: 'un socle grossi au-delà de son plafond, sous --bloquant',
+      quoi: 'un socle grossi au-delà de son plafond',
       vue: buildDeFixture({
         racine: ['static/chunks/socle.js'],
         routes: [{ page: P, paquets: [] }],
         tailles: { 'static/chunks/socle.js': plafonds.socleOctets + 4096 },
       }),
-      bloquant: true,
       attendu: 1,
       famille: 'socle_depasse',
     },
@@ -494,7 +493,7 @@ function prouver(): number {
   const vues = new Set<Famille>();
   for (const c of cas) {
     const r = mesurer(c.vue);
-    const code = codeDeSortie(r, plafonds, c.bloquant);
+    const code = codeDeSortie(r, plafonds);
     const familles = [
       ...r.fautes.map((f) => f.famille),
       ...depassements(r, plafonds).map((d) => d.famille),
@@ -517,7 +516,7 @@ function prouver(): number {
     return 1;
   }
   console.log(
-    `✅ perf:bundle --prove — ${FAMILLES.length} familles rougissent chacune sur son témoin, 2 contre-témoins verts.`
+    `✅ perf:bundle --prove — ${FAMILLES.length} familles rougissent chacune sur son témoin, 1 contre-témoin vert.`
   );
   return 0;
 }
@@ -540,22 +539,35 @@ function pagesSurLeDisque(): string[] {
   );
 }
 
-function arguments_(argv: string[]): { build: string; pages: string[]; bloquant: boolean } {
+/** Les routes nommées dans `sizeLimit` : lues, jamais supposées ; une forme inattendue est un refus. */
+function routesBudgetees(): ReadonlySet<string> {
+  const l = (JSON.parse(readFileSync(CHEMIN_BUDGETS, 'utf8')) as { sizeLimit?: unknown }).sizeLimit;
+  if (
+    !Array.isArray(l) ||
+    l.some((e) => typeof (e as { name?: unknown } | null)?.name !== 'string')
+  ) {
+    throw new Error(`${CHEMIN_BUDGETS} : \`sizeLimit\` doit être une liste d'entrées nommées`);
+  }
+  return new Set(l.map((e) => (e as { name: string }).name));
+}
+
+function arguments_(argv: string[]): { build: string; pages: string[] } {
   let build = BUILD_PAR_DEFAUT;
   const pages: string[] = [];
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === '--build' && argv[i + 1]) build = argv[++i]!;
     else if (argv[i] === '--pages' && argv[i + 1]) pages.push(argv[++i]!);
   }
-  return { build, pages, bloquant: argv.includes('--bloquant') };
+  return { build, pages };
 }
 
 function controlerLeDepot(argv: string[]): number {
-  const { build, pages: explicites, bloquant } = arguments_(argv);
+  const { build, pages: explicites } = arguments_(argv);
   const pages =
     explicites.length > 0 ? explicites : routesDeLEspace(pagesSurLeDisque()).map((r) => r.fichier);
   const vue: VueBuild = {
     pages,
+    budgetees: routesBudgetees(),
     lire: (c) => {
       const p = join(build, c);
       return existsSync(p) ? readFileSync(p) : null;
@@ -593,17 +605,10 @@ function controlerLeDepot(argv: string[]): number {
     const quoi = x.route === null ? 'le socle commun' : x.route;
     const texte = `[${x.famille}] ${quoi} : ${x.octets} o gz pour un plafond de ${x.plafond} o`;
     console.log(`   ⚠ ${texte}`);
-    if (forge) console.log(`::warning title=perf:bundle::${texte}`);
+    if (forge) console.log(`::error title=perf:bundle::${texte}`);
   }
-  const code = codeDeSortie(r, plafonds, bloquant);
-  if (d.length > 0 && !bloquant) {
-    console.log(
-      `   Dépassement(s) NOMMÉ(S), non bloquant(s) jusqu'à l'armement bloquant ; \`--bloquant\` les ferait rougir.`
-    );
-  }
-  console.log(
-    code === 0 ? '✅ perf:bundle' : `❌ perf:bundle — ${d.length} dépassement(s) sous --bloquant`
-  );
+  const code = codeDeSortie(r, plafonds);
+  console.log(code === 0 ? '✅ perf:bundle' : `❌ perf:bundle — ${d.length} dépassement(s)`);
   return code;
 }
 

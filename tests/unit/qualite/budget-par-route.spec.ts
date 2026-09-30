@@ -14,9 +14,8 @@
  *      mesure nulle est une FAUTE (`mesure_nulle`), jamais un succès.
  *   2. LE MANIFESTE QU'ON EXÉCUTERAIT. Le manifeste client d'une route est un fichier JavaScript ;
  *      il est LU (son objet JSON extrait), jamais exécuté, et une forme inconnue échoue fermé.
- *   3. LE DÉPASSEMENT QUI SE TAIRAIT. Jusqu'à l'armement bloquant, le dépassement n'arrête pas la CI — mais il
- *      est NOMMÉ (route, octets, plafond), et le mode `--bloquant` prouve dès aujourd'hui qu'il
- *      rougit.
+ *   3. LE DÉPASSEMENT QUI SE TAIRAIT. La garde est BLOQUANTE dès sa livraison (arbitrage -d7 du
+ *      2026-09-30) : il n'existe aucun mode souple, et une route livrée sans budget rougit aussi.
  *
  * DEUX PLAFONDS (arbitrage -d7 sur délégation de Williams du 2026-09-29) : le JS PROPRE à une
  * route se juge contre le plafond par route ; le SOCLE commun à toutes les routes (le runtime
@@ -38,6 +37,7 @@ import {
   lireManifesteClient,
   cheminDuManifeste,
   FAMILLES,
+  nomDeRoute,
   type VueBuild,
 } from '../../../scripts/gates/bundle-par-route';
 
@@ -93,8 +93,11 @@ function vueDe(f: Fixture): VueBuild {
     const cle = r.page.replace(/^src\/app/, '').replace(/\.(t|j)sx?$/, '');
     disque.set(cheminDuManifeste(r.page), manifeste(cle, r.entrees));
   }
+  const pages = f.routes.map((r) => r.page);
   return {
-    pages: f.routes.map((r) => r.page),
+    pages,
+    // Toute route de la fixture est budgétée ; le témoin `budget_absent` en retire une, nommément.
+    budgetees: new Set(pages.map(nomDeRoute)),
     lire: (chemin) => {
       const v = disque.get(chemin);
       return v === undefined ? null : Buffer.from(v);
@@ -158,10 +161,10 @@ describe('la mesure est celle que le navigateur charge', () => {
 
 describe('ce qui ne se mesure pas est une faute, jamais zéro octet', () => {
   it('build_absent : aucun build, la garde rougit au lieu de rendre un vert vide', () => {
-    const vue: VueBuild = { pages: [PAGE_A], lire: () => null };
+    const vue: VueBuild = { pages: [PAGE_A], budgetees: new Set(['/connexion']), lire: () => null };
     const r = mesurer(vue);
     expect(r.fautes.map((f) => f.famille)).toEqual(['build_absent']);
-    expect(codeDeSortie(r, PLAFONDS_LARGES, false)).toBe(1);
+    expect(codeDeSortie(r, PLAFONDS_LARGES)).toBe(1);
   });
 
   it('manifeste_absent : une route de l’espace sans manifeste client est nommée', () => {
@@ -171,7 +174,11 @@ describe('ce qui ne se mesure pas est une faute, jamais zéro octet', () => {
       routes: [],
       tailles: { 'static/chunks/r1.js': 100 },
     });
-    const { fautes } = mesurer({ ...vue, pages: [PAGE_B] });
+    const { fautes } = mesurer({
+      ...vue,
+      pages: [PAGE_B],
+      budgetees: new Set(['/mes-entreprises']),
+    });
     expect(fautes.map((f) => f.famille)).toEqual(['manifeste_absent']);
     expect(fautes[0]!.message).toContain('/mes-entreprises');
   });
@@ -215,7 +222,7 @@ describe('ce qui ne se mesure pas est une faute, jamais zéro octet', () => {
     });
     const r = mesurer(vue);
     expect(r.fautes.map((f) => f.famille)).toEqual(['mesure_nulle']);
-    expect(codeDeSortie(r, PLAFONDS_LARGES, false)).toBe(1);
+    expect(codeDeSortie(r, PLAFONDS_LARGES)).toBe(1);
   });
 
   it('zéro route balayée n’est pas une faute, mais le résultat le porte', () => {
@@ -228,11 +235,11 @@ describe('ce qui ne se mesure pas est une faute, jamais zéro octet', () => {
     const r = mesurer(vue);
     expect(r.fautes).toEqual([]);
     expect(r.mesures).toEqual([]);
-    expect(codeDeSortie(r, PLAFONDS_LARGES, true)).toBe(0);
+    expect(codeDeSortie(r, PLAFONDS_LARGES)).toBe(0);
   });
 });
 
-describe('le dépassement : nommé aujourd’hui, bloquant sous --bloquant (armement bloquant)', () => {
+describe('le dépassement : nommé, et bloquant dès la livraison', () => {
   const plafonds = { routeOctets: 10_000, socleOctets: 5_000 };
   const construire = (tailleRacine: number, tailleGraphiques: number) =>
     vueDe({
@@ -261,25 +268,30 @@ describe('le dépassement : nommé aujourd’hui, bloquant sous --bloquant (arme
     expect(depassements(r, plafonds).map((d) => d.famille)).toEqual(['socle_depasse']);
   });
 
-  it('sans --bloquant : sort en zéro malgré les dépassements', () => {
-    expect(codeDeSortie(mesurer(construire(8000, 20_000)), plafonds, false)).toBe(0);
+  it('un dépassement de route sort en non nul, sans aucun drapeau', () => {
+    expect(codeDeSortie(mesurer(construire(1000, 20_000)), plafonds)).toBe(1);
   });
 
-  it('avec --bloquant : un dépassement de route sort en non nul', () => {
-    expect(codeDeSortie(mesurer(construire(1000, 20_000)), plafonds, true)).toBe(1);
+  it('un dépassement du socle sort en non nul', () => {
+    expect(codeDeSortie(mesurer(construire(8000, 1000)), plafonds)).toBe(1);
   });
 
-  it('avec --bloquant : un dépassement du socle sort en non nul', () => {
-    expect(codeDeSortie(mesurer(construire(8000, 1000)), plafonds, true)).toBe(1);
+  it('tout sous les plafonds sort en zéro', () => {
+    expect(codeDeSortie(mesurer(construire(1000, 1000)), plafonds)).toBe(0);
   });
 
-  it('avec --bloquant : tout sous les plafonds sort en zéro', () => {
-    expect(codeDeSortie(mesurer(construire(1000, 1000)), plafonds, true)).toBe(0);
+  it('une route livrée sans entrée dans perf/budgets.json est une faute, nommée', () => {
+    const vue = construire(1000, 1000);
+    const r = mesurer({ ...vue, budgetees: new Set(['/connexion']) });
+    expect(r.fautes.map((f) => [f.famille, f.message.split(' ')[0]])).toEqual([
+      ['budget_absent', '/mes-entreprises'],
+    ]);
+    expect(codeDeSortie(r, plafonds)).toBe(1);
   });
 
-  it('une faute de mesure rougit même sans --bloquant', () => {
-    const vue: VueBuild = { pages: [PAGE_A], lire: () => null };
-    expect(codeDeSortie(mesurer(vue), plafonds, false)).toBe(1);
+  it('une faute de mesure rougit', () => {
+    const vue: VueBuild = { pages: [PAGE_A], budgetees: new Set(['/connexion']), lire: () => null };
+    expect(codeDeSortie(mesurer(vue), plafonds)).toBe(1);
   });
 });
 
@@ -299,6 +311,7 @@ describe('les familles déclarées et la ligne de commande', () => {
   it('déclare exactement les familles que ce fichier exerce', () => {
     expect([...FAMILLES].sort()).toEqual(
       [
+        'budget_absent',
         'budget_depasse',
         'socle_depasse',
         'build_absent',
@@ -321,7 +334,7 @@ describe('les familles déclarées et la ligne de commande', () => {
     }
   }, 60_000);
 
-  it('sur un build sur disque, une route lourde sort en zéro sans --bloquant et en un avec', () => {
+  it('sur un build sur disque, une route lourde sort en un et est nommée ; une route légère en zéro', () => {
     const dossier = mkdtempSync(join(tmpdir(), 'perf-bundle-'));
     try {
       const ecrire = (rel: string, contenu: Buffer | string) => {
@@ -336,18 +349,22 @@ describe('les familles déclarées et la ligne de commande', () => {
       );
       ecrire('static/chunks/r.js', octets(1000, 7));
       ecrire('static/chunks/graphiques.js', octets(200_000, 8));
+      ecrire('static/chunks/leger.js', octets(1000, 9));
       ecrire(
         cheminDuManifeste('src/app/(espace)/connexion/page.tsx'),
         manifeste('/(espace)/connexion/page', { a: ['static/chunks/graphiques.js'] })
       );
-      const lancer = (...args: string[]) =>
-        lancerScript('--build', dossier, '--pages', 'src/app/(espace)/connexion/page.tsx', ...args);
-      const souple = lancer();
-      expect(souple.status).toBe(0);
-      expect(souple.stdout + souple.stderr).toContain('/connexion');
-      const dur = lancer('--bloquant');
-      expect(dur.status).toBe(1);
-      expect(dur.stdout + dur.stderr).toContain('budget_depasse');
+      ecrire(
+        cheminDuManifeste('src/app/(espace)/confidentialite/page.tsx'),
+        manifeste('/(espace)/confidentialite/page', { a: ['static/chunks/leger.js'] })
+      );
+      const lancer = (page: string) => lancerScript('--build', dossier, '--pages', page);
+      const lourde = lancer('src/app/(espace)/connexion/page.tsx');
+      expect(lourde.status).toBe(1);
+      expect(lourde.stdout + lourde.stderr).toContain('[budget_depasse] /connexion');
+      const legere = lancer('src/app/(espace)/confidentialite/page.tsx');
+      expect(legere.stdout + legere.stderr).toContain('/confidentialite');
+      expect(legere.status).toBe(0);
     } finally {
       rmSync(dossier, { recursive: true, force: true });
     }
