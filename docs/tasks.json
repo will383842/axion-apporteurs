@@ -13465,7 +13465,8 @@
         "tests/unit/gouvernance/lot-dedie-gardien-spec.spec.ts",
         "package.json",
         "docs/journal/",
-        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts"
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts",
+        "scripts/gates/registre-des-refus.ts"
       ],
       "reqs": [
         "REQ-GOV-010"
