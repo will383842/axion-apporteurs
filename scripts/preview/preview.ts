@@ -2,7 +2,7 @@
  * preview.ts — une preview par PR : publiée, attribuée sous plafond, détruite (QA-T06, REQ-QA-015).
  *
  * USAGE (forge, `.github/workflows/preview.yml`) :
- *   pnpm preview:publier-image   reconstruit l'image de la PR et la pousse dans le paquet de PREVIEW
+ *   pnpm preview:publier-image   charge l'image de la PR (artefact du job image) et la pousse en PREVIEW
  *   pnpm preview:attribuer       crée ou met à jour la preview de la PR, sous le plafond, et commente
  *   pnpm preview:detruire        détruit l'application, la base, le cache et les étiquettes de la PR
  *
@@ -92,12 +92,19 @@ function executer(cmd: string, args: string[], entree?: string): void {
 
 function publierImage(): number {
   const e = exiger(
-    ['JETON', 'GITHUB_REPOSITORY', 'GITHUB_ACTOR', 'PR_NUMERO', 'TETE'],
+    ['JETON', 'GITHUB_REPOSITORY', 'GITHUB_ACTOR', 'PR_NUMERO', 'TETE', 'IMAGE_TAR'],
     'preview:publier-image'
   );
   if (!e) return 0;
   const cible = cibleDePreview(e.GITHUB_REPOSITORY!, Number(e.PR_NUMERO), e.TETE!);
-  executer('docker', ['build', '--build-arg', `GITHUB_SHA=${e.TETE}`, '--tag', cible, '.']);
+  // L'image vient de l'ARTEFACT du job `image` (lecture seule) : on la CHARGE, on ne construit rien,
+  // et aucun code de la PR ne tourne ici (lentille `securite`, PR 281 — le schéma « pwn request »).
+  // `docker load` n'exécute aucun code ; l'étiquette chargée doit être exactement celle du job `image`.
+  const charge = spawnSync('docker', ['load', '-i', e.IMAGE_TAR!], { encoding: 'utf8' });
+  if (charge.status !== 0 || !/Loaded image: partners:construite\s*$/m.test(charge.stdout ?? '')) {
+    throw new Error("l'artefact ne charge pas l'image partners:construite : refusé");
+  }
+  executer('docker', ['tag', 'partners:construite', cible]);
   executer('docker', ['login', 'ghcr.io', '-u', e.GITHUB_ACTOR!, '--password-stdin'], e.JETON);
   executer('docker', ['push', cible]);
   console.log(`✅ image de preview publiée : ${cible}`);
