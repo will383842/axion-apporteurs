@@ -474,6 +474,8 @@ const MANUELS: Record<string, string[]> = {
   ],
   'JUR-T27': ['docs/contrat/CONTRAT-APPORTEUR-V1.md'],
   'JUR-T28': ['docs/contrat/CONTRAT-APPORTEUR-V1.md', 'src/domain/apporteur/resiliation.ts'],
+  // GOV-130 (pas de serveur d'aperçus, passe du lot dédié) : sans fichier de test neuf, ses chemins sont ceux de sa fiche.
+  'GOV-130': ['docs/DECISIONS.md', 'docs/journal/'],
 };
 
 /**
