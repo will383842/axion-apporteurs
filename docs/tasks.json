@@ -5568,11 +5568,12 @@
       ],
       "reqs": [
         "REQ-SEC-003",
-        "REQ-UX-015"
+        "REQ-UX-015",
+        "REQ-UX-047"
       ],
       "hyp": [],
       "externe": null,
-      "estimateDays": 1,
+      "estimateDays": 1.1,
       "statut": "a_faire",
       "owner": null,
       "lot": null,
@@ -5581,7 +5582,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "Contraintes W19 à intégrer (GOV-115, décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §6) : un lien d'apporteur consommé redirige en une action vers « / » ou vers l'URL demandée, bornée aux chemins relatifs de l'espace. Fin du cul-de-sac de `src/app/(espace)/connexion/ecran.tsx:76-82`. Le mécanisme du code à 6 chiffres est écrit pour être réutilisé par SEC-29."
+      "acceptance": "Contraintes W19 à intégrer (GOV-115, décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §6) : un lien d'apporteur consommé redirige en une action vers « / » ou vers l'URL demandée, bornée aux chemins relatifs de l'espace. Fin du cul-de-sac de `src/app/(espace)/connexion/ecran.tsx:76-82`. Le mécanisme du code à 6 chiffres est écrit pour être réutilisé par SEC-29. REQ-UX-047 (passe GOV-115, 2026-09-30) : geste principal : DETTE NOMMÉE, geste non encore connu, à écrire à la revendication ; budget : lu dans `BUDGETS_UX` (consultation au plus 3 interactions, saisie au plus 8), mesuré par la fixture QA-T33. Son droit `ecran:*` est déclaré dans la matrice ; la maquette de l'écran est validée dans `docs/maquettes/VALIDATION.md` avant la première ligne de code ; cinq états (REQ-UX-019 amendée)."
     },
     {
       "id": "UX-P1-01",
@@ -5608,11 +5609,12 @@
       ],
       "reqs": [
         "REQ-UX-001",
-        "REQ-UX-007"
+        "REQ-UX-007",
+        "REQ-UX-047"
       ],
       "hyp": [],
       "externe": null,
-      "estimateDays": 1,
+      "estimateDays": 1.1,
       "statut": "a_faire",
       "owner": null,
       "lot": null,
@@ -5621,7 +5623,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "route citée depuis `docs/ESPACE-ROUTES.md` (un champ sur `/`, résultat `/entreprise?q=`). Carence de redépôt W20, arbitrage de -d7 sur délégation de Williams du 2026-09-29 (question 20 de docs/chantiers/W20-confirmation-par-email.md, tranchée, défaut retenu ; HYP-W20-CARENCE-REDEPOT) : quand l'apporteur consulte une entreprise qu'il ne peut pas redéposer pendant la carence de DM-13 (même apporteur, même SIREN : 30 jours après une libération sans confirmation, 90 après une deuxième et au-delà), la carte « Vérifier » dit, sans consigne, « Vous pourrez déposer cette entreprise à nouveau à partir du <date>. » (date en toutes lettres, fuseau de l'apporteur), texte de la SSOT de micro-copy, garde lexicale verte, et ne propose pas « Déposer ». Aucune valeur nouvelle d'IssueDepot ni de MotifRefusDepot (consigne W19 maintenue) ; la carte ne dit ni la raison, ni la vérification, ni le nombre d'appels ; pour tout autre apporteur, l'entreprise est disponible et « Déposer » est proposé. L'état est lu du prédicat de carence de DM-13, côté serveur. Tests : apporteur en carence → texte et aucun bouton « Déposer » ; autre apporteur → « Déposer » présent ; le jour de fin de carence → « Déposer » revient ; le DTO ne porte aucune raison. Contraintes W19 à intégrer (GOV-115, décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §6) : Budget REQ-UX-001 mesuré par la fixture QA-T33. Test : aucune issue ne nomme un rôle de console, et aucune ne distingue un occupant conseiller. Par UX-P1-17, cet écran hérite du bloqueur externe JUR-T31 (validation du texte par Williams)."
+      "acceptance": "route citée depuis `docs/ESPACE-ROUTES.md` (un champ sur `/`, résultat `/entreprise?q=`). Carence de redépôt W20, arbitrage de -d7 sur délégation de Williams du 2026-09-29 (question 20 de docs/chantiers/W20-confirmation-par-email.md, tranchée, défaut retenu ; HYP-W20-CARENCE-REDEPOT) : quand l'apporteur consulte une entreprise qu'il ne peut pas redéposer pendant la carence de DM-13 (même apporteur, même SIREN : 30 jours après une libération sans confirmation, 90 après une deuxième et au-delà), la carte « Vérifier » dit, sans consigne, « Vous pourrez déposer cette entreprise à nouveau à partir du <date>. » (date en toutes lettres, fuseau de l'apporteur), texte de la SSOT de micro-copy, garde lexicale verte, et ne propose pas « Déposer ». Aucune valeur nouvelle d'IssueDepot ni de MotifRefusDepot (consigne W19 maintenue) ; la carte ne dit ni la raison, ni la vérification, ni le nombre d'appels ; pour tout autre apporteur, l'entreprise est disponible et « Déposer » est proposé. L'état est lu du prédicat de carence de DM-13, côté serveur. Tests : apporteur en carence → texte et aucun bouton « Déposer » ; autre apporteur → « Déposer » présent ; le jour de fin de carence → « Déposer » revient ; le DTO ne porte aucune raison. Contraintes W19 à intégrer (GOV-115, décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §6) : Budget REQ-UX-001 mesuré par la fixture QA-T33. Test : aucune issue ne nomme un rôle de console, et aucune ne distingue un occupant conseiller. Par UX-P1-17, cet écran hérite du bloqueur externe JUR-T31 (validation du texte par Williams). REQ-UX-047 (passe GOV-115, 2026-09-30) : geste principal : déposer en au plus 8 interactions (REQ-UX-001, plus stricte, prime) ; budget : lu dans `BUDGETS_UX`, mesuré par la fixture QA-T33. Son droit `ecran:*` est déclaré dans la matrice ; la maquette de l'écran est validée dans `docs/maquettes/VALIDATION.md` avant la première ligne de code ; cinq états (REQ-UX-019 amendée)."
     },
     {
       "id": "UX-P1-02",
@@ -5649,11 +5651,12 @@
       "reqs": [
         "REQ-UX-001",
         "REQ-UX-002",
-        "REQ-UX-039"
+        "REQ-UX-039",
+        "REQ-UX-047"
       ],
       "hyp": [],
       "externe": null,
-      "estimateDays": 1.25,
+      "estimateDays": 1.35,
       "statut": "a_faire",
       "owner": null,
       "lot": null,
@@ -5662,7 +5665,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "Contraintes W20 à intégrer (chantier W20, décision de Williams du 2026-09-29, session -d7, docs/chantiers/W20-confirmation-par-email.md §6) : (1) Après l'entreprise pré-remplie (SIRET affiché en lecture seule, jamais saisi deux fois), le contact rencontré : nom et prénom, fonction, e-mail et téléphone EXIGÉS, contexte facultatif et court (HYP-W20-CONTEXTE) ; un champ exigé n'est jamais marqué « obligatoire » (REQ-JUR-037), seuls les facultatifs portent « (facultatif) ». (2) Juste au-dessus du bouton, un message INFORMATIF, non bloquant, sans fenêtre modale, tiré de la SSOT de micro-copy (UX-P1-41) : « <Prénom Nom> (<Entreprise>) va recevoir un e-mail d'Axion-IA dans les 15 minutes pour confirmer votre échange. » suivi de la phrase sur le téléphone (question 15 du plan) ; il ne donne aucune consigne (REQ-JUR-039). (3) Le bouton se nomme « Déposer et prévenir <Prénom Nom> », replié en « Déposer et prévenir » si le nom est vide ou trop long à 320 px. (4) REQ-UX-001 tenue avec les quatre coordonnées : le décompte de la maquette UX-P1-40 est rejoué en E2E mobile (au plus 8 interactions, 90 s). (5) Maquette deposer.html révisée et validée par UX-P1-40 avant l'attribution. (6) Cinq états : vide, saisie, envoi, erreur par champ, hors ligne (le délai de 15 minutes court de la réception, REQ-UX-013). « Vérifier une entreprise » ne crée aucune demande de confirmation. (7) Carence de redépôt W20, arbitrage de -d7 sur délégation de Williams du 2026-09-29 (question 20 du plan, tranchée, défaut retenu ; HYP-W20-CARENCE-REDEPOT) : pendant la carence de DM-13 (même apporteur, même SIREN : 30 jours après une libération sans confirmation, 90 après une deuxième et au-delà), le formulaire n'est pas atteint : l'accès au dépôt de cette entreprise par cet apporteur affiche, sans consigne, « Vous pourrez déposer cette entreprise à nouveau à partir du <date>. » (texte de la SSOT de micro-copy, le même que la carte « Vérifier » d'UX-P1-01, garde lexicale verte), sans formulaire ni bouton « Déposer ». Une soumission forgée reçoit une erreur serveur qui n'est PAS une issue d'IssueDepot (refus porté par DM-13, sans écriture ni horodatage), rendue sans erreur brute. Aucune valeur nouvelle d'IssueDepot ni de MotifRefusDepot : la consigne W19 est maintenue. Tests : apporteur en carence → texte, aucun formulaire ; soumission forgée → erreur serveur, aucune attribution, aucun horodatage, aucune issue de dépôt rendue ; autre apporteur → formulaire normal ; fin de carence → formulaire normal. Contraintes W19 à intégrer (GOV-115, décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §6) : Budget REQ-UX-001 mesuré par la fixture QA-T33. Test : aucune issue ne nomme un rôle de console, et aucune ne distingue un occupant conseiller. Par UX-P1-17, cet écran hérite du bloqueur externe JUR-T31 (validation du texte par Williams)."
+      "acceptance": "Contraintes W20 à intégrer (chantier W20, décision de Williams du 2026-09-29, session -d7, docs/chantiers/W20-confirmation-par-email.md §6) : (1) Après l'entreprise pré-remplie (SIRET affiché en lecture seule, jamais saisi deux fois), le contact rencontré : nom et prénom, fonction, e-mail et téléphone EXIGÉS, contexte facultatif et court (HYP-W20-CONTEXTE) ; un champ exigé n'est jamais marqué « obligatoire » (REQ-JUR-037), seuls les facultatifs portent « (facultatif) ». (2) Juste au-dessus du bouton, un message INFORMATIF, non bloquant, sans fenêtre modale, tiré de la SSOT de micro-copy (UX-P1-41) : « <Prénom Nom> (<Entreprise>) va recevoir un e-mail d'Axion-IA dans les 15 minutes pour confirmer votre échange. » suivi de la phrase sur le téléphone (question 15 du plan) ; il ne donne aucune consigne (REQ-JUR-039). (3) Le bouton se nomme « Déposer et prévenir <Prénom Nom> », replié en « Déposer et prévenir » si le nom est vide ou trop long à 320 px. (4) REQ-UX-001 tenue avec les quatre coordonnées : le décompte de la maquette UX-P1-40 est rejoué en E2E mobile (au plus 8 interactions, 90 s). (5) Maquette deposer.html révisée et validée par UX-P1-40 avant l'attribution. (6) Cinq états : vide, saisie, envoi, erreur par champ, hors ligne (le délai de 15 minutes court de la réception, REQ-UX-013). « Vérifier une entreprise » ne crée aucune demande de confirmation. (7) Carence de redépôt W20, arbitrage de -d7 sur délégation de Williams du 2026-09-29 (question 20 du plan, tranchée, défaut retenu ; HYP-W20-CARENCE-REDEPOT) : pendant la carence de DM-13 (même apporteur, même SIREN : 30 jours après une libération sans confirmation, 90 après une deuxième et au-delà), le formulaire n'est pas atteint : l'accès au dépôt de cette entreprise par cet apporteur affiche, sans consigne, « Vous pourrez déposer cette entreprise à nouveau à partir du <date>. » (texte de la SSOT de micro-copy, le même que la carte « Vérifier » d'UX-P1-01, garde lexicale verte), sans formulaire ni bouton « Déposer ». Une soumission forgée reçoit une erreur serveur qui n'est PAS une issue d'IssueDepot (refus porté par DM-13, sans écriture ni horodatage), rendue sans erreur brute. Aucune valeur nouvelle d'IssueDepot ni de MotifRefusDepot : la consigne W19 est maintenue. Tests : apporteur en carence → texte, aucun formulaire ; soumission forgée → erreur serveur, aucune attribution, aucun horodatage, aucune issue de dépôt rendue ; autre apporteur → formulaire normal ; fin de carence → formulaire normal. Contraintes W19 à intégrer (GOV-115, décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §6) : Budget REQ-UX-001 mesuré par la fixture QA-T33. Test : aucune issue ne nomme un rôle de console, et aucune ne distingue un occupant conseiller. Par UX-P1-17, cet écran hérite du bloqueur externe JUR-T31 (validation du texte par Williams). REQ-UX-047 (passe GOV-115, 2026-09-30) : geste principal : déposer en au plus 8 interactions (REQ-UX-001, plus stricte, prime) ; budget : lu dans `BUDGETS_UX`, mesuré par la fixture QA-T33. Son droit `ecran:*` est déclaré dans la matrice ; la maquette de l'écran est validée dans `docs/maquettes/VALIDATION.md` avant la première ligne de code ; cinq états (REQ-UX-019 amendée)."
     },
     {
       "id": "UX-P1-03",
@@ -5684,13 +5687,14 @@
       ],
       "reqs": [
         "REQ-SEC-033",
-        "REQ-UX-013"
+        "REQ-UX-013",
+        "REQ-UX-047"
       ],
       "hyp": [
         "HYP-E1-12"
       ],
       "externe": null,
-      "estimateDays": 1,
+      "estimateDays": 1.1,
       "statut": "a_faire",
       "owner": null,
       "lot": null,
@@ -5698,7 +5702,8 @@
       "pr": null,
       "issue": null,
       "attempts": 0,
-      "motif": null
+      "motif": null,
+      "acceptance": "Contraintes à intégrer : REQ-UX-047 (passe GOV-115, 2026-09-30) : geste principal : DETTE NOMMÉE, geste non encore connu, à écrire à la revendication ; budget : lu dans `BUDGETS_UX` (consultation au plus 3 interactions, saisie au plus 8), mesuré par la fixture QA-T33. Son droit `ecran:*` est déclaré dans la matrice ; la maquette de l'écran est validée dans `docs/maquettes/VALIDATION.md` avant la première ligne de code ; cinq états (REQ-UX-019 amendée)."
     },
     {
       "id": "UX-P1-05",
@@ -5726,13 +5731,14 @@
       "reqs": [
         "REQ-UX-004",
         "REQ-UX-023",
-        "REQ-UX-062"
+        "REQ-UX-062",
+        "REQ-UX-047"
       ],
       "hyp": [
         "HYP-W20-BADGE"
       ],
       "externe": null,
-      "estimateDays": 1.25,
+      "estimateDays": 1.35,
       "statut": "a_faire",
       "owner": null,
       "lot": null,
@@ -5741,7 +5747,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "Contraintes W20 à intégrer (chantier W20, réponse de Williams du 2026-09-29, session -d7, et son exigence d'expérience « facile à se souvenir et intuitif », docs/chantiers/W20-confirmation-par-email.md §4 et HYP-W20-BADGE) : l'apporteur n'a rien à retenir, l'écran le lui montre. (1) Chaque dépôt en phase de confirmation porte UN SEUL badge d'état, avec sa date et au plus une action, dérivé serveur par une fonction pure exhaustive, horloge injectée, partie de statutApporteur (REQ-UX-004) : 🟢 « Confirmée » (active : clic retenu, appel confirme ou confirmation tacite) ; 🟡 « En attente de confirmation · réservée pour vous jusqu'au <date> » (provisoire, e-mail reçu, sans réponse ni appel concluant, demande non signalée ; injoignable et ne_se_souvient_pas s'y lisent aussi, rien d'autre n'est visible) ; 🟡 « En attente de confirmation — Axion-IA va appeler votre contact » (demande SIGNALÉE, clic non retenu compris : sans date tacite ni phrase d'aide, formulation neutre, sans consigne, dans la SSOT de micro-copy ; Correction de sécurité du 2026-09-29 (refus de la lentille securite sur 2340a63, docs/chantiers/W20-confirmation-par-email.md §2, §8 et question 18)) ; 🔴 « E-mail non reçu par le contact », action unique « Corriger l'adresse » (rebond non corrigé ; action absente au-delà de CORRECTIONS_ADRESSE_MAX) ; ⚪ « Non confirmée par le contact » (invalidee par non_confirme) ; ⚪ « Réservation terminée · l'entreprise est de nouveau disponible » (demande signalée libérée sans appel concluant par DM-13 : trois injoignable ou 45 jours après l'envoi, réponse de Williams du 2026-09-29 à la question 19 ; attribution perimee par liberee_sans_confirmation), sans date, sans action, sans phrase d'aide, libellé par défaut dans la SSOT de micro-copy, qui ne dit ni la raison, ni la vérification, ni le nombre d'appels. Le libellé de la demande signalée suit la réponse de Williams à la question 18 (même jour : aucune confirmation tacite). (2) La date est le jour de l'échéance tacite (recueAt + CONFIRMATION_TACITE_JOURS, DM-24), écrite en toutes lettres (« 29 octobre 2026 ») dans le fuseau de l'apporteur (Europe/Paris par défaut, question 17 du plan) ; le badge passe seul à 🟢 le jour affiché ; avant l'envoi effectif, 🟡 sans date (question 16). (3) 🔴 prime sur le libellé de la demande signalée tant que le rebond n'est pas corrigé. Une seule phrase d'aide, sous le 🟡 daté et sous 🔴, jamais sous le libellé de la demande signalée : « Sans réponse de votre contact, l'entreprise reste réservée pour vous 30 jours après la réception de notre e-mail. », le nombre lu de la SSOT. (4) Tous les textes viennent de la SSOT de micro-copy (UX-P1-41) et passent la garde lexicale : aucune consigne, aucun « obligatoire ». (5) Accessibilité : chaque badge a son libellé écrit, la pastille est décorative (aria-hidden), la couleur n'est jamais seule porteuse du sens ; axe-core sans violation sérieuse. (6) Aucune raison de vérification, aucun tirage d'échantillon, aucun clic non retenu n'atteint le DTO de l'espace (REQ-SEC-060 au plan) : seul l'état « appel attendu », dérivé côté serveur du prédicat de SEC-41, y arrive ; les phrases de REQ-UX-023 ne s'ajoutent pas au badge, et « vérification prioritaire » n'est jamais affichée pour une raison W20. (7) Cinq états de l'écran : liste, vide (guide vers le premier dépôt, REQ-UX-019), chargement, erreur avec reprise, hors ligne (dernière liste connue, avec son heure). (8) Le composant du badge est réutilisé tel quel par la carte du dépôt (UX-P1-43). Garantie d'expérience de l'apporteur honnête (un artisan sur Gmail, par exemple) : ces dépôts sont appelés en priorité (DM-43). Tests : un cas par badge ; demande signalée → libellé d'appel attendu, sans date, aucune bascule vers 🟢 à trente jours ; demande signalée libérée → ⚪ « Réservation terminée », sans date ni action, et aucune raison dans le DTO ; bascule 🟡 → 🟢 horloge figée, y compris une échéance à 23 h 59 et un changement d'heure ; rebond → 🔴 ; correction → 🟡 avec la nouvelle date ; une valeur d'état sans badge fait échouer le typecheck. Maquette mes-entreprises.html revalidée (UX-P1-40). REQ-UX-062 proposée au §3 du plan, écrite par GOV-112 (dépendance)."
+      "acceptance": "Contraintes W20 à intégrer (chantier W20, réponse de Williams du 2026-09-29, session -d7, et son exigence d'expérience « facile à se souvenir et intuitif », docs/chantiers/W20-confirmation-par-email.md §4 et HYP-W20-BADGE) : l'apporteur n'a rien à retenir, l'écran le lui montre. (1) Chaque dépôt en phase de confirmation porte UN SEUL badge d'état, avec sa date et au plus une action, dérivé serveur par une fonction pure exhaustive, horloge injectée, partie de statutApporteur (REQ-UX-004) : 🟢 « Confirmée » (active : clic retenu, appel confirme ou confirmation tacite) ; 🟡 « En attente de confirmation · réservée pour vous jusqu'au <date> » (provisoire, e-mail reçu, sans réponse ni appel concluant, demande non signalée ; injoignable et ne_se_souvient_pas s'y lisent aussi, rien d'autre n'est visible) ; 🟡 « En attente de confirmation — Axion-IA va appeler votre contact » (demande SIGNALÉE, clic non retenu compris : sans date tacite ni phrase d'aide, formulation neutre, sans consigne, dans la SSOT de micro-copy ; Correction de sécurité du 2026-09-29 (refus de la lentille securite sur 2340a63, docs/chantiers/W20-confirmation-par-email.md §2, §8 et question 18)) ; 🔴 « E-mail non reçu par le contact », action unique « Corriger l'adresse » (rebond non corrigé ; action absente au-delà de CORRECTIONS_ADRESSE_MAX) ; ⚪ « Non confirmée par le contact » (invalidee par non_confirme) ; ⚪ « Réservation terminée · l'entreprise est de nouveau disponible » (demande signalée libérée sans appel concluant par DM-13 : trois injoignable ou 45 jours après l'envoi, réponse de Williams du 2026-09-29 à la question 19 ; attribution perimee par liberee_sans_confirmation), sans date, sans action, sans phrase d'aide, libellé par défaut dans la SSOT de micro-copy, qui ne dit ni la raison, ni la vérification, ni le nombre d'appels. Le libellé de la demande signalée suit la réponse de Williams à la question 18 (même jour : aucune confirmation tacite). (2) La date est le jour de l'échéance tacite (recueAt + CONFIRMATION_TACITE_JOURS, DM-24), écrite en toutes lettres (« 29 octobre 2026 ») dans le fuseau de l'apporteur (Europe/Paris par défaut, question 17 du plan) ; le badge passe seul à 🟢 le jour affiché ; avant l'envoi effectif, 🟡 sans date (question 16). (3) 🔴 prime sur le libellé de la demande signalée tant que le rebond n'est pas corrigé. Une seule phrase d'aide, sous le 🟡 daté et sous 🔴, jamais sous le libellé de la demande signalée : « Sans réponse de votre contact, l'entreprise reste réservée pour vous 30 jours après la réception de notre e-mail. », le nombre lu de la SSOT. (4) Tous les textes viennent de la SSOT de micro-copy (UX-P1-41) et passent la garde lexicale : aucune consigne, aucun « obligatoire ». (5) Accessibilité : chaque badge a son libellé écrit, la pastille est décorative (aria-hidden), la couleur n'est jamais seule porteuse du sens ; axe-core sans violation sérieuse. (6) Aucune raison de vérification, aucun tirage d'échantillon, aucun clic non retenu n'atteint le DTO de l'espace (REQ-SEC-060 au plan) : seul l'état « appel attendu », dérivé côté serveur du prédicat de SEC-41, y arrive ; les phrases de REQ-UX-023 ne s'ajoutent pas au badge, et « vérification prioritaire » n'est jamais affichée pour une raison W20. (7) Cinq états de l'écran : liste, vide (guide vers le premier dépôt, REQ-UX-019), chargement, erreur avec reprise, hors ligne (dernière liste connue, avec son heure). (8) Le composant du badge est réutilisé tel quel par la carte du dépôt (UX-P1-43). Garantie d'expérience de l'apporteur honnête (un artisan sur Gmail, par exemple) : ces dépôts sont appelés en priorité (DM-43). Tests : un cas par badge ; demande signalée → libellé d'appel attendu, sans date, aucune bascule vers 🟢 à trente jours ; demande signalée libérée → ⚪ « Réservation terminée », sans date ni action, et aucune raison dans le DTO ; bascule 🟡 → 🟢 horloge figée, y compris une échéance à 23 h 59 et un changement d'heure ; rebond → 🔴 ; correction → 🟡 avec la nouvelle date ; une valeur d'état sans badge fait échouer le typecheck. Maquette mes-entreprises.html revalidée (UX-P1-40). REQ-UX-062 proposée au §3 du plan, écrite par GOV-112 (dépendance). REQ-UX-047 (passe GOV-115, 2026-09-30) : geste principal : DETTE NOMMÉE, geste non encore connu, à écrire à la revendication ; budget : lu dans `BUDGETS_UX` (consultation au plus 3 interactions, saisie au plus 8), mesuré par la fixture QA-T33. Son droit `ecran:*` est déclaré dans la matrice ; la maquette de l'écran est validée dans `docs/maquettes/VALIDATION.md` avant la première ligne de code ; cinq états (REQ-UX-019 amendée)."
     },
     {
       "id": "UX-P1-06",
@@ -5841,11 +5847,12 @@
       "reqs": [
         "REQ-UX-008",
         "REQ-UX-019",
-        "REQ-UX-033"
+        "REQ-UX-033",
+        "REQ-UX-047"
       ],
       "hyp": [],
       "externe": null,
-      "estimateDays": 1,
+      "estimateDays": 1.1,
       "statut": "a_faire",
       "owner": null,
       "lot": null,
@@ -5853,7 +5860,8 @@
       "pr": null,
       "issue": null,
       "attempts": 0,
-      "motif": null
+      "motif": null,
+      "acceptance": "Contraintes à intégrer : REQ-UX-047 (passe GOV-115, 2026-09-30) : geste principal : DETTE NOMMÉE, geste non encore connu, à écrire à la revendication ; budget : lu dans `BUDGETS_UX` (consultation au plus 3 interactions, saisie au plus 8), mesuré par la fixture QA-T33. Son droit `ecran:*` est déclaré dans la matrice ; la maquette de l'écran est validée dans `docs/maquettes/VALIDATION.md` avant la première ligne de code ; cinq états (REQ-UX-019 amendée)."
     },
     {
       "id": "QA-T20b",
@@ -5911,11 +5919,12 @@
         "REQ-CPL-019",
         "REQ-UX-016",
         "REQ-UX-027",
-        "REQ-UX-031"
+        "REQ-UX-031",
+        "REQ-UX-047"
       ],
       "hyp": [],
       "externe": null,
-      "estimateDays": 1,
+      "estimateDays": 1.1,
       "statut": "a_faire",
       "owner": null,
       "lot": null,
@@ -5924,7 +5933,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "Écrans Ma conformité et Mon profil de l'espace, sans migration : ils écrivent dans des tables créées ailleurs (partners/ADR-0022, une table un créateur) — pièces du dossier de conformité (DM-11), changement de courriel (`changements_courriel`, SEC-04), préférences de notification (UX-P1-10), dernières connexions lues dans `sessions_espace`. (1) Chaque pièce affiche son état, sa date et ce qu'elle bloque ; un changement de RIB crée une pièce `a_verifier`, l'ancienne restant active, et exige le relèvement de SEC-04 (REQ-UX-027, REQ-UX-031). (2) CHANGEMENT DE COURRIEL (REQ-CPL-019) : confirmation par un lien envoyé à l'ANCIENNE adresse, effet après le délai de la source unique, révocation des sessions par `session_version`, dans une seule transaction ; sans confirmation, rien ne change. (3) AUCUNE RÉVÉLATION PAR L'UNICITÉ : quand la nouvelle adresse est déjà portée par un autre apporteur (`apporteurs.email_hash` est unique), la réponse à la demande est IDENTIQUE à celle d'une adresse libre — même texte, même code, même durée observable — ; la demande n'aboutit simplement jamais, aucun courriel n'est envoyé à la nouvelle adresse, et l'écart est journalisé côté console sans l'identité de l'autre apporteur. La contrainte d'unicité ne doit jamais remonter comme une erreur visible. (4) Les dernières connexions n'affichent que la date et une empreinte tronquée de l'adresse réseau, jamais une adresse en clair. (5) TÉMOIN À DEUX FACES : une demande vers une adresse déjà portée par un autre apporteur et une demande vers une adresse libre rendent des réponses comparées octet à octet et égales ; une divergence introduite volontairement fait rougir le test ; et le compte des courriels envoyés prouve qu'aucun n'est parti vers l'adresse déjà portée."
+      "acceptance": "Écrans Ma conformité et Mon profil de l'espace, sans migration : ils écrivent dans des tables créées ailleurs (partners/ADR-0022, une table un créateur) — pièces du dossier de conformité (DM-11), changement de courriel (`changements_courriel`, SEC-04), préférences de notification (UX-P1-10), dernières connexions lues dans `sessions_espace`. (1) Chaque pièce affiche son état, sa date et ce qu'elle bloque ; un changement de RIB crée une pièce `a_verifier`, l'ancienne restant active, et exige le relèvement de SEC-04 (REQ-UX-027, REQ-UX-031). (2) CHANGEMENT DE COURRIEL (REQ-CPL-019) : confirmation par un lien envoyé à l'ANCIENNE adresse, effet après le délai de la source unique, révocation des sessions par `session_version`, dans une seule transaction ; sans confirmation, rien ne change. (3) AUCUNE RÉVÉLATION PAR L'UNICITÉ : quand la nouvelle adresse est déjà portée par un autre apporteur (`apporteurs.email_hash` est unique), la réponse à la demande est IDENTIQUE à celle d'une adresse libre — même texte, même code, même durée observable — ; la demande n'aboutit simplement jamais, aucun courriel n'est envoyé à la nouvelle adresse, et l'écart est journalisé côté console sans l'identité de l'autre apporteur. La contrainte d'unicité ne doit jamais remonter comme une erreur visible. (4) Les dernières connexions n'affichent que la date et une empreinte tronquée de l'adresse réseau, jamais une adresse en clair. (5) TÉMOIN À DEUX FACES : une demande vers une adresse déjà portée par un autre apporteur et une demande vers une adresse libre rendent des réponses comparées octet à octet et égales ; une divergence introduite volontairement fait rougir le test ; et le compte des courriels envoyés prouve qu'aucun n'est parti vers l'adresse déjà portée. REQ-UX-047 (passe GOV-115, 2026-09-30) : geste principal : DETTE NOMMÉE, geste non encore connu, à écrire à la revendication ; budget : lu dans `BUDGETS_UX` (consultation au plus 3 interactions, saisie au plus 8), mesuré par la fixture QA-T33. Son droit `ecran:*` est déclaré dans la matrice ; la maquette de l'écran est validée dans `docs/maquettes/VALIDATION.md` avant la première ligne de code ; cinq états (REQ-UX-019 amendée)."
     },
     {
       "id": "UX-P1-15",
@@ -5948,13 +5957,14 @@
       ],
       "reqs": [
         "REQ-CPL-029",
-        "REQ-UX-039"
+        "REQ-UX-039",
+        "REQ-UX-047"
       ],
       "hyp": [
         "W4"
       ],
       "externe": null,
-      "estimateDays": 0.5,
+      "estimateDays": 0.6,
       "statut": "a_faire",
       "owner": null,
       "lot": null,
@@ -5963,7 +5973,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "`PersonneDeclaree {apporteurId, nom, qualite, declareeAt, retireeAt}` — **liste déclarative éditable dans Mon profil, sans compte, sans session, sans jeton de dépôt, sans code de parrainage, sans DTO propre** (la décision **W4 « un apporteur = une personne » est intacte**) ; le champ « personne ayant rencontré » du dépôt propose cette liste, l'apporteur restant seul titulaire et seul responsable. (2) **Case facultative de lien d'intérêt** au dépôt (art. 8.4) : « j'ai une relation d'affaires ou d'intérêt avec cette entreprise » + champ libre court, **sans effet sur l'issue** — jamais un refus, jamais un signal, jamais un compteur, jamais une entrée dans le score ; visible en console et journalisé."
+      "acceptance": "`PersonneDeclaree {apporteurId, nom, qualite, declareeAt, retireeAt}` — **liste déclarative éditable dans Mon profil, sans compte, sans session, sans jeton de dépôt, sans code de parrainage, sans DTO propre** (la décision **W4 « un apporteur = une personne » est intacte**) ; le champ « personne ayant rencontré » du dépôt propose cette liste, l'apporteur restant seul titulaire et seul responsable. (2) **Case facultative de lien d'intérêt** au dépôt (art. 8.4) : « j'ai une relation d'affaires ou d'intérêt avec cette entreprise » + champ libre court, **sans effet sur l'issue** — jamais un refus, jamais un signal, jamais un compteur, jamais une entrée dans le score ; visible en console et journalisé. REQ-UX-047 (passe GOV-115, 2026-09-30) : geste principal : DETTE NOMMÉE, geste non encore connu, à écrire à la revendication ; budget : lu dans `BUDGETS_UX` (consultation au plus 3 interactions, saisie au plus 8), mesuré par la fixture QA-T33. Son droit `ecran:*` est déclaré dans la matrice ; la maquette de l'écran est validée dans `docs/maquettes/VALIDATION.md` avant la première ligne de code ; cinq états (REQ-UX-019 amendée)."
     },
     {
       "id": "UX-P1-10",
@@ -5993,11 +6003,12 @@
         "REQ-JUR-042",
         "REQ-UX-003",
         "REQ-UX-016",
-        "REQ-UX-038"
+        "REQ-UX-038",
+        "REQ-UX-047"
       ],
       "hyp": [],
       "externe": null,
-      "estimateDays": 1.25,
+      "estimateDays": 1.35,
       "statut": "a_faire",
       "owner": null,
       "lot": null,
@@ -6006,7 +6017,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "ELLE ÉCRIT LE SCHÉMA (label `schema`, seule de sa famille dans son lot). Cadrage de l'architecte du 2026-09-26 sur délégation de Will (partners/ADR-0022) : ce que la tâche crée ; le comportement est celui de ses exigences. (1) `notifications_espace {id, apporteurId, cle, attributionId, creeAt, lueAt}` et `preferences_notification {apporteurId, cle, active, modifieeAt}`, clé primaire `(apporteur_id, cle)`. (2) `cle` est l'exception E3 de partners/ADR-0022 : VarChar(64), `CHECK (cle ~ '^[a-z][a-z0-9_]*$')`, validée par Zod contre `src/server/notifications/table-ssot.ts` à l'écriture, et un test d'intégration confronte les valeurs écrites à la table de code ; aucune règle métier ne branche dessus. (3) Elle REPREND la table SSOT minimale posée par INT-T10. (4) `lueAt` n'est lu par AUCUN calcul de délai (REQ-JUR-039), et une garde le tient : un délai court de `courriels_envoyes.envoyeAt`."
+      "acceptance": "ELLE ÉCRIT LE SCHÉMA (label `schema`, seule de sa famille dans son lot). Cadrage de l'architecte du 2026-09-26 sur délégation de Will (partners/ADR-0022) : ce que la tâche crée ; le comportement est celui de ses exigences. (1) `notifications_espace {id, apporteurId, cle, attributionId, creeAt, lueAt}` et `preferences_notification {apporteurId, cle, active, modifieeAt}`, clé primaire `(apporteur_id, cle)`. (2) `cle` est l'exception E3 de partners/ADR-0022 : VarChar(64), `CHECK (cle ~ '^[a-z][a-z0-9_]*$')`, validée par Zod contre `src/server/notifications/table-ssot.ts` à l'écriture, et un test d'intégration confronte les valeurs écrites à la table de code ; aucune règle métier ne branche dessus. (3) Elle REPREND la table SSOT minimale posée par INT-T10. (4) `lueAt` n'est lu par AUCUN calcul de délai (REQ-JUR-039), et une garde le tient : un délai court de `courriels_envoyes.envoyeAt`. REQ-UX-047 (passe GOV-115, 2026-09-30) : geste principal : DETTE NOMMÉE, geste non encore connu, à écrire à la revendication ; budget : lu dans `BUDGETS_UX` (consultation au plus 3 interactions, saisie au plus 8), mesuré par la fixture QA-T33. Son droit `ecran:*` est déclaré dans la matrice ; la maquette de l'écran est validée dans `docs/maquettes/VALIDATION.md` avant la première ligne de code ; cinq états (REQ-UX-019 amendée)."
     },
     {
       "id": "UX-P1-11",
@@ -6032,11 +6043,12 @@
         "REQ-JUR-013",
         "REQ-JUR-041",
         "REQ-SEC-005",
-        "REQ-UX-016"
+        "REQ-UX-016",
+        "REQ-UX-047"
       ],
       "hyp": [],
       "externe": null,
-      "estimateDays": 1,
+      "estimateDays": 1.1,
       "statut": "a_faire",
       "owner": null,
       "lot": null,
@@ -6045,7 +6057,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "déclenché par `contrat.signe`, BullMQ delay ; J0 = **documents de présentation** (jamais « kit de vente », REQ-JUR-041) **en PDF non modifiable, sans aucun fichier de logo, de charte ni de gabarit de signature** (art. 22 réécrit : aucun droit d'usage de la dénomination n'est concédé) + grille snapshotée **de l'apporteur** + code de parrainage + lien de dépôt privé + règle du premier déclarant ; J2 = rappel ; J7 → dépôt."
+      "acceptance": "déclenché par `contrat.signe`, BullMQ delay ; J0 = **documents de présentation** (jamais « kit de vente », REQ-JUR-041) **en PDF non modifiable, sans aucun fichier de logo, de charte ni de gabarit de signature** (art. 22 réécrit : aucun droit d'usage de la dénomination n'est concédé) + grille snapshotée **de l'apporteur** + code de parrainage + lien de dépôt privé + règle du premier déclarant ; J2 = rappel ; J7 → dépôt. REQ-UX-047 (passe GOV-115, 2026-09-30) : geste principal : DETTE NOMMÉE, geste non encore connu, à écrire à la revendication ; budget : lu dans `BUDGETS_UX` (consultation au plus 3 interactions, saisie au plus 8), mesuré par la fixture QA-T33. Son droit `ecran:*` est déclaré dans la matrice ; la maquette de l'écran est validée dans `docs/maquettes/VALIDATION.md` avant la première ligne de code ; cinq états (REQ-UX-019 amendée)."
     },
     {
       "id": "UX-P1-12",
@@ -6202,13 +6214,14 @@
         "REQ-EXT-023",
         "REQ-EXT-024",
         "REQ-EXT-027",
-        "REQ-UX-026"
+        "REQ-UX-026",
+        "REQ-UX-047"
       ],
       "hyp": [
         "W12"
       ],
       "externe": null,
-      "estimateDays": 1,
+      "estimateDays": 1.1,
       "statut": "a_faire",
       "owner": null,
       "lot": null,
@@ -6217,7 +6230,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "édition réservée au rôle `admin`, journalisée, **inaccessible tant que le KYC n'est pas complet** ; départ depuis un `GrilleModele`, puis ajustement ; **édition en masse** (« toutes les formations à 300 € », « tous les audits à 25 % ») puis dérogation ligne par ligne — 30 lignes à saisir à la main à chaque recrutement est intenable, et une ligne oubliée devient une commission bloquée le jour d'une vente ; valeur publiée pré-remplie et rappelée en regard de chaque ligne ; ligne inférieure à la grille publiée → **avertissement non bloquant** « cette ligne est inférieure à la grille publiée » (W12 : c'est permis) **assorti d'un motif obligatoire** — l'avertissement n'empêche pas l'envoi, il oblige à le regarder ; compteur de complétude **30/30 bloquant** : le bouton de génération du contrat reste inactif tant qu'une ligne est indéfinie ; l'écran Contrats montre la grille de chaque apporteur, l'écart à la grille publiée, le motif, qui l'a fixée et quand. 🔴 **L'écart et son motif sont en outre portés à la connaissance de l'APPORTEUR AVANT la signature** (contrat art. 4.1 al. nouveau, synthèse M-9) : le produit stockait déjà `motifEcart` mais rien n'obligeait à le montrer à celui qui signe, ce qui est le cas d'école de l'art. 1112-1 C. civ. dans un contrat d'adhésion. Le **document de présentation qui accompagne l'enveloppe DocuSeal** est **généré** (jamais retapé) et liste chaque ligne en écart avec sa valeur publiée, sa valeur contractuelle et son motif ; **l'envoi de l'enveloppe est refusé si une ligne en écart n'y figure pas**."
+      "acceptance": "édition réservée au rôle `admin`, journalisée, **inaccessible tant que le KYC n'est pas complet** ; départ depuis un `GrilleModele`, puis ajustement ; **édition en masse** (« toutes les formations à 300 € », « tous les audits à 25 % ») puis dérogation ligne par ligne — 30 lignes à saisir à la main à chaque recrutement est intenable, et une ligne oubliée devient une commission bloquée le jour d'une vente ; valeur publiée pré-remplie et rappelée en regard de chaque ligne ; ligne inférieure à la grille publiée → **avertissement non bloquant** « cette ligne est inférieure à la grille publiée » (W12 : c'est permis) **assorti d'un motif obligatoire** — l'avertissement n'empêche pas l'envoi, il oblige à le regarder ; compteur de complétude **30/30 bloquant** : le bouton de génération du contrat reste inactif tant qu'une ligne est indéfinie ; l'écran Contrats montre la grille de chaque apporteur, l'écart à la grille publiée, le motif, qui l'a fixée et quand. 🔴 **L'écart et son motif sont en outre portés à la connaissance de l'APPORTEUR AVANT la signature** (contrat art. 4.1 al. nouveau, synthèse M-9) : le produit stockait déjà `motifEcart` mais rien n'obligeait à le montrer à celui qui signe, ce qui est le cas d'école de l'art. 1112-1 C. civ. dans un contrat d'adhésion. Le **document de présentation qui accompagne l'enveloppe DocuSeal** est **généré** (jamais retapé) et liste chaque ligne en écart avec sa valeur publiée, sa valeur contractuelle et son motif ; **l'envoi de l'enveloppe est refusé si une ligne en écart n'y figure pas**. REQ-UX-047 (passe GOV-115, 2026-09-30) : geste principal : DETTE NOMMÉE, geste non encore connu, à écrire à la revendication ; budget : lu dans `BUDGETS_UX` (consultation au plus 3 interactions, saisie au plus 8), mesuré par la fixture QA-T33. Son droit `ecran:*` est déclaré dans la matrice ; la maquette de l'écran est validée dans `docs/maquettes/VALIDATION.md` avant la première ligne de code ; cinq états (REQ-UX-019 amendée)."
     },
     {
       "id": "INT-T24",
@@ -7123,11 +7136,12 @@
       ],
       "reqs": [
         "REQ-EXT-025",
-        "REQ-UX-026"
+        "REQ-UX-026",
+        "REQ-UX-047"
       ],
       "hyp": [],
       "externe": null,
-      "estimateDays": 0.5,
+      "estimateDays": 0.6,
       "statut": "a_faire",
       "owner": null,
       "lot": null,
@@ -7136,7 +7150,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "liste des paliers apparus au catalogue **après** signature, avec pour chacun le nombre de contrats dont la grille figée ne le couvre pas et les lignes `bloquee` motif **`a_qualifier`** (cas « barème indéfini ») qui en découlent ; 🔴 **chaque ligne affiche son échéance de règlement à soixante jours de l'encaissement** (`PALIER_HORS_GRILLE_JOURS`, annexe A1.7 réécrite, synthèse A-11) ; deux sorties explicites par palier — **avenant** (déclenche la campagne de re-signature INT-T23 sur les contrats visés) ou **décision écrite « non commissionnée pour ces contrats »**, motivée, journalisée **et portée à la connaissance de l'apporteur avec son motif** ; 🔴 **à défaut de décision dans le délai, la commission est due au taux ou au forfait de la GRILLE PUBLIÉE à la date de la vente**, appliqué par le cron de T-ARG-037 — jamais un taux deviné, jamais une fermeture silencieuse, jamais une suspension sans terme."
+      "acceptance": "liste des paliers apparus au catalogue **après** signature, avec pour chacun le nombre de contrats dont la grille figée ne le couvre pas et les lignes `bloquee` motif **`a_qualifier`** (cas « barème indéfini ») qui en découlent ; 🔴 **chaque ligne affiche son échéance de règlement à soixante jours de l'encaissement** (`PALIER_HORS_GRILLE_JOURS`, annexe A1.7 réécrite, synthèse A-11) ; deux sorties explicites par palier — **avenant** (déclenche la campagne de re-signature INT-T23 sur les contrats visés) ou **décision écrite « non commissionnée pour ces contrats »**, motivée, journalisée **et portée à la connaissance de l'apporteur avec son motif** ; 🔴 **à défaut de décision dans le délai, la commission est due au taux ou au forfait de la GRILLE PUBLIÉE à la date de la vente**, appliqué par le cron de T-ARG-037 — jamais un taux deviné, jamais une fermeture silencieuse, jamais une suspension sans terme. REQ-UX-047 (passe GOV-115, 2026-09-30) : geste principal : DETTE NOMMÉE, geste non encore connu, à écrire à la revendication ; budget : lu dans `BUDGETS_UX` (consultation au plus 3 interactions, saisie au plus 8), mesuré par la fixture QA-T33. Son droit `ecran:*` est déclaré dans la matrice ; la maquette de l'écran est validée dans `docs/maquettes/VALIDATION.md` avant la première ligne de code ; cinq états (REQ-UX-019 amendée)."
     },
     {
       "id": "INT-T17",
@@ -7199,11 +7213,12 @@
         "REQ-UX-005",
         "REQ-UX-010",
         "REQ-UX-011",
-        "REQ-UX-012"
+        "REQ-UX-012",
+        "REQ-UX-047"
       ],
       "hyp": [],
       "externe": null,
-      "estimateDays": 1,
+      "estimateDays": 1.1,
       "statut": "a_faire",
       "owner": null,
       "lot": null,
@@ -7211,7 +7226,8 @@
       "pr": null,
       "issue": null,
       "attempts": 0,
-      "motif": null
+      "motif": null,
+      "acceptance": "Contraintes à intégrer : REQ-UX-047 (passe GOV-115, 2026-09-30) : geste principal : DETTE NOMMÉE, geste non encore connu, à écrire à la revendication ; budget : lu dans `BUDGETS_UX` (consultation au plus 3 interactions, saisie au plus 8), mesuré par la fixture QA-T33. Son droit `ecran:*` est déclaré dans la matrice ; la maquette de l'écran est validée dans `docs/maquettes/VALIDATION.md` avant la première ligne de code ; cinq états (REQ-UX-019 amendée)."
     },
     {
       "id": "UX-P2-02",
@@ -7229,11 +7245,12 @@
         "UX-P2-01"
       ],
       "reqs": [
-        "REQ-UX-009"
+        "REQ-UX-009",
+        "REQ-UX-047"
       ],
       "hyp": [],
       "externe": null,
-      "estimateDays": 0.5,
+      "estimateDays": 0.6,
       "statut": "a_faire",
       "owner": null,
       "lot": null,
@@ -7241,7 +7258,8 @@
       "pr": null,
       "issue": null,
       "attempts": 0,
-      "motif": null
+      "motif": null,
+      "acceptance": "Contraintes à intégrer : REQ-UX-047 (passe GOV-115, 2026-09-30) : geste principal : DETTE NOMMÉE, geste non encore connu, à écrire à la revendication ; budget : lu dans `BUDGETS_UX` (consultation au plus 3 interactions, saisie au plus 8), mesuré par la fixture QA-T33. Son droit `ecran:*` est déclaré dans la matrice ; la maquette de l'écran est validée dans `docs/maquettes/VALIDATION.md` avant la première ligne de code ; cinq états (REQ-UX-019 amendée)."
     },
     {
       "id": "UX-P2-04",
@@ -7270,11 +7288,12 @@
         "REQ-EXT-029",
         "REQ-UX-006",
         "REQ-UX-030",
-        "REQ-UX-032"
+        "REQ-UX-032",
+        "REQ-UX-047"
       ],
       "hyp": [],
       "externe": null,
-      "estimateDays": 1,
+      "estimateDays": 1.1,
       "statut": "a_faire",
       "owner": null,
       "lot": null,
@@ -7283,7 +7302,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "PAS D'ÉCHÉANCE SUR « MES FILLEULS » (décision du 2026-09-25, par délégation de Will, HYP-W15-FILLEULS-VUE, W15) : l'échéance des 12 mois de la fenêtre de parrainage N'EST PAS AFFICHÉE sur `/filleuls` — ni par filleul, ni agrégée, ni conditionnée à un seuil : toute agrégation de dates (minimum, prochaine échéance) vaut exactement la date d'un filleul, et un seuil fuit le jour où il est franchi. À la place, un TEXTE FIXE, identique pour tous : « Vos gains de parrainage sur un filleul courent 12 mois à compter de la signature de son contrat », sans aucune date calculée. Tests : aucune clé ni valeur de date d'échéance dans le DTO de `/filleuls`, pour 0, 1, 2 et N filleuls ; deux fixtures qui ne diffèrent QUE par la date de signature d'un filleul donnent un DTO identique à l'octet près ; le texte fixe est le même pour tous les parrains. Les autres points de la tâche (documents, relevés, autofactures, attestation, export RGPD, parrainage agrégé par mois, lien partageable, REQ-UX-006, REQ-UX-030, REQ-UX-032, REQ-EXT-029, REQ-ARG-035) restent à écrire en acceptance avant son attribution."
+      "acceptance": "PAS D'ÉCHÉANCE SUR « MES FILLEULS » (décision du 2026-09-25, par délégation de Will, HYP-W15-FILLEULS-VUE, W15) : l'échéance des 12 mois de la fenêtre de parrainage N'EST PAS AFFICHÉE sur `/filleuls` — ni par filleul, ni agrégée, ni conditionnée à un seuil : toute agrégation de dates (minimum, prochaine échéance) vaut exactement la date d'un filleul, et un seuil fuit le jour où il est franchi. À la place, un TEXTE FIXE, identique pour tous : « Vos gains de parrainage sur un filleul courent 12 mois à compter de la signature de son contrat », sans aucune date calculée. Tests : aucune clé ni valeur de date d'échéance dans le DTO de `/filleuls`, pour 0, 1, 2 et N filleuls ; deux fixtures qui ne diffèrent QUE par la date de signature d'un filleul donnent un DTO identique à l'octet près ; le texte fixe est le même pour tous les parrains. Les autres points de la tâche (documents, relevés, autofactures, attestation, export RGPD, parrainage agrégé par mois, lien partageable, REQ-UX-006, REQ-UX-030, REQ-UX-032, REQ-EXT-029, REQ-ARG-035) restent à écrire en acceptance avant son attribution. REQ-UX-047 (passe GOV-115, 2026-09-30) : geste principal : DETTE NOMMÉE, geste non encore connu, à écrire à la revendication ; budget : lu dans `BUDGETS_UX` (consultation au plus 3 interactions, saisie au plus 8), mesuré par la fixture QA-T33. Son droit `ecran:*` est déclaré dans la matrice ; la maquette de l'écran est validée dans `docs/maquettes/VALIDATION.md` avant la première ligne de code ; cinq états (REQ-UX-019 amendée)."
     },
     {
       "id": "UX-P2-05",
@@ -7346,11 +7365,12 @@
       "reqs": [
         "REQ-SEC-009",
         "REQ-UX-005",
-        "REQ-UX-006"
+        "REQ-UX-006",
+        "REQ-UX-047"
       ],
       "hyp": [],
       "externe": null,
-      "estimateDays": 0.75,
+      "estimateDays": 0.85,
       "statut": "a_faire",
       "owner": null,
       "lot": null,
@@ -7358,7 +7378,8 @@
       "pr": null,
       "issue": null,
       "attempts": 0,
-      "motif": null
+      "motif": null,
+      "acceptance": "Contraintes à intégrer : REQ-UX-047 (passe GOV-115, 2026-09-30) : geste principal : DETTE NOMMÉE, geste non encore connu, à écrire à la revendication ; budget : lu dans `BUDGETS_UX` (consultation au plus 3 interactions, saisie au plus 8), mesuré par la fixture QA-T33. Son droit `ecran:*` est déclaré dans la matrice ; la maquette de l'écran est validée dans `docs/maquettes/VALIDATION.md` avant la première ligne de code ; cinq états (REQ-UX-019 amendée)."
     },
     {
       "id": "CPL-T12",
@@ -7957,11 +7978,12 @@
         "REQ-INT-025",
         "REQ-UX-014",
         "REQ-UX-016",
-        "REQ-UX-033"
+        "REQ-UX-033",
+        "REQ-UX-047"
       ],
       "hyp": [],
       "externe": null,
-      "estimateDays": 1,
+      "estimateDays": 1.1,
       "statut": "a_faire",
       "owner": null,
       "lot": null,
@@ -7969,7 +7991,8 @@
       "pr": null,
       "issue": null,
       "attempts": 0,
-      "motif": null
+      "motif": null,
+      "acceptance": "Contraintes à intégrer : REQ-UX-047 (passe GOV-115, 2026-09-30) : geste principal : DETTE NOMMÉE, geste non encore connu, à écrire à la revendication ; budget : lu dans `BUDGETS_UX` (consultation au plus 3 interactions, saisie au plus 8), mesuré par la fixture QA-T33. Son droit `ecran:*` est déclaré dans la matrice ; la maquette de l'écran est validée dans `docs/maquettes/VALIDATION.md` avant la première ligne de code ; cinq états (REQ-UX-019 amendée)."
     },
     {
       "id": "UX-P3-02",
@@ -7992,11 +8015,12 @@
         "REQ-CPL-023",
         "REQ-JUR-041",
         "REQ-UX-003",
-        "REQ-UX-029"
+        "REQ-UX-029",
+        "REQ-UX-047"
       ],
       "hyp": [],
       "externe": null,
-      "estimateDays": 1,
+      "estimateDays": 1.1,
       "statut": "a_faire",
       "owner": null,
       "lot": null,
@@ -8004,7 +8028,8 @@
       "pr": null,
       "issue": null,
       "attempts": 0,
-      "motif": null
+      "motif": null,
+      "acceptance": "Contraintes à intégrer : REQ-UX-047 (passe GOV-115, 2026-09-30) : geste principal : DETTE NOMMÉE, geste non encore connu, à écrire à la revendication ; budget : lu dans `BUDGETS_UX` (consultation au plus 3 interactions, saisie au plus 8), mesuré par la fixture QA-T33. Son droit `ecran:*` est déclaré dans la matrice ; la maquette de l'écran est validée dans `docs/maquettes/VALIDATION.md` avant la première ligne de code ; cinq états (REQ-UX-019 amendée)."
     },
     {
       "id": "UX-P3-03",
@@ -8022,11 +8047,12 @@
         "UX-P1-10"
       ],
       "reqs": [
-        "REQ-UX-028"
+        "REQ-UX-028",
+        "REQ-UX-047"
       ],
       "hyp": [],
       "externe": null,
-      "estimateDays": 1,
+      "estimateDays": 1.1,
       "statut": "a_faire",
       "owner": null,
       "lot": null,
@@ -8034,7 +8060,8 @@
       "pr": null,
       "issue": null,
       "attempts": 0,
-      "motif": null
+      "motif": null,
+      "acceptance": "Contraintes à intégrer : REQ-UX-047 (passe GOV-115, 2026-09-30) : geste principal : DETTE NOMMÉE, geste non encore connu, à écrire à la revendication ; budget : lu dans `BUDGETS_UX` (consultation au plus 3 interactions, saisie au plus 8), mesuré par la fixture QA-T33. Son droit `ecran:*` est déclaré dans la matrice ; la maquette de l'écran est validée dans `docs/maquettes/VALIDATION.md` avant la première ligne de code ; cinq états (REQ-UX-019 amendée)."
     },
     {
       "id": "UX-P3-04",
@@ -8140,11 +8167,12 @@
       "reqs": [
         "REQ-CPL-027",
         "REQ-JUR-033",
-        "REQ-UX-016"
+        "REQ-UX-016",
+        "REQ-UX-047"
       ],
       "hyp": [],
       "externe": null,
-      "estimateDays": 1,
+      "estimateDays": 1.1,
       "statut": "a_faire",
       "owner": null,
       "lot": null,
@@ -8152,7 +8180,8 @@
       "pr": null,
       "issue": null,
       "attempts": 0,
-      "motif": null
+      "motif": null,
+      "acceptance": "Contraintes à intégrer : REQ-UX-047 (passe GOV-115, 2026-09-30) : geste principal : DETTE NOMMÉE, geste non encore connu, à écrire à la revendication ; budget : lu dans `BUDGETS_UX` (consultation au plus 3 interactions, saisie au plus 8), mesuré par la fixture QA-T33. Son droit `ecran:*` est déclaré dans la matrice ; la maquette de l'écran est validée dans `docs/maquettes/VALIDATION.md` avant la première ligne de code ; cinq états (REQ-UX-019 amendée)."
     },
     {
       "id": "JUR-T22",
@@ -8334,11 +8363,12 @@
         "INT-T09"
       ],
       "reqs": [
-        "REQ-EXT-015"
+        "REQ-EXT-015",
+        "REQ-UX-047"
       ],
       "hyp": [],
       "externe": null,
-      "estimateDays": 0.5,
+      "estimateDays": 0.6,
       "statut": "a_faire",
       "owner": null,
       "lot": null,
@@ -8347,7 +8377,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "`latitude`/`longitude` capturées depuis le siège renvoyé par l'API publique, projection Lambert-93 → coordonnées d'affichage en fonction pure côté serveur."
+      "acceptance": "`latitude`/`longitude` capturées depuis le siège renvoyé par l'API publique, projection Lambert-93 → coordonnées d'affichage en fonction pure côté serveur. REQ-UX-047 (passe GOV-115, 2026-09-30) : geste principal : DETTE NOMMÉE, geste non encore connu, à écrire à la revendication ; budget : lu dans `BUDGETS_UX` (consultation au plus 3 interactions, saisie au plus 8), mesuré par la fixture QA-T33. Son droit `ecran:*` est déclaré dans la matrice ; la maquette de l'écran est validée dans `docs/maquettes/VALIDATION.md` avant la première ligne de code ; cinq états (REQ-UX-019 amendée)."
     },
     {
       "id": "EXT-T01",
@@ -8382,7 +8412,8 @@
         "REQ-EXT-002",
         "REQ-EXT-003",
         "REQ-EXT-004",
-        "REQ-JUR-025"
+        "REQ-JUR-025",
+        "REQ-UX-047"
       ],
       "hyp": [],
       "externe": null,
@@ -8395,7 +8426,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "une frise unique (événements Axion-IA + échanges), formulaire d'échange à 4 champs, **mention explicite avant la première saisie que les échanges sont visibles de la Société** (reprise dans la politique de confidentialité, JUR-T04), purge branchée sur le cron d'attribution. 🔴 **Complétée le 2026-09-26 (cadrage de l'architecte sur délégation de Will, partners/ADR-0022, GOV-102).** ELLE ÉCRIT LE SCHÉMA (label `schema`, seule de sa famille dans son lot) : `enum CanalEchange {appel, email, visite, linkedin, autre}` ; `Echange` -> `echanges` (REQ-EXT-002 : aucun drapeau de visibilité, tout échange est visible de la Société) : `attributionId`, `apporteurId`, `dateEchange` en date calendaire, `canal`, `texteChiffre` et `prochaineActionChiffre` (nuls après effacement, REQ-EXT-004), `prochaineActionDate`, `creeAt`, `contenuEffaceAt` ; CHECK `contenu_efface_at IS NULL OR (texte_chiffre IS NULL AND prochaine_action_chiffre IS NULL)`. Journal `echange_saisi` (agrégat `attribution`, charge `{echangeId, canal}`). `CHAMPS_PII` gagne `prochaineAction` ; `texte` est posé par DM-12."
+      "acceptance": "une frise unique (événements Axion-IA + échanges), formulaire d'échange à 4 champs, **mention explicite avant la première saisie que les échanges sont visibles de la Société** (reprise dans la politique de confidentialité, JUR-T04), purge branchée sur le cron d'attribution. 🔴 **Complétée le 2026-09-26 (cadrage de l'architecte sur délégation de Will, partners/ADR-0022, GOV-102).** ELLE ÉCRIT LE SCHÉMA (label `schema`, seule de sa famille dans son lot) : `enum CanalEchange {appel, email, visite, linkedin, autre}` ; `Echange` -> `echanges` (REQ-EXT-002 : aucun drapeau de visibilité, tout échange est visible de la Société) : `attributionId`, `apporteurId`, `dateEchange` en date calendaire, `canal`, `texteChiffre` et `prochaineActionChiffre` (nuls après effacement, REQ-EXT-004), `prochaineActionDate`, `creeAt`, `contenuEffaceAt` ; CHECK `contenu_efface_at IS NULL OR (texte_chiffre IS NULL AND prochaine_action_chiffre IS NULL)`. Journal `echange_saisi` (agrégat `attribution`, charge `{echangeId, canal}`). `CHAMPS_PII` gagne `prochaineAction` ; `texte` est posé par DM-12. REQ-UX-047 (passe GOV-115, 2026-09-30) : geste principal : DETTE NOMMÉE, geste non encore connu, à écrire à la revendication ; budget : lu dans `BUDGETS_UX` (consultation au plus 3 interactions, saisie au plus 8), mesuré par la fixture QA-T33. Son droit `ecran:*` est déclaré dans la matrice ; la maquette de l'écran est validée dans `docs/maquettes/VALIDATION.md` avant la première ligne de code ; cinq états (REQ-UX-019 amendée)."
     },
     {
       "id": "EXT-T02a",
@@ -8461,11 +8492,12 @@
       "reqs": [
         "REQ-EXT-008",
         "REQ-EXT-009",
-        "REQ-EXT-010"
+        "REQ-EXT-010",
+        "REQ-UX-047"
       ],
       "hyp": [],
       "externe": null,
-      "estimateDays": 1,
+      "estimateDays": 1.1,
       "statut": "a_faire",
       "owner": null,
       "lot": null,
@@ -8474,7 +8506,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "enum `origine`, `canal` contraint par `CampagneRecrutement`, hash e-mail et téléphone normalisés, rattachement au lieu de création. 🔴 **Complétée le 2026-09-25 (décision du 2026-09-25, par délégation de Will, GOV-099).** EXT-T03 porte la dérivation de `sourceCanal` — chaîne transportée figée par DM-06 (REQ-DM-035) — vers l'enum `CanalCandidature` (`site`, `linkedin`, `jobboard`, `saisie_console`, `autre`, glossaire §4) : une table de correspondance chemin → canal, côté Partners, en SSOT ; un chemin inconnu donne `autre` et est journalisé, jamais un canal deviné. Tests : chaque entrée de la table → son canal ; chemin inconnu → `autre` et une entrée de journal ; `sourceCanal` nulle → `autre` ; la valeur transportée n'est jamais modifiée par la dérivation. ⚠️ **Dette de cadrage, NON tranchée ici — à cadrer avant EXT-T03** : le producteur axionia émet aujourd'hui une **constante de chemin** pour `sourceCanal` ; `linkedin` et `jobboard` ne seront donc atteignables que par les paramètres `utm`, que DM-06 ne stocke pas. Tant que ce point n'est pas cadré, la table chemin → canal ne sait produire que `site`, `saisie_console` ou `autre`. 🔴 **Complétée le 2026-09-26 (cadrage de l'architecte sur délégation de Will, partners/ADR-0022, GOV-102).** Schéma : `enum OrigineCandidature {tunnel, saisie_console, import, parrainage}` et `enum TypeFichierCv {pdf, docx, jpg, png}` ; sur `apporteurs` : `origine`, `canalCandidature` et `campagneId` (clé étrangère), nullables ; NOT NULL RELÂCHÉ sur `candidature_id`, `reponses_json`, `score_initial`, `score_parts_json` et `score_bareme_version` (saisie console et `score_indisponible`, REQ-EXT-010 ; relâcher est additif), avec CHECK « les trois colonnes de score présentes ensemble ». Tables `campagnes_recrutement {canal CanalCandidature, libelle, coutCents Int >= 0, debutAt, finAt}` et `pieces_jointes_candidature {apporteurId, cle (objet privé), typeFichier, tailleOctets entre 1 et 10485760, empreinteSha256 Char(64), deposeeAt, purgeeAt}`. Journal `candidature_rattachee` (agrégat `apporteur`, charge `{apporteurIdRattache}`). EXT-T04 écrit dans ces tables sans migration."
+      "acceptance": "enum `origine`, `canal` contraint par `CampagneRecrutement`, hash e-mail et téléphone normalisés, rattachement au lieu de création. 🔴 **Complétée le 2026-09-25 (décision du 2026-09-25, par délégation de Will, GOV-099).** EXT-T03 porte la dérivation de `sourceCanal` — chaîne transportée figée par DM-06 (REQ-DM-035) — vers l'enum `CanalCandidature` (`site`, `linkedin`, `jobboard`, `saisie_console`, `autre`, glossaire §4) : une table de correspondance chemin → canal, côté Partners, en SSOT ; un chemin inconnu donne `autre` et est journalisé, jamais un canal deviné. Tests : chaque entrée de la table → son canal ; chemin inconnu → `autre` et une entrée de journal ; `sourceCanal` nulle → `autre` ; la valeur transportée n'est jamais modifiée par la dérivation. ⚠️ **Dette de cadrage, NON tranchée ici — à cadrer avant EXT-T03** : le producteur axionia émet aujourd'hui une **constante de chemin** pour `sourceCanal` ; `linkedin` et `jobboard` ne seront donc atteignables que par les paramètres `utm`, que DM-06 ne stocke pas. Tant que ce point n'est pas cadré, la table chemin → canal ne sait produire que `site`, `saisie_console` ou `autre`. 🔴 **Complétée le 2026-09-26 (cadrage de l'architecte sur délégation de Will, partners/ADR-0022, GOV-102).** Schéma : `enum OrigineCandidature {tunnel, saisie_console, import, parrainage}` et `enum TypeFichierCv {pdf, docx, jpg, png}` ; sur `apporteurs` : `origine`, `canalCandidature` et `campagneId` (clé étrangère), nullables ; NOT NULL RELÂCHÉ sur `candidature_id`, `reponses_json`, `score_initial`, `score_parts_json` et `score_bareme_version` (saisie console et `score_indisponible`, REQ-EXT-010 ; relâcher est additif), avec CHECK « les trois colonnes de score présentes ensemble ». Tables `campagnes_recrutement {canal CanalCandidature, libelle, coutCents Int >= 0, debutAt, finAt}` et `pieces_jointes_candidature {apporteurId, cle (objet privé), typeFichier, tailleOctets entre 1 et 10485760, empreinteSha256 Char(64), deposeeAt, purgeeAt}`. Journal `candidature_rattachee` (agrégat `apporteur`, charge `{apporteurIdRattache}`). EXT-T04 écrit dans ces tables sans migration. REQ-UX-047 (passe GOV-115, 2026-09-30) : geste principal : DETTE NOMMÉE, geste non encore connu, à écrire à la revendication ; budget : lu dans `BUDGETS_UX` (consultation au plus 3 interactions, saisie au plus 8), mesuré par la fixture QA-T33. Son droit `ecran:*` est déclaré dans la matrice ; la maquette de l'écran est validée dans `docs/maquettes/VALIDATION.md` avant la première ligne de code ; cinq états (REQ-UX-019 amendée)."
     },
     {
       "id": "EXT-T04",
@@ -8498,11 +8530,12 @@
       "reqs": [
         "REQ-EXT-011",
         "REQ-EXT-012",
-        "REQ-EXT-014"
+        "REQ-EXT-014",
+        "REQ-UX-047"
       ],
       "hyp": [],
       "externe": null,
-      "estimateDays": 1,
+      "estimateDays": 1.1,
       "statut": "a_faire",
       "owner": null,
       "lot": null,
@@ -8511,7 +8544,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "formulaire console reprenant les champs du tunnel, upload CV, type réel vérifié par octets d'en-tête, stockage privé + URL signée courte, purge à 2 ans avec la candidature."
+      "acceptance": "formulaire console reprenant les champs du tunnel, upload CV, type réel vérifié par octets d'en-tête, stockage privé + URL signée courte, purge à 2 ans avec la candidature. REQ-UX-047 (passe GOV-115, 2026-09-30) : geste principal : DETTE NOMMÉE, geste non encore connu, à écrire à la revendication ; budget : lu dans `BUDGETS_UX` (consultation au plus 3 interactions, saisie au plus 8), mesuré par la fixture QA-T33. Son droit `ecran:*` est déclaré dans la matrice ; la maquette de l'écran est validée dans `docs/maquettes/VALIDATION.md` avant la première ligne de code ; cinq états (REQ-UX-019 amendée)."
     },
     {
       "id": "EXT-T06",
@@ -8533,14 +8566,15 @@
       ],
       "reqs": [
         "REQ-EXT-006",
-        "REQ-EXT-007"
+        "REQ-EXT-007",
+        "REQ-UX-047"
       ],
       "hyp": [
         "HYP-W7",
         "W7"
       ],
       "externe": null,
-      "estimateDays": 0.5,
+      "estimateDays": 0.6,
       "statut": "a_faire",
       "owner": null,
       "lot": null,
@@ -8549,7 +8583,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "cinquième état `libre_deja_travaillee` dans le DTO de vérification ; signal d'anomalie au-delà du seuil de configuration prévu pour la part de dépôts sur des entreprises déjà travaillées (valeur hors dépôt, REQ-GOV-031)."
+      "acceptance": "cinquième état `libre_deja_travaillee` dans le DTO de vérification ; signal d'anomalie au-delà du seuil de configuration prévu pour la part de dépôts sur des entreprises déjà travaillées (valeur hors dépôt, REQ-GOV-031). REQ-UX-047 (passe GOV-115, 2026-09-30) : geste principal : DETTE NOMMÉE, geste non encore connu, à écrire à la revendication ; budget : lu dans `BUDGETS_UX` (consultation au plus 3 interactions, saisie au plus 8), mesuré par la fixture QA-T33. Son droit `ecran:*` est déclaré dans la matrice ; la maquette de l'écran est validée dans `docs/maquettes/VALIDATION.md` avant la première ligne de code ; cinq états (REQ-UX-019 amendée)."
     },
     {
       "id": "EXT-T02b",
@@ -8569,11 +8603,12 @@
         "T-ARG-010"
       ],
       "reqs": [
-        "REQ-EXT-005"
+        "REQ-EXT-005",
+        "REQ-UX-047"
       ],
       "hyp": [],
       "externe": null,
-      "estimateDays": 0.25,
+      "estimateDays": 0.35,
       "statut": "a_faire",
       "owner": null,
       "lot": null,
@@ -8582,7 +8617,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "depuis une ligne de commission on atteint la fiche prospect, et réciproquement ; l'encaissement qui a produit la ligne est atteignable depuis les deux."
+      "acceptance": "depuis une ligne de commission on atteint la fiche prospect, et réciproquement ; l'encaissement qui a produit la ligne est atteignable depuis les deux. REQ-UX-047 (passe GOV-115, 2026-09-30) : geste principal : DETTE NOMMÉE, geste non encore connu, à écrire à la revendication ; budget : lu dans `BUDGETS_UX` (consultation au plus 3 interactions, saisie au plus 8), mesuré par la fixture QA-T33. Son droit `ecran:*` est déclaré dans la matrice ; la maquette de l'écran est validée dans `docs/maquettes/VALIDATION.md` avant la première ligne de code ; cinq états (REQ-UX-019 amendée)."
     },
     {
       "id": "EXT-T07",
@@ -8601,13 +8636,14 @@
         "INT-T04"
       ],
       "reqs": [
-        "REQ-EXT-020"
+        "REQ-EXT-020",
+        "REQ-UX-047"
       ],
       "hyp": [
         "W9"
       ],
       "externe": null,
-      "estimateDays": 0.5,
+      "estimateDays": 0.6,
       "statut": "a_faire",
       "owner": null,
       "lot": null,
@@ -8616,7 +8652,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "prolongation unique de 3 mois, automatique, notifiée aux deux parties, journalisée."
+      "acceptance": "prolongation unique de 3 mois, automatique, notifiée aux deux parties, journalisée. REQ-UX-047 (passe GOV-115, 2026-09-30) : geste principal : DETTE NOMMÉE, geste non encore connu, à écrire à la revendication ; budget : lu dans `BUDGETS_UX` (consultation au plus 3 interactions, saisie au plus 8), mesuré par la fixture QA-T33. Son droit `ecran:*` est déclaré dans la matrice ; la maquette de l'écran est validée dans `docs/maquettes/VALIDATION.md` avant la première ligne de code ; cinq états (REQ-UX-019 amendée)."
     },
     {
       "id": "EXT-T09",
@@ -8640,7 +8676,8 @@
       "reqs": [
         "REQ-EXT-016",
         "REQ-EXT-017",
-        "REQ-EXT-018"
+        "REQ-EXT-018",
+        "REQ-UX-047"
       ],
       "hyp": [],
       "externe": null,
@@ -8653,7 +8690,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "SVG des départements simplifié au build, 3 couches, filtre par apporteur avec surbrillance, agrégation serveur au-delà de 2 000 points, segment chargé à la demande."
+      "acceptance": "SVG des départements simplifié au build, 3 couches, filtre par apporteur avec surbrillance, agrégation serveur au-delà de 2 000 points, segment chargé à la demande. REQ-UX-047 (passe GOV-115, 2026-09-30) : geste principal : DETTE NOMMÉE, geste non encore connu, à écrire à la revendication ; budget : lu dans `BUDGETS_UX` (consultation au plus 3 interactions, saisie au plus 8), mesuré par la fixture QA-T33. Son droit `ecran:*` est déclaré dans la matrice ; la maquette de l'écran est validée dans `docs/maquettes/VALIDATION.md` avant la première ligne de code ; cinq états (REQ-UX-019 amendée)."
     },
     {
       "id": "EXT-T10",
@@ -8673,11 +8710,12 @@
         "SEC-05"
       ],
       "reqs": [
-        "REQ-EXT-019"
+        "REQ-EXT-019",
+        "REQ-UX-047"
       ],
       "hyp": [],
       "externe": null,
-      "estimateDays": 0.5,
+      "estimateDays": 0.6,
       "statut": "a_faire",
       "owner": null,
       "lot": null,
@@ -8685,7 +8723,8 @@
       "pr": null,
       "issue": null,
       "attempts": 0,
-      "motif": null
+      "motif": null,
+      "acceptance": "Contraintes à intégrer : REQ-UX-047 (passe GOV-115, 2026-09-30) : geste principal : DETTE NOMMÉE, geste non encore connu, à écrire à la revendication ; budget : lu dans `BUDGETS_UX` (consultation au plus 3 interactions, saisie au plus 8), mesuré par la fixture QA-T33. Son droit `ecran:*` est déclaré dans la matrice ; la maquette de l'écran est validée dans `docs/maquettes/VALIDATION.md` avant la première ligne de code ; cinq états (REQ-UX-019 amendée)."
     },
     {
       "id": "EXT-T05",
@@ -8703,11 +8742,12 @@
       ],
       "reqs": [
         "REQ-EXT-008",
-        "REQ-EXT-009"
+        "REQ-EXT-009",
+        "REQ-UX-047"
       ],
       "hyp": [],
       "externe": null,
-      "estimateDays": 0.5,
+      "estimateDays": 0.6,
       "statut": "a_faire",
       "owner": null,
       "lot": null,
@@ -8716,7 +8756,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "import idempotent, colonnes mappées, rapport de rattachements et de rejets."
+      "acceptance": "import idempotent, colonnes mappées, rapport de rattachements et de rejets. REQ-UX-047 (passe GOV-115, 2026-09-30) : geste principal : DETTE NOMMÉE, geste non encore connu, à écrire à la revendication ; budget : lu dans `BUDGETS_UX` (consultation au plus 3 interactions, saisie au plus 8), mesuré par la fixture QA-T33. Son droit `ecran:*` est déclaré dans la matrice ; la maquette de l'écran est validée dans `docs/maquettes/VALIDATION.md` avant la première ligne de code ; cinq états (REQ-UX-019 amendée)."
     },
     {
       "id": "EXT-T11",
@@ -8736,13 +8776,14 @@
         "JUR-T04"
       ],
       "reqs": [
-        "REQ-EXT-013"
+        "REQ-EXT-013",
+        "REQ-UX-047"
       ],
       "hyp": [
         "W10"
       ],
       "externe": null,
-      "estimateDays": 1,
+      "estimateDays": 1.1,
       "statut": "a_faire",
       "owner": null,
       "lot": null,
@@ -8751,7 +8792,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "extraction de faits vers les champs du formulaire, chacun modifiable, aucune écriture sans validation humaine, **aucun score, aucun rang, aucun avis** (l'extraction est une aide à la lecture), journal du proposé et du corrigé."
+      "acceptance": "extraction de faits vers les champs du formulaire, chacun modifiable, aucune écriture sans validation humaine, **aucun score, aucun rang, aucun avis** (l'extraction est une aide à la lecture), journal du proposé et du corrigé. REQ-UX-047 (passe GOV-115, 2026-09-30) : geste principal : DETTE NOMMÉE, geste non encore connu, à écrire à la revendication ; budget : lu dans `BUDGETS_UX` (consultation au plus 3 interactions, saisie au plus 8), mesuré par la fixture QA-T33. Son droit `ecran:*` est déclaré dans la matrice ; la maquette de l'écran est validée dans `docs/maquettes/VALIDATION.md` avant la première ligne de code ; cinq états (REQ-UX-019 amendée)."
     },
     {
       "id": "JUR-T26",
@@ -12268,15 +12309,16 @@
         "UX-P1-12"
       ],
       "reqs": [
-        "REQ-UX-040"
+        "REQ-UX-040",
+        "REQ-UX-047"
       ],
       "hyp": [
         "HYP-W15-EQUIPE"
       ],
       "externe": null,
-      "estimateDays": 1,
+      "estimateDays": 1.1,
       "statut": "a_faire",
-      "acceptance": "(1) Depuis la fiche apporteur (UX-P1-12), la console affiche la lignée en LISTE et en ARBRE SVG rendu côté serveur, sans bibliothèque ; chaque nœud porte l'état du contrat et la date de rattachement. (2) Fixture à trois niveaux → exactement les niveaux 1 et 2 ; la liste et l'arbre portent le même ensemble d'apporteurs (comparaison des identifiants). (3) L'écran est dans la matrice des rôles ; retiré de la matrice → refus. `lecteur` → aucune clé d'identité dans le DTO. (4) Aucun montant du second niveau n'est présenté comme revenant à l'apporteur consulté. (5) axe-core : 0 violation serious ou critical ; poids de la route mesuré avant/après et collé dans la PR.",
+      "acceptance": "(1) Depuis la fiche apporteur (UX-P1-12), la console affiche la lignée en LISTE et en ARBRE SVG rendu côté serveur, sans bibliothèque ; chaque nœud porte l'état du contrat et la date de rattachement. (2) Fixture à trois niveaux → exactement les niveaux 1 et 2 ; la liste et l'arbre portent le même ensemble d'apporteurs (comparaison des identifiants). (3) L'écran est dans la matrice des rôles ; retiré de la matrice → refus. `lecteur` → aucune clé d'identité dans le DTO. (4) Aucun montant du second niveau n'est présenté comme revenant à l'apporteur consulté. (5) axe-core : 0 violation serious ou critical ; poids de la route mesuré avant/après et collé dans la PR. REQ-UX-047 (passe GOV-115, 2026-09-30) : geste principal : DETTE NOMMÉE, geste non encore connu, à écrire à la revendication ; budget : lu dans `BUDGETS_UX` (consultation au plus 3 interactions, saisie au plus 8), mesuré par la fixture QA-T33. Son droit `ecran:*` est déclaré dans la matrice ; la maquette de l'écran est validée dans `docs/maquettes/VALIDATION.md` avant la première ligne de code ; cinq états (REQ-UX-019 amendée).",
       "tests": {
         "REQ-UX-040": [
           "tests/unit/console/lignee.spec.ts"
@@ -12307,16 +12349,17 @@
       ],
       "reqs": [
         "REQ-UX-041",
-        "REQ-UX-006"
+        "REQ-UX-006",
+        "REQ-UX-047"
       ],
       "hyp": [
         "HYP-W15-FILLEULS-VUE",
         "HYP-W15-ART-4-6"
       ],
       "externe": null,
-      "estimateDays": 0.5,
+      "estimateDays": 0.6,
       "statut": "a_faire",
-      "acceptance": "TÂCHE SENSIBLE — espace et données personnelles. (1) Toute lecture passe par `forApporteur` (SEC-05). (2) RÈGLE FERMÉE DES ÉTATS (REQ-UX-041, HYP-W15-ART-4-6 tranchée le 2026-09-25), dérivée de l'ENSEMBLE des versions du contrat du filleul, jamais d'une version « courante », lues dans l'ordre chronologique de leur création, seules comptant celles POSTÉRIEURES À LA DERNIÈRE `resilie` (toutes s'il n'y en a aucune) : dernière version `resilie` → le filleul SORT de la liste ; une `signe` parmi les versions comptées → `signe` ; versions comptées toutes `envoye` → `en_signature` ; aucune version → absent ; toute autre combinaison → ÉCHEC FERMÉ, filleul absent et écart journalisé côté console, jamais un libellé par défaut. Tests, une fixture par branche : AVENANT ENVOYÉ SUR UN CONTRAT SIGNÉ → « signé », élément identique à l'octet près avant et après l'envoi de l'avenant ; avenant jamais signé → « signé » indéfiniment, horloge avancée ; premier contrat envoyé jamais signé → « en signature » ; résiliation → absent ; combinaison incohérente → absent et écart journalisé ; RELATION REPRISE : {signe, resilie, envoye} → « en signature », {signe, resilie, signe} → « signé », {signe, resilie} → absent, avenant après la reprise → « signé ». Le statut d'apporteur du filleul (`suspendu`, `resilie`, gel, anomalie, sincérité) n'est JAMAIS lu : un filleul au contrat `signe` dont l'apporteur passe `suspendu` reste affiché « signé », élément byte-identique avant et après ; aucun DTO de l'espace ne porte de champ de statut d'apporteur ni les valeurs `resilie`, `remplace`, `suspendu` (témoin qui les porte → rouge). (3) CLÉS EXACTES de chaque élément du DTO de liste : `prenom`, `initialeNom`, `etatContrat` — rien d'autre ; un témoin portant une clé d'activité (`nbDepots`, `actif`, `derniereVente`, `lastSeenAt`) ou un montant fait rougir le test. (4) Fixture à deux niveaux → les filleuls des filleuls sont absents. (5) Deux filleuls au même état de contrat, l'un actif et l'autre non → éléments byte-identiques hors prénom et initiale. (6) Le montant de parrainage reste agrégé par mois, jamais ventilé par filleul (REQ-UX-006). (7) Le filleul d'un autre apporteur n'apparaît jamais ; son identifiant sur une route paramétrée rend le 404 byte-identique. L'alinéa amendé est rédigé dans le gabarit par JUR-T01 : cette tâche n'arme pas en production avant la signature du premier contrat qui le porte.",
+      "acceptance": "TÂCHE SENSIBLE — espace et données personnelles. (1) Toute lecture passe par `forApporteur` (SEC-05). (2) RÈGLE FERMÉE DES ÉTATS (REQ-UX-041, HYP-W15-ART-4-6 tranchée le 2026-09-25), dérivée de l'ENSEMBLE des versions du contrat du filleul, jamais d'une version « courante », lues dans l'ordre chronologique de leur création, seules comptant celles POSTÉRIEURES À LA DERNIÈRE `resilie` (toutes s'il n'y en a aucune) : dernière version `resilie` → le filleul SORT de la liste ; une `signe` parmi les versions comptées → `signe` ; versions comptées toutes `envoye` → `en_signature` ; aucune version → absent ; toute autre combinaison → ÉCHEC FERMÉ, filleul absent et écart journalisé côté console, jamais un libellé par défaut. Tests, une fixture par branche : AVENANT ENVOYÉ SUR UN CONTRAT SIGNÉ → « signé », élément identique à l'octet près avant et après l'envoi de l'avenant ; avenant jamais signé → « signé » indéfiniment, horloge avancée ; premier contrat envoyé jamais signé → « en signature » ; résiliation → absent ; combinaison incohérente → absent et écart journalisé ; RELATION REPRISE : {signe, resilie, envoye} → « en signature », {signe, resilie, signe} → « signé », {signe, resilie} → absent, avenant après la reprise → « signé ». Le statut d'apporteur du filleul (`suspendu`, `resilie`, gel, anomalie, sincérité) n'est JAMAIS lu : un filleul au contrat `signe` dont l'apporteur passe `suspendu` reste affiché « signé », élément byte-identique avant et après ; aucun DTO de l'espace ne porte de champ de statut d'apporteur ni les valeurs `resilie`, `remplace`, `suspendu` (témoin qui les porte → rouge). (3) CLÉS EXACTES de chaque élément du DTO de liste : `prenom`, `initialeNom`, `etatContrat` — rien d'autre ; un témoin portant une clé d'activité (`nbDepots`, `actif`, `derniereVente`, `lastSeenAt`) ou un montant fait rougir le test. (4) Fixture à deux niveaux → les filleuls des filleuls sont absents. (5) Deux filleuls au même état de contrat, l'un actif et l'autre non → éléments byte-identiques hors prénom et initiale. (6) Le montant de parrainage reste agrégé par mois, jamais ventilé par filleul (REQ-UX-006). (7) Le filleul d'un autre apporteur n'apparaît jamais ; son identifiant sur une route paramétrée rend le 404 byte-identique. L'alinéa amendé est rédigé dans le gabarit par JUR-T01 : cette tâche n'arme pas en production avant la signature du premier contrat qui le porte. REQ-UX-047 (passe GOV-115, 2026-09-30) : geste principal : DETTE NOMMÉE, geste non encore connu, à écrire à la revendication ; budget : lu dans `BUDGETS_UX` (consultation au plus 3 interactions, saisie au plus 8), mesuré par la fixture QA-T33. Son droit `ecran:*` est déclaré dans la matrice ; la maquette de l'écran est validée dans `docs/maquettes/VALIDATION.md` avant la première ligne de code ; cinq états (REQ-UX-019 amendée).",
       "tests": {
         "REQ-UX-041": [
           "tests/unit/espace/mes-filleuls-liste.spec.ts"
@@ -12431,13 +12474,14 @@
       "reqs": [
         "REQ-UX-042",
         "REQ-UX-044",
-        "REQ-DM-047"
+        "REQ-DM-047",
+        "REQ-UX-047"
       ],
       "hyp": [],
       "externe": null,
-      "estimateDays": 1,
+      "estimateDays": 1.1,
       "statut": "a_faire",
-      "acceptance": "(1) L'écran rend les indicateurs de DM-29 sur une période choisie, filtrables par canal, statut et secteur (section et division). (2) Les montants par apporteur ne sortent que pour les rôles que la matrice autorise ; `lecteur` → aucune clé de montant par apporteur dans le DTO. (3) TRIS RÉSERVÉS À LA CONSOLE : garde statique, témoin à deux faces — un fichier sous `src/app/(espace)/**` qui importe un module de statistiques fait rougir la garde et le nomme ; le dépôt réel sort vert avec le compte des fichiers confrontés. Le terme que REQ-GOV-017 bannit n'apparaît pas (`pnpm gov:lexique`). (4) axe-core 0 violation serious ou critical ; poids de la route mesuré avant/après, ≤ 75 KB gz.",
+      "acceptance": "(1) L'écran rend les indicateurs de DM-29 sur une période choisie, filtrables par canal, statut et secteur (section et division). (2) Les montants par apporteur ne sortent que pour les rôles que la matrice autorise ; `lecteur` → aucune clé de montant par apporteur dans le DTO. (3) TRIS RÉSERVÉS À LA CONSOLE : garde statique, témoin à deux faces — un fichier sous `src/app/(espace)/**` qui importe un module de statistiques fait rougir la garde et le nomme ; le dépôt réel sort vert avec le compte des fichiers confrontés. Le terme que REQ-GOV-017 bannit n'apparaît pas (`pnpm gov:lexique`). (4) axe-core 0 violation serious ou critical ; poids de la route mesuré avant/après, ≤ 75 KB gz. REQ-UX-047 (passe GOV-115, 2026-09-30) : geste principal : DETTE NOMMÉE, geste non encore connu, à écrire à la revendication ; budget : lu dans `BUDGETS_UX` (consultation au plus 3 interactions, saisie au plus 8), mesuré par la fixture QA-T33. Son droit `ecran:*` est déclaré dans la matrice ; la maquette de l'écran est validée dans `docs/maquettes/VALIDATION.md` avant la première ligne de code ; cinq états (REQ-UX-019 amendée).",
       "tests": {
         "REQ-UX-042": [
           "tests/unit/console/statistiques.spec.ts"
@@ -12539,15 +12583,16 @@
         "DM-20"
       ],
       "reqs": [
-        "REQ-SEC-039"
+        "REQ-SEC-039",
+        "REQ-UX-047"
       ],
       "hyp": [
         "HYP-W15-NOTES"
       ],
       "externe": null,
-      "estimateDays": 1,
+      "estimateDays": 1.1,
       "statut": "a_faire",
-      "acceptance": "TÂCHE SENSIBLE — données personnelles ; ELLE ÉCRIT LE SCHÉMA (modèle de note). (1) Création, modification et suppression réservées aux rôles de la matrice ; rôle absent → refus. (2) Chaque geste écrit un événement au journal chaîné. (3) GARDE STATIQUE, TÉMOIN À DEUX FACES : AUCUN écran ni DTO d'écran de l'espace ne porte une note — le modèle de note est inaccessible par `forApporteur`, et la garde rougit sur tout lecteur des notes autre que la console et la fonction d'export art. 15 du module RGPD (DM-20), seule exemptée et nommée dans la garde ; un DTO de l'espace portant une clé de note la fait rougir. (4) Aucune note n'entre dans un e-mail, une alerte Telegram, un score ni un déclencheur. (5) L'export d'accès art. 15 d'une fixture (DM-20), quel que soit le canal de la demande — y compris le téléchargement depuis l'espace (REQ-UX-030, REQ-JUR-025), qui ne sert que le fichier produit —, CONTIENT les notes, chacune horodatée et son auteur désigné par son rôle de console, jamais par son nom (HYP-W15-NOTES).",
+      "acceptance": "TÂCHE SENSIBLE — données personnelles ; ELLE ÉCRIT LE SCHÉMA (modèle de note). (1) Création, modification et suppression réservées aux rôles de la matrice ; rôle absent → refus. (2) Chaque geste écrit un événement au journal chaîné. (3) GARDE STATIQUE, TÉMOIN À DEUX FACES : AUCUN écran ni DTO d'écran de l'espace ne porte une note — le modèle de note est inaccessible par `forApporteur`, et la garde rougit sur tout lecteur des notes autre que la console et la fonction d'export art. 15 du module RGPD (DM-20), seule exemptée et nommée dans la garde ; un DTO de l'espace portant une clé de note la fait rougir. (4) Aucune note n'entre dans un e-mail, une alerte Telegram, un score ni un déclencheur. (5) L'export d'accès art. 15 d'une fixture (DM-20), quel que soit le canal de la demande — y compris le téléchargement depuis l'espace (REQ-UX-030, REQ-JUR-025), qui ne sert que le fichier produit —, CONTIENT les notes, chacune horodatée et son auteur désigné par son rôle de console, jamais par son nom (HYP-W15-NOTES). REQ-UX-047 (passe GOV-115, 2026-09-30) : geste principal : DETTE NOMMÉE, geste non encore connu, à écrire à la revendication ; budget : lu dans `BUDGETS_UX` (consultation au plus 3 interactions, saisie au plus 8), mesuré par la fixture QA-T33. Son droit `ecran:*` est déclaré dans la matrice ; la maquette de l'écran est validée dans `docs/maquettes/VALIDATION.md` avant la première ligne de code ; cinq états (REQ-UX-019 amendée).",
       "tests": {
         "REQ-SEC-039": [
           "tests/unit/console/notes-internes.spec.ts"
@@ -12619,7 +12664,8 @@
         "JUR-T30"
       ],
       "reqs": [
-        "REQ-UX-046"
+        "REQ-UX-046",
+        "REQ-UX-047"
       ],
       "hyp": [
         "HYP-W15-BIBLIOTHEQUE"
@@ -12627,7 +12673,7 @@
       "externe": null,
       "estimateDays": 1.5,
       "statut": "a_faire",
-      "acceptance": "TÂCHE SENSIBLE — espace et données personnelles ; ELLE ÉCRIT LE SCHÉMA (document et versions). (1) Console : ajout, remplacement versionné (l'ancienne version conservée et plus jamais servie), retrait par dépublication, ciblage tous / un palier / un apporteur, date de publication ; chaque geste journalisé. (2) Espace, par `forApporteur` : un document ciblé sur un palier est visible de ce palier ; pour un autre apporteur, sa route rend le 404 byte-identique à un identifiant inexistant (test en boîte noire). (3) Publication datée de demain → invisible aujourd'hui (horloge injectée). (4) Fichier non PDF, jugé sur ses octets d'en-tête → refus ; stockage privé, URL signée courte. (5) Inventaire des ressources téléchargeables : aucun fichier de logo ni de charte (REQ-JUR-041) ; le terme que REQ-JUR-041 bannit n'apparaît nulle part (`pnpm gov:lexique`).",
+      "acceptance": "TÂCHE SENSIBLE — espace et données personnelles ; ELLE ÉCRIT LE SCHÉMA (document et versions). (1) Console : ajout, remplacement versionné (l'ancienne version conservée et plus jamais servie), retrait par dépublication, ciblage tous / un palier / un apporteur, date de publication ; chaque geste journalisé. (2) Espace, par `forApporteur` : un document ciblé sur un palier est visible de ce palier ; pour un autre apporteur, sa route rend le 404 byte-identique à un identifiant inexistant (test en boîte noire). (3) Publication datée de demain → invisible aujourd'hui (horloge injectée). (4) Fichier non PDF, jugé sur ses octets d'en-tête → refus ; stockage privé, URL signée courte. (5) Inventaire des ressources téléchargeables : aucun fichier de logo ni de charte (REQ-JUR-041) ; le terme que REQ-JUR-041 bannit n'apparaît nulle part (`pnpm gov:lexique`). REQ-UX-047 (passe GOV-115, 2026-09-30) : geste principal : DETTE NOMMÉE, geste non encore connu, à écrire à la revendication ; budget : lu dans `BUDGETS_UX` (consultation au plus 3 interactions, saisie au plus 8), mesuré par la fixture QA-T33. Son droit `ecran:*` est déclaré dans la matrice ; la maquette de l'écran est validée dans `docs/maquettes/VALIDATION.md` avant la première ligne de code ; cinq états (REQ-UX-019 amendée).",
       "tests": {
         "REQ-UX-046": [
           "tests/unit/console/bibliotheque.spec.ts",
@@ -14416,10 +14462,11 @@
         "REQ-UX-017",
         "REQ-UX-019",
         "REQ-DM-008",
-        "REQ-UX-061"
+        "REQ-UX-061",
+        "REQ-UX-047"
       ],
-      "estimateDays": 1,
-      "acceptance": "Source : docs/chantiers/W20-confirmation-par-email.md (décision de Williams du 2026-09-29, session -d7, phase 1). Réalise REQ-UX-061 (Exigence nouvelle proposée au §3 du plan, à inscrire par la passe gardien-spec puis à ajouter à `reqs` ; les HYP-W20 citées ici ne sont pas encore au §2 de docs/DECISIONS.md, elles entreront dans `hyp` par la même passe.). Maquette confirmation-contact.html validée (UX-P1-40). (1) Hors session ; l'ouverture n'écrit rien, les boutons postent (SEC-40). (2) « Oui, nous avons échangé » en au plus 2 interactions depuis l'e-mail ; « Non » en 3, par un second geste explicite affiché en place, sans fenêtre modale. (3) Information de l'article 14 dépliable et lien d'opposition sur la page (JUR-T09). (4) La page ne montre que le nom de l'entreprise et les prénom et nom de l'apporteur. (5) Cinq états : question, merci, déjà répondu, lien inconnu ou expiré (un seul texte, sans oracle), erreur avec reprise. (6) REQ-UX-017 : axe-core sans violation sérieuse, cibles de 48 px, texte de 18 px, 320 px sans défilement horizontal ; aucune ressource tierce chargée. E2E mobile-chrome. Exigence transverse de Williams : fluide, intuitif, moderne, sans friction, mobile d'abord, cinq états nommés.",
+      "estimateDays": 1.1,
+      "acceptance": "Source : docs/chantiers/W20-confirmation-par-email.md (décision de Williams du 2026-09-29, session -d7, phase 1). Réalise REQ-UX-061 (Exigence nouvelle proposée au §3 du plan, à inscrire par la passe gardien-spec puis à ajouter à `reqs` ; les HYP-W20 citées ici ne sont pas encore au §2 de docs/DECISIONS.md, elles entreront dans `hyp` par la même passe.). Maquette confirmation-contact.html validée (UX-P1-40). (1) Hors session ; l'ouverture n'écrit rien, les boutons postent (SEC-40). (2) « Oui, nous avons échangé » en au plus 2 interactions depuis l'e-mail ; « Non » en 3, par un second geste explicite affiché en place, sans fenêtre modale. (3) Information de l'article 14 dépliable et lien d'opposition sur la page (JUR-T09). (4) La page ne montre que le nom de l'entreprise et les prénom et nom de l'apporteur. (5) Cinq états : question, merci, déjà répondu, lien inconnu ou expiré (un seul texte, sans oracle), erreur avec reprise. (6) REQ-UX-017 : axe-core sans violation sérieuse, cibles de 48 px, texte de 18 px, 320 px sans défilement horizontal ; aucune ressource tierce chargée. E2E mobile-chrome. Exigence transverse de Williams : fluide, intuitif, moderne, sans friction, mobile d'abord, cinq états nommés. REQ-UX-047 (passe GOV-115, 2026-09-30) : geste principal : DETTE NOMMÉE, geste non encore connu, à écrire à la revendication ; budget : lu dans `BUDGETS_UX` (consultation au plus 3 interactions, saisie au plus 8), mesuré par la fixture QA-T33. Son droit `ecran:*` est déclaré dans la matrice ; la maquette de l'écran est validée dans `docs/maquettes/VALIDATION.md` avant la première ligne de code ; cinq états (REQ-UX-019 amendée).",
       "tests": {
         "REQ-JUR-009": [
           "tests/unit/public/page-de-confirmation.spec.ts"
@@ -14920,13 +14967,14 @@
         "JUR-T34"
       ],
       "reqs": [
-        "REQ-JUR-025"
+        "REQ-JUR-025",
+        "REQ-UX-047"
       ],
       "hyp": [],
       "externe": null,
-      "estimateDays": 0.5,
+      "estimateDays": 0.6,
       "statut": "a_faire",
-      "acceptance": "DETTE BLOQUANTE POUR LA MISE EN SERVICE, relevee par la lentille A07 juriste sur la PR #242 (JUR-T34), et deja signalee par la lentille securite. La page /confidentialite, lisible sans session, affiche le registre de l article 30 tel quel : les rubriques A completer y montrent la question interne posee a Williams, le prenom Will apparait (a confirmer par Will), et le mot attribution, refuse par le lexique de l espace, y est lu. A LIVRER : (1) la page n affiche jamais une question interne ni un nom de personne ; une rubrique encore A completer s affiche comme en cours de redaction, sans la question ; (2) aucun mot du lexique interdit de l espace n atteint la page, que la garde lexicale lise le texte a l execution ou que le registre soit reformule pour l apporteur ; (3) le choix est ecrit ; (4) TEMOIN rouge d abord : un registre de fixture qui porte une question interne, le prenom Will et le mot attribution produit une page qui n en montre aucun, et le temoin nomme ce qu il a filtre. Aucune mise en service de l espace avant cette tache. Dette apres lancement notee a part : l historique des versions acceptees, et la micro-copie Votre espace s ouvre une fois cette politique acceptee, inexacte tant qu aucune route ne verifie l accord hors connexion.",
+      "acceptance": "DETTE BLOQUANTE POUR LA MISE EN SERVICE, relevee par la lentille A07 juriste sur la PR #242 (JUR-T34), et deja signalee par la lentille securite. La page /confidentialite, lisible sans session, affiche le registre de l article 30 tel quel : les rubriques A completer y montrent la question interne posee a Williams, le prenom Will apparait (a confirmer par Will), et le mot attribution, refuse par le lexique de l espace, y est lu. A LIVRER : (1) la page n affiche jamais une question interne ni un nom de personne ; une rubrique encore A completer s affiche comme en cours de redaction, sans la question ; (2) aucun mot du lexique interdit de l espace n atteint la page, que la garde lexicale lise le texte a l execution ou que le registre soit reformule pour l apporteur ; (3) le choix est ecrit ; (4) TEMOIN rouge d abord : un registre de fixture qui porte une question interne, le prenom Will et le mot attribution produit une page qui n en montre aucun, et le temoin nomme ce qu il a filtre. Aucune mise en service de l espace avant cette tache. Dette apres lancement notee a part : l historique des versions acceptees, et la micro-copie Votre espace s ouvre une fois cette politique acceptee, inexacte tant qu aucune route ne verifie l accord hors connexion. REQ-UX-047 (passe GOV-115, 2026-09-30) : geste principal : DETTE NOMMÉE, geste non encore connu, à écrire à la revendication ; budget : lu dans `BUDGETS_UX` (consultation au plus 3 interactions, saisie au plus 8), mesuré par la fixture QA-T33. Son droit `ecran:*` est déclaré dans la matrice ; la maquette de l'écran est validée dans `docs/maquettes/VALIDATION.md` avant la première ligne de code ; cinq états (REQ-UX-019 amendée).",
       "tests": {
         "REQ-JUR-025": [
           "tests/unit/juridique/politique-publique-sans-note-interne.spec.ts"
