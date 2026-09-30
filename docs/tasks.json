@@ -14853,7 +14853,11 @@
         "docs/env.md",
         "src/server/integrations/axionia/api-entrante.ts",
         "docs/runbooks/secret-desynchronise.md",
-        "tests/unit/securite/webhook-signature.spec.ts"
+        "tests/unit/securite/webhook-signature.spec.ts",
+        "src/server/integrations/axionia/candidature-recue.ts",
+        "tests/integration/webhook.spec.ts",
+        "tests/integration/frontiere.spec.ts",
+        "tests/integration/candidature-recue.spec.ts"
       ],
       "schema": false,
       "sensible": [],
