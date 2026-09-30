@@ -80,31 +80,115 @@ export const DENY_DU_LOT: readonly string[] = [
   'Bash(git reset:*)',
   'Bash(git checkout:*)',
   'Bash(git restore:*)',
+  'PowerShell',
 ];
 
-/** Le hook du lot : lancé par node (types effacés), sans dépendance. */
+/**
+ * Le hook du lot : lancé par node (types effacés), sans dépendance, par CHEMIN ABSOLU, et FERMÉ SUR
+ * ÉCHEC. Un hook ne bloque que sur le code 2 : un node qui plante (fichier absent, TS non chargé,
+ * autre dossier courant) rend 1 et laisserait passer l'outil. `|| exit 2` fait de toute sortie non
+ * nulle un refus (lentille securite, #262).
+ */
 export const COMMANDE_DE_LA_GARDE =
-  'node --no-warnings scripts/lot/lot-dedie-gardien-spec.ts --garde';
+  'node --no-warnings "$CLAUDE_PROJECT_DIR/scripts/lot/lot-dedie-gardien-spec.ts" --garde || exit 2';
 export const OUTILS_D_ECRITURE = ['Write', 'Edit', 'MultiEdit', 'NotebookEdit'] as const;
-const MATCHER_DE_LA_GARDE = [...OUTILS_D_ECRITURE, 'Bash'].join('|');
+
+/**
+ * La garde voit TOUS les outils (`*`) et refuse par défaut : seuls passent ces outils de lecture,
+ * les écritures des trois fichiers et les commandes Bash de la liste. PowerShell, un sous-agent, un
+ * outil MCP ou tout outil à venir sont refusés sans avoir été nommés.
+ */
+export const OUTILS_DE_LECTURE: readonly string[] = [
+  'Read',
+  'Grep',
+  'Glob',
+  'TodoWrite',
+  'ToolSearch',
+  'AskUserQuestion',
+];
+const MATCHER_DE_LA_GARDE = '*';
 
 /** Toute commande portant l'un de ces caractères enchaîne, redirige ou substitue : refusée. */
 const METACARACTERES = /[;&|<>`$\n\r\\]/;
-const BRANCHE_T = 't\\/[A-Za-z0-9._-]+';
+const BRANCHE_T = /^t\/[A-Za-z0-9._-]+$/;
+/** Un argument libre : ni option, ni guillemet, ni espace. */
+const MOT = /^[A-Za-z0-9._/=,:@~^][A-Za-z0-9._/=,:@~^-]*$/;
 
-/** Les seules commandes Bash que la garde laisse passer. Tout le reste est refusé. */
-export const COMMANDES_PERMISES: readonly RegExp[] = [
-  /^git (status|diff|log|show|fetch)( |$)/,
-  /^git add( docs\/(DECISIONS|GLOSSAIRE|PRESEANCE)\.md)+$/,
-  /^git commit -m "[^"]+"$/,
-  new RegExp(`^git push( -u)? origin ${BRANCHE_T}$`),
-  new RegExp(`^git switch -c ${BRANCHE_T}$`),
-  /^gh pr (view|checks|diff|create)( |$)/,
-  /^gh run (view|list)( |$)/,
-];
+/**
+ * Les options permises, EXACTES : git accepte les abréviations (`--upl` pour `--upload-pack`),
+ * donc on ne refuse pas des options connues, on n'admet que celles-ci. `-c`, `--exec`,
+ * `--upload-pack`, `--ext-diff`, `--textconv` et `--output` n'y sont pas.
+ */
+const OPTIONS_GIT_LECTURE = new Set([
+  '--',
+  '--oneline',
+  '--stat',
+  '--name-only',
+  '--name-status',
+  '--short',
+  '-s',
+  '-b',
+  '-sb',
+  '--cached',
+  '--staged',
+  '-p',
+  '--graph',
+  '--decorate',
+  '--no-color',
+  '-n',
+]);
+const OPTIONS_GH_LECTURE = new Set([
+  '--json',
+  '--patch',
+  '--name-only',
+  '--log',
+  '--log-failed',
+  '--limit',
+  '-L',
+  '--branch',
+  '--comments',
+]);
 
-/** Une option qui fait écrire une commande de lecture (`git diff --output=…`) : refusée. */
-const OPTION_QUI_ECRIT = /(^| )(--output|-o)(=| |$)/;
+/** Chaque mot est un argument libre ou une option de la liste (`-5` compte comme `-n 5`). */
+const argumentsSurs = (mots: string[], options: Set<string>): boolean =>
+  mots.every((m) => options.has(m) || /^-\d+$/.test(m) || (!m.startsWith('-') && MOT.test(m)));
+
+/** Le seul fichier de corps admis : un `.md` à la racine, sans dossier ni `..` (pas de `.env`). */
+const CORPS_DE_PR = /^[A-Za-z0-9_-]+\.md$/;
+
+function jugerMots(mots: string[]): boolean {
+  const [outil, sous, ...reste] = mots;
+  if (outil === 'git') {
+    if (['status', 'diff', 'log', 'show'].includes(sous ?? '')) {
+      return argumentsSurs(reste, OPTIONS_GIT_LECTURE);
+    }
+    if (sous === 'fetch')
+      return reste.length === 0 || (reste.length === 1 && reste[0] === 'origin');
+    if (sous === 'add') {
+      return (
+        reste.length > 0 && reste.every((m) => (FICHIERS_DU_LOT as readonly string[]).includes(m))
+      );
+    }
+    if (sous === 'push') {
+      const r = reste[0] === '-u' ? reste.slice(1) : reste;
+      return r.length === 2 && r[0] === 'origin' && BRANCHE_T.test(r[1] ?? '');
+    }
+    if (sous === 'switch')
+      return reste.length === 2 && reste[0] === '-c' && BRANCHE_T.test(reste[1] ?? '');
+    return false;
+  }
+  if (outil === 'gh') {
+    const [verbe, ...args] = reste;
+    if (
+      (sous === 'pr' && ['view', 'checks', 'diff'].includes(verbe ?? '')) ||
+      (sous === 'run' && ['view', 'list'].includes(verbe ?? ''))
+    ) {
+      return argumentsSurs(args, OPTIONS_GH_LECTURE);
+    }
+    return false;
+  }
+  return false;
+}
 
 /** `null` si la commande passe ; sinon, la raison du refus. */
 export function jugerCommande(commande: string): string | null {
@@ -112,16 +196,29 @@ export function jugerCommande(commande: string): string | null {
   if (METACARACTERES.test(c)) {
     return `commande refusée dans le lot : elle enchaîne, redirige ou substitue (« ${c} »).`;
   }
-  if (OPTION_QUI_ECRIT.test(c)) {
-    return `commande refusée dans le lot : l'option --output écrit un fichier (« ${c} »).`;
-  }
-  if (!COMMANDES_PERMISES.some((m) => m.test(c))) {
-    return (
-      `commande refusée dans le lot : hors de la liste (lire, git add des trois fichiers, ` +
-      `commit, push sur t/*, gh en lecture). Fais-la dans une session ordinaire (« ${c} »).`
+  // Les deux seules commandes à texte libre, entre guillemets doubles, sans guillemet intérieur.
+  const commit = /^git commit -m "([^"]+)"$/.exec(c);
+  if (commit) return null;
+  const pr =
+    /^gh pr create((?: --title "[^"]+"| --body-file \S+| --base main| --head \S+| --draft)+)$/.exec(
+      c
     );
+  if (pr) {
+    const fichier = /--body-file (\S+)/.exec(pr[1] ?? '')?.[1];
+    const tete = /--head (\S+)/.exec(pr[1] ?? '')?.[1];
+    if (
+      (fichier === undefined || CORPS_DE_PR.test(fichier)) &&
+      (tete === undefined || BRANCHE_T.test(tete))
+    ) {
+      return null;
+    }
+  } else if (!c.includes('"') && !c.includes("'") && jugerMots(c.split(/\s+/))) {
+    return null;
   }
-  return null;
+  return (
+    `commande refusée dans le lot : hors de la liste (lire, git add des trois fichiers, ` +
+    `commit, push sur t/*, gh en lecture). Fais-la dans une session ordinaire (« ${c} »).`
+  );
 }
 
 function cheminReel(absolu: string): string | null {
@@ -171,7 +268,8 @@ export function jugerOutil(entree: EntreeDeHook, racine: string): string | null 
     return jugerEcriture(chemin, racine);
   }
   if (outil === 'Bash') return jugerCommande(entree.tool_input?.command ?? '');
-  return null;
+  if (OUTILS_DE_LECTURE.includes(outil)) return null;
+  return `outil refusé dans le lot : « ${outil} » n'est ni une lecture, ni une écriture des trois fichiers, ni Bash.`;
 }
 
 export type Reglages = {

@@ -10,6 +10,7 @@
  * Williams, jointe à la PR.
  */
 import { describe, it, expect } from 'vitest';
+import { spawnSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -67,13 +68,8 @@ describe('REQ-GOV-010 — le lot dédié du gardien-spec ouvre trois fichiers et
     const garde = lot.PreToolUse?.find((c) =>
       c.hooks?.some((h) => h.command === COMMANDE_DE_LA_GARDE)
     );
-    expect(garde?.matcher?.split('|').sort()).toEqual([
-      'Bash',
-      'Edit',
-      'MultiEdit',
-      'NotebookEdit',
-      'Write',
-    ]);
+    // La garde voit TOUS les outils : un outil qu'elle ne nomme pas est refusé, pas ignoré.
+    expect(garde?.matcher).toBe('*');
     expect(LOT.env).toEqual(PROJET.env);
   });
 
@@ -241,5 +237,91 @@ describe('REQ-GOV-010 — le confinement du lot est mécanique, pas une liste (l
     expect(
       jugerOutil({ tool_name: 'Read', tool_input: { file_path: 'docs/tasks.json' } }, RACINE)
     ).toBeNull();
+  });
+});
+
+describe('REQ-GOV-010 — les trois fuites relevées par la lentille securite sur 626f6b0e (#262)', () => {
+  it('REQ-GOV-010 — FUITE 1 : une option qui fait exécuter git (--upload-pack, abrégée ou non) est refusée', () => {
+    for (const c of [
+      'git fetch --upload-pack="sed -i s/GOV/PIRATE/ docs/tasks.json" .',
+      'git fetch --upload-pack=x .',
+      'git fetch --upl=x .',
+      'git fetch origin main',
+      'git log --upl=x',
+      'git diff --ext-diff',
+      'git diff --textconv',
+      'git show --exec=x',
+      'git status -c core.fsmonitor=x',
+      'git log --output=docs/tasks.json',
+      'git log --outp=docs/tasks.json',
+      'gh pr view 262 --web',
+      'gh pr create --body-file .env',
+      'gh pr create --body-file ../ailleurs.md',
+      'gh pr create --body-file docs/tasks.json',
+      'gh pr create --head main --title "x"',
+    ]) {
+      expect(jugerCommande(c), c).not.toBeNull();
+    }
+    for (const c of [
+      'git fetch',
+      'git fetch origin',
+      'git log -5 --oneline',
+      'git diff --stat -- docs/GLOSSAIRE.md',
+    ]) {
+      expect(jugerCommande(c), c).toBeNull();
+    }
+  });
+
+  it('REQ-GOV-010 — FUITE 2 : un outil que la garde ne nomme pas (PowerShell, sous-agent, MCP) est refusé', () => {
+    const RACINE = mkdtempSync(join(tmpdir(), 'lot-outils-'));
+    for (const outil of [
+      'PowerShell',
+      'Agent',
+      'WebFetch',
+      'mcp__gmail__send_message',
+      'OutilAVenir',
+    ]) {
+      expect(jugerOutil({ tool_name: outil, tool_input: {} }, RACINE), outil).not.toBeNull();
+    }
+    for (const outil of ['Read', 'Grep', 'Glob']) {
+      expect(jugerOutil({ tool_name: outil, tool_input: {} }, RACINE), outil).toBeNull();
+    }
+    expect(DENY_DU_LOT).toContain('PowerShell');
+  });
+
+  /** Joue la commande EXACTE du hook, comme Claude la lance : par bash, JSON sur l'entrée. */
+  const jouerLaGarde = (projet: string, entree: object): number | null =>
+    spawnSync('bash', ['-c', COMMANDE_DE_LA_GARDE], {
+      input: JSON.stringify(entree),
+      env: { ...process.env, CLAUDE_PROJECT_DIR: projet },
+    }).status;
+
+  it('REQ-GOV-010 — FUITE 3 : la garde introuvable ou en panne REFUSE (code 2), elle n’échoue pas ouverte', () => {
+    const vide = mkdtempSync(join(tmpdir(), 'lot-sans-garde-'));
+    expect(
+      jouerLaGarde(vide, { tool_name: 'Write', tool_input: { file_path: 'docs/GLOSSAIRE.md' } })
+    ).toBe(2);
+    expect(jouerLaGarde(vide, { tool_name: 'Read', tool_input: { file_path: 'README.md' } })).toBe(
+      2
+    );
+  });
+
+  it('REQ-GOV-010 — la commande exacte du hook, jouée par bash sur ce dépôt : 0 pour le lot, 2 pour le reste', () => {
+    const ici = process.cwd();
+    expect(
+      jouerLaGarde(ici, { tool_name: 'Write', tool_input: { file_path: 'docs/GLOSSAIRE.md' } })
+    ).toBe(0);
+    expect(
+      jouerLaGarde(ici, { tool_name: 'Write', tool_input: { file_path: 'docs/tasks.json' } })
+    ).toBe(2);
+    expect(
+      jouerLaGarde(ici, { tool_name: 'PowerShell', tool_input: { command: 'Set-Content x y' } })
+    ).toBe(2);
+    expect(
+      jouerLaGarde(ici, {
+        tool_name: 'Bash',
+        tool_input: { command: 'git fetch --upload-pack="sed -i s/GOV/PIRATE/ docs/tasks.json" .' },
+      })
+    ).toBe(2);
   });
 });

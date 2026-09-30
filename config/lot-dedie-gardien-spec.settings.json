@@ -82,7 +82,8 @@
       "Bash(git rebase:*)",
       "Bash(git reset:*)",
       "Bash(git checkout:*)",
-      "Bash(git restore:*)"
+      "Bash(git restore:*)",
+      "PowerShell"
     ]
   },
   "hooks": {
@@ -97,11 +98,11 @@
         ]
       },
       {
-        "matcher": "Write|Edit|MultiEdit|NotebookEdit|Bash",
+        "matcher": "*",
         "hooks": [
           {
             "type": "command",
-            "command": "node --no-warnings scripts/lot/lot-dedie-gardien-spec.ts --garde"
+            "command": "node --no-warnings \"$CLAUDE_PROJECT_DIR/scripts/lot/lot-dedie-gardien-spec.ts\" --garde || exit 2"
           }
         ]
       }

@@ -44,14 +44,21 @@ fichier de plus :
    règles manque au `deny` du projet.
 5. **Le confinement est mécanique** (lentille securite, 2026-09-30). `--setting-sources user` charge
    aussi `~/.claude/settings.json` : son mode et ses `allow` s'ajoutent à ceux du lot, et un
-   `deny` ne les borne que motif par motif. Un hook `PreToolUse` du lot
-   (`lot-dedie-gardien-spec.ts --garde`) juge donc chaque `Write`, `Edit`, `MultiEdit`,
-   `NotebookEdit` et `Bash`, quelle que soit la règle héritée. Une écriture passe si son chemin,
-   RÉSOLU puis suivi jusqu'au fichier réel, est l'un des trois fichiers, casse comprise (seule la
-   lettre de lecteur Windows est normalisée). Une commande passe si elle ne porte aucun
-   métacaractère et figure sur une liste : la lecture, `git add` des trois fichiers, `git commit -m`,
-   `git push` et `git switch -c` sur `t/*`, et `gh pr create`. Tout le reste est refusé, et le refus
-   est nommé.
+   `deny` ne les borne que motif par motif. Un hook `PreToolUse` du lot, sur TOUS les outils
+   (`*`), juge donc chaque appel, quelle que soit la règle héritée, et REFUSE PAR DÉFAUT :
+   - une écriture (`Write`, `Edit`, `MultiEdit`, `NotebookEdit`) passe si son chemin, RÉSOLU puis
+     suivi jusqu'au fichier réel, est l'un des trois fichiers, casse comprise (seule la lettre de
+     lecteur Windows est normalisée) ;
+   - une commande `Bash` passe si elle ne porte aucun métacaractère et figure sur une liste :
+     `git status/diff/log/show` avec des options de lecture EXACTES (git accepte les abréviations,
+     donc aucune option n'est admise hors liste : ni `-c`, ni `--upload-pack`, ni `--exec`, ni
+     `--ext-diff`, ni `--textconv`, ni `--output`), `git fetch` nu ou `origin`, `git add` des trois
+     fichiers, `git commit -m`, `git push` et `git switch -c` sur `t/*`, `gh pr create` (corps : un
+     `.md` à la racine) et `gh` en lecture ;
+   - `Read`, `Grep`, `Glob`, `TodoWrite`, `ToolSearch` et `AskUserQuestion` passent ; tout autre
+     outil (PowerShell, sous-agent, MCP, outil à venir) est refusé.
+   Le hook est lancé par chemin absolu (`$CLAUDE_PROJECT_DIR`) et FERMÉ SUR ÉCHEC (`|| exit 2`) :
+   un node qui plante refuse au lieu de laisser passer.
 
 ## Conséquences
 
