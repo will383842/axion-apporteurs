@@ -64,7 +64,8 @@ function fautesDeLActe(workflow: string, paquet: string, temoinSh: string): stri
   const scripts = (JSON.parse(paquet) as { scripts: Record<string, string> }).scripts;
   if (
     !/run: pnpm image:construire\s*$/m.test(workflow) ||
-    scripts['image:construire'] !== 'docker build --tag partners:construite .'
+    scripts['image:construire'] !==
+      'docker build --build-arg GITHUB_SHA --tag partners:construite .'
   )
     f.push('build_sans_base_absent : le workflow ne construit pas l’image sans variable');
   const temoin =
@@ -121,8 +122,8 @@ describe('REQ-QA-032 — le build réussit sans base, et ne triche pas pour y ar
       'une variable de base passée au build par le script de construction',
       PAQUET,
       paquet.replace(
-        'docker build --tag partners:construite .',
-        'docker build --build-arg DATABASE_URL=x --tag partners:construite .'
+        'docker build --build-arg GITHUB_SHA --tag partners:construite .',
+        'docker build --build-arg GITHUB_SHA --build-arg DATABASE_URL=x --tag partners:construite .'
       ),
       'substitution_de_build',
     ],

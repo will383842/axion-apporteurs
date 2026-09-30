@@ -3000,9 +3000,6 @@ export const PASSIF_SANS_SCRIPT: Readonly<Record<string, string>> = {
   'gov:contrat':
     'l’empreinte du contrat est tenue par `pnpm contracts:hash` (`scripts/contracts/export.ts ' +
     '--verifier`, câblé en porte A) ; ce nom de script n’a jamais existé : entrée à re-pointer.',
-  'gate-deploiement':
-    'tâche porteuse livrée ; le script de vérification d’atterrissage est déclaré par une tâche ' +
-    'de phase 0 non livrée, mais l’entrée reste attribuée à la tâche du socle : à ré-attribuer.',
   'gov:derivation':
     'garde DIFFÉRÉE par écrit (`docs/GARDES-AXIONIA.md` §2) et reprise par la tâche de la grille, ' +
     'qui déclare ce chemin ; son attribution d’origine est exigée par `gardes-transposees.spec.ts`.',
