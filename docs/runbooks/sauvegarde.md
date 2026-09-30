@@ -17,8 +17,14 @@ réussi sur un vidage lu sous `partners/chiffres/` : l'exercice **refuse** tout 
 **Et trois conditions de plus, avant la première donnée réelle** (lentille `securite`, PR 280) :
 
 1. **Une heure au plus en clair.** La plateforme dépose le vidage EN CLAIR sous `partners/` ; le
-   rechiffrement horaire le chiffre puis l'efface. Le clair vit donc une heure au plus. Les colonnes de
-   données personnelles sont déjà chiffrées dans la base, ce qui borne le risque de cette fenêtre.
+   rechiffrement horaire le chiffre puis l'efface. Ce n'est pas la cadence qui tient la fenêtre : un
+   planificateur sauté, une relecture en échec ou un run retardé laissent un clair vivre. C'est la
+   garde `pnpm sauvegarde:clairs` qui la tient : tout vidage en clair plus vieux que
+   `CLAIR_EN_DEPOT_MAX_MINUTES` (SSOT, 90 minutes, soit l'heure plus le retard d'un run), ou dont la
+   date est illisible, est nommé, et le geste sort en 1. Elle tourne après chaque rechiffrement, même
+   en échec, et chaque nuit. L'alerte Telegram sur cet échec est livrée par QA-T53, **préalable au même
+   rang**. Les colonnes de données personnelles sont déjà chiffrées dans la base, ce qui borne le
+   risque de cette fenêtre.
 2. **Aucune gestion des versions ni rétention d'objets** sur le préfixe `partners/` du bucket : sinon,
    le clair effacé survivrait en version antérieure. À vérifier dans le tableau de bord du bucket.
 3. **Le chiffré est relu avant l'effacement du clair** : `rechiffrer` relit l'objet chiffré qu'il vient
@@ -31,8 +37,9 @@ réussi sur un vidage lu sous `partners/chiffres/` : l'exercice **refuse** tout 
 | --- | --- | --- | --- |
 | Chaque heure | la plateforme | vidage de la base, déposé en clair | `partners/` du bucket `axion-ia-backups` |
 | Chaque heure, à :23 | la forge, `Sauvegarde` / `rechiffrer` | chiffrement côté client (AES-256-GCM), puis effacement du clair | `partners/chiffres/` |
+| Juste après, même en échec | la forge, `Sauvegarde` / `rechiffrer`, étape `sauvegarde:clairs` | rouge si un clair a plus de `CLAIR_EN_DEPOT_MAX_MINUTES` (SSOT) ou une date illisible, chacun nommé | — |
 | Le 1er du mois, 04:41 UTC | la forge, `Sauvegarde` / `exercice` | restauration du dernier vidage chiffré sur un Postgres 16 éphémère ; migrations propres ; au moins une ligne dans la table témoin ; verdict daté ; alerte sur échec | `partners/exercices/AAAA-MM-JJ.json` |
-| Chaque nuit, 03:17 UTC | la forge, `Nightly` / `sauvegarde-fraicheur` | rouge si le dernier exercice réussi est plus vieux que `EXERCICE_DE_RESTAURATION_MAX_JOURS` (SSOT), en échec, ou absent | — |
+| Chaque nuit, 03:17 UTC | la forge, `Nightly` / `sauvegarde-fraicheur` | rouge si le dernier exercice réussi est plus vieux que `EXERCICE_DE_RESTAURATION_MAX_JOURS` (SSOT), en échec, ou absent ; puis, même en échec, la garde `sauvegarde:clairs`, filet d'un planificateur horaire arrêté | — |
 
 La **table témoin** est dérivée du schéma : la table d'attribution dès que le modèle existe, sinon
 `_prisma_migrations`, et le verdict écrit alors « témoin de substitution ». Rien de la base restaurée ne
@@ -50,13 +57,20 @@ l'étape et le code de sortie.
    Partners), `COOLIFY_URL`, `COOLIFY_API_TOKEN`.
 2. Déclarer Cloudflare R2 comme stockage S3 dans la plateforme, puis poser les variables de dépôt
    `COOLIFY_S3_STORAGE_UUID` et `COOLIFY_DB_UUID` (rendu par le provisionnement).
-3. Lancer `Sauvegarde` à la main, geste `configurer` : la sauvegarde horaire est programmée ; relancé, il
+3. **Poser la variable de dépôt `PARTNERS_SAUVEGARDE_ACTIVEE` à `oui`, AVANT le pas suivant. C'est une
+   condition de mise en service** (arbitrage -a2 du 2026-09-30, lentille `securite`, PR 280). Une fois
+   la variable posée, un secret de lecture du bucket qui manque fait rougir la garde des clairs, même
+   sous le planificateur : l'alarme ne s'éteint plus en silence. Sans elle, `configurer` refuse de
+   programmer la sauvegarde, en le disant.
+4. Lancer `Sauvegarde` à la main, geste `configurer` : la sauvegarde horaire est programmée ; relancé, il
    dit « existe déjà ».
-4. Attendre un vidage, lancer `Sauvegarde` / `rechiffrer`, puis `Sauvegarde` / `exercice`. **Le verdict
+5. Attendre un vidage, lancer `Sauvegarde` / `rechiffrer`, puis `Sauvegarde` / `exercice`. **Le verdict
    réussi de cet exercice est la condition de mise en service.**
 
-Tant qu'un secret manque, chaque geste est **sauté** et nomme chaque absent en avertissement : rien n'est
-lu ni écrit.
+Tant qu'un secret manque, chaque geste **planifié** est sauté et nomme chaque absent en avertissement :
+rien n'est lu ni écrit. Exception : la garde des clairs, une fois `PARTNERS_SAUVEGARDE_ACTIVEE` posée,
+échoue au lieu de sauter. Les secrets de lecture présents, elle juge toujours, activée ou non. Un geste lancé **à la main** sans ses secrets échoue, en nommant chaque absent
+(arbitrage -d7 du 2026-09-30) : un vert vide ne prouve rien.
 
 ## Restaurer pour de vrai — la base est perdue
 
@@ -81,6 +95,20 @@ verdict sous `partners/exercices/`, dont le motif nomme l'étape :
 | `migrations` | la base sauvegardée n'est pas au niveau des migrations du dépôt |
 | `témoin : … est vide` | la base sauvegardée est vide |
 | `aucun vidage chiffré` | ni la plateforme ni le rechiffrement n'ont rien déposé |
+
+## Si un vidage reste en clair
+
+`sauvegarde:clairs` nomme chaque clair en souffrance par sa clé et sa date de dépôt. Lire d'abord le
+run `rechiffrer` de la même heure :
+
+| Ce qu'on lit | Cause probable | Geste |
+| --- | --- | --- |
+| `relu ne restitue pas … : le clair est GARDÉ` | le dépôt altère ce qu'il écrit | ne rien effacer à la main ; relancer `rechiffrer` ; si l'écart persiste, vérifier le jeton et le bucket |
+| aucun run `rechiffrer` à l'heure | planificateur arrêté ou désactivé | relancer `Sauvegarde` / `rechiffrer` à la main, puis réactiver le planificateur |
+| run sauté, secrets absents | environnement `production` incomplet | poser les secrets (Mise en place, pas 1) |
+| date illisible | objet déposé hors de la plateforme | l'identifier avant tout effacement : ce n'est peut-être pas un vidage |
+
+Le clair n'est jamais effacé à la main avant qu'un chiffré relu existe sous `partners/chiffres/`.
 
 ## Exécuté le
 

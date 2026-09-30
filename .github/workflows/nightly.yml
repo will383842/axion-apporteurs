@@ -146,3 +146,14 @@ jobs:
           R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
           R2_BUCKET: ${{ secrets.R2_BUCKET }}
         run: pnpm sauvegarde:fraicheur
+      # Filet de nuit : un planificateur horaire qui ne tourne plus laisserait le clair vivre sans
+      # qu'aucun run de `Sauvegarde` ne le nomme.
+      - name: Aucun vidage ne reste en clair au-dela du seuil de la SSOT
+        if: ${{ always() }}
+        env:
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+          PARTNERS_SAUVEGARDE_ACTIVEE: ${{ vars.PARTNERS_SAUVEGARDE_ACTIVEE }}
+        run: pnpm sauvegarde:clairs

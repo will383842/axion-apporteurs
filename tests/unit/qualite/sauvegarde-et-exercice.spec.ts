@@ -48,6 +48,7 @@ import { lireYaml } from '../../../scripts/lib/lire-yaml';
 import {
   rechiffrer,
   clairsEnSouffrance,
+  issueDesClairs,
   exercerLeDernier,
   issueDesSecretsAbsents,
   fraicheurDuDepot,
@@ -488,7 +489,7 @@ describe('REQ-QA-023 — TÉMOIN À DEUX FACES : aucun vidage ne reste en clair 
   // Lentille exactitude, PR 280 : « une heure au plus en clair » n’était tenu par rien — un
   // planificateur sauté, une relecture en échec ou un run retardé laissaient le clair vivre.
   const MAINTENANT = new Date('2026-09-30T06:00:00Z');
-  const SEUIL_MINUTES = 90;
+  const SEUIL_MINUTES = SEUILS.CLAIR_EN_DEPOT_MAX_MINUTES.valeur;
   const clair = (nom: string, date: string) => ({
     [`${PREFIXES.depot}${nom}`]: { contenu: Buffer.from('c'), date },
   });
@@ -531,5 +532,114 @@ describe('REQ-QA-023 — TÉMOIN À DEUX FACES : aucun vidage ne reste en clair 
     await expect(rechiffrer(d, CLE_CYCLE)).rejects.toThrow(/relu/);
     const r = await clairsEnSouffrance(d, MAINTENANT, SEUIL_MINUTES);
     expect(r.vieux.map((o) => o.cle)).toEqual([`${PREFIXES.depot}garde.dmp`]);
+  });
+});
+
+describe('REQ-QA-023 — la garde des clairs est une commande, son seuil vient de la SSOT, et elle tourne', () => {
+  it('REQ-QA-023 : le seuil est dans la SSOT, en minutes, à 90, avec sa source', () => {
+    const s = SEUILS.CLAIR_EN_DEPOT_MAX_MINUTES;
+    expect(s.unite).toBe('minutes');
+    expect(s.valeur).toBe(90);
+    expect(s.source).toMatch(/QA-T12/);
+  });
+
+  it('REQ-QA-023 : TÉMOIN À DEUX FACES — un clair en souffrance sort en 1 et est nommé ; aucun, en 0', () => {
+    const erreurs: string[] = [];
+    const avant = console.error;
+    const avantLog = console.log;
+    console.error = (l: string) => void erreurs.push(l);
+    console.log = () => undefined;
+    try {
+      const vieux = { cle: `${PREFIXES.depot}vieux.dmp`, date: '2026-09-30T04:00:00Z' };
+      expect(issueDesClairs({ vieux: [vieux], juges: 2 }, 90)).toBe(1);
+      expect(erreurs[0]).toBe(
+        `::error title=sauvegarde:clairs::${vieux.cle} déposé le ${vieux.date}, en clair depuis plus de 90 min (ou date illisible)`
+      );
+      erreurs.length = 0;
+      expect(issueDesClairs({ vieux: [], juges: 2 }, 90)).toBe(0);
+      expect(erreurs).toEqual([]);
+    } finally {
+      console.error = avant;
+      console.log = avantLog;
+    }
+  });
+
+  it('REQ-QA-023 : la commande existe, et la CLI la sert', () => {
+    const pkg = JSON.parse(readFileSync('package.json', 'utf8')) as {
+      scripts: Record<string, string>;
+    };
+    expect(pkg.scripts['sauvegarde:clairs']).toBe('tsx scripts/sauvegarde/cycle.ts clairs');
+  });
+
+  type Etape = { run?: string; if?: string };
+  const etapes = async (fichier: string, job: string): Promise<Etape[]> => {
+    const wf = (await lireYaml(readFileSync(`.github/workflows/${fichier}`, 'utf8'))) as {
+      jobs: Record<string, { steps: Etape[] }>;
+    };
+    return wf.jobs[job]?.steps ?? [];
+  };
+
+  it('REQ-QA-023 : après chaque rechiffrement, la garde tourne MÊME si le rechiffrement a échoué', async () => {
+    const e = await etapes('backup.yml', 'rechiffrer');
+    const iR = e.findIndex((x) => x.run === 'pnpm sauvegarde:rechiffrer');
+    const iC = e.findIndex((x) => x.run === 'pnpm sauvegarde:clairs');
+    expect(iR).toBeGreaterThanOrEqual(0);
+    expect(iC).toBeGreaterThan(iR);
+    expect(e[iC]?.if).toMatch(/always()/);
+  });
+
+  it('REQ-QA-023 : chaque nuit, la garde tourne aussi, même si la fraîcheur a rougi', async () => {
+    const e = await etapes('nightly.yml', 'sauvegarde-fraicheur');
+    const iC = e.findIndex((x) => x.run === 'pnpm sauvegarde:clairs');
+    expect(iC).toBeGreaterThanOrEqual(0);
+    expect(e[iC]?.if).toMatch(/always()/);
+  });
+});
+
+describe('REQ-QA-023 — la garde des clairs sans ses secrets : saut avant l’activation, rouge après', () => {
+  // Arbitrage -a2 sur délégation de Williams du 2026-09-30 (point de la lentille securite, PR 280).
+  const noms = ['R2_BUCKET'];
+
+  it('REQ-QA-023 : ACTIVÉE, sous le planificateur, un secret absent sort en 1 et est nommé en erreur', () => {
+    for (const declencheur of ['schedule', undefined]) {
+      const r = issueDesSecretsAbsents('sauvegarde:clairs', noms, declencheur, true);
+      expect(r.code, String(declencheur)).toBe(1);
+      expect(r.lignes).toContain(
+        '::error title=sauvegarde:clairs::R2_BUCKET absent alors que la sauvegarde est ACTIVÉE'
+      );
+      expect(r.lignes.join(' ')).not.toContain('SAUTÉ');
+    }
+  });
+
+  it('REQ-QA-023 : CONTRE-TÉMOIN — NON activée, sous le planificateur, le manque est sauté en 0 et nommé', () => {
+    const r = issueDesSecretsAbsents('sauvegarde:clairs', noms, 'schedule', false);
+    expect(r.code).toBe(0);
+    expect(
+      r.lignes.some((l) => l.startsWith('::warning title=sauvegarde:clairs::R2_BUCKET absent'))
+    ).toBe(true);
+  });
+
+  it('REQ-QA-023 : à la main, activée ou non, le manque est un échec nommé', () => {
+    for (const activee of [true, false]) {
+      const r = issueDesSecretsAbsents('sauvegarde:clairs', noms, 'workflow_dispatch', activee);
+      expect(r.code, String(activee)).toBe(1);
+    }
+  });
+
+  it('REQ-QA-023 : le signal d’activation parvient à chaque garde des clairs et à configurer', async () => {
+    const lus = [
+      ['backup.yml', 'rechiffrer', 'pnpm sauvegarde:clairs'],
+      ['nightly.yml', 'sauvegarde-fraicheur', 'pnpm sauvegarde:clairs'],
+      ['backup.yml', 'configurer', 'pnpm sauvegarde:configurer'],
+    ] as const;
+    for (const [fichier, job, run] of lus) {
+      const wf = (await lireYaml(readFileSync(`.github/workflows/${fichier}`, 'utf8'))) as {
+        jobs: Record<string, { steps: { run?: string; env?: Record<string, string> }[] }>;
+      };
+      const etape = wf.jobs[job]?.steps.find((x) => x.run === run);
+      expect(etape?.env?.PARTNERS_SAUVEGARDE_ACTIVEE, `${fichier} › ${job}`).toBe(
+        '${{ vars.PARTNERS_SAUVEGARDE_ACTIVEE }}'
+      );
+    }
   });
 });

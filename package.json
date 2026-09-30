@@ -161,6 +161,7 @@
     "sauvegarde:rechiffrer": "tsx scripts/sauvegarde/cycle.ts rechiffrer",
     "sauvegarde:exercice": "tsx scripts/sauvegarde/cycle.ts exercice",
     "sauvegarde:fraicheur": "tsx scripts/sauvegarde/cycle.ts fraicheur",
+    "sauvegarde:clairs": "tsx scripts/sauvegarde/cycle.ts clairs",
     "sauvegarde:configurer": "tsx scripts/sauvegarde/cycle.ts configurer",
     "coolify:provisionner": "tsx scripts/deploiement/provisionner.ts",
     "deploy:verify": "tsx scripts/gates/deploy-verify.ts --verifier",

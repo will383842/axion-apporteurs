@@ -5,6 +5,8 @@
  *   pnpm sauvegarde:rechiffrer    chaque heure : chiffre ce que la plateforme a déposé en clair
  *   pnpm sauvegarde:exercice      chaque mois : exerce le dernier vidage chiffré, alerte sur échec
  *   pnpm sauvegarde:fraicheur     chaque nuit : rougit si le dernier exercice réussi est trop vieux
+ *   pnpm sauvegarde:clairs        après chaque rechiffrement et chaque nuit : rougit si un vidage est
+ *                                 resté en clair au-delà de `CLAIR_EN_DEPOT_MAX_MINUTES` (SSOT)
  *   pnpm sauvegarde:configurer    à la main : programme la sauvegarde horaire de la base vers Cloudflare R2
  *
  * ── LA RÉPARTITION, ARBITRÉE PAR -d7 SUR DÉLÉGATION DE WILLIAMS DU 2026-09-29 ────────────────
@@ -90,6 +92,30 @@ export async function clairsEnSouffrance(
   return { vieux, juges: clairs.length };
 }
 
+/**
+ * L'issue de `sauvegarde:clairs` : 0 si aucun clair ne dépasse le seuil, 1 sinon, chaque clair en
+ * souffrance nommé en `::error::` par sa clé et sa date de dépôt. Pure, pour que le témoin la juge.
+ */
+export function issueDesClairs(
+  r: { vieux: ObjetDuDepot[]; juges: number },
+  seuilMinutes: number
+): number {
+  if (r.vieux.length === 0) {
+    console.log(
+      `✅ sauvegarde:clairs — ${r.juges} clair(s) en dépôt, aucun de plus de ${seuilMinutes} min`
+    );
+    return 0;
+  }
+  for (const o of r.vieux)
+    console.error(
+      `::error title=sauvegarde:clairs::${o.cle} déposé le ${o.date}, en clair depuis plus de ${seuilMinutes} min (ou date illisible)`
+    );
+  console.error(
+    `❌ sauvegarde:clairs — ${r.vieux.length} vidage(s) en clair au-delà de ${seuilMinutes} min sur ${r.juges}`
+  );
+  return 1;
+}
+
 /** Chaque vidage en clair déposé sous `partners/` (hors des deux sous-préfixes) : chiffré, puis effacé. */
 export async function rechiffrer(depot: Depot, phrase: string): Promise<{ rechiffres: number }> {
   const clairs = (await clairsDuDepot(depot)).sort(parDate);
@@ -168,12 +194,28 @@ function manquantes(noms: readonly string[]): string[] {
 /**
  * PURE. L'issue d'un geste auquel des secrets manquent : SAUTÉ en 0 sous le planificateur (une
  * attente connue), ÉCHEC en 1 quand il a été lancé à la main — un vert vide tromperait l'opérateur.
+ *
+ * `activee` (arbitrage -a2 sur délégation de Williams du 2026-09-30, sur le point de la lentille
+ * securite, PR 280) : une fois la sauvegarde ACTIVÉE (`PARTNERS_SAUVEGARDE_ACTIVEE=oui`), un secret
+ * absent n'est plus une attente connue mais une alarme éteinte : ÉCHEC en 1, même sous le planificateur.
  */
 export function issueDesSecretsAbsents(
   commande: string,
   noms: readonly string[],
-  declencheur: string | undefined
+  declencheur: string | undefined,
+  activee = false
 ): { code: 0 | 1; lignes: string[] } {
+  if (activee && declencheur !== 'workflow_dispatch') {
+    return {
+      code: 1,
+      lignes: [
+        ...noms.map(
+          (n) => `::error title=${commande}::${n} absent alors que la sauvegarde est ACTIVÉE`
+        ),
+        `❌ ${commande} : ${noms.join(', ')} absent(s), sauvegarde activée. Rien n'a été lu ni écrit.`,
+      ],
+    };
+  }
   if (declencheur === 'workflow_dispatch') {
     return {
       code: 1,
@@ -194,8 +236,11 @@ export function issueDesSecretsAbsents(
   };
 }
 
-function sauter(commande: string, noms: string[]): 0 | 1 {
-  const r = issueDesSecretsAbsents(commande, noms, process.env.GITHUB_EVENT_NAME);
+/** Le signal d'activation, posé AVANT la sauvegarde de la plateforme (runbook, mise en place). */
+const sauvegardeActivee = (): boolean => process.env.PARTNERS_SAUVEGARDE_ACTIVEE === 'oui';
+
+function sauter(commande: string, noms: string[], activee = false): 0 | 1 {
+  const r = issueDesSecretsAbsents(commande, noms, process.env.GITHUB_EVENT_NAME, activee);
   for (const l of r.lignes) console.log(l);
   return r.code;
 }
@@ -327,8 +372,17 @@ async function commande(nom: string): Promise<number> {
     console.error(`❌ sauvegarde:fraicheur — ${j.motif}`);
     return 1;
   }
+  if (nom === 'clairs') {
+    const m = manquantes(SECRETS_DU_STOCKAGE);
+    // Les secrets de lecture présents, la garde juge TOUJOURS, activée ou non ; le saut ne vaut que
+    // pour leur absence AVANT l'activation.
+    if (m.length) return sauter('sauvegarde:clairs', m, sauvegardeActivee());
+    const seuil = SEUILS.CLAIR_EN_DEPOT_MAX_MINUTES.valeur;
+    const r = await clairsEnSouffrance(depotR2(), new Date(), seuil);
+    return issueDesClairs(r, seuil);
+  }
   if (nom === 'configurer') return configurer();
-  throw new Error('usage : cycle.ts rechiffrer | exercice | fraicheur | configurer');
+  throw new Error('usage : cycle.ts rechiffrer | exercice | fraicheur | clairs | configurer');
 }
 
 /** La sauvegarde horaire de la base, programmée sur la plateforme ; relancée, elle ne se double pas. */
@@ -340,6 +394,13 @@ async function configurer(): Promise<number> {
     'COOLIFY_S3_STORAGE_UUID',
   ]);
   if (m.length) return sauter('sauvegarde:configurer', m);
+  // Le signal d'abord : une sauvegarde programmée sans lui laisserait la garde des clairs sauter.
+  if (!sauvegardeActivee()) {
+    console.error(
+      "::error title=sauvegarde:configurer::PARTNERS_SAUVEGARDE_ACTIVEE n'est pas « oui » — poser la variable AVANT de programmer la sauvegarde"
+    );
+    return 1;
+  }
   const base = new URL(process.env.COOLIFY_URL ?? '');
   if (base.protocol !== 'https:') throw new Error('COOLIFY_URL doit être en https');
   const racine = `${base.href.replace(/\/+$/, '')}/api/v1/databases/${encodeURIComponent(process.env.COOLIFY_DB_UUID ?? '')}/backups`;
