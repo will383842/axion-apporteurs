@@ -20,6 +20,11 @@ on:
 jobs:
   provisionner:
     runs-on: ubuntu-latest
+    # Lentille securite, refus de la PR 272 : les secrets vivent dans l ENVIRONNEMENT `production`,
+    # jamais au niveau du depot (un secret de depot est servi a toute PR de branche, avant relecture),
+    # et le declenchement manuel ne part que de la branche principale.
+    if: ${{ github.ref == 'refs/heads/main' }}
+    environment: production
     concurrency:
       group: provisionnement-production
       cancel-in-progress: false

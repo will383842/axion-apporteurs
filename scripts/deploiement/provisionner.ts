@@ -111,6 +111,25 @@ function liste(v: unknown, quoi: string): { uuid: string; name: string }[] {
     .map((e) => ({ uuid: e.uuid as string, name: e.name as string }));
 }
 
+/**
+ * UNE ressource de ce nom, ou aucune : jamais un choix entre plusieurs. La plateforme liste ses
+ * ressources sur TOUS ses projets (lentille exactitude, PR 272) ; une homonyme d'un autre projet ou
+ * d'une preview serait réutilisée, et son adresse deviendrait la base de production. Deux ou plus :
+ * refus nommé, rien n'est créé ni posé.
+ */
+function unique<T extends { uuid: string; name: string }>(
+  liste: readonly T[],
+  nom: string
+): T | undefined {
+  const trouvees = liste.filter((x) => x.name === nom);
+  if (trouvees.length > 1) {
+    throw new Refus(
+      `${trouvees.length} ressources s'appellent « ${nom} » sur la plateforme : aucune n'est choisie — à lever à la main`
+    );
+  }
+  return trouvees[0];
+}
+
 function uuidDe(v: unknown, quoi: string): string {
   const u = (v as Element | null)?.uuid;
   if (typeof u !== 'string' || u === '')
@@ -178,12 +197,17 @@ export async function provisionner(env: NodeJS.ProcessEnv): Promise<0 | 1> {
   };
 
   const bases = liste(await api('GET', '/databases'), 'bases');
+  const applications = liste(await api('GET', '/applications'), 'applications');
+  // Toute ambiguïté se juge AVANT la première création : rien ne doit être créé à moitié.
+  unique(bases, NOM_BASE);
+  unique(bases, NOM_CACHE);
+  unique(applications, NOM_APPLICATION);
   const assurerBase = async (
     nom: string,
     type: 'postgresql' | 'redis',
     extra: Record<string, unknown>
   ) => {
-    const existante = bases.find((b) => b.name === nom);
+    const existante = unique(bases, nom);
     if (existante) {
       console.log(`   ${nom} existe déjà (${existante.uuid})`);
       return existante.uuid;
@@ -231,8 +255,7 @@ export async function provisionner(env: NodeJS.ProcessEnv): Promise<0 | 1> {
     })),
   ];
 
-  const applications = liste(await api('GET', '/applications'), 'applications');
-  let application = applications.find((a) => a.name === NOM_APPLICATION)?.uuid;
+  let application = unique(applications, NOM_APPLICATION)?.uuid;
   if (application) {
     console.log(`   ${NOM_APPLICATION} existe déjà (${application})`);
   } else {
