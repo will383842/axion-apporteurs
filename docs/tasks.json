@@ -4210,10 +4210,10 @@
       ],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
-      "owner": null,
+      "statut": "fusionnee",
+      "owner": "A01",
       "lot": null,
-      "branch": null,
+      "branch": "partners/jur-t29-sans-projection",
       "pr": null,
       "issue": null,
       "attempts": 0,
@@ -4232,6 +4232,11 @@
         "REQ-JUR-041": [
           "axionia/src/content/__tests__/remuneration-indicative.spec.ts"
         ]
+      },
+      "attestation": {
+        "pr": 1241,
+        "sha": "c64d9f1f1cb707cdbc186cca751c12041d407057",
+        "fusionneeAt": "2026-09-30T12:12:30Z"
       }
     },
     {
