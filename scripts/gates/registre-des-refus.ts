@@ -320,6 +320,10 @@ export const REFUS_NOMMES: Readonly<Record<string, readonly string[]>> = {
     'module › si LANCE_EN_SCRIPT › si iPr >= 0 || iApres >= 0 › catch › (1)',
     'module › si LANCE_EN_SCRIPT › (1)',
   ],
+  'scripts/deploiement/provisionner.ts': [
+    'provisionner(process.env).then › ∅ › (= code)',
+    'provisionner(process.env).then › ∅ › (= 1)',
+  ],
   'scripts/gates/gov-requirements.ts': [
     'sources › si !existsSync(f) › (1)',
     'sources › si refus.length > 0 › (1)',

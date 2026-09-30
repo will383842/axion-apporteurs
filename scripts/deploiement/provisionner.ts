@@ -268,7 +268,7 @@ export async function provisionner(env: NodeJS.ProcessEnv): Promise<0 | 1> {
 const APPELE_DIRECTEMENT = /provisionner\.ts$/.test(process.argv[1] ?? '');
 
 if (APPELE_DIRECTEMENT) {
-  // `exitCode`, jamais `process.exit()` : sous Windows, couper des sockets de `fetch` encore
+  // `exitCode`, jamais la sortie immédiate du processus : sous Windows, couper des sockets de `fetch` encore
   // ouvertes fait planter Node et le code rendu n'est plus le nôtre (mesuré le 2026-09-29).
   provisionner(process.env).then(
     (code) => {
