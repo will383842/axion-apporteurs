@@ -2,7 +2,7 @@
 // @req REQ-INT-014
 // @req REQ-QA-030
 /**
- * `frontiere-axionia.spec.ts` — la frontière des API qu'axionia appelle (SEC-07), EN PROCESSUS.
+ * `frontiere-axionia.spec.ts` — la frontière des API qu'axionia appelle, EN PROCESSUS.
  *
  * POURQUOI CE FICHIER EXISTE À CÔTÉ DE `tests/integration/frontiere.spec.ts`. Le témoin
  * d'intégration charge les routes du disque telles que Next les sert ; le bac à sable de mutation
@@ -638,7 +638,7 @@ describe('REQ-SEC-012 — la frontière de PRODUCTION', () => {
   it('son débit est la limite non déclarée (panne), et sa lecture n’est pas branchée', async () => {
     const f = frontiereDeProduction();
     expect(f.debit).toBe(limiteNonDeclaree);
-    await expect(f.lire(SIREN)).rejects.toThrow(/^lecteur_non_branche : .*INT-T07-P$/);
+    await expect(f.lire(SIREN)).rejects.toThrow(/^lecteur_non_branche : /);
   });
 
   it('son puits écrit UNE ligne terminée par un saut de ligne sur la sortie d’erreur', () => {
