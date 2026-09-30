@@ -39,7 +39,7 @@ import { spawnSync } from 'node:child_process';
 import { mkdtempSync, rmSync, writeFileSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, basename } from 'node:path';
-import { chiffrer } from './chiffrement';
+import { chiffrer, dechiffrer } from './chiffrement';
 import { exercer, jugerFraicheur, type Verdict } from './exercice';
 import { SEUILS } from '../../src/domain/seuils/ssot';
 import { creerAlerteur, type ObjetAlerte } from '../../src/server/integrations/telegram/alertes';
@@ -69,8 +69,20 @@ export async function rechiffrer(depot: Depot, phrase: string): Promise<{ rechif
     .filter((o) => !o.cle.endsWith(SUFFIXE_CHIFFRE) && !o.cle.endsWith('/'))
     .sort(parDate);
   for (const o of clairs) {
-    const chiffre = chiffrer(await depot.lire(o.cle), phrase);
-    await depot.ecrire(`${PREFIXES.chiffres}${basename(o.cle)}${SUFFIXE_CHIFFRE}`, chiffre);
+    const clair = await depot.lire(o.cle);
+    const cible = `${PREFIXES.chiffres}${basename(o.cle)}${SUFFIXE_CHIFFRE}`;
+    await depot.ecrire(cible, chiffrer(clair, phrase));
+    // Le clair n'est effacé qu'une fois le chiffré RELU et déchiffré à l'identique (lentille
+    // `securite`, PR 280) : un dépôt qui aurait mal écrit ne coûte jamais la seule copie lisible.
+    const relu = await depot
+      .lire(cible)
+      .then((c) => dechiffrer(c, phrase))
+      .catch(() => null);
+    if (relu === null || !relu.equals(clair)) {
+      throw new Error(
+        `${cible} relu ne restitue pas ${o.cle} : le clair est GARDÉ, rien n'est effacé`
+      );
+    }
     await depot.supprimer(o.cle);
   }
   return { rechiffres: clairs.length };

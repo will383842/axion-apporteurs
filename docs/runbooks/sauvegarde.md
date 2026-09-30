@@ -14,6 +14,17 @@ Partners, avec une clé propre à Partners — le secret `PARTNERS_BACKUP_PASSPH
 d'un autre produit (arbitrage -d7 sur délégation de Williams du 2026-09-29). La preuve est un exercice
 réussi sur un vidage lu sous `partners/chiffres/` : l'exercice **refuse** tout vidage non chiffré.
 
+**Et trois conditions de plus, avant la première donnée réelle** (lentille `securite`, PR 280) :
+
+1. **Une heure au plus en clair.** La plateforme dépose le vidage EN CLAIR sous `partners/` ; le
+   rechiffrement horaire le chiffre puis l'efface. Le clair vit donc une heure au plus. Les colonnes de
+   données personnelles sont déjà chiffrées dans la base, ce qui borne le risque de cette fenêtre.
+2. **Aucune gestion des versions ni rétention d'objets** sur le préfixe `partners/` du bucket : sinon,
+   le clair effacé survivrait en version antérieure. À vérifier dans le tableau de bord du bucket.
+3. **Le chiffré est relu avant l'effacement du clair** : `rechiffrer` relit l'objet chiffré qu'il vient
+   d'écrire, le déchiffre et le compare au clair ; au moindre écart, le clair est GARDÉ et le geste
+   échoue en le nommant.
+
 ## La chaîne
 
 | Quand | Qui | Quoi | Où |
