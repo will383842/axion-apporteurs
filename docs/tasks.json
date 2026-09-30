@@ -5275,7 +5275,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "ELLE ÉCRIT LE SCHÉMA (label `schema`, seule de sa famille dans son lot). Cadrage de l'architecte du 2026-09-26 sur délégation de Will (partners/ADR-0022) : ce que la tâche crée ; le comportement est celui de ses exigences. (1) `contrats` est créée par DM-23 (dépendance, conflit C1) ; INT-T12 crée `enveloppes_signature` : `enum StatutEnveloppe {envoyee, signee, refusee, expiree, annulee}` ; `contratId`, `submissionId` unique, `statut`, `emailHash` (l'adresse d'envoi en empreinte seule), `envoyeeAt`, `relancesEnvoyees` (0 à 3), `derniereRelanceAt`, `termineeAt` (nulle si et seulement si `envoyee`), `remplaceeParId` unique ; une seule enveloppe `envoyee` par contrat (`UNIQUE (contrat_id) WHERE statut = 'envoyee'`). (2) Elle ajoute à `type_evenement_recu` les valeurs DocuSeal réellement traitées : `submission_completed` (`submission.completed`), `form_declined` (`form.declined`), `submission_expired` (`submission.expired`), identifiant en snake_case et libellé de fil par `@map`. (3) INFORMATION EXTERNE REQUISE AVANT LE CODE : les noms d'événements émis, la forme exacte de la signature `<ts>.<hex64>` et l'emplacement de `metadata.apporteurId` sont consignés dans `docs/tiers/docuseal.md` avec une charge réelle enregistrée. Forme sûre : un type non listé rend 200 sans effet et est alerté, jamais traité par défaut."
+      "acceptance": "ELLE ÉCRIT LE SCHÉMA (label `schema`, seule de sa famille dans son lot). Cadrage de l'architecte du 2026-09-26 sur délégation de Will (partners/ADR-0022) : ce que la tâche crée ; le comportement est celui de ses exigences. (1) `contrats` est créée par DM-23 (dépendance, conflit C1) ; INT-T12 crée `enveloppes_signature` : `enum StatutEnveloppe {envoyee, signee, refusee, expiree, annulee}` ; `contratId`, `submissionId` unique, `statut`, `emailHash` (l'adresse d'envoi en empreinte seule), `envoyeeAt`, `relancesEnvoyees` (0 à 3), `derniereRelanceAt`, `termineeAt` (nulle si et seulement si `envoyee`), `remplaceeParId` unique ; une seule enveloppe `envoyee` par contrat (`UNIQUE (contrat_id) WHERE statut = 'envoyee'`). (2) Elle ajoute à `type_evenement_recu` les valeurs DocuSeal réellement traitées : `submission_completed` (`submission.completed`), `form_declined` (`form.declined`), `submission_expired` (`submission.expired`), identifiant en snake_case et libellé de fil par `@map`. (3) INFORMATION EXTERNE REQUISE AVANT LE CODE : les noms d'événements émis, la forme exacte de la signature `<ts>.<hex64>` et l'emplacement de `metadata.apporteurId` sont consignés dans `docs/tiers/docuseal.md` avec une charge réelle enregistrée. Forme sûre : un type non listé rend 200 sans effet et est alerté, jamais traité par défaut. AJOUT (arbitrage -d7 sur delegation de Williams du 2026-09-30, dette bloquante de la lentille securite) : DOCUSEAL_WEBHOOK_SECRET accepte une cle courante et une cle precedente, echeance de 24 h au plus ; DocuSeal n'envoyant pas de kid, les deux cles sont essayees, la courante d'abord, et le refus apres echeance est nomme ; temoin avant et apres echeance."
     },
     {
       "id": "INT-T13",
@@ -14849,13 +14849,21 @@
         "src/app/api/webhooks/axionia/route.ts",
         "src/server/integrations/axionia/reception.ts",
         "tests/unit/securite/rotation-des-secrets.spec.ts",
-        "docs/env.md"
+        "docs/env.md",
+        "src/server/integrations/axionia/api-entrante.ts",
+        "packages/contracts/api.ts",
+        "packages/contracts/enveloppe.ts",
+        "packages/contracts/contracts.v2.json",
+        "packages/contracts/contracts.sha256",
+        "docs/runbooks/secret-desynchronise.md",
+        "tests/unit/securite/webhook-signature.spec.ts"
       ],
-      "schema": false,
+      "schema": true,
       "sensible": [],
       "deps": [
         "QA-T04",
-        "SEC-06"
+        "SEC-06",
+        "INT-T41"
       ],
       "reqs": [
         "REQ-QA-030"
@@ -14864,10 +14872,49 @@
       "externe": null,
       "estimateDays": 0.5,
       "statut": "a_faire",
-      "acceptance": "DETTE BLOQUANTE (lentille securite, verdict de la PR 282 ; arbitrage -d7 sur delegation de Williams du 2026-09-30) : la double cle de rotation de REQ-QA-030 n'etait portee par aucune tache (tests/unit/qualite/env-fail-fast.spec.ts l. 20 l'annoncait a sa propre tache). Des webhooks entrants sont actifs des la phase 0 (SEC-06) : PREALABLE FERME de la mise en service, avant le premier webhook entrant en production. A LIVRER : (1) AXIONIA_WEBHOOK_SECRET, DOCUSEAL_WEBHOOK_SECRET et AXIONIA_API_TOKEN acceptent une cle courante et une cle precedente, declarees dans src/lib/env.ts et docs/env.md (genere) ; la cle precedente porte son echeance, au plus 24 h. (2) Le `kid` de l'en-tete choisit la cle ; un kid inconnu est refuse, jamais essaye contre toutes les cles. (3) Apres l'echeance, la cle precedente est refusee, et le refus est nomme. (4) TEMOIN A DEUX FACES, rouge d'abord : une signature par la cle precedente passe avant l'echeance et echoue apres ; une signature par une cle inconnue ou un kid absent echoue ; la cle courante passe toujours. (5) Un runbook de rotation (docs/runbooks/secret-desynchronise.md, livre par QA-T13) cite la procedure. Deux lentilles.",
+      "acceptance": "DETTE BLOQUANTE (lentille securite, verdict de la PR 282 ; arbitrage -d7 sur delegation de Williams du 2026-09-30) : la double cle de rotation de REQ-QA-030 n'etait portee par aucune tache (tests/unit/qualite/env-fail-fast.spec.ts l. 20 l'annoncait a sa propre tache). Des webhooks entrants sont actifs des la phase 0 (SEC-06) : PREALABLE FERME de la mise en service, avant le premier webhook entrant en production. A LIVRER : (1) AXIONIA_WEBHOOK_SECRET et AXIONIA_API_TOKEN acceptent une cle courante et une cle precedente, declarees dans src/lib/env.ts et docs/env.md (genere) ; la cle precedente porte son echeance, au plus 24 h. (2) Le `kid` de l'en-tete, emis par axion-ia (INT-T41, dependance ferme) et declare dans packages/contracts, choisit la cle ; un kid inconnu est refuse, jamais essaye contre toutes les cles. (3) Apres l'echeance, la cle precedente est refusee, et le refus est nomme. (4) TEMOIN A DEUX FACES, rouge d'abord : une signature par la cle precedente passe avant l'echeance et echoue apres ; une signature par une cle inconnue ou un kid absent echoue ; la cle courante passe toujours. (5) Un runbook de rotation (docs/runbooks/secret-desynchronise.md, livre par QA-T13) cite la procedure. Deux lentilles. DocuSeal n'envoie pas de kid et n'a pas encore de recepteur : sa double cle sans kid (cle courante puis precedente essayees) releve de INT-T12 (arbitrage -d7 du 2026-09-30).",
       "tests": {
         "REQ-QA-030": [
           "tests/unit/securite/rotation-des-secrets.spec.ts"
+        ]
+      },
+      "issue": null,
+      "owner": null,
+      "branch": null,
+      "pr": null,
+      "attestation": null,
+      "motif": null
+    },
+    {
+      "id": "INT-T41",
+      "titre": "axion-ia emet l'en-tete du kid, derive par kidDe, sur les webhooks signes vers Partners et sur l'appel Bearer",
+      "phase": 0,
+      "repo": "axionia",
+      "zone": "integration",
+      "paths": [
+        "axionia/src/server/partners/enveloppe.ts",
+        "axionia/src/server/partners-sync/relais.ts",
+        "axionia/src/server/partners-sync/coordonnees.ts",
+        "axionia/src/server/partners/contrat/contracts.v2.json",
+        "axionia/src/server/partners/contrat/contracts.sha256",
+        "axionia/src/server/partners-sync/__tests__/kid-emis.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "INT-T02"
+      ],
+      "reqs": [
+        "REQ-QA-030"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "acceptance": "Arbitrage -d7 sur delegation de Williams du 2026-09-30, prealable de QA-T52 (rotation a double cle, dette bloquante de la lentille securite). Auteur : -66. A LIVRER cote axion-ia : (1) chaque webhook signe vers Partners (signerCorps) porte l'en-tete du kid de la cle qui a signe ; (2) l'appel Bearer vers l'API entrante de Partners porte l'en-tete du kid de son jeton ; (3) le kid est derive de la valeur par kidDe (partners/ADR-0013 d.8), jamais configure a part ; (4) le nom de l'en-tete est declare dans packages/contracts, et non recopie dans le code ; (5) TEMOIN : un envoi signe par la cle courante porte son kid ; apres rotation, le kid emis change avec la cle. Les chemins reels remplacent le gabarit a la premiere PR.",
+      "tests": {
+        "REQ-QA-030": [
+          "axionia/src/server/partners-sync/__tests__/kid-emis.spec.ts"
         ]
       },
       "issue": null,
