@@ -418,6 +418,14 @@ export const REFUS_NOMMES: Readonly<Record<string, readonly string[]>> = {
     'module › si LANCE_EN_SCRIPT › si fautes.length > 0 › (1)',
   ],
   'scripts/gates/schema-pii.ts': ['module › si LANCE_EN_SCRIPT › (decision.code)'],
+  'scripts/sauvegarde/cycle.ts': [
+    "commande(process.argv[2] ?? '').then › ∅ › (= code)",
+    "commande(process.argv[2] ?? '').then › ∅ › (= 1)",
+  ],
+  'scripts/sauvegarde/exercice.ts': [
+    'principal().then › ∅ › (= code)',
+    'principal().then › ∅ › (= 1)',
+  ],
   'scripts/gates/seuils-ssot.ts': [
     "module › si process.argv[1] !== undefined && /seuils-ssot[.](ts|js)$/.t… › si process.argv.includes('--prove') › si rate > 0 › (1)",
     'module › si process.argv[1] !== undefined && /seuils-ssot[.](ts|js)$/.t… › si fautes.length > 0 › (1)',

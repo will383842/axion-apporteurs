@@ -323,7 +323,7 @@ async function configurer(): Promise<number> {
 const APPELE_DIRECTEMENT = /cycle\.ts$/.test(process.argv[1] ?? '');
 
 if (APPELE_DIRECTEMENT) {
-  // `exitCode`, jamais `process.exit()` : voir `exercice.ts`.
+  // `exitCode`, jamais la sortie immédiate du processus : voir `exercice.ts`.
   commande(process.argv[2] ?? '').then(
     (code) => {
       process.exitCode = code;

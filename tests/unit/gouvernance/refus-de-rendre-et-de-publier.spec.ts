@@ -958,8 +958,8 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
     // et c'est ICI qu'elles entrent au registre, une fois, avec leur motif. La somme des `total`
     // déclarés gagne donc exactement ces quatre-là — l'écart vient de ce fichier, pas d'un ajout.
     'scripts/sauvegarde/cycle.ts': {
-      total: 3,
-      porte: 3,
+      total: 2,
+      porte: 2,
       temoins: 0,
       raison:
         'QA-T12 — REQ-QA-023, rechiffrement, exercice, fraicheur et configuration de la sauvegarde. `process.exitCode` pose sur le code de la commande (1 exercice en echec, exercice perime ou refus de la plateforme) et sur 1 en cas d erreur. Les fonctions sont vues rendre chaque issue sur un depot EN MEMOIRE (sauvegarde-et-exercice.spec.ts) ; le binaire attend les cles Cloudflare R2 ; aucun temoin ne vit dans `REFUS`. N importe pas `fichiersSuivisOuRefus`. Dette DECLAREE.',
