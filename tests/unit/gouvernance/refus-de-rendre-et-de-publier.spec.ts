@@ -821,11 +821,11 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
     },
     // ── CPL-T22 : UNE sortie, à code VARIABLE ───────────────────────────────────────────────
     'scripts/gates/deploy-verify.ts': {
-      total: 4,
-      porte: 4,
+      total: 3,
+      porte: 3,
       temoins: 0,
       raison:
-        'QA-T34 — REQ-QA-033, l atterrissage lu sur l en-tete servi, et la plateforme qui tire sha-<7>. QUATRE sorties : l usage refuse (1), et `process.exitCode` pose trois fois — le code du mode (0 atterri ou saute, 1 non atterri ou refus de la plateforme, 2 indetermine), et 1 sur une erreur. `exitCode` et non `process.exit()` : couper des sockets de `fetch` fait planter Node sous Windows. Chaque issue est vue sur le binaire contre de vrais serveurs HTTP locaux (un-seul-producteur-de-deploiement.spec.ts) ; aucun temoin ne vit dans `REFUS`. N importe pas `fichiersSuivisOuRefus`. Dette DECLAREE.',
+        'QA-T34 — REQ-QA-033, l atterrissage lu sur l en-tete servi, et la plateforme qui tire sha-<7>. TROIS sorties : l usage refuse (1), et `process.exitCode` pose deux fois — le code du mode (0 atterri ou saute, 1 non atterri ou refus de la plateforme, 2 indetermine), et 1 sur une erreur. `exitCode` et non `process.exit()` : couper des sockets de `fetch` fait planter Node sous Windows. Chaque issue est vue sur le binaire contre de vrais serveurs HTTP locaux (un-seul-producteur-de-deploiement.spec.ts) ; aucun temoin ne vit dans `REFUS`. N importe pas `fichiersSuivisOuRefus`. Dette DECLAREE.',
     },
     'scripts/gates/red-first.ts': {
       total: 1,

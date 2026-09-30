@@ -8,12 +8,12 @@
 >
 > Une tache = une PR, **≤ 1,5 jour**. Le plafond est porte par la garde `gov:tasks`.
 
-**332 taches · 257.85 j estimes.**
+**333 taches · 258.35 j estimes.**
 
 | Phase | Taches | Jours | Terminees |
 | --- | ---: | ---: | ---: |
 | -1 — Gouvernance (prealable bloquant) | 39 | 23.75 | 39 |
-| 0 — Socle technique | 133 | 100.35 | 115 |
+| 0 — Socle technique | 134 | 100.85 | 121 |
 | 1 — Operationnel | 79 | 68.00 | 0 |
 | 2 — Argent | 45 | 33.50 | 0 |
 | 3 — Pilotage et conformite | 36 | 32.25 | 0 |
@@ -598,7 +598,7 @@ Couvre : `REQ-QA-015`
 
 Couvre : `REQ-QA-023`
 
-**Acceptation.** DEPEND D'UN TIERS : espace de stockage objet et ses cles, prefixe dedie a Partners. (1) La base est sauvegardee TOUTES LES HEURES vers le stockage objet sous le prefixe `partners/` ; la perte de donnees acceptable et le delai de remise en service sont l'un et l'autre d'une heure (REQ-QA-023). (2) UN EXERCICE MENSUEL RESTAURE le dernier vidage sur un Postgres ephemere, verifie qu'au moins une ligne d'attribution existe et que l'etat des migrations est propre, et ALERTE en cas d'echec. (3) UNE SAUVEGARDE QU'ON NE RESTAURE PAS N'EST PAS UNE SAUVEGARDE : le resultat de l'exercice du mois est ecrit avec sa date, son empreinte de vidage et son verdict ; un exercice plus vieux que 35 jours fait rougir le travail de nuit. C'est la meme famille que la surveillance qui detecte sans prevenir. (4) TEMOIN A DEUX FACES : un vidage tronque d'un octet fait echouer la restauration de l'exercice, qui sort en code non nul et nomme l'echec ; le dernier vidage reel la fait sortir en zero avec le compte de lignes restaurees. (5) L'alerte ne contient ni coordonnee de tiers ni lien de console.
+**Acceptation.** DEPEND D'UN TIERS : espace de stockage objet et ses cles, prefixe dedie a Partners. (1) La base est sauvegardee TOUTES LES HEURES vers le stockage objet sous le prefixe `partners/` ; la perte de donnees acceptable et le delai de remise en service sont l'un et l'autre d'une heure (REQ-QA-023). (2) UN EXERCICE MENSUEL RESTAURE le dernier vidage sur un Postgres ephemere, verifie qu'au moins une ligne d'attribution existe et que l'etat des migrations est propre, et ALERTE en cas d'echec. (3) UNE SAUVEGARDE QU'ON NE RESTAURE PAS N'EST PAS UNE SAUVEGARDE : le resultat de l'exercice du mois est ecrit avec sa date, son empreinte de vidage et son verdict ; un exercice plus vieux que 35 jours fait rougir le travail de nuit. C'est la meme famille que la surveillance qui detecte sans prevenir. (4) TEMOIN A DEUX FACES : un vidage tronque d'un octet fait echouer la restauration de l'exercice, qui sort en code non nul et nomme l'echec ; le dernier vidage reel la fait sortir en zero avec le compte de lignes restaurees. (5) L'alerte ne contient ni coordonnee de tiers ni lien de console. AVENANT A01 du 2026-09-29 (arbitrage -d7 sur delegation de Williams, volet sauvegardes de l AIPD de JUR-T04, relaye par la session -50) : les vidages horaires vont sur R2 (bucket axion-ia-backups, prefixe partners/), avec le chiffrement natif de R2 au repos et un jeton restreint a ce bucket et a ce prefixe. CONDITION DE MISE EN SERVICE, BLOQUANTE AVANT LA PREMIERE DONNEE REELLE en production : chiffrement COTE CLIENT par une cle propre a Partners (secret PARTNERS_BACKUP_PASSPHRASE, jamais celle d axion-ia) ; si le mecanisme de la plateforme ne sait pas chiffrer cote client, un job rechiffre le vidage avant son depot, faute de quoi la dette est nommee bloquante de mise en service dans le runbook de sauvegarde. TEMOIN : un vidage depose sans chiffrement client est refuse par l exercice mensuel, qui le nomme.
 
 **Tests.** `tests/unit/qualite/sauvegarde-et-exercice.spec.ts`
 
@@ -608,7 +608,7 @@ Couvre : `REQ-QA-023`
 
 Couvre : `REQ-QA-022`, `REQ-QA-030`, `REQ-QA-034`
 
-**Acceptation.** (1) Un enclenchement manuel de retour arriere redeploie l'etiquette de la version precedente avec l'echappatoire de migration, puis VERIFIE `readyz` et l'en-tete de build servi (REQ-QA-022). Un retour arriere qui ne verifie pas ce qu'il a remis en place n'a rien remis en place. (2) LES CINQ RUNBOOKS de `docs/runbooks/` existent — retour arriere, migration echouee, evenement abandonne ou secret desynchronise, commission manquante, lot mensuel bloque — et CHACUN porte un bloc « Execute le : <date> · environnement : preview · SHA · resultat » (REQ-QA-034, REQ-QA-030). (3) L'EXERCICE SE FAIT EN PREVIEW, PAS SUR LE PAPIER : le bloc d'execution est rempli par une execution reelle, et une garde refuse un runbook dont le bloc est vide ou dont la date precede la derniere modification du runbook. (4) TEMOIN A DEUX FACES : un runbook dont on vide le bloc d'execution, puis un dont on modifie le corps sans refaire l'exercice, font sortir la garde en code non nul et NOMMENT le runbook ; les cinq runbooks exerces la font sortir en zero, et le vert imprime le compte des runbooks reellement confrontes. (5) `docs/runbooks/**` est reserve : la PR porte le label de documentation prevu par la charte.
+**Acceptation.** (1) Un enclenchement manuel du workflow de retour arriere (`workflow_dispatch`, avec le SHA cible) redeploie l'image `sha-<cible>` avec `SKIP_MIGRATE=1`, VERIFIE `readyz` et l'en-tete `x-partners-build-sha` par `pnpm deploy:verify` (mode retour arriere), puis retire `SKIP_MIGRATE` (REQ-QA-022). Un retour arriere qui ne verifie pas ce qu'il a remis en place n'a rien remis en place. (2) LES TROIS RUNBOOKS DU SOCLE existent — `docs/runbooks/retour-arriere.md` (seul porteur de `SKIP_MIGRATE`), `docs/runbooks/migration-echouee.md`, `docs/runbooks/secret-desynchronise.md` — et CHACUN porte un bloc « Execute le : <date> · environnement : preview · SHA · resultat » (REQ-QA-034, REQ-QA-030). Les runbooks commission manquante et lot mensuel bloque relevent de QA-T25. (3) La garde `scripts/gates/runbooks-exerces.ts` refuse un runbook dont le bloc est vide ou dont la date precede la derniere modification du runbook ; elle tourne en nightly et passe en porte A au premier exercice reel. (4) TEMOIN A DEUX FACES : un runbook dont on vide le bloc d'execution, puis un dont on modifie le corps sans refaire l'exercice, font sortir la garde en code non nul et NOMMENT le runbook ; les runbooks exerces la font sortir en zero, et le vert imprime le compte des runbooks reellement confrontes. (5) CONDITION posee sur delegation (2026-09-30) : les trois runbooks du socle sont EXERCES REELLEMENT en preview AVANT la cloture de la Phase 0, et la verification de fin de Phase 0 le controle. (6) `docs/runbooks/**` est reserve : la PR porte le label de documentation prevu par la charte.
 
 **Tests.** `tests/unit/qualite/retour-arriere.spec.ts` · `tests/unit/qualite/runbooks-exerces.spec.ts`
 
@@ -662,7 +662,7 @@ Couvre : `REQ-DM-021`, `REQ-INT-007`, `REQ-INT-015`
 
 **Tests.** `axionia/src/server/partners-sync/__tests__/producteurs-client.spec.ts` · `axionia/src/server/partners-sync/__tests__/cliquet-ecrivains.spec.ts`
 
-### INT-T04 — Producteur `devis.signe` unifié
+### INT-T04 — Producteur `devis.signe` unifié ✅ **fusionnee**
 
 `1 j` · zone `integration` · `axionia` · sensible : argent · depend de `DM-03-A`, `INT-T02`
 
@@ -672,7 +672,7 @@ Couvre : `REQ-INT-006`, `REQ-INT-007`
 
 **Tests.** `axionia/src/server/partners-sync/__tests__/producteur-devis.spec.ts`
 
-### INT-T05 — Producteurs `facture.emise`, `facture.annulee`, `avoir.emis`, `paiement.recu`, `paiement.rembourse`
+### INT-T05 — Producteurs `facture.emise`, `facture.annulee`, `avoir.emis`, `paiement.recu`, `paiement.rembourse` ✅ **fusionnee**
 
 `1 j` · zone `integration` · `axionia` · `schema` · sensible : argent, auth · depend de `INT-T02`, `INT-T01c`
 
@@ -812,7 +812,7 @@ Couvre : `REQ-CPL-012`, `REQ-JUR-003`, `REQ-JUR-007`, `REQ-JUR-023`
 
 **Tests.** `tests/unit/contrat/contract-template-complete.spec.ts`
 
-### JUR-T03 — Corriger la copy publique d'axionia + garde lexicale des textes apporteurs et gate financement inconditionnelle
+### JUR-T03 — Corriger la copy publique d'axionia + garde lexicale des textes apporteurs et gate financement inconditionnelle ✅ **fusionnee**
 
 `1 j` · zone `juridique` · `axionia` · aucune dependance
 
@@ -1743,7 +1743,7 @@ Couvre : `REQ-GOV-023`
 
 **Tests.** `tests/unit/gouvernance/une-pr-porte-son-entree-de-journal.spec.ts`
 
-### GOV-109 — La garde lexicale ne s'arrete pas au texte litteral : des expressions constantes de la JSX rendent encore a l'ecran un terme qu'elle ne voit pas
+### GOV-109 — La garde lexicale ne s'arrete pas au texte litteral : des expressions constantes de la JSX rendent encore a l'ecran un terme qu'elle ne voit pas ✅ **fusionnee**
 
 `1 j` · zone `gouvernance` · sensible : espace · depend de `GOV-106`
 
@@ -1793,7 +1793,7 @@ Couvre : `REQ-GOV-010`
 
 **Tests.** `tests/unit/gouvernance/lot-dedie-gardien-spec.spec.ts`
 
-### GOV-117 — L'outil d'écriture du registre écrit reqs, hyp et zone d'une tâche existante, validés contre le schéma, les REQ et les HYP existantes, et journalisés
+### GOV-117 — L'outil d'écriture du registre écrit reqs, hyp et zone d'une tâche existante, validés contre le schéma, les REQ et les HYP existantes, et journalisés ✅ **fusionnee**
 
 `0.75 j` · zone `gouvernance` · aucune dependance
 
@@ -1922,6 +1922,16 @@ Couvre : `REQ-INT-031`
 **Acceptation.** Versee a la demande de la session -50 (mise en ligne), sur demande de -d7 : aucune tache du registre ne portait le provisionnement, REQ-INT-031 n etant rattachee qu a INT-T02 cote axionia. (1) Un declenchement manuel cree, s ils n existent pas, dans le projet Coolify Axion-Partners, l application de type image Docker (ghcr.io/will383842/axion-apporteurs, etiquette sha-<7>, sonde /api/readyz) et une base Postgres 16 separee ; il est idempotent : relance, il ne cree rien et le dit. (2) Chaque variable de docs/env.md est posee depuis le secret du depot de meme nom, jamais en argument ni en clair dans le journal du run ; DATABASE_URL vient de la base creee. (3) Un secret absent : SAUTE avec un ::warning:: par secret nomme. (4) TEMOIN A DEUX FACES sur une plateforme factice locale : secrets absents, alors saute et nomme ; plateforme en 401, alors code non nul et jeton jamais imprime. Deux lentilles (workflow et secrets).
 
 **Tests.** `tests/unit/qualite/provisionnement-coolify.spec.ts`
+
+### GOV-128 — Le passif de la declaration lit aussi la ligne Lot: du squash immuable : une PR de lot au corps enrichi se clot sur arbitrage ecrit ✅ **fusionnee**
+
+`0.5 j` · zone `gouvernance` · depend de `GOV-127`
+
+Couvre : `REQ-GOV-026`
+
+**Acceptation.** EXCEPTION AU GEL, arbitrage -d7 sur delegation de Williams du 2026-09-30 : elle bloque deux clotures de phase 0. CONSTAT : INT-T04 et INT-T05 (axion-ia #1228, sha 3fb76aa) sont refusees par lot:cloture (tache_etrangere_a_la_pr) : la premiere ligne du squash est conforme, mais le corps porte, apres la ligne Lot: INT-T04, INT-T05, un paragraphe et un trailer ; or le corps ne declare que s il est reduit a la seule ligne Lot: (GOV-104), et le titre feat(INT-T04, INT-T05) ne nomme aucune tache a lui seul. Condition verifiee : les deux accords A09 sont publies sur la tete fusionnee 7eb1bf3. A LIVRER : (1) deux entrees au PASSIF_DE_LA_DECLARATION, INT-T04 et INT-T05, PR axion-ia #1228, sha complet 3fb76aa, declarees par la ligne Lot: et non par le titre. (2) Une telle entree ne leve le refus QUE si la tache, la PR et le sha complet coincident, si la premiere ligne du squash est conforme, et si la ligne Lot: qui la suit dans le message immuable nomme la tache. (3) Toute autre livraison garde les refus a l identique ; les entrees par titre gardent leur regle ; aucun drapeau ne leve rien ; aucune regle generale n est assouplie. (4) TEMOINS rouges d abord : INT-T04 et INT-T05 passent ; un autre sha, une autre PR, une tache absente de la ligne Lot:, un squash sans ligne Lot: ou a premiere ligne non conforme sont refuses. (5) Deux lentilles (scripts/lot/). Puis INT-T04 et INT-T05 sont closes par un rattrapage.
+
+**Tests.** `tests/unit/gouvernance/le-passif-de-la-declaration-est-ferme.spec.ts`
 
 ## Phase 1 — Operationnel
 
@@ -2792,6 +2802,8 @@ Couvre : `REQ-ARG-017`, `REQ-ARG-018`, `REQ-ARG-034`
 `0.5 j` · zone `qualite` · sensible : argent · depend de `QA-T13`, `T-ARG-017`, `T-ARG-022`
 
 Couvre : `REQ-QA-034`
+
+**Acceptation.** (1) Les deux runbooks d'argent existent — `docs/runbooks/commission-manquante.md` et `docs/runbooks/lot-mensuel-bloque.md` — et CHACUN porte un bloc « Execute le : <date> · environnement : preview · SHA · resultat » rempli par une execution reelle en preview (REQ-QA-034). (2) La garde des runbooks exerces livree par QA-T13 les confronte : le vert imprime le compte des runbooks reellement confrontes, socle compris. (3) Chaque runbook designe les fonctions d'argent qu'il exerce (lot du mois, ligne de commission bloquee, rattachement manuel) par leur nom reel, jamais par une description. (4) `docs/runbooks/**` est reserve : la PR porte le label de documentation prevu par la charte.
 
 ### QA-T29 — Test de charge léger : 50 dépôts simultanés même SIREN
 

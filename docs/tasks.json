@@ -662,7 +662,8 @@
         "tests/unit/gouvernance/clore-une-tache-livree-seule.spec.ts",
         "tests/unit/gouvernance/une-branche-reelle-de-la-forge-est-admise.spec.ts",
         "tests/unit/gouvernance/gov-pr-lit-une-pr-de-lot.spec.ts",
-        "tests/unit/gouvernance/tasks-schema-et-paths.spec.ts"
+        "tests/unit/gouvernance/tasks-schema-et-paths.spec.ts",
+        "docs/LECONS.md"
       ],
       "schema": false,
       "sensible": [
@@ -2359,7 +2360,13 @@
         "tests/integration/semeur-deterministe.spec.ts",
         "tests/unit/qualite/preview-par-pr.spec.ts",
         ".github/workflows/ci.yml",
-        "prisma/seed/"
+        "prisma/seed/",
+        "scripts/preview/",
+        "package.json",
+        "tests/unit/qualite/pipeline-image.spec.ts",
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts",
+        "docker-entrypoint.sh",
+        "scripts/gates/registre-des-refus.ts"
       ],
       "schema": true,
       "sensible": [],
@@ -2398,7 +2405,12 @@
         ".github/workflows/backup.yml",
         "docs/runbooks/sauvegarde.md",
         "tests/unit/qualite/sauvegarde-et-exercice.spec.ts",
-        ".github/workflows/nightly.yml"
+        ".github/workflows/nightly.yml",
+        "scripts/sauvegarde/",
+        "package.json",
+        "src/domain/seuils/ssot.ts",
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts",
+        "scripts/gates/registre-des-refus.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -2420,7 +2432,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "DEPEND D'UN TIERS : espace de stockage objet et ses cles, prefixe dedie a Partners. (1) La base est sauvegardee TOUTES LES HEURES vers le stockage objet sous le prefixe `partners/` ; la perte de donnees acceptable et le delai de remise en service sont l'un et l'autre d'une heure (REQ-QA-023). (2) UN EXERCICE MENSUEL RESTAURE le dernier vidage sur un Postgres ephemere, verifie qu'au moins une ligne d'attribution existe et que l'etat des migrations est propre, et ALERTE en cas d'echec. (3) UNE SAUVEGARDE QU'ON NE RESTAURE PAS N'EST PAS UNE SAUVEGARDE : le resultat de l'exercice du mois est ecrit avec sa date, son empreinte de vidage et son verdict ; un exercice plus vieux que 35 jours fait rougir le travail de nuit. C'est la meme famille que la surveillance qui detecte sans prevenir. (4) TEMOIN A DEUX FACES : un vidage tronque d'un octet fait echouer la restauration de l'exercice, qui sort en code non nul et nomme l'echec ; le dernier vidage reel la fait sortir en zero avec le compte de lignes restaurees. (5) L'alerte ne contient ni coordonnee de tiers ni lien de console.",
+      "acceptance": "DEPEND D'UN TIERS : espace de stockage objet et ses cles, prefixe dedie a Partners. (1) La base est sauvegardee TOUTES LES HEURES vers le stockage objet sous le prefixe `partners/` ; la perte de donnees acceptable et le delai de remise en service sont l'un et l'autre d'une heure (REQ-QA-023). (2) UN EXERCICE MENSUEL RESTAURE le dernier vidage sur un Postgres ephemere, verifie qu'au moins une ligne d'attribution existe et que l'etat des migrations est propre, et ALERTE en cas d'echec. (3) UNE SAUVEGARDE QU'ON NE RESTAURE PAS N'EST PAS UNE SAUVEGARDE : le resultat de l'exercice du mois est ecrit avec sa date, son empreinte de vidage et son verdict ; un exercice plus vieux que 35 jours fait rougir le travail de nuit. C'est la meme famille que la surveillance qui detecte sans prevenir. (4) TEMOIN A DEUX FACES : un vidage tronque d'un octet fait echouer la restauration de l'exercice, qui sort en code non nul et nomme l'echec ; le dernier vidage reel la fait sortir en zero avec le compte de lignes restaurees. (5) L'alerte ne contient ni coordonnee de tiers ni lien de console. AVENANT A01 du 2026-09-29 (arbitrage -d7 sur delegation de Williams, volet sauvegardes de l AIPD de JUR-T04, relaye par la session -50) : les vidages horaires vont sur R2 (bucket axion-ia-backups, prefixe partners/), avec le chiffrement natif de R2 au repos et un jeton restreint a ce bucket et a ce prefixe. CONDITION DE MISE EN SERVICE, BLOQUANTE AVANT LA PREMIERE DONNEE REELLE en production : chiffrement COTE CLIENT par une cle propre a Partners (secret PARTNERS_BACKUP_PASSPHRASE, jamais celle d axion-ia) ; si le mecanisme de la plateforme ne sait pas chiffrer cote client, un job rechiffre le vidage avant son depot, faute de quoi la dette est nommee bloquante de mise en service dans le runbook de sauvegarde. TEMOIN : un vidage depose sans chiffrement client est refuse par l exercice mensuel, qui le nomme.",
       "tests": {
         "REQ-QA-023": [
           "tests/unit/qualite/sauvegarde-et-exercice.spec.ts"
@@ -2435,10 +2447,18 @@
       "zone": "qualite",
       "paths": [
         ".github/workflows/rollback.yml",
-        "docs/runbooks/rollback.md",
-        "docs/runbooks/socle.md",
         "tests/unit/qualite/retour-arriere.spec.ts",
-        "tests/unit/qualite/runbooks-exerces.spec.ts"
+        "tests/unit/qualite/runbooks-exerces.spec.ts",
+        "docs/runbooks/retour-arriere.md",
+        "docs/runbooks/migration-echouee.md",
+        "docs/runbooks/secret-desynchronise.md",
+        "scripts/gates/runbooks-exerces.ts",
+        "scripts/gates/deploy-verify.ts",
+        "package.json",
+        ".github/workflows/nightly.yml",
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts",
+        "tests/integration/sondes-de-vie.spec.ts",
+        "scripts/gates/registre-des-refus.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -2462,7 +2482,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "(1) Un enclenchement manuel de retour arriere redeploie l'etiquette de la version precedente avec l'echappatoire de migration, puis VERIFIE `readyz` et l'en-tete de build servi (REQ-QA-022). Un retour arriere qui ne verifie pas ce qu'il a remis en place n'a rien remis en place. (2) LES CINQ RUNBOOKS de `docs/runbooks/` existent — retour arriere, migration echouee, evenement abandonne ou secret desynchronise, commission manquante, lot mensuel bloque — et CHACUN porte un bloc « Execute le : <date> · environnement : preview · SHA · resultat » (REQ-QA-034, REQ-QA-030). (3) L'EXERCICE SE FAIT EN PREVIEW, PAS SUR LE PAPIER : le bloc d'execution est rempli par une execution reelle, et une garde refuse un runbook dont le bloc est vide ou dont la date precede la derniere modification du runbook. (4) TEMOIN A DEUX FACES : un runbook dont on vide le bloc d'execution, puis un dont on modifie le corps sans refaire l'exercice, font sortir la garde en code non nul et NOMMENT le runbook ; les cinq runbooks exerces la font sortir en zero, et le vert imprime le compte des runbooks reellement confrontes. (5) `docs/runbooks/**` est reserve : la PR porte le label de documentation prevu par la charte.",
+      "acceptance": "(1) Un enclenchement manuel du workflow de retour arriere (`workflow_dispatch`, avec le SHA cible) redeploie l'image `sha-<cible>` avec `SKIP_MIGRATE=1`, VERIFIE `readyz` et l'en-tete `x-partners-build-sha` par `pnpm deploy:verify` (mode retour arriere), puis retire `SKIP_MIGRATE` (REQ-QA-022). Un retour arriere qui ne verifie pas ce qu'il a remis en place n'a rien remis en place. (2) LES TROIS RUNBOOKS DU SOCLE existent — `docs/runbooks/retour-arriere.md` (seul porteur de `SKIP_MIGRATE`), `docs/runbooks/migration-echouee.md`, `docs/runbooks/secret-desynchronise.md` — et CHACUN porte un bloc « Execute le : <date> · environnement : preview · SHA · resultat » (REQ-QA-034, REQ-QA-030). Les runbooks commission manquante et lot mensuel bloque relevent de QA-T25. (3) La garde `scripts/gates/runbooks-exerces.ts` refuse un runbook dont le bloc est vide ou dont la date precede la derniere modification du runbook ; elle tourne en nightly et passe en porte A au premier exercice reel. (4) TEMOIN A DEUX FACES : un runbook dont on vide le bloc d'execution, puis un dont on modifie le corps sans refaire l'exercice, font sortir la garde en code non nul et NOMMENT le runbook ; les runbooks exerces la font sortir en zero, et le vert imprime le compte des runbooks reellement confrontes. (5) CONDITION posee sur delegation (2026-09-30) : les trois runbooks du socle sont EXERCES REELLEMENT en preview AVANT la cloture de la Phase 0, et la verification de fin de Phase 0 le controle. (6) `docs/runbooks/**` est reserve : la PR porte le label de documentation prevu par la charte.",
       "tests": {
         "REQ-QA-022": [
           "tests/unit/qualite/retour-arriere.spec.ts"
@@ -2822,10 +2842,10 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 1,
-      "statut": "a_faire",
-      "owner": null,
+      "statut": "fusionnee",
+      "owner": "A01",
       "lot": null,
-      "branch": null,
+      "branch": "partners/int-t04-devis-signe",
       "pr": null,
       "issue": null,
       "attempts": 0,
@@ -2838,6 +2858,11 @@
         "REQ-INT-007": [
           "axionia/src/server/partners-sync/__tests__/producteur-devis.spec.ts"
         ]
+      },
+      "attestation": {
+        "pr": 1228,
+        "sha": "3fb76aa6f93a58aba79bae876169089bb0a505ed",
+        "fusionneeAt": "2026-09-29T22:28:11Z"
       }
     },
     {
@@ -2885,10 +2910,10 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 1,
-      "statut": "a_faire",
-      "owner": null,
+      "statut": "fusionnee",
+      "owner": "A01",
       "lot": null,
-      "branch": null,
+      "branch": "partners/int-t04-devis-signe",
       "pr": null,
       "issue": null,
       "attempts": 0,
@@ -2919,6 +2944,11 @@
         "REQ-INT-032": [
           "axionia/src/server/partners-sync/__tests__/producteurs-facturation.spec.ts"
         ]
+      },
+      "attestation": {
+        "pr": 1228,
+        "sha": "3fb76aa6f93a58aba79bae876169089bb0a505ed",
+        "fusionneeAt": "2026-09-29T22:28:11Z"
       }
     },
     {
@@ -3801,10 +3831,10 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 1,
-      "statut": "a_faire",
-      "owner": null,
+      "statut": "fusionnee",
+      "owner": "A01",
       "lot": null,
-      "branch": null,
+      "branch": "jur/t03-copie-apporteur",
       "pr": null,
       "issue": null,
       "attempts": 0,
@@ -3820,6 +3850,11 @@
         "REQ-JUR-024": [
           "axionia/src/content/__tests__/vocabulaire-apporteur.spec.ts"
         ]
+      },
+      "attestation": {
+        "pr": 1220,
+        "sha": "b1eb57ea32d92da4f6fec5ec1caa740eb554c4d8",
+        "fusionneeAt": "2026-09-29T21:03:44Z"
       }
     },
     {
@@ -4072,7 +4107,9 @@
         "scripts/gates/perf-budgets.ts",
         "package.json",
         "perf/budgets.json",
-        "scripts/gates/gov-conventions.ts"
+        "scripts/gates/gov-conventions.ts",
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts",
+        "scripts/gates/registre-des-refus.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -4124,7 +4161,12 @@
         "axionia/src/content/recrutement/tunnel-facebook.ts",
         "axionia/src/components/services/devenir-commercial/CommercialFounder.tsx",
         "axionia/src/components/services/devenir-commercial/CommercialHowItWorks.tsx",
-        "axionia/src/components/services/devenir-commercial/CommercialProductsEarnings.tsx"
+        "axionia/src/components/services/devenir-commercial/CommercialProductsEarnings.tsx",
+        "axionia/src/app/[locale]/devenir-commercial-ia/page.tsx",
+        "axionia/src/app/[locale]/devenir-commercial-ia/candidature/page.tsx",
+        "axionia/src/components/services/devenir-commercial/CommercialContactBand.tsx",
+        "axionia/src/lib/email/templates/apporteur-issue-echange.tsx",
+        "axionia/src/lib/email/templates/__tests__/l-issue-de-l-echange-apporteur-a-ses-trois-e-mails.spec.tsx"
       ],
       "schema": false,
       "sensible": [
@@ -7512,7 +7554,8 @@
       "repo": "partners",
       "zone": "qualite",
       "paths": [
-        "scripts/gates/QA-T25"
+        "docs/runbooks/commission-manquante.md",
+        "docs/runbooks/lot-mensuel-bloque.md"
       ],
       "schema": false,
       "sensible": [
@@ -7536,7 +7579,8 @@
       "pr": null,
       "issue": null,
       "attempts": 0,
-      "motif": null
+      "motif": null,
+      "acceptance": "(1) Les deux runbooks d'argent existent — `docs/runbooks/commission-manquante.md` et `docs/runbooks/lot-mensuel-bloque.md` — et CHACUN porte un bloc « Execute le : <date> · environnement : preview · SHA · resultat » rempli par une execution reelle en preview (REQ-QA-034). (2) La garde des runbooks exerces livree par QA-T13 les confronte : le vert imprime le compte des runbooks reellement confrontes, socle compris. (3) Chaque runbook designe les fonctions d'argent qu'il exerce (lot du mois, ligne de commission bloquee, rattachement manuel) par leur nom reel, jamais par une description. (4) `docs/runbooks/**` est reserve : la PR porte le label de documentation prevu par la charte."
     },
     {
       "id": "QA-T29",
@@ -13221,7 +13265,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 1,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "Releve par la lentille securite sur la PR #206, formes tenues HORS DEPOT (dossier de reprise, fichier confidentiel) : apres GOV-106, une famille d'expressions dont la valeur est connue sans execution affiche encore un terme du lexique interdit. A livrer : la garde evalue, par l'AST de TypeScript, toute expression JSX dont la valeur rendue est constante, comme React la rend, au lieu d'une liste de formes. TEMOINS : chaque forme du fichier confidentiel rougit ; les temoins entrent dans le meme commit que le correctif, jamais avant, et ni l acceptance, ni les messages de commit, ni le journal ne les enumerent.",
       "tests": {
         "REQ-GOV-017": [
@@ -13231,11 +13275,15 @@
           "tests/unit/gouvernance/frontiere-de-mot-du-rendu.spec.ts"
         ]
       },
-      "issue": null,
-      "owner": null,
-      "branch": null,
-      "pr": null,
-      "attestation": null,
+      "issue": 266,
+      "owner": "A01",
+      "branch": "t/gov-109",
+      "pr": 267,
+      "attestation": {
+        "pr": 267,
+        "sha": "dc6cfcb9da3bb73b25fa7cab714893d274e1cc78",
+        "fusionneeAt": "2026-09-29T22:49:31Z"
+      },
       "motif": null
     },
     {
@@ -13437,7 +13485,7 @@
       "deps": [],
       "hyp": [],
       "externe": null,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "paths": [
         "scripts/lot/chemins-de-tache.ts",
         "docs/journal/",
@@ -13454,7 +13502,15 @@
         ]
       },
       "issue": 258,
-      "owner": "A01"
+      "owner": "A01",
+      "branch": "t/gov-117",
+      "pr": 259,
+      "attestation": {
+        "pr": 259,
+        "sha": "581a3fb7a8e04847a4671fa8291fc6a62246edc0",
+        "fusionneeAt": "2026-09-29T21:05:27Z"
+      },
+      "motif": null
     },
     {
       "id": "GOV-122",
@@ -13753,7 +13809,9 @@
         "package.json",
         "scripts/gates/gov-conventions.ts",
         "tests/unit/qualite/pipeline-image.spec.ts",
-        "tests/unit/qualite/build-sans-base.spec.ts"
+        "tests/unit/qualite/build-sans-base.spec.ts",
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts",
+        "scripts/gates/registre-des-refus.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -14685,7 +14743,10 @@
       "paths": [
         ".github/workflows/coolify-provisionner.yml",
         "scripts/deploiement/provisionner.ts",
-        "tests/unit/qualite/provisionnement-coolify.spec.ts"
+        "tests/unit/qualite/provisionnement-coolify.spec.ts",
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts",
+        "package.json",
+        "scripts/gates/registre-des-refus.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -14710,6 +14771,45 @@
       "branch": null,
       "pr": null,
       "attestation": null,
+      "motif": null
+    },
+    {
+      "id": "GOV-128",
+      "titre": "Le passif de la declaration lit aussi la ligne Lot: du squash immuable : une PR de lot au corps enrichi se clot sur arbitrage ecrit",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "scripts/lot/cloture.ts",
+        "tests/unit/gouvernance/le-passif-de-la-declaration-est-ferme.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "GOV-127"
+      ],
+      "reqs": [
+        "REQ-GOV-026"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "fusionnee",
+      "acceptance": "EXCEPTION AU GEL, arbitrage -d7 sur delegation de Williams du 2026-09-30 : elle bloque deux clotures de phase 0. CONSTAT : INT-T04 et INT-T05 (axion-ia #1228, sha 3fb76aa) sont refusees par lot:cloture (tache_etrangere_a_la_pr) : la premiere ligne du squash est conforme, mais le corps porte, apres la ligne Lot: INT-T04, INT-T05, un paragraphe et un trailer ; or le corps ne declare que s il est reduit a la seule ligne Lot: (GOV-104), et le titre feat(INT-T04, INT-T05) ne nomme aucune tache a lui seul. Condition verifiee : les deux accords A09 sont publies sur la tete fusionnee 7eb1bf3. A LIVRER : (1) deux entrees au PASSIF_DE_LA_DECLARATION, INT-T04 et INT-T05, PR axion-ia #1228, sha complet 3fb76aa, declarees par la ligne Lot: et non par le titre. (2) Une telle entree ne leve le refus QUE si la tache, la PR et le sha complet coincident, si la premiere ligne du squash est conforme, et si la ligne Lot: qui la suit dans le message immuable nomme la tache. (3) Toute autre livraison garde les refus a l identique ; les entrees par titre gardent leur regle ; aucun drapeau ne leve rien ; aucune regle generale n est assouplie. (4) TEMOINS rouges d abord : INT-T04 et INT-T05 passent ; un autre sha, une autre PR, une tache absente de la ligne Lot:, un squash sans ligne Lot: ou a premiere ligne non conforme sont refuses. (5) Deux lentilles (scripts/lot/). Puis INT-T04 et INT-T05 sont closes par un rattrapage.",
+      "tests": {
+        "REQ-GOV-026": [
+          "tests/unit/gouvernance/le-passif-de-la-declaration-est-ferme.spec.ts"
+        ]
+      },
+      "issue": 277,
+      "owner": "A01",
+      "branch": "t/gov-128",
+      "pr": 278,
+      "attestation": {
+        "pr": 278,
+        "sha": "58ac665f2134b925aec000a2d81ba9509db46b17",
+        "fusionneeAt": "2026-09-29T23:56:28Z"
+      },
       "motif": null
     }
   ]
