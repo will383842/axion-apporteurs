@@ -147,7 +147,7 @@
     "mutation:prove": "tsx scripts/mutation/rapport.ts --prove",
     "mutation:pr": "tsx scripts/mutation/pr.ts",
     "a11y:navigateurs": "playwright install --with-deps chromium webkit",
-    "image:construire": "docker build --tag partners:construite .",
+    "image:construire": "docker build --build-arg GITHUB_SHA --tag partners:construite .",
     "image:temoin-build-sans-base": "sh scripts/image/temoin-build-sans-base.sh",
     "gate-c": "sh scripts/gates/gate-c.sh partners:construite",
     "gate-c:prove": "sh scripts/image/temoin-porte-c.sh",
@@ -157,7 +157,9 @@
     "image:exporter": "docker save partners:construite -o image-preview.tar",
     "preview:publier-image": "tsx scripts/preview/preview.ts publier-image",
     "preview:attribuer": "tsx scripts/preview/preview.ts attribuer",
-    "preview:detruire": "tsx scripts/preview/preview.ts detruire"
+    "preview:detruire": "tsx scripts/preview/preview.ts detruire",
+    "deploy:verify": "tsx scripts/gates/deploy-verify.ts --verifier",
+    "deploy:coolify": "tsx scripts/gates/deploy-verify.ts --declencher"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.13.0",

@@ -32,7 +32,8 @@ const REEL: Sources = {
 
 /** Ce que chaque étape doit exécuter, EXACTEMENT. */
 const ATTENDUS: Record<string, string> = {
-  'image:construire': 'docker build --tag partners:construite .',
+  // `--build-arg GITHUB_SHA` : le sha du commit devient l'en-tête x-partners-build-sha (QA-T34).
+  'image:construire': 'docker build --build-arg GITHUB_SHA --tag partners:construite .',
   'gate-c': 'sh scripts/gates/gate-c.sh partners:construite',
   'gate-c:prove': 'sh scripts/image/temoin-porte-c.sh',
   'image:publier': 'sh scripts/image/publier.sh',
@@ -114,8 +115,16 @@ function fautesDuPipeline(s: Sources): string[] {
     if (!/JETON: \$\{\{ secrets\.GITHUB_TOKEN \}\}/.test(publier))
       f.push('connexion_au_registre : le jeton de publication n’est pas GITHUB_TOKEN');
   }
-  if (/secrets\.(?!GITHUB_TOKEN\b)/.test(s.workflow))
+  // La chaîne qui construit et publie ne lit que GITHUB_TOKEN. Le job `deployer` (QA-T34), qui ne
+  // construit ni ne publie rien, ne lit que les trois secrets de la plateforme — et rien d'autre.
+  const horsDeployer = [
+    s.workflow.slice(0, s.workflow.indexOf('\njobs:')),
+    ...[...j].filter(([nom]) => nom !== 'deployer').map(([, texte]) => texte),
+  ].join('\n');
+  if (/secrets\.(?!GITHUB_TOKEN\b)/.test(horsDeployer))
     f.push('secret_tiers : le workflow lit un autre secret que GITHUB_TOKEN');
+  if (/secrets\.(?!COOLIFY_(?:URL|API_TOKEN|APP_UUID)\b)/.test(j.get('deployer') ?? ''))
+    f.push('secret_tiers : le job deployer lit un autre secret que ceux de la plateforme');
 
   // Aucun checkout ne laisse le jeton dans `.git/config`.
   const checkouts =
@@ -148,7 +157,7 @@ function fautesDuPipeline(s: Sources): string[] {
 describe('REQ-QA-018 — la forge construit, juge, puis publie l’image (QA-T05)', () => {
   it('REQ-QA-018 — les vraies sources ne portent aucune faute, et les deux jobs sont lus', () => {
     expect(fautesDuPipeline(REEL)).toEqual([]);
-    expect([...jobs(REEL.workflow).keys()]).toEqual(['image', 'publier']);
+    expect([...jobs(REEL.workflow).keys()]).toEqual(['image', 'publier', 'deployer']);
   });
 
   const mutants: [string, (s: Sources) => Sources, string][] = [
@@ -228,6 +237,14 @@ describe('REQ-QA-018 — la forge construit, juge, puis publie l’image (QA-T05
     [
       'un secret tiers lu par la publication',
       (s) => ({ ...s, workflow: s.workflow.replace('secrets.GITHUB_TOKEN', 'secrets.GHCR_PAT') }),
+      'secret_tiers',
+    ],
+    [
+      'un secret tiers lu par le job deployer',
+      (s) => ({
+        ...s,
+        workflow: s.workflow.replace('secrets.COOLIFY_APP_UUID', 'secrets.GHCR_PAT'),
+      }),
       'secret_tiers',
     ],
   ];
