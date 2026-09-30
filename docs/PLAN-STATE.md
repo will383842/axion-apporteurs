@@ -8,12 +8,12 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `dffcbbaf` — 2026-09-30T02:11:03+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #275 (un contrôle requis rouge ou une revue manquante) · 2. #262 (un conflit avec `main`) · 3. #263 (un conflit avec `main`) · 4. #268 (un conflit avec `main`) · 5. #272 (un conflit avec `main`) |
+| Qu’est-ce qui est en vol ? | 1. #275 (un contrôle requis rouge ou une revue manquante) · 2. #279 (un contrôle requis rouge ou une revue manquante) · 3. #262 (un conflit avec `main`) · 4. #263 (un conflit avec `main`) · 5. #268 (un conflit avec `main`) · 6. #272 (un conflit avec `main`) |
 | Qui tient quoi ? | aucune tâche revendiquée |
 | Où en est la phase ? | phase 0 — 121/134 tâches, reste 9.25 j |
 | Le prochain pas | QA-T06 — Preview par PR sur Coolify, base éphémère, seed déterministe |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
-| Dernière entrée de journal | PR #278 — 2026-09-29 |
+| Dernière entrée de journal | PR #279 — 2026-09-30 |
 
 **Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
@@ -61,10 +61,11 @@ Aucune : toutes les décisions dont la phase courante dépend sont codables dans
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
 | 1 | #275 — feat(GOV-123): les vues derivees sortent de git et se rendent a la volee, fin des conflits de vues entre PR | `t/gov-123-vues` | un contrôle requis rouge ou une revue manquante |
-| 2 | #262 — feat(GOV-116): le lot dedie du gardien-spec, procedure exacte lancee par Williams, reglages rendus depuis le projet | `t/gov-116` | un conflit avec `main` — à résoudre avant tout |
-| 3 | #263 — feat(QA-T20): le poids charge par route se lit dans les manifestes de Next 16, zero octet est une faute | `t/qa-t20` | un conflit avec `main` — à résoudre avant tout |
-| 4 | #268 — feat(QA-T34): la plateforme tire sha-7 apres publier, un seul producteur, l'atterrissage lu sur x-partners-build-sha | `t/qa-t34` | un conflit avec `main` — à résoudre avant tout |
-| 5 | #272 — feat(QA-T50): base, cache et application crees s'ils manquent, variables posees depuis les secrets, aucune valeur imprimee | `t/qa-t50` | un conflit avec `main` — à résoudre avant tout |
+| 2 | #279 — chore(GOV-012): registre rattrape, INT-T04 et INT-T05 closes par le passif, QA-T13 decoupee, paths de QA-T06 et JUR-T29 | `t/registre-rattrapage-17` | un contrôle requis rouge ou une revue manquante |
+| 3 | #262 — feat(GOV-116): le lot dedie du gardien-spec, procedure exacte lancee par Williams, reglages rendus depuis le projet | `t/gov-116` | un conflit avec `main` — à résoudre avant tout |
+| 4 | #263 — feat(QA-T20): le poids charge par route se lit dans les manifestes de Next 16, zero octet est une faute | `t/qa-t20` | un conflit avec `main` — à résoudre avant tout |
+| 5 | #268 — feat(QA-T34): la plateforme tire sha-7 apres publier, un seul producteur, l'atterrissage lu sur x-partners-build-sha | `t/qa-t34` | un conflit avec `main` — à résoudre avant tout |
+| 6 | #272 — feat(QA-T50): base, cache et application crees s'ils manquent, variables posees depuis les secrets, aucune valeur imprimee | `t/qa-t50` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -98,6 +99,17 @@ Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
 
+### PR #279 — 2026-09-30 — chore(GOV-012): registre rattrape, INT-T04 et INT-T05 closes par le passif, QA-T13 decoupee, paths de QA-T06 et JUR-T29
+
+**Fait.** Cinq clôtures, dont INT-T04 et INT-T05 par le passif déclaré. QA-T13 est découpée : le
+socle et ses trois runbooks exercés avant la fin de la Phase 0, les runbooks d'argent à QA-T25.
+JUR-T29 déclare les fichiers réels de sa PR. Les dettes non bloquantes sont rangées dans LECONS.
+
+**Reste.** La clôture de JUR-T29 après la fusion et la mise en production de axion-ia #1232.
+
+**Appris.** Une clôture écrite sur une base qui ne porte pas la revendication de la tâche se perd
+à la fusion du registre : on clôt sur la base à jour, jamais avant.
+
 ### PR #278 — 2026-09-29 — feat(GOV-128): le passif de la declaration lit la ligne Lot: du squash immuable, deux entrees pour axion-ia 1228
 
 **Fait.** Le passif déclaré de la déclaration sait lire la ligne Lot: du message d'écrasement
@@ -120,19 +132,7 @@ chemins de QA-T12 et de JUR-T29 suivent ce que leurs auteurs ont mesuré.
 **Appris.** Une condition de mise en service écrite dans un runbook seul se perd : écrite dans
 l'acceptance, elle a un témoin et bloque réellement.
 
-### PR #267 — 2026-09-29 — fix(GOV-109): la garde lexicale evalue toute expression JSX constante comme React la rend
-
-**Fait.** La garde du lexique évalue désormais la valeur rendue de toute expression JSX constante,
-ternaires compris, avec les deux branches jugées, au lieu d'une liste de formes. Ce qu'elle ne peut
-pas évaluer est écrit dans son en-tête.
-
-**Reste.** Les expressions non constantes, et ce qu'un composant fait de ses enfants, restent hors
-de la garde : c'est la relecture qui les voit.
-
-**Appris.** Une liste de formes interdites se contourne par la forme suivante : évaluer la valeur
-rendue ferme toute la famille d'un coup.
-
-… 3 entrée(s) affichée(s) sur 119 ; les 116 plus ancienne(s) se lisent dans `docs/journal/`.
+… 3 entrée(s) affichée(s) sur 120 ; les 117 plus ancienne(s) se lisent dans `docs/journal/`.
 
 ## Dette déclarée
 
