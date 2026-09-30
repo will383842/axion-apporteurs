@@ -4125,11 +4125,11 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
-      "owner": null,
+      "statut": "fusionnee",
+      "owner": "A05",
       "lot": null,
-      "branch": null,
-      "pr": null,
+      "branch": "t/qa-t20",
+      "pr": 263,
       "issue": null,
       "attempts": 0,
       "motif": null,
@@ -4141,6 +4141,11 @@
         "REQ-UX-033": [
           "tests/unit/qualite/budget-par-route.spec.ts"
         ]
+      },
+      "attestation": {
+        "pr": 263,
+        "sha": "a89b061f37ca18b3e2e7531b3796119ed5251a68",
+        "fusionneeAt": "2026-09-30T03:35:01Z"
       }
     },
     {
@@ -14965,7 +14970,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.25,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "Arbitrage A01 du 2026-09-30, sur la question de -66 (contrat en lockstep) et l'arbitrage -d7 sur QA-T52. Le contrat Partners est la source : l'en-tete du kid y est declare AVANT sa recopie dans axion-ia (INT-T41). A LIVRER : (1) un en-tete du kid, facultatif, ajoute aux en-tetes declares des webhooks d'axion-ia vers Partners et de la reponse de coordonnees ; (2) changement ADDITIF et facultatif, sans nouveau type d'evenement : le contrat reste en v2, et contracts.sha256 est recalcule par l'export ; (3) TEMOIN : le contrat exporte declare l'en-tete, l'empreinte suit, et un en-tete absent reste valide (facultatif). Auteur : -66, puis INT-T41 recopie le contrat octet pour octet. Lentille schema requise.",
       "tests": {
         "REQ-QA-030": [
@@ -14973,10 +14978,14 @@
         ]
       },
       "issue": null,
-      "owner": null,
-      "branch": null,
-      "pr": null,
-      "attestation": null,
+      "owner": "A05",
+      "branch": "t/int-t42",
+      "pr": 287,
+      "attestation": {
+        "pr": 287,
+        "sha": "9a3ba2fe2a52bf5c5488514181f5359b2147f5d2",
+        "fusionneeAt": "2026-09-30T05:24:48Z"
+      },
       "motif": null
     },
     {
