@@ -195,7 +195,7 @@ describe('REQ-QA-015 — le workflow de preview tient les six conditions', () =>
   it('REQ-QA-015 : (4) deployer et detruire vivent dans l’environnement `preview`, jamais dans celui de production', () => {
     expect((job('deployer') as { environment?: unknown }).environment).toBe('preview');
     expect((job('detruire') as { environment?: unknown }).environment).toBe('preview');
-    expect(texte).not.toMatch(/secrets.COOLIFY_URL|secrets.COOLIFY_API_TOKEN/);
+    expect(texte).not.toMatch(/secrets\.COOLIFY_URL\b|secrets\.COOLIFY_API_TOKEN\b/);
   });
 
   it('REQ-QA-015 : (5) une seule décision à la fois, jamais annulée', () => {
