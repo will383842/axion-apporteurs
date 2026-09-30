@@ -1,7 +1,7 @@
 /**
  * chiffrement.ts — le chiffrement CÔTÉ CLIENT des vidages de Partners (QA-T12, REQ-QA-023).
  *
- * Arbitrage -d7 sur délégation de Williams du 2026-09-29 : le chiffrement natif de R2 au repos ne
+ * Arbitrage -d7 sur délégation de Williams du 2026-09-29 : le chiffrement natif de Cloudflare R2 au repos ne
  * suffit pas avant la première donnée réelle ; chaque vidage est chiffré par Partners, avec une clé
  * PROPRE à Partners (`PARTNERS_BACKUP_PASSPHRASE`), jamais celle d'un autre produit.
  *

@@ -5,12 +5,12 @@
  *   pnpm sauvegarde:rechiffrer    chaque heure : chiffre ce que la plateforme a déposé en clair
  *   pnpm sauvegarde:exercice      chaque mois : exerce le dernier vidage chiffré, alerte sur échec
  *   pnpm sauvegarde:fraicheur     chaque nuit : rougit si le dernier exercice réussi est trop vieux
- *   pnpm sauvegarde:configurer    à la main : programme la sauvegarde horaire de la base vers R2
+ *   pnpm sauvegarde:configurer    à la main : programme la sauvegarde horaire de la base vers Cloudflare R2
  *
  * ── LA RÉPARTITION, ARBITRÉE PAR -d7 SUR DÉLÉGATION DE WILLIAMS DU 2026-09-29 ────────────────
  *
  * La base n'est pas publique : c'est la PLATEFORME qui produit le vidage horaire et le dépose dans
- * R2, sous `partners/` (bucket `axion-ia-backups`, décision de Williams du 2026-09-22). Elle ne sait
+ * Cloudflare R2, sous `partners/` (bucket `axion-ia-backups`, décision de Williams du 2026-09-22). Elle ne sait
  * pas chiffrer côté client : chaque heure, `rechiffrer` le chiffre avec la clé PROPRE à Partners
  * (`PARTNERS_BACKUP_PASSPHRASE`), l'écrit sous `partners/chiffres/` et efface le clair. Chaque mois,
  * la forge exerce le dernier vidage chiffré et écrit son verdict sous `partners/exercices/`.
@@ -25,7 +25,7 @@
  *
  * ── TIERS, LUS LE 2026-09-29 (RM-08) ─────────────────────────────────────────────────────────
  *
- *   • R2 parle S3 : la CLI `aws` des runners (`s3api list-objects-v2`, `s3 cp`, `s3 rm`), avec
+ *   • Cloudflare R2 parle S3 : la CLI `aws` des runners (`s3api list-objects-v2`, `s3 cp`, `s3 rm`), avec
  *     `--endpoint-url` et la région `auto`. Aucun SDK ajouté au dépôt.
  *   • Coolify : `POST /api/v1/databases/{uuid}/backups` (`frequency`, `enabled`, `save_s3`,
  *     `s3_storage_uuid`), `GET /api/v1/databases/{uuid}/backups`, dont la réponse N'EST PAS
@@ -135,9 +135,14 @@ function sauter(commande: string, noms: string[]): 0 {
   return 0;
 }
 
-const R2 = ['R2_ENDPOINT', 'R2_ACCESS_KEY_ID', 'R2_SECRET_ACCESS_KEY', 'R2_BUCKET'] as const;
+const SECRETS_DU_STOCKAGE = [
+  'R2_ENDPOINT',
+  'R2_ACCESS_KEY_ID',
+  'R2_SECRET_ACCESS_KEY',
+  'R2_BUCKET',
+] as const;
 
-/** R2 par la CLI `aws` : les clés passent par l'environnement du sous-processus, jamais en argument. */
+/** Cloudflare R2 par la CLI `aws` : les clés passent par l'environnement du sous-processus, jamais en argument. */
 function depotR2(): Depot {
   const env = {
     ...process.env,
@@ -196,7 +201,7 @@ function notifieurTelegram(jeton: string, salon: string): Notifieur {
 
 async function commande(nom: string): Promise<number> {
   if (nom === 'rechiffrer') {
-    const m = manquantes([...R2, 'PARTNERS_BACKUP_PASSPHRASE']);
+    const m = manquantes([...SECRETS_DU_STOCKAGE, 'PARTNERS_BACKUP_PASSPHRASE']);
     if (m.length) return sauter('sauvegarde:rechiffrer', m);
     const r = await rechiffrer(depotR2(), process.env.PARTNERS_BACKUP_PASSPHRASE ?? '');
     console.log(
@@ -206,7 +211,7 @@ async function commande(nom: string): Promise<number> {
   }
   if (nom === 'exercice') {
     const m = manquantes([
-      ...R2,
+      ...SECRETS_DU_STOCKAGE,
       'PARTNERS_BACKUP_PASSPHRASE',
       'TELEGRAM_BOT_TOKEN',
       'TELEGRAM_CHAT_ID',
@@ -244,7 +249,7 @@ async function commande(nom: string): Promise<number> {
     return 1;
   }
   if (nom === 'fraicheur') {
-    const m = manquantes(R2);
+    const m = manquantes(SECRETS_DU_STOCKAGE);
     if (m.length) return sauter('sauvegarde:fraicheur', m);
     const seuil = SEUILS.EXERCICE_DE_RESTAURATION_MAX_JOURS.valeur;
     const j = await fraicheurDuDepot(depotR2(), new Date(), seuil);

@@ -1,6 +1,6 @@
 # La sauvegarde de Partners et son exercice — QA-T12 (REQ-QA-023).
 #
-# La base n'est pas publique : la PLATEFORME produit le vidage horaire et le dépose dans R2 sous
+# La base n'est pas publique : la PLATEFORME produit le vidage horaire et le dépose dans Cloudflare R2 sous
 # `partners/` (arbitrage -d7 sur délégation de Williams du 2026-09-29). Ce workflow :
 #   — chaque heure, CHIFFRE côté client ce qui a été déposé en clair, puis efface le clair ;
 #   — chaque mois, EXERCE le dernier vidage chiffré sur un Postgres éphémère, écrit le verdict
@@ -76,7 +76,7 @@ jobs:
         with: { persist-credentials: false }
       - uses: pnpm/action-setup@v4
       - run: pnpm install --frozen-lockfile
-      - name: Programmer la sauvegarde horaire de la base vers R2 sur la plateforme
+      - name: Programmer la sauvegarde horaire de la base vers Cloudflare R2 sur la plateforme
         env:
           COOLIFY_URL: ${{ secrets.COOLIFY_URL }}
           COOLIFY_API_TOKEN: ${{ secrets.COOLIFY_API_TOKEN }}

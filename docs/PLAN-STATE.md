@@ -113,9 +113,9 @@ dans une table témoin dérivée du schéma, écrit un verdict daté et alerte s
 rougit si le dernier exercice réussi est trop vieux, selon un seuil de la SSOT. Le runbook porte la
 condition de mise en service : aucune donnée réelle avant un exercice réussi sur un vidage chiffré.
 
-**Reste.** L'exercice réel attend les clés R2, la phrase de passe et le salon d'alerte. Le format du
+**Reste.** L'exercice réel attend les clés Cloudflare R2, la phrase de passe et le salon d'alerte. Le format du
 vidage de la plateforme n'est pas documenté : le premier exercice dira si la restauration le lit. Le
-transport R2 passe par la CLI des runners et n'est exercé qu'en réel.
+transport Cloudflare R2 passe par la CLI des runners et n'est exercé qu'en réel.
 
 **Appris.** Un vidage au format personnalisé tronqué d'un seul octet fait bien échouer la restauration,
 mais un vidage chiffré en GCM tronqué d'un octet échoue plus tôt, au déchiffrement : les deux faces se

@@ -8,7 +8,7 @@
 ## ⛔ Condition de mise en service
 
 **Aucune donnée réelle en production avant que le chiffrement côté client ait tourné.** Le chiffrement
-natif de R2 au repos et un jeton restreint au bucket et au préfixe `partners/` suffisent tant que la base
+natif de Cloudflare R2 au repos et un jeton restreint au bucket et au préfixe `partners/` suffisent tant que la base
 ne porte que des données d'essai. Avant la première donnée réelle, chaque vidage doit être chiffré par
 Partners, avec une clé propre à Partners — le secret `PARTNERS_BACKUP_PASSPHRASE`, **jamais** la clé
 d'un autre produit (arbitrage -d7 sur délégation de Williams du 2026-09-29). La preuve est un exercice
@@ -34,7 +34,7 @@ l'étape et le code de sortie.
    `PARTNERS_BACKUP_PASSPHRASE` (au moins 32 caractères, tirée au hasard, conservée hors de la forge dans
    le coffre de Williams), `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` (un robot ou un salon **dédié** à
    Partners), `COOLIFY_URL`, `COOLIFY_API_TOKEN`.
-2. Déclarer R2 comme stockage S3 dans la plateforme, puis poser les variables de dépôt
+2. Déclarer Cloudflare R2 comme stockage S3 dans la plateforme, puis poser les variables de dépôt
    `COOLIFY_S3_STORAGE_UUID` et `COOLIFY_DB_UUID` (rendu par le provisionnement).
 3. Lancer `Sauvegarde` à la main, geste `configurer` : la sauvegarde horaire est programmée ; relancé, il
    dit « existe déjà ».
@@ -70,5 +70,5 @@ verdict sous `partners/exercices/`, dont le motif nomme l'étape :
 
 ## Exécuté le
 
-Exécuté le : — · environnement : — · SHA : — · résultat : **jamais exécuté**, attend les clés R2 et la
+Exécuté le : — · environnement : — · SHA : — · résultat : **jamais exécuté**, attend les clés Cloudflare R2 et la
 plateforme (arbitrage -d7 du 2026-09-29 : la tâche n'est pas déclarée livrée avant).

@@ -123,7 +123,7 @@ jobs:
 
   # QA-T12 (REQ-QA-023) : une sauvegarde qu on ne restaure pas n en est pas une. Rouge si le dernier
   # exercice reussi est plus vieux que le seuil de la SSOT (`EXERCICE_DE_RESTAURATION_MAX_JOURS`),
-  # s il a echoue, ou s il n y en a aucun. Secrets R2 absents : SAUTE, chaque absent nomme.
+  # s il a echoue, ou s il n y en a aucun. Secrets Cloudflare R2 absents : SAUTE, chaque absent nomme.
   sauvegarde-fraicheur:
     name: Sauvegarde — le dernier exercice de restauration est recent et reussi
     runs-on: ubuntu-latest

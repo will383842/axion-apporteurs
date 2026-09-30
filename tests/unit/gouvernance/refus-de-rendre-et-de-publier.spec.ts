@@ -962,7 +962,7 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
       porte: 3,
       temoins: 0,
       raison:
-        'QA-T12 — REQ-QA-023, rechiffrement, exercice, fraicheur et configuration de la sauvegarde. `process.exitCode` pose sur le code de la commande (1 exercice en echec, exercice perime ou refus de la plateforme) et sur 1 en cas d erreur. Les fonctions sont vues rendre chaque issue sur un depot EN MEMOIRE (sauvegarde-et-exercice.spec.ts) ; le binaire attend les cles R2 ; aucun temoin ne vit dans `REFUS`. N importe pas `fichiersSuivisOuRefus`. Dette DECLAREE.',
+        'QA-T12 — REQ-QA-023, rechiffrement, exercice, fraicheur et configuration de la sauvegarde. `process.exitCode` pose sur le code de la commande (1 exercice en echec, exercice perime ou refus de la plateforme) et sur 1 en cas d erreur. Les fonctions sont vues rendre chaque issue sur un depot EN MEMOIRE (sauvegarde-et-exercice.spec.ts) ; le binaire attend les cles Cloudflare R2 ; aucun temoin ne vit dans `REFUS`. N importe pas `fichiersSuivisOuRefus`. Dette DECLAREE.',
     },
     'scripts/sauvegarde/exercice.ts': {
       total: 2,

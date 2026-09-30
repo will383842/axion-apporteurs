@@ -4,7 +4,7 @@
  * USAGE : pnpm sauvegarde:exercice -- --vidage <fichier> [--verdict <sortie.json>]
  *             restaure le vidage chiffré sur un Postgres ÉPHÉMÈRE, juge, écrit le verdict ;
  *             code 0 si réussi, 1 sinon. Clé : PARTNERS_BACKUP_PASSPHRASE.
- *         La fraîcheur, le rechiffrement et l'exercice du dernier vidage R2 : `cycle.ts`.
+ *         La fraîcheur, le rechiffrement et l'exercice du dernier vidage Cloudflare R2 : `cycle.ts`.
  *
  * UNE SAUVEGARDE QU'ON NE RESTAURE PAS N'EST PAS UNE SAUVEGARDE. L'exercice, dans cet ordre :
  *   1. refuse un vidage sans chiffrement client, et déchiffre (AES-256-GCM, `chiffrement.ts`) : un
