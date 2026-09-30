@@ -2410,7 +2410,8 @@
         "package.json",
         "src/domain/seuils/ssot.ts",
         "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts",
-        "scripts/gates/registre-des-refus.ts"
+        "scripts/gates/registre-des-refus.ts",
+        "tests/unit/juridique/seuils-ssot-en-processus.spec.ts"
       ],
       "schema": false,
       "sensible": [],
