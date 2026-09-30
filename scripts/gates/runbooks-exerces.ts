@@ -18,6 +18,13 @@
  * tant qu'aucun runbook du socle n'a été exercé en preview — une garde rouge en porte A jusqu'au
  * premier exercice bloquerait toutes les PR —, en porte A dès le premier exercice réel. Les trois
  * runbooks du socle sont exercés AVANT la clôture de la phase 0.
+ *
+ * AMENDEMENT (7)-(8) DE QA-T13 (2026-09-30). Williams a décidé qu'il n'y aurait pas de serveur
+ * d'aperçus : les runbooks s'exercent alors sur la PRODUCTION, strictement avant la première donnée
+ * réelle (plan B2, conditions de la lentille `securite`). La liste des environnements est FERMÉE
+ * (`ENVIRONNEMENTS_ADMIS`), et la garde ne croit pas une étiquette : `production-avant-donnees` n'est
+ * admis que si `MISE_EN_SERVICE` est posée et que l'exercice lui est STRICTEMENT antérieur. Date
+ * absente ou illisible : refus (échec fermé).
  */
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
@@ -34,9 +41,36 @@ export const FAMILLES = [
   'bloc_vide',
   'bloc_illisible',
   'hors_preview',
+  'mise_en_service_non_posee',
+  'exerce_apres_mise_en_service',
   'corps_modifie_depuis_l_exercice',
 ] as const;
 export type Faute = { famille: (typeof FAMILLES)[number]; message: string };
+
+/** Les environnements où un exercice compte, et eux seuls (amendement (8) de QA-T13). */
+export const ENVIRONNEMENTS_ADMIS = ['preview', 'production-avant-donnees'] as const;
+
+/**
+ * Le jour de la mise en service de Partners : la première donnée réelle. `null` tant que Williams ne
+ * l'a pas fixée, et alors aucun exercice `production-avant-donnees` n'est admis.
+ *
+ * Elle ne sert jamais de sursis (lentille `securite`, 2026-09-30) :
+ *   — le jour de la PREMIÈRE donnée réelle, si ce jour précède la date posée, elle est ramenée à ce
+ *     jour : c'est un pas de la mise en service. La date ne fait que reculer vers le réel ;
+ *   — un report à une date plus TARDIVE est une décision datée de Williams : `source` et `verifieLe`
+ *     sont mis à jour, et une ligne est ajoutée à `docs/DECISIONS.md`.
+ */
+export const MISE_EN_SERVICE: {
+  readonly valeur: string | null;
+  readonly source: string;
+  readonly verifieLe: string;
+} = {
+  valeur: null,
+  source: 'à fixer par Williams avant l’enregistrement des exercices (amendement (8) de QA-T13)',
+  verifieLe: '2026-09-30',
+};
+
+const JOUR = /^\d{4}-\d{2}-\d{2}$/;
 
 const TITRE_DU_BLOC = /^## Exécuté le\s*$/m;
 const LIGNE = /^Exécuté le : (.*)$/m;
@@ -64,7 +98,10 @@ export function blocDExecution(b: {
   return `Exécuté le : ${b.date} · environnement : ${b.environnement} · SHA : ${b.sha} · corps : ${b.corps} · résultat : ${b.resultat}`;
 }
 
-export function juger(runbooks: readonly { chemin: string; texte: string | null }[]): Faute[] {
+export function juger(
+  runbooks: readonly { chemin: string; texte: string | null }[],
+  miseEnService: string | null = MISE_EN_SERVICE.valeur
+): Faute[] {
   const fautes: Faute[] = [];
   for (const { chemin, texte } of runbooks) {
     if (texte === null) {
@@ -93,17 +130,33 @@ export function juger(runbooks: readonly { chemin: string; texte: string | null 
       });
       continue;
     }
-    if (m[2] !== 'preview') {
+    if (!(ENVIRONNEMENTS_ADMIS as readonly string[]).includes(m[2]!)) {
       fautes.push({
         famille: 'hors_preview',
-        message: `${chemin} : exercé en « ${m[2]} », pas en preview`,
+        message: `${chemin} : exercé en « ${m[2]} », hors de la liste fermée (${ENVIRONNEMENTS_ADMIS.join(' | ')})`,
       });
       continue;
+    }
+    if (m[2] === 'production-avant-donnees') {
+      if (miseEnService === null || !JOUR.test(miseEnService)) {
+        fautes.push({
+          famille: 'mise_en_service_non_posee',
+          message: `${chemin} : exercé en production-avant-donnees, mais la date de mise en service n'est pas posée (MISE_EN_SERVICE) — rien ne prouve que l'exercice précède la première donnée réelle`,
+        });
+        continue;
+      }
+      if (m[1]! >= miseEnService) {
+        fautes.push({
+          famille: 'exerce_apres_mise_en_service',
+          message: `${chemin} : exercé le ${m[1]}, pas avant la mise en service du ${miseEnService} — à ré-exercer`,
+        });
+        continue;
+      }
     }
     if (m[4] !== empreinteDuCorps(t)) {
       fautes.push({
         famille: 'corps_modifie_depuis_l_exercice',
-        message: `${chemin} : le corps a changé depuis l'exercice du ${m[1]} — à ré-exercer en preview`,
+        message: `${chemin} : le corps a changé depuis l'exercice du ${m[1]} — à ré-exercer`,
       });
     }
   }
@@ -124,16 +177,35 @@ function prouver(): number {
       'bloc_vide',
     ],
     ['date illisible', exerce(C).replace('2026-09-30', '30/09/2026'), 'bloc_illisible'],
-    ['exercé en production', exerce(C, 'production'), 'hors_preview'],
+    ['exercé en production (hors liste fermée)', exerce(C, 'production'), 'hors_preview'],
+    [
+      'production-avant-donnees, date de mise en service absente',
+      exerce(C, 'production-avant-donnees'),
+      'mise_en_service_non_posee',
+    ],
+    [
+      'production-avant-donnees, exercé le jour de la mise en service',
+      exerce(C, 'production-avant-donnees'),
+      'exerce_apres_mise_en_service',
+    ],
     [
       'corps modifié sans nouvel exercice',
       exerce(C).replace('1. Faire.', '1. Faire autrement.'),
       'corps_modifie_depuis_l_exercice',
     ],
   ];
+  // RM-11 : la date de mise en service est posée par chaque cas, jamais lue de la constante.
+  const dateDuCas = (quoi: string): string | null =>
+    quoi.includes('absente')
+      ? null
+      : quoi.includes('jour de la mise')
+        ? '2026-09-30'
+        : '2026-12-31';
   let echecs = 0;
   for (const [quoi, texte, attendue] of cas) {
-    const f = juger([{ chemin: 'docs/runbooks/temoin.md', texte }]).map((x) => x.famille);
+    const f = juger([{ chemin: 'docs/runbooks/temoin.md', texte }], dateDuCas(quoi)).map(
+      (x) => x.famille
+    );
     const bon = attendue === null ? f.length === 0 : f.length === 1 && f[0] === attendue;
     console.log(`${bon ? '✅' : '❌'} ${quoi} → ${f.length ? f.join(', ') : 'vert'}`);
     if (!bon) echecs++;
@@ -156,13 +228,13 @@ function controler(): number {
   const fautes = juger(lus);
   if (fautes.length > 0) {
     console.error(
-      `❌ runbooks:exerces — ${fautes.length} runbook(s) non exercé(s) en preview sur ${lus.length} :`
+      `❌ runbooks:exerces — ${fautes.length} runbook(s) non exercé(s) sur ${lus.length} :`
     );
     for (const f of fautes) console.error(`   [${f.famille}] ${f.message}`);
     return 1;
   }
   console.log(
-    `✅ runbooks:exerces — ${lus.length} runbook(s) confronté(s), tous exercés en preview, corps inchangés.`
+    `✅ runbooks:exerces — ${lus.length} runbook(s) confronté(s), tous exercés (${ENVIRONNEMENTS_ADMIS.join(' | ')}), corps inchangés.`
   );
   return 0;
 }

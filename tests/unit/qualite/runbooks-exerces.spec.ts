@@ -22,6 +22,7 @@ import {
   blocDExecution,
   RUNBOOKS_EXIGES,
   FAMILLES,
+  ENVIRONNEMENTS_ADMIS,
 } from '../../../scripts/gates/runbooks-exerces';
 
 const CORPS = '# Runbook — essai\n\n## Geste\n\n1. Faire.\n2. Vérifier.\n';
@@ -86,6 +87,59 @@ describe('REQ-QA-034 — le bloc d’exécution fait foi, et il suit le corps', 
   });
 });
 
+/**
+ * AMENDEMENT (7)-(8) de QA-T13 (2026-09-30) : pas de serveur d'aperçus (décision de Williams), donc
+ * les runbooks s'exercent sur la PRODUCTION avant toute donnée réelle. La garde ne croit pas une
+ * étiquette (lentille securite) : `production-avant-donnees` n'est admis que si la date de mise en
+ * service est POSÉE et que l'exercice lui est strictement antérieur. Date absente : refus (échec fermé).
+ */
+describe('REQ-QA-034 — production-avant-donnees, borné par la date de mise en service', () => {
+  const avantDonnees = (date: string) =>
+    exerce(CORPS, 'production-avant-donnees').replace('2026-09-30', date);
+  const juge = (texte: string, miseEnService: string | null) =>
+    juger([{ chemin: 'docs/runbooks/essai.md', texte }], miseEnService).map((x) => x.famille);
+
+  it('REQ-QA-034 : exercé avant la date de mise en service, il passe', () => {
+    expect(juge(avantDonnees('2026-10-01'), '2026-10-15')).toEqual([]);
+  });
+
+  it('REQ-QA-034 : exercé LE JOUR de la mise en service, il est refusé', () => {
+    expect(juge(avantDonnees('2026-10-15'), '2026-10-15')).toEqual([
+      'exerce_apres_mise_en_service',
+    ]);
+  });
+
+  it('REQ-QA-034 : exercé APRÈS la mise en service, il est refusé, le runbook nommé', () => {
+    const f = juger(
+      [{ chemin: 'docs/runbooks/essai.md', texte: avantDonnees('2026-11-02') }],
+      '2026-10-15'
+    );
+    expect(f.map((x) => x.famille)).toEqual(['exerce_apres_mise_en_service']);
+    expect(f[0]!.message).toContain('docs/runbooks/essai.md');
+  });
+
+  it('REQ-QA-034 : date de mise en service ABSENTE, il est refusé (échec fermé)', () => {
+    expect(juge(avantDonnees('2026-10-01'), null)).toEqual(['mise_en_service_non_posee']);
+  });
+
+  it('REQ-QA-034 : date de mise en service illisible, il est refusé comme si elle manquait', () => {
+    expect(juge(avantDonnees('2026-10-01'), '15/10/2026')).toEqual(['mise_en_service_non_posee']);
+  });
+
+  it('REQ-QA-034 : CONTRE-TÉMOIN — preview ne dépend pas de la date de mise en service', () => {
+    expect(juge(exerce(CORPS), null)).toEqual([]);
+    expect(juge(exerce(CORPS), '2026-01-01')).toEqual([]);
+  });
+
+  it('REQ-QA-034 : un environnement hors de la liste fermée est refusé, même avec une date posée', () => {
+    expect(juge(exerce(CORPS, 'local'), '2026-12-31')).toEqual(['hors_preview']);
+  });
+
+  it('REQ-QA-034 : la liste des environnements est fermée à deux', () => {
+    expect([...ENVIRONNEMENTS_ADMIS]).toEqual(['preview', 'production-avant-donnees']);
+  });
+});
+
 describe('REQ-QA-034 — la liste des runbooks exigés, et la garde elle-même', () => {
   it('REQ-QA-034 : les runbooks du socle sont exigés, chacun avec son chemin', () => {
     expect(RUNBOOKS_EXIGES.length).toBeGreaterThanOrEqual(3);
@@ -101,6 +155,8 @@ describe('REQ-QA-034 — la liste des runbooks exigés, et la garde elle-même',
         'hors_preview',
         'corps_modifie_depuis_l_exercice',
         'runbook_absent',
+        'mise_en_service_non_posee',
+        'exerce_apres_mise_en_service',
       ].sort()
     );
   });
