@@ -543,7 +543,7 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
       porte: 1,
       temoins: 0,
       raison:
-        'QA-T20 — REQ-UX-033, le poids charge par route lu dans les manifestes de Next 16. `process.exitCode = code` : sortie TERMINALE a code variable, commune a la mesure et a `--prove` — 0 quand la garde passe, 1 sur une faute de mesure, ou sur un depassement sous `--bloquant`. Les familles sont vues rougir sur des builds INJECTES (budget-par-route.spec.ts) et le binaire est vu sortir en 1 sur un build absent et sur un build sur disque sous `--bloquant`, dans la meme spec ; aucun temoin ne vit dans `REFUS`. Le REFUS DE PERIMETRE vient de `fichiersSuivisOuRefus`, et `GARDES_QUI_BALAIENT` le declare plus bas. Dette DECLAREE.',
+        'QA-T20 — REQ-UX-033, le poids charge par route lu dans les manifestes de Next 16. `process.exitCode = code` : sortie TERMINALE a code variable, commune a la mesure et a `--prove` — 0 quand la garde passe, 1 sur une faute de mesure, ou sur un depassement sous `--bloquant`. Les familles sont vues rougir sur des builds INJECTES (budget-par-route.spec.ts) et le binaire est vu sortir en 1 sur un build absent et sur un build sur disque sous `--bloquant`, dans la meme spec ; aucun temoin ne vit dans `REFUS`. Elle lit les pages de l espace sur le DISQUE, pas dans l index : elle n importe pas `fichiersSuivisOuRefus` et n a rien a faire dans `GARDES_QUI_BALAIENT` ; sans build, elle rougit en build_absent. Dette DECLAREE.',
     },
     'scripts/gates/perf-budgets.ts': {
       total: 4,
@@ -2264,7 +2264,6 @@ const GARDES_QUI_BALAIENT = [
   // GOV-046 — `perf:budgets` juge les routes des fichiers SUIVIS sous `src/`. Elle rendait `[]`
   // quand `src/` manquait ; elle établit désormais son périmètre par la source unique.
   'scripts/gates/perf-budgets.ts',
-  'scripts/gates/bundle-par-route.ts',
   // JUR-T02 — `ssot:seuils` juge les littéraux de seuil et de délai dans les fichiers SUIVIS sous
   // `src/`. Elle lançait son propre `git ls-files` ; le témoin de la source unique l'a nommée.
   'scripts/gates/seuils-ssot.ts',

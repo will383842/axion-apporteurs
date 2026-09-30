@@ -55,11 +55,15 @@
  * `lhci` ni Lighthouse : LCP, CLS et INP restent à l'armement bloquant.
  */
 
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { gzipSync } from 'node:zlib';
-import { fichiersSuivisOuRefus } from '../lot/fichiers-suivis';
-import { routesDeLEspace, seuilsDepuisRegistre, texteDeLExigence } from './perf-budgets';
+import {
+  RACINE_ESPACE,
+  routesDeLEspace,
+  seuilsDepuisRegistre,
+  texteDeLExigence,
+} from './perf-budgets';
 
 const CHEMIN_BUDGETS = 'perf/budgets.json';
 const CHEMIN_REGISTRE = 'docs/requirements.json';
@@ -520,6 +524,19 @@ function prouver(): number {
 
 // ── le dépôt ─────────────────────────────────────────────────────────────────────────────────
 
+/**
+ * Les pages de l'espace, lues sur le DISQUE et non dans l'index git : la mesure porte sur ce que
+ * `next build` a construit, c'est-à-dire sur l'arbre de travail. Un espace absent donne zéro page, et le
+ * vert le DIT (« ZÉRO ROUTE »). La garde n'est donc pas de celles qui balaient l'index
+ * (`GARDES_QUI_BALAIENT`) : sans build, elle rougit en `build_absent`, jamais sur un faux périmètre.
+ */
+function pagesSurLeDisque(): string[] {
+  if (!existsSync(RACINE_ESPACE)) return [];
+  return (readdirSync(RACINE_ESPACE, { recursive: true }) as string[]).map(
+    (f) => `${RACINE_ESPACE}/${String(f).split('\\').join('/')}`
+  );
+}
+
 function arguments_(argv: string[]): { build: string; pages: string[]; bloquant: boolean } {
   let build = BUILD_PAR_DEFAUT;
   const pages: string[] = [];
@@ -533,9 +550,7 @@ function arguments_(argv: string[]): { build: string; pages: string[]; bloquant:
 function controlerLeDepot(argv: string[]): number {
   const { build, pages: explicites, bloquant } = arguments_(argv);
   const pages =
-    explicites.length > 0
-      ? explicites
-      : routesDeLEspace(fichiersSuivisOuRefus('perf:bundle')).map((r) => r.fichier);
+    explicites.length > 0 ? explicites : routesDeLEspace(pagesSurLeDisque()).map((r) => r.fichier);
   const vue: VueBuild = {
     pages,
     lire: (c) => {
