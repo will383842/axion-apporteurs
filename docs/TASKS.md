@@ -13,7 +13,7 @@
 | Phase | Taches | Jours | Terminees |
 | --- | ---: | ---: | ---: |
 | -1 — Gouvernance (prealable bloquant) | 39 | 23.75 | 39 |
-| 0 — Socle technique | 134 | 100.85 | 116 |
+| 0 — Socle technique | 134 | 100.85 | 121 |
 | 1 — Operationnel | 79 | 68.00 | 0 |
 | 2 — Argent | 45 | 33.50 | 0 |
 | 3 — Pilotage et conformite | 36 | 32.25 | 0 |
@@ -608,7 +608,7 @@ Couvre : `REQ-QA-023`
 
 Couvre : `REQ-QA-022`, `REQ-QA-030`, `REQ-QA-034`
 
-**Acceptation.** (1) Un enclenchement manuel de retour arriere redeploie l'etiquette de la version precedente avec l'echappatoire de migration, puis VERIFIE `readyz` et l'en-tete de build servi (REQ-QA-022). Un retour arriere qui ne verifie pas ce qu'il a remis en place n'a rien remis en place. (2) LES CINQ RUNBOOKS de `docs/runbooks/` existent — retour arriere, migration echouee, evenement abandonne ou secret desynchronise, commission manquante, lot mensuel bloque — et CHACUN porte un bloc « Execute le : <date> · environnement : preview · SHA · resultat » (REQ-QA-034, REQ-QA-030). (3) L'EXERCICE SE FAIT EN PREVIEW, PAS SUR LE PAPIER : le bloc d'execution est rempli par une execution reelle, et une garde refuse un runbook dont le bloc est vide ou dont la date precede la derniere modification du runbook. (4) TEMOIN A DEUX FACES : un runbook dont on vide le bloc d'execution, puis un dont on modifie le corps sans refaire l'exercice, font sortir la garde en code non nul et NOMMENT le runbook ; les cinq runbooks exerces la font sortir en zero, et le vert imprime le compte des runbooks reellement confrontes. (5) `docs/runbooks/**` est reserve : la PR porte le label de documentation prevu par la charte.
+**Acceptation.** (1) Un enclenchement manuel du workflow de retour arriere (`workflow_dispatch`, avec le SHA cible) redeploie l'image `sha-<cible>` avec `SKIP_MIGRATE=1`, VERIFIE `readyz` et l'en-tete `x-partners-build-sha` par `pnpm deploy:verify` (mode retour arriere), puis retire `SKIP_MIGRATE` (REQ-QA-022). Un retour arriere qui ne verifie pas ce qu'il a remis en place n'a rien remis en place. (2) LES TROIS RUNBOOKS DU SOCLE existent — `docs/runbooks/retour-arriere.md` (seul porteur de `SKIP_MIGRATE`), `docs/runbooks/migration-echouee.md`, `docs/runbooks/secret-desynchronise.md` — et CHACUN porte un bloc « Execute le : <date> · environnement : preview · SHA · resultat » (REQ-QA-034, REQ-QA-030). Les runbooks commission manquante et lot mensuel bloque relevent de QA-T25. (3) La garde `scripts/gates/runbooks-exerces.ts` refuse un runbook dont le bloc est vide ou dont la date precede la derniere modification du runbook ; elle tourne en nightly et passe en porte A au premier exercice reel. (4) TEMOIN A DEUX FACES : un runbook dont on vide le bloc d'execution, puis un dont on modifie le corps sans refaire l'exercice, font sortir la garde en code non nul et NOMMENT le runbook ; les runbooks exerces la font sortir en zero, et le vert imprime le compte des runbooks reellement confrontes. (5) CONDITION posee sur delegation (2026-09-30) : les trois runbooks du socle sont EXERCES REELLEMENT en preview AVANT la cloture de la Phase 0, et la verification de fin de Phase 0 le controle. (6) `docs/runbooks/**` est reserve : la PR porte le label de documentation prevu par la charte.
 
 **Tests.** `tests/unit/qualite/retour-arriere.spec.ts` · `tests/unit/qualite/runbooks-exerces.spec.ts`
 
@@ -662,7 +662,7 @@ Couvre : `REQ-DM-021`, `REQ-INT-007`, `REQ-INT-015`
 
 **Tests.** `axionia/src/server/partners-sync/__tests__/producteurs-client.spec.ts` · `axionia/src/server/partners-sync/__tests__/cliquet-ecrivains.spec.ts`
 
-### INT-T04 — Producteur `devis.signe` unifié
+### INT-T04 — Producteur `devis.signe` unifié ✅ **fusionnee**
 
 `1 j` · zone `integration` · `axionia` · sensible : argent · depend de `DM-03-A`, `INT-T02`
 
@@ -672,7 +672,7 @@ Couvre : `REQ-INT-006`, `REQ-INT-007`
 
 **Tests.** `axionia/src/server/partners-sync/__tests__/producteur-devis.spec.ts`
 
-### INT-T05 — Producteurs `facture.emise`, `facture.annulee`, `avoir.emis`, `paiement.recu`, `paiement.rembourse`
+### INT-T05 — Producteurs `facture.emise`, `facture.annulee`, `avoir.emis`, `paiement.recu`, `paiement.rembourse` ✅ **fusionnee**
 
 `1 j` · zone `integration` · `axionia` · `schema` · sensible : argent, auth · depend de `INT-T02`, `INT-T01c`
 
@@ -1743,7 +1743,7 @@ Couvre : `REQ-GOV-023`
 
 **Tests.** `tests/unit/gouvernance/une-pr-porte-son-entree-de-journal.spec.ts`
 
-### GOV-109 — La garde lexicale ne s'arrete pas au texte litteral : des expressions constantes de la JSX rendent encore a l'ecran un terme qu'elle ne voit pas
+### GOV-109 — La garde lexicale ne s'arrete pas au texte litteral : des expressions constantes de la JSX rendent encore a l'ecran un terme qu'elle ne voit pas ✅ **fusionnee**
 
 `1 j` · zone `gouvernance` · sensible : espace · depend de `GOV-106`
 
@@ -1793,7 +1793,7 @@ Couvre : `REQ-GOV-010`
 
 **Tests.** `tests/unit/gouvernance/lot-dedie-gardien-spec.spec.ts`
 
-### GOV-117 — L'outil d'écriture du registre écrit reqs, hyp et zone d'une tâche existante, validés contre le schéma, les REQ et les HYP existantes, et journalisés
+### GOV-117 — L'outil d'écriture du registre écrit reqs, hyp et zone d'une tâche existante, validés contre le schéma, les REQ et les HYP existantes, et journalisés ✅ **fusionnee**
 
 `0.75 j` · zone `gouvernance` · aucune dependance
 
@@ -1923,7 +1923,7 @@ Couvre : `REQ-INT-031`
 
 **Tests.** `tests/unit/qualite/provisionnement-coolify.spec.ts`
 
-### GOV-128 — Le passif de la declaration lit aussi la ligne Lot: du squash immuable : une PR de lot au corps enrichi se clot sur arbitrage ecrit
+### GOV-128 — Le passif de la declaration lit aussi la ligne Lot: du squash immuable : une PR de lot au corps enrichi se clot sur arbitrage ecrit ✅ **fusionnee**
 
 `0.5 j` · zone `gouvernance` · depend de `GOV-127`
 
@@ -2802,6 +2802,8 @@ Couvre : `REQ-ARG-017`, `REQ-ARG-018`, `REQ-ARG-034`
 `0.5 j` · zone `qualite` · sensible : argent · depend de `QA-T13`, `T-ARG-017`, `T-ARG-022`
 
 Couvre : `REQ-QA-034`
+
+**Acceptation.** (1) Les deux runbooks d'argent existent — `docs/runbooks/commission-manquante.md` et `docs/runbooks/lot-mensuel-bloque.md` — et CHACUN porte un bloc « Execute le : <date> · environnement : preview · SHA · resultat » rempli par une execution reelle en preview (REQ-QA-034). (2) La garde des runbooks exerces livree par QA-T13 les confronte : le vert imprime le compte des runbooks reellement confrontes, socle compris. (3) Chaque runbook designe les fonctions d'argent qu'il exerce (lot du mois, ligne de commission bloquee, rattachement manuel) par leur nom reel, jamais par une description. (4) `docs/runbooks/**` est reserve : la PR porte le label de documentation prevu par la charte.
 
 ### QA-T29 — Test de charge léger : 50 dépôts simultanés même SIREN
 
