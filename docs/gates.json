@@ -172,7 +172,7 @@
       "phase": -1,
       "script": "scripts/gates/gates-derivees.ts",
       "tache": "QA-T00",
-      "verifie": "GATES.md est une VUE de gates.json : toute ligne de GATES.md a une entree de meme id ici (phase et tache identiques), et toute entree a une ligne la-bas ; les alias cites avec = ou + sont portes par alias[], jamais par une seconde entree",
+      "verifie": "GATES.md est une VUE de gates.json : toute ligne de GATES.md a une entree de meme id ici (phase et tache identiques), et toute entree a une ligne la-bas ; les alias cites avec = ou + sont portes par alias[], jamais par une seconde entree ÉTAT AU 2026-09-30 (vérification transversale de la Phase 0, écart T5) : la garde tourne, mais elle n'a ni mode `--prove` ni `preuveRouge`. Lui en donner un est du code de garde : DETTE APRÈS LE LANCEMENT (gel de la gouvernance), pas un préalable à la clôture de la Phase 0.",
       "fixtureRouge": "ajouter une ligne a GATES.md sans entree dans gates.json",
       "preuveRouge": null
     },
@@ -202,7 +202,7 @@
       "phase": -1,
       "script": "scripts/gates/detect-pii.ts",
       "tache": "INT-T01a",
-      "verifie": "aucune PII reelle dans les fixtures commitees (generees par pnpm partners:fixtures, pseudonymisees) ni dans docs/spec/** ; meme fonction que le harnais MCP (INT-T11 livre detectPii)",
+      "verifie": "aucune PII reelle dans les fixtures commitees (generees par pnpm partners:fixtures, pseudonymisees) ni dans docs/spec/** ; meme fonction que le harnais MCP (INT-T11 livre detectPii) ÉTAT AU 2026-09-30 (vérification transversale de la Phase 0, écart T4) : NON ARMÉE. Le script `scripts/gates/detect-pii.ts` n'existe pas sur `main`, et aucun autre témoin ne tient cette promesse sur les fixtures ; dette déclarée dans `scripts/gates/gov-conventions.ts` (PASSIF_SANS_SCRIPT) et `scripts/gates/gov-attributions.ts` (DETTE_GATE_NON_RECIPROQUE) ; re-pointer ou retirer l'entrée touche ces gardes, donc APRÈS LE LANCEMENT (gel de la gouvernance).",
       "fixtureRouge": "fixture portant une adresse e-mail reelle",
       "preuveRouge": null
     },
@@ -211,7 +211,7 @@
       "phase": -1,
       "script": "scripts/gates/contrat-epingle.ts",
       "tache": "INT-T01a",
-      "verifie": "SHA du JSON Schema et schemaVersion identiques dans les deux depots (contracts.v<N>.json + contracts.sha256 copies par pnpm contracts:export, jamais retapes) ; fixtures generees par pnpm partners:fixtures ; changement d'un seul cote -> rouge ; fixture sans en-tete Source: -> rouge",
+      "verifie": "SHA du JSON Schema et schemaVersion identiques dans les deux depots (contracts.v<N>.json + contracts.sha256 copies par pnpm contracts:export, jamais retapes) ; fixtures generees par pnpm partners:fixtures ; changement d'un seul cote -> rouge ; fixture sans en-tete Source: -> rouge ÉTAT AU 2026-09-30 (vérification transversale de la Phase 0, écart T4) : ABSORBÉE. Le script `scripts/gates/contrat-epingle.ts` n'a jamais existé ; l'empreinte du contrat est tenue par `pnpm contracts:hash` (`scripts/contracts/export.ts --verifier`, en porte A) et par `tests/unit/integration/contrat-hash.spec.ts` (REQ-QA-007 : schéma régénéré identique, un champ renommé change l'empreinte) ; l'identité des deux dépôts est constatée par la vérification transversale (axe 3). dette déclarée dans `scripts/gates/gov-conventions.ts` (PASSIF_SANS_SCRIPT) et `scripts/gates/gov-attributions.ts` (DETTE_GATE_NON_RECIPROQUE) ; re-pointer ou retirer l'entrée touche ces gardes, donc APRÈS LE LANCEMENT (gel de la gouvernance).",
       "fixtureRouge": "renommer un champ d'un seul cote",
       "preuveRouge": null
     },
@@ -1018,7 +1018,7 @@
       "phase": -1,
       "script": "scripts/gates/gov-derivation.ts",
       "tache": "GOV-014",
-      "verifie": "toute valeur presente a deux endroits est DERIVEE d'une source unique, jamais recopiee : grille, seuils legaux, listes d'etats, libelles d'enum. DIFFEREE par GOV-014 le 2026-09-05 (docs/GARDES-AXIONIA.md §2), et la tache qui re-arme cette garde DANS CE DEPOT est DM-03-P : son perimetre n'existe a AUCUN endroit du depot aujourd'hui, et l'ecrire produirait exactement la garde a perimetre vide que ce registre refuse. Les seuils sont deja couverts par GATE-JUR-SEUILS-SSOT et les enumerations par partners:schema:enums ; ce qui reste sans domicile est la GRILLE, et c'est DM-03-P qui la pose ici, a partir de la grille que l'autre depot exporte. ⚠️ L'ENTREE RESTE ATTRIBUEE A GOV-014, ET C'EST VOULU : tests/unit/gouvernance/gardes-transposees.spec.ts exige qu'une gate que GOV-014 porte sans l'armer soit AU MOINS decidee par ecrit, sinon la tache se ferme en laissant derriere elle une entree que plus personne ne relit. La re-attribuer a sa tache successeur rendait ce temoin VIDE — il l'a dit lui-meme, « aucune gate GOV-014 sans script : ce test ne juge rien » — et faisait donc disparaitre la garde qui surveille l'oubli",
+      "verifie": "toute valeur presente a deux endroits est DERIVEE d'une source unique, jamais recopiee : grille, seuils legaux, listes d'etats, libelles d'enum. DIFFEREE par GOV-014 le 2026-09-05 (docs/GARDES-AXIONIA.md §2), et la tache qui re-arme cette garde DANS CE DEPOT est DM-03-P : son perimetre n'existe a AUCUN endroit du depot aujourd'hui, et l'ecrire produirait exactement la garde a perimetre vide que ce registre refuse. Les seuils sont deja couverts par GATE-JUR-SEUILS-SSOT et les enumerations par partners:schema:enums ; ce qui reste sans domicile est la GRILLE, et c'est DM-03-P qui la pose ici, a partir de la grille que l'autre depot exporte. ⚠️ L'ENTREE RESTE ATTRIBUEE A GOV-014, ET C'EST VOULU : tests/unit/gouvernance/gardes-transposees.spec.ts exige qu'une gate que GOV-014 porte sans l'armer soit AU MOINS decidee par ecrit, sinon la tache se ferme en laissant derriere elle une entree que plus personne ne relit. La re-attribuer a sa tache successeur rendait ce temoin VIDE — il l'a dit lui-meme, « aucune gate GOV-014 sans script : ce test ne juge rien » — et faisait donc disparaitre la garde qui surveille l'oubli ÉTAT AU 2026-09-30 (vérification transversale de la Phase 0, écart T4) : NON ARMÉE, toujours DIFFÉRÉE. DM-03-P, tâche de la grille, est fusionnée et déclare `scripts/gates/gov-derivation.ts` dans ses paths sans l'avoir écrit ; dette déclarée dans `scripts/gates/gov-conventions.ts` (PASSIF_SANS_SCRIPT) et `scripts/gates/gov-attributions.ts` (DETTE_GATE_NON_RECIPROQUE) ; re-pointer ou retirer l'entrée touche ces gardes, donc APRÈS LE LANCEMENT (gel de la gouvernance).",
       "fixtureRouge": "recopier un taux de commission dans un second fichier",
       "preuveRouge": null
     },
@@ -1027,7 +1027,7 @@
       "phase": -1,
       "script": "scripts/gates/fixtures-source.ts",
       "tache": "INT-T01a",
-      "verifie": "toute fixture porte un en-tete `Source:` nommant le producteur reel qui l'a generee ; une fixture ecrite a la main est refusee",
+      "verifie": "toute fixture porte un en-tete `Source:` nommant le producteur reel qui l'a generee ; une fixture ecrite a la main est refusee ÉTAT AU 2026-09-30 (vérification transversale de la Phase 0, écart T4) : NON ARMÉE. Le script `scripts/gates/fixtures-source.ts` n'existe pas sur `main` ; les fixtures portent leur en-tête Source par convention, sans garde qui le refuse ; dette déclarée dans `scripts/gates/gov-conventions.ts` (PASSIF_SANS_SCRIPT) et `scripts/gates/gov-attributions.ts` (DETTE_GATE_NON_RECIPROQUE) ; re-pointer ou retirer l'entrée touche ces gardes, donc APRÈS LE LANCEMENT (gel de la gouvernance).",
       "fixtureRouge": "ajouter une fixture sans en-tete Source",
       "preuveRouge": null
     },
