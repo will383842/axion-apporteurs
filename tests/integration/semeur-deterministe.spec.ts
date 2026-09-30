@@ -19,7 +19,7 @@ import { spawnSync } from 'node:child_process';
 import { join } from 'node:path';
 import { PrismaClient } from '@prisma/client';
 import { PostgreSqlContainer, type StartedPostgreSqlContainer } from '@testcontainers/postgresql';
-import { IMAGE_BASE, prismaCli, RACINE } from './harnais';
+import { environnementDeLHote, IMAGE_BASE, prismaCli, RACINE } from './harnais';
 import {
   semer,
   comparerBases,
@@ -74,7 +74,7 @@ function lancer(args: string[]) {
   return spawnSync(process.execPath, [TSX, SEMEUR, ...args], {
     cwd: RACINE,
     encoding: 'utf8',
-    env: { ...process.env, ...ENV_CLES, SEMEUR_INSTANT: INSTANT.toISOString() },
+    env: environnementDeLHote({ ...ENV_CLES, SEMEUR_INSTANT: INSTANT.toISOString() }),
   });
 }
 
