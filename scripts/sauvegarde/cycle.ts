@@ -21,7 +21,8 @@
  *
  * Chaque commande nomme en `::warning::` chaque variable qui lui manque et sort en 0 sans rien
  * toucher : un `main` rouge en permanence sur une attente connue finit désarmé (RM-02). Dès qu'elles
- * existent, tout échec est rouge.
+ * existent, tout échec est rouge. Ce saut ne vaut que pour le PLANIFICATEUR : un geste lancé à la
+ * main (`workflow_dispatch`) sans ses secrets ÉCHOUE en les nommant (arbitrage -d7 du 2026-09-30).
  *
  * ── TIERS, LUS LE 2026-09-29 (RM-08) ─────────────────────────────────────────────────────────
  *
@@ -140,11 +141,39 @@ function manquantes(noms: readonly string[]): string[] {
   return noms.filter((n) => (process.env[n] ?? '') === '');
 }
 
-function sauter(commande: string, noms: string[]): 0 {
-  for (const n of noms)
-    console.log(`::warning title=${commande}::${n} absent — SAUTÉ (arbitrage -d7 du 2026-09-29)`);
-  console.log(`⚠ ${commande} SAUTÉ : ${noms.join(', ')}. Rien n'a été lu ni écrit.`);
-  return 0;
+/**
+ * PURE. L'issue d'un geste auquel des secrets manquent : SAUTÉ en 0 sous le planificateur (une
+ * attente connue), ÉCHEC en 1 quand il a été lancé à la main — un vert vide tromperait l'opérateur.
+ */
+export function issueDesSecretsAbsents(
+  commande: string,
+  noms: readonly string[],
+  evenement: string | undefined
+): { code: 0 | 1; lignes: string[] } {
+  if (evenement === 'workflow_dispatch') {
+    return {
+      code: 1,
+      lignes: [
+        ...noms.map((n) => `::error title=${commande}::${n} absent — geste manuel IMPOSSIBLE`),
+        `❌ ${commande} : ${noms.join(', ')} absent(s). Rien n'a été lu ni écrit.`,
+      ],
+    };
+  }
+  return {
+    code: 0,
+    lignes: [
+      ...noms.map(
+        (n) => `::warning title=${commande}::${n} absent — SAUTÉ (arbitrage -d7 du 2026-09-29)`
+      ),
+      `⚠ ${commande} SAUTÉ : ${noms.join(', ')}. Rien n'a été lu ni écrit.`,
+    ],
+  };
+}
+
+function sauter(commande: string, noms: string[]): 0 | 1 {
+  const r = issueDesSecretsAbsents(commande, noms, process.env.GITHUB_EVENT_NAME);
+  for (const l of r.lignes) console.log(l);
+  return r.code;
 }
 
 const SECRETS_DU_STOCKAGE = [

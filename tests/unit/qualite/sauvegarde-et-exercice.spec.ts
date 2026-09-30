@@ -48,6 +48,7 @@ import { lireYaml } from '../../../scripts/lib/lire-yaml';
 import {
   rechiffrer,
   exercerLeDernier,
+  issueDesSecretsAbsents,
   fraicheurDuDepot,
   PREFIXES,
   type Depot,
@@ -452,5 +453,32 @@ describe('REQ-QA-023 — le clair n’est effacé qu’une fois le chiffré relu
     d.ecrire = async (cle, contenu) => ecrireFidele(cle, contenu.subarray(0, contenu.length - 1));
     await expect(rechiffrer(d, CLE_CYCLE)).rejects.toThrow(/relu/);
     expect(d.etat.has(`${PREFIXES.depot}pg-dump-partners-2.dmp`)).toBe(true);
+  });
+});
+
+describe('REQ-QA-023 — un geste MANUEL sans ses secrets échoue ; seul le planifié saute', () => {
+  // Arbitrage -d7 du 2026-09-30 : le saut en code 0 vaut pour une attente connue sur un déclencheur
+  // automatique. Lancé à la main, un geste sans ses secrets ne doit jamais rendre un vert vide.
+  const noms = ['R2_BUCKET', 'PARTNERS_BACKUP_PASSPHRASE'];
+
+  it('REQ-QA-023 : déclenché à la main (workflow_dispatch), le geste sort en 1 et nomme chaque absent en erreur', () => {
+    const r = issueDesSecretsAbsents('sauvegarde:exercice', noms, 'workflow_dispatch');
+    expect(r.code).toBe(1);
+    for (const n of noms)
+      expect(r.lignes).toContain(
+        `::error title=sauvegarde:exercice::${n} absent — geste manuel IMPOSSIBLE`
+      );
+    expect(r.lignes.join('\n')).not.toContain('SAUTÉ');
+  });
+
+  it('REQ-QA-023 : déclenché par le planificateur, le même manque est SAUTÉ en 0, chaque absent nommé en avertissement', () => {
+    for (const evenement of ['schedule', undefined]) {
+      const r = issueDesSecretsAbsents('sauvegarde:exercice', noms, evenement);
+      expect(r.code, String(evenement)).toBe(0);
+      for (const n of noms)
+        expect(
+          r.lignes.some((l) => l.startsWith(`::warning title=sauvegarde:exercice::${n} absent`))
+        ).toBe(true);
+    }
   });
 });
