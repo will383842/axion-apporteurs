@@ -241,3 +241,4 @@ _(rien à consolider — vingt-quatre leçons au journal. Consolidation du 2026-
 - **QA-T34** — `docs/gates.json`, porte de déploiement : le champ `tache` reste GOV-000 (non écrivable par les outils, voulu) alors que QA-T34 livre `deploy-verify`.
 - **GOV-128** (PR #278) — le champ `date` d'une entrée du passif n'est pas documenté : pour #1228, c'est la date de l'arbitrage (2026-09-30), la fusion étant du 2026-09-29 en UTC.
 - **QA-T50** (PR #271, revue exactitude) — la section « Paths » du corps omet le témoin des refus et `package.json`.
+- **JUR-T29** (axion-ia #1232, revue exactitude) — l'OBJET du courriel ne porte ni l'entreprise, ni le client, ni le mois ; le test du courriel d'avant signature juge le fichier entier, et en français seulement ; « sans aucune limite » reste sous l'indicatif.
