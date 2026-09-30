@@ -157,3 +157,25 @@ jobs:
           R2_BUCKET: ${{ secrets.R2_BUCKET }}
           PARTNERS_SAUVEGARDE_ACTIVEE: ${{ vars.PARTNERS_SAUVEGARDE_ACTIVEE }}
         run: pnpm sauvegarde:clairs
+
+  # QA-T13 (REQ-QA-034) : un runbook s exerce en preview, pas sur le papier. EN NUIT tant qu aucun
+  # runbook du socle n a ete exerce — en porte A, il bloquerait toutes les PR jusqu au premier
+  # exercice (decoupe arbitree par -d7 sur delegation de Williams du 2026-09-30) ; il passe en porte A
+  # au premier exercice reel, et les trois runbooks du socle sont exerces avant la cloture de la
+  # phase 0. Rouge ici : c est l etat attendu jusqu a l exercice, et il le NOMME.
+  runbooks-exerces:
+    name: Runbooks du socle — exerces en preview, corps inchanges depuis
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - name: La garde des runbooks sait rougir
+        run: pnpm runbooks:exerces:prove
+      - name: Les runbooks du socle sont exerces en preview
+        run: pnpm runbooks:exerces

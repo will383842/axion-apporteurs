@@ -163,9 +163,13 @@
     "sauvegarde:fraicheur": "tsx scripts/sauvegarde/cycle.ts fraicheur",
     "sauvegarde:clairs": "tsx scripts/sauvegarde/cycle.ts clairs",
     "sauvegarde:configurer": "tsx scripts/sauvegarde/cycle.ts configurer",
+    "runbooks:exerces": "tsx scripts/gates/runbooks-exerces.ts",
+    "runbooks:exerces:prove": "tsx scripts/gates/runbooks-exerces.ts --prove",
     "coolify:provisionner": "tsx scripts/deploiement/provisionner.ts",
     "deploy:verify": "tsx scripts/gates/deploy-verify.ts --verifier",
-    "deploy:coolify": "tsx scripts/gates/deploy-verify.ts --declencher"
+    "deploy:coolify": "tsx scripts/gates/deploy-verify.ts --declencher",
+    "deploy:retour-arriere": "tsx scripts/gates/deploy-verify.ts --retour-arriere",
+    "deploy:retirer-echappatoire": "tsx scripts/gates/deploy-verify.ts --retirer-echappatoire"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.13.0",

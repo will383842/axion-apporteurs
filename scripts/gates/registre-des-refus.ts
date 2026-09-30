@@ -306,8 +306,8 @@ export const REFUS_NOMMES: Readonly<Record<string, readonly string[]>> = {
   ],
   'scripts/gates/deploy-verify.ts': [
     'module › si APPELE_DIRECTEMENT › si mode === null › (1)',
-    "mode(argv.filter((a) => a !== '--declencher' && a !== '--ve… › ∅ › (= code)",
-    "mode(argv.filter((a) => a !== '--declencher' && a !== '--ve… › ∅ › (= 1)",
+    "mode( argv.filter( (a) => !['--declencher', '--verifier', '… › ∅ › (= code)",
+    "mode( argv.filter( (a) => !['--declencher', '--verifier', '… › ∅ › (= 1)",
   ],
   'scripts/gates/gov-pr.ts': [
     'lireDepot › si !existsSync(f) › (1)',
@@ -400,6 +400,9 @@ export const REFUS_NOMMES: Readonly<Record<string, readonly string[]>> = {
     'module › si APPELE_DIRECTEMENT › si rendre || verifier › (rendreOuVerifier(verifier))',
     "module › si APPELE_DIRECTEMENT › sinon rendre || verifier › si process.argv.includes('--prove') › (prouver())",
     "module › si APPELE_DIRECTEMENT › sinon rendre || verifier › sinon process.argv.includes('--prove') › (controlerLeDepot())",
+  ],
+  'scripts/gates/runbooks-exerces.ts': [
+    "module › si APPELE_DIRECTEMENT › (= process.argv.includes('--prove') ? prouver() : controler())",
   ],
   'scripts/gates/rate-famille.ts': [
     "(process.argv.includes('--prove') ? prouver() : controler()… › ∅ › (code)",
