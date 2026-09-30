@@ -2,6 +2,7 @@
  * preview.ts — une preview par PR : publiée, attribuée sous plafond, détruite (QA-T06, REQ-QA-015).
  *
  * USAGE (forge, `.github/workflows/preview.yml`) :
+ *   pnpm preview:verifier-artefact  refuse un artefact qui n'est pas EXACTEMENT l'image, en fichier ordinaire
  *   pnpm preview:publier-image   charge l'image de la PR (artefact du job image) et la pousse en PREVIEW
  *   pnpm preview:attribuer       crée ou met à jour la preview de la PR, sous le plafond, et commente
  *   pnpm preview:detruire        détruit l'application, la base, le cache et les étiquettes de la PR
@@ -29,6 +30,8 @@
  */
 import { randomBytes } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
+import { readdirSync } from 'node:fs';
+import { join } from 'node:path';
 
 export const PARAMETRES_PREVIEW = {
   PREVIEWS_SIMULTANEES_MAX: {
@@ -90,17 +93,67 @@ function executer(cmd: string, args: string[], entree?: string): void {
   if (r.status !== 0) throw new Error(`${cmd} ${args[0]} sort en ${r.status}`);
 }
 
+// ── L'artefact : une DONNÉE venue de la PR ──────────────────────────────────────────────────
+
+/** Le seul fichier qu'un artefact de preview peut porter : l'archive écrite par `pnpm image:exporter`. */
+export const ARTEFACT_ATTENDU = 'image-preview.tar';
+
+export type EntreeDArtefact = { nom: string; fichierOrdinaire: boolean };
+
+/**
+ * PURE. L'artefact vient du job `image` d'une PR, dont le workflow est modifiable par la PR : il
+ * est extrait HORS de l'espace de travail (`runner.temp`) et doit contenir EXACTEMENT l'archive, en
+ * fichier ordinaire. Un fichier de plus, un dossier, un lien, ou l'archive absente : refus nommé
+ * (lentille `securite`, PR 281 — un artefact extrait par-dessus le checkout de main y aurait glissé
+ * des scripts, exécutés ensuite avec `packages: write`).
+ */
+export function jugerArtefact(
+  entrees: readonly EntreeDArtefact[]
+): { ok: true } | { ok: false; motif: string } {
+  const noms = entrees.map((x) => x.nom).sort();
+  const seule = entrees.length === 1 ? entrees[0] : undefined;
+  if (seule?.nom === ARTEFACT_ATTENDU && seule.fichierOrdinaire) return { ok: true };
+  return {
+    ok: false,
+    motif: `artefact_inattendu : attendu exactement ${ARTEFACT_ATTENDU} en fichier ordinaire, reçu [${noms.join(', ')}]${
+      seule?.nom === ARTEFACT_ATTENDU ? ' (pas un fichier ordinaire)' : ''
+    }`,
+  };
+}
+
+/** Le contenu du dossier d'artefact, sans suivre aucun lien (`isFile` est faux pour un lien). */
+function lireArtefact(dossier: string): EntreeDArtefact[] {
+  return readdirSync(dossier, { withFileTypes: true }).map((d) => ({
+    nom: d.name,
+    fichierOrdinaire: d.isFile(),
+  }));
+}
+
+function verifierArtefact(): number {
+  const e = exiger(['DOSSIER_ARTEFACT'], 'preview:verifier-artefact');
+  if (!e) return 0;
+  const verdict = jugerArtefact(lireArtefact(e.DOSSIER_ARTEFACT!));
+  if (!verdict.ok) throw new Error(verdict.motif);
+  console.log(`✅ artefact de preview : ${ARTEFACT_ATTENDU} seul, en fichier ordinaire`);
+  return 0;
+}
+
 function publierImage(): number {
   const e = exiger(
-    ['JETON', 'GITHUB_REPOSITORY', 'GITHUB_ACTOR', 'PR_NUMERO', 'TETE', 'IMAGE_TAR'],
+    ['JETON', 'GITHUB_REPOSITORY', 'GITHUB_ACTOR', 'PR_NUMERO', 'TETE', 'DOSSIER_ARTEFACT'],
     'preview:publier-image'
   );
   if (!e) return 0;
+  // Rejugé ici, juste avant le chargement : l'étape de vérification peut avoir été retirée du workflow.
+  const verdict = jugerArtefact(lireArtefact(e.DOSSIER_ARTEFACT!));
+  if (!verdict.ok) throw new Error(verdict.motif);
   const cible = cibleDePreview(e.GITHUB_REPOSITORY!, Number(e.PR_NUMERO), e.TETE!);
   // L'image vient de l'ARTEFACT du job `image` (lecture seule) : on la CHARGE, on ne construit rien,
   // et aucun code de la PR ne tourne ici (lentille `securite`, PR 281 — le schéma « pwn request »).
   // `docker load` n'exécute aucun code ; l'étiquette chargée doit être exactement celle du job `image`.
-  const charge = spawnSync('docker', ['load', '-i', e.IMAGE_TAR!], { encoding: 'utf8' });
+  const charge = spawnSync('docker', ['load', '-i', join(e.DOSSIER_ARTEFACT!, ARTEFACT_ATTENDU)], {
+    encoding: 'utf8',
+  });
   if (charge.status !== 0 || !/Loaded image: partners:construite\s*$/m.test(charge.stdout ?? '')) {
     throw new Error("l'artefact ne charge pas l'image partners:construite : refusé");
   }
@@ -263,6 +316,26 @@ async function attribuer(): Promise<number> {
   return 0;
 }
 
+/**
+ * PURE. Les versions du paquet de preview qui portent une étiquette de la PR. Une lecture qui ÉCHOUE
+ * n'est pas « aucune étiquette » : ce serait annoncer détruite une preview dont les images survivent
+ * (acceptation, point 2 : une preview qui survit à sa PR est un défaut nommé). Le refus nomme le
+ * paquet et la PR ; le job sort en non nul.
+ */
+export function etiquettesDeLaPr(
+  r: { status: number | null; stdout?: string | null },
+  pr: number,
+  paquet: string
+): { ok: true; ids: string[] } | { ok: false; motif: string } {
+  if (r.status !== 0) {
+    return {
+      ok: false,
+      motif: `etiquettes_illisibles : versions du paquet ${paquet} non lues (sortie ${r.status}) — les étiquettes pr-${pr}-* de la PR ${pr} ne sont PAS détruites`,
+    };
+  }
+  return { ok: true, ids: (r.stdout ?? '').split('\n').filter(Boolean) };
+}
+
 async function detruire(): Promise<number> {
   const e = exiger(
     ['COOLIFY_PREVIEW_URL', 'COOLIFY_PREVIEW_TOKEN', 'PR_NUMERO', 'GITHUB_REPOSITORY', 'GH_TOKEN'],
@@ -291,7 +364,9 @@ async function detruire(): Promise<number> {
     ],
     { encoding: 'utf8' }
   );
-  const ids = versions.status === 0 ? versions.stdout.split('\n').filter(Boolean) : [];
+  const lu = etiquettesDeLaPr(versions, pr, paquet);
+  if (!lu.ok) throw new Error(lu.motif);
+  const ids = lu.ids;
   for (const id of ids)
     executer('gh', [
       'api',
@@ -310,15 +385,17 @@ const APPELE_DIRECTEMENT = /preview\.ts$/.test(process.argv[1] ?? '');
 if (APPELE_DIRECTEMENT) {
   const geste = process.argv[2];
   const f =
-    geste === 'publier-image'
-      ? async () => publierImage()
-      : geste === 'attribuer'
-        ? attribuer
-        : geste === 'detruire'
-          ? detruire
-          : null;
+    geste === 'verifier-artefact'
+      ? async () => verifierArtefact()
+      : geste === 'publier-image'
+        ? async () => publierImage()
+        : geste === 'attribuer'
+          ? attribuer
+          : geste === 'detruire'
+            ? detruire
+            : null;
   if (!f) {
-    console.error('usage : preview.ts publier-image | attribuer | detruire');
+    console.error('usage : preview.ts verifier-artefact | publier-image | attribuer | detruire');
     process.exitCode = 1;
   } else {
     // `exitCode`, jamais la sortie immédiate du processus : voir `scripts/gates/deploy-verify.ts`.

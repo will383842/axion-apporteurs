@@ -22,7 +22,10 @@ import { spawnSync } from 'node:child_process';
 import { join } from 'node:path';
 import { lireYaml } from '../../../scripts/lib/lire-yaml';
 import {
+  ARTEFACT_ATTENDU,
   decider,
+  etiquettesDeLaPr,
+  jugerArtefact,
   nomDePreview,
   PARAMETRES_PREVIEW,
   type Decision,
@@ -242,6 +245,93 @@ describe('REQ-QA-015 — le workflow de preview tient les six conditions', () =>
 
   it('REQ-QA-015 : aucune étape n’est tolérée en échec', () => {
     expect(texte).not.toMatch(/continue-on-error/);
+  });
+
+  it('REQ-QA-015 : (lentille securite) tout artefact reçu par un workflow privilégié s’extrait HORS de l’espace de travail', async () => {
+    const fautes: string[] = [];
+    let juges = 0;
+    for (const f of readdirSync('.github/workflows').filter((x) => /\.ya?ml$/.test(x))) {
+      const w = (await lireYaml(readFileSync(`.github/workflows/${f}`, 'utf8'))) as {
+        on?: Record<string, unknown>;
+        jobs?: Record<string, Job>;
+      };
+      const privilegie = Object.keys(w.on ?? {}).some(
+        (e) => e === 'workflow_run' || e === 'pull_request_target'
+      );
+      if (!privilegie) continue;
+      for (const [nom, j] of Object.entries(w.jobs ?? {})) {
+        for (const s of (j.steps ?? []).filter((e) =>
+          e.uses?.startsWith('actions/download-artifact')
+        )) {
+          juges++;
+          if (!String(s.with?.path ?? '').startsWith('${{ runner.temp }}/'))
+            fautes.push(`${f} › ${nom}`);
+        }
+      }
+    }
+    expect(juges).toBeGreaterThan(0);
+    expect(fautes, `extraient dans l'espace de travail :\n${fautes.join('\n')}`).toEqual([]);
+  });
+
+  it('REQ-QA-015 : (lentille securite) l’artefact est vérifié AVANT la publication, dans le dossier où il a été extrait', () => {
+    const etapes = job('publier-image').steps ?? [];
+    const i = (pred: (e: Etape) => boolean) => etapes.findIndex(pred);
+    const telechargement = i((e) => e.uses?.startsWith('actions/download-artifact') === true);
+    const verification = i((e) => e.run === 'pnpm preview:verifier-artefact');
+    const publication = i((e) => e.run === 'pnpm preview:publier-image');
+    expect(telechargement).toBeGreaterThanOrEqual(0);
+    expect(verification).toBeGreaterThan(telechargement);
+    expect(publication).toBeGreaterThan(verification);
+    const dossier = etapes[telechargement]?.with?.path;
+    expect(etapes[verification]?.env?.DOSSIER_ARTEFACT).toBe(dossier);
+    expect(etapes[publication]?.env?.DOSSIER_ARTEFACT).toBe(dossier);
+  });
+});
+
+describe('REQ-QA-015 — TÉMOIN À DEUX FACES : l’artefact est l’image, et rien d’autre', () => {
+  it('REQ-QA-015 : l’archive seule, en fichier ordinaire, passe', () => {
+    expect(jugerArtefact([{ nom: ARTEFACT_ATTENDU, fichierOrdinaire: true }])).toEqual({
+      ok: true,
+    });
+  });
+
+  it('REQ-QA-015 : un script glissé à côté de l’archive est refusé, et nommé', () => {
+    const v = jugerArtefact([
+      { nom: ARTEFACT_ATTENDU, fichierOrdinaire: true },
+      { nom: 'package.json', fichierOrdinaire: true },
+    ]);
+    expect(v.ok).toBe(false);
+    if (!v.ok) expect(v.motif).toMatch(/^artefact_inattendu .*package\.json/);
+  });
+
+  it('REQ-QA-015 : un dossier, un lien ou une archive absente sont refusés', () => {
+    for (const entrees of [
+      [{ nom: 'scripts', fichierOrdinaire: false }],
+      [{ nom: ARTEFACT_ATTENDU, fichierOrdinaire: false }],
+      [],
+    ]) {
+      expect(jugerArtefact(entrees).ok, JSON.stringify(entrees)).toBe(false);
+    }
+  });
+});
+
+describe('REQ-QA-015 — TÉMOIN À DEUX FACES : une preview détruite ne l’est pas à moitié', () => {
+  it('REQ-QA-015 : une lecture des versions qui échoue est un refus qui nomme le paquet et la PR', () => {
+    const v = etiquettesDeLaPr({ status: 1, stdout: '' }, 42, 'axion-apporteurs-preview');
+    expect(v.ok).toBe(false);
+    if (!v.ok) {
+      expect(v.motif).toContain('axion-apporteurs-preview');
+      expect(v.motif).toContain('pr-42-');
+      expect(v.motif).toContain('PR 42');
+    }
+  });
+
+  it('REQ-QA-015 : une lecture réussie rend les versions à supprimer, et zéro seulement si la forge le dit', () => {
+    expect(etiquettesDeLaPr({ status: 0, stdout: '11\n12\n' }, 42, 'p')).toEqual({
+      ok: true,
+      ids: ['11', '12'],
+    });
+    expect(etiquettesDeLaPr({ status: 0, stdout: '' }, 42, 'p')).toEqual({ ok: true, ids: [] });
   });
 });
 

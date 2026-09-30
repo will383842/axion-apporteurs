@@ -39,16 +39,23 @@ jobs:
           persist-credentials: false
       - uses: pnpm/action-setup@v4
       - run: pnpm install --frozen-lockfile
-      # L image construite par le job `image` (lecture seule), comme une DONNEE non fiable.
+      # L image construite par le job `image` (lecture seule), comme une DONNEE non fiable, extraite
+      # HORS de l espace de travail : jamais par-dessus le checkout de main, ou une PR y glisserait
+      # des scripts executes ensuite avec `packages: write` (lentille securite, PR 281).
       - uses: actions/download-artifact@v4
         with:
           name: image-preview
+          path: ${{ runner.temp }}/artefact-preview
           run-id: ${{ github.event.workflow_run.id }}
           github-token: ${{ github.token }}
+      - name: L artefact ne contient que l image, en fichier ordinaire
+        env:
+          DOSSIER_ARTEFACT: ${{ runner.temp }}/artefact-preview
+        run: pnpm preview:verifier-artefact
       - name: Publier l image de la PR dans le seul paquet de preview
         env:
           JETON: ${{ secrets.GITHUB_TOKEN }}
-          IMAGE_TAR: image-preview.tar
+          DOSSIER_ARTEFACT: ${{ runner.temp }}/artefact-preview
           PR_NUMERO: ${{ github.event.workflow_run.pull_requests[0].number }}
           TETE: ${{ github.event.workflow_run.head_sha }}
         run: pnpm preview:publier-image
