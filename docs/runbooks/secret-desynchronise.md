@@ -24,13 +24,34 @@ la même valeur : un secret a été changé d'un seul côté.
 1. Identifier le secret par la route qui refuse : `AXIONIA_WEBHOOK_SECRET`, `AXIONIA_API_TOKEN`,
    `DOCUSEAL_WEBHOOK_SECRET`, `ZEPTOMAIL_WEBHOOK_SECRET`, `AXIONIA_RELECTURE_SECRET` (`docs/env.md`).
 2. Choisir la valeur qui fait foi — celle du tiers, sauf rotation voulue — et la poser dans les
-   **secrets du dépôt**, jamais dans une conversation ni dans un fichier (REQ-INT-031).
+   **secrets de l'environnement `production`**, jamais dans une conversation ni dans un fichier
+   (REQ-INT-031).
 3. La reporter sur la plateforme par le workflow `Provisionnement Coolify`, lancé à la main : il pose
-   les variables depuis les secrets du dépôt et n'imprime aucune valeur.
+   les variables depuis ces secrets et n'imprime aucune valeur.
 4. Redéployer, puis vérifier : `pnpm deploy:verify <sha>` sort en 0, et un événement de test du tiers
    est accepté.
 5. Les événements refusés pendant la désynchronisation n'ont PAS été enregistrés par Partners : les
    faire réémettre par le tiers, selon sa propre procédure (sa fiche dans `docs/tiers/`).
+
+## Rotation voulue d'un secret d'axionia, sans refus (QA-T52, REQ-QA-030)
+
+Pour `AXIONIA_WEBHOOK_SECRET` et `AXIONIA_API_TOKEN` : Partners accepte une clé courante et une clé
+précédente, et c'est le `kid` présenté par axionia (`x-axionia-kid`, dérivé de la valeur) qui choisit
+la clé. Un `kid` absent ou inconnu est refusé ; aucune clé n'est essayée au hasard. L'ordre compte :
+
+1. **Partners d'abord.** Poser dans les secrets de l'environnement `production` `<NOM>_PRECEDENT` = la
+   valeur ACTUELLE, `<NOM>_PRECEDENT_ECHEANCE` = un instant ISO 8601 UTC au plus 24 h plus tard, et
+   `<NOM>` = la NOUVELLE valeur. Les deux variables de la paire se posent ensemble : le provisionnement
+   puis le démarrage refusent sinon, en les nommant (`docs/env.md`). Reporter par `Provisionnement
+   Coolify` (il pose la paire quand elle est présente), redéployer, `pnpm deploy:verify`.
+2. **axionia ensuite.** Lui faire adopter la nouvelle valeur ; son `kid` suit, puisqu'il dérive de la
+   valeur. Jusqu'à l'échéance, un envoi encore signé par l'ancienne valeur passe sous l'ancien `kid`.
+3. **Vérifier** qu'un événement de test émis sous le nouveau `kid` est accepté.
+4. **Après l'échéance**, la clé précédente est refusée (motif `cle_precedente_echue`). Retirer les deux
+   variables `_PRECEDENT` des secrets de l'environnement `production` ET de l'application sur la
+   plateforme : le provisionnement pose, il n'efface pas.
+
+Inverser 1 et 2 fait refuser par Partners tout envoi d'axionia, pour `kid` inconnu, jusqu'à l'étape 1.
 
 ## Ce que ce runbook ne fait jamais
 

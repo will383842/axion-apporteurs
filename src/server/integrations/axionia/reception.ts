@@ -8,7 +8,9 @@
  *   2. le corps, borné à 128 Ko AVANT d'être lu en entier (`lireCorpsBorne`) → 413 ;
  *   3. la signature : HMAC-SHA256 de `<secondes>.<corps exact>` sous le secret dédié, en-têtes
  *      `X-Axionia-Timestamp` / `X-Axionia-Signature`, tolérance de 300 s, comparaison à temps
- *      constant, aucun repli en clair → 401 et une alerte PLAFONNÉE. Le corps n'est PAS parsé avant ;
+ *      constant, aucun repli en clair → 401 et une alerte PLAFONNÉE. Le corps n'est PAS parsé avant.
+ *      La clé est choisie par `X-Axionia-Kid` dans le trousseau à double clé (QA-T52, REQ-QA-030) :
+ *      un kid absent ou inconnu, ou une clé précédente échue, est refusé sans calcul ;
  *   4. l'enveloppe, jugée par le schéma Zod du contrat (`packages/contracts/events.zod.ts`), puis la
  *      frontière de REQ-INT-029 (aucune coordonnée ne traverse), puis la clé métier d'un paiement →
  *      422 et une alerte : l'outbox d'axionia passe l'envoi en `gave_up`, rien n'est perdu ;
@@ -39,7 +41,8 @@ import {
   type TypeEvenement,
 } from '../../../../packages/contracts/events';
 import { enveloppeEvenement } from '../../../../packages/contracts/events.zod';
-import { lireEnvironnement } from '../../../lib/env';
+import { ENTETE_KID_AXIONIA } from '../../../../packages/contracts/api';
+import { cleDuKid, lireTrousseaux, type MotifDeCle, type Trousseau } from '../../../lib/env';
 import {
   TOLERANCE_SIGNATURE_S,
   egalATempsConstant,
@@ -64,7 +67,7 @@ export const ENTETE_SIGNATURE = 'x-axionia-signature';
 // ── La signature ────────────────────────────────────────────────────────────────────────────────
 
 export type MotifDeSignature =
-  'entete_absent' | 'horodatage_illisible' | 'hors_fenetre' | 'signature_invalide';
+  'entete_absent' | 'horodatage_illisible' | 'hors_fenetre' | 'signature_invalide' | MotifDeCle;
 
 /**
  * Des secondes Unix en chiffres, et rien d'autre : un horodatage qui porterait un point rendrait la
@@ -85,7 +88,8 @@ export function verifierSignatureAxionia(
   octets: Uint8Array,
   horodatage: string | null,
   signature: string | null,
-  secret: string,
+  kid: string | null,
+  trousseau: Trousseau,
   maintenantMs: number
 ): { ok: true } | { ok: false; motif: MotifDeSignature } {
   if (horodatage === null || signature === null) return { ok: false, motif: 'entete_absent' };
@@ -93,7 +97,10 @@ export function verifierSignatureAxionia(
   if (Math.abs(maintenantMs / 1000 - Number(horodatage)) > TOLERANCE_SIGNATURE_S) {
     return { ok: false, motif: 'hors_fenetre' };
   }
-  const attendue = signatureAttendue(secret, horodatage, octets);
+  // Le kid est public : le refuser avant le calcul ne dit rien de la clé.
+  const cle = cleDuKid(trousseau, kid, maintenantMs);
+  if (!cle.ok) return { ok: false, motif: cle.motif };
+  const attendue = signatureAttendue(cle.cle, horodatage, octets);
   // La forme est jugée APRÈS le calcul, et la comparaison se fait toujours : le temps de réponse ne
   // dit pas si la signature présentée avait la bonne forme.
   const egale = egalATempsConstant(signature, attendue);
@@ -191,7 +198,7 @@ export async function recevoirEvenementAxionia(
   requete: Request,
   d: DependancesDeReception
 ): Promise<Response> {
-  const lu = lireEnvironnement(d.environnement);
+  const lu = lireTrousseaux(d.environnement, d.maintenantMs);
   if (!lu.ok) return texte(503, 'reception_indisponible');
 
   const corps = await lireCorpsBorne(requete);
@@ -204,7 +211,8 @@ export async function recevoirEvenementAxionia(
     corps.octets,
     requete.headers.get(ENTETE_HORODATAGE),
     requete.headers.get(ENTETE_SIGNATURE),
-    lu.env.AXIONIA_WEBHOOK_SECRET,
+    requete.headers.get(ENTETE_KID_AXIONIA),
+    lu.trousseaux.AXIONIA_WEBHOOK_SECRET,
     d.maintenantMs
   );
   if (!verdict.ok) {
