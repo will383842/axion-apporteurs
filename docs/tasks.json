@@ -4131,7 +4131,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "budget 75 KB gz par route mesure par script maison sur `.next/static/chunks/app/` (une entree par route) ; en AVERTISSEMENT tant qu'aucune route de l'espace n'est livree, BLOQUANT a la premiere route livree par QA-T20b (seuil aligne d'abord, blocage ensuite), conformement a REQ-UX-033 et REQ-GOV-028 precisees le 2026-09-30.",
+      "acceptance": "budget 75 KB gz par route mesure par script maison sur `.next/static/chunks/app/` (une entree par route) ; BLOQUANT des sa livraison (REQ-UX-033, REQ-GOV-028) : les routes deja livrees, dont /connexion et /confidentialite, sont jugees, et une route sans budget rougit. QA-T20b realigne ensuite le seuil sur la premiere mesure de l'accueil de l'espace (UX-P1-08), sans jamais desarmer le blocage.",
       "tests": {
         "REQ-QA-031": [
           "tests/unit/qualite/budget-par-route.spec.ts"
@@ -5840,7 +5840,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "seuil aligné sur la première mesure de la première route de l'espace, puis bloquant."
+      "acceptance": "seuil realigne sur la premiere mesure de l'accueil de l'espace (UX-P1-08), jamais pose sous la mesure courante ; le blocage arme par QA-T20 reste arme."
     },
     {
       "id": "UX-P1-09",
@@ -14836,6 +14836,45 @@
         "sha": "58ac665f2134b925aec000a2d81ba9509db46b17",
         "fusionneeAt": "2026-09-29T23:56:28Z"
       },
+      "motif": null
+    },
+    {
+      "id": "QA-T52",
+      "titre": "Rotation a double cle des secrets de webhook et du jeton d'API : cle courante et cle precedente acceptees 24 h, kid en en-tete",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "qualite",
+      "paths": [
+        "src/lib/env.ts",
+        "src/app/api/webhooks/axionia/route.ts",
+        "src/server/integrations/axionia/reception.ts",
+        "tests/unit/securite/rotation-des-secrets.spec.ts",
+        "docs/env.md"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "QA-T04",
+        "SEC-06"
+      ],
+      "reqs": [
+        "REQ-QA-030"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "acceptance": "DETTE BLOQUANTE (lentille securite, verdict de la PR 282 ; arbitrage -d7 sur delegation de Williams du 2026-09-30) : la double cle de rotation de REQ-QA-030 n'etait portee par aucune tache (tests/unit/qualite/env-fail-fast.spec.ts l. 20 l'annoncait a sa propre tache). Des webhooks entrants sont actifs des la phase 0 (SEC-06) : PREALABLE FERME de la mise en service, avant le premier webhook entrant en production. A LIVRER : (1) AXIONIA_WEBHOOK_SECRET, DOCUSEAL_WEBHOOK_SECRET et AXIONIA_API_TOKEN acceptent une cle courante et une cle precedente, declarees dans src/lib/env.ts et docs/env.md (genere) ; la cle precedente porte son echeance, au plus 24 h. (2) Le `kid` de l'en-tete choisit la cle ; un kid inconnu est refuse, jamais essaye contre toutes les cles. (3) Apres l'echeance, la cle precedente est refusee, et le refus est nomme. (4) TEMOIN A DEUX FACES, rouge d'abord : une signature par la cle precedente passe avant l'echeance et echoue apres ; une signature par une cle inconnue ou un kid absent echoue ; la cle courante passe toujours. (5) Un runbook de rotation (docs/runbooks/secret-desynchronise.md, livre par QA-T13) cite la procedure. Deux lentilles.",
+      "tests": {
+        "REQ-QA-030": [
+          "tests/unit/securite/rotation-des-secrets.spec.ts"
+        ]
+      },
+      "issue": null,
+      "owner": null,
+      "branch": null,
+      "pr": null,
+      "attestation": null,
       "motif": null
     }
   ]
