@@ -669,6 +669,13 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
         'dans gardes-de-schema.spec.ts : invoquée SANS extension sur le dépôt, elle imprime son ' +
         'périmètre et juge ; une copie renommée ne s’exécute pas.',
     },
+    'scripts/preview/preview.ts': {
+      total: 3,
+      porte: 3,
+      temoins: 0,
+      raison:
+        'QA-T06 — REQ-QA-015, la preview par PR : publication de l image dans le seul paquet de preview, attribution sous plafond, destruction. process.exitCode pose sur l usage refuse, sur le code du geste et sur 1 en cas d erreur (cible hors du paquet de preview, refus de la plateforme, adresse interne absente). La decision du plafond et le refus de la cible de production sont vus sur des fonctions pures (preview-par-pr.spec.ts, pipeline-image.spec.ts) ; le binaire attend la plateforme ; aucun temoin ne vit dans REFUS. N importe pas fichiersSuivisOuRefus. Dette DECLAREE.',
+    },
     'scripts/gates/migrations-additive.ts': {
       total: 3,
       porte: 5,
@@ -990,6 +997,20 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
     // motif les voit désormais ; comptées des DEUX côtés du diff, elles laissent le delta à zéro,
     // et c'est ICI qu'elles entrent au registre, une fois, avec leur motif. La somme des `total`
     // déclarés gagne donc exactement ces quatre-là — l'écart vient de ce fichier, pas d'un ajout.
+    'scripts/sauvegarde/cycle.ts': {
+      total: 2,
+      porte: 2,
+      temoins: 0,
+      raison:
+        'QA-T12 — REQ-QA-023, rechiffrement, exercice, fraicheur et configuration de la sauvegarde. `process.exitCode` pose sur le code de la commande (1 exercice en echec, exercice perime ou refus de la plateforme) et sur 1 en cas d erreur. Les fonctions sont vues rendre chaque issue sur un depot EN MEMOIRE (sauvegarde-et-exercice.spec.ts) ; le binaire attend les cles Cloudflare R2 ; aucun temoin ne vit dans `REFUS`. N importe pas `fichiersSuivisOuRefus`. Dette DECLAREE.',
+    },
+    'scripts/sauvegarde/exercice.ts': {
+      total: 2,
+      porte: 2,
+      temoins: 0,
+      raison:
+        'QA-T12 — REQ-QA-023, l exercice de restauration sur un Postgres ephemere. `process.exitCode` pose sur 1 quand l exercice echoue — vidage non chiffre, dechiffrement, restauration, migrations, temoin vide — et sur 1 en cas d erreur. Chaque echec est vu sur un VRAI Postgres (sauvegarde-et-exercice.spec.ts), dont le vidage tronque d un octet ; aucun temoin ne vit dans `REFUS`. N importe pas `fichiersSuivisOuRefus`. Dette DECLAREE.',
+    },
     'scripts/plan-state/build.ts': {
       total: 4,
       porte: 4,
@@ -1017,6 +1038,19 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
         'pas un SHA plausible. Le binaire à blanc est vu sortir 0 sur le dépôt ' +
         '(un-statut-fusionnee-porte-sa-preuve.spec.ts) ; la branche rouge n’a pas de témoin ' +
         'd’effet. Dette DÉCLARÉE.',
+    },
+    'scripts/lot/lot-dedie-gardien-spec.ts': {
+      total: 2,
+      porte: 2,
+      // ZÉRO dans `REFUS` : les témoins d'effet vivent dans `lot-dedie-gardien-spec.spec.ts`.
+      temoins: 0,
+      raison:
+        'GOV-116 — REQ-GOV-010, le lot dédié du gardien-spec. `--garde` sort en 2 (le code qui ' +
+        'BLOQUE un outil dans un hook PreToolUse) sur toute écriture hors des trois fichiers, ' +
+        'toute commande hors liste, tout outil non nommé et toute entrée illisible : la commande ' +
+        'EXACTE du hook est jouée par bash et vue rendre 2, et 0 pour le lot. `--verifier` sort ' +
+        'en 1 sur un fichier du lot divergent ou une règle deny manquante au projet : le témoin ' +
+        '(c) nomme la règle oubliée.',
     },
     'scripts/gates/seuils-ssot.ts': {
       total: 2,

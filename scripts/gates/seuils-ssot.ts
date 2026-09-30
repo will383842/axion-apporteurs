@@ -77,7 +77,14 @@ export const EXEMPTIONS: readonly Exemption[] = [
 // ── 1. La SSOT ──────────────────────────────────────────────────────────────────────────────────
 
 const NOM_DE_GRADATION = /CONTRADICTOIRE|STRIKE|GRADATION|GRADUE|MANQUEMENT|AVERTISSEMENT|SANCTION/;
-const UNITES: readonly Seuil['unite'][] = ['jours', 'jours_ouvres', 'mois', 'ans', 'centimes'];
+const UNITES: readonly Seuil['unite'][] = [
+  'minutes',
+  'jours',
+  'jours_ouvres',
+  'mois',
+  'ans',
+  'centimes',
+];
 
 function dateIsoReelle(v: string): boolean {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return false;
@@ -323,6 +330,8 @@ export function montantDansLaLigne(
 }
 
 const JOURS_PAR_UNITE: Readonly<Record<Exclude<Seuil['unite'], 'centimes'>, number>> = {
+  // Une minute, en jours : 90 minutes rendent 0,0625 jour, 1,5 heure, 90 minutes, sans reste.
+  minutes: 1 / 1440,
   jours: 1,
   jours_ouvres: 1,
   mois: 30,
@@ -530,6 +539,7 @@ export function enLettres(n: number): string | null {
 }
 
 const UNITE_ECRITE: Readonly<Record<Seuil['unite'], string>> = {
+  minutes: 'minutes?',
   jours: 'jours?',
   jours_ouvres: 'jours? ouvr[ée]s',
   mois: 'mois',

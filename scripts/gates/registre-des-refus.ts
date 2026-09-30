@@ -384,6 +384,11 @@ export const REFUS_NOMMES: Readonly<Record<string, readonly string[]>> = {
   'scripts/gates/maquettes-validees.ts': [
     "module › si LANCE_EN_SCRIPT › (process.argv.includes('--prove') ? prouver() : juger())",
   ],
+  'scripts/preview/preview.ts': [
+    'module › si APPELE_DIRECTEMENT › si !f › (= 1)',
+    'f().then › ∅ › (= code)',
+    'f().then › ∅ › (= 1)',
+  ],
   'scripts/gates/migrations-additive.ts': [
     "module › si LANCE_EN_SCRIPT › si process.argv.includes('--prove') › si echecs.length > 0 › (1)",
     'module › si LANCE_EN_SCRIPT › si verdict.fautes.length > 0 › (1)',
@@ -433,6 +438,14 @@ export const REFUS_NOMMES: Readonly<Record<string, readonly string[]>> = {
     'module › si LANCE_EN_SCRIPT › si fautes.length > 0 › (1)',
   ],
   'scripts/gates/schema-pii.ts': ['module › si LANCE_EN_SCRIPT › (decision.code)'],
+  'scripts/sauvegarde/cycle.ts': [
+    "commande(process.argv[2] ?? '').then › ∅ › (= code)",
+    "commande(process.argv[2] ?? '').then › ∅ › (= 1)",
+  ],
+  'scripts/sauvegarde/exercice.ts': [
+    'principal().then › ∅ › (= code)',
+    'principal().then › ∅ › (= 1)',
+  ],
   'scripts/gates/seuils-ssot.ts': [
     "module › si process.argv[1] !== undefined && /seuils-ssot[.](ts|js)$/.t… › si process.argv.includes('--prove') › si rate > 0 › (1)",
     'module › si process.argv[1] !== undefined && /seuils-ssot[.](ts|js)$/.t… › si fautes.length > 0 › (1)',
@@ -442,6 +455,10 @@ export const REFUS_NOMMES: Readonly<Record<string, readonly string[]>> = {
     'module › si APPELE_DIRECTEMENT › si fautes.length > 0 › (1)',
   ],
   'scripts/lot/cloture.ts': ['rattraperLePasse › si horsPassif.length > 0 › (= 1)'],
+  'scripts/lot/lot-dedie-gardien-spec.ts': [
+    "module › si LANCE › si process.argv.includes('--garde') › si raison !== null › (2)",
+    "module › si LANCE › sinon process.argv.includes('--garde') › sinon process.argv.includes('--rendre') › si process.argv.includes('--verifier') › si fautes.length > 0 › (1)",
+  ],
   'scripts/lot/corps-de-pr.ts': [
     'caseRevues › si !verdictTete.concordent › (1)',
     "module › si process.argv[1]?.endsWith('corps-de-pr.ts') › si prBrut === null || !/^\\d+$/.test(prBrut) › (1)",
