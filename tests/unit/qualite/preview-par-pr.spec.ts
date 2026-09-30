@@ -146,10 +146,36 @@ describe('REQ-QA-015 — le workflow de preview tient les six conditions', () =>
   });
 
   it('REQ-QA-015 : (2) publier-image ne lit que GITHUB_TOKEN, et ne pousse que dans le paquet de preview', () => {
-    expect(job('publier-image').permissions).toEqual({ contents: 'read', packages: 'write' });
+    // `actions: read` : télécharger l'artefact du run `Image` ; rien d'autre n'est écrit que le paquet.
+    expect(job('publier-image').permissions).toEqual({
+      contents: 'read',
+      packages: 'write',
+      actions: 'read',
+    });
     expect([...new Set(secretsDe(job('publier-image')))]).toEqual(['secrets.GITHUB_TOKEN']);
     const runs = (job('publier-image').steps ?? []).map((s) => s.run).filter(Boolean);
     expect(runs).toContain('pnpm preview:publier-image');
+  });
+
+  it('REQ-QA-015 : (2) publier-image n’exécute AUCUN code de la PR : il extrait main et charge l’image comme DONNÉE', () => {
+    const etapes = job('publier-image').steps ?? [];
+    const checkout = etapes.find((s) => s.uses?.startsWith('actions/checkout'));
+    expect(checkout?.with?.ref).toBe('${{ github.event.repository.default_branch }}');
+    const artefact = etapes.find((s) => s.uses?.startsWith('actions/download-artifact'));
+    expect(artefact?.with?.['run-id']).toBe('${{ github.event.workflow_run.id }}');
+    expect(artefact?.with?.name).toBe('image-preview');
+  });
+
+  it('REQ-QA-015 : (2) l’image de la PR est produite par le job `image`, en lecture seule, et exportée en artefact', async () => {
+    const deploy = (await lireYaml(readFileSync('.github/workflows/deploy.yml', 'utf8'))) as {
+      jobs?: Record<string, Job>;
+    };
+    const image = deploy.jobs?.image ?? {};
+    expect(image.permissions).toEqual({ contents: 'read' });
+    const runs = (image.steps ?? []).map((s) => s.run).filter(Boolean);
+    expect(runs).toContain('pnpm image:exporter');
+    const envoi = (image.steps ?? []).find((s) => s.uses?.startsWith('actions/upload-artifact'));
+    expect(envoi?.with?.name).toBe('image-preview');
   });
 
   it('REQ-QA-015 : (4) deployer est séparé, n’extrait que la branche principale, et seul détient le jeton de preview', () => {
@@ -186,15 +212,32 @@ describe('REQ-QA-015 — le workflow de preview tient les six conditions', () =>
     expect(d.permissions).toEqual({ contents: 'read', packages: 'write' });
   });
 
-  it('REQ-QA-015 : aucun job n’EXTRAIT le code de la PR, sauf publier-image, qui n’a que GITHUB_TOKEN', () => {
-    for (const [nom, j] of Object.entries(wf.jobs ?? {})) {
-      if (nom === 'publier-image') continue;
-      for (const s of (j.steps ?? []).filter((e) => e.uses?.startsWith('actions/checkout'))) {
-        expect(s.with?.ref, `${nom} extrait autre chose que la branche principale`).toBe(
-          '${{ github.event.repository.default_branch }}'
-        );
+  it('REQ-QA-015 : (lentille securite) AUCUN workflow déclenché par workflow_run ou pull_request_target n’extrait le code de la PR', async () => {
+    const { readdirSync } = await import('node:fs');
+    const fautes: string[] = [];
+    let juges = 0;
+    for (const f of readdirSync('.github/workflows').filter((x) => /\.ya?ml$/.test(x))) {
+      const w = (await lireYaml(readFileSync(`.github/workflows/${f}`, 'utf8'))) as {
+        on?: Record<string, unknown>;
+        jobs?: Record<string, Job>;
+      };
+      const privilegie = Object.keys(w.on ?? {}).some(
+        (e) => e === 'workflow_run' || e === 'pull_request_target'
+      );
+      if (!privilegie) continue;
+      for (const [nom, j] of Object.entries(w.jobs ?? {})) {
+        for (const s of (j.steps ?? []).filter((e) => e.uses?.startsWith('actions/checkout'))) {
+          juges++;
+          if (s.with?.ref !== '${{ github.event.repository.default_branch }}')
+            fautes.push(`${f} › ${nom}`);
+        }
       }
     }
+    expect(juges).toBeGreaterThan(0);
+    expect(
+      fautes,
+      `extraient autre chose que la branche principale :\n${fautes.join('\n')}`
+    ).toEqual([]);
   });
 
   it('REQ-QA-015 : aucune étape n’est tolérée en échec', () => {
