@@ -27,6 +27,10 @@
 - [ ] **Provisionnement** (REQ-INT-031) : aucune ressource nommée `axion-partners-postgres`,
       `axion-partners-redis` ou `axion-partners` n'existe hors du projet `Axion-Partners` de la plateforme.
       _Porteur : Williams (constat dans la plateforme)._
+- [ ] **Données personnelles dans le dépôt public** : tant que la garde `detectPii` n'est pas armée,
+      toute PR qui touche `tests/fixtures/**` ou `docs/spec/**` passe par un scan à la main de la lentille
+      `securite`. La case se coche à l'armement de `detectPii`. _Porteur : la lentille `securite`,
+      jusqu'à l'armement._
 
 ## 2. Les exercices, en `production-avant-donnees`
 
@@ -95,8 +99,10 @@
       de Williams, tracée dans `docs/DECISIONS.md`. _Porteur : Williams (décision), l'auteur (PR)._
 - [ ] La double clé de rotation (PR 297, REQ-QA-030) est DÉPLOYÉE en production. _Porteur : la forge
       (déploiement de la fusion), constat de l'auteur._
-- [ ] Le refus de lecture des coordonnées retirées (axion-ia, PR 1250) est DÉPLOYÉ en production côté
-      axion-ia. _Porteur : la session axion-ia._
+- [x] Le refus de lecture des coordonnées retirées (axion-ia, PR 1250) est DÉPLOYÉ en production côté
+      axion-ia. _Porteur : la session axion-ia._ **Fait le 2026-09-30** : `2bbe3482` (squash de la PR
+      1250) servi par axion-ia.com (`x-axion-build-sha`), run « Build & Deploy » 36735033118, job de
+      déploiement vert.
 - [ ] `PARTNERS_SYNC_ENABLED` ouvert côté axion-ia, **en DERNIER**, après les deux cases précédentes.
       _Porteur : Williams._
 - [ ] Première donnée réelle : date et sha consignés ci-dessous. _Porteur : Williams, l'auteur (PR)._
