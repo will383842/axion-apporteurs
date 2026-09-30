@@ -38,7 +38,8 @@
  */
 import { createHmac } from 'node:crypto';
 import { z } from 'zod';
-import { lireEnvironnement } from '../../../lib/env';
+import { ENTETE_KID_AXIONIA } from '../../../../packages/contracts/api';
+import { cleDuKid, lireEnvironnement, lireTrousseaux, type Trousseau } from '../../../lib/env';
 import { horlogeSysteme } from '../../../lib/horloge';
 import { SAUTS_DE_CONFIANCE, adresseDuClient } from '../../securite/adresse-du-client';
 import { executerAuPlancher, type HorlogeDePlancher } from '../../securite/pot-de-miel';
@@ -189,10 +190,20 @@ function listeDAdresses(brut: string | undefined): ReadonlySet<string> | null {
   return sujets;
 }
 
-/** Le jeton porteur, comparé à temps constant par la primitive partagée. */
-function jetonAccepte(autorisation: string | null, attendu: string): boolean {
+/**
+ * Le jeton porteur, comparé à temps constant par la primitive partagée, à la clé que désigne le
+ * `kid` présenté (QA-T52, REQ-QA-030) : un kid absent ou inconnu, ou un jeton précédent échu, est
+ * refusé sans comparaison — jamais essayé contre toutes les clés.
+ */
+function jetonAccepte(
+  autorisation: string | null,
+  kid: string | null,
+  trousseau: Trousseau,
+  maintenantMs: number
+): boolean {
   const presente = /^Bearer (\S+)$/.exec(autorisation ?? '')?.[1] ?? '';
-  return egalATempsConstant(presente, attendu);
+  const cle = cleDuKid(trousseau, kid, maintenantMs);
+  return cle.ok && egalATempsConstant(presente, cle.cle);
 }
 
 // ── Le chemin d'un appel ────────────────────────────────────────────────────────────────────────
@@ -220,7 +231,8 @@ export async function traiterAppel(
   };
 
   const lu = lireEnvironnement(f.environnement);
-  if (!lu.ok) {
+  const rotation = lireTrousseaux(f.environnement, f.horloge.maintenantMs());
+  if (!lu.ok || !rotation.ok) {
     noter('configuration_refusee');
     return refus();
   }
@@ -235,7 +247,14 @@ export async function traiterAppel(
     noter('adresse_hors_liste');
     return refus();
   }
-  if (!jetonAccepte(requete.headers.get('authorization'), lu.env.AXIONIA_API_TOKEN)) {
+  if (
+    !jetonAccepte(
+      requete.headers.get('authorization'),
+      requete.headers.get(ENTETE_KID_AXIONIA),
+      rotation.trousseaux.AXIONIA_API_TOKEN,
+      f.horloge.maintenantMs()
+    )
+  ) {
     noter('jeton_refuse');
     return refus();
   }
