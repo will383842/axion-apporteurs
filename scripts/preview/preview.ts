@@ -110,7 +110,7 @@ function plateforme(url: string, jeton: string) {
   const u = new URL(url);
   const locale = ['127.0.0.1', 'localhost', '[::1]'].includes(u.hostname);
   if (u.protocol !== 'https:' && !(u.protocol === 'http:' && locale))
-    throw new Error('COOLIFY_URL doit être en https');
+    throw new Error('COOLIFY_PREVIEW_URL doit être en https');
   const racine = `${u.href.replace(/\/+$/, '')}/api/v1`;
   return async (
     methode: 'GET' | 'POST' | 'PATCH' | 'DELETE',
@@ -158,7 +158,7 @@ async function secretsFactices(): Promise<{ key: string; value: string }[]> {
 async function attribuer(): Promise<number> {
   const e = exiger(
     [
-      'COOLIFY_URL',
+      'COOLIFY_PREVIEW_URL',
       'COOLIFY_PREVIEW_TOKEN',
       'PREVIEW_DOMAINE',
       'PR_NUMERO',
@@ -173,7 +173,7 @@ async function attribuer(): Promise<number> {
   const nom = nomDePreview(pr);
   const image = cibleDePreview(e.GITHUB_REPOSITORY!, pr, e.TETE!);
   const [nomImage, etiquette] = image.split(':') as [string, string];
-  const api = plateforme(e.COOLIFY_URL!, e.COOLIFY_PREVIEW_TOKEN!);
+  const api = plateforme(e.COOLIFY_PREVIEW_URL!, e.COOLIFY_PREVIEW_TOKEN!);
 
   const applications = liste(await api('GET', '/applications'));
   const vivantes = applications
@@ -258,13 +258,13 @@ async function attribuer(): Promise<number> {
 
 async function detruire(): Promise<number> {
   const e = exiger(
-    ['COOLIFY_URL', 'COOLIFY_PREVIEW_TOKEN', 'PR_NUMERO', 'GITHUB_REPOSITORY', 'GH_TOKEN'],
+    ['COOLIFY_PREVIEW_URL', 'COOLIFY_PREVIEW_TOKEN', 'PR_NUMERO', 'GITHUB_REPOSITORY', 'GH_TOKEN'],
     'preview:detruire'
   );
   if (!e) return 0;
   const pr = Number(e.PR_NUMERO);
   const nom = nomDePreview(pr);
-  const api = plateforme(e.COOLIFY_URL!, e.COOLIFY_PREVIEW_TOKEN!);
+  const api = plateforme(e.COOLIFY_PREVIEW_URL!, e.COOLIFY_PREVIEW_TOKEN!);
   const app = liste(await api('GET', '/applications')).find((a) => a.name === nom);
   if (app) await api('DELETE', `/applications/${app.uuid}`);
   const bases = liste(await api('GET', '/databases')).filter(

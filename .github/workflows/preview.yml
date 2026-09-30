@@ -45,6 +45,9 @@ jobs:
   deployer:
     needs: publier-image
     runs-on: ubuntu-latest
+    # Environnement `preview` (lentille securite) : ses secrets propres, jamais ceux de production,
+    # et la regle de branche de l environnement (main seulement) comme serrure.
+    environment: preview
     concurrency:
       group: preview-attribution
       cancel-in-progress: false
@@ -60,7 +63,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Creer ou mettre a jour la preview sous le plafond, et commenter son adresse
         env:
-          COOLIFY_URL: ${{ secrets.COOLIFY_URL }}
+          COOLIFY_PREVIEW_URL: ${{ secrets.COOLIFY_PREVIEW_URL }}
           COOLIFY_PREVIEW_TOKEN: ${{ secrets.COOLIFY_PREVIEW_TOKEN }}
           COOLIFY_SERVER_UUID: ${{ vars.COOLIFY_SERVER_UUID }}
           PREVIEW_DOMAINE: ${{ vars.PREVIEW_DOMAINE }}
@@ -72,6 +75,9 @@ jobs:
   detruire:
     if: ${{ github.event_name == 'pull_request_target' && github.event.action == 'closed' }}
     runs-on: ubuntu-latest
+    # Environnement `preview` (lentille securite) : ses secrets propres, jamais ceux de production,
+    # et la regle de branche de l environnement (main seulement) comme serrure.
+    environment: preview
     concurrency:
       group: preview-attribution
       cancel-in-progress: false
@@ -87,7 +93,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Detruire l application, la base, le cache et les etiquettes de la preview
         env:
-          COOLIFY_URL: ${{ secrets.COOLIFY_URL }}
+          COOLIFY_PREVIEW_URL: ${{ secrets.COOLIFY_PREVIEW_URL }}
           COOLIFY_PREVIEW_TOKEN: ${{ secrets.COOLIFY_PREVIEW_TOKEN }}
           PR_NUMERO: ${{ github.event.pull_request.number }}
           GH_TOKEN: ${{ github.token }}

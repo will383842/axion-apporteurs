@@ -258,7 +258,7 @@ describe('REQ-QA-018 — la preview écrit dans son paquet, jamais dans celui de
   it('REQ-QA-018 : aucun job de preview ne lance la publication de production', () => {
     expect(PREVIEW).not.toMatch(/image:publier\b/);
     expect(PREVIEW).not.toMatch(
-      /secrets\.(?!GITHUB_TOKEN\b|COOLIFY_URL\b|COOLIFY_PREVIEW_TOKEN\b)/
+      /secrets\.(?!GITHUB_TOKEN\b|COOLIFY_PREVIEW_URL\b|COOLIFY_PREVIEW_TOKEN\b)/
     );
   });
 
