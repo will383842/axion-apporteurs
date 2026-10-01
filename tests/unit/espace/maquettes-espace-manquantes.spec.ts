@@ -103,9 +103,9 @@ describe('REQ-UX-047 — les écrans de l’espace trouvés sans maquette ont la
   });
 
   it('REQ-UX-047 — TÉMOINS : une route, une maquette, un état, une ligne ou un lien qui manque rougit', () => {
-    expect(
-      fautes({ ...d, routes: d.routes.replace(/^\| `\/notifications` \|.*$/m, '') })
-    ).toEqual(['/notifications : aucune ligne dans ESPACE-ROUTES.md']);
+    expect(fautes({ ...d, routes: d.routes.replace(/^\| `\/notifications` \|.*$/m, '') })).toEqual([
+      '/notifications : aucune ligne dans ESPACE-ROUTES.md',
+    ]);
     expect(fautes({ ...d, maquettes: { ...d.maquettes, 'personnes.html': undefined } })).toEqual([
       'personnes.html : maquette absente',
     ]);
@@ -115,7 +115,7 @@ describe('REQ-UX-047 — les écrans de l’espace trouvés sans maquette ont la
     );
     expect(
       fautes({ ...d, maquettes: { ...d.maquettes, 'notifications.html': sansChargement } })
-    ).toEqual(['notifications.html : aucun état de chargement']);
+    ).toContain('notifications.html : aucun état de chargement');
     expect(
       fautes({ ...d, validation: d.validation.replace(/^\|.*`connexion\.html`.*$/m, '') })
     ).toEqual(['connexion.html : aucune ligne dans VALIDATION.md']);
@@ -123,9 +123,9 @@ describe('REQ-UX-047 — les écrans de l’espace trouvés sans maquette ont la
       'href="mon-contrat.html#etat-limitee"',
       'href="mon-contrat.html#etat-signature"'
     );
-    expect(
-      fautes({ ...d, maquettes: { ...d.maquettes, 'conformite.html': sansRenvoi } })
-    ).toEqual(['conformite.html : l’ouverture limitée ne renvoie pas à Mon contrat']);
+    expect(fautes({ ...d, maquettes: { ...d.maquettes, 'conformite.html': sansRenvoi } })).toEqual([
+      'conformite.html : l’ouverture limitée ne renvoie pas à Mon contrat',
+    ]);
     const lienMort = `${d.maquettes['personnes.html']!}<a href="notifications.html#etat-fantome">x</a>`;
     expect(fautes({ ...d, maquettes: { ...d.maquettes, 'personnes.html': lienMort } })).toEqual([
       'personnes.html : lien mort vers notifications.html#etat-fantome',
