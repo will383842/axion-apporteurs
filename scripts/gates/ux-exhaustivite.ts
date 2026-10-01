@@ -68,6 +68,7 @@ import * as ETATS_VIDES_DE_L_ESPACE from '../../src/content/micro-copy/espace/et
 import * as VOCABULAIRE_DE_L_ESPACE from '../../src/content/micro-copy/espace/vocabulaire';
 import * as TYPES_DE_LA_MICRO_COPIE from '../../src/content/micro-copy/types';
 import { ETATS_VIDES_CONSOLE } from '../../src/content/micro-copy/console/etats-vides';
+import { GABARITS } from '../../src/server/notifications/table-ssot';
 import type { ActionEcran, EtatVide, TexteIssue } from '../../src/content/micro-copy/types';
 import { fichiersSuivisOuRefus } from '../lot/fichiers-suivis';
 
@@ -80,6 +81,8 @@ const { ETATS_VIDES_ESPACE } = ETATS_VIDES_DE_L_ESPACE;
 const CHEMIN_REGISTRE = 'docs/requirements.json';
 const CHEMIN_CARTE = 'docs/ESPACE-ROUTES.md';
 const CHEMIN_VALIDATION = 'docs/maquettes/VALIDATION.md';
+/** GOV-113 : la carte des routes de la console (REQ-UX-048), lue comme celle de l'espace. */
+const CHEMIN_CARTE_CONSOLE = 'docs/CONSOLE-ROUTES.md';
 const RACINE_MICRO_COPIE = 'src/content/micro-copy/';
 const RACINE_ESPACE = `${RACINE_MICRO_COPIE}espace/`;
 
@@ -474,6 +477,10 @@ export type Vue = {
   contestation: ActionEcran;
   ecransEspace: readonly string[];
   ecransConsole: readonly string[];
+  /** GOV-113 : les routes de `docs/CONSOLE-ROUTES.md`, où mène une action de la console. */
+  routesConsole: readonly string[];
+  /** GOV-113 : les gabarits de `src/server/notifications/table-ssot.ts`, tels que la table les déclare. */
+  gabarits: Readonly<Record<string, { actions?: readonly { libelle: string; source?: string }[] }>>;
   etatsVidesEspace: Readonly<Record<string, EtatVide | undefined>>;
   etatsVidesConsole: Readonly<Record<string, EtatVide | undefined>>;
   composants: readonly FichierVu[];
@@ -542,6 +549,11 @@ export type Faute = { famille: string; message: string };
 export type Rapport = { fautes: Faute[] };
 
 export const FAMILLES = [
+  {
+    nom: 'gabarit_sans_appel_unique',
+    explication:
+      'GOV-113 (REQ-UX-047 point 8) : un gabarit de la table des notifications qui déclare zéro ou plusieurs appels à l’action, ou dont le libellé n’est pas tiré de la micro-copie.',
+  },
   {
     nom: 'source_illisible',
     explication:
@@ -765,16 +777,29 @@ export function controler(vue: Vue): Rapport {
     if (e !== undefined) actions.push([`état vide ${ecran}`, e.action, vue.ecransEspace]);
   }
   for (const [ecran, e] of Object.entries(vue.etatsVidesConsole)) {
-    if (e !== undefined) actions.push([`état vide console ${ecran}`, e.action, []]);
+    if (e !== undefined) actions.push([`état vide console ${ecran}`, e.action, vue.routesConsole]);
   }
   for (const [qui, action, connues] of actions) {
     if (action !== null && action.route !== null && !connues.includes(action.route)) {
       ajouter(
         'action_vers_route_inconnue',
-        `${qui} — « ${action.libelle} » mène à ${action.route}, route absente de ${CHEMIN_CARTE}. ` +
+        `${qui} — « ${action.libelle} » mène à ${action.route}, route absente de ${connues === vue.routesConsole ? CHEMIN_CARTE_CONSOLE : CHEMIN_CARTE}. ` +
           `Une action vers une route inconnue est un lien mort le jour où l'écran est codé.`
       );
     }
+  }
+
+  // GOV-113 — un gabarit de notification, un seul appel à l’action, libellé tiré de la micro-copie.
+  for (const [cle, g] of Object.entries(vue.gabarits)) {
+    if (g.actions === undefined) continue; // dette imprimée : UX-P1-10 déclare les actions
+    if (
+      g.actions.length !== 1 ||
+      !g.actions.every((a) => (a.source ?? '').startsWith(RACINE_MICRO_COPIE))
+    )
+      ajouter(
+        'gabarit_sans_appel_unique',
+        `gabarit « ${cle} » — ${g.actions.length} appel(s) à l’action, chacun tiré de la micro-copie (${RACINE_MICRO_COPIE}) : il en faut UN.`
+      );
   }
 
   // « Mes entreprises » vide guide vers le premier dépôt.
@@ -933,6 +958,8 @@ export function vueDuDepot(sources: Sources = SOURCES_DU_DEPOT): Vue {
     contestation: CONTESTATION_ECRITE,
     ecransEspace: ecransDeLEspace(lire(CHEMIN_CARTE)),
     ecransConsole: ecransDeLaConsole(lire(CHEMIN_VALIDATION)),
+    routesConsole: ecransDeLEspace(lire(CHEMIN_CARTE_CONSOLE)),
+    gabarits: GABARITS,
     etatsVidesEspace: ETATS_VIDES_ESPACE,
     etatsVidesConsole: ETATS_VIDES_CONSOLE,
     // Un composant suivi est lu par `lire` (qui rend '' pour un fichier absent) : la preuve peut
@@ -998,6 +1025,10 @@ export function vueDeFixture(): Vue {
     contestation: { libelle: 'Contester', route: null },
     ecransEspace: ['/', ECRAN_MES_ENTREPRISES, ROUTE_DU_DEPOT],
     ecransConsole: ['file'],
+    routesConsole: ['/console/qualification'],
+    gabarits: {
+      lien: { actions: [{ libelle: 'Se connecter', source: `${RACINE_MICRO_COPIE}fixture.ts` }] },
+    },
     etatsVidesEspace: {
       '/': V('Accueil'),
       [ECRAN_MES_ENTREPRISES]: V('Vide', ROUTE_DU_DEPOT),
@@ -1146,6 +1177,30 @@ const TEMOINS: { famille: string; nomme: string; vue: () => Vue }[] = [
     },
   },
   {
+    famille: 'gabarit_sans_appel_unique',
+    nomme: 'lien',
+    vue: () => ({
+      ...vueDeFixture(),
+      gabarits: {
+        lien: {
+          actions: [
+            { libelle: 'Se connecter', source: `${RACINE_MICRO_COPIE}a.ts` },
+            { libelle: 'Aide', source: `${RACINE_MICRO_COPIE}a.ts` },
+          ],
+        },
+      },
+    }),
+  },
+  {
+    // GOV-113 : une action de la console se confronte à docs/CONSOLE-ROUTES.md, plus à une liste vide.
+    famille: 'action_vers_route_inconnue',
+    nomme: '/console/nulle-part',
+    vue: () => {
+      const v = vueDeFixture();
+      return { ...v, etatsVidesConsole: { file: V('File vide', '/console/nulle-part') } };
+    },
+  },
+  {
     famille: 'premier_depot_non_guide',
     nomme: ECRAN_MES_ENTREPRISES,
     vue: () => {
@@ -1274,6 +1329,13 @@ const CONTRE_TEMOINS: { quoi: string; vue: () => Vue }[] = [
   {
     quoi: 'un composant qui lit la micro-copie, avec classes, attribut data- et ponctuation',
     vue: () => ({ ...vueDeFixture(), composants: [COMPOSANT_PROPRE] }),
+  },
+  {
+    quoi: 'GOV-113 : une action de la console vers une route de docs/CONSOLE-ROUTES.md',
+    vue: () => ({
+      ...vueDeFixture(),
+      etatsVidesConsole: { file: V('File vide', '/console/qualification') },
+    }),
   },
 ];
 
