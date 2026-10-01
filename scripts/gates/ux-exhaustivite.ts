@@ -104,6 +104,10 @@ const MICRO_COPIE_DE_L_ESPACE: Readonly<Record<string, unknown>> = {
  */
 export const MICRO_COPIE_HORS_PORTEE: Readonly<Record<string, string>> = {
   'console/etats-vides.ts': 'lu par Axion-IA seul, dans la console (portée dépôt, REQ-GOV-017)',
+  'console/script-de-qualification.ts':
+    'script de la console, lu par le qualifieur, jamais par l’apporteur',
+  'courriels/information-article-14.ts':
+    'courriel au prospect, hors de l’espace : couvert par le témoin information-article-14',
 };
 
 /**
