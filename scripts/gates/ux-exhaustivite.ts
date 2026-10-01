@@ -480,7 +480,19 @@ export type Vue = {
   /** GOV-113 : les routes de `docs/CONSOLE-ROUTES.md`, où mène une action de la console. */
   routesConsole: readonly string[];
   /** GOV-113 : les gabarits de `src/server/notifications/table-ssot.ts`, tels que la table les déclare. */
-  gabarits: Readonly<Record<string, { actions?: readonly { libelle: string; source?: string }[] }>>;
+  /**
+   * Les gabarits de la table : la garde ne lit que `actions` ; les autres champs d'un gabarit
+   * (`req`…) restent admis, sans quoi TypeScript refuse une entrée qui n'a pas d'`actions`.
+   */
+  gabarits: Readonly<
+    Record<
+      string,
+      {
+        readonly actions?: readonly { libelle: string; source?: string }[];
+        readonly [champ: string]: unknown;
+      }
+    >
+  >;
   etatsVidesEspace: Readonly<Record<string, EtatVide | undefined>>;
   etatsVidesConsole: Readonly<Record<string, EtatVide | undefined>>;
   composants: readonly FichierVu[];
