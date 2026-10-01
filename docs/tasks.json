@@ -15894,7 +15894,11 @@
         "docs/maquettes/acces-refuse.html",
         "docs/maquettes/file-qualification.html",
         "docs/maquettes/lot-paiement.html",
-        "docs/maquettes/VALIDATION.md"
+        "docs/maquettes/VALIDATION.md",
+        "src/content/micro-copy/console/etats-vides.ts",
+        "tests/unit/console/carte-des-routes-console.spec.ts",
+        "tests/unit/espace/maquettes-validees.spec.ts",
+        "docs/maquettes/index.html"
       ],
       "schema": false,
       "sensible": [],
@@ -15910,7 +15914,18 @@
       "externe": null,
       "estimateDays": 1,
       "statut": "a_faire",
-      "acceptance": "Lot transverse « confort de la console pour tous les rôles ». Pourquoi, pour tous les rôles : aucune maquette de console n'est validée, la navigation des maquettes n'est pas filtrée par rôle et aucune carte des routes de la console n'existe. (1) `CONSOLE-ROUTES.md`, pendant d'`ESPACE-ROUTES` : route, écran, rôle, phase, statut prévue ou livrée, REQ, maquette, et une colonne « écran principal » (oui ou non) qui désigne les écrans soumis au test de premier usage (REQ-UX-047 point 7). Tout sous `/console/`. `ESPACE-ROUTES.md` reçoit la même colonne. (2) `console-cadre.html` en 1280×800 et 375×667 : ≤ 7 entrées sur bureau, barre ≤ 4 plus menu en mobile, instantané par rôle (qualifieur, comptable, lecteur, admin ; aucun conseiller, qui n'a pas de console en V1). Accueil de repli par rôle et par phase. (3) Les en-têtes de `file-qualification.html` et `lot-paiement.html` sont filtrés par rôle : le qualifieur ne voit plus les lots (`:800-806`), le comptable ne voit plus la qualification. (4) Chaque maquette montre ses cinq états, dans les deux thèmes, avec une micro-copy de console proposée. (5) Une séance de validation groupée de Will est planifiée. Ses lignes sont posées dans `VALIDATION.md`. La fiche W19 porte « externe will » : la validation de Williams est une étape de cette acceptance, pas un préalable ; la tâche reste éligible pour produire ce qu'il validera (patron UX-P1-40 ; le schéma lie un externe non nul au statut attente_externe, qui bloquerait le travail). Arbitrage A01 du 2026-09-30."
+      "acceptance": "Lot transverse « confort de la console pour tous les rôles ». Pourquoi, pour tous les rôles : aucune maquette de console n'est validée, la navigation des maquettes n'est pas filtrée par rôle et aucune carte des routes de la console n'existe. (1) `CONSOLE-ROUTES.md`, pendant d'`ESPACE-ROUTES` : route, écran, rôle, phase, statut prévue ou livrée, REQ, maquette, et une colonne « écran principal » (oui ou non) qui désigne les écrans soumis au test de premier usage (REQ-UX-047 point 7). Tout sous `/console/`. `ESPACE-ROUTES.md` reçoit la même colonne. (2) `console-cadre.html` en 1280×800 et 375×667 : ≤ 7 entrées sur bureau, barre ≤ 4 plus menu en mobile, instantané par rôle (qualifieur, comptable, lecteur, admin ; aucun conseiller, qui n'a pas de console en V1). Accueil de repli par rôle et par phase. (3) Les en-têtes de `file-qualification.html` et `lot-paiement.html` sont filtrés par rôle : le qualifieur ne voit plus les lots (`:800-806`), le comptable ne voit plus la qualification. (4) Chaque maquette montre ses cinq états, dans les deux thèmes, avec une micro-copy de console proposée. (5) Une séance de validation groupée de Will est planifiée. Ses lignes sont posées dans `VALIDATION.md`. La fiche W19 porte « externe will » : la validation de Williams est une étape de cette acceptance, pas un préalable ; la tâche reste éligible pour produire ce qu'il validera (patron UX-P1-40 ; le schéma lie un externe non nul au statut attente_externe, qui bloquerait le travail). Arbitrage A01 du 2026-09-30.",
+      "tests": {
+        "REQ-UX-048": [
+          "tests/unit/console/carte-des-routes-console.spec.ts"
+        ],
+        "REQ-UX-047": [
+          "tests/unit/console/carte-des-routes-console.spec.ts"
+        ],
+        "REQ-UX-018": [
+          "tests/unit/console/carte-des-routes-console.spec.ts"
+        ]
+      }
     },
     {
       "id": "UX-P1-19",
