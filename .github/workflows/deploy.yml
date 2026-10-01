@@ -175,4 +175,4 @@ jobs:
           SHA_ATTENDU: ${{ github.sha }}
           SHA_SERVI: ${{ needs.deployer.outputs.sha_servi }}
           DEPLOIEMENT_ENVIRONNEMENT: production
-        run: pnpm exec tsx scripts/gates/deploy-verify.ts --alerter
+        run: pnpm deploy:alerter

@@ -9,7 +9,7 @@
  *                                      l'application, déploiement déclenché, puis la même
  *                                      vérification
  *         … --essais <n> --delai-ms <n>  la patience de la vérification (les tests la raccourcissent)
- *         tsx scripts/gates/deploy-verify.ts --alerter
+ *         pnpm deploy:alerter
  *                                      (forge, job `alerter`, QA-T54) : l'alerte close
  *                                      `deploiement_non_atterri`, après un `deployer` rouge ou annulé
  *
@@ -566,13 +566,8 @@ if (APPELE_DIRECTEMENT) {
   mode(
     argv.filter(
       (a) =>
-        ![
-          '--declencher',
-          '--verifier',
-          '--retour-arriere',
-          '--retirer-echappatoire',
-          '--alerter',
-        ].includes(a)
+        !['--declencher', '--verifier', '--retour-arriere', '--retirer-echappatoire'].includes(a) &&
+        a !== '--alerter'
     )
   ).then(
     (code) => {
