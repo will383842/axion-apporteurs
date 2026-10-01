@@ -3,7 +3,7 @@
 /**
  * INT-T55, en base RÉELLE — le passage des événements reçus est EXCLUSIF.
  *
- * LE CHOIX (écrit dans la PR) : le verrou consultatif du lanceur de GOV-137, et non une réclamation
+ * LE CHOIX (écrit dans la PR) : le verrou consultatif du lanceur des passages planifiés, et non une réclamation
  * ligne par ligne. La route du webhook prend le MÊME verrou que le lanceur (`cleDuVerrou` de
  * `evenements_recus`) : aucun chemin d'appel ne contourne l'exclusion. Un passage qui trouve le
  * verrou tenu saute ; l'événement reste `recu` et le passage suivant le prend. Un processus tué
