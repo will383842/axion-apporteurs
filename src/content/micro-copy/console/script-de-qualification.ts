@@ -24,9 +24,9 @@ export const MENTION_ARTICLE_14_SCRIPT = {
   ouverture:
     "Bonjour, je vous appelle de la part d'Axion-IA : {prenomApporteur} {nomApporteur}, apporteur d'affaires indépendant, nous a présenté {entreprise} et nous a transmis vos coordonnées professionnelles.",
   apresCourriel:
-    "{responsable} les utilise pour vérifier votre échange avec lui et y donner suite, sur la base de son intérêt légitime. Le courriel que vous avez reçu de notre part détaille la durée de conservation et vos droits, dont celui de vous opposer à tout moment.",
+    "{responsable} les utilise pour donner suite à votre échange avec lui, après l'avoir confirmé avec vous, sur la base de son intérêt légitime. Le courriel que vous avez reçu de notre part détaille la durée de conservation et vos droits, dont celui de vous opposer à tout moment.",
   sansCourriel:
-    "{responsable} les utilise pour vérifier votre échange avec lui et y donner suite, sur la base de son intérêt légitime. Je vous adresse aujourd'hui par courriel le détail de la durée de conservation et de vos droits, dont celui de vous opposer à tout moment.",
+    "{responsable} les utilise pour donner suite à votre échange avec lui, après l'avoir confirmé avec vous, sur la base de son intérêt légitime. Je vous adresse aujourd'hui par courriel le détail de la durée de conservation et de vos droits, dont celui de vous opposer à tout moment.",
   question: 'Souhaitez-vous que nous poursuivions cet échange ?',
   /** Ce que l'appelant dit si la personne s'oppose : il n'insiste pas, et l'opposition est enregistrée. */
   siOpposition:

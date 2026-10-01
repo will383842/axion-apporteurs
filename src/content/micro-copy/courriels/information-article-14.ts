@@ -26,7 +26,7 @@
  * et l'envoi journalise la version envoyée (REQ-JUR-060, INT-T40).
  */
 
-export const VERSION_INFORMATION_ARTICLE_14 = 'information-article-14/v2';
+export const VERSION_INFORMATION_ARTICLE_14 = 'information-article-14/v3';
 
 /** Le libellé du lien d'opposition, posé par le gabarit de l'e-mail à la fin du bloc. */
 export const LIEN_OPPOSITION = {
@@ -44,9 +44,9 @@ export const INFORMATION_ARTICLE_14 = {
   source:
     "Ces coordonnées nous ont été transmises par {prenomApporteur} {nomApporteur}, apporteur d'affaires indépendant, qui nous a présenté {entreprise} et indique avoir échangé avec vous.",
   finalite:
-    "Nous les utilisons pour vérifier auprès de vous que cet échange a bien eu lieu, puis, le cas échéant, pour reprendre contact avec vous au sujet de {entreprise} et des prestations d'Axion-IA. Une empreinte de votre adresse et de votre numéro nous sert aussi à éviter les doublons et à respecter votre opposition.",
+    "Nous les utilisons pour donner suite à cette présentation et reprendre contact avec vous au sujet de {entreprise} et des prestations d'Axion-IA, après vous avoir demandé de confirmer cet échange. Une empreinte de votre adresse et de votre numéro nous sert aussi à éviter les doublons et à respecter votre opposition.",
   baseLegale:
-    "Ce traitement repose sur notre intérêt légitime à vérifier les présentations qui nous sont faites et à y donner suite (article 6, paragraphe 1, point f du RGPD). Vous pouvez vous y opposer à tout moment.",
+    "Ce traitement repose sur notre intérêt légitime à donner suite aux présentations qui nous sont faites, après en avoir vérifié la réalité (article 6, paragraphe 1, point f du RGPD). Vous pouvez vous y opposer à tout moment.",
   destinataires:
     "Vos coordonnées ne sont accessibles qu'aux personnes d'Axion-IA chargées de ce suivi et à {prestataireEnvoi}, notre prestataire d'envoi de courriels. {prenomApporteur} {nomApporteur} est informé de la suite donnée à sa présentation. Vos données ne sont ni vendues ni cédées. {mentionTransfert}",
   duree:
