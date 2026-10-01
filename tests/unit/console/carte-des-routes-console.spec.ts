@@ -212,8 +212,8 @@ describe('REQ-UX-048 — la carte des routes de la console', () => {
   it('REQ-UX-048 — TÉMOINS : une huitième entrée, un instantané qui montre les lots au qualifieur', () => {
     const carte = lire(CARTE);
     const huit = carte.replace(
-      '| 6 | Administration |',
-      '| 7 | Huit | `/console` | admin | 1 |\n| 8 | Neuf | `/console` | admin | 1 |\n| 6 | Administration |'
+      '| 7 | Administration |',
+      '| 8 | Huit | `/console` | admin | 1 |\n| 7 | Administration |'
     );
     expect(fautesDeNavigation(huit)).toContain('8 entrées de premier niveau, sept au plus');
     const fuite = carte.replace(
