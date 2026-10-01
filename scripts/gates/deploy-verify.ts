@@ -237,8 +237,11 @@ export async function alerterDepuisLaForge(
     await alerter(objet);
     return 0;
   } catch (e) {
+    // Le NOM de l'erreur, jamais son message : une erreur de `fetch` peut recopier l'adresse appelée,
+    // qui porte le jeton du bot, dans un journal de la forge lisible par tous (lentille `securite`).
+    const nom = e instanceof Error ? e.name : 'Erreur';
     console.error(
-      `::error title=deploy:alerter::alerte ${objet.categorie} NON envoyée : ${(e as Error).message}`
+      `::error title=deploy:alerter::alerte ${objet.categorie} NON envoyée (${nom}) : le canal a refusé ou n'a pas répondu`
     );
     return 1;
   }

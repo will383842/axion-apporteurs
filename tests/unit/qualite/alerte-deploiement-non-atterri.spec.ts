@@ -201,8 +201,11 @@ describe('REQ-GOV-014 — `alerter` tourne après un `deployer` rouge ou annulé
 
   it('`alerter` dépend de `deployer`, ne tourne que sur son échec ou son annulation, en production', () => {
     expect(alerter).toMatch(/^ {4}needs: deployer\s*$/m);
-    expect(alerter).toMatch(
-      /^ {4}if: \$\{\{[^\n]*\(failure\(\) \|\| cancelled\(\)\)[^\n]*\}\}\s*$/m
+    // La ligne ENTIÈRE, à l'identique : `false && (…)`, `always() || …` ou une autre ref passeraient
+    // une expression qui ne cherche que `(failure() || cancelled())` (refus `securite` sur #339). La
+    // garde qui la tient, avec ses faces rouges, vit dans pipeline-image.spec.ts (`alerter_mal_garde`).
+    expect(alerter.split('\n').map((l) => l.trim())).toContain(
+      "if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && (failure() || cancelled()) }}"
     );
     expect(alerter).toMatch(/^ {4}environment: production\s*$/m);
   });

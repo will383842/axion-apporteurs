@@ -131,6 +131,21 @@ function fautesDuPipeline(s: Sources): string[] {
   if (/secrets\.(?!TELEGRAM_(?:BOT_TOKEN|CHAT_ID)\b)/.test(j.get('alerter') ?? ''))
     f.push('secret_tiers : le job alerter lit un autre secret que ceux du canal d’alerte');
 
+  // QA-T54 : `alerter` ne tourne qu'après `deployer`, sur un push de `main`, et seulement si
+  // `deployer` a échoué ou a été annulé. Les deux lignes se comparent ENTIÈRES (refus `securite` sur
+  // #339) : une expression qui ne chercherait que `(failure() || cancelled())` laisserait passer
+  // `false && (…)`, `always() || …` ou une autre ref.
+  const alerter = (j.get('alerter') ?? '').split('\n').map((l) => l.trim());
+  if (
+    !alerter.includes('needs: deployer') ||
+    !alerter.includes(
+      "if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && (failure() || cancelled()) }}"
+    )
+  )
+    f.push(
+      'alerter_mal_garde : le job alerter ne dépend pas de deployer, ou ne tourne pas exactement sur son échec ou son annulation, sur un push de main'
+    );
+
   // Aucun checkout ne laisse le jeton dans `.git/config`.
   const checkouts =
     s.workflow.match(/- uses: actions\/checkout@[^\n]*(?:\n\s+with:[^\n]*)?/g) ?? [];
@@ -268,6 +283,31 @@ describe('REQ-QA-018 — la forge construit, juge, puis publie l’image (QA-T05
       }),
       'secret_tiers',
     ],
+    ...(
+      [
+        [
+          'le job alerter sans dépendance à deployer',
+          '    needs: deployer\n    environment',
+          '    environment',
+        ],
+        ['le job alerter sans condition', ' && (failure() || cancelled()) }}', ' }}'],
+        ['le job alerter sur failure() seul', '(failure() || cancelled())', '(failure())'],
+        [
+          'le job alerter neutralisé par false &&',
+          "if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && (failure() || cancelled()) }}",
+          "if: ${{ false && github.event_name == 'push' && github.ref == 'refs/heads/main' && (failure() || cancelled()) }}",
+        ],
+        [
+          'le job alerter ouvert par always() ||',
+          "if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && (failure() || cancelled()) }}",
+          "if: ${{ always() || github.event_name == 'push' && github.ref == 'refs/heads/main' && (failure() || cancelled()) }}",
+        ],
+      ] as const
+    ).map(([quoi, avant, apres]): [string, (s: Sources) => Sources, string] => [
+      quoi,
+      (s) => ({ ...s, workflow: s.workflow.replace(avant, apres) }),
+      'alerter_mal_garde',
+    ]),
   ];
 
   for (const [quoi, muter, famille] of mutants) {

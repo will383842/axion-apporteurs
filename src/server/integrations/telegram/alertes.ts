@@ -87,11 +87,12 @@ export const CATEGORIES_ALERTE = [
    */
   'rechiffrement_echoue',
   /**
-   * `QA-T54` — un déploiement dont l'atterrissage n'est pas vérifié (`REQ-GOV-014`) : `deploy:coolify`
-   * (`scripts/gates/deploy-verify.ts`, job `deployer` de `.github/workflows/deploy.yml`) l'émet quand le
-   * sha servi n'est pas le sha fusionné (en-tête absent ou délai dépassé compris), ou quand `readyz`
-   * n'est pas prêt. Le message ne porte que le sha attendu, le sha servi et l'environnement
-   * (`ObjetAlerte.deploiement`, chacun en liste blanche) ; le job reste rouge.
+   * `QA-T54` — un déploiement dont l'atterrissage n'est pas vérifié (`REQ-GOV-014`). Le job
+   * `deployer` de `.github/workflows/deploy.yml` ne fait que vérifier, et rougit quand le sha servi
+   * n'est pas le sha fusionné (en-tête absent ou délai dépassé compris) ou quand `readyz` n'est pas
+   * prêt ; c'est le job `alerter`, À PART (`scripts/gates/deploy-verify.ts --alerter`, après un
+   * `deployer` rouge ou annulé), qui émet l'alerte. Le message ne porte que le sha attendu, le sha
+   * servi et l'environnement (`ObjetAlerte.deploiement`, chacun en liste blanche).
    */
   'deploiement_non_atterri',
   /** Le témoin de la garde `G-SEC-NOTIF` (`garde-sans-pii.ts`, `OBJET_TEMOIN`). */
