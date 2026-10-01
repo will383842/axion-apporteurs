@@ -75,7 +75,7 @@ const etat = async (id: string) =>
   });
 
 describe('INT-T43 — un type sans traitant attend son traitant, en base réelle', () => {
-  it('un `paiement.recu` reçu avant son traitant lui est redonné une fois branché, et une seule', async () => {
+  it('REQ-DM-036 · REQ-ARG-003 : un `paiement.recu` reçu avant son traitant lui est redonné une fois branché, et une seule', async () => {
     const facture = randomUUID();
     const f = await inscrire(TypeEvenementRecu.facture_emise, `facture:${facture}`, {
       factureId: facture,
@@ -108,7 +108,7 @@ describe('INT-T43 — un type sans traitant attend son traitant, en base réelle
     expect(await etat(p)).toMatchObject({ statut: 'traite', dependanceRef: null });
   });
 
-  it("la reprise ne réveille pas l'attente d'un type qui n'a toujours pas de traitant", async () => {
+  it("REQ-DM-036 · REQ-ARG-003 : la reprise ne réveille pas l'attente d'un type qui n'a toujours pas de traitant", async () => {
     const a = await inscrire(TypeEvenementRecu.avoir_emis, `avoir:${randomUUID()}`, {
       factureId: randomUUID(),
     });
