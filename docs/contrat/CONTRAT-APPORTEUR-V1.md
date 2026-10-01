@@ -114,19 +114,48 @@ aucun effet. Une entreprise ne peut être attribuée qu'à un seul Apporteur, qu
 du formulaire mis à disposition. Elle n'est pas acquise du seul fait d'une démarche non déclarée.
 
 La déclaration comporte l'identification de l'entreprise, le **nom et la fonction de la personne
-rencontrée**, un **moyen direct de la joindre** et la **date du contact**, laquelle n'est recueillie
+rencontrée**, un **moyen direct de la joindre**, à savoir son adresse électronique et son numéro de
+téléphone, et la **date du contact**, laquelle n'est recueillie
 qu'aux fins de l'article 3.7 et ne fait l'objet d'aucune exploitation statistique.
 
-L'attribution est d'abord **provisoire**. Elle devient définitive lorsque l'entreprise confirme, lors de
-la prise de contact de la Société, avoir échangé avec l'Apporteur. **Lorsque l'entreprise ne peut être
-jointe, ou ne se prononce pas sur l'existence de l'échange, l'attribution demeure provisoire et est réputée
-confirmée à l'expiration du délai mentionné à l'alinéa suivant. L'article 3.7 ne s'applique qu'au cas où
-l'entreprise indique ne pas connaître l'Apporteur.**
+L'attribution est d'abord **provisoire**. Elle devient définitive lorsque l'entreprise confirme avoir
+échangé avec l'Apporteur, soit en réponse à la demande de confirmation que lui adresse la Société, soit
+lors d'une prise de contact de la Société, **sauf lorsque la demande fait l'objet d'une vérification,
+auquel cas seule une prise de contact concluante de la Société vaut confirmation.** **Lorsque l'entreprise
+ne peut être jointe, ne répond pas, ou ne se prononce pas sur l'existence de l'échange, l'attribution
+demeure provisoire et suit les alinéas 5 et 6. L'article 3.7 ne s'applique qu'au cas où l'entreprise
+indique ne pas connaître l'Apporteur.**
 
-**La Société s'efforce de prendre contact** avec l'entreprise déclarée dans un délai de deux jours ouvrés
-à compter de la déclaration. Passé un délai de trente jours sans que ce contact ait été tenté,
-l'attribution est réputée confirmée ; **cette confirmation est la seule conséquence attachée au défaut ou
-au retard de contact.**
+**La demande de confirmation** est adressée par la Société, par courrier électronique, à l'adresse de la
+personne mentionnée dans la déclaration, après l'enregistrement de celle-ci. **Elle désigne l'Apporteur
+par ses prénom et nom : l'Apporteur est informé que ses prénom et nom sont ainsi communiqués à la personne
+qu'il déclare, comme ils peuvent l'être lors d'une prise de contact de la Société ; ses coordonnées ne lui
+sont pas communiquées.** La Société peut en outre prendre contact avec l'entreprise déclarée, notamment
+par téléphone. La vérification d'une demande, au sens du présent article, n'est pas la suspension prévue
+à l'article 3.7 et n'en emporte aucun des effets.
+
+À défaut de réponse de l'entreprise et de prise de contact concluante dans un délai de
+**{{CONFIRMATION_TACITE_JOURS}} jours** à compter de la réception de la demande de confirmation,
+l'attribution est **réputée confirmée**, sauf lorsque la demande fait l'objet d'une vérification, auquel
+cas seule une prise de contact concluante de la Société vaut confirmation. La demande est réputée reçue
+lorsqu'elle a été envoyée à l'adresse déclarée, le cas échéant corrigée par l'Apporteur, sans être
+retournée en erreur ; **tant qu'elle revient en erreur et que l'Apporteur n'a pas communiqué une adresse
+corrigée, ce délai ne court pas.**
+
+Lorsque la demande fait l'objet d'une vérification et qu'aucune prise de contact concluante n'a eu lieu,
+l'attribution prend fin après {{LIBERATION_SIGNALEE_INJOIGNABLE_MAX}} tentatives de prise de contact
+restées sans réponse ou à l'expiration d'un délai de **{{LIBERATION_SIGNALEE_JOURS}} jours** à compter du
+premier envoi de la demande, selon ce qui survient en premier. **Cette fin n'emporte aucune autre
+conséquence pour l'Apporteur que celle-ci : il ne peut déclarer à nouveau la même entreprise qu'à
+l'expiration d'un délai de {{CARENCE_REDEPOT_APRES_LIBERATION_JOURS}} jours à compter de cette fin, porté
+à {{CARENCE_REDEPOT_APRES_SECONDE_LIBERATION_JOURS}} jours lorsque l'attribution de cette entreprise a déjà
+pris fin une première fois dans les mêmes conditions ; la déclaration de cette entreprise par un autre
+Apporteur n'en est pas affectée.**
+
+**La confirmation réputée acquise et, pour une demande qui fait l'objet d'une vérification, la fin de
+l'attribution sont les seules conséquences attachées au silence de l'entreprise.** La confirmation
+réputée acquise ne fait naître aucune commission : la commission ne naît que dans les conditions de
+l'article 4.
 
 **3.3 — Antériorité de la Société.** Aucune attribution ne peut porter sur une entreprise que la Société
 connaît déjà à la date de la déclaration, c'est-à-dire **cliente au titre d'une prestation facturée au
@@ -150,8 +179,11 @@ catégorie ; il n'emporte aucune autre conséquence et n'est pas un manquement.
 Elle expire par anticipation si, dans un délai de **{{PEREMPTION_JOURS}} jours à compter de la première
 prise de contact de la Société avec l'entreprise déclarée**, aucun rendez-vous n'a été tenu, aucun devis
 n'a été émis et aucune commande n'a été signée. **Ce délai ne court pas tant que ce contact n'a pas eu
-lieu. L'attribution n'expire pas au titre du présent alinéa lorsque l'absence de rendez-vous, de devis et
-de commande est imputable à la Société ; seule la durée de l'alinéa 1 s'applique alors.** L'entreprise
+lieu. La première prise de contact s'entend de la première réponse de l'entreprise, qu'elle soit donnée à
+la demande de confirmation de l'article 3.2 ou lors d'un appel de la Société qui a pu la joindre ; ni
+l'envoi d'une demande restée sans réponse, ni la réponse par courrier électronique à une demande qui fait
+l'objet d'une vérification n'en tiennent lieu. L'attribution n'expire pas au titre du présent alinéa
+lorsque l'absence de rendez-vous, de devis et de commande est imputable à la Société ; seule la durée de l'alinéa 1 s'applique alors.** L'entreprise
 redevient ensuite librement déclarable par tout Apporteur.
 
 Lorsqu'un devis est en cours au terme de la période, l'attribution est prolongée de trois mois, une seule
@@ -205,11 +237,14 @@ notifiée avec son motif.** Aucun autre rattachement n'ouvre droit à commission
 rencontré ou joint un représentant.
 
 Lorsque le représentant de l'entreprise déclarée indique expressément n'avoir eu aucun échange avec
-l'Apporteur, l'attribution correspondante s'éteint et l'entreprise redevient librement déclarable. Ne
-valent pas une telle indication l'impossibilité de joindre l'entreprise, l'absence de souvenir de
-l'échange, le changement d'interlocuteur ou le refus de répondre : dans ces cas l'attribution est
-maintenue. La réponse de l'entreprise est journalisée avec sa date, la personne interrogée et ses termes ;
-l'extrait en est communiqué à l'Apporteur sur sa demande.
+l'Apporteur, l'attribution correspondante s'éteint et l'entreprise redevient librement déclarable. Vaut
+une telle indication la réponse négative à la demande de confirmation de l'article 3.2, lorsque la
+personne qui la donne la confirme expressément par un second geste. Ne valent pas une telle indication
+l'impossibilité de joindre l'entreprise, l'absence de réponse à la demande de confirmation, l'absence de
+souvenir de l'échange, le changement d'interlocuteur ou le refus de répondre : dans ces cas l'attribution
+est maintenue, sous la seule réserve des alinéas 5 et 6 de l'article 3.2. La réponse de l'entreprise,
+qu'elle soit donnée lors d'une prise de contact de la Société ou en réponse à la demande de confirmation, est journalisée avec sa date, la personne interrogée ou
+destinataire de la demande, et ses termes ; l'extrait en est communiqué à l'Apporteur sur sa demande.
 
 La Société peut suspendre l'enregistrement de nouvelles déclarations le temps d'une vérification. La
 suspension est notifiée avec les faits qui la motivent, lesquels ne peuvent être que l'absence de
@@ -870,7 +905,7 @@ dehors de ce cas.
 | `CL-ANTI-REQUALIF` | 1.2 et 1.4 | Exclusion de l'agence commerciale et du contrat de travail, exclusion de tout pouvoir de négocier |
 | `CL-LIBERTE-EXERCICE` | 2.1 à 2.7 | Indépendance, absence d'objectif, de compte rendu et d'exclusivité ; liberté de moyens humains ; absence de régime salarié ; absence d'instruction |
 | `CL-ATTRIBUTION` | 3.1, 3.3, 3.3 bis, 3.5, 3.6, 3.8 | Clé SIREN, antériorité et autres cas de refus, concours entre apporteurs, file d'attente bornée, groupes de sociétés, accès et identifiants |
-| `CL-CONFIRMATION` | 3.2 al. 3 à 5 | Attribution provisoire, confirmation, quatre issues de contact, confirmation tacite à 30 jours |
+| `CL-CONFIRMATION` | 3.2 al. 3 à 7 | Attribution provisoire, confirmation par réponse à la demande ou par prise de contact, réserve de la demande vérifiée, information de l'Apporteur sur son nom, confirmation tacite, fin de l'attribution d'une demande vérifiée et délai avant une nouvelle déclaration |
 | `CL-DUREE` | 3.4 | Fenêtre d'attribution, péremption courant du premier contact, prolongation |
 | `CL-SINCERITE` | 3.7 al. 1 et 2 | Déclaration sincère, extinction de l'attribution sur démenti exprès de l'entreprise |
 | `CL-SUSPENSION-VERIFICATION` | 3.7 al. 3 | Suspension comme mesure de vérification, motifs fermés, aucun barème, aucun effet sur les droits acquis, durée maximale de 15 jours |
