@@ -1,7 +1,7 @@
 // @req REQ-SEC-008
 /**
  * SEC-47 — la fiche de l'apporteur passe par `CHAMPS_RENDUS`, comme les modèles cloisonnés
- * (dette nommée par la PR #345, GOV-111 ; exigences de la lentille sécurité, mot pour mot à
+ * (dette nommée par la PR #345 ; exigences de la lentille sécurité, mot pour mot à
  * l'acceptance).
  *
  * CE QU'IL PROUVE :
