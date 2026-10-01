@@ -84,6 +84,8 @@ const UNITES: readonly Seuil['unite'][] = [
   'mois',
   'ans',
   'centimes',
+  // JUR-T40 : un compte, pas une durée (LIBERATION_SIGNALEE_INJOIGNABLE_MAX).
+  'tentatives',
 ];
 
 function dateIsoReelle(v: string): boolean {
@@ -329,7 +331,9 @@ export function montantDansLaLigne(
   return null;
 }
 
-const JOURS_PAR_UNITE: Readonly<Record<Exclude<Seuil['unite'], 'centimes'>, number>> = {
+const JOURS_PAR_UNITE: Readonly<
+  Record<Exclude<Seuil['unite'], 'centimes' | 'tentatives'>, number>
+> = {
   // Une minute, en jours : 90 minutes rendent 0,0625 jour, 1,5 heure, 90 minutes, sans reste.
   minutes: 1 / 1440,
   jours: 1,
@@ -352,7 +356,8 @@ const ECHELLES: readonly (readonly [string, number])[] = [
 export function delaisExprimes(seuils: Readonly<Record<string, Seuil>>): Map<number, string> {
   const delais = new Map<number, string>();
   for (const [cle, s] of Object.entries(seuils)) {
-    if (s.unite === 'centimes') continue;
+    // Un montant et un compte ne sont pas des délais.
+    if (s.unite === 'centimes' || s.unite === 'tentatives') continue;
     const jours = new Set([s.valeur * JOURS_PAR_UNITE[s.unite]]);
     if (s.unite === 'mois' && s.valeur % 12 === 0) jours.add((s.valeur / 12) * 365);
     for (const j of jours) {
@@ -545,6 +550,7 @@ const UNITE_ECRITE: Readonly<Record<Seuil['unite'], string>> = {
   mois: 'mois',
   ans: '(?:ans|ann[ée]es)',
   centimes: '(?!)',
+  tentatives: 'tentatives?',
 };
 
 export function fautesDeCoherence(entree: {

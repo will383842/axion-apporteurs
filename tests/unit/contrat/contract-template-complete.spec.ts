@@ -959,3 +959,58 @@ describe('REQ-JUR-003 — les lecteurs du gabarit et du registre, sur leurs cas 
     expect(motifs2).toContain('clause CL-INVENTEE absente de la table de correspondance');
   });
 });
+
+// ── JUR-T31 — l'art. 3.5 : l'entreprise déjà prise par un autre apporteur ou par la Société ──────
+
+describe('REQ-JUR-003 — JUR-T31 : l’art. 3.5, entreprise déjà prise, bornes de la Société, non-exploitation', () => {
+  const art35 = (): string =>
+    normaliser(
+      (unitesDuGabarit(readFileSync(GABARIT, 'utf8')).get('3.5')?.alineas ?? []).join(' ')
+    );
+
+  it('REQ-JUR-003 : l’occupant peut être un autre apporteur, la Société ou ses préposés — nommés en toutes lettres', () => {
+    expect(art35()).toContain('par un autre apporteur ou par la Société ou ses préposés');
+    expect(art35()).toContain('préposés de la Société');
+  });
+
+  it('REQ-JUR-003 : l’acte de la Société s’appelle « prise en charge » — ni « suivi », ni « déclaration » de la Société', () => {
+    const a = art35();
+    expect(a).not.toMatch(/\bsuivie?s?\b/i);
+    // L'acte de la Société n'est jamais une déclaration : ni « la Société déclare », ni « ses préposés
+    // déclarent », ni « déclaration de la Société », ni « déclarée par la Société ». Les déclarations
+    // de l'apporteur, elles, restent nommées.
+    for (const forme of [
+      /(?:la Société|ses préposés|les préposés)s+(?:nes+)?déclar/i,
+      /déclarations?s+(?:de|par)s+(?:la Société|ses préposés|les préposés)/i,
+      /déclarée?s?s+pars+(?:la Société|ses préposés|les préposés)/i,
+    ])
+      expect(a).not.toMatch(forme);
+    expect(a).toContain('prise en charge');
+  });
+
+  it('REQ-JUR-003 : les bornes de la Société sont écrites par variables (RM-10), et aucune reconduction', () => {
+    const a = art35();
+    for (const v of ['FENETRE_MOIS', 'PEREMPTION_JOURS', 'CARENCE_CONSEILLER_JOURS'])
+      expect(a).toContain(`{{${v}}}`);
+    const bornes = a.slice(a.indexOf('obéit aux mêmes bornes'), a.indexOf("n'utilise ni"));
+    expect(bornes).not.toMatch(/(?<![\d{])(?:6|60|90)(?![\d}])/);
+    expect(bornes).not.toMatch(/\b(?:six|soixante|quatre-vingt-dix)\b/i);
+    expect(a).toContain('aucune reconduction');
+  });
+
+  it('REQ-JUR-003 : la Société n’exploite ni les vérifications, ni les déclarations, ni les coordonnées de l’apporteur', () => {
+    expect(art35()).toContain("n'utilise ni les vérifications");
+  });
+
+  it('REQ-JUR-003 : la preuve vaut quel que soit l’occupant, et l’extrait ne révèle pas qui occupe', () => {
+    expect(art35()).toContain("quel que soit l'occupant");
+    expect(art35()).toContain('ne révèle pas qui occupe');
+  });
+
+  it('REQ-JUR-003 : CARENCE_CONSEILLER_JOURS est une variable du contrat, déclarée sur la SSOT', () => {
+    expect(VARIABLES).toHaveProperty('CARENCE_CONSEILLER_JOURS');
+    expect(VARIABLES['CARENCE_CONSEILLER_JOURS' as keyof typeof VARIABLES]).toMatchObject({
+      constante: 'CARENCE_CONSEILLER_JOURS',
+    });
+  });
+});

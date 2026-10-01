@@ -313,6 +313,26 @@ export const CONCORDANCES: readonly Concordance[] = [
     gabarit: ['par un autre apporteur ou par la Société ou ses préposés'],
     absents: [],
   },
+  // JUR-T43 — le forfait d'un palier est réduit au prorata d'une remise, sans jamais augmenter.
+  {
+    decision: 'HYP-PRORATA-REMISE',
+    article: '4.1 bis',
+    alinea: null,
+    registre: ['sans jamais augmenter'],
+    gabarit: ['le forfait est multiplié par le rapport entre ces deux prix'],
+    absents: [],
+  },
+  // JUR-T42 — un devis signé qui n'est pas encore entièrement facturé rend l'entreprise
+  // indisponible, quelle que soit sa date. Le fragment s'arrête à « entièrement facturé » : la suite
+  // (« ni annulé ») attend la décision de Williams, et l'ancrage tient quelle que soit sa réponse.
+  {
+    decision: 'HYP-ANTERIORITE-DEVIS',
+    article: '3.3',
+    alinea: null,
+    registre: ["ayant accepté un devis qui n'est pas encore entièrement facturé"],
+    gabarit: ["ayant signé un devis qui n'a été ni entièrement facturé"],
+    absents: [],
+  },
   {
     decision: 'HYP-W19-CONCOURS',
     article: '3.3',
@@ -620,7 +640,7 @@ export const DIVERGENCES_DECLAREES: readonly Divergence[] = [
   },
   {
     cle: 'HYP-E1-12:3.5:al4',
-    constat: 'le registre cite l’al. 4 de l’art. 3.5, qui n’en compte que trois',
+    constat: 'le registre cite l’al. 4 de l’art. 3.5 ; l’horodatage en est le 5e alinéa',
     question: 'JUR-T01-Q03',
   },
   {
@@ -642,16 +662,6 @@ export const DIVERGENCES_DECLAREES: readonly Divergence[] = [
     cle: 'W11:identifiants',
     constat: 'W11 annonce 23 identifiants ; le gabarit et REQ-JUR-003 en portent 22',
     question: 'JUR-T01-Q13',
-  },
-  {
-    cle: 'W19:3.5',
-    constat: 'l’art. 3.5 amendé (la Société ou ses préposés) n’est pas encore écrit au gabarit',
-    question: 'JUR-T01-Q17',
-  },
-  {
-    cle: 'HYP-W19-CONCOURS:3.5',
-    constat: 'l’art. 3.5 amendé (la Société ou ses préposés) n’est pas encore écrit au gabarit',
-    question: 'JUR-T01-Q17',
   },
 ];
 
