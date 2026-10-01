@@ -53,6 +53,17 @@ export const SEUILS = {
     renvois: art('3.2'),
     verifieLe: LE,
   },
+  // INT-T49 — combien de temps une candidature qui attend ses coordonnées est reprise par le
+  // lanceur ; au-delà, elle ne l'est plus, et une alerte `attente_depassee` part. Un paramètre
+  // d'exploitation, pas une durée de conservation : il reste SOUS les 30 jours de minimisation
+  // d'INT-T56, qui demeurent le plafond (7 < 30).
+  ATTENTE_DES_COORDONNEES_JOURS: {
+    valeur: 7,
+    unite: 'jours',
+    source: 'coordination, 2026-10-01 (UTC), proposition de A05 (couvre un week-end prolongé)',
+    renvois: [],
+    verifieLe: '2026-10-01',
+  },
   ANTERIORITE_CLIENT_MOIS: {
     valeur: 24,
     unite: 'mois',

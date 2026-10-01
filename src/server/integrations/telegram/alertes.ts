@@ -97,6 +97,15 @@ export const CATEGORIES_ALERTE = [
   'deploiement_non_atterri',
   /** Le témoin de la garde `G-SEC-NOTIF` (`garde-sans-pii.ts`, `OBJET_TEMOIN`). */
   'temoin_garde',
+  /**
+   * `INT-T49` et `INT-T54` — des événements reçus qui ATTENDENT au-delà de leur seuil de la SSOT
+   * (`REQ-QA-027`, `REQ-DM-036`, `REQ-ARG-003`) : leurs coordonnées (plus reprises), un traitant, ou
+   * un parent. Émise par le lanceur au FRANCHISSEMENT du seuil, une fois par (forme, type). Le message
+   * ne porte que la forme, le type d'événement, le nombre et l'âge de la plus ancienne
+   * (`ObjetAlerte.attente`, chacun en liste blanche) : ni référence, ni charge, ni identifiant
+   * d'événement.
+   */
+  'attente_depassee',
 ] as const;
 
 export type CategorieAlerte = (typeof CATEGORIES_ALERTE)[number];
@@ -116,7 +125,21 @@ export type ObjetAlerte = {
     readonly servi: string;
     readonly environnement: string;
   };
+  /**
+   * INT-T49 / INT-T54 — ce qu'une alerte `attente_depassee` montre : la forme de l'attente et le type
+   * d'événement, en listes fermées ; le nombre et l'âge, en entiers. Rien d'autre.
+   */
+  readonly attente?: {
+    readonly forme: string;
+    readonly type: string;
+    readonly nombre: number;
+    readonly plusAncienneJours: number;
+  };
 };
+
+/** Les formes d'attente, fermées : ce qu'attend un événement reçu (INT-T49, INT-T54). */
+export const FORMES_D_ATTENTE = ['coordonnees', 'traitant', 'parent'] as const;
+export type FormeDAttente = (typeof FORMES_D_ATTENTE)[number];
 
 /** Les environnements de déploiement, fermés : rien d'autre n'entre dans une alerte. */
 export const ENVIRONNEMENTS_DE_DEPLOIEMENT = ['production', 'preview'] as const;
@@ -134,6 +157,13 @@ export const shaLisible = (v: unknown): string =>
     : typeof v === 'string' && SHA_LISIBLE.test(v.toLowerCase())
       ? v.toLowerCase()
       : ILLISIBLE;
+
+const dansLaListe = (liste: readonly string[]) => (v: unknown): string =>
+  typeof v === 'string' && liste.includes(v) ? v : ILLISIBLE;
+const formeDAttente = dansLaListe(FORMES_D_ATTENTE);
+const typeDEvenement = dansLaListe(Object.values(TypeEvenementRecu));
+const entier = (v: unknown): string =>
+  typeof v === 'number' && Number.isSafeInteger(v) && v >= 0 ? String(v) : ILLISIBLE;
 
 const environnement = (v: unknown): string =>
   typeof v === 'string' && (ENVIRONNEMENTS_DE_DEPLOIEMENT as readonly string[]).includes(v)
@@ -166,7 +196,11 @@ const ligneDeBase = (o: ObjetAlerte): string =>
   (o.deploiement === undefined
     ? ''
     : ` · attendu ${shaLisible(o.deploiement.attendu)} · servi ${shaLisible(o.deploiement.servi)}` +
-      ` · environnement ${environnement(o.deploiement.environnement)}`);
+      ` · environnement ${environnement(o.deploiement.environnement)}`) +
+  (o.attente === undefined
+    ? ''
+    : ` · attente ${formeDAttente(o.attente.forme)} · type ${typeDEvenement(o.attente.type)}` +
+      ` · ${entier(o.attente.nombre)} au-delà · la plus ancienne ${entier(o.attente.plusAncienneJours)} j`);
 
 /**
  * Les gabarits de message, et eux seuls : la garde les confronte TOUS, en les énumérant ici. Chacun
