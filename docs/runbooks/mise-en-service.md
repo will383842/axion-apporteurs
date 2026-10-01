@@ -19,6 +19,9 @@
       **Fait le 2026-09-30** : `2026-12-31`, décision de Williams (16h17), posée par la PR 302.
 - [ ] Production provisionnée (`Provisionnement Coolify`), déployée, `pnpm deploy:verify <sha>` vert.
       _Porteur : Williams ou une session autorisée aux gestes de production._
+- [ ] Tâche planifiée Coolify, chaque minute : `pnpm taches:lancer` (le lanceur des passages
+      planifiés, GOV-137). Constat : un battement récent pour chaque tâche inscrite, et un code non
+      nul quand une tâche échoue. _Porteur : Williams (plateforme), constat de l'auteur._
 - [ ] Base de production semée de données SYNTHÉTIQUES seulement. _Porteur : Williams (plateforme)._
 - [ ] Canal Partners d'axion-ia FERMÉ : `PARTNERS_SYNC_ENABLED` faux côté axion-ia, constaté.
       _Porteur : la session axion-ia (constat daté)._
@@ -67,7 +70,11 @@
       constat de l'auteur._
 - [ ] `deploy.yml` alerte (catégorie close `deploiement_non_atterri`) sur un `deploy:verify` rouge
       PROVOQUÉ, et l'alerte est REÇUE. Sans retour automatique de la plateforme, c'est ce rouge qui
-      voit un déploiement malade. _Porteur : QA-T54 (code), Williams (réception)._
+      voit un déploiement malade. _Porteur : QA-T54 (code), Williams (réception)._ **Code livré par
+      QA-T54** : le job `alerter` de `deploy.yml` (après un `deployer` rouge ou annulé, seul lecteur
+      de `TELEGRAM_BOT_TOKEN` et `TELEGRAM_CHAT_ID`), témoin
+      `tests/unit/qualite/alerte-deploiement-non-atterri.spec.ts`. La case reste ouverte tant que la
+      réception d'une alerte provoquée n'est pas constatée.
 
 ## 4. Les clés et l'entité, juste avant l'ouverture
 

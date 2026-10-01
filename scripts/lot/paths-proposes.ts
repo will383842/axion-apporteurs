@@ -491,7 +491,7 @@ const MANUELS: Record<string, string[]> = {
     'docs/contrat/CONTRAT-APPORTEUR-V1.md',
     'tests/unit/contrat/contract-template-complete.spec.ts',
   ],
-  'JUR-T33': ['docs/tiers/axionia-populations.md'],
+  'JUR-T33': ['docs/chantiers/W19-inventaire-axionia-1202.md'],
   'INT-T28': ['docs/adr/', 'docs/tiers/crm-pro.md', 'docs/journal/'],
   'GOV-114': [
     'scripts/gates/lexique-apporteurs.ts',
