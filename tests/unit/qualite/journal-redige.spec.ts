@@ -20,9 +20,11 @@ import { LEXIQUE_CHAMPS_PERSONNELS } from '../../../src/domain/donnees-personnel
 import {
   CAVIARDE,
   SEGMENTS_SECRETS,
+  caviarder,
   cleProtegee,
   creerJournal,
   fluxCaviardant,
+  caviarderTexte,
 } from '../../../src/lib/logger';
 import { creerNotifieur, productionDeclaree, type Notification } from '../../../src/lib/notify';
 import {
@@ -503,6 +505,37 @@ function transportCapturant() {
 }
 
 describe('REQ-QA-024 — Sentry reçoit les erreurs par la même fonction de caviardage', () => {
+  it('REQ-QA-024 : le jeton d’un lien de CONNEXION (`/connexion/<jeton>`) est caviardé comme celui de dépôt — message, chemin d’erreur et Sentry', async () => {
+    // Mesuré le 2026-09-30 (VÉRIF-1, GOV-131) : `caviarderTexte` ne connaissait que `/d/<jeton>` ;
+    // l’URL du lien magique est `/connexion/<43 caractères base64url>`, et `onRequestError` écrit
+    // `chemin` au journal et à Sentry : un rendu en erreur de cette page publiait un jeton vivant.
+    const jeton = 'A'.repeat(20) + 'b-_' + '9'.repeat(20);
+    expect(jeton).toHaveLength(43);
+    expect(caviarderTexte(`refus sur /connexion/${jeton}`)).toBe('refus sur /connexion/[jeton]');
+    expect(caviarderTexte(`https://x.fr/connexion/${jeton}?x=1`)).toBe(
+      'https://x.fr/connexion/[jeton]?x=1'
+    );
+    // La page de demande, sans jeton, n’a rien à cacher : le motif exige un segment après le chemin.
+    expect(caviarderTexte('GET /connexion')).toBe('GET /connexion');
+    expect(caviarderTexte('GET /connexion/')).toBe('GET /connexion/');
+
+    const capture = transportCapturant();
+    const journal = sortieCapturee();
+    const composition = await composer(
+      { SENTRY_DSN: DSN_FICTIF, PARTNERS_ENV: 'test' },
+      { transport: capture.fabrique, sortie: journal.sortie }
+    );
+    await traiterErreurDeRequete(composition)(
+      new Error('rendu en échec'),
+      { path: `/connexion/${jeton}`, method: 'GET', headers: {} },
+      { routerKind: 'App Router', routePath: '/connexion/[jeton]', routeType: 'render' }
+    );
+    expect(capture.enveloppes).toHaveLength(1);
+    expect(capture.enveloppes[0] ?? '').not.toContain(jeton);
+    expect(capture.enveloppes[0] ?? '').toContain('"chemin":"/connexion/[jeton]"');
+    expect(journal.texte()).not.toContain(jeton);
+  });
+
   it('REQ-QA-024 : onRequestError — ni la valeur, ni le jeton, ni le cookie, ni l’adresse réseau', async () => {
     const capture = transportCapturant();
     const journal = sortieCapturee();
@@ -728,5 +761,275 @@ describe('REQ-QA-024 — le notifieur refuse de partir hors production sans NOTI
       transports: [],
     });
     expect(lignes()[0]).toMatchObject({ level: 50, msg: 'notifications_retenues_en_production' });
+  });
+});
+
+// ── relevé de mutation de la PR 314 : chaque constante et chaque branche, à sa valeur exacte ────
+
+/**
+ * POURQUOI RECHARGER LE MODULE. Les listes et motifs du journal — `SEGMENTS_SECRETS`, `MOTIFS`,
+ * `CLES_CONTEXTE`, les formes d'identifiant technique — sont des constantes évaluées AU CHARGEMENT.
+ * Un test qui les juge par l'import statique de ce fichier les a lues avant de commencer : une
+ * passe de mutation qui les altère n'active le mutant qu'ensuite, et ce test ne rougit jamais
+ * (mesuré le 2026-09-30 sur `pnpm mutation:pr` : près des deux tiers des survivants étaient « statiques »,
+ * et le fichier passait sous le seuil de mutation ; le chiffre exact est dans la PR 314).
+ * Les témoins ci-dessous rechargent donc le module et jugent SES constantes, à la valeur près.
+ * Les bacs en sous-processus (`lancerBac`, `lancerLignes`) ne jugent aucun mutant : le processus
+ * enfant charge la source instrumentée sans mutant actif.
+ */
+type ModuleJournal = typeof import('../../../src/lib/logger');
+
+async function moduleRecharge(): Promise<ModuleJournal> {
+  vi.resetModules();
+  return import('../../../src/lib/logger');
+}
+
+const MESSAGE_LIBRE_CAVIARDE = 'rappeler [telephone] ou [courriel], IBAN [iban], lien /d/[jeton]';
+const JETON_DE_CONNEXION = 'A'.repeat(20) + 'b-_' + '9'.repeat(20);
+/** Une empreinte de 64 hexadécimaux qui PORTE un numéro de téléphone : scannée, elle s'altère. */
+const EMPREINTE_AVEC_TELEPHONE = 'abcdef' + '0612345678' + 'abcdef'.repeat(8);
+/** Un `span_id` de 16 hexadécimaux qui porte le même numéro. */
+const SPAN_AVEC_TELEPHONE = 'ab0612345678cdef';
+
+describe('REQ-QA-024 — le module rechargé : les clés protégées et la marque de caviardage', () => {
+  it('REQ-QA-024 : chacun des huit segments secrets et le segment réseau protègent une clé, à la marque « [caviarde] »', async () => {
+    const m = await moduleRecharge();
+    expect(EMPREINTE_AVEC_TELEPHONE).toHaveLength(64);
+    for (const cle of [
+      'jeton',
+      'token',
+      'secret',
+      'password',
+      'motdepasse',
+      'authorization',
+      'cookie',
+      'signature',
+      'forwarded',
+      'x-forwarded-for',
+      'Prénom',
+    ]) {
+      expect(m.cleProtegee(cle), cle).toBe(true);
+      expect(m.caviarder({ [cle]: `fuite-${cle}` }), cle).toEqual({ [cle]: '[caviarde]' });
+    }
+    for (const cle of ['hotel', 'nomenclature', 'requestId', 'event_id', 'apporteurIdHash']) {
+      expect(m.cleProtegee(cle), cle).toBe(false);
+      expect(m.caviarder({ [cle]: 'valeur-libre' }), cle).toEqual({ [cle]: 'valeur-libre' });
+    }
+    expect(m.SEGMENTS_SECRETS).toHaveLength(8);
+    expect(m.SEGMENTS_RESEAU).toEqual(['forwarded']);
+  });
+
+  it('REQ-QA-024 : jobName est exempté à la racine SEULEMENT — un cran plus bas, même sous jobName, il est caviardé', async () => {
+    const m = await moduleRecharge();
+    expect(
+      m.caviarder({
+        jobName: 'relance-quotidienne',
+        contact: { jobName: 'Jean Dupont' },
+        lignes: [{ jobName: 'Jean Dupont' }],
+      })
+    ).toEqual({
+      jobName: 'relance-quotidienne',
+      contact: { jobName: '[caviarde]' },
+      lignes: [{ jobName: '[caviarde]' }],
+    });
+    expect(caviarder({ jobName: { jobName: 'Jean Dupont' } })).toEqual({
+      jobName: { jobName: '[caviarde]' },
+    });
+  });
+});
+
+describe('REQ-QA-024 — le module rechargé : chaque motif de valeur, à sa marque exacte', () => {
+  it('REQ-QA-024 : le message libre et le lien de connexion, sur le module rechargé', async () => {
+    const m = await moduleRecharge();
+    expect(m.caviarderTexte(MESSAGE_LIBRE)).toBe(MESSAGE_LIBRE_CAVIARDE);
+    expect(m.caviarderTexte(`refus sur /connexion/${JETON_DE_CONNEXION}?x=1`)).toBe(
+      'refus sur /connexion/[jeton]?x=1'
+    );
+    expect(m.caviarderTexte('GET /d/ et /connexion/')).toBe('GET /d/ et /connexion/');
+  });
+
+  it('REQ-QA-024 : chaque écriture du téléphone devient « [telephone] », entière, et onze chiffres ne sont pas un numéro', async () => {
+    const m = await moduleRecharge();
+    for (const v of [
+      '+33 6 12 34 56 78',
+      '+33612345678',
+      '0033.6.12.34.56.78',
+      '06-12-34-56-78',
+      '06 12 34 56 78',
+      '0612345678',
+    ]) {
+      expect(m.caviarderTexte(v), v).toBe('[telephone]');
+    }
+    expect(m.caviarderTexte('appel au 0612345678.')).toBe('appel au [telephone].');
+    expect(m.caviarderTexte('06 12 34 56 78 ou rien')).toBe('[telephone] ou rien');
+    // Précédé d'un chiffre, ce n'est plus un numéro à dix chiffres : la forme ne coupe pas dedans.
+    expect(m.caviarderTexte('ref 10612345678')).toBe('ref 10612345678');
+  });
+
+  it('REQ-QA-024 : IPv4 et IPv6 deviennent « [ip] » — majuscules comprises, toutes les occurrences — et une version à quatre nombres reste lisible', async () => {
+    const m = await moduleRecharge();
+    expect(
+      m.caviarderTexte('depuis 192.0.2.44, puis 2001:db8:85a3::8a2e:370:7334 et fe80::1')
+    ).toBe('depuis [ip], puis [ip] et [ip]');
+    expect(m.caviarderTexte('2001:DB8::7 et FE80::1')).toBe('[ip] et [ip]');
+    expect(m.caviarderTexte('203.0.113.7')).toBe('[ip]');
+    expect(m.caviarderTexte('version 1.2.3.4567 à 12:34:56')).toBe('version 1.2.3.4567 à 12:34:56');
+  });
+
+  it('REQ-QA-024 : une adresse encodée pour une URL et un « + » de formulaire sont lus, sur le module rechargé', async () => {
+    const m = await moduleRecharge();
+    expect(m.caviarderTexte('e=a%40b.fr')).toBe('e=[courriel]');
+    expect(m.caviarderTexte('n=1+0612345678')).toBe('n=1 [telephone]');
+  });
+});
+
+describe('REQ-QA-024 — le module rechargé : les formes des identifiants techniques', () => {
+  it('REQ-QA-024 : apporteurIdHash accepte 16 à 64 hexadécimaux, ancrés aux deux bouts, et refuse le reste avec le message entier', async () => {
+    const m = await moduleRecharge();
+    const journal = m.creerJournal({ niveau: 'info', sortie: sortieCapturee().sortie });
+    for (const h of ['a'.repeat(16), '0123456789abcdef'.repeat(4)]) {
+      expect(() => journal.enfant({ apporteurIdHash: h }), h).not.toThrow();
+    }
+    for (const h of [
+      'a',
+      'a'.repeat(15),
+      'a'.repeat(65),
+      'g'.repeat(16),
+      `zz${'a'.repeat(16)}`,
+      `${'a'.repeat(16)}zz`,
+    ]) {
+      expect(() => journal.enfant({ apporteurIdHash: h }), h).toThrow(
+        "apporteurIdHash doit être une empreinte hexadécimale de 16 à 64 caractères, jamais l'identifiant brut"
+      );
+    }
+  });
+
+  it('REQ-QA-024 : un identifiant NOMMÉ, à sa forme exacte, sort intact ; la même valeur sous un autre nom, ou débordant de sa forme, est scannée', async () => {
+    const m = await moduleRecharge();
+    const piege32 = hexQuiEstUnIban();
+    const zeros32 = '0'.repeat(32);
+    const zeros16 = '0'.repeat(16);
+    const intacts = {
+      apporteurIdHash: EMPREINTE_AVEC_TELEPHONE,
+      requestId: piege32,
+      event_id: piege32,
+      trace_id: piege32,
+      span_id: SPAN_AVEC_TELEPHONE,
+      parent_span_id: SPAN_AVEC_TELEPHONE,
+    };
+    expect(m.caviarder(intacts)).toEqual(intacts);
+    const uuid = randomUUID();
+    expect(m.caviarder({ requestId: uuid, event_id: uuid })).toEqual({
+      requestId: uuid,
+      event_id: uuid,
+    });
+    expect(
+      m.caviarder({
+        empreinte: EMPREINTE_AVEC_TELEPHONE,
+        identifiant: piege32,
+        span: SPAN_AVEC_TELEPHONE,
+        requestId: `/d/abc ${zeros32}`,
+        trace_id: `${zeros32} /d/abc`,
+        span_id: `/d/abc ${zeros16}`,
+        parent_span_id: `${zeros16} /d/abc`,
+      })
+    ).toEqual({
+      empreinte: `abcdef[telephone]${'abcdef'.repeat(8)}`,
+      identifiant: '[iban]',
+      span: 'ab[telephone]cdef',
+      requestId: `/d/[jeton] ${zeros32}`,
+      trace_id: `${zeros32} /d/[jeton]`,
+      span_id: `/d/[jeton] ${zeros16}`,
+      parent_span_id: `${zeros16} /d/[jeton]`,
+    });
+  });
+});
+
+describe('REQ-QA-024 — les lectures d’une chaîne : décodage borné, forme brute rendue quand rien n’y est trouvé', () => {
+  it('REQ-QA-024 : « %40 » est décodé jusqu’à trois fois, pas quatre ; un octet non UTF-8 ne décode que ses voisins ASCII', () => {
+    expect(caviarderTexte('e=a%2540b.fr')).toBe('e=[courriel]');
+    expect(caviarderTexte('e=a%252540b.fr')).toBe('e=[courriel]');
+    expect(caviarderTexte('e=a%25252540b.fr')).toBe('e=a%25252540b.fr');
+    // Une suite multi-octets (`é` en UTF-8) est décodée d'un bloc ; coupée octet par octet, elle serait refusée.
+    expect(caviarderTexte('e=a%40caf%c3%a9.fr')).toBe('e=[courriel]');
+    // `%E9` seul n'est pas de l'UTF-8 : `decodeURIComponent` refuse la suite, seul `%40` est lu.
+    expect(caviarderTexte('jos%E9%40x.fr')).toBe('[courriel]');
+  });
+
+  it('REQ-QA-024 : une URL sans donnée protégée ressort telle quelle, encodage compris', () => {
+    expect(caviarderTexte('https://x.fr/?q=a%20b&c=1')).toBe('https://x.fr/?q=a%20b&c=1');
+  });
+});
+
+describe('REQ-QA-024 — l’IBAN en tête de forme : le mot court avalé ressort, une clé fausse laisse la chaîne intacte', () => {
+  it('REQ-QA-024 : « <IBAN témoin belge, par blocs de quatre> et » — la forme avale « et », la clé décide sur le préfixe, le mot ressort', () => {
+    // Le témoin vient de la garde elle-même ; sa valeur ne s'écrit pas ici (REQ-GOV-031).
+    const be = (IBANS_TEMOINS_ETRANGERS.BE ?? '').replace(/(.{4})(?=.)/g, '$1 ');
+    expect(be.replace(/ /g, '')).toBe(IBANS_TEMOINS_ETRANGERS.BE);
+    expect(be.split(' ').map((b) => b.length)).toEqual([4, 4, 4, 4]);
+    expect(cleIbanValide(be)).toBe(true);
+    expect(cleIbanValide(`${be} et`)).toBe(false);
+    expect(caviarderTexte(`vers ${be} et retour`)).toBe('vers [iban] et retour');
+  });
+
+  it('REQ-QA-024 : une clé de contrôle fausse — aucun préfixe valide — laisse la chaîne intacte', () => {
+    const faux = `${IBAN_DU_MESSAGE.slice(0, -1)}0`;
+    expect(faux).toBe('FR76 3000 6000 0112 3456 7890 180');
+    expect(cleIbanValide(faux)).toBe(false);
+    expect(caviarderTexte(`IBAN ${faux} refusé`)).toBe(`IBAN ${faux} refusé`);
+  });
+});
+
+describe('REQ-QA-024 — le parcours : null, tableaux, cycles et frères', () => {
+  it('REQ-QA-024 : null reste null, un tableau reste un tableau, ses objets n’ont pas l’exemption de la racine', () => {
+    expect(caviarder({ n: null, t: ['a', { jobName: 'Jean Dupont' }], k: 3 })).toEqual({
+      n: null,
+      t: ['a', { jobName: '[caviarde]' }],
+      k: 3,
+    });
+    const { journal, lignes } = journalCapture();
+    journal.info('m', { n: null, t: ['a', 1] });
+    expect(lignes()[0]).toMatchObject({ n: null, t: ['a', 1] });
+  });
+
+  it('REQ-QA-024 : un cycle est coupé par « [circulaire] » ; un même objet sous deux clés sœurs est parcouru deux fois', () => {
+    const cycle: Record<string, unknown> = { a: 1 };
+    cycle.moi = cycle;
+    expect(caviarder(cycle)).toEqual({ a: 1, moi: '[circulaire]' });
+    const frere = { email: 'jean@x.fr' };
+    expect(caviarder({ x: frere, y: frere })).toEqual({
+      x: { email: '[caviarde]' },
+      y: { email: '[caviarde]' },
+    });
+  });
+});
+
+describe('REQ-QA-024 — le journal : niveau donné, cinq verbes, flux sans contre-pression', () => {
+  it('REQ-QA-024 : le niveau donné est respecté — debug écrit à « debug », info se tait à « warn » — et chaque verbe porte son niveau pino', () => {
+    const bas = sortieCapturee();
+    const journal = creerJournal({ niveau: 'debug', sortie: bas.sortie });
+    journal.debug('d');
+    journal.info('i');
+    journal.warn('w');
+    journal.error('e');
+    journal.fatal('f');
+    expect(bas.lignes().map((l) => [l.level, l.msg])).toEqual([
+      [20, 'd'],
+      [30, 'i'],
+      [40, 'w'],
+      [50, 'e'],
+      [60, 'f'],
+    ]);
+    const haut = sortieCapturee();
+    const tu = creerJournal({ niveau: 'warn', sortie: haut.sortie });
+    tu.info('non');
+    tu.warn('oui');
+    expect(haut.lignes().map((l) => [l.level, l.msg])).toEqual([[40, 'oui']]);
+  });
+
+  it('REQ-QA-024 : le flux caviardant écrit chaque ligne et rend vrai — il ne demande jamais de pause', () => {
+    const { sortie, lignes } = sortieCapturee();
+    expect(fluxCaviardant(sortie).write('{"a":"jean@x.fr"}\n{"b":2}\n')).toBe(true);
+    expect(lignes()).toEqual([{ a: '[courriel]' }, { b: 2 }]);
   });
 });
