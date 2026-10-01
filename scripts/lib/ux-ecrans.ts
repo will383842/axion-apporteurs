@@ -91,7 +91,11 @@ export function tachesDEcran<T extends TacheDuRegistre>(
   return taches.filter((t) => desCartes.has(t.id) || (t.paths ?? []).some(cheminDEcran));
 }
 
-/** Les familles d'états exigées, et leurs alias d'identifiant de section — NOMMÉS, jamais devinés. */
+/**
+ * Les familles d'états exigées, et leurs alias d'identifiant de section — NOMMÉS, jamais devinés, et
+ * EXACTS : un alias n'appartient qu'à une famille (témoin dans `ux-ecrans.spec.ts`), et une vue propre
+ * à un rôle (`etat-lecteur`, `etat-qualifieur`) n'est pas un accès refusé.
+ */
 export const FAMILLES_D_ETATS = {
   vide: [
     'etat-vide',
@@ -99,12 +103,11 @@ export const FAMILLES_D_ETATS = {
     'etat-aucune',
     'etat-adresse',
     'etat-lien-inconnu',
-    'etat-ecran',
     'etat-filtre-vide',
   ],
   chargement: ['etat-chargement', 'etat-envoi'],
   erreur: ['etat-erreur', 'etat-erreurs', 'etat-erreur-envoi', 'etat-service-indisponible'],
-  refus: ['etat-refuse', 'etat-lecteur', 'etat-qualifieur', 'etat-ecran'],
+  refus: ['etat-refuse', 'etat-ecran'],
 } as const;
 export type FamilleDEtat = keyof typeof FAMILLES_D_ETATS;
 
@@ -112,16 +115,35 @@ export type FamilleDEtat = keyof typeof FAMILLES_D_ETATS;
 export const familleExigees = (console: boolean): FamilleDEtat[] =>
   console ? ['vide', 'chargement', 'erreur', 'refus'] : ['vide', 'chargement', 'erreur'];
 
-/** Les identifiants des sections d'état d'une maquette. */
+/**
+ * Les états d'une maquette (arbitrage iii) : une section ne COMPTE comme état que par son
+ * `aria-label` « État : … » ; sa famille se lit ensuite par son identifiant, nommé ci-dessus —
+ * l'étiquette est un titre libre, l'identifiant est ce que les liens `#etat-…` désignent.
+ */
 export function etatsDe(html: string): string[] {
-  return [...html.matchAll(/<section\s+class="ecran"\s+id="([^"]+)"/g)].map((m) => m[1]!);
+  return [...html.matchAll(/<section\s+class="ecran"\s+id="([^"]+)"([^>]*)>/g)]
+    .filter((m) => /\saria-label="État : [^"]+"/.test(m[2]!))
+    .map((m) => m[1]!);
 }
 
+/**
+ * Les familles SANS OBJET pour une maquette précise, chacune avec sa raison : une exception nommée,
+ * jamais un alias élargi. En ajouter une est un geste relu.
+ */
+export const FAMILLES_SANS_OBJET: Readonly<
+  Record<string, Readonly<Partial<Record<FamilleDEtat, string>>>>
+> = {
+  'acces-refuse.html': {
+    vide: 'la page EST l’accès refusé : elle ne liste rien dont l’absence ferait un état vide',
+  },
+};
+
 /** Les familles d'états qu'une maquette ne montre pas. */
-export function etatsManquants(html: string, console: boolean): FamilleDEtat[] {
+export function etatsManquants(html: string, console: boolean, fichier = ''): FamilleDEtat[] {
   const ids = new Set(etatsDe(html));
+  const sansObjet = FAMILLES_SANS_OBJET[fichier] ?? {};
   return familleExigees(console).filter(
-    (f) => !FAMILLES_D_ETATS[f].some((alias) => ids.has(alias))
+    (f) => !Object.hasOwn(sansObjet, f) && !FAMILLES_D_ETATS[f].some((alias) => ids.has(alias))
   );
 }
 
