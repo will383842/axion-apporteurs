@@ -14435,7 +14435,10 @@
         "docs/maquettes/VALIDATION.md",
         "docs/ESPACE-ROUTES.md",
         "tests/unit/espace/maquettes-confirmation-par-courriel.spec.ts",
-        "docs/maquettes/mes-entreprises.html"
+        "docs/maquettes/mes-entreprises.html",
+        "tests/unit/espace/maquettes-validees.spec.ts",
+        "src/content/micro-copy/espace/etats-vides.ts",
+        "docs/maquettes/index.html"
       ],
       "deps": [
         "GOV-112",
