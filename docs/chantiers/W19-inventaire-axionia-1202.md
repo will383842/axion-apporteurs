@@ -39,8 +39,10 @@
    d'apporteurs par un premier message, dans une variante dédiée, et « le consentement n'est pas
    simulé ». L'import du point 4 n'emprunte pas ce parcours.
 6. **Rien de cela ne traverse vers Partners.** `src/server/partners/payloads.ts:831` et suivantes
-   n'envoient à Partners que les réponses de `details.candidature`. `details.candidatureSalariee` et
-   `details.cv` n'en font pas partie : aucune donnée de la PR #1202 n'atteint ce dépôt.
+   n'envoient à Partners que des champs nommés de `details` : les réponses de `details.candidature`,
+   le score (`details.score` et `details.scoreParts`, `:956-957`), le canal (`details.source`) et
+   `details.funnel`. `details.candidatureSalariee` et `details.cv` n'en font pas partie : aucune donnée
+   de la PR #1202 n'atteint ce dépôt.
 
 ## 3. Ce que le constat touche
 
