@@ -576,6 +576,7 @@
         "INT-T44",
         "INT-T54",
         "INT-T55",
+        "INT-T56",
         "SEC-06"
       ]
     },
@@ -788,7 +789,8 @@
       "phase": 0,
       "taches": [
         "GOV-111",
-        "SEC-05"
+        "SEC-05",
+        "SEC-47"
       ]
     },
     {
@@ -806,6 +808,7 @@
         "QA-T31",
         "SEC-05",
         "SEC-32",
+        "SEC-47",
         "UX-P2-06"
       ]
     },
@@ -1224,7 +1227,7 @@
     {
       "id": "REQ-SEC-037",
       "domaine": "anti-abus-securite",
-      "texte": "Le code public de parrainage porte ≥ 25 bits aléatoires ; un `?p=` inconnu est ignoré silencieusement, journalisé et limité à 30/h par IP ; l'existence d'un code n'est jamais confirmée publiquement.",
+      "texte": "Le code public de parrainage porte ≥ 25 bits aléatoires ; un `?p=` inconnu est ignoré silencieusement, journalisé et limité à 30/h par IP ; l'existence d'un code n'est jamais confirmée publiquement. Répartition (arbitrage de la coordination, 2026-10-01) : la capture du `?p=`, la limite par IP, la réponse indistincte et l'absence de cookie persistant sont portées par axion-ia (INT-T52-A) ; Partners porte la forme du code et sa résolution silencieuse (SEC-21).",
       "source": "audit-anti-abus F4",
       "statut": "active",
       "remplaceePar": null,
@@ -2807,7 +2810,7 @@
       "etape": 10,
       "phase": 1,
       "taches": [
-        "SEC-21"
+        "INT-T52-A"
       ]
     },
     {
@@ -2823,6 +2826,7 @@
       "taches": [
         "DM-11",
         "INT-T44",
+        "INT-T56",
         "JUR-T02",
         "T-ARG-033"
       ]
@@ -3638,6 +3642,7 @@
       "taches": [
         "QA-T16",
         "QA-T33",
+        "QA-T59",
         "UX-P0-03"
       ]
     },
@@ -5116,7 +5121,7 @@
     {
       "id": "REQ-UX-047",
       "domaine": "produit-ux",
-      "texte": "Toute tâche qui livre un écran de Partners (espace, console) porte dans son acceptance les huit points suivants ; le conseiller n'a aucun écran dans Partners (question 22), ses écrans sont ceux du CRM Pro, hors de cette exigence. (1) Le geste principal et son budget, lus dans la SSOT `BUDGETS_UX` (`src/domain/seuils/ssot.ts`) : consultation ≤ 3 interactions, saisie ≤ 8 ; une exigence existante plus stricte prime (REQ-UX-001, REQ-UX-021) ; mesure par la fixture QA-T33. (2) Première action : visible sans défilement à 375×667 (espace, console mobile) ou 1280×800 (console), atteinte en ≤ 3 tabulations, cliquable en ≤ 2 s sur le profil réseau « 4G ralentie » défini dans `BUDGETS_UX` (débit et latence, sourcés, posés par GOV-113). (3) Cinq états : nominal, vide qui montre le geste suivant, chargement, erreur qui dit quoi faire, accès refusé (REQ-UX-019 amendée). (4) Libellés tirés de la micro-copy SSOT du public et des termes du glossaire, sans identifiant technique. (5) Accessibilité et cibles : REQ-UX-017 (espace) et REQ-UX-018 (console) s'appliquent telles quelles, dans les deux thèmes. (6) Maquette produite par le poste `ux-redaction` et validée dans `docs/maquettes/VALIDATION.md`. (7) Écrans principaux, déclarés par la colonne « écran principal » de `docs/CONSOLE-ROUTES.md` et de `docs/ESPACE-ROUTES.md` : test de premier usage ; une personne du public, qui n'a jamais vu l'outil, reçoit une consigne d'une phrase ; on consigne le temps de première action (≤ 10 s), le temps total dans le budget, les hésitations et un verbatim ; par défaut (question 17) : si Williams fournit une personne du public, le test est joué par elle, sinon par un agent qui n'a pas écrit l'écran, et la trace consignée dit qu'aucune personne du public n'était disponible. (8) E-mails : un seul appel à l'action, libellé tiré de la SSOT, lien qui mène à l'écran utile.",
+      "texte": "Toute tâche qui livre un écran de Partners (espace, console) porte dans son acceptance les huit points suivants ; le conseiller n'a aucun écran dans Partners (question 22), ses écrans sont ceux du CRM Pro, hors de cette exigence. (1) Le geste principal et son budget, lus dans la SSOT `BUDGETS_UX` (`src/domain/seuils/ssot.ts`) : consultation ≤ 3 interactions, saisie ≤ 8 ; une exigence existante plus stricte prime (REQ-UX-001, REQ-UX-021) ; mesure par la fixture QA-T33. (2) Première action : visible sans défilement à 375×667 (espace, console mobile) ou 1280×800 (console), atteinte en ≤ 3 tabulations, cliquable en ≤ 2 s sur le profil réseau « 4G ralentie » défini dans `BUDGETS_UX` (débit et latence, sourcés, posés par QA-T58). (3) Cinq états : nominal, vide qui montre le geste suivant, chargement, erreur qui dit quoi faire, accès refusé (REQ-UX-019 amendée). (4) Libellés tirés de la micro-copy SSOT du public et des termes du glossaire, sans identifiant technique. (5) Accessibilité et cibles : REQ-UX-017 (espace) et REQ-UX-018 (console) s'appliquent telles quelles, dans les deux thèmes. (6) Maquette produite par le poste `ux-redaction` et validée dans `docs/maquettes/VALIDATION.md`. (7) Écrans principaux, déclarés par la colonne « écran principal » de `docs/CONSOLE-ROUTES.md` et de `docs/ESPACE-ROUTES.md` : test de premier usage ; une personne du public, qui n'a jamais vu l'outil, reçoit une consigne d'une phrase ; on consigne le temps de première action (≤ 10 s), le temps total dans le budget, les hésitations et un verbatim ; par défaut (question 17) : si Williams fournit une personne du public, le test est joué par elle, sinon par un agent qui n'a pas écrit l'écran, et la trace consignée dit qu'aucune personne du public n'était disponible. (8) E-mails : un seul appel à l'action, libellé tiré de la SSOT, lien qui mène à l'écran utile.",
       "source": "décision de Will du 2026-09-29, W19 (docs/chantiers/W19-conseillers-salaries.md §4.1), lot « confort de la console pour tous les rôles » ; transverse : aucun module ni étape",
       "statut": "active",
       "remplaceePar": null,
@@ -5124,6 +5129,7 @@
       "etape": null,
       "phase": 1,
       "taches": [
+        "CPL-T07",
         "EXT-T01",
         "EXT-T02a",
         "EXT-T02b",
@@ -5134,6 +5140,7 @@
         "EXT-T10",
         "EXT-T11",
         "GOV-113",
+        "JUR-T32",
         "JUR-T36",
         "QA-T33",
         "QA-T58",

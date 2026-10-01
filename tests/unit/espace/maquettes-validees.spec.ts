@@ -382,7 +382,7 @@ describe('maquettes-validees — la SORTIE du binaire, sur un arbre jetable', ()
 describe('maquettes-validees — le script sur le dépôt réel', () => {
   it('REQ-UX-008 — le dépôt sort en zéro, et la sortie COMPTE ce qu’elle a lu', () => {
     const { code, sortie } = lancer();
-    expect(sortie).toMatch(/8 ligne\(s\) lue\(s\)/);
+    expect(sortie).toMatch(/12 ligne\(s\) lue\(s\)/);
     expect(code).toBe(0);
   });
 
@@ -392,11 +392,11 @@ describe('maquettes-validees — le script sur le dépôt réel', () => {
     expect(code).toBe(0);
   });
 
-  it('REQ-UX-008 — la vue du dépôt lit les huit maquettes et les tâches du registre', () => {
+  it('REQ-UX-008 — la vue du dépôt lit les douze maquettes et les tâches du registre', () => {
     const v = vueDuDepot();
     expect(v.maquettes).toContain('accueil.html');
     expect(v.taches.find((t) => t.id === 'UX-P1-08')).toBeDefined();
-    expect(lireValidation(v.validation).lignes).toHaveLength(8);
+    expect(lireValidation(v.validation).lignes).toHaveLength(12);
   });
 });
 
@@ -551,7 +551,12 @@ describe('REQ-UX-034 — mode clair et mode sombre de l’espace, jetons propres
   const charte = pairesDeLaCharte();
 
   it('REQ-UX-034 — la charte déclare ses paires pour les deux thèmes de l’espace et pour la console', () => {
-    expect([...charte.keys()]).toEqual(['Espace, thème clair', 'Espace, thème sombre', 'Console']);
+    expect([...charte.keys()]).toEqual([
+      'Espace, thème clair',
+      'Espace, thème sombre',
+      'Console',
+      'Console, thème sombre',
+    ]);
     expect(charte.get('Espace, thème clair')!.length).toBeGreaterThanOrEqual(30);
     expect(charte.get('Espace, thème sombre')!.length).toBe(
       charte.get('Espace, thème clair')!.length
@@ -587,7 +592,7 @@ describe('REQ-UX-034 — mode clair et mode sombre de l’espace, jetons propres
       expect(jetons(lire(f), CLAIR), f).toEqual(reference);
       expect(jetons(lire(f), SOMBRE), f).toEqual(jetons(lire(MAQUETTES_ESPACE[0]!), SOMBRE));
     }
-    expect(MAQUETTES_CONSOLE).toHaveLength(2);
+    expect(MAQUETTES_CONSOLE).toHaveLength(6);
     const consoleClair = jetons(lire(MAQUETTES_CONSOLE[0]!), CLAIR);
     expect(consoleClair.fond).toBeDefined();
     expect(consoleClair.fond).not.toBe(reference.fond);
@@ -616,7 +621,7 @@ describe('REQ-UX-017 — la moitié statique : autonomes, langue déclarée, cha
   const toutes = readdirSync(DOSSIER).filter((f) => f.endsWith('.html'));
 
   it('REQ-UX-017 — aucune maquette ne charge quoi que ce soit hors d’elle-même', () => {
-    expect(toutes.length).toBe(9);
+    expect(toutes.length).toBe(13);
     for (const f of toutes) {
       const html = lire(f);
       expect(html.match(/(?:src|href)\s*=\s*["']?(?:https?:)?\/\//gi) ?? [], f).toEqual([]);

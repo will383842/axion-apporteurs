@@ -41,6 +41,75 @@
         --cadre: #1b1f24;
       }
 
+      @media (prefers-color-scheme: dark) {
+        :root[data-theme='auto'] {
+          color-scheme: dark;
+          --fond: #12161c;
+          --surface: #1b2129;
+          --surface-2: #2a313b;
+          --texte: #eef1f5;
+          --texte-doux: #c3cad4;
+          --bord: #7f8a99;
+          --primaire: #8db8f2;
+          --sur-primaire: #0d1724;
+          --lien: #9cc3f5;
+          --ok-fond: #15301f;
+          --ok-texte: #9fe0b4;
+          --attente-fond: #33280e;
+          --attente-texte: #f3d37a;
+          --bloque-fond: #3a1717;
+          --bloque-texte: #fca5a5;
+          --info-fond: #162a47;
+          --info-texte: #b3cff7;
+          --neutre-fond: #262c35;
+          --neutre-texte: #d0d6de;
+          --focus: #ffb366;
+          --atelier-fond: #0c0a09;
+          --atelier-surface: #1a1614;
+          --atelier-texte: #f5f1ea;
+          --atelier-doux: #cfc8bf;
+          --atelier-lien: #f7a06a;
+          --atelier-bord: #57504a;
+          --atelier-fond-bouton: #11161c;
+          --atelier-alerte-fond: #33240a;
+          --atelier-alerte-texte: #ffd58a;
+          --cadre: #3a424d;
+        }
+      }
+      :root[data-theme='sombre'] {
+        color-scheme: dark;
+        --fond: #12161c;
+        --surface: #1b2129;
+        --surface-2: #2a313b;
+        --texte: #eef1f5;
+        --texte-doux: #c3cad4;
+        --bord: #7f8a99;
+        --primaire: #8db8f2;
+        --sur-primaire: #0d1724;
+        --lien: #9cc3f5;
+        --ok-fond: #15301f;
+        --ok-texte: #9fe0b4;
+        --attente-fond: #33280e;
+        --attente-texte: #f3d37a;
+        --bloque-fond: #3a1717;
+        --bloque-texte: #fca5a5;
+        --info-fond: #162a47;
+        --info-texte: #b3cff7;
+        --neutre-fond: #262c35;
+        --neutre-texte: #d0d6de;
+        --focus: #ffb366;
+        --atelier-fond: #0c0a09;
+        --atelier-surface: #1a1614;
+        --atelier-texte: #f5f1ea;
+        --atelier-doux: #cfc8bf;
+        --atelier-lien: #f7a06a;
+        --atelier-bord: #57504a;
+        --atelier-fond-bouton: #11161c;
+        --atelier-alerte-fond: #33240a;
+        --atelier-alerte-texte: #ffd58a;
+        --cadre: #3a424d;
+      }
+
       *,
       *::before,
       *::after {
@@ -751,6 +820,160 @@
         }
       }
 
+      /* Le cadre de la console (UX-P1-18) : en-tête, recherche, compte, barre mobile, menu. */
+      .c-marque {
+        color: var(--texte);
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        min-height: 44px;
+      }
+      .c-recherche {
+        margin-left: auto;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        min-height: 44px;
+        min-width: 220px;
+        padding: 0 12px;
+        border: 2px solid var(--bord);
+        border-radius: 8px;
+        background: var(--surface);
+        color: var(--texte-doux);
+      }
+      .c-recherche input {
+        border: 0;
+        background: transparent;
+        color: var(--texte);
+        font: inherit;
+        min-height: 40px;
+        width: 100%;
+      }
+      .c-compte {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-height: 44px;
+        padding: 0 12px;
+        border-radius: 8px;
+        border: 2px solid var(--surface-2);
+        background: var(--surface);
+        color: var(--texte);
+        font: inherit;
+        cursor: pointer;
+      }
+      .c-barre {
+        display: none;
+      }
+      .c-barre a,
+      .c-barre button {
+        flex: 1 1 0;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 2px;
+        min-height: 56px;
+        padding: 4px 2px;
+        border: 0;
+        background: transparent;
+        color: var(--texte);
+        font: inherit;
+        font-size: 14px;
+        font-weight: 600;
+        text-decoration: none;
+        text-align: center;
+        cursor: pointer;
+      }
+      .c-barre [aria-current='page'],
+      .c-barre [aria-expanded='true'] {
+        background: var(--info-fond);
+        color: var(--info-texte);
+        font-weight: 800;
+      }
+      .c-menu {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        margin: 0;
+        padding: 8px;
+        list-style: none;
+        background: var(--surface);
+        border: 2px solid var(--texte);
+        border-radius: 12px;
+      }
+      .c-menu a {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 48px;
+        padding: 0 12px;
+        border-radius: 8px;
+        color: var(--texte);
+        text-decoration: none;
+        font-weight: 600;
+      }
+      .c-menu .separe {
+        border-top: 1px solid var(--surface-2);
+        margin-top: 4px;
+        padding-top: 4px;
+      }
+      .vide {
+        align-items: flex-start;
+        background: var(--surface);
+        border: 1px dashed var(--bord);
+        border-radius: 10px;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        max-width: 640px;
+      }
+      .vide h3 {
+        font-size: 20px;
+      }
+      .centre {
+        align-items: center;
+        justify-content: flex-start;
+      }
+      .panneau {
+        width: 100%;
+        max-width: 440px;
+        background: var(--surface);
+        border: 1px solid var(--surface-2);
+        border-radius: 12px;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+      .panneau h2 {
+        font-size: 24px;
+        margin: 0;
+      }
+      .code-saisie {
+        letter-spacing: 0.4em;
+        font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+        font-size: 22px !important;
+        text-align: center;
+      }
+      @container (max-width: 767px) {
+        .app.avec-barre .c-nav,
+        .app.avec-barre .c-recherche,
+        .app.avec-barre .c-compte {
+          display: none;
+        }
+        .app.avec-barre .c-barre {
+          display: flex;
+          border-top: 1px solid var(--surface-2);
+          background: var(--surface);
+        }
+        .c-recherche {
+          min-width: 0;
+        }
+      }
+
       /* charte:fin */
     </style>
   </head>
@@ -771,6 +994,7 @@
         <button type="button" data-largeur="390" data-hauteur="844" aria-pressed="false">
           Téléphone 390
         </button>
+        <button type="button" id="theme">Thème : automatique</button>
         <button type="button" class="zoom" id="zoom-moins" aria-label="Dézoomer">−</button>
         <button type="button" class="zoom" id="zoom-ajuster" aria-label="Ajuster à la fenêtre">
           <span id="zoom-valeur">100 %</span>
@@ -797,12 +1021,12 @@
               <p class="sans-js-titre">État : Brouillon</p>
               <div class="app">
                 <header class="c-tete">
-                  <span class="c-marque">Console Axion Partners</span>
+                  <a class="c-marque" href="console-cadre.html#etat-comptable"
+                    >Console Axion Partners</a
+                  >
                   <nav class="c-nav" aria-label="Console">
-                    <a href="file-qualification.html#etat-nominal">Qualification</a
-                    ><a href="lot-paiement.html#etat-brouillon" aria-current="page"
-                      >Lots de paiement</a
-                    >
+                    <a href="console-cadre.html#etat-comptable">Apporteurs</a>
+                    <a href="lot-paiement.html#etat-brouillon" aria-current="page">Argent</a>
                   </nav>
                   <span class="c-qui">Nadia Chiffre-Exemple · <b>comptable</b></span>
                 </header>
@@ -1041,12 +1265,12 @@
               <p class="sans-js-titre">État : Approuvé</p>
               <div class="app">
                 <header class="c-tete">
-                  <span class="c-marque">Console Axion Partners</span>
+                  <a class="c-marque" href="console-cadre.html#etat-comptable"
+                    >Console Axion Partners</a
+                  >
                   <nav class="c-nav" aria-label="Console">
-                    <a href="file-qualification.html#etat-nominal">Qualification</a
-                    ><a href="lot-paiement.html#etat-brouillon" aria-current="page"
-                      >Lots de paiement</a
-                    >
+                    <a href="console-cadre.html#etat-comptable">Apporteurs</a>
+                    <a href="lot-paiement.html#etat-brouillon" aria-current="page">Argent</a>
                   </nav>
                   <span class="c-qui">Nadia Chiffre-Exemple · <b>comptable</b></span>
                 </header>
@@ -1208,12 +1432,12 @@
               <p class="sans-js-titre">État : Exporté</p>
               <div class="app">
                 <header class="c-tete">
-                  <span class="c-marque">Console Axion Partners</span>
+                  <a class="c-marque" href="console-cadre.html#etat-comptable"
+                    >Console Axion Partners</a
+                  >
                   <nav class="c-nav" aria-label="Console">
-                    <a href="file-qualification.html#etat-nominal">Qualification</a
-                    ><a href="lot-paiement.html#etat-brouillon" aria-current="page"
-                      >Lots de paiement</a
-                    >
+                    <a href="console-cadre.html#etat-comptable">Apporteurs</a>
+                    <a href="lot-paiement.html#etat-brouillon" aria-current="page">Argent</a>
                   </nav>
                   <span class="c-qui">Nadia Chiffre-Exemple · <b>comptable</b></span>
                 </header>
@@ -1282,12 +1506,12 @@
               <p class="sans-js-titre">État : Régénérer le fichier</p>
               <div class="app">
                 <header class="c-tete">
-                  <span class="c-marque">Console Axion Partners</span>
+                  <a class="c-marque" href="console-cadre.html#etat-comptable"
+                    >Console Axion Partners</a
+                  >
                   <nav class="c-nav" aria-label="Console">
-                    <a href="file-qualification.html#etat-nominal">Qualification</a
-                    ><a href="lot-paiement.html#etat-brouillon" aria-current="page"
-                      >Lots de paiement</a
-                    >
+                    <a href="console-cadre.html#etat-comptable">Apporteurs</a>
+                    <a href="lot-paiement.html#etat-brouillon" aria-current="page">Argent</a>
                   </nav>
                   <span class="c-qui">Nadia Chiffre-Exemple · <b>comptable</b></span>
                 </header>
@@ -1341,12 +1565,12 @@ Fichier refusé par la banque : format de date.</textarea
               <p class="sans-js-titre">État : Rapprochement</p>
               <div class="app">
                 <header class="c-tete">
-                  <span class="c-marque">Console Axion Partners</span>
+                  <a class="c-marque" href="console-cadre.html#etat-comptable"
+                    >Console Axion Partners</a
+                  >
                   <nav class="c-nav" aria-label="Console">
-                    <a href="file-qualification.html#etat-nominal">Qualification</a
-                    ><a href="lot-paiement.html#etat-brouillon" aria-current="page"
-                      >Lots de paiement</a
-                    >
+                    <a href="console-cadre.html#etat-comptable">Apporteurs</a>
+                    <a href="lot-paiement.html#etat-brouillon" aria-current="page">Argent</a>
                   </nav>
                   <span class="c-qui">Nadia Chiffre-Exemple · <b>comptable</b></span>
                 </header>
@@ -1417,12 +1641,12 @@ Fichier refusé par la banque : format de date.</textarea
               <p class="sans-js-titre">État : Rapproché</p>
               <div class="app">
                 <header class="c-tete">
-                  <span class="c-marque">Console Axion Partners</span>
+                  <a class="c-marque" href="console-cadre.html#etat-comptable"
+                    >Console Axion Partners</a
+                  >
                   <nav class="c-nav" aria-label="Console">
-                    <a href="file-qualification.html#etat-nominal">Qualification</a
-                    ><a href="lot-paiement.html#etat-brouillon" aria-current="page"
-                      >Lots de paiement</a
-                    >
+                    <a href="console-cadre.html#etat-comptable">Apporteurs</a>
+                    <a href="lot-paiement.html#etat-brouillon" aria-current="page">Argent</a>
                   </nav>
                   <span class="c-qui">Nadia Chiffre-Exemple · <b>comptable</b></span>
                 </header>
@@ -1574,12 +1798,12 @@ Fichier refusé par la banque : format de date.</textarea
               <p class="sans-js-titre">État : Rejeté</p>
               <div class="app">
                 <header class="c-tete">
-                  <span class="c-marque">Console Axion Partners</span>
+                  <a class="c-marque" href="console-cadre.html#etat-comptable"
+                    >Console Axion Partners</a
+                  >
                   <nav class="c-nav" aria-label="Console">
-                    <a href="file-qualification.html#etat-nominal">Qualification</a
-                    ><a href="lot-paiement.html#etat-brouillon" aria-current="page"
-                      >Lots de paiement</a
-                    >
+                    <a href="console-cadre.html#etat-comptable">Apporteurs</a>
+                    <a href="lot-paiement.html#etat-brouillon" aria-current="page">Argent</a>
                   </nav>
                   <span class="c-qui">Nadia Chiffre-Exemple · <b>comptable</b></span>
                 </header>
@@ -1625,12 +1849,12 @@ Fichier refusé par la banque : format de date.</textarea
               <p class="sans-js-titre">État : Export refusé : non approuvé</p>
               <div class="app">
                 <header class="c-tete">
-                  <span class="c-marque">Console Axion Partners</span>
+                  <a class="c-marque" href="console-cadre.html#etat-comptable"
+                    >Console Axion Partners</a
+                  >
                   <nav class="c-nav" aria-label="Console">
-                    <a href="file-qualification.html#etat-nominal">Qualification</a
-                    ><a href="lot-paiement.html#etat-brouillon" aria-current="page"
-                      >Lots de paiement</a
-                    >
+                    <a href="console-cadre.html#etat-comptable">Apporteurs</a>
+                    <a href="lot-paiement.html#etat-brouillon" aria-current="page">Argent</a>
                   </nav>
                   <span class="c-qui">Nadia Chiffre-Exemple · <b>comptable</b></span>
                 </header>
@@ -1665,12 +1889,12 @@ Fichier refusé par la banque : format de date.</textarea
               <p class="sans-js-titre">État : Aucun relevé ce mois-ci</p>
               <div class="app">
                 <header class="c-tete">
-                  <span class="c-marque">Console Axion Partners</span>
+                  <a class="c-marque" href="console-cadre.html#etat-comptable"
+                    >Console Axion Partners</a
+                  >
                   <nav class="c-nav" aria-label="Console">
-                    <a href="file-qualification.html#etat-nominal">Qualification</a
-                    ><a href="lot-paiement.html#etat-brouillon" aria-current="page"
-                      >Lots de paiement</a
-                    >
+                    <a href="console-cadre.html#etat-comptable">Apporteurs</a>
+                    <a href="lot-paiement.html#etat-brouillon" aria-current="page">Argent</a>
                   </nav>
                   <span class="c-qui">Nadia Chiffre-Exemple · <b>comptable</b></span>
                 </header>
@@ -1774,12 +1998,13 @@ Fichier refusé par la banque : format de date.</textarea
               <p class="sans-js-titre">État : Rôle qualifieur</p>
               <div class="app">
                 <header class="c-tete">
-                  <span class="c-marque">Console Axion Partners</span>
+                  <a class="c-marque" href="console-cadre.html#etat-qualifieur"
+                    >Console Axion Partners</a
+                  >
                   <nav class="c-nav" aria-label="Console">
-                    <a href="file-qualification.html#etat-nominal">Qualification</a
-                    ><a href="lot-paiement.html#etat-brouillon" aria-current="page"
-                      >Lots de paiement</a
-                    >
+                    <a href="file-qualification.html#etat-nominal">Qualification</a>
+                    <a href="console-cadre.html#etat-qualifieur">Apporteurs</a>
+                    <a href="console-cadre.html#etat-qualifieur">Prospects</a>
                   </nav>
                   <span class="c-qui">Sophie Démo · <b>qualifieur</b></span>
                 </header>
@@ -1803,12 +2028,12 @@ Fichier refusé par la banque : format de date.</textarea
               <p class="sans-js-titre">État : Chargement</p>
               <div class="app">
                 <header class="c-tete">
-                  <span class="c-marque">Console Axion Partners</span>
+                  <a class="c-marque" href="console-cadre.html#etat-comptable"
+                    >Console Axion Partners</a
+                  >
                   <nav class="c-nav" aria-label="Console">
-                    <a href="file-qualification.html#etat-nominal">Qualification</a
-                    ><a href="lot-paiement.html#etat-brouillon" aria-current="page"
-                      >Lots de paiement</a
-                    >
+                    <a href="console-cadre.html#etat-comptable">Apporteurs</a>
+                    <a href="lot-paiement.html#etat-brouillon" aria-current="page">Argent</a>
                   </nav>
                   <span class="c-qui">Nadia Chiffre-Exemple · <b>comptable</b></span>
                 </header>
@@ -1854,6 +2079,13 @@ Fichier refusé par la banque : format de date.</textarea
         <h2 class="notes-titre">Notes pour la relecture</h2>
         <section class="note" data-pour="etat-brouillon">
           <h2>Brouillon</h2>
+          <p>
+            <b>En-tête filtré par rôle</b> (UX-P1-18, REQ-UX-048) : chaque état ne montre que les
+            entrées que son rôle peut ouvrir, dérivées de la carte
+            <code>docs/CONSOLE-ROUTES.md</code> — le comptable ne voit plus la qualification ;
+            l’état « Rôle qualifieur » ne montre plus d’onglet vers les lots, seulement l’écran de
+            refus.
+          </p>
           <p>
             <b>Le geste principal</b> : relire, approuver, exporter. Mimé :
             <b>3 clics et une vérification renforcée, environ 2 minutes de relecture</b>.
