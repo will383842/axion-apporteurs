@@ -17063,7 +17063,9 @@
       "zone": "gouvernance",
       "paths": [
         "docs/journal/",
-        "scripts/gates/gov-attributions.ts"
+        "scripts/gates/gov-attributions.ts",
+        "tests/unit/gouvernance/lentilles-selon-le-risque.spec.ts",
+        "tests/unit/gouvernance/attributions-resolvent.spec.ts"
       ],
       "schema": false,
       "sensible": [],

@@ -560,7 +560,12 @@ const MANUELS: Record<string, string[]> = {
   // et leurs correctifs passent par des PR ordinaires ; dans le dépôt, elles écrivent le journal, et
   // GOV-132 la garde des attributions que l'ouverture de la Phase 1 oblige à resserrer (rattrapage 30).
   'GOV-131': ['docs/journal/'],
-  'GOV-132': ['docs/journal/', 'scripts/gates/gov-attributions.ts'],
+  'GOV-132': [
+    'docs/journal/',
+    'scripts/gates/gov-attributions.ts',
+    'tests/unit/gouvernance/lentilles-selon-le-risque.spec.ts',
+    'tests/unit/gouvernance/attributions-resolvent.spec.ts',
+  ],
   // Versées par la vérification V2 (GOV-132, écarts C-01, B-02, B-04) : leurs témoins n'existent pas
   // encore, leurs chemins sont ceux de leur fiche.
   // INT-T43 : son témoin seul, le nom du fichier de son worker portant le mot que journal:sans-pii réserve à l'écrivain du journal.

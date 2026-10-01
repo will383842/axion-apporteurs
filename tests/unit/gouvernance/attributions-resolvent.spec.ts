@@ -588,17 +588,21 @@ describe('REQ-GOV-021 — sur le dépôt réel, la garde lit ses sources EN ENTI
     ];
     const reel = lireReel(fichier).split('\n');
     const i = reel.indexOf(titre);
+    // Le second fichier est FICTIF et le reste : un mois réel (`2026-10`, fixé ici jusqu'au
+    // 2026-10-01) devenait, au premier vrai fichier de ce mois, un préfixe qui remplaçait aussi le
+    // journal réel, et le refus nommait ce dernier au lieu du témoin. Un nom exact et lointain.
+    const SECOND_JOURNAL = 'docs/journal/2099-12.md';
     const juger = (quoi: string, lignes: string[], n: number, taches: boolean, autres = suivis) => {
       const lire = (f: string) =>
         f === fichier
           ? Buffer.from(lignes.join('\n'))
           : f === 'docs/tasks.json' && taches
             ? tachesFaussees
-            : f.startsWith('docs/journal/2026-10')
-              ? Buffer.from(`# Journal — octobre 2026\n\n- ${titre}\n`)
+            : f === SECOND_JOURNAL
+              ? Buffer.from(`# Journal — décembre 2099\n\n- ${titre}\n`)
               : octets(f);
       const refus = refusDe(() => chargerSources(autres, lire));
-      const attendu = autres === suivis ? `${fichier}:${n}` : 'docs/journal/2026-10.md:3';
+      const attendu = autres === suivis ? `${fichier}:${n}` : `${SECOND_JOURNAL}:3`;
       if (refus instanceof SourceIllisible && refus.message.includes(attendu)) return null;
       const verdict = refus ? refus.message : analyser(chargerSources(autres, lire)).fautes;
       return `${quoi} (${attendu}) : ${JSON.stringify(verdict).slice(0, 220)}`;
@@ -610,7 +614,7 @@ describe('REQ-GOV-021 — sur le dépôt réel, la garde lit ses sources EN ENTI
     // Un SECOND fichier suivi du journal, porteur de la panne « titre en liste ».
     const second = juger('un second fichier de journal', reel, 0, false, [
       ...suivis,
-      'docs/journal/2026-10.md',
+      SECOND_JOURNAL,
     ]);
     // Une panne dans une entrée SOUS le plancher : le refus ne dépend pas du plancher.
     const sous = [...entreesDeJournal(s.journal).entries()].find(

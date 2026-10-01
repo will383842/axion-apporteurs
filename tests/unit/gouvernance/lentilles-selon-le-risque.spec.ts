@@ -290,14 +290,16 @@ describe('REQ-GOV-011 — cas 2 à 5 : ce que la PR porte comme tâche décide s
     expect(r.raisons.join(' ; ')).toContain('securite');
   });
 
-  it('REQ-GOV-011 · cas 3 : une PR INT-T13 (zone integration, sensible vide) est ORDINAIRE depuis GOV-097 — la limite déclarée de partners/ADR-0021', () => {
+  it('REQ-GOV-011 · cas 3 : une PR INT-T22 (zone integration, sensible vide) est ORDINAIRE depuis GOV-097 — la limite déclarée de partners/ADR-0021', () => {
     // Avant GOV-097, la zone `integration` l'élevait seule. La décision du 2026-09-25 réserve les
     // quatre lentilles à l'argent, à la sécurité et aux données, et les données se lisent par
     // `sensible` : une tâche de données à `sensible: []` passe donc à deux lentilles. C'est la
-    // limite que l'ADR nomme, et dont le remède est au registre (`rgpd`), pas dans le code.
-    expect(tache(registre(), 'INT-T13').zone).toBe('integration');
-    expect(tache(registre(), 'INT-T13').sensible).toEqual([]);
-    const r = risque({ titre: 'feat(INT-T13): x', fichiers: NEUTRES });
+    // limite que l'ADR nomme, et dont le remède est au registre (`rgpd`), pas dans le code — remède
+    // appliqué à INT-T13, l'exemple d'origine, par la vérification V2 (GOV-132, 2026-10-01) : le cas
+    // porte désormais sur une autre tâche d'intégration restée à `sensible: []`.
+    expect(tache(registre(), 'INT-T22').zone).toBe('integration');
+    expect(tache(registre(), 'INT-T22').sensible).toEqual([]);
+    const r = risque({ titre: 'feat(INT-T22): x', fichiers: NEUTRES });
     expect(r.niveau, r.raisons.join(' ; ')).toBe('ordinaire');
   });
 
