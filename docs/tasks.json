@@ -4432,7 +4432,8 @@
         "INT-T10",
         "SEC-17",
         "INT-T09",
-        "QA-T06"
+        "QA-T06",
+        "GOV-111"
       ],
       "reqs": [
         "REQ-DM-002",
@@ -4458,7 +4459,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "ELLE ÉCRIT LE SCHÉMA (label `schema`, seule de sa famille dans son lot) ET PORTE TOUTE LA PERSISTANCE DU DÉPÔT (partners/ADR-0022, cadrage de l'architecte du 2026-09-26 sur délégation de Will). (1) Enums `CanalDepot {espace, lien_prive}`, `EtatAdministratif {actif, cesse}` (projection de « A » et « C »), `CategorieEntreprise {pme, eti, ge}`, `MotifRefusDepot` à sept valeurs exactement : `anteriorite_client`, `anteriorite_devis`, `etablissement_cesse`, `entreprise_hors_perimetre`, `file_complete`, `opposition_demarchage`, `insincerite` (REQ-SEC-022). (2) `Attribution` -> `attributions` : `apporteurId`, `statut EtatAttribution`, `rangAttente`, `siren` Char(9), `siret` Char(14) nullable, `grilleCommissionId` NOT NULL vers `grilles_commission` (REQ-DM-014), `canal`, `jetonDepotId` nullable, `deposeeAt` Timestamptz(6) posé par l'horloge de la TRANSACTION serveur, jamais fourni par le client (REQ-DM-005), `clientCapturedAt`, `dateContact` en date calendaire (REQ-JUR-040), `informationTiersVersion` (REQ-JUR-008), `verificationPrioritaire`, `ipHash` Char(16), `agentHash` Char(64) ; l'entreprise telle que rendue par l'API publique (REQ-DM-030, REQ-INT-021) : `raisonSociale`, `natureJuridique`, `codeNaf` (nul en repli, DM-28), `trancheEffectif`, `etatAdministratif`, `categorieEntreprise`, `codePostalChiffre`, `communeSiege`, `departement`, `region`, `latitudeMicrodeg` et `longitudeMicrodeg` en micro-degrés Int (EXT-T08 ; aucun Float, aucun Decimal), `dirigeantsJson` (empreinte et qualité seulement), `entrepriseAVerifier` (REQ-INT-020) ; le contact rencontré (REQ-DM-031), noms de `CHAMPS_PII` : `nomChiffre`, `prenomChiffre`, `nomHash` (type `nom_personne`), `emailChiffre`, `emailHash`, `telephoneChiffre`, `phoneHash`, `fonctionContact`, `contexteChiffre`, `personneDeclareeId` (UX-P1-15), `lienInteretDeclare` et `lienInteretPrecisionChiffre` (REQ-UX-039) ; le temps de la machine (REQ-DM-004, REQ-DM-007, REQ-UX-022) : `aQualifierDepuisAt`, `premierContactAt`, `confirmeeAt`, `fenetreFinAt`, `peremptionAt`, `peremptionSuspendueAt`, `peremptionSuspendueParId`, `peremptionSuspendueJustification`, `fenetreRedeclarationFinAt`, `purgeContactAt`, `contactPurgeAt`, et `versionQualification`, verrou optimiste de la fiche (REQ-CPL-024). Toutes les colonnes connues des phases 0 et 1 sont posées d'un coup, nulles si elles ne sont pas écrites à la naissance. (3) `DepotRefuse` -> `depots_refuses` : `apporteurId`, `siren`, `motif MotifRefusDepot`, `canal`, `refuseAt` — de quoi contester (REQ-DM-043), aucune coordonnée du contact. `PersonneDeclaree` -> `personnes_declarees` (REQ-CPL-029) : `apporteurId`, `nomChiffre`, `prenomChiffre`, `qualite`, `declareeAt`, `retireeAt`. Relations vers `Apporteur`, `GrilleCommission`, `JetonDepot`, `PersonneDeclaree` et `UtilisateurConsole` en `onDelete: Restrict`, écrites en entier. (4) SQL brut : l'index unique partiel occupant `ON attributions (siren) WHERE statut IN (...)` est GÉNÉRÉ depuis `ETATS_OCCUPANTS`, jamais tapé, et vérifié par `pg_indexes` ; `UNIQUE (siren, rang_attente) WHERE statut = 'en_attente'`, `rang_attente IN (1,2)` et `(statut = 'en_attente') = (rang_attente IS NOT NULL)` ; formes du SIREN et du SIRET, `left(siret,9) = siren` (REQ-DM-002), idem pour `depots_refuses.siren` ; forme du code NAF ; latitude entre -90000000 et 90000000, longitude entre -180000000 et 180000000, présentes ensemble ; `lien_interet_precision_chiffre` seulement si `lien_interet_declare` ; les trois colonnes de suspension de péremption présentes ensemble, justification d'au moins 20 caractères utiles ; empreintes hexadécimales. (5) `courriels_envoyes` reçoit `attribution_id` (clé étrangère `Restrict`, index) ; la valeur de journal `attribution_contact_purge` (agrégat `attribution`, charge `{purgeAt}`) entre au schéma et dans `charges.ts`. `CHAMPS_PII` gagne `codePostal`, `contexte` et `lienInteretPrecision` ; `NORMALISATIONS` gagne `nom_personne` et `agent` ; `projection.ts` (INT-T09) calcule l'empreinte des dirigeants par `empreinteRecherche('nom_personne', ...)` — aucune n'est encore stockée. Module du semeur `prisma/seed/10-attributions.ts`. (6) TÉMOIN À DEUX FACES sur la référence de grille (repris de DM-03-P, conflit C14) : une attribution créée sans version de grille est refusée par la base ; une attribution portant une version existante passe. Contraintes W19 à intégrer (GOV-115, décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §6) : (1) `CanalDepot` reçoit `console`. (2) `apporteurId` devient nullable et `utilisateurConsoleId` est ajouté (nullable, FK Restrict, index). Contraintes : CHECK XOR des deux porteurs ; CHECK grille présente si et seulement si le porteur est un apporteur ; CHECK canal `console` si et seulement si le porteur est un conseiller, et alors `jeton_depot_id IS NULL` ; CHECK sur `rang_attente` réservé à l'apporteur ; `peremption_suspendue_at` suit HYP-W19-CYCLE (mêmes délais visibles). (3) DÉCLENCHEUR : `utilisateur_console_id` désigne un utilisateur de rôle `conseiller_salarie` non désactivé ; au moment de DM-07, aucune valeur ne passe tant que SEC-31 n'est pas là. (4) `depots_refuses` et `personnes_declarees` restent réservées aux apporteurs. (5) Témoins : attribution d'apporteur sans grille refusée ; attribution de conseiller avec grille refusée ; porteur de rôle qualifieur refusé ; apporteur puis conseiller sur le même SIREN refusé, et inversement. AMENDEMENT (vérification V2 (GOV-132, 2026-10-01)) : (a) le déclencheur W19 compare `role::text = 'conseiller_salarie'`, ou il est posé par SEC-31 (A1-03, B-08) ; (b) les champs du contact sont nommés `nomContact`/`prenomContact` (`nom_contact_chiffre`, `nom_contact_hash`), et `CHAMPS_PII` reste sans empreinte pour `nom` (A1-06) ; (c) le modèle entre dans `MODELES_CLOISONNES` avec ses clés refusées (A1-04). La précision de `deposeeAt` (`Timestamptz(3)` écrit par un déclencheur `BEFORE INSERT` à `transaction_timestamp()`, ou `Timestamptz(6)`) attend la décision A02 (A2-20, condition 5 de V2) avant la revendication de DM-07."
+      "acceptance": "ELLE ÉCRIT LE SCHÉMA (label `schema`, seule de sa famille dans son lot) ET PORTE TOUTE LA PERSISTANCE DU DÉPÔT (partners/ADR-0022, cadrage de l'architecte du 2026-09-26 sur délégation de Will). (1) Enums `CanalDepot {espace, lien_prive}`, `EtatAdministratif {actif, cesse}` (projection de « A » et « C »), `CategorieEntreprise {pme, eti, ge}`, `MotifRefusDepot` à sept valeurs exactement : `anteriorite_client`, `anteriorite_devis`, `etablissement_cesse`, `entreprise_hors_perimetre`, `file_complete`, `opposition_demarchage`, `insincerite` (REQ-SEC-022). (2) `Attribution` -> `attributions` : `apporteurId`, `statut EtatAttribution`, `rangAttente`, `siren` Char(9), `siret` Char(14) nullable, `grilleCommissionId` NOT NULL vers `grilles_commission` (REQ-DM-014), `canal`, `jetonDepotId` nullable, `deposeeAt` Timestamptz(6) posé par l'horloge de la TRANSACTION serveur, jamais fourni par le client (REQ-DM-005), `clientCapturedAt`, `dateContact` en date calendaire (REQ-JUR-040), `informationTiersVersion` (REQ-JUR-008), `verificationPrioritaire`, `ipHash` Char(16), `agentHash` Char(64) ; l'entreprise telle que rendue par l'API publique (REQ-DM-030, REQ-INT-021) : `raisonSociale`, `natureJuridique`, `codeNaf` (nul en repli, DM-28), `trancheEffectif`, `etatAdministratif`, `categorieEntreprise`, `codePostalChiffre`, `communeSiege`, `departement`, `region`, `latitudeMicrodeg` et `longitudeMicrodeg` en micro-degrés Int (EXT-T08 ; aucun Float, aucun Decimal), `dirigeantsJson` (empreinte et qualité seulement), `entrepriseAVerifier` (REQ-INT-020) ; le contact rencontré (REQ-DM-031), noms de `CHAMPS_PII` : `nomChiffre`, `prenomChiffre`, `emailChiffre`, `emailHash`, `telephoneChiffre`, `phoneHash`, `fonctionContact`, `contexteChiffre`, `personneDeclareeId` (UX-P1-15), `lienInteretDeclare` et `lienInteretPrecisionChiffre` (REQ-UX-039) ; le temps de la machine (REQ-DM-004, REQ-DM-007, REQ-UX-022) : `aQualifierDepuisAt`, `premierContactAt`, `confirmeeAt`, `fenetreFinAt`, `peremptionAt`, `peremptionSuspendueAt`, `peremptionSuspendueParId`, `peremptionSuspendueJustification`, `fenetreRedeclarationFinAt`, `purgeContactAt`, `contactPurgeAt`, et `versionQualification`, verrou optimiste de la fiche (REQ-CPL-024). Toutes les colonnes connues des phases 0 et 1 sont posées d'un coup, nulles si elles ne sont pas écrites à la naissance. (3) `DepotRefuse` -> `depots_refuses` : `apporteurId`, `siren`, `motif MotifRefusDepot`, `canal`, `refuseAt` — de quoi contester (REQ-DM-043), aucune coordonnée du contact. `PersonneDeclaree` -> `personnes_declarees` (REQ-CPL-029) : `apporteurId`, `nomChiffre`, `prenomChiffre`, `qualite`, `declareeAt`, `retireeAt`. Relations vers `Apporteur`, `GrilleCommission`, `JetonDepot`, `PersonneDeclaree` et `UtilisateurConsole` en `onDelete: Restrict`, écrites en entier. (4) SQL brut : l'index unique partiel occupant `ON attributions (siren) WHERE statut IN (...)` est GÉNÉRÉ depuis `ETATS_OCCUPANTS`, jamais tapé, et vérifié par `pg_indexes` ; `UNIQUE (siren, rang_attente) WHERE statut = 'en_attente'`, `rang_attente IN (1,2)` et `(statut = 'en_attente') = (rang_attente IS NOT NULL)` ; formes du SIREN et du SIRET, `left(siret,9) = siren` (REQ-DM-002), idem pour `depots_refuses.siren` ; forme du code NAF ; latitude entre -90000000 et 90000000, longitude entre -180000000 et 180000000, présentes ensemble ; `lien_interet_precision_chiffre` seulement si `lien_interet_declare` ; les trois colonnes de suspension de péremption présentes ensemble, justification d'au moins 20 caractères utiles ; empreintes hexadécimales. (5) `courriels_envoyes` reçoit `attribution_id` (clé étrangère `Restrict`, index) ; la valeur de journal `attribution_contact_purge` (agrégat `attribution`, charge `{purgeAt}`) entre au schéma et dans `charges.ts`. `CHAMPS_PII` gagne `codePostal`, `contexte` et `lienInteretPrecision` ; `NORMALISATIONS` gagne `nom_personne` et `agent` ; `projection.ts` (INT-T09) calcule l'empreinte des dirigeants par `empreinteRecherche('nom_personne', ...)` — aucune n'est encore stockée. Module du semeur `prisma/seed/10-attributions.ts`. (6) TÉMOIN À DEUX FACES sur la référence de grille (repris de DM-03-P, conflit C14) : une attribution créée sans version de grille est refusée par la base ; une attribution portant une version existante passe. Contraintes W19 à intégrer (GOV-115, décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §6) : (1) `CanalDepot` reçoit `console`. (2) `apporteurId` devient nullable et `utilisateurConsoleId` est ajouté (nullable, FK Restrict, index). Contraintes : CHECK XOR des deux porteurs ; CHECK grille présente si et seulement si le porteur est un apporteur ; CHECK canal `console` si et seulement si le porteur est un conseiller, et alors `jeton_depot_id IS NULL` ; CHECK sur `rang_attente` réservé à l'apporteur ; `peremption_suspendue_at` suit HYP-W19-CYCLE (mêmes délais visibles). (3) DÉCLENCHEUR : `utilisateur_console_id` désigne un utilisateur de rôle `conseiller_salarie` non désactivé ; au moment de DM-07, aucune valeur ne passe tant que SEC-31 n'est pas là. (4) `depots_refuses` et `personnes_declarees` restent réservées aux apporteurs. (5) Témoins : attribution d'apporteur sans grille refusée ; attribution de conseiller avec grille refusée ; porteur de rôle qualifieur refusé ; apporteur puis conseiller sur le même SIREN refusé, et inversement. AMENDEMENT (vérification V2 (GOV-132, 2026-10-01)) : (a) le déclencheur W19 compare `role::text = 'conseiller_salarie'`, ou il est posé par SEC-31 (A1-03, B-08) ; (b) les champs du contact sont nommés `nomContact`/`prenomContact` (`nom_contact_chiffre`, `nom_contact_hash`), et `CHAMPS_PII` reste sans empreinte pour `nom` (A1-06) ; (c) le modèle entre dans `MODELES_CLOISONNES` avec ses clés refusées (A1-04). La précision de `deposeeAt` (`Timestamptz(3)` écrit par un déclencheur `BEFORE INSERT` à `transaction_timestamp()`, ou `Timestamptz(6)`) attend la décision A02 (A2-20, condition 5 de V2) avant la revendication de DM-07. AMENDEMENT (audit indépendant du plan de la Phase 1 (2026-10-01, `_REPRISE-AXION-APPORTEURS/AUDIT-PLAN-PHASE-1.md`), écarts B-02 et B-12) : `onUpdate: Restrict` sur toutes les clés étrangères créées. Reste à trancher par A02, avec B-01, B-05 et A2-20 avant la revendication : `nomContact` porte-t-il une empreinte (si oui, clé `CHAMPS_PII.nomContact {chiffre, empreinte, type: 'nom_personne'}` ; sinon `nom_contact_hash` est rayé)."
     },
     {
       "id": "DM-08",
@@ -4480,7 +4481,8 @@
         "attribution"
       ],
       "deps": [
-        "DM-07"
+        "DM-07",
+        "DM-45"
       ],
       "reqs": [
         "REQ-DM-004",
@@ -4505,7 +4507,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "ELLE ÉCRIT LE SCHÉMA (label `schema`, seule de sa famille dans son lot) : seul écrivain légitime de la matrice d'attribution (partners/ADR-0022, cadrage de l'architecte du 2026-09-26 sur délégation de Will). Le comportement de la machine est celui de ses exigences ; ce qui suit est ce qu'elle écrit au schéma. (1) Elle ajoute à `TypeEvenementJournal` deux valeurs par `ALTER TYPE type_evenement_journal ADD VALUE`, jamais employées dans la même migration : `attribution_etat_modifie` (agrégat `attribution`, charge fermée `{de: EtatAttribution | null, vers, evenement: z.enum(EVENEMENTS_ATTRIBUTION), acteurId?: uuid, lienInteret?: 'declare' | 'non_declare'}`) et `attribution_peremption_suspendue` (`{acteurId: uuid, suspendueAt}`). (2) UN TYPE PAR GENRE DE TRANSITION, PAS PAR TRANSITION : `EVENEMENTS_ATTRIBUTION` est exporté de `machine.ts` et lu par la charge ; ajouter un événement à la matrice modifie une charge Zod dans `charges.ts`, jamais le schéma. (3) La charge reste fermée (REQ-DM-041) : un booléen s'y écrit `z.enum(['oui','non'])`, aucune chaîne libre. 🔴 Complétée le 2026-09-29 (chantier W20, décision de Williams, session -d7, docs/chantiers/W20-confirmation-par-email.md §6). (4) La matrice gagne trois transitions W20, par genre et non par transition : provisoire → annulee (annulation par l'apporteur pendant le délai avant envoi, HYP-W20-ANNULATION), provisoire → active (clic « Oui » retenu, source courriel, HYP-W20-SOURCE), provisoire → invalidee (« Non » confirmé en second geste, valeur non_confirme, HYP-W20-NON). Une annulation après l'échéance est une transition absente de la matrice : erreur typée, rien n'est écrit (REQ-DM-006). Contraintes W19 à intégrer (GOV-115, décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §6) : (1) Entrée dérivée « type de porteur ». (2) Événement de naissance `prise_en_charge_par_la_societe`. Vu de l'espace et de l'API 1, l'état suit la même chronologie qu'un dépôt d'apporteur (question 2, HYP-W19-CYCLE) : même état d'entrée, passage à `active` au même délai que la confirmation d'un dépôt, par l'horloge serveur et sans qualifieur. (3) Refus typé, pour un conseiller, de : confirmation tacite par un apporteur, `non_confirme`, gel, `figee_resiliation`, rang, contestation ; aucun de ces refus ne se voit de l'espace. (4) Prolongation W9 identique à celle de l'apporteur. (5) Événement `porteur_reaffecte {de, vers, acteurId, motif}`, de conseiller à conseiller seulement. (6) Désactivation : les prises en charge sans suite passent `perimee` sous 15 jours. (7) Test exhaustif des triplets (état, événement, type de porteur), et test : à chaque stade, l'état visible d'une prise en charge égale celui d'un dépôt d'apporteur aux mêmes dates. Les 13 valeurs d'`EtatAttribution` sont inchangées. AMENDEMENT (vérification V2 (GOV-132, 2026-10-01), A1-07) : la matrice W20 gagne CINQ transitions et non trois : en plus de celles écrites en (4), « provisoire → active, `confirmee_tacitement` (DM-24) » et « provisoire → perimee, `liberee_sans_confirmation` (DM-13) ». AMENDEMENT (note de la lentille exactitude sur la PR 316, annexe V2 R1) : le témoin de la garde partners:transitions:exhaustive vit sous `tests/unit/domaine/attribution-machine-a-etats.spec.ts` (include vitest), témoin unitaire que la tâche déclare déjà, et non sous `tests/domain/transitions.spec.ts`, hors de ces portées ; `docs/gates.json` (champ `script`) est réaligné par cette tâche à sa revendication, avec les clés de site de `scripts/gates/gov-attributions.ts` qui en dépendent, et `tests/domain/transitions.spec.ts` est alors retiré de ses `paths`."
+      "acceptance": "ELLE ÉCRIT LE SCHÉMA (label `schema`, seule de sa famille dans son lot) : seul écrivain légitime de la matrice d'attribution (partners/ADR-0022, cadrage de l'architecte du 2026-09-26 sur délégation de Will). Le comportement de la machine est celui de ses exigences ; ce qui suit est ce qu'elle écrit au schéma. (1) Elle ajoute à `TypeEvenementJournal` deux valeurs par `ALTER TYPE type_evenement_journal ADD VALUE`, jamais employées dans la même migration : `attribution_etat_modifie` (agrégat `attribution`, charge fermée `{de: EtatAttribution | null, vers, evenement: z.enum(EVENEMENTS_ATTRIBUTION), acteurId?: uuid, lienInteret?: 'declare' | 'non_declare'}`) et `attribution_peremption_suspendue` (`{acteurId: uuid, suspendueAt}`). (2) UN TYPE PAR GENRE DE TRANSITION, PAS PAR TRANSITION : `EVENEMENTS_ATTRIBUTION` est exporté de `machine.ts` et lu par la charge ; ajouter un événement à la matrice modifie une charge Zod dans `charges.ts`, jamais le schéma. (3) La charge reste fermée (REQ-DM-041) : un booléen s'y écrit `z.enum(['oui','non'])`, aucune chaîne libre. 🔴 Complétée le 2026-09-29 (chantier W20, décision de Williams, session -d7, docs/chantiers/W20-confirmation-par-email.md §6). (4) La matrice gagne trois transitions W20, par genre et non par transition : provisoire → annulee (annulation par l'apporteur pendant le délai avant envoi, HYP-W20-ANNULATION), provisoire → active (clic « Oui » retenu, source courriel, HYP-W20-SOURCE), provisoire → invalidee (« Non » confirmé en second geste, valeur non_confirme, HYP-W20-NON). Une annulation après l'échéance est une transition absente de la matrice : erreur typée, rien n'est écrit (REQ-DM-006). Contraintes W19 à intégrer (GOV-115, décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §6) : (1) Entrée dérivée « type de porteur ». (2) Événement de naissance `prise_en_charge_par_la_societe`. Vu de l'espace et de l'API 1, l'état suit la même chronologie qu'un dépôt d'apporteur (question 2, HYP-W19-CYCLE) : même état d'entrée, passage à `active` au même délai que la confirmation d'un dépôt, par l'horloge serveur et sans qualifieur. (3) Refus typé, pour un conseiller, de : confirmation tacite par un apporteur, `non_confirme`, gel, `figee_resiliation`, rang, contestation ; aucun de ces refus ne se voit de l'espace. (4) Prolongation W9 identique à celle de l'apporteur. (5) Événement `porteur_reaffecte {de, vers, acteurId, motif}`, de conseiller à conseiller seulement. (6) Désactivation : les prises en charge sans suite passent `perimee` sous 15 jours. (7) Test exhaustif des triplets (état, événement, type de porteur), et test : à chaque stade, l'état visible d'une prise en charge égale celui d'un dépôt d'apporteur aux mêmes dates. Les 13 valeurs d'`EtatAttribution` sont inchangées. AMENDEMENT (vérification V2 (GOV-132, 2026-10-01), A1-07) : la matrice W20 gagne CINQ transitions et non trois : en plus de celles écrites en (4), « provisoire → active, `confirmee_tacitement` (DM-24) » et « provisoire → perimee, `liberee_sans_confirmation` (DM-13) ». AMENDEMENT (note de la lentille exactitude sur la PR 316, annexe V2 R1) : le témoin de la garde partners:transitions:exhaustive vit sous `tests/unit/domaine/attribution-machine-a-etats.spec.ts` (include vitest), témoin unitaire que la tâche déclare déjà, et non sous `tests/domain/transitions.spec.ts`, hors de ces portées ; `docs/gates.json` (champ `script`) est réaligné par cette tâche à sa revendication, avec les clés de site de `scripts/gates/gov-attributions.ts` qui en dépendent, et `tests/domain/transitions.spec.ts` est alors retiré de ses `paths`. AMENDEMENT (audit indépendant du plan de la Phase 1 (2026-10-01, `_REPRISE-AXION-APPORTEURS/AUDIT-PLAN-PHASE-1.md`), écart B-10) : index `(agregat, agregat_id)` sur `evenements`."
     },
     {
       "id": "DM-24",
@@ -4517,7 +4519,8 @@
         "src/server/jobs/confirmation-tacite.ts",
         "src/domain/attribution/confirmation-tacite.ts",
         "src/server/taches/registre.ts",
-        "tests/integration/confirmation-tacite.spec.ts"
+        "tests/integration/confirmation-tacite.spec.ts",
+        "src/domain/temps/sla.ts"
       ],
       "schema": false,
       "sensible": [
@@ -4530,7 +4533,8 @@
         "JUR-T02",
         "DM-40",
         "GOV-112",
-        "SEC-41"
+        "SEC-41",
+        "GOV-137"
       ],
       "reqs": [
         "REQ-DM-006",
@@ -4551,7 +4555,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "job de confirmation tacite, horloge injectée, qui promeut en `active` toute `provisoire` dont la demande de confirmation a été **reçue** depuis plus de `CONFIRMATION_TACITE_JOURS` (30) **sans confirmation ni `non_confirme`, par appel ou par courriel** — y compris `injoignable` et `ne_se_souvient_pas` —, écrit l'événement `attribution_etat_modifie` avec `evenement: 'confirmee_tacitement'` **dans la même transaction** (un type de journal par genre de transition, partners/ADR-0022, REQ-DM-042 amendée au §3.2 du plan W20, à inscrire par la passe gardien-spec) et fait courir `fenetreFinAt` à compter de cette date ; c'est la **seule** conséquence attachée au silence de l'entreprise pour une demande non signalée ; pour une demande signalée, c'est la libération de DM-13 (question 19). 🔴 Complétée le 2026-09-29 (chantier W20, décision de Williams, session -d7, docs/chantiers/W20-confirmation-par-email.md §6), puis amendée le 2026-09-29 (réponse de Williams à la question 2 et exigence d'expérience, docs/chantiers/W20-confirmation-par-email.md §2, §4 et §9). Un clic « Oui » retenu ou un « Non » confirmé (DM-41) empêchent la promotion comme une Qualification. Règle de confirmation tacite TRANCHÉE PAR WILLIAMS le 2026-09-29 (session -d7, question 2 du plan, HYP-W20-TACITE) : au bout de trente jours (CONFIRMATION_TACITE_JOURS) sans réponse du contact et sans appel concluant (Qualification confirme ou non_confirme), l'entreprise reste réservée à l'apporteur, l'attribution est réputée confirmée ; le délai court de la RÉCEPTION de l'e-mail de confirmation, c'est-à-dire d'un envoi sans rebond (recueAt) ; tant que l'e-mail revient en erreur et que l'apporteur n'a pas corrigé l'adresse, le délai NE COMMENCE PAS, et un rebond rattaché après coup retire à l'envoi sa qualité de réception. La confirmation tacite réserve l'entreprise et ne crée aucune commission : aucune commission sans paiement réel. (a) Le job lit la demande de confirmation (DM-40) : l'échéance est recueAt + CONFIRMATION_TACITE_JOURS, et non plus l'enregistrement du dépôt ; aucune échéance tant que la demande est planifiée, retenue ou en rebond non corrigé ; après correction de l'adresse, l'échéance part du nouvel envoi sans rebond. (b) La bascule a lieu le jour qu'affiche le badge de REQ-UX-062 (UX-P1-05) : passage « tout ce qui est dû à l'instant t » (REQ-QA-027), et non plus un passage quotidien unique, pour qu'une échéance à 23 h 59 soit promue le jour dit. (c) Tests frontière, horloge figée : réception à J, échéance moins une minute aucune promotion, échéance une seule ; rebond à J+1 non corrigé, J+90 aucune promotion (la demande en rebond porte la raison « rebond », elle est signalée et DM-13 la libère 45 jours après l'envoi) ; correction à J+10 puis envoi sans rebond, promotion à J+40 et pas avant ; clic « Oui » ou appel confirme avant l'échéance, aucune promotion tacite ; deux passages, un seul événement. Pour une demande non signalée, le job reste la seule conséquence du silence. (d) Correction de sécurité du 2026-09-29 (refus de la lentille securite sur 2340a63, docs/chantiers/W20-confirmation-par-email.md §2, §8 et question 18) : une demande SIGNALÉE (qui porte une raison de vérification de SEC-41 à l'échéance) n'est JAMAIS promue par le seul silence ; elle reste provisoire jusqu'à un appel concluant (confirme la confirme, non_confirme l'invalide), puis suit le régime ordinaire, péremption comprise. TRANCHÉ PAR WILLIAMS le 2026-09-29 vers 20 h (session -d7, question 18) : la valeur par défaut est retenue, aucune confirmation tacite d'une demande signalée. Sans appel concluant, la demande signalée n'est pas promue mais LIBÉRÉE par DM-13 (question 19, tranchée le même jour : trois appels injoignable ou 45 jours après l'envoi, au premier terme, sans sanction) ; DM-24 et DM-13 lisent le même prédicat « demande signalée » de SEC-41 (dépendance ajoutée le 2026-09-29), et aucun des deux n'en recopie la règle. Témoins : demande signalée et silencieuse, J+30 aucune promotion, et à J+45 aucune promotion (la libération de DM-13 a lieu, pas une confirmation) ; demande signalée puis appel confirme à J+35, active à J+35 ; une mutation qui promeut une demande signalée rougit. REQ-DM-042 amendée s'écrit par GOV-112 (dépendance). Contraintes W19 à intégrer (GOV-115, décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §6) : ne sélectionne jamais un porteur conseiller (témoin à deux faces)."
+      "acceptance": "job de confirmation tacite, horloge injectée, qui promeut en `active` toute `provisoire` dont la demande de confirmation a été **reçue** depuis plus de `CONFIRMATION_TACITE_JOURS` (30) **sans confirmation ni `non_confirme`, par appel ou par courriel** — y compris `injoignable` et `ne_se_souvient_pas` —, écrit l'événement `attribution_etat_modifie` avec `evenement: 'confirmee_tacitement'` **dans la même transaction** (un type de journal par genre de transition, partners/ADR-0022, REQ-DM-042 amendée au §3.2 du plan W20, à inscrire par la passe gardien-spec) et fait courir `fenetreFinAt` à compter de cette date ; c'est la **seule** conséquence attachée au silence de l'entreprise pour une demande non signalée ; pour une demande signalée, c'est la libération de DM-13 (question 19). 🔴 Complétée le 2026-09-29 (chantier W20, décision de Williams, session -d7, docs/chantiers/W20-confirmation-par-email.md §6), puis amendée le 2026-09-29 (réponse de Williams à la question 2 et exigence d'expérience, docs/chantiers/W20-confirmation-par-email.md §2, §4 et §9). Un clic « Oui » retenu ou un « Non » confirmé (DM-41) empêchent la promotion comme une Qualification. Règle de confirmation tacite TRANCHÉE PAR WILLIAMS le 2026-09-29 (session -d7, question 2 du plan, HYP-W20-TACITE) : au bout de trente jours (CONFIRMATION_TACITE_JOURS) sans réponse du contact et sans appel concluant (Qualification confirme ou non_confirme), l'entreprise reste réservée à l'apporteur, l'attribution est réputée confirmée ; le délai court de la RÉCEPTION de l'e-mail de confirmation, c'est-à-dire d'un envoi sans rebond (recueAt) ; tant que l'e-mail revient en erreur et que l'apporteur n'a pas corrigé l'adresse, le délai NE COMMENCE PAS, et un rebond rattaché après coup retire à l'envoi sa qualité de réception. La confirmation tacite réserve l'entreprise et ne crée aucune commission : aucune commission sans paiement réel. (a) Le job lit la demande de confirmation (DM-40) : l'échéance est recueAt + CONFIRMATION_TACITE_JOURS, et non plus l'enregistrement du dépôt ; aucune échéance tant que la demande est planifiée, retenue ou en rebond non corrigé ; après correction de l'adresse, l'échéance part du nouvel envoi sans rebond. (b) La bascule a lieu le jour qu'affiche le badge de REQ-UX-062 (UX-P1-05) : passage « tout ce qui est dû à l'instant t » (REQ-QA-027), et non plus un passage quotidien unique, pour qu'une échéance à 23 h 59 soit promue le jour dit. (c) Tests frontière, horloge figée : réception à J, échéance moins une minute aucune promotion, échéance une seule ; rebond à J+1 non corrigé, J+90 aucune promotion (la demande en rebond porte la raison « rebond », elle est signalée et DM-13 la libère 45 jours après l'envoi) ; correction à J+10 puis envoi sans rebond, promotion à J+40 et pas avant ; clic « Oui » ou appel confirme avant l'échéance, aucune promotion tacite ; deux passages, un seul événement. Pour une demande non signalée, le job reste la seule conséquence du silence. (d) Correction de sécurité du 2026-09-29 (refus de la lentille securite sur 2340a63, docs/chantiers/W20-confirmation-par-email.md §2, §8 et question 18) : une demande SIGNALÉE (qui porte une raison de vérification de SEC-41 à l'échéance) n'est JAMAIS promue par le seul silence ; elle reste provisoire jusqu'à un appel concluant (confirme la confirme, non_confirme l'invalide), puis suit le régime ordinaire, péremption comprise. TRANCHÉ PAR WILLIAMS le 2026-09-29 vers 20 h (session -d7, question 18) : la valeur par défaut est retenue, aucune confirmation tacite d'une demande signalée. Sans appel concluant, la demande signalée n'est pas promue mais LIBÉRÉE par DM-13 (question 19, tranchée le même jour : trois appels injoignable ou 45 jours après l'envoi, au premier terme, sans sanction) ; DM-24 et DM-13 lisent le même prédicat « demande signalée » de SEC-41 (dépendance ajoutée le 2026-09-29), et aucun des deux n'en recopie la règle. Témoins : demande signalée et silencieuse, J+30 aucune promotion, et à J+45 aucune promotion (la libération de DM-13 a lieu, pas une confirmation) ; demande signalée puis appel confirme à J+35, active à J+35 ; une mutation qui promeut une demande signalée rougit. REQ-DM-042 amendée s'écrit par GOV-112 (dépendance). Contraintes W19 à intégrer (GOV-115, décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §6) : ne sélectionne jamais un porteur conseiller (témoin à deux faces). AMENDEMENT (audit indépendant du plan de la Phase 1 (2026-10-01, `_REPRISE-AXION-APPORTEURS/AUDIT-PLAN-PHASE-1.md`), écart A1-09) : pose `ajouterJoursCivilsParis` et l'alias `joursOuvres` dans `src/domain/temps/` ; DM-13 les réutilise."
     },
     {
       "id": "DM-25",
@@ -4578,7 +4582,8 @@
         "DM-10-P",
         "SEC-17",
         "UX-P1-10",
-        "DM-12"
+        "DM-12",
+        "GOV-137"
       ],
       "reqs": [
         "REQ-DM-043",
@@ -4601,7 +4606,7 @@
     },
     {
       "id": "INT-T07-P",
-      "titre": "API 1 `GET /api/integrations/axionia/attributions?siren=` côté Partners : réponse `{statut: libre|attribuee|cliente, until: 'AAAA-MM'|null, apporteurRef: opaque|null}`, jamais nom, prénom, e-mail",
+      "titre": "API 1 `GET /api/integrations/axionia/attributions?siren=` côté Partners : `{statut, until, apporteurRef opaque, nomAffichable (prénom et initiale) | null}` ; jamais e-mail, téléphone, identifiant ni adresse",
       "phase": 1,
       "repo": "partners",
       "zone": "integration",
@@ -4622,7 +4627,10 @@
       "deps": [
         "DM-08",
         "SEC-06",
-        "SEC-07"
+        "SEC-07",
+        "INT-T48-P",
+        "DM-10-P",
+        "SEC-44"
       ],
       "reqs": [
         "REQ-INT-014",
@@ -4639,7 +4647,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "Contraintes W19 à intégrer (GOV-115, décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §6) : une attribution de conseiller répond comme une attribution d'apporteur au même stade : `attribuee`, `until`, `apporteurRef` opaque de même forme (question 2 : même réponse de l'API 1). Test de forme refusant tout champ de plus, et test d'indistinction repris par QA-T31. Aucune commission d'apporteur n'est déduite de l'API 1 côté axion-ia : la chaîne d'argent de Partners aiguille par porteur réel (REQ-DM-021). Le déplacement vers `packages/contracts/` est RETIRÉ du chantier : il imposerait `schema: true` et une copie à hash identique côté axion-ia, non chiffrées. AVENANT A01 du 2026-09-30 (condition de la lentille securite sur #297, QA-T52) : l'API entrante GET /attributions exige x-axionia-kid depuis QA-T52, mais contracts.v2 ne le déclare que sur les webhooks et la réponse de coordonnées (INT-T42). AVANT le premier client axion-ia de cette API (INT-T07-A), le contrat déclare x-axionia-kid pour GET /attributions, dérivé par kidDe(AXIONIA_API_TOKEN) ; sinon l'API refuse chaque appel (panne fermée). Témoin : un appel sans kid est refusé en le nommant, un appel au kid du jeton courant passe. AMENDEMENT (vérification V2 (GOV-132, 2026-10-01), C-03) : déclare `api_attributions_*` (en-têtes dont `x-axionia-kid`) dans `packages/contracts` avant INT-T07-A ; passer la tâche en `schema: true` ou confier la déclaration à une tâche `schema` est une décision A02 à tracer (annexe V2, R2). DÉCISION A01 (2026-10-01, annexe V2 R2, sur délégation) : la tâche passe en `schema: true` et déclare elle-même, dans `packages/contracts`, les en-têtes de GET /attributions dont `x-axionia-kid` (contrat publié et empreinte régénérés par `pnpm contracts:export`, copie côté axion-ia à empreinte identique, lockstep avec INT-T07-A). La réponse reste OPAQUE (W19) : le point d'appel retenu par la décision D3 de Williams du 2026-10-01, dans la fenêtre de la coordination : à la question du moment où axion-ia interroge l'API 1 (A = à la création du devis, avant l'envoi, et en lecture sur la fiche du client ; B = seulement à la facture), Williams répond : « OUI OK POUR A - A (recommandé) : au moment où vous créez un devis pour cette entreprise, avant de l'envoyer. Vous le voyez aussi sur la fiche du client (par exemple : « Apportée par Paul, depuis le 3 octobre »). Vous êtes prévenu avant de proposer un prix, ce qui évite toute surprise. » ne change pas sa forme. Relecture de la lentille schema. AMENDEMENT — Décision de Williams du 2026-10-01, dans la fenêtre de la coordination, réponse « je préfere B » à la question : A = garder la réponse opaque de l'API 1 (« Entreprise réservée jusqu'au … », le nom seulement dans la console Partners ; protège apporteurs et salariés, rien ne change à W19) ; B = axion-ia affiche le NOM sur la fiche client et au devis (« Apportée par Paul »), ce qui revient sur la décision W19 du 2026-09-29 et demande des changements de sécurité. Les raisons de A (minimisation, salariés, conflit) lui avaient été exposées. Cela revient sur R3 de REQ-INT-014 et sur la réponse opaque de W19 pour l'API 1 : (1) la réponse de GET /attributions gagne un champ `nomAffichable` (null si `libre`), déclaré dans le contrat publié (lockstep avec INT-T07-A) ; le test de forme l'admet, et refuse tout AUTRE champ. (2) Minimisation, sous la relecture EXIGÉE de la lentille securite (donnée personnelle qui sort de Partners) : seul un NOM D'AFFICHAGE (prénom et initiale du nom, par défaut) traverse, jamais e-mail, téléphone, identifiant ni adresse ; côté axion-ia, ce nom ne s'affiche qu'aux utilisateurs qui créent ou lisent un devis, n'entre dans aucun journal, et n'est conservé que le temps du cache (5 minutes). (3) QUESTION OUVERTE, à Williams : pour une entreprise prise en charge par un CONSEILLER SALARIÉ, que porte le nom affichable ? Recommandation A01 : le MÊME champ, de la même forme, au nom du conseiller, sans mention de rôle — la réponse garde ainsi une seule forme pour les deux populations (W19, question 2), et ce sont des salariés de la Société qui la lisent. Tant que Williams n'a pas tranché, la tâche ne livre PAS le cas du conseiller. (4) TÉMOINS rouges d'abord : une entreprise attribuée rend son nom affichable ; une entreprise libre rend null ; aucun e-mail ni identifiant n'apparaît dans la réponse."
+      "acceptance": "Contraintes W19 à intégrer (GOV-115, décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §6) : une attribution de conseiller répond comme une attribution d'apporteur au même stade : `attribuee`, `until`, `apporteurRef` opaque de même forme (question 2 : même réponse de l'API 1). Test de forme refusant tout champ de plus, et test d'indistinction repris par QA-T31. Aucune commission d'apporteur n'est déduite de l'API 1 côté axion-ia : la chaîne d'argent de Partners aiguille par porteur réel (REQ-DM-021). Le déplacement vers `packages/contracts/` est RETIRÉ du chantier : il imposerait `schema: true` et une copie à hash identique côté axion-ia, non chiffrées. AVENANT A01 du 2026-09-30 (condition de la lentille securite sur #297, QA-T52) : l'API entrante GET /attributions exige x-axionia-kid depuis QA-T52, mais contracts.v2 ne le déclare que sur les webhooks et la réponse de coordonnées (INT-T42). AVANT le premier client axion-ia de cette API (INT-T07-A), le contrat déclare x-axionia-kid pour GET /attributions, dérivé par kidDe(AXIONIA_API_TOKEN) ; sinon l'API refuse chaque appel (panne fermée). Témoin : un appel sans kid est refusé en le nommant, un appel au kid du jeton courant passe. AMENDEMENT (vérification V2 (GOV-132, 2026-10-01), C-03) : déclare `api_attributions_*` (en-têtes dont `x-axionia-kid`) dans `packages/contracts` avant INT-T07-A ; passer la tâche en `schema: true` ou confier la déclaration à une tâche `schema` est une décision A02 à tracer (annexe V2, R2). DÉCISION A01 (2026-10-01, annexe V2 R2, sur délégation) : la tâche passe en `schema: true` et déclare elle-même, dans `packages/contracts`, les en-têtes de GET /attributions dont `x-axionia-kid` (contrat publié et empreinte régénérés par `pnpm contracts:export`, copie côté axion-ia à empreinte identique, lockstep avec INT-T07-A). La réponse reste OPAQUE (W19) : le point d'appel retenu par la décision D3 de Williams du 2026-10-01, dans la fenêtre de la coordination : à la question du moment où axion-ia interroge l'API 1 (A = à la création du devis, avant l'envoi, et en lecture sur la fiche du client ; B = seulement à la facture), Williams répond : « OUI OK POUR A - A (recommandé) : au moment où vous créez un devis pour cette entreprise, avant de l'envoyer. Vous le voyez aussi sur la fiche du client (par exemple : « Apportée par Paul, depuis le 3 octobre »). Vous êtes prévenu avant de proposer un prix, ce qui évite toute surprise. » ne change pas sa forme. Relecture de la lentille schema. AMENDEMENT — Décision de Williams du 2026-10-01, dans la fenêtre de la coordination, réponse « je préfere B » à la question : A = garder la réponse opaque de l'API 1 (« Entreprise réservée jusqu'au … », le nom seulement dans la console Partners ; protège apporteurs et salariés, rien ne change à W19) ; B = axion-ia affiche le NOM sur la fiche client et au devis (« Apportée par Paul »), ce qui revient sur la décision W19 du 2026-09-29 et demande des changements de sécurité. Les raisons de A (minimisation, salariés, conflit) lui avaient été exposées. Cela revient sur R3 de REQ-INT-014 et sur la réponse opaque de W19 pour l'API 1 : (1) la réponse de GET /attributions gagne un champ `nomAffichable` (null si `libre`), déclaré dans le contrat publié (lockstep avec INT-T07-A) ; le test de forme l'admet, et refuse tout AUTRE champ. (2) Minimisation, sous la relecture EXIGÉE de la lentille securite (donnée personnelle qui sort de Partners) : seul un NOM D'AFFICHAGE (prénom et initiale du nom, par défaut) traverse, jamais e-mail, téléphone, identifiant ni adresse ; côté axion-ia, ce nom ne s'affiche qu'aux utilisateurs qui créent ou lisent un devis, n'entre dans aucun journal, et n'est conservé que le temps du cache (5 minutes). (3) QUESTION OUVERTE, à Williams : pour une entreprise prise en charge par un CONSEILLER SALARIÉ, que porte le nom affichable ? Recommandation A01 : le MÊME champ, de la même forme, au nom du conseiller, sans mention de rôle — la réponse garde ainsi une seule forme pour les deux populations (W19, question 2), et ce sont des salariés de la Société qui la lisent. Tant que Williams n'a pas tranché, la tâche ne livre PAS le cas du conseiller. (4) TÉMOINS rouges d'abord : une entreprise attribuée rend son nom affichable ; une entreprise libre rend null ; aucun e-mail ni identifiant n'apparaît dans la réponse. AMENDEMENT (audit indépendant du plan de la Phase 1 (2026-10-01), écarts C-03 et B-05) : les trois écritures de `packages/contracts` (INT-T46-P, INT-T48-P, INT-T07-P) sont sérialisées dans la même v3. `nomAffichable` s'ajoute à `formeDeLaReponse` (`api-entrante.ts`), dérivée du `$defs` de `packages/contracts/api.ts` ; la règle « libre ⇒ `nomAffichable` null » est dans le même raffinement ; `attributions-dto.ts` ne contient que le lecteur ; le contrat dit `kid` obligatoire là où la réception l'exige (dette INT-T42)."
     },
     {
       "id": "INT-T07-A",
@@ -4665,7 +4673,7 @@
       ],
       "hyp": [],
       "externe": null,
-      "estimateDays": 0.5,
+      "estimateDays": 1,
       "statut": "a_faire",
       "owner": null,
       "lot": null,
@@ -4674,7 +4682,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "Client API 1 cote axionia : timeout 2 s, cache 5 min, echec ouvert (titre). (arbitrage A01 du 2026-09-30, suite de QA-T52 et INT-T41) : l'appel Bearer vers l'API entrante de Partners porte l'en-tete du kid du jeton, derive par kidDe et declare par le contrat POUR CETTE API : INT-T42 ne le declare que sur les webhooks et la reponse de coordonnees, et l'API entrante l'exige depuis QA-T52 ; avant le premier appel, x-axionia-kid (kidDe(AXIONIA_API_TOKEN)) est ajoute au contrat pour GET /attributions, sinon panne fermee (condition de la lentille securite sur #297, avenant A01 du 2026-09-30 ; porte cote Partners par INT-T07-P) ; temoin : le kid emis change quand le jeton tourne. AMENDEMENT (vérification V2 (GOV-132, 2026-10-01), C-03) : nomme le point d'appel côté axion-ia (décision de Williams attendue ; recommandation de V2 : à la création du devis, et en lecture sur la fiche client). POINT D'APPEL TRANCHÉ (C-03 de la vérification transversale réglé) — Décision D3 de Williams du 2026-10-01, dans la fenêtre de la coordination : à la question du moment où axion-ia interroge l'API 1 (A = à la création du devis, avant l'envoi, et en lecture sur la fiche du client ; B = seulement à la facture), Williams répond : « OUI OK POUR A - A (recommandé) : au moment où vous créez un devis pour cette entreprise, avant de l'envoyer. Vous le voyez aussi sur la fiche du client (par exemple : « Apportée par Paul, depuis le 3 octobre »). Vous êtes prévenu avant de proposer un prix, ce qui évite toute surprise. ». RÉSERVE écrite par A01 : l'exemple « Apportée par Paul » suppose que l'API 1 rende le NOM de l'apporteur ; or W19 (décision de Williams du 2026-09-29) impose une réponse OPAQUE (`attribuee`, `until`, `apporteurRef` opaque), indistincte entre un apporteur et un conseiller salarié, sous un test de forme qui refuse tout champ de plus. Le point d'appel est retenu ; l'affichage reste celui que la réponse permet (« attribuée jusqu'au … »), et rendre un nom serait une décision distincte de Williams, contraire à W19 tant qu'elle n'est pas prise. (1) axion-ia appelle l'API 1 à la CRÉATION d'un devis, avant son envoi, et en lecture sur la fiche du client ; jamais seulement à la facture. (2) TÉMOINS rouges d'abord : la création d'un devis pour un SIREN attribué affiche l'attribution avant l'envoi ; la fiche du client l'affiche ; une panne de l'API ne bloque pas le devis (échec ouvert du titre), et elle est signalée. AMENDEMENT — Décision de Williams du 2026-10-01, dans la fenêtre de la coordination, réponse « je préfere B » à la question : A = garder la réponse opaque de l'API 1 (« Entreprise réservée jusqu'au … », le nom seulement dans la console Partners ; protège apporteurs et salariés, rien ne change à W19) ; B = axion-ia affiche le NOM sur la fiche client et au devis (« Apportée par Paul »), ce qui revient sur la décision W19 du 2026-09-29 et demande des changements de sécurité. Les raisons de A (minimisation, salariés, conflit) lui avaient été exposées. (1) La fiche du client et l'écran de création du devis affichent « Apportée par <nom affichable> » et la date d'attribution. (2) Minimisation, sous la relecture EXIGÉE de la lentille securite (donnée personnelle qui sort de Partners) : seul un NOM D'AFFICHAGE (prénom et initiale du nom, par défaut) traverse, jamais e-mail, téléphone, identifiant ni adresse ; côté axion-ia, ce nom ne s'affiche qu'aux utilisateurs qui créent ou lisent un devis, n'entre dans aucun journal, et n'est conservé que le temps du cache (5 minutes). (3) QUESTION OUVERTE, à Williams : pour une entreprise prise en charge par un CONSEILLER SALARIÉ, que porte le nom affichable ? Recommandation A01 : le MÊME champ, de la même forme, au nom du conseiller, sans mention de rôle — la réponse garde ainsi une seule forme pour les deux populations (W19, question 2), et ce sont des salariés de la Société qui la lisent. Tant que Williams n'a pas tranché, la tâche ne livre PAS le cas du conseiller."
+      "acceptance": "Client API 1 cote axionia : timeout 2 s, cache 5 min, echec ouvert (titre). (arbitrage A01 du 2026-09-30, suite de QA-T52 et INT-T41) : l'appel Bearer vers l'API entrante de Partners porte l'en-tete du kid du jeton, derive par kidDe et declare par le contrat POUR CETTE API : INT-T42 ne le declare que sur les webhooks et la reponse de coordonnees, et l'API entrante l'exige depuis QA-T52 ; avant le premier appel, x-axionia-kid (kidDe(AXIONIA_API_TOKEN)) est ajoute au contrat pour GET /attributions, sinon panne fermee (condition de la lentille securite sur #297, avenant A01 du 2026-09-30 ; porte cote Partners par INT-T07-P) ; temoin : le kid emis change quand le jeton tourne. AMENDEMENT (vérification V2 (GOV-132, 2026-10-01), C-03) : nomme le point d'appel côté axion-ia (décision de Williams attendue ; recommandation de V2 : à la création du devis, et en lecture sur la fiche client). POINT D'APPEL TRANCHÉ (C-03 de la vérification transversale réglé) — Décision D3 de Williams du 2026-10-01, dans la fenêtre de la coordination : à la question du moment où axion-ia interroge l'API 1 (A = à la création du devis, avant l'envoi, et en lecture sur la fiche du client ; B = seulement à la facture), Williams répond : « OUI OK POUR A - A (recommandé) : au moment où vous créez un devis pour cette entreprise, avant de l'envoyer. Vous le voyez aussi sur la fiche du client (par exemple : « Apportée par Paul, depuis le 3 octobre »). Vous êtes prévenu avant de proposer un prix, ce qui évite toute surprise. ». (1) [Réserve caduque depuis l'option B, retirée par le rattrapage 35.] axion-ia appelle l'API 1 à la CRÉATION d'un devis, avant son envoi, et en lecture sur la fiche du client ; jamais seulement à la facture. (2) TÉMOINS rouges d'abord : la création d'un devis pour un SIREN attribué affiche l'attribution avant l'envoi ; la fiche du client l'affiche ; une panne de l'API ne bloque pas le devis (échec ouvert du titre), et elle est signalée. AMENDEMENT — Décision de Williams du 2026-10-01, dans la fenêtre de la coordination, réponse « je préfere B » à la question : A = garder la réponse opaque de l'API 1 (« Entreprise réservée jusqu'au … », le nom seulement dans la console Partners ; protège apporteurs et salariés, rien ne change à W19) ; B = axion-ia affiche le NOM sur la fiche client et au devis (« Apportée par Paul »), ce qui revient sur la décision W19 du 2026-09-29 et demande des changements de sécurité. Les raisons de A (minimisation, salariés, conflit) lui avaient été exposées. (1) La fiche du client et l'écran de création du devis affichent « Apportée par <nom affichable> » et la date d'attribution. (2) Minimisation, sous la relecture EXIGÉE de la lentille securite (donnée personnelle qui sort de Partners) : seul un NOM D'AFFICHAGE (prénom et initiale du nom, par défaut) traverse, jamais e-mail, téléphone, identifiant ni adresse ; côté axion-ia, ce nom ne s'affiche qu'aux utilisateurs qui créent ou lisent un devis, n'entre dans aucun journal, et n'est conservé que le temps du cache (5 minutes). (3) QUESTION OUVERTE, à Williams : pour une entreprise prise en charge par un CONSEILLER SALARIÉ, que porte le nom affichable ? Recommandation A01 : le MÊME champ, de la même forme, au nom du conseiller, sans mention de rôle — la réponse garde ainsi une seule forme pour les deux populations (W19, question 2), et ce sont des salariés de la Société qui la lisent. Tant que Williams n'a pas tranché, la tâche ne livre PAS le cas du conseiller. AMENDEMENT (audit indépendant du plan de la Phase 1 (2026-10-01, `_REPRISE-AXION-APPORTEURS/AUDIT-PLAN-PHASE-1.md`)) : les fichiers d'axion-ia de la fiche client et de la création de devis sont nommés à la revendication par la session axion-ia, et ajoutés à `paths`."
     },
     {
       "id": "INT-T08-A",
@@ -4732,7 +4740,8 @@
       ],
       "deps": [
         "INT-T08-A",
-        "SEC-06"
+        "SEC-06",
+        "GOV-137"
       ],
       "reqs": [
         "REQ-INT-012",
@@ -4930,7 +4939,9 @@
         "INT-T05",
         "SEC-17",
         "INT-T46-P",
-        "JUR-T42"
+        "JUR-T42",
+        "INT-T45",
+        "INT-T43"
       ],
       "reqs": [
         "REQ-DM-028",
@@ -4948,7 +4959,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "évaluation **locale**, sans appel réseau au dépôt (la dépendance à DM-10-A est retirée) ; `origine` enum réduit à **{client, devis, financeur}** — **`demande_entrante` est retirée**, aucun des cinq événements arrêtés ne la transporte ; **deux fenêtres distinctes** alignées sur l'art. 3.3 réécrit, `ANTERIORITE_CLIENT_MOIS = 24` (prestation **facturée**) et `ANTERIORITE_DEVIS_MOIS = 6` (**devis** émis), toutes deux en SSOT (JUR-T02), jamais un paramètre unique ; `financeur` est alimentée par la liste tenue par la Société (DM-028), **dont l'existence et le principe sont portés à la connaissance de l'apporteur** (art. 3.3 bis b) et dont le refus est notifié avec sa **catégorie**. 🔴 **Complétée le 2026-09-26 (cadrage de l'architecte sur délégation de Will, partners/ADR-0022, GOV-102).** Schéma : `sirens_liste_noire {siren Char(9) clé primaire, motif MotifListeNoire, ajouteParId vers utilisateurs_console, ajouteAt}` et `entreprises_connues {siren, origine OrigineEntrepriseConnue, connueDepuisAt, dernierContactAt, clientStatut}` (REQ-DM-029) ; la ligne `OrigineEntrepriseConnue` du glossaire est alignée AVANT cette tâche — `demande_entrante` retirée —, faute de quoi `partners:schema:enums` rougirait en `enum_divergent_du_glossaire`. AMENDEMENT (Décision D2 de Williams du 2026-10-01, dans la fenêtre de la coordination : la question est posée à 08:12:08Z (« A : on garde le contrat tel quel (« devis envoyé »). Il faut alors ajouter dans axion-ia un signal « devis envoyé ». […] B : on change le contrat en « devis signé ». […] ») ; Williams la recopie à 08:21:42Z avec « EXPLIQUE MOI CA JE NE comprends pas ce que c'est concremtent et a quoi ca sert » ; la coordination répond à 08:21:51Z par un exemple concret (un devis envoyé le lundi, une déclaration d'apporteur le mercredi, une signature le vendredi) ; Williams répond à 08:24:28Z : « oUi A. par contre des qu'un clietn a deja signé un devis, il faut dire qu'il nest pas disponible non ? car ce cleitn on l'a deja non ? UN PEU COmme si c'etait un apportuer d'affaire qui l'avait deja demarcher non ? pUIS AS TU pensé aussi aux commerciaux ? est ce que ca fonctionne aussi ? » (séquence mot pour mot : `_REPRISE-AXION-APPORTEURS/SEQUENCE-DECISIONS-PHASE1-2026-10-01.md`, hors dépôt)). L'antériorité « devis » se lit sur l'événement « devis émis » (INT-T46-P), et non sur « devis signé » (A1-16 réglée, option A). TROU constaté par A01 en vérifiant le complément : l'art. 3.3 compte six mois depuis l'ÉMISSION du devis ; un devis SIGNÉ il y a plus de six mois et pas encore facturé ne rend donc plus l'entreprise indisponible, alors que la Société la tient déjà. Le complément de Williams le ferme : un devis signé rend l'entreprise indisponible tant qu'il n'est pas entièrement facturé, puis la fenêtre « cliente » de vingt-quatre mois prend le relais à la facture. Ajout : une entreprise dont un devis est SIGNÉ et pas encore entièrement facturé est connue, quelle que soit l'ancienneté du devis (JUR-T42) ; une fois facturée, la fenêtre `ANTERIORITE_CLIENT_MOIS` s'applique. TÉMOINS rouges d'abord : un devis émis il y a moins de six mois rend l'entreprise connue ; un devis signé il y a plus de six mois, non facturé, la rend connue ; un devis émis il y a plus de six mois, jamais signé ni facturé, ne la rend plus connue."
+      "acceptance": "évaluation **locale**, sans appel réseau au dépôt (la dépendance à DM-10-A est retirée) ; `origine` enum réduit à **{client, devis, financeur}** — **`demande_entrante` est retirée**, aucun des cinq événements arrêtés ne la transporte ; **deux fenêtres distinctes** alignées sur l'art. 3.3 réécrit, `ANTERIORITE_CLIENT_MOIS = 24` (prestation **facturée**) et `ANTERIORITE_DEVIS_MOIS = 6` (**devis** émis), toutes deux en SSOT (JUR-T02), jamais un paramètre unique ; `financeur` est alimentée par la liste tenue par la Société (DM-028), **dont l'existence et le principe sont portés à la connaissance de l'apporteur** (art. 3.3 bis b) et dont le refus est notifié avec sa **catégorie**. 🔴 **Complétée le 2026-09-26 (cadrage de l'architecte sur délégation de Will, partners/ADR-0022, GOV-102).** Schéma : `sirens_liste_noire {siren Char(9) clé primaire, motif MotifListeNoire, ajouteParId vers utilisateurs_console, ajouteAt}` et `entreprises_connues {siren, origine OrigineEntrepriseConnue, connueDepuisAt, dernierContactAt, clientStatut}` (REQ-DM-029) ; la ligne `OrigineEntrepriseConnue` du glossaire est alignée AVANT cette tâche — `demande_entrante` retirée —, faute de quoi `partners:schema:enums` rougirait en `enum_divergent_du_glossaire`. AMENDEMENT (Décision D2 de Williams du 2026-10-01, dans la fenêtre de la coordination : la question est posée à 08:12:08Z (« A : on garde le contrat tel quel (« devis envoyé »). Il faut alors ajouter dans axion-ia un signal « devis envoyé ». […] B : on change le contrat en « devis signé ». […] ») ; Williams la recopie à 08:21:42Z avec « EXPLIQUE MOI CA JE NE comprends pas ce que c'est concremtent et a quoi ca sert » ; la coordination répond à 08:21:51Z par un exemple concret (un devis envoyé le lundi, une déclaration d'apporteur le mercredi, une signature le vendredi) ; Williams répond à 08:24:28Z : « oUi A. par contre des qu'un clietn a deja signé un devis, il faut dire qu'il nest pas disponible non ? car ce cleitn on l'a deja non ? UN PEU COmme si c'etait un apportuer d'affaire qui l'avait deja demarcher non ? pUIS AS TU pensé aussi aux commerciaux ? est ce que ca fonctionne aussi ? » (séquence mot pour mot : `_REPRISE-AXION-APPORTEURS/SEQUENCE-DECISIONS-PHASE1-2026-10-01.md`, hors dépôt)). L'antériorité « devis » se lit sur l'événement « devis émis » (INT-T46-P), et non sur « devis signé » (A1-16 réglée, option A). TROU constaté par A01 en vérifiant le complément : l'art. 3.3 compte six mois depuis l'ÉMISSION du devis ; un devis SIGNÉ il y a plus de six mois et pas encore facturé ne rend donc plus l'entreprise indisponible, alors que la Société la tient déjà. Le complément de Williams le ferme : un devis signé rend l'entreprise indisponible tant qu'il n'est pas entièrement facturé, puis la fenêtre « cliente » de vingt-quatre mois prend le relais à la facture. Ajout : une entreprise dont un devis est SIGNÉ et pas encore entièrement facturé est connue, quelle que soit l'ancienneté du devis (JUR-T42) ; une fois facturée, la fenêtre `ANTERIORITE_CLIENT_MOIS` s'applique. TÉMOINS rouges d'abord : un devis émis il y a moins de six mois rend l'entreprise connue ; un devis signé il y a plus de six mois, non facturé, la rend connue ; un devis émis il y a plus de six mois, jamais signé ni facturé, ne la rend plus connue. AMENDEMENT (audit indépendant du plan de la Phase 1 (2026-10-01), écart B-11) : la projection (`src/server/entreprise-connue/projection.ts`) consomme l'événement « devis émis » ; « entièrement facturé » se lit par `facture.emise.devisId` : somme HT des factures supérieure ou égale à `montantTotalHtCents` du devis, avoirs déduits."
     },
     {
       "id": "DM-11",
@@ -4979,7 +4990,8 @@
         "DM-06",
         "INT-T09",
         "SEC-17",
-        "SEC-08"
+        "SEC-08",
+        "SEC-43"
       ],
       "reqs": [
         "REQ-CPL-004",
@@ -5055,7 +5067,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "ELLE ÉCRIT LE SCHÉMA (label `schema`, seule de sa famille dans son lot). Cadrage de l'architecte du 2026-09-26 sur délégation de Will (partners/ADR-0022) : ce que la tâche crée ; le comportement est celui de ses exigences. (1) Enums `TypeAnomalie {sincerite, appareil_inconnu, ramassage, auto_parrainage}` — aucune valeur de rythme (REQ-SEC-017, REQ-JUR-031, REQ-SEC-021 amendée) — et `ObjetContestation {refus_depot, annulation_attribution, demande_rattachement}`, avec `ResultatVerification` et `StatutAnomalie`. (2) `Verification` -> `verifications` (REQ-DM-032, REQ-SEC-021), append-only : `apporteurId`, `siren`, `resultat`, `ipHash` Char(16), `verifieeAt` ; le plafond de vérifications est un compte, jamais une colonne. `AlerteLiberation` -> `alertes_liberation` : `apporteurId`, `siren`, `creeAt`, `envoyeeAt`, unique tant que non envoyée (`WHERE envoyee_at IS NULL`). `Anomalie` -> `anomalies` (REQ-DM-033) : `type`, `score` (présent si et seulement si `sincerite`), `apporteurId`, `attributionId`, `statut`, `ouverteAt`, `traiteParId`, `traiteAt`, `justification` ; CHECK `(statut = 'ouverte') = (traite_at IS NULL)` et `(traite_at IS NULL) = (traite_par_id IS NULL)`. `RattachementManuel` -> `rattachements_manuels` (REQ-DM-034) : `attributionId`, `sirenCommande`, `justification` d'au moins 20 caractères utiles (renommée de `motif` : un texte libre ne porte jamais un nom de vocabulaire), `lienControleEtabliAt`, `lienControleSource` non vide, `decideParId`, `decideAt`, `revoqueAt` ; `UNIQUE (siren_commande) WHERE revoque_at IS NULL` ; le déclencheur `rattachement_lien_anterieur` refuse `lien_controle_etabli_at > attributions.deposee_at`. `Contestation` -> `contestations` (REQ-DM-043, et la DEMANDE de rattachement de REQ-DM-034) : `apporteurId`, `objet`, `depotRefuseId` (si et seulement si `refus_depot`, `attributionId` sinon), `texteChiffre`, `recueAt`, `reponseChiffre`, `repondueParId`, `repondueAt` (réponse présente ensemble) ; l'échéance de réponse est `recueAt` plus la durée SSOT, jamais stockée. (3) Journal : `anomalie_statut_modifie` et `contestation_modifiee` (agrégat `apporteur`, charge `{anomalieId | contestationId, de?, vers, acteurId?}`), `rattachement_manuel_modifie` (agrégat `attribution`, `{rattachementId, vers: 'decide' | 'revoque', acteurId}`). `CHAMPS_PII` gagne `texte` et `reponse`. Module du semeur `prisma/seed/12-console-cas.ts`. Contraintes W19 à intégrer (GOV-115, décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §6) : Sans changer l'estimation. `verifications` reçoit le porteur XOR. `decide_par_id`, `traite_par_id` et `repondue_par_id` ne désignent jamais un conseiller : DÉCLENCHEUR, et non une assertion de test. AMENDEMENT (vérification V2 (GOV-132, 2026-10-01), A1-01) : la tâche déclare `action:rattacher_manuellement` dans `src/server/roles/matrice.ts`."
+      "acceptance": "ELLE ÉCRIT LE SCHÉMA (label `schema`, seule de sa famille dans son lot). Cadrage de l'architecte du 2026-09-26 sur délégation de Will (partners/ADR-0022) : ce que la tâche crée ; le comportement est celui de ses exigences. (1) Enums `TypeAnomalie {sincerite, appareil_inconnu, ramassage, auto_parrainage}` — aucune valeur de rythme (REQ-SEC-017, REQ-JUR-031, REQ-SEC-021 amendée) — et `ObjetContestation {refus_depot, annulation_attribution, demande_rattachement}`, avec `ResultatVerification` et `StatutAnomalie`. (2) `Verification` -> `verifications` (REQ-DM-032, REQ-SEC-021), append-only : `apporteurId`, `siren`, `resultat`, `ipHash` Char(16), `verifieeAt` ; le plafond de vérifications est un compte, jamais une colonne. `AlerteLiberation` -> `alertes_liberation` : `apporteurId`, `siren`, `creeAt`, `envoyeeAt`, unique tant que non envoyée (`WHERE envoyee_at IS NULL`). `Anomalie` -> `anomalies` (REQ-DM-033) : `type`, `score` (présent si et seulement si `sincerite`), `apporteurId`, `attributionId`, `statut`, `ouverteAt`, `traiteParId`, `traiteAt`, `justification` ; CHECK `(statut = 'ouverte') = (traite_at IS NULL)` et `(traite_at IS NULL) = (traite_par_id IS NULL)`. `RattachementManuel` -> `rattachements_manuels` (REQ-DM-034) : `attributionId`, `sirenCommande`, `justification` d'au moins 20 caractères utiles (renommée de `motif` : un texte libre ne porte jamais un nom de vocabulaire), `lienControleEtabliAt`, `lienControleSource` non vide, `decideParId`, `decideAt`, `revoqueAt` ; `UNIQUE (siren_commande) WHERE revoque_at IS NULL` ; le déclencheur `rattachement_lien_anterieur` refuse `lien_controle_etabli_at > attributions.deposee_at`. `Contestation` -> `contestations` (REQ-DM-043, et la DEMANDE de rattachement de REQ-DM-034) : `apporteurId`, `objet`, `depotRefuseId` (si et seulement si `refus_depot`, `attributionId` sinon), `texteChiffre`, `recueAt`, `reponseChiffre`, `repondueParId`, `repondueAt` (réponse présente ensemble) ; l'échéance de réponse est `recueAt` plus la durée SSOT, jamais stockée. (3) Journal : `anomalie_statut_modifie` et `contestation_modifiee` (agrégat `apporteur`, charge `{anomalieId | contestationId, de?, vers, acteurId?}`), `rattachement_manuel_modifie` (agrégat `attribution`, `{rattachementId, vers: 'decide' | 'revoque', acteurId}`). `CHAMPS_PII` gagne `texte` et `reponse`. Module du semeur `prisma/seed/12-console-cas.ts`. Contraintes W19 à intégrer (GOV-115, décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §6) : Sans changer l'estimation. `verifications` reçoit le porteur XOR. `decide_par_id`, `traite_par_id` et `repondue_par_id` ne désignent jamais un conseiller : DÉCLENCHEUR, et non une assertion de test. AMENDEMENT (vérification V2 (GOV-132, 2026-10-01), A1-01) : la tâche déclare `action:rattacher_manuellement` dans `src/server/roles/matrice.ts`. AMENDEMENT (audit indépendant du plan de la Phase 1 (2026-10-01, `_REPRISE-AXION-APPORTEURS/AUDIT-PLAN-PHASE-1.md`), écart B-03) : le déclencheur W19 compare `role::text = 'conseiller_salarie'`, ou il est posé par SEC-31 (même règle que DM-07 (a))."
     },
     {
       "id": "DM-13",
@@ -5086,7 +5098,8 @@
         "SEC-41",
         "UX-P1-10",
         "UX-P1-41",
-        "JUR-T40"
+        "JUR-T40",
+        "GOV-137"
       ],
       "reqs": [
         "REQ-DM-004",
@@ -5228,7 +5241,8 @@
       "deps": [
         "DM-13",
         "QA-T01",
-        "SEC-15"
+        "SEC-15",
+        "GOV-137"
       ],
       "reqs": [
         "REQ-INT-007",
@@ -5329,7 +5343,8 @@
       "pr": null,
       "issue": null,
       "attempts": 0,
-      "motif": null
+      "motif": null,
+      "acceptance": "Porté par l'audit indépendant du plan de la Phase 1 (2026-10-01, `_REPRISE-AXION-APPORTEURS/AUDIT-PLAN-PHASE-1.md`). Les empreintes (courriel, téléphone, IBAN, SIREN) sont comparées entre filleul et parrain à la candidature et au changement de RIB ; refus nommé côté console, réponse neutre côté espace ; journalisé sans donnée personnelle. TÉMOINS à deux faces."
     },
     {
       "id": "SEC-19",
@@ -5357,7 +5372,8 @@
         "SEC-04",
         "SEC-11",
         "SEC-17",
-        "CPL-T06"
+        "CPL-T06",
+        "SEC-43"
       ],
       "reqs": [
         "REQ-DM-011",
@@ -5566,7 +5582,10 @@
         "tests/integration/code-de-parrainage.spec.ts"
       ],
       "schema": false,
-      "sensible": [],
+      "sensible": [
+        "auth",
+        "argent"
+      ],
       "deps": [
         "SEC-10"
       ],
@@ -5586,7 +5605,8 @@
       "pr": null,
       "issue": null,
       "attempts": 0,
-      "motif": null
+      "motif": null,
+      "acceptance": "Porté par l'audit indépendant du plan de la Phase 1 (2026-10-01, `_REPRISE-AXION-APPORTEURS/AUDIT-PLAN-PHASE-1.md`) (écart C-08). (1) Code public de parrainage d'au moins 25 bits d'aléa, alphabet sans ambiguïté, unique, jamais dérivé de l'identité (`src/domain/parrainage/code.ts`). (2) Un `?p=` inconnu, mal formé ou révoqué est ignoré silencieusement : réponse identique à une visite sans code (aucun oracle, même statut, même corps). (3) Propagation sans cookie persistant ni stockage local au-delà de la session de navigation. (4) Débit limité par `rate-limit.ts`. TÉMOINS rouges d'abord : code inconnu ≡ sans code, octet à octet ; aucun `Set-Cookie` persistant. Relecture de la lentille securite."
     },
     {
       "id": "JUR-T09",
@@ -5626,7 +5646,7 @@
     },
     {
       "id": "JUR-T13",
-      "titre": "Audit de la charte relationnelle sur les écrans et e-mails + garde lexicale textes apporteurs",
+      "titre": "Audit de la charte relationnelle sur les écrans et e-mails + extension de la garde lexicale existante",
       "phase": 1,
       "repo": "partners",
       "zone": "juridique",
@@ -5665,7 +5685,8 @@
         "REQ-JUR-013": [
           "textes-apporteurs-charte-relationnelle.spec.ts"
         ]
-      }
+      },
+      "acceptance": "Porté par l'audit indépendant du plan de la Phase 1 (2026-10-01, `_REPRISE-AXION-APPORTEURS/AUDIT-PLAN-PHASE-1.md`) (écart B-17). Audit des textes de l'espace et des courriels contre la charte relationnelle. La garde existe (`scripts/gates/lexique-apporteurs.ts`, GOV-013, GOV-106, GOV-109) : on étend `src/domain/lexique/lexique-interdit.ts` pour REQ-JUR-012 et REQ-JUR-013, jamais une garde nouvelle. TÉMOIN rouge par famille ajoutée."
     },
     {
       "id": "CPL-T06",
@@ -5690,7 +5711,8 @@
       "deps": [
         "DM-06",
         "INT-T10",
-        "SEC-17"
+        "SEC-17",
+        "DM-45"
       ],
       "reqs": [
         "REQ-CPL-006"
@@ -6054,7 +6076,8 @@
       "deps": [
         "UX-P0-02",
         "UX-P0-03",
-        "UX-P1-01"
+        "UX-P1-01",
+        "SEC-43"
       ],
       "reqs": [
         "REQ-UX-008",
@@ -6133,7 +6156,8 @@
         "DM-11",
         "SEC-04",
         "UX-P1-08",
-        "UX-P1-10"
+        "UX-P1-10",
+        "SEC-43"
       ],
       "reqs": [
         "REQ-CPL-019",
@@ -6273,7 +6297,8 @@
         "INT-T12",
         "SEC-11",
         "UX-P1-10",
-        "QA-T33"
+        "QA-T33",
+        "GOV-137"
       ],
       "reqs": [
         "REQ-JUR-012",
@@ -6443,7 +6468,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "`GrilleContrat` (une par contrat, figée à la signature, `Contrat.grilleId` **non nul**) et `GrilleModele` (jeu complet nommé et réutilisable : « Standard », « Tête de réseau », « Zone difficile »…) ; la granularité n'est pas la famille mais **le palier** — les quatre familles commissionnées (W6, tranchée le 2026-09-03) comptent **30 paliers vendables** dans `pricing.ts`, la durée y étant un axe distinct ; une ligne porte `commissionId` (nom de REQ-INT-006), `prestationFamille`, `type ∈ {forfait, pourcentage, aucune}`, `montantCents` entier si `forfait`, `tauxBps` entier en points de base si `pourcentage` (le point de base vaut un centième de pour cent), jamais un flottant, **`cpfEligible` Boolean NOT NULL dérivé de `pricing.ts` par le script d'export (jamais saisi — 🔴 ce champ MANQUAIT et toute la garde CPF de REQ-JUR-023 reposait dessus : la gate n'avait aucune donnée à lire, synthèse M-15)**, et `motifEcart` **obligatoire dès que la ligne diffère de la grille publiée** ; 🔴 **un forfait est dû UNE FOIS par commande portant le palier — la durée est déjà dans le palier, `montantCents` n'est jamais multiplié par les journées** (DM-04, synthèse A-2) ; les cinq familles non commissionnées (développement web, maintenance, coaching récurrent, conférences, interventions sur demande) n'ont aucune ligne et sont énoncées dans l'annexe 1 ; **séquence verrouillée** KYC complet → grille complète 30/30 → génération du contrat → envoi DocuSeal : la fonction de génération refuse une grille incomplète, la fonction d'envoi refuse un contrat sans grille figée ; annexe 1 **générée** depuis la grille, jamais retapée ; une grille figée ne se modifie que par avenant (INT-T23), les lignes de commission déjà nées gardant leur `grilleVersionId` ; un palier créé au catalogue **après** la signature n'existe dans aucune grille figée → ligne `bloquee` motif **`a_qualifier`** (le cas « barème indéfini » ; `bareme_indefini` n'est pas une valeur de l'enum, arbitrage l. 410), libellé apporteur « Prestation hors grille de commissions », jamais un taux deviné, jamais u 🔴 **Complétée le 2026-09-26 (cadrage de l'architecte sur délégation de Will, partners/ADR-0022, GOV-102).** **DM-23 CRÉE `contrats`** (conflit C1, REQ-DM-013 amendée) : `apporteurId`, `gabaritVersion`, `grilleCommissionId` NOT NULL, `grilleContratId` NOT NULL dès la naissance, `statut StatutContrat`, `signeAt`, `pdfHash`, `auditTrailHash`, `pdfCle`, `auditTrailCle`, `creeAt`, et `UNIQUE (apporteur_id) WHERE statut = 'signe'` ; ainsi que `grilles_modele`, `lignes_grille_modele`, `grilles_contrat` et `lignes_grille_contrat`. Une ligne : `commissionId`, `prestationFamille FamillePrestation`, `type TypeLigneGrille {forfait, pourcentage, aucune}`, `montantCents` Int, `tauxBps` Int, `cpfEligible`, et `ecartJustification` Text — le `motifEcart` des lignes précédentes : un texte libre ne s'appelle jamais `motif...` ni `palier...` (REQ-EXT-026 et REQ-EXT-027 amendées) ; CHECK `(type = 'forfait') = (montant_cents IS NOT NULL)`, `(type = 'pourcentage') = (taux_bps IS NOT NULL)`, `montant_cents > 0`, `taux_bps` entre 1 et 10000. Journal `contrat_statut_modifie` (`{de?, vers: StatutContrat, acteurId?}`) et `grille_contrat_modifiee` (`{grilleContratId, lignes: uuid[], acteurId}` : les identifiants des lignes modifiées, jamais un compte). Contraintes W19 à intégrer (GOV-115, décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §6) : GrilleModele, GrilleContrat et contrats réservés aux apporteurs (témoin). AMENDEMENT (Décision D4 de Williams du 2026-10-01, dans la fenêtre de la coordination : à la question du format de la grille publiée, Williams répond « OUI OK - A (recommandé) : axion-ia envoie automatiquement une grille complète à Partners. Quand vous changez un prix dans axion-ia, l'espace apporteur se met à jour tout seul. Une seule source, aucun risque d'erreur. ») : `cpfEligible`, `prixReferenceHt` et `commissionPubliee` viennent de la grille publiée en `schema: 2` (INT-T47-A, INT-T47-P), jamais d'un script d'export propre à Partners ni d'une retape ; A1-08 de la vérification transversale réglée."
+      "acceptance": "`GrilleContrat` (une par contrat, figée à la signature, `Contrat.grilleId` **non nul**) et `GrilleModele` (jeu complet nommé et réutilisable : « Standard », « Tête de réseau », « Zone difficile »…) ; la granularité n'est pas la famille mais **le palier** — les quatre familles commissionnées (W6, tranchée le 2026-09-03) comptent **30 paliers vendables** dans `pricing.ts`, la durée y étant un axe distinct ; une ligne porte `commissionId` (nom de REQ-INT-006), `prestationFamille`, `type ∈ {forfait, pourcentage, aucune}`, `montantCents` entier si `forfait`, `tauxBps` entier en points de base si `pourcentage` (le point de base vaut un centième de pour cent), jamais un flottant, **`cpfEligible` Boolean NOT NULL dérivé de `pricing.ts` par le script d'export (jamais saisi — 🔴 ce champ MANQUAIT et toute la garde CPF de REQ-JUR-023 reposait dessus : la gate n'avait aucune donnée à lire, synthèse M-15)**, et `motifEcart` **obligatoire dès que la ligne diffère de la grille publiée** ; 🔴 **un forfait est dû UNE FOIS par commande portant le palier — la durée est déjà dans le palier, `montantCents` n'est jamais multiplié par les journées** (DM-04, synthèse A-2) ; les cinq familles non commissionnées (développement web, maintenance, coaching récurrent, conférences, interventions sur demande) n'ont aucune ligne et sont énoncées dans l'annexe 1 ; **séquence verrouillée** KYC complet → grille complète 30/30 → génération du contrat → envoi DocuSeal : la fonction de génération refuse une grille incomplète, la fonction d'envoi refuse un contrat sans grille figée ; annexe 1 **générée** depuis la grille, jamais retapée ; une grille figée ne se modifie que par avenant (INT-T23), les lignes de commission déjà nées gardant leur `grilleVersionId` ; un palier créé au catalogue **après** la signature n'existe dans aucune grille figée → ligne `bloquee` motif **`a_qualifier`** (le cas « barème indéfini » ; `bareme_indefini` n'est pas une valeur de l'enum, arbitrage l. 410), libellé apporteur « Prestation hors grille de commissions », jamais un taux deviné, jamais u 🔴 **Complétée le 2026-09-26 (cadrage de l'architecte sur délégation de Will, partners/ADR-0022, GOV-102).** **DM-23 CRÉE `contrats`** (conflit C1, REQ-DM-013 amendée) : `apporteurId`, `gabaritVersion`, `grilleCommissionId` NOT NULL, `grilleContratId` NOT NULL dès la naissance, `statut StatutContrat`, `signeAt`, `pdfHash`, `auditTrailHash`, `pdfCle`, `auditTrailCle`, `creeAt`, et `UNIQUE (apporteur_id) WHERE statut = 'signe'` ; ainsi que `grilles_modele`, `lignes_grille_modele`, `grilles_contrat` et `lignes_grille_contrat`. Une ligne : `commissionId`, `prestationFamille FamillePrestation`, `type TypeLigneGrille {forfait, pourcentage, aucune}`, `montantCents` Int, `tauxBps` Int, `cpfEligible`, et `ecartJustification` Text — le `motifEcart` des lignes précédentes : un texte libre ne s'appelle jamais `motif...` ni `palier...` (REQ-EXT-026 et REQ-EXT-027 amendées) ; CHECK `(type = 'forfait') = (montant_cents IS NOT NULL)`, `(type = 'pourcentage') = (taux_bps IS NOT NULL)`, `montant_cents > 0`, `taux_bps` entre 1 et 10000. Journal `contrat_statut_modifie` (`{de?, vers: StatutContrat, acteurId?}`) et `grille_contrat_modifiee` (`{grilleContratId, lignes: uuid[], acteurId}` : les identifiants des lignes modifiées, jamais un compte). Contraintes W19 à intégrer (GOV-115, décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §6) : GrilleModele, GrilleContrat et contrats réservés aux apporteurs (témoin). AMENDEMENT (Décision D4 de Williams du 2026-10-01, dans la fenêtre de la coordination : à la question du format de la grille publiée, Williams répond « OUI OK - A (recommandé) : axion-ia envoie automatiquement une grille complète à Partners. Quand vous changez un prix dans axion-ia, l'espace apporteur se met à jour tout seul. Une seule source, aucun risque d'erreur. ») : `cpfEligible`, `prixReferenceHt` et `commissionPubliee` viennent de la grille publiée en `schema: 2` (INT-T47-A, INT-T47-P), jamais d'un script d'export propre à Partners ni d'une retape ; A1-08 de la vérification transversale réglée. AMENDEMENT (audit indépendant du plan de la Phase 1 (2026-10-01), écart C-07) : si Williams retient le prix de référence figé à la signature, la ligne de grille du contrat porte la colonne `prix_reference_ht_cents`."
     },
     {
       "id": "UX-P1-14",
@@ -6517,7 +6542,8 @@
       "deps": [
         "INT-T12",
         "SEC-17",
-        "UX-P1-10"
+        "UX-P1-10",
+        "GOV-137"
       ],
       "reqs": [
         "REQ-CPL-028",
@@ -6548,7 +6574,8 @@
         ".github/PULL_REQUEST_TEMPLATE.md",
         "scripts/lot/revues.ts",
         "docs/CHARTE-AGENTS.md",
-        "tests/unit/gouvernance/revue-adversariale-exigee.spec.ts"
+        "tests/unit/gouvernance/revue-adversariale-exigee.spec.ts",
+        "tests/e2e/squatteur.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -6579,7 +6606,8 @@
           "revue-adversariale-exigee.spec.ts",
           "tests/e2e/squatteur.spec.ts"
         ]
-      }
+      },
+      "acceptance": "AMENDEMENT (audit indépendant du plan de la Phase 1 (2026-10-01, `_REPRISE-AXION-APPORTEURS/AUDIT-PLAN-PHASE-1.md`)) : `tests/e2e/squatteur.spec.ts` entre dans un `testMatch` Playwright, sinon il ne tourne nulle part."
     },
     {
       "id": "QA-T16",
@@ -6639,14 +6667,16 @@
         ".github/workflows/nightly.yml",
         "docs/gates.json",
         "tests/unit/qualite/metriques-metier.spec.ts",
-        "tests/integration/carte-de-sante.spec.ts"
+        "tests/integration/carte-de-sante.spec.ts",
+        "scripts/sauvegarde/cycle.ts"
       ],
       "schema": false,
       "sensible": [],
       "deps": [
         "DM-13",
         "INT-T08-P",
-        "QA-T08"
+        "QA-T08",
+        "QA-T54"
       ],
       "reqs": [
         "REQ-INT-030",
@@ -6663,7 +6693,8 @@
       "pr": null,
       "issue": null,
       "attempts": 0,
-      "motif": null
+      "motif": null,
+      "acceptance": "AMENDEMENT (audit indépendant du plan de la Phase 1 (2026-10-01, `_REPRISE-AXION-APPORTEURS/AUDIT-PLAN-PHASE-1.md`)) : réutilise `CATEGORIES_ALERTE` (`src/server/integrations/telegram/alertes.ts`) et le nightly existant ; `scripts/sauvegarde/cycle.ts` lit des secrets Telegram DÉDIÉS, déclarés dans `schemaSecrets` (REQ-SEC-028), jamais les noms génériques, sous une garde structurelle (écart C17 de la vérification de bout en bout)."
     },
     {
       "id": "JUR-T16",
@@ -6797,7 +6828,11 @@
         "DM-04",
         "DM-10-P",
         "SEC-06",
-        "T-ARG-010"
+        "T-ARG-010",
+        "DM-47",
+        "DM-46",
+        "INT-T43",
+        "INT-T45"
       ],
       "reqs": [
         "REQ-DM-016",
@@ -7365,7 +7400,8 @@
       "deps": [
         "DM-15",
         "DM-23",
-        "T-ARG-010"
+        "T-ARG-010",
+        "DM-47"
       ],
       "reqs": [
         "REQ-ARG-004",
@@ -8686,7 +8722,8 @@
         "SEC-05",
         "UX-P0-01",
         "UX-P1-05",
-        "QA-T33"
+        "QA-T33",
+        "GOV-137"
       ],
       "reqs": [
         "REQ-EXT-001",
@@ -12697,7 +12734,8 @@
       ],
       "deps": [
         "DM-07",
-        "INT-T09"
+        "INT-T09",
+        "GOV-137"
       ],
       "reqs": [
         "REQ-DM-046"
@@ -12708,7 +12746,7 @@
       "externe": null,
       "estimateDays": 0.5,
       "statut": "a_faire",
-      "acceptance": "(1) Sur chacune des fixtures ENREGISTRÉES d'INT-T09, le code NAF stocké sur l'attribution égale `activite_principale` de la fixture — jamais `activite_principale_naf25`, que REQ-INT-021 n'énumère pas. (2) Dépôt en repli manuel → code NAF nul ; le formulaire de dépôt ne porte aucun champ de code NAF. (3) La reprise, déclenchée à la fermeture du disjoncteur, complète les codes nuls par un nouvel appel au tiers (fixture) et n'écrase jamais un code déjà présent. (4) Un tiers qui ne rend pas le code laisse le champ nul (« non renseigné »), sans valeur par défaut. (5) TÉMOIN : une reprise qui écrirait une valeur par défaut fait rougir le test (4).",
+      "acceptance": "(1) Sur chacune des fixtures ENREGISTRÉES d'INT-T09, le code NAF stocké sur l'attribution égale `activite_principale` de la fixture — jamais `activite_principale_naf25`, que REQ-INT-021 n'énumère pas. (2) Dépôt en repli manuel → code NAF nul ; le formulaire de dépôt ne porte aucun champ de code NAF. (3) La reprise, déclenchée à la fermeture du disjoncteur, complète les codes nuls par un nouvel appel au tiers (fixture) et n'écrase jamais un code déjà présent. (4) Un tiers qui ne rend pas le code laisse le champ nul (« non renseigné »), sans valeur par défaut. (5) TÉMOIN : une reprise qui écrirait une valeur par défaut fait rougir le test (4). AMENDEMENT (audit indépendant du plan de la Phase 1 (2026-10-01, `_REPRISE-AXION-APPORTEURS/AUDIT-PLAN-PHASE-1.md`), écart A-07) : la reprise passe par un passage périodique du lanceur (GOV-137), ou par `src/server/integrations/recherche-entreprises/disjoncteur.ts` ; le choix est écrit à la revendication.",
       "tests": {
         "REQ-DM-046": [
           "tests/unit/domaine/code-naf-au-depot.spec.ts"
@@ -14569,7 +14607,8 @@
         "SEC-40",
         "UX-P1-41",
         "UX-P1-10",
-        "GOV-112"
+        "GOV-112",
+        "GOV-137"
       ],
       "reqs": [
         "REQ-INT-022",
@@ -14892,7 +14931,9 @@
     {
       "repo": "partners",
       "schema": false,
-      "sensible": [],
+      "sensible": [
+        "attribution"
+      ],
       "hyp": [
         "HYP-C1",
         "HYP-W20-TACITE",
@@ -17190,7 +17231,7 @@
       "externe": null,
       "estimateDays": 0.5,
       "statut": "a_faire",
-      "acceptance": "Vérification V2 (GOV-132, écart B-04) : l'adresse d'un utilisateur de console désactivé ne peut pas être effacée aujourd'hui, `email_chiffre` étant obligatoire. (1) `utilisateurs_console.email_chiffre` devient nullable, sous un CHECK qui ne l'admet vide que pour un utilisateur désactivé. (2) HYP-A02-RETENTION est amendée au registre des décisions par le lot dédié (durée de conservation de l'adresse après désactivation). (3) TÉMOINS rouges d'abord : un utilisateur actif sans adresse est refusé par la base ; un utilisateur désactivé sans adresse est admis. Relecture de la lentille `schema`."
+      "acceptance": "Vérification V2 (GOV-132, écart B-04) : l'adresse d'un utilisateur de console désactivé ne peut pas être effacée aujourd'hui, `email_chiffre` étant obligatoire. (1) `utilisateurs_console.email_chiffre` ET `email_hash` deviennent nullables, sous le même CHECK de désactivation ; l'unicité de `email_hash` reste sur les valeurs non nulles (audit du plan de la Phase 1, écart B-04). (2) HYP-A02-RETENTION est amendée au registre des décisions par le lot dédié (durée de conservation de l'adresse après désactivation). (3) TÉMOINS rouges d'abord : un utilisateur actif sans adresse est refusé par la base ; un utilisateur désactivé sans adresse est admis. Relecture de la lentille `schema`."
     },
     {
       "id": "GOV-133",
@@ -17297,14 +17338,17 @@
       "paths": [
         "src/domain/apporteur/acces-espace.ts",
         "src/domain/apporteur/matrice.ts",
-        "src/app/(espace)/mon-contrat/page.tsx",
-        "tests/unit/securite/acces-espace-avant-signature.spec.ts"
+        "tests/unit/securite/acces-espace-avant-signature.spec.ts",
+        "src/server/auth/session.ts",
+        "src/server/auth/lien-magique.ts"
       ],
       "schema": false,
       "sensible": [
         "auth"
       ],
-      "deps": [],
+      "deps": [
+        "SEC-42"
+      ],
       "reqs": [
         "REQ-SEC-032",
         "REQ-UX-006"
@@ -17315,7 +17359,7 @@
       "externe": null,
       "estimateDays": 0.75,
       "statut": "a_faire",
-      "acceptance": "Décision D1 de Williams du 2026-10-01, dans la fenêtre de la coordination : après « c'est quoi a ou b ? » (08:04:10Z), la coordination reformule la question à 08:04:19Z — pendant les contrôles et avant la signature, « A : il peut entrer, mais il ne voit que deux pages : « Ma conformité », qui lui montre où en sont ses vérifications, et « Mon contrat », pour lire le contrat avant de le signer. Il ne voit rien d'autre (ni clients ni commissions) tant qu'il n'a pas signé. » ou « B : il ne peut pas entrer du tout avant d'avoir signé. Il ne reçoit que des courriels. » — et Williams répond « A » à 08:11:11Z (séquence mot pour mot : `_REPRISE-AXION-APPORTEURS/SEQUENCE-DECISIONS-PHASE1-2026-10-01.md`, hors dépôt). HYP-SEC03-ACCES les disait « fermés » ; elle est amendée par la passe du lot dédié. (1) `peutOuvrirLEspace` (src/domain/apporteur/acces-espace.ts) distingue l'ouverture PLEINE (`signe`, `suspendu`) de l'ouverture LIMITÉE (`kyc_en_cours`, `pret_a_signer`) ; tout autre statut reste fermé (liste blanche, défaut fermé). (2) En ouverture limitée, seuls les écrans « Ma conformité » (UX-P1-09) et « Mon contrat » (lecture du contrat avant signature, écran livré ici) répondent ; tout autre écran ou toute autre route de l'espace (clients, attributions, commissions, relevés) refuse, avec un motif nommé, sans rien révéler. (3) TÉMOINS rouges d'abord : un apporteur `kyc_en_cours` atteint « Ma conformité » et « Mon contrat », et il est refusé sur chaque autre écran ; un apporteur `candidat` ou `refuse` est refusé partout ; un apporteur `signe` garde l'accès plein. (4) Relecture de la lentille securite exigée."
+      "acceptance": "Décision D1 de Williams du 2026-10-01, dans la fenêtre de la coordination : après « c'est quoi a ou b ? » (08:04:10Z), la coordination reformule la question à 08:04:19Z — pendant les contrôles et avant la signature, « A : il peut entrer, mais il ne voit que deux pages : « Ma conformité », qui lui montre où en sont ses vérifications, et « Mon contrat », pour lire le contrat avant de le signer. Il ne voit rien d'autre (ni clients ni commissions) tant qu'il n'a pas signé. » ou « B : il ne peut pas entrer du tout avant d'avoir signé. Il ne reçoit que des courriels. » — et Williams répond « A » à 08:11:11Z (séquence mot pour mot : `_REPRISE-AXION-APPORTEURS/SEQUENCE-DECISIONS-PHASE1-2026-10-01.md`, hors dépôt). HYP-SEC03-ACCES les disait « fermés » ; elle est amendée par la passe du lot dédié. (1) `peutOuvrirLEspace` (src/domain/apporteur/acces-espace.ts) distingue l'ouverture PLEINE (`signe`, `suspendu`) de l'ouverture LIMITÉE (`kyc_en_cours`, `pret_a_signer`) ; tout autre statut reste fermé (liste blanche, défaut fermé). (2) En ouverture limitée, seuls les écrans « Ma conformité » (UX-P1-09) et « Mon contrat » (UX-P1-44) répondent ; tout autre écran ou toute autre route de l'espace (clients, attributions, commissions, relevés) refuse, avec un motif nommé, sans rien révéler. (3) TÉMOINS rouges d'abord : un apporteur `kyc_en_cours` atteint « Ma conformité » et « Mon contrat », et il est refusé sur chaque autre écran ; un apporteur `candidat` ou `refuse` est refusé partout ; un apporteur `signe` garde l'accès plein. (4) Relecture de la lentille securite exigée. AMENDEMENT (audit indépendant du plan de la Phase 1 (2026-10-01, `_REPRISE-AXION-APPORTEURS/AUDIT-PLAN-PHASE-1.md`), écarts B-12 et C-01) : la liste blanche de l'ouverture limitée est appliquée dans le layout du groupe `(espace)`, défaut fermé ; une route ajoutée plus tard est refusée sans modification ; témoin énuméré depuis le système de fichiers ; un seul verdict à trois niveaux (plein, limité, lecture seule de SEC-19). Condition de la lentille securite : le refus est appliqué CÔTÉ SERVEUR (pages, API, actions serveur), avec un TÉMOIN d'action — un apporteur `kyc_en_cours` qui appelle directement l'action de dépôt est refusé, et rien n'est écrit."
     },
     {
       "id": "INT-T46-A",
@@ -17355,13 +17399,24 @@
         "packages/contracts/contracts.v2.json",
         "packages/contracts/contracts.sha256",
         "src/server/integrations/axionia/reception.ts",
-        "tests/integration/devis-emis.spec.ts"
+        "tests/integration/devis-emis.spec.ts",
+        "packages/contracts/payloads.ts",
+        "packages/contracts/enveloppe.ts",
+        "packages/contracts/events.zod.ts",
+        "packages/contracts/contracts.v3.json",
+        "scripts/gates/journal-sans-pii.ts",
+        "scripts/lot/paths-proposes.ts",
+        "prisma/schema.prisma",
+        "prisma/migrations/"
       ],
       "schema": true,
       "sensible": [
         "attribution"
       ],
-      "deps": [],
+      "deps": [
+        "INT-T45",
+        "INT-T43"
+      ],
       "reqs": [
         "REQ-INT-004",
         "REQ-QA-007",
@@ -17371,7 +17426,7 @@
       "externe": null,
       "estimateDays": 0.75,
       "statut": "a_faire",
-      "acceptance": "Décision D2 de Williams du 2026-10-01, dans la fenêtre de la coordination : la question est posée à 08:12:08Z (« A : on garde le contrat tel quel (« devis envoyé »). Il faut alors ajouter dans axion-ia un signal « devis envoyé ». […] B : on change le contrat en « devis signé ». […] ») ; Williams la recopie à 08:21:42Z avec « EXPLIQUE MOI CA JE NE comprends pas ce que c'est concremtent et a quoi ca sert » ; la coordination répond à 08:21:51Z par un exemple concret (un devis envoyé le lundi, une déclaration d'apporteur le mercredi, une signature le vendredi) ; Williams répond à 08:24:28Z : « oUi A. par contre des qu'un clietn a deja signé un devis, il faut dire qu'il nest pas disponible non ? car ce cleitn on l'a deja non ? UN PEU COmme si c'etait un apportuer d'affaire qui l'avait deja demarcher non ? pUIS AS TU pensé aussi aux commerciaux ? est ce que ca fonctionne aussi ? » (séquence mot pour mot : `_REPRISE-AXION-APPORTEURS/SEQUENCE-DECISIONS-PHASE1-2026-10-01.md`, hors dépôt). Option A. (1) Le type « devis émis » entre dans la liste fermée `TYPES_EVENEMENT` (packages/contracts/events.ts), avec son `$defs` fermé ; le contrat publié passe en v3 et son empreinte est régénérée par `pnpm contracts:export`, jamais retapée. (2) Le texte de REQ-INT-004 et de REQ-QA-007, qui comptent les types, est amendé au registre dans la même PR. (3) La réception range l'événement dans `entreprises_connues` (origine `devis`, date d'émission). (4) TÉMOINS rouges d'abord : un « devis émis » conforme est rangé ; un « devis émis » hors schéma est refusé 422. Relecture de la lentille schema."
+      "acceptance": "Décision D2 de Williams du 2026-10-01, dans la fenêtre de la coordination : la question est posée à 08:12:08Z (« A : on garde le contrat tel quel (« devis envoyé »). Il faut alors ajouter dans axion-ia un signal « devis envoyé ». […] B : on change le contrat en « devis signé ». […] ») ; Williams la recopie à 08:21:42Z avec « EXPLIQUE MOI CA JE NE comprends pas ce que c'est concremtent et a quoi ca sert » ; la coordination répond à 08:21:51Z par un exemple concret (un devis envoyé le lundi, une déclaration d'apporteur le mercredi, une signature le vendredi) ; Williams répond à 08:24:28Z : « oUi A. par contre des qu'un clietn a deja signé un devis, il faut dire qu'il nest pas disponible non ? car ce cleitn on l'a deja non ? UN PEU COmme si c'etait un apportuer d'affaire qui l'avait deja demarcher non ? pUIS AS TU pensé aussi aux commerciaux ? est ce que ca fonctionne aussi ? » (séquence mot pour mot : `_REPRISE-AXION-APPORTEURS/SEQUENCE-DECISIONS-PHASE1-2026-10-01.md`, hors dépôt). Option A. (1) Le type « devis émis » entre dans la liste fermée `TYPES_EVENEMENT` (packages/contracts/events.ts), avec son `$defs` fermé ; le contrat publié passe en v3 et son empreinte est régénérée par `pnpm contracts:export`, jamais retapée. (2) Le texte de REQ-INT-004 et de REQ-QA-007, qui comptent les types, est amendé au registre dans la même PR. (3) [Retiré par le rattrapage 35 : la projection appartient à DM-10-P, ce qui lève le cycle caché entre les deux tâches.] (4) TÉMOINS rouges d'abord : un « devis émis » conforme est rangé ; un « devis émis » hors schéma est refusé 422. Relecture de la lentille schema. AMENDEMENT (audit indépendant du plan de la Phase 1 (2026-10-01), écarts C-03 et A-05) : `SCHEMA_VERSION` a une seule définition ; `type_evenement_recu` gagne `devis_emis` en fin d'enum (bijection de `webhook.spec.ts`) ; `facture.emise` gagne `devisId` (nullable) dans la même montée v3 (JUR-T42) ; un événement `held` d'une version antérieure est validé contre les `$defs` de SA version. TÉMOIN : un `devis.signe` v2 mis en `held`, puis rejoué après la v3, est traité."
     },
     {
       "id": "JUR-T42",
@@ -17411,7 +17466,9 @@
       "sensible": [
         "argent"
       ],
-      "deps": [],
+      "deps": [
+        "INT-T47-P"
+      ],
       "reqs": [
         "REQ-DM-014",
         "REQ-INT-017"
@@ -17420,7 +17477,7 @@
       "externe": null,
       "estimateDays": 0.5,
       "statut": "a_faire",
-      "acceptance": "Décision D4 de Williams du 2026-10-01, dans la fenêtre de la coordination : à la question du format de la grille publiée, Williams répond « OUI OK - A (recommandé) : axion-ia envoie automatiquement une grille complète à Partners. Quand vous changez un prix dans axion-ia, l'espace apporteur se met à jour tout seul. Une seule source, aucun risque d'erreur. ». A1-08 de la vérification transversale réglée, option A. (1) La publication de la grille (DM-03-A) passe en `schema: 2` : chaque palier porte `cpfEligible`, `prixReferenceHt` et `commissionPubliee`, dérivés de `pricing.ts` et de `COMMERCIAL_COMMISSIONS`, jamais retapés ; l'empreinte est recalculée. (2) Le passage se fait en LOCKSTEP avec INT-T47-P : axion-ia ne publie le schema 2 qu'une fois Partners prêt à le lire. (3) TÉMOIN rouge d'abord : un changement de prix dans `pricing.ts` change la grille publiée et son empreinte."
+      "acceptance": "Décision D4 de Williams du 2026-10-01, dans la fenêtre de la coordination : à la question du format de la grille publiée, Williams répond « OUI OK - A (recommandé) : axion-ia envoie automatiquement une grille complète à Partners. Quand vous changez un prix dans axion-ia, l'espace apporteur se met à jour tout seul. Une seule source, aucun risque d'erreur. ». A1-08 de la vérification transversale réglée, option A. (1) La publication de la grille (DM-03-A) passe en `schema: 2` : chaque palier porte `cpfEligible`, `prixReferenceHt` et `commissionPubliee`, dérivés de `pricing.ts` et de `COMMERCIAL_COMMISSIONS`, jamais retapés ; l'empreinte est recalculée. (2) Le passage se fait en LOCKSTEP avec INT-T47-P : axion-ia ne publie le schema 2 qu'une fois Partners prêt à le lire. (3) TÉMOIN rouge d'abord : un changement de prix dans `pricing.ts` change la grille publiée et son empreinte. AMENDEMENT (audit indépendant du plan de la Phase 1 (2026-10-01), écarts C-06 et C19 de la vérification de bout en bout) : la résolution d'une ligne se fait d'abord par palier (`tierId`), puis par activité. TÉMOIN : un palier sans commission connue rend la ligne `bloquee`."
     },
     {
       "id": "INT-T47-P",
@@ -17430,7 +17487,8 @@
       "zone": "argent",
       "paths": [
         "src/server/grille/import.ts",
-        "tests/integration/grille-schema-2.spec.ts"
+        "tests/integration/grille-schema-2.spec.ts",
+        "src/domain/commission/grille.ts"
       ],
       "schema": false,
       "sensible": [
@@ -17439,18 +17497,17 @@
       "deps": [],
       "reqs": [
         "REQ-DM-014",
-        "REQ-ARG-031",
         "REQ-INT-017"
       ],
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
       "statut": "a_faire",
-      "acceptance": "Décision D4 de Williams du 2026-10-01, dans la fenêtre de la coordination : à la question du format de la grille publiée, Williams répond « OUI OK - A (recommandé) : axion-ia envoie automatiquement une grille complète à Partners. Quand vous changez un prix dans axion-ia, l'espace apporteur se met à jour tout seul. Une seule source, aucun risque d'erreur. ». A1-08 réglée, option A. (1) L'import (DM-03-P) lit la grille en `schema: 2` et rend `cpfEligible`, `prixReferenceHt` et `commissionPubliee` par palier, sans en recopier aucune valeur (REQ-ARG-031) ; l'empreinte reçue est recontrôlée. (2) La correspondance des types de commission d'axion-ia vers ceux de Partners (forfait, pourcentage, aucune) est écrite en un seul endroit et testée. (3) Un `schema` inconnu est refusé et nommé (échec fermé). (4) TÉMOINS rouges d'abord : une grille schema 2 est lue ; une grille d'un schema inconnu est refusée."
+      "acceptance": "Décision D4 de Williams du 2026-10-01, dans la fenêtre de la coordination : à la question du format de la grille publiée, Williams répond « OUI OK - A (recommandé) : axion-ia envoie automatiquement une grille complète à Partners. Quand vous changez un prix dans axion-ia, l'espace apporteur se met à jour tout seul. Une seule source, aucun risque d'erreur. ». A1-08 réglée, option A. (1) L'import (DM-03-P) lit la grille en `schema: 2` et rend `cpfEligible`, `prixReferenceHt` et `commissionPubliee` par palier, sans en recopier aucune valeur (REQ-ARG-031) ; l'empreinte reçue est recontrôlée. (2) La correspondance des types de commission d'axion-ia vers ceux de Partners (forfait, pourcentage, aucune) est écrite en un seul endroit et testée. (3) Un `schema` inconnu est refusé et nommé (échec fermé). (4) TÉMOINS rouges d'abord : une grille schema 2 est lue ; une grille d'un schema inconnu est refusée. AMENDEMENT (audit indépendant du plan de la Phase 1 (2026-10-01), écart B-10) : le schéma 1 reste lisible (les versions importées sont immuables, DM-03-P) ; la correspondance de `scale` vers {forfait, pourcentage, aucune} est écrite et testée."
     },
     {
       "id": "JUR-T43",
-      "titre": "Contrat v1, art. 4 : le forfait par journée est réduit au prorata de la remise, sans jamais augmenter",
+      "titre": "Contrat v1, art. 4 : le forfait du palier est réduit au prorata de la remise, sans jamais augmenter",
       "phase": 1,
       "repo": "partners",
       "zone": "juridique",
@@ -17470,11 +17527,11 @@
       "externe": null,
       "estimateDays": 0.25,
       "statut": "a_faire",
-      "acceptance": "Décision de Williams du 2026-10-01, dans la fenêtre de la coordination (suite de D4) : la commission FORFAITAIRE baisse au prorata quand le prix vendu est inférieur au prix de référence, et n'augmente jamais au-dessus. À la question posée avec un exemple chiffré, Williams répond à 08:33:52Z « OUI POUR CA   - A (recommandé) : la commission reste […]. Elle baisse en cas de remise, mais n'augmente jamais. » (le montant est remplacé par « […] » : aucun montant n'entre dans ce dépôt public). Et c'est LUI qui demande l'inscription au contrat, à 08:33:27Z, sans qu'on le lui ait demandé : « oui et il faut bien que ce soit indiqué dans le contrat non ? » (séquence mot pour mot : `_REPRISE-AXION-APPORTEURS/SEQUENCE-DECISIONS-PHASE1-2026-10-01.md`, hors dépôt). Le prorata ne porte que sur le FORFAIT par journée (le pourcentage suit déjà le prix vendu : l'appliquer deux fois le baisserait deux fois), arrondi au centime INFÉRIEUR. SOURCE DÉJÀ EN PRODUCTION : le courriel d'axion-ia aux apporteurs (`axionia/src/lib/email/templates/apporteur-issue-echange.tsx`) annonce déjà « par journée de formation au tarif public (réduite au prorata en cas de remise accordée au client) », règle qu'ignoraient le contrat v1 et le calcul : ces tâches les alignent sur cette promesse. (1) L'art. 4 du gabarit écrit que la commission forfaitaire par journée est multipliée par le rapport du prix vendu au prix de référence, plafonné à un (jamais au-dessus du forfait), arrondie au centime inférieur ; la commission au pourcentage n'est pas concernée. (2) C'est un AVENANT : il est écrit avant le premier envoi DocuSeal, et sa formulation finale est montrée à Williams et validée par lui avant la fusion. (3) TÉMOIN rouge d'abord : le gabarit sans cette clause est refusé par la concordance du contrat ; avec elle, accepté. Relecture de la lentille juridique."
+      "acceptance": "Décision de Williams du 2026-10-01, dans la fenêtre de la coordination (suite de D4) : la commission FORFAITAIRE baisse au prorata quand le prix vendu est inférieur au prix de référence, et n'augmente jamais au-dessus. À la question posée avec un exemple chiffré, Williams répond à 08:33:52Z « OUI POUR CA   - A (recommandé) : la commission reste […]. Elle baisse en cas de remise, mais n'augmente jamais. » (le montant est remplacé par « […] » : aucun montant n'entre dans ce dépôt public). Et c'est LUI qui demande l'inscription au contrat, à 08:33:27Z, sans qu'on le lui ait demandé : « oui et il faut bien que ce soit indiqué dans le contrat non ? » (séquence mot pour mot : `_REPRISE-AXION-APPORTEURS/SEQUENCE-DECISIONS-PHASE1-2026-10-01.md`, hors dépôt). Le prorata ne porte que sur le FORFAIT du palier, dû une fois par commande (REQ-DM-015) (le pourcentage suit déjà le prix vendu : l'appliquer deux fois le baisserait deux fois), arrondi au centime INFÉRIEUR. SOURCE DÉJÀ EN PRODUCTION : le courriel d'axion-ia aux apporteurs (`axionia/src/lib/email/templates/apporteur-issue-echange.tsx`) annonce déjà « par journée de formation au tarif public (réduite au prorata en cas de remise accordée au client) », règle qu'ignoraient le contrat v1 et le calcul : ces tâches les alignent sur cette promesse. (1) L'art. 4 du gabarit écrit que la commission forfaitaire du palier, due une fois par commande (REQ-DM-015), est multipliée par le rapport du prix vendu au prix de référence, plafonné à un (jamais au-dessus du forfait), arrondie au centime inférieur ; la commission au pourcentage n'est pas concernée. (2) C'est un AVENANT : il est écrit avant le premier envoi DocuSeal, et sa formulation finale est montrée à Williams et validée par lui avant la fusion. (3) TÉMOIN rouge d'abord : le gabarit sans cette clause est refusé par la concordance du contrat ; avec elle, accepté. Relecture de la lentille juridique."
     },
     {
       "id": "INT-T48-P",
-      "titre": "Contrat d'événements : prixVenduHt et prixReferenceHt entrent dans la charge du devis signé",
+      "titre": "Contrat d'événements : prixReferenceHt entre dans chaque ligne du devis signé, le prix vendu restant montantHtCents",
       "phase": 1,
       "repo": "partners",
       "zone": "argent",
@@ -17488,7 +17545,11 @@
       "sensible": [
         "argent"
       ],
-      "deps": [],
+      "deps": [
+        "INT-T46-P",
+        "INT-T45",
+        "INT-T43"
+      ],
       "reqs": [
         "REQ-INT-003",
         "REQ-QA-007"
@@ -17497,11 +17558,11 @@
       "externe": null,
       "estimateDays": 0.5,
       "statut": "a_faire",
-      "acceptance": "Décision de Williams du 2026-10-01, dans la fenêtre de la coordination (suite de D4) : la commission FORFAITAIRE baisse au prorata quand le prix vendu est inférieur au prix de référence, et n'augmente jamais au-dessus. À la question posée avec un exemple chiffré, Williams répond à 08:33:52Z « OUI POUR CA   - A (recommandé) : la commission reste […]. Elle baisse en cas de remise, mais n'augmente jamais. » (le montant est remplacé par « […] » : aucun montant n'entre dans ce dépôt public). Et c'est LUI qui demande l'inscription au contrat, à 08:33:27Z, sans qu'on le lui ait demandé : « oui et il faut bien que ce soit indiqué dans le contrat non ? » (séquence mot pour mot : `_REPRISE-AXION-APPORTEURS/SEQUENCE-DECISIONS-PHASE1-2026-10-01.md`, hors dépôt). Le prorata ne porte que sur le FORFAIT par journée (le pourcentage suit déjà le prix vendu : l'appliquer deux fois le baisserait deux fois), arrondi au centime INFÉRIEUR. SOURCE DÉJÀ EN PRODUCTION : le courriel d'axion-ia aux apporteurs (`axionia/src/lib/email/templates/apporteur-issue-echange.tsx`) annonce déjà « par journée de formation au tarif public (réduite au prorata en cas de remise accordée au client) », règle qu'ignoraient le contrat v1 et le calcul : ces tâches les alignent sur cette promesse. (1) La charge du devis signé porte `prixVenduHt` et `prixReferenceHt` (centimes entiers), déclarés dans le contrat publié ; l'empreinte est régénérée par `pnpm contracts:export`. S'il part avec INT-T46-P, le changement entre dans la MÊME version du contrat ; sinon, dans la suivante. (2) Partners les conserve et les montre à l'apporteur à côté de sa commission, sans recalculer la commission (elle vient d'axion-ia). (3) TÉMOINS rouges d'abord : une charge sans ces champs est refusée hors schéma ; une charge complète est acceptée. Relecture de la lentille schema."
+      "acceptance": "Décision de Williams du 2026-10-01, dans la fenêtre de la coordination (suite de D4) : la commission FORFAITAIRE baisse au prorata quand le prix vendu est inférieur au prix de référence, et n'augmente jamais au-dessus. À la question posée avec un exemple chiffré, Williams répond à 08:33:52Z « OUI POUR CA   - A (recommandé) : la commission reste […]. Elle baisse en cas de remise, mais n'augmente jamais. » (le montant est remplacé par « […] » : aucun montant n'entre dans ce dépôt public). Et c'est LUI qui demande l'inscription au contrat, à 08:33:27Z, sans qu'on le lui ait demandé : « oui et il faut bien que ce soit indiqué dans le contrat non ? » (séquence mot pour mot : `_REPRISE-AXION-APPORTEURS/SEQUENCE-DECISIONS-PHASE1-2026-10-01.md`, hors dépôt). Le prorata ne porte que sur le FORFAIT du palier, dû une fois par commande (REQ-DM-015) (le pourcentage suit déjà le prix vendu : l'appliquer deux fois le baisserait deux fois), arrondi au centime INFÉRIEUR. SOURCE DÉJÀ EN PRODUCTION : le courriel d'axion-ia aux apporteurs (`axionia/src/lib/email/templates/apporteur-issue-echange.tsx`) annonce déjà « par journée de formation au tarif public (réduite au prorata en cas de remise accordée au client) », règle qu'ignoraient le contrat v1 et le calcul : ces tâches les alignent sur cette promesse. (1) Chaque ligne du devis signé (`ligneDeDevis`) porte `prixReferenceHt` (centimes entiers) ; le prix vendu de la ligne reste `montantHtCents`, sans `prixVenduHt` au niveau du devis ; déclarés dans le contrat publié ; l'empreinte est régénérée par `pnpm contracts:export`. Une SEULE montée v3 du contrat, commune avec INT-T46-P et INT-T07-P. (2) Partners les conserve ; la commission est recalculée par Partners depuis la grille du contrat (partners/ADR-0003 §3, DM-47) ; l'affichage à l'apporteur revient à la tâche de relevé de la Phase 2. (3) TÉMOINS rouges d'abord : une charge sans ces champs est refusée hors schéma ; une charge complète est acceptée. Relecture de la lentille schema."
     },
     {
       "id": "INT-T48-A",
-      "titre": "Le calcul de la commission applique le prorata de la remise au forfait par journée, et l'émet avec les deux prix",
+      "titre": "Le calcul de la commission applique le prorata de la remise au forfait du palier, et émet le prix de référence par ligne",
       "phase": 1,
       "repo": "axionia",
       "zone": "argent",
@@ -17515,7 +17576,8 @@
         "argent"
       ],
       "deps": [
-        "INT-T48-P"
+        "INT-T48-P",
+        "JUR-T43"
       ],
       "reqs": [
         "REQ-INT-006"
@@ -17524,7 +17586,183 @@
       "externe": null,
       "estimateDays": 0.5,
       "statut": "a_faire",
-      "acceptance": "Décision de Williams du 2026-10-01, dans la fenêtre de la coordination (suite de D4) : la commission FORFAITAIRE baisse au prorata quand le prix vendu est inférieur au prix de référence, et n'augmente jamais au-dessus. À la question posée avec un exemple chiffré, Williams répond à 08:33:52Z « OUI POUR CA   - A (recommandé) : la commission reste […]. Elle baisse en cas de remise, mais n'augmente jamais. » (le montant est remplacé par « […] » : aucun montant n'entre dans ce dépôt public). Et c'est LUI qui demande l'inscription au contrat, à 08:33:27Z, sans qu'on le lui ait demandé : « oui et il faut bien que ce soit indiqué dans le contrat non ? » (séquence mot pour mot : `_REPRISE-AXION-APPORTEURS/SEQUENCE-DECISIONS-PHASE1-2026-10-01.md`, hors dépôt). Le prorata ne porte que sur le FORFAIT par journée (le pourcentage suit déjà le prix vendu : l'appliquer deux fois le baisserait deux fois), arrondi au centime INFÉRIEUR. SOURCE DÉJÀ EN PRODUCTION : le courriel d'axion-ia aux apporteurs (`axionia/src/lib/email/templates/apporteur-issue-echange.tsx`) annonce déjà « par journée de formation au tarif public (réduite au prorata en cas de remise accordée au client) », règle qu'ignoraient le contrat v1 et le calcul : ces tâches les alignent sur cette promesse. (1) La fonction pure de `commission.ts` multiplie le forfait par journée par min(1, prix vendu ÷ prix de référence), en centimes entiers arrondis à l'inférieur ; la commission au pourcentage est inchangée. (2) Le producteur du devis signé émet `prixVenduHt` et `prixReferenceHt` (lockstep avec INT-T48-P). (3) TÉMOINS rouges d'abord, sans montant réel : prix vendu égal au prix de référence, forfait entier ; prix vendu inférieur, forfait réduit au prorata et arrondi à l'inférieur ; prix vendu supérieur, forfait entier, jamais plus ; prix vendu nul, commission nulle ; une commission au pourcentage ne subit aucun prorata."
+      "acceptance": "Décision de Williams du 2026-10-01, dans la fenêtre de la coordination (suite de D4) : la commission FORFAITAIRE baisse au prorata quand le prix vendu est inférieur au prix de référence, et n'augmente jamais au-dessus. À la question posée avec un exemple chiffré, Williams répond à 08:33:52Z « OUI POUR CA   - A (recommandé) : la commission reste […]. Elle baisse en cas de remise, mais n'augmente jamais. » (le montant est remplacé par « […] » : aucun montant n'entre dans ce dépôt public). Et c'est LUI qui demande l'inscription au contrat, à 08:33:27Z, sans qu'on le lui ait demandé : « oui et il faut bien que ce soit indiqué dans le contrat non ? » (séquence mot pour mot : `_REPRISE-AXION-APPORTEURS/SEQUENCE-DECISIONS-PHASE1-2026-10-01.md`, hors dépôt). Le prorata ne porte que sur le FORFAIT du palier, dû une fois par commande (REQ-DM-015) (le pourcentage suit déjà le prix vendu : l'appliquer deux fois le baisserait deux fois), arrondi au centime INFÉRIEUR. SOURCE DÉJÀ EN PRODUCTION : le courriel d'axion-ia aux apporteurs (`axionia/src/lib/email/templates/apporteur-issue-echange.tsx`) annonce déjà « par journée de formation au tarif public (réduite au prorata en cas de remise accordée au client) », règle qu'ignoraient le contrat v1 et le calcul : ces tâches les alignent sur cette promesse. (1) La fonction pure de `commission.ts` multiplie le forfait du palier par min(1, prix vendu de la ligne ÷ prix de référence), en centimes entiers arrondis à l'inférieur ; la commission au pourcentage est inchangée. (2) Le producteur du devis signé émet `prixReferenceHt` par ligne, le prix vendu restant `montantHtCents` (lockstep avec INT-T48-P). (3) TÉMOINS rouges d'abord, sans montant réel : prix vendu égal au prix de référence, forfait entier ; prix vendu inférieur, forfait réduit au prorata et arrondi à l'inférieur ; prix vendu supérieur, forfait entier, jamais plus ; prix vendu nul, commission nulle ; une commission au pourcentage ne subit aucun prorata. À TRANCHER PAR WILLIAMS (audit indépendant du plan de la Phase 1 (2026-10-01), écart C-07) : la source du prix de référence. Proposition : celui FIGÉ dans la grille du contrat à la signature (une baisse de prix public ultérieure ne change pas le prorata d'un contrat signé)."
+    },
+    {
+      "id": "DM-45",
+      "titre": "Le journal chaîné a son premier écrivain et sa vérification",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "domaine",
+      "paths": [
+        "src/server/integrations/axionia/candidature-recue.ts",
+        "src/domain/evenement/charges.ts",
+        "prisma/migrations/",
+        "tests/integration/journal-premier-ecrivain.spec.ts"
+      ],
+      "schema": true,
+      "sensible": [
+        "rgpd"
+      ],
+      "deps": [],
+      "reqs": [
+        "REQ-DM-024"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.75,
+      "statut": "a_faire",
+      "acceptance": "Écart C6 de la vérification de bout en bout, porté par l'audit indépendant du plan de la Phase 1 (2026-10-01, `_REPRISE-AXION-APPORTEURS/AUDIT-PLAN-PHASE-1.md`), BLOQUANT avant CPL-T06 et DM-08. (1) Le type `apporteur_cree` (charge fermée : identifiant, candidature, statut) est écrit dans la transaction de `traiterCandidatureRecue`, par l'écrivain unique du journal. (2) Une tâche `journal_verifier`, inscrite au registre des tâches de fond (GOV-137), appelle `verifierChaine()`. (3) Le rôle applicatif n'est plus propriétaire des tables du journal. TÉMOINS rouges d'abord : une candidature reçue écrit exactement un `apporteur_cree` ; sous le rôle applicatif, désactiver le déclencheur du journal est refusé (42501). Relecture de la lentille schema."
+    },
+    {
+      "id": "GOV-137",
+      "titre": "Le lanceur des passages planifiés : « tout ce qui est dû à l'instant t »",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "integration",
+      "paths": [
+        "src/server/taches/lanceur.ts",
+        "src/server/taches/registre.ts",
+        "tests/integration/lanceur-des-passages.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [],
+      "reqs": [
+        "REQ-QA-027"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.75,
+      "statut": "a_faire",
+      "acceptance": "Porté par l'audit indépendant du plan de la Phase 1 (2026-10-01, `_REPRISE-AXION-APPORTEURS/AUDIT-PLAN-PHASE-1.md`) (écart A-07), BLOQUANT avant DM-24. (1) Un processus planifié déclenche périodiquement les passages « tout ce qui est dû à l'instant t » (REQ-QA-027), sous un verrou consultatif, avec un battement par clé de `TACHES` (`src/server/taches/registre.ts`). (2) Une tâche de fond s'y inscrit sans toucher au lanceur. TÉMOINS rouges d'abord : deux lanceurs concurrents n'exécutent un passage qu'une fois ; une tâche en échec n'arrête pas les autres."
+    },
+    {
+      "id": "INT-T49",
+      "titre": "Les attentes de dépendance des événements reçus sont reprises par le lanceur, hors after()",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "integration",
+      "paths": [
+        "src/server/queue/workers/evenement-recu.ts",
+        "src/app/api/webhooks/axionia/route.ts",
+        "tests/integration/reprise-des-attentes.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [
+        "argent"
+      ],
+      "deps": [
+        "GOV-137"
+      ],
+      "reqs": [
+        "REQ-QA-027"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "acceptance": "Écart C5 de la vérification de bout en bout, porté par l'audit indépendant du plan de la Phase 1 (2026-10-01, `_REPRISE-AXION-APPORTEURS/AUDIT-PLAN-PHASE-1.md`). (1) `passerLeTravail` et `reprendreLesAttentes` tournent par le lanceur (GOV-137), et non plus dans `after()`. (2) Les reprises sont bornées, et une alerte part au-delà. TÉMOIN rouge d'abord : une attente `en_attente_dependance` sans nouvel événement est reprise."
+    },
+    {
+      "id": "GOV-138",
+      "titre": "Passe du lot dédié : les décisions de Williams du 2026-10-01 au registre des décisions",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "docs/DECISIONS.md",
+        "docs/journal/"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [],
+      "reqs": [
+        "REQ-GOV-015"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.25,
+      "statut": "a_faire",
+      "acceptance": "Porté par l'audit indépendant du plan de la Phase 1 (2026-10-01, `_REPRISE-AXION-APPORTEURS/AUDIT-PLAN-PHASE-1.md`) (écart C-11). Passe du lot dédié de GOV-116, lancé par Williams : `docs/DECISIONS.md` reçoit l'accès avant signature (HYP-SEC03-ACCES amendée, D1), l'antériorité sur le devis émis et sur le devis signé non facturé (D2), la grille publiée en schema 2 (D4), le prorata de la remise, le nom affichable (apporteur et conseiller, même forme), l'option « branches à jour avant fusion » (D6), le retrait du PDF public (C1) et la validation du contrat v1 et du mandat, chacune avec sa date seule en colonne « Tranchée », sans référence d'article qui exigerait un ancrage du contrat. La règle de REQ-INT-014 sur l'API 1 reçoit une note de renversement datée. Les citations mot pour mot renvoient à `_REPRISE-AXION-APPORTEURS/SEQUENCE-DECISIONS-PHASE1-2026-10-01.md` et `SEQUENCE-DECISION-CONTRAT-2026-10-01.md`."
+    },
+    {
+      "id": "DM-46",
+      "titre": "Les arrondis de la commission : trois attendus calculés à la main, et une règle pour un encaissement nul ou négatif",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "argent",
+      "paths": [
+        "src/domain/commission/calcul.ts",
+        "tests/unit/domaine/commission-arrondis.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [
+        "argent"
+      ],
+      "deps": [],
+      "reqs": [
+        "REQ-DM-015"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "acceptance": "Écart C14 de la vérification de bout en bout, porté par l'audit indépendant du plan de la Phase 1 (2026-10-01). (1) Trois attendus d'arrondi calculés à la main, sans montant réel, deviennent des témoins. (2) Une permutation est vérifiée sur une facture NON soldée. (3) Un encaissement nul ou négatif suit une règle écrite, et ne lève plus d'exception (RangeError). TÉMOINS rouges d'abord."
+    },
+    {
+      "id": "DM-47",
+      "titre": "Partners applique au forfait du palier le prorata de la remise, avant le prorata d'encaissement",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "argent",
+      "paths": [
+        "src/domain/commission/calcul.ts",
+        "tests/unit/domaine/commission-calcul.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [
+        "argent"
+      ],
+      "deps": [
+        "INT-T48-P",
+        "JUR-T43",
+        "DM-46"
+      ],
+      "reqs": [
+        "REQ-DM-015"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "acceptance": "Porté par l'audit indépendant du plan de la Phase 1 (2026-10-01) (écart A-08), BLOQUANT avant la Phase 2 : `calcul.ts` paierait aujourd'hui le forfait entier malgré une remise. Décision de Williams du 2026-10-01 (prorata de la remise, voir JUR-T43). (1) `calculerCommission` (`src/domain/commission/calcul.ts`) applique au forfait du palier (type `forfait`) le facteur min(1, prix vendu de la ligne ÷ `prixReferenceHt`), en entiers, arrondi au centime inférieur, AVANT le prorata d'encaissement ; le pourcentage est inchangé. (2) Le montant de base est celui de la grille du contrat, jamais celui d'axion-ia (partners/ADR-0003 §3). TÉMOINS rouges d'abord, sans montant réel : égal, inférieur, supérieur (jamais au-dessus), nul, pourcentage sans prorata, contrat dont la grille diffère de la grille publiée."
+    },
+    {
+      "id": "SEC-44",
+      "titre": "L'API entrante d'axion-ia a son compteur par IP, son allowlist déclarée et ses sauts de confiance mesurés",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "securite",
+      "paths": [
+        "src/server/securite/rate-limit.ts",
+        "src/lib/env.ts",
+        "docs/tiers/coolify.md",
+        "tests/unit/securite/api-entrante-ip.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [
+        "auth"
+      ],
+      "deps": [],
+      "reqs": [
+        "REQ-SEC-012"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "acceptance": "Écart C11 de la vérification de bout en bout, porté par l'audit indépendant du plan de la Phase 1 (2026-10-01). (1) Le compteur `auth:axionia-ip` (60 par minute) est inscrit au registre des limites. (2) `AXIONIA_API_ALLOWLIST` est déclarée dans `schemaConfiguration` et dans le provisionnement. (3) `SAUTS_DE_CONFIANCE` est mesuré et consigné dans `docs/tiers/coolify.md`. TÉMOINS rouges d'abord. Relecture de la lentille securite."
     }
   ]
 }
