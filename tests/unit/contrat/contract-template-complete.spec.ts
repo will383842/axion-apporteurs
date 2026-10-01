@@ -431,9 +431,11 @@ describe('REQ-JUR-003 — concordance du gabarit avec le registre des décisions
 
   it('REQ-JUR-003 — W6 : les paliers et les familles de l’annexe 1 sont ceux de la décision', () => {
     const w6 = perimetreW6(registre().find((l) => l.id === 'W6')!.texte)!;
-    expect(w6.paliers).toBe(30);
+    // JUR-T46 : la conférence entre dans A1.1 au forfait et quitte A1.5 — 31 paliers, quatre
+    // prestations non commissionnées. Rouge tant que la ligne W6 du registre n'est pas amendée (GOV-139).
+    expect(w6.paliers).toBe(31);
     expect(w6.familles).toHaveLength(4);
-    expect(w6.nonCommissionnees).toHaveLength(5);
+    expect(w6.nonCommissionnees).toHaveLength(4);
     const paliers = paliersDeLAnnexe1(gabarit());
     expect(paliers).toHaveLength(w6.paliers);
     expect(new Set(paliers.map((p) => p.section)).size).toBe(w6.familles.length);
