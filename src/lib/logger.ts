@@ -14,7 +14,8 @@
  * DEUX DÉTECTIONS. Par NOM de clé — un segment du lexique de personne, de `SEGMENTS_SECRETS` ou de
  * `SEGMENTS_RESEAU`, casse et accents neutralisés, ou la clé brute `apporteurId` (on journalise son
  * EMPREINTE) : la valeur entière est remplacée. Par VALEUR, sur toute chaîne et tout nom de clé :
- * courriel, IBAN, téléphone français, lien de dépôt `/d/<jeton>`, adresse IPv4 ou IPv6 — sur la
+ * courriel, IBAN, téléphone français, lien de dépôt `/d/<jeton>` ou de connexion
+ * `/connexion/<jeton>`, adresse IPv4 ou IPv6 — sur la
  * chaîne telle quelle, puis sur sa forme décodée d'URL (`%40`, `%2540`, `+`).
  *
  * AUCUNE LECTURE D'ENVIRONNEMENT ICI : le niveau et la sortie entrent en paramètres.
@@ -87,6 +88,9 @@ const H6 = '[0-9a-f]{1,4}';
  */
 const MOTIFS: ReadonlyArray<readonly [RegExp, string | ((trouve: string) => string)]> = [
   [/\/d\/[^\s/?#"'<>]+/g, '/d/[jeton]'],
+  // Le lien magique (`/connexion/<jeton>`, SEC-03) a la forme du lien de dépôt et le même prix :
+  // `onRequestError` écrit `chemin` au journal et à Sentry — mesuré le 2026-09-30 (VÉRIF-1, GOV-131).
+  [/\/connexion\/[^\s/?#"'<>]+/g, '/connexion/[jeton]'],
   [/[\p{L}\p{N}._%+-]+@[\p{L}\p{N}-]+(?:\.[\p{L}\p{N}-]+)*\.\p{L}{2,}/gu, '[courriel]'],
   [FORME_IBAN, ibanEnTete],
   [/(?<![\d+])(?:\+33|0033|0)[\s.-]?[1-9](?:[\s.-]?\d{2}){4}(?!\d)/g, '[telephone]'],
