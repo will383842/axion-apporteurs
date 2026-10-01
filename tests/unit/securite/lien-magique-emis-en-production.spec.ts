@@ -1,9 +1,9 @@
 // @req REQ-SEC-001
 // @req REQ-INT-022
 /**
- * SEC-42 — LE LIEN MAGIQUE PART EN PRODUCTION, par l'émetteur de courriels (INT-T10, `demanderEnvoi`).
+ * SEC-42 — LE LIEN MAGIQUE PART EN PRODUCTION, par l'émetteur de courriels (`demanderEnvoi`).
  *
- * L'écart « C3 » de la vérification de bout en bout (GOV-131) : en production, le seul transport du notifieur levait
+ * L'écart « C3 » de la vérification de bout en bout du 2026-09-30 : en production, le seul transport du notifieur levait
  * `envoi_courriel_non_cable`, et `demanderEnvoi` n'était importé nulle part hors du relais. Le seul
  * parcours utilisateur de la Phase 0 n'existait donc pas.
  *

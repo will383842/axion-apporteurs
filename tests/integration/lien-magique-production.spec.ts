@@ -54,7 +54,7 @@ function envoi(dmarcVerifie: boolean, appels: string[]) {
 }
 
 describe('REQ-SEC-001 REQ-INT-022 — une ligne par envoi, sans jeton, en base réelle', () => {
-  it('REQ-INT-022 : drapeau posé — UNE ligne `envoye`, UN appel, et le jeton absent de la ligne', async () => {
+  it('REQ-SEC-001 · REQ-INT-022 : drapeau posé — UNE ligne `envoye`, UN appel, et le jeton absent de la ligne', async () => {
     const avant = await base.prisma.courrielEnvoye.count();
     const appels: string[] = [];
     await envoi(true, appels).envoyer({
@@ -72,7 +72,7 @@ describe('REQ-SEC-001 REQ-INT-022 — une ligne par envoi, sans jeton, en base r
     expect(JSON.stringify(ligne)).not.toContain('marie@example.org');
   });
 
-  it('REQ-INT-022 : drapeau fermé — la ligne est retenue, AUCUN appel', async () => {
+  it('REQ-SEC-001 · REQ-INT-022 : drapeau fermé — la ligne est retenue, AUCUN appel', async () => {
     const appels: string[] = [];
     await envoi(false, appels).envoyer({
       a: 'paul@example.org',
