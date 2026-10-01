@@ -18326,6 +18326,44 @@
       "estimateDays": 0.25,
       "statut": "a_faire",
       "acceptance": "Décision de Williams du 2026-10-01, dans la fenêtre de la coordination : à la question de 12:36:13Z (« 1. Un apporteur vous amène un client qui achète une conférence. L'apporteur touche combien ? […] 2. Un apporteur vous amène un client qui achète une « intervention sur demande » (une prestation sur mesure). L'apporteur touche combien ? »), Williams répond à 12:36:59Z : « […] pour une conference. ON FIXXERA ca 2. […] plus tard car je ne le sais pas encore » (séquence mot pour mot : `_REPRISE-AXION-APPORTEURS/SEQUENCE-DECISIONS-PHASE1-2026-10-01.md`, hors dépôt). La CONFÉRENCE est commissionnée au FORFAIT (le montant vit dans `pricing.ts` d'axion-ia, jamais dans ce dépôt) ; l'INTERVENTION SUR DEMANDE reste sans barème, à fixer plus tard par Williams. (1) Dans `pricing.ts`, le palier `intervention-conference` reçoit un `commissionId` de forme `flat` déclaré dans `COMMERCIAL_COMMISSIONS`, et sort de `BAREMES_INDEFINIS` ; `intervention-sur-demande` y reste (`hors_perimetre_w6`). (2) L'empreinte de la grille change : republication par `scripts/gates/grille-check.ts --publier`, en lockstep avec INT-T47-A. (3) TÉMOINS rouges d'abord : la conférence a une commission `flat` ; l'intervention sur demande n'en a aucune et reste dans `BAREMES_INDEFINIS` ; `grille-export.spec.ts` reste vert (un palier a SOIT un `commissionId`, SOIT une ligne d'indéfini). (4) Toute surface publique qui liste les forfaits (`CommercialProductsEarnings`, imprimés) reste sous la garde indicative de JUR-T45 : si la conférence y apparaît, c'est en formulation indicative ; sinon elle en est exclue explicitement, avec un témoin. Aucun montant dans ce dépôt public."
+    },
+    {
+      "id": "INT-T54",
+      "titre": "Alerte d'une attente traitant: qui dure, au-delà d'un seuil SSOT",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "integration",
+      "paths": [
+        "src/server/integrations/telegram/alertes.ts",
+        "src/domain/seuils/ssot.ts",
+        "src/server/queue/workers/evenement-recu.ts",
+        "tests/unit/integration/alerte-attente-traitant.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [
+        "argent"
+      ],
+      "deps": [
+        "INT-T43",
+        "QA-T54"
+      ],
+      "reqs": [
+        "REQ-DM-036",
+        "REQ-ARG-003"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "acceptance": "Condition (3) recommandée par la lentille sécurité pour INT-T43, sortie d'INT-T43 par la coordination le 2026-10-01 (sous délégation), pour éviter deux PR concurrentes sur `alertes.ts` : elle se code juste après QA-T54. Aujourd'hui, après INT-T43, un événement dont le type n'a pas de traitant attend en `en_attente_dependance` (`dependanceRef` = `traitant:<type>`) sans que personne soit prévenu si l'attente dure. (1) Une catégorie d'alerte CLOSE, neuve, ajoutée à `CATEGORIES_ALERTE` (`src/server/integrations/telegram/alertes.ts`) avec son gabarit. (2) Le seuil de durée est une constante de la SSOT (`src/domain/seuils/ssot.ts`) avec `source` et `verifieLe` (RM-10, REQ-JUR-015) ; aucun littéral ailleurs. (3) Une attente `traitant:<type>` plus ancienne que le seuil émet exactement une alerte, dédoublonnée par type ; l'alerte ne porte que le type d'événement, le nombre d'attentes et l'âge de la plus ancienne, sans donnée personnelle, sans charge ni identifiant d'événement. (4) TÉMOINS rouges d'abord : une attente sous le seuil n'alerte pas ; au-delà, une alerte et une seule ; une attente d'un autre préfixe que `traitant:` n'alerte pas ; le message ne contient aucune donnée personnelle. Le lieu de la détection (worker `evenement-recu.ts`, en fin de passage) est confirmé à la revendication.",
+      "tests": {
+        "REQ-DM-036": [
+          "tests/unit/integration/alerte-attente-traitant.spec.ts"
+        ],
+        "REQ-ARG-003": [
+          "tests/unit/integration/alerte-attente-traitant.spec.ts"
+        ]
+      }
     }
   ]
 }
