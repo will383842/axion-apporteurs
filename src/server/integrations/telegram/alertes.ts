@@ -123,9 +123,16 @@ export const ENVIRONNEMENTS_DE_DEPLOIEMENT = ['production', 'preview'] as const;
 const SHA_LISIBLE = /^[0-9a-f]{7,40}$/;
 const ILLISIBLE = 'illisible';
 
-/** Un sha de 7 à 40 hexadécimaux (casse indifférente), rendu en minuscules ; sinon « illisible ». */
+/**
+ * Un sha de 7 à 40 hexadécimaux (casse indifférente), rendu en minuscules ; absent ou vide,
+ * « inconnu » (le job qui devait le lire a pu mourir avant) ; toute autre valeur, « illisible ».
+ */
 export const shaLisible = (v: unknown): string =>
-  typeof v === 'string' && SHA_LISIBLE.test(v.toLowerCase()) ? v.toLowerCase() : ILLISIBLE;
+  v === undefined || v === null || v === ''
+    ? 'inconnu'
+    : typeof v === 'string' && SHA_LISIBLE.test(v.toLowerCase())
+      ? v.toLowerCase()
+      : ILLISIBLE;
 
 const environnement = (v: unknown): string =>
   typeof v === 'string' && (ENVIRONNEMENTS_DE_DEPLOIEMENT as readonly string[]).includes(v)

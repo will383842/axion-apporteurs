@@ -9,6 +9,9 @@
  *                                      l'application, déploiement déclenché, puis la même
  *                                      vérification
  *         … --essais <n> --delai-ms <n>  la patience de la vérification (les tests la raccourcissent)
+ *         tsx scripts/gates/deploy-verify.ts --alerter
+ *                                      (forge, job `alerter`, QA-T54) : l'alerte close
+ *                                      `deploiement_non_atterri`, après un `deployer` rouge ou annulé
  *
  * ── LA PLATEFORME TIRE, ELLE NE CONSTRUIT RIEN ───────────────────────────────────────────────
  *
@@ -39,8 +42,13 @@
  * les noms des variables sortent.
  */
 import { randomUUID } from 'node:crypto';
+import { appendFileSync } from 'node:fs';
 import { ENTETE_DE_BUILD } from '../../next.config';
-import { creerAlerteur, type ObjetAlerte } from '../../src/server/integrations/telegram/alertes';
+import {
+  creerAlerteur,
+  shaLisible,
+  type ObjetAlerte,
+} from '../../src/server/integrations/telegram/alertes';
 import type { Notifieur } from '../../src/lib/notify';
 
 const SHA_COMPLET = /^[0-9a-f]{40}$/;
@@ -136,43 +144,60 @@ async function verifierEnDetail(
   return { code: 1, servi: dernier.valeur };
 }
 
-export type AlerteDeDeploiement = {
-  /** Remet l'alerte au canal ; un échec d'envoi se nomme, il ne masque pas l'échec du déploiement. */
-  readonly alerter: (objet: ObjetAlerte) => Promise<void>;
-  /** L'environnement déployé, confronté à la liste close à l'écriture du message. */
-  readonly environnement: string;
-};
-
 /**
- * QA-T54 (REQ-GOV-014) — l'atterrissage, puis `readyz` ; tout échec émet EXACTEMENT une alerte close
- * `deploiement_non_atterri` (sha attendu, sha servi, environnement), et le code reste 1 : l'alerte
- * ne remplace pas le rouge du job. Le sha servi est passé BRUT : c'est l'alerte qui le confronte à sa
- * liste blanche (`shaLisible`), au seul endroit où il entre dans un message.
+ * QA-T54 (REQ-GOV-014) — l'atterrissage, puis `readyz`. Le job `deployer` ne fait QUE vérifier : il
+ * n'a aucun canal d'alerte (option B, choisie par la lentille `securite` et validée par la
+ * coordination). Il rend le sha servi au dernier essai (`null` : en-tête absent), que
+ * `sortieDuDeployeur` met en forme pour le job `alerter`.
  */
-export async function atterrirOuAlerter(
+export async function atterrir(
   sha: string,
   base: URL,
-  o: Options,
-  a: AlerteDeDeploiement
-): Promise<0 | 1> {
+  o: Options
+): Promise<{ code: 0 | 1; servi: string | null }> {
   const v = await verifierEnDetail(sha, base, o);
-  let echoue = v.code !== 0;
-  if (!echoue) {
-    const sante = await readyz(base);
-    if (sante !== 200) {
-      console.error(
-        `❌ readyz répond ${sante || 'rien'} : le sha est servi, l'application n'est pas prête`
-      );
-      echoue = true;
-    }
-  }
-  if (!echoue) return 0;
-  await a.alerter({
+  if (v.code !== 0) return v;
+  const sante = await readyz(base);
+  if (sante === 200) return v;
+  console.error(
+    `❌ readyz répond ${sante || 'rien'} : le sha est servi, l'application n'est pas prête`
+  );
+  return { code: 1, servi: v.servi };
+}
+
+/**
+ * Ce que `deployer` passe à `alerter` par la sortie `sha_servi` du job : le sha servi en minuscules
+ * s'il a la forme d'un sha, `illisible` s'il est là sans l'avoir, et RIEN s'il est absent. L'en-tête
+ * vient d'une réponse que contrôle quiconque sert le domaine : rien d'autre ne traverse la sortie
+ * (un saut de ligne y écrirait une seconde sortie).
+ */
+export function sortieDuDeployeur(servi: string | null): string {
+  if (servi === null || servi === '') return '';
+  const lu = shaLisible(servi);
+  return lu === 'inconnu' ? '' : lu;
+}
+
+/** Écrit `sha_servi` dans `GITHUB_OUTPUT` quand la forge le fournit ; ailleurs, rien. */
+function ecrireLaSortie(servi: string | null): void {
+  const fichier = process.env.GITHUB_OUTPUT ?? '';
+  if (fichier !== '') appendFileSync(fichier, `sha_servi=${sortieDuDeployeur(servi)}\n`);
+}
+
+/**
+ * L'alerte close `deploiement_non_atterri` : le sha attendu, le sha servi et l'environnement, tels
+ * que reçus. C'est le message (`shaLisible`, `ENVIRONNEMENTS_DE_DEPLOIEMENT`) qui les confronte à
+ * leur liste blanche : absent, « inconnu » ; mal formé, « illisible ».
+ */
+export function alerteDeDeploiement(
+  attendu: string,
+  servi: string,
+  environnement: string
+): ObjetAlerte {
+  return {
     categorie: 'deploiement_non_atterri',
     id: randomUUID(),
-    deploiement: { attendu: sha, servi: v.servi ?? '', environnement: a.environnement },
-  });
-  return 1;
+    deploiement: { attendu, servi, environnement },
+  };
 }
 
 /** Le notifieur Telegram de la forge : le texte de l'alerte, rien d'autre ; le jeton ne sort jamais. */
@@ -190,24 +215,42 @@ function notifieurTelegram(jeton: string, salon: string): Notifieur {
   };
 }
 
-const SECRETS_DU_CANAL = ['TELEGRAM_BOT_TOKEN', 'TELEGRAM_CHAT_ID'] as const;
+/** Les deux seuls secrets du job `alerter` ; `deployer` n'en lit aucun. */
+export const SECRETS_DU_CANAL = ['TELEGRAM_BOT_TOKEN', 'TELEGRAM_CHAT_ID'] as const;
 
 /**
- * L'alerte de la forge pour `deploy:coolify`. Sans canal, l'alerte qui ne peut partir est NOMMÉE en
- * `::error::` ; un envoi refusé par Telegram aussi. Dans les deux cas, le job est déjà rouge.
+ * Le job `alerter` (`needs: deployer`, `if: failure() || cancelled()`) : il émet TOUJOURS une
+ * alerte, même si `deployer` est mort avant d'écrire sa sortie (« inconnu »). Sans canal, ou si
+ * Telegram refuse, l'alerte qui ne part pas est NOMMÉE en `::error::` et le job rougit : une alarme
+ * éteinte ne passe pas pour un silence.
  */
-function alerteDeLaForge(): AlerteDeDeploiement {
-  const environnement = process.env.DEPLOIEMENT_ENVIRONNEMENT ?? '';
+export async function alerterDepuisLaForge(
+  env: Readonly<Record<string, string | undefined>>,
+  alerter: (objet: ObjetAlerte) => Promise<unknown>
+): Promise<0 | 1> {
+  const objet = alerteDeDeploiement(
+    env.SHA_ATTENDU ?? '',
+    env.SHA_SERVI ?? '',
+    env.DEPLOIEMENT_ENVIRONNEMENT ?? ''
+  );
+  try {
+    await alerter(objet);
+    return 0;
+  } catch (e) {
+    console.error(
+      `::error title=deploy:alerter::alerte ${objet.categorie} NON envoyée : ${(e as Error).message}`
+    );
+    return 1;
+  }
+}
+
+async function commandeAlerter(): Promise<number> {
   const manquants = SECRETS_DU_CANAL.filter((n) => (process.env[n] ?? '') === '');
   if (manquants.length > 0) {
-    return {
-      environnement,
-      alerter: async (objet) => {
-        console.error(
-          `::error title=deploy:coolify::alerte ${objet.categorie} NON envoyée : ${manquants.join(', ')} absent(s)`
-        );
-      },
-    };
+    console.error(
+      `::error title=deploy:alerter::alerte deploiement_non_atterri NON envoyée : ${manquants.join(', ')} absent(s)`
+    );
+    return 1;
   }
   const alerteur = creerAlerteur({
     notifieur: notifieurTelegram(
@@ -217,16 +260,7 @@ function alerteDeLaForge(): AlerteDeDeploiement {
     horloge: { maintenant: () => Date.now() },
     plafondParHeure: 1,
   });
-  return {
-    environnement,
-    alerter: async (objet) => {
-      await alerteur.alerter(objet).catch((e: Error) => {
-        console.error(
-          `::error title=deploy:coolify::alerte ${objet.categorie} NON envoyée : ${e.message}`
-        );
-      });
-    },
-  };
+  return alerterDepuisLaForge(process.env, (o) => alerteur.alerter(o));
 }
 
 function shaDemande(argv: string[]): string {
@@ -326,7 +360,9 @@ async function commandeDeclencher(argv: string[]): Promise<number> {
     return 1;
   }
   console.log(`   déploiement déclenché — lecture de ${ENTETE_DE_BUILD} sur ${publique.origin}`);
-  return atterrirOuAlerter(sha, publique, options(argv), alerteDeLaForge());
+  const r = await atterrir(sha, publique, options(argv));
+  ecrireLaSortie(r.servi);
+  return r.code;
 }
 
 /**
@@ -513,10 +549,12 @@ if (APPELE_DIRECTEMENT) {
         ? commandeRetourArriere
         : argv.includes('--retirer-echappatoire')
           ? commandeRetirerEchappatoire
-          : null;
+          : argv.includes('--alerter')
+            ? commandeAlerter
+            : null;
   if (mode === null) {
     console.error(
-      'usage : deploy-verify.ts --verifier [<sha>] | --declencher | --retour-arriere | --retirer-echappatoire'
+      'usage : deploy-verify.ts --verifier [<sha>] | --declencher | --retour-arriere | --retirer-echappatoire | --alerter'
     );
     process.exit(1);
   }
@@ -525,7 +563,13 @@ if (APPELE_DIRECTEMENT) {
   mode(
     argv.filter(
       (a) =>
-        !['--declencher', '--verifier', '--retour-arriere', '--retirer-echappatoire'].includes(a)
+        ![
+          '--declencher',
+          '--verifier',
+          '--retour-arriere',
+          '--retirer-echappatoire',
+          '--alerter',
+        ].includes(a)
     )
   ).then(
     (code) => {

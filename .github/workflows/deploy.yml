@@ -129,6 +129,10 @@ jobs:
       cancel-in-progress: false
     permissions:
       contents: read
+    # QA-T54 : le sha servi, deja mis en forme par le script (hexadecimal, illisible, ou vide),
+    # passe au job alerter. Aucun secret de canal ici : deployer n en lit que trois.
+    outputs:
+      sha_servi: ${{ steps.atterrissage.outputs.sha_servi }}
     steps:
       - uses: actions/checkout@v4
         with: { persist-credentials: false }
@@ -136,9 +140,39 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       - name: La plateforme tire sha-7, puis l atterrissage est lu sur l en-tete servi
+        id: atterrissage
         env:
           COOLIFY_URL: ${{ secrets.COOLIFY_URL }}
           COOLIFY_API_TOKEN: ${{ secrets.COOLIFY_API_TOKEN }}
           COOLIFY_APP_UUID: ${{ secrets.COOLIFY_APP_UUID }}
           PARTNERS_URL_PUBLIQUE: ${{ vars.PARTNERS_URL_PUBLIQUE }}
         run: pnpm deploy:coolify
+
+  # QA-T54 (REQ-GOV-014) — L ALERTE D UN DEPLOIEMENT QUI N ATTERRIT PAS. Option B de la lentille
+  # securite, validee par la coordination : un job A PART, pour que l alerte survive a un deployer
+  # qui plante, depasse son delai ou est annule, et pour que seul ce job lise le canal.
+  #   — needs: deployer et if: failure() || cancelled() : il ne tourne que si deployer n a pas reussi ;
+  #   — les deux secrets du canal dans l env de l ETAPE, jamais du job, et rien d autre ;
+  #   — le sha attendu est celui du commit, le sha servi vient de la sortie de deployer, absente si
+  #     deployer est mort avant de l ecrire : l alerte part quand meme, avec « inconnu ».
+  alerter:
+    runs-on: ubuntu-latest
+    needs: deployer
+    environment: production
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && (failure() || cancelled()) }}
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - uses: pnpm/action-setup@v4
+      - run: pnpm install --frozen-lockfile
+
+      - name: Un deploiement non atterri alerte, sans donnee personnelle
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          SHA_ATTENDU: ${{ github.sha }}
+          SHA_SERVI: ${{ needs.deployer.outputs.sha_servi }}
+          DEPLOIEMENT_ENVIRONNEMENT: production
+        run: pnpm exec tsx scripts/gates/deploy-verify.ts --alerter
