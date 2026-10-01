@@ -1446,6 +1446,28 @@
                 </div>
               </div>
             </section>
+            <section class="ecran" id="etat-chargement" aria-label="État : Envoi de la réponse">
+              <p class="sans-js-titre">État : Envoi de la réponse</p>
+              <div class="app">
+                <div class="app-principal">
+                  <div class="barre-etat" aria-hidden="true">
+                    <span>11:20</span><span>4G ▮▮▮</span>
+                  </div>
+                  <header class="app-tete">
+                    <span class="marque"
+                      ><svg class="logo" viewBox="0 0 1229 521" role="img" aria-label="Axion-IA">
+                        <use href="#logo-axion-ia" width="1229" height="521"></use></svg
+                    ></span>
+                  </header>
+                  <h2 class="app-titre">Votre échange avec Paul Démo-Martin</h2>
+                  <div class="defile" tabindex="0" role="region" aria-label="Contenu de l’écran">
+                    <p class="doux" role="status">Envoi de votre réponse…</p>
+                    <div class="squelette" style="height: 48px"></div>
+                    <div class="squelette" style="height: 48px"></div>
+                  </div>
+                </div>
+              </div>
+            </section>
             <section class="ecran" id="etat-erreur" aria-label="État : Erreur réseau">
               <p class="sans-js-titre">État : Erreur réseau</p>
               <div class="app">
@@ -1553,6 +1575,7 @@
         <p class="groupe">Vide et techniques</p>
         <ul>
           <li><a href="#etat-lien-inconnu">Lien inconnu ou expiré</a></li>
+          <li><a href="#etat-chargement">Envoi de la réponse</a></li>
           <li><a href="#etat-erreur">Erreur réseau</a></li>
         </ul>
       </nav>
@@ -1610,6 +1633,13 @@
           <p>
             <b>Un seul texte</b> pour un lien inconnu, expiré ou révoqué : aucun oracle (REQ-UX-061,
             SEC-40). C’est aussi l’état vide de la page.
+          </p>
+        </section>
+        <section class="note" data-pour="etat-chargement">
+          <h2>Envoi de la réponse</h2>
+          <p>
+            Le clic envoie la réponse (requête POST) ; la hauteur des boutons est réservée et le
+            statut annoncé.
           </p>
         </section>
         <section class="note" data-pour="etat-erreur">

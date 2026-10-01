@@ -183,6 +183,7 @@ const ETATS_ATTENDUS: Record<string, string[]> = {
     'etat-merci',
     'etat-deja-repondu',
     'etat-lien-inconnu',
+    'etat-chargement',
     'etat-erreur',
     'etat-opposition',
   ],
