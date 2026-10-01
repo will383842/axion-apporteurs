@@ -27,13 +27,20 @@ const TABLEAU = (lignes: string[]) =>
 
 const vue = (validation: string, taches: Vue['taches']): Vue => ({
   validation,
-  maquettes: ['fiche-prospect.html', 'connexion-console.html', 'apporteur-fiche.html', 'index.html'],
+  maquettes: [
+    'fiche-prospect.html',
+    'connexion-console.html',
+    'apporteur-fiche.html',
+    'index.html',
+  ],
   taches,
 });
 
 describe('REQ-UX-047 — maquettes-validees lit tout identifiant du registre, plus seulement UX-P…', () => {
   it('REQ-UX-047 — une ligne qui ne nomme qu’EXT-T02a est bien formée et verrouille EXT-T02a', () => {
-    const lu = lireValidation(TABLEAU(['| Fiche prospect | `fiche-prospect.html` | EXT-T02a | — | — |']));
+    const lu = lireValidation(
+      TABLEAU(['| Fiche prospect | `fiche-prospect.html` | EXT-T02a | — | — |'])
+    );
     expect(lu.fautes).toEqual([]);
     expect(lu.lignes[0]!.taches).toEqual(['EXT-T02a']);
   });
@@ -58,7 +65,9 @@ describe('REQ-UX-047 — maquettes-validees lit tout identifiant du registre, pl
       ])
     );
     expect(fautes.map((f) => f.famille)).toContain('ecran_attribue_sans_validation');
-    expect(fautes.find((f) => f.famille === 'ecran_attribue_sans_validation')!.message).toMatch(/EXT-T02a/);
+    expect(fautes.find((f) => f.famille === 'ecran_attribue_sans_validation')!.message).toMatch(
+      /EXT-T02a/
+    );
   });
 
   it('REQ-UX-047 — TÉMOIN : un identifiant inconnu du registre est refusé et nommé', () => {

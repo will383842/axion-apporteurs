@@ -45,9 +45,23 @@
  * lisait avant l'avant-dernière cellule de chaque ligne, par position — la colonne « Par », sous un
  * commentaire qui disait « Validé le » —, et une colonne ajoutée à droite faisait passer une tâche
  * non validée pour validée.
+ *
+ * GOV-113 (REQ-UX-047, REQ-UX-019) ÉTEND LA GARDE, sans en toucher les familles existantes : l'identifiant
+ * de tâche d'une ligne est celui du SCHÉMA du registre, plus seulement `UX-P…` ; et trois familles
+ * neuves, dont la définition vit dans `./ux-ecrans.ts` — une tâche d'écran qui ne cite pas REQ-UX-047,
+ * une tâche d'écran ATTRIBUÉE sans ligne, une maquette sans ses cinq états. Une tâche d'écran `a_faire`
+ * sans ligne n'est pas une faute : elle est IMPRIMÉE en dette (arbitrage de la gouvernance, option A).
+ * Rien de tout cela n'est rétroactif sur une tâche fusionnée, ni sur les maquettes de `NON_RETROACTIVES`.
  */
 
-import { readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import {
+  NON_RETROACTIVES,
+  etatsManquants,
+  motifIdentifiant,
+  tachesDEcran,
+  tachesDeLaCarte,
+} from './ux-ecrans';
 
 export const VALIDEUR = 'Will';
 export const DOSSIER_DES_MAQUETTES = 'docs/maquettes';
@@ -68,6 +82,9 @@ export const FAMILLES = [
   'maquette_sans_ligne',
   'tache_inconnue',
   'ecran_attribue_sans_validation',
+  'ecran_sans_req_ux_047',
+  'ecran_attribue_sans_ligne',
+  'maquette_sans_cinq_etats',
 ] as const;
 export type Famille = (typeof FAMILLES)[number];
 export type Faute = { famille: Famille; message: string };
@@ -88,12 +105,23 @@ export type Vue = {
   validation: string;
   /** Les fichiers `.html` de `docs/maquettes/`, noms seuls. */
   maquettes: readonly string[];
-  taches: readonly { id: string; statut: string; owner: string | null }[];
+  taches: readonly {
+    id: string;
+    statut: string;
+    owner: string | null;
+    reqs?: readonly string[];
+    paths?: readonly string[];
+  }[];
+  /** GOV-113 : le texte des cartes de routes (espace, console). Absent : aucune tâche n'y est nommée. */
+  cartes?: readonly string[];
+  /** GOV-113 : le contenu des maquettes, par nom. Absent : les cinq états ne sont pas jugés. */
+  html?: Readonly<Record<string, string>>;
 };
 
 const VIDE = /^(—|-+|)$/;
 const estVide = (c: string) => VIDE.test(c.trim());
-const IDENTIFIANT = /\bUX-P\d-[A-Za-z0-9]+\b/g;
+/** L'identifiant d'une tâche, LU dans le schéma du registre (GOV-113, RM-01). */
+const IDENTIFIANT = motifIdentifiant();
 const COLONNES = {
   fichier: /^fichier$/i,
   tache: /^t[âa]che/i,
@@ -178,7 +206,7 @@ export function lireValidation(texte: string): {
       fautive();
       fautes.push({
         famille: 'ligne_mal_formee',
-        message: `VALIDATION.md:${numero} — ${!fichier ? 'aucun fichier `…html` entre accents graves' : 'aucune tâche `UX-P…`'}. Une ligne sans fichier ou sans tâche ne verrouille rien : elle ne peut ni valider un écran ni en écarter un.`,
+        message: `VALIDATION.md:${numero} — ${!fichier ? 'aucun fichier `…html` entre accents graves' : 'aucun identifiant de tâche du registre'}. Une ligne sans fichier ou sans tâche ne verrouille rien : elle ne peut ni valider un écran ni en écarter un.`,
       });
       continue;
     }
@@ -231,6 +259,14 @@ export function tachesAEcarterParLeComposeur(texte: string): Set<string> {
   return s;
 }
 
+/** Les tâches d'écran que la garde juge : jamais une tâche fusionnée (GOV-113, point 6). */
+export function ecransJuges(vue: Vue): Vue['taches'][number][] {
+  const desCartes = new Set(
+    (vue.cartes ?? []).flatMap((c) => [...tachesDeLaCarte(c, IDENTIFIANT)])
+  );
+  return tachesDEcran(vue.taches, desCartes).filter((t) => t.statut !== 'fusionnee');
+}
+
 export function controler(vue: Vue): Faute[] {
   const { lignes, fautes, mentionnes, tableaux } = lireValidation(vue.validation);
   const ids = new Map(vue.taches.map((t) => [t.id, t]));
@@ -274,6 +310,33 @@ export function controler(vue: Vue): Faute[] {
         });
     }
   }
+  // GOV-113 — les tâches d'écran : REQ-UX-047 citée, et une ligne dès qu'elles sont attribuées.
+  const nommees = new Set(lignes.flatMap((l) => l.taches));
+  for (const t of ecransJuges(vue)) {
+    if (!(t.reqs ?? []).includes('REQ-UX-047'))
+      fautes.push({
+        famille: 'ecran_sans_req_ux_047',
+        message: `${t.id} est une tâche d'écran et ne cite pas REQ-UX-047 dans \`reqs\`. Ses huit points (geste et budget, première action, cinq états, libellés, accessibilité, maquette validée, premier usage, e-mails) ne seraient exigés par personne.`,
+      });
+    const attribuee = t.owner !== null || !STATUTS_NON_ATTRIBUES.has(t.statut);
+    if (attribuee && !nommees.has(t.id))
+      fautes.push({
+        famille: 'ecran_attribue_sans_ligne',
+        message: `${t.id} est une tâche d'écran attribuée (statut « ${t.statut} », propriétaire « ${t.owner ?? '—'} ») qu'aucune ligne de VALIDATION.md ne nomme. Un écran codé sans maquette est un écran que Will n'a jamais vu.`,
+      });
+  }
+  // GOV-113 — les cinq états de chaque maquette (REQ-UX-047 point 3), hors maquettes non rétroactives.
+  if (vue.html)
+    for (const l of lignes) {
+      const html = vue.html[l.fichier!];
+      if (html === undefined || Object.hasOwn(NON_RETROACTIVES, l.fichier!)) continue;
+      const manquent = etatsManquants(html, /console/i.test(l.section));
+      if (manquent.length)
+        fautes.push({
+          famille: 'maquette_sans_cinq_etats',
+          message: `VALIDATION.md:${l.numero} (${l.fichier}) — la maquette ne montre pas d'état ${manquent.map((m) => `« ${m} »`).join(', ')} (alias dans scripts/gates/ux-ecrans.ts, FAMILLES_D_ETATS). Un état qui n'est pas dessiné sera codé au hasard.`,
+        });
+    }
   // Sans tableau, « sans ligne » ne dit rien de plus que `tableau_illisible` : on ne le répète pas.
   if (tableaux === 0) return fautes;
   for (const m of vue.maquettes) {
@@ -290,14 +353,34 @@ export function controler(vue: Vue): Faute[] {
 
 export function vueDuDepot(): Vue {
   const registre = JSON.parse(readFileSync('docs/tasks.json', 'utf8')) as {
-    taches: { id: string; statut: string; owner: string | null }[];
+    taches: {
+      id: string;
+      statut: string;
+      owner: string | null;
+      reqs?: string[];
+      paths?: string[];
+    }[];
   };
   return {
     validation: readFileSync(FICHIER_DE_VALIDATION, 'utf8'),
     // Le DISQUE, et non `git ls-files` : une maquette neuve, pas encore suivie, doit déjà réclamer
     // sa ligne (une garde qui lit l'index est aveugle aux fichiers neufs).
     maquettes: readdirSync(DOSSIER_DES_MAQUETTES).filter((f) => f.endsWith('.html')),
-    taches: registre.taches.map((t) => ({ id: t.id, statut: t.statut, owner: t.owner ?? null })),
+    taches: registre.taches.map((t) => ({
+      id: t.id,
+      statut: t.statut,
+      owner: t.owner ?? null,
+      reqs: t.reqs ?? [],
+      paths: t.paths ?? [],
+    })),
+    cartes: ['docs/ESPACE-ROUTES.md', 'docs/CONSOLE-ROUTES.md']
+      .filter((c) => existsSync(c))
+      .map((c) => readFileSync(c, 'utf8')),
+    html: Object.fromEntries(
+      readdirSync(DOSSIER_DES_MAQUETTES)
+        .filter((f) => f.endsWith('.html'))
+        .map((f) => [f, readFileSync(`${DOSSIER_DES_MAQUETTES}/${f}`, 'utf8')])
+    ),
   };
 }
 
@@ -371,6 +454,45 @@ export const TEMOINS: { famille: Famille; nom: string; vue: Vue }[] = [
       ],
     }),
   },
+  {
+    famille: 'ecran_sans_req_ux_047',
+    nom: 'une page de console déclarée par une tâche qui ne cite pas REQ-UX-047',
+    vue: VUE_TEMOIN(TABLEAU(MILIEU_OK), {
+      taches: [
+        ...VUE_TEMOIN('').taches,
+        {
+          id: 'EXT-T04',
+          statut: 'a_faire',
+          owner: null,
+          reqs: ['REQ-EXT-011'],
+          paths: ['src/app/(console)/console/candidatures/'],
+        },
+      ],
+    }),
+  },
+  {
+    famille: 'ecran_attribue_sans_ligne',
+    nom: 'une tâche de console nommée par la carte, attribuée, qu’aucune ligne ne nomme',
+    vue: VUE_TEMOIN(TABLEAU(MILIEU_OK), {
+      cartes: [
+        '| Route | Écran | Tâche |\n| --- | --- | --- |\n| `/console/candidatures` | Saisie | EXT-T04 |\n',
+      ],
+      taches: [
+        ...VUE_TEMOIN('').taches,
+        { id: 'EXT-T04', statut: 'en_cours', owner: 'A05', reqs: ['REQ-UX-047'], paths: [] },
+      ],
+    }),
+  },
+  {
+    famille: 'maquette_sans_cinq_etats',
+    nom: 'une maquette de la ligne du MILIEU sans état de chargement',
+    vue: VUE_TEMOIN(TABLEAU(MILIEU_OK), {
+      html: {
+        'b.html':
+          '<section class="ecran" id="etat-nominal"></section><section class="ecran" id="etat-vide"></section><section class="ecran" id="etat-erreur"></section>',
+      },
+    }),
+  },
 ];
 
 export const CONTRE_TEMOINS: { nom: string; vue: Vue }[] = [
@@ -389,6 +511,59 @@ export const CONTRE_TEMOINS: { nom: string; vue: Vue }[] = [
     }),
   },
   { nom: 'index.html sans ligne (la charte)', vue: VUE_TEMOIN(TABLEAU(MILIEU_OK)) },
+  {
+    nom: 'GOV-113 : une tâche d’écran a_faire sans ligne est une dette imprimée, pas une faute',
+    vue: VUE_TEMOIN(TABLEAU(MILIEU_OK), {
+      taches: [
+        ...VUE_TEMOIN('').taches,
+        {
+          id: 'EXT-T04',
+          statut: 'a_faire',
+          owner: null,
+          reqs: ['REQ-UX-047'],
+          paths: ['src/app/(console)/console/candidatures/'],
+        },
+      ],
+    }),
+  },
+  {
+    nom: 'GOV-113 : un error.tsx seul n’est pas un écran, et une tâche fusionnée n’est pas rejugée',
+    vue: VUE_TEMOIN(TABLEAU(MILIEU_OK), {
+      taches: [
+        ...VUE_TEMOIN('').taches,
+        {
+          id: 'SEC-46',
+          statut: 'en_cours',
+          owner: 'A05',
+          reqs: [],
+          paths: ['src/app/(espace)/error.tsx'],
+        },
+        {
+          id: 'UX-P1-02',
+          statut: 'fusionnee',
+          owner: 'A05',
+          reqs: [],
+          paths: ['src/app/(espace)/deposer/page.tsx'],
+        },
+      ],
+    }),
+  },
+  {
+    nom: 'GOV-113 : une maquette de console avec ses quatre familles d’états, alias compris',
+    vue: VUE_TEMOIN(TABLEAU(MILIEU_OK), {
+      html: {
+        'b.html': [
+          'etat-nominal',
+          'etat-premier-jour',
+          'etat-envoi',
+          'etat-erreurs',
+          'etat-lecteur',
+        ]
+          .map((id) => `<section class="ecran" id="${id}"></section>`)
+          .join(''),
+      },
+    }),
+  },
 ];
 
 function prouver(): number {
@@ -431,6 +606,16 @@ function juger(): number {
   const nommees = new Set(lignes.flatMap((l) => l.taches));
   const sansLigne = vue.taches.filter((t) => /^UX-P[123]-/.test(t.id) && !nommees.has(t.id)).length;
   for (const f of fautes) console.error(`❌ [${f.famille}] ${f.message}`);
+  // GOV-113 : la dette d'une tâche d'écran a_faire sans ligne est IMPRIMÉE, jamais rougie (option A).
+  const dette = ecransJuges(vue).filter(
+    (t) => !nommees.has(t.id) && t.owner === null && STATUTS_NON_ATTRIBUES.has(t.statut)
+  );
+  if (dette.length)
+    console.log(
+      `ℹ️  dette nommée (GOV-113) — ${dette.length} tâche(s) d'écran sans ligne de validation, à poser avant leur attribution : ${dette.map((t) => t.id).join(', ')}`
+    );
+  const nonRetro = Object.keys(NON_RETROACTIVES);
+  console.log(`ℹ️  maquettes non rétroactives (cinq états non jugés) : ${nonRetro.join(', ')}`);
   const bilan =
     `${lignes.length} ligne(s) lue(s), ${validees.length} validée(s) par ${VALIDEUR}, ` +
     `${vue.maquettes.length} maquette(s) sur le disque ; tâches d'écran écartées tant que non validées : ` +
