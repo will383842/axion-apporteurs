@@ -2,7 +2,7 @@
 /**
  * JUR-T35 — AUCUN DÉPÔT RÉEL TANT QUE L'AIPD N'EST PAS SIGNÉE (REQ-CPL-009).
  *
- * REQ-CPL-009 exige l'analyse d'impact SIGNÉE avant le premier dépôt réel ; JUR-T04 l'a livrée et
+ * REQ-CPL-009 exige l'analyse d'impact SIGNÉE avant le premier dépôt réel ; l'analyse est livrée et
  * écrit la condition, sans la garder. Arbitrage de la coordination à la revendication (option 1) :
  * la signature a DEUX sources qui doivent concorder — le texte de `docs/rgpd/aipd.md`, qu'une demande
  * de fusion peut modifier, et la variable `AIPD_SIGNEE_LE` de l'environnement GitHub `production`,
