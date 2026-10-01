@@ -17062,7 +17062,12 @@
         "sha": "28a298ad76afc5422932d0c5f8927b266397ac27",
         "fusionneeAt": "2026-10-01T06:12:25Z"
       },
-      "motif": null
+      "motif": null,
+      "tests": {
+        "REQ-GOV-027": [
+          "tests/unit/gouvernance/verrou-de-phase.spec.ts"
+        ]
+      }
     },
     {
       "id": "GOV-132",
@@ -17097,7 +17102,12 @@
         "sha": "e6cfd42e579b55a27188c322ba8e8e673cb609f4",
         "fusionneeAt": "2026-10-01T05:29:39Z"
       },
-      "motif": null
+      "motif": null,
+      "tests": {
+        "REQ-GOV-027": [
+          "tests/unit/gouvernance/verrou-de-phase.spec.ts"
+        ]
+      }
     },
     {
       "id": "INT-T43",
