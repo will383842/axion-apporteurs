@@ -706,6 +706,10 @@ const MANUELS: Record<string, string[]> = {
   ],
   'INT-T51': ['docs/tiers/axionia.md'],
   'INT-T50-A': ['axionia/docs/runbooks/rotation-secret-partners.md'],
+  'INT-T53-A': [
+    'axionia/src/content/pricing.ts',
+    'axionia/src/content/commission-conference.test.ts',
+  ],
   'JUR-T44': [
     'axionia/src/lib/commercial-application/kit-apporteur.ts',
     'axionia/src/lib/commercial-application/__tests__/kit-apporteur-sans-pdf.spec.ts',

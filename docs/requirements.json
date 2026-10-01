@@ -230,6 +230,7 @@
         "GOV-080",
         "INT-T47-A",
         "INT-T47-P",
+        "INT-T53-A",
         "JUR-T43",
         "JUR-T45"
       ]
@@ -248,6 +249,7 @@
         "DM-04",
         "DM-46",
         "DM-47",
+        "INT-T53-A",
         "T-ARG-035"
       ]
     },
@@ -5717,7 +5719,7 @@
     {
       "id": "REQ-EXT-022",
       "domaine": "extensions du 2026-09-03 (REQ-EXT)",
-      "texte": "🔴 **La granularité est le palier, pas la famille.** Une `GrilleContrat` porte **une ligne par palier vendable** des quatre familles commissionnées, soit **30 lignes** : 9 formations collectives, 5 accompagnements 1-to-1, 5 implémentations, 11 audits. La durée (demi-journée, 1 jour, 2 jours) est un **axe distinct** : deux paliers de durées différentes sont deux lignes. La liste des 30 paliers est **dérivée de `pricing.ts`** par le script d'export (REQ-DM-014), jamais retapée ; un test compare le nombre et les identifiants de paliers de la grille publiée à ceux de `COMMERCIAL_COMMISSIONS`. Un forfait sur une formation d'une journée et un pourcentage sur les audits, pour le **même** apporteur, est le cas nominal, pas une exception. **Les cinq familles non commissionnées — développement web, maintenance, coaching récurrent, conférences, interventions sur demande — n'ont aucune ligne de grille** et sont énumérées **explicitement** sous l'annexe 1 du contrat : c'est le silence, et non l'omission, qui crée le litige.",
+      "texte": "🔴 **La granularité est le palier, pas la famille.** Une `GrilleContrat` porte **une ligne par palier vendable** des quatre familles commissionnées, soit **30 lignes** : 9 formations collectives, 5 accompagnements 1-to-1, 5 implémentations, 11 audits. La durée (demi-journée, 1 jour, 2 jours) est un **axe distinct** : deux paliers de durées différentes sont deux lignes. La liste des 30 paliers est **dérivée de `pricing.ts`** par le script d'export (REQ-DM-014), jamais retapée ; un test compare le nombre et les identifiants de paliers de la grille publiée à ceux de `COMMERCIAL_COMMISSIONS`. Un forfait sur une formation d'une journée et un pourcentage sur les audits, pour le **même** apporteur, est le cas nominal, pas une exception. **Les quatre familles non commissionnées — développement web, maintenance, coaching récurrent, interventions sur demande — n'ont aucune ligne de grille** (la conférence est commissionnée au forfait depuis la décision de Williams du 2026-10-01) et sont énumérées **explicitement** sous l'annexe 1 du contrat : c'est le silence, et non l'omission, qui crée le litige.",
       "source": "GRILLE-PAR-APPORTEUR §1.1, §6.1 ; décision W6 du 2026-09-03",
       "statut": "active",
       "remplaceePar": null,
@@ -5726,6 +5728,7 @@
       "phase": 1,
       "taches": [
         "DM-23",
+        "INT-T53-A",
         "T-ARG-037"
       ]
     },
