@@ -584,6 +584,7 @@ const MANUELS: Record<string, string[]> = {
   'GOV-133': [
     'docs/adr/0009-valeurs-du-monde-reel.md',
     'tests/unit/gouvernance/verrou-de-phase.spec.ts',
+    'scripts/gates/gov-tasks.ts',
   ],
 };
 

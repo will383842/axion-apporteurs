@@ -17194,7 +17194,8 @@
       "zone": "gouvernance",
       "paths": [
         "docs/adr/0009-valeurs-du-monde-reel.md",
-        "tests/unit/gouvernance/verrou-de-phase.spec.ts"
+        "tests/unit/gouvernance/verrou-de-phase.spec.ts",
+        "scripts/gates/gov-tasks.ts"
       ],
       "schema": false,
       "sensible": [],
