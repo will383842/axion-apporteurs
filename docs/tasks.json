@@ -5627,7 +5627,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "Porté par l'audit indépendant du plan de la Phase 1 (2026-10-01, `_REPRISE-AXION-APPORTEURS/AUDIT-PLAN-PHASE-1.md`) (écart C-08). (1) Code public de parrainage d'au moins 25 bits d'aléa, alphabet sans ambiguïté, unique, jamais dérivé de l'identité (`src/domain/parrainage/code.ts`). (2) Un `?p=` inconnu, mal formé ou révoqué est ignoré silencieusement : réponse identique à une visite sans code (aucun oracle, même statut, même corps). (3) Propagation sans cookie persistant ni stockage local au-delà de la session de navigation. (4) Débit limité par `rate-limit.ts`. TÉMOINS rouges d'abord : code inconnu ≡ sans code, octet à octet ; aucun `Set-Cookie` persistant. Relecture de la lentille securite. RÉPARTITION (rattrapage 44, arbitrage de la coordination sous délégation, 2026-10-01, sur proposition de A05) : le `?p=` arrive sur axion-ia, et Partners ne voit ni la requête ni l'IP du visiteur. Partners (SEC-21) porte la forme du code (`src/domain/parrainage/code.ts` : ≥ 25 bits, alphabet de Crockford, jamais dérivé de l'identité, exportée pour axion-ia ; déplacée de `src/domain/apporteur/identifiants.ts` avec ses appelants, RM-07) et la résolution silencieuse d'un code inconnu dans `candidature.recue` (`candidature-recue.ts`, lecture du parrain actif par son code dans la table des apporteurs, aucun schéma). Condition de la lentille sécurité, dans la forme retenue par la coordination : aucun rattachement sans code valide, en échec fermé. La limite par IP, la réponse indistincte, l'absence de cookie persistant (REQ-JUR-028) et la journalisation de la panne sont portées par INT-T52-A ; `rate-limit.ts` n'est plus un chemin de SEC-21. Un code capturé pendant une panne du limiteur n'est pas transmis par axion-ia : rien ne le marque côté Partners.",
+      "acceptance": "Porté par l'audit indépendant du plan de la Phase 1 (2026-10-01, `_REPRISE-AXION-APPORTEURS/AUDIT-PLAN-PHASE-1.md`) (écart C-08). (1) Code public de parrainage d'au moins 25 bits d'aléa, alphabet sans ambiguïté, unique, jamais dérivé de l'identité (`src/domain/parrainage/code.ts`). (2) Un `?p=` inconnu, mal formé ou révoqué est ignoré silencieusement : réponse identique à une visite sans code (aucun oracle, même statut, même corps). (3) Propagation sans cookie persistant ni stockage local au-delà de la session de navigation. (4) Débit limité par `rate-limit.ts`. TÉMOINS rouges d'abord : code inconnu ≡ sans code, octet à octet ; aucun `Set-Cookie` persistant. Relecture de la lentille securite. RÉPARTITION (rattrapage 44, arbitrage de la coordination sous délégation, 2026-10-01, sur proposition de A05) : le `?p=` arrive sur axion-ia, et Partners ne voit ni la requête ni l'IP du visiteur. Partners (SEC-21) porte la forme du code (`src/domain/parrainage/code.ts` : ≥ 25 bits, alphabet de Crockford, jamais dérivé de l'identité, exportée pour axion-ia ; déplacée de `src/domain/apporteur/identifiants.ts` avec ses appelants, RM-07) et la résolution silencieuse d'un code inconnu dans `candidature.recue` (`candidature-recue.ts`, lecture du parrain actif par son code dans la table des apporteurs, aucun schéma). Condition de la lentille sécurité, dans la forme retenue par la coordination : aucun rattachement sans code valide, en échec fermé. La limite par IP, la réponse indistincte, l'absence de cookie persistant (REQ-JUR-028) et la journalisation de la panne sont portées par INT-T52-A ; `rate-limit.ts` n'est plus un chemin de SEC-21. Un code capturé pendant une panne du limiteur n'est pas transmis par axion-ia : rien ne le marque côté Partners. PRÉCISION A01 (rattrapage 46, proposition de A05) : « parrain actif » = apporteur au statut `signe`, et lui seul ; un code d'apporteur suspendu, résilié ou d'avant la signature ne rattache rien (traité comme sans code). Un code mal formé n'est jamais cherché en base ; une lecture en échec fait remonter l'erreur (l'événement est rejoué, jamais rattaché). `identifiants.ts` ré-exporte la forme pour que le témoin de DM-06 reste inchangé.",
       "tests": {
         "REQ-SEC-037": [
           "tests/unit/securite/code-de-parrainage.spec.ts",
@@ -5645,7 +5645,8 @@
         "src/content/micro-copy/courriels/information-article-14.ts",
         "src/content/micro-copy/console/script-de-qualification.ts",
         "tests/unit/juridique/information-article-14.spec.ts",
-        "docs/runbooks/mise-en-service.md"
+        "docs/runbooks/mise-en-service.md",
+        "scripts/gates/ux-exhaustivite.ts"
       ],
       "schema": false,
       "sensible": [
@@ -6004,7 +6005,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "Contraintes W20 à intégrer (chantier W20, réponse de Williams du 2026-09-29, session -d7, et son exigence d'expérience « facile à se souvenir et intuitif », docs/chantiers/W20-confirmation-par-email.md §4 et HYP-W20-BADGE) : l'apporteur n'a rien à retenir, l'écran le lui montre. (1) Chaque dépôt en phase de confirmation porte UN SEUL badge d'état, avec sa date et au plus une action, dérivé serveur par une fonction pure exhaustive, horloge injectée, partie de statutApporteur (REQ-UX-004) : 🟢 « Confirmée » (active : clic retenu, appel confirme ou confirmation tacite) ; 🟡 « En attente de confirmation · réservée pour vous jusqu'au <date> » (provisoire, e-mail reçu, sans réponse ni appel concluant, demande non signalée ; injoignable et ne_se_souvient_pas s'y lisent aussi, rien d'autre n'est visible) ; 🟡 « En attente de confirmation — Axion-IA va appeler votre contact » (demande SIGNALÉE, clic non retenu compris : sans date tacite ni phrase d'aide, formulation neutre, sans consigne, dans la SSOT de micro-copy ; Correction de sécurité du 2026-09-29 (refus de la lentille securite sur 2340a63, docs/chantiers/W20-confirmation-par-email.md §2, §8 et question 18)) ; 🔴 « E-mail non reçu par le contact », action unique « Corriger l'adresse » (rebond non corrigé ; action absente au-delà de CORRECTIONS_ADRESSE_MAX) ; ⚪ « Non confirmée par le contact » (invalidee par non_confirme) ; ⚪ « Réservation terminée · l'entreprise est de nouveau disponible » (demande signalée libérée sans appel concluant par DM-13 : trois injoignable ou 45 jours après l'envoi, réponse de Williams du 2026-09-29 à la question 19 ; attribution perimee par liberee_sans_confirmation), sans date, sans action, sans phrase d'aide, libellé par défaut dans la SSOT de micro-copy, qui ne dit ni la raison, ni la vérification, ni le nombre d'appels. Le libellé de la demande signalée suit la réponse de Williams à la question 18 (même jour : aucune confirmation tacite). (2) La date est le jour de l'échéance tacite (recueAt + CONFIRMATION_TACITE_JOURS, DM-24), écrite en toutes lettres (« 29 octobre 2026 ») dans le fuseau de l'apporteur (Europe/Paris par défaut, question 17 du plan) ; le badge passe seul à 🟢 le jour affiché ; avant l'envoi effectif, 🟡 sans date (question 16). (3) 🔴 prime sur le libellé de la demande signalée tant que le rebond n'est pas corrigé. Une seule phrase d'aide, sous le 🟡 daté et sous 🔴, jamais sous le libellé de la demande signalée : « Sans réponse de votre contact, l'entreprise reste réservée pour vous 30 jours après la réception de notre e-mail. », le nombre lu de la SSOT. (4) Tous les textes viennent de la SSOT de micro-copy (UX-P1-41) et passent la garde lexicale : aucune consigne, aucun « obligatoire ». (5) Accessibilité : chaque badge a son libellé écrit, la pastille est décorative (aria-hidden), la couleur n'est jamais seule porteuse du sens ; axe-core sans violation sérieuse. (6) Aucune raison de vérification, aucun tirage d'échantillon, aucun clic non retenu n'atteint le DTO de l'espace (REQ-SEC-060 au plan) : seul l'état « appel attendu », dérivé côté serveur du prédicat de SEC-41, y arrive ; les phrases de REQ-UX-023 ne s'ajoutent pas au badge, et « vérification prioritaire » n'est jamais affichée pour une raison W20. (7) Cinq états de l'écran : liste, vide (guide vers le premier dépôt, REQ-UX-019), chargement, erreur avec reprise, hors ligne (dernière liste connue, avec son heure). (8) Le composant du badge est réutilisé tel quel par la carte du dépôt (UX-P1-43). Garantie d'expérience de l'apporteur honnête (un artisan sur Gmail, par exemple) : ces dépôts sont appelés en priorité (DM-43). Tests : un cas par badge ; demande signalée → libellé d'appel attendu, sans date, aucune bascule vers 🟢 à trente jours ; demande signalée libérée → ⚪ « Réservation terminée », sans date ni action, et aucune raison dans le DTO ; bascule 🟡 → 🟢 horloge figée, y compris une échéance à 23 h 59 et un changement d'heure ; rebond → 🔴 ; correction → 🟡 avec la nouvelle date ; une valeur d'état sans badge fait échouer le typecheck. Maquette mes-entreprises.html revalidée (UX-P1-40). REQ-UX-062 proposée au §3 du plan, écrite par GOV-112 (dépendance). REQ-UX-047 (passe GOV-115, 2026-09-30) : geste principal : DETTE NOMMÉE, geste non encore connu, à écrire à la revendication ; budget : lu dans `BUDGETS_UX` (consultation au plus 3 interactions, saisie au plus 8), mesuré par la fixture QA-T33. la maquette de l'écran est validée dans `docs/maquettes/VALIDATION.md` avant la première ligne de code ; cinq états (REQ-UX-019 amendée)."
+      "acceptance": "Contraintes W20 à intégrer (chantier W20, réponse de Williams du 2026-09-29, session -d7, et son exigence d'expérience « facile à se souvenir et intuitif », docs/chantiers/W20-confirmation-par-email.md §4 et HYP-W20-BADGE) : l'apporteur n'a rien à retenir, l'écran le lui montre. (1) Chaque dépôt en phase de confirmation porte UN SEUL badge d'état, avec sa date et au plus une action, dérivé serveur par une fonction pure exhaustive, horloge injectée, partie de statutApporteur (REQ-UX-004) : 🟢 « Confirmée » (active : clic retenu, appel confirme ou confirmation tacite) ; 🟡 « En attente · confirmée automatiquement le <date> » (provisoire, e-mail reçu, sans réponse ni appel concluant, demande non signalée ; injoignable et ne_se_souvient_pas s'y lisent aussi, rien d'autre n'est visible) ; 🟡 « En attente de confirmation — Axion-IA va appeler votre contact » (demande SIGNALÉE, clic non retenu compris : sans date tacite ni phrase d'aide, formulation neutre, sans consigne, dans la SSOT de micro-copy ; Correction de sécurité du 2026-09-29 (refus de la lentille securite sur 2340a63, docs/chantiers/W20-confirmation-par-email.md §2, §8 et question 18)) ; 🔴 « E-mail non reçu par le contact », action unique « Corriger l'adresse » (rebond non corrigé ; action absente au-delà de CORRECTIONS_ADRESSE_MAX) ; ⚪ « Non confirmée par le contact » (invalidee par non_confirme) ; ⚪ « Réservation terminée · l'entreprise est de nouveau disponible » (demande signalée libérée sans appel concluant par DM-13 : trois injoignable ou 45 jours après l'envoi, réponse de Williams du 2026-09-29 à la question 19 ; attribution perimee par liberee_sans_confirmation), sans date, sans action, sans phrase d'aide, libellé par défaut dans la SSOT de micro-copy, qui ne dit ni la raison, ni la vérification, ni le nombre d'appels. Le libellé de la demande signalée suit la réponse de Williams à la question 18 (même jour : aucune confirmation tacite). (2) La date est le jour de l'échéance tacite (recueAt + CONFIRMATION_TACITE_JOURS, DM-24), écrite en toutes lettres (« 29 octobre 2026 ») dans le fuseau de l'apporteur (Europe/Paris par défaut, question 17 du plan) ; le badge passe seul à 🟢 le jour affiché ; avant l'envoi effectif, 🟡 sans date (question 16). (3) 🔴 prime sur le libellé de la demande signalée tant que le rebond n'est pas corrigé. Une seule phrase d'aide, sous le 🟡 daté et sous 🔴, jamais sous le libellé de la demande signalée : « Sans réponse de votre contact, votre dépôt est confirmé 30 jours après la réception de notre e-mail. », le nombre lu de la SSOT. (4) Tous les textes viennent de la SSOT de micro-copy (UX-P1-41) et passent la garde lexicale : aucune consigne, aucun « obligatoire ». (5) Accessibilité : chaque badge a son libellé écrit, la pastille est décorative (aria-hidden), la couleur n'est jamais seule porteuse du sens ; axe-core sans violation sérieuse. (6) Aucune raison de vérification, aucun tirage d'échantillon, aucun clic non retenu n'atteint le DTO de l'espace (REQ-SEC-060 au plan) : seul l'état « appel attendu », dérivé côté serveur du prédicat de SEC-41, y arrive ; les phrases de REQ-UX-023 ne s'ajoutent pas au badge, et « vérification prioritaire » n'est jamais affichée pour une raison W20. (7) Cinq états de l'écran : liste, vide (guide vers le premier dépôt, REQ-UX-019), chargement, erreur avec reprise, hors ligne (dernière liste connue, avec son heure). (8) Le composant du badge est réutilisé tel quel par la carte du dépôt (UX-P1-43). Garantie d'expérience de l'apporteur honnête (un artisan sur Gmail, par exemple) : ces dépôts sont appelés en priorité (DM-43). Tests : un cas par badge ; demande signalée → libellé d'appel attendu, sans date, aucune bascule vers 🟢 à trente jours ; demande signalée libérée → ⚪ « Réservation terminée », sans date ni action, et aucune raison dans le DTO ; bascule 🟡 → 🟢 horloge figée, y compris une échéance à 23 h 59 et un changement d'heure ; rebond → 🔴 ; correction → 🟡 avec la nouvelle date ; une valeur d'état sans badge fait échouer le typecheck. Maquette mes-entreprises.html revalidée (UX-P1-40). REQ-UX-062 proposée au §3 du plan, écrite par GOV-112 (dépendance). REQ-UX-047 (passe GOV-115, 2026-09-30) : geste principal : DETTE NOMMÉE, geste non encore connu, à écrire à la revendication ; budget : lu dans `BUDGETS_UX` (consultation au plus 3 interactions, saisie au plus 8), mesuré par la fixture QA-T33. la maquette de l'écran est validée dans `docs/maquettes/VALIDATION.md` avant la première ligne de code ; cinq états (REQ-UX-019 amendée). AMENDEMENT (rattrapage 45) : DÉCISION DE WILLIAMS (2026-10-01 soir, option A, REQ-UX-062 et HYP-W20-BADGE ; séquence hors dépôt `_REPRISE-AXION-APPORTEURS/SEQUENCE-DECISION-BADGE-W20-2026-10-01.md`) : « ok pour ca ▎ 🟡 En attente · confirmée automatiquement le 31 octobre. » Le badge jaune dit « En attente · confirmée automatiquement le <date> » (libellé choisi par Williams), PARTOUT : badge de « Mes entreprises » et carte du dépôt. La phrase d'aide « Sans réponse de votre contact, votre dépôt est confirmé 30 jours après la réception de notre e-mail. » (le nombre lu dans la SSOT), sous 🟡 et sous 🔴, est PROPOSÉE et reste à valider par Williams en séance (point 7 de la séance du 2026-10-02) : elle ne lui a pas été montrée explicitement (note de la lentille exactitude). L'ancien libellé (« réservée pour vous jusqu'au… ») se lisait comme une fin de réservation, à contresens de l'art. 3.2 al. 5."
     },
     {
       "id": "UX-P1-06",
@@ -6907,7 +6908,8 @@
         "INT-T45",
         "INT-T55",
         "GOV-137",
-        "INT-T49"
+        "INT-T49",
+        "INT-T46-P"
       ],
       "reqs": [
         "REQ-DM-016",
@@ -14374,7 +14376,8 @@
       "paths": [
         "scripts/gates/aipd-signee.ts",
         "tests/unit/juridique/aucun-depot-reel-sans-aipd-signee.spec.ts",
-        ".github/workflows/deploy.yml"
+        ".github/workflows/deploy.yml",
+        "package.json"
       ],
       "schema": false,
       "sensible": [
@@ -14391,7 +14394,7 @@
       "externe": null,
       "estimateDays": 0.5,
       "statut": "a_faire",
-      "acceptance": "Releve par la lentille exactitude sur la PR #233 (JUR-T04) : REQ-CPL-009 exige l'AIPD signee AVANT le premier depot reel, et rien ne le bloquait ; JUR-T04 livre l'AIPD et ecrit la condition, sans la garder. A livrer : une garde qui refuse la mise en service des depots reels (le premier depot hors environnement de demonstration) tant que docs/rgpd/aipd.md ne porte pas l'etat « signee le <date> par <signataire> ». Le point d'application (demarrage, porte de deploiement ou drapeau de mise en service) est choisi et ecrit ; il ne depend pas d'un texte que l'auteur d'une demande de fusion peut modifier seul. TEMOIN A DEUX FACES : AIPD non signee, la mise en service des depots reels est refusee en nommant la condition ; AIPD signee avec date et signataire, elle est admise. ARBITRAGE (rattrapage 44, coordination, 2026-10-01, option 1) : point d'application = une étape à part du job `deployer` de `.github/workflows/deploy.yml`, avant `deploy:coolify`, active à partir de `MISE_EN_SERVICE`. Deux sources doivent concorder : l'état « signée le <date> par <signataire> » de `docs/rgpd/aipd.md` et la variable `AIPD_SIGNEE_LE` (`vars`, pas un secret) de l'environnement GitHub production, posée par Williams seul ; discordance ou absence → le déploiement s'arrête. Les gardes du job `deployer` (`pipeline-image.spec.ts`, `un-seul-producteur-de-deploiement.spec.ts`) restent vertes sans modification. L'entrée de `docs/gates.json` est posée par A01 dans la même PR que l'étape. JUR-T35 dépend de QA-T54 (même fichier de workflow).",
+      "acceptance": "Releve par la lentille exactitude sur la PR #233 (JUR-T04) : REQ-CPL-009 exige l'AIPD signee AVANT le premier depot reel, et rien ne le bloquait ; JUR-T04 livre l'AIPD et ecrit la condition, sans la garder. A livrer : une garde qui refuse la mise en service des depots reels (le premier depot hors environnement de demonstration) tant que docs/rgpd/aipd.md ne porte pas l'etat « signee le <date> par <signataire> ». Le point d'application (demarrage, porte de deploiement ou drapeau de mise en service) est choisi et ecrit ; il ne depend pas d'un texte que l'auteur d'une demande de fusion peut modifier seul. TEMOIN A DEUX FACES : AIPD non signee, la mise en service des depots reels est refusee en nommant la condition ; AIPD signee avec date et signataire, elle est admise. ARBITRAGE (rattrapage 44, coordination, 2026-10-01, option 1) : point d'application = une étape à part du job `deployer` de `.github/workflows/deploy.yml`, avant `deploy:coolify`, active à partir de `MISE_EN_SERVICE`. Deux sources doivent concorder : l'état « signée le <date> par <signataire> » de `docs/rgpd/aipd.md` et la variable `AIPD_SIGNEE_LE` (`vars`, pas un secret) de l'environnement GitHub production, posée par Williams seul ; discordance ou absence → le déploiement s'arrête. Les gardes du job `deployer` (`pipeline-image.spec.ts`, `un-seul-producteur-de-deploiement.spec.ts`) restent vertes sans modification. L'entrée de `docs/gates.json` est posée par A01 dans la même PR que l'étape. JUR-T35 dépend de QA-T54 (même fichier de workflow). PRÉCISION (rattrapage 46, mesure de A05) : l'étape appelle le script `pnpm aipd:signee` (`\"aipd:signee\": \"tsx scripts/gates/aipd-signee.ts\"` dans `package.json`, REQ-GOV-018 ; les gardes du workflow exigent une commande qui soit un script nommé du dépôt) ; `package.json` est réservé à A02 (label `role:architecte`).",
       "tests": {
         "REQ-CPL-009": [
           "tests/unit/juridique/aucun-depot-reel-sans-aipd-signee.spec.ts"
@@ -14486,7 +14489,7 @@
         "REQ-UX-022"
       ],
       "estimateDays": 1.25,
-      "acceptance": "Source : docs/chantiers/W20-confirmation-par-email.md (décision de Williams du 2026-09-29, session -d7, phase 1). Label role:ux-redaction. (1) deposer.html révisée selon le §4 du plan : entreprise pré-remplie avec son SIRET en lecture seule, nom et prénom, fonction, e-mail et téléphone du contact exigés, contexte facultatif et court, message informatif non bloquant sans fenêtre modale juste au-dessus du bouton « Déposer et prévenir <Prénom Nom> », carte « Annuler / Corriger » pendant le délai, état de rebond. Le DÉCOMPTE DES INTERACTIONS de REQ-UX-001 est écrit sur la maquette, geste par geste, de l'accueil à la confirmation (au plus 8). (2) Nouvelle confirmation-contact.html : page publique de réponse du contact, deux actions, second geste pour « Non », information de l'article 14 et opposition, cinq états (question, merci, déjà répondu, lien inconnu ou expiré, erreur), de 320 à 414 px, deux thèmes. (3) file-qualification.html gagne l'onglet « À appeler aujourd'hui » trié par priorité, avec la raison de chaque ligne en clair. (4) La route /confirmer/<jeton> entre dans ESPACE-ROUTES.md. (5) La validation de Williams est consignée dans VALIDATION.md avant toute tâche d'écran W20. Aucun texte de maquette ne donne une consigne à l'apporteur (REQ-JUR-039). Exigence transverse de Williams : fluide, intuitif, moderne, sans friction, mobile d'abord, cinq états nommés. (6) Amendée le 2026-09-29 (réponse de Williams à la question 2 et exigence d'expérience, docs/chantiers/W20-confirmation-par-email.md §2, §4 et §9) : mes-entreprises.html (validée le 2026-09-19 pour UX-P1-05) gagne les quatre badges de REQ-UX-062 (🟢 « Confirmée », 🟡 « En attente de confirmation · réservée pour vous jusqu'au <date> », 🔴 « E-mail non reçu par le contact » avec l'action unique « Corriger l'adresse », ⚪ « Non confirmée par le contact »), le libellé de la demande signalée « En attente de confirmation — Axion-IA va appeler votre contact », sans date (Correction de sécurité du 2026-09-29 (refus de la lentille securite sur 2340a63, docs/chantiers/W20-confirmation-par-email.md §2, §8 et question 18)), la phrase d'aide unique et les cinq états de l'écran, et se revalide dans VALIDATION.md ; deposer.html montre la carte du dépôt passé le délai, badge compris. Chaque badge porte son libellé ; la couleur n'est jamais seule porteuse du sens.",
+      "acceptance": "Source : docs/chantiers/W20-confirmation-par-email.md (décision de Williams du 2026-09-29, session -d7, phase 1). Label role:ux-redaction. (1) deposer.html révisée selon le §4 du plan : entreprise pré-remplie avec son SIRET en lecture seule, nom et prénom, fonction, e-mail et téléphone du contact exigés, contexte facultatif et court, message informatif non bloquant sans fenêtre modale juste au-dessus du bouton « Déposer et prévenir <Prénom Nom> », carte « Annuler / Corriger » pendant le délai, état de rebond. Le DÉCOMPTE DES INTERACTIONS de REQ-UX-001 est écrit sur la maquette, geste par geste, de l'accueil à la confirmation (au plus 8). (2) Nouvelle confirmation-contact.html : page publique de réponse du contact, deux actions, second geste pour « Non », information de l'article 14 et opposition, cinq états (question, merci, déjà répondu, lien inconnu ou expiré, erreur), de 320 à 414 px, deux thèmes. (3) file-qualification.html gagne l'onglet « À appeler aujourd'hui » trié par priorité, avec la raison de chaque ligne en clair. (4) La route /confirmer/<jeton> entre dans ESPACE-ROUTES.md. (5) La validation de Williams est consignée dans VALIDATION.md avant toute tâche d'écran W20. Aucun texte de maquette ne donne une consigne à l'apporteur (REQ-JUR-039). Exigence transverse de Williams : fluide, intuitif, moderne, sans friction, mobile d'abord, cinq états nommés. (6) Amendée le 2026-09-29 (réponse de Williams à la question 2 et exigence d'expérience, docs/chantiers/W20-confirmation-par-email.md §2, §4 et §9) : mes-entreprises.html (validée le 2026-09-19 pour UX-P1-05) gagne les quatre badges de REQ-UX-062 (🟢 « Confirmée », 🟡 « En attente · confirmée automatiquement le <date> », 🔴 « E-mail non reçu par le contact » avec l'action unique « Corriger l'adresse », ⚪ « Non confirmée par le contact »), le libellé de la demande signalée « En attente de confirmation — Axion-IA va appeler votre contact », sans date (Correction de sécurité du 2026-09-29 (refus de la lentille securite sur 2340a63, docs/chantiers/W20-confirmation-par-email.md §2, §8 et question 18)), la phrase d'aide unique et les cinq états de l'écran, et se revalide dans VALIDATION.md ; deposer.html montre la carte du dépôt passé le délai, badge compris. Chaque badge porte son libellé ; la couleur n'est jamais seule porteuse du sens. AMENDEMENT (rattrapage 45, accord de A06) : DÉCISION DE WILLIAMS (2026-10-01 soir, option A, REQ-UX-062 et HYP-W20-BADGE ; séquence hors dépôt `_REPRISE-AXION-APPORTEURS/SEQUENCE-DECISION-BADGE-W20-2026-10-01.md`) : « ok pour ca ▎ 🟡 En attente · confirmée automatiquement le 31 octobre. » Le badge jaune dit « En attente · confirmée automatiquement le <date> » (libellé choisi par Williams), PARTOUT : badge de « Mes entreprises » et carte du dépôt. La phrase d'aide « Sans réponse de votre contact, votre dépôt est confirmé 30 jours après la réception de notre e-mail. » (le nombre lu dans la SSOT), sous 🟡 et sous 🔴, est PROPOSÉE et reste à valider par Williams en séance (point 7 de la séance du 2026-10-02) : elle ne lui a pas été montrée explicitement (note de la lentille exactitude). L'ancien libellé (« réservée pour vous jusqu'au… ») se lisait comme une fin de réservation, à contresens de l'art. 3.2 al. 5. Les maquettes suivent dans la PR de UX-P1-40 (#360), qui atterrit après ce rattrapage : son témoin lit les libellés dans REQ-UX-062.",
       "tests": {
         "REQ-UX-001": [
           "tests/unit/espace/maquettes-confirmation-par-courriel.spec.ts"
@@ -14539,7 +14542,7 @@
         "REQ-JUR-060"
       ],
       "estimateDays": 0.75,
-      "acceptance": "Source : docs/chantiers/W20-confirmation-par-email.md (décision de Williams du 2026-09-29, session -d7, phase 1). Réalise la part texte de REQ-UX-060, REQ-UX-061 et REQ-JUR-060 (Exigence nouvelle proposée au §3 du plan, à inscrire par la passe gardien-spec puis à ajouter à `reqs` ; les HYP-W20 citées ici ne sont pas encore au §2 de docs/DECISIONS.md, elles entreront dans `hyp` par la même passe.). (1) Tous les textes W20 vivent dans la SSOT de micro-copy, en gabarits à variables (prénom, nom, entreprise, heure) ; aucun texte recopié ailleurs (RM-01). (2) Message avant le bouton, repris mot pour mot de la décision de Williams, sauf la fin proposée « Axion-IA pourra aussi l'appeler. » (question 15 du plan, valeur par défaut confirmée par Williams le 2026-09-29) : il INFORME et ne donne aucune consigne (REQ-JUR-039). (3) Un champ exigé n'est jamais marqué « obligatoire » (mot interdit par REQ-JUR-037) ; seuls les champs facultatifs portent « (facultatif) ». (4) Les valeurs saisies par l'apporteur et reprises dans l'e-mail sont rendues en texte brut, échappées, sans lien (HYP-W20-CONTEXTE). (5) Témoins : la garde lexicale reste verte sur tout texte vu par l'apporteur ; un texte « vous devez confirmer » posé dans le fichier la fait rougir. (6) Amendée le 2026-09-29 (réponse de Williams à la question 2 et exigence d'expérience, docs/chantiers/W20-confirmation-par-email.md §2, §4 et §9) : la SSOT porte aussi les quatre libellés du badge de REQ-UX-062, plus, depuis la correction de sécurité du 2026-09-29 (refus de la lentille securite sur 2340a63, docs/chantiers/W20-confirmation-par-email.md §2, §8 et question 18), le libellé de la demande signalée « En attente de confirmation — Axion-IA va appeler votre contact » (neutre, sans consigne, sans date), l'action « Corriger l'adresse », la phrase d'aide unique « Sans réponse de votre contact, l'entreprise reste réservée pour vous 30 jours après la réception de notre e-mail. » (le nombre interpolé depuis CONFIRMATION_TACITE_JOURS, jamais recopié) et le texte de la notification de l'e-mail reparti après correction ; depuis les réponses de Williams du 2026-09-29 vers 20 h (session -d7, questions 18 et 19), le libellé ⚪ « Réservation terminée · l'entreprise est de nouveau disponible » (sans date, sans action, sans phrase d'aide) et le texte de la notification de libération, neutre et sans consigne, proposé : « La réservation de <Entreprise> a pris fin sans confirmation. L'entreprise est de nouveau disponible. », qui ne dit ni la raison, ni la vérification, ni le nombre d'appels ; la date en toutes lettres est formatée par une seule fonction, dans le fuseau de l'apporteur. Garde lexicale verte sur ces textes. AMENDEMENT (vérification V2 (GOV-132, 2026-10-01), A1-12) : `public/**` et `courriels/**` sont en portée `apporteur`, attendue. AMENDEMENT (audit indépendant du plan de la Phase 1 (2026-10-01), écart C15 de la vérification de bout en bout) : réécrit la phrase d'états vides qui promet un gain dès la signature du client (contraire à l'art. 4.2), dans `src/content/micro-copy/espace/etats-vides.ts` et dans la maquette `docs/maquettes/accueil.html`, et transpose `jur:copy-indicative` dans Partners (`src/content/**`, `docs/maquettes/**`), avec un témoin rouge sur cette phrase. AMENDEMENT (rattrapage 44, demande de A07) : le corps de l'e-mail de confirmation (`courriels/confirmation-contact.ts`) IMPORTE `INFORMATION_ARTICLE_14` et `ORDRE_INFORMATION_ARTICLE_14` de JUR-T09, sans les réécrire. NOTE DE A07 (rattrapage 44, relayée par la coordination, 2026-10-01) : le dépliant de l’information de l’art. 14 rend le texte de JUR-T09 (INFORMATION_ARTICLE_14), sans le réécrire ; les formules « la personne que vous avez rencontrée » et « vous proposer un rendez-vous » sont interdites.",
+      "acceptance": "Source : docs/chantiers/W20-confirmation-par-email.md (décision de Williams du 2026-09-29, session -d7, phase 1). Réalise la part texte de REQ-UX-060, REQ-UX-061 et REQ-JUR-060 (Exigence nouvelle proposée au §3 du plan, à inscrire par la passe gardien-spec puis à ajouter à `reqs` ; les HYP-W20 citées ici ne sont pas encore au §2 de docs/DECISIONS.md, elles entreront dans `hyp` par la même passe.). (1) Tous les textes W20 vivent dans la SSOT de micro-copy, en gabarits à variables (prénom, nom, entreprise, heure) ; aucun texte recopié ailleurs (RM-01). (2) Message avant le bouton, repris mot pour mot de la décision de Williams, sauf la fin proposée « Axion-IA pourra aussi l'appeler. » (question 15 du plan, valeur par défaut confirmée par Williams le 2026-09-29) : il INFORME et ne donne aucune consigne (REQ-JUR-039). (3) Un champ exigé n'est jamais marqué « obligatoire » (mot interdit par REQ-JUR-037) ; seuls les champs facultatifs portent « (facultatif) ». (4) Les valeurs saisies par l'apporteur et reprises dans l'e-mail sont rendues en texte brut, échappées, sans lien (HYP-W20-CONTEXTE). (5) Témoins : la garde lexicale reste verte sur tout texte vu par l'apporteur ; un texte « vous devez confirmer » posé dans le fichier la fait rougir. (6) Amendée le 2026-09-29 (réponse de Williams à la question 2 et exigence d'expérience, docs/chantiers/W20-confirmation-par-email.md §2, §4 et §9) : la SSOT porte aussi les quatre libellés du badge de REQ-UX-062, plus, depuis la correction de sécurité du 2026-09-29 (refus de la lentille securite sur 2340a63, docs/chantiers/W20-confirmation-par-email.md §2, §8 et question 18), le libellé de la demande signalée « En attente de confirmation — Axion-IA va appeler votre contact » (neutre, sans consigne, sans date), l'action « Corriger l'adresse », la phrase d'aide unique « Sans réponse de votre contact, votre dépôt est confirmé 30 jours après la réception de notre e-mail. » (le nombre interpolé depuis CONFIRMATION_TACITE_JOURS, jamais recopié) et le texte de la notification de l'e-mail reparti après correction ; depuis les réponses de Williams du 2026-09-29 vers 20 h (session -d7, questions 18 et 19), le libellé ⚪ « Réservation terminée · l'entreprise est de nouveau disponible » (sans date, sans action, sans phrase d'aide) et le texte de la notification de libération, neutre et sans consigne, proposé : « La réservation de <Entreprise> a pris fin sans confirmation. L'entreprise est de nouveau disponible. », qui ne dit ni la raison, ni la vérification, ni le nombre d'appels ; la date en toutes lettres est formatée par une seule fonction, dans le fuseau de l'apporteur. Garde lexicale verte sur ces textes. AMENDEMENT (vérification V2 (GOV-132, 2026-10-01), A1-12) : `public/**` et `courriels/**` sont en portée `apporteur`, attendue. AMENDEMENT (audit indépendant du plan de la Phase 1 (2026-10-01), écart C15 de la vérification de bout en bout) : réécrit la phrase d'états vides qui promet un gain dès la signature du client (contraire à l'art. 4.2), dans `src/content/micro-copy/espace/etats-vides.ts` et dans la maquette `docs/maquettes/accueil.html`, et transpose `jur:copy-indicative` dans Partners (`src/content/**`, `docs/maquettes/**`), avec un témoin rouge sur cette phrase. AMENDEMENT (rattrapage 44, demande de A07) : le corps de l'e-mail de confirmation (`courriels/confirmation-contact.ts`) IMPORTE `INFORMATION_ARTICLE_14` et `ORDRE_INFORMATION_ARTICLE_14` de JUR-T09, sans les réécrire. NOTE DE A07 (rattrapage 44, relayée par la coordination, 2026-10-01) : le dépliant de l’information de l’art. 14 rend le texte de JUR-T09 (INFORMATION_ARTICLE_14), sans le réécrire ; les formules « la personne que vous avez rencontrée » et « vous proposer un rendez-vous » sont interdites. AMENDEMENT (rattrapage 45) : DÉCISION DE WILLIAMS (2026-10-01 soir, option A, REQ-UX-062 et HYP-W20-BADGE ; séquence hors dépôt `_REPRISE-AXION-APPORTEURS/SEQUENCE-DECISION-BADGE-W20-2026-10-01.md`) : « ok pour ca ▎ 🟡 En attente · confirmée automatiquement le 31 octobre. » Le badge jaune dit « En attente · confirmée automatiquement le <date> » (libellé choisi par Williams), PARTOUT : badge de « Mes entreprises » et carte du dépôt. La phrase d'aide « Sans réponse de votre contact, votre dépôt est confirmé 30 jours après la réception de notre e-mail. » (le nombre lu dans la SSOT), sous 🟡 et sous 🔴, est PROPOSÉE et reste à valider par Williams en séance (point 7 de la séance du 2026-10-02) : elle ne lui a pas été montrée explicitement (note de la lentille exactitude). L'ancien libellé (« réservée pour vous jusqu'au… ») se lisait comme une fin de réservation, à contresens de l'art. 3.2 al. 5. Remarque de Williams, sans décision (même séance) : l'e-mail au contact a le ton d'une prise de contact commerciale d'Axion-IA, pas d'une vérification ; son texte est validé par Williams en séance de maquettes. GARDE-FOUS DE A07, MOT POUR MOT (relayés par la coordination, 2026-10-01) : (1) « La question de l'échange reste EXPLICITE : le \"Oui, nous avons échangé\" confirme l'attribution (art. 3.2), le \"Non\" confirmé est le démenti exprès (art. 3.7) ; habillage permis (\"Pour donner suite, pouvez-vous nous confirmer votre échange avec <Prénom Nom> ?\"), mais aucun bouton ne vaut confirmation sous un autre sens (pas de \"Être rappelé\"). » (2) « Aucun lien ni pièce jointe en plus (REQ-JUR-060) : seuls les deux boutons et l'opposition. » (3) « L'information art. 14 est entière, importée de JUR-T09, sans résumé. » (4) « Ni date du contact (REQ-JUR-040), ni consigne au contact, ni promesse commerciale chiffrée. » TROU LEXICAL (rattrapage 45, relevé par A07) : aucun motif de `MOTIFS` (`scripts/gates/lexique-apporteurs.ts`) ne couvre `src/content/micro-copy/courriels/**` ; les textes envoyés au contact au nom d’Axion-IA (`information-article-14.ts` de JUR-T09, `confirmation-contact.ts` de cette tâche) ne sont jugés par aucune garde lexicale. Cette tâche ajoute le motif `src/content/micro-copy/courriels/**`, en portée « dépôt » au minimum (ces textes ne sont pas lus par l’apporteur), avec sa preuve rouge. CONDITION DE LA LENTILLE SÉCURITÉ (rattrapage 45, relayée par la coordination, 2026-10-02), MOT POUR MOT : « (a) le journal de l'envoi ne porte que version, identifiant et statut, jamais adresse, nom, fonction ni téléphone ; (b) la case de mise en service est tenue par le CODE : un drapeau de mise en service absent ou faux donne un refus nommé de tout envoi réel, avec un témoin ».",
       "tests": {
         "REQ-JUR-039": [
           "tests/unit/micro-copy/confirmation-par-courriel.spec.ts"
@@ -14722,7 +14725,7 @@
         "REQ-JUR-060"
       ],
       "estimateDays": 1.25,
-      "acceptance": "Source : docs/chantiers/W20-confirmation-par-email.md (décision de Williams du 2026-09-29, session -d7, phase 1). Réalise REQ-INT-060 et la part envoi de REQ-JUR-060 (Exigence nouvelle proposée au §3 du plan, à inscrire par la passe gardien-spec puis à ajouter à `reqs` ; les HYP-W20 citées ici ne sont pas encore au §2 de docs/DECISIONS.md, elles entreront dans `hyp` par la même passe.) ; hypothèse HYP-W20-REBOND. (1) Un job « tout ce qui est dû à l'instant t », horloge injectée (REQ-QA-027), envoie les demandes échues par l'émetteur d'INT-T10 : jamais avant l'échéance, jamais deux fois ; une demande annulée n'envoie rien. (2) Sans drapeau DMARC, ou vers une adresse supprimée, l'envoi est retenu et visible (REQ-INT-022, REQ-INT-023). (3) L'e-mail part depuis une adresse humaine, vers l'adresse saisie pour le contact et aucune autre ; multipart avec une version texte, aucune image distante, aucun pixel de suivi, aucun lien autre que les deux réponses et l'opposition ; la version du texte est journalisée avec l'envoi. (4) Le webhook de rebond rattache le rebond à sa demande par l'identifiant du message, passe la demande en rebond, et crée une notification INFORMATIVE de l'apporteur (clé de la table SSOT, faitCourirUnDelai false, REQ-JUR-039). (5) Témoins : drapeau faux → aucune requête au relais ; rebond mal signé → rien ; worker arrêté puis relancé → rattrapage sans doublon. AMENDEMENT (audit indépendant du plan de la Phase 1 (2026-10-01), écart B-06) : le rattachement est appelé depuis `recevoirRebond` ; aucune seconde route de rebond.",
+      "acceptance": "Source : docs/chantiers/W20-confirmation-par-email.md (décision de Williams du 2026-09-29, session -d7, phase 1). Réalise REQ-INT-060 et la part envoi de REQ-JUR-060 (Exigence nouvelle proposée au §3 du plan, à inscrire par la passe gardien-spec puis à ajouter à `reqs` ; les HYP-W20 citées ici ne sont pas encore au §2 de docs/DECISIONS.md, elles entreront dans `hyp` par la même passe.) ; hypothèse HYP-W20-REBOND. (1) Un job « tout ce qui est dû à l'instant t », horloge injectée (REQ-QA-027), envoie les demandes échues par l'émetteur d'INT-T10 : jamais avant l'échéance, jamais deux fois ; une demande annulée n'envoie rien. (2) Sans drapeau DMARC, ou vers une adresse supprimée, l'envoi est retenu et visible (REQ-INT-022, REQ-INT-023). (3) L'e-mail part depuis une adresse humaine, vers l'adresse saisie pour le contact et aucune autre ; multipart avec une version texte, aucune image distante, aucun pixel de suivi, aucun lien autre que les deux réponses et l'opposition ; la version du texte est journalisée avec l'envoi. (4) Le webhook de rebond rattache le rebond à sa demande par l'identifiant du message, passe la demande en rebond, et crée une notification INFORMATIVE de l'apporteur (clé de la table SSOT, faitCourirUnDelai false, REQ-JUR-039). (5) Témoins : drapeau faux → aucune requête au relais ; rebond mal signé → rien ; worker arrêté puis relancé → rattrapage sans doublon. AMENDEMENT (audit indépendant du plan de la Phase 1 (2026-10-01), écart B-06) : le rattachement est appelé depuis `recevoirRebond` ; aucune seconde route de rebond. CONDITION DE LA LENTILLE SÉCURITÉ (rattrapage 45, relayée par la coordination, 2026-10-02), MOT POUR MOT : « (a) le journal de l'envoi ne porte que version, identifiant et statut, jamais adresse, nom, fonction ni téléphone ; (b) la case de mise en service est tenue par le CODE : un drapeau de mise en service absent ou faux donne un refus nommé de tout envoi réel, avec un témoin ».",
       "tests": {
         "REQ-INT-022": [
           "tests/integration/envoi-differe-de-la-confirmation.spec.ts"
@@ -15055,7 +15058,9 @@
         "tests/unit/contrat/confirmation-au-contrat.spec.ts",
         "src/domain/contrat/variables.ts",
         "src/domain/contrat/decisions.ts",
-        "src/domain/seuils/ssot.ts"
+        "src/domain/seuils/ssot.ts",
+        "scripts/gates/seuils-ssot.ts",
+        "src/domain/rgpd/politique.ts"
       ],
       "deps": [
         "JUR-T01",
@@ -15151,7 +15156,7 @@
         "REQ-QA-027"
       ],
       "estimateDays": 1.5,
-      "acceptance": "Source : docs/chantiers/W20-confirmation-par-email.md (décision de Williams du 2026-09-29, session -d7, phase 1). Parcours mobile (iPhone et Pixel), horloge simulée, relais d'envoi simulé : (1) dépôt de l'accueil à la confirmation en au plus 8 interactions et 90 s, avec les quatre coordonnées du contact (REQ-UX-001, REQ-QA-017) ; (2) annulation avant l'échéance → aucun envoi ; échéance → un envoi, un seul ; (3) « Oui » → attribution confirmée visible dans l'espace ; « Non » en second geste → issue de non-confirmation, aucune suspension ; (4) rebond → message informatif et correction ; (5) la console montre le dépôt dans « À appeler aujourd'hui » au rang attendu, avec sa raison. (6) Amendée le 2026-09-29 (réponse de Williams à la question 2 et exigence d'expérience, docs/chantiers/W20-confirmation-par-email.md §2, §4 et §9), horloge figée : (a) après réception, badge 🟡 « réservée pour vous jusqu'au <date> », date en toutes lettres ; à l'échéance moins une minute toujours 🟡, à l'échéance 🟢, le jour affiché ; (b) rebond → 🔴 et « Corriger l'adresse », 44 jours après l'envoi toujours 🔴 et aucune promotion, et 45 jours après l'envoi la demande en rebond, signalée par la raison « rebond », est libérée (⚪, point 8), jamais promue ; (c) correction → e-mail reparti, une notification, 🟡 avec la nouvelle date, 🟢 trente jours après ce nouvel envoi et pas avant ; (d) un clic « Oui » avant l'échéance → 🟢 aussitôt, aucune promotion tacite ensuite. (7) Correction de sécurité du 2026-09-29 (refus de la lentille securite sur 2340a63, docs/chantiers/W20-confirmation-par-email.md §2, §8 et question 18), horloge figée : une demande signalée (adresse webmail) et silencieuse pendant trente jours reste non confirmée, porte « En attente de confirmation — Axion-IA va appeler votre contact » sans date, et figure en tête de « À appeler aujourd'hui » ; un appel confirme la fait passer à 🟢. (8) Réponses de Williams du 2026-09-29 vers 20 h (session -d7, questions 18 et 19), horloge figée : (a) une demande signalée qui reçoit trois appels injoignable depuis la console est libérée au passage suivant : badge ⚪ « Réservation terminée · l'entreprise est de nouveau disponible », une notification neutre dans l'espace, le dépôt sort de « À appeler aujourd'hui » ; (b) une demande signalée sans appel est libérée 45 jours après l'envoi, et pas à 44 ; (c) aucune suspension ni anomalie visible en console après la libération ; (d) carence (arbitrage de -d7 du 2026-09-29) : le même apporteur ne peut pas redéposer la même entreprise pendant 30 jours, l'écran le lui dit sans consigne et sans action « Déposer » (valeur par défaut de la question 20 du plan), un autre apporteur la dépose aussitôt ; à J+30, le redépôt donne une nouvelle attribution provisoire et une nouvelle demande, règles ordinaires. Aucun test skippé.",
+      "acceptance": "Source : docs/chantiers/W20-confirmation-par-email.md (décision de Williams du 2026-09-29, session -d7, phase 1). Parcours mobile (iPhone et Pixel), horloge simulée, relais d'envoi simulé : (1) dépôt de l'accueil à la confirmation en au plus 8 interactions et 90 s, avec les quatre coordonnées du contact (REQ-UX-001, REQ-QA-017) ; (2) annulation avant l'échéance → aucun envoi ; échéance → un envoi, un seul ; (3) « Oui » → attribution confirmée visible dans l'espace ; « Non » en second geste → issue de non-confirmation, aucune suspension ; (4) rebond → message informatif et correction ; (5) la console montre le dépôt dans « À appeler aujourd'hui » au rang attendu, avec sa raison. (6) Amendée le 2026-09-29 (réponse de Williams à la question 2 et exigence d'expérience, docs/chantiers/W20-confirmation-par-email.md §2, §4 et §9), horloge figée : (a) après réception, badge 🟡 « En attente · confirmée automatiquement le <date> », date en toutes lettres ; à l'échéance moins une minute toujours 🟡, à l'échéance 🟢, le jour affiché ; (b) rebond → 🔴 et « Corriger l'adresse », 44 jours après l'envoi toujours 🔴 et aucune promotion, et 45 jours après l'envoi la demande en rebond, signalée par la raison « rebond », est libérée (⚪, point 8), jamais promue ; (c) correction → e-mail reparti, une notification, 🟡 avec la nouvelle date, 🟢 trente jours après ce nouvel envoi et pas avant ; (d) un clic « Oui » avant l'échéance → 🟢 aussitôt, aucune promotion tacite ensuite. (7) Correction de sécurité du 2026-09-29 (refus de la lentille securite sur 2340a63, docs/chantiers/W20-confirmation-par-email.md §2, §8 et question 18), horloge figée : une demande signalée (adresse webmail) et silencieuse pendant trente jours reste non confirmée, porte « En attente de confirmation — Axion-IA va appeler votre contact » sans date, et figure en tête de « À appeler aujourd'hui » ; un appel confirme la fait passer à 🟢. (8) Réponses de Williams du 2026-09-29 vers 20 h (session -d7, questions 18 et 19), horloge figée : (a) une demande signalée qui reçoit trois appels injoignable depuis la console est libérée au passage suivant : badge ⚪ « Réservation terminée · l'entreprise est de nouveau disponible », une notification neutre dans l'espace, le dépôt sort de « À appeler aujourd'hui » ; (b) une demande signalée sans appel est libérée 45 jours après l'envoi, et pas à 44 ; (c) aucune suspension ni anomalie visible en console après la libération ; (d) carence (arbitrage de -d7 du 2026-09-29) : le même apporteur ne peut pas redéposer la même entreprise pendant 30 jours, l'écran le lui dit sans consigne et sans action « Déposer » (valeur par défaut de la question 20 du plan), un autre apporteur la dépose aussitôt ; à J+30, le redépôt donne une nouvelle attribution provisoire et une nouvelle demande, règles ordinaires. Aucun test skippé. AMENDEMENT (rattrapage 45) : DÉCISION DE WILLIAMS (2026-10-01 soir, option A, REQ-UX-062 et HYP-W20-BADGE ; séquence hors dépôt `_REPRISE-AXION-APPORTEURS/SEQUENCE-DECISION-BADGE-W20-2026-10-01.md`) : « ok pour ca ▎ 🟡 En attente · confirmée automatiquement le 31 octobre. » Le badge jaune dit « En attente · confirmée automatiquement le <date> » (libellé choisi par Williams), PARTOUT : badge de « Mes entreprises » et carte du dépôt. La phrase d'aide « Sans réponse de votre contact, votre dépôt est confirmé 30 jours après la réception de notre e-mail. » (le nombre lu dans la SSOT), sous 🟡 et sous 🔴, est PROPOSÉE et reste à valider par Williams en séance (point 7 de la séance du 2026-10-02) : elle ne lui a pas été montrée explicitement (note de la lentille exactitude). L'ancien libellé (« réservée pour vous jusqu'au… ») se lisait comme une fin de réservation, à contresens de l'art. 3.2 al. 5.",
       "tests": {
         "REQ-QA-017": [
           "tests/e2e/espace/depot-avec-confirmation-par-courriel.spec.ts"
@@ -15957,7 +15962,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 1,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "Lot transverse « confort de la console pour tous les rôles ». Pourquoi, pour tous les rôles : aucune maquette de console n'est validée, la navigation des maquettes n'est pas filtrée par rôle et aucune carte des routes de la console n'existe. (1) `CONSOLE-ROUTES.md`, pendant d'`ESPACE-ROUTES` : route, écran, rôle, phase, statut prévue ou livrée, REQ, maquette, et une colonne « écran principal » (oui ou non) qui désigne les écrans soumis au test de premier usage (REQ-UX-047 point 7). Tout sous `/console/`. `ESPACE-ROUTES.md` reçoit la même colonne. (2) `console-cadre.html` en 1280×800 et 375×667 : ≤ 7 entrées sur bureau, barre ≤ 4 plus menu en mobile, instantané par rôle (qualifieur, comptable, lecteur, admin ; aucun conseiller, qui n'a pas de console en V1). Accueil de repli par rôle et par phase. (3) Les en-têtes de `file-qualification.html` et `lot-paiement.html` sont filtrés par rôle : le qualifieur ne voit plus les lots (`:800-806`), le comptable ne voit plus la qualification. (4) Chaque maquette montre ses cinq états, dans les deux thèmes, avec une micro-copy de console proposée. (5) Une séance de validation groupée de Will est planifiée. Ses lignes sont posées dans `VALIDATION.md`. La fiche W19 porte « externe will » : la validation de Williams est une étape de cette acceptance, pas un préalable ; la tâche reste éligible pour produire ce qu'il validera (patron UX-P1-40 ; le schéma lie un externe non nul au statut attente_externe, qui bloquerait le travail). Arbitrage A01 du 2026-09-30.",
       "tests": {
         "REQ-UX-048": [
@@ -15969,7 +15974,16 @@
         "REQ-UX-018": [
           "tests/unit/console/carte-des-routes-console.spec.ts"
         ]
-      }
+      },
+      "branch": "t/ux-p1-18",
+      "owner": "A06",
+      "pr": 342,
+      "attestation": {
+        "pr": 342,
+        "sha": "215945dbd81699e8ea9cbd7e6175a8df42dd683d",
+        "fusionneeAt": "2026-10-01T19:56:41Z"
+      },
+      "motif": null
     },
     {
       "id": "UX-P1-19",
@@ -16149,7 +16163,8 @@
         "tests/unit/gouvernance/ux-ecrans.spec.ts",
         "docs/gates.json",
         "scripts/lib/ux-ecrans.ts",
-        "tests/unit/espace/maquettes-validees.spec.ts"
+        "tests/unit/espace/maquettes-validees.spec.ts",
+        "scripts/gates/gov-attributions.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -16186,7 +16201,9 @@
       "paths": [
         "tests/e2e/fixtures/budget-de-gestes.ts",
         "tests/unit/qualite/budget-de-gestes.spec.ts",
-        "playwright.config.ts"
+        "playwright.config.ts",
+        "tests/a11y/harnais.ts",
+        "tests/a11y/axe.spec.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -16202,7 +16219,7 @@
       "externe": null,
       "estimateDays": 0.75,
       "statut": "a_faire",
-      "acceptance": "Lot transverse « confort de la console pour tous les rôles ». Pourquoi, pour tous les rôles : REQ-UX-001 et REQ-UX-021 fixent des budgets de gestes que rien ne mesure ; la fixture sert l'apporteur comme le qualifieur et le comptable. (1) La fixture `budgetDeGestes` compte les clics, les saisies et les tabulations, et lit ses seuils dans `BUDGETS_UX`. (2) Chrono de la première action cliquable sur le profil « 4G ralentie » lu dans `BUDGETS_UX`. (3) Assertion « visible sans défilement » à 375×667 et 1280×800. (4) Témoin rouge : un parcours de 9 saisies échoue face au budget de 8. (5) Les projets mobile-safari et mobile-chrome sont disponibles pour `console/**`.",
+      "acceptance": "Lot transverse « confort de la console pour tous les rôles ». Pourquoi, pour tous les rôles : REQ-UX-001 et REQ-UX-021 fixent des budgets de gestes que rien ne mesure ; la fixture sert l'apporteur comme le qualifieur et le comptable. (1) La fixture `budgetDeGestes` compte les clics, les saisies et les tabulations, et lit ses seuils dans `BUDGETS_UX`. (2) Chrono de la première action cliquable sur le profil « 4G ralentie » lu dans `BUDGETS_UX`. (3) Assertion « visible sans défilement » à 375×667 et 1280×800. (4) Témoin rouge : un parcours de 9 saisies échoue face au budget de 8. (5) Les projets mobile-safari et mobile-chrome sont disponibles pour `console/**`. ARBITRAGE A01 (rattrapage 45, mesure de A06) : `specsSansProjet()` (`tests/a11y/harnais.ts`, UX-P0-03) refusait tout spec `console/` pris par un projet mobile. Conformément à REQ-QA-016 (amendement W19 : le cadre de console à 375 px s'exécute aussi sur mobile-safari et mobile-chrome) et à REQ-UX-047 point 2, la règle devient « au moins un projet de bureau pour la console ; un projet mobile EN PLUS est admis ». Le témoin de `tests/a11y/axe.spec.ts` change de face : une configuration privée de son projet de bureau rend « aucun projet de bureau » ; contre-témoin : une console prise par le bureau ET par un mobile est sans faute. C'est la conséquence de l'arbitrage, pas un affaiblissement.",
       "tests": {
         "REQ-UX-047": [
           "tests/unit/qualite/budget-de-gestes.spec.ts"
@@ -16220,7 +16237,10 @@
       "zone": "juridique",
       "paths": [
         "docs/contrat/CONTRAT-APPORTEUR-V1.md",
-        "tests/unit/contrat/contract-template-complete.spec.ts"
+        "tests/unit/contrat/contract-template-complete.spec.ts",
+        "src/domain/seuils/ssot.ts",
+        "src/domain/contrat/variables.ts",
+        "src/domain/contrat/decisions.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -16242,7 +16262,7 @@
       "externe": null,
       "estimateDays": 0.75,
       "statut": "a_faire",
-      "acceptance": "ARBITRAGE RENDU : art. 3.5 retenu, art. 3.3 c) rejeté (Williams, 2026-09-29, question 2). (1) L'art. 3.5 est amendé en termes généraux : l'entreprise peut être déjà prise « par un autre apporteur ou par la Société ou ses préposés » ; l'effet pour l'apporteur est le même quel que soit l'occupant ; la Société ne révèle jamais qui occupe une entreprise donnée. Aucun art. 3.3 c), aucune catégorie de refus nouvelle. Jamais le mot « suivi ». L'acte d'un préposé n'est jamais « une déclaration ». (2) Bornes de la Société, tous préposés confondus, écrites avec les variables du gabarit et jamais en dur (RM-10) : les mêmes durées qu'une attribution d'apporteur (`{{PEREMPTION_JOURS}}` jours, `{{FENETRE_MOIS}}` mois), pas de reconduction, délai d'attente de `{{CARENCE_CONSEILLER_JOURS}}` jours après toute libération (variable nouvelle, déclarée au gabarit), entreprise fermée à la Société pendant la fenêtre d'un rang 1. (3) Clause de non-exploitation (HYP-W19-NON-EXPLOITATION). (4) Le mode de preuve de l'horodatage (journal chaîné) est le même quel que soit l'occupant, et ne révèle pas qui. (5) Le contrat dit « préposés de la Société » en toutes lettres, pour lever l'homonymie avec les « préposés » de l'apporteur à l'art. 1 (`CONTRAT-APPORTEUR-V1.md`), jamais le mot que GLOSSAIRE §8 interdit pour l'apporteur. (6) `contract-template-complete.spec.ts` reste vert. (7) L'arbitrage de Williams est daté dans la colonne « Tranchée » de HYP-W19-CONCOURS ; le texte amendé est validé par Williams avant INT-T12. La note d'analyse hors dépôt sur l'indice de service organisé est relue. (8) Aucun point non sourcé présenté comme un fait ; un point de droit non tranché prend l'option la plus prudente, marquée « à arbitrer par Williams » (question 13 : pas d'avocat). La fiche W19 porte « externe will » : la validation de Williams est une étape de cette acceptance, pas un préalable ; la tâche reste éligible pour produire ce qu'il validera (patron UX-P1-40 ; le schéma lie un externe non nul au statut attente_externe, qui bloquerait le travail). Arbitrage A01 du 2026-09-30."
+      "acceptance": "ARBITRAGE RENDU : art. 3.5 retenu, art. 3.3 c) rejeté (Williams, 2026-09-29, question 2). (1) L'art. 3.5 est amendé en termes généraux : l'entreprise peut être déjà prise « par un autre apporteur ou par la Société ou ses préposés » ; l'effet pour l'apporteur est le même quel que soit l'occupant ; la Société ne révèle jamais qui occupe une entreprise donnée. Aucun art. 3.3 c), aucune catégorie de refus nouvelle. Jamais le mot « suivi ». L'acte d'un préposé n'est jamais « une déclaration ». (2) Bornes de la Société, tous préposés confondus, écrites avec les variables du gabarit et jamais en dur (RM-10) : les mêmes durées qu'une attribution d'apporteur (`{{PEREMPTION_JOURS}}` jours, `{{FENETRE_MOIS}}` mois), pas de reconduction, délai d'attente de `{{CARENCE_CONSEILLER_JOURS}}` jours après toute libération (variable nouvelle, déclarée au gabarit), entreprise fermée à la Société pendant la fenêtre d'un rang 1. (3) Clause de non-exploitation (HYP-W19-NON-EXPLOITATION). (4) Le mode de preuve de l'horodatage (journal chaîné) est le même quel que soit l'occupant, et ne révèle pas qui. (5) Le contrat dit « préposés de la Société » en toutes lettres, pour lever l'homonymie avec les « préposés » de l'apporteur à l'art. 1 (`CONTRAT-APPORTEUR-V1.md`), jamais le mot que GLOSSAIRE §8 interdit pour l'apporteur. (6) `contract-template-complete.spec.ts` reste vert. (7) L'arbitrage de Williams est daté dans la colonne « Tranchée » de HYP-W19-CONCOURS ; le texte amendé est validé par Williams avant INT-T12. La note d'analyse hors dépôt sur l'indice de service organisé est relue. (8) Aucun point non sourcé présenté comme un fait ; un point de droit non tranché prend l'option la plus prudente, marquée « à arbitrer par Williams » (question 13 : pas d'avocat). La fiche W19 porte « externe will » : la validation de Williams est une étape de cette acceptance, pas un préalable ; la tâche reste éligible pour produire ce qu'il validera (patron UX-P1-40 ; le schéma lie un externe non nul au statut attente_externe, qui bloquerait le travail). Arbitrage A01 du 2026-09-30. AMENDEMENT (rattrapage 45, arbitrages A01, texte de A07) : CARENCE_CONSEILLER_JOURS (90, HYP-W19-CARENCE, hypothèse par défaut) est POSÉE dans la SSOT avec l'art. 3.5 pour source et `verifieLe`, et déclarée dans `variables.ts` ; les divergences W19:3.5 et HYP-W19-CONCOURS:3.5 sont retirées de `decisions.ts`, dont l'ancrage tient désormais ; le constat de HYP-E1-12:3.5:al4 est reformulé pour rester exact (l'art. 3.5 compte cinq alinéas, l'horodatage est le cinquième) ; JUR-T01-Q17 reste une question de validation par Williams (une question ne se retire pas sans sa réponse). Ces fichiers et le témoin `contract-template-complete.spec.ts` sont écrits par le poste dev (A05) dans la même PR ; le texte du contrat reste à A07. Choix de rédaction signalé aux lentilles : le délai RESERVE_APRES_ACTE_APPORTEUR_JOURS n'est pas écrit au contrat, seule l'interdiction absolue l'est (un délai écrit se lirait comme une limite de l'interdiction). JUR-T31 atterrit après JUR-T40 et QA-T58 (mêmes fichiers)."
     },
     {
       "id": "JUR-T33",
@@ -16251,7 +16271,7 @@
       "repo": "partners",
       "zone": "juridique",
       "paths": [
-        "docs/tiers/axionia-populations.md"
+        "docs/chantiers/W19-inventaire-axionia-1202.md"
       ],
       "schema": false,
       "sensible": [],
@@ -17228,14 +17248,23 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "Condition de mise en service posée par la lentille sécurité, relayée par la coordination le 2026-09-30 : PRÉALABLE FERME avant la première donnée réelle, sur le modèle de QA-T53 (`rechiffrement_echoue`). Aujourd'hui, un déploiement dont l'atterrissage n'est pas vérifié ne prévient personne. À LIVRER : (1) une catégorie d'alerte CLOSE `deploiement_non_atterri`, NEUVE (elle n'existe nulle part aujourd'hui), ajoutée à `CATEGORIES_ALERTE` (src/server/integrations/telegram/alertes.ts) avec son gabarit ; (2) tout échec de `deploy:verify` (scripts/gates/deploy-verify.ts) joué après un déploiement de `.github/workflows/deploy.yml` (sha servi différent du sha fusionné, `readyz` non prêt, en-tête `x-partners-build-sha` absent, délai dépassé) émet exactement une alerte `deploiement_non_atterri`, qui ne porte que le sha attendu, le sha servi et l'environnement, sans donnée personnelle ni secret ; le sha servi vient de l'en-tête `x-partners-build-sha` de la RÉPONSE, que contrôle quiconque sert le domaine : il n'entre dans l'alerte qu'après validation de forme (hexadécimal de 7 à 40 caractères), sinon il y est écrit « illisible » ; le job reste rouge (l'alerte ne remplace pas l'échec) ; (3) TÉMOINS rouges d'abord : un atterrissage raté (sha servi ≠ sha fusionné) émet une alerte ; `readyz` non prêt émet une alerte ; un atterrissage réussi n'en émet aucune ; le message de l'alerte ne contient ni jeton ni URL de secret ; un en-tête piégé (saut de ligne, balisage, URL) n'entre pas tel quel dans l'alerte, qui écrit « illisible ». (4) La case de cette alerte existe déjà dans la liste de mise en service (`docs/runbooks/mise-en-service.md`, écrite par la PR de la garde de QA-T13) : la PR qui livre cette tâche la cite, sans en ajouter une seconde ; la case est cochée après réception par Williams. Phase 1 (arbitrage de la coordination du 2026-09-30) : c'est une condition de mise en service, avant la première donnée réelle, et non un préalable à la clôture de la Phase 0. AMENDEMENT (rattrapage 42, option B de la lentille sécurité, validée par la coordination le 2026-10-01) : l'alerte part d'un job `alerter` SÉPARÉ (`needs: deployer`, `if: failure() || cancelled()`, environnement production), seul lecteur de `TELEGRAM_BOT_TOKEN` et `TELEGRAM_CHAT_ID`, dans l'environnement de son étape ; le job `deployer` garde ses secrets actuels, et aucun secret Telegram n'y entre. `tests/unit/qualite/pipeline-image.spec.ts` porte la garde `secret_tiers` d'`alerter` (liste fermée de ces deux secrets) et ses deux faces rouges : un secret de la plateforme lu par `alerter`, un secret du canal lu par `deployer`. `alerter` appelle le script `deploy:alerter` (= `tsx scripts/gates/deploy-verify.ts --alerter`), seule entrée ajoutée à `package.json` (REQ-GOV-018) ; décision de la coordination du 2026-10-01, `package.json` est réservé à A02 (label `role:architecte`) et relu par la lentille schéma. CONDITIONS DE LA LENTILLE SÉCURITÉ (relecture de #338, 2026-10-01) : condition (3) : « Si les sorties de `deployer` sont absentes ou invalides (sha attendu ou servi hors de l'hexadécimal de 7 à 40 caractères), `alerter` émet quand même l'alerte, avec « inconnu » à la place de la valeur ; une sortie absente ne fait jamais sauter l'alerte. » Harmonisation avec la clause (2) : « inconnu » pour une valeur absente, « illisible » pour une valeur invalide ; le message part toujours. Condition (5) : « La garde de `pipeline-image.spec.ts` exige aussi, pour `alerter`, `needs: deployer` et `if: failure() || cancelled()` exactement, avec une face rouge pour chacun (condition retirée, `if: failure()` seul). » AMENDEMENT (rattrapage 44, décision de la coordination) : REQ-QA-013 : l'analyseur partagé des conditions de job (`tests/unit/ci/condition-de-job.ts`) traite les fonctions de statut `failure()` et `cancelled()`, avec un témoin (`tests/unit/ci/condition-de-job.spec.ts`) ; sous une PR fusionnée, `github.event_name == 'push'` est faux et la condition d'`alerter` l'est quel que soit le statut des prérequis ; la ligne `if` d'`alerter` reste inchangée.",
       "tests": {
         "REQ-GOV-014": [
           "tests/unit/qualite/alerte-deploiement-non-atterri.spec.ts",
           "tests/unit/integration/alerte-deploiement-message.spec.ts"
         ]
-      }
+      },
+      "branch": "t/qa-t54",
+      "owner": "A05",
+      "pr": 339,
+      "attestation": {
+        "pr": 339,
+        "sha": "a3ea83c557e9b1a95127ecd2a163016b59c1b1e6",
+        "fusionneeAt": "2026-10-01T21:12:14Z"
+      },
+      "motif": null
     },
     {
       "id": "GOV-131",
@@ -17338,8 +17367,27 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
-      "acceptance": "Vérification V2 (GOV-132, écart C-01, condition 4, avant l'ouverture du canal) : aujourd'hui, le worker `evenement-recu` marque `traite` un événement dont le type n'a pas encore de traitant ; un `paiement.recu` reçu avant DM-15 serait donc perdu pour le calcul des commissions. (1) Tout type sans traitant reste `recu` (ou passe `held` avec une alerte : choix de conception à arbitrer à la revendication), jamais `traite`. (2) TÉMOIN rouge d'abord : un `paiement.recu` reçu avant le branchement de son traitant est redonné au dispatch une fois le traitant branché, et produit son effet une fois et une seule. (3) `PARTNERS_SYNC_ENABLED` reste faux tant que cette tâche n'est pas livrée (case de `docs/runbooks/mise-en-service.md`). ARBITRAGE A01 du point (1), à la revendication (2026-10-01, proposition de A05) : ni `recu` (passerLeTravail boucle tant que aTraiter() rend des lignes `recu`) ni `held` (réservé à une `schema_version` inconnue, sans reprise). Un type absent du registre des traitants passe `en_attente_dependance` avec `dependanceRef` = `traitant:<type>`, jamais `traite`. En tête de passage, la reprise remet en `recu` les seules attentes `traitant:<t>` dont le type a désormais un traitant. Le compteur `enAttente` du battement les rend visibles. Aucune migration : `dependance_ref` existe déjà. La route `src/app/api/webhooks/axionia/route.ts` passe le registre au worker. Elle est aussi déclarée par INT-T49 : les deux tâches ne vont jamais dans le même lot."
+      "statut": "fusionnee",
+      "acceptance": "Vérification V2 (GOV-132, écart C-01, condition 4, avant l'ouverture du canal) : aujourd'hui, le worker `evenement-recu` marque `traite` un événement dont le type n'a pas encore de traitant ; un `paiement.recu` reçu avant DM-15 serait donc perdu pour le calcul des commissions. (1) Tout type sans traitant reste `recu` (ou passe `held` avec une alerte : choix de conception à arbitrer à la revendication), jamais `traite`. (2) TÉMOIN rouge d'abord : un `paiement.recu` reçu avant le branchement de son traitant est redonné au dispatch une fois le traitant branché, et produit son effet une fois et une seule. (3) `PARTNERS_SYNC_ENABLED` reste faux tant que cette tâche n'est pas livrée (case de `docs/runbooks/mise-en-service.md`). ARBITRAGE A01 du point (1), à la revendication (2026-10-01, proposition de A05) : ni `recu` (passerLeTravail boucle tant que aTraiter() rend des lignes `recu`) ni `held` (réservé à une `schema_version` inconnue, sans reprise). Un type absent du registre des traitants passe `en_attente_dependance` avec `dependanceRef` = `traitant:<type>`, jamais `traite`. En tête de passage, la reprise remet en `recu` les seules attentes `traitant:<t>` dont le type a désormais un traitant. Le compteur `enAttente` du battement les rend visibles. Aucune migration : `dependance_ref` existe déjà. La route `src/app/api/webhooks/axionia/route.ts` passe le registre au worker. Elle est aussi déclarée par INT-T49 : les deux tâches ne vont jamais dans le même lot.",
+      "tests": {
+        "REQ-DM-036": [
+          "tests/integration/worker-type-sans-traitant.spec.ts",
+          "tests/unit/integration/type-sans-traitant.spec.ts"
+        ],
+        "REQ-ARG-003": [
+          "tests/integration/worker-type-sans-traitant.spec.ts",
+          "tests/unit/integration/type-sans-traitant.spec.ts"
+        ]
+      },
+      "branch": "t/int-t43-trace",
+      "owner": "A05",
+      "pr": 359,
+      "attestation": {
+        "pr": 359,
+        "sha": "1d7ff4ac024aa10c96b892f5345367ad1f16842f",
+        "fusionneeAt": "2026-10-01T20:16:39Z"
+      },
+      "motif": null
     },
     {
       "id": "INT-T44",
@@ -17364,7 +17412,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.25,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "Vérification V2 (GOV-132, écart B-02), avant le premier `candidature.recue` réel : `evenements_recus.charge` est conservée 10 ans et ne doit porter aucune donnée personnelle. (1) La réception retire `utm` de la charge conservée ; le `payload_hash` reste la preuve de ce qui a été reçu. (2) TÉMOIN rouge d'abord : une charge reçue avec `utm` est conservée sans lui, et son `payload_hash` est celui de la charge reçue entière. AMENDEMENT (rattrapage 43, décision de la coordination sous délégation, 2026-10-01, sur le blocage relevé par l'auteur back) : `reponsesJson` n'est PAS retiré à la réception : INT-T26 (`candidature-recue.ts`, `snapshotDeCandidature`) le lit plus tard depuis `recu.charge`, et la charge est immuable (déclencheur `evenements_recus_reception_immuable`). Son retrait est porté par INT-T56, au passage à `traite`. Un témoin unitaire (`tests/unit/integration/reception-sans-utm.spec.ts`) couvre le retrait dans la portée de `mutation:pr` ; le témoin d'intégration reste jugé en CI.",
       "tests": {
         "REQ-JUR-029": [
@@ -17375,7 +17423,16 @@
           "tests/integration/charge-minimisee.spec.ts",
           "tests/unit/integration/reception-sans-utm.spec.ts"
         ]
-      }
+      },
+      "branch": "t/int-t44",
+      "owner": "A05",
+      "pr": 361,
+      "attestation": {
+        "pr": 361,
+        "sha": "89b23e0123582c2fba7833e88a887a354c3f39ee",
+        "fusionneeAt": "2026-10-01T20:56:01Z"
+      },
+      "motif": null
     },
     {
       "id": "DM-44",
@@ -17449,7 +17506,8 @@
       "zone": "securite",
       "paths": [
         "src/server/auth/lien-magique-production.ts",
-        "tests/integration/lien-magique-production.spec.ts"
+        "tests/integration/lien-magique-production.spec.ts",
+        "tests/unit/securite/lien-magique-emis-en-production.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -17464,7 +17522,17 @@
       "externe": null,
       "estimateDays": 0.5,
       "statut": "a_faire",
-      "acceptance": "Écart C3 de la vérification de bout en bout (GOV-131, VERIF-1-RAPPORT.md), versé sur demande de la coordination, en tête du lot 2 : en production, aucun lien magique ne part — le transport `courriel` de `dependancesDuProcessus` lève `envoi_courriel_non_cable`, et `demanderEnvoi` (INT-T10) n'est importé nulle part hors du relais. Le seul parcours utilisateur de la Phase 0 n'existe donc pas sur `main` déployé. (1) TÉMOIN rouge d'abord : `demanderLien` en production simulée, relais simulé, écrit exactement une ligne `courriels_envoyes` et fait exactement un appel au relais. (2) `demanderEnvoi` est câblé dans `dependancesDuProcessus` (`src/server/auth/lien-magique-production.ts`) ; aucune autre voie d'envoi. (3) Préalable de tout écran de l'espace. Relecture de la lentille securite exigée. (4) Condition de la lentille securite : le jeton du lien n'est conservé NULLE PART après l'envoi — ni dans les données du job de file (suppression à l'achèvement), ni dans le journal, ni dans la réponse du relais conservée. TÉMOIN : après un envoi, le jeton est absent de `courriels_envoyes` et du journal."
+      "acceptance": "Écart C3 de la vérification de bout en bout (GOV-131, VERIF-1-RAPPORT.md), versé sur demande de la coordination, en tête du lot 2 : en production, aucun lien magique ne part — le transport `courriel` de `dependancesDuProcessus` lève `envoi_courriel_non_cable`, et `demanderEnvoi` (INT-T10) n'est importé nulle part hors du relais. Le seul parcours utilisateur de la Phase 0 n'existe donc pas sur `main` déployé. (1) TÉMOIN rouge d'abord : `demanderLien` en production simulée, relais simulé, écrit exactement une ligne `courriels_envoyes` et fait exactement un appel au relais. (2) `demanderEnvoi` est câblé dans `dependancesDuProcessus` (`src/server/auth/lien-magique-production.ts`) ; aucune autre voie d'envoi. (3) Préalable de tout écran de l'espace. Relecture de la lentille securite exigée. (4) Condition de la lentille securite : le jeton du lien n'est conservé NULLE PART après l'envoi — ni dans les données du job de file (suppression à l'achèvement), ni dans le journal, ni dans la réponse du relais conservée. TÉMOIN : après un envoi, le jeton est absent de `courriels_envoyes` et du journal.",
+      "tests": {
+        "REQ-SEC-001": [
+          "tests/integration/lien-magique-production.spec.ts",
+          "tests/unit/securite/lien-magique-emis-en-production.spec.ts"
+        ],
+        "REQ-INT-022": [
+          "tests/integration/lien-magique-production.spec.ts",
+          "tests/unit/securite/lien-magique-emis-en-production.spec.ts"
+        ]
+      }
     },
     {
       "id": "INT-T45",
@@ -17474,13 +17542,19 @@
       "zone": "integration",
       "paths": [
         "src/server/integrations/axionia/reception.ts",
-        "tests/integration/reception-hors-schema.spec.ts"
+        "tests/integration/reception-hors-schema.spec.ts",
+        "tests/unit/integration/reception-hors-schema.spec.ts",
+        "tests/unit/securite/webhook-signature.spec.ts",
+        "tests/integration/webhook.spec.ts",
+        "tests/integration/webhook-verdicts.spec.ts"
       ],
       "schema": false,
       "sensible": [
         "argent"
       ],
-      "deps": [],
+      "deps": [
+        "INT-T44"
+      ],
       "reqs": [
         "REQ-INT-003",
         "REQ-QA-007"
@@ -17489,7 +17563,17 @@
       "externe": null,
       "estimateDays": 0.5,
       "statut": "a_faire",
-      "acceptance": "Écart C4 de la vérification de bout en bout (GOV-131, VERIF-1-RAPPORT.md), versé sur demande de la coordination, en tête du lot 2, AVANT tout événement d'argent : la réception n'applique pas les `$defs` fermés du contrat (`payload: z.record(unknown)`) ; un payload hors schéma (champ en trop, montant en chaîne, montant négatif) est accepté 200, marqué `sent` côté axion-ia, et jamais rejoué. (1) TÉMOIN rouge d'abord : un `candidature.recue` signé portant `payload.champIntrus` est refusé 422 `hors_schema` ; de même un montant en chaîne et un montant négatif. (2) La validation porte sur `#/$defs/payload_<type>` du contrat publié, après `enveloppeReconnue`, et seulement si `schema_version === SCHEMA_VERSION`. (3) Un payload conforme reste accepté (contre-témoin). Relecture de la lentille securite exigée. (4) Condition de la lentille securite : un événement mis en attente (`held`) pour une autre `schema_version`, puis rejoué après une montée de version, passe par la MÊME validation des `$defs`. TÉMOIN : un tel événement hors schéma, rejoué après la montée, est refusé `hors_schema`."
+      "acceptance": "Écart C4 de la vérification de bout en bout (GOV-131, VERIF-1-RAPPORT.md), versé sur demande de la coordination, en tête du lot 2, AVANT tout événement d'argent : la réception n'applique pas les `$defs` fermés du contrat (`payload: z.record(unknown)`) ; un payload hors schéma (champ en trop, montant en chaîne, montant négatif) est accepté 200, marqué `sent` côté axion-ia, et jamais rejoué. (1) TÉMOIN rouge d'abord : un `candidature.recue` signé portant `payload.champIntrus` est refusé 422 `hors_schema` ; de même un montant en chaîne. (2) La validation porte sur `#/$defs/payload_<type>` du contrat publié, après `enveloppeReconnue`, et seulement si `schema_version === SCHEMA_VERSION`. (3) Un payload conforme reste accepté (contre-témoin). Relecture de la lentille securite exigée. (4) Condition de la lentille securite : un événement mis en attente (`held`) pour une autre `schema_version`, puis rejoué après une montée de version, passe par la MÊME validation des `$defs`. TÉMOIN : un tel événement hors schéma, rejoué après la montée, est refusé `hors_schema`. CONDITION DE LA LENTILLE SÉCURITÉ (rattrapage 45, relayée par la coordination, 2026-10-01), MOT POUR MOT : « Au rejeu d'un `held`, la validation juge la charge conservée contre le `$defs` du type PRIVÉ des `CHAMPS_NON_CONSERVES` (retirés des propriétés et de `required`), sans jamais les réintroduire ; TÉMOIN : un `held` conforme, conservé sans `utm`, est rejoué et accepté. » Motif : `utm` est requis par `payload_candidature_recue` mais n'est plus conservé depuis INT-T44 ; une validation naïve refuserait en `hors_schema` toute `candidature.recue` en attente. INT-T45 dépend d'INT-T44 (même `reception.ts`). DÉCISION DE LA COORDINATION (rattrapage 46, 2026-10-02, sur mesure de A05) : le `$defs` v2 publié n'a aucun `minimum` (les montants y sont `{\"type\":\"integer\"}`) ; un montant NÉGATIF n'est donc refusé qu'à partir de la v3, qui porte le minimum (INT-T46-P) — trou connu, jamais ouvert sur des données réelles (le minimum est préalable à `PARTNERS_SYNC_ENABLED` et à DM-15). Une règle propre à la réception serait un schéma retapé hors du contrat (RM-01) : écartée. Témoins : `tests/unit/integration/reception-hors-schema.spec.ts` en processus ; les témoins de SEC-06 (`webhook-signature.spec.ts`, `webhook.spec.ts`, `webhook-verdicts.spec.ts`) envoient désormais la charge du producteur réel, refusée à juste titre quand elle est factice, sans changer ce qu'ils prouvent.",
+      "tests": {
+        "REQ-INT-003": [
+          "tests/integration/reception-hors-schema.spec.ts",
+          "tests/unit/integration/reception-hors-schema.spec.ts"
+        ],
+        "REQ-QA-007": [
+          "tests/integration/reception-hors-schema.spec.ts",
+          "tests/unit/integration/reception-hors-schema.spec.ts"
+        ]
+      }
     },
     {
       "id": "QA-T55",
@@ -17594,7 +17678,8 @@
         "scripts/gates/journal-sans-pii.ts",
         "scripts/lot/paths-proposes.ts",
         "prisma/schema.prisma",
-        "prisma/migrations/"
+        "prisma/migrations/",
+        "docs/runbooks/mise-en-service.md"
       ],
       "schema": true,
       "sensible": [
@@ -17613,7 +17698,7 @@
       "externe": null,
       "estimateDays": 0.75,
       "statut": "a_faire",
-      "acceptance": "Décision D2 de Williams du 2026-10-01, dans la fenêtre de la coordination : la question est posée à 08:12:08Z (« A : on garde le contrat tel quel (« devis envoyé »). Il faut alors ajouter dans axion-ia un signal « devis envoyé ». […] B : on change le contrat en « devis signé ». […] ») ; Williams la recopie à 08:21:42Z avec « EXPLIQUE MOI CA JE NE comprends pas ce que c'est concremtent et a quoi ca sert » ; la coordination répond à 08:21:51Z par un exemple concret (un devis envoyé le lundi, une déclaration d'apporteur le mercredi, une signature le vendredi) ; Williams répond à 08:24:28Z : « oUi A. par contre des qu'un clietn a deja signé un devis, il faut dire qu'il nest pas disponible non ? car ce cleitn on l'a deja non ? UN PEU COmme si c'etait un apportuer d'affaire qui l'avait deja demarcher non ? pUIS AS TU pensé aussi aux commerciaux ? est ce que ca fonctionne aussi ? » (séquence mot pour mot : `_REPRISE-AXION-APPORTEURS/SEQUENCE-DECISIONS-PHASE1-2026-10-01.md`, hors dépôt). Option A. (1) Le type « devis émis » entre dans la liste fermée `TYPES_EVENEMENT` (packages/contracts/events.ts), avec son `$defs` fermé ; le contrat publié passe en v3 et son empreinte est régénérée par `pnpm contracts:export`, jamais retapée. (2) Le texte de REQ-INT-004 et de REQ-QA-007, qui comptent les types, est amendé au registre dans la même PR. (3) [Retiré par le rattrapage 35 : la projection appartient à DM-10-P, ce qui lève le cycle caché entre les deux tâches.] (4) TÉMOINS rouges d'abord : un « devis émis » conforme est rangé ; un « devis émis » hors schéma est refusé 422. Relecture de la lentille schema. AMENDEMENT (audit indépendant du plan de la Phase 1 (2026-10-01), écarts C-03 et A-05) : `SCHEMA_VERSION` a une seule définition ; `type_evenement_recu` gagne `devis_emis` en fin d'enum (bijection de `webhook.spec.ts`) ; `facture.emise` gagne `devisId` (nullable) dans la même montée v3 (JUR-T42) ; un événement `held` d'une version antérieure est validé contre les `$defs` de SA version. TÉMOIN : un `devis.signe` v2 mis en `held`, puis rejoué après la v3, est traité."
+      "acceptance": "Décision D2 de Williams du 2026-10-01, dans la fenêtre de la coordination : la question est posée à 08:12:08Z (« A : on garde le contrat tel quel (« devis envoyé »). Il faut alors ajouter dans axion-ia un signal « devis envoyé ». […] B : on change le contrat en « devis signé ». […] ») ; Williams la recopie à 08:21:42Z avec « EXPLIQUE MOI CA JE NE comprends pas ce que c'est concremtent et a quoi ca sert » ; la coordination répond à 08:21:51Z par un exemple concret (un devis envoyé le lundi, une déclaration d'apporteur le mercredi, une signature le vendredi) ; Williams répond à 08:24:28Z : « oUi A. par contre des qu'un clietn a deja signé un devis, il faut dire qu'il nest pas disponible non ? car ce cleitn on l'a deja non ? UN PEU COmme si c'etait un apportuer d'affaire qui l'avait deja demarcher non ? pUIS AS TU pensé aussi aux commerciaux ? est ce que ca fonctionne aussi ? » (séquence mot pour mot : `_REPRISE-AXION-APPORTEURS/SEQUENCE-DECISIONS-PHASE1-2026-10-01.md`, hors dépôt). Option A. (1) Le type « devis émis » entre dans la liste fermée `TYPES_EVENEMENT` (packages/contracts/events.ts), avec son `$defs` fermé ; le contrat publié passe en v3 et son empreinte est régénérée par `pnpm contracts:export`, jamais retapée. (2) Le texte de REQ-INT-004 et de REQ-QA-007, qui comptent les types, est amendé au registre dans la même PR. (3) [Retiré par le rattrapage 35 : la projection appartient à DM-10-P, ce qui lève le cycle caché entre les deux tâches.] (4) TÉMOINS rouges d'abord : un « devis émis » conforme est rangé ; un « devis émis » hors schéma est refusé 422. Relecture de la lentille schema. AMENDEMENT (audit indépendant du plan de la Phase 1 (2026-10-01), écarts C-03 et A-05) : `SCHEMA_VERSION` a une seule définition ; `type_evenement_recu` gagne `devis_emis` en fin d'enum (bijection de `webhook.spec.ts`) ; `facture.emise` gagne `devisId` (nullable) dans la même montée v3 (JUR-T42) ; un événement `held` d'une version antérieure est validé contre les `$defs` de SA version. TÉMOIN : un `devis.signe` v2 mis en `held`, puis rejoué après la v3, est traité. AMENDEMENT (rattrapage 46, décision de la coordination du 2026-10-02) : la v3 porte `minimum: 0` sur les champs `…Cents`. PRÉALABLE : inventaire des types porteurs de montants (`avoir.emis`, `facture.annulee`, paiement remboursé) ; si l'un porte un montant négatif par conception, le minimum s'écrit par type, avec un témoin par cas. Ce minimum est PRÉALABLE à `PARTNERS_SYNC_ENABLED` et à DM-15 : la PR ajoute la case à `docs/runbooks/mise-en-service.md` (label `role:documentaliste`), cochée après réception par Williams. Relecture A02 et sécurité. Une seule montée de contrat (v3), recommandée par l'audit du plan de la Phase 1."
     },
     {
       "id": "JUR-T42",
@@ -17623,7 +17708,8 @@
       "zone": "juridique",
       "paths": [
         "docs/contrat/CONTRAT-APPORTEUR-V1.md",
-        "tests/unit/contrat/anteriorite-devis-signe.spec.ts"
+        "tests/unit/contrat/anteriorite-devis-signe.spec.ts",
+        "src/domain/contrat/decisions.ts"
       ],
       "schema": false,
       "sensible": [
@@ -17639,7 +17725,7 @@
       "externe": null,
       "estimateDays": 0.25,
       "statut": "a_faire",
-      "acceptance": "Décision D2 de Williams du 2026-10-01, dans la fenêtre de la coordination : la question est posée à 08:12:08Z (« A : on garde le contrat tel quel (« devis envoyé »). Il faut alors ajouter dans axion-ia un signal « devis envoyé ». […] B : on change le contrat en « devis signé ». […] ») ; Williams la recopie à 08:21:42Z avec « EXPLIQUE MOI CA JE NE comprends pas ce que c'est concremtent et a quoi ca sert » ; la coordination répond à 08:21:51Z par un exemple concret (un devis envoyé le lundi, une déclaration d'apporteur le mercredi, une signature le vendredi) ; Williams répond à 08:24:28Z : « oUi A. par contre des qu'un clietn a deja signé un devis, il faut dire qu'il nest pas disponible non ? car ce cleitn on l'a deja non ? UN PEU COmme si c'etait un apportuer d'affaire qui l'avait deja demarcher non ? pUIS AS TU pensé aussi aux commerciaux ? est ce que ca fonctionne aussi ? » (séquence mot pour mot : `_REPRISE-AXION-APPORTEURS/SEQUENCE-DECISIONS-PHASE1-2026-10-01.md`, hors dépôt). TROU constaté par A01 en vérifiant le complément : l'art. 3.3 compte six mois depuis l'ÉMISSION du devis ; un devis SIGNÉ il y a plus de six mois et pas encore facturé ne rend donc plus l'entreprise indisponible, alors que la Société la tient déjà. Le complément de Williams le ferme : un devis signé rend l'entreprise indisponible tant qu'il n'est pas entièrement facturé, puis la fenêtre « cliente » de vingt-quatre mois prend le relais à la facture. (1) L'art. 3.3 du gabarit ajoute, après « destinataire d'un devis de moins de six mois », le cas d'une entreprise « ayant accepté un devis qui n'est pas encore entièrement facturé », sans limite de durée. (2) C'est un AVENANT : il est écrit avant le premier envoi DocuSeal, et sa formulation finale est validée par Williams avant la fusion. (3) TÉMOIN rouge d'abord : le gabarit sans ce cas est refusé par la concordance du contrat ; avec lui, accepté. Relecture de la lentille juridique."
+      "acceptance": "Décision D2 de Williams du 2026-10-01, dans la fenêtre de la coordination : la question est posée à 08:12:08Z (« A : on garde le contrat tel quel (« devis envoyé »). Il faut alors ajouter dans axion-ia un signal « devis envoyé ». […] B : on change le contrat en « devis signé ». […] ») ; Williams la recopie à 08:21:42Z avec « EXPLIQUE MOI CA JE NE comprends pas ce que c'est concremtent et a quoi ca sert » ; la coordination répond à 08:21:51Z par un exemple concret (un devis envoyé le lundi, une déclaration d'apporteur le mercredi, une signature le vendredi) ; Williams répond à 08:24:28Z : « oUi A. par contre des qu'un clietn a deja signé un devis, il faut dire qu'il nest pas disponible non ? car ce cleitn on l'a deja non ? UN PEU COmme si c'etait un apportuer d'affaire qui l'avait deja demarcher non ? pUIS AS TU pensé aussi aux commerciaux ? est ce que ca fonctionne aussi ? » (séquence mot pour mot : `_REPRISE-AXION-APPORTEURS/SEQUENCE-DECISIONS-PHASE1-2026-10-01.md`, hors dépôt). TROU constaté par A01 en vérifiant le complément : l'art. 3.3 compte six mois depuis l'ÉMISSION du devis ; un devis SIGNÉ il y a plus de six mois et pas encore facturé ne rend donc plus l'entreprise indisponible, alors que la Société la tient déjà. Le complément de Williams le ferme : un devis signé rend l'entreprise indisponible tant qu'il n'est pas entièrement facturé, puis la fenêtre « cliente » de vingt-quatre mois prend le relais à la facture. (1) L'art. 3.3 du gabarit ajoute, après « destinataire d'un devis de moins de six mois », le cas d'une entreprise « ayant accepté un devis qui n'est pas encore entièrement facturé », sans limite de durée. (2) C'est un AVENANT : il est écrit avant le premier envoi DocuSeal, et sa formulation finale est validée par Williams avant la fusion. (3) TÉMOIN rouge d'abord : le gabarit sans ce cas est refusé par la concordance du contrat ; avec lui, accepté. Relecture de la lentille juridique. AMENDEMENT (rattrapage 45, arbitrage A01, texte de A07) : la concordance qui refuse un gabarit sans ce cas se déclare dans `src/domain/contrat/decisions.ts` (HYP-ANTERIORITE-DEVIS / 3.3, fragment « ayant signé un devis qui n'a été ni entièrement facturé »), écrite par le poste dev (A05) avec le témoin `anteriorite-devis-signe.spec.ts` ; le texte du contrat reste à A07. L'ajout de rédaction « ni annulé » (un devis signé puis abandonné ne ferme pas l'entreprise pour toujours) dépasse le texte de la décision D2 : il est SOUMIS à Williams dans la séance groupée ; s'il le refuse, il est retiré avant la fusion. JUR-T42 atterrit après JUR-T31 (même contrat, même `decisions.ts`)."
     },
     {
       "id": "INT-T47-A",
@@ -17703,7 +17789,8 @@
       "zone": "juridique",
       "paths": [
         "docs/contrat/CONTRAT-APPORTEUR-V1.md",
-        "tests/unit/contrat/prorata-de-remise.spec.ts"
+        "tests/unit/contrat/prorata-de-remise.spec.ts",
+        "src/domain/contrat/decisions.ts"
       ],
       "schema": false,
       "sensible": [
@@ -17719,7 +17806,7 @@
       "externe": null,
       "estimateDays": 0.25,
       "statut": "a_faire",
-      "acceptance": "Décision de Williams du 2026-10-01, dans la fenêtre de la coordination (suite de D4) : la commission FORFAITAIRE baisse au prorata quand le prix vendu est inférieur au prix de référence, et n'augmente jamais au-dessus. À la question posée avec un exemple chiffré, Williams répond à 08:33:52Z « OUI POUR CA   - A (recommandé) : la commission reste […]. Elle baisse en cas de remise, mais n'augmente jamais. » (le montant est remplacé par « […] » : aucun montant n'entre dans ce dépôt public). Et c'est LUI qui demande l'inscription au contrat, à 08:33:27Z, sans qu'on le lui ait demandé : « oui et il faut bien que ce soit indiqué dans le contrat non ? » (séquence mot pour mot : `_REPRISE-AXION-APPORTEURS/SEQUENCE-DECISIONS-PHASE1-2026-10-01.md`, hors dépôt). Le prorata ne porte que sur le FORFAIT du palier, dû une fois par commande (REQ-DM-015) (le pourcentage suit déjà le prix vendu : l'appliquer deux fois le baisserait deux fois), arrondi au centime INFÉRIEUR. SOURCE DÉJÀ EN PRODUCTION : le courriel d'axion-ia aux apporteurs (`axionia/src/lib/email/templates/apporteur-issue-echange.tsx`) annonce déjà « par journée de formation au tarif public (réduite au prorata en cas de remise accordée au client) », règle qu'ignoraient le contrat v1 et le calcul : ces tâches les alignent sur cette promesse. (1) L'art. 4 du gabarit écrit que la commission forfaitaire du palier, due une fois par commande (REQ-DM-015), est multipliée par le rapport du prix vendu au prix de référence, plafonné à un (jamais au-dessus du forfait), arrondie au centime inférieur ; la commission au pourcentage n'est pas concernée. (2) C'est un AVENANT : il est écrit avant le premier envoi DocuSeal, et sa formulation finale est montrée à Williams et validée par lui avant la fusion. (3) TÉMOIN rouge d'abord : le gabarit sans cette clause est refusé par la concordance du contrat ; avec elle, accepté. Relecture de la lentille juridique. SOURCE DU PRIX DE RÉFÉRENCE, à écrire dans l'avenant — Décision C-07 de Williams du 2026-10-01, dans la fenêtre de la coordination : à la question de 09:38:20Z (« Question : quel « prix de référence » utiliser pour calculer la réduction ? », illustrée par un exemple chiffré non recopié dans ce dépôt public ; A : le prix inscrit dans le contrat de l'apporteur ; B : le prix public du moment), Williams répond à 09:45:54Z : « B ca ron plus il peut y avoir des prix de formation sur devis et donc sans prix de référence non ? » (séquence mot pour mot : `_REPRISE-AXION-APPORTEURS/SEQUENCE-DECISIONS-PHASE1-2026-10-01.md`, hors dépôt). Le prix de référence est le prix PUBLIC EN VIGUEUR À LA DATE DU DEVIS SIGNÉ, lu dans `pricing.ts` par le producteur et transporté par ligne dans l'événement du devis signé (INT-T48-P) : aucune historisation de la grille n'est nécessaire. CONSTAT A01 (axionia `src/content/pricing.ts`, origin/main 7a9cf68a) sur sa question : les paliers sur devis sont au POURCENTAGE (implémentations) ou sans barème (conférence, intervention sur demande) ; aucun palier au FORFAIT n'est sans prix public, donc le prorata a toujours un prix de référence. AMENDEMENT (rattrapage 36) — Décision de Williams du 2026-10-01, dans la fenêtre de la coordination : à la question de 12:36:13Z (« 1. Un apporteur vous amène un client qui achète une conférence. L'apporteur touche combien ? […] 2. Un apporteur vous amène un client qui achète une « intervention sur demande » (une prestation sur mesure). L'apporteur touche combien ? »), Williams répond à 12:36:59Z : « […] pour une conference. ON FIXXERA ca 2. […] plus tard car je ne le sais pas encore » (séquence mot pour mot : `_REPRISE-AXION-APPORTEURS/SEQUENCE-DECISIONS-PHASE1-2026-10-01.md`, hors dépôt). La CONFÉRENCE est commissionnée au FORFAIT (le montant vit dans `pricing.ts` d'axion-ia, jamais dans ce dépôt) ; l'INTERVENTION SUR DEMANDE reste sans barème, à fixer plus tard par Williams. La conférence étant sur devis, c'est un palier au FORFAIT SANS PRIX PUBLIC : le constat « aucun palier au forfait n'est sans prix public » ne vaut plus pour elle. Arbitrage A01/coordination, révisable par Williams à la relecture de l'avenant (JUR-T43) : sans prix de référence, PAS DE PRORATA — le forfait de la conférence est dû entier, l'événement ne porte pas de `prixReferenceHt` pour cette ligne, et l'absence de prix de référence n'est jamais lue comme un prix nul. TÉMOIN : une ligne conférence, quel que soit son prix vendu, donne le forfait entier. L'annexe 1 porte le palier de la conférence comme variable, sans montant, et énonce les quatre familles non commissionnées. AMENDEMENT (rattrapage 36, refus de la lentille exactitude) : l'avenant remplace les « 30 paliers » figés du contrat v1 (`docs/contrat/CONTRAT-APPORTEUR-V1.md`, annexe 1 et ligne `CL-GRILLE`) par le renvoi aux paliers de la grille du contrat, dérivés de la grille publiée (31 au 2026-10-01, la conférence comprise) ; la vérification « 30 paliers » de `docs/gates.json` suit avec la reprise de gates.json, hors registre."
+      "acceptance": "Décision de Williams du 2026-10-01, dans la fenêtre de la coordination (suite de D4) : la commission FORFAITAIRE baisse au prorata quand le prix vendu est inférieur au prix de référence, et n'augmente jamais au-dessus. À la question posée avec un exemple chiffré, Williams répond à 08:33:52Z « OUI POUR CA   - A (recommandé) : la commission reste […]. Elle baisse en cas de remise, mais n'augmente jamais. » (le montant est remplacé par « […] » : aucun montant n'entre dans ce dépôt public). Et c'est LUI qui demande l'inscription au contrat, à 08:33:27Z, sans qu'on le lui ait demandé : « oui et il faut bien que ce soit indiqué dans le contrat non ? » (séquence mot pour mot : `_REPRISE-AXION-APPORTEURS/SEQUENCE-DECISIONS-PHASE1-2026-10-01.md`, hors dépôt). Le prorata ne porte que sur le FORFAIT du palier, dû une fois par commande (REQ-DM-015) (le pourcentage suit déjà le prix vendu : l'appliquer deux fois le baisserait deux fois), arrondi au centime INFÉRIEUR. SOURCE DÉJÀ EN PRODUCTION : le courriel d'axion-ia aux apporteurs (`axionia/src/lib/email/templates/apporteur-issue-echange.tsx`) annonce déjà « par journée de formation au tarif public (réduite au prorata en cas de remise accordée au client) », règle qu'ignoraient le contrat v1 et le calcul : ces tâches les alignent sur cette promesse. (1) L'art. 4 du gabarit écrit que la commission forfaitaire du palier, due une fois par commande (REQ-DM-015), est multipliée par le rapport du prix vendu au prix de référence, plafonné à un (jamais au-dessus du forfait), arrondie au centime inférieur ; la commission au pourcentage n'est pas concernée. (2) C'est un AVENANT : il est écrit avant le premier envoi DocuSeal, et sa formulation finale est montrée à Williams et validée par lui avant la fusion. (3) TÉMOIN rouge d'abord : le gabarit sans cette clause est refusé par la concordance du contrat ; avec elle, accepté. Relecture de la lentille juridique. SOURCE DU PRIX DE RÉFÉRENCE, à écrire dans l'avenant — Décision C-07 de Williams du 2026-10-01, dans la fenêtre de la coordination : à la question de 09:38:20Z (« Question : quel « prix de référence » utiliser pour calculer la réduction ? », illustrée par un exemple chiffré non recopié dans ce dépôt public ; A : le prix inscrit dans le contrat de l'apporteur ; B : le prix public du moment), Williams répond à 09:45:54Z : « B ca ron plus il peut y avoir des prix de formation sur devis et donc sans prix de référence non ? » (séquence mot pour mot : `_REPRISE-AXION-APPORTEURS/SEQUENCE-DECISIONS-PHASE1-2026-10-01.md`, hors dépôt). Le prix de référence est le prix PUBLIC EN VIGUEUR À LA DATE DU DEVIS SIGNÉ, lu dans `pricing.ts` par le producteur et transporté par ligne dans l'événement du devis signé (INT-T48-P) : aucune historisation de la grille n'est nécessaire. CONSTAT A01 (axionia `src/content/pricing.ts`, origin/main 7a9cf68a) sur sa question : les paliers sur devis sont au POURCENTAGE (implémentations) ou sans barème (conférence, intervention sur demande) ; aucun palier au FORFAIT n'est sans prix public, donc le prorata a toujours un prix de référence. AMENDEMENT (rattrapage 36) — Décision de Williams du 2026-10-01, dans la fenêtre de la coordination : à la question de 12:36:13Z (« 1. Un apporteur vous amène un client qui achète une conférence. L'apporteur touche combien ? […] 2. Un apporteur vous amène un client qui achète une « intervention sur demande » (une prestation sur mesure). L'apporteur touche combien ? »), Williams répond à 12:36:59Z : « […] pour une conference. ON FIXXERA ca 2. […] plus tard car je ne le sais pas encore » (séquence mot pour mot : `_REPRISE-AXION-APPORTEURS/SEQUENCE-DECISIONS-PHASE1-2026-10-01.md`, hors dépôt). La CONFÉRENCE est commissionnée au FORFAIT (le montant vit dans `pricing.ts` d'axion-ia, jamais dans ce dépôt) ; l'INTERVENTION SUR DEMANDE reste sans barème, à fixer plus tard par Williams. La conférence étant sur devis, c'est un palier au FORFAIT SANS PRIX PUBLIC : le constat « aucun palier au forfait n'est sans prix public » ne vaut plus pour elle. Arbitrage A01/coordination, révisable par Williams à la relecture de l'avenant (JUR-T43) : sans prix de référence, PAS DE PRORATA — le forfait de la conférence est dû entier, l'événement ne porte pas de `prixReferenceHt` pour cette ligne, et l'absence de prix de référence n'est jamais lue comme un prix nul. TÉMOIN : une ligne conférence, quel que soit son prix vendu, donne le forfait entier. L'annexe 1 porte le palier de la conférence comme variable, sans montant, et énonce les quatre familles non commissionnées. AMENDEMENT (rattrapage 36, refus de la lentille exactitude) : l'avenant remplace les « 30 paliers » figés du contrat v1 (`docs/contrat/CONTRAT-APPORTEUR-V1.md`, annexe 1 et ligne `CL-GRILLE`) par le renvoi aux paliers de la grille du contrat, dérivés de la grille publiée (31 au 2026-10-01, la conférence comprise) ; la vérification « 30 paliers » de `docs/gates.json` suit avec la reprise de gates.json, hors registre. AMENDEMENT (rattrapage 45, arbitrage A01, texte de A07) : la concordance HYP-PRORATA-REMISE / 4.1 bis (fragment « le forfait est multiplié par le rapport entre ces deux prix ») se déclare dans `src/domain/contrat/decisions.ts` et son témoin `prorata-de-remise.spec.ts` est écrit par le poste dev (A05) ; le texte reste à A07. Le palier de la CONFÉRENCE (commissionnée au forfait, décision de Williams du 2026-10-01) n'est PAS écrit dans cette tâche : il change les comptes de W6 et de W11 (31 paliers ; la conférence quitte A1.5 ; rangement proposé dans A1.1, formations collectives), qui ne s'amendent que par le lot dédié du gardien-spec ; une tâche de suite l'écrira après ce lot dédié, avec la mise à jour du test W6 de `contract-template-complete.spec.ts` et de l'entrée `partners:grille:complete` de `docs/gates.json` (A01). JUR-T43 atterrit après JUR-T42."
     },
     {
       "id": "INT-T48-P",
@@ -17834,7 +17921,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.75,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "Porté par l'audit indépendant du plan de la Phase 1 (2026-10-01, `_REPRISE-AXION-APPORTEURS/AUDIT-PLAN-PHASE-1.md`) (écart A-07), BLOQUANT avant DM-24. (1) Un processus planifié déclenche périodiquement les passages « tout ce qui est dû à l'instant t » (REQ-QA-027), sous un verrou consultatif, avec un battement par clé de `TACHES` (`src/server/taches/registre.ts`). (2) Une tâche de fond s'y inscrit sans toucher au lanceur. TÉMOINS rouges d'abord : deux lanceurs concurrents n'exécutent un passage qu'une fois ; une tâche en échec n'arrête pas les autres. AMENDEMENT (rattrapage 44, décision de la coordination, option (a)) : au point (1), le déclencheur périodique est une tâche planifiée de la plateforme (Coolify) qui appelle chaque minute le point d'entrée CLI du lanceur (`src/server/taches/lanceur.ts`) par le script `taches:lancer` de `package.json` (REQ-GOV-018 ; label `role:architecte`, relecture A02) ; sortie non nulle si une tâche échoue. La composition des tâches inscrites vit dans `src/server/taches/inscriptions.ts`, partagée avec la route `src/app/api/webhooks/axionia/route.ts`. La case de cette tâche planifiée est ajoutée à `docs/runbooks/mise-en-service.md` (label `role:documentaliste`) et cochée après réception par Williams. Témoins unitaires dans la portée de `mutation:pr` : `tests/unit/integration/lanceur-des-passages.spec.ts` (deux lanceurs concurrents, un seul passage ; une tâche en échec n'arrête pas les autres ; un battement par clé) et `tests/unit/integration/inscriptions-des-taches.spec.ts` (composition). GOV-137 atterrit après QA-T54 (mêmes `package.json` et `mise-en-service.md`).",
       "tests": {
         "REQ-QA-027": [
@@ -17842,7 +17929,16 @@
           "tests/unit/integration/lanceur-des-passages.spec.ts",
           "tests/unit/integration/inscriptions-des-taches.spec.ts"
         ]
-      }
+      },
+      "branch": "t/gov-137",
+      "owner": "A05",
+      "pr": 369,
+      "attestation": {
+        "pr": 369,
+        "sha": "d653f55e5432004b79e40c7db771fe312673dcc7",
+        "fusionneeAt": "2026-10-01T21:31:21Z"
+      },
+      "motif": null
     },
     {
       "id": "INT-T49",
@@ -18187,7 +18283,10 @@
         "scripts/sauvegarde/cycle.ts",
         "Dockerfile",
         "scripts/deploiement/provisionner.ts",
-        "tests/unit/qualite/sauvegarde-fraicheur.spec.ts"
+        "tests/unit/qualite/sauvegarde-fraicheur.spec.ts",
+        "src/domain/seuils/ssot.ts",
+        "src/server/integrations/telegram/alertes.ts",
+        "tests/unit/qualite/provisionnement-coolify.spec.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -18199,7 +18298,7 @@
       "externe": null,
       "estimateDays": 0.5,
       "statut": "a_faire",
-      "acceptance": "Écarts C9 et C10 de la vérification de bout en bout, portés par l'audit indépendant du plan de la Phase 1 (2026-10-01). (1) Famille « âge du dernier vidage au plus 2 h » dans `sauvegarde:fraicheur`, alertée. (2) Avec `PARTNERS_SAUVEGARDE_ACTIVEE=oui` et un secret manquant, le run échoue au lieu de sauter en vert. (3) `curl` dans l'étape `execution` du Dockerfile, et le bilan de santé du provisionnement sur `/api/readyz` (`provisionner.ts`). TÉMOINS à deux faces."
+      "acceptance": "Écarts C9 et C10 de la vérification de bout en bout, portés par l'audit indépendant du plan de la Phase 1 (2026-10-01). (1) Famille « âge du dernier vidage au plus 2 h » dans `sauvegarde:fraicheur`, alertée. (2) Avec `PARTNERS_SAUVEGARDE_ACTIVEE=oui` et un secret manquant, le run échoue au lieu de sauter en vert. (3) `curl` dans l'étape `execution` du Dockerfile, et le bilan de santé du provisionnement sur `/api/readyz` (`provisionner.ts`). TÉMOINS à deux faces. ARBITRAGES A01 (rattrapage 46, mesure de A06) : le seuil d'âge du dernier vidage est une constante de la SSOT (`DERNIER_VIDAGE_MAX_MINUTES` = 120, sourcée, RM-10) ; l'alerte est une catégorie close NOUVELLE, `vidage_perime`, dans `src/server/integrations/telegram/alertes.ts` (réemployer `restauration_echouee` mentirait sur la cause), vérifiée par le témoin de la tâche ; le bilan de santé de la plateforme sur `/api/readyz` est réactivé, et `tests/unit/qualite/provisionnement-coolify.spec.ts` change de face (`health_check_enabled` repasse à vrai, motif du 2026-09-30 levé). `ssot.ts` et `alertes.ts` sont partagés avec des tâches ouvertes : la PR atterrit après elles."
     },
     {
       "id": "SEC-45",
@@ -18359,7 +18458,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.25,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "Décision C1 de Williams du 2026-10-01, dans la fenêtre de la coordination : à la question de 09:17:18Z sur le PDF de présentation pour les futurs apporteurs, en ligne et joint aux courriels des candidats, qui contient des formulations relevées par l'écart C1 de la vérification de bout en bout (promesses de gains et un exemple chiffré, non recopiés dans ce dépôt public) — « A (recommandé) : on retire tout de suite le PDF des courriels, puis on le réécrit avec des formulations prudentes (« à titre indicatif… ») pendant la Phase 1, avant de le remettre. » ou « B : on le laisse en place jusqu'à sa réécriture. » —, Williams répond « A » à 09:22:23Z (séquence mot pour mot : `_REPRISE-AXION-APPORTEURS/SEQUENCE-DECISIONS-PHASE1-2026-10-01.md`, hors dépôt). JUR-T44 ajoutée en tête du lot 1 par la décision C1 de Williams, arbitrage A01/coordination. (1) La pièce jointe est retirée (`kit-apporteur.ts`), et le lien est retiré de la page de remerciement `/apporteur-affaires/merci`. (2) TÉMOIN rouge d'abord : aucun courriel ne joint le PDF. (3) Le PDF n'est remis dans les courriels qu'après JUR-T45. Les chemins exacts de la page de remerciement sont nommés à la revendication par la session axion-ia.",
       "tests": {
         "REQ-JUR-001": [
@@ -18370,7 +18469,16 @@
           "axionia/src/lib/commercial-application/__tests__/kit-apporteur-sans-pdf.spec.ts",
           "axionia/src/app/[locale]/apporteur-affaires/merci/__tests__/la-page-merci-ne-lie-plus-le-pdf.spec.tsx"
         ]
-      }
+      },
+      "branch": "partners/jur-t44-sans-pdf",
+      "owner": "A08",
+      "pr": null,
+      "attestation": {
+        "pr": 1263,
+        "sha": "782cc971ee78f124d7731b243c88b9261fab278c",
+        "fusionneeAt": "2026-10-01T19:50:08Z"
+      },
+      "motif": null
     },
     {
       "id": "JUR-T45",
@@ -18402,7 +18510,7 @@
       "externe": null,
       "estimateDays": 0.5,
       "statut": "a_faire",
-      "acceptance": "Décision C1 de Williams du 2026-10-01, dans la fenêtre de la coordination : à la question de 09:17:18Z sur le PDF de présentation pour les futurs apporteurs, en ligne et joint aux courriels des candidats, qui contient des formulations relevées par l'écart C1 de la vérification de bout en bout (promesses de gains et un exemple chiffré, non recopiés dans ce dépôt public) — « A (recommandé) : on retire tout de suite le PDF des courriels, puis on le réécrit avec des formulations prudentes (« à titre indicatif… ») pendant la Phase 1, avant de le remettre. » ou « B : on le laisse en place jusqu'à sa réécriture. » —, Williams répond « A » à 09:22:23Z (séquence mot pour mot : `_REPRISE-AXION-APPORTEURS/SEQUENCE-DECISIONS-PHASE1-2026-10-01.md`, hors dépôt). (1) `docs/imprimes/devenir-apporteur-d-affaires.html` est réécrit en formulation indicative ; le PDF est régénéré à partir de lui, jamais retouché à la main. (2) `jur:copy-indicative` et `vocab-public` couvrent `docs/imprimes/**`. (3) TÉMOIN rouge d'abord, sans `skipIf` : le PDF ACTUEL, lu par `pdftotext`, est refusé ; le PDF réécrit passe. (4) Aucun montant d'exemple dans le document. Le PDF n'est remis dans les courriels qu'une fois cette tâche livrée. AMENDEMENT (rattrapage 39, signalé par la session axion-ia à la livraison de JUR-T44) : (5) La remise du PDF dans les courriels repasse `DOCUMENT_APPORTEUR_DIFFUSE` à `true` et rétablit les textes qui annonçaient le document (les courriels et la page de remerciement que JUR-T44 a modifiés). Les deux témoins de JUR-T44 (`kit-apporteur-sans-pdf.spec.ts` et `la-page-merci-ne-lie-plus-le-pdf.spec.tsx`) rougissent alors : ils sont retournés DANS LA MÊME PR, avec le motif. Les chemins réels sont ajoutés au registre à la revendication. AMENDEMENT (rattrapage 42) : le point (5) s'étend à ce que JUR-T44b retire ou substitue : la micro-copy du formulaire (`FORMULAIRE.micro`), `devenir-apporteur` dans `IMPRIMES_PROPOSES`, et la phrase de la politique de confidentialité en français et en anglais (`legal.ts`), que JUR-T44b a SUBSTITUÉE par l'annonce du catalogue des prestations dans l'e-mail des 30 minutes, à reformuler à la remise sous relecture de la juriste. Le témoin de JUR-T44b est retourné dans la même PR. JUR-T45 dépend de JUR-T44b."
+      "acceptance": "Décision C1 de Williams du 2026-10-01, dans la fenêtre de la coordination : à la question de 09:17:18Z sur le PDF de présentation pour les futurs apporteurs, en ligne et joint aux courriels des candidats, qui contient des formulations relevées par l'écart C1 de la vérification de bout en bout (promesses de gains et un exemple chiffré, non recopiés dans ce dépôt public) — « A (recommandé) : on retire tout de suite le PDF des courriels, puis on le réécrit avec des formulations prudentes (« à titre indicatif… ») pendant la Phase 1, avant de le remettre. » ou « B : on le laisse en place jusqu'à sa réécriture. » —, Williams répond « A » à 09:22:23Z (séquence mot pour mot : `_REPRISE-AXION-APPORTEURS/SEQUENCE-DECISIONS-PHASE1-2026-10-01.md`, hors dépôt). (1) `docs/imprimes/devenir-apporteur-d-affaires.html` est réécrit en formulation indicative ; le PDF est régénéré à partir de lui, jamais retouché à la main. (2) `jur:copy-indicative` et `vocab-public` couvrent `docs/imprimes/**`. (3) TÉMOIN rouge d'abord, sans `skipIf` : le PDF ACTUEL, lu par `pdftotext`, est refusé ; le PDF réécrit passe. (4) Aucun montant d'exemple dans le document. Le PDF n'est remis dans les courriels qu'une fois cette tâche livrée. AMENDEMENT (rattrapage 39, signalé par la session axion-ia à la livraison de JUR-T44) : (5) La remise du PDF dans les courriels repasse `DOCUMENT_APPORTEUR_DIFFUSE` à `true` et rétablit les textes qui annonçaient le document (les courriels et la page de remerciement que JUR-T44 a modifiés). Les deux témoins de JUR-T44 (`kit-apporteur-sans-pdf.spec.ts` et `la-page-merci-ne-lie-plus-le-pdf.spec.tsx`) rougissent alors : ils sont retournés DANS LA MÊME PR, avec le motif. Les chemins réels sont ajoutés au registre à la revendication. AMENDEMENT (rattrapage 42) : le point (5) s'étend à ce que JUR-T44b retire ou substitue : la micro-copy du formulaire (`FORMULAIRE.micro`), `devenir-apporteur` dans `IMPRIMES_PROPOSES`, et la phrase de la politique de confidentialité en français et en anglais (`legal.ts`), que JUR-T44b a SUBSTITUÉE par l'annonce du catalogue des prestations dans l'e-mail des 30 minutes, à reformuler à la remise sous relecture de la juriste. Le témoin de JUR-T44b est retourné dans la même PR. JUR-T45 dépend de JUR-T44b. AMENDEMENT (rattrapage 45, note de la lentille exactitude) : les commentaires de développeur d'axion-ia qui décrivent encore le kit « document + catalogue » sont alignés (huit relevés par la lentille, notamment dans `capture-actions.ts`, `relances-lead-apporteur.ts` et `saisie-manuelle.ts`) ; leurs chemins exacts sont nommés à la revendication."
     },
     {
       "id": "INT-T53-A",
@@ -18499,7 +18607,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.25,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "Suite de JUR-T44 (décision C1 de Williams du 2026-10-01, « on retire tout de suite le PDF des courriels »), sortie dans une PR axion-ia à part par décision de file de la coordination : la PR de JUR-T44 atterrit telle quelle pour couper l'exposition au plus vite, et ce qui reste n'a qu'un impact marginal. (1) Les textes qui annoncent encore le document sont corrigés : la micro-copy du formulaire (`FORMULAIRE.micro`), le résumé des imprimés (« envoyé automatiquement ») et les issues d'invitation. (2) Le PDF n'est plus proposé par la console : `devenir-apporteur` est retiré de `IMPRIMES_PROPOSES`, et le composeur de contact manuel et le bloc d'invitation ne le proposent plus. (3) Dans la politique de confidentialité, en français et en anglais, la phrase sur l'envoi du document est SUBSTITUÉE, pas retirée : l'e-mail envoyé 30 minutes après part toujours, et c'est le catalogue des prestations qu'il annonce désormais (accord de la coordination). Le verrou `la-notice-dit-vrai-sur-les-apporteurs` reste vert. Relecture de la juriste (A07), relayée par la coordination. (4) TÉMOIN rouge d'abord : aucun imprimé proposé ne pointe vers le PDF de l'apporteur. Les tests existants qui exigeaient le document sont retournés, chacun nommé dans la PR avec son motif. (5) Le corps du squash est la seule ligne « Lot: JUR-T44b ». À la remise du document (JUR-T45), tout ce que cette tâche retire est rétabli.",
       "tests": {
         "REQ-JUR-001": [
@@ -18508,7 +18616,16 @@
         "REQ-JUR-041": [
           "axionia/src/lib/imprimes/__tests__/aucun-imprime-propose-ne-pointe-vers-le-pdf-apporteur.spec.ts"
         ]
-      }
+      },
+      "branch": "partners/jur-t44b-textes",
+      "owner": "A08",
+      "pr": null,
+      "attestation": {
+        "pr": 1264,
+        "sha": "1613d137fbb6f0b7d21438b0898c5824806b0e80",
+        "fusionneeAt": "2026-10-01T20:58:24Z"
+      },
+      "motif": null
     },
     {
       "id": "INT-T55",
@@ -18520,7 +18637,8 @@
         "src/server/queue/workers/evenement-recu.ts",
         "src/app/api/webhooks/axionia/route.ts",
         "tests/integration/passage-exclusif.spec.ts",
-        "docs/runbooks/mise-en-service.md"
+        "docs/runbooks/mise-en-service.md",
+        "tests/unit/integration/passage-exclusif.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -18538,13 +18656,15 @@
       "externe": null,
       "estimateDays": 0.75,
       "statut": "a_faire",
-      "acceptance": "Défaut antérieur signalé par la lentille sécurité le 2026-10-01, hors de la PR d'INT-T43, et tranché par la coordination sous délégation : chaque POST du webhook lance `passerLeTravail` dans `after()`, sans verrou, et `aTraiter` lit les lignes `recu` sans les réclamer ; deux webhooks rapprochés peuvent donc dispatcher deux fois le même événement, et, DM-15 branché, verser deux fois une commission. (1) Le passage est EXCLUSIF : soit chaque ligne est réclamée par une écriture conditionnelle (`recu` → état réclamé, une seule écriture gagnante), soit le passage entier prend un verrou consultatif sur le patron du lanceur de GOV-137 ; le choix est écrit dans la PR. La route `src/app/api/webhooks/axionia/route.ts` est comprise : aucun chemin d'appel ne contourne l'exclusion. Une réclamation abandonnée (processus tué) est reprise, jamais perdue. Si le choix exige une valeur d'énumération ou une colonne neuve, la tâche s'arrête et rend un `stop` : elle est déclarée sans schéma. (2) TÉMOIN rouge d'abord, en intégration sur une vraie base : deux passages SIMULTANÉS sur le même événement produisent un seul effet ; un passage tué après réclamation laisse l'événement repris au passage suivant. (3) Relecture OBLIGATOIRE de la lentille sécurité (sensible argent). (4) Condition de mise en service : `PARTNERS_SYNC_ENABLED` reste faux tant que cette tâche n'est pas fusionnée ; la PR qui la livre ajoute cette case à `docs/runbooks/mise-en-service.md`, avant la case d'ouverture du canal, et la cite ; la case est cochée après réception par Williams.",
+      "acceptance": "Défaut antérieur signalé par la lentille sécurité le 2026-10-01, hors de la PR d'INT-T43, et tranché par la coordination sous délégation : chaque POST du webhook lance `passerLeTravail` dans `after()`, sans verrou, et `aTraiter` lit les lignes `recu` sans les réclamer ; deux webhooks rapprochés peuvent donc dispatcher deux fois le même événement, et, DM-15 branché, verser deux fois une commission. (1) Le passage est EXCLUSIF : soit chaque ligne est réclamée par une écriture conditionnelle (`recu` → état réclamé, une seule écriture gagnante), soit le passage entier prend un verrou consultatif sur le patron du lanceur de GOV-137 ; le choix est écrit dans la PR. La route `src/app/api/webhooks/axionia/route.ts` est comprise : aucun chemin d'appel ne contourne l'exclusion. Une réclamation abandonnée (processus tué) est reprise, jamais perdue. Si le choix exige une valeur d'énumération ou une colonne neuve, la tâche s'arrête et rend un `stop` : elle est déclarée sans schéma. (2) TÉMOIN rouge d'abord, en intégration sur une vraie base : deux passages SIMULTANÉS sur le même événement produisent un seul effet ; un passage tué après réclamation laisse l'événement repris au passage suivant. (3) Relecture OBLIGATOIRE de la lentille sécurité (sensible argent). (4) Condition de mise en service : `PARTNERS_SYNC_ENABLED` reste faux tant que cette tâche n'est pas fusionnée ; la PR qui la livre ajoute cette case à `docs/runbooks/mise-en-service.md`, avant la case d'ouverture du canal, et la cite ; la case est cochée après réception par Williams. NOTE DE LA LENTILLE SÉCURITÉ (rattrapage 45, relayée par la coordination, 2026-10-02), MOT POUR MOT : « la route du webhook prend le MÊME verrou que le lanceur ; un passage plus long que la durée de transaction de Prisma (10 min) ne garde jamais le verrou pendant que le travail continue : passage borné, ou verrou de session relâché explicitement ; témoin ».",
       "tests": {
         "REQ-DM-036": [
-          "tests/integration/passage-exclusif.spec.ts"
+          "tests/integration/passage-exclusif.spec.ts",
+          "tests/unit/integration/passage-exclusif.spec.ts"
         ],
         "REQ-ARG-003": [
-          "tests/integration/passage-exclusif.spec.ts"
+          "tests/integration/passage-exclusif.spec.ts",
+          "tests/unit/integration/passage-exclusif.spec.ts"
         ]
       }
     },
@@ -18602,7 +18722,8 @@
         "docs/runbooks/mise-en-service.md",
         "src/server/taches/minimiser-candidatures.ts",
         "src/server/taches/registre.ts",
-        "src/domain/seuils/ssot.ts"
+        "src/domain/seuils/ssot.ts",
+        "src/server/taches/inscriptions.ts"
       ],
       "schema": true,
       "sensible": [
@@ -18621,7 +18742,7 @@
       "externe": null,
       "estimateDays": 1,
       "statut": "a_faire",
-      "acceptance": "Décision de la coordination sous délégation (2026-10-01), sur le blocage d'INT-T44 relevé par l'auteur back : `reponsesJson` ne peut pas être retiré à la réception, parce qu'INT-T26 (`candidature-recue.ts`, `snapshotDeCandidature`) le lit plus tard depuis `recu.charge`, et que la charge est immuable (déclencheur `evenements_recus_reception_immuable`). Or `evenements_recus.charge` est conservée 10 ans et ne doit porter aucune donnée personnelle (vérification V2, écart B-02). (1) Au passage à `traite` d'une `candidature.recue`, dans la MÊME transaction que l'écriture de la candidature, la charge conservée est réécrite UNE seule fois vers sa forme minimisée, sans `reponsesJson`. (2) Une migration amende le déclencheur d'immutabilité : il admet cette seule réécriture (type `candidature.recue`, passage à `traite`, charge sortante sans `reponsesJson`), et refuse toute autre écriture de `charge`, y compris une seconde réécriture. (3) `payload_hash` n'est jamais modifié : il reste la preuve de la charge reçue entière. (4) TÉMOINS rouges d'abord, en intégration sur une vraie base : une candidature traitée garde une charge sans `reponsesJson` et le même `payload_hash` ; une seconde réécriture est refusée par le déclencheur ; une réécriture de `charge` hors de ce cas est refusée ; un échec de la transaction laisse la charge reçue intacte. Un témoin unitaire sous `tests/unit/integration/` couvre la forme minimisée, dans la portée de `mutation:pr`. (5) Relecture OBLIGATOIRE de l'architecte (A02, label `schema`) et de la lentille sécurité (rgpd). (6) Condition de mise en service, comme INT-T44 : `PARTNERS_SYNC_ENABLED` reste faux tant que cette tâche n'est pas fusionnée ; la PR qui la livre ajoute cette case à `docs/runbooks/mise-en-service.md` (label `role:documentaliste`) et la cite ; la case est cochée après réception par Williams. CONDITIONS DE LA LENTILLE SÉCURITÉ (relecture de #346, 2026-10-01, validées par la coordination) : au point (2) : « Le déclencheur n'admet la réécriture que si `NEW.charge = OLD.charge - 'reponsesJson'` exactement, `OLD.charge ? 'reponsesJson'`, `OLD.statut <> 'traite'` et `NEW.statut = 'traite'` dans la même écriture ; TÉMOIN : une réécriture qui retire `reponsesJson` ET modifie une autre clé est refusée. » Minimisation de fond : « Une `candidature.recue` qui n'est pas `traite` au-delà d'un délai de la SSOT (source et date) est minimisée de la même façon par le travail de fond, sous la même règle d'égalité du déclencheur ; TÉMOIN : une candidature `en_erreur` au-delà du délai perd `reponsesJson`, `payload_hash` inchangé. » Le travail de fond est un passage planifié du lanceur de GOV-137 (`src/server/taches/minimiser-candidatures.ts`, inscrit dans `src/server/taches/registre.ts`) ; le délai est une constante de `src/domain/seuils/ssot.ts` (RM-10). INT-T56 dépend donc de GOV-137. « Note d'harmonisation (sécurité et coordination, 2026-10-01) : le déclencheur admet exactement deux cas, toute autre combinaison étant refusée : (i) le passage à traite, avec les 4 conditions ; (ii) la minimisation par le travail de fond seul, statut INCHANGÉ et différent de traite, `OLD.charge ? 'reponsesJson'` et la même égalité exacte `NEW.charge = OLD.charge - 'reponsesJson'`. Dans les deux cas, payload_hash et les autres colonnes restent inchangés. TÉMOINS : le témoin de fond passe par le vrai déclencheur ; un passage de en_erreur à traite par le fond est refusé. »",
+      "acceptance": "Décision de la coordination sous délégation (2026-10-01), sur le blocage d'INT-T44 relevé par l'auteur back : `reponsesJson` ne peut pas être retiré à la réception, parce qu'INT-T26 (`candidature-recue.ts`, `snapshotDeCandidature`) le lit plus tard depuis `recu.charge`, et que la charge est immuable (déclencheur `evenements_recus_reception_immuable`). Or `evenements_recus.charge` est conservée 10 ans et ne doit porter aucune donnée personnelle (vérification V2, écart B-02). (1) Au passage à `traite` d'une `candidature.recue`, dans la MÊME transaction que l'écriture de la candidature, la charge conservée est réécrite UNE seule fois vers sa forme minimisée, sans `reponsesJson`. (2) Une migration amende le déclencheur d'immutabilité : il admet cette seule réécriture (type `candidature.recue`, passage à `traite`, charge sortante sans `reponsesJson`), et refuse toute autre écriture de `charge`, y compris une seconde réécriture. (3) `payload_hash` n'est jamais modifié : il reste la preuve de la charge reçue entière. (4) TÉMOINS rouges d'abord, en intégration sur une vraie base : une candidature traitée garde une charge sans `reponsesJson` et le même `payload_hash` ; une seconde réécriture est refusée par le déclencheur ; une réécriture de `charge` hors de ce cas est refusée ; un échec de la transaction laisse la charge reçue intacte. Un témoin unitaire sous `tests/unit/integration/` couvre la forme minimisée, dans la portée de `mutation:pr`. (5) Relecture OBLIGATOIRE de l'architecte (A02, label `schema`) et de la lentille sécurité (rgpd). (6) Condition de mise en service, comme INT-T44 : `PARTNERS_SYNC_ENABLED` reste faux tant que cette tâche n'est pas fusionnée ; la PR qui la livre ajoute cette case à `docs/runbooks/mise-en-service.md` (label `role:documentaliste`) et la cite ; la case est cochée après réception par Williams. CONDITIONS DE LA LENTILLE SÉCURITÉ (relecture de #346, 2026-10-01, validées par la coordination) : au point (2) : « Le déclencheur n'admet la réécriture que si `NEW.charge = OLD.charge - 'reponsesJson'` exactement, `OLD.charge ? 'reponsesJson'`, `OLD.statut <> 'traite'` et `NEW.statut = 'traite'` dans la même écriture ; TÉMOIN : une réécriture qui retire `reponsesJson` ET modifie une autre clé est refusée. » Minimisation de fond : « Une `candidature.recue` qui n'est pas `traite` au-delà d'un délai de la SSOT (source et date) est minimisée de la même façon par le travail de fond, sous la même règle d'égalité du déclencheur ; TÉMOIN : une candidature `en_erreur` au-delà du délai perd `reponsesJson`, `payload_hash` inchangé. » Le travail de fond est un passage planifié du lanceur de GOV-137 (`src/server/taches/minimiser-candidatures.ts`, inscrit dans `src/server/taches/registre.ts`) ; le délai est une constante de `src/domain/seuils/ssot.ts` (RM-10). INT-T56 dépend donc de GOV-137. « Note d'harmonisation (sécurité et coordination, 2026-10-01) : le déclencheur admet exactement deux cas, toute autre combinaison étant refusée : (i) le passage à traite, avec les 4 conditions ; (ii) la minimisation par le travail de fond seul, statut INCHANGÉ et différent de traite, `OLD.charge ? 'reponsesJson'` et la même égalité exacte `NEW.charge = OLD.charge - 'reponsesJson'`. Dans les deux cas, payload_hash et les autres colonnes restent inchangés. TÉMOINS : le témoin de fond passe par le vrai déclencheur ; un passage de en_erreur à traite par le fond est refusé. » DÉLAI DE LA MINIMISATION DE FOND (rattrapage 46, coordination et lentille sécurité, 2026-10-02) : 30 jours, valeur provisoire PLAFOND (jamais plus long sans décision de Williams) ; source : HYP-RGPD-RETENTION, proposition de la lentille sécurité, 2026-10-02 ; à confirmer en séance (point 9). Constante de la SSOT (RM-10). Depuis GOV-137, le passage planifié s'inscrit dans `src/server/taches/inscriptions.ts`.",
       "tests": {
         "REQ-JUR-029": [
           "tests/integration/charge-candidature-minimisee.spec.ts",
@@ -18641,7 +18762,9 @@
       "zone": "qualite",
       "paths": [
         ".github/workflows/ci.yml",
-        "tests/unit/qualite/ci-navigateurs-a11y.spec.ts"
+        "tests/unit/qualite/ci-navigateurs-a11y.spec.ts",
+        "scripts/gates/gov-conventions.ts",
+        "tests/unit/gouvernance/relectures-sans-defaut.spec.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -18653,7 +18776,7 @@
       "externe": null,
       "estimateDays": 0.25,
       "statut": "a_faire",
-      "acceptance": "Constat de la coordination le 2026-10-01, versé en priorité : l'étape « Navigateurs des passes d accessibilite » de `.github/workflows/ci.yml` (`pnpm a11y:navigateurs`, soit `playwright install --with-deps chromium webkit`) s'est BLOQUÉE deux fois le même jour, plus de 25 minutes sur #330 et sur #333, `apt-get` pendant ; il a fallu relancer à la main, et chaque PR touchée perd environ 30 minutes. (1) L'étape porte un `timeout-minutes` borné. (2) Une nouvelle tentative automatique, bornée en nombre, relance l'installation qui a expiré ; au-delà, l'étape échoue en le disant. (3) Les navigateurs Playwright sont mis en cache (`actions/cache` sur `~/.cache/ms-playwright`, clé = version de Playwright lue dans le dépôt) ; un cache trouvé saute le téléchargement des navigateurs, les dépendances système restant installées. (4) TÉMOIN de structure (`tests/unit/qualite/ci-navigateurs-a11y.spec.ts`), rouge d'abord : il exige sur cette étape un `timeout-minutes`, la nouvelle tentative bornée et l'étape de cache avec sa clé ; retirer l'un des trois le fait rougir. (5) `package.json` (chemin réservé à A02) n'est pas modifié : tout se fait dans le workflow. `ci.yml` est aussi déclaré par QA-T20b, QA-T16 et GOV-063 : jamais dans le même lot.",
+      "acceptance": "Constat de la coordination le 2026-10-01, versé en priorité : l'étape « Navigateurs des passes d accessibilite » de `.github/workflows/ci.yml` (`pnpm a11y:navigateurs`, soit `playwright install --with-deps chromium webkit`) s'est BLOQUÉE deux fois le même jour, plus de 25 minutes sur #330 et sur #333, `apt-get` pendant ; il a fallu relancer à la main, et chaque PR touchée perd environ 30 minutes. (1) L'étape porte un `timeout-minutes` borné. (2) Une nouvelle tentative automatique, bornée en nombre, relance l'installation qui a expiré ; au-delà, l'étape échoue en le disant. (3) Les navigateurs Playwright sont mis en cache (`actions/cache` sur `~/.cache/ms-playwright`, clé dérivée du verrou, `navigateurs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}`, puisque le verrou épingle Playwright (RM-01) et qu'aucune commande n'est lancée pour la lire) ; un cache trouvé saute le téléchargement des navigateurs, les dépendances système restant installées. (4) TÉMOIN de structure (`tests/unit/qualite/ci-navigateurs-a11y.spec.ts`), rouge d'abord : il exige sur cette étape un `timeout-minutes`, la nouvelle tentative bornée et l'étape de cache avec sa clé ; retirer l'un des trois le fait rougir. (5) `package.json` (chemin réservé à A02) n'est pas modifié : tout se fait dans le workflow. `ci.yml` est aussi déclaré par QA-T20b, QA-T16 et GOV-063 : jamais dans le même lot. ARBITRAGE A01 (rattrapage 45, mesure de A06 sur main 2e38febd) : la porte A est figée ENTIÈRE par `scripts/gates/gov-conventions.ts` (sept violations mesurées : étapes non figées et repointées, porte altérée par `timeout-minutes`, action tierce non relevée, action après la première commande du job, commande intégrée). Donc : (a) l'étape de cache se place juste après `setup-node`, AVANT `pnpm install` ; (b) la clé dérive du verrou, et l'étape qui lisait la version de Playwright disparaît (une montée de dépendance refroidit le cache une fois, ce qui est accepté) ; (c) les étapes nouvelles ou modifiées, `timeout-minutes: 15` et la boucle de trois tentatives sous `timeout 240` compris, sont figées dans `PORTE_A_FIGEE` ; (d) `actions/cache@v4` est relevée dans `OUTILLAGE_FIGE` avec son commit (v4 = 0057852bfaa89a56745cba8c7296529d2fc39830, `runs.using: node20`, relevé sur la forge le 2026-10-02). `scripts/gates/gov-conventions.ts` entre dans les paths ; il est aussi déclaré par GOV-063 (non revendiquée). PRÉCISION A01 (rattrapage 46, mesure de A06) : `pnpm pre-gate` refuse un `run:` de plusieurs lignes ou portant un `$` ; les trois tentatives s'écrivent donc en UNE ligne (`timeout 240 pnpm a11y:navigateurs || …` trois fois, `timeout-minutes: 15`), mêmes bornes, la dernière tentative donne son code. Le témoin « aucune liste morte » de `tests/unit/gouvernance/relectures-sans-defaut.spec.ts` reconnaît le script par la MÊME règle que `etapesRapides()` (`pnpm <script>` comme mot dans la commande), et une étape qui ne lance pas le script le rougit toujours.",
       "tests": {
         "REQ-QA-016": [
           "tests/unit/qualite/ci-navigateurs-a11y.spec.ts"
@@ -18669,7 +18792,8 @@
       "paths": [
         "src/server/acces/for-apporteur.ts",
         "tests/unit/securite/champs-rendus-apporteur.spec.ts",
-        "tests/integration/idor.spec.ts"
+        "tests/integration/idor.spec.ts",
+        "tests/unit/securite/acces-scope.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -18686,13 +18810,116 @@
       "externe": null,
       "estimateDays": 0.75,
       "statut": "a_faire",
-      "acceptance": "Dette nommée par la PR #345 (GOV-111) : `moi()` rend l'Apporteur entier, hors de `CHAMPS_RENDUS`. Tâche versée par la coordination le 2026-10-01, relecture de la lentille sécurité EXIGÉE. EXIGENCES DE LA LENTILLE SÉCURITÉ, MOT POUR MOT : (a) Classer Apporteur colonne par colonne sous la même garde. (b) Ajouter nomChiffre, prenomChiffre, telephoneChiffre et phoneHash à SECRETS, et TAIRE seuilVerificationPrioritaire, scoreInitial, scorePartsJson, reponsesJson et isTest. (c) En faire une DÉPENDANCE de toute tâche qui appelle moi() ou rend la fiche de l'apporteur (écran espace, API, export). RECOMMANDÉ par la sécurité et retenu : restreindre les clés de colonne de where et orderBy à CHAMPS_RENDUS (pas d'oracle sur tokenHash, emailHash ou kid). TÉMOINS rouges d'abord : `moi()` ne rend aucune colonne hors de `CHAMPS_RENDUS` ; chaque colonne d'Apporteur est classée (rendue, tue ou secrète), et une colonne ajoutée sans classement fait rougir la garde ; un filtre ou un tri sur une colonne non rendue est refusé. Le point (c) est porté au registre : UX-P1-08, UX-P1-09, UX-P1-15, UX-P1-44, UX-P2-09, JUR-T36, UX-P2-04 et DM-20 dépendent de SEC-47, ainsi que toute tâche future qui rend la fiche de l'apporteur. `for-apporteur.ts` et ses témoins sont aussi déclarés par GOV-111 et par huit tâches non revendiquées : jamais dans le même lot.",
+      "acceptance": "Dette nommée par la PR #345 (GOV-111) : `moi()` rend l'Apporteur entier, hors de `CHAMPS_RENDUS`. Tâche versée par la coordination le 2026-10-01, relecture de la lentille sécurité EXIGÉE. EXIGENCES DE LA LENTILLE SÉCURITÉ, MOT POUR MOT : (a) Classer Apporteur colonne par colonne sous la même garde. (b) Ajouter nomChiffre, prenomChiffre, telephoneChiffre et phoneHash à SECRETS, et TAIRE seuilVerificationPrioritaire, scoreInitial, scorePartsJson, reponsesJson et isTest. (c) En faire une DÉPENDANCE de toute tâche qui appelle moi() ou rend la fiche de l'apporteur (écran espace, API, export). RECOMMANDÉ par la sécurité et retenu : restreindre les clés de colonne de where et orderBy à CHAMPS_RENDUS (pas d'oracle sur tokenHash, emailHash ou kid). TÉMOINS rouges d'abord : `moi()` ne rend aucune colonne hors de `CHAMPS_RENDUS` ; chaque colonne d'Apporteur est classée (rendue, tue ou secrète), et une colonne ajoutée sans classement fait rougir la garde ; un filtre ou un tri sur une colonne non rendue est refusé. Le point (c) est porté au registre : UX-P1-08, UX-P1-09, UX-P1-15, UX-P1-44, UX-P2-09, JUR-T36, UX-P2-04 et DM-20 dépendent de SEC-47, ainsi que toute tâche future qui rend la fiche de l'apporteur. `for-apporteur.ts` et ses témoins sont aussi déclarés par GOV-111 et par huit tâches non revendiquées : jamais dans le même lot. ARBITRAGE A01 (rattrapage 46, proposition de A05) : RÈGLE STRICTE, sans exception : borner les clés de `where` et d'`orderBy` à `CHAMPS_RENDUS` refuse aussi `where: { apporteurId }`, colonne tue (un filtre sur le propriétaire n'apprend rien que la session ne sache déjà). Les cas de `tests/unit/securite/acces-scope.spec.ts` (GOV-111) et d'`idor.spec.ts` qui prouvaient la conjonction d'un tel filtre deviennent « refusé avant tout appel » ; la conjonction reste prouvée par `lister()` sans filtre et par les filtres sur des colonnes rendues. Ce changement de face de témoins de GOV-111 est nommé dans la PR et jugé par la lentille sécurité.",
       "tests": {
         "REQ-SEC-008": [
           "tests/unit/securite/champs-rendus-apporteur.spec.ts"
         ],
         "REQ-SEC-009": [
           "tests/integration/idor.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "INT-T57",
+      "titre": "Le relais HTTP réel du prestataire d'e-mails (ZeptoMail) derrière le port d'envoi : délai borné, nouvelle tentative idempotente, erreur nommée, aucun jeton ni contenu au journal",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "integration",
+      "paths": [
+        "src/server/integrations/zeptomail/relais.ts",
+        "src/server/auth/lien-magique-production.ts",
+        "src/lib/env.ts",
+        "docs/tiers/zeptomail.md",
+        "tests/unit/integration/relais-zeptomail.spec.ts",
+        "tests/fixtures/tiers/",
+        "docs/env.md"
+      ],
+      "schema": false,
+      "sensible": [
+        "auth"
+      ],
+      "deps": [
+        "SEC-42",
+        "INT-T10"
+      ],
+      "reqs": [
+        "REQ-INT-022",
+        "REQ-INT-023"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.75,
+      "statut": "a_faire",
+      "acceptance": "Trou du plan relevé par l'auteur back en concevant SEC-42, tâche versée par la coordination le 2026-10-01 : aucune tâche ne portait le client HTTP du prestataire d'e-mails. INT-T10 a posé l'émetteur (domaine, DKIM, drapeau DMARC, webhook des rebonds), INT-T40 envoie « par l'émetteur d'INT-T10 », et SEC-42 câble `demanderEnvoi` sur un port de production qui REFUSE ; sans cette tâche, aucun e-mail réel ne part. Relecture OBLIGATOIRE de la lentille sécurité. (1) PRÉALABLE AU CODE : `docs/tiers/zeptomail.md` §2 porte l'URL officielle, la date de lecture, l'extrait cité et l'exemple officiel de la requête (RM-08) ; la PR porte le label `role:documentaliste` pour ce chemin. (2) `src/server/integrations/zeptomail/relais.ts` implémente l'interface `Relais` de l'émetteur : client HTTP, jeton lu dans l'environnement serveur (`src/lib/env.ts`, secret jamais versionné ; sa valeur est un geste de Williams, groupé avec ses secrets de production), réponse réduite au `messageId`. Il remplace, dans `src/server/auth/lien-magique-production.ts`, le port qui refuse posé par SEC-42. (3) Délai borné ; nouvelle tentative idempotente ; un échec rend une erreur NOMMÉE, jamais la sortie brute du prestataire. (4) Aucun jeton, aucun corps de message, aucune adresse dans le journal. (5) REQ-INT-022 reste entière : tant que le drapeau `PARTNERS_EMAIL_DMARC_VERIFIE` est fermé, l'envoi est retenu et rien ne part ; la pose du drapeau est un geste de Williams après le rapport DMARC. (6) TÉMOINS rouges d'abord, dans la portée de `mutation:pr` : `tests/unit/integration/relais-zeptomail.spec.ts`, `fetch` simulé, forme de la requête confrontée à l'exemple de la fiche, délai dépassé, nouvelle tentative sans double envoi, code d'échec fermé, aucun jeton au journal ; la fixture vit sous `tests/fixtures/tiers/` avec sa ligne `Source:` vers la fiche (RM-03, RM-08). (7) Condition de mise en service : `PARTNERS_SYNC_ENABLED` et la mise en service attendent cette tâche fusionnée. `src/lib/env.ts` est aussi déclaré par SEC-14, INT-T12, EXT-T04, EXT-T06 et SEC-44, et `docs/tiers/zeptomail.md` par INT-T40 : jamais dans le même lot. ARBITRAGES A01 (rattrapage 46, mesure de A05, accord de la coordination) : (1) `ZEPTOMAIL_API_URL` est une configuration https au chemin `/v1.1/email`, jugée contre une liste FERMÉE d'hôtes, chacun daté dans `docs/tiers/zeptomail.md` avec sa source : `cpaas.zoho.com` et `api.zeptomail.com` (pages officielles, 2026-10-02) ; `api.zeptomail.eu` (sources TIERCES, non officiel, à confirmer dans « Setup info » de l'agent avant l'allumage — case du runbook) ; toute autre valeur est un refus nommé. (2) `ZEPTOMAIL_SEND_TOKEN` est un secret de `schemaSecrets` (REQ-SEC-028), EXIGÉ au démarrage (REQ-QA-030) seulement si l'envoi réel est allumé, sur le précédent de REQ-CPL-021 : éteint et absent → le relais refuse `relais_non_configure` ; allumé et absent → le démarrage échoue ; un témoin par cas. La fusion ne dépend d'aucun geste de Williams ; le jeton et l'hôte précèdent l'ALLUMAGE. `docs/env.md` est régénéré par `pnpm env:doc` ; `docs/tiers/**` demande le label `role:documentaliste`.",
+      "tests": {
+        "REQ-INT-022": [
+          "tests/unit/integration/relais-zeptomail.spec.ts"
+        ],
+        "REQ-INT-023": [
+          "tests/unit/integration/relais-zeptomail.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "GOV-139",
+      "titre": "Passe du lot dédié : les décisions de Williams des 2026-10-01 (soir) et 2026-10-02 au registre des décisions",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "docs/DECISIONS.md",
+        "docs/journal/"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "GOV-116"
+      ],
+      "reqs": [
+        "REQ-GOV-015"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.25,
+      "statut": "a_faire",
+      "acceptance": "Passe du lot dédié de GOV-116, lancée par Williams en un geste (raccourci du Bureau LANCER-LOT-DEDIE-2026-10-02.bat), APRÈS sa séance de décisions du 2026-10-02 (`_REPRISE-AXION-APPORTEURS/SEANCE-WILLIAMS-2026-10-02.md`). `docs/DECISIONS.md` reçoit : HYP-W19-OBJECTIFS tranchée en B (pilotage réel des commerciaux, 2026-10-01) ; HYP-W20-BADGE amendée en A (libellé choisi par Williams, « En attente · confirmée automatiquement le <date> », 2026-10-01 ; phrase d'aide à valider en séance, point 7) ; W6 et W11 amendées pour la conférence commissionnée au forfait (2026-10-01) : 31 paliers, la conférence rangée dans les formations collectives, quatre familles non commissionnées ; puis les réponses de la séance du 2026-10-02 (art. 3.5, HYP-W19-NON-EXPLOITATION, HYP-W19-CARENCE, « ni annulé » de JUR-T42, JUR-T43, Indeed, JUR-T09), chacune avec sa citation mot pour mot renvoyée à sa séquence hors dépôt et sa date en colonne « Tranchée ». ATOMICITÉ : le test W6 de `tests/unit/contrat/contract-template-complete.spec.ts` lit la ligne W6 ; la PR de ce lot porte donc aussi, sur la même branche, la mise à jour de ce test (poste dev), le palier de la conférence dans l'annexe 1 du contrat (A07) et l'entrée `partners:grille:complete` de `docs/gates.json` (A01), pour que `main` ne rougisse jamais ; ces chemins entrent aux paths de la tâche de suite de JUR-T43 qui les porte.",
+      "tests": {
+        "REQ-GOV-015": [
+          "tests/unit/gouvernance/gardes.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "JUR-T46",
+      "titre": "Contrat v1, annexe 1 : le palier de la conférence, commissionnée au forfait (31 paliers), avec le test W6 et l'entrée de garde de la grille",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "juridique",
+      "paths": [
+        "docs/contrat/CONTRAT-APPORTEUR-V1.md",
+        "tests/unit/contrat/contract-template-complete.spec.ts",
+        "docs/gates.json",
+        "src/domain/contrat/variables.ts"
+      ],
+      "schema": false,
+      "sensible": [
+        "argent"
+      ],
+      "deps": [
+        "JUR-T43"
+      ],
+      "reqs": [
+        "REQ-JUR-003"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.25,
+      "statut": "a_faire",
+      "acceptance": "Suite de JUR-T43, mesurée par A07 le 2026-10-02 : la conférence est commissionnée au forfait (décision de Williams du 2026-10-01, sans montant dans ce dépôt) ; son palier change les comptes de W6 et de W11, que seul le lot dédié GOV-139 amende (31 paliers ; la conférence quitte A1.5 et rejoint A1.1, formations collectives ; quatre familles non commissionnées). ATOMICITÉ : cette tâche est livrée sur la MÊME branche et dans la MÊME PR que GOV-139 (« Lot: GOV-139, JUR-T46 »), pour que `main` ne rougisse jamais. (1) A07 écrit le palier de la conférence dans le tableau A1.1 de l'annexe 1 et la retire de A1.5, montant en variable (aucun chiffre dans ce dépôt). (2) Le poste dev met à jour le test W6 de `tests/unit/contrat/contract-template-complete.spec.ts` (31 paliers, quatre familles non commissionnées), qui lit la ligne W6 amendée. (3) A01 réécrit le champ `verifie` de l'entrée `partners:grille:complete` de `docs/gates.json` (« les 31 paliers »). ARBITRAGE A01 (rattrapage 46, mesure de A05, accord de A07) : la règle « chaque palier a ses quatre variables » vaut aussi pour la conférence ; l'annexe porte {{PRIX_INTERVENTION_CONFERENCE}} ; sa source (`src/domain/contrat/variables.ts`) rend « sur devis » quand le prix public est absent, jamais 0, vide ni un nombre ; la note ² de l'annexe explique l'absence de prix. Aucune exemption dans la garde.",
+      "tests": {
+        "REQ-JUR-003": [
+          "tests/unit/contrat/contract-template-complete.spec.ts"
         ]
       }
     }
