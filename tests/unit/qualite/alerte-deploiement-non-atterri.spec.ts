@@ -72,26 +72,26 @@ async function alerteDuJob(env: Record<string, string | undefined>): Promise<Obj
 }
 
 describe('REQ-GOV-014 — la catégorie close `deploiement_non_atterri` existe', () => {
-  it('elle est dans la liste close des catégories', () => {
+  it('REQ-GOV-014 : elle est dans la liste close des catégories', () => {
     expect(CATEGORIES_ALERTE).toContain('deploiement_non_atterri');
   });
 });
 
 describe('REQ-GOV-014 — `deployer` rougit sur un atterrissage raté, jamais sur un atterrissage réussi', () => {
-  it('sha servi ≠ sha fusionné : code 1, le sha servi rendu', async () => {
+  it('REQ-GOV-014 : sha servi ≠ sha fusionné : code 1, le sha servi rendu', async () => {
     const r = await atterrir(SHA, await servir(AUTRE, 200), RAPIDE);
     expect(r).toEqual({ code: 1, servi: AUTRE });
   });
 
-  it('en-tête absent : code 1, aucun sha servi', async () => {
+  it('REQ-GOV-014 : en-tête absent : code 1, aucun sha servi', async () => {
     expect(await atterrir(SHA, await servir(null, 200), RAPIDE)).toEqual({ code: 1, servi: null });
   });
 
-  it('`readyz` non prêt, sha atterri : code 1', async () => {
+  it('REQ-GOV-014 : `readyz` non prêt, sha atterri : code 1', async () => {
     expect((await atterrir(SHA, await servir(SHA, 503), RAPIDE)).code).toBe(1);
   });
 
-  it('atterri et `readyz` prêt : code 0', async () => {
+  it('REQ-GOV-014 : atterri et `readyz` prêt : code 0', async () => {
     expect((await atterrir(SHA, await servir(SHA, 200), RAPIDE)).code).toBe(0);
   });
 });
@@ -105,13 +105,13 @@ describe('REQ-GOV-014 — la sortie de `deployer` ne laisse passer qu’un sha',
     ['un saut de ligne qui écrirait une seconde sortie', `${SHA}\nsha_servi=${AUTRE}`, 'illisible'],
     ['un sha trop court', 'abc12', 'illisible'],
     ['un sha trop long', 'a'.repeat(41), 'illisible'],
-  ])('%s', (_nom, servi, attendu) => {
+  ])('REQ-GOV-014 : %s', (_nom, servi, attendu) => {
     expect(sortieDuDeployeur(servi)).toBe(attendu);
   });
 });
 
 describe('REQ-GOV-014 — le job `alerter` alerte toujours, une fois, sans donnée personnelle', () => {
-  it('après un atterrissage raté : une alerte, sha attendu et servi, environnement', async () => {
+  it('REQ-GOV-014 : après un atterrissage raté : une alerte, sha attendu et servi, environnement', async () => {
     const alertes = await alerteDuJob({
       SHA_ATTENDU: SHA,
       SHA_SERVI: AUTRE,
@@ -124,14 +124,14 @@ describe('REQ-GOV-014 — le job `alerter` alerte toujours, une fois, sans donn�
     });
   });
 
-  it('`deployer` mort avant sa sortie : l’alerte part quand même, sha servi « inconnu »', async () => {
+  it('REQ-GOV-014 : `deployer` mort avant sa sortie : l’alerte part quand même, sha servi « inconnu »', async () => {
     const [a] = await alerteDuJob({ SHA_ATTENDU: SHA, DEPLOIEMENT_ENVIRONNEMENT: 'production' });
     expect(messageDAlerte('alerte', a!)).toContain('servi inconnu');
     const [b] = await alerteDuJob({ SHA_SERVI: '', DEPLOIEMENT_ENVIRONNEMENT: 'production' });
     expect(messageDAlerte('alerte', b!)).toContain('attendu inconnu');
   });
 
-  it('un sha servi piégé n’entre pas tel quel : « illisible »', async () => {
+  it('REQ-GOV-014 : un sha servi piégé n’entre pas tel quel : « illisible »', async () => {
     const piege = '<b>https://piege.example/x</b>';
     const [a] = await alerteDuJob({
       SHA_ATTENDU: SHA,
@@ -143,7 +143,7 @@ describe('REQ-GOV-014 — le job `alerter` alerte toujours, une fois, sans donn�
     expect(message).not.toContain('piege.example');
   });
 
-  it('un environnement hors de la liste close entre « illisible »', async () => {
+  it('REQ-GOV-014 : un environnement hors de la liste close entre « illisible »', async () => {
     const [a] = await alerteDuJob({
       SHA_ATTENDU: SHA,
       SHA_SERVI: AUTRE,
@@ -154,7 +154,7 @@ describe('REQ-GOV-014 — le job `alerter` alerte toujours, une fois, sans donn�
     expect(message).not.toContain('example.org');
   });
 
-  it('le message remis au canal : catégorie, deux sha, environnement — sans jeton ni URL', async () => {
+  it('REQ-GOV-014 : le message remis au canal : catégorie, deux sha, environnement — sans jeton ni URL', async () => {
     const corps: string[] = [];
     const alerteur = creerAlerteur({
       notifieur: { notifier: async (n) => void corps.push(`${n.sujet}\n${n.corps}`) },
@@ -178,7 +178,7 @@ describe('REQ-GOV-014 — le job `alerter` alerte toujours, une fois, sans donn�
     expect(corps[0]).not.toMatch(/https?:\/\//);
   });
 
-  it('un canal qui refuse : le job `alerter` rougit, l’alerte ne passe pas pour envoyée', async () => {
+  it('REQ-GOV-014 : un canal qui refuse : le job `alerter` rougit, l’alerte ne passe pas pour envoyée', async () => {
     const code = await alerterDepuisLaForge({ SHA_ATTENDU: SHA }, async () => {
       throw new Error('Telegram refuse l’alerte : HTTP 401');
     });
@@ -199,25 +199,25 @@ describe('REQ-GOV-014 — `alerter` tourne après un `deployer` rouge ou annulé
   const alerter = job(workflow, 'alerter');
   const deployer = job(workflow, 'deployer');
 
-  it('`alerter` dépend de `deployer`, ne tourne que sur son échec ou son annulation, en production', () => {
+  it('REQ-GOV-014 : `alerter` dépend de `deployer`, ne tourne que sur son échec ou son annulation, en production', () => {
     expect(alerter).toMatch(/^ {4}needs: deployer\s*$/m);
     // La ligne ENTIÈRE, à l'identique : `false && (…)`, `always() || …` ou une autre ref passeraient
     // une expression qui ne cherche que `(failure() || cancelled())` (refus `securite` sur #339). La
     // garde qui la tient, avec ses faces rouges, vit dans pipeline-image.spec.ts (`alerter_mal_garde`).
-    expect(alerter.split('\n').map((l) => l.trim())).toContain(
-      "if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && (failure() || cancelled()) }}"
+    expect(alerter.split('\n').map((l) => l.trimEnd())).toContain(
+      "    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && (failure() || cancelled()) }}"
     );
     expect(alerter).toMatch(/^ {4}environment: production\s*$/m);
   });
 
-  it('`alerter` ne lit que les deux secrets du canal, dans l’env de son ÉTAPE', () => {
+  it('REQ-GOV-014 : `alerter` ne lit que les deux secrets du canal, dans l’env de son ÉTAPE', () => {
     const lus = [...alerter.matchAll(/secrets\.([A-Z_]+)/g)].map((m) => m[1]).sort();
     expect(lus).toEqual([...SECRETS_DU_CANAL].sort());
     // Aucun `env:` au niveau du job : les secrets n'existent que pendant l'étape qui alerte.
     expect(alerter).not.toMatch(/^ {4}env:/m);
   });
 
-  it('`deployer` ne lit aucun secret du canal, et passe le sha servi en sortie', () => {
+  it('REQ-GOV-014 : `deployer` ne lit aucun secret du canal, et passe le sha servi en sortie', () => {
     for (const s of SECRETS_DU_CANAL) expect(deployer).not.toContain(s);
     expect(deployer).toMatch(/sha_servi: \$\{\{ steps\.atterrissage\.outputs\.sha_servi \}\}/);
   });

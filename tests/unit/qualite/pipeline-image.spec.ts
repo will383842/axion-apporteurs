@@ -134,12 +134,13 @@ function fautesDuPipeline(s: Sources): string[] {
   // QA-T54 : `alerter` ne tourne qu'après `deployer`, sur un push de `main`, et seulement si
   // `deployer` a échoué ou a été annulé. Les deux lignes se comparent ENTIÈRES (refus `securite` sur
   // #339) : une expression qui ne chercherait que `(failure() || cancelled())` laisserait passer
-  // `false && (…)`, `always() || …` ou une autre ref.
-  const alerter = (j.get('alerter') ?? '').split('\n').map((l) => l.trim());
+  // `false && (…)`, `always() || …` ou une autre ref. Elles sont ancrées sur l'indentation du JOB
+  // (quatre espaces) : un `if:` d'étape identique, plus indenté, ne masque pas un `if:` de job modifié.
+  const alerter = (j.get('alerter') ?? '').split('\n').map((l) => l.trimEnd());
   if (
-    !alerter.includes('needs: deployer') ||
+    !alerter.includes('    needs: deployer') ||
     !alerter.includes(
-      "if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && (failure() || cancelled()) }}"
+      "    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && (failure() || cancelled()) }}"
     )
   )
     f.push(
