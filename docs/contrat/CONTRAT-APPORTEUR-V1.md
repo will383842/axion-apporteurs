@@ -829,7 +829,7 @@ la disposition de chaque partie.
 | Approfondie — petit groupe | `approfondie-standard` | 2 jours | {{PRIX_APPROFONDIE_STANDARD}} | {{COM_APPROFONDIE_STANDARD}} | {{PUBLIEE_APPROFONDIE_STANDARD}} | {{CPF_APPROFONDIE_STANDARD}} |
 | Gagner du temps — petit groupe | `temps-standard` | 1 journée | {{PRIX_TEMPS_STANDARD}} | {{COM_TEMPS_STANDARD}} | {{PUBLIEE_TEMPS_STANDARD}} | {{CPF_TEMPS_STANDARD}} |
 | Claude — petit groupe | `claude-standard` | 1 journée | {{PRIX_CLAUDE_STANDARD}} | {{COM_CLAUDE_STANDARD}} | {{PUBLIEE_CLAUDE_STANDARD}} | {{CPF_CLAUDE_STANDARD}} |
-| Conférence | `intervention-conference` | selon le devis | Sur devis ² | {{COM_INTERVENTION_CONFERENCE}} | {{PUBLIEE_INTERVENTION_CONFERENCE}} | {{CPF_INTERVENTION_CONFERENCE}} |
+| Conférence | `intervention-conference` | selon le devis | {{PRIX_INTERVENTION_CONFERENCE}} ² | {{COM_INTERVENTION_CONFERENCE}} | {{PUBLIEE_INTERVENTION_CONFERENCE}} | {{CPF_INTERVENTION_CONFERENCE}} |
 
 ¹ *Dérivé du forfait de {{PUBLIEE_FORFAIT_JOURNEE}} par journée : une demi-journée vaut un demi-forfait. La grille publiée ne
 porte pas de ligne propre à ce palier ; la valeur applicable reste celle de la colonne « Commission du
