@@ -291,12 +291,8 @@ const MANUELS: Record<string, string[]> = {
     'tests/security/cliquet-gel.spec.ts',
   ],
   'SEC-16': ['src/server/verification/dto.ts', 'src/domain/verification/etats.ts'],
-  'SEC-18': ['src/server/parrainage/anti-auto.ts', 'prisma/schema.prisma'],
-  'SEC-19': [
-    'src/domain/apporteur/resiliation.ts',
-    'src/server/auth/session.ts',
-    'prisma/schema.prisma',
-  ],
+  'SEC-18': ['src/server/parrainage/anti-auto.ts'],
+  'SEC-19': ['src/domain/apporteur/resiliation.ts', 'src/server/auth/session.ts'],
   'INT-T12': [
     'src/server/integrations/docuseal/',
     'docs/tiers/docuseal.md',
@@ -306,14 +302,9 @@ const MANUELS: Record<string, string[]> = {
   'INT-T13': ['src/server/mcp/'],
   'INT-T21-A': ['axionia/src/app/api/partners/relecture/route.ts'],
   'INT-T21-P': ['scripts/backfill/axionia.ts'],
-  'SEC-21': ['src/server/parrainage/code.ts', 'prisma/schema.prisma'],
+  'SEC-21': ['src/server/parrainage/code.ts'],
   'JUR-T09': ['emails/prospect/information-article-14.tsx', 'src/content/script-qualification.ts'],
-  'JUR-T13': [
-    'emails/apporteur/',
-    'src/content/micro-copy/',
-    'src/app/(espace)/',
-    'scripts/gates/lexique-apporteurs.ts',
-  ],
+  'JUR-T13': ['scripts/gates/lexique-apporteurs.ts', 'src/domain/lexique/lexique-interdit.ts'],
   'CPL-T06': ['prisma/schema.prisma', 'src/domain/candidature/decision.ts'],
   'UX-P1-04': ['src/app/(espace)/connexion/'],
   'UX-P1-01': [
@@ -332,11 +323,7 @@ const MANUELS: Record<string, string[]> = {
   'UX-P1-08': ['src/app/(espace)/page.tsx', 'src/app/(espace)/layout.tsx'],
   'QA-T20b': ['.github/workflows/ci.yml'],
   'UX-P1-09': ['src/app/(espace)/conformite/page.tsx', 'src/app/(espace)/profil/page.tsx'],
-  'UX-P1-15': [
-    'src/app/(espace)/profil/page.tsx',
-    'src/components/depot/formulaire.tsx',
-    'prisma/schema.prisma',
-  ],
+  'UX-P1-15': ['src/app/(espace)/profil/page.tsx', 'src/components/depot/formulaire.tsx'],
   'UX-P1-10': ['src/server/notifications/table-ssot.ts', 'emails/apporteur/'],
   'UX-P1-11': ['src/server/queue/workers/onboarding.ts', 'emails/apporteur/'],
   'UX-P1-12': [
@@ -359,7 +346,7 @@ const MANUELS: Record<string, string[]> = {
   'T-ARG-010': ['prisma/schema.prisma', 'src/domain/commission/ligne.ts'],
   'T-ARG-034': ['prisma/migrations/', 'prisma/schema.prisma'],
   'DM-15': ['src/domain/commission/resolution.ts', 'src/domain/commission/ligne.ts'],
-  'DM-16': ['prisma/schema.prisma', 'src/domain/parrainage/'],
+  'DM-16': ['src/domain/parrainage/'],
   'DM-18': ['src/domain/apporteur/resiliation.ts'],
   'T-ARG-015': ['src/server/argent/releve-mensuel.ts', 'src/domain/versement/controles.ts'],
   'T-ARG-016': ['src/server/argent/autofacture.ts', 'src/server/pdf/autofacture.tsx'],
@@ -372,7 +359,7 @@ const MANUELS: Record<string, string[]> = {
   ],
   'T-ARG-019': ['src/server/argent/rapprochement.ts', 'src/app/(console)/lots/page.tsx'],
   'DM-19': ['prisma/migrations/', 'src/server/argent/cumuls.ts'],
-  'T-ARG-032': ['prisma/schema.prisma', 'src/domain/kyc/pieces.ts', 'docs/tiers/urssaf.md'],
+  'T-ARG-032': ['src/domain/kyc/pieces.ts', 'docs/tiers/urssaf.md'],
   'UX-P2-03': ['src/app/(console)/lots/page.tsx', 'src/server/argent/lot.ts'],
   'T-ARG-022': ['tests/argent/rejeu-golden.spec.ts', 'tests/argent/scenarios/'],
   'QA-T21': ['tests/argent/proprietes.spec.ts'],
@@ -404,7 +391,7 @@ const MANUELS: Record<string, string[]> = {
   'T-ARG-039': ['src/server/argent/releve-mensuel.ts', 'src/domain/seuils/ssot.ts'],
   'QA-T25': ['docs/runbooks/argent.md'],
   'QA-T29': ['tests/charge/depots-concurrents.spec.ts'],
-  'CPL-T11': ['src/lib/env.ts', 'prisma/schema.prisma'],
+  'CPL-T11': ['src/lib/env.ts'],
   'CPL-T23': ['docs/runbooks/pilote.md'],
   'T-ARG-030': ['src/server/argent/export-comptable.ts', 'docs/tiers/tiime.md'],
   'T-ARG-033': [
@@ -414,7 +401,7 @@ const MANUELS: Record<string, string[]> = {
   ],
   'DM-20': ['src/server/rgpd/', 'src/server/crons/purge.ts', 'src/domain/seuils/retention.ts'],
   'DM-21': ['prisma/schema.prisma', 'prisma/migrations/'],
-  'CPL-T15': ['prisma/schema.prisma', 'src/server/pilotage/indicateurs.ts'],
+  'CPL-T15': ['src/server/pilotage/indicateurs.ts'],
   'UX-P3-01': ['src/app/manifest.ts', 'public/sw.js', 'src/server/notifications/push.ts'],
   'UX-P3-02': ['src/app/(espace)/activite/page.tsx', 'src/app/(espace)/ressources/page.tsx'],
   'UX-P3-03': ['src/app/(espace)/aide/page.tsx'],
@@ -426,11 +413,7 @@ const MANUELS: Record<string, string[]> = {
   'QA-T27': ['docs/runbooks/resilience.md', '.github/workflows/nightly.yml'],
   'QA-T28': ['docs/runbooks/audit-securite.md', '.github/workflows/nightly.yml'],
   'GOV-022': ['docs/TRACEABILITE.md', 'scripts/plan-state/traceabilite.ts'],
-  'EXT-T08': [
-    'prisma/schema.prisma',
-    'src/domain/geo/lambert93.ts',
-    'src/server/depot/controles.ts',
-  ],
+  'EXT-T08': ['src/domain/geo/lambert93.ts', 'src/server/depot/controles.ts'],
   'EXT-T01': ['src/app/(espace)/mes-entreprises/[id]/page.tsx', 'prisma/schema.prisma'],
   'EXT-T02a': [
     'src/app/(console)/attributions/[id]/page.tsx',
@@ -649,6 +632,89 @@ const MANUELS: Record<string, string[]> = {
     'axionia/src/server/partners/commission.ts',
     'axionia/src/server/partners-sync/producteurs/devis.ts',
     'axionia/src/server/partners/__tests__/commission-prorata.spec.ts',
+  ],
+  // Rattrapage 35 (audit indépendant du plan de la Phase 1, décisions de Williams du 2026-10-01) : leurs
+  // témoins n'existent pas encore, leurs chemins sont ceux de leur fiche, hors des chemins que la garde
+  // du journal réserve à son écrivain unique.
+  'DM-45': [
+    'src/server/integrations/axionia/candidature-recue.ts',
+    'prisma/migrations/',
+    'tests/integration/journal-premier-ecrivain.spec.ts',
+  ],
+  'GOV-137': [
+    'src/server/taches/lanceur.ts',
+    'src/server/taches/registre.ts',
+    'tests/integration/lanceur-des-passages.spec.ts',
+  ],
+  'INT-T49': [
+    'src/app/api/webhooks/axionia/route.ts',
+    'tests/integration/reprise-des-attentes.spec.ts',
+  ],
+  'GOV-138': ['docs/DECISIONS.md', 'docs/journal/'],
+  'DM-46': ['src/domain/commission/calcul.ts', 'tests/unit/domaine/commission-arrondis.spec.ts'],
+  'DM-47': ['src/domain/commission/calcul.ts', 'tests/unit/domaine/commission-calcul.spec.ts'],
+  'SEC-44': [
+    'src/server/securite/rate-limit.ts',
+    'src/lib/env.ts',
+    'docs/tiers/coolify.md',
+    'tests/unit/securite/api-entrante-ip.spec.ts',
+  ],
+  'CPL-T07': [
+    'src/server/conformite/dossier.ts',
+    'src/domain/apporteur/matrice.ts',
+    'src/app/(console)/console/apporteurs/[id]/conformite/page.tsx',
+    'tests/integration/dossier-de-conformite.spec.ts',
+  ],
+  'UX-P1-44': [
+    'src/app/(espace)/mon-contrat/page.tsx',
+    'src/content/micro-copy/espace/mon-contrat.ts',
+    'tests/e2e/espace/mon-contrat.spec.ts',
+  ],
+  'UX-P1-45': ['docs/maquettes/', 'docs/maquettes/VALIDATION.md', 'docs/ESPACE-ROUTES.md'],
+  'INT-T52-A': [
+    'axionia/src/lib/commercial-application/',
+    'axionia/src/server/partners-sync/producteurs/candidature.ts',
+    'axionia/src/server/partners-sync/__tests__/parrainage-capture.spec.ts',
+  ],
+  'QA-T58': ['src/domain/seuils/ssot.ts', 'tests/unit/qualite/budgets-ux.spec.ts'],
+  'QA-T56': [
+    'tests/unit/espace/vocabulaire-et-micro-copy.spec.ts',
+    'scripts/gates/gov-sonde.ts',
+    '.github/workflows/nightly.yml',
+    'tests/unit/qualite/nightly-mise-en-service.spec.ts',
+  ],
+  'QA-T57': [
+    'scripts/sauvegarde/cycle.ts',
+    'Dockerfile',
+    'scripts/deploiement/provisionner.ts',
+    'tests/unit/qualite/sauvegarde-fraicheur.spec.ts',
+  ],
+  'SEC-45': [
+    'prisma/schema.prisma',
+    'prisma/migrations/',
+    'tests/integration/iban-et-session.spec.ts',
+  ],
+  'SEC-46': [
+    'scripts/gates/csp-inline.ts',
+    'src/app/(espace)/confidentialite/error.tsx',
+    'tests/e2e/espace/csp.spec.ts',
+  ],
+  'GOV-134': [
+    'scripts/gates/gov-publication.ts',
+    'docs/requirements.json',
+    'tests/unit/gouvernance/publication-temoins-reels.spec.ts',
+  ],
+  'INT-T51': ['docs/tiers/axionia.md'],
+  'INT-T50-A': ['axionia/docs/runbooks/rotation-secret-partners.md'],
+  'JUR-T44': [
+    'axionia/src/lib/commercial-application/kit-apporteur.ts',
+    'axionia/src/lib/commercial-application/__tests__/kit-apporteur-sans-pdf.spec.ts',
+  ],
+  'JUR-T45': [
+    'axionia/docs/imprimes/devenir-apporteur-d-affaires.html',
+    'axionia/public/imprimes/devenir-apporteur-d-affaires-axion-ia.pdf',
+    'axionia/scripts/gates/jur-copy-indicative.ts',
+    'axionia/src/content/__tests__/imprimes-indicatifs.spec.ts',
   ],
 };
 

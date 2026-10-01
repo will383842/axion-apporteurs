@@ -230,7 +230,8 @@
         "GOV-080",
         "INT-T47-A",
         "INT-T47-P",
-        "JUR-T43"
+        "JUR-T43",
+        "JUR-T45"
       ]
     },
     {
@@ -245,6 +246,8 @@
       "phase": 0,
       "taches": [
         "DM-04",
+        "DM-46",
+        "DM-47",
         "T-ARG-035"
       ]
     },
@@ -379,6 +382,7 @@
       "taches": [
         "DM-01",
         "DM-20",
+        "DM-45",
         "SEC-30"
       ]
     },
@@ -422,6 +426,7 @@
       "etape": 4,
       "phase": 1,
       "taches": [
+        "CPL-T07",
         "DM-11",
         "DM-19",
         "JUR-T16",
@@ -706,6 +711,7 @@
         "SEC-19",
         "SEC-29",
         "SEC-30",
+        "SEC-45",
         "UX-P1-04"
       ]
     },
@@ -838,7 +844,10 @@
       "etape": null,
       "phase": 0,
       "taches": [
-        "SEC-07"
+        "INT-T50-A",
+        "SEC-07",
+        "SEC-44",
+        "SEC-46"
       ]
     },
     {
@@ -1219,6 +1228,7 @@
       "etape": 10,
       "phase": 1,
       "taches": [
+        "INT-T52-A",
         "SEC-21"
       ]
     },
@@ -1799,8 +1809,7 @@
       "phase": 0,
       "taches": [
         "DM-03-A",
-        "DM-03-P",
-        "INT-T47-P"
+        "DM-03-P"
       ]
     },
     {
@@ -2101,7 +2110,8 @@
         "INT-T08-A",
         "INT-T08-P",
         "INT-T21-A",
-        "INT-T21-P"
+        "INT-T21-P",
+        "INT-T51"
       ]
     },
     {
@@ -2122,7 +2132,7 @@
     {
       "id": "REQ-INT-014",
       "domaine": "integration",
-      "texte": "API 1 `GET /attributions?siren=` : auth = jeton bearer dédié + allowlist IP + 60/min + **404 sans jeton** (REQ-SEC-012), route `/api/integrations/axionia/attributions?siren=` ; réponse **minimale** `{statut: libre|attribuee|cliente, until: 'AAAA-MM'|null, apporteurRef: opaque|null}` — plus `nomAffichable` (prénom et initiale du nom, null si libre), sur décision de Williams du 2026-10-01 (option B) revenant sur R3 ; **jamais e-mail, téléphone, identifiant ni adresse** ; côté axion-ia, affiché seulement à qui crée ou lit un devis, hors de tout journal, conservé le seul temps du cache ; le cas d'une prise en charge par un conseiller salarié attend la décision de Williams ; chaque appel journalisé (siren, ipHash, résultat) ; côté axionia, timeout 2 s, cache 5 min, échec ouvert : le devis se crée avec `attributionVerifiee=false` et une alerte, la vérification est rejouée par job. Amendement W19 (décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §4.2) : Une attribution de conseiller répond comme une attribution d'apporteur au même stade : `attribuee`, `until`, et une `apporteurRef` opaque de même forme que celle d'un apporteur. Jamais `libre`, jamais un champ de plus que la forme commune, jamais une valeur qui nomme la population. Test d'indistinction (QA-T31). Le consommateur axion-ia (INT-T07-A) ne peut pas distinguer : aucune commission d'apporteur n'est versée sur la foi de l'API 1, la chaîne d'argent de Partners aiguillant par porteur réel (REQ-DM-021).",
+      "texte": "API 1 `GET /attributions?siren=` : auth = jeton bearer dédié + allowlist IP + 60/min + **404 sans jeton** (REQ-SEC-012), route `/api/integrations/axionia/attributions?siren=` ; réponse **minimale** `{statut: libre|attribuee|cliente, until: 'AAAA-MM'|null, apporteurRef: opaque|null}` — plus `nomAffichable` (prénom et initiale du nom, null si libre), sur décision de Williams du 2026-10-01 (option B) revenant sur R3 ; **jamais e-mail, téléphone, identifiant ni adresse** ; côté axion-ia, affiché seulement à qui crée ou lit un devis, hors de tout journal, conservé le seul temps du cache ; pour une prise en charge par un conseiller salarié, le même champ et la même forme, au nom du conseiller, sans mention de rôle (décision de Williams du 2026-10-01) ; chaque appel journalisé (siren, ipHash, résultat) ; côté axionia, timeout 2 s, cache 5 min, échec ouvert : le devis se crée avec `attributionVerifiee=false` et une alerte, la vérification est rejouée par job. Amendement W19 (décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §4.2) : Une attribution de conseiller répond comme une attribution d'apporteur au même stade : `attribuee`, `until`, et une `apporteurRef` opaque de même forme que celle d'un apporteur. Jamais `libre`, jamais un champ de plus que la forme commune, jamais une valeur qui nomme la population. Test d'indistinction (QA-T31). Le consommateur axion-ia (INT-T07-A) ne peut pas distinguer : aucune commission d'apporteur n'est versée sur la foi de l'API 1, la chaîne d'argent de Partners aiguillant par porteur réel (REQ-DM-021).",
       "source": "audit-outil §2.3, §5 étape 9 ; audit anti-abus C13 ; INT-F11",
       "statut": "active",
       "remplaceePar": null,
@@ -2397,7 +2407,9 @@
       "phase": 0,
       "taches": [
         "JUR-T03",
-        "JUR-T29"
+        "JUR-T29",
+        "JUR-T44",
+        "JUR-T45"
       ]
     },
     {
@@ -2412,7 +2424,8 @@
       "phase": 0,
       "taches": [
         "JUR-T03",
-        "JUR-T29"
+        "JUR-T29",
+        "JUR-T45"
       ]
     },
     {
@@ -2920,6 +2933,7 @@
         "DM-16",
         "SEC-05",
         "SEC-43",
+        "UX-P1-44",
         "UX-P2-04",
         "UX-P2-06",
         "UX-P2-09"
@@ -3716,7 +3730,8 @@
       "phase": 0,
       "taches": [
         "QA-T12",
-        "QA-T53"
+        "QA-T53",
+        "QA-T57"
       ]
     },
     {
@@ -3776,8 +3791,11 @@
       "taches": [
         "CPL-T13",
         "DM-13",
+        "GOV-137",
         "INT-T40",
+        "INT-T49",
         "QA-T40",
+        "QA-T56",
         "T-ARG-015"
       ]
     },
@@ -4037,7 +4055,7 @@
     {
       "id": "REQ-GOV-010",
       "domaine": "gouvernance-agents",
-      "texte": "`docs/CHARTE-AGENTS.md` définit neuf droits exclusifs portés par les quinze postes de `docs/CHARTE-AGENTS.md` §4 : l'attribution des tâches et l'écriture de `docs/tasks.json` et de la vue `docs/PLAN-STATE.md` reviennent à A01 avec l'outillage de lot (`pnpm lot:cloture`, seul écrivain des LIVRAISONS — `statut`, `pr`, `branch`, `owner` — et `lever-attente`, seul écrivain des LEVÉES d'attente — `attente_externe` → `a_faire` sur décision citée, jamais une livraison ; `pnpm plan-state:build`) — il n'existe pas de poste « orchestrateur » ; architecte (seul à accepter un ADR), gardien du spec (seul à modifier REQUIREMENTS/PRESEANCE/DECISIONS/GLOSSAIRE), leads de domaine (découpent, valident l'acceptation), développeurs (une tâche revendiquée à la fois), relecteurs adversariaux, vérificateurs de tests, release manager (seul à fusionner), documentaliste (LECONS.md). Gate : PR modifiant un fichier réservé sans le label du rôle → rouge.",
+      "texte": "`docs/CHARTE-AGENTS.md` définit neuf droits exclusifs portés par les quinze postes de `docs/CHARTE-AGENTS.md` §4 : l'attribution des tâches et l'écriture de `docs/tasks.json` et de la vue `docs/PLAN-STATE.md` reviennent à A01 avec l'outillage de lot (`pnpm lot:cloture`, seul écrivain des LIVRAISONS — `statut`, `pr`, `branch`, `owner` — et le verbe hors dépôt `lever-attente` (outils de reprise, relu par les lentilles securite et exactitude le 2026-10-01), seul écrivain des LEVÉES d'attente — `attente_externe` → `a_faire` sur décision citée, jamais une livraison ; `pnpm plan-state:build`) — il n'existe pas de poste « orchestrateur » ; architecte (seul à accepter un ADR), gardien du spec (seul à modifier REQUIREMENTS/PRESEANCE/DECISIONS/GLOSSAIRE), leads de domaine (découpent, valident l'acceptation), développeurs (une tâche revendiquée à la fois), relecteurs adversariaux, vérificateurs de tests, release manager (seul à fusionner), documentaliste (LECONS.md). Gate : PR modifiant un fichier réservé sans le label du rôle → rouge.",
       "source": "nouvelle",
       "statut": "active",
       "remplaceePar": null,
@@ -4160,6 +4178,7 @@
         "GOV-102",
         "GOV-112",
         "GOV-115",
+        "GOV-138",
         "JUR-T01b"
       ]
     },
@@ -4273,7 +4292,8 @@
         "GOV-117",
         "GOV-118",
         "GOV-120",
-        "GOV-121"
+        "GOV-121",
+        "GOV-134"
       ]
     },
     {
@@ -4530,7 +4550,8 @@
       "etape": 2,
       "phase": 1,
       "taches": [
-        "CPL-T06"
+        "CPL-T06",
+        "UX-P1-44"
       ]
     },
     {
@@ -5100,7 +5121,6 @@
         "EXT-T02b",
         "EXT-T04",
         "EXT-T05",
-        "EXT-T06",
         "EXT-T07",
         "EXT-T09",
         "EXT-T10",
@@ -5108,6 +5128,7 @@
         "GOV-113",
         "JUR-T36",
         "QA-T33",
+        "QA-T58",
         "SEC-29",
         "SEC-30",
         "T-ARG-035",
@@ -5120,7 +5141,6 @@
         "UX-P1-07",
         "UX-P1-08",
         "UX-P1-09",
-        "UX-P1-11",
         "UX-P1-12",
         "UX-P1-13",
         "UX-P1-14",
@@ -5130,6 +5150,8 @@
         "UX-P1-19",
         "UX-P1-20",
         "UX-P1-42",
+        "UX-P1-44",
+        "UX-P1-45",
         "UX-P2-01",
         "UX-P2-02",
         "UX-P2-03",
@@ -5166,7 +5188,9 @@
       "etape": null,
       "phase": 1,
       "taches": [
+        "CPL-T07",
         "EXT-T02a",
+        "EXT-T04",
         "SEC-29",
         "SEC-30",
         "T-ARG-035",
@@ -5174,6 +5198,7 @@
         "UX-P1-07",
         "UX-P1-12",
         "UX-P1-13",
+        "UX-P1-14",
         "UX-P1-16",
         "UX-P1-18",
         "UX-P1-20",
@@ -5979,6 +6004,8 @@
       "taches": [
         "JUR-T29",
         "JUR-T30",
+        "JUR-T44",
+        "JUR-T45",
         "UX-P1-11",
         "UX-P3-02"
       ]
