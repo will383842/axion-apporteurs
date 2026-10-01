@@ -194,3 +194,26 @@ export function valeurDEntite(
   }
   return { valeur: brute };
 }
+
+/** JUR-T46 — ce que rend la cellule de prix d'un palier qui n'a pas de prix public. */
+export const SANS_PRIX_PUBLIC = 'sur devis';
+
+/**
+ * La valeur d'une variable `PRIX_<palier>`, lue dans l'export de pricing. Un palier SANS prix
+ * public (la conférence, vendue sur devis) rend « sur devis » : jamais 0, jamais une chaîne vide,
+ * jamais un montant. Un prix absent de l'export (`undefined`) ne résout pas. Un montant, lui,
+ * appartient au rendu de l'export de pricing (DM-03-A) : il n'est pas mis en forme ici.
+ */
+export function valeurDePrixPublic(
+  source: SourceDeVariable,
+  prixPublicHtCentimes: number | null | undefined
+): Resolution {
+  if (source.genre !== 'pricing' || source.champ !== 'prixReferenceHt') {
+    return { manque: `source « ${source.genre} », pas le prix public de l'export de pricing` };
+  }
+  if (prixPublicHtCentimes === null) return { valeur: SANS_PRIX_PUBLIC };
+  if (prixPublicHtCentimes === undefined) {
+    return { manque: `prix public absent de l'export de pricing (${source.tache})` };
+  }
+  return { manque: `mise en forme d'un montant : rendu de l'export de pricing (${source.tache})` };
+}
