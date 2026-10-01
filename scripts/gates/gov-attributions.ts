@@ -1795,6 +1795,106 @@ export const CITATIONS_DECLAREES: Citation[] = [
     raison:
       'la phrase renvoie à la vue qui a nommé les valeurs de tests{} sans répertoire : la tâche est citée comme source de la mesure, pas comme propriétaire du test.',
   },
+  // OUVERTURE DE LA PHASE 1 (vérification V2, GOV-132, condition 1). Tant que ces tâches de Phase 1 ne
+  // portaient que des gabarits, leurs mentions étaient exemptées comme non résolues ; leurs chemins
+  // réels posés, chacune RÉSOUT, et la phrase la nomme comme VOISINE du fichier, jamais comme
+  // propriétaire : la garde appartient à la tâche que `docs/gates.json` déclare dans son champ `tache`.
+  {
+    ou: 'docs/gates.json(tests/unit/contrat/contract-template-complete.spec.ts).verifie',
+    ligne: 1,
+    id: 'DM-11',
+    nature: 'contexte',
+    raison:
+      'la garde du contrat complet appartient à JUR-T01 ; DM-11 est nommée comme la tâche qui livre une donnée que le gabarit consomme.',
+  },
+  {
+    ou: 'docs/gates.json(tests/a11y/axe.spec.ts).verifie',
+    ligne: 1,
+    id: 'QA-T16',
+    nature: 'contexte',
+    raison:
+      'la garde appartient à UX-P0-03 ; QA-T16 est nommée comme la tâche qui la rendra bloquante sur les routes réelles.',
+  },
+  {
+    ou: 'docs/gates.json(tests/a11y/cibles.spec.ts).verifie',
+    ligne: 1,
+    id: 'QA-T16',
+    nature: 'contexte',
+    raison:
+      'la garde appartient à UX-P0-03 ; QA-T16 est nommée comme la tâche qui la rendra bloquante sur les routes réelles.',
+  },
+  {
+    ou: 'docs/gates.json(tests/a11y/reflow.spec.ts).verifie',
+    ligne: 1,
+    id: 'QA-T16',
+    nature: 'contexte',
+    raison:
+      'la garde appartient à UX-P0-03 ; QA-T16 est nommée comme la tâche qui la rendra bloquante sur les routes réelles.',
+  },
+  {
+    ou: 'tests/a11y/harnais.ts',
+    ligne: 11,
+    id: 'QA-T16',
+    nature: 'contexte',
+    raison:
+      'le harnais appartient à UX-P0-03 ; la phrase dit que le serveur de test arrive avec QA-T16, nommée comme voisine.',
+  },
+  {
+    ou: 'tests/a11y/harnais.ts',
+    ligne: 13,
+    id: 'QA-T16',
+    nature: 'contexte',
+    raison:
+      'le harnais appartient à UX-P0-03 ; la phrase dit que QA-T16 rendra les gardes bloquantes sur les routes réelles.',
+  },
+  {
+    ou: 'docs/gates.json(tests/security/oracle.spec.ts).verifie',
+    ligne: 1,
+    id: 'UX-P1-01',
+    nature: 'contexte',
+    raison:
+      'la garde de l’oracle appartient à SEC-16 ; UX-P1-01 est nommée comme l’écran dont les réponses doivent rester indistinctes.',
+  },
+  {
+    ou: 'docs/gates.json(tests/unit/securite/revocation.spec.ts).verifie',
+    ligne: 1,
+    id: 'SEC-19',
+    nature: 'contexte',
+    raison:
+      'la garde de révocation appartient à SEC-04 ; SEC-19 est nommée comme la tâche voisine qui prolonge la règle.',
+  },
+  {
+    ou: 'docs/gates.json(scripts/gates/harnais-mcp.ts).verifie',
+    ligne: 1,
+    id: 'INT-T13',
+    nature: 'contexte',
+    raison:
+      'la garde du harnais appartient à INT-T11 ; INT-T13 est nommée comme la tâche qui s’en servira.',
+  },
+  {
+    ou: 'docs/gates.json(scripts/gates/schema-cents.ts).verifie',
+    ligne: 1,
+    id: 'DM-07',
+    nature: 'contexte',
+    raison:
+      'la garde des montants en centimes appartient à DM-02 ; DM-07 est nommée comme la tâche dont les tables y entreront.',
+  },
+  {
+    ou: 'docs/gates.json(scripts/gates/schema-enums.ts).verifie',
+    ligne: 1,
+    id: 'DM-07',
+    nature: 'contexte',
+    raison:
+      'la garde des énumérations appartient à DM-02 ; DM-07 est nommée comme la tâche dont les tables y entreront.',
+  },
+  {
+    ou: 'docs/gates.json(scripts/gates/bundle-par-route.ts).verifie',
+    ligne: 1,
+    id: 'QA-T20b',
+    nature: 'contexte',
+    raison:
+      'la garde du poids par route appartient à QA-T20 ; QA-T20b est nommée comme la tâche qui en durcit le seuil.',
+  },
 ];
 
 /**
@@ -1835,24 +1935,9 @@ export const DETTE_LOT_JOURNAL: DetteLot[] = [
  */
 export const EXEMPTIONS_FIGEES: ExemptionFigee[] = [
   {
-    nature: 'gate_paths_en_partie_gabarit',
-    tache: 'DM-08',
-    site: 'docs/gates.json(tests/domain/transitions.spec.ts)',
-  },
-  {
     nature: 'gate_paths_non_resolus',
     tache: 'DM-20',
     site: 'docs/gates.json(tests/integration/rgpd-export.spec.ts)',
-  },
-  {
-    nature: 'gate_paths_non_resolus',
-    tache: 'DM-13',
-    site: 'docs/gates.json(tests/integration/purge.spec.ts)',
-  },
-  {
-    nature: 'gate_paths_non_resolus',
-    tache: 'UX-P1-14',
-    site: 'docs/gates.json(scripts/gates/grille-complete.ts)',
   },
   {
     nature: 'gate_paths_non_resolus',
@@ -1916,67 +2001,10 @@ export const EXEMPTIONS_FIGEES: ExemptionFigee[] = [
   },
   {
     nature: 'gate_paths_non_resolus',
-    tache: 'SEC-12',
-    site: 'docs/gates.json(tests/integration/concurrence.spec.ts)',
-  },
-  {
-    nature: 'gate_paths_non_resolus',
-    tache: 'SEC-16',
-    site: 'docs/gates.json(tests/security/oracle.spec.ts)',
-  },
-  {
-    nature: 'gate_paths_en_partie_gabarit',
-    tache: 'INT-T12',
-    site: 'docs/gates.json(tests/integration/docuseal.spec.ts)',
-  },
-  {
-    nature: 'gate_paths_non_resolus',
-    tache: 'QA-T19',
-    site: 'docs/gates.json(scripts/gates/sante.ts)',
-  },
-  {
-    nature: 'gate_paths_non_resolus',
-    tache: 'INT-T08-A',
-    site: 'docs/gates.json(axionia/tests/integration/reconciliation.spec.ts)',
-  },
-  {
-    nature: 'gate_paths_non_resolus',
-    tache: 'JUR-T24',
-    site: 'docs/gates.json(tests/domain/suspension-motifs.spec.ts)',
-  },
-  {
-    nature: 'gate_paths_en_partie_gabarit',
-    tache: 'INT-T12',
-    site: 'docs/gates.json(tests/integration/signature-avant-depot.spec.ts)',
-  },
-  {
-    nature: 'gate_paths_non_resolus',
-    tache: 'SEC-19',
-    site: 'docs/gates.json(tests/domain/acteur-humain.spec.ts)',
-  },
-  {
-    nature: 'gate_paths_non_resolus',
     tache: 'UX-P3-02',
     site: 'docs/gates.json(scripts/gates/lexique-financement-ressources.ts)',
   },
-  {
-    nature: 'gate_paths_non_resolus',
-    tache: 'UX-P1-08',
-    site: 'docs/gates.json(tests/ux/etats-vides.spec.ts)',
-  },
-  {
-    nature: 'gate_paths_non_resolus',
-    tache: 'UX-P1-03',
-    site: 'docs/gates.json(tests/ux/hors-ligne.spec.ts)',
-  },
-  {
-    nature: 'gate_paths_non_resolus',
-    tache: 'QA-T16',
-    site: 'docs/gates.json(tests/unit/ci/spec-espace-mobile.spec.ts)',
-  },
   { nature: 'lot_sans_pr', tache: 'GOV-000', site: 'lot « gov-amorcage »' },
-  { nature: 'mention_paths_non_resolus', tache: 'QA-T16', site: 'tests/a11y/harnais.ts:11' },
-  { nature: 'mention_paths_non_resolus', tache: 'QA-T16', site: 'tests/a11y/harnais.ts:13' },
   {
     nature: 'mention_paths_non_resolus',
     tache: 'T-ARG-022',
@@ -1991,21 +2019,6 @@ export const EXEMPTIONS_FIGEES: ExemptionFigee[] = [
     nature: 'mention_paths_non_resolus',
     tache: 'GOV-022',
     site: 'tests/unit/gouvernance/tracabilite.spec.ts:9',
-  },
-  {
-    nature: 'mention_paths_non_resolus',
-    tache: 'JUR-T13',
-    site: 'docs/gates.json(scripts/gates/lexique-apporteurs.ts).verifie:1',
-  },
-  {
-    nature: 'mention_paths_en_partie_gabarit',
-    tache: 'DM-07',
-    site: 'docs/gates.json(scripts/gates/schema-enums.ts).verifie:1',
-  },
-  {
-    nature: 'mention_paths_en_partie_gabarit',
-    tache: 'DM-07',
-    site: 'docs/gates.json(scripts/gates/schema-cents.ts).verifie:1',
   },
   {
     nature: 'mention_paths_non_resolus',
@@ -2099,16 +2112,6 @@ export const EXEMPTIONS_FIGEES: ExemptionFigee[] = [
   },
   {
     nature: 'mention_paths_non_resolus',
-    tache: 'SEC-19',
-    site: 'docs/gates.json(tests/unit/securite/revocation.spec.ts).verifie:1',
-  },
-  {
-    nature: 'mention_paths_non_resolus',
-    tache: 'UX-P1-01',
-    site: 'docs/gates.json(tests/security/oracle.spec.ts).verifie:1',
-  },
-  {
-    nature: 'mention_paths_non_resolus',
     tache: 'SEC-26',
     site: 'docs/gates.json(tests/unit/integration/notif-sans-pii.spec.ts).verifie:1',
   },
@@ -2119,18 +2122,8 @@ export const EXEMPTIONS_FIGEES: ExemptionFigee[] = [
   },
   {
     nature: 'mention_paths_non_resolus',
-    tache: 'INT-T13',
-    site: 'docs/gates.json(scripts/gates/harnais-mcp.ts).verifie:1',
-  },
-  {
-    nature: 'mention_paths_non_resolus',
     tache: 'INT-T17',
     site: 'docs/gates.json(scripts/gates/harnais-mcp.ts).verifie:1',
-  },
-  {
-    nature: 'mention_paths_en_partie_gabarit',
-    tache: 'DM-11',
-    site: 'docs/gates.json(tests/unit/contrat/contract-template-complete.spec.ts).verifie:1',
   },
   {
     nature: 'mention_paths_non_resolus',
@@ -2144,36 +2137,6 @@ export const EXEMPTIONS_FIGEES: ExemptionFigee[] = [
   },
   {
     nature: 'mention_paths_non_resolus',
-    tache: 'QA-T16',
-    site: 'docs/gates.json(tests/a11y/axe.spec.ts).verifie:1',
-  },
-  {
-    nature: 'mention_paths_non_resolus',
-    tache: 'QA-T16',
-    site: 'docs/gates.json(tests/a11y/axe.spec.ts).verifie:1',
-  },
-  {
-    nature: 'mention_paths_non_resolus',
-    tache: 'QA-T16',
-    site: 'docs/gates.json(tests/a11y/cibles.spec.ts).verifie:1',
-  },
-  {
-    nature: 'mention_paths_non_resolus',
-    tache: 'QA-T16',
-    site: 'docs/gates.json(tests/a11y/cibles.spec.ts).verifie:1',
-  },
-  {
-    nature: 'mention_paths_non_resolus',
-    tache: 'QA-T16',
-    site: 'docs/gates.json(tests/a11y/reflow.spec.ts).verifie:1',
-  },
-  {
-    nature: 'mention_paths_non_resolus',
-    tache: 'QA-T16',
-    site: 'docs/gates.json(tests/a11y/reflow.spec.ts).verifie:1',
-  },
-  {
-    nature: 'mention_paths_non_resolus',
     tache: 'UX-P3-01',
     site: 'docs/gates.json(tests/ux/hors-ligne.spec.ts).verifie:1',
   },
@@ -2181,21 +2144,6 @@ export const EXEMPTIONS_FIGEES: ExemptionFigee[] = [
     nature: 'mention_paths_non_resolus',
     tache: 'SEC-26',
     site: 'docs/gates.json(tests/ux/hors-ligne.spec.ts).verifie:1',
-  },
-  {
-    nature: 'mention_paths_non_resolus',
-    tache: 'QA-T20b',
-    site: 'docs/gates.json(scripts/gates/bundle-par-route.ts).verifie:1',
-  },
-  {
-    nature: 'mention_paths_non_resolus',
-    tache: 'QA-T19',
-    site: 'docs/gates.json(.github/workflows/nightly.yml).verifie:1',
-  },
-  {
-    nature: 'mention_paths_non_resolus',
-    tache: 'QA-T19',
-    site: 'docs/gates.json(.github/workflows/nightly.yml).verifie:1',
   },
   {
     nature: 'mention_paths_non_resolus',

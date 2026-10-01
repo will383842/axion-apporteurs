@@ -193,7 +193,8 @@
       "etape": 10,
       "phase": 0,
       "taches": [
-        "DM-06"
+        "DM-06",
+        "SEC-11"
       ]
     },
     {
@@ -225,6 +226,7 @@
       "taches": [
         "DM-03-A",
         "DM-03-P",
+        "DM-23",
         "GOV-080"
       ]
     },
@@ -239,7 +241,8 @@
       "etape": 9,
       "phase": 0,
       "taches": [
-        "DM-04"
+        "DM-04",
+        "T-ARG-035"
       ]
     },
     {
@@ -327,6 +330,7 @@
       "taches": [
         "DM-15",
         "INT-T03",
+        "T-ARG-035",
         "T-ARG-040"
       ]
     },
@@ -378,7 +382,7 @@
     {
       "id": "REQ-DM-025",
       "domaine": "domaine-donnees",
-      "texte": "Un Relevé fige ses lignes (LigneCommission.releveId, une ligne dans au plus un relevé), est unique par (apporteurId, periode), porte un `numeroAutofacture` séquentiel sans trou par année (séquence Postgres, alloué à l'approbation) et devient immuable au statut `approuve`.",
+      "texte": "Un Relevé fige ses lignes (LigneCommission.releveId, une ligne dans au plus un relevé), est unique par (apporteurId, periode), porte un `numeroAutofacture` séquentiel sans trou par année (compteur par exercice verrouillé dans la transaction d'approbation, `compteurs_autofacture`, UNIQUE `(annee, numero)`) et devient immuable au statut `approuve`.",
       "source": "tableaux-de-bord §2.7, B3 ; outil §6.3 ; nouvelle (F-DM-22)",
       "statut": "active",
       "remplaceePar": null,
@@ -553,7 +557,10 @@
       "etape": 5,
       "phase": 0,
       "taches": [
+        "DM-15",
         "GOV-088",
+        "INT-T43",
+        "INT-T44",
         "SEC-06"
       ]
     },
@@ -749,10 +756,8 @@
       "remplaceePar": "REQ-DM-012",
       "module": 9,
       "etape": 7,
-      "phase": 1,
-      "taches": [
-        "SEC-11"
-      ]
+      "phase": null,
+      "taches": []
     },
     {
       "id": "REQ-SEC-008",
@@ -812,7 +817,6 @@
       "etape": 10,
       "phase": 0,
       "taches": [
-        "DM-15",
         "SEC-06"
       ]
     },
@@ -869,10 +873,8 @@
       "remplaceePar": "REQ-DM-010",
       "module": 9,
       "etape": 7,
-      "phase": 1,
-      "taches": [
-        "SEC-12"
-      ]
+      "phase": null,
+      "taches": []
     },
     {
       "id": "REQ-SEC-016",
@@ -997,9 +999,12 @@
       "etape": 12,
       "phase": 0,
       "taches": [
+        "DM-44",
         "SEC-17",
         "SEC-30",
-        "SEC-31"
+        "SEC-31",
+        "UX-P2-03",
+        "UX-P3-05"
       ]
     },
     {
@@ -1059,8 +1064,7 @@
       "etape": 8,
       "phase": 0,
       "taches": [
-        "DM-01",
-        "DM-20"
+        "DM-01"
       ]
     },
     {
@@ -1163,7 +1167,8 @@
       "etape": 5,
       "phase": 1,
       "taches": [
-        "INT-T12"
+        "INT-T12",
+        "INT-T24"
       ]
     },
     {
@@ -1332,7 +1337,6 @@
       "etape": 10,
       "phase": 0,
       "taches": [
-        "DM-15",
         "INT-T05"
       ]
     },
@@ -1363,6 +1367,8 @@
       "etape": null,
       "phase": 0,
       "taches": [
+        "INT-T43",
+        "QA-T27",
         "QA-T32",
         "SEC-06",
         "T-ARG-022"
@@ -1412,8 +1418,7 @@
       "phase": -1,
       "taches": [
         "DM-04",
-        "INT-T01b",
-        "T-ARG-035"
+        "INT-T01b"
       ]
     },
     {
@@ -1454,10 +1459,8 @@
       "remplaceePar": "REQ-DM-022",
       "module": null,
       "etape": 9,
-      "phase": 2,
-      "taches": [
-        "DM-15"
-      ]
+      "phase": null,
+      "taches": []
     },
     {
       "id": "REQ-ARG-010",
@@ -1482,10 +1485,8 @@
       "remplaceePar": "REQ-DM-023",
       "module": 14,
       "etape": 10,
-      "phase": 2,
-      "taches": [
-        "DM-16"
-      ]
+      "phase": null,
+      "taches": []
     },
     {
       "id": "REQ-ARG-012",
@@ -1496,9 +1497,10 @@
       "remplaceePar": null,
       "module": 14,
       "etape": 4,
-      "phase": 2,
+      "phase": 1,
       "taches": [
-        "DM-16"
+        "DM-16",
+        "SEC-18"
       ]
     },
     {
@@ -1554,8 +1556,9 @@
       "remplaceePar": null,
       "module": 4,
       "etape": 4,
-      "phase": 2,
+      "phase": 1,
       "taches": [
+        "DM-11",
         "JUR-T16",
         "T-ARG-015",
         "T-ARG-032",
@@ -1772,10 +1775,8 @@
       "etape": null,
       "phase": -1,
       "taches": [
-        "DM-15",
         "INT-T01b",
-        "INT-T05",
-        "T-ARG-035"
+        "INT-T05"
       ]
     },
     {
@@ -2176,11 +2177,8 @@
       "remplaceePar": "REQ-SEC-034",
       "module": 5,
       "etape": 5,
-      "phase": 1,
-      "taches": [
-        "INT-T12",
-        "INT-T24"
-      ]
+      "phase": null,
+      "taches": []
     },
     {
       "id": "REQ-INT-019",
@@ -2518,10 +2516,8 @@
       "remplaceePar": "REQ-DM-031",
       "module": null,
       "etape": null,
-      "phase": 3,
-      "taches": [
-        "DM-20"
-      ]
+      "phase": null,
+      "taches": []
     },
     {
       "id": "REQ-JUR-011",
@@ -2577,10 +2573,8 @@
       "remplaceePar": "REQ-ARG-025",
       "module": 4,
       "etape": 4,
-      "phase": 2,
-      "taches": [
-        "T-ARG-032"
-      ]
+      "phase": null,
+      "taches": []
     },
     {
       "id": "REQ-JUR-015",
@@ -2606,10 +2600,8 @@
       "remplaceePar": "REQ-ARG-024",
       "module": 16,
       "etape": 11,
-      "phase": 2,
-      "taches": [
-        "DM-19"
-      ]
+      "phase": null,
+      "taches": []
     },
     {
       "id": "REQ-JUR-017",
@@ -2620,11 +2612,8 @@
       "remplaceePar": "REQ-ARG-018",
       "module": 4,
       "etape": 4,
-      "phase": 1,
-      "taches": [
-        "JUR-T01c",
-        "T-ARG-016"
-      ]
+      "phase": null,
+      "taches": []
     },
     {
       "id": "REQ-JUR-018",
@@ -2635,12 +2624,8 @@
       "remplaceePar": "REQ-ARG-016",
       "module": 4,
       "etape": 4,
-      "phase": 1,
-      "taches": [
-        "DM-11",
-        "JUR-T16",
-        "T-ARG-032"
-      ]
+      "phase": null,
+      "taches": []
     },
     {
       "id": "REQ-JUR-019",
@@ -2654,7 +2639,6 @@
       "phase": 0,
       "taches": [
         "DM-03-A",
-        "DM-23",
         "JUR-T29"
       ]
     },
@@ -2681,11 +2665,8 @@
       "remplaceePar": "REQ-ARG-012",
       "module": 14,
       "etape": 4,
-      "phase": 1,
-      "taches": [
-        "DM-16",
-        "SEC-18"
-      ]
+      "phase": null,
+      "taches": []
     },
     {
       "id": "REQ-JUR-022",
@@ -2804,6 +2785,7 @@
       "phase": 0,
       "taches": [
         "DM-11",
+        "INT-T44",
         "JUR-T02",
         "T-ARG-033"
       ]
@@ -3201,9 +3183,7 @@
       "etape": 8,
       "phase": 0,
       "taches": [
-        "SEC-17",
-        "UX-P2-03",
-        "UX-P3-05"
+        "SEC-17"
       ]
     },
     {
@@ -3335,7 +3315,9 @@
       "etape": 7,
       "phase": 0,
       "taches": [
+        "QA-T16",
         "QA-T20",
+        "QA-T20b",
         "UX-P1-08",
         "UX-P3-01"
       ]
@@ -3460,7 +3442,7 @@
     {
       "id": "REQ-QA-007",
       "domaine": "qualite-ci-devops",
-      "texte": "Les 5 webhooks entrants et les 3 API sortantes (la vérification d'attribution, la relecture de l'outbox, et `GET /api/partners/candidatures/{candidatureId}/coordonnees` qui rend les coordonnées d'un candidat — partners/ADR-0023) ont chacun un schéma Zod versionné (`schemaVersion`) transcrit à l'identique dans les deux dépôts, avec un test de transcription datée de chaque côté ; les fixtures de contrat sont générées par le producteur réel d'axionia (FactureFormation, Payment, Devis, Client, Submission) et non écrites à la main.",
+      "texte": "Les onze types d'événements du webhook entrant d'axionia (liste fermée de REQ-INT-004, `TYPES_EVENEMENT` de `packages/contracts/events.ts`) et les 3 API sortantes (la vérification d'attribution, la relecture de l'outbox, et `GET /api/partners/candidatures/{candidatureId}/coordonnees` qui rend les coordonnées d'un candidat — partners/ADR-0023) ont chacun un schéma Zod versionné (`schemaVersion`) transcrit à l'identique dans les deux dépôts, avec un test de transcription datée de chaque côté ; les fixtures de contrat sont générées par le producteur réel d'axionia (FactureFormation, Payment, Devis, Client, Submission) et non écrites à la main.",
       "source": "audit-outil-bout-en-bout §2.3 + QA-F01, QA-F14 · patron tests/e2e-crm-sync/contract.spec.ts",
       "statut": "active",
       "remplaceePar": null,
@@ -3499,9 +3481,7 @@
       "etape": 10,
       "phase": 0,
       "taches": [
-        "QA-T27",
-        "SEC-06",
-        "T-ARG-022"
+        "SEC-06"
       ]
     },
     {
@@ -3544,8 +3524,7 @@
       "etape": 7,
       "phase": 0,
       "taches": [
-        "SEC-05",
-        "SEC-16"
+        "SEC-05"
       ]
     },
     {
@@ -3582,6 +3561,7 @@
       "etape": null,
       "phase": 0,
       "taches": [
+        "GOV-022",
         "GOV-039",
         "GOV-085",
         "QA-T03"
@@ -3837,9 +3817,7 @@
       "etape": 7,
       "phase": 0,
       "taches": [
-        "QA-T16",
-        "QA-T20",
-        "QA-T20b"
+        "QA-T20"
       ]
     },
     {
@@ -3867,8 +3845,7 @@
       "etape": null,
       "phase": 0,
       "taches": [
-        "QA-T34",
-        "QA-T54"
+        "QA-T34"
       ]
     },
     {
@@ -3963,7 +3940,6 @@
       "phase": -1,
       "taches": [
         "GOV-011",
-        "GOV-022",
         "GOV-043",
         "GOV-082"
       ]
@@ -3989,7 +3965,7 @@
     {
       "id": "REQ-GOV-007",
       "domaine": "gouvernance-agents",
-      "texte": "Une tâche a au plus un `owner` à la fois, revendiqué par écriture dans PLAN-STATE via l'orchestrateur (seul écrivain) ; un agent ne travaille jamais sur une tâche non revendiquée. Gate : deux PR ouvertes citant la même tâche → rouge.",
+      "texte": "Une tâche a au plus un `owner` à la fois, revendiqué par l'issue `owner:*`/`en_cours` et l'écriture de `owner` dans `docs/tasks.json` par A01 via l'outillage de lot, reflétée dans `docs/PLAN-STATE.md` ; un agent ne travaille jamais sur une tâche non revendiquée. Gate : deux PR ouvertes citant la même tâche → rouge.",
       "source": "nouvelle",
       "statut": "active",
       "remplaceePar": null,
@@ -4040,7 +4016,7 @@
     {
       "id": "REQ-GOV-010",
       "domaine": "gouvernance-agents",
-      "texte": "`docs/CHARTE-AGENTS.md` définit neuf rôles à droit exclusif : orchestrateur (attribue, écrit PLAN-STATE), architecte (seul à accepter un ADR), gardien du spec (seul à modifier REQUIREMENTS/PRESEANCE/DECISIONS/GLOSSAIRE), leads de domaine (découpent, valident l'acceptation), développeurs (une tâche revendiquée à la fois), relecteurs adversariaux, vérificateurs de tests, release manager (seul à fusionner), documentaliste (LECONS.md). Gate : PR modifiant un fichier réservé sans le label du rôle → rouge.",
+      "texte": "`docs/CHARTE-AGENTS.md` définit neuf droits exclusifs portés par les quinze postes de `docs/CHARTE-AGENTS.md` §4 : l'attribution des tâches et l'écriture de `docs/tasks.json` et de la vue `docs/PLAN-STATE.md` reviennent à A01 avec l'outillage de lot (`pnpm lot:cloture`, seul écrivain de `statut`, `pr`, `branch`, `owner` ; `pnpm plan-state:build`) — il n'existe pas de poste « orchestrateur » ; architecte (seul à accepter un ADR), gardien du spec (seul à modifier REQUIREMENTS/PRESEANCE/DECISIONS/GLOSSAIRE), leads de domaine (découpent, valident l'acceptation), développeurs (une tâche revendiquée à la fois), relecteurs adversariaux, vérificateurs de tests, release manager (seul à fusionner), documentaliste (LECONS.md). Gate : PR modifiant un fichier réservé sans le label du rôle → rouge.",
       "source": "nouvelle",
       "statut": "active",
       "remplaceePar": null,
@@ -4137,7 +4113,8 @@
       "taches": [
         "GOV-000",
         "GOV-012",
-        "GOV-057"
+        "GOV-057",
+        "QA-T54"
       ]
     },
     {
@@ -5098,12 +5075,10 @@
         "EXT-T01",
         "EXT-T02a",
         "EXT-T02b",
-        "EXT-T03",
         "EXT-T04",
         "EXT-T05",
         "EXT-T06",
         "EXT-T07",
-        "EXT-T08",
         "EXT-T09",
         "EXT-T10",
         "EXT-T11",
@@ -5122,7 +5097,6 @@
         "UX-P1-07",
         "UX-P1-08",
         "UX-P1-09",
-        "UX-P1-10",
         "UX-P1-11",
         "UX-P1-12",
         "UX-P1-13",
