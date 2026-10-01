@@ -33,7 +33,9 @@ type Textes = Readonly<Record<string, string>>;
 
 function texteDe(id: string): string {
   const brut = JSON.parse(readFileSync('docs/requirements.json', 'utf8')) as unknown;
-  const liste = (Array.isArray(brut) ? brut : Object.values(brut as object).find(Array.isArray)) as {
+  const liste = (
+    Array.isArray(brut) ? brut : Object.values(brut as object).find(Array.isArray)
+  ) as {
     id: string;
     texte: string;
   }[];
@@ -60,7 +62,11 @@ function rubriquesDeLExigence(texte: string): string[] {
   return m[1]!.split(',').map((r) => r.split(':')[0]!.trim());
 }
 
-function fautesDesRubriques(info: Textes, lienOpposition: { libelle: string }, texte: string): string[] {
+function fautesDesRubriques(
+  info: Textes,
+  lienOpposition: { libelle: string },
+  texte: string
+): string[] {
   const f: string[] = [];
   for (const r of rubriquesDeLExigence(texte)) {
     const cle = CLE_DE_LA_RUBRIQUE[r];
@@ -68,7 +74,8 @@ function fautesDesRubriques(info: Textes, lienOpposition: { libelle: string }, t
     else if (!(info[cle] ?? '').trim()) f.push(`rubrique vide : « ${r} » (${cle})`);
   }
   if (!/lien d'opposition/.test(texte)) f.push('REQ-JUR-060 ne nomme plus le lien d’opposition');
-  if (!(info.opposition ?? '').trim() || !lienOpposition.libelle.trim()) f.push('opposition absente');
+  if (!(info.opposition ?? '').trim() || !lienOpposition.libelle.trim())
+    f.push('opposition absente');
   return f;
 }
 
@@ -80,7 +87,8 @@ function fautesDeLOrdre(info: Textes, ordre: readonly string[]): string[] {
   return f;
 }
 
-const MOIS = /\b(janvier|février|fevrier|mars|avril|mai|juin|juillet|août|aout|septembre|octobre|novembre|décembre|decembre)\b/i;
+const MOIS =
+  /\b(janvier|février|fevrier|mars|avril|mai|juin|juillet|août|aout|septembre|octobre|novembre|décembre|decembre)\b/i;
 function fautesDeDate(textes: Textes): string[] {
   return Object.entries(textes).flatMap(([cle, t]) =>
     /\{dateContact\}|date du contact|\b\d{1,2}\/\d{1,2}\b/i.test(t) || MOIS.test(t)
@@ -89,12 +97,16 @@ function fautesDeDate(textes: Textes): string[] {
   );
 }
 
-const COORDONNEE = /\{[A-Za-z]*(?:email|mail|courriel|telephone|tel|adresse|portable)[A-Za-z]*Apporteur\}/i;
+const COORDONNEE =
+  /\{[A-Za-z]*(?:email|mail|courriel|telephone|tel|adresse|portable)[A-Za-z]*Apporteur\}/i;
 function fautesDIdentite(source: string, ouverture: string, tous: Textes): string[] {
   const f: string[] = [];
-  if (!source.includes('{prenomApporteur} {nomApporteur}')) f.push('source : l’apporteur n’est pas nommé par prénom et nom');
-  if (!ouverture.includes('{prenomApporteur} {nomApporteur}')) f.push('script : l’apporteur n’est pas nommé par prénom et nom');
-  for (const [cle, t] of Object.entries(tous)) if (COORDONNEE.test(t)) f.push(`${cle} : une coordonnée de l’apporteur`);
+  if (!source.includes('{prenomApporteur} {nomApporteur}'))
+    f.push('source : l’apporteur n’est pas nommé par prénom et nom');
+  if (!ouverture.includes('{prenomApporteur} {nomApporteur}'))
+    f.push('script : l’apporteur n’est pas nommé par prénom et nom');
+  for (const [cle, t] of Object.entries(tous))
+    if (COORDONNEE.test(t)) f.push(`${cle} : une coordonnée de l’apporteur`);
   return f;
 }
 
@@ -102,7 +114,9 @@ function fautesDIdentite(source: string, ouverture: string, tous: Textes): strin
 const EXCEPTION_BASE_LEGALE = '6, paragraphe 1, point f';
 function fautesDeNombre(textes: Textes): string[] {
   return Object.entries(textes).flatMap(([cle, t]) =>
-    /\d/.test(cle === 'baseLegale' ? t.replace(EXCEPTION_BASE_LEGALE, '') : t) ? [`${cle} : un nombre en clair`] : []
+    /\d/.test(cle === 'baseLegale' ? t.replace(EXCEPTION_BASE_LEGALE, '') : t)
+      ? [`${cle} : un nombre en clair`]
+      : []
   );
 }
 
@@ -117,8 +131,10 @@ function fautesDuScript(script: Textes, info: Textes, vScript: string, vInfo: st
   if (vScript !== vInfo) f.push(`version du script ${vScript} ≠ version de l’e-mail ${vInfo}`);
   for (const [cs, ts] of Object.entries(script))
     for (const [ci, ti] of Object.entries(info))
-      if (ti.trim().length > 20 && ts.includes(ti)) f.push(`script.${cs} recopie la rubrique ${ci}`);
-  if (!script.apresCourriel?.trim() || !script.sansCourriel?.trim()) f.push('le script n’a pas ses deux cas');
+      if (ti.trim().length > 20 && ts.includes(ti))
+        f.push(`script.${cs} recopie la rubrique ${ci}`);
+  if (!script.apresCourriel?.trim() || !script.sansCourriel?.trim())
+    f.push('le script n’a pas ses deux cas');
   return f;
 }
 
@@ -146,15 +162,35 @@ describe('REQ-JUR-060 — l’information de l’art. 14 portée par l’e-mail 
     expect(fautesDIdentite(INFO.source!, SCRIPT.ouverture!, TOUS)).toEqual([]);
   });
   it('REQ-JUR-060 — TÉMOINS : chaque règle rougit sur un texte cassé d’un geste', () => {
-    expect(fautesDesRubriques({ ...INFO, finalite: ' ' }, LIEN_OPPOSITION, REQ_JUR_060)).toEqual(['rubrique vide : « finalité » (finalite)']);
-    expect(fautesDesRubriques(INFO, LIEN_OPPOSITION, REQ_JUR_060.replace('base légale', 'base légale, transferts'))).toEqual(['rubrique sans clé : « transferts »']);
-    expect(fautesDeLOrdre(INFO, [...ORDRE_INFORMATION_ARTICLE_14.filter((c) => c !== 'droits'), 'titre'])).toEqual(['clé hors de l’ordre : droits', 'doublon dans l’ordre']);
-    expect(fautesDeDate({ source: `${INFO.source} Vous vous êtes vus le 12 mars.` })).toEqual(['source : une date du contact']);
+    expect(fautesDesRubriques({ ...INFO, finalite: ' ' }, LIEN_OPPOSITION, REQ_JUR_060)).toEqual([
+      'rubrique vide : « finalité » (finalite)',
+    ]);
+    expect(
+      fautesDesRubriques(
+        INFO,
+        LIEN_OPPOSITION,
+        REQ_JUR_060.replace('base légale', 'base légale, transferts')
+      )
+    ).toEqual(['rubrique sans clé : « transferts »']);
+    expect(
+      fautesDeLOrdre(INFO, [...ORDRE_INFORMATION_ARTICLE_14.filter((c) => c !== 'droits'), 'titre'])
+    ).toEqual(['clé hors de l’ordre : droits', 'doublon dans l’ordre']);
+    expect(fautesDeDate({ source: `${INFO.source} Vous vous êtes vus le 12 mars.` })).toEqual([
+      'source : une date du contact',
+    ]);
     expect(fautesDeDate({ source: '{dateContact}' })).toEqual(['source : une date du contact']);
-    expect(fautesDeNombre({ duree: 'Elles sont supprimées 6 mois après.' })).toEqual(['duree : un nombre en clair']);
+    expect(fautesDeNombre({ duree: 'Elles sont supprimées 6 mois après.' })).toEqual([
+      'duree : un nombre en clair',
+    ]);
     expect(fautesDeNombre({ baseLegale: INFO.baseLegale! })).toEqual([]);
-    expect(fautesDeLien({ droits: 'Écrivez à https://exemple.invalid' })).toEqual(['droits : un lien ou une balise']);
-    expect(fautesDIdentite('{emailApporteur} nous a présenté', SCRIPT.ouverture!, { source: '{emailApporteur}' })).toEqual([
+    expect(fautesDeLien({ droits: 'Écrivez à https://exemple.invalid' })).toEqual([
+      'droits : un lien ou une balise',
+    ]);
+    expect(
+      fautesDIdentite('{emailApporteur} nous a présenté', SCRIPT.ouverture!, {
+        source: '{emailApporteur}',
+      })
+    ).toEqual([
       'source : l’apporteur n’est pas nommé par prénom et nom',
       'source : une coordonnée de l’apporteur',
     ]);
@@ -163,17 +199,31 @@ describe('REQ-JUR-060 — l’information de l’art. 14 portée par l’e-mail 
 
 describe('REQ-JUR-009 — la mention de l’art. 14 au script de qualification', () => {
   it('REQ-JUR-009 — même version que l’e-mail, deux cas, aucune rubrique recopiée', () => {
-    expect(fautesDuScript(SCRIPT, INFO, VERSION_MENTION_SCRIPT, VERSION_INFORMATION_ARTICLE_14)).toEqual([]);
+    expect(
+      fautesDuScript(SCRIPT, INFO, VERSION_MENTION_SCRIPT, VERSION_INFORMATION_ARTICLE_14)
+    ).toEqual([]);
   });
   it('REQ-JUR-009 — TÉMOINS : une autre version, une rubrique recopiée, un cas manquant rougissent', () => {
-    expect(fautesDuScript(SCRIPT, INFO, 'information-article-14/v0', VERSION_INFORMATION_ARTICLE_14)).toEqual([
+    expect(
+      fautesDuScript(SCRIPT, INFO, 'information-article-14/v0', VERSION_INFORMATION_ARTICLE_14)
+    ).toEqual([
       `version du script information-article-14/v0 ≠ version de l’e-mail ${VERSION_INFORMATION_ARTICLE_14}`,
     ]);
-    expect(fautesDuScript({ ...SCRIPT, apresCourriel: `${SCRIPT.apresCourriel} ${INFO.droits}` }, INFO, VERSION_MENTION_SCRIPT, VERSION_INFORMATION_ARTICLE_14)).toEqual([
-      'script.apresCourriel recopie la rubrique droits',
-    ]);
-    expect(fautesDuScript({ ...SCRIPT, sansCourriel: '' }, INFO, VERSION_MENTION_SCRIPT, VERSION_INFORMATION_ARTICLE_14)).toEqual([
-      'le script n’a pas ses deux cas',
-    ]);
+    expect(
+      fautesDuScript(
+        { ...SCRIPT, apresCourriel: `${SCRIPT.apresCourriel} ${INFO.droits}` },
+        INFO,
+        VERSION_MENTION_SCRIPT,
+        VERSION_INFORMATION_ARTICLE_14
+      )
+    ).toEqual(['script.apresCourriel recopie la rubrique droits']);
+    expect(
+      fautesDuScript(
+        { ...SCRIPT, sansCourriel: '' },
+        INFO,
+        VERSION_MENTION_SCRIPT,
+        VERSION_INFORMATION_ARTICLE_14
+      )
+    ).toEqual(['le script n’a pas ses deux cas']);
   });
 });
