@@ -321,3 +321,88 @@ export const PARAMETRES = {
     verifieLe: '2026-09-29',
   },
 } as const satisfies Record<string, Parametre>;
+
+/**
+ * Les BUDGETS D'EXPÉRIENCE de REQ-UX-047 (QA-T58, sorti du point 4 de GOV-113) — une seule source,
+ * lue par la fixture de mesure (QA-T33) et par la garde des écrans (GOV-113). Hors de `SEUILS` pour la
+ * même raison que les paramètres : ni un délai du contrat, ni un montant. Une exigence plus stricte
+ * prime sur ces budgets génériques (REQ-UX-001 pour le dépôt, REQ-UX-021 pour la qualification) et
+ * reste écrite dans son exigence. Aucun budget propre au conseiller : il n'a aucun écran dans
+ * Partners (question 22 de W19), ses budgets sont ceux du CRM.
+ */
+export type BudgetUx = {
+  readonly valeur: number;
+  readonly unite:
+    'interactions' | 'tabulations' | 'secondes' | 'kbit_par_seconde' | 'millisecondes';
+  readonly source: string;
+  readonly verifieLe: string;
+};
+
+const LIGHTHOUSE_4G_RALENTIE =
+  'Lighthouse, docs/throttling.md, « The mobile network throttling preset » (« Slow 4G » : latence 150 ms, 1,6 Mbps descendant, 750 Kbps montant), https://github.com/GoogleChrome/lighthouse/blob/main/docs/throttling.md';
+
+export const BUDGETS_UX = {
+  CONSULTATION_INTERACTIONS_MAX: {
+    valeur: 3,
+    unite: 'interactions',
+    source: 'REQ-UX-047 point 1 (consultation)',
+    verifieLe: '2026-10-01',
+  },
+  SAISIE_INTERACTIONS_MAX: {
+    valeur: 8,
+    unite: 'interactions',
+    source: 'REQ-UX-047 point 1 (saisie)',
+    verifieLe: '2026-10-01',
+  },
+  PREMIERE_ACTION_TABULATIONS_MAX: {
+    valeur: 3,
+    unite: 'tabulations',
+    source: 'REQ-UX-047 point 2',
+    verifieLe: '2026-10-01',
+  },
+  PREMIERE_ACTION_CLIQUABLE_SECONDES_MAX: {
+    valeur: 2,
+    unite: 'secondes',
+    source: 'REQ-UX-047 point 2, sur le profil « 4G ralentie » ci-dessous',
+    verifieLe: '2026-10-01',
+  },
+  PREMIER_USAGE_PREMIERE_ACTION_SECONDES_MAX: {
+    valeur: 10,
+    unite: 'secondes',
+    source: 'REQ-UX-047 point 7 (test de premier usage)',
+    verifieLe: '2026-10-01',
+  },
+  RESEAU_4G_RALENTIE_DEBIT_DESCENDANT_KBPS: {
+    valeur: 1_600,
+    unite: 'kbit_par_seconde',
+    source: LIGHTHOUSE_4G_RALENTIE,
+    verifieLe: '2026-10-01',
+  },
+  RESEAU_4G_RALENTIE_DEBIT_MONTANT_KBPS: {
+    valeur: 750,
+    unite: 'kbit_par_seconde',
+    source: LIGHTHOUSE_4G_RALENTIE,
+    verifieLe: '2026-10-01',
+  },
+  RESEAU_4G_RALENTIE_LATENCE_MS: {
+    valeur: 150,
+    unite: 'millisecondes',
+    source: LIGHTHOUSE_4G_RALENTIE,
+    verifieLe: '2026-10-01',
+  },
+} as const satisfies Record<string, BudgetUx>;
+
+export type NomDeBudgetUx = keyof typeof BUDGETS_UX;
+
+/**
+ * Un budget par son nom. Un nom absent de la SSOT est REFUSÉ et nommé : jamais un défaut silencieux
+ * qui ferait passer une mesure contre un budget que personne n'a fixé. L'appartenance se lit par
+ * `Object.hasOwn`, pour qu'un nom hérité d'`Object.prototype` ne passe pas pour un budget.
+ */
+export function budgetUx(nom: string): BudgetUx {
+  if (!Object.hasOwn(BUDGETS_UX, nom))
+    throw new Error(
+      `Budget d'expérience inconnu de la SSOT : ${nom} (src/domain/seuils/ssot.ts, BUDGETS_UX)`
+    );
+  return BUDGETS_UX[nom as NomDeBudgetUx];
+}
