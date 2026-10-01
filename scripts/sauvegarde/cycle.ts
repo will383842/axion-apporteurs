@@ -205,6 +205,46 @@ export async function exercerLeDernier(depot: Depot, outils: OutilsDExercice): P
   return v;
 }
 
+/**
+ * QA-T57 — l'âge du DERNIER vidage du dépôt, en clair ou chiffré : c'est la preuve que la plateforme
+ * vide encore la base. Les verdicts d'exercice ne sont pas des vidages. Aucun vidage, une date
+ * illisible ou un vidage plus vieux que le seuil : refusé et nommé.
+ */
+export async function ageDuDernierVidage(
+  depot: Depot,
+  maintenant: Date,
+  seuilMinutes: number
+): Promise<{ ok: boolean; ageMinutes: number | null; motif: string }> {
+  const vidages = (await depot.lister(PREFIXES.depot)).filter(
+    (o) => !o.cle.startsWith(PREFIXES.exercices) && !o.cle.endsWith('/')
+  );
+  if (vidages.length === 0)
+    return { ok: false, ageMinutes: null, motif: `aucun vidage sous ${PREFIXES.depot}` };
+  if (vidages.some((o) => Number.isNaN(Date.parse(o.date))))
+    return { ok: false, ageMinutes: null, motif: 'un vidage porte une date illisible' };
+  const dernier = Math.max(...vidages.map((o) => Date.parse(o.date)));
+  const ageMinutes = Math.floor((maintenant.getTime() - dernier) / 60_000);
+  return ageMinutes <= seuilMinutes
+    ? { ok: true, ageMinutes, motif: '' }
+    : {
+        ok: false,
+        ageMinutes,
+        motif: `dernier vidage il y a ${ageMinutes} min, au-delà de ${seuilMinutes} min`,
+      };
+}
+
+/** L'âge du dernier vidage, et son ALERTE close `vidage_perime`, une par jugement, sans donnée. */
+export async function jugerLeDernierVidage(
+  depot: Depot,
+  maintenant: Date,
+  seuilMinutes: number,
+  alerter: (objet: ObjetAlerte) => Promise<void>
+): Promise<{ ok: boolean; ageMinutes: number | null; motif: string }> {
+  const r = await ageDuDernierVidage(depot, maintenant, seuilMinutes);
+  if (!r.ok) await alerter({ categorie: 'vidage_perime', id: randomUUID() });
+  return r;
+}
+
 export async function fraicheurDuDepot(depot: Depot, maintenant: Date, seuilJours: number) {
   const dernier = (await depot.lister(PREFIXES.exercices))
     .filter((o) => o.cle.endsWith('.json'))
@@ -451,12 +491,28 @@ async function commande(nom: string): Promise<number> {
     const m = manquantes(SECRETS_DU_STOCKAGE);
     if (m.length) return sauter('sauvegarde:fraicheur', m, sauvegardeActivee());
     const seuil = SEUILS.EXERCICE_DE_RESTAURATION_MAX_JOURS.valeur;
-    const j = await fraicheurDuDepot(depotR2(), new Date(), seuil);
+    const depot = depotR2();
+    const maintenant = new Date();
+    // QA-T57 : l'âge du dernier vidage est jugé à CHAQUE passage, même quand l'exercice est frais.
+    const seuilVidage = SEUILS.DERNIER_VIDAGE_MAX_MINUTES.valeur;
+    const a = alerteDeLaForge('sauvegarde:fraicheur');
+    const v = await jugerLeDernierVidage(depot, maintenant, seuilVidage, a.alerter);
+    let code = a.canalEteint ? 1 : 0;
+    if (v.ok)
+      console.log(
+        `✅ sauvegarde:fraicheur — dernier vidage il y a ${v.ageMinutes} min, seuil ${seuilVidage}`
+      );
+    else {
+      console.error(`::error title=sauvegarde:fraicheur::${v.motif}`);
+      console.error(`❌ sauvegarde:fraicheur — ${v.motif}`);
+      code = 1;
+    }
+    const j = await fraicheurDuDepot(depot, maintenant, seuil);
     if (j.ok) {
       console.log(
         `✅ sauvegarde:fraicheur — dernier exercice réussi il y a ${j.ageJours} jour(s), seuil ${seuil}`
       );
-      return 0;
+      return code;
     }
     console.error(`❌ sauvegarde:fraicheur — ${j.motif}`);
     return 1;
