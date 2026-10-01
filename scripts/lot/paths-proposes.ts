@@ -601,6 +601,14 @@ const MANUELS: Record<string, string[]> = {
     'scripts/gates/gov-depot.ts',
     'tests/unit/gouvernance/protection-de-main-strict.spec.ts',
   ],
+  // SEC-43 (ouverture limitée de l'espace avant signature, décision de Williams du 2026-10-01) : son
+  // témoin n'existe pas encore, ses chemins sont ceux de sa fiche.
+  'SEC-43': [
+    'src/domain/apporteur/acces-espace.ts',
+    'src/domain/apporteur/matrice.ts',
+    'src/app/(espace)/mon-contrat/page.tsx',
+    'tests/unit/securite/acces-espace-avant-signature.spec.ts',
+  ],
 };
 
 /**
