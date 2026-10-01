@@ -16,7 +16,13 @@
 | Déposer un contact | `deposer.html` | UX-P1-02 | 2026-09-19 | Will |
 | Mes entreprises | `mes-entreprises.html` | UX-P1-05 | 2026-09-19 | Will |
 | Mes commissions | `mes-commissions.html` | UX-P2-01 | 2026-09-19 | Will |
-| Ma conformité / Mon profil | `conformite.html` | UX-P1-09 | 2026-09-19 | Will |
+| Ma conformité / Mon profil (ouverture limitée, état vide) | `conformite.html` | UX-P1-09 | — | — |
+| Se connecter (lien, code à 6 chiffres, lien déjà utilisé) | `connexion.html` | UX-P1-04 | — | — |
+| Mon contrat | `mon-contrat.html` | UX-P1-44 | — | — |
+| Fiche d'une entreprise (frise, échanges) | `mes-entreprises-fiche.html` | EXT-T01 | — | — |
+| Personnes qui agissent pour l'apporteur | `personnes.html` | UX-P1-15 | — | — |
+| Dépôt par lien privé | `depot-lien-prive.html` | UX-P1-03 | — | — |
+| Notifications | `notifications.html` | UX-P1-08 | — | — |
 
 ## Console
 

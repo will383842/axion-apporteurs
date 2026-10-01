@@ -26,7 +26,7 @@
 | --- | --- | --- | --- | --- | --- | --- |
 | `/entreprise?q=` | **Vérifier une entreprise** | Recherche, carte à **4 états** (`libre`, `suivie_place_disponible`, `suivie_file_complete`, `non_disponible`), bouton « Déposer » pré-rempli, compteur 30/jour | REQ-UX-001, REQ-UX-007 | `entreprise.html` | UX-P1-01 | oui |
 | `/deposer` | Déposer un contact | Autocomplétion < 300 ms, tolérance aux fautes, ville en aide, repli manuel, issues de `IssueDepot` rendues | REQ-UX-001, REQ-UX-002, REQ-UX-020 | `deposer.html` | UX-P1-02 | oui |
-| `/d/<jeton>` | **Dépôt sans connexion** | Même formulaire, par lien privé ; brouillon hors-ligne (IndexedDB), envoi au retour du réseau, **horodatage à la réception** | REQ-UX-013, REQ-SEC-033 | `deposer.html` (états hors ligne) | UX-P1-03 | oui |
+| `/d/<jeton>` | **Dépôt sans connexion** | Même formulaire, par lien privé ; brouillon hors-ligne (IndexedDB), envoi au retour du réseau, **horodatage à la réception** | REQ-UX-013, REQ-SEC-033 | `depot-lien-prive.html` | UX-P1-03 | oui |
 
 > ⚠️ `/entreprise` exige une **session** (30/jour, journalisé) ; `/d/<jeton>` n'exige qu'un jeton et ne
 > permet **que** le dépôt — jamais la consultation. Vérifier est gratuit et en lecture seule ; déposer
@@ -40,6 +40,9 @@
 | `/filleuls` | Filleuls, règle des 12 mois en **texte fixe** sans aucune date calculée (W15), lien de parrainage partageable — **agrégé, sans montant par filleul** ; liste des filleuls directs réduite à trois clés exactes — prénom, initiale du nom, état du contrat (« en signature » ou « signé », règle fermée de REQ-UX-041, sur l'ensemble des versions du contrat) —, jamais les filleuls des filleuls (W15) ; aucune échéance ni date propre à un filleul, ni par filleul ni agrégée | REQ-UX-030, REQ-UX-041 | — | UX-P2-04, UX-P2-09 | non |
 | `/conformite` | Pièces KYC avec état et upload — c'est ici qu'on voit pourquoi un paiement est bloqué | REQ-UX-016, REQ-UX-027 | `conformite.html` | UX-P1-09 | oui |
 | `/profil` | Zones, secteur, disponibilité, canal de notification, RIB (step-up), e-mail (confirmation sur l'ancienne adresse) | REQ-UX-027, REQ-UX-031, REQ-CPL-019 | `conformite.html` | UX-P1-09 | non |
+| `/profil/personnes` | Personnes qui agissent pour l'apporteur : liste déclarative, sans compte ni session ; proposée au dépôt | REQ-UX-039 | `personnes.html` | UX-P1-15 | non |
+| `/mon-contrat` | Mon contrat : version à signer, annexe générée de la grille avec ses écarts justifiés, signature, état de l'enveloppe ; atteignable en ouverture limitée (SEC-43) | REQ-UX-047, REQ-CPL-006 | `mon-contrat.html` | UX-P1-44 | oui |
+| `/notifications` | Notifications de l'espace ; leur ouverture ne fait courir aucun délai | REQ-UX-016, REQ-JUR-039 | `notifications.html` | UX-P1-08 | non |
 | `/activite` | Mon activité — ses chiffres, son palier, **aucun objectif, aucun classement** | REQ-UX-029 | — | UX-P3-02 | non |
 | `/ressources` | Kit, grille de sa version de contrat, FAQ, replay, argumentaires par palier | REQ-CPL-023 | — | UX-P3-02 | non |
 | `/aide` | Fil de conversation avec Axion-IA, FAQ d'abord, engagement 2 jours ouvrés | REQ-UX-028 | — | UX-P3-03 | non |
@@ -48,7 +51,7 @@
 
 | Route | Rôle | REQ | Tâche | Écran principal |
 | --- | --- | --- | --- | --- |
-| `/connexion` | Demande de lien magique (message identique que l'adresse existe ou non) | REQ-SEC-001, REQ-SEC-016 | SEC-03 | oui |
+| `/connexion` | Demande de lien magique (message identique que l'adresse existe ou non), maquette `connexion.html` | REQ-SEC-001, REQ-SEC-016 | SEC-03 | oui |
 | `/connexion/<jeton>` | Consommation du lien (usage unique) ; page dédiée si déjà consommé ; code à 6 chiffres en repli | REQ-UX-015 | UX-P1-04 | non |
 
 ## Hors des onglets
@@ -56,6 +59,7 @@
 | Route | Rôle | REQ | Tâche | Écran principal |
 | --- | --- | --- | --- | --- |
 | `/confidentialite` | Politique de confidentialité dérivée du registre de l'article 30 ; lisible sans session ; acceptée à la première connexion, puis à chaque nouvelle version | REQ-JUR-025 | JUR-T34 | non |
+| `/mes-entreprises/<id>` | Fiche d'une entreprise : frise des étapes et des échanges, échanges visibles de la Société ; la fiche d'un autre compte rend la même page qu'un identifiant inexistant ; maquette `mes-entreprises-fiche.html` | REQ-EXT-002, REQ-EXT-003 | EXT-T01 | oui |
 
 ## Règles qui s'appliquent à toutes les routes
 
