@@ -4318,7 +4318,7 @@
       "repo": "externe",
       "zone": "juridique",
       "paths": [
-        "docs/decisions/JUR-T01b"
+        "docs/DECISIONS.md"
       ],
       "schema": false,
       "sensible": [],
@@ -4367,7 +4367,8 @@
       "repo": "externe",
       "zone": "juridique",
       "paths": [
-        "docs/decisions/JUR-T01c"
+        "docs/DECISIONS.md",
+        "docs/contrat/ANNEXE-2-MANDAT.md"
       ],
       "schema": false,
       "sensible": [],
@@ -4401,7 +4402,6 @@
       "repo": "partners",
       "zone": "domaine",
       "paths": [
-        "src/domaine/DM-07",
         "prisma/schema.prisma",
         "prisma/migrations/",
         "src/domain/attribution/etats.ts",
@@ -4411,7 +4411,8 @@
         "src/server/integrations/recherche-entreprises/projection.ts",
         "src/domain/evenement/charges.ts",
         "prisma/seed/10-attributions.ts",
-        "docs/GLOSSAIRE.md"
+        "docs/GLOSSAIRE.md",
+        "src/domain/depot/motifs-refus.ts"
       ],
       "schema": true,
       "sensible": [
@@ -4461,11 +4462,12 @@
       "repo": "partners",
       "zone": "domaine",
       "paths": [
-        "src/domaine/DM-08",
         "prisma/schema.prisma",
         "prisma/migrations/",
         "src/domain/evenement/charges.ts",
-        "docs/GLOSSAIRE.md"
+        "docs/GLOSSAIRE.md",
+        "src/domain/attribution/machine.ts",
+        "tests/unit/domaine/attribution-machine-a-etats.spec.ts"
       ],
       "schema": true,
       "sensible": [
@@ -4506,7 +4508,10 @@
       "repo": "partners",
       "zone": "domaine",
       "paths": [
-        "src/domaine/DM-24"
+        "src/server/jobs/confirmation-tacite.ts",
+        "src/domain/attribution/confirmation-tacite.ts",
+        "src/server/taches/registre.ts",
+        "tests/integration/confirmation-tacite.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -4549,7 +4554,12 @@
       "repo": "partners",
       "zone": "domaine",
       "paths": [
-        "src/domaine/DM-25"
+        "src/server/jobs/anteriorite-retroactive.ts",
+        "src/domain/entreprise-connue/anteriorite-retroactive.ts",
+        "src/server/contestation/contester.ts",
+        "src/server/taches/registre.ts",
+        "tests/integration/anteriorite-retroactive.spec.ts",
+        "tests/integration/contestation.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -4590,7 +4600,10 @@
       "repo": "partners",
       "zone": "integration",
       "paths": [
-        "src/integration/INT-T07-P"
+        "src/server/integrations/axionia/api-entrante.ts",
+        "src/server/integrations/axionia/attributions-dto.ts",
+        "tests/integration/api-attributions.spec.ts",
+        "tests/unit/integration/attributions-dto.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -4626,7 +4639,8 @@
       "repo": "axionia",
       "zone": "integration",
       "paths": [
-        "axionia/INT-T07-A"
+        "axionia/src/server/partners/client-attributions.ts",
+        "axionia/src/server/partners/__tests__/client-attributions.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -4660,7 +4674,9 @@
       "repo": "axionia",
       "zone": "integration",
       "paths": [
-        "axionia/INT-T08-A"
+        "axionia/src/app/api/partners/reconciliation/route.ts",
+        "axionia/src/server/partners-sync/reconciliation.ts",
+        "axionia/src/server/partners-sync/__tests__/reconciliation.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -4693,7 +4709,10 @@
       "repo": "partners",
       "zone": "integration",
       "paths": [
-        "src/integration/INT-T08-P"
+        "src/server/jobs/reconciliation.ts",
+        "src/server/integrations/axionia/reconciliation.ts",
+        "src/server/taches/registre.ts",
+        "tests/integration/reconciliation-quotidienne.spec.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -4726,8 +4745,12 @@
       "repo": "partners",
       "zone": "securite",
       "paths": [
-        "src/securite/SEC-11",
-        "prisma/migrations/"
+        "prisma/migrations/",
+        "prisma/schema.prisma",
+        "src/server/auth/jeton-depot.ts",
+        "src/domain/seuils/ssot.ts",
+        "tests/integration/jeton-depot.spec.ts",
+        "tests/unit/securite/jeton-depot-pas-moi.spec.ts"
       ],
       "schema": true,
       "sensible": [
@@ -4769,7 +4792,11 @@
       "repo": "partners",
       "zone": "securite",
       "paths": [
-        "src/securite/SEC-12"
+        "src/server/depot/",
+        "src/domain/depot/issue-depot.ts",
+        "src/content/micro-copy/espace/information-tiers.ts",
+        "tests/integration/concurrence.spec.ts",
+        "tests/unit/domaine/controles-de-depot.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -4817,11 +4844,13 @@
       "repo": "partners",
       "zone": "domaine",
       "paths": [
-        "src/domaine/DM-09",
         "prisma/schema.prisma",
         "prisma/migrations/",
         "src/server/securite/pii.ts",
-        "prisma/seed/11-qualifications.ts"
+        "prisma/seed/11-qualifications.ts",
+        "src/domain/qualification/",
+        "src/server/qualification/",
+        "tests/integration/qualification-append-only.spec.ts"
       ],
       "schema": true,
       "sensible": [
@@ -4868,9 +4897,12 @@
       "repo": "partners",
       "zone": "domaine",
       "paths": [
-        "src/domaine/DM-10-P",
         "prisma/schema.prisma",
-        "prisma/migrations/"
+        "prisma/migrations/",
+        "src/domain/entreprise-connue/anteriorite.ts",
+        "src/server/entreprise-connue/projection.ts",
+        "tests/unit/domaine/anteriorite.spec.ts",
+        "tests/integration/entreprise-connue.spec.ts"
       ],
       "schema": true,
       "sensible": [
@@ -4907,12 +4939,13 @@
       "repo": "partners",
       "zone": "domaine",
       "paths": [
-        "src/domaine/DM-11",
         "prisma/schema.prisma",
         "prisma/migrations/",
         "tests/unit/domaine/kyc-reference-piece-rib.spec.ts",
         "src/domain/evenement/charges.ts",
-        "docs/GLOSSAIRE.md"
+        "docs/GLOSSAIRE.md",
+        "src/domain/kyc/pieces.ts",
+        "tests/integration/pieces-kyc.spec.ts"
       ],
       "schema": true,
       "sensible": [
@@ -4965,13 +4998,14 @@
       "repo": "partners",
       "zone": "domaine",
       "paths": [
-        "src/domaine/DM-12",
         "prisma/schema.prisma",
         "prisma/migrations/",
         "src/server/securite/pii.ts",
         "src/domain/evenement/charges.ts",
         "prisma/seed/12-console-cas.ts",
-        "docs/GLOSSAIRE.md"
+        "docs/GLOSSAIRE.md",
+        "src/domain/anomalie/",
+        "tests/integration/anomalies-et-contestations.spec.ts"
       ],
       "schema": true,
       "sensible": [],
@@ -5005,7 +5039,12 @@
       "repo": "partners",
       "zone": "domaine",
       "paths": [
-        "src/domaine/DM-13"
+        "src/server/jobs/attribution-echeances.ts",
+        "src/domain/attribution/echeances.ts",
+        "src/domain/seuils/ssot.ts",
+        "src/server/taches/registre.ts",
+        "tests/integration/purge.spec.ts",
+        "tests/unit/domaine/attribution-echeances.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -5055,7 +5094,11 @@
       "repo": "partners",
       "zone": "securite",
       "paths": [
-        "src/securite/SEC-14"
+        "src/server/anomalie/sincerite.ts",
+        "src/lib/env.ts",
+        "docs/env.md",
+        "tests/unit/securite/signaux-de-sincerite.spec.ts",
+        "tests/integration/anomalie-sincerite.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -5098,11 +5141,13 @@
       "repo": "partners",
       "zone": "securite",
       "paths": [
-        "src/securite/SEC-15",
         "prisma/schema.prisma",
         "prisma/migrations/",
         "src/domain/evenement/charges.ts",
-        "docs/GLOSSAIRE.md"
+        "docs/GLOSSAIRE.md",
+        "src/domain/apporteur/suspension.ts",
+        "src/server/apporteur/suspension.ts",
+        "tests/integration/suspension.spec.ts"
       ],
       "schema": true,
       "sensible": [
@@ -5143,7 +5188,10 @@
       "repo": "partners",
       "zone": "securite",
       "paths": [
-        "src/securite/SEC-28"
+        "tests/unit/securite/cliquet-gel.spec.ts",
+        "src/server/jobs/levee-de-gel.ts",
+        "src/server/taches/registre.ts",
+        "tests/integration/levee-de-gel.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -5179,7 +5227,10 @@
       "repo": "partners",
       "zone": "securite",
       "paths": [
-        "src/securite/SEC-16"
+        "src/server/verification/",
+        "src/domain/verification/etats.ts",
+        "tests/unit/securite/verification-non-oracle.spec.ts",
+        "tests/integration/verifier-une-entreprise.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -5219,7 +5270,9 @@
       "repo": "partners",
       "zone": "securite",
       "paths": [
-        "src/securite/SEC-18"
+        "src/server/parrainage/anti-auto-parrainage.ts",
+        "tests/unit/securite/anti-auto-parrainage.spec.ts",
+        "tests/integration/anti-auto-parrainage.spec.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -5253,7 +5306,12 @@
       "repo": "partners",
       "zone": "securite",
       "paths": [
-        "src/securite/SEC-19"
+        "src/domain/apporteur/acces-espace.ts",
+        "src/domain/apporteur/resiliation.ts",
+        "src/server/apporteur/resiliation.ts",
+        "src/server/auth/session.ts",
+        "tests/integration/resiliation.spec.ts",
+        "tests/unit/domaine/resiliation-acteur-humain.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -5295,9 +5353,19 @@
       "repo": "partners",
       "zone": "integration",
       "paths": [
-        "src/integration/INT-T12",
         "prisma/schema.prisma",
-        "prisma/migrations/"
+        "prisma/migrations/",
+        "src/server/integrations/docuseal/",
+        "src/app/api/webhooks/docuseal/route.ts",
+        "docs/tiers/docuseal.md",
+        "src/lib/env.ts",
+        "docs/env.md",
+        "src/server/queue/workers/evenement-recu.ts",
+        "tests/integration/docuseal.spec.ts",
+        "tests/integration/signature-avant-depot.spec.ts",
+        "src/config/entite.ts",
+        "src/lib/forme-iban.ts",
+        "tests/unit/gouvernance/entite-registre.spec.ts"
       ],
       "schema": true,
       "sensible": [
@@ -5344,7 +5412,12 @@
       "repo": "partners",
       "zone": "integration",
       "paths": [
-        "src/integration/INT-T13"
+        "src/server/mcp/registre.ts",
+        "src/server/mcp/outils/",
+        "src/server/mcp/manifeste.json",
+        "tests/fixtures/mcp/",
+        "tests/integration/adaptateur-mcp.spec.ts",
+        "tests/unit/integration/outils-mcp.spec.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -5375,7 +5448,9 @@
       "repo": "axionia",
       "zone": "integration",
       "paths": [
-        "axionia/INT-T21-A"
+        "axionia/src/app/api/partners/backfill/route.ts",
+        "axionia/src/server/partners-sync/backfill.ts",
+        "axionia/src/server/partners-sync/__tests__/backfill.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -5407,7 +5482,9 @@
       "repo": "partners",
       "zone": "integration",
       "paths": [
-        "src/integration/INT-T21-P"
+        "scripts/backfill/axionia.ts",
+        "src/server/integrations/axionia/backfill.ts",
+        "tests/integration/backfill-axionia.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -5445,7 +5522,11 @@
       "repo": "partners",
       "zone": "securite",
       "paths": [
-        "src/securite/SEC-21"
+        "src/domain/parrainage/code.ts",
+        "src/server/parrainage/code-public.ts",
+        "src/server/securite/rate-limit.ts",
+        "tests/unit/securite/code-de-parrainage.spec.ts",
+        "tests/integration/code-de-parrainage.spec.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -5477,7 +5558,9 @@
       "repo": "partners",
       "zone": "juridique",
       "paths": [
-        "docs/contrat/JUR-T09"
+        "src/content/micro-copy/courriels/information-article-14.ts",
+        "src/content/micro-copy/console/script-de-qualification.ts",
+        "tests/unit/juridique/information-article-14.spec.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -5510,7 +5593,9 @@
       "repo": "partners",
       "zone": "juridique",
       "paths": [
-        "docs/contrat/JUR-T13"
+        "scripts/gates/lexique-apporteurs.ts",
+        "tests/unit/juridique/textes-apporteurs-charte-relationnelle.spec.ts",
+        "docs/gates.json"
       ],
       "schema": false,
       "sensible": [
@@ -5551,12 +5636,14 @@
       "repo": "partners",
       "zone": "gouvernance",
       "paths": [
-        "docs/conformite/CPL-T06",
         "prisma/schema.prisma",
         "prisma/migrations/",
         "src/domain/evenement/charges.ts",
         "prisma/seed/13-candidatures.ts",
-        "docs/GLOSSAIRE.md"
+        "docs/GLOSSAIRE.md",
+        "src/domain/candidature/decision.ts",
+        "tests/unit/domaine/decision-candidature.spec.ts",
+        "tests/integration/decision-candidature.spec.ts"
       ],
       "schema": true,
       "sensible": [],
@@ -5588,7 +5675,10 @@
       "repo": "partners",
       "zone": "espace",
       "paths": [
-        "src/app/UX-P1-04"
+        "src/app/(espace)/connexion/",
+        "src/server/auth/code-court.ts",
+        "tests/unit/securite/code-a-six-chiffres.spec.ts",
+        "tests/e2e/espace/connexion-mobile.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -5624,7 +5714,10 @@
       "repo": "partners",
       "zone": "espace",
       "paths": [
-        "src/app/UX-P1-01"
+        "src/app/(espace)/entreprise/",
+        "src/content/micro-copy/espace/entreprise.ts",
+        "tests/unit/espace/entreprise-carte-4-etats.spec.ts",
+        "tests/e2e/espace/verifier-une-entreprise.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -5665,7 +5758,10 @@
       "repo": "partners",
       "zone": "espace",
       "paths": [
-        "src/app/UX-P1-02"
+        "src/app/(espace)/deposer/",
+        "src/components/espace/formulaire-de-depot.tsx",
+        "tests/unit/espace/formulaire-de-depot.spec.ts",
+        "tests/e2e/espace/deposer-un-contact.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -5707,7 +5803,11 @@
       "repo": "partners",
       "zone": "espace",
       "paths": [
-        "src/app/UX-P1-03"
+        "src/app/(public)/d/[jeton]/",
+        "src/components/espace/formulaire-de-depot.tsx",
+        "src/lib/brouillon-hors-ligne.ts",
+        "tests/unit/espace/depot-par-lien-prive.spec.ts",
+        "tests/e2e/espace/depot-par-lien-prive.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -5745,7 +5845,11 @@
       "repo": "partners",
       "zone": "espace",
       "paths": [
-        "src/app/UX-P1-05"
+        "src/app/(espace)/mes-entreprises/",
+        "src/domain/attribution/badge-de-confirmation.ts",
+        "tests/unit/domaine/badge-de-confirmation.spec.ts",
+        "tests/unit/espace/mes-entreprises.spec.ts",
+        "tests/e2e/espace/mes-entreprises.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -5789,7 +5893,12 @@
       "repo": "partners",
       "zone": "console",
       "paths": [
-        "src/app/UX-P1-06"
+        "src/app/(console)/console/qualification/[id]/",
+        "src/components/console/fiche-de-qualification.tsx",
+        "src/content/micro-copy/console/qualification.ts",
+        "src/server/roles/matrice.ts",
+        "tests/unit/console/fiche-de-qualification.spec.ts",
+        "tests/e2e/console/fiche-de-qualification.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -5828,7 +5937,12 @@
       "repo": "partners",
       "zone": "console",
       "paths": [
-        "src/app/UX-P1-07"
+        "src/app/(console)/console/qualification/page.tsx",
+        "src/components/console/file-de-qualification.tsx",
+        "src/content/micro-copy/console/file-de-qualification.ts",
+        "src/server/roles/matrice.ts",
+        "tests/unit/console/file-de-qualification.spec.ts",
+        "tests/e2e/console/file-de-qualification.spec.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -5866,7 +5980,12 @@
       "repo": "partners",
       "zone": "espace",
       "paths": [
-        "src/app/UX-P1-08"
+        "src/app/(espace)/page.tsx",
+        "src/app/(espace)/layout.tsx",
+        "src/components/espace/navigation.tsx",
+        "src/content/micro-copy/espace/etats-vides.ts",
+        "tests/unit/espace/accueil-et-navigation.spec.ts",
+        "tests/e2e/espace/accueil.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -5903,7 +6022,10 @@
       "repo": "partners",
       "zone": "qualite",
       "paths": [
-        "scripts/gates/QA-T20b"
+        "scripts/gates/perf-budgets.ts",
+        "lighthouserc.json",
+        ".github/workflows/ci.yml",
+        "tests/unit/qualite/budget-par-route.spec.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -5934,7 +6056,12 @@
       "repo": "partners",
       "zone": "espace",
       "paths": [
-        "src/app/UX-P1-09"
+        "src/app/(espace)/conformite/",
+        "src/app/(espace)/profil/",
+        "src/server/apporteur/changement-de-courriel.ts",
+        "tests/unit/espace/conformite-et-profil.spec.ts",
+        "tests/integration/changement-de-courriel.spec.ts",
+        "tests/e2e/espace/conformite-et-profil.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -5975,7 +6102,12 @@
       "repo": "partners",
       "zone": "espace",
       "paths": [
-        "src/app/UX-P1-15"
+        "src/app/(espace)/profil/personnes/",
+        "src/components/espace/personnes-declarees.tsx",
+        "src/components/espace/lien-d-interet.tsx",
+        "src/server/apporteur/personnes-declarees.ts",
+        "tests/unit/espace/personnes-declarees.spec.ts",
+        "tests/integration/personnes-declarees.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -6015,9 +6147,15 @@
       "repo": "partners",
       "zone": "espace",
       "paths": [
-        "src/app/UX-P1-10",
         "prisma/schema.prisma",
-        "prisma/migrations/"
+        "prisma/migrations/",
+        "src/server/notifications/table-ssot.ts",
+        "src/server/notifications/envoyer.ts",
+        "src/content/micro-copy/courriels/notifications.ts",
+        "scripts/gates/notifications-lue-at-inerte.ts",
+        "docs/gates.json",
+        "tests/integration/notifications-espace.spec.ts",
+        "tests/unit/integration/table-ssot-notifications.spec.ts"
       ],
       "schema": true,
       "sensible": [
@@ -6059,7 +6197,11 @@
       "repo": "partners",
       "zone": "espace",
       "paths": [
-        "src/app/UX-P1-11"
+        "src/server/queue/workers/onboarding.ts",
+        "src/server/taches/registre.ts",
+        "src/content/micro-copy/courriels/onboarding.ts",
+        "tests/integration/onboarding.spec.ts",
+        "tests/unit/email/gabarits-onboarding.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -6099,7 +6241,11 @@
       "repo": "partners",
       "zone": "console",
       "paths": [
-        "src/app/UX-P1-12"
+        "src/app/(console)/console/apporteurs/",
+        "src/content/micro-copy/console/apporteurs.ts",
+        "src/server/roles/matrice.ts",
+        "tests/unit/console/apporteurs.spec.ts",
+        "tests/e2e/console/apporteurs.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -6142,7 +6288,14 @@
       "repo": "partners",
       "zone": "console",
       "paths": [
-        "src/app/UX-P1-13"
+        "src/app/(console)/console/attributions/",
+        "src/app/(console)/console/contrats/",
+        "src/server/attribution/rattachement-manuel.ts",
+        "src/content/micro-copy/console/attributions.ts",
+        "src/server/roles/matrice.ts",
+        "tests/unit/console/attributions-et-contrats.spec.ts",
+        "tests/integration/rattachement-manuel.spec.ts",
+        "tests/e2e/console/attributions-et-contrats.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -6182,11 +6335,16 @@
       "repo": "partners",
       "zone": "domaine",
       "paths": [
-        "src/domaine/DM-23",
         "prisma/schema.prisma",
         "prisma/migrations/",
         "src/domain/evenement/charges.ts",
-        "docs/GLOSSAIRE.md"
+        "docs/GLOSSAIRE.md",
+        "src/domain/commission/grille-contrat.ts",
+        "src/domain/commission/grille.ts",
+        "src/domain/contrat/annexe-grille.ts",
+        "src/server/grille/import.ts",
+        "tests/unit/domaine/grille-contrat.spec.ts",
+        "tests/integration/contrats-et-grilles.spec.ts"
       ],
       "schema": true,
       "sensible": [
@@ -6231,7 +6389,14 @@
       "repo": "partners",
       "zone": "espace",
       "paths": [
-        "src/app/UX-P1-14"
+        "src/app/(console)/console/grille/",
+        "src/server/grille/edition.ts",
+        "src/server/pdf/ecarts-de-grille.tsx",
+        "src/content/micro-copy/console/grille.ts",
+        "src/server/roles/matrice.ts",
+        "tests/unit/console/editeur-de-grille.spec.ts",
+        "tests/integration/edition-de-grille.spec.ts",
+        "tests/e2e/console/editeur-de-grille.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -6272,7 +6437,12 @@
       "repo": "partners",
       "zone": "integration",
       "paths": [
-        "src/integration/INT-T24"
+        "src/server/integrations/docuseal/cycle-de-vie.ts",
+        "src/server/integrations/docuseal/reemission.ts",
+        "src/server/jobs/relances-docuseal.ts",
+        "src/server/taches/registre.ts",
+        "tests/integration/cycle-de-vie-enveloppe.spec.ts",
+        "tests/unit/integration/relances-docuseal.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -6311,7 +6481,10 @@
       "repo": "partners",
       "zone": "gouvernance",
       "paths": [
-        "docs/gouvernance/GOV-021"
+        ".github/PULL_REQUEST_TEMPLATE.md",
+        "scripts/lot/revues.ts",
+        "docs/CHARTE-AGENTS.md",
+        "tests/unit/gouvernance/revue-adversariale-exigee.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -6351,7 +6524,11 @@
       "repo": "partners",
       "zone": "qualite",
       "paths": [
-        "scripts/gates/QA-T16"
+        "tests/e2e/espace/parcours-mobile-depot.spec.ts",
+        "tests/unit/ci/spec-espace-mobile.spec.ts",
+        "tests/e2e/fixtures/recherche-entreprises.ts",
+        "playwright.config.ts",
+        ".github/workflows/ci.yml"
       ],
       "schema": false,
       "sensible": [
@@ -6390,7 +6567,15 @@
       "repo": "partners",
       "zone": "qualite",
       "paths": [
-        "scripts/gates/QA-T19"
+        "scripts/gates/sante.ts",
+        "src/server/observabilite/metriques.ts",
+        "src/app/api/internal/metriques/route.ts",
+        "src/server/sante/integration.ts",
+        "src/server/integrations/telegram/alertes.ts",
+        ".github/workflows/nightly.yml",
+        "docs/gates.json",
+        "tests/unit/qualite/metriques-metier.spec.ts",
+        "tests/integration/carte-de-sante.spec.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -8383,9 +8568,11 @@
       "repo": "partners",
       "zone": "espace",
       "paths": [
-        "src/app/EXT-T08",
         "src/server/integrations/recherche-entreprises/projection.ts",
-        "src/server/integrations/recherche-entreprises/schemas.ts"
+        "src/server/integrations/recherche-entreprises/schemas.ts",
+        "src/domain/geo/micro-degres.ts",
+        "tests/unit/domaine/micro-degres.spec.ts",
+        "tests/unit/integration/projection-coordonnees.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -8419,12 +8606,19 @@
       "repo": "partners",
       "zone": "espace",
       "paths": [
-        "src/app/EXT-T01",
         "prisma/schema.prisma",
         "prisma/migrations/",
         "src/server/securite/pii.ts",
         "src/domain/evenement/charges.ts",
-        "docs/GLOSSAIRE.md"
+        "docs/GLOSSAIRE.md",
+        "src/app/(espace)/mes-entreprises/[id]/",
+        "src/domain/echange/echange.ts",
+        "src/server/echange/enregistrer.ts",
+        "src/server/jobs/purge-echanges.ts",
+        "src/content/micro-copy/espace/fiche-prospect.ts",
+        "tests/unit/espace/fiche-prospect.spec.ts",
+        "tests/integration/echanges.spec.ts",
+        "tests/e2e/espace/fiche-prospect.spec.ts"
       ],
       "schema": true,
       "sensible": [
@@ -8468,7 +8662,11 @@
       "repo": "partners",
       "zone": "console",
       "paths": [
-        "src/app/EXT-T02a"
+        "src/app/(console)/console/attributions/[id]/",
+        "src/content/micro-copy/console/fiche-prospect.ts",
+        "src/server/roles/matrice.ts",
+        "tests/unit/console/fiche-prospect.spec.ts",
+        "tests/e2e/console/fiche-prospect.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -8507,11 +8705,14 @@
       "repo": "partners",
       "zone": "espace",
       "paths": [
-        "src/app/EXT-T03",
         "prisma/schema.prisma",
         "prisma/migrations/",
         "src/domain/evenement/charges.ts",
-        "docs/GLOSSAIRE.md"
+        "docs/GLOSSAIRE.md",
+        "src/domain/candidature/origine.ts",
+        "src/server/integrations/axionia/candidature-recue.ts",
+        "tests/unit/domaine/canal-de-candidature.spec.ts",
+        "tests/integration/candidatures-multi-canal.spec.ts"
       ],
       "schema": true,
       "sensible": [
@@ -8548,7 +8749,15 @@
       "repo": "partners",
       "zone": "espace",
       "paths": [
-        "src/app/EXT-T04"
+        "src/app/(console)/console/candidatures/",
+        "src/server/candidature/saisie-console.ts",
+        "src/server/stockage/piece-jointe.ts",
+        "src/content/micro-copy/console/candidatures.ts",
+        "src/server/roles/matrice.ts",
+        "src/lib/env.ts",
+        "tests/unit/securite/type-reel-par-octets.spec.ts",
+        "tests/integration/saisie-manuelle-candidature.spec.ts",
+        "tests/e2e/console/candidatures.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -8586,7 +8795,11 @@
       "repo": "partners",
       "zone": "espace",
       "paths": [
-        "src/app/EXT-T06"
+        "src/domain/verification/etats.ts",
+        "src/server/anomalie/ramassage.ts",
+        "src/lib/env.ts",
+        "tests/unit/securite/detecteur-de-ramassage.spec.ts",
+        "tests/integration/signal-deja-travaillee.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -8899,7 +9112,9 @@
       "repo": "partners",
       "zone": "juridique",
       "paths": [
-        "docs/contrat/JUR-T24"
+        "tests/unit/domaine/suspension-motifs.spec.ts",
+        "tests/unit/juridique/resiliation-motifs-fermes.spec.ts",
+        "src/content/micro-copy/espace/vocabulaire.ts"
       ],
       "schema": false,
       "sensible": [
@@ -8941,7 +9156,13 @@
       "repo": "partners",
       "zone": "juridique",
       "paths": [
-        "docs/contrat/JUR-T30"
+        "scripts/gates/jur-aucune-instruction.ts",
+        "scripts/gates/jur-date-contact-inerte.ts",
+        "scripts/gates/jur-supports-de-presentation.ts",
+        "docs/gates.json",
+        "src/domain/lexique/lexique-interdit.ts",
+        "docs/GLOSSAIRE.md",
+        "tests/unit/juridique/gardes-article-2-7.spec.ts"
       ],
       "schema": false,
       "sensible": [
