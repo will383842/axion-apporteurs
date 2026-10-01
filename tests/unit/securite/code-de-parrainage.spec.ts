@@ -13,7 +13,7 @@
  *      rattache rien — l'erreur remonte, l'événement est rejoué, jamais rattaché à un code non vérifié.
  *
  * La limite par IP, la réponse indistincte et l'absence de cookie persistant sont côté axion-ia
- * (INT-T52-A) : Partners ne voit ni la requête ni l'IP du visiteur.
+ * (la tâche de la visite, côté axion-ia) : Partners ne voit ni la requête ni l'IP du visiteur.
  */
 import { describe, it, expect } from 'vitest';
 import {
