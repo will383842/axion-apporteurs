@@ -620,7 +620,7 @@ export const DIVERGENCES_DECLAREES: readonly Divergence[] = [
   },
   {
     cle: 'HYP-E1-12:3.5:al4',
-    constat: 'le registre cite l’al. 4 de l’art. 3.5, qui n’en compte que trois',
+    constat: 'le registre cite l’al. 4 de l’art. 3.5 ; l’horodatage en est le 5e alinéa',
     question: 'JUR-T01-Q03',
   },
   {
@@ -642,16 +642,6 @@ export const DIVERGENCES_DECLAREES: readonly Divergence[] = [
     cle: 'W11:identifiants',
     constat: 'W11 annonce 23 identifiants ; le gabarit et REQ-JUR-003 en portent 22',
     question: 'JUR-T01-Q13',
-  },
-  {
-    cle: 'W19:3.5',
-    constat: 'l’art. 3.5 amendé (la Société ou ses préposés) n’est pas encore écrit au gabarit',
-    question: 'JUR-T01-Q17',
-  },
-  {
-    cle: 'HYP-W19-CONCOURS:3.5',
-    constat: 'l’art. 3.5 amendé (la Société ou ses préposés) n’est pas encore écrit au gabarit',
-    question: 'JUR-T01-Q17',
   },
 ];
 
