@@ -8,7 +8,7 @@
  *
  *   (1) L'identifiant de tâche que lit `maquettes-validees` n'est plus le seul `UX-P…` : il est DÉRIVÉ
  *       du motif d'identifiant du schéma du registre (`scripts/lot/tasks.schema.json`, RM-01). Une
- *       ligne de `VALIDATION.md` qui ne nomme qu'EXT-T02a, SEC-29 ou CPL-T07 verrouille cette tâche ;
+ *       ligne de `VALIDATION.md` qui ne nomme qu'une tâche d'une autre zone (EXT, SEC, CPL) verrouille cette tâche ;
  *       un identifiant que le registre ne connaît pas reste refusé et nommé.
  */
 import { describe, it, expect } from 'vitest';
