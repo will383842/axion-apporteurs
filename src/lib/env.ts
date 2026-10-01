@@ -587,7 +587,8 @@ function presenceDe(nom: string): string {
   if ((EXIGES_SI_ENVOI_ACTIF as readonly string[]).includes(nom)) {
     return 'facultative, requise si l’envoi réel est allumé';
   }
-  if (NOMS_DES_SECRETS_CONDITIONNELS.includes(nom)) return 'facultative';
+  if (NOMS_DES_SECRETS_CONDITIONNELS.includes(nom))
+    return 'facultative, jamais requise au démarrage';
   return NOMS_FACULTATIFS.includes(nom) ? 'facultative' : 'requise';
 }
 

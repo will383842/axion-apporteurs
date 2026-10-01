@@ -25,7 +25,7 @@ posée est jugée comme les autres.
 | `ZEPTOMAIL_WEBHOOK_SECRET` | requise | au moins 32 octets, distincte des autres secrets ; préfixes `dev_` et `stub` refusés en production | authentifie les webhooks de rebonds du relais de courriel, en-tête `Producer-Signature` |
 | `AXIONIA_RELECTURE_SECRET` | requise | au moins 32 octets, distincte des autres secrets ; préfixes `dev_` et `stub` refusés en production | signe les lectures de Partners chez axionia (coordonnées d'un candidat), en-tête `x-partners-signature` |
 | `ZEPTOMAIL_SEND_TOKEN` | facultative, requise si l’envoi réel est allumé | au moins 32 octets, distincte des autres secrets ; préfixes `dev_` et `stub` refusés en production | jeton d'envoi du relais de courriels ; exigé quand l'envoi réel est allumé (`PARTNERS_EMAIL_DMARC_VERIFIE`) |
-| `TELEGRAM_BOT_TOKEN` | facultative | au moins 32 octets, distincte des autres secrets ; préfixes `dev_` et `stub` refusés en production | jeton du canal d'alerte du serveur ; une alerte due sans lui fait échouer le passage en le nommant |
+| `TELEGRAM_BOT_TOKEN` | facultative, jamais requise au démarrage | au moins 32 octets, distincte des autres secrets ; préfixes `dev_` et `stub` refusés en production | jeton du canal d'alerte du serveur ; une alerte due sans lui fait échouer le passage en le nommant |
 
 ## Configuration
 
