@@ -110,14 +110,14 @@ describe('REQ-QA-027 — le lanceur joue chaque passage inscrit, sous verrou, av
 
   it('REQ-QA-027 : une tâche en échec n’arrête pas les autres, et écrit son battement d’échec', async () => {
     const joues: string[] = [];
-    // Deux inscriptions sous deux clés : la seconde est une clé fictive, admise par le seul type du
-    // test — le lanceur juge chaque clé contre le registre (témoin suivant).
-    const inscriptions = {
+    // Le registre n'a qu'une clé aujourd'hui : elle est jouée DEUX fois par `ordre`, et la première
+    // panne ne doit pas empêcher la seconde de partir.
+    const inscriptions: Inscriptions = {
       evenements_recus: async () => {
         joues.push('evenements_recus');
         throw new TypeError('panne');
       },
-    } as Inscriptions;
+    };
     const b = battements();
     const issues = await lancerLesPassages({
       inscriptions,
