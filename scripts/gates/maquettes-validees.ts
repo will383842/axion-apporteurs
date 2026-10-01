@@ -330,7 +330,7 @@ export function controler(vue: Vue): Faute[] {
     for (const l of lignes) {
       const html = vue.html[l.fichier!];
       if (html === undefined || Object.hasOwn(NON_RETROACTIVES, l.fichier!)) continue;
-      const manquent = etatsManquants(html, /console/i.test(l.section));
+      const manquent = etatsManquants(html, /console/i.test(l.section), l.fichier!);
       if (manquent.length)
         fautes.push({
           famille: 'maquette_sans_cinq_etats',
@@ -489,7 +489,7 @@ export const TEMOINS: { famille: Famille; nom: string; vue: Vue }[] = [
     vue: VUE_TEMOIN(TABLEAU(MILIEU_OK), {
       html: {
         'b.html':
-          '<section class="ecran" id="etat-nominal"></section><section class="ecran" id="etat-vide"></section><section class="ecran" id="etat-erreur"></section>',
+          '<section class="ecran" id="etat-nominal" aria-label="État : etat-nominal"></section><section class="ecran" id="etat-vide" aria-label="État : etat-vide"></section><section class="ecran" id="etat-erreur" aria-label="État : etat-erreur"></section>',
       },
     }),
   },
@@ -552,14 +552,8 @@ export const CONTRE_TEMOINS: { nom: string; vue: Vue }[] = [
     nom: 'GOV-113 : une maquette de console avec ses quatre familles d’états, alias compris',
     vue: VUE_TEMOIN(TABLEAU(MILIEU_OK), {
       html: {
-        'b.html': [
-          'etat-nominal',
-          'etat-premier-jour',
-          'etat-envoi',
-          'etat-erreurs',
-          'etat-lecteur',
-        ]
-          .map((id) => `<section class="ecran" id="${id}"></section>`)
+        'b.html': ['etat-nominal', 'etat-premier-jour', 'etat-envoi', 'etat-erreurs', 'etat-ecran']
+          .map((id) => `<section class="ecran" id="${id}" aria-label="État : ${id}"></section>`)
           .join(''),
       },
     }),

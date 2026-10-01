@@ -282,7 +282,9 @@ describe('maquettes-validees — la garde exécutée sur des vues injectées', (
 
   it('REQ-UX-047 — TÉMOIN : une maquette sans état de chargement rougit en le nommant ; la console exige aussi le refus', () => {
     const sections = (...ids: string[]) =>
-      ids.map((id) => `<section class="ecran" id="${id}"></section>`).join('');
+      ids
+        .map((id) => `<section class="ecran" id="${id}" aria-label="État : ${id}"></section>`)
+        .join('');
     const complete = sections('etat-nominal', 'etat-vide', 'etat-chargement', 'etat-erreur');
     const html = (milieu: string) => ({
       html: { 'accueil.html': '', 'entreprise.html': milieu, 'lot.html': complete },
@@ -434,7 +436,7 @@ describe('maquettes-validees — la SORTIE du binaire, sur un arbre jetable', ()
       mkdirSync(join(arbre, 'docs/maquettes'), { recursive: true });
       // GOV-113 : la garde lit les états de chaque maquette ; celles de l'arbre les dessinent.
       const etatsDessines = ['etat-nominal', 'etat-vide', 'etat-chargement', 'etat-erreur']
-        .map((id) => `<section class="ecran" id="${id}"></section>`)
+        .map((id) => `<section class="ecran" id="${id}" aria-label="État : ${id}"></section>`)
         .join('');
       for (const f of ['accueil.html', 'entreprise.html', 'lot.html', 'index.html'])
         writeFileSync(join(arbre, 'docs/maquettes', f), `<!doctype html>${etatsDessines}`);
