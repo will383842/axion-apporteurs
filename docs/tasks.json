@@ -17087,8 +17087,17 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
-      "acceptance": "Seconde moitié de la porte avant la Phase 1 (voir GOV-131). (1) La session V2 exécute `_REPRISE-AXION-APPORTEURS/PROMPT-VERIF-2-TRANSVERSALE-ET-PHASE-1.txt`, en partant du rapport de V1 sans refaire ce qu'il couvre. (2) Elle rédige la liste exacte des amendements de registre nécessaires au démarrage de la Phase 1 (chemins réels des tâches de Phase 1 à la place de leurs gabarits, que `gov:attributions` exige dès que la phase 1 devient courante ; déblocage de phase), versés en UN rattrapage GOV-012. (3) La clôture de GOV-132 VAUT verdict « feu vert Phase 1 » de V2, et c'est elle qui fait de la Phase 1 la phase courante au registre ; elle ne se clôt qu'avec ce verdict écrit. (4) Aussitôt après la clôture, rappel à Williams des renforts de Phase 1 (un auteur d'écrans et une lentille de plus, sur un autre ordinateur)."
+      "statut": "fusionnee",
+      "acceptance": "Seconde moitié de la porte avant la Phase 1 (voir GOV-131). (1) La session V2 exécute `_REPRISE-AXION-APPORTEURS/PROMPT-VERIF-2-TRANSVERSALE-ET-PHASE-1.txt`, en partant du rapport de V1 sans refaire ce qu'il couvre. (2) Elle rédige la liste exacte des amendements de registre nécessaires au démarrage de la Phase 1 (chemins réels des tâches de Phase 1 à la place de leurs gabarits, que `gov:attributions` exige dès que la phase 1 devient courante ; déblocage de phase), versés en UN rattrapage GOV-012. (3) La clôture de GOV-132 VAUT verdict « feu vert Phase 1 » de V2, et c'est elle qui fait de la Phase 1 la phase courante au registre ; elle ne se clôt qu'avec ce verdict écrit. (4) Aussitôt après la clôture, rappel à Williams des renforts de Phase 1 (un auteur d'écrans et une lentille de plus, sur un autre ordinateur).",
+      "branch": "t/registre-rattrapage-30",
+      "owner": "A01",
+      "pr": 316,
+      "attestation": {
+        "pr": 316,
+        "sha": "e6cfd42e579b55a27188c322ba8e8e673cb609f4",
+        "fusionneeAt": "2026-10-01T05:29:39Z"
+      },
+      "motif": null
     },
     {
       "id": "INT-T43",
