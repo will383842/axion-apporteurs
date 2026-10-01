@@ -437,8 +437,8 @@
       "phase": 1,
       "script": "scripts/gates/grille-complete.ts",
       "tache": "UX-P1-14",
-      "verifie": "aucun contrat genere sans une grille figee COMPLETE : les 30 paliers des quatre familles commissionnees (formations collectives, accompagnement 1-to-1, audits, implementations — W6) sont tous values, et les cinq familles non commissionnees (developpement web, maintenance, coaching recurrent, conferences, interventions sur demande) figurent explicitement a l'annexe ; 29 paliers, un palier nul ou une famille absente -> generation refusee",
-      "fixtureRouge": "generer un contrat sur une grille temoin a 29 paliers",
+      "verifie": "aucun contrat genere sans une grille figee COMPLETE : les 31 paliers des quatre familles commissionnees (formations collectives, dont la conference commissionnee au forfait depuis la decision de Williams du 2026-10-01, accompagnement 1-to-1, audits, implementations — W6 amendee) sont tous values, et les quatre familles non commissionnees (developpement web, maintenance, coaching recurrent, interventions sur demande) figurent explicitement a l'annexe ; 30 paliers, un palier nul ou une famille absente -> generation refusee",
+      "fixtureRouge": "generer un contrat sur une grille temoin a 30 paliers",
       "preuveRouge": null
     },
     {
