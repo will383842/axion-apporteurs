@@ -586,6 +586,21 @@ const MANUELS: Record<string, string[]> = {
     'tests/unit/gouvernance/verrou-de-phase.spec.ts',
     'scripts/gates/gov-tasks.ts',
   ],
+  // Trois écarts de la vérification de bout en bout (GOV-131), versés au rattrapage 33 : leurs
+  // témoins n'existent pas encore, leurs chemins sont ceux de leur fiche.
+  'SEC-42': [
+    'src/server/auth/lien-magique-production.ts',
+    'tests/integration/lien-magique-production.spec.ts',
+  ],
+  'INT-T45': [
+    'src/server/integrations/axionia/reception.ts',
+    'tests/integration/reception-hors-schema.spec.ts',
+  ],
+  'QA-T55': [
+    '.github/workflows/deploy.yml',
+    'scripts/gates/gov-depot.ts',
+    'tests/unit/gouvernance/protection-de-main-strict.spec.ts',
+  ],
 };
 
 /**

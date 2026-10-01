@@ -667,7 +667,8 @@
       "etape": null,
       "phase": 0,
       "taches": [
-        "SEC-03"
+        "SEC-03",
+        "SEC-42"
       ]
     },
     {
@@ -1945,7 +1946,8 @@
       "phase": -1,
       "taches": [
         "GOV-088",
-        "INT-T01a"
+        "INT-T01a",
+        "INT-T45"
       ]
     },
     {
@@ -2235,7 +2237,8 @@
       "phase": 0,
       "taches": [
         "INT-T10",
-        "INT-T40"
+        "INT-T40",
+        "SEC-42"
       ]
     },
     {
@@ -3452,7 +3455,8 @@
       "taches": [
         "INT-T01a",
         "INT-T01b",
-        "INT-T01c"
+        "INT-T01c",
+        "INT-T45"
       ]
     },
     {
@@ -4114,7 +4118,8 @@
         "GOV-000",
         "GOV-012",
         "GOV-057",
-        "QA-T54"
+        "QA-T54",
+        "QA-T55"
       ]
     },
     {
