@@ -205,8 +205,10 @@ source de leur valeur comme de leur motif.
 - **`JUR-T01b` et `JUR-T01c`** restaient différées en phase 1, arbitrées ici : elles porteraient le
   même patron — gabarit codé, valeur saisie — et une tâche livrerait cet arbitrage avant la clôture
   de la phase 0. **Appliqué le 2026-10-01 par GOV-133**, à l'ouverture de la phase 1, sur décision de
-  Williams écrite dans la fenêtre de la coordination : « oui je confirme c'est moi qui valide car je
-  n'ai pas d'expert comptable ». Les deux tâches sont levées (`attente_externe` → `a_faire`, dépôt
+  Williams écrite dans la fenêtre de la coordination, chaque fois en réponse à une question de la
+  coordination dont l'acceptance de GOV-133 cite le texte : pour le mandat (06:52Z), « oui je
+  confirme c'est moi qui valide car je n'ai pas d'expert comptable » ; pour le contrat v1, demandé le
+  2026-09-30 et confirmé à la question de 07:22Z, « oui ». Les deux tâches sont levées (`attente_externe` → `a_faire`, dépôt
   `partners`) : ce qui reste à livrer est la décision de Williams question par question
   (`QUESTIONS_POUR_WILL`), et les valeurs encore attendues du gabarit sont des configurations à
   sentinelle, refusées à la mise en service et jamais au plan. Plus aucune tâche n'est différée.
