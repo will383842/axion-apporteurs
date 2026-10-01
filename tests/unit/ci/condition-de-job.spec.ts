@@ -9,6 +9,7 @@
  * prérequis.
  */
 import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
 import {
   PR_FUSIONNEE,
   PR_OUVERTE,
@@ -85,5 +86,42 @@ describe('REQ-QA-013 — la condition d’`alerter` ne tourne jamais sur une dem
     expect(evaluerExpression(ALERTER, PUSH_MAIN)).toBe(false);
     expect(evaluerExpression(ALERTER, avecStatut(PUSH_MAIN, true, false))).toBe(true);
     expect(evaluerExpression(ALERTER, avecStatut(PUSH_MAIN, false, true))).toBe(true);
+  });
+});
+
+/**
+ * La condition RÉELLE du job `alerter`, lue dans `.github/workflows/deploy.yml` : le bloc du job (deux
+ * espaces d'indentation) jusqu'au job suivant, et sa ligne `if:` (quatre espaces). Sans job, sans
+ * ligne, ou avec deux lignes `if:`, le témoin rougit en le nommant.
+ */
+function conditionReelleDAlerter(): string {
+  const lignes = readFileSync('.github/workflows/deploy.yml', 'utf8').split(/\r?\n/);
+  const debut = lignes.findIndex((l) => l === '  alerter:');
+  if (debut === -1) throw new Error('deploy.yml : aucun job « alerter »');
+  const fin = lignes.findIndex((l, i) => i > debut && /^ {2}\S/.test(l));
+  const bloc = lignes.slice(debut + 1, fin === -1 ? undefined : fin);
+  const conditions = bloc.filter((l) => l.startsWith('    if: '));
+  if (conditions.length !== 1) {
+    throw new Error(`deploy.yml : le job « alerter » porte ${conditions.length} ligne(s) \`if:\``);
+  }
+  return conditions[0]!.slice('    if: '.length);
+}
+
+describe('REQ-QA-013 — la condition RÉELLE d’`alerter` (deploy.yml), lue par l’analyseur', () => {
+  it('REQ-QA-013 : c’est exactement la condition que ce fichier juge', () => {
+    expect(conditionReelleDAlerter()).toBe(ALERTER);
+  });
+
+  it('REQ-QA-013 : un déploiement de main en échec ou annulé ALERTE ; réussi, il se tait', () => {
+    const reelle = conditionReelleDAlerter();
+    expect(evaluerExpression(reelle, avecStatut(PUSH_MAIN, true, false))).toBe(true);
+    expect(evaluerExpression(reelle, avecStatut(PUSH_MAIN, false, true))).toBe(true);
+    expect(evaluerExpression(reelle, PUSH_MAIN)).toBe(false);
+  });
+
+  it('REQ-QA-013 : sur une demande de fusion, même en échec, elle se tait', () => {
+    const reelle = conditionReelleDAlerter();
+    expect(evaluerExpression(reelle, avecStatut(PR_OUVERTE('opened'), true, true))).toBe(false);
+    expect(evaluerExpression(reelle, avecStatut(PR_FUSIONNEE('closed'), true, true))).toBe(false);
   });
 });
