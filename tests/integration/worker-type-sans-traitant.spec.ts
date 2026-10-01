@@ -33,6 +33,9 @@ afterAll(async () => {
 
 const MAINTENANT = new Date('2026-10-01T10:00:00.000Z');
 
+/** Une ligne d'axionia porte sa séquence d'émission (contrainte `evenements_recus_sequence_si_et_seulement_si_axionia`). */
+let sequence = 0n;
+
 async function inscrire(
   eventType: TypeEvenementRecu,
   sujetRef: string,
@@ -44,6 +47,7 @@ async function inscrire(
       eventId: randomUUID(),
       eventType,
       schemaVersion: 2,
+      sequence: (sequence += 1n),
       sujetRef,
       charge,
       payloadHash: createHash('sha256').update(JSON.stringify(charge)).digest('hex'),
