@@ -65,6 +65,22 @@ export const VARIABLES: Readonly<Record<string, SourceDeVariable>> = {
   PEREMPTION_JOURS: { ...SSOT_SEUILS, constante: 'PEREMPTION_JOURS' },
   SEUIL_VERSEMENT: { ...SSOT_SEUILS, constante: 'SEUIL_VERSEMENT' },
   PREAVIS_JOURS: { ...SSOT_SEUILS, constante: 'PREAVIS_JOURS' },
+  // JUR-T40 — les délais de l'art. 3.2 (W20). Seule la première est dans la SSOT aujourd'hui ; les
+  // quatre autres y entrent avec DM-13, et d'ici là le gabarit ne résout pas : c'est voulu.
+  CONFIRMATION_TACITE_JOURS: { ...SSOT_SEUILS, constante: 'CONFIRMATION_TACITE_JOURS' },
+  LIBERATION_SIGNALEE_INJOIGNABLE_MAX: {
+    ...SSOT_SEUILS,
+    constante: 'LIBERATION_SIGNALEE_INJOIGNABLE_MAX',
+  },
+  LIBERATION_SIGNALEE_JOURS: { ...SSOT_SEUILS, constante: 'LIBERATION_SIGNALEE_JOURS' },
+  CARENCE_REDEPOT_APRES_LIBERATION_JOURS: {
+    ...SSOT_SEUILS,
+    constante: 'CARENCE_REDEPOT_APRES_LIBERATION_JOURS',
+  },
+  CARENCE_REDEPOT_APRES_SECONDE_LIBERATION_JOURS: {
+    ...SSOT_SEUILS,
+    constante: 'CARENCE_REDEPOT_APRES_SECONDE_LIBERATION_JOURS',
+  },
   // Le parrainage : taux et fenêtre versionnés en configuration (HYP-E1-19).
   PARRAINAGE_TAUX: { genre: 'configuration', cle: 'parrainage.taux', decision: 'HYP-E1-19' },
   PARRAINAGE_MOIS: { genre: 'configuration', cle: 'parrainage.fenetreMois', decision: 'HYP-E1-19' },
