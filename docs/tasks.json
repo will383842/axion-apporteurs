@@ -4467,7 +4467,8 @@
         "src/domain/evenement/charges.ts",
         "docs/GLOSSAIRE.md",
         "src/domain/attribution/machine.ts",
-        "tests/unit/domaine/attribution-machine-a-etats.spec.ts"
+        "tests/unit/domaine/attribution-machine-a-etats.spec.ts",
+        "tests/domain/transitions.spec.ts"
       ],
       "schema": true,
       "sensible": [
@@ -4676,7 +4677,8 @@
       "paths": [
         "axionia/src/app/api/partners/reconciliation/route.ts",
         "axionia/src/server/partners-sync/reconciliation.ts",
-        "axionia/src/server/partners-sync/__tests__/reconciliation.spec.ts"
+        "axionia/src/server/partners-sync/__tests__/reconciliation.spec.ts",
+        "axionia/tests/integration/reconciliation.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -5230,7 +5232,8 @@
         "src/server/verification/",
         "src/domain/verification/etats.ts",
         "tests/unit/securite/verification-non-oracle.spec.ts",
-        "tests/integration/verifier-une-entreprise.spec.ts"
+        "tests/integration/verifier-une-entreprise.spec.ts",
+        "tests/security/oracle.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -5311,7 +5314,8 @@
         "src/server/apporteur/resiliation.ts",
         "src/server/auth/session.ts",
         "tests/integration/resiliation.spec.ts",
-        "tests/unit/domaine/resiliation-acteur-humain.spec.ts"
+        "tests/unit/domaine/resiliation-acteur-humain.spec.ts",
+        "tests/domain/acteur-humain.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -5807,7 +5811,8 @@
         "src/components/espace/formulaire-de-depot.tsx",
         "src/lib/brouillon-hors-ligne.ts",
         "tests/unit/espace/depot-par-lien-prive.spec.ts",
-        "tests/e2e/espace/depot-par-lien-prive.spec.ts"
+        "tests/e2e/espace/depot-par-lien-prive.spec.ts",
+        "tests/ux/hors-ligne.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -5985,7 +5990,8 @@
         "src/components/espace/navigation.tsx",
         "src/content/micro-copy/espace/etats-vides.ts",
         "tests/unit/espace/accueil-et-navigation.spec.ts",
-        "tests/e2e/espace/accueil.spec.ts"
+        "tests/e2e/espace/accueil.spec.ts",
+        "tests/ux/etats-vides.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -6396,7 +6402,8 @@
         "src/server/roles/matrice.ts",
         "tests/unit/console/editeur-de-grille.spec.ts",
         "tests/integration/edition-de-grille.spec.ts",
-        "tests/e2e/console/editeur-de-grille.spec.ts"
+        "tests/e2e/console/editeur-de-grille.spec.ts",
+        "scripts/gates/grille-complete.ts"
       ],
       "schema": false,
       "sensible": [
@@ -9114,7 +9121,8 @@
       "paths": [
         "tests/unit/domaine/suspension-motifs.spec.ts",
         "tests/unit/juridique/resiliation-motifs-fermes.spec.ts",
-        "src/content/micro-copy/espace/vocabulaire.ts"
+        "src/content/micro-copy/espace/vocabulaire.ts",
+        "tests/domain/suspension-motifs.spec.ts"
       ],
       "schema": false,
       "sensible": [
