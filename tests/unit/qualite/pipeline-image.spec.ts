@@ -117,14 +117,19 @@ function fautesDuPipeline(s: Sources): string[] {
   }
   // La chaîne qui construit et publie ne lit que GITHUB_TOKEN. Le job `deployer` (QA-T34), qui ne
   // construit ni ne publie rien, ne lit que les trois secrets de la plateforme — et rien d'autre.
+  // Le job `alerter` (QA-T54, option B de la lentille `securite`) ne lit que les deux secrets du
+  // canal d'alerte : séparés, `alerter` n'a jamais le jeton de la plateforme, ni `deployer` celui
+  // du canal.
   const horsDeployer = [
     s.workflow.slice(0, s.workflow.indexOf('\njobs:')),
-    ...[...j].filter(([nom]) => nom !== 'deployer').map(([, texte]) => texte),
+    ...[...j].filter(([nom]) => nom !== 'deployer' && nom !== 'alerter').map(([, texte]) => texte),
   ].join('\n');
   if (/secrets\.(?!GITHUB_TOKEN\b)/.test(horsDeployer))
     f.push('secret_tiers : le workflow lit un autre secret que GITHUB_TOKEN');
   if (/secrets\.(?!COOLIFY_(?:URL|API_TOKEN|APP_UUID)\b)/.test(j.get('deployer') ?? ''))
     f.push('secret_tiers : le job deployer lit un autre secret que ceux de la plateforme');
+  if (/secrets\.(?!TELEGRAM_(?:BOT_TOKEN|CHAT_ID)\b)/.test(j.get('alerter') ?? ''))
+    f.push('secret_tiers : le job alerter lit un autre secret que ceux du canal d’alerte');
 
   // Aucun checkout ne laisse le jeton dans `.git/config`.
   const checkouts =
@@ -157,7 +162,7 @@ function fautesDuPipeline(s: Sources): string[] {
 describe('REQ-QA-018 — la forge construit, juge, puis publie l’image (QA-T05)', () => {
   it('REQ-QA-018 — les vraies sources ne portent aucune faute, et les deux jobs sont lus', () => {
     expect(fautesDuPipeline(REEL)).toEqual([]);
-    expect([...jobs(REEL.workflow).keys()]).toEqual(['image', 'publier', 'deployer']);
+    expect([...jobs(REEL.workflow).keys()]).toEqual(['image', 'publier', 'deployer', 'alerter']);
   });
 
   const mutants: [string, (s: Sources) => Sources, string][] = [
@@ -244,6 +249,22 @@ describe('REQ-QA-018 — la forge construit, juge, puis publie l’image (QA-T05
       (s) => ({
         ...s,
         workflow: s.workflow.replace('secrets.COOLIFY_APP_UUID', 'secrets.GHCR_PAT'),
+      }),
+      'secret_tiers',
+    ],
+    [
+      'un secret de la plateforme lu par le job alerter',
+      (s) => ({
+        ...s,
+        workflow: s.workflow.replace('secrets.TELEGRAM_CHAT_ID', 'secrets.COOLIFY_API_TOKEN'),
+      }),
+      'secret_tiers',
+    ],
+    [
+      'un secret du canal lu par le job deployer',
+      (s) => ({
+        ...s,
+        workflow: s.workflow.replace('secrets.COOLIFY_APP_UUID', 'secrets.TELEGRAM_BOT_TOKEN'),
       }),
       'secret_tiers',
     ],
