@@ -2769,14 +2769,7 @@ export const PORTE_A_FIGEE: PorteFigee = {
     // toutes échouées, l'étape ÉCHOUE (jamais un vert de complaisance).
     {
       nom: 'Navigateurs des passes d accessibilite',
-      run: [
-        'for tentative in 1 2 3; do',
-        '  if timeout 240 pnpm a11y:navigateurs; then exit 0; fi',
-        '  echo "::warning::installation des navigateurs, tentative ${tentative} sur 3 echouee"',
-        'done',
-        'echo "::error::installation des navigateurs, trois tentatives echouees"',
-        'exit 1',
-      ].join('\n'),
+      run: Array(3).fill('timeout 240 pnpm a11y:navigateurs').join(' || '),
       cles: { 'timeout-minutes': '15' },
     },
     { nom: 'Tests', run: 'pnpm test', cles: JETON_DE_LA_FORGE },

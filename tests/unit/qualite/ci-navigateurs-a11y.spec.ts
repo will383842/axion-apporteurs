@@ -7,9 +7,9 @@
  * règles, chacune lue dans le workflow et chacune vue rouge sur un workflow cassé d'un geste :
  *
  *   1. l'étape a un `timeout-minutes` borné : un blocage échoue vite, il n'immobilise plus la file ;
- *   2. la commande est rejouée par une boucle BORNÉE (au plus trois tentatives, chacune sous
- *      `timeout`), et l'étape échoue si toutes échouent : une nouvelle tentative, jamais un vert de
- *      complaisance ;
+ *   2. la commande est rejouée au plus trois fois, chaque tentative sous `timeout`, et l'étape
+ *      échoue si toutes échouent : une nouvelle tentative, jamais un vert de complaisance. La chaîne
+ *      tient sur UNE ligne sans substitution, la seule forme que `pnpm pre-gate` sait relire ;
  *   3. le cache `actions/cache` de `~/.cache/ms-playwright` vient AVANT la première commande du job
  *      (`gov:conventions`, point 5 : une action qui suit une commande peut réécrire l'arbre mesuré),
  *      et sa clé est DÉRIVÉE du verrou `pnpm-lock.yaml`, qui épingle Playwright (RM-01) : aucune
@@ -68,18 +68,24 @@ function fautes(yml: string): string[] {
   if (!t) f.push('timeout_absent : l’étape n’a pas de timeout-minutes');
   else if (Number(t[1]) > TIMEOUT_MAX_MINUTES)
     f.push(`timeout_trop_long : ${t[1]} min, au plus ${TIMEOUT_MAX_MINUTES}`);
-  const boucle = /for \w+ in ((?:\d+ ?)+); do/.exec(e);
-  if (!boucle || !/pnpm a11y:navigateurs/.test(e))
-    f.push('tentatives_absentes : aucune boucle de tentatives autour de pnpm a11y:navigateurs');
+  // Les tentatives : une chaîne `a || b || c` sur UNE ligne, sans `$` — `pnpm pre-gate` refuse un
+  // `run:` de plusieurs lignes ou portant une substitution (`scripts/prevol.ts`). La dernière
+  // tentative échouée donne son code à l'étape : toutes échouées, l'étape échoue.
+  const run = /\brun:\s*(.+)/.exec(e)?.[1]?.trim() ?? '';
+  const tentatives = run.split('||').map((t) => t.trim());
+  const lancees = tentatives.filter((t) => /pnpm a11y:navigateurs\b/.test(t));
+  if (lancees.length === 0)
+    f.push('tentatives_absentes : aucune tentative de pnpm a11y:navigateurs');
   else {
-    const n = boucle[1]!.trim().split(/\s+/).length;
-    if (n > TENTATIVES_MAX)
-      f.push(`tentatives_non_bornees : ${n} tentatives, au plus ${TENTATIVES_MAX}`);
-    if (!/timeout \d+/.test(e))
+    if (lancees.length > TENTATIVES_MAX)
+      f.push(`tentatives_non_bornees : ${lancees.length} tentatives, au plus ${TENTATIVES_MAX}`);
+    if (lancees.some((t) => !/^timeout \d+ pnpm a11y:navigateurs$/.test(t)))
       f.push('tentative_sans_timeout : chaque tentative doit être sous timeout');
-    if (!/exit 1/.test(e))
+    if (lancees.length !== tentatives.length || /\b(true|exit 0)\b|;/.test(run))
       f.push('echec_masque : l’étape ne sort pas en erreur quand toutes les tentatives échouent');
   }
+  if (/[$`]/.test(run) || !/\brun:\s*\S/.test(e) || /\brun:\s*[|>]/.test(e))
+    f.push('run_illisible_en_local : une ligne, sans substitution (pnpm pre-gate)');
   const c = cacheDuJob(yml, NOM);
   if (!c) f.push('cache_absent : aucun actions/cache dans le job, avant l’étape');
   else {
@@ -120,9 +126,23 @@ describe('REQ-QA-016 — les navigateurs des passes d’accessibilité, bornés 
       '$1\n'
     );
     expect(fautes(sansTimeout)).toContain('timeout_absent : l’étape n’a pas de timeout-minutes');
-    const sansBorne = yml.replace(/for (\w+) in (?:\d+ ?)+; do/, 'for $1 in 1 2 3 4 5 6; do');
-    expect(fautes(sansBorne)).toContain(
+    const une = 'timeout 240 pnpm a11y:navigateurs';
+    const ligne = (run: string) =>
+      yml.replace(
+        /(- name: Navigateurs des passes d accessibilite\n(?:.*\n)*?\s*run:).*\n/,
+        `$1 ${run}\n`
+      );
+    expect(fautes(ligne(Array(6).fill(une).join(' || ')))).toContain(
       `tentatives_non_bornees : 6 tentatives, au plus ${TENTATIVES_MAX}`
+    );
+    expect(fautes(ligne(`${une} || pnpm a11y:navigateurs`))).toContain(
+      'tentative_sans_timeout : chaque tentative doit être sous timeout'
+    );
+    expect(fautes(ligne(`${une} || ${une} || true`))).toContain(
+      'echec_masque : l’étape ne sort pas en erreur quand toutes les tentatives échouent'
+    );
+    expect(fautes(ligne(`${une} || echo "$PATH"`))).toContain(
+      'run_illisible_en_local : une ligne, sans substitution (pnpm pre-gate)'
     );
     const enDur = yml.replace(/(key:\s*.*)\$\{\{\s*hashFiles\([^)]*\)\s*\}\}/, '$1 1.63.0');
     expect(fautes(enDur)).toEqual(
