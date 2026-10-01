@@ -396,7 +396,7 @@ function alerteDeLaForge(commande: string): {
 async function commande(nom: string): Promise<number> {
   if (nom === 'rechiffrer') {
     const m = manquantes([...SECRETS_DU_STOCKAGE, 'PARTNERS_BACKUP_PASSPHRASE']);
-    if (m.length) return sauter('sauvegarde:rechiffrer', m);
+    if (m.length) return sauter('sauvegarde:rechiffrer', m, sauvegardeActivee());
     const a = alerteDeLaForge('sauvegarde:rechiffrer');
     const r = await rechiffrerOuAlerter(
       depotR2(),
@@ -415,7 +415,7 @@ async function commande(nom: string): Promise<number> {
       'TELEGRAM_BOT_TOKEN',
       'TELEGRAM_CHAT_ID',
     ]);
-    if (m.length) return sauter('sauvegarde:exercice', m);
+    if (m.length) return sauter('sauvegarde:exercice', m, sauvegardeActivee());
     const alerteur = creerAlerteur({
       notifieur: notifieurTelegram(
         process.env.TELEGRAM_BOT_TOKEN ?? '',
@@ -449,7 +449,7 @@ async function commande(nom: string): Promise<number> {
   }
   if (nom === 'fraicheur') {
     const m = manquantes(SECRETS_DU_STOCKAGE);
-    if (m.length) return sauter('sauvegarde:fraicheur', m);
+    if (m.length) return sauter('sauvegarde:fraicheur', m, sauvegardeActivee());
     const seuil = SEUILS.EXERCICE_DE_RESTAURATION_MAX_JOURS.valeur;
     const j = await fraicheurDuDepot(depotR2(), new Date(), seuil);
     if (j.ok) {
