@@ -789,7 +789,8 @@
       "phase": 0,
       "taches": [
         "GOV-111",
-        "SEC-05"
+        "SEC-05",
+        "SEC-47"
       ]
     },
     {
@@ -807,6 +808,7 @@
         "QA-T31",
         "SEC-05",
         "SEC-32",
+        "SEC-47",
         "UX-P2-06"
       ]
     },
@@ -1225,7 +1227,7 @@
     {
       "id": "REQ-SEC-037",
       "domaine": "anti-abus-securite",
-      "texte": "Le code public de parrainage porte ≥ 25 bits aléatoires ; un `?p=` inconnu est ignoré silencieusement, journalisé et limité à 30/h par IP ; l'existence d'un code n'est jamais confirmée publiquement.",
+      "texte": "Le code public de parrainage porte ≥ 25 bits aléatoires ; un `?p=` inconnu est ignoré silencieusement, journalisé et limité à 30/h par IP ; l'existence d'un code n'est jamais confirmée publiquement. Répartition (arbitrage de la coordination, 2026-10-01) : la capture du `?p=`, la limite par IP, la réponse indistincte et l'absence de cookie persistant sont portées par axion-ia (INT-T52-A) ; Partners porte la forme du code et sa résolution silencieuse (SEC-21).",
       "source": "audit-anti-abus F4",
       "statut": "active",
       "remplaceePar": null,
@@ -2269,6 +2271,7 @@
       "taches": [
         "INT-T10",
         "INT-T40",
+        "INT-T57",
         "SEC-42"
       ]
     },
@@ -2284,7 +2287,8 @@
       "phase": 0,
       "taches": [
         "INT-T10",
-        "INT-T40"
+        "INT-T40",
+        "INT-T57"
       ]
     },
     {
@@ -2449,7 +2453,8 @@
       "taches": [
         "JUR-T01",
         "JUR-T01b",
-        "JUR-T40"
+        "JUR-T40",
+        "JUR-T46"
       ]
     },
     {
@@ -2808,7 +2813,7 @@
       "etape": 10,
       "phase": 1,
       "taches": [
-        "SEC-21"
+        "INT-T52-A"
       ]
     },
     {
@@ -3640,6 +3645,7 @@
       "taches": [
         "QA-T16",
         "QA-T33",
+        "QA-T59",
         "UX-P0-03"
       ]
     },
@@ -4189,6 +4195,7 @@
         "GOV-112",
         "GOV-115",
         "GOV-138",
+        "GOV-139",
         "JUR-T01b"
       ]
     },
@@ -5118,7 +5125,7 @@
     {
       "id": "REQ-UX-047",
       "domaine": "produit-ux",
-      "texte": "Toute tâche qui livre un écran de Partners (espace, console) porte dans son acceptance les huit points suivants ; le conseiller n'a aucun écran dans Partners (question 22), ses écrans sont ceux du CRM Pro, hors de cette exigence. (1) Le geste principal et son budget, lus dans la SSOT `BUDGETS_UX` (`src/domain/seuils/ssot.ts`) : consultation ≤ 3 interactions, saisie ≤ 8 ; une exigence existante plus stricte prime (REQ-UX-001, REQ-UX-021) ; mesure par la fixture QA-T33. (2) Première action : visible sans défilement à 375×667 (espace, console mobile) ou 1280×800 (console), atteinte en ≤ 3 tabulations, cliquable en ≤ 2 s sur le profil réseau « 4G ralentie » défini dans `BUDGETS_UX` (débit et latence, sourcés, posés par GOV-113). (3) Cinq états : nominal, vide qui montre le geste suivant, chargement, erreur qui dit quoi faire, accès refusé (REQ-UX-019 amendée). (4) Libellés tirés de la micro-copy SSOT du public et des termes du glossaire, sans identifiant technique. (5) Accessibilité et cibles : REQ-UX-017 (espace) et REQ-UX-018 (console) s'appliquent telles quelles, dans les deux thèmes. (6) Maquette produite par le poste `ux-redaction` et validée dans `docs/maquettes/VALIDATION.md`. (7) Écrans principaux, déclarés par la colonne « écran principal » de `docs/CONSOLE-ROUTES.md` et de `docs/ESPACE-ROUTES.md` : test de premier usage ; une personne du public, qui n'a jamais vu l'outil, reçoit une consigne d'une phrase ; on consigne le temps de première action (≤ 10 s), le temps total dans le budget, les hésitations et un verbatim ; par défaut (question 17) : si Williams fournit une personne du public, le test est joué par elle, sinon par un agent qui n'a pas écrit l'écran, et la trace consignée dit qu'aucune personne du public n'était disponible. (8) E-mails : un seul appel à l'action, libellé tiré de la SSOT, lien qui mène à l'écran utile.",
+      "texte": "Toute tâche qui livre un écran de Partners (espace, console) porte dans son acceptance les huit points suivants ; le conseiller n'a aucun écran dans Partners (question 22), ses écrans sont ceux du CRM Pro, hors de cette exigence. (1) Le geste principal et son budget, lus dans la SSOT `BUDGETS_UX` (`src/domain/seuils/ssot.ts`) : consultation ≤ 3 interactions, saisie ≤ 8 ; une exigence existante plus stricte prime (REQ-UX-001, REQ-UX-021) ; mesure par la fixture QA-T33. (2) Première action : visible sans défilement à 375×667 (espace, console mobile) ou 1280×800 (console), atteinte en ≤ 3 tabulations, cliquable en ≤ 2 s sur le profil réseau « 4G ralentie » défini dans `BUDGETS_UX` (débit et latence, sourcés, posés par QA-T58). (3) Cinq états : nominal, vide qui montre le geste suivant, chargement, erreur qui dit quoi faire, accès refusé (REQ-UX-019 amendée). (4) Libellés tirés de la micro-copy SSOT du public et des termes du glossaire, sans identifiant technique. (5) Accessibilité et cibles : REQ-UX-017 (espace) et REQ-UX-018 (console) s'appliquent telles quelles, dans les deux thèmes. (6) Maquette produite par le poste `ux-redaction` et validée dans `docs/maquettes/VALIDATION.md`. (7) Écrans principaux, déclarés par la colonne « écran principal » de `docs/CONSOLE-ROUTES.md` et de `docs/ESPACE-ROUTES.md` : test de premier usage ; une personne du public, qui n'a jamais vu l'outil, reçoit une consigne d'une phrase ; on consigne le temps de première action (≤ 10 s), le temps total dans le budget, les hésitations et un verbatim ; par défaut (question 17) : si Williams fournit une personne du public, le test est joué par elle, sinon par un agent qui n'a pas écrit l'écran, et la trace consignée dit qu'aucune personne du public n'était disponible. (8) E-mails : un seul appel à l'action, libellé tiré de la SSOT, lien qui mène à l'écran utile.",
       "source": "décision de Will du 2026-09-29, W19 (docs/chantiers/W19-conseillers-salaries.md §4.1), lot « confort de la console pour tous les rôles » ; transverse : aucun module ni étape",
       "statut": "active",
       "remplaceePar": null,
@@ -5126,6 +5133,7 @@
       "etape": null,
       "phase": 1,
       "taches": [
+        "CPL-T07",
         "EXT-T01",
         "EXT-T02a",
         "EXT-T02b",
@@ -5136,6 +5144,7 @@
         "EXT-T10",
         "EXT-T11",
         "GOV-113",
+        "JUR-T32",
         "JUR-T36",
         "QA-T33",
         "QA-T58",
@@ -5252,7 +5261,7 @@
     {
       "id": "REQ-UX-062",
       "domaine": "produit-ux",
-      "texte": "**Le badge d'état de la confirmation (exigence d'expérience de Williams, 2026-09-29).** L'apporteur n'a rien à retenir : dans « Mes entreprises » et sur la carte du dépôt, chaque dépôt en phase de confirmation porte **un seul** badge, avec sa date et au plus une action, dérivé serveur par une fonction pure exhaustive, horloge injectée (HYP-W20-BADGE) : 🟢 « Confirmée » ; 🟡 « En attente de confirmation · réservée pour vous jusqu'au <date> », date en toutes lettres dans le fuseau de l'apporteur, qui passe seul à 🟢 le jour affiché ; pour une demande signalée (REQ-SEC-060), 🟡 « En attente de confirmation — Axion-IA va appeler votre contact », sans date ni phrase d'aide, le dépôt étant appelé en priorité ; 🔴 « E-mail non reçu par le contact », action unique « Corriger l'adresse », après laquelle l'e-mail repart, le délai démarre et l'apporteur est notifié (UX-P1-10) ; ⚪ « Non confirmée par le contact » ; après une libération (REQ-DM-063), ⚪ « Réservation terminée · l'entreprise est de nouveau disponible », sans date, sans action ni phrase d'aide, qui ne dit ni la raison, ni la vérification, ni le nombre d'appels. Une seule phrase d'aide : « Sans réponse de votre contact, l'entreprise reste réservée pour vous 30 jours après la réception de notre e-mail. » Textes dans la SSOT de micro-copy, garde lexicale verte (aucune consigne, aucun « obligatoire ») ; chaque badge a son libellé, la couleur n'est jamais seule porteuse du sens. Aucune raison de vérification, aucun tirage d'échantillon, aucun clic non retenu n'est lisible dans le badge : le libellé de la demande signalée dit seulement qu'un appel est attendu. Cinq états par écran. Tests : un cas par badge ; demande signalée → libellé d'appel attendu, sans date, et aucune bascule vers 🟢 à trente jours ; demande signalée libérée → ⚪ « Réservation terminée », sans date ni action ; bascule 🟡 → 🟢 à l'échéance, horloge figée, y compris une échéance à 23 h 59 ; date écrite identique au changement d'heure ; rebond → 🔴 ; correction → 🟡 avec la nouvelle date ; une valeur d'état sans badge fait échouer le typecheck.",
+      "texte": "**Le badge d'état de la confirmation (exigence d'expérience de Williams, 2026-09-29).** L'apporteur n'a rien à retenir : dans « Mes entreprises » et sur la carte du dépôt, chaque dépôt en phase de confirmation porte **un seul** badge, avec sa date et au plus une action, dérivé serveur par une fonction pure exhaustive, horloge injectée (HYP-W20-BADGE) : 🟢 « Confirmée » ; 🟡 « En attente · confirmée automatiquement le <date> », date en toutes lettres dans le fuseau de l'apporteur, qui passe seul à 🟢 le jour affiché ; pour une demande signalée (REQ-SEC-060), 🟡 « En attente de confirmation — Axion-IA va appeler votre contact », sans date ni phrase d'aide, le dépôt étant appelé en priorité ; 🔴 « E-mail non reçu par le contact », action unique « Corriger l'adresse », après laquelle l'e-mail repart, le délai démarre et l'apporteur est notifié (UX-P1-10) ; ⚪ « Non confirmée par le contact » ; après une libération (REQ-DM-063), ⚪ « Réservation terminée · l'entreprise est de nouveau disponible », sans date, sans action ni phrase d'aide, qui ne dit ni la raison, ni la vérification, ni le nombre d'appels. Une seule phrase d'aide : « Sans réponse de votre contact, votre dépôt est confirmé 30 jours après la réception de notre e-mail. » Textes dans la SSOT de micro-copy, garde lexicale verte (aucune consigne, aucun « obligatoire ») ; chaque badge a son libellé, la couleur n'est jamais seule porteuse du sens. Aucune raison de vérification, aucun tirage d'échantillon, aucun clic non retenu n'est lisible dans le badge : le libellé de la demande signalée dit seulement qu'un appel est attendu. Cinq états par écran. Tests : un cas par badge ; demande signalée → libellé d'appel attendu, sans date, et aucune bascule vers 🟢 à trente jours ; demande signalée libérée → ⚪ « Réservation terminée », sans date ni action ; bascule 🟡 → 🟢 à l'échéance, horloge figée, y compris une échéance à 23 h 59 ; date écrite identique au changement d'heure ; rebond → 🔴 ; correction → 🟡 avec la nouvelle date ; une valeur d'état sans badge fait échouer le typecheck. DÉCISION DE WILLIAMS (2026-10-01 soir, option A, REQ-UX-062 et HYP-W20-BADGE ; séquence hors dépôt `_REPRISE-AXION-APPORTEURS/SEQUENCE-DECISION-BADGE-W20-2026-10-01.md`) : « ok pour ca ▎ 🟡 En attente · confirmée automatiquement le 31 octobre. » Le badge jaune dit « En attente · confirmée automatiquement le <date> » (libellé choisi par Williams), PARTOUT : badge de « Mes entreprises » et carte du dépôt. La phrase d'aide « Sans réponse de votre contact, votre dépôt est confirmé 30 jours après la réception de notre e-mail. » (le nombre lu dans la SSOT), sous 🟡 et sous 🔴, est PROPOSÉE et reste à valider par Williams en séance (point 7 de la séance du 2026-10-02) : elle ne lui a pas été montrée explicitement (note de la lentille exactitude). L'ancien libellé (« réservée pour vous jusqu'au… ») se lisait comme une fin de réservation, à contresens de l'art. 3.2 al. 5.",
       "source": "décision de Will du 2026-09-29, W20 (docs/chantiers/W20-confirmation-par-email.md §3.1), passe gardien-spec W20 portée par GOV-112 (8)(b) ; module et étape repris de REQ-UX-022",
       "statut": "active",
       "remplaceePar": null,
