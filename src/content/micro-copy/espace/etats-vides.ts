@@ -116,4 +116,11 @@ export const ETATS_VIDES_ESPACE: Readonly<Record<string, EtatVide>> = {
       'Le registre des traitements ne nomme encore aucun prestataire ni organisme qui reçoive vos données.',
     action: RETOUR_ACCUEIL,
   },
+  // UX-P1-40 (W20) : la page du contact ; vide, c'est un lien inconnu ou expiré — un seul texte, sans oracle.
+  '/confirmer/<jeton>': {
+    titre: 'Ce lien n’est plus valable',
+    phrase:
+      'Il a peut-être déjà servi, ou il est trop ancien. Axion-IA reste joignable par écrit si besoin.',
+    action: { libelle: 'Écrire à Axion-IA', route: null },
+  },
 };
