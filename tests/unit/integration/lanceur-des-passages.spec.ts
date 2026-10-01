@@ -15,7 +15,9 @@
  */
 import { describe, it, expect } from 'vitest';
 import {
+  cleDuVerrou,
   lancerLesPassages,
+  verrouConsultatif,
   type Inscriptions,
   type VerrouConsultatif,
 } from '../../../src/server/taches/lanceur';
@@ -163,5 +165,76 @@ describe('REQ-QA-027 — le lanceur joue chaque passage inscrit, sous verrou, av
     });
     expect(issues).toEqual({});
     expect(b.lignes).toEqual([]);
+  });
+
+  it('REQ-QA-027 : chaque tâche a SA clé de verrou, sous l’espace du lanceur', async () => {
+    expect(cleDuVerrou('evenements_recus')).toBe('lanceur:evenements_recus');
+    const verrou = verrouEnMemoire();
+    await lancerLesPassages({
+      inscriptions: { evenements_recus: async () => ({}) },
+      verrou,
+      battre: battements().battre,
+      maintenant: () => INSTANT,
+    });
+    expect(verrou.pris).toEqual(['lanceur:evenements_recus']);
+  });
+
+  it('REQ-QA-027 : une clé ORDONNÉE sans inscription est sautée, sans battement', async () => {
+    const b = battements();
+    expect(
+      await lancerLesPassages({
+        inscriptions: {},
+        verrou: verrouEnMemoire(),
+        battre: b.battre,
+        maintenant: () => INSTANT,
+        ordre: ['evenements_recus'],
+      })
+    ).toEqual({});
+    expect(b.lignes).toEqual([]);
+  });
+});
+
+describe('REQ-QA-027 — le verrou de Postgres, sur un faux client qui enregistre', () => {
+  function fauxClient(reponse: unknown[]) {
+    const appels: { sql: string; valeurs: unknown[]; options: unknown }[] = [];
+    const client = {
+      async $transaction(f: (tx: unknown) => Promise<unknown>, options: unknown) {
+        const tx = {
+          $queryRaw: async (sql: TemplateStringsArray, ...valeurs: unknown[]) => {
+            appels.push({ sql: sql.join('?'), valeurs, options });
+            return reponse;
+          },
+        };
+        return f(tx);
+      },
+    };
+    return { client: client as never, appels };
+  }
+
+  it('REQ-QA-027 : clé libre — le travail est joué, sous pg_try_advisory_xact_lock et un délai borné', async () => {
+    const { client, appels } = fauxClient([{ pris: true }]);
+    let joue = 0;
+    const r = await verrouConsultatif(client).sous('lanceur:evenements_recus', async () => {
+      joue += 1;
+      return 7;
+    });
+    expect(r).toEqual({ pris: true, valeur: 7 });
+    expect(joue).toBe(1);
+    expect(appels[0]!.sql).toContain('pg_try_advisory_xact_lock');
+    expect(appels[0]!.valeurs).toEqual(['lanceur:evenements_recus']);
+    expect(appels[0]!.options).toMatchObject({ timeout: expect.any(Number) });
+  });
+
+  it.each([
+    ['la base refuse le verrou', [{ pris: false }]],
+    ['la base ne rend aucune ligne', []],
+  ])('REQ-QA-027 : %s — le travail n’est PAS joué', async (_quoi, reponse) => {
+    const { client } = fauxClient(reponse);
+    let joue = 0;
+    const r = await verrouConsultatif(client).sous('x', async () => {
+      joue += 1;
+    });
+    expect(r).toEqual({ pris: false });
+    expect(joue).toBe(0);
   });
 });

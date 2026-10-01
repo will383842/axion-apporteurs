@@ -20,7 +20,7 @@
  * verrou en mémoire ; le vrai est jugé par `tests/integration/lanceur-des-passages.spec.ts`.
  */
 import type { PrismaClient } from '@prisma/client';
-import { TACHES, schemaNomDeTache, type NomDeTache } from './registre';
+import { TACHES, type NomDeTache } from './registre';
 import type { Battre, CompteursDuPassage } from '../queue/workers/evenement-recu';
 
 /** Un passage : ce qui est dû à l'instant t pour UNE tâche ; il rend ses compteurs. */
@@ -52,7 +52,7 @@ export async function lancerLesPassages(d: {
 }): Promise<Partial<Record<NomDeTache, IssueDuPassage>>> {
   const cles = Object.keys(d.inscriptions);
   for (const cle of cles) {
-    if (!schemaNomDeTache.safeParse(cle).success || !Object.hasOwn(TACHES, cle)) {
+    if (!Object.hasOwn(TACHES, cle)) {
       throw new Error('tache_hors_registre : une inscription porte une clé absente de TACHES');
     }
   }
