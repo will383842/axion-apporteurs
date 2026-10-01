@@ -422,7 +422,7 @@ badge, sa date et au plus une action :
 
 Phrase d'aide unique, sous le 🟡 daté et sous 🔴, jamais sous le libellé de la demande signalée : « Sans
 réponse de votre contact, votre dépôt est confirmé 30 jours après la réception de notre
-e-mail. » (Libellé et phrase d'aide amendés par Williams le 2026-10-01, option A.) 🔴 prime sur le libellé de la demande signalée tant que le rebond n'est pas corrigé. Chaque badge
+e-mail. » (Libellé du badge amendé par Williams le 2026-10-01, option A ; cette phrase d'aide est proposée et reste à valider par Williams en séance, point 7 du 2026-10-02.) 🔴 prime sur le libellé de la demande signalée tant que le rebond n'est pas corrigé. Chaque badge
 a son libellé écrit ; la pastille de couleur est décorative et n'est jamais seule porteuse du sens
 (REQ-UX-017). Aucun tirage, aucune raison de vérification, aucun clic non retenu n'y paraît : le libellé
 de la demande signalée dit seulement qu'un appel est attendu (ce qu'il révèle est au §8, risque 1). Avant l'envoi effectif (délai de 15 minutes, envoi
