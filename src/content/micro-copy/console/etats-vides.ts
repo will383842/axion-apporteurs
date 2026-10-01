@@ -50,4 +50,31 @@ export const ETATS_VIDES_CONSOLE: Readonly<Record<string, EtatVide>> = {
       'Invitez la personne qui qualifiera les dépôts, ou celle qui tiendra les lots : c’est vous qui fixez son rôle.',
     action: { libelle: 'Inviter une personne', route: null },
   },
+  'fiche-qualification': {
+    titre: "Ce dépôt n'est plus à qualifier",
+    phrase:
+      'Le contact a répondu par e-mail, ou le dépôt a été qualifié. Les autres attendent dans la file.',
+    action: { libelle: 'Revenir à la file', route: null },
+  },
+  apporteurs: {
+    titre: 'Aucun apporteur pour l’instant',
+    phrase: 'Les candidatures retenues apparaissent ici, avec leur dossier de conformité.',
+    action: { libelle: 'Voir les candidatures', route: null },
+  },
+  'apporteur-fiche': {
+    titre: 'Pas encore de dossier',
+    phrase:
+      'La candidature attend une décision ; le dossier de conformité s’ouvre quand elle est retenue.',
+    action: { libelle: 'Décider de la candidature', route: null },
+  },
+  'attributions-contrats': {
+    titre: 'Aucune attribution avec ces filtres',
+    phrase: 'Aucune entreprise ne correspond à ces filtres.',
+    action: { libelle: 'Effacer les filtres', route: null },
+  },
+  'fiche-prospect': {
+    titre: 'Aucun échange noté',
+    phrase: 'Rien n’est attendu ici : noter un échange est utile, jamais exigé.',
+    action: { libelle: 'Ajouter un échange', route: null },
+  },
 };
