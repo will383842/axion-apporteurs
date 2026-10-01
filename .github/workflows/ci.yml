@@ -71,6 +71,15 @@ jobs:
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: pnpm }
+      # QA-T59. Le cache des navigateurs des passes d accessibilite, AVANT toute commande (une
+      # action qui suit une commande peut reecrire l arbre que les gardes mesurent). Sa CLE derive
+      # du verrou, qui epingle Playwright (RM-01) : aucune version ecrite ici, aucune commande pour
+      # la lire ; une montee de dependance refroidit le cache une fois, jamais un navigateur perime.
+      - name: Cache des navigateurs des passes d accessibilite
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: navigateurs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
       - run: pnpm install --frozen-lockfile
       # GOV-123, REQ-GOV-032. Les vues derivees ne sont plus commitees : elles se RENDENT ici,
       # avant toute etape qui en lit une, puis une seconde fois pour que deux rendus identiques
@@ -438,20 +447,10 @@ jobs:
       # et pilotent un vrai navigateur : WebKit pour le profil iPhone, Chromium pour le bureau. Sans
       # eux, la suite rougirait sur une absence d outil, pas sur une faute. Avant `Tests`, donc.
       # QA-T59. Cette etape est restee bloquee plus de 25 min : un telechargement qui ne repond plus
-      # immobilisait toute la porte A. Trois bornes. (1) Le cache des navigateurs, dont la CLE est la
-      # version de Playwright LUE dans le paquet installe (RM-01), jamais ecrite ici : sinon une
-      # montee de version servirait des navigateurs perimes. (2) Chaque tentative est sous `timeout`,
-      # trois au plus ; si toutes echouent, l etape ECHOUE — une nouvelle tentative, jamais un vert de
-      # complaisance. (3) `timeout-minutes` sur l etape entiere. Temoin :
-      # `tests/unit/qualite/ci-navigateurs-a11y.spec.ts`.
-      - name: Version de Playwright, cle du cache des navigateurs
-        id: playwright
-        run: echo "version=$(pnpm exec playwright --version | cut -d" " -f2)" >> "$GITHUB_OUTPUT"
-      - name: Cache des navigateurs des passes d accessibilite
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/ms-playwright
-          key: navigateurs-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+      # immobilisait toute la porte A. Chaque tentative est sous `timeout`, trois au plus ; si toutes
+      # echouent, l etape ECHOUE — une nouvelle tentative, jamais un vert de complaisance ;
+      # `timeout-minutes` borne l etape entiere. Le cache des navigateurs est en tete du job.
+      # Temoin : `tests/unit/qualite/ci-navigateurs-a11y.spec.ts`.
       - name: Navigateurs des passes d accessibilite
         timeout-minutes: 15
         run: |
