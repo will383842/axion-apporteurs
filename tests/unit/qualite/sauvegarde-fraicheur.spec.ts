@@ -71,7 +71,7 @@ function paquetsDeLExecution(dockerfile: string): Set<string> {
   }
   const paquets = new Set<string>();
   for (let nom: string | undefined = 'execution'; nom && etapes.has(nom);) {
-    const e = etapes.get(nom)!;
+    const e: { parent: string; corps: string } = etapes.get(nom)!;
     const joint = e.corps.replace(/\\\r?\n/g, ' ');
     for (const i of joint.matchAll(/apt-get install\s+([^&\n]*)/g))
       for (const p of i[1]!.split(/\s+/)) if (/^[a-z0-9][a-z0-9.+-]*$/.test(p)) paquets.add(p);
