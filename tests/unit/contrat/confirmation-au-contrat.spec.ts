@@ -15,6 +15,7 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { normaliser, unitesDuGabarit } from '../../../src/domain/contrat/gabarit';
 import { VARIABLES } from '../../../src/domain/contrat/variables';
+import { SEUILS } from '../../../src/domain/seuils/ssot';
 
 const GABARIT = readFileSync('docs/contrat/CONTRAT-APPORTEUR-V1.md', 'utf8');
 const UNITES = unitesDuGabarit(GABARIT);
@@ -109,5 +110,29 @@ describe('REQ-DM-042 — art. 3.4 et 3.7 : la première prise de contact, la jou
     expect(a).toContain('en réponse à la demande de confirmation');
     expect(a).toContain('est journalisée');
     expect(a).toContain('destinataire de la demande');
+  });
+});
+
+/**
+ * Le registre écrit la valeur de chaque délai de l'art. 3.2 sous la forme « `NOM` (= N, SSOT) ».
+ * Les valeurs sont modifiables, mais jamais en silence : une SSOT qui change sans que le registre
+ * le dise est une divergence (attaque jouée sur JUR-T40, qui ne rougissait pas).
+ */
+describe('REQ-DM-042 — les délais de l’art. 3.2 : la SSOT dit ce que le registre écrit', () => {
+  const REGISTRE = readFileSync('docs/DECISIONS.md', 'utf8');
+  it.each([
+    'LIBERATION_SIGNALEE_INJOIGNABLE_MAX',
+    'LIBERATION_SIGNALEE_JOURS',
+    'CARENCE_REDEPOT_APRES_LIBERATION_JOURS',
+    'CARENCE_REDEPOT_APRES_SECONDE_LIBERATION_JOURS',
+  ] as const)('REQ-DM-042 : %s — la valeur de la SSOT est celle du registre', (nom) => {
+    // Le nom, puis au plus soixante caractères sans parenthèse, puis « (= N, SSOT) ».
+    const debut = REGISTRE.indexOf('`' + nom + '`');
+    const ecrite =
+      debut === -1
+        ? null
+        : /^[^(]{0,60}\(= (\d+), SSOT\)/.exec(REGISTRE.slice(debut + nom.length + 2));
+    expect(ecrite, `${nom} : aucune valeur « (= N, SSOT) » au registre`).not.toBeNull();
+    expect(SEUILS[nom].valeur).toBe(Number(ecrite![1]));
   });
 });
