@@ -579,6 +579,12 @@ const MANUELS: Record<string, string[]> = {
     'prisma/migrations/',
     'tests/integration/utilisateur-console-desactive.spec.ts',
   ],
+  // GOV-133 (patron de partners/ADR-0009 appliqué à JUR-T01b et JUR-T01c) : son témoin existe déjà et ne la
+  // nomme pas, ses chemins sont ceux de sa fiche.
+  'GOV-133': [
+    'docs/adr/0009-valeurs-du-monde-reel.md',
+    'tests/unit/gouvernance/verrou-de-phase.spec.ts',
+  ],
 };
 
 /**

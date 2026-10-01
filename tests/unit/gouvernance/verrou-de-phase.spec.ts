@@ -115,10 +115,11 @@ describe('REQ-GOV-027 — une phase gelée doit pouvoir se clore', () => {
       .map((t) => t.id)
       .sort();
 
-    // Deux tâches, et deux seulement, sont arbitrées comme différées : `partners/ADR-0009`
-    // « Reste à faire ». Toute NOUVELLE tâche en attente d'un tiers fait rougir ce contrôle —
-    // c'est le seul moment où l'on peut encore décider de son sort avant qu'elle ne gèle une
-    // phase. La liste ne se choisit pas : elle s'additionne, et chaque ajout passe par un ADR.
-    expect(differees).toEqual(['JUR-T01b', 'JUR-T01c']);
+    // AUCUNE tâche n'est arbitrée comme différée : les deux que `partners/ADR-0009` « Reste à faire »
+    // nommait, JUR-T01b et JUR-T01c, ont reçu le patron qu'il prévoyait (GOV-133, 2026-10-01, sur
+    // décision de Williams) et ne sont plus hors d'atteinte. Toute NOUVELLE tâche en attente d'un
+    // tiers fait rougir ce contrôle — c'est le seul moment où l'on peut encore décider de son sort
+    // avant qu'elle ne gèle une phase. La liste ne se choisit pas : chaque ajout passe par un ADR.
+    expect(differees).toEqual([]);
   });
 });
