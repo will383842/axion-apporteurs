@@ -51,7 +51,9 @@ describe('REQ-DM-014 — art. 4.1 bis : le forfait réduit au prorata d’une re
   });
 
   it('REQ-DM-014 : le dépôt est public — l’article ne chiffre ni montant ni pourcentage', () => {
-    const a = art41bis().replace(/^\*\*4\.1 bis\b/, '');
+    // Le numéro de l'article, seul chiffre admis, est retiré avant le contrôle.
+    const a = art41bis().replace(/^(?:\*\*)?4\.1 bis\b/, '');
+    expect(a).not.toBe(art41bis());
     expect(a).not.toMatch(/\d/);
     expect(a).not.toMatch(/€|%|\beuros?\b|\bpour ?cent\b/i);
   });
