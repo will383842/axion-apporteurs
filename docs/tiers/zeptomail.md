@@ -18,6 +18,28 @@ d'envoi. La fiche n'est donc pas une documentation d'accompagnement : c'est la p
 
 ## 2. Source officielle
 
+### L'envoi par l'interface programmable — lu à la source le 2026-10-02 (INT-T57, A05)
+
+| Élément exigé par REQ-GOV-022 | Lu le 2026-10-02 |
+| --- | --- |
+| URL officielle | `https://www.zoho.com/zeptomail/help/api/email-sending.html` (référence « Send Email API ») ; `https://www.zoho.com/zeptomail/articles/transactional-api.html` (article officiel) |
+| Date de lecture | 2026-10-02, par A05 (auteur back), pour INT-T57 |
+| Extrait cité | « API key of an agent. Send the header as `Authorization: Zoho-enczapikey {apiKey}`. The agent and account are derived from the key. » |
+| Requête | `POST https://cpaas.zoho.com/v1.1/email` (référence) ; `https://api.zeptomail.com/v1.1/email` (article) ; en-tête `content-type: application/json` |
+| Exemple officiel (extrait, champs que Partners emploie) | `{"from":{"address":"accounts@info.zylker.com","name":"Paula"},"to":[{"email_address":{"address":"rudra.d@zylker.com","name":"Rudra"}}],"subject":"Account Confirmation","textbody":"Kindly click on Verify Account to confirm your account.","client_reference":"order-12345"}` |
+| Réponse 200 officielle | `{"data":[{"code":"EM_104","additional_info":[{"to":{"email_address":{}}}],"message":"OK"}],"message":"OK","request_id":"req-xxxx"}` |
+| Réponse 400 officielle | `{"data":{"error_code":"TM_3004","message":"Invalid request"},"message":"error"}` |
+
+⚠️ **La région.** Le compte d'axion-ia est européen (`smtp.zeptomail.eu`), et un jeton ne vaut que dans
+le centre de données de son compte. **Aucune page officielle lue le 2026-10-02 ne donne l'hôte européen
+de l'interface programmable.** `https://api.zeptomail.eu/v1.1/email` est **indiqué par des sources
+TIERCES** (swoosh.hexdocs.pm, adaptateur ZeptoMail ; packagist.org, laravel-zeptomail), lues le
+2026-10-02 : **non officiel**, admis dans la liste fermée du relais comme tel. L'hôte du compte se lit
+dans « Setup info » de l'agent d'envoi : **à confirmer** par Will, identique à `ZEPTOMAIL_API_URL`,
+avant l'allumage de l'envoi réel.
+
+### Ce qui reste à lire à la source (rebonds, DNS, quotas)
+
 | Élément exigé par REQ-GOV-022 | État au 2026-09-03 |
 | --- | --- |
 | URL officielle | adresse exacte de la page d'envoi de l'interface programmable **à relever**, non ouverte à ce jour — `A01` répartit la lecture |

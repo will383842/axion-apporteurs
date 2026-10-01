@@ -13,8 +13,8 @@
  *   2. drapeau fermé : la ligne est `retenu_dmarc_non_verifie`, et AUCUN appel (REQ-INT-022) ;
  *   3. le jeton n'est conservé nulle part après l'envoi : ni dans la ligne, ni au journal ;
  *   4. hors production, l'envoi reste au puits du notifieur, et aucune ligne n'est écrite ;
- *   5. le relais de production refuse tant que le relais réel n'est pas livré : la ligne le dit
- *      (`echec`, code fermé), jamais un envoi fantôme.
+ *   5. le relais de production sans sa configuration refuse : la ligne le dit (`echec`, code
+ *      fermé), jamais un envoi fantôme.
  */
 import { describe, it, expect } from 'vitest';
 import type { PrismaClient } from '@prisma/client';
@@ -30,9 +30,12 @@ import {
   envoiDuProcessus,
   portsDeConsommation,
   portsDeDemande,
-  relaisDeProduction,
   type DependancesDuLien,
 } from '../../../src/server/auth/lien-magique-production';
+import { relaisZeptomail } from '../../../src/server/integrations/zeptomail/relais';
+
+/** Le relais réel de la production (INT-T57), SANS sa configuration : il refuse en se nommant. */
+const relaisNonConfigure = relaisZeptomail({ url: undefined, jeton: undefined });
 import type {
   DependancesDeLEmetteur,
   LigneCourriel,
@@ -139,8 +142,8 @@ describe('REQ-SEC-001 REQ-INT-022 — en production, le lien part par l’émett
     expect(conserve).not.toContain(COURRIEL);
   });
 
-  it('REQ-INT-022 : le relais de production refuse tant que le relais réel n’est pas livré — la ligne dit l’échec', async () => {
-    const e = emetteurSimule(true, relaisDeProduction);
+  it('REQ-INT-022 : le relais de production sans sa configuration refuse — la ligne dit l’échec', async () => {
+    const e = emetteurSimule(true, relaisNonConfigure);
     const { d } = dependances(PRODUCTION, () => e.deps);
     await envoyerUnLien(d);
     expect(e.lignes).toHaveLength(1);
@@ -197,16 +200,16 @@ describe('REQ-SEC-001 — hors production, l’envoi reste au puits du notifieur
 });
 
 describe('REQ-SEC-001 — le câblage du processus', () => {
-  it('REQ-INT-022 : le relais de production refuse en se nommant', async () => {
+  it('REQ-INT-022 : le relais de production sans sa configuration refuse en se nommant', async () => {
     await expect(
-      relaisDeProduction.envoyer({
+      relaisNonConfigure.envoyer({
         de: 'a@b.c',
         a: 'd@e.f',
         sujet: 's',
         corps: 'c',
         reference: 'r',
       })
-    ).rejects.toThrow('relais_non_livre');
+    ).rejects.toThrow('relais_non_configure');
   });
 
   it('REQ-SEC-001 : un client de base par processus, et `planifier` confié à `apres`', () => {

@@ -31,6 +31,7 @@ import {
   CHEMIN_DOC_ENV,
   NOMS_DE_CONFIGURATION,
   NOMS_DES_SECRETS,
+  NOMS_DES_SECRETS_CONDITIONNELS,
   NOMS_DES_VARIABLES,
   NOMS_FACULTATIFS,
   documenterEnvironnement,
@@ -120,7 +121,11 @@ const REQUISES = [...NOMS_DES_SECRETS, ...CONFIGURATION_REQUISE];
 
 describe('REQ-QA-030 — le schéma porte toutes les variables, et le démarrage réel les exige', () => {
   it('REQ-QA-030 : le schéma porte les secrets ET la configuration, sans doublon, et le code ne lit rien hors de lui', () => {
-    expect(NOMS_DES_VARIABLES).toEqual([...NOMS_DES_SECRETS, ...NOMS_DE_CONFIGURATION]);
+    expect(NOMS_DES_VARIABLES).toEqual([
+      ...NOMS_DES_SECRETS,
+      ...NOMS_DES_SECRETS_CONDITIONNELS,
+      ...NOMS_DE_CONFIGURATION,
+    ]);
     expect(new Set(NOMS_DES_VARIABLES).size).toBe(NOMS_DES_VARIABLES.length);
     // La base et le cache sont ce que `readyz` sonde : un démarrage qui ne les exige pas démarre
     // une instance qui ne sait pas servir.
