@@ -17052,8 +17052,17 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
-      "acceptance": "Décision de Williams du 2026-09-30 : la Phase 1 ne s'ouvre qu'après DEUX vérifications menées avec SES prompts, V1 puis V2 ; arbitrage de la coordination du même jour : la porte est portée au registre par deux tâches de Phase 0, pour que la phase courante (dérivée des statuts) reste 0 tant qu'elle n'est pas franchie. Les 139 tâches de production de la Phase 0 sont livrées ; ces deux tâches sont la porte elle-même. (1) La session V1 exécute `_REPRISE-AXION-APPORTEURS/PROMPT-VERIF-1-BOUT-EN-BOUT.txt` : pour chaque tâche close des phases −1 et 0, « tenu / partiellement tenu / non tenu » avec preuve fichier:ligne, production comprise (en lecture seule). (2) Son rapport est publié dans `_REPRISE-AXION-APPORTEURS/VERIF-1-RAPPORT.md`, et chaque correctif qu'il retient passe par une PR ordinaire (deux lentilles) ou par le prochain rattrapage GOV-012. (3) La tâche se clôt quand le rapport est publié et que ses correctifs bloquants sont fusionnés ; elle ne s'invente aucune autre preuve."
+      "statut": "fusionnee",
+      "acceptance": "Décision de Williams du 2026-09-30 : la Phase 1 ne s'ouvre qu'après DEUX vérifications menées avec SES prompts, V1 puis V2 ; arbitrage de la coordination du même jour : la porte est portée au registre par deux tâches de Phase 0, pour que la phase courante (dérivée des statuts) reste 0 tant qu'elle n'est pas franchie. Les 139 tâches de production de la Phase 0 sont livrées ; ces deux tâches sont la porte elle-même. (1) La session V1 exécute `_REPRISE-AXION-APPORTEURS/PROMPT-VERIF-1-BOUT-EN-BOUT.txt` : pour chaque tâche close des phases −1 et 0, « tenu / partiellement tenu / non tenu » avec preuve fichier:ligne, production comprise (en lecture seule). (2) Son rapport est publié dans `_REPRISE-AXION-APPORTEURS/VERIF-1-RAPPORT.md`, et chaque correctif qu'il retient passe par une PR ordinaire (deux lentilles) ou par le prochain rattrapage GOV-012. (3) La tâche se clôt quand le rapport est publié et que ses correctifs bloquants sont fusionnés ; elle ne s'invente aucune autre preuve.",
+      "branch": "t/gov-131-porte",
+      "owner": "A01",
+      "pr": 318,
+      "attestation": {
+        "pr": 318,
+        "sha": "28a298ad76afc5422932d0c5f8927b266397ac27",
+        "fusionneeAt": "2026-10-01T06:12:25Z"
+      },
+      "motif": null
     },
     {
       "id": "GOV-132",
