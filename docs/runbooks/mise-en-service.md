@@ -95,8 +95,9 @@
 - [ ] **Information de l'article 14 tranchée au registre** (REQ-JUR-009, REQ-JUR-060, JUR-T09) : la base
       légale de TRT-TIERS, les durées de conservation du tiers (HYP-RGPD-RETENTION) et la localisation de
       l'hébergement du serveur et des sauvegardes (`docs/tiers/coolify.md`, `docs/tiers/cloudflare-r2.md`)
-      sont décidées dans `docs/DECISIONS.md` — l'envoi, lui, passe par la région européenne de ZeptoMail
-      (`smtp.zeptomail.eu`, constaté côté axion-ia) —, et les paramètres du
+      sont décidées dans `docs/DECISIONS.md` — l'hôte d'envoi est documenté comme `smtp.zeptomail.eu` dans des
+      commentaires du code d'axion-ia (AFF-48) ; la valeur effective de `SMTP_HOST` sur `axion-ia-worker` est
+      constatée dans Coolify et datée avant de cocher cette case —, et les paramètres du
       texte (`src/content/micro-copy/courriels/information-article-14.ts`) les rendent. Tant que cette
       case n'est pas cochée, **aucun e-mail de confirmation réel ne part**. Cochée après réception par
       Williams. _Porteur : Williams (les trois décisions), A07 (relecture du texte rendu)._
