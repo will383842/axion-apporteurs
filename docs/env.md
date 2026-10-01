@@ -26,6 +26,7 @@ posée est jugée comme les autres.
 | `AXIONIA_RELECTURE_SECRET` | requise | au moins 32 octets, distincte des autres secrets ; préfixes `dev_` et `stub` refusés en production | signe les lectures de Partners chez axionia (coordonnées d'un candidat), en-tête `x-partners-signature` |
 | `ZEPTOMAIL_SEND_TOKEN` | facultative, requise si l’envoi réel est allumé | au moins 32 octets, distincte des autres secrets ; préfixes `dev_` et `stub` refusés en production | jeton d'envoi du relais de courriels ; exigé quand l'envoi réel est allumé (`PARTNERS_EMAIL_DMARC_VERIFIE`) |
 | `TELEGRAM_BOT_TOKEN` | facultative, jamais requise au démarrage | au moins 32 octets, distincte des autres secrets ; préfixes `dev_` et `stub` refusés en production | jeton du canal d'alerte du serveur ; une alerte due sans lui fait échouer le passage en le nommant |
+| `TELEGRAM_CHAT_ID` | facultative, jamais requise au démarrage | entier signé, au plus 20 chiffres | salon du canal d'alerte du serveur ; voir TELEGRAM_BOT_TOKEN |
 
 ## Configuration
 
@@ -41,7 +42,6 @@ posée est jugée comme les autres.
 | `PARTNERS_EMAIL_EXPEDITEUR` | facultative | non vide, sans espace en bordure | adresse humaine d'expédition, du sous-domaine d'envoi ; jamais une adresse sans réponse |
 | `AXIONIA_BASE_URL` | facultative | URL `https:` | adresse d'axionia pour les lectures de Partners ; absente, aucune coordonnée n'est tirée |
 | `ZEPTOMAIL_API_URL` | facultative, requise si l’envoi réel est allumé | URL `https:`, hôte de la liste fermée du relais, chemin `/v1.1/email` | URL d'envoi du relais de courriels, d'un hôte de la liste fermée ; exigée quand l'envoi réel est allumé |
-| `TELEGRAM_CHAT_ID` | facultative | non vide, sans espace en bordure | salon du canal d'alerte du serveur ; voir TELEGRAM_BOT_TOKEN |
 
 ## Rotation à double clé (REQ-QA-030)
 

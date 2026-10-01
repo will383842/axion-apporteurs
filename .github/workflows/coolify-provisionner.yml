@@ -63,11 +63,11 @@ jobs:
           ZEPTOMAIL_SEND_TOKEN: ${{ secrets.ZEPTOMAIL_SEND_TOKEN }}
           # INT-T54 : le canal d alerte du serveur, jamais exige au demarrage.
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           LOG_LEVEL: ${{ vars.LOG_LEVEL }}
           SENTRY_DSN: ${{ vars.SENTRY_DSN }}
           PARTNERS_EMAIL_DMARC_VERIFIE: ${{ vars.PARTNERS_EMAIL_DMARC_VERIFIE }}
           PARTNERS_EMAIL_EXPEDITEUR: ${{ vars.PARTNERS_EMAIL_EXPEDITEUR }}
           AXIONIA_BASE_URL: ${{ vars.AXIONIA_BASE_URL }}
           ZEPTOMAIL_API_URL: ${{ vars.ZEPTOMAIL_API_URL }}
-          TELEGRAM_CHAT_ID: ${{ vars.TELEGRAM_CHAT_ID }}
         run: pnpm coolify:provisionner
