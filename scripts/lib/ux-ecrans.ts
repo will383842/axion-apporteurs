@@ -1,6 +1,6 @@
 /**
  * ux-ecrans.ts — GOV-113 (REQ-UX-047, REQ-UX-019) : ce qu'est une tâche d'écran, et ce que sont les
- * cinq états d'une maquette. MODULE PUR, sans point d'entrée : `maquettes-validees.ts`, déjà câblé en
+ * cinq états d'une maquette. MODULE PUR, sans point d'entrée : `scripts/gates/maquettes-validees.ts`, déjà câblé en
  * porte A, l'importe et en tire trois familles (arbitrage de la gouvernance du 2026-10-01).
  *
  * UNE TÂCHE D'ÉCRAN (arbitrage de la gouvernance, rattrapage 44) : elle déclare une page sous

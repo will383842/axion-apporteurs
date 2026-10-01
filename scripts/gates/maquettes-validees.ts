@@ -48,7 +48,7 @@
  *
  * GOV-113 (REQ-UX-047, REQ-UX-019) ÉTEND LA GARDE, sans en toucher les familles existantes : l'identifiant
  * de tâche d'une ligne est celui du SCHÉMA du registre, plus seulement `UX-P…` ; et trois familles
- * neuves, dont la définition vit dans `./ux-ecrans.ts` — une tâche d'écran qui ne cite pas REQ-UX-047,
+ * neuves, dont la définition vit dans `scripts/lib/ux-ecrans.ts` — une tâche d'écran qui ne cite pas REQ-UX-047,
  * une tâche d'écran ATTRIBUÉE sans ligne, une maquette sans ses cinq états. Une tâche d'écran `a_faire`
  * sans ligne n'est pas une faute : elle est IMPRIMÉE en dette (arbitrage de la gouvernance, option A).
  * Rien de tout cela n'est rétroactif sur une tâche fusionnée, ni sur les maquettes de `NON_RETROACTIVES`.
@@ -61,7 +61,7 @@ import {
   motifIdentifiant,
   tachesDEcran,
   tachesDeLaCarte,
-} from './ux-ecrans';
+} from '../lib/ux-ecrans';
 
 export const VALIDEUR = 'Will';
 export const DOSSIER_DES_MAQUETTES = 'docs/maquettes';
@@ -334,7 +334,7 @@ export function controler(vue: Vue): Faute[] {
       if (manquent.length)
         fautes.push({
           famille: 'maquette_sans_cinq_etats',
-          message: `VALIDATION.md:${l.numero} (${l.fichier}) — la maquette ne montre pas d'état ${manquent.map((m) => `« ${m} »`).join(', ')} (alias dans scripts/gates/ux-ecrans.ts, FAMILLES_D_ETATS). Un état qui n'est pas dessiné sera codé au hasard.`,
+          message: `VALIDATION.md:${l.numero} (${l.fichier}) — la maquette ne montre pas d'état ${manquent.map((m) => `« ${m} »`).join(', ')} (alias dans scripts/lib/ux-ecrans.ts, FAMILLES_D_ETATS). Un état qui n'est pas dessiné sera codé au hasard.`,
         });
     }
   // Sans tableau, « sans ligne » ne dit rien de plus que `tableau_illisible` : on ne le répète pas.
