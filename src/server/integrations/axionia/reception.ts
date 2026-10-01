@@ -153,6 +153,24 @@ export function sujetRefDe(sujet: unknown): string | null {
   return ref.length > SUJET_MAX ? null : ref;
 }
 
+/**
+ * INT-T44 (REQ-JUR-029, REQ-DM-036) — les champs du payload que la charge CONSERVÉE ne garde pas.
+ * `evenements_recus.charge` est conservée dix ans : ce qui n'entre dans aucun traitement de Partners
+ * n'y est pas écrit. Le `payload_hash` reste celui du corps reçu entier, et prouve seul ce qui a été
+ * reçu. `reponsesJson` n'est PAS ici : le traitement de la candidature le lit dans la charge, et sa
+ * minimisation réécrit la charge au passage à `traite` (tâche à part, arbitrage de la coordination).
+ */
+export const CHAMPS_NON_CONSERVES = ['utm'] as const;
+
+/** La charge conservée : le payload reçu, sans les champs de `CHAMPS_NON_CONSERVES`. */
+export function chargeConservee(payload: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(payload).filter(
+      ([cle]) => !(CHAMPS_NON_CONSERVES as readonly string[]).includes(cle)
+    )
+  );
+}
+
 /** Les types dont la clé métier est le `paymentId` (REQ-ARG-002). */
 const TYPES_A_CLE_DE_PAIEMENT: readonly TypeEvenementRecu[] = [
   TypeEvenementRecu.paiement_recu,
@@ -258,7 +276,7 @@ export async function recevoirEvenementAxionia(
     sequence: BigInt(e.sequence),
     sujetRef: sujetRefDe(e.subject_ref),
     cleMetier,
-    charge: e.payload,
+    charge: chargeConservee(e.payload),
     payloadHash: createHash('sha256').update(corps.octets).digest('hex'),
     statut: held ? 'held' : 'recu',
     receivedAt: new Date(d.maintenantMs),
