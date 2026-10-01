@@ -230,6 +230,7 @@
         "GOV-080",
         "INT-T47-A",
         "INT-T47-P",
+        "INT-T53-A",
         "JUR-T43",
         "JUR-T45"
       ]
@@ -248,6 +249,7 @@
         "DM-04",
         "DM-46",
         "DM-47",
+        "INT-T53-A",
         "T-ARG-035"
       ]
     },
@@ -5703,7 +5705,7 @@
     {
       "id": "REQ-EXT-021",
       "domaine": "extensions du 2026-09-03 (REQ-EXT)",
-      "texte": "🔴 **Séquence verrouillée.** L'ordre `KYC complet → grille du contrat fixée et COMPLÈTE (30/30) → génération du contrat → envoi DocuSeal → signature` est une contrainte dure, pas un ordre d'écran. Trois contrôles bloquants, **chacun vu rougir** : (a) la grille n'est éditable que si le KYC est complet ; (b) la fonction de génération du contrat refuse une grille absente ou incomplète — `Contrat.grilleId` est **non nul** en base (contrainte NOT NULL) ; (c) la fonction d'envoi refuse un contrat dont la grille n'est pas figée. L'envoi de l'enveloppe reste réservé au rôle `admin` et journalisé. Une fois le contrat signé, la grille du contrat est **immuable** : toute modification passe par un avenant et une re-signature (REQ-CPL-028, contrat art. 13).",
+      "texte": "🔴 **Séquence verrouillée.** L'ordre `KYC complet → grille du contrat fixée et COMPLÈTE (N/N, N = nombre de paliers de la grille publiée par axion-ia, lu et jamais recopié (31 au 2026-10-01, la conférence comprise)) → génération du contrat → envoi DocuSeal → signature` est une contrainte dure, pas un ordre d'écran. Trois contrôles bloquants, **chacun vu rougir** : (a) la grille n'est éditable que si le KYC est complet ; (b) la fonction de génération du contrat refuse une grille absente ou incomplète — `Contrat.grilleId` est **non nul** en base (contrainte NOT NULL) ; (c) la fonction d'envoi refuse un contrat dont la grille n'est pas figée. L'envoi de l'enveloppe reste réservé au rôle `admin` et journalisé. Une fois le contrat signé, la grille du contrat est **immuable** : toute modification passe par un avenant et une re-signature (REQ-CPL-028, contrat art. 13).",
       "source": "GRILLE-PAR-APPORTEUR §6.3 ; décision de Will du 2026-09-03",
       "statut": "active",
       "remplaceePar": null,
@@ -5717,7 +5719,7 @@
     {
       "id": "REQ-EXT-022",
       "domaine": "extensions du 2026-09-03 (REQ-EXT)",
-      "texte": "🔴 **La granularité est le palier, pas la famille.** Une `GrilleContrat` porte **une ligne par palier vendable** des quatre familles commissionnées, soit **30 lignes** : 9 formations collectives, 5 accompagnements 1-to-1, 5 implémentations, 11 audits. La durée (demi-journée, 1 jour, 2 jours) est un **axe distinct** : deux paliers de durées différentes sont deux lignes. La liste des 30 paliers est **dérivée de `pricing.ts`** par le script d'export (REQ-DM-014), jamais retapée ; un test compare le nombre et les identifiants de paliers de la grille publiée à ceux de `COMMERCIAL_COMMISSIONS`. Un forfait sur une formation d'une journée et un pourcentage sur les audits, pour le **même** apporteur, est le cas nominal, pas une exception. **Les cinq familles non commissionnées — développement web, maintenance, coaching récurrent, conférences, interventions sur demande — n'ont aucune ligne de grille** et sont énumérées **explicitement** sous l'annexe 1 du contrat : c'est le silence, et non l'omission, qui crée le litige.",
+      "texte": "🔴 **La granularité est le palier, pas la famille.** Une `GrilleContrat` porte **une ligne par palier vendable** des familles commissionnées, soit **N lignes** (N = nombre de paliers de la grille publiée par axion-ia, lu et jamais recopié (31 au 2026-10-01, la conférence comprise)) : au 2026-10-01, 9 formations collectives, 5 accompagnements 1-to-1, 5 implémentations, 11 audits et 1 conférence (commissionnée au forfait par décision de Williams du 2026-10-01). La durée (demi-journée, 1 jour, 2 jours) est un **axe distinct** : deux paliers de durées différentes sont deux lignes. La liste des N paliers est **dérivée de `pricing.ts`** par le script d'export (REQ-DM-014), jamais retapée ; un test compare le nombre et les identifiants de paliers de la grille publiée à ceux de `COMMERCIAL_COMMISSIONS`. Un forfait sur une formation d'une journée et un pourcentage sur les audits, pour le **même** apporteur, est le cas nominal, pas une exception. **Les quatre familles non commissionnées — développement web, maintenance, coaching récurrent, interventions sur demande — n'ont aucune ligne de grille** (la conférence est commissionnée au forfait depuis la décision de Williams du 2026-10-01) et sont énumérées **explicitement** sous l'annexe 1 du contrat : c'est le silence, et non l'omission, qui crée le litige.",
       "source": "GRILLE-PAR-APPORTEUR §1.1, §6.1 ; décision W6 du 2026-09-03",
       "statut": "active",
       "remplaceePar": null,
@@ -5726,13 +5728,14 @@
       "phase": 1,
       "taches": [
         "DM-23",
+        "INT-T53-A",
         "T-ARG-037"
       ]
     },
     {
       "id": "REQ-EXT-023",
       "domaine": "extensions du 2026-09-03 (REQ-EXT)",
-      "texte": "🔴 **Modèles de grille et édition en masse.** Saisir 30 lignes à la main à chaque recrutement est intenable, et une ligne oubliée devient une commission bloquée le jour d'une vente. Deux mécanismes sont **obligatoires** : (a) `GrilleModele` — un jeu **complet** de 30 lignes, nommé et réutilisable (« Standard », « Tête de réseau », « Zone difficile ») ; on part d'un modèle et on ajuste ligne à ligne ; créer ou publier un modèle est une action `admin` journalisée ; (b) **édition en masse** — « toutes les formations à 300 € », « tous les audits à 25 % » en une action, puis dérogation ligne par ligne. Un modèle ne s'applique **jamais** rétroactivement à un contrat déjà signé.",
+      "texte": "🔴 **Modèles de grille et édition en masse.** Saisir une grille complète à la main à chaque recrutement est intenable, et une ligne oubliée devient une commission bloquée le jour d'une vente. Deux mécanismes sont **obligatoires** : (a) `GrilleModele` — un jeu **complet** de N lignes (N = nombre de paliers de la grille publiée par axion-ia, lu et jamais recopié (31 au 2026-10-01, la conférence comprise)), nommé et réutilisable (« Standard », « Tête de réseau », « Zone difficile ») ; on part d'un modèle et on ajuste ligne à ligne ; créer ou publier un modèle est une action `admin` journalisée ; (b) **édition en masse** — « toutes les formations à 300 € », « tous les audits à 25 % » en une action, puis dérogation ligne par ligne. Un modèle ne s'applique **jamais** rétroactivement à un contrat déjà signé.",
       "source": "GRILLE-PAR-APPORTEUR §6.2 ; décision de Will du 2026-09-03",
       "statut": "active",
       "remplaceePar": null,
@@ -5747,7 +5750,7 @@
     {
       "id": "REQ-EXT-024",
       "domaine": "extensions du 2026-09-03 (REQ-EXT)",
-      "texte": "🔴 **Complétude 30/30 bloquante.** Aucune ligne ne peut rester indéfinie : tant que les 30 paliers ne portent pas chacun une valeur (`forfait`, `pourcentage` **ou** `aucune`), le contrat **ne peut pas être généré**. L'écran affiche le compteur `n/30` et la liste nominative des paliers manquants ; `genererContrat()` lève une erreur typée `grille_incomplete` et n'écrit rien. Test vu rougir : une grille à 29/30 → génération refusée, aucun `Contrat` créé, aucun envoi.",
+      "texte": "🔴 **Complétude bloquante.** Aucune ligne ne peut rester indéfinie : tant que les N paliers (N = nombre de paliers de la grille publiée par axion-ia, lu et jamais recopié (31 au 2026-10-01, la conférence comprise)) ne portent pas chacun une valeur (`forfait`, `pourcentage` **ou** `aucune`), le contrat **ne peut pas être généré**. L'écran affiche le compteur `n/N` et la liste nominative des paliers manquants ; `genererContrat()` lève une erreur typée `grille_incomplete` et n'écrit rien. Test vu rougir : une grille à N−1/N → génération refusée, aucun `Contrat` créé, aucun envoi.",
       "source": "GRILLE-PAR-APPORTEUR §6.2, §6.3",
       "statut": "active",
       "remplaceePar": null,
@@ -5807,7 +5810,7 @@
     {
       "id": "REQ-EXT-028",
       "domaine": "extensions du 2026-09-03 (REQ-EXT)",
-      "texte": "🔴 **L'annexe 1 est GÉNÉRÉE depuis la grille du contrat, et le moteur lit `contrat.grilleId`.** (a) L'annexe 1 du gabarit est **produite** depuis les 30 lignes de la `GrilleContrat` — montants en euros HT pour les forfaits, taux et assiette pour les pourcentages, mention explicite pour les `aucune`, **colonne « CPF » dérivée de `cpfEligible`** (REQ-EXT-026, M-15) — **jamais retapée** ; un test compare, cellule à cellule, l'annexe rendue au contenu de la grille, et la gate `jur:grille-chiffree` refuse de publier un gabarit dont l'annexe 1 porte les mots « forfait », « barème » ou « pourcentage » sans valeur numérique dans la même cellule. Le **chapeau** de l'annexe rendue définit le `forfait` comme « dû **une fois par commande** portant ce palier, quel que soit le nombre de journées vendues, la durée étant déjà portée par le palier lui-même » (A-2) — un test compare cette phrase au comportement de REQ-DM-015, faute de quoi le contrat et le moteur divergent d'un facteur 2. (b) Le moteur de commissions lit **`contrat.grilleId`** de l'apporteur concerné, **jamais** la grille globale ni la dernière version publiée ; un test le prouve sur un jeu à deux versions, **posé sur le pivot de REQ-ARG-008 — la date de CONFIRMATION de l'attribution, jamais `dateRef`** (M-9) : attribution confirmée sous v1, devis signé après publication de v2 → la ligne est calculée avec **v1**. Les lignes déjà nées gardent leur `grilleVersionId` (REQ-DM-014, REQ-ARG-008).",
+      "texte": "🔴 **L'annexe 1 est GÉNÉRÉE depuis la grille du contrat, et le moteur lit `contrat.grilleId`.** (a) L'annexe 1 du gabarit est **produite** depuis les N lignes de la `GrilleContrat` (N lu dans la grille publiée, jamais recopié) — montants en euros HT pour les forfaits, taux et assiette pour les pourcentages, mention explicite pour les `aucune`, **colonne « CPF » dérivée de `cpfEligible`** (REQ-EXT-026, M-15) — **jamais retapée** ; un test compare, cellule à cellule, l'annexe rendue au contenu de la grille, et la gate `jur:grille-chiffree` refuse de publier un gabarit dont l'annexe 1 porte les mots « forfait », « barème » ou « pourcentage » sans valeur numérique dans la même cellule. Le **chapeau** de l'annexe rendue définit le `forfait` comme « dû **une fois par commande** portant ce palier, quel que soit le nombre de journées vendues, la durée étant déjà portée par le palier lui-même » (A-2) — un test compare cette phrase au comportement de REQ-DM-015, faute de quoi le contrat et le moteur divergent d'un facteur 2. (b) Le moteur de commissions lit **`contrat.grilleId`** de l'apporteur concerné, **jamais** la grille globale ni la dernière version publiée ; un test le prouve sur un jeu à deux versions, **posé sur le pivot de REQ-ARG-008 — la date de CONFIRMATION de l'attribution, jamais `dateRef`** (M-9) : attribution confirmée sous v1, devis signé après publication de v2 → la ligne est calculée avec **v1**. Les lignes déjà nées gardent leur `grilleVersionId` (REQ-DM-014, REQ-ARG-008).",
       "source": "GRILLE-PAR-APPORTEUR §2.3, §6.3 ; règle maison « dériver, jamais recopier »",
       "statut": "active",
       "remplaceePar": null,
