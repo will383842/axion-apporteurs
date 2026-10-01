@@ -61,9 +61,11 @@
 - [ ] `TELEGRAM_BOT_TOKEN` et `TELEGRAM_CHAT_ID` posés dans l'environnement `production`, et une alerte
       `rechiffrement_echoue` réellement REÇUE dans le salon (échec provoqué pendant l'exercice).
       _Porteur : Williams (secrets, réception), l'auteur (consignation)._
-- [ ] **Canal d'alerte du SERVEUR** (INT-T49, INT-T54) : `TELEGRAM_BOT_TOKEN` (secret) et
-      `TELEGRAM_CHAT_ID` (variable) posés AUSSI dans l'environnement de l'APPLICATION (provisionnement
-      Coolify), et une alerte `attente_depassee` d'essai réellement REÇUE dans le salon. À cocher
+- [ ] **Canal d'alerte du SERVEUR** (INT-T49, INT-T54) : `TELEGRAM_BOT_TOKEN` (secret de l'environnement
+      `production`) et `TELEGRAM_CHAT_ID` passent à l'APPLICATION par le provisionnement. Le salon,
+      aujourd'hui SECRET de l'environnement, y est recopié en VARIABLE (le workflow le lit dans `vars`).
+      Puis **provisionnement relancé**, et une alerte `attente_depassee` d'essai
+      réellement REÇUE dans le salon. À cocher
       AVANT l'ouverture du canal côté axion-ia : sans ce canal, une attente au-delà de son seuil fait
       échouer le passage du lanceur (`canal_alerte_absent`), sans jamais perdre l'alerte. _Porteur :
       Williams (valeurs, réception), l'auteur (consignation)._
