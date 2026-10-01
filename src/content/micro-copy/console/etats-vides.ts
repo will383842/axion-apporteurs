@@ -7,7 +7,9 @@
  * la maquette. Quand la matrice écran × rôle de SEC-17 (REQ-SEC-023) sera livrée, c'est d'elle que
  * la garde `ux-exhaustivite` dérivera les écrans de la console — et chacun lui devra un état vide.
  *
- * Base : les maquettes `file-qualification.html` et `lot-paiement.html`. Le vocabulaire des motifs
+ * Base : les maquettes `file-qualification.html`, `lot-paiement.html`, et celles du cadre de la
+ * console (UX-P1-18) : `console-cadre.html`, `connexion-console.html`, `acces-refuse.html`,
+ * `utilisateurs-console.html`. Le vocabulaire des motifs
  * de blocage est celui du glossaire (« bloqué »), jamais celui de la paie.
  */
 import type { EtatVide } from '../types';
@@ -24,5 +26,28 @@ export const ETATS_VIDES_CONSOLE: Readonly<Record<string, EtatVide>> = {
     phrase:
       'Les soldes du mois sont sous le seuil de versement, ou bloqués par un motif : ils seront repris au prochain lot.',
     action: { libelle: 'Voir les relevés bloqués', route: null },
+  },
+  'console-cadre': {
+    titre: "Votre console s'ouvre bientôt",
+    phrase:
+      "Aucun écran de votre rôle n'est encore en service : la liste des apporteurs arrive la première, puis les lots de paiement avec les premiers versements. Rien n'est à faire d'ici là.",
+    action: { libelle: 'Voir ce que permet votre rôle', route: null },
+  },
+  'acces-refuse': {
+    titre: "Cette page n'est pas ouverte à votre rôle",
+    phrase:
+      'Si vous en avez besoin, un administrateur peut changer votre rôle. Votre accueil reste ouvert.',
+    action: { libelle: 'Retour à mon accueil', route: null },
+  },
+  'connexion-console': {
+    titre: 'Se connecter à la console',
+    phrase: 'Un lien et un code vous sont envoyés par e-mail. Aucun mot de passe.',
+    action: { libelle: 'Recevoir mon lien', route: null },
+  },
+  'utilisateurs-console': {
+    titre: "Personne d'autre n'utilise la console",
+    phrase:
+      'Invitez la personne qui qualifiera les dépôts, ou celle qui tiendra les lots : c’est vous qui fixez son rôle.',
+    action: { libelle: 'Inviter une personne', route: null },
   },
 };

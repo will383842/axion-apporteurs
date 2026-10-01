@@ -61,6 +61,7 @@ import {
   repondre,
   type AccesApporteur,
   REFUS,
+  SECRETS,
   type ClientCloisonnable,
   type ModeleCloisonne,
 } from '../../src/server/acces/for-apporteur';
@@ -759,4 +760,59 @@ describe('REQ-SEC-008 — le vrai sérialiseur de Prisma ne reçoit que ce que l
     expect(envoye).toContain(A);
     expect(envoye).not.toContain(B);
   });
+
+  // ── GOV-111 : les options de lecture, les filtres de relation, la sélection explicite ──────────
+
+  it('REQ-SEC-008 : TÉMOIN DU BANC — sans la couche, une relation HÉRITÉE dans le filtre part au moteur', async () => {
+    const { client, envois } = clientIntercepte();
+    await client.jetonDepot
+      .findMany({ where: Object.create({ apporteur: { is: { id: B } } }) as never })
+      .catch(() => undefined);
+    expect(envois.join('\n')).toContain(B);
+  });
+
+  it.each([
+    [
+      'une relation héritée dans le filtre',
+      { where: Object.create({ apporteur: { is: { id: B } } }) },
+    ],
+    ['une relation nommée dans un OR', { where: { OR: [{ apporteur: { is: { id: B } } }] } }],
+    ['un include', { include: { apporteur: true } }],
+    ['un select qui demande un secret', { select: { tokenHash: true } }],
+  ])(
+    'REQ-SEC-008 : par la couche, lister avec %s est refusé, et RIEN n’est envoyé',
+    async (_quoi, options) => {
+      const { client, envois } = clientIntercepte();
+      const vue = forApporteur(client as unknown as ClientCloisonnable, A).jetonDepot;
+      expect(await refusDe(vue.lister(options as never))).toBe(REFUS.forme);
+      expect(envois).toEqual([]);
+    }
+  );
+
+  it.each(MODELES_CLOISONNES)(
+    'REQ-SEC-008 : par la couche, ce qui part au moteur pour %s ne nomme aucun secret',
+    async (modele) => {
+      const { client, envois } = clientIntercepte();
+      const vue = forApporteur(client as unknown as ClientCloisonnable, A)[modele];
+      await vue.lister().catch(() => undefined);
+      await vue.trouver(randomUUID()).catch(() => undefined);
+      expect(envois.length).toBe(2);
+      for (const secret of SECRETS) expect(envois.join('\n')).not.toContain(`"${secret}"`);
+    }
+  );
+});
+
+describe('REQ-SEC-008 — GOV-111 : en base réelle, une ligne rendue par la couche ne porte aucun secret', () => {
+  it.each(MODELES_CLOISONNES)(
+    'REQ-SEC-008 : %s — trouver et lister rendent la ligne sans secret',
+    async (modele) => {
+      const vue = accesDe(base.prisma, A)[modele];
+      const lue = (await vue.trouver(lignes[modele].a)) as Record<string, unknown> | null;
+      expect(lue).not.toBeNull();
+      const listees = (await vue.lister()) as Record<string, unknown>[];
+      expect(listees.length).toBeGreaterThan(0);
+      for (const ligne of [lue!, ...listees])
+        for (const secret of SECRETS) expect(Object.hasOwn(ligne, secret)).toBe(false);
+    }
+  );
 });
