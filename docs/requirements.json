@@ -230,7 +230,8 @@
         "GOV-080",
         "INT-T47-A",
         "INT-T47-P",
-        "JUR-T43"
+        "JUR-T43",
+        "JUR-T45"
       ]
     },
     {
@@ -2668,8 +2669,7 @@
       "phase": 0,
       "taches": [
         "DM-03-A",
-        "JUR-T29",
-        "JUR-T45"
+        "JUR-T29"
       ]
     },
     {

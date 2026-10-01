@@ -4736,7 +4736,8 @@
         "src/server/jobs/reconciliation.ts",
         "src/server/integrations/axionia/reconciliation.ts",
         "src/server/taches/registre.ts",
-        "tests/integration/reconciliation-quotidienne.spec.ts"
+        "tests/integration/reconciliation-quotidienne.spec.ts",
+        "src/server/integrations/axionia/relecture.ts"
       ],
       "schema": false,
       "sensible": [
@@ -5104,7 +5105,8 @@
         "UX-P1-10",
         "UX-P1-41",
         "JUR-T40",
-        "GOV-137"
+        "GOV-137",
+        "DM-24"
       ],
       "reqs": [
         "REQ-DM-004",
@@ -5553,7 +5555,8 @@
       "paths": [
         "scripts/backfill/axionia.ts",
         "src/server/integrations/axionia/backfill.ts",
-        "tests/integration/backfill-axionia.spec.ts"
+        "tests/integration/backfill-axionia.spec.ts",
+        "src/server/integrations/axionia/relecture.ts"
       ],
       "schema": false,
       "sensible": [
@@ -5793,7 +5796,7 @@
     },
     {
       "id": "UX-P1-01",
-      "titre": "Écran unique Entreprise : recherche, carte 4 états, « Déposer » pré-remplie, compteur 30/j",
+      "titre": "Écran unique Entreprise : recherche, carte aux états du DTO de SEC-16, « Déposer » pré-remplie, compteur 30/j",
       "phase": 1,
       "repo": "partners",
       "zone": "espace",
@@ -6087,7 +6090,7 @@
     },
     {
       "id": "UX-P1-08",
-      "titre": "Accueil et navigation : 3 chiffres, 1 alerte priorisée, 1 champ, barre 4 onglets, Plus, états vides",
+      "titre": "Accueil et navigation : 3 chiffres, 1 alerte priorisée, 1 champ, barre de navigation dérivée des routes livrées, états vides",
       "phase": 1,
       "repo": "partners",
       "zone": "espace",
@@ -14477,7 +14480,8 @@
         "src/content/micro-copy/console/a-appeler.ts",
         "tests/unit/micro-copy/confirmation-par-courriel.spec.ts",
         "scripts/gates/lexique-apporteurs.ts",
-        "scripts/gates/ux-exhaustivite.ts"
+        "scripts/gates/ux-exhaustivite.ts",
+        "src/content/micro-copy/espace/etats-vides.ts"
       ],
       "deps": [
         "UX-P1-40",
@@ -14495,7 +14499,7 @@
         "REQ-JUR-060"
       ],
       "estimateDays": 0.75,
-      "acceptance": "Source : docs/chantiers/W20-confirmation-par-email.md (décision de Williams du 2026-09-29, session -d7, phase 1). Réalise la part texte de REQ-UX-060, REQ-UX-061 et REQ-JUR-060 (Exigence nouvelle proposée au §3 du plan, à inscrire par la passe gardien-spec puis à ajouter à `reqs` ; les HYP-W20 citées ici ne sont pas encore au §2 de docs/DECISIONS.md, elles entreront dans `hyp` par la même passe.). (1) Tous les textes W20 vivent dans la SSOT de micro-copy, en gabarits à variables (prénom, nom, entreprise, heure) ; aucun texte recopié ailleurs (RM-01). (2) Message avant le bouton, repris mot pour mot de la décision de Williams, sauf la fin proposée « Axion-IA pourra aussi l'appeler. » (question 15 du plan, valeur par défaut confirmée par Williams le 2026-09-29) : il INFORME et ne donne aucune consigne (REQ-JUR-039). (3) Un champ exigé n'est jamais marqué « obligatoire » (mot interdit par REQ-JUR-037) ; seuls les champs facultatifs portent « (facultatif) ». (4) Les valeurs saisies par l'apporteur et reprises dans l'e-mail sont rendues en texte brut, échappées, sans lien (HYP-W20-CONTEXTE). (5) Témoins : la garde lexicale reste verte sur tout texte vu par l'apporteur ; un texte « vous devez confirmer » posé dans le fichier la fait rougir. (6) Amendée le 2026-09-29 (réponse de Williams à la question 2 et exigence d'expérience, docs/chantiers/W20-confirmation-par-email.md §2, §4 et §9) : la SSOT porte aussi les quatre libellés du badge de REQ-UX-062, plus, depuis la correction de sécurité du 2026-09-29 (refus de la lentille securite sur 2340a63, docs/chantiers/W20-confirmation-par-email.md §2, §8 et question 18), le libellé de la demande signalée « En attente de confirmation — Axion-IA va appeler votre contact » (neutre, sans consigne, sans date), l'action « Corriger l'adresse », la phrase d'aide unique « Sans réponse de votre contact, l'entreprise reste réservée pour vous 30 jours après la réception de notre e-mail. » (le nombre interpolé depuis CONFIRMATION_TACITE_JOURS, jamais recopié) et le texte de la notification de l'e-mail reparti après correction ; depuis les réponses de Williams du 2026-09-29 vers 20 h (session -d7, questions 18 et 19), le libellé ⚪ « Réservation terminée · l'entreprise est de nouveau disponible » (sans date, sans action, sans phrase d'aide) et le texte de la notification de libération, neutre et sans consigne, proposé : « La réservation de <Entreprise> a pris fin sans confirmation. L'entreprise est de nouveau disponible. », qui ne dit ni la raison, ni la vérification, ni le nombre d'appels ; la date en toutes lettres est formatée par une seule fonction, dans le fuseau de l'apporteur. Garde lexicale verte sur ces textes. AMENDEMENT (vérification V2 (GOV-132, 2026-10-01), A1-12) : `public/**` et `courriels/**` sont en portée `apporteur`, attendue. AMENDEMENT (audit indépendant du plan de la Phase 1 (2026-10-01), écart C15 de la vérification de bout en bout) : réécrit la phrase d'états vides qui promet un gain dès la signature du client (contraire à l'art. 4.2), et transpose `jur:copy-indicative` dans Partners (`src/content/**`, `docs/maquettes/**`), avec un témoin rouge sur cette phrase.",
+      "acceptance": "Source : docs/chantiers/W20-confirmation-par-email.md (décision de Williams du 2026-09-29, session -d7, phase 1). Réalise la part texte de REQ-UX-060, REQ-UX-061 et REQ-JUR-060 (Exigence nouvelle proposée au §3 du plan, à inscrire par la passe gardien-spec puis à ajouter à `reqs` ; les HYP-W20 citées ici ne sont pas encore au §2 de docs/DECISIONS.md, elles entreront dans `hyp` par la même passe.). (1) Tous les textes W20 vivent dans la SSOT de micro-copy, en gabarits à variables (prénom, nom, entreprise, heure) ; aucun texte recopié ailleurs (RM-01). (2) Message avant le bouton, repris mot pour mot de la décision de Williams, sauf la fin proposée « Axion-IA pourra aussi l'appeler. » (question 15 du plan, valeur par défaut confirmée par Williams le 2026-09-29) : il INFORME et ne donne aucune consigne (REQ-JUR-039). (3) Un champ exigé n'est jamais marqué « obligatoire » (mot interdit par REQ-JUR-037) ; seuls les champs facultatifs portent « (facultatif) ». (4) Les valeurs saisies par l'apporteur et reprises dans l'e-mail sont rendues en texte brut, échappées, sans lien (HYP-W20-CONTEXTE). (5) Témoins : la garde lexicale reste verte sur tout texte vu par l'apporteur ; un texte « vous devez confirmer » posé dans le fichier la fait rougir. (6) Amendée le 2026-09-29 (réponse de Williams à la question 2 et exigence d'expérience, docs/chantiers/W20-confirmation-par-email.md §2, §4 et §9) : la SSOT porte aussi les quatre libellés du badge de REQ-UX-062, plus, depuis la correction de sécurité du 2026-09-29 (refus de la lentille securite sur 2340a63, docs/chantiers/W20-confirmation-par-email.md §2, §8 et question 18), le libellé de la demande signalée « En attente de confirmation — Axion-IA va appeler votre contact » (neutre, sans consigne, sans date), l'action « Corriger l'adresse », la phrase d'aide unique « Sans réponse de votre contact, l'entreprise reste réservée pour vous 30 jours après la réception de notre e-mail. » (le nombre interpolé depuis CONFIRMATION_TACITE_JOURS, jamais recopié) et le texte de la notification de l'e-mail reparti après correction ; depuis les réponses de Williams du 2026-09-29 vers 20 h (session -d7, questions 18 et 19), le libellé ⚪ « Réservation terminée · l'entreprise est de nouveau disponible » (sans date, sans action, sans phrase d'aide) et le texte de la notification de libération, neutre et sans consigne, proposé : « La réservation de <Entreprise> a pris fin sans confirmation. L'entreprise est de nouveau disponible. », qui ne dit ni la raison, ni la vérification, ni le nombre d'appels ; la date en toutes lettres est formatée par une seule fonction, dans le fuseau de l'apporteur. Garde lexicale verte sur ces textes. AMENDEMENT (vérification V2 (GOV-132, 2026-10-01), A1-12) : `public/**` et `courriels/**` sont en portée `apporteur`, attendue. AMENDEMENT (audit indépendant du plan de la Phase 1 (2026-10-01), écart C15 de la vérification de bout en bout) : réécrit la phrase d'états vides qui promet un gain dès la signature du client (contraire à l'art. 4.2), dans `src/content/micro-copy/espace/etats-vides.ts` et dans la maquette `docs/maquettes/accueil.html`, et transpose `jur:copy-indicative` dans Partners (`src/content/**`, `docs/maquettes/**`), avec un témoin rouge sur cette phrase.",
       "tests": {
         "REQ-JUR-039": [
           "tests/unit/micro-copy/confirmation-par-courriel.spec.ts"
@@ -16195,9 +16199,7 @@
       "repo": "partners",
       "zone": "integration",
       "paths": [
-        "docs/adr/",
-        "docs/tiers/crm-pro.md",
-        "docs/journal/"
+        "docs/tiers/crm-pro.md"
       ],
       "schema": false,
       "sensible": [
@@ -17472,7 +17474,7 @@
     },
     {
       "id": "INT-T46-P",
-      "titre": "Contrat d'événements v3 : le type « devis émis » entre dans la liste fermée, et la réception le range en antériorité",
+      "titre": "Contrat d'événements v3 : le type « devis émis » entre dans la liste fermée",
       "phase": 1,
       "repo": "partners",
       "zone": "integration",
@@ -17561,7 +17563,7 @@
       "externe": null,
       "estimateDays": 0.5,
       "statut": "a_faire",
-      "acceptance": "Décision D4 de Williams du 2026-10-01, dans la fenêtre de la coordination : à la question du format de la grille publiée, Williams répond « OUI OK - A (recommandé) : axion-ia envoie automatiquement une grille complète à Partners. Quand vous changez un prix dans axion-ia, l'espace apporteur se met à jour tout seul. Une seule source, aucun risque d'erreur. ». A1-08 de la vérification transversale réglée, option A. (1) La publication de la grille (DM-03-A) passe en `schema: 2` : chaque palier porte `cpfEligible`, `prixReferenceHt` et `commissionPubliee`, dérivés de `pricing.ts` et de `COMMERCIAL_COMMISSIONS`, jamais retapés ; l'empreinte est recalculée. (2) Le passage se fait en LOCKSTEP avec INT-T47-P : axion-ia ne publie le schema 2 qu'une fois Partners prêt à le lire. (3) TÉMOIN rouge d'abord : un changement de prix dans `pricing.ts` change la grille publiée et son empreinte. AMENDEMENT (audit indépendant du plan de la Phase 1 (2026-10-01), écarts C-06 et C19 de la vérification de bout en bout) : la résolution d'une ligne se fait d'abord par palier (`tierId`), puis par activité. TÉMOIN : un palier sans commission connue rend la ligne `bloquee`."
+      "acceptance": "Décision D4 de Williams du 2026-10-01, dans la fenêtre de la coordination : à la question du format de la grille publiée, Williams répond « OUI OK - A (recommandé) : axion-ia envoie automatiquement une grille complète à Partners. Quand vous changez un prix dans axion-ia, l'espace apporteur se met à jour tout seul. Une seule source, aucun risque d'erreur. ». A1-08 de la vérification transversale réglée, option A. (1) La publication de la grille (DM-03-A) passe en `schema: 2` : chaque palier porte `cpfEligible`, `prixReferenceHt` et `commissionPubliee`, dérivés de `pricing.ts` et de `COMMERCIAL_COMMISSIONS`, jamais retapés ; l'empreinte est recalculée. (2) Le passage se fait en LOCKSTEP avec INT-T47-P : axion-ia ne publie le schema 2 qu'une fois Partners prêt à le lire. (3) TÉMOIN rouge d'abord : un changement de prix dans `pricing.ts` change la grille publiée et son empreinte. AMENDEMENT (audit indépendant du plan de la Phase 1 (2026-10-01), écarts C-06 et C19 de la vérification de bout en bout) : la résolution d'une ligne se fait d'abord par palier (`tierId`), puis par activité. TÉMOIN de l'audit : une ligne `{tierId:'intervention-conference'}` rend `bloquee` — un palier sans commission publiée n'est jamais payé par la résolution par activité, même quand son activité en a une."
     },
     {
       "id": "INT-T47-P",
@@ -17690,7 +17692,9 @@
       "sensible": [
         "rgpd"
       ],
-      "deps": [],
+      "deps": [
+        "GOV-137"
+      ],
       "reqs": [
         "REQ-DM-024"
       ],
@@ -17762,7 +17766,9 @@
       ],
       "schema": false,
       "sensible": [],
-      "deps": [],
+      "deps": [
+        "GOV-116"
+      ],
       "reqs": [
         "REQ-GOV-015"
       ],
@@ -17899,7 +17905,8 @@
       ],
       "schema": false,
       "sensible": [
-        "argent"
+        "argent",
+        "espace"
       ],
       "deps": [
         "SEC-43",
@@ -18216,8 +18223,8 @@
       "reqs": [
         "REQ-JUR-001",
         "REQ-JUR-002",
-        "REQ-JUR-019",
-        "REQ-JUR-041"
+        "REQ-JUR-041",
+        "REQ-DM-014"
       ],
       "hyp": [],
       "externe": null,

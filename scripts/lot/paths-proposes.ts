@@ -304,12 +304,7 @@ const MANUELS: Record<string, string[]> = {
   'INT-T21-P': ['scripts/backfill/axionia.ts'],
   'SEC-21': ['src/server/parrainage/code.ts'],
   'JUR-T09': ['emails/prospect/information-article-14.tsx', 'src/content/script-qualification.ts'],
-  'JUR-T13': [
-    'emails/apporteur/',
-    'src/content/micro-copy/',
-    'scripts/gates/lexique-apporteurs.ts',
-    'src/domain/lexique/lexique-interdit.ts',
-  ],
+  'JUR-T13': ['scripts/gates/lexique-apporteurs.ts', 'src/domain/lexique/lexique-interdit.ts'],
   'CPL-T06': ['prisma/schema.prisma', 'src/domain/candidature/decision.ts'],
   'UX-P1-04': ['src/app/(espace)/connexion/'],
   'UX-P1-01': [
