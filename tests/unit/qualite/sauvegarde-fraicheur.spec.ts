@@ -70,9 +70,10 @@ function paquetsDeLExecution(dockerfile: string): Set<string> {
     if (m) etapes.set(m[2]!, { parent: m[1]!, corps: bloc });
   }
   const paquets = new Set<string>();
-  for (let nom: string | undefined = 'execution'; nom && etapes.has(nom); ) {
+  for (let nom: string | undefined = 'execution'; nom && etapes.has(nom);) {
     const e = etapes.get(nom)!;
-    for (const i of e.corps.matchAll(/apt-get install\s+([^&\n\]*(?:\\n[^&\n\]*)*)/g))
+    const joint = e.corps.replace(/\\\r?\n/g, ' ');
+    for (const i of joint.matchAll(/apt-get install\s+([^&\n]*)/g))
       for (const p of i[1]!.split(/\s+/)) if (/^[a-z0-9][a-z0-9.+-]*$/.test(p)) paquets.add(p);
     nom = e.parent;
   }
@@ -96,6 +97,13 @@ describe('REQ-QA-023 — l’image d’exécution porte curl, pour la sonde de l
       'FROM base AS execution',
     ].join('\n');
     expect([...paquetsDeLExecution(construction)]).not.toContain('curl');
-    expect([...paquetsDeLExecution(construction.replace('AS execution', 'AS execution\nRUN apt-get install -y --no-install-recommends curl'))]).toContain('curl');
+    expect([
+      ...paquetsDeLExecution(
+        construction.replace(
+          'AS execution',
+          'AS execution\nRUN apt-get install -y --no-install-recommends curl'
+        )
+      ),
+    ]).toContain('curl');
   });
 });
