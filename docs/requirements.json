@@ -710,6 +710,7 @@
         "SEC-19",
         "SEC-29",
         "SEC-30",
+        "SEC-45",
         "UX-P1-04"
       ]
     },
@@ -842,8 +843,10 @@
       "etape": null,
       "phase": 0,
       "taches": [
+        "INT-T50-A",
         "SEC-07",
-        "SEC-44"
+        "SEC-44",
+        "SEC-46"
       ]
     },
     {
@@ -2106,7 +2109,8 @@
         "INT-T08-A",
         "INT-T08-P",
         "INT-T21-A",
-        "INT-T21-P"
+        "INT-T21-P",
+        "INT-T51"
       ]
     },
     {
@@ -2127,7 +2131,7 @@
     {
       "id": "REQ-INT-014",
       "domaine": "integration",
-      "texte": "API 1 `GET /attributions?siren=` : auth = jeton bearer dédié + allowlist IP + 60/min + **404 sans jeton** (REQ-SEC-012), route `/api/integrations/axionia/attributions?siren=` ; réponse **minimale** `{statut: libre|attribuee|cliente, until: 'AAAA-MM'|null, apporteurRef: opaque|null}` — plus `nomAffichable` (prénom et initiale du nom, null si libre), sur décision de Williams du 2026-10-01 (option B) revenant sur R3 ; **jamais e-mail, téléphone, identifiant ni adresse** ; côté axion-ia, affiché seulement à qui crée ou lit un devis, hors de tout journal, conservé le seul temps du cache ; le cas d'une prise en charge par un conseiller salarié attend la décision de Williams ; chaque appel journalisé (siren, ipHash, résultat) ; côté axionia, timeout 2 s, cache 5 min, échec ouvert : le devis se crée avec `attributionVerifiee=false` et une alerte, la vérification est rejouée par job. Amendement W19 (décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §4.2) : Une attribution de conseiller répond comme une attribution d'apporteur au même stade : `attribuee`, `until`, et une `apporteurRef` opaque de même forme que celle d'un apporteur. Jamais `libre`, jamais un champ de plus que la forme commune, jamais une valeur qui nomme la population. Test d'indistinction (QA-T31). Le consommateur axion-ia (INT-T07-A) ne peut pas distinguer : aucune commission d'apporteur n'est versée sur la foi de l'API 1, la chaîne d'argent de Partners aiguillant par porteur réel (REQ-DM-021).",
+      "texte": "API 1 `GET /attributions?siren=` : auth = jeton bearer dédié + allowlist IP + 60/min + **404 sans jeton** (REQ-SEC-012), route `/api/integrations/axionia/attributions?siren=` ; réponse **minimale** `{statut: libre|attribuee|cliente, until: 'AAAA-MM'|null, apporteurRef: opaque|null}` — plus `nomAffichable` (prénom et initiale du nom, null si libre), sur décision de Williams du 2026-10-01 (option B) revenant sur R3 ; **jamais e-mail, téléphone, identifiant ni adresse** ; côté axion-ia, affiché seulement à qui crée ou lit un devis, hors de tout journal, conservé le seul temps du cache ; pour une prise en charge par un conseiller salarié, le même champ et la même forme, au nom du conseiller, sans mention de rôle (décision de Williams du 2026-10-01) ; chaque appel journalisé (siren, ipHash, résultat) ; côté axionia, timeout 2 s, cache 5 min, échec ouvert : le devis se crée avec `attributionVerifiee=false` et une alerte, la vérification est rejouée par job. Amendement W19 (décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §4.2) : Une attribution de conseiller répond comme une attribution d'apporteur au même stade : `attribuee`, `until`, et une `apporteurRef` opaque de même forme que celle d'un apporteur. Jamais `libre`, jamais un champ de plus que la forme commune, jamais une valeur qui nomme la population. Test d'indistinction (QA-T31). Le consommateur axion-ia (INT-T07-A) ne peut pas distinguer : aucune commission d'apporteur n'est versée sur la foi de l'API 1, la chaîne d'argent de Partners aiguillant par porteur réel (REQ-DM-021).",
       "source": "audit-outil §2.3, §5 étape 9 ; audit anti-abus C13 ; INT-F11",
       "statut": "active",
       "remplaceePar": null,
@@ -2402,7 +2406,9 @@
       "phase": 0,
       "taches": [
         "JUR-T03",
-        "JUR-T29"
+        "JUR-T29",
+        "JUR-T44",
+        "JUR-T45"
       ]
     },
     {
@@ -2417,7 +2423,8 @@
       "phase": 0,
       "taches": [
         "JUR-T03",
-        "JUR-T29"
+        "JUR-T29",
+        "JUR-T45"
       ]
     },
     {
@@ -2661,7 +2668,8 @@
       "phase": 0,
       "taches": [
         "DM-03-A",
-        "JUR-T29"
+        "JUR-T29",
+        "JUR-T45"
       ]
     },
     {
@@ -3722,7 +3730,8 @@
       "phase": 0,
       "taches": [
         "QA-T12",
-        "QA-T53"
+        "QA-T53",
+        "QA-T57"
       ]
     },
     {
@@ -3786,6 +3795,7 @@
         "INT-T40",
         "INT-T49",
         "QA-T40",
+        "QA-T56",
         "T-ARG-015"
       ]
     },
@@ -4045,7 +4055,7 @@
     {
       "id": "REQ-GOV-010",
       "domaine": "gouvernance-agents",
-      "texte": "`docs/CHARTE-AGENTS.md` définit neuf droits exclusifs portés par les quinze postes de `docs/CHARTE-AGENTS.md` §4 : l'attribution des tâches et l'écriture de `docs/tasks.json` et de la vue `docs/PLAN-STATE.md` reviennent à A01 avec l'outillage de lot (`pnpm lot:cloture`, seul écrivain des LIVRAISONS — `statut`, `pr`, `branch`, `owner` — et `lever-attente`, seul écrivain des LEVÉES d'attente — `attente_externe` → `a_faire` sur décision citée, jamais une livraison ; `pnpm plan-state:build`) — il n'existe pas de poste « orchestrateur » ; architecte (seul à accepter un ADR), gardien du spec (seul à modifier REQUIREMENTS/PRESEANCE/DECISIONS/GLOSSAIRE), leads de domaine (découpent, valident l'acceptation), développeurs (une tâche revendiquée à la fois), relecteurs adversariaux, vérificateurs de tests, release manager (seul à fusionner), documentaliste (LECONS.md). Gate : PR modifiant un fichier réservé sans le label du rôle → rouge.",
+      "texte": "`docs/CHARTE-AGENTS.md` définit neuf droits exclusifs portés par les quinze postes de `docs/CHARTE-AGENTS.md` §4 : l'attribution des tâches et l'écriture de `docs/tasks.json` et de la vue `docs/PLAN-STATE.md` reviennent à A01 avec l'outillage de lot (`pnpm lot:cloture`, seul écrivain des LIVRAISONS — `statut`, `pr`, `branch`, `owner` — et le verbe hors dépôt `lever-attente` (outils de reprise, relu par les lentilles securite et exactitude le 2026-10-01), seul écrivain des LEVÉES d'attente — `attente_externe` → `a_faire` sur décision citée, jamais une livraison ; `pnpm plan-state:build`) — il n'existe pas de poste « orchestrateur » ; architecte (seul à accepter un ADR), gardien du spec (seul à modifier REQUIREMENTS/PRESEANCE/DECISIONS/GLOSSAIRE), leads de domaine (découpent, valident l'acceptation), développeurs (une tâche revendiquée à la fois), relecteurs adversariaux, vérificateurs de tests, release manager (seul à fusionner), documentaliste (LECONS.md). Gate : PR modifiant un fichier réservé sans le label du rôle → rouge.",
       "source": "nouvelle",
       "statut": "active",
       "remplaceePar": null,
@@ -4282,7 +4292,8 @@
         "GOV-117",
         "GOV-118",
         "GOV-120",
-        "GOV-121"
+        "GOV-121",
+        "GOV-134"
       ]
     },
     {
@@ -5993,6 +6004,8 @@
       "taches": [
         "JUR-T29",
         "JUR-T30",
+        "JUR-T44",
+        "JUR-T45",
         "UX-P1-11",
         "UX-P3-02"
       ]
