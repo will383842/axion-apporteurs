@@ -16,6 +16,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   cleDuVerrou,
+  codeDeSortie,
   lancerLesPassages,
   verrouConsultatif,
   type Inscriptions,
@@ -236,5 +237,16 @@ describe('REQ-QA-027 — le verrou de Postgres, sur un faux client qui enregistr
     });
     expect(r).toEqual({ pris: false });
     expect(joue).toBe(0);
+  });
+});
+
+describe('REQ-QA-027 — le point d’entrée sort en code non nul si une tâche échoue', () => {
+  it.each([
+    [{ evenements_recus: 'joue' }, 0],
+    [{ evenements_recus: 'deja_en_cours' }, 0],
+    [{}, 0],
+    [{ evenements_recus: 'echec' }, 1],
+  ] as const)('REQ-QA-027 : %j → %i', (issues, code) => {
+    expect(codeDeSortie(issues)).toBe(code);
   });
 });

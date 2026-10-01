@@ -19,9 +19,16 @@
  * à la fin de la transaction, y compris si le processus meurt. Les témoins unitaires injectent un
  * verrou en mémoire ; le vrai est jugé par `tests/integration/lanceur-des-passages.spec.ts`.
  */
-import type { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
+import { horlogeSysteme } from '../../lib/horloge';
+import { creerJournal } from '../../lib/logger';
 import { TACHES, type NomDeTache } from './registre';
-import type { Battre, CompteursDuPassage } from '../queue/workers/evenement-recu';
+import {
+  depotDuTravail,
+  type Battre,
+  type CompteursDuPassage,
+} from '../queue/workers/evenement-recu';
+import { inscriptions } from './inscriptions';
 
 /** Un passage : ce qui est dû à l'instant t pour UNE tâche ; il rend ses compteurs. */
 export type Passage = () => Promise<Partial<CompteursDuPassage> | Record<string, number>>;
@@ -100,4 +107,38 @@ export function verrouConsultatif(prisma: PrismaClient): VerrouConsultatif {
       );
     },
   };
+}
+
+/** Le code de sortie du point d'entrée : 1 dès qu'une tâche a échoué, sinon 0. */
+export function codeDeSortie(issues: Partial<Record<NomDeTache, IssueDuPassage>>): 0 | 1 {
+  return Object.values(issues).includes('echec') ? 1 : 0;
+}
+
+// ── le point d'entrée : une tâche planifiée de la plateforme, chaque minute (`pnpm taches:lancer`) ──
+
+const APPELE_DIRECTEMENT = /lanceur\.ts$/.test(process.argv[1] ?? '');
+
+if (APPELE_DIRECTEMENT) {
+  const prisma = new PrismaClient();
+  const journal = creerJournal();
+  // Le journal ne porte que le nom de chaque tâche et son issue ; l'erreur, par son NOM.
+  lancerLesPassages({
+    inscriptions: inscriptions(prisma),
+    verrou: verrouConsultatif(prisma),
+    battre: depotDuTravail(prisma).battre,
+    maintenant: () => new Date(horlogeSysteme.maintenant()),
+  })
+    .then(
+      (issues) => {
+        journal.info('passages_planifies', { issues });
+        process.exitCode = codeDeSortie(issues);
+      },
+      (erreur: unknown) => {
+        journal.error('lanceur_en_echec', {
+          nom: erreur instanceof Error ? erreur.name : 'Erreur',
+        });
+        process.exitCode = 1;
+      }
+    )
+    .finally(() => prisma.$disconnect());
 }
