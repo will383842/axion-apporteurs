@@ -34,6 +34,10 @@
  */
 import { Prisma, TypeEvenementRecu, type PrismaClient } from '@prisma/client';
 import { schemaNomDeTache, type NomDeTache } from '../../taches/registre';
+import { refDependanceCoordonnees } from '../../../../packages/contracts/api';
+import { SEUILS } from '../../../domain/seuils/ssot';
+import { MS_PAR_JOUR } from '../../../domain/temps/calendrier-civil';
+import type { FormeDAttente } from '../../integrations/telegram/alertes';
 
 /** La tâche dont ce passage écrit le battement : une clé du registre, validée à la lecture. */
 export const TACHE_DE_RECEPTION: NomDeTache = schemaNomDeTache.parse('evenements_recus');
@@ -272,19 +276,119 @@ async function traiterUn(
 /** La taille d'un lot lu par `aTraiter` : un passage en lit autant qu'il en faut, lot après lot. */
 const LOT = 100;
 
+// ── INT-T49 / INT-T54 : les attentes, bornées et alertées au-delà de leur seuil ──────────────────
+
+/** Le préfixe des attentes de coordonnées (INT-T26), dérivé du contrat : jamais retapé. */
+const PREFIXE_COORDONNEES = refDependanceCoordonnees('x').slice(0, -1);
+
+/** Ce qu'attend un événement, d'après sa référence : ses coordonnées, un traitant, ou un parent. */
+export function formeDeLAttente(ref: string): FormeDAttente {
+  if (ref.startsWith(PREFIXE_COORDONNEES)) return 'coordonnees';
+  if (ref.startsWith(PREFIXE_ATTENTE_TRAITANT)) return 'traitant';
+  return 'parent';
+}
+
+/** Le seuil d'une forme d'attente, en millisecondes, lu dans la SSOT (RM-10). */
+export function seuilDAttenteMs(forme: FormeDAttente): number {
+  const jours =
+    forme === 'coordonnees'
+      ? SEUILS.ATTENTE_DES_COORDONNEES_JOURS.valeur
+      : SEUILS.ATTENTE_D_UNE_DEPENDANCE_JOURS.valeur;
+  return jours * MS_PAR_JOUR;
+}
+
 /**
  * La reprise des attentes dont la référence commence par `prefixe` (INT-T26 : `coordonnees:`) :
  * elles repassent `recu`. Une par passage, jamais en boucle : un échec les remet en attente, et le
- * passage suivant les reprendra.
+ * passage suivant les reprendra. INT-T49 : BORNÉE par l'âge — une attente reçue avant le seuil de
+ * sa forme n'est plus reprise ; elle reste en attente, et `franchissements` la signale.
  */
-export function reprendreLesAttentes(prisma: PrismaClient, prefixe: string): () => Promise<number> {
+export function reprendreLesAttentes(
+  prisma: PrismaClient,
+  prefixe: string,
+  maintenant: () => Date
+): () => Promise<number> {
   return async () => {
+    const borne = new Date(maintenant().getTime() - seuilDAttenteMs(formeDeLAttente(prefixe)));
     const r = await prisma.evenementRecu.updateMany({
-      where: { statut: 'en_attente_dependance', dependanceRef: { startsWith: prefixe } },
+      where: {
+        statut: 'en_attente_dependance',
+        dependanceRef: { startsWith: prefixe },
+        receivedAt: { gte: borne },
+      },
       data: { statut: 'recu', dependanceRef: null },
     });
     return r.count;
   };
+}
+
+/** Une attente en cours, telle que la détection la lit : jamais sa charge, jamais son identifiant. */
+export interface AttenteEnCours {
+  readonly eventType: TypeEvenementRecu;
+  readonly dependanceRef: string;
+  readonly receivedAt: Date;
+}
+
+/** Un franchissement : ce qu'une alerte `attente_depassee` dit, et rien d'autre. */
+export interface Franchissement {
+  readonly forme: FormeDAttente;
+  readonly type: TypeEvenementRecu;
+  readonly nombre: number;
+  readonly plusAncienneJours: number;
+}
+
+/**
+ * LES FRANCHISSEMENTS depuis le dernier passage réussi. Un (forme, type) alerte si l'une de ses
+ * attentes a franchi son seuil dans la fenêtre ]depuis − seuil ; maintenant − seuil] : une alerte par
+ * franchissement, jamais une par minute — le lanceur est un processus neuf à chaque passage, aucune
+ * mémoire ne dédoublonne pour lui. `depuis` absent (premier passage) : la fenêtre part de −∞, et le
+ * stock déjà au-delà alerte une fois. L'alerte compte TOUTES les attentes au-delà de ce (forme, type)
+ * et l'âge de la plus ancienne.
+ */
+export function franchissements(
+  attentes: readonly AttenteEnCours[],
+  instants: { maintenant: Date; depuis: Date | null }
+): Franchissement[] {
+  const maintenant = instants.maintenant.getTime();
+  const depuis = instants.depuis?.getTime() ?? Number.NEGATIVE_INFINITY;
+  const groupes = new Map<
+    string,
+    { forme: FormeDAttente; type: TypeEvenementRecu; ages: number[]; franchi: boolean }
+  >();
+  for (const a of attentes) {
+    const forme = formeDeLAttente(a.dependanceRef);
+    const seuil = seuilDAttenteMs(forme);
+    const recu = a.receivedAt.getTime();
+    if (recu > maintenant - seuil) continue;
+    const cle = `${forme}\u0000${a.eventType}`;
+    const g = groupes.get(cle) ?? { forme, type: a.eventType, ages: [], franchi: false };
+    g.ages.push(maintenant - recu);
+    if (recu > depuis - seuil) g.franchi = true;
+    groupes.set(cle, g);
+  }
+  return [...groupes.values()]
+    .filter((g) => g.franchi)
+    .map((g) => ({
+      forme: g.forme,
+      type: g.type,
+      nombre: g.ages.length,
+      plusAncienneJours: Math.floor(Math.max(...g.ages) / MS_PAR_JOUR),
+    }));
+}
+
+/** Les attentes en cours, lues sans charge ni identifiant. */
+export function lireLesAttentes(prisma: PrismaClient): () => Promise<AttenteEnCours[]> {
+  return async () =>
+    (
+      await prisma.evenementRecu.findMany({
+        where: { statut: 'en_attente_dependance', dependanceRef: { not: null } },
+        select: { eventType: true, dependanceRef: true, receivedAt: true },
+      })
+    ).map((l) => ({
+      eventType: l.eventType,
+      dependanceRef: l.dependanceRef ?? '',
+      receivedAt: l.receivedAt,
+    }));
 }
 
 /**

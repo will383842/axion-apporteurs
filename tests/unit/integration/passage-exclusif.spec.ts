@@ -116,19 +116,21 @@ describe('REQ-DM-036 — le passage est BORNÉ par son budget', () => {
   });
 });
 
-describe('REQ-ARG-003 — la route du webhook prend le MÊME verrou que le lanceur', () => {
+// INT-T49 a changé la face de ce bloc (INT-T55 l'avait livré sous l'ancienne) : la route prenait le
+// MÊME verrou que le lanceur pour jouer le passage ; elle n'en joue plus AUCUN. Le seul chemin du
+// passage est le lanceur, sous le verrou de sa tâche : l'exclusion tient par construction.
+describe('REQ-ARG-003 — la route ne joue aucun passage ; le lanceur seul, sous son verrou', () => {
   const ROUTE = readFileSync('src/app/api/webhooks/axionia/route.ts', 'utf8');
+  const LANCEUR = readFileSync('src/server/taches/lanceur.ts', 'utf8');
 
-  it('REQ-ARG-003 : la route passe sous `verrouConsultatif(...).sous(cleDuVerrou(TACHE_DE_RECEPTION), …)`', () => {
-    expect(ROUTE).toMatch(
-      /verrouConsultatif\(prisma\)\.sous\(\s*cleDuVerrou\(TACHE_DE_RECEPTION\),\s*passageDesEvenementsRecus\(prisma\)\s*\)/
+  it('REQ-ARG-003 : la route n’appelle ni le passage, ni le verrou, ni after()', () => {
+    expect(ROUTE).not.toMatch(
+      /passageDesEvenementsRecus|passerLeTravail|verrouConsultatif|\bafter\s*\(/
     );
-    expect(cleDuVerrou(TACHE_DE_RECEPTION)).toBe('lanceur:evenements_recus');
   });
 
-  it('REQ-ARG-003 : aucun appel du passage ne contourne le verrou', () => {
-    const appels = ROUTE.match(/passageDesEvenementsRecus\(prisma\)/g) ?? [];
-    expect(appels).toHaveLength(1);
-    expect(ROUTE).not.toMatch(/passageDesEvenementsRecus\(prisma\)\(\)/);
+  it('REQ-ARG-003 : le lanceur joue chaque passage sous le verrou de sa tâche', () => {
+    expect(LANCEUR).toMatch(/d\.verrou\.sous\(cleDuVerrou\(tache\), passage\)/);
+    expect(cleDuVerrou(TACHE_DE_RECEPTION)).toBe('lanceur:evenements_recus');
   });
 });

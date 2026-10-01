@@ -92,7 +92,7 @@ const passage = () =>
         aleatoire: (n) => Uint8Array.from({ length: n }, () => Math.floor(Math.random() * 256)),
       });
     },
-    reprendre: reprendreLesAttentes(base.prisma, PREFIXE_ATTENTE_COORDONNEES),
+    reprendre: reprendreLesAttentes(base.prisma, PREFIXE_ATTENTE_COORDONNEES, () => MAINTENANT),
     maintenant: () => MAINTENANT,
   });
 

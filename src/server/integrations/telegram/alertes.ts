@@ -31,6 +31,7 @@
  * LIMITE DÉCLARÉE. L'état du dédoublonnage et du plafond vit dans la mémoire du processus : deux
  * instances du serveur ont chacune leur plafond.
  */
+import { TypeEvenementRecu } from '@prisma/client';
 import type { Horloge } from '../../../domain/temps/horloge';
 import { MS_PAR_HEURE } from '../../../domain/temps/calendrier-civil';
 import type { Notifieur } from '../../../lib/notify';
@@ -158,8 +159,10 @@ export const shaLisible = (v: unknown): string =>
       ? v.toLowerCase()
       : ILLISIBLE;
 
-const dansLaListe = (liste: readonly string[]) => (v: unknown): string =>
-  typeof v === 'string' && liste.includes(v) ? v : ILLISIBLE;
+const dansLaListe =
+  (liste: readonly string[]) =>
+  (v: unknown): string =>
+    typeof v === 'string' && liste.includes(v) ? v : ILLISIBLE;
 const formeDAttente = dansLaListe(FORMES_D_ATTENTE);
 const typeDEvenement = dansLaListe(Object.values(TypeEvenementRecu));
 const entier = (v: unknown): string =>
@@ -269,6 +272,30 @@ export function creerAlerteur({ notifieur, horloge, plafondParHeure }: OptionsAl
         corps: messageDAlerte(gabarit, objet),
       });
       return 'envoyee';
+    },
+  };
+}
+
+/**
+ * INT-T54 — le notifieur Telegram du SERVEUR : le texte de l'alerte, rien d'autre ; le jeton ne sort
+ * jamais, et un refus du canal est une erreur nommée par son seul statut. Dette nommée : les deux
+ * copies des scripts (`scripts/gates/deploy-verify.ts`, `scripts/sauvegarde/cycle.ts`) seront
+ * ramenées ici, hors de ce lot.
+ */
+export function notifieurTelegram(
+  jeton: string,
+  salon: string,
+  appeler: typeof fetch = fetch
+): Notifieur {
+  return {
+    async notifier({ corps }) {
+      const r = await appeler(`https://api.telegram.org/bot${jeton}/sendMessage`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ chat_id: salon, text: corps }),
+      });
+      await r.body?.cancel();
+      if (!r.ok) throw new Error(`telegram_refuse : HTTP ${r.status}`);
     },
   };
 }

@@ -16,6 +16,7 @@ const m = vi.hoisted(() => ({
   passerLeTravail: vi.fn(),
   reprendreLesAttentes: vi.fn(),
   reprendreLesTraitants: vi.fn(),
+  lireLesAttentes: vi.fn(),
   depotDuTravail: vi.fn(),
   lireEnvironnement: vi.fn(),
   lireTrousseaux: vi.fn(),
@@ -29,6 +30,7 @@ vi.mock('../../../src/server/queue/workers/evenement-recu', async (original) => 
   passerLeTravail: m.passerLeTravail,
   reprendreLesAttentes: m.reprendreLesAttentes,
   reprendreLesTraitants: m.reprendreLesTraitants,
+  lireLesAttentes: m.lireLesAttentes,
   depotDuTravail: m.depotDuTravail,
 }));
 vi.mock('../../../src/lib/env', () => ({
@@ -77,7 +79,12 @@ describe('REQ-QA-027 — le passage des événements reçus', () => {
     const depot = { battre: vi.fn() };
     const r = await passageDesEvenementsRecus(PRISMA, depot as never)();
     expect(r).toEqual({ traites: 1, enAttente: 0, enErreur: 0, reveilles: 5 });
-    expect(m.reprendreLesAttentes).toHaveBeenCalledWith(PRISMA, 'coordonnees:');
+    // INT-T49 : la reprise reçoit l'horloge du passage, qui la borne par l'âge.
+    expect(m.reprendreLesAttentes).toHaveBeenCalledWith(
+      PRISMA,
+      'coordonnees:',
+      expect.any(Function)
+    );
     const d = m.passerLeTravail.mock.calls[0]![0] as {
       depot: unknown;
       reprendre: () => Promise<number>;
@@ -105,6 +112,8 @@ describe('REQ-QA-027 — le passage des événements reçus', () => {
     m.reprendreLesAttentes.mockReturnValue(async () => 0);
     m.reprendreLesTraitants.mockReturnValue(async () => 0);
     m.passerLeTravail.mockResolvedValue({});
+    // INT-T54 : aucune attente en cours, aucune alerte due.
+    m.lireLesAttentes.mockReturnValue(async () => []);
     await inscriptions(PRISMA).evenements_recus!();
     const d = m.passerLeTravail.mock.calls[0]![0] as {
       depot: { battre: (...a: unknown[]) => Promise<unknown>; aTraiter: unknown };

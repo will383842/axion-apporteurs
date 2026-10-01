@@ -64,6 +64,17 @@ export const SEUILS = {
     renvois: [],
     verifieLe: '2026-10-01',
   },
+  // INT-T54 — combien de temps un événement qui attend un TRAITANT (`traitant:<type>`) ou un PARENT
+  // (la facture d'un paiement, par exemple) attend avant qu'une alerte `attente_depassee` parte.
+  // Un paramètre d'exploitation : un type sans traitant ou un parent absent se voit vite.
+  ATTENTE_D_UNE_DEPENDANCE_JOURS: {
+    valeur: 2,
+    unite: 'jours',
+    source:
+      'arbitrage A01, 2026-10-01 (UTC), proposition de A05 (un type sans traitant ou un parent absent se voit vite)',
+    renvois: [],
+    verifieLe: '2026-10-01',
+  },
   ANTERIORITE_CLIENT_MOIS: {
     valeur: 24,
     unite: 'mois',

@@ -122,6 +122,9 @@ export type Secrets = z.infer<typeof schemaSecrets>;
 export const schemaSecretsConditionnels = z.object({
   // Le jeton d'envoi du relais de courriels (`Authorization: Zoho-enczapikey <jeton>`).
   ZEPTOMAIL_SEND_TOKEN: secret.optional(),
+  // INT-T54 : le jeton du canal d'alerte (Telegram) du SERVEUR. Exigé par aucune règle de démarrage :
+  // une alerte due sans canal fait échouer le passage en le nommant (`canal_alerte_absent`).
+  TELEGRAM_BOT_TOKEN: secret.optional(),
 });
 export type SecretsConditionnels = z.infer<typeof schemaSecretsConditionnels>;
 export const NOMS_DES_SECRETS_CONDITIONNELS: readonly string[] = Object.keys(
@@ -193,6 +196,8 @@ export const schemaConfiguration = z.object({
   // INT-T57 (REQ-INT-022) : l'URL d'envoi du relais ; son hôte est jugé contre la liste fermée de
   // `src/server/integrations/zeptomail/relais.ts`. Exigée au démarrage si l'envoi réel est allumé.
   ZEPTOMAIL_API_URL: urlDe(['https:']).optional(),
+  // INT-T54 : le salon du canal d'alerte du serveur ; voir TELEGRAM_BOT_TOKEN.
+  TELEGRAM_CHAT_ID: nette.optional(),
 });
 
 export type Configuration = z.infer<typeof schemaConfiguration>;
@@ -541,6 +546,9 @@ const ROLES: Record<NomDeVariable, string> = {
     "adresse d'axionia pour les lectures de Partners ; absente, aucune coordonnée n'est tirée",
   ZEPTOMAIL_SEND_TOKEN:
     "jeton d'envoi du relais de courriels ; exigé quand l'envoi réel est allumé (`PARTNERS_EMAIL_DMARC_VERIFIE`)",
+  TELEGRAM_BOT_TOKEN:
+    "jeton du canal d'alerte du serveur ; une alerte due sans lui fait échouer le passage en le nommant",
+  TELEGRAM_CHAT_ID: "salon du canal d'alerte du serveur ; voir TELEGRAM_BOT_TOKEN",
   ZEPTOMAIL_API_URL:
     "URL d'envoi du relais de courriels, d'un hôte de la liste fermée ; exigée quand l'envoi réel est allumé",
 };

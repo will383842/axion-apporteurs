@@ -12,6 +12,7 @@
  * démarrage, et un refus lève (l'événement passe `en_erreur` sous le NOM de l'erreur, jamais un
  * secret).
  */
+import { randomUUID } from 'node:crypto';
 import { PrismaClient, TypeEvenementRecu } from '@prisma/client';
 import { sourceAleatoireSysteme } from '../../domain/apporteur/identifiants';
 import { lireEnvironnement, lireTrousseaux } from '../../lib/env';
@@ -24,8 +25,12 @@ import {
 import {
   aiguiller,
   depotDuTravail,
+  franchissements,
+  lireLesAttentes,
   passerLeTravail,
   reprendreLesAttentes,
+  TACHE_DE_RECEPTION,
+  type Franchissement,
   reprendreLesTraitants,
   type CompteursDuPassage,
   type DepotDuTravail,
@@ -33,6 +38,12 @@ import {
   type Traitants,
 } from '../queue/workers/evenement-recu';
 import { clesPii } from '../securite/pii';
+import {
+  FORMES_D_ATTENTE,
+  creerAlerteur,
+  notifieurTelegram,
+  type Alerteur,
+} from '../integrations/telegram/alertes';
 import type { Inscriptions } from './lanceur';
 
 /**
@@ -53,29 +64,108 @@ export function traitantsDeReception(prisma: PrismaClient): Traitants {
  */
 export function passageDesEvenementsRecus(
   prisma: PrismaClient,
-  depot: DepotDuTravail = depotDuTravail(prisma)
+  depot: DepotDuTravail = depotDuTravail(prisma),
+  alertes: AlertesDAttente | null = null
 ): () => Promise<CompteursDuPassage> {
-  return () => {
+  return async () => {
+    const maintenant = () => new Date(horlogeSysteme.maintenant());
     const traitants = traitantsDeReception(prisma);
-    const reprendreCoordonnees = reprendreLesAttentes(prisma, PREFIXE_ATTENTE_COORDONNEES);
+    const reprendreCoordonnees = reprendreLesAttentes(
+      prisma,
+      PREFIXE_ATTENTE_COORDONNEES,
+      maintenant
+    );
     const reprendreTraitants = reprendreLesTraitants(prisma, traitants);
-    return passerLeTravail({
+    const compteurs = await passerLeTravail({
       depot,
       dispatch: aiguiller(traitants),
       reprendre: async () => (await reprendreCoordonnees()) + (await reprendreTraitants()),
-      maintenant: () => new Date(horlogeSysteme.maintenant()),
+      maintenant,
     });
+    if (alertes !== null) await alerterLesFranchissements(alertes, maintenant());
+    return compteurs;
   };
 }
 
+// ── INT-T49 / INT-T54 : l'alerte des attentes au-delà de leur seuil, en fin de passage ─────────────
+
+/** Ce dont l'alerte des attentes a besoin : les attentes, le dernier succès, le canal (ou rien). */
+export interface AlertesDAttente {
+  lireLesAttentes(): ReturnType<ReturnType<typeof lireLesAttentes>>;
+  /** `dernierSuccesAt` du battement de la tâche : le début de la fenêtre, ou `null` au premier passage. */
+  dernierSucces(): Promise<Date | null>;
+  /** `null` : aucun canal configuré. */
+  alerteur: Pick<Alerteur, 'alerter'> | null;
+}
+
+/** L'objet d'une alerte `attente_depassee` : la forme, le type, le nombre, l'âge. Rien d'autre. */
+export function objetDAlerte(f: Franchissement) {
+  return {
+    categorie: 'attente_depassee' as const,
+    id: randomUUID(),
+    attente: {
+      forme: f.forme,
+      type: f.type,
+      nombre: f.nombre,
+      plusAncienneJours: f.plusAncienneJours,
+    },
+  };
+}
+
+/**
+ * Une alerte par franchissement. Une alerte DUE sans canal fait ÉCHOUER le passage en le nommant
+ * (`canal_alerte_absent`), et un envoi en échec aussi : le battement n'avance pas, la fenêtre est
+ * rejouée au passage suivant — une alerte perdue en silence serait pire qu'un doublon. Sans attente
+ * au-delà du seuil, rien n'est exigé.
+ */
+export async function alerterLesFranchissements(
+  a: AlertesDAttente,
+  maintenant: Date
+): Promise<void> {
+  const attentes = await a.lireLesAttentes();
+  if (attentes.length === 0) return;
+  const dus = franchissements(attentes, { maintenant, depuis: await a.dernierSucces() });
+  if (dus.length === 0) return;
+  if (a.alerteur === null) throw new Error('canal_alerte_absent');
+  for (const f of dus) await a.alerteur.alerter(objetDAlerte(f));
+}
+
+/** Le canal d'alerte du serveur, lu dans l'environnement ; `null` s'il n'est pas configuré. */
+export function canalDAlerte(env: Readonly<Record<string, string | undefined>>): Alerteur | null {
+  const jeton = env.TELEGRAM_BOT_TOKEN;
+  const salon = env.TELEGRAM_CHAT_ID;
+  if (jeton === undefined || jeton === '' || salon === undefined || salon === '') return null;
+  return creerAlerteur({
+    notifieur: notifieurTelegram(jeton, salon),
+    horloge: horlogeSysteme,
+    // Une alerte par (forme, type) au plus dans un passage : le plafond ne retient jamais une
+    // alerte due de ce passage.
+    plafondParHeure: FORMES_D_ATTENTE.length * Object.values(TypeEvenementRecu).length,
+  });
+}
+
 /** Les inscriptions du lanceur : une clé du registre, un passage. Le battement est celui du lanceur. */
-export function inscriptions(prisma: PrismaClient): Inscriptions {
+export function inscriptions(
+  prisma: PrismaClient,
+  env: Readonly<Record<string, string | undefined>> = process.env
+): Inscriptions {
   const depot = depotDuTravail(prisma);
   return {
-    evenements_recus: passageDesEvenementsRecus(prisma, {
-      ...depot,
-      battre: async () => undefined,
-    }),
+    evenements_recus: passageDesEvenementsRecus(
+      prisma,
+      { ...depot, battre: async () => undefined },
+      {
+        lireLesAttentes: lireLesAttentes(prisma),
+        dernierSucces: async () =>
+          (
+            await prisma.battement.findUnique({
+              where: { tache: TACHE_DE_RECEPTION },
+              select: { dernierSuccesAt: true },
+            })
+          )?.dernierSuccesAt ?? null,
+        alerteur: canalDAlerte(env),
+      }
+    ),
   };
 }
 
