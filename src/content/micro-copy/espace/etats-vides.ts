@@ -121,6 +121,6 @@ export const ETATS_VIDES_ESPACE: Readonly<Record<string, EtatVide>> = {
     titre: 'Ce lien n’est plus valable',
     phrase:
       'Il a peut-être déjà servi, ou il est trop ancien. Axion-IA reste joignable par écrit si besoin.',
-    action: { libelle: 'Écrire à Axion-IA', route: null },
+    action: { libelle: 'Contacter Axion-IA', route: null },
   },
 };
