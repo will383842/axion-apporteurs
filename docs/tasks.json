@@ -6415,7 +6415,8 @@
       "deps": [
         "DM-03-P",
         "DM-06",
-        "DM-11"
+        "DM-11",
+        "INT-T47-P"
       ],
       "reqs": [
         "REQ-DM-013",
@@ -6442,7 +6443,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "`GrilleContrat` (une par contrat, figée à la signature, `Contrat.grilleId` **non nul**) et `GrilleModele` (jeu complet nommé et réutilisable : « Standard », « Tête de réseau », « Zone difficile »…) ; la granularité n'est pas la famille mais **le palier** — les quatre familles commissionnées (W6, tranchée le 2026-09-03) comptent **30 paliers vendables** dans `pricing.ts`, la durée y étant un axe distinct ; une ligne porte `commissionId` (nom de REQ-INT-006), `prestationFamille`, `type ∈ {forfait, pourcentage, aucune}`, `montantCents` entier si `forfait`, `tauxBps` entier en points de base si `pourcentage` (le point de base vaut un centième de pour cent), jamais un flottant, **`cpfEligible` Boolean NOT NULL dérivé de `pricing.ts` par le script d'export (jamais saisi — 🔴 ce champ MANQUAIT et toute la garde CPF de REQ-JUR-023 reposait dessus : la gate n'avait aucune donnée à lire, synthèse M-15)**, et `motifEcart` **obligatoire dès que la ligne diffère de la grille publiée** ; 🔴 **un forfait est dû UNE FOIS par commande portant le palier — la durée est déjà dans le palier, `montantCents` n'est jamais multiplié par les journées** (DM-04, synthèse A-2) ; les cinq familles non commissionnées (développement web, maintenance, coaching récurrent, conférences, interventions sur demande) n'ont aucune ligne et sont énoncées dans l'annexe 1 ; **séquence verrouillée** KYC complet → grille complète 30/30 → génération du contrat → envoi DocuSeal : la fonction de génération refuse une grille incomplète, la fonction d'envoi refuse un contrat sans grille figée ; annexe 1 **générée** depuis la grille, jamais retapée ; une grille figée ne se modifie que par avenant (INT-T23), les lignes de commission déjà nées gardant leur `grilleVersionId` ; un palier créé au catalogue **après** la signature n'existe dans aucune grille figée → ligne `bloquee` motif **`a_qualifier`** (le cas « barème indéfini » ; `bareme_indefini` n'est pas une valeur de l'enum, arbitrage l. 410), libellé apporteur « Prestation hors grille de commissions », jamais un taux deviné, jamais u 🔴 **Complétée le 2026-09-26 (cadrage de l'architecte sur délégation de Will, partners/ADR-0022, GOV-102).** **DM-23 CRÉE `contrats`** (conflit C1, REQ-DM-013 amendée) : `apporteurId`, `gabaritVersion`, `grilleCommissionId` NOT NULL, `grilleContratId` NOT NULL dès la naissance, `statut StatutContrat`, `signeAt`, `pdfHash`, `auditTrailHash`, `pdfCle`, `auditTrailCle`, `creeAt`, et `UNIQUE (apporteur_id) WHERE statut = 'signe'` ; ainsi que `grilles_modele`, `lignes_grille_modele`, `grilles_contrat` et `lignes_grille_contrat`. Une ligne : `commissionId`, `prestationFamille FamillePrestation`, `type TypeLigneGrille {forfait, pourcentage, aucune}`, `montantCents` Int, `tauxBps` Int, `cpfEligible`, et `ecartJustification` Text — le `motifEcart` des lignes précédentes : un texte libre ne s'appelle jamais `motif...` ni `palier...` (REQ-EXT-026 et REQ-EXT-027 amendées) ; CHECK `(type = 'forfait') = (montant_cents IS NOT NULL)`, `(type = 'pourcentage') = (taux_bps IS NOT NULL)`, `montant_cents > 0`, `taux_bps` entre 1 et 10000. Journal `contrat_statut_modifie` (`{de?, vers: StatutContrat, acteurId?}`) et `grille_contrat_modifiee` (`{grilleContratId, lignes: uuid[], acteurId}` : les identifiants des lignes modifiées, jamais un compte). Contraintes W19 à intégrer (GOV-115, décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §6) : GrilleModele, GrilleContrat et contrats réservés aux apporteurs (témoin)."
+      "acceptance": "`GrilleContrat` (une par contrat, figée à la signature, `Contrat.grilleId` **non nul**) et `GrilleModele` (jeu complet nommé et réutilisable : « Standard », « Tête de réseau », « Zone difficile »…) ; la granularité n'est pas la famille mais **le palier** — les quatre familles commissionnées (W6, tranchée le 2026-09-03) comptent **30 paliers vendables** dans `pricing.ts`, la durée y étant un axe distinct ; une ligne porte `commissionId` (nom de REQ-INT-006), `prestationFamille`, `type ∈ {forfait, pourcentage, aucune}`, `montantCents` entier si `forfait`, `tauxBps` entier en points de base si `pourcentage` (le point de base vaut un centième de pour cent), jamais un flottant, **`cpfEligible` Boolean NOT NULL dérivé de `pricing.ts` par le script d'export (jamais saisi — 🔴 ce champ MANQUAIT et toute la garde CPF de REQ-JUR-023 reposait dessus : la gate n'avait aucune donnée à lire, synthèse M-15)**, et `motifEcart` **obligatoire dès que la ligne diffère de la grille publiée** ; 🔴 **un forfait est dû UNE FOIS par commande portant le palier — la durée est déjà dans le palier, `montantCents` n'est jamais multiplié par les journées** (DM-04, synthèse A-2) ; les cinq familles non commissionnées (développement web, maintenance, coaching récurrent, conférences, interventions sur demande) n'ont aucune ligne et sont énoncées dans l'annexe 1 ; **séquence verrouillée** KYC complet → grille complète 30/30 → génération du contrat → envoi DocuSeal : la fonction de génération refuse une grille incomplète, la fonction d'envoi refuse un contrat sans grille figée ; annexe 1 **générée** depuis la grille, jamais retapée ; une grille figée ne se modifie que par avenant (INT-T23), les lignes de commission déjà nées gardant leur `grilleVersionId` ; un palier créé au catalogue **après** la signature n'existe dans aucune grille figée → ligne `bloquee` motif **`a_qualifier`** (le cas « barème indéfini » ; `bareme_indefini` n'est pas une valeur de l'enum, arbitrage l. 410), libellé apporteur « Prestation hors grille de commissions », jamais un taux deviné, jamais u 🔴 **Complétée le 2026-09-26 (cadrage de l'architecte sur délégation de Will, partners/ADR-0022, GOV-102).** **DM-23 CRÉE `contrats`** (conflit C1, REQ-DM-013 amendée) : `apporteurId`, `gabaritVersion`, `grilleCommissionId` NOT NULL, `grilleContratId` NOT NULL dès la naissance, `statut StatutContrat`, `signeAt`, `pdfHash`, `auditTrailHash`, `pdfCle`, `auditTrailCle`, `creeAt`, et `UNIQUE (apporteur_id) WHERE statut = 'signe'` ; ainsi que `grilles_modele`, `lignes_grille_modele`, `grilles_contrat` et `lignes_grille_contrat`. Une ligne : `commissionId`, `prestationFamille FamillePrestation`, `type TypeLigneGrille {forfait, pourcentage, aucune}`, `montantCents` Int, `tauxBps` Int, `cpfEligible`, et `ecartJustification` Text — le `motifEcart` des lignes précédentes : un texte libre ne s'appelle jamais `motif...` ni `palier...` (REQ-EXT-026 et REQ-EXT-027 amendées) ; CHECK `(type = 'forfait') = (montant_cents IS NOT NULL)`, `(type = 'pourcentage') = (taux_bps IS NOT NULL)`, `montant_cents > 0`, `taux_bps` entre 1 et 10000. Journal `contrat_statut_modifie` (`{de?, vers: StatutContrat, acteurId?}`) et `grille_contrat_modifiee` (`{grilleContratId, lignes: uuid[], acteurId}` : les identifiants des lignes modifiées, jamais un compte). Contraintes W19 à intégrer (GOV-115, décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §6) : GrilleModele, GrilleContrat et contrats réservés aux apporteurs (témoin). AMENDEMENT (Décision D4 de Williams du 2026-10-01, dans la fenêtre de la coordination : à la question du format de la grille publiée, Williams répond « OUI OK - A (recommandé) : axion-ia envoie automatiquement une grille complète à Partners. Quand vous changez un prix dans axion-ia, l'espace apporteur se met à jour tout seul. Une seule source, aucun risque d'erreur. ») : `cpfEligible`, `prixReferenceHt` et `commissionPubliee` viennent de la grille publiée en `schema: 2` (INT-T47-A, INT-T47-P), jamais d'un script d'export propre à Partners ni d'une retape ; A1-08 de la vérification transversale réglée."
     },
     {
       "id": "UX-P1-14",
@@ -17395,6 +17396,57 @@
       "estimateDays": 0.25,
       "statut": "a_faire",
       "acceptance": "Décision D2 de Williams du 2026-10-01, dans la fenêtre de la coordination : à la question « A = garder l'art. 3.3 tel quel (« destinataire d'un devis de moins de six mois », donc devis ENVOYÉ), en ajoutant dans axion-ia un événement « devis émis » vers Partners ; B = passer l'art. 3.3 à « devis signé » », Williams répond : « oUi A. par contre des qu'un clietn a deja signé un devis, il faut dire qu'il nest pas disponible non ? car ce cleitn on l'a deja non ? UN PEU COmme si c'etait un apportuer d'affaire qui l'avait deja demarcher non ? ». TROU constaté par A01 en vérifiant le complément : l'art. 3.3 compte six mois depuis l'ÉMISSION du devis ; un devis SIGNÉ il y a plus de six mois et pas encore facturé ne rend donc plus l'entreprise indisponible, alors que la Société la tient déjà. Le complément de Williams le ferme : un devis signé rend l'entreprise indisponible tant qu'il n'est pas entièrement facturé, puis la fenêtre « cliente » de vingt-quatre mois prend le relais à la facture. (1) L'art. 3.3 du gabarit ajoute, après « destinataire d'un devis de moins de six mois », le cas d'une entreprise « ayant accepté un devis qui n'est pas encore entièrement facturé », sans limite de durée. (2) C'est un AVENANT : il est écrit avant le premier envoi DocuSeal, et sa formulation finale est validée par Williams avant la fusion. (3) TÉMOIN rouge d'abord : le gabarit sans ce cas est refusé par la concordance du contrat ; avec lui, accepté. Relecture de la lentille juridique."
+    },
+    {
+      "id": "INT-T47-A",
+      "titre": "La grille publiée par axion-ia passe en schema 2 : cpfEligible, prixReferenceHt et commissionPubliee par palier",
+      "phase": 1,
+      "repo": "axionia",
+      "zone": "argent",
+      "paths": [
+        "axionia/src/server/partners-sync/grille/export.ts",
+        "axionia/src/server/partners-sync/__tests__/grille-export-schema-2.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [
+        "argent"
+      ],
+      "deps": [],
+      "reqs": [
+        "REQ-DM-014",
+        "REQ-INT-017"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "acceptance": "Décision D4 de Williams du 2026-10-01, dans la fenêtre de la coordination : à la question du format de la grille publiée, Williams répond « OUI OK - A (recommandé) : axion-ia envoie automatiquement une grille complète à Partners. Quand vous changez un prix dans axion-ia, l'espace apporteur se met à jour tout seul. Une seule source, aucun risque d'erreur. ». A1-08 de la vérification transversale réglée, option A. (1) La publication de la grille (DM-03-A) passe en `schema: 2` : chaque palier porte `cpfEligible`, `prixReferenceHt` et `commissionPubliee`, dérivés de `pricing.ts` et de `COMMERCIAL_COMMISSIONS`, jamais retapés ; l'empreinte est recalculée. (2) Le passage se fait en LOCKSTEP avec INT-T47-P : axion-ia ne publie le schema 2 qu'une fois Partners prêt à le lire. (3) TÉMOIN rouge d'abord : un changement de prix dans `pricing.ts` change la grille publiée et son empreinte."
+    },
+    {
+      "id": "INT-T47-P",
+      "titre": "Partners lit la grille en schema 2, sans retape : la correspondance des types de commission est explicite",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "argent",
+      "paths": [
+        "src/server/grille/import.ts",
+        "tests/integration/grille-schema-2.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [
+        "argent"
+      ],
+      "deps": [],
+      "reqs": [
+        "REQ-DM-014",
+        "REQ-ARG-031",
+        "REQ-INT-017"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "acceptance": "Décision D4 de Williams du 2026-10-01, dans la fenêtre de la coordination : à la question du format de la grille publiée, Williams répond « OUI OK - A (recommandé) : axion-ia envoie automatiquement une grille complète à Partners. Quand vous changez un prix dans axion-ia, l'espace apporteur se met à jour tout seul. Une seule source, aucun risque d'erreur. ». A1-08 réglée, option A. (1) L'import (DM-03-P) lit la grille en `schema: 2` et rend `cpfEligible`, `prixReferenceHt` et `commissionPubliee` par palier, sans en recopier aucune valeur (REQ-ARG-031) ; l'empreinte reçue est recontrôlée. (2) La correspondance des types de commission d'axion-ia vers ceux de Partners (forfait, pourcentage, aucune) est écrite en un seul endroit et testée. (3) Un `schema` inconnu est refusé et nommé (échec fermé). (4) TÉMOINS rouges d'abord : une grille schema 2 est lue ; une grille d'un schema inconnu est refusée."
     }
   ]
 }

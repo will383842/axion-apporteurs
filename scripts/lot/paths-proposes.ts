@@ -626,6 +626,13 @@ const MANUELS: Record<string, string[]> = {
     'docs/contrat/CONTRAT-APPORTEUR-V1.md',
     'tests/unit/contrat/anteriorite-devis-signe.spec.ts',
   ],
+  // La grille publiée en schema 2 (décision de Williams du 2026-10-01) : leurs témoins n'existent pas
+  // encore, leurs chemins sont ceux de leur fiche.
+  'INT-T47-A': [
+    'axionia/src/server/partners-sync/grille/export.ts',
+    'axionia/src/server/partners-sync/__tests__/grille-export-schema-2.spec.ts',
+  ],
+  'INT-T47-P': ['src/server/grille/import.ts', 'tests/integration/grille-schema-2.spec.ts'],
 };
 
 /**
