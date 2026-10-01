@@ -227,7 +227,10 @@
         "DM-03-A",
         "DM-03-P",
         "DM-23",
-        "GOV-080"
+        "GOV-080",
+        "INT-T47-A",
+        "INT-T47-P",
+        "JUR-T43"
       ]
     },
     {
@@ -436,7 +439,10 @@
       "etape": 7,
       "phase": 1,
       "taches": [
-        "DM-10-P"
+        "DM-10-P",
+        "INT-T46-A",
+        "INT-T46-P",
+        "JUR-T42"
       ]
     },
     {
@@ -1139,6 +1145,7 @@
       "taches": [
         "SEC-12",
         "SEC-19",
+        "SEC-43",
         "T-ARG-038"
       ]
     },
@@ -1792,7 +1799,8 @@
       "phase": 0,
       "taches": [
         "DM-03-A",
-        "DM-03-P"
+        "DM-03-P",
+        "INT-T47-P"
       ]
     },
     {
@@ -1947,7 +1955,9 @@
       "taches": [
         "GOV-088",
         "INT-T01a",
-        "INT-T45"
+        "INT-T45",
+        "INT-T46-A",
+        "INT-T48-P"
       ]
     },
     {
@@ -1966,7 +1976,8 @@
         "GOV-088",
         "INT-T01a",
         "INT-T01c",
-        "INT-T05"
+        "INT-T05",
+        "INT-T46-P"
       ]
     },
     {
@@ -1996,7 +2007,8 @@
       "phase": -1,
       "taches": [
         "INT-T01b",
-        "INT-T04"
+        "INT-T04",
+        "INT-T48-A"
       ]
     },
     {
@@ -2110,7 +2122,7 @@
     {
       "id": "REQ-INT-014",
       "domaine": "integration",
-      "texte": "API 1 `GET /attributions?siren=` : auth = jeton bearer dédié + allowlist IP + 60/min + **404 sans jeton** (REQ-SEC-012), route `/api/integrations/axionia/attributions?siren=` ; réponse **minimale** `{statut: libre|attribuee|cliente, until: 'AAAA-MM'|null, apporteurRef: opaque|null}` — **jamais nom, prénom, e-mail** (R3 : l'identité d'un apporteur ne traverse jamais la frontière) ; chaque appel journalisé (siren, ipHash, résultat) ; côté axionia, timeout 2 s, cache 5 min, échec ouvert : le devis se crée avec `attributionVerifiee=false` et une alerte, la vérification est rejouée par job. Amendement W19 (décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §4.2) : Une attribution de conseiller répond comme une attribution d'apporteur au même stade : `attribuee`, `until`, et une `apporteurRef` opaque de même forme que celle d'un apporteur. Jamais `libre`, jamais un champ de plus, jamais une valeur qui distingue la population. Test d'indistinction (QA-T31). Le consommateur axion-ia (INT-T07-A) ne peut pas distinguer : aucune commission d'apporteur n'est versée sur la foi de l'API 1, la chaîne d'argent de Partners aiguillant par porteur réel (REQ-DM-021).",
+      "texte": "API 1 `GET /attributions?siren=` : auth = jeton bearer dédié + allowlist IP + 60/min + **404 sans jeton** (REQ-SEC-012), route `/api/integrations/axionia/attributions?siren=` ; réponse **minimale** `{statut: libre|attribuee|cliente, until: 'AAAA-MM'|null, apporteurRef: opaque|null}` — plus `nomAffichable` (prénom et initiale du nom, null si libre), sur décision de Williams du 2026-10-01 (option B) revenant sur R3 ; **jamais e-mail, téléphone, identifiant ni adresse** ; côté axion-ia, affiché seulement à qui crée ou lit un devis, hors de tout journal, conservé le seul temps du cache ; le cas d'une prise en charge par un conseiller salarié attend la décision de Williams ; chaque appel journalisé (siren, ipHash, résultat) ; côté axionia, timeout 2 s, cache 5 min, échec ouvert : le devis se crée avec `attributionVerifiee=false` et une alerte, la vérification est rejouée par job. Amendement W19 (décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §4.2) : Une attribution de conseiller répond comme une attribution d'apporteur au même stade : `attribuee`, `until`, et une `apporteurRef` opaque de même forme que celle d'un apporteur. Jamais `libre`, jamais un champ de plus que la forme commune, jamais une valeur qui nomme la population. Test d'indistinction (QA-T31). Le consommateur axion-ia (INT-T07-A) ne peut pas distinguer : aucune commission d'apporteur n'est versée sur la foi de l'API 1, la chaîne d'argent de Partners aiguillant par porteur réel (REQ-DM-021).",
       "source": "audit-outil §2.3, §5 étape 9 ; audit anti-abus C13 ; INT-F11",
       "statut": "active",
       "remplaceePar": null,
@@ -2167,7 +2179,9 @@
       "phase": 0,
       "taches": [
         "DM-03-A",
-        "DM-03-P"
+        "DM-03-P",
+        "INT-T47-A",
+        "INT-T47-P"
       ]
     },
     {
@@ -2905,6 +2919,7 @@
       "taches": [
         "DM-16",
         "SEC-05",
+        "SEC-43",
         "UX-P2-04",
         "UX-P2-06",
         "UX-P2-09"
@@ -3456,7 +3471,9 @@
         "INT-T01a",
         "INT-T01b",
         "INT-T01c",
-        "INT-T45"
+        "INT-T45",
+        "INT-T46-P",
+        "INT-T48-P"
       ]
     },
     {

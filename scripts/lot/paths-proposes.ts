@@ -601,6 +601,55 @@ const MANUELS: Record<string, string[]> = {
     'scripts/gates/gov-depot.ts',
     'tests/unit/gouvernance/protection-de-main-strict.spec.ts',
   ],
+  // SEC-43 (ouverture limitée de l'espace avant signature, décision de Williams du 2026-10-01) : son
+  // témoin n'existe pas encore, ses chemins sont ceux de sa fiche.
+  'SEC-43': [
+    'src/domain/apporteur/acces-espace.ts',
+    'src/domain/apporteur/matrice.ts',
+    'src/app/(espace)/mon-contrat/page.tsx',
+    'tests/unit/securite/acces-espace-avant-signature.spec.ts',
+  ],
+  // Antériorité sur le devis émis, et devis signé non facturé (décision de Williams du 2026-10-01) :
+  // leurs témoins n'existent pas encore, leurs chemins sont ceux de leur fiche.
+  'INT-T46-A': [
+    'axionia/src/server/partners-sync/producteurs/devis.ts',
+    'axionia/src/server/partners-sync/__tests__/producteur-devis-emis.spec.ts',
+  ],
+  'INT-T46-P': [
+    'packages/contracts/events.ts',
+    'packages/contracts/contracts.v2.json',
+    'packages/contracts/contracts.sha256',
+    'src/server/integrations/axionia/reception.ts',
+    'tests/integration/devis-emis.spec.ts',
+  ],
+  'JUR-T42': [
+    'docs/contrat/CONTRAT-APPORTEUR-V1.md',
+    'tests/unit/contrat/anteriorite-devis-signe.spec.ts',
+  ],
+  // La grille publiée en schema 2 (décision de Williams du 2026-10-01) : leurs témoins n'existent pas
+  // encore, leurs chemins sont ceux de leur fiche.
+  'INT-T47-A': [
+    'axionia/src/server/partners-sync/grille/export.ts',
+    'axionia/src/server/partners-sync/__tests__/grille-export-schema-2.spec.ts',
+  ],
+  'INT-T47-P': ['src/server/grille/import.ts', 'tests/integration/grille-schema-2.spec.ts'],
+  // Le prorata de la remise sur le forfait (décision de Williams du 2026-10-01) : leurs témoins
+  // n'existent pas encore, leurs chemins sont ceux de leur fiche.
+  'JUR-T43': [
+    'docs/contrat/CONTRAT-APPORTEUR-V1.md',
+    'tests/unit/contrat/prorata-de-remise.spec.ts',
+  ],
+  'INT-T48-P': [
+    'packages/contracts/payloads.ts',
+    'packages/contracts/contracts.v2.json',
+    'packages/contracts/contracts.sha256',
+    'tests/integration/devis-signe-prix.spec.ts',
+  ],
+  'INT-T48-A': [
+    'axionia/src/server/partners/commission.ts',
+    'axionia/src/server/partners-sync/producteurs/devis.ts',
+    'axionia/src/server/partners/__tests__/commission-prorata.spec.ts',
+  ],
 };
 
 /**
