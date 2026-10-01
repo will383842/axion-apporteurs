@@ -12,6 +12,17 @@ import { describe, it, expect } from 'vitest';
 import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { SEUILS } from '../../../src/domain/seuils/ssot';
+import {
+  CATEGORIES_ALERTE,
+  type ObjetAlerte,
+} from '../../../src/server/integrations/telegram/alertes';
+import {
+  ageDuDernierVidage,
+  jugerLeDernierVidage,
+  PREFIXES,
+  type Depot,
+} from '../../../scripts/sauvegarde/cycle';
 
 const CYCLE = 'scripts/sauvegarde/cycle.ts';
 const COMMANDES = ['rechiffrer', 'exercice', 'fraicheur', 'clairs'] as const;
@@ -105,5 +116,79 @@ describe('REQ-QA-023 — l’image d’exécution porte curl, pour la sonde de l
         )
       ),
     ]).toContain('curl');
+  });
+});
+
+// ── (1) l'âge du dernier vidage ─────────────────────────────────────────────
+
+/** Un dépôt en mémoire : des clés et leurs dates de dépôt, rien d'autre. */
+function depotDe(objets: Record<string, string>): Depot {
+  return {
+    lister: async (prefixe) =>
+      Object.entries(objets)
+        .filter(([cle]) => cle.startsWith(prefixe))
+        .map(([cle, date]) => ({ cle, date })),
+    lire: async () => Buffer.alloc(0),
+    ecrire: async () => undefined,
+    supprimer: async () => undefined,
+  };
+}
+
+const MAINTENANT = new Date('2026-10-01T12:00:00Z');
+const SEUIL = SEUILS.DERNIER_VIDAGE_MAX_MINUTES.valeur;
+const ilYA = (minutes: number) => new Date(MAINTENANT.getTime() - minutes * 60_000).toISOString();
+
+describe('REQ-QA-023 — l’âge du dernier vidage, au plus le seuil de la SSOT, alerté (QA-T57, point 1)', () => {
+  it('REQ-QA-023 — le seuil vit dans la SSOT, sourcé et daté : deux heures', () => {
+    expect(SEUILS.DERNIER_VIDAGE_MAX_MINUTES.valeur).toBe(120);
+    expect(SEUILS.DERNIER_VIDAGE_MAX_MINUTES.unite).toBe('minutes');
+    expect(SEUILS.DERNIER_VIDAGE_MAX_MINUTES.source).toMatch(/QA-T57/);
+  });
+
+  it('REQ-QA-023 — la catégorie close vidage_perime existe, distincte de la restauration', () => {
+    expect(CATEGORIES_ALERTE).toContain('vidage_perime');
+  });
+
+  it('REQ-QA-023 — un vidage chiffré récent passe, sans alerte ; le plus RÉCENT est jugé', async () => {
+    const depot = depotDe({
+      [`${PREFIXES.chiffres}vieux.dump.chiffre`]: ilYA(SEUIL * 10),
+      [`${PREFIXES.chiffres}recent.dump.chiffre`]: ilYA(SEUIL - 1),
+    });
+    expect(await ageDuDernierVidage(depot, MAINTENANT, SEUIL)).toMatchObject({
+      ok: true,
+      ageMinutes: SEUIL - 1,
+    });
+    const alertes: ObjetAlerte[] = [];
+    await jugerLeDernierVidage(depot, MAINTENANT, SEUIL, async (o) => void alertes.push(o));
+    expect(alertes).toEqual([]);
+  });
+
+  it('REQ-QA-023 — un vidage EN CLAIR récent compte aussi : la plateforme a bien vidé', async () => {
+    const depot = depotDe({ [`${PREFIXES.depot}base.dump`]: ilYA(5) });
+    expect((await ageDuDernierVidage(depot, MAINTENANT, SEUIL)).ok).toBe(true);
+  });
+
+  it('REQ-QA-023 — TÉMOIN : un dernier vidage plus vieux que le seuil rougit, nommé, et alerte UNE fois sous vidage_perime', async () => {
+    const depot = depotDe({ [`${PREFIXES.chiffres}base.dump.chiffre`]: ilYA(SEUIL + 1) });
+    const r = await ageDuDernierVidage(depot, MAINTENANT, SEUIL);
+    expect(r.ok).toBe(false);
+    expect(r.motif).toContain(`${SEUIL + 1} min`);
+    const alertes: ObjetAlerte[] = [];
+    await jugerLeDernierVidage(depot, MAINTENANT, SEUIL, async (o) => void alertes.push(o));
+    expect(alertes.map((a) => a.categorie)).toEqual(['vidage_perime']);
+  });
+
+  it('REQ-QA-023 — TÉMOIN : aucun vidage, ou une date illisible, rougit et alerte', async () => {
+    expect((await ageDuDernierVidage(depotDe({}), MAINTENANT, SEUIL)).ok).toBe(false);
+    const illisible = depotDe({ [`${PREFIXES.chiffres}x.chiffre`]: 'pas une date' });
+    expect((await ageDuDernierVidage(illisible, MAINTENANT, SEUIL)).ok).toBe(false);
+  });
+
+  it('REQ-QA-023 — CONTRE-TÉMOIN : un verdict d’exercice récent n’est PAS un vidage', async () => {
+    const depot = depotDe({
+      [`${PREFIXES.exercices}2026-10-01.json`]: ilYA(1),
+      [`${PREFIXES.chiffres}base.dump.chiffre`]: ilYA(SEUIL * 3),
+    });
+    expect((await ageDuDernierVidage(depot, MAINTENANT, SEUIL)).ok).toBe(false);
   });
 });
