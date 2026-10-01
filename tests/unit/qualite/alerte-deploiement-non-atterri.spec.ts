@@ -3,7 +3,7 @@
  * QA-T54 — UN DÉPLOIEMENT QUI N'ATTERRIT PAS ALERTE, SANS DONNÉE PERSONNELLE.
  *
  * Condition de mise en service posée par la lentille `securite` (relayée par la coordination le
- * 2026-09-30), sur le modèle de QA-T53 : sans retour automatique de la plateforme, c'est le rouge de
+ * 2026-09-30), sur le modèle de l'alerte `rechiffrement_echoue` : sans retour automatique de la plateforme, c'est le rouge de
  * `deploy:coolify` qui voit un déploiement malade, et un rouge dans l'onglet Actions ne réveille
  * personne. Une catégorie CLOSE, `deploiement_non_atterri`.
  *
