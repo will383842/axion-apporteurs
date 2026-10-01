@@ -456,7 +456,9 @@ texte ; version texte seul jointe (multipart), aucune image distante, aucun pixe
 **Console, « À appeler aujourd'hui » (UX-P1-07, fiche UX-P1-06).** En tête de la file de qualification,
 un onglet par défaut « À appeler aujourd'hui », trié par priorité (REQ-DM-062), chaque ligne portant sa
 raison en clair (« Adresse webmail — vérification suggérée », « Sans réponse depuis 5 jours ouvrés »,
-« Tiré au sort », « Premier dépôt de l'apporteur »), le bouton `tel:` et le chrono SLA. La fiche montre
+« Tiré au sort »), le bouton `tel:` et le chrono SLA. Le premier dépôt de l'apporteur et la rafale de
+dépôts sont des critères de tri, jamais affichés (question 6, confirmée par Williams le 2026-09-29 ;
+HYP-W20-VERIFICATION ; alignement du rattrapage 44). La fiche montre
 l'état de la demande (planifiée, envoyée, remise, rebond, réponse avec son horodatage) avant la zone de
 qualification. Cinq états : liste, vide (« Personne à appeler aujourd'hui »), chargement, erreur, conflit
 de version (REQ-CPL-024).
