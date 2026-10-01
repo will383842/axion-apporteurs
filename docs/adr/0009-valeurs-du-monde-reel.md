@@ -208,7 +208,9 @@ source de leur valeur comme de leur motif.
   Williams écrite dans la fenêtre de la coordination, chaque fois en réponse à une question de la
   coordination dont l'acceptance de GOV-133 cite le texte : pour le mandat (06:52Z), « oui je
   confirme c'est moi qui valide car je n'ai pas d'expert comptable » ; pour le contrat v1, demandé le
-  2026-09-30 et confirmé à la question de 07:22Z, « oui ». Les deux tâches sont levées (`attente_externe` → `a_faire`, dépôt
+  2026-09-30, puis validé en connaissance de cause à la question de 07:28:44Z (« Oui, je valide le
+  contrat v1 tel qu'expliqué. » ou « Non, je veux d'abord le relire. »), « OUI » à 07:31:11Z, un
+  premier « oui » ayant été repris parce qu'il précédait l'explication. Les deux tâches sont levées (`attente_externe` → `a_faire`, dépôt
   `partners`) : ce qui reste à livrer est la décision de Williams question par question
   (`QUESTIONS_POUR_WILL`), et les valeurs encore attendues du gabarit sont des configurations à
   sentinelle, refusées à la mise en service et jamais au plan. Plus aucune tâche n'est différée.
