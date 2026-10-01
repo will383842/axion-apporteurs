@@ -225,7 +225,7 @@ interface Delegue<R, W, C, U, O> {
   updateMany(args: { where: W; data: U }): PromiseLike<{ count: number }>;
 }
 
-/** Une sélection Prisma : chaque colonne rendue à `true`, et rien d'autre. */
+/** La sélection passée au client — chaque colonne rendue à `true`, et rien d'autre. */
 type Selection = Readonly<Record<string, true>>;
 
 type SansProprietaire<C> = Omit<C, 'id' | 'apporteurId' | 'apporteur'>;
