@@ -97,7 +97,7 @@ const sansUtm = (p: Record<string, unknown>) =>
   Object.fromEntries(Object.entries(p).filter(([cle]) => cle !== 'utm'));
 
 describe('REQ-JUR-029 — la charge conservée d’une candidature ne porte plus `utm`', () => {
-  it('une candidature reçue AVEC `utm` est inscrite sans lui ; tout le reste est conservé', async () => {
+  it('REQ-JUR-029 : une candidature reçue AVEC `utm` est inscrite sans lui ; tout le reste est conservé', async () => {
     const payload = FIXTURE.evenement.payload;
     expect(payload.utm).not.toBeNull();
     const { statut, inscrites } = await recevoir(
@@ -111,7 +111,7 @@ describe('REQ-JUR-029 — la charge conservée d’une candidature ne porte plus
     expect(inscrites[0]!.charge).toEqual(sansUtm(payload));
   });
 
-  it('`utm` nul est retiré aussi : la clé n’existe pas dans la charge conservée', async () => {
+  it('REQ-JUR-029 : `utm` nul est retiré aussi : la clé n’existe pas dans la charge conservée', async () => {
     const { inscrites } = await recevoir('candidature.recue', FIXTURE.evenement.subject_ref, {
       ...FIXTURE.evenement.payload,
       utm: null,
@@ -119,7 +119,7 @@ describe('REQ-JUR-029 — la charge conservée d’une candidature ne porte plus
     expect(Object.hasOwn(inscrites[0]!.charge, 'utm')).toBe(false);
   });
 
-  it('REQ-DM-036 — le `payload_hash` reste celui du corps reçu ENTIER, `utm` compris', async () => {
+  it('REQ-DM-036 : le `payload_hash` reste celui du corps reçu ENTIER, `utm` compris', async () => {
     const { inscrites, corps } = await recevoir(
       'candidature.recue',
       FIXTURE.evenement.subject_ref,
@@ -129,7 +129,7 @@ describe('REQ-JUR-029 — la charge conservée d’une candidature ne porte plus
     expect(inscrites[0]!.payloadHash).toBe(createHash('sha256').update(corps).digest('hex'));
   });
 
-  it('le snapshot de la candidature se lit toujours sur la charge conservée (`reponsesJson` reste)', async () => {
+  it('REQ-DM-036 : le snapshot de la candidature se lit toujours sur la charge conservée (`reponsesJson` reste)', async () => {
     const { inscrites } = await recevoir(
       'candidature.recue',
       FIXTURE.evenement.subject_ref,

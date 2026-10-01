@@ -43,7 +43,7 @@ for (const nom of NOMS_DES_SECRETS) env[nom] = randomBytes(32).toString('hex');
 const SECRET = env.AXIONIA_WEBHOOK_SECRET!;
 
 describe('REQ-JUR-029 — `evenements_recus.charge` ne conserve pas `utm`', () => {
-  it('une candidature reçue avec `utm` est inscrite sans lui, et son hash est celui du corps entier', async () => {
+  it('REQ-JUR-029 · REQ-DM-036 : une candidature reçue avec `utm` est inscrite sans lui, et son hash est celui du corps entier', async () => {
     const eventId = randomUUID();
     const corps = JSON.stringify({
       event_id: eventId,
