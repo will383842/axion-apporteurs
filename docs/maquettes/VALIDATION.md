@@ -13,10 +13,21 @@
 | --- | --- | --- | --- | --- |
 | Accueil (3 chiffres, 1 alerte, 1 champ, 4 onglets) | `accueil.html` | UX-P1-08 | 2026-09-19 | Will |
 | Entreprise (recherche + carte 4 états + « Déposer ») | `entreprise.html` | UX-P1-01 | 2026-09-19 | Will |
-| Déposer un contact | `deposer.html` | UX-P1-02 | 2026-09-19 | Will |
-| Mes entreprises | `mes-entreprises.html` | UX-P1-05 | 2026-09-19 | Will |
+| Déposer un contact (W20 : quatre coordonnées, message, carte Annuler / Corriger) | `deposer.html` | UX-P1-02 | — | — |
+| Mes entreprises (W20 : badges de la confirmation) | `mes-entreprises.html` | UX-P1-05 | — | — |
+| Réponse du contact (page publique /confirmer) | `confirmation-contact.html` | UX-P1-42 | — | — |
 | Mes commissions | `mes-commissions.html` | UX-P2-01 | 2026-09-19 | Will |
 | Ma conformité / Mon profil | `conformite.html` | UX-P1-09 | 2026-09-19 | Will |
+
+### Séance de validation W20 (confirmation par e-mail)
+
+Quatre maquettes, à valider ensemble avant toute tâche d'écran W20 (UX-P1-40, `docs/chantiers/W20-confirmation-par-email.md` §4) :
+`deposer.html` (le formulaire, le message au-dessus du bouton, le décompte des interactions écrit dans la
+note de l'état « Formulaire (depuis la carte) », la carte « Annuler / Corriger » et ses suites),
+`mes-entreprises.html` (l'état « Les badges de la confirmation »), `confirmation-contact.html` (la page du
+contact, de 320 à 414 px) et `file-qualification.html` (l'onglet « À appeler aujourd'hui », qui se valide
+avec les maquettes de la console). `deposer.html` et `mes-entreprises.html`, validées le 2026-09-19, ont
+changé en substance : leur ligne repart vide.
 
 ## Console
 
