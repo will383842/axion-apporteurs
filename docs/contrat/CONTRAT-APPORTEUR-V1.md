@@ -201,26 +201,43 @@ l'article 3.3.
 présent contrat : une attribution reconductible constituerait un portefeuille permanent, que les parties
 entendent écarter (article 1.4).*
 
-**3.5 — Concours entre deux Apporteurs.** Lorsque deux Apporteurs déclarent la même entreprise,
-l'attribution revient à celui dont la déclaration porte **l'horodatage serveur le plus ancien**. Cette
-règle s'applique de plein droit, sans appréciation de la Société, quelles que soient l'ancienneté ou
-l'intensité des démarches invoquées.
+**3.5 — Entreprise déjà prise, concours entre Apporteurs.** Une entreprise peut être déjà prise **par un
+autre apporteur ou par la Société ou ses préposés**, les préposés de la Société s'entendant des personnes
+qu'elle emploie, et non des préposés de l'Apporteur mentionnés à l'article 2. **L'effet pour l'Apporteur
+est le même quel que soit l'occupant, et la Société ne révèle jamais qui occupe une entreprise donnée.**
+Lorsque deux Apporteurs déclarent la même entreprise, l'attribution revient à celui dont la déclaration
+porte **l'horodatage serveur le plus ancien**. Cette règle s'applique de plein droit, sans appréciation de
+la Société, quelles que soient l'ancienneté ou l'intensité des démarches invoquées.
 
-L'Apporteur dont la déclaration est postérieure est informé que l'entreprise est déjà suivie ; **l'identité
-du premier déclarant ne lui est jamais communiquée**. **Deux déclarations au plus sont conservées en
-attente par entreprise, dans l'ordre de leur horodatage ; au-delà, la déclaration n'est pas conservée et
-l'Apporteur en est informé. Lorsque l'attribution en cours prend fin, l'Apporteur dont la déclaration est
-en attente au premier rang en est informé et dispose de quinze jours pour déclarer à nouveau l'entreprise ;
-à défaut, sa déclaration est effacée et l'entreprise redevient librement déclarable par tous. Aucune
-attribution ne naît d'une déclaration conservée sans nouvelle déclaration de l'Apporteur. Une déclaration
-en attente s'éteint en tout état de cause douze mois après son enregistrement.**
+L'Apporteur dont la déclaration est postérieure est informé que l'entreprise n'est pas disponible ;
+**l'identité de celui qui l'occupe ne lui est jamais communiquée**. **Deux déclarations au plus sont
+conservées en attente par entreprise, dans l'ordre de leur horodatage ; au-delà, la déclaration n'est pas
+conservée et l'Apporteur en est informé. Lorsque l'attribution en cours, ou la prise en charge de
+l'entreprise par la Société ou ses préposés, prend fin, l'Apporteur dont la déclaration est en attente au
+premier rang en est informé et dispose de quinze jours pour déclarer à nouveau l'entreprise ; à défaut, sa
+déclaration est effacée et l'entreprise redevient librement déclarable par tous. Aucune attribution ne naît
+d'une déclaration conservée sans nouvelle déclaration de l'Apporteur. Une déclaration en attente s'éteint
+en tout état de cause douze mois après son enregistrement.**
+
+**La prise en charge d'une entreprise par la Société ou ses préposés obéit aux mêmes bornes qu'une
+attribution**, la Société et l'ensemble de ses préposés comptant pour un seul occupant : elle ne peut
+excéder **{{FENETRE_MOIS}} mois**, elle prend fin par anticipation lorsque, dans un délai de
+**{{PEREMPTION_JOURS}} jours**, aucun rendez-vous n'a été tenu, aucun devis n'a été émis et aucune commande
+n'a été signée, et elle ne fait l'objet d'aucune reconduction. **La Société ne prend pas en charge une
+entreprise dont l'attribution ou la prise en charge a pris fin depuis moins de
+{{CARENCE_CONSEILLER_JOURS}} jours**, quel qu'en ait été l'occupant, ni pendant le délai de quinze jours
+ouvert à l'Apporteur en attente au premier rang.
+
+**La Société n'utilise ni les vérifications d'entreprise faites par un Apporteur, ni ses déclarations
+refusées ou en attente, ni les coordonnées qu'il a déclarées, pour prendre elle-même en charge une
+entreprise.**
 
 Les parties conviennent que l'horodatage attribué par le serveur de la Société fait foi entre elles
 **jusqu'à preuve contraire** pour l'application du présent article, conformément à l'article 1356 du code
-civil. Cet horodatage est inscrit
+civil, **quel que soit l'occupant de l'entreprise**. Cet horodatage est inscrit
 dans un journal inaltérable et chaîné ; l'Apporteur peut en obtenir sur simple demande un extrait relatif
-à ses propres déclarations. Une déclaration préparée hors connexion est horodatée à sa réception par le
-serveur.
+à ses propres déclarations, qui ne révèle pas qui occupe l'entreprise. Une déclaration préparée hors
+connexion est horodatée à sa réception par le serveur.
 
 **3.6 — Groupes de sociétés.** Chaque personne morale dispose de son propre SIREN. L'attribution d'une
 filiale n'emporte aucun droit sur sa société mère ni sur les autres sociétés du groupe.
