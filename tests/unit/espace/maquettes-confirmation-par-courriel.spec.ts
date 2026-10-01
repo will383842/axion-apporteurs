@@ -159,7 +159,10 @@ function fautesDesBadges(html: string): string[] {
     .filter((l) => !lu.includes(l.replace(/’/g, "'")) && !lu.includes(l.replace(/'/g, '’')))
     .map((l) => `badge absent : « ${l} »`);
   const aide = PHRASE_D_AIDE();
-  const n = lu.split(aide.replace(/'/g, '’')).length - 1 + (lu.split(aide).length - 1);
+  // Les deux graphies de l'apostrophe, comptées UNE fois chacune : une phrase sans apostrophe n'a
+  // qu'une graphie, et la compter deux fois doublerait le total.
+  const graphies = new Set([aide, aide.replace(/'/g, '’')]);
+  const n = [...graphies].reduce((t, g) => t + lu.split(g).length - 1, 0);
   if (n !== 2) fautes.push(`phrase d’aide présente ${n} fois, attendue sous deux badges`);
   return fautes;
 }
