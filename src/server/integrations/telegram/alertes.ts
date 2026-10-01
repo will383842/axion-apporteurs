@@ -86,6 +86,15 @@ export const CATEGORIES_ALERTE = [
    * ni la clé du vidage ni le motif de l'échec n'entrent dans le message.
    */
   'rechiffrement_echoue',
+  /**
+   * `QA-T54` — un déploiement dont l'atterrissage n'est pas vérifié (`REQ-GOV-014`). Le job
+   * `deployer` de `.github/workflows/deploy.yml` ne fait que vérifier, et rougit quand le sha servi
+   * n'est pas le sha fusionné (en-tête absent ou délai dépassé compris) ou quand `readyz` n'est pas
+   * prêt ; c'est le job `alerter`, À PART (`scripts/gates/deploy-verify.ts --alerter`, après un
+   * `deployer` rouge ou annulé), qui émet l'alerte. Le message ne porte que le sha attendu, le sha
+   * servi et l'environnement (`ObjetAlerte.deploiement`, chacun en liste blanche).
+   */
+  'deploiement_non_atterri',
   /** Le témoin de la garde `G-SEC-NOTIF` (`garde-sans-pii.ts`, `OBJET_TEMOIN`). */
   'temoin_garde',
 ] as const;
@@ -97,7 +106,39 @@ export type ObjetAlerte = {
   readonly categorie: CategorieAlerte;
   readonly id: string;
   readonly compte?: string;
+  /**
+   * QA-T54 — ce qu'une alerte `deploiement_non_atterri` montre. Le sha servi vient d'un en-tête de
+   * RÉPONSE, que contrôle quiconque sert le domaine : chaque champ passe une liste blanche
+   * (`shaLisible`, `ENVIRONNEMENTS_DE_DEPLOIEMENT`), sinon il est écrit « illisible ».
+   */
+  readonly deploiement?: {
+    readonly attendu: string;
+    readonly servi: string;
+    readonly environnement: string;
+  };
 };
+
+/** Les environnements de déploiement, fermés : rien d'autre n'entre dans une alerte. */
+export const ENVIRONNEMENTS_DE_DEPLOIEMENT = ['production', 'preview'] as const;
+
+const SHA_LISIBLE = /^[0-9a-f]{7,40}$/;
+const ILLISIBLE = 'illisible';
+
+/**
+ * Un sha de 7 à 40 hexadécimaux (casse indifférente), rendu en minuscules ; absent ou vide,
+ * « inconnu » (le job qui devait le lire a pu mourir avant) ; toute autre valeur, « illisible ».
+ */
+export const shaLisible = (v: unknown): string =>
+  v === undefined || v === null || v === ''
+    ? 'inconnu'
+    : typeof v === 'string' && SHA_LISIBLE.test(v.toLowerCase())
+      ? v.toLowerCase()
+      : ILLISIBLE;
+
+const environnement = (v: unknown): string =>
+  typeof v === 'string' && (ENVIRONNEMENTS_DE_DEPLOIEMENT as readonly string[]).includes(v)
+    ? v
+    : ILLISIBLE;
 
 /**
  * Le format des identifiants d'agrégat du dépôt, et LUI SEUL : `@default(uuid()) @db.Uuid`
@@ -121,7 +162,11 @@ const categorie = (v: unknown): string =>
 
 const ligneDeBase = (o: ObjetAlerte): string =>
   `[${categorie(o.categorie)}] objet ${identifiant(o.id)}` +
-  (o.compte === undefined ? '' : ` · compte ${identifiant(o.compte)}`);
+  (o.compte === undefined ? '' : ` · compte ${identifiant(o.compte)}`) +
+  (o.deploiement === undefined
+    ? ''
+    : ` · attendu ${shaLisible(o.deploiement.attendu)} · servi ${shaLisible(o.deploiement.servi)}` +
+      ` · environnement ${environnement(o.deploiement.environnement)}`);
 
 /**
  * Les gabarits de message, et eux seuls : la garde les confronte TOUS, en les énumérant ici. Chacun
