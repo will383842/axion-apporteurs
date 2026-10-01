@@ -17246,7 +17246,9 @@
       "zone": "integration",
       "paths": [
         "src/server/queue/workers/evenement-recu.ts",
-        "tests/integration/worker-type-sans-traitant.spec.ts"
+        "tests/integration/worker-type-sans-traitant.spec.ts",
+        "src/app/api/webhooks/axionia/route.ts",
+        "tests/unit/integration/type-sans-traitant.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -17261,7 +17263,7 @@
       "externe": null,
       "estimateDays": 0.5,
       "statut": "a_faire",
-      "acceptance": "Vérification V2 (GOV-132, écart C-01, condition 4, avant l'ouverture du canal) : aujourd'hui, le worker `evenement-recu` marque `traite` un événement dont le type n'a pas encore de traitant ; un `paiement.recu` reçu avant DM-15 serait donc perdu pour le calcul des commissions. (1) Tout type sans traitant reste `recu` (ou passe `held` avec une alerte : choix de conception à arbitrer à la revendication), jamais `traite`. (2) TÉMOIN rouge d'abord : un `paiement.recu` reçu avant le branchement de son traitant est redonné au dispatch une fois le traitant branché, et produit son effet une fois et une seule. (3) `PARTNERS_SYNC_ENABLED` reste faux tant que cette tâche n'est pas livrée (case de `docs/runbooks/mise-en-service.md`)."
+      "acceptance": "Vérification V2 (GOV-132, écart C-01, condition 4, avant l'ouverture du canal) : aujourd'hui, le worker `evenement-recu` marque `traite` un événement dont le type n'a pas encore de traitant ; un `paiement.recu` reçu avant DM-15 serait donc perdu pour le calcul des commissions. (1) Tout type sans traitant reste `recu` (ou passe `held` avec une alerte : choix de conception à arbitrer à la revendication), jamais `traite`. (2) TÉMOIN rouge d'abord : un `paiement.recu` reçu avant le branchement de son traitant est redonné au dispatch une fois le traitant branché, et produit son effet une fois et une seule. (3) `PARTNERS_SYNC_ENABLED` reste faux tant que cette tâche n'est pas livrée (case de `docs/runbooks/mise-en-service.md`). ARBITRAGE A01 du point (1), à la revendication (2026-10-01, proposition de A05) : ni `recu` (passerLeTravail boucle tant que aTraiter() rend des lignes `recu`) ni `held` (réservé à une `schema_version` inconnue, sans reprise). Un type absent du registre des traitants passe `en_attente_dependance` avec `dependanceRef` = `traitant:<type>`, jamais `traite`. En tête de passage, la reprise remet en `recu` les seules attentes `traitant:<t>` dont le type a désormais un traitant. Le compteur `enAttente` du battement les rend visibles. Aucune migration : `dependance_ref` existe déjà. La route `src/app/api/webhooks/axionia/route.ts` passe le registre au worker. Elle est aussi déclarée par INT-T49 : les deux tâches ne vont jamais dans le même lot."
     },
     {
       "id": "INT-T44",
@@ -18213,7 +18215,20 @@
       "zone": "juridique",
       "paths": [
         "axionia/src/lib/commercial-application/kit-apporteur.ts",
-        "axionia/src/lib/commercial-application/__tests__/kit-apporteur-sans-pdf.spec.ts"
+        "axionia/src/lib/commercial-application/__tests__/kit-apporteur-sans-pdf.spec.ts",
+        "axionia/src/app/[locale]/apporteur-affaires/merci/page.tsx",
+        "axionia/src/app/[locale]/apporteur-affaires/merci/__tests__/la-page-merci-ne-lie-plus-le-pdf.spec.tsx",
+        "axionia/src/content/recrutement/tunnel-facebook.ts",
+        "axionia/src/lib/email/templates/_kit-apporteur.tsx",
+        "axionia/src/lib/email/templates/candidature-commercial-confirmee.tsx",
+        "axionia/src/lib/email/templates/lead-apporteur-recu.tsx",
+        "axionia/src/lib/email/templates/apporteur-issue-echange.tsx",
+        "axionia/src/lib/email/templates/apporteur-invitation-relance.tsx",
+        "axionia/src/lib/email/templates/__tests__/le-kit-apporteur-part-avec-chaque-e-mail.spec.tsx",
+        "axionia/src/lib/email/templates/__tests__/l-issue-de-l-echange-apporteur-a-ses-trois-e-mails.spec.tsx",
+        "axionia/src/lib/email/templates/__tests__/le-rappel-de-l-invitation-dit-son-etape.spec.tsx",
+        "axionia/src/lib/email/templates/__tests__/l-invitation-d-un-candidat-a-une-offre-ne-dit-pas-candidature-apporteur.spec.tsx",
+        "axionia/src/lib/email/templates/__tests__/__snapshots__/l-invitation-dit-d-ou-vient-l-adresse.spec.tsx.snap"
       ],
       "schema": false,
       "sensible": [
@@ -18228,7 +18243,17 @@
       "externe": null,
       "estimateDays": 0.25,
       "statut": "a_faire",
-      "acceptance": "Décision C1 de Williams du 2026-10-01, dans la fenêtre de la coordination : à la question de 09:17:18Z sur le PDF de présentation pour les futurs apporteurs, en ligne et joint aux courriels des candidats, qui contient des formulations relevées par l'écart C1 de la vérification de bout en bout (promesses de gains et un exemple chiffré, non recopiés dans ce dépôt public) — « A (recommandé) : on retire tout de suite le PDF des courriels, puis on le réécrit avec des formulations prudentes (« à titre indicatif… ») pendant la Phase 1, avant de le remettre. » ou « B : on le laisse en place jusqu'à sa réécriture. » —, Williams répond « A » à 09:22:23Z (séquence mot pour mot : `_REPRISE-AXION-APPORTEURS/SEQUENCE-DECISIONS-PHASE1-2026-10-01.md`, hors dépôt). JUR-T44 ajoutée en tête du lot 1 par la décision C1 de Williams, arbitrage A01/coordination. (1) La pièce jointe est retirée (`kit-apporteur.ts`), et le lien est retiré de la page de remerciement `/apporteur-affaires/merci`. (2) TÉMOIN rouge d'abord : aucun courriel ne joint le PDF. (3) Le PDF n'est remis dans les courriels qu'après JUR-T45. Les chemins exacts de la page de remerciement sont nommés à la revendication par la session axion-ia."
+      "acceptance": "Décision C1 de Williams du 2026-10-01, dans la fenêtre de la coordination : à la question de 09:17:18Z sur le PDF de présentation pour les futurs apporteurs, en ligne et joint aux courriels des candidats, qui contient des formulations relevées par l'écart C1 de la vérification de bout en bout (promesses de gains et un exemple chiffré, non recopiés dans ce dépôt public) — « A (recommandé) : on retire tout de suite le PDF des courriels, puis on le réécrit avec des formulations prudentes (« à titre indicatif… ») pendant la Phase 1, avant de le remettre. » ou « B : on le laisse en place jusqu'à sa réécriture. » —, Williams répond « A » à 09:22:23Z (séquence mot pour mot : `_REPRISE-AXION-APPORTEURS/SEQUENCE-DECISIONS-PHASE1-2026-10-01.md`, hors dépôt). JUR-T44 ajoutée en tête du lot 1 par la décision C1 de Williams, arbitrage A01/coordination. (1) La pièce jointe est retirée (`kit-apporteur.ts`), et le lien est retiré de la page de remerciement `/apporteur-affaires/merci`. (2) TÉMOIN rouge d'abord : aucun courriel ne joint le PDF. (3) Le PDF n'est remis dans les courriels qu'après JUR-T45. Les chemins exacts de la page de remerciement sont nommés à la revendication par la session axion-ia.",
+      "tests": {
+        "REQ-JUR-001": [
+          "axionia/src/lib/commercial-application/__tests__/kit-apporteur-sans-pdf.spec.ts",
+          "axionia/src/app/[locale]/apporteur-affaires/merci/__tests__/la-page-merci-ne-lie-plus-le-pdf.spec.tsx"
+        ],
+        "REQ-JUR-041": [
+          "axionia/src/lib/commercial-application/__tests__/kit-apporteur-sans-pdf.spec.ts",
+          "axionia/src/app/[locale]/apporteur-affaires/merci/__tests__/la-page-merci-ne-lie-plus-le-pdf.spec.tsx"
+        ]
+      }
     },
     {
       "id": "JUR-T45",
@@ -18259,7 +18284,7 @@
       "externe": null,
       "estimateDays": 0.5,
       "statut": "a_faire",
-      "acceptance": "Décision C1 de Williams du 2026-10-01, dans la fenêtre de la coordination : à la question de 09:17:18Z sur le PDF de présentation pour les futurs apporteurs, en ligne et joint aux courriels des candidats, qui contient des formulations relevées par l'écart C1 de la vérification de bout en bout (promesses de gains et un exemple chiffré, non recopiés dans ce dépôt public) — « A (recommandé) : on retire tout de suite le PDF des courriels, puis on le réécrit avec des formulations prudentes (« à titre indicatif… ») pendant la Phase 1, avant de le remettre. » ou « B : on le laisse en place jusqu'à sa réécriture. » —, Williams répond « A » à 09:22:23Z (séquence mot pour mot : `_REPRISE-AXION-APPORTEURS/SEQUENCE-DECISIONS-PHASE1-2026-10-01.md`, hors dépôt). (1) `docs/imprimes/devenir-apporteur-d-affaires.html` est réécrit en formulation indicative ; le PDF est régénéré à partir de lui, jamais retouché à la main. (2) `jur:copy-indicative` et `vocab-public` couvrent `docs/imprimes/**`. (3) TÉMOIN rouge d'abord, sans `skipIf` : le PDF ACTUEL, lu par `pdftotext`, est refusé ; le PDF réécrit passe. (4) Aucun montant d'exemple dans le document. Le PDF n'est remis dans les courriels qu'une fois cette tâche livrée."
+      "acceptance": "Décision C1 de Williams du 2026-10-01, dans la fenêtre de la coordination : à la question de 09:17:18Z sur le PDF de présentation pour les futurs apporteurs, en ligne et joint aux courriels des candidats, qui contient des formulations relevées par l'écart C1 de la vérification de bout en bout (promesses de gains et un exemple chiffré, non recopiés dans ce dépôt public) — « A (recommandé) : on retire tout de suite le PDF des courriels, puis on le réécrit avec des formulations prudentes (« à titre indicatif… ») pendant la Phase 1, avant de le remettre. » ou « B : on le laisse en place jusqu'à sa réécriture. » —, Williams répond « A » à 09:22:23Z (séquence mot pour mot : `_REPRISE-AXION-APPORTEURS/SEQUENCE-DECISIONS-PHASE1-2026-10-01.md`, hors dépôt). (1) `docs/imprimes/devenir-apporteur-d-affaires.html` est réécrit en formulation indicative ; le PDF est régénéré à partir de lui, jamais retouché à la main. (2) `jur:copy-indicative` et `vocab-public` couvrent `docs/imprimes/**`. (3) TÉMOIN rouge d'abord, sans `skipIf` : le PDF ACTUEL, lu par `pdftotext`, est refusé ; le PDF réécrit passe. (4) Aucun montant d'exemple dans le document. Le PDF n'est remis dans les courriels qu'une fois cette tâche livrée. AMENDEMENT (rattrapage 39, signalé par la session axion-ia à la livraison de JUR-T44) : (5) La remise du PDF dans les courriels repasse `DOCUMENT_APPORTEUR_DIFFUSE` à `true` et rétablit les textes qui annonçaient le document (les courriels et la page de remerciement que JUR-T44 a modifiés). Les deux témoins de JUR-T44 (`kit-apporteur-sans-pdf.spec.ts` et `la-page-merci-ne-lie-plus-le-pdf.spec.tsx`) rougissent alors : ils sont retournés DANS LA MÊME PR, avec le motif. Les chemins réels sont ajoutés au registre à la revendication."
     },
     {
       "id": "INT-T53-A",
