@@ -205,7 +205,7 @@
     "@prisma/client": "5.22.0",
     "@sentry/node": "10.75.0",
     "ioredis": "5.11.1",
-    "next": "16.3.1",
+    "next": "16.3.8",
     "pino": "10.3.1",
     "react": "19.2.8",
     "react-dom": "19.2.8",
