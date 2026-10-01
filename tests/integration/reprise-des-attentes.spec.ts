@@ -67,7 +67,9 @@ describe('REQ-QA-027 — une attente sans nouvel événement est reprise par le 
     const b = await base.prisma.battement.findUniqueOrThrow({
       where: { tache: 'evenements_recus' },
     });
-    expect((b.compteurs as { reveilles?: number } | null)?.reveilles ?? 0).toBeGreaterThanOrEqual(1);
+    expect((b.compteurs as { reveilles?: number } | null)?.reveilles ?? 0).toBeGreaterThanOrEqual(
+      1
+    );
   });
 
   it('REQ-QA-027 : la route ne lance plus le passage — seul le lanceur le joue', () => {
