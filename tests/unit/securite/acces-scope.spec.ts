@@ -331,8 +331,16 @@ describe('REQ-SEC-008 — aucune écriture ne déplace une ligne vers un autre a
       REFUS.reference
     );
     expect(appels).toEqual([
-      { modele: 'lienMagique', methode: 'findFirst', args: { where: portee({ id: lien }, A) } },
-      { modele: 'lienMagique', methode: 'findFirst', args: { where: portee({ id: lien }, A) } },
+      {
+        modele: 'lienMagique',
+        methode: 'findFirst',
+        args: { where: portee({ id: lien }, A), select: selection('lienMagique') },
+      },
+      {
+        modele: 'lienMagique',
+        methode: 'findFirst',
+        args: { where: portee({ id: lien }, A), select: selection('lienMagique') },
+      },
     ]);
   });
 
@@ -350,7 +358,10 @@ describe('REQ-SEC-008 — aucune écriture ne déplace une ligne vers un autre a
       ['lienMagique', 'findFirst'],
       ['sessionEspace', 'updateMany'],
     ]);
-    expect(appels[1]!.args).toEqual({ data: { lienMagiqueId: lien, apporteurId: A } });
+    expect(appels[1]!.args).toEqual({
+      data: { lienMagiqueId: lien, apporteurId: A },
+      select: selection('sessionEspace'),
+    });
   });
 
   it('REQ-SEC-008 : une référence absente ou nulle n’est pas lue — rien à vérifier', async () => {
