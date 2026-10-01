@@ -2,8 +2,8 @@
 // @req REQ-QA-007
 /**
  * INT-T45 — la réception applique les `$defs` FERMÉS du contrat publié : un payload hors schéma est
- * refusé 422 `hors_schema`, AVANT toute inscription (écart C4 de la vérification de bout en bout,
- * GOV-131).
+ * refusé 422 `hors_schema`, AVANT toute inscription (un écart relevé par la vérification de bout en
+ * bout du 2026-09-30).
  *
  * Par la vraie porte (`recevoirEvenementAxionia`) et le vrai dépôt (`depotDeReception`), en base
  * réelle. Les charges viennent de la fixture du producteur réel (RM-03) ; chaque cas hors schéma en
