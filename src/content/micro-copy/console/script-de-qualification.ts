@@ -13,7 +13,8 @@
  *                     automatique, HYP-W20-SALARIES) : l'information complète est alors envoyée par
  *                     e-mail au plus tard lors de cet appel (REQ-JUR-009), et l'appelant le dit.
  *
- * Les paramètres sont ceux de l'e-mail (`{responsable}`, `{prenomApporteur}`, `{nomApporteur}`,
+ * Les paramètres sont ceux de l'e-mail (`{responsable}`, `{baseLegale}` — proposition A07, à trancher par
+ * Williams —, `{prenomApporteur}`, `{nomApporteur}`,
  * `{entreprise}`). Le script ne cite pas la date du contact (REQ-JUR-040).
  */
 import { VERSION_INFORMATION_ARTICLE_14 } from '../courriels/information-article-14';
@@ -24,9 +25,9 @@ export const MENTION_ARTICLE_14_SCRIPT = {
   ouverture:
     "Bonjour, je vous appelle de la part d'Axion-IA : {prenomApporteur} {nomApporteur}, apporteur d'affaires indépendant, nous a présenté {entreprise} et nous a transmis vos coordonnées professionnelles.",
   apresCourriel:
-    "{responsable} les utilise pour donner suite à votre échange avec lui, après l'avoir confirmé avec vous, sur la base de son intérêt légitime. Le courriel que vous avez reçu de notre part détaille la durée de conservation et vos droits, dont celui de vous opposer à tout moment.",
+    "{responsable} les utilise pour donner suite à votre échange avec lui, après l'avoir confirmé avec vous, sur la base de {baseLegale}. Le courriel que vous avez reçu de notre part détaille la durée de conservation et vos droits, dont celui de vous opposer à tout moment.",
   sansCourriel:
-    "{responsable} les utilise pour donner suite à votre échange avec lui, après l'avoir confirmé avec vous, sur la base de son intérêt légitime. Je vous adresse aujourd'hui par courriel le détail de la durée de conservation et de vos droits, dont celui de vous opposer à tout moment.",
+    "{responsable} les utilise pour donner suite à votre échange avec lui, après l'avoir confirmé avec vous, sur la base de {baseLegale}. Je vous adresse aujourd'hui par courriel le détail de la durée de conservation et de vos droits, dont celui de vous opposer à tout moment.",
   question: 'Souhaitez-vous que nous poursuivions cet échange ?',
   /** Ce que l'appelant dit si la personne s'oppose : il n'insiste pas, et l'opposition est enregistrée. */
   siOpposition:

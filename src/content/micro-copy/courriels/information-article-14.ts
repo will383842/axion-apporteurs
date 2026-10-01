@@ -12,6 +12,11 @@
  *   `{dureeSansSuite}`, `{dureeApresDernierContact}` — les durées de purge du tiers (REQ-SEC-030,
  *                                       HYP-RGPD-RETENTION), rendues en toutes lettres à l'envoi ;
  *   `{prestataireEnvoi}`, `{mentionTransfert}` — la fiche `docs/tiers/zeptomail.md` ;
+ *   `{baseLegale}`                    — la base légale de TRT-TIERS, lue au registre des décisions. PROPOSITION
+ *                                       A07, À TRANCHER par Williams : « l'intérêt légitime d'Axion-IA à donner
+ *                                       suite aux présentations qui lui sont faites, après en avoir vérifié la
+ *                                       réalité (article 6, paragraphe 1, point f du RGPD) ». Une autre décision
+ *                                       change le texte et sa version ;
  *   `{adresseDroits}`                 — l'adresse d'exercice des droits, écrite en texte : l'e-mail ne
  *                                       porte aucun lien autre que les deux réponses et l'opposition
  *                                       (REQ-JUR-060).
@@ -26,7 +31,7 @@
  * et l'envoi journalise la version envoyée (REQ-JUR-060, INT-T40).
  */
 
-export const VERSION_INFORMATION_ARTICLE_14 = 'information-article-14/v3';
+export const VERSION_INFORMATION_ARTICLE_14 = 'information-article-14/v4';
 
 /** Le libellé du lien d'opposition, posé par le gabarit de l'e-mail à la fin du bloc. */
 export const LIEN_OPPOSITION = {
@@ -46,7 +51,7 @@ export const INFORMATION_ARTICLE_14 = {
   finalite:
     "Nous les utilisons pour donner suite à cette présentation et reprendre contact avec vous au sujet de {entreprise} et des prestations d'Axion-IA, après vous avoir demandé de confirmer cet échange. Une empreinte de votre adresse et de votre numéro nous sert aussi à éviter les doublons et à respecter votre opposition.",
   baseLegale:
-    "Ce traitement repose sur notre intérêt légitime à donner suite aux présentations qui nous sont faites, après en avoir vérifié la réalité (article 6, paragraphe 1, point f du RGPD). Vous pouvez vous y opposer à tout moment.",
+    "Ce traitement repose sur {baseLegale}. Vous pouvez vous y opposer à tout moment.",
   destinataires:
     "Vos coordonnées ne sont accessibles qu'aux personnes d'Axion-IA chargées de ce suivi et à {prestataireEnvoi}, notre prestataire d'envoi de courriels. {prenomApporteur} {nomApporteur} est informé de la suite donnée à sa présentation. Vos données ne sont ni vendues ni cédées. {mentionTransfert}",
   duree:
