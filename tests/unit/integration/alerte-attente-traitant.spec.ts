@@ -5,7 +5,7 @@
  * alerte `attente_depassee`, une par (forme, type) et par FRANCHISSEMENT ; le message ne porte que
  * la forme, le type, le nombre et l'âge de la plus ancienne — ni référence, ni charge, ni identifiant.
  *
- * Partagé avec INT-T49 (les coordonnées), qui livre dans le même lot : une seule catégorie, un seul
+ * Partagé avec la reprise bornée des coordonnées, qui livre dans le même lot : une seule catégorie, un seul
  * alerteur, un seuil par forme.
  */
 import { describe, it, expect } from 'vitest';

@@ -1,6 +1,6 @@
 // @req REQ-QA-027
 /**
- * INT-T49, en base RÉELLE — les attentes de dépendance sont reprises par le LANCEUR (GOV-137), sans
+ * INT-T49, en base RÉELLE — les attentes de dépendance sont reprises par le LANCEUR des passages planifiés, sans
  * qu'aucun nouvel événement ni aucun webhook ne les réveille ; la route ne lance plus le passage.
  *
  * Le lanceur est celui de la production (`lancerLesPassages`, `inscriptions`, `verrouConsultatif`,
