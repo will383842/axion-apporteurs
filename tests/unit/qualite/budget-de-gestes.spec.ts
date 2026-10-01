@@ -23,11 +23,16 @@ import {
   dansLaFenetre,
   jugerLeBudget,
   lireLaMesure,
+  poserLeCompteur,
   profilReseau,
   type Mesure,
 } from '../../e2e/fixtures/budget-de-gestes';
 
-const mesure = (clics: number, champs: number, tabulations = 0): Mesure => ({ clics, champs, tabulations });
+const mesure = (clics: number, champs: number, tabulations = 0): Mesure => ({
+  clics,
+  champs,
+  tabulations,
+});
 
 describe('REQ-UX-047 — le jugement du budget, pur', () => {
   it('REQ-UX-047 — un geste de saisie dans son budget passe, et le budget vient de BUDGETS_UX', () => {
@@ -52,7 +57,10 @@ describe('REQ-UX-047 — le jugement du budget, pur', () => {
   });
 
   it('REQ-UX-047 — « visible sans défilement » aux deux fenêtres de référence', () => {
-    expect(FENETRES).toEqual({ mobile: { width: 375, height: 667 }, bureau: { width: 1280, height: 800 } });
+    expect(FENETRES).toEqual({
+      mobile: { width: 375, height: 667 },
+      bureau: { width: 1280, height: 800 },
+    });
     expect(dansLaFenetre({ x: 16, y: 600, width: 200, height: 48 }, FENETRES.mobile)).toBe(true);
     expect(dansLaFenetre({ x: 16, y: 640, width: 200, height: 48 }, FENETRES.mobile)).toBe(false);
     expect(dansLaFenetre(null, FENETRES.bureau)).toBe(false);
@@ -61,8 +69,12 @@ describe('REQ-UX-047 — le jugement du budget, pur', () => {
   it('REQ-UX-047 — le profil « 4G ralentie » est celui de BUDGETS_UX, converti pour le navigateur', () => {
     const p = profilReseau();
     expect(p.latency).toBe(BUDGETS_UX.RESEAU_4G_RALENTIE_LATENCE_MS.valeur);
-    expect(p.downloadThroughput).toBe((BUDGETS_UX.RESEAU_4G_RALENTIE_DEBIT_DESCENDANT_KBPS.valeur * 1000) / 8);
-    expect(p.uploadThroughput).toBe((BUDGETS_UX.RESEAU_4G_RALENTIE_DEBIT_MONTANT_KBPS.valeur * 1000) / 8);
+    expect(p.downloadThroughput).toBe(
+      (BUDGETS_UX.RESEAU_4G_RALENTIE_DEBIT_DESCENDANT_KBPS.valeur * 1000) / 8
+    );
+    expect(p.uploadThroughput).toBe(
+      (BUDGETS_UX.RESEAU_4G_RALENTIE_DEBIT_MONTANT_KBPS.valeur * 1000) / 8
+    );
   });
 });
 
@@ -77,6 +89,7 @@ describe('REQ-UX-047 — le comptage dans un vrai navigateur', () => {
     const page = await navigateur.newPage();
     await page.addInitScript(COMPTEUR_DANS_LA_PAGE);
     await page.setContent('<input id="a" /><input id="b" /><button id="c">Envoyer</button>');
+    await poserLeCompteur(page);
     await page.fill('#a', 'Claire');
     await page.type('#a', ' Exemple');
     await page.keyboard.press('Tab');
@@ -89,6 +102,7 @@ describe('REQ-UX-047 — le comptage dans un vrai navigateur', () => {
     const page = await navigateur.newPage();
     await page.addInitScript(COMPTEUR_DANS_LA_PAGE);
     await page.setContent(Array.from({ length: 9 }, (_, i) => `<input id="c${i}" />`).join(''));
+    await poserLeCompteur(page);
     for (let i = 0; i < 9; i++) await page.fill(`#c${i}`, 'x');
     expect(jugerLeBudget('saisie', await lireLaMesure(page))).toEqual([
       'saisie : 9 interactions, budget 8 (BUDGETS_UX.SAISIE_INTERACTIONS_MAX)',
