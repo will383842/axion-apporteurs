@@ -175,6 +175,7 @@
     "coolify:provisionner": "tsx scripts/deploiement/provisionner.ts",
     "deploy:verify": "tsx scripts/gates/deploy-verify.ts --verifier",
     "deploy:coolify": "tsx scripts/gates/deploy-verify.ts --declencher",
+    "deploy:alerter": "tsx scripts/gates/deploy-verify.ts --alerter",
     "deploy:retour-arriere": "tsx scripts/gates/deploy-verify.ts --retour-arriere",
     "deploy:retirer-echappatoire": "tsx scripts/gates/deploy-verify.ts --retirer-echappatoire"
   },
