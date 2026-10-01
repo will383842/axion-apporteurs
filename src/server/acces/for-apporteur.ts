@@ -104,6 +104,73 @@ export const REFUS = {
   forme: 'acces_ecriture_d_une_forme_refusee',
 } as const;
 
+// ── GOV-111 : ce qu'une lecture peut demander, et ce qu'elle rend ────────────────────────────────
+
+/** Les options de lecture admises par `lister` : une liste BLANCHE, tout le reste est refusé. */
+export const OPTIONS_DE_LECTURE = ['where', 'orderBy', 'take'] as const;
+
+/**
+ * Les relations de chaque modèle cloisonné. Aucun `where` ni `orderBy` ne les nomme, à aucune
+ * profondeur : un filtre qui traverse une relation sortirait du périmètre de l'apporteur dès qu'un
+ * modèle partagé arriverait (REQ-SEC-022). Confrontées au schéma généré par
+ * `tests/unit/securite/acces-scope.spec.ts`.
+ */
+export const RELATIONS = {
+  changementCourriel: ['apporteur'],
+  courrielEnvoye: ['apporteur'],
+  identiteFacturation: ['apporteur'],
+  jetonDepot: ['apporteur'],
+  lienMagique: ['apporteur', 'utilisateurConsole', 'session'],
+  sessionEspace: ['apporteur', 'utilisateurConsole', 'lienMagique'],
+} as const satisfies Record<ModeleCloisonne, readonly string[]>;
+
+/**
+ * Le matériel secret ou chiffré : JAMAIS rendu par la couche, quel que soit le modèle. Liste figée,
+ * à part des listes de rendu : la garde refuse qu'un de ces noms figure dans `CHAMPS_RENDUS`.
+ */
+export const SECRETS = Object.freeze([
+  'tokenHash',
+  'codeHash',
+  'emailChiffre',
+  'emailHash',
+  'kid',
+  'ipHash',
+] as const);
+
+/**
+ * Ce que la couche RENDUE, colonne par colonne : la sélection explicite qui part DANS la requête
+ * (`select`), jamais un filtre après lecture. Chaque colonne du schéma est soit ici, soit dans
+ * `CHAMPS_TUS` : une colonne neuve non classée fait rougir la confrontation au schéma (RM-05).
+ */
+export const CHAMPS_RENDUS = {
+  changementCourriel: ['id', 'demandeAt', 'confirmeAt', 'annuleAt'],
+  courrielEnvoye: ['id', 'gabarit', 'statut', 'demandeAt', 'envoyeAt'],
+  identiteFacturation: ['id', 'siren', 'regimeTva', 'debutAt', 'finAt'],
+  jetonDepot: ['id', 'creeAt', 'revoqueAt', 'dernierUsageAt'],
+  lienMagique: ['id', 'creeAt', 'expireAt', 'consommeAt', 'annuleAt', 'tentativesCode'],
+  sessionEspace: ['id', 'creeAt', 'expireAt', 'revoqueAt', 'derniereVueAt', 'sessionVersion'],
+} as const satisfies Record<ModeleCloisonne, readonly string[]>;
+
+/** Ce que la couche TAIT : le propriétaire (connu de la session), les secrets, les traces techniques. */
+export const CHAMPS_TUS = {
+  changementCourriel: ['apporteurId', 'emailChiffre', 'emailHash', 'tokenHash', 'kid'],
+  courrielEnvoye: ['apporteurId', 'emailHash', 'fournisseurMessageId', 'erreur'],
+  identiteFacturation: ['apporteurId'],
+  jetonDepot: ['apporteurId', 'tokenHash'],
+  lienMagique: ['apporteurId', 'utilisateurConsoleId', 'tokenHash', 'kid', 'codeHash'],
+  sessionEspace: [
+    'apporteurId',
+    'utilisateurConsoleId',
+    'lienMagiqueId',
+    'tokenHash',
+    'kid',
+    'ipHash',
+  ],
+} as const satisfies Record<ModeleCloisonne, readonly string[]>;
+
+/** La ligne telle que la couche la rend : les seules colonnes de `CHAMPS_RENDUS`. */
+type Rendu<M, K extends ModeleCloisonne> = Pick<M, (typeof CHAMPS_RENDUS)[K][number] & keyof M>;
+
 /**
  * UNE SEULE LECTURE DES DONNÉES À ÉCRIRE (lentille `securite`, #200). Le contrôle ne juge que les
  * propriétés PROPRES, alors que le sérialiseur de Prisma parcourt les arguments par `for…in` et
@@ -151,12 +218,15 @@ export interface VueCloisonnee<R, W, C, U, O> {
 
 /** Le délégué tel que la vue l'appelle : cinq méthodes, rien d'autre. */
 interface Delegue<R, W, C, U, O> {
-  findFirst(args: { where: W }): PromiseLike<R | null>;
-  findMany(args: { where: W; orderBy?: O; take?: number }): PromiseLike<R[]>;
+  findFirst(args: { where: W; select: Selection }): PromiseLike<R | null>;
+  findMany(args: { where: W; orderBy?: O; take?: number; select: Selection }): PromiseLike<R[]>;
   count(args: { where: W }): PromiseLike<number>;
-  create(args: { data: C }): PromiseLike<R>;
+  create(args: { data: C; select: Selection }): PromiseLike<R>;
   updateMany(args: { where: W; data: U }): PromiseLike<{ count: number }>;
 }
+
+/** Une sélection Prisma : chaque colonne rendue à `true`, et rien d'autre. */
+type Selection = Readonly<Record<string, true>>;
 
 type SansProprietaire<C> = Omit<C, 'id' | 'apporteurId' | 'apporteur'>;
 
@@ -192,30 +262,42 @@ export interface AccesApporteur {
   /** La fiche de l'apporteur de la session. */
   moi(): Promise<Apporteur | null>;
   changementCourriel: VueCloisonnee<
-    ChangementCourriel,
+    Rendu<ChangementCourriel, 'changementCourriel'>,
     WChangement,
     SansProprietaire<CChangement>,
     UChangement,
     OChangement
   >;
   courrielEnvoye: VueCloisonnee<
-    CourrielEnvoye,
+    Rendu<CourrielEnvoye, 'courrielEnvoye'>,
     WCourriel,
     SansProprietaire<CCourriel>,
     UCourriel,
     OCourriel
   >;
   identiteFacturation: VueCloisonnee<
-    IdentiteFacturation,
+    Rendu<IdentiteFacturation, 'identiteFacturation'>,
     WIdentite,
     SansProprietaire<CIdentite>,
     UIdentite,
     OIdentite
   >;
-  jetonDepot: VueCloisonnee<JetonDepot, WJeton, SansProprietaire<CJeton>, UJeton, OJeton>;
-  lienMagique: VueCloisonnee<LienMagique, WLien, SansProprietaire<CLien>, ULien, OLien>;
+  jetonDepot: VueCloisonnee<
+    Rendu<JetonDepot, 'jetonDepot'>,
+    WJeton,
+    SansProprietaire<CJeton>,
+    UJeton,
+    OJeton
+  >;
+  lienMagique: VueCloisonnee<
+    Rendu<LienMagique, 'lienMagique'>,
+    WLien,
+    SansProprietaire<CLien>,
+    ULien,
+    OLien
+  >;
   sessionEspace: VueCloisonnee<
-    SessionEspace,
+    Rendu<SessionEspace, 'sessionEspace'>,
     WSession,
     SansProprietaire<CSession>,
     USession,
@@ -274,6 +356,43 @@ function cloisonner<R, W, C, U, O>(
     return conjonction as W;
   };
 
+  /** La sélection explicite de GOV-111, posée DANS chaque lecture et chaque création. */
+  const select: Selection = Object.fromEntries(
+    CHAMPS_RENDUS[modele].map((c) => [c, true] as const)
+  );
+  const relations: readonly string[] = RELATIONS[modele];
+
+  /**
+   * Un filtre ou un tri, RECONSTRUIT nœud par nœud : chaque objet passe l'instantané des données
+   * écrites (une clé héritée ou un accesseur sont refusés, le sérialiseur ne verra que la copie),
+   * aucune clé ne nomme une relation, et les nœuds logiques (`AND`, `OR`, `NOT`) sont suivis à toute
+   * profondeur. Les valeurs d'une condition de colonne ne sont pas descendues : elles ne nomment
+   * aucune relation.
+   */
+  function sansRelation(valeur: unknown): unknown {
+    if (Array.isArray(valeur)) return valeur.map(sansRelation);
+    const noeud = instantane(valeur);
+    for (const [cle, v] of Object.entries(noeud)) {
+      if (relations.includes(cle)) throw new Error(REFUS.forme);
+      if (cle === 'AND' || cle === 'OR' || cle === 'NOT') noeud[cle] = sansRelation(v);
+    }
+    return noeud;
+  }
+
+  /** Les options de lecture : la liste blanche, `take` entier, filtre et tri sans relation. */
+  function lecture(options: unknown): { where: unknown; orderBy?: unknown; take?: number } {
+    const o = instantane(options ?? {});
+    for (const cle of Object.keys(o)) {
+      if (!(OPTIONS_DE_LECTURE as readonly string[]).includes(cle)) throw new Error(REFUS.forme);
+    }
+    if (o.take !== undefined && !Number.isInteger(o.take)) throw new Error(REFUS.forme);
+    return {
+      where: sansRelation(o.where ?? {}),
+      ...(o.orderBy === undefined ? {} : { orderBy: sansRelation(o.orderBy) }),
+      ...(o.take === undefined ? {} : { take: o.take as number }),
+    };
+  }
+
   /** Refuse les clés interdites, puis vérifie chaque référence déclarée par la vue de la session. */
   async function verifier(data: object): Promise<void> {
     for (const cle of CLES_REFUSEES[modele]) {
@@ -289,19 +408,20 @@ function cloisonner<R, W, C, U, O>(
   return {
     async trouver(id) {
       if (!estUnUuid(id)) return null;
-      return delegue.findFirst({ where: portee({ id }) });
+      return delegue.findFirst({ where: portee({ id }), select });
     },
     async lister(options) {
-      return delegue.findMany({ ...options, where: portee(options?.where ?? {}) });
+      const { where, ...reste } = lecture(options);
+      return delegue.findMany({ where: portee(where), ...(reste as { orderBy?: O }), select });
     },
     async compter(where) {
-      return delegue.count({ where: portee(where ?? {}) });
+      return delegue.count({ where: portee(sansRelation(where ?? {})) });
     },
     async creer(data) {
       const propre = instantane(data);
       await verifier(propre);
       const ecrite: unknown = { ...propre, apporteurId };
-      return delegue.create({ data: ecrite as C });
+      return delegue.create({ data: ecrite as C, select });
     },
     async modifier(id, data) {
       const propre = instantane(data);
