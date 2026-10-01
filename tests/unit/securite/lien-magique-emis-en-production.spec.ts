@@ -25,7 +25,10 @@ import { clesPii } from '../../../src/server/securite/pii';
 import type { VerdictDeLimite } from '../../../src/server/securite/rate-limit';
 import { demanderLien, empreinteDuJeton } from '../../../src/server/auth/lien-magique';
 import {
+  configurationDuLien,
+  dependancesDuProcessus,
   envoiDuProcessus,
+  portsDeConsommation,
   portsDeDemande,
   relaisDeProduction,
   type DependancesDuLien,
@@ -190,5 +193,58 @@ describe('REQ-SEC-001 — hors production, l’envoi reste au puits du notifieur
     expect(e.envois).toEqual([]);
     expect(e.lignes).toEqual([]);
     expect(puits).toHaveLength(1);
+  });
+});
+
+describe('REQ-SEC-001 — le câblage du processus', () => {
+  it('REQ-INT-022 : le relais de production refuse en se nommant', async () => {
+    await expect(
+      relaisDeProduction.envoyer({
+        de: 'a@b.c',
+        a: 'd@e.f',
+        sujet: 's',
+        corps: 'c',
+        reference: 'r',
+      })
+    ).rejects.toThrow('relais_non_livre');
+  });
+
+  it('REQ-SEC-001 : un client de base par processus, et `planifier` confié à `apres`', () => {
+    const confies: unknown[] = [];
+    const apres = (t: () => Promise<void>) => void confies.push(t);
+    const d1 = dependancesDuProcessus({ apres, env: { ...ENV, NOTIFY_SINK: 'true' } });
+    const d2 = dependancesDuProcessus({ apres, env: { ...ENV, NOTIFY_SINK: 'true' } });
+    expect(d1.prisma).toBe(d2.prisma);
+    const travail = async () => undefined;
+    d1.planifier(travail);
+    expect(confies).toEqual([travail]);
+  });
+
+  it('REQ-SEC-001 : hors production, le processus envoie au puits — aucune configuration d’émetteur n’est lue', async () => {
+    const d = dependancesDuProcessus({
+      apres: () => undefined,
+      env: { ...ENV, NOTIFY_SINK: 'true' },
+    });
+    await expect(d.envoi.envoyer({ a: COURRIEL, sujet: 's', corps: 'c' })).resolves.toBeUndefined();
+  });
+
+  it('REQ-INT-022 : en production, le processus passe par l’émetteur — sans expéditeur configuré, l’envoi est refusé en le nommant', async () => {
+    const d = dependancesDuProcessus({ apres: () => undefined, env: PRODUCTION });
+    await expect(d.envoi.envoyer({ a: COURRIEL, sujet: 's', corps: 'c' })).rejects.toThrow(
+      'configuration_refusee : expediteur_absent'
+    );
+  });
+
+  it('REQ-SEC-001 : la consommation porte la configuration du lien, et un environnement refusé se nomme', () => {
+    const ports = portsDeConsommation({
+      env: ENV,
+      prisma: Object.create(null) as PrismaClient,
+      horloge: horlogeFigee(INSTANT),
+    });
+    expect(ports.configuration).toEqual(configurationDuLien(ENV));
+    expect(ports.maintenant().getTime()).toBe(INSTANT);
+    expect(() => configurationDuLien({ NODE_ENV: 'test' })).toThrow(
+      /environnement refusé par src\/lib\/env\.ts — /
+    );
   });
 });
