@@ -4318,7 +4318,8 @@
       "repo": "partners",
       "zone": "juridique",
       "paths": [
-        "docs/DECISIONS.md"
+        "docs/DECISIONS.md",
+        "src/domain/contrat/decisions.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -4326,7 +4327,9 @@
         "CPL-T01",
         "JUR-T01",
         "JUR-T40",
-        "JUR-T31"
+        "JUR-T31",
+        "JUR-T42",
+        "JUR-T43"
       ],
       "reqs": [
         "REQ-GOV-015",
@@ -4347,7 +4350,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "relecture du gabarit v1 et des décisions « avenant » (C1, C12, D9, D11, D14, horodatage E.1-12, point de départ E.1-9 `fenetreFinAt = confirmeeAt + 6 mois` (décision de Williams du 2026-09-30, art. 3.4 al. 1 : six mois et non douze ; le seul « 12 mois » changé, les autres délais restent), sort d'une ligne acquise bloquée pour KYC à 12 mois, délai distinct de `FENETRE_MOIS`) reçue et consignée dans `docs/DECISIONS.md` avant INT-T12. 🔴 Complétée le 2026-09-29 (chantier W20, décision de Williams, session -d7, docs/chantiers/W20-confirmation-par-email.md §6). La relecture du gabarit v1 porte aussi l'art. 3.2 amendé par W20 (JUR-T40) : confirmation par le clic du contact en réponse à la demande de la Société OU lors d'une prise de contact de la Société, sauf lorsque la demande fait l'objet d'une vérification, auquel cas seule une prise de contact concluante de la Société vaut confirmation (Correction de sécurité du 2026-09-29 (refus de la lentille securite sur 2340a63, docs/chantiers/W20-confirmation-par-email.md §2, §8 et question 18)). Règle de confirmation tacite TRANCHÉE PAR WILLIAMS le 2026-09-29 (session -d7, question 2 du plan, HYP-W20-TACITE) : au bout de trente jours (CONFIRMATION_TACITE_JOURS) sans réponse du contact et sans appel concluant (Qualification confirme ou non_confirme), l'entreprise reste réservée à l'apporteur, l'attribution est réputée confirmée ; le délai court de la RÉCEPTION de l'e-mail de confirmation, c'est-à-dire d'un envoi sans rebond (recueAt) ; tant que l'e-mail revient en erreur et que l'apporteur n'a pas corrigé l'adresse, le délai NE COMMENCE PAS, et un rebond rattaché après coup retire à l'envoi sa qualité de réception. La confirmation tacite réserve l'entreprise et ne crée aucune commission : aucune commission sans paiement réel. Texte de l'art. 3.2 proposé par JUR-T40 et soumis à cette relecture : « À défaut de réponse de l'entreprise et de prise de contact concluante dans un délai de trente jours à compter de la réception de la demande de confirmation, l'attribution est réputée confirmée, sauf lorsque la demande fait l'objet d'une vérification, auquel cas seule une prise de contact concluante de la Société vaut confirmation. La demande est réputée reçue lorsqu'elle a été envoyée à l'adresse déclarée sans être retournée en erreur ; tant qu'elle revient en erreur et que l'Apporteur n'a pas communiqué une adresse corrigée, ce délai ne court pas. Lorsque la demande fait l'objet d'une vérification et qu'aucune prise de contact concluante n'a eu lieu, l'attribution prend fin après trois tentatives de prise de contact restées sans réponse ou à l'expiration d'un délai de quarante-cinq jours à compter de l'envoi de la demande, selon ce qui survient en premier. Cette fin n'emporte aucune autre conséquence pour l'Apporteur que celle-ci : il ne peut déclarer à nouveau la même entreprise qu'à l'expiration d'un délai de trente jours, porté à quatre-vingt-dix jours lorsque l'attribution de cette entreprise a déjà pris fin une première fois dans les mêmes conditions ; la déclaration de cette entreprise par un autre Apporteur n'en est pas affectée. La confirmation réputée acquise et, pour une demande qui fait l'objet d'une vérification, la fin de l'attribution sont les seules conséquences attachées au silence de l'entreprise. » (texte mis à jour après les réponses de Williams du 2026-09-29 vers 20 h aux questions 18 et 19 du plan, puis l'arbitrage de -d7 sur sa délégation, même jour, pour le délai avant une nouvelle déclaration). Elle porte encore la lecture de la « première prise de contact » de l'art. 3.4 (HYP-W20-PREMIER-CONTACT) et l'information de l'apporteur sur la communication de son nom (HYP-W20-IDENTITE-APPORTEUR). Contraintes W19 à intégrer (GOV-115, décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §6) : Aucun DocuSeal avant la fusion de JUR-T31 : art. 3.5 amendé et clause de non-exploitation validés par Williams. L'arbitrage de principe est rendu (question 2, 2026-09-29). AMENDEMENT (vérification V2 (GOV-132, 2026-10-01), A1-13, RM-10) : dans le texte de l'art. 3.2, les délais ne sont pas écrits en toutes lettres mais par variables : `{{CONFIRMATION_TACITE_JOURS}}`, `{{LIBERATION_SIGNALEE_JOURS}}`, `{{CARENCE_REDEPOT_APRES_LIBERATION_JOURS}}`, `{{CARENCE_REDEPOT_APRES_SECONDE_LIBERATION_JOURS}}`. LEVÉE D'ATTENTE (patron de partners/ADR-0009, GOV-133) — Décision de Williams du 2026-10-01, écrite dans la fenêtre de la coordination : « oui je confirme c'est moi qui valide car je n'ai pas d'expert comptable » — TRACE COMPLÈTE : MANDAT — à la question de la coordination (fenêtre de la coordination, 2026-10-01T06:46:53Z) « Ma recommandation : vous confirmez par écrit ce que vous m'avez déjà dit, à savoir que le contrat existe et que vous validez le mandat vous-même. Les quelques montants et clauses encore à choisir (capital, représentant, 5 clauses) restent à remplir plus tard. Le site refusera simplement de se lancer tant qu'ils ne sont pas remplis. », Williams répond à 06:52:04Z : « oui je confirme c'est moi qui valide car je n'ai pas d'expert comptable » (la phrase « Je décide : … » qui lui était proposée n'a PAS été tapée) ; CONTRAT — demandé le 2026-09-30 (« il me semble qu'il est deja fait non ? », une question et non une décision). Le 2026-10-01, même fenêtre : à 07:22:52Z Williams écrit ne pas avoir compris ce qui lui est demandé ; à 07:23:10Z il répond « oui » à une demande simplifiée, puis demande à 07:24:16Z ce que sont le contrat et le mandat (« je n'ai pas compris ») ; la coordination les lui explique (07:24:32Z) et répond à ses trois questions d'après le contrat lui-même (07:27:08Z : le contrat existe depuis le 2026-09-25 ; l'apporteur est une entreprise déclarée, avec un SIREN, et non un particulier ; le SIREN est exigé pour signer et vérifié avant tout paiement). Le « oui » de 07:23:10Z a été REPRIS, parce qu'il précédait l'explication. À la question de 07:28:44Z, qui n'offre que deux réponses — « Oui, je valide le contrat v1 tel qu'expliqué. » ou « Non, je veux d'abord le relire. » — et après la précision de 07:29:52Z qu'un « non » empêcherait l'ouverture de la Phase 1, Williams répond à 2026-10-01T07:31:11.043Z : « OUI ». Séquence complète, mot pour mot et horodatée : `_REPRISE-AXION-APPORTEURS/SEQUENCE-DECISION-CONTRAT-2026-10-01.md` (hors dépôt). CE QUI RESTE À LIVRER, dans ce dépôt : (1) Williams tranche une à une les questions fermées de `QUESTIONS_POUR_WILL` (`src/domain/contrat/decisions.ts`), dont la valeur par défaut est celle que le gabarit porte déjà ; le lot dédié en écrit la date seule dans la colonne « Tranchée » de `docs/DECISIONS.md`, et chaque question tranchée est retirée de la liste, sa valeur reportée ; (2) les valeurs que le gabarit attend encore (capital, représentant, lignes d'avenant : écart B2 de la vérification de bout en bout) sont des configurations à sentinelle `A-RENSEIGNER`, refusées par `gov:entite` à la MISE EN SERVICE et jamais au plan ; (3) `exigerGabaritPubliable` reste le verrou avant le premier envoi DocuSeal (INT-T12).",
+      "acceptance": "relecture du gabarit v1 et des décisions « avenant » (C1, C12, D9, D11, D14, horodatage E.1-12, point de départ E.1-9 `fenetreFinAt = confirmeeAt + 6 mois` (décision de Williams du 2026-09-30, art. 3.4 al. 1 : six mois et non douze ; le seul « 12 mois » changé, les autres délais restent), sort d'une ligne acquise bloquée pour KYC à 12 mois, délai distinct de `FENETRE_MOIS`) reçue et consignée dans `docs/DECISIONS.md` avant INT-T12. 🔴 Complétée le 2026-09-29 (chantier W20, décision de Williams, session -d7, docs/chantiers/W20-confirmation-par-email.md §6). La relecture du gabarit v1 porte aussi l'art. 3.2 amendé par W20 (JUR-T40) : confirmation par le clic du contact en réponse à la demande de la Société OU lors d'une prise de contact de la Société, sauf lorsque la demande fait l'objet d'une vérification, auquel cas seule une prise de contact concluante de la Société vaut confirmation (Correction de sécurité du 2026-09-29 (refus de la lentille securite sur 2340a63, docs/chantiers/W20-confirmation-par-email.md §2, §8 et question 18)). Règle de confirmation tacite TRANCHÉE PAR WILLIAMS le 2026-09-29 (session -d7, question 2 du plan, HYP-W20-TACITE) : au bout de trente jours (CONFIRMATION_TACITE_JOURS) sans réponse du contact et sans appel concluant (Qualification confirme ou non_confirme), l'entreprise reste réservée à l'apporteur, l'attribution est réputée confirmée ; le délai court de la RÉCEPTION de l'e-mail de confirmation, c'est-à-dire d'un envoi sans rebond (recueAt) ; tant que l'e-mail revient en erreur et que l'apporteur n'a pas corrigé l'adresse, le délai NE COMMENCE PAS, et un rebond rattaché après coup retire à l'envoi sa qualité de réception. La confirmation tacite réserve l'entreprise et ne crée aucune commission : aucune commission sans paiement réel. Texte de l'art. 3.2 proposé par JUR-T40 et soumis à cette relecture : « À défaut de réponse de l'entreprise et de prise de contact concluante dans un délai de trente jours à compter de la réception de la demande de confirmation, l'attribution est réputée confirmée, sauf lorsque la demande fait l'objet d'une vérification, auquel cas seule une prise de contact concluante de la Société vaut confirmation. La demande est réputée reçue lorsqu'elle a été envoyée à l'adresse déclarée sans être retournée en erreur ; tant qu'elle revient en erreur et que l'Apporteur n'a pas communiqué une adresse corrigée, ce délai ne court pas. Lorsque la demande fait l'objet d'une vérification et qu'aucune prise de contact concluante n'a eu lieu, l'attribution prend fin après trois tentatives de prise de contact restées sans réponse ou à l'expiration d'un délai de quarante-cinq jours à compter de l'envoi de la demande, selon ce qui survient en premier. Cette fin n'emporte aucune autre conséquence pour l'Apporteur que celle-ci : il ne peut déclarer à nouveau la même entreprise qu'à l'expiration d'un délai de trente jours, porté à quatre-vingt-dix jours lorsque l'attribution de cette entreprise a déjà pris fin une première fois dans les mêmes conditions ; la déclaration de cette entreprise par un autre Apporteur n'en est pas affectée. La confirmation réputée acquise et, pour une demande qui fait l'objet d'une vérification, la fin de l'attribution sont les seules conséquences attachées au silence de l'entreprise. » (texte mis à jour après les réponses de Williams du 2026-09-29 vers 20 h aux questions 18 et 19 du plan, puis l'arbitrage de -d7 sur sa délégation, même jour, pour le délai avant une nouvelle déclaration). Elle porte encore la lecture de la « première prise de contact » de l'art. 3.4 (HYP-W20-PREMIER-CONTACT) et l'information de l'apporteur sur la communication de son nom (HYP-W20-IDENTITE-APPORTEUR). Contraintes W19 à intégrer (GOV-115, décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §6) : Aucun DocuSeal avant la fusion de JUR-T31 : art. 3.5 amendé et clause de non-exploitation validés par Williams. L'arbitrage de principe est rendu (question 2, 2026-09-29). AMENDEMENT (vérification V2 (GOV-132, 2026-10-01), A1-13, RM-10) : dans le texte de l'art. 3.2, les délais ne sont pas écrits en toutes lettres mais par variables : `{{CONFIRMATION_TACITE_JOURS}}`, `{{LIBERATION_SIGNALEE_JOURS}}`, `{{CARENCE_REDEPOT_APRES_LIBERATION_JOURS}}`, `{{CARENCE_REDEPOT_APRES_SECONDE_LIBERATION_JOURS}}`. LEVÉE D'ATTENTE (patron de partners/ADR-0009, GOV-133) — Décision de Williams du 2026-10-01, écrite dans la fenêtre de la coordination : « oui je confirme c'est moi qui valide car je n'ai pas d'expert comptable » — TRACE COMPLÈTE : MANDAT — à la question de la coordination (fenêtre de la coordination, 2026-10-01T06:46:53Z) « Ma recommandation : vous confirmez par écrit ce que vous m'avez déjà dit, à savoir que le contrat existe et que vous validez le mandat vous-même. Les quelques montants et clauses encore à choisir (capital, représentant, 5 clauses) restent à remplir plus tard. Le site refusera simplement de se lancer tant qu'ils ne sont pas remplis. », Williams répond à 06:52:04Z : « oui je confirme c'est moi qui valide car je n'ai pas d'expert comptable » (la phrase « Je décide : … » qui lui était proposée n'a PAS été tapée) ; CONTRAT — demandé le 2026-09-30 (« il me semble qu'il est deja fait non ? », une question et non une décision). Le 2026-10-01, même fenêtre : à 07:22:52Z Williams écrit ne pas avoir compris ce qui lui est demandé ; à 07:23:10Z il répond « oui » à une demande simplifiée, puis demande à 07:24:16Z ce que sont le contrat et le mandat (« je n'ai pas compris ») ; la coordination les lui explique (07:24:32Z) et répond à ses trois questions d'après le contrat lui-même (07:27:08Z : le contrat existe depuis le 2026-09-25 ; l'apporteur est une entreprise déclarée, avec un SIREN, et non un particulier ; le SIREN est exigé pour signer et vérifié avant tout paiement). Le « oui » de 07:23:10Z a été REPRIS, parce qu'il précédait l'explication. À la question de 07:28:44Z, qui n'offre que deux réponses — « Oui, je valide le contrat v1 tel qu'expliqué. » ou « Non, je veux d'abord le relire. » — et après la précision de 07:29:52Z qu'un « non » empêcherait l'ouverture de la Phase 1, Williams répond à 2026-10-01T07:31:11.043Z : « OUI ». Séquence complète, mot pour mot et horodatée : `_REPRISE-AXION-APPORTEURS/SEQUENCE-DECISION-CONTRAT-2026-10-01.md` (hors dépôt). CE QUI RESTE À LIVRER, dans ce dépôt : (1) Williams tranche une à une les questions fermées de `QUESTIONS_POUR_WILL` (`src/domain/contrat/decisions.ts`), dont la valeur par défaut est celle que le gabarit porte déjà ; le lot dédié en écrit la date seule dans la colonne « Tranchée » de `docs/DECISIONS.md`, et chaque question tranchée est retirée de la liste, sa valeur reportée ; (2) les valeurs que le gabarit attend encore (capital, représentant, lignes d'avenant : écart B2 de la vérification de bout en bout) sont des configurations à sentinelle `A-RENSEIGNER`, refusées par `gov:entite` à la MISE EN SERVICE et jamais au plan ; (3) `exigerGabaritPubliable` reste le verrou avant le premier envoi DocuSeal (INT-T12). (4) AMENDEMENT (audit indépendant du plan de la Phase 1 (2026-10-01), écart C-09) : la relecture porte aussi l'art. 3.3 amendé (JUR-T42, D2) et l'art. 4 amendé (JUR-T43), postérieurs à la validation de 07:31Z.",
       "tests": {
         "REQ-GOV-015": [
           "decisions-ouvertes.spec.ts"
@@ -4368,7 +4371,8 @@
       "zone": "juridique",
       "paths": [
         "docs/DECISIONS.md",
-        "docs/contrat/ANNEXE-2-MANDAT.md"
+        "docs/contrat/ANNEXE-2-MANDAT.md",
+        "src/domain/contrat/decisions.ts"
       ],
       "schema": false,
       "sensible": [
@@ -4376,7 +4380,8 @@
       ],
       "deps": [
         "CPL-T01",
-        "JUR-T01"
+        "JUR-T01",
+        "JUR-T01b"
       ],
       "reqs": [
         "REQ-ARG-018"
@@ -4394,7 +4399,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "mandat d'autofacturation (art. 289 CGI) relu par l'expert-comptable AVANT le premier envoi DocuSeal ; avis consigné dans `docs/DECISIONS.md`. LEVÉE D'ATTENTE (patron de partners/ADR-0009, GOV-133) — Décision de Williams du 2026-10-01, écrite dans la fenêtre de la coordination : « oui je confirme c'est moi qui valide car je n'ai pas d'expert comptable » — TRACE COMPLÈTE : MANDAT — à la question de la coordination (fenêtre de la coordination, 2026-10-01T06:46:53Z) « Ma recommandation : vous confirmez par écrit ce que vous m'avez déjà dit, à savoir que le contrat existe et que vous validez le mandat vous-même. Les quelques montants et clauses encore à choisir (capital, représentant, 5 clauses) restent à remplir plus tard. Le site refusera simplement de se lancer tant qu'ils ne sont pas remplis. », Williams répond à 06:52:04Z : « oui je confirme c'est moi qui valide car je n'ai pas d'expert comptable » (la phrase « Je décide : … » qui lui était proposée n'a PAS été tapée). Il n'y a pas d'expert-comptable : CE QUI RESTE À LIVRER est la décision de Williams elle-même, dans ce dépôt. Le mandat d'autofacturation (art. 289 CGI, `docs/contrat/ANNEXE-2-MANDAT.md`) est validé avec les défauts du registre (HYP-D9) ; la question JUR-T01-Q04 est tranchée sur la valeur que le gabarit porte, sa date seule écrite par le lot dédié dans la colonne « Tranchée » de `docs/DECISIONS.md`, et la question retirée de `QUESTIONS_POUR_WILL`."
+      "acceptance": "[Première phrase retirée par le rattrapage 35 : elle exigeait la relecture d'un expert-comptable, contraire à la décision de Williams du 2026-10-01 (audit du plan de la Phase 1, écart B-16).] LEVÉE D'ATTENTE (patron de partners/ADR-0009, GOV-133) — Décision de Williams du 2026-10-01, écrite dans la fenêtre de la coordination : « oui je confirme c'est moi qui valide car je n'ai pas d'expert comptable » — TRACE COMPLÈTE : MANDAT — à la question de la coordination (fenêtre de la coordination, 2026-10-01T06:46:53Z) « Ma recommandation : vous confirmez par écrit ce que vous m'avez déjà dit, à savoir que le contrat existe et que vous validez le mandat vous-même. Les quelques montants et clauses encore à choisir (capital, représentant, 5 clauses) restent à remplir plus tard. Le site refusera simplement de se lancer tant qu'ils ne sont pas remplis. », Williams répond à 06:52:04Z : « oui je confirme c'est moi qui valide car je n'ai pas d'expert comptable » (la phrase « Je décide : … » qui lui était proposée n'a PAS été tapée). Il n'y a pas d'expert-comptable : CE QUI RESTE À LIVRER est la décision de Williams elle-même, dans ce dépôt. Le mandat d'autofacturation (art. 289 CGI, `docs/contrat/ANNEXE-2-MANDAT.md`) est validé avec les défauts du registre (HYP-D9) ; la question JUR-T01-Q04 est tranchée sur la valeur que le gabarit porte, sa date seule écrite par le lot dédié dans la colonne « Tranchée » de `docs/DECISIONS.md`, et la question retirée de `QUESTIONS_POUR_WILL`."
     },
     {
       "id": "DM-07",
@@ -4686,7 +4691,7 @@
     },
     {
       "id": "INT-T08-A",
-      "titre": "Relecture par `sequence` + endpoint Σ HT par SIREN pour la réconciliation quotidienne",
+      "titre": "Relecture par `after_sequence` (REQ-INT-012) et `rejouerEvenement` appelable",
       "phase": 1,
       "repo": "axionia",
       "zone": "integration",
@@ -4719,11 +4724,11 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "Vérification V2 (GOV-132, C-01, condition 4) : axion-ia rend la relecture de son outbox par `after_sequence` et `rejouerEvenement` appelable (route ou script), dans des bornes nommées ; témoins rouges d'abord."
+      "acceptance": "Vérification V2 (GOV-132, C-01, condition 4) : axion-ia rend la relecture de son outbox par `after_sequence` et `rejouerEvenement` appelable (route ou script), dans des bornes nommées ; témoins rouges d'abord. AMENDEMENT (audit indépendant du plan de la Phase 1 (2026-10-01), écart B-07) : la route de relecture est déclarée dans `packages/contracts/api.ts`, dans la même montée v3."
     },
     {
       "id": "INT-T08-P",
-      "titre": "Job quotidien de réconciliation",
+      "titre": "Client de relecture Partners et réconciliation quotidienne",
       "phase": 1,
       "repo": "partners",
       "zone": "integration",
@@ -4760,7 +4765,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "Vérification V2 (GOV-132, C-01, condition 4) : le client de relecture Partners relit l'outbox d'axion-ia depuis le dernier `after_sequence` reçu, dans des bornes nommées, et alerte quand la relecture échoue ou rattrape un trou ; témoins rouges d'abord."
+      "acceptance": "Vérification V2 (GOV-132, C-01, condition 4) : le client de relecture Partners relit l'outbox d'axion-ia depuis le dernier `after_sequence` reçu, dans des bornes nommées, et alerte quand la relecture échoue ou rattrape un trou ; témoins rouges d'abord. AMENDEMENT (audit indépendant du plan de la Phase 1 (2026-10-01), écart B-07) : client unique `src/server/integrations/axionia/relecture.ts`, réutilisé par INT-T21-P."
     },
     {
       "id": "SEC-11",
@@ -5416,7 +5421,9 @@
         "src/lib/forme-iban.ts",
         "tests/unit/gouvernance/entite-registre.spec.ts",
         "tests/integration/webhook.spec.ts",
-        "src/server/integrations/axionia/reception.ts"
+        "src/server/integrations/axionia/reception.ts",
+        ".github/workflows/coolify-provisionner.yml",
+        "scripts/gates/gov-entite.ts"
       ],
       "schema": true,
       "sensible": [
@@ -5430,7 +5437,11 @@
         "SEC-03",
         "SEC-06",
         "DM-23",
-        "JUR-T31"
+        "JUR-T31",
+        "JUR-T42",
+        "JUR-T43",
+        "CPL-T06",
+        "CPL-T07"
       ],
       "reqs": [
         "REQ-SEC-034",
@@ -5453,7 +5464,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "ELLE ÉCRIT LE SCHÉMA (label `schema`, seule de sa famille dans son lot). Cadrage de l'architecte du 2026-09-26 sur délégation de Will (partners/ADR-0022) : ce que la tâche crée ; le comportement est celui de ses exigences. (1) `contrats` est créée par DM-23 (dépendance, conflit C1) ; INT-T12 crée `enveloppes_signature` : `enum StatutEnveloppe {envoyee, signee, refusee, expiree, annulee}` ; `contratId`, `submissionId` unique, `statut`, `emailHash` (l'adresse d'envoi en empreinte seule), `envoyeeAt`, `relancesEnvoyees` (0 à 3), `derniereRelanceAt`, `termineeAt` (nulle si et seulement si `envoyee`), `remplaceeParId` unique ; une seule enveloppe `envoyee` par contrat (`UNIQUE (contrat_id) WHERE statut = 'envoyee'`). (2) Elle ajoute à `type_evenement_recu` les valeurs DocuSeal réellement traitées : `submission_completed` (`submission.completed`), `form_declined` (`form.declined`), `submission_expired` (`submission.expired`), identifiant snake_case dérivé du libellé de fil (point → souligné), sans `@map` de valeur, bijection testée (ADR-0022 §10) ; le test d'ordre de `type_evenement_recu` et `identifiantDuType` deviennent par source (vérification V2 (GOV-132, 2026-10-01), A2-18, A1-15). (3) INFORMATION EXTERNE REQUISE AVANT LE CODE : les noms d'événements émis, la forme exacte de la signature `<ts>.<hex64>` et l'emplacement de `metadata.apporteurId` sont consignés dans `docs/tiers/docuseal.md` avec une charge réelle enregistrée. Forme sûre : un type non listé rend 200 sans effet et est alerté, jamais traité par défaut. AJOUT (arbitrage -d7 sur delegation de Williams du 2026-09-30, dette bloquante de la lentille securite) : DOCUSEAL_WEBHOOK_SECRET accepte une cle courante et une cle precedente, echeance de 24 h au plus ; DocuSeal n'envoyant pas de kid, les deux cles sont essayees, la courante d'abord, et le refus apres echeance est nomme ; temoin avant et apres echeance. Contraintes W19 à intégrer (GOV-115, décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §6) : Aucun DocuSeal avant la fusion de JUR-T31 : art. 3.5 amendé et clause de non-exploitation validés par Williams. L'arbitrage de principe est rendu (question 2, 2026-09-29). Coordonnées bancaires débitrices (lentille securite, vérification V2 (GOV-132, 2026-10-01)) : tout code qui lit `PARTNERS_IBAN_DEBITEUR` ou `PARTNERS_BIC_DEBITEUR` REFUSE, en nommant la variable, quand elle est absente, vide ou mal formée (IBAN contrôlé par sa clé — `src/lib/forme-iban.ts` —, BIC au format ISO 9362 `^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$`) ; témoin à deux faces (rouge sur chaque forme fautive — absente, vide, clé IBAN fausse, BIC hors format —, vert sur une valeur bien formée) ; relecture de la lentille securite. La lecture passe par `banqueDebitrice()` / `exigerEntiteRenseignee('<point de sortie>')` de `src/config/entite.ts`, jamais par `process.env` ; le point de sortie de cette tâche figure dans `POINTS_DE_SORTIE` avec `banqueDebitrice.iban` et `banqueDebitrice.bic` dans ses `cles`. INT-T12, première livrée des six, pose dans `src/config/entite.ts` le contrôle de forme centralisé (clé IBAN par `cleIbanValide`, forme BIC) dans `manquantsPour`/`exigerEntiteRenseignee`, et complète `contrat-docuseal` si le contrat imprime l'IBAN : un seul lieu de contrôle (RM-01)."
+      "acceptance": "ELLE ÉCRIT LE SCHÉMA (label `schema`, seule de sa famille dans son lot). Cadrage de l'architecte du 2026-09-26 sur délégation de Will (partners/ADR-0022) : ce que la tâche crée ; le comportement est celui de ses exigences. (1) `contrats` est créée par DM-23 (dépendance, conflit C1) ; INT-T12 crée `enveloppes_signature` : `enum StatutEnveloppe {envoyee, signee, refusee, expiree, annulee}` ; `contratId`, `submissionId` unique, `statut`, `emailHash` (l'adresse d'envoi en empreinte seule), `envoyeeAt`, `relancesEnvoyees` (0 à 3), `derniereRelanceAt`, `termineeAt` (nulle si et seulement si `envoyee`), `remplaceeParId` unique ; une seule enveloppe `envoyee` par contrat (`UNIQUE (contrat_id) WHERE statut = 'envoyee'`). (2) Elle ajoute à `type_evenement_recu` les valeurs DocuSeal réellement traitées : `submission_completed` (`submission.completed`), `form_declined` (`form.declined`), `submission_expired` (`submission.expired`), identifiant snake_case dérivé du libellé de fil (point → souligné), sans `@map` de valeur, bijection testée (ADR-0022 §10) ; le test d'ordre de `type_evenement_recu` et `identifiantDuType` deviennent par source (vérification V2 (GOV-132, 2026-10-01), A2-18, A1-15). (3) INFORMATION EXTERNE REQUISE AVANT LE CODE : les noms d'événements émis, la forme exacte de la signature `<ts>.<hex64>` et l'emplacement de `metadata.apporteurId` sont consignés dans `docs/tiers/docuseal.md` avec une charge réelle enregistrée. Forme sûre : un type non listé rend 200 sans effet et est alerté, jamais traité par défaut. AJOUT (arbitrage -d7 sur delegation de Williams du 2026-09-30, dette bloquante de la lentille securite) : DOCUSEAL_WEBHOOK_SECRET accepte une cle courante et une cle precedente, echeance de 24 h au plus ; DocuSeal n'envoyant pas de kid, les deux cles sont essayees, la courante d'abord, et le refus apres echeance est nomme ; temoin avant et apres echeance. Contraintes W19 à intégrer (GOV-115, décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §6) : Aucun DocuSeal avant la fusion de JUR-T31 : art. 3.5 amendé et clause de non-exploitation validés par Williams. L'arbitrage de principe est rendu (question 2, 2026-09-29). Coordonnées bancaires débitrices (lentille securite, vérification V2 (GOV-132, 2026-10-01)) : tout code qui lit `PARTNERS_IBAN_DEBITEUR` ou `PARTNERS_BIC_DEBITEUR` REFUSE, en nommant la variable, quand elle est absente, vide ou mal formée (IBAN contrôlé par sa clé — `src/lib/forme-iban.ts` —, BIC au format ISO 9362 `^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$`) ; témoin à deux faces (rouge sur chaque forme fautive — absente, vide, clé IBAN fausse, BIC hors format —, vert sur une valeur bien formée) ; relecture de la lentille securite. La lecture passe par `banqueDebitrice()` / `exigerEntiteRenseignee('<point de sortie>')` de `src/config/entite.ts`, jamais par `process.env` ; le point de sortie de cette tâche figure dans `POINTS_DE_SORTIE` avec `banqueDebitrice.iban` et `banqueDebitrice.bic` dans ses `cles`. INT-T12, première livrée des six, pose dans `src/config/entite.ts` le contrôle de forme centralisé (clé IBAN par `cleIbanValide`, forme BIC) dans `manquantsPour`/`exigerEntiteRenseignee`, et complète `contrat-docuseal` si le contrat imprime l'IBAN : un seul lieu de contrôle (RM-01). AMENDEMENT (audit indépendant du plan de la Phase 1 (2026-10-01), écarts A-03, D-01, D-06) : (a) le lien de signature de l'enveloppe `envoyee` est servi à l'espace par une route cloisonnée (`forApporteur`), jamais conservé en clair au journal ; (b) `PARTNERS_IBAN_DEBITEUR` et `PARTNERS_BIC_DEBITEUR` sont déclarés en secrets facultatifs hors production dans `src/lib/env.ts`, `docs/env.md` et `.github/workflows/coolify-provisionner.yml`, et `entite-registre.spec.ts` est étendu ; (c) le motif des points de sortie de `src/config/entite.ts` et `scripts/gates/gov-entite.ts` devient `(?:/docuseal/|docuseal[^/]*\\.tsx?$|contrat[^/]*\\.tsx?$)`, avec un témoin sur `src/server/integrations/docuseal/client.ts`."
     },
     {
       "id": "INT-T13",
@@ -5477,7 +5488,9 @@
       "deps": [
         "DM-12",
         "INT-T09",
-        "INT-T11"
+        "INT-T11",
+        "SEC-16",
+        "DM-43"
       ],
       "reqs": [
         "REQ-INT-027"
@@ -5492,7 +5505,8 @@
       "pr": null,
       "issue": null,
       "attempts": 0,
-      "motif": null
+      "motif": null,
+      "acceptance": "Porté par l'audit indépendant du plan de la Phase 1 (2026-10-01) (écart B-08). Les outils `partners.verifier_entreprise` et `partners.contacts_a_qualifier` appellent la fonction de SEC-16 et celle de DM-43, sans logique propre ; droits par rôle ; journal."
     },
     {
       "id": "INT-T21-A",
@@ -5510,7 +5524,8 @@
         "attribution"
       ],
       "deps": [
-        "INT-T02"
+        "INT-T02",
+        "INT-T46-A"
       ],
       "reqs": [
         "REQ-INT-011",
@@ -5526,7 +5541,8 @@
       "pr": null,
       "issue": null,
       "attempts": 0,
-      "motif": null
+      "motif": null,
+      "acceptance": "Porté par l'audit indépendant du plan de la Phase 1 (2026-10-01) (écart A-06). Relecture par la route unique de REQ-INT-012, fenêtre depuis le 2026-08-13 ; reprend aussi les devis émis des six derniers mois (après INT-T46-A)."
     },
     {
       "id": "INT-T21-P",
@@ -5547,7 +5563,8 @@
       "deps": [
         "INT-T12",
         "INT-T21-A",
-        "SEC-06"
+        "SEC-06",
+        "INT-T08-P"
       ],
       "reqs": [
         "REQ-CPL-016",
@@ -5566,7 +5583,8 @@
       "pr": null,
       "issue": null,
       "attempts": 0,
-      "motif": null
+      "motif": null,
+      "acceptance": "Porté par l'audit indépendant du plan de la Phase 1 (2026-10-01) (écarts A-06, B-07). Rejoue la relecture dans la même réception (mêmes validations, mêmes clés d'idempotence), par le client unique de relecture d'INT-T08-P (`src/server/integrations/axionia/relecture.ts`)."
     },
     {
       "id": "SEC-21",
@@ -5751,7 +5769,9 @@
       "deps": [
         "SEC-03",
         "SEC-04",
-        "QA-T33"
+        "QA-T33",
+        "UX-P1-45",
+        "SEC-42"
       ],
       "reqs": [
         "REQ-SEC-003",
@@ -5796,7 +5816,9 @@
         "DM-13",
         "UX-P1-17",
         "QA-T33",
-        "UX-P1-41"
+        "UX-P1-41",
+        "SEC-42",
+        "EXT-T06"
       ],
       "reqs": [
         "REQ-UX-001",
@@ -5814,11 +5836,11 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "route citée depuis `docs/ESPACE-ROUTES.md` (un champ sur `/`, résultat `/entreprise?q=`). Carence de redépôt W20, arbitrage de -d7 sur délégation de Williams du 2026-09-29 (question 20 de docs/chantiers/W20-confirmation-par-email.md, tranchée, défaut retenu ; HYP-W20-CARENCE-REDEPOT) : quand l'apporteur consulte une entreprise qu'il ne peut pas redéposer pendant la carence de DM-13 (même apporteur, même SIREN : 30 jours après une libération sans confirmation, 90 après une deuxième et au-delà), la carte « Vérifier » dit, sans consigne, « Vous pourrez déposer cette entreprise à nouveau à partir du <date>. » (date en toutes lettres, fuseau de l'apporteur), texte de la SSOT de micro-copy, garde lexicale verte, et ne propose pas « Déposer ». Aucune valeur nouvelle d'IssueDepot ni de MotifRefusDepot (consigne W19 maintenue) ; la carte ne dit ni la raison, ni la vérification, ni le nombre d'appels ; pour tout autre apporteur, l'entreprise est disponible et « Déposer » est proposé. L'état est lu du prédicat de carence de DM-13, côté serveur. Tests : apporteur en carence → texte et aucun bouton « Déposer » ; autre apporteur → « Déposer » présent ; le jour de fin de carence → « Déposer » revient ; le DTO ne porte aucune raison. Contraintes W19 à intégrer (GOV-115, décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §6) : Budget REQ-UX-001 mesuré par la fixture QA-T33. Test : aucune issue ne nomme un rôle de console, et aucune ne distingue un occupant conseiller. Par UX-P1-17, cet écran hérite du bloqueur externe JUR-T31 (validation du texte par Williams). REQ-UX-047 (passe GOV-115, 2026-09-30) : geste principal : déposer en au plus 8 interactions (REQ-UX-001, plus stricte, prime) ; budget : lu dans `BUDGETS_UX`, mesuré par la fixture QA-T33. la maquette de l'écran est validée dans `docs/maquettes/VALIDATION.md` avant la première ligne de code ; cinq états (REQ-UX-019 amendée)."
+      "acceptance": "route citée depuis `docs/ESPACE-ROUTES.md` (un champ sur `/`, résultat `/entreprise?q=`). Carence de redépôt W20, arbitrage de -d7 sur délégation de Williams du 2026-09-29 (question 20 de docs/chantiers/W20-confirmation-par-email.md, tranchée, défaut retenu ; HYP-W20-CARENCE-REDEPOT) : quand l'apporteur consulte une entreprise qu'il ne peut pas redéposer pendant la carence de DM-13 (même apporteur, même SIREN : 30 jours après une libération sans confirmation, 90 après une deuxième et au-delà), la carte « Vérifier » dit, sans consigne, « Vous pourrez déposer cette entreprise à nouveau à partir du <date>. » (date en toutes lettres, fuseau de l'apporteur), texte de la SSOT de micro-copy, garde lexicale verte, et ne propose pas « Déposer ». Aucune valeur nouvelle d'IssueDepot ni de MotifRefusDepot (consigne W19 maintenue) ; la carte ne dit ni la raison, ni la vérification, ni le nombre d'appels ; pour tout autre apporteur, l'entreprise est disponible et « Déposer » est proposé. L'état est lu du prédicat de carence de DM-13, côté serveur. Tests : apporteur en carence → texte et aucun bouton « Déposer » ; autre apporteur → « Déposer » présent ; le jour de fin de carence → « Déposer » revient ; le DTO ne porte aucune raison. Contraintes W19 à intégrer (GOV-115, décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §6) : Budget REQ-UX-001 mesuré par la fixture QA-T33. Test : aucune issue ne nomme un rôle de console, et aucune ne distingue un occupant conseiller. Par UX-P1-17, cet écran hérite du bloqueur externe JUR-T31 (validation du texte par Williams). REQ-UX-047 (passe GOV-115, 2026-09-30) : geste principal : déposer en au plus 8 interactions (REQ-UX-001, plus stricte, prime) ; budget : lu dans `BUDGETS_UX`, mesuré par la fixture QA-T33. la maquette de l'écran est validée dans `docs/maquettes/VALIDATION.md` avant la première ligne de code ; cinq états (REQ-UX-019 amendée). AMENDEMENT (audit indépendant du plan de la Phase 1 (2026-10-01), écart B-18) : la carte porte les états du DTO de SEC-16, dont `libre_deja_travaillee` d'EXT-T06."
     },
     {
       "id": "UX-P1-02",
-      "titre": "Formulaire de dépôt : autocomplétion < 300 ms, tolérance, ville, repli, **rendu de chaque issue de `IssueDepot`**, case facultative de lien d'intérêt",
+      "titre": "Formulaire de dépôt : autocomplétion < 300 ms, tolérance, ville, repli, **rendu de chaque issue de `IssueDepot`**",
       "phase": 1,
       "repo": "partners",
       "zone": "espace",
@@ -5843,7 +5865,8 @@
         "QA-T33",
         "UX-P1-40",
         "UX-P1-41",
-        "SEC-05"
+        "SEC-05",
+        "SEC-42"
       ],
       "reqs": [
         "REQ-UX-001",
@@ -5885,7 +5908,10 @@
       ],
       "deps": [
         "SEC-11",
-        "UX-P1-02"
+        "UX-P1-02",
+        "UX-P1-45",
+        "SEC-42",
+        "QA-T33"
       ],
       "reqs": [
         "REQ-SEC-033",
@@ -5937,7 +5963,9 @@
         "UX-P1-41",
         "DM-13",
         "QA-T33",
-        "SEC-05"
+        "SEC-05",
+        "SEC-42",
+        "UX-P0-01b"
       ],
       "reqs": [
         "REQ-UX-004",
@@ -5986,7 +6014,9 @@
         "UX-P1-19",
         "DM-40",
         "SEC-41",
-        "JUR-T09"
+        "JUR-T09",
+        "UX-P1-41",
+        "DM-41"
       ],
       "reqs": [
         "REQ-CPL-024",
@@ -6034,7 +6064,8 @@
         "GOV-112",
         "UX-P1-16",
         "UX-P1-19",
-        "UX-P1-40"
+        "UX-P1-40",
+        "UX-P1-41"
       ],
       "reqs": [
         "REQ-UX-022",
@@ -6077,7 +6108,10 @@
         "UX-P0-02",
         "UX-P0-03",
         "UX-P1-01",
-        "SEC-43"
+        "SEC-43",
+        "SEC-42",
+        "UX-P1-10",
+        "QA-T33"
       ],
       "reqs": [
         "REQ-UX-008",
@@ -6096,7 +6130,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "Contraintes à intégrer : REQ-UX-047 (passe GOV-115, 2026-09-30) : geste principal : DETTE NOMMÉE, geste non encore connu, à écrire à la revendication ; budget : lu dans `BUDGETS_UX` (consultation au plus 3 interactions, saisie au plus 8), mesuré par la fixture QA-T33. la maquette de l'écran est validée dans `docs/maquettes/VALIDATION.md` avant la première ligne de code ; cinq états (REQ-UX-019 amendée). AMENDEMENT (note de la lentille exactitude sur la PR 316, annexe V2 R1) : le témoin de la garde GATE-UX-ETATS-VIDES vit sous `tests/unit/…` (include vitest) ou sous `tests/e2e/…` (testMatch Playwright), au choix de la tâche selon ce qu'il éprouve, et non sous `tests/ux/etats-vides.spec.ts`, hors de ces portées ; `docs/gates.json` (champ `script`) est réaligné par cette tâche à sa revendication, avec les clés de site de `scripts/gates/gov-attributions.ts` qui en dépendent, et `tests/ux/etats-vides.spec.ts` est alors retiré de ses `paths`."
+      "acceptance": "Contraintes à intégrer : REQ-UX-047 (passe GOV-115, 2026-09-30) : geste principal : DETTE NOMMÉE, geste non encore connu, à écrire à la revendication ; budget : lu dans `BUDGETS_UX` (consultation au plus 3 interactions, saisie au plus 8), mesuré par la fixture QA-T33. la maquette de l'écran est validée dans `docs/maquettes/VALIDATION.md` avant la première ligne de code ; cinq états (REQ-UX-019 amendée). AMENDEMENT (note de la lentille exactitude sur la PR 316, annexe V2 R1) : le témoin de la garde GATE-UX-ETATS-VIDES vit sous `tests/unit/…` (include vitest) ou sous `tests/e2e/…` (testMatch Playwright), au choix de la tâche selon ce qu'il éprouve, et non sous `tests/ux/etats-vides.spec.ts`, hors de ces portées ; `docs/gates.json` (champ `script`) est réaligné par cette tâche à sa revendication, avec les clés de site de `scripts/gates/gov-attributions.ts` qui en dépendent, et `tests/ux/etats-vides.spec.ts` est alors retiré de ses `paths`. AMENDEMENT (audit indépendant du plan de la Phase 1 (2026-10-01), écarts B-19, A-09) : la barre est dérivée des routes livrées (en Phase 1 : Accueil, Mes entreprises, Conformité et Profil ; aucun onglet vers un écran non livré ; en ouverture limitée, seules « Ma conformité » et « Mon contrat ») ; l'alerte priorisée et la liste des notifications viennent de `notifications_espace` ; l'ouverture écrit `lueAt`, qui ne fait courir aucun délai (REQ-JUR-039)."
     },
     {
       "id": "QA-T20b",
@@ -6157,7 +6191,9 @@
         "SEC-04",
         "UX-P1-08",
         "UX-P1-10",
-        "SEC-43"
+        "SEC-43",
+        "SEC-42",
+        "QA-T33"
       ],
       "reqs": [
         "REQ-CPL-019",
@@ -6202,7 +6238,10 @@
       "deps": [
         "SEC-12",
         "UX-P1-02",
-        "UX-P1-09"
+        "UX-P1-09",
+        "UX-P1-45",
+        "SEC-42",
+        "QA-T33"
       ],
       "reqs": [
         "REQ-CPL-029",
@@ -6298,15 +6337,15 @@
         "SEC-11",
         "UX-P1-10",
         "QA-T33",
-        "GOV-137"
+        "GOV-137",
+        "JUR-T30"
       ],
       "reqs": [
         "REQ-JUR-012",
         "REQ-JUR-013",
         "REQ-JUR-041",
         "REQ-SEC-005",
-        "REQ-UX-016",
-        "REQ-UX-047"
+        "REQ-UX-016"
       ],
       "hyp": [],
       "externe": null,
@@ -6319,7 +6358,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "déclenché par `contrat.signe`, BullMQ delay ; J0 = **documents de présentation** (jamais « kit de vente », REQ-JUR-041) **en PDF non modifiable, sans aucun fichier de logo, de charte ni de gabarit de signature** (art. 22 réécrit : aucun droit d'usage de la dénomination n'est concédé) + grille snapshotée **de l'apporteur** + code de parrainage + lien de dépôt privé + règle du premier déclarant ; J2 = rappel ; J7 → dépôt. REQ-UX-047 (passe GOV-115, 2026-09-30) : geste principal : DETTE NOMMÉE, geste non encore connu, à écrire à la revendication ; budget : lu dans `BUDGETS_UX` (consultation au plus 3 interactions, saisie au plus 8), mesuré par la fixture QA-T33. la maquette de l'écran est validée dans `docs/maquettes/VALIDATION.md` avant la première ligne de code ; cinq états (REQ-UX-019 amendée)."
+      "acceptance": "déclenché par `contrat.signe`, BullMQ delay ; J0 = **documents de présentation** (jamais « kit de vente », REQ-JUR-041) **en PDF non modifiable, sans aucun fichier de logo, de charte ni de gabarit de signature** (art. 22 réécrit : aucun droit d'usage de la dénomination n'est concédé) + grille snapshotée **de l'apporteur** + code de parrainage + lien de dépôt privé + règle du premier déclarant ; J2 = rappel ; J7 → dépôt. (audit indépendant du plan de la Phase 1 (2026-10-01), écart B-18 : pas d'écran, REQ-UX-047 retirée.)"
     },
     {
       "id": "UX-P1-12",
@@ -6345,7 +6384,9 @@
         "SEC-17",
         "SEC-19",
         "UX-P1-16",
-        "UX-P1-19"
+        "UX-P1-19",
+        "CPL-T06",
+        "DM-11"
       ],
       "reqs": [
         "REQ-CPL-027",
@@ -6357,7 +6398,7 @@
       ],
       "hyp": [],
       "externe": null,
-      "estimateDays": 1,
+      "estimateDays": 1.5,
       "statut": "a_faire",
       "owner": null,
       "lot": null,
@@ -6366,7 +6407,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "Contraintes W19 à intégrer (GOV-115, décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §6) : écran de console : zone `console` au registre ; son droit `ecran:*` est ajouté à la matrice ; il cite REQ-UX-047 et REQ-UX-048 ; il dépend d'UX-P1-16 et de la maquette de sa phase (UX-P1-19). Son chemin réel sous `src/app/(console)/console/` est celui que fixe `docs/CONSOLE-ROUTES.md` (UX-P1-18) : le chemin gabarit du registre est remplacé à la revendication."
+      "acceptance": "Contraintes W19 à intégrer (GOV-115, décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §6) : écran de console : zone `console` au registre ; son droit `ecran:*` est ajouté à la matrice ; il cite REQ-UX-047 et REQ-UX-048 ; il dépend d'UX-P1-16 et de la maquette de sa phase (UX-P1-19). Son chemin réel sous `src/app/(console)/console/` est celui que fixe `docs/CONSOLE-ROUTES.md` (UX-P1-18) : le chemin gabarit du registre est remplacé à la revendication. AMENDEMENT (audit indépendant du plan de la Phase 1 (2026-10-01), écarts A-01, A-02) : le bloc identité porte la décision retenu, vivier ou refusé, avec motif (`action:decider_candidature` {admin}) ; le bloc conformité ouvre CPL-T07."
     },
     {
       "id": "UX-P1-13",
@@ -6475,7 +6516,7 @@
       "titre": "Éditeur de grille en console : modèles, édition en masse, complétude 30/30 bloquante",
       "phase": 1,
       "repo": "partners",
-      "zone": "espace",
+      "zone": "console",
       "paths": [
         "src/app/(console)/console/grille/",
         "src/server/grille/edition.ts",
@@ -6495,14 +6536,17 @@
       "deps": [
         "DM-23",
         "SEC-17",
-        "UX-P1-13"
+        "UX-P1-13",
+        "UX-P1-16",
+        "UX-P1-19"
       ],
       "reqs": [
         "REQ-EXT-023",
         "REQ-EXT-024",
         "REQ-EXT-027",
         "REQ-UX-026",
-        "REQ-UX-047"
+        "REQ-UX-047",
+        "REQ-UX-048"
       ],
       "hyp": [
         "W12"
@@ -6517,7 +6561,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "édition réservée au rôle `admin`, journalisée, **inaccessible tant que le KYC n'est pas complet** ; départ depuis un `GrilleModele`, puis ajustement ; **édition en masse** (« toutes les formations à 300 € », « tous les audits à 25 % ») puis dérogation ligne par ligne — 30 lignes à saisir à la main à chaque recrutement est intenable, et une ligne oubliée devient une commission bloquée le jour d'une vente ; valeur publiée pré-remplie et rappelée en regard de chaque ligne ; ligne inférieure à la grille publiée → **avertissement non bloquant** « cette ligne est inférieure à la grille publiée » (W12 : c'est permis) **assorti d'un motif obligatoire** — l'avertissement n'empêche pas l'envoi, il oblige à le regarder ; compteur de complétude **30/30 bloquant** : le bouton de génération du contrat reste inactif tant qu'une ligne est indéfinie ; l'écran Contrats montre la grille de chaque apporteur, l'écart à la grille publiée, le motif, qui l'a fixée et quand. 🔴 **L'écart et son motif sont en outre portés à la connaissance de l'APPORTEUR AVANT la signature** (contrat art. 4.1 al. nouveau, synthèse M-9) : le produit stockait déjà `motifEcart` mais rien n'obligeait à le montrer à celui qui signe, ce qui est le cas d'école de l'art. 1112-1 C. civ. dans un contrat d'adhésion. Le **document de présentation qui accompagne l'enveloppe DocuSeal** est **généré** (jamais retapé) et liste chaque ligne en écart avec sa valeur publiée, sa valeur contractuelle et son motif ; **l'envoi de l'enveloppe est refusé si une ligne en écart n'y figure pas**. REQ-UX-047 (passe GOV-115, 2026-09-30) : geste principal : DETTE NOMMÉE, geste non encore connu, à écrire à la revendication ; budget : lu dans `BUDGETS_UX` (consultation au plus 3 interactions, saisie au plus 8), mesuré par la fixture QA-T33. la maquette de l'écran est validée dans `docs/maquettes/VALIDATION.md` avant la première ligne de code ; cinq états (REQ-UX-019 amendée)."
+      "acceptance": "édition réservée au rôle `admin`, journalisée, **inaccessible tant que le KYC n'est pas complet** ; départ depuis un `GrilleModele`, puis ajustement ; **édition en masse** (« toutes les formations à 300 € », « tous les audits à 25 % ») puis dérogation ligne par ligne — 30 lignes à saisir à la main à chaque recrutement est intenable, et une ligne oubliée devient une commission bloquée le jour d'une vente ; valeur publiée pré-remplie et rappelée en regard de chaque ligne ; ligne inférieure à la grille publiée → **avertissement non bloquant** « cette ligne est inférieure à la grille publiée » (W12 : c'est permis) **assorti d'un motif obligatoire** — l'avertissement n'empêche pas l'envoi, il oblige à le regarder ; compteur de complétude **30/30 bloquant** : le bouton de génération du contrat reste inactif tant qu'une ligne est indéfinie ; l'écran Contrats montre la grille de chaque apporteur, l'écart à la grille publiée, le motif, qui l'a fixée et quand. 🔴 **L'écart et son motif sont en outre portés à la connaissance de l'APPORTEUR AVANT la signature** (contrat art. 4.1 al. nouveau, synthèse M-9) : le produit stockait déjà `motifEcart` mais rien n'obligeait à le montrer à celui qui signe, ce qui est le cas d'école de l'art. 1112-1 C. civ. dans un contrat d'adhésion. Le **document de présentation qui accompagne l'enveloppe DocuSeal** est **généré** (jamais retapé) et liste chaque ligne en écart avec sa valeur publiée, sa valeur contractuelle et son motif ; **l'envoi de l'enveloppe est refusé si une ligne en écart n'y figure pas**. REQ-UX-047 (passe GOV-115, 2026-09-30) : geste principal : DETTE NOMMÉE, geste non encore connu, à écrire à la revendication ; budget : lu dans `BUDGETS_UX` (consultation au plus 3 interactions, saisie au plus 8), mesuré par la fixture QA-T33. la maquette de l'écran est validée dans `docs/maquettes/VALIDATION.md` avant la première ligne de code ; cinq états (REQ-UX-019 amendée). AMENDEMENT (audit indépendant du plan de la Phase 1 (2026-10-01), écart B-14) : écran de CONSOLE ; son droit `ecran:*` est déclaré dans la matrice, et son chemin est fixé par `CONSOLE-ROUTES`."
     },
     {
       "id": "INT-T24",
@@ -6531,7 +6575,9 @@
         "src/server/jobs/relances-docuseal.ts",
         "src/server/taches/registre.ts",
         "tests/integration/cycle-de-vie-enveloppe.spec.ts",
-        "tests/unit/integration/relances-docuseal.spec.ts"
+        "tests/unit/integration/relances-docuseal.spec.ts",
+        "src/domain/apporteur/matrice.ts",
+        "src/domain/apporteur/statut.ts"
       ],
       "schema": false,
       "sensible": [
@@ -6543,7 +6589,8 @@
         "INT-T12",
         "SEC-17",
         "UX-P1-10",
-        "GOV-137"
+        "GOV-137",
+        "CPL-T06"
       ],
       "reqs": [
         "REQ-CPL-028",
@@ -6562,7 +6609,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "relance automatique à **J+3** puis **J+7**, alerte console à **J+10**, trois relances au maximum ; refus dans DocuSeal → statut `refuse`, la candidature revient en `retenu`, alerte console, **aucun accès ouvert** ; expiration à **30 jours** → statut `expire`, la réémission est une action de console tracée ; action `admin` « **renvoyer à une adresse corrigée** » — une faute de frappe dans l'e-mail bloquerait sinon l'apporteur définitivement — qui annule l'enveloppe, en crée une nouvelle et **journalise l'ancienne et la nouvelle adresse** ; DocuSeal indisponible → l'envoi part en file d'attente et est réessayé, l'apporteur n'est jamais laissé sans nouvelle, alerte console si le service est muet plus d'une heure ; l'envoi reste **impossible** tant que le KYC n'est pas complet et la grille (DM-23) pas figée."
+      "acceptance": "relance automatique à **J+3** puis **J+7**, alerte console à **J+10**, trois relances au maximum ; refus dans DocuSeal → statut `refuse`, la candidature revient en `retenu`, alerte console, **aucun accès ouvert** ; expiration à **30 jours** → statut `expire`, la réémission est une action de console tracée ; action `admin` « **renvoyer à une adresse corrigée** » — une faute de frappe dans l'e-mail bloquerait sinon l'apporteur définitivement — qui annule l'enveloppe, en crée une nouvelle et **journalise l'ancienne et la nouvelle adresse** ; DocuSeal indisponible → l'envoi part en file d'attente et est réessayé, l'apporteur n'est jamais laissé sans nouvelle, alerte console si le service est muet plus d'une heure ; l'envoi reste **impossible** tant que le KYC n'est pas complet et la grille (DM-23) pas figée. AMENDEMENT (audit indépendant du plan de la Phase 1 (2026-10-01), écart B-09) : le vocabulaire est aligné sur `StatutEnveloppe` (`refusee`, `expiree`) ; la flèche `pret_a_signer → retenu` est posée au glossaire avant."
     },
     {
       "id": "GOV-021",
@@ -6632,7 +6679,9 @@
         "QA-T06",
         "SEC-05",
         "UX-P1-07",
-        "UX-P1-08"
+        "UX-P1-08",
+        "UX-P1-01",
+        "UX-P1-02"
       ],
       "reqs": [
         "REQ-QA-016",
@@ -8723,7 +8772,9 @@
         "UX-P0-01",
         "UX-P1-05",
         "QA-T33",
-        "GOV-137"
+        "GOV-137",
+        "UX-P1-45",
+        "SEC-42"
       ],
       "reqs": [
         "REQ-EXT-001",
@@ -8837,7 +8888,7 @@
       "titre": "Saisie manuelle en console + pièce jointe CV",
       "phase": 1,
       "repo": "partners",
-      "zone": "espace",
+      "zone": "console",
       "paths": [
         "src/app/(console)/console/candidatures/",
         "src/server/candidature/saisie-console.ts",
@@ -8858,13 +8909,16 @@
         "EXT-T03",
         "SEC-08",
         "SEC-17",
-        "QA-T33"
+        "QA-T33",
+        "UX-P1-16",
+        "UX-P1-19"
       ],
       "reqs": [
         "REQ-EXT-011",
         "REQ-EXT-012",
         "REQ-EXT-014",
-        "REQ-UX-047"
+        "REQ-UX-047",
+        "REQ-UX-048"
       ],
       "hyp": [],
       "externe": null,
@@ -8877,7 +8931,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "formulaire console reprenant les champs du tunnel, upload CV, type réel vérifié par octets d'en-tête, stockage privé + URL signée courte, purge à 2 ans avec la candidature. REQ-UX-047 (passe GOV-115, 2026-09-30) : geste principal : DETTE NOMMÉE, geste non encore connu, à écrire à la revendication ; budget : lu dans `BUDGETS_UX` (consultation au plus 3 interactions, saisie au plus 8), mesuré par la fixture QA-T33. la maquette de l'écran est validée dans `docs/maquettes/VALIDATION.md` avant la première ligne de code ; cinq états (REQ-UX-019 amendée)."
+      "acceptance": "formulaire console reprenant les champs du tunnel, upload CV, type réel vérifié par octets d'en-tête, stockage privé + URL signée courte, purge à 2 ans avec la candidature. REQ-UX-047 (passe GOV-115, 2026-09-30) : geste principal : DETTE NOMMÉE, geste non encore connu, à écrire à la revendication ; budget : lu dans `BUDGETS_UX` (consultation au plus 3 interactions, saisie au plus 8), mesuré par la fixture QA-T33. la maquette de l'écran est validée dans `docs/maquettes/VALIDATION.md` avant la première ligne de code ; cinq états (REQ-UX-019 amendée). AMENDEMENT (audit indépendant du plan de la Phase 1 (2026-10-01), écart B-14) : écran de CONSOLE ; son droit `ecran:*` est déclaré dans la matrice, et son chemin est fixé par `CONSOLE-ROUTES`."
     },
     {
       "id": "EXT-T06",
@@ -8904,8 +8958,7 @@
       ],
       "reqs": [
         "REQ-EXT-006",
-        "REQ-EXT-007",
-        "REQ-UX-047"
+        "REQ-EXT-007"
       ],
       "hyp": [
         "HYP-W7",
@@ -8921,7 +8974,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "cinquième état `libre_deja_travaillee` dans le DTO de vérification ; signal d'anomalie au-delà du seuil de configuration prévu pour la part de dépôts sur des entreprises déjà travaillées (valeur hors dépôt, REQ-GOV-031). REQ-UX-047 (passe GOV-115, 2026-09-30) : geste principal : DETTE NOMMÉE, geste non encore connu, à écrire à la revendication ; budget : lu dans `BUDGETS_UX` (consultation au plus 3 interactions, saisie au plus 8), mesuré par la fixture QA-T33. la maquette de l'écran est validée dans `docs/maquettes/VALIDATION.md` avant la première ligne de code ; cinq états (REQ-UX-019 amendée)."
+      "acceptance": "cinquième état `libre_deja_travaillee` dans le DTO de vérification ; signal d'anomalie au-delà du seuil de configuration prévu pour la part de dépôts sur des entreprises déjà travaillées (valeur hors dépôt, REQ-GOV-031). (audit indépendant du plan de la Phase 1 (2026-10-01), écart B-18 : pas d'écran, REQ-UX-047 retirée.)"
     },
     {
       "id": "EXT-T02b",
@@ -9220,7 +9273,8 @@
         "JUR-T26",
         "SEC-15",
         "SEC-19",
-        "UX-P0-01"
+        "UX-P0-01",
+        "UX-P1-17"
       ],
       "reqs": [
         "REQ-CPL-027",
@@ -9240,7 +9294,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "l'entrée de `suspendreDeclarations()` n'accepte que `non_confirme | fraude` (type fermé) ; aucun compteur de gradation dans l'espace ; libellés « déclaration non confirmée » / « contrôle de sincérité ». 🔴 **Deux corrections du 2026-09-03.** (1) **Le libellé de plafond est RETIRÉ** (synthèse P-2) : « vous pouvez déclarer jusqu'à 15 entreprises par semaine » annonçait un plafond que REQ-DM-010 ne pose pas — « aucun dépôt n'est refusé pour dépassement de seuil » ; soit l'espace mentait sur l'étendue des droits (art. 1112-1 C. civ., al. 5 d'ordre public, que l'art. 17 ne peut pas écarter), soit le plafond existait et était inopposable. Libellé unique, qui ne promet ni ne restreint : « **Vos déclarations au-delà de quinze par semaine font l'objet d'une vérification prioritaire ; aucune n'est refusée.** » (2) **Verrou « aucune résiliation pour inactivité »** (synthèse §B.2, arbitré par Will) — l'art. 11.1 permet déjà de résilier à tout moment sans motiver sous 30 jours, donc la clause n'apporterait **rien** et ajouterait le risque : `resiliationMotif` reste l'enum fermé `{ordinaire_apporteur, ordinaire_axion, manquement_grave}` sous **test-cliquet** ; l'écran de résiliation n'offre **aucun** motif d'inactivité ; **aucun gabarit d'e-mail de résiliation ne mentionne l'absence de dépôt** ; `dormant` reste un indicateur de console et **n'entre dans aucun DTO exposé** (REQ-CPL-027, JUR-T25, UX-P3-06). AMENDEMENT (note de la lentille exactitude sur la PR 316, annexe V2 R1) : le témoin de la garde jur:suspension-motifs-fermes vit sous `tests/unit/domaine/suspension-motifs.spec.ts` (include vitest), témoin unitaire que la tâche déclare déjà, et non sous `tests/domain/suspension-motifs.spec.ts`, hors de ces portées ; `docs/gates.json` (champ `script`) est réaligné par cette tâche à sa revendication, avec les clés de site de `scripts/gates/gov-attributions.ts` qui en dépendent, et `tests/domain/suspension-motifs.spec.ts` est alors retiré de ses `paths`."
+      "acceptance": "l'entrée de `suspendreDeclarations()` n'accepte que `non_confirme | fraude` (type fermé) ; aucun compteur de gradation dans l'espace ; libellés « déclaration non confirmée » / « contrôle de sincérité ». 🔴 **Deux corrections du 2026-09-03.** (1) **Le libellé de plafond est RETIRÉ** (synthèse P-2) : « vous pouvez déclarer jusqu'à 15 entreprises par semaine » annonçait un plafond que REQ-DM-010 ne pose pas — « aucun dépôt n'est refusé pour dépassement de seuil » ; soit l'espace mentait sur l'étendue des droits (art. 1112-1 C. civ., al. 5 d'ordre public, que l'art. 17 ne peut pas écarter), soit le plafond existait et était inopposable. Libellé unique, qui ne promet ni ne restreint : « **Vos déclarations au-delà du seuil de l'apporteur, interpolé, font l'objet d'une vérification prioritaire ; aucune n'est refusée.** » (2) **Verrou « aucune résiliation pour inactivité »** (synthèse §B.2, arbitré par Will) — l'art. 11.1 permet déjà de résilier à tout moment sans motiver sous 30 jours, donc la clause n'apporterait **rien** et ajouterait le risque : `resiliationMotif` reste l'enum fermé `{ordinaire_apporteur, ordinaire_axion, manquement_grave}` sous **test-cliquet** ; l'écran de résiliation n'offre **aucun** motif d'inactivité ; **aucun gabarit d'e-mail de résiliation ne mentionne l'absence de dépôt** ; `dormant` reste un indicateur de console et **n'entre dans aucun DTO exposé** (REQ-CPL-027, JUR-T25, UX-P3-06). AMENDEMENT (note de la lentille exactitude sur la PR 316, annexe V2 R1) : le témoin de la garde jur:suspension-motifs-fermes vit sous `tests/unit/domaine/suspension-motifs.spec.ts` (include vitest), témoin unitaire que la tâche déclare déjà, et non sous `tests/domain/suspension-motifs.spec.ts`, hors de ces portées ; `docs/gates.json` (champ `script`) est réaligné par cette tâche à sa revendication, avec les clés de site de `scripts/gates/gov-attributions.ts` qui en dépendent, et `tests/domain/suspension-motifs.spec.ts` est alors retiré de ses `paths`."
     },
     {
       "id": "JUR-T30",
@@ -12091,9 +12145,8 @@
       "repo": "partners",
       "zone": "espace",
       "paths": [
-        "messages/fr.json",
-        "src/content/micro-copy/",
-        "tests/unit/espace/libelles-d-etats.spec.ts"
+        "tests/unit/espace/libelles-d-etats.spec.ts",
+        "src/content/micro-copy/espace/etats-attribution.ts"
       ],
       "schema": false,
       "sensible": [
@@ -12101,7 +12154,8 @@
       ],
       "deps": [
         "UX-P0-01",
-        "DM-07"
+        "DM-07",
+        "UX-P1-17"
       ],
       "reqs": [
         "REQ-UX-002",
@@ -12111,7 +12165,7 @@
       "externe": null,
       "estimateDays": 0.25,
       "statut": "a_faire",
-      "acceptance": "SUITE DE UX-P0-01, DECOUPEE LE 2026-09-16 POUR NE PAS POSER D'EXEMPTION PERMANENTE AU CONTROLE DES PHASES. Les treize etats d'attribution sont livres par DM-07 (phase 1) : leurs libelles visibles ne peuvent donc pas etre ecrits en phase 0 sans dependre d'une tache de phase superieure. A LIVRER. (1) CHACUN des etats declares par l'enum a son libelle visible, sa phrase d'explication, et — quand l'etat en a une — sa date de fin affichee ; la liste des etats est DERIVEE de l'enum, jamais retapee (RM-01). (2) AUCUN LIBELLE NE NOMME L'AUTRE APPORTEUR, ni par son identite, ni par une date de depot, ni par un stade : la reponse « deja suivie » ne dit que la date de fin (REQ-QA-012 tient la meme regle cote serveur, ce texte ne doit pas la contredire). (3) Aucun de ces libelles ne contient les mots que REQ-UX-003 refuse, notamment celui qui designe l'attribution elle-meme. (4) TEMOIN A DEUX FACES : un etat ajoute a l'enum sans son libelle fait sortir la garde en code non nul et NOMME l'etat ; les treize etats libelles la font sortir en zero, avec le compte des etats reellement confrontes. Un libelle qui nommerait l'autre apporteur fait sortir la garde lexicale en code non nul.",
+      "acceptance": "SUITE DE UX-P0-01, DECOUPEE LE 2026-09-16 POUR NE PAS POSER D'EXEMPTION PERMANENTE AU CONTROLE DES PHASES. Les treize etats d'attribution sont livres par DM-07 (phase 1) : leurs libelles visibles ne peuvent donc pas etre ecrits en phase 0 sans dependre d'une tache de phase superieure. A LIVRER. (1) CHACUN des etats declares par l'enum a son libelle visible, sa phrase d'explication, et — quand l'etat en a une — sa date de fin affichee ; la liste des etats est DERIVEE de l'enum, jamais retapee (RM-01). (2) AUCUN LIBELLE NE NOMME L'AUTRE APPORTEUR, ni par son identite, ni par une date de depot, ni par un stade : la réponse d'occupation reprend `FORMULES.dejaReservee` et ne dit que la date de fin (REQ-QA-012 tient la meme regle cote serveur, ce texte ne doit pas la contredire). (3) Aucun de ces libelles ne contient les mots que REQ-UX-003 refuse, notamment celui qui designe l'attribution elle-meme. (4) TEMOIN A DEUX FACES : un etat ajoute a l'enum sans son libelle fait sortir la garde en code non nul et NOMME l'etat ; les treize etats libelles la font sortir en zero, avec le compte des etats reellement confrontes. Un libelle qui nommerait l'autre apporteur fait sortir la garde lexicale en code non nul. AMENDEMENT (audit indépendant du plan de la Phase 1 (2026-10-01), écarts B-15, A1-11) : le fichier réel des libellés d'états est `src/content/micro-copy/espace/etats-attribution.ts`, ou celui que nomme la revendication.",
       "tests": {
         "REQ-UX-002": [
           "tests/unit/espace/libelles-d-etats.spec.ts"
@@ -14380,7 +14434,8 @@
         "docs/maquettes/mes-entreprises.html"
       ],
       "deps": [
-        "GOV-112"
+        "GOV-112",
+        "UX-P1-18"
       ],
       "reqs": [
         "REQ-UX-001",
@@ -14426,7 +14481,8 @@
       "deps": [
         "UX-P1-40",
         "JUR-T09",
-        "GOV-112"
+        "GOV-112",
+        "JUR-T13"
       ],
       "reqs": [
         "REQ-JUR-039",
@@ -14438,7 +14494,7 @@
         "REQ-JUR-060"
       ],
       "estimateDays": 0.75,
-      "acceptance": "Source : docs/chantiers/W20-confirmation-par-email.md (décision de Williams du 2026-09-29, session -d7, phase 1). Réalise la part texte de REQ-UX-060, REQ-UX-061 et REQ-JUR-060 (Exigence nouvelle proposée au §3 du plan, à inscrire par la passe gardien-spec puis à ajouter à `reqs` ; les HYP-W20 citées ici ne sont pas encore au §2 de docs/DECISIONS.md, elles entreront dans `hyp` par la même passe.). (1) Tous les textes W20 vivent dans la SSOT de micro-copy, en gabarits à variables (prénom, nom, entreprise, heure) ; aucun texte recopié ailleurs (RM-01). (2) Message avant le bouton, repris mot pour mot de la décision de Williams, sauf la fin proposée « Axion-IA pourra aussi l'appeler. » (question 15 du plan, valeur par défaut confirmée par Williams le 2026-09-29) : il INFORME et ne donne aucune consigne (REQ-JUR-039). (3) Un champ exigé n'est jamais marqué « obligatoire » (mot interdit par REQ-JUR-037) ; seuls les champs facultatifs portent « (facultatif) ». (4) Les valeurs saisies par l'apporteur et reprises dans l'e-mail sont rendues en texte brut, échappées, sans lien (HYP-W20-CONTEXTE). (5) Témoins : la garde lexicale reste verte sur tout texte vu par l'apporteur ; un texte « vous devez confirmer » posé dans le fichier la fait rougir. (6) Amendée le 2026-09-29 (réponse de Williams à la question 2 et exigence d'expérience, docs/chantiers/W20-confirmation-par-email.md §2, §4 et §9) : la SSOT porte aussi les quatre libellés du badge de REQ-UX-062, plus, depuis la correction de sécurité du 2026-09-29 (refus de la lentille securite sur 2340a63, docs/chantiers/W20-confirmation-par-email.md §2, §8 et question 18), le libellé de la demande signalée « En attente de confirmation — Axion-IA va appeler votre contact » (neutre, sans consigne, sans date), l'action « Corriger l'adresse », la phrase d'aide unique « Sans réponse de votre contact, l'entreprise reste réservée pour vous 30 jours après la réception de notre e-mail. » (le nombre interpolé depuis CONFIRMATION_TACITE_JOURS, jamais recopié) et le texte de la notification de l'e-mail reparti après correction ; depuis les réponses de Williams du 2026-09-29 vers 20 h (session -d7, questions 18 et 19), le libellé ⚪ « Réservation terminée · l'entreprise est de nouveau disponible » (sans date, sans action, sans phrase d'aide) et le texte de la notification de libération, neutre et sans consigne, proposé : « La réservation de <Entreprise> a pris fin sans confirmation. L'entreprise est de nouveau disponible. », qui ne dit ni la raison, ni la vérification, ni le nombre d'appels ; la date en toutes lettres est formatée par une seule fonction, dans le fuseau de l'apporteur. Garde lexicale verte sur ces textes. AMENDEMENT (vérification V2 (GOV-132, 2026-10-01), A1-12) : `public/**` et `courriels/**` sont en portée `apporteur`, attendue.",
+      "acceptance": "Source : docs/chantiers/W20-confirmation-par-email.md (décision de Williams du 2026-09-29, session -d7, phase 1). Réalise la part texte de REQ-UX-060, REQ-UX-061 et REQ-JUR-060 (Exigence nouvelle proposée au §3 du plan, à inscrire par la passe gardien-spec puis à ajouter à `reqs` ; les HYP-W20 citées ici ne sont pas encore au §2 de docs/DECISIONS.md, elles entreront dans `hyp` par la même passe.). (1) Tous les textes W20 vivent dans la SSOT de micro-copy, en gabarits à variables (prénom, nom, entreprise, heure) ; aucun texte recopié ailleurs (RM-01). (2) Message avant le bouton, repris mot pour mot de la décision de Williams, sauf la fin proposée « Axion-IA pourra aussi l'appeler. » (question 15 du plan, valeur par défaut confirmée par Williams le 2026-09-29) : il INFORME et ne donne aucune consigne (REQ-JUR-039). (3) Un champ exigé n'est jamais marqué « obligatoire » (mot interdit par REQ-JUR-037) ; seuls les champs facultatifs portent « (facultatif) ». (4) Les valeurs saisies par l'apporteur et reprises dans l'e-mail sont rendues en texte brut, échappées, sans lien (HYP-W20-CONTEXTE). (5) Témoins : la garde lexicale reste verte sur tout texte vu par l'apporteur ; un texte « vous devez confirmer » posé dans le fichier la fait rougir. (6) Amendée le 2026-09-29 (réponse de Williams à la question 2 et exigence d'expérience, docs/chantiers/W20-confirmation-par-email.md §2, §4 et §9) : la SSOT porte aussi les quatre libellés du badge de REQ-UX-062, plus, depuis la correction de sécurité du 2026-09-29 (refus de la lentille securite sur 2340a63, docs/chantiers/W20-confirmation-par-email.md §2, §8 et question 18), le libellé de la demande signalée « En attente de confirmation — Axion-IA va appeler votre contact » (neutre, sans consigne, sans date), l'action « Corriger l'adresse », la phrase d'aide unique « Sans réponse de votre contact, l'entreprise reste réservée pour vous 30 jours après la réception de notre e-mail. » (le nombre interpolé depuis CONFIRMATION_TACITE_JOURS, jamais recopié) et le texte de la notification de l'e-mail reparti après correction ; depuis les réponses de Williams du 2026-09-29 vers 20 h (session -d7, questions 18 et 19), le libellé ⚪ « Réservation terminée · l'entreprise est de nouveau disponible » (sans date, sans action, sans phrase d'aide) et le texte de la notification de libération, neutre et sans consigne, proposé : « La réservation de <Entreprise> a pris fin sans confirmation. L'entreprise est de nouveau disponible. », qui ne dit ni la raison, ni la vérification, ni le nombre d'appels ; la date en toutes lettres est formatée par une seule fonction, dans le fuseau de l'apporteur. Garde lexicale verte sur ces textes. AMENDEMENT (vérification V2 (GOV-132, 2026-10-01), A1-12) : `public/**` et `courriels/**` sont en portée `apporteur`, attendue. AMENDEMENT (audit indépendant du plan de la Phase 1 (2026-10-01), écart C15 de la vérification de bout en bout) : réécrit la phrase d'états vides qui promet un gain dès la signature du client (contraire à l'art. 4.2), et transpose `jur:copy-indicative` dans Partners (`src/content/**`, `docs/maquettes/**`), avec un témoin rouge sur cette phrase.",
       "tests": {
         "REQ-JUR-039": [
           "tests/unit/micro-copy/confirmation-par-courriel.spec.ts"
@@ -14600,7 +14656,9 @@
         "src/server/confirmation/rebonds.ts",
         "src/server/notifications/table-ssot.ts",
         "tests/integration/envoi-differe-de-la-confirmation.spec.ts",
-        "tests/unit/email/gabarit-confirmation-contact.spec.ts"
+        "tests/unit/email/gabarit-confirmation-contact.spec.ts",
+        "src/server/integrations/zeptomail/rebonds.ts",
+        "docs/tiers/zeptomail.md"
       ],
       "deps": [
         "DM-40",
@@ -14619,7 +14677,7 @@
         "REQ-JUR-060"
       ],
       "estimateDays": 1.25,
-      "acceptance": "Source : docs/chantiers/W20-confirmation-par-email.md (décision de Williams du 2026-09-29, session -d7, phase 1). Réalise REQ-INT-060 et la part envoi de REQ-JUR-060 (Exigence nouvelle proposée au §3 du plan, à inscrire par la passe gardien-spec puis à ajouter à `reqs` ; les HYP-W20 citées ici ne sont pas encore au §2 de docs/DECISIONS.md, elles entreront dans `hyp` par la même passe.) ; hypothèse HYP-W20-REBOND. (1) Un job « tout ce qui est dû à l'instant t », horloge injectée (REQ-QA-027), envoie les demandes échues par l'émetteur d'INT-T10 : jamais avant l'échéance, jamais deux fois ; une demande annulée n'envoie rien. (2) Sans drapeau DMARC, ou vers une adresse supprimée, l'envoi est retenu et visible (REQ-INT-022, REQ-INT-023). (3) L'e-mail part depuis une adresse humaine, vers l'adresse saisie pour le contact et aucune autre ; multipart avec une version texte, aucune image distante, aucun pixel de suivi, aucun lien autre que les deux réponses et l'opposition ; la version du texte est journalisée avec l'envoi. (4) Le webhook de rebond rattache le rebond à sa demande par l'identifiant du message, passe la demande en rebond, et crée une notification INFORMATIVE de l'apporteur (clé de la table SSOT, faitCourirUnDelai false, REQ-JUR-039). (5) Témoins : drapeau faux → aucune requête au relais ; rebond mal signé → rien ; worker arrêté puis relancé → rattrapage sans doublon.",
+      "acceptance": "Source : docs/chantiers/W20-confirmation-par-email.md (décision de Williams du 2026-09-29, session -d7, phase 1). Réalise REQ-INT-060 et la part envoi de REQ-JUR-060 (Exigence nouvelle proposée au §3 du plan, à inscrire par la passe gardien-spec puis à ajouter à `reqs` ; les HYP-W20 citées ici ne sont pas encore au §2 de docs/DECISIONS.md, elles entreront dans `hyp` par la même passe.) ; hypothèse HYP-W20-REBOND. (1) Un job « tout ce qui est dû à l'instant t », horloge injectée (REQ-QA-027), envoie les demandes échues par l'émetteur d'INT-T10 : jamais avant l'échéance, jamais deux fois ; une demande annulée n'envoie rien. (2) Sans drapeau DMARC, ou vers une adresse supprimée, l'envoi est retenu et visible (REQ-INT-022, REQ-INT-023). (3) L'e-mail part depuis une adresse humaine, vers l'adresse saisie pour le contact et aucune autre ; multipart avec une version texte, aucune image distante, aucun pixel de suivi, aucun lien autre que les deux réponses et l'opposition ; la version du texte est journalisée avec l'envoi. (4) Le webhook de rebond rattache le rebond à sa demande par l'identifiant du message, passe la demande en rebond, et crée une notification INFORMATIVE de l'apporteur (clé de la table SSOT, faitCourirUnDelai false, REQ-JUR-039). (5) Témoins : drapeau faux → aucune requête au relais ; rebond mal signé → rien ; worker arrêté puis relancé → rattrapage sans doublon. AMENDEMENT (audit indépendant du plan de la Phase 1 (2026-10-01), écart B-06) : le rattachement est appelé depuis `recevoirRebond` ; aucune seconde route de rebond.",
       "tests": {
         "REQ-INT-022": [
           "tests/integration/envoi-differe-de-la-confirmation.spec.ts"
@@ -14841,7 +14899,8 @@
         "UX-P1-41",
         "DM-41",
         "SEC-40",
-        "GOV-112"
+        "GOV-112",
+        "QA-T33"
       ],
       "reqs": [
         "REQ-JUR-009",
@@ -15851,7 +15910,8 @@
       "schema": false,
       "sensible": [],
       "deps": [
-        "UX-P1-18"
+        "UX-P1-18",
+        "GOV-113"
       ],
       "reqs": [
         "REQ-UX-047",
@@ -15862,7 +15922,7 @@
       "externe": null,
       "estimateDays": 1.5,
       "statut": "a_faire",
-      "acceptance": "Lot transverse « confort de la console pour tous les rôles ». Pourquoi, pour tous les rôles : les écrans de console de la phase 1 (qualifieur, admin) seraient codés sans maquette validée. (1) Une maquette par écran de console de la phase 1 listé dans `CONSOLE-ROUTES` : UX-P1-06, UX-P1-07, UX-P1-12, UX-P1-13, EXT-T02a. La liste est rapprochée de la carte et tout écart est nommé. (2) Chacune montre son geste principal et son budget (REQ-UX-021 : fiche de qualification en ≤ 6 interactions), ses cinq états et ses deux thèmes, avec des libellés tirés du glossaire. (3) Aucune phrase « l'apporteur verra » sur une entreprise prise en charge par la Société. (4) Validation groupée de Will, dans `VALIDATION.md`. La fiche W19 porte « externe will » : la validation de Williams est une étape de cette acceptance, pas un préalable ; la tâche reste éligible pour produire ce qu'il validera (patron UX-P1-40 ; le schéma lie un externe non nul au statut attente_externe, qui bloquerait le travail). Arbitrage A01 du 2026-09-30."
+      "acceptance": "Lot transverse « confort de la console pour tous les rôles ». Pourquoi, pour tous les rôles : les écrans de console de la phase 1 (qualifieur, admin) seraient codés sans maquette validée. (1) Une maquette par écran de console de la phase 1 listé dans `CONSOLE-ROUTES` : UX-P1-06, UX-P1-07, UX-P1-12 (avec décision et conformité), UX-P1-13, UX-P1-14, UX-P1-20, EXT-T02a, EXT-T04, CPL-T07. La liste est rapprochée de la carte et tout écart est nommé. (2) Chacune montre son geste principal et son budget (REQ-UX-021 : fiche de qualification en ≤ 6 interactions), ses cinq états et ses deux thèmes, avec des libellés tirés du glossaire. (3) Aucune phrase « l'apporteur verra » sur une entreprise prise en charge par la Société. (4) Validation groupée de Will, dans `VALIDATION.md`. La fiche W19 porte « externe will » : la validation de Williams est une étape de cette acceptance, pas un préalable ; la tâche reste éligible pour produire ce qu'il validera (patron UX-P1-40 ; le schéma lie un externe non nul au statut attente_externe, qui bloquerait le travail). Arbitrage A01 du 2026-09-30."
     },
     {
       "id": "UX-P1-16",
@@ -15942,7 +16002,8 @@
       "deps": [
         "UX-P1-16",
         "SEC-08",
-        "UX-P1-12"
+        "UX-P1-12",
+        "UX-P1-19"
       ],
       "reqs": [
         "REQ-UX-048",
@@ -16013,7 +16074,9 @@
       "deps": [
         "GOV-115",
         "GOV-117",
-        "UX-P1-18"
+        "UX-P1-18",
+        "UX-P1-41",
+        "QA-T58"
       ],
       "reqs": [
         "REQ-UX-047",
@@ -16047,7 +16110,8 @@
       "schema": false,
       "sensible": [],
       "deps": [
-        "GOV-113"
+        "GOV-113",
+        "QA-T58"
       ],
       "reqs": [
         "REQ-UX-047",
@@ -16080,7 +16144,8 @@
       "schema": false,
       "sensible": [],
       "deps": [
-        "GOV-115"
+        "GOV-115",
+        "JUR-T40"
       ],
       "reqs": [
         "REQ-SEC-042",
@@ -17319,7 +17384,9 @@
       ],
       "schema": false,
       "sensible": [],
-      "deps": [],
+      "deps": [
+        "QA-T54"
+      ],
       "reqs": [
         "REQ-GOV-014"
       ],
@@ -17327,7 +17394,7 @@
       "externe": null,
       "estimateDays": 0.5,
       "statut": "a_faire",
-      "acceptance": "Écart C7 de la vérification de bout en bout (GOV-131, VERIF-1-RAPPORT.md), versé sur demande de la coordination, en tête du lot 2 : `deploy.yml` publie et déploie sur tout `push: main` sans dépendre de la porte A, et la protection de `main` porte `strict=false` ; une PR verte sur une base périmée fusionne et déploie un état jamais testé. `gov-depot.ts` lit `strict` sans le juger. (1) Famille `strict_absent` dans `scripts/gates/gov-depot.ts`, avec son TÉMOIN rouge : une protection de `main` sans « branches à jour avant fusion » est refusée et nommée. (2) Le job `deployer` de `.github/workflows/deploy.yml` ne part que si la porte A a réussi sur le même sha. (3) Le réglage de la forge (« branches à jour avant fusion », `strict=true`) est un GESTE DE WILLIAMS, présenté par la coordination ; la garde le constate, elle ne le pose pas. Relecture de la lentille securite exigée."
+      "acceptance": "Écart C7 de la vérification de bout en bout (GOV-131, VERIF-1-RAPPORT.md), versé sur demande de la coordination, en tête du lot 2 : `deploy.yml` publie et déploie sur tout `push: main` sans dépendre de la porte A, et la protection de `main` porte `strict=false` ; une PR verte sur une base périmée fusionne et déploie un état jamais testé. `gov-depot.ts` lit `strict` sans le juger. (1) Famille `strict_absent` dans `scripts/gates/gov-depot.ts`, avec son TÉMOIN rouge : une protection de `main` sans « branches à jour avant fusion » est refusée et nommée. (2) Le job `deployer` de `.github/workflows/deploy.yml` ne part que si la porte A a réussi sur le même sha. (3) Le réglage de la forge (« branches à jour avant fusion », `strict=true`) est un GESTE DE WILLIAMS, présenté par la coordination ; la garde le constate, elle ne le pose pas. Relecture de la lentille securite exigée. AMENDEMENT (audit indépendant du plan de la Phase 1 (2026-10-01), écart C29 de la vérification de bout en bout) : l'image déployée est tirée par EMPREINTE, et non plus par l'étiquette `sha-<7>`."
     },
     {
       "id": "SEC-43",
@@ -17442,7 +17509,9 @@
       "sensible": [
         "attribution"
       ],
-      "deps": [],
+      "deps": [
+        "JUR-T31"
+      ],
       "reqs": [
         "REQ-DM-028"
       ],
@@ -17519,7 +17588,9 @@
       "sensible": [
         "argent"
       ],
-      "deps": [],
+      "deps": [
+        "JUR-T42"
+      ],
       "reqs": [
         "REQ-DM-014"
       ],
@@ -17763,6 +17834,154 @@
       "estimateDays": 0.5,
       "statut": "a_faire",
       "acceptance": "Écart C11 de la vérification de bout en bout, porté par l'audit indépendant du plan de la Phase 1 (2026-10-01). (1) Le compteur `auth:axionia-ip` (60 par minute) est inscrit au registre des limites. (2) `AXIONIA_API_ALLOWLIST` est déclarée dans `schemaConfiguration` et dans le provisionnement. (3) `SAUTS_DE_CONFIANCE` est mesuré et consigné dans `docs/tiers/coolify.md`. TÉMOINS rouges d'abord. Relecture de la lentille securite."
+    },
+    {
+      "id": "CPL-T07",
+      "titre": "Dossier de conformité en console : SIREN et statut, vérification des pièces, ouverture et validation du KYC, envoi du contrat",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "console",
+      "paths": [
+        "src/server/conformite/dossier.ts",
+        "src/domain/apporteur/matrice.ts",
+        "src/app/(console)/console/apporteurs/[id]/conformite/page.tsx",
+        "tests/integration/dossier-de-conformite.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [
+        "rgpd",
+        "argent",
+        "auth"
+      ],
+      "deps": [
+        "DM-11",
+        "CPL-T06",
+        "SEC-17",
+        "UX-P1-16",
+        "UX-P1-19",
+        "SEC-43"
+      ],
+      "reqs": [
+        "REQ-DM-027",
+        "REQ-UX-048"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1,
+      "statut": "a_faire",
+      "acceptance": "Porté par l'audit indépendant du plan de la Phase 1 (2026-10-01) (écarts A-01, A-02, A-04), BLOQUANT avant INT-T12. (1) L'apporteur saisit son SIREN et son statut d'exercice dans « Ma conformité » (`identites_facturation`) ; le SIREN actif et la dénomination sont contrôlés par le client recherche-entreprises existant, avec un repli manuel nommé. (2) En console, `action:verifier_piece` {admin, qualifieur} valide ou refuse une pièce `a_verifier`, avec motif, journalisé (`piece_kyc_statut_modifie`) ; IBAN au nom contrôlé ; RC pro avec échéance. (3) `ouvrir_kyc` à la décision « retenu » (CPL-T06) et `valider_kyc` quand toutes les pièces exigibles sont valides, dans une transaction. (4) À `pret_a_signer` avec une grille complète, l'admin déclenche « générer et envoyer le contrat » (DM-23, INT-T12). TÉMOINS à deux faces. Relecture de la lentille securite."
+    },
+    {
+      "id": "UX-P1-44",
+      "titre": "Mon contrat : lecture de la version à signer, accès à la signature, état de l'enveloppe",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "espace",
+      "paths": [
+        "src/app/(espace)/mon-contrat/page.tsx",
+        "src/content/micro-copy/espace/mon-contrat.ts",
+        "tests/e2e/espace/mon-contrat.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [
+        "argent"
+      ],
+      "deps": [
+        "SEC-43",
+        "SEC-42",
+        "DM-23",
+        "INT-T12",
+        "JUR-T01b",
+        "UX-P1-14",
+        "UX-P1-45",
+        "QA-T33",
+        "GOV-113"
+      ],
+      "reqs": [
+        "REQ-UX-047",
+        "REQ-UX-006",
+        "REQ-CPL-006"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.1,
+      "statut": "a_faire",
+      "acceptance": "Porté par l'audit indépendant du plan de la Phase 1 (2026-10-01) (écart A-03) ; écran « Mon contrat » de la décision D1 de Williams du 2026-10-01 (SEC-43). (1) Lecture de la version à signer : annexe générée de la grille du contrat, lignes en écart avec leur justification. (2) Accès à la signature DocuSeal et état de l'enveloppe. (3) Cinq états ; atteignable en ouverture limitée comme en ouverture pleine. La maquette est validée dans `docs/maquettes/VALIDATION.md` (UX-P1-45) avant la première ligne de code."
+    },
+    {
+      "id": "UX-P1-45",
+      "titre": "Maquettes de l'espace manquantes et lignes de ESPACE-ROUTES",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "espace",
+      "paths": [
+        "docs/maquettes/",
+        "docs/maquettes/VALIDATION.md",
+        "docs/ESPACE-ROUTES.md"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "UX-P1-18"
+      ],
+      "reqs": [
+        "REQ-UX-047"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1,
+      "statut": "a_faire",
+      "acceptance": "Porté par l'audit indépendant du plan de la Phase 1 (2026-10-01) (écarts A-10, A2-24), sur le patron d'UX-P1-40, label `role:ux-redaction`, avec la validation de Williams comme étape. Maquettes et lignes de `ESPACE-ROUTES.md` : connexion (code à 6 chiffres), Mon contrat, état « ouverture limitée » de `conformite.html`, fiche prospect (`/mes-entreprises/[id]`), personnes déclarées (`/profil/personnes`, case de lien d'intérêt), dépôt par lien privé, notifications ; lignes posées dans `docs/maquettes/VALIDATION.md`."
+    },
+    {
+      "id": "INT-T52-A",
+      "titre": "Le tunnel de candidature d'axion-ia capte le code de parrainage et le transporte jusqu'à la candidature",
+      "phase": 1,
+      "repo": "axionia",
+      "zone": "integration",
+      "paths": [
+        "axionia/src/lib/commercial-application/",
+        "axionia/src/server/partners-sync/producteurs/candidature.ts",
+        "axionia/src/server/partners-sync/__tests__/parrainage-capture.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [
+        "argent",
+        "rgpd"
+      ],
+      "deps": [
+        "SEC-21"
+      ],
+      "reqs": [
+        "REQ-SEC-037"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "acceptance": "Porté par l'audit indépendant du plan de la Phase 1 (2026-10-01) (écart A-11). (1) Le tunnel de candidature d'axion-ia capte `?p=` (au format de SEC-21), le transporte sans cookie persistant jusqu'à la soumission et le pose dans `candidature.recue.parrainCodeCapture`. (2) Un code mal formé est ignoré, sans oracle. TÉMOIN : une candidature arrivée par un lien `?p=` émet le code ; une candidature sans lien émet `null`. Les chemins exacts du tunnel sont nommés à la revendication par la session axion-ia."
+    },
+    {
+      "id": "QA-T58",
+      "titre": "BUDGETS_UX en SSOT, sorti de GOV-113",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "qualite",
+      "paths": [
+        "src/domain/seuils/ssot.ts",
+        "tests/unit/qualite/budgets-ux.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [],
+      "reqs": [
+        "REQ-UX-047"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.25,
+      "statut": "a_faire",
+      "acceptance": "Porté par l'audit indépendant du plan de la Phase 1 (2026-10-01) (point 4 de GOV-113) : `BUDGETS_UX` vit en SSOT, ce qui découple l'espace des maquettes de console. TÉMOIN : un budget absent de la SSOT est refusé et nommé."
     }
   ]
 }
