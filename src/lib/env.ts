@@ -215,15 +215,13 @@ export const NOMS_DES_VARIABLES: readonly string[] = [
 
 /**
  * Les variables que le schéma déclare facultatives, DÉRIVÉES de lui. `NOTIFY_SINK` n'en est pas :
- * facultative pour Zod, elle est exigée hors production par la règle de REQ-CPL-021. Les secrets
- * conditionnels en sont : le démarrage ne les exige que si leur fonction est allumée.
+ * facultative pour Zod, elle est exigée hors production par la règle de REQ-CPL-021. La
+ * CONFIGURATION seule : les secrets conditionnels ont leur propre liste, et se provisionnent comme
+ * des secrets, jamais comme des variables.
  */
-export const NOMS_FACULTATIFS: readonly string[] = [
-  ...Object.entries(schemaConfiguration.shape)
-    .filter(([nom, type]) => type.isOptional() && nom !== 'NOTIFY_SINK')
-    .map(([nom]) => nom),
-  ...NOMS_DES_SECRETS_CONDITIONNELS,
-];
+export const NOMS_FACULTATIFS: readonly string[] = Object.entries(schemaConfiguration.shape)
+  .filter(([nom, type]) => type.isOptional() && nom !== 'NOTIFY_SINK')
+  .map(([nom]) => nom);
 
 /** Le motif est construit ICI : le `message` d'une issue Zod peut porter la valeur reçue. */
 function motifDe(issue: z.ZodIssue): MotifDeRefus {
@@ -589,6 +587,7 @@ function presenceDe(nom: string): string {
   if ((EXIGES_SI_ENVOI_ACTIF as readonly string[]).includes(nom)) {
     return 'facultative, requise si l’envoi réel est allumé';
   }
+  if (NOMS_DES_SECRETS_CONDITIONNELS.includes(nom)) return 'facultative';
   return NOMS_FACULTATIFS.includes(nom) ? 'facultative' : 'requise';
 }
 
