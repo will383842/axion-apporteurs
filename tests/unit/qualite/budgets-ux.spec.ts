@@ -2,7 +2,7 @@
 /**
  * QA-T58 — `BUDGETS_UX`, une seule source pour les budgets d'expérience (REQ-UX-047, RM-10).
  *
- * Sorti du point 4 de GOV-113 par l'audit indépendant du plan de la Phase 1 (2026-10-01) : les
+ * Sorti de la garde des écrans par l'audit indépendant du plan de la Phase 1 (2026-10-01) : les
  * budgets vivent dans `src/domain/seuils/ssot.ts`, ce qui découple l'espace des maquettes de console.
  *
  * CE QUE CE FICHIER GARDE.
