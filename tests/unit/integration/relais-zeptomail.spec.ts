@@ -2,7 +2,7 @@
 // @req REQ-INT-023
 /**
  * INT-T57 — le client HTTP du relais de courriels (ZeptoMail), qui remplace le port de production
- * qui refusait (SEC-42). `fetch` est simulé ; la forme de la requête est confrontée à l'exemple
+ * qui refusait. `fetch` est simulé ; la forme de la requête est confrontée à l'exemple
  * officiel, transcrit dans `tests/fixtures/tiers/zeptomail-envoi.json` (lu le 2026-10-02, RM-08).
  *
  * CE QU'IL PROUVE :
