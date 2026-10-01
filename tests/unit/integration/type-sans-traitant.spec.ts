@@ -95,7 +95,7 @@ const INSTANT = new Date('2026-10-01T10:00:00.000Z');
 const sansEffet = async () => undefined;
 
 describe('INT-T43 — un type sans traitant reste en attente, jamais `traite`', () => {
-  it('un `paiement.recu` sans traitant attend `traitant:paiement_recu` ; sa facture, traitée, passe', async () => {
+  it('REQ-DM-036 · REQ-ARG-003 : un `paiement.recu` sans traitant attend `traitant:paiement_recu` ; sa facture, traitée, passe', async () => {
     const lignes = [
       ligne('f', TypeEvenementRecu.facture_emise, 'facture:F1', { factureId: 'F1' }),
       ligne('p', TypeEvenementRecu.paiement_recu, 'paiement:P1', { factureId: 'F1' }),
@@ -114,7 +114,7 @@ describe('INT-T43 — un type sans traitant reste en attente, jamais `traite`', 
     expect([c.traites, c.enAttente]).toEqual([1, 1]);
   });
 
-  it('branché ensuite, le traitant reçoit le paiement une fois et une seule', async () => {
+  it('REQ-DM-036 · REQ-ARG-003 : branché ensuite, le traitant reçoit le paiement une fois et une seule', async () => {
     const lignes = [
       ligne('f', TypeEvenementRecu.facture_emise, 'facture:F1', { factureId: 'F1' }),
       ligne('p', TypeEvenementRecu.paiement_recu, 'paiement:P1', { factureId: 'F1' }),
@@ -148,7 +148,7 @@ describe('INT-T43 — un type sans traitant reste en attente, jamais `traite`', 
     });
   });
 
-  it("la reprise ne vise que les types qui ont un traitant : l'attente d'un autre type ne bouge pas", async () => {
+  it("REQ-DM-036 · REQ-ARG-003 : la reprise ne vise que les types qui ont un traitant : l'attente d'un autre type ne bouge pas", async () => {
     const lignes = [
       ligne('a', TypeEvenementRecu.avoir_emis, 'avoir:A1', { factureId: 'F9' }),
       ligne('c', TypeEvenementRecu.client_cree, 'client:cl-1', { clientId: 'cl-1' }),
@@ -174,7 +174,7 @@ describe('INT-T43 — un type sans traitant reste en attente, jamais `traite`', 
     ]);
   });
 
-  it('aucun type du contrat sans traitant ne passe `traite`, et le passage se termine', async () => {
+  it('REQ-DM-036 · REQ-ARG-003 : aucun type du contrat sans traitant ne passe `traite`, et le passage se termine', async () => {
     const lignes = Object.values(TypeEvenementRecu).map((t, i) =>
       ligne(`e${i}`, t, `sujet:${i}`, { clientId: 'x', factureId: 'y' })
     );
@@ -186,7 +186,7 @@ describe('INT-T43 — un type sans traitant reste en attente, jamais `traite`', 
     expect(lignes.filter((l) => l.statut === 'traite')).toEqual([]);
   });
 
-  it("`SansTraitant` porte son nom et sa référence ; une entrée déclarée sans traitant n'en est pas un", async () => {
+  it("REQ-DM-036 · REQ-ARG-003 : `SansTraitant` porte son nom et sa référence ; une entrée déclarée sans traitant n'en est pas un", async () => {
     const e = new SansTraitant(TypeEvenementRecu.avoir_emis);
     expect([e.name, e.ref]).toEqual(['SansTraitant', 'traitant:avoir_emis']);
     const declares: Traitants = {
