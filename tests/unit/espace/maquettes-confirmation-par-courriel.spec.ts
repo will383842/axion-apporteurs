@@ -247,6 +247,40 @@ describe('REQ-UX-019 — les états des écrans W20, et les badges de REQ-UX-062
   });
 });
 
+// ── (2 bis) la page du contact, lien inconnu : aucun oracle, aucun nom ─────────
+
+/**
+ * Les noms qu'une page de réponse peut porter : ceux que l'état « question » met en gras (apporteur,
+ * entreprise) et celui qu'il salue (le contact). LUS dans la maquette, jamais retapés ici.
+ */
+function nomsDeLaQuestion(html: string): string[] {
+  const c = corpsDe(html, 'etat-question');
+  const gras = [...c.matchAll(/<b>([^<]+)<\/b\s*>/g)].map((m) => texte(m[1]!));
+  const salue = /Bonjour ([^.<]+)\./.exec(texte(c))?.[1];
+  return [...new Set([...gras, ...(salue ? [salue.trim()] : [])])].filter((n) => n.length > 2);
+}
+
+/** Les noms qu'un état de lien inconnu, expiré ou révoqué laisse lire — titre compris. */
+function fuitesDuLienInconnu(html: string): string[] {
+  const c = texte(corpsDe(html, 'etat-lien-inconnu'));
+  return nomsDeLaQuestion(html).filter((n) => c.includes(n));
+}
+
+describe('REQ-UX-019 — un lien inconnu ou expiré ne dit rien de qui ni de quoi (aucun oracle)', () => {
+  it('REQ-UX-019 — l’état « lien inconnu » ne porte aucun nom d’entreprise, d’apporteur ni de contact', () => {
+    const html = lire('confirmation-contact.html');
+    expect(nomsDeLaQuestion(html).length).toBeGreaterThanOrEqual(3);
+    expect(fuitesDuLienInconnu(html)).toEqual([]);
+  });
+
+  it('REQ-UX-019 — TÉMOIN : un nom glissé dans l’état « lien inconnu » rougit, nommé', () => {
+    const html = lire('confirmation-contact.html');
+    const [nom] = nomsDeLaQuestion(html);
+    const casse = html.replace(/(id="etat-lien-inconnu"[\s\S]*?<h3>)/, `$1${nom} — `);
+    expect(fuitesDuLienInconnu(casse)).toEqual([nom]);
+  });
+});
+
 // ── (3) « À appeler aujourd'hui » ──────────────────────────────────────────────
 
 function fautesDeLaListe(html: string): string[] {

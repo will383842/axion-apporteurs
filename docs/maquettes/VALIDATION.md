@@ -29,9 +29,6 @@ contact, de 320 à 414 px) et `file-qualification.html` (l'onglet « À appeler 
 avec les maquettes de la console). `deposer.html` et `mes-entreprises.html`, validées le 2026-09-19, ont
 changé en substance : leur ligne repart vide.
 
-Une question est posée à Will dans la note de l'onglet « À appeler aujourd'hui » : le libellé des
-premiers dépôts d'un apporteur.
-
 ## Console
 
 | Écran | Fichier | Tâche | Validé le | Par |
