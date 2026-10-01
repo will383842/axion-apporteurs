@@ -202,9 +202,18 @@ source de leur valeur comme de leur motif.
 - **Les quatre valeurs que la banque n'a pas encore données** — BIC de la banque réceptrice, jeu de
   caractères, espace de test, format CSV du relevé (`HYP-W2`, REQ-CPL-002). Elles ne retiennent que
   `sepa-pain001`, et sont à obtenir avant l'armement SEPA.
-- **`JUR-T01b` et `JUR-T01c`** restent différées en phase 1, arbitrées ici : elles porteront le même
-  patron — gabarit codé, valeur saisie — et une tâche livrera cet arbitrage avant la clôture de la
-  phase 0.
+- **`JUR-T01b` et `JUR-T01c`** restaient différées en phase 1, arbitrées ici : elles porteraient le
+  même patron — gabarit codé, valeur saisie — et une tâche livrerait cet arbitrage avant la clôture
+  de la phase 0. **Appliqué le 2026-10-01 par GOV-133**, à l'ouverture de la phase 1, sur décision de
+  Williams écrite dans la fenêtre de la coordination, chaque fois en réponse à une question de la
+  coordination dont l'acceptance de GOV-133 cite le texte : pour le mandat (06:52Z), « oui je
+  confirme c'est moi qui valide car je n'ai pas d'expert comptable » ; pour le contrat v1, demandé le
+  2026-09-30, puis validé en connaissance de cause à la question de 07:28:44Z (« Oui, je valide le
+  contrat v1 tel qu'expliqué. » ou « Non, je veux d'abord le relire. »), « OUI » à 07:31:11Z, un
+  premier « oui » ayant été repris parce qu'il précédait l'explication. Les deux tâches sont levées (`attente_externe` → `a_faire`, dépôt
+  `partners`) : ce qui reste à livrer est la décision de Williams question par question
+  (`QUESTIONS_POUR_WILL`), et les valeurs encore attendues du gabarit sont des configurations à
+  sentinelle, refusées à la mise en service et jamais au plan. Plus aucune tâche n'est différée.
 - **Les quatre points de sortie n'existent pas encore en code.** `POINTS_DE_SORTIE` est leur
   déclaration anticipée ; la garde reconnaît par son chemin celui qui atterrirait sans appeler le
   refus, et c'est la tâche qui écrira chacun de ces fichiers qui posera l'appel.

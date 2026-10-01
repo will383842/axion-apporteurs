@@ -790,10 +790,12 @@ if (LANCE_EN_SCRIPT) {
       },
       {
         famille: 'externe_sans_attente',
+        // Le témoin FABRIQUE sa faute sur une tâche `a_faire` : il ne dépend plus d'une tâche réelle
+        // en attente d'un tiers, dont le registre peut légitimement n'en porter aucune (GOV-133).
         defaut: () => {
           const d = copie();
-          const e = d.taches.find((t) => t.externe !== null)!;
-          e.statut = 'a_faire';
+          const e = d.taches.find((t) => t.statut === 'a_faire')!;
+          e.externe = 'will';
           return d;
         },
       },

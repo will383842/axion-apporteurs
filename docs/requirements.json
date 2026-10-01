@@ -4016,7 +4016,7 @@
     {
       "id": "REQ-GOV-010",
       "domaine": "gouvernance-agents",
-      "texte": "`docs/CHARTE-AGENTS.md` définit neuf droits exclusifs portés par les quinze postes de `docs/CHARTE-AGENTS.md` §4 : l'attribution des tâches et l'écriture de `docs/tasks.json` et de la vue `docs/PLAN-STATE.md` reviennent à A01 avec l'outillage de lot (`pnpm lot:cloture`, seul écrivain de `statut`, `pr`, `branch`, `owner` ; `pnpm plan-state:build`) — il n'existe pas de poste « orchestrateur » ; architecte (seul à accepter un ADR), gardien du spec (seul à modifier REQUIREMENTS/PRESEANCE/DECISIONS/GLOSSAIRE), leads de domaine (découpent, valident l'acceptation), développeurs (une tâche revendiquée à la fois), relecteurs adversariaux, vérificateurs de tests, release manager (seul à fusionner), documentaliste (LECONS.md). Gate : PR modifiant un fichier réservé sans le label du rôle → rouge.",
+      "texte": "`docs/CHARTE-AGENTS.md` définit neuf droits exclusifs portés par les quinze postes de `docs/CHARTE-AGENTS.md` §4 : l'attribution des tâches et l'écriture de `docs/tasks.json` et de la vue `docs/PLAN-STATE.md` reviennent à A01 avec l'outillage de lot (`pnpm lot:cloture`, seul écrivain des LIVRAISONS — `statut`, `pr`, `branch`, `owner` — et `lever-attente`, seul écrivain des LEVÉES d'attente — `attente_externe` → `a_faire` sur décision citée, jamais une livraison ; `pnpm plan-state:build`) — il n'existe pas de poste « orchestrateur » ; architecte (seul à accepter un ADR), gardien du spec (seul à modifier REQUIREMENTS/PRESEANCE/DECISIONS/GLOSSAIRE), leads de domaine (découpent, valident l'acceptation), développeurs (une tâche revendiquée à la fois), relecteurs adversariaux, vérificateurs de tests, release manager (seul à fusionner), documentaliste (LECONS.md). Gate : PR modifiant un fichier réservé sans le label du rôle → rouge.",
       "source": "nouvelle",
       "statut": "active",
       "remplaceePar": null,
@@ -4370,7 +4370,8 @@
         "GOV-017b",
         "GOV-022",
         "GOV-131",
-        "GOV-132"
+        "GOV-132",
+        "GOV-133"
       ]
     },
     {
