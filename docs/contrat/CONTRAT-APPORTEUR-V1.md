@@ -308,6 +308,13 @@ Lorsqu'un palier de la présente grille est inférieur à la valeur correspondan
 publiée par la Société, **l'écart et son motif sont portés à la connaissance de l'Apporteur avant la
 signature**, dans le document de présentation qui accompagne l'enveloppe de signature.
 
+**4.1 bis — Commission forfaitaire et remise.** Lorsqu'un palier est commissionné au forfait et que le prix
+unitaire hors taxes de ce palier dans la commande, remises déduites, est inférieur au prix public hors taxes
+du même palier en vigueur à la date de signature de la commande, **le forfait est multiplié par le rapport
+entre ces deux prix et arrondi au centime inférieur**. **Il n'est jamais augmenté** lorsque le prix de la
+commande est égal ou supérieur au prix public. Lorsque le palier n'a pas de prix public, le forfait est dû
+en entier. La commission au pourcentage n'est pas concernée : elle suit déjà le prix facturé.
+
 **4.2 — Fait générateur.** **La commission est due lorsque la Société a effectivement encaissé** tout ou
 partie de la facture correspondante — jamais à la signature, jamais à l'émission de la facture.
 
@@ -792,14 +799,14 @@ la disposition de chaque partie.
 > nouvelle version du contrat (article 13).
 >
 > **Périmètre — décision W6 du 2026-09-03** : quatre familles sont commissionnées — formations
-> collectives, accompagnement individuel (1-to-1), audits, implémentations —, réparties en **30 paliers**.
+> collectives, accompagnement individuel (1-to-1), audits, implémentations —, réparties en **paliers**, ceux des tableaux A1.1 à A1.4.
 > La granularité est le **palier**, pas la famille : la durée vendue est un axe à part entière.
 >
 > **Chaque palier porte l'un des trois types** : `forfait` — montant fixe en euros hors taxes **dû une fois
 > par commande portant ce palier, quel que soit le nombre de journées vendues, la durée étant déjà portée
 > par le palier lui-même** —, `pourcentage` (taux appliqué au montant hors taxes facturé), ou `aucune`.
 > **Aucun contrat ne peut être
-> généré tant que l'un des 30 paliers demeure indéfini** : la contrepartie est donc toujours déterminée à
+> généré tant que l'un des paliers de ces tableaux demeure indéfini** : la contrepartie est donc toujours déterminée à
 > la signature.
 >
 > La colonne « **Grille publiée** » rappelle, à titre de référence, la valeur de la grille que la Société
@@ -811,7 +818,7 @@ la disposition de chaque partie.
 
 *Grille publiée : forfait de **{{PUBLIEE_FORFAIT_JOURNEE}} HT par journée vendue** (`com-formation-1j`, `-2j`, `-3j`).*
 
-| Palier | Identifiant | Durée | Prix de référence HT | Commission du présent contrat | Grille publiée | CPF |
+| Palier | Identifiant | Durée | Prix public HT à la date du contrat (indicatif) | Commission du présent contrat | Grille publiée | CPF |
 | --- | --- | --- | --- | --- | --- | --- |
 | Essentielle | `intervention-essentielle` | 1 journée | {{PRIX_INTERVENTION_ESSENTIELLE}} | {{COM_INTERVENTION_ESSENTIELLE}} | {{PUBLIEE_INTERVENTION_ESSENTIELLE}} | {{CPF_INTERVENTION_ESSENTIELLE}} |
 | Approfondie | `intervention-approfondie` | 2 jours | {{PRIX_INTERVENTION_APPROFONDIE}} | {{COM_INTERVENTION_APPROFONDIE}} | {{PUBLIEE_INTERVENTION_APPROFONDIE}} | {{CPF_INTERVENTION_APPROFONDIE}} |
@@ -833,7 +840,7 @@ présent contrat ».*
 donc, pour chacun de ces cinq paliers, celle portée en colonne « Commission du présent contrat », qui ne
 peut pas rester indéfinie.*
 
-| Palier | Identifiant | Durée | Prix de référence HT | Commission du présent contrat | Grille publiée | CPF |
+| Palier | Identifiant | Durée | Prix public HT à la date du contrat (indicatif) | Commission du présent contrat | Grille publiée | CPF |
 | --- | --- | --- | --- | --- | --- | --- |
 | Dirigeant | `intervention-dirigeants` | 1 jour | {{PRIX_INTERVENTION_DIRIGEANTS}} | {{COM_INTERVENTION_DIRIGEANTS}} | {{PUBLIEE_INTERVENTION_DIRIGEANTS}} | {{CPF_INTERVENTION_DIRIGEANTS}} |
 | Vision IA stratégique | `intervention-dirigeant-vision` | 1 journée | {{PRIX_INTERVENTION_DIRIGEANT_VISION}} | {{COM_INTERVENTION_DIRIGEANT_VISION}} | {{PUBLIEE_INTERVENTION_DIRIGEANT_VISION}} | {{CPF_INTERVENTION_DIRIGEANT_VISION}} |
@@ -845,7 +852,7 @@ peut pas rester indéfinie.*
 
 *Grille publiée : **{{PUBLIEE_TAUX_AUDIT}} du montant hors taxes facturé** (`com-audit`).*
 
-| Palier | Identifiant | Prix de référence HT | Commission du présent contrat | Grille publiée | CPF |
+| Palier | Identifiant | Prix public HT à la date du contrat (indicatif) | Commission du présent contrat | Grille publiée | CPF |
 | --- | --- | --- | --- | --- | --- |
 | Audit sur place | `audit-flash` | {{PRIX_AUDIT_FLASH}} | {{COM_AUDIT_FLASH}} | {{PUBLIEE_AUDIT_FLASH}} | {{CPF_AUDIT_FLASH}} |
 | Audit sur place — sur site | `audit-flash-onsite` | {{PRIX_AUDIT_FLASH_ONSITE}} | {{COM_AUDIT_FLASH_ONSITE}} | {{PUBLIEE_AUDIT_FLASH_ONSITE}} | {{CPF_AUDIT_FLASH_ONSITE}} |
@@ -865,7 +872,7 @@ peut pas rester indéfinie.*
 étant vendus sur devis, seul le pourcentage y est applicable ; c'est aussi là que se règle la dégressivité,
 en portant un taux plus bas sur les grands programmes.*
 
-| Palier | Identifiant | Prix de référence HT | Commission du présent contrat | Grille publiée | CPF |
+| Palier | Identifiant | Prix public HT à la date du contrat (indicatif) | Commission du présent contrat | Grille publiée | CPF |
 | --- | --- | --- | --- | --- | --- |
 | Pilote IA | `impl-poc` | {{PRIX_IMPL_POC}} | {{COM_IMPL_POC}} | {{PUBLIEE_IMPL_POC}} | {{CPF_IMPL_POC}} |
 | Mission PME | `impl-mission-pme` | {{PRIX_IMPL_MISSION_PME}} | {{COM_IMPL_MISSION_PME}} | {{PUBLIEE_IMPL_MISSION_PME}} | {{CPF_IMPL_MISSION_PME}} |
@@ -940,4 +947,4 @@ dehors de ce cas.
 | `CL-RESILIATION-ORDINAIRE` | 11.1 | Résiliation non motivée, préavis fixe fondé sur L.442-1, II |
 | `CL-RESILIATION-EFFETS` | Article 12 | Effets de la fin du contrat, commissions acquises et à venir, accès en lecture jusqu'à extinction |
 | `CL-DROIT` | Article 14 | Loi applicable, clause attributive de compétence et qualité déclarée de l'Apporteur |
-| `CL-GRILLE` | Annexe 1 | Grille du contrat, 30 paliers, forfait dû une fois par commande, prestations non commissionnées, palier absent |
+| `CL-GRILLE` | Annexe 1 | Grille du contrat, paliers des tableaux A1.1 à A1.4, forfait dû une fois par commande et réduit au prorata d'une remise (4.1 bis), prestations non commissionnées, palier absent |
