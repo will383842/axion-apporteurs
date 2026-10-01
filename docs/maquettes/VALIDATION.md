@@ -28,8 +28,21 @@
 | Accès refusé | `acces-refuse.html` | UX-P1-16 | — | — |
 | Connexion à la console (lien, code à 6 chiffres, lien déjà utilisé) | `connexion-console.html` | SEC-29 · UX-P1-16 | — | — |
 | Utilisateurs de la console et « Votre rôle » | `utilisateurs-console.html` | SEC-30 · UX-P1-20 | — | — |
+| Fiche de qualification (W20 : état de la demande, raisons de vérification) | `fiche-qualification.html` | UX-P1-06 | — | — |
+| Apporteurs : liste | `apporteurs.html` | UX-P1-12 | — | — |
+| Fiche apporteur : cinq blocs, décision, dossier de conformité | `apporteur-fiche.html` | UX-P1-12 · CPL-T07 | — | — |
+| Attributions et contrats | `attributions-contrats.html` | UX-P1-13 | — | — |
+| Fiche prospect | `fiche-prospect.html` | EXT-T02a | — | — |
 
 ### Séance de validation groupée de la console
+
+**Rapprochement avec `docs/CONSOLE-ROUTES.md` (UX-P1-19).** Chaque écran de console de la phase 1 a sa
+maquette, sauf deux écarts nommés : l'éditeur de grille (`/console/grille`, UX-P1-14) et la saisie
+manuelle d'une candidature (`/console/candidatures`, EXT-T04) n'ont pas de maquette, faute de chemin
+dans UX-P1-19 ; la file (UX-P1-07) est `file-qualification.html`, « Votre rôle » (UX-P1-20) est un état de
+`utilisateurs-console.html`, le dossier de conformité (CPL-T07) un état de `apporteur-fiche.html`. La
+ligne de `fiche-prospect.html` ne nomme que EXT-T02a : la garde ne lit encore que les identifiants
+`UX-P…`, et GOV-113 l'élargit.
 
 Les six maquettes de la console se valident **ensemble**, en une séance de Will, parce qu'elles
 partagent le même cadre : valider la file sans le cadre, c'est valider un en-tête qui va changer. La
