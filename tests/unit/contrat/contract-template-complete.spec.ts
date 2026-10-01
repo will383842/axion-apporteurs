@@ -49,6 +49,7 @@ import {
   sourceDe,
   suffixeDePalier,
   valeurDEntite,
+  valeurDePrixPublic,
 } from '../../../src/domain/contrat/variables';
 import {
   CONCORDANCES,
@@ -1014,5 +1015,39 @@ describe('REQ-JUR-003 — JUR-T31 : l’art. 3.5, entreprise déjà prise, borne
     expect(VARIABLES['CARENCE_CONSEILLER_JOURS' as keyof typeof VARIABLES]).toMatchObject({
       constante: 'CARENCE_CONSEILLER_JOURS',
     });
+  });
+});
+
+// ── JUR-T46 — la conférence, palier sans prix public : sa cellule de prix rend « sur devis » ──
+
+describe('REQ-DM-014 — JUR-T46 : un palier sans prix public rend « sur devis »', () => {
+  const PALIERS = () => paliersDeLAnnexe1(gabarit()).map((p) => p.identifiant);
+  const source = () => sourceDe('PRIX_INTERVENTION_CONFERENCE', PALIERS())!;
+
+  it('REQ-DM-014 : la cellule de prix de la conférence est une variable PRIX_, servie par l’export de pricing', () => {
+    expect(gabarit()).toContain('{{PRIX_INTERVENTION_CONFERENCE}}');
+    expect(source()).toMatchObject({ genre: 'pricing', champ: 'prixReferenceHt' });
+  });
+
+  it('REQ-DM-014 : sans prix public, la variable rend « sur devis » — jamais 0, jamais vide, jamais un montant', () => {
+    const r = valeurDePrixPublic(source(), null);
+    expect(r).toEqual({ valeur: 'sur devis' });
+    const v = (r as { valeur: string }).valeur;
+    expect(v.trim()).not.toBe('');
+    expect(v).not.toMatch(/\d|€/);
+  });
+
+  it('REQ-DM-014 : rendu dans le gabarit, la ligne de la conférence dit « sur devis »', () => {
+    const r = valeurDePrixPublic(source(), null) as { valeur: string };
+    const rendu = rendre(gabarit(), { PRIX_INTERVENTION_CONFERENCE: r.valeur }, [SENTINELLE]);
+    const ligne = rendu.split(/\r?\n/).find((l) => l.includes('`intervention-conference`'));
+    expect(ligne).toContain('| sur devis ');
+    expect(ligne).not.toContain('{{PRIX_INTERVENTION_CONFERENCE}}');
+  });
+
+  it('REQ-DM-014 : un prix absent de l’export ne résout pas, et un montant n’est pas mis en forme ici', () => {
+    expect(valeurDePrixPublic(source(), undefined)).toHaveProperty('manque');
+    expect(valeurDePrixPublic(source(), 150000)).toHaveProperty('manque');
+    expect(valeurDePrixPublic({ genre: 'question', question: 'Q' }, null)).toHaveProperty('manque');
   });
 });
