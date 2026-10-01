@@ -12,7 +12,7 @@
  *   2. l'ordre de rendu porte exactement les clés du bloc, sans manque ni doublon ;
  *   3. aucune date du contact (REQ-JUR-040) : ni `{dateContact}`, ni « date du contact », ni date écrite ;
  *   4. l'apporteur est nommé par `{prenomApporteur} {nomApporteur}`, jamais par une coordonnée ;
- *   5. aucun nombre en clair (RM-10), sauf l'exception NOMMÉE de la base légale ;
+ *   5. aucun nombre en clair (RM-10) dans aucune valeur, base légale comprise (`{baseLegale}`) ;
  *   6. aucune URL, aucun lien, aucune balise dans les textes ;
  *   7. le script porte la version de l'e-mail et n'en recopie aucune rubrique.
  */
@@ -110,13 +110,15 @@ function fautesDIdentite(source: string, ouverture: string, tous: Textes): strin
   return f;
 }
 
-/** L'exception nommée : la référence de la base légale, seul chiffre admis. */
-const EXCEPTION_BASE_LEGALE = '6, paragraphe 1, point f';
+/**
+ * Aucun chiffre dans aucune VALEUR du gabarit, sans exception : depuis la v4, la base légale est le
+ * paramètre `{baseLegale}`. La règle porte sur les valeurs, PAS sur le texte rendu — `{baseLegale}`
+ * y sera rempli avec « 6, paragraphe 1, point f », lu au registre des décisions ; ne pas la
+ * retourner un jour contre le rendu.
+ */
 function fautesDeNombre(textes: Textes): string[] {
   return Object.entries(textes).flatMap(([cle, t]) =>
-    /\d/.test(cle === 'baseLegale' ? t.replace(EXCEPTION_BASE_LEGALE, '') : t)
-      ? [`${cle} : un nombre en clair`]
-      : []
+    /\d/.test(t) ? [`${cle} : un nombre en clair`] : []
   );
 }
 
@@ -182,7 +184,9 @@ describe('REQ-JUR-060 — l’information de l’art. 14 portée par l’e-mail 
     expect(fautesDeNombre({ duree: 'Elles sont supprimées 6 mois après.' })).toEqual([
       'duree : un nombre en clair',
     ]);
-    expect(fautesDeNombre({ baseLegale: INFO.baseLegale! })).toEqual([]);
+    expect(fautesDeNombre({ baseLegale: 'l’article 6, paragraphe 1, point f' })).toEqual([
+      'baseLegale : un nombre en clair',
+    ]);
     expect(fautesDeLien({ droits: 'Écrivez à https://exemple.invalid' })).toEqual([
       'droits : un lien ou une balise',
     ]);
