@@ -17087,7 +17087,7 @@
       "zone": "integration",
       "paths": [
         "src/server/queue/workers/evenement-recu.ts",
-        "tests/integration/evenement-sans-traitant.spec.ts"
+        "tests/integration/worker-type-sans-traitant.spec.ts"
       ],
       "schema": false,
       "sensible": [

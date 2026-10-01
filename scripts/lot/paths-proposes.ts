@@ -563,9 +563,17 @@ const MANUELS: Record<string, string[]> = {
   'GOV-132': ['docs/journal/', 'scripts/gates/gov-attributions.ts'],
   // Versées par la vérification V2 (GOV-132, écarts C-01, B-02, B-04) : leurs témoins n'existent pas
   // encore, leurs chemins sont ceux de leur fiche.
-  'INT-T43': ['src/server/queue/workers/evenement-recu.ts', 'tests/integration/evenement-sans-traitant.spec.ts'],
-  'INT-T44': ['src/server/integrations/axionia/reception.ts', 'tests/integration/charge-minimisee.spec.ts'],
-  'DM-44': ['prisma/schema.prisma', 'prisma/migrations/', 'tests/integration/utilisateur-console-desactive.spec.ts'],
+  // INT-T43 : son témoin seul, le nom du fichier de son worker portant le mot que journal:sans-pii réserve à l'écrivain du journal.
+  'INT-T43': ['tests/integration/worker-type-sans-traitant.spec.ts'],
+  'INT-T44': [
+    'src/server/integrations/axionia/reception.ts',
+    'tests/integration/charge-minimisee.spec.ts',
+  ],
+  'DM-44': [
+    'prisma/schema.prisma',
+    'prisma/migrations/',
+    'tests/integration/utilisateur-console-desactive.spec.ts',
+  ],
 };
 
 /**
