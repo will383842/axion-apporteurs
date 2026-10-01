@@ -18,6 +18,7 @@
 import { describe, it, expect } from 'vitest';
 import { TypeEvenementRecu } from '@prisma/client';
 import {
+  SansTraitant,
   aiguiller,
   passerLeTravail,
   refsDesTraitants,
@@ -183,5 +184,24 @@ describe('INT-T43 — un type sans traitant reste en attente, jamais `traite`', 
       maintenant: () => INSTANT,
     });
     expect(lignes.filter((l) => l.statut === 'traite')).toEqual([]);
+  });
+
+  it("`SansTraitant` porte son nom et sa référence ; une entrée déclarée sans traitant n'en est pas un", async () => {
+    const e = new SansTraitant(TypeEvenementRecu.avoir_emis);
+    expect([e.name, e.ref]).toEqual(['SansTraitant', 'traitant:avoir_emis']);
+    const declares: Traitants = {
+      [TypeEvenementRecu.client_cree]: sansEffet,
+      [TypeEvenementRecu.avoir_emis]: undefined,
+    };
+    expect(refsDesTraitants(declares)).toEqual(['traitant:client_cree']);
+    await expect(
+      aiguiller(declares)({
+        id: 'x',
+        eventType: TypeEvenementRecu.avoir_emis,
+        sujetRef: null,
+        charge: {},
+        retryCount: 0,
+      })
+    ).rejects.toBeInstanceOf(SansTraitant);
   });
 });
