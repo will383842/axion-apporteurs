@@ -37,8 +37,9 @@ suivante), et la marque « Console Axion Partners », en tête de chaque page, y
 | 2 | Apporteurs | `/console/apporteurs` | admin, qualifieur, comptable | 1 |
 | 3 | Prospects | `/console/attributions` | admin, qualifieur, lecteur (lecture) | 1 |
 | 4 | Argent | `/console/lots` | admin, comptable | 2 |
-| 5 | Pilotage | `/console/pilotage` | admin, lecteur | 3 |
-| 6 | Administration | `/console/utilisateurs` | admin | 1 |
+| 5 | Pilotage | `/console/pilotage` | admin | 3 |
+| 6 | Statistiques | `/console/statistiques` | admin, lecteur | 3 |
+| 7 | Administration | `/console/utilisateurs` | admin | 1 |
 
 Hors de la barre, dans l'en-tête : la recherche globale (bornée par la matrice, UX-P1-20) et le menu du
 compte (« Votre rôle », « Se déconnecter »). En mobile, ces deux-là passent dans « Menu ».
@@ -62,7 +63,7 @@ encore, l'accueil montre un état vide guidant qui dit ce qui arrive et à quel 
 | admin | `/console/qualification`, `/console/apporteurs` | la file de qualification |
 | qualifieur | `/console/qualification` | la file de qualification |
 | comptable | `/console/lots`, `/console/apporteurs` | la liste des apporteurs, et un encart qui annonce les lots à l'ouverture des versements |
-| lecteur | `/console/pilotage`, `/console/qualification` | la file de qualification, en lecture |
+| lecteur | `/console/statistiques`, `/console/qualification` | la file de qualification, en lecture |
 
 ## Connexion et pages transverses
 
@@ -99,10 +100,10 @@ encore, l'accueil montre un état vide guidant qui dit ce qui arrive et à quel 
 | `/console/argent/paie` | Export paie, base de calcul par ligne | admin, comptable | 2 | prévue | REQ-ARG-037, REQ-ARG-038 | — | UX-P2-10 | non |
 | `/console/parametres` | Paramètres : grille en lecture seule | admin, comptable, lecteur (lecture) | 2 | prévue | REQ-CPL-007, REQ-UX-026 | — | UX-P2-05 | non |
 | `/console/apporteurs/lignee` | Lignée d'un apporteur, liste et arbre | admin | 2 | prévue | REQ-UX-040 | — | UX-P2-08 | non |
-| `/console/conseillers` | Fiche conseiller : plans de part variable, réaffectation motivée | admin | 2 | prévue | REQ-ARG-038, REQ-DM-048 | — | UX-P2-12 | non |
-| `/console/pilotage` | Pilotage : entonnoir, territoire | admin, lecteur | 3 | prévue | REQ-UX-035 | — | UX-P3-04 | non |
+| `/console/conseillers` | Fiche conseiller : plans de part variable et objectifs, réaffectation motivée | admin | 2 | prévue | REQ-ARG-038, REQ-DM-048 | — | UX-P2-12 | non |
+| `/console/pilotage` | Pilotage : entonnoir, territoire, tableau de bord nominatif des conseillers ; refus serveur pour tout autre rôle (décision de Williams, UX-P3-04) | admin | 3 | prévue | REQ-UX-035 | — | UX-P3-04 | non |
 | `/console/conformite` | Conformité et anomalies : pièces, échéances, cumuls annuels | admin, comptable | 3 | prévue | REQ-UX-031, REQ-SEC-023 | — | UX-P3-05 | non |
-| `/console/statistiques` | Statistiques : tableaux filtrables | admin, lecteur | 3 | prévue | REQ-UX-042, REQ-UX-044 | — | UX-P3-07 | non |
+| `/console/statistiques` | Statistiques : agrégats en tableaux filtrables, sans aucune donnée nominative | admin, lecteur | 3 | prévue | REQ-UX-042, REQ-UX-044 | — | UX-P3-07 | non |
 | `/console/apporteurs/notes` | Notes internes par apporteur | admin, qualifieur | 3 | prévue | REQ-SEC-039 | — | UX-P3-10 | non |
 | `/console/bibliotheque` | Bibliothèque de documents | admin | 3 | prévue | REQ-UX-046 | — | UX-P3-12 | non |
 

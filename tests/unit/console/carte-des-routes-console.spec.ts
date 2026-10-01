@@ -212,8 +212,8 @@ describe('REQ-UX-048 — la carte des routes de la console', () => {
   it('REQ-UX-048 — TÉMOINS : une huitième entrée, un instantané qui montre les lots au qualifieur', () => {
     const carte = lire(CARTE);
     const huit = carte.replace(
-      '| 6 | Administration |',
-      '| 7 | Huit | `/console` | admin | 1 |\n| 8 | Neuf | `/console` | admin | 1 |\n| 6 | Administration |'
+      '| 7 | Administration |',
+      '| 8 | Huit | `/console` | admin | 1 |\n| 7 | Administration |'
     );
     expect(fautesDeNavigation(huit)).toContain('8 entrées de premier niveau, sept au plus');
     const fuite = carte.replace(
@@ -221,6 +221,68 @@ describe('REQ-UX-048 — la carte des routes de la console', () => {
       '| qualifieur | Qualification · Apporteurs · Prospects · Argent |'
     );
     expect(fautesDeNavigation(fuite).some((f) => f.startsWith('qualifieur : bureau'))).toBe(true);
+  });
+});
+
+// ── (1 bis) les routes réservées à l'admin, écrites ici et non lues dans la carte ─
+
+/**
+ * Les routes que la décision de Williams réserve au seul `admin` (UX-P3-04 : tableau de bord
+ * nominatif des conseillers ; UX-P2-12 : plans et objectifs des conseillers). Écrites ICI, pas lues
+ * dans la carte : un contrôle qui dériverait ses rôles de la carte resterait vert si quelqu'un y
+ * rendait le pilotage au lecteur (refus de la lentille securite sur la PR 342).
+ */
+const RESERVEES_A_L_ADMIN = ['/console/pilotage', '/console/conseillers'] as const;
+
+/** Chaque ligne, de navigation ou de route, qui ouvre une route réservée à un autre rôle que `admin`. */
+function fautesDesRoutesReservees(texte: string): string[] {
+  const fautes: string[] = [];
+  const vues = new Set<string>();
+  for (const t of tableaux(texte)) {
+    const iRoute = t.entete.findIndex((c) => /^Route/.test(c));
+    const iRoles = colonne(t, 'Rôles');
+    if (iRoute < 0 || iRoles < 0) continue;
+    for (const l of t.lignes) {
+      const r = route(l[iRoute] ?? '');
+      if (!r || !(RESERVEES_A_L_ADMIN as readonly string[]).includes(r)) continue;
+      vues.add(r);
+      const roles = rolesDe(l[iRoles] ?? '');
+      for (const role of roles.filter((x) => x !== 'admin'))
+        fautes.push(`${t.section} : ${r} ouverte au rôle « ${role} », réservée à admin`);
+      if (!roles.includes('admin')) fautes.push(`${t.section} : ${r} sans le rôle admin`);
+    }
+  }
+  for (const r of RESERVEES_A_L_ADMIN) if (!vues.has(r)) fautes.push(`${r} absente de la carte`);
+  return fautes;
+}
+
+describe('REQ-UX-048 — le pilotage nominatif et la fiche conseiller sont réservés à l’admin', () => {
+  it('REQ-UX-048 — /console/pilotage et /console/conseillers : « admin » et lui seul, navigation et routes', () => {
+    expect(fautesDesRoutesReservees(lire(CARTE))).toEqual([]);
+    expect(
+      tableaux(lire(CARTE)).some(
+        (t) =>
+          t.section === 'Navigation de premier niveau' &&
+          t.lignes.some((l) => l.includes('`/console/pilotage`'))
+      )
+    ).toBe(true);
+  });
+
+  it('REQ-UX-048 — TÉMOIN : le pilotage rendu au lecteur rougit, en nommant la route et le rôle', () => {
+    const carte = lire(CARTE).replace(
+      '| 5 | Pilotage | `/console/pilotage` | admin | 3 |',
+      '| 5 | Pilotage | `/console/pilotage` | admin, lecteur | 3 |'
+    );
+    expect(fautesDesRoutesReservees(carte)).toEqual([
+      'Navigation de premier niveau : /console/pilotage ouverte au rôle « lecteur », réservée à admin',
+    ]);
+    const conseillers = lire(CARTE).replace(
+      /(\| `\/console\/conseillers` \|[^\n]*?\|) admin \|/,
+      '$1 admin, comptable |'
+    );
+    expect(fautesDesRoutesReservees(conseillers)).toEqual([
+      'Écrans des phases 2 et 3 : /console/conseillers ouverte au rôle « comptable », réservée à admin',
+    ]);
   });
 });
 
