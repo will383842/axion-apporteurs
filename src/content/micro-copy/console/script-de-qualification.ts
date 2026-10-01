@@ -30,5 +30,5 @@ export const MENTION_ARTICLE_14_SCRIPT = {
   question: 'Souhaitez-vous que nous poursuivions cet échange ?',
   /** Ce que l'appelant dit si la personne s'oppose : il n'insiste pas, et l'opposition est enregistrée. */
   siOpposition:
-    "C'est noté : Axion-IA ne vous écrira plus et ne vous appellera plus au titre de cette présentation. Je vous souhaite une bonne journée.",
+    "C'est noté : Axion-IA ne vous écrira plus et ne vous appellera plus au titre de cette présentation, ni d'aucune autre qui vous concernerait. Je vous souhaite une bonne journée.",
 } as const;

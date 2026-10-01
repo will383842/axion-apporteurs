@@ -26,11 +26,11 @@
  * et l'envoi journalise la version envoyée (REQ-JUR-060, INT-T40).
  */
 
-export const VERSION_INFORMATION_ARTICLE_14 = 'information-article-14/v1';
+export const VERSION_INFORMATION_ARTICLE_14 = 'information-article-14/v2';
 
 /** Le libellé du lien d'opposition, posé par le gabarit de l'e-mail à la fin du bloc. */
 export const LIEN_OPPOSITION = {
-  libelle: 'Ne plus être contacté par Axion-IA au sujet de cette présentation',
+  libelle: "Ne plus recevoir de message ni d'appel d'Axion-IA au sujet des présentations",
 } as const;
 
 /**
@@ -55,7 +55,7 @@ export const INFORMATION_ARTICLE_14 = {
   droits:
     "Vous pouvez accéder à vos données, les faire rectifier ou effacer, en demander la limitation, et vous opposer à leur traitement, en écrivant à {adresseDroits}. Vous pouvez aussi introduire une réclamation auprès de la CNIL.",
   opposition:
-    "Pour vous opposer dès maintenant, un clic suffit : Axion-IA ne vous écrira plus et ne vous appellera plus au titre de cette présentation.",
+    "Pour vous opposer dès maintenant, un clic suffit : Axion-IA ne vous écrira plus et ne vous appellera plus au titre de cette présentation, ni d'aucune autre qui vous concernerait.",
 } as const;
 
 /** L'ordre de rendu du bloc — le gabarit de l'e-mail le suit, puis pose `LIEN_OPPOSITION`. */
