@@ -3,7 +3,7 @@
 /**
  * SEC-42 — LE LIEN MAGIQUE PART EN PRODUCTION, par l'émetteur de courriels (INT-T10, `demanderEnvoi`).
  *
- * Écart C3 de la vérification de bout en bout : en production, le seul transport du notifieur levait
+ * L'écart « C3 » de la vérification de bout en bout (GOV-131) : en production, le seul transport du notifieur levait
  * `envoi_courriel_non_cable`, et `demanderEnvoi` n'était importé nulle part hors du relais. Le seul
  * parcours utilisateur de la Phase 0 n'existait donc pas.
  *
@@ -22,6 +22,7 @@ import { NOMS_DES_SECRETS } from '../../../src/lib/env';
 import { domaines } from '../../../src/config/entite';
 import { horlogeFigee } from '../../../src/domain/temps/horloge';
 import { clesPii } from '../../../src/server/securite/pii';
+import type { VerdictDeLimite } from '../../../src/server/securite/rate-limit';
 import { demanderLien, empreinteDuJeton } from '../../../src/server/auth/lien-magique';
 import {
   envoiDuProcessus,
@@ -77,7 +78,8 @@ function dependances(env: Record<string, string>, emetteur: () => DependancesDeL
   const puits: string[] = [];
   const d: DependancesDuLien = {
     env,
-    prisma: {} as PrismaClient,
+    // L'envoi ne touche pas la base du lien : un client vide suffit.
+    prisma: Object.create(null) as PrismaClient,
     horloge: horlogeFigee(INSTANT),
     planifier: (travail) => planifies.push(travail),
     envoi: envoiDuProcessus(env, {
@@ -148,7 +150,13 @@ describe('REQ-SEC-001 REQ-INT-022 — en production, le lien part par l’émett
     const ports = portsDeDemande(d);
     // Un compte existe et peut ouvrir l'espace : sa lecture et l'écriture du lien sont simulées ;
     // l'envoi, lui, est le vrai port câblé.
-    const admis = { autorise: true, panne: false } as never;
+    const admis: VerdictDeLimite = {
+      autorise: true,
+      restant: 1,
+      repriseAt: null,
+      panne: false,
+      motif: 'admis',
+    };
     await demanderLien(
       { saisie: COURRIEL, piege: false, entetes: new Headers() },
       {
