@@ -144,6 +144,23 @@ type ColonnesApporteur = {
   readonly phoneHash?: string | null;
 };
 
+/**
+ * INT-T56 (REQ-DM-036, REQ-JUR-029) — la charge CONSERVÉE d'une candidature, sans `reponsesJson` :
+ * `evenements_recus.charge` vit dix ans et ne porte aucune donnée personnelle une fois la candidature
+ * écrite. Toutes les autres clés restent à l'identique ; c'est la seule réécriture que le déclencheur
+ * d'immutabilité admet (égalité exacte `NEW.charge = OLD.charge - 'reponsesJson'`). Refuse une charge
+ * qui n'est pas un objet, ou qui n'a pas (ou plus) `reponsesJson` : une seconde réécriture n'est pas un
+ * cas normal. `payload_hash` n'est jamais touché : il reste la preuve de la charge reçue entière.
+ */
+export function chargeMinimisee(charge: unknown): Record<string, unknown> {
+  if (typeof charge !== 'object' || charge === null || Array.isArray(charge))
+    throw new Error('charge de candidature : un objet est attendu');
+  if (!Object.hasOwn(charge, 'reponsesJson'))
+    throw new Error('charge de candidature : reponsesJson absent, déjà minimisée ?');
+  const { reponsesJson: _retire, ...reste } = charge as Record<string, unknown>;
+  return reste;
+}
+
 export async function traiterCandidatureRecue(
   prisma: ClientCandidature,
   recu: { readonly id: string; readonly charge: unknown },
@@ -201,9 +218,17 @@ export async function traiterCandidatureRecue(
       });
       resultat = 'cree';
     }
+    // INT-T56 : la charge minimisée part dans la MÊME écriture que le passage à `traite` — le
+    // déclencheur n'admet la réécriture qu'avec ce passage ; un échec de la transaction la laisse
+    // intacte. Le snapshot a été lu plus haut, avant la minimisation.
     await tx.evenementRecu.update({
       where: { id: recu.id },
-      data: { statut: 'traite', processedAt: d.maintenant(), dependanceRef: null },
+      data: {
+        statut: 'traite',
+        processedAt: d.maintenant(),
+        dependanceRef: null,
+        charge: chargeMinimisee(recu.charge) as Prisma.InputJsonValue,
+      },
     });
     return resultat;
   });
