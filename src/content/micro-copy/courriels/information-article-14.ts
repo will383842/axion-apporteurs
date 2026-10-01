@@ -50,15 +50,14 @@ export const INFORMATION_ARTICLE_14 = {
     "Ces coordonnées nous ont été transmises par {prenomApporteur} {nomApporteur}, apporteur d'affaires indépendant, qui nous a présenté {entreprise} et indique avoir échangé avec vous.",
   finalite:
     "Nous les utilisons pour donner suite à cette présentation et reprendre contact avec vous au sujet de {entreprise} et des prestations d'Axion-IA, après vous avoir demandé de confirmer cet échange. Une empreinte de votre adresse et de votre numéro nous sert aussi à éviter les doublons et à respecter votre opposition.",
-  baseLegale:
-    "Ce traitement repose sur {baseLegale}. Vous pouvez vous y opposer à tout moment.",
+  baseLegale: 'Ce traitement repose sur {baseLegale}. Vous pouvez vous y opposer à tout moment.',
   destinataires:
     "Vos coordonnées ne sont accessibles qu'aux personnes d'Axion-IA chargées de ce suivi et à {prestataireEnvoi}, notre prestataire d'envoi de courriels. {prenomApporteur} {nomApporteur} est informé de la suite donnée à sa présentation. Vos données ne sont ni vendues ni cédées. {mentionTransfert}",
   duree:
     "Elles sont supprimées {dureeSansSuite} après la fin de cette présentation si elle n'aboutit pas, et {dureeApresDernierContact} après notre dernier échange si {entreprise} devient cliente.",
   relance: "Ce message ne sera suivi d'aucune relance par courriel.",
   droits:
-    "Vous pouvez accéder à vos données, les faire rectifier ou effacer, en demander la limitation, et vous opposer à leur traitement, en écrivant à {adresseDroits}. Vous pouvez aussi introduire une réclamation auprès de la CNIL.",
+    'Vous pouvez accéder à vos données, les faire rectifier ou effacer, en demander la limitation, et vous opposer à leur traitement, en écrivant à {adresseDroits}. Vous pouvez aussi introduire une réclamation auprès de la CNIL.',
   opposition:
     "Pour vous opposer dès maintenant, un clic suffit : Axion-IA ne vous écrira plus et ne vous appellera plus au titre de cette présentation, ni d'aucune autre qui vous concernerait.",
 } as const;
