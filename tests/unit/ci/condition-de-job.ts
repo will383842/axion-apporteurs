@@ -15,8 +15,10 @@
  *
  * CE QU'ELLE SAIT LIRE, ET CE QU'ELLE REFUSE. Le sous-ensemble d'expressions que
  * `.github/workflows/` emploie : `${{ … }}`, chemins de contexte, `true`/`false`/`null`, nombres,
- * chaînes entre apostrophes, `==`, `!=`, `!`, `&&`, `||`, parenthèses. TOUT LE RESTE LÈVE — une
- * fonction (`contains`, `success`), un contexte hors périmètre (`secrets`, `env`), un jeton inconnu.
+ * chaînes entre apostrophes, `==`, `!=`, `!`, `&&`, `||`, parenthèses, et les quatre fonctions de
+ * STATUT sans argument (`success()`, `failure()`, `cancelled()`, `always()`, QA-T54 : le job
+ * `alerter` de `deploy.yml`). TOUT LE RESTE LÈVE — une autre fonction (`contains`), une fonction de
+ * statut appelée avec un argument, un contexte hors périmètre (`secrets`, `env`), un jeton inconnu.
  * C'est le sens de panne voulu : un témoin qui ne comprend pas ce qu'il lit doit rougir, jamais
  * rendre vert par ignorance (RM-02).
  *
@@ -35,6 +37,25 @@ export type ValeurGh = string | number | boolean | null;
 
 /** Un contexte d'évaluation : `{ github: { … } }`, réduit à ce que les workflows du dépôt lisent. */
 export type ContexteGh = Record<string, unknown>;
+
+/**
+ * LE STATUT DES PRÉREQUIS, que lisent les fonctions de statut. Il vit sous une clé qui n'est pas un
+ * identifiant (`(statut)`) : aucun chemin de contexte ne peut l'atteindre. Absent, tous les
+ * prérequis ont RÉUSSI — c'est l'événement que les autres témoins jugent.
+ */
+export const STATUT = '(statut)';
+export type StatutDesPrerequis = { readonly failure: boolean; readonly cancelled: boolean };
+const PREREQUIS_REUSSIS: StatutDesPrerequis = { failure: false, cancelled: false };
+
+/** La valeur d'une fonction de statut, ou `undefined` si le nom n'en est pas une. */
+function fonctionDeStatut(nom: string, ctx: ContexteGh): boolean | undefined {
+  const s = (ctx[STATUT] as StatutDesPrerequis | undefined) ?? PREREQUIS_REUSSIS;
+  if (nom === 'success') return !s.failure && !s.cancelled;
+  if (nom === 'failure') return s.failure;
+  if (nom === 'cancelled') return s.cancelled;
+  if (nom === 'always') return true;
+  return undefined;
+}
 
 /** Un contexte nommé — le nom sert à DIRE quel événement une condition éteint. */
 export type ContexteNomme = readonly [string, ContexteGh];
@@ -161,7 +182,14 @@ export function evaluerExpression(source: string, ctx: ContexteGh): boolean {
     if (/^-?\d/.test(j)) return Number(j);
     // Un appel de fonction (`contains(…)`, `success()`) se trahit par la parenthèse qui suit : on
     // REFUSE plutôt que de lire le nom comme un chemin de contexte, qui rendrait `null`, donc faux.
-    if (lus[i] === '(') throw new Error(`expression GitHub : fonction « ${j} » hors périmètre`);
+    if (lus[i] === '(') {
+      const statut = lus[i + 1] === ')' ? fonctionDeStatut(j, ctx) : undefined;
+      if (statut === undefined) {
+        throw new Error(`expression GitHub : fonction « ${j} » hors périmètre`);
+      }
+      i += 2;
+      return statut;
+    }
     const morceaux = j.split('.');
     if (!Object.hasOwn(ctx, morceaux[0]!)) {
       throw new Error(
