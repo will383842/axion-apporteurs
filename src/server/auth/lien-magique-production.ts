@@ -11,20 +11,21 @@
  *  - Les compteurs : `limiter` du REGISTRE, appelé directement avec `magic:ip` et `magic:courriel`.
  *    Le magasin et le signaleur sont ceux du registre, toujours (garde `securite:rate-famille`).
  *  - Le travail différé : `planifier`, que l'action branche sur `after()` de Next.
- *  - L'envoi : un port. Hors production, le puits du notifieur (`NOTIFY_SINK`) ; l'envoi réel du
- *    courriel appartient à INT-T10, et d'ici là la production refuse d'envoyer en le disant.
+ *  - L'envoi : un port. Hors production, le puits du notifieur (`NOTIFY_SINK`) ; en production,
+ *    l'émetteur de courriels d'INT-T10 (`demanderEnvoi`), câblé par SEC-42.
  *
  * AUCUN JETON ET AUCUNE ADRESSE DANS LES JOURNAUX : l'échec du travail différé s'écrit par son seul
  * motif ; le puits du notifieur n'écrit que le sujet et la taille du corps.
  */
 
+import { randomUUID } from 'node:crypto';
 import { PrismaClient } from '@prisma/client';
 import { domaines } from '../../config/entite';
 import type { Horloge } from '../../domain/temps/horloge';
 import { horlogeSysteme } from '../../lib/horloge';
 import { formaterRefus, kidDe, lireEnvironnement } from '../../lib/env';
 import { creerJournal, type Journal } from '../../lib/logger';
-import { creerNotifieur, type Notifieur } from '../../lib/notify';
+import { creerNotifieur, productionDeclaree, type Notifieur } from '../../lib/notify';
 import { SAUTS_DE_CONFIANCE, adresseDuClient } from '../securite/adresse-du-client';
 import { clesPii, empreinteAdresseReseau, empreinteRecherche, type ClesPii } from '../securite/pii';
 import { signalerPotDeMiel } from '../securite/pot-de-miel';
@@ -32,6 +33,13 @@ import { limiter, sujetDepuisEmpreinte } from '../securite/rate-limit';
 import { CONNEXION } from '../../content/micro-copy/espace/vocabulaire';
 import type { ConfigurationDuLien, PortsDeConsommation, PortsDeDemande } from './lien-magique';
 import { ecrituresDeLien, lectureDuCompte, transactionDeConsommation } from './lien-magique-depot';
+import {
+  configurationDeLEmetteur,
+  demanderEnvoi,
+  depotDesCourriels,
+  type DependancesDeLEmetteur,
+  type Relais,
+} from '../integrations/zeptomail/emetteur';
 
 export { MODELE_APPORTEUR } from './lien-magique-depot';
 
@@ -134,41 +142,82 @@ export function envoiParLeNotifieur(notifieur: Notifieur): EnvoiDuLien {
   };
 }
 
+/**
+ * SEC-42 — l'envoi par l'ÉMETTEUR de courriels (INT-T10) : chaque demande écrit sa ligne
+ * `courriels_envoyes` (gabarit, empreinte de l'adresse, statut — ni adresse, ni corps, donc ni
+ * jeton), puis le relais est appelé une fois, ou la demande est retenue (drapeau DMARC fermé,
+ * adresse supprimée). L'émetteur est construit À L'ENVOI : une configuration absente fait échouer
+ * l'envoi (signalé par le travail différé), jamais la page.
+ */
+export function envoiParLEmetteur(emetteur: () => DependancesDeLEmetteur): EnvoiDuLien {
+  return {
+    async envoyer({ a, sujet, corps }) {
+      await demanderEnvoi(
+        { gabarit: 'lien_magique', a, sujet, corps, apporteurId: null },
+        emetteur()
+      );
+    },
+  };
+}
+
+/**
+ * Le relais de PRODUCTION, tant que le client du prestataire n'est pas livré : il REFUSE. Il n'est
+ * jamais appelé tant que `PARTNERS_EMAIL_DMARC_VERIFIE` est fermé (la demande est retenue avant) ;
+ * appelé, la ligne dit `echec` sous un code fermé — jamais un envoi fantôme. Le relais réel attend
+ * la lecture de `docs/tiers/zeptomail.md` §2 (RM-08).
+ */
+export const relaisDeProduction: Relais = {
+  async envoyer() {
+    throw new Error('relais_non_livre');
+  },
+};
+
+/**
+ * La voie d'envoi du processus, et elle seule : en PRODUCTION, l'émetteur ; hors production, le
+ * puits du notifieur (`NOTIFY_SINK`), qui n'écrit que le sujet et la taille du corps.
+ */
+export function envoiDuProcessus(
+  env: DependancesDuLien['env'],
+  fabriques: { emetteur: () => DependancesDeLEmetteur; notifieur: () => Notifieur }
+): EnvoiDuLien {
+  return productionDeclaree(env)
+    ? envoiParLEmetteur(fabriques.emetteur)
+    : envoiParLeNotifieur(fabriques.notifieur());
+}
+
 let client: PrismaClient | null = null;
 
 /**
  * Les dépendances du processus, pour les actions serveur : le client de base (un par processus),
- * l'horloge du système, le journal, le notifieur, et `planifier` branché sur `apres` — `after()`
- * de Next, que l'action passe. Le travail planifié n'est JAMAIS exécuté ici : il est confié.
+ * l'horloge du système, le journal, et `planifier` branché sur `apres` — `after()` de Next, que
+ * l'action passe. Le travail planifié n'est JAMAIS exécuté ici : il est confié.
  *
- * L'envoi : hors production, le puits du notifieur (`NOTIFY_SINK`) ; en production, le seul
- * transport déclaré refuse d'envoyer en le disant — le transport réel appartient à INT-T10.
+ * L'envoi (SEC-42) : en production, l'émetteur d'INT-T10 et son relais de production ; hors
+ * production, le puits du notifieur.
  */
 export function dependancesDuProcessus(outils: {
   apres: (travail: () => Promise<void>) => void;
   env: DependancesDuLien['env'];
 }): DependancesDuLien {
   client ??= new PrismaClient();
+  const prisma = client;
   const journal = creerJournal();
   return {
     env: outils.env,
-    prisma: client,
+    prisma,
     horloge: horlogeSysteme,
     planifier: (travail) => outils.apres(travail),
-    envoi: envoiParLeNotifieur(
-      creerNotifieur({
-        env: outils.env,
-        journal,
-        transports: [
-          {
-            nom: 'courriel',
-            envoyer: async () => {
-              throw new Error('envoi_courriel_non_cable : le transport réel appartient à INT-T10');
-            },
-          },
-        ],
-      })
-    ),
+    envoi: envoiDuProcessus(outils.env, {
+      emetteur: () => ({
+        configuration: configurationDeLEmetteur(outils.env, domaines().envoi),
+        relais: relaisDeProduction,
+        depot: depotDesCourriels(prisma),
+        cles: clesPii(outils.env),
+        maintenant: () => new Date(horlogeSysteme.maintenant()),
+        nouvelId: randomUUID,
+      }),
+      notifieur: () => creerNotifieur({ env: outils.env, journal, transports: [] }),
+    }),
     journal,
   };
 }
