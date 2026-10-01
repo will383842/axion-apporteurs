@@ -17447,6 +17447,84 @@
       "estimateDays": 0.5,
       "statut": "a_faire",
       "acceptance": "Décision D4 de Williams du 2026-10-01, dans la fenêtre de la coordination : à la question du format de la grille publiée, Williams répond « OUI OK - A (recommandé) : axion-ia envoie automatiquement une grille complète à Partners. Quand vous changez un prix dans axion-ia, l'espace apporteur se met à jour tout seul. Une seule source, aucun risque d'erreur. ». A1-08 réglée, option A. (1) L'import (DM-03-P) lit la grille en `schema: 2` et rend `cpfEligible`, `prixReferenceHt` et `commissionPubliee` par palier, sans en recopier aucune valeur (REQ-ARG-031) ; l'empreinte reçue est recontrôlée. (2) La correspondance des types de commission d'axion-ia vers ceux de Partners (forfait, pourcentage, aucune) est écrite en un seul endroit et testée. (3) Un `schema` inconnu est refusé et nommé (échec fermé). (4) TÉMOINS rouges d'abord : une grille schema 2 est lue ; une grille d'un schema inconnu est refusée."
+    },
+    {
+      "id": "JUR-T43",
+      "titre": "Contrat v1, art. 4 : le forfait par journée est réduit au prorata de la remise, sans jamais augmenter",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "juridique",
+      "paths": [
+        "docs/contrat/CONTRAT-APPORTEUR-V1.md",
+        "tests/unit/contrat/prorata-de-remise.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [
+        "argent"
+      ],
+      "deps": [],
+      "reqs": [
+        "REQ-DM-014"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.25,
+      "statut": "a_faire",
+      "acceptance": "Décision de Williams du 2026-10-01, dans la fenêtre de la coordination (suite de D4) : la commission FORFAITAIRE baisse au prorata quand le prix vendu est inférieur au prix de référence, et n'augmente jamais au-dessus (« Elle baisse en cas de remise, mais n'augmente jamais. » — option A ; l'exemple chiffré de la question est au journal hors dépôt, aucun montant n'entre dans ce dépôt public) ; à la question de l'écrire au contrat, Williams répond « oui et il faut bien que ce soit indiqué dans le contrat non ? ». Le prorata ne porte que sur le FORFAIT par journée (le pourcentage suit déjà le prix vendu : l'appliquer deux fois le baisserait deux fois), arrondi au centime INFÉRIEUR. SOURCE DÉJÀ EN PRODUCTION : le courriel d'axion-ia aux apporteurs (`axionia/src/lib/email/templates/apporteur-issue-echange.tsx`) annonce déjà « par journée de formation au tarif public (réduite au prorata en cas de remise accordée au client) », règle qu'ignoraient le contrat v1 et le calcul : ces tâches les alignent sur cette promesse. (1) L'art. 4 du gabarit écrit que la commission forfaitaire par journée est multipliée par le rapport du prix vendu au prix de référence, plafonné à un (jamais au-dessus du forfait), arrondie au centime inférieur ; la commission au pourcentage n'est pas concernée. (2) C'est un AVENANT : il est écrit avant le premier envoi DocuSeal, et sa formulation finale est montrée à Williams et validée par lui avant la fusion. (3) TÉMOIN rouge d'abord : le gabarit sans cette clause est refusé par la concordance du contrat ; avec elle, accepté. Relecture de la lentille juridique."
+    },
+    {
+      "id": "INT-T48-P",
+      "titre": "Contrat d'événements : prixVenduHt et prixReferenceHt entrent dans la charge du devis signé",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "argent",
+      "paths": [
+        "packages/contracts/payloads.ts",
+        "packages/contracts/contracts.v2.json",
+        "packages/contracts/contracts.sha256",
+        "tests/integration/devis-signe-prix.spec.ts"
+      ],
+      "schema": true,
+      "sensible": [
+        "argent"
+      ],
+      "deps": [],
+      "reqs": [
+        "REQ-INT-003",
+        "REQ-QA-007"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "acceptance": "Décision de Williams du 2026-10-01, dans la fenêtre de la coordination (suite de D4) : la commission FORFAITAIRE baisse au prorata quand le prix vendu est inférieur au prix de référence, et n'augmente jamais au-dessus (« Elle baisse en cas de remise, mais n'augmente jamais. » — option A ; l'exemple chiffré de la question est au journal hors dépôt, aucun montant n'entre dans ce dépôt public) ; à la question de l'écrire au contrat, Williams répond « oui et il faut bien que ce soit indiqué dans le contrat non ? ». Le prorata ne porte que sur le FORFAIT par journée (le pourcentage suit déjà le prix vendu : l'appliquer deux fois le baisserait deux fois), arrondi au centime INFÉRIEUR. SOURCE DÉJÀ EN PRODUCTION : le courriel d'axion-ia aux apporteurs (`axionia/src/lib/email/templates/apporteur-issue-echange.tsx`) annonce déjà « par journée de formation au tarif public (réduite au prorata en cas de remise accordée au client) », règle qu'ignoraient le contrat v1 et le calcul : ces tâches les alignent sur cette promesse. (1) La charge du devis signé porte `prixVenduHt` et `prixReferenceHt` (centimes entiers), déclarés dans le contrat publié ; l'empreinte est régénérée par `pnpm contracts:export`. S'il part avec INT-T46-P, le changement entre dans la MÊME version du contrat ; sinon, dans la suivante. (2) Partners les conserve et les montre à l'apporteur à côté de sa commission, sans recalculer la commission (elle vient d'axion-ia). (3) TÉMOINS rouges d'abord : une charge sans ces champs est refusée hors schéma ; une charge complète est acceptée. Relecture de la lentille schema."
+    },
+    {
+      "id": "INT-T48-A",
+      "titre": "Le calcul de la commission applique le prorata de la remise au forfait par journée, et l'émet avec les deux prix",
+      "phase": 1,
+      "repo": "axionia",
+      "zone": "argent",
+      "paths": [
+        "axionia/src/server/partners/commission.ts",
+        "axionia/src/server/partners-sync/producteurs/devis.ts",
+        "axionia/src/server/partners/__tests__/commission-prorata.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [
+        "argent"
+      ],
+      "deps": [
+        "INT-T48-P"
+      ],
+      "reqs": [
+        "REQ-INT-006"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "acceptance": "Décision de Williams du 2026-10-01, dans la fenêtre de la coordination (suite de D4) : la commission FORFAITAIRE baisse au prorata quand le prix vendu est inférieur au prix de référence, et n'augmente jamais au-dessus (« Elle baisse en cas de remise, mais n'augmente jamais. » — option A ; l'exemple chiffré de la question est au journal hors dépôt, aucun montant n'entre dans ce dépôt public) ; à la question de l'écrire au contrat, Williams répond « oui et il faut bien que ce soit indiqué dans le contrat non ? ». Le prorata ne porte que sur le FORFAIT par journée (le pourcentage suit déjà le prix vendu : l'appliquer deux fois le baisserait deux fois), arrondi au centime INFÉRIEUR. SOURCE DÉJÀ EN PRODUCTION : le courriel d'axion-ia aux apporteurs (`axionia/src/lib/email/templates/apporteur-issue-echange.tsx`) annonce déjà « par journée de formation au tarif public (réduite au prorata en cas de remise accordée au client) », règle qu'ignoraient le contrat v1 et le calcul : ces tâches les alignent sur cette promesse. (1) La fonction pure de `commission.ts` multiplie le forfait par journée par min(1, prix vendu ÷ prix de référence), en centimes entiers arrondis à l'inférieur ; la commission au pourcentage est inchangée. (2) Le producteur du devis signé émet `prixVenduHt` et `prixReferenceHt` (lockstep avec INT-T48-P). (3) TÉMOINS rouges d'abord, sans montant réel : prix vendu égal au prix de référence, forfait entier ; prix vendu inférieur, forfait réduit au prorata et arrondi à l'inférieur ; prix vendu supérieur, forfait entier, jamais plus ; prix vendu nul, commission nulle ; une commission au pourcentage ne subit aucun prorata."
     }
   ]
 }

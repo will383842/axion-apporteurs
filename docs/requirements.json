@@ -229,7 +229,8 @@
         "DM-23",
         "GOV-080",
         "INT-T47-A",
-        "INT-T47-P"
+        "INT-T47-P",
+        "JUR-T43"
       ]
     },
     {
@@ -1955,7 +1956,8 @@
         "GOV-088",
         "INT-T01a",
         "INT-T45",
-        "INT-T46-A"
+        "INT-T46-A",
+        "INT-T48-P"
       ]
     },
     {
@@ -2005,7 +2007,8 @@
       "phase": -1,
       "taches": [
         "INT-T01b",
-        "INT-T04"
+        "INT-T04",
+        "INT-T48-A"
       ]
     },
     {
@@ -3469,7 +3472,8 @@
         "INT-T01b",
         "INT-T01c",
         "INT-T45",
-        "INT-T46-P"
+        "INT-T46-P",
+        "INT-T48-P"
       ]
     },
     {

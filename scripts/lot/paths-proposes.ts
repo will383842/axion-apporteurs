@@ -633,6 +633,23 @@ const MANUELS: Record<string, string[]> = {
     'axionia/src/server/partners-sync/__tests__/grille-export-schema-2.spec.ts',
   ],
   'INT-T47-P': ['src/server/grille/import.ts', 'tests/integration/grille-schema-2.spec.ts'],
+  // Le prorata de la remise sur le forfait (décision de Williams du 2026-10-01) : leurs témoins
+  // n'existent pas encore, leurs chemins sont ceux de leur fiche.
+  'JUR-T43': [
+    'docs/contrat/CONTRAT-APPORTEUR-V1.md',
+    'tests/unit/contrat/prorata-de-remise.spec.ts',
+  ],
+  'INT-T48-P': [
+    'packages/contracts/payloads.ts',
+    'packages/contracts/contracts.v2.json',
+    'packages/contracts/contracts.sha256',
+    'tests/integration/devis-signe-prix.spec.ts',
+  ],
+  'INT-T48-A': [
+    'axionia/src/server/partners/commission.ts',
+    'axionia/src/server/partners-sync/producteurs/devis.ts',
+    'axionia/src/server/partners/__tests__/commission-prorata.spec.ts',
+  ],
 };
 
 /**
