@@ -22,7 +22,15 @@
  * — puis l'erreur remonte à qui a lancé le passage.
  *
  * Aucun effet métier ici : `dispatch` est le port où les tâches de commission et de rattachement se
- * brancheront (DM-10-P, DM-15). En phase 0, il ne fait rien.
+ * brancheront (DM-10-P, DM-15).
+ *
+ * LE TYPE SANS TRAITANT (INT-T43). Un événement dont le type n'a pas encore de traitant n'est JAMAIS
+ * marqué `traite` : un `traite` n'est jamais redonné au dispatch, et un `paiement.recu` reçu avant
+ * son traitant serait perdu pour les commissions. `aiguiller` lève `SansTraitant`, l'événement passe
+ * `en_attente_dependance` sous `traitant:<type>`, et la reprise en tête de passage
+ * (`reprendreLesTraitants`) ne remet en `recu` que les attentes dont le type a désormais un
+ * traitant : l'effet a lieu une fois, au premier passage qui le connaît (arbitrage d'A01, issue
+ * #331).
  */
 import { Prisma, TypeEvenementRecu, type PrismaClient } from '@prisma/client';
 import { schemaNomDeTache, type NomDeTache } from '../../taches/registre';
@@ -80,6 +88,41 @@ export class AttenteDeDependance extends Error {
     super('en_attente_dependance');
     this.name = 'AttenteDeDependance';
   }
+}
+
+/** Le préfixe des attentes d'un traitant non branché (INT-T43). */
+export const PREFIXE_ATTENTE_TRAITANT = 'traitant:';
+
+/** La référence d'attente d'un type sans traitant : `traitant:<type>`. */
+export function refAttenteTraitant(type: TypeEvenementRecu): string {
+  return `${PREFIXE_ATTENTE_TRAITANT}${type}`;
+}
+
+/** Levée par `aiguiller` pour un type qui n'a pas de traitant : une attente, jamais un `traite`. */
+export class SansTraitant extends AttenteDeDependance {
+  constructor(type: TypeEvenementRecu) {
+    super(refAttenteTraitant(type));
+    this.name = 'SansTraitant';
+  }
+}
+
+/** Les traitants branchés, par type. Un type absent n'a pas de traitant. */
+export type Traitants = Partial<Record<TypeEvenementRecu, Dispatch>>;
+
+/** Le dispatch qui aiguille vers le traitant du type, et met en attente un type qui n'en a pas. */
+export function aiguiller(traitants: Traitants): Dispatch {
+  return async (recu) => {
+    const traitant = traitants[recu.eventType];
+    if (traitant === undefined) throw new SansTraitant(recu.eventType);
+    await traitant(recu);
+  };
+}
+
+/** Les références d'attente que les traitants branchés peuvent désormais lever. */
+export function refsDesTraitants(traitants: Traitants): string[] {
+  return (Object.keys(traitants) as TypeEvenementRecu[])
+    .filter((t) => traitants[t] !== undefined)
+    .map(refAttenteTraitant);
 }
 
 /**
@@ -224,6 +267,25 @@ export function reprendreLesAttentes(prisma: PrismaClient, prefixe: string): () 
   return async () => {
     const r = await prisma.evenementRecu.updateMany({
       where: { statut: 'en_attente_dependance', dependanceRef: { startsWith: prefixe } },
+      data: { statut: 'recu', dependanceRef: null },
+    });
+    return r.count;
+  };
+}
+
+/**
+ * La reprise des attentes `traitant:<type>` dont le type a désormais un traitant (INT-T43) : elles
+ * repassent `recu`, et elles seules. L'attente d'un type toujours sans traitant ne bouge pas.
+ */
+export function reprendreLesTraitants(
+  prisma: PrismaClient,
+  traitants: Traitants
+): () => Promise<number> {
+  return async () => {
+    const refs = refsDesTraitants(traitants);
+    if (refs.length === 0) return 0;
+    const r = await prisma.evenementRecu.updateMany({
+      where: { statut: 'en_attente_dependance', dependanceRef: { in: refs } },
       data: { statut: 'recu', dependanceRef: null },
     });
     return r.count;

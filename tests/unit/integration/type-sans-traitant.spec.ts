@@ -80,7 +80,15 @@ const ligne = (
   eventType: TypeEvenementRecu,
   sujetRef: string,
   charge: Record<string, string>
-): Ligne => ({ id, eventType, sujetRef, charge, retryCount: 0, statut: 'recu', dependanceRef: null });
+): Ligne => ({
+  id,
+  eventType,
+  sujetRef,
+  charge,
+  retryCount: 0,
+  statut: 'recu',
+  dependanceRef: null,
+});
 
 const INSTANT = new Date('2026-10-01T10:00:00.000Z');
 const sansEffet = async () => undefined;
@@ -133,7 +141,10 @@ describe('INT-T43 — un type sans traitant reste en attente, jamais `traite`', 
     await passer(apres);
     await passer(apres);
     expect(effets).toEqual(['p']);
-    expect(lignes.find((l) => l.id === 'p')).toMatchObject({ statut: 'traite', dependanceRef: null });
+    expect(lignes.find((l) => l.id === 'p')).toMatchObject({
+      statut: 'traite',
+      dependanceRef: null,
+    });
   });
 
   it("la reprise ne vise que les types qui ont un traitant : l'attente d'un autre type ne bouge pas", async () => {

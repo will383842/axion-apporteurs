@@ -26,10 +26,13 @@ import {
   traiterCandidatureRecue,
 } from '../../../../server/integrations/axionia/candidature-recue';
 import {
+  aiguiller,
   depotDuTravail,
   passerLeTravail,
   reprendreLesAttentes,
+  reprendreLesTraitants,
   type EvenementATraiter,
+  type Traitants,
 } from '../../../../server/queue/workers/evenement-recu';
 import { clesPii } from '../../../../server/securite/pii';
 import { creerAlerteurPlafonne } from '../../../../server/securite/primitives-de-porte';
@@ -52,12 +55,18 @@ export function POST(requete: Request): Promise<Response> {
     declencher: () =>
       after(async () => {
         try {
+          // Un seul type a un traitant aujourd'hui : la candidature reçue (INT-T26). Les autres
+          // attendent `traitant:<type>`, jamais `traite` (INT-T43) ; brancher un traitant ici
+          // suffit pour qu'au passage suivant, ses événements en attente lui soient redonnés.
+          const traitants: Traitants = {
+            [TypeEvenementRecu.candidature_recue]: (recu) => traiterCandidature(prisma, recu),
+          };
+          const reprendreCoordonnees = reprendreLesAttentes(prisma, PREFIXE_ATTENTE_COORDONNEES);
+          const reprendreTraitants = reprendreLesTraitants(prisma, traitants);
           await passerLeTravail({
             depot: depotDuTravail(prisma),
-            // Un seul type a un effet en phase 0 : la candidature reçue (INT-T26). Les autres
-            // passent `traite` sans effet, comme avant ; les tâches de commission s'y brancheront.
-            dispatch: (recu) => traiter(prisma, recu),
-            reprendre: reprendreLesAttentes(prisma, PREFIXE_ATTENTE_COORDONNEES),
+            dispatch: aiguiller(traitants),
+            reprendre: async () => (await reprendreCoordonnees()) + (await reprendreTraitants()),
             maintenant: () => new Date(horlogeSysteme.maintenant()),
           });
         } catch (erreur) {
@@ -70,11 +79,10 @@ export function POST(requete: Request): Promise<Response> {
 }
 
 /**
- * Le port métier. Les secrets sont relus À CHAQUE traitement, par le même juge que le démarrage :
+ * Le traitant de la candidature reçue. Les secrets sont relus À CHAQUE traitement, par le même juge que le démarrage :
  * un refus lève (l'événement passe `en_erreur` sous le NOM de l'erreur, jamais un secret).
  */
-async function traiter(prisma: PrismaClient, recu: EvenementATraiter): Promise<void> {
-  if (recu.eventType !== TypeEvenementRecu.candidature_recue) return;
+async function traiterCandidature(prisma: PrismaClient, recu: EvenementATraiter): Promise<void> {
   const lu = lireEnvironnement(process.env);
   if (!lu.ok) throw new Error('environnement_refuse');
   const rotation = lireTrousseaux(process.env, horlogeSysteme.maintenant());
