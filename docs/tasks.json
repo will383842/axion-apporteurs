@@ -15737,8 +15737,22 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.25,
-      "statut": "a_faire",
-      "acceptance": "Décision de Williams du 2026-09-30 : pas de serveur dédié aux aperçus (l'équipe Coolify « previews » n'a aucun serveur ; le petit serveur dédié proposé par la lentille sécurité n'est pas retenu). Conséquences déjà portées au backlog : QA-T06 (4) en attente externe (aperçus inertes) et QA-T13 (5) en plan B (runbooks exercés sur la production avant toute donnée réelle, seule voie que la garde admet sans aperçus). Tâche porteuse nommée par la coordination sur #304, GOV-129 étant livrée en entier par #300. (1) Passe du lot dédié de GOV-116, lancé par Williams : dans `docs/DECISIONS.md`, la ligne HYP-E1-5 dit que les aperçus par PR ne sont pas servis tant qu'aucun serveur ne leur est rattaché (décision de Williams du 2026-09-30), sans rien retirer de ce qu'elle disait ; la colonne « Tranchée » ne porte qu'une date seule. (2) Trace datée du lot (date, branche, sha de départ) dans le corps de la PR. (3) `gov:tasks`, `gov:requirements` et `gov:hypotheses` sortent 0. Phase 1 (arbitrage de la coordination du 2026-09-30) : la décision est déjà écrite, datée, dans les amendements de QA-T06 (4) et de QA-T13 (7) ; sa ligne au registre DECISIONS attend le prochain passage du lot dédié et ne retarde pas la clôture de la Phase 0. Même passe du lot : la décision de Williams du 2026-09-30 fixant la date PRÉVUE de mise en service au 2026-12-31 (provisoire ; la constante `MISE_EN_SERVICE` vit dans `scripts/gates/runbooks-exerces.ts`, livrée par la PR de la garde de QA-T13 (#302)) entre au registre, avec sa date seule en colonne « Tranchée »."
+      "statut": "fusionnee",
+      "acceptance": "Décision de Williams du 2026-09-30 : pas de serveur dédié aux aperçus (l'équipe Coolify « previews » n'a aucun serveur ; le petit serveur dédié proposé par la lentille sécurité n'est pas retenu). Conséquences déjà portées au backlog : QA-T06 (4) en attente externe (aperçus inertes) et QA-T13 (5) en plan B (runbooks exercés sur la production avant toute donnée réelle, seule voie que la garde admet sans aperçus). Tâche porteuse nommée par la coordination sur #304, GOV-129 étant livrée en entier par #300. (1) Passe du lot dédié de GOV-116, lancé par Williams : dans `docs/DECISIONS.md`, la ligne HYP-E1-5 dit que les aperçus par PR ne sont pas servis tant qu'aucun serveur ne leur est rattaché (décision de Williams du 2026-09-30), sans rien retirer de ce qu'elle disait ; la colonne « Tranchée » ne porte qu'une date seule. (2) Trace datée du lot (date, branche, sha de départ) dans le corps de la PR. (3) `gov:tasks`, `gov:requirements` et `gov:hypotheses` sortent 0. Phase 1 (arbitrage de la coordination du 2026-09-30) : la décision est déjà écrite, datée, dans les amendements de QA-T06 (4) et de QA-T13 (7) ; sa ligne au registre DECISIONS attend le prochain passage du lot dédié et ne retarde pas la clôture de la Phase 0. Même passe du lot : la décision de Williams du 2026-09-30 fixant la date PRÉVUE de mise en service au 2026-12-31 (provisoire ; la constante `MISE_EN_SERVICE` vit dans `scripts/gates/runbooks-exerces.ts`, livrée par la PR de la garde de QA-T13 (#302)) entre au registre, avec sa date seule en colonne « Tranchée ».",
+      "branch": "t/jur-t01-decision",
+      "owner": "A01",
+      "pr": 326,
+      "attestation": {
+        "pr": 326,
+        "sha": "d4aadb3e0baea25d04d44b8ef31eb0c8b0dca865",
+        "fusionneeAt": "2026-10-01T14:12:24Z"
+      },
+      "motif": null,
+      "tests": {
+        "REQ-QA-015": [
+          "tests/unit/qualite/preview-par-pr.spec.ts"
+        ]
+      }
     },
     {
       "id": "SEC-29",
@@ -17776,8 +17790,22 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.25,
-      "statut": "a_faire",
-      "acceptance": "Porté par l'audit indépendant du plan de la Phase 1 (2026-10-01, `_REPRISE-AXION-APPORTEURS/AUDIT-PLAN-PHASE-1.md`) (écart C-11). Passe du lot dédié de GOV-116, lancé par Williams : `docs/DECISIONS.md` reçoit l'accès avant signature (HYP-SEC03-ACCES amendée, D1), l'antériorité sur le devis émis et sur le devis signé non facturé (D2), la grille publiée en schema 2 (D4), le prorata de la remise, le nom affichable (apporteur et conseiller, même forme), l'option « branches à jour avant fusion » (D6), le retrait du PDF public (C1) et la validation du contrat v1 et du mandat, chacune avec sa date seule en colonne « Tranchée », sans référence d'article qui exigerait un ancrage du contrat. La règle de REQ-INT-014 sur l'API 1 reçoit une note de renversement datée. Les citations mot pour mot renvoient à `_REPRISE-AXION-APPORTEURS/SEQUENCE-DECISIONS-PHASE1-2026-10-01.md` et `SEQUENCE-DECISION-CONTRAT-2026-10-01.md`."
+      "statut": "fusionnee",
+      "acceptance": "Porté par l'audit indépendant du plan de la Phase 1 (2026-10-01, `_REPRISE-AXION-APPORTEURS/AUDIT-PLAN-PHASE-1.md`) (écart C-11). Passe du lot dédié de GOV-116, lancé par Williams : `docs/DECISIONS.md` reçoit l'accès avant signature (HYP-SEC03-ACCES amendée, D1), l'antériorité sur le devis émis et sur le devis signé non facturé (D2), la grille publiée en schema 2 (D4), le prorata de la remise, le nom affichable (apporteur et conseiller, même forme), l'option « branches à jour avant fusion » (D6), le retrait du PDF public (C1) et la validation du contrat v1 et du mandat, chacune avec sa date seule en colonne « Tranchée », sans référence d'article qui exigerait un ancrage du contrat. La règle de REQ-INT-014 sur l'API 1 reçoit une note de renversement datée. Les citations mot pour mot renvoient à `_REPRISE-AXION-APPORTEURS/SEQUENCE-DECISIONS-PHASE1-2026-10-01.md` et `SEQUENCE-DECISION-CONTRAT-2026-10-01.md`.",
+      "branch": "t/jur-t01-decision",
+      "owner": "A01",
+      "pr": 326,
+      "attestation": {
+        "pr": 326,
+        "sha": "d4aadb3e0baea25d04d44b8ef31eb0c8b0dca865",
+        "fusionneeAt": "2026-10-01T14:12:24Z"
+      },
+      "motif": null,
+      "tests": {
+        "REQ-GOV-015": [
+          "tests/unit/gouvernance/gardes.spec.ts"
+        ]
+      }
     },
     {
       "id": "DM-46",
