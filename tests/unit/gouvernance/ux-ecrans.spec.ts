@@ -102,12 +102,12 @@ describe('REQ-UX-047 — les états d’une maquette : étiquette « État : …
     `<section class="ecran" id="${id}"${etiquette ? ` aria-label="${etiquette}"` : ''}></section>`;
   const maquette = (...ids: string[]) => ids.map((id) => section(id)).join('');
 
-  it('REQ-UX-047 — un alias n’appartient qu’à UNE famille', () => {
+  it('REQ-UX-047 REQ-UX-019 : un alias n’appartient qu’à UNE famille', () => {
     const tous: string[] = Object.values(FAMILLES_D_ETATS).flat();
     expect(tous.filter((a, i) => tous.indexOf(a) !== i)).toEqual([]);
   });
 
-  it('REQ-UX-047 — TÉMOIN : une section sans étiquette « État : … » ne compte pas comme état', () => {
+  it('REQ-UX-047 REQ-UX-019 : TÉMOIN : une section sans étiquette « État : … » ne compte pas comme état', () => {
     const complete = maquette('etat-nominal', 'etat-vide', 'etat-chargement', 'etat-erreur');
     expect(etatsManquants(complete, false)).toEqual([]);
     const chargementSansEtiquette = complete.replace(
@@ -118,14 +118,14 @@ describe('REQ-UX-047 — les états d’une maquette : étiquette « État : …
     expect(etatsDe(chargementSansEtiquette)).not.toContain('etat-chargement');
   });
 
-  it('REQ-UX-047 — TÉMOIN : la vue d’un rôle (etat-lecteur, etat-qualifieur) n’est pas un accès refusé', () => {
+  it('REQ-UX-047 REQ-UX-019 : TÉMOIN : la vue d’un rôle (etat-lecteur, etat-qualifieur) n’est pas un accès refusé', () => {
     const base = ['etat-nominal', 'etat-vide', 'etat-chargement', 'etat-erreur'];
     expect(etatsManquants(maquette(...base, 'etat-lecteur'), true)).toEqual(['refus']);
     expect(etatsManquants(maquette(...base, 'etat-qualifieur'), true)).toEqual(['refus']);
     expect(etatsManquants(maquette(...base, 'etat-refuse'), true)).toEqual([]);
   });
 
-  it('REQ-UX-047 — TÉMOIN : l’écran fermé à un rôle ne vaut pas état vide ; seule l’exception NOMMÉE d’acces-refuse.html en dispense', () => {
+  it('REQ-UX-047 REQ-UX-019 : TÉMOIN : l’écran fermé à un rôle ne vaut pas état vide ; seule l’exception NOMMÉE d’acces-refuse.html en dispense', () => {
     const pageDeRefus = maquette('etat-ecran', 'etat-chargement', 'etat-erreur');
     expect(etatsManquants(pageDeRefus, true, 'autre.html')).toEqual(['vide']);
     expect(etatsManquants(pageDeRefus, true, 'acces-refuse.html')).toEqual([]);
