@@ -814,7 +814,7 @@ la disposition de chaque partie.
 > contrat » a valeur contractuelle** : décision **W12** du 2026-09-03, la grille d'un contrat peut être
 > supérieure ou inférieure à la grille publiée, chaque écart étant motivé et journalisé.
 
-### A1.1 — Formations collectives (9 paliers)
+### A1.1 — Formations collectives (10 paliers)
 
 *Grille publiée : forfait de **{{PUBLIEE_FORFAIT_JOURNEE}} HT par journée vendue** (`com-formation-1j`, `-2j`, `-3j`).*
 
@@ -829,10 +829,14 @@ la disposition de chaque partie.
 | Approfondie — petit groupe | `approfondie-standard` | 2 jours | {{PRIX_APPROFONDIE_STANDARD}} | {{COM_APPROFONDIE_STANDARD}} | {{PUBLIEE_APPROFONDIE_STANDARD}} | {{CPF_APPROFONDIE_STANDARD}} |
 | Gagner du temps — petit groupe | `temps-standard` | 1 journée | {{PRIX_TEMPS_STANDARD}} | {{COM_TEMPS_STANDARD}} | {{PUBLIEE_TEMPS_STANDARD}} | {{CPF_TEMPS_STANDARD}} |
 | Claude — petit groupe | `claude-standard` | 1 journée | {{PRIX_CLAUDE_STANDARD}} | {{COM_CLAUDE_STANDARD}} | {{PUBLIEE_CLAUDE_STANDARD}} | {{CPF_CLAUDE_STANDARD}} |
+| Conférence | `intervention-conference` | selon le devis | Sur devis ² | {{COM_INTERVENTION_CONFERENCE}} | {{PUBLIEE_INTERVENTION_CONFERENCE}} | {{CPF_INTERVENTION_CONFERENCE}} |
 
 ¹ *Dérivé du forfait de {{PUBLIEE_FORFAIT_JOURNEE}} par journée : une demi-journée vaut un demi-forfait. La grille publiée ne
 porte pas de ligne propre à ce palier ; la valeur applicable reste celle de la colonne « Commission du
 présent contrat ».*
+
+² *La conférence est vendue sur devis et n'a pas de prix public : son forfait est dû en entier, sans
+réduction au titre de l'article 4.1 bis.*
 
 ### A1.2 — Accompagnement individuel, 1-to-1 (5 paliers)
 
@@ -890,7 +894,6 @@ non commissionnées à la date de la présente version :
 | Développement web | `codage-web` | **Aucune** |
 | Maintenance | `maintenance-standard` | **Aucune** |
 | Coaching récurrent 1-to-1 | `un-a-un-recurrent` | **Aucune** |
-| Conférence | `intervention-conference` | **Aucune** |
 | Intervention sur demande | `intervention-sur-demande` | **Aucune** |
 
 Le « coup de projecteur » (podcast, interview, page dédiée) est fourni à titre gratuit et ne donne lieu à
