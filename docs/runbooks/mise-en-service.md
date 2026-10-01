@@ -93,8 +93,10 @@
       sentinelle reste, les quatre points de sortie refusent : contrat, mandat, virement, export annuel.
       _Porteur : Williams (valeurs et décisions), l'auteur (PR du registre, garde verte)._
 - [ ] **Information de l'article 14 tranchée au registre** (REQ-JUR-009, REQ-JUR-060, JUR-T09) : la base
-      légale de TRT-TIERS, les durées de conservation du tiers (HYP-RGPD-RETENTION) et la région du compte
-      d'envoi (`docs/tiers/zeptomail.md`) sont décidées dans `docs/DECISIONS.md`, et les paramètres du
+      légale de TRT-TIERS, les durées de conservation du tiers (HYP-RGPD-RETENTION) et la localisation de
+      l'hébergement du serveur et des sauvegardes (`docs/tiers/coolify.md`, `docs/tiers/cloudflare-r2.md`)
+      sont décidées dans `docs/DECISIONS.md` — l'envoi, lui, passe par la région européenne de ZeptoMail
+      (`smtp.zeptomail.eu`, constaté côté axion-ia) —, et les paramètres du
       texte (`src/content/micro-copy/courriels/information-article-14.ts`) les rendent. Tant que cette
       case n'est pas cochée, **aucun e-mail de confirmation réel ne part**. Cochée après réception par
       Williams. _Porteur : Williams (les trois décisions), A07 (relecture du texte rendu)._
