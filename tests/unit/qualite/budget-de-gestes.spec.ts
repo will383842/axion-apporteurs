@@ -2,7 +2,7 @@
 // @req REQ-QA-016
 /**
  * QA-T33 — la fixture « budget de gestes » : ce que REQ-UX-001 et REQ-UX-021 fixent, quelque chose le
- * mesure enfin. Les seuils sont LUS dans `BUDGETS_UX` (QA-T58), jamais retapés (RM-01).
+ * mesure enfin. Les seuils sont LUS dans `BUDGETS_UX` (`src/domain/seuils/ssot.ts`), jamais retapés (RM-01).
  *
  * CE QUE CE FICHIER GARDE.
  *   1. Le JUGEMENT, pur : une mesure (clics, champs, tabulations) confrontée au budget d'un geste —

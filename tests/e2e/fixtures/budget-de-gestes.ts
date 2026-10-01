@@ -6,7 +6,7 @@
  *   — les TABULATIONS jusqu'à la première action ;
  *   — la PREMIÈRE ACTION CLIQUABLE, chronométrée sur le profil réseau « 4G ralentie » ;
  *   — la première action VISIBLE SANS DÉFILEMENT à 375×667 et 1280×800.
- * Tous les seuils sont LUS dans `BUDGETS_UX` (`src/domain/seuils/ssot.ts`, QA-T58) : aucun chiffre ici.
+ * Tous les seuils sont LUS dans `BUDGETS_UX` (`src/domain/seuils/ssot.ts`) : aucun chiffre ici.
  * Une exigence plus stricte (REQ-UX-001 pour le dépôt, REQ-UX-021 pour la qualification) se passe en
  * argument, nommée, au parcours qui la mesure.
  *
