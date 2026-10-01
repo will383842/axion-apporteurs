@@ -60,7 +60,8 @@ describe('REQ-DM-028 — art. 3.3 : un devis signé et pas encore entièrement f
 
   it('REQ-DM-028 : TÉMOIN — un gabarit sans le devis signé est refusé par la concordance', () => {
     const sans = GABARIT.replace(
-      /ayant signé un devis qui n.a été ni entièrement facturé/,
+      // La phrase peut être coupée par un retour à la ligne du gabarit.
+      /ayant signé un devis\s+qui n.a été ni entièrement facturé/,
       'ayant reçu un devis'
     );
     expect(sans).not.toBe(GABARIT);
