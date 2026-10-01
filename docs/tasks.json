@@ -5627,7 +5627,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "Porté par l'audit indépendant du plan de la Phase 1 (2026-10-01, `_REPRISE-AXION-APPORTEURS/AUDIT-PLAN-PHASE-1.md`) (écart C-08). (1) Code public de parrainage d'au moins 25 bits d'aléa, alphabet sans ambiguïté, unique, jamais dérivé de l'identité (`src/domain/parrainage/code.ts`). (2) Un `?p=` inconnu, mal formé ou révoqué est ignoré silencieusement : réponse identique à une visite sans code (aucun oracle, même statut, même corps). (3) Propagation sans cookie persistant ni stockage local au-delà de la session de navigation. (4) Débit limité par `rate-limit.ts`. TÉMOINS rouges d'abord : code inconnu ≡ sans code, octet à octet ; aucun `Set-Cookie` persistant. Relecture de la lentille securite. RÉPARTITION (rattrapage 44, arbitrage de la coordination sous délégation, 2026-10-01, sur proposition de A05) : le `?p=` arrive sur axion-ia, et Partners ne voit ni la requête ni l'IP du visiteur. Partners (SEC-21) porte la forme du code (`src/domain/parrainage/code.ts` : ≥ 25 bits, alphabet de Crockford, jamais dérivé de l'identité, exportée pour axion-ia ; déplacée de `src/domain/apporteur/identifiants.ts` avec ses appelants, RM-07) et la résolution silencieuse d'un code inconnu dans `candidature.recue` (`candidature-recue.ts`, lecture du parrain actif par son code dans la table des apporteurs, aucun schéma). Condition de la lentille sécurité, dans la forme retenue par la coordination : aucun rattachement sans code valide, en échec fermé. La limite par IP, la réponse indistincte, l'absence de cookie persistant (REQ-JUR-028) et la journalisation de la panne sont portées par INT-T52-A ; `rate-limit.ts` n'est plus un chemin de SEC-21. Un code capturé pendant une panne du limiteur n'est pas transmis par axion-ia : rien ne le marque côté Partners.",
+      "acceptance": "Porté par l'audit indépendant du plan de la Phase 1 (2026-10-01, `_REPRISE-AXION-APPORTEURS/AUDIT-PLAN-PHASE-1.md`) (écart C-08). (1) Code public de parrainage d'au moins 25 bits d'aléa, alphabet sans ambiguïté, unique, jamais dérivé de l'identité (`src/domain/parrainage/code.ts`). (2) Un `?p=` inconnu, mal formé ou révoqué est ignoré silencieusement : réponse identique à une visite sans code (aucun oracle, même statut, même corps). (3) Propagation sans cookie persistant ni stockage local au-delà de la session de navigation. (4) Débit limité par `rate-limit.ts`. TÉMOINS rouges d'abord : code inconnu ≡ sans code, octet à octet ; aucun `Set-Cookie` persistant. Relecture de la lentille securite. RÉPARTITION (rattrapage 44, arbitrage de la coordination sous délégation, 2026-10-01, sur proposition de A05) : le `?p=` arrive sur axion-ia, et Partners ne voit ni la requête ni l'IP du visiteur. Partners (SEC-21) porte la forme du code (`src/domain/parrainage/code.ts` : ≥ 25 bits, alphabet de Crockford, jamais dérivé de l'identité, exportée pour axion-ia ; déplacée de `src/domain/apporteur/identifiants.ts` avec ses appelants, RM-07) et la résolution silencieuse d'un code inconnu dans `candidature.recue` (`candidature-recue.ts`, lecture du parrain actif par son code dans la table des apporteurs, aucun schéma). Condition de la lentille sécurité, dans la forme retenue par la coordination : aucun rattachement sans code valide, en échec fermé. La limite par IP, la réponse indistincte, l'absence de cookie persistant (REQ-JUR-028) et la journalisation de la panne sont portées par INT-T52-A ; `rate-limit.ts` n'est plus un chemin de SEC-21. Un code capturé pendant une panne du limiteur n'est pas transmis par axion-ia : rien ne le marque côté Partners. PRÉCISION A01 (rattrapage 46, proposition de A05) : « parrain actif » = apporteur au statut `signe`, et lui seul ; un code d'apporteur suspendu, résilié ou d'avant la signature ne rattache rien (traité comme sans code). Un code mal formé n'est jamais cherché en base ; une lecture en échec fait remonter l'erreur (l'événement est rejoué, jamais rattaché). `identifiants.ts` ré-exporte la forme pour que le témoin de DM-06 reste inchangé.",
       "tests": {
         "REQ-SEC-037": [
           "tests/unit/securite/code-de-parrainage.spec.ts",
@@ -6908,7 +6908,8 @@
         "INT-T45",
         "INT-T55",
         "GOV-137",
-        "INT-T49"
+        "INT-T49",
+        "INT-T46-P"
       ],
       "reqs": [
         "REQ-DM-016",
@@ -14375,7 +14376,8 @@
       "paths": [
         "scripts/gates/aipd-signee.ts",
         "tests/unit/juridique/aucun-depot-reel-sans-aipd-signee.spec.ts",
-        ".github/workflows/deploy.yml"
+        ".github/workflows/deploy.yml",
+        "package.json"
       ],
       "schema": false,
       "sensible": [
@@ -14392,7 +14394,7 @@
       "externe": null,
       "estimateDays": 0.5,
       "statut": "a_faire",
-      "acceptance": "Releve par la lentille exactitude sur la PR #233 (JUR-T04) : REQ-CPL-009 exige l'AIPD signee AVANT le premier depot reel, et rien ne le bloquait ; JUR-T04 livre l'AIPD et ecrit la condition, sans la garder. A livrer : une garde qui refuse la mise en service des depots reels (le premier depot hors environnement de demonstration) tant que docs/rgpd/aipd.md ne porte pas l'etat « signee le <date> par <signataire> ». Le point d'application (demarrage, porte de deploiement ou drapeau de mise en service) est choisi et ecrit ; il ne depend pas d'un texte que l'auteur d'une demande de fusion peut modifier seul. TEMOIN A DEUX FACES : AIPD non signee, la mise en service des depots reels est refusee en nommant la condition ; AIPD signee avec date et signataire, elle est admise. ARBITRAGE (rattrapage 44, coordination, 2026-10-01, option 1) : point d'application = une étape à part du job `deployer` de `.github/workflows/deploy.yml`, avant `deploy:coolify`, active à partir de `MISE_EN_SERVICE`. Deux sources doivent concorder : l'état « signée le <date> par <signataire> » de `docs/rgpd/aipd.md` et la variable `AIPD_SIGNEE_LE` (`vars`, pas un secret) de l'environnement GitHub production, posée par Williams seul ; discordance ou absence → le déploiement s'arrête. Les gardes du job `deployer` (`pipeline-image.spec.ts`, `un-seul-producteur-de-deploiement.spec.ts`) restent vertes sans modification. L'entrée de `docs/gates.json` est posée par A01 dans la même PR que l'étape. JUR-T35 dépend de QA-T54 (même fichier de workflow).",
+      "acceptance": "Releve par la lentille exactitude sur la PR #233 (JUR-T04) : REQ-CPL-009 exige l'AIPD signee AVANT le premier depot reel, et rien ne le bloquait ; JUR-T04 livre l'AIPD et ecrit la condition, sans la garder. A livrer : une garde qui refuse la mise en service des depots reels (le premier depot hors environnement de demonstration) tant que docs/rgpd/aipd.md ne porte pas l'etat « signee le <date> par <signataire> ». Le point d'application (demarrage, porte de deploiement ou drapeau de mise en service) est choisi et ecrit ; il ne depend pas d'un texte que l'auteur d'une demande de fusion peut modifier seul. TEMOIN A DEUX FACES : AIPD non signee, la mise en service des depots reels est refusee en nommant la condition ; AIPD signee avec date et signataire, elle est admise. ARBITRAGE (rattrapage 44, coordination, 2026-10-01, option 1) : point d'application = une étape à part du job `deployer` de `.github/workflows/deploy.yml`, avant `deploy:coolify`, active à partir de `MISE_EN_SERVICE`. Deux sources doivent concorder : l'état « signée le <date> par <signataire> » de `docs/rgpd/aipd.md` et la variable `AIPD_SIGNEE_LE` (`vars`, pas un secret) de l'environnement GitHub production, posée par Williams seul ; discordance ou absence → le déploiement s'arrête. Les gardes du job `deployer` (`pipeline-image.spec.ts`, `un-seul-producteur-de-deploiement.spec.ts`) restent vertes sans modification. L'entrée de `docs/gates.json` est posée par A01 dans la même PR que l'étape. JUR-T35 dépend de QA-T54 (même fichier de workflow). PRÉCISION (rattrapage 46, mesure de A05) : l'étape appelle le script `pnpm aipd:signee` (`\"aipd:signee\": \"tsx scripts/gates/aipd-signee.ts\"` dans `package.json`, REQ-GOV-018 ; les gardes du workflow exigent une commande qui soit un script nommé du dépôt) ; `package.json` est réservé à A02 (label `role:architecte`).",
       "tests": {
         "REQ-CPL-009": [
           "tests/unit/juridique/aucun-depot-reel-sans-aipd-signee.spec.ts"
@@ -16161,7 +16163,8 @@
         "tests/unit/gouvernance/ux-ecrans.spec.ts",
         "docs/gates.json",
         "scripts/lib/ux-ecrans.ts",
-        "tests/unit/espace/maquettes-validees.spec.ts"
+        "tests/unit/espace/maquettes-validees.spec.ts",
+        "scripts/gates/gov-attributions.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -17245,14 +17248,23 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "Condition de mise en service posée par la lentille sécurité, relayée par la coordination le 2026-09-30 : PRÉALABLE FERME avant la première donnée réelle, sur le modèle de QA-T53 (`rechiffrement_echoue`). Aujourd'hui, un déploiement dont l'atterrissage n'est pas vérifié ne prévient personne. À LIVRER : (1) une catégorie d'alerte CLOSE `deploiement_non_atterri`, NEUVE (elle n'existe nulle part aujourd'hui), ajoutée à `CATEGORIES_ALERTE` (src/server/integrations/telegram/alertes.ts) avec son gabarit ; (2) tout échec de `deploy:verify` (scripts/gates/deploy-verify.ts) joué après un déploiement de `.github/workflows/deploy.yml` (sha servi différent du sha fusionné, `readyz` non prêt, en-tête `x-partners-build-sha` absent, délai dépassé) émet exactement une alerte `deploiement_non_atterri`, qui ne porte que le sha attendu, le sha servi et l'environnement, sans donnée personnelle ni secret ; le sha servi vient de l'en-tête `x-partners-build-sha` de la RÉPONSE, que contrôle quiconque sert le domaine : il n'entre dans l'alerte qu'après validation de forme (hexadécimal de 7 à 40 caractères), sinon il y est écrit « illisible » ; le job reste rouge (l'alerte ne remplace pas l'échec) ; (3) TÉMOINS rouges d'abord : un atterrissage raté (sha servi ≠ sha fusionné) émet une alerte ; `readyz` non prêt émet une alerte ; un atterrissage réussi n'en émet aucune ; le message de l'alerte ne contient ni jeton ni URL de secret ; un en-tête piégé (saut de ligne, balisage, URL) n'entre pas tel quel dans l'alerte, qui écrit « illisible ». (4) La case de cette alerte existe déjà dans la liste de mise en service (`docs/runbooks/mise-en-service.md`, écrite par la PR de la garde de QA-T13) : la PR qui livre cette tâche la cite, sans en ajouter une seconde ; la case est cochée après réception par Williams. Phase 1 (arbitrage de la coordination du 2026-09-30) : c'est une condition de mise en service, avant la première donnée réelle, et non un préalable à la clôture de la Phase 0. AMENDEMENT (rattrapage 42, option B de la lentille sécurité, validée par la coordination le 2026-10-01) : l'alerte part d'un job `alerter` SÉPARÉ (`needs: deployer`, `if: failure() || cancelled()`, environnement production), seul lecteur de `TELEGRAM_BOT_TOKEN` et `TELEGRAM_CHAT_ID`, dans l'environnement de son étape ; le job `deployer` garde ses secrets actuels, et aucun secret Telegram n'y entre. `tests/unit/qualite/pipeline-image.spec.ts` porte la garde `secret_tiers` d'`alerter` (liste fermée de ces deux secrets) et ses deux faces rouges : un secret de la plateforme lu par `alerter`, un secret du canal lu par `deployer`. `alerter` appelle le script `deploy:alerter` (= `tsx scripts/gates/deploy-verify.ts --alerter`), seule entrée ajoutée à `package.json` (REQ-GOV-018) ; décision de la coordination du 2026-10-01, `package.json` est réservé à A02 (label `role:architecte`) et relu par la lentille schéma. CONDITIONS DE LA LENTILLE SÉCURITÉ (relecture de #338, 2026-10-01) : condition (3) : « Si les sorties de `deployer` sont absentes ou invalides (sha attendu ou servi hors de l'hexadécimal de 7 à 40 caractères), `alerter` émet quand même l'alerte, avec « inconnu » à la place de la valeur ; une sortie absente ne fait jamais sauter l'alerte. » Harmonisation avec la clause (2) : « inconnu » pour une valeur absente, « illisible » pour une valeur invalide ; le message part toujours. Condition (5) : « La garde de `pipeline-image.spec.ts` exige aussi, pour `alerter`, `needs: deployer` et `if: failure() || cancelled()` exactement, avec une face rouge pour chacun (condition retirée, `if: failure()` seul). » AMENDEMENT (rattrapage 44, décision de la coordination) : REQ-QA-013 : l'analyseur partagé des conditions de job (`tests/unit/ci/condition-de-job.ts`) traite les fonctions de statut `failure()` et `cancelled()`, avec un témoin (`tests/unit/ci/condition-de-job.spec.ts`) ; sous une PR fusionnée, `github.event_name == 'push'` est faux et la condition d'`alerter` l'est quel que soit le statut des prérequis ; la ligne `if` d'`alerter` reste inchangée.",
       "tests": {
         "REQ-GOV-014": [
           "tests/unit/qualite/alerte-deploiement-non-atterri.spec.ts",
           "tests/unit/integration/alerte-deploiement-message.spec.ts"
         ]
-      }
+      },
+      "branch": "t/qa-t54",
+      "owner": "A05",
+      "pr": 339,
+      "attestation": {
+        "pr": 339,
+        "sha": "a3ea83c557e9b1a95127ecd2a163016b59c1b1e6",
+        "fusionneeAt": "2026-10-01T21:12:14Z"
+      },
+      "motif": null
     },
     {
       "id": "GOV-131",
@@ -17400,7 +17412,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.25,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "Vérification V2 (GOV-132, écart B-02), avant le premier `candidature.recue` réel : `evenements_recus.charge` est conservée 10 ans et ne doit porter aucune donnée personnelle. (1) La réception retire `utm` de la charge conservée ; le `payload_hash` reste la preuve de ce qui a été reçu. (2) TÉMOIN rouge d'abord : une charge reçue avec `utm` est conservée sans lui, et son `payload_hash` est celui de la charge reçue entière. AMENDEMENT (rattrapage 43, décision de la coordination sous délégation, 2026-10-01, sur le blocage relevé par l'auteur back) : `reponsesJson` n'est PAS retiré à la réception : INT-T26 (`candidature-recue.ts`, `snapshotDeCandidature`) le lit plus tard depuis `recu.charge`, et la charge est immuable (déclencheur `evenements_recus_reception_immuable`). Son retrait est porté par INT-T56, au passage à `traite`. Un témoin unitaire (`tests/unit/integration/reception-sans-utm.spec.ts`) couvre le retrait dans la portée de `mutation:pr` ; le témoin d'intégration reste jugé en CI.",
       "tests": {
         "REQ-JUR-029": [
@@ -17411,7 +17423,16 @@
           "tests/integration/charge-minimisee.spec.ts",
           "tests/unit/integration/reception-sans-utm.spec.ts"
         ]
-      }
+      },
+      "branch": "t/int-t44",
+      "owner": "A05",
+      "pr": 361,
+      "attestation": {
+        "pr": 361,
+        "sha": "89b23e0123582c2fba7833e88a887a354c3f39ee",
+        "fusionneeAt": "2026-10-01T20:56:01Z"
+      },
+      "motif": null
     },
     {
       "id": "DM-44",
@@ -17521,7 +17542,11 @@
       "zone": "integration",
       "paths": [
         "src/server/integrations/axionia/reception.ts",
-        "tests/integration/reception-hors-schema.spec.ts"
+        "tests/integration/reception-hors-schema.spec.ts",
+        "tests/unit/integration/reception-hors-schema.spec.ts",
+        "tests/unit/securite/webhook-signature.spec.ts",
+        "tests/integration/webhook.spec.ts",
+        "tests/integration/webhook-verdicts.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -17538,7 +17563,17 @@
       "externe": null,
       "estimateDays": 0.5,
       "statut": "a_faire",
-      "acceptance": "Écart C4 de la vérification de bout en bout (GOV-131, VERIF-1-RAPPORT.md), versé sur demande de la coordination, en tête du lot 2, AVANT tout événement d'argent : la réception n'applique pas les `$defs` fermés du contrat (`payload: z.record(unknown)`) ; un payload hors schéma (champ en trop, montant en chaîne, montant négatif) est accepté 200, marqué `sent` côté axion-ia, et jamais rejoué. (1) TÉMOIN rouge d'abord : un `candidature.recue` signé portant `payload.champIntrus` est refusé 422 `hors_schema` ; de même un montant en chaîne et un montant négatif. (2) La validation porte sur `#/$defs/payload_<type>` du contrat publié, après `enveloppeReconnue`, et seulement si `schema_version === SCHEMA_VERSION`. (3) Un payload conforme reste accepté (contre-témoin). Relecture de la lentille securite exigée. (4) Condition de la lentille securite : un événement mis en attente (`held`) pour une autre `schema_version`, puis rejoué après une montée de version, passe par la MÊME validation des `$defs`. TÉMOIN : un tel événement hors schéma, rejoué après la montée, est refusé `hors_schema`. CONDITION DE LA LENTILLE SÉCURITÉ (rattrapage 45, relayée par la coordination, 2026-10-01), MOT POUR MOT : « Au rejeu d'un `held`, la validation juge la charge conservée contre le `$defs` du type PRIVÉ des `CHAMPS_NON_CONSERVES` (retirés des propriétés et de `required`), sans jamais les réintroduire ; TÉMOIN : un `held` conforme, conservé sans `utm`, est rejoué et accepté. » Motif : `utm` est requis par `payload_candidature_recue` mais n'est plus conservé depuis INT-T44 ; une validation naïve refuserait en `hors_schema` toute `candidature.recue` en attente. INT-T45 dépend d'INT-T44 (même `reception.ts`)."
+      "acceptance": "Écart C4 de la vérification de bout en bout (GOV-131, VERIF-1-RAPPORT.md), versé sur demande de la coordination, en tête du lot 2, AVANT tout événement d'argent : la réception n'applique pas les `$defs` fermés du contrat (`payload: z.record(unknown)`) ; un payload hors schéma (champ en trop, montant en chaîne, montant négatif) est accepté 200, marqué `sent` côté axion-ia, et jamais rejoué. (1) TÉMOIN rouge d'abord : un `candidature.recue` signé portant `payload.champIntrus` est refusé 422 `hors_schema` ; de même un montant en chaîne. (2) La validation porte sur `#/$defs/payload_<type>` du contrat publié, après `enveloppeReconnue`, et seulement si `schema_version === SCHEMA_VERSION`. (3) Un payload conforme reste accepté (contre-témoin). Relecture de la lentille securite exigée. (4) Condition de la lentille securite : un événement mis en attente (`held`) pour une autre `schema_version`, puis rejoué après une montée de version, passe par la MÊME validation des `$defs`. TÉMOIN : un tel événement hors schéma, rejoué après la montée, est refusé `hors_schema`. CONDITION DE LA LENTILLE SÉCURITÉ (rattrapage 45, relayée par la coordination, 2026-10-01), MOT POUR MOT : « Au rejeu d'un `held`, la validation juge la charge conservée contre le `$defs` du type PRIVÉ des `CHAMPS_NON_CONSERVES` (retirés des propriétés et de `required`), sans jamais les réintroduire ; TÉMOIN : un `held` conforme, conservé sans `utm`, est rejoué et accepté. » Motif : `utm` est requis par `payload_candidature_recue` mais n'est plus conservé depuis INT-T44 ; une validation naïve refuserait en `hors_schema` toute `candidature.recue` en attente. INT-T45 dépend d'INT-T44 (même `reception.ts`). DÉCISION DE LA COORDINATION (rattrapage 46, 2026-10-02, sur mesure de A05) : le `$defs` v2 publié n'a aucun `minimum` (les montants y sont `{\"type\":\"integer\"}`) ; un montant NÉGATIF n'est donc refusé qu'à partir de la v3, qui porte le minimum (INT-T46-P) — trou connu, jamais ouvert sur des données réelles (le minimum est préalable à `PARTNERS_SYNC_ENABLED` et à DM-15). Une règle propre à la réception serait un schéma retapé hors du contrat (RM-01) : écartée. Témoins : `tests/unit/integration/reception-hors-schema.spec.ts` en processus ; les témoins de SEC-06 (`webhook-signature.spec.ts`, `webhook.spec.ts`, `webhook-verdicts.spec.ts`) envoient désormais la charge du producteur réel, refusée à juste titre quand elle est factice, sans changer ce qu'ils prouvent.",
+      "tests": {
+        "REQ-INT-003": [
+          "tests/integration/reception-hors-schema.spec.ts",
+          "tests/unit/integration/reception-hors-schema.spec.ts"
+        ],
+        "REQ-QA-007": [
+          "tests/integration/reception-hors-schema.spec.ts",
+          "tests/unit/integration/reception-hors-schema.spec.ts"
+        ]
+      }
     },
     {
       "id": "QA-T55",
@@ -17643,7 +17678,8 @@
         "scripts/gates/journal-sans-pii.ts",
         "scripts/lot/paths-proposes.ts",
         "prisma/schema.prisma",
-        "prisma/migrations/"
+        "prisma/migrations/",
+        "docs/runbooks/mise-en-service.md"
       ],
       "schema": true,
       "sensible": [
@@ -17662,7 +17698,7 @@
       "externe": null,
       "estimateDays": 0.75,
       "statut": "a_faire",
-      "acceptance": "Décision D2 de Williams du 2026-10-01, dans la fenêtre de la coordination : la question est posée à 08:12:08Z (« A : on garde le contrat tel quel (« devis envoyé »). Il faut alors ajouter dans axion-ia un signal « devis envoyé ». […] B : on change le contrat en « devis signé ». […] ») ; Williams la recopie à 08:21:42Z avec « EXPLIQUE MOI CA JE NE comprends pas ce que c'est concremtent et a quoi ca sert » ; la coordination répond à 08:21:51Z par un exemple concret (un devis envoyé le lundi, une déclaration d'apporteur le mercredi, une signature le vendredi) ; Williams répond à 08:24:28Z : « oUi A. par contre des qu'un clietn a deja signé un devis, il faut dire qu'il nest pas disponible non ? car ce cleitn on l'a deja non ? UN PEU COmme si c'etait un apportuer d'affaire qui l'avait deja demarcher non ? pUIS AS TU pensé aussi aux commerciaux ? est ce que ca fonctionne aussi ? » (séquence mot pour mot : `_REPRISE-AXION-APPORTEURS/SEQUENCE-DECISIONS-PHASE1-2026-10-01.md`, hors dépôt). Option A. (1) Le type « devis émis » entre dans la liste fermée `TYPES_EVENEMENT` (packages/contracts/events.ts), avec son `$defs` fermé ; le contrat publié passe en v3 et son empreinte est régénérée par `pnpm contracts:export`, jamais retapée. (2) Le texte de REQ-INT-004 et de REQ-QA-007, qui comptent les types, est amendé au registre dans la même PR. (3) [Retiré par le rattrapage 35 : la projection appartient à DM-10-P, ce qui lève le cycle caché entre les deux tâches.] (4) TÉMOINS rouges d'abord : un « devis émis » conforme est rangé ; un « devis émis » hors schéma est refusé 422. Relecture de la lentille schema. AMENDEMENT (audit indépendant du plan de la Phase 1 (2026-10-01), écarts C-03 et A-05) : `SCHEMA_VERSION` a une seule définition ; `type_evenement_recu` gagne `devis_emis` en fin d'enum (bijection de `webhook.spec.ts`) ; `facture.emise` gagne `devisId` (nullable) dans la même montée v3 (JUR-T42) ; un événement `held` d'une version antérieure est validé contre les `$defs` de SA version. TÉMOIN : un `devis.signe` v2 mis en `held`, puis rejoué après la v3, est traité."
+      "acceptance": "Décision D2 de Williams du 2026-10-01, dans la fenêtre de la coordination : la question est posée à 08:12:08Z (« A : on garde le contrat tel quel (« devis envoyé »). Il faut alors ajouter dans axion-ia un signal « devis envoyé ». […] B : on change le contrat en « devis signé ». […] ») ; Williams la recopie à 08:21:42Z avec « EXPLIQUE MOI CA JE NE comprends pas ce que c'est concremtent et a quoi ca sert » ; la coordination répond à 08:21:51Z par un exemple concret (un devis envoyé le lundi, une déclaration d'apporteur le mercredi, une signature le vendredi) ; Williams répond à 08:24:28Z : « oUi A. par contre des qu'un clietn a deja signé un devis, il faut dire qu'il nest pas disponible non ? car ce cleitn on l'a deja non ? UN PEU COmme si c'etait un apportuer d'affaire qui l'avait deja demarcher non ? pUIS AS TU pensé aussi aux commerciaux ? est ce que ca fonctionne aussi ? » (séquence mot pour mot : `_REPRISE-AXION-APPORTEURS/SEQUENCE-DECISIONS-PHASE1-2026-10-01.md`, hors dépôt). Option A. (1) Le type « devis émis » entre dans la liste fermée `TYPES_EVENEMENT` (packages/contracts/events.ts), avec son `$defs` fermé ; le contrat publié passe en v3 et son empreinte est régénérée par `pnpm contracts:export`, jamais retapée. (2) Le texte de REQ-INT-004 et de REQ-QA-007, qui comptent les types, est amendé au registre dans la même PR. (3) [Retiré par le rattrapage 35 : la projection appartient à DM-10-P, ce qui lève le cycle caché entre les deux tâches.] (4) TÉMOINS rouges d'abord : un « devis émis » conforme est rangé ; un « devis émis » hors schéma est refusé 422. Relecture de la lentille schema. AMENDEMENT (audit indépendant du plan de la Phase 1 (2026-10-01), écarts C-03 et A-05) : `SCHEMA_VERSION` a une seule définition ; `type_evenement_recu` gagne `devis_emis` en fin d'enum (bijection de `webhook.spec.ts`) ; `facture.emise` gagne `devisId` (nullable) dans la même montée v3 (JUR-T42) ; un événement `held` d'une version antérieure est validé contre les `$defs` de SA version. TÉMOIN : un `devis.signe` v2 mis en `held`, puis rejoué après la v3, est traité. AMENDEMENT (rattrapage 46, décision de la coordination du 2026-10-02) : la v3 porte `minimum: 0` sur les champs `…Cents`. PRÉALABLE : inventaire des types porteurs de montants (`avoir.emis`, `facture.annulee`, paiement remboursé) ; si l'un porte un montant négatif par conception, le minimum s'écrit par type, avec un témoin par cas. Ce minimum est PRÉALABLE à `PARTNERS_SYNC_ENABLED` et à DM-15 : la PR ajoute la case à `docs/runbooks/mise-en-service.md` (label `role:documentaliste`), cochée après réception par Williams. Relecture A02 et sécurité. Une seule montée de contrat (v3), recommandée par l'audit du plan de la Phase 1."
     },
     {
       "id": "JUR-T42",
@@ -17885,7 +17921,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.75,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "Porté par l'audit indépendant du plan de la Phase 1 (2026-10-01, `_REPRISE-AXION-APPORTEURS/AUDIT-PLAN-PHASE-1.md`) (écart A-07), BLOQUANT avant DM-24. (1) Un processus planifié déclenche périodiquement les passages « tout ce qui est dû à l'instant t » (REQ-QA-027), sous un verrou consultatif, avec un battement par clé de `TACHES` (`src/server/taches/registre.ts`). (2) Une tâche de fond s'y inscrit sans toucher au lanceur. TÉMOINS rouges d'abord : deux lanceurs concurrents n'exécutent un passage qu'une fois ; une tâche en échec n'arrête pas les autres. AMENDEMENT (rattrapage 44, décision de la coordination, option (a)) : au point (1), le déclencheur périodique est une tâche planifiée de la plateforme (Coolify) qui appelle chaque minute le point d'entrée CLI du lanceur (`src/server/taches/lanceur.ts`) par le script `taches:lancer` de `package.json` (REQ-GOV-018 ; label `role:architecte`, relecture A02) ; sortie non nulle si une tâche échoue. La composition des tâches inscrites vit dans `src/server/taches/inscriptions.ts`, partagée avec la route `src/app/api/webhooks/axionia/route.ts`. La case de cette tâche planifiée est ajoutée à `docs/runbooks/mise-en-service.md` (label `role:documentaliste`) et cochée après réception par Williams. Témoins unitaires dans la portée de `mutation:pr` : `tests/unit/integration/lanceur-des-passages.spec.ts` (deux lanceurs concurrents, un seul passage ; une tâche en échec n'arrête pas les autres ; un battement par clé) et `tests/unit/integration/inscriptions-des-taches.spec.ts` (composition). GOV-137 atterrit après QA-T54 (mêmes `package.json` et `mise-en-service.md`).",
       "tests": {
         "REQ-QA-027": [
@@ -17893,7 +17929,16 @@
           "tests/unit/integration/lanceur-des-passages.spec.ts",
           "tests/unit/integration/inscriptions-des-taches.spec.ts"
         ]
-      }
+      },
+      "branch": "t/gov-137",
+      "owner": "A05",
+      "pr": 369,
+      "attestation": {
+        "pr": 369,
+        "sha": "d653f55e5432004b79e40c7db771fe312673dcc7",
+        "fusionneeAt": "2026-10-01T21:31:21Z"
+      },
+      "motif": null
     },
     {
       "id": "INT-T49",
@@ -18238,7 +18283,10 @@
         "scripts/sauvegarde/cycle.ts",
         "Dockerfile",
         "scripts/deploiement/provisionner.ts",
-        "tests/unit/qualite/sauvegarde-fraicheur.spec.ts"
+        "tests/unit/qualite/sauvegarde-fraicheur.spec.ts",
+        "src/domain/seuils/ssot.ts",
+        "src/server/integrations/telegram/alertes.ts",
+        "tests/unit/qualite/provisionnement-coolify.spec.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -18250,7 +18298,7 @@
       "externe": null,
       "estimateDays": 0.5,
       "statut": "a_faire",
-      "acceptance": "Écarts C9 et C10 de la vérification de bout en bout, portés par l'audit indépendant du plan de la Phase 1 (2026-10-01). (1) Famille « âge du dernier vidage au plus 2 h » dans `sauvegarde:fraicheur`, alertée. (2) Avec `PARTNERS_SAUVEGARDE_ACTIVEE=oui` et un secret manquant, le run échoue au lieu de sauter en vert. (3) `curl` dans l'étape `execution` du Dockerfile, et le bilan de santé du provisionnement sur `/api/readyz` (`provisionner.ts`). TÉMOINS à deux faces."
+      "acceptance": "Écarts C9 et C10 de la vérification de bout en bout, portés par l'audit indépendant du plan de la Phase 1 (2026-10-01). (1) Famille « âge du dernier vidage au plus 2 h » dans `sauvegarde:fraicheur`, alertée. (2) Avec `PARTNERS_SAUVEGARDE_ACTIVEE=oui` et un secret manquant, le run échoue au lieu de sauter en vert. (3) `curl` dans l'étape `execution` du Dockerfile, et le bilan de santé du provisionnement sur `/api/readyz` (`provisionner.ts`). TÉMOINS à deux faces. ARBITRAGES A01 (rattrapage 46, mesure de A06) : le seuil d'âge du dernier vidage est une constante de la SSOT (`DERNIER_VIDAGE_MAX_MINUTES` = 120, sourcée, RM-10) ; l'alerte est une catégorie close NOUVELLE, `vidage_perime`, dans `src/server/integrations/telegram/alertes.ts` (réemployer `restauration_echouee` mentirait sur la cause), vérifiée par le témoin de la tâche ; le bilan de santé de la plateforme sur `/api/readyz` est réactivé, et `tests/unit/qualite/provisionnement-coolify.spec.ts` change de face (`health_check_enabled` repasse à vrai, motif du 2026-09-30 levé). `ssot.ts` et `alertes.ts` sont partagés avec des tâches ouvertes : la PR atterrit après elles."
     },
     {
       "id": "SEC-45",
@@ -18410,7 +18458,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.25,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "Décision C1 de Williams du 2026-10-01, dans la fenêtre de la coordination : à la question de 09:17:18Z sur le PDF de présentation pour les futurs apporteurs, en ligne et joint aux courriels des candidats, qui contient des formulations relevées par l'écart C1 de la vérification de bout en bout (promesses de gains et un exemple chiffré, non recopiés dans ce dépôt public) — « A (recommandé) : on retire tout de suite le PDF des courriels, puis on le réécrit avec des formulations prudentes (« à titre indicatif… ») pendant la Phase 1, avant de le remettre. » ou « B : on le laisse en place jusqu'à sa réécriture. » —, Williams répond « A » à 09:22:23Z (séquence mot pour mot : `_REPRISE-AXION-APPORTEURS/SEQUENCE-DECISIONS-PHASE1-2026-10-01.md`, hors dépôt). JUR-T44 ajoutée en tête du lot 1 par la décision C1 de Williams, arbitrage A01/coordination. (1) La pièce jointe est retirée (`kit-apporteur.ts`), et le lien est retiré de la page de remerciement `/apporteur-affaires/merci`. (2) TÉMOIN rouge d'abord : aucun courriel ne joint le PDF. (3) Le PDF n'est remis dans les courriels qu'après JUR-T45. Les chemins exacts de la page de remerciement sont nommés à la revendication par la session axion-ia.",
       "tests": {
         "REQ-JUR-001": [
@@ -18421,7 +18469,16 @@
           "axionia/src/lib/commercial-application/__tests__/kit-apporteur-sans-pdf.spec.ts",
           "axionia/src/app/[locale]/apporteur-affaires/merci/__tests__/la-page-merci-ne-lie-plus-le-pdf.spec.tsx"
         ]
-      }
+      },
+      "branch": "partners/jur-t44-sans-pdf",
+      "owner": "A08",
+      "pr": null,
+      "attestation": {
+        "pr": 1263,
+        "sha": "782cc971ee78f124d7731b243c88b9261fab278c",
+        "fusionneeAt": "2026-10-01T19:50:08Z"
+      },
+      "motif": null
     },
     {
       "id": "JUR-T45",
@@ -18550,7 +18607,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.25,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "Suite de JUR-T44 (décision C1 de Williams du 2026-10-01, « on retire tout de suite le PDF des courriels »), sortie dans une PR axion-ia à part par décision de file de la coordination : la PR de JUR-T44 atterrit telle quelle pour couper l'exposition au plus vite, et ce qui reste n'a qu'un impact marginal. (1) Les textes qui annoncent encore le document sont corrigés : la micro-copy du formulaire (`FORMULAIRE.micro`), le résumé des imprimés (« envoyé automatiquement ») et les issues d'invitation. (2) Le PDF n'est plus proposé par la console : `devenir-apporteur` est retiré de `IMPRIMES_PROPOSES`, et le composeur de contact manuel et le bloc d'invitation ne le proposent plus. (3) Dans la politique de confidentialité, en français et en anglais, la phrase sur l'envoi du document est SUBSTITUÉE, pas retirée : l'e-mail envoyé 30 minutes après part toujours, et c'est le catalogue des prestations qu'il annonce désormais (accord de la coordination). Le verrou `la-notice-dit-vrai-sur-les-apporteurs` reste vert. Relecture de la juriste (A07), relayée par la coordination. (4) TÉMOIN rouge d'abord : aucun imprimé proposé ne pointe vers le PDF de l'apporteur. Les tests existants qui exigeaient le document sont retournés, chacun nommé dans la PR avec son motif. (5) Le corps du squash est la seule ligne « Lot: JUR-T44b ». À la remise du document (JUR-T45), tout ce que cette tâche retire est rétabli.",
       "tests": {
         "REQ-JUR-001": [
@@ -18559,7 +18616,16 @@
         "REQ-JUR-041": [
           "axionia/src/lib/imprimes/__tests__/aucun-imprime-propose-ne-pointe-vers-le-pdf-apporteur.spec.ts"
         ]
-      }
+      },
+      "branch": "partners/jur-t44b-textes",
+      "owner": "A08",
+      "pr": null,
+      "attestation": {
+        "pr": 1264,
+        "sha": "1613d137fbb6f0b7d21438b0898c5824806b0e80",
+        "fusionneeAt": "2026-10-01T20:58:24Z"
+      },
+      "motif": null
     },
     {
       "id": "INT-T55",
@@ -18571,7 +18637,8 @@
         "src/server/queue/workers/evenement-recu.ts",
         "src/app/api/webhooks/axionia/route.ts",
         "tests/integration/passage-exclusif.spec.ts",
-        "docs/runbooks/mise-en-service.md"
+        "docs/runbooks/mise-en-service.md",
+        "tests/unit/integration/passage-exclusif.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -18592,10 +18659,12 @@
       "acceptance": "Défaut antérieur signalé par la lentille sécurité le 2026-10-01, hors de la PR d'INT-T43, et tranché par la coordination sous délégation : chaque POST du webhook lance `passerLeTravail` dans `after()`, sans verrou, et `aTraiter` lit les lignes `recu` sans les réclamer ; deux webhooks rapprochés peuvent donc dispatcher deux fois le même événement, et, DM-15 branché, verser deux fois une commission. (1) Le passage est EXCLUSIF : soit chaque ligne est réclamée par une écriture conditionnelle (`recu` → état réclamé, une seule écriture gagnante), soit le passage entier prend un verrou consultatif sur le patron du lanceur de GOV-137 ; le choix est écrit dans la PR. La route `src/app/api/webhooks/axionia/route.ts` est comprise : aucun chemin d'appel ne contourne l'exclusion. Une réclamation abandonnée (processus tué) est reprise, jamais perdue. Si le choix exige une valeur d'énumération ou une colonne neuve, la tâche s'arrête et rend un `stop` : elle est déclarée sans schéma. (2) TÉMOIN rouge d'abord, en intégration sur une vraie base : deux passages SIMULTANÉS sur le même événement produisent un seul effet ; un passage tué après réclamation laisse l'événement repris au passage suivant. (3) Relecture OBLIGATOIRE de la lentille sécurité (sensible argent). (4) Condition de mise en service : `PARTNERS_SYNC_ENABLED` reste faux tant que cette tâche n'est pas fusionnée ; la PR qui la livre ajoute cette case à `docs/runbooks/mise-en-service.md`, avant la case d'ouverture du canal, et la cite ; la case est cochée après réception par Williams. NOTE DE LA LENTILLE SÉCURITÉ (rattrapage 45, relayée par la coordination, 2026-10-02), MOT POUR MOT : « la route du webhook prend le MÊME verrou que le lanceur ; un passage plus long que la durée de transaction de Prisma (10 min) ne garde jamais le verrou pendant que le travail continue : passage borné, ou verrou de session relâché explicitement ; témoin ».",
       "tests": {
         "REQ-DM-036": [
-          "tests/integration/passage-exclusif.spec.ts"
+          "tests/integration/passage-exclusif.spec.ts",
+          "tests/unit/integration/passage-exclusif.spec.ts"
         ],
         "REQ-ARG-003": [
-          "tests/integration/passage-exclusif.spec.ts"
+          "tests/integration/passage-exclusif.spec.ts",
+          "tests/unit/integration/passage-exclusif.spec.ts"
         ]
       }
     },
@@ -18653,7 +18722,8 @@
         "docs/runbooks/mise-en-service.md",
         "src/server/taches/minimiser-candidatures.ts",
         "src/server/taches/registre.ts",
-        "src/domain/seuils/ssot.ts"
+        "src/domain/seuils/ssot.ts",
+        "src/server/taches/inscriptions.ts"
       ],
       "schema": true,
       "sensible": [
@@ -18672,7 +18742,7 @@
       "externe": null,
       "estimateDays": 1,
       "statut": "a_faire",
-      "acceptance": "Décision de la coordination sous délégation (2026-10-01), sur le blocage d'INT-T44 relevé par l'auteur back : `reponsesJson` ne peut pas être retiré à la réception, parce qu'INT-T26 (`candidature-recue.ts`, `snapshotDeCandidature`) le lit plus tard depuis `recu.charge`, et que la charge est immuable (déclencheur `evenements_recus_reception_immuable`). Or `evenements_recus.charge` est conservée 10 ans et ne doit porter aucune donnée personnelle (vérification V2, écart B-02). (1) Au passage à `traite` d'une `candidature.recue`, dans la MÊME transaction que l'écriture de la candidature, la charge conservée est réécrite UNE seule fois vers sa forme minimisée, sans `reponsesJson`. (2) Une migration amende le déclencheur d'immutabilité : il admet cette seule réécriture (type `candidature.recue`, passage à `traite`, charge sortante sans `reponsesJson`), et refuse toute autre écriture de `charge`, y compris une seconde réécriture. (3) `payload_hash` n'est jamais modifié : il reste la preuve de la charge reçue entière. (4) TÉMOINS rouges d'abord, en intégration sur une vraie base : une candidature traitée garde une charge sans `reponsesJson` et le même `payload_hash` ; une seconde réécriture est refusée par le déclencheur ; une réécriture de `charge` hors de ce cas est refusée ; un échec de la transaction laisse la charge reçue intacte. Un témoin unitaire sous `tests/unit/integration/` couvre la forme minimisée, dans la portée de `mutation:pr`. (5) Relecture OBLIGATOIRE de l'architecte (A02, label `schema`) et de la lentille sécurité (rgpd). (6) Condition de mise en service, comme INT-T44 : `PARTNERS_SYNC_ENABLED` reste faux tant que cette tâche n'est pas fusionnée ; la PR qui la livre ajoute cette case à `docs/runbooks/mise-en-service.md` (label `role:documentaliste`) et la cite ; la case est cochée après réception par Williams. CONDITIONS DE LA LENTILLE SÉCURITÉ (relecture de #346, 2026-10-01, validées par la coordination) : au point (2) : « Le déclencheur n'admet la réécriture que si `NEW.charge = OLD.charge - 'reponsesJson'` exactement, `OLD.charge ? 'reponsesJson'`, `OLD.statut <> 'traite'` et `NEW.statut = 'traite'` dans la même écriture ; TÉMOIN : une réécriture qui retire `reponsesJson` ET modifie une autre clé est refusée. » Minimisation de fond : « Une `candidature.recue` qui n'est pas `traite` au-delà d'un délai de la SSOT (source et date) est minimisée de la même façon par le travail de fond, sous la même règle d'égalité du déclencheur ; TÉMOIN : une candidature `en_erreur` au-delà du délai perd `reponsesJson`, `payload_hash` inchangé. » Le travail de fond est un passage planifié du lanceur de GOV-137 (`src/server/taches/minimiser-candidatures.ts`, inscrit dans `src/server/taches/registre.ts`) ; le délai est une constante de `src/domain/seuils/ssot.ts` (RM-10). INT-T56 dépend donc de GOV-137. « Note d'harmonisation (sécurité et coordination, 2026-10-01) : le déclencheur admet exactement deux cas, toute autre combinaison étant refusée : (i) le passage à traite, avec les 4 conditions ; (ii) la minimisation par le travail de fond seul, statut INCHANGÉ et différent de traite, `OLD.charge ? 'reponsesJson'` et la même égalité exacte `NEW.charge = OLD.charge - 'reponsesJson'`. Dans les deux cas, payload_hash et les autres colonnes restent inchangés. TÉMOINS : le témoin de fond passe par le vrai déclencheur ; un passage de en_erreur à traite par le fond est refusé. »",
+      "acceptance": "Décision de la coordination sous délégation (2026-10-01), sur le blocage d'INT-T44 relevé par l'auteur back : `reponsesJson` ne peut pas être retiré à la réception, parce qu'INT-T26 (`candidature-recue.ts`, `snapshotDeCandidature`) le lit plus tard depuis `recu.charge`, et que la charge est immuable (déclencheur `evenements_recus_reception_immuable`). Or `evenements_recus.charge` est conservée 10 ans et ne doit porter aucune donnée personnelle (vérification V2, écart B-02). (1) Au passage à `traite` d'une `candidature.recue`, dans la MÊME transaction que l'écriture de la candidature, la charge conservée est réécrite UNE seule fois vers sa forme minimisée, sans `reponsesJson`. (2) Une migration amende le déclencheur d'immutabilité : il admet cette seule réécriture (type `candidature.recue`, passage à `traite`, charge sortante sans `reponsesJson`), et refuse toute autre écriture de `charge`, y compris une seconde réécriture. (3) `payload_hash` n'est jamais modifié : il reste la preuve de la charge reçue entière. (4) TÉMOINS rouges d'abord, en intégration sur une vraie base : une candidature traitée garde une charge sans `reponsesJson` et le même `payload_hash` ; une seconde réécriture est refusée par le déclencheur ; une réécriture de `charge` hors de ce cas est refusée ; un échec de la transaction laisse la charge reçue intacte. Un témoin unitaire sous `tests/unit/integration/` couvre la forme minimisée, dans la portée de `mutation:pr`. (5) Relecture OBLIGATOIRE de l'architecte (A02, label `schema`) et de la lentille sécurité (rgpd). (6) Condition de mise en service, comme INT-T44 : `PARTNERS_SYNC_ENABLED` reste faux tant que cette tâche n'est pas fusionnée ; la PR qui la livre ajoute cette case à `docs/runbooks/mise-en-service.md` (label `role:documentaliste`) et la cite ; la case est cochée après réception par Williams. CONDITIONS DE LA LENTILLE SÉCURITÉ (relecture de #346, 2026-10-01, validées par la coordination) : au point (2) : « Le déclencheur n'admet la réécriture que si `NEW.charge = OLD.charge - 'reponsesJson'` exactement, `OLD.charge ? 'reponsesJson'`, `OLD.statut <> 'traite'` et `NEW.statut = 'traite'` dans la même écriture ; TÉMOIN : une réécriture qui retire `reponsesJson` ET modifie une autre clé est refusée. » Minimisation de fond : « Une `candidature.recue` qui n'est pas `traite` au-delà d'un délai de la SSOT (source et date) est minimisée de la même façon par le travail de fond, sous la même règle d'égalité du déclencheur ; TÉMOIN : une candidature `en_erreur` au-delà du délai perd `reponsesJson`, `payload_hash` inchangé. » Le travail de fond est un passage planifié du lanceur de GOV-137 (`src/server/taches/minimiser-candidatures.ts`, inscrit dans `src/server/taches/registre.ts`) ; le délai est une constante de `src/domain/seuils/ssot.ts` (RM-10). INT-T56 dépend donc de GOV-137. « Note d'harmonisation (sécurité et coordination, 2026-10-01) : le déclencheur admet exactement deux cas, toute autre combinaison étant refusée : (i) le passage à traite, avec les 4 conditions ; (ii) la minimisation par le travail de fond seul, statut INCHANGÉ et différent de traite, `OLD.charge ? 'reponsesJson'` et la même égalité exacte `NEW.charge = OLD.charge - 'reponsesJson'`. Dans les deux cas, payload_hash et les autres colonnes restent inchangés. TÉMOINS : le témoin de fond passe par le vrai déclencheur ; un passage de en_erreur à traite par le fond est refusé. » DÉLAI DE LA MINIMISATION DE FOND (rattrapage 46, coordination et lentille sécurité, 2026-10-02) : 30 jours, valeur provisoire PLAFOND (jamais plus long sans décision de Williams) ; source : HYP-RGPD-RETENTION, proposition de la lentille sécurité, 2026-10-02 ; à confirmer en séance (point 9). Constante de la SSOT (RM-10). Depuis GOV-137, le passage planifié s'inscrit dans `src/server/taches/inscriptions.ts`.",
       "tests": {
         "REQ-JUR-029": [
           "tests/integration/charge-candidature-minimisee.spec.ts",
@@ -18721,7 +18791,8 @@
       "paths": [
         "src/server/acces/for-apporteur.ts",
         "tests/unit/securite/champs-rendus-apporteur.spec.ts",
-        "tests/integration/idor.spec.ts"
+        "tests/integration/idor.spec.ts",
+        "tests/unit/securite/acces-scope.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -18738,7 +18809,7 @@
       "externe": null,
       "estimateDays": 0.75,
       "statut": "a_faire",
-      "acceptance": "Dette nommée par la PR #345 (GOV-111) : `moi()` rend l'Apporteur entier, hors de `CHAMPS_RENDUS`. Tâche versée par la coordination le 2026-10-01, relecture de la lentille sécurité EXIGÉE. EXIGENCES DE LA LENTILLE SÉCURITÉ, MOT POUR MOT : (a) Classer Apporteur colonne par colonne sous la même garde. (b) Ajouter nomChiffre, prenomChiffre, telephoneChiffre et phoneHash à SECRETS, et TAIRE seuilVerificationPrioritaire, scoreInitial, scorePartsJson, reponsesJson et isTest. (c) En faire une DÉPENDANCE de toute tâche qui appelle moi() ou rend la fiche de l'apporteur (écran espace, API, export). RECOMMANDÉ par la sécurité et retenu : restreindre les clés de colonne de where et orderBy à CHAMPS_RENDUS (pas d'oracle sur tokenHash, emailHash ou kid). TÉMOINS rouges d'abord : `moi()` ne rend aucune colonne hors de `CHAMPS_RENDUS` ; chaque colonne d'Apporteur est classée (rendue, tue ou secrète), et une colonne ajoutée sans classement fait rougir la garde ; un filtre ou un tri sur une colonne non rendue est refusé. Le point (c) est porté au registre : UX-P1-08, UX-P1-09, UX-P1-15, UX-P1-44, UX-P2-09, JUR-T36, UX-P2-04 et DM-20 dépendent de SEC-47, ainsi que toute tâche future qui rend la fiche de l'apporteur. `for-apporteur.ts` et ses témoins sont aussi déclarés par GOV-111 et par huit tâches non revendiquées : jamais dans le même lot.",
+      "acceptance": "Dette nommée par la PR #345 (GOV-111) : `moi()` rend l'Apporteur entier, hors de `CHAMPS_RENDUS`. Tâche versée par la coordination le 2026-10-01, relecture de la lentille sécurité EXIGÉE. EXIGENCES DE LA LENTILLE SÉCURITÉ, MOT POUR MOT : (a) Classer Apporteur colonne par colonne sous la même garde. (b) Ajouter nomChiffre, prenomChiffre, telephoneChiffre et phoneHash à SECRETS, et TAIRE seuilVerificationPrioritaire, scoreInitial, scorePartsJson, reponsesJson et isTest. (c) En faire une DÉPENDANCE de toute tâche qui appelle moi() ou rend la fiche de l'apporteur (écran espace, API, export). RECOMMANDÉ par la sécurité et retenu : restreindre les clés de colonne de where et orderBy à CHAMPS_RENDUS (pas d'oracle sur tokenHash, emailHash ou kid). TÉMOINS rouges d'abord : `moi()` ne rend aucune colonne hors de `CHAMPS_RENDUS` ; chaque colonne d'Apporteur est classée (rendue, tue ou secrète), et une colonne ajoutée sans classement fait rougir la garde ; un filtre ou un tri sur une colonne non rendue est refusé. Le point (c) est porté au registre : UX-P1-08, UX-P1-09, UX-P1-15, UX-P1-44, UX-P2-09, JUR-T36, UX-P2-04 et DM-20 dépendent de SEC-47, ainsi que toute tâche future qui rend la fiche de l'apporteur. `for-apporteur.ts` et ses témoins sont aussi déclarés par GOV-111 et par huit tâches non revendiquées : jamais dans le même lot. ARBITRAGE A01 (rattrapage 46, proposition de A05) : RÈGLE STRICTE, sans exception : borner les clés de `where` et d'`orderBy` à `CHAMPS_RENDUS` refuse aussi `where: { apporteurId }`, colonne tue (un filtre sur le propriétaire n'apprend rien que la session ne sache déjà). Les cas de `tests/unit/securite/acces-scope.spec.ts` (GOV-111) et d'`idor.spec.ts` qui prouvaient la conjonction d'un tel filtre deviennent « refusé avant tout appel » ; la conjonction reste prouvée par `lister()` sans filtre et par les filtres sur des colonnes rendues. Ce changement de face de témoins de GOV-111 est nommé dans la PR et jugé par la lentille sécurité.",
       "tests": {
         "REQ-SEC-008": [
           "tests/unit/securite/champs-rendus-apporteur.spec.ts"
@@ -18826,7 +18897,8 @@
       "paths": [
         "docs/contrat/CONTRAT-APPORTEUR-V1.md",
         "tests/unit/contrat/contract-template-complete.spec.ts",
-        "docs/gates.json"
+        "docs/gates.json",
+        "src/domain/contrat/variables.ts"
       ],
       "schema": false,
       "sensible": [
@@ -18842,7 +18914,7 @@
       "externe": null,
       "estimateDays": 0.25,
       "statut": "a_faire",
-      "acceptance": "Suite de JUR-T43, mesurée par A07 le 2026-10-02 : la conférence est commissionnée au forfait (décision de Williams du 2026-10-01, sans montant dans ce dépôt) ; son palier change les comptes de W6 et de W11, que seul le lot dédié GOV-139 amende (31 paliers ; la conférence quitte A1.5 et rejoint A1.1, formations collectives ; quatre familles non commissionnées). ATOMICITÉ : cette tâche est livrée sur la MÊME branche et dans la MÊME PR que GOV-139 (« Lot: GOV-139, JUR-T46 »), pour que `main` ne rougisse jamais. (1) A07 écrit le palier de la conférence dans le tableau A1.1 de l'annexe 1 et la retire de A1.5, montant en variable (aucun chiffre dans ce dépôt). (2) Le poste dev met à jour le test W6 de `tests/unit/contrat/contract-template-complete.spec.ts` (31 paliers, quatre familles non commissionnées), qui lit la ligne W6 amendée. (3) A01 réécrit le champ `verifie` de l'entrée `partners:grille:complete` de `docs/gates.json` (« les 31 paliers »).",
+      "acceptance": "Suite de JUR-T43, mesurée par A07 le 2026-10-02 : la conférence est commissionnée au forfait (décision de Williams du 2026-10-01, sans montant dans ce dépôt) ; son palier change les comptes de W6 et de W11, que seul le lot dédié GOV-139 amende (31 paliers ; la conférence quitte A1.5 et rejoint A1.1, formations collectives ; quatre familles non commissionnées). ATOMICITÉ : cette tâche est livrée sur la MÊME branche et dans la MÊME PR que GOV-139 (« Lot: GOV-139, JUR-T46 »), pour que `main` ne rougisse jamais. (1) A07 écrit le palier de la conférence dans le tableau A1.1 de l'annexe 1 et la retire de A1.5, montant en variable (aucun chiffre dans ce dépôt). (2) Le poste dev met à jour le test W6 de `tests/unit/contrat/contract-template-complete.spec.ts` (31 paliers, quatre familles non commissionnées), qui lit la ligne W6 amendée. (3) A01 réécrit le champ `verifie` de l'entrée `partners:grille:complete` de `docs/gates.json` (« les 31 paliers »). ARBITRAGE A01 (rattrapage 46, mesure de A05, accord de A07) : la règle « chaque palier a ses quatre variables » vaut aussi pour la conférence ; l'annexe porte {{PRIX_INTERVENTION_CONFERENCE}} ; sa source (`src/domain/contrat/variables.ts`) rend « sur devis » quand le prix public est absent, jamais 0, vide ni un nombre ; la note ² de l'annexe explique l'absence de prix. Aucune exemption dans la garde.",
       "tests": {
         "REQ-JUR-003": [
           "tests/unit/contrat/contract-template-complete.spec.ts"
