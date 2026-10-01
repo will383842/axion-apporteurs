@@ -609,6 +609,23 @@ const MANUELS: Record<string, string[]> = {
     'src/app/(espace)/mon-contrat/page.tsx',
     'tests/unit/securite/acces-espace-avant-signature.spec.ts',
   ],
+  // Antériorité sur le devis émis, et devis signé non facturé (décision de Williams du 2026-10-01) :
+  // leurs témoins n'existent pas encore, leurs chemins sont ceux de leur fiche.
+  'INT-T46-A': [
+    'axionia/src/server/partners-sync/producteurs/devis.ts',
+    'axionia/src/server/partners-sync/__tests__/producteur-devis-emis.spec.ts',
+  ],
+  'INT-T46-P': [
+    'packages/contracts/events.ts',
+    'packages/contracts/contracts.v2.json',
+    'packages/contracts/contracts.sha256',
+    'src/server/integrations/axionia/reception.ts',
+    'tests/integration/devis-emis.spec.ts',
+  ],
+  'JUR-T42': [
+    'docs/contrat/CONTRAT-APPORTEUR-V1.md',
+    'tests/unit/contrat/anteriorite-devis-signe.spec.ts',
+  ],
 };
 
 /**

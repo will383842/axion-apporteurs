@@ -4925,7 +4925,9 @@
       "deps": [
         "DM-07",
         "INT-T05",
-        "SEC-17"
+        "SEC-17",
+        "INT-T46-P",
+        "JUR-T42"
       ],
       "reqs": [
         "REQ-DM-028",
@@ -4943,7 +4945,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "évaluation **locale**, sans appel réseau au dépôt (la dépendance à DM-10-A est retirée) ; `origine` enum réduit à **{client, devis, financeur}** — **`demande_entrante` est retirée**, aucun des cinq événements arrêtés ne la transporte ; **deux fenêtres distinctes** alignées sur l'art. 3.3 réécrit, `ANTERIORITE_CLIENT_MOIS = 24` (prestation **facturée**) et `ANTERIORITE_DEVIS_MOIS = 6` (**devis** émis), toutes deux en SSOT (JUR-T02), jamais un paramètre unique ; `financeur` est alimentée par la liste tenue par la Société (DM-028), **dont l'existence et le principe sont portés à la connaissance de l'apporteur** (art. 3.3 bis b) et dont le refus est notifié avec sa **catégorie**. 🔴 **Complétée le 2026-09-26 (cadrage de l'architecte sur délégation de Will, partners/ADR-0022, GOV-102).** Schéma : `sirens_liste_noire {siren Char(9) clé primaire, motif MotifListeNoire, ajouteParId vers utilisateurs_console, ajouteAt}` et `entreprises_connues {siren, origine OrigineEntrepriseConnue, connueDepuisAt, dernierContactAt, clientStatut}` (REQ-DM-029) ; la ligne `OrigineEntrepriseConnue` du glossaire est alignée AVANT cette tâche — `demande_entrante` retirée —, faute de quoi `partners:schema:enums` rougirait en `enum_divergent_du_glossaire`."
+      "acceptance": "évaluation **locale**, sans appel réseau au dépôt (la dépendance à DM-10-A est retirée) ; `origine` enum réduit à **{client, devis, financeur}** — **`demande_entrante` est retirée**, aucun des cinq événements arrêtés ne la transporte ; **deux fenêtres distinctes** alignées sur l'art. 3.3 réécrit, `ANTERIORITE_CLIENT_MOIS = 24` (prestation **facturée**) et `ANTERIORITE_DEVIS_MOIS = 6` (**devis** émis), toutes deux en SSOT (JUR-T02), jamais un paramètre unique ; `financeur` est alimentée par la liste tenue par la Société (DM-028), **dont l'existence et le principe sont portés à la connaissance de l'apporteur** (art. 3.3 bis b) et dont le refus est notifié avec sa **catégorie**. 🔴 **Complétée le 2026-09-26 (cadrage de l'architecte sur délégation de Will, partners/ADR-0022, GOV-102).** Schéma : `sirens_liste_noire {siren Char(9) clé primaire, motif MotifListeNoire, ajouteParId vers utilisateurs_console, ajouteAt}` et `entreprises_connues {siren, origine OrigineEntrepriseConnue, connueDepuisAt, dernierContactAt, clientStatut}` (REQ-DM-029) ; la ligne `OrigineEntrepriseConnue` du glossaire est alignée AVANT cette tâche — `demande_entrante` retirée —, faute de quoi `partners:schema:enums` rougirait en `enum_divergent_du_glossaire`. AMENDEMENT (Décision D2 de Williams du 2026-10-01, dans la fenêtre de la coordination : à la question « A = garder l'art. 3.3 tel quel (« destinataire d'un devis de moins de six mois », donc devis ENVOYÉ), en ajoutant dans axion-ia un événement « devis émis » vers Partners ; B = passer l'art. 3.3 à « devis signé » », Williams répond : « oUi A. par contre des qu'un clietn a deja signé un devis, il faut dire qu'il nest pas disponible non ? car ce cleitn on l'a deja non ? UN PEU COmme si c'etait un apportuer d'affaire qui l'avait deja demarcher non ? »). L'antériorité « devis » se lit sur l'événement « devis émis » (INT-T46-P), et non sur « devis signé » (A1-16 réglée, option A). TROU constaté par A01 en vérifiant le complément : l'art. 3.3 compte six mois depuis l'ÉMISSION du devis ; un devis SIGNÉ il y a plus de six mois et pas encore facturé ne rend donc plus l'entreprise indisponible, alors que la Société la tient déjà. Le complément de Williams le ferme : un devis signé rend l'entreprise indisponible tant qu'il n'est pas entièrement facturé, puis la fenêtre « cliente » de vingt-quatre mois prend le relais à la facture. Ajout : une entreprise dont un devis est SIGNÉ et pas encore entièrement facturé est connue, quelle que soit l'ancienneté du devis (JUR-T42) ; une fois facturée, la fenêtre `ANTERIORITE_CLIENT_MOIS` s'applique. TÉMOINS rouges d'abord : un devis émis il y a moins de six mois rend l'entreprise connue ; un devis signé il y a plus de six mois, non facturé, la rend connue ; un devis émis il y a plus de six mois, jamais signé ni facturé, ne la rend plus connue."
     },
     {
       "id": "DM-11",
@@ -17310,6 +17312,86 @@
       "estimateDays": 0.75,
       "statut": "a_faire",
       "acceptance": "Décision D1 de Williams du 2026-10-01, dans la fenêtre de la coordination, réponse « A » à la question : pendant les contrôles (SIREN, IBAN) et avant la signature, l'apporteur connecté voit-il « A : seulement deux pages, « Ma conformité » (état de ses vérifications) et « Mon contrat » (lire le contrat avant de signer), sans clients ni commissions tant qu'il n'a pas signé » ou « B : aucun accès avant la signature, seulement des courriels ». HYP-SEC03-ACCES les disait « fermés » ; elle est amendée par la passe du lot dédié. (1) `peutOuvrirLEspace` (src/domain/apporteur/acces-espace.ts) distingue l'ouverture PLEINE (`signe`, `suspendu`) de l'ouverture LIMITÉE (`kyc_en_cours`, `pret_a_signer`) ; tout autre statut reste fermé (liste blanche, défaut fermé). (2) En ouverture limitée, seuls les écrans « Ma conformité » (UX-P1-09) et « Mon contrat » (lecture du contrat avant signature, écran livré ici) répondent ; tout autre écran ou toute autre route de l'espace (clients, attributions, commissions, relevés) refuse, avec un motif nommé, sans rien révéler. (3) TÉMOINS rouges d'abord : un apporteur `kyc_en_cours` atteint « Ma conformité » et « Mon contrat », et il est refusé sur chaque autre écran ; un apporteur `candidat` ou `refuse` est refusé partout ; un apporteur `signe` garde l'accès plein. (4) Relecture de la lentille securite exigée."
+    },
+    {
+      "id": "INT-T46-A",
+      "titre": "Producteur de l'événement « devis émis » vers Partners (contrat d'événements v3, lockstep)",
+      "phase": 1,
+      "repo": "axionia",
+      "zone": "integration",
+      "paths": [
+        "axionia/src/server/partners-sync/producteurs/devis.ts",
+        "axionia/src/server/partners-sync/__tests__/producteur-devis-emis.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [
+        "attribution"
+      ],
+      "deps": [
+        "INT-T46-P"
+      ],
+      "reqs": [
+        "REQ-DM-028",
+        "REQ-INT-003"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "acceptance": "Décision D2 de Williams du 2026-10-01, dans la fenêtre de la coordination : à la question « A = garder l'art. 3.3 tel quel (« destinataire d'un devis de moins de six mois », donc devis ENVOYÉ), en ajoutant dans axion-ia un événement « devis émis » vers Partners ; B = passer l'art. 3.3 à « devis signé » », Williams répond : « oUi A. par contre des qu'un clietn a deja signé un devis, il faut dire qu'il nest pas disponible non ? car ce cleitn on l'a deja non ? UN PEU COmme si c'etait un apportuer d'affaire qui l'avait deja demarcher non ? ». Option A, réglant A1-16 de la vérification transversale. (1) axion-ia émet un événement « devis émis » à l'ENVOI d'un devis, avec le SIREN du destinataire et la date d'émission, par le même producteur unifié que « devis signé » (une clé d'idempotence par devis), et seulement une fois le contrat d'événements v3 publié par INT-T46-P (lockstep, copie du contrat jamais retapée). (2) TÉMOIN rouge d'abord : l'envoi d'un devis émet exactement un événement, rejoué sans doublon."
+    },
+    {
+      "id": "INT-T46-P",
+      "titre": "Contrat d'événements v3 : le type « devis émis » entre dans la liste fermée, et la réception le range en antériorité",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "integration",
+      "paths": [
+        "packages/contracts/events.ts",
+        "packages/contracts/contracts.v2.json",
+        "packages/contracts/contracts.sha256",
+        "src/server/integrations/axionia/reception.ts",
+        "tests/integration/devis-emis.spec.ts"
+      ],
+      "schema": true,
+      "sensible": [
+        "attribution"
+      ],
+      "deps": [],
+      "reqs": [
+        "REQ-INT-004",
+        "REQ-QA-007",
+        "REQ-DM-028"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.75,
+      "statut": "a_faire",
+      "acceptance": "Décision D2 de Williams du 2026-10-01, dans la fenêtre de la coordination : à la question « A = garder l'art. 3.3 tel quel (« destinataire d'un devis de moins de six mois », donc devis ENVOYÉ), en ajoutant dans axion-ia un événement « devis émis » vers Partners ; B = passer l'art. 3.3 à « devis signé » », Williams répond : « oUi A. par contre des qu'un clietn a deja signé un devis, il faut dire qu'il nest pas disponible non ? car ce cleitn on l'a deja non ? UN PEU COmme si c'etait un apportuer d'affaire qui l'avait deja demarcher non ? ». Option A. (1) Le type « devis émis » entre dans la liste fermée `TYPES_EVENEMENT` (packages/contracts/events.ts), avec son `$defs` fermé ; le contrat publié passe en v3 et son empreinte est régénérée par `pnpm contracts:export`, jamais retapée. (2) Le texte de REQ-INT-004 et de REQ-QA-007, qui comptent les types, est amendé au registre dans la même PR. (3) La réception range l'événement dans `entreprises_connues` (origine `devis`, date d'émission). (4) TÉMOINS rouges d'abord : un « devis émis » conforme est rangé ; un « devis émis » hors schéma est refusé 422. Relecture de la lentille schema."
+    },
+    {
+      "id": "JUR-T42",
+      "titre": "Contrat v1, art. 3.3 : un devis signé et non encore facturé rend l'entreprise indisponible, au-delà de six mois",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "juridique",
+      "paths": [
+        "docs/contrat/CONTRAT-APPORTEUR-V1.md",
+        "tests/unit/contrat/anteriorite-devis-signe.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [
+        "attribution"
+      ],
+      "deps": [],
+      "reqs": [
+        "REQ-DM-028"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.25,
+      "statut": "a_faire",
+      "acceptance": "Décision D2 de Williams du 2026-10-01, dans la fenêtre de la coordination : à la question « A = garder l'art. 3.3 tel quel (« destinataire d'un devis de moins de six mois », donc devis ENVOYÉ), en ajoutant dans axion-ia un événement « devis émis » vers Partners ; B = passer l'art. 3.3 à « devis signé » », Williams répond : « oUi A. par contre des qu'un clietn a deja signé un devis, il faut dire qu'il nest pas disponible non ? car ce cleitn on l'a deja non ? UN PEU COmme si c'etait un apportuer d'affaire qui l'avait deja demarcher non ? ». TROU constaté par A01 en vérifiant le complément : l'art. 3.3 compte six mois depuis l'ÉMISSION du devis ; un devis SIGNÉ il y a plus de six mois et pas encore facturé ne rend donc plus l'entreprise indisponible, alors que la Société la tient déjà. Le complément de Williams le ferme : un devis signé rend l'entreprise indisponible tant qu'il n'est pas entièrement facturé, puis la fenêtre « cliente » de vingt-quatre mois prend le relais à la facture. (1) L'art. 3.3 du gabarit ajoute, après « destinataire d'un devis de moins de six mois », le cas d'une entreprise « ayant accepté un devis qui n'est pas encore entièrement facturé », sans limite de durée. (2) C'est un AVENANT : il est écrit avant le premier envoi DocuSeal, et sa formulation finale est validée par Williams avant la fusion. (3) TÉMOIN rouge d'abord : le gabarit sans ce cas est refusé par la concordance du contrat ; avec lui, accepté. Relecture de la lentille juridique."
     }
   ]
 }

@@ -436,7 +436,10 @@
       "etape": 7,
       "phase": 1,
       "taches": [
-        "DM-10-P"
+        "DM-10-P",
+        "INT-T46-A",
+        "INT-T46-P",
+        "JUR-T42"
       ]
     },
     {
@@ -1948,7 +1951,8 @@
       "taches": [
         "GOV-088",
         "INT-T01a",
-        "INT-T45"
+        "INT-T45",
+        "INT-T46-A"
       ]
     },
     {
@@ -1967,7 +1971,8 @@
         "GOV-088",
         "INT-T01a",
         "INT-T01c",
-        "INT-T05"
+        "INT-T05",
+        "INT-T46-P"
       ]
     },
     {
@@ -3458,7 +3463,8 @@
         "INT-T01a",
         "INT-T01b",
         "INT-T01c",
-        "INT-T45"
+        "INT-T45",
+        "INT-T46-P"
       ]
     },
     {
