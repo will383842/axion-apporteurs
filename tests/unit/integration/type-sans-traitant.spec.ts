@@ -5,7 +5,7 @@
  *
  * Avant : le port métier de la route rendait la main sans rien faire pour tout type autre que
  * la candidature, et le travail de fond marquait l'événement `traite`. Un `paiement.recu` reçu avant
- * le branchement de son traitant (DM-15) était donc perdu pour le calcul des commissions : un
+ * le branchement de son traitant de commissions était donc perdu pour le calcul des commissions : un
  * événement `traite` n'est jamais redonné au dispatch.
  *
  * Arbitrage d'A01 à la revendication (issue #331) : l'événement passe `en_attente_dependance`
@@ -150,7 +150,7 @@ describe('INT-T43 — un type sans traitant reste en attente, jamais `traite`', 
   it("la reprise ne vise que les types qui ont un traitant : l'attente d'un autre type ne bouge pas", async () => {
     const lignes = [
       ligne('a', TypeEvenementRecu.avoir_emis, 'avoir:A1', { factureId: 'F9' }),
-      ligne('c', TypeEvenementRecu.client_cree, 'client:C1', { clientId: 'C1' }),
+      ligne('c', TypeEvenementRecu.client_cree, 'client:cl-1', { clientId: 'cl-1' }),
     ];
     const t: Traitants = {};
     await passerLeTravail({

@@ -25,7 +25,7 @@
  * brancheront (DM-10-P, DM-15).
  *
  * LE TYPE SANS TRAITANT (INT-T43). Un événement dont le type n'a pas encore de traitant n'est JAMAIS
- * marqué `traite` : un `traite` n'est jamais redonné au dispatch, et un `paiement.recu` reçu avant
+ * marqué `traite` : un `traite` n'est jamais redonné au dispatch, et un encaissement arrivé avant
  * son traitant serait perdu pour les commissions. `aiguiller` lève `SansTraitant`, l'événement passe
  * `en_attente_dependance` sous `traitant:<type>`, et la reprise en tête de passage
  * (`reprendreLesTraitants`) ne remet en `recu` que les attentes dont le type a désormais un
