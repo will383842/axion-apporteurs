@@ -38,7 +38,10 @@
  * Le jeton, et le corps des réponses de la plateforme (qui pourrait l'écho). Seuls le statut HTTP et
  * les noms des variables sortent.
  */
+import { randomUUID } from 'node:crypto';
 import { ENTETE_DE_BUILD } from '../../next.config';
+import { creerAlerteur, type ObjetAlerte } from '../../src/server/integrations/telegram/alertes';
+import type { Notifieur } from '../../src/lib/notify';
 
 const SHA_COMPLET = /^[0-9a-f]{40}$/;
 /**
@@ -101,6 +104,15 @@ async function enteteServi(base: URL): Promise<{ valeur: string | null; erreur: 
 const attendre = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 export async function verifier(sha: string, base: URL, o: Options): Promise<0 | 1> {
+  return (await verifierEnDetail(sha, base, o)).code;
+}
+
+/** La même vérification, qui rend aussi l'en-tête servi au dernier essai (`null` : absent). */
+async function verifierEnDetail(
+  sha: string,
+  base: URL,
+  o: Options
+): Promise<{ code: 0 | 1; servi: string | null }> {
   let dernier: { valeur: string | null; erreur: string | null } = { valeur: null, erreur: null };
   for (let i = 1; i <= o.essais; i++) {
     dernier = await enteteServi(base);
@@ -108,7 +120,7 @@ export async function verifier(sha: string, base: URL, o: Options): Promise<0 | 
       console.log(
         `✅ atterri : ${base.origin} sert ${ENTETE_DE_BUILD} = ${sha} (essai ${i}/${o.essais})`
       );
-      return 0;
+      return { code: 0, servi: dernier.valeur };
     }
     if (i < o.essais) await attendre(o.delaiMs);
   }
@@ -121,7 +133,100 @@ export async function verifier(sha: string, base: URL, o: Options): Promise<0 | 
   console.error(`❌ NON ATTERRI après ${o.essais} essai(s) sur ${base.origin} :`);
   console.error(`   attendu : ${sha}`);
   console.error(`   servi   : ${servi}`);
+  return { code: 1, servi: dernier.valeur };
+}
+
+export type AlerteDeDeploiement = {
+  /** Remet l'alerte au canal ; un échec d'envoi se nomme, il ne masque pas l'échec du déploiement. */
+  readonly alerter: (objet: ObjetAlerte) => Promise<void>;
+  /** L'environnement déployé, confronté à la liste close à l'écriture du message. */
+  readonly environnement: string;
+};
+
+/**
+ * QA-T54 (REQ-GOV-014) — l'atterrissage, puis `readyz` ; tout échec émet EXACTEMENT une alerte close
+ * `deploiement_non_atterri` (sha attendu, sha servi, environnement), et le code reste 1 : l'alerte
+ * ne remplace pas le rouge du job. Le sha servi est passé BRUT : c'est l'alerte qui le confronte à sa
+ * liste blanche (`shaLisible`), au seul endroit où il entre dans un message.
+ */
+export async function atterrirOuAlerter(
+  sha: string,
+  base: URL,
+  o: Options,
+  a: AlerteDeDeploiement
+): Promise<0 | 1> {
+  const v = await verifierEnDetail(sha, base, o);
+  let echoue = v.code !== 0;
+  if (!echoue) {
+    const sante = await readyz(base);
+    if (sante !== 200) {
+      console.error(
+        `❌ readyz répond ${sante || 'rien'} : le sha est servi, l'application n'est pas prête`
+      );
+      echoue = true;
+    }
+  }
+  if (!echoue) return 0;
+  await a.alerter({
+    categorie: 'deploiement_non_atterri',
+    id: randomUUID(),
+    deploiement: { attendu: sha, servi: v.servi ?? '', environnement: a.environnement },
+  });
   return 1;
+}
+
+/** Le notifieur Telegram de la forge : le texte de l'alerte, rien d'autre ; le jeton ne sort jamais. */
+function notifieurTelegram(jeton: string, salon: string): Notifieur {
+  return {
+    async notifier({ corps }) {
+      const r = await fetch(`https://api.telegram.org/bot${jeton}/sendMessage`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ chat_id: salon, text: corps }),
+      });
+      await r.body?.cancel();
+      if (!r.ok) throw new Error(`Telegram refuse l'alerte : HTTP ${r.status}`);
+    },
+  };
+}
+
+const SECRETS_DU_CANAL = ['TELEGRAM_BOT_TOKEN', 'TELEGRAM_CHAT_ID'] as const;
+
+/**
+ * L'alerte de la forge pour `deploy:coolify`. Sans canal, l'alerte qui ne peut partir est NOMMÉE en
+ * `::error::` ; un envoi refusé par Telegram aussi. Dans les deux cas, le job est déjà rouge.
+ */
+function alerteDeLaForge(): AlerteDeDeploiement {
+  const environnement = process.env.DEPLOIEMENT_ENVIRONNEMENT ?? '';
+  const manquants = SECRETS_DU_CANAL.filter((n) => (process.env[n] ?? '') === '');
+  if (manquants.length > 0) {
+    return {
+      environnement,
+      alerter: async (objet) => {
+        console.error(
+          `::error title=deploy:coolify::alerte ${objet.categorie} NON envoyée : ${manquants.join(', ')} absent(s)`
+        );
+      },
+    };
+  }
+  const alerteur = creerAlerteur({
+    notifieur: notifieurTelegram(
+      process.env.TELEGRAM_BOT_TOKEN ?? '',
+      process.env.TELEGRAM_CHAT_ID ?? ''
+    ),
+    horloge: { maintenant: () => Date.now() },
+    plafondParHeure: 1,
+  });
+  return {
+    environnement,
+    alerter: async (objet) => {
+      await alerteur.alerter(objet).catch((e: Error) => {
+        console.error(
+          `::error title=deploy:coolify::alerte ${objet.categorie} NON envoyée : ${e.message}`
+        );
+      });
+    },
+  };
 }
 
 function shaDemande(argv: string[]): string {
@@ -221,7 +326,7 @@ async function commandeDeclencher(argv: string[]): Promise<number> {
     return 1;
   }
   console.log(`   déploiement déclenché — lecture de ${ENTETE_DE_BUILD} sur ${publique.origin}`);
-  return verifier(sha, publique, options(argv));
+  return atterrirOuAlerter(sha, publique, options(argv), alerteDeLaForge());
 }
 
 /**
