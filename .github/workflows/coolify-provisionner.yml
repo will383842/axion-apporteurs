@@ -69,5 +69,6 @@ jobs:
           PARTNERS_EMAIL_DMARC_VERIFIE: ${{ vars.PARTNERS_EMAIL_DMARC_VERIFIE }}
           PARTNERS_EMAIL_EXPEDITEUR: ${{ vars.PARTNERS_EMAIL_EXPEDITEUR }}
           AXIONIA_BASE_URL: ${{ vars.AXIONIA_BASE_URL }}
+          AXIONIA_API_ALLOWLIST: ${{ vars.AXIONIA_API_ALLOWLIST }}
           ZEPTOMAIL_API_URL: ${{ vars.ZEPTOMAIL_API_URL }}
         run: pnpm coolify:provisionner

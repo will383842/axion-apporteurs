@@ -24,11 +24,21 @@ import { spawn } from 'node:child_process';
 import { createServer, type IncomingMessage, type Server } from 'node:http';
 import { readFileSync } from 'node:fs';
 import { lireYaml } from '../../../scripts/lib/lire-yaml';
+import { politiqueDeContenu } from '../../../src/server/securite/entetes';
 
 const SCRIPT = 'scripts/gates/deploy-verify.ts';
 const TSX = 'node_modules/tsx/dist/cli.mjs';
 const SHA = 'a'.repeat(40);
 const AUTRE = 'b'.repeat(40);
+/**
+ * Ce que sert une application ATTERRIE : le sha, et la politique de contenu de la configuration, avec
+ * son propre nonce. `deploy:verify` compare aussi la politique servie à celle de la configuration :
+ * un faux serveur qui ne la servirait pas serait un atterrissage refusé.
+ */
+const ATTERRIE = {
+  'x-partners-build-sha': SHA,
+  'content-security-policy': politiqueDeContenu({ nonce: 'nonceDuTemoin01', developpement: false }),
+};
 
 type Requete = { methode: string; url: string; auth: string | undefined; corps: string };
 let serveurs: Server[] = [];
@@ -91,7 +101,7 @@ describe('deploy:verify — l’atterrissage se lit sur l’en-tête servi', () 
   it('sur le sha servi, sort en zéro', async () => {
     const app = await serveur(() => ({
       statut: 200,
-      entetes: { 'x-partners-build-sha': SHA },
+      entetes: ATTERRIE,
       corps: '',
     }));
     const r = await lancer(['--verifier', SHA, ...RAPIDE], { PARTNERS_URL_PUBLIQUE: app.url });
@@ -135,7 +145,7 @@ describe('deploy:verify — l’atterrissage se lit sur l’en-tête servi', () 
   it('lit le sha dans GITHUB_SHA quand aucun n’est donné', async () => {
     const app = await serveur(() => ({
       statut: 200,
-      entetes: { 'x-partners-build-sha': SHA },
+      entetes: ATTERRIE,
       corps: '',
     }));
     const r = await lancer(['--verifier', ...RAPIDE], {
@@ -206,7 +216,7 @@ describe('deploy:coolify — la plateforme tire l’image, ou le saut est NOMMÉ
     );
     const app = await serveur(() => ({
       statut: 200,
-      entetes: { 'x-partners-build-sha': SHA },
+      entetes: ATTERRIE,
       corps: '',
     }));
     const r = await lancer(['--declencher', ...RAPIDE], {
@@ -299,8 +309,87 @@ describe('la structure : un seul producteur, qui tire, sans droit sur le registr
     expect(String(deployer!.concurrency?.['cancel-in-progress'])).toBe('false');
   });
 
-  it('aucun droit d’écriture : ni sur le registre, ni sur le dépôt', () => {
-    expect(deployer!.permissions).toEqual({ contents: 'read' });
+  // QA-T67 (lentille securite du 2026-10-02) : la PAIRE. `actions: read` lit les runs de ci.yml et
+  // les jobs du run (`deploy-attendre-porte-a.spec.ts`) ; `checks: read` n'a plus d'usage. Une
+  // permission de plus, `checks: read` compris, ou une écriture, rougit.
+  const PAIRE = { contents: 'read', actions: 'read' };
+  async function permissionsDuDeployeur(texte: string): Promise<unknown> {
+    const wf = (await lireYaml(texte)) as { jobs: Record<string, { permissions?: unknown }> };
+    return wf.jobs['deployer']?.permissions;
+  }
+
+  it('REQ-GOV-014 : aucun droit d’écriture — EXACTEMENT deux lectures : le dépôt et les runs', () => {
+    expect(deployer!.permissions).toEqual(PAIRE);
+  });
+
+  it('REQ-GOV-014 : TÉMOIN — la paire figée : checks: read rajouté, ou une écriture, rougit', async () => {
+    const reel = readFileSync('.github/workflows/deploy.yml', 'utf8');
+    // L'unique `actions: read` de deploy.yml est celui du job `deployer`.
+    const ligne = '      actions: read\n';
+    expect(reel.split(ligne)).toHaveLength(2);
+    expect(await permissionsDuDeployeur(reel)).toEqual(PAIRE);
+    for (const ajout of ['      checks: read\n', '      statuses: write\n'])
+      expect(await permissionsDuDeployeur(reel.replace(ligne, ligne + ajout))).not.toEqual(PAIRE);
+  });
+
+  it('REQ-GOV-014 : la porte A du même sha est attendue AVANT l’AIPD et la plateforme, jeton à l’étape seule', () => {
+    const runs = (deployer!.steps ?? []).map((s) => s.run ?? '');
+    const porte = runs.indexOf('pnpm deploy:attendre-porte-a');
+    expect(porte).toBeGreaterThan(-1);
+    expect(porte).toBeLessThan(runs.indexOf('pnpm aipd:signee'));
+    expect(porte).toBeLessThan(runs.indexOf('pnpm deploy:coolify'));
+    const etape = (deployer!.steps ?? [])[porte];
+    expect(Object.keys(etape?.env ?? {})).toEqual(['GH_TOKEN']);
+    for (const s of deployer!.steps ?? [])
+      if (s !== etape) expect(Object.keys(s.env ?? {})).not.toContain('GH_TOKEN');
+    expect((deployer as { env?: unknown }).env).toBeUndefined();
+    const pkg = JSON.parse(readFileSync('package.json', 'utf8')) as {
+      scripts: Record<string, string>;
+    };
+    expect(pkg.scripts['deploy:attendre-porte-a']).toBe(
+      'tsx scripts/gates/deploy-verify.ts --attendre-porte-a'
+    );
+  });
+
+  // L'ORDRE ne suffit pas, il faut le BLOCAGE (relevé de la lentille securite sur #460) : une étape
+  // de la porte A tolérée (`continue-on-error`) ou conditionnée (`if:`) laisserait partir le
+  // déploiement d'un sha que la porte A n'a pas jugé, tout en restant « avant ».
+  async function porteABloquante(texte: string): Promise<string[]> {
+    const wf = (await lireYaml(texte)) as {
+      jobs: Record<string, { steps?: (Etape & { if?: unknown })[] }>;
+    };
+    const etapes = wf.jobs['deployer']?.steps ?? [];
+    const rang = etapes.findIndex((s) => s.run === 'pnpm deploy:attendre-porte-a');
+    if (rang < 0) return ['porte_a_absente'];
+    const etape = etapes[rang]!;
+    const f: string[] = [];
+    if (etape['continue-on-error'] !== undefined) f.push('porte_a_toleree');
+    if (etape.if !== undefined) f.push('porte_a_conditionnelle');
+    // Le trou voisin (lentille securite) : un `if: always()`, `!cancelled()` ou `failure()` sur une
+    // étape QUI SUIT la porte A la ferait tourner après son échec. Aucune ne porte de `if:`.
+    for (const s of etapes.slice(rang + 1))
+      if (s.if !== undefined) f.push(`apres_porte_a_conditionnelle : ${s.run ?? s.uses ?? '?'}`);
+    return f;
+  }
+
+  it('REQ-GOV-014 : l’étape de la porte A est BLOQUANTE — ni continue-on-error ni if:, jugé sur deux copies cassées', async () => {
+    const reel = readFileSync('.github/workflows/deploy.yml', 'utf8');
+    const ligne = '        run: pnpm deploy:attendre-porte-a';
+    expect(reel).toContain(ligne);
+    const avant = (cle: string) => reel.replace(ligne, `        ${cle}\n${ligne}`);
+    expect(await porteABloquante(reel)).toEqual([]);
+    expect(await porteABloquante(avant('continue-on-error: true'))).toEqual(['porte_a_toleree']);
+    expect(await porteABloquante(avant('if: ${{ false }}'))).toEqual(['porte_a_conditionnelle']);
+  });
+
+  it('REQ-GOV-014 : TÉMOIN — deploy:coolify avec if: always() rougit en se nommant : il tournerait après l’échec de la porte A', async () => {
+    const reel = readFileSync('.github/workflows/deploy.yml', 'utf8');
+    const ligne = '        run: pnpm deploy:coolify';
+    expect(reel).toContain(ligne);
+    for (const condition of ['always()', '!cancelled()', 'failure()'])
+      expect(
+        await porteABloquante(reel.replace(ligne, `        if: \${{ ${condition} }}\n${ligne}`))
+      ).toEqual(['apres_porte_a_conditionnelle : pnpm deploy:coolify']);
   });
 
   it('les étapes sont des scripts nommés, sans continue-on-error, et le seul appel à la plateforme est `pnpm deploy:coolify`', () => {

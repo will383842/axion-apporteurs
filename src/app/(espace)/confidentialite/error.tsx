@@ -7,6 +7,9 @@
  */
 import { useSyncExternalStore } from 'react';
 import { CONFIDENTIALITE } from '../../../content/micro-copy/espace/vocabulaire';
+// SEC-46 : la hauteur tactile de 48 px vient d'une feuille de la même origine, qu'admet style-src
+// 'self' ; un style en ligne était refusé par la CSP, et le bouton perdait cette hauteur.
+import styles from './confidentialite.module.css';
 
 function abonner(rappel: () => void): () => void {
   window.addEventListener('online', rappel);
@@ -28,7 +31,7 @@ export default function ErreurConfidentialite({ reset }: { error: Error; reset: 
     <main>
       <h1>{t.titre}</h1>
       <p role="alert">{t.phrase}</p>
-      <button type="button" onClick={reset} style={{ minHeight: '3rem', fontSize: '1.125rem' }}>
+      <button type="button" onClick={reset} className={styles.bouton}>
         {CONFIDENTIALITE.erreur.action}
       </button>
     </main>

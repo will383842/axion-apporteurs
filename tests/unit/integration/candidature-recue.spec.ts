@@ -19,6 +19,7 @@ import {
   ENTETE_HORODATAGE_REQUETE,
   ENTETE_SIGNATURE_REQUETE,
   PREFIXE_ATTENTE_COORDONNEES,
+  chargeMinimisee,
   clientCoordonnees,
   traiterCandidatureRecue,
   type ClientCandidature,
@@ -163,6 +164,7 @@ function base(existants: { emailHash?: string; phoneHash?: string; candidatureId
   const crees: Record<string, unknown>[] = [];
   const mises: unknown[] = [];
   const recherches: unknown[] = [];
+  const journal: Record<string, unknown>[] = [];
   const correspond = (where: Record<string, unknown>) => {
     const conditions = (where['OR'] as Record<string, unknown>[] | undefined) ?? [where];
     return existants.find((e) =>
@@ -188,6 +190,15 @@ function base(existants: { emailHash?: string; phoneHash?: string; candidatureId
         return args;
       },
     },
+    // DM-45 : l'écrivain du journal prend son verrou, lit la tête, et écrit un maillon.
+    $executeRaw: async () => 0,
+    evenement: {
+      findFirst: async () => ({ selfHash: '0'.repeat(64) }),
+      create: async (args: { data: Record<string, unknown> }) => {
+        journal.push(args.data);
+        return { id: BigInt(journal.length + 1) };
+      },
+    },
   };
   let transactions = 0;
   const prisma = {
@@ -196,7 +207,7 @@ function base(existants: { emailHash?: string; phoneHash?: string; candidatureId
       return fn(tx);
     },
   } as unknown as ClientCandidature;
-  return { prisma, crees, mises, recherches, transactions: () => transactions };
+  return { prisma, crees, mises, recherches, journal, transactions: () => transactions };
 }
 
 const DEPS = (tirer: (id: string) => Promise<Coordonnees | null>) => ({
@@ -233,10 +244,17 @@ describe('REQ-DM-035, REQ-QA-035 — un apporteur `candidat` naît, figé, dans 
       Buffer.isBuffer(v) ? v.toString('latin1') : v
     );
     expect(texte).not.toMatch(/Camille|Durand|camille@example|0600000000/);
+    // INT-T56 (exigence (b) d'A02) : la charge minimisée part dans la MÊME écriture que le passage
+    // à `traite` — changement de face voulu de ce témoin.
     expect(b.mises).toEqual([
       {
         where: { id: 'evt-1' },
-        data: { statut: 'traite', processedAt: new Date(MAINTENANT_MS), dependanceRef: null },
+        data: {
+          statut: 'traite',
+          processedAt: new Date(MAINTENANT_MS),
+          dependanceRef: null,
+          charge: chargeMinimisee(CHARGE),
+        },
       },
     ]);
   });
@@ -252,6 +270,30 @@ describe('REQ-DM-035, REQ-QA-035 — un apporteur `candidat` naît, figé, dans 
     ).toBe('rattache');
     expect(b.crees).toEqual([]);
     expect(b.mises).toHaveLength(1);
+  });
+
+  it('REQ-DM-024 : la NAISSANCE s’inscrit au journal — agrégat apporteur, son identifiant, la charge fermée ; un rattachement n’écrit rien', async () => {
+    const b = base([]);
+    await traiterCandidatureRecue(
+      b.prisma,
+      EVENEMENT,
+      DEPS(async () => COORDONNEES)
+    );
+    expect(b.journal).toHaveLength(1);
+    expect(b.journal[0]).toMatchObject({
+      type: 'apporteur_statut_modifie',
+      agregat: 'apporteur',
+      agregatId: b.crees[0]!['id'],
+      charge: { de: null, vers: 'candidat', transition: 'creer', acteur: { par: 'systeme' } },
+      prevHash: '0'.repeat(64),
+    });
+    const r = base([{ emailHash: empreinteRecherche('courriel', COORDONNEES.email!, CLES) }]);
+    await traiterCandidatureRecue(
+      r.prisma,
+      EVENEMENT,
+      DEPS(async () => COORDONNEES)
+    );
+    expect(r.journal).toEqual([]);
   });
 
   it('REQ-INT-032 : la recherche est exacte — courriel OU candidature d’abord, puis le seul téléphone, l’identifiant seul', async () => {

@@ -100,3 +100,25 @@ Confronte-a: docs/tiers/coolify.md#2-source-officielle
 
 Toute fixture de configuration de déploiement ou de réponse de sonde porte ces deux lignes. Tant que la
 rubrique 2 est vide, la seconde ligne porte la mention `non confrontée`.
+
+## 10. Sauts de confiance — combien de mandataires devant l'application
+
+Ajoutée par **SEC-44** (REQ-SEC-012, écart de la vérification de bout en bout). L'adresse du client se lit dans `X-Forwarded-For`, à
+droite, en sautant les mandataires de confiance (`src/server/securite/adresse-du-client.ts`). Trop peu
+de sauts, et toutes les requêtes portent l'adresse du mandataire : un seul quota pour tout le site.
+Trop, et l'on lit une valeur écrite par le client.
+
+**Mesuré le 2026-10-02 à 03:32 UTC**, sur le domaine de production `apporteurs.axion-ia.com` :
+
+| Mesure | Méthode | Résultat |
+| --- | --- | --- |
+| Proxy de Cloudflare devant le domaine | lecture de l'enregistrement DNS dans la zone `axion-ia.com` (API Cloudflare, lecture seule) | enregistrement `A`, `proxied: false` : pas de proxy Cloudflare |
+| En-têtes de la réponse | `curl -sI https://apporteurs.axion-ia.com/api/readyz` | `HTTP/1.1 200`, `x-partners-build-sha` présent ; aucun `cf-ray`, aucun `server: cloudflare`, aucun `via` |
+| Mandataire de la plateforme | Coolify sert l'application derrière son mandataire inverse | un saut |
+
+Conclusion : **`SAUTS_DE_CONFIANCE` = 1**, la valeur du code. Un témoin
+(`tests/unit/securite/api-entrante-ip.spec.ts`) confronte la constante à cette ligne.
+
+**Remesurer** avant toute modification de la chaîne : passage du DNS en `proxied: true`, mandataire
+ajouté devant Coolify, changement d'hébergeur. Chaque mandataire de confiance ajoute un saut, et la
+constante change dans la même PR que cette rubrique.

@@ -179,5 +179,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: La garde des runbooks sait rougir
         run: pnpm runbooks:exerces:prove
+      # QA-T56 : `--now` est FOURNI, en UTC. Avant MISE_EN_SERVICE, un runbook encore a exercer est
+      # une condition de mise en service : avertissement nomme, sortie 0. La garde decide, pas le YAML.
       - name: Les runbooks du socle sont exerces en preview
-        run: pnpm runbooks:exerces
+        run: pnpm runbooks:exerces --now $(date -u +%F)

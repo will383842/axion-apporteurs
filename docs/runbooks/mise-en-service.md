@@ -25,6 +25,14 @@
 - [ ] Base de production semée de données SYNTHÉTIQUES seulement. _Porteur : Williams (plateforme)._
 - [ ] Canal Partners d'axion-ia FERMÉ : `PARTNERS_SYNC_ENABLED` faux côté axion-ia, constaté.
       _Porteur : la session axion-ia (constat daté)._
+- [ ] **INT-T56 fusionnée AVANT toute ouverture du canal** : `PARTNERS_SYNC_ENABLED` reste faux tant que
+      la charge des candidatures n'est pas minimisée (`partners/ADR-0029`). Sa migration ÉCHOUE, à
+      dessein, si une `candidature_recue` traitée porte encore `reponsesJson` (requête :
+      `SELECT count(*) FROM evenements_recus WHERE event_type = 'candidature_recue' AND statut =
+      'traite' AND charge ? 'reponsesJson'`) ; aucune n'existe tant que le canal est fermé. Si le
+      déploiement échoue pour cette raison : ne rien réécrire à la main, ouvrir une décision. Une
+      candidature `en_erreur` minimisée à 30 jours (plafond provisoire) ne peut plus être retraitée.
+      _Porteur : Williams (réception), après la fusion d'INT-T56._
 - [ ] **Forge** : l'environnement `production` n'accepte que la branche `main` ; aucun secret ne reste au
       niveau du dépôt ; relecteurs requis sur `production` (recommandé). _Porteur : Williams
       (`poser-secrets-production.ps1 -Etape nettoyer`, réglages de la forge)._
@@ -116,6 +124,11 @@
       texte (`src/content/micro-copy/courriels/information-article-14.ts`) les rendent. Tant que cette
       case n'est pas cochée, **aucun e-mail de confirmation réel ne part**. Cochée après réception par
       Williams. _Porteur : Williams (les trois décisions), A07 (relecture du texte rendu)._
+- [ ] **Purge planifiée du contact active** (REQ-DM-031, REQ-SEC-030, DM-48) : la tâche
+      `contacts_purger` est inscrite au lanceur et bat chaque minute ; les durées de
+      `src/domain/seuils/retention.ts` (HYP-RGPD-RETENTION) sont confirmées par Williams au registre.
+      Sans cette case, aucune coordonnée d'un tiers réel n'entre en base. _Porteur : Williams (les
+      durées), constat de l'auteur (un battement récent de `contacts_purger`)._
 - [ ] Base de production vidée de son semis synthétique, puis `deploy:verify` vert. _Porteur :
       Williams._
 - [ ] **Relais de courriels** (INT-T57, REQ-INT-022), AVANT le drapeau d'allumage de l'envoi réel

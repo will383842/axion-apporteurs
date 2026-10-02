@@ -21,7 +21,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { spawnSync } from 'node:child_process';
-import { readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { FORMULES } from '../../../src/content/micro-copy/espace/vocabulaire';
 import {
   ISSUES_DEPOT,
@@ -53,6 +53,7 @@ import {
   PARAMETRES_PERMIS,
   ECRAN_MES_ENTREPRISES,
   ROUTE_DU_DEPOT,
+  type Sources,
   type Vue,
 } from '../../../scripts/gates/ux-exhaustivite';
 import {
@@ -65,6 +66,30 @@ import {
 import { toutesLesFormes } from '../../../src/domain/lexique/lexique-interdit';
 
 const SCRIPT = 'scripts/gates/ux-exhaustivite.ts';
+
+/**
+ * QA-T56 (REQ-QA-027) — les fichiers que la garde lirait par `git ls-files`, tirés du DISQUE. Le bac
+ * à sable de Stryker n'est pas un dépôt git : `git ls-files` y échouait, et le run initial de la passe
+ * de mutation rougissait. Les racines sont celles que la garde lit — les composants sous `src/` et
+ * `emails/`, la micro-copie sous `src/content/micro-copy/`, et `messages/fr.json` —, avec la forme de
+ * chemin de git (séparateur « / »). Les tests qui ne PEUVENT pas recevoir cette liste (la garde en
+ * sous-processus, le lexique du dépôt) sont écartés de la passe de mutation, nommés dans
+ * `vitest.mutation.config.ts`, et joués dans `pnpm test` sur le vrai dépôt.
+ */
+function fichiersDuDisque(racines: readonly string[] = ['src', 'emails', 'messages']): string[] {
+  const fichiers: string[] = [];
+  const parcourir = (dossier: string): void => {
+    for (const e of readdirSync(dossier, { withFileTypes: true })) {
+      const chemin = `${dossier}/${e.name}`;
+      if (e.isDirectory()) {
+        if (e.name !== 'node_modules' && !e.name.startsWith('.')) parcourir(chemin);
+      } else fichiers.push(chemin);
+    }
+  };
+  for (const r of racines) if (existsSync(r)) parcourir(r);
+  return fichiers.sort();
+}
+const SOURCES: Sources = { lire: SOURCES_DU_DEPOT.lire, suivis: () => fichiersDuDisque() };
 
 function lancer(...args: string[]): { code: number; sortie: string } {
   const r = spawnSync('npx', ['tsx', SCRIPT, ...args], { encoding: 'utf8', shell: true });
@@ -167,7 +192,7 @@ describe('REQ-UX-002 — chaque issue du dépôt dit quoi, pourquoi, quoi faire 
   it('REQ-UX-002 : une valeur ajoutée à l’enum sans son texte fait rougir la garde, qui la NOMME', () => {
     // Le témoin ne diffère de la référence QUE par le texte absent : l'issue est au contrat et a
     // son horodatage — sans quoi il rougirait pour une autre raison et ne prouverait rien du texte.
-    const base = vueDuDepot();
+    const base = vueDuDepot(SOURCES);
     const vue: Vue = {
       ...base,
       issuesDeLEnum: [...base.issuesDeLEnum, 'issue_temoin'],
@@ -193,7 +218,7 @@ describe('REQ-UX-002 — chaque issue du dépôt dit quoi, pourquoi, quoi faire 
         : chemin === 'docs/ESPACE-ROUTES.md'
           ? carte
           : readFileSync(chemin, 'utf8');
-    const vue = vueDuDepot({ ...SOURCES_DU_DEPOT, lire });
+    const vue = vueDuDepot({ ...SOURCES, lire });
     expect([...new Set(familles(vue))].sort()).toEqual([
       'ecran_sans_etat_vide',
       'issue_du_contrat_sans_valeur',
@@ -212,7 +237,7 @@ describe('REQ-UX-002 — chaque issue du dépôt dit quoi, pourquoi, quoi faire 
         chemin === composant
           ? 'export const P = ({ t }: { t: string }) => <p dangerouslySetInnerHTML={{ __html: t }} />;'
           : SOURCES_DU_DEPOT.lire(chemin),
-      suivis: () => [...SOURCES_DU_DEPOT.suivis(), neuf, composant],
+      suivis: () => [...SOURCES.suivis(), neuf, composant],
     });
     expect([...new Set(familles(vue))].sort()).toEqual(['html_brut', 'micro_copie_non_lue']);
     expect(messages(vue)).toContain(neuf);
@@ -220,7 +245,7 @@ describe('REQ-UX-002 — chaque issue du dépôt dit quoi, pourquoi, quoi faire 
   });
 
   it('REQ-UX-002 : une valeur sans base contractuelle fait rougir la garde, qui la NOMME', () => {
-    const base = vueDuDepot();
+    const base = vueDuDepot(SOURCES);
     const vue: Vue = {
       ...base,
       issuesDeLEnum: [...base.issuesDeLEnum, 'fermee'],
@@ -232,14 +257,14 @@ describe('REQ-UX-002 — chaque issue du dépôt dit quoi, pourquoi, quoi faire 
   });
 
   it('REQ-UX-002 : une issue ajoutée au contrat sans valeur ni texte fait rougir la garde', () => {
-    const base = vueDuDepot();
+    const base = vueDuDepot(SOURCES);
     const vue: Vue = { ...base, issuesDuContrat: [...base.issuesDuContrat, 'insincerite'] };
     expect(familles(vue)).toContain('issue_du_contrat_sans_valeur');
     expect(messages(vue)).toContain('insincerite');
   });
 
   it('REQ-UX-002 : un refus qui révèle qui ou quand fait rougir la garde', () => {
-    const base = vueDuDepot();
+    const base = vueDuDepot(SOURCES);
     const bavard = {
       ...TEXTES_DES_ISSUES.file_complete,
       pourquoi: 'Déposée par {autreApporteur} le {dateDepot}.',
@@ -253,7 +278,7 @@ describe('REQ-UX-002 — chaque issue du dépôt dit quoi, pourquoi, quoi faire 
   });
 
   it('REQ-UX-002 : un refus déclaré à tort (ou oublié) fait rougir la garde', () => {
-    const base = vueDuDepot();
+    const base = vueDuDepot(SOURCES);
     const vue: Vue = { ...base, refusDeclares: [...base.refusDeclares, 'gele'] };
     expect(familles(vue)).toContain('refus_mal_declare');
     expect(messages(vue)).toContain('gele');
@@ -279,7 +304,7 @@ function avecTexte(base: Vue, fichier: string, chemin: readonly string[], valeur
 describe('REQ-UX-002 — un texte de l’espace ne porte que les paramètres que son contexte permet', () => {
   it('REQ-UX-002 : la collision au dépôt (en_attente) qui nomme et date l’autre apporteur rougit', () => {
     const vue = avecTexte(
-      vueDuDepot(),
+      vueDuDepot(SOURCES),
       'espace/issues-depot.ts',
       ['TEXTES_DES_ISSUES', 'en_attente', 'pourquoi'],
       'Cette entreprise est déjà réservée par {nomAutreApporteur} depuis le {dateDepotAutre}.'
@@ -292,7 +317,7 @@ describe('REQ-UX-002 — un texte de l’espace ne porte que les paramètres que
 
   it('REQ-UX-002 : un libellé d’ACTION qui nomme l’autre apporteur rougit aussi', () => {
     const vue = avecTexte(
-      vueDuDepot(),
+      vueDuDepot(SOURCES),
       'espace/issues-depot.ts',
       ['TEXTES_DES_ISSUES', 'etablissement_cesse', 'actionSecondaire', 'libelle'],
       'Voir le dépôt de {autreApporteur}'
@@ -304,7 +329,7 @@ describe('REQ-UX-002 — un texte de l’espace ne porte que les paramètres que
 
   it('REQ-UX-002 : la saisie reflétée {recherche} n’est permise que sur l’écran de recherche', () => {
     const vue = avecTexte(
-      vueDuDepot(),
+      vueDuDepot(SOURCES),
       'espace/etats-vides.ts',
       ['ETATS_VIDES_ESPACE', '/aide', 'phrase'],
       'Vous avez cherché « {recherche} ».'
@@ -333,14 +358,14 @@ describe('REQ-UX-002 — un texte de l’espace ne porte que les paramètres que
       const fichier = cle.split(' › ')[0]!;
       const etranger = CONTEXTE_ETRANGER[fichier];
       expect([cle, etranger !== undefined]).toEqual([cle, true]);
-      const vue = avecTexte(vueDuDepot(), fichier, etranger!, `Texte témoin {${nom}}.`);
+      const vue = avecTexte(vueDuDepot(SOURCES), fichier, etranger!, `Texte témoin {${nom}}.`);
       expect([cle, nom, familles(vue)]).toEqual([cle, nom, ['parametre_non_permis']]);
       expect([cle, nom, messages(vue).includes(`{${nom}}`)]).toEqual([cle, nom, true]);
     }
   });
 
   it('REQ-UX-002 : texte_calcule — un littéral qui écrit un texte dans une fonction rougit', () => {
-    const base = vueDuDepot();
+    const base = vueDuDepot(SOURCES);
     const vocabulaire = 'src/content/micro-copy/espace/vocabulaire.ts';
     const vue: Vue = {
       ...base,
@@ -359,7 +384,7 @@ describe('REQ-UX-002 — un texte de l’espace ne porte que les paramètres que
   });
 
   it('REQ-UX-002 : texte_calcule — une concaténation dans une fonction hors liste blanche rougit', () => {
-    const base = vueDuDepot();
+    const base = vueDuDepot(SOURCES);
     const vocabulaire = 'src/content/micro-copy/espace/vocabulaire.ts';
     const vue: Vue = {
       ...base,
@@ -377,18 +402,18 @@ describe('REQ-UX-002 — un texte de l’espace ne porte que les paramètres que
 
   it('REQ-UX-002 : contre-témoin — la date de fin, seule permise à la collision (REQ-SEC-022), reste verte', () => {
     const vue = avecTexte(
-      vueDuDepot(),
+      vueDuDepot(SOURCES),
       'espace/issues-depot.ts',
       ['TEXTES_DES_ISSUES', 'en_attente', 'pourquoi'],
       'Cette entreprise est déjà réservée pour un autre apporteur jusqu’au {dateFin}.'
     );
     expect(familles(vue)).toEqual([]);
-    expect(familles(vueDuDepot())).toEqual([]);
+    expect(familles(vueDuDepot(SOURCES))).toEqual([]);
   });
 
   it('REQ-UX-002 : un délai écrit en clair à la place de son paramètre rougit (RM-10)', () => {
     const vue = avecTexte(
-      vueDuDepot(),
+      vueDuDepot(SOURCES),
       'espace/etats-vides.ts',
       ['ETATS_VIDES_ESPACE', '/aide', 'phrase'],
       'Vous pouvez écrire à Axion-IA quand vous le souhaitez. Axion-IA vous répond sous 48 heures.'
@@ -399,7 +424,7 @@ describe('REQ-UX-002 — un texte de l’espace ne porte que les paramètres que
   });
 
   it('REQ-UX-002 : un fichier de micro-copie de l’espace que la garde ne lit pas rougit, nommé', () => {
-    const base = vueDuDepot();
+    const base = vueDuDepot(SOURCES);
     const nouveau = 'src/content/micro-copy/espace/nouvel-ecran.ts';
     const vue: Vue = { ...base, fichiersDeMicroCopie: [...base.fichiersDeMicroCopie, nouveau] };
     expect(familles(vue)).toEqual(['micro_copie_non_lue']);
@@ -413,7 +438,7 @@ describe('REQ-UX-002 — un texte de l’espace ne porte que les paramètres que
       "const e = ETATS_VIDES_ESPACE['/entreprise?q=']!;",
       'export const P = () => <p dangerouslySetInnerHTML={{ __html: e.phrase }} />;',
     ].join('\n');
-    const vue: Vue = { ...vueDuDepot(), composants: [{ chemin, contenu }] };
+    const vue: Vue = { ...vueDuDepot(SOURCES), composants: [{ chemin, contenu }] };
     expect(familles(vue)).toEqual(['html_brut']);
     expect(messages(vue)).toContain(`${chemin}:3`);
   });
@@ -424,7 +449,7 @@ describe('REQ-UX-002 — un texte de l’espace ne porte que les paramètres que
     '  `Déjà réservée par ${nom} depuis le ${depuis}`;\n';
 
   it('REQ-UX-002 : une fonction exportée collision(nom, depuis) rougit, à l’exécution et dans le source', () => {
-    const base = vueDuDepot();
+    const base = vueDuDepot(SOURCES);
     const vocabulaire = 'src/content/micro-copy/espace/vocabulaire.ts';
     const vue: Vue = {
       ...base,
@@ -447,7 +472,7 @@ describe('REQ-UX-002 — un texte de l’espace ne porte que les paramètres que
   });
 
   it('REQ-UX-002 : une Map exportée rougit — la garde ne sait pas la lire comme un texte', () => {
-    const base = vueDuDepot();
+    const base = vueDuDepot(SOURCES);
     const vue: Vue = {
       ...base,
       microCopieEspace: {
@@ -463,7 +488,7 @@ describe('REQ-UX-002 — un texte de l’espace ne porte que les paramètres que
   });
 
   it('REQ-UX-002 : un paramètre écrit dans une CLÉ d’objet rougit', () => {
-    const base = vueDuDepot();
+    const base = vueDuDepot(SOURCES);
     const vue: Vue = {
       ...base,
       microCopieEspace: {
@@ -479,7 +504,7 @@ describe('REQ-UX-002 — un texte de l’espace ne porte que les paramètres que
   });
 
   it('REQ-UX-002 : un module de micro-copie HORS espace/, ni parcouru ni déclaré, rougit', () => {
-    const base = vueDuDepot();
+    const base = vueDuDepot(SOURCES);
     const commun = 'src/content/micro-copy/commun/libelles.ts';
     const vue: Vue = { ...base, fichiersDeMicroCopie: [...base.fichiersDeMicroCopie, commun] };
     expect(familles(vue)).toEqual(['micro_copie_non_lue']);
@@ -487,7 +512,7 @@ describe('REQ-UX-002 — un texte de l’espace ne porte que les paramètres que
   });
 
   it('REQ-UX-002 : contre-témoin — les deux utilitaires de la liste blanche et les textes actuels restent verts', () => {
-    const base = vueDuDepot();
+    const base = vueDuDepot(SOURCES);
     expect(familles(base)).toEqual([]);
     const lus = (base.sourcesMicroCopie ?? []).map((f) => f.chemin);
     expect(lus).toEqual(
@@ -506,7 +531,7 @@ describe('REQ-UX-002 — un texte de l’espace ne porte que les paramètres que
       'export const P = ({ t }: { t: string }) => <p {...brut(t)} />;',
       "export const Q = ({ t }: { t: string }) => createElement('p', { ['dangerouslySetInnerHTML']: { __html: t } });",
     ].join('\n');
-    const vue: Vue = { ...vueDuDepot(), composants: [{ chemin, contenu }] };
+    const vue: Vue = { ...vueDuDepot(SOURCES), composants: [{ chemin, contenu }] };
     expect([...new Set(familles(vue))]).toEqual(['html_brut']);
     expect(messages(vue)).toContain(`${chemin}:2`);
     expect(messages(vue)).toContain(`${chemin}:4`);
@@ -547,7 +572,7 @@ function fuites(lignes: readonly { chemin: string; texte: string }[]): string[] 
 
 describe('REQ-UX-002 — snapshot des libellés de l’espace, sans date, sans nom, sans UUID', () => {
   it('REQ-UX-002 : le snapshot de TOUS les libellés rendus (tout champ chaîne, toute profondeur)', () => {
-    const lignes = textesDeLEspace(vueDuDepot());
+    const lignes = textesDeLEspace(vueDuDepot(SOURCES));
     expect(lignes.length).toBeGreaterThanOrEqual(100);
     expect(lignes.map((l) => `${l.chemin} : ${l.texte}`).join('\n')).toMatchInlineSnapshot(`
       "espace/issues-depot.ts › MENTIONS_HORODATAGE › a_votre_nom : Enregistré à votre nom le {dateEnregistrement}.
@@ -701,6 +726,20 @@ describe('REQ-UX-002 — snapshot des libellés de l’espace, sans date, sans n
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › /connexion/<jeton> › titre : Ce lien a déjà servi
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › /connexion/<jeton> › phrase : Un lien de connexion ne sert qu’une fois. Un nouveau lien peut vous être envoyé.
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › /connexion/<jeton> › action › libelle : M'envoyer un nouveau lien
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /mes-entreprises/<id> › titre : Aucun échange noté
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /mes-entreprises/<id> › phrase : Rien n’est attendu ici : les étapes d’Axion-IA s’affichent dans la frise.
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /mes-entreprises/<id> › action › libelle : Noter un échange
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /profil/personnes › titre : Personne n’agit pour vous
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /profil/personnes › phrase : Si quelqu’un rencontre des entreprises pour vous, vous pouvez le déclarer ici. Seules vos propres rencontres et celles des personnes déclarées permettent de réserver une entreprise pour vous.
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /profil/personnes › action › libelle : Déclarer une personne
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /mon-contrat › titre : Votre contrat est en préparation
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /mon-contrat › phrase : Il est préparé quand vos pièces sont vérifiées. Vous le lirez ici avant de le signer ; rien n’est à faire d’ici là.
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /mon-contrat › action › libelle : Voir mes vérifications
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /mon-contrat › action › route : /conformite
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /notifications › titre : Aucune notification
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /notifications › phrase : Les nouvelles de vos entreprises apparaîtront ici. Rien n’est à consulter régulièrement : les avis importants arrivent aussi par e-mail.
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /notifications › action › libelle : Retour à l'accueil
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /notifications › action › route : /
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › /confidentialite › titre : Aucun destinataire nommé
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › /confidentialite › phrase : Le registre des traitements ne nomme encore aucun prestataire ni organisme qui reçoive vos données.
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › /confidentialite › action › libelle : Retour à l'accueil
@@ -772,8 +811,8 @@ describe('REQ-UX-002 — snapshot des libellés de l’espace, sans date, sans n
   });
 
   it('REQ-UX-002 : aucun libellé du snapshot ne porte de date, de nom, d’UUID ni de paramètre hors liste', () => {
-    expect(fuites(textesDeLEspace(vueDuDepot()))).toEqual([]);
-    expect(familles(vueDuDepot())).toEqual([]);
+    expect(fuites(textesDeLEspace(vueDuDepot(SOURCES)))).toEqual([]);
+    expect(familles(vueDuDepot(SOURCES))).toEqual([]);
   });
 
   it('REQ-UX-002 : témoin — un libellé piégé (nom, date, UUID) est vu par la lecture du snapshot', () => {
@@ -872,7 +911,7 @@ describe('REQ-UX-019 — chaque écran de l’espace et de la console a un état
 
   it('REQ-UX-019 : l’état vide de « Mes entreprises » mène au premier dépôt', () => {
     expect(ETATS_VIDES_ESPACE[ECRAN_MES_ENTREPRISES]!.action.route).toBe(ROUTE_DU_DEPOT);
-    const base = vueDuDepot();
+    const base = vueDuDepot(SOURCES);
     const detourne = {
       ...base.etatsVidesEspace[ECRAN_MES_ENTREPRISES]!,
       action: { libelle: 'Retour à l’accueil', route: '/' },
@@ -885,7 +924,7 @@ describe('REQ-UX-019 — chaque écran de l’espace et de la console a un état
   });
 
   it('REQ-UX-019 : un écran sans état vide déclaré fait rougir la garde, qui le NOMME', () => {
-    const base = vueDuDepot();
+    const base = vueDuDepot(SOURCES);
     const vue: Vue = { ...base, ecransEspace: [...base.ecransEspace, '/ecran-temoin'] };
     expect(familles(vue)).toEqual(['ecran_sans_etat_vide']);
     expect(messages(vue)).toContain('/ecran-temoin');
@@ -895,7 +934,7 @@ describe('REQ-UX-019 — chaque écran de l’espace et de la console a un état
   });
 
   it('REQ-UX-019 : une action qui mène à une route inconnue de la carte fait rougir la garde', () => {
-    const base = vueDuDepot();
+    const base = vueDuDepot(SOURCES);
     const perdu = {
       ...base.etatsVidesEspace['/aide']!,
       action: { libelle: 'Écrire à Axion-IA', route: '/route-inexistante' },
@@ -927,7 +966,7 @@ describe('REQ-UX-019 — un libellé vit dans la micro-copie, jamais en dur dans
     expect(fautes.map((f) => f.ligne)).toEqual([4, 5, 6]);
     for (const f of fautes) expect(f.message).toContain(TEMOIN);
 
-    const base = vueDuDepot();
+    const base = vueDuDepot(SOURCES);
     const vue: Vue = { ...base, composants: [{ chemin: TEMOIN, contenu }] };
     expect([...new Set(familles(vue))]).toEqual(['libelle_en_dur']);
     expect(messages(vue)).toContain(`${TEMOIN}:5`);

@@ -44,7 +44,17 @@ import {
   notifieurTelegram,
   type Alerteur,
 } from '../integrations/telegram/alertes';
+import { verifierChaine, type LigneJournal } from '../../domain/evenement/journal';
+import { lireJournalParLots } from '../evenement/journal';
 import type { Inscriptions } from './lanceur';
+import { minimiserCandidatures } from './minimiser-candidatures';
+import { purgerLesContacts } from './purger-contacts';
+import { purgerLesSirenRefuses } from './purger-siren-refuses';
+import { completerLesCodesNaf, portsDeBase } from './completer-code-naf';
+import { creerDisjoncteur } from '../integrations/recherche-entreprises/disjoncteur';
+import { PARAMETRES } from '../integrations/recherche-entreprises/parametres';
+import { clientDuTiers } from '../integrations/recherche-entreprises/tiers';
+import { limiteurDuRegistre } from '../integrations/recherche-entreprises/limiteur';
 
 /**
  * Les traitants branchés, par type d'événement reçu. Un seul aujourd'hui : la candidature reçue
@@ -166,6 +176,44 @@ export function inscriptions(
         alerteur: canalDAlerte(env),
       }
     ),
+    // INT-T56 : la charge des candidatures non traitées au-delà du délai de la SSOT est minimisée.
+    minimiser_candidatures: async () => ({
+      minimisees: await minimiserCandidatures(prisma, new Date(horlogeSysteme.maintenant())),
+    }),
+    journal_verifier: passageDuJournal(() => lireJournalParLots(prisma)),
+    // DM-48 (REQ-DM-031) : la purge du contact à échéance, à l'heure du système.
+    contacts_purger: () => purgerLesContacts(prisma, new Date(horlogeSysteme.maintenant())),
+    // DM-53 (REQ-DM-043) : le SIREN des dépôts refusés, douze mois après le refus.
+    siren_refuses_purger: () =>
+      purgerLesSirenRefuses(prisma, new Date(horlogeSysteme.maintenant())),
+    // DM-28 (REQ-DM-046) : la reprise des codes NAF nuls. Un disjoncteur par passage : le tiers en
+    // panne interrompt la reprise, le passage suivant la relance.
+    naf_completer: () =>
+      completerLesCodesNaf({
+        ...portsDeBase(prisma),
+        tiers: clientDuTiers({
+          fetch,
+          urlDeBase: PARAMETRES.urlDeBase.valeur,
+          delaiMs: PARAMETRES.delaiAttenteMs.valeur,
+        }),
+        disjoncteur: creerDisjoncteur(),
+        // Le quota du tiers est partagé avec l'autocomplétion : la reprise passe par le même débit.
+        debit: (ms) => limiteurDuRegistre.global(ms),
+        maintenantMs: () => horlogeSysteme.maintenant(),
+      }),
+  };
+}
+
+/**
+ * DM-45 (REQ-DM-024) — le passage `journal_verifier` : le journal, lu par lots, est VÉRIFIÉ par ses
+ * liens de hash (`verifierChaine`). Une chaîne rompue fait ÉCHOUER le passage, et son battement le
+ * dit ; l'erreur nomme la faute et l'id du maillon, jamais une charge.
+ */
+export function passageDuJournal(lire: () => Promise<LigneJournal[]>) {
+  return async (): Promise<{ maillons: number }> => {
+    const v = verifierChaine(await lire());
+    if (!v.ok) throw new Error(`chaine_rompue : ${v.faute}, maillon ${v.id ?? 'aucun'}`);
+    return { maillons: v.maillons };
   };
 }
 

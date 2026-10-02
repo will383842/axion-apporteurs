@@ -27,10 +27,9 @@ import {
   API_COORDONNEES_CANDIDATURE,
   refDependanceCoordonnees,
 } from '../../../../packages/contracts/api';
-import {
-  genererCodeParrainage,
-  type SourceAleatoire,
-} from '../../../domain/apporteur/identifiants';
+import type { SourceAleatoire } from '../../../domain/apporteur/identifiants';
+import { genererCodeParrainage } from '../../../domain/parrainage/code';
+import { codeDeParrainResolu, lecteurDesParrains } from '../../parrainage/code-public';
 import { snapshotDeCandidature } from '../../../domain/apporteur/snapshot-candidature';
 import { MODELE_APPORTEUR } from '../../auth/lien-magique-depot';
 import { AttenteDeDependance } from '../../queue/workers/evenement-recu';
@@ -38,6 +37,8 @@ import { colonnesPii, empreinteRecherche, type ClesPii } from '../../securite/pi
 import { ENTETE_KID_AXIONIA } from '../../../../packages/contracts/api';
 import type { Trousseau } from '../../../lib/env';
 import { ENTETE_HORODATAGE, ENTETE_SIGNATURE, verifierSignatureAxionia } from './reception';
+import { ajouterEvenement } from '../../evenement/journal';
+import { naissanceDApporteur } from '../../../domain/evenement/charges';
 
 /** Les en-têtes de la REQUÊTE signée, tels que le contrat les publie (confrontés par le test). */
 export const ENTETE_HORODATAGE_REQUETE = 'x-partners-timestamp';
@@ -144,6 +145,24 @@ type ColonnesApporteur = {
   readonly phoneHash?: string | null;
 };
 
+/**
+ * INT-T56 (REQ-DM-036, REQ-JUR-029) — la charge CONSERVÉE d'une candidature, sans `reponsesJson` :
+ * `evenements_recus.charge` vit dix ans et ne porte aucune donnée personnelle une fois la candidature
+ * écrite. Toutes les autres clés restent à l'identique ; c'est la seule réécriture que le déclencheur
+ * d'immutabilité admet (égalité exacte `NEW.charge = OLD.charge - 'reponsesJson'`). Refuse une charge
+ * qui n'est pas un objet, ou qui n'a pas (ou plus) `reponsesJson` : une seconde réécriture n'est pas un
+ * cas normal. `payload_hash` n'est jamais touché : il reste la preuve de la charge reçue entière.
+ */
+export function chargeMinimisee(charge: unknown): Record<string, unknown> {
+  if (typeof charge !== 'object' || charge === null || Array.isArray(charge))
+    throw new Error('charge de candidature : un objet est attendu');
+  if (!Object.hasOwn(charge, 'reponsesJson'))
+    throw new Error('charge de candidature : reponsesJson absent, déjà minimisée ?');
+  const reste: Record<string, unknown> = { ...(charge as Record<string, unknown>) };
+  delete reste.reponsesJson;
+  return reste;
+}
+
 export async function traiterCandidatureRecue(
   prisma: ClientCandidature,
   recu: { readonly id: string; readonly charge: unknown },
@@ -172,7 +191,8 @@ export async function traiterCandidatureRecue(
 
     let resultat: ResultatCandidature = 'rattache';
     if (existant === null) {
-      await tx.apporteur.create({
+      const cree = await tx.apporteur.create({
+        select: { id: true },
         data: {
           statut: 'candidat',
           codeParrainage: genererCodeParrainage(d.aleatoire),
@@ -183,7 +203,11 @@ export async function traiterCandidatureRecue(
           scorePartsJson: snapshot.scorePartsJson,
           scoreBaremeVersion: snapshot.scoreBaremeVersion,
           sourceCanal: snapshot.sourceCanal,
-          parrainCodeCapture: snapshot.parrainCodeCapture,
+          // SEC-21 : conservé seulement s'il désigne un parrain actif ; sinon, comme sans code.
+          parrainCodeCapture: await codeDeParrainResolu(
+            lecteurDesParrains(tx),
+            snapshot.parrainCodeCapture
+          ),
           creeAt: d.maintenant(),
           // Les blocs et empreintes naissent de colonnesPii, ÉTALÉ (garde securite:schema-pii) ;
           // `id` vient de lui aussi. Prisma 5 accepte un Uint8Array là où il type Buffer.
@@ -199,11 +223,28 @@ export async function traiterCandidatureRecue(
           ) as unknown as ColonnesApporteur),
         },
       });
+      // DM-45 (REQ-DM-024) : la création s'inscrit au journal chaîné, dans CETTE transaction, par
+      // l'écrivain unique : la NAISSANCE, de nul vers `candidat`. Ni nom, ni courriel.
+      await ajouterEvenement(tx, {
+        type: 'apporteur_statut_modifie',
+        agregat: 'apporteur',
+        agregatId: cree.id,
+        survenuAt: d.maintenant(),
+        charge: naissanceDApporteur({ par: 'systeme' }),
+      });
       resultat = 'cree';
     }
+    // INT-T56 : la charge minimisée part dans la MÊME écriture que le passage à `traite` — le
+    // déclencheur n'admet la réécriture qu'avec ce passage ; un échec de la transaction la laisse
+    // intacte. Le snapshot a été lu plus haut, avant la minimisation.
     await tx.evenementRecu.update({
       where: { id: recu.id },
-      data: { statut: 'traite', processedAt: d.maintenant(), dependanceRef: null },
+      data: {
+        statut: 'traite',
+        processedAt: d.maintenant(),
+        dependanceRef: null,
+        charge: chargeMinimisee(recu.charge) as Prisma.InputJsonValue,
+      },
     });
     return resultat;
   });

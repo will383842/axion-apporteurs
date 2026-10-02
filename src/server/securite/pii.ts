@@ -42,7 +42,9 @@ export type MotifPii =
   | 'courriel_invalide'
   | 'telephone_invalide'
   | 'iban_invalide'
-  | 'siret_invalide';
+  | 'siret_invalide'
+  | 'nom_personne_invalide'
+  | 'agent_invalide';
 
 export class ErreurPii extends Error {
   constructor(
@@ -279,12 +281,45 @@ const normaliserSiret = (valeur: string): string => {
   return normalise;
 };
 
+/**
+ * Un segment de nom de personne : forme NFD, diacritiques retirés, majuscules, toute ponctuation
+ * réduite à une espace, bords retirés. « Jean-Émile » et « JEAN EMILE » donnent le même segment.
+ */
+export function normaliserSegmentDeNom(texte: string): string {
+  return texte
+    .normalize('NFD')
+    .replace(/\p{M}+/gu, '')
+    .toUpperCase()
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim();
+}
+
+/**
+ * Nom d'une personne (DM-07, partners/ADR-0022 point 6) — l'empreinte des dirigeants. Les segments
+ * séparés par U+001F (nom, prénoms) sont normalisés un à un et gardent leur séparation : « Jean »
+ * puis « Paul Martin » ne se confond pas avec « Jean Paul » puis « Martin ». Tout vide : refus.
+ */
+const normaliserNomPersonne = (valeur: string): string => {
+  const segments = valeur.split('\u001f').map(normaliserSegmentDeNom);
+  if (segments.every((s) => s === '')) throw refus('nom_personne_invalide', 'le nom');
+  return segments.join('\u001f');
+};
+
+/** En-tête de navigateur (DM-07) : bords retirés, espaces réduits ; jamais vide. */
+const normaliserAgent = (valeur: string): string => {
+  const normalise = valeur.replace(/\s+/g, ' ').trim();
+  if (normalise === '') throw refus('agent_invalide', 'l’en-tête de navigateur');
+  return normalise;
+};
+
 /** La SOURCE des types d'empreinte : le type se dérive de ses clés, jamais d'une liste tapée. */
 const NORMALISATIONS = {
   courriel: normaliserCourriel,
   telephone: normaliserTelephone,
   iban: normaliserIban,
   siret: normaliserSiret,
+  nom_personne: normaliserNomPersonne,
+  agent: normaliserAgent,
 } satisfies Record<string, (valeur: string) => string>;
 
 export type TypeEmpreinte = keyof typeof NORMALISATIONS;
@@ -296,8 +331,16 @@ export const TYPES_EMPREINTE = Object.keys(NORMALISATIONS) as readonly TypeEmpre
  * séparée par domaine — une même chaîne donne deux empreintes selon son type. Forme `HASH_HEX_64`.
  */
 export function empreinteRecherche(type: TypeEmpreinte, valeur: string, cles: ClesPii): string {
+  return empreinteSousCle(type, valeur, cles.empreintes);
+}
+
+/**
+ * La même empreinte, sous la clé PII_HASH_KEY reçue en clair — pour un appelant qui ne tient que
+ * cette clé (l'empreinteur des dirigeants, INT-T09, DM-07). Une seule écriture du format.
+ */
+export function empreinteSousCle(type: TypeEmpreinte, valeur: string, cle: string): string {
   const normalise = NORMALISATIONS[type](valeur);
-  return createHmac('sha256', cles.empreintes)
+  return createHmac('sha256', cle)
     .update(['partners.empreinte.v1', type, normalise].join('\u001f'), 'utf8')
     .digest('hex');
 }
@@ -324,6 +367,15 @@ export const CHAMPS_PII = {
   email: { chiffre: 'emailChiffre', empreinte: 'emailHash', type: 'courriel' },
   telephone: { chiffre: 'telephoneChiffre', empreinte: 'phoneHash', type: 'telephone' },
   iban: { chiffre: 'ibanChiffre', empreinte: 'ibanHash', type: 'iban' },
+  // DM-07 : le contact rencontré (REQ-DM-031), sans empreinte de nom (HYP-A02-EMPREINTE-NOM-CONTACT),
+  // sa fonction (chiffrée, décision A02 du 2026-10-02), le contexte, l'adresse de l'entreprise et la
+  // précision du lien d'intérêt (REQ-UX-039).
+  nomContact: { chiffre: 'nomContactChiffre' },
+  prenomContact: { chiffre: 'prenomContactChiffre' },
+  fonctionContact: { chiffre: 'fonctionContactChiffre' },
+  contexte: { chiffre: 'contexteChiffre' },
+  codePostal: { chiffre: 'codePostalChiffre' },
+  lienInteretPrecision: { chiffre: 'lienInteretPrecisionChiffre' },
 } as const satisfies Record<
   string,
   { chiffre: string } | { chiffre: string; empreinte: string; type: TypeEmpreinte }
@@ -360,4 +412,29 @@ export function colonnesPii(
     }
   }
   return sortie as ColonnesPii;
+}
+
+/** Les colonnes que l'effacement des champs `C` met à `null` : leur bloc, et leur empreinte s'il y en a une. */
+export type EffacementPii<C extends ChampPii> = {
+  [K in ChampsPii[C]['chiffre'] | Extract<ChampsPii[C], { empreinte: string }>['empreinte']]: null;
+};
+
+/**
+ * L'EFFACEMENT des champs de personne nommés, prêt à étaler dans `data` : le bloc chiffré de chacun
+ * ET son empreinte, s'il en a une, à `null` — ensemble, par construction, comme les CHECK l'exigent.
+ * Aucune clé ni aucun clair : rien n'est chiffré, rien n'est lu. La SOURCE est `CHAMPS_PII`, jamais une
+ * liste de colonnes recopiée. Une liste vide est refusée : un effacement qui n'efface rien est une
+ * erreur d'appel.
+ */
+export function effacementPii<C extends ChampPii>(champs: readonly C[]): EffacementPii<C> {
+  if (champs.length === 0) {
+    throw new EntreeRefuseePii('ligne_incomplete', 'l’effacement exige au moins un champ');
+  }
+  const sortie: Record<string, null> = {};
+  for (const champ of champs) {
+    const def: ChampsPii[ChampPii] = CHAMPS_PII[champ];
+    sortie[def.chiffre] = null;
+    if ('empreinte' in def) sortie[def.empreinte] = null;
+  }
+  return sortie as EffacementPii<C>;
 }
