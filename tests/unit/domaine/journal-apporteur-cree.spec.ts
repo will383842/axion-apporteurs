@@ -35,7 +35,8 @@ const NAISSANCE = () => ({
 
 /** Une chaîne bien formée : la genèse, puis `n` naissances d'apporteur. */
 function chaine(n: number): LigneJournal[] {
-  const lignes: LigneJournal[] = [{ ...GENESE, id: '1' } as LigneJournal];
+  const genese: LigneJournal = { ...GENESE, id: '1' };
+  const lignes: LigneJournal[] = [genese];
   for (let i = 0; i < n; i += 1) {
     const e: Enregistrement = {
       type: 'apporteur_statut_modifie',
@@ -98,7 +99,9 @@ describe('REQ-DM-024 — la charge de `apporteur_statut_modifie` est fermée', (
   });
 
   it('REQ-DM-024 : l’acteur est OBLIGATOIRE, et sous sa forme unique', () => {
-    const { acteur: _retire, ...sans } = NAISSANCE();
+    const sans = Object.fromEntries(
+      Object.entries(NAISSANCE()).filter(([cle]) => cle !== 'acteur')
+    );
     expect(schema.safeParse(sans).success).toBe(false);
     expect(schema.safeParse({ ...NAISSANCE(), acteur: { par: 'quelqu-un' } }).success).toBe(false);
     expect(FORMES.acteur().safeParse({ par: 'systeme' }).success).toBe(true);
