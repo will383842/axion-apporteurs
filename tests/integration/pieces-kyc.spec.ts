@@ -14,6 +14,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { demarrerBase, type Base } from './harnais';
+import { TYPES_A_ECHEANCE, TYPES_PIECE_KYC } from '../../src/domain/kyc/pieces';
 
 let base: Base;
 let apporteurId: string;
@@ -87,16 +88,20 @@ async function refus(promesse: Promise<unknown>): Promise<string> {
 }
 
 describe('REQ-DM-027 — les formes d’une pièce du KYC', () => {
-  it('REQ-DM-027 : l’échéance est obligatoire pour vigilance et rc_pro, facultative ailleurs', async () => {
-    const a = await unApporteur();
-    for (const type of ['vigilance', 'rc_pro']) {
-      expect(await refus(piece({ apporteur: a, type, expireAt: null }))).toContain(
-        'pieces_kyc_echeance_requise'
-      );
-      await expect(piece({ apporteur: a, type, expireAt: ECHEANCE })).resolves.toBeTruthy();
+  it.each([...TYPES_PIECE_KYC])(
+    'REQ-DM-027 : %s — l’échéance est exigée pour vigilance et rc_pro, et pour eux seuls',
+    async (type) => {
+      const a = await unApporteur();
+      if ((TYPES_A_ECHEANCE as readonly string[]).includes(type)) {
+        expect(await refus(piece({ apporteur: a, type, expireAt: null }))).toContain(
+          'pieces_kyc_echeance_requise'
+        );
+        await expect(piece({ apporteur: a, type, expireAt: ECHEANCE })).resolves.toBeTruthy();
+      } else {
+        await expect(piece({ apporteur: a, type, expireAt: null })).resolves.toBeTruthy();
+      }
     }
-    await expect(piece({ apporteur: a, type: 'siret', expireAt: null })).resolves.toBeTruthy();
-  });
+  );
 
   it('REQ-DM-027 : l’IBAN n’existe que sur une pièce rib, bloc et empreinte ensemble, empreinte hexadécimale', async () => {
     const a = await unApporteur();
