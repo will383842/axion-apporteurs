@@ -1,6 +1,6 @@
 // @req REQ-DM-015
 /**
- * DM-46 — les arrondis de la commission, sur des attendus calculés À LA MAIN (écart C14 de la
+ * DM-46 — les arrondis de la commission, sur des attendus calculés À LA MAIN (écart de la
  * vérification de bout en bout : l'oracle d'arrondi ÉTAIT la formule, et la permutation se jouait
  * sur des factures soldées, où l'ordre ne peut rien changer).
  *
@@ -22,7 +22,7 @@ import {
   prorataDesEncaissements,
   type EntreeCalcul,
 } from '../../../src/domain/commission/calcul';
-import type { ContenuGrille } from '../../../src/domain/commission/grille';
+import { BPS_MAX, type ContenuGrille } from '../../../src/domain/commission/grille';
 
 /** Une grille SYNTHÉTIQUE : deux taux ronds, aucune valeur réelle. */
 const GRILLE_SYNTHETIQUE: ContenuGrille = {
@@ -32,17 +32,19 @@ const GRILLE_SYNTHETIQUE: ContenuGrille = {
   commissions: [
     {
       commissionId: 'temoin-12-5',
-      libelleFr: 'Taux témoin 12,5 %',
+      libelleFr: 'Taux témoin, un huitième',
       kind: 'percent',
       montantCents: null,
-      tauxBps: 1250,
+      // un huitième de 10 000 bps = 1 250 bps — synthétique, aucune valeur d'une grille publiée
+      tauxBps: BPS_MAX / 8,
     },
     {
       commissionId: 'temoin-15',
-      libelleFr: 'Taux témoin 15 %',
+      libelleFr: 'Taux témoin, trois vingtièmes',
       kind: 'percent',
       montantCents: null,
-      tauxBps: 1500,
+      // trois vingtièmes de 10 000 bps = 1 500 bps — synthétique
+      tauxBps: (BPS_MAX * 3) / 20,
     },
   ],
   paliers: [
@@ -89,7 +91,8 @@ describe('REQ-DM-015 — l’arrondi au demi-centime supérieur, sur trois atten
 
   it('REQ-DM-015 : un reste AU-DESSUS de la moitié s’arrondit vers le haut — une troncature rendrait 499', () => {
     // 3 333 c × 1 500 bps / 10 000 = 4 999 500 / 10 000 = 499,95 c → 500 c
-    expect(calculerCommission(entree('temoin-15', 3_333))).toMatchObject({ montantCents: 500 });
+    const attendu = 500;
+    expect(calculerCommission(entree('temoin-15', 3_333))).toMatchObject({ montantCents: attendu });
   });
 });
 
