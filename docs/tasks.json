@@ -4756,7 +4756,8 @@
         "axionia/src/app/api/partners/reconciliation/route.ts",
         "axionia/src/server/partners-sync/reconciliation.ts",
         "axionia/src/server/partners-sync/__tests__/reconciliation.spec.ts",
-        "axionia/tests/integration/reconciliation.spec.ts"
+        "axionia/tests/integration/reconciliation.spec.ts",
+        "axionia/src/server/partners-sync/__tests__/relecture-contrat-v3.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -4781,7 +4782,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "Vérification V2 (GOV-132, C-01, condition 4) : axion-ia rend la relecture de son outbox par `after_sequence` et `rejouerEvenement` appelable (route ou script), dans des bornes nommées ; témoins rouges d'abord. AMENDEMENT (audit indépendant du plan de la Phase 1 (2026-10-01), écart B-07) : la route de relecture est déclarée dans `packages/contracts/api.ts`, dans la même montée v3."
+      "acceptance": "Vérification V2 (GOV-132, C-01, condition 4) : axion-ia rend la relecture de son outbox par `after_sequence` et `rejouerEvenement` appelable (route ou script), dans des bornes nommées ; témoins rouges d'abord. AMENDEMENT (audit indépendant du plan de la Phase 1 (2026-10-01), écart B-07) : la route de relecture est déclarée dans `packages/contracts/api.ts`, dans la même montée v3. RECENTRAGE (rattrapage 66, coordination avec A05) : la relecture par `after_sequence` EXISTE déjà (INT-T02) ; INT-T08-A se recentre sur `rejouerEvenement` (`reconciliation.ts` et `POST /api/partners/reconciliation`). La déclaration de la route au contrat relève d'INT-T70-P ; INT-T08-A en est l'ADOPTION unique côté axion-ia : sa copie de `contracts.v3.json` est vérifiée par `sha256sum -c contracts.sha256`, avec l'empreinte égale à celle de Partners ; le témoin de sa route valide sa réponse contre `api_relecture_reponse` de SA copie et rougit si un champ sort du schéma (A02)."
     },
     {
       "id": "INT-T08-P",
@@ -5796,7 +5797,7 @@
           "textes-apporteurs-charte-relationnelle.spec.ts"
         ]
       },
-      "acceptance": "Porté par l'audit indépendant du plan de la Phase 1 (2026-10-01, `_REPRISE-AXION-APPORTEURS/AUDIT-PLAN-PHASE-1.md`) (écart B-17). Audit des textes de l'espace et des courriels contre la charte relationnelle. La garde existe (`scripts/gates/lexique-apporteurs.ts`, GOV-013, GOV-106, GOV-109) : on étend `src/domain/lexique/lexique-interdit.ts` pour REQ-JUR-012 et REQ-JUR-013, jamais une garde nouvelle. TÉMOIN rouge par famille ajoutée. CHEMIN (rattrapage 53) : `src/domain/lexique/lexique-interdit.ts`, que l'acceptance étend, entre aux chemins. MUTATION (rattrapage 63, rectifiée au rattrapage 64 par la lentille sécurité) : le témoin « REQ-JUR-034 : le binaire sur le dépôt sort en 0 et imprime les fichiers et clés confrontés », seul et par son titre exact, entre dans ECARTES ; il lance la garde sur les fichiers suivis du dépôt, que le bac à sable instrumenté ne reproduit pas (motif de la lentille sécurité, validé pour ce témoin le 2026-10-02) ; jamais de Stryker disable. Les autres témoins de la describe « REQ-JUR-034 — aucun agrégat du réseau dans un DTO de l'espace », qui exécutent le code, restent mutés."
+      "acceptance": "Porté par l'audit indépendant du plan de la Phase 1 (2026-10-01, `_REPRISE-AXION-APPORTEURS/AUDIT-PLAN-PHASE-1.md`) (écart B-17). Audit des textes de l'espace et des courriels contre la charte relationnelle. La garde existe (`scripts/gates/lexique-apporteurs.ts`, GOV-013, GOV-106, GOV-109) : on étend `src/domain/lexique/lexique-interdit.ts` pour REQ-JUR-012 et REQ-JUR-013, jamais une garde nouvelle. TÉMOIN rouge par famille ajoutée. CHEMIN (rattrapage 53) : `src/domain/lexique/lexique-interdit.ts`, que l'acceptance étend, entre aux chemins. MUTATION (rattrapage 63, rectifiée au rattrapage 64 par la lentille sécurité) : le témoin « REQ-JUR-034 : le binaire sur le dépôt sort en 0 et imprime les fichiers et clés confrontés », seul et par son titre exact, entre dans ECARTES ; il lance la garde sur les fichiers suivis du dépôt, que le bac à sable instrumenté ne reproduit pas (motif de la lentille sécurité, validé pour ce témoin le 2026-10-02) ; jamais de Stryker disable. Les autres témoins de la describe « REQ-JUR-034 — aucun agrégat du réseau dans un DTO de l'espace », qui exécutent le code, restent mutés. QUATRE TÉMOINS (rattrapage 66, validés par la lentille sécurité le 2026-10-02), chacun seul par son titre exact, qui lancent une garde sur les fichiers suivis : « REQ-JUR-034 : le binaire sur le dépôt sort en 0 et imprime les fichiers et clés confrontés » ; « REQ-JUR-035 : le binaire sur le dépôt sort en 0 et imprime les noms confrontés » ; « REQ-JUR-037 : le binaire `jur:lexique-social` sur le dépôt sort en 0 et imprime les fichiers lus » ; « REQ-SEC-029 : le dépôt réel — aucune faute, et un plancher de fichiers et d’attributs confrontés » (`csp-inline.spec.ts` ; ses témoins synthétiques restent mutés). Tous les autres témoins de ces describe restent mutés."
     },
     {
       "id": "CPL-T06",
@@ -9010,7 +9011,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "enum `origine`, `canal` contraint par `CampagneRecrutement`, hash e-mail et téléphone normalisés, rattachement au lieu de création. 🔴 **Complétée le 2026-09-25 (décision du 2026-09-25, par délégation de Will, GOV-099).** EXT-T03 porte la dérivation de `sourceCanal` — chaîne transportée figée par DM-06 (REQ-DM-035) — vers l'enum `CanalCandidature` (`site`, `linkedin`, `jobboard`, `saisie_console`, `autre`, glossaire §4) : une table de correspondance chemin → canal, côté Partners, en SSOT ; un chemin inconnu donne `autre` et est journalisé, jamais un canal deviné. Tests : chaque entrée de la table → son canal ; chemin inconnu → `autre` et une entrée de journal ; `sourceCanal` nulle → `autre` ; la valeur transportée n'est jamais modifiée par la dérivation. ⚠️ **Dette de cadrage, NON tranchée ici — à cadrer avant EXT-T03** : le producteur axionia émet aujourd'hui une **constante de chemin** pour `sourceCanal` ; `linkedin` et `jobboard` ne seront donc atteignables que par les paramètres `utm`, que DM-06 ne stocke pas. Tant que ce point n'est pas cadré, la table chemin → canal ne sait produire que `site`, `saisie_console` ou `autre`. 🔴 **Complétée le 2026-09-26 (cadrage de l'architecte sur délégation de Will, partners/ADR-0022, GOV-102).** Schéma : `enum OrigineCandidature {tunnel, saisie_console, import, parrainage}` et `enum TypeFichierCv {pdf, docx, jpg, png}` ; sur `apporteurs` : `origine`, `canalCandidature` et `campagneId` (clé étrangère), nullables ; NOT NULL RELÂCHÉ sur `candidature_id`, `reponses_json`, `score_initial`, `score_parts_json` et `score_bareme_version` (saisie console et `score_indisponible`, REQ-EXT-010 ; relâcher est additif), avec CHECK « les trois colonnes de score présentes ensemble ». Tables `campagnes_recrutement {canal CanalCandidature, libelle, coutCents Int >= 0, debutAt, finAt}` et `pieces_jointes_candidature {apporteurId, cle (objet privé), typeFichier, tailleOctets entre 1 et 10485760, empreinteSha256 Char(64), deposeeAt, purgeeAt}`. Journal `candidature_rattachee` (agrégat `apporteur`, charge `{apporteurIdRattache}`). EXT-T04 écrit dans ces tables sans migration. (vérification V2 (GOV-132, 2026-10-01), A2-15 : pas d'écran, REQ-UX-047 retirée.)"
+      "acceptance": "enum `origine`, `canal` contraint par `CampagneRecrutement`, hash e-mail et téléphone normalisés, rattachement au lieu de création. 🔴 **Complétée le 2026-09-25 (décision du 2026-09-25, par délégation de Will, GOV-099).** EXT-T03 porte la dérivation de `sourceCanal` — chaîne transportée figée par DM-06 (REQ-DM-035) — vers l'enum `CanalCandidature` (`site`, `linkedin`, `jobboard`, `saisie_console`, `autre`, glossaire §4) : une table de correspondance chemin → canal, côté Partners, en SSOT ; un chemin inconnu donne `autre` et est journalisé, jamais un canal deviné. Tests : chaque entrée de la table → son canal ; chemin inconnu → `autre` et une entrée de journal ; `sourceCanal` nulle → `autre` ; la valeur transportée n'est jamais modifiée par la dérivation. ⚠️ **Dette de cadrage, NON tranchée ici — à cadrer avant EXT-T03** : le producteur axionia émet aujourd'hui une **constante de chemin** pour `sourceCanal` ; `linkedin` et `jobboard` ne seront donc atteignables que par les paramètres `utm`, que DM-06 ne stocke pas. Tant que ce point n'est pas cadré, la table chemin → canal ne sait produire que `site`, `saisie_console` ou `autre`. 🔴 **Complétée le 2026-09-26 (cadrage de l'architecte sur délégation de Will, partners/ADR-0022, GOV-102).** Schéma : `enum OrigineCandidature {tunnel, saisie_console, import, parrainage}` et `enum TypeFichierCv {pdf, docx, jpg, png}` ; sur `apporteurs` : `origine`, `canalCandidature` et `campagneId` (clé étrangère), nullables ; NOT NULL RELÂCHÉ sur `candidature_id`, `reponses_json`, `score_initial`, `score_parts_json` et `score_bareme_version` (saisie console et `score_indisponible`, REQ-EXT-010 ; relâcher est additif), avec CHECK « les trois colonnes de score présentes ensemble ». Tables `campagnes_recrutement {canal CanalCandidature, libelle, coutCents Int >= 0, debutAt, finAt}` et `pieces_jointes_candidature {apporteurId, cle (objet privé), typeFichier, tailleOctets entre 1 et 10485760, empreinteSha256 Char(64), deposeeAt, purgeeAt}`. Journal `candidature_rattachee` (agrégat `apporteur`, charge `{apporteurIdRattache}`). EXT-T04 écrit dans ces tables sans migration. (vérification V2 (GOV-132, 2026-10-01), A2-15 : pas d'écran, REQ-UX-047 retirée.) PORTÉE (rattrapage 66, décision de la coordination) : portée par la console d'axion-ia en V1 (ADR 0051 d'axion-ia, B1 de Will du 2026-09-19 : l'origine et la provenance sont portées par la `Submission`) ; reprise côté Partners si les seuils de l'ADR 0051 sont franchis (import si plus de 10 candidatures par mois ; table dédiée au-delà d'environ 500 lignes apporteurs). Revendication relâchée avant toute ligne de code (A05). QUESTIONS OUVERTES (A05) : Q1, la campagne d'une candidature du tunnel (REQ-EXT-008 : « refusée sans campagne ») ; Q2, la durée de purge du CV, absente de `retention.ts`. CONSTAT : le rattachement par empreinte (REQ-EXT-009) existe déjà côté Partners dans `candidature-recue.ts` (INT-T26) ; seul l'événement `candidature_rattachee` manque."
     },
     {
       "id": "EXT-T04",
@@ -12937,13 +12938,22 @@
       ],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "(1) Sur chacune des fixtures ENREGISTRÉES d'INT-T09, le code NAF stocké sur l'attribution égale `activite_principale` de la fixture s'il est en NAF rév. 2, nul sinon (CHECK de DM-07) — jamais `activite_principale_naf25`, que REQ-INT-021 n'énumère pas. (2) Dépôt en repli manuel → code NAF nul ; le formulaire de dépôt ne porte aucun champ de code NAF. (3) La reprise, déclenchée à la fermeture du disjoncteur, complète les codes nuls par un nouvel appel au tiers (fixture) et n'écrase jamais un code déjà présent. (4) Un tiers qui ne rend pas le code laisse le champ nul (« non renseigné »), sans valeur par défaut. (5) TÉMOIN : une reprise qui écrirait une valeur par défaut fait rougir le test (4). AMENDEMENT (audit indépendant du plan de la Phase 1 (2026-10-01, `_REPRISE-AXION-APPORTEURS/AUDIT-PLAN-PHASE-1.md`), écart A-07) : la reprise passe par un passage périodique du lanceur (GOV-137), ou par `src/server/integrations/recherche-entreprises/disjoncteur.ts` ; le choix est écrit à la revendication. CHOIX DE LA REVENDICATION (rattrapage 55, A05, issue #431, amendement A-07) : (1) REPRISE : un passage périodique du lanceur (GOV-137), tâche `naf_completer` au registre des tâches (REQ-DM-046), même patron que `journal_verifier` et `contacts_purger` ; inerte tant que le disjoncteur est ouvert, reprise seule à sa fermeture ; `disjoncteur.ts` intact. Le passage vit dans `src/server/taches/completer-code-naf.ts` (il remplace `src/server/jobs/completer-code-naf.ts`). (2) Le témoin « n'écrase jamais un code présent » se juge en base réelle (`tests/integration/completer-code-naf.spec.ts`). (3) PORTÉE : le dépôt n'existe pas encore (SEC-12) ; DM-28 livre la fonction PURE `codeNafDuDepot` (lit `activite_principale`, jamais `activite_principale_naf25` ; null en repli ou en absence), que SEC-12 appellera, et la reprise. Le point (2) (« aucun champ de code NAF au formulaire ») se juge sur le schéma d'entrée du dépôt s'il existe à la PR, sinon il est écrit en reste pour SEC-12 et l'UX. LIMITEUR (rattrapage 64, condition de la lentille sécurité, faite par A05 dans #481) : la reprise consomme le débit GLOBAL du mandataire (quota partagé avec l'autocomplétion) ; refusée ou en panne, elle s'interrompt sans appel au tiers ; témoins à deux faces.",
       "tests": {
         "REQ-DM-046": [
           "tests/unit/domaine/code-naf-au-depot.spec.ts"
         ]
-      }
+      },
+      "branch": "t/dm-28",
+      "owner": "A05",
+      "pr": 481,
+      "attestation": {
+        "pr": 481,
+        "sha": "aabd35196e584a120639b132f573b005c6c24220",
+        "fusionneeAt": "2026-10-02T16:40:28Z"
+      },
+      "motif": null
     },
     {
       "id": "DM-29",
@@ -20937,6 +20947,38 @@
       "tests": {
         "REQ-GOV-031": [
           "tests/unit/gouvernance/publication-donnee-du-poste.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "INT-T70-P",
+      "titre": "Le contrat déclare la route de relecture after_sequence dans api.ts, en amendement de la v3 tant qu'axion-ia ne l'a pas adoptée",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "integration",
+      "paths": [
+        "packages/contracts/api.ts",
+        "packages/contracts/contracts.v3.json",
+        "packages/contracts/contracts.sha256",
+        "packages/contracts/events.zod.ts",
+        "tests/unit/integration/contrat-relecture.spec.ts"
+      ],
+      "schema": true,
+      "sensible": [],
+      "deps": [
+        "INT-T46-P"
+      ],
+      "reqs": [
+        "REQ-INT-012"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "acceptance": "Versée au rattrapage 66 (option (b) de la coordination ; forme d'A02, 2026-10-02 ; amendement B-07) : la relecture par `after_sequence` tourne déjà (INT-T02) sans être déclarée au contrat. (1) deps INT-T46-P ; amende la v3 tant qu'axion-ia ne l'a pas adoptée, sinon v4 (A02). Un numéro de version se FIGE à sa première adoption par l'autre côté (axion-ia épingle l'empreinte), pas à la fusion dans Partners ; tant qu'il n'est pas adopté, ajouter la route est un AMENDEMENT : même `contracts.v3.json`, et `contracts.sha256` RÉGÉNÉRÉ par `pnpm contracts:export`, jamais retapé. Ordre : INT-T46-P (crée la v3), puis INT-T70-P (amende la v3), puis l'adoption unique côté axion-ia (INT-T08-A et la reprise de l'empreinte), une seule fenêtre de bascule. (2) La route entre dans `packages/contracts/api.ts` (« les API du contrat qui ne sont pas des webhooks »), pas dans un module dédié, en `$defs` fermés : `api_relecture_parametres` (`after_sequence` et une borne `limite` nommée) et `api_relecture_reponse` (une liste d'enveloppes déjà au contrat), `additionalProperties: false`, sous la MÊME authentification signée que les autres routes, avec un `$comment` qui porte ce que le schéma ne dit pas (bornes, absence de cache, journalisation sans donnée de personne) ; `contratJsonSchema` les inclut, donc l'empreinte les couvre. (3) TÉMOINS : `pnpm contracts:hash` (export --verifier) et `tests/unit/integration/contrat-hash.spec.ts`, existants, plus `tests/unit/integration/contrat-relecture.spec.ts` : la route est dans `$defs`, fermée, et l'empreinte change quand un champ de la route change. Auteur : A05. Lentille schema (A02).",
+      "tests": {
+        "REQ-INT-012": [
+          "tests/unit/integration/contrat-relecture.spec.ts"
         ]
       }
     }
