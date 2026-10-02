@@ -35,7 +35,6 @@ import { readFileSync, existsSync } from 'node:fs';
 import { DEPOT_LOCAL, MOTIF_SHA, depotDeLaTache, type Attestation } from '../lot/attestation';
 import { cheminsProposesDuDepot } from '../lot/paths-proposes';
 import { estUneVueDerivee } from '../vues/vues';
-import { ecrireEtSortir } from '../lib/sortie';
 
 /**
  * `--taches <chemin>` : juger un AUTRE backlog que celui du dépôt (GOV-038). Même motif que le
@@ -488,38 +487,37 @@ function resolue(e: Etat): LigneChantier {
 }
 
 // ── mode --rapport : le même calcul, en JSON ─────────────────────────────────
-// GOV-140 : le rapport dépasse le tampon d'un pipe ; `ecrireEtSortir` attend que la sortie soit
-// vidée avant de sortir. L'écriture étant asynchrone, les modes suivants sont en `else` : aucun ne
-// doit s'exécuter (ni sortir) pendant que le rapport s'écrit.
+// GOV-140 : le rapport dépasse le tampon d'un pipe (plus de 146 Ko). Sous Linux, stdout vers un pipe
+// est ASYNCHRONE : `console.log` puis `process.exit(0)` coupait le dernier morceau. On sort donc
+// dans le rappel de l'écriture, une fois la sortie vidée. L'écriture étant asynchrone, les modes
+// suivants sont en `else` : aucun ne doit s'exécuter (ni sortir) pendant que le rapport s'écrit.
 if (process.argv.includes('--rapport')) {
   const e = etatDuDepot;
-  ecrireEtSortir(
-    JSON.stringify(
-      {
-        legende: [...LEGENDE],
-        bareme: PLANCHER,
-        statutsDuSchema: e.statutsDuSchema,
-        statutsSansRang: e.statutsDuSchema.filter((s) => !(s in PLANCHER)),
-        etiquettesDeLaReq: e.etiquettesDeLaReq,
-        taches: e.taches.map((t) => ({
-          id: t.id,
-          statut: t.statut,
-          avancement: PLANCHER[t.statut] ?? null,
-          preuves: preuvesDeLaTache(t, e),
-        })),
-        chantiers: e.chantiers.map((c) => ({
-          etiquette: c.etiquette,
-          referentResolu: c.referentResolu,
-          etat: c.etat,
-          preuves: c.preuves,
-        })),
-        fautes: controler(e),
-      },
-      null,
-      2
-    ),
-    0
+  const rapport = JSON.stringify(
+    {
+      legende: [...LEGENDE],
+      bareme: PLANCHER,
+      statutsDuSchema: e.statutsDuSchema,
+      statutsSansRang: e.statutsDuSchema.filter((s) => !(s in PLANCHER)),
+      etiquettesDeLaReq: e.etiquettesDeLaReq,
+      taches: e.taches.map((t) => ({
+        id: t.id,
+        statut: t.statut,
+        avancement: PLANCHER[t.statut] ?? null,
+        preuves: preuvesDeLaTache(t, e),
+      })),
+      chantiers: e.chantiers.map((c) => ({
+        etiquette: c.etiquette,
+        referentResolu: c.referentResolu,
+        etat: c.etat,
+        preuves: c.preuves,
+      })),
+      fautes: controler(e),
+    },
+    null,
+    2
   );
+  process.stdout.write(`${rapport}\n`, () => process.exit(0));
 }
 
 // ── mode --prove : un témoin par famille, des contre-témoins qui restent verts ─
