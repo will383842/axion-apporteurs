@@ -29,4 +29,15 @@ export const DUREES_DE_RETENTION = {
     renvois: [],
     verifieLe: LE,
   },
+  // La minimisation de fond (tâche `minimiser_candidatures`) : une candidature reçue restée non
+  // traitée au-delà de ce délai perd `reponsesJson` de sa charge conservée. PLAFOND PROVISOIRE :
+  // jamais plus long sans décision de Williams.
+  CANDIDATURE_NON_TRAITEE_MINIMISEE_APRES_JOURS: {
+    valeur: 30,
+    unite: 'jours',
+    source:
+      'HYP-RGPD-RETENTION, proposition de la lentille sécurité, 2026-10-02 (minimisation des candidatures, REQ-JUR-029) — plafond provisoire, à confirmer par Williams',
+    renvois: [],
+    verifieLe: '2026-10-02',
+  },
 } as const satisfies Record<string, Seuil>;

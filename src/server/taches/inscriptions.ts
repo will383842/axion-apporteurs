@@ -36,6 +36,7 @@ import { clesPii } from '../securite/pii';
 import { verifierChaine, type LigneJournal } from '../../domain/evenement/journal';
 import { lireJournalParLots } from '../evenement/journal';
 import type { Inscriptions } from './lanceur';
+import { minimiserCandidatures } from './minimiser-candidatures';
 import { purgerLesContacts } from './purger-contacts';
 
 /**
@@ -78,6 +79,10 @@ export function inscriptions(prisma: PrismaClient): Inscriptions {
     evenements_recus: passageDesEvenementsRecus(prisma, {
       ...depot,
       battre: async () => undefined,
+    }),
+    // INT-T56 : la charge des candidatures non traitées au-delà du délai de la SSOT est minimisée.
+    minimiser_candidatures: async () => ({
+      minimisees: await minimiserCandidatures(prisma, new Date(horlogeSysteme.maintenant())),
     }),
     journal_verifier: passageDuJournal(() => lireJournalParLots(prisma)),
     // DM-48 (REQ-DM-031) : la purge du contact à échéance, à l'heure du système.
