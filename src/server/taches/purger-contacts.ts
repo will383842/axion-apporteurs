@@ -21,6 +21,7 @@ import { ETATS_OCCUPANTS } from '../../domain/attribution/etats';
 import { SEUILS } from '../../domain/seuils/ssot';
 import { MS_PAR_JOUR } from '../../domain/temps/calendrier-civil';
 import { ajouterEvenement } from '../evenement/journal';
+import { effacementPii, type ChampPii } from '../securite/pii';
 
 /** Les états LIBÉRÉS (REQ-SEC-030) : le contact se purge après `CONTACT_PURGE_APRES_LIBERATION_JOURS`. */
 export const ETATS_LIBERES = [
@@ -64,26 +65,24 @@ export function coordonneesSEffacent(natureJuridique: string | null): boolean {
 }
 
 /**
- * Le contact, colonne par colonne : le champ Prisma et sa colonne. SOURCE UNIQUE de ce que la purge
- * efface ; `lien_interet_declare` RESTE (seule la précision est une donnée de personne).
+ * Le contact, champ par champ (`CHAMPS_PII`) : SOURCE UNIQUE de ce que la purge efface. Chaque champ
+ * emporte son bloc chiffré et, s'il en a une, son empreinte (`effacementPii`). `lien_interet_declare`
+ * RESTE : seule la précision est une donnée de personne.
  */
-const CONTACT = {
-  nomContactChiffre: 'nom_contact_chiffre',
-  prenomContactChiffre: 'prenom_contact_chiffre',
-  emailChiffre: 'email_chiffre',
-  emailHash: 'email_hash',
-  telephoneChiffre: 'telephone_chiffre',
-  phoneHash: 'phone_hash',
-  fonctionContactChiffre: 'fonction_contact_chiffre',
-  contexteChiffre: 'contexte_chiffre',
-  lienInteretPrecisionChiffre: 'lien_interet_precision_chiffre',
-} as const;
+export const CHAMPS_DU_CONTACT = [
+  'nomContact',
+  'prenomContact',
+  'email',
+  'telephone',
+  'fonctionContact',
+  'contexte',
+  'lienInteretPrecision',
+] as const satisfies readonly ChampPii[];
 
-export const COLONNES_DU_CONTACT: readonly string[] = Object.values(CONTACT);
+const CONTACT_EFFACE = effacementPii(CHAMPS_DU_CONTACT);
 
-const CONTACT_EFFACE = Object.fromEntries(Object.keys(CONTACT).map((c) => [c, null])) as {
-  [C in keyof typeof CONTACT]: null;
-};
+/** Les colonnes (propriétés Prisma) que la purge met à `null`, dérivées de la primitive. */
+export const COLONNES_DU_CONTACT: readonly string[] = Object.keys(CONTACT_EFFACE);
 
 /** Un lot de lecture : la tâche reprend au passage suivant ce qu'elle n'a pas fini. */
 const LOT = 100;

@@ -99,19 +99,20 @@ describe('REQ-DM-031 — ce que la purge efface', () => {
     }
   });
 
-  it('REQ-DM-031 : les colonnes du contact effacées, exactement — lien_interet_declare reste', () => {
+  it('REQ-DM-031 : les colonnes du contact effacées, exactement, blocs et empreintes ensemble — lienInteretDeclare reste', () => {
     expect([...COLONNES_DU_CONTACT].sort()).toEqual([
-      'contexte_chiffre',
-      'email_chiffre',
-      'email_hash',
-      'fonction_contact_chiffre',
-      'lien_interet_precision_chiffre',
-      'nom_contact_chiffre',
-      'phone_hash',
-      'prenom_contact_chiffre',
-      'telephone_chiffre',
+      'contexteChiffre',
+      'emailChiffre',
+      'emailHash',
+      'fonctionContactChiffre',
+      'lienInteretPrecisionChiffre',
+      'nomContactChiffre',
+      'phoneHash',
+      'prenomContactChiffre',
+      'telephoneChiffre',
     ]);
-    expect(COLONNES_DU_CONTACT).not.toContain('lien_interet_declare');
+    expect(COLONNES_DU_CONTACT).not.toContain('lienInteretDeclare');
+    expect(COLONNES_DU_CONTACT).not.toContain('id');
   });
 
   it('REQ-DM-031 : la purge est une tâche du registre, inscrite au lanceur', () => {
