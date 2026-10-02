@@ -47,7 +47,7 @@ const GARDES = [
     nom: 'gov:publication',
     exigences: 'REQ-GOV-031 — ',
     script: 'scripts/gates/gov-publication.ts',
-    familles: 7,
+    familles: 8, // SEC-48 : donnee_du_poste
   },
   // Les familles de `gov:tasks`, y compris celles de l'attestation inter-dépôt (GOV-038) et du
   // couple état/opération (GOV-086). Le compte ENTIER est DÉRIVÉ de `FAMILLES` : la liste est
