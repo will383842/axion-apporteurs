@@ -122,14 +122,14 @@ async function refus(p: Promise<unknown>): Promise<string> {
 }
 
 /**
- * Une violation d'unicité : Prisma la rapporte par les COLONNES de l'index (P2002), parfois par son
- * nom — les deux formes désignent le même index, puisque `(siren)` seul et `(siren, rang_attente)`
+ * Une violation d'unicité : Prisma la rapporte par le code SQL et les COLONNES de l'index, sans son
+ * nom — et ces colonnes désignent un seul index, puisque `(siren)` seul et `(siren, rang_attente)`
  * n'ont chacun qu'un index unique sur la table (le premier `describe` le prouve sur `pg_indexes`).
  */
-const UNIQUE_OCCUPANT =
-  /attributions_un_occupant|Unique constraint failed on the fields: \(`siren`\)/;
-const UNIQUE_RANG =
-  /attributions_en_attente|Unique constraint failed on the fields: \(`siren`,`rang_attente`\)/;
+// Mesuré en CI (Prisma 5.22, Postgres 16) : « Raw query failed. Code: `23505`. Message: `Key
+// (siren)=(…) already exists.` » — le code SQL et les COLONNES de l'index, jamais son nom.
+const UNIQUE_OCCUPANT = /`23505`[\s\S]*Key \(siren\)=/;
+const UNIQUE_RANG = /`23505`[\s\S]*Key \(siren, rang_attente\)=/;
 
 async function definitions(): Promise<string[]> {
   const l = await base.prisma.$queryRawUnsafe<{ indexdef: string }[]>(
