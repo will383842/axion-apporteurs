@@ -315,7 +315,8 @@ export const CONCORDANCES: readonly Concordance[] = [
   },
   // JUR-T42 — un devis signé qui n'est pas encore entièrement facturé rend l'entreprise
   // indisponible, quelle que soit sa date. Le fragment s'arrête à « entièrement facturé » : la suite
-  // (« ni annulé ») attend la décision de Williams, et l'ancrage tient quelle que soit sa réponse.
+  // (« ni annulé ») a été validée par Williams le 2026-10-02 (séance, point 2) ; l'ancrage s'arrête
+  // avant elle, et reste valable si le texte devait encore changer.
   {
     decision: 'HYP-ANTERIORITE-DEVIS',
     article: '3.3',

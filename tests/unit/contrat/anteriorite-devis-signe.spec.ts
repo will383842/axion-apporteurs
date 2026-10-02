@@ -43,7 +43,7 @@ describe('REQ-DM-028 — art. 3.3 : un devis signé et pas encore entièrement f
     expect(art33()).toContain('quelle que soit sa date');
   });
 
-  it('REQ-DM-028 : la décision de Williams en attente — « ni annulé » (test à part, retirable seul)', () => {
+  it('REQ-DM-028 : « ni annulé », validé par Williams le 2026-10-02 (séance, point 2)', () => {
     expect(art33()).toContain("ayant signé un devis qui n'a été ni entièrement facturé, ni annulé");
   });
 
