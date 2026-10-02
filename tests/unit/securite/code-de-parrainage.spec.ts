@@ -50,6 +50,12 @@ describe('REQ-SEC-037 — la forme du code public de parrainage', () => {
     expect(genererCodeParrainage(octets(1, 2, 3, 5))).not.toBe(a);
   });
 
+  it('REQ-SEC-037 : une source d’aléa qui rend trop peu d’octets est refusée — pour le code comme pour le jeton de dépôt resté dans l’ancien module', () => {
+    const courte = (n: number) => new Uint8Array(n - 1);
+    expect(() => genererCodeParrainage(courte)).toThrow(RangeError);
+    expect(() => identifiants.nouveauJetonDepot(courte, 0 as never)).toThrow(/octets attendus/);
+  });
+
   it('REQ-SEC-037 : la forme vit dans src/domain/parrainage/code.ts — l’ancien module la ré-exporte, il ne la redéfinit pas', () => {
     expect(identifiants.genererCodeParrainage).toBe(genererCodeParrainage);
     expect(identifiants.estCodeParrainage).toBe(estCodeParrainage);
