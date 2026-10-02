@@ -16,6 +16,7 @@
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { randomUUID } from 'node:crypto';
+import { PrismaClient } from '@prisma/client';
 import { demarrerBase, type Base } from './harnais';
 import { cleDuVerrou, verrouConsultatif } from '../../src/server/taches/lanceur';
 import {
@@ -67,9 +68,10 @@ const statutDe = async (id: string) =>
 /** Un passage EXCLUSIF, tel que la route et le lanceur le jouent : sous le verrou de la tâche. */
 function passageExclusif(
   dispatch: (e: EvenementATraiter) => Promise<void>,
-  depot: DepotDuTravail = depotDuTravail(base.prisma)
+  depot: DepotDuTravail = depotDuTravail(base.prisma),
+  client: PrismaClient = base.prisma
 ) {
-  return verrouConsultatif(base.prisma).sous(cleDuVerrou(TACHE_DE_RECEPTION), () =>
+  return verrouConsultatif(client).sous(cleDuVerrou(TACHE_DE_RECEPTION), () =>
     passerLeTravail({ depot, dispatch, maintenant: () => INSTANT })
   );
 }
@@ -80,8 +82,8 @@ function passageExclusif(
  * sans ce dépôt, il marquerait l'événement par une autre connexion du pool, ce qu'un processus tué
  * ne fait jamais.
  */
-const depotDUnProcessusMort = (): DepotDuTravail => {
-  const vivant = depotDuTravail(base.prisma);
+const depotDUnProcessusMort = (client: PrismaClient): DepotDuTravail => {
+  const vivant = depotDuTravail(client);
   const mort = async (): Promise<never> => {
     throw new Error('processus_tue');
   };
@@ -119,11 +121,18 @@ describe('REQ-DM-036 REQ-ARG-003 — deux passages simultanés, un seul effet', 
     // Le CHEMIN RÉEL : le passage prend le verrou, lit l'événement (`aTraiter`), et meurt PENDANT
     // son dispatch — l'événement est en cours, pas encore marqué.
     const enCours: string[] = [];
-    const tue = passageExclusif(async (e) => {
-      enCours.push(e.id);
-      entre();
-      await tenu;
-    }, depotDUnProcessusMort()).then(
+    // Le processus qui va mourir a SA connexion, comme un autre processus : la tuer ne touche pas
+    // au pool du test, qui relit l'événement ensuite.
+    const mortel = new PrismaClient({ datasourceUrl: base.url });
+    const tue = passageExclusif(
+      async (e) => {
+        enCours.push(e.id);
+        entre();
+        await tenu;
+      },
+      depotDUnProcessusMort(mortel),
+      mortel
+    ).then(
       () => 'vivant',
       () => 'tue'
     );
@@ -136,6 +145,7 @@ describe('REQ-DM-036 REQ-ARG-003 — deux passages simultanés, un seul effet', 
       WHERE locktype = 'advisory' AND pid <> pg_backend_pid()`;
     relacher();
     expect(await tue).toBe('tue');
+    await mortel.$disconnect().catch(() => undefined);
     expect(await statutDe(id)).toBe('recu');
     const effets: string[] = [];
     const suivant = await passageExclusif(async (e) => void effets.push(e.id));
