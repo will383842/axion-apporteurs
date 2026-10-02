@@ -50,16 +50,26 @@ export const BADGES_DU_DEPOT = {
   enAttenteSignalee: 'En attente de confirmation — Axion-IA va appeler votre contact',
   courrielNonRecu: 'E-mail non reçu par le contact',
   nonConfirmee: 'Non confirmée par le contact',
+  // La fin d'une réservation, choisie par la CAUSE, comme la notification `attribution_liberee`
+  // (A07, 2026-10-02) : une demande vérifiée libérée ouvre une carence (art. 3.2 al. 6) ; une
+  // péremption ou une fin de durée (art. 3.4) n'en ouvre aucune.
+  reservationTermineeVerifiee:
+    'Réservation terminée · nouveau dépôt possible à partir du {dateRedepot}',
   reservationTerminee: "Réservation terminée · l'entreprise est de nouveau disponible",
 } as const;
 
 /**
  * PROPOSITION, à valider par Williams en séance (point 7 du 2026-10-02) : la phrase d'aide unique,
- * sous le 🟡 daté et sous 🔴, jamais sous la demande signalée.
+ * sous le 🟡 daté SEULEMENT — jamais avec `enAttenteSignalee`, ni avec `courrielNonRecu`, dont le
+ * délai ne court pas (A07, 2026-10-02).
  */
 export const AIDE_DU_BADGE =
   'Sans réponse de votre contact, votre dépôt est confirmé {delaiTacite} après la réception de notre e-mail.';
 
-/** Pendant la carence après une libération (question 20) : sans consigne, sans « Déposer ». */
+/**
+ * Pendant la carence après la libération d'une demande vérifiée (question 20, art. 3.2 al. 6) : la
+ * phrase du corps d'A07 pour `attribution_liberee`, sans consigne, sans « Déposer ». `{dateRedepot}`
+ * est la même date que celle de la notification.
+ */
 export const CARENCE_DU_REDEPOT =
-  'Vous pourrez déposer cette entreprise à nouveau à partir du {date}.';
+  'Vous pourrez déposer à nouveau cette entreprise à partir du {dateRedepot}.';

@@ -830,9 +830,10 @@ describe('REQ-UX-002 — snapshot des libellés de l’espace, sans date, sans n
       espace/confirmation-du-depot.ts › BADGES_DU_DEPOT › enAttenteSignalee : En attente de confirmation — Axion-IA va appeler votre contact
       espace/confirmation-du-depot.ts › BADGES_DU_DEPOT › courrielNonRecu : E-mail non reçu par le contact
       espace/confirmation-du-depot.ts › BADGES_DU_DEPOT › nonConfirmee : Non confirmée par le contact
+      espace/confirmation-du-depot.ts › BADGES_DU_DEPOT › reservationTermineeVerifiee : Réservation terminée · nouveau dépôt possible à partir du {dateRedepot}
       espace/confirmation-du-depot.ts › BADGES_DU_DEPOT › reservationTerminee : Réservation terminée · l'entreprise est de nouveau disponible
       espace/confirmation-du-depot.ts › AIDE_DU_BADGE : Sans réponse de votre contact, votre dépôt est confirmé {delaiTacite} après la réception de notre e-mail.
-      espace/confirmation-du-depot.ts › CARENCE_DU_REDEPOT : Vous pourrez déposer cette entreprise à nouveau à partir du {date}."
+      espace/confirmation-du-depot.ts › CARENCE_DU_REDEPOT : Vous pourrez déposer à nouveau cette entreprise à partir du {dateRedepot}."
     `);
   });
 

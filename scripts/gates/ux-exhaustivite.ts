@@ -194,7 +194,10 @@ export const PARAMETRES_PERMIS: Readonly<Record<string, readonly string[]>> = {
   // L'échéance de SA confirmation tacite, et la fin de SA carence.
   'espace/confirmation-du-depot.ts › BADGES_DU_DEPOT › enAttenteDatee': ['date'],
   'espace/confirmation-du-depot.ts › AIDE_DU_BADGE': ['delaiTacite'],
-  'espace/confirmation-du-depot.ts › CARENCE_DU_REDEPOT': ['date'],
+  'espace/confirmation-du-depot.ts › BADGES_DU_DEPOT › reservationTermineeVerifiee': [
+    'dateRedepot',
+  ],
+  'espace/confirmation-du-depot.ts › CARENCE_DU_REDEPOT': ['dateRedepot'],
 };
 
 /**

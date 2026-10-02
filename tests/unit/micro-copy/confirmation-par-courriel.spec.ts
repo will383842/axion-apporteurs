@@ -28,12 +28,15 @@ import {
 import {
   FORMULAIRE_DU_CONTACT,
   BADGES_DU_DEPOT,
+  CARENCE_DU_REDEPOT,
 } from '../../../src/content/micro-copy/espace/confirmation-du-depot';
+import { PAGE_DE_CONFIRMATION } from '../../../src/content/micro-copy/public/confirmation-contact';
 import * as COURRIEL from '../../../src/content/micro-copy/courriels/confirmation-contact';
 import * as INFORMATION from '../../../src/content/micro-copy/courriels/information-article-14';
 import {
   contexteRendu,
   fauteDuContexte,
+  LiensNonConformes,
   liensDuTexte,
   rendreLeCourriel,
 } from '../../../src/domain/confirmation/rendu-du-courriel';
@@ -183,5 +186,45 @@ describe('REQ-JUR-060 — l’e-mail rendu : trois liens, et seulement eux', () 
     expect(objet).toBe('Camille Témoin nous a parlé de Entreprise témoin');
     expect(texte).toContain(INFORMATION.LIEN_OPPOSITION.libelle);
     expect(texte).toContain('Vos données personnelles');
+  });
+});
+
+describe('REQ-JUR-060 — toute valeur est désamorcée, et l’e-mail refuse de partir avec un quatrième lien', () => {
+  it('REQ-JUR-060 : TÉMOIN — un nom d’entreprise comme « boutique-exemple.fr » est rendu désamorcé, avec trois liens', () => {
+    const { objet, texte, html } = rendreLeCourriel({
+      ...VALEURS,
+      entreprise: 'boutique-exemple.fr',
+    });
+    expect(texte).toContain('boutique-exemple[.]fr');
+    expect(objet).toContain('boutique-exemple[.]fr');
+    expect(liensDuTexte(objet)).toEqual([]);
+    expect(liensDuTexte(texte).sort()).toEqual(Object.values(LIENS).sort());
+    expect(html.match(/<a /g)).toHaveLength(3);
+  });
+
+  it('REQ-JUR-060 : TÉMOIN — une valeur non désamorcée (une adresse électronique de l’entité) fait lever l’échec fermé, nommé', () => {
+    expect(() => rendreLeCourriel({ ...VALEURS, adresseDroits: 'droits@exemple.invalid' })).toThrow(
+      LiensNonConformes
+    );
+    expect(() => rendreLeCourriel({ ...VALEURS, siege: 'voir www.piege.example' })).toThrow(
+      /liens_non_conformes/
+    );
+  });
+});
+
+describe('REQ-UX-003 — la fin d’une réservation se dit selon sa cause (A07)', () => {
+  it('REQ-UX-003 : TÉMOIN ANTI-RETOUR — la demande vérifiée libérée ne porte plus « de nouveau disponible », mais sa date de redépôt', () => {
+    expect(BADGES_DU_DEPOT.reservationTermineeVerifiee).toBe(
+      'Réservation terminée · nouveau dépôt possible à partir du {dateRedepot}'
+    );
+    expect(BADGES_DU_DEPOT.reservationTermineeVerifiee).not.toContain('de nouveau disponible');
+    expect(BADGES_DU_DEPOT.reservationTerminee).toBe(
+      "Réservation terminée · l'entreprise est de nouveau disponible"
+    );
+    expect(CARENCE_DU_REDEPOT).toContain('{dateRedepot}');
+  });
+
+  it('REQ-JUR-060 : l’opposition de la page publique DÉRIVE celle de l’art. 14, sans promettre davantage', () => {
+    expect(PAGE_DE_CONFIRMATION.opposition).toBe(INFORMATION.LIEN_OPPOSITION.libelle);
   });
 });

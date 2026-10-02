@@ -31,7 +31,7 @@
  * et l'envoi journalise la version envoyée (REQ-JUR-060, INT-T40).
  */
 
-export const VERSION_INFORMATION_ARTICLE_14 = 'information-article-14/v4';
+export const VERSION_INFORMATION_ARTICLE_14 = 'information-article-14/v5';
 
 /**
  * Le destinataire : le contact rencontré, jamais l'apporteur (liste `COURRIELS_AU_CONTACT` de
@@ -63,7 +63,7 @@ export const INFORMATION_ARTICLE_14 = {
     "Elles sont supprimées {dureeSansSuite} après la fin de cette présentation si elle n'aboutit pas, et {dureeApresDernierContact} après notre dernier échange si {entreprise} devient cliente.",
   relance: "Ce message ne sera suivi d'aucune relance par courriel.",
   droits:
-    'Vous pouvez accéder à vos données, les faire rectifier ou effacer, en demander la limitation, et vous opposer à leur traitement, en écrivant à {adresseDroits}. Vous pouvez aussi introduire une réclamation auprès de la CNIL.',
+    'Vous pouvez accéder à vos données, les faire rectifier ou effacer, en demander la limitation, et vous opposer à leur traitement, en écrivant à {adresseDroits}, ou en ligne depuis la page ouverte par le lien ci-dessous. Vous pouvez aussi introduire une réclamation auprès de la CNIL.',
   opposition:
     "Pour vous opposer dès maintenant, un clic suffit : Axion-IA ne vous écrira plus et ne vous appellera plus au titre de cette présentation, ni d'aucune autre qui vous concernerait.",
 } as const;

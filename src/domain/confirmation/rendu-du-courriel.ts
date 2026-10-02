@@ -61,10 +61,62 @@ export function contexteRendu(saisie: string): string {
     .replace(CONTROLE_OU_FORMAT, '')
     .replace(/\s+/g, ' ')
     .trim();
-  const desamorce = aplati.replace(RESSEMBLE_A_UN_LIEN, (lien) =>
+  return [...desamorcer(aplati)].slice(0, CONTEXTE_DEPOT_CARACTERES_MAX.valeur).join('').trim();
+}
+
+/** Tout ce qui ressemble à un lien, désamorcé : « exemple[.]com », « nom[@]domaine », « https[://] ». */
+function desamorcer(texte: string): string {
+  return texte.replace(RESSEMBLE_A_UN_LIEN, (lien) =>
     lien.replace(/:\/\//g, '[://]').replace(/\./g, '[.]').replace(/@/g, '[@]')
   );
-  return [...desamorce].slice(0, CONTEXTE_DEPOT_CARACTERES_MAX.valeur).join('').trim();
+}
+
+/**
+ * Les valeurs de l'ENTITÉ (`config/entite.json` et son registre), posées par l'émetteur et jamais par
+ * une personne : elles ne sont pas désamorcées. Toutes les AUTRES le sont, comme le contexte
+ * (lentille sécurité, 2026-10-02) : un nom d'entreprise comme « boutique-exemple.fr » deviendrait un
+ * lien. Le contrôle final (`exigerTroisLiens`) les juge toutes, celles-ci comprises.
+ */
+export const VALEURS_DE_L_ENTITE = [
+  'responsable',
+  'siege',
+  'adresseDroits',
+  'prestataireEnvoi',
+  'baseLegale',
+  'mentionTransfert',
+  'dureeSansSuite',
+  'dureeApresDernierContact',
+  'prenomSignataire',
+  'nomSignataire',
+] as const;
+
+const LIENS = ['lienOui', 'lienNon', 'lienOpposition'] as const;
+
+/** Une valeur rendue : retirée de tout contrôle et format, désamorcée si elle ne vient pas de l'entité. */
+function valeurRendue(nom: string, valeur: string): string {
+  const propre = valeur.replace(CONTROLE_OU_FORMAT, '');
+  return (VALEURS_DE_L_ENTITE as readonly string[]).includes(nom) ? propre : desamorcer(propre);
+}
+
+/** Le refus de rendre un e-mail dont les liens ne sont pas EXACTEMENT les trois attendus. */
+export class LiensNonConformes extends Error {
+  constructor(readonly detail: string) {
+    super(`liens_non_conformes : ${detail}`);
+    this.name = 'LiensNonConformes';
+  }
+}
+
+/**
+ * ÉCHEC FERMÉ (condition (d) de la lentille sécurité) : le texte porte EXACTEMENT les trois liens,
+ * chacun une fois, et l'objet n'en porte aucun — en comptant ce qu'un client de messagerie fabrique.
+ */
+function exigerTroisLiens(objet: string, texte: string, valeurs: ValeursDuCourriel): void {
+  const dansObjet = liensDuTexte(objet);
+  if (dansObjet.length > 0) throw new LiensNonConformes(`l'objet porte ${dansObjet.join(', ')}`);
+  const attendus = LIENS.map((l) => valeurs[l]).sort();
+  const vus = liensDuTexte(texte).sort();
+  if (JSON.stringify(vus) !== JSON.stringify(attendus))
+    throw new LiensNonConformes(`le texte porte ${vus.length} lien(s) : ${vus.join(', ')}`);
 }
 
 /** Les liens qu'un client de messagerie verrait dans un texte en clair. */
@@ -98,7 +150,14 @@ export function echapperHtml(texte: string): string {
  */
 export function rendreLeCourriel(valeurs: ValeursDuCourriel): CourrielRendu {
   const contexte = contexteRendu(valeurs['contexte'] ?? '');
-  const v: Readonly<Record<string, string>> = { ...valeurs, contexte };
+  const v: Readonly<Record<string, string>> = {
+    ...Object.fromEntries(
+      Object.entries(valeurs)
+        .filter(([nom]) => !(LIENS as readonly string[]).includes(nom))
+        .map(([nom, valeur]) => [nom, valeurRendue(nom, valeur)])
+    ),
+    contexte,
+  };
   const lignes: { texte: string; lien?: string }[] = [];
   for (const cle of ORDRE_DU_COURRIEL) {
     if (cle === 'contexte' && contexte === '') continue;
@@ -119,5 +178,7 @@ export function rendreLeCourriel(valeurs: ValeursDuCourriel): CourrielRendu {
         : `<p>${echapperHtml(l.texte)}</p>`
     )
     .join('\n');
-  return { objet: remplir(COURRIEL_DE_CONFIRMATION.objet, v), texte, html };
+  const objet = remplir(COURRIEL_DE_CONFIRMATION.objet, v);
+  exigerTroisLiens(objet, texte, valeurs);
+  return { objet, texte, html };
 }

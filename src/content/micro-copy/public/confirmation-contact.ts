@@ -7,6 +7,7 @@
  * vaut confirmation sous un autre sens. Aucune date du contact (REQ-JUR-040), aucune consigne au
  * contact. L'information de l'art. 14 est celle de JUR-T09, rendue entière, jamais résumée ici.
  */
+import { LIEN_OPPOSITION } from '../courriels/information-article-14';
 
 export const PAGE_DE_CONFIRMATION = {
   question:
@@ -16,7 +17,9 @@ export const PAGE_DE_CONFIRMATION = {
   secondeQuestion: "Vous n'avez eu aucun échange avec {prenomApporteur} {nomApporteur} ?",
   confirmerLeNon: "Je confirme n'avoir eu aucun échange",
   information: 'Vos données personnelles',
-  opposition: 'Ne plus être contacté(e) par Axion-IA',
+  // DÉRIVÉ du libellé de l'opposition de l'art. 14 (A07, 2026-10-02) : la page ne promet pas plus que
+  // l'opposition réelle, et ne la récrit pas (RM-01).
+  opposition: LIEN_OPPOSITION.libelle,
 } as const;
 
 /** Les quatre autres états de la page (cinq avec la question). */
