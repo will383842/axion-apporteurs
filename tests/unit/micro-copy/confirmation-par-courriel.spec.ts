@@ -325,3 +325,61 @@ describe('REQ-JUR-060 — la borne du contexte est celle de la SSOT, entière', 
     expect([...contexteRendu('b'.repeat(141))]).toHaveLength(140);
   });
 });
+
+describe('REQ-JUR-060 — chaque lien reconnu l’est en entier, et chaque refus dit tout', () => {
+  const ZWSP = String.fromCharCode(0x200b);
+  const message = (geste: () => void): string => {
+    try {
+      geste();
+    } catch (e) {
+      return `${(e as Error).name} | ${(e as Error).message}`;
+    }
+    return 'aucun refus';
+  };
+
+  it('REQ-JUR-060 : TÉMOINS — adresse de courriel, « www. », protocole, domaine avec chemin : reconnus en entier', () => {
+    expect(liensDuTexte('écrire à jean.dupont@mail.piege.example')).toEqual([
+      'jean.dupont@mail.piege.example',
+    ]);
+    expect(liensDuTexte('voir www.piège maintenant')).toEqual(['www.piège']);
+    expect(liensDuTexte('voir https://piège maintenant')).toEqual(['https://piège']);
+    expect(liensDuTexte('boutique-exemple.fr/promo?x=1 ici')).toEqual([
+      'boutique-exemple.fr/promo?x=1',
+    ]);
+    expect(liensDuTexte('site.fr et a.b')).toEqual(['site.fr']);
+  });
+
+  it('REQ-JUR-060 : TÉMOINS — le désamorçage est exact, et la borne se prend après les blancs retirés', () => {
+    expect(contexteRendu('jean.dupont@piege.example https://piege.example')).toBe(
+      'jean[.]dupont[@]piege[.]example https[://]piege[.]example'
+    );
+    expect(contexteRendu(` ${'a'.repeat(140)}`)).toBe('a'.repeat(140));
+    expect(contexteRendu(`${'a'.repeat(139)} b`)).toBe('a'.repeat(139));
+    expect(contexteRendu(`a ${ZWSP} b`)).toBe('a b');
+  });
+
+  it('REQ-JUR-060 : TÉMOIN — une valeur rendue perd ses caractères de direction, sans rien d’autre', () => {
+    const { objet } = rendreLeCourriel({ ...VALEURS, entreprise: `Entreprise${RLO} témoin` });
+    expect(objet).toBe('Camille Témoin nous a parlé de Entreprise témoin');
+  });
+
+  it('REQ-JUR-060 : TÉMOINS — les refus sont nommés et listent chaque lien vu', () => {
+    const { texte } = rendreLeCourriel(VALEURS);
+    expect(message(() => exigerTroisLiens('www.a.example et www.b.example', texte, VALEURS))).toBe(
+      "LiensNonConformes | liens_non_conformes : l'objet porte www.a.example, www.b.example"
+    );
+    expect(
+      message(() =>
+        exigerTroisLiens('Objet', 'voir https://y.example et https://x.example', VALEURS)
+      )
+    ).toBe(
+      'LiensNonConformes | liens_non_conformes : le texte porte 2 lien(s) : https://x.example, https://y.example'
+    );
+  });
+
+  it('REQ-JUR-060 : TÉMOIN — la version HTML échappe esperluette et guillemets, un paragraphe par ligne', () => {
+    const { html } = rendreLeCourriel({ ...VALEURS, contexte: `Tom & "Jerry's"` });
+    expect(html).toContain('Tom &amp; &quot;Jerry&#39;s&quot;');
+    expect(html).toContain('</p>\n<p>');
+  });
+});
