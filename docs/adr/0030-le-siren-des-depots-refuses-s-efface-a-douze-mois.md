@@ -2,9 +2,9 @@
 
 | Champ | Valeur |
 | --- | --- |
-| **Statut** | `propose` |
+| **Statut** | `accepte` |
 | **Date** | 2026-10-02 |
-| **Décideur** | `architecte` — cet ADR consigne la forme (a) arrêtée par A02 au rattrapage 56 ; il passe `accepte` quand A02 l'a relu et accepté, et que ses assertions existent |
+| **Décideur** | `architecte` — cet ADR consigne la forme (a) arrêtée par A02 au rattrapage 56 ; accepté par A02, revue 5391819668 |
 | **Tâche** | DM-53 |
 | **Exigences servies** | REQ-DM-043, REQ-DM-037 |
 | **Décisions du registre citées** | HYP-A02-RETENTION (`depots_refuses` : 12 mois) |
@@ -82,7 +82,5 @@ la lentille sécurité) : il est atomique.
 
 ## Reste à faire
 
-- Relecture et acceptation par A02 ; l'ADR passe alors `accepte`, et la migration qui le cite en
-  ligne 1 est absoute de `journal_desarme`.
 - `gov:adr` exige des numéros consécutifs : cet ADR, ouvert le premier, prend le 0030 ; l'ADR
   d'INT-T28 prendra le 0031.
