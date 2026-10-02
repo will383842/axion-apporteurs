@@ -9,6 +9,8 @@
  * Aucun texte n'est une instruction, une relance d'activité, ni une menace (charte relationnelle,
  * REQ-JUR-012, REQ-JUR-039) : une notification INFORME, et l'appel à l'action est une possibilité.
  */
+import { MENTION_DU_REFUS } from '../espace/issues-depot';
+
 export type TexteDeNotification = {
   readonly titre: string;
   readonly appel: string;
@@ -48,7 +50,9 @@ export const TEXTES_DES_NOTIFICATIONS = {
   refus_declaration: {
     titre: '{entreprise} : dépôt non enregistré — {categorie}',
     appel: 'Contester ce refus par écrit',
-    corps: "{categorie} : {motif}. Ce refus n'emporte aucune autre conséquence.",
+    // La mention de l'espace, DÉRIVÉE (RM-01) : « n'est pas un manquement » reprend la fin de
+    // l'art. 3.3 bis (avis d'A07 du 2026-10-02).
+    corps: `{categorie} : {motif}. ${MENTION_DU_REFUS}`,
   },
   suspension_declarations: {
     titre: "Vos nouveaux dépôts sont suspendus le temps d'un échange avec Axion-IA",
