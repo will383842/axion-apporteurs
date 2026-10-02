@@ -1156,6 +1156,22 @@ describe('REQ-SEC-042 REQ-UX-002 REQ-JUR-043 — l’occupant d’une entreprise
     expect(TEXTES_DES_ISSUES.enregistree.quoiFaire).toContain(FORMULES.rienAFaire);
   });
 
+  it('REQ-JUR-043 : les maquettes de l’espace n’emploient « suivre » ni pour une entreprise ni pour la période de l’apporteur, et ne nomment pas l’occupant', () => {
+    // Le texte LU : les codes et ids `suivie_*`, termes du glossaire non lus par l'apporteur, sont
+    // retirés avant le jugement (avis d'A07 du 2026-10-02).
+    const fautes: string[] = [];
+    for (const m of ['deposer', 'entreprise', 'mes-entreprises']) {
+      const lu = readFileSync(`docs/maquettes/${m}.html`, 'utf8')
+        .replace(/(etat-)?suivie[_-][a-z_-]+/g, '')
+        .split('\n');
+      lu.forEach((l, i) => {
+        if (SUIVRE.test(l) || mot('suit|suivent').test(l) || /autre apporteur suit/i.test(l))
+          fautes.push(`${m}.html:${i + 1} — ${l.trim()}`);
+      });
+    }
+    expect(fautes).toEqual([]);
+  });
+
   it('REQ-SEC-042 REQ-JUR-043 : les formules d’occupation ne nomment plus l’occupant ni « ce droit »', () => {
     expect(FORMULES.dejaReservee).toBe('déjà réservée');
     expect(FORMULES.finDuDroit).toBe('si cette réservation prend fin');
