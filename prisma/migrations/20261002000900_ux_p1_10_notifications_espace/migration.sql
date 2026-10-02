@@ -18,12 +18,13 @@ CREATE TABLE "notifications_espace" (
 
 -- CreateTable
 CREATE TABLE "preferences_notification" (
+    "id" UUID NOT NULL,
     "apporteur_id" UUID NOT NULL,
     "cle" VARCHAR(64) NOT NULL,
     "active" BOOLEAN NOT NULL,
     "modifiee_at" TIMESTAMPTZ(3) NOT NULL,
 
-    CONSTRAINT "preferences_notification_pkey" PRIMARY KEY ("apporteur_id","cle")
+    CONSTRAINT "preferences_notification_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
@@ -31,6 +32,9 @@ CREATE INDEX "notifications_espace_apporteur_id_cree_at_idx" ON "notifications_e
 
 -- CreateIndex
 CREATE INDEX "notifications_espace_attribution_id_idx" ON "notifications_espace"("attribution_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "preferences_notification_apporteur_cle_unique" ON "preferences_notification"("apporteur_id", "cle");
 
 -- AddForeignKey
 ALTER TABLE "notifications_espace" ADD CONSTRAINT "notifications_espace_apporteur_id_fkey" FOREIGN KEY ("apporteur_id") REFERENCES "apporteurs"("id") ON DELETE RESTRICT ON UPDATE RESTRICT;

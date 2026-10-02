@@ -520,13 +520,16 @@ model NotificationEspace {
 /// UX-P1-10 (REQ-UX-016) — la préférence d'un apporteur pour une clé de notification. Une clé qui fait
 /// courir un délai n'a PAS de préférence désactivable : la table de code le refuse avant l'écriture.
 model PreferenceNotification {
+  id          String    @id @default(uuid()) @db.Uuid
   apporteurId String    @map("apporteur_id") @db.Uuid
   apporteur   Apporteur @relation(fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   cle         String    @db.VarChar(64)
   active      Boolean
   modifieeAt  DateTime  @map("modifiee_at") @db.Timestamptz(3)
 
-  @@id([apporteurId, cle])
+  /// Une préférence par (apporteur, clé) ; sert aussi d'index à la clé étrangère. La clé primaire uid=197612(Will) gid=197121 groups=197121
+  /// fait passer la ligne par la couche cloisonnée sans exception (A02, 2026-10-02).
+  @@unique([apporteurId, cle], map: "preferences_notification_apporteur_cle_unique")
   @@map("preferences_notification")
 }
 
