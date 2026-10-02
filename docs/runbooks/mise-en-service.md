@@ -69,6 +69,14 @@
 - [ ] `TELEGRAM_BOT_TOKEN` et `TELEGRAM_CHAT_ID` posés dans l'environnement `production`, et une alerte
       `rechiffrement_echoue` réellement REÇUE dans le salon (échec provoqué pendant l'exercice).
       _Porteur : Williams (secrets, réception), l'auteur (consignation)._
+- [ ] **Canal d'alerte du SERVEUR** (INT-T49, INT-T54) : `TELEGRAM_BOT_TOKEN` (secret de l'environnement
+      `production`) et `TELEGRAM_CHAT_ID` (secret du même environnement, une seule source avec
+      backup.yml, deploy.yml et nightly.yml) passent à l'APPLICATION par le provisionnement :
+      **provisionnement relancé**, et une alerte `attente_depassee` d'essai
+      réellement REÇUE dans le salon. À cocher
+      AVANT l'ouverture du canal côté axion-ia : sans ce canal, une attente au-delà de son seuil fait
+      échouer le passage du lanceur (`canal_alerte_absent`), sans jamais perdre l'alerte. _Porteur :
+      Williams (valeurs, réception), l'auteur (consignation)._
 - [ ] `PARTNERS_SAUVEGARDE_ACTIVEE` = `oui`, posé AVANT `Sauvegarde` / `configurer`. _Porteur :
       Williams (`poser-secrets-production.ps1 -Etape sauvegarde`)._
 - [ ] `configurer`, un vidage, `rechiffrer`, puis `exercice` : **verdict réussi** sous
