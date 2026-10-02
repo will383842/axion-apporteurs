@@ -112,7 +112,7 @@ export const CLES_REFUSEES = {
   courrielEnvoye: ['id', 'apporteurId', 'apporteur', 'attribution'],
   depotRefuse: ['id', 'apporteurId', 'apporteur'],
   // DM-11 : la pièce rib référencée est une référence vérifiée, jamais une relation écrite de l'espace.
-  identiteFacturation: ['id', 'apporteurId', 'apporteur', 'pieceRib', 'pieceRibType'],
+  identiteFacturation: ['id', 'apporteurId', 'apporteur', 'pieceKyc', 'pieceKycType'],
   jetonDepot: ['id', 'apporteurId', 'apporteur', 'attributions'],
   lienMagique: [
     'id',
@@ -142,7 +142,7 @@ export const REFERENCES_CLOISONNEES: Partial<
   attribution: { jetonDepotId: 'jetonDepot', personneDeclareeId: 'personneDeclaree' },
   courrielEnvoye: { attributionId: 'attribution' },
   // DM-11 : la pièce rib d'une identité de facturation est une pièce de la session.
-  identiteFacturation: { pieceRibId: 'pieceKyc' },
+  identiteFacturation: { pieceKycId: 'pieceKyc' },
 };
 
 /** Les messages de refus : une liste FERMÉE, qui part au journal et jamais au navigateur. */
@@ -177,7 +177,7 @@ export const RELATIONS = {
   changementCourriel: ['apporteur'],
   courrielEnvoye: ['apporteur', 'attribution'],
   depotRefuse: ['apporteur'],
-  identiteFacturation: ['apporteur', 'pieceRib'],
+  identiteFacturation: ['apporteur', 'pieceKyc'],
   jetonDepot: ['apporteur', 'attributions'],
   lienMagique: ['apporteur', 'utilisateurConsole', 'session'],
   personneDeclaree: ['apporteur', 'attributions'],
@@ -310,7 +310,7 @@ export const CHAMPS_TUS = {
   courrielEnvoye: ['apporteurId', 'emailHash', 'fournisseurMessageId', 'erreur', 'attributionId'],
   // DM-53 : la date de la purge du SIREN, une trace technique ; le SIREN, lui, reste rendu (NULL une fois purgé).
   depotRefuse: ['apporteurId', 'sirenPurgeAt'],
-  identiteFacturation: ['apporteurId', 'pieceRibId', 'pieceRibType'],
+  identiteFacturation: ['apporteurId', 'pieceKycId', 'pieceKycType'],
   jetonDepot: ['apporteurId', 'tokenHash'],
   lienMagique: ['apporteurId', 'utilisateurConsoleId', 'tokenHash', 'kid', 'codeHash'],
   personneDeclaree: ['apporteurId', 'nomChiffre', 'prenomChiffre'],

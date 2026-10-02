@@ -4,8 +4,8 @@
 -- leurs enums dans DM-50.
 
 -- AlterTable
-ALTER TABLE "identites_facturation" ADD COLUMN     "piece_rib_id" UUID,
-ADD COLUMN     "piece_rib_type" "type_piece_kyc" NOT NULL DEFAULT 'rib';
+ALTER TABLE "identites_facturation" ADD COLUMN     "piece_kyc_id" UUID,
+ADD COLUMN     "piece_kyc_type" "type_piece_kyc" NOT NULL DEFAULT 'rib';
 
 -- CreateTable
 CREATE TABLE "pieces_kyc" (
@@ -34,10 +34,10 @@ CREATE INDEX "pieces_kyc_iban_hash_idx" ON "pieces_kyc"("iban_hash");
 CREATE UNIQUE INDEX "pieces_kyc_id_type_key" ON "pieces_kyc"("id", "type");
 
 -- CreateIndex
-CREATE INDEX "identites_facturation_piece_rib_id_idx" ON "identites_facturation"("piece_rib_id");
+CREATE INDEX "identites_facturation_piece_kyc_id_idx" ON "identites_facturation"("piece_kyc_id");
 
 -- AddForeignKey
-ALTER TABLE "identites_facturation" ADD CONSTRAINT "identites_facturation_piece_rib_id_piece_rib_type_fkey" FOREIGN KEY ("piece_rib_id", "piece_rib_type") REFERENCES "pieces_kyc"("id", "type") ON DELETE RESTRICT ON UPDATE RESTRICT;
+ALTER TABLE "identites_facturation" ADD CONSTRAINT "identites_facturation_piece_kyc_id_piece_kyc_type_fkey" FOREIGN KEY ("piece_kyc_id", "piece_kyc_type") REFERENCES "pieces_kyc"("id", "type") ON DELETE RESTRICT ON UPDATE RESTRICT;
 
 -- AddForeignKey
 ALTER TABLE "pieces_kyc" ADD CONSTRAINT "pieces_kyc_apporteur_id_fkey" FOREIGN KEY ("apporteur_id") REFERENCES "apporteurs"("id") ON DELETE RESTRICT ON UPDATE RESTRICT;
@@ -47,11 +47,11 @@ ALTER TABLE "pieces_kyc" ADD CONSTRAINT "pieces_kyc_apporteur_id_fkey" FOREIGN K
 
 -- ── identites_facturation : la pièce référencée est une pièce `rib` (décision A02) ──────────────
 
--- La clé étrangère composite (piece_rib_id, piece_rib_type) → pieces_kyc (id, type) refuse une pièce
+-- La clé étrangère composite (piece_kyc_id, piece_kyc_type) → pieces_kyc (id, type) refuse une pièce
 -- d'un autre type ; la colonne constante ne peut valoir que `rib`. En MATCH SIMPLE, une référence
 -- nulle n'est pas vérifiée : c'est voulu, l'identité peut précéder sa pièce.
-ALTER TABLE "identites_facturation" ADD CONSTRAINT "identites_facturation_piece_rib_type_rib"
-  CHECK ("piece_rib_type" = 'rib');
+ALTER TABLE "identites_facturation" ADD CONSTRAINT "identites_facturation_piece_kyc_type_rib"
+  CHECK ("piece_kyc_type" = 'rib');
 
 -- ── pieces_kyc ───────────────────────────────────────────────────────────────────────────────────
 

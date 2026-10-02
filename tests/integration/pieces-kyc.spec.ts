@@ -155,11 +155,11 @@ describe('REQ-DM-027 — une pièce courante et une en vérification, au plus, p
 });
 
 describe('REQ-CPL-005 — l’identité de facturation référence une pièce rib, et seulement elle', () => {
-  const identite = (a: string, pieceRibId: string | null, type: string | null = null) =>
+  const identite = (a: string, pieceKycId: string | null, type: string | null = null) =>
     base.prisma.$executeRawUnsafe(
-      `INSERT INTO identites_facturation (id, apporteur_id, siren, regime_tva, debut_at, piece_rib_id${type ? ', piece_rib_type' : ''})
+      `INSERT INTO identites_facturation (id, apporteur_id, siren, regime_tva, debut_at, piece_kyc_id${type ? ', piece_kyc_type' : ''})
        VALUES ($1::uuid, $2::uuid, '000000001', 'franchise_293b', $3, $4::uuid${type ? ', $5::type_piece_kyc' : ''})`,
-      ...[randomUUID(), a, MAINTENANT, pieceRibId, ...(type ? [type] : [])]
+      ...[randomUUID(), a, MAINTENANT, pieceKycId, ...(type ? [type] : [])]
     );
 
   it('REQ-CPL-005 : une pièce rib est acceptée ; une pièce d’un autre type est refusée par la clé composite', async () => {
@@ -172,14 +172,14 @@ describe('REQ-CPL-005 — l’identité de facturation référence une pièce ri
     });
     const autre = await piece({ apporteur: a, type: 'identite' });
     await expect(identite(a, rib)).resolves.toBe(1);
-    expect(await refus(identite(a, autre))).toMatch(/23503|foreign key|piece_rib/);
+    expect(await refus(identite(a, autre))).toMatch(/23503|foreign key|piece_kyc/);
   });
 
   it('REQ-CPL-005 : le type de la référence ne peut valoir que rib ; une identité sans pièce reste admise', async () => {
     const a = await unApporteur();
     const tva = await piece({ apporteur: a, type: 'tva' });
     expect(await refus(identite(a, tva, 'tva'))).toContain(
-      'identites_facturation_piece_rib_type_rib'
+      'identites_facturation_piece_kyc_type_rib'
     );
     await expect(identite(a, null)).resolves.toBe(1);
   });

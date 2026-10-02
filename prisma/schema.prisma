@@ -371,12 +371,12 @@ model IdentiteFacturation {
   finAt        DateTime?    @map("fin_at") @db.Timestamptz(3)
   /// DM-11 (HYP-DM06-IBAN) : la pièce `rib` de l'identité ; l'IBAN n'est QUE dans cette pièce.
   /// Clé étrangère composite (id, type) : la base refuse une pièce d'un autre type.
-  pieceRibId   String?      @map("piece_rib_id") @db.Uuid
-  pieceRibType TypePieceKyc @default(rib) @map("piece_rib_type")
-  pieceRib     PieceKyc?    @relation(fields: [pieceRibId, pieceRibType], references: [id, type], onDelete: Restrict, onUpdate: Restrict)
+  pieceKycId   String?      @map("piece_kyc_id") @db.Uuid
+  pieceKycType TypePieceKyc @default(rib) @map("piece_kyc_type")
+  pieceKyc     PieceKyc?    @relation(fields: [pieceKycId, pieceKycType], references: [id, type], onDelete: Restrict, onUpdate: Restrict)
 
   @@index([apporteurId])
-  @@index([pieceRibId])
+  @@index([pieceKycId])
   @@map("identites_facturation")
 }
 

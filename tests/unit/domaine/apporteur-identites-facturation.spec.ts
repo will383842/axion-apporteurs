@@ -133,29 +133,13 @@ describe('REQ-CPL-005 — le modèle IdentiteFacturation : daté, régime en enu
     ]);
   });
 
-  /**
-   * DM-11 (HYP-DM06-IBAN) : l'identité de facturation RÉFÉRENCE la pièce `rib` du KYC, qui seule porte
-   * l'IBAN. La référence est un identifiant et son type, jamais une donnée bancaire : elle est nommée
-   * ici, exactement, et le témoin suivant prouve qu'elle n'est que cela.
-   */
-  const REFERENCE_A_LA_PIECE_RIB = new Set(['pieceRib', 'pieceRibId', 'pieceRibType']);
-
-  it('REQ-CPL-005 : AUCUNE colonne de RIB, d’IBAN ni de BIC, dans aucun modèle de DM-06 (HYP-DM06-IBAN) — la référence à la pièce rib exceptée', () => {
+  it('REQ-CPL-005 : AUCUNE colonne de RIB, d’IBAN ni de BIC, dans aucun modèle de DM-06 (HYP-DM06-IBAN)', () => {
     for (const nom of ['IdentiteFacturation', 'Apporteur', 'JetonDepot']) {
       const m = schema.modeles.find((x) => x.nom === nom);
       expect(m, nom).toBeDefined();
-      for (const c of m!.champs) {
-        if (nom === 'IdentiteFacturation' && REFERENCE_A_LA_PIECE_RIB.has(c.nom)) continue;
+      for (const c of m!.champs)
         expect(bancaire(c.nom) || bancaire(c.colonne), `${nom}.${c.nom} ${c.colonne}`).toBe(false);
-      }
     }
-  });
-
-  it('REQ-CPL-005 : la référence à la pièce rib n’est qu’une clé — un uuid et un type, sans chiffre ni empreinte', () => {
-    const m = schema.modeles.find((x) => x.nom === 'IdentiteFacturation')!;
-    const champs = m.champs.filter((c) => REFERENCE_A_LA_PIECE_RIB.has(c.nom));
-    expect(champs.map((c) => c.nom).sort()).toEqual(['pieceRib', 'pieceRibId', 'pieceRibType']);
-    for (const c of champs) expect(c.nom).not.toMatch(/Chiffre$|Hash$/);
   });
 
   it('REQ-CPL-005 : le juge lit des SEGMENTS de nom — « attributions » n’est pas un RIB, « ibanChiffre » et « rib_hash » le sont', () => {

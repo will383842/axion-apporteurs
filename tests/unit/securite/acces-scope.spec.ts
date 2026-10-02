@@ -476,7 +476,7 @@ describe('REQ-QA-011 → REQ-SEC-008 — la liste des modèles cloisonnés est c
       const m = modeles.find((x) => delegue(x.name) === modele)!;
       for (const f of m.fields.filter((x) => x.kind === 'object')) {
         const versCloisonnee = (MODELES_CLOISONNES as readonly string[]).includes(delegue(f.type));
-        // Une clé COMPOSITE (DM-11 : `(piece_rib_id, piece_rib_type)` vers la pièce `rib`) se vérifie par
+        // Une clé COMPOSITE (DM-11 : `(piece_kyc_id, piece_kyc_type)` vers la pièce `rib`) se vérifie par
         // son identifiant, sa PREMIÈRE colonne ; le discriminant qui la complète n'est pas une référence.
         for (const [i, colonne] of (f.relationFromFields ?? []).entries()) {
           const declaree = Object.keys(REFERENCES_CLOISONNEES[modele] ?? {}).includes(colonne);

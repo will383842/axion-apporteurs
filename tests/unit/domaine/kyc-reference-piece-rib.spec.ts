@@ -57,10 +57,10 @@ describe('REQ-CPL-005 — l’IBAN n’existe que dans la pièce rib (HYP-DM06-I
 
   it('REQ-CPL-005 : l’identité de facturation référence sa pièce rib par une clé COMPOSITE (id, type)', () => {
     const champs = new Map(modele('IdentiteFacturation')!.champs.map((c) => [c.nom, c]));
-    expect(champs.get('pieceRibId')).toMatchObject({ type: 'String', optionnel: true });
-    expect(champs.get('pieceRibType')).toMatchObject({ type: 'TypePieceKyc', optionnel: false });
+    expect(champs.get('pieceKycId')).toMatchObject({ type: 'String', optionnel: true });
+    expect(champs.get('pieceKycType')).toMatchObject({ type: 'TypePieceKyc', optionnel: false });
     expect(TEXTE).toMatch(
-      /pieceRib\s+PieceKyc\?\s+@relation\(fields: \[pieceRibId, pieceRibType\], references: \[id, type\]/
+      /pieceKyc\s+PieceKyc\?\s+@relation\(fields: \[pieceKycId, pieceKycType\], references: \[id, type\]/
     );
     expect(TEXTE).toMatch(/model PieceKyc \{[\s\S]*?@@unique\(\[id, type\]\)/);
   });
