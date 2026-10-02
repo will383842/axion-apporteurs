@@ -243,9 +243,16 @@ entreprise dont l'attribution ou la prise en charge a pris fin depuis moins de
 {{CARENCE_CONSEILLER_JOURS}} jours**, quel qu'en ait été l'occupant, ni pendant le délai de quinze jours
 ouvert à l'Apporteur en attente au premier rang.
 
-**La Société n'utilise ni les vérifications d'entreprise faites par un Apporteur, ni ses déclarations
-refusées ou en attente, ni les coordonnées qu'il a déclarées, pour prendre elle-même en charge une
-entreprise.**
+**La Société conserve dans ses propres outils, et peut utiliser à ses propres fins commerciales, les
+entreprises déclarées par l'Apporteur et les coordonnées qu'il a transmises, y compris pour les démarcher
+elle-même ou par ses préposés. Cette utilisation ne retire rien aux droits de l'Apporteur : pendant la
+durée de l'attribution, toute commande de l'entreprise attribuée est commissionnée dans les conditions de
+l'article 4.4, qu'elle résulte des démarches de l'Apporteur, de celles de la Société ou de ses préposés,
+ou d'une initiative de l'entreprise. Pendant le délai de confirmation de l'article 3.2, la Société ne
+démarche pas l'entreprise déclarée, hors la demande de confirmation elle-même. Dans les
+{{RESERVE_APRES_ACTE_APPORTEUR_JOURS}} jours qui suivent une vérification d'entreprise faite par
+l'Apporteur, ou une déclaration de sa part refusée ou en attente, la Société ne démarche pas l'entreprise
+concernée et ne la prend pas en charge.**
 
 Les parties conviennent que l'horodatage attribué par le serveur de la Société fait foi entre elles
 **jusqu'à preuve contraire** pour l'application du présent article, conformément à l'article 1356 du code
