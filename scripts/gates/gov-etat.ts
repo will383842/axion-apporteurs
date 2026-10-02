@@ -371,16 +371,6 @@ function lireGithub(): {
   revendications: Map<number, string[]>;
   revendicationsParTitre: Map<string, number[]>;
 } {
-  // Un clone superficiel coupe le graphe : un ancêtre y paraît hors de l'arbre, une fusion présente
-  // y manque. Aucun des jugements qui suivent n'y est sûr.
-  const dansLeClone = executerGit();
-  if (estUnCloneSuperficiel(dansLeClone)) {
-    refuserDeJuger(
-      'clone_superficiel',
-      'ce clone est superficiel : la place des fusions dans l’arbre testé ne peut pas être jugée.\n' +
-        '   Le job doit poser `fetch-depth: 0` sur actions/checkout (localement : `git fetch --unshallow`).'
-    );
-  }
   let prOuvertes: PrOuverte[];
   try {
     prOuvertes = (
@@ -433,6 +423,17 @@ function lireGithub(): {
   const posterieures: FusionPosterieure[] = [];
   const horsArbre: FusionHorsArbre[] = [];
   const baseDuClone = dateDeLaBaseDuClone();
+  // Un clone superficiel coupe le graphe : un ancêtre y paraît hors de l'arbre, une fusion présente
+  // y manque. Jugé APRÈS la lecture de la forge, dont chaque faute garde sa priorité, et seulement
+  // s'il y a une fusion à classer. Un `git` qui ne répond pas vaut « superficiel » (échec fermé).
+  const dansLeClone = executerGit();
+  if (brutFusionnees.some((p) => p.mergeCommit?.oid) && estUnCloneSuperficiel(dansLeClone)) {
+    refuserDeJuger(
+      'clone_superficiel',
+      'ce clone est superficiel, ou `git` ne répond pas : la place des fusions dans l’arbre testé ne peut pas être jugée.\n' +
+        '   Le job doit poser `fetch-depth: 0` sur actions/checkout (localement : `git fetch --unshallow`).'
+    );
+  }
   for (const p of brutFusionnees) {
     const oid = p.mergeCommit?.oid;
     if (!oid) continue; // fusionnée sans commit lisible (branche supprimée côté forge) : hors portée
