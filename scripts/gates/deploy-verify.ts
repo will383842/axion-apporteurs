@@ -434,82 +434,101 @@ async function commandeDeclencher(argv: string[]): Promise<number> {
   return r.code === 0 ? verifierLaPolitique(publique) : r.code;
 }
 
-// ── QA-T55 (REQ-GOV-014) : la porte A du MÊME sha, de la bonne provenance ─────────────────────
+// ── QA-T55, QA-T67 (REQ-GOV-014) : la porte A du MÊME sha, de la bonne provenance ─────────────
 
 /**
  * Le job `deployer` partait sur tout push de `main`, que la porte A soit verte, rouge ou encore en
- * cours. `pnpm deploy:attendre-porte-a` l'attend, AVANT l'AIPD et la plateforme. Voie V2 de la
- * lentille `securite` : un check « gate-a » peut être posé par une autre application, ou par l'API
- * depuis n'importe quel workflow qui a `checks: write` ; seul fait foi le PLUS RÉCENT check-run de
- * `github-actions` sur ce sha, réussi, dont le run appartient à `.github/workflows/ci.yml`. Le job
- * porte EXACTEMENT `contents`, `checks` et `actions` en lecture ; le jeton n'est servi qu'à cette
- * étape. Échec FERMÉ et nommé partout ; ni le jeton ni les adresses appelées ne sont imprimés.
+ * cours. `pnpm deploy:attendre-porte-a` l'attend, AVANT l'AIPD et la plateforme. Deux lectures
+ * seulement, `contents` et `actions` (lentille `securite` du 2026-10-02, quatre conditions) :
+ *   1. les runs de `ci.yml` filtrés par la forge sur le sha, `event=push` et `branch=main` ; un run
+ *      rendu hors de ce filtre est un refus nommé, jamais ignoré ;
+ *   2. le plus récent se choisit sur `run_number` puis `run_attempt`, champs du SERVEUR ;
+ *   3. ce run est `completed` et `success`, puis son job `gate-a` est `success` ;
+ *   4. la paire de permissions est figée par le témoin du workflow.
+ * Le jeton n'est servi qu'à cette étape. Échec FERMÉ et nommé partout ; ni le jeton ni les adresses
+ * appelées ne sont imprimés.
  */
-export const CHECK_DE_LA_PORTE_A = 'gate-a';
+export const JOB_DE_LA_PORTE_A = 'gate-a';
 export const WORKFLOW_DE_LA_PORTE_A = '.github/workflows/ci.yml';
+const FICHIER_DU_WORKFLOW = 'ci.yml';
 
-export type VerdictDesChecks =
+export type VerdictDesRuns =
   | { etat: 'reussie'; runId: number }
   | { etat: 'absente' }
   | { etat: 'en_cours' }
   | { etat: 'refusee'; raison: string };
 
-type CheckRun = {
-  name?: unknown;
-  app?: { slug?: unknown } | null;
+type Run = {
+  id?: unknown;
+  run_number?: unknown;
+  run_attempt?: unknown;
   head_sha?: unknown;
+  head_branch?: unknown;
+  event?: unknown;
+  path?: unknown;
   status?: unknown;
   conclusion?: unknown;
-  started_at?: unknown;
-  details_url?: unknown;
 };
 
-export function jugerLesChecks(brut: unknown, sha: string): VerdictDesChecks {
+const entier = (x: unknown): x is number => typeof x === 'number' && Number.isSafeInteger(x);
+
+export function jugerLesRuns(brut: unknown, sha: string): VerdictDesRuns {
   const liste =
     typeof brut === 'object' && brut !== null
-      ? (brut as { check_runs?: unknown }).check_runs
+      ? (brut as { workflow_runs?: unknown }).workflow_runs
       : undefined;
-  if (!Array.isArray(liste))
-    return { etat: 'refusee', raison: 'reponse_illisible : la liste des check-runs' };
-  const duSha = (liste as CheckRun[]).filter(
-    (c) => c?.name === CHECK_DE_LA_PORTE_A && c.head_sha === sha
+  if (!Array.isArray(liste)) return { etat: 'refusee', raison: 'reponse_illisible : les runs' };
+  const tous = liste as Run[];
+  const horsFiltre = tous.find(
+    (r) =>
+      r?.head_sha !== sha ||
+      r.event !== 'push' ||
+      r.head_branch !== 'main' ||
+      r.path !== WORKFLOW_DE_LA_PORTE_A
   );
-  if (duSha.length === 0) return { etat: 'absente' };
-  const etrangers = duSha.filter((c) => c.app?.slug !== 'github-actions');
-  if (etrangers.length > 0)
+  if (horsFiltre !== undefined)
     return {
       etat: 'refusee',
-      raison: `autre_application : un check « ${CHECK_DE_LA_PORTE_A} » posé par « ${String(etrangers[0]!.app?.slug)} »`,
+      raison: `hors_filtre : un run « ${String(horsFiltre?.event)} » de « ${String(horsFiltre?.head_branch)} » (${String(horsFiltre?.path)}) rendu pour ce sha`,
     };
-  const date = (c: CheckRun) => Date.parse(typeof c.started_at === 'string' ? c.started_at : '');
-  const recent = [...duSha].sort((a, b) => (date(b) || 0) - (date(a) || 0))[0]!;
+  if (tous.length === 0) return { etat: 'absente' };
+  if (tous.some((r) => !entier(r.id) || !entier(r.run_number) || !entier(r.run_attempt)))
+    return { etat: 'refusee', raison: 'reponse_illisible : id, run_number ou run_attempt' };
+  const rang = (r: Run) => [r.run_number as number, r.run_attempt as number] as const;
+  const recent = [...tous].sort((a, b) => {
+    const [na, ta] = rang(a);
+    const [nb, tb] = rang(b);
+    return nb - na || tb - ta;
+  })[0]!;
   if (recent.status !== 'completed') return { etat: 'en_cours' };
   if (recent.conclusion !== 'success')
     return {
       etat: 'refusee',
-      raison: `echec : le check « ${CHECK_DE_LA_PORTE_A} » le plus récent conclut « ${String(recent.conclusion)} »`,
+      raison: `echec : le run de ${WORKFLOW_DE_LA_PORTE_A} le plus récent conclut « ${String(recent.conclusion)} »`,
     };
-  const run = /\/actions\/runs\/(\d+)\//.exec(
-    typeof recent.details_url === 'string' ? recent.details_url : ''
-  );
-  if (run === null) return { etat: 'refusee', raison: 'reponse_illisible : le run du check' };
-  return { etat: 'reussie', runId: Number(run[1]) };
+  return { etat: 'reussie', runId: recent.id as number };
 }
 
-export function jugerLeRun(
-  brut: unknown,
-  sha: string
+export function jugerLesJobs(
+  brut: unknown
 ): { etat: 'reussie' } | { etat: 'refusee'; raison: string } {
-  if (typeof brut !== 'object' || brut === null)
-    return { etat: 'refusee', raison: 'reponse_illisible : le run' };
-  const r = brut as { path?: unknown; head_sha?: unknown };
-  if (r.path !== WORKFLOW_DE_LA_PORTE_A)
+  const liste =
+    typeof brut === 'object' && brut !== null ? (brut as { jobs?: unknown }).jobs : undefined;
+  if (!Array.isArray(liste)) return { etat: 'refusee', raison: 'reponse_illisible : les jobs' };
+  const porte = (liste as { name?: unknown; status?: unknown; conclusion?: unknown }[]).filter(
+    (j) => j?.name === JOB_DE_LA_PORTE_A
+  );
+  if (porte.length === 0)
     return {
       etat: 'refusee',
-      raison: `autre_workflow : le run vient de « ${String(r.path)} », pas de ${WORKFLOW_DE_LA_PORTE_A}`,
+      raison: `gate_a_absent : le run ne porte pas de job « ${JOB_DE_LA_PORTE_A} »`,
     };
-  if (r.head_sha !== sha)
-    return { etat: 'refusee', raison: 'autre_sha : le run porte un autre sha' };
+  const ko = porte.find((j) => j.status !== 'completed' || j.conclusion !== 'success');
+  if (ko !== undefined)
+    return {
+      etat: 'refusee',
+      raison: `echec : le job « ${JOB_DE_LA_PORTE_A} » conclut « ${String(ko.conclusion)} »`,
+    };
   return { etat: 'reussie' };
 }
 
@@ -539,11 +558,11 @@ async function commandeAttendrePorteA(argv: string[]): Promise<number> {
     return 1;
   }
   const o = options(argv);
-  let dernier: VerdictDesChecks = { etat: 'absente' };
+  let dernier: VerdictDesRuns = { etat: 'absente' };
   for (let essai = 1; essai <= o.essais; essai++) {
-    dernier = jugerLesChecks(
+    dernier = jugerLesRuns(
       await lireLaForge(
-        `/repos/${depot}/commits/${sha}/check-runs?check_name=${CHECK_DE_LA_PORTE_A}&per_page=100`,
+        `/repos/${depot}/actions/workflows/${FICHIER_DU_WORKFLOW}/runs?head_sha=${sha}&event=push&branch=main&per_page=100`,
         jeton
       ),
       sha
@@ -561,16 +580,15 @@ async function commandeAttendrePorteA(argv: string[]): Promise<number> {
     );
     return 1;
   }
-  const run = jugerLeRun(
-    await lireLaForge(`/repos/${depot}/actions/runs/${dernier.runId}`, jeton),
-    sha
+  const porte = jugerLesJobs(
+    await lireLaForge(`/repos/${depot}/actions/runs/${dernier.runId}/jobs?per_page=100`, jeton)
   );
-  if (run.etat === 'refusee') {
-    console.error(`❌ porte A refusée pour ${sha} — ${run.raison}`);
+  if (porte.etat === 'refusee') {
+    console.error(`❌ porte A refusée pour ${sha} — ${porte.raison}`);
     return 1;
   }
   console.log(
-    `✅ porte A « ${CHECK_DE_LA_PORTE_A} » réussie sur ${sha}, run de ${WORKFLOW_DE_LA_PORTE_A} — le déploiement peut partir`
+    `✅ porte A « ${JOB_DE_LA_PORTE_A} » réussie sur ${sha}, run de ${WORKFLOW_DE_LA_PORTE_A} — le déploiement peut partir`
   );
   return 0;
 }
