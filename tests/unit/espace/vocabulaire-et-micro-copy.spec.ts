@@ -701,6 +701,20 @@ describe('REQ-UX-002 — snapshot des libellés de l’espace, sans date, sans n
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › /connexion/<jeton> › titre : Ce lien a déjà servi
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › /connexion/<jeton> › phrase : Un lien de connexion ne sert qu’une fois. Un nouveau lien peut vous être envoyé.
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › /connexion/<jeton> › action › libelle : M'envoyer un nouveau lien
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /mes-entreprises/<id> › titre : Aucun échange noté
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /mes-entreprises/<id> › phrase : Rien n’est attendu ici : les étapes d’Axion-IA s’affichent dans la frise.
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /mes-entreprises/<id> › action › libelle : Noter un échange
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /profil/personnes › titre : Personne n’agit pour vous
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /profil/personnes › phrase : Si quelqu’un rencontre des entreprises pour vous, vous pouvez le déclarer ici. Seules vos propres rencontres et celles des personnes déclarées permettent de réserver une entreprise pour vous.
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /profil/personnes › action › libelle : Déclarer une personne
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /mon-contrat › titre : Votre contrat est en préparation
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /mon-contrat › phrase : Il est préparé quand vos pièces sont vérifiées. Vous le lirez ici avant de le signer ; rien n’est à faire d’ici là.
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /mon-contrat › action › libelle : Voir mes vérifications
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /mon-contrat › action › route : /conformite
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /notifications › titre : Aucune notification
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /notifications › phrase : Les nouvelles de vos entreprises apparaîtront ici. Rien n’est à consulter régulièrement : les avis importants arrivent aussi par e-mail.
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /notifications › action › libelle : Retour à l'accueil
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /notifications › action › route : /
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › /confidentialite › titre : Aucun destinataire nommé
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › /confidentialite › phrase : Le registre des traitements ne nomme encore aucun prestataire ni organisme qui reçoive vos données.
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › /confidentialite › action › libelle : Retour à l'accueil
