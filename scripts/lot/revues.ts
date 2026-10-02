@@ -1245,6 +1245,10 @@ export const SEGMENTS_DES_ZONES_SENSIBLES: readonly string[] = [
   'chiffrement',
   'cloisonnement',
   'middleware',
+  // QA-T60 (note de la lentille securite sur JUR-T35) : le fichier qui porte MISE_EN_SERVICE, lu par
+  // son nom (`scripts/gates/runbooks-exerces.ts`). La date garde l'exercice des runbooks avant la
+  // première donnée réelle : la déplacer est une décision de sécurité.
+  'runbooks-exerces',
 ];
 
 /**
