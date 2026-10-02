@@ -16,6 +16,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
   LECTURES_DE_LA_PORTE_A,
+  NOM_DE_L_INSTANTANE,
   cleDeLecture,
   contexteAdmis,
   figerLesLectures,
@@ -95,26 +96,64 @@ describe('REQ-GOV-006 REQ-QA-013 — la forge lue une fois par porte A', () => {
     expect(instantaneEnVigueur({})).toBeUndefined();
   });
 
-  it('REQ-GOV-006 : TÉMOIN — l’étape ne tourne que dans la porte A ; elle y pose GOV_FORGE après UNE lecture par type', () => {
-    expect(poserLInstantane(() => '[]', {})).toMatch(/RUNNER_TEMP et GITHUB_ENV sont exigés/);
-    const sortieEnv = join(DOSSIER, 'github-env');
-    writeFileSync(sortieEnv, '');
+  it('REQ-GOV-006 : TÉMOIN — l’étape ne tourne que dans la porte A ; elle y écrit l’instantané, sous le nom que les étapes lisent, après UNE lecture par type', () => {
+    expect(poserLInstantane(() => '[]', {})).toBe(
+      'RUNNER_TEMP est exigé : cette étape ne tourne que dans la porte A'
+    );
     let lectures = 0;
     const refus = poserLInstantane(
       () => {
         lectures++;
         return '[]';
       },
-      { RUNNER_TEMP: DOSSIER, GITHUB_ENV: sortieEnv }
+      { RUNNER_TEMP: DOSSIER }
     );
     expect(refus).toBeNull();
     expect(lectures).toBe(LECTURES_DE_LA_PORTE_A.length);
-    const ligne = readFileSync(sortieEnv, 'utf8').trim();
-    expect(ligne).toBe(`GOV_FORGE=${join(DOSSIER, 'forge-instantane.json')}`);
-    expect(
-      poserLInstantane(() => 'pas du json', { RUNNER_TEMP: DOSSIER, GITHUB_ENV: sortieEnv })
-    ).toMatch(/aucun instantané posé/);
+    const ecrit = { variable: 'GOV_FORGE' as const, chemin: join(DOSSIER, NOM_DE_L_INSTANTANE) };
+    for (const lecture of LECTURES_DE_LA_PORTE_A)
+      expect(lireDansLInstantane(ecrit, lecture, CI)).toBe('[]');
+    expect(poserLInstantane(() => 'pas du json', { RUNNER_TEMP: DOSSIER })).toMatch(
+      /aucun instantané posé/
+    );
   });
+
+  it('REQ-GOV-006 : le chemin que les étapes de la porte A reçoivent dans GOV_FORGE est celui que l’étape écrit', () => {
+    const ci = readFileSync('.github/workflows/ci.yml', 'utf8');
+    const attendu = `GOV_FORGE: \${{ runner.temp }}/${NOM_DE_L_INSTANTANE}`;
+    const lignes = ci.split('\n').filter((l) => l.includes('GOV_FORGE:'));
+    expect(lignes.length).toBeGreaterThan(0);
+    for (const l of lignes) expect(l.trim()).toBe(attendu);
+    expect(ci).toContain('run: pnpm forge:instantane');
+  });
+
+  it('REQ-GOV-006 REQ-QA-013 : la vraie garde gov:trace, sans `gh` sur le chemin, lit les PR fusionnées dans l’instantané ; corrompu, elle échoue en le nommant', () => {
+    const lecture = LECTURES_DE_LA_PORTE_A[3];
+    const lancer = (chemin: string) => {
+      const env: NodeJS.ProcessEnv = { ...process.env };
+      for (const k of Object.keys(env))
+        if (/^(path|gov_etat_forge|gov_etat_gh|gov_forge|gov_trace_sans_pr)$/i.test(k))
+          delete env[k];
+      env['PATH'] = process.execPath.replace(/[\\/][^\\/]+$/, '');
+      const r = spawnSync(
+        process.execPath,
+        ['node_modules/tsx/dist/cli.mjs', 'scripts/gates/gov-trace.ts', '--sources'],
+        { encoding: 'utf8', env: { ...env, ...CI, GOV_FORGE: chemin } }
+      );
+      return { code: r.status, sortie: `${r.stdout}${r.stderr}` };
+    };
+    const lu = lancer(
+      ecrire(
+        JSON.stringify({
+          [cleDeLecture(lecture)]: JSON.stringify([{ number: 7, body: 'Couvre : REQ-QA-013' }]),
+        })
+      )
+    );
+    expect(lu.sortie).toContain('PR fusionnées : lues ✓ (1,');
+    const corrompu = lancer(ecrire('{ pas du json'));
+    expect(corrompu.code).not.toBe(0);
+    expect(corrompu.sortie).toContain('instantané de la forge illisible');
+  }, 120_000);
 
   it('REQ-GOV-006 : la vraie garde gov:etat, avec GOV_FORGE et sans `gh` sur le chemin, lit l’instantané et ne parle pas à la forge', () => {
     const instantane = Object.fromEntries(

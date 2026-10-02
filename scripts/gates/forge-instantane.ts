@@ -11,8 +11,11 @@
  *
  * CE QUE FAIT L'ÉTAPE. Elle fait chaque lecture de `LECTURES_DE_LA_PORTE_A` UNE fois, écrit
  * l'instantané (une sortie de `gh` par lecture, indexée par ses arguments joints) dans `RUNNER_TEMP`,
- * et pose `GOV_FORGE` pour les étapes suivantes du job (`GITHUB_ENV`). `gov:etat`, `gov:pr`,
- * `gov:trace` et `tests/setup-forge.ts` le lisent par `lireDansLInstantane`.
+ * sous un nom FIXE (`NOM_DE_L_INSTANTANE`). Elle ne pose RIEN dans l'environnement des étapes
+ * suivantes : `gov:conventions` (point 7 de l'outillage) refuse qu'une étape le fasse. Chaque étape
+ * qui lit la forge reçoit `GOV_FORGE` dans son `env:`, figé avec elle. `gov:etat`, `gov:trace` et
+ * `tests/setup-forge.ts` le lisent par `lireDansLInstantane` ; `gov:pr` ne lit pas la forge en
+ * porte A (il y tourne sans argument).
  *
  * LES RÈGLES, toutes en échec FERMÉ et NOMMÉ :
  *   — une lecture qui échoue, ou qui ne rend pas du JSON : pas d'instantané, l'étape échoue ;
@@ -24,7 +27,7 @@
  *     (lentille sécurité) : un instantané forgé ne fait jamais passer une porte réelle.
  * RÉSERVE ACCEPTÉE : une revue publiée pendant le job n'est pas vue par ce run ; le rejeu la voit.
  */
-import { appendFileSync, readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { join } from 'node:path';
 
@@ -127,18 +130,17 @@ export function lireDansLInstantane(
   return lu;
 }
 
-/** L'étape de la porte A : la forge lue une fois, l'instantané écrit, `GOV_FORGE` posé. Rend le refus, ou `null`. */
+/** Le nom de l'instantané sous `RUNNER_TEMP` : celui que les `env:` des étapes nomment. */
+export const NOM_DE_L_INSTANTANE = 'forge-instantane.json';
+
+/** L'étape de la porte A : la forge lue une fois, l'instantané écrit. Rend le refus, ou `null`. */
 export function poserLInstantane(lire: Lire, env: Env): string | null {
   const dossier = env['RUNNER_TEMP'];
-  const sortieEnv = env['GITHUB_ENV'];
-  if (!dossier || !sortieEnv)
-    return 'RUNNER_TEMP et GITHUB_ENV sont exigés : cette étape ne tourne que dans la porte A';
+  if (!dossier) return 'RUNNER_TEMP est exigé : cette étape ne tourne que dans la porte A';
   const instantane = figerLesLectures(lire);
   if (instantane === null)
     return 'une lecture de la forge a échoué ou n’a pas rendu de JSON : aucun instantané posé';
-  const chemin = join(dossier, 'forge-instantane.json');
-  writeFileSync(chemin, JSON.stringify(instantane));
-  appendFileSync(sortieEnv, `GOV_FORGE=${chemin}\n`);
+  writeFileSync(join(dossier, NOM_DE_L_INSTANTANE), JSON.stringify(instantane));
   return null;
 }
 

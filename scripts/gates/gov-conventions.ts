@@ -2561,6 +2561,13 @@ export function lireVue(): Vue {
  */
 /** Le jeton que cinq étapes reçoivent pour lire la forge — une valeur, écrite une fois (RM-01). */
 const JETON_DE_LA_FORGE = { env: { GH_TOKEN: '${{ secrets.GITHUB_TOKEN }}' } } as const;
+/** QA-T64 : les étapes qui lisent la forge relisent l'instantané de `forge:instantane`, nommé ici. */
+const JETON_ET_INSTANTANE = {
+  env: {
+    GH_TOKEN: '${{ secrets.GITHUB_TOKEN }}',
+    GOV_FORGE: '${{ runner.temp }}/forge-instantane.json',
+  },
+} as const;
 
 export const PORTE_A_FIGEE: PorteFigee = {
   job: 'gate-a',
@@ -2603,6 +2610,12 @@ export const PORTE_A_FIGEE: PorteFigee = {
       },
     },
     { nom: 'run: pnpm install --frozen-lockfile', run: 'pnpm install --frozen-lockfile' },
+    // QA-T64 : la forge lue une fois, en tête, pour toutes les gardes qui la lisent.
+    {
+      nom: 'La forge est lue une fois pour toute la porte A',
+      run: 'pnpm forge:instantane',
+      cles: JETON_DE_LA_FORGE,
+    },
     // GOV-123 : les vues se rendent AVANT toute étape qui en lit une ; aucune ne revient sous git.
     {
       nom: 'Les vues derivees sont rendues, et le rendu est reproductible',
@@ -2654,7 +2667,7 @@ export const PORTE_A_FIGEE: PorteFigee = {
     {
       nom: 'Matrice de tracabilite REQ vers tache vers test vers PR',
       run: 'pnpm gov:trace',
-      cles: JETON_DE_LA_FORGE,
+      cles: JETON_ET_INSTANTANE,
     },
     { nom: 'La matrice de tracabilite sait rougir', run: 'pnpm gov:trace:prove' },
     { nom: 'La vue de tracabilite est derivee de ses sources', run: 'pnpm gov:trace:verifier' },
@@ -2772,11 +2785,11 @@ export const PORTE_A_FIGEE: PorteFigee = {
       run: 'pnpm a11y:navigateurs:bornes',
       cles: { 'timeout-minutes': '15' },
     },
-    { nom: 'Tests', run: 'pnpm test', cles: JETON_DE_LA_FORGE },
+    { nom: 'Tests', run: 'pnpm test', cles: JETON_ET_INSTANTANE },
     {
       nom: 'req:check — chaque paire (tache, REQ) a son test annote et VERT',
       run: 'pnpm req:check',
-      cles: JETON_DE_LA_FORGE,
+      cles: JETON_ET_INSTANTANE,
     },
     { nom: 'Le lecteur du rapport de mutation sait rougir', run: 'pnpm mutation:prove' },
     {
@@ -2786,7 +2799,7 @@ export const PORTE_A_FIGEE: PorteFigee = {
     {
       nom: 'Etat vivant — fraicheur, verrou d owner, journal',
       run: 'pnpm gov:etat --now "$(date -u +%Y-%m-%dT%H:%M:%SZ)"',
-      cles: JETON_DE_LA_FORGE,
+      cles: JETON_ET_INSTANTANE,
     },
     { nom: 'La garde de l etat vivant sait rougir', run: 'pnpm gov:etat:prove' },
     { nom: 'Construire l application pour la mesure', run: 'pnpm perf:bundle:construire' },
@@ -2868,6 +2881,7 @@ export const PORTE_A_FIGEE: PorteFigee = {
     'sec:semgrep:prove': 'tsx scripts/gates/semgrep.ts --prove',
     // GOV-123 : les deux étapes des vues, lancées par la porte A, figées comme les autres.
     'vues:rendre': 'tsx scripts/vues/rendre-apres-fusion.ts',
+    'forge:instantane': 'tsx scripts/gates/forge-instantane.ts',
     'vues:hors-git': 'tsx scripts/vues/rendre-apres-fusion.ts --hors-git',
     'gov:publication': 'tsx scripts/gates/gov-publication.ts',
     'gov:publication:prove': 'tsx scripts/gates/gov-publication.ts --prove',
