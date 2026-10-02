@@ -48,14 +48,16 @@ export function echeanceDePurge(statut: EtatAttribution, dateDeReference: Date):
 }
 
 /**
- * Entrepreneur individuel : la catégorie juridique de l'INSEE dont le niveau 1 est « 1 »
- * (nomenclature des catégories juridiques, niveau I : « Entrepreneur individuel »). Son siège est
+ * Entrepreneur individuel : la catégorie juridique INSEE de premier rang « 1 »
+ * (nomenclature des catégories juridiques, premier rang : « Entrepreneur individuel »). Son siège est
  * souvent son domicile : ses coordonnées s'effacent avec le contact (point 13 de la séance, validé par
  * Williams le 2026-10-02). Une personne morale garde les siennes.
  */
-const NIVEAU_I_ENTREPRENEUR_INDIVIDUEL = '1';
+const PREMIER_RANG_ENTREPRENEUR_INDIVIDUEL = '1';
 export function estEntrepriseIndividuelle(natureJuridique: string | null): boolean {
-  return natureJuridique !== null && natureJuridique.startsWith(NIVEAU_I_ENTREPRENEUR_INDIVIDUEL);
+  return (
+    natureJuridique !== null && natureJuridique.startsWith(PREMIER_RANG_ENTREPRENEUR_INDIVIDUEL)
+  );
 }
 
 /**

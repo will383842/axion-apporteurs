@@ -86,7 +86,7 @@ describe('REQ-DM-031 — l’échéance de la purge, statut par statut', () => {
 });
 
 describe('REQ-DM-031 — ce que la purge efface', () => {
-  it('REQ-DM-031 : l’entreprise individuelle se lit sur la catégorie juridique (niveau 1 de l’INSEE : 1)', () => {
+  it('REQ-DM-031 : l’entreprise individuelle se lit sur la catégorie juridique (catégorie juridique INSEE de premier rang 1)', () => {
     expect(estEntrepriseIndividuelle('1000')).toBe(true);
     expect(estEntrepriseIndividuelle('5710')).toBe(false);
     expect(estEntrepriseIndividuelle('9220')).toBe(false);
