@@ -1,7 +1,7 @@
 // @req REQ-DM-043
 /**
  * Le SIREN d'un dépôt refusé s'efface douze mois après le refus, en base RÉELLE (REQ-DM-043,
- * HYP-A02-RETENTION, partners/ADR-0031).
+ * HYP-A02-RETENTION, partners/ADR-0030).
  *
  * CE QUE LA TÂCHE ET LA BASE TIENNENT :
  *   — sous l'échéance, rien ; pile et au-delà, `siren` passe à NULL et `siren_purge_at` date la

@@ -1,6 +1,6 @@
 /**
  * La purge planifiée du SIREN des dépôts refusés (DM-53, REQ-DM-043, HYP-A02-RETENTION,
- * partners/ADR-0031) — un passage du lanceur (GOV-137).
+ * partners/ADR-0030) — un passage du lanceur (GOV-137).
  *
  * Douze mois après le refus (`DEPOT_REFUSE_SIREN_PURGE_APRES_MOIS`, `retention.ts`), le SIREN passe à
  * NULL et `siren_purge_at` date la purge, en une seule instruction. La ligne RESTE comme trace du

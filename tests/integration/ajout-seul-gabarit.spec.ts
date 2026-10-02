@@ -6,7 +6,7 @@
  * branche par `CREATE TRIGGER … EXECUTE FUNCTION refuser_modification_sauf('purge:<c>', …)`.
  *
  * CE QU'IL PROUVE, sur ses deux premiers usages :
- *   — `depots_refuses` (`purge:siren`, `une_fois:siren_purge_at`, partners/ADR-0031) : le SIREN
+ *   — `depots_refuses` (`purge:siren`, `une_fois:siren_purge_at`, partners/ADR-0030) : le SIREN
  *     passe à NULL avec sa date de purge ; toute autre colonne modifiée est refusée, un SIREN purgé ne
  *     revient pas ;
  *   — `personnes_declarees` (`purge:nom_chiffre`, `purge:prenom_chiffre`, `une_fois:retiree_at`) :

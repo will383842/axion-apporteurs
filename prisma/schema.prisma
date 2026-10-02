@@ -688,7 +688,7 @@ model DepotRefuse {
   id           String          @id @default(uuid()) @db.Uuid
   apporteurId  String          @map("apporteur_id") @db.Uuid
   apporteur    Apporteur       @relation(fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  /// Effacé douze mois après le refus (DM-53, partners/ADR-0031) : la ligne reste, sans lui.
+  /// Effacé douze mois après le refus (DM-53, partners/ADR-0030) : la ligne reste, sans lui.
   siren        String?         @db.Char(9)
   motif        MotifRefusDepot
   canal        CanalDepot

@@ -1,4 +1,4 @@
-# partners/ADR-0031 — Le SIREN des dépôts refusés s'efface à douze mois, la ligne reste comme trace
+# partners/ADR-0030 — Le SIREN des dépôts refusés s'efface à douze mois, la ligne reste comme trace
 
 | Champ | Valeur |
 | --- | --- |
@@ -84,5 +84,5 @@ la lentille sécurité) : il est atomique.
 
 - Relecture et acceptation par A02 ; l'ADR passe alors `accepte`, et la migration qui le cite en
   ligne 1 est absoute de `journal_desarme`.
-- `gov:adr` exige des numéros consécutifs : cet ADR attend l'ADR 0030 (INT-T28) ; à défaut, les
-  numéros s'échangent à la PR.
+- `gov:adr` exige des numéros consécutifs : cet ADR, ouvert le premier, prend le 0030 ; l'ADR
+  d'INT-T28 prendra le 0031.

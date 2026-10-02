@@ -1,4 +1,4 @@
--- ADR: partners/ADR-0031
+-- ADR: partners/ADR-0030
 -- DM-53 (REQ-DM-043, HYP-A02-RETENTION) : le SIREN d'un dépôt refusé s'efface douze mois après le
 -- refus ; la ligne reste comme trace du refus (apporteur, motif, canal, date), sans lui. Jamais une
 -- empreinte à sa place : un SIREN se retrouve par force brute sur ses 10⁹ valeurs.
