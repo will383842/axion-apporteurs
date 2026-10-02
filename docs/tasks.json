@@ -18894,7 +18894,9 @@
         "package.json",
         "scripts/prevol.ts",
         "scripts/ci/navigateurs-bornes.ts",
-        "tests/unit/qualite/navigateurs-bornes.spec.ts"
+        "tests/unit/qualite/navigateurs-bornes.spec.ts",
+        "scripts/gates/registre-des-refus.ts",
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts"
       ],
       "schema": false,
       "sensible": [],
