@@ -1,11 +1,11 @@
 // @req REQ-JUR-001
 // @req REQ-JUR-002
 /**
- * QA-T69 — la garde `jur:copy-indicative`, transposée d'axion-ia (JUR-T29) : la rémunération d'un
+ * QA-T69 — la garde `jur:copy-indicative`, transposée d'axion-ia : la rémunération d'un
  * apporteur ne se promet pas, ni dans la micro-copy ni dans les maquettes.
  *
  * CE QUE CE FICHIER GARDE :
- *   1. la phrase d'états vides que C15 a réécrite (une promesse de gain dès la signature, contraire
+ *   1. l'ancienne phrase de l'état vide de l'accueil (une promesse de gain dès la signature, contraire
  *      à l'art. 4.2), reposée dans une copie de test, fait rougir la garde ;
  *   2. chaque famille rougit sur son témoin, et seulement elle ; les contre-témoins restent verts ;
  *   3. la copy RÉELLE (src/content/ et docs/maquettes/, lues sur le disque) la laisse verte.
@@ -17,7 +17,7 @@ import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import {
   CONTRE_TEMOINS,
-  PHRASE_C15,
+  PHRASE_DE_L_ACCUEIL,
   TEMOINS,
   fautesDeRemuneration,
   telleQueLue,
@@ -33,9 +33,9 @@ function lireSous(dossier: string, extensions: RegExp): Fichier[] {
 }
 
 describe('REQ-JUR-001 REQ-JUR-002 — aucune rémunération présentée comme ferme', () => {
-  it('REQ-JUR-001 : TÉMOIN — la phrase que C15 a réécrite fait rougir la garde, nommée', () => {
+  it('REQ-JUR-001 : TÉMOIN — l’ancienne phrase de l’accueil fait rougir la garde, nommée', () => {
     const f = fautesDeRemuneration([
-      { chemin: 'src/content/micro-copy/espace/etats-vides.ts', texte: PHRASE_C15 },
+      { chemin: 'src/content/micro-copy/espace/etats-vides.ts', texte: PHRASE_DE_L_ACCUEIL },
     ]);
     expect(f.map((x) => [x.famille, x.extrait])).toEqual([['remuneration_ferme', 'vous touchez']]);
   });
@@ -47,7 +47,7 @@ describe('REQ-JUR-001 REQ-JUR-002 — aucune rémunération présentée comme fe
     }
   });
 
-  it('REQ-JUR-002 : CONTRE-TÉMOINS — la phrase C15 d’A07, un taux indicatif, la limite d’âge, un commentaire : verts', () => {
+  it('REQ-JUR-002 : CONTRE-TÉMOINS — la tournure d’A07 pour l’accueil, un taux indicatif, la limite d’âge, un commentaire : verts', () => {
     for (const c of CONTRE_TEMOINS)
       expect([c.quoi, fautesDeRemuneration(c.fichiers)]).toEqual([c.quoi, []]);
   });

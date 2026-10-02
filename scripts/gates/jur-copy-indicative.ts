@@ -5,7 +5,7 @@
  * USAGE : npx tsx scripts/gates/jur-copy-indicative.ts           (juge le dépôt)
  *         npx tsx scripts/gates/jur-copy-indicative.ts --prove   (témoins INJECTÉS)
  *
- * TRANSPOSÉE de la garde d'axion-ia (`scripts/gates/jur-copy-indicative.ts`, JUR-T29), motifs repris
+ * TRANSPOSÉE de la garde d'axion-ia (`scripts/gates/jur-copy-indicative.ts`), motifs repris
  * tels quels, sur la copy de Partners : les fichiers SUIVIS de `src/content/**` et de
  * `docs/maquettes/**`. Familles :
  *   — `remuneration_ferme` : une formule qui présente une rémunération comme acquise (« vous
@@ -142,14 +142,14 @@ export function fautesDeRemuneration(
 
 const MICRO = 'src/content/micro-copy/espace/etats-vides.ts';
 
-/** La phrase que C15 a réécrite (une promesse de gain dès la signature, contraire à l'art. 4.2). */
-export const PHRASE_C15 =
+/** L'ancienne phrase de l'état vide de l'accueil (une promesse de gain dès la signature, contraire à l'art. 4.2). */
+export const PHRASE_DE_L_ACCUEIL =
   "    phrase: 'Axion-IA l’appelle. Si elle signe, vous touchez une commission.',";
 
 export const TEMOINS: { quoi: string; fichiers: Fichier[]; famille: string }[] = [
   {
-    quoi: 'la phrase d’états vides que C15 a réécrite',
-    fichiers: [{ chemin: MICRO, texte: PHRASE_C15 }],
+    quoi: 'l’ancienne phrase de l’état vide de l’accueil',
+    fichiers: [{ chemin: MICRO, texte: PHRASE_DE_L_ACCUEIL }],
     famille: 'remuneration_ferme',
   },
   {
@@ -192,7 +192,7 @@ export const TEMOINS: { quoi: string; fichiers: Fichier[]; famille: string }[] =
 
 export const CONTRE_TEMOINS: { quoi: string; fichiers: Fichier[] }[] = [
   {
-    quoi: 'la phrase que C15 a posée (A07)',
+    quoi: 'la tournure d’A07 pour l’accueil',
     fichiers: [
       {
         chemin: MICRO,
