@@ -172,14 +172,14 @@ describe('REQ-CPL-005 — l’identité de facturation référence une pièce ri
     });
     const autre = await piece({ apporteur: a, type: 'identite' });
     await expect(identite(a, rib)).resolves.toBe(1);
-    expect(await refus(identite(a, autre))).toMatch(/23503|foreign key|piece_kyc/);
+    expect(await refus(identite(a, autre))).toContain('identites_facturation_piece_rib_fkey');
   });
 
   it('REQ-CPL-005 : le type de la référence ne peut valoir que rib ; une identité sans pièce reste admise', async () => {
     const a = await unApporteur();
     const tva = await piece({ apporteur: a, type: 'tva' });
     expect(await refus(identite(a, tva, 'tva'))).toContain(
-      'identites_facturation_piece_kyc_type_rib'
+      'identites_facturation_piece_kyc_est_un_rib'
     );
     await expect(identite(a, null)).resolves.toBe(1);
   });
