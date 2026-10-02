@@ -100,28 +100,42 @@ export function calculerCommission(e: EntreeCalcul): VerdictCommission {
  * Numérateur et dénominateur sont TOUS DEUX TTC. Le cumul est borné au TTC net : un trop-perçu
  * n'acquiert rien au-delà de la commission. La formule est cumulative : l'état final ne dépend pas
  * de l'ordre des encaissements, et le dernier absorbe le reliquat d'arrondi par construction.
- * Entrées entières positives exigées : sinon, `RangeError` — un prorata sur une donnée fausse
- * n'a pas de valeur par défaut.
+ *
+ * UN ENCAISSEMENT NUL, NÉGATIF OU NON ENTIER (DM-46, décision A02 du 2026-10-02) :
+ *   — NUL : il n'acquiert rien — part 0, cumul inchangé — et il est RAPPORTÉ dans `ecartes`
+ *     (`encaissement_nul`) pour que l'appelant l'écrive au journal. C'est le seul écart admis ;
+ *   — NÉGATIF : il LÈVE. Un remboursement est un événement distinct (`paiement_rembourse`) qui
+ *     produit sa ligne de reprise (REQ-DM-019) ; un montant négatif ici viole le contrat, et
+ *     l'écarter laisserait passer un remboursement mal acheminé comme un « rien » ;
+ *   — NON ENTIER : il LÈVE — une donnée corrompue est une faute en amont.
+ * Une commission totale négative ou non entière, un TTC net nul ou négatif lèvent aussi : un prorata
+ * sur une donnée fausse n'a pas de valeur par défaut. Chaque refus nomme ce qu'il refuse.
  */
-export function partsDuProrata(
+export type EcartDEncaissement = { readonly indice: number; readonly motif: 'encaissement_nul' };
+
+export function prorataDesEncaissements(
   commissionTotaleCents: number,
   factureTtcNetCents: number,
   encaissementsTtcCents: readonly number[]
-): number[] {
-  const entierPositif = (n: number) => Number.isSafeInteger(n) && n > 0;
+): { parts: number[]; ecartes: EcartDEncaissement[] } {
   if (!Number.isSafeInteger(commissionTotaleCents) || commissionTotaleCents < 0) {
     throw new RangeError('prorata : la commission totale doit être un entier de centimes ≥ 0');
   }
-  if (!entierPositif(factureTtcNetCents)) {
+  if (!Number.isSafeInteger(factureTtcNetCents) || factureTtcNetCents <= 0) {
     throw new RangeError('prorata : le TTC net de la facture doit être un entier de centimes > 0');
   }
   const total = BigInt(commissionTotaleCents);
   const net = BigInt(factureTtcNetCents);
+  const ecartes: EcartDEncaissement[] = [];
   let cumul = 0n;
   let acquis = 0n;
-  return encaissementsTtcCents.map((e, i) => {
-    if (!entierPositif(e)) {
-      throw new RangeError(`prorata : l'encaissement ${i} doit être un entier de centimes > 0`);
+  const parts = encaissementsTtcCents.map((e, i) => {
+    if (!Number.isSafeInteger(e) || e < 0) {
+      throw new RangeError(`prorata : l'encaissement ${i} doit être un entier de centimes ≥ 0`);
+    }
+    if (e === 0) {
+      ecartes.push({ indice: i, motif: 'encaissement_nul' });
+      return 0;
     }
     cumul += BigInt(e);
     const borne = cumul < net ? cumul : net;
@@ -129,4 +143,15 @@ export function partsDuProrata(
     acquis += part;
     return Number(part);
   });
+  return { parts, ecartes };
+}
+
+/** Les parts seules : l'enveloppe historique de `prorataDesEncaissements`, même signature. */
+export function partsDuProrata(
+  commissionTotaleCents: number,
+  factureTtcNetCents: number,
+  encaissementsTtcCents: readonly number[]
+): number[] {
+  return prorataDesEncaissements(commissionTotaleCents, factureTtcNetCents, encaissementsTtcCents)
+    .parts;
 }

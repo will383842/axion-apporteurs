@@ -292,7 +292,7 @@
       "phase": 1,
       "script": "tests/integration/index-partiel.spec.ts",
       "tache": "DM-07",
-      "verifie": "pg_indexes contient attributions_un_occupant avec la clause WHERE GENEREE depuis ETATS_OCCUPANTS (REQ-DM-003, 7 etats, jamais ('provisoire','active') litteral), attributions_en_attente, contrats_un_en_vigueur, rattachements_un_actif ; double insertion -> 23505",
+      "verifie": "pg_indexes contient attributions_un_occupant avec la clause WHERE GENEREE depuis ETATS_OCCUPANTS (REQ-DM-003, 7 etats, jamais ('provisoire','active') litteral), compare en ENSEMBLE apres la reecriture = ANY (ARRAY[...]) de PostgreSQL et juge par fautesIndexOccupant, la meme fonction que partners:schema:enums ; attributions_en_attente (REQ-DM-004), predicat exact statut = en_attente ; double insertion -> 23505. DM-07 : l'horloge du depot (deposee_at ecrasee, microseconde, strictement croissante sous le verrou du SIREN) et le porteur exclusif W19 (REQ-DM-048) sont eprouves dans le meme fichier. contrats_un_en_vigueur et rattachements_un_actif entrent avec leurs tables, dont les taches creatrices etendent ce fichier.",
       "fixtureRouge": "inserer deux attributions occupantes sur le meme SIREN",
       "preuveRouge": null
     },
@@ -1194,6 +1194,18 @@
       "verifie": "AST JSX de tout fichier de src/app/ : un attribut style= (objet ou chaîne) rougit en nommant le fichier et la ligne (style_en_ligne) — la CSP sert style-src 'self' sans nonce, un style en ligne y serait bloqué ou forcerait 'unsafe-inline' ; un attribut dangerouslySetInnerHTML rougit (html_injecte) ; un fichier que l'analyseur ne lit pas rougit (source_illisible). Les styles passent par des modules CSS. Lancée en porte A par `pnpm csp:inline` et `pnpm csp:inline:prove`. CE QU'ELLE NE TIENT PAS : un style posé à l'exécution par du code client (element.style), une CSP altérée au service (tenue par la comparaison de deploy-verify), une CSP mal configurée (tenue par tests/unit/securite/headers.spec.ts).",
       "fixtureRouge": "un <button style={{ minHeight: '3rem' }}> sous src/app/",
       "preuveRouge": "Rejoué par A01 le 2026-10-02 sur t/sec-46 (2e5078c2) : ecran.tsx et error.tsx de main remis en place -> EXIT=1, « ❌ csp:inline — 4 faute(s) ; 9 fichier(s) de src/app/ lu(s), 60 attribut(s) JSX confronté(s) » (ecran.tsx l. 102, 119, 138 ; error.tsx l. 31) ; tête -> EXIT=0, « ✅ csp:inline — 9 fichier(s) … aucun style en ligne, aucun HTML injecté » ; --prove : 3 familles rougissent sur leurs témoins, 2 contre-témoins verts. Témoin tests/unit/securite/csp-inline.spec.ts commité d'abord (e568e4fa). Rouge constaté par: A01"
+    },
+    {
+      "id": "aipd:signee",
+      "phase": 1,
+      "script": "scripts/gates/aipd-signee.ts",
+      "tache": "JUR-T35",
+      "verifie": "aucun depot reel tant que l'AIPD n'est pas signee (REQ-CPL-009) : a partir de MISE_EN_SERVICE (scripts/gates/runbooks-exerces.ts ; date absente = active, echec ferme), deux sources doivent concorder, la section « Signature » de docs/rgpd/aipd.md (« Etat : signee le AAAA-MM-JJ par <signataire> ») et la variable AIPD_SIGNEE_LE de l'environnement GitHub production, que seul Williams pose ; quatre familles : aipd_non_signee, variable_absente, variable_illisible, dates_discordantes ; 0 admise, 1 refusee ; le message nomme la condition et le geste, jamais une date ni une valeur lue. Point d'application : une etape a part du job deployer de .github/workflows/deploy.yml, avant deploy:coolify, qui appelle `pnpm aipd:signee` (script de package.json, REQ-GOV-018 ; arbitrage de la coordination, option 1) ; AIPD_SIGNEE_LE est une variable (vars), jamais un secret. Limite declaree : avant MISE_EN_SERVICE, la garde admet",
+      "fixtureRouge": "retirer le module scripts/gates/aipd-signee.ts, ou une AIPD « signee » sans variable AIPD_SIGNEE_LE concordante",
+      "preuveRouge": "JUR-T35, 2026-10-01 : temoin commite seul (af6ee2ba), module absent -> « Failed to load url ../../../scripts/gates/aipd-signee … Does the file exist? », suite rouge ; rejoue par A01 sur ed324406 en retirant le module : meme echec. Apres la garde (9d9396ed) : 18/18 verts (tests/unit/juridique/aucun-depot-reel-sans-aipd-signee.spec.ts) ; `tsx scripts/gates/aipd-signee.ts` -> EXIT=0 avant MISE_EN_SERVICE. Rouge constate par: A05, rejoue par A01",
+      "alias": [
+        "GATE-JUR-AIPD-SIGNEE"
+      ]
     }
   ]
 }
