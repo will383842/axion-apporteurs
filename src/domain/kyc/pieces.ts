@@ -3,7 +3,7 @@
  *
  * Les listes sont celles des enums Prisma `TypePieceKyc` et `StatutPieceKyc`, que la garde
  * `partners:schema:enums` confronte au glossaire ; le témoin `kyc-reference-piece-rib.spec.ts` les
- * confronte au schéma. Le domaine n'importe pas le client Prisma : il les écrit une fois, et les deux
+ * confronte au schéma. Le domaine n'importe pas le client de base de données : il les écrit une fois, et les deux
  * confrontations en tiennent l'égalité.
  *
  * CE QUI N'EST PAS ICI. La règle de vigilance et le blocage du versement appartiennent à JUR-T16
