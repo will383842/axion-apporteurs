@@ -264,6 +264,30 @@ describe('REQ-DM-035, REQ-QA-035 — un apporteur `candidat` naît, figé, dans 
     expect(b.mises).toHaveLength(1);
   });
 
+  it('REQ-DM-024 : la NAISSANCE s’inscrit au journal — agrégat apporteur, son identifiant, la charge fermée ; un rattachement n’écrit rien', async () => {
+    const b = base([]);
+    await traiterCandidatureRecue(
+      b.prisma,
+      EVENEMENT,
+      DEPS(async () => COORDONNEES)
+    );
+    expect(b.journal).toHaveLength(1);
+    expect(b.journal[0]).toMatchObject({
+      type: 'apporteur_statut_modifie',
+      agregat: 'apporteur',
+      agregatId: b.crees[0]!['id'],
+      charge: { de: null, vers: 'candidat', transition: 'creer', acteur: { par: 'systeme' } },
+      prevHash: '0'.repeat(64),
+    });
+    const r = base([{ emailHash: empreinteRecherche('courriel', COORDONNEES.email!, CLES) }]);
+    await traiterCandidatureRecue(
+      r.prisma,
+      EVENEMENT,
+      DEPS(async () => COORDONNEES)
+    );
+    expect(r.journal).toEqual([]);
+  });
+
   it('REQ-INT-032 : la recherche est exacte — courriel OU candidature d’abord, puis le seul téléphone, l’identifiant seul', async () => {
     const b = base([]);
     await traiterCandidatureRecue(

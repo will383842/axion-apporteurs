@@ -14,17 +14,20 @@ import {
   CHARGES_PAR_TYPE,
   TRANSITIONS_DU_JOURNAL_APPORTEUR,
   FORMES,
+  HASH_HEX_64,
 } from '../../../src/domain/evenement/charges';
 import { EVENEMENTS_APPORTEUR } from '../../../src/domain/apporteur/statut';
 import { TRANSITIONS_APPORTEUR } from '../../../src/domain/apporteur/matrice';
 import {
+  ALGORITHME,
   GENESE,
   calculerSelfHash,
   type Enregistrement,
   type LigneJournal,
 } from '../../../src/domain/evenement/journal';
 import { TACHES } from '../../../src/server/taches/registre';
-import { passageDuJournal } from '../../../src/server/taches/inscriptions';
+import { inscriptions, passageDuJournal } from '../../../src/server/taches/inscriptions';
+import { ajouterEvenement, lireJournalParLots } from '../../../src/server/evenement/journal';
 
 const NAISSANCE = () => ({
   de: null,
@@ -199,5 +202,218 @@ describe('REQ-DM-024 — un raffinement ne blanchit rien sous la garde du journa
 
   it('REQ-DM-024 : contre-témoin — la forme de l’acteur, raffinée, passe la garde', () => {
     expect(sousLaGarde({ bac: z.object({ acteur: FORMES.acteur() }).strict() })).toEqual([]);
+  });
+});
+
+// ── L'écrivain et le lecteur du journal, sur un client simulé (la mutation ne joue que tests/unit) ──
+
+/** Une ligne de la base telle que Prisma la rend : id en bigint, date en Date. */
+const enBase = (l: LigneJournal) => ({
+  ...l,
+  id: BigInt(l.id),
+  survenuAt: new Date(l.survenuAt),
+});
+
+/** Un client dont `evenement.findMany` sert des lots et ENREGISTRE ses arguments. */
+function clientDeLecture(lignes: LigneJournal[]) {
+  const appels: unknown[] = [];
+  const base = lignes.map(enBase);
+  const client = {
+    evenement: {
+      findMany: async (a: { where: { id?: { gt: bigint } }; take: number }) => {
+        appels.push(a);
+        const apres = a.where.id?.gt ?? -1n;
+        return base.filter((l) => l.id > apres).slice(0, a.take);
+      },
+    },
+  };
+  return { client: client as never, appels };
+}
+
+describe('REQ-DM-024 — le journal se lit PAR LOTS ordonnés, dans la forme que la vérification lit', () => {
+  it('REQ-DM-024 : cinq lignes en lots de deux — trois lectures, la suivante après le dernier id lu, et les lignes rendues telles quelles', async () => {
+    const lignes = chaine(4);
+    const { client, appels } = clientDeLecture(lignes);
+    expect(await lireJournalParLots(client, 2)).toEqual(lignes);
+    expect(appels).toEqual([
+      { where: {}, orderBy: { id: 'asc' }, take: 2 },
+      { where: { id: { gt: 2n } }, orderBy: { id: 'asc' }, take: 2 },
+      { where: { id: { gt: 4n } }, orderBy: { id: 'asc' }, take: 2 },
+    ]);
+  });
+
+  it('REQ-DM-024 : un nombre de lignes MULTIPLE du lot — une dernière lecture vide arrête la boucle', async () => {
+    const { client, appels } = clientDeLecture(chaine(3));
+    expect(await lireJournalParLots(client, 2)).toHaveLength(4);
+    expect(appels).toHaveLength(3);
+  });
+
+  it('REQ-DM-024 : par défaut, un lot de mille lignes', async () => {
+    const { client, appels } = clientDeLecture(chaine(1));
+    await lireJournalParLots(client);
+    expect(appels).toEqual([{ where: {}, orderBy: { id: 'asc' }, take: 1000 }]);
+  });
+
+  it('REQ-DM-024 : la tâche `journal_verifier` du lanceur lit le journal de la base et compte ses maillons', async () => {
+    const { client } = clientDeLecture(chaine(2));
+    expect(await inscriptions(client).journal_verifier!()).toEqual({ maillons: 3 });
+  });
+});
+
+/** Une transaction simulée pour l'écrivain : verrou, tête, création — chaque appel enregistré. */
+function transaction(tete: { selfHash: string } | null) {
+  const appels: { quoi: string; args: unknown }[] = [];
+  const tx = {
+    $executeRaw: async (...args: unknown[]) => {
+      appels.push({ quoi: 'verrou', args: args.slice(1) });
+      return 0;
+    },
+    evenement: {
+      findFirst: async (args: unknown) => {
+        appels.push({ quoi: 'tete', args });
+        return tete;
+      },
+      create: async (args: unknown) => {
+        appels.push({ quoi: 'creer', args });
+        return { id: 7n };
+      },
+    },
+  };
+  return { tx: tx as never, appels };
+}
+
+const UUID_MAJUSCULE = '0F8FAD5B-D9CB-469F-A165-70867728950E';
+
+describe('REQ-DM-024 — l’écrivain unique du journal', () => {
+  it('REQ-DM-024 : il prend le verrou, lit la tête, et chaîne le maillon sur elle — identifiant d’agrégat canonique, en minuscules', async () => {
+    const prev = GENESE.selfHash;
+    const { tx, appels } = transaction({ selfHash: prev });
+    const survenuAt = new Date('2026-10-02T10:00:00.000Z');
+    const r = await ajouterEvenement(tx, {
+      type: 'apporteur_statut_modifie',
+      agregat: 'apporteur',
+      agregatId: UUID_MAJUSCULE,
+      survenuAt,
+      charge: NAISSANCE(),
+    });
+    const enregistrement: Enregistrement = {
+      type: 'apporteur_statut_modifie',
+      agregat: 'apporteur',
+      agregatId: UUID_MAJUSCULE.toLowerCase(),
+      survenuAt: survenuAt.toISOString(),
+      charge: NAISSANCE(),
+    };
+    const selfHash = calculerSelfHash(prev, enregistrement);
+    expect(r).toEqual({ id: '7', selfHash });
+    expect(appels.map((a) => a.quoi)).toEqual(['verrou', 'tete', 'creer']);
+    expect(appels[1]!.args).toEqual({ orderBy: { id: 'desc' }, select: { selfHash: true } });
+    expect(appels[2]!.args).toEqual({
+      data: { ...enregistrement, survenuAt, prevHash: prev, selfHash },
+      select: { id: true },
+    });
+  });
+
+  it('REQ-DM-024 : sans agrégat ni identifiant, ils s’écrivent nuls', async () => {
+    const { tx, appels } = transaction({ selfHash: GENESE.selfHash });
+    await ajouterEvenement(tx, {
+      type: 'apporteur_statut_modifie',
+      survenuAt: new Date('2026-10-02T10:00:00.000Z'),
+      charge: NAISSANCE(),
+    });
+    expect(appels[2]!.args).toMatchObject({ data: { agregat: null, agregatId: null } });
+  });
+
+  it('REQ-DM-024 : un client HORS transaction est refusé, avant tout appel', async () => {
+    const { tx, appels } = transaction({ selfHash: GENESE.selfHash });
+    const nu = Object.assign(tx as object, { $transaction: async () => undefined });
+    await expect(
+      ajouterEvenement(nu as never, {
+        type: 'apporteur_statut_modifie',
+        survenuAt: new Date(),
+        charge: NAISSANCE(),
+      })
+    ).rejects.toThrow(
+      'ajouterEvenement exige une transaction ouverte : reçu un client hors transaction'
+    );
+    expect(appels).toEqual([]);
+  });
+
+  it('REQ-DM-024 : une charge refusée nomme le chemin et le code de chaque écart, jamais une valeur — et rien n’est écrit', async () => {
+    const { tx, appels } = transaction({ selfHash: GENESE.selfHash });
+    const ecrire = (type: 'apporteur_statut_modifie' | 'journal_ouvert', charge: unknown) =>
+      ajouterEvenement(tx, { type, survenuAt: new Date(), charge });
+    await expect(
+      ecrire('apporteur_statut_modifie', { ...NAISSANCE(), de: 'candidat' })
+    ).rejects.toThrow('charge refusée pour le type apporteur_statut_modifie : de custom');
+    await expect(ecrire('journal_ouvert', 'pas un objet')).rejects.toThrow(
+      'charge refusée pour le type journal_ouvert : (racine) invalid_type'
+    );
+    expect(appels).toEqual([]);
+  });
+
+  it('REQ-DM-024 : un identifiant d’agrégat non canonique est refusé, avant tout appel', async () => {
+    const { tx, appels } = transaction({ selfHash: GENESE.selfHash });
+    await expect(
+      ajouterEvenement(tx, {
+        type: 'apporteur_statut_modifie',
+        agregatId: 'pas-un-uuid',
+        survenuAt: new Date(),
+        charge: NAISSANCE(),
+      })
+    ).rejects.toThrow('agregatId refusé : un UUID sous sa forme canonique à tirets est attendu');
+    expect(appels).toEqual([]);
+  });
+
+  it('REQ-DM-024 : un journal sans genèse est une faute nommée, rien n’est créé', async () => {
+    const { tx, appels } = transaction(null);
+    await expect(
+      ajouterEvenement(tx, {
+        type: 'apporteur_statut_modifie',
+        survenuAt: new Date(),
+        charge: NAISSANCE(),
+      })
+    ).rejects.toThrow(/journal sans genèse/);
+    expect(appels.map((a) => a.quoi)).toEqual(['verrou', 'tete']);
+  });
+});
+
+describe('REQ-DM-024 — les formes et les raffinements nomment leur écart', () => {
+  it('REQ-DM-024 : l’acteur incohérent est refusé sur `id`, motif `acteur_id_incoherent`', () => {
+    const r = FORMES.acteur().safeParse({ par: 'systeme', id: randomUUID() });
+    expect(r.success).toBe(false);
+    expect(r.error?.issues.map((i) => [i.path, i.message])).toEqual([
+      [['id'], 'acteur_id_incoherent'],
+    ]);
+  });
+
+  it('REQ-DM-024 : une naissance incohérente est refusée sur `de`, motif `naissance_incoherente`', () => {
+    const r = CHARGES_PAR_TYPE.apporteur_statut_modifie.safeParse({
+      ...NAISSANCE(),
+      de: 'candidat',
+    });
+    expect(r.error?.issues.map((i) => [i.path, i.message])).toEqual([
+      [['de'], 'naissance_incoherente'],
+    ]);
+  });
+
+  it('REQ-DM-024 : chaque forme admet sa valeur et refuse sa voisine', () => {
+    expect(FORMES.identifiant().safeParse(randomUUID()).success).toBe(true);
+    expect(FORMES.identifiant().safeParse('x').success).toBe(false);
+    expect(FORMES.empreinte().safeParse('a'.repeat(64)).success).toBe(true);
+    expect(FORMES.empreinte().safeParse('A'.repeat(64)).success).toBe(false);
+    expect(FORMES.empreinte().safeParse('a'.repeat(63)).success).toBe(false);
+    expect(FORMES.empreinte().safeParse(`${'a'.repeat(64)}0`).success).toBe(false);
+    expect(FORMES.montantCents().safeParse(12).success).toBe(true);
+    expect(FORMES.montantCents().safeParse(1.5).success).toBe(false);
+    expect(FORMES.horodatage().safeParse('2026-10-02T10:00:00.000Z').success).toBe(true);
+    expect(FORMES.horodatage().safeParse('demain').success).toBe(false);
+    expect(HASH_HEX_64.test(`x${'a'.repeat(64)}`)).toBe(false);
+  });
+
+  it('REQ-DM-024 : la genèse porte son algorithme, et rien d’autre', () => {
+    const genese = CHARGES_PAR_TYPE.journal_ouvert;
+    expect(genese.safeParse({ algorithme: ALGORITHME }).success).toBe(true);
+    expect(genese.safeParse({ algorithme: ALGORITHME, autre: 1 }).success).toBe(false);
+    expect(genese.safeParse({ algorithme: 'md5' }).success).toBe(false);
   });
 });
