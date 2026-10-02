@@ -195,12 +195,29 @@ describe('REQ-DM-024 — le rôle d’exécution n’est plus propriétaire du j
       .split('\n')
       .filter((l) => !l.startsWith('--'))
       .join('\n');
-    // Une instruction se termine par `;` en fin de ligne, suivie d'une ligne NON indentée : le bloc
-    // `DO $$ … $$;` reste entier.
-    const instructions = sql
-      .split(/;\s*\n(?=\S|$)/)
-      .map((i) => i.trim())
-      .filter(Boolean);
+    // Un `;` ne termine une instruction que HORS d'un corps entre dollars : le bloc `DO $$ … $$;`
+    // porte ses propres `;` et reste entier (un `;` en fin de ligne ne suffisait pas : `END IF;` suivi
+    // de `END $$;` non indenté coupait le bloc, 42601 en CI).
+    const instructions: string[] = [];
+    let courante = '';
+    let dansUnCorps = false;
+    for (let i = 0; i < sql.length; i += 1) {
+      if (sql.startsWith('$$', i)) {
+        dansUnCorps = !dansUnCorps;
+        courante += '$$';
+        i += 1;
+        continue;
+      }
+      if (sql[i] === ';' && !dansUnCorps) {
+        instructions.push(courante.trim());
+        courante = '';
+        continue;
+      }
+      courante += sql[i];
+    }
+    if (courante.trim() !== '') instructions.push(courante.trim());
+    expect(dansUnCorps).toBe(false);
+    expect(instructions.some((i) => i.startsWith('DO $$') && i.endsWith('$$'))).toBe(true);
     expect(instructions.length).toBeGreaterThanOrEqual(5);
     for (const i of instructions) await base.prisma.$executeRawUnsafe(i);
   });
