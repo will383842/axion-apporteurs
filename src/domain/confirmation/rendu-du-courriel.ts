@@ -110,7 +110,7 @@ export class LiensNonConformes extends Error {
  * ÉCHEC FERMÉ (condition (d) de la lentille sécurité) : le texte porte EXACTEMENT les trois liens,
  * chacun une fois, et l'objet n'en porte aucun — en comptant ce qu'un client de messagerie fabrique.
  */
-function exigerTroisLiens(objet: string, texte: string, valeurs: ValeursDuCourriel): void {
+export function exigerTroisLiens(objet: string, texte: string, valeurs: ValeursDuCourriel): void {
   const dansObjet = liensDuTexte(objet);
   if (dansObjet.length > 0) throw new LiensNonConformes(`l'objet porte ${dansObjet.join(', ')}`);
   const attendus = LIENS.map((l) => valeurs[l]).sort();

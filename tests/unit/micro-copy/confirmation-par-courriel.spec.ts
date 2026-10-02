@@ -42,6 +42,7 @@ import {
   contexteRendu,
   fauteDuContexte,
   LiensNonConformes,
+  exigerTroisLiens,
   liensDuTexte,
   rendreLeCourriel,
 } from '../../../src/domain/confirmation/rendu-du-courriel';
@@ -258,5 +259,33 @@ describe('REQ-UX-060 REQ-UX-061 — le message du dépôt, et la page de répons
       'erreur',
       'reessayer',
     ]);
+  });
+});
+
+describe('REQ-JUR-060 — chaque branche du rendu a son témoin', () => {
+  /** Les valeurs du témoin, privées d'une clé. */
+  const sans = (cle: string) =>
+    Object.fromEntries(Object.entries(VALEURS).filter(([k]) => k !== cle));
+
+  it('REQ-JUR-060 : TÉMOIN — un objet qui porterait un lien est refusé, nommé, même si le texte est conforme', () => {
+    const { texte } = rendreLeCourriel(VALEURS);
+    expect(() => exigerTroisLiens('Voir www.piege.example', texte, VALEURS)).toThrow(
+      /liens_non_conformes : l'objet porte www\.piege\.example/
+    );
+    expect(() => exigerTroisLiens('Un objet sans lien', texte, VALEURS)).not.toThrow();
+  });
+
+  it('REQ-JUR-060 : TÉMOIN — une valeur manquante pour un paramètre des textes est refusée, nommée', () => {
+    const sansSiege = sans('siege');
+    expect(() => rendreLeCourriel(sansSiege as typeof VALEURS)).toThrow(
+      /valeur_manquante : \{siege\}/
+    );
+  });
+
+  it('REQ-JUR-060 : un contexte absent (et non vide) laisse aussi l’e-mail sans ligne de contexte', () => {
+    const sansContexte = sans('contexte');
+    const { texte } = rendreLeCourriel(sansContexte as typeof VALEURS);
+    expect(texte).not.toContain('Contexte indiqué');
+    expect(liensDuTexte(texte).sort()).toEqual(Object.values(LIENS).sort());
   });
 });
