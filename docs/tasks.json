@@ -5151,7 +5151,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "Contraintes W20 à intégrer (chantier W20, décision de Williams du 2026-09-29, session -d7, docs/chantiers/W20-confirmation-par-email.md §6) : (1) La péremption court de premierContactAt, posé par la PREMIÈRE RÉPONSE du contact (clic ou appel qui l'a joint), jamais par l'envoi de l'e-mail de confirmation (HYP-W20-PREMIER-CONTACT, contrat art. 3.4). (2) L'e-mail de REQ-UX-038 part à J+5 ouvrés SANS CONFIRMATION, par clic ou par appel, et non plus « sans qualification » (question 13 du plan). (3) « Injoignable ×3 » ne compte que les appels, jamais un e-mail sans réponse. (4) Libération d'une demande signalée, réponse de Williams du 2026-09-29 vers 20 h (session -d7, question 19 du plan, proposée par la lentille securite ; HYP-W20-LIBERATION et REQ-DM-063 proposées au plan, écrites par GOV-112) : une attribution provisoire dont la demande de confirmation est SIGNALÉE (prédicat pur de SEC-41) et qui n'a reçu aucune Qualification confirme ni non_confirme est libérée, par le passage « tout ce qui est dû à l'instant t » (REQ-QA-027), horloge injectée, au PREMIER des deux termes : la LIBERATION_SIGNALEE_INJOIGNABLE_MAX-ième Qualification injoignable (= 3) ou LIBERATION_SIGNALEE_JOURS (= 45) jours après l'envoi effectif de la première demande de l'attribution (DM-40), qu'une correction d'adresse ne fait pas repartir. Les deux valeurs sont des paramètres de src/domain/seuils/ssot.ts, modifiables, de source contrat art. 3.2 (JUR-T40), jamais recopiées. Dans la même transaction : attribution perimee par l'événement attribution_etat_modifie avec evenement: 'liberee_sans_confirmation' (un type de journal par genre de transition, partners/ADR-0022 ; la transition provisoire → perimee entre dans la matrice de DM-08), distincte de la péremption (peremptionAt reste null) ; demande expiree, jetons révoqués ; entreprise de nouveau disponible, file d'attente comprise (fenêtre de redéclaration du rang 1, art. 3.5) ; une notification NEUTRE à l'apporteur, clé de la table SSOT des notifications (UX-P1-10, faitCourirUnDelai: false), texte de la SSOT de micro-copy (UX-P1-41), garde lexicale verte, aucune consigne, sans la raison, ni la vérification, ni le nombre d'appels. AUCUNE SANCTION : aucune suspension, aucune Anomalie, aucune entrée dans le score de SEC-14, aucun signal, rien d'imputé à l'apporteur ni au contact. Carence de redépôt, arbitrage de -d7 sur délégation de Williams du 2026-09-29 (HYP-W20-CARENCE-REDEPOT, au plan) : après une libération, le MÊME apporteur ne peut pas déposer la MÊME entreprise (SIREN, tous établissements) pendant CARENCE_REDEPOT_APRES_LIBERATION_JOURS (= 30) jours, ni pendant CARENCE_REDEPOT_APRES_SECONDE_LIBERATION_JOURS (= 90) jours après une deuxième libération du même couple (90 aussi au-delà, par défaut) ; prédicat pur, horloge injectée, dérivé des attributions libérées par liberee_sans_confirmation (aucune colonne nouvelle), lu au dépôt côté serveur ; le refus n'écrit rien et ne pose aucun horodatage ; les autres apporteurs ne sont pas concernés ; aucune sanction (ni suspension, ni Anomalie, ni signal), texte neutre de la SSOT de micro-copy. AUCUNE valeur nouvelle d'IssueDepot ni de MotifRefusDepot (consigne W19) : la présentation du refus est la question 20 du plan, ouverte ; par défaut, le redépôt n'atteint pas le formulaire et une requête forgée reçoit une erreur typée du serveur, hors IssueDepot. Passé la carence, un nouveau dépôt suit les règles ordinaires. Les précisions de la libération (45 jours depuis la première demande, seuls les injoignable, rebond non corrigé libéré de même, état perimee, badge et notification) sont validées par arbitrage de -d7 sur délégation de Williams du 2026-09-29. Seules les Qualifications injoignable comptent (point 3), ne_se_souvient_pas n'en est pas une, et une demande non signalée n'est jamais libérée par ce terme. Témoins, horloge figée : deux injoignable → rien ; le troisième → libérée au passage suivant, une seule fois ; envoi à J sans appel : J+45 moins une minute → rien, J+45 → libérée ; ne_se_souvient_pas ×3 → rien ; appel confirme à J+40 → active, aucune libération ; demande non signalée et trois injoignable → aucune libération ; correction d'adresse à J+30 → libération toujours à J+45 ; libération → aucune Anomalie, aucune suspension, une seule notification ; deux passages → un seul événement ; redépôt du même apporteur à J+29 après la libération → refusé, rien d'écrit ; à J+30 → nouvelle attribution provisoire et nouvelle demande ; deuxième libération du même couple → refus à J+89, dépôt à J+90 ; un autre apporteur le jour de la libération → accepté ; même apporteur, autre SIREN → accepté ; même SIREN, autre établissement → refusé pendant la carence ; le refus n'ouvre ni Anomalie ni suspension. Estimation portée de 0,75 à 1 j le 2026-09-29 (travail réel : un terme de plus, une transition, deux paramètres, une clé de notification et leurs témoins), puis à 1,25 j le même jour pour la carence (prédicat, refus serveur, deux paramètres, témoins) ; dépendances DM-40, SEC-41 et UX-P1-10 ajoutées le même jour. Contraintes W19 à intégrer (GOV-115, décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §6) : péremption et expiration du conseiller à la durée d'attribution (`FENETRE_MOIS`, SSOT ; 6 mois depuis la décision de Williams du 2026-09-30) aux mêmes délais visibles que l'apporteur (HYP-W19-CYCLE) ; la fin notifie le rang 1 ; le délai d'attente de la Société démarre à toute libération. AMENDEMENT (rattrapage 44) : les constantes de libération et de carence (LIBERATION_SIGNALEE_JOURS, LIBERATION_SIGNALEE_INJOIGNABLE_MAX, CARENCE_REDEPOT_APRES_LIBERATION_JOURS, CARENCE_REDEPOT_APRES_SECONDE_LIBERATION_JOURS) sont posées dans la SSOT par JUR-T40 ; DM-13 les lit et ne les redéclare pas. SUSPENSION ET REDÉCLARATION (rattrapage 56, JUR-T49, précision d’A07) : le délai de redéclaration (`FILE_FENETRE_REDECLARATION_JOURS`) est SUSPENDU pendant une suspension de l’apporteur : il reprend à la levée pour sa durée RESTANTE, sans remise à zéro (libération au jour J, suspension de J+10 à J+20 : il reste cinq jours à partir de J+20) ; une suspension notifiée AVANT la libération reporte le départ du délai à sa levée. TÉMOIN des deux cas. Si Williams retient, en validant JUR-T49, la variante « reporté, pour sa durée entière, à la fin de la suspension », DM-13 suit le texte validé."
+      "acceptance": "Contraintes W20 à intégrer (chantier W20, décision de Williams du 2026-09-29, session -d7, docs/chantiers/W20-confirmation-par-email.md §6) : (1) La péremption court de premierContactAt, posé par la PREMIÈRE RÉPONSE du contact (clic ou appel qui l'a joint), jamais par l'envoi de l'e-mail de confirmation (HYP-W20-PREMIER-CONTACT, contrat art. 3.4). (2) L'e-mail de REQ-UX-038 part à J+5 ouvrés SANS CONFIRMATION, par clic ou par appel, et non plus « sans qualification » (question 13 du plan). (3) « Injoignable ×3 » ne compte que les appels, jamais un e-mail sans réponse. (4) Libération d'une demande signalée, réponse de Williams du 2026-09-29 vers 20 h (session -d7, question 19 du plan, proposée par la lentille securite ; HYP-W20-LIBERATION et REQ-DM-063 proposées au plan, écrites par GOV-112) : une attribution provisoire dont la demande de confirmation est SIGNALÉE (prédicat pur de SEC-41) et qui n'a reçu aucune Qualification confirme ni non_confirme est libérée, par le passage « tout ce qui est dû à l'instant t » (REQ-QA-027), horloge injectée, au PREMIER des deux termes : la LIBERATION_SIGNALEE_INJOIGNABLE_MAX-ième Qualification injoignable (= 3) ou LIBERATION_SIGNALEE_JOURS (= 45) jours après l'envoi effectif de la première demande de l'attribution (DM-40), qu'une correction d'adresse ne fait pas repartir. Les deux valeurs sont des paramètres de src/domain/seuils/ssot.ts, modifiables, de source contrat art. 3.2 (JUR-T40), jamais recopiées. Dans la même transaction : attribution perimee par l'événement attribution_etat_modifie avec evenement: 'liberee_sans_confirmation' (un type de journal par genre de transition, partners/ADR-0022 ; la transition provisoire → perimee entre dans la matrice de DM-08), distincte de la péremption (peremptionAt reste null) ; demande expiree, jetons révoqués ; entreprise de nouveau disponible, file d'attente comprise (fenêtre de redéclaration du rang 1, art. 3.5) ; une notification NEUTRE à l'apporteur, clé de la table SSOT des notifications (UX-P1-10, faitCourirUnDelai: false), texte de la SSOT de micro-copy (UX-P1-41), garde lexicale verte, aucune consigne, sans la raison, ni la vérification, ni le nombre d'appels. AUCUNE SANCTION : aucune suspension, aucune Anomalie, aucune entrée dans le score de SEC-14, aucun signal, rien d'imputé à l'apporteur ni au contact. Carence de redépôt, arbitrage de -d7 sur délégation de Williams du 2026-09-29 (HYP-W20-CARENCE-REDEPOT, au plan) : après une libération, le MÊME apporteur ne peut pas déposer la MÊME entreprise (SIREN, tous établissements) pendant CARENCE_REDEPOT_APRES_LIBERATION_JOURS (= 30) jours, ni pendant CARENCE_REDEPOT_APRES_SECONDE_LIBERATION_JOURS (= 90) jours après une deuxième libération du même couple (90 aussi au-delà, par défaut) ; prédicat pur, horloge injectée, dérivé des attributions libérées par liberee_sans_confirmation (aucune colonne nouvelle), lu au dépôt côté serveur ; le refus n'écrit rien et ne pose aucun horodatage ; les autres apporteurs ne sont pas concernés ; aucune sanction (ni suspension, ni Anomalie, ni signal), texte neutre de la SSOT de micro-copy. AUCUNE valeur nouvelle d'IssueDepot ni de MotifRefusDepot (consigne W19) : la présentation du refus est la question 20 du plan, ouverte ; par défaut, le redépôt n'atteint pas le formulaire et une requête forgée reçoit une erreur typée du serveur, hors IssueDepot. Passé la carence, un nouveau dépôt suit les règles ordinaires. Les précisions de la libération (45 jours depuis la première demande, seuls les injoignable, rebond non corrigé libéré de même, état perimee, badge et notification) sont validées par arbitrage de -d7 sur délégation de Williams du 2026-09-29. Seules les Qualifications injoignable comptent (point 3), ne_se_souvient_pas n'en est pas une, et une demande non signalée n'est jamais libérée par ce terme. Témoins, horloge figée : deux injoignable → rien ; le troisième → libérée au passage suivant, une seule fois ; envoi à J sans appel : J+45 moins une minute → rien, J+45 → libérée ; ne_se_souvient_pas ×3 → rien ; appel confirme à J+40 → active, aucune libération ; demande non signalée et trois injoignable → aucune libération ; correction d'adresse à J+30 → libération toujours à J+45 ; libération → aucune Anomalie, aucune suspension, une seule notification ; deux passages → un seul événement ; redépôt du même apporteur à J+29 après la libération → refusé, rien d'écrit ; à J+30 → nouvelle attribution provisoire et nouvelle demande ; deuxième libération du même couple → refus à J+89, dépôt à J+90 ; un autre apporteur le jour de la libération → accepté ; même apporteur, autre SIREN → accepté ; même SIREN, autre établissement → refusé pendant la carence ; le refus n'ouvre ni Anomalie ni suspension. Estimation portée de 0,75 à 1 j le 2026-09-29 (travail réel : un terme de plus, une transition, deux paramètres, une clé de notification et leurs témoins), puis à 1,25 j le même jour pour la carence (prédicat, refus serveur, deux paramètres, témoins) ; dépendances DM-40, SEC-41 et UX-P1-10 ajoutées le même jour. Contraintes W19 à intégrer (GOV-115, décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §6) : péremption et expiration du conseiller à la durée d'attribution (`FENETRE_MOIS`, SSOT ; 6 mois depuis la décision de Williams du 2026-09-30) aux mêmes délais visibles que l'apporteur (HYP-W19-CYCLE) ; la fin notifie le rang 1 ; le délai d'attente de la Société démarre à toute libération. AMENDEMENT (rattrapage 44) : les constantes de libération et de carence (LIBERATION_SIGNALEE_JOURS, LIBERATION_SIGNALEE_INJOIGNABLE_MAX, CARENCE_REDEPOT_APRES_LIBERATION_JOURS, CARENCE_REDEPOT_APRES_SECONDE_LIBERATION_JOURS) sont posées dans la SSOT par JUR-T40 ; DM-13 les lit et ne les redéclare pas. SUSPENSION ET REDÉCLARATION (rattrapage 56, JUR-T49, précision d’A07) : le délai de redéclaration (`FILE_FENETRE_REDECLARATION_JOURS`) est SUSPENDU pendant une suspension de l’apporteur : il reprend à la levée pour sa durée RESTANTE, sans remise à zéro (libération au jour J, suspension de J+10 à J+20 : il reste cinq jours à partir de J+20) ; une suspension notifiée AVANT la libération reporte le départ du délai à sa levée. TÉMOIN des deux cas. Si Williams retient, en validant JUR-T49, la variante « reporté, pour sa durée entière, à la fin de la suspension », DM-13 suit le texte validé. PRÉCISION (rattrapage 57, A07) : la suspension qui arrête le délai de redéclaration est celle de l'ENREGISTREMENT DES DÉCLARATIONS (art. 3.7), jamais la suspension du versement du parrainage (art. 4.6) ; le texte de JUR-T49 fait foi."
     },
     {
       "id": "SEC-14",
@@ -8859,7 +8859,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "une frise unique (événements Axion-IA + échanges), formulaire d'échange à 4 champs, **mention explicite avant la première saisie que les échanges sont visibles de la Société** (reprise dans la politique de confidentialité, JUR-T04), purge branchée sur le cron d'attribution. 🔴 **Complétée le 2026-09-26 (cadrage de l'architecte sur délégation de Will, partners/ADR-0022, GOV-102).** ELLE ÉCRIT LE SCHÉMA (label `schema`, seule de sa famille dans son lot) : `enum CanalEchange {appel, email, visite, linkedin, autre}` ; `Echange` -> `echanges` (REQ-EXT-002 : aucun drapeau de visibilité, tout échange est visible de la Société) : `attributionId`, `apporteurId`, `dateEchange` en date calendaire, `canal`, `texteChiffre` et `prochaineActionChiffre` (nuls après effacement, REQ-EXT-004), `prochaineActionDate`, `creeAt`, `contenuEffaceAt` ; CHECK `contenu_efface_at IS NULL OR (texte_chiffre IS NULL AND prochaine_action_chiffre IS NULL)`. Journal `echange_saisi` (agrégat `attribution`, charge `{echangeId, canal}`). `CHAMPS_PII` gagne `prochaineAction` ; `texte` est posé par DM-12. REQ-UX-047 (passe GOV-115, 2026-09-30) : geste principal : DETTE NOMMÉE, geste non encore connu, à écrire à la revendication ; budget : lu dans `BUDGETS_UX` (consultation au plus 3 interactions, saisie au plus 8), mesuré par la fixture QA-T33. la maquette de l'écran est validée dans `docs/maquettes/VALIDATION.md` avant la première ligne de code ; cinq états (REQ-UX-019 amendée)."
+      "acceptance": "une frise unique (événements Axion-IA + échanges), formulaire d'échange à 4 champs, **mention explicite avant la première saisie que les échanges sont visibles de la Société** (reprise dans la politique de confidentialité, JUR-T04), purge branchée sur le cron d'attribution. 🔴 **Complétée le 2026-09-26 (cadrage de l'architecte sur délégation de Will, partners/ADR-0022, GOV-102).** ELLE ÉCRIT LE SCHÉMA (label `schema`, seule de sa famille dans son lot) : `enum CanalEchange {appel, email, visite, linkedin, autre}` ; `Echange` -> `echanges` (REQ-EXT-002 : aucun drapeau de visibilité, tout échange est visible de la Société) : `attributionId`, `apporteurId`, `dateEchange` en date calendaire, `canal`, `texteChiffre` et `prochaineActionChiffre` (nuls après effacement, REQ-EXT-004), `prochaineActionDate`, `creeAt`, `contenuEffaceAt` ; CHECK `contenu_efface_at IS NULL OR (texte_chiffre IS NULL AND prochaine_action_chiffre IS NULL)`. Journal `echange_saisi` (agrégat `attribution`, charge `{echangeId, canal}`). `CHAMPS_PII` gagne `prochaineAction` ; `texte` est posé par DM-12. REQ-UX-047 (passe GOV-115, 2026-09-30) : geste principal : DETTE NOMMÉE, geste non encore connu, à écrire à la revendication ; budget : lu dans `BUDGETS_UX` (consultation au plus 3 interactions, saisie au plus 8), mesuré par la fixture QA-T33. la maquette de l'écran est validée dans `docs/maquettes/VALIDATION.md` avant la première ligne de code ; cinq états (REQ-UX-019 amendée). LOT CRM PRO (rattrapage 57, A07, charte M05) : si ce que l'apporteur ajoute ici part au CRM Pro (INT-T68-P), cet ajout reste FACULTATIF : jamais compté, relancé, ni lié à la commission ; aucun écran ne dit « complétez la fiche » ; le contexte libre ne part jamais au CRM. A07 relit cette tâche avant le code."
     },
     {
       "id": "EXT-T02a",
@@ -9039,7 +9039,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "cinquième état `libre_deja_travaillee` dans le DTO de vérification ; signal d'anomalie au-delà du seuil de configuration prévu pour la part de dépôts sur des entreprises déjà travaillées (valeur hors dépôt, REQ-GOV-031). (audit indépendant du plan de la Phase 1 (2026-10-01), écart B-18 : pas d'écran, REQ-UX-047 retirée.)"
+      "acceptance": "cinquième état `libre_deja_travaillee` dans le DTO de vérification ; signal d'anomalie au-delà du seuil de configuration prévu pour la part de dépôts sur des entreprises déjà travaillées (valeur hors dépôt, REQ-GOV-031). (audit indépendant du plan de la Phase 1 (2026-10-01), écart B-18 : pas d'écran, REQ-UX-047 retirée.) LOT CRM PRO (rattrapage 57, sécurité) : les données reçues par le CRM Pro ne servent jamais à refuser un dépôt ni à signaler une entreprise « déjà travaillée » : seul Partners fait foi de l'occupation (HYP-W19-SOURCE)."
     },
     {
       "id": "EXT-T02b",
@@ -16333,7 +16333,7 @@
       "externe": null,
       "estimateDays": 0.75,
       "statut": "a_faire",
-      "acceptance": "ARBITRAGE RENDU : art. 3.5 retenu, art. 3.3 c) rejeté (Williams, 2026-09-29, question 2). (1) L'art. 3.5 est amendé en termes généraux : l'entreprise peut être déjà prise « par un autre apporteur ou par la Société ou ses préposés » ; l'effet pour l'apporteur est le même quel que soit l'occupant ; la Société ne révèle jamais qui occupe une entreprise donnée. Aucun art. 3.3 c), aucune catégorie de refus nouvelle. Jamais le mot « suivi ». L'acte d'un préposé n'est jamais « une déclaration ». (2) Bornes de la Société, tous préposés confondus, écrites avec les variables du gabarit et jamais en dur (RM-10) : les mêmes durées qu'une attribution d'apporteur (`{{PEREMPTION_JOURS}}` jours, `{{FENETRE_MOIS}}` mois), pas de reconduction, délai d'attente de `{{CARENCE_CONSEILLER_JOURS}}` jours après toute libération (variable nouvelle, déclarée au gabarit), entreprise fermée à la Société pendant la fenêtre d'un rang 1. (3) Clause de non-exploitation (HYP-W19-NON-EXPLOITATION). (4) Le mode de preuve de l'horodatage (journal chaîné) est le même quel que soit l'occupant, et ne révèle pas qui. (5) Le contrat dit « préposés de la Société » en toutes lettres, pour lever l'homonymie avec les « préposés » de l'apporteur à l'art. 1 (`CONTRAT-APPORTEUR-V1.md`), jamais le mot que GLOSSAIRE §8 interdit pour l'apporteur. (6) `contract-template-complete.spec.ts` reste vert. (7) L'arbitrage de Williams est daté dans la colonne « Tranchée » de HYP-W19-CONCOURS ; le texte amendé est validé par Williams avant INT-T12. La note d'analyse hors dépôt sur l'indice de service organisé est relue. (8) Aucun point non sourcé présenté comme un fait ; un point de droit non tranché prend l'option la plus prudente, marquée « à arbitrer par Williams » (question 13 : pas d'avocat). La fiche W19 porte « externe will » : la validation de Williams est une étape de cette acceptance, pas un préalable ; la tâche reste éligible pour produire ce qu'il validera (patron UX-P1-40 ; le schéma lie un externe non nul au statut attente_externe, qui bloquerait le travail). Arbitrage A01 du 2026-09-30. AMENDEMENT (rattrapage 45, arbitrages A01, texte de A07) : CARENCE_CONSEILLER_JOURS (90, HYP-W19-CARENCE, hypothèse par défaut) est POSÉE dans la SSOT avec l'art. 3.5 pour source et `verifieLe`, et déclarée dans `variables.ts` ; les divergences W19:3.5 et HYP-W19-CONCOURS:3.5 sont retirées de `decisions.ts`, dont l'ancrage tient désormais ; le constat de HYP-E1-12:3.5:al4 est reformulé pour rester exact (l'art. 3.5 compte cinq alinéas, l'horodatage est le cinquième) ; JUR-T01-Q17 reste une question de validation par Williams (une question ne se retire pas sans sa réponse). Ces fichiers et le témoin `contract-template-complete.spec.ts` sont écrits par le poste dev (A05) dans la même PR ; le texte du contrat reste à A07. Choix de rédaction signalé aux lentilles : le délai RESERVE_APRES_ACTE_APPORTEUR_JOURS n'est pas écrit au contrat, seule l'interdiction absolue l'est (un délai écrit se lirait comme une limite de l'interdiction). JUR-T31 atterrit après JUR-T40 et QA-T58 (mêmes fichiers)."
+      "acceptance": "ARBITRAGE RENDU : art. 3.5 retenu, art. 3.3 c) rejeté (Williams, 2026-09-29, question 2). (1) L'art. 3.5 est amendé en termes généraux : l'entreprise peut être déjà prise « par un autre apporteur ou par la Société ou ses préposés » ; l'effet pour l'apporteur est le même quel que soit l'occupant ; la Société ne révèle jamais qui occupe une entreprise donnée. Aucun art. 3.3 c), aucune catégorie de refus nouvelle. Jamais le mot « suivi ». L'acte d'un préposé n'est jamais « une déclaration ». (2) Bornes de la Société, tous préposés confondus, écrites avec les variables du gabarit et jamais en dur (RM-10) : les mêmes durées qu'une attribution d'apporteur (`{{PEREMPTION_JOURS}}` jours, `{{FENETRE_MOIS}}` mois), pas de reconduction, délai d'attente de `{{CARENCE_CONSEILLER_JOURS}}` jours après toute libération (variable nouvelle, déclarée au gabarit), entreprise fermée à la Société pendant la fenêtre d'un rang 1. (3) Clause de non-exploitation (HYP-W19-NON-EXPLOITATION). (4) Le mode de preuve de l'horodatage (journal chaîné) est le même quel que soit l'occupant, et ne révèle pas qui. (5) Le contrat dit « préposés de la Société » en toutes lettres, pour lever l'homonymie avec les « préposés » de l'apporteur à l'art. 1 (`CONTRAT-APPORTEUR-V1.md`), jamais le mot que GLOSSAIRE §8 interdit pour l'apporteur. (6) `contract-template-complete.spec.ts` reste vert. (7) L'arbitrage de Williams est daté dans la colonne « Tranchée » de HYP-W19-CONCOURS ; le texte amendé est validé par Williams avant INT-T12. La note d'analyse hors dépôt sur l'indice de service organisé est relue. (8) Aucun point non sourcé présenté comme un fait ; un point de droit non tranché prend l'option la plus prudente, marquée « à arbitrer par Williams » (question 13 : pas d'avocat). La fiche W19 porte « externe will » : la validation de Williams est une étape de cette acceptance, pas un préalable ; la tâche reste éligible pour produire ce qu'il validera (patron UX-P1-40 ; le schéma lie un externe non nul au statut attente_externe, qui bloquerait le travail). Arbitrage A01 du 2026-09-30. AMENDEMENT (rattrapage 45, arbitrages A01, texte de A07) : CARENCE_CONSEILLER_JOURS (90, HYP-W19-CARENCE, hypothèse par défaut) est POSÉE dans la SSOT avec l'art. 3.5 pour source et `verifieLe`, et déclarée dans `variables.ts` ; les divergences W19:3.5 et HYP-W19-CONCOURS:3.5 sont retirées de `decisions.ts`, dont l'ancrage tient désormais ; le constat de HYP-E1-12:3.5:al4 est reformulé pour rester exact (l'art. 3.5 compte cinq alinéas, l'horodatage est le cinquième) ; JUR-T01-Q17 reste une question de validation par Williams (une question ne se retire pas sans sa réponse). Ces fichiers et le témoin `contract-template-complete.spec.ts` sont écrits par le poste dev (A05) dans la même PR ; le texte du contrat reste à A07. Choix de rédaction signalé aux lentilles : le délai RESERVE_APRES_ACTE_APPORTEUR_JOURS n'est pas écrit au contrat, seule l'interdiction absolue l'est (un délai écrit se lirait comme une limite de l'interdiction). JUR-T31 atterrit après JUR-T40 et QA-T58 (mêmes fichiers). CONSTAT (rattrapage 57) : la décision de Williams du 2026-10-02, option B (« il faut que toutes les données que l'on récupère aille dans le crm pro soit pour nouveau prospect ou cleitn saist par approteurs ou commercial ou nous ou soit tout ce qui est l'enrichissment de chaaque fiche », verbatim) remet en cause l'al. 4 (non-exploitation) que porte cette tâche. #433 NE FUSIONNE PAS en l'état. La manière de procéder attend Williams (décision de la coordination du 2026-10-02) : AUCUN texte de remplacement n'est écrit au registre, et HYP-W19-NON-EXPLOITATION n'est pas modifiée. Acquis par délégation de la coordination : le délai `RESERVE_APRES_ACTE_APPORTEUR_JOURS` (30 jours) est gardé, et la commission reste due sur toute commande signée pendant l'attribution, quel que soit celui qui la conclut. Le témoin et la concordance de `decisions.ts` suivront le texte que Williams validera."
     },
     {
       "id": "JUR-T33",
@@ -16603,7 +16603,7 @@
       "externe": null,
       "estimateDays": 1.5,
       "statut": "a_faire",
-      "acceptance": "TÂCHE SENSIBLE (attribution). (0) Une seule fonction de prise en charge, appelée par l'API 3 (SEC-34) et par la console admin (UX-P2-12), jamais recopiée : c'est la seule écriture qui fasse naître une prise en charge (HYP-W19-SOURCE, question 22). (1) La tâche APPELLE la transaction de SEC-12 sans la recopier : verrou SIREN, index, horodatage, antériorité DM-10-P, établissement cessé, liste 3.3 bis (b) et registre d'opposition (témoin nommé pour l'opposition). (2) Le porteur est un `conseiller_salarie` actif, vérifié par Partners au moment de la transaction (référence rattachée par DM-32 pour l'API 3, choix de l'admin en console), sinon `role_refuse`. Naissance par `prise_en_charge_par_la_societe`, canal `console` ; l'état visible depuis l'espace et l'API 1 suit la chronologie d'un dépôt d'apporteur (HYP-W19-CYCLE, machine de DM-08). (3) `IssuePriseEnCharge` renvoie `non_disponible`, SANS mois et sans identité, dans tous ces cas : SIREN occupé ; délai d'attente après toute libération (témoin : relais A → B à J+90 refusé) ; fenêtre d'un rang 1 (témoin : rang 1 notifié, prise en charge à J+1 refusée) ; moins de `RESERVE_APRES_ACTE_APPORTEUR_JOURS` après une vérification ou un dépôt refusé d'un apporteur. (4) Limites par conseiller (verrou par `utilisateurConsoleId`) et par Société, en SSOT (HYP-W19-LIMITES). Anomalie au-delà du seuil journalier. (5) Côté apporteur (question 2, art. 3.5) : AUCUNE valeur ajoutée à `IssueDepot`, `MotifRefusDepot` ni `ISSUES_DE_REFUS` ; `ux-exhaustivite` reste verte à 12 valeurs. Le dépôt d'un apporteur sur un SIREN pris en charge reçoit l'issue d'une occupation par un apporteur (`en_attente` au rang 1 ou 2, ou `file_complete`), et « Vérifier » le même état et la même date. Témoin d'indistinction, repris par QA-T31 : corps identiques octet à octet face à un occupant apporteur au même stade et aux mêmes dates. (6) Case d'information du tiers exigée côté serveur. Origine de la collecte (art. 13) au journal. (7) Course mixte : 20 concurrents, apporteurs et conseillers, donnent exactement un occupant. (8) Mise en service après l'AIPD signée et la condition HYP-W19-CSE remplie ; ni l'une ni l'autre ne bloque la livraison de la tâche.",
+      "acceptance": "TÂCHE SENSIBLE (attribution). (0) Une seule fonction de prise en charge, appelée par l'API 3 (SEC-34) et par la console admin (UX-P2-12), jamais recopiée : c'est la seule écriture qui fasse naître une prise en charge (HYP-W19-SOURCE, question 22). (1) La tâche APPELLE la transaction de SEC-12 sans la recopier : verrou SIREN, index, horodatage, antériorité DM-10-P, établissement cessé, liste 3.3 bis (b) et registre d'opposition (témoin nommé pour l'opposition). (2) Le porteur est un `conseiller_salarie` actif, vérifié par Partners au moment de la transaction (référence rattachée par DM-32 pour l'API 3, choix de l'admin en console), sinon `role_refuse`. Naissance par `prise_en_charge_par_la_societe`, canal `console` ; l'état visible depuis l'espace et l'API 1 suit la chronologie d'un dépôt d'apporteur (HYP-W19-CYCLE, machine de DM-08). (3) `IssuePriseEnCharge` renvoie `non_disponible`, SANS mois et sans identité, dans tous ces cas : SIREN occupé ; délai d'attente après toute libération (témoin : relais A → B à J+90 refusé) ; fenêtre d'un rang 1 (témoin : rang 1 notifié, prise en charge à J+1 refusée) ; moins de `RESERVE_APRES_ACTE_APPORTEUR_JOURS` après une vérification ou un dépôt refusé d'un apporteur. (4) Limites par conseiller (verrou par `utilisateurConsoleId`) et par Société, en SSOT (HYP-W19-LIMITES). Anomalie au-delà du seuil journalier. (5) Côté apporteur (question 2, art. 3.5) : AUCUNE valeur ajoutée à `IssueDepot`, `MotifRefusDepot` ni `ISSUES_DE_REFUS` ; `ux-exhaustivite` reste verte à 12 valeurs. Le dépôt d'un apporteur sur un SIREN pris en charge reçoit l'issue d'une occupation par un apporteur (`en_attente` au rang 1 ou 2, ou `file_complete`), et « Vérifier » le même état et la même date. Témoin d'indistinction, repris par QA-T31 : corps identiques octet à octet face à un occupant apporteur au même stade et aux mêmes dates. (6) Case d'information du tiers exigée côté serveur. Origine de la collecte (art. 13) au journal. (7) Course mixte : 20 concurrents, apporteurs et conseillers, donnent exactement un occupant. (8) Mise en service après l'AIPD signée et la condition HYP-W19-CSE remplie ; ni l'une ni l'autre ne bloque la livraison de la tâche. LOT CRM PRO (rattrapage 57) : la décision de Williams du 2026-10-02, option B (« il faut que toutes les données que l'on récupère aille dans le crm pro soit pour nouveau prospect ou cleitn saist par approteurs ou commercial ou nous ou soit tout ce qui est l'enrichissment de chaaque fiche », verbatim) remet en cause HYP-W19-NON-EXPLOITATION, dont cette tâche tire une partie de son acceptance ; la manière de procéder attend Williams, et rien de ce qui en dépend ne se code avant. `RESERVE_APRES_ACTE_APPORTEUR_JOURS` (30 jours) est gardé (coordination).",
       "tests": {
         "REQ-DM-048": [
           "tests/unit/domaine/prise-en-charge.spec.ts",
@@ -18573,14 +18573,23 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "Écart C13 de la vérification de bout en bout, porté par l'audit indépendant du plan de la Phase 1 (2026-10-01). (1) Une garde AST refuse `style=` et `dangerouslySetInnerHTML` sous `src/app/**`. (2) Correctif de `confidentialite/error.tsx`. (3) TÉMOIN Playwright de la CSP sur le serveur construit. Relecture de la lentille securite. ARBITRAGE (rattrapage 52 ; A01, conditions de la lentille sécurité retenues par la coordination) : le témoin sur serveur construit passe à QA-T16 (aucun terrain e2e aujourd'hui : pas de serveur Playwright, `tests/e2e` vide) ; QA-T16 devient bloquante pour la mise en service. La configuration de la CSP est jugée par le témoin EXISTANT `tests/unit/securite/headers.spec.ts` (vrai proxy et vrai `next.config.ts`, directive par directive, faces rouges sur `'unsafe-inline'`) : pas de doublon (RM-01). Le risque « correcte en configuration, altérée au service » est fermé DANS SEC-46 : `scripts/gates/deploy-verify.ts` compare l'en-tête `Content-Security-Policy` SERVI à celui de la configuration (au nonce près), sinon NON ATTERRI ; TÉMOIN neuf `tests/unit/qualite/deploy-verify-csp.spec.ts` (absent ou différent : rouge). La garde `csp:inline` tourne en porte A (`pnpm csp:inline`, `pnpm csp:inline:prove`) : `PORTE_A_FIGEE` suit ; les styles passent par un module CSS (`confidentialite.module.css`, `style-src 'self'` sans nonce). `package.json` : label `role:architecte`. PRÉCISION (rattrapage 55, lentille exactitude) : l'exigence de SEC-46 est REQ-SEC-029 (la CSP), et non REQ-SEC-012 (les API appelées par axion-ia : rien ici n'en relève). Dans l'arbitrage du rattrapage 52, « `style-src 'self'` sans nonce » est INEXACT : `src/server/securite/entetes.ts` sert `style-src 'self'` ET le nonce. La raison de la garde reste vraie : un nonce ne couvre jamais un ATTRIBUT `style=`. La même phrase dans l'entrée `csp:inline` de `docs/gates.json` se corrige dans une PR suivante de SEC-46.",
       "tests": {
         "REQ-SEC-029": [
           "tests/unit/securite/csp-inline.spec.ts",
           "tests/unit/qualite/deploy-verify-csp.spec.ts"
         ]
-      }
+      },
+      "branch": "t/sec-46",
+      "owner": "A05",
+      "pr": 435,
+      "attestation": {
+        "pr": 435,
+        "sha": "146ee03aa48bb974d09fd70737bdeb49795e6755",
+        "fusionneeAt": "2026-10-02T10:18:03Z"
+      },
+      "motif": null
     },
     {
       "id": "GOV-134",
@@ -19184,7 +19193,7 @@
       "externe": null,
       "estimateDays": 0.25,
       "statut": "a_faire",
-      "acceptance": "Passe du lot dédié de GOV-116, lancée par Williams en un geste (raccourci du Bureau LANCER-LOT-DEDIE-2026-10-02.bat), APRÈS sa séance de décisions du 2026-10-02 (`_REPRISE-AXION-APPORTEURS/SEANCE-WILLIAMS-2026-10-02.md`). `docs/DECISIONS.md` reçoit : HYP-W19-OBJECTIFS tranchée en B (pilotage réel des commerciaux, 2026-10-01) ; HYP-W20-BADGE amendée en A (libellé choisi par Williams, « En attente · confirmée automatiquement le <date> », 2026-10-01 ; phrase d'aide à valider en séance, point 7) ; W6 et W11 amendées pour la conférence commissionnée au forfait (2026-10-01) : 31 paliers, la conférence rangée dans les formations collectives, quatre familles non commissionnées ; puis les réponses de la séance du 2026-10-02 (art. 3.5, HYP-W19-NON-EXPLOITATION, HYP-W19-CARENCE, « ni annulé » de JUR-T42, JUR-T43, Indeed, JUR-T09), chacune avec sa citation mot pour mot renvoyée à sa séquence hors dépôt et sa date en colonne « Tranchée ». ATOMICITÉ : le test W6 de `tests/unit/contrat/contract-template-complete.spec.ts` lit la ligne W6 ; la PR de ce lot porte donc aussi, sur la même branche, la mise à jour de ce test (poste dev), le palier de la conférence dans l'annexe 1 du contrat (A07) et l'entrée `partners:grille:complete` de `docs/gates.json` (A01), pour que `main` ne rougisse jamais ; ces chemins entrent aux paths de la tâche de suite de JUR-T43 qui les porte.",
+      "acceptance": "Passe du lot dédié de GOV-116, lancée par Williams en un geste (raccourci du Bureau LANCER-LOT-DEDIE-2026-10-02.bat), APRÈS sa séance de décisions du 2026-10-02 (`_REPRISE-AXION-APPORTEURS/SEANCE-WILLIAMS-2026-10-02.md`). `docs/DECISIONS.md` reçoit : HYP-W19-OBJECTIFS tranchée en B (pilotage réel des commerciaux, 2026-10-01) ; HYP-W20-BADGE amendée en A (libellé choisi par Williams, « En attente · confirmée automatiquement le <date> », 2026-10-01 ; phrase d'aide à valider en séance, point 7) ; W6 et W11 amendées pour la conférence commissionnée au forfait (2026-10-01) : 31 paliers, la conférence rangée dans les formations collectives, quatre familles non commissionnées ; puis les réponses de la séance du 2026-10-02 (art. 3.5, HYP-W19-NON-EXPLOITATION, HYP-W19-CARENCE, « ni annulé » de JUR-T42, JUR-T43, Indeed, JUR-T09), chacune avec sa citation mot pour mot renvoyée à sa séquence hors dépôt et sa date en colonne « Tranchée ». ATOMICITÉ : le test W6 de `tests/unit/contrat/contract-template-complete.spec.ts` lit la ligne W6 ; la PR de ce lot porte donc aussi, sur la même branche, la mise à jour de ce test (poste dev), le palier de la conférence dans l'annexe 1 du contrat (A07) et l'entrée `partners:grille:complete` de `docs/gates.json` (A01), pour que `main` ne rougisse jamais ; ces chemins entrent aux paths de la tâche de suite de JUR-T43 qui les porte. LOT CRM PRO (rattrapage 57) : la décision de Williams du 2026-10-02, option B (« il faut que toutes les données que l'on récupère aille dans le crm pro soit pour nouveau prospect ou cleitn saist par approteurs ou commercial ou nous ou soit tout ce qui est l'enrichissment de chaaque fiche », verbatim) remet en cause HYP-W19-NON-EXPLOITATION, dont cette tâche tire une partie de son acceptance ; la manière de procéder attend Williams, et rien de ce qui en dépend ne se code avant. `RESERVE_APRES_ACTE_APPORTEUR_JOURS` (30 jours) est gardé (coordination).",
       "tests": {
         "REQ-GOV-015": [
           "tests/unit/gouvernance/gardes.spec.ts"
@@ -20154,9 +20163,7 @@
       ],
       "schema": false,
       "sensible": [],
-      "deps": [
-        "JUR-T31"
-      ],
+      "deps": [],
       "reqs": [
         "REQ-DM-004"
       ],
@@ -20164,7 +20171,7 @@
       "externe": null,
       "estimateDays": 0.25,
       "statut": "a_faire",
-      "acceptance": "Versée au rattrapage 56 sur le constat d'A07 (2026-10-02) : un angle mort entre l'art. 3.7 al. 3 et l'art. 3.5 al. 2. La suspension bloque l'enregistrement de nouvelles déclarations pendant quinze jours au plus, alors que l'apporteur au premier rang doit faire une NOUVELLE déclaration dans les quinze jours qui suivent la libération : suspendu à ce moment, il perdrait sa place, alors que la suspension n'a aucun effet sur ses droits. (1) L'art. 3.5 al. 2 reçoit la phrase d'A07 : « Le délai de quinze jours de l'article 3.5 alinéa 2 ne court pas pendant une suspension. » (le délai est SUSPENDU et reprend pour sa durée restante ; variante à présenter à Williams : « reporté, pour sa durée entière, à la fin de la suspension »). (2) ACTE JURIDIQUE : le texte est validé par Williams avant la fusion et avant tout premier envoi DocuSeal ; la tâche peut se coder. (3) Le code suit dans DM-13. TÉMOIN de gabarit (écrit par A05, pas par l'autrice) : l'article porte la phrase validée. Autrice : A07 (relecture par la suppléante, REQ-JUR-036).",
+      "acceptance": "Versée au rattrapage 56 sur le constat d'A07 (2026-10-02) : un angle mort entre l'art. 3.7 al. 3 et l'art. 3.5 al. 2. La suspension bloque l'enregistrement de nouvelles déclarations pendant quinze jours au plus, alors que l'apporteur au premier rang doit faire une NOUVELLE déclaration dans les quinze jours qui suivent la libération : suspendu à ce moment, il perdrait sa place, alors que la suspension n'a aucun effet sur ses droits. (1) L'art. 3.5 al. 2 reçoit la phrase d'A07 : « Le délai de quinze jours de l'article 3.5 alinéa 2 ne court pas pendant une suspension. » (le délai est SUSPENDU et reprend pour sa durée restante ; variante à présenter à Williams : « reporté, pour sa durée entière, à la fin de la suspension »). (2) ACTE JURIDIQUE : le texte est validé par Williams avant la fusion et avant tout premier envoi DocuSeal ; la tâche peut se coder. (3) Le code suit dans DM-13. TÉMOIN de gabarit (écrit par A05, pas par l'autrice) : l'article porte la phrase validée. Autrice : A07 (relecture par la suppléante, REQ-JUR-036). TEXTE POSÉ (rattrapage 57, A07) : la phrase de (1) se renvoyait à elle-même et « une suspension » était ambigu (l'art. 4.6 connaît la suspension du versement du parrainage). Le texte posé, à la suite de « …redevient librement déclarable par tous. », est : « Ce délai ne court pas tant que l'enregistrement des déclarations de l'Apporteur est suspendu en application de l'article 3.7 ; il reprend, pour sa durée restante, à la fin de la suspension. » Il couvre la suspension antérieure à la libération (le délai, non commencé, part entier à la levée). Variante présentée à Williams : « …il recommence à courir, pour sa durée entière, à la fin de la suspension. » DÉPENDANCE : la phrase est indépendante de JUR-T31 (vérifié par A07) ; l'ordre de fusion est indifférent, et le conflit git du second se résout en gardant les deux textes.",
       "tests": {
         "REQ-DM-004": [
           "tests/unit/contrat/redeclaration-et-suspension.spec.ts"
@@ -20236,10 +20243,181 @@
       "externe": null,
       "estimateDays": 1,
       "statut": "a_faire",
-      "acceptance": "Versée au rattrapage 56 sur demande de la coordination (A02 et A07, 2026-10-02), en phase 3 avec DM-20. Le SIREN d'une ENTREPRISE INDIVIDUELLE identifie une personne : il est effacé à la PRESCRIPTION, cinq ans après la dernière commission ou le dernier relevé de l'attribution, durée sous HYP-RGPD-RETENTION dans `retention.ts`. (1) Colonne `archive_effacee_at` ; `siren` nullable sous CHECK : la forme est vérifiée quand il n'est pas NULL, et NULL n'est admis que si `archive_effacee_at` est posée. (2) JAMAIS sur un état occupant (liste dérivée de `ETATS_OCCUPANTS`). (3) Effacement, jamais hachage ni pseudonymisation. (4) Une personne morale n'est pas concernée. TÉMOINS : entreprise individuelle prescrite → SIREN effacé ; personne morale → gardé ; occupante → jamais ; NULL sans `archive_effacee_at` refusé par la base. Auteur : à revendiquer en phase 3. Lentille schema (A02).",
+      "acceptance": "Versée au rattrapage 56 sur demande de la coordination (A02 et A07, 2026-10-02), en phase 3 avec DM-20. Le SIREN d'une ENTREPRISE INDIVIDUELLE identifie une personne : il est effacé à la PRESCRIPTION, cinq ans après la dernière commission ou le dernier relevé de l'attribution, durée NEUVE et PROVISOIRE (5 ans, avis d'A07), dans `retention.ts`, à confirmer par Williams au plus tard en phase 3 ; elle entre au registre des décisions comme hypothèse de prescription par le prochain lot dédié (elle ne relève pas d'HYP-RGPD-RETENTION, qui ne porte que les deux durées du contact). (1) Colonne `archive_effacee_at` ; `siren` nullable sous CHECK : la forme est vérifiée quand il n'est pas NULL, et NULL n'est admis que si `archive_effacee_at` est posée. (2) JAMAIS sur un état occupant (liste dérivée de `ETATS_OCCUPANTS`). (3) Effacement, jamais hachage ni pseudonymisation. (4) Une personne morale n'est pas concernée. TÉMOINS : entreprise individuelle prescrite → SIREN effacé ; personne morale → gardé ; occupante → jamais ; NULL sans `archive_effacee_at` refusé par la base. Auteur : à revendiquer en phase 3. Lentille schema (A02).",
       "tests": {
         "REQ-DM-031": [
           "tests/integration/siren-ei-prescription.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "JUR-T50",
+      "titre": "Art. 7.2 : la Société conserve les données déclarées dans son outil de relation client, trois ans après le dernier échange à l'initiative de la personne",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "juridique",
+      "paths": [
+        "docs/contrat/CONTRAT-APPORTEUR-V1.md",
+        "src/domain/seuils/ssot.ts",
+        "src/domain/contrat/variables.ts",
+        "tests/unit/contrat/conservation-crm.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "JUR-T31"
+      ],
+      "reqs": [
+        "REQ-JUR-062"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.25,
+      "statut": "a_faire",
+      "acceptance": "TEXTES D'A07 = PROPOSITION À VALIDER PAR WILLIAMS, NON EN VIGUEUR (décision de la coordination du 2026-10-02) ; rien ne se fusionne avant sa validation. LOT CRM PRO (rattrapage 57) : décision de Williams du 2026-10-02, option B (« il faut que toutes les données que l'on récupère aille dans le crm pro », verbatim hors dépôt). (1) L'art. 7.2 reçoit, après « …et les conserve pour la durée nécessaire au suivi de l'affaire. », le texte d'A07 : « La Société conserve en outre ces données dans son outil de gestion de la relation client, à des fins de prospection et de gestion de sa relation commerciale avec l'entreprise, pendant {{CRM_DUREE_PROSPECT_ANS}} à compter du dernier échange à l'initiative de la personne concernée, sauf opposition de celle-ci. L'Apporteur en informe la personne lorsqu'il recueille ses coordonnées. » (2) `CRM_DUREE_PROSPECT_ANS` (3 ans, référence de la CNIL, avis d'A07) est une constante de la SSOT, rendue par une variable du gabarit, jamais un littéral (RM-10). (3) ACTE JURIDIQUE : texte validé par Williams avant la fusion et avant tout premier envoi DocuSeal. TÉMOIN (écrit par A05) : l'article porte la phrase et la variable. Autrice : A07 (relecture par la suppléante).",
+      "tests": {
+        "REQ-JUR-062": [
+          "tests/unit/contrat/conservation-crm.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "JUR-T51",
+      "titre": "Le bloc d'information art. 14, version 5 : le CRM d'Axion-IA nommé, la finalité commerciale, la base, la durée, l'opposition à la prospection à part",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "juridique",
+      "paths": [
+        "src/content/micro-copy/courriels/information-article-14.ts",
+        "tests/unit/micro-copy/information-article-14-v5.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "JUR-T50"
+      ],
+      "reqs": [
+        "REQ-JUR-060",
+        "REQ-JUR-062"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "acceptance": "TEXTES D'A07 = PROPOSITION À VALIDER PAR WILLIAMS, NON EN VIGUEUR (décision de la coordination du 2026-10-02) ; rien ne se fusionne avant sa validation. LOT CRM PRO (rattrapage 57, décision de Williams du 2026-10-02, option B ; textes d'A07). `information-article-14.ts` passe en `information-article-14/v5` : (1) `finalite` ajoute la conservation dans l'outil de relation client pour proposer les prestations d'Axion-IA et gérer la relation commerciale avec {entreprise} ; (2) `baseLegale` nomme l'intérêt légitime d'Axion-IA à développer sa relation commerciale avec des professionnels, au titre de la fonction, et le droit de s'y opposer à tout moment (art. 14.2.b, art. 21) ; (3) `destinataires` : les personnes d'Axion-IA chargées de la présentation ET de la relation commerciale ; (4) `duree` : {dureeProspect} après le dernier échange à l'initiative de la personne, ou pendant la relation commerciale puis {dureeProspect} ; (5) `relance` (devenue fausse) : « Ce message ne sera suivi d'aucune relance au sujet de cette demande de confirmation. » ; (6) `opposition` et `LIEN_OPPOSITION.libelle` : l'opposition vaut pour TOUT message et tout appel d'Axion-IA, présentée à part (art. 21.4). (7) Seules les personnes informées par la v5 ou une version ultérieure peuvent être démarchées depuis le CRM ; une personne informée en v4 ne l'est qu'après une information complémentaire. TÉMOINS : les clés v5 ; aucune clé ne dit « relance » à tort ; la version est celle gardée avec le dépôt (`information_tiers_version`). Autrice : A07 (relecture par la suppléante) ; Williams valide le texte.",
+      "tests": {
+        "REQ-JUR-060": [
+          "tests/unit/micro-copy/information-article-14-v5.spec.ts"
+        ],
+        "REQ-JUR-062": [
+          "tests/unit/micro-copy/information-article-14-v5.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "JUR-T52",
+      "titre": "Le registre de l'article 30 et l'AIPD nomment le CRM d'Axion-IA, sa finalité et sa durée, avant la première émission",
+      "phase": 2,
+      "repo": "partners",
+      "zone": "juridique",
+      "paths": [
+        "docs/rgpd/registre-article-30.md",
+        "docs/rgpd/aipd.md",
+        "tests/unit/juridique/registre-crm-pro.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "JUR-T50",
+        "JUR-T51"
+      ],
+      "reqs": [
+        "REQ-JUR-062"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.25,
+      "statut": "a_faire",
+      "acceptance": "LOT CRM PRO (rattrapage 57). Le registre de l'art. 30 reçoit le destinataire « CRM d'Axion-IA (service commercial) », la finalité « gestion de la relation commerciale et prospection », la base (intérêt légitime, art. L34-5 CPCE pour les courriels) et la durée `CRM_DUREE_PROSPECT_ANS` ; l'AIPD est amendée (nouveau flux, risques résiduels nommés par A07 : déloyauté, conflit d'intérêts sur la péremption, contacts au « Non » à marquer). Les entreprises individuelles en diffusion partielle SIRENE sont exclues de la prospection. CONDITION DE LA LENTILLE SÉCURITÉ : cette tâche est une dépendance BLOQUANTE d'INT-T68-P (rien n'est émis avant). Autrice : A07. TÉMOIN (écrit par A05) : le registre et l'AIPD nomment le destinataire CRM, la finalité et `CRM_DUREE_PROSPECT_ANS`.",
+      "tests": {
+        "REQ-JUR-062": [
+          "tests/unit/juridique/registre-crm-pro.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "INT-T68-P",
+      "titre": "API 4 : Partners pousse vers le CRM Pro l'entreprise et le contact déclarés, et chaque enrichissement, dans un contrat fermé",
+      "phase": 2,
+      "repo": "partners",
+      "zone": "integration",
+      "paths": [
+        "packages/contracts/crm-pro.ts",
+        "prisma/schema.prisma",
+        "prisma/migrations/",
+        "src/server/integrations/crm-pro/emission.ts",
+        "src/server/integrations/crm-pro/charge.ts",
+        "src/server/taches/emettre-crm-pro.ts",
+        "src/server/taches/registre.ts",
+        "src/server/taches/inscriptions.ts",
+        "src/lib/env.ts",
+        ".env.example",
+        "docs/env.md",
+        "docs/tiers/crm-pro.md",
+        "tests/unit/integration/contrat-crm-pro-hash.spec.ts",
+        "tests/integration/crm-pro-emission.spec.ts"
+      ],
+      "schema": true,
+      "sensible": [],
+      "deps": [
+        "JUR-T31",
+        "JUR-T51",
+        "JUR-T52",
+        "DM-48"
+      ],
+      "reqs": [
+        "REQ-INT-063"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.5,
+      "statut": "a_faire",
+      "acceptance": "LOT CRM PRO (rattrapage 57), décision de Williams du 2026-10-02, option B : tout ce qui est déclaré (entreprise ET contact), et chaque enrichissement, part au CRM Pro DÈS LA DÉCLARATION. Formes d'A02 et conditions de la lentille sécurité. (1) API DISTINCTE de l'API 3 ; Partners POUSSE seul ; aucune route de lecture ouverte au CRM. (2) OUTBOX : seulement la référence (uuid de l'attribution), le type et la version, jamais un clair ; la charge se construit à l'envoi depuis les colonnes courantes (chiffrées), et le contrôle d'opposition se fait dans la MÊME transaction ; une ligne envoyée ne garde aucune charge. (3) Requêtes HMAC-SHA256 (horodatage et corps exact, 300 s), secret DÉDIÉ (distinct d'axion-ia et d'`appels:lire`) avec `kid` et rotation ; hôte en liste fermée, HTTPS, `redirect: 'error'`, aucun secret dans l'URL ; `Idempotency-Key` = (référence, type, version) ; reprises bornées, alerte nommée SANS donnée au-delà d'un seuil de la SSOT ; journal : identifiant, version, statut, nombre, jamais la charge. (4) CONTRAT `.strict()` dans `packages/contracts/crm-pro.ts`, empreinte épinglée des deux côtés : `reference` ; `entreprise { siren, siret?, raisonSociale, natureJuridique, codeNaf, trancheEffectif, etatAdministratif, categorieEntreprise, communeSiege, departement, region }` ; `contact { prenom, nom, email?, telephone?, fonction? }` ; `provenance` {apporteur, commercial, societe} ; `informationTiersVersion`. (5) NE SORTENT JAMAIS, liste fermée avec TÉMOIN (un champ de plus rougit) : la date du contact (REQ-JUR-040) et AUCUNE date d'acte (`deposee_at` compris : le CRM date la réception, arbitrage A01) ; toute identité de l'apporteur, même un identifiant opaque stable ; ses empreintes (`emailHash`, `phoneHash`) ; le contexte libre et la précision du lien d'intérêt ; `ipHash`, `agentHash`, `verificationPrioritaire` et tout signal de sincérité ; l'état d'un dépôt refusé ou en attente ; les coordonnées géographiques. (6) ENTREPRISE INDIVIDUELLE : rien n'est émis pour une forme qui n'est pas une personne morale PROUVÉE, par la MÊME fonction nommée que DM-48 (premier rang INSEE 3 à 9), jamais une copie ; une EI en diffusion partielle n'est jamais émise. (7) INFORMATION : seule une personne informée par la v5 (JUR-T51) est émise. (8) PRÉALABLE (option (b) de la coordination, le CRM Pro relève de sa propre gouvernance) : le CRM lit la version N du contrat AVANT toute émission ; la preuve (réponse de version du CRM) est collée dans la PR. Le dédoublonnage (entreprise par SIREN, contact par (SIREN, e-mail normalisé) puis (SIREN, téléphone normalisé), provenance ajoutée sans écraser) vit côté CRM ; la clé SIREN unique du CRM est vérifiée avant la première émission. (9) Aucune émission avant que les textes validés par Williams (JUR-T31, JUR-T51) ne soient en vigueur, ni avant JUR-T52 (registre et AIPD), dépendance BLOQUANTE. (10) Le CRM ne refuse jamais un dépôt : seul Partners fait foi de l'occupation (HYP-W19-SOURCE) ; le CRM peut recevoir l'état « occupée », sans qui ni depuis quand. TÉMOINS : opposition posée entre la mise en file et l'envoi → rien ne part ; EI → rien ; un champ de plus → rouge. `docs/tiers/crm-pro.md` et `.env.example` : label `role:documentaliste`. Auteur : A05. Lentilles schema (A02) et sécurité.",
+      "tests": {
+        "REQ-INT-063": [
+          "tests/integration/crm-pro-emission.spec.ts",
+          "tests/unit/integration/contrat-crm-pro-hash.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "INT-T69-P",
+      "titre": "Oppositions et effacements synchronisés dans les deux sens entre Partners et le CRM Pro, et une personne en opposition n'est plus jamais émise",
+      "phase": 2,
+      "repo": "partners",
+      "zone": "integration",
+      "paths": [
+        "src/server/integrations/crm-pro/oppositions.ts",
+        "src/app/api/integrations/crm-pro/oppositions/route.ts",
+        "packages/contracts/crm-pro.ts",
+        "tests/integration/crm-pro-oppositions.spec.ts"
+      ],
+      "schema": true,
+      "sensible": [],
+      "deps": [
+        "INT-T68-P"
+      ],
+      "reqs": [
+        "REQ-INT-063"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1,
+      "statut": "a_faire",
+      "acceptance": "LOT CRM PRO (rattrapage 57), formes d'A02 et conditions de la lentille sécurité ; opposition ABSOLUE (art. 21.3). (1) PARTNERS → CRM : une opposition (page du contact, W20) émet `{ reference, motif: opposition_prospection }`, un effacement (art. 17) `{ reference, motif: effacement }`, par la même API 4 et la même outbox, PRIORITAIRES sur toute émission en file. (2) CRM → PARTNERS : une route ENTRANTE signée (même juge que l'API entrante, portée propre), idempotente, par `evenements_recus` ; le CRM envoie l'e-mail ou le téléphone, et Partners calcule LUI-MÊME l'empreinte pour l'inscrire dans `suppressions_courriel` (INT-T10) et au registre d'opposition de l'art. 3.3 bis (d), jamais une empreinte du CRM. (3) Une personne en opposition n'est PLUS JAMAIS émise, même redéclarée par un autre apporteur (liste de suppression par empreinte, côté Partners, jamais envoyée). (4) La PURGE de Partners (DM-48) N'EST PAS une opposition et n'émet RIEN vers le CRM, qui a sa durée propre (`CRM_DUREE_PROSPECT_ANS`). TÉMOINS : opposition avant l'émission → rien ne part ; opposition après → l'événement part ; redéclaration d'une personne en opposition → rien ne part ; purge de Partners → rien vers le CRM. Auteur : A05. Lentille sécurité.",
+      "tests": {
+        "REQ-INT-063": [
+          "tests/integration/crm-pro-oppositions.spec.ts"
         ]
       }
     }
