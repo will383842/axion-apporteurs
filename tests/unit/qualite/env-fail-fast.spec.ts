@@ -709,3 +709,27 @@ describe('REQ-QA-030 — le module rechargé : le refus de démarrer écrit les 
     expect((c.rendu as Record<string, unknown>).DATABASE_URL).toBe(base.DATABASE_URL);
   });
 });
+
+describe('REQ-QA-030 — l’identifiant du salon d’alerte, rechargé, à deux faces', () => {
+  it.each(['-1001234567890', '123456789', '-'.concat('9'.repeat(20))])(
+    'REQ-QA-030 : TÉMOIN — %s, un entier signé d’au plus vingt chiffres, est admis',
+    async (salon) => {
+      const m = await envRecharge();
+      expect(m.schemaSecretsConditionnels.safeParse({ TELEGRAM_CHAT_ID: salon }).success).toBe(
+        true
+      );
+    }
+  );
+
+  it.each([
+    ['des lettres', 'abc'],
+    ['la lettre d seule, que le motif sans barre oblique admettait', 'ddd'],
+    ['un chiffre suivi d’une lettre', '12a'],
+    ['un double signe', '--1'],
+    ['vingt et un chiffres', '1'.repeat(21)],
+    ['une espace en bordure', ' -1001234567890'],
+  ])('REQ-QA-030 : TÉMOIN — %s est refusé', async (_q, salon) => {
+    const m = await envRecharge();
+    expect(m.schemaSecretsConditionnels.safeParse({ TELEGRAM_CHAT_ID: salon }).success).toBe(false);
+  });
+});

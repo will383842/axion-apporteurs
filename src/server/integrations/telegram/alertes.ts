@@ -300,6 +300,8 @@ export function notifieurTelegram(
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ chat_id: salon, text: corps }),
+        // Le jeton est dans le chemin : une redirection le porterait ailleurs.
+        redirect: 'error',
       });
       await r.body?.cancel();
       if (!r.ok) throw new Error(`telegram_refuse : HTTP ${r.status}`);

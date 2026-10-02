@@ -117,3 +117,30 @@ describe('REQ-DM-036 REQ-ARG-003 — l’alerte d’une attente au-delà de son 
     expect(texte).toContain('attente illisible · type illisible · illisible au-delà');
   });
 });
+
+describe('REQ-DM-036 — le canal Telegram du serveur', () => {
+  it('REQ-DM-036 : TÉMOIN — un envoi : l’URL du jeton, un POST JSON vers le salon, et AUCUNE redirection suivie', async () => {
+    const { notifieurTelegram } = await import('../../../src/server/integrations/telegram/alertes');
+    const appels: [string, RequestInit | undefined][] = [];
+    const appeler = (async (url: string, init?: RequestInit) => {
+      appels.push([url, init]);
+      return new Response('{}', { status: 200 });
+    }) as typeof fetch;
+    const jeton = 'jeton-factice-'.padEnd(40, 'x');
+    await notifieurTelegram(jeton, '-1001234567890', appeler).notifier({
+      sujet: 'essai',
+      corps: 'alerte',
+    });
+    expect(appels).toStrictEqual([
+      [
+        `https://api.telegram.org/bot${jeton}/sendMessage`,
+        {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ chat_id: '-1001234567890', text: 'alerte' }),
+          redirect: 'error',
+        },
+      ],
+    ]);
+  });
+});

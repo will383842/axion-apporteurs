@@ -81,7 +81,7 @@ const secret = z.string().superRefine((v, ctx) => {
 });
 
 /** INT-T54 : l'identifiant d'un salon Telegram, un entier signé — court, donc pas un `secret` de 32 octets. */
-const IDENTIFIANT_DE_SALON = /^-?d{1,20}$/;
+const IDENTIFIANT_DE_SALON = /^-?\d{1,20}$/;
 const identifiantDeSalon = z.string().superRefine((v, ctx) => {
   if (presenteEtNette(v, ctx) && !IDENTIFIANT_DE_SALON.test(v)) refuser(ctx, 'format_invalide');
 });
