@@ -115,6 +115,8 @@
       d'envoi, daté dans `docs/tiers/zeptomail.md` §2, et IDENTIQUE à `ZEPTOMAIL_API_URL` ; son pays
       CONCORDE avec `{mentionTransfert}` de JUR-T09 (le centre de données annoncé aux personnes) ;
       `ZEPTOMAIL_SEND_TOKEN` et `ZEPTOMAIL_API_URL` sont posés dans l'environnement `production`. Le
+      jeton est PROPRE à Partners : un agent d'envoi ou une clé DISTINCTS de ceux d'axion-ia, pour
+      qu'une fuite de l'un ne donne pas l'envoi de l'autre. Le
       drapeau allumé sans eux, le démarrage refuse (`requise_envoi_actif`). _Porteur : Williams
       (relevé, valeurs, drapeau), constat de l'auteur._
 

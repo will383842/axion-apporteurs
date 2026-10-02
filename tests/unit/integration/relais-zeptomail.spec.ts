@@ -101,6 +101,14 @@ describe('REQ-INT-022 — la requête a la forme officielle, la réponse se réd
     const entetes = new Headers(init.headers);
     expect(entetes.get('authorization')).toBe(`Zoho-enczapikey ${JETON}`);
     expect(entetes.get('content-type')).toBe('application/json');
+    // Le jeton ne voyage QUE dans Authorization : ni dans l'URL entière (requête comprise), ni dans
+    // aucun autre en-tête, ni dans le corps.
+    expect(url).not.toContain(JETON);
+    expect(new URL(url).search).toBe('');
+    for (const [nom, valeur] of entetes.entries()) {
+      if (nom !== 'authorization') expect(valeur, nom).not.toContain(JETON);
+    }
+    expect(String(init.body)).not.toContain(JETON);
     const corps = JSON.parse(String(init.body)) as Record<string, unknown>;
     expect(Object.keys(corps).sort()).toEqual(Object.keys(FIXTURE.requete.corps).sort());
     expect(corps).toEqual({
