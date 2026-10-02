@@ -16,6 +16,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { spawnSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import {
   juger,
   empreinteDuCorps,
@@ -195,6 +196,18 @@ describe('REQ-QA-027 — runbooks:exerces ne rougit pas le nightly avant la mise
     expect(avantLaMiseEnService(null, '2026-12-31')).toBe(false);
     expect(avantLaMiseEnService('demain', '2026-12-31')).toBe(false);
     expect(avantLaMiseEnService('2026-10-02', 'bientôt')).toBe(false);
+  });
+
+  // Lentille securite (#418) : la BARRIÈRE RÉELLE de la mise en service est l'appel du runbook, SANS
+  // `--now`. Elle ne peut jamais retomber en simple avertissement : le runbook ne fournit pas de date,
+  // et la garde ne lit pas l'horloge pour en inventer une.
+  it('REQ-QA-027 : la barrière du runbook de mise en service appelle la garde SANS --now, et la garde ne lit pas l’horloge', () => {
+    const runbook = readFileSync('docs/runbooks/mise-en-service.md', 'utf8');
+    const appels = runbook.match(/pnpm runbooks:exerces(?![:\w-])[^`\n]*/g) ?? [];
+    expect(appels.length).toBeGreaterThan(0);
+    for (const appel of appels) expect(appel).not.toContain('--now');
+    const source = readFileSync('scripts/gates/runbooks-exerces.ts', 'utf8');
+    expect(source).not.toMatch(/Date\.now\(|new Date\(\s*\)/);
   });
 
   it('REQ-QA-027 : avant la mise en service, des fautes donnent un avertissement nommé et zéro ; après, un refus', () => {
