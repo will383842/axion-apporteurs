@@ -17,7 +17,7 @@
  *      caducité d'une commande qui ne recalcule rien ;
  *   5. la charge du journal `attribution_etat_modifie` lit `EVENEMENTS_ATTRIBUTION`.
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { EtatAttribution } from '@prisma/client';
 import {
   ETATS_ATTRIBUTION,
@@ -393,4 +393,229 @@ describe('REQ-DM-006 — la charge du journal lit la matrice', () => {
       ]);
     }
   );
+});
+
+/**
+ * LES MODULES RECHARGÉS. La matrice, ses listes et les charges du journal sont évalués AU
+ * CHARGEMENT : importés une fois en tête de fichier, ils seraient lus avant que l'outil de mutation
+ * n'active son mutant (le patron des témoins du relais de courriel). Ces témoins vident le cache
+ * des modules, réimportent la source, et jugent chaque valeur à sa forme LITTÉRALE exacte.
+ */
+type ModuleMachine = typeof import('../../../src/domain/attribution/machine');
+type ModuleCharges = typeof import('../../../src/domain/evenement/charges');
+async function machineRechargee(): Promise<ModuleMachine> {
+  vi.resetModules();
+  return import('../../../src/domain/attribution/machine');
+}
+async function chargesRechargees(): Promise<ModuleCharges> {
+  vi.resetModules();
+  return import('../../../src/domain/evenement/charges');
+}
+
+describe('REQ-QA-004 — la matrice rechargée, à la valeur près', () => {
+  it('REQ-QA-004 : les treize états, les vingt-cinq transitions et les naissances, dans cet ordre', async () => {
+    const m = await machineRechargee();
+    expect(m.ETATS_ATTRIBUTION).toEqual([
+      'en_attente',
+      'provisoire',
+      'active',
+      'rdv_pris',
+      'proposition',
+      'signee',
+      'convertie',
+      'figee_resiliation',
+      'invalidee',
+      'perdue',
+      'perimee',
+      'expiree',
+      'annulee',
+    ]);
+    expect(m.EVENEMENTS_ATTRIBUTION).toEqual([
+      'deposee',
+      'deposee_en_file',
+      'prise_en_charge',
+      'retiree',
+      'file_expiree',
+      'redeclaree',
+      'confirmee',
+      'confirmee_par_courriel',
+      'confirmee_tacitement',
+      'non_confirmee',
+      'non_confirmee_par_courriel',
+      'anomalie_confirmee',
+      'annulee_par_apporteur',
+      'annulee_par_la_console',
+      'liberee_sans_confirmation',
+      'figee',
+      'rdv_pris',
+      'devis_envoye',
+      'devis_signe',
+      'perdue',
+      'perimee',
+      'expiree',
+      'paiement_recu',
+      'commande_caduque',
+      'commande_caduque_hors_fenetre',
+    ]);
+    expect(m.NAISSANCES_ATTRIBUTION).toEqual(NAISSANCES);
+  });
+
+  it('REQ-QA-004 : TÉMOIN — la matrice rechargée égale la table attendue, cellule par cellule', async () => {
+    const m = await machineRechargee();
+    expect(m.TRANSITIONS_ATTRIBUTION).toEqual(ATTENDUE);
+  });
+
+  it('REQ-SEC-042 : les refus au conseiller, rechargés, à la valeur près', async () => {
+    const m = await machineRechargee();
+    expect(m.REFUSEES_AU_CONSEILLER).toEqual([
+      'deposee',
+      'deposee_en_file',
+      'retiree',
+      'file_expiree',
+      'redeclaree',
+      'confirmee_tacitement',
+      'non_confirmee',
+      'non_confirmee_par_courriel',
+      'anomalie_confirmee',
+      'figee',
+    ]);
+  });
+
+  it('REQ-DM-006 : TÉMOIN — les erreurs rechargées : nom, code et détail exacts', async () => {
+    const m = await machineRechargee();
+    const erreur = (f: () => unknown) => {
+      try {
+        f();
+      } catch (e) {
+        return e as InstanceType<ModuleMachine['ErreurTransitionAttribution']>;
+      }
+      throw new Error('aucune erreur');
+    };
+    const refusApporteur = erreur(() =>
+      m.transitionnerAttribution({ de: null, transition: 'prise_en_charge', porteur: 'apporteur' })
+    );
+    expect(refusApporteur.name).toBe('ErreurTransitionAttribution');
+    expect(refusApporteur.code).toBe('refusee_au_porteur');
+    expect(refusApporteur.message).toBe(
+      'refusee_au_porteur : naissance × prise_en_charge × apporteur'
+    );
+    expect(
+      erreur(() =>
+        m.transitionnerAttribution({ de: 'active', transition: 'figee', porteur: 'conseiller' })
+      ).message
+    ).toBe('refusee_au_porteur : active × figee × conseiller');
+    expect(
+      erreur(() =>
+        m.transitionnerAttribution({ de: null, transition: 'retiree', porteur: 'apporteur' })
+      ).message
+    ).toBe('naissance_refusee : naissance × retiree');
+    expect(
+      erreur(() =>
+        m.transitionnerAttribution({
+          de: 'x'.repeat(80) as never,
+          transition: 'figee',
+          porteur: 'apporteur',
+        })
+      ).message
+    ).toBe(`etat_inconnu : ${'x'.repeat(64)}`);
+    expect(
+      erreur(() =>
+        m.transitionnerAttribution({ de: 'active', transition: 'z' as never, porteur: 'apporteur' })
+      ).message
+    ).toBe('transition_inconnue : z');
+    expect(
+      erreur(() =>
+        m.transitionnerAttribution({ de: 'active', transition: 'figee', porteur: 'autre' as never })
+      ).message
+    ).toBe('porteur_inconnu : autre');
+    // Les deux porteurs connus passent.
+    expect(
+      m.transitionnerAttribution({ de: null, transition: 'deposee', porteur: 'apporteur' })
+    ).toBe('provisoire');
+    expect(
+      m.transitionnerAttribution({ de: null, transition: 'prise_en_charge', porteur: 'conseiller' })
+    ).toBe('provisoire');
+  });
+});
+
+describe('REQ-DM-006 — les charges rechargées, à la valeur près', () => {
+  const acteur = { par: 'systeme' } as const;
+  const conseillerA = {
+    type: 'utilisateur_console',
+    id: '0190f0a0-0000-7000-8000-000000000001',
+  } as const;
+  const conseillerB = {
+    type: 'utilisateur_console',
+    id: '0190f0a0-0000-7000-8000-000000000002',
+  } as const;
+  const issues = (r: {
+    success: boolean;
+    error?: { issues: { path: (string | number)[]; message: string }[] };
+  }) => (r.error?.issues ?? []).map((i) => [i.path.join('.'), i.message]);
+
+  it('REQ-DM-041 : les formes rechargées — empreinte ancrée aux deux bouts, montant entier, horodatage', async () => {
+    const c = await chargesRechargees();
+    expect(c.HASH_HEX_64.source).toBe('^[0-9a-f]{64}$');
+    expect(c.FORMES.empreinte().safeParse('a'.repeat(64)).success).toBe(true);
+    expect(c.FORMES.empreinte().safeParse('a'.repeat(65)).success).toBe(false);
+    expect(c.FORMES.empreinte().safeParse(`x${'a'.repeat(64)}`).success).toBe(false);
+    expect(c.FORMES.montantCents().safeParse(12).success).toBe(true);
+    expect(c.FORMES.montantCents().safeParse(1.5).success).toBe(false);
+    expect(c.FORMES.horodatage().safeParse('2026-10-02T12:00:00.000Z').success).toBe(true);
+    expect(c.FORMES.horodatage().safeParse('hier').success).toBe(false);
+  });
+
+  it('REQ-DM-024 : la genèse et la purge rechargées — l’algorithme exigé, l’acteur système nommé', async () => {
+    const c = await chargesRechargees();
+    expect(
+      c.CHARGES_PAR_TYPE.journal_ouvert.safeParse({ algorithme: 'sha256-jcs-v1' }).success
+    ).toBe(true);
+    expect(c.CHARGES_PAR_TYPE.journal_ouvert.safeParse({}).success).toBe(false);
+    const purge = c.CHARGES_PAR_TYPE.attribution_contact_purge;
+    expect(purge.safeParse({ purgeAt: '2026-10-02T12:00:00.000Z', acteur }).success).toBe(true);
+    expect(
+      issues(
+        purge.safeParse({
+          purgeAt: '2026-10-02T12:00:00.000Z',
+          acteur: { par: 'apporteur', id: conseillerA.id },
+        })
+      )
+    ).toEqual([['acteur', 'acteur_systeme_attendu']]);
+  });
+
+  it('REQ-DM-006 : TÉMOIN — la transition rechargée : le lien d’intérêt aux deux valeurs, la naissance nommée', async () => {
+    const c = await chargesRechargees();
+    const etat = c.CHARGES_PAR_TYPE.attribution_etat_modifie;
+    const base = { de: null, vers: 'provisoire', transition: 'deposee', acteur };
+    expect(etat.safeParse({ ...base, lienInteret: 'declare' }).success).toBe(true);
+    expect(etat.safeParse({ ...base, lienInteret: 'non_declare' }).success).toBe(true);
+    expect(etat.safeParse({ ...base, lienInteret: 'peut_etre' }).success).toBe(false);
+    expect(issues(etat.safeParse({ ...base, de: 'active' }))).toEqual([
+      ['de', 'naissance_incoherente'],
+    ]);
+    const susp = c.CHARGES_PAR_TYPE.attribution_peremption_suspendue;
+    expect(susp.safeParse({ acteur, suspendueAt: '2026-10-02T12:00:00.000Z' }).success).toBe(true);
+    expect(susp.safeParse({ acteur }).success).toBe(false);
+  });
+
+  it('REQ-SEC-042 : TÉMOIN — la réaffectation rechargée : chaque refus nommé à son chemin', async () => {
+    const c = await chargesRechargees();
+    const p = c.CHARGES_PAR_TYPE.attribution_porteur_reaffecte;
+    const acteurConsole = { par: 'utilisateur_console', id: conseillerA.id } as const;
+    expect(p.safeParse({ de: conseillerA, vers: conseillerB, acteur: acteurConsole }).success).toBe(
+      true
+    );
+    expect(
+      issues(p.safeParse({ de: conseillerA, vers: conseillerA, acteur: acteurConsole }))
+    ).toEqual([['vers', 'meme_porteur']]);
+    // Un apporteur est une forme ADMISE du porteur, refusée par le raffinement — pas par l'enum.
+    const apporteur = { type: 'apporteur', id: conseillerA.id } as const;
+    expect(
+      issues(p.safeParse({ de: apporteur, vers: conseillerB, acteur: acteurConsole }))
+    ).toEqual([['de', 'porteur_non_conseiller']]);
+    // Même identifiant, types différents : ce n'est pas le même porteur.
+    expect(
+      issues(p.safeParse({ de: conseillerA, vers: apporteur, acteur: acteurConsole }))
+    ).toEqual([['vers', 'porteur_non_conseiller']]);
+  });
 });
