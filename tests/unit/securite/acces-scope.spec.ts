@@ -2,6 +2,7 @@
 // @req REQ-QA-011 → REQ-SEC-008
 // @req REQ-SEC-022
 // @req REQ-QA-012 → REQ-SEC-022
+// @req REQ-DM-031
 /**
  * `acces-scope.spec.ts` — la couche d'accès cloisonnée de l'espace apporteur (SEC-05), SANS base :
  * `forApporteur` est jugée sur un faux client qui ENREGISTRE chaque appel et ses arguments. Ce que
@@ -49,6 +50,11 @@ import {
   vueDeLOccupationEtrangere,
   type ClientCloisonnable,
 } from '../../../src/server/acces/for-apporteur';
+import {
+  ISSUES_DE_REFUS_STOCKEES,
+  MOTIFS_REFUS_DEPOT,
+} from '../../../src/domain/depot/motifs-refus';
+import { CHAMPS_PII } from '../../../src/server/securite/pii';
 
 const A = randomUUID();
 const B = randomUUID();
@@ -743,7 +749,7 @@ function fautesDeClassement(
 }
 
 describe('REQ-SEC-008 — GOV-111 : la couche ne rend qu’une sélection EXPLICITE, sans secret', () => {
-  it('REQ-SEC-008 : les dix secrets sont figés — les six de GOV-111 et les quatre de la fiche (SEC-47)', () => {
+  it('REQ-SEC-008 : les dix-sept secrets sont figés — les six de GOV-111, les quatre de la fiche (SEC-47) et les sept du dépôt (DM-07)', () => {
     expect(Object.isFrozen(SECRETS)).toBe(true);
     expect([...SECRETS].sort()).toEqual(
       [
@@ -757,6 +763,13 @@ describe('REQ-SEC-008 — GOV-111 : la couche ne rend qu’une sélection EXPLIC
         'prenomChiffre',
         'telephoneChiffre',
         'phoneHash',
+        'nomContactChiffre',
+        'prenomContactChiffre',
+        'fonctionContactChiffre',
+        'contexteChiffre',
+        'codePostalChiffre',
+        'lienInteretPrecisionChiffre',
+        'agentHash',
       ].sort()
     );
   });
@@ -808,4 +821,94 @@ describe('REQ-SEC-008 — GOV-111 : la couche ne rend qu’une sélection EXPLIC
       }
     }
   );
+});
+
+describe('REQ-DM-031 — DM-07 : le vocabulaire et les colonnes du dépôt, confrontés au schéma généré', () => {
+  const enums = Prisma.dmmf.datamodel.enums;
+  const valeurs = (nom: string) =>
+    (enums.find((e) => e.name === nom)?.values ?? []).map((v) => v.name);
+
+  it('REQ-DM-031 : MOTIFS_REFUS_DEPOT est EXACTEMENT l’enum MotifRefusDepot, dans l’ordre, et chaque refus de catégorie y est', () => {
+    expect([...MOTIFS_REFUS_DEPOT]).toEqual(valeurs('MotifRefusDepot'));
+    expect(MOTIFS_REFUS_DEPOT).toHaveLength(7);
+    for (const issue of ISSUES_DE_REFUS_STOCKEES) expect(MOTIFS_REFUS_DEPOT).toContain(issue);
+  });
+
+  it('REQ-DM-031 : le contact rencontré n’est JAMAIS rendu — chaque colonne chiffrée ou empreinte de l’attribution est tue et secrète', () => {
+    const attribution = Prisma.dmmf.datamodel.models.find((m) => m.name === 'Attribution')!;
+    const sensibles = attribution.fields
+      .map((f) => f.name)
+      .filter((n) => n.endsWith('Chiffre') || n.endsWith('Hash'));
+    expect(sensibles.length).toBeGreaterThan(0);
+    for (const c of sensibles) {
+      expect(CHAMPS_TUS.attribution as readonly string[], c).toContain(c);
+      expect(SECRETS as readonly string[], c).toContain(c);
+    }
+  });
+
+  it('REQ-DM-031 : les coordonnées au micro-degré ne sont JAMAIS rendues — tues, absentes de chaque sélection de la vue apporteur', async () => {
+    const coordonnees = ['latitudeMicrodeg', 'longitudeMicrodeg'];
+    for (const c of coordonnees) {
+      expect(CHAMPS_TUS.attribution as readonly string[], c).toContain(c);
+      expect(CHAMPS_RENDUS.attribution as readonly string[], c).not.toContain(c);
+    }
+    const { client, appels } = fauxClient();
+    const vue = forApporteur(client, A).attribution;
+    await vue.trouver(randomUUID());
+    await vue.lister();
+    expect(appels.length).toBeGreaterThan(0);
+    for (const a of appels) {
+      const select = (a.args as { select: Record<string, unknown> }).select;
+      for (const c of coordonnees)
+        expect(Object.hasOwn(select, c), `${a.methode}.${c}`).toBe(false);
+    }
+    expect(await refusDe(vue.lister(brut({ where: { latitudeMicrodeg: 0 } })))).toBe(REFUS.forme);
+  });
+
+  it('REQ-DM-031 : chaque colonne chiffrée de l’attribution est écrite par colonnesPii — un champ de CHAMPS_PII, sans empreinte de nom', () => {
+    const attribution = Prisma.dmmf.datamodel.models.find((m) => m.name === 'Attribution')!;
+    const chiffrees = attribution.fields.map((f) => f.name).filter((n) => n.endsWith('Chiffre'));
+    const ecrites = Object.values(CHAMPS_PII).map((d) => d.chiffre as string);
+    for (const c of chiffrees) expect(ecrites, c).toContain(c);
+    expect('empreinte' in CHAMPS_PII.nomContact).toBe(false);
+    expect('empreinte' in CHAMPS_PII.fonctionContact).toBe(false);
+  });
+});
+
+describe('REQ-SEC-008 — GOV-111 : la lecture ne transmet que ce qui a été demandé', () => {
+  it('REQ-SEC-008 : sans take, aucune clé take ne part ; avec take, elle part telle quelle', async () => {
+    const { client, appels } = fauxClient();
+    const vue = forApporteur(client, A).jetonDepot;
+    await vue.lister(brut({ where: { revoqueAt: null } }));
+    await vue.lister(brut({ where: { revoqueAt: null }, take: 5 }));
+    expect(appels).toHaveLength(2);
+    const sansTake = appels[0]!.args as Record<string, unknown>;
+    const avecTake = appels[1]!.args as Record<string, unknown>;
+    expect(Object.keys(sansTake).sort()).toEqual(['select', 'where']);
+    expect('take' in sansTake).toBe(false);
+    expect(Object.keys(avecTake).sort()).toEqual(['select', 'take', 'where']);
+    expect(avecTake.take).toBe(5);
+  });
+
+  it('REQ-SEC-008 : DÉFENSE EN PROFONDEUR — une relation classée par erreur parmi les colonnes rendues reste refusée en filtre et en tri', async () => {
+    // La confrontation au schéma interdit ce classement ; on le force ici pour juger la garde
+    // des relations SEULE, sans l'appui de la liste des colonnes rendues.
+    const rendus = CHAMPS_RENDUS.jetonDepot as unknown as string[];
+    rendus.push('apporteur');
+    try {
+      const { client, appels } = fauxClient();
+      const vue = forApporteur(client, A).jetonDepot;
+      expect(await refusDe(vue.lister(brut({ where: { apporteur: { is: {} } } })))).toBe(
+        REFUS.forme
+      );
+      expect(await refusDe(vue.lister(brut({ orderBy: { apporteur: { id: 'asc' } } })))).toBe(
+        REFUS.forme
+      );
+      expect(await refusDe(vue.compter(brut({ apporteur: {} })))).toBe(REFUS.forme);
+      expect(appels).toEqual([]);
+    } finally {
+      rendus.pop();
+    }
+    expect(CHAMPS_RENDUS.jetonDepot).not.toContain('apporteur');
+  });
 });
