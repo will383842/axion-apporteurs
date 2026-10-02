@@ -14,12 +14,12 @@
  *   2. LA FILE (REQ-DM-004) : `UNIQUE (siren, rang_attente) WHERE statut = 'en_attente'`, prédicat
  *      exact ; deux rangs au plus, chacun une fois ; un rang hors de 1 et 2 est refusé.
  *   3. L'HORLOGE DU DÉPÔT (REQ-DM-005, REQ-SEC-014, HYP-A02-PRECISION-DEPOT) : une valeur forgée est
- *      écrasée ; deux dépôts sérialisés sous le verrou consultatif du SIREN (celui que SEC-12
- *      prendra, simulé ici) ont des `deposee_at` STRICTEMENT croissants dans leur ordre réel ; la
+ *      écrasée ; deux dépôts sérialisés sous le verrou consultatif du SIREN (celui que la tâche du
+ *      verrou de dépôt prendra, simulé ici) ont des `deposee_at` STRICTEMENT croissants dans leur ordre réel ; la
  *      précision est la microseconde ; une fois posée, la valeur ne se réécrit pas.
  *   4. LE PORTEUR (REQ-DM-048, W19) : exactement un porteur ; une grille si et seulement si le
- *      porteur est un apporteur (attribution d'apporteur sans grille refusée — repris de DM-03-P,
- *      conflit C14 —, avec une version existante elle passe) ; le canal `console` si et seulement si
+ *      porteur est un apporteur (attribution d'apporteur sans grille refusée — reprise du témoin de la grille
+ *      —, avec une version existante elle passe) ; le canal `console` si et seulement si
  *      le porteur est un conseiller ; un porteur console d'un autre rôle refusé par le DÉCLENCHEUR ;
  *      l'occupation d'un SIREN vaut pour les deux porteurs, dans les deux sens.
  */

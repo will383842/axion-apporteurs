@@ -292,7 +292,7 @@
       "phase": 1,
       "script": "tests/integration/index-partiel.spec.ts",
       "tache": "DM-07",
-      "verifie": "pg_indexes contient attributions_un_occupant avec la clause WHERE GENEREE depuis ETATS_OCCUPANTS (REQ-DM-003, 7 etats, jamais ('provisoire','active') litteral), compare en ENSEMBLE apres la reecriture = ANY (ARRAY[...]) de PostgreSQL et juge par fautesIndexOccupant, la meme fonction que partners:schema:enums ; attributions_en_attente (REQ-DM-004), predicat exact statut = en_attente ; double insertion -> 23505. DM-07 : l'horloge du depot (deposee_at ecrasee, microseconde, strictement croissante sous le verrou du SIREN) et le porteur exclusif W19 (REQ-DM-048) sont eprouves dans le meme fichier. contrats_un_en_vigueur et rattachements_un_actif entrent avec leurs tables (DM-23, DM-12), qui etendent ce fichier.",
+      "verifie": "pg_indexes contient attributions_un_occupant avec la clause WHERE GENEREE depuis ETATS_OCCUPANTS (REQ-DM-003, 7 etats, jamais ('provisoire','active') litteral), compare en ENSEMBLE apres la reecriture = ANY (ARRAY[...]) de PostgreSQL et juge par fautesIndexOccupant, la meme fonction que partners:schema:enums ; attributions_en_attente (REQ-DM-004), predicat exact statut = en_attente ; double insertion -> 23505. DM-07 : l'horloge du depot (deposee_at ecrasee, microseconde, strictement croissante sous le verrou du SIREN) et le porteur exclusif W19 (REQ-DM-048) sont eprouves dans le meme fichier. contrats_un_en_vigueur et rattachements_un_actif entrent avec leurs tables, dont les taches creatrices etendent ce fichier.",
       "fixtureRouge": "inserer deux attributions occupantes sur le meme SIREN",
       "preuveRouge": null
     },
