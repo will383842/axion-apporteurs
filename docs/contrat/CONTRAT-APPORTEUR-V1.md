@@ -216,9 +216,10 @@ entendent écarter (article 1.4).*
 autre apporteur ou par la Société ou ses préposés**, les préposés de la Société s'entendant des personnes
 qu'elle emploie, et non des préposés de l'Apporteur mentionnés à l'article 2. **L'effet pour l'Apporteur
 est le même quel que soit l'occupant, et la Société ne révèle jamais qui occupe une entreprise donnée.**
-Lorsque deux Apporteurs déclarent la même entreprise, l'attribution revient à celui dont la déclaration
-porte **l'horodatage serveur le plus ancien**. Cette règle s'applique de plein droit, sans appréciation de
-la Société, quelles que soient l'ancienneté ou l'intensité des démarches invoquées.
+Lorsque deux Apporteurs déclarent la même entreprise, ou lorsqu'une déclaration et une prise en charge par
+la Société ou ses préposés portent sur la même entreprise, l'entreprise revient à celui dont la
+déclaration ou la prise en charge porte **l'horodatage serveur le plus ancien**. Cette règle s'applique
+de plein droit, sans appréciation de la Société, quelles que soient l'ancienneté ou l'intensité des démarches invoquées.
 
 L'Apporteur dont la déclaration est postérieure est informé que l'entreprise n'est pas disponible ;
 **l'identité de celui qui l'occupe ne lui est jamais communiquée**. **Deux déclarations au plus sont
@@ -231,10 +232,12 @@ d'une déclaration conservée sans nouvelle déclaration de l'Apporteur. Une dé
 en tout état de cause douze mois après son enregistrement.**
 
 **La prise en charge d'une entreprise par la Société ou ses préposés obéit aux mêmes bornes qu'une
-attribution**, la Société et l'ensemble de ses préposés comptant pour un seul occupant : elle ne peut
-excéder **{{FENETRE_MOIS}} mois**, elle prend fin par anticipation lorsque, dans un délai de
-**{{PEREMPTION_JOURS}} jours**, aucun rendez-vous n'a été tenu, aucun devis n'a été émis et aucune commande
-n'a été signée, et elle ne fait l'objet d'aucune reconduction. **La Société ne prend pas en charge une
+attribution**, la Société et l'ensemble de ses préposés comptant pour un seul occupant. Les articles 3.4 et
+3.4 bis lui sont applicables comme à une attribution : la durée de **{{FENETRE_MOIS}} mois** court de la date
+à laquelle la prise en charge devient définitive, au plus tard à l'expiration du délai de l'article 3.2
+alinéa 5 ; le délai de **{{PEREMPTION_JOURS}} jours** court de la prise en charge ; la prolongation de
+l'article 3.4 alinéa 3 ne s'applique qu'une fois, dans les mêmes conditions ; elle ne fait l'objet
+d'aucune reconduction. **La Société ne prend pas en charge une
 entreprise dont l'attribution ou la prise en charge a pris fin depuis moins de
 {{CARENCE_CONSEILLER_JOURS}} jours**, quel qu'en ait été l'occupant, ni pendant le délai de quinze jours
 ouvert à l'Apporteur en attente au premier rang.
