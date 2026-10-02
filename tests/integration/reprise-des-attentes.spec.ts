@@ -63,7 +63,8 @@ const lancer = () =>
 describe('REQ-QA-027 — une attente sans nouvel événement est reprise par le lanceur', () => {
   it('REQ-QA-027 : TÉMOIN — une attente `coordonnees:` récente est reprise au passage du lanceur, sans webhook', async () => {
     await uneAttente(60_000);
-    expect(await lancer()).toEqual({ evenements_recus: 'joue' });
+    // Le lanceur joue TOUTES les tâches inscrites : seule celle des événements reçus est jugée ici.
+    expect((await lancer()).evenements_recus).toBe('joue');
     const b = await base.prisma.battement.findUniqueOrThrow({
       where: { tache: 'evenements_recus' },
     });
