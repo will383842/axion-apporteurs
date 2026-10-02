@@ -42,6 +42,12 @@ async function fautes(texte: string): Promise<string[]> {
     f.push('aipd_toleree : l’étape de l’AIPD porte continue-on-error, son échec ne bloque plus');
   if (etape.if !== undefined)
     f.push('aipd_conditionnelle : l’étape de l’AIPD porte un if:, elle peut être sautée');
+  // Le trou voisin (lentille securite) : un `if: always()`, `!cancelled()` ou `failure()` sur
+  // l'étape du déploiement la ferait tourner APRÈS l'échec de l'AIPD. Elle ne porte aucun `if:`.
+  if (etapes[deploiement]!.if !== undefined)
+    f.push(
+      'deploiement_conditionnel : l’étape deploy:coolify porte un if:, elle peut tourner après l’échec de l’AIPD'
+    );
   return f;
 }
 
@@ -78,5 +84,16 @@ describe('REQ-CPL-009 — l’AIPD est vérifiée avant que la plateforme ne dé
     expect(await fautes(avant('if: ${{ false }}'))).toEqual([
       'aipd_conditionnelle : l’étape de l’AIPD porte un if:, elle peut être sautée',
     ]);
+  });
+
+  it('REQ-CPL-009 : TÉMOIN — deploy:coolify avec if: always() rougit en se nommant : il tournerait après l’échec de l’AIPD', async () => {
+    const ligne = `        run: ${DEPLOIEMENT}`;
+    expect(REEL).toContain(ligne);
+    for (const condition of ['always()', '!cancelled()', 'failure()'])
+      expect(
+        await fautes(REEL.replace(ligne, `        if: \${{ ${condition} }}\n${ligne}`))
+      ).toEqual([
+        'deploiement_conditionnel : l’étape deploy:coolify porte un if:, elle peut tourner après l’échec de l’AIPD',
+      ]);
   });
 });
