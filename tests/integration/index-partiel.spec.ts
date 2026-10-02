@@ -1,6 +1,8 @@
+// @req REQ-DM-002
 // @req REQ-DM-003
 // @req REQ-DM-004
 // @req REQ-DM-005
+// @req REQ-DM-030
 // @req REQ-DM-048
 // @req REQ-SEC-014
 /**
@@ -391,5 +393,67 @@ describe('REQ-DM-048 — le porteur exclusif (W19)', () => {
       `SELECT tgenabled <> 'D' AS actif FROM pg_trigger WHERE tgname = 'attributions_porteur_conseiller'`
     );
     expect(etat?.actif).toBe(true);
+  });
+});
+
+describe('REQ-DM-002 — la clé d’attribution est le SIREN normalisé ; le SIRET en est le contexte', () => {
+  /** Une attribution au SIREN et au SIRET donnés, par SQL brut : c'est la BASE qu'on juge. */
+  const ecrire = (siren: string, siret: string | null) =>
+    base.prisma.$executeRawUnsafe(
+      `INSERT INTO attributions (id, apporteur_id, statut, siren, siret, canal, grille_commission_id,
+         date_contact, verification_prioritaire, entreprise_a_verifier, lien_interet_declare)
+       VALUES ($1::uuid, $2::uuid, 'perdue', $3, $4, 'espace', $5::uuid, '2026-10-01', false, false, false)`,
+      randomUUID(),
+      apporteurA,
+      siren,
+      siret,
+      grilleId
+    );
+
+  it('REQ-DM-002 : un SIREN de neuf caractères au plus, hors de neuf chiffres, est refusé par le CHECK attributions_siren_forme', async () => {
+    for (const faux of ['12345678', '12345678A', '12345 678']) {
+      expect(await refus(ecrire(faux, null))).toContain('attributions_siren_forme');
+    }
+    await expect(ecrire(unSiren(), null)).resolves.toBe(1);
+  });
+
+  it('REQ-DM-002 : un SIREN de dix chiffres est refusé AVANT le CHECK, par le type de la colonne (22001, char(9))', async () => {
+    expect(await refus(ecrire('1234567890', null))).toMatch(
+      /22001|too long for type character\(9\)/
+    );
+  });
+
+  it('REQ-DM-002 : un SIRET présent a quatorze chiffres, et ses neuf premiers sont le SIREN', async () => {
+    const siren = unSiren();
+    expect(await refus(ecrire(siren, `${siren}0001`))).toContain('attributions_siret_forme');
+    expect(await refus(ecrire(siren, `${unSiren()}00012`))).toContain('attributions_siret_forme');
+    await expect(ecrire(siren, `${siren}00012`)).resolves.toBe(1);
+  });
+});
+
+describe('REQ-DM-030 — l’entreprise est stockée STRUCTURÉE, jamais en adresse libre', () => {
+  it('REQ-DM-030 : les colonnes structurées rendues par l’API sont présentes ; aucune colonne d’adresse en texte libre', async () => {
+    const colonnes = (
+      await base.prisma.$queryRawUnsafe<{ column_name: string }[]>(
+        `SELECT column_name FROM information_schema.columns
+         WHERE table_schema = 'public' AND table_name = 'attributions'`
+      )
+    ).map((c) => c.column_name);
+    for (const attendue of [
+      'raison_sociale',
+      'siret',
+      'code_postal_chiffre',
+      'commune_siege',
+      'departement',
+      'region',
+      'code_naf',
+      'tranche_effectif',
+      'nature_juridique',
+      'etat_administratif',
+      'dirigeants_json',
+    ]) {
+      expect(colonnes).toContain(attendue);
+    }
+    expect(colonnes.filter((c) => /adresse|address|rue|voie/.test(c))).toEqual([]);
   });
 });
