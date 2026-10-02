@@ -242,15 +242,18 @@ const CONFIRMATIONS: readonly TransitionAttribution[] = [
   'confirmee_tacitement',
 ];
 
+/** Le calendrier, pas un délai : les mois d'une année civile. */
+const MOIS_PAR_AN = 12;
+
 /** Ajoute des mois CIVILS en heure de Paris ; un jour absent du mois d'arrivée devient son dernier. */
 export function ajouterMoisParis(instant: Instant, mois: number): Instant {
   const p = versParis(instant);
-  const total = p.annee * 12 + (p.mois - 1) + mois;
-  const annee = Math.floor(total / 12);
-  const moisArrivee = (total % 12) + 1;
+  const total = p.annee * MOIS_PAR_AN + (p.mois - 1) + mois;
+  const annee = Math.floor(total / MOIS_PAR_AN);
+  const moisArrivee = (total % MOIS_PAR_AN) + 1;
   const premierSuivant = joursDeLaDate({
-    annee: moisArrivee === 12 ? annee + 1 : annee,
-    mois: moisArrivee === 12 ? 1 : moisArrivee + 1,
+    annee: moisArrivee === MOIS_PAR_AN ? annee + 1 : annee,
+    mois: moisArrivee === MOIS_PAR_AN ? 1 : moisArrivee + 1,
     jour: 1,
   });
   const dernier = premierSuivant - joursDeLaDate({ annee, mois: moisArrivee, jour: 1 });
