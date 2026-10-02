@@ -235,9 +235,10 @@ en tout état de cause douze mois après son enregistrement.**
 attribution**, la Société et l'ensemble de ses préposés comptant pour un seul occupant. Les articles 3.4 et
 3.4 bis lui sont applicables comme à une attribution : la durée de **{{FENETRE_MOIS}} mois** court de la date
 à laquelle la prise en charge devient définitive, au plus tard à l'expiration du délai de l'article 3.2
-alinéa 5 ; le délai de **{{PEREMPTION_JOURS}} jours** court de la prise en charge ; la prolongation de
-l'article 3.4 alinéa 3 ne s'applique qu'une fois, dans les mêmes conditions ; elle ne fait l'objet
-d'aucune reconduction. **La Société ne prend pas en charge une
+alinéa 5 ; le délai de **{{PEREMPTION_JOURS}} jours** court de la prise en charge, et l'exception de l'article
+3.4 alinéa 2 tirée d'une absence imputable à la Société ne s'applique pas à la prise en charge ; la
+prolongation de l'article 3.4 alinéa 3 ne s'applique qu'une fois, dans les mêmes conditions ; la prise en
+charge ne fait l'objet d'aucune reconduction. **La Société ne prend pas en charge une
 entreprise dont l'attribution ou la prise en charge a pris fin depuis moins de
 {{CARENCE_CONSEILLER_JOURS}} jours**, quel qu'en ait été l'occupant, ni pendant le délai de quinze jours
 ouvert à l'Apporteur en attente au premier rang.
