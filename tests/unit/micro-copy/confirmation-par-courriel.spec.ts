@@ -18,7 +18,7 @@
  *      éligibilité » ; l'information de l'art. 14 importée de son fichier source, jamais réécrite ;
  *   4. chaque courriel de la liste `COURRIELS_AU_CONTACT` déclare son destinataire, le contact.
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import {
   COURRIELS_AU_CONTACT,
@@ -38,15 +38,34 @@ import {
 } from '../../../src/content/micro-copy/public/confirmation-contact';
 import * as COURRIEL from '../../../src/content/micro-copy/courriels/confirmation-contact';
 import * as INFORMATION from '../../../src/content/micro-copy/courriels/information-article-14';
-import {
-  contexteRendu,
-  fauteDuContexte,
-  LiensNonConformes,
-  exigerTroisLiens,
-  liensDuTexte,
-  rendreLeCourriel,
-} from '../../../src/domain/confirmation/rendu-du-courriel';
-import { CONTEXTE_DEPOT_CARACTERES_MAX } from '../../../src/domain/seuils/ssot';
+/**
+ * LE RENDU EST IMPORTÉ À NEUF À CHAQUE TEST : la borne du contexte, l'expression des liens et la
+ * liste des valeurs de l'entité sont évaluées au chargement du module. Importées une fois en tête de
+ * fichier, elles resteraient en cache, et un mutant de ces lignes ne serait jamais évalué (même cause
+ * que `seuils-ssot-en-processus.spec.ts`).
+ */
+type Rendu = typeof import('../../../src/domain/confirmation/rendu-du-courriel');
+type Seuils = typeof import('../../../src/domain/seuils/ssot');
+let contexteRendu: Rendu['contexteRendu'];
+let fauteDuContexte: Rendu['fauteDuContexte'];
+let LiensNonConformes: Rendu['LiensNonConformes'];
+let exigerTroisLiens: Rendu['exigerTroisLiens'];
+let liensDuTexte: Rendu['liensDuTexte'];
+let rendreLeCourriel: Rendu['rendreLeCourriel'];
+let CONTEXTE_DEPOT_CARACTERES_MAX: Seuils['CONTEXTE_DEPOT_CARACTERES_MAX'];
+beforeEach(async () => {
+  vi.resetModules();
+  const rendu = await import('../../../src/domain/confirmation/rendu-du-courriel');
+  ({
+    contexteRendu,
+    fauteDuContexte,
+    LiensNonConformes,
+    exigerTroisLiens,
+    liensDuTexte,
+    rendreLeCourriel,
+  } = rendu);
+  ({ CONTEXTE_DEPOT_CARACTERES_MAX } = await import('../../../src/domain/seuils/ssot'));
+});
 
 const FICHIER_DU_DEPOT = 'src/content/micro-copy/espace/confirmation-du-depot.ts';
 const fautes = (f: FichierVu) => controler(vueDeFixture([f])).fautes;
@@ -287,5 +306,22 @@ describe('REQ-JUR-060 — chaque branche du rendu a son témoin', () => {
     const { texte } = rendreLeCourriel(sansContexte as typeof VALEURS);
     expect(texte).not.toContain('Contexte indiqué');
     expect(liensDuTexte(texte).sort()).toEqual(Object.values(LIENS).sort());
+  });
+});
+
+describe('REQ-JUR-060 — la borne du contexte est celle de la SSOT, entière', () => {
+  it('REQ-JUR-060 : la constante porte sa valeur, son unité, sa source et sa date, exactement', () => {
+    expect(CONTEXTE_DEPOT_CARACTERES_MAX).toEqual({
+      valeur: 140,
+      unite: 'caracteres',
+      source: 'docs/chantiers/W20-confirmation-par-email.md §2, HYP-W20-CONTEXTE',
+      verifieLe: '2026-10-02',
+    });
+  });
+
+  it('REQ-JUR-060 : TÉMOIN — 140 caractères passent, 141 sont refusés ; le rendu borne à 140', () => {
+    expect(fauteDuContexte('a'.repeat(140))).toBeNull();
+    expect(fauteDuContexte('a'.repeat(141))).toBe('trop_long');
+    expect([...contexteRendu('b'.repeat(141))]).toHaveLength(140);
   });
 });
