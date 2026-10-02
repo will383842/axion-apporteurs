@@ -58,6 +58,9 @@ const ECARTES = [
   // sous-processus. Mesuré hors dépôt git : 31 tests sur 52 en échec avant l'injection, ces 2 après.
   'la micro-copie réelle de l.espace est lue par gov:lexique et n.y rougit pas',
   'sur le dépôt réel, elle sort en zéro avec les comptes confrontés',
+  // JUR-T13 : `jur:aucun-agregat-reseau` lancée sur les sources du dépôt — juge les sources du dépôt,
+  // pas le code sous mutation : le bac à sable instrumenté n'est pas la source.
+  'le binaire sur le dépôt sort en 0 et imprime les fichiers et clés confrontés',
 ];
 
 export default defineConfig({
