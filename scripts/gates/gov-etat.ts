@@ -56,6 +56,7 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync, existsSync } from 'node:fs';
 import { LIVREE as LIVREE_DERIVEE, verifierExhaustivite } from '../lot/avancement';
 import { dateDUneVue } from '../vues/rendre-apres-fusion';
+import { classerLaFusion, estUnCloneSuperficiel, executerGit } from '../lib/classer-la-fusion';
 import {
   DOSSIER_DU_JOURNAL,
   GUIDE_DU_JOURNAL,
@@ -334,6 +335,22 @@ function abandonGithub(commande: string, e: unknown): never {
 export type FusionPosterieure = { numero: number; mergedAt: string };
 
 /**
+ * GOV-141 — UNE FUSION HORS DE L'ARBRE TESTÉ. Son commit est dans le clone sans être un ancêtre de
+ * HEAD : une PR en retard sur `main` (choix A, la branche à jour n'est pas exigée) voit les fusions
+ * des autres. Elle est NOMMÉE et COMPTÉE ; ni son journal ni sa date n'entrent dans un jugement.
+ */
+export type FusionHorsArbre = { numero: number; oid: string };
+
+/**
+ * Le refus de juger une lecture de la forge que ce clone ne permet pas de situer. UNE sortie pour
+ * les deux causes : un commit de fusion absent, et un clone superficiel.
+ */
+function refuserDeJuger(famille: 'github_illisible' | 'clone_superficiel', raison: string): never {
+  console.error(`❌ gov:etat — [${famille}] ${raison}`);
+  process.exit(1);
+}
+
+/**
  * La date du dernier commit de la branche par défaut que porte ce clone : la borne au-delà de
  * laquelle une fusion lui est postérieure. `origin/main` d'abord (la porte A clone tout, les
  * branches distantes comprises), `HEAD` à défaut.
@@ -348,10 +365,21 @@ function lireGithub(): {
   prOuvertes: PrOuverte[];
   prFusionnees: PrFusionnee[];
   posterieures: FusionPosterieure[];
+  horsArbre: FusionHorsArbre[];
   baseDuClone: string | null;
   revendications: Map<number, string[]>;
   revendicationsParTitre: Map<string, number[]>;
 } {
+  // Un clone superficiel coupe le graphe : un ancêtre y paraît hors de l'arbre, une fusion présente
+  // y manque. Aucun des jugements qui suivent n'y est sûr.
+  const dansLeClone = executerGit();
+  if (estUnCloneSuperficiel(dansLeClone)) {
+    refuserDeJuger(
+      'clone_superficiel',
+      'ce clone est superficiel : la place des fusions dans l’arbre testé ne peut pas être jugée.\n' +
+        '   Le job doit poser `fetch-depth: 0` sur actions/checkout (localement : `git fetch --unshallow`).'
+    );
+  }
   let prOuvertes: PrOuverte[];
   try {
     prOuvertes = (
@@ -396,14 +424,23 @@ function lireGithub(): {
    * GitHub horodate la fusion APRÈS avoir écrit le commit. Comparer la date de PLAN-STATE (lue par
    * `git log`) à `mergedAt` rendait donc ROUGE un dépôt parfaitement à jour, dont PLAN-STATE avait
    * été régénéré DANS ce commit même. Les deux dates viennent maintenant de la même horloge.
+   *
+   * GOV-141 : seules les fusions ANCÊTRES de HEAD entrent dans `prFusionnees`, donc dans le journal
+   * exigé et dans la fraîcheur de PLAN-STATE. La place se lit sur le graphe, pas sur la date.
    */
   const prFusionnees: PrFusionnee[] = [];
   const posterieures: FusionPosterieure[] = [];
+  const horsArbre: FusionHorsArbre[] = [];
   const baseDuClone = dateDeLaBaseDuClone();
   for (const p of brutFusionnees) {
     const oid = p.mergeCommit?.oid;
     if (!oid) continue; // fusionnée sans commit lisible (branche supprimée côté forge) : hors portée
-    const date = git(['log', '-1', '--format=%cI', oid]);
+    const classe = classerLaFusion(oid, dansLeClone);
+    if (classe === 'hors_arbre') {
+      horsArbre.push({ numero: p.number, oid });
+      continue;
+    }
+    const date = classe === 'ancetre' ? git(['log', '-1', '--format=%cI', oid]) : null;
     if (!date) {
       // Postérieure au clone : hors de ce que CETTE porte peut juger — nommée, comptée, jamais un
       // rouge. Une date illisible, d'un côté ou de l'autre, ne vaut PAS « postérieure » (échec fermé).
@@ -413,12 +450,12 @@ function lireGithub(): {
         posterieures.push({ numero: p.number, mergedAt: p.mergedAt as string });
         continue;
       }
-      console.error(
-        `❌ gov:etat — [github_illisible] le commit de fusion \`${oid}\` (PR #${p.number}) est absent du clone, ` +
+      refuserDeJuger(
+        'github_illisible',
+        `le commit de fusion \`${oid}\` (PR #${p.number}) est absent du clone, ` +
           `et sa fusion (${p.mergedAt ?? 'date absente'}) n'est pas postérieure à la base du clone (${baseDuClone ?? 'illisible'}).\n` +
           '   La fraîcheur de PLAN-STATE ne peut pas être jugée. Le job doit poser `fetch-depth: 0` sur actions/checkout.'
       );
-      process.exit(1);
     }
     prFusionnees.push({ numero: p.number, titre: p.title ?? '', dateCommitIso: date });
   }
@@ -450,6 +487,7 @@ function lireGithub(): {
     prOuvertes,
     prFusionnees,
     posterieures,
+    horsArbre,
     baseDuClone,
     revendications,
     revendicationsParTitre,
@@ -964,6 +1002,13 @@ if (!horsLigne) {
         `cette porte peut juger — leur commit n'est pas encore dans ce clone (GOV-119) :`
     );
     lu.posterieures.forEach((x) => console.log(`   • PR #${x.numero}, fusionnée ${x.mergedAt}`));
+  }
+  if (lu.horsArbre.length > 0) {
+    console.log(
+      `⚠️ ${lu.horsArbre.length} fusion(s) hors de l’arbre testé : présentes dans ce clone, pas ` +
+        "ancêtres de HEAD ; ni leur journal ni leur date n'entrent dans un jugement (GOV-141) :"
+    );
+    lu.horsArbre.forEach((x) => console.log(`   • PR #${x.numero}, commit ${x.oid.slice(0, 9)}`));
   }
   etat.prOuvertes = lu.prOuvertes;
   etat.prFusionnees = lu.prFusionnees;
