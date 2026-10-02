@@ -98,3 +98,22 @@ describe('REQ-QA-013 — aucune garde n’écrit un JSON sur stdout puis ne sort
     expect(sortiesCoupees('corrige.ts', corrigee)).toEqual([]);
   });
 });
+
+/**
+ * QA-T60, point (3) — note de la lentille securite sur GOV-140 : le rappel d'écriture du rapport
+ * ignorait son erreur. Un tube fermé avant la fin (EPIPE) ne recevait pas le rapport, et la garde
+ * sortait pourtant en 0 : un lecteur qui coupe trop tôt prenait une absence pour un succès.
+ */
+describe('REQ-GOV-026 — une écriture du rapport qui échoue sort en non nul (QA-T60)', () => {
+  it('REQ-GOV-026 — TÉMOIN : le rapport écrit dans un tube déjà fermé fait sortir gov:inventaire en non nul', async () => {
+    const { spawn } = await import('node:child_process');
+    const code = await new Promise<number | null>((resoudre) => {
+      const p = spawn(process.execPath, [TSX, 'scripts/gates/gov-inventaire.ts', '--rapport'], {
+        stdio: ['ignore', 'pipe', 'ignore'],
+      });
+      p.stdout.destroy();
+      p.on('close', (c) => resoudre(c));
+    });
+    expect(code).not.toBe(0);
+  }, 60_000);
+});
