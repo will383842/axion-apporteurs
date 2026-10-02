@@ -189,7 +189,7 @@ describe('REQ-DM-024 — le rôle d’exécution n’est plus propriétaire du j
 
   it('REQ-DM-024 : un SECOND passage de la migration ne lève rien (idempotente)', async () => {
     const sql = readFileSync(
-      'prisma/migrations/20261002000000_journal_premier_ecrivain/migration.sql',
+      'prisma/migrations/20261002000100_journal_premier_ecrivain/migration.sql',
       'utf8'
     )
       .split('\n')

@@ -7,6 +7,8 @@
  * `tests/integration/journal-premier-ecrivain.spec.ts`.
  */
 import { describe, it, expect } from 'vitest';
+import { z } from 'zod';
+import { controler, type Vue } from '../../../scripts/gates/journal-sans-pii';
 import { randomUUID } from 'node:crypto';
 import {
   CHARGES_PAR_TYPE,
@@ -150,5 +152,49 @@ describe('REQ-DM-024 — le passage `journal_verifier`', () => {
     const lignes = chaine(3);
     const melangee = [lignes[2]!, lignes[0]!, lignes[3]!, lignes[1]!];
     expect(await passageDuJournal(async () => melangee)()).toEqual({ maillons: 4 });
+  });
+});
+
+// ── le raffinement desserré dans la garde journal:sans-pii ──────────────────────────────────────
+// DM-45 laisse la garde traverser un `refine` / `superRefine` (il restreint, il ne transforme pas) :
+// ces témoins prouvent que ce chemin ne laisse passer NI une chaîne libre, NI un objet ouvert, NI une
+// transformation cachée sous un raffinement — et que la forme unique de l'acteur, elle, passe.
+
+const sousLaGarde = (charges: Vue['charges']): string[] =>
+  controler({ typesDuSchema: Object.keys(charges), code: [], charges }).fautes.map(
+    (f) => `${f.famille} ${f.ou}`
+  );
+
+describe('REQ-DM-024 — un raffinement ne blanchit rien sous la garde du journal', () => {
+  it('REQ-DM-024 : TÉMOIN — une chaîne libre sous un raffinement rougit, au chemin de son champ', () => {
+    expect(
+      sousLaGarde({ bac: z.object({ motif: z.string().refine(() => true) }).strict() })
+    ).toEqual(['feuille_hors_liste bac.motif']);
+  });
+
+  it('REQ-DM-024 : TÉMOIN — un objet ouvert sous un superRefine rougit, avec son champ de personne', () => {
+    expect(sousLaGarde({ bac: z.object({ nom: z.string() }).superRefine(() => {}) })).toEqual([
+      'charge_ouverte bac',
+      'champ_nominatif bac.nom',
+      'feuille_hors_liste bac.nom',
+    ]);
+  });
+
+  it('REQ-DM-024 : TÉMOIN — une transformation sous un raffinement rougit, au chemin de son champ', () => {
+    expect(
+      sousLaGarde({
+        bac: z
+          .object({
+            quand: FORMES.horodatage()
+              .transform((s) => s)
+              .refine(() => true),
+          })
+          .strict(),
+      })
+    ).toEqual(['feuille_hors_liste bac.quand']);
+  });
+
+  it('REQ-DM-024 : contre-témoin — la forme de l’acteur, raffinée, passe la garde', () => {
+    expect(sousLaGarde({ bac: z.object({ acteur: FORMES.acteur() }).strict() })).toEqual([]);
   });
 });
