@@ -12,7 +12,8 @@
  *    Le magasin et le signaleur sont ceux du registre, toujours (garde `securite:rate-famille`).
  *  - Le travail différé : `planifier`, que l'action branche sur `after()` de Next.
  *  - L'envoi : un port. Hors production, le puits du notifieur (`NOTIFY_SINK`) ; en production,
- *    l'émetteur de courriels d'INT-T10 (`demanderEnvoi`), câblé par SEC-42.
+ *    l'émetteur de courriels d'INT-T10 (`demanderEnvoi`), câblé par SEC-42, et son relais réel
+ *    (`relaisZeptomail`, INT-T57).
  *
  * AUCUN JETON ET AUCUNE ADRESSE DANS LES JOURNAUX : l'échec du travail différé s'écrit par son seul
  * motif ; le puits du notifieur n'écrit que le sujet et la taille du corps.
@@ -38,8 +39,8 @@ import {
   demanderEnvoi,
   depotDesCourriels,
   type DependancesDeLEmetteur,
-  type Relais,
 } from '../integrations/zeptomail/emetteur';
+import { relaisZeptomail } from '../integrations/zeptomail/relais';
 
 export { MODELE_APPORTEUR } from './lien-magique-depot';
 
@@ -161,18 +162,6 @@ export function envoiParLEmetteur(emetteur: () => DependancesDeLEmetteur): Envoi
 }
 
 /**
- * Le relais de PRODUCTION, tant que le client du prestataire n'est pas livré : il REFUSE. Il n'est
- * jamais appelé tant que `PARTNERS_EMAIL_DMARC_VERIFIE` est fermé (la demande est retenue avant) ;
- * appelé, la ligne dit `echec` sous un code fermé — jamais un envoi fantôme. Le relais réel attend
- * la lecture de `docs/tiers/zeptomail.md` §2 (RM-08).
- */
-export const relaisDeProduction: Relais = {
-  async envoyer() {
-    throw new Error('relais_non_livre');
-  },
-};
-
-/**
  * La voie d'envoi du processus, et elle seule : en PRODUCTION, l'émetteur ; hors production, le
  * puits du notifieur (`NOTIFY_SINK`), qui n'écrit que le sujet et la taille du corps.
  */
@@ -192,8 +181,9 @@ let client: PrismaClient | null = null;
  * l'horloge du système, le journal, et `planifier` branché sur `apres` — `after()` de Next, que
  * l'action passe. Le travail planifié n'est JAMAIS exécuté ici : il est confié.
  *
- * L'envoi (SEC-42) : en production, l'émetteur d'INT-T10 et son relais de production ; hors
- * production, le puits du notifieur.
+ * L'envoi (SEC-42) : en production, l'émetteur d'INT-T10 et son relais réel (INT-T57), configuré
+ * par `ZEPTOMAIL_API_URL` et `ZEPTOMAIL_SEND_TOKEN` ; sans eux, il refuse en se nommant, et la ligne
+ * le dit. Hors production, le puits du notifieur.
  */
 export function dependancesDuProcessus(outils: {
   apres: (travail: () => Promise<void>) => void;
@@ -210,7 +200,10 @@ export function dependancesDuProcessus(outils: {
     envoi: envoiDuProcessus(outils.env, {
       emetteur: () => ({
         configuration: configurationDeLEmetteur(outils.env, domaines().envoi),
-        relais: relaisDeProduction,
+        relais: relaisZeptomail({
+          url: outils.env.ZEPTOMAIL_API_URL,
+          jeton: outils.env.ZEPTOMAIL_SEND_TOKEN,
+        }),
         depot: depotDesCourriels(prisma),
         cles: clesPii(outils.env),
         maintenant: () => new Date(horlogeSysteme.maintenant()),

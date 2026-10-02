@@ -127,8 +127,13 @@ jobs:
     concurrency:
       group: deploiement-production
       cancel-in-progress: false
+    # QA-T55 : EXACTEMENT trois lectures. checks pour le check-run gate-a du sha, actions pour remonter
+    # a son workflow (ci.yml) : un gate-a pose par une autre app, ou par l API depuis un autre
+    # workflow, ne fait pas foi (lentille securite, voie V2). Aucune ecriture.
     permissions:
       contents: read
+      checks: read
+      actions: read
     # QA-T54 : le sha servi, deja mis en forme par le script (hexadecimal, illisible, ou vide),
     # passe au job alerter. Aucun secret de canal ici : deployer n en lit que trois.
     outputs:
@@ -138,6 +143,15 @@ jobs:
         with: { persist-credentials: false }
       - uses: pnpm/action-setup@v4
       - run: pnpm install --frozen-lockfile
+
+      # QA-T55 (REQ-GOV-014) — la porte A du MEME sha, avant tout le reste : le plus recent check-run
+      # gate-a de github-actions, reussi, dont le run vient de ci.yml. Absente, en cours au-dela de la
+      # borne, rouge, d une autre app ou d un autre workflow : refus nomme. Le jeton est servi a CETTE
+      # etape seule, jamais au job, ni a l AIPD, ni a la plateforme.
+      - name: Le deploiement attend la porte A du meme sha
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: pnpm deploy:attendre-porte-a
 
       # JUR-T35 (REQ-CPL-009) — aucun depot reel sans l AIPD signee : a partir de MISE_EN_SERVICE, l etat
       # « signee le <date> par <signataire> » de docs/rgpd/aipd.md et la variable AIPD_SIGNEE_LE de
