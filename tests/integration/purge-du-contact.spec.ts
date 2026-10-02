@@ -186,8 +186,9 @@ describe('REQ-DM-031 — la purge planifiée du contact', () => {
     });
     expect((await purgerLesContacts(base.prisma, MAINTENANT)).purgees).toBeGreaterThanOrEqual(1);
     const premier = await lire(id);
-    const plusTard = new Date(MAINTENANT.getTime() + 10 * MINUTE);
-    expect((await purgerLesContacts(base.prisma, plusTard)).purgees).toBe(0);
+    // Au MÊME instant : un instant plus tard échoirait d'autres lignes du banc (la ligne « sous »
+    // du témoin précédent), et le compte ne jugerait plus l'idempotence.
+    expect((await purgerLesContacts(base.prisma, MAINTENANT)).purgees).toBe(0);
     expect(await lire(id)).toEqual(premier);
     expect(await evenements(id)).toHaveLength(1);
   });

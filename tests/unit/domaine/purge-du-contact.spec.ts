@@ -23,7 +23,7 @@ import { DUREES_DE_RETENTION } from '../../../src/domain/seuils/retention';
 import { ETATS_OCCUPANTS } from '../../../src/domain/attribution/etats';
 import { MS_PAR_JOUR } from '../../../src/domain/temps/calendrier-civil';
 import {
-  COLONNES_DU_CONTACT,
+  colonnesDuContact,
   ETATS_LIBERES,
   echeanceDePurge,
   coordonneesSEffacent,
@@ -106,7 +106,7 @@ describe('REQ-DM-031 — ce que la purge efface', () => {
   });
 
   it('REQ-DM-031 : les colonnes du contact effacées, exactement, blocs et empreintes ensemble — lienInteretDeclare reste', () => {
-    expect([...COLONNES_DU_CONTACT].sort()).toEqual([
+    expect([...colonnesDuContact()].sort()).toEqual([
       'contexteChiffre',
       'emailChiffre',
       'emailHash',
@@ -117,8 +117,8 @@ describe('REQ-DM-031 — ce que la purge efface', () => {
       'prenomContactChiffre',
       'telephoneChiffre',
     ]);
-    expect(COLONNES_DU_CONTACT).not.toContain('lienInteretDeclare');
-    expect(COLONNES_DU_CONTACT).not.toContain('id');
+    expect(colonnesDuContact()).not.toContain('lienInteretDeclare');
+    expect(colonnesDuContact()).not.toContain('id');
   });
 
   it('REQ-DM-031 : la purge est une tâche du registre, inscrite au lanceur', () => {

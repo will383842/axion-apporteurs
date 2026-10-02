@@ -84,10 +84,17 @@ export const CHAMPS_DU_CONTACT = [
   'lienInteretPrecision',
 ] as const satisfies readonly ChampPii[];
 
-const CONTACT_EFFACE = effacementPii(CHAMPS_DU_CONTACT);
+/**
+ * L'effacement du contact, construit À L'APPEL et non à l'import : un module qui importe ce fichier
+ * sans purger (le lanceur, et ses tests qui simulent la couche de chiffrement) ne dépend pas de la
+ * primitive.
+ */
+const contactEfface = () => effacementPii(CHAMPS_DU_CONTACT);
 
 /** Les colonnes (propriétés Prisma) que la purge met à `null`, dérivées de la primitive. */
-export const COLONNES_DU_CONTACT: readonly string[] = Object.keys(CONTACT_EFFACE);
+export function colonnesDuContact(): readonly string[] {
+  return Object.keys(contactEfface());
+}
 
 /** Un lot de lecture : la tâche reprend au passage suivant ce qu'elle n'a pas fini. */
 const LOT = 100;
@@ -97,6 +104,7 @@ export async function purgerLesContacts(
   maintenant: Date
 ): Promise<{ purgees: number }> {
   let purgees = 0;
+  const efface = contactEfface();
   for (;;) {
     const lot = await prisma.attribution.findMany({
       where: {
@@ -114,7 +122,7 @@ export async function purgerLesContacts(
         const { count } = await tx.attribution.updateMany({
           where: { id: a.id, contactPurgeAt: null },
           data: {
-            ...CONTACT_EFFACE,
+            ...efface,
             contactPurgeAt: maintenant,
             ...(coordonneesSEffacent(a.natureJuridique)
               ? { latitudeMicrodeg: null, longitudeMicrodeg: null }
