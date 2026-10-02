@@ -16,7 +16,11 @@
  * configuration (`HYP-E1-19`, `src/domain/contrat/variables.ts`).
  *
  * Les montants sont en CENTIMES hors taxes (`docs/CONVENTIONS.md`, argent en centimes).
+ *
+ * LES DURÉES DE CONSERVATION vivent dans le sous-module `retention.ts` (partners/ADR-0022 §12) et sont
+ * ÉTALÉES ici : l'accès reste `SEUILS.X`, la garde les juge, et aucune n'est définie aux deux endroits.
  */
+import { DUREES_DE_RETENTION } from './retention';
 
 export type UniteDeSeuil =
   'minutes' | 'jours' | 'jours_ouvres' | 'mois' | 'ans' | 'centimes' | 'tentatives';
@@ -40,6 +44,7 @@ const art = (...unites: string[]): Renvoi[] =>
   unites.map((unite) => ({ document: 'contrat', unite }));
 
 export const SEUILS = {
+  ...DUREES_DE_RETENTION,
   // JUR-T40 : l'art. 3.2 n'écrit plus ce délai (W20, REQ-CPL-026) ; il reste l'objectif interne de
   // la console pour une prise de contact, sans engagement contractuel (recommandation d'A07).
   PRISE_DE_CONTACT_JOURS_OUVRES: {
@@ -307,17 +312,6 @@ export const SEUILS = {
       'acceptation QA-T12 (REQ-QA-023), lentille exactitude PR 280 ; option A de -d7 sur délégation de Williams du 2026-09-30',
     renvois: [],
     verifieLe: '2026-09-30',
-  },
-  // INT-T56 : une candidature reçue restée non traitée au-delà de ce délai perd `reponsesJson` de sa
-  // charge conservée (minimisation de fond). PLAFOND PROVISOIRE : jamais plus long sans décision de
-  // Williams.
-  CANDIDATURE_NON_TRAITEE_MINIMISEE_APRES_JOURS: {
-    valeur: 30,
-    unite: 'jours',
-    source:
-      'HYP-RGPD-RETENTION, proposition de la lentille sécurité, 2026-10-02 (acceptation INT-T56, REQ-JUR-029) — plafond provisoire, à confirmer par Williams',
-    renvois: [],
-    verifieLe: '2026-10-02',
   },
   // QA-T57 : la plateforme vide la base chaque heure ; au-delà, le dernier vidage du dépôt est
   // périmé, la fraîcheur rougit et alerte (`vidage_perime`). Une heure de marge absorbe un run

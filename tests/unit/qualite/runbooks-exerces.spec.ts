@@ -16,6 +16,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { spawnSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import {
   juger,
   empreinteDuCorps,
@@ -23,6 +24,9 @@ import {
   RUNBOOKS_EXIGES,
   FAMILLES,
   ENVIRONNEMENTS_ADMIS,
+  MISE_EN_SERVICE,
+  avantLaMiseEnService,
+  issueDuControle,
 } from '../../../scripts/gates/runbooks-exerces';
 
 const CORPS = '# Runbook — essai\n\n## Geste\n\n1. Faire.\n2. Vérifier.\n';
@@ -169,5 +173,65 @@ describe('REQ-QA-034 — la liste des runbooks exigés, et la garde elle-même',
     );
     expect(r.stdout + r.stderr).toMatch(/runbook\(s\) confronté\(s\)/);
     expect(r.status).toBe(0);
+  }, 60_000);
+});
+
+/**
+ * QA-T56 (REQ-QA-027) — tant que les runbooks sont une CONDITION de la mise en service, leur absence
+ * n'est pas une panne : le nightly ne rougit pas sur ce qui reste à faire avant le lancement. Une
+ * seule source dit « sommes-nous en service » : `MISE_EN_SERVICE`. Le nightly FOURNIT `--now` (UTC),
+ * la garde ne lit pas l'horloge. `--now` antérieur à la date, ou date non posée : avertissement qui
+ * nomme chaque faute, sortie en zéro. À la date ou après, ou `--now` absent ou illisible : verdict
+ * complet (échec fermé).
+ */
+describe('REQ-QA-027 — runbooks:exerces ne rougit pas le nightly avant la mise en service', () => {
+  it('REQ-QA-027 : avant la date posée, ou date non posée, on est AVANT la mise en service', () => {
+    expect(avantLaMiseEnService('2026-12-30', '2026-12-31')).toBe(true);
+    expect(avantLaMiseEnService('2026-10-02', null)).toBe(true);
+  });
+
+  it('REQ-QA-027 : le jour même, après, --now absent ou illisible : verdict complet (échec fermé)', () => {
+    expect(avantLaMiseEnService('2026-12-31', '2026-12-31')).toBe(false);
+    expect(avantLaMiseEnService('2027-01-01', '2026-12-31')).toBe(false);
+    expect(avantLaMiseEnService(null, '2026-12-31')).toBe(false);
+    expect(avantLaMiseEnService('demain', '2026-12-31')).toBe(false);
+    expect(avantLaMiseEnService('2026-10-02', 'bientôt')).toBe(false);
+  });
+
+  // Lentille securite (#418) : la BARRIÈRE RÉELLE de la mise en service est l'appel du runbook, SANS
+  // `--now`. Elle ne peut jamais retomber en simple avertissement : le runbook ne fournit pas de date,
+  // et la garde ne lit pas l'horloge pour en inventer une.
+  it('REQ-QA-027 : la barrière du runbook de mise en service appelle la garde SANS --now, et la garde ne lit pas l’horloge', () => {
+    const runbook = readFileSync('docs/runbooks/mise-en-service.md', 'utf8');
+    const appels = runbook.match(/pnpm runbooks:exerces(?![:\w-])[^`\n]*/g) ?? [];
+    expect(appels.length).toBeGreaterThan(0);
+    for (const appel of appels) expect(appel).not.toContain('--now');
+    const source = readFileSync('scripts/gates/runbooks-exerces.ts', 'utf8');
+    expect(source).not.toMatch(/Date\.now\(|new Date\(\s*\)/);
+  });
+
+  it('REQ-QA-027 : avant la mise en service, des fautes donnent un avertissement nommé et zéro ; après, un refus', () => {
+    const fautes = juger([{ chemin: 'docs/runbooks/essai.md', texte: CORPS }]);
+    expect(fautes.length).toBeGreaterThan(0);
+    const avant = issueDuControle(fautes, 3, true);
+    expect(avant.code).toBe(0);
+    expect(avant.lignes.filter((l) => l.startsWith('::notice::'))).toHaveLength(fautes.length);
+    expect(avant.lignes.join('\n')).toContain('docs/runbooks/essai.md');
+    expect(issueDuControle(fautes, 3, false).code).toBe(1);
+    expect(issueDuControle([], 3, true).code).toBe(0);
+  });
+
+  it('REQ-QA-027 : le dépôt réel, lancé avec un --now antérieur à MISE_EN_SERVICE, sort en zéro', () => {
+    const valeur = MISE_EN_SERVICE.valeur;
+    const veille =
+      valeur === null
+        ? '2026-10-02'
+        : new Date(Date.parse(`${valeur}T00:00:00Z`) - 86_400_000).toISOString().slice(0, 10);
+    const r = spawnSync(
+      process.execPath,
+      ['node_modules/tsx/dist/cli.mjs', 'scripts/gates/runbooks-exerces.ts', '--now', veille],
+      { encoding: 'utf8' }
+    );
+    expect([r.status, r.stdout + r.stderr]).toEqual([0, expect.stringMatching(/mise en service/)]);
   }, 60_000);
 });

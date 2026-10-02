@@ -456,6 +456,18 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
         'en fin de fichier ; les familles, elles, sont couvertes par `--prove` et par ' +
         'attributions-resolvent.spec.ts — un témoin d’effet prouve la famille qu’il injecte, jamais la gate.',
     },
+    // ── QA-T60 : UNE sortie, à code VARIABLE, dans le rappel d'écriture du rapport ─────────────
+    'scripts/gates/gov-inventaire.ts': {
+      total: 1,
+      porte: 1,
+      temoins: 0,
+      raison:
+        'QA-T60 — note de la lentille securite sur GOV-140 : `--rapport` écrit son JSON puis sort ' +
+        'DANS le rappel d’écriture, `process.exit(err ? 1 : 0)`. Comptée non nulle par le motif, elle ' +
+        'vaut 0 quand le rapport est livré et 1 quand l’écriture échoue (tube fermé, EPIPE), là où ' +
+        'l’ancienne forme sortait en 0. Témoin d’effet HORS du tableau REFUS (temoins : 0) : sortie-des-gardes-entiere.spec.ts, un tube ' +
+        'fermé avant la fin fait sortir la garde en non nul.',
+    },
     // ── JUR-T35 : UNE sortie différée, celle du refus ──────────────────────────────────────────
     'scripts/gates/aipd-signee.ts': {
       total: 1,
