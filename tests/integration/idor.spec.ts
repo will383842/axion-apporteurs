@@ -60,6 +60,7 @@ import {
   introuvable,
   repondre,
   type AccesApporteur,
+  MODELES_EN_AJOUT_SEUL,
   REFUS,
   SECRETS,
   type ClientCloisonnable,
@@ -352,6 +353,29 @@ async function apporteur(): Promise<string> {
 function donneesNeuves(modele: ModeleCloisonne, lienMagiqueId: string): Record<string, unknown> {
   const creeAt = new Date(t0);
   switch (modele) {
+    // DM-07 : semée HORS de la couche (voir `SEMES_HORS_COUCHE`) — la grille est une clé refusée à
+    // l'espace, et une attribution d'apporteur sans grille est refusée par la base. Un état qui
+    // n'occupe pas le SIREN : les deux apporteurs partagent le même.
+    case 'attribution':
+      return {
+        statut: 'perdue',
+        siren: '123456789',
+        canal: 'espace',
+        grilleCommissionId: grilleId,
+        dateContact: creeAt,
+        verificationPrioritaire: false,
+        entrepriseAVerifier: false,
+        lienInteretDeclare: false,
+      };
+    case 'depotRefuse':
+      return { siren: '123456789', motif: 'file_complete', canal: 'espace', refuseAt: creeAt };
+    case 'personneDeclaree':
+      return {
+        nomChiffre: randomBytes(32),
+        prenomChiffre: randomBytes(32),
+        qualite: 'associe',
+        declareeAt: creeAt,
+      };
     case 'changementCourriel':
       return {
         emailChiffre: randomBytes(32),
@@ -388,6 +412,13 @@ function donneesNeuves(modele: ModeleCloisonne, lienMagiqueId: string): Record<s
 function modification(modele: ModeleCloisonne, n: number): Record<string, unknown> {
   const instant = new Date(t0 + n * MINUTE);
   switch (modele) {
+    case 'attribution':
+      return { versionQualification: n };
+    // Les deux tables en ajout seul : une modification que la BASE refuse, quel que soit l'auteur.
+    case 'depotRefuse':
+      return { motif: 'insincerite' };
+    case 'personneDeclaree':
+      return { qualite: 'prepose' };
     case 'changementCourriel':
       return { demandeAt: instant };
     case 'courrielEnvoye':
@@ -412,6 +443,14 @@ type Vue = AccesApporteur[ModeleCloisonne];
 
 /** Une donnée d'essai passée à la couche sans son type : c'est la couche qu'on juge, pas le compilateur. */
 const brut = (o: object): never => o as never;
+
+/**
+ * Les modèles semés HORS de la couche : l'attribution d'un apporteur porte une version de grille
+ * (REQ-DM-014), clé que l'espace n'écrit jamais — le dépôt passe par son propre chemin serveur, sous
+ * verrou. La batterie l'attaque par la couche comme les autres ; seule sa naissance est directe.
+ */
+const SEMES_HORS_COUCHE: readonly ModeleCloisonne[] = ['attribution'];
+let grilleId: string;
 
 /** Ce qui est semé : pour chaque modèle, la ligne de A et la ligne de B. */
 const lignes = Object.fromEntries([]) as Record<ModeleCloisonne, { a: string; b: string }>;
@@ -446,12 +485,25 @@ async function attaquer(vue: Vue, modele: ModeleCloisonne, n: number): Promise<s
   if (!(await refuse(vue.compter(brut({ apporteurId: B }))))) breches.push('compte_par_apporteur');
   if ((await vue.compter(brut({ id: idB }))) > 0) breches.push('compte');
 
+  // DM-07 : une table en AJOUT SEUL refuse la modification EN BASE (`refuser_modification_sauf`) ;
+  // ce refus est lu comme un verdict, pas comme une panne de la batterie.
+  const enAjoutSeul = (MODELES_EN_AJOUT_SEUL as readonly string[]).includes(modele);
+  const modifier = (id: string) =>
+    vue.modifier(id, modification(modele, n) as never).then(
+      (v) => v,
+      (e: unknown) => {
+        if (enAjoutSeul && /refuser_modification_sauf/.test((e as Error).message))
+          return 'refusee_par_la_base' as const;
+        throw e;
+      }
+    );
   const avant = JSON.stringify(await relire(modele, idB));
-  const verdict = await vue.modifier(idB, modification(modele, n) as never);
-  if (verdict !== 'introuvable') breches.push('modification_acceptee');
+  const verdict = await modifier(idB);
+  if (verdict === 'modifiee') breches.push('modification_acceptee');
   if (JSON.stringify(await relire(modele, idB)) !== avant) breches.push('modification_ecrite');
-  if ((await vue.modifier(idA, modification(modele, n) as never)) !== 'modifiee')
-    throw new Error(`${modele} : vue muette en modification`);
+  const surA = await modifier(idA);
+  if (enAjoutSeul ? surA !== 'refusee_par_la_base' : surA !== 'modifiee')
+    throw new Error(`${modele} : vue muette en modification (${surA})`);
 
   const compteB = await base.prisma[modele as 'jetonDepot'].count({ where: { apporteurId: B } });
   try {
@@ -499,6 +551,17 @@ beforeAll(async () => {
   journalise.$on('query', (e) => requetes.push(e.query));
   A = await apporteur();
   B = await apporteur();
+  grilleId = (
+    await base.prisma.grilleCommission.create({
+      data: {
+        version: 1,
+        hash: hex(32),
+        contenuJson: { essai: true },
+        publieeAt: new Date(t0),
+        importeeAt: new Date(t0),
+      },
+    })
+  ).id;
   const semer = async (qui: string) => {
     const acces = accesDe(base.prisma, qui);
     const ids = Object.fromEntries([]) as Record<ModeleCloisonne, string>;
@@ -506,6 +569,15 @@ beforeAll(async () => {
       (await acces.lienMagique.creer(donneesNeuves('lienMagique', '') as never)) as { id: string }
     ).id;
     for (const m of MODELES_CLOISONNES.filter((x) => x !== 'lienMagique')) {
+      if (SEMES_HORS_COUCHE.includes(m)) {
+        const directe = (await (
+          base.prisma[m] as unknown as { create(a: object): Promise<{ id: string }> }
+        ).create({ data: { ...donneesNeuves(m, ids.lienMagique), apporteurId: qui } })) as {
+          id: string;
+        };
+        ids[m] = directe.id;
+        continue;
+      }
       const ligne = (await acces[m].creer(donneesNeuves(m, ids.lienMagique) as never)) as {
         id: string;
       };
@@ -525,7 +597,7 @@ afterAll(async () => {
 
 describe('REQ-SEC-009 — A ne lit, ne liste, ne compte, ne modifie ni ne crée rien de B', () => {
   it('REQ-SEC-009 : la couche a écrit chaque ligne semée au nom de son apporteur, et à lui seul', async () => {
-    for (const m of MODELES_CLOISONNES) {
+    for (const m of MODELES_CLOISONNES.filter((x) => !SEMES_HORS_COUCHE.includes(x))) {
       const a = (await relire(m, lignes[m].a)) as { apporteurId: string };
       const b = (await relire(m, lignes[m].b)) as { apporteurId: string };
       expect([m, a.apporteurId, b.apporteurId]).toEqual([m, A, B]);
@@ -535,6 +607,11 @@ describe('REQ-SEC-009 — A ne lit, ne liste, ne compte, ne modifie ni ne crée 
   it('REQ-SEC-009 : TÉMOIN À DEUX FACES — la vue sans `where` d’apporteur (fixture rouge) : la batterie relève chaque brèche, sur chaque modèle', async () => {
     for (const m of MODELES_CLOISONNES) {
       const breches = await attaquer(vueSansWhere(m), m, 2);
+      // Une table en ajout seul refuse la modification EN BASE, même sans `where` : la défense en
+      // profondeur tient, et ces deux brèches-là n'y apparaissent pas.
+      const modification = (MODELES_EN_AJOUT_SEUL as readonly string[]).includes(m)
+        ? []
+        : ['modification_acceptee', 'modification_ecrite'];
       expect([m, breches]).toEqual([
         m,
         expect.arrayContaining([
@@ -544,8 +621,7 @@ describe('REQ-SEC-009 — A ne lit, ne liste, ne compte, ne modifie ni ne crée 
           'liste_ciblee_par_apporteur',
           'compte_par_apporteur',
           'compte',
-          'modification_acceptee',
-          'modification_ecrite',
+          ...modification,
         ]),
       ]);
     }
@@ -574,6 +650,24 @@ describe('REQ-SEC-009 — A ne lit, ne liste, ne compte, ne modifie ni ne crée 
       vue.creer(donneesNeuves('sessionEspace', lignes.lienMagique.b) as never)
     ).rejects.toThrow();
     expect(await base.prisma.sessionEspace.count()).toBe(avant);
+  });
+
+  it('REQ-SEC-009 : DM-07 — le RETRAIT d’une personne déclarée : B ne retire pas celle de A ; A la retire UNE fois, la base refuse le second', async () => {
+    const vueA = accesDe(base.prisma, A).personneDeclaree;
+    const vueB = accesDe(base.prisma, B).personneDeclaree;
+    const { id } = (await vueA.creer(donneesNeuves('personneDeclaree', '') as never)) as {
+      id: string;
+    };
+    const avant = JSON.stringify(await relire('personneDeclaree', id));
+    expect(await vueB.modifier(id, brut({ retireeAt: new Date(t0 + MINUTE) }))).toBe('introuvable');
+    expect(JSON.stringify(await relire('personneDeclaree', id))).toBe(avant);
+    expect(await vueA.modifier(id, brut({ retireeAt: new Date(t0 + MINUTE) }))).toBe('modifiee');
+    await expect(vueA.modifier(id, brut({ retireeAt: new Date(t0 + 2 * MINUTE) }))).rejects.toThrow(
+      /refuser_modification_sauf/
+    );
+    await expect(vueA.modifier(id, brut({ qualite: 'sous_traitant' }))).rejects.toThrow(
+      /refuser_modification_sauf/
+    );
   });
 
   it('REQ-UX-006 : moi() rend l’apporteur de la session — jamais l’autre', async () => {

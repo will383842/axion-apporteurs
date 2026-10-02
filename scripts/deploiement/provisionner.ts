@@ -52,6 +52,7 @@
  */
 import {
   NOMS_DES_SECRETS,
+  NOMS_DES_SECRETS_CONDITIONNELS,
   NOMS_FACULTATIFS,
   NOMS_EN_ROTATION,
   variablesDeRotation,
@@ -69,6 +70,15 @@ const NOM_CACHE = 'axion-partners-redis';
 /** PostgreSQL 16 : la version des bancs d'intégration du dépôt. */
 const IMAGE_BASE = 'postgres:16-alpine';
 const PORT = '3000';
+/**
+ * QA-T57 — la sonde de la PLATEFORME, sur le même chemin que le HEALTHCHECK de l'image : `/api/readyz`,
+ * jamais `/api/livez`. L'image porte curl depuis QA-T57 (`Dockerfile`, étape `execution`).
+ */
+const SONDE_DE_LA_PLATEFORME = {
+  health_check_enabled: true,
+  health_check_path: '/api/readyz',
+  health_check_port: PORT,
+} as const;
 
 const SECRETS_DE_LA_PLATEFORME = [
   'COOLIFY_URL',
@@ -175,6 +185,9 @@ export async function provisionner(env: NodeJS.ProcessEnv): Promise<0 | 1> {
 
   const secrets: Record<string, string> = {};
   for (const n of NOMS_DES_SECRETS) secrets[n] = env[n] ?? '';
+  // Un secret conditionnel POSÉ est jugé avec les autres (longueur, préfixe, égalité).
+  for (const n of NOMS_DES_SECRETS_CONDITIONNELS)
+    if ((env[n] ?? '') !== '') secrets[n] = env[n] ?? '';
   const lu = lireEnvironnement({ ...secrets, NODE_ENV: 'production', PARTNERS_ENV: 'production' });
   if (!lu.ok) {
     console.error(
@@ -289,6 +302,12 @@ export async function provisionner(env: NodeJS.ProcessEnv): Promise<0 | 1> {
     { key: 'DATABASE_URL', value: await adresseInterne(uuidBase, NOM_BASE) },
     { key: 'REDIS_URL', value: await adresseInterne(uuidCache, NOM_CACHE) },
     { key: 'PARTNERS_ENV', value: 'production' },
+    // INT-T57 : les secrets conditionnels, posés seulement s'ils sont présents (jugés par
+    // `lireEnvironnement` avec les autres) ; leur absence n'empêche pas le provisionnement.
+    ...NOMS_DES_SECRETS_CONDITIONNELS.filter((n) => (env[n] ?? '') !== '').map((n) => ({
+      key: n,
+      value: env[n] ?? '',
+    })),
     ...NOMS_FACULTATIFS.filter((n) => n !== 'PARTNERS_ENV' && (env[n] ?? '') !== '').map((n) => ({
       key: n,
       value: env[n] ?? '',
@@ -306,7 +325,7 @@ export async function provisionner(env: NodeJS.ProcessEnv): Promise<0 | 1> {
         docker_registry_image_name: IMAGE,
         docker_registry_image_tag: `sha-${sha.slice(0, 7)}`,
         ports_exposes: PORT,
-        health_check_enabled: false,
+        ...SONDE_DE_LA_PLATEFORME,
         domains: publique.origin,
         instant_deploy: false,
       }),
@@ -315,15 +334,15 @@ export async function provisionner(env: NodeJS.ProcessEnv): Promise<0 | 1> {
     console.log(`   ${NOM_APPLICATION} créée (${application})`);
   }
 
-  // La sonde de la PLATEFORME est coupée, sur l'application Partners SEULE (premier déploiement réel,
-  // 2026-09-30) : elle s'exécute dans le conteneur par curl ou wget, que l'image n'a pas, et Coolify
-  // retirait donc tout nouveau conteneur. La sonde de vérité est le HEALTHCHECK natif de l'image (en
-  // node, `Dockerfile`, sur `/api/readyz`), et `deploy:coolify` vérifie de l'extérieur le sha servi.
-  // Reposé à chaque passage : une application existante créée avec la sonde est corrigée.
-  await api('PATCH', `/applications/${encodeURIComponent(application)}`, {
-    health_check_enabled: false,
-  });
-  console.log(`   ${NOM_APPLICATION} : sonde de la plateforme coupée, celle de l'image fait foi`);
+  // La sonde de la PLATEFORME, sur l'application Partners SEULE. Elle avait été coupée au premier
+  // déploiement réel (2026-09-30) : elle s'exécute dans le conteneur par curl, que l'image n'avait
+  // pas, et Coolify retirait tout nouveau conteneur. Depuis QA-T57, l'image porte curl : la sonde est
+  // réactivée sur `/api/readyz`, le même chemin que le HEALTHCHECK de l'image. Reposée à chaque
+  // passage : une application existante, coupée le 2026-09-30, est corrigée.
+  await api('PATCH', `/applications/${encodeURIComponent(application)}`, SONDE_DE_LA_PLATEFORME);
+  console.log(
+    `   ${NOM_APPLICATION} : sonde de la plateforme sur ${SONDE_DE_LA_PLATEFORME.health_check_path}`
+  );
 
   await api('PATCH', `/applications/${encodeURIComponent(application)}/envs/bulk`, {
     data: variables,
