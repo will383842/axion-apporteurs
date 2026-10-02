@@ -51,10 +51,13 @@ describe('REQ-JUR-061 — la commande sous condition suspensive est datée de sa
     expect(article44()).toContain("vaut annulation au sens de l'article 3.3");
   });
 
-  it('REQ-DM-022 : (d) la renonciation avant la défaillance garde la date ; un accord après est une nouvelle commande', () => {
+  it('REQ-DM-022 : (d) la renonciation avant la défaillance garde la date ; une convention signée après est une nouvelle commande, et un accord tardif ne fait pas revivre la caduque', () => {
     const a = article44();
-    expect(a).toContain('renonce à la condition avant sa défaillance');
+    expect(a).toContain('la condition est levée par renonciation avant sa défaillance');
     expect(a).toContain('la commande conserve la date de sa signature');
+    expect(a).toContain(
+      'un accord de prise en charge intervenu après la défaillance ne fait pas revivre la commande caduque'
+    );
     expect(a).toContain('nouvelle commande, datée de sa propre signature');
     expect(a).toContain(
       "qui n'est commissionnée que si elle est signée pendant la durée de l'attribution"
