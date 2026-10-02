@@ -7,7 +7,7 @@
  *     colonne dont un segment de nom est `iban` ou `bic` (TÉMOIN : une colonne `iban` ajoutée à un
  *     autre modèle fait rougir) ;
  *   — l'identité de facturation référence sa pièce `rib` par une clé étrangère COMPOSITE
- *     (id, type), et la pièce porte l'unicité (id, type) ;
+ *     (id, type, apporteur), et la pièce porte l'unicité (id, type, apporteur) ;
  *   — les vocabulaires du KYC sont des enums, aux valeurs du domaine et du glossaire ;
  *   — le journal d'une pièce porte une charge fermée, sans donnée personnelle.
  */
@@ -55,14 +55,14 @@ describe('REQ-CPL-005 — l’IBAN n’existe que dans la pièce rib (HYP-DM06-I
     expect(horsDeLaPiece(lireSchemaPrisma(fautif))).toEqual(['IdentiteFacturation.iban']);
   });
 
-  it('REQ-CPL-005 : l’identité de facturation référence sa pièce rib par une clé COMPOSITE (id, type)', () => {
+  it('REQ-CPL-005 : l’identité de facturation référence sa pièce rib par une clé COMPOSITE (id, type, apporteur)', () => {
     const champs = new Map(modele('IdentiteFacturation')!.champs.map((c) => [c.nom, c]));
     expect(champs.get('pieceKycId')).toMatchObject({ type: 'String', optionnel: true });
     expect(champs.get('pieceKycType')).toMatchObject({ type: 'TypePieceKyc', optionnel: false });
     expect(TEXTE).toMatch(
-      /pieceKyc\s+PieceKyc\?\s+@relation\(fields: \[pieceKycId, pieceKycType\], references: \[id, type\]/
+      /pieceKyc\s+PieceKyc\?\s+@relation\(fields: \[pieceKycId, pieceKycType, apporteurId\], references: \[id, type, apporteurId\]/
     );
-    expect(TEXTE).toMatch(/model PieceKyc \{[\s\S]*?@@unique\(\[id, type\]\)/);
+    expect(TEXTE).toMatch(/model PieceKyc \{[\s\S]*?@@unique\(\[id, type, apporteurId\]/);
   });
 });
 

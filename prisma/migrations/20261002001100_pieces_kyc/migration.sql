@@ -31,13 +31,13 @@ CREATE INDEX "pieces_kyc_apporteur_id_idx" ON "pieces_kyc"("apporteur_id");
 CREATE INDEX "pieces_kyc_iban_hash_idx" ON "pieces_kyc"("iban_hash");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "pieces_kyc_id_type_key" ON "pieces_kyc"("id", "type");
+CREATE UNIQUE INDEX "pieces_kyc_id_type_apporteur_key" ON "pieces_kyc"("id", "type", "apporteur_id");
 
 -- CreateIndex
 CREATE INDEX "identites_facturation_piece_kyc_id_idx" ON "identites_facturation"("piece_kyc_id");
 
 -- AddForeignKey
-ALTER TABLE "identites_facturation" ADD CONSTRAINT "identites_facturation_piece_rib_fkey" FOREIGN KEY ("piece_kyc_id", "piece_kyc_type") REFERENCES "pieces_kyc"("id", "type") ON DELETE RESTRICT ON UPDATE RESTRICT;
+ALTER TABLE "identites_facturation" ADD CONSTRAINT "identites_facturation_piece_rib_fkey" FOREIGN KEY ("piece_kyc_id", "piece_kyc_type", "apporteur_id") REFERENCES "pieces_kyc"("id", "type", "apporteur_id") ON DELETE RESTRICT ON UPDATE RESTRICT;
 
 -- AddForeignKey
 ALTER TABLE "pieces_kyc" ADD CONSTRAINT "pieces_kyc_apporteur_id_fkey" FOREIGN KEY ("apporteur_id") REFERENCES "apporteurs"("id") ON DELETE RESTRICT ON UPDATE RESTRICT;
@@ -47,8 +47,9 @@ ALTER TABLE "pieces_kyc" ADD CONSTRAINT "pieces_kyc_apporteur_id_fkey" FOREIGN K
 
 -- ── identites_facturation : la pièce référencée est une pièce `rib` (décision A02) ──────────────
 
--- La clé étrangère composite (piece_kyc_id, piece_kyc_type) → pieces_kyc (id, type) refuse une pièce
--- d'un autre type ; la colonne constante ne peut valoir que `rib`. En MATCH SIMPLE, une référence
+-- La clé étrangère composite (piece_kyc_id, piece_kyc_type, apporteur_id) → pieces_kyc (id, type,
+-- apporteur_id) refuse une pièce d'un autre type ET la pièce d'un AUTRE apporteur, même écrite hors de
+-- la couche cloisonnée (A02 : l'argent part vers ce compte) ; la colonne constante ne peut valoir que `rib`. En MATCH SIMPLE, une référence
 -- nulle n'est pas vérifiée : c'est voulu, l'identité peut précéder sa pièce.
 ALTER TABLE "identites_facturation" ADD CONSTRAINT "identites_facturation_piece_kyc_est_un_rib"
   CHECK ("piece_kyc_type" = 'rib');
