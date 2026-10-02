@@ -1,6 +1,7 @@
 // @req REQ-QA-023
 /**
- * QA-T57 — écarts C9 et C10 de la vérification de bout en bout : la sauvegarde ne se tait plus.
+ * QA-T57 — deux écarts de la vérification de bout en bout (l'âge du dernier vidage, et le run sauté
+ * en vert sur un secret manquant) : la sauvegarde ne se tait plus.
  *
  * CE QUE CE FICHIER GARDE (témoins à deux faces) :
  *   (2) une fois la sauvegarde ACTIVÉE (`PARTNERS_SAUVEGARDE_ACTIVEE=oui`), un secret manquant fait

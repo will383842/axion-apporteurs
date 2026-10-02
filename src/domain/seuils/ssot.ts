@@ -280,7 +280,7 @@ export const SEUILS = {
     valeur: 120,
     unite: 'minutes',
     source:
-      'acceptation QA-T57 (REQ-QA-023), écart C9 de la vérification de bout en bout ; arbitrage A01 au rattrapage 46',
+      'acceptation QA-T57 (REQ-QA-023), âge du dernier vidage relevé par la vérification de bout en bout ; arbitrage A01 au rattrapage 46',
     renvois: [],
     verifieLe: '2026-10-01',
   },
