@@ -4,7 +4,7 @@
 | --- | --- |
 | **Statut** | `accepte` |
 | **Date** | 2026-10-02 |
-| **Décideur** | `architecte` — cet ADR consigne la conception d'INT-T56, validée par A02 le 2026-10-02 sous les corrections C1 à C4 ; accepté par A02, revue 5387209119 |
+| **Décideur** | `architecte` — cet ADR consigne la conception d'INT-T56, validée par A02 le 2026-10-02 sous ses corrections (revue 5387209119) ; accepté par A02, revue 5387209119 |
 | **Tâche** | INT-T56 |
 | **Exigences servies** | REQ-DM-036, REQ-JUR-029, REQ-DM-037 |
 | **Décisions du registre citées** | HYP-RGPD-RETENTION (délai de la minimisation de fond, plafond provisoire) |
@@ -40,7 +40,7 @@ Dans les deux cas, `OLD.charge ? 'reponsesJson'` et `NEW.charge = OLD.charge - '
 `payload_hash` et les dix autres colonnes restent refusés : il demeure la preuve de la charge reçue
 entière. DELETE et TRUNCATE restent refusés.
 
-**L'invariant est TENU par la base (C4 d'A02).** Le déclencheur ADMET la réécriture ; il ne l'IMPOSE pas. La contrainte `evenements_recus_candidature_traitee_minimisee`, `CHECK (NOT (event_type = 'candidature_recue' AND statut = 'traite' AND charge ? 'reponsesJson'))`, VALIDÉE à l'ajout (sans NOT VALID), refuse qu'une candidature traitée garde `reponsesJson` : un passage à `traite` qui oublierait la charge, par une régression future du code, est refusé. Elle refuse d'elle-même toute ligne héritée fautive ; aucune n'est réécrite.
+**L'invariant est TENU par la base (condition d'A02).** Le déclencheur ADMET la réécriture ; il ne l'IMPOSE pas. La contrainte `evenements_recus_candidature_traitee_minimisee`, `CHECK (NOT (event_type = 'candidature_recue' AND statut = 'traite' AND charge ? 'reponsesJson'))`, VALIDÉE à l'ajout (sans NOT VALID), refuse qu'une candidature traitée garde `reponsesJson` : un passage à `traite` qui oublierait la charge, par une régression future du code, est refusé. Elle refuse d'elle-même toute ligne héritée fautive ; aucune n'est réécrite.
 
 Le délai du fond, `CANDIDATURE_NON_TRAITEE_MINIMISEE_APRES_JOURS = 30` (SSOT, plafond provisoire,
 HYP-RGPD-RETENTION), n'est tenu QUE par le `WHERE` du code, jamais recopié dans le SQL.

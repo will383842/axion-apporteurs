@@ -172,7 +172,7 @@ describe('REQ-DM-036 — (i) le traitant : la charge minimisée au passage à tr
   });
 });
 
-describe('REQ-DM-036 — C4 : la base TIENT l’invariant, elle ne fait pas que le permettre', () => {
+describe('REQ-DM-036 — la base TIENT l’invariant, elle ne fait pas que le permettre', () => {
   it('REQ-DM-036 REQ-JUR-029 : TÉMOIN — un passage à traite SANS réécriture de la charge est refusé par la base', async () => {
     const e = await inscrire('recu');
     await expect(
