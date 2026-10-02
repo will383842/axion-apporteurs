@@ -33,7 +33,12 @@ import { readFileSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { Prisma } from '@prisma/client';
 import {
+  CHAMPS_RENDUS,
+  CHAMPS_TUS,
   CLES_REFUSEES,
+  OPTIONS_DE_LECTURE,
+  RELATIONS,
+  SECRETS,
   CORPS_INTROUVABLE,
   MODELES_CLOISONNES,
   REFERENCES_CLOISONNEES,
@@ -94,6 +99,10 @@ async function refusDe(promesse: Promise<unknown>): Promise<string> {
 
 const portee = (where: unknown, apporteurId: string) => ({ AND: [where, { apporteurId }] });
 
+/** La sélection EXPLICITE qu'une lecture ou une création doit porter (GOV-111). */
+const selection = (modele: (typeof MODELES_CLOISONNES)[number]) =>
+  Object.fromEntries(CHAMPS_RENDUS[modele].map((c) => [c, true]));
+
 /** Une donnée d'essai passée à la couche sans son type : c'est la couche qu'on juge, pas le compilateur. */
 const brut = (o: object): never => o as never;
 
@@ -105,7 +114,11 @@ describe('REQ-SEC-008 — chaque méthode injecte l’apporteur de la session', 
       const id = randomUUID();
       expect(await forApporteur(client, A)[modele].trouver(id)).toBeNull();
       expect(appels).toEqual([
-        { modele, methode: 'findFirst', args: { where: portee({ id }, A) } },
+        {
+          modele,
+          methode: 'findFirst',
+          args: { where: portee({ id }, A), select: selection(modele) },
+        },
       ]);
     }
   );
@@ -116,16 +129,23 @@ describe('REQ-SEC-008 — chaque méthode injecte l’apporteur de la session', 
       const { client, appels, reponses } = fauxClient();
       reponses.findMany = [{ id: 'x' }];
       expect(await forApporteur(client, A)[modele].lister()).toEqual([{ id: 'x' }]);
-      expect(appels).toEqual([{ modele, methode: 'findMany', args: { where: portee({}, A) } }]);
+      expect(appels).toEqual([
+        { modele, methode: 'findMany', args: { where: portee({}, A), select: selection(modele) } },
+      ]);
     }
   );
 
+  // SEC-47 a changé la face de ces témoins : un filtre sur `apporteurId` (colonne TUE) était
+  // gardé en CONJONCTION ; il est désormais REFUSÉ avant tout appel, comme tout filtre sur une
+  // colonne non rendue. La conjonction reste prouvée par `lister()` sans filtre (ci-dessus) et par
+  // un filtre sur une colonne RENDUE (ci-dessous).
   it.each(MODELES_CLOISONNES)(
-    'REQ-SEC-008 : %s.lister({ where: { apporteurId: B } }) reste en CONJONCTION avec la session — jamais un remplacement',
+    'REQ-SEC-008 : %s.lister({ where: { id } }) reste en CONJONCTION avec la session — jamais un remplacement',
     async (modele) => {
       const { client, appels } = fauxClient();
+      const id = randomUUID();
       await forApporteur(client, A)[modele].lister({
-        where: { apporteurId: B },
+        where: { id },
         orderBy: { id: 'asc' },
         take: 7,
       });
@@ -133,9 +153,25 @@ describe('REQ-SEC-008 — chaque méthode injecte l’apporteur de la session', 
         {
           modele,
           methode: 'findMany',
-          args: { where: portee({ apporteurId: B }, A), orderBy: { id: 'asc' }, take: 7 },
+          args: {
+            where: portee({ id }, A),
+            orderBy: { id: 'asc' },
+            take: 7,
+            select: selection(modele),
+          },
         },
       ]);
+    }
+  );
+
+  it.each(MODELES_CLOISONNES)(
+    'REQ-SEC-008 : %s — SEC-47 : un filtre sur apporteurId (colonne tue) est REFUSÉ avant tout appel, en lecture comme en compte',
+    async (modele) => {
+      const { client, appels } = fauxClient();
+      const vue = forApporteur(client, A)[modele];
+      expect(await refusDe(vue.lister(brut({ where: { apporteurId: B } })))).toBe(REFUS.forme);
+      expect(await refusDe(vue.compter(brut({ apporteurId: B })))).toBe(REFUS.forme);
+      expect(appels).toEqual([]);
     }
   );
 
@@ -145,11 +181,12 @@ describe('REQ-SEC-008 — chaque méthode injecte l’apporteur de la session', 
       const { client, appels, reponses } = fauxClient();
       reponses.count = 3;
       const vue = forApporteur(client, A)[modele];
+      const id = randomUUID();
       expect(await vue.compter()).toBe(3);
-      expect(await vue.compter({ apporteurId: B })).toBe(3);
+      expect(await vue.compter({ id })).toBe(3);
       expect(appels).toEqual([
         { modele, methode: 'count', args: { where: portee({}, A) } },
-        { modele, methode: 'count', args: { where: portee({ apporteurId: B }, A) } },
+        { modele, methode: 'count', args: { where: portee({ id }, A) } },
       ]);
     }
   );
@@ -178,7 +215,11 @@ describe('REQ-SEC-008 — chaque méthode injecte l’apporteur de la session', 
       const data = { kid: '0123abcd' };
       expect(await forApporteur(client, A)[modele].creer(data as never)).toEqual({ id: 'cree' });
       expect(appels).toEqual([
-        { modele, methode: 'create', args: { data: { kid: '0123abcd', apporteurId: A } } },
+        {
+          modele,
+          methode: 'create',
+          args: { data: { kid: '0123abcd', apporteurId: A }, select: selection(modele) },
+        },
       ]);
     }
   );
@@ -188,7 +229,15 @@ describe('REQ-SEC-008 — chaque méthode injecte l’apporteur de la session', 
     reponses.findFirst = { id: A };
     expect(await forApporteur(client, A).moi()).toEqual({ id: A });
     expect(appels).toEqual([
-      { modele: 'apporteur', methode: 'findFirst', args: { where: { id: A } } },
+      {
+        modele: 'apporteur',
+        methode: 'findFirst',
+        // SEC-47 : la fiche part avec sa sélection explicite, comme les modèles cloisonnés.
+        args: {
+          where: { id: A },
+          select: Object.fromEntries(CHAMPS_RENDUS.apporteur.map((c) => [c, true])),
+        },
+      },
     ]);
   });
 
@@ -307,8 +356,16 @@ describe('REQ-SEC-008 — aucune écriture ne déplace une ligne vers un autre a
       REFUS.reference
     );
     expect(appels).toEqual([
-      { modele: 'lienMagique', methode: 'findFirst', args: { where: portee({ id: lien }, A) } },
-      { modele: 'lienMagique', methode: 'findFirst', args: { where: portee({ id: lien }, A) } },
+      {
+        modele: 'lienMagique',
+        methode: 'findFirst',
+        args: { where: portee({ id: lien }, A), select: selection('lienMagique') },
+      },
+      {
+        modele: 'lienMagique',
+        methode: 'findFirst',
+        args: { where: portee({ id: lien }, A), select: selection('lienMagique') },
+      },
     ]);
   });
 
@@ -326,7 +383,10 @@ describe('REQ-SEC-008 — aucune écriture ne déplace une ligne vers un autre a
       ['lienMagique', 'findFirst'],
       ['sessionEspace', 'updateMany'],
     ]);
-    expect(appels[1]!.args).toEqual({ data: { lienMagiqueId: lien, apporteurId: A } });
+    expect(appels[1]!.args).toEqual({
+      data: { lienMagiqueId: lien, apporteurId: A },
+      select: selection('sessionEspace'),
+    });
   });
 
   it('REQ-SEC-008 : une référence absente ou nulle n’est pas lue — rien à vérifier', async () => {
@@ -559,6 +619,193 @@ describe('REQ-SEC-008 — un corps JSON qui touche au prototype est refusé avan
         await refusDe(forApporteur(client, A).jetonDepot.modifier(randomUUID(), data as never))
       ).toBe(REFUS.forme);
       expect(appels).toEqual([]);
+    }
+  );
+});
+
+// ── GOV-111 — les options de lecture, les filtres de relation, la sélection explicite ──────────────
+
+describe('REQ-SEC-008 — GOV-111 : les options de lecture sont une liste blanche', () => {
+  it('les options admises sont where, orderBy et take, et elles seules', () => {
+    expect([...OPTIONS_DE_LECTURE].sort()).toEqual(['orderBy', 'take', 'where']);
+  });
+
+  it.each([
+    ['select', { select: { tokenHash: true } }],
+    ['include', { include: { apporteur: true } }],
+    ['skip', { skip: 1 }],
+    ['cursor', { cursor: { id: randomUUID() } }],
+    ['distinct', { distinct: ['id'] }],
+    ['une clé inconnue', { omit: { id: true } }],
+  ])('REQ-SEC-008 : lister() refuse %s, avant tout appel', async (_nom, options) => {
+    for (const modele of MODELES_CLOISONNES) {
+      const { client, appels } = fauxClient();
+      expect(await refusDe(forApporteur(client, A)[modele].lister(brut(options)))).toBe(
+        REFUS.forme
+      );
+      expect(appels).toEqual([]);
+    }
+  });
+
+  it.each([
+    ['un décimal', 1.5],
+    ['une chaîne', '7'],
+    ['NaN', Number.NaN],
+  ])('REQ-SEC-008 : take doit être un entier — %s est refusé', async (_nom, take) => {
+    const { client, appels } = fauxClient();
+    expect(await refusDe(forApporteur(client, A).jetonDepot.lister(brut({ take })))).toBe(
+      REFUS.forme
+    );
+    expect(appels).toEqual([]);
+  });
+
+  it('REQ-SEC-008 : un objet d’options au prototype piégé est refusé, comme une donnée écrite', async () => {
+    const { client, appels } = fauxClient();
+    const piege = Object.create({ include: { apporteur: true } }) as object;
+    expect(await refusDe(forApporteur(client, A).jetonDepot.lister(brut(piege)))).toBe(REFUS.forme);
+    expect(appels).toEqual([]);
+  });
+});
+
+describe('REQ-SEC-008 — GOV-111 : aucun filtre ni tri ne traverse une relation', () => {
+  it.each(MODELES_CLOISONNES)(
+    'REQ-SEC-008 : %s — chaque relation du schéma est refusée en where, à toute profondeur, et en orderBy',
+    async (modele) => {
+      for (const relation of RELATIONS[modele]) {
+        for (const where of [
+          { [relation]: { is: {} } },
+          { AND: [{ id: randomUUID() }, { [relation]: {} }] },
+          { OR: [{ NOT: { [relation]: {} } }] },
+          { NOT: [{ [relation]: {} }] },
+        ]) {
+          const { client, appels } = fauxClient();
+          const vue = forApporteur(client, A)[modele];
+          expect(await refusDe(vue.lister(brut({ where })))).toBe(REFUS.forme);
+          expect(await refusDe(vue.compter(brut(where)))).toBe(REFUS.forme);
+          expect(appels).toEqual([]);
+        }
+        for (const orderBy of [
+          { [relation]: { id: 'asc' } },
+          [{ id: 'asc' }, { [relation]: {} }],
+        ]) {
+          const { client, appels } = fauxClient();
+          expect(await refusDe(forApporteur(client, A)[modele].lister(brut({ orderBy })))).toBe(
+            REFUS.forme
+          );
+          expect(appels).toEqual([]);
+        }
+      }
+    }
+  );
+
+  it('REQ-SEC-008 : CONTRE-TÉMOIN — un filtre de colonne, dans AND/OR/NOT, passe', async () => {
+    const { client, appels } = fauxClient();
+    const where = { AND: [{ revoqueAt: null }], OR: [{ NOT: { creeAt: { lt: new Date(0) } } }] };
+    await forApporteur(client, A).jetonDepot.lister(brut({ where }));
+    expect(appels).toHaveLength(1);
+  });
+
+  it.each(MODELES_CLOISONNES)(
+    'REQ-QA-011 → REQ-SEC-008 : %s — RELATIONS est EXACTEMENT la liste des relations du schéma généré',
+    (modele) => {
+      const m = Prisma.dmmf.datamodel.models.find(
+        (x) => x.name.charAt(0).toLowerCase() + x.name.slice(1) === modele
+      )!;
+      const attendues = m.fields.filter((f) => f.kind === 'object').map((f) => f.name);
+      expect([...RELATIONS[modele]].sort()).toEqual(attendues.sort());
+    }
+  );
+});
+
+/** Les fautes de classement des colonnes, chacune NOMMÉE par sa famille. */
+function fautesDeClassement(
+  rendus: Readonly<Record<string, readonly string[]>>,
+  tus: Readonly<Record<string, readonly string[]>>
+): string[] {
+  const f: string[] = [];
+  for (const modele of MODELES_CLOISONNES) {
+    const m = Prisma.dmmf.datamodel.models.find(
+      (x) => x.name.charAt(0).toLowerCase() + x.name.slice(1) === modele
+    )!;
+    const colonnes = m.fields.filter((x) => x.kind !== 'object').map((x) => x.name);
+    const r = rendus[modele] ?? [];
+    const t = tus[modele] ?? [];
+    for (const c of colonnes) {
+      if (!r.includes(c) && !t.includes(c)) f.push(`colonne_non_classee : ${modele}.${c}`);
+      if (r.includes(c) && t.includes(c)) f.push(`colonne_classee_deux_fois : ${modele}.${c}`);
+    }
+    for (const c of [...r, ...t])
+      if (!colonnes.includes(c)) f.push(`colonne_inconnue : ${modele}.${c}`);
+    for (const c of r)
+      if ((SECRETS as readonly string[]).includes(c)) f.push(`secret_rendu : ${modele}.${c}`);
+  }
+  return f;
+}
+
+describe('REQ-SEC-008 — GOV-111 : la couche ne rend qu’une sélection EXPLICITE, sans secret', () => {
+  it('REQ-SEC-008 : les dix secrets sont figés — les six de GOV-111 et les quatre de la fiche (SEC-47)', () => {
+    expect(Object.isFrozen(SECRETS)).toBe(true);
+    expect([...SECRETS].sort()).toEqual(
+      [
+        'codeHash',
+        'emailChiffre',
+        'emailHash',
+        'ipHash',
+        'kid',
+        'tokenHash',
+        'nomChiffre',
+        'prenomChiffre',
+        'telephoneChiffre',
+        'phoneHash',
+      ].sort()
+    );
+  });
+
+  it('REQ-QA-011 → REQ-SEC-008 : chaque colonne du schéma (Json et enum compris) est RENDUE ou TUE, une seule fois, et aucun secret n’est rendu', () => {
+    expect(fautesDeClassement(CHAMPS_RENDUS, CHAMPS_TUS)).toEqual([]);
+  });
+
+  it.each([
+    [
+      'tokenHash ajouté aux champs rendus du jeton',
+      { ...CHAMPS_RENDUS, jetonDepot: [...CHAMPS_RENDUS.jetonDepot, 'tokenHash'] },
+      CHAMPS_TUS,
+      'secret_rendu',
+    ],
+    [
+      'une colonne retirée des deux listes',
+      { ...CHAMPS_RENDUS, jetonDepot: CHAMPS_RENDUS.jetonDepot.filter((c) => c !== 'creeAt') },
+      CHAMPS_TUS,
+      'colonne_non_classee',
+    ],
+    [
+      'une colonne inventée',
+      { ...CHAMPS_RENDUS, jetonDepot: [...CHAMPS_RENDUS.jetonDepot, 'nouvelleColonne'] },
+      CHAMPS_TUS,
+      'colonne_inconnue',
+    ],
+  ] as const)('REQ-SEC-008 : TÉMOIN — %s rougit en « %s »', (_quoi, rendus, tus, famille) => {
+    const f = fautesDeClassement(rendus, tus);
+    expect(
+      f.some((x) => x.startsWith(famille)),
+      f.join('\n')
+    ).toBe(true);
+  });
+
+  it.each(MODELES_CLOISONNES)(
+    'REQ-SEC-008 : %s — trouver, lister et creer portent la sélection DANS la requête, sans include',
+    async (modele) => {
+      const { client, appels } = fauxClient();
+      const vue = forApporteur(client, A)[modele];
+      await vue.trouver(randomUUID());
+      await vue.lister();
+      await vue.creer(brut({}));
+      for (const a of appels) {
+        const args = a.args as Record<string, unknown>;
+        expect(args.select, `${modele}.${a.methode}`).toEqual(selection(modele));
+        expect(Object.hasOwn(args, 'include'), `${modele}.${a.methode}`).toBe(false);
+        for (const s of SECRETS) expect(Object.hasOwn(args.select as object, s)).toBe(false);
+      }
     }
   );
 });

@@ -117,14 +117,35 @@ function fautesDuPipeline(s: Sources): string[] {
   }
   // La chaîne qui construit et publie ne lit que GITHUB_TOKEN. Le job `deployer` (QA-T34), qui ne
   // construit ni ne publie rien, ne lit que les trois secrets de la plateforme — et rien d'autre.
+  // Le job `alerter` (QA-T54, option B de la lentille `securite`) ne lit que les deux secrets du
+  // canal d'alerte : séparés, `alerter` n'a jamais le jeton de la plateforme, ni `deployer` celui
+  // du canal.
   const horsDeployer = [
     s.workflow.slice(0, s.workflow.indexOf('\njobs:')),
-    ...[...j].filter(([nom]) => nom !== 'deployer').map(([, texte]) => texte),
+    ...[...j].filter(([nom]) => nom !== 'deployer' && nom !== 'alerter').map(([, texte]) => texte),
   ].join('\n');
   if (/secrets\.(?!GITHUB_TOKEN\b)/.test(horsDeployer))
     f.push('secret_tiers : le workflow lit un autre secret que GITHUB_TOKEN');
   if (/secrets\.(?!COOLIFY_(?:URL|API_TOKEN|APP_UUID)\b)/.test(j.get('deployer') ?? ''))
     f.push('secret_tiers : le job deployer lit un autre secret que ceux de la plateforme');
+  if (/secrets\.(?!TELEGRAM_(?:BOT_TOKEN|CHAT_ID)\b)/.test(j.get('alerter') ?? ''))
+    f.push('secret_tiers : le job alerter lit un autre secret que ceux du canal d’alerte');
+
+  // QA-T54 : `alerter` ne tourne qu'après `deployer`, sur un push de `main`, et seulement si
+  // `deployer` a échoué ou a été annulé. Les deux lignes se comparent ENTIÈRES (refus `securite` sur
+  // #339) : une expression qui ne chercherait que `(failure() || cancelled())` laisserait passer
+  // `false && (…)`, `always() || …` ou une autre ref. Elles sont ancrées sur l'indentation du JOB
+  // (quatre espaces) : un `if:` d'étape identique, plus indenté, ne masque pas un `if:` de job modifié.
+  const alerter = (j.get('alerter') ?? '').split('\n').map((l) => l.trimEnd());
+  if (
+    !alerter.includes('    needs: deployer') ||
+    !alerter.includes(
+      "    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && (failure() || cancelled()) }}"
+    )
+  )
+    f.push(
+      'alerter_mal_garde : le job alerter ne dépend pas de deployer, ou ne tourne pas exactement sur son échec ou son annulation, sur un push de main'
+    );
 
   // Aucun checkout ne laisse le jeton dans `.git/config`.
   const checkouts =
@@ -157,7 +178,7 @@ function fautesDuPipeline(s: Sources): string[] {
 describe('REQ-QA-018 — la forge construit, juge, puis publie l’image (QA-T05)', () => {
   it('REQ-QA-018 — les vraies sources ne portent aucune faute, et les deux jobs sont lus', () => {
     expect(fautesDuPipeline(REEL)).toEqual([]);
-    expect([...jobs(REEL.workflow).keys()]).toEqual(['image', 'publier', 'deployer']);
+    expect([...jobs(REEL.workflow).keys()]).toEqual(['image', 'publier', 'deployer', 'alerter']);
   });
 
   const mutants: [string, (s: Sources) => Sources, string][] = [
@@ -247,6 +268,47 @@ describe('REQ-QA-018 — la forge construit, juge, puis publie l’image (QA-T05
       }),
       'secret_tiers',
     ],
+    [
+      'un secret de la plateforme lu par le job alerter',
+      (s) => ({
+        ...s,
+        workflow: s.workflow.replace('secrets.TELEGRAM_CHAT_ID', 'secrets.COOLIFY_API_TOKEN'),
+      }),
+      'secret_tiers',
+    ],
+    [
+      'un secret du canal lu par le job deployer',
+      (s) => ({
+        ...s,
+        workflow: s.workflow.replace('secrets.COOLIFY_APP_UUID', 'secrets.TELEGRAM_BOT_TOKEN'),
+      }),
+      'secret_tiers',
+    ],
+    ...(
+      [
+        [
+          'le job alerter sans dépendance à deployer',
+          '    needs: deployer\n    environment',
+          '    environment',
+        ],
+        ['le job alerter sans condition', ' && (failure() || cancelled()) }}', ' }}'],
+        ['le job alerter sur failure() seul', '(failure() || cancelled())', '(failure())'],
+        [
+          'le job alerter neutralisé par false &&',
+          "if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && (failure() || cancelled()) }}",
+          "if: ${{ false && github.event_name == 'push' && github.ref == 'refs/heads/main' && (failure() || cancelled()) }}",
+        ],
+        [
+          'le job alerter ouvert par always() ||',
+          "if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && (failure() || cancelled()) }}",
+          "if: ${{ always() || github.event_name == 'push' && github.ref == 'refs/heads/main' && (failure() || cancelled()) }}",
+        ],
+      ] as const
+    ).map(([quoi, avant, apres]): [string, (s: Sources) => Sources, string] => [
+      quoi,
+      (s) => ({ ...s, workflow: s.workflow.replace(avant, apres) }),
+      'alerter_mal_garde',
+    ]),
   ];
 
   for (const [quoi, muter, famille] of mutants) {

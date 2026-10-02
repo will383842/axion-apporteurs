@@ -41,6 +41,75 @@
         --cadre: #1b1f24;
       }
 
+      @media (prefers-color-scheme: dark) {
+        :root[data-theme='auto'] {
+          color-scheme: dark;
+          --fond: #12161c;
+          --surface: #1b2129;
+          --surface-2: #2a313b;
+          --texte: #eef1f5;
+          --texte-doux: #c3cad4;
+          --bord: #7f8a99;
+          --primaire: #8db8f2;
+          --sur-primaire: #0d1724;
+          --lien: #9cc3f5;
+          --ok-fond: #15301f;
+          --ok-texte: #9fe0b4;
+          --attente-fond: #33280e;
+          --attente-texte: #f3d37a;
+          --bloque-fond: #3a1717;
+          --bloque-texte: #fca5a5;
+          --info-fond: #162a47;
+          --info-texte: #b3cff7;
+          --neutre-fond: #262c35;
+          --neutre-texte: #d0d6de;
+          --focus: #ffb366;
+          --atelier-fond: #0c0a09;
+          --atelier-surface: #1a1614;
+          --atelier-texte: #f5f1ea;
+          --atelier-doux: #cfc8bf;
+          --atelier-lien: #f7a06a;
+          --atelier-bord: #57504a;
+          --atelier-fond-bouton: #11161c;
+          --atelier-alerte-fond: #33240a;
+          --atelier-alerte-texte: #ffd58a;
+          --cadre: #3a424d;
+        }
+      }
+      :root[data-theme='sombre'] {
+        color-scheme: dark;
+        --fond: #12161c;
+        --surface: #1b2129;
+        --surface-2: #2a313b;
+        --texte: #eef1f5;
+        --texte-doux: #c3cad4;
+        --bord: #7f8a99;
+        --primaire: #8db8f2;
+        --sur-primaire: #0d1724;
+        --lien: #9cc3f5;
+        --ok-fond: #15301f;
+        --ok-texte: #9fe0b4;
+        --attente-fond: #33280e;
+        --attente-texte: #f3d37a;
+        --bloque-fond: #3a1717;
+        --bloque-texte: #fca5a5;
+        --info-fond: #162a47;
+        --info-texte: #b3cff7;
+        --neutre-fond: #262c35;
+        --neutre-texte: #d0d6de;
+        --focus: #ffb366;
+        --atelier-fond: #0c0a09;
+        --atelier-surface: #1a1614;
+        --atelier-texte: #f5f1ea;
+        --atelier-doux: #cfc8bf;
+        --atelier-lien: #f7a06a;
+        --atelier-bord: #57504a;
+        --atelier-fond-bouton: #11161c;
+        --atelier-alerte-fond: #33240a;
+        --atelier-alerte-texte: #ffd58a;
+        --cadre: #3a424d;
+      }
+
       *,
       *::before,
       *::after {
@@ -751,6 +820,160 @@
         }
       }
 
+      /* Le cadre de la console (UX-P1-18) : en-tête, recherche, compte, barre mobile, menu. */
+      .c-marque {
+        color: var(--texte);
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        min-height: 44px;
+      }
+      .c-recherche {
+        margin-left: auto;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        min-height: 44px;
+        min-width: 220px;
+        padding: 0 12px;
+        border: 2px solid var(--bord);
+        border-radius: 8px;
+        background: var(--surface);
+        color: var(--texte-doux);
+      }
+      .c-recherche input {
+        border: 0;
+        background: transparent;
+        color: var(--texte);
+        font: inherit;
+        min-height: 40px;
+        width: 100%;
+      }
+      .c-compte {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-height: 44px;
+        padding: 0 12px;
+        border-radius: 8px;
+        border: 2px solid var(--surface-2);
+        background: var(--surface);
+        color: var(--texte);
+        font: inherit;
+        cursor: pointer;
+      }
+      .c-barre {
+        display: none;
+      }
+      .c-barre a,
+      .c-barre button {
+        flex: 1 1 0;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 2px;
+        min-height: 56px;
+        padding: 4px 2px;
+        border: 0;
+        background: transparent;
+        color: var(--texte);
+        font: inherit;
+        font-size: 14px;
+        font-weight: 600;
+        text-decoration: none;
+        text-align: center;
+        cursor: pointer;
+      }
+      .c-barre [aria-current='page'],
+      .c-barre [aria-expanded='true'] {
+        background: var(--info-fond);
+        color: var(--info-texte);
+        font-weight: 800;
+      }
+      .c-menu {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        margin: 0;
+        padding: 8px;
+        list-style: none;
+        background: var(--surface);
+        border: 2px solid var(--texte);
+        border-radius: 12px;
+      }
+      .c-menu a {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 48px;
+        padding: 0 12px;
+        border-radius: 8px;
+        color: var(--texte);
+        text-decoration: none;
+        font-weight: 600;
+      }
+      .c-menu .separe {
+        border-top: 1px solid var(--surface-2);
+        margin-top: 4px;
+        padding-top: 4px;
+      }
+      .vide {
+        align-items: flex-start;
+        background: var(--surface);
+        border: 1px dashed var(--bord);
+        border-radius: 10px;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        max-width: 640px;
+      }
+      .vide h3 {
+        font-size: 20px;
+      }
+      .centre {
+        align-items: center;
+        justify-content: flex-start;
+      }
+      .panneau {
+        width: 100%;
+        max-width: 440px;
+        background: var(--surface);
+        border: 1px solid var(--surface-2);
+        border-radius: 12px;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+      .panneau h2 {
+        font-size: 24px;
+        margin: 0;
+      }
+      .code-saisie {
+        letter-spacing: 0.4em;
+        font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+        font-size: 22px !important;
+        text-align: center;
+      }
+      @container (max-width: 767px) {
+        .app.avec-barre .c-nav,
+        .app.avec-barre .c-recherche,
+        .app.avec-barre .c-compte {
+          display: none;
+        }
+        .app.avec-barre .c-barre {
+          display: flex;
+          border-top: 1px solid var(--surface-2);
+          background: var(--surface);
+        }
+        .c-recherche {
+          min-width: 0;
+        }
+      }
+
       /* charte:fin */
     </style>
   </head>
@@ -771,6 +994,7 @@
         <button type="button" data-largeur="390" data-hauteur="844" aria-pressed="false">
           Téléphone 390
         </button>
+        <button type="button" id="theme">Thème : automatique</button>
         <button type="button" class="zoom" id="zoom-moins" aria-label="Dézoomer">−</button>
         <button type="button" class="zoom" id="zoom-ajuster" aria-label="Ajuster à la fenêtre">
           <span id="zoom-valeur">100 %</span>
@@ -793,20 +1017,297 @@
             data-hauteur="820"
             style="--largeur: 1280px; --hauteur: 820px"
           >
-            <section class="ecran" id="etat-nominal" aria-label="État : File et fiche ouverte">
-              <p class="sans-js-titre">État : File et fiche ouverte</p>
+            <section class="ecran" id="etat-a-appeler" aria-label="État : À appeler aujourd’hui">
+              <p class="sans-js-titre">État : À appeler aujourd’hui</p>
               <div class="app">
                 <header class="c-tete">
-                  <span class="c-marque">Console Axion Partners</span>
+                  <a class="c-marque" href="console-cadre.html#etat-qualifieur"
+                    >Console Axion Partners</a
+                  >
                   <nav class="c-nav" aria-label="Console">
                     <a href="file-qualification.html#etat-nominal" aria-current="page"
                       >Qualification</a
-                    ><a href="lot-paiement.html#etat-brouillon">Lots de paiement</a>
+                    >
+                    <a href="console-cadre.html#etat-qualifieur">Apporteurs</a>
+                    <a href="console-cadre.html#etat-qualifieur">Prospects</a>
                   </nav>
                   <span class="c-qui">Sophie Démo · <b>qualifieur</b></span>
                 </header>
                 <div class="defile" tabindex="0" role="region" aria-label="Qualification">
                   <h2 class="c-titre">File de qualification</h2>
+                  <div class="c-nav" role="group" aria-label="Vues de la file">
+                    <a href="#etat-a-appeler" aria-current="page">À appeler aujourd’hui · 5</a
+                    ><a href="#etat-nominal">Tous les dépôts · 6</a>
+                  </div>
+                  <table>
+                    <caption>
+                      À appeler aujourd’hui : 5 · triés par priorité (vérification, rebond,
+                      contrôle, sans réponse, tirage), puis ancienneté
+                    </caption>
+                    <thead>
+                      <tr>
+                        <th scope="col">Priorité</th>
+                        <th scope="col">Entreprise</th>
+                        <th scope="col">Apporteur</th>
+                        <th scope="col">Pourquoi l’appeler</th>
+                        <th scope="col">E-mail</th>
+                        <th scope="col">Appeler</th>
+                        <th scope="col">Délai</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td data-col="Priorité">1</td>
+                        <td data-col="Entreprise">
+                          <a href="#etat-nominal">Atelier Fictif Lumière</a>
+                        </td>
+                        <td data-col="Apporteur">Paul Démo-Martin</td>
+                        <td data-col="Raison">
+                          <span class="pastille attente"
+                            >Adresse webmail — vérification suggérée</span
+                          >
+                        </td>
+                        <td data-col="E-mail">Envoyé, clic « Oui » non retenu</td>
+                        <td data-col="Appeler">
+                          <a href="tel:0465710001"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <path
+                                d="M5 4h4l2 5-2.5 1.5a11 11 0 005 5L15 13l5 2v4a2 2 0 01-2 2A16 16 0 013 6a2 2 0 012-2"
+                              /></svg
+                            >04 65 71 00 01</a
+                          >
+                        </td>
+                        <td data-col="Délai">
+                          <span class="pastille neutre"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <circle cx="12" cy="12" r="9" />
+                              <path d="M12 7v5l3.5 2" /></svg
+                            >Reste 40 h</span
+                          >
+                        </td>
+                      </tr>
+                      <tr>
+                        <td data-col="Priorité">2</td>
+                        <td data-col="Entreprise">
+                          <a href="#etat-nominal">Boulangerie Démo du Lac</a>
+                        </td>
+                        <td data-col="Apporteur">Inès Exemple</td>
+                        <td data-col="Raison">
+                          <span class="pastille bloque">E-mail non reçu (rebond)</span>
+                        </td>
+                        <td data-col="E-mail">Revenu en erreur le 18/09</td>
+                        <td data-col="Appeler">
+                          <a href="tel:0465710002"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <path
+                                d="M5 4h4l2 5-2.5 1.5a11 11 0 005 5L15 13l5 2v4a2 2 0 01-2 2A16 16 0 013 6a2 2 0 012-2"
+                              /></svg
+                            >04 65 71 00 02</a
+                          >
+                        </td>
+                        <td data-col="Délai">
+                          <span class="pastille neutre"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <circle cx="12" cy="12" r="9" />
+                              <path d="M12 7v5l3.5 2" /></svg
+                            >Reste 44 h</span
+                          >
+                        </td>
+                      </tr>
+                      <tr>
+                        <td data-col="Priorité">3</td>
+                        <td data-col="Entreprise">
+                          <a href="#etat-nominal">Menuiserie Imaginaire</a>
+                        </td>
+                        <td data-col="Apporteur">Marc Fictif</td>
+                        <td data-col="Raison">
+                          <span class="pastille info">Appel de contrôle</span>
+                        </td>
+                        <td data-col="E-mail">Envoyé le 17/09, sans réponse</td>
+                        <td data-col="Appeler">
+                          <a href="tel:0465710003"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <path
+                                d="M5 4h4l2 5-2.5 1.5a11 11 0 005 5L15 13l5 2v4a2 2 0 01-2 2A16 16 0 013 6a2 2 0 012-2"
+                              /></svg
+                            >04 65 71 00 03</a
+                          >
+                        </td>
+                        <td data-col="Délai">
+                          <span class="pastille neutre"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <circle cx="12" cy="12" r="9" />
+                              <path d="M12 7v5l3.5 2" /></svg
+                            >Reste 46 h</span
+                          >
+                        </td>
+                      </tr>
+                      <tr>
+                        <td data-col="Priorité">4</td>
+                        <td data-col="Entreprise"><a href="#etat-nominal">Garage de la Démo</a></td>
+                        <td data-col="Apporteur">Paul Démo-Martin</td>
+                        <td data-col="Raison">
+                          <span class="pastille neutre">Sans réponse depuis 5 jours ouvrés</span>
+                        </td>
+                        <td data-col="E-mail">Envoyé le 12/09, sans réponse</td>
+                        <td data-col="Appeler">
+                          <a href="tel:0465710004"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <path
+                                d="M5 4h4l2 5-2.5 1.5a11 11 0 005 5L15 13l5 2v4a2 2 0 01-2 2A16 16 0 013 6a2 2 0 012-2"
+                              /></svg
+                            >04 65 71 00 04</a
+                          >
+                        </td>
+                        <td data-col="Délai">
+                          <span class="pastille neutre"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <circle cx="12" cy="12" r="9" />
+                              <path d="M12 7v5l3.5 2" /></svg
+                            >Reste 30 h</span
+                          >
+                        </td>
+                      </tr>
+                      <tr>
+                        <td data-col="Priorité">5</td>
+                        <td data-col="Entreprise">
+                          <a href="#etat-nominal">Imprimerie Fictive Alpine</a>
+                        </td>
+                        <td data-col="Apporteur">Inès Exemple</td>
+                        <td data-col="Raison"><span class="pastille neutre">Tiré au sort</span></td>
+                        <td data-col="E-mail">Envoyé le 18/09, sans réponse</td>
+                        <td data-col="Appeler">
+                          <a href="tel:0465710005"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <path
+                                d="M5 4h4l2 5-2.5 1.5a11 11 0 005 5L15 13l5 2v4a2 2 0 01-2 2A16 16 0 013 6a2 2 0 012-2"
+                              /></svg
+                            >04 65 71 00 05</a
+                          >
+                        </td>
+                        <td data-col="Délai">
+                          <span class="pastille neutre"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <circle cx="12" cy="12" r="9" />
+                              <path d="M12 7v5l3.5 2" /></svg
+                            >Reste 47 h</span
+                          >
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </section>
+            <section
+              class="ecran"
+              id="etat-a-appeler-vide"
+              aria-label="État : Personne à appeler aujourd’hui"
+            >
+              <p class="sans-js-titre">État : Personne à appeler aujourd’hui</p>
+              <div class="app">
+                <header class="c-tete">
+                  <a class="c-marque" href="console-cadre.html#etat-qualifieur"
+                    >Console Axion Partners</a
+                  >
+                  <nav class="c-nav" aria-label="Console">
+                    <a href="file-qualification.html#etat-nominal" aria-current="page"
+                      >Qualification</a
+                    >
+                    <a href="console-cadre.html#etat-qualifieur">Apporteurs</a>
+                    <a href="console-cadre.html#etat-qualifieur">Prospects</a>
+                  </nav>
+                  <span class="c-qui">Sophie Démo · <b>qualifieur</b></span>
+                </header>
+                <div class="defile" tabindex="0" role="region" aria-label="Qualification">
+                  <h2 class="c-titre">File de qualification</h2>
+                  <div class="c-nav" role="group" aria-label="Vues de la file">
+                    <a href="#etat-a-appeler" aria-current="page">À appeler aujourd’hui · 0</a
+                    ><a href="#etat-nominal">Tous les dépôts · 6</a>
+                  </div>
+                  <div class="carte">
+                    <p class="fort">Personne à appeler aujourd’hui</p>
+                    <p>
+                      Les contacts ont répondu à leur e-mail, ou leur délai court encore. Les dépôts
+                      à qualifier restent dans « Tous les dépôts ».
+                    </p>
+                    <p><a href="#etat-nominal">Voir tous les dépôts</a></p>
+                  </div>
+                </div>
+              </div>
+            </section>
+            <section class="ecran" id="etat-nominal" aria-label="État : File et fiche ouverte">
+              <p class="sans-js-titre">État : File et fiche ouverte</p>
+              <div class="app">
+                <header class="c-tete">
+                  <a class="c-marque" href="console-cadre.html#etat-qualifieur"
+                    >Console Axion Partners</a
+                  >
+                  <nav class="c-nav" aria-label="Console">
+                    <a href="file-qualification.html#etat-nominal" aria-current="page"
+                      >Qualification</a
+                    >
+                    <a href="console-cadre.html#etat-qualifieur">Apporteurs</a>
+                    <a href="console-cadre.html#etat-qualifieur">Prospects</a>
+                  </nav>
+                  <span class="c-qui">Sophie Démo · <b>qualifieur</b></span>
+                </header>
+                <div class="defile" tabindex="0" role="region" aria-label="Qualification">
+                  <h2 class="c-titre">File de qualification</h2>
+                  <div class="c-nav" role="group" aria-label="Vues de la file">
+                    <a href="#etat-a-appeler">À appeler aujourd’hui · 5</a
+                    ><a href="#etat-nominal" aria-current="page">Tous les dépôts · 6</a>
+                  </div>
                   <div class="encart bloque" role="group" aria-label="Alertes">
                     <p class="encart-titre">
                       <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -1163,11 +1664,15 @@
               <p class="sans-js-titre">État : Fiche : relation déclarée</p>
               <div class="app">
                 <header class="c-tete">
-                  <span class="c-marque">Console Axion Partners</span>
+                  <a class="c-marque" href="console-cadre.html#etat-qualifieur"
+                    >Console Axion Partners</a
+                  >
                   <nav class="c-nav" aria-label="Console">
                     <a href="file-qualification.html#etat-nominal" aria-current="page"
                       >Qualification</a
-                    ><a href="lot-paiement.html#etat-brouillon">Lots de paiement</a>
+                    >
+                    <a href="console-cadre.html#etat-qualifieur">Apporteurs</a>
+                    <a href="console-cadre.html#etat-qualifieur">Prospects</a>
                   </nav>
                   <span class="c-qui">Sophie Démo · <b>qualifieur</b></span>
                 </header>
@@ -1531,11 +2036,15 @@
               <p class="sans-js-titre">État : Fiche : il manque la date</p>
               <div class="app">
                 <header class="c-tete">
-                  <span class="c-marque">Console Axion Partners</span>
+                  <a class="c-marque" href="console-cadre.html#etat-qualifieur"
+                    >Console Axion Partners</a
+                  >
                   <nav class="c-nav" aria-label="Console">
                     <a href="file-qualification.html#etat-nominal" aria-current="page"
                       >Qualification</a
-                    ><a href="lot-paiement.html#etat-brouillon">Lots de paiement</a>
+                    >
+                    <a href="console-cadre.html#etat-qualifieur">Apporteurs</a>
+                    <a href="console-cadre.html#etat-qualifieur">Prospects</a>
                   </nav>
                   <span class="c-qui">Sophie Démo · <b>qualifieur</b></span>
                 </header>
@@ -1882,11 +2391,15 @@
               <p class="sans-js-titre">État : Fiche : non confirmé</p>
               <div class="app">
                 <header class="c-tete">
-                  <span class="c-marque">Console Axion Partners</span>
+                  <a class="c-marque" href="console-cadre.html#etat-qualifieur"
+                    >Console Axion Partners</a
+                  >
                   <nav class="c-nav" aria-label="Console">
                     <a href="file-qualification.html#etat-nominal" aria-current="page"
                       >Qualification</a
-                    ><a href="lot-paiement.html#etat-brouillon">Lots de paiement</a>
+                    >
+                    <a href="console-cadre.html#etat-qualifieur">Apporteurs</a>
+                    <a href="console-cadre.html#etat-qualifieur">Prospects</a>
                   </nav>
                   <span class="c-qui">Sophie Démo · <b>qualifieur</b></span>
                 </header>
@@ -2254,11 +2767,15 @@
               <p class="sans-js-titre">État : Qualification enregistrée</p>
               <div class="app">
                 <header class="c-tete">
-                  <span class="c-marque">Console Axion Partners</span>
+                  <a class="c-marque" href="console-cadre.html#etat-qualifieur"
+                    >Console Axion Partners</a
+                  >
                   <nav class="c-nav" aria-label="Console">
                     <a href="file-qualification.html#etat-nominal" aria-current="page"
                       >Qualification</a
-                    ><a href="lot-paiement.html#etat-brouillon">Lots de paiement</a>
+                    >
+                    <a href="console-cadre.html#etat-qualifieur">Apporteurs</a>
+                    <a href="console-cadre.html#etat-qualifieur">Prospects</a>
                   </nav>
                   <span class="c-qui">Sophie Démo · <b>qualifieur</b></span>
                 </header>
@@ -2479,11 +2996,15 @@
               <p class="sans-js-titre">État : File vide</p>
               <div class="app">
                 <header class="c-tete">
-                  <span class="c-marque">Console Axion Partners</span>
+                  <a class="c-marque" href="console-cadre.html#etat-qualifieur"
+                    >Console Axion Partners</a
+                  >
                   <nav class="c-nav" aria-label="Console">
                     <a href="file-qualification.html#etat-nominal" aria-current="page"
                       >Qualification</a
-                    ><a href="lot-paiement.html#etat-brouillon">Lots de paiement</a>
+                    >
+                    <a href="console-cadre.html#etat-qualifieur">Apporteurs</a>
+                    <a href="console-cadre.html#etat-qualifieur">Prospects</a>
                   </nav>
                   <span class="c-qui">Sophie Démo · <b>qualifieur</b></span>
                 </header>
@@ -2503,11 +3024,15 @@
               <p class="sans-js-titre">État : Chargement</p>
               <div class="app">
                 <header class="c-tete">
-                  <span class="c-marque">Console Axion Partners</span>
+                  <a class="c-marque" href="console-cadre.html#etat-qualifieur"
+                    >Console Axion Partners</a
+                  >
                   <nav class="c-nav" aria-label="Console">
                     <a href="file-qualification.html#etat-nominal" aria-current="page"
                       >Qualification</a
-                    ><a href="lot-paiement.html#etat-brouillon">Lots de paiement</a>
+                    >
+                    <a href="console-cadre.html#etat-qualifieur">Apporteurs</a>
+                    <a href="console-cadre.html#etat-qualifieur">Prospects</a>
                   </nav>
                   <span class="c-qui">Sophie Démo · <b>qualifieur</b></span>
                 </header>
@@ -2527,11 +3052,15 @@
               <p class="sans-js-titre">État : Enregistrement échoué</p>
               <div class="app">
                 <header class="c-tete">
-                  <span class="c-marque">Console Axion Partners</span>
+                  <a class="c-marque" href="console-cadre.html#etat-qualifieur"
+                    >Console Axion Partners</a
+                  >
                   <nav class="c-nav" aria-label="Console">
                     <a href="file-qualification.html#etat-nominal" aria-current="page"
                       >Qualification</a
-                    ><a href="lot-paiement.html#etat-brouillon">Lots de paiement</a>
+                    >
+                    <a href="console-cadre.html#etat-qualifieur">Apporteurs</a>
+                    <a href="console-cadre.html#etat-qualifieur">Prospects</a>
                   </nav>
                   <span class="c-qui">Sophie Démo · <b>qualifieur</b></span>
                 </header>
@@ -2887,11 +3416,14 @@
               <p class="sans-js-titre">État : Rôle lecteur</p>
               <div class="app">
                 <header class="c-tete">
-                  <span class="c-marque">Console Axion Partners</span>
+                  <a class="c-marque" href="console-cadre.html#etat-lecteur"
+                    >Console Axion Partners</a
+                  >
                   <nav class="c-nav" aria-label="Console">
-                    <a href="file-qualification.html#etat-nominal" aria-current="page"
+                    <a href="file-qualification.html#etat-lecteur" aria-current="page"
                       >Qualification</a
-                    ><a href="lot-paiement.html#etat-brouillon">Lots de paiement</a>
+                    >
+                    <a href="console-cadre.html#etat-lecteur">Prospects</a>
                   </nav>
                   <span class="c-qui">Luc Lecteur-Exemple · <b>lecteur</b></span>
                 </header>
@@ -3109,6 +3641,62 @@
                 </div>
               </div>
             </section>
+            <section class="ecran" id="etat-refuse" aria-label="État : Ouverte par un comptable">
+              <p class="sans-js-titre">État : Ouverte par un comptable</p>
+              <div class="app avec-barre">
+                <header class="c-tete">
+                  <a class="c-marque" href="console-cadre.html#etat-comptable"
+                    >Console Axion Partners</a
+                  >
+                  <nav class="c-nav" aria-label="Console">
+                    <a href="console-cadre.html#etat-comptable">Apporteurs</a>
+                  </nav>
+                  <label class="c-recherche"
+                    ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <circle cx="11" cy="11" r="6" />
+                      <path d="M20 20l-4.5-4.5" /></svg
+                    ><span class="cache">Rechercher dans la console</span
+                    ><input
+                      type="search"
+                      placeholder="Rechercher"
+                      aria-label="Rechercher dans la console"
+                  /></label>
+                  <button type="button" class="c-compte" aria-haspopup="menu">
+                    <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <circle cx="12" cy="8" r="4" />
+                      <path d="M4 21c1-4 4.5-6 8-6s7 2 8 6" /></svg
+                    >Nadia Chiffre-Exemple · <b>comptable</b>
+                  </button>
+                </header>
+                <div class="defile" tabindex="0" role="region" aria-label="Accès refusé">
+                  <div class="encart info">
+                    <p class="encart-titre">
+                      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <rect x="5" y="11" width="14" height="10" rx="2" />
+                        <path d="M8 11V8a4 4 0 018 0v3" /></svg
+                      >Cette page n’est pas ouverte à votre rôle
+                    </p>
+                    <p>
+                      La file de qualification est tenue par les administrateurs et les qualifieurs.
+                      Votre rôle (comptable) suit les apporteurs et leurs paiements.
+                    </p>
+                    <p class="rangee">
+                      <a class="c-bouton" href="console-cadre.html#etat-comptable"
+                        >Retour à mon accueil</a
+                      >
+                    </p>
+                  </div>
+                </div>
+                <nav class="c-barre" aria-label="Console, barre du bas">
+                  <a href="console-cadre.html#etat-comptable">Apporteurs</a>
+                  <button type="button" aria-expanded="false" aria-controls="menu-comptable">
+                    <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <path d="M4 7h16M4 12h16M4 17h16" /></svg
+                    >Menu
+                  </button>
+                </nav>
+              </div>
+            </section>
           </div>
         </div>
       </div>
@@ -3116,6 +3704,8 @@
         <h2>États</h2>
         <p class="groupe">Au quotidien</p>
         <ul>
+          <li><a href="#etat-a-appeler">À appeler aujourd’hui</a></li>
+          <li><a href="#etat-a-appeler-vide">Personne à appeler aujourd’hui</a></li>
           <li><a href="#etat-nominal">File et fiche ouverte</a></li>
           <li><a href="#etat-lien-interet">Fiche : relation déclarée</a></li>
         </ul>
@@ -3137,12 +3727,46 @@
         <p class="groupe">Droits</p>
         <ul>
           <li><a href="#etat-lecteur">Rôle lecteur</a></li>
+          <li><a href="#etat-refuse">Ouverte par un comptable</a></li>
         </ul>
       </nav>
       <aside class="notes" aria-label="Notes de conception">
         <h2 class="notes-titre">Notes pour la relecture</h2>
+        <section class="note" data-pour="etat-a-appeler">
+          <h2>À appeler aujourd’hui</h2>
+          <p>
+            <b>W20 (UX-P1-40, REQ-DM-062)</b> : l’onglet par défaut de la file. Un dépôt y entre par
+            une raison, s’en va à la première réponse retenue ; le tri est fixe, par priorité puis
+            par <code>aQualifierDepuis</code> croissant. Chaque ligne dit <b>pourquoi l’appeler</b>,
+            en clair, et porte le bouton d’appel et le délai de 48 h ouvrées (REQ-UX-022 amendée :
+            il court de l’entrée dans la liste).
+          </p>
+          <ul>
+            <li>
+              Les raisons de vérification ne se voient qu’en console, jamais dans l’espace, et n’ont
+              aucun effet défavorable (REQ-SEC-017).
+            </li>
+            <li>
+              <b>« Appel de contrôle »</b> pour les premiers dépôts d’un apporteur : ils trient la
+              liste d’appels sans être affichés comme raison (question 6 de W20, tranchée par
+              Williams le 2026-09-29 ; HYP-W20-VERIFICATION).
+            </li>
+          </ul>
+        </section>
+        <section class="note" data-pour="etat-a-appeler-vide">
+          <h2>Personne à appeler aujourd’hui</h2>
+          <p>
+            L’état vide de la vue : il dit pourquoi elle est vide et renvoie vers la file complète.
+          </p>
+        </section>
         <section class="note" data-pour="etat-nominal">
           <h2>File et fiche ouverte</h2>
+          <p>
+            <b>En-tête filtré par rôle</b> (UX-P1-18, REQ-UX-048) : chaque état ne montre que les
+            entrées que son rôle peut ouvrir, dérivées de la carte
+            <code>docs/CONSOLE-ROUTES.md</code> — le qualifieur ne voit plus les lots, le lecteur ne
+            voit que Qualification et Prospects.
+          </p>
           <p>
             <b>Le geste principal</b> : ouvrir la ligne du haut, appeler, cocher deux réponses, une
             date, enregistrer. Mimé : <b>6 interactions en comptant le bouton d’appel</b> (ouvrir,
@@ -3223,6 +3847,14 @@
             Matrice écran × rôle × action (REQ-SEC-023) : le lecteur voit, sans téléphone de
             l’apporteur ni bouton d’enregistrement. Le refus dit pourquoi et qui peut changer le
             rôle.
+          </p>
+        </section>
+        <section class="note" data-pour="etat-refuse">
+          <h2>Ouverte par un comptable</h2>
+          <p>
+            Matrice écran × rôle de <code>docs/CONSOLE-ROUTES.md</code> : la file est ouverte à
+            l’administrateur, au qualifieur et au lecteur (en lecture), pas au comptable. Le refus
+            dit pourquoi et ramène à l’accueil du rôle ; il ne laisse rien voir de la file.
           </p>
         </section>
       </aside>
