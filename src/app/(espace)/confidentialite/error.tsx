@@ -7,8 +7,8 @@
  */
 import { useSyncExternalStore } from 'react';
 import { CONFIDENTIALITE } from '../../../content/micro-copy/espace/vocabulaire';
-// SEC-46 : la cible de 48 px vient d'une feuille de la même origine, qu'admet style-src 'self' ;
-// un style en ligne était refusé par la CSP, et le bouton perdait sa cible.
+// SEC-46 : la hauteur tactile de 48 px vient d'une feuille de la même origine, qu'admet style-src
+// 'self' ; un style en ligne était refusé par la CSP, et le bouton perdait cette hauteur.
 import styles from './confidentialite.module.css';
 
 function abonner(rappel: () => void): () => void {
