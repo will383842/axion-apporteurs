@@ -2855,6 +2855,14 @@ export const PORTE_A_FIGEE: PorteFigee = {
       run: 'pnpm ssot:seuils:prove',
     },
     {
+      nom: 'La date de lecture d une notification ne fait courir aucun delai',
+      run: 'pnpm notifications:lue-at-inerte',
+    },
+    {
+      nom: 'La garde de la date de lecture sait rougir, famille par famille',
+      run: 'pnpm notifications:lue-at-inerte:prove',
+    },
+    {
       nom: 'Roles de la console — requireRole partout, droits dans la matrice',
       run: 'pnpm securite:roles',
     },
@@ -2976,6 +2984,8 @@ export const PORTE_A_FIGEE: PorteFigee = {
     'jur:lexique-social:prove': 'tsx scripts/gates/jur-lexique-social.ts --prove',
     'ssot:seuils': 'tsx scripts/gates/seuils-ssot.ts',
     'ssot:seuils:prove': 'tsx scripts/gates/seuils-ssot.ts --prove',
+    'notifications:lue-at-inerte': 'tsx scripts/gates/notifications-lue-at-inerte.ts',
+    'notifications:lue-at-inerte:prove': 'tsx scripts/gates/notifications-lue-at-inerte.ts --prove',
     'securite:roles': 'tsx scripts/gates/roles.ts',
     'securite:roles:prove': 'tsx scripts/gates/roles.ts --prove',
   },
