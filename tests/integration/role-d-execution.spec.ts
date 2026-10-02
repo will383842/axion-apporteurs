@@ -62,7 +62,7 @@ let serveur: PrismaClient;
 
 beforeAll(async () => {
   base = await demarrerBase();
-  urlServeur = urlSous('partners_app_temoin', secret());
+  urlServeur = urlSous(ROLE_D_EXECUTION, secret());
   await provisionnerRoleDExecution({ urlMigration: base.url, urlExecution: urlServeur });
   serveur = connecter(urlServeur);
 }, 180_000);
@@ -129,7 +129,7 @@ describe('REQ-DM-024 — le rôle d’exécution, constaté connecté comme le s
 
 describe('REQ-DM-024 — le provisionnement', () => {
   it('REQ-DM-024 : idempotent, et la rotation du secret prend effet', async () => {
-    const nouvelle = urlSous('partners_app_temoin', secret());
+    const nouvelle = urlSous(ROLE_D_EXECUTION, secret());
     await provisionnerRoleDExecution({ urlMigration: base.url, urlExecution: nouvelle });
     await provisionnerRoleDExecution({ urlMigration: base.url, urlExecution: nouvelle });
     await expect(constaterRoleDExecution(nouvelle)).resolves.toBeUndefined();
@@ -146,11 +146,11 @@ describe('REQ-DM-024 — le provisionnement', () => {
   });
 
   it('REQ-DM-024 : TÉMOIN — un rôle d’exécution membre de partners_journal est refusé au constat', async () => {
-    const url = urlSous('partners_app_pieges', secret());
+    const url = urlSous(ROLE_D_EXECUTION, secret());
     await provisionnerRoleDExecution({ urlMigration: base.url, urlExecution: url });
-    await base.prisma.$executeRawUnsafe(`GRANT partners_journal TO partners_app_pieges`);
+    await base.prisma.$executeRawUnsafe(`GRANT partners_journal TO partners_app`);
     expect(await refus(constaterRoleDExecution(url))).toMatch(/partners_journal/);
-    await base.prisma.$executeRawUnsafe(`REVOKE partners_journal FROM partners_app_pieges`);
+    await base.prisma.$executeRawUnsafe(`REVOKE partners_journal FROM partners_app`);
   });
 });
 
@@ -165,14 +165,14 @@ async function membreDuJournal(role: string): Promise<boolean> {
 
 describe('REQ-DM-024 — le chemin de l’entrée de l’image (principal), en échec fermé', () => {
   it('REQ-DM-024 : TÉMOIN — un rôle DÉJÀ membre de partners_journal fait refuser le démarrage, et n’est PAS réparé en silence', async () => {
-    const url = urlSous('partners_app_membre', secret());
+    const url = urlSous(ROLE_D_EXECUTION, secret());
     await provisionnerRoleDExecution({ urlMigration: base.url, urlExecution: url });
-    await base.prisma.$executeRawUnsafe(`GRANT partners_journal TO partners_app_membre`);
+    await base.prisma.$executeRawUnsafe(`GRANT partners_journal TO partners_app`);
     expect(
       await principal({ NODE_ENV: 'test', DATABASE_MIGRATION_URL: base.url, DATABASE_URL: url })
     ).toBe(1);
-    expect(await membreDuJournal('partners_app_membre')).toBe(true);
-    await base.prisma.$executeRawUnsafe(`REVOKE partners_journal FROM partners_app_membre`);
+    expect(await membreDuJournal(ROLE_D_EXECUTION)).toBe(true);
+    await base.prisma.$executeRawUnsafe(`REVOKE partners_journal FROM partners_app`);
   });
 
   it('REQ-DM-024 : TÉMOIN — sans URL de migration, hors production déclarée, le constat tourne quand même : un superutilisateur est refusé', async () => {
@@ -188,20 +188,21 @@ describe('REQ-DM-024 — le chemin de l’entrée de l’image (principal), en �
         DATABASE_URL: base.url,
       })
     ).toBe(1);
-    const absent = urlSous('partners_app_jamais_cree', secret());
+    // Un secret NEUF, sous SKIP_MIGRATE : rien n'est provisionné, donc le secret n'est pas posé et
+    // le constat ne peut pas se connecter.
+    const neuf = urlSous(ROLE_D_EXECUTION, secret());
     expect(
       await principal({
         NODE_ENV: 'test',
         SKIP_MIGRATE: '1',
         DATABASE_MIGRATION_URL: base.url,
-        DATABASE_URL: absent,
+        DATABASE_URL: neuf,
       })
     ).toBe(1);
-    const [cree] = await base.prisma.$queryRawUnsafe<{ n: number }[]>(
-      `SELECT count(*)::int AS n FROM pg_roles WHERE rolname = 'partners_app_jamais_cree'`
+    expect(await refus(connecter(neuf).$queryRawUnsafe(`SELECT 1`))).toMatch(
+      /authentication|authentification|password/i
     );
-    expect(cree!.n).toBe(0);
-    const bon = urlSous('partners_app_skip', secret());
+    const bon = urlSous(ROLE_D_EXECUTION, secret());
     await provisionnerRoleDExecution({ urlMigration: base.url, urlExecution: bon });
     expect(
       await principal({
@@ -218,9 +219,33 @@ describe('REQ-DM-024 — le chemin de l’entrée de l’image (principal), en �
       await principal({
         NODE_ENV: 'test',
         DATABASE_MIGRATION_URL: base.url,
-        DATABASE_URL: urlSous('partners_app_chemin', secret()),
+        DATABASE_URL: urlSous(ROLE_D_EXECUTION, secret()),
       })
     ).toBe(0);
+  });
+});
+
+describe('REQ-DM-024 — le nom du rôle d’exécution est fixe', () => {
+  it('REQ-DM-024 : TÉMOIN — un autre nom de rôle dans DATABASE_URL est refusé avant tout appel, et rien n’est créé', async () => {
+    const autre = urlSous('partners_autre', secret());
+    expect(
+      await refus(provisionnerRoleDExecution({ urlMigration: base.url, urlExecution: autre }))
+    ).toMatch(/partners_app, et lui seul/);
+    expect(
+      await principal({ NODE_ENV: 'test', DATABASE_MIGRATION_URL: base.url, DATABASE_URL: autre })
+    ).toBe(1);
+    expect(
+      await principal({
+        NODE_ENV: 'test',
+        SKIP_MIGRATE: '1',
+        DATABASE_MIGRATION_URL: base.url,
+        DATABASE_URL: autre,
+      })
+    ).toBe(1);
+    const [cree] = await base.prisma.$queryRawUnsafe<{ n: number }[]>(
+      `SELECT count(*)::int AS n FROM pg_roles WHERE rolname = 'partners_autre'`
+    );
+    expect(cree!.n).toBe(0);
   });
 });
 
@@ -235,10 +260,10 @@ describe('REQ-DM-024 — le secret ne voyage pas en clair jusqu’à la base', (
   });
 
   it('REQ-DM-024 : le rôle provisionné porte un vérificateur SCRAM, et le serveur s’y connecte', async () => {
-    const url = urlSous('partners_app_scram', secret());
+    const url = urlSous(ROLE_D_EXECUTION, secret());
     await provisionnerRoleDExecution({ urlMigration: base.url, urlExecution: url });
     const [r] = await base.prisma.$queryRawUnsafe<{ ok: boolean }[]>(
-      `SELECT rolpassword LIKE 'SCRAM-SHA-256$4096:%' AS ok FROM pg_authid WHERE rolname = 'partners_app_scram'`
+      `SELECT rolpassword LIKE 'SCRAM-SHA-256$4096:%' AS ok FROM pg_authid WHERE rolname = 'partners_app'`
     );
     expect(r!.ok).toBe(true);
     await expect(connecter(url).$queryRawUnsafe(`SELECT 1`)).resolves.toBeDefined();

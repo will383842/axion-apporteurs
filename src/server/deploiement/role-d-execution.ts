@@ -19,7 +19,6 @@ import { PrismaClient } from '@prisma/client';
 import { productionDeclaree } from '../../lib/notify';
 
 /** Un identifiant de rôle Postgres simple : il s'écrit sans guillemets et sans échappement. */
-const NOM_DE_ROLE = /^[a-z_][a-z0-9_]{0,62}$/;
 /** Le secret s'écrit dans un littéral SQL : seuls des caractères qui n'ont pas à être échappés. */
 const SECRET = /^[A-Za-z0-9_.~-]{32,}$/;
 
@@ -34,10 +33,10 @@ function identiteDe(urlExecution: string): { role: string; secret: string } {
   const u = new URL(urlExecution);
   const role = decodeURIComponent(u.username);
   const secret = decodeURIComponent(u.password);
-  if (!NOM_DE_ROLE.test(role)) {
-    throw new RoleDExecutionRefuse(
-      'le nom du rôle d’exécution doit être un identifiant simple (minuscules, chiffres, _)'
-    );
+  // Le nom est FIXE : un nom libre laisserait le propriétaire réécrire le secret d'un autre rôle
+  // existant (en faire un rôle de connexion). Refusé AVANT tout appel à la base.
+  if (role !== ROLE_D_EXECUTION) {
+    throw new RoleDExecutionRefuse(`le rôle d’exécution est ${ROLE_D_EXECUTION}, et lui seul`);
   }
   if (!SECRET.test(secret)) {
     throw new RoleDExecutionRefuse(
@@ -95,36 +94,17 @@ type Etat = {
 };
 
 async function etatDu(c: PrismaClient, role: string): Promise<Etat> {
-  const [e] = await c.$queryRawUnsafe<Etat[]>(
-    `SELECT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = $1) AS existe,
-            COALESCE((SELECT rolsuper FROM pg_roles WHERE rolname = $1), false) AS superutilisateur,
-            (EXISTS (SELECT 1 FROM pg_roles WHERE rolname = $1)
-              AND pg_has_role($1, 'partners_journal', 'MEMBER')) AS journal,
-            (SELECT count(*)::int FROM pg_class c JOIN pg_roles r ON r.oid = c.relowner
-              WHERE r.rolname = $1) AS tables,
-            ($1 = current_user) AS courant`,
-    role
-  );
+  const [e] = await c.$queryRaw<Etat[]>`
+    SELECT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = ${role}::name) AS existe,
+           COALESCE((SELECT rolsuper FROM pg_roles WHERE rolname = ${role}::name), false)
+             AS superutilisateur,
+           (EXISTS (SELECT 1 FROM pg_roles WHERE rolname = ${role}::name)
+             AND pg_has_role(${role}::name, 'partners_journal', 'MEMBER')) AS journal,
+           (SELECT count(*)::int FROM pg_class c JOIN pg_roles r ON r.oid = c.relowner
+             WHERE r.rolname = ${role}::name) AS tables,
+           (${role}::name = current_user) AS courant`;
   return e!;
 }
-
-/** Les tables et séquences hors journal : lecture et écriture, à `partners_execution`. */
-const PRIVILEGES_HORS_JOURNAL = `DO $corps$
-DECLARE t record;
-BEGIN
-  FOR t IN
-    SELECT c.relname, c.relkind FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
-    WHERE n.nspname = 'public' AND c.relkind IN ('r', 'p', 'S')
-      AND pg_get_userbyid(c.relowner) <> 'partners_journal' AND c.relname <> '_prisma_migrations'
-  LOOP
-    IF t.relkind = 'S' THEN
-      EXECUTE format('GRANT USAGE, SELECT ON SEQUENCE %I TO partners_execution', t.relname);
-    ELSE
-      EXECUTE format('GRANT SELECT, INSERT, UPDATE, DELETE ON %I TO partners_execution', t.relname);
-    END IF;
-  END LOOP;
-END
-$corps$`;
 
 /**
  * Pose le rôle d'exécution, idempotent : création s'il manque, attributs et secret à chaque passage
@@ -153,24 +133,46 @@ export async function provisionnerRoleDExecution(urls: {
         'le rôle d’exécution ne peut être propriétaire d’aucune table'
       );
     }
-    const attributs = 'LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS NOREPLICATION INHERIT';
-    const verbe = e.existe ? 'ALTER' : 'CREATE';
+    // AUCUNE valeur dans le texte SQL : le nom du rôle est le littéral `partners_app`, et le
+    // vérificateur du secret passe en PARAMÈTRE LIÉ (`set_config`, local à la transaction) qu'un bloc
+    // CONSTANT relit, le verbe choisi dans le bloc et la valeur citée par `%L`.
     await c.$transaction([
-      c.$executeRawUnsafe(
-        `${verbe} ROLE ${role} WITH ${attributs} PASSWORD '${verificateurScram(secret)}'`
-      ),
-      c.$executeRawUnsafe(`GRANT partners_execution TO ${role}`),
-      c.$executeRawUnsafe(`GRANT USAGE ON SCHEMA public TO partners_execution`),
+      c.$queryRaw`SELECT set_config('partners_execution.verificateur', ${verificateurScram(secret)}, true)`,
+      c.$executeRaw`DO $corps$
+DECLARE
+  verbe text := CASE WHEN EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'partners_app')
+    THEN 'ALTER' ELSE 'CREATE' END;
+BEGIN
+  EXECUTE format(
+    '%s ROLE partners_app WITH LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS NOREPLICATION INHERIT PASSWORD %L',
+    verbe, current_setting('partners_execution.verificateur')
+  );
+END
+$corps$`,
+      c.$executeRaw`GRANT partners_execution TO partners_app`,
+      c.$executeRaw`GRANT USAGE ON SCHEMA public TO partners_execution`,
       // La sonde de disponibilité (`readyz`) LIT l'état des migrations sous le rôle du serveur ; elle
-      // n'en écrit aucun. La lecture seule, et rien d'autre, sur la table de suivi de Prisma.
-      c.$executeRawUnsafe(`GRANT SELECT ON _prisma_migrations TO partners_execution`),
-      c.$executeRawUnsafe(PRIVILEGES_HORS_JOURNAL),
-      c.$executeRawUnsafe(
-        `ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO partners_execution`
-      ),
-      c.$executeRawUnsafe(
-        `ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO partners_execution`
-      ),
+      // n'en écrit aucun. La lecture seule, et rien d'autre, sur la table de suivi des migrations.
+      c.$executeRaw`GRANT SELECT ON _prisma_migrations TO partners_execution`,
+      // Les tables et séquences hors journal : lecture et écriture, à `partners_execution`.
+      c.$executeRaw`DO $corps$
+DECLARE t record;
+BEGIN
+  FOR t IN
+    SELECT c.relname, c.relkind FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE n.nspname = 'public' AND c.relkind IN ('r', 'p', 'S')
+      AND pg_get_userbyid(c.relowner) <> 'partners_journal' AND c.relname <> '_prisma_migrations'
+  LOOP
+    IF t.relkind = 'S' THEN
+      EXECUTE format('GRANT USAGE, SELECT ON SEQUENCE %I TO partners_execution', t.relname);
+    ELSE
+      EXECUTE format('GRANT SELECT, INSERT, UPDATE, DELETE ON %I TO partners_execution', t.relname);
+    END IF;
+  END LOOP;
+END
+$corps$`,
+      c.$executeRaw`ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO partners_execution`,
+      c.$executeRaw`ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO partners_execution`,
     ]);
   });
 }
@@ -181,15 +183,14 @@ export async function provisionnerRoleDExecution(urls: {
  */
 export async function constaterRoleDExecution(urlExecution: string): Promise<void> {
   await avec(urlExecution, async (c) => {
-    const [f] = await c.$queryRawUnsafe<
+    const [f] = await c.$queryRaw<
       { superutilisateur: boolean; journal: boolean; execution: boolean; tables: number }[]
-    >(
-      `SELECT r.rolsuper AS superutilisateur,
-              pg_has_role(current_user, 'partners_journal', 'MEMBER') AS journal,
-              pg_has_role(current_user, 'partners_execution', 'MEMBER') AS execution,
-              (SELECT count(*)::int FROM pg_class WHERE relowner = r.oid) AS tables
-       FROM pg_roles r WHERE r.rolname = current_user`
-    );
+    >`
+      SELECT r.rolsuper AS superutilisateur,
+             pg_has_role(current_user, 'partners_journal', 'MEMBER') AS journal,
+             pg_has_role(current_user, 'partners_execution', 'MEMBER') AS execution,
+             (SELECT count(*)::int FROM pg_class WHERE relowner = r.oid) AS tables
+      FROM pg_roles r WHERE r.rolname = current_user`;
     if (!f || f.superutilisateur) {
       throw new RoleDExecutionRefuse('le serveur est connecté en superutilisateur');
     }
@@ -228,6 +229,7 @@ export async function principal(env: NodeJS.ProcessEnv = process.env): Promise<n
   // serveur sous un superutilisateur ou un membre du journal ne démarre pas (échec fermé).
   const provisionner = migrer && Boolean(urlMigration);
   try {
+    identiteDe(urlExecution);
     if (provisionner) {
       await provisionnerRoleDExecution({ urlMigration: urlMigration!, urlExecution });
     }
