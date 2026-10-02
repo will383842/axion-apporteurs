@@ -190,12 +190,18 @@ describe('REQ-DM-031 — la purge planifiée du contact', () => {
     expect(await evenements(id)).toHaveLength(1);
   });
 
-  it('REQ-DM-031 : TÉMOIN À DEUX FACES — l’entreprise individuelle perd les coordonnées de son siège, la personne morale les garde', async () => {
+  it('REQ-DM-031 : TÉMOIN À TROIS FACES — l’entreprise individuelle perd les coordonnées de son siège, une forme INCONNUE aussi (échec fermé), la personne morale prouvée les garde', async () => {
     const passee = new Date(MAINTENANT.getTime() - MINUTE);
     const ei = await semer({
       statut: 'perdue',
       purgeContactAt: passee,
       natureJuridique: '1000',
+      coordonnees: true,
+    });
+    const inconnue = await semer({
+      statut: 'perdue',
+      purgeContactAt: passee,
+      natureJuridique: null,
       coordonnees: true,
     });
     const pm = await semer({
@@ -206,9 +212,11 @@ describe('REQ-DM-031 — la purge planifiée du contact', () => {
     });
     await purgerLesContacts(base.prisma, MAINTENANT);
     const lEi = await lire(ei);
+    const lInconnue = await lire(inconnue);
     const lPm = await lire(pm);
-    expect(purgee(lEi) && purgee(lPm)).toBe(true);
+    expect(purgee(lEi) && purgee(lInconnue) && purgee(lPm)).toBe(true);
     expect([lEi['latitude_microdeg'], lEi['longitude_microdeg']]).toEqual([null, null]);
+    expect([lInconnue['latitude_microdeg'], lInconnue['longitude_microdeg']]).toEqual([null, null]);
     expect([lPm['latitude_microdeg'], lPm['longitude_microdeg']]).toEqual([48856614, 2352222]);
   });
 

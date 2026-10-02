@@ -48,16 +48,17 @@ export function echeanceDePurge(statut: EtatAttribution, dateDeReference: Date):
 }
 
 /**
- * Entrepreneur individuel : la catégorie juridique INSEE de premier rang « 1 »
- * (nomenclature des catégories juridiques, premier rang : « Entrepreneur individuel »). Son siège est
- * souvent son domicile : ses coordonnées s'effacent avec le contact (point 13 de la séance, validé par
- * Williams le 2026-10-02). Une personne morale garde les siennes.
+ * Les coordonnées du siège s'effacent-elles avec le contact ? Le siège d'un entrepreneur individuel
+ * (catégorie juridique INSEE de premier rang « 1 ») est souvent son domicile : ses coordonnées
+ * s'effacent (point 13 de la séance, validé par Williams le 2026-10-02).
+ *
+ * ÉCHEC FERMÉ (lentille sécurité) : seule une personne morale PROUVÉE garde les siennes — une
+ * catégorie de quatre chiffres dont le premier rang n'est pas « 1 ». Une forme nulle, vide ou
+ * illisible peut être une entreprise individuelle : elle est traitée comme telle.
  */
-const PREMIER_RANG_ENTREPRENEUR_INDIVIDUEL = '1';
-export function estEntrepriseIndividuelle(natureJuridique: string | null): boolean {
-  return (
-    natureJuridique !== null && natureJuridique.startsWith(PREMIER_RANG_ENTREPRENEUR_INDIVIDUEL)
-  );
+const PERSONNE_MORALE_PROUVEE = /^[2-9]\d{3}$/;
+export function coordonneesSEffacent(natureJuridique: string | null): boolean {
+  return natureJuridique === null || !PERSONNE_MORALE_PROUVEE.test(natureJuridique);
 }
 
 /**
@@ -109,7 +110,7 @@ export async function purgerLesContacts(
           data: {
             ...CONTACT_EFFACE,
             contactPurgeAt: maintenant,
-            ...(estEntrepriseIndividuelle(a.natureJuridique)
+            ...(coordonneesSEffacent(a.natureJuridique)
               ? { latitudeMicrodeg: null, longitudeMicrodeg: null }
               : {}),
           },

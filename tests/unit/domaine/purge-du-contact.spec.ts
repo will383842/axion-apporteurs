@@ -26,7 +26,7 @@ import {
   COLONNES_DU_CONTACT,
   ETATS_LIBERES,
   echeanceDePurge,
-  estEntrepriseIndividuelle,
+  coordonneesSEffacent,
 } from '../../../src/server/taches/purger-contacts';
 import { TACHES } from '../../../src/server/taches/registre';
 import { inscriptions } from '../../../src/server/taches/inscriptions';
@@ -86,12 +86,17 @@ describe('REQ-DM-031 — l’échéance de la purge, statut par statut', () => {
 });
 
 describe('REQ-DM-031 — ce que la purge efface', () => {
-  it('REQ-DM-031 : l’entreprise individuelle se lit sur la catégorie juridique (catégorie juridique INSEE de premier rang 1)', () => {
-    expect(estEntrepriseIndividuelle('1000')).toBe(true);
-    expect(estEntrepriseIndividuelle('5710')).toBe(false);
-    expect(estEntrepriseIndividuelle('9220')).toBe(false);
-    expect(estEntrepriseIndividuelle(null)).toBe(false);
-    expect(estEntrepriseIndividuelle('')).toBe(false);
+  it('REQ-DM-031 : les coordonnées du siège s’effacent, sauf pour une personne morale PROUVÉE (échec fermé)', () => {
+    // Entrepreneur individuel : catégorie juridique INSEE de premier rang 1.
+    expect(coordonneesSEffacent('1000')).toBe(true);
+    // Une forme inconnue peut être une entreprise individuelle : elle est traitée comme telle.
+    for (const inconnue of [null, '', ' ', '57', '57100', 'x710', '0000']) {
+      expect(coordonneesSEffacent(inconnue)).toBe(true);
+    }
+    // Seule une personne morale prouvée garde ses coordonnées.
+    for (const morale of ['5710', '9220', '7210', '2110']) {
+      expect(coordonneesSEffacent(morale)).toBe(false);
+    }
   });
 
   it('REQ-DM-031 : les colonnes du contact effacées, exactement — lien_interet_declare reste', () => {
