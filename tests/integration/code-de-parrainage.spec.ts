@@ -86,7 +86,11 @@ async function candidature(code: string | null) {
 /** Un parrain au statut voulu : une candidature traitée, puis passée à ce statut. */
 async function parrain(statut: 'signe' | 'suspendu' | 'resilie' | 'candidat') {
   const p = await candidature(null);
-  await base.prisma.apporteur.update({ where: { id: p.id }, data: { statut } });
+  // Un apporteur résilié porte son motif : la base l'exige (contrainte `apporteurs_motif_si_resilie`).
+  await base.prisma.apporteur.update({
+    where: { id: p.id },
+    data: statut === 'resilie' ? { statut, resiliationMotif: 'ordinaire_apporteur' } : { statut },
+  });
   return p.codeParrainage;
 }
 
