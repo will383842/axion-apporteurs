@@ -336,8 +336,9 @@ export type FusionPosterieure = { numero: number; mergedAt: string };
 
 /**
  * GOV-141 — UNE FUSION HORS DE L'ARBRE TESTÉ. Son commit est dans le clone sans être un ancêtre de
- * HEAD : une PR en retard sur `main` (choix A, la branche à jour n'est pas exigée) voit les fusions
- * des autres. Elle est NOMMÉE et COMPTÉE ; ni son journal ni sa date n'entrent dans un jugement.
+ * HEAD : une PR en retard sur `main` (décision de Williams du 2026-10-02 : la branche à jour n'est
+ * pas exigée) voit les fusions des autres. Elle est NOMMÉE et COMPTÉE ; ni son journal ni sa date
+ * n'entrent dans un jugement.
  */
 export type FusionHorsArbre = { numero: number; oid: string };
 

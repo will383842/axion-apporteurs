@@ -4,16 +4,16 @@
  * `gov:etat` NE JUGE QUE LES FUSIONS ANCÊTRES DE L'ARBRE TESTÉ — GOV-141 (REQ-GOV-006, REQ-GOV-023).
  *
  * LE DÉFAUT MESURÉ. Une fusion dont le commit est PRÉSENT dans le clone était toujours jugée, même
- * quand elle n'est pas dans l'arbre testé : une PR en retard sur `main` (choix A de Williams, la
- * branche à jour n'est pas exigée) lisait la fusion d'une AUTRE PR, comparait PLAN-STATE à sa date
- * et rougissait. Chaque fusion rougissait les portes A des PR en cours.
+ * quand elle n'est pas dans l'arbre testé : une PR en retard sur `main` (décision de Williams du
+ * 2026-10-02 : la branche à jour n'est pas exigée) lisait la fusion d'une AUTRE PR, comparait
+ * PLAN-STATE à sa date et rougissait. Chaque fusion rougissait les portes A des PR en cours.
  *
  * LA RÈGLE. Chaque fusion lue sur la forge est CLASSÉE (`scripts/lib/classer-la-fusion.ts`) :
  *   - `ancetre` : son commit est un ancêtre de HEAD. Elle est jugée : journal exigé, fraîcheur de
  *     PLAN-STATE comparée à la dernière fusion ancêtre ;
  *   - `hors_arbre` : son commit est dans le clone, mais pas dans l'arbre testé. Nommée et comptée,
  *     jamais un rouge, et sa date n'entre dans aucun jugement ;
- *   - `introuvable` : son commit n'est pas dans le clone. La règle de GOV-119 s'applique, inchangée
+ *   - `introuvable` : son commit n'est pas dans le clone. La règle de la porte A s'applique, inchangée
  *     (`la-porte-a-ne-depend-pas-des-autres-pr.spec.ts`).
  * Un clone SUPERFICIEL ne permet aucun de ces jugements : échec nommé, `clone_superficiel`, avec la
  * profondeur à poser.
@@ -145,7 +145,15 @@ describe(
     it('REQ-GOV-006 : TÉMOIN — une fusion PRÉSENTE dans le clone et hors de l’arbre testé, plus récente que PLAN-STATE, ne rougit pas : nommée et comptée', () => {
       // Un commit d'aujourd'hui, enfant de HEAD : présent dans ce clone, jamais ancêtre de HEAD.
       // Sans journal et plus récent que PLAN-STATE : jugé, il rougirait deux familles.
-      const horsArbre = git(process.cwd(), 'commit-tree', 'HEAD^{tree}', '-p', 'HEAD', '-m', 'GOV-141 banc');
+      const horsArbre = git(
+        process.cwd(),
+        'commit-tree',
+        'HEAD^{tree}',
+        '-p',
+        'HEAD',
+        '-m',
+        'GOV-141 banc'
+      );
       const { code, sortie } = lancer({ number: 9902, oid: horsArbre });
       // Les deux messages que la fusion produirait si elle était jugée (familles
       // `pr_fusionnee_sans_journal` et `plan_state_perime`).
@@ -157,7 +165,10 @@ describe(
     });
 
     it('REQ-GOV-023 : CONTRE-TÉMOIN — une fusion ANCÊTRE de l’arbre testé, sans journal, rougit en la nommant', () => {
-      const { code, sortie } = lancer({ number: 9903, oid: git(process.cwd(), 'rev-parse', 'HEAD') });
+      const { code, sortie } = lancer({
+        number: 9903,
+        oid: git(process.cwd(), 'rev-parse', 'HEAD'),
+      });
       expect(sortie).toContain('── pr_fusionnee_sans_journal');
       expect(sortie).toMatch(/PR #9903 [^\n]*aucune entrée/);
       expect(code).not.toBe(0);

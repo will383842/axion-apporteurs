@@ -22,7 +22,11 @@ export type ExecuterGit = (args: string[]) => { code: number; sortie: string };
 /** `git` dans un dossier donné (le dossier courant par défaut), sans shell. */
 export function executerGit(cwd?: string): ExecuterGit {
   return (args) => {
-    const r = spawnSync('git', args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+    const r = spawnSync('git', args, {
+      cwd,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    });
     return { code: r.status ?? -1, sortie: (r.stdout ?? '').trim() };
   };
 }
