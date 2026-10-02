@@ -14,7 +14,7 @@
  *   — la tâche de fond efface la valeur non traitée à un mois, ou à trois s'il y a prolongation, et
  *     pas avant ; aucun événement du journal ne porte la valeur ;
  *   — le jeton des droits de l'attribution : empreinte en forme, unique, effacé par la purge du
- *     contact (DM-48), et refusé sur une attribution purgée.
+ *     contact, et refusé sur une attribution purgée.
  *
  * Joué par Gate D, sur la base fraîchement migrée.
  */
@@ -351,11 +351,11 @@ describe('REQ-JUR-065 — la valeur non traitée s’efface à l’échéance, e
     const id = await demande({ droit: 'rectification', valeur });
     await reculer(id, RECUE);
     await purgerLesValeursDesDroits(base.prisma, new Date('2026-08-01T00:00:00.000Z'));
-    const [{ n }] = await base.prisma.$queryRaw<{ n: bigint }[]>`
+    const [compte] = await base.prisma.$queryRaw<{ n: bigint }[]>`
       SELECT count(*) AS n FROM evenements
       WHERE charge::text LIKE ${'%' + valeur.toString('hex') + '%'}
          OR charge::text LIKE ${'%' + valeur.toString('base64') + '%'}`;
-    expect(Number(n)).toBe(0);
+    expect(Number(compte!.n)).toBe(0);
   });
 });
 
@@ -379,7 +379,7 @@ describe('REQ-JUR-065 — le jeton des droits de l’attribution', () => {
     ).toContain('attributions_jeton_droits_purge');
   });
 
-  it('REQ-JUR-065 : TÉMOIN — la purge du contact (DM-48) efface le jeton dans la même instruction', async () => {
+  it('REQ-JUR-065 : TÉMOIN — la purge planifiée du contact efface le jeton dans la même instruction', async () => {
     const id = await uneAttribution({ purgeContactAt: new Date('2026-01-01T00:00:00.000Z') });
     await purgerLesContacts(base.prisma, new Date('2026-10-02T12:00:00.000Z'));
     const [l] = await base.prisma.$queryRaw<{ jeton: string | null; purge: Date | null }[]>`
