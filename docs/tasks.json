@@ -4423,7 +4423,8 @@
         "tests/unit/securite/acces-scope.spec.ts",
         "docs/adr/0022-carte-du-schema-des-phases-0-et-1.md",
         "tests/integration/ajout-seul-gabarit.spec.ts",
-        "tests/integration/idor.spec.ts"
+        "tests/integration/idor.spec.ts",
+        "tests/unit/integration/recherche-entreprises-repli.spec.ts"
       ],
       "schema": true,
       "sensible": [
