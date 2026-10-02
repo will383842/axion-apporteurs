@@ -34,10 +34,11 @@ export function versMicroDegres(
   const auDela =
     Number(entier) > borneDegres || (Number(entier) === borneDegres && /[1-9]/.test(decimales));
   if (auDela) return null;
+  // Sous la borne, l'arrondi atteint au plus la borne elle-même (89.9999995 → 90 000 000) : il
+  // n'existe pas de second contrôle à faire après lui.
   const six = decimales.slice(0, CHIFFRES_DU_MICRO_DEGRE).padEnd(CHIFFRES_DU_MICRO_DEGRE, '0');
   const arrondi = Number(decimales.charAt(CHIFFRES_DU_MICRO_DEGRE) || '0') >= 5 ? 1 : 0;
   const absolu = Number(entier) * MICRO_DEGRES_PAR_DEGRE + Number(six) + arrondi;
-  if (absolu > borneDegres * MICRO_DEGRES_PAR_DEGRE) return null;
   return signe === '-' && absolu !== 0 ? -absolu : absolu;
 }
 
