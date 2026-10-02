@@ -329,6 +329,33 @@ describe('la structure : un seul producteur, qui tire, sans droit sur le registr
     );
   });
 
+  // L'ORDRE ne suffit pas, il faut le BLOCAGE (relevé de la lentille securite sur #460) : une étape
+  // de la porte A tolérée (`continue-on-error`) ou conditionnée (`if:`) laisserait partir le
+  // déploiement d'un sha que la porte A n'a pas jugé, tout en restant « avant ».
+  async function porteABloquante(texte: string): Promise<string[]> {
+    const wf = (await lireYaml(texte)) as {
+      jobs: Record<string, { steps?: (Etape & { if?: unknown })[] }>;
+    };
+    const etape = (wf.jobs['deployer']?.steps ?? []).find(
+      (s) => s.run === 'pnpm deploy:attendre-porte-a'
+    );
+    if (etape === undefined) return ['porte_a_absente'];
+    const f: string[] = [];
+    if (etape['continue-on-error'] !== undefined) f.push('porte_a_toleree');
+    if (etape.if !== undefined) f.push('porte_a_conditionnelle');
+    return f;
+  }
+
+  it('REQ-GOV-014 : l’étape de la porte A est BLOQUANTE — ni continue-on-error ni if:, jugé sur deux copies cassées', async () => {
+    const reel = readFileSync('.github/workflows/deploy.yml', 'utf8');
+    const ligne = '        run: pnpm deploy:attendre-porte-a';
+    expect(reel).toContain(ligne);
+    const avant = (cle: string) => reel.replace(ligne, `        ${cle}\n${ligne}`);
+    expect(await porteABloquante(reel)).toEqual([]);
+    expect(await porteABloquante(avant('continue-on-error: true'))).toEqual(['porte_a_toleree']);
+    expect(await porteABloquante(avant('if: ${{ false }}'))).toEqual(['porte_a_conditionnelle']);
+  });
+
   it('les étapes sont des scripts nommés, sans continue-on-error, et le seul appel à la plateforme est `pnpm deploy:coolify`', () => {
     const runs = (deployer!.steps ?? []).map((s) => s.run).filter((r): r is string => !!r);
     expect(runs).toContain('pnpm deploy:coolify');
