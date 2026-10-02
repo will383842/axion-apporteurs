@@ -339,6 +339,7 @@ describe('REQ-QA-030 — le module rechargé : les listes dérivées du schéma,
       'PARTNERS_EMAIL_DMARC_VERIFIE',
       'PARTNERS_EMAIL_EXPEDITEUR',
       'AXIONIA_BASE_URL',
+      'AXIONIA_API_ALLOWLIST',
       'ZEPTOMAIL_API_URL',
     ]);
     // NOTIFY_SINK est facultative pour Zod, mais exigée hors production : elle n'est PAS ici.
@@ -349,13 +350,14 @@ describe('REQ-QA-030 — le module rechargé : les listes dérivées du schéma,
       'PARTNERS_EMAIL_DMARC_VERIFIE',
       'PARTNERS_EMAIL_EXPEDITEUR',
       'AXIONIA_BASE_URL',
+      'AXIONIA_API_ALLOWLIST',
       'ZEPTOMAIL_API_URL',
     ]);
     expect(m.NOMS_DES_SECRETS_CONDITIONNELS).toEqual(['ZEPTOMAIL_SEND_TOKEN']);
     // Douze secrets toujours exigés, lus au schéma : leurs noms ne sont pas retapés ici.
     expect(m.NOMS_DES_SECRETS).toHaveLength(12);
     expect(m.NOMS_DES_SECRETS).toContain(CLE_HEX);
-    expect(m.NOMS_DES_VARIABLES).toHaveLength(23);
+    expect(m.NOMS_DES_VARIABLES).toHaveLength(24);
     expect(m.NOMS_DES_VARIABLES).toEqual([
       ...m.NOMS_DES_SECRETS,
       ...m.NOMS_DES_SECRETS_CONDITIONNELS,
