@@ -69,7 +69,7 @@
     {
       "id": "REQ-DM-005",
       "domaine": "domaine-donnees",
-      "texte": "`deposeeAt` est l'horodatage de la transaction serveur (now() Postgres, timestamptz(6)) ; il n'est jamais fourni par le client ; l'égalité est départagée par l'id séquentiel de l'événement de dépôt ; `clientCapturedAt` est informatif et non opposable.",
+      "texte": "`deposeeAt` est l'horodatage de la transaction serveur (now() Postgres, timestamptz(6)) ; il n'est jamais fourni par le client ; l'égalité est départagée par l'id séquentiel de l'événement de dépôt ; `clientCapturedAt` est informatif et non opposable. Précision de l'architecte (A02, 2026-10-02) : « now() Postgres » se lit « horloge du serveur Postgres au moment de l'écriture, sous le verrou » (`clock_timestamp()` lu après les verrous consultatifs, déclencheur `BEFORE INSERT` qui écrase toute valeur fournie).",
       "source": "fonctionnement R3 ; contrat art. 1.5 ; nouvelle (F-DM-15)",
       "statut": "active",
       "remplaceePar": null,
@@ -385,6 +385,7 @@
         "DM-01",
         "DM-20",
         "DM-45",
+        "QA-T62",
         "SEC-30"
       ]
     },
@@ -3676,7 +3677,8 @@
       "etape": null,
       "phase": 0,
       "taches": [
-        "QA-T05"
+        "QA-T05",
+        "QA-T61"
       ]
     },
     {
@@ -4109,7 +4111,8 @@
         "GOV-097",
         "GOV-101",
         "GOV-124",
-        "GOV-126"
+        "GOV-126",
+        "QA-T60"
       ]
     },
     {
@@ -4411,7 +4414,8 @@
         "GOV-125",
         "GOV-127",
         "GOV-128",
-        "GOV-140"
+        "GOV-140",
+        "QA-T60"
       ]
     },
     {
@@ -4615,7 +4619,8 @@
       "taches": [
         "JUR-T04",
         "JUR-T32",
-        "JUR-T35"
+        "JUR-T35",
+        "QA-T60"
       ]
     },
     {
