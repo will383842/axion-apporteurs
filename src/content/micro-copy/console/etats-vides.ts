@@ -77,4 +77,15 @@ export const ETATS_VIDES_CONSOLE: Readonly<Record<string, EtatVide>> = {
     phrase: 'Rien n’est attendu ici : noter un échange est utile, jamais exigé.',
     action: { libelle: 'Ajouter un échange', route: null },
   },
+  'grille-console': {
+    titre: 'Aucune grille pour cet apporteur',
+    phrase:
+      'Partez d’un modèle : chaque ligne est pré-remplie avec la grille publiée, vous n’ajustez que ce qui diffère.',
+    action: { libelle: 'Partir d’un modèle', route: null },
+  },
+  'saisie-manuelle-console': {
+    titre: 'Une candidature reçue hors du site ?',
+    phrase: 'Saisissez-la ici : elle suit ensuite le même parcours que les autres.',
+    action: { libelle: 'Saisir une candidature', route: null },
+  },
 };

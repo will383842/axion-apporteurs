@@ -50,13 +50,14 @@ changé en substance : leur ligne repart vide.
 | Fiche apporteur : cinq blocs, décision, dossier de conformité | `apporteur-fiche.html` | UX-P1-12 · CPL-T07 | — | — |
 | Attributions et contrats | `attributions-contrats.html` | UX-P1-13 | — | — |
 | Fiche prospect | `fiche-prospect.html` | EXT-T02a | — | — |
+| Éditeur de grille (modèle, édition en masse, complétude) | `grille-console.html` | UX-P1-14 | — | — |
+| Saisie manuelle d'une candidature et CV | `saisie-manuelle-console.html` | EXT-T04 | — | — |
 
 ### Séance de validation groupée de la console
 
 **Rapprochement avec `docs/CONSOLE-ROUTES.md` (UX-P1-19).** Chaque écran de console de la phase 1 a sa
-maquette, sauf deux écarts nommés : l'éditeur de grille (`/console/grille`, UX-P1-14) et la saisie
-manuelle d'une candidature (`/console/candidatures`, EXT-T04) n'ont pas de maquette, faute de chemin
-dans UX-P1-19 ; la file (UX-P1-07) est `file-qualification.html`, « Votre rôle » (UX-P1-20) est un état de
+maquette ; les deux écarts relevés par UX-P1-19, l'éditeur de grille (`/console/grille`, UX-P1-14) et la
+saisie manuelle d'une candidature (`/console/candidatures`, EXT-T04), sont comblés par UX-P1-46 ; la file (UX-P1-07) est `file-qualification.html`, « Votre rôle » (UX-P1-20) est un état de
 `utilisateurs-console.html`, le dossier de conformité (CPL-T07) un état de `apporteur-fiche.html`. La
 ligne de `fiche-prospect.html` ne nomme que EXT-T02a : la garde ne lit encore que les identifiants
 `UX-P…`, et GOV-113 l'élargit.
