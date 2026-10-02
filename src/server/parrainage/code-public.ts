@@ -1,6 +1,6 @@
 /**
  * SEC-21 — la RÉSOLUTION SILENCIEUSE d'un code de parrainage capturé (REQ-SEC-037), au traitement
- * de `candidature.recue`.
+ * d'une candidature reçue d'axion-ia.
  *
  * Le code capturé n'est conservé que s'il désigne un parrain ACTIF : un apporteur signé. Un code
  * inconnu, mal formé, ou d'un apporteur qui n'est pas actif (révoqué, suspendu, pas encore signé)
