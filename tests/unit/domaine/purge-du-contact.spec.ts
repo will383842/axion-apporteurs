@@ -90,11 +90,11 @@ describe('REQ-DM-031 — ce que la purge efface', () => {
     // Entrepreneur individuel : catégorie juridique INSEE de premier rang 1.
     expect(coordonneesSEffacent('1000')).toBe(true);
     // Une forme inconnue peut être une entreprise individuelle : elle est traitée comme telle.
-    for (const inconnue of [null, '', ' ', '57', '57100', 'x710', '0000']) {
+    for (const inconnue of [null, '', ' ', '57', '57100', 'x710', '0000', '2110', '2900']) {
       expect(coordonneesSEffacent(inconnue)).toBe(true);
     }
     // Seule une personne morale prouvée garde ses coordonnées.
-    for (const morale of ['5710', '9220', '7210', '2110']) {
+    for (const morale of ['5710', '9220', '7210', '3120']) {
       expect(coordonneesSEffacent(morale)).toBe(false);
     }
   });

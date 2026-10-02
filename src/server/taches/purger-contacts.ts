@@ -53,10 +53,12 @@ export function echeanceDePurge(statut: EtatAttribution, dateDeReference: Date):
  * s'effacent (point 13 de la séance, validé par Williams le 2026-10-02).
  *
  * ÉCHEC FERMÉ (lentille sécurité) : seule une personne morale PROUVÉE garde les siennes — une
- * catégorie de quatre chiffres dont le premier rang n'est pas « 1 ». Une forme nulle, vide ou
- * illisible peut être une entreprise individuelle : elle est traitée comme telle.
+ * catégorie de quatre chiffres dont le premier rang va de « 3 » à « 9 » (nomenclature INSEE des
+ * catégories juridiques, premier rang). Le rang « 2 » est un groupement de droit privé NON doté de
+ * la personnalité morale, souvent entre personnes physiques (`2110`, indivision) : il est effacé.
+ * Une forme nulle, vide ou illisible peut être une entreprise individuelle : elle est effacée aussi.
  */
-const PERSONNE_MORALE_PROUVEE = /^[2-9]\d{3}$/;
+const PERSONNE_MORALE_PROUVEE = /^[3-9]\d{3}$/;
 export function coordonneesSEffacent(natureJuridique: string | null): boolean {
   return natureJuridique === null || !PERSONNE_MORALE_PROUVEE.test(natureJuridique);
 }
