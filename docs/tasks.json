@@ -19411,7 +19411,9 @@
         "tests/integration/purge-du-contact.spec.ts",
         "docs/runbooks/mise-en-service.md",
         "src/domain/seuils/retention.ts",
-        "src/domain/seuils/ssot.ts"
+        "src/domain/seuils/ssot.ts",
+        "scripts/gates/seuils-ssot.ts",
+        "tests/unit/juridique/seuils-ssot.spec.ts"
       ],
       "schema": false,
       "sensible": [
