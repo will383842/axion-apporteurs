@@ -35,6 +35,8 @@ export default defineConfig({
     exclude: ['node_modules', '.next', 'tests/e2e/**'],
     // QA-T01 : chargé avant chaque fichier de test. Minimal — voir son en-tête.
     setupFiles: ['tests/setup.ts'],
+    // QA-T63 : la forge lue UNE fois par run (instantané temporaire, `GOV_ETAT_FORGE`) — voir son en-tête.
+    globalSetup: ['tests/setup-forge.ts'],
 
     /**
      * COUVERTURE DU DOMAINE — REQ-QA-002 : 100 % lignes et 100 % branches sur `src/domain/**`.
