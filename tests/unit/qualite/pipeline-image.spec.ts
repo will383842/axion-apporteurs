@@ -120,14 +120,28 @@ function fautesDuPipeline(s: Sources): string[] {
   // Le job `alerter` (QA-T54, option B de la lentille `securite`) ne lit que les deux secrets du
   // canal d'alerte : séparés, `alerter` n'a jamais le jeton de la plateforme, ni `deployer` celui
   // du canal.
+  // QA-T55 (conditions de la lentille `securite` du 2026-10-02) : `deployer` lit AUSSI `GITHUB_TOKEN`,
+  // nommé, pour la SEULE étape `pnpm deploy:attendre-porte-a`, en lecture seule par les permissions
+  // du job. Le jeton servi à une autre étape, ou au job entier, rougit (`jeton_hors_de_la_porte_a`).
   const horsDeployer = [
     s.workflow.slice(0, s.workflow.indexOf('\njobs:')),
     ...[...j].filter(([nom]) => nom !== 'deployer' && nom !== 'alerter').map(([, texte]) => texte),
   ].join('\n');
   if (/secrets\.(?!GITHUB_TOKEN\b)/.test(horsDeployer))
     f.push('secret_tiers : le workflow lit un autre secret que GITHUB_TOKEN');
-  if (/secrets\.(?!COOLIFY_(?:URL|API_TOKEN|APP_UUID)\b)/.test(j.get('deployer') ?? ''))
+  const deployer = j.get('deployer') ?? '';
+  if (/secrets\.(?!COOLIFY_(?:URL|API_TOKEN|APP_UUID)\b|GITHUB_TOKEN\b)/.test(deployer))
     f.push('secret_tiers : le job deployer lit un autre secret que ceux de la plateforme');
+  const blocsAuJeton = deployer
+    .split('\n      - ')
+    .filter((b) => b.includes('secrets.GITHUB_TOKEN'));
+  if (
+    blocsAuJeton.length > 1 ||
+    blocsAuJeton.some((b) => !/\n\s+run: pnpm deploy:attendre-porte-a\n/.test(`${b}\n`))
+  )
+    f.push(
+      'jeton_hors_de_la_porte_a : GITHUB_TOKEN est servi dans deployer ailleurs qu’à la seule étape deploy:attendre-porte-a'
+    );
   if (/secrets\.(?!TELEGRAM_(?:BOT_TOKEN|CHAT_ID)\b)/.test(j.get('alerter') ?? ''))
     f.push('secret_tiers : le job alerter lit un autre secret que ceux du canal d’alerte');
 
@@ -267,6 +281,30 @@ describe('REQ-QA-018 — la forge construit, juge, puis publie l’image (QA-T05
         workflow: s.workflow.replace('secrets.COOLIFY_APP_UUID', 'secrets.GHCR_PAT'),
       }),
       'secret_tiers',
+    ],
+    [
+      // QA-T55 : le jeton de la forge servi à l'étape de l'AIPD, en plus de la porte A.
+      'GITHUB_TOKEN servi à une autre étape de deployer que la porte A',
+      (s) => ({
+        ...s,
+        workflow: s.workflow.replace(
+          'AIPD_SIGNEE_LE: ${{ vars.AIPD_SIGNEE_LE }}',
+          'AIPD_SIGNEE_LE: ${{ vars.AIPD_SIGNEE_LE }}\n          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}'
+        ),
+      }),
+      'jeton_hors_de_la_porte_a',
+    ],
+    [
+      // QA-T55 : le jeton de la forge servi au job entier.
+      'GITHUB_TOKEN servi au job deployer entier',
+      (s) => ({
+        ...s,
+        workflow: s.workflow.replace(
+          '    concurrency:\n      group: deploiement-production',
+          '    env:\n      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}\n    concurrency:\n      group: deploiement-production'
+        ),
+      }),
+      'jeton_hors_de_la_porte_a',
     ],
     [
       'un secret de la plateforme lu par le job alerter',
