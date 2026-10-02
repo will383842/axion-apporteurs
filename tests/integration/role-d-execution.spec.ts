@@ -116,6 +116,15 @@ describe('REQ-DM-024 — le rôle d’exécution, constaté connecté comme le s
     );
     expect(possedees?.n).toBe(0);
   });
+
+  it('REQ-DM-024 : TÉMOIN — la sonde de disponibilité lit l’état des migrations sous le rôle du serveur, sans pouvoir l’écrire', async () => {
+    await expect(
+      serveur.$queryRawUnsafe(`SELECT count(*) FROM _prisma_migrations`)
+    ).resolves.toBeDefined();
+    expect(
+      await refus(serveur.$executeRawUnsafe(`DELETE FROM _prisma_migrations WHERE false`))
+    ).toContain('42501');
+  });
 });
 
 describe('REQ-DM-024 — le provisionnement', () => {

@@ -161,6 +161,9 @@ export async function provisionnerRoleDExecution(urls: {
       ),
       c.$executeRawUnsafe(`GRANT partners_execution TO ${role}`),
       c.$executeRawUnsafe(`GRANT USAGE ON SCHEMA public TO partners_execution`),
+      // La sonde de disponibilité (`readyz`) LIT l'état des migrations sous le rôle du serveur ; elle
+      // n'en écrit aucun. La lecture seule, et rien d'autre, sur la table de suivi de Prisma.
+      c.$executeRawUnsafe(`GRANT SELECT ON _prisma_migrations TO partners_execution`),
       c.$executeRawUnsafe(PRIVILEGES_HORS_JOURNAL),
       c.$executeRawUnsafe(
         `ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO partners_execution`
