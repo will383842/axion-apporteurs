@@ -67,7 +67,7 @@ DM-11 ne crée que le dossier de conformité ; INT-T12 crée l'enveloppe de sign
 **4. Journal : un type par GENRE de transition, jamais par transition.** `attribution_etat_modifie`
 porte `{de, vers, transition}`, où `transition` est un `z.enum` dérivé de la matrice d'états ;
 `apporteur_statut_modifie` fait de même pour l'apporteur. Ajouter un événement à une matrice modifie
-une charge Zod de `src/domain/evenement/charges.ts`, jamais le schéma. Les treize valeurs des phases
+une charge Zod de `src/domain/evenement/charges.ts`, jamais le schéma. Les quatorze valeurs des phases
 0 et 1 et leur créateur sont au glossaire §4.1. Chacune entre dans la ligne `TypeEvenementJournal` du
 glossaire avec la migration qui la crée, pas avant. Un texte qui nomme un événement pointé désigne le
 type de son genre avec la valeur de `transition` correspondante.
