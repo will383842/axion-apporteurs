@@ -23,6 +23,7 @@
 import { describe, it, expect } from 'vitest';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
+import ts from 'typescript';
 import {
   SEGMENTS_LIMITES,
   SEGMENTS_PLEINS,
@@ -208,18 +209,184 @@ function fichiers(dossier: string): string[] {
   });
 }
 
-/** La directive `'use server'`, n'importe où dans le fichier. */
-const DIRECTIVE = /(['"])use server\1/g;
+/**
+ * LE JUGE PARLE À L'ARBRE DE SYNTAXE, PAS AU TEXTE. Un découpage par expressions régulières se laissait
+ * tromper par une aide non exportée qui suit un export nu, ou par une forme d'export qu'il ne savait
+ * pas reconnaître. `ts.createSourceFile` suffit : ni programme, ni vérification de types.
+ */
+const source = (chemin: string, contenu: string): ts.SourceFile =>
+  ts.createSourceFile(chemin, contenu, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
 
-/** Le fichier S'OUVRE-t-il sur la directive (commentaires de tête compris) ? C'est un module d'actions. */
-function directiveEnTete(contenu: string): boolean {
-  const corps = contenu.replace(/^(?:\s+|\/\/[^\n]*|\/\*[\s\S]*?\*\/)*/, '');
-  return /^(['"])use server\1/.test(corps);
+/** La chaîne d'un énoncé-directive (`'use server';`), ou `null`. */
+function directiveDe(s: ts.Statement): string | null {
+  return ts.isExpressionStatement(s) && ts.isStringLiteral(s.expression) ? s.expression.text : null;
+}
+
+/** Le prologue d'une liste d'énoncés : les directives de tête. */
+function prologue(enonces: readonly ts.Statement[]): string[] {
+  const vues: string[] = [];
+  for (const s of enonces) {
+    const d = directiveDe(s);
+    if (d === null) break;
+    vues.push(d);
+  }
+  return vues;
+}
+
+/** Le fichier S'OUVRE-t-il sur `'use server'` ? C'est alors un module d'actions. */
+const directiveEnTete = (f: ts.SourceFile): boolean =>
+  prologue(f.statements).includes('use server');
+
+/** Une fonction, n'importe où dans le fichier, porte-t-elle `'use server'` en tête de son corps ? */
+function actionEnLigne(f: ts.SourceFile): boolean {
+  let vue = false;
+  const visiter = (n: ts.Node): void => {
+    if (ts.isFunctionLike(n) && 'body' in n && n.body && ts.isBlock(n.body)) {
+      if (prologue(n.body.statements).includes('use server')) vue = true;
+    }
+    ts.forEachChild(n, visiter);
+  };
+  visiter(f);
+  return vue;
 }
 
 /** Un fichier que la règle juge : une page, une route, ou un module d'actions serveur. */
-function estJuge(nom: string, contenu: string): boolean {
-  return /^(page|route)\.[cm]?[jt]sx?$/.test(nom) || directiveEnTete(contenu);
+function estJuge(nom: string, f: ts.SourceFile): boolean {
+  return /^(page|route)\.[cm]?[jt]sx?$/.test(nom) || directiveEnTete(f);
+}
+
+type Fonction = ts.FunctionDeclaration | ts.FunctionExpression | ts.ArrowFunction;
+const estFonction = (n: ts.Node | undefined): n is Fonction =>
+  n !== undefined &&
+  (ts.isFunctionDeclaration(n) || ts.isFunctionExpression(n) || ts.isArrowFunction(n));
+const exporte = (s: ts.Statement): boolean =>
+  ts.canHaveModifiers(s) &&
+  (ts.getModifiers(s) ?? []).some((m) => m.kind === ts.SyntaxKind.ExportKeyword);
+
+/**
+ * Les exports d'un fichier, chacun avec la FONCTION qui le porte, ou `null` quand sa forme n'est pas
+ * reconnue. Un export indirect est rendu à part : il cache ce qu'il expose.
+ */
+function exportsDe(
+  f: ts.SourceFile
+): { nom: string; fonction: Fonction | null; valeur: boolean }[] | 'indirect' {
+  const vus: { nom: string; fonction: Fonction | null; valeur: boolean }[] = [];
+  for (const s of f.statements) {
+    if (ts.isExportDeclaration(s)) {
+      if (s.isTypeOnly) continue;
+      return 'indirect';
+    }
+    if (ts.isExportAssignment(s)) {
+      const e = s.expression;
+      vus.push({ nom: 'default', fonction: estFonction(e) ? e : null, valeur: false });
+      continue;
+    }
+    if (!exporte(s)) continue;
+    if (ts.isInterfaceDeclaration(s) || ts.isTypeAliasDeclaration(s)) continue;
+    if (ts.isFunctionDeclaration(s)) {
+      const parDefaut = (ts.getModifiers(s) ?? []).some(
+        (m) => m.kind === ts.SyntaxKind.DefaultKeyword
+      );
+      vus.push({
+        nom: parDefaut ? 'default' : (s.name?.text ?? 'default'),
+        fonction: s,
+        valeur: false,
+      });
+      continue;
+    }
+    if (ts.isVariableStatement(s)) {
+      for (const d of s.declarationList.declarations) {
+        const nom = ts.isIdentifier(d.name) ? d.name.text : d.name.getText(f);
+        const init = d.initializer;
+        vus.push({ nom, fonction: estFonction(init) ? init : null, valeur: !estFonction(init) });
+      }
+      continue;
+    }
+    vus.push({ nom: s.getText(f).slice(0, 40), fonction: null, valeur: false });
+  }
+  return vus;
+}
+
+/** Le premier énoncé d'un corps : ses énoncés, ou l'expression d'une flèche sans bloc. */
+const enoncesDe = (fn: Fonction): readonly ts.Node[] =>
+  fn.body === undefined ? [] : ts.isBlock(fn.body) ? fn.body.statements : [fn.body];
+
+/** L'appel que porte un énoncé, sous `return`, `await`, `const x =` ou des parenthèses ; ou `null`. */
+function appelDe(n: ts.Node): ts.CallExpression | null {
+  let e: ts.Node | undefined = n;
+  if (ts.isReturnStatement(n)) e = n.expression;
+  else if (ts.isExpressionStatement(n)) e = n.expression;
+  else if (ts.isVariableStatement(n)) {
+    const ds = n.declarationList.declarations;
+    e = ds.length === 1 ? ds[0]?.initializer : undefined;
+  }
+  while (e !== undefined && (ts.isAwaitExpression(e) || ts.isParenthesizedExpression(e))) {
+    e = e.expression;
+  }
+  return e !== undefined && ts.isCallExpression(e) ? e : null;
+}
+
+/**
+ * Un énoncé admis AVANT la garde : la SEULE lecture du cookie de session par `cookies()`, avec
+ * l'extraction de sa valeur (décision de la lentille sécurité, 2026-10-02). Une déclaration, dont
+ * toute attente est `await cookies()`, et qui ne lit AUCUN paramètre de la fonction (`params`,
+ * `searchParams`, le `FormData`, la requête). `headers()` n'est pas admis : la session est un cookie
+ * httpOnly.
+ */
+function admisAvantLaGarde(n: ts.Node, fn: Fonction): boolean {
+  if (!ts.isVariableStatement(n)) return false;
+  // Les noms liés par les paramètres, déstructurés compris (`{ params }`, `{ searchParams }`).
+  const noms = (b: ts.BindingName): string[] =>
+    ts.isIdentifier(b)
+      ? [b.text]
+      : b.elements.flatMap((e) => (ts.isOmittedExpression(e) ? [] : noms(e.name)));
+  const parametres = new Set(fn.parameters.flatMap((p) => noms(p.name)));
+  let admis = true;
+  const visiter = (x: ts.Node): void => {
+    if (ts.isAwaitExpression(x)) {
+      const c = x.expression;
+      const estCookies =
+        ts.isCallExpression(c) && ts.isIdentifier(c.expression) && c.expression.text === 'cookies';
+      if (!estCookies) admis = false;
+    }
+    if (ts.isIdentifier(x) && parametres.has(x.text)) admis = false;
+    ts.forEachChild(x, visiter);
+  };
+  visiter(n);
+  return admis;
+}
+
+/** La faute d'UNE fonction exportée, ou `null` : son premier acte est la garde, pour SON segment. */
+function fauteDeLaFonction(
+  quoi: string,
+  fn: Fonction,
+  segment: string,
+  attendu: 'actionEspace' | 'exigerSessionPour'
+): string | null {
+  for (const n of enoncesDe(fn)) {
+    const appel = appelDe(n);
+    if (appel !== null && ts.isIdentifier(appel.expression) && appel.expression.text === attendu) {
+      const premier = appel.arguments[0];
+      const litteral =
+        premier !== undefined &&
+        (ts.isStringLiteral(premier) || ts.isNoSubstitutionTemplateLiteral(premier))
+          ? premier.text
+          : null;
+      if (litteral !== segment) {
+        return `mauvais_segment ${quoi} (« ${litteral ?? 'non littéral'} » au lieu de « ${segment} »)`;
+      }
+      return null;
+    }
+    if (!admisAvantLaGarde(n, fn)) {
+      // Une garde plus loin dans le corps n'est pas un premier acte ; aucune garde, pas de protection.
+      const plusLoin = enoncesDe(fn).some((m) => {
+        const a = appelDe(m);
+        return a !== null && ts.isIdentifier(a.expression) && a.expression.text === attendu;
+      });
+      return plusLoin ? `pas_premier_acte ${quoi}` : `non_protege ${quoi} (${attendu} attendu)`;
+    }
+  }
+  return `non_protege ${quoi} (${attendu} attendu)`;
 }
 
 /**
@@ -229,11 +396,11 @@ function estJuge(nom: string, contenu: string): boolean {
 export function fauteDuFichier(cheminRelatif: string, contenu: string): string | null {
   const parties = cheminRelatif.split(/[\\/]/).filter((p) => !/^\(.*\)$/.test(p));
   const nom = parties.at(-1) ?? '';
-  // Une directive HORS de la tête est une action EN LIGNE : la page qui la porte se protège, mais
-  // l'action s'appelle sans elle. Refusée partout sous l'espace, segment public compris.
-  const directives = [...contenu.matchAll(DIRECTIVE)].length;
-  if (directives > (directiveEnTete(contenu) ? 1 : 0)) return `action_en_ligne ${cheminRelatif}`;
-  if (!estJuge(nom, contenu)) return null;
+  const f = source(nom, contenu);
+  // Une directive en tête d'un CORPS de fonction est une action EN LIGNE : la page qui la porte se
+  // protège, mais l'action s'appelle sans elle. Refusée partout sous l'espace, segment public compris.
+  if (actionEnLigne(f)) return `action_en_ligne ${cheminRelatif}`;
+  if (!estJuge(nom, f)) return null;
   const segment = parties.length === 1 ? 'accueil' : (parties[0] ?? '');
   const publics: readonly string[] = SEGMENTS_PUBLICS;
   if (publics.includes(segment)) return null;
@@ -246,52 +413,22 @@ export function fauteDuFichier(cheminRelatif: string, contenu: string): string |
   ];
   if (!proteges.includes(segment)) return `segment_inconnu ${cheminRelatif} (« ${segment} »)`;
   // Une ACTION serveur passe par l'enveloppeur ; une page ou une route, par exigerSessionPour.
-  const estUneAction = directiveEnTete(contenu);
+  const estUneAction = directiveEnTete(f);
   const attendu = estUneAction ? 'actionEspace' : 'exigerSessionPour';
-  // Une PAGE n'expose que son export par défaut : elle est jugée d'un bloc. Un module d'actions
-  // expose UNE ACTION PAR EXPORT, et une route UN HANDLER PAR MÉTHODE : chacun est jugé seul, sinon
-  // un second export nu passerait derrière le premier qui se protège.
-  if (!estUneAction && !/^route\./.test(nom))
-    return fauteDUnBloc(cheminRelatif, contenu, segment, attendu);
-  // Un export indirect (`export { … }`, `export * from`) cache ce qu'il expose : il est refusé.
-  if (/^\s*export\s*(?:\{|\*)/m.test(contenu)) return `export_indirect ${cheminRelatif}`;
-  const exports = [
-    ...contenu.matchAll(
-      /^\s*export\s+(?:default\s+)?(?:(?:async\s+)?function\s*\*?\s*(\w*)|(?:const|let|var)\s+(\w+))/gm
-    ),
-  ];
+  const exports = exportsDe(f);
+  if (exports === 'indirect') return `export_indirect ${cheminRelatif}`;
   if (exports.length === 0) return `non_protege ${cheminRelatif} (aucun export jugé)`;
-  for (const [i, m] of exports.entries()) {
-    const fin = exports[i + 1]?.index ?? contenu.length;
-    const nomExport = m[1] || m[2] || 'default';
-    const faute = fauteDUnBloc(
-      `${cheminRelatif}#${nomExport}`,
-      contenu.slice(m.index, fin),
-      segment,
-      attendu
-    );
+  // CHAQUE export est jugé seul : une action par export, un handler par méthode, et l'export par
+  // défaut d'une page. Seule une PAGE garde ses constantes de configuration (`metadata`, `dynamic`).
+  const estUnePage = /^page\./.test(nom);
+  for (const e of exports) {
+    const quoi = `${cheminRelatif}#${e.nom}`;
+    if (e.fonction === null) {
+      if (estUnePage && e.valeur) continue;
+      return `export_non_reconnu ${quoi}`;
+    }
+    const faute = fauteDeLaFonction(quoi, e.fonction, segment, attendu);
     if (faute !== null) return faute;
-  }
-  return null;
-}
-
-/** La faute d'un bloc — une page entière, ou UN export d'action ou de route —, ou `null`. */
-function fauteDUnBloc(
-  quoi: string,
-  bloc: string,
-  segment: string,
-  attendu: 'actionEspace' | 'exigerSessionPour'
-): string | null {
-  const appel = new RegExp(`\\b${attendu}\\(\\s*['"]([^'"]*)['"]`).exec(bloc);
-  if (appel === null) return `non_protege ${quoi} (${attendu} attendu)`;
-  if (appel[1] !== segment) {
-    return `mauvais_segment ${quoi} (« ${appel[1]} » au lieu de « ${segment} »)`;
-  }
-  // Premier acte : avant l'appel, aucune attente — sauf la lecture du cookie ou des en-têtes.
-  const avant = bloc.slice(0, appel.index);
-  const attentes = [...avant.matchAll(/\bawait\s+([\w.]+)/g)].map((m) => m[1]);
-  if (attentes.some((a) => a !== 'cookies' && a !== 'headers')) {
-    return `pas_premier_acte ${quoi}`;
   }
   return null;
 }
@@ -300,7 +437,10 @@ describe('REQ-SEC-032 — sur le disque, chaque page, route et action de l’esp
   it('REQ-SEC-032 : le dépôt réel — aucune faute, et le plancher dit ce qui a été jugé', () => {
     const juges = fichiers(RACINE_ESPACE)
       .map((f) => ({ f: relative(RACINE_ESPACE, f), contenu: readFileSync(f, 'utf8') }))
-      .filter(({ f, contenu }) => estJuge(f.split(/[\\/]/).at(-1) ?? '', contenu));
+      .filter(({ f, contenu }) => {
+        const nom = f.split(/[\\/]/).at(-1) ?? '';
+        return estJuge(nom, source(nom, contenu));
+      });
     expect(juges.length).toBeGreaterThan(0);
     // Les fautes se cherchent dans TOUS les fichiers : une action en ligne peut vivre hors d'un
     // fichier jugé.
@@ -370,6 +510,54 @@ describe('REQ-SEC-032 — sur le disque, chaque page, route et action de l’esp
       'conformite/page.tsx',
       "export default async function P() { const v = await exigerSessionPour('conformite', j, p); async function envoyer() { 'use server'; await ecrire(); } }",
       /^action_en_ligne conformite\/page\.tsx$/,
+    ],
+    [
+      'une aide NON exportée, protégée, placée APRÈS un export nu',
+      'mon-contrat/actions.ts',
+      "'use server';\nexport async function telecharger() { return lire(); }\nasync function aide() { return actionEspace('mon-contrat', j, p, async () => 1); }",
+      /^non_protege mon-contrat\/actions\.ts#telecharger \(actionEspace attendu\)$/,
+    ],
+    [
+      'un export par défaut en flèche, nu',
+      'mon-contrat/actions.ts',
+      "'use server';\nexport async function signer() { return actionEspace('mon-contrat', j, p, async () => 1); }\nexport default async () => ecrire();",
+      /^non_protege mon-contrat\/actions\.ts#default \(actionEspace attendu\)$/,
+    ],
+    [
+      'un export par défaut d’une forme non reconnue',
+      'mon-contrat/actions.ts',
+      "'use server';\nimport action from './ailleurs';\nexport default action;",
+      /^export_non_reconnu mon-contrat\/actions\.ts#default$/,
+    ],
+    [
+      'une route dont le handler est une valeur, pas une fonction',
+      'conformite/route.ts',
+      'export const GET = g.GET;',
+      /^export_non_reconnu conformite\/route\.ts#GET$/,
+    ],
+    [
+      'une garde imbriquée dans une fonction interne, pas au premier niveau du corps',
+      'mon-contrat/actions.ts',
+      "'use server';\nexport async function signer() { async function aide() { return actionEspace('mon-contrat', j, p, async () => 1); } return lire(); }",
+      /^non_protege mon-contrat\/actions\.ts#signer \(actionEspace attendu\)$/,
+    ],
+    [
+      '`await headers()` AVANT la garde',
+      'conformite/page.tsx',
+      "export default async function P() { const h = await headers(); const v = await exigerSessionPour('conformite', j, p); }",
+      /^pas_premier_acte conformite\/page\.tsx#default$/,
+    ],
+    [
+      '`await params` AVANT la garde',
+      'conformite/page.tsx',
+      "export default async function P({ params }: { params: Promise<{ id: string }> }) { const q = await params; const v = await exigerSessionPour('conformite', j, p); }",
+      /^pas_premier_acte conformite\/page\.tsx#default$/,
+    ],
+    [
+      'le FormData lu AVANT l’enveloppeur',
+      'mon-contrat/actions.ts',
+      "'use server';\nexport async function signer(formulaire: FormData) { const x = formulaire.get('a'); return actionEspace('mon-contrat', j, p, async () => 1); }",
+      /^pas_premier_acte mon-contrat\/actions\.ts#signer$/,
     ],
     [
       'un export INDIRECT dans un module d’actions',
