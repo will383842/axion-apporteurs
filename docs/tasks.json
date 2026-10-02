@@ -21282,7 +21282,8 @@
       "sensible": [],
       "deps": [
         "DM-11",
-        "DM-57"
+        "DM-57",
+        "SEC-49"
       ],
       "reqs": [
         "REQ-SEC-026"
@@ -21291,10 +21292,43 @@
       "externe": null,
       "estimateDays": 0.5,
       "statut": "a_faire",
-      "acceptance": "Versée au rattrapage 69 sur la décision de Williams du 2026-10-02 (« OK POUR ( ANS ALORS », lu 5 ans) : un RIB remplacé est conservé 5 ans après le dernier virement qui l'a utilisé (L.110-4 C. com.), puis effacé. Arbitrage de la coordination, sur la mesure de l'auteur back et la forme d'A02. (1) Un seuil `CONSERVATION_RIB_REMPLACE_ANS` = 5 dans `src/domain/seuils/ssot.ts`, avec sa source (cette décision et l'article) et sa date. (2) « Le dernier virement qui l'a utilisé » se DÉRIVE comme `MAX(remise_at)` des lignes de virement qui référencent la pièce (DM-57) ; aucune colonne « dernier usage » sur `pieces_kyc` (ADR-0022 §8). (3) Une tâche de fond efface ENSEMBLE `iban_chiffre` et `iban_hash` d'un RIB remplacé dont le dernier virement date de plus de 5 ans, par un UPDATE ordinaire (pieces_kyc est mutable, sans déclencheur d'ajout seul), ce qu'admet le CHECK `pieces_kyc_iban_ensemble` de DM-11 ; elle pose dans la même instruction `iban_purge_at`, qui date la purge, sert d'idempotence et distingue une purge d'un IBAN jamais saisi (patron de DM-53). DM-58 passe `schema: true` : colonne `pieces_kyc.iban_purge_at` Timestamptz(3) nullable, et CHECK nommé `pieces_kyc_iban_purge_liee` : `iban_purge_at IS NULL OR (iban_chiffre IS NULL AND iban_hash IS NULL AND type = 'rib' AND remplacee_at IS NOT NULL)` ; la ligne de la pièce reste, et la clé Restrict de DM-57 empêche toute suppression ; préfixe donné à la revendication (A02). (4) TÉMOINS : un RIB remplacé dont le dernier virement date de moins de 5 ans est gardé ; au-delà, les deux colonnes sont effacées ensemble, et la ligne reste ; le RIB EN COURS n'est jamais purgé, quel que soit l'âge de ses virements. Le CHECK refuse une date de purge sur un RIB en cours ou avec un IBAN présent, attendu sur son nom ; un second passage ne réécrit rien. Auteur : A05. Lentille schema (A02).",
+      "acceptance": "Versée au rattrapage 69 sur la décision de Williams du 2026-10-02 (« OK POUR ( ANS ALORS », lu 5 ans) : un RIB remplacé est conservé 5 ans après le dernier virement qui l'a utilisé (L.110-4 C. com.), puis effacé. Arbitrage de la coordination, sur la mesure de l'auteur back et la forme d'A02. (1) Un seuil `CONSERVATION_RIB_REMPLACE_ANS` = 5 dans `src/domain/seuils/ssot.ts`, avec sa source (cette décision et l'article) et sa date. (2) « Le dernier virement qui l'a utilisé » se DÉRIVE comme `MAX(remise_at)` des lignes de virement qui référencent la pièce (DM-57) ; aucune colonne « dernier usage » sur `pieces_kyc` (ADR-0022 §8). (3) Une tâche de fond efface ENSEMBLE `iban_chiffre` et `iban_hash` d'un RIB remplacé dont le dernier virement date de plus de 5 ans, par un UPDATE ordinaire (pieces_kyc est mutable, sans déclencheur d'ajout seul), ce qu'admet le CHECK `pieces_kyc_iban_ensemble` de DM-11 ; elle pose dans la même instruction `iban_purge_at`, qui date la purge, sert d'idempotence et distingue une purge d'un IBAN jamais saisi (patron de DM-53). DM-58 passe `schema: true` : colonne `pieces_kyc.iban_purge_at` Timestamptz(3) nullable, et CHECK nommé `pieces_kyc_iban_purge_liee` : `iban_purge_at IS NULL OR (iban_chiffre IS NULL AND iban_hash IS NULL AND type = 'rib' AND remplacee_at IS NOT NULL)` ; la ligne de la pièce reste, et la clé Restrict de DM-57 empêche toute suppression ; préfixe donné à la revendication (A02). deps SEC-49 ; assouplit `pieces_kyc_refuser_substitution()` pour la seule purge, avec ADR (A02) : `iban_chiffre` et `iban_hash` à NULL ensemble, sans retour, avec `iban_purge_at` écrit une fois, par `CREATE OR REPLACE` (famille journal_desarme : un ADR accepté, cité en ligne 1 de sa migration, patron de DM-53 et de l'ADR-0030). (4) TÉMOINS : un RIB remplacé dont le dernier virement date de moins de 5 ans est gardé ; au-delà, les deux colonnes sont effacées ensemble, et la ligne reste ; le RIB EN COURS n'est jamais purgé, quel que soit l'âge de ses virements. Le CHECK refuse une date de purge sur un RIB en cours ou avec un IBAN présent, attendu sur son nom ; un second passage ne réécrit rien. Auteur : A05. Lentille schema (A02).",
       "tests": {
         "REQ-SEC-026": [
           "tests/integration/purge-rib-remplace.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "SEC-49",
+      "titre": "Les coordonnées d'une pièce KYC sont figées en base : un changement de RIB est toujours une nouvelle pièce à vérifier",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "securite",
+      "paths": [
+        "prisma/migrations/",
+        "tests/integration/pieces-kyc-figees.spec.ts"
+      ],
+      "schema": true,
+      "sensible": [],
+      "deps": [
+        "DM-11"
+      ],
+      "reqs": [
+        "REQ-UX-027",
+        "REQ-DM-027"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "acceptance": "Versée au rattrapage 69 sur le refus de la lentille sécurité (2026-10-02) : `pieces_kyc` étant mutable, un simple UPDATE de `iban_chiffre` et `iban_hash` sur le RIB COURANT et validé changerait le compte de versement sans nouvelle pièce `a_verifier`, sans vérification hors bande et sans deux personnes. Forme d'A02, retenue par la coordination (le gabarit générique `refuser_modification_sauf()` figerait aussi le statut et les dates). (1) Une FONCTION DÉDIÉE, nouvelle et additive, `pieces_kyc_refuser_substitution()`, sans EXECUTE, refuse en UPDATE tout changement de `id`, `apporteur_id`, `type`, `iban_chiffre`, `iban_hash` et `fichier_ref`, avec une seule exception : `fichier_ref` peut passer à NULL, sans retour, en même temps que `fichier_purge_at` est posé (la purge de la pièce d'identité de DM-11, REQ-JUR-029). Les autres colonnes restent libres (`statut`, `verifiee_at`, `expire_at`, `remplacee_at`, `fichier_purge_at`). DÉCLENCHEURS : `pieces_kyc_coordonnees_figees` (BEFORE UPDATE OR DELETE, FOR EACH ROW ; DELETE refusé, puisqu'une pièce ne disparaît pas) et `pieces_kyc_troncature` (BEFORE TRUNCATE, FOR EACH STATEMENT). Un changement de RIB est TOUJOURS une nouvelle pièce (`a_verifier`), et l'ancienne reçoit `remplacee_at` (REQ-UX-027). (2) SANS exception de purge d'IBAN en phase 1 : `iban_purge_at` n'existe qu'avec DM-58 (phase 2), et la fonction ne peut pas la nommer avant ; l'IBAN est donc ENTIÈREMENT figé, et DM-58 assouplira la fonction pour sa seule purge, avec un ADR. (3) PRÉFIXE `20261002001500` (001400 est réservé à DM-56) ; la migration vient après 001100, donc SEC-49 fusionne APRÈS DM-11 (#476). Label `schema`. (4) TÉMOINS, chaque refus attendu sur le nom du déclencheur ou de la fonction : sur une pièce rib `valide`, un UPDATE de `iban_chiffre`, de `iban_hash`, de `type`, d'`apporteur_id` ou de `fichier_ref` est refusé ; `statut`, `verifiee_at`, `expire_at` et `remplacee_at` passent ; la purge de la pièce d'identité (`fichier_ref` à NULL avec `fichier_purge_at`) passe, et le retour de `fichier_ref` est refusé ; DELETE et TRUNCATE sont refusés ; un test lit `pg_trigger` et rougit si l'un des deux déclencheurs manque. Auteur : A05. Lentilles sécurité et schema (A02).",
+      "tests": {
+        "REQ-UX-027": [
+          "tests/integration/pieces-kyc-figees.spec.ts"
+        ],
+        "REQ-DM-027": [
+          "tests/integration/pieces-kyc-figees.spec.ts"
         ]
       }
     }
