@@ -308,6 +308,17 @@ export const SEUILS = {
     renvois: [],
     verifieLe: '2026-09-30',
   },
+  // INT-T56 : une candidature reçue restée non traitée au-delà de ce délai perd `reponsesJson` de sa
+  // charge conservée (minimisation de fond). PLAFOND PROVISOIRE : jamais plus long sans décision de
+  // Williams.
+  CANDIDATURE_NON_TRAITEE_MINIMISEE_APRES_JOURS: {
+    valeur: 30,
+    unite: 'jours',
+    source:
+      'HYP-RGPD-RETENTION, proposition de la lentille sécurité, 2026-10-02 (acceptation INT-T56, REQ-JUR-029) — plafond provisoire, à confirmer par Williams',
+    renvois: [],
+    verifieLe: '2026-10-02',
+  },
   // QA-T57 : la plateforme vide la base chaque heure ; au-delà, le dernier vidage du dépôt est
   // périmé, la fraîcheur rougit et alerte (`vidage_perime`). Une heure de marge absorbe un run
   // planifié retardé.
