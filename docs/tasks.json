@@ -14915,7 +14915,8 @@
         "UX-P1-41",
         "UX-P1-10",
         "GOV-112",
-        "GOV-137"
+        "GOV-137",
+        "UX-P1-48"
       ],
       "reqs": [
         "REQ-INT-022",
@@ -14926,7 +14927,7 @@
         "REQ-JUR-060"
       ],
       "estimateDays": 1.25,
-      "acceptance": "Source : docs/chantiers/W20-confirmation-par-email.md (décision de Williams du 2026-09-29, session -d7, phase 1). Réalise REQ-INT-060 et la part envoi de REQ-JUR-060 (Exigence nouvelle proposée au §3 du plan, à inscrire par la passe gardien-spec puis à ajouter à `reqs` ; les HYP-W20 citées ici ne sont pas encore au §2 de docs/DECISIONS.md, elles entreront dans `hyp` par la même passe.) ; hypothèse HYP-W20-REBOND. (1) Un job « tout ce qui est dû à l'instant t », horloge injectée (REQ-QA-027), envoie les demandes échues par l'émetteur d'INT-T10 : jamais avant l'échéance, jamais deux fois ; une demande annulée n'envoie rien. (2) Sans drapeau DMARC, ou vers une adresse supprimée, l'envoi est retenu et visible (REQ-INT-022, REQ-INT-023). (3) L'e-mail part depuis une adresse humaine, vers l'adresse saisie pour le contact et aucune autre ; multipart avec une version texte, aucune image distante, aucun pixel de suivi, aucun lien autre que les deux réponses et l'opposition ; la version du texte est journalisée avec l'envoi. (4) Le webhook de rebond rattache le rebond à sa demande par l'identifiant du message, passe la demande en rebond, et crée une notification INFORMATIVE de l'apporteur (clé de la table SSOT, faitCourirUnDelai false, REQ-JUR-039). (5) Témoins : drapeau faux → aucune requête au relais ; rebond mal signé → rien ; worker arrêté puis relancé → rattrapage sans doublon. AMENDEMENT (audit indépendant du plan de la Phase 1 (2026-10-01), écart B-06) : le rattachement est appelé depuis `recevoirRebond` ; aucune seconde route de rebond. CONDITION DE LA LENTILLE SÉCURITÉ (rattrapage 45, relayée par la coordination, 2026-10-02), MOT POUR MOT : « (a) le journal de l'envoi ne porte que version, identifiant et statut, jamais adresse, nom, fonction ni téléphone ; (b) la case de mise en service est tenue par le CODE : un drapeau de mise en service absent ou faux donne un refus nommé de tout envoi réel, avec un témoin ». REPRIS D'UX-P1-41 (rattrapage 68, arbitrage de la coordination : l'envoi appartient à l'émettrice ; la condition de la lentille sécurité du rattrapage 45 figure déjà plus haut). TÉMOIN : le prénom et le nom de l'apporteur viennent du contrat signé, lu à l'envoi (une saisie libre différente ne passe pas). L'envoi importe le rendu pur `src/domain/confirmation/rendu-du-courriel.ts` (UX-P1-41) ; le courriel renvoyé au contact après correction est un gabarit du parcours de confirmation, envoyé ici et tracé dans `courriels_envoyes`.",
+      "acceptance": "Source : docs/chantiers/W20-confirmation-par-email.md (décision de Williams du 2026-09-29, session -d7, phase 1). Réalise REQ-INT-060 et la part envoi de REQ-JUR-060 (Exigence nouvelle proposée au §3 du plan, à inscrire par la passe gardien-spec puis à ajouter à `reqs` ; les HYP-W20 citées ici ne sont pas encore au §2 de docs/DECISIONS.md, elles entreront dans `hyp` par la même passe.) ; hypothèse HYP-W20-REBOND. (1) Un job « tout ce qui est dû à l'instant t », horloge injectée (REQ-QA-027), envoie les demandes échues par l'émetteur d'INT-T10 : jamais avant l'échéance, jamais deux fois ; une demande annulée n'envoie rien. (2) Sans drapeau DMARC, ou vers une adresse supprimée, l'envoi est retenu et visible (REQ-INT-022, REQ-INT-023). (3) L'e-mail part depuis une adresse humaine, vers l'adresse saisie pour le contact et aucune autre ; multipart avec une version texte, aucune image distante, aucun pixel de suivi, aucun lien autre que les deux réponses et l'opposition ; la version du texte est journalisée avec l'envoi. (4) Le webhook de rebond rattache le rebond à sa demande par l'identifiant du message, passe la demande en rebond, et crée une notification INFORMATIVE de l'apporteur (clé de la table SSOT, faitCourirUnDelai false, REQ-JUR-039). (5) Témoins : drapeau faux → aucune requête au relais ; rebond mal signé → rien ; worker arrêté puis relancé → rattrapage sans doublon. AMENDEMENT (audit indépendant du plan de la Phase 1 (2026-10-01), écart B-06) : le rattachement est appelé depuis `recevoirRebond` ; aucune seconde route de rebond. CONDITION DE LA LENTILLE SÉCURITÉ (rattrapage 45, relayée par la coordination, 2026-10-02), MOT POUR MOT : « (a) le journal de l'envoi ne porte que version, identifiant et statut, jamais adresse, nom, fonction ni téléphone ; (b) la case de mise en service est tenue par le CODE : un drapeau de mise en service absent ou faux donne un refus nommé de tout envoi réel, avec un témoin ». REPRIS D'UX-P1-41 (rattrapage 68, arbitrage de la coordination : l'envoi appartient à l'émettrice ; la condition de la lentille sécurité du rattrapage 45 figure déjà plus haut). TÉMOIN : le prénom et le nom de l'apporteur viennent du contrat signé, lu à l'envoi (une saisie libre différente ne passe pas). L'envoi importe le rendu pur `src/domain/confirmation/rendu-du-courriel.ts` (UX-P1-41) ; le courriel renvoyé au contact après correction est un gabarit du parcours de confirmation, envoyé ici et tracé dans `courriels_envoyes`. CONDITION DE MISE EN SERVICE d'A07 (rattrapage 70), MOT POUR MOT : « aucun courriel au contact en v5 de l'art. 14 ne part tant que la page ouverte par le lien n'offre pas TOUS les droits (accès, rectification, effacement, limitation, opposition), chacun distinct et sans compte ; sinon l'information de l'art. 14 serait inexacte ». La page est UX-P1-48, à ses deps.",
       "tests": {
         "REQ-INT-022": [
           "tests/integration/envoi-differe-de-la-confirmation.spec.ts"
@@ -21353,6 +21354,97 @@
         ],
         "REQ-DM-027": [
           "tests/integration/pieces-kyc-figees.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "UX-P1-48",
+      "titre": "La page des droits du contact : tous ses droits, sans compte, avec deux actions distinctes",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "espace",
+      "paths": [
+        "src/app/(public)/droits/[jeton]/page.tsx",
+        "src/app/(public)/droits/[jeton]/actions.ts",
+        "tests/unit/public/page-des-droits.spec.ts",
+        "tests/e2e/public/droits-du-contact.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "UX-P1-42",
+        "JUR-T51",
+        "SEC-40"
+      ],
+      "reqs": [
+        "REQ-JUR-065",
+        "REQ-UX-047"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1,
+      "statut": "a_faire",
+      "acceptance": "Versée au rattrapage 70 sur l'arbitrage de la coordination du 2026-10-02, accepté par A07 et la lentille sécurité. (1) La page ouverte par le lien d'opposition du courriel au contact permet TOUS les droits (accès, rectification, effacement, limitation, opposition), sans compte et sans condition, avec DEUX actions distinctes : exercer un droit, et s'opposer. C'est le moyen électronique de l'art. 12, puisque `{adresseDroits}` est postale dans le courriel ; la clé `droits` de l'art. 14 (v5) y renvoie déjà. (2) CONDITION DE MISE EN SERVICE d'A07, MOT POUR MOT : « aucun courriel au contact en v5 de l'art. 14 ne part tant que la page ouverte par le lien n'offre pas TOUS les droits (accès, rectification, effacement, limitation, opposition), chacun distinct et sans compte ; sinon l'information de l'art. 14 serait inexacte ». (3) Écran public : maquette et cinq états (REQ-UX-047), textes dans la SSOT de micro-copy, garde lexicale verte. (4) TÉMOINS : chacun des cinq droits est offert et distinct ; aucune étape ne demande de compte ; les deux actions mènent à deux demandes distinctes. Auteur : A06. Lentilles A07 et sécurité.",
+      "tests": {
+        "REQ-JUR-065": [
+          "tests/unit/public/page-des-droits.spec.ts"
+        ],
+        "REQ-UX-047": [
+          "tests/unit/public/page-des-droits.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "JUR-T56",
+      "titre": "Art. 3.2 : l'art. 3.7 s'applique quand l'entreprise indique n'avoir eu aucun échange avec l'Apporteur",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "juridique",
+      "paths": [
+        "docs/contrat/CONTRAT-APPORTEUR-V1.md",
+        "tests/unit/contrat/art-3-2-aligne-sur-3-7.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [],
+      "reqs": [
+        "REQ-JUR-031"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.25,
+      "statut": "a_faire",
+      "acceptance": "Versée au rattrapage 70 sur la revue d'A07 de #501 (2026-10-02) : l'art. 3.2 dit que « L'article 3.7 ne s'applique qu'au cas où l'entreprise indique ne pas connaître l'Apporteur », alors que l'art. 3.7 al. 2 vise l'entreprise qui « indique expressément n'avoir eu aucun échange avec l'Apporteur » ; on peut connaître quelqu'un sans avoir eu d'échange récent avec lui. Texte d'A07, MOT POUR MOT : « …qu'au cas où l'entreprise indique expressément n'avoir eu aucun échange avec l'Apporteur, dans les conditions de l'article 3.7. » Le texte reste une PROPOSITION, non en vigueur, jusqu'à sa validation par Williams en séance ; cette validation est une étape de cette acceptance, pas un préalable. TÉMOIN (écrit par A05, pas par l'autrice) : le gabarit rendu ne porte plus « ne pas connaître l'Apporteur » à l'art. 3.2, et y porte la phrase d'A07. Autrice : A07 ; sa relecture revient à la suppléante (REQ-JUR-036).",
+      "tests": {
+        "REQ-JUR-031": [
+          "tests/unit/contrat/art-3-2-aligne-sur-3-7.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "INT-T71-A",
+      "titre": "Le script d'import des CV route les candidats de l'annonce salariée vers « proposer le réseau »",
+      "phase": 1,
+      "repo": "axionia",
+      "zone": "integration",
+      "paths": [
+        "axionia/scripts/import-cv-apporteurs.mjs",
+        "axionia/tests/unit/import-cv-apporteurs.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [],
+      "reqs": [
+        "REQ-JUR-066"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "acceptance": "Versée au rattrapage 70 sur la décision de Williams du 2026-10-02, point 4 de la séance (« Pour le point 4 = A. » ; HYP-CANDIDATS-INDEED, option A). Constat de l'inventaire (JUR-T33, `docs/chantiers/W19-inventaire-axionia-1202.md`) : `scripts/import-cv-apporteurs.mjs` rattache ou crée une fiche d'apporteur pour chaque CV reçu par l'annonce Indeed de commercial SALARIÉ, sans geste de la personne. (1) Le script route ces candidats vers le parcours « proposer le réseau » qui existe déjà (`src/features/admin-job-applications/proposer-reseau-actions.ts`) : ils reçoivent d'abord une proposition, et n'entrent dans le tunnel des apporteurs qu'après l'avoir acceptée ; aucune fiche d'apporteur n'est créée ni rattachée avant. (2) TÉMOIN sur le routage : un CV de l'annonce salariée ne crée aucune fiche d'apporteur et produit une proposition du réseau ; un CV d'une autre source garde le comportement actuel. Auteur : A05.",
+      "tests": {
+        "REQ-JUR-066": [
+          "axionia/tests/unit/import-cv-apporteurs.spec.ts"
         ]
       }
     }

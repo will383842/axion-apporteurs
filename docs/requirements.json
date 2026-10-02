@@ -5264,6 +5264,7 @@
         "UX-P1-44",
         "UX-P1-45",
         "UX-P1-46",
+        "UX-P1-48",
         "UX-P2-01",
         "UX-P2-02",
         "UX-P2-03",
@@ -5994,6 +5995,7 @@
         "JUR-T24",
         "JUR-T27",
         "JUR-T28",
+        "JUR-T56",
         "SEC-14",
         "SEC-15",
         "SEC-41",
@@ -6300,6 +6302,34 @@
       "phase": 1,
       "taches": [
         "JUR-T55"
+      ]
+    },
+    {
+      "id": "REQ-JUR-065",
+      "domaine": "juridique",
+      "texte": "**La page ouverte par le lien du courriel au contact permet TOUS ses droits** (accès, rectification, effacement, limitation, opposition), chacun distinct, sans compte et sans condition, avec DEUX actions distinctes : exercer un droit, et s'opposer. C'est le moyen électronique de l'art. 12 du RGPD, puisque `{adresseDroits}` est postale dans le courriel ; la clé `droits` de l'information de l'art. 14 (v5) y renvoie. Aucun courriel au contact en v5 de l'art. 14 ne part tant que cette page n'offre pas tous ces droits.",
+      "source": "Arbitrage de la coordination du 2026-10-02, accepté par A07 et la lentille sécurité ; condition de mise en service d'A07 (2026-10-02)",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": null,
+      "etape": null,
+      "phase": 1,
+      "taches": [
+        "UX-P1-48"
+      ]
+    },
+    {
+      "id": "REQ-JUR-066",
+      "domaine": "juridique",
+      "texte": "**Une personne qui répond à une annonce de commercial salarié n'entre dans le tunnel des apporteurs qu'après avoir accepté une proposition.** Le script d'import des CV la route vers le parcours « proposer le réseau » qui existe déjà ; il ne crée ni ne rattache aucune fiche d'apporteur sans ce consentement. Les deux populations, salariés et apporteurs, restent séparées dès le départ.",
+      "source": "Décision de Williams du 2026-10-02, point 4 de la séance (« Pour le point 4 = A. ») ; HYP-CANDIDATS-INDEED",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": null,
+      "etape": null,
+      "phase": 1,
+      "taches": [
+        "INT-T71-A"
       ]
     },
     {
