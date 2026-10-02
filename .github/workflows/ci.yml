@@ -447,14 +447,15 @@ jobs:
       # et pilotent un vrai navigateur : WebKit pour le profil iPhone, Chromium pour le bureau. Sans
       # eux, la suite rougirait sur une absence d outil, pas sur une faute. Avant `Tests`, donc.
       # QA-T59. Cette etape est restee bloquee plus de 25 min : un telechargement qui ne repond plus
-      # immobilisait toute la porte A. Chaque tentative est sous `timeout`, trois au plus ; si toutes
-      # echouent, la derniere donne son code et l etape ECHOUE — une nouvelle tentative, jamais un
-      # vert de complaisance ; `timeout-minutes` borne l etape entiere. Une seule ligne, sans
-      # substitution : la seule forme que `pnpm pre-gate` relit. Le cache des navigateurs est en tete
-      # du job. Temoin : `tests/unit/qualite/ci-navigateurs-a11y.spec.ts`.
+      # immobilisait toute la porte A. `scripts/ci/navigateurs-bornes.ts` tente trois fois au plus,
+      # chaque tentative tuee a quatre minutes ; si toutes echouent, l etape ECHOUE — une nouvelle
+      # tentative, jamais un vert de complaisance ; `timeout-minutes` borne l etape entiere. Un script
+      # du depot, sous une forme fermee (REQ-GOV-018) ; `pnpm pre-gate` le classe lent. Le cache des
+      # navigateurs est en tete du job. Temoins : `tests/unit/qualite/ci-navigateurs-a11y.spec.ts` et
+      # `tests/unit/qualite/navigateurs-bornes.spec.ts`.
       - name: Navigateurs des passes d accessibilite
         timeout-minutes: 15
-        run: timeout 240 pnpm a11y:navigateurs || timeout 240 pnpm a11y:navigateurs || timeout 240 pnpm a11y:navigateurs
+        run: pnpm a11y:navigateurs:bornes
       # `pnpm test` a besoin du jeton pour la MEME raison que l etape `gov:etat` ci-dessous :
       # `plan-state-frais.spec.ts` et `une-tache-un-owner.spec.ts` lancent la garde contre le depot
       # REEL, et elle echoue quand elle ne peut pas lire la forge — c est ce qu on lui demande.

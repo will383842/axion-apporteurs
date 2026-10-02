@@ -152,6 +152,7 @@
     "mutation:prove": "tsx scripts/mutation/rapport.ts --prove",
     "mutation:pr": "tsx scripts/mutation/pr.ts",
     "a11y:navigateurs": "playwright install --with-deps chromium webkit",
+    "a11y:navigateurs:bornes": "tsx scripts/ci/navigateurs-bornes.ts",
     "image:construire": "docker build --build-arg GITHUB_SHA --tag partners:construite .",
     "image:temoin-build-sans-base": "sh scripts/image/temoin-build-sans-base.sh",
     "gate-c": "sh scripts/gates/gate-c.sh partners:construite",

@@ -2769,7 +2769,7 @@ export const PORTE_A_FIGEE: PorteFigee = {
     // toutes échouées, l'étape ÉCHOUE (jamais un vert de complaisance).
     {
       nom: 'Navigateurs des passes d accessibilite',
-      run: Array(3).fill('timeout 240 pnpm a11y:navigateurs').join(' || '),
+      run: 'pnpm a11y:navigateurs:bornes',
       cles: { 'timeout-minutes': '15' },
     },
     { nom: 'Tests', run: 'pnpm test', cles: JETON_DE_LA_FORGE },
@@ -2941,6 +2941,7 @@ export const PORTE_A_FIGEE: PorteFigee = {
     'red-first:prove': 'tsx scripts/gates/red-first.ts --prove',
     'harnais-mcp': 'tsx scripts/gates/harnais-mcp.ts',
     'a11y:navigateurs': 'playwright install --with-deps chromium webkit',
+    'a11y:navigateurs:bornes': 'tsx scripts/ci/navigateurs-bornes.ts',
     test: 'vitest run --coverage --reporter=default --reporter=json --outputFile.json=test-results/vitest.json',
     'req:check': 'tsx scripts/gates/gov-trace.ts --resultats test-results/vitest.json',
     'mutation:prove': 'tsx scripts/mutation/rapport.ts --prove',
