@@ -81,14 +81,16 @@ describe('REQ-QA-016 — les projets Playwright', () => {
     expect(specsSansProjet(sansMobile, ['tests/e2e/espace/deposer.spec.ts'])).toEqual([
       'tests/e2e/espace/deposer.spec.ts : aucun projet mobile',
     ]);
-    // Et un parcours de console qu'un projet mobile prendrait est refusé aussi.
-    const consoleSurMobile = {
+    // QA-T33 : un parcours de console privé de son projet de bureau est orphelin…
+    const consoleSansBureau = {
       ...config,
-      projects: (config.projects ?? []).map((p) => ({ ...p, testMatch: '**/*.spec.ts' })),
+      projects: (config.projects ?? []).filter((p) => p.use?.isMobile === true),
     };
-    expect(specsSansProjet(consoleSurMobile, ['tests/e2e/console/lot.spec.ts'])).toEqual([
-      'tests/e2e/console/lot.spec.ts : pris par un projet mobile',
+    expect(specsSansProjet(consoleSansBureau, ['tests/e2e/console/lot.spec.ts'])).toEqual([
+      'tests/e2e/console/lot.spec.ts : aucun projet de bureau',
     ]);
+    // … et pris par le bureau ET par un mobile, il est sans faute (REQ-QA-016 amendée W19).
+    expect(specsSansProjet(config, ['tests/e2e/console/lot.spec.ts'])).toEqual([]);
   });
 });
 

@@ -476,9 +476,11 @@ describe('REQ-QA-011 → REQ-SEC-008 — la liste des modèles cloisonnés est c
       const m = modeles.find((x) => delegue(x.name) === modele)!;
       for (const f of m.fields.filter((x) => x.kind === 'object')) {
         const versCloisonnee = (MODELES_CLOISONNES as readonly string[]).includes(delegue(f.type));
-        for (const colonne of f.relationFromFields ?? []) {
+        // Une clé COMPOSITE (DM-11 : `(piece_kyc_id, piece_kyc_type)` vers la pièce `rib`) se vérifie par
+        // son identifiant, sa PREMIÈRE colonne ; le discriminant qui la complète n'est pas une référence.
+        for (const [i, colonne] of (f.relationFromFields ?? []).entries()) {
           const declaree = Object.keys(REFERENCES_CLOISONNEES[modele] ?? {}).includes(colonne);
-          expect(declaree, `${modele}.${colonne}`).toBe(versCloisonnee);
+          expect(declaree, `${modele}.${colonne}`).toBe(versCloisonnee && i === 0);
         }
       }
     }
@@ -750,7 +752,7 @@ function fautesDeClassement(
 }
 
 describe('REQ-SEC-008 — GOV-111 : la couche ne rend qu’une sélection EXPLICITE, sans secret', () => {
-  it('REQ-SEC-008 : les dix-sept secrets sont figés — les six de GOV-111, les quatre de la fiche (SEC-47) et les sept du dépôt (DM-07)', () => {
+  it('REQ-SEC-008 : les dix-neuf secrets sont figés — les six de GOV-111, les quatre de la fiche (SEC-47), les sept du dépôt (DM-07) et l’IBAN de la pièce rib (DM-11)', () => {
     expect(Object.isFrozen(SECRETS)).toBe(true);
     expect([...SECRETS].sort()).toEqual(
       [
@@ -771,6 +773,8 @@ describe('REQ-SEC-008 — GOV-111 : la couche ne rend qu’une sélection EXPLIC
         'codePostalChiffre',
         'lienInteretPrecisionChiffre',
         'agentHash',
+        'ibanChiffre',
+        'ibanHash',
       ].sort()
     );
   });
