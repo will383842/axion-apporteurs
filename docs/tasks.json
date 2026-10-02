@@ -8839,7 +8839,8 @@
         "INT-T09"
       ],
       "reqs": [
-        "REQ-EXT-015"
+        "REQ-EXT-015",
+        "REQ-INT-021"
       ],
       "hyp": [],
       "externe": null,
@@ -8852,7 +8853,15 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "`latitude`/`longitude` capturées depuis le siège renvoyé par l'API publique, `siege.latitude`/`siege.longitude` WGS84 (chaînes) convertis en micro-degrés entiers en fonction pure côté serveur ; aucune projection (vérification V2 (GOV-132, 2026-10-01), A1-10 : l'API rend du WGS84). (vérification V2 (GOV-132, 2026-10-01), A2-15 : pas d'écran, REQ-UX-047 retirée.) ÉCHEC FERMÉ (rattrapage 64, règle retenue par la lentille sécurité le 2026-10-02) : une position n'est enregistrée que si la diffusion est O pour l'unité ET le siège ; toute autre valeur donne nul (souvent le domicile d'un entrepreneur individuel) ; la position ne va qu'à la fiche serveur, jamais à la suggestion (sécurité, 02/10)."
+      "acceptance": "`latitude`/`longitude` capturées depuis le siège renvoyé par l'API publique, `siege.latitude`/`siege.longitude` WGS84 (chaînes) convertis en micro-degrés entiers en fonction pure côté serveur ; aucune projection (vérification V2 (GOV-132, 2026-10-01), A1-10 : l'API rend du WGS84). (vérification V2 (GOV-132, 2026-10-01), A2-15 : pas d'écran, REQ-UX-047 retirée.) ÉCHEC FERMÉ (rattrapage 64, règle retenue par la lentille sécurité le 2026-10-02) : une position n'est enregistrée que si la diffusion est O pour l'unité ET le siège ; toute autre valeur donne nul (souvent le domicile d'un entrepreneur individuel) ; la position ne va qu'à la fiche serveur, jamais à la suggestion (sécurité, 02/10). EXIGENCE (rattrapage 65) : EXT-T08 porte aussi REQ-INT-021, amendée pour les coordonnées du siège (`latitude_microdeg`, `longitude_microdeg`, échec fermé de la diffusion) ; son témoin `tests/integration/api-gouv.spec.ts` dérive la liste attendue du texte de l'exigence.",
+      "tests": {
+        "REQ-INT-021": [
+          "tests/integration/api-gouv.spec.ts"
+        ],
+        "REQ-EXT-015": [
+          "tests/unit/integration/projection-coordonnees.spec.ts"
+        ]
+      }
     },
     {
       "id": "EXT-T01",
@@ -18346,8 +18355,23 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
-      "acceptance": "Écart C11 de la vérification de bout en bout, porté par l'audit indépendant du plan de la Phase 1 (2026-10-01). (1) Le compteur `auth:axionia-ip` (60 par minute) est inscrit au registre des limites. (2) `AXIONIA_API_ALLOWLIST` est déclarée dans `schemaConfiguration` et dans le provisionnement. (3) `SAUTS_DE_CONFIANCE` est mesuré et consigné dans `docs/tiers/coolify.md`. TÉMOINS rouges d'abord. Relecture de la lentille securite. PRÉCISIONS (rattrapage 51, note de conception de A05) : (1) le compteur `auth:axionia-ip` entre au registre `COMPTEURS` (60 / 60 s, `surPanne: refuser`, sujet = empreinte de l'adresse) ; REQ-SEC-012 est amendée à valeur constante (« 60 / 1 min par hash IP, avec `surPanne: refuser` », forme lue par la garde de famille, modèle REQ-SEC-002). (2) `frontiereDeProduction().debit` passe de `limiteNonDeclaree` à ce compteur (écart C11 de la vérification de bout en bout) : TÉMOIN d'intégration, 60e appel 200, 61e 429. (3) `AXIONIA_API_ALLOWLIST` entre au schéma de configuration (facultative ; absente, personne n'entre), à `.env.example`, `docs/env.md` et au provisionnement (`vars`). (4) Sauts de confiance mesurés le 2026-10-02 (DNS de `apporteurs.axion-ia.com` non mandaté par Cloudflare ; réponse sans `cf-ray` ni `via`) : un seul mandataire, le Traefik de la plateforme ; `SAUTS_DE_CONFIANCE` = 1, consigné avec la méthode et la condition de remesure (passer le DNS en mandaté ajoute un saut) dans `docs/tiers/coolify.md`, épinglé par un témoin unitaire ; PAS de variable d'environnement. Le témoin `tests/unit/securite/frontiere-axionia.spec.ts` change de face : le débit de production est le compteur du registre ; sans `REDIS_URL`, il refuse en panne (`cache_indisponible`) ; la panne est signalée sous `auth:`, jamais la clé. FICHE DES TIERS (rattrapage 53) : `docs/tiers/README.md` porte REQ-SEC-012 sur la ligne de coolify, exigée par `fiches-tiers.spec.ts` (REQ-GOV-022) ; label `role:documentaliste`. MUTATION (rattrapage 60, forme tranchée par la lentille sécurité) : jamais de `Stryker disable` ; le BLOC « REQ-SEC-016 — la garde de famille » (élargi au bloc au rattrapage 63) (ses témoins lisent les sources par universDuDepot(), que Stryker instrumente) entre dans ECARTES ; les autres blocs REQ-SEC-016 restent mutés (accord de la sécurité, 02/10) ; ECARTES vit dans `vitest.mutation.config.ts`, avec le motif « juge les sources du dépôt, pas le code sous mutation : le bac à sable instrumenté n'est pas la source » ; un témoin-ESPION tue le mutant du nom à `api-entrante.ts` (le site de #414). Les deux autres sites (lien-magique-production.ts, limiteur.ts) sont portés par QA-T68."
+      "statut": "fusionnee",
+      "acceptance": "Écart C11 de la vérification de bout en bout, porté par l'audit indépendant du plan de la Phase 1 (2026-10-01). (1) Le compteur `auth:axionia-ip` (60 par minute) est inscrit au registre des limites. (2) `AXIONIA_API_ALLOWLIST` est déclarée dans `schemaConfiguration` et dans le provisionnement. (3) `SAUTS_DE_CONFIANCE` est mesuré et consigné dans `docs/tiers/coolify.md`. TÉMOINS rouges d'abord. Relecture de la lentille securite. PRÉCISIONS (rattrapage 51, note de conception de A05) : (1) le compteur `auth:axionia-ip` entre au registre `COMPTEURS` (60 / 60 s, `surPanne: refuser`, sujet = empreinte de l'adresse) ; REQ-SEC-012 est amendée à valeur constante (« 60 / 1 min par hash IP, avec `surPanne: refuser` », forme lue par la garde de famille, modèle REQ-SEC-002). (2) `frontiereDeProduction().debit` passe de `limiteNonDeclaree` à ce compteur (écart C11 de la vérification de bout en bout) : TÉMOIN d'intégration, 60e appel 200, 61e 429. (3) `AXIONIA_API_ALLOWLIST` entre au schéma de configuration (facultative ; absente, personne n'entre), à `.env.example`, `docs/env.md` et au provisionnement (`vars`). (4) Sauts de confiance mesurés le 2026-10-02 (DNS de `apporteurs.axion-ia.com` non mandaté par Cloudflare ; réponse sans `cf-ray` ni `via`) : un seul mandataire, le Traefik de la plateforme ; `SAUTS_DE_CONFIANCE` = 1, consigné avec la méthode et la condition de remesure (passer le DNS en mandaté ajoute un saut) dans `docs/tiers/coolify.md`, épinglé par un témoin unitaire ; PAS de variable d'environnement. Le témoin `tests/unit/securite/frontiere-axionia.spec.ts` change de face : le débit de production est le compteur du registre ; sans `REDIS_URL`, il refuse en panne (`cache_indisponible`) ; la panne est signalée sous `auth:`, jamais la clé. FICHE DES TIERS (rattrapage 53) : `docs/tiers/README.md` porte REQ-SEC-012 sur la ligne de coolify, exigée par `fiches-tiers.spec.ts` (REQ-GOV-022) ; label `role:documentaliste`. MUTATION (rattrapage 60, forme tranchée par la lentille sécurité) : jamais de `Stryker disable` ; le BLOC « REQ-SEC-016 — la garde de famille » (élargi au bloc au rattrapage 63) (ses témoins lisent les sources par universDuDepot(), que Stryker instrumente) entre dans ECARTES ; les autres blocs REQ-SEC-016 restent mutés (accord de la sécurité, 02/10) ; ECARTES vit dans `vitest.mutation.config.ts`, avec le motif « juge les sources du dépôt, pas le code sous mutation : le bac à sable instrumenté n'est pas la source » ; un témoin-ESPION tue le mutant du nom à `api-entrante.ts` (le site de #414). Les deux autres sites (lien-magique-production.ts, limiteur.ts) sont portés par QA-T68.",
+      "tests": {
+        "REQ-SEC-012": [
+          "tests/unit/securite/api-entrante-ip.spec.ts",
+          "tests/integration/frontiere.spec.ts"
+        ]
+      },
+      "branch": "t/sec-44",
+      "owner": "A05",
+      "pr": 414,
+      "attestation": {
+        "pr": 414,
+        "sha": "958ea96a6ca4e9c77881e902b07a8309a5c547c6",
+        "fusionneeAt": "2026-10-02T16:06:47Z"
+      },
+      "motif": null
     },
     {
       "id": "CPL-T07",
@@ -20889,7 +20913,14 @@
       "zone": "securite",
       "paths": [
         "scripts/gates/gov-publication.ts",
-        "tests/unit/gouvernance/publication-donnee-du-poste.spec.ts"
+        "tests/unit/gouvernance/publication-donnee-du-poste.spec.ts",
+        "docs/GARDES-AXIONIA.md",
+        "docs/REPRISE-SESSION.md",
+        "scripts/lot/chemins-de-tache.ts",
+        "scripts/reprise.ts",
+        "vitest.config.ts",
+        "tests/unit/gouvernance/un-path-designe-ce-depot-ci.spec.ts",
+        "tests/unit/gouvernance/gardes.spec.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -20901,7 +20932,7 @@
       "externe": null,
       "estimateDays": 0.25,
       "statut": "a_faire",
-      "acceptance": "Tâche BLOQUANTE au sens du gel (une donnée personnelle dans le dépôt public), versée au rattrapage 64 sur demande de la coordination et de la lentille sécurité : une chaîne d'identité du poste s'était glissée dans un commentaire Prisma de #480, par une expansion du shell. On ÉTEND le scan EXISTANT des fichiers suivis, `gov:publication` (`scripts/gates/gov-publication.ts`, la garde du dépôt public), et non une garde de plus : une famille `donnee_du_poste` refuse les motifs `\\buid=\\d+\\(`, `\\bgid=\\d+\\b` et un chemin de dossier personnel Windows (`C:\\Users\\<nom>`). TÉMOINS : la famille a son témoin rouge dans `--prove` (une règle sans témoin fait échouer la preuve), et `tests/unit/gouvernance/publication-donnee-du-poste.spec.ts` couvre les trois motifs et un contre-témoin vert. ORDRE : SEC-48 fusionne avant GOV-134, qui porte le même fichier. Auteur : A06, après #480.",
+      "acceptance": "Tâche BLOQUANTE au sens du gel (une donnée personnelle dans le dépôt public), versée au rattrapage 64 sur demande de la coordination et de la lentille sécurité : une chaîne d'identité du poste s'était glissée dans un commentaire Prisma de #480, par une expansion du shell. On ÉTEND le scan EXISTANT des fichiers suivis, `gov:publication` (`scripts/gates/gov-publication.ts`, la garde du dépôt public), et non une garde de plus : une famille `donnee_du_poste` refuse les motifs `\\buid=\\d+\\(`, `\\bgid=\\d+\\b` et un chemin de dossier personnel Windows (`C:\\Users\\<nom>`). TÉMOINS : la famille a son témoin rouge dans `--prove` (une règle sans témoin fait échouer la preuve), et `tests/unit/gouvernance/publication-donnee-du-poste.spec.ts` couvre les trois motifs et un contre-témoin vert. ORDRE : SEC-48 fusionne avant GOV-134, qui porte le même fichier. Auteur : A06, après #480. NETTOYAGE ET FORMES (rattrapage 65 ; choix (A) de la coordination, conditions de la lentille sécurité) : six fichiers suivis de main portaient déjà le dossier personnel du poste ; les cinq hors `.claude/` sont NETTOYÉS par cette tâche (`docs/GARDES-AXIONIA.md`, `docs/REPRISE-SESSION.md`, `scripts/lot/chemins-de-tache.ts`, `scripts/reprise.ts`, `vitest.config.ts`) : chemin relatif au dépôt ou variable d'environnement avec repli pour le code, `<dossier des projets>` pour les .md ; aucune entrée EXEMPTS (coordination, 02/10). Une seule forme permise, le marqueur littéral `<nom>` (C:\\Users\\<nom>), avec son contre-témoin ; les trois écritures C:\\Users\\, C:/Users/ et /c/Users/, insensibles à la casse ; formes neutres %USERPROFILE%, ~ ou chemin relatif ; pas de réécriture de l'historique (sécurité, 02/10 : disproportionné). La forme ENCODÉE des dossiers de session (`C--Users-<nom>-…`, trouvée dans `reprise.ts`) est aussi refusée et nettoyée. `tests/unit/gouvernance/gardes.spec.ts` passe de 7 à 8 familles pour gov:publication ; la fixture de `tests/unit/gouvernance/un-path-designe-ce-depot-ci.spec.ts` emploie le marqueur `<nom>`. DÉPENDANCE : le sixième fichier, `.claude/agents/dev-axionia.md`, n'est écrit que par le lot dédié (CODEOWNERS) ; SEC-48 ne fusionne qu'APRÈS ce lot dédié, sinon la famille rougit main.",
       "tests": {
         "REQ-GOV-031": [
           "tests/unit/gouvernance/publication-donnee-du-poste.spec.ts"
