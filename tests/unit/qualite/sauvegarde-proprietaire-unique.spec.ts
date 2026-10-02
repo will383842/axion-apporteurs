@@ -1,7 +1,7 @@
 // @req REQ-QA-023
 /**
  * QA-T66 — l'exercice de sauvegarde refuse un vidage qui porte plus d'un propriétaire SOURCE
- * (REQ-QA-023 ; suite de DM-45 signalée par la lentille securite ; précisions : décision de la
+ * (REQ-QA-023 ; suite de la garde des rôles de la restauration, signalée par la lentille securite ; précisions : décision de la
  * coordination du 2026-10-02).
  *
  * Le propriétaire source est le rôle HORS `FORME_DES_ROLES` (`partners_*`) qui porte un
@@ -12,7 +12,7 @@
  *   1. deux propriétaires source → `proprietaires_multiples`, AVANT toute restauration, les DEUX
  *      rôles nommés, aucune ligne du vidage dans le message ;
  *   2. un seul, ou aucun → passe (contre-témoins) ;
- *   3. les rôles `partners_*` restent gérés comme avant (DM-45) : ni comptés comme propriétaires
+ *   3. les rôles `partners_*` restent gérés comme avant : ni comptés comme propriétaires
  *      source, ni refusés quand ils ont la forme ancrée.
  */
 import { describe, it, expect } from 'vitest';
@@ -58,7 +58,7 @@ describe('REQ-QA-023 — au plus UN propriétaire source dans le vidage', () => 
     expect(lu.proprietes).toEqual(['ALTER TABLE public.journal OWNER TO partners_journal;']);
   });
 
-  it('REQ-QA-023 : les fautes déjà gardées par DM-45 gardent leur message — rôle hors forme, propriété piégée', () => {
+  it('REQ-QA-023 : les fautes déjà gardées pour les rôles gardent leur message — rôle hors forme, propriété piégée', () => {
     expect(jugerLesRoles(rolesDuVidage(`${SCHEMA_UN}\nGRANT SELECT ON TABLE x TO etranger;`))).toBe(
       'restauration : rôle hors de la forme partners_* — etranger'
     );
