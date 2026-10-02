@@ -248,11 +248,13 @@ entreprises déclarées par l'Apporteur et les coordonnées qu'il a transmises, 
 elle-même ou par ses préposés. Cette utilisation ne retire rien aux droits de l'Apporteur : pendant la
 durée de l'attribution, toute commande de l'entreprise attribuée est commissionnée dans les conditions de
 l'article 4.4, qu'elle résulte des démarches de l'Apporteur, de celles de la Société ou de ses préposés,
-ou d'une initiative de l'entreprise. Pendant le délai de confirmation de l'article 3.2, la Société ne
-démarche pas l'entreprise déclarée, hors la demande de confirmation elle-même. Dans les
+ou d'une initiative de l'entreprise. Tant que l'attribution est provisoire, la Société ne démarche pas l'entreprise déclarée ; la demande de
+confirmation et les prises de contact de l'article 3.2 ne constituent pas un démarchage. Dans les
 {{RESERVE_APRES_ACTE_APPORTEUR_JOURS}} jours qui suivent une vérification d'entreprise faite par
-l'Apporteur, ou une déclaration de sa part refusée ou en attente, la Société ne démarche pas l'entreprise
-concernée et ne la prend pas en charge.**
+l'Apporteur, ou une déclaration de sa part refusée ou en attente, la Société ne démarche pas l'entreprise concernée et ne la prend pas en charge ; cette réserve ne
+s'applique ni à une entreprise que la Société connaissait déjà au sens de l'article 3.3, ni à une
+entreprise dont une attribution ou une prise en charge était en cours à la date de cette vérification ou de
+cette déclaration.**
 
 Les parties conviennent que l'horodatage attribué par le serveur de la Société fait foi entre elles
 **jusqu'à preuve contraire** pour l'application du présent article, conformément à l'article 1356 du code
@@ -526,8 +528,9 @@ professionnelles d'une personne physique. Il garantit avoir informé cette perso
 de l'article 13 du règlement (UE) 2016/679**, de la transmission de ses coordonnées et de sa finalité.
 
 **7.2** La Société est responsable du traitement de ces données. Elle en informe la personne concernée dans
-les conditions de l'article 14 du règlement (UE) 2016/679 et les conserve pour la durée nécessaire au
-suivi de l'affaire.
+les conditions de l'article 14 du règlement (UE) 2016/679 et les conserve pour la durée nécessaire au suivi de l'affaire et aux finalités de l'article 3.5 alinéa
+4, dans la limite des durées de conservation qu'elle porte à la connaissance de la personne ; elle l'informe
+de son droit de s'opposer à tout moment à la prospection.
 
 **7.3** L'Apporteur ne collecte ni ne transmet aucune donnée relevant de l'article 9 du même règlement.
 
