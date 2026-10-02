@@ -296,7 +296,8 @@ export const CHAMPS_TUS = {
   ],
   changementCourriel: ['apporteurId', 'emailChiffre', 'emailHash', 'tokenHash', 'kid'],
   courrielEnvoye: ['apporteurId', 'emailHash', 'fournisseurMessageId', 'erreur', 'attributionId'],
-  depotRefuse: ['apporteurId'],
+  // DM-53 : la date de la purge du SIREN, une trace technique ; le SIREN, lui, reste rendu (NULL une fois purgé).
+  depotRefuse: ['apporteurId', 'sirenPurgeAt'],
   identiteFacturation: ['apporteurId'],
   jetonDepot: ['apporteurId', 'tokenHash'],
   lienMagique: ['apporteurId', 'utilisateurConsoleId', 'tokenHash', 'kid', 'codeHash'],

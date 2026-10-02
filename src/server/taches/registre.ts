@@ -24,6 +24,8 @@ export const TACHES = {
   journal_verifier: { req: 'REQ-DM-024' },
   /** DM-48 — la purge du contact d'une attribution à échéance (`purgerLesContacts`). */
   contacts_purger: { req: 'REQ-DM-031' },
+  /** DM-53 — la purge du SIREN des dépôts refusés, douze mois après le refus. */
+  siren_refuses_purger: { req: 'REQ-DM-043' },
 } as const satisfies Readonly<Record<string, { req: `REQ-${string}` }>>;
 
 export type NomDeTache = keyof typeof TACHES;
