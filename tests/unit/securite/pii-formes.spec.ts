@@ -170,8 +170,8 @@ describe('REQ-SEC-024 — le format du bloc, confronté à un bloc assemblé à 
 
 describe('REQ-SEC-024 — chaque empreinte normalise ce qu’elle doit, et refuse le reste', () => {
   it('REQ-SEC-024 : courriel — bords, casse ; une seule arobase entre deux parties non vides', () => {
-    expect(empreinteRecherche('courriel', '  Ab.Cd@Ex.Fr ', CLES)).toBe(
-      attendue('courriel', 'ab.cd@ex.fr')
+    expect(empreinteRecherche('courriel', '  Ab.Cd@Exemple.Invalid ', CLES)).toBe(
+      attendue('courriel', 'ab.cd@exemple.invalid')
     );
     for (const faux of ['ab@cd@ef', 'abcd', '@cd', 'ab@', 'a b@cd', 'ab@c d']) {
       expect(refus('courriel', faux)).toEqual({
