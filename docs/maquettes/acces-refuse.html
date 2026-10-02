@@ -1,0 +1,1516 @@
+<!doctype html>
+<html lang="fr" data-theme="auto">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Maquette — Accès refusé · Axion Partners</title>
+    <style>
+      /* charte:debut — bloc commun aux maquettes (console) : ne pas modifier ici seul, le propager aux autres fichiers */
+      :root {
+        color-scheme: light;
+        --fond: #f6f7f9;
+        --surface: #ffffff;
+        --surface-2: #e6e9ee;
+        --texte: #1a1d23;
+        --texte-doux: #4a5261;
+        --bord: #737c8a;
+        --primaire: #1f4e8c;
+        --sur-primaire: #ffffff;
+        --lien: #1f4e8c;
+        --ok-fond: #e2f2e7;
+        --ok-texte: #1b5e34;
+        --attente-fond: #fdf0d5;
+        --attente-texte: #704000;
+        --bloque-fond: #fbe6e6;
+        --bloque-texte: #8f1d1d;
+        --info-fond: #e3ecf8;
+        --info-texte: #12427a;
+        --neutre-fond: #eceef2;
+        --neutre-texte: #4a5261;
+        --focus: #b34700;
+        --atelier-fond: #e4ded3;
+        --atelier-surface: #ffffff;
+        --atelier-texte: #1c1917;
+        --atelier-doux: #57534e;
+        --atelier-lien: #a8390b;
+        --atelier-bord: #a39a8f;
+        --atelier-fond-bouton: #ffffff;
+        --atelier-alerte-fond: #fff1d6;
+        --atelier-alerte-texte: #6e3b00;
+        --cadre: #1b1f24;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root[data-theme='auto'] {
+          color-scheme: dark;
+          --fond: #12161c;
+          --surface: #1b2129;
+          --surface-2: #2a313b;
+          --texte: #eef1f5;
+          --texte-doux: #c3cad4;
+          --bord: #7f8a99;
+          --primaire: #8db8f2;
+          --sur-primaire: #0d1724;
+          --lien: #9cc3f5;
+          --ok-fond: #15301f;
+          --ok-texte: #9fe0b4;
+          --attente-fond: #33280e;
+          --attente-texte: #f3d37a;
+          --bloque-fond: #3a1717;
+          --bloque-texte: #fca5a5;
+          --info-fond: #162a47;
+          --info-texte: #b3cff7;
+          --neutre-fond: #262c35;
+          --neutre-texte: #d0d6de;
+          --focus: #ffb366;
+          --atelier-fond: #0c0a09;
+          --atelier-surface: #1a1614;
+          --atelier-texte: #f5f1ea;
+          --atelier-doux: #cfc8bf;
+          --atelier-lien: #f7a06a;
+          --atelier-bord: #57504a;
+          --atelier-fond-bouton: #11161c;
+          --atelier-alerte-fond: #33240a;
+          --atelier-alerte-texte: #ffd58a;
+          --cadre: #3a424d;
+        }
+      }
+      :root[data-theme='sombre'] {
+        color-scheme: dark;
+        --fond: #12161c;
+        --surface: #1b2129;
+        --surface-2: #2a313b;
+        --texte: #eef1f5;
+        --texte-doux: #c3cad4;
+        --bord: #7f8a99;
+        --primaire: #8db8f2;
+        --sur-primaire: #0d1724;
+        --lien: #9cc3f5;
+        --ok-fond: #15301f;
+        --ok-texte: #9fe0b4;
+        --attente-fond: #33280e;
+        --attente-texte: #f3d37a;
+        --bloque-fond: #3a1717;
+        --bloque-texte: #fca5a5;
+        --info-fond: #162a47;
+        --info-texte: #b3cff7;
+        --neutre-fond: #262c35;
+        --neutre-texte: #d0d6de;
+        --focus: #ffb366;
+        --atelier-fond: #0c0a09;
+        --atelier-surface: #1a1614;
+        --atelier-texte: #f5f1ea;
+        --atelier-doux: #cfc8bf;
+        --atelier-lien: #f7a06a;
+        --atelier-bord: #57504a;
+        --atelier-fond-bouton: #11161c;
+        --atelier-alerte-fond: #33240a;
+        --atelier-alerte-texte: #ffd58a;
+        --cadre: #3a424d;
+      }
+
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+      html {
+        -webkit-text-size-adjust: 100%;
+      }
+      body {
+        margin: 0;
+        font:
+          18px/1.5 system-ui,
+          -apple-system,
+          'Segoe UI',
+          Roboto,
+          'Helvetica Neue',
+          Arial,
+          sans-serif;
+        background: var(--atelier-fond);
+        color: var(--atelier-texte);
+      }
+      a {
+        color: var(--atelier-lien);
+      }
+      :focus-visible {
+        outline: 3px solid var(--focus);
+        outline-offset: 2px;
+      }
+      .evitement {
+        position: absolute;
+        left: 8px;
+        top: -80px;
+        background: var(--atelier-surface);
+        padding: 12px 16px;
+        z-index: 10;
+        min-height: 48px;
+      }
+      .evitement:focus {
+        top: 8px;
+      }
+      .atelier-tete {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px 24px;
+        padding: 12px 20px;
+        background: var(--atelier-surface);
+        border-bottom: 1px solid var(--atelier-bord);
+      }
+      .atelier-tete h1 {
+        font-size: 24px;
+        margin: 0;
+        line-height: 1.25;
+      }
+      .atelier-tete h1 small {
+        display: block;
+        font-size: 18px;
+        font-weight: 400;
+        color: var(--atelier-doux);
+      }
+      .atelier-tete .fil a {
+        display: inline-flex;
+        align-items: center;
+        min-height: 48px;
+        font-weight: 600;
+      }
+      .fictif {
+        margin: 0;
+        padding: 6px 12px;
+        border-radius: 8px;
+        background: var(--atelier-alerte-fond);
+        color: var(--atelier-alerte-texte);
+        font-weight: 600;
+      }
+      .reglages {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-left: auto;
+      }
+      .reglages button {
+        min-height: 48px;
+        min-width: 48px;
+        padding: 0 14px;
+        font: inherit;
+        border-radius: 10px;
+        border: 2px solid var(--atelier-bord);
+        background: var(--atelier-fond-bouton);
+        color: var(--atelier-texte);
+        cursor: pointer;
+      }
+      .reglages button[aria-pressed='true'] {
+        background: var(--atelier-texte);
+        color: var(--atelier-surface);
+        border-color: var(--atelier-texte);
+      }
+      .atelier {
+        display: grid;
+        grid-template-columns: minmax(220px, 280px) minmax(0, 1fr) minmax(280px, 380px);
+        min-height: calc(100vh - 90px);
+      }
+      .etats {
+        grid-column: 1;
+        grid-row: 1;
+      }
+      .scene {
+        grid-column: 2;
+        grid-row: 1;
+      }
+      .notes {
+        grid-column: 3;
+        grid-row: 1;
+      }
+      .etats {
+        background: var(--atelier-surface);
+        border-right: 1px solid var(--atelier-bord);
+        padding: 12px;
+        overflow-y: auto;
+      }
+      .etats h2,
+      .notes h2.notes-titre {
+        font-size: 18px;
+        margin: 4px 4px 8px;
+        text-transform: none;
+      }
+      .etats ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .etats .groupe {
+        margin: 12px 4px 4px;
+        font-weight: 700;
+        color: var(--atelier-doux);
+      }
+      .etats a {
+        display: flex;
+        align-items: center;
+        min-height: 48px;
+        padding: 6px 12px;
+        border-radius: 10px;
+        text-decoration: none;
+        color: var(--atelier-texte);
+      }
+      .etats a[aria-current='true'] {
+        background: var(--atelier-texte);
+        color: var(--atelier-surface);
+        font-weight: 700;
+      }
+      .scene {
+        position: relative;
+        overflow: hidden;
+        touch-action: none;
+        cursor: grab;
+        background-color: var(--atelier-fond);
+        background-image: radial-gradient(var(--atelier-bord) 1px, transparent 1px);
+        background-size: 24px 24px;
+      }
+      .scene.glisse {
+        cursor: grabbing;
+      }
+      .plateau {
+        display: flex;
+        justify-content: center;
+        transform-origin: 50% 0;
+        padding: 24px;
+        will-change: transform;
+      }
+      .telephone {
+        position: relative;
+        flex: none;
+        margin: 0;
+        width: var(--largeur, 390px);
+        height: var(--hauteur, 844px);
+        border: 12px solid var(--cadre);
+        border-radius: 44px;
+        overflow: hidden;
+        background: var(--fond);
+        color: var(--texte);
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+        container-type: inline-size;
+        cursor: auto;
+      }
+      .telephone.bureau {
+        border-width: 10px;
+        border-radius: 12px;
+      }
+      .notes {
+        background: var(--atelier-surface);
+        border-left: 1px solid var(--atelier-bord);
+        padding: 16px 20px;
+        overflow-y: auto;
+      }
+      .note h2 {
+        font-size: 22px;
+        margin: 0 0 8px;
+      }
+      .note h3 {
+        font-size: 18px;
+        margin: 16px 0 4px;
+      }
+      .note p,
+      .note li {
+        margin: 0 0 8px;
+      }
+      .note ul {
+        padding-left: 22px;
+        margin: 0 0 8px;
+      }
+      .note code {
+        font-size: 16px;
+        background: var(--atelier-fond);
+        padding: 1px 4px;
+        border-radius: 4px;
+        overflow-wrap: anywhere;
+      }
+      .note .req {
+        color: var(--atelier-doux);
+      }
+      .js .ecran[hidden],
+      .js .note[hidden] {
+        display: none;
+      }
+      .sans-js-titre {
+        display: none;
+      }
+      html:not(.js) .ecran {
+        margin-bottom: 32px;
+      }
+      html:not(.js) .sans-js-titre {
+        display: block;
+        font-weight: 700;
+        padding: 8px 16px;
+      }
+      @media (max-width: 1100px) {
+        .atelier {
+          grid-template-columns: minmax(0, 1fr);
+        }
+        .etats,
+        .scene,
+        .notes {
+          grid-column: auto;
+          grid-row: auto;
+        }
+        .etats {
+          border-right: 0;
+          border-bottom: 1px solid var(--atelier-bord);
+        }
+        .etats ul {
+          flex-direction: row;
+          flex-wrap: wrap;
+        }
+        .etats .groupe {
+          width: 100%;
+        }
+        .notes {
+          border-left: 0;
+          border-top: 1px solid var(--atelier-bord);
+        }
+        .scene {
+          min-height: 70vh;
+        }
+      }
+      @media (max-width: 640px) {
+        .reglages .zoom {
+          display: none;
+        }
+        .scene {
+          background-image: none;
+          cursor: auto;
+          touch-action: auto;
+          min-height: 0;
+        }
+        .plateau {
+          padding: 0;
+          transform: none !important;
+        }
+        .telephone,
+        .telephone.bureau {
+          width: 100% !important;
+          height: auto !important;
+          border: 0;
+          border-radius: 0;
+          box-shadow: none;
+        }
+        .telephone .app {
+          height: auto;
+        }
+        .telephone .defile {
+          overflow: visible;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        * {
+          animation: none !important;
+          transition: none !important;
+        }
+      }
+
+      .telephone {
+        font-size: 16px;
+        line-height: 1.5;
+      }
+      .app {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        background: var(--fond);
+        color: var(--texte);
+      }
+      .ico {
+        width: 20px;
+        height: 20px;
+        flex: none;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2.2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .c-tete {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px 20px;
+        padding: 6px 20px;
+        background: var(--surface);
+        border-bottom: 1px solid var(--surface-2);
+      }
+      .c-marque {
+        font-weight: 800;
+      }
+      .c-nav {
+        display: flex;
+        gap: 4px;
+      }
+      .c-nav a {
+        display: inline-flex;
+        align-items: center;
+        min-height: 44px;
+        padding: 0 12px;
+        border-radius: 8px;
+        color: var(--texte);
+        text-decoration: none;
+      }
+      .c-nav a[aria-current='page'] {
+        background: var(--info-fond);
+        color: var(--info-texte);
+        font-weight: 700;
+      }
+      .c-qui {
+        margin-left: auto;
+        color: var(--texte-doux);
+      }
+      .defile {
+        flex: 1;
+        overflow: auto;
+        padding: 16px 20px 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+      .defile > * {
+        margin: 0;
+      }
+      h2.c-titre {
+        font-size: 24px;
+        margin: 0;
+      }
+      h3 {
+        font-size: 18px;
+        margin: 0;
+      }
+      p {
+        margin: 0;
+      }
+      .doux {
+        color: var(--texte-doux);
+      }
+      .fort {
+        font-weight: 700;
+      }
+      .rangee {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px 12px;
+      }
+      .ecarte {
+        justify-content: space-between;
+      }
+      .carte {
+        background: var(--surface);
+        border: 1px solid var(--surface-2);
+        border-radius: 10px;
+        padding: 14px 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .ok {
+        --t: var(--ok-texte);
+        --f: var(--ok-fond);
+      }
+      .attente {
+        --t: var(--attente-texte);
+        --f: var(--attente-fond);
+      }
+      .bloque {
+        --t: var(--bloque-texte);
+        --f: var(--bloque-fond);
+      }
+      .info {
+        --t: var(--info-texte);
+        --f: var(--info-fond);
+      }
+      .neutre {
+        --t: var(--neutre-texte);
+        --f: var(--neutre-fond);
+      }
+      .pastille {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 2px 10px 2px 6px;
+        border-radius: 999px;
+        background: var(--f);
+        color: var(--t);
+        font-weight: 700;
+        font-size: 15px;
+        white-space: nowrap;
+      }
+      .pastille .ico {
+        width: 16px;
+        height: 16px;
+      }
+      .encart {
+        background: var(--f);
+        border-left: 5px solid var(--t);
+        border-radius: 8px;
+        padding: 10px 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .encart-titre {
+        display: flex;
+        gap: 8px;
+        align-items: flex-start;
+        font-weight: 800;
+        color: var(--t);
+      }
+      .encart a:not(.c-bouton) {
+        color: var(--lien);
+        font-weight: 700;
+      }
+      .encart p a,
+      .carte p a {
+        display: inline-flex;
+        align-items: center;
+        min-height: 44px;
+      }
+      .c-bouton {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        min-height: 44px;
+        min-width: 44px;
+        padding: 6px 16px;
+        border-radius: 8px;
+        border: 2px solid var(--primaire);
+        background: var(--primaire);
+        color: var(--sur-primaire);
+        font: inherit;
+        font-weight: 700;
+        text-decoration: none;
+        cursor: pointer;
+      }
+      .c-bouton.second {
+        background: var(--surface);
+        color: var(--lien);
+      }
+      .c-bouton.danger {
+        background: var(--surface);
+        color: var(--bloque-texte);
+        border-color: var(--bloque-texte);
+      }
+      .c-bouton.inactif {
+        background: var(--surface-2);
+        color: var(--texte-doux);
+        border: 2px dashed var(--bord);
+        cursor: not-allowed;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        background: var(--surface);
+        border: 1px solid var(--surface-2);
+        border-radius: 10px;
+      }
+      caption {
+        text-align: left;
+        font-weight: 700;
+        padding: 0 0 8px;
+      }
+      th,
+      td {
+        text-align: left;
+        vertical-align: top;
+        padding: 8px 10px;
+        border-bottom: 1px solid var(--surface-2);
+      }
+      th {
+        font-size: 15px;
+        color: var(--texte-doux);
+        font-weight: 700;
+      }
+      td.nombre,
+      th.nombre {
+        text-align: right;
+        white-space: nowrap;
+      }
+      tr.ouverte > td {
+        background: var(--info-fond);
+      }
+      tr.retard > td:first-child {
+        box-shadow: inset 5px 0 0 var(--bloque-texte);
+      }
+      td a {
+        color: var(--lien);
+        font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        min-height: 44px;
+      }
+      .fiche {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 16px;
+      }
+      .champ {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .champ > span.etiquette,
+      legend {
+        font-weight: 700;
+      }
+      fieldset {
+        border: 1px solid var(--surface-2);
+        border-radius: 8px;
+        padding: 8px 12px 12px;
+        margin: 0;
+      }
+      .champ input,
+      .champ textarea,
+      .champ select {
+        min-height: 44px;
+        padding: 8px 10px;
+        border: 2px solid var(--bord);
+        border-radius: 8px;
+        background: var(--surface);
+        color: var(--texte);
+        font: inherit;
+        width: 100%;
+      }
+      .champ.erreur input,
+      .champ.erreur select,
+      .champ.erreur textarea {
+        border-color: var(--bloque-texte);
+        border-width: 3px;
+      }
+      .message-erreur {
+        color: var(--bloque-texte);
+        font-weight: 700;
+      }
+      .choix {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .choix label {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 44px;
+        padding: 0 12px 0 4px;
+        border: 2px solid var(--bord);
+        border-radius: 8px;
+        background: var(--surface);
+        cursor: pointer;
+      }
+      .choix input {
+        width: 24px;
+        height: 24px;
+        margin: 0 0 0 6px;
+        accent-color: var(--primaire);
+      }
+      .choix label.coche {
+        border-color: var(--primaire);
+        background: var(--info-fond);
+        font-weight: 700;
+      }
+      .etapes {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+      .etapes li {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        border-radius: 999px;
+        background: var(--neutre-fond);
+        color: var(--neutre-texte);
+        font-weight: 600;
+      }
+      .etapes li.fait {
+        background: var(--ok-fond);
+        color: var(--ok-texte);
+      }
+      .etapes li.courant {
+        background: var(--primaire);
+        color: var(--sur-primaire);
+        font-weight: 800;
+      }
+      .definition {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 2px 12px;
+        margin: 0;
+      }
+      .definition dt {
+        color: var(--texte-doux);
+      }
+      .definition dd {
+        margin: 0;
+        font-weight: 600;
+      }
+      .squelette {
+        border-radius: 8px;
+        background: var(--surface-2);
+      }
+      .dialogue {
+        border: 2px solid var(--texte);
+        border-radius: 12px;
+        background: var(--surface);
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        max-width: 560px;
+        align-self: center;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+      }
+      .mono {
+        font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+        font-size: 15px;
+        overflow-wrap: anywhere;
+      }
+      @container (max-width: 760px) {
+        .fiche {
+          grid-template-columns: minmax(0, 1fr);
+        }
+        .c-qui {
+          margin-left: 0;
+        }
+        table,
+        thead,
+        tbody,
+        tr,
+        th,
+        td,
+        caption {
+          display: block;
+        }
+        thead {
+          position: absolute;
+          width: 1px;
+          height: 1px;
+          overflow: hidden;
+          clip: rect(0 0 0 0);
+        }
+        tr {
+          border-bottom: 2px solid var(--surface-2);
+          padding: 6px 0;
+        }
+        td {
+          border: 0;
+          padding: 4px 12px;
+        }
+        td[data-col]::before {
+          content: attr(data-col) ' : ';
+          color: var(--texte-doux);
+          font-weight: 700;
+        }
+        td.nombre {
+          text-align: left;
+        }
+      }
+
+      /* Le cadre de la console (UX-P1-18) : en-tête, recherche, compte, barre mobile, menu. */
+      .c-marque {
+        color: var(--texte);
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        min-height: 44px;
+      }
+      .c-recherche {
+        margin-left: auto;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        min-height: 44px;
+        min-width: 220px;
+        padding: 0 12px;
+        border: 2px solid var(--bord);
+        border-radius: 8px;
+        background: var(--surface);
+        color: var(--texte-doux);
+      }
+      .c-recherche input {
+        border: 0;
+        background: transparent;
+        color: var(--texte);
+        font: inherit;
+        min-height: 40px;
+        width: 100%;
+      }
+      .c-compte {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-height: 44px;
+        padding: 0 12px;
+        border-radius: 8px;
+        border: 2px solid var(--surface-2);
+        background: var(--surface);
+        color: var(--texte);
+        font: inherit;
+        cursor: pointer;
+      }
+      .c-barre {
+        display: none;
+      }
+      .c-barre a,
+      .c-barre button {
+        flex: 1 1 0;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 2px;
+        min-height: 56px;
+        padding: 4px 2px;
+        border: 0;
+        background: transparent;
+        color: var(--texte);
+        font: inherit;
+        font-size: 14px;
+        font-weight: 600;
+        text-decoration: none;
+        text-align: center;
+        cursor: pointer;
+      }
+      .c-barre [aria-current='page'],
+      .c-barre [aria-expanded='true'] {
+        background: var(--info-fond);
+        color: var(--info-texte);
+        font-weight: 800;
+      }
+      .c-menu {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        margin: 0;
+        padding: 8px;
+        list-style: none;
+        background: var(--surface);
+        border: 2px solid var(--texte);
+        border-radius: 12px;
+      }
+      .c-menu a {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 48px;
+        padding: 0 12px;
+        border-radius: 8px;
+        color: var(--texte);
+        text-decoration: none;
+        font-weight: 600;
+      }
+      .c-menu .separe {
+        border-top: 1px solid var(--surface-2);
+        margin-top: 4px;
+        padding-top: 4px;
+      }
+      .vide {
+        align-items: flex-start;
+        background: var(--surface);
+        border: 1px dashed var(--bord);
+        border-radius: 10px;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        max-width: 640px;
+      }
+      .vide h3 {
+        font-size: 20px;
+      }
+      .centre {
+        align-items: center;
+        justify-content: flex-start;
+      }
+      .panneau {
+        width: 100%;
+        max-width: 440px;
+        background: var(--surface);
+        border: 1px solid var(--surface-2);
+        border-radius: 12px;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+      .panneau h2 {
+        font-size: 24px;
+        margin: 0;
+      }
+      .code-saisie {
+        letter-spacing: 0.4em;
+        font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+        font-size: 22px !important;
+        text-align: center;
+      }
+      @container (max-width: 767px) {
+        .app.avec-barre .c-nav,
+        .app.avec-barre .c-recherche,
+        .app.avec-barre .c-compte {
+          display: none;
+        }
+        .app.avec-barre .c-barre {
+          display: flex;
+          border-top: 1px solid var(--surface-2);
+          background: var(--surface);
+        }
+        .c-recherche {
+          min-width: 0;
+        }
+      }
+
+      /* charte:fin */
+      .cache {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+      }
+    </style>
+  </head>
+  <body>
+    <a class="evitement" href="#telephone">Aller à l'écran maquetté</a>
+    <header class="atelier-tete">
+      <p class="fil"><a href="index.html">← Toutes les maquettes</a></p>
+      <h1>
+        Accès refusé<small>Console · tâche UX-P1-16 · REQ-UX-048, REQ-UX-047, REQ-SEC-023</small>
+      </h1>
+      <p class="fictif">Données fictives : aucune entreprise, personne ni adresse réelles.</p>
+      <div class="reglages" role="group" aria-label="Réglages de la maquette">
+        <button type="button" data-largeur="1280" data-hauteur="800" aria-pressed="true">
+          Bureau 1280
+        </button>
+        <button type="button" data-largeur="375" data-hauteur="667" aria-pressed="false">
+          Téléphone 375
+        </button>
+        <button type="button" id="theme">Thème : automatique</button>
+        <button type="button" class="zoom" id="zoom-moins" aria-label="Dézoomer">−</button>
+        <button type="button" class="zoom" id="zoom-ajuster" aria-label="Ajuster à la fenêtre">
+          <span id="zoom-valeur">100 %</span>
+        </button>
+        <button type="button" class="zoom" id="zoom-plus" aria-label="Zoomer">+</button>
+      </div>
+    </header>
+    <main class="atelier">
+      <div
+        class="scene"
+        id="scene"
+        tabindex="0"
+        aria-label="Plan de travail : glisser hors du cadre pour déplacer, flèches du clavier pour déplacer, plus et moins pour zoomer, zéro pour ajuster"
+      >
+        <div class="plateau" id="plateau">
+          <div
+            class="telephone bureau"
+            id="telephone"
+            tabindex="-1"
+            data-hauteur="800"
+            style="--largeur: 1280px; --hauteur: 800px"
+          >
+            <section class="ecran" id="etat-ecran" aria-label="État : Écran fermé à ce rôle">
+              <p class="sans-js-titre">État : Écran fermé à ce rôle</p>
+              <div class="app avec-barre">
+                <header class="c-tete">
+                  <a class="c-marque" href="console-cadre.html#etat-qualifieur"
+                    >Console Axion Partners</a
+                  >
+                  <nav class="c-nav" aria-label="Console">
+                    <a href="file-qualification.html#etat-nominal">Qualification</a>
+                    <a href="console-cadre.html#etat-qualifieur">Apporteurs</a>
+                    <a href="console-cadre.html#etat-qualifieur">Prospects</a>
+                  </nav>
+                  <label class="c-recherche"
+                    ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <circle cx="11" cy="11" r="6" />
+                      <path d="M20 20l-4.5-4.5" /></svg
+                    ><span class="cache">Rechercher dans la console</span
+                    ><input
+                      type="search"
+                      placeholder="Rechercher"
+                      aria-label="Rechercher dans la console"
+                  /></label>
+                  <button type="button" class="c-compte" aria-haspopup="menu">
+                    <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <circle cx="12" cy="8" r="4" />
+                      <path d="M4 21c1-4 4.5-6 8-6s7 2 8 6" /></svg
+                    >Sophie Démo · <b>qualifieur</b>
+                  </button>
+                </header>
+                <div class="defile" tabindex="0" role="region" aria-label="Accès refusé">
+                  <div class="vide">
+                    <h3>
+                      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <rect x="5" y="11" width="14" height="10" rx="2" />
+                        <path d="M8 11V8a4 4 0 018 0v3" />
+                      </svg>
+                      Cette page n’est pas ouverte à votre rôle
+                    </h3>
+                    <p>
+                      « Contrats » est réservé aux rôles administrateur et comptable. Votre rôle,
+                      qualifieur, ouvre la qualification, les apporteurs et les prospects.
+                    </p>
+                    <p>
+                      <b>Quoi faire :</b> si vous avez besoin de cette page, demandez à un
+                      administrateur de changer votre rôle.
+                    </p>
+                    <p class="rangee">
+                      <a class="c-bouton" href="console-cadre.html#etat-qualifieur"
+                        >Retour à mon accueil</a
+                      ><a class="c-bouton second" href="utilisateurs-console.html#etat-votre-role"
+                        >Voir ce que permet mon rôle</a
+                      >
+                    </p>
+                  </div>
+                </div>
+                <nav class="c-barre" aria-label="Console, barre du bas">
+                  <a href="file-qualification.html#etat-nominal">Qualification</a>
+                  <a href="console-cadre.html#etat-qualifieur">Apporteurs</a>
+                  <a href="console-cadre.html#etat-qualifieur">Prospects</a>
+                  <button type="button" aria-expanded="false" aria-controls="menu-qualifieur">
+                    <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <path d="M4 7h16M4 12h16M4 17h16" /></svg
+                    >Menu
+                  </button>
+                </nav>
+              </div>
+            </section>
+            <section class="ecran" id="etat-action" aria-label="État : Action fermée à ce rôle">
+              <p class="sans-js-titre">État : Action fermée à ce rôle</p>
+              <div class="app avec-barre">
+                <header class="c-tete">
+                  <a class="c-marque" href="console-cadre.html#etat-comptable"
+                    >Console Axion Partners</a
+                  >
+                  <nav class="c-nav" aria-label="Console">
+                    <a href="console-cadre.html#etat-comptable" aria-current="page">Apporteurs</a>
+                  </nav>
+                  <label class="c-recherche"
+                    ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <circle cx="11" cy="11" r="6" />
+                      <path d="M20 20l-4.5-4.5" /></svg
+                    ><span class="cache">Rechercher dans la console</span
+                    ><input
+                      type="search"
+                      placeholder="Rechercher"
+                      aria-label="Rechercher dans la console"
+                  /></label>
+                  <button type="button" class="c-compte" aria-haspopup="menu">
+                    <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <circle cx="12" cy="8" r="4" />
+                      <path d="M4 21c1-4 4.5-6 8-6s7 2 8 6" /></svg
+                    >Nadia Chiffre-Exemple · <b>comptable</b>
+                  </button>
+                </header>
+                <div class="defile" tabindex="0" role="region" aria-label="Apporteurs">
+                  <h2 class="c-titre">Apporteurs</h2>
+                  <div class="encart info">
+                    <p class="encart-titre">
+                      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <rect x="5" y="11" width="14" height="10" rx="2" />
+                        <path d="M8 11V8a4 4 0 018 0v3" /></svg
+                      >Ce geste n’est pas ouvert à votre rôle
+                    </p>
+                    <p>
+                      Suspendre un apporteur est réservé aux administrateurs : rien n’a été modifié.
+                      Si la suspension vous paraît nécessaire, signalez-la à un administrateur.
+                    </p>
+                    <p>
+                      <a class="c-bouton second" href="console-cadre.html#etat-comptable"
+                        >Revenir à la liste</a
+                      >
+                    </p>
+                  </div>
+                </div>
+                <nav class="c-barre" aria-label="Console, barre du bas">
+                  <a href="console-cadre.html#etat-comptable" aria-current="page">Apporteurs</a>
+                  <button type="button" aria-expanded="false" aria-controls="menu-comptable">
+                    <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <path d="M4 7h16M4 12h16M4 17h16" /></svg
+                    >Menu
+                  </button>
+                </nav>
+              </div>
+            </section>
+            <section class="ecran" id="etat-session" aria-label="État : Session expirée">
+              <p class="sans-js-titre">État : Session expirée</p>
+              <div class="app">
+                <header class="c-tete">
+                  <span class="c-marque">Console Axion Partners</span>
+                </header>
+                <div class="defile centre" tabindex="0" role="region" aria-label="Session">
+                  <div class="panneau">
+                    <h2>Votre session a pris fin</h2>
+                    <p>
+                      Les sessions de la console sont courtes, pour qu’un poste laissé ouvert ne le
+                      reste pas longtemps. Reconnectez-vous : vous reviendrez sur la page que vous
+                      consultiez.
+                    </p>
+                    <a class="c-bouton" href="connexion-console.html#etat-adresse"
+                      >Me reconnecter</a
+                    >
+                  </div>
+                </div>
+              </div>
+            </section>
+            <section class="ecran" id="etat-desactive" aria-label="État : Compte désactivé">
+              <p class="sans-js-titre">État : Compte désactivé</p>
+              <div class="app">
+                <header class="c-tete">
+                  <span class="c-marque">Console Axion Partners</span>
+                </header>
+                <div class="defile centre" tabindex="0" role="region" aria-label="Accès fermé">
+                  <div class="panneau">
+                    <h2>Votre accès à la console est fermé</h2>
+                    <p>
+                      Un administrateur a désactivé ce compte. Ce qui a été fait reste enregistré.
+                      Pour rouvrir l’accès, adressez-vous à un administrateur d’Axion-IA.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </section>
+            <section class="ecran" id="etat-chargement" aria-label="État : Vérification des droits">
+              <p class="sans-js-titre">État : Vérification des droits</p>
+              <div class="app avec-barre">
+                <header class="c-tete">
+                  <a class="c-marque" href="console-cadre.html#etat-qualifieur"
+                    >Console Axion Partners</a
+                  >
+                  <nav class="c-nav" aria-label="Console">
+                    <a href="file-qualification.html#etat-nominal">Qualification</a>
+                    <a href="console-cadre.html#etat-qualifieur">Apporteurs</a>
+                    <a href="console-cadre.html#etat-qualifieur">Prospects</a>
+                  </nav>
+                  <label class="c-recherche"
+                    ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <circle cx="11" cy="11" r="6" />
+                      <path d="M20 20l-4.5-4.5" /></svg
+                    ><span class="cache">Rechercher dans la console</span
+                    ><input
+                      type="search"
+                      placeholder="Rechercher"
+                      aria-label="Rechercher dans la console"
+                  /></label>
+                  <button type="button" class="c-compte" aria-haspopup="menu">
+                    <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <circle cx="12" cy="8" r="4" />
+                      <path d="M4 21c1-4 4.5-6 8-6s7 2 8 6" /></svg
+                    >Sophie Démo · <b>qualifieur</b>
+                  </button>
+                </header>
+                <div class="defile" tabindex="0" role="region" aria-label="Accès refusé">
+                  <p class="doux" role="status">Vérification de vos droits sur cette page…</p>
+                  <div class="squelette" style="height: 120px"></div>
+                </div>
+                <nav class="c-barre" aria-label="Console, barre du bas">
+                  <a href="file-qualification.html#etat-nominal">Qualification</a>
+                  <a href="console-cadre.html#etat-qualifieur">Apporteurs</a>
+                  <a href="console-cadre.html#etat-qualifieur">Prospects</a>
+                  <button type="button" aria-expanded="false" aria-controls="menu-qualifieur">
+                    <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <path d="M4 7h16M4 12h16M4 17h16" /></svg
+                    >Menu
+                  </button>
+                </nav>
+              </div>
+            </section>
+            <section class="ecran" id="etat-erreur" aria-label="État : Droits illisibles">
+              <p class="sans-js-titre">État : Droits illisibles</p>
+              <div class="app avec-barre">
+                <header class="c-tete">
+                  <a class="c-marque" href="console-cadre.html#etat-qualifieur"
+                    >Console Axion Partners</a
+                  >
+                  <nav class="c-nav" aria-label="Console">
+                    <a href="file-qualification.html#etat-nominal">Qualification</a>
+                    <a href="console-cadre.html#etat-qualifieur">Apporteurs</a>
+                    <a href="console-cadre.html#etat-qualifieur">Prospects</a>
+                  </nav>
+                  <label class="c-recherche"
+                    ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <circle cx="11" cy="11" r="6" />
+                      <path d="M20 20l-4.5-4.5" /></svg
+                    ><span class="cache">Rechercher dans la console</span
+                    ><input
+                      type="search"
+                      placeholder="Rechercher"
+                      aria-label="Rechercher dans la console"
+                  /></label>
+                  <button type="button" class="c-compte" aria-haspopup="menu">
+                    <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <circle cx="12" cy="8" r="4" />
+                      <path d="M4 21c1-4 4.5-6 8-6s7 2 8 6" /></svg
+                    >Sophie Démo · <b>qualifieur</b>
+                  </button>
+                </header>
+                <div class="defile" tabindex="0" role="region" aria-label="Accès refusé">
+                  <div class="encart bloque">
+                    <p class="encart-titre">
+                      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M12 3l10 18H2z" />
+                        <path d="M12 10v5M12 18v.5" /></svg
+                      >Vos droits n’ont pas pu être vérifiés
+                    </p>
+                    <p>
+                      Par prudence, la page reste fermée. Rechargez dans un instant ; si le message
+                      revient, prévenez un administrateur.
+                    </p>
+                    <p><a class="c-bouton" href="#etat-ecran">Recharger</a></p>
+                  </div>
+                </div>
+                <nav class="c-barre" aria-label="Console, barre du bas">
+                  <a href="file-qualification.html#etat-nominal">Qualification</a>
+                  <a href="console-cadre.html#etat-qualifieur">Apporteurs</a>
+                  <a href="console-cadre.html#etat-qualifieur">Prospects</a>
+                  <button type="button" aria-expanded="false" aria-controls="menu-qualifieur">
+                    <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <path d="M4 7h16M4 12h16M4 17h16" /></svg
+                    >Menu
+                  </button>
+                </nav>
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
+      <nav class="etats" aria-label="États de l'écran">
+        <h2>États</h2>
+        <p class="groupe">Refus</p>
+        <ul>
+          <li><a href="#etat-ecran">Écran fermé à ce rôle</a></li>
+          <li><a href="#etat-action">Action fermée à ce rôle</a></li>
+        </ul>
+        <p class="groupe">Session</p>
+        <ul>
+          <li><a href="#etat-session">Session expirée</a></li>
+          <li><a href="#etat-desactive">Compte désactivé</a></li>
+        </ul>
+        <p class="groupe">Techniques</p>
+        <ul>
+          <li><a href="#etat-chargement">Vérification des droits</a></li>
+          <li><a href="#etat-erreur">Droits illisibles</a></li>
+        </ul>
+      </nav>
+      <aside class="notes" aria-label="Notes de conception">
+        <h2 class="notes-titre">Notes pour la relecture</h2>
+        <section class="note" data-pour="etat-ecran">
+          <h2>Écran fermé à ce rôle</h2>
+          <p>
+            <b>Écran d'accès refusé qui explique quoi faire</b> (REQ-UX-048) : quelle page, à quels
+            rôles elle est ouverte, ce que permet le rôle courant, à qui s'adresser. Un retour à
+            l'accueil du rôle, en une action.
+          </p>
+          <ul>
+            <li>
+              C'est aussi l'état nominal et l'état vide de cette page : elle n'a qu'un message et un
+              geste.
+            </li>
+            <li>
+              Pour un <b>écran</b> : cette page. Pour une <b>ressource</b> (la fiche d'un apporteur
+              hors du périmètre) : un 404 indiscernable d'un identifiant inexistant, jamais cette
+              page, qui confirmerait l'existence de la ressource (RM-05).
+            </li>
+          </ul>
+        </section>
+        <section class="note" data-pour="etat-action">
+          <h2>Action fermée à ce rôle</h2>
+          <p>
+            Refus d'une action, sur place : « rien n'a été modifié » d'abord, puis quoi faire. Le
+            bouton n'aurait pas dû être visible (navigation dérivée de la matrice) ; ce message est
+            le filet si la page est restée ouverte pendant un changement de rôle.
+          </p>
+        </section>
+        <section class="note" data-pour="etat-session">
+          <h2>Session expirée</h2>
+          <p>
+            Sessions courtes de la console (SEC-29) : l'URL est gardée, on y revient après
+            connexion.
+          </p>
+        </section>
+        <section class="note" data-pour="etat-desactive">
+          <h2>Compte désactivé</h2>
+          <p>Désactivation immédiate (SEC-30) : la session suivante tombe ici, sans navigation.</p>
+        </section>
+        <section class="note" data-pour="etat-chargement">
+          <h2>Vérification des droits</h2>
+          <p>Rien ne s'affiche avant la réponse de la matrice.</p>
+        </section>
+        <section class="note" data-pour="etat-erreur">
+          <h2>Droits illisibles</h2>
+          <p>Le défaut est le refus (RM-05) : une erreur ne laisse jamais la page ouverte.</p>
+        </section>
+      </aside>
+    </main>
+    <script>
+      (function () {
+        var racine = document.documentElement;
+        racine.classList.add('js');
+        var ecrans = Array.prototype.slice.call(document.querySelectorAll('.ecran'));
+        var notes = Array.prototype.slice.call(document.querySelectorAll('.note'));
+        var liens = Array.prototype.slice.call(document.querySelectorAll('.etats a'));
+        var scene = document.getElementById('scene');
+        var plateau = document.getElementById('plateau');
+        var tel = document.getElementById('telephone');
+        var etat = { x: 0, y: 0, s: 1 };
+        function appliquer() {
+          plateau.style.transform =
+            'translate(' + etat.x + 'px,' + etat.y + 'px) scale(' + etat.s + ')';
+          var z = document.getElementById('zoom-valeur');
+          if (z) z.textContent = Math.round(etat.s * 100) + ' %';
+        }
+        function montrer(id, pousser) {
+          var cible = document.getElementById(id) ? id : ecrans[0].id;
+          ecrans.forEach(function (el) {
+            el.hidden = el.id !== cible;
+          });
+          notes.forEach(function (el) {
+            el.hidden = el.getAttribute('data-pour') !== cible;
+          });
+          liens.forEach(function (a) {
+            if (a.getAttribute('href') === '#' + cible) a.setAttribute('aria-current', 'true');
+            else a.removeAttribute('aria-current');
+          });
+          if (pousser) history.replaceState(null, '', '#' + cible);
+          var d = document.querySelector('#' + cible + ' .defile');
+          if (d) d.scrollTop = 0;
+        }
+        liens.forEach(function (a) {
+          a.addEventListener('click', function (ev) {
+            ev.preventDefault();
+            montrer(a.getAttribute('href').slice(1), true);
+            if (window.matchMedia('(max-width: 1100px)').matches)
+              scene.scrollIntoView({ block: 'start' });
+          });
+        });
+        window.addEventListener('hashchange', function () {
+          montrer(location.hash.slice(1), false);
+        });
+        montrer(location.hash.slice(1), false);
+        // Thème : automatique → clair → sombre (sans réseau, mémorisé sur ce poste seulement).
+        var bTheme = document.getElementById('theme');
+        var themes = ['auto', 'clair', 'sombre'];
+        var noms = { auto: 'automatique', clair: 'clair', sombre: 'sombre' };
+        function poserTheme(t) {
+          racine.setAttribute('data-theme', t);
+          if (bTheme) bTheme.textContent = 'Thème : ' + noms[t];
+          try {
+            localStorage.setItem('maquettes-theme', t);
+          } catch (x) {}
+        }
+        if (bTheme) {
+          var mem = null;
+          try {
+            mem = localStorage.getItem('maquettes-theme');
+          } catch (x) {}
+          poserTheme(themes.indexOf(mem) >= 0 ? mem : 'auto');
+          bTheme.addEventListener('click', function () {
+            poserTheme(themes[(themes.indexOf(racine.getAttribute('data-theme')) + 1) % 3]);
+          });
+        }
+        // Largeur du cadre.
+        Array.prototype.slice
+          .call(document.querySelectorAll('[data-largeur]'))
+          .forEach(function (b, i, tous) {
+            b.addEventListener('click', function () {
+              tel.style.setProperty('--largeur', b.getAttribute('data-largeur') + 'px');
+              tel.style.setProperty(
+                '--hauteur',
+                (b.getAttribute('data-hauteur') || tel.getAttribute('data-hauteur')) + 'px'
+              );
+              tous.forEach(function (o) {
+                o.setAttribute('aria-pressed', String(o === b));
+              });
+              ajuster();
+            });
+          });
+        // Pan et zoom.
+        function borner(s) {
+          return Math.min(2.5, Math.max(0.3, s));
+        }
+        function ajuster() {
+          var l = tel.offsetWidth + 48,
+            h = tel.offsetHeight + 48;
+          var s = Math.min(1, scene.clientWidth / l, Math.max(0.3, (scene.clientHeight || h) / h));
+          etat = { x: 0, y: 0, s: borner(s) };
+          appliquer();
+        }
+        var bm = document.getElementById('zoom-moins'),
+          bp = document.getElementById('zoom-plus'),
+          br = document.getElementById('zoom-ajuster');
+        if (bm)
+          bm.addEventListener('click', function () {
+            etat.s = borner(etat.s / 1.2);
+            appliquer();
+          });
+        if (bp)
+          bp.addEventListener('click', function () {
+            etat.s = borner(etat.s * 1.2);
+            appliquer();
+          });
+        if (br) br.addEventListener('click', ajuster);
+        var tire = null;
+        scene.addEventListener('pointerdown', function (ev) {
+          if (ev.target.closest('.telephone') && !ev.altKey) return;
+          if (window.matchMedia('(max-width: 640px)').matches) return;
+          tire = { x: ev.clientX - etat.x, y: ev.clientY - etat.y };
+          scene.classList.add('glisse');
+          scene.setPointerCapture(ev.pointerId);
+        });
+        scene.addEventListener('pointermove', function (ev) {
+          if (!tire) return;
+          etat.x = ev.clientX - tire.x;
+          etat.y = ev.clientY - tire.y;
+          appliquer();
+        });
+        scene.addEventListener('pointerup', function () {
+          tire = null;
+          scene.classList.remove('glisse');
+        });
+        scene.addEventListener(
+          'wheel',
+          function (ev) {
+            if (!ev.ctrlKey) return;
+            ev.preventDefault();
+            etat.s = borner(etat.s * (ev.deltaY < 0 ? 1.1 : 1 / 1.1));
+            appliquer();
+          },
+          { passive: false }
+        );
+        scene.addEventListener('keydown', function (ev) {
+          if (ev.target !== scene) return;
+          var pas = 40,
+            k = ev.key;
+          if (k === 'ArrowLeft') etat.x += pas;
+          else if (k === 'ArrowRight') etat.x -= pas;
+          else if (k === 'ArrowUp') etat.y += pas;
+          else if (k === 'ArrowDown') etat.y -= pas;
+          else if (k === '+' || k === '=') etat.s = borner(etat.s * 1.2);
+          else if (k === '-') etat.s = borner(etat.s / 1.2);
+          else if (k === '0') {
+            ajuster();
+            return;
+          } else return;
+          ev.preventDefault();
+          appliquer();
+        });
+        if (!window.matchMedia('(max-width: 640px)').matches) ajuster();
+      })();
+    </script>
+  </body>
+</html>

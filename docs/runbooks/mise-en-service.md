@@ -19,6 +19,9 @@
       **Fait le 2026-09-30** : `2026-12-31`, décision de Williams (16h17), posée par la PR 302.
 - [ ] Production provisionnée (`Provisionnement Coolify`), déployée, `pnpm deploy:verify <sha>` vert.
       _Porteur : Williams ou une session autorisée aux gestes de production._
+- [ ] Tâche planifiée Coolify, chaque minute : `pnpm taches:lancer` (le lanceur des passages
+      planifiés, GOV-137). Constat : un battement récent pour chaque tâche inscrite, et un code non
+      nul quand une tâche échoue. _Porteur : Williams (plateforme), constat de l'auteur._
 - [ ] Base de production semée de données SYNTHÉTIQUES seulement. _Porteur : Williams (plateforme)._
 - [ ] Canal Partners d'axion-ia FERMÉ : `PARTNERS_SYNC_ENABLED` faux côté axion-ia, constaté.
       _Porteur : la session axion-ia (constat daté)._
@@ -67,7 +70,11 @@
       constat de l'auteur._
 - [ ] `deploy.yml` alerte (catégorie close `deploiement_non_atterri`) sur un `deploy:verify` rouge
       PROVOQUÉ, et l'alerte est REÇUE. Sans retour automatique de la plateforme, c'est ce rouge qui
-      voit un déploiement malade. _Porteur : QA-T54 (code), Williams (réception)._
+      voit un déploiement malade. _Porteur : QA-T54 (code), Williams (réception)._ **Code livré par
+      QA-T54** : le job `alerter` de `deploy.yml` (après un `deployer` rouge ou annulé, seul lecteur
+      de `TELEGRAM_BOT_TOKEN` et `TELEGRAM_CHAT_ID`), témoin
+      `tests/unit/qualite/alerte-deploiement-non-atterri.spec.ts`. La case reste ouverte tant que la
+      réception d'une alerte provoquée n'est pas constatée.
 
 ## 4. Les clés et l'entité, juste avant l'ouverture
 
@@ -92,6 +99,15 @@
       ne les compte pas comme sentinelles. Tant qu'une
       sentinelle reste, les quatre points de sortie refusent : contrat, mandat, virement, export annuel.
       _Porteur : Williams (valeurs et décisions), l'auteur (PR du registre, garde verte)._
+- [ ] **Information de l'article 14 tranchée au registre** (REQ-JUR-009, REQ-JUR-060, JUR-T09) : la base
+      légale de TRT-TIERS, les durées de conservation du tiers (HYP-RGPD-RETENTION) et la localisation de
+      l'hébergement du serveur et des sauvegardes (`docs/tiers/coolify.md`, `docs/tiers/cloudflare-r2.md`)
+      sont décidées dans `docs/DECISIONS.md` — l'hôte d'envoi est documenté comme `smtp.zeptomail.eu` dans des
+      commentaires du code d'axion-ia (AFF-48) ; la valeur effective de `SMTP_HOST` sur `axion-ia-worker` est
+      constatée dans Coolify et datée avant de cocher cette case —, et les paramètres du
+      texte (`src/content/micro-copy/courriels/information-article-14.ts`) les rendent. Tant que cette
+      case n'est pas cochée, **aucun e-mail de confirmation réel ne part**. Cochée après réception par
+      Williams. _Porteur : Williams (les trois décisions), A07 (relecture du texte rendu)._
 - [ ] Base de production vidée de son semis synthétique, puis `deploy:verify` vert. _Porteur :
       Williams._
 
@@ -108,7 +124,12 @@
       axion-ia. _Porteur : la session axion-ia._ **Fait le 2026-09-30** : `2bbe3482` (squash de la PR
       1250) servi par axion-ia.com (`x-axion-build-sha`), run « Build & Deploy » 36735033118, job de
       déploiement vert.
-- [ ] `PARTNERS_SYNC_ENABLED` ouvert côté axion-ia, **en DERNIER**, après les deux cases précédentes.
+- [ ] Le passage EXCLUSIF des événements reçus (INT-T55, REQ-ARG-003) est FUSIONNÉ et DÉPLOYÉ : la route
+      du webhook et le lanceur prennent le même verrou, et un passage ne dépasse pas son budget. Sans
+      lui, deux webhooks rapprochés dispatchent deux fois le même événement. `PARTNERS_SYNC_ENABLED`
+      reste faux jusque-là. _Porteur : la forge (déploiement de la fusion), constat de l'auteur ;
+      cochée après réception par Williams._
+- [ ] `PARTNERS_SYNC_ENABLED` ouvert côté axion-ia, **en DERNIER**, après les cases précédentes.
       _Porteur : Williams._
 - [ ] Première donnée réelle : date et sha consignés ci-dessous. _Porteur : Williams, l'auteur (PR)._
 
