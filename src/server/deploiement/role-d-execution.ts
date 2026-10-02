@@ -2,7 +2,7 @@
  * Le rôle de connexion du serveur (QA-T62, REQ-DM-024) — provisionné AU DÉMARRAGE de l'image, hors
  * migration, avec l'URL de migration (le propriétaire), puis CONSTATÉ connecté comme le serveur.
  *
- * Céder la propriété d'`evenements` à `partners_journal` (DM-45) ne protège rien tant que le serveur
+ * Céder la propriété de la table du journal à `partners_journal` ne protège rien tant que le serveur
  * se connecte en superutilisateur. Le rôle d'exécution :
  *   — est un rôle LOGIN, NOSUPERUSER, NOCREATEDB, NOCREATEROLE, NOBYPASSRLS, NOREPLICATION ;
  *   — est membre de `partners_execution` (ajout seul sur le journal) et JAMAIS de `partners_journal`
