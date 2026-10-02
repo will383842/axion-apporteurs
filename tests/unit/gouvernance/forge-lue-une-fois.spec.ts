@@ -17,7 +17,7 @@ import { spawnSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import setup, { figerLaForge, LECTURES_DE_LA_FORGE, type Lire } from '../../setup-forge';
+import setup, { figerLaForge, preparer, LECTURES_DE_LA_FORGE, type Lire } from '../../setup-forge';
 
 const DOSSIER = mkdtempSync(join(tmpdir(), 'forge-lue-une-fois-'));
 afterAll(() => rmSync(DOSSIER, { recursive: true, force: true }));
@@ -72,7 +72,7 @@ describe('REQ-GOV-006 REQ-QA-013 — le run de tests lit la forge une fois', () 
     expect(figerLaForge((a) => (a[0] === 'issue' ? 'pas du json' : '[]'))).toBeNull();
   });
 
-  it('REQ-GOV-006 REQ-QA-013 : GOV_ETAT_GH ou GOV_ETAT_FORGE déjà posé : le setup ne lit rien et ne pose rien', () => {
+  it('REQ-GOV-006 REQ-QA-013 : GOV_ETAT_GH ou GOV_ETAT_FORGE déjà posé, ou vitest list : le setup ne lit rien et ne pose rien', () => {
     const avant = { gh: process.env['GOV_ETAT_GH'], forge: process.env['GOV_ETAT_FORGE'] };
     let lectures = 0;
     const compter: Lire = () => {
@@ -82,13 +82,23 @@ describe('REQ-GOV-006 REQ-QA-013 — le run de tests lit la forge une fois', () 
     try {
       delete process.env['GOV_ETAT_FORGE'];
       process.env['GOV_ETAT_GH'] = 'faux-gh';
-      expect(setup(compter)).toBeUndefined();
+      expect(preparer(compter, [])).toBeUndefined();
       expect(process.env['GOV_ETAT_FORGE']).toBeUndefined();
       delete process.env['GOV_ETAT_GH'];
+      expect(preparer(compter, ['node', 'vitest', 'list'])).toBeUndefined();
+      expect(process.env['GOV_ETAT_FORGE']).toBeUndefined();
       process.env['GOV_ETAT_FORGE'] = INSTANTANE_VIDE;
-      expect(setup(compter)).toBeUndefined();
+      expect(preparer(compter, [])).toBeUndefined();
       expect(process.env['GOV_ETAT_FORGE']).toBe(INSTANTANE_VIDE);
       expect(lectures).toBe(0);
+      // Contre-témoin : rien de posé, un run qui exécute → une lecture par type, l'instantané posé.
+      delete process.env['GOV_ETAT_FORGE'];
+      const retirer = preparer(compter, ['node', 'vitest', 'run']);
+      expect(lectures).toBe(3);
+      const chemin = process.env['GOV_ETAT_FORGE'];
+      expect(Object.keys(JSON.parse(readFileSync(chemin ?? '', 'utf8')) as object)).toHaveLength(3);
+      retirer?.();
+      expect(process.env['GOV_ETAT_FORGE']).toBeUndefined();
     } finally {
       for (const [k, v] of [
         ['GOV_ETAT_GH', avant.gh],
@@ -136,5 +146,8 @@ describe('REQ-GOV-006 REQ-QA-013 — le run de tests lit la forge une fois', () 
     expect(readFileSync('vitest.config.ts', 'utf8')).toMatch(
       /globalSetup:\s*\[\s*'tests\/setup-forge\.ts'\s*\]/
     );
+    // vitest appelle le globalSetup avec le PROJET en argument : un paramètre injectable l'aurait
+    // pris pour le lecteur, et l'instantané n'aurait jamais été posé.
+    expect(setup.length).toBe(0);
   });
 });

@@ -67,8 +67,15 @@ const lireLaForge: Lire = (args) =>
     stdio: ['ignore', 'pipe', 'ignore'],
   });
 
-export default function setup(lire: Lire = lireLaForge): (() => void) | undefined {
+/**
+ * Pose l'instantané, et rend de quoi le retirer. Rien n'est lu ni posé :
+ *   — `GOV_ETAT_GH` ou `GOV_ETAT_FORGE` déjà posée (banc d'attaque, ou vitest lancé par un test) ;
+ *   — en mode `vitest list` (que `gov:trace` lance) : il collecte, il n'exécute aucun test, et la
+ *     forge lue pour rien serait une lecture de plus qu'avant.
+ */
+export function preparer(lire: Lire, argv: readonly string[]): (() => void) | undefined {
   if (process.env['GOV_ETAT_GH'] || process.env['GOV_ETAT_FORGE']) return undefined;
+  if (argv.includes('list')) return undefined;
   const instantane = figerLaForge(lire);
   if (instantane === null) return undefined;
   const dossier = mkdtempSync(join(tmpdir(), 'axion-forge-'));
@@ -79,4 +86,13 @@ export default function setup(lire: Lire = lireLaForge): (() => void) | undefine
     rmSync(dossier, { recursive: true, force: true });
     delete process.env['GOV_ETAT_FORGE'];
   };
+}
+
+/**
+ * Le point d'entrée de vitest. SANS paramètre injectable : vitest appelle un `globalSetup` en lui
+ * passant le PROJET — un `setup(lire = …)` l'aurait pris pour le lecteur, et l'instantané n'aurait
+ * jamais été posé (vu le 2026-10-02 : `GOV_ETAT_FORGE` absente d'un run réel).
+ */
+export default function setup(): (() => void) | undefined {
+  return preparer(lireLaForge, process.argv);
 }
