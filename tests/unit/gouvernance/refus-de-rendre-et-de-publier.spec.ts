@@ -919,6 +919,19 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
     // ── JUR-T26 : QUATRE gardes neuves de la charte relationnelle, UNE sortie chacune ────────
     // Le cliquet a rougi en NOMMANT la première (`jur-aucun-agregat-reseau.ts ajoute 1 …`) ; les
     // trois autres étaient dans le même cas, comptées sur le disque contre `origin/main`, pas devinées.
+    // SEC-46 — la garde des styles en ligne : UNE sortie terminale, à code variable.
+    'scripts/gates/csp-inline.ts': {
+      total: 1,
+      porte: 1,
+      temoins: 0,
+      raison:
+        'SEC-46 — aucun style en ligne ni HTML injecté sous src/app/. `process.exit(decision.code)` : ' +
+        'sortie TERMINALE à code variable, commune au jugement et à `--prove` — 0 quand la garde passe, ' +
+        '1 sur une faute (`style_en_ligne`, `html_injecte`, `source_illisible`). Les familles sont vues ' +
+        'rougir sur des sources INJECTÉES dans la fonction pure (csp-inline.spec.ts), et le binaire est ' +
+        'vu sortir sous `--prove` ; aucun témoin ne le voit sortir en 1, et aucun ne vit dans `REFUS`. ' +
+        'Le REFUS DE PÉRIMÈTRE vient de `fichiersSuivisOuRefus`. Dette DÉCLARÉE.',
+    },
     'scripts/gates/jur-aucun-agregat-reseau.ts': {
       total: 1,
       porte: 1,
@@ -2372,6 +2385,8 @@ const GARDES_QUI_BALAIENT = [
   // `src/server/pdf/`) dans les fichiers SUIVIS. La réciproque ci-dessous a rougi en les nommant.
   'scripts/gates/jur-aucun-agregat-reseau.ts',
   'scripts/gates/jur-aucune-progression.ts',
+  // SEC-46 — `csp:inline` juge les fichiers SUIVIS sous `src/app/`.
+  'scripts/gates/csp-inline.ts',
   'scripts/gates/jur-lexique-social.ts',
   // SEC-17 — `securite:roles` dérive les actions et les routes de la console des fichiers SUIVIS
   // sous `src/app/(console)/` et `src/server/console/`.
