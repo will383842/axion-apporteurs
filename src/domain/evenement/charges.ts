@@ -27,6 +27,7 @@
 import { z } from 'zod';
 import { ALGORITHME } from './journal';
 import { EVENEMENTS_APPORTEUR, MOTIFS_RESILIATION, STATUTS_APPORTEUR } from '../apporteur/statut';
+import { STATUTS_PIECE_KYC, TYPES_PIECE_KYC } from '../kyc/pieces';
 
 /**
  * Les codes d'événement que porte `apporteur_statut_modifie` : la NAISSANCE (`creer`, `de` nul), puis
@@ -70,7 +71,10 @@ export const FORMES = {
 
 /** Les valeurs de l'enum Prisma `TypeEvenementJournal`, confrontées au schéma par la garde. */
 export type TypeEvenementJournal =
-  'journal_ouvert' | 'apporteur_statut_modifie' | 'attribution_contact_purge';
+  | 'journal_ouvert'
+  | 'apporteur_statut_modifie'
+  | 'attribution_contact_purge'
+  | 'piece_kyc_statut_modifie';
 
 export const CHARGES_PAR_TYPE = {
   /** La genèse : l'algorithme de chaînage, inscrit DANS la chaîne. */
@@ -109,6 +113,18 @@ export const CHARGES_PAR_TYPE = {
       acteur: FORMES.acteur().refine((a) => a.par === 'systeme', {
         message: 'acteur_systeme_attendu',
       }),
+    })
+    .strict(),
+  /**
+   * DM-11 (REQ-DM-027) : un changement de statut d'une pièce du KYC, sur l'agrégat `piece_kyc`.
+   * `de` est nul à la naissance de la pièce. Ni fichier, ni IBAN, ni donnée de personne.
+   */
+  piece_kyc_statut_modifie: z
+    .object({
+      de: z.enum(STATUTS_PIECE_KYC).nullable(),
+      vers: z.enum(STATUTS_PIECE_KYC),
+      type: z.enum(TYPES_PIECE_KYC),
+      acteur: FORMES.acteur(),
     })
     .strict(),
 } satisfies Record<TypeEvenementJournal, z.ZodTypeAny>;

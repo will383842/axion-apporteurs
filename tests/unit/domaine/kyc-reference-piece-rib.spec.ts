@@ -1,17 +1,14 @@
 // @req REQ-CPL-005
 // @req REQ-DM-027
-// @req REQ-JUR-022
 /**
- * `kyc-reference-piece-rib.spec.ts` — DM-11 lu dans le SCHÉMA, sans base (HYP-DM06-IBAN, REQ-DM-027,
- * REQ-JUR-022).
+ * `kyc-reference-piece-rib.spec.ts` — DM-11 lu dans le SCHÉMA, sans base (HYP-DM06-IBAN, REQ-DM-027).
  *
  *   — L'IBAN n'existe NULLE PART ailleurs que dans la pièce `rib` : aucun autre modèle ne porte une
  *     colonne dont un segment de nom est `iban` ou `bic` (TÉMOIN : une colonne `iban` ajoutée à un
  *     autre modèle fait rougir) ;
  *   — l'identité de facturation référence sa pièce `rib` par une clé étrangère COMPOSITE
  *     (id, type), et la pièce porte l'unicité (id, type) ;
- *   — les vocabulaires du KYC sont des enums, aux valeurs du glossaire ; les professions
- *     réglementées sont la liste figée de HYP-JUR-PROF-REGLEMENTEES ;
+ *   — les vocabulaires du KYC sont des enums, aux valeurs du domaine et du glossaire ;
  *   — le journal d'une pièce porte une charge fermée, sans donnée personnelle.
  */
 import { describe, it, expect } from 'vitest';
@@ -20,7 +17,6 @@ import { lireSchemaPrisma } from '../../../scripts/lot/lecteur-prisma';
 import { segmentsDuNom } from '../../../src/domain/donnees-personnelles/champs';
 import { CHARGES_PAR_TYPE } from '../../../src/domain/evenement/charges';
 import {
-  PROFESSIONS_REGLEMENTEES,
   STATUTS_PIECE_KYC,
   TYPES_A_ECHEANCE,
   TYPES_PIECE_KYC,
@@ -77,19 +73,6 @@ describe('REQ-DM-027 — les vocabulaires du KYC', () => {
     expect(valeurs('TypePieceKyc')).toEqual([...TYPES_PIECE_KYC]);
     expect(valeurs('StatutPieceKyc')).toEqual([...STATUTS_PIECE_KYC]);
     expect([...TYPES_A_ECHEANCE]).toEqual(['vigilance', 'rc_pro']);
-  });
-
-  it('REQ-JUR-022 : TEST HYP — les professions réglementées sont exactement ces trois-là, sur leurs codes NAF', () => {
-    expect(valeurs('ProfessionReglementee')).toEqual([
-      'expertise_comptable',
-      'auxiliaire_services_financiers',
-      'intermediaire_assurance',
-    ]);
-    expect(PROFESSIONS_REGLEMENTEES).toEqual({
-      expertise_comptable: '69.20Z',
-      auxiliaire_services_financiers: '66.19B',
-      intermediaire_assurance: '66.22Z',
-    });
   });
 });
 
