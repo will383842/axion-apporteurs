@@ -1187,13 +1187,16 @@
       "preuveRouge": "npx vitest run tests/unit/gouvernance/outillage-de-la-porte-a.spec.ts -t AUDITE sur le verrou `next` 16.3.1 (origin/main 0d0c37cc) : « AssertionError: dépendances de production vulnérables (REQ-QA-013) » ; vert sur `next` 16.3.8 (PR #313, commit témoin 7a0b8f7d)"
     },
     {
-      "id": "GATE-JUR-AIPD-SIGNEE",
+      "id": "aipd:signee",
       "phase": 1,
       "script": "scripts/gates/aipd-signee.ts",
       "tache": "JUR-T35",
       "verifie": "aucun depot reel tant que l'AIPD n'est pas signee (REQ-CPL-009) : a partir de MISE_EN_SERVICE (scripts/gates/runbooks-exerces.ts ; date absente = active, echec ferme), deux sources doivent concorder, la section « Signature » de docs/rgpd/aipd.md (« Etat : signee le AAAA-MM-JJ par <signataire> ») et la variable AIPD_SIGNEE_LE de l'environnement GitHub production, que seul Williams pose ; quatre familles : aipd_non_signee, variable_absente, variable_illisible, dates_discordantes ; 0 admise, 1 refusee ; le message nomme la condition et le geste, jamais une date ni une valeur lue. Point d'application : une etape a part du job deployer de .github/workflows/deploy.yml, avant deploy:coolify, qui appelle `pnpm aipd:signee` (script de package.json, REQ-GOV-018 ; arbitrage de la coordination, option 1) ; AIPD_SIGNEE_LE est une variable (vars), jamais un secret. Limite declaree : avant MISE_EN_SERVICE, la garde admet",
       "fixtureRouge": "retirer le module scripts/gates/aipd-signee.ts, ou une AIPD « signee » sans variable AIPD_SIGNEE_LE concordante",
-      "preuveRouge": "JUR-T35, 2026-10-01 : temoin commite seul (af6ee2ba), module absent -> « Failed to load url ../../../scripts/gates/aipd-signee … Does the file exist? », suite rouge ; rejoue par A01 sur ed324406 en retirant le module : meme echec. Apres la garde (9d9396ed) : 18/18 verts (tests/unit/juridique/aucun-depot-reel-sans-aipd-signee.spec.ts) ; `tsx scripts/gates/aipd-signee.ts` -> EXIT=0 avant MISE_EN_SERVICE. Rouge constate par: A05, rejoue par A01"
+      "preuveRouge": "JUR-T35, 2026-10-01 : temoin commite seul (af6ee2ba), module absent -> « Failed to load url ../../../scripts/gates/aipd-signee … Does the file exist? », suite rouge ; rejoue par A01 sur ed324406 en retirant le module : meme echec. Apres la garde (9d9396ed) : 18/18 verts (tests/unit/juridique/aucun-depot-reel-sans-aipd-signee.spec.ts) ; `tsx scripts/gates/aipd-signee.ts` -> EXIT=0 avant MISE_EN_SERVICE. Rouge constate par: A05, rejoue par A01",
+      "alias": [
+        "GATE-JUR-AIPD-SIGNEE"
+      ]
     }
   ]
 }
