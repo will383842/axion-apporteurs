@@ -70,6 +70,17 @@ describe('REQ-DM-024 — la charge de `apporteur_cree` est fermée', () => {
     expect(FORMES.acteur().safeParse({ par: 'systeme' }).success).toBe(true);
   });
 
+  it('REQ-DM-024 : HYP-A02-ACTEUR-JOURNAL — `id` présent si et seulement si l’acteur n’est pas le système', () => {
+    const acteur = FORMES.acteur();
+    const id = randomUUID();
+    expect(acteur.safeParse({ par: 'apporteur', id }).success).toBe(true);
+    expect(acteur.safeParse({ par: 'utilisateur_console', id }).success).toBe(true);
+    expect(acteur.safeParse({ par: 'apporteur' }).success).toBe(false);
+    expect(acteur.safeParse({ par: 'utilisateur_console' }).success).toBe(false);
+    expect(acteur.safeParse({ par: 'systeme', id }).success).toBe(false);
+    expect(acteur.safeParse({ par: 'apporteur', id: 'pas-un-uuid' }).success).toBe(false);
+  });
+
   it('REQ-DM-024 : un statut autre que celui de naissance, ou un identifiant mal formé, est refusé', () => {
     expect(schema.safeParse({ ...CHARGE(), statut: 'signe' }).success).toBe(false);
     expect(schema.safeParse({ ...CHARGE(), apporteurId: 'pas-un-uuid' }).success).toBe(false);

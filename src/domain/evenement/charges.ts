@@ -37,11 +37,27 @@ export const FORMES = {
   montantCents: () => z.number().int(),
   horodatage: () => z.string().datetime(),
   /**
-   * DM-45 (HYP-A02-ACTEUR-JOURNAL) — QUI a produit l'événement : obligatoire dans toute charge sauf
-   * la genèse, et sous CETTE forme seule. Le système, aujourd'hui ; un acteur humain s'y ajoutera
-   * par une valeur de plus, jamais par un identifiant libre.
+   * HYP-A02-ACTEUR-JOURNAL — QUI a produit l'événement : OBLIGATOIRE dans la charge hachée de tout
+   * type sauf la genèse, et sous CETTE forme seule. `id` est présent si et seulement si l'acteur
+   * n'est pas le système : le raffinement le dit. Le conseiller salarié (W19)
+   * est un `utilisateur_console` ; une écriture de l'intégration porte `{ par: 'systeme' }`.
    */
-  acteur: () => z.object({ par: z.enum(['systeme']) }).strict(),
+  acteur: () =>
+    z
+      .object({
+        par: z.enum(['apporteur', 'utilisateur_console', 'systeme']),
+        id: z.string().uuid().optional(),
+      })
+      .strict()
+      .superRefine((a, ctx) => {
+        if ((a.par === 'systeme') !== (a.id === undefined)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['id'],
+            message: 'acteur_id_incoherent',
+          });
+        }
+      }),
 };
 
 /** Les valeurs de l'enum Prisma `TypeEvenementJournal`, confrontées au schéma par la garde. */

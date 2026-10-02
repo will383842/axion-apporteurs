@@ -186,7 +186,7 @@ qui nomme un événement pointé — `attribution.confirmee_tacitement` (REQ-DM-
 | `grille_contrat_modifiee` | `contrat` | DM-23 | `{grilleContratId, lignes, acteurId}` ; `lignes` : les identifiants des lignes modifiées, jamais un compte |
 | `echange_saisi` | `attribution` | EXT-T01 | `{echangeId, canal}` ; `canal` : `CanalEchange` |
 | `candidature_rattachee` | `apporteur` | EXT-T03 | `{apporteurIdRattache}` |
-| `apporteur_cree` | `apporteur` | DM-45 | `{apporteurId, candidatureId, statut, acteur}` ; `statut` : `candidat` ; `acteur` : `{par: systeme}` (HYP-A02-ACTEUR-JOURNAL) |
+| `apporteur_cree` | `apporteur` | DM-45 | `{apporteurId, candidatureId, statut, acteur}` ; `statut` : `candidat` ; `acteur` : `{par: systeme}`, forme commune `{par, id?}` (HYP-A02-ACTEUR-JOURNAL) |
 
 Un booléen s'écrit dans une charge `z.enum(['oui', 'non'])`, jamais une chaîne libre (REQ-DM-041).
 
