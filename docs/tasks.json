@@ -6382,7 +6382,8 @@
         "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts",
         "scripts/gates/ux-exhaustivite.ts",
         "scripts/gates/lexique-apporteurs.ts",
-        "tests/unit/espace/vocabulaire-et-micro-copy.spec.ts"
+        "tests/unit/espace/vocabulaire-et-micro-copy.spec.ts",
+        "tests/integration/idor.spec.ts"
       ],
       "schema": true,
       "sensible": [
