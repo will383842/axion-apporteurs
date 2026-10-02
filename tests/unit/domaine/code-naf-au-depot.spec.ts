@@ -46,18 +46,24 @@ const resultats = (): Brut[] =>
   });
 
 describe('REQ-DM-046 — le code NAF retenu au dépôt', () => {
-  it('REQ-DM-046 : sur chaque fixture enregistrée, le code retenu égale activite_principale, jamais le NAF 2025', () => {
+  it('REQ-DM-046 : sur chaque fixture enregistrée, le code retenu égale activite_principale en NAF rév. 2, jamais le NAF 2025 ; une nomenclature antérieure reste nulle', () => {
     const tous = resultats();
     expect(tous.length).toBeGreaterThan(20);
+    const REV2 = /^\d{2}\.\d{2}[A-Z]$/;
     let compares = 0;
+    let anterieurs = 0;
     for (const r of tous) {
-      expect(codeNafDuDepot(r)).toBe(r.activite_principale);
+      const rev2 = r.activite_principale !== null && REV2.test(r.activite_principale);
+      if (!rev2 && r.activite_principale !== null) anterieurs += 1;
+      expect(codeNafDuDepot(r)).toBe(rev2 ? r.activite_principale : null);
       if (r.activite_principale_naf25 && r.activite_principale_naf25 !== r.activite_principale) {
         expect(codeNafDuDepot(r)).not.toBe(r.activite_principale_naf25);
         compares += 1;
       }
     }
     expect(compares).toBeGreaterThan(0);
+    // Les fixtures portent bien des codes d'une nomenclature antérieure : le cas est jugé, pas supposé.
+    expect(anterieurs).toBeGreaterThan(0);
   });
 
   it('REQ-DM-046 : un dépôt en repli manuel porte un code NUL ; une valeur absente ou hors forme reste nulle', () => {
@@ -66,8 +72,11 @@ describe('REQ-DM-046 — le code NAF retenu au dépôt', () => {
     for (const faux of ['', ' ', '7010Z', '70.', 'x70.10Z', '70.10ZZ', '70.10z', ' 70.10Z']) {
       expect(codeNafDuDepot({ activite_principale: faux })).toBeNull();
     }
-    // La révision 1, que le tiers rend encore pour d'anciennes entreprises, est gardée telle quelle.
-    expect(codeNafDuDepot({ activite_principale: '74.4B' })).toBe('74.4B');
+    // Une nomenclature antérieure, que le tiers rend encore pour d'anciennes entreprises, n'est ni
+    // traduite ni devinée : le code reste nul, comme l'exige le CHECK de la base.
+    expect(codeNafDuDepot({ activite_principale: '74.4B' })).toBeNull();
+    expect(codeNafDuDepot({ activite_principale: '59.08' })).toBeNull();
+    expect(codeNafDuDepot({ activite_principale: '70.10' })).toBeNull();
   });
 
   it('REQ-DM-046 : un code présent n’est jamais écrasé ; un code nul n’est complété que par le tiers', () => {

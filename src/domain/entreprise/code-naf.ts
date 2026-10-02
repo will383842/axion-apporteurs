@@ -7,12 +7,12 @@
  * code est NUL, jamais deviné, jamais saisi par l'apporteur. Une valeur hors forme reste nulle : on
  * ne tronque ni ne corrige ce que le tiers a rendu.
  *
- * LA FORME : deux chiffres, un point, puis un à trois chiffres ou lettres majuscules — six caractères
- * au plus, la largeur de la colonne. Elle couvre la nomenclature NAF rév. 2 (`70.10Z`) et les
- * nomenclatures plus anciennes que le tiers rend encore pour d'anciennes entreprises (`74.4B`,
- * `59.08`, relevés dans les fixtures enregistrées) : ce sont des codes rendus, gardés tels quels.
+ * LA FORME : la nomenclature NAF rév. 2 seule (REQ-DM-046), `NN.NNL` — la MÊME que le CHECK
+ * `attributions_code_naf_forme` de la base (DM-07). Le tiers rend encore, pour d'anciennes
+ * entreprises, des codes d'une nomenclature antérieure (`74.4B`, `59.08`, relevés dans les fixtures
+ * enregistrées) : ils ne sont ni traduits ni devinés, le code reste NUL (« non renseigné »).
  */
-const FORME_CODE_NAF = /^\d{2}\.[0-9A-Z]{1,3}$/;
+const FORME_CODE_NAF = /^\d{2}\.\d{2}[A-Z]$/;
 
 /** Ce que le dépôt lit de l'entreprise : sa seule activité principale, ou rien (repli manuel). */
 export type SourceDuCodeNaf = { readonly activite_principale: string | null } | null;
