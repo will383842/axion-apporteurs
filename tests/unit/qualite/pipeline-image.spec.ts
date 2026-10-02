@@ -142,6 +142,13 @@ function fautesDuPipeline(s: Sources): string[] {
     f.push(
       'jeton_hors_de_la_porte_a : GITHUB_TOKEN est servi dans deployer ailleurs qu’à la seule étape deploy:attendre-porte-a'
     );
+  // Relevé de la lentille exactitude sur #463 : `github.token` est le MÊME jeton, et l'arbitrage du
+  // rattrapage 53 l'a refusé (voie V-b). La regex `secrets.` ne le voit pas : il est refusé à part,
+  // partout dans deployer, l'étape de la porte A comprise (elle lit `secrets.GITHUB_TOKEN`).
+  if (/github\.token\b/.test(deployer))
+    f.push(
+      'jeton_github_token : deployer lit `github.token`, le jeton que la liste fermée ne nomme pas'
+    );
   if (/secrets\.(?!TELEGRAM_(?:BOT_TOKEN|CHAT_ID)\b)/.test(j.get('alerter') ?? ''))
     f.push('secret_tiers : le job alerter lit un autre secret que ceux du canal d’alerte');
 
@@ -306,6 +313,35 @@ describe('REQ-QA-018 — la forge construit, juge, puis publie l’image (QA-T05
       }),
       'jeton_hors_de_la_porte_a',
     ],
+    // Relevé de la lentille exactitude sur #463 : `github.token`, le même jeton, refusé partout.
+    ...(
+      [
+        [
+          'github.token servi à l’étape de l’AIPD',
+          'AIPD_SIGNEE_LE: ${{ vars.AIPD_SIGNEE_LE }}',
+          'AIPD_SIGNEE_LE: ${{ vars.AIPD_SIGNEE_LE }}\n          GH_TOKEN: ${{ github.token }}',
+        ],
+        [
+          'github.token servi à deploy:coolify',
+          'COOLIFY_URL: ${{ secrets.COOLIFY_URL }}',
+          'COOLIFY_URL: ${{ secrets.COOLIFY_URL }}\n          GH_TOKEN: ${{ github.token }}',
+        ],
+        [
+          'github.token servi au job deployer entier',
+          '    concurrency:\n      group: deploiement-production',
+          '    env:\n      GH_TOKEN: ${{ github.token }}\n    concurrency:\n      group: deploiement-production',
+        ],
+        [
+          'github.token à la place du secret, à l’étape de la porte A',
+          'GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}',
+          'GH_TOKEN: ${{ github.token }}',
+        ],
+      ] as const
+    ).map(([quoi, de, vers]): [string, (s: Sources) => Sources, string] => [
+      quoi,
+      (s) => ({ ...s, workflow: s.workflow.replace(de, vers) }),
+      'jeton_github_token',
+    ]),
     [
       'un secret de la plateforme lu par le job alerter',
       (s) => ({

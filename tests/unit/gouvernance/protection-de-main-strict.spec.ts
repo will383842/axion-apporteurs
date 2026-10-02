@@ -1,59 +1,41 @@
 // @req REQ-GOV-014
+// @no-red-first: ce fichier fige une DÉCISION déjà en vigueur sur main (choix A de Williams du 2026-10-02, « OK POUR A » : la protection n'exige pas les branches à jour) ; ses copies cassées rougissent sur les deux familles qui restent exigées
 /**
- * QA-T55 (REQ-GOV-014) — la protection de `main` exige des branches À JOUR avant fusion.
+ * QA-T55 (REQ-GOV-014) — la garde de la forge juge l'état DÉCIDÉ de la protection de `main`.
  *
- * Sans `required_status_checks.strict`, une PR verte sur une base PÉRIMÉE fusionne : l'état fusionné
- * n'a jamais été testé, et le déploiement le publie. Le réglage est posé sur la forge (décision de
- * Williams, 2026-10-01) ; `gov:depot-visibilite` le CONSTATE, elle ne le pose pas. Ce fichier juge la
- * famille `strict_absent` sur la vue conforme ET sur une vue cassée d'un geste (RM-02).
+ * Choix A de Williams, 2026-10-02, verbatim « OK POUR A » : l'option « branches à jour avant
+ * fusion » (`required_status_checks.strict`) est DÉCOCHÉE, et c'est vérifié sur la forge
+ * (strict=false). La garde n'exige donc jamais `strict`. Ce n'est pas un trou : le déploiement
+ * attend la porte A réussie du commit FUSIONNÉ lui-même (`deploy:attendre-porte-a`), de sorte
+ * qu'une PR verte sur une base périmée ne déploie rien que la porte A n'ait jugé. Restent ROUGES, et
+ * ce fichier le garde : `gate-a` absent des checks requis, et la règle de `main` absente.
  */
 import { describe, it, expect } from 'vitest';
-import { spawnSync } from 'node:child_process';
 import {
   controler,
-  FAMILLES,
   VUE_CONFORME,
   type Protection,
   type Vue,
 } from '../../../scripts/gates/gov-depot';
 
 const protection = (): Protection => structuredClone(VUE_CONFORME.protection as Protection);
-const avec = (p: Protection): Vue => ({ ...VUE_CONFORME, protection: p });
-const strictAbsent = (v: Vue) => controler(v).filter((f) => f.famille === 'strict_absent');
+const avec = (p: Protection | 'non_protegee'): Vue => ({ ...VUE_CONFORME, protection: p });
+const familles = (v: Vue) => controler(v).map((f) => f.famille);
 
-describe('REQ-GOV-014 — la protection de main exige des branches à jour avant fusion', () => {
-  it('REQ-GOV-014 : la vue conforme (strict posé) ne porte aucune faute strict_absent', () => {
-    expect(controler(VUE_CONFORME)).toEqual([]);
-  });
-
-  it('REQ-GOV-014 : TÉMOIN — strict à false est refusé, en rouge, et nommé', () => {
+describe('REQ-GOV-014 — la protection de main est jugée selon le choix A de Williams (2026-10-02)', () => {
+  it('REQ-GOV-014 : strict à false, ou absent, n’est PAS une faute — la garde n’exige jamais les branches à jour', () => {
     const p = protection();
     p.required_status_checks = { ...p.required_status_checks, strict: false };
-    const f = strictAbsent(avec(p));
-    expect(f).toHaveLength(1);
-    expect(f[0]!.gravite).toBe('rouge');
-    expect(f[0]!.message).toMatch(/à jour/i);
-  });
-
-  it('REQ-GOV-014 : TÉMOIN — strict absent, ou aucun check requis du tout, est refusé aussi', () => {
-    const p = protection();
+    expect(controler(avec(p))).toEqual([]);
     const sansStrict = { ...p.required_status_checks };
     delete sansStrict.strict;
-    expect(strictAbsent(avec({ ...p, required_status_checks: sansStrict }))).toHaveLength(1);
-    expect(strictAbsent(avec({ ...p, required_status_checks: null }))).toHaveLength(1);
+    expect(controler(avec({ ...p, required_status_checks: sansStrict }))).toEqual([]);
   });
 
-  it('REQ-GOV-014 : une protection non lue reste INDÉTERMINÉE, jamais un strict_absent inventé', () => {
-    expect(strictAbsent({ ...VUE_CONFORME, protection: null })).toEqual([]);
+  it('REQ-GOV-014 : TÉMOINS — gate-a absent des checks requis, ou main sans règle, restent ROUGES', () => {
+    const p = protection();
+    p.required_status_checks = { strict: false, contexts: [] };
+    expect(familles(avec(p))).toContain('check_requis_absent');
+    expect(familles(avec('non_protegee'))).toContain('branche_non_protegee');
   });
-
-  it('REQ-GOV-014 : la famille est déclarée, et --prove la fait rougir sur son témoin', () => {
-    expect(FAMILLES).toContain('strict_absent');
-    const r = spawnSync(
-      process.execPath,
-      ['node_modules/tsx/dist/cli.mjs', 'scripts/gates/gov-depot.ts', '--prove'],
-      { encoding: 'utf8' }
-    );
-    expect([r.status, r.stdout]).toEqual([0, expect.stringContaining('• strict_absent')]);
-  }, 60_000);
 });

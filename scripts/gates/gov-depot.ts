@@ -97,7 +97,6 @@ export const FAMILLES = [
   'workflow_pousse_sur_main',
   'branche_non_protegee',
   'protection_non_lisible',
-  'strict_absent',
 ] as const;
 
 // ── ce que le dépôt a décidé ─────────────────────────────────────────────────
@@ -168,9 +167,7 @@ export function checksProduits(yml: string): string[] {
 
 // ── ce que les workflows font ────────────────────────────────────────────────
 
-type Analyse = {
-  jugerPush: (ligne: string) => { refuse: boolean; motif: string | null };
-};
+type Analyse = { jugerPush: (ligne: string) => { refuse: boolean; motif: string | null } };
 const analyse = require_('./git-push-sur.js') as Analyse;
 
 /**
@@ -214,11 +211,7 @@ export function analyserWorkflows(
   const fautes: Faute[] = [];
   const commandes: string[] = [];
   const rouge = (message: string): void => {
-    fautes.push({
-      famille: 'workflow_pousse_sur_main',
-      gravite: 'rouge',
-      message,
-    });
+    fautes.push({ famille: 'workflow_pousse_sur_main', gravite: 'rouge', message });
   };
 
   for (const f of fichiers) {
@@ -346,19 +339,6 @@ export function controler(vue: Vue): Faute[] {
       }
     }
 
-    // QA-T55 (REQ-GOV-014) — « branches à jour avant fusion ». Sans `strict`, une PR verte sur une
-    // base PÉRIMÉE fusionne, et l'état fusionné n'a jamais été testé. Posé sur la forge par décision
-    // de Williams du 2026-10-01 : la garde le CONSTATE, elle ne le pose pas.
-    if (src?.strict !== true) {
-      rouge(
-        'strict_absent',
-        `la protection de \`main\` n'exige pas des branches À JOUR avant fusion ` +
-          `(\`required_status_checks.strict\` vaut \`${String(src?.strict)}\`). Une PR verte sur une base ` +
-          `périmée fusionne alors un état que la porte A n'a jamais jugé, et le déploiement le publie. ` +
-          `Le rétablir est un réglage de la forge, par Williams (sa décision du 2026-10-01).`
-      );
-    }
-
     if (vue.protection.required_linear_history?.enabled !== true) {
       rouge(
         'historique_non_lineaire',
@@ -407,10 +387,7 @@ function lireWorkflows(): Fichier[] {
 function gh(args: string[]): { sortie: string | null; erreur: string } {
   try {
     return {
-      sortie: execFileSync('gh', args, {
-        encoding: 'utf8',
-        stdio: ['ignore', 'pipe', 'pipe'],
-      }),
+      sortie: execFileSync('gh', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }),
       erreur: '',
     };
   } catch (e) {
@@ -484,11 +461,7 @@ export const VUE_CONFORME: Vue = {
   ],
   visibilite: 'PUBLIC',
   protection: {
-    required_status_checks: {
-      strict: true,
-      contexts: ['gate-a'],
-      checks: [{ context: 'gate-a' }],
-    },
+    required_status_checks: { strict: true, contexts: ['gate-a'], checks: [{ context: 'gate-a' }] },
     required_linear_history: { enabled: true },
     allow_force_pushes: { enabled: false },
     allow_deletions: { enabled: false },
@@ -560,44 +533,26 @@ function prouver(): number {
   const p = (): Protection => structuredClone(VUE_CONFORME.protection as Protection);
 
   const TEMOINS: { famille: (typeof FAMILLES)[number]; vue: Vue }[] = [
-    {
-      famille: 'source_illisible',
-      vue: { ...VUE_CONFORME, decisions: '| Id | Décision |\n' },
-    },
-    {
-      famille: 'visibilite_inattendue',
-      vue: { ...VUE_CONFORME, visibilite: 'PRIVATE' },
-    },
+    { famille: 'source_illisible', vue: { ...VUE_CONFORME, decisions: '| Id | Décision |\n' } },
+    { famille: 'visibilite_inattendue', vue: { ...VUE_CONFORME, visibilite: 'PRIVATE' } },
     {
       famille: 'check_requis_absent',
-      vue: {
-        ...VUE_CONFORME,
-        protection: { ...p(), required_status_checks: { contexts: [] } },
-      },
+      vue: { ...VUE_CONFORME, protection: { ...p(), required_status_checks: { contexts: [] } } },
     },
     {
       famille: 'check_jamais_produit',
       vue: {
         ...VUE_CONFORME,
-        protection: {
-          ...p(),
-          required_status_checks: { contexts: ['gate-a', 'gate-fantome'] },
-        },
+        protection: { ...p(), required_status_checks: { contexts: ['gate-a', 'gate-fantome'] } },
       },
     },
     {
       famille: 'historique_non_lineaire',
-      vue: {
-        ...VUE_CONFORME,
-        protection: { ...p(), required_linear_history: { enabled: false } },
-      },
+      vue: { ...VUE_CONFORME, protection: { ...p(), required_linear_history: { enabled: false } } },
     },
     {
       famille: 'ecrasement_autorise',
-      vue: {
-        ...VUE_CONFORME,
-        protection: { ...p(), allow_force_pushes: { enabled: true } },
-      },
+      vue: { ...VUE_CONFORME, protection: { ...p(), allow_force_pushes: { enabled: true } } },
     },
     {
       // Le témoin qui compte : la forme que les six règles `deny` ne voient pas, portée cette
@@ -616,21 +571,7 @@ function prouver(): number {
       famille: 'branche_non_protegee',
       vue: { ...VUE_CONFORME, protection: 'non_protegee' },
     },
-    {
-      famille: 'protection_non_lisible',
-      vue: { ...VUE_CONFORME, protection: null },
-    },
-    {
-      // QA-T55 : une PR verte sur une base périmée ne doit plus pouvoir fusionner.
-      famille: 'strict_absent',
-      vue: {
-        ...VUE_CONFORME,
-        protection: {
-          ...p(),
-          required_status_checks: { strict: false, contexts: ['gate-a'] },
-        },
-      },
-    },
+    { famille: 'protection_non_lisible', vue: { ...VUE_CONFORME, protection: null } },
   ];
 
   for (const t of TEMOINS) {
