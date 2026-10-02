@@ -36,6 +36,10 @@ import { clesPii } from '../securite/pii';
 import { verifierChaine, type LigneJournal } from '../../domain/evenement/journal';
 import { lireJournalParLots } from '../evenement/journal';
 import type { Inscriptions } from './lanceur';
+import { completerLesCodesNaf, portsDeBase } from './completer-code-naf';
+import { creerDisjoncteur } from '../integrations/recherche-entreprises/disjoncteur';
+import { PARAMETRES } from '../integrations/recherche-entreprises/parametres';
+import { clientDuTiers } from '../integrations/recherche-entreprises/tiers';
 
 /**
  * Les traitants branchés, par type d'événement reçu. Un seul aujourd'hui : la candidature reçue
@@ -79,6 +83,19 @@ export function inscriptions(prisma: PrismaClient): Inscriptions {
       battre: async () => undefined,
     }),
     journal_verifier: passageDuJournal(() => lireJournalParLots(prisma)),
+    // DM-28 (REQ-DM-046) : la reprise des codes NAF nuls. Un disjoncteur par passage : le tiers en
+    // panne interrompt la reprise, le passage suivant la relance.
+    naf_completer: () =>
+      completerLesCodesNaf({
+        ...portsDeBase(prisma),
+        tiers: clientDuTiers({
+          fetch,
+          urlDeBase: PARAMETRES.urlDeBase.valeur,
+          delaiMs: PARAMETRES.delaiAttenteMs.valeur,
+        }),
+        disjoncteur: creerDisjoncteur(),
+        maintenantMs: () => horlogeSysteme.maintenant(),
+      }),
   };
 }
 

@@ -17,6 +17,8 @@ export const TACHES = {
   evenements_recus: { req: 'REQ-QA-026' },
   /** DM-45 — la vérification de la chaîne du journal, par ses liens de hash (`verifierChaine`). */
   journal_verifier: { req: 'REQ-DM-024' },
+  /** DM-28 — la reprise des codes NAF nuls d'un dépôt en repli manuel (`completerLesCodesNaf`). */
+  naf_completer: { req: 'REQ-DM-046' },
 } as const satisfies Readonly<Record<string, { req: `REQ-${string}` }>>;
 
 export type NomDeTache = keyof typeof TACHES;

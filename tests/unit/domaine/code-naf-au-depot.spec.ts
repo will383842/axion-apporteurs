@@ -63,7 +63,7 @@ describe('REQ-DM-046 — le code NAF retenu au dépôt', () => {
   it('REQ-DM-046 : un dépôt en repli manuel porte un code NUL ; une valeur absente ou hors forme reste nulle', () => {
     expect(codeNafDuDepot(null)).toBeNull();
     expect(codeNafDuDepot({ activite_principale: null })).toBeNull();
-    for (const faux of ['', ' ', '7010Z', '70.10', 'x70.10Z', '70.10Zx', '70.10z']) {
+    for (const faux of ['', ' ', '7010Z', '70.', 'x70.10Z', '70.10ZZ', '70.10z', ' 70.10Z']) {
       expect(codeNafDuDepot({ activite_principale: faux })).toBeNull();
     }
     // La révision 1, que le tiers rend encore pour d'anciennes entreprises, est gardée telle quelle.
@@ -154,7 +154,7 @@ describe('REQ-DM-046 — la reprise des codes nuls', () => {
     expect(await completerLesCodesNaf(p)).toEqual({
       completes: 1,
       sansCode: 0,
-      interrompue: false,
+      interruptions: 0,
     });
     expect(p.ecrits).toEqual([['a', '68.20B']]);
     expect(p.appels).toEqual([SIREN_A]);
@@ -167,7 +167,7 @@ describe('REQ-DM-046 — la reprise des codes nuls', () => {
     expect(await completerLesCodesNaf(p)).toEqual({
       completes: 0,
       sansCode: 1,
-      interrompue: false,
+      interruptions: 0,
     });
     expect(p.ecrits).toEqual([]);
     expect(lignes[0]!.codeNaf).toBeNull();
@@ -186,7 +186,7 @@ describe('REQ-DM-046 — la reprise des codes nuls', () => {
       { id: 'b', siren: SIREN_B, codeNaf: null as string | null },
     ];
     const p = ports(lignes, () => ({ ok: false, motif: 'erreur_serveur', retryAfterMs: null }));
-    expect(await completerLesCodesNaf(p)).toEqual({ completes: 0, sansCode: 0, interrompue: true });
+    expect(await completerLesCodesNaf(p)).toEqual({ completes: 0, sansCode: 0, interruptions: 1 });
     expect(p.appels).toEqual([SIREN_A]);
   });
 
@@ -194,7 +194,7 @@ describe('REQ-DM-046 — la reprise des codes nuls', () => {
     const lignes = [{ id: 'a', siren: SIREN_A, codeNaf: null as string | null }];
     const p = ports(lignes, (q) => reponse(q, '68.20B'));
     p.disjoncteur.echec(0, 'erreur_serveur', null);
-    expect(await completerLesCodesNaf(p)).toEqual({ completes: 0, sansCode: 0, interrompue: true });
+    expect(await completerLesCodesNaf(p)).toEqual({ completes: 0, sansCode: 0, interruptions: 1 });
     expect(p.appels).toEqual([]);
   });
 
