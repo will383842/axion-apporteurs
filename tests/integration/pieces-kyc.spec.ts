@@ -90,30 +90,37 @@ async function refus(promesse: Promise<unknown>): Promise<string> {
 /**
  * Le refus d'UNICITÉ, avec le NOM de l'index. Une requête brute ne transmet que le code et le détail
  * (« Key (apporteur_id, type)=… already exists »), et les deux index partiels portent les MÊMES
- * colonnes : seul leur nom les distingue. Le bloc lit ce nom dans le diagnostic de Postgres et le
- * relève SOUS LE MÊME CODE `23505` ; le témoin juge les deux. L'apporteur est un UUID vérifié ici et
- * retranstypé `::uuid`, le type et le statut des littéraux de ce fichier, transtypés en enum.
+ * colonnes : seul leur nom les distingue. Un message relevé ne revient pas non plus (Prisma rend
+ * « Message: N/A » sous le code `23505`). Le refus est donc RENDU COMME UNE DONNÉE : une fonction
+ * `pg_temp`, créée et appelée dans la MÊME transaction (une seule connexion : un objet temporaire est
+ * invisible à travers le pool), tente l'insertion, attrape `unique_violation` et rend le SQLSTATE et
+ * le CONSTRAINT_NAME lus dans le diagnostic. L'appel est paramétré ; aucune valeur n'est interpolée.
  */
-const FORME_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 async function refusDUnicite(p: {
   apporteur: string;
   type: 'siret' | 'rib';
   statut: 'valide' | 'a_verifier';
-}): Promise<string> {
-  if (!FORME_UUID.test(p.apporteur)) throw new Error('apporteur hors forme');
-  const iban = p.type === 'rib' ? "decode(repeat('ab', 40), 'hex'), repeat('a', 64)" : 'NULL, NULL';
-  return refus(
-    base.prisma.$executeRawUnsafe(`DO $$
-      DECLARE contrainte text;
+}): Promise<{ etat: string; contrainte: string | null }> {
+  return base.prisma.$transaction(async (tx) => {
+    await tx.$executeRawUnsafe(`
+      CREATE FUNCTION pg_temp.essai_unicite(a uuid, t type_piece_kyc, s statut_piece_kyc, rib boolean)
+      RETURNS text[] LANGUAGE plpgsql AS $f$
+      DECLARE etat text; contrainte text;
       BEGIN
         INSERT INTO pieces_kyc (id, apporteur_id, type, statut, iban_chiffre, iban_hash)
-        VALUES (gen_random_uuid(), '${p.apporteur}'::uuid, '${p.type}'::type_piece_kyc,
-                '${p.statut}'::statut_piece_kyc, ${iban});
+        VALUES (gen_random_uuid(), a, t, s,
+                CASE WHEN rib THEN decode(repeat('ab', 40), 'hex') END,
+                CASE WHEN rib THEN repeat('a', 64) END);
+        RETURN ARRAY['insere', ''];
       EXCEPTION WHEN unique_violation THEN
-        GET STACKED DIAGNOSTICS contrainte = CONSTRAINT_NAME;
-        RAISE EXCEPTION 'unicite_refusee:%', contrainte USING ERRCODE = 'unique_violation';
-      END $$`)
-  );
+        GET STACKED DIAGNOSTICS etat = RETURNED_SQLSTATE, contrainte = CONSTRAINT_NAME;
+        RETURN ARRAY[etat, coalesce(contrainte, '')];
+      END $f$`);
+    const [r] = await tx.$queryRaw<{ r: (string | null)[] }[]>`
+      SELECT pg_temp.essai_unicite(${p.apporteur}::uuid, ${p.type}::type_piece_kyc,
+                                   ${p.statut}::statut_piece_kyc, ${p.type === 'rib'}) AS r`;
+    return { etat: String(r!.r[0]), contrainte: r!.r[1] || null };
+  });
 }
 
 describe('REQ-DM-027 — les formes d’une pièce du KYC', () => {
@@ -157,8 +164,7 @@ describe('REQ-DM-027 — une pièce courante et une en vérification, au plus, p
     const a = await unApporteur();
     await piece({ apporteur: a, type: 'siret' });
     const courante = await refusDUnicite({ apporteur: a, type: 'siret', statut: 'valide' });
-    expect(courante).toContain('`23505`');
-    expect(courante).toContain('unicite_refusee:pieces_kyc_une_courante');
+    expect(courante).toStrictEqual({ etat: '23505', contrainte: 'pieces_kyc_une_courante' });
     // Une pièce remplacée ne compte plus : la nouvelle passe.
     await base.prisma.$executeRawUnsafe(
       `UPDATE pieces_kyc SET remplacee_at = $2 WHERE apporteur_id = $1::uuid AND type = 'siret'`,
@@ -178,8 +184,10 @@ describe('REQ-DM-027 — une pièce courante et une en vérification, au plus, p
       piece({ apporteur: a, type: 'rib', statut: 'a_verifier', ...iban() })
     ).resolves.toBeTruthy();
     const enVerification = await refusDUnicite({ apporteur: a, type: 'rib', statut: 'a_verifier' });
-    expect(enVerification).toContain('`23505`');
-    expect(enVerification).toContain('unicite_refusee:pieces_kyc_une_en_verification');
+    expect(enVerification).toStrictEqual({
+      etat: '23505',
+      contrainte: 'pieces_kyc_une_en_verification',
+    });
   });
 });
 
