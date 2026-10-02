@@ -70,9 +70,7 @@ export const FORMES = {
 
 /** Les valeurs de l'enum Prisma `TypeEvenementJournal`, confrontées au schéma par la garde. */
 export type TypeEvenementJournal =
-  | 'journal_ouvert'
-  | 'apporteur_statut_modifie'
-  | 'attribution_contact_purge';
+  'journal_ouvert' | 'apporteur_statut_modifie' | 'attribution_contact_purge';
 
 export const CHARGES_PAR_TYPE = {
   /** La genèse : l'algorithme de chaînage, inscrit DANS la chaîne. */
