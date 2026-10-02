@@ -1,6 +1,8 @@
 // @req REQ-UX-008
 // @req REQ-UX-017
 // @req REQ-UX-034
+// @req REQ-UX-021
+// @req REQ-UX-047
 /**
  * UX-P0-02 — les maquettes de l'espace, et la garde qui les rend OBLIGATOIRES avant tout code d'écran.
  *
@@ -737,5 +739,38 @@ describe('REQ-UX-017 — la moitié statique : autonomes, langue déclarée, cha
       }
     }
     expect(champs).toBeGreaterThan(50);
+  });
+});
+
+/**
+ * UX-P1-19 — la fiche de qualification de la console, telle que REQ-UX-021 la décrit : un appel
+ * `tel:`, le compteur des appels, la validation conditionnelle de la date (son état d'erreur), et
+ * « Non confirmé » offert à côté de « Perdue », sans être une perte. Jugé sur la maquette réelle ET
+ * sur une copie cassée d'un geste (RM-02). La mesure E2E du cas nominal appartient à l'écran codé.
+ */
+describe('REQ-UX-021 — la maquette de la fiche de qualification porte ce que l’exigence demande', () => {
+  const FICHE = 'docs/maquettes/fiche-qualification.html';
+  const manques = (html: string): string[] => {
+    const texte = html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ');
+    const f: string[] = [];
+    if (!/href="tel:\+?\d+"/.test(html)) f.push('appel_tel');
+    if (!/Appels : \d+/.test(texte)) f.push('compteur_des_appels');
+    if (!/data-pour="etat-erreur-date"/.test(html)) f.push('erreur_de_date_conditionnelle');
+    if (!/Non confirmé/.test(texte) || !/Perdue/.test(texte)) f.push('non_confirme_et_perdue');
+    return f;
+  };
+
+  it('REQ-UX-021 : la fiche porte l’appel tel:, le compteur des appels, l’erreur de date conditionnelle, et « Non confirmé » à côté de « Perdue »', () => {
+    expect(manques(readFileSync(FICHE, 'utf8'))).toEqual([]);
+  });
+
+  it('REQ-UX-021 : TÉMOIN — chacun retiré d’une copie de la maquette rougit, nommé', () => {
+    const reelle = readFileSync(FICHE, 'utf8');
+    expect(manques(reelle.replace(/href="tel:[^"]*"/g, 'href="#"'))).toEqual(['appel_tel']);
+    expect(manques(reelle.replace(/Appels : \d+/g, 'Appels : —'))).toEqual(['compteur_des_appels']);
+    expect(manques(reelle.replace(/data-pour="etat-erreur-date"/g, ''))).toEqual([
+      'erreur_de_date_conditionnelle',
+    ]);
+    expect(manques(reelle.replace(/Non\s+confirmé/g, 'Autre'))).toEqual(['non_confirme_et_perdue']);
   });
 });
