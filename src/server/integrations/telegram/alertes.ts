@@ -97,6 +97,13 @@ export const CATEGORIES_ALERTE = [
   'deploiement_non_atterri',
   /** Le témoin de la garde `G-SEC-NOTIF` (`garde-sans-pii.ts`, `OBJET_TEMOIN`). */
   'temoin_garde',
+  /**
+   * `QA-T57` — le dernier vidage du dépôt est plus vieux que `DERNIER_VIDAGE_MAX_MINUTES` (SSOT), ou
+   * absent (`REQ-QA-023`) : la plateforme ne vide plus la base. Émise par `sauvegarde:fraicheur`
+   * (`scripts/sauvegarde/cycle.ts`). Gabarit : `alerte`, la catégorie et un identifiant technique ;
+   * ni la clé du vidage ni sa date n'entrent dans le message.
+   */
+  'vidage_perime',
 ] as const;
 
 export type CategorieAlerte = (typeof CATEGORIES_ALERTE)[number];
