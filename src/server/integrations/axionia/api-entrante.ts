@@ -147,9 +147,6 @@ export function frontiereDeProduction(): Frontiere {
       attendre: (ms) => new Promise((resoudre) => setTimeout(resoudre, ms)),
     },
     // SEC-44 : le compteur du registre, appelé à nom LITTÉRAL — la forme que `rate-famille` lit.
-    // Le nom n'est pas muté : Stryker l'envelopperait, et la garde, qui juge ce texte dans le bac à
-    // sable, y verrait un nom calculé. Un nom faux est refusé par la garde, jamais par un test.
-    // Stryker disable next-line StringLiteral
     debit: (sujet, maintenantMs) => limiter('auth:axionia-ip', sujet, maintenantMs),
     lire: lecteurNonBranche,
     puits: (ligne) => {

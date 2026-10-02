@@ -21,9 +21,17 @@ import { NOMS_DES_SECRETS, kidDe } from '../../../src/lib/env';
 import type { HorlogeDePlancher } from '../../../src/server/securite/pot-de-miel';
 import { limiteNonDeclaree } from '../../../src/server/securite/primitives-de-porte';
 import {
+  limiter,
   sujetDepuisEmpreinte,
   type VerdictDeLimite,
 } from '../../../src/server/securite/rate-limit';
+
+// Un ESPION sur `limiter`, qui délègue au vrai compteur : le témoin du nom de compteur de la
+// frontière lit ses arguments, et tous les autres tests gardent le comportement réel.
+vi.mock('../../../src/server/securite/rate-limit', async (original) => {
+  const vrai = await original<typeof import('../../../src/server/securite/rate-limit')>();
+  return { ...vrai, limiter: vi.fn(vrai.limiter) };
+});
 import {
   CHAMPS_DE_LA_REPONSE,
   METHODES_HTTP,
@@ -649,6 +657,16 @@ describe('REQ-SEC-012 — la frontière de PRODUCTION', () => {
       { signal: 'rate_limit_panne', prefixe: 'auth:', motif: 'cache_indisponible' },
     ]);
     await expect(f.lire(SIREN)).rejects.toThrow(/^lecteur_non_branche : /);
+  });
+
+  it('REQ-SEC-016 : TÉMOIN — son débit appelle EXACTEMENT le compteur `auth:axionia-ip`, avec le sujet et l’instant reçus', async () => {
+    vi.stubEnv('REDIS_URL', '');
+    const espion = vi.mocked(limiter);
+    espion.mockClear();
+    const sujet = sujetDepuisEmpreinte('fedcba9876543210');
+    await frontiereDeProduction().debit(sujet, DEPART);
+    expect(espion).toHaveBeenCalledTimes(1);
+    expect(espion.mock.calls[0]).toEqual(['auth:axionia-ip', sujet, DEPART]);
   });
 
   it('son puits écrit UNE ligne terminée par un saut de ligne sur la sortie d’erreur', () => {
