@@ -3,7 +3,7 @@
  * EXT-T08 — la fiche persistée porte les coordonnées du siège en micro-degrés, calculées CÔTÉ
  * SERVEUR dans la projection (REQ-EXT-015) ; la suggestion vue du navigateur n'en porte aucune.
  *
- * CE QU'IL PROUVE, sur CHAQUE fixture enregistrée d'INT-T09 :
+ * CE QU'IL PROUVE, sur CHAQUE fixture enregistrée du tiers :
  *   — `siege.latitude_microdeg` et `siege.longitude_microdeg` égalent la conversion des chaînes WGS84
  *     du tiers (contre-calcul indépendant), et sont nuls ensemble quand le tiers n'en rend pas ;
  *   — la suggestion ne porte aucune coordonnée ;

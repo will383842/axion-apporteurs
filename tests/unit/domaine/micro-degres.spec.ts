@@ -36,8 +36,7 @@ describe('REQ-EXT-015 — une coordonnée en micro-degrés entiers', () => {
   });
 
   it('REQ-EXT-015 : TÉMOIN — l’arithmétique est celle de la chaîne, pas d’un flottant', () => {
-    // 1.005 × 10⁶ en flottant vaut 1004999.9999999999 : un arrondi naïf du produit le rend juste ici,
-    // mais pas toujours ; la chaîne, elle, ne se trompe jamais.
+    // Une demie au septième chiffre s'arrondit vers le haut, quel que soit ce qu'en ferait un flottant.
     expect(versMicroDegres('1.0000005', BORNE_LATITUDE)).toBe(1000001);
     expect(versMicroDegres('4.35000050', BORNE_LATITUDE)).toBe(4350001);
   });
