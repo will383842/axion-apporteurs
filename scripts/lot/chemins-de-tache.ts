@@ -106,7 +106,7 @@ export type TacheDeLot = {
  * `reecrire-champ.mjs`, qui REFUSE une entree absente (corrige le 2026-09-18).
  *
  * MESURE : 12 verbes, lus le 2026-09-22 dans
- * `C:/Users/willi/Documents/Projets/_REPRISE-AXION-APPORTEURS/outils/`.
+ * `~/Documents/Projets/_REPRISE-AXION-APPORTEURS/outils/`.
  */
 export const QUALIFIANT_HORS_DEPOT = 'hors-depot';
 

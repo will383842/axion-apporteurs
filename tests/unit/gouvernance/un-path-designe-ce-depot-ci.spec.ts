@@ -119,7 +119,8 @@ describe('REQ-GOV-021 — un chemin de `paths` désigne CE dépôt, sous sa form
       '../axionia/src/content/pricing.ts',
       '..',
       '/etc/passwd',
-      'C:/Users/x.ts',
+      // Le dossier personnel s'écrit par son marqueur, seule forme que `gov:publication` permet (SEC-48).
+      'C:/Users/<nom>/x.ts',
       'c:docs',
       'docs\\spec\\plan.md',
       'docs//spec/plan.md',

@@ -20,7 +20,7 @@
 > - une garde `différer` **nomme la tâche qui la reprend, et cette tâche est au backlog**. C'est la seule chose qui
 >   distingue « différée » d'« oubliée ».
 >
-> **Comment axionia a été lu.** Arbre de travail `C:\Users\willi\Documents\Projets\Axion-IA\axionia`, **2026-09-05**,
+> **Comment axionia a été lu.** Arbre de travail `%USERPROFILE%\Documents\Projets\Axion-IA\axionia`, **2026-09-05**,
 > en LECTURE SEULE (trois autres sessions y travaillaient ; aucune commande d'écriture, `git` compris, n'y a été
 > lancée). ⚠️ Les chemins ci-dessous ne portent donc **pas de SHA** : je n'ai pas pu lire le commit. Ce ne sont pas des
 > lignes de `docs/AFFIRMATIONS-AXIONIA.md`, qui exige `AAAA-MM-JJ @ <SHA court>` et qu'on ne peut pas satisfaire sans
