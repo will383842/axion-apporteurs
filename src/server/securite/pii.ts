@@ -331,8 +331,16 @@ export const TYPES_EMPREINTE = Object.keys(NORMALISATIONS) as readonly TypeEmpre
  * séparée par domaine — une même chaîne donne deux empreintes selon son type. Forme `HASH_HEX_64`.
  */
 export function empreinteRecherche(type: TypeEmpreinte, valeur: string, cles: ClesPii): string {
+  return empreinteSousCle(type, valeur, cles.empreintes);
+}
+
+/**
+ * La même empreinte, sous la clé PII_HASH_KEY reçue en clair — pour un appelant qui ne tient que
+ * cette clé (l'empreinteur des dirigeants, INT-T09, DM-07). Une seule écriture du format.
+ */
+export function empreinteSousCle(type: TypeEmpreinte, valeur: string, cle: string): string {
   const normalise = NORMALISATIONS[type](valeur);
-  return createHmac('sha256', cles.empreintes)
+  return createHmac('sha256', cle)
     .update(['partners.empreinte.v1', type, normalise].join('\u001f'), 'utf8')
     .digest('hex');
 }

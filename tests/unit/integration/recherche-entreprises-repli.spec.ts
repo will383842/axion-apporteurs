@@ -755,8 +755,15 @@ describe('REQ-SEC-013 — `dependancesDeProduction` : clés, adresse, délai et 
 
   it('REQ-SEC-013 — format FIXÉ des empreintes : vecteurs connus (HMAC-SHA-256, étiquette, séparateur U+001F)', () => {
     // Calculés une fois hors du code livré ; une empreinte persistée qui change de format rougit ici.
+    // DM-07 (décision A02 du 2026-10-02) : l'empreinte d'un dirigeant est celle de
+    // `empreinteRecherche('nom_personne', …)` ; l'ancien format (`partners.dirigeant.v1`) disparaît,
+    // aucune empreinte n'ayant encore été stockée. Entrée normalisée, en clair :
+    //   partners.empreinte.v1 U+001F nom_personne U+001F PP U+001F LEFEVRE U+001F JEAN
+    // Commande exacte :
+    //   printf 'partners.empreinte.v1\x1fnom_personne\x1fPP\x1fLEFEVRE\x1fJEAN' \
+    //     | openssl dgst -sha256 -hmac 'cle-de-vecteur'
     expect(empreinteurDeDirigeants('cle-de-vecteur')('pp\u001fLEFEVRE\u001fJEAN')).toBe(
-      'dafcc5f1e7e142fa48d4be88684d51e7bcafffa04f92497fce89270a6b73f180'
+      '3540e9bab2292366e4b5f42b72077a697dddf108709c600b8630120229c190f5'
     );
     expect(
       appelantDepuis('apporteur-42', new Headers(), {
