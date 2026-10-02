@@ -25,11 +25,21 @@ import { createServer, type IncomingMessage, type Server } from 'node:http';
 import { readFileSync } from 'node:fs';
 import { lireYaml } from '../../../scripts/lib/lire-yaml';
 import { jugerLesChecks, jugerLeRun } from '../../../scripts/gates/deploy-verify';
+import { politiqueDeContenu } from '../../../src/server/securite/entetes';
 
 const SCRIPT = 'scripts/gates/deploy-verify.ts';
 const TSX = 'node_modules/tsx/dist/cli.mjs';
 const SHA = 'a'.repeat(40);
 const AUTRE = 'b'.repeat(40);
+/**
+ * Ce que sert une application ATTERRIE : le sha, et la politique de contenu de la configuration, avec
+ * son propre nonce. `deploy:verify` compare aussi la politique servie à celle de la configuration :
+ * un faux serveur qui ne la servirait pas serait un atterrissage refusé.
+ */
+const ATTERRIE = {
+  'x-partners-build-sha': SHA,
+  'content-security-policy': politiqueDeContenu({ nonce: 'nonceDuTemoin01', developpement: false }),
+};
 
 type Requete = { methode: string; url: string; auth: string | undefined; corps: string };
 let serveurs: Server[] = [];
@@ -92,7 +102,7 @@ describe('deploy:verify — l’atterrissage se lit sur l’en-tête servi', () 
   it('sur le sha servi, sort en zéro', async () => {
     const app = await serveur(() => ({
       statut: 200,
-      entetes: { 'x-partners-build-sha': SHA },
+      entetes: ATTERRIE,
       corps: '',
     }));
     const r = await lancer(['--verifier', SHA, ...RAPIDE], { PARTNERS_URL_PUBLIQUE: app.url });
@@ -136,7 +146,7 @@ describe('deploy:verify — l’atterrissage se lit sur l’en-tête servi', () 
   it('lit le sha dans GITHUB_SHA quand aucun n’est donné', async () => {
     const app = await serveur(() => ({
       statut: 200,
-      entetes: { 'x-partners-build-sha': SHA },
+      entetes: ATTERRIE,
       corps: '',
     }));
     const r = await lancer(['--verifier', ...RAPIDE], {
@@ -207,7 +217,7 @@ describe('deploy:coolify — la plateforme tire l’image, ou le saut est NOMMÉ
     );
     const app = await serveur(() => ({
       statut: 200,
-      entetes: { 'x-partners-build-sha': SHA },
+      entetes: ATTERRIE,
       corps: '',
     }));
     const r = await lancer(['--declencher', ...RAPIDE], {

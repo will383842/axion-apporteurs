@@ -383,7 +383,7 @@ export const CONCORDANCES: readonly Concordance[] = [
     alinea: null,
     registre: ["leur source est l'art. 3.2 amendé (JUR-T40)"],
     gabarit: [
-      "l'attribution prend fin après trois tentatives de prise de contact restées sans réponse",
+      "l'attribution prend fin après {{LIBERATION_SIGNALEE_INJOIGNABLE_MAX}} tentatives de prise de contact restées sans réponse",
     ],
     absents: [],
   },
@@ -392,7 +392,7 @@ export const CONCORDANCES: readonly Concordance[] = [
     article: '3.2',
     alinea: null,
     registre: ["Les deux valeurs sont écrites à l'art. 3.2 amendé (JUR-T40)"],
-    gabarit: ["qu'à l'expiration d'un délai de trente jours"],
+    gabarit: ["qu'à l'expiration d'un délai de {{CARENCE_REDEPOT_APRES_LIBERATION_JOURS}} jours"],
     absents: [],
   },
   {
@@ -651,20 +651,6 @@ export const DIVERGENCES_DECLAREES: readonly Divergence[] = [
   {
     cle: 'HYP-W19-CONCOURS:3.5',
     constat: 'l’art. 3.5 amendé (la Société ou ses préposés) n’est pas encore écrit au gabarit',
-    question: 'JUR-T01-Q17',
-  },
-  {
-    cle: 'HYP-W20-LIBERATION:3.2',
-    constat:
-      'l’art. 3.2 amendé (fin de l’attribution d’une demande signalée) n’est pas encore écrit',
-    question: 'JUR-T01-Q17',
-  },
-  {
-    // La clé est composée : écrite d'un bloc, « …-redepot:3.2 » contient le préfixe de famille de
-    // débit `depot:`, que `rate-famille` refuse hors du registre des compteurs. Ce n'est pas un
-    // compteur, c'est la clé `<décision>:<article>` d'une divergence du contrat.
-    cle: `${'HYP-W20-CARENCE-REDEPOT'}:3.2`,
-    constat: 'l’art. 3.2 amendé (carence de redépôt) n’est pas encore écrit au gabarit',
     question: 'JUR-T01-Q17',
   },
 ];

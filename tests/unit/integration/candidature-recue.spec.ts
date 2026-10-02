@@ -19,6 +19,7 @@ import {
   ENTETE_HORODATAGE_REQUETE,
   ENTETE_SIGNATURE_REQUETE,
   PREFIXE_ATTENTE_COORDONNEES,
+  chargeMinimisee,
   clientCoordonnees,
   traiterCandidatureRecue,
   type ClientCandidature,
@@ -243,10 +244,17 @@ describe('REQ-DM-035, REQ-QA-035 — un apporteur `candidat` naît, figé, dans 
       Buffer.isBuffer(v) ? v.toString('latin1') : v
     );
     expect(texte).not.toMatch(/Camille|Durand|camille@example|0600000000/);
+    // INT-T56 (exigence (b) d'A02) : la charge minimisée part dans la MÊME écriture que le passage
+    // à `traite` — changement de face voulu de ce témoin.
     expect(b.mises).toEqual([
       {
         where: { id: 'evt-1' },
-        data: { statut: 'traite', processedAt: new Date(MAINTENANT_MS), dependanceRef: null },
+        data: {
+          statut: 'traite',
+          processedAt: new Date(MAINTENANT_MS),
+          dependanceRef: null,
+          charge: chargeMinimisee(CHARGE),
+        },
       },
     ]);
   });
