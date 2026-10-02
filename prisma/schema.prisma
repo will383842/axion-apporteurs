@@ -71,6 +71,9 @@ enum TypeEvenementJournal {
   journal_ouvert
   apporteur_statut_modifie
   attribution_contact_purge
+  attribution_etat_modifie
+  attribution_peremption_suspendue
+  attribution_porteur_reaffecte
   piece_kyc_statut_modifie
 
   @@map("type_evenement_journal")
@@ -101,6 +104,7 @@ model Evenement {
   prevHash  String               @unique @map("prev_hash") @db.Char(64)
   selfHash  String               @unique @map("self_hash") @db.Char(64)
 
+  @@index([agregat, agregatId])
   @@map("evenements")
 }
 

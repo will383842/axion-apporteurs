@@ -64,6 +64,7 @@
         "DM-07",
         "DM-08",
         "DM-13",
+        "DM-55",
         "JUR-T49"
       ]
     },
@@ -97,7 +98,8 @@
         "DM-08",
         "DM-13",
         "DM-24",
-        "DM-41"
+        "DM-41",
+        "DM-55"
       ]
     },
     {
@@ -2130,7 +2132,9 @@
         "INT-T08-P",
         "INT-T21-A",
         "INT-T21-P",
-        "INT-T51"
+        "INT-T51",
+        "INT-T70-A",
+        "INT-T70-P"
       ]
     },
     {
@@ -2265,6 +2269,7 @@
       "etape": 10,
       "phase": 0,
       "taches": [
+        "EXT-T08",
         "INT-T09"
       ]
     },
@@ -5398,7 +5403,7 @@
     {
       "id": "REQ-DM-046",
       "domaine": "domaine-donnees",
-      "texte": "Au dépôt, le code NAF (`activite_principale`, nomenclature NAF rév. 2) rendu par le client recherche-entreprises (REQ-INT-021) est **stocké sur l'attribution** (REQ-DM-030). Un dépôt fait en **repli manuel** (tiers indisponible, REQ-INT-020) porte un code NAF **nul — jamais deviné, jamais saisi par l'apporteur** ; il est complété par un nouvel appel au tiers après la fermeture du disjoncteur (`HYP-W15-SECTEUR`) et reste « non renseigné » tant que le tiers ne l'a pas rendu. Décision W15 (4), 2026-09-25. Tests : fixture enregistrée → code stocké égal à celui de la fixture ; repli manuel → code nul, puis complété par la reprise sur fixture ; le formulaire de dépôt ne porte aucun champ de code NAF.",
+      "texte": "Au dépôt, le code NAF (`activite_principale`, nomenclature NAF rév. 2) rendu par le client recherche-entreprises (REQ-INT-021) est **stocké sur l'attribution** (REQ-DM-030). Un dépôt fait en **repli manuel** (tiers indisponible, REQ-INT-020) porte un code NAF **nul — jamais deviné, jamais saisi par l'apporteur** ; il est complété par un nouvel appel au tiers après la fermeture du disjoncteur (`HYP-W15-SECTEUR`) et reste « non renseigné » tant que le tiers ne l'a pas rendu. Décision W15 (4), 2026-09-25. Tests : fixture enregistrée → code stocké égal à celui de la fixture s'il est en NAF rév. 2, nul sinon (CHECK de DM-07) ; repli manuel → code nul, puis complété par la reprise sur fixture ; le formulaire de dépôt ne porte aucun champ de code NAF.",
       "source": "décision de Will du 2026-09-25, W15 (point 4)",
       "statut": "active",
       "remplaceePar": null,
@@ -6271,7 +6276,8 @@
         "GOV-089",
         "GOV-092",
         "GOV-094",
-        "GOV-105"
+        "GOV-105",
+        "SEC-48"
       ]
     },
     {

@@ -39,6 +39,11 @@ import type { Inscriptions } from './lanceur';
 import { minimiserCandidatures } from './minimiser-candidatures';
 import { purgerLesContacts } from './purger-contacts';
 import { purgerLesSirenRefuses } from './purger-siren-refuses';
+import { completerLesCodesNaf, portsDeBase } from './completer-code-naf';
+import { creerDisjoncteur } from '../integrations/recherche-entreprises/disjoncteur';
+import { PARAMETRES } from '../integrations/recherche-entreprises/parametres';
+import { clientDuTiers } from '../integrations/recherche-entreprises/tiers';
+import { limiteurDuRegistre } from '../integrations/recherche-entreprises/limiteur';
 
 /**
  * Les traitants branchés, par type d'événement reçu. Un seul aujourd'hui : la candidature reçue
@@ -91,6 +96,21 @@ export function inscriptions(prisma: PrismaClient): Inscriptions {
     // DM-53 (REQ-DM-043) : le SIREN des dépôts refusés, douze mois après le refus.
     siren_refuses_purger: () =>
       purgerLesSirenRefuses(prisma, new Date(horlogeSysteme.maintenant())),
+    // DM-28 (REQ-DM-046) : la reprise des codes NAF nuls. Un disjoncteur par passage : le tiers en
+    // panne interrompt la reprise, le passage suivant la relance.
+    naf_completer: () =>
+      completerLesCodesNaf({
+        ...portsDeBase(prisma),
+        tiers: clientDuTiers({
+          fetch,
+          urlDeBase: PARAMETRES.urlDeBase.valeur,
+          delaiMs: PARAMETRES.delaiAttenteMs.valeur,
+        }),
+        disjoncteur: creerDisjoncteur(),
+        // Le quota du tiers est partagé avec l'autocomplétion : la reprise passe par le même débit.
+        debit: (ms) => limiteurDuRegistre.global(ms),
+        maintenantMs: () => horlogeSysteme.maintenant(),
+      }),
   };
 }
 
