@@ -16,12 +16,12 @@ L'image fraîchement déployée sert mal, et l'on veut remettre en service l'ima
 migrations sont additives (REQ-DM-037) : le schéma déjà migré accepte l'ancienne image. La migration
 n'a donc rien à faire au redémarrage de l'ancienne image, et elle ne doit pas être rejouée par elle.
 
-**Pas de retour automatique** (arbitrage du 2026-09-30, accepté par la lentille `securite`) : la sonde
-de la plateforme est coupée sur l'application, parce que l'image n'a ni `curl` ni `wget`. Seul le
-HEALTHCHECK de l'image, en node, fait foi. Un nouveau conteneur malade donne donc une **coupure
-visible**, et non un retour automatique à l'ancien conteneur : le job `deployer` rougit (NON ATTERRI),
-et le geste est ce runbook. Mieux vaut une coupure qu'on voit qu'une mauvaise version servie en
-silence.
+**Pas de retour automatique.** La sonde de la plateforme sur `/api/readyz` est réactivée par QA-T57
+(elle avait été coupée le 2026-09-30, l'image n'ayant alors ni `curl` ni `wget`) : un nouveau
+conteneur qui ne devient pas prêt ne remplace PAS l'ancien, qui reste servi (REQ-QA-019, HYP-E1-26).
+Ce n'est pas un retour arrière, et le job `deployer` rougit quand même (NON ATTERRI, sha servi ≠ sha
+fusionné). Ce comportement de la plateforme reste à constater (`docs/tiers/coolify.md`, rubrique à
+relever). Le geste de ce runbook vaut pour une image qui démarre mais sert mal.
 
 ## Par la forge — le geste ordinaire (QA-T13, REQ-QA-022)
 
