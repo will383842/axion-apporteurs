@@ -17,7 +17,7 @@
  *      caducité d'une commande qui ne recalcule rien ;
  *   5. la charge du journal `attribution_etat_modifie` lit `EVENEMENTS_ATTRIBUTION`.
  */
-import { describe, it, expect, vi } from 'vitest';
+import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { EtatAttribution } from '@prisma/client';
 import {
   ETATS_ATTRIBUTION,
@@ -617,5 +617,416 @@ describe('REQ-DM-006 — les charges rechargées, à la valeur près', () => {
     expect(
       issues(p.safeParse({ de: conseillerA, vers: apporteur, acteur: acteurConsole }))
     ).toEqual([['vers', 'porteur_non_conseiller']]);
+  });
+});
+
+/**
+ * L'ÉCRIVAIN, en processus. Le test d'intégration juge `transitionner.ts` contre une vraie base, mais
+ * l'outil de mutation ne joue que les tests unitaires : ici, un client de transaction SIMULÉ reçoit
+ * le verrou, la mise à jour et l'événement, et chaque objet est comparé à sa valeur EXACTE.
+ */
+const journalSimule = vi.hoisted(() => ({ ajouterEvenement: vi.fn() }));
+vi.mock('../../../src/server/evenement/journal', () => journalSimule);
+
+type LigneSimulee = {
+  statut: string;
+  apporteur_id: string | null;
+  lien_interet_declare: boolean;
+  premier_contact_at: Date | null;
+  peremption_suspendue_at: Date | null;
+  confirmee_at: Date | null;
+  fenetre_fin_at: Date | null;
+  peremption_at: Date | null;
+};
+
+const ID = '0190f0a0-0000-7000-8000-0000000000a1';
+const APPORTEUR = '0190f0a0-0000-7000-8000-0000000000b2';
+const MAINTENANT = new Date('2026-10-02T10:00:00.000Z');
+const ACTEUR = { par: 'systeme' } as const;
+
+function ligneDe(champs: Partial<LigneSimulee>): LigneSimulee {
+  return {
+    statut: 'provisoire',
+    apporteur_id: APPORTEUR,
+    lien_interet_declare: false,
+    premier_contact_at: null,
+    peremption_suspendue_at: null,
+    confirmee_at: null,
+    fenetre_fin_at: null,
+    peremption_at: null,
+    ...champs,
+  };
+}
+
+/** Un client de transaction : `$queryRaw` rend les lignes de la file, une par verrou. */
+function txSimule(lignes: LigneSimulee[]) {
+  const verrous: { sql: string; valeurs: unknown[] }[] = [];
+  const mises: unknown[] = [];
+  const file = [...lignes];
+  const tx = {
+    $queryRaw: async (gabarit: TemplateStringsArray, ...valeurs: unknown[]) => {
+      verrous.push({ sql: gabarit.join('$').replace(/\s+/g, ' ').trim(), valeurs });
+      const l = file.shift();
+      return l ? [l] : [];
+    },
+    attribution: {
+      update: async (arg: unknown) => {
+        mises.push(arg);
+        return {};
+      },
+    },
+  };
+  return { tx: tx as never, verrous, mises };
+}
+
+const SQL_DU_VERROU =
+  'SELECT statut::text AS statut, apporteur_id::text AS apporteur_id, lien_interet_declare, ' +
+  'premier_contact_at, peremption_suspendue_at, confirmee_at, fenetre_fin_at, peremption_at ' +
+  'FROM attributions WHERE id = $::uuid FOR UPDATE';
+
+type EvenementEcrit = {
+  charge: { de: unknown; vers: unknown; transition: unknown; lienInteret: unknown };
+};
+const evenementsEcrits = (): EvenementEcrit[] =>
+  journalSimule.ajouterEvenement.mock.calls.map((c) => c[1] as EvenementEcrit);
+
+async function ecrivain() {
+  return import('../../../src/server/attribution/transitionner');
+}
+
+async function refusDe(p: Promise<unknown>) {
+  try {
+    await p;
+  } catch (e) {
+    return e as { code: string; message: string };
+  }
+  throw new Error('aucun refus');
+}
+
+describe('REQ-DM-006 — l’écrivain des transitions, en processus (client simulé)', () => {
+  beforeEach(() => {
+    journalSimule.ajouterEvenement.mockReset();
+  });
+
+  it('REQ-DM-006 : TÉMOIN — la confirmation verrouille la ligne, écrit l’état et la fenêtre, puis l’événement, à la valeur près', async () => {
+    const { transitionnerUneAttribution } = await ecrivain();
+    const { tx, verrous, mises } = txSimule([ligneDe({})]);
+    const r = await transitionnerUneAttribution(tx, {
+      attributionId: ID,
+      transition: 'confirmee',
+      acteur: ACTEUR,
+      maintenant: MAINTENANT,
+    });
+    expect(r).toStrictEqual({ de: 'provisoire', vers: 'active' });
+    expect(verrous).toStrictEqual([{ sql: SQL_DU_VERROU, valeurs: [ID] }]);
+    expect(mises).toStrictEqual([
+      {
+        where: { id: ID },
+        data: {
+          statut: 'active',
+          confirmeeAt: MAINTENANT,
+          fenetreFinAt: new Date('2027-04-02T10:00:00.000Z'),
+          peremptionAt: null,
+        },
+      },
+    ]);
+    expect(journalSimule.ajouterEvenement).toHaveBeenCalledTimes(1);
+    expect(journalSimule.ajouterEvenement.mock.calls[0]![0]).toBe(tx);
+    expect(journalSimule.ajouterEvenement.mock.calls.map((c) => c[1])).toStrictEqual([
+      {
+        type: 'attribution_etat_modifie',
+        agregat: 'attribution',
+        agregatId: ID,
+        survenuAt: MAINTENANT,
+        charge: {
+          de: 'provisoire',
+          vers: 'active',
+          transition: 'confirmee',
+          acteur: ACTEUR,
+          lienInteret: 'non_declare',
+        },
+      },
+    ]);
+  });
+
+  it('REQ-DM-031 : TÉMOIN — sortir de la file libère le rang, et un état LIBÉRÉ pose la purge du contact', async () => {
+    const { transitionnerUneAttribution } = await ecrivain();
+    const { tx, mises } = txSimule([ligneDe({ statut: 'en_attente', lien_interet_declare: true })]);
+    await transitionnerUneAttribution(tx, {
+      attributionId: ID,
+      transition: 'retiree',
+      acteur: ACTEUR,
+      maintenant: MAINTENANT,
+    });
+    expect(mises).toStrictEqual([
+      {
+        where: { id: ID },
+        data: {
+          statut: 'annulee',
+          rangAttente: null,
+          confirmeeAt: null,
+          fenetreFinAt: null,
+          peremptionAt: null,
+          purgeContactAt: new Date('2026-12-31T10:00:00.000Z'),
+        },
+      },
+    ]);
+    expect(evenementsEcrits()[0]!.charge.lienInteret).toBe('declare');
+  });
+
+  it('REQ-DM-007 : les dates de la ligne passent au domaine et en reviennent, à la milliseconde', async () => {
+    const { transitionnerUneAttribution } = await ecrivain();
+    const confirmeeAt = new Date('2026-05-01T08:00:00.000Z');
+    const fenetreFinAt = new Date('2026-11-01T09:00:00.000Z');
+    const { tx, mises } = txSimule([
+      ligneDe({
+        statut: 'active',
+        apporteur_id: null,
+        premier_contact_at: new Date('2026-09-30T08:00:00.000Z'),
+        peremption_suspendue_at: new Date('2026-10-01T08:00:00.000Z'),
+        confirmee_at: confirmeeAt,
+        fenetre_fin_at: fenetreFinAt,
+        peremption_at: new Date('2026-12-29T08:00:00.000Z'),
+      }),
+    ]);
+    const r = await transitionnerUneAttribution(tx, {
+      attributionId: ID,
+      transition: 'rdv_pris',
+      acteur: ACTEUR,
+      maintenant: MAINTENANT,
+    });
+    // Le porteur d'une ligne SANS apporteur est un conseiller : rdv_pris lui est permis.
+    expect(r).toStrictEqual({ de: 'active', vers: 'rdv_pris' });
+    expect(mises).toStrictEqual([
+      {
+        where: { id: ID },
+        data: { statut: 'rdv_pris', confirmeeAt, fenetreFinAt, peremptionAt: null },
+      },
+    ]);
+  });
+
+  it('REQ-SEC-042 : TÉMOIN — une ligne sans apporteur est jugée au CONSEILLER : un refus nommé, rien d’écrit', async () => {
+    const { transitionnerUneAttribution } = await ecrivain();
+    const { tx, mises } = txSimule([ligneDe({ apporteur_id: null })]);
+    const e = await refusDe(
+      transitionnerUneAttribution(tx, {
+        attributionId: ID,
+        transition: 'figee',
+        acteur: ACTEUR,
+        maintenant: MAINTENANT,
+      })
+    );
+    expect(e.code).toBe('refusee_au_porteur');
+    expect(e.message).toBe('refusee_au_porteur : provisoire × figee × conseiller');
+    expect(mises).toStrictEqual([]);
+    expect(journalSimule.ajouterEvenement).not.toHaveBeenCalled();
+  });
+
+  it('REQ-DM-006 : TÉMOIN — une attribution introuvable est refusée `etat_inconnu`, rien d’écrit', async () => {
+    const { transitionnerUneAttribution } = await ecrivain();
+    const { tx, mises } = txSimule([]);
+    const e = await refusDe(
+      transitionnerUneAttribution(tx, {
+        attributionId: ID,
+        transition: 'confirmee',
+        acteur: ACTEUR,
+        maintenant: MAINTENANT,
+      })
+    );
+    expect(e.code).toBe('etat_inconnu');
+    expect(e.message).toBe('etat_inconnu : attribution introuvable');
+    expect(mises).toStrictEqual([]);
+  });
+
+  it('REQ-DM-006 : TÉMOIN — la naissance est jugée contre la ligne, et journalisée sans `de`', async () => {
+    const { journaliserLaNaissance } = await ecrivain();
+    const { tx, verrous, mises } = txSimule([ligneDe({ lien_interet_declare: true })]);
+    const vers = await journaliserLaNaissance(tx, {
+      attributionId: ID,
+      transition: 'deposee',
+      acteur: ACTEUR,
+      maintenant: MAINTENANT,
+    });
+    expect(vers).toBe('provisoire');
+    expect(verrous).toStrictEqual([{ sql: SQL_DU_VERROU, valeurs: [ID] }]);
+    expect(mises).toStrictEqual([]);
+    expect(journalSimule.ajouterEvenement.mock.calls.map((c) => c[1])).toStrictEqual([
+      {
+        type: 'attribution_etat_modifie',
+        agregat: 'attribution',
+        agregatId: ID,
+        survenuAt: MAINTENANT,
+        charge: {
+          de: null,
+          vers: 'provisoire',
+          transition: 'deposee',
+          acteur: ACTEUR,
+          lienInteret: 'declare',
+        },
+      },
+    ]);
+  });
+
+  it('REQ-DM-006 : TÉMOIN — une naissance dont la ligne n’est pas dans l’état d’entrée est refusée et nommée', async () => {
+    const { journaliserLaNaissance } = await ecrivain();
+    const { tx } = txSimule([ligneDe({ statut: 'en_attente' })]);
+    const e = await refusDe(
+      journaliserLaNaissance(tx, {
+        attributionId: ID,
+        transition: 'deposee',
+        acteur: ACTEUR,
+        maintenant: MAINTENANT,
+      })
+    );
+    expect(e.code).toBe('naissance_refusee');
+    expect(e.message).toBe(
+      'naissance_refusee : naissance × deposee : ligne en en_attente, attendu provisoire'
+    );
+    expect(journalSimule.ajouterEvenement).not.toHaveBeenCalled();
+  });
+
+  it('REQ-DM-007 : la confirmation SANS commande rattachée est un seul événement', async () => {
+    const { confirmerUneAttribution } = await ecrivain();
+    const { tx, mises } = txSimule([ligneDe({}), ligneDe({ statut: 'active' })]);
+    const r = await confirmerUneAttribution(tx, {
+      attributionId: ID,
+      transition: 'confirmee_tacitement',
+      acteur: ACTEUR,
+      maintenant: MAINTENANT,
+      commandeValableRattachee: false,
+    });
+    expect(r).toStrictEqual({ vers: 'active' });
+    expect(mises).toHaveLength(1);
+    expect(evenementsEcrits().map((e) => e.charge.transition)).toStrictEqual([
+      'confirmee_tacitement',
+    ]);
+  });
+
+  it('REQ-DM-007 : TÉMOIN — avec une commande DÉJÀ rattachée, la confirmation est suivie de devis_signe : deux événements, dans cet ordre', async () => {
+    const { confirmerUneAttribution } = await ecrivain();
+    const { tx, mises } = txSimule([ligneDe({}), ligneDe({ statut: 'active' })]);
+    const r = await confirmerUneAttribution(tx, {
+      attributionId: ID,
+      transition: 'confirmee',
+      acteur: ACTEUR,
+      maintenant: MAINTENANT,
+      commandeValableRattachee: true,
+    });
+    expect(r).toStrictEqual({ vers: 'signee' });
+    expect(mises).toHaveLength(2);
+    expect(
+      evenementsEcrits().map((e) => [e.charge.de, e.charge.transition, e.charge.vers])
+    ).toStrictEqual([
+      ['provisoire', 'confirmee', 'active'],
+      ['active', 'devis_signe', 'signee'],
+    ]);
+  });
+
+  it('REQ-DM-022 : TÉMOIN — une autre commande valable portée : refus nommé, rien d’écrit', async () => {
+    const { constaterLaCaducite } = await ecrivain();
+    const { tx, mises } = txSimule([ligneDe({ statut: 'signee' })]);
+    const e = await refusDe(
+      constaterLaCaducite(tx, {
+        attributionId: ID,
+        acteur: ACTEUR,
+        maintenant: MAINTENANT,
+        autreCommandeValable: true,
+      })
+    );
+    expect(e.code).toBe('autre_commande_valable');
+    expect(e.message).toBe(
+      'autre_commande_valable : signee × commande_caduque : une autre commande valable est portée'
+    );
+    expect(mises).toStrictEqual([]);
+  });
+
+  it('REQ-DM-022 : TÉMOIN — sans fenêtre, la caducité est refusée et nommée', async () => {
+    const { constaterLaCaducite } = await ecrivain();
+    const { tx, mises } = txSimule([ligneDe({ statut: 'signee' })]);
+    const e = await refusDe(
+      constaterLaCaducite(tx, {
+        attributionId: ID,
+        acteur: ACTEUR,
+        maintenant: MAINTENANT,
+        autreCommandeValable: false,
+      })
+    );
+    expect(e.code).toBe('transition_refusee');
+    expect(e.message).toBe('transition_refusee : signee × commande_caduque');
+    expect(mises).toStrictEqual([]);
+  });
+
+  it.each([
+    ['une milliseconde avant la fin de la fenêtre', 1, 'commande_caduque', 'active'],
+    [
+      'à la fin de la fenêtre, incluse dans le « hors »',
+      0,
+      'commande_caduque_hors_fenetre',
+      'expiree',
+    ],
+  ] as const)(
+    'REQ-DM-022 : TÉMOIN — %s, le code est choisi par la fenêtre de la LIGNE',
+    async (_q, ecartMs, code, vers) => {
+      const { constaterLaCaducite } = await ecrivain();
+      const fenetre = new Date(MAINTENANT.getTime() + ecartMs);
+      const { tx } = txSimule([
+        ligneDe({ statut: 'signee', fenetre_fin_at: fenetre }),
+        ligneDe({ statut: 'signee', fenetre_fin_at: fenetre }),
+      ]);
+      const r = await constaterLaCaducite(tx, {
+        attributionId: ID,
+        acteur: ACTEUR,
+        maintenant: MAINTENANT,
+        autreCommandeValable: false,
+      });
+      expect(r).toStrictEqual({ vers });
+      expect(evenementsEcrits().map((e) => e.charge.transition)).toStrictEqual([code]);
+    }
+  );
+});
+
+describe('REQ-DM-007 — les confirmations et la charge d’apporteur, rechargées', () => {
+  const AVANT = {
+    premierContactAt: null,
+    peremptionSuspendueAt: null,
+    confirmeeAt: null,
+    fenetreFinAt: null,
+    peremptionAt: null,
+  };
+  const T = Date.UTC(2026, 9, 2, 10);
+
+  it.each(['confirmee', 'confirmee_par_courriel', 'confirmee_tacitement'] as const)(
+    'REQ-DM-007 : TÉMOIN — %s CONFIRME : confirmeeAt à l’instant, fenêtre ouverte de six mois à Paris',
+    async (transition) => {
+      const m = await machineRechargee();
+      const t = m.effetsDeTransition(AVANT, transition, 'active', T);
+      expect(t.confirmeeAt).toBe(T);
+      expect(t.fenetreFinAt).toBe(Date.UTC(2027, 3, 2, 10));
+    }
+  );
+
+  it('REQ-DM-007 : une transition qui ne confirme pas laisse la fenêtre fermée', async () => {
+    const m = await machineRechargee();
+    const t = m.effetsDeTransition(AVANT, 'liberee_sans_confirmation', 'perimee', T);
+    expect(t.confirmeeAt).toBeNull();
+    expect(t.fenetreFinAt).toBeNull();
+  });
+
+  it('REQ-DM-024 : TÉMOIN — la charge rechargée d’un statut d’apporteur admet ses champs (naissance comprise)', async () => {
+    const c = await chargesRechargees();
+    const s = c.CHARGES_PAR_TYPE.apporteur_statut_modifie;
+    expect(
+      s.safeParse({ de: null, vers: 'candidat', transition: 'creer', acteur: { par: 'systeme' } })
+        .success
+    ).toBe(true);
+    expect(
+      s.safeParse({
+        de: null,
+        vers: 'candidat',
+        transition: 'creer',
+        acteur: { par: 'systeme' },
+        intrus: 1,
+      }).success
+    ).toBe(false);
   });
 });
