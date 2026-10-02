@@ -111,6 +111,8 @@ describe('REQ-DM-031 — ce que la purge efface', () => {
 
   it('REQ-DM-031 : la purge est une tâche du registre, inscrite au lanceur', () => {
     expect(TACHES.contacts_purger).toEqual({ req: 'REQ-DM-031' });
-    expect(typeof inscriptions({} as PrismaClient).contacts_purger).toBe('function');
+    // Aucun appel n'est fait : on ne lit que la composition.
+    const client: unknown = {};
+    expect(typeof inscriptions(client as PrismaClient).contacts_purger).toBe('function');
   });
 });
