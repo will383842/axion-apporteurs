@@ -11,11 +11,19 @@
  *     la colonne purgée passe à NULL, une autre colonne modifiée est refusée, un retour de NULL vers
  *     une valeur est refusé, `une_fois` réécrit est refusé ;
  *   — DELETE et TRUNCATE sont refusés partout ;
- *   — chaque argument de `pg_trigger.tgargs` nomme une colonne qui existe (`information_schema`).
+ *   — chaque argument de `pg_trigger.tgargs` nomme une colonne qui existe (`information_schema`) ;
+ *   — un modèle cloisonné est dans `MODELES_EN_AJOUT_SEUL` si et seulement si sa table est
+ *     branchée sur le gabarit (décision A02 : l'égalité porte sur l'intersection, d'autres tables
+ *     non cloisonnées s'y brancheront) ;
+ *   — la PURGE du contact d'une attribution (REQ-DM-031) : nom, prénom, courriel et son empreinte,
+ *     téléphone et son empreinte, fonction et contexte passent à NULL ensemble ; le SIREN et
+ *     `deposeeAt` restent.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { randomUUID } from 'node:crypto';
+import { Prisma } from '@prisma/client';
 import { demarrerBase, type Base } from './harnais';
+import { MODELES_CLOISONNES, MODELES_EN_AJOUT_SEUL } from '../../src/server/acces/for-apporteur';
 
 let base: Base;
 beforeAll(async () => {
@@ -186,11 +194,12 @@ describe('REQ-DM-031 — chaque argument du gabarit nomme une colonne qui existe
   it('REQ-DM-031 : `pg_trigger.tgargs`, préfixe retiré, est confronté à `information_schema.columns`', async () => {
     const branchements = await base.prisma.$queryRaw<{ table: string; args: string[] }[]>`
       SELECT c.relname AS table,
-             string_to_array(rtrim(encode(t.tgargs, 'escape'), E'\\000'), E'\\000') AS args
+             string_to_array(encode(t.tgargs, 'escape'), '\\000') AS args
       FROM pg_trigger t
       JOIN pg_class c ON c.oid = t.tgrelid
       JOIN pg_proc p ON p.oid = t.tgfoid
-      WHERE p.proname = 'refuser_modification_sauf' AND NOT t.tgisinternal`;
+      WHERE p.proname = 'refuser_modification_sauf' AND NOT t.tgisinternal
+        AND c.relpersistence = 'p'`;
     const tables = new Set(branchements.map((b) => b.table));
     expect([...tables].sort()).toEqual(['depots_refuses', 'personnes_declarees']);
     const absentes: string[] = [];
@@ -222,5 +231,108 @@ describe('REQ-DM-031 — chaque argument du gabarit nomme une colonne qui existe
     expect(
       await refus(base.prisma.$executeRawUnsafe(`UPDATE temoin_gabarit SET a = NULL WHERE id = 1`))
     ).toMatch(/colonne_absente/);
+  });
+});
+
+describe('REQ-DM-031 — la liste des modèles en ajout seul égale, sur les modèles cloisonnés, les tables branchées', () => {
+  it('REQ-DM-031 : un modèle cloisonné est dans MODELES_EN_AJOUT_SEUL si et seulement si sa table porte le gabarit', async () => {
+    const branchees = new Set(
+      (
+        await base.prisma.$queryRaw<{ table: string }[]>`
+          SELECT DISTINCT c.relname AS table
+          FROM pg_trigger t
+          JOIN pg_class c ON c.oid = t.tgrelid
+          JOIN pg_proc p ON p.oid = t.tgfoid
+          WHERE p.proname = 'refuser_modification_sauf' AND NOT t.tgisinternal
+            AND c.relpersistence = 'p'`
+      ).map((l) => l.table)
+    );
+    const tableDe = (modele: string) => {
+      const nom = modele.charAt(0).toUpperCase() + modele.slice(1);
+      const m = Prisma.dmmf.datamodel.models.find((x) => x.name === nom);
+      if (m?.dbName === undefined || m.dbName === null) throw new Error(`${modele} sans table`);
+      return m.dbName;
+    };
+    const branches = MODELES_CLOISONNES.filter((m) => branchees.has(tableDe(m)));
+    expect([...branches].sort()).toEqual([...MODELES_EN_AJOUT_SEUL].sort());
+  });
+});
+
+describe('REQ-DM-031 — la purge du contact d’une attribution', () => {
+  it('REQ-DM-031 : nom, prénom, courriel, téléphone, fonction et contexte passent à NULL ensemble ; le SIREN et deposeeAt restent', async () => {
+    const apporteurId = await unApporteur();
+    const [g] = await base.prisma.$queryRawUnsafe<{ id: string }[]>(
+      `INSERT INTO grilles_commission (id, version, hash, contenu_json, publiee_at, importee_at)
+       VALUES ($1::uuid, $2, $3, '{}'::jsonb, $4, $4) RETURNING id`,
+      randomUUID(),
+      Math.floor(Math.random() * 1e9) + 1,
+      randomUUID().replace(/-/g, '').repeat(2),
+      MAINTENANT
+    );
+    const id = randomUUID();
+    const empreinte = 'a'.repeat(64);
+    await base.prisma.$executeRawUnsafe(
+      `INSERT INTO attributions (id, apporteur_id, statut, siren, canal, grille_commission_id,
+         date_contact, verification_prioritaire, entreprise_a_verifier, lien_interet_declare,
+         nom_contact_chiffre, prenom_contact_chiffre, email_chiffre, email_hash,
+         telephone_chiffre, phone_hash, fonction_contact_chiffre, contexte_chiffre)
+       VALUES ($1::uuid, $2::uuid, 'perdue', '552100554', 'espace', $3::uuid, '2026-10-01',
+         false, false, false, '\\x01'::bytea, '\\x02'::bytea, '\\x03'::bytea, $4,
+         '\\x04'::bytea, $4, '\\x05'::bytea, '\\x06'::bytea)`,
+      id,
+      apporteurId,
+      g!.id,
+      empreinte
+    );
+    await base.prisma.$executeRawUnsafe(
+      `UPDATE attributions SET nom_contact_chiffre = NULL, prenom_contact_chiffre = NULL,
+         email_chiffre = NULL, email_hash = NULL, telephone_chiffre = NULL, phone_hash = NULL,
+         fonction_contact_chiffre = NULL, contexte_chiffre = NULL, contact_purge_at = $2
+       WHERE id = $1::uuid`,
+      id,
+      MAINTENANT
+    );
+    const [l] = await base.prisma.$queryRawUnsafe<
+      { restants: number; siren: string; depot: boolean }[]
+    >(
+      `SELECT num_nonnulls(nom_contact_chiffre, prenom_contact_chiffre, email_chiffre, email_hash,
+         telephone_chiffre, phone_hash, fonction_contact_chiffre, contexte_chiffre) AS restants,
+         siren, deposee_at IS NOT NULL AS depot
+       FROM attributions WHERE id = $1::uuid`,
+      id
+    );
+    expect(l).toEqual({ restants: 0, siren: '552100554', depot: true });
+  });
+
+  it('REQ-DM-031 : TÉMOIN — purger le bloc du courriel sans son empreinte est refusé : ils vont ensemble', async () => {
+    const apporteurId = await unApporteur();
+    const [g] = await base.prisma.$queryRawUnsafe<{ id: string }[]>(
+      `INSERT INTO grilles_commission (id, version, hash, contenu_json, publiee_at, importee_at)
+       VALUES ($1::uuid, $2, $3, '{}'::jsonb, $4, $4) RETURNING id`,
+      randomUUID(),
+      Math.floor(Math.random() * 1e9) + 1,
+      randomUUID().replace(/-/g, '').repeat(2),
+      MAINTENANT
+    );
+    const id = randomUUID();
+    await base.prisma.$executeRawUnsafe(
+      `INSERT INTO attributions (id, apporteur_id, statut, siren, canal, grille_commission_id,
+         date_contact, verification_prioritaire, entreprise_a_verifier, lien_interet_declare,
+         email_chiffre, email_hash)
+       VALUES ($1::uuid, $2::uuid, 'perdue', '552100554', 'espace', $3::uuid, '2026-10-01',
+         false, false, false, '\\x03'::bytea, $4)`,
+      id,
+      apporteurId,
+      g!.id,
+      'b'.repeat(64)
+    );
+    expect(
+      await refus(
+        base.prisma.$executeRawUnsafe(
+          `UPDATE attributions SET email_chiffre = NULL WHERE id = $1::uuid`,
+          id
+        )
+      )
+    ).toMatch(/attributions_courriel_bloc_et_empreinte/);
   });
 });

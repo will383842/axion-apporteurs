@@ -39,9 +39,19 @@ export const FORMES = {
 };
 
 /** Les valeurs de l'enum Prisma `TypeEvenementJournal`, confrontées au schéma par la garde. */
-export type TypeEvenementJournal = 'journal_ouvert';
+export type TypeEvenementJournal = 'journal_ouvert' | 'attribution_contact_purge';
 
 export const CHARGES_PAR_TYPE = {
   /** La genèse : l'algorithme de chaînage, inscrit DANS la chaîne. */
   journal_ouvert: z.object({ algorithme: z.literal(ALGORITHME) }).strict(),
+  /**
+   * DM-07 (REQ-DM-031) : la purge du contact d'une attribution. Aucune donnée du contact, seulement
+   * l'instant ; l'acteur est toujours le système, la purge est celle du cron.
+   */
+  attribution_contact_purge: z
+    .object({
+      purgeAt: FORMES.horodatage(),
+      acteur: z.object({ par: z.literal('systeme') }).strict(),
+    })
+    .strict(),
 } satisfies Record<TypeEvenementJournal, z.ZodTypeAny>;
