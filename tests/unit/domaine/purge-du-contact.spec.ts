@@ -10,7 +10,7 @@
  *      une décision datée au registre ;
  *   2. LE SOUS-MODULE DE LA SSOT : chaque durée de `retention.ts` est dans `SEUILS`, à l'identique,
  *      et AUCUNE n'est définie aussi dans `ssot.ts` ;
- *   3. L'ÉCHÉANCE, statut par statut de la matrice : libérée → +90 j ; convertie → +1 095 j ; tout
+ *   3. L'ÉCHÉANCE, statut par statut de la matrice : libérée (annulée comprise) → +90 j ; convertie → +1 095 j ; tout
  *      autre statut, dont tout occupant non converti → aucune purge ;
  *   4. L'ENTREPRISE INDIVIDUELLE, lue sur la nature juridique ;
  *   5. LES COLONNES effacées, exactement, et la tâche inscrite au registre.
@@ -60,8 +60,14 @@ describe('REQ-SEC-030 — les durées de conservation du contact (HYP-RGPD-RETEN
 });
 
 describe('REQ-DM-031 — l’échéance de la purge, statut par statut', () => {
-  it('REQ-DM-031 : les états libérés sont invalidee, perdue, expiree et perimee', () => {
-    expect([...ETATS_LIBERES].sort()).toEqual(['expiree', 'invalidee', 'perdue', 'perimee']);
+  it('REQ-DM-031 : TÉMOIN — les états libérés sont annulee, invalidee, perdue, expiree et perimee (une annulée ne garde pas son contact)', () => {
+    expect([...ETATS_LIBERES].sort()).toEqual([
+      'annulee',
+      'expiree',
+      'invalidee',
+      'perdue',
+      'perimee',
+    ]);
   });
 
   it.each(Object.values(EtatAttribution))(

@@ -23,8 +23,13 @@ import { MS_PAR_JOUR } from '../../domain/temps/calendrier-civil';
 import { ajouterEvenement } from '../evenement/journal';
 import { effacementPii, type ChampPii } from '../securite/pii';
 
-/** Les états LIBÉRÉS (REQ-SEC-030) : le contact se purge après `CONTACT_PURGE_APRES_LIBERATION_JOURS`. */
+/**
+ * Les états LIBÉRÉS (REQ-SEC-030) : le contact se purge après `CONTACT_PURGE_APRES_LIBERATION_JOURS`.
+ * `annulee` en est (décision de la coordination du 2026-10-02) : sans elle, une attribution annulée
+ * avant l'envoi ou par la console garderait son contact pour toujours.
+ */
 export const ETATS_LIBERES = [
+  'annulee',
   'invalidee',
   'perdue',
   'expiree',

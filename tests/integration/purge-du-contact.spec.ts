@@ -14,7 +14,9 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { demarrerBase, type Base } from './harnais';
-import { purgerLesContacts } from '../../src/server/taches/purger-contacts';
+import { echeanceDePurge, purgerLesContacts } from '../../src/server/taches/purger-contacts';
+import { SEUILS } from '../../src/domain/seuils/ssot';
+import { MS_PAR_JOUR } from '../../src/domain/temps/calendrier-civil';
 
 let base: Base;
 let grilleId: string;
@@ -187,6 +189,20 @@ describe('REQ-DM-031 — la purge planifiée du contact', () => {
     const plusTard = new Date(MAINTENANT.getTime() + 10 * MINUTE);
     expect((await purgerLesContacts(base.prisma, plusTard)).purgees).toBe(0);
     expect(await lire(id)).toEqual(premier);
+    expect(await evenements(id)).toHaveLength(1);
+  });
+
+  it('REQ-DM-031 : TÉMOIN — une attribution ANNULÉE reçoit son échéance et perd son contact', async () => {
+    const liberation = new Date(
+      MAINTENANT.getTime() - SEUILS.CONTACT_PURGE_APRES_LIBERATION_JOURS.valeur * MS_PAR_JOUR
+    );
+    const echeance = echeanceDePurge('annulee', liberation);
+    expect(echeance).toEqual(MAINTENANT);
+    const id = await semer({ statut: 'annulee', purgeContactAt: echeance });
+    expect((await purgerLesContacts(base.prisma, MAINTENANT)).purgees).toBeGreaterThanOrEqual(1);
+    const l = await lire(id);
+    expect(l['contact_purge_at']).toEqual(MAINTENANT);
+    expect(l['email_chiffre']).toBeNull();
     expect(await evenements(id)).toHaveLength(1);
   });
 
