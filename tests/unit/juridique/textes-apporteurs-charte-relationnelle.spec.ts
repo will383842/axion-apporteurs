@@ -106,6 +106,8 @@ const NOUVELLES: Record<string, { reqs: string[]; formes: string[] }> = {
       'compte suspendu',
       'dernière connexion',
       'dernières connexions',
+      "vous n'avez rien déposé",
+      'sans nouvelles de vous',
     ],
   },
 };

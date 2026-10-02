@@ -319,6 +319,8 @@ export const LEXIQUE_INTERDIT = [
       'compte suspendu',
       'dernière connexion',
       'dernières connexions',
+      "vous n'avez rien déposé",
+      'sans nouvelles de vous',
     ],
     aDireALaPlace: null,
   },
