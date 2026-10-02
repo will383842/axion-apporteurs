@@ -27,10 +27,9 @@ import {
   API_COORDONNEES_CANDIDATURE,
   refDependanceCoordonnees,
 } from '../../../../packages/contracts/api';
-import {
-  genererCodeParrainage,
-  type SourceAleatoire,
-} from '../../../domain/apporteur/identifiants';
+import type { SourceAleatoire } from '../../../domain/apporteur/identifiants';
+import { genererCodeParrainage } from '../../../domain/parrainage/code';
+import { codeDeParrainResolu, lecteurDesParrains } from '../../parrainage/code-public';
 import { snapshotDeCandidature } from '../../../domain/apporteur/snapshot-candidature';
 import { MODELE_APPORTEUR } from '../../auth/lien-magique-depot';
 import { AttenteDeDependance } from '../../queue/workers/evenement-recu';
@@ -201,7 +200,11 @@ export async function traiterCandidatureRecue(
           scorePartsJson: snapshot.scorePartsJson,
           scoreBaremeVersion: snapshot.scoreBaremeVersion,
           sourceCanal: snapshot.sourceCanal,
-          parrainCodeCapture: snapshot.parrainCodeCapture,
+          // SEC-21 : conservé seulement s'il désigne un parrain actif ; sinon, comme sans code.
+          parrainCodeCapture: await codeDeParrainResolu(
+            lecteurDesParrains(tx),
+            snapshot.parrainCodeCapture
+          ),
           creeAt: d.maintenant(),
           // Les blocs et empreintes naissent de colonnesPii, ÉTALÉ (garde securite:schema-pii) ;
           // `id` vient de lui aussi. Prisma 5 accepte un Uint8Array là où il type Buffer.
