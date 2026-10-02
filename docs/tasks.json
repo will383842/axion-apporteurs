@@ -8302,7 +8302,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "\"Cron de purge, condition de la lentille sécurité (rattrapage 52, 2026-10-02), SI le point 13 de la séance de Williams retient l'avis d'A02 sur les coordonnées du siège : le témoin de purge vérifie que `latitudeMicrodeg` et `longitudeMicrodeg` d'une ENTREPRISE INDIVIDUELLE passent à NULL avec la purge du contact (`purge_contact_at`, REQ-DM-031), et que la colonne qui distingue l'entreprise individuelle est bien lue à la purge. Le reste de l'acceptance de cette tâche (phase 3) est à écrire à sa revendication.\" EXTRACTION (rattrapage 52, décision de la coordination) : la purge PLANIFIÉE du contact d'une attribution libérée ou convertie, et la condition ci-dessus sur l'entreprise individuelle, passent à DM-48 (phase 1, bloquante pour la mise en service) ; DM-20 garde le reste."
+      "acceptance": "Cron de purge, condition de la lentille sécurité (rattrapage 52, 2026-10-02), SI le point 13 de la séance de Williams retient l'avis d'A02 sur les coordonnées du siège : le témoin de purge vérifie que `latitudeMicrodeg` et `longitudeMicrodeg` d'une ENTREPRISE INDIVIDUELLE passent à NULL avec la purge du contact (`purge_contact_at`, REQ-DM-031), et que la colonne qui distingue l'entreprise individuelle est bien lue à la purge. Le reste de l'acceptance de cette tâche (phase 3) est à écrire à sa revendication. EXTRACTION (rattrapage 52, décision de la coordination) : la purge PLANIFIÉE du contact d'une attribution libérée ou convertie, et la condition ci-dessus sur l'entreprise individuelle, passent à DM-48 (phase 1, bloquante pour la mise en service) ; DM-20 garde le reste."
     },
     {
       "id": "DM-21",
