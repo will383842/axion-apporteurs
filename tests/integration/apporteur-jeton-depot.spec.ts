@@ -177,7 +177,9 @@ describe('REQ-DM-012 — une ligne révoquée est gelée, une empreinte ne chang
   });
 
   it('REQ-DM-012 : face ROUGE — TRUNCATE est refusé, il effacerait d’un coup toutes les révocations', async () => {
-    const m = await refus(base.prisma.$executeRawUnsafe('TRUNCATE jetons_depot'));
+    // DM-07 : `attributions` référence le jeton. Sans CASCADE, la clé étrangère refuse AVANT le
+    // déclencheur ; avec, le déclencheur de troncature parle, et c'est lui que ce témoin juge.
+    const m = await refus(base.prisma.$executeRawUnsafe('TRUNCATE jetons_depot CASCADE'));
     expect(m).toContain('jetons_depot_revocation_definitive');
     expect(await base.prisma.jetonDepot.count()).toBeGreaterThan(0);
   });
