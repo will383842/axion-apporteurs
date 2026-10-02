@@ -36,12 +36,30 @@ export const FORMES = {
   empreinte: () => z.string().regex(HASH_HEX_64),
   montantCents: () => z.number().int(),
   horodatage: () => z.string().datetime(),
+  /**
+   * DM-45 (HYP-A02-ACTEUR-JOURNAL) — QUI a produit l'événement : obligatoire dans toute charge sauf
+   * la genèse, et sous CETTE forme seule. Le système, aujourd'hui ; un acteur humain s'y ajoutera
+   * par une valeur de plus, jamais par un identifiant libre.
+   */
+  acteur: () => z.object({ par: z.enum(['systeme']) }).strict(),
 };
 
 /** Les valeurs de l'enum Prisma `TypeEvenementJournal`, confrontées au schéma par la garde. */
-export type TypeEvenementJournal = 'journal_ouvert';
+export type TypeEvenementJournal = 'journal_ouvert' | 'apporteur_cree';
 
 export const CHARGES_PAR_TYPE = {
   /** La genèse : l'algorithme de chaînage, inscrit DANS la chaîne. */
   journal_ouvert: z.object({ algorithme: z.literal(ALGORITHME) }).strict(),
+  /**
+   * DM-45 — la création d'un apporteur par une candidature reçue : son identifiant, celui de la
+   * candidature, son statut de naissance. Aucune donnée personnelle.
+   */
+  apporteur_cree: z
+    .object({
+      apporteurId: FORMES.identifiant(),
+      candidatureId: FORMES.identifiant(),
+      statut: z.enum(['candidat']),
+      acteur: FORMES.acteur(),
+    })
+    .strict(),
 } satisfies Record<TypeEvenementJournal, z.ZodTypeAny>;

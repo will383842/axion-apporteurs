@@ -163,6 +163,7 @@ function base(existants: { emailHash?: string; phoneHash?: string; candidatureId
   const crees: Record<string, unknown>[] = [];
   const mises: unknown[] = [];
   const recherches: unknown[] = [];
+  const journal: Record<string, unknown>[] = [];
   const correspond = (where: Record<string, unknown>) => {
     const conditions = (where['OR'] as Record<string, unknown>[] | undefined) ?? [where];
     return existants.find((e) =>
@@ -188,6 +189,15 @@ function base(existants: { emailHash?: string; phoneHash?: string; candidatureId
         return args;
       },
     },
+    // DM-45 : l'écrivain du journal prend son verrou, lit la tête, et écrit un maillon.
+    $executeRaw: async () => 0,
+    evenement: {
+      findFirst: async () => ({ selfHash: '0'.repeat(64) }),
+      create: async (args: { data: Record<string, unknown> }) => {
+        journal.push(args.data);
+        return { id: BigInt(journal.length + 1) };
+      },
+    },
   };
   let transactions = 0;
   const prisma = {
@@ -196,7 +206,7 @@ function base(existants: { emailHash?: string; phoneHash?: string; candidatureId
       return fn(tx);
     },
   } as unknown as ClientCandidature;
-  return { prisma, crees, mises, recherches, transactions: () => transactions };
+  return { prisma, crees, mises, recherches, journal, transactions: () => transactions };
 }
 
 const DEPS = (tirer: (id: string) => Promise<Coordonnees | null>) => ({
