@@ -1,3 +1,4 @@
+// @req REQ-JUR-031
 /**
  * JUR-T56 (REQ-JUR-031) — l'art. 3.2 renvoie à l'art. 3.7 dans les propres termes de l'art. 3.7.
  *
