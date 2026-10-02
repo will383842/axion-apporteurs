@@ -410,11 +410,17 @@ describe('REQ-DM-002 — la clé d’attribution est le SIREN normalisé ; le SI
       grilleId
     );
 
-  it('REQ-DM-002 : un SIREN hors de neuf chiffres est refusé par le CHECK attributions_siren_forme', async () => {
-    for (const faux of ['12345678', '1234567890', '12345678A', '12345 678']) {
+  it('REQ-DM-002 : un SIREN de neuf caractères au plus, hors de neuf chiffres, est refusé par le CHECK attributions_siren_forme', async () => {
+    for (const faux of ['12345678', '12345678A', '12345 678']) {
       expect(await refus(ecrire(faux, null))).toContain('attributions_siren_forme');
     }
     await expect(ecrire(unSiren(), null)).resolves.toBe(1);
+  });
+
+  it('REQ-DM-002 : un SIREN de dix chiffres est refusé AVANT le CHECK, par le type de la colonne (22001, char(9))', async () => {
+    expect(await refus(ecrire('1234567890', null))).toMatch(
+      /22001|too long for type character\(9\)/
+    );
   });
 
   it('REQ-DM-002 : un SIRET présent a quatorze chiffres, et ses neuf premiers sont le SIREN', async () => {
