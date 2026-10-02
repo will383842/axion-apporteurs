@@ -45,7 +45,6 @@ import {
 import {
   EXCEPTIONS_DECLAREES,
   LEXIQUE_INTERDIT,
-  famillesPourPortee,
   PORTEURS_DU_LEXIQUE,
   TERMES_CANONIQUES,
   toutesLesFormes,
@@ -358,26 +357,5 @@ describe('acceptation de GOV-013 — les deux modes de la gate (REQ-GOV-017)', (
       expect(f.pourquoi.length).toBeGreaterThan(20);
       expect(f.formes.length).toBeGreaterThanOrEqual(2);
     }
-  });
-});
-
-// Les témoins du dépôt réel sortent du bac de mutation (`vitest.mutation.config.ts`) : ces lignes du
-// lexique se jugent donc ici, directement, sans lire un seul fichier suivi.
-describe('REQ-GOV-017 — la portée d’un fichier choisit ses familles, et aucune exception n’est posée', () => {
-  it('REQ-GOV-017 : aucune exception lexicale n’est déclarée — la liste est vide, exactement', () => {
-    expect(EXCEPTIONS_DECLAREES).toEqual([]);
-  });
-
-  it('REQ-GOV-017 : la portée apporteur rend TOUTES les familles, dans leur ordre', () => {
-    expect(famillesPourPortee('apporteur')).toBe(LEXIQUE_INTERDIT);
-    expect(famillesPourPortee('apporteur').map((f) => f.nom)).toContain('challenge');
-  });
-
-  it('REQ-GOV-017 : la portée dépôt ne rend que les familles de portée dépôt — retenues, et les autres exclues', () => {
-    const noms = famillesPourPortee('depot').map((f) => f.nom);
-    expect(noms).toEqual(['commercial', 'objectif', 'quota', 'classement']);
-    expect(noms).not.toContain('challenge');
-    expect(noms).not.toContain('inactivite_sanctionnee');
-    expect(famillesPourPortee('depot').every((f) => f.portee === 'depot')).toBe(true);
   });
 });

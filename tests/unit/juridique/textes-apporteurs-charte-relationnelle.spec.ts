@@ -16,7 +16,7 @@
  *      formation » (une exclusion du contrat, pas une formation exigée) et la suspension des dépôts
  *      après un courrier non distribué (une raison de contact, pas une inactivité).
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { LEXIQUE_INTERDIT } from '../../../src/domain/lexique/lexique-interdit';
 import { controler, vueDeFixture, type FichierVu } from '../../../scripts/gates/lexique-apporteurs';
@@ -210,5 +210,39 @@ describe('REQ-JUR-012 — aucun objectif, classement, quota ni injonction dans l
         )
       )
     ).toEqual([]);
+  });
+});
+
+// Les témoins du dépôt réel sortent du bac de mutation (`vitest.mutation.config.ts`) : ces lignes du
+// lexique se jugent donc ici, directement, sans lire un seul fichier suivi — et dans un fichier que
+// l'`include` de la mutation joue (`tests/unit/juridique/`), ce que `tests/unit/gouvernance/` n'est pas.
+//
+// L'IMPORT EST REFAIT À CHAQUE TEST : la liste d'exceptions est évaluée au chargement du module.
+// Importée une fois en tête de fichier, elle resterait en cache, et un mutant de cette ligne ne serait
+// jamais évalué (même cause que `seuils-ssot-en-processus.spec.ts`).
+async function lexiqueFrais() {
+  vi.resetModules();
+  return import('../../../src/domain/lexique/lexique-interdit');
+}
+
+describe('REQ-GOV-017 — la portée d’un fichier choisit ses familles, et aucune exception n’est posée', () => {
+  it('REQ-GOV-017 : aucune exception lexicale n’est déclarée — la liste est vide, exactement', async () => {
+    const { EXCEPTIONS_DECLAREES } = await lexiqueFrais();
+    expect(EXCEPTIONS_DECLAREES).toEqual([]);
+  });
+
+  it('REQ-GOV-017 : la portée apporteur rend TOUTES les familles, dans leur ordre', async () => {
+    const { famillesPourPortee, LEXIQUE_INTERDIT } = await lexiqueFrais();
+    expect(famillesPourPortee('apporteur')).toBe(LEXIQUE_INTERDIT);
+    expect(famillesPourPortee('apporteur').map((f) => f.nom)).toContain('challenge');
+  });
+
+  it('REQ-GOV-017 : la portée dépôt ne rend que les familles de portée dépôt — retenues, et les autres exclues', async () => {
+    const { famillesPourPortee } = await lexiqueFrais();
+    const noms = famillesPourPortee('depot').map((f) => f.nom);
+    expect(noms).toEqual(['commercial', 'objectif', 'quota', 'classement']);
+    expect(noms).not.toContain('challenge');
+    expect(noms).not.toContain('inactivite_sanctionnee');
+    expect(famillesPourPortee('depot').every((f) => f.portee === 'depot')).toBe(true);
   });
 });
