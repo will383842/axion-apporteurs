@@ -139,6 +139,15 @@ jobs:
       - uses: pnpm/action-setup@v4
       - run: pnpm install --frozen-lockfile
 
+      # JUR-T35 (REQ-CPL-009) — aucun depot reel sans l AIPD signee : a partir de MISE_EN_SERVICE, l etat
+      # « signee le <date> par <signataire> » de docs/rgpd/aipd.md et la variable AIPD_SIGNEE_LE de
+      # l environnement production (vars, posee par Williams seul) doivent dire le meme jour ; sinon le
+      # deploiement s arrete ici, avant la plateforme. Aucun secret dans cette etape.
+      - name: Aucun depot reel sans l AIPD signee
+        env:
+          AIPD_SIGNEE_LE: ${{ vars.AIPD_SIGNEE_LE }}
+        run: pnpm aipd:signee
+
       - name: La plateforme tire sha-7, puis l atterrissage est lu sur l en-tete servi
         id: atterrissage
         env:
