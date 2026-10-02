@@ -1,7 +1,7 @@
 // @req REQ-UX-047
 // @req REQ-UX-018
 /**
- * UX-P1-46 — l'éditeur de grille (UX-P1-14) et la saisie manuelle d'une candidature (EXT-T04) sont des
+ * UX-P1-46 — l'éditeur de grille et la saisie manuelle d'une candidature (leurs tâches : `ECRANS`) sont des
  * écrans de console qui n'avaient aucune maquette. REQ-UX-047 : la maquette d'un écran est validée
  * AVANT sa première ligne de code — un écran sans maquette ne peut pas l'être.
  *
