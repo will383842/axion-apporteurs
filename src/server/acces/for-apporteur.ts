@@ -65,6 +65,12 @@ export const MODELES_CLOISONNES = [
 ] as const;
 export type ModeleCloisonne = (typeof MODELES_CLOISONNES)[number];
 
+/**
+ * Les modèles dont la couche RENDUE des lignes : les cloisonnés, et la fiche de l'apporteur de la
+ * session (`moi()`, SEC-47), classée colonne par colonne sous la même garde.
+ */
+export type ModeleRendu = ModeleCloisonne | 'apporteur';
+
 /** Les clés qu'aucune écriture de l'espace ne porte : identité de la ligne, propriétaire, relations. */
 export const CLES_REFUSEES = {
   changementCourriel: ['id', 'apporteurId', 'apporteur'],
@@ -135,6 +141,11 @@ export const SECRETS = Object.freeze([
   'emailHash',
   'kid',
   'ipHash',
+  // SEC-47 : l'identité chiffrée de l'apporteur et l'empreinte de son téléphone.
+  'nomChiffre',
+  'prenomChiffre',
+  'telephoneChiffre',
+  'phoneHash',
 ] as const);
 
 /**
@@ -149,7 +160,17 @@ export const CHAMPS_RENDUS = {
   jetonDepot: ['id', 'creeAt', 'revoqueAt', 'dernierUsageAt'],
   lienMagique: ['id', 'creeAt', 'expireAt', 'consommeAt', 'annuleAt', 'tentativesCode'],
   sessionEspace: ['id', 'creeAt', 'expireAt', 'revoqueAt', 'derniereVueAt', 'sessionVersion'],
-} as const satisfies Record<ModeleCloisonne, readonly string[]>;
+  // SEC-47 : ce que l'apporteur lit de sa propre fiche — son état, son code, ce qu'il a accepté.
+  apporteur: [
+    'id',
+    'statut',
+    'resiliationMotif',
+    'codeParrainage',
+    'creeAt',
+    'confidentialiteAccepteeAt',
+    'confidentialiteVersion',
+  ],
+} as const satisfies Record<ModeleRendu, readonly string[]>;
 
 /** Ce que la couche TAIT : le propriétaire (connu de la session), les secrets, les traces techniques. */
 export const CHAMPS_TUS = {
@@ -166,10 +187,31 @@ export const CHAMPS_TUS = {
     'kid',
     'ipHash',
   ],
-} as const satisfies Record<ModeleCloisonne, readonly string[]>;
+  // SEC-47 : les secrets, le jugement de la candidature (seuil, score, parts, réponses, barème),
+  // les traces d'acquisition et de parrainage, le marqueur de test, la version de session.
+  apporteur: [
+    'isTest',
+    'seuilVerificationPrioritaire',
+    'seuilVerificationPrioritaireAt',
+    'candidatureId',
+    'reponsesJson',
+    'scoreInitial',
+    'scorePartsJson',
+    'scoreBaremeVersion',
+    'sourceCanal',
+    'parrainCodeCapture',
+    'emailChiffre',
+    'emailHash',
+    'nomChiffre',
+    'prenomChiffre',
+    'telephoneChiffre',
+    'phoneHash',
+    'sessionVersion',
+  ],
+} as const satisfies Record<ModeleRendu, readonly string[]>;
 
 /** La ligne telle que la couche la rend : les seules colonnes de `CHAMPS_RENDUS`. */
-type Rendu<M, K extends ModeleCloisonne> = Pick<M, (typeof CHAMPS_RENDUS)[K][number] & keyof M>;
+type Rendu<M, K extends ModeleRendu> = Pick<M, (typeof CHAMPS_RENDUS)[K][number] & keyof M>;
 
 /**
  * UNE SEULE LECTURE DES DONNÉES À ÉCRIRE (lentille `securite`, #200). Le contrôle ne juge que les
@@ -228,6 +270,11 @@ interface Delegue<R, W, C, U, O> {
 /** La sélection passée au client — chaque colonne rendue à `true`, et rien d'autre. */
 type Selection = Readonly<Record<string, true>>;
 
+/** La sélection explicite d'un modèle rendu : ses colonnes de `CHAMPS_RENDUS`, et elles seules. */
+function selectionDe(modele: ModeleRendu): Selection {
+  return Object.fromEntries(CHAMPS_RENDUS[modele].map((c) => [c, true] as const));
+}
+
 type SansProprietaire<C> = Omit<C, 'id' | 'apporteurId' | 'apporteur'>;
 
 // Les types du schéma généré, par alias : un argument de type ne commence jamais par le namespace.
@@ -259,8 +306,8 @@ type OSession = Prisma.SessionEspaceOrderByWithRelationInput;
 /** L'accès de l'espace, pour UN apporteur : une vue par modèle cloisonné, et sa propre fiche. */
 export interface AccesApporteur {
   readonly apporteurId: string;
-  /** La fiche de l'apporteur de la session. */
-  moi(): Promise<Apporteur | null>;
+  /** La fiche de l'apporteur de la session : les seules colonnes de `CHAMPS_RENDUS.apporteur`. */
+  moi(): Promise<Rendu<Apporteur, 'apporteur'> | null>;
   changementCourriel: VueCloisonnee<
     Rendu<ChangementCourriel, 'changementCourriel'>,
     WChangement,
@@ -340,7 +387,12 @@ export function forApporteur(client: ClientCloisonnable, apporteurId: string): A
 
   return {
     apporteurId,
-    moi: () => client.apporteur.findFirst({ where: { id: apporteurId } }),
+    // La sélection est construite depuis la liste : son type vient de `Rendu`, pas du client.
+    moi: () =>
+      client.apporteur.findFirst({
+        where: { id: apporteurId },
+        select: selectionDe('apporteur'),
+      }) as unknown as Promise<Rendu<Apporteur, 'apporteur'> | null>,
     ...(vues as Omit<AccesApporteur, 'apporteurId' | 'moi'>),
   };
 }
@@ -357,10 +409,9 @@ function cloisonner<R, W, C, U, O>(
   };
 
   /** La sélection explicite de GOV-111, posée DANS chaque lecture et chaque création. */
-  const select: Selection = Object.fromEntries(
-    CHAMPS_RENDUS[modele].map((c) => [c, true] as const)
-  );
+  const select = selectionDe(modele);
   const relations: readonly string[] = RELATIONS[modele];
+  const rendus: readonly string[] = CHAMPS_RENDUS[modele];
 
   /**
    * Un filtre ou un tri, RECONSTRUIT nœud par nœud : chaque objet passe l'instantané des données
@@ -368,6 +419,10 @@ function cloisonner<R, W, C, U, O>(
    * aucune clé ne nomme une relation, et les nœuds logiques (`AND`, `OR`, `NOT`) sont suivis à toute
    * profondeur. Les valeurs d'une condition de colonne ne sont pas descendues : elles ne nomment
    * aucune relation.
+   *
+   * SEC-47 : toute autre clé est une COLONNE RENDUE (`CHAMPS_RENDUS`). Filtrer ou trier sur une
+   * colonne tue ferait de la réponse un oracle sur ce qu'elle tait (`tokenHash`, `emailHash`, `kid`) ;
+   * le propriétaire n'y fait pas exception, la session le connaît déjà.
    */
   function sansRelation(valeur: unknown): unknown {
     if (Array.isArray(valeur)) return valeur.map(sansRelation);
@@ -375,6 +430,7 @@ function cloisonner<R, W, C, U, O>(
     for (const [cle, v] of Object.entries(noeud)) {
       if (relations.includes(cle)) throw new Error(REFUS.forme);
       if (cle === 'AND' || cle === 'OR' || cle === 'NOT') noeud[cle] = sansRelation(v);
+      else if (!rendus.includes(cle)) throw new Error(REFUS.forme);
     }
     return noeud;
   }
