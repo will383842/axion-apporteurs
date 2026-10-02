@@ -20,7 +20,12 @@
 import type { PrismaClient } from '@prisma/client';
 import { DUREES_AUTH } from './durees';
 import { empreinteDeSession } from './lien-magique';
-import { niveauDAcces, routeOuverte, type NiveauDAcces } from '../../domain/apporteur/acces-espace';
+import {
+  niveauDAcces,
+  routeOuverte,
+  type NiveauDAcces,
+  type SegmentProtege,
+} from '../../domain/apporteur/acces-espace';
 
 // ── le cookie ────────────────────────────────────────────────────────────────────────────────────
 
@@ -79,6 +84,8 @@ export interface SessionOuverte {
   lienConsommeAt: Date | null;
   /** `plein` ou `limite` (SEC-43) : une session fermée n'est jamais ouverte. */
   niveau: Exclude<NiveauDAcces, 'ferme'>;
+  /** Le statut de l'apporteur, pour la seule trace d'un refus d'ouverture limitée. */
+  statut: string;
 }
 
 export type VerdictDeSession =
@@ -112,6 +119,7 @@ export function jugerSession(
       apporteurId: ligne.apporteurId,
       lienConsommeAt: ligne.lienMagique.consommeAt,
       niveau,
+      statut: ligne.apporteur.statut,
     },
   };
 }
@@ -141,6 +149,19 @@ export interface PortsDeSession {
   depot: DepotDeSessions;
   /** Le secret des sessions (SESSION_SECRET) et son `kid`. */
   configuration: { readonly secret: string; readonly kid: string };
+  /**
+   * Le journal d'un refus d'ouverture limitée (SEC-43) : le statut et le segment, jamais une donnée
+   * de personne ni l'identifiant de la session. Absent, le refus tient : seule sa trace manque.
+   */
+  journal?: (ligne: RefusDOuvertureLimitee) => void;
+}
+
+/** La seule ligne qu'un refus d'ouverture limitée écrit. */
+export interface RefusDOuvertureLimitee {
+  signal: 'acces_espace_refuse';
+  motif: 'hors_ouverture_limitee';
+  statut: string;
+  segment: SegmentProtege;
 }
 
 // ── la vérification ──────────────────────────────────────────────────────────────────────────────
@@ -165,13 +186,36 @@ export async function exigerSession(
  * lise ou n'écrive quoi que ce soit.
  */
 export async function exigerSessionPour(
-  segment: string,
+  segment: SegmentProtege,
   jeton: string | undefined,
   ports: PortsDeSession
 ): Promise<VerdictDeSession> {
   const verdict = await exigerSession(jeton, ports);
   if (!verdict.ok) return verdict;
-  return routeOuverte(verdict.session.niveau, segment) ? verdict : refus('hors_ouverture_limitee');
+  if (routeOuverte(verdict.session.niveau, segment)) return verdict;
+  ports.journal?.({
+    signal: 'acces_espace_refuse',
+    motif: 'hors_ouverture_limitee',
+    statut: verdict.session.statut,
+    segment,
+  });
+  return refus('hors_ouverture_limitee');
+}
+
+/**
+ * L'enveloppe d'une ACTION serveur de l'espace (SEC-43) : la session pour CE segment est son premier
+ * acte, et le corps ne s'exécute que sur une session acceptée. Le refus est rendu tel quel : l'action
+ * répond comme à une route inconnue, sans rien révéler.
+ */
+export async function actionEspace<T>(
+  segment: SegmentProtege,
+  jeton: string | undefined,
+  ports: PortsDeSession,
+  corps: (session: SessionOuverte) => Promise<T>
+): Promise<{ ok: true; valeur: T } | { ok: false; motif: MotifDeRefus }> {
+  const verdict = await exigerSessionPour(segment, jeton, ports);
+  if (!verdict.ok) return verdict;
+  return { ok: true, valeur: await corps(verdict.session) };
 }
 
 /** La session de la requête, RELEVÉE : à appeler dans toute action qui modifie une coordonnée. */

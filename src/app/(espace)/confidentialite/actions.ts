@@ -12,7 +12,7 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { after } from 'next/server';
 import { dependancesDuProcessus } from '../../../server/auth/lien-magique-production';
-import { COOKIE_DE_SESSION, exigerSession } from '../../../server/auth/session';
+import { COOKIE_DE_SESSION, actionEspace } from '../../../server/auth/session';
 import {
   ROUTE_CONFIDENTIALITE,
   accepterLaPolitique,
@@ -23,21 +23,25 @@ import {
 const ROUTE_CONNEXION = '/connexion';
 
 export async function accepterLaPolitiqueDeConfidentialite(formulaire: FormData): Promise<void> {
-  const lue = lireLaPolitique();
-  if (!lue.ok) redirect(ROUTE_CONFIDENTIALITE);
-  const ports = portsDuProcessus(dependancesDuProcessus({ apres: after, env: process.env }));
   const jeton = (await cookies()).get(COOKIE_DE_SESSION.nom)?.value;
-  const verdict = await exigerSession(jeton, ports.session);
-  if (!verdict.ok) redirect(ROUTE_CONNEXION);
-  const versionVue = formulaire.get('version');
-  await accepterLaPolitique(
-    {
-      apporteurId: verdict.session.apporteurId,
-      versionVue: typeof versionVue === 'string' ? versionVue : null,
-      versionCourante: lue.politique.version,
-      maintenant: ports.session.maintenant(),
-    },
-    ports.depot
-  );
+  const ports = portsDuProcessus(dependancesDuProcessus({ apres: after, env: process.env }));
+  // SEC-43 : la session pour CE segment est le premier acte ; l'acceptation est ouverte à tout
+  // niveau ouvert (plein et limité), puisque l'accord précède tout le reste.
+  const issue = await actionEspace('confidentialite', jeton, ports.session, async (session) => {
+    const lue = lireLaPolitique();
+    if (!lue.ok) return 'illisible' as const;
+    const versionVue = formulaire.get('version');
+    await accepterLaPolitique(
+      {
+        apporteurId: session.apporteurId,
+        versionVue: typeof versionVue === 'string' ? versionVue : null,
+        versionCourante: lue.politique.version,
+        maintenant: ports.session.maintenant(),
+      },
+      ports.depot
+    );
+    return 'traitee' as const;
+  });
+  if (!issue.ok) redirect(ROUTE_CONNEXION);
   redirect(ROUTE_CONFIDENTIALITE);
 }
