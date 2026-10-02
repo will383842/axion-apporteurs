@@ -13,6 +13,9 @@
  * LES ÉCHECS sont une liste FERMÉE de codes : jamais la sortie du prestataire, qui peut citer
  * l'adresse ou le corps, et jamais le jeton. Le délai est borné.
  *
+ * AUCUNE REDIRECTION n'est suivie (`redirect: 'error'`) : le corps, qui porte l'URL du lien magique,
+ * ne part jamais vers un autre hôte (condition de la lentille sécurité).
+ *
  * LA NOUVELLE TENTATIVE n'a lieu que si le prestataire a REFUSÉ avant d'accepter (429, débit) : rien
  * n'est parti. Après une réponse incertaine — délai dépassé, panne réseau, 5xx —, le message a pu
  * partir : on ne retente pas, l'échec est rendu et la ligne le dit. Aucun double envoi.
@@ -49,6 +52,7 @@ export const ECHECS_DU_RELAIS = [
   'relais_debit_depasse',
   'relais_indisponible',
   'relais_reponse_illisible',
+  'relais_redirection_refusee',
 ] as const;
 export type EchecDuRelais = (typeof ECHECS_DU_RELAIS)[number];
 
@@ -81,6 +85,7 @@ function urlAdmise(brute: string): string | null {
 
 /** Le code d'une réponse non 200. */
 function echecDuStatut(statut: number): EchecDuRelais {
+  if (statut >= 300 && statut < 400) return 'relais_redirection_refusee';
   if (statut === 401 || statut === 403) return 'relais_refus_authentification';
   if (statut === 429) return 'relais_debit_depasse';
   if (statut >= 500) return 'relais_indisponible';
@@ -123,6 +128,10 @@ export function relaisZeptomail(d: {
               'content-type': 'application/json',
             },
             body: corps,
+            // Le corps porte l'URL du lien magique : une redirection ne le RENVOIE jamais ailleurs.
+            // `error` fait échouer l'appel (rendu `relais_injoignable`) ; une réponse 3xx qui
+            // arriverait quand même est refusée en se nommant.
+            redirect: 'error',
             signal: AbortSignal.timeout(delaiMs),
           });
         } catch (erreur) {

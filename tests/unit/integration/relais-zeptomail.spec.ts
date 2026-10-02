@@ -190,6 +190,29 @@ describe('REQ-INT-023 — délai borné, échecs nommés, aucune nouvelle tentat
     expect(appels).toHaveLength(1);
   });
 
+  it('REQ-INT-022 : AUCUNE redirection n’est suivie — `redirect: error`, et la redirection refusée par fetch échoue fermé, sans second envoi du corps', async () => {
+    const { f, appels } = fetchSimule([new TypeError('unexpected redirect')]);
+    expect((await echecDe(relais(f).envoyer(MESSAGE))).message).toBe('relais_injoignable');
+    expect(appels).toHaveLength(1);
+    expect(appels[0]!.init.redirect).toBe('error');
+  });
+
+  it.each([307, 308])(
+    'REQ-INT-022 : une réponse %i qui arriverait quand même est refusée `relais_redirection_refusee`, un seul appel',
+    async (statut) => {
+      const { f, appels } = fetchSimule([
+        new Response(null, {
+          status: statut,
+          headers: { location: 'https://evil.example/v1.1/email' },
+        }),
+      ]);
+      expect((await echecDe(relais(f).envoyer(MESSAGE))).message).toBe(
+        'relais_redirection_refusee'
+      );
+      expect(appels).toHaveLength(1);
+    }
+  );
+
   it('REQ-INT-023 : une panne réseau rend `relais_injoignable`, sans nouvelle tentative (l’envoi a pu partir)', async () => {
     const { f, appels } = fetchSimule([new TypeError('fetch failed')]);
     expect((await echecDe(relais(f).envoyer(MESSAGE))).message).toBe('relais_injoignable');
@@ -218,6 +241,7 @@ describe('REQ-INT-023 — délai borné, échecs nommés, aucune nouvelle tentat
         'relais_injoignable',
         'relais_non_configure',
         'relais_refus_authentification',
+        'relais_redirection_refusee',
         'relais_reponse_illisible',
         'relais_requete_refusee',
         'relais_url_refusee',
