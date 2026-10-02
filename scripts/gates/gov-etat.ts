@@ -271,13 +271,20 @@ const PREFIXE_GH = COMMANDE_GH.slice(1);
  *   — PRÉSÉANCE : `GOV_ETAT_GH` posé (un faux `gh`, le banc d'attaque) → l'instantané est IGNORÉ ;
  *   — posée, l'instantané fait foi pour TOUTES les lectures : absent, illisible, d'une autre forme
  *     ou sans la lecture demandée, il fait ÉCHOUER en le nommant — jamais un repli silencieux ;
- *   — hors tests, la variable n'est jamais posée : rien ne change.
+ *   — hors tests, la variable n'est jamais posée : rien ne change ;
+ *   — et si elle l'est HORS de vitest (`VITEST` absente), elle est REFUSÉE, nommée (lentille
+ *     `securite`, #416) : un instantané forgé ne fait jamais passer une porte réelle. C'est une
+ *     défense en profondeur, pas un secret — qui pose les deux variables contrôle déjà le job.
  */
 const INSTANTANE_DE_LA_FORGE = process.env['GOV_ETAT_GH']
   ? undefined
   : process.env['GOV_ETAT_FORGE'] || undefined;
 
 function lireInstantane(chemin: string, cle: string): string {
+  if (!process.env['VITEST'])
+    throw new Error(
+      `GOV_ETAT_FORGE refusée hors de vitest (${chemin}) : l'instantané ne sert qu'aux témoins, une porte réelle lit la forge`
+    );
   let brut: unknown;
   try {
     brut = JSON.parse(readFileSync(chemin, 'utf8'));

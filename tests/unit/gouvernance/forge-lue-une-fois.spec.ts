@@ -142,6 +142,16 @@ describe('REQ-GOV-006 REQ-QA-013 — le run de tests lit la forge une fois', () 
     expect(r.sortie).not.toContain(corrompu);
   }, 60_000);
 
+  it('REQ-GOV-006 REQ-QA-013 : HORS de vitest, GOV_ETAT_FORGE est refusée, nommée — une porte réelle lit la forge', () => {
+    const env = sansGh({ GOV_ETAT_FORGE: INSTANTANE_VIDE });
+    for (const k of Object.keys(env)) if (/^vitest/i.test(k)) delete env[k];
+    const r = govEtat(env);
+    expect([r.code, r.sortie]).toEqual([
+      1,
+      expect.stringContaining(`GOV_ETAT_FORGE refusée hors de vitest (${INSTANTANE_VIDE})`),
+    ]);
+  }, 60_000);
+
   it('REQ-GOV-006 REQ-QA-013 : la configuration du dépôt déclare le setup de la forge', () => {
     expect(readFileSync('vitest.config.ts', 'utf8')).toMatch(
       /globalSetup:\s*\[\s*'tests\/setup-forge\.ts'\s*\]/
