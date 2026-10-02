@@ -349,4 +349,30 @@ describe('REQ-DM-006 — la charge du journal lit la matrice', () => {
     expect(p.safeParse({ de: a, vers: a, acteur: acteurConsole }).success).toBe(false);
     expect(p.safeParse({ de: a, vers: b, acteur: acteurConsole, motif: 'x' }).success).toBe(false);
   });
+
+  it.each([
+    ['un apporteur en de', 'de'],
+    ['un apporteur en vers', 'vers'],
+  ] as const)(
+    'REQ-SEC-042 : TÉMOIN — attribution_porteur_reaffecte refuse %s (porteur_non_conseiller)',
+    (_quoi, cote) => {
+      const p = CHARGES_PAR_TYPE.attribution_porteur_reaffecte;
+      const conseiller = {
+        type: 'utilisateur_console',
+        id: '0190f0a0-0000-7000-8000-000000000001',
+      } as const;
+      const apporteur = { type: 'apporteur', id: '0190f0a0-0000-7000-8000-000000000003' } as const;
+      const charge = {
+        de: cote === 'de' ? apporteur : conseiller,
+        vers: cote === 'vers' ? apporteur : conseiller,
+        acteur: { par: 'utilisateur_console', id: conseiller.id },
+      };
+      const r = p.safeParse(charge);
+      expect(r.success).toBe(false);
+      expect(r.error?.issues.map((i) => [i.path.join('.'), i.message])).toContainEqual([
+        cote,
+        'porteur_non_conseiller',
+      ]);
+    }
+  );
 });

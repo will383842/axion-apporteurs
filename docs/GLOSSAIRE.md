@@ -176,7 +176,7 @@ qui nomme un événement pointé — `attribution.confirmee_tacitement` (REQ-DM-
 | --- | --- | --- | --- |
 | `attribution_etat_modifie` | `attribution` | DM-08 | `{de, vers, transition, acteur, lienInteret?}` ; `de` : `EtatAttribution` ou nul ; `transition` : `z.enum(EVENEMENTS_ATTRIBUTION)` ; `lienInteret` : `declare` ou `non_declare` |
 | `attribution_peremption_suspendue` | `attribution` | DM-08 | `{acteur, suspendueAt}` |
-| `attribution_porteur_reaffecte` | `attribution` | DM-08 | `{de, vers, acteur}` ; `de` et `vers` : un porteur `{type, id}`, `type` valant `apporteur` ou `utilisateur_console` ; `de` ≠ `vers` ; de conseiller à conseiller (W19), aucune donnée de personne ni date |
+| `attribution_porteur_reaffecte` | `attribution` | DM-08 | `{de, vers, acteur}` ; `de` et `vers` : un porteur `{type, id}`, `type` valant `utilisateur_console` (W19 (5), refus `porteur_non_conseiller`) ; `de` ≠ `vers` ; aucune donnée de personne ni date |
 | `attribution_contact_purge` | `attribution` | DM-07 | `{purgeAt, acteur}` ; `acteur` : `FORMES.acteur()` restreint au système, la purge est celle du cron |
 | `apporteur_statut_modifie` | `apporteur` | DM-45 | `{de, vers, transition, resiliationMotif?, acteur}` ; `de` : `StatutApporteur` ou nul (la naissance) ; `transition` : `creer` ou une flèche de la matrice (`EVENEMENTS_APPORTEUR`), dérivés ; `acteur` : `{par, id?}` (HYP-A02-ACTEUR-JOURNAL) |
 | `apporteur_gel_modifie` | `apporteur` | SEC-15 | `{de, vers, par, anomalieId?, acteur}` ; `de` et `vers` : `EtatGel` ; `par` : `role` ou `plein_droit` |

@@ -168,6 +168,21 @@ export const CHARGES_PAR_TYPE = {
     .object({ de: PORTEUR(), vers: PORTEUR(), acteur: FORMES.acteur() })
     .strict()
     .superRefine(({ de, vers }, ctx) => {
+      // W19 (5) ne connaît que la réaffectation ENTRE CONSEILLERS : retirer son entreprise à un
+      // apporteur, ou la lui donner, n'est pas une réaffectation (lentilles securite et schema). La forme
+      // unique du porteur reste ; un futur genre élargira ce raffinement, pas la forme.
+      for (const [cote, p] of [
+        ['de', de],
+        ['vers', vers],
+      ] as const) {
+        if (p.type !== 'utilisateur_console') {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: [cote],
+            message: 'porteur_non_conseiller',
+          });
+        }
+      }
       if (de.type === vers.type && de.id === vers.id) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['vers'], message: 'meme_porteur' });
       }
