@@ -171,6 +171,10 @@ export const schemaConfiguration = z.object({
   // INT-T26 (REQ-INT-032) : l'adresse d'axionia pour les lectures de Partners. Absente, le canal est
   // fermé de ce côté : une candidature reçue attend ses coordonnées, rien ne part.
   AXIONIA_BASE_URL: urlDe(['https:']).optional(),
+  // SEC-44 (REQ-SEC-012) : les adresses d'où axionia appelle l'API entrante, séparées par des
+  // virgules. Absente, personne n'entre ; posée, elle n'est jamais vide. Sa forme fine (adresses
+  // lisibles) est jugée à chaque appel par `listeDAdresses` (`api-entrante.ts`).
+  AXIONIA_API_ALLOWLIST: nette.optional(),
 });
 
 export type Configuration = z.infer<typeof schemaConfiguration>;
@@ -495,6 +499,8 @@ const ROLES: Record<NomDeVariable, string> = {
     "adresse humaine d'expédition, du sous-domaine d'envoi ; jamais une adresse sans réponse",
   AXIONIA_BASE_URL:
     "adresse d'axionia pour les lectures de Partners ; absente, aucune coordonnée n'est tirée",
+  AXIONIA_API_ALLOWLIST:
+    "adresses d'où axionia appelle l'API entrante, séparées par des virgules ; absente, personne n'entre",
 };
 
 /** La règle de forme, dite une fois par espèce de variable — celle que le schéma applique. */

@@ -20,7 +20,10 @@ import { ENTETE_KID_AXIONIA } from '../../../packages/contracts/api';
 import { NOMS_DES_SECRETS, kidDe } from '../../../src/lib/env';
 import type { HorlogeDePlancher } from '../../../src/server/securite/pot-de-miel';
 import { limiteNonDeclaree } from '../../../src/server/securite/primitives-de-porte';
-import type { VerdictDeLimite } from '../../../src/server/securite/rate-limit';
+import {
+  sujetDepuisEmpreinte,
+  type VerdictDeLimite,
+} from '../../../src/server/securite/rate-limit';
 import {
   CHAMPS_DE_LA_REPONSE,
   METHODES_HTTP,
@@ -635,9 +638,16 @@ describe('REQ-SEC-012 — la frontière de PRODUCTION', () => {
     expect(fini).toBe(true);
   });
 
-  it('son débit est la limite non déclarée (panne), et sa lecture n’est pas branchée', async () => {
+  it('son débit est le compteur `auth:axionia-ip` du registre (SEC-44) : sans cache, il REFUSE en panne ; sa lecture n’est pas branchée', async () => {
     const f = frontiereDeProduction();
-    expect(f.debit).toBe(limiteNonDeclaree);
+    expect(f.debit).not.toBe(limiteNonDeclaree);
+    vi.stubEnv('REDIS_URL', '');
+    const verdict = await f.debit(sujetDepuisEmpreinte('0123456789abcdef'), DEPART);
+    expect(verdict).toMatchObject({ autorise: false, panne: true, motif: 'cache_indisponible' });
+    // La panne est signalée sous le préfixe du compteur, et seulement lui : jamais la clé.
+    expect(ecrit.map((e) => JSON.parse(e) as Record<string, unknown>)).toEqual([
+      { signal: 'rate_limit_panne', prefixe: 'auth:', motif: 'cache_indisponible' },
+    ]);
     await expect(f.lire(SIREN)).rejects.toThrow(/^lecteur_non_branche : /);
   });
 
@@ -646,7 +656,8 @@ describe('REQ-SEC-012 — la frontière de PRODUCTION', () => {
     expect(ecrit).toEqual(['{"signal":"x"}\n']);
   });
 
-  it('les sept gestionnaires passent tous par le même chemin : GET → 503 (débit non déclaré), les autres → 404', async () => {
+  it('les sept gestionnaires passent tous par le même chemin : GET → 503 (cache du débit absent), les autres → 404', async () => {
+    vi.stubEnv('REDIS_URL', '');
     for (const route of ROUTES_DE_LA_FRONTIERE) {
       const g = gestionnaires(route);
       expect(Object.keys(g).sort()).toEqual([...METHODES_HTTP].sort());
@@ -655,8 +666,12 @@ describe('REQ-SEC-012 — la frontière de PRODUCTION', () => {
         const r = await g[methode](requete({ methode }));
         const attendu = methode === 'GET' && route === 'attributions' ? 503 : 404;
         expect(r.status, `${route} ${methode}`).toBe(attendu);
-        expect(ecrit, `${route} ${methode} : une ligne`).toHaveLength(1);
-        const l = JSON.parse(ecrit[0] ?? '{}') as Record<string, unknown>;
+        // Une ligne d'APPEL par appel ; la panne du compteur se signale à part, sous son préfixe.
+        const appels = ecrit
+          .map((e) => JSON.parse(e) as Record<string, unknown>)
+          .filter((l) => l.signal === 'appel_axionia');
+        expect(appels, `${route} ${methode} : une ligne`).toHaveLength(1);
+        const l = appels[0] ?? {};
         expect(l.route, `${route} ${methode}`).toBe(route);
         expect(l.resultat, `${route} ${methode}`).toBe(
           methode !== 'GET'
