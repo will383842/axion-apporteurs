@@ -103,7 +103,7 @@ async function refusDUnicite(p: {
 }): Promise<{ etat: string; contrainte: string | null }> {
   return base.prisma.$transaction(async (tx) => {
     await tx.$executeRawUnsafe(`
-      CREATE FUNCTION pg_temp.essai_unicite(a uuid, t type_piece_kyc, s statut_piece_kyc, rib boolean)
+      CREATE OR REPLACE FUNCTION pg_temp.essai_unicite(a uuid, t type_piece_kyc, s statut_piece_kyc, rib boolean)
       RETURNS text[] LANGUAGE plpgsql AS $f$
       DECLARE etat text; contrainte text;
       BEGIN
