@@ -1608,6 +1608,22 @@ const TEMOINS: { famille: string; quoi: string; vue: () => Vue }[] = [
         },
       ]),
   },
+  // JUR-T13 (REQ-JUR-012, REQ-JUR-013) — les trois familles de la charte relationnelle, texte d'A07.
+  {
+    famille: 'challenge',
+    quoi: 'un challenge entre apporteurs annoncé dans l’espace (REQ-JUR-012)',
+    vue: () => vue([MICRO('{ "bandeau": "Le challenge d’octobre est lancé" }')]),
+  },
+  {
+    famille: 'formation_exigee',
+    quoi: 'un webinaire présenté comme une condition, dans un courriel (REQ-JUR-013)',
+    vue: () => vue([COURRIEL('<p>Votre webinaire requis a lieu jeudi.</p>')]),
+  },
+  {
+    famille: 'inactivite_sanctionnee',
+    quoi: 'une conséquence attachée à l’inactivité de l’apporteur (REQ-JUR-039)',
+    vue: () => vue([ESPACE('<p>Votre compte suspendu sera rouvert sur demande.</p>')]),
+  },
   {
     famille: LISTE_NOIRE_GABARIT.nom,
     quoi: "un art. 11.3 « amélioré » qui renonce à l'indemnité de clientèle",
