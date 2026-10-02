@@ -50,8 +50,11 @@ export class NotificationRefusee extends Error {
 export type TexteRendu = { titre: string; appel: string; corps: string | null };
 
 const PARAMETRE = /\{([a-zA-Z]+)\}/g;
-/** Une valeur : une ligne, visible, bornée — ni caractère de contrôle, ni saut de ligne. */
-const VALEUR = /^[^\p{Cc}]{1,300}$/u;
+/**
+ * Une valeur : une ligne, visible, bornée — ni caractère de contrôle (\p{Cc}, dont le saut de ligne),
+ * ni caractère de FORMAT (\p{Cf} : U+202E et les isolats retournent un sujet, U+200B le cachent).
+ */
+const VALEUR = /^[^\p{Cc}\p{Cf}]{1,300}$/u;
 
 function cleDeLaTable(cle: string): Gabarit {
   const lue = schemaGabarit.safeParse(cle);
@@ -64,7 +67,7 @@ function cleDeLaTable(cle: string): Gabarit {
  * par l'émetteur, qui ne pourrait que les retaper.
  */
 export const PARAMETRES_DE_LA_SSOT: Readonly<Record<string, string>> = {
-  delaiReponse: `${SEUILS.REPONSE_CONTESTATION_JOURS.valeur} jours`,
+  delaiReponse: `${SEUILS.REPONSE_CONTESTATION_JOURS.valeur} ${SEUILS.REPONSE_CONTESTATION_JOURS.unite}`,
 };
 
 /** Les paramètres que l'ÉMETTEUR fournit pour une clé, triés : ceux des textes, hors SSOT. */

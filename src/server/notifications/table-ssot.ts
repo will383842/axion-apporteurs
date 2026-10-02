@@ -108,7 +108,7 @@ export const GABARITS = {
   },
   decision_attribution: {
     req: 'REQ-DM-006',
-    emetteur: 'DM-08',
+    emetteur: 'DM-55',
     fondement:
       'art. 3.3 — une décision qui ouvre une contestation (le délai court contre la Société)',
     declencheur: 'evenement',
@@ -122,7 +122,7 @@ export const GABARITS = {
   },
   premier_rang_libere: {
     req: 'REQ-DM-004',
-    emetteur: 'DM-08',
+    emetteur: 'DM-55',
     fondement: `art. 3.5 al. 2 — ${SEUILS.FILE_FENETRE_REDECLARATION_JOURS.valeur} jours pour déclarer à nouveau, à compter de l’information`,
     declencheur: 'evenement',
     notificationObligatoire: true,

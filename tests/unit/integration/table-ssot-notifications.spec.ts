@@ -242,6 +242,14 @@ describe('REQ-UX-016 — le rendu d’une notification : les paramètres de sa c
     expect(motif(() => rendreLaNotification('attribution_liberee', { entreprise: '' }))).toBe(
       'parametre_invalide'
     );
+    // Un caractère de FORMAT (\p{Cf}) retourne ou masque le sujet d'un courriel : U+202E inverse le
+    // sens de lecture, U+200B à U+200F et U+2066 à U+2069 cachent ou isolent un texte.
+    for (const format of ['‮', '​', '‏', '⁦', '⁩'])
+      expect(
+        motif(() =>
+          rendreLaNotification('attribution_liberee', { entreprise: `Entreprise${format}fdp.exe` })
+        )
+      ).toBe('parametre_invalide');
   });
 });
 
