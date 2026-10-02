@@ -37,6 +37,7 @@ import { verifierChaine, type LigneJournal } from '../../domain/evenement/journa
 import { lireJournalParLots } from '../evenement/journal';
 import type { Inscriptions } from './lanceur';
 import { minimiserCandidatures } from './minimiser-candidatures';
+import { purgerLesContacts } from './purger-contacts';
 
 /**
  * Les traitants branchés, par type d'événement reçu. Un seul aujourd'hui : la candidature reçue
@@ -84,6 +85,8 @@ export function inscriptions(prisma: PrismaClient): Inscriptions {
       minimisees: await minimiserCandidatures(prisma, new Date(horlogeSysteme.maintenant())),
     }),
     journal_verifier: passageDuJournal(() => lireJournalParLots(prisma)),
+    // DM-48 (REQ-DM-031) : la purge du contact à échéance, à l'heure du système.
+    contacts_purger: () => purgerLesContacts(prisma, new Date(horlogeSysteme.maintenant())),
   };
 }
 
