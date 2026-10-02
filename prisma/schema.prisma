@@ -507,6 +507,8 @@ model NotificationEspace {
   cle           String       @db.VarChar(64)
   attributionId String?      @map("attribution_id") @db.Uuid
   attribution   Attribution? @relation(fields: [attributionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  /// L'heure d'inscription dans l'espace, PAS un horodatage opposable : aucun délai ne s'y appuie ;
+  /// un délai court de `courriels_envoyes.envoye_at` (relecture A02, 2026-10-02).
   creeAt        DateTime     @default(now()) @map("cree_at") @db.Timestamptz(3)
   lueAt         DateTime?    @map("lue_at") @db.Timestamptz(3)
 
