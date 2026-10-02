@@ -119,10 +119,31 @@ describe('REQ-DM-043 — la purge planifiée du SIREN d’un dépôt refusé', (
     const id = await unRefus(new Date(limiteDePurgeDuSiren(MAINTENANT).getTime() - MINUTE));
     await purgerLesSirenRefuses(base.prisma, MAINTENANT);
     const premier = await lire(id);
-    expect(
-      (await purgerLesSirenRefuses(base.prisma, new Date(MAINTENANT.getTime() + MINUTE))).purges
-    ).toBe(0);
+    // Au MÊME instant : un instant plus tard ferait échoir la ligne « sous » du témoin précédent, et
+    // le compte ne jugerait plus l'idempotence.
+    expect((await purgerLesSirenRefuses(base.prisma, MAINTENANT)).purges).toBe(0);
     expect(await lire(id)).toEqual(premier);
+  });
+
+  it('REQ-DM-043 : TÉMOIN — un passage ULTÉRIEUR qui purge d’autres lignes ne réécrit RIEN de ce qui est déjà purgé', async () => {
+    // Un mois après le reste du banc : le premier passage solde toutes les lignes échues des témoins
+    // précédents, et le second ne trouve que B.
+    const t = new Date(Date.UTC(2026, 10, 2, 12, 0, 0));
+    const tPlus10 = new Date(t.getTime() + 10 * MINUTE);
+    const limite = limiteDePurgeDuSiren(t);
+    const a = await unRefus(new Date(limite.getTime() - MINUTE));
+    const b = await unRefus(new Date(limite.getTime() + 5 * MINUTE));
+
+    await purgerLesSirenRefuses(base.prisma, t);
+    const aApresPremier = await lire(a);
+    expect(aApresPremier.siren_purge_at).toEqual(t);
+    expect((await lire(b)).siren).toBe('552100554');
+
+    expect((await purgerLesSirenRefuses(base.prisma, tPlus10)).purges).toBe(1);
+    expect(await lire(a)).toEqual(aApresPremier);
+    const bApres = await lire(b);
+    expect(bApres.siren).toBeNull();
+    expect(bApres.siren_purge_at).toEqual(tPlus10);
   });
 
   it('REQ-DM-043 : la date de purge est LIÉE au SIREN — ni l’un sans l’autre', async () => {
