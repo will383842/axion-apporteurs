@@ -3,7 +3,7 @@
  * QA-T55 (REQ-GOV-014) — la protection de `main` exige des branches À JOUR avant fusion.
  *
  * Sans `required_status_checks.strict`, une PR verte sur une base PÉRIMÉE fusionne : l'état fusionné
- * n'a jamais été testé, et le déploiement le publie. Le réglage est posé sur la forge (décision D6 de
+ * n'a jamais été testé, et le déploiement le publie. Le réglage est posé sur la forge (décision de
  * Williams, 2026-10-01) ; `gov:depot-visibilite` le CONSTATE, elle ne le pose pas. Ce fichier juge la
  * famille `strict_absent` sur la vue conforme ET sur une vue cassée d'un geste (RM-02).
  */
