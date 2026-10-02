@@ -235,7 +235,9 @@ export const NOMS_DES_VARIABLES: readonly string[] = [
  * des secrets, jamais comme des variables.
  */
 export const NOMS_FACULTATIFS: readonly string[] = Object.entries(schemaConfiguration.shape)
-  .filter(([nom, type]) => type.isOptional() && nom !== 'NOTIFY_SINK')
+  .filter(
+    ([nom, type]) => type.isOptional() && nom !== 'NOTIFY_SINK' && nom !== 'DATABASE_MIGRATION_URL'
+  )
   .map(([nom]) => nom);
 
 /** Le motif est construit ICI : le `message` d'une issue Zod peut porter la valeur reçue. */
@@ -606,6 +608,7 @@ function regleDe(nom: NomDeVariable): string {
 
 function presenceDe(nom: string): string {
   if (nom === 'NOTIFY_SINK') return 'requise hors production';
+  if (nom === 'DATABASE_MIGRATION_URL') return "requise en production, par l'entrée de l'image";
   if ((EXIGES_SI_ENVOI_ACTIF as readonly string[]).includes(nom)) {
     return 'facultative, requise si l’envoi réel est allumé';
   }

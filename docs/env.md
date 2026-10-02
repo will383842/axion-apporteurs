@@ -33,7 +33,7 @@ posée est jugée comme les autres.
 | Variable | Présence | Règle | Rôle |
 | --- | --- | --- | --- |
 | `DATABASE_URL` | requise | URL `postgresql:` ou `postgres:` | la base Postgres, sous le rôle d'exécution du serveur (jamais superutilisateur, jamais membre de `partners_journal`) ; `readyz` la sonde |
-| `DATABASE_MIGRATION_URL` | facultative | URL `postgresql:` ou `postgres:` | la base sous le rôle propriétaire : migration et provisionnement du rôle d'exécution, par l'entrée de l'image seulement ; exigée en production, retirée avant le serveur |
+| `DATABASE_MIGRATION_URL` | requise en production, par l'entrée de l'image | URL `postgresql:` ou `postgres:` | la base sous le rôle propriétaire : migration et provisionnement du rôle d'exécution, par l'entrée de l'image seulement ; exigée en production, retirée avant le serveur |
 | `REDIS_URL` | requise | URL `redis:` ou `rediss:` | le cache Redis ; `readyz` le sonde |
 | `NOTIFY_SINK` | requise hors production | `true` exigé hors production (REQ-CPL-021) | retient toute notification dans le journal au lieu de l'envoyer |
 | `PARTNERS_ENV` | facultative | non vide, sans espace en bordure | nom de l'environnement ; `production` avec `NODE_ENV=production` vaut production |
