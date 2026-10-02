@@ -85,7 +85,10 @@ export const TEXTES_DES_ISSUES: { readonly [I in IssueDepot]: TexteIssue } = {
     pastille: 'En attente',
     titre: 'Enregistré en attente',
     pourquoi: `Cette entreprise est ${FORMULES.dejaReservee}. Votre dépôt attend, avec son heure d’envoi.`,
-    quoiFaire: `${enTete(FORMULES.finDuDroit)}, votre dépôt prend la suite, à l'heure où vous l'avez envoyé. ${FORMULES.rienAFaire} : vous serez prévenu.`,
+    // UX-P1-17 (texte d'A07, art. 3.5 al. 2) : à la fin de la réservation, le premier en attente
+    // est prévenu et doit DÉPOSER À NOUVEAU dans le délai, sinon son dépôt est effacé. « Rien à
+    // faire » et « prend la suite » étaient une information trompeuse sur cette condition.
+    quoiFaire: `${enTete(FORMULES.finDuDroit)} alors que votre dépôt est le premier en attente, vous serez prévenu, et vous aurez {delaiRedeclaration} pour déposer à nouveau cette entreprise. Sans nouveau dépôt dans ce délai, votre dépôt en attente est effacé.`,
     actionPrincipale: DEPOSER_UNE_AUTRE,
     actionSecondaire: VOIR_MES_ENTREPRISES,
   },

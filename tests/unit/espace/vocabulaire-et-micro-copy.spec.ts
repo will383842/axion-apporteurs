@@ -23,6 +23,7 @@ import { describe, it, expect } from 'vitest';
 import { spawnSync } from 'node:child_process';
 import { readFileSync, readdirSync } from 'node:fs';
 import { FORMULES } from '../../../src/content/micro-copy/espace/vocabulaire';
+import { SEUILS } from '../../../src/domain/seuils/ssot';
 import {
   ISSUES_DEPOT,
   ISSUES_DE_REFUS,
@@ -573,15 +574,15 @@ describe('REQ-UX-002 — snapshot des libellés de l’espace, sans date, sans n
       espace/issues-depot.ts › TEXTES_DES_ISSUES › prioritaire › actionSecondaire › route : /mes-entreprises
       espace/issues-depot.ts › TEXTES_DES_ISSUES › en_attente › pastille : En attente
       espace/issues-depot.ts › TEXTES_DES_ISSUES › en_attente › titre : Enregistré en attente
-      espace/issues-depot.ts › TEXTES_DES_ISSUES › en_attente › pourquoi : Cette entreprise est déjà réservée pour un autre apporteur. Votre dépôt attend, avec son heure d’envoi.
-      espace/issues-depot.ts › TEXTES_DES_ISSUES › en_attente › quoiFaire : Si ce droit prend fin, votre dépôt prend la suite, à l'heure où vous l'avez envoyé. Rien à faire de votre côté : vous serez prévenu.
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › en_attente › pourquoi : Cette entreprise est déjà réservée. Votre dépôt attend, avec son heure d’envoi.
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › en_attente › quoiFaire : Si cette réservation prend fin alors que votre dépôt est le premier en attente, vous serez prévenu, et vous aurez {delaiRedeclaration} pour déposer à nouveau cette entreprise. Sans nouveau dépôt dans ce délai, votre dépôt en attente est effacé.
       espace/issues-depot.ts › TEXTES_DES_ISSUES › en_attente › actionPrincipale › libelle : Déposer une autre entreprise
       espace/issues-depot.ts › TEXTES_DES_ISSUES › en_attente › actionPrincipale › route : /deposer
       espace/issues-depot.ts › TEXTES_DES_ISSUES › en_attente › actionSecondaire › libelle : Voir Mes entreprises
       espace/issues-depot.ts › TEXTES_DES_ISSUES › en_attente › actionSecondaire › route : /mes-entreprises
       espace/issues-depot.ts › TEXTES_DES_ISSUES › file_complete › pastille : Pas enregistré
       espace/issues-depot.ts › TEXTES_DES_ISSUES › file_complete › titre : Pas enregistré : l'attente est complète
-      espace/issues-depot.ts › TEXTES_DES_ISSUES › file_complete › pourquoi : Cette entreprise est déjà réservée pour un autre apporteur, et l'attente prévue par le contrat est complète (article 3.3 bis).
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › file_complete › pourquoi : Cette entreprise est déjà réservée, et l'attente prévue par le contrat est complète (article 3.3 bis).
       espace/issues-depot.ts › TEXTES_DES_ISSUES › file_complete › quoiFaire : Rien à faire. Vous pourrez la vérifier à nouveau plus tard.
       espace/issues-depot.ts › TEXTES_DES_ISSUES › file_complete › actionPrincipale › libelle : Retour à l'accueil
       espace/issues-depot.ts › TEXTES_DES_ISSUES › file_complete › actionPrincipale › route : /
@@ -723,8 +724,8 @@ describe('REQ-UX-002 — snapshot des libellés de l’espace, sans date, sans n
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › /confirmer/<jeton> › phrase : Il a peut-être déjà servi, ou il est trop ancien. Axion-IA reste joignable par écrit si besoin.
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › /confirmer/<jeton> › action › libelle : Contacter Axion-IA
       espace/vocabulaire.ts › FORMULES › droitACommissionJusquau : Votre droit à commission sur cette entreprise court jusqu'au {dateFin}.
-      espace/vocabulaire.ts › FORMULES › dejaReservee : déjà réservée pour un autre apporteur
-      espace/vocabulaire.ts › FORMULES › finDuDroit : si ce droit prend fin
+      espace/vocabulaire.ts › FORMULES › dejaReservee : déjà réservée
+      espace/vocabulaire.ts › FORMULES › finDuDroit : si cette réservation prend fin
       espace/vocabulaire.ts › FORMULES › sansSuite : Sans suite
       espace/vocabulaire.ts › FORMULES › depotsSuspendus : vos nouveaux dépôts sont suspendus le temps d'un échange avec Axion-IA
       espace/vocabulaire.ts › FORMULES › courrierDeSuspension : Le courrier électronique du {dateCourrier} en donne la raison et vous dit comment nous répondre.
@@ -1134,6 +1135,30 @@ describe('REQ-SEC-042 REQ-UX-002 REQ-JUR-043 — l’occupant d’une entreprise
       fautes.push(...fautesDOccupation(`${DOSSIER}/${n}`, chaines(module)));
     }
     expect(fautes).toEqual([]);
+  });
+
+  it('REQ-JUR-043 : l’attente dit la redéclaration sous délai et l’effacement — ni « rien à faire », ni « prend la suite » (art. 3.5 al. 2)', () => {
+    const t = TEXTES_DES_ISSUES.en_attente;
+    const texte = `${t.pourquoi} ${t.quoiFaire}`;
+    expect(texte).not.toContain(FORMULES.rienAFaire);
+    expect(texte).not.toMatch(/prend la suite/i);
+    expect(t.quoiFaire).toContain('{delaiRedeclaration}');
+    expect(t.quoiFaire).toMatch(/déposer à nouveau/);
+    expect(t.quoiFaire).toMatch(/effacé/);
+    // Le texte RENDU, le paramètre rempli depuis la SSOT comme l'écran de dépôt le fera.
+    const rendu = t.quoiFaire.replace(
+      '{delaiRedeclaration}',
+      `${SEUILS.FILE_FENETRE_REDECLARATION_JOURS.valeur} jours`
+    );
+    expect(rendu).toContain('vous aurez 15 jours pour déposer à nouveau cette entreprise');
+    expect(rendu).not.toMatch(/\{[^}]*\}/);
+    // Les autres « Rien à faire » de l'espace restent : ils ne visent pas l'attente.
+    expect(TEXTES_DES_ISSUES.enregistree.quoiFaire).toContain(FORMULES.rienAFaire);
+  });
+
+  it('REQ-SEC-042 REQ-JUR-043 : les formules d’occupation ne nomment plus l’occupant ni « ce droit »', () => {
+    expect(FORMULES.dejaReservee).toBe('déjà réservée');
+    expect(FORMULES.finDuDroit).toBe('si cette réservation prend fin');
   });
 
   it('REQ-SEC-042 REQ-JUR-043 : TÉMOINS — un rôle, une Société occupante, « suivie » dans le vocabulaire rougissent ; CONTRE-TÉMOINS — « former ses salariés » et « conseiller » seul restent verts', () => {

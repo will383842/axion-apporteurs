@@ -147,7 +147,8 @@ export const PARAMETRES_PERMIS: Readonly<Record<string, readonly string[]>> = {
   'espace/issues-depot.ts › TEXTES_DES_ISSUES › enregistree': ['contact', 'dateAppel'],
   'espace/issues-depot.ts › TEXTES_DES_ISSUES › prioritaire': ['dateAppel'],
   // La collision au dépôt : seule la date de fin est autorisée (REQ-SEC-022).
-  'espace/issues-depot.ts › TEXTES_DES_ISSUES › en_attente': ['dateFin'],
+  // UX-P1-17 : le délai de redéclaration (art. 3.5 al. 2), rempli par l'écran depuis la SSOT.
+  'espace/issues-depot.ts › TEXTES_DES_ISSUES › en_attente': ['dateFin', 'delaiRedeclaration'],
   // SA propre suspension.
   'espace/issues-depot.ts › TEXTES_DES_ISSUES › gele': ['dateSuspension'],
   // SON brouillon : le contact qu'il a saisi, et la date où son téléphone l'effacera.
