@@ -5663,11 +5663,11 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.75,
-      "statut": "a_faire",
-      "owner": null,
+      "statut": "fusionnee",
+      "owner": "A07",
       "lot": null,
-      "branch": null,
-      "pr": null,
+      "branch": "t/jur-t09",
+      "pr": 368,
       "issue": null,
       "attempts": 0,
       "motif": null,
@@ -5679,6 +5679,11 @@
         "REQ-JUR-060": [
           "tests/unit/juridique/information-article-14.spec.ts"
         ]
+      },
+      "attestation": {
+        "pr": 368,
+        "sha": "29ab0c6ef5589584e41553567682549682e6635d",
+        "fusionneeAt": "2026-10-01T22:56:17Z"
       }
     },
     {
@@ -14461,7 +14466,7 @@
       "sensible": [],
       "hyp": [],
       "externe": null,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "phase": 1,
       "id": "UX-P1-40",
       "titre": "Maquettes W20 : dépôt révisé (contact exigé, message informatif, bouton nommé, annuler ou corriger), page de réponse du contact, « À appeler aujourd'hui » dans la file de qualification",
@@ -14500,7 +14505,16 @@
         "REQ-UX-022": [
           "tests/unit/espace/maquettes-confirmation-par-courriel.spec.ts"
         ]
-      }
+      },
+      "branch": "t/ux-p1-40",
+      "owner": "A06",
+      "pr": 360,
+      "attestation": {
+        "pr": 360,
+        "sha": "262de4d6ddc1b5ba1f5ee7d002dd03bcfdefd503",
+        "fusionneeAt": "2026-10-01T22:39:09Z"
+      },
+      "motif": null
     },
     {
       "repo": "partners",
@@ -17521,7 +17535,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "Écart C3 de la vérification de bout en bout (GOV-131, VERIF-1-RAPPORT.md), versé sur demande de la coordination, en tête du lot 2 : en production, aucun lien magique ne part — le transport `courriel` de `dependancesDuProcessus` lève `envoi_courriel_non_cable`, et `demanderEnvoi` (INT-T10) n'est importé nulle part hors du relais. Le seul parcours utilisateur de la Phase 0 n'existe donc pas sur `main` déployé. (1) TÉMOIN rouge d'abord : `demanderLien` en production simulée, relais simulé, écrit exactement une ligne `courriels_envoyes` et fait exactement un appel au relais. (2) `demanderEnvoi` est câblé dans `dependancesDuProcessus` (`src/server/auth/lien-magique-production.ts`) ; aucune autre voie d'envoi. (3) Préalable de tout écran de l'espace. Relecture de la lentille securite exigée. (4) Condition de la lentille securite : le jeton du lien n'est conservé NULLE PART après l'envoi — ni dans les données du job de file (suppression à l'achèvement), ni dans le journal, ni dans la réponse du relais conservée. TÉMOIN : après un envoi, le jeton est absent de `courriels_envoyes` et du journal.",
       "tests": {
         "REQ-SEC-001": [
@@ -17532,7 +17546,16 @@
           "tests/integration/lien-magique-production.spec.ts",
           "tests/unit/securite/lien-magique-emis-en-production.spec.ts"
         ]
-      }
+      },
+      "branch": "t/sec-42",
+      "owner": "A05",
+      "pr": 378,
+      "attestation": {
+        "pr": 378,
+        "sha": "1c04d12bda2ad7306cd19aada8de7235db2376be",
+        "fusionneeAt": "2026-10-01T23:12:25Z"
+      },
+      "motif": null
     },
     {
       "id": "INT-T45",
@@ -17949,14 +17972,23 @@
       "paths": [
         "src/server/queue/workers/evenement-recu.ts",
         "src/app/api/webhooks/axionia/route.ts",
-        "tests/integration/reprise-des-attentes.spec.ts"
+        "tests/integration/reprise-des-attentes.spec.ts",
+        "src/server/taches/inscriptions.ts",
+        "src/domain/seuils/ssot.ts",
+        "src/server/integrations/telegram/alertes.ts",
+        "src/server/taches/lanceur.ts",
+        "tests/unit/integration/reprise-des-attentes.spec.ts",
+        "tests/unit/integration/passage-exclusif.spec.ts",
+        "tests/integration/candidature-recue.spec.ts",
+        "tests/unit/integration/inscriptions-des-taches.spec.ts"
       ],
       "schema": false,
       "sensible": [
         "argent"
       ],
       "deps": [
-        "GOV-137"
+        "GOV-137",
+        "INT-T55"
       ],
       "reqs": [
         "REQ-QA-027"
@@ -17965,7 +17997,7 @@
       "externe": null,
       "estimateDays": 0.5,
       "statut": "a_faire",
-      "acceptance": "Écart C5 de la vérification de bout en bout, porté par l'audit indépendant du plan de la Phase 1 (2026-10-01, `_REPRISE-AXION-APPORTEURS/AUDIT-PLAN-PHASE-1.md`). (1) `passerLeTravail` et `reprendreLesAttentes` tournent par le lanceur (GOV-137), et non plus dans `after()`. (2) Les reprises sont bornées, et une alerte part au-delà. TÉMOIN rouge d'abord : une attente `en_attente_dependance` sans nouvel événement est reprise."
+      "acceptance": "Écart C5 de la vérification de bout en bout, porté par l'audit indépendant du plan de la Phase 1 (2026-10-01, `_REPRISE-AXION-APPORTEURS/AUDIT-PLAN-PHASE-1.md`). (1) `passerLeTravail` et `reprendreLesAttentes` tournent par le lanceur (GOV-137), et non plus dans `after()`. (2) Les reprises sont bornées, et une alerte part au-delà. TÉMOIN rouge d'abord : une attente `en_attente_dependance` sans nouvel événement est reprise. ARBITRAGES (rattrapage 47, mesures de A05) : (1) la route ne joue plus aucun passage (`declencher` ne lance rien, plus d'`after()`) ; le lanceur seul, sous son verrou, le joue à la minute suivante — le bloc REQ-ARG-003 de `passage-exclusif.spec.ts` (INT-T55) change de face en ce sens, nommé dans la PR. (2) Les reprises sont bornées par l'ÂGE (`receivedAt`), jamais par `retryCount` (qui appartient à `en_erreur`) : `ATTENTE_DES_COORDONNEES_JOURS` = 7 en SSOT, source « coordination, 2026-10-02, proposition de A05 (couvre un week-end prolongé) », validée sous délégation comme paramètre d'exploitation, sous le plafond de 30 jours de minimisation d'INT-T56. Au-delà, l'attente n'est plus reprise ; elle est comptée et alerte par la catégorie close `attente_depassee`, partagée avec INT-T54, émise par le lanceur. L'horloge est injectée dans `reprendreLesAttentes`. Livrée avec INT-T54 (« Lot: INT-T49, INT-T54 »). CONDITION DE LA LENTILLE SÉCURITÉ (rattrapage 47, mot pour mot) : « la route ne lance AUCUN passage (ni `after()`, ni appel à `passageDesEvenementsRecus`) ; TÉMOIN qui rougit si on le réintroduit »."
     },
     {
       "id": "GOV-138",
@@ -18241,13 +18273,22 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.25,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "Porté par l'audit indépendant du plan de la Phase 1 (2026-10-01) (point 4 de GOV-113) : `BUDGETS_UX` vit en SSOT, ce qui découple l'espace des maquettes de console. TÉMOIN : un budget absent de la SSOT est refusé et nommé.",
       "tests": {
         "REQ-UX-047": [
           "tests/unit/domaine/budgets-ux.spec.ts"
         ]
-      }
+      },
+      "branch": "t/qa-t58",
+      "owner": "A06",
+      "pr": 351,
+      "attestation": {
+        "pr": 351,
+        "sha": "27a1cc7b0a5d4bdc8361080dca7c7a2f37a0a425",
+        "fusionneeAt": "2026-10-01T22:16:45Z"
+      },
+      "motif": null
     },
     {
       "id": "QA-T56",
@@ -18548,7 +18589,15 @@
         "src/server/integrations/telegram/alertes.ts",
         "src/domain/seuils/ssot.ts",
         "src/server/queue/workers/evenement-recu.ts",
-        "tests/unit/integration/alerte-attente-traitant.spec.ts"
+        "tests/unit/integration/alerte-attente-traitant.spec.ts",
+        "src/server/taches/lanceur.ts",
+        "src/server/taches/inscriptions.ts",
+        "src/lib/env.ts",
+        ".env.example",
+        "docs/env.md",
+        "docs/runbooks/mise-en-service.md",
+        ".github/workflows/coolify-provisionner.yml",
+        "scripts/deploiement/provisionner.ts"
       ],
       "schema": false,
       "sensible": [
@@ -18566,7 +18615,7 @@
       "externe": null,
       "estimateDays": 0.5,
       "statut": "a_faire",
-      "acceptance": "Condition (3) recommandée par la lentille sécurité pour INT-T43, sortie d'INT-T43 par la coordination le 2026-10-01 (sous délégation), pour éviter deux PR concurrentes sur `alertes.ts` : elle se code juste après QA-T54. Aujourd'hui, après INT-T43, un événement dont le type n'a pas de traitant attend en `en_attente_dependance` (`dependanceRef` = `traitant:<type>`) sans que personne soit prévenu si l'attente dure. (1) Une catégorie d'alerte CLOSE, neuve, ajoutée à `CATEGORIES_ALERTE` (`src/server/integrations/telegram/alertes.ts`) avec son gabarit. (2) Le seuil de durée est une constante de la SSOT (`src/domain/seuils/ssot.ts`) avec `source` et `verifieLe` (RM-10, REQ-JUR-015) ; aucun littéral ailleurs. (3) Une attente `traitant:<type>` plus ancienne que le seuil émet exactement une alerte, dédoublonnée par type ; l'alerte ne porte que le type d'événement, le nombre d'attentes et l'âge de la plus ancienne, sans donnée personnelle, sans charge ni identifiant d'événement. (4) TÉMOINS rouges d'abord : une attente sous le seuil n'alerte pas ; au-delà, une alerte et une seule ; une attente d'un autre préfixe que `traitant:` n'alerte pas ; le message ne contient aucune donnée personnelle. Le lieu de la détection (worker `evenement-recu.ts`, en fin de passage) est confirmé à la revendication. AMENDEMENT (rattrapage 42, relevé par la lentille exactitude, tranché par la coordination le 2026-10-01) : l'alerte couvre AUSSI les attentes de parent (`en_attente_dependance` dont la référence nomme un parent attendu, par exemple la facture d'un `paiement_recu`) au-delà du même seuil. Le témoin du point (4) « une attente d'un autre préfixe que `traitant:` n'alerte pas » est REMPLACÉ par : une attente de parent au-delà du seuil alerte, sous le même dédoublonnage et sans donnée personnelle (le type et le nombre, jamais la référence du parent). Les paths ne changent pas.",
+      "acceptance": "Condition (3) recommandée par la lentille sécurité pour INT-T43, sortie d'INT-T43 par la coordination le 2026-10-01 (sous délégation), pour éviter deux PR concurrentes sur `alertes.ts` : elle se code juste après QA-T54. Aujourd'hui, après INT-T43, un événement dont le type n'a pas de traitant attend en `en_attente_dependance` (`dependanceRef` = `traitant:<type>`) sans que personne soit prévenu si l'attente dure. (1) Une catégorie d'alerte CLOSE, neuve, ajoutée à `CATEGORIES_ALERTE` (`src/server/integrations/telegram/alertes.ts`) avec son gabarit. (2) Le seuil de durée est une constante de la SSOT (`src/domain/seuils/ssot.ts`) avec `source` et `verifieLe` (RM-10, REQ-JUR-015) ; aucun littéral ailleurs. (3) Une attente `traitant:<type>` plus ancienne que le seuil émet exactement une alerte, dédoublonnée par type ; l'alerte ne porte que le type d'événement, le nombre d'attentes et l'âge de la plus ancienne, sans donnée personnelle, sans charge ni identifiant d'événement. (4) TÉMOINS rouges d'abord : une attente sous le seuil n'alerte pas ; au-delà, une alerte et une seule ; une attente d'un autre préfixe que `traitant:` n'alerte pas ; le message ne contient aucune donnée personnelle. Le lieu de la détection (worker `evenement-recu.ts`, en fin de passage) est confirmé à la revendication. AMENDEMENT (rattrapage 42, relevé par la lentille exactitude, tranché par la coordination le 2026-10-01) : l'alerte couvre AUSSI les attentes de parent (`en_attente_dependance` dont la référence nomme un parent attendu, par exemple la facture d'un `paiement_recu`) au-delà du même seuil. Le témoin du point (4) « une attente d'un autre préfixe que `traitant:` n'alerte pas » est REMPLACÉ par : une attente de parent au-delà du seuil alerte, sous le même dédoublonnage et sans donnée personnelle (le type et le nombre, jamais la référence du parent). Les paths ne changent pas. ARBITRAGES (rattrapage 47 ; tâche passée à A05 par la coordination le 2026-10-02, livrée avec INT-T49) : (1) UNE catégorie close, `attente_depassee`, partagée avec INT-T49, émise par l'alerteur du lanceur ; l'alerte porte la forme d'attente (liste fermée), le type d'événement, le nombre et l'âge de la plus ancienne, sans donnée personnelle, ni charge, ni identifiant ; dédoublonnée par (forme, type). (2) « Exactement une alerte » = alerte au FRANCHISSEMENT : le lanceur est un processus neuf chaque minute, le dédoublonnage en mémoire de `creerAlerteur` ne tient pas ; une attente alerte quand `receivedAt` tombe dans ]`dernierSuccesAt` − seuil ; maintenant − seuil] (battement `evenements_recus`) ; premier passage sans `dernierSuccesAt` : la fenêtre part de −∞ ; un envoi d'alerte en échec fait échouer le passage et la fenêtre est rejouée. (3) `ATTENTE_D_UNE_DEPENDANCE_JOURS` = 2 (formes `traitant:` et parent) en SSOT, source « arbitrage A01, 2026-10-02, proposition de A05 ». (4) Le canal d'alerte du serveur : `notifieurTelegram` exporté de `alertes.ts` (les copies de `deploy-verify.ts` et `sauvegarde/cycle.ts` sont une dette nommée, hors lot) ; `TELEGRAM_BOT_TOKEN` et `TELEGRAM_CHAT_ID` sont des secrets CONDITIONNELS (le second à son format, entier signé d'au plus 20 chiffres), provisionnés depuis `secrets.*` ; AUCUNE exigence au démarrage : une alerte due sans canal fait échouer le passage en le NOMMANT (`canal_alerte_absent`) et la fenêtre est rejouée — « un canal absent est une alarme éteinte » (runbook de sauvegarde) ; trois témoins (pas d'alerte due, canal absent : réussi ; due, absent : échec nommé ; due, présent : un envoi). Case du runbook, section 3 : provisionnement relancé, une `attente_depassee` d'essai reçue, avant l'ouverture du canal côté axion-ia.",
       "tests": {
         "REQ-DM-036": [
           "tests/unit/integration/alerte-attente-traitant.spec.ts"
@@ -18656,7 +18705,7 @@
       "externe": null,
       "estimateDays": 0.75,
       "statut": "a_faire",
-      "acceptance": "Défaut antérieur signalé par la lentille sécurité le 2026-10-01, hors de la PR d'INT-T43, et tranché par la coordination sous délégation : chaque POST du webhook lance `passerLeTravail` dans `after()`, sans verrou, et `aTraiter` lit les lignes `recu` sans les réclamer ; deux webhooks rapprochés peuvent donc dispatcher deux fois le même événement, et, DM-15 branché, verser deux fois une commission. (1) Le passage est EXCLUSIF : soit chaque ligne est réclamée par une écriture conditionnelle (`recu` → état réclamé, une seule écriture gagnante), soit le passage entier prend un verrou consultatif sur le patron du lanceur de GOV-137 ; le choix est écrit dans la PR. La route `src/app/api/webhooks/axionia/route.ts` est comprise : aucun chemin d'appel ne contourne l'exclusion. Une réclamation abandonnée (processus tué) est reprise, jamais perdue. Si le choix exige une valeur d'énumération ou une colonne neuve, la tâche s'arrête et rend un `stop` : elle est déclarée sans schéma. (2) TÉMOIN rouge d'abord, en intégration sur une vraie base : deux passages SIMULTANÉS sur le même événement produisent un seul effet ; un passage tué après réclamation laisse l'événement repris au passage suivant. (3) Relecture OBLIGATOIRE de la lentille sécurité (sensible argent). (4) Condition de mise en service : `PARTNERS_SYNC_ENABLED` reste faux tant que cette tâche n'est pas fusionnée ; la PR qui la livre ajoute cette case à `docs/runbooks/mise-en-service.md`, avant la case d'ouverture du canal, et la cite ; la case est cochée après réception par Williams. NOTE DE LA LENTILLE SÉCURITÉ (rattrapage 45, relayée par la coordination, 2026-10-02), MOT POUR MOT : « la route du webhook prend le MÊME verrou que le lanceur ; un passage plus long que la durée de transaction de Prisma (10 min) ne garde jamais le verrou pendant que le travail continue : passage borné, ou verrou de session relâché explicitement ; témoin ».",
+      "acceptance": "Défaut antérieur signalé par la lentille sécurité le 2026-10-01, hors de la PR d'INT-T43, et tranché par la coordination sous délégation : chaque POST du webhook lance `passerLeTravail` dans `after()`, sans verrou, et `aTraiter` lit les lignes `recu` sans les réclamer ; deux webhooks rapprochés peuvent donc dispatcher deux fois le même événement, et, DM-15 branché, verser deux fois une commission. (1) Le passage est EXCLUSIF : soit chaque ligne est réclamée par une écriture conditionnelle (`recu` → état réclamé, une seule écriture gagnante), soit le passage entier prend un verrou consultatif sur le patron du lanceur de GOV-137 ; le choix est écrit dans la PR. La route `src/app/api/webhooks/axionia/route.ts` est comprise : aucun chemin d'appel ne contourne l'exclusion. Une réclamation abandonnée (processus tué) est reprise, jamais perdue. Si le choix exige une valeur d'énumération ou une colonne neuve, la tâche s'arrête et rend un `stop` : elle est déclarée sans schéma. (2) TÉMOIN rouge d'abord, en intégration sur une vraie base : deux passages SIMULTANÉS sur le même événement produisent un seul effet ; un passage tué après réclamation laisse l'événement repris au passage suivant. (3) Relecture OBLIGATOIRE de la lentille sécurité (sensible argent). (4) Condition de mise en service : `PARTNERS_SYNC_ENABLED` reste faux tant que cette tâche n'est pas fusionnée ; la PR qui la livre ajoute cette case à `docs/runbooks/mise-en-service.md`, avant la case d'ouverture du canal, et la cite ; la case est cochée après réception par Williams. NOTE DE LA LENTILLE SÉCURITÉ (rattrapage 45, relayée par la coordination, 2026-10-02), MOT POUR MOT : « la route du webhook prend le MÊME verrou que le lanceur ; un passage plus long que la durée de transaction de Prisma (10 min) ne garde jamais le verrou pendant que le travail continue : passage borné, ou verrou de session relâché explicitement ; témoin ». NOTE D'HARMONISATION (rattrapage 47, coordination, validée par la lentille sécurité ; la citation ci-dessus reste intacte) : « depuis INT-T49, la route ne joue plus de passage : l'exclusion se prouve sur le lanceur seul ; tant qu'INT-T49 n'est pas fusionnée, la route prend le même verrou que le lanceur ».",
       "tests": {
         "REQ-DM-036": [
           "tests/integration/passage-exclusif.spec.ts",
@@ -18833,7 +18882,13 @@
         "docs/tiers/zeptomail.md",
         "tests/unit/integration/relais-zeptomail.spec.ts",
         "tests/fixtures/tiers/",
-        "docs/env.md"
+        "docs/env.md",
+        ".env.example",
+        "tests/unit/qualite/env-fail-fast.spec.ts",
+        "tests/unit/securite/lien-magique-emis-en-production.spec.ts",
+        "docs/runbooks/mise-en-service.md",
+        "scripts/deploiement/provisionner.ts",
+        ".github/workflows/coolify-provisionner.yml"
       ],
       "schema": false,
       "sensible": [
@@ -18851,7 +18906,7 @@
       "externe": null,
       "estimateDays": 0.75,
       "statut": "a_faire",
-      "acceptance": "Trou du plan relevé par l'auteur back en concevant SEC-42, tâche versée par la coordination le 2026-10-01 : aucune tâche ne portait le client HTTP du prestataire d'e-mails. INT-T10 a posé l'émetteur (domaine, DKIM, drapeau DMARC, webhook des rebonds), INT-T40 envoie « par l'émetteur d'INT-T10 », et SEC-42 câble `demanderEnvoi` sur un port de production qui REFUSE ; sans cette tâche, aucun e-mail réel ne part. Relecture OBLIGATOIRE de la lentille sécurité. (1) PRÉALABLE AU CODE : `docs/tiers/zeptomail.md` §2 porte l'URL officielle, la date de lecture, l'extrait cité et l'exemple officiel de la requête (RM-08) ; la PR porte le label `role:documentaliste` pour ce chemin. (2) `src/server/integrations/zeptomail/relais.ts` implémente l'interface `Relais` de l'émetteur : client HTTP, jeton lu dans l'environnement serveur (`src/lib/env.ts`, secret jamais versionné ; sa valeur est un geste de Williams, groupé avec ses secrets de production), réponse réduite au `messageId`. Il remplace, dans `src/server/auth/lien-magique-production.ts`, le port qui refuse posé par SEC-42. (3) Délai borné ; nouvelle tentative idempotente ; un échec rend une erreur NOMMÉE, jamais la sortie brute du prestataire. (4) Aucun jeton, aucun corps de message, aucune adresse dans le journal. (5) REQ-INT-022 reste entière : tant que le drapeau `PARTNERS_EMAIL_DMARC_VERIFIE` est fermé, l'envoi est retenu et rien ne part ; la pose du drapeau est un geste de Williams après le rapport DMARC. (6) TÉMOINS rouges d'abord, dans la portée de `mutation:pr` : `tests/unit/integration/relais-zeptomail.spec.ts`, `fetch` simulé, forme de la requête confrontée à l'exemple de la fiche, délai dépassé, nouvelle tentative sans double envoi, code d'échec fermé, aucun jeton au journal ; la fixture vit sous `tests/fixtures/tiers/` avec sa ligne `Source:` vers la fiche (RM-03, RM-08). (7) Condition de mise en service : `PARTNERS_SYNC_ENABLED` et la mise en service attendent cette tâche fusionnée. `src/lib/env.ts` est aussi déclaré par SEC-14, INT-T12, EXT-T04, EXT-T06 et SEC-44, et `docs/tiers/zeptomail.md` par INT-T40 : jamais dans le même lot. ARBITRAGES A01 (rattrapage 46, mesure de A05, accord de la coordination) : (1) `ZEPTOMAIL_API_URL` est une configuration https au chemin `/v1.1/email`, jugée contre une liste FERMÉE d'hôtes, chacun daté dans `docs/tiers/zeptomail.md` avec sa source : `cpaas.zoho.com` et `api.zeptomail.com` (pages officielles, 2026-10-02) ; `api.zeptomail.eu` (sources TIERCES, non officiel, à confirmer dans « Setup info » de l'agent avant l'allumage — case du runbook) ; toute autre valeur est un refus nommé. (2) `ZEPTOMAIL_SEND_TOKEN` est un secret de `schemaSecrets` (REQ-SEC-028), EXIGÉ au démarrage (REQ-QA-030) seulement si l'envoi réel est allumé, sur le précédent de REQ-CPL-021 : éteint et absent → le relais refuse `relais_non_configure` ; allumé et absent → le démarrage échoue ; un témoin par cas. La fusion ne dépend d'aucun geste de Williams ; le jeton et l'hôte précèdent l'ALLUMAGE. `docs/env.md` est régénéré par `pnpm env:doc` ; `docs/tiers/**` demande le label `role:documentaliste`.",
+      "acceptance": "Trou du plan relevé par l'auteur back en concevant SEC-42, tâche versée par la coordination le 2026-10-01 : aucune tâche ne portait le client HTTP du prestataire d'e-mails. INT-T10 a posé l'émetteur (domaine, DKIM, drapeau DMARC, webhook des rebonds), INT-T40 envoie « par l'émetteur d'INT-T10 », et SEC-42 câble `demanderEnvoi` sur un port de production qui REFUSE ; sans cette tâche, aucun e-mail réel ne part. Relecture OBLIGATOIRE de la lentille sécurité. (1) PRÉALABLE AU CODE : `docs/tiers/zeptomail.md` §2 porte l'URL officielle, la date de lecture, l'extrait cité et l'exemple officiel de la requête (RM-08) ; la PR porte le label `role:documentaliste` pour ce chemin. (2) `src/server/integrations/zeptomail/relais.ts` implémente l'interface `Relais` de l'émetteur : client HTTP, jeton lu dans l'environnement serveur (`src/lib/env.ts`, secret jamais versionné ; sa valeur est un geste de Williams, groupé avec ses secrets de production), réponse réduite au `messageId`. Il remplace, dans `src/server/auth/lien-magique-production.ts`, le port qui refuse posé par SEC-42. (3) Délai borné ; nouvelle tentative idempotente ; un échec rend une erreur NOMMÉE, jamais la sortie brute du prestataire. (4) Aucun jeton, aucun corps de message, aucune adresse dans le journal. (5) REQ-INT-022 reste entière : tant que le drapeau `PARTNERS_EMAIL_DMARC_VERIFIE` est fermé, l'envoi est retenu et rien ne part ; la pose du drapeau est un geste de Williams après le rapport DMARC. (6) TÉMOINS rouges d'abord, dans la portée de `mutation:pr` : `tests/unit/integration/relais-zeptomail.spec.ts`, `fetch` simulé, forme de la requête confrontée à l'exemple de la fiche, délai dépassé, nouvelle tentative sans double envoi, code d'échec fermé, aucun jeton au journal ; la fixture vit sous `tests/fixtures/tiers/` avec sa ligne `Source:` vers la fiche (RM-03, RM-08). (7) Condition de mise en service : `PARTNERS_SYNC_ENABLED` et la mise en service attendent cette tâche fusionnée. `src/lib/env.ts` est aussi déclaré par SEC-14, INT-T12, EXT-T04, EXT-T06 et SEC-44, et `docs/tiers/zeptomail.md` par INT-T40 : jamais dans le même lot. ARBITRAGES A01 (rattrapage 46, mesure de A05, accord de la coordination) : (1) `ZEPTOMAIL_API_URL` est une configuration https au chemin `/v1.1/email`, jugée contre une liste FERMÉE d'hôtes, chacun daté dans `docs/tiers/zeptomail.md` avec sa source : `cpaas.zoho.com` et `api.zeptomail.com` (pages officielles, 2026-10-02) ; `api.zeptomail.eu` (sources TIERCES, non officiel, à confirmer dans « Setup info » de l'agent avant l'allumage — case du runbook) ; toute autre valeur est un refus nommé. (2) `ZEPTOMAIL_SEND_TOKEN` est un secret de `schemaSecrets` (REQ-SEC-028), EXIGÉ au démarrage (REQ-QA-030) seulement si l'envoi réel est allumé, sur le précédent de REQ-CPL-021 : éteint et absent → le relais refuse `relais_non_configure` ; allumé et absent → le démarrage échoue ; un témoin par cas. La fusion ne dépend d'aucun geste de Williams ; le jeton et l'hôte précèdent l'ALLUMAGE. `docs/env.md` est régénéré par `pnpm env:doc` ; `docs/tiers/**` demande le label `role:documentaliste`. PRÉCISIONS (rattrapage 47, mesures de A05, note de la lentille sécurité) : le jeton vit dans un schéma à part, `schemaSecretsConditionnels` (mêmes règles que les secrets, hors du type `Secrets` lu par `mcp/porte.ts`) ; le drapeau d'allumage de l'envoi réel est `PARTNERS_EMAIL_DMARC_VERIFIE` (seule porte vers le relais : `emetteur.ts` retient `retenu_dmarc_non_verifie` sinon), motif de démarrage `requise_envoi_actif` ; le provisionnement pose un secret conditionnel PRÉSENT comme secret, jamais comme `vars` (REQ-INT-031). La case du runbook : hôte relevé dans « Setup info », daté dans la fiche, IDENTIQUE à `ZEPTOMAIL_API_URL`, et dont le pays CONCORDE avec `{mentionTransfert}` de JUR-T09 — dans la même case. Le témoin de SEC-42 qui nommait `relaisDeProduction` devient « le relais réel sans sa configuration refuse `relais_non_configure` ». CONDITIONS DE LA LENTILLE SÉCURITÉ (rattrapage 47, mot pour mot) : « Le jeton part dans l'en-tête `Authorization` de la requête, jamais dans l'URL, un paramètre ou le corps ; TÉMOIN : la requête confrontée à l'exemple de la fiche ne porte le jeton que dans cet en-tête. Le jeton d'envoi de Partners est PROPRE à Partners (agent ou clé distincts de ceux d'axion-ia), pour qu'une fuite de l'un ne donne pas l'envoi de l'autre ; case du runbook. »",
       "tests": {
         "REQ-INT-022": [
           "tests/unit/integration/relais-zeptomail.spec.ts"
@@ -18920,6 +18975,37 @@
       "tests": {
         "REQ-JUR-003": [
           "tests/unit/contrat/contract-template-complete.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "GOV-140",
+      "titre": "La sortie d'une garde lue par un pipe arrive entière : aucun script de garde ne fait console.log puis process.exit immédiat",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "scripts/gates/gov-inventaire.ts",
+        "tests/unit/gouvernance/sortie-des-gardes-entiere.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [],
+      "reqs": [
+        "REQ-GOV-026",
+        "REQ-QA-013"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.25,
+      "statut": "a_faire",
+      "acceptance": "Diagnostic A01 du 2026-10-02, tâche BLOQUANTE (hors gel de la gouvernance) validée par la coordination : #384 et #372 rougissaient sur `tests/unit/gouvernance/inventaire-prouve.spec.ts` (« Expected ',' or ']' after array element in JSON at position 146080 ») alors que le test est vert en local. `scripts/gates/gov-inventaire.ts`, mode `--rapport`, fait `console.log(JSON.stringify(…))` puis `process.exit(0)` aussitôt : sur Linux, une sortie vers un PIPE est asynchrone et `process.exit` coupe le dernier morceau (le rapport dépasse 146 Ko et grossit avec le registre) ; sous Windows le pipe est synchrone, d'où le vert local. (1) Le mode `--rapport` écrit sa charge par `process.stdout.write(…, rappel)` et ne sort qu'une fois l'écriture vidée (ou pose `process.exitCode` sans `process.exit`). (2) TÉMOIN : le rapport lu par un pipe (`spawnSync` sans fichier) est un JSON complet dont la longueur égale celle de l'écriture ; il rougit sur l'ancien code quand la sortie dépasse la taille du tampon du pipe (un rapport gonflé artificiellement, ou un écrivain de démonstration). (3) BALAYAGE : aucun autre script de `scripts/gates/` (ni de `scripts/lot/`) ne fait `console.log`/`process.stdout.write` d'une sortie potentiellement grosse suivi d'un `process.exit` synchrone ; le témoin balaie ces répertoires et nomme tout fichier fautif ; chaque fichier corrigé entre aux `paths` (rattrapage ou entrée de cette PR). La PR verse cette tâche elle-même (`verser-tache`, label `role:gardien-spec`) et fusionne AVANT #384 et #372, qui se mettent ensuite à jour.",
+      "tests": {
+        "REQ-GOV-026": [
+          "tests/unit/gouvernance/sortie-des-gardes-entiere.spec.ts"
+        ],
+        "REQ-QA-013": [
+          "tests/unit/gouvernance/sortie-des-gardes-entiere.spec.ts"
         ]
       }
     }
