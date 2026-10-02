@@ -71,6 +71,15 @@ jobs:
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: pnpm }
+      # QA-T59. Le cache des navigateurs des passes d accessibilite, AVANT toute commande (une
+      # action qui suit une commande peut reecrire l arbre que les gardes mesurent). Sa CLE derive
+      # du verrou, qui epingle Playwright (RM-01) : aucune version ecrite ici, aucune commande pour
+      # la lire ; une montee de dependance refroidit le cache une fois, jamais un navigateur perime.
+      - name: Cache des navigateurs des passes d accessibilite
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: navigateurs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
       - run: pnpm install --frozen-lockfile
       # GOV-123, REQ-GOV-032. Les vues derivees ne sont plus commitees : elles se RENDENT ici,
       # avant toute etape qui en lit une, puis une seconde fois pour que deux rendus identiques
@@ -443,8 +452,16 @@ jobs:
       # UX-P0-03, REQ-UX-017. Les passes d accessibilite de `tests/a11y/` tournent DANS `pnpm test`
       # et pilotent un vrai navigateur : WebKit pour le profil iPhone, Chromium pour le bureau. Sans
       # eux, la suite rougirait sur une absence d outil, pas sur une faute. Avant `Tests`, donc.
+      # QA-T59. Cette etape est restee bloquee plus de 25 min : un telechargement qui ne repond plus
+      # immobilisait toute la porte A. `scripts/ci/navigateurs-bornes.ts` tente trois fois au plus,
+      # chaque tentative tuee a quatre minutes ; si toutes echouent, l etape ECHOUE — une nouvelle
+      # tentative, jamais un vert de complaisance ; `timeout-minutes` borne l etape entiere. Un script
+      # du depot, sous une forme fermee (REQ-GOV-018) ; `pnpm pre-gate` le classe lent. Le cache des
+      # navigateurs est en tete du job. Temoins : `tests/unit/qualite/ci-navigateurs-a11y.spec.ts` et
+      # `tests/unit/qualite/navigateurs-bornes.spec.ts`.
       - name: Navigateurs des passes d accessibilite
-        run: pnpm a11y:navigateurs
+        timeout-minutes: 15
+        run: pnpm a11y:navigateurs:bornes
       # `pnpm test` a besoin du jeton pour la MEME raison que l etape `gov:etat` ci-dessous :
       # `plan-state-frais.spec.ts` et `une-tache-un-owner.spec.ts` lancent la garde contre le depot
       # REEL, et elle echoue quand elle ne peut pas lire la forge — c est ce qu on lui demande.
