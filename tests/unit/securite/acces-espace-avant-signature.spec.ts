@@ -327,11 +327,12 @@ function appelDe(n: ts.Node): ts.CallExpression | null {
 }
 
 /**
- * Un énoncé admis AVANT la garde : la SEULE lecture du cookie de session par `cookies()`, avec
- * l'extraction de sa valeur (décision de la lentille sécurité, 2026-10-02). Une déclaration, dont
- * toute attente est `await cookies()`, et qui ne lit AUCUN paramètre de la fonction (`params`,
- * `searchParams`, le `FormData`, la requête). `headers()` n'est pas admis : la session est un cookie
- * httpOnly.
+ * Un énoncé admis AVANT la garde (décisions de la lentille sécurité, 2026-10-02) : une déclaration
+ * qui ne fait que (a) LIRE le cookie de session par `cookies()` et en extraire la valeur, ou
+ * (b) appeler une fabrique de câblage de la liste fermée, à arguments littéraux, `process.env` ou
+ * importés. Toute attente autre que `await cookies()`, tout autre appel (même non attendu), et toute
+ * lecture d'un paramètre de la fonction (`params`, `searchParams`, le `FormData`, la requête) est une
+ * faute. `headers()` n'est pas admis : la session est un cookie httpOnly.
  */
 function admisAvantLaGarde(n: ts.Node, fn: Fonction): boolean {
   if (!ts.isVariableStatement(n)) return false;
@@ -341,19 +342,101 @@ function admisAvantLaGarde(n: ts.Node, fn: Fonction): boolean {
       ? [b.text]
       : b.elements.flatMap((e) => (ts.isOmittedExpression(e) ? [] : noms(e.name)));
   const parametres = new Set(fn.parameters.flatMap((p) => noms(p.name)));
+  const importes = nomsImportes(fn.getSourceFile());
   let admis = true;
   const visiter = (x: ts.Node): void => {
-    if (ts.isAwaitExpression(x)) {
-      const c = x.expression;
-      const estCookies =
-        ts.isCallExpression(c) && ts.isIdentifier(c.expression) && c.expression.text === 'cookies';
-      if (!estCookies) admis = false;
-    }
+    if (ts.isAwaitExpression(x) && !estCookies(x.expression)) admis = false;
     if (ts.isIdentifier(x) && parametres.has(x.text)) admis = false;
+    // Tout APPEL, attendu ou non, est une faute — sauf `cookies()`, le `.get(…)` de son résultat,
+    // et une fabrique de câblage de la liste fermée, à arguments admis.
+    if (ts.isCallExpression(x)) {
+      const c = x.expression;
+      const lectureDuCookie =
+        ts.isPropertyAccessExpression(c) &&
+        c.name.text === 'get' &&
+        estCookies(sansEnveloppe(c.expression));
+      const fabrique = ts.isIdentifier(c) && FABRIQUES_DE_CABLAGE.includes(c.text);
+      if (!estCookies(x) && !lectureDuCookie && !fabrique) admis = false;
+      if ((lectureDuCookie || fabrique) && !x.arguments.every((a) => argumentAdmis(a, importes))) {
+        admis = false;
+      }
+    }
     ts.forEachChild(x, visiter);
   };
   visiter(n);
   return admis;
+}
+
+/**
+ * Les fabriques de câblage admises avant la garde, liste FERMÉE (décision de la lentille sécurité,
+ * 2026-10-02) : elles assemblent des ports, elles ne lisent ni la requête, ni la base, ni le réseau.
+ */
+const FABRIQUES_DE_CABLAGE: readonly string[] = ['portsDuProcessus', 'dependancesDuProcessus'];
+
+/** `cookies()`, sans argument. */
+const estCookies = (e: ts.Node): boolean =>
+  ts.isCallExpression(e) &&
+  ts.isIdentifier(e.expression) &&
+  e.expression.text === 'cookies' &&
+  e.arguments.length === 0;
+
+/** L'expression sous ses parenthèses et ses `await`. */
+function sansEnveloppe(e: ts.Expression): ts.Expression {
+  let x = e;
+  while (ts.isParenthesizedExpression(x) || ts.isAwaitExpression(x)) x = x.expression;
+  return x;
+}
+
+/** Les noms qu'un fichier importe. */
+function nomsImportes(f: ts.SourceFile): Set<string> {
+  const vus = new Set<string>();
+  for (const s of f.statements) {
+    if (!ts.isImportDeclaration(s) || s.importClause === undefined) continue;
+    const c = s.importClause;
+    if (c.name) vus.add(c.name.text);
+    const b = c.namedBindings;
+    if (b && ts.isNamespaceImport(b)) vus.add(b.name.text);
+    if (b && ts.isNamedImports(b)) for (const e of b.elements) vus.add(e.name.text);
+  }
+  return vus;
+}
+
+/**
+ * Un argument admis d'une fabrique ou de la lecture du cookie : un littéral, `process.env…`, un nom
+ * importé (ou une propriété d'un nom importé), un objet de tels arguments, ou une fabrique admise.
+ */
+function argumentAdmis(e: ts.Expression, importes: Set<string>): boolean {
+  if (
+    ts.isStringLiteral(e) ||
+    ts.isNumericLiteral(e) ||
+    ts.isNoSubstitutionTemplateLiteral(e) ||
+    e.kind === ts.SyntaxKind.TrueKeyword ||
+    e.kind === ts.SyntaxKind.FalseKeyword ||
+    e.kind === ts.SyntaxKind.NullKeyword
+  ) {
+    return true;
+  }
+  if (ts.isIdentifier(e)) return importes.has(e.text);
+  if (ts.isPropertyAccessExpression(e)) {
+    let racine: ts.Expression = e;
+    while (ts.isPropertyAccessExpression(racine)) racine = racine.expression;
+    return ts.isIdentifier(racine) && (racine.text === 'process' || importes.has(racine.text));
+  }
+  if (ts.isObjectLiteralExpression(e)) {
+    return e.properties.every((p) =>
+      ts.isPropertyAssignment(p)
+        ? argumentAdmis(p.initializer, importes)
+        : ts.isShorthandPropertyAssignment(p) && importes.has(p.name.text)
+    );
+  }
+  if (ts.isCallExpression(e)) {
+    return (
+      ts.isIdentifier(e.expression) &&
+      FABRIQUES_DE_CABLAGE.includes(e.expression.text) &&
+      e.arguments.every((a) => argumentAdmis(a, importes))
+    );
+  }
+  return false;
 }
 
 /** La faute d'UNE fonction exportée, ou `null` : son premier acte est la garde, pour SON segment. */
@@ -560,6 +643,30 @@ describe('REQ-SEC-032 — sur le disque, chaque page, route et action de l’esp
       /^pas_premier_acte mon-contrat\/actions\.ts#signer$/,
     ],
     [
+      'un `ecrire()` NON attendu avant la garde',
+      'mon-contrat/actions.ts',
+      "'use server';\nexport async function signer() { const x = ecrire(); return actionEspace('mon-contrat', j, p, async () => 1); }",
+      /^pas_premier_acte mon-contrat\/actions\.ts#signer$/,
+    ],
+    [
+      'un `lireLaPolitique()` avant la garde',
+      'conformite/page.tsx',
+      "export default async function P() { const t = lireLaPolitique(); const v = await exigerSessionPour('conformite', j, p); }",
+      /^pas_premier_acte conformite\/page\.tsx#default$/,
+    ],
+    [
+      'une fabrique HORS de la liste fermée avant la garde',
+      'mon-contrat/actions.ts',
+      "'use server';\nimport { construirePorts } from './ports';\nexport async function signer() { const ports = construirePorts(); return actionEspace('mon-contrat', j, ports, async () => 1); }",
+      /^pas_premier_acte mon-contrat\/actions\.ts#signer$/,
+    ],
+    [
+      'une fabrique de la liste, mais nourrie d’un paramètre',
+      'mon-contrat/actions.ts',
+      "'use server';\nexport async function signer(formulaire: FormData) { const ports = portsDuProcessus(formulaire); return actionEspace('mon-contrat', j, ports, async () => 1); }",
+      /^pas_premier_acte mon-contrat\/actions\.ts#signer$/,
+    ],
+    [
       'un export INDIRECT dans un module d’actions',
       'mon-contrat/actions.ts',
       "'use server';\nimport { telecharger } from './ailleurs';\nexport { telecharger };",
@@ -579,6 +686,11 @@ describe('REQ-SEC-032 — sur le disque, chaque page, route et action de l’esp
       'une action enveloppée',
       'mon-contrat/actions.ts',
       "'use server';\nexport async function signer() { return actionEspace('mon-contrat', j, p, async () => 1); }",
+    ],
+    [
+      'une action qui lit le cookie et câble ses ports par les fabriques de la liste, puis s’enveloppe',
+      'mon-contrat/actions.ts',
+      "'use server';\nimport { after } from 'next/server';\nimport { COOKIE } from './session';\nexport async function signer(formulaire: FormData) { const jeton = (await cookies()).get(COOKIE.nom)?.value; const ports = portsDuProcessus(dependancesDuProcessus({ apres: after, env: process.env })); return actionEspace('mon-contrat', jeton, ports.session, async () => formulaire.get('a')); }",
     ],
     [
       'un module d’actions dont CHAQUE export est enveloppé',
