@@ -121,6 +121,16 @@ async function refus(p: Promise<unknown>): Promise<string> {
   throw new Error('aucun refus');
 }
 
+/**
+ * Une violation d'unicité : Prisma la rapporte par les COLONNES de l'index (P2002), parfois par son
+ * nom — les deux formes désignent le même index, puisque `(siren)` seul et `(siren, rang_attente)`
+ * n'ont chacun qu'un index unique sur la table (le premier `describe` le prouve sur `pg_indexes`).
+ */
+const UNIQUE_OCCUPANT =
+  /attributions_un_occupant|Unique constraint failed on the fields: \(`siren`\)/;
+const UNIQUE_RANG =
+  /attributions_en_attente|Unique constraint failed on the fields: \(`siren`,`rang_attente`\)/;
+
 async function definitions(): Promise<string[]> {
   const l = await base.prisma.$queryRawUnsafe<{ indexdef: string }[]>(
     "SELECT indexdef FROM pg_indexes WHERE schemaname = 'public' AND tablename = 'attributions' ORDER BY indexname"
@@ -156,7 +166,7 @@ describe('REQ-DM-003 — l’index occupant de `attributions`, lu dans pg_indexe
     await inserer({ siren, statut: ETATS_OCCUPANTS[0] });
     expect(
       await refus(inserer({ siren, statut: ETATS_OCCUPANTS[1], apporteurId: apporteurB }))
-    ).toMatch(/attributions_un_occupant/);
+    ).toMatch(UNIQUE_OCCUPANT);
     await expect(
       inserer({ siren, statut: 'perdue', apporteurId: apporteurB })
     ).resolves.toBeDefined();
@@ -176,7 +186,7 @@ describe('REQ-DM-004 — la file : deux rangs au plus par SIREN', () => {
     await inserer({ siren, statut: 'en_attente', rangAttente: 1 });
     await inserer({ siren, statut: 'en_attente', rangAttente: 2, apporteurId: apporteurB });
     expect(await refus(inserer({ siren, statut: 'en_attente', rangAttente: 2 }))).toMatch(
-      /attributions_en_attente/
+      UNIQUE_RANG
     );
     expect(await refus(inserer({ siren, statut: 'en_attente', rangAttente: 3 }))).toMatch(
       /attributions_rang_attente/
@@ -215,10 +225,10 @@ describe('REQ-DM-005 — l’horloge du dépôt est celle de la base, sous le ve
     // d'écrire. Le second, lancé pendant que le premier tient le verrou, attend sa fin.
     const deposer = (statut: string, apporteurId: string, pause: number) =>
       base.prisma.$transaction(async (tx) => {
-        await tx.$queryRawUnsafe('SELECT pg_advisory_xact_lock(hashtext($1))', siren);
+        await tx.$executeRawUnsafe('SELECT pg_advisory_xact_lock(hashtext($1))', siren);
         const l = await inserer({ siren, statut, apporteurId }, tx);
         ordre.push(l);
-        await tx.$queryRawUnsafe(`SELECT pg_sleep(${pause})`);
+        await tx.$executeRawUnsafe(`SELECT pg_sleep(${pause})`);
       });
     const premier = deposer('perdue', apporteurA, 0.3);
     await new Promise((r) => setTimeout(r, 50));
@@ -375,7 +385,7 @@ describe('REQ-DM-048 — le porteur exclusif (W19)', () => {
         await inserer(d1, tx);
         return refus(inserer(d2, tx));
       });
-      expect(message).toMatch(/attributions_un_occupant/);
+      expect(message).toMatch(UNIQUE_OCCUPANT);
     }
     const [etat] = await base.prisma.$queryRawUnsafe<{ actif: boolean }[]>(
       `SELECT tgenabled <> 'D' AS actif FROM pg_trigger WHERE tgname = 'attributions_porteur_conseiller'`
