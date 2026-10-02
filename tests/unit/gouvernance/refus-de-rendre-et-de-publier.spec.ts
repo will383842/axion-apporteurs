@@ -877,6 +877,13 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
         'est vu sortir en 0 sur le dépôt dans la même spec ; ⛔ ce témoin d’effet ne vit pas dans ' +
         '`REFUS`. Dette DÉCLARÉE.',
     },
+    'scripts/ci/navigateurs-bornes.ts': {
+      total: 1,
+      porte: 1,
+      temoins: 0,
+      raison:
+        'QA-T59 — REQ-QA-016, l installation bornee des navigateurs des passes a11y. `process.exitCode` pose sur 1 quand les trois tentatives echouent, sinon 0. Le coeur pur est vu par navigateurs-bornes.spec.ts ; aucun temoin ne vit dans `REFUS`. N importe pas `fichiersSuivisOuRefus`. Dette DECLAREE.',
+    },
     'scripts/deploiement/provisionner.ts': {
       total: 2,
       porte: 2,
