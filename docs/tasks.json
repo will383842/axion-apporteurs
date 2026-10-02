@@ -17740,7 +17740,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "Écart C4 de la vérification de bout en bout (GOV-131, VERIF-1-RAPPORT.md), versé sur demande de la coordination, en tête du lot 2, AVANT tout événement d'argent : la réception n'applique pas les `$defs` fermés du contrat (`payload: z.record(unknown)`) ; un payload hors schéma (champ en trop, montant en chaîne, montant négatif) est accepté 200, marqué `sent` côté axion-ia, et jamais rejoué. (1) TÉMOIN rouge d'abord : un `candidature.recue` signé portant `payload.champIntrus` est refusé 422 `hors_schema` ; de même un montant en chaîne. (2) La validation porte sur `#/$defs/payload_<type>` du contrat publié, après `enveloppeReconnue`, et seulement si `schema_version === SCHEMA_VERSION`. (3) Un payload conforme reste accepté (contre-témoin). Relecture de la lentille securite exigée. (4) Condition de la lentille securite : un événement mis en attente (`held`) pour une autre `schema_version`, puis rejoué après une montée de version, passe par la MÊME validation des `$defs`. TÉMOIN : un tel événement hors schéma, rejoué après la montée, est refusé `hors_schema`. CONDITION DE LA LENTILLE SÉCURITÉ (rattrapage 45, relayée par la coordination, 2026-10-01), MOT POUR MOT : « Au rejeu d'un `held`, la validation juge la charge conservée contre le `$defs` du type PRIVÉ des `CHAMPS_NON_CONSERVES` (retirés des propriétés et de `required`), sans jamais les réintroduire ; TÉMOIN : un `held` conforme, conservé sans `utm`, est rejoué et accepté. » Motif : `utm` est requis par `payload_candidature_recue` mais n'est plus conservé depuis INT-T44 ; une validation naïve refuserait en `hors_schema` toute `candidature.recue` en attente. INT-T45 dépend d'INT-T44 (même `reception.ts`). DÉCISION DE LA COORDINATION (rattrapage 46, 2026-10-02, sur mesure de A05) : le `$defs` v2 publié n'a aucun `minimum` (les montants y sont `{\"type\":\"integer\"}`) ; un montant NÉGATIF n'est donc refusé qu'à partir de la v3, qui porte le minimum (INT-T46-P) — trou connu, jamais ouvert sur des données réelles (le minimum est préalable à `PARTNERS_SYNC_ENABLED` et à DM-15). Une règle propre à la réception serait un schéma retapé hors du contrat (RM-01) : écartée. Témoins : `tests/unit/integration/reception-hors-schema.spec.ts` en processus ; les témoins de SEC-06 (`webhook-signature.spec.ts`, `webhook.spec.ts`, `webhook-verdicts.spec.ts`) envoient désormais la charge du producteur réel, refusée à juste titre quand elle est factice, sans changer ce qu'ils prouvent.",
       "tests": {
         "REQ-INT-003": [
@@ -17751,7 +17751,16 @@
           "tests/integration/reception-hors-schema.spec.ts",
           "tests/unit/integration/reception-hors-schema.spec.ts"
         ]
-      }
+      },
+      "branch": "t/int-t45",
+      "owner": "A05",
+      "pr": 388,
+      "attestation": {
+        "pr": 388,
+        "sha": "544d76ab849413207c444686194f967a62368501",
+        "fusionneeAt": "2026-10-02T00:20:00Z"
+      },
+      "motif": null
     },
     {
       "id": "QA-T55",
@@ -18968,7 +18977,8 @@
         "docs/env.md",
         "docs/runbooks/mise-en-service.md",
         ".github/workflows/coolify-provisionner.yml",
-        "scripts/deploiement/provisionner.ts"
+        "scripts/deploiement/provisionner.ts",
+        "tests/unit/qualite/env-fail-fast.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -19126,7 +19136,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.75,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "Écart du plan relevé par l'auteur écrans (A06) en livrant UX-P1-19, versé par la coordination le 2026-10-01 : l'éditeur de grille (UX-P1-14) et la saisie manuelle avec pièce jointe CV (EXT-T04) sont des écrans de console sans aucune maquette déclarée. Patron UX-P1-19, label `role:ux-redaction`. (1) Les deux maquettes, en 1280×800 et 375×667, avec leurs cinq états, dans les deux thèmes, et une micro-copy de console proposée ; en-têtes filtrés par rôle comme UX-P1-18. (2) Leurs lignes dans `VALIDATION.md` (section « Console »), nommant UX-P1-14 et EXT-T04 ; leurs routes dans `CONSOLE-ROUTES.md` ; leurs cartes dans `index.html` ; leurs états vides dans `etats-vides.ts` (ux-exhaustivite). (3) Les comptes figés de `maquettes-validees.spec.ts` changent, et eux seuls : chacun est nommé avant → après dans la PR, la logique du test est inchangée. (4) TÉMOIN rouge d'abord : chaque maquette existe, a sa ligne de validation et sa route. (5) La validation de Williams est une étape de cette acceptance, pas un préalable : elle est groupée avec la séance déjà prévue (deposer.html, mes-entreprises.html, « Appel de contrôle »). UX-P1-14 et EXT-T04 en dépendent.",
       "tests": {
         "REQ-UX-047": [
@@ -19135,7 +19145,16 @@
         "REQ-UX-018": [
           "tests/unit/console/maquettes-grille-et-saisie.spec.ts"
         ]
-      }
+      },
+      "branch": "t/ux-p1-46",
+      "owner": "A06",
+      "pr": 407,
+      "attestation": {
+        "pr": 407,
+        "sha": "ba1132ee3e1c5bf5474b68807a89ea966e5e9770",
+        "fusionneeAt": "2026-10-02T17:56:38Z"
+      },
+      "motif": null
     },
     {
       "id": "INT-T56",
@@ -20292,7 +20311,7 @@
       "externe": null,
       "estimateDays": 0.5,
       "statut": "a_faire",
-      "acceptance": "Extraite de DM-11 au rattrapage 55 (arbitrage A01 sur l'avis d'A02 : de VRAIS enums, ADR-0022 §5 et §16, et PAS de colonne texte d'attente, dont la conversion ne serait pas additive). Les deux colonnes `apporteurs.qualite_exercice` et `apporteurs.profession_reglementee` (nullables) entrent AVEC leur enum dans une migration additive. (1) `QualiteExercice`, liste FERMÉE d'A07 (2026-10-02) : `commercant` « commerçant », `societe_commerciale` « société commerciale », `artisan` « artisan », `profession_liberale` « professionnel libéral » ; les deux premières rendent applicable la clause attributive de juridiction (art. 48 CPC), les deux autres renvoient au droit commun (TÉMOIN qui le fige) ; « micro-entrepreneur » n’est pas une valeur (un régime, pas une qualité), et la liste est FERMÉE à ces quatre valeurs (motifs d’A07 hors dépôt). LA PR ATTEND LA VALIDATION DE CETTE LISTE PAR WILLIAMS (avis d'A02) : la tâche peut se coder. (2) `ProfessionReglementee` : les noms d'ADR-0022 §16, `expertise_comptable`, `auxiliaire_services_financiers`, `intermediaire_assurance` (codes NAF 69.20Z, 66.19B, 66.22Z, HYP-JUR-PROF-REGLEMENTEES), liste figée par un TÉMOIN. (3) Glossaire §4 : les deux enums, sans synonymes interdits. Auteur : A05. Lentilles schema (A02) et A07.",
+      "acceptance": "Extraite de DM-11 au rattrapage 55 (arbitrage A01 sur l'avis d'A02 : de VRAIS enums, ADR-0022 §5 et §16, et PAS de colonne texte d'attente, dont la conversion ne serait pas additive). Les deux colonnes `apporteurs.qualite_exercice` et `apporteurs.profession_reglementee` (nullables) entrent AVEC leur enum dans une migration additive. (1) `QualiteExercice`, liste FERMÉE d'A07 (2026-10-02) : `commercant` « commerçant », `societe_commerciale` « société commerciale », `artisan` « artisan », `profession_liberale` « professionnel libéral » ; les deux premières rendent applicable la clause attributive de juridiction (art. 48 CPC), les deux autres renvoient au droit commun (TÉMOIN qui le fige) ; « micro-entrepreneur » n’est pas une valeur (un régime, pas une qualité), et la liste est FERMÉE à ces quatre valeurs (motifs d’A07 hors dépôt). Question SOLDÉE (rattrapage 67) : la décision de Williams du 2026-10-02 sur l'avis d'A07 garde `QualiteExercice` à ces quatre valeurs ; le statut juridique est une liste distincte, rangée dans ces qualités (DM-56). (2) `ProfessionReglementee` : les noms d'ADR-0022 §16, `expertise_comptable`, `auxiliaire_services_financiers`, `intermediaire_assurance` (codes NAF 69.20Z, 66.19B, 66.22Z, HYP-JUR-PROF-REGLEMENTEES), liste figée par un TÉMOIN. (3) Glossaire §4 : les deux enums, sans synonymes interdits. Auteur : A05. Lentilles schema (A02) et A07.",
       "tests": {
         "REQ-JUR-022": [
           "tests/unit/domaine/qualite-et-profession.spec.ts"
@@ -21009,6 +21028,72 @@
       "tests": {
         "REQ-INT-012": [
           "axionia/src/server/partners-sync/__tests__/relecture-contrat-v3.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "DM-56",
+      "titre": "Le statut juridique de l'apporteur devient une liste fermée rangée dans sa qualité, et le KYC refuse par motif nommé",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "domaine",
+      "paths": [
+        "prisma/schema.prisma",
+        "prisma/migrations/",
+        "docs/GLOSSAIRE.md",
+        "src/domain/kyc/statut-juridique.ts",
+        "src/domain/kyc/admission.ts",
+        "tests/unit/domaine/statut-juridique.spec.ts",
+        "tests/unit/domaine/kyc-admission.spec.ts"
+      ],
+      "schema": true,
+      "sensible": [],
+      "deps": [
+        "DM-11",
+        "DM-50"
+      ],
+      "reqs": [
+        "REQ-DM-065",
+        "REQ-JUR-063"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.75,
+      "statut": "a_faire",
+      "acceptance": "Versée au rattrapage 67 sur la décision de Williams du 2026-10-02 (« ok donc rajoute tous les statuts autorisés »), selon l'avis d'A07 du même jour (hors dépôt), relayée par la coordination. Elle vient APRÈS DM-11 (pièces KYC) et DM-50 (enum `QualiteExercice`). (1) `StatutJuridique`, un vrai enum dans une migration additive (ADR-0022 §5) : `micro_entrepreneur`, `entrepreneur_individuel`, `sarl`, `eurl`, `sas`, `sasu`, `sa`, `snc`. Il alimente `{{APPORTEUR_STATUT}}` par son libellé du glossaire. (2) La correspondance vers `QualiteExercice` est une fonction pure : les six sociétés donnent `societe_commerciale` ; `micro_entrepreneur` et `entrepreneur_individuel` donnent la qualité de l'activité déclarée (`commercant`, `artisan` ou `profession_liberale`). Un TÉMOIN fige la liste et la correspondance. `QualiteExercice` reste à quatre valeurs (DM-50). (3) L'admission refuse avec trois motifs NOMMÉS, chacun avec son témoin : `siren_inactif`, `lien_avec_la_societe` (salarié, dirigeant ou associé d'Axion-IA : déclaration à l'inscription et contrôle croisé de REQ-CPL-030), `statut_hors_liste`. (4) Professions réglementées : le signal bloquant de REQ-JUR-022 reste inchangé ; on y ajoute l'EXCLUSION D'OFFICE des avocats, notaires, commissaires de justice et professions de santé, par une liste de codes NAF arrêtée par A07 et figée par un témoin, sous le motif nommé `profession_exclue`. (5) Le portage salarial et l'entrepreneur-salarié de coopérative ne sont pas des valeurs : ils relèvent de la phase 2, car ils changent qui signe et qui facture. Auteur : A05. Lentilles schema (A02) et A07.",
+      "tests": {
+        "REQ-DM-065": [
+          "tests/unit/domaine/statut-juridique.spec.ts"
+        ],
+        "REQ-JUR-063": [
+          "tests/unit/domaine/kyc-admission.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "JUR-T55",
+      "titre": "Art. 23 : l'Apporteur déclare n'être tenu envers aucun employeur d'une obligation qui lui interdirait le contrat",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "juridique",
+      "paths": [
+        "docs/contrat/CONTRAT-APPORTEUR-V1.md",
+        "tests/unit/contrat/declaration-employeur-art-23.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [],
+      "reqs": [
+        "REQ-JUR-064"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.25,
+      "statut": "a_faire",
+      "acceptance": "Versée au rattrapage 67 sur l'avis d'A07 du 2026-10-02, retenu par la décision de Williams du même jour, relayée par la coordination. Texte d'A07, une phrase et rien d'autre, ajoutée aux déclarations de l'Apporteur (art. 23) : « L'Apporteur déclare n'être tenu envers aucun employeur d'une obligation qui lui interdirait le présent contrat. » Le texte reste une PROPOSITION, non en vigueur, tant que Williams ne l'a pas validé. Cette validation est une étape de cette acceptance, pas un préalable : la tâche reste éligible pour produire ce qu'il validera. TÉMOIN (écrit par A05, pas par l'autrice) : le gabarit rendu porte la phrase exacte, une seule fois, à l'art. 23. Autrice : A07 ; sa relecture revient donc à la suppléante (REQ-JUR-036).",
+      "tests": {
+        "REQ-JUR-064": [
+          "tests/unit/contrat/declaration-employeur-art-23.spec.ts"
         ]
       }
     }
