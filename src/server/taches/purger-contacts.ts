@@ -4,9 +4,9 @@
  * effacement ne peut pas attendre la phase 3.
  *
  * DEUX PIÈCES, décision A02 du 2026-10-02 :
- *   — `echeanceDePurge(statut, dateDeReference)`, PURE : la transition (DM-08) l'appelle pour poser
+ *   — `echeanceDePurge(statut, dateDeReference)`, PURE : la transition de la machine à états l'appelle pour poser
  *     `purge_contact_at` ; les durées sont lues dans `SEUILS` (sous-module `retention.ts`), jamais
- *     retapées. Avant DM-08, aucune transition n'existe : `purge_contact_at` reste nul, et la tâche ne
+ *     retapées. Avant cette machine, aucune transition n'existe : `purge_contact_at` reste nul, et la tâche ne
  *     trouve rien, ce qui est exact ;
  *   — `purgerLesContacts`, la tâche planifiée : elle SÉLECTIONNE `purge_contact_at <= maintenant` et
  *     `contact_purge_at` nul, efface le contact, pose `contact_purge_at` et écrit l'événement

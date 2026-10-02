@@ -3,7 +3,7 @@
  * La purge planifiée du contact d'une attribution, en base RÉELLE (REQ-DM-031, HYP-RGPD-RETENTION).
  *
  * L'échéance `purge_contact_at` est SEMÉE directement (sous, pile et au-delà de l'instant) : c'est la
- * transition (DM-08) qui la posera en appelant `echeanceDePurge`. Ici, on juge la tâche :
+ * transition de la machine à états qui la posera en appelant `echeanceDePurge`. Ici, on juge la tâche :
  *   — sous l'échéance, rien ; pile et au-delà, le contact est effacé et UN événement est écrit, dans
  *     la même transaction ; SIREN, horodatage du dépôt et `lien_interet_declare` restent ;
  *   — une occupante NON convertie garde son contact, même échéance passée ; une convertie le perd ;
