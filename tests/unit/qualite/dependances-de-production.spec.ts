@@ -1,7 +1,7 @@
 // @req REQ-QA-018
 /**
  * QA-T61 — ce que la production importe ou exécute est une `dependencies` (note de la lentille
- * securite sur INT-T45, acceptance de A02, étendue par A02 le 2026-10-02 à `prisma` et au point
+ * securite sur la réception d’Axion-IA, acceptance de A02, étendue par A02 le 2026-10-02 à `prisma` et au point
  * d'entrée du conteneur).
  *
  * Le Dockerfile installe aujourd'hui TOUT (`pnpm install --frozen-lockfile`) : rien ne casse. Mais une
