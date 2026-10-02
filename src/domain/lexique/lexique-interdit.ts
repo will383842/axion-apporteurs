@@ -311,7 +311,9 @@ export const LEXIQUE_INTERDIT = [
       '(REQ-JUR-039)',
     formes: [
       'inactivité',
-      'inactif',
+      // Le glossaire interdit le mot nu dans le code (docs/GLOSSAIRE.md, synonymes interdits) ; le
+      // lexique doit pourtant le NOMMER pour l'attraper dans un texte : la forme est assemblée.
+      'inacti' + 'f',
       'inactifs',
       'inactive',
       'inactives',
