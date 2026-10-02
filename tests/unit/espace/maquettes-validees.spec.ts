@@ -468,7 +468,7 @@ describe('maquettes-validees — la SORTIE du binaire, sur un arbre jetable', ()
 describe('maquettes-validees — le script sur le dépôt réel', () => {
   it('REQ-UX-008 — le dépôt sort en zéro, et la sortie COMPTE ce qu’elle a lu', () => {
     const { code, sortie } = lancer();
-    expect(sortie).toMatch(/19 ligne\(s\) lue\(s\)/);
+    expect(sortie).toMatch(/24 ligne\(s\) lue\(s\)/);
     expect(code).toBe(0);
   });
 
@@ -478,11 +478,11 @@ describe('maquettes-validees — le script sur le dépôt réel', () => {
     expect(code).toBe(0);
   });
 
-  it('REQ-UX-008 — la vue du dépôt lit les dix-neuf maquettes et les tâches du registre', () => {
+  it('REQ-UX-008 — la vue du dépôt lit les vingt-quatre maquettes et les tâches du registre', () => {
     const v = vueDuDepot();
     expect(v.maquettes).toContain('accueil.html');
     expect(v.taches.find((t) => t.id === 'UX-P1-08')).toBeDefined();
-    expect(lireValidation(v.validation).lignes).toHaveLength(19);
+    expect(lireValidation(v.validation).lignes).toHaveLength(24);
   });
 });
 
@@ -678,7 +678,7 @@ describe('REQ-UX-034 — mode clair et mode sombre de l’espace, jetons propres
       expect(jetons(lire(f), CLAIR), f).toEqual(reference);
       expect(jetons(lire(f), SOMBRE), f).toEqual(jetons(lire(MAQUETTES_ESPACE[0]!), SOMBRE));
     }
-    expect(MAQUETTES_CONSOLE).toHaveLength(6);
+    expect(MAQUETTES_CONSOLE).toHaveLength(11);
     const consoleClair = jetons(lire(MAQUETTES_CONSOLE[0]!), CLAIR);
     expect(consoleClair.fond).toBeDefined();
     expect(consoleClair.fond).not.toBe(reference.fond);
@@ -707,7 +707,7 @@ describe('REQ-UX-017 — la moitié statique : autonomes, langue déclarée, cha
   const toutes = readdirSync(DOSSIER).filter((f) => f.endsWith('.html'));
 
   it('REQ-UX-017 — aucune maquette ne charge quoi que ce soit hors d’elle-même', () => {
-    expect(toutes.length).toBe(20);
+    expect(toutes.length).toBe(25);
     for (const f of toutes) {
       const html = lire(f);
       expect(html.match(/(?:src|href)\s*=\s*["']?(?:https?:)?\/\//gi) ?? [], f).toEqual([]);
