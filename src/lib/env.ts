@@ -190,6 +190,10 @@ export const schemaConfiguration = z.object({
   // INT-T26 (REQ-INT-032) : l'adresse d'axionia pour les lectures de Partners. Absente, le canal est
   // fermé de ce côté : une candidature reçue attend ses coordonnées, rien ne part.
   AXIONIA_BASE_URL: urlDe(['https:']).optional(),
+  // SEC-44 (REQ-SEC-012) : les adresses d'où axionia appelle l'API entrante, séparées par des
+  // virgules. Absente, personne n'entre ; posée, elle n'est jamais vide. Sa forme fine (adresses
+  // lisibles) est jugée à chaque appel par `listeDAdresses` (`api-entrante.ts`).
+  AXIONIA_API_ALLOWLIST: nette.optional(),
   // INT-T57 (REQ-INT-022) : l'URL d'envoi du relais ; son hôte est jugé contre la liste fermée de
   // `src/server/integrations/zeptomail/relais.ts`. Exigée au démarrage si l'envoi réel est allumé.
   ZEPTOMAIL_API_URL: urlDe(['https:']).optional(),
@@ -537,6 +541,8 @@ const ROLES: Record<NomDeVariable, string> = {
     "adresse humaine d'expédition, du sous-domaine d'envoi ; jamais une adresse sans réponse",
   AXIONIA_BASE_URL:
     "adresse d'axionia pour les lectures de Partners ; absente, aucune coordonnée n'est tirée",
+  AXIONIA_API_ALLOWLIST:
+    "adresses d'où axionia appelle l'API entrante, séparées par des virgules ; absente, personne n'entre",
   ZEPTOMAIL_SEND_TOKEN:
     "jeton d'envoi du relais de courriels ; exigé quand l'envoi réel est allumé (`PARTNERS_EMAIL_DMARC_VERIFIE`)",
   ZEPTOMAIL_API_URL:
