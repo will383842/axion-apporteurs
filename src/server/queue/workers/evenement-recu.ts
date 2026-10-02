@@ -174,9 +174,18 @@ function nomDe(erreur: unknown): string {
 }
 
 /**
+ * INT-T55 — LE BUDGET D'UN PASSAGE. Le passage tourne sous le verrou de sa tâche, tenu par une
+ * transaction dont la patience est de dix minutes (`lanceur.ts`) : au-delà, la base relâche le
+ * verrou. Le passage ne commence donc plus d'événement passé ce budget, plus court, et ce qui reste
+ * `recu` attend le passage suivant (note de la lentille sécurité). C'est la marge d'un instrument,
+ * pas un seuil métier (RM-10) : elle laisse deux minutes au dernier événement commencé.
+ */
+export const BUDGET_D_UN_PASSAGE_MS = 8 * 60 * 1000;
+
+/**
  * Un passage : traite tout ce qui est `recu`, y compris ce que le passage réveille, jusqu'à ce qu'il
- * n'en reste plus. Chaque événement quitte `recu` à chaque tour ; un enfant n'y revient que si un
- * parent vient de passer `traite` — le passage se termine donc toujours.
+ * n'en reste plus, ou que son budget soit épuisé. Chaque événement quitte `recu` à chaque tour ; un
+ * enfant n'y revient que si un parent vient de passer `traite` — le passage se termine donc toujours.
  */
 export async function passerLeTravail(d: {
   depot: DepotDuTravail;
@@ -189,12 +198,17 @@ export async function passerLeTravail(d: {
   reprendre?: () => Promise<number>;
 }): Promise<CompteursDuPassage> {
   const compteurs: CompteursDuPassage = { traites: 0, enAttente: 0, enErreur: 0, reveilles: 0 };
+  const fin = d.maintenant().getTime() + BUDGET_D_UN_PASSAGE_MS;
+  const epuise = () => d.maintenant().getTime() >= fin;
   try {
     if (d.reprendre) compteurs.reveilles += await d.reprendre();
-    for (;;) {
+    passage: for (;;) {
       const lot = await d.depot.aTraiter();
       if (lot.length === 0) break;
-      for (const e of lot) await traiterUn(e, d, compteurs);
+      for (const e of lot) {
+        if (epuise()) break passage;
+        await traiterUn(e, d, compteurs);
+      }
     }
   } catch (erreur) {
     await d.depot.battre(TACHE_DE_RECEPTION, { echecAt: d.maintenant() }).catch(() => undefined);
