@@ -16,7 +16,11 @@
  * configuration (`HYP-E1-19`, `src/domain/contrat/variables.ts`).
  *
  * Les montants sont en CENTIMES hors taxes (`docs/CONVENTIONS.md`, argent en centimes).
+ *
+ * LES DURÉES DE CONSERVATION vivent dans le sous-module `retention.ts` (partners/ADR-0022 §12) et sont
+ * ÉTALÉES ici : l'accès reste `SEUILS.X`, la garde les juge, et aucune n'est définie aux deux endroits.
  */
+import { DUREES_DE_RETENTION } from './retention';
 
 export type UniteDeSeuil =
   'minutes' | 'jours' | 'jours_ouvres' | 'mois' | 'ans' | 'centimes' | 'tentatives';
@@ -40,6 +44,7 @@ const art = (...unites: string[]): Renvoi[] =>
   unites.map((unite) => ({ document: 'contrat', unite }));
 
 export const SEUILS = {
+  ...DUREES_DE_RETENTION,
   // JUR-T40 : l'art. 3.2 n'écrit plus ce délai (W20, REQ-CPL-026) ; il reste l'objectif interne de
   // la console pour une prise de contact, sans engagement contractuel (recommandation d'A07).
   PRISE_DE_CONTACT_JOURS_OUVRES: {
