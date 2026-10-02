@@ -2795,6 +2795,15 @@ export const PORTE_A_FIGEE: PorteFigee = {
       nom: 'La garde des agregats du reseau sait rougir',
       run: 'pnpm jur:aucun-agregat-reseau:prove',
     },
+    // SEC-46 — la garde des styles en ligne, et sa preuve, par paire.
+    {
+      nom: 'Securite — aucun style en ligne sous src/app',
+      run: 'pnpm csp:inline',
+    },
+    {
+      nom: 'La garde des styles en ligne sait rougir',
+      run: 'pnpm csp:inline:prove',
+    },
     {
       nom: 'Charte — aucune progression vers un seuil dans l espace',
       run: 'pnpm jur:aucune-progression',
@@ -2938,6 +2947,8 @@ export const PORTE_A_FIGEE: PorteFigee = {
     //    Dérivés de `package.json` par le MÊME calcul que le témoin, lu dans son code. ──
     'jur:aucun-agregat-reseau': 'tsx scripts/gates/jur-aucun-agregat-reseau.ts',
     'jur:aucun-agregat-reseau:prove': 'tsx scripts/gates/jur-aucun-agregat-reseau.ts --prove',
+    'csp:inline': 'tsx scripts/gates/csp-inline.ts',
+    'csp:inline:prove': 'tsx scripts/gates/csp-inline.ts --prove',
     'jur:aucune-progression': 'tsx scripts/gates/jur-aucune-progression.ts',
     'jur:aucune-progression:prove': 'tsx scripts/gates/jur-aucune-progression.ts --prove',
     'jur:revue-apporteur-facing': 'tsx scripts/gates/jur-revue-apporteur-facing.ts',

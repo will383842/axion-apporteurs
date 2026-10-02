@@ -1187,6 +1187,15 @@
       "preuveRouge": "npx vitest run tests/unit/gouvernance/outillage-de-la-porte-a.spec.ts -t AUDITE sur le verrou `next` 16.3.1 (origin/main 0d0c37cc) : « AssertionError: dépendances de production vulnérables (REQ-QA-013) » ; vert sur `next` 16.3.8 (PR #313, commit témoin 7a0b8f7d)"
     },
     {
+      "id": "csp:inline",
+      "phase": 1,
+      "script": "scripts/gates/csp-inline.ts",
+      "tache": "SEC-46",
+      "verifie": "AST JSX de tout fichier de src/app/ : un attribut style= (objet ou chaîne) rougit en nommant le fichier et la ligne (style_en_ligne) — la CSP sert style-src 'self' sans nonce, un style en ligne y serait bloqué ou forcerait 'unsafe-inline' ; un attribut dangerouslySetInnerHTML rougit (html_injecte) ; un fichier que l'analyseur ne lit pas rougit (source_illisible). Les styles passent par des modules CSS. Lancée en porte A par `pnpm csp:inline` et `pnpm csp:inline:prove`. CE QU'ELLE NE TIENT PAS : un style posé à l'exécution par du code client (element.style), une CSP altérée au service (tenue par la comparaison de deploy-verify), une CSP mal configurée (tenue par tests/unit/securite/headers.spec.ts).",
+      "fixtureRouge": "un <button style={{ minHeight: '3rem' }}> sous src/app/",
+      "preuveRouge": "Rejoué par A01 le 2026-10-02 sur t/sec-46 (2e5078c2) : ecran.tsx et error.tsx de main remis en place -> EXIT=1, « ❌ csp:inline — 4 faute(s) ; 9 fichier(s) de src/app/ lu(s), 60 attribut(s) JSX confronté(s) » (ecran.tsx l. 102, 119, 138 ; error.tsx l. 31) ; tête -> EXIT=0, « ✅ csp:inline — 9 fichier(s) … aucun style en ligne, aucun HTML injecté » ; --prove : 3 familles rougissent sur leurs témoins, 2 contre-témoins verts. Témoin tests/unit/securite/csp-inline.spec.ts commité d'abord (e568e4fa). Rouge constaté par: A01"
+    },
+    {
       "id": "aipd:signee",
       "phase": 1,
       "script": "scripts/gates/aipd-signee.ts",
