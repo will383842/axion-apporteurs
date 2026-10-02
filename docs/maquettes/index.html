@@ -297,13 +297,19 @@
         </li>
         <li>
           <a class="bloc" href="deposer.html">Déposer un contact</a>
-          <p class="doux">/deposer · UX-P1-02 · 18 états</p>
+          <p class="doux">/deposer · UX-P1-02 · 27 états</p>
           <p><b>Geste principal</b> : De l’accueil à la confirmation : 8 interactions.</p>
           <p><b>Temps mimé</b> : 55 à 70 s.</p>
         </li>
         <li>
+          <a class="bloc" href="confirmation-contact.html">Réponse du contact</a>
+          <p class="doux">/confirmer/&lt;jeton&gt; · UX-P1-42 · 9 états</p>
+          <p><b>Geste principal</b> : Répondre « Oui » : 2 interactions ; « Non » : 3.</p>
+          <p><b>Temps mimé</b> : 10 s.</p>
+        </li>
+        <li>
           <a class="bloc" href="mes-entreprises.html">Mes entreprises</a>
-          <p class="doux">/mes-entreprises · UX-P1-05 · 9 états</p>
+          <p class="doux">/mes-entreprises · UX-P1-05 · 10 états</p>
           <p><b>Geste principal</b> : Lire la prochaine étape et qui la fait.</p>
           <p><b>Temps mimé</b> : 5 à 10 s.</p>
         </li>
@@ -321,7 +327,7 @@
         </li>
         <li>
           <a class="bloc" href="file-qualification.html">File de qualification</a>
-          <p class="doux">console · UX-P1-07 · 9 états</p>
+          <p class="doux">console · UX-P1-07 · 11 états</p>
           <p><b>Geste principal</b> : Qualifier après l’appel : 6 interactions.</p>
           <p><b>Temps mimé</b> : 60 s hors appel.</p>
         </li>
@@ -330,6 +336,30 @@
           <p class="doux">console · UX-P2-03 · 11 états</p>
           <p><b>Geste principal</b> : Relire, approuver, produire le fichier.</p>
           <p><b>Temps mimé</b> : 2 min de relecture.</p>
+        </li>
+        <li>
+          <a class="bloc" href="console-cadre.html">Cadre de la console</a>
+          <p class="doux">/console · UX-P1-16 · 9 états</p>
+          <p><b>Geste principal</b> : Changer d’écran : 1 interaction.</p>
+          <p><b>Temps mimé</b> : 2 s.</p>
+        </li>
+        <li>
+          <a class="bloc" href="connexion-console.html">Connexion à la console</a>
+          <p class="doux">/console/connexion · SEC-29 · 7 états</p>
+          <p><b>Geste principal</b> : Adresse, lien, clic : 3 interactions.</p>
+          <p><b>Temps mimé</b> : 20 à 30 s (e-mail compris).</p>
+        </li>
+        <li>
+          <a class="bloc" href="acces-refuse.html">Accès refusé</a>
+          <p class="doux">/console/acces-refuse · UX-P1-16 · 6 états</p>
+          <p><b>Geste principal</b> : Revenir à son accueil : 1 interaction.</p>
+          <p><b>Temps mimé</b> : 5 s.</p>
+        </li>
+        <li>
+          <a class="bloc" href="utilisateurs-console.html">Utilisateurs de la console</a>
+          <p class="doux">/console/utilisateurs · SEC-30 · 10 états</p>
+          <p><b>Geste principal</b> : Inviter une personne : 4 interactions.</p>
+          <p><b>Temps mimé</b> : 30 s.</p>
         </li>
       </ul>
       <h3>Lire une maquette</h3>
@@ -731,6 +761,98 @@
         <li>
           <span class="pastille-couleur" style="background: #b34700"></span><code>--focus</code>
           <span class="doux">#B34700</span>
+        </li>
+      </ul>
+      <h3>Console (thème sombre)</h3>
+      <ul class="nuancier">
+        <li>
+          <span class="pastille-couleur" style="background: #12161c"></span><code>--fond</code>
+          <span class="doux">#12161C</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #1b2129"></span><code>--surface</code>
+          <span class="doux">#1B2129</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #2a313b"></span><code>--surface-2</code>
+          <span class="doux">#2A313B</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #eef1f5"></span><code>--texte</code>
+          <span class="doux">#EEF1F5</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #c3cad4"></span
+          ><code>--texte-doux</code>
+          <span class="doux">#C3CAD4</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #7f8a99"></span><code>--bord</code>
+          <span class="doux">#7F8A99</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #8db8f2"></span><code>--primaire</code>
+          <span class="doux">#8DB8F2</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #0d1724"></span
+          ><code>--sur-primaire</code>
+          <span class="doux">#0D1724</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #9cc3f5"></span><code>--lien</code>
+          <span class="doux">#9CC3F5</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #15301f"></span><code>--ok-fond</code>
+          <span class="doux">#15301F</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #9fe0b4"></span><code>--ok-texte</code>
+          <span class="doux">#9FE0B4</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #33280e"></span
+          ><code>--attente-fond</code>
+          <span class="doux">#33280E</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #f3d37a"></span
+          ><code>--attente-texte</code>
+          <span class="doux">#F3D37A</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #3a1717"></span
+          ><code>--bloque-fond</code>
+          <span class="doux">#3A1717</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #fca5a5"></span
+          ><code>--bloque-texte</code>
+          <span class="doux">#FCA5A5</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #162a47"></span><code>--info-fond</code>
+          <span class="doux">#162A47</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #b3cff7"></span
+          ><code>--info-texte</code>
+          <span class="doux">#B3CFF7</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #262c35"></span
+          ><code>--neutre-fond</code>
+          <span class="doux">#262C35</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #d0d6de"></span
+          ><code>--neutre-texte</code>
+          <span class="doux">#D0D6DE</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #ffb366"></span><code>--focus</code>
+          <span class="doux">#FFB366</span>
         </li>
       </ul>
       <p>
@@ -1454,6 +1576,225 @@
               <td><code>--surface</code></td>
               <td>anneau de focus sur carte (non textuel)</td>
               <td class="n"><b>5.50:1</b></td>
+              <td class="n">3:1 ✓</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div
+        class="defile-x"
+        tabindex="0"
+        role="region"
+        aria-label="Contrastes de la console, thème sombre"
+      >
+        <table>
+          <caption>
+            Console, thème sombre
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col">Premier plan</th>
+              <th scope="col">Arrière-plan</th>
+              <th scope="col">Usage</th>
+              <th scope="col" class="n">Rapport</th>
+              <th scope="col" class="n">Seuil</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>--texte</code></td>
+              <td><code>--fond</code></td>
+              <td>corps de texte</td>
+              <td class="n"><b>16.02:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--texte</code></td>
+              <td><code>--surface</code></td>
+              <td>texte sur carte</td>
+              <td class="n"><b>14.30:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--texte</code></td>
+              <td><code>--surface-2</code></td>
+              <td>texte sur squelette ou séparateur</td>
+              <td class="n"><b>11.58:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--texte-doux</code></td>
+              <td><code>--fond</code></td>
+              <td>texte secondaire</td>
+              <td class="n"><b>10.99:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--texte-doux</code></td>
+              <td><code>--surface</code></td>
+              <td>texte secondaire sur carte</td>
+              <td class="n"><b>9.81:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--texte-doux</code></td>
+              <td><code>--surface-2</code></td>
+              <td>texte secondaire sur surface 2</td>
+              <td class="n"><b>7.94:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--lien</code></td>
+              <td><code>--fond</code></td>
+              <td>lien</td>
+              <td class="n"><b>9.97:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--lien</code></td>
+              <td><code>--surface</code></td>
+              <td>lien sur carte</td>
+              <td class="n"><b>8.90:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--sur-primaire</code></td>
+              <td><code>--primaire</code></td>
+              <td>texte de bouton principal</td>
+              <td class="n"><b>8.82:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--ok-texte</code></td>
+              <td><code>--ok-fond</code></td>
+              <td>pastille « ok »</td>
+              <td class="n"><b>9.36:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--attente-texte</code></td>
+              <td><code>--attente-fond</code></td>
+              <td>pastille « attente »</td>
+              <td class="n"><b>9.93:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--bloque-texte</code></td>
+              <td><code>--bloque-fond</code></td>
+              <td>pastille « bloqué »</td>
+              <td class="n"><b>8.42:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--info-texte</code></td>
+              <td><code>--info-fond</code></td>
+              <td>pastille « info »</td>
+              <td class="n"><b>9.05:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--neutre-texte</code></td>
+              <td><code>--neutre-fond</code></td>
+              <td>pastille « neutre »</td>
+              <td class="n"><b>9.61:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--texte</code></td>
+              <td><code>--ok-fond</code></td>
+              <td>texte dans un encart « ok »</td>
+              <td class="n"><b>12.57:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--texte</code></td>
+              <td><code>--attente-fond</code></td>
+              <td>texte dans un encart « attente »</td>
+              <td class="n"><b>12.78:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--texte</code></td>
+              <td><code>--bloque-fond</code></td>
+              <td>texte dans un encart « bloqué »</td>
+              <td class="n"><b>14.10:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--texte</code></td>
+              <td><code>--info-fond</code></td>
+              <td>texte dans un encart « info »</td>
+              <td class="n"><b>12.73:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--texte</code></td>
+              <td><code>--neutre-fond</code></td>
+              <td>texte dans un encart « neutre »</td>
+              <td class="n"><b>12.41:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--lien</code></td>
+              <td><code>--info-fond</code></td>
+              <td>lien dans un encart « info »</td>
+              <td class="n"><b>7.92:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--lien</code></td>
+              <td><code>--attente-fond</code></td>
+              <td>lien dans un encart « attente »</td>
+              <td class="n"><b>7.95:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--lien</code></td>
+              <td><code>--bloque-fond</code></td>
+              <td>lien dans un encart « bloqué »</td>
+              <td class="n"><b>8.78:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--lien</code></td>
+              <td><code>--ok-fond</code></td>
+              <td>lien dans un encart « ok »</td>
+              <td class="n"><b>7.83:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--bord</code></td>
+              <td><code>--fond</code></td>
+              <td>bord de champ (non textuel)</td>
+              <td class="n"><b>5.18:1</b></td>
+              <td class="n">3:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--bord</code></td>
+              <td><code>--surface</code></td>
+              <td>bord de champ sur carte (non textuel)</td>
+              <td class="n"><b>4.63:1</b></td>
+              <td class="n">3:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--primaire</code></td>
+              <td><code>--fond</code></td>
+              <td>contour de bouton (non textuel)</td>
+              <td class="n"><b>8.88:1</b></td>
+              <td class="n">3:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--focus</code></td>
+              <td><code>--fond</code></td>
+              <td>anneau de focus (non textuel)</td>
+              <td class="n"><b>10.28:1</b></td>
+              <td class="n">3:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--focus</code></td>
+              <td><code>--surface</code></td>
+              <td>anneau de focus sur carte (non textuel)</td>
+              <td class="n"><b>9.17:1</b></td>
               <td class="n">3:1 ✓</td>
             </tr>
           </tbody>

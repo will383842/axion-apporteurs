@@ -19,6 +19,7 @@
  * Secrets tirés à l'exécution ; aucune donnée personnelle n'est écrite.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { createHmac, randomBytes, randomUUID } from 'node:crypto';
 import { TypeEvenementRecu } from '@prisma/client';
 import { demarrerBase, type Base } from './harnais';
@@ -56,6 +57,23 @@ const MAINTENANT_MS = Date.UTC(2026, 8, 26, 10, 0, 0);
 const MAINTENANT_S = String(MAINTENANT_MS / 1000);
 const CLIENT = TYPES_EVENEMENT[0];
 
+/**
+ * INT-T45 : la réception juge le payload contre le `$defs` fermé de son type. Chaque charge part donc
+ * de celle du PRODUCTEUR RÉEL (RM-03), en version 2 (le seul renommage de la v2, `amountHtCents` →
+ * `montantHtCents` du paiement, nommé par `contrat-hash.spec.ts`), et le test n'y SURCHARGE que les
+ * champs qu'il fait varier : ce qu'il prouve ne change pas.
+ */
+const PRODUCTEUR = JSON.parse(
+  readFileSync('tests/fixtures/axionia/fixtures-producteur.v1.json', 'utf8')
+) as { evenements: { event_type: string; payload: Record<string, unknown> }[] };
+function chargeDuProducteur(type: string): Record<string, unknown> {
+  const e = PRODUCTEUR.evenements.find((x) => x.event_type === type);
+  if (e === undefined) throw new Error(`fixture du producteur : aucun ${type}`);
+  if (type !== 'paiement.recu') return { ...e.payload };
+  const { amountHtCents, ...reste } = e.payload;
+  return { ...reste, montantHtCents: amountHtCents };
+}
+
 function corpsDe(sujet: string): string {
   return JSON.stringify({
     event_id: randomUUID(),
@@ -66,7 +84,7 @@ function corpsDe(sujet: string): string {
     producer: 'axionia',
     subject_ref: { client_id: sujet },
     sequence: 1,
-    payload: { clientId: sujet },
+    payload: { ...chargeDuProducteur(CLIENT), clientId: sujet },
   });
 }
 

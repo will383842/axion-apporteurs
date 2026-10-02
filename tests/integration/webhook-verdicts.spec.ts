@@ -22,6 +22,7 @@
  * `tests/unit/integration/evenement-recu-travail.spec.ts`.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { createHmac, randomBytes, randomUUID } from 'node:crypto';
 import { demarrerBase, type Base } from './harnais';
 import { NOMS_DES_SECRETS, kidDe } from '../../src/lib/env';
@@ -69,6 +70,23 @@ const FACTURE = type('facture.');
 const PAIEMENT_RECU = TYPES_EVENEMENT.filter((t) => t.startsWith('paiement.'))[0]!;
 const PAIEMENT_REMBOURSE = TYPES_EVENEMENT.filter((t) => t.startsWith('paiement.'))[1]!;
 
+/**
+ * INT-T45 : la réception juge le payload contre le `$defs` fermé de son type. Chaque charge part donc
+ * de celle du PRODUCTEUR RÉEL (RM-03), en version 2 (le seul renommage de la v2, `amountHtCents` →
+ * `montantHtCents` du paiement, nommé par `contrat-hash.spec.ts`), et le test n'y SURCHARGE que les
+ * champs qu'il fait varier : ce qu'il prouve ne change pas.
+ */
+const PRODUCTEUR = JSON.parse(
+  readFileSync('tests/fixtures/axionia/fixtures-producteur.v1.json', 'utf8')
+) as { evenements: { event_type: string; payload: Record<string, unknown> }[] };
+function chargeDuProducteur(type: string): Record<string, unknown> {
+  const e = PRODUCTEUR.evenements.find((x) => x.event_type === type);
+  if (e === undefined) throw new Error(`fixture du producteur : aucun ${type}`);
+  if (type !== 'paiement.recu') return { ...e.payload };
+  const { amountHtCents, ...reste } = e.payload;
+  return { ...reste, montantHtCents: amountHtCents };
+}
+
 function corps(
   t: TypeEvenement,
   sujet: Record<string, string>,
@@ -84,7 +102,7 @@ function corps(
     producer: 'axionia',
     subject_ref: sujet,
     sequence: 1,
-    payload,
+    payload: { ...chargeDuProducteur(t), ...payload },
   });
 }
 
