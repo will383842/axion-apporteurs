@@ -44,6 +44,7 @@
 import { randomUUID } from 'node:crypto';
 import { appendFileSync } from 'node:fs';
 import { ENTETE_DE_BUILD } from '../../next.config';
+import { politiqueDeContenu } from '../../src/server/securite/entetes';
 import {
   creerAlerteur,
   shaLisible,
@@ -279,6 +280,69 @@ function shaDemande(argv: string[]): string {
   return sha;
 }
 
+// ── SEC-46 : la politique de contenu SERVIE est celle de la configuration ─────────────────────
+
+/** Le nonce neutre qui remplace, des deux côtés, celui que chaque réponse tire. */
+const NONCE_NEUTRE = 'nonce-de-comparaison';
+
+/** La route où la politique se lit : une page publique, que le proxy couvre comme toute page. */
+const ROUTE_DE_LA_POLITIQUE = '/confidentialite';
+
+/**
+ * La politique de PRODUCTION telle que la configuration la produit (`politiqueDeContenu`), nonce
+ * neutralisé. Ce n'est pas un second exemplaire des directives : la configuration est jugée par
+ * `tests/unit/securite/headers.spec.ts` ; ici ne se juge que l'écart entre elle et ce que le domaine
+ * SERT — un mandataire qui la retire ou la réécrit, un proxy qui ne tourne pas.
+ */
+export function politiqueAttendue(): string {
+  return politiqueDeContenu({ nonce: NONCE_NEUTRE, developpement: false });
+}
+
+export type JugementDeLaPolitique =
+  { ok: true } | { ok: false; motif: 'csp_absente' | 'csp_differente' };
+
+/** La politique servie, nonce neutralisé, égale-t-elle celle de la configuration ? */
+export function jugerLaPolitique(servie: string | null): JugementDeLaPolitique {
+  if (servie === null || servie.trim() === '') return { ok: false, motif: 'csp_absente' };
+  const neutre = servie.replace(/'nonce-[A-Za-z0-9+/=_-]+'/g, `'nonce-${NONCE_NEUTRE}'`);
+  return neutre === politiqueAttendue() ? { ok: true } : { ok: false, motif: 'csp_differente' };
+}
+
+/**
+ * Après l'atterrissage du sha COURANT (jamais d'un retour arrière, dont l'image porte sa propre
+ * politique) : l'en-tête `Content-Security-Policy` servi doit être celui de la configuration.
+ * Sinon, NON ATTERRI — correcte en configuration, altérée au service, c'est une politique absente.
+ */
+export async function verifierLaPolitique(base: URL): Promise<0 | 1> {
+  let servie: string | null;
+  try {
+    const r = await fetch(new URL(ROUTE_DE_LA_POLITIQUE, base), {
+      method: 'HEAD',
+      redirect: 'manual',
+      cache: 'no-store',
+    });
+    servie = r.headers.get('content-security-policy');
+  } catch (e) {
+    console.error(
+      `❌ NON ATTERRI : ${base.origin}${ROUTE_DE_LA_POLITIQUE} ne répond pas (${(e as Error).message})`
+    );
+    return 1;
+  }
+  const j = jugerLaPolitique(servie);
+  if (j.ok) {
+    console.log(
+      `✅ politique de contenu servie = configuration (${base.origin}${ROUTE_DE_LA_POLITIQUE})`
+    );
+    return 0;
+  }
+  console.error(
+    `❌ NON ATTERRI : la politique de contenu servie n'est pas celle de la configuration (${j.motif})`
+  );
+  console.error(`   attendue : ${politiqueAttendue()}`);
+  console.error(`   servie   : ${servie ?? 'en-tête absent'}`);
+  return 1;
+}
+
 async function commandeVerifier(argv: string[]): Promise<number> {
   const sha = shaDemande(argv);
   const brut = process.env.PARTNERS_URL_PUBLIQUE ?? '';
@@ -289,7 +353,9 @@ async function commandeVerifier(argv: string[]): Promise<number> {
     );
     return 2;
   }
-  return verifier(sha, adresseSure(brut, 'PARTNERS_URL_PUBLIQUE'), options(argv));
+  const base = adresseSure(brut, 'PARTNERS_URL_PUBLIQUE');
+  const code = await verifier(sha, base, options(argv));
+  return code === 0 ? verifierLaPolitique(base) : code;
 }
 
 async function appel(
@@ -365,7 +431,7 @@ async function commandeDeclencher(argv: string[]): Promise<number> {
   console.log(`   déploiement déclenché — lecture de ${ENTETE_DE_BUILD} sur ${publique.origin}`);
   const r = await atterrir(sha, publique, options(argv));
   ecrireLaSortie(r.servi);
-  return r.code;
+  return r.code === 0 ? verifierLaPolitique(publique) : r.code;
 }
 
 /**
