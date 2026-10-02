@@ -58,6 +58,10 @@ const ECARTES = [
   // sous-processus. Mesuré hors dépôt git : 31 tests sur 52 en échec avant l'injection, ces 2 après.
   'la micro-copie réelle de l.espace est lue par gov:lexique et n.y rougit pas',
   'sur le dépôt réel, elle sort en zéro avec les comptes confrontés',
+  // SEC-44 : la garde de famille (REQ-SEC-016) juge les sources du dépôt, pas le code sous mutation : le
+  // bac à sable instrumenté n'est pas la source (Stryker y enveloppe le nom d'un compteur). Jouée par
+  // pnpm test et la porte A ; le nom de compteur de la frontière est tué par un espion unitaire.
+  'le dépôt est vert, et le vert dit ce qu.il a confronté',
 ];
 
 export default defineConfig({
