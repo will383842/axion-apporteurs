@@ -1,13 +1,20 @@
 // @req REQ-DM-024
 /**
- * DM-45, en mémoire — la charge FERMÉE de `apporteur_cree` (sans donnée personnelle, acteur
- * obligatoire) et le passage `journal_verifier`, qui vérifie la chaîne par ses liens de hash et
- * échoue en nommant la faute et le maillon, jamais une charge. La même chose en base réelle :
+ * DM-45, en mémoire — la charge FERMÉE de `apporteur_statut_modifie` à la NAISSANCE d'un apporteur
+ * (`de` nul, `transition: 'creer'`, sans donnée personnelle, acteur obligatoire) et le passage
+ * `journal_verifier`, qui vérifie la chaîne par ses liens de hash et échoue en nommant la faute et le
+ * maillon, jamais une charge. La même chose en base réelle :
  * `tests/integration/journal-premier-ecrivain.spec.ts`.
  */
 import { describe, it, expect } from 'vitest';
 import { randomUUID } from 'node:crypto';
-import { CHARGES_PAR_TYPE, FORMES } from '../../../src/domain/evenement/charges';
+import {
+  CHARGES_PAR_TYPE,
+  TRANSITIONS_DU_JOURNAL_APPORTEUR,
+  FORMES,
+} from '../../../src/domain/evenement/charges';
+import { EVENEMENTS_APPORTEUR } from '../../../src/domain/apporteur/statut';
+import { TRANSITIONS_APPORTEUR } from '../../../src/domain/apporteur/matrice';
 import {
   GENESE,
   calculerSelfHash,
@@ -17,24 +24,23 @@ import {
 import { TACHES } from '../../../src/server/taches/registre';
 import { passageDuJournal } from '../../../src/server/taches/inscriptions';
 
-const CHARGE = () => ({
-  apporteurId: randomUUID(),
-  candidatureId: randomUUID(),
-  statut: 'candidat',
+const NAISSANCE = () => ({
+  de: null,
+  vers: 'candidat',
+  transition: 'creer',
   acteur: { par: 'systeme' },
 });
 
-/** Une chaîne bien formée : la genèse, puis `n` créations d'apporteur. */
+/** Une chaîne bien formée : la genèse, puis `n` naissances d'apporteur. */
 function chaine(n: number): LigneJournal[] {
   const lignes: LigneJournal[] = [{ ...GENESE, id: '1' } as LigneJournal];
   for (let i = 0; i < n; i += 1) {
-    const charge = CHARGE();
     const e: Enregistrement = {
-      type: 'apporteur_cree',
+      type: 'apporteur_statut_modifie',
       agregat: 'apporteur',
-      agregatId: charge.apporteurId,
+      agregatId: randomUUID(),
       survenuAt: new Date(Date.UTC(2026, 9, 2, 10, i)).toISOString(),
-      charge,
+      charge: NAISSANCE(),
     };
     const prevHash = lignes[lignes.length - 1]!.selfHash;
     lignes.push({ ...e, id: String(i + 2), prevHash, selfHash: calculerSelfHash(prevHash, e) });
@@ -42,31 +48,57 @@ function chaine(n: number): LigneJournal[] {
   return lignes;
 }
 
-describe('REQ-DM-024 — la charge de `apporteur_cree` est fermée', () => {
-  const schema = CHARGES_PAR_TYPE.apporteur_cree;
+describe('REQ-DM-024 — la charge de `apporteur_statut_modifie` est fermée', () => {
+  const schema = CHARGES_PAR_TYPE.apporteur_statut_modifie;
 
-  it('REQ-DM-024 : les identifiants, le statut de naissance et l’acteur — rien d’autre', () => {
-    expect(schema.safeParse(CHARGE()).success).toBe(true);
+  it('REQ-DM-024 : la naissance — `de` nul, `vers: candidat`, `transition: creer`, l’acteur système', () => {
+    expect(schema.safeParse(NAISSANCE()).success).toBe(true);
+  });
+
+  it('REQ-DM-024 : une transition de la matrice passe aussi, avec son `de`', () => {
+    expect(
+      schema.safeParse({
+        de: 'candidat',
+        vers: 'retenu',
+        transition: 'retenir',
+        acteur: { par: 'systeme' },
+      }).success
+    ).toBe(true);
+  });
+
+  it('REQ-DM-024 : les codes sont DÉRIVÉS — la naissance, puis une flèche par transition de la matrice ; `creer` n’est pas une flèche', () => {
+    expect([...TRANSITIONS_DU_JOURNAL_APPORTEUR]).toEqual(['creer', ...EVENEMENTS_APPORTEUR]);
+    const fleches = new Set(Object.values(TRANSITIONS_APPORTEUR).flatMap((t) => Object.keys(t)));
+    expect(fleches.has('creer')).toBe(false);
   });
 
   it.each([
     ['un nom', { nom: 'Camille Durand' }],
     ['un courriel', { email: 'camille@example.test' }],
-    ['un champ inconnu', { note: 'x' }],
+    ['la candidature (portée par apporteurs.candidature_id)', { candidatureId: randomUUID() }],
   ])(
-    'REQ-DM-024 : %s est REFUSÉ (aucune donnée personnelle dans un journal append-only)',
+    'REQ-DM-024 : %s est REFUSÉ (aucune donnée en trop dans un journal append-only)',
     (_q, en_plus) => {
-      expect(schema.safeParse({ ...CHARGE(), ...en_plus }).success).toBe(false);
+      expect(schema.safeParse({ ...NAISSANCE(), ...en_plus }).success).toBe(false);
     }
   );
 
+  it('REQ-DM-024 : `de` nul si et seulement si l’événement est la naissance', () => {
+    expect(schema.safeParse({ ...NAISSANCE(), de: 'candidat' }).success).toBe(false);
+    expect(
+      schema.safeParse({
+        de: null,
+        vers: 'retenu',
+        transition: 'retenir',
+        acteur: { par: 'systeme' },
+      }).success
+    ).toBe(false);
+  });
+
   it('REQ-DM-024 : l’acteur est OBLIGATOIRE, et sous sa forme unique', () => {
-    const { acteur: _retire, ...sans } = CHARGE();
+    const { acteur: _retire, ...sans } = NAISSANCE();
     expect(schema.safeParse(sans).success).toBe(false);
-    expect(schema.safeParse({ ...CHARGE(), acteur: { par: 'quelqu-un' } }).success).toBe(false);
-    expect(schema.safeParse({ ...CHARGE(), acteur: { par: 'systeme', id: 'x' } }).success).toBe(
-      false
-    );
+    expect(schema.safeParse({ ...NAISSANCE(), acteur: { par: 'quelqu-un' } }).success).toBe(false);
     expect(FORMES.acteur().safeParse({ par: 'systeme' }).success).toBe(true);
   });
 
@@ -81,9 +113,8 @@ describe('REQ-DM-024 — la charge de `apporteur_cree` est fermée', () => {
     expect(acteur.safeParse({ par: 'apporteur', id: 'pas-un-uuid' }).success).toBe(false);
   });
 
-  it('REQ-DM-024 : un statut autre que celui de naissance, ou un identifiant mal formé, est refusé', () => {
-    expect(schema.safeParse({ ...CHARGE(), statut: 'signe' }).success).toBe(false);
-    expect(schema.safeParse({ ...CHARGE(), apporteurId: 'pas-un-uuid' }).success).toBe(false);
+  it('REQ-DM-024 : un statut hors de la liste stockée est refusé', () => {
+    expect(schema.safeParse({ ...NAISSANCE(), vers: 'actif' }).success).toBe(false);
   });
 });
 
@@ -98,7 +129,7 @@ describe('REQ-DM-024 — le passage `journal_verifier`', () => {
 
   it('REQ-DM-024 : TÉMOIN — une charge FALSIFIÉE fait échouer le passage, qui nomme la faute et le maillon', async () => {
     const lignes = chaine(3);
-    lignes[2] = { ...lignes[2]!, charge: { ...(lignes[2]!.charge as object), statut: 'signe' } };
+    lignes[2] = { ...lignes[2]!, charge: { ...(lignes[2]!.charge as object), vers: 'signe' } };
     const e = await passageDuJournal(async () => lignes)().then(
       () => null,
       (x: Error) => x
@@ -106,12 +137,13 @@ describe('REQ-DM-024 — le passage `journal_verifier`', () => {
     expect(e?.message).toMatch(/^chaine_rompue : [a-z_]+, maillon 3$/);
   });
 
-  it('REQ-DM-024 : l’erreur ne porte jamais la charge', async () => {
+  it('REQ-DM-024 : l’erreur ne porte jamais la charge ni l’agrégat', async () => {
     const lignes = chaine(2);
-    const secret = lignes[1]!.charge as { apporteurId: string };
-    lignes[1] = { ...lignes[1]!, charge: { ...secret, statut: 'signe' } };
+    const agregat = lignes[1]!.agregatId!;
+    lignes[1] = { ...lignes[1]!, charge: { ...(lignes[1]!.charge as object), vers: 'signe' } };
     const e = await passageDuJournal(async () => lignes)().catch((x: Error) => x);
-    expect(String((e as Error).message)).not.toContain(secret.apporteurId);
+    expect(String((e as Error).message)).not.toContain(agregat);
+    expect(String((e as Error).message)).not.toContain('signe');
   });
 
   it('REQ-DM-024 : la vérification suit les LIENS DE HASH, pas l’ordre de lecture', async () => {

@@ -1,7 +1,7 @@
 // @req REQ-DM-024
 /**
  * DM-45, en base RÉELLE — le journal chaîné a son premier écrivain : une candidature reçue qui CRÉE
- * un apporteur écrit exactement UN événement `apporteur_cree`, dans la même transaction, par
+ * un apporteur écrit exactement UN événement `apporteur_statut_modifie` de naissance, dans la même transaction, par
  * l'écrivain unique du journal ; un rattachement à un apporteur existant n'en écrit aucun. La chaîne
  * reste vérifiée après l'écriture.
  *
@@ -75,16 +75,17 @@ async function recevoir(candidatureId: string, courriel: string) {
   });
 }
 
-/** Le nombre d'événements `apporteur_cree` du journal pour un apporteur. */
+/** Le nombre de NAISSANCES (`apporteur_statut_modifie`, `de` nul) du journal pour un apporteur. */
 async function apporteursCrees(apporteurId: string): Promise<number> {
   const [l] = await base.prisma.$queryRaw<{ n: bigint }[]>`
     SELECT count(*) AS n FROM evenements
-    WHERE type::text = 'apporteur_cree' AND agregat_id = ${apporteurId}::uuid`;
+    WHERE type::text = 'apporteur_statut_modifie' AND charge->>'de' IS NULL
+      AND charge->>'transition' = 'creer' AND agregat_id = ${apporteurId}::uuid`;
   return Number(l?.n ?? 0n);
 }
 
 describe('REQ-DM-024 — le journal chaîné a son premier écrivain', () => {
-  it('REQ-DM-024 : TÉMOIN — une candidature reçue qui crée un apporteur écrit exactement UN `apporteur_cree`', async () => {
+  it('REQ-DM-024 : TÉMOIN — une candidature reçue qui crée un apporteur écrit exactement UN `apporteur_statut_modifie` de naissance', async () => {
     const candidatureId = randomUUID();
     expect(await recevoir(candidatureId, `${candidatureId}@example.test`)).toBe('cree');
     const a = await base.prisma.apporteur.findUniqueOrThrow({
@@ -94,7 +95,7 @@ describe('REQ-DM-024 — le journal chaîné a son premier écrivain', () => {
     expect(await apporteursCrees(a.id)).toBe(1);
   });
 
-  it('REQ-DM-024 : un RATTACHEMENT à un apporteur existant n’écrit aucun `apporteur_cree` de plus', async () => {
+  it('REQ-DM-024 : un RATTACHEMENT à un apporteur existant n’écrit aucun `apporteur_statut_modifie` de naissance de plus', async () => {
     const candidatureId = randomUUID();
     const courriel = `${candidatureId}@example.test`;
     expect(await recevoir(candidatureId, courriel)).toBe('cree');
@@ -112,7 +113,9 @@ describe('REQ-DM-024 — le journal chaîné a son premier écrivain', () => {
              to_char(survenu_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS "survenuAt",
              charge, prev_hash AS "prevHash", self_hash AS "selfHash"
       FROM evenements ORDER BY id`;
-    expect(lignes.some((l) => (l as { type: string }).type === 'apporteur_cree')).toBe(true);
+    expect(lignes.some((l) => (l as { type: string }).type === 'apporteur_statut_modifie')).toBe(
+      true
+    );
     expect(verifierChaine(lignes)).toMatchObject({ ok: true });
   });
 });
@@ -160,16 +163,11 @@ describe('REQ-DM-024 — le rôle d’exécution n’est plus propriétaire du j
     await expect(
       sousLeRole((tx) =>
         ajouterEvenement(tx, {
-          type: 'apporteur_cree',
+          type: 'apporteur_statut_modifie',
           agregat: 'apporteur',
           agregatId: apporteurId,
           survenuAt: MAINTENANT,
-          charge: {
-            apporteurId,
-            candidatureId: randomUUID(),
-            statut: 'candidat',
-            acteur: { par: 'systeme' },
-          },
+          charge: { de: null, vers: 'candidat', transition: 'creer', acteur: { par: 'systeme' } },
         })
       )
     ).resolves.toMatchObject({ selfHash: expect.stringMatching(/^[0-9a-f]{64}$/) });

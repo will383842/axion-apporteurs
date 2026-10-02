@@ -26,6 +26,14 @@
  */
 import { z } from 'zod';
 import { ALGORITHME } from './journal';
+import { EVENEMENTS_APPORTEUR, MOTIFS_RESILIATION, STATUTS_APPORTEUR } from '../apporteur/statut';
+
+/**
+ * Les codes d'événement que porte `apporteur_statut_modifie` : la NAISSANCE (`creer`, `de` nul), puis
+ * les flèches de la matrice (`EVENEMENTS_APPORTEUR`, une par flèche de `matrice.ts`). DÉRIVÉS,
+ * jamais recopiés ; `creer` n'entre PAS dans la matrice : ce n'est pas une transition admise.
+ */
+export const TRANSITIONS_DU_JOURNAL_APPORTEUR = ['creer', ...EVENEMENTS_APPORTEUR] as const;
 
 /** L'empreinte admise : SHA-256 en hexadécimal minuscule. La SEULE expression d'empreinte admise. */
 export const HASH_HEX_64 = /^[0-9a-f]{64}$/;
@@ -61,21 +69,40 @@ export const FORMES = {
 };
 
 /** Les valeurs de l'enum Prisma `TypeEvenementJournal`, confrontées au schéma par la garde. */
-export type TypeEvenementJournal = 'journal_ouvert' | 'apporteur_cree';
+export type TypeEvenementJournal = 'journal_ouvert' | 'apporteur_statut_modifie';
 
 export const CHARGES_PAR_TYPE = {
   /** La genèse : l'algorithme de chaînage, inscrit DANS la chaîne. */
   journal_ouvert: z.object({ algorithme: z.literal(ALGORITHME) }).strict(),
   /**
-   * DM-45 — la création d'un apporteur par une candidature reçue : son identifiant, celui de la
-   * candidature, son statut de naissance. Aucune donnée personnelle.
+   * Un changement de statut d'apporteur, NAISSANCE comprise (`de` nul, `transition: 'creer'`) : un type
+   * par GENRE de transition (ADR-0022 §4, rectification d'A02 sur DM-45). L'apporteur est l'agrégat ;
+   * la candidature est déjà portée par `apporteurs.candidature_id`. Aucune donnée personnelle.
    */
-  apporteur_cree: z
+  apporteur_statut_modifie: z
     .object({
-      apporteurId: FORMES.identifiant(),
-      candidatureId: FORMES.identifiant(),
-      statut: z.enum(['candidat']),
+      de: z.enum(STATUTS_APPORTEUR).nullable(),
+      vers: z.enum(STATUTS_APPORTEUR),
+      transition: z.enum(TRANSITIONS_DU_JOURNAL_APPORTEUR),
+      resiliationMotif: z.enum(MOTIFS_RESILIATION).optional(),
       acteur: FORMES.acteur(),
     })
-    .strict(),
+    .strict()
+    .superRefine(({ de, transition }, ctx) => {
+      if ((de === null) !== (transition === 'creer')) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['de'],
+          message: 'naissance_incoherente',
+        });
+      }
+    }),
 } satisfies Record<TypeEvenementJournal, z.ZodTypeAny>;
+
+/**
+ * DM-45 — la charge de NAISSANCE d'un apporteur (`apporteur_statut_modifie`, `de` nul) : construite ICI,
+ * dans le domaine du journal, pour qu'aucun appelant n'écrive le vocabulaire du journal à la main.
+ */
+export function naissanceDApporteur(acteur: z.input<ReturnType<typeof FORMES.acteur>>) {
+  return { de: null, vers: 'candidat', transition: 'creer', acteur } as const;
+}

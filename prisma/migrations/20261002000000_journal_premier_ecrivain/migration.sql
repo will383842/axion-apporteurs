@@ -1,9 +1,10 @@
 -- DM-45 (REQ-DM-024) — le journal chaîné a son premier écrivain, et le rôle d'exécution n'en est
 -- plus propriétaire. Migration ADDITIVE ; forme arrêtée par A02 sur la note de conception de DM-45.
 
--- (1) Le type `apporteur_cree`. Valeur AJOUTÉE, jamais utilisée dans cette migration : une valeur
+-- (1) Le type `apporteur_statut_modifie` (un type par GENRE de transition, ADR-0022 §4 : la naissance
+-- y est `de` nul). Valeur AJOUTÉE, jamais utilisée dans cette migration : une valeur
 -- d'enum ajoutée n'est utilisable qu'après la validation de sa transaction.
-ALTER TYPE "type_evenement_journal" ADD VALUE IF NOT EXISTS 'apporteur_cree';
+ALTER TYPE "type_evenement_journal" ADD VALUE IF NOT EXISTS 'apporteur_statut_modifie';
 
 -- (3) Deux rôles NOLOGIN, créés de façon IDEMPOTENTE : un rôle est GLOBAL à la grappe, et la base
 -- fantôme comme les bases de test le trouvent peut-être déjà.
@@ -35,4 +36,4 @@ GRANT USAGE ON SEQUENCE "evenements_id_seq" TO partners_execution;
 --   REVOKE USAGE ON SEQUENCE "evenements_id_seq" FROM partners_execution;
 --   ALTER TABLE "evenements" OWNER TO <propriétaire d'origine>;
 --   ALTER SEQUENCE "evenements_id_seq" OWNER TO <propriétaire d'origine>;
--- La valeur d'enum `apporteur_cree` reste : Postgres ne retire pas une valeur d'enum.
+-- La valeur d'enum `apporteur_statut_modifie` reste : Postgres ne retire pas une valeur d'enum.

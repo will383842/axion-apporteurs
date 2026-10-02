@@ -69,7 +69,7 @@ enum ConsoleRole {
 /// journal est l'événement de type `journal_ouvert` que la première migration écrit.
 enum TypeEvenementJournal {
   journal_ouvert
-  apporteur_cree
+  apporteur_statut_modifie
 
   @@map("type_evenement_journal")
 }

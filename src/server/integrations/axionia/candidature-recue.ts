@@ -39,6 +39,7 @@ import { ENTETE_KID_AXIONIA } from '../../../../packages/contracts/api';
 import type { Trousseau } from '../../../lib/env';
 import { ENTETE_HORODATAGE, ENTETE_SIGNATURE, verifierSignatureAxionia } from './reception';
 import { ajouterEvenement } from '../../evenement/journal';
+import { naissanceDApporteur } from '../../../domain/evenement/charges';
 
 /** Les en-têtes de la REQUÊTE signée, tels que le contrat les publie (confrontés par le test). */
 export const ENTETE_HORODATAGE_REQUETE = 'x-partners-timestamp';
@@ -202,18 +203,13 @@ export async function traiterCandidatureRecue(
         },
       });
       // DM-45 (REQ-DM-024) : la création s'inscrit au journal chaîné, dans CETTE transaction, par
-      // l'écrivain unique. Ni nom, ni courriel : les identifiants, le statut, l'acteur.
+      // l'écrivain unique : la NAISSANCE, de nul vers `candidat`. Ni nom, ni courriel.
       await ajouterEvenement(tx, {
-        type: 'apporteur_cree',
+        type: 'apporteur_statut_modifie',
         agregat: 'apporteur',
         agregatId: cree.id,
         survenuAt: d.maintenant(),
-        charge: {
-          apporteurId: cree.id,
-          candidatureId: snapshot.candidatureId,
-          statut: 'candidat',
-          acteur: { par: 'systeme' },
-        },
+        charge: naissanceDApporteur({ par: 'systeme' }),
       });
       resultat = 'cree';
     }
