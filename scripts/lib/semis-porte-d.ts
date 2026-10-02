@@ -140,6 +140,58 @@ function motifsDesChecks(contraintes: ContrainteVue[]): Map<string, string> {
   return motifs;
 }
 
+/**
+ * Les colonnes que des CHECK LIENT (DM-07) : `(a IS [NOT] NULL) = (b IS [NOT] NULL)` dit que a et b
+ * sont présentes ensemble ou absentes ensemble ; `num_nonnulls(a, b, …) = 1` dit qu'une seule
+ * l'est. Lus dans la définition que rend le catalogue, jamais dans un nom de table.
+ */
+function liensDesChecks(contraintes: ContrainteVue[]): {
+  ensemble: Map<string, Set<string>>;
+  exclusives: Map<string, Set<string>>;
+} {
+  const ensemble = new Map<string, Set<string>>();
+  const exclusives = new Map<string, Set<string>>();
+  const lier = (m: Map<string, Set<string>>, a: string, b: string) => {
+    if (!m.has(a)) m.set(a, new Set());
+    m.get(a)!.add(b);
+  };
+  const paire =
+    /\(\(?"?([A-Za-z_]\w*)"? IS (?:NOT )?NULL\)?\s*=\s*\(?"?([A-Za-z_]\w*)"? IS (?:NOT )?NULL\)/g;
+  const unSeul = /num_nonnulls\(([^)]*)\)\s*=\s*1\b/g;
+  for (const k of contraintes) {
+    if (k.genre !== 'c') continue;
+    for (const m of k.definition.matchAll(paire)) {
+      lier(ensemble, m[1]!, m[2]!);
+      lier(ensemble, m[2]!, m[1]!);
+    }
+    for (const m of k.definition.matchAll(unSeul)) {
+      const membres = m[1]!.split(',').map((x) => x.trim().replace(/^"|"$/g, ''));
+      for (const a of membres) for (const b of membres) if (a !== b) lier(exclusives, a, b);
+    }
+  }
+  return { ensemble, exclusives };
+}
+
+/** La colonne et celles que les CHECK lui lient, transitivement, sans franchir une exclusion. */
+function fermeture(
+  c: string,
+  liens: ReturnType<typeof liensDesChecks>,
+  nullables: Set<string>
+): string[] {
+  const interdites = liens.exclusives.get(c) ?? new Set<string>();
+  const vues = new Set([c]);
+  const pile = [c];
+  while (pile.length > 0) {
+    for (const v of liens.ensemble.get(pile.pop()!) ?? []) {
+      if (!vues.has(v) && nullables.has(v) && !interdites.has(v)) {
+        vues.add(v);
+        pile.push(v);
+      }
+    }
+  }
+  return [...vues];
+}
+
 /** La valeur SQL d'une colonne remplie, hors enum et hors clé étrangère. */
 function valeurDeType(c: ColonneVue, motif: string | undefined): string {
   const t = c.type.toLowerCase();
@@ -216,7 +268,15 @@ function candidatsDe(table: string, schema: SchemaVu): string[] {
     }
   }
   const nullables = retenues.filter((c) => !c.nonNul);
-  const remplissages: ColonneVue[][] = [[], ...nullables.map((c) => [c]), nullables];
+  // Chaque nullable est remplie AVEC celles que les CHECK lui lient, jamais avec une exclusive
+  // (DM-07 : porteur exclusif, grille si et seulement si apporteur, bloc et empreinte ensemble).
+  const liens = liensDesChecks(contraintes);
+  const nomsNullables = new Set(nullables.map((c) => c.colonne));
+  const parNom = new Map(nullables.map((c) => [c.colonne, c]));
+  const fermees = nullables.map((c) =>
+    fermeture(c.colonne, liens, nomsNullables).map((n) => parNom.get(n)!)
+  );
+  const remplissages: ColonneVue[][] = [[], ...fermees, nullables];
   const sortie: string[] = [];
   const noms = retenues.map((c) => ident(c.colonne)).join(', ');
   for (const v of variantesEnum) {
