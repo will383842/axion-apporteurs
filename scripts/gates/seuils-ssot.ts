@@ -519,9 +519,23 @@ export function preavisIndexes(fichiers: readonly Fichier[]): Faute[] {
 
 // ── 4. La cohérence gabarit ↔ SSOT ──────────────────────────────────────────────────────────────
 
-/** Un entier de 0 à 99 en lettres (orthographe traditionnelle, traits d'union) ; `null` au-delà. */
+/**
+ * Un entier de 0 à 999 en lettres (orthographe traditionnelle, traits d'union) ; `null` au-delà.
+ * QA-T57 : une durée de la SSOT peut dépasser 99 (`DERNIER_VIDAGE_MAX_MINUTES` = 120). Règle du « s »
+ * de cent : il prend la marque du pluriel quand il est multiplié ET termine le nombre (« deux
+ * cents »), jamais suivi d'un autre nombre (« deux cent un », « cent vingt »).
+ */
 export function enLettres(n: number): string | null {
-  if (!Number.isInteger(n) || n < 0 || n > 99) return null;
+  if (!Number.isInteger(n) || n < 0 || n > 999) return null;
+  if (n < 100) return deZeroAQuatreVingtDixNeuf(n);
+  const c = Math.floor(n / 100);
+  const r = n % 100;
+  const centaine = c === 1 ? 'cent' : `${UNITES_FR[c]} cent${r === 0 ? 's' : ''}`;
+  return r === 0 ? centaine : `${centaine} ${deZeroAQuatreVingtDixNeuf(r)}`;
+}
+
+/** Un entier de 0 à 99 en lettres (orthographe traditionnelle, traits d'union). */
+function deZeroAQuatreVingtDixNeuf(n: number): string {
   if (n <= 16) return UNITES_FR[n]!;
   if (n < 20) return `dix-${UNITES_FR[n - 10]}`;
   const d = Math.floor(n / 10);
