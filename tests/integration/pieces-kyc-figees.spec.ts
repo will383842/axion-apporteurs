@@ -1,3 +1,5 @@
+// @req REQ-UX-027
+// @req REQ-DM-027
 /**
  * SEC-49 (REQ-UX-027, REQ-DM-027) — l'IBAN d'une pièce du KYC est FIGÉ par la base.
  *
