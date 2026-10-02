@@ -47,6 +47,12 @@ export type RolesDuVidage = {
    * restauration ÉCHOUE, rien n'est rejoué (condition de la lentille sécurité, DM-45).
    */
   pieges: string[];
+  /**
+   * QA-T66 — les rôles HORS `FORME_DES_ROLES` qui portent un `ALTER … OWNER TO` : celui qui a migré
+   * la base source, triés. Il n'y en a qu'UN au plus ; un second serait un rôle inconnu dont les
+   * GRANT seraient exemptés en silence (décision de la coordination du 2026-10-02).
+   */
+  proprietairesSource: string[];
 };
 
 /**
@@ -99,7 +105,28 @@ export function rolesDuVidage(sqlDuSchema: string): RolesDuVidage {
     roles.add(m[1]!);
     proprietes.push(ligne);
   }
-  return { roles: [...roles].sort(), proprietes, horsForme: [...horsForme].sort(), pieges };
+  return {
+    roles: [...roles].sort(),
+    proprietes,
+    horsForme: [...horsForme].sort(),
+    pieges,
+    proprietairesSource: [...proprietairesSource].sort(),
+  };
+}
+
+/**
+ * Le jugement des rôles, AVANT toute création de rôle et toute restauration : le motif de l'échec,
+ * ou `null`. Il nomme des RÔLES, jamais une ligne du vidage (« rien ne sort de la base restaurée ») ;
+ * une ligne piégée n'est que comptée.
+ */
+export function jugerLesRoles(lu: RolesDuVidage): string | null {
+  if (lu.proprietairesSource.length > 1)
+    return `restauration : [proprietaires_multiples] plus d’un propriétaire source dans le vidage — ${lu.proprietairesSource.join(', ')}`;
+  if (lu.horsForme.length > 0)
+    return `restauration : rôle hors de la forme partners_* — ${lu.horsForme.join(', ')}`;
+  if (lu.pieges.length > 0)
+    return `restauration : ${lu.pieges.length} propriété(s) hors de la forme ancrée, rien n'est rejoué`;
+  return null;
 }
 
 export type Verdict = {
@@ -202,13 +229,9 @@ export async function exercer(
     if (schemaSql.status !== 0)
       return echec(`restauration : lecture du schéma du vidage sort en ${schemaSql.status}`);
     const lu = rolesDuVidage(schemaSql.stdout.toString('utf8'));
-    if (lu.horsForme.length > 0)
-      return echec(`restauration : rôle hors de la forme partners_* — ${lu.horsForme.join(', ')}`);
     // Le compte seulement, jamais le texte : une ligne piégée peut porter n'importe quoi.
-    if (lu.pieges.length > 0)
-      return echec(
-        `restauration : ${lu.pieges.length} propriété(s) hors de la forme ancrée, rien n'est rejoué`
-      );
+    const faute = jugerLesRoles(lu);
+    if (faute !== null) return echec(faute);
     for (const role of lu.roles) {
       const cree = psql(
         `DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '${role}') THEN CREATE ROLE ${role} NOLOGIN; END IF; END $$;`
