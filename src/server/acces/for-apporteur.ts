@@ -50,6 +50,7 @@ import type {
   JetonDepot,
   LienMagique,
   PersonneDeclaree,
+  PieceKyc,
   Prisma,
   PrismaClient,
   SessionEspace,
@@ -67,6 +68,7 @@ export const MODELES_CLOISONNES = [
   'jetonDepot',
   'lienMagique',
   'personneDeclaree',
+  'pieceKyc',
   'sessionEspace',
 ] as const;
 export type ModeleCloisonne = (typeof MODELES_CLOISONNES)[number];
@@ -109,7 +111,8 @@ export const CLES_REFUSEES = {
   changementCourriel: ['id', 'apporteurId', 'apporteur'],
   courrielEnvoye: ['id', 'apporteurId', 'apporteur', 'attribution'],
   depotRefuse: ['id', 'apporteurId', 'apporteur'],
-  identiteFacturation: ['id', 'apporteurId', 'apporteur'],
+  // DM-11 : la pièce rib référencée est une référence vérifiée, jamais une relation écrite de l'espace.
+  identiteFacturation: ['id', 'apporteurId', 'apporteur', 'pieceKyc', 'pieceKycType'],
   jetonDepot: ['id', 'apporteurId', 'apporteur', 'attributions'],
   lienMagique: [
     'id',
@@ -128,6 +131,7 @@ export const CLES_REFUSEES = {
     'lienMagique',
   ],
   personneDeclaree: ['id', 'apporteurId', 'apporteur', 'attributions'],
+  pieceKyc: ['id', 'apporteurId', 'apporteur', 'identitesFacturation'],
 } as const satisfies Record<ModeleCloisonne, readonly string[]>;
 
 /** Les clés étrangères vers une autre table cloisonnée : admises si la ligne visée est de la session. */
@@ -137,6 +141,8 @@ export const REFERENCES_CLOISONNEES: Partial<
   sessionEspace: { lienMagiqueId: 'lienMagique' },
   attribution: { jetonDepotId: 'jetonDepot', personneDeclareeId: 'personneDeclaree' },
   courrielEnvoye: { attributionId: 'attribution' },
+  // DM-11 : la pièce rib d'une identité de facturation est une pièce de la session.
+  identiteFacturation: { pieceKycId: 'pieceKyc' },
 };
 
 /** Les messages de refus : une liste FERMÉE, qui part au journal et jamais au navigateur. */
@@ -171,10 +177,11 @@ export const RELATIONS = {
   changementCourriel: ['apporteur'],
   courrielEnvoye: ['apporteur', 'attribution'],
   depotRefuse: ['apporteur'],
-  identiteFacturation: ['apporteur'],
+  identiteFacturation: ['apporteur', 'pieceKyc'],
   jetonDepot: ['apporteur', 'attributions'],
   lienMagique: ['apporteur', 'utilisateurConsole', 'session'],
   personneDeclaree: ['apporteur', 'attributions'],
+  pieceKyc: ['apporteur', 'identitesFacturation'],
   sessionEspace: ['apporteur', 'utilisateurConsole', 'lienMagique'],
 } as const satisfies Record<ModeleCloisonne, readonly string[]>;
 
@@ -202,6 +209,9 @@ export const SECRETS = Object.freeze([
   'codePostalChiffre',
   'lienInteretPrecisionChiffre',
   'agentHash',
+  // DM-11 : l'IBAN de la pièce rib, chiffré et empreint (HYP-DM06-IBAN).
+  'ibanChiffre',
+  'ibanHash',
 ] as const);
 
 /**
@@ -248,6 +258,8 @@ export const CHAMPS_RENDUS = {
   jetonDepot: ['id', 'creeAt', 'revoqueAt', 'dernierUsageAt'],
   lienMagique: ['id', 'creeAt', 'expireAt', 'consommeAt', 'annuleAt', 'tentativesCode'],
   personneDeclaree: ['id', 'qualite', 'declareeAt', 'retireeAt'],
+  // DM-11 : ce que « Ma conformité » montre d'une pièce — son type, son état, ses dates.
+  pieceKyc: ['id', 'type', 'statut', 'verifieeAt', 'expireAt', 'remplaceeAt'],
   sessionEspace: ['id', 'creeAt', 'expireAt', 'revoqueAt', 'derniereVueAt', 'sessionVersion'],
   // SEC-47 : ce que l'apporteur lit de sa propre fiche — son état, son code, ce qu'il a accepté.
   apporteur: [
@@ -298,10 +310,12 @@ export const CHAMPS_TUS = {
   courrielEnvoye: ['apporteurId', 'emailHash', 'fournisseurMessageId', 'erreur', 'attributionId'],
   // DM-53 : la date de la purge du SIREN, une trace technique ; le SIREN, lui, reste rendu (NULL une fois purgé).
   depotRefuse: ['apporteurId', 'sirenPurgeAt'],
-  identiteFacturation: ['apporteurId'],
+  identiteFacturation: ['apporteurId', 'pieceKycId', 'pieceKycType'],
   jetonDepot: ['apporteurId', 'tokenHash'],
   lienMagique: ['apporteurId', 'utilisateurConsoleId', 'tokenHash', 'kid', 'codeHash'],
   personneDeclaree: ['apporteurId', 'nomChiffre', 'prenomChiffre'],
+  // DM-11 : le fichier (stockage privé, REQ-SEC-026), sa purge, et l'IBAN chiffré et empreint.
+  pieceKyc: ['apporteurId', 'fichierRef', 'fichierPurgeAt', 'ibanChiffre', 'ibanHash'],
   sessionEspace: [
     'apporteurId',
     'utilisateurConsoleId',
@@ -413,6 +427,10 @@ type WPersonne = Prisma.PersonneDeclareeWhereInput;
 type CPersonne = Prisma.PersonneDeclareeUncheckedCreateInput;
 type UPersonne = Prisma.PersonneDeclareeUncheckedUpdateManyInput;
 type OPersonne = Prisma.PersonneDeclareeOrderByWithRelationInput;
+type WPiece = Prisma.PieceKycWhereInput;
+type CPiece = Prisma.PieceKycUncheckedCreateInput;
+type UPiece = Prisma.PieceKycUncheckedUpdateManyInput;
+type OPiece = Prisma.PieceKycOrderByWithRelationInput;
 type WChangement = Prisma.ChangementCourrielWhereInput;
 type CChangement = Prisma.ChangementCourrielUncheckedCreateInput;
 type UChangement = Prisma.ChangementCourrielUncheckedUpdateManyInput;
@@ -463,6 +481,13 @@ export interface AccesApporteur {
     SansProprietaire<CPersonne>,
     UPersonne,
     OPersonne
+  >;
+  pieceKyc: VueCloisonnee<
+    Rendu<PieceKyc, 'pieceKyc'>,
+    WPiece,
+    SansProprietaire<CPiece>,
+    UPiece,
+    OPiece
   >;
   changementCourriel: VueCloisonnee<
     Rendu<ChangementCourriel, 'changementCourriel'>,

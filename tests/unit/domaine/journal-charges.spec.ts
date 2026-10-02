@@ -47,6 +47,7 @@ describe('REQ-DM-024 — une charge par type, fermée', () => {
       'attribution_peremption_suspendue',
       'attribution_porteur_reaffecte',
       'journal_ouvert',
+      'piece_kyc_statut_modifie',
     ]);
   });
 
