@@ -282,7 +282,7 @@ export const SEUILS = {
     source:
       'HYP-RGPD-RETENTION, proposition de la lentille sécurité, 2026-10-02 (acceptation INT-T56, REQ-JUR-029) — plafond provisoire, à confirmer par Williams',
     renvois: [],
-    verifieLe: '2026-10-01',
+    verifieLe: '2026-10-02',
   },
 } as const satisfies Record<string, Seuil>;
 
