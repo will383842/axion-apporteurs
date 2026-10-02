@@ -99,7 +99,7 @@ export const LEXIQUE_INTERDIT = [
   {
     nom: 'objectif',
     portee: 'depot',
-    reqs: ['REQ-GOV-017', 'REQ-JUR-037'],
+    reqs: ['REQ-GOV-017', 'REQ-JUR-037', 'REQ-JUR-012'],
     pourquoi:
       "un objectif assigné est une obligation de produire — le premier des trois pouvoirs qu'on " +
       'ne réunit jamais en une phrase',
@@ -109,7 +109,7 @@ export const LEXIQUE_INTERDIT = [
   {
     nom: 'quota',
     portee: 'depot',
-    reqs: ['REQ-GOV-017', 'REQ-JUR-037'],
+    reqs: ['REQ-GOV-017', 'REQ-JUR-037', 'REQ-JUR-012'],
     pourquoi:
       'un quota est un objectif chiffré, et la mesure de son atteinte est le deuxième pouvoir',
     formes: ['quota', 'quotas'],
@@ -118,7 +118,7 @@ export const LEXIQUE_INTERDIT = [
   {
     nom: 'classement',
     portee: 'depot',
-    reqs: ['REQ-GOV-017', 'REQ-JUR-037'],
+    reqs: ['REQ-GOV-017', 'REQ-JUR-037', 'REQ-JUR-012'],
     pourquoi:
       "classer les apporteurs entre eux les met en concurrence sous l'autorité de celui qui classe",
     formes: ['classement', 'classements'],
@@ -127,7 +127,7 @@ export const LEXIQUE_INTERDIT = [
   {
     nom: 'palmares',
     portee: 'apporteur',
-    reqs: ['REQ-JUR-037'],
+    reqs: ['REQ-JUR-037', 'REQ-JUR-012'],
     pourquoi: 'un rang, un niveau ou un « top » est un classement qui ne dit pas son nom',
     formes: [
       'top',
@@ -163,7 +163,7 @@ export const LEXIQUE_INTERDIT = [
   {
     nom: 'injonction',
     portee: 'apporteur',
-    reqs: ['REQ-JUR-037', 'REQ-JUR-039'],
+    reqs: ['REQ-JUR-037', 'REQ-JUR-039', 'REQ-JUR-012', 'REQ-JUR-013'],
     pourquoi:
       "l'impératif de méthode est une directive : rien de ce que l'outil envoie ne doit se lire " +
       "comme une instruction, et l'apporteur n'est tenu à aucune fréquence de connexion",
@@ -242,6 +242,84 @@ export const LEXIQUE_INTERDIT = [
       '(ajoutée par UX-P0-01 ; « quota », « strike » et « commercial », que REQ-UX-003 refuse aussi, ' +
       'sont tenus par leurs familles)',
     formes: ['attribution', 'attributions', 'SIREN', 'prorata'],
+    aDireALaPlace: null,
+  },
+  // JUR-T13 — la charte relationnelle sur les écrans et les courriels. Texte d'A07 du 2026-10-02 :
+  // des TOURNURES, jamais le mot nu « formation » ni « suspendu » (« organismes de formation » et
+  // « vos nouveaux dépôts sont suspendus le temps d'un échange » restent verts). « Concours », titre
+  // juridique de l'art. 3.5, et « défi » seul sont écartés à dessein ; « formation obligatoire » est
+  // tenue par `injonction`, et chaque « faute de … » par `subordination`.
+  {
+    nom: 'challenge',
+    portee: 'apporteur',
+    reqs: ['REQ-JUR-012'],
+    pourquoi:
+      "un challenge met les apporteurs en compétition sous l'autorité de celui qui l'organise : " +
+      "c'est un classement et un objectif à la fois, que REQ-JUR-012 nomme en toutes lettres",
+    formes: [
+      'challenge',
+      'challenges',
+      'challenger',
+      'compétition',
+      'compétitions',
+      'défi du mois',
+      'défis du mois',
+    ],
+    aDireALaPlace: null,
+  },
+  {
+    nom: 'formation_exigee',
+    portee: 'apporteur',
+    reqs: ['REQ-JUR-012', 'REQ-JUR-013'],
+    pourquoi:
+      'une formation ou un webinaire présentés comme une condition sont une formation exigée : ils ' +
+      "doivent rester facultatifs, et aucune étape de la relation n'en dépend (REQ-JUR-013)",
+    formes: [
+      'formation exigée',
+      'formations exigées',
+      'formation requise',
+      'formations requises',
+      'formation préalable',
+      'formations préalables',
+      'webinaire exigé',
+      'webinaires exigés',
+      'webinaire requis',
+      'webinaires requis',
+      'webinaire préalable',
+      'webinaires préalables',
+      'présence requise',
+      'présence exigée',
+      'participation requise',
+      'participation exigée',
+      'module à valider',
+      'modules à valider',
+      'suivez la formation',
+      'suivez le webinaire',
+      'assistez au webinaire',
+      'participez au webinaire',
+      'inscrivez-vous au webinaire',
+    ],
+    aDireALaPlace: null,
+  },
+  {
+    nom: 'inactivite_sanctionnee',
+    portee: 'apporteur',
+    reqs: ['REQ-JUR-012', 'REQ-JUR-039'],
+    pourquoi:
+      "l'apporteur n'est tenu à aucune fréquence d'activité ni de connexion : un texte qui nomme son " +
+      "inactivité, ou y attache une conséquence, crée l'obligation qu'il prétend ne pas fixer " +
+      '(REQ-JUR-039)',
+    formes: [
+      'inactivité',
+      'inactif',
+      'inactifs',
+      'inactive',
+      'inactives',
+      'compte désactivé',
+      'compte suspendu',
+      'dernière connexion',
+      'dernières connexions',
+    ],
     aDireALaPlace: null,
   },
 ] as const satisfies readonly FamilleInterdite[];
