@@ -20,7 +20,7 @@
  * HORS DE CE FICHIER : la double clé de rotation (`kid`, 24 h) de REQ-QA-030 a sa propre tâche,
  * qui la livrera avec son test.
  */
-import { describe, it, expect, afterAll } from 'vitest';
+import { describe, it, expect, afterAll, vi } from 'vitest';
 import { spawnSync } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
@@ -275,5 +275,431 @@ describe('REQ-QA-030 — docs/env.md est le rendu du schéma', () => {
       expect(lignes, nom).toHaveLength(1);
       expect(lignes[0], nom).toContain(NOMS_FACULTATIFS.includes(nom) ? 'facultative' : 'requise');
     }
+  });
+});
+
+/**
+ * LE MODULE RECHARGÉ, JUGÉ EN PROCESSUS, À LA VALEUR PRÈS.
+ *
+ * Les listes, les expressions régulières, les rôles et les schémas de `src/lib/env.ts` sont évalués
+ * AU CHARGEMENT : importés une fois en tête de fichier, ils seraient lus avant que l'outil de
+ * mutation n'active son mutant, et aucun test ne les jugerait. Chaque témoin ci-dessous vide donc le
+ * cache des modules et réimporte la source (même procédé que `journal-redige.spec.ts`). Les
+ * démarrages en sous-processus, plus haut, ne jugent aucun mutant : l'enfant charge la source sans
+ * mutant actif. Toutes les valeurs de secret sont FACTICES, fabriquées à l'exécution.
+ */
+type ModuleEnv = typeof import('../../../src/lib/env');
+
+async function envRecharge(): Promise<ModuleEnv> {
+  vi.resetModules();
+  return import('../../../src/lib/env');
+}
+
+const CLE_FACTICE = '0123456789abcdef'.repeat(4);
+const valeurFactice = (graine: string): string =>
+  `factice-${graine.toLowerCase()}-`.padEnd(48, 'x');
+const INSTANT_DE_REFERENCE = Date.UTC(2026, 9, 2, 10, 0, 0);
+
+/** Chaque secret toujours exigé, factice et distinct des autres. */
+function secretsFactices(m: ModuleEnv): Record<string, string> {
+  const env: Record<string, string> = {};
+  for (const nom of m.NOMS_DES_SECRETS) {
+    env[nom] = nom === CLE_HEX ? CLE_FACTICE : valeurFactice(nom);
+  }
+  return env;
+}
+
+/** Un démarrage complet hors production (`NODE_ENV=test`), puits armé. */
+function demarrageFactice(m: ModuleEnv): Record<string, string | undefined> {
+  return {
+    NODE_ENV: 'test',
+    ...secretsFactices(m),
+    DATABASE_URL: 'postgresql://partners@localhost:5432/partners',
+    REDIS_URL: 'redis://localhost:6379',
+    NOTIFY_SINK: 'true',
+  };
+}
+
+/** Les refus d'un démarrage, en lignes `<NOM> : <motif>` formées par le module lui-même. */
+function lignesDe(m: ModuleEnv, source: Readonly<Record<string, string | undefined>>): string[] {
+  const r = m.lireDemarrage(source, INSTANT_DE_REFERENCE);
+  return r.ok ? [] : r.refus.map(m.formaterRefus);
+}
+
+describe('REQ-QA-030 — le module rechargé : les listes dérivées du schéma, à la valeur près', () => {
+  it('REQ-QA-030 : la configuration, les facultatives, les secrets conditionnels et la liste complète sont exactement ceux-ci', async () => {
+    const m = await envRecharge();
+    expect(m.NOMS_DE_CONFIGURATION).toEqual([
+      'DATABASE_URL',
+      'REDIS_URL',
+      'NOTIFY_SINK',
+      'PARTNERS_ENV',
+      'LOG_LEVEL',
+      'SENTRY_DSN',
+      'PARTNERS_EMAIL_DMARC_VERIFIE',
+      'PARTNERS_EMAIL_EXPEDITEUR',
+      'AXIONIA_BASE_URL',
+      'ZEPTOMAIL_API_URL',
+    ]);
+    // NOTIFY_SINK est facultative pour Zod, mais exigée hors production : elle n'est PAS ici.
+    expect(m.NOMS_FACULTATIFS).toEqual([
+      'PARTNERS_ENV',
+      'LOG_LEVEL',
+      'SENTRY_DSN',
+      'PARTNERS_EMAIL_DMARC_VERIFIE',
+      'PARTNERS_EMAIL_EXPEDITEUR',
+      'AXIONIA_BASE_URL',
+      'ZEPTOMAIL_API_URL',
+    ]);
+    expect(m.NOMS_DES_SECRETS_CONDITIONNELS).toEqual(['ZEPTOMAIL_SEND_TOKEN']);
+    // Douze secrets toujours exigés, lus au schéma : leurs noms ne sont pas retapés ici.
+    expect(m.NOMS_DES_SECRETS).toHaveLength(12);
+    expect(m.NOMS_DES_SECRETS).toContain(CLE_HEX);
+    expect(m.NOMS_DES_VARIABLES).toHaveLength(23);
+    expect(m.NOMS_DES_VARIABLES).toEqual([
+      ...m.NOMS_DES_SECRETS,
+      ...m.NOMS_DES_SECRETS_CONDITIONNELS,
+      ...m.NOMS_DE_CONFIGURATION,
+    ]);
+    // Un jeu vide : chaque secret toujours exigé est refusé `absente`, et lui seul.
+    const vide = m.lireEnvironnement({ NODE_ENV: 'test' });
+    expect(vide.ok).toBe(false);
+    expect(vide.ok ? [] : vide.refus).toEqual(
+      m.NOMS_DES_SECRETS.map((variable) => ({ variable, motif: 'absente' }))
+    );
+  });
+
+  it('REQ-QA-030 : le chemin de la vue, la fenêtre de rotation et les variables de la clé précédente sont exactement ceux-ci', async () => {
+    const m = await envRecharge();
+    expect(m.CHEMIN_DOC_ENV).toBe('docs/env.md');
+    expect(m.ROTATION_MAX_MS).toBe(86_400_000);
+    for (const nom of m.NOMS_EN_ROTATION) {
+      expect(m.variablesDeRotation(nom)).toEqual({
+        cle: `${nom}_PRECEDENT`,
+        echeance: `${nom}_PRECEDENT_ECHEANCE`,
+      });
+    }
+    // Le `kid` d'une valeur fixe, figé : huit hexadécimaux de l'empreinte séparée par domaine.
+    expect(m.kidDe('valeur-temoin-kid')).toBe('427b2cbb');
+  });
+
+  it('REQ-QA-030 : la vue rendue par le module rechargé est celle du disque — chaque rôle, chaque règle, à la lettre', async () => {
+    const m = await envRecharge();
+    const surLeDisque = readFileSync(join(RACINE, 'docs/env.md'), 'utf8').replace(/\r\n/g, '\n');
+    const rendu = m.documenterEnvironnement();
+    expect(rendu === surLeDisque, 'docs/env.md diffère du rendu du module rechargé').toBe(true);
+    // Chaque ligne de variable porte un rôle non vide en dernière colonne.
+    for (const nom of m.NOMS_DES_VARIABLES) {
+      const ligne = rendu.split('\n').find((l) => l.startsWith(`| \`${nom}\` |`)) ?? '';
+      const role = ligne.split(' | ').at(-1)?.replace(/ \|$/, '').trim() ?? '';
+      expect(role, nom).not.toBe('');
+    }
+    expect(rendu).toContain(
+      '| `ZEPTOMAIL_SEND_TOKEN` | facultative, requise si l’envoi réel est allumé |'
+    );
+    expect(rendu).toContain(
+      '| `LOG_LEVEL` | facultative | `fatal`, `error`, `warn`, `info`, `debug`, `trace`, `silent` |'
+    );
+  });
+});
+
+describe('REQ-QA-030 — le module rechargé : les règles de forme des secrets', () => {
+  it('REQ-QA-030 : la clé hexadécimale est ancrée aux deux bouts — 64 hexadécimaux exactement, ni avant, ni après', async () => {
+    const m = await envRecharge();
+    const base = secretsFactices(m);
+    const refusDeLaCle = (v: string) => {
+      const r = m.lireEnvironnement({ NODE_ENV: 'test', ...base, [CLE_HEX]: v });
+      return r.ok ? [] : r.refus;
+    };
+    expect(refusDeLaCle(CLE_FACTICE)).toEqual([]);
+    expect(refusDeLaCle(CLE_FACTICE.toUpperCase())).toEqual([]);
+    const horsFormat = [{ variable: CLE_HEX, motif: 'format_invalide' }];
+    expect(refusDeLaCle(`g${CLE_FACTICE}`)).toEqual(horsFormat);
+    expect(refusDeLaCle(`${CLE_FACTICE}g`)).toEqual(horsFormat);
+    expect(refusDeLaCle(`${CLE_FACTICE}a`)).toEqual(horsFormat);
+    expect(refusDeLaCle(CLE_FACTICE.slice(1))).toEqual(horsFormat);
+  });
+
+  it('REQ-QA-030 : une espace EN BORDURE est refusée, une espace intérieure ne l’est pas', async () => {
+    const m = await envRecharge();
+    const base = secretsFactices(m);
+    const nom = m.NOMS_DES_SECRETS[0] ?? '';
+    const refusDe = (v: string) => {
+      const r = m.lireEnvironnement({ NODE_ENV: 'test', ...base, [nom]: v });
+      return r.ok ? [] : r.refus;
+    };
+    expect(refusDe('factice avec une espace interieure'.padEnd(48, 'x'))).toEqual([]);
+    const bordure = [{ variable: nom, motif: 'espace_en_bordure' }];
+    expect(refusDe(` ${valeurFactice('bordure')}`)).toEqual(bordure);
+    expect(refusDe(`${valeurFactice('bordure')} `)).toEqual(bordure);
+    expect(refusDe(`${valeurFactice('bordure')}\n`)).toEqual(bordure);
+  });
+
+  it('REQ-QA-030 : le préfixe interdit est jugé en tête seulement, sans égard à la casse, et seulement en production', async () => {
+    const m = await envRecharge();
+    const base = secretsFactices(m);
+    const nom = m.NOMS_DES_SECRETS[0] ?? '';
+    const refusDe = (nodeEnv: string | undefined, v: string) => {
+      const r = m.lireEnvironnement({ ...base, NODE_ENV: nodeEnv, [nom]: v });
+      return r.ok ? [] : r.refus;
+    };
+    const prefixe = [{ variable: nom, motif: 'prefixe_interdit' }];
+    expect(refusDe('production', 'dev_'.padEnd(48, 'x'))).toEqual(prefixe);
+    expect(refusDe('production', 'STUB'.padEnd(48, 'x'))).toEqual(prefixe);
+    // Le prédicat échoue FERMÉ : NODE_ENV absent ou inconnu vaut production.
+    expect(refusDe(undefined, 'dev_'.padEnd(48, 'x'))).toEqual(prefixe);
+    expect(refusDe('preview', 'stub'.padEnd(48, 'x'))).toEqual(prefixe);
+    // Hors production — development ET test —, le préfixe est admis.
+    expect(refusDe('development', 'dev_'.padEnd(48, 'x'))).toEqual([]);
+    expect(refusDe('test', 'dev_'.padEnd(48, 'x'))).toEqual([]);
+    // Au milieu de la valeur, ce n'est pas un préfixe.
+    expect(refusDe('production', 'factice-dev_-stub-'.padEnd(48, 'x'))).toEqual([]);
+    // Une valeur DÉJÀ refusée ne reçoit pas un second motif.
+    expect(refusDe('production', 'dev_court')).toEqual([{ variable: nom, motif: 'trop_courte' }]);
+  });
+
+  it('REQ-QA-030 : des secrets égaux forment UN refus `egale_a` qui nomme les autres ; des secrets vides ne sont pas égaux entre eux', async () => {
+    const m = await envRecharge();
+    const base = secretsFactices(m);
+    const [n0 = '', n1 = '', n2 = ''] = m.NOMS_DES_SECRETS;
+    const meme = valeurFactice('partagee');
+    const egaux = m.lireEnvironnement({
+      NODE_ENV: 'test',
+      ...base,
+      [n0]: meme,
+      [n1]: meme,
+      [n2]: meme,
+    });
+    expect(egaux.ok ? [] : egaux.refus).toEqual([
+      { variable: n0, motif: 'egale_a', avec: [n1, n2] },
+    ]);
+    expect(egaux.ok ? [] : egaux.refus.map(m.formaterRefus)).toEqual([
+      `${n0} : egale_a ${n1}, ${n2}`,
+    ]);
+    const vides = m.lireEnvironnement({ NODE_ENV: 'test', ...base, [n0]: '', [n1]: '' });
+    expect(vides.ok ? [] : vides.refus).toEqual([
+      { variable: n0, motif: 'absente' },
+      { variable: n1, motif: 'absente' },
+    ]);
+  });
+
+  it('REQ-QA-030 : une ligne de refus porte le nom, le motif, et pour une égalité les autres noms séparés par une virgule', async () => {
+    const m = await envRecharge();
+    expect(m.formaterRefus({ variable: 'A', motif: 'absente' })).toBe('A : absente');
+    expect(m.formaterRefus({ variable: 'A', motif: 'egale_a', avec: ['B', 'C'] })).toBe(
+      'A : egale_a B, C'
+    );
+  });
+});
+
+describe('REQ-QA-030 — le module rechargé : la configuration, valeur admise par valeur admise', () => {
+  it('REQ-QA-030 : chaque protocole admis est accepté, un autre est `format_invalide`', async () => {
+    const m = await envRecharge();
+    const base = demarrageFactice(m);
+    const admises: [string, string][] = [
+      ['DATABASE_URL', 'postgresql://partners@localhost:5432/partners'],
+      ['DATABASE_URL', 'postgres://partners@localhost:5432/partners'],
+      ['REDIS_URL', 'redis://localhost:6379'],
+      ['REDIS_URL', 'rediss://localhost:6380'],
+      ['SENTRY_DSN', 'https://collecte.exemple.invalid/1'],
+      ['AXIONIA_BASE_URL', 'https://axionia.exemple.invalid'],
+      ['ZEPTOMAIL_API_URL', 'https://api.zeptomail.eu/v1.1/email'],
+    ];
+    for (const [nom, v] of admises) {
+      expect(lignesDe(m, { ...base, [nom]: v }), `${nom}=${v}`).toEqual([]);
+    }
+    for (const nom of ['SENTRY_DSN', 'AXIONIA_BASE_URL', 'ZEPTOMAIL_API_URL']) {
+      expect(lignesDe(m, { ...base, [nom]: 'http://hote.exemple.invalid/x' }), nom).toEqual([
+        `${nom} : format_invalide`,
+      ]);
+    }
+    expect(lignesDe(m, { ...base, DATABASE_URL: 'pas une url' })).toEqual([
+      'DATABASE_URL : format_invalide',
+    ]);
+  });
+
+  it('REQ-QA-030 : chaque niveau de journal de pino est admis, tout autre est `format_invalide` — même le mot « undefined »', async () => {
+    const m = await envRecharge();
+    const base = demarrageFactice(m);
+    for (const niveau of ['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']) {
+      expect(lignesDe(m, { ...base, LOG_LEVEL: niveau }), niveau).toEqual([]);
+    }
+    for (const v of ['bavard', 'undefined', 'INFO']) {
+      expect(lignesDe(m, { ...base, LOG_LEVEL: v }), v).toEqual(['LOG_LEVEL : format_invalide']);
+    }
+  });
+
+  it('REQ-QA-030 : une valeur non textuelle est `format_invalide`, pas `absente`', async () => {
+    const m = await envRecharge();
+    const base = demarrageFactice(m);
+    const nombre = 42 as unknown as string;
+    expect(lignesDe(m, { ...base, DATABASE_URL: nombre })).toEqual([
+      'DATABASE_URL : format_invalide',
+    ]);
+    expect(lignesDe(m, { ...base, LOG_LEVEL: nombre })).toEqual(['LOG_LEVEL : format_invalide']);
+  });
+
+  it('REQ-QA-030 : le drapeau d’envoi admet `true` et `false`, rien d’autre', async () => {
+    const m = await envRecharge();
+    const base = demarrageFactice(m);
+    const allume = {
+      ...base,
+      PARTNERS_EMAIL_DMARC_VERIFIE: 'true',
+      ZEPTOMAIL_API_URL: 'https://api.zeptomail.eu/v1.1/email',
+      ZEPTOMAIL_SEND_TOKEN: valeurFactice('jeton-d-envoi'),
+    };
+    expect(lignesDe(m, allume)).toEqual([]);
+    expect(lignesDe(m, { ...base, PARTNERS_EMAIL_DMARC_VERIFIE: 'false' })).toEqual([]);
+    expect(lignesDe(m, { ...base, PARTNERS_EMAIL_DMARC_VERIFIE: 'oui' })).toEqual([
+      'PARTNERS_EMAIL_DMARC_VERIFIE : format_invalide',
+    ]);
+  });
+
+  it('REQ-QA-030 : une variable facultative posée est nette — ni vide, ni entourée d’une espace', async () => {
+    const m = await envRecharge();
+    const base = demarrageFactice(m);
+    for (const nom of ['PARTNERS_ENV', 'PARTNERS_EMAIL_EXPEDITEUR']) {
+      expect(lignesDe(m, { ...base, [nom]: '' }), nom).toEqual([`${nom} : absente`]);
+      expect(lignesDe(m, { ...base, [nom]: ' preview' }), nom).toEqual([
+        `${nom} : espace_en_bordure`,
+      ]);
+      expect(lignesDe(m, { ...base, [nom]: 'preview' }), nom).toEqual([]);
+    }
+  });
+
+  it('REQ-QA-030 : envoi allumé, un jeton ou une URL VIDE est exigé comme une variable absente', async () => {
+    const m = await envRecharge();
+    const base = demarrageFactice(m);
+    expect(
+      lignesDe(m, {
+        ...base,
+        PARTNERS_EMAIL_DMARC_VERIFIE: 'true',
+        ZEPTOMAIL_SEND_TOKEN: '',
+        ZEPTOMAIL_API_URL: '',
+      })
+    ).toEqual([
+      'ZEPTOMAIL_SEND_TOKEN : absente',
+      'ZEPTOMAIL_API_URL : absente',
+      'ZEPTOMAIL_SEND_TOKEN : requise_envoi_actif',
+      'ZEPTOMAIL_API_URL : requise_envoi_actif',
+    ]);
+  });
+
+  it('REQ-QA-030 : un démarrage accepté rend les secrets, le secret conditionnel posé ET la configuration', async () => {
+    const m = await envRecharge();
+    const base = demarrageFactice(m);
+    const jeton = valeurFactice('jeton-d-envoi');
+    const r = m.lireDemarrage({ ...base, ZEPTOMAIL_SEND_TOKEN: jeton, LOG_LEVEL: 'warn' });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    const nom = m.NOMS_DES_SECRETS[0] ?? '';
+    expect((r.env as Record<string, unknown>)[nom]).toBe(base[nom]);
+    expect(r.env.ZEPTOMAIL_SEND_TOKEN).toBe(jeton);
+    expect(r.env.DATABASE_URL).toBe(base.DATABASE_URL);
+    expect(r.env.LOG_LEVEL).toBe('warn');
+  });
+});
+
+describe('REQ-QA-030 — le module rechargé : l’échéance de la clé précédente', () => {
+  it('REQ-QA-030 : l’échéance est un instant UTC écrit en entier, avec ou sans millisecondes, au plus 24 h après le démarrage', async () => {
+    const m = await envRecharge();
+    const nom = m.NOMS_EN_ROTATION[0];
+    const v = m.variablesDeRotation(nom);
+    const precedente = valeurFactice('cle-precedente');
+    const avec = (echeance: string) => ({
+      NODE_ENV: 'test',
+      ...secretsFactices(m),
+      [v.cle]: precedente,
+      [v.echeance]: echeance,
+    });
+    for (const e of ['2026-10-02T12:00:00Z', '2026-10-02T12:00:00.123Z', '2026-10-03T10:00:00Z']) {
+      const r = m.lireTrousseaux(avec(e), INSTANT_DE_REFERENCE);
+      expect(r.ok, e).toBe(true);
+      if (r.ok) {
+        expect(r.trousseaux[nom].precedente, e).toEqual({
+          valeur: precedente,
+          echeanceMs: Date.parse(e),
+        });
+      }
+    }
+    const refusDe = (e: string) => {
+      const r = m.lireTrousseaux(avec(e), INSTANT_DE_REFERENCE);
+      return r.ok ? [] : r.refus;
+    };
+    // Une milliseconde au-delà des 24 h : refusée.
+    expect(refusDe('2026-10-03T10:00:00.001Z')).toEqual([
+      { variable: v.echeance, motif: 'echeance_au_dela_de_24_h' },
+    ]);
+    // L'ancre de tête : une année étendue est lisible par Date.parse, mais n'est pas la forme admise.
+    for (const e of ['+002026-10-02T12:00:00Z', '2026-10-02', '2026-10-02T12:00:00+02:00']) {
+      expect(refusDe(e), e).toEqual([{ variable: v.echeance, motif: 'format_invalide' }]);
+    }
+  });
+});
+
+describe('REQ-QA-030 — le module rechargé : le refus de démarrer écrit les refus et sort en 1', () => {
+  /** Espionne la sortie : `process.exit` LÈVE au lieu de sortir ; tout est restauré après. */
+  function capturer(appel: () => unknown): { sortie: string; ecrit: string; rendu: unknown } {
+    const sortie = vi.spyOn(process, 'exit').mockImplementation((code) => {
+      throw new Error(`sortie ${String(code)}`);
+    });
+    const ecriture = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    try {
+      let rendu: unknown;
+      let leve = '';
+      try {
+        rendu = appel();
+      } catch (e) {
+        leve = (e as Error).message;
+      }
+      return { sortie: leve, ecrit: ecriture.mock.calls.map((c) => String(c[0])).join(''), rendu };
+    } finally {
+      sortie.mockRestore();
+      ecriture.mockRestore();
+    }
+  }
+
+  it('REQ-QA-030 : secrets en défaut — l’en-tête, une ligne par refus, puis la sortie en 1', async () => {
+    const m = await envRecharge();
+    const base: Record<string, string | undefined> = { NODE_ENV: 'test', ...secretsFactices(m) };
+    const [n0 = '', n1 = ''] = m.NOMS_DES_SECRETS;
+    delete base[n0];
+    delete base[n1];
+    const c = capturer(() => m.exigerEnvironnement(base));
+    expect(c.sortie).toBe('sortie 1');
+    expect(c.ecrit).toBe(
+      "Démarrage refusé : secrets d'environnement en défaut (src/lib/env.ts, .env.example).\n" +
+        `  ${n0} : absente\n  ${n1} : absente\n`
+    );
+    expect(c.rendu).toBeUndefined();
+  });
+
+  it('REQ-QA-030 : secrets valides — ils sont rendus, rien n’est écrit, rien ne sort', async () => {
+    const m = await envRecharge();
+    const secrets = secretsFactices(m);
+    const c = capturer(() => m.exigerEnvironnement({ NODE_ENV: 'test', ...secrets }));
+    expect(c.sortie).toBe('');
+    expect(c.ecrit).toBe('');
+    expect(c.rendu).toEqual(secrets);
+  });
+
+  it('REQ-QA-030 : démarrage en défaut — l’en-tête des variables, une ligne par refus, puis la sortie en 1', async () => {
+    const m = await envRecharge();
+    const base = { ...demarrageFactice(m), DATABASE_URL: undefined, NOTIFY_SINK: 'false' };
+    const c = capturer(() => m.exigerDemarrage(base));
+    expect(c.sortie).toBe('sortie 1');
+    expect(c.ecrit).toBe(
+      "Démarrage refusé : variables d'environnement en défaut (src/lib/env.ts, docs/env.md).\n" +
+        '  DATABASE_URL : absente\n  NOTIFY_SINK : requise_hors_production\n'
+    );
+  });
+
+  it('REQ-QA-030 : démarrage complet — l’environnement est rendu, rien n’est écrit, rien ne sort', async () => {
+    const m = await envRecharge();
+    const base = demarrageFactice(m);
+    const c = capturer(() => m.exigerDemarrage(base));
+    expect(c.sortie).toBe('');
+    expect(c.ecrit).toBe('');
+    expect((c.rendu as Record<string, unknown>).DATABASE_URL).toBe(base.DATABASE_URL);
   });
 });
