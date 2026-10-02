@@ -25,8 +25,8 @@ const ROUTE_CONNEXION = '/connexion';
 export async function accepterLaPolitiqueDeConfidentialite(formulaire: FormData): Promise<void> {
   const jeton = (await cookies()).get(COOKIE_DE_SESSION.nom)?.value;
   const ports = portsDuProcessus(dependancesDuProcessus({ apres: after, env: process.env }));
-  // SEC-43 : la session pour CE segment est le premier acte ; l'acceptation est ouverte à tout
-  // niveau ouvert (plein et limité), puisque l'accord précède tout le reste.
+  // SEC-43 : la session pour CE segment est le premier acte ; l'acceptation répond en ouverture
+  // pleine comme en ouverture limitée, puisque l'accord précède tout le reste.
   const issue = await actionEspace('confidentialite', jeton, ports.session, async (session) => {
     const lue = lireLaPolitique();
     if (!lue.ok) return 'illisible' as const;

@@ -208,12 +208,18 @@ function fichiers(dossier: string): string[] {
   });
 }
 
+/** La directive `'use server'`, n'importe où dans le fichier. */
+const DIRECTIVE = /(['"])use server\1/g;
+
+/** Le fichier S'OUVRE-t-il sur la directive (commentaires de tête compris) ? C'est un module d'actions. */
+function directiveEnTete(contenu: string): boolean {
+  const corps = contenu.replace(/^(?:\s+|\/\/[^\n]*|\/\*[\s\S]*?\*\/)*/, '');
+  return /^(['"])use server\1/.test(corps);
+}
+
 /** Un fichier que la règle juge : une page, une route, ou un module d'actions serveur. */
 function estJuge(nom: string, contenu: string): boolean {
-  return (
-    /^(page|route)\.[cm]?[jt]sx?$/.test(nom) ||
-    /^\s*['"]use server['"]/m.test(contenu.slice(0, 400))
-  );
+  return /^(page|route)\.[cm]?[jt]sx?$/.test(nom) || directiveEnTete(contenu);
 }
 
 /**
@@ -223,6 +229,10 @@ function estJuge(nom: string, contenu: string): boolean {
 export function fauteDuFichier(cheminRelatif: string, contenu: string): string | null {
   const parties = cheminRelatif.split(/[\\/]/).filter((p) => !/^\(.*\)$/.test(p));
   const nom = parties.at(-1) ?? '';
+  // Une directive HORS de la tête est une action EN LIGNE : la page qui la porte se protège, mais
+  // l'action s'appelle sans elle. Refusée partout sous l'espace, segment public compris.
+  const directives = [...contenu.matchAll(DIRECTIVE)].length;
+  if (directives > (directiveEnTete(contenu) ? 1 : 0)) return `action_en_ligne ${cheminRelatif}`;
   if (!estJuge(nom, contenu)) return null;
   const segment = parties.length === 1 ? 'accueil' : (parties[0] ?? '');
   const publics: readonly string[] = SEGMENTS_PUBLICS;
@@ -236,21 +246,52 @@ export function fauteDuFichier(cheminRelatif: string, contenu: string): string |
   ];
   if (!proteges.includes(segment)) return `segment_inconnu ${cheminRelatif} (« ${segment} »)`;
   // Une ACTION serveur passe par l'enveloppeur ; une page ou une route, par exigerSessionPour.
-  const estUneAction = /^\s*['"]use server['"]/m.test(contenu.slice(0, 400));
-  const appel = estUneAction
-    ? /\bactionEspace\(\s*['"]([^'"]*)['"]/.exec(contenu)
-    : /\bexigerSessionPour\(\s*['"]([^'"]*)['"]/.exec(contenu);
-  if (appel === null) {
-    return `non_protege ${cheminRelatif} (${estUneAction ? 'actionEspace' : 'exigerSessionPour'} attendu)`;
+  const estUneAction = directiveEnTete(contenu);
+  const attendu = estUneAction ? 'actionEspace' : 'exigerSessionPour';
+  // Une PAGE n'expose que son export par défaut : elle est jugée d'un bloc. Un module d'actions
+  // expose UNE ACTION PAR EXPORT, et une route UN HANDLER PAR MÉTHODE : chacun est jugé seul, sinon
+  // un second export nu passerait derrière le premier qui se protège.
+  if (!estUneAction && !/^route\./.test(nom))
+    return fauteDUnBloc(cheminRelatif, contenu, segment, attendu);
+  // Un export indirect (`export { … }`, `export * from`) cache ce qu'il expose : il est refusé.
+  if (/^\s*export\s*(?:\{|\*)/m.test(contenu)) return `export_indirect ${cheminRelatif}`;
+  const exports = [
+    ...contenu.matchAll(
+      /^\s*export\s+(?:default\s+)?(?:(?:async\s+)?function\s*\*?\s*(\w*)|(?:const|let|var)\s+(\w+))/gm
+    ),
+  ];
+  if (exports.length === 0) return `non_protege ${cheminRelatif} (aucun export jugé)`;
+  for (const [i, m] of exports.entries()) {
+    const fin = exports[i + 1]?.index ?? contenu.length;
+    const nomExport = m[1] || m[2] || 'default';
+    const faute = fauteDUnBloc(
+      `${cheminRelatif}#${nomExport}`,
+      contenu.slice(m.index, fin),
+      segment,
+      attendu
+    );
+    if (faute !== null) return faute;
   }
+  return null;
+}
+
+/** La faute d'un bloc — une page entière, ou UN export d'action ou de route —, ou `null`. */
+function fauteDUnBloc(
+  quoi: string,
+  bloc: string,
+  segment: string,
+  attendu: 'actionEspace' | 'exigerSessionPour'
+): string | null {
+  const appel = new RegExp(`\\b${attendu}\\(\\s*['"]([^'"]*)['"]`).exec(bloc);
+  if (appel === null) return `non_protege ${quoi} (${attendu} attendu)`;
   if (appel[1] !== segment) {
-    return `mauvais_segment ${cheminRelatif} (« ${appel[1]} » au lieu de « ${segment} »)`;
+    return `mauvais_segment ${quoi} (« ${appel[1]} » au lieu de « ${segment} »)`;
   }
   // Premier acte : avant l'appel, aucune attente — sauf la lecture du cookie ou des en-têtes.
-  const avant = contenu.slice(0, appel.index);
+  const avant = bloc.slice(0, appel.index);
   const attentes = [...avant.matchAll(/\bawait\s+([\w.]+)/g)].map((m) => m[1]);
   if (attentes.some((a) => a !== 'cookies' && a !== 'headers')) {
-    return `pas_premier_acte ${cheminRelatif}`;
+    return `pas_premier_acte ${quoi}`;
   }
   return null;
 }
@@ -261,7 +302,11 @@ describe('REQ-SEC-032 — sur le disque, chaque page, route et action de l’esp
       .map((f) => ({ f: relative(RACINE_ESPACE, f), contenu: readFileSync(f, 'utf8') }))
       .filter(({ f, contenu }) => estJuge(f.split(/[\\/]/).at(-1) ?? '', contenu));
     expect(juges.length).toBeGreaterThan(0);
-    const fautes = juges.map(({ f, contenu }) => fauteDuFichier(f, contenu)).filter(Boolean);
+    // Les fautes se cherchent dans TOUS les fichiers : une action en ligne peut vivre hors d'un
+    // fichier jugé.
+    const fautes = fichiers(RACINE_ESPACE)
+      .map((f) => fauteDuFichier(relative(RACINE_ESPACE, f), readFileSync(f, 'utf8')))
+      .filter(Boolean);
     expect(fautes).toEqual([]);
   });
 
@@ -294,13 +339,43 @@ describe('REQ-SEC-032 — sur le disque, chaque page, route et action de l’esp
       'une action qui appelle exigerSessionPour au lieu de l’enveloppeur',
       'deposer/actions.ts',
       "'use server';\nexport async function deposer() { const v = await exigerSessionPour('deposer', j, p); }",
-      /^non_protege deposer\/actions\.ts \(actionEspace attendu\)/,
+      /^non_protege deposer\/actions\.ts#deposer \(actionEspace attendu\)$/,
     ],
     [
       'une route d’API à la racine non protégée',
       'route.ts',
       'export async function GET() { return new Response(); }',
       /^non_protege route\.ts/,
+    ],
+    [
+      'un module d’actions à DEUX exports dont le second est nu',
+      'mon-contrat/actions.ts',
+      "'use server';\nexport async function signer() { return actionEspace('mon-contrat', j, p, async () => 1); }\nexport async function telecharger() { return lire(); }",
+      /^non_protege mon-contrat\/actions\.ts#telecharger \(actionEspace attendu\)$/,
+    ],
+    [
+      'un second export en `const = async` nu',
+      'mon-contrat/actions.ts',
+      "'use server';\nexport async function signer() { return actionEspace('mon-contrat', j, p, async () => 1); }\nexport const annuler = async () => ecrire();",
+      /^non_protege mon-contrat\/actions\.ts#annuler \(actionEspace attendu\)$/,
+    ],
+    [
+      'une route dont le GET se protège et le POST est nu',
+      'conformite/route.ts',
+      "export async function GET() { const v = await exigerSessionPour('conformite', j, p); }\nexport async function POST() { await ecrire(); }",
+      /^non_protege conformite\/route\.ts#POST \(exigerSessionPour attendu\)$/,
+    ],
+    [
+      'une page qui porte une action EN LIGNE',
+      'conformite/page.tsx',
+      "export default async function P() { const v = await exigerSessionPour('conformite', j, p); async function envoyer() { 'use server'; await ecrire(); } }",
+      /^action_en_ligne conformite\/page\.tsx$/,
+    ],
+    [
+      'un export INDIRECT dans un module d’actions',
+      'mon-contrat/actions.ts',
+      "'use server';\nimport { telecharger } from './ailleurs';\nexport { telecharger };",
+      /^export_indirect mon-contrat\/actions\.ts$/,
     ],
   ])('REQ-SEC-032 : PIÈGE — %s rougit, nommé', (_quoi, chemin, contenu, attendu) => {
     expect(fauteDuFichier(chemin, contenu)).toMatch(attendu);
@@ -316,6 +391,16 @@ describe('REQ-SEC-032 — sur le disque, chaque page, route et action de l’esp
       'une action enveloppée',
       'mon-contrat/actions.ts',
       "'use server';\nexport async function signer() { return actionEspace('mon-contrat', j, p, async () => 1); }",
+    ],
+    [
+      'un module d’actions dont CHAQUE export est enveloppé',
+      'mon-contrat/actions.ts',
+      "'use server';\nexport async function signer() { return actionEspace('mon-contrat', j, p, async () => 1); }\nexport const annuler = async () => actionEspace('mon-contrat', j, p, async () => 2);",
+    ],
+    [
+      'une route dont chaque handler se protège',
+      'conformite/route.ts',
+      "export async function GET() { const v = await exigerSessionPour('conformite', j, p); }\nexport async function POST() { const v = await exigerSessionPour('conformite', j, p); }",
     ],
     [
       'la page publique de la politique',
