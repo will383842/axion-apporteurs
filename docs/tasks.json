@@ -14386,7 +14386,8 @@
         ".github/workflows/deploy.yml",
         "package.json",
         "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts",
-        "tests/unit/gouvernance/cliquet-nomme-chaque-refus.spec.ts"
+        "tests/unit/gouvernance/cliquet-nomme-chaque-refus.spec.ts",
+        "scripts/gates/registre-des-refus.ts"
       ],
       "schema": false,
       "sensible": [
@@ -16199,7 +16200,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.75,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "Lot transverse « confort de la console pour tous les rôles ». Pourquoi, pour tous les rôles : la garde des maquettes ne voit que les identifiants UX-P*, et plusieurs écrans de console sont classés en zone `espace` : un écran de console peut être codé sans maquette ni cinq états. (1) Toute tâche `a_faire` ayant un chemin sous `src/app/(espace|console)`, ou désignée dans `ESPACE-ROUTES` ou `CONSOLE-ROUTES`, cite REQ-UX-047 et a une ligne de validation, quel que soit son préfixe. « Cite » se lit dans le champ `reqs` SEUL, écrit par le verbe de GOV-117 (question 20, option A) : aucun repli par l'acceptance. Le motif `IDENTIFIANT` (`maquettes-validees.ts`) est élargi. (2) `ux-exhaustivite` exige les cinq états et lit `CONSOLE-ROUTES`. (3) Chaque gabarit de `table-ssot.ts` a un seul appel à l'action, et son libellé vient de la SSOT. (4) `BUDGETS_UX` est une seule source, dans `ssot.ts` : 3 et 8 interactions, 3 tabulations, 2 s, 10 s ; le profil réseau « 4G ralentie » (débit descendant, débit montant, latence, chacun sourcé et daté). Aucune valeur propre au conseiller : ses cibles et son corps de texte sont des exigences du rôle CRM (question 22). (5) Témoin à deux faces : une tâche de console sans validation rougit et nomme la tâche. (6) La garde n'est pas rétroactive sur les tâches fusionnées. Elle n'est armée qu'après la fusion de GOV-115. (7) L'entrée `gates.json` passe par `hors-depot/ajouter-entree.mjs`. AMENDEMENT (rattrapage 42, arbitrage A01 du 2026-10-01, demande de A06) : (8) UX-P1-41 n'est plus une dépendance : le seul lien était le fichier partagé `scripts/gates/ux-exhaustivite.ts`, et la dépendance est INVERSÉE (UX-P1-41 dépend de GOV-113), ce qui garde ce fichier modifié par une seule tâche à la fois. Le point (7) est fait par A01 : l'auteur livre le script et son témoin, A01 pose l'entrée de `docs/gates.json` par `ajouter-entree.mjs` dans la même PR, par un commit à lui, label `role:gardien-spec`. ARBITRAGES A01 à la revendication (rattrapage 44, mesure de A06 sur le registre réel) : (i) point (1) : la ligne de validation est EXIGÉE quand la tâche d'écran quitte `a_faire` (owner posé ou statut au-delà), comme la famille `ecran_attribue_sans_validation` ; pour une tâche `a_faire`, son absence est imprimée en dette nommée, sans rougir (34 tâches mesurées le 2026-10-01, dont 16 de phase 1, dont les maquettes viennent de UX-P1-19, UX-P1-45 et UX-P1-46) ; le composeur l'écarte déjà. (ii) Une tâche d'écran est une tâche qui déclare un `page.tsx` sous `src/app/(espace|console)` ou qui est nommée dans la colonne « Tâche » d'un tableau de routes, jamais dans la prose ; un `error.tsx`, `loading.tsx` ou `not-found.tsx` seul n'en fait pas une. (iii) Point (2) : les cinq états se lisent dans la MAQUETTE de chaque écran de `VALIDATION.md`, par l'`aria-label` « État : … » de ses sections ; au moins un état vide, un chargement, une erreur et, pour la console, un accès refusé ; un alias par famille est nommé ; une maquette déjà validée qui n'en a pas est déclarée non rétroactive (point 6) : accueil et mes-commissions (pas d'état d'erreur), conformite (pas d'état vide), validées le 2026-09-19 avant la règle, et lot-paiement (phase 2, refaite par UX-P2-14). (iv) Câblage : `scripts/lib/ux-ecrans.ts` est un module PUR, sans point d'entrée, importé par `maquettes-validees.ts` (déjà câblé) ; le point (7) se fait par deux entrées propres, GATE-UX-ECRANS et GATE-UX-CONSOLE-ROUTES, posées par A01 ; les entrées d'UX-P0-01 et d'UX-P0-02 ne sont pas réécrites. (v) `gabarit_sans_appel_unique` ne juge qu'un gabarit qui déclare son champ `actions` (UX-P1-10). AMENDEMENT DU POINT (7) (rattrapage 48, arbitrage A01 sur mesure de A06) : AUCUNE entrée nouvelle au registre des gardes. GATE-UX-ECRANS et GATE-UX-CONSOLE-ROUTES lançaient `scripts/gates/maquettes-validees.ts` et `scripts/gates/ux-exhaustivite.ts`, déjà portés par les entrées `maquettes-validees` et `ux:exhaustivite`, sous un autre identifiant : deux dettes de nommage de plus, que `tests/unit/gouvernance/un-nom-une-garde.spec.ts` (REQ-QA-013, « un nom, une garde », ADR-0018) refuse. Les familles de GOV-113 sont des familles de ces deux gardes, déjà en porte A ; leurs entrées ne sont pas réécrites. Retirées de #372 par A01 (3708888c).",
       "tests": {
         "REQ-UX-047": [
@@ -16208,7 +16209,16 @@
         "REQ-UX-019": [
           "tests/unit/gouvernance/ux-ecrans.spec.ts"
         ]
-      }
+      },
+      "branch": "t/gov-113",
+      "owner": "A06",
+      "pr": 372,
+      "attestation": {
+        "pr": 372,
+        "sha": "357ed80812d19a68b756703e00618ac02f53c691",
+        "fusionneeAt": "2026-10-02T02:24:58Z"
+      },
+      "motif": null
     },
     {
       "id": "QA-T33",
