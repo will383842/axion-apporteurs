@@ -1,6 +1,7 @@
 // @req REQ-SEC-008
 // @req REQ-QA-011 → REQ-SEC-008
 // @req REQ-SEC-022
+// @req REQ-DM-043
 // @req REQ-QA-012 → REQ-SEC-022
 // @req REQ-DM-031
 /**
@@ -872,6 +873,60 @@ describe('REQ-DM-031 — DM-07 : le vocabulaire et les colonnes du dépôt, conf
     for (const c of chiffrees) expect(ecrites, c).toContain(c);
     expect('empreinte' in CHAMPS_PII.nomContact).toBe(false);
     expect('empreinte' in CHAMPS_PII.fonctionContact).toBe(false);
+  });
+});
+
+describe('REQ-DM-043 — DM-53 : le refus reste visible, son SIREN rendu NULL une fois purgé, la date de purge jamais rendue', () => {
+  const colonnes = Prisma.dmmf.datamodel.models
+    .find((m) => m.name === 'DepotRefuse')!
+    .fields.filter((f) => f.kind !== 'object')
+    .map((f) => f.name);
+
+  it('REQ-DM-043 : siren est RENDU, sirenPurgeAt est TU — dans les listes et dans chaque sélection de la vue', async () => {
+    expect(CHAMPS_RENDUS.depotRefuse as readonly string[]).toContain('siren');
+    expect(CHAMPS_RENDUS.depotRefuse as readonly string[]).not.toContain('sirenPurgeAt');
+    expect(CHAMPS_TUS.depotRefuse as readonly string[]).toContain('sirenPurgeAt');
+    const { client, appels } = fauxClient();
+    const vue = forApporteur(client, A).depotRefuse;
+    await vue.trouver(randomUUID());
+    await vue.lister();
+    expect(appels.length).toBeGreaterThan(0);
+    for (const a of appels) {
+      const select = (a.args as { select: Record<string, unknown> }).select;
+      expect(select, a.methode).toEqual(selection('depotRefuse'));
+      expect(Object.hasOwn(select, 'siren'), `${a.methode}.siren`).toBe(true);
+      expect(Object.hasOwn(select, 'sirenPurgeAt'), `${a.methode}.sirenPurgeAt`).toBe(false);
+    }
+  });
+
+  it('REQ-DM-043 : TÉMOIN À DEUX FACES — la sélection livrée tait la date de purge ; une COPIE de toutes les colonnes la rendrait, et rougit à la même comparaison', async () => {
+    const { client, appels } = fauxClient();
+    await forApporteur(client, A).depotRefuse.lister();
+    const livree = Object.keys((appels[0]!.args as { select: object }).select).sort();
+    const copie = [...colonnes].sort();
+    const tue = (cles: string[]) => !cles.includes('sirenPurgeAt');
+    expect(tue(livree)).toBe(true);
+    expect(tue(copie)).toBe(false);
+    expect(copie).not.toEqual(livree);
+  });
+
+  it('REQ-DM-043 : un refus purgé est rendu avec un SIREN NULL — la ligne reste visible, sans lui', async () => {
+    const { client, reponses } = fauxClient();
+    const purge = {
+      id: randomUUID(),
+      siren: null,
+      motif: 'file_complete',
+      canal: 'espace',
+      refuseAt: new Date(0),
+    };
+    reponses.findFirst = purge;
+    const rendu = (await forApporteur(client, A).depotRefuse.trouver(purge.id)) as Record<
+      string,
+      unknown
+    >;
+    expect(rendu).toEqual(purge);
+    expect(rendu['siren']).toBeNull();
+    expect(Object.hasOwn(rendu, 'sirenPurgeAt')).toBe(false);
   });
 });
 
