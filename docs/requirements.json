@@ -2259,7 +2259,7 @@
     {
       "id": "REQ-INT-021",
       "domaine": "integration",
-      "texte": "Depuis la réponse API, Partners persiste `siren, siret (siège), nom_complet, nature_juridique, activite_principale, tranche_effectif_salarie, etat_administratif, categorie_entreprise, siege.{code_postal, libelle_commune, departement, region, latitude_microdeg, longitude_microdeg}` ; la position du siège est gardée en micro-degrés entiers, calculés par le serveur depuis le WGS84 du tiers, et seulement quand la diffusion de l'unité légale et du siège est pleine (échec fermé) ; des dirigeants, seulement un hash normalisé de `nom+prenoms` et `qualite` ; jamais `annee_de_naissance` ; `statut_diffusion` est respecté à l'affichage.",
+      "texte": "Depuis la réponse API, Partners persiste `siren, siret (siège), nom_complet, nature_juridique, activite_principale, tranche_effectif_salarie, etat_administratif, categorie_entreprise, siege.{code_postal, libelle_commune, departement, region}` ; des dirigeants, seulement un hash normalisé de `nom+prenoms` et `qualite` ; jamais `annee_de_naissance` ; `statut_diffusion` est respecté à l'affichage.",
       "source": "audit anti-abus M5 ; INT-F16",
       "statut": "active",
       "remplaceePar": null,

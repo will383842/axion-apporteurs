@@ -8828,7 +8828,8 @@
         "src/server/integrations/recherche-entreprises/schemas.ts",
         "src/domain/geo/micro-degres.ts",
         "tests/unit/domaine/micro-degres.spec.ts",
-        "tests/unit/integration/projection-coordonnees.spec.ts"
+        "tests/unit/integration/projection-coordonnees.spec.ts",
+        "docs/requirements.json"
       ],
       "schema": false,
       "sensible": [
@@ -8853,7 +8854,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "`latitude`/`longitude` capturées depuis le siège renvoyé par l'API publique, `siege.latitude`/`siege.longitude` WGS84 (chaînes) convertis en micro-degrés entiers en fonction pure côté serveur ; aucune projection (vérification V2 (GOV-132, 2026-10-01), A1-10 : l'API rend du WGS84). (vérification V2 (GOV-132, 2026-10-01), A2-15 : pas d'écran, REQ-UX-047 retirée.) ÉCHEC FERMÉ (rattrapage 64, règle retenue par la lentille sécurité le 2026-10-02) : une position n'est enregistrée que si la diffusion est O pour l'unité ET le siège ; toute autre valeur donne nul (souvent le domicile d'un entrepreneur individuel) ; la position ne va qu'à la fiche serveur, jamais à la suggestion (sécurité, 02/10). EXIGENCE (rattrapage 65) : EXT-T08 porte aussi REQ-INT-021, amendée pour les coordonnées du siège (`latitude_microdeg`, `longitude_microdeg`, échec fermé de la diffusion) ; son témoin `tests/integration/api-gouv.spec.ts` dérive la liste attendue du texte de l'exigence.",
+      "acceptance": "`latitude`/`longitude` capturées depuis le siège renvoyé par l'API publique, `siege.latitude`/`siege.longitude` WGS84 (chaînes) convertis en micro-degrés entiers en fonction pure côté serveur ; aucune projection (vérification V2 (GOV-132, 2026-10-01), A1-10 : l'API rend du WGS84). (vérification V2 (GOV-132, 2026-10-01), A2-15 : pas d'écran, REQ-UX-047 retirée.) ÉCHEC FERMÉ (rattrapage 64, règle retenue par la lentille sécurité le 2026-10-02) : une position n'est enregistrée que si la diffusion est O pour l'unité ET le siège ; toute autre valeur donne nul (souvent le domicile d'un entrepreneur individuel) ; la position ne va qu'à la fiche serveur, jamais à la suggestion (sécurité, 02/10). EXIGENCE (rattrapage 65, rectifiée : le texte ne pouvait pas changer seul, le témoin api-gouv.spec.ts dérivant la liste attendue du texte) : EXT-T08 porte REQ-INT-021 et AMENDE ELLE-MÊME son texte (liste du siège avec `latitude_microdeg` et `longitude_microdeg`, et la phrase d'échec fermé : la position du siège est gardée en micro-degrés entiers, calculés par le serveur depuis le WGS84 du tiers, et seulement quand la diffusion de l'unité légale et du siège est pleine), dans la MÊME PR que le code ; `docs/requirements.json` entre à ses chemins, écrit par l'outil du registre (label `role:gardien-spec`).",
       "tests": {
         "REQ-INT-021": [
           "tests/integration/api-gouv.spec.ts"
