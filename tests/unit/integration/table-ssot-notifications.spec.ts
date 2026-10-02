@@ -403,7 +403,7 @@ describe('REQ-UX-016 — la fin d’une réservation se dit selon sa cause (A07,
       { entreprise: 'Entreprise témoin', dateRedepot: '2 novembre 2026' },
       'demande_verifiee'
     );
-    expect(r.titre).toBe('Entreprise témoin : ce dépôt a pris fin');
+    expect(r.titre).toBe('Entreprise témoin : réservation terminée');
     expect(r.corps).toBe(
       "Ce dépôt a pris fin sans confirmation de l'échange. Vous pourrez déposer à nouveau cette entreprise à partir du 2 novembre 2026. Cette fin n'emporte aucune autre conséquence pour vous."
     );

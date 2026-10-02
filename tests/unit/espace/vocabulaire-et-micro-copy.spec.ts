@@ -813,7 +813,7 @@ describe('REQ-UX-002 — snapshot des libellés de l’espace, sans date, sans n
       courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › depot_injoignable_j5 › titre : {entreprise} : la confirmation de l'échange est en cours
       courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › depot_injoignable_j5 › appel : Voir Mes entreprises
       courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › depot_injoignable_j5 › corps : Axion-IA n'a pas encore pu joindre {contact}. Votre dépôt garde son heure d'enregistrement.
-      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › attribution_liberee › titre : {entreprise} : ce dépôt a pris fin
+      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › attribution_liberee › titre : {entreprise} : réservation terminée
       courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › attribution_liberee › appel : Voir Mes entreprises
       courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › decision_attribution › titre : {entreprise} : une décision concerne votre dépôt
       courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › decision_attribution › appel : Contester cette décision par écrit

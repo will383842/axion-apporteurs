@@ -31,7 +31,7 @@ export const TEXTES_DES_NOTIFICATIONS = {
       "Axion-IA n'a pas encore pu joindre {contact}. Votre dépôt garde son heure d'enregistrement.",
   },
   attribution_liberee: {
-    titre: '{entreprise} : ce dépôt a pris fin',
+    titre: '{entreprise} : réservation terminée',
     appel: 'Voir Mes entreprises',
     corps: null,
   },
