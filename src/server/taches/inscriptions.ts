@@ -33,6 +33,8 @@ import {
   type Traitants,
 } from '../queue/workers/evenement-recu';
 import { clesPii } from '../securite/pii';
+import { verifierChaine, type LigneJournal } from '../../domain/evenement/journal';
+import { lireJournalParLots } from '../evenement/journal';
 import type { Inscriptions } from './lanceur';
 import { minimiserCandidatures } from './minimiser-candidatures';
 
@@ -81,6 +83,20 @@ export function inscriptions(prisma: PrismaClient): Inscriptions {
     minimiser_candidatures: async () => ({
       minimisees: await minimiserCandidatures(prisma, new Date(horlogeSysteme.maintenant())),
     }),
+    journal_verifier: passageDuJournal(() => lireJournalParLots(prisma)),
+  };
+}
+
+/**
+ * DM-45 (REQ-DM-024) — le passage `journal_verifier` : le journal, lu par lots, est VÉRIFIÉ par ses
+ * liens de hash (`verifierChaine`). Une chaîne rompue fait ÉCHOUER le passage, et son battement le
+ * dit ; l'erreur nomme la faute et l'id du maillon, jamais une charge.
+ */
+export function passageDuJournal(lire: () => Promise<LigneJournal[]>) {
+  return async (): Promise<{ maillons: number }> => {
+    const v = verifierChaine(await lire());
+    if (!v.ok) throw new Error(`chaine_rompue : ${v.faute}, maillon ${v.id ?? 'aucun'}`);
+    return { maillons: v.maillons };
   };
 }
 

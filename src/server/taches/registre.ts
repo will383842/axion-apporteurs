@@ -20,6 +20,8 @@ export const TACHES = {
    * `CANDIDATURE_NON_TRAITEE_MINIMISEE_APRES_JOURS` (`src/server/taches/minimiser-candidatures.ts`).
    */
   minimiser_candidatures: { req: 'REQ-JUR-029' },
+  /** DM-45 — la vérification de la chaîne du journal, par ses liens de hash (`verifierChaine`). */
+  journal_verifier: { req: 'REQ-DM-024' },
 } as const satisfies Readonly<Record<string, { req: `REQ-${string}` }>>;
 
 export type NomDeTache = keyof typeof TACHES;
