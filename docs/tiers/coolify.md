@@ -103,7 +103,7 @@ rubrique 2 est vide, la seconde ligne porte la mention `non confrontée`.
 
 ## 10. Sauts de confiance — combien de mandataires devant l'application
 
-Ajoutée par **SEC-44** (REQ-SEC-012, écart C11). L'adresse du client se lit dans `X-Forwarded-For`, à
+Ajoutée par **SEC-44** (REQ-SEC-012, écart de la vérification de bout en bout). L'adresse du client se lit dans `X-Forwarded-For`, à
 droite, en sautant les mandataires de confiance (`src/server/securite/adresse-du-client.ts`). Trop peu
 de sauts, et toutes les requêtes portent l'adresse du mandataire : un seul quota pour tout le site.
 Trop, et l'on lit une valeur écrite par le client.

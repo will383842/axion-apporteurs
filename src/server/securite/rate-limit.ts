@@ -153,7 +153,7 @@ export const COMPTEURS = {
     ancre: 'par hash IP',
     verifieLe: '2026-09-19',
   },
-  // SEC-44 (écart C11) — l'API appelée par axionia : 60 par minute, sur l'empreinte de l'adresse
+  // SEC-44 — l'API appelée par axionia : 60 par minute, sur l'empreinte de l'adresse
   // AUTORISÉE. `refuser` sur panne : l'API ne sert qu'axionia, un refus passager est rejoué par
   // l'appelant ; une panne qui l'ouvrirait lèverait le plafond quand il sert.
   'auth:axionia-ip': {

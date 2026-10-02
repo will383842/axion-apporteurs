@@ -1,7 +1,7 @@
 // @req REQ-SEC-012
 /**
  * SEC-44 — l'API entrante d'axion-ia a son compteur par IP, son allowlist déclarée et ses sauts de
- * confiance mesurés (écart C11 de la vérification de bout en bout).
+ * confiance mesurés (écart de la vérification de bout en bout).
  *
  * CE QU'IL PROUVE :
  *   1. LE COMPTEUR : `auth:axionia-ip` est au registre unique des limites, 60 par minute, sur
