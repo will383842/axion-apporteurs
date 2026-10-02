@@ -11,15 +11,16 @@
  *   — reçoit, par `partners_execution`, la lecture et l'écriture de toutes les tables qui ne sont pas
  *     au journal, et les mêmes droits sur les tables à venir (privilèges par défaut du propriétaire).
  *
- * Son nom et son secret sont ceux de `DATABASE_URL` : une seule source, posée par le provisionnement
- * de la plateforme (`provisionner.ts`). Aucune valeur n'est imprimée, ni le secret, ni une URL.
+ * Son nom est FIXE, `partners_app` (`ROLE_D_EXECUTION`) : tout autre nom dans `DATABASE_URL` est refusé
+ * avant le moindre appel. Son secret est celui de `DATABASE_URL`, une seule source, posée par le
+ * provisionnement de la plateforme (`provisionner.ts`). Aucune valeur n'est imprimée, ni le secret,
+ * ni une URL.
  */
 import { createHash, createHmac, pbkdf2Sync, randomBytes } from 'node:crypto';
 import { PrismaClient } from '@prisma/client';
 import { productionDeclaree } from '../../lib/notify';
 
-/** Un identifiant de rôle Postgres simple : il s'écrit sans guillemets et sans échappement. */
-/** Le secret s'écrit dans un littéral SQL : seuls des caractères qui n'ont pas à être échappés. */
+/** Le secret : un alphabet sans échappement, celui que le provisionnement de la plateforme tire. */
 const SECRET = /^[A-Za-z0-9_.~-]{32,}$/;
 
 /** Le nom du rôle de connexion du serveur en production, posé par `provisionner.ts`. */

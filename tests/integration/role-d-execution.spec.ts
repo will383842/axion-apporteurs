@@ -15,7 +15,7 @@
  *   — il REFUSE un rôle d'exécution superutilisateur, ou propriétaire d'une table ;
  *   — `docker-entrypoint.sh` migre avec l'URL de migration, provisionne, puis lance le serveur.
  */
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
 import { PrismaClient } from '@prisma/client';
@@ -175,19 +175,58 @@ describe('REQ-DM-024 — le chemin de l’entrée de l’image (principal), en �
     await base.prisma.$executeRawUnsafe(`REVOKE partners_journal FROM partners_app`);
   });
 
-  it('REQ-DM-024 : TÉMOIN — sans URL de migration, hors production déclarée, le constat tourne quand même : un superutilisateur est refusé', async () => {
-    expect(await principal({ NODE_ENV: 'production', DATABASE_URL: base.url })).toBe(1);
+  /** `principal`, sa sortie d'erreur CAPTURÉE : le motif prouve QUEL contrôle a refusé. */
+  async function principalCapture(
+    env: NodeJS.ProcessEnv
+  ): Promise<{ code: number; sortie: string }> {
+    const ecrit: string[] = [];
+    const espion = vi.spyOn(process.stderr, 'write').mockImplementation((t) => {
+      ecrit.push(String(t));
+      return true;
+    });
+    try {
+      return { code: await principal(env), sortie: ecrit.join('') };
+    } finally {
+      espion.mockRestore();
+    }
+  }
+
+  /** partners_app provisionné, puis rendu membre du journal APRÈS : seul le CONSTAT peut refuser. */
+  async function membreApresProvisionnement(): Promise<string> {
+    const url = urlSous(ROLE_D_EXECUTION, secret());
+    await provisionnerRoleDExecution({ urlMigration: base.url, urlExecution: url });
+    await base.prisma.$executeRawUnsafe(`GRANT partners_journal TO partners_app`);
+    return url;
+  }
+
+  it('REQ-DM-024 : TÉMOIN — sans URL de migration, hors production déclarée, le CONSTAT tourne quand même et refuse un membre du journal', async () => {
+    const url = await membreApresProvisionnement();
+    try {
+      const r = await principalCapture({ NODE_ENV: 'production', DATABASE_URL: url });
+      expect(r.code).toBe(1);
+      expect(r.sortie).toContain('le serveur est membre de partners_journal');
+    } finally {
+      await base.prisma.$executeRawUnsafe(`REVOKE partners_journal FROM partners_app`);
+    }
   });
 
-  it('REQ-DM-024 : TÉMOIN — sous SKIP_MIGRATE=1, rien n’est provisionné, mais le constat tourne : un superutilisateur est refusé, un bon rôle passe', async () => {
-    expect(
-      await principal({
+  it('REQ-DM-024 : TÉMOIN — sous SKIP_MIGRATE=1, le CONSTAT tourne et refuse un membre du journal', async () => {
+    const url = await membreApresProvisionnement();
+    try {
+      const r = await principalCapture({
         NODE_ENV: 'test',
         SKIP_MIGRATE: '1',
         DATABASE_MIGRATION_URL: base.url,
-        DATABASE_URL: base.url,
-      })
-    ).toBe(1);
+        DATABASE_URL: url,
+      });
+      expect(r.code).toBe(1);
+      expect(r.sortie).toContain('le serveur est membre de partners_journal');
+    } finally {
+      await base.prisma.$executeRawUnsafe(`REVOKE partners_journal FROM partners_app`);
+    }
+  });
+
+  it('REQ-DM-024 : TÉMOIN — sous SKIP_MIGRATE=1, rien n’est provisionné : un secret neuf n’est pas posé, un bon rôle passe', async () => {
     // Un secret NEUF, sous SKIP_MIGRATE : rien n'est provisionné, donc le secret n'est pas posé et
     // le constat ne peut pas se connecter.
     const neuf = urlSous(ROLE_D_EXECUTION, secret());
