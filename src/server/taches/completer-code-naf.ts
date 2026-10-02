@@ -44,7 +44,12 @@ export async function completerLesCodesNaf(
   for (const { id, siren } of await p.lire()) {
     const maintenant = p.maintenantMs();
     if (!p.disjoncteur.autoriser(maintenant)) return { completes, sansCode, interruptions: 1 };
-    if (!(await p.debit(maintenant)).autorise) return { completes, sansCode, interruptions: 1 };
+    if (!(await p.debit(maintenant)).autorise) {
+      // L'essai que le disjoncteur a permis n'est pas parti : il lui est RENDU, sans échec — sinon un
+      // disjoncteur demi-ouvert resterait sans essai.
+      p.disjoncteur.abandonner();
+      return { completes, sansCode, interruptions: 1 };
+    }
     const issue = await p.tiers(siren, maintenant);
     if (!issue.ok) {
       if (issue.motif !== 'requete_refusee') {

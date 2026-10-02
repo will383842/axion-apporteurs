@@ -12,14 +12,17 @@
  *      refuse ;
  *   4. TÉMOIN : une reprise qui écrirait une valeur par défaut fait rougir le point 4.
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { codeNafACompleter, codeNafDuDepot } from '../../../src/domain/entreprise/code-naf';
 import { lireFixtures } from '../../../src/server/integrations/recherche-entreprises/fixtures';
 import { schemaReponseDuTiers } from '../../../src/server/integrations/recherche-entreprises/schemas';
 import {
+  LOT_DE_LA_REPRISE,
   completerLesCodesNaf,
+  portsDeBase,
   type PortsDeLaReprise,
 } from '../../../src/server/taches/completer-code-naf';
+import type { Disjoncteur } from '../../../src/server/integrations/recherche-entreprises/disjoncteur';
 import { creerDisjoncteur } from '../../../src/server/integrations/recherche-entreprises/disjoncteur';
 import type { IssueDuTiers } from '../../../src/server/integrations/recherche-entreprises/tiers';
 import { TACHES } from '../../../src/server/taches/registre';
@@ -270,5 +273,116 @@ describe('REQ-DM-046 — la reprise des codes nuls', () => {
     expect(TACHES.naf_completer).toEqual({ req: 'REQ-DM-046' });
     const client: unknown = {};
     expect(typeof inscriptions(client as PrismaClient).naf_completer).toBe('function');
+  });
+});
+
+/** Un disjoncteur ESPION : il autorise, et compte ce que la reprise lui dit. */
+function disjoncteurEspion(): Disjoncteur & {
+  appels: { reussite: number; abandonner: number; echec: unknown[][] };
+} {
+  const appels = { reussite: 0, abandonner: 0, echec: [] as unknown[][] };
+  return {
+    appels,
+    autoriser: () => true,
+    reussite: () => {
+      appels.reussite += 1;
+    },
+    abandonner: () => {
+      appels.abandonner += 1;
+    },
+    echec: (...a: unknown[]) => {
+      appels.echec.push(a);
+    },
+    vue: () => ({ etat: 'ferme', echecsConsecutifs: 0, repriseAt: null, dernierMotif: null }),
+  };
+}
+
+describe('REQ-DM-046 — ce que la reprise dit au disjoncteur', () => {
+  const ligne = [{ id: 'a', siren: SIREN_A, codeNaf: null as string | null }];
+
+  it('REQ-DM-046 : une réponse rendue est une RÉUSSITE, ni échec ni abandon', async () => {
+    const p = ports(structuredClone(ligne), (q) => reponse(q, '68.20B'));
+    const d = disjoncteurEspion();
+    await completerLesCodesNaf({ ...p, disjoncteur: d });
+    expect(d.appels).toEqual({ reussite: 1, abandonner: 0, echec: [] });
+  });
+
+  it('REQ-DM-046 : TÉMOIN — une panne du tiers est un ÉCHEC, avec l’instant, le motif et le délai rendus', async () => {
+    const p = ports(structuredClone(ligne), () => ({
+      ok: false,
+      motif: 'erreur_serveur',
+      retryAfterMs: 7_000,
+    }));
+    const d = disjoncteurEspion();
+    await completerLesCodesNaf({ ...p, maintenantMs: () => 42, disjoncteur: d });
+    expect(d.appels).toEqual({
+      reussite: 0,
+      abandonner: 0,
+      echec: [[42, 'erreur_serveur', 7_000]],
+    });
+  });
+
+  it('REQ-DM-046 : TÉMOIN — une requête refusée par le tiers est un ABANDON, jamais un échec (le tiers n’est pas en panne)', async () => {
+    const p = ports(structuredClone(ligne), () => ({
+      ok: false,
+      motif: 'requete_refusee',
+      retryAfterMs: null,
+    }));
+    const d = disjoncteurEspion();
+    expect(await completerLesCodesNaf({ ...p, disjoncteur: d })).toEqual({
+      completes: 0,
+      sansCode: 0,
+      interruptions: 1,
+    });
+    expect(d.appels).toEqual({ reussite: 0, abandonner: 1, echec: [] });
+  });
+
+  it('REQ-DM-046 : TÉMOIN — un débit refusé REND l’essai au disjoncteur (abandon), sans échec ni appel', async () => {
+    const p = ports(structuredClone(ligne), (q) => reponse(q, '68.20B'));
+    p.verdict = {
+      autorise: false,
+      restant: 0,
+      repriseAt: 1_000,
+      panne: false,
+      motif: 'limite_atteinte',
+    };
+    const d = disjoncteurEspion();
+    await completerLesCodesNaf({ ...p, disjoncteur: d });
+    expect(d.appels).toEqual({ reussite: 0, abandonner: 1, echec: [] });
+    expect(p.appels).toEqual([]);
+  });
+});
+
+describe('REQ-DM-046 — les ports de base, sur un client Prisma simulé', () => {
+  function prismaSimule(compte: number) {
+    const findMany = vi.fn(async () => [{ id: 'a', siren: SIREN_A }]);
+    const updateMany = vi.fn(async () => ({ count: compte }));
+    return {
+      findMany,
+      updateMany,
+      client: { attribution: { findMany, updateMany } } as unknown as PrismaClient,
+    };
+  }
+
+  it('REQ-DM-046 : lire — les dépôts en repli manuel au code nul, par lot, dans l’ordre du dépôt', async () => {
+    const s = prismaSimule(1);
+    expect(await portsDeBase(s.client).lire()).toEqual([{ id: 'a', siren: SIREN_A }]);
+    expect(s.findMany).toHaveBeenCalledWith({
+      where: { entrepriseAVerifier: true, codeNaf: null },
+      select: { id: true, siren: true },
+      orderBy: [{ deposeeAt: 'asc' }, { id: 'asc' }],
+      take: LOT_DE_LA_REPRISE,
+    });
+  });
+
+  it('REQ-DM-046 : TÉMOIN — écrire n’écrit que si le code est encore NUL, et le dit', async () => {
+    const ecrit = prismaSimule(1);
+    expect(await portsDeBase(ecrit.client).ecrire('a', '68.20B')).toBe(true);
+    expect(ecrit.updateMany).toHaveBeenCalledWith({
+      where: { id: 'a', codeNaf: null },
+      data: { codeNaf: '68.20B' },
+    });
+    const dejaPose = prismaSimule(0);
+    expect(await portsDeBase(dejaPose.client).ecrire('a', '68.20B')).toBe(false);
   });
 });
