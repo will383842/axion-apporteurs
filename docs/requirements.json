@@ -844,7 +844,7 @@
     {
       "id": "REQ-SEC-012",
       "domaine": "anti-abus-securite",
-      "texte": "Les API appelées par axionia répondent 404 sans jeton bearer dédié (≥ 32 octets, temps constant), sont restreintes à une allowlist d'IP, limitées à 60/min, journalisent chaque appel ; `/attributions` ne renvoie ni nom ni email d'apporteur, seulement un booléen, un mois de fin et une référence opaque.",
+      "texte": "Les API appelées par axionia répondent 404 sans jeton bearer dédié (≥ 32 octets, temps constant), sont restreintes à une allowlist d'IP, limitées à 60 / 1 min par hash IP, avec `surPanne: refuser`, journalisent chaque appel ; `/attributions` ne renvoie ni nom ni email d'apporteur, seulement un booléen, un mois de fin et une référence opaque.",
       "source": "audit-outil §2.3 ; fonctionnement R3",
       "statut": "active",
       "remplaceePar": null,
@@ -3599,7 +3599,8 @@
         "QA-T00",
         "QA-T01",
         "QA-T07",
-        "QA-T28"
+        "QA-T28",
+        "QA-T63"
       ]
     },
     {
@@ -4017,7 +4018,8 @@
         "GOV-032",
         "GOV-060",
         "GOV-119",
-        "GOV-123"
+        "GOV-123",
+        "QA-T63"
       ]
     },
     {
