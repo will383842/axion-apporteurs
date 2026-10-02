@@ -7301,7 +7301,8 @@
       ],
       "deps": [
         "SEC-17",
-        "T-ARG-016"
+        "T-ARG-016",
+        "DM-57"
       ],
       "reqs": [
         "REQ-ARG-019",
@@ -7317,7 +7318,8 @@
       "pr": null,
       "issue": null,
       "attempts": 0,
-      "motif": null
+      "motif": null,
+      "acceptance": "LOT ET LIGNES (rattrapage 69 ; correction d'A02 retenue par la coordination, 2026-10-02) : le lot du mois écrit `lots_virement` et ses `lignes_virement` (DM-57), en choisissant à l'approbation la pièce rib COURANTE (validée) de chaque apporteur ; ce choix n'est plus jamais réécrit (ligne en ajout seul)."
     },
     {
       "id": "T-ARG-018",
@@ -7336,7 +7338,9 @@
       "deps": [
         "CPL-T01",
         "GOV-015",
-        "T-ARG-017"
+        "T-ARG-017",
+        "DM-57",
+        "DM-58"
       ],
       "reqs": [
         "REQ-ARG-020",
@@ -7356,7 +7360,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "Contraintes W19 à intégrer (GOV-115, décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §6) : types fermés à `apporteurId` NOT NULL, et test d'absence de toute donnée de conseiller dans le relevé, l'autofacture, le pain.001, la DAS2 et le registre « Commissions ». Coordonnées bancaires débitrices (lentille securite, vérification V2 (GOV-132, 2026-10-01)) : tout code qui lit `PARTNERS_IBAN_DEBITEUR` ou `PARTNERS_BIC_DEBITEUR` REFUSE, en nommant la variable, quand elle est absente, vide ou mal formée (IBAN contrôlé par sa clé — `src/lib/forme-iban.ts` —, BIC au format ISO 9362 `^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$`) ; témoin à deux faces (rouge sur chaque forme fautive — absente, vide, clé IBAN fausse, BIC hors format —, vert sur une valeur bien formée) ; relecture de la lentille securite. La lecture passe par `banqueDebitrice()` / `exigerEntiteRenseignee('<point de sortie>')` de `src/config/entite.ts`, jamais par `process.env` ; le point de sortie de cette tâche figure dans `POINTS_DE_SORTIE` avec `banqueDebitrice.iban` et `banqueDebitrice.bic` dans ses `cles`."
+      "acceptance": "Contraintes W19 à intégrer (GOV-115, décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §6) : types fermés à `apporteurId` NOT NULL, et test d'absence de toute donnée de conseiller dans le relevé, l'autofacture, le pain.001, la DAS2 et le registre « Commissions ». Coordonnées bancaires débitrices (lentille securite, vérification V2 (GOV-132, 2026-10-01)) : tout code qui lit `PARTNERS_IBAN_DEBITEUR` ou `PARTNERS_BIC_DEBITEUR` REFUSE, en nommant la variable, quand elle est absente, vide ou mal formée (IBAN contrôlé par sa clé — `src/lib/forme-iban.ts` —, BIC au format ISO 9362 `^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$`) ; témoin à deux faces (rouge sur chaque forme fautive — absente, vide, clé IBAN fausse, BIC hors format —, vert sur une valeur bien formée) ; relecture de la lentille securite. La lecture passe par `banqueDebitrice()` / `exigerEntiteRenseignee('<point de sortie>')` de `src/config/entite.ts`, jamais par `process.env` ; le point de sortie de cette tâche figure dans `POINTS_DE_SORTIE` avec `banqueDebitrice.iban` et `banqueDebitrice.bic` dans ses `cles`. PIÈCE RIB (rattrapage 69 ; correction d'A02 retenue par la coordination, 2026-10-02) : l'export lit la pièce rib portée par chaque ligne (tâche de schéma DM-57) ; il ne choisit ni n'écrit la pièce. Il lit l'IBAN dans la pièce au moment de l'export, et le fichier produit n'est pas une copie en base (HYP-DM06-IBAN). T-ARG-018 reste un générateur PUR. AUCUN export réel avant la fusion de DM-58, la purge de l'IBAN d'un RIB remplacé (remarque d'A07 sur #476, 2026-10-02) : DM-58 est à ses deps."
     },
     {
       "id": "T-ARG-019",
@@ -7372,7 +7376,8 @@
         "argent"
       ],
       "deps": [
-        "T-ARG-018"
+        "T-ARG-018",
+        "DM-57"
       ],
       "reqs": [
         "REQ-ARG-021",
@@ -7389,7 +7394,8 @@
       "pr": null,
       "issue": null,
       "attempts": 0,
-      "motif": null
+      "motif": null,
+      "acceptance": "LIGNES (rattrapage 69 ; correction d'A02 retenue par la coordination, 2026-10-02) : le rapprochement porte sur les `lignes_virement` de DM-57, sans réécrire leur référence RIB."
     },
     {
       "id": "DM-19",
@@ -21224,6 +21230,68 @@
         ],
         "REQ-JUR-002": [
           "tests/unit/juridique/copy-indicative.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "DM-57",
+      "titre": "Les lots de virement et leurs lignes, en ajout seul, chaque ligne liée à la pièce RIB qu'elle utilise",
+      "phase": 2,
+      "repo": "partners",
+      "zone": "domaine",
+      "paths": [
+        "prisma/schema.prisma",
+        "prisma/migrations/",
+        "tests/integration/lignes-virement.spec.ts"
+      ],
+      "schema": true,
+      "sensible": [],
+      "deps": [
+        "DM-11"
+      ],
+      "reqs": [
+        "REQ-ARG-019"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.75,
+      "statut": "a_faire",
+      "acceptance": "Versée au rattrapage 69 : tâche de schéma DÉDIÉE, sur la correction d'A02 retenue par la coordination (2026-10-02). AUCUNE tâche de schéma, en aucune phase, ne créait les lots ni les lignes de virement (T-ARG-015 à T-ARG-019 et DM-15 sont `schema: false`), et T-ARG-018 reste un générateur PUR. Elle porte le lien que lit la purge du RIB remplacé (DM-58, décision de Williams du 2026-10-02 : 5 ans après le dernier virement, L.110-4 C. com.). Forme d'A02, MOT POUR MOT : « Les lots de virement et leurs lignes : `lots_virement` (remise SEPA, `remise_at` Timestamptz(3), statut) et `lignes_virement` (une par apporteur et par lot, montant, `apporteur_id`, la référence RIB à trois colonnes NOT NULL vers `pieces_kyc_id_type_apporteur_key`, CHECK `'rib'`), Restrict/Restrict ; la ligne est EN AJOUT SEUL (gabarit `refuser_modification_sauf()`) ; jamais d'IBAN sur la ligne (HYP-DM06-IBAN) ; un index `(piece_kyc_id, …)` pour la lecture de DM-58 (la purge) ; témoins : autre type et RIB d'un autre apporteur refusés sur `<table>_piece_rib_fkey`, ligne sans pièce refusée, réécriture refusée par le déclencheur. » (Le renvoi à la purge est écrit DM-58 sur autorisation expresse d'A02.) NOMS (A02) : la clé étrangère composite (`piece_kyc_id`, `piece_kyc_type`, `apporteur_id`) vise l'UNIQUE `pieces_kyc_id_type_apporteur_key` (id, type, apporteur_id) de `pieces_kyc`, posé par la migration `20261002001100_pieces_kyc` de DM-11 ; la clé de la ligne s'appelle `lignes_virement_piece_rib_fkey` et son CHECK `lignes_virement_piece_kyc_est_un_rib`, sur le patron de `identites_facturation_piece_rib_fkey`. Le préfixe de migration est donné à la revendication. Les noms de colonne sont neutres pour securite:schema-pii. Auteur : A05. Lentille schema (A02).",
+      "tests": {
+        "REQ-ARG-019": [
+          "tests/integration/lignes-virement.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "DM-58",
+      "titre": "L'IBAN d'un RIB remplacé est effacé cinq ans après le dernier virement qui l'a utilisé",
+      "phase": 2,
+      "repo": "partners",
+      "zone": "domaine",
+      "paths": [
+        "src/domain/seuils/ssot.ts",
+        "src/server/jobs/purge-rib-remplace.ts",
+        "src/server/taches/registre.ts",
+        "tests/integration/purge-rib-remplace.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "DM-11",
+        "DM-57"
+      ],
+      "reqs": [
+        "REQ-SEC-026"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "acceptance": "Versée au rattrapage 69 sur la décision de Williams du 2026-10-02 (« OK POUR ( ANS ALORS », lu 5 ans) : un RIB remplacé est conservé 5 ans après le dernier virement qui l'a utilisé (L.110-4 C. com.), puis effacé. Arbitrage de la coordination, sur la mesure de l'auteur back et la forme d'A02. (1) Un seuil `CONSERVATION_RIB_REMPLACE_ANS` = 5 dans `src/domain/seuils/ssot.ts`, avec sa source (cette décision et l'article) et sa date. (2) « Le dernier virement qui l'a utilisé » se DÉRIVE comme `MAX(remise_at)` des lignes de virement qui référencent la pièce (DM-57) ; aucune colonne « dernier usage » sur `pieces_kyc` (ADR-0022 §8). (3) Une tâche de fond efface ENSEMBLE `iban_chiffre` et `iban_hash` d'un RIB remplacé dont le dernier virement date de plus de 5 ans, ce qu'admet le CHECK `pieces_kyc_iban_ensemble` de DM-11 et ce qu'autorise le déclencheur de garde, sur le gabarit « purge: » de DM-53 ; la ligne de la pièce reste, et la clé étrangère Restrict de DM-57 empêche toute suppression. Cette tâche dira, avec son ADR, si `pieces_kyc` reçoit pour cela le gabarit `purge:` (A02). (4) TÉMOINS : un RIB remplacé dont le dernier virement date de moins de 5 ans est gardé ; au-delà, les deux colonnes sont effacées ensemble, et la ligne reste ; le RIB EN COURS n'est jamais purgé, quel que soit l'âge de ses virements. Auteur : A05. Lentille schema (A02).",
+      "tests": {
+        "REQ-SEC-026": [
+          "tests/integration/purge-rib-remplace.spec.ts"
         ]
       }
     }
