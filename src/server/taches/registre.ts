@@ -15,6 +15,11 @@ import { z } from 'zod';
 export const TACHES = {
   /** Le traitement, hors requête, des événements reçus par les webhooks (SEC-06). */
   evenements_recus: { req: 'REQ-QA-026' },
+  /**
+   * INT-T56 : la minimisation de fond des candidatures reçues restées non traitées au-delà de
+   * `CANDIDATURE_NON_TRAITEE_MINIMISEE_APRES_JOURS` (`src/server/taches/minimiser-candidatures.ts`).
+   */
+  minimiser_candidatures: { req: 'REQ-JUR-029' },
 } as const satisfies Readonly<Record<string, { req: `REQ-${string}` }>>;
 
 export type NomDeTache = keyof typeof TACHES;
