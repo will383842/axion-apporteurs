@@ -347,6 +347,9 @@ function admisAvantLaGarde(n: ts.Node, fn: Fonction): boolean {
   const visiter = (x: ts.Node): void => {
     if (ts.isAwaitExpression(x) && !estCookies(x.expression)) admis = false;
     if (ts.isIdentifier(x) && parametres.has(x.text)) admis = false;
+    // Une construction (`new X()`) et un gabarit étiqueté (`` sql`…` ``) exécutent du code : ce sont des
+    // appels, jamais admis avant la garde.
+    if (ts.isNewExpression(x) || ts.isTaggedTemplateExpression(x)) admis = false;
     // Tout APPEL, attendu ou non, est une faute — sauf `cookies()`, le `.get(…)` de son résultat,
     // et une fabrique de câblage de la liste fermée, à arguments admis.
     if (ts.isCallExpression(x)) {
@@ -665,6 +668,18 @@ describe('REQ-SEC-032 — sur le disque, chaque page, route et action de l’esp
       'mon-contrat/actions.ts',
       "'use server';\nexport async function signer(formulaire: FormData) { const ports = portsDuProcessus(formulaire); return actionEspace('mon-contrat', j, ports, async () => 1); }",
       /^pas_premier_acte mon-contrat\/actions\.ts#signer$/,
+    ],
+    [
+      'un `new X()` avant la garde',
+      'mon-contrat/actions.ts',
+      "'use server';\nimport { Client } from './client';\nexport async function signer() { const c = new Client(); return actionEspace('mon-contrat', j, p, async () => 1); }",
+      /^pas_premier_acte mon-contrat\/actions\.ts#signer$/,
+    ],
+    [
+      'un gabarit ÉTIQUETÉ avant la garde',
+      'conformite/page.tsx',
+      "import { sql } from './base';\nexport default async function P() { const q = sql`SELECT 1`; const v = await exigerSessionPour('conformite', j, p); }",
+      /^pas_premier_acte conformite\/page\.tsx#default$/,
     ],
     [
       'un export INDIRECT dans un module d’actions',
