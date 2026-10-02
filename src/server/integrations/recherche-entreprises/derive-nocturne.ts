@@ -80,12 +80,12 @@ export function comparerFormes(enregistrees: Formes, vivantes: Formes): string[]
   return derives;
 }
 
-const pause = (ms: number) => new Promise<void>((ok) => setTimeout(ok, ms));
+export const pause = (ms: number) => new Promise<void>((ok) => setTimeout(ok, ms));
 
 /** Un appel au tiers : la production passe `fetch`, le témoin une réponse fabriquée. */
 export type Appeler = (url: URL) => Promise<Response>;
 
-const appelerLeTiers: Appeler = (url) =>
+export const appelerLeTiers: Appeler = (url) =>
   fetch(url, {
     headers: { accept: 'application/json', 'user-agent': PARAMETRES.agentUtilisateur.valeur },
     signal: AbortSignal.timeout(10_000),
@@ -164,26 +164,28 @@ export async function mesurer(
   return { derives, nonMesures };
 }
 
-async function contrat(): Promise<number> {
-  const { derives, nonMesures } = await mesurer(
-    CAS_ENREGISTRES,
-    lireFixtures(),
-    appelerLeTiers,
-    pause
-  );
-  // « Non mesuré » n'est ni une dérive ni un vert silencieux : un avertissement nommé, que l'onglet
-  // du job affiche, et la sortie en zéro — un 429 persistant ne rougit pas le nightly.
-  for (const cas of nonMesures)
-    process.stdout.write(
+/**
+ * Le verdict imprimé, PUR : « non mesuré » n'est ni une dérive ni un vert silencieux — un
+ * avertissement nommé, que l'onglet du job affiche, et la sortie en zéro ; un 429 persistant ne
+ * rougit pas le nightly. Toute dérive rend 1.
+ */
+export function rendreLaMesure(m: Mesure, total: number): { code: 0 | 1; sortie: string } {
+  const avertissements = m.nonMesures.map(
+    (cas) =>
       `::warning::contrat recherche-entreprises — ${cas} non mesuré : 429 après ${TENTATIVES_SUR_429} tentatives\n`
-    );
-  const mesures = CAS_ENREGISTRES.length - nonMesures.length;
-  process.stdout.write(
-    derives.length === 0
-      ? `✅ contrat recherche-entreprises — ${mesures} cas rejoués contre l'API réelle, aucune dérive, ${nonMesures.length} non mesuré(s)\n`
-      : `❌ contrat recherche-entreprises — ${derives.length} dérive(s) :\n${derives.map((d) => `  ${d}`).join('\n')}\n`
   );
-  return derives.length === 0 ? 0 : 1;
+  const verdict =
+    m.derives.length === 0
+      ? `✅ contrat recherche-entreprises — ${total - m.nonMesures.length} cas rejoués contre l'API réelle, aucune dérive, ${m.nonMesures.length} non mesuré(s)\n`
+      : `❌ contrat recherche-entreprises — ${m.derives.length} dérive(s) :\n${m.derives.map((d) => `  ${d}`).join('\n')}\n`;
+  return { code: m.derives.length === 0 ? 0 : 1, sortie: avertissements.join('') + verdict };
+}
+
+async function contrat(): Promise<number> {
+  const m = await mesurer(CAS_ENREGISTRES, lireFixtures(), appelerLeTiers, pause);
+  const { code, sortie } = rendreLaMesure(m, CAS_ENREGISTRES.length);
+  process.stdout.write(sortie);
+  return code;
 }
 
 if (process.argv[1]?.endsWith('derive-nocturne.ts') === true) {
