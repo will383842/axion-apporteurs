@@ -57,8 +57,9 @@ export type TexteRendu = { titre: string; appel: string; corps: string | null };
 
 const PARAMETRE = /\{([a-zA-Z]+)\}/g;
 /**
- * Une valeur : une ligne, visible, bornée — ni caractère de contrôle (\p{Cc}, dont le saut de ligne),
- * ni caractère de FORMAT (\p{Cf} : U+202E et les isolats retournent un sujet, U+200B le cachent).
+ * Une valeur : une ligne, visible, bornée — ni caractère de contrôle (catégorie Unicode Cc, dont le
+ * saut de ligne), ni caractère de FORMAT (catégorie Cf : U+202E et les isolats retournent un sujet,
+ * U+200B le cachent).
  */
 const VALEUR = /^[^\p{Cc}\p{Cf}]{1,300}$/u;
 
