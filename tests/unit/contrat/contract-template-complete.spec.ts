@@ -1019,13 +1019,13 @@ describe('REQ-JUR-003 — JUR-T31 : l’art. 3.5, entreprise déjà prise, borne
     expect(a).toContain("dans les conditions de l'article 4.4");
   });
 
-  it('REQ-JUR-003 : al. 4 — deux protections : pas de démarchage pendant le délai de l’art. 3.2, ni dans la réserve après un acte de l’Apporteur', () => {
+  it('REQ-JUR-003 : al. 4 — deux protections : pas de démarchage tant que l’attribution est provisoire, ni dans la réserve après un acte de l’Apporteur', () => {
     const a = art35();
     expect(a).toContain(
-      "Pendant le délai de confirmation de l'article 3.2, la Société ne démarche pas l'entreprise déclarée"
+      "Tant que l'attribution est provisoire, la Société ne démarche pas l'entreprise déclarée ; la demande de confirmation et les prises de contact de l'article 3.2 ne constituent pas un démarchage."
     );
     expect(a).toContain(
-      "Dans les {{RESERVE_APRES_ACTE_APPORTEUR_JOURS}} jours qui suivent une vérification d'entreprise faite par l'Apporteur, ou une déclaration de sa part refusée ou en attente, la Société ne démarche pas l'entreprise concernée et ne la prend pas en charge."
+      "Dans les {{RESERVE_APRES_ACTE_APPORTEUR_JOURS}} jours qui suivent une vérification d'entreprise faite par l'Apporteur, ou une déclaration de sa part refusée ou en attente, la Société ne démarche pas l'entreprise concernée et ne la prend pas en charge ; cette réserve ne s'applique ni à une entreprise que la Société connaissait déjà au sens de l'article 3.3, ni à une entreprise dont une attribution ou une prise en charge était en cours à la date de cette vérification ou de cette déclaration."
     );
     expect(VARIABLES['RESERVE_APRES_ACTE_APPORTEUR_JOURS' as keyof typeof VARIABLES]).toMatchObject(
       {
