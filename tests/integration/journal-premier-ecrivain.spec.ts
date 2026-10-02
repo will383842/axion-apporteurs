@@ -9,6 +9,7 @@
  * base dont l'enum ne connaît pas encore la valeur : il y rougit en comptant zéro.
  */
 import { createHash, randomUUID } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { TypeEvenementRecu } from '@prisma/client';
 import { NOMS_DES_SECRETS } from '../../src/lib/env';
@@ -60,7 +61,12 @@ async function recevoir(candidatureId: string, courriel: string) {
     },
     select: { id: true, charge: true },
   });
-  const coordonnees: Coordonnees = { nom: 'Camille Durand', prenom: null, email: courriel, telephone: null };
+  const coordonnees: Coordonnees = {
+    nom: 'Camille Durand',
+    prenom: null,
+    email: courriel,
+    telephone: null,
+  };
   return traiterCandidatureRecue(base.prisma, recu, {
     tirer: async () => coordonnees,
     cles: CLES,
@@ -108,5 +114,96 @@ describe('REQ-DM-024 — le journal chaîné a son premier écrivain', () => {
       FROM evenements ORDER BY id`;
     expect(lignes.some((l) => (l as { type: string }).type === 'apporteur_cree')).toBe(true);
     expect(verifierChaine(lignes)).toMatchObject({ ok: true });
+  });
+});
+
+/** Le code SQLSTATE d'une erreur de Postgres remontée par Prisma, ou `null`. */
+function codeSql(e: unknown): string | null {
+  const texte = String((e as { message?: string })?.message ?? e);
+  const m = /\b(42501|[0-9A-Z]{5})\b/.exec(texte);
+  const meta = (e as { meta?: { code?: string } })?.meta?.code;
+  return meta ?? (texte.includes('42501') ? '42501' : (m?.[1] ?? null));
+}
+
+describe('REQ-DM-024 — le rôle d’exécution n’est plus propriétaire du journal', () => {
+  const ROLE = `temoin_dm45_${randomUUID().replace(/-/g, '').slice(0, 12)}`;
+
+  beforeAll(async () => {
+    await base.prisma.$executeRawUnsafe(`CREATE ROLE ${ROLE} NOLOGIN NOSUPERUSER`);
+    await base.prisma.$executeRawUnsafe(`GRANT partners_execution TO ${ROLE}`);
+  });
+  afterAll(async () => {
+    await base.prisma.$executeRawUnsafe(`DROP OWNED BY ${ROLE}`).catch(() => undefined);
+    await base.prisma.$executeRawUnsafe(`DROP ROLE IF EXISTS ${ROLE}`).catch(() => undefined);
+  });
+
+  /** Joue `f` sous le rôle de test, dans une transaction annulée à la fin. */
+  async function sousLeRole<T>(
+    f: (tx: Parameters<Parameters<typeof base.prisma.$transaction>[0]>[0]) => Promise<T>
+  ): Promise<T> {
+    return base.prisma.$transaction(async (tx) => {
+      await tx.$executeRawUnsafe(`SET LOCAL ROLE ${ROLE}`);
+      return f(tx);
+    });
+  }
+
+  it('REQ-DM-024 : la table et sa séquence appartiennent à partners_journal', async () => {
+    const [p] = await base.prisma.$queryRaw<{ table: string; sequence: string }[]>`
+      SELECT (SELECT tableowner FROM pg_tables WHERE tablename = 'evenements') AS table,
+             (SELECT pg_get_userbyid(c.relowner) FROM pg_class c WHERE c.relname = 'evenements_id_seq') AS sequence`;
+    expect(p).toEqual({ table: 'partners_journal', sequence: 'partners_journal' });
+  });
+
+  it('REQ-DM-024 : sous le rôle d’exécution, l’écrivain AJOUTE au journal', async () => {
+    const { ajouterEvenement } = await import('../../src/server/evenement/journal');
+    const apporteurId = randomUUID();
+    await expect(
+      sousLeRole((tx) =>
+        ajouterEvenement(tx, {
+          type: 'apporteur_cree',
+          agregat: 'apporteur',
+          agregatId: apporteurId,
+          survenuAt: MAINTENANT,
+          charge: {
+            apporteurId,
+            candidatureId: randomUUID(),
+            statut: 'candidat',
+            acteur: { par: 'systeme' },
+          },
+        })
+      )
+    ).resolves.toMatchObject({ selfHash: expect.stringMatching(/^[0-9a-f]{64}$/) });
+  });
+
+  it('REQ-DM-024 : TÉMOIN — sous le rôle d’exécution, UPDATE est refusé par le PRIVILÈGE (42501)', async () => {
+    const e = await sousLeRole((tx) =>
+      tx.$executeRawUnsafe(`UPDATE evenements SET charge = charge WHERE id = 1`)
+    ).catch((x: unknown) => x);
+    expect(codeSql(e)).toBe('42501');
+  });
+
+  it('REQ-DM-024 : TÉMOIN — sous le rôle d’exécution, désactiver le déclencheur est refusé : il n’est pas PROPRIÉTAIRE (42501)', async () => {
+    const e = await sousLeRole((tx) =>
+      tx.$executeRawUnsafe(`ALTER TABLE evenements DISABLE TRIGGER evenements_append_only`)
+    ).catch((x: unknown) => x);
+    expect(codeSql(e)).toBe('42501');
+  });
+
+  it('REQ-DM-024 : un SECOND passage de la migration ne lève rien (idempotente)', async () => {
+    const sql = readFileSync(
+      'prisma/migrations/20261002000000_journal_premier_ecrivain/migration.sql',
+      'utf8'
+    )
+      .split('\n')
+      .filter((l) => !l.startsWith('--'))
+      .join('\n');
+    // Une instruction se termine par `;` en fin de ligne, suivie d'une ligne NON indentée : le bloc
+    // `DO $$ … $$;` reste entier.
+    const instructions = sql
+      .split(/;\s*\n(?=\S|$)/)
+      .map((i) => i.trim())
+      .filter(Boolean);
+    expect(instructions.length).toBeGreaterThanOrEqual(5);
+    for (const i of instructions) await base.prisma.$executeRawUnsafe(i);
   });
 });
