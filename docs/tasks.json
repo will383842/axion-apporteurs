@@ -21273,9 +21273,11 @@
         "src/domain/seuils/ssot.ts",
         "src/server/jobs/purge-rib-remplace.ts",
         "src/server/taches/registre.ts",
-        "tests/integration/purge-rib-remplace.spec.ts"
+        "tests/integration/purge-rib-remplace.spec.ts",
+        "prisma/schema.prisma",
+        "prisma/migrations/"
       ],
-      "schema": false,
+      "schema": true,
       "sensible": [],
       "deps": [
         "DM-11",
@@ -21288,7 +21290,7 @@
       "externe": null,
       "estimateDays": 0.5,
       "statut": "a_faire",
-      "acceptance": "Versée au rattrapage 69 sur la décision de Williams du 2026-10-02 (« OK POUR ( ANS ALORS », lu 5 ans) : un RIB remplacé est conservé 5 ans après le dernier virement qui l'a utilisé (L.110-4 C. com.), puis effacé. Arbitrage de la coordination, sur la mesure de l'auteur back et la forme d'A02. (1) Un seuil `CONSERVATION_RIB_REMPLACE_ANS` = 5 dans `src/domain/seuils/ssot.ts`, avec sa source (cette décision et l'article) et sa date. (2) « Le dernier virement qui l'a utilisé » se DÉRIVE comme `MAX(remise_at)` des lignes de virement qui référencent la pièce (DM-57) ; aucune colonne « dernier usage » sur `pieces_kyc` (ADR-0022 §8). (3) Une tâche de fond efface ENSEMBLE `iban_chiffre` et `iban_hash` d'un RIB remplacé dont le dernier virement date de plus de 5 ans, ce qu'admet le CHECK `pieces_kyc_iban_ensemble` de DM-11 et ce qu'autorise le déclencheur de garde, sur le gabarit « purge: » de DM-53 ; la ligne de la pièce reste, et la clé étrangère Restrict de DM-57 empêche toute suppression. Cette tâche dira, avec son ADR, si `pieces_kyc` reçoit pour cela le gabarit `purge:` (A02). (4) TÉMOINS : un RIB remplacé dont le dernier virement date de moins de 5 ans est gardé ; au-delà, les deux colonnes sont effacées ensemble, et la ligne reste ; le RIB EN COURS n'est jamais purgé, quel que soit l'âge de ses virements. Auteur : A05. Lentille schema (A02).",
+      "acceptance": "Versée au rattrapage 69 sur la décision de Williams du 2026-10-02 (« OK POUR ( ANS ALORS », lu 5 ans) : un RIB remplacé est conservé 5 ans après le dernier virement qui l'a utilisé (L.110-4 C. com.), puis effacé. Arbitrage de la coordination, sur la mesure de l'auteur back et la forme d'A02. (1) Un seuil `CONSERVATION_RIB_REMPLACE_ANS` = 5 dans `src/domain/seuils/ssot.ts`, avec sa source (cette décision et l'article) et sa date. (2) « Le dernier virement qui l'a utilisé » se DÉRIVE comme `MAX(remise_at)` des lignes de virement qui référencent la pièce (DM-57) ; aucune colonne « dernier usage » sur `pieces_kyc` (ADR-0022 §8). (3) Une tâche de fond efface ENSEMBLE `iban_chiffre` et `iban_hash` d'un RIB remplacé dont le dernier virement date de plus de 5 ans, par un UPDATE ordinaire (pieces_kyc est mutable, sans déclencheur d'ajout seul), ce qu'admet le CHECK `pieces_kyc_iban_ensemble` de DM-11 ; elle pose dans la même instruction `iban_purge_at`, qui date la purge, sert d'idempotence et distingue une purge d'un IBAN jamais saisi (patron de DM-53). DM-58 passe `schema: true` : colonne `pieces_kyc.iban_purge_at` Timestamptz(3) nullable, et CHECK nommé `pieces_kyc_iban_purge_liee` : `iban_purge_at IS NULL OR (iban_chiffre IS NULL AND iban_hash IS NULL AND type = 'rib' AND remplacee_at IS NOT NULL)` ; la ligne de la pièce reste, et la clé Restrict de DM-57 empêche toute suppression ; préfixe donné à la revendication (A02). (4) TÉMOINS : un RIB remplacé dont le dernier virement date de moins de 5 ans est gardé ; au-delà, les deux colonnes sont effacées ensemble, et la ligne reste ; le RIB EN COURS n'est jamais purgé, quel que soit l'âge de ses virements. Le CHECK refuse une date de purge sur un RIB en cours ou avec un IBAN présent, attendu sur son nom ; un second passage ne réécrit rien. Auteur : A05. Lentille schema (A02).",
       "tests": {
         "REQ-SEC-026": [
           "tests/integration/purge-rib-remplace.spec.ts"
