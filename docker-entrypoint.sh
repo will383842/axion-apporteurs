@@ -47,10 +47,9 @@ fi
 # QA-T62 (REQ-DM-024) : le rôle d'exécution est provisionné (hors migration, avec l'URL de migration)
 # puis CONSTATÉ connecté comme le serveur : ni superutilisateur, ni membre de `partners_journal`, ni
 # propriétaire d'une table. Sinon, le serveur n'est pas lancé.
-if [ "${SKIP_MIGRATE:-}" != "1" ]; then
-  if ! node "$ICI/node_modules/tsx/dist/cli.mjs" "$ICI/src/server/deploiement/role-d-execution.ts"; then
-    exit 1
-  fi
+# Sous SKIP_MIGRATE=1 aussi : le module ne provisionne alors pas, mais il CONSTATE (échec fermé).
+if ! node "$ICI/node_modules/tsx/dist/cli.mjs" "$ICI/src/server/deploiement/role-d-execution.ts"; then
+  exit 1
 fi
 
 # Le serveur ne garde pas l'URL du rôle propriétaire (QA-T62).

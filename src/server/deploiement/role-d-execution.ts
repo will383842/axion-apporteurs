@@ -14,6 +14,7 @@
  * Son nom et son secret sont ceux de `DATABASE_URL` : une seule source, posée par le provisionnement
  * de la plateforme (`provisionner.ts`). Aucune valeur n'est imprimée, ni le secret, ni une URL.
  */
+import { createHash, createHmac, pbkdf2Sync, randomBytes } from 'node:crypto';
 import { PrismaClient } from '@prisma/client';
 import { productionDeclaree } from '../../lib/notify';
 
@@ -58,6 +59,24 @@ export function urlDuRoleDExecution(urlMigration: string, secret: string): strin
   return u.toString();
 }
 
+/** Les itérations du vérificateur, celles que Postgres emploie par défaut (`scram_iterations`). */
+const ITERATIONS_SCRAM = 4096;
+
+/**
+ * Le vérificateur SCRAM-SHA-256 du secret (RFC 5802, RFC 7677), au format que Postgres stocke dans
+ * `pg_authid` : `SCRAM-SHA-256$<itérations>:<sel>$<StoredKey>:<ServerKey>`. Passé tel quel à
+ * `PASSWORD`, il est stocké sans que le secret en clair ne voyage jusqu'à la base, ni n'atteigne ses
+ * journaux (`log_statement`). Le secret est restreint à l'ASCII (`SECRET`) : la normalisation
+ * SASLprep de Postgres le laisse inchangé.
+ */
+export function verificateurScram(secret: string, sel: Buffer = randomBytes(16)): string {
+  const sale = pbkdf2Sync(secret, sel, ITERATIONS_SCRAM, 32, 'sha256');
+  const cleClient = createHmac('sha256', sale).update('Client Key').digest();
+  const cleStockee = createHash('sha256').update(cleClient).digest();
+  const cleServeur = createHmac('sha256', sale).update('Server Key').digest();
+  return `SCRAM-SHA-256$${ITERATIONS_SCRAM}:${sel.toString('base64')}$${cleStockee.toString('base64')}:${cleServeur.toString('base64')}`;
+}
+
 async function avec<T>(url: string, f: (c: PrismaClient) => Promise<T>): Promise<T> {
   const c = new PrismaClient({ datasourceUrl: url });
   try {
@@ -67,12 +86,20 @@ async function avec<T>(url: string, f: (c: PrismaClient) => Promise<T>): Promise
   }
 }
 
-type Etat = { existe: boolean; superutilisateur: boolean; tables: number; courant: boolean };
+type Etat = {
+  existe: boolean;
+  superutilisateur: boolean;
+  journal: boolean;
+  tables: number;
+  courant: boolean;
+};
 
 async function etatDu(c: PrismaClient, role: string): Promise<Etat> {
   const [e] = await c.$queryRawUnsafe<Etat[]>(
     `SELECT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = $1) AS existe,
             COALESCE((SELECT rolsuper FROM pg_roles WHERE rolname = $1), false) AS superutilisateur,
+            (EXISTS (SELECT 1 FROM pg_roles WHERE rolname = $1)
+              AND pg_has_role($1, 'partners_journal', 'MEMBER')) AS journal,
             (SELECT count(*)::int FROM pg_class c JOIN pg_roles r ON r.oid = c.relowner
               WHERE r.rolname = $1) AS tables,
             ($1 = current_user) AS courant`,
@@ -118,6 +145,9 @@ export async function provisionnerRoleDExecution(urls: {
         'le rôle d’exécution ne peut être ni superutilisateur, ni le rôle de la migration'
       );
     }
+    if (e.journal) {
+      throw new RoleDExecutionRefuse('le rôle d’exécution ne peut être membre de partners_journal');
+    }
     if (e.tables > 0) {
       throw new RoleDExecutionRefuse(
         'le rôle d’exécution ne peut être propriétaire d’aucune table'
@@ -126,8 +156,9 @@ export async function provisionnerRoleDExecution(urls: {
     const attributs = 'LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS NOREPLICATION INHERIT';
     const verbe = e.existe ? 'ALTER' : 'CREATE';
     await c.$transaction([
-      c.$executeRawUnsafe(`${verbe} ROLE ${role} WITH ${attributs} PASSWORD '${secret}'`),
-      c.$executeRawUnsafe(`REVOKE partners_journal FROM ${role}`),
+      c.$executeRawUnsafe(
+        `${verbe} ROLE ${role} WITH ${attributs} PASSWORD '${verificateurScram(secret)}'`
+      ),
       c.$executeRawUnsafe(`GRANT partners_execution TO ${role}`),
       c.$executeRawUnsafe(`GRANT USAGE ON SCHEMA public TO partners_execution`),
       c.$executeRawUnsafe(PRIVILEGES_HORS_JOURNAL),
@@ -176,20 +207,27 @@ export async function constaterRoleDExecution(urlExecution: string): Promise<voi
 export async function principal(env: NodeJS.ProcessEnv = process.env): Promise<number> {
   const urlMigration = env.DATABASE_MIGRATION_URL;
   const urlExecution = env.DATABASE_URL;
-  if (!urlExecution || (!urlMigration && productionDeclaree(env))) {
-    process.stderr.write(
-      'Demarrage refuse : DATABASE_MIGRATION_URL et DATABASE_URL sont requises.\n'
-    );
+  // SKIP_MIGRATE=1 (le runbook de retour arrière) : aucune migration, donc aucun provisionnement, qui
+  // écrit ; l'URL du propriétaire n'est alors pas exigée.
+  const migrer = env.SKIP_MIGRATE !== '1';
+  if (!urlExecution) {
+    // Sans base, rien à constater : le serveur refusera lui-même de démarrer (DATABASE_URL est exigée
+    // par le schéma de src/lib/env.ts). Hors retour arrière, l'entrée refuse dès ici, comme avant.
+    if (!migrer) return 0;
+    process.stderr.write('Demarrage refuse : DATABASE_URL est requise.\n');
     return 1;
   }
-  if (!urlMigration) {
-    process.stderr.write(
-      "DATABASE_MIGRATION_URL absente hors production : role d'execution non provisionne.\n"
-    );
-    return 0;
+  if (migrer && !urlMigration && productionDeclaree(env)) {
+    process.stderr.write('Demarrage refuse : DATABASE_MIGRATION_URL est requise en production.\n');
+    return 1;
   }
+  // Le CONSTAT tourne dès que DATABASE_URL est posée, quel que soit l'environnement déclaré : un
+  // serveur sous un superutilisateur ou un membre du journal ne démarre pas (échec fermé).
+  const provisionner = migrer && Boolean(urlMigration);
   try {
-    await provisionnerRoleDExecution({ urlMigration, urlExecution });
+    if (provisionner) {
+      await provisionnerRoleDExecution({ urlMigration: urlMigration!, urlExecution });
+    }
     await constaterRoleDExecution(urlExecution);
     return 0;
   } catch (e) {
