@@ -143,6 +143,13 @@ describe('REQ-DM-046 — la reprise des codes NAF nuls, en base réelle', () => 
         return faux(q);
       },
       disjoncteur: creerDisjoncteur(),
+      debit: async () => ({
+        autorise: true,
+        restant: 1,
+        repriseAt: null,
+        panne: false,
+        motif: 'admis',
+      }),
       maintenantMs: () => MAINTENANT.getTime(),
     });
 

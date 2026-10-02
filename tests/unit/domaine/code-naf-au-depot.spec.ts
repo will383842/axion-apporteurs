@@ -25,6 +25,7 @@ import type { IssueDuTiers } from '../../../src/server/integrations/recherche-en
 import { TACHES } from '../../../src/server/taches/registre';
 import { inscriptions } from '../../../src/server/taches/inscriptions';
 import type { PrismaClient } from '@prisma/client';
+import type { VerdictDeLimite } from '../../../src/server/securite/rate-limit';
 
 type Brut = {
   siren: string;
@@ -126,13 +127,27 @@ function reponse(siren: string, naf: string | null): IssueDuTiers {
   };
 }
 
+type PortsSimules = PortsDeLaReprise & {
+  ecrits: [string, string][];
+  appels: string[];
+  debits: number;
+  verdict: VerdictDeLimite;
+};
+
 function ports(
   lignes: { id: string; siren: string; codeNaf: string | null }[],
   tiers: (q: string) => IssueDuTiers
-): PortsDeLaReprise & { ecrits: [string, string][]; appels: string[] } {
+): PortsSimules {
   const ecrits: [string, string][] = [];
   const appels: string[] = [];
-  return {
+  const admis: VerdictDeLimite = {
+    autorise: true,
+    restant: 1,
+    repriseAt: null,
+    panne: false,
+    motif: 'admis',
+  };
+  const p: PortsSimules = {
     ecrits,
     appels,
     lire: async () =>
@@ -149,8 +164,15 @@ function ports(
       return tiers(q);
     },
     disjoncteur: creerDisjoncteur({ seuilEchecs: 1, pauseMs: 60_000 }),
+    debits: 0,
+    verdict: admis,
+    debit: async () => {
+      p.debits += 1;
+      return p.verdict;
+    },
     maintenantMs: () => 0,
   };
+  return p;
 }
 
 describe('REQ-DM-046 — la reprise des codes nuls', () => {
@@ -205,6 +227,43 @@ describe('REQ-DM-046 — la reprise des codes nuls', () => {
     p.disjoncteur.echec(0, 'erreur_serveur', null);
     expect(await completerLesCodesNaf(p)).toEqual({ completes: 0, sansCode: 0, interruptions: 1 });
     expect(p.appels).toEqual([]);
+  });
+
+  it.each([
+    [
+      'refusé par la limite',
+      { autorise: false, restant: 0, repriseAt: 1_000, panne: false, motif: 'limite_atteinte' },
+    ],
+    [
+      'en panne',
+      { autorise: false, restant: 0, repriseAt: null, panne: true, motif: 'cache_indisponible' },
+    ],
+  ] as const)(
+    'REQ-DM-046 : TÉMOIN — le débit global %s interrompt la reprise sans appeler le tiers',
+    async (_quoi, verdict) => {
+      const lignes = [{ id: 'a', siren: SIREN_A, codeNaf: null as string | null }];
+      const p = ports(lignes, (q) => reponse(q, '68.20B'));
+      p.verdict = verdict;
+      expect(await completerLesCodesNaf(p)).toEqual({
+        completes: 0,
+        sansCode: 0,
+        interruptions: 1,
+      });
+      expect(p.appels).toEqual([]);
+      expect(p.debits).toBe(1);
+      expect(lignes[0]!.codeNaf).toBeNull();
+    }
+  );
+
+  it('REQ-DM-046 : un appel au tiers consomme UNE place du débit global, comme l’autocomplétion', async () => {
+    const lignes = [
+      { id: 'a', siren: SIREN_A, codeNaf: null as string | null },
+      { id: 'b', siren: SIREN_B, codeNaf: null as string | null },
+    ];
+    const p = ports(lignes, (q) => reponse(q, '68.20B'));
+    await completerLesCodesNaf(p);
+    expect(p.debits).toBe(p.appels.length);
+    expect(p.appels).toHaveLength(2);
   });
 
   it('REQ-DM-046 : la reprise est une tâche du registre, inscrite au lanceur', () => {

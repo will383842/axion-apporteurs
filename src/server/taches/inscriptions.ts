@@ -43,6 +43,7 @@ import { completerLesCodesNaf, portsDeBase } from './completer-code-naf';
 import { creerDisjoncteur } from '../integrations/recherche-entreprises/disjoncteur';
 import { PARAMETRES } from '../integrations/recherche-entreprises/parametres';
 import { clientDuTiers } from '../integrations/recherche-entreprises/tiers';
+import { limiteurDuRegistre } from '../integrations/recherche-entreprises/limiteur';
 
 /**
  * Les traitants branchés, par type d'événement reçu. Un seul aujourd'hui : la candidature reçue
@@ -106,6 +107,8 @@ export function inscriptions(prisma: PrismaClient): Inscriptions {
           delaiMs: PARAMETRES.delaiAttenteMs.valeur,
         }),
         disjoncteur: creerDisjoncteur(),
+        // Le quota du tiers est partagé avec l'autocomplétion : la reprise passe par le même débit.
+        debit: (ms) => limiteurDuRegistre.global(ms),
         maintenantMs: () => horlogeSysteme.maintenant(),
       }),
   };

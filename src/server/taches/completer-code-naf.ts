@@ -15,6 +15,7 @@ import type { PrismaClient } from '@prisma/client';
 import { codeNafACompleter } from '../../domain/entreprise/code-naf';
 import type { Disjoncteur } from '../integrations/recherche-entreprises/disjoncteur';
 import type { ClientDuTiers } from '../integrations/recherche-entreprises/tiers';
+import type { VerdictDeLimite } from '../securite/rate-limit';
 
 /** Un lot par passage : la reprise ne sature pas le tiers, le passage suivant continue. */
 export const LOT_DE_LA_REPRISE = 20;
@@ -26,6 +27,12 @@ export interface PortsDeLaReprise {
   ecrire(id: string, code: string): Promise<boolean>;
   readonly tiers: (q: string, maintenantMs: number) => ReturnType<ClientDuTiers>;
   readonly disjoncteur: Disjoncteur;
+  /**
+   * Le débit GLOBAL vers le tiers (`depot:entreprise-global`, `limiteurDuRegistre.global`) : son quota
+   * est PARTAGÉ avec l'autocomplétion des apporteurs, et la reprise le consomme comme elle (lentille
+   * sécurité). Refusé ou en panne, la reprise s'interrompt sans appeler le tiers.
+   */
+  debit(maintenantMs: number): Promise<VerdictDeLimite>;
   maintenantMs(): number;
 }
 
@@ -37,6 +44,7 @@ export async function completerLesCodesNaf(
   for (const { id, siren } of await p.lire()) {
     const maintenant = p.maintenantMs();
     if (!p.disjoncteur.autoriser(maintenant)) return { completes, sansCode, interruptions: 1 };
+    if (!(await p.debit(maintenant)).autorise) return { completes, sansCode, interruptions: 1 };
     const issue = await p.tiers(siren, maintenant);
     if (!issue.ok) {
       if (issue.motif !== 'requete_refusee') {
