@@ -118,7 +118,7 @@ export const ETATS_VIDES_ESPACE: Readonly<Record<string, EtatVide>> = {
   '/profil/personnes': {
     titre: 'Personne n’agit pour vous',
     phrase:
-      'Si quelqu’un rencontre des entreprises pour vous, vous pouvez le déclarer ici. Seules vos propres rencontres et celles des personnes déclarées ouvrent droit à une attribution.',
+      'Si quelqu’un rencontre des entreprises pour vous, vous pouvez le déclarer ici. Seules vos propres rencontres et celles des personnes déclarées permettent de réserver une entreprise pour vous.',
     action: { libelle: 'Déclarer une personne', route: null },
   },
   '/mon-contrat': {

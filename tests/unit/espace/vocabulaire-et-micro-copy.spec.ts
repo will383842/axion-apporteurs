@@ -705,7 +705,7 @@ describe('REQ-UX-002 — snapshot des libellés de l’espace, sans date, sans n
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › /mes-entreprises/<id> › phrase : Rien n’est attendu ici : les étapes d’Axion-IA s’affichent dans la frise.
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › /mes-entreprises/<id> › action › libelle : Noter un échange
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › /profil/personnes › titre : Personne n’agit pour vous
-      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /profil/personnes › phrase : Si quelqu’un rencontre des entreprises pour vous, vous pouvez le déclarer ici. Seules vos propres rencontres et celles des personnes déclarées ouvrent droit à une attribution.
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /profil/personnes › phrase : Si quelqu’un rencontre des entreprises pour vous, vous pouvez le déclarer ici. Seules vos propres rencontres et celles des personnes déclarées permettent de réserver une entreprise pour vous.
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › /profil/personnes › action › libelle : Déclarer une personne
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › /mon-contrat › titre : Votre contrat est en préparation
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › /mon-contrat › phrase : Il est préparé quand vos pièces sont vérifiées. Vous le lirez ici avant de le signer ; rien n’est à faire d’ici là.
