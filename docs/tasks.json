@@ -21271,11 +21271,12 @@
       "zone": "domaine",
       "paths": [
         "src/domain/seuils/ssot.ts",
-        "src/server/jobs/purge-rib-remplace.ts",
         "src/server/taches/registre.ts",
         "tests/integration/purge-rib-remplace.spec.ts",
         "prisma/schema.prisma",
-        "prisma/migrations/"
+        "prisma/migrations/",
+        "src/server/taches/purger-rib-remplace.ts",
+        "src/server/taches/inscriptions.ts"
       ],
       "schema": true,
       "sensible": [],
