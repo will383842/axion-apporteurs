@@ -17,7 +17,12 @@ import { join } from 'node:path';
 import type { PrismaClient } from '@prisma/client';
 import { extrairePolitique, type LecturePolitique } from '../../domain/rgpd/politique';
 import { configurationDuLien, type DependancesDuLien } from '../auth/lien-magique-production';
-import { depotDeSessions, exigerSession, type PortsDeSession } from '../auth/session';
+import {
+  depotDeSessions,
+  exigerSession,
+  type PortsDeSession,
+  type RefusDOuvertureLimitee,
+} from '../auth/session';
 
 /** Le registre de l'article 30, copié dans l'image avec `docs/` et lu à l'exécution. */
 export const CHEMIN_DU_REGISTRE = 'docs/rgpd/registre-article-30.md';
@@ -156,13 +161,22 @@ export function depotDAcceptation(prisma: PrismaClient): DepotDAcceptation {
 
 /** Les ports du processus : l'horloge, la base et le secret des sessions de la connexion. */
 export function portsDuProcessus(
-  d: Pick<DependancesDuLien, 'env' | 'prisma' | 'horloge'>
+  d: Pick<DependancesDuLien, 'env' | 'prisma' | 'horloge'> &
+    Partial<Pick<DependancesDuLien, 'journal'>>
 ): PortsDAcceptation {
+  const journal = d.journal;
   return {
     session: {
       maintenant: () => new Date(d.horloge.maintenant()),
       depot: depotDeSessions(d.prisma),
       configuration: configurationDuLien(d.env).session,
+      // SEC-43 : un refus d'ouverture limitée, au journal — le statut et le segment, rien d'autre.
+      ...(journal === undefined
+        ? {}
+        : {
+            journal: ({ signal, motif, statut, segment }: RefusDOuvertureLimitee) =>
+              journal.warn(signal, { motif, statut, segment }),
+          }),
     },
     depot: depotDAcceptation(d.prisma),
   };

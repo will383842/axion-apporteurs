@@ -22,7 +22,8 @@
  */
 import { DUREES_DE_RETENTION } from './retention';
 
-export type UniteDeSeuil = 'minutes' | 'jours' | 'jours_ouvres' | 'mois' | 'ans' | 'centimes';
+export type UniteDeSeuil =
+  'minutes' | 'jours' | 'jours_ouvres' | 'mois' | 'ans' | 'centimes' | 'tentatives';
 
 /** Un endroit du contrat où la valeur est écrite : le corps du contrat, ou son annexe 2. */
 export type Renvoi = { readonly document: 'contrat' | 'annexe-2'; readonly unite: string };
@@ -44,12 +45,14 @@ const art = (...unites: string[]): Renvoi[] =>
 
 export const SEUILS = {
   ...DUREES_DE_RETENTION,
+  // JUR-T40 : l'art. 3.2 n'écrit plus ce délai (W20, REQ-CPL-026) ; il reste l'objectif interne de
+  // la console pour une prise de contact, sans engagement contractuel (recommandation d'A07).
   PRISE_DE_CONTACT_JOURS_OUVRES: {
     valeur: 2,
     unite: 'jours_ouvres',
-    source: 'contrat art. 3.2',
-    renvois: art('3.2'),
-    verifieLe: LE,
+    source: 'REQ-CPL-026 (objectif interne de la console, détaché du contrat par JUR-T40)',
+    renvois: [],
+    verifieLe: '2026-10-01',
   },
   CONFIRMATION_TACITE_JOURS: {
     valeur: 30,
@@ -57,6 +60,38 @@ export const SEUILS = {
     source: 'contrat art. 3.2',
     renvois: art('3.2'),
     verifieLe: LE,
+  },
+  // JUR-T40 — la fin d'une demande vérifiée sans prise de contact concluante (HYP-W20-LIBERATION,
+  // tranchée par Williams le 2026-09-29) et la carence avant une nouvelle déclaration
+  // (HYP-W20-CARENCE-REDEPOT, arbitrage de -d7 sur délégation, même jour). L'art. 3.2 en est la
+  // source, et il les écrit par variables.
+  LIBERATION_SIGNALEE_INJOIGNABLE_MAX: {
+    valeur: 3,
+    unite: 'tentatives',
+    source: 'contrat art. 3.2 (HYP-W20-LIBERATION)',
+    renvois: art('3.2'),
+    verifieLe: '2026-10-01',
+  },
+  LIBERATION_SIGNALEE_JOURS: {
+    valeur: 45,
+    unite: 'jours',
+    source: 'contrat art. 3.2 (HYP-W20-LIBERATION)',
+    renvois: art('3.2'),
+    verifieLe: '2026-10-01',
+  },
+  CARENCE_REDEPOT_APRES_LIBERATION_JOURS: {
+    valeur: 30,
+    unite: 'jours',
+    source: 'contrat art. 3.2 (HYP-W20-CARENCE-REDEPOT)',
+    renvois: art('3.2'),
+    verifieLe: '2026-10-01',
+  },
+  CARENCE_REDEPOT_APRES_SECONDE_LIBERATION_JOURS: {
+    valeur: 90,
+    unite: 'jours',
+    source: 'contrat art. 3.2 (HYP-W20-CARENCE-REDEPOT)',
+    renvois: art('3.2'),
+    verifieLe: '2026-10-01',
   },
   ANTERIORITE_CLIENT_MOIS: {
     valeur: 24,
