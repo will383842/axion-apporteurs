@@ -31,7 +31,9 @@ import { mkdtempSync, writeFileSync, rmSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { PostgreSqlContainer, type StartedPostgreSqlContainer } from '@testcontainers/postgresql';
+import { PrismaClient } from '@prisma/client';
 import { IMAGE_BASE, prismaCli, RACINE } from '../../integration/harnais';
+import { REQUETE_SCHEMA, semis, type SchemaVu } from '../../../scripts/lib/semis-porte-d';
 import {
   exercer,
   FORME_DE_PROPRIETE,
@@ -240,6 +242,23 @@ describe('REQ-QA-023 — TÉMOIN À DEUX FACES sur un vrai Postgres', () => {
       '--schema',
       join(RACINE, 'prisma/schema.prisma'),
     ]);
+    // DM-07 : dès que le modèle d'attribution existe, la table témoin est `attributions` (règle de
+    // QA-T12). Une base seulement migrée la laisse vide : la source est SEMÉE par le semeur de la
+    // porte D, le même que `migrations-additives.spec.ts` — aucune ligne tapée ici.
+    const client = new PrismaClient({ datasourceUrl: source.getConnectionUri() });
+    try {
+      const [ligne] = await client.$queryRawUnsafe<{ json_build_object: SchemaVu }[]>(
+        REQUETE_SCHEMA.replace(/;\s*$/, '')
+      );
+      for (const insert of semis(ligne!.json_build_object)
+        .sql.split('\n')
+        .filter((l) => l.startsWith('INSERT'))) {
+        // Le refus d'un candidat est le mécanisme du semeur : le suivant est essayé.
+        await client.$executeRawUnsafe(insert).catch(() => 0);
+      }
+    } finally {
+      await client.$disconnect();
+    }
     const r = spawnSync(
       'docker',
       [

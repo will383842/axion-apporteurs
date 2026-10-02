@@ -112,7 +112,9 @@ describe('REQ-DM-014 — une grille importée est une version, et une version ne
   it.each([
     ['UPDATE', `UPDATE grilles_commission SET importee_at = now()`],
     ['DELETE', `DELETE FROM grilles_commission`],
-    ['TRUNCATE', `TRUNCATE grilles_commission`],
+    // DM-07 : `attributions` référence la grille. Sans CASCADE, la clé étrangère refuse AVANT le
+    // déclencheur ; avec, le déclencheur de troncature parle, et c'est lui que ce témoin juge.
+    ['TRUNCATE', `TRUNCATE grilles_commission CASCADE`],
   ])(
     'REQ-DM-014 — TÉMOIN : %s d’une version importée est refusé par la base, déclencheur nommé',
     async (op, sql) => {
