@@ -122,7 +122,16 @@ describe('REQ-UX-027 — l’IBAN et l’identité de la pièce sont figés', ()
         )
       )
     ).toContain(FIGEES);
-    expect(await refus(poser(id, 'apporteur_id', await unApporteur()))).toContain(FIGEES);
+    // Transtypée `::uuid` : sinon Postgres refuse le TYPE (42804) avant que le déclencheur ne juge.
+    expect(
+      await refus(
+        base.prisma.$executeRawUnsafe(
+          `UPDATE pieces_kyc SET apporteur_id = $2::uuid WHERE id = $1::uuid`,
+          id,
+          await unApporteur()
+        )
+      )
+    ).toContain(FIGEES);
     expect(await refus(poser(id, 'fichier_ref', 'stockage/essai-2'))).toContain(FIGEES);
     expect(await refus(poser(id, 'fichier_ref', null))).toContain(FIGEES);
   });
