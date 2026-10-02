@@ -277,7 +277,14 @@ export function issueDuControle(
   };
 }
 
-function controler(now: string | null): number {
+/** `--now <AAAA-MM-JJ>` tel que le nightly le fournit ; absent → `null` (verdict complet). */
+function nowFourni(): string | null {
+  const i = process.argv.indexOf('--now');
+  return i >= 0 ? (process.argv[i + 1] ?? null) : null;
+}
+
+function controler(): number {
+  const now = nowFourni();
   const lus = RUNBOOKS_EXIGES.map((r) => ({
     chemin: r.chemin,
     texte: existsSync(r.chemin) ? readFileSync(r.chemin, 'utf8') : null,
@@ -290,7 +297,5 @@ function controler(now: string | null): number {
 const APPELE_DIRECTEMENT = /runbooks-exerces\.ts$/.test(process.argv[1] ?? '');
 
 if (APPELE_DIRECTEMENT) {
-  const i = process.argv.indexOf('--now');
-  const now = i >= 0 ? (process.argv[i + 1] ?? null) : null;
-  process.exitCode = process.argv.includes('--prove') ? prouver() : controler(now);
+  process.exitCode = process.argv.includes('--prove') ? prouver() : controler();
 }
