@@ -9127,7 +9127,7 @@
     },
     {
       "id": "EXT-T07",
-      "titre": "Prolongation de fenêtre si un devis est en cours",
+      "titre": "Prolongation de l'attribution, une fois, sur des faits enregistrés par la Société ou sur demande de l'apporteur confirmée par l'entreprise (JUR-T54)",
       "phase": 2,
       "repo": "partners",
       "zone": "espace",
@@ -20726,15 +20726,15 @@
       "sensible": [],
       "deps": [],
       "reqs": [
-        "REQ-EXT-020"
+        "REQ-JUR-062"
       ],
       "hyp": [],
       "externe": null,
       "estimateDays": 0.25,
       "statut": "a_faire",
-      "acceptance": "PROPOSITION EN ATTENTE DE LA VALIDATION FINALE DE WILLIAMS (acte juridique ; rattrapage 61). Principe validé par Williams, mot pour mot : « OUI. c'est bien. il ne faut pas qu'il perde l'entreprise tant qu'il s'en occupe ». L'avenant de l'art. 3.4 al. 3 : la prolongation (trois mois, une fois) est accordée (a) si la Société a tenu ou planifié un rendez-vous, ou consigné un échange avec l'entreprise, dans les {{PROLONGATION_FAITS_RECENTS_JOURS}} derniers jours, OU (b) si l'apporteur la DEMANDE (un clic) et que l'entreprise confirme son intérêt à la Société ; l'ABSENCE de demande n'emporte AUCUNE conséquence. DEUX constantes de la SSOT (A02, rattrapage 61), rendues par des variables du gabarit (RM-10) : `PROLONGATION_FAITS_RECENTS_JOURS` (les faits récents du (a)) et `PROLONGATION_DEMANDE_OUVERTE_JOURS` (l'ouverture de la demande, si le contrat la mentionne) ; JUR-T54 pose leurs valeurs dans la SSOT avec leur source, validées par Williams avec le texte. « REQ-EXT-020 reste en phase 2, JUR-T54 la sert par avance (décision de la coordination avec A02, 02/10) ». Texte rédigé par A07 (relecture par la suppléante, REQ-JUR-036), validé par Williams avant la fusion et avant tout premier envoi DocuSeal. TÉMOIN de gabarit (écrit par A05). Le code suit dans EXT-T07, UX-P2-18 et UX-P2-19.",
+      "acceptance": "PROPOSITION EN ATTENTE DE LA VALIDATION FINALE DE WILLIAMS (acte juridique ; rattrapage 61). Principe validé par Williams, mot pour mot : « OUI. c'est bien. il ne faut pas qu'il perde l'entreprise tant qu'il s'en occupe ». L'avenant de l'art. 3.4 al. 3 : la prolongation (trois mois, une fois) est accordée (a) si la Société a tenu ou planifié un rendez-vous, ou consigné un échange avec l'entreprise, dans les {{PROLONGATION_FAITS_RECENTS_JOURS}} derniers jours, OU (b) si l'apporteur la DEMANDE (un clic) et que l'entreprise confirme son intérêt à la Société ; l'ABSENCE de demande n'emporte AUCUNE conséquence. DEUX constantes de la SSOT (A02, rattrapage 61), rendues par des variables du gabarit (RM-10) : `PROLONGATION_FAITS_RECENTS_JOURS` (les faits récents du (a)) et `PROLONGATION_DEMANDE_OUVERTE_JOURS` (l'ouverture de la demande, si le contrat la mentionne) ; JUR-T54 pose leurs valeurs dans la SSOT avec leur source, validées par Williams avec le texte. « REQ-EXT-020 reste en phase 2, JUR-T54 la sert par avance (décision de la coordination avec A02, 02/10) ». Texte rédigé par A07 (relecture par la suppléante, REQ-JUR-036), validé par Williams avant la fusion et avant tout premier envoi DocuSeal. TÉMOIN de gabarit (écrit par A05). Le code suit dans EXT-T07, UX-P2-18 et UX-P2-19. RATTACHEMENT (rattrapage 61, A02) : JUR-T54 porte REQ-JUR-062 (le contrat), et non REQ-EXT-020, dont la phase dérivée reste ainsi 2 (EXT-T07, UX-P2-18, UX-P2-19) ; le texte sert REQ-EXT-020 par avance.",
       "tests": {
-        "REQ-EXT-020": [
+        "REQ-JUR-062": [
           "tests/unit/contrat/prolongation-sur-demande.spec.ts"
         ]
       }
