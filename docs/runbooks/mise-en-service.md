@@ -116,6 +116,11 @@
       texte (`src/content/micro-copy/courriels/information-article-14.ts`) les rendent. Tant que cette
       case n'est pas cochée, **aucun e-mail de confirmation réel ne part**. Cochée après réception par
       Williams. _Porteur : Williams (les trois décisions), A07 (relecture du texte rendu)._
+- [ ] **Purge planifiée du contact active** (REQ-DM-031, REQ-SEC-030, DM-48) : la tâche
+      `contacts_purger` est inscrite au lanceur et bat chaque minute ; les durées de
+      `src/domain/seuils/retention.ts` (HYP-RGPD-RETENTION) sont confirmées par Williams au registre.
+      Sans cette case, aucune coordonnée d'un tiers réel n'entre en base. _Porteur : Williams (les
+      durées), constat de l'auteur (un battement récent de `contacts_purger`)._
 - [ ] Base de production vidée de son semis synthétique, puis `deploy:verify` vert. _Porteur :
       Williams._
 - [ ] **Relais de courriels** (INT-T57, REQ-INT-022), AVANT le drapeau d'allumage de l'envoi réel

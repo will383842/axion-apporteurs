@@ -356,7 +356,8 @@
       "taches": [
         "DM-08",
         "DM-15",
-        "JUR-T47"
+        "JUR-T47",
+        "JUR-T53"
       ]
     },
     {
@@ -1128,7 +1129,7 @@
     {
       "id": "REQ-SEC-030",
       "domaine": "anti-abus-securite",
-      "texte": "Les coordonnées du tiers rencontré sont purgées par le cron de REQ-DM-031 selon `retention.ts` : `CONTACT_PURGE_APRES_LIBERATION_JOURS` (défaut 90, états `invalidee`/`perdue`/`expiree`/`perimee`) et `CONTACT_PURGE_CONVERTIE_APRES_DERNIER_CONTACT_JOURS` (défaut 1 095), toutes deux sous marqueur `HYP-RGPD-RETENTION` **jusqu'à la décision de Will consignée dans `DECISIONS.md`** (il n'y a pas de DPO sur le projet, décision du 2026-09-03), avec un test HYP qui échoue si la valeur change ; l'information art. 14 est délivrée selon REQ-JUR-009 ; apporteur et tiers disposent d'une voie d'accès et d'effacement par jeton (1/jour, `surPanne: refuser`, testée) ; le registre art. 30 décrit trois traitements et un test vérifie qu'il en liste exactement trois.",
+      "texte": "Les coordonnées du tiers rencontré sont purgées par le cron de REQ-DM-031 selon `retention.ts` : `CONTACT_PURGE_APRES_LIBERATION_JOURS` (défaut 90, états `invalidee`/`perdue`/`expiree`/`perimee`/`annulee`) et `CONTACT_PURGE_CONVERTIE_APRES_DERNIER_CONTACT_JOURS` (défaut 1 095), toutes deux sous marqueur `HYP-RGPD-RETENTION` **jusqu'à la décision de Will consignée dans `DECISIONS.md`** (il n'y a pas de DPO sur le projet, décision du 2026-09-03), avec un test HYP qui échoue si la valeur change ; l'information art. 14 est délivrée selon REQ-JUR-009 ; apporteur et tiers disposent d'une voie d'accès et d'effacement par jeton (1/jour, `surPanne: refuser`, testée) ; le registre art. 30 décrit trois traitements et un test vérifie qu'il en liste exactement trois.",
       "source": "audit-outil §3.3, §5 étape 12 ; audit-attribution P8 ; reformulation d'annexe appliquée le 2026-09-03",
       "statut": "active",
       "remplaceePar": null,
