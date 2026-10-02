@@ -8302,7 +8302,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "\"Cron de purge, condition de la lentille sécurité (rattrapage 52, 2026-10-02), SI le point 13 de la séance de Williams retient l'avis d'A02 sur les coordonnées du siège : le témoin de purge vérifie que `latitudeMicrodeg` et `longitudeMicrodeg` d'une ENTREPRISE INDIVIDUELLE passent à NULL avec la purge du contact (`purge_contact_at`, REQ-DM-031), et que la colonne qui distingue l'entreprise individuelle est bien lue à la purge. Le reste de l'acceptance de cette tâche (phase 3) est à écrire à sa revendication.\""
+      "acceptance": "\"Cron de purge, condition de la lentille sécurité (rattrapage 52, 2026-10-02), SI le point 13 de la séance de Williams retient l'avis d'A02 sur les coordonnées du siège : le témoin de purge vérifie que `latitudeMicrodeg` et `longitudeMicrodeg` d'une ENTREPRISE INDIVIDUELLE passent à NULL avec la purge du contact (`purge_contact_at`, REQ-DM-031), et que la colonne qui distingue l'entreprise individuelle est bien lue à la purge. Le reste de l'acceptance de cette tâche (phase 3) est à écrire à sa revendication.\" EXTRACTION (rattrapage 52, décision de la coordination) : la purge PLANIFIÉE du contact d'une attribution libérée ou convertie, et la condition ci-dessus sur l'entreprise individuelle, passent à DM-48 (phase 1, bloquante pour la mise en service) ; DM-20 garde le reste."
     },
     {
       "id": "DM-21",
@@ -19299,6 +19299,45 @@
         ],
         "REQ-QA-013": [
           "tests/unit/gouvernance/forge-lue-une-fois.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "DM-48",
+      "titre": "La purge du contact d'une attribution libérée ou convertie est planifiée dès la phase 1 : coordonnées du tiers remises à NULL, événement attribution_contact_purge",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "domaine",
+      "paths": [
+        "src/server/taches/purger-contacts.ts",
+        "src/server/taches/inscriptions.ts",
+        "src/server/taches/registre.ts",
+        "src/domain/seuils/ssot.ts",
+        "tests/unit/domaine/purge-du-contact.spec.ts",
+        "tests/integration/purge-du-contact.spec.ts",
+        "docs/runbooks/mise-en-service.md"
+      ],
+      "schema": false,
+      "sensible": [
+        "rgpd"
+      ],
+      "deps": [
+        "DM-07"
+      ],
+      "reqs": [
+        "REQ-DM-031"
+      ],
+      "hyp": [
+        "HYP-RGPD-RETENTION"
+      ],
+      "externe": null,
+      "estimateDays": 0.75,
+      "statut": "a_faire",
+      "acceptance": "Extraite de DM-20 (phase 3) par décision de la coordination du 2026-10-02 sous délégation, comme condition RGPD de la mise en service, et non choix d'affaires : les attributions et les coordonnées du contact d'un tiers naissent en phase 1 (DM-07), et sans cette tâche aucune purge ne les toucherait avant la phase 3. BLOQUANTE pour la mise en service (case au runbook, label `role:documentaliste`). (1) Une tâche planifiée, inscrite au lanceur (GOV-137, `inscriptions.ts`, clé du registre des tâches), remet à NULL les colonnes chiffrées et les empreintes du contact (nom, prénom, e-mail, téléphone, contexte, fonction) d'une attribution LIBÉRÉE au-delà de `CONTACT_PURGE_APRES_LIBERATION_JOURS`, ou CONVERTIE au-delà de `CONTACT_PURGE_CONVERTIE_APRES_DERNIER_CONTACT_JOURS` (dernier contact), pose `purge_contact_at`, et écrit l'événement de journal `attribution_contact_purge` (`{ purgeAt, acteur: { par: 'systeme' } }`) dans la même transaction, par le gabarit `purge:` de `refuser_modification_sauf()` (DM-07). (2) Les deux constantes vivent dans la SSOT (RM-10) sous HYP-RGPD-RETENTION, valeurs PROVISOIRES à confirmer par Williams, avec `source` et `verifieLe` ; jamais un littéral ailleurs. (3) Idempotente : une attribution déjà purgée n'est ni réécrite ni rejournalisée ; un passage tué reprend sans double événement. (4) CONDITIONNEL au point 13 de la séance : si l'avis d'A02 est retenu, `latitudeMicrodeg` et `longitudeMicrodeg` d'une ENTREPRISE INDIVIDUELLE passent à NULL avec la purge du contact ; TÉMOIN À DEUX FACES (lentille sécurité) : entreprise individuelle → coordonnées à NULL ; personne morale → coordonnées GARDÉES ; la forme est lue depuis `nature_juridique`. (5) TÉMOINS rouges d'abord : sous le seuil, rien ; au-delà, purge et un seul événement ; une attribution occupante n'est jamais purgée ; un second passage ne change rien ; le journal ne porte aucune donnée personnelle. DM-20 garde le reste (export article 15, purge des journaux, effacement des tiers à la demande, registre) en phase 3. Auteur : A05, après DM-07.",
+      "tests": {
+        "REQ-DM-031": [
+          "tests/unit/domaine/purge-du-contact.spec.ts",
+          "tests/integration/purge-du-contact.spec.ts"
         ]
       }
     }
