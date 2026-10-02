@@ -22,40 +22,40 @@ import { SEUILS } from '../../domain/seuils/ssot';
 import { chargeMinimisee } from '../integrations/axionia/candidature-recue';
 
 const JOUR_MS = 24 * 3600_000;
+/** Le lanceur tourne chaque minute : un passage minimise au plus ce lot, le suivant reprend la suite. */
+const LOT = 100;
 
 export async function minimiserCandidatures(
-  prisma: Pick<PrismaClient, 'evenementRecu' | '$transaction'>,
+  prisma: Pick<PrismaClient, '$queryRaw' | '$transaction'>,
   maintenant: Date
 ): Promise<number> {
   const avant = new Date(
     maintenant.getTime() - SEUILS.CANDIDATURE_NON_TRAITEE_MINIMISEE_APRES_JOURS.valeur * JOUR_MS
   );
-  const lignes = await prisma.evenementRecu.findMany({
-    where: {
-      eventType: TypeEvenementRecu.candidature_recue,
-      statut: { not: 'traite' },
-      receivedAt: { lt: avant },
-    },
-    select: { id: true, charge: true },
-  });
-  // Seules les charges qui portent ENCORE `reponsesJson` : une déjà minimisée n'est pas réécrite.
-  const aMinimiser = lignes.filter(
-    (l) =>
-      typeof l.charge === 'object' &&
-      l.charge !== null &&
-      !Array.isArray(l.charge) &&
-      Object.hasOwn(l.charge, 'reponsesJson')
-  );
+  // Filtré EN SQL sur `charge ? 'reponsesJson'` : les candidatures déjà minimisées ne sont ni lues
+  // ni accumulées en mémoire d'un passage à l'autre (revue A02).
+  const lignes = await prisma.$queryRaw<{ id: string; charge: unknown }[]>`
+    SELECT "id", "charge" FROM "evenements_recus"
+    WHERE "event_type" = ${TypeEvenementRecu.candidature_recue}::type_evenement_recu
+      AND "statut" <> 'traite'
+      AND "received_at" < ${avant}
+      AND "charge" ? 'reponsesJson'
+    ORDER BY "received_at", "id"
+    LIMIT ${LOT}`;
   let minimisees = 0;
-  for (const l of aMinimiser) {
-    await prisma.$transaction(async (tx) => {
+  for (const l of lignes) {
+    // La course avec le traitant : si la ligne est passée à `traite` entre la lecture et l'écriture,
+    // la condition sur le statut l'écarte (0 ligne) au lieu de faire refuser l'écriture par le
+    // déclencheur et d'échouer tout le passage (revue A02).
+    const n = await prisma.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT set_config('partners.minimisation_de_fond', 'oui', true)`;
-      await tx.evenementRecu.update({
-        where: { id: l.id },
+      const r = await tx.evenementRecu.updateMany({
+        where: { id: l.id, statut: { not: 'traite' } },
         data: { charge: chargeMinimisee(l.charge) as Prisma.InputJsonValue },
       });
+      return r.count;
     });
-    minimisees += 1;
+    minimisees += n;
   }
   return minimisees;
 }

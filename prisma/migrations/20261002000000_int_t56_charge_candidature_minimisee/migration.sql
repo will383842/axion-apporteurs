@@ -63,8 +63,18 @@ BEGIN
 END;
 $$;
 
--- 3. RETOUR ARRIÈRE (C3 d'A02) : une migration suivante repose l'ANCIEN corps ci-dessous, à
---    l'identique (20260927000000_evenements_recus_et_battements), par copier-coller :
+-- 3. L'INVARIANT TENU PAR LA BASE (C4 d'A02) : le déclencheur ADMET la réécriture, il ne l'IMPOSE pas.
+--    Une candidature traitée ne peut pas porter `reponsesJson` : un passage à `traite` qui oublierait
+--    la charge est refusé. Contrainte VALIDÉE à l'ajout (sans NOT VALID) : elle refuse d'elle-même
+--    toute ligne héritée fautive ; aucune n'est réécrite.
+ALTER TABLE "evenements_recus" ADD CONSTRAINT "evenements_recus_candidature_traitee_minimisee"
+  CHECK (NOT ("event_type" = 'candidature_recue' AND "statut" = 'traite' AND "charge" ? 'reponsesJson'));
+
+-- 4. RETOUR ARRIÈRE (C3 et C4 d'A02) : une migration suivante retire la contrainte, puis repose
+--    l'ANCIEN corps ci-dessous, à l'identique (20260927000000_evenements_recus_et_battements), par
+--    copier-coller :
+--
+-- ALTER TABLE "evenements_recus" DROP CONSTRAINT "evenements_recus_candidature_traitee_minimisee";
 --
 -- CREATE OR REPLACE FUNCTION evenements_recus_refuser_modification() RETURNS trigger LANGUAGE plpgsql AS $$
 -- BEGIN

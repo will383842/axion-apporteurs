@@ -87,22 +87,26 @@ const lire = (id: string) =>
     select: { charge: true, payloadHash: true, statut: true },
   });
 
-/** Une écriture SQL directe de la charge (et du statut), hors de tout code de l'application. */
-const ecrire = (id: string, charge: unknown, statut?: string) =>
-  statut === undefined
-    ? base.prisma
-        .$executeRaw`UPDATE evenements_recus SET charge = ${JSON.stringify(charge)}::jsonb WHERE id = ${id}::uuid`
-    : base.prisma
-        .$executeRaw`UPDATE evenements_recus SET charge = ${JSON.stringify(charge)}::jsonb, statut = ${statut}::statut_evenement_recu WHERE id = ${id}::uuid`;
+/**
+ * Une écriture SQL directe de la charge (et du passage à `traite`, avec sa date, que le CHECK
+ * `evenements_recus_traite_si_et_seulement_si_date` exige), hors de tout code de l'application.
+ */
+type Client = Pick<typeof base.prisma, '$executeRaw'>;
+const ecrireAvec = (c: Client, id: string, charge: unknown, traite = false) =>
+  traite
+    ? c.$executeRaw`UPDATE evenements_recus SET charge = ${JSON.stringify(charge)}::jsonb, statut = 'traite', processed_at = now() WHERE id = ${id}::uuid`
+    : c.$executeRaw`UPDATE evenements_recus SET charge = ${JSON.stringify(charge)}::jsonb WHERE id = ${id}::uuid`;
+const ecrire = (id: string, charge: unknown, traite = false) =>
+  ecrireAvec(base.prisma, id, charge, traite);
 
 /** La même écriture, SOUS le marqueur du fond, dans une transaction interactive. */
-const ecrireSousMarqueur = (id: string, charge: unknown, statut?: string) =>
+const ecrireSousMarqueur = (id: string, charge: unknown, traite = false) =>
   base.prisma.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT set_config('partners.minimisation_de_fond', 'oui', true)`;
-    return statut === undefined
-      ? tx.$executeRaw`UPDATE evenements_recus SET charge = ${JSON.stringify(charge)}::jsonb WHERE id = ${id}::uuid`
-      : tx.$executeRaw`UPDATE evenements_recus SET charge = ${JSON.stringify(charge)}::jsonb, statut = ${statut}::statut_evenement_recu WHERE id = ${id}::uuid`;
+    return ecrireAvec(tx, id, charge, traite);
   });
+
+const CONTRAINTE = /evenements_recus_candidature_traitee_minimisee/;
 
 const REFUS = /evenements_recus_reception_immuable/;
 
@@ -128,7 +132,7 @@ describe('REQ-DM-036 — (i) le traitant : la charge minimisée au passage à tr
 
   it('REQ-DM-036 : TÉMOIN — une seconde réécriture est refusée par le déclencheur', async () => {
     const e = await inscrire('recu');
-    await ecrire(e.id, chargeMinimisee(e.charge), 'traite');
+    await ecrire(e.id, chargeMinimisee(e.charge), true);
     const encorePlusPetite: Record<string, unknown> = { ...e.charge };
     delete encorePlusPetite.reponsesJson;
     delete encorePlusPetite.candidatureId;
@@ -138,7 +142,7 @@ describe('REQ-DM-036 — (i) le traitant : la charge minimisée au passage à tr
   it('REQ-DM-036 : TÉMOIN — retirer reponsesJson ET changer une autre clé est refusé', async () => {
     const e = await inscrire('recu');
     const fausse = { ...chargeMinimisee(e.charge), candidatureId: randomUUID() };
-    await expect(ecrire(e.id, fausse, 'traite')).rejects.toThrow(REFUS);
+    await expect(ecrire(e.id, fausse, true)).rejects.toThrow(REFUS);
   });
 
   it('REQ-DM-036 : TÉMOIN — une réécriture de la charge hors des deux cas est refusée', async () => {
@@ -155,6 +159,7 @@ describe('REQ-DM-036 — (i) le traitant : la charge minimisée au passage à tr
           where: { id: e.id },
           data: {
             statut: 'traite',
+            processedAt: MAINTENANT,
             charge: chargeMinimisee(e.charge) as Prisma.InputJsonValue,
           },
         });
@@ -164,6 +169,35 @@ describe('REQ-DM-036 — (i) le traitant : la charge minimisée au passage à tr
     const lu = await lire(e.id);
     expect(lu.charge).toEqual(e.charge);
     expect(lu.statut).toBe('recu');
+  });
+});
+
+describe('REQ-DM-036 — C4 : la base TIENT l’invariant, elle ne fait pas que le permettre', () => {
+  it('REQ-DM-036 REQ-JUR-029 : TÉMOIN — un passage à traite SANS réécriture de la charge est refusé par la base', async () => {
+    const e = await inscrire('recu');
+    await expect(
+      base.prisma
+        .$executeRaw`UPDATE evenements_recus SET statut = 'traite', processed_at = now() WHERE id = ${e.id}::uuid`
+    ).rejects.toThrow(CONTRAINTE);
+    expect((await lire(e.id)).statut).toBe('recu');
+  });
+
+  it('REQ-DM-036 : TÉMOIN — une ligne héritée fautive fait ÉCHOUER l’ajout de la contrainte (transaction annulée)', async () => {
+    const ANNULEE = 'transaction annulée par le témoin';
+    await expect(
+      base.prisma.$transaction(async (tx) => {
+        await tx.$executeRaw`ALTER TABLE "evenements_recus" DROP CONSTRAINT "evenements_recus_candidature_traitee_minimisee"`;
+        // L'INSERT n'est pas gardé par le déclencheur (UPDATE/DELETE seulement) : la ligne héritée.
+        sequence += 1n;
+        const charge = { ...CHARGE, candidatureId: randomUUID() };
+        await tx.$executeRaw`INSERT INTO evenements_recus (id, source, event_id, event_type, schema_version, sequence, charge, payload_hash, statut, received_at, survenu_at, processed_at)
+          VALUES (${randomUUID()}::uuid, 'axionia', ${randomUUID()}, 'candidature_recue', 2, ${1000n + sequence}, ${JSON.stringify(charge)}::jsonb, ${'d'.repeat(64)}, 'traite', now(), now(), now())`;
+        await expect(
+          tx.$executeRaw`ALTER TABLE "evenements_recus" ADD CONSTRAINT "evenements_recus_candidature_traitee_minimisee" CHECK (NOT ("event_type" = 'candidature_recue' AND "statut" = 'traite' AND "charge" ? 'reponsesJson'))`
+        ).rejects.toThrow(CONTRAINTE);
+        throw new Error(ANNULEE);
+      })
+    ).rejects.toThrow(ANNULEE);
   });
 });
 
@@ -187,9 +221,7 @@ describe('REQ-DM-036 — (ii) le fond : les candidatures non traitées au-delà 
 
   it('REQ-DM-036 : TÉMOIN — sous le marqueur du fond, un passage en_erreur → traite est refusé', async () => {
     const e = await inscrire('en_erreur');
-    await expect(ecrireSousMarqueur(e.id, chargeMinimisee(e.charge), 'traite')).rejects.toThrow(
-      REFUS
-    );
+    await expect(ecrireSousMarqueur(e.id, chargeMinimisee(e.charge), true)).rejects.toThrow(REFUS);
   });
 
   it('REQ-DM-036 : TÉMOIN — la réécriture du fond SANS le marqueur est refusée', async () => {
