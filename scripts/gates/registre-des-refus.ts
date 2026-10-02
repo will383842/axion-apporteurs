@@ -339,6 +339,7 @@ export const REFUS_NOMMES: Readonly<Record<string, readonly string[]>> = {
     'module › si LANCE_EN_SCRIPT › si iPr >= 0 || iApres >= 0 › catch › (1)',
     'module › si LANCE_EN_SCRIPT › (1)',
   ],
+  'scripts/ci/navigateurs-bornes.ts': ['module › si APPELE_DIRECTEMENT › (= r.code)'],
   'scripts/deploiement/provisionner.ts': [
     'provisionner(process.env).then › ∅ › (= code)',
     'provisionner(process.env).then › ∅ › (= 1)',
