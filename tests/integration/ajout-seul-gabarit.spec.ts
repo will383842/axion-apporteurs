@@ -32,7 +32,11 @@ async function unApporteur(): Promise<string> {
   const a = await base.prisma.apporteur.create({
     data: {
       statut: 'signe',
-      codeParrainage: `AX${randomUUID().replace(/-/g, '').slice(0, 6).toUpperCase().replace(/[ILOU]/g, '0')}`,
+      codeParrainage: `AX${randomUUID()
+        .replace(/-/g, '')
+        .slice(0, 6)
+        .toUpperCase()
+        .replace(/[ILOU]/g, '0')}`,
       isTest: true,
       candidatureId: randomUUID(),
       reponsesJson: {},
@@ -72,7 +76,7 @@ async function unePersonne(apporteurId: string): Promise<string> {
   const id = randomUUID();
   await base.prisma.$executeRawUnsafe(
     `INSERT INTO personnes_declarees (id, apporteur_id, nom_chiffre, prenom_chiffre, qualite, declaree_at)
-     VALUES ($1::uuid, $2::uuid, '\\x01'::bytea, '\\x02'::bytea, 'salarie', $3)`,
+     VALUES ($1::uuid, $2::uuid, '\\x01'::bytea, '\\x02'::bytea, 'associe', $3)`,
     id,
     apporteurId,
     MAINTENANT
@@ -84,15 +88,22 @@ describe('REQ-DM-043 — `depots_refuses` : ajout seul, sans aucune exception', 
   it('REQ-DM-043 : toute modification d’un refus est refusée', async () => {
     const id = await unRefus(await unApporteur());
     expect(
-      await refus(base.prisma.$executeRawUnsafe(`UPDATE depots_refuses SET motif = 'insincerite' WHERE id = $1::uuid`, id))
+      await refus(
+        base.prisma.$executeRawUnsafe(
+          `UPDATE depots_refuses SET motif = 'insincerite' WHERE id = $1::uuid`,
+          id
+        )
+      )
     ).toMatch(/refuser_modification_sauf|ajout seul/i);
   });
 
   it('REQ-DM-043 : DELETE et TRUNCATE sont refusés', async () => {
     const id = await unRefus(await unApporteur());
-    expect(await refus(base.prisma.$executeRawUnsafe(`DELETE FROM depots_refuses WHERE id = $1::uuid`, id))).toMatch(
-      /refuser_modification_sauf|ajout seul/i
-    );
+    expect(
+      await refus(
+        base.prisma.$executeRawUnsafe(`DELETE FROM depots_refuses WHERE id = $1::uuid`, id)
+      )
+    ).toMatch(/refuser_modification_sauf|ajout seul/i);
     expect(await refus(base.prisma.$executeRawUnsafe(`TRUNCATE depots_refuses CASCADE`))).toMatch(
       /refuser_modification_sauf|ajout seul/i
     );
@@ -127,17 +138,27 @@ describe('REQ-DM-031 — `personnes_declarees` : ajout seul, sauf la purge et le
 
   it('REQ-DM-031 : TÉMOIN — une colonne purgée ne revient pas de NULL vers une valeur', async () => {
     const id = await unePersonne(await unApporteur());
-    await base.prisma.$executeRawUnsafe(`UPDATE personnes_declarees SET nom_chiffre = NULL WHERE id = $1::uuid`, id);
+    await base.prisma.$executeRawUnsafe(
+      `UPDATE personnes_declarees SET nom_chiffre = NULL WHERE id = $1::uuid`,
+      id
+    );
     expect(
       await refus(
-        base.prisma.$executeRawUnsafe(`UPDATE personnes_declarees SET nom_chiffre = '\\x03'::bytea WHERE id = $1::uuid`, id)
+        base.prisma.$executeRawUnsafe(
+          `UPDATE personnes_declarees SET nom_chiffre = '\\x03'::bytea WHERE id = $1::uuid`,
+          id
+        )
       )
     ).toMatch(/refuser_modification_sauf|ajout seul/i);
   });
 
   it('REQ-DM-031 : le retrait s’écrit UNE fois ; réécrit, il est refusé', async () => {
     const id = await unePersonne(await unApporteur());
-    await base.prisma.$executeRawUnsafe(`UPDATE personnes_declarees SET retiree_at = $2 WHERE id = $1::uuid`, id, MAINTENANT);
+    await base.prisma.$executeRawUnsafe(
+      `UPDATE personnes_declarees SET retiree_at = $2 WHERE id = $1::uuid`,
+      id,
+      MAINTENANT
+    );
     expect(
       await refus(
         base.prisma.$executeRawUnsafe(
@@ -150,12 +171,14 @@ describe('REQ-DM-031 — `personnes_declarees` : ajout seul, sauf la purge et le
 
   it('REQ-DM-031 : DELETE et TRUNCATE sont refusés', async () => {
     const id = await unePersonne(await unApporteur());
-    expect(await refus(base.prisma.$executeRawUnsafe(`DELETE FROM personnes_declarees WHERE id = $1::uuid`, id))).toMatch(
-      /refuser_modification_sauf|ajout seul/i
-    );
-    expect(await refus(base.prisma.$executeRawUnsafe(`TRUNCATE personnes_declarees CASCADE`))).toMatch(
-      /refuser_modification_sauf|ajout seul/i
-    );
+    expect(
+      await refus(
+        base.prisma.$executeRawUnsafe(`DELETE FROM personnes_declarees WHERE id = $1::uuid`, id)
+      )
+    ).toMatch(/refuser_modification_sauf|ajout seul/i);
+    expect(
+      await refus(base.prisma.$executeRawUnsafe(`TRUNCATE personnes_declarees CASCADE`))
+    ).toMatch(/refuser_modification_sauf|ajout seul/i);
   });
 });
 
