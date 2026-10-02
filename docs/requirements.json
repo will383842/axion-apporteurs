@@ -5805,7 +5805,7 @@
     {
       "id": "REQ-EXT-020",
       "domaine": "extensions du 2026-09-03 (REQ-EXT)",
-      "texte": "Si la prolongation de fenêtre est retenue (HYP-W9) : une attribution dont un devis est `en cours` au terme de la fenêtre d'attribution (`FENETRE_MOIS`) est prolongée **une seule fois de 3 mois**, automatiquement, les deux parties étant notifiées ; la prolongation est journalisée et visible dans la fiche.",
+      "texte": "**PROPOSITION (JUR-T54, en attente de la validation finale de Williams ; principe validé : « il ne faut pas qu'il perde l'entreprise tant qu'il s'en occupe »).** Une attribution est prolongée **une seule fois de 3 mois** au terme de la fenêtre (`FENETRE_MOIS`) si la Société s'occupe de l'entreprise (rendez-vous tenu ou planifié, ou échange consigné dans les `PROLONGATION_FAITS_RECENTS_JOURS` derniers jours) OU si l'apporteur la DEMANDE (un clic, ouvert dans les `PROLONGATION_DEMANDE_OUVERTE_JOURS` derniers jours) et que l'entreprise confirme son intérêt à la Société ; l'absence de demande n'emporte aucune conséquence. La prolongation est notifiée aux deux parties, journalisée et visible dans la fiche. Remplace la prolongation automatique « si un devis est en cours » (HYP-W9).",
       "source": "EXTENSIONS §3.3",
       "statut": "active",
       "remplaceePar": null,
