@@ -42,11 +42,14 @@
 
 import type {
   Apporteur,
+  Attribution,
   ChangementCourriel,
   CourrielEnvoye,
+  DepotRefuse,
   IdentiteFacturation,
   JetonDepot,
   LienMagique,
+  PersonneDeclaree,
   Prisma,
   PrismaClient,
   SessionEspace,
@@ -56,14 +59,28 @@ import type {
 
 /** Les délégués du client dont les lignes appartiennent à un apporteur (colonne `apporteurId`). */
 export const MODELES_CLOISONNES = [
+  'attribution',
   'changementCourriel',
   'courrielEnvoye',
+  'depotRefuse',
   'identiteFacturation',
   'jetonDepot',
   'lienMagique',
+  'personneDeclaree',
   'sessionEspace',
 ] as const;
 export type ModeleCloisonne = (typeof MODELES_CLOISONNES)[number];
+
+/**
+ * DM-07 : les modèles cloisonnés dont la table est en AJOUT SEUL — branchée sur le gabarit
+ * `refuser_modification_sauf()` (HYP-A02-GABARIT-AJOUT-SEUL). La base y refuse toute modification
+ * hors de ce que le branchement admet ; `tests/integration/ajout-seul-gabarit.spec.ts` confronte
+ * cette liste à `pg_trigger`, sur les modèles cloisonnés.
+ */
+export const MODELES_EN_AJOUT_SEUL = [
+  'depotRefuse',
+  'personneDeclaree',
+] as const satisfies readonly ModeleCloisonne[];
 
 /**
  * Les modèles dont la couche RENDUE des lignes : les cloisonnés, et la fiche de l'apporteur de la
@@ -73,10 +90,27 @@ export type ModeleRendu = ModeleCloisonne | 'apporteur';
 
 /** Les clés qu'aucune écriture de l'espace ne porte : identité de la ligne, propriétaire, relations. */
 export const CLES_REFUSEES = {
+  // DM-07 : le porteur conseiller, la grille et le suspendeur de péremption ne s'écrivent jamais
+  // de l'espace ; le jeton et la personne déclarée sont des références vérifiées.
+  attribution: [
+    'id',
+    'apporteurId',
+    'apporteur',
+    'utilisateurConsoleId',
+    'utilisateurConsole',
+    'grilleCommissionId',
+    'grilleCommission',
+    'jetonDepot',
+    'personneDeclaree',
+    'peremptionSuspendueParId',
+    'peremptionSuspenduePar',
+    'courrielsEnvoyes',
+  ],
   changementCourriel: ['id', 'apporteurId', 'apporteur'],
-  courrielEnvoye: ['id', 'apporteurId', 'apporteur'],
+  courrielEnvoye: ['id', 'apporteurId', 'apporteur', 'attribution'],
+  depotRefuse: ['id', 'apporteurId', 'apporteur'],
   identiteFacturation: ['id', 'apporteurId', 'apporteur'],
-  jetonDepot: ['id', 'apporteurId', 'apporteur'],
+  jetonDepot: ['id', 'apporteurId', 'apporteur', 'attributions'],
   lienMagique: [
     'id',
     'apporteurId',
@@ -93,6 +127,7 @@ export const CLES_REFUSEES = {
     'utilisateurConsole',
     'lienMagique',
   ],
+  personneDeclaree: ['id', 'apporteurId', 'apporteur', 'attributions'],
 } as const satisfies Record<ModeleCloisonne, readonly string[]>;
 
 /** Les clés étrangères vers une autre table cloisonnée : admises si la ligne visée est de la session. */
@@ -100,6 +135,8 @@ export const REFERENCES_CLOISONNEES: Partial<
   Record<ModeleCloisonne, Readonly<Record<string, ModeleCloisonne>>>
 > = {
   sessionEspace: { lienMagiqueId: 'lienMagique' },
+  attribution: { jetonDepotId: 'jetonDepot', personneDeclareeId: 'personneDeclaree' },
+  courrielEnvoye: { attributionId: 'attribution' },
 };
 
 /** Les messages de refus : une liste FERMÉE, qui part au journal et jamais au navigateur. */
@@ -122,11 +159,22 @@ export const OPTIONS_DE_LECTURE = ['where', 'orderBy', 'take'] as const;
  * `tests/unit/securite/acces-scope.spec.ts`.
  */
 export const RELATIONS = {
+  attribution: [
+    'apporteur',
+    'utilisateurConsole',
+    'grilleCommission',
+    'jetonDepot',
+    'personneDeclaree',
+    'peremptionSuspenduePar',
+    'courrielsEnvoyes',
+  ],
   changementCourriel: ['apporteur'],
-  courrielEnvoye: ['apporteur'],
+  courrielEnvoye: ['apporteur', 'attribution'],
+  depotRefuse: ['apporteur'],
   identiteFacturation: ['apporteur'],
-  jetonDepot: ['apporteur'],
+  jetonDepot: ['apporteur', 'attributions'],
   lienMagique: ['apporteur', 'utilisateurConsole', 'session'],
+  personneDeclaree: ['apporteur', 'attributions'],
   sessionEspace: ['apporteur', 'utilisateurConsole', 'lienMagique'],
 } as const satisfies Record<ModeleCloisonne, readonly string[]>;
 
@@ -146,6 +194,14 @@ export const SECRETS = Object.freeze([
   'prenomChiffre',
   'telephoneChiffre',
   'phoneHash',
+  // DM-07 : le contact rencontré, l'adresse de l'entreprise, la précision du lien d'intérêt, l'agent.
+  'nomContactChiffre',
+  'prenomContactChiffre',
+  'fonctionContactChiffre',
+  'contexteChiffre',
+  'codePostalChiffre',
+  'lienInteretPrecisionChiffre',
+  'agentHash',
 ] as const);
 
 /**
@@ -154,11 +210,44 @@ export const SECRETS = Object.freeze([
  * `CHAMPS_TUS` : une colonne neuve non classée fait rougir la confrontation au schéma (RM-05).
  */
 export const CHAMPS_RENDUS = {
+  // DM-07 : ce que l'apporteur lit de son dépôt — son état, l'entreprise telle que l'API publique
+  // l'a rendue, et le temps de la machine qui le concerne. Jamais le contact, jamais un porteur.
+  attribution: [
+    'id',
+    'statut',
+    'rangAttente',
+    'siren',
+    'siret',
+    'canal',
+    'deposeeAt',
+    'clientCapturedAt',
+    'dateContact',
+    'informationTiersVersion',
+    'raisonSociale',
+    'natureJuridique',
+    'codeNaf',
+    'trancheEffectif',
+    'etatAdministratif',
+    'categorieEntreprise',
+    'communeSiege',
+    'departement',
+    'region',
+    'entrepriseAVerifier',
+    'lienInteretDeclare',
+    'aQualifierDepuisAt',
+    'premierContactAt',
+    'confirmeeAt',
+    'fenetreFinAt',
+    'peremptionAt',
+    'fenetreRedeclarationFinAt',
+  ],
   changementCourriel: ['id', 'demandeAt', 'confirmeAt', 'annuleAt'],
   courrielEnvoye: ['id', 'gabarit', 'statut', 'demandeAt', 'envoyeAt'],
+  depotRefuse: ['id', 'siren', 'motif', 'canal', 'refuseAt'],
   identiteFacturation: ['id', 'siren', 'regimeTva', 'debutAt', 'finAt'],
   jetonDepot: ['id', 'creeAt', 'revoqueAt', 'dernierUsageAt'],
   lienMagique: ['id', 'creeAt', 'expireAt', 'consommeAt', 'annuleAt', 'tentativesCode'],
+  personneDeclaree: ['id', 'qualite', 'declareeAt', 'retireeAt'],
   sessionEspace: ['id', 'creeAt', 'expireAt', 'revoqueAt', 'derniereVueAt', 'sessionVersion'],
   // SEC-47 : ce que l'apporteur lit de sa propre fiche — son état, son code, ce qu'il a accepté.
   apporteur: [
@@ -174,11 +263,44 @@ export const CHAMPS_RENDUS = {
 
 /** Ce que la couche TAIT : le propriétaire (connu de la session), les secrets, les traces techniques. */
 export const CHAMPS_TUS = {
+  // DM-07 : le porteur, la grille, le jeton, les traces de sincérité, le contact chiffré et sa
+  // purge, la suspension de péremption (un acte de la console) et le verrou de la fiche.
+  attribution: [
+    'apporteurId',
+    'utilisateurConsoleId',
+    'grilleCommissionId',
+    'jetonDepotId',
+    'verificationPrioritaire',
+    'ipHash',
+    'agentHash',
+    'codePostalChiffre',
+    'latitudeMicrodeg',
+    'longitudeMicrodeg',
+    'dirigeantsJson',
+    'nomContactChiffre',
+    'prenomContactChiffre',
+    'emailChiffre',
+    'emailHash',
+    'telephoneChiffre',
+    'phoneHash',
+    'fonctionContactChiffre',
+    'contexteChiffre',
+    'personneDeclareeId',
+    'lienInteretPrecisionChiffre',
+    'peremptionSuspendueAt',
+    'peremptionSuspendueParId',
+    'peremptionSuspendueJustification',
+    'purgeContactAt',
+    'contactPurgeAt',
+    'versionQualification',
+  ],
   changementCourriel: ['apporteurId', 'emailChiffre', 'emailHash', 'tokenHash', 'kid'],
-  courrielEnvoye: ['apporteurId', 'emailHash', 'fournisseurMessageId', 'erreur'],
+  courrielEnvoye: ['apporteurId', 'emailHash', 'fournisseurMessageId', 'erreur', 'attributionId'],
+  depotRefuse: ['apporteurId'],
   identiteFacturation: ['apporteurId'],
   jetonDepot: ['apporteurId', 'tokenHash'],
   lienMagique: ['apporteurId', 'utilisateurConsoleId', 'tokenHash', 'kid', 'codeHash'],
+  personneDeclaree: ['apporteurId', 'nomChiffre', 'prenomChiffre'],
   sessionEspace: [
     'apporteurId',
     'utilisateurConsoleId',
@@ -278,6 +400,18 @@ function selectionDe(modele: ModeleRendu): Selection {
 type SansProprietaire<C> = Omit<C, 'id' | 'apporteurId' | 'apporteur'>;
 
 // Les types du schéma généré, par alias : un argument de type ne commence jamais par le namespace.
+type WAttribution = Prisma.AttributionWhereInput;
+type CAttribution = Prisma.AttributionUncheckedCreateInput;
+type UAttribution = Prisma.AttributionUncheckedUpdateManyInput;
+type OAttribution = Prisma.AttributionOrderByWithRelationInput;
+type WRefus = Prisma.DepotRefuseWhereInput;
+type CRefus = Prisma.DepotRefuseUncheckedCreateInput;
+type URefus = Prisma.DepotRefuseUncheckedUpdateManyInput;
+type ORefus = Prisma.DepotRefuseOrderByWithRelationInput;
+type WPersonne = Prisma.PersonneDeclareeWhereInput;
+type CPersonne = Prisma.PersonneDeclareeUncheckedCreateInput;
+type UPersonne = Prisma.PersonneDeclareeUncheckedUpdateManyInput;
+type OPersonne = Prisma.PersonneDeclareeOrderByWithRelationInput;
 type WChangement = Prisma.ChangementCourrielWhereInput;
 type CChangement = Prisma.ChangementCourrielUncheckedCreateInput;
 type UChangement = Prisma.ChangementCourrielUncheckedUpdateManyInput;
@@ -308,6 +442,27 @@ export interface AccesApporteur {
   readonly apporteurId: string;
   /** La fiche de l'apporteur de la session : les seules colonnes de `CHAMPS_RENDUS.apporteur`. */
   moi(): Promise<Rendu<Apporteur, 'apporteur'> | null>;
+  attribution: VueCloisonnee<
+    Rendu<Attribution, 'attribution'>,
+    WAttribution,
+    SansProprietaire<CAttribution>,
+    UAttribution,
+    OAttribution
+  >;
+  depotRefuse: VueCloisonnee<
+    Rendu<DepotRefuse, 'depotRefuse'>,
+    WRefus,
+    SansProprietaire<CRefus>,
+    URefus,
+    ORefus
+  >;
+  personneDeclaree: VueCloisonnee<
+    Rendu<PersonneDeclaree, 'personneDeclaree'>,
+    WPersonne,
+    SansProprietaire<CPersonne>,
+    UPersonne,
+    OPersonne
+  >;
   changementCourriel: VueCloisonnee<
     Rendu<ChangementCourriel, 'changementCourriel'>,
     WChangement,

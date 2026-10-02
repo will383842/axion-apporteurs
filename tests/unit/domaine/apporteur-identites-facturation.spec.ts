@@ -13,6 +13,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { lireSchemaPrisma } from '../../../scripts/lot/lecteur-prisma';
+import { segmentsDuNom } from '../../../src/domain/donnees-personnelles/champs';
 import {
   ErreurIdentitesFacturation,
   autofacturesDuReleve,
@@ -20,6 +21,10 @@ import {
 } from '../../../src/domain/apporteur/identites-facturation';
 
 const jour = (m: number, j: number) => Date.UTC(2026, m - 1, j);
+
+/** Un nom porte une coordonnée bancaire si l'un de ses SEGMENTS est rib, iban ou bic. */
+const bancaire = (nom: string | null | undefined): boolean =>
+  segmentsDuNom(nom ?? '').some((s) => s === 'rib' || s === 'iban' || s === 'bic');
 
 // SIREN de fiction : neuf chiffres, aucun n'appartient à une entreprise connue de ce dépôt.
 const franchise: IdentiteFacturation = {
@@ -133,7 +138,16 @@ describe('REQ-CPL-005 — le modèle IdentiteFacturation : daté, régime en enu
       const m = schema.modeles.find((x) => x.nom === nom);
       expect(m, nom).toBeDefined();
       for (const c of m!.champs)
-        expect(`${nom}.${c.nom} ${c.colonne}`).not.toMatch(/rib|iban|bic/i);
+        expect(bancaire(c.nom) || bancaire(c.colonne), `${nom}.${c.nom} ${c.colonne}`).toBe(false);
     }
+  });
+
+  it('REQ-CPL-005 : le juge lit des SEGMENTS de nom — « attributions » n’est pas un RIB, « ibanChiffre » et « rib_hash » le sont', () => {
+    // DM-07 : une sous-chaîne prenait « attRIButions » pour un RIB ; un segment ne s'y trompe pas.
+    expect(bancaire('attributions')).toBe(false);
+    expect(bancaire('ibanChiffre')).toBe(true);
+    expect(bancaire('rib_hash')).toBe(true);
+    expect(bancaire('codeBic')).toBe(true);
+    expect(bancaire('IBAN')).toBe(true);
   });
 });
