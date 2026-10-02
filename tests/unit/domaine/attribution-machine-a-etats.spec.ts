@@ -27,6 +27,7 @@ import {
   REFUSEES_AU_CONSEILLER,
   TRANSITIONS_ATTRIBUTION,
   codeDeCaducite,
+  ajouterMoisParis,
   effetsDeTransition,
   transitionnerAttribution,
   type TransitionAttribution,
@@ -249,6 +250,23 @@ describe('REQ-DM-007 — les effets recalculés à chaque transition', () => {
   it('REQ-DM-007 : le dernier jour d’un mois plus court est pris quand le jour n’existe pas', () => {
     const e = effetsDeTransition(AVANT, 'confirmee', 'active', iso('2026-08-31T10:00:00.000Z'));
     expect(e.fenetreFinAt).toEqual(iso('2027-02-28T11:00:00.000Z'));
+  });
+
+  it('REQ-DM-007 : TÉMOIN — un mois d’arrivée en DÉCEMBRE : sa longueur se lit sur janvier de l’année suivante', () => {
+    // Juin 30 (heure d'été) + 6 mois = 30 décembre (heure d'hiver) : 12 h à Paris, 11 h UTC.
+    const e = effetsDeTransition(AVANT, 'confirmee', 'active', iso('2026-06-30T10:00:00.000Z'));
+    expect(e.fenetreFinAt).toEqual(iso('2026-12-30T11:00:00.000Z'));
+    // Le 31 décembre existe : il est gardé, jamais ramené au 30.
+    expect(ajouterMoisParis(iso('2025-12-31T11:00:00.000Z'), 12)).toBe(
+      iso('2026-12-31T11:00:00.000Z')
+    );
+  });
+
+  it('REQ-DM-007 : un mois d’arrivée hors décembre lit sa longueur sur le mois suivant de la même année', () => {
+    // Novembre a 30 jours : le 31 mai + 6 mois devient le 30 novembre.
+    expect(ajouterMoisParis(iso('2026-05-31T10:00:00.000Z'), 6)).toBe(
+      iso('2026-11-30T11:00:00.000Z')
+    );
   });
 
   it('REQ-DM-007 : TÉMOIN — confirmée sans premier contact à J+200 → peremptionAt nul', () => {
