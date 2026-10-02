@@ -27,6 +27,7 @@
  * lui, ne peut pas s'inscrire (la colonne est un enum) : 422, et c'est l'outbox qui le garde.
  */
 import { createHash, createHmac } from 'node:crypto';
+import Ajv, { type ValidateFunction } from 'ajv';
 import {
   Prisma,
   SourceEvenementRecu,
@@ -41,6 +42,7 @@ import {
   type TypeEvenement,
 } from '../../../../packages/contracts/events';
 import { enveloppeEvenement } from '../../../../packages/contracts/events.zod';
+import contratPublie from '../../../../packages/contracts/contracts.v2.json';
 import { ENTETE_KID_AXIONIA } from '../../../../packages/contracts/api';
 import { cleDuKid, lireTrousseaux, type MotifDeCle, type Trousseau } from '../../../lib/env';
 import {
@@ -153,6 +155,77 @@ export function sujetRefDe(sujet: unknown): string | null {
   return ref.length > SUJET_MAX ? null : ref;
 }
 
+/**
+ * INT-T44 (REQ-JUR-029, REQ-DM-036) — les champs du payload que la charge CONSERVÉE ne garde pas.
+ * `evenements_recus.charge` est conservée dix ans : ce qui n'entre dans aucun traitement de Partners
+ * n'y est pas écrit. Le `payload_hash` reste celui du corps reçu entier, et prouve seul ce qui a été
+ * reçu. `reponsesJson` n'est PAS ici : le traitement de la candidature le lit dans la charge, et sa
+ * minimisation réécrit la charge au passage à `traite` (tâche à part, arbitrage de la coordination).
+ */
+export const CHAMPS_NON_CONSERVES = ['utm'] as const;
+
+// ── INT-T45 : les `$defs` fermés du contrat publié ──────────────────────────────────────────────
+
+/** Le `$defs` publié de la charge d'un type, jamais un schéma retapé ici. */
+function defsDuPayload(type: TypeEvenement): Record<string, unknown> {
+  const nom = `payload_${type.replace('.', '_')}`;
+  const defs = (contratPublie as { $defs: Record<string, Record<string, unknown>> }).$defs;
+  const d = defs[nom];
+  if (d === undefined) throw new Error(`contrat_sans_defs : ${nom}`);
+  return d;
+}
+
+/**
+ * Le même `$defs`, PRIVÉ des `CHAMPS_NON_CONSERVES` : retirés des propriétés et de `required`,
+ * jamais réintroduits. C'est contre lui que se juge une charge CONSERVÉE (condition de la lentille
+ * sécurité, rattrapage 45) : `utm` est requis à la réception et n'est plus conservé (INT-T44).
+ */
+function defsDeLaCharge(type: TypeEvenement): Record<string, unknown> {
+  const d = defsDuPayload(type);
+  const exclus: readonly string[] = CHAMPS_NON_CONSERVES;
+  const proprietes = (d.properties ?? {}) as Record<string, unknown>;
+  const requis = (d.required ?? []) as readonly string[];
+  return {
+    ...d,
+    properties: Object.fromEntries(Object.entries(proprietes).filter(([c]) => !exclus.includes(c))),
+    required: requis.filter((c) => !exclus.includes(c)),
+  };
+}
+
+const VALIDEUR = new Ajv({ strict: false });
+const valideurs = new Map<string, ValidateFunction>();
+
+function valideur(cle: string, schema: () => Record<string, unknown>): ValidateFunction {
+  let v = valideurs.get(cle);
+  if (v === undefined) {
+    v = VALIDEUR.compile(schema());
+    valideurs.set(cle, v);
+  }
+  return v;
+}
+
+/** Le payload REÇU d'un type, jugé contre le `$defs` publié de ce type. */
+export function payloadConforme(type: TypeEvenement, payload: unknown): boolean {
+  return valideur(`recu:${type}`, () => defsDuPayload(type))(payload);
+}
+
+/**
+ * La charge CONSERVÉE d'un type — celle d'un `held` qu'on rejoue après une montée de version —,
+ * jugée par la MÊME validation, contre le `$defs` privé des champs non conservés.
+ */
+export function chargeConforme(type: TypeEvenement, charge: unknown): boolean {
+  return valideur(`conserve:${type}`, () => defsDeLaCharge(type))(charge);
+}
+
+/** La charge conservée : le payload reçu, sans les champs de `CHAMPS_NON_CONSERVES`. */
+export function chargeConservee(payload: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(payload).filter(
+      ([cle]) => !(CHAMPS_NON_CONSERVES as readonly string[]).includes(cle)
+    )
+  );
+}
+
 /** Les types dont la clé métier est le `paymentId` (REQ-ARG-002). */
 const TYPES_A_CLE_DE_PAIEMENT: readonly TypeEvenementRecu[] = [
   TypeEvenementRecu.paiement_recu,
@@ -249,6 +322,9 @@ export async function recevoirEvenementAxionia(
     cleMetier = paymentId;
   }
   const held = e.schema_version !== SCHEMA_VERSION;
+  // INT-T45 : la charge de la version courante est jugée contre le `$defs` FERMÉ de son type ;
+  // celle d'une autre version, inscrite `held`, le sera à son rejeu (`chargeConforme`).
+  if (!held && !payloadConforme(e.event_type, e.payload)) return horsSchema();
 
   const inscription: EvenementAInscrire = {
     source: SourceEvenementRecu.axionia,
@@ -258,7 +334,7 @@ export async function recevoirEvenementAxionia(
     sequence: BigInt(e.sequence),
     sujetRef: sujetRefDe(e.subject_ref),
     cleMetier,
-    charge: e.payload,
+    charge: chargeConservee(e.payload),
     payloadHash: createHash('sha256').update(corps.octets).digest('hex'),
     statut: held ? 'held' : 'recu',
     receivedAt: new Date(d.maintenantMs),
