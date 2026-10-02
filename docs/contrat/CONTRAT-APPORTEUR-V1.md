@@ -314,6 +314,14 @@ totale.
 signé par l'entreprise attribuée ; la date retenue est celle de cette signature et, à défaut de document
 signé, la date d'émission de la première facture.**
 
+**Une commande conclue sous condition suspensive est datée de sa signature ; elle est réputée n'avoir
+jamais existé si la condition défaille.** Il en est ainsi notamment d'une convention conclue sous la
+condition de l'accord de prise en charge d'un opérateur de compétences. La défaillance de la condition rend
+la commande caduque, et cette caducité vaut annulation au sens de l'article 3.3. Si l'entreprise renonce à
+la condition avant sa défaillance, la commande conserve la date de sa signature. Un accord conclu après la
+défaillance constitue une nouvelle commande, datée de sa propre signature, qui n'est commissionnée que si
+elle est signée pendant la durée de l'attribution.
+
 Sont commissionnées toutes les commandes de l'entreprise attribuée **signées pendant la durée de
 l'attribution**, pour les prestations figurant à la grille — quel que soit leur nombre. **Cette commission
 rémunère la seule mise en relation initiale, dont le prix est ainsi forfaitisé sur la durée de
