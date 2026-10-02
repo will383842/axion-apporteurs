@@ -93,6 +93,7 @@ const UNITES: Readonly<Record<UniteDeSeuil, string>> = {
   mois: 'mois',
   ans: 'ans',
   centimes: 'centimes',
+  tentatives: 'tentatives',
 };
 
 /** Un refus du registre : son message est le motif, rendu tel quel. */
