@@ -2,9 +2,9 @@
 
 | Champ | Valeur |
 | --- | --- |
-| **Statut** | `propose` |
+| **Statut** | `accepte` |
 | **Date** | 2026-10-02 |
-| **Décideur** | `architecte` — cet ADR consigne la conception d'INT-T56, validée par A02 le 2026-10-02 sous les corrections C1 à C4 ; il n'est pas encore accepté |
+| **Décideur** | `architecte` — cet ADR consigne la conception d'INT-T56, validée par A02 le 2026-10-02 sous les corrections C1 à C4 ; accepté par A02, revue 5387209119 |
 | **Tâche** | INT-T56 |
 | **Exigences servies** | REQ-DM-036, REQ-JUR-029, REQ-DM-037 |
 | **Décisions du registre citées** | HYP-RGPD-RETENTION (délai de la minimisation de fond, plafond provisoire) |
@@ -73,12 +73,15 @@ jamais rien, et un second rôle coûterait une seconde connexion pour un gain nu
 
 ## Ce qui le vérifie
 
-- `tests/integration/charge-candidature-minimisee.spec.ts`, sur un vrai Postgres (en CI) : les deux
-  cas, la seconde réécriture refusée, une autre clé changée refusée, l'échec de transaction qui laisse
-  la charge intacte, le passage à `traite` sans réécriture refusé par la contrainte, une ligne héritée
-  fautive qui fait échouer l'ajout de la contrainte (transaction annulée), le fond par le vrai déclencheur, le fond sans marqueur refusé, un
-  `en_erreur → traite` sous le marqueur refusé, et le marqueur qui ne fuit pas. Le rouge a été constaté
-  sans la migration (run 36944587186).
+Sur un vrai Postgres, en CI ; le rouge a été constaté sans la migration (run 36944587186).
+
+- **Assertion** — `tests/integration/charge-candidature-minimisee.spec.ts` · `it('REQ-DM-036 REQ-JUR-029 : une candidature traitée garde une charge SANS reponsesJson et le MÊME payload_hash')`
+- **Assertion** — `tests/integration/charge-candidature-minimisee.spec.ts` · `it('REQ-DM-036 : TÉMOIN — une seconde réécriture est refusée par le déclencheur')`
+- **Assertion** — `tests/integration/charge-candidature-minimisee.spec.ts` · `it('REQ-DM-036 : TÉMOIN — retirer reponsesJson ET changer une autre clé est refusé')`
+- **Assertion** — `tests/integration/charge-candidature-minimisee.spec.ts` · `it('REQ-DM-036 REQ-JUR-029 : TÉMOIN — un passage à traite SANS réécriture de la charge est refusé par la base')`
+- **Assertion** — `tests/integration/charge-candidature-minimisee.spec.ts` · `it('REQ-DM-036 : TÉMOIN — une ligne héritée fautive fait ÉCHOUER l’ajout de la contrainte (transaction annulée)')`
+- **Assertion** — `tests/integration/charge-candidature-minimisee.spec.ts` · `it('REQ-DM-036 REQ-JUR-029 : une candidature en_erreur au-delà du délai perd reponsesJson, statut et payload_hash inchangés, par le VRAI déclencheur')`
+- **Assertion** — `tests/integration/charge-candidature-minimisee.spec.ts` · `it('REQ-DM-036 : TÉMOIN — sous le marqueur du fond, un passage en_erreur → traite est refusé')`
 - `tests/unit/integration/charge-candidature-minimisee.spec.ts` : la forme minimisée, pure.
 - `partners:migrations:additive` : la faute `journal_desarme` est absoute par cet ADR, et imprimée.
 
