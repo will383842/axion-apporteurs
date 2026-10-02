@@ -135,12 +135,17 @@ describe('REQ-SEC-008 — chaque méthode injecte l’apporteur de la session', 
     }
   );
 
+  // SEC-47 a changé la face de ces témoins : un filtre sur `apporteurId` (colonne TUE) était
+  // gardé en CONJONCTION ; il est désormais REFUSÉ avant tout appel, comme tout filtre sur une
+  // colonne non rendue. La conjonction reste prouvée par `lister()` sans filtre (ci-dessus) et par
+  // un filtre sur une colonne RENDUE (ci-dessous).
   it.each(MODELES_CLOISONNES)(
-    'REQ-SEC-008 : %s.lister({ where: { apporteurId: B } }) reste en CONJONCTION avec la session — jamais un remplacement',
+    'REQ-SEC-008 : %s.lister({ where: { id } }) reste en CONJONCTION avec la session — jamais un remplacement',
     async (modele) => {
       const { client, appels } = fauxClient();
+      const id = randomUUID();
       await forApporteur(client, A)[modele].lister({
-        where: { apporteurId: B },
+        where: { id },
         orderBy: { id: 'asc' },
         take: 7,
       });
@@ -149,7 +154,7 @@ describe('REQ-SEC-008 — chaque méthode injecte l’apporteur de la session', 
           modele,
           methode: 'findMany',
           args: {
-            where: portee({ apporteurId: B }, A),
+            where: portee({ id }, A),
             orderBy: { id: 'asc' },
             take: 7,
             select: selection(modele),
@@ -160,16 +165,28 @@ describe('REQ-SEC-008 — chaque méthode injecte l’apporteur de la session', 
   );
 
   it.each(MODELES_CLOISONNES)(
+    'REQ-SEC-008 : %s — SEC-47 : un filtre sur apporteurId (colonne tue) est REFUSÉ avant tout appel, en lecture comme en compte',
+    async (modele) => {
+      const { client, appels } = fauxClient();
+      const vue = forApporteur(client, A)[modele];
+      expect(await refusDe(vue.lister(brut({ where: { apporteurId: B } })))).toBe(REFUS.forme);
+      expect(await refusDe(vue.compter(brut({ apporteurId: B })))).toBe(REFUS.forme);
+      expect(appels).toEqual([]);
+    }
+  );
+
+  it.each(MODELES_CLOISONNES)(
     'REQ-SEC-008 : %s.compter() compte sous la même conjonction, avec ou sans filtre',
     async (modele) => {
       const { client, appels, reponses } = fauxClient();
       reponses.count = 3;
       const vue = forApporteur(client, A)[modele];
+      const id = randomUUID();
       expect(await vue.compter()).toBe(3);
-      expect(await vue.compter({ apporteurId: B })).toBe(3);
+      expect(await vue.compter({ id })).toBe(3);
       expect(appels).toEqual([
         { modele, methode: 'count', args: { where: portee({}, A) } },
-        { modele, methode: 'count', args: { where: portee({ apporteurId: B }, A) } },
+        { modele, methode: 'count', args: { where: portee({ id }, A) } },
       ]);
     }
   );
@@ -212,7 +229,15 @@ describe('REQ-SEC-008 — chaque méthode injecte l’apporteur de la session', 
     reponses.findFirst = { id: A };
     expect(await forApporteur(client, A).moi()).toEqual({ id: A });
     expect(appels).toEqual([
-      { modele: 'apporteur', methode: 'findFirst', args: { where: { id: A } } },
+      {
+        modele: 'apporteur',
+        methode: 'findFirst',
+        // SEC-47 : la fiche part avec sa sélection explicite, comme les modèles cloisonnés.
+        args: {
+          where: { id: A },
+          select: Object.fromEntries(CHAMPS_RENDUS.apporteur.map((c) => [c, true])),
+        },
+      },
     ]);
   });
 
@@ -718,10 +743,21 @@ function fautesDeClassement(
 }
 
 describe('REQ-SEC-008 — GOV-111 : la couche ne rend qu’une sélection EXPLICITE, sans secret', () => {
-  it('les six secrets sont figés, et ce sont bien des colonnes du schéma', () => {
+  it('REQ-SEC-008 : les dix secrets sont figés — les six de GOV-111 et les quatre de la fiche (SEC-47)', () => {
     expect(Object.isFrozen(SECRETS)).toBe(true);
     expect([...SECRETS].sort()).toEqual(
-      ['codeHash', 'emailChiffre', 'emailHash', 'ipHash', 'kid', 'tokenHash'].sort()
+      [
+        'codeHash',
+        'emailChiffre',
+        'emailHash',
+        'ipHash',
+        'kid',
+        'tokenHash',
+        'nomChiffre',
+        'prenomChiffre',
+        'telephoneChiffre',
+        'phoneHash',
+      ].sort()
     );
   });
 
