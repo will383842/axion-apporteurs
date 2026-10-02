@@ -4973,6 +4973,21 @@
       ]
     },
     {
+      "id": "REQ-INT-063",
+      "domaine": "integration",
+      "texte": "**L'API 4 : Partners pousse vers le CRM Pro ce qui est déclaré (décision de Williams du 2026-10-02, option B).** Partners POUSSE seul (aucune route de lecture n'est ouverte au CRM), par une outbox qui ne garde que la référence et la version, jamais un clair ; la charge se construit à l'envoi depuis les colonnes courantes, et le contrôle d'opposition se fait dans la MÊME transaction. Requêtes signées HMAC-SHA256 (horodatage et corps, 300 s), secret DÉDIÉ avec `kid`, hôte en liste fermée, HTTPS, aucune redirection ; idempotence par `Idempotency-Key` ; journal sans charge. Contrat `.strict()` à empreinte épinglée des deux côtés : `reference`, `entreprise{…}`, `contact{prenom, nom, email?, telephone?, fonction?}`, `provenance` {apporteur, commercial, societe}, `informationTiersVersion`. Ne sortent JAMAIS : la date du contact ni aucune date d'acte, toute identité de l'apporteur (même un identifiant opaque), ses empreintes, le contexte libre, la précision du lien d'intérêt, les signaux de sincérité, l'état d'un dépôt refusé ou en attente, les coordonnées géographiques. Une entreprise individuelle (forme non prouvée personne morale) n'est jamais émise. Aucune émission avant que le CRM ne lise la version, ni avant les textes validés par Williams et le registre et l'AIPD amendés.",
+      "source": "Décision de Williams du 2026-10-02 (option B, verbatim dans REPONSES-WILLIAMS-SEANCE-2026-10-02.md, hors dépôt) ; A02, lentille sécurité et A07 (2026-10-02)",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": null,
+      "etape": null,
+      "phase": 2,
+      "taches": [
+        "INT-T68-P",
+        "INT-T69-P"
+      ]
+    },
+    {
       "id": "REQ-CPL-027",
       "domaine": "Annexe — passe de dédoublonnage (à appliquer par le Gardien du spec, GOV-001)",
       "texte": "`actif` (premier dépôt confirmé) et `dormant` (> 60 j sans dépôt, paramètre SSOT) sont **dérivés** par fonction pure, jamais stockés, et restent des indicateurs de **console** : **aucun message n'est envoyé à un apporteur en raison de son inactivité** (REQ-JUR-033, qui remplace toute relance de dormance par la lettre du réseau, identique pour tous, à intervalle fixe, dont le job d'envoi ne reçoit aucun filtre sur la date du dernier dépôt). La « relance de dormance » est retirée du produit le 2026-09-03.",
@@ -6176,7 +6191,7 @@
     {
       "id": "REQ-JUR-060",
       "domaine": "juridique",
-      "texte": "**Ce que dit l'e-mail au contact.** L'e-mail est envoyé depuis une adresse humaine d'un domaine authentifié (REQ-INT-022). Il nomme l'apporteur (prénom et nom), l'entreprise et le contexte s'il existe, sans date du contact (REQ-JUR-040) ; il porte les deux liens, l'information de l'art. 14 (identité du responsable, finalité, base légale, destinataires, durée, droits, source des données : l'apporteur) et un lien d'opposition. Il ne demande rien d'autre qu'un clic ; il ne contient ni pièce jointe ni lien autre que ceux-là. Le texte envoyé est versionné et la version est journalisée avec l'envoi.",
+      "texte": "**Ce que dit l'e-mail au contact.** L'e-mail est envoyé depuis une adresse humaine d'un domaine authentifié (REQ-INT-022). Il nomme l'apporteur (prénom et nom), l'entreprise et le contexte s'il existe, sans date du contact (REQ-JUR-040) ; il porte les deux liens, l'information de l'art. 14 (identité du responsable, finalité, base légale, destinataires, durée, droits, source des données : l'apporteur) et un lien d'opposition. Il ne demande rien d'autre qu'un clic ; il ne contient ni pièce jointe ni lien autre que ceux-là. Le texte envoyé est versionné et la version est journalisée avec l'envoi. Amendement LOT CRM PRO (rattrapage 57) : après la décision de Williams du 2026-10-02 (option B), l'information de l'art. 14 nomme aussi le CRM d'Axion-IA, la finalité commerciale, la base légale, la durée propre et l'opposition à la prospection présentée à part, dans la version 5 du bloc (JUR-T51), dont le texte est validé par Williams avant tout envoi.",
       "source": "décision de Will du 2026-09-29, W20 (docs/chantiers/W20-confirmation-par-email.md §3.1), passe gardien-spec W20 portée par GOV-112 (8)(b) ; module et étape repris de REQ-JUR-009",
       "statut": "active",
       "remplaceePar": null,
@@ -6186,6 +6201,7 @@
       "taches": [
         "INT-T40",
         "JUR-T09",
+        "JUR-T51",
         "UX-P1-41"
       ]
     },
@@ -6203,6 +6219,22 @@
         "INT-T65-A",
         "INT-T66-A",
         "JUR-T47"
+      ]
+    },
+    {
+      "id": "REQ-JUR-062",
+      "domaine": "juridique",
+      "texte": "**Le contrat suit la décision de Williams du 2026-10-02 (option B : les données déclarées vont au CRM Pro dès la déclaration), dans des textes que Williams valide avant tout premier envoi en signature.** Le registre ne porte AUCUN texte de remplacement de l'art. 3.5 al. 4 : la manière de procéder attend Williams (décision de la coordination du 2026-10-02). Ce qui est déjà acquis par délégation : toute commande de l'entreprise attribuée signée pendant l'attribution reste commissionnée, quel que soit celui qui la conclut ; le délai `RESERVE_APRES_ACTE_APPORTEUR_JOURS` est gardé ; la conservation au CRM a sa durée propre, `CRM_DUREE_PROSPECT_ANS`, à compter du dernier échange à l'initiative de la personne, sauf opposition ; aucune émission avant les textes validés.",
+      "source": "Décision de Williams du 2026-10-02 (option B) ; textes d'A07 ; décisions de la coordination par délégation (délai de 30 jours gardé, deux phrases recommandées gardées par défaut)",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": 11,
+      "etape": 10,
+      "phase": 1,
+      "taches": [
+        "JUR-T50",
+        "JUR-T51",
+        "JUR-T52"
       ]
     },
     {
