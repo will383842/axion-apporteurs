@@ -121,8 +121,9 @@ qu'aux fins de l'article 3.7 et ne fait l'objet d'aucune exploitation statistiqu
 L'attribution est d'abord **provisoire**. Elle devient définitive lorsque l'entreprise confirme avoir
 échangé avec l'Apporteur, soit en réponse à la demande de confirmation que lui adresse la Société, soit
 lors d'une prise de contact de la Société, **sauf lorsque la demande fait l'objet d'une vérification,
-auquel cas seule une prise de contact concluante de la Société, c'est-à-dire au cours de laquelle
-l'entreprise confirme ou dément l'échange, vaut confirmation.** **Lorsque l'entreprise
+auquel cas seule une prise de contact concluante de la Société vaut confirmation.** Une prise de
+contact est concluante lorsque l'entreprise y confirme l'échange ; lorsqu'elle le dément, l'article 3.7
+s'applique. **Lorsque l'entreprise
 ne peut être jointe, ne répond pas, ou ne se prononce pas sur l'existence de l'échange, l'attribution
 demeure provisoire et suit les alinéas 5 et 6. L'article 3.7 ne s'applique qu'au cas où l'entreprise
 indique ne pas connaître l'Apporteur.**
