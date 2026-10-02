@@ -222,10 +222,10 @@ ALTER TABLE "attributions" ADD CONSTRAINT "attributions_rang_attente"
 -- Au plus UN occupant par SIREN. La clause est EXACTEMENT `clauseEtatsOccupants()`
 -- (`src/domain/attribution/etats.ts`), jamais retapée : `partners:schema:enums` et
 -- `tests/integration/index-partiel.spec.ts` la confrontent, l'une au texte, l'autre à `pg_indexes`.
-CREATE UNIQUE INDEX "attributions_un_occupant_par_siren" ON "attributions" ("siren")
+CREATE UNIQUE INDEX "attributions_un_occupant" ON "attributions" ("siren")
   WHERE "statut" IN ('provisoire', 'active', 'rdv_pris', 'proposition', 'signee', 'convertie', 'figee_resiliation');
 -- La file : deux rangs au plus par SIREN, chacun une fois.
-CREATE UNIQUE INDEX "attributions_rang_par_siren" ON "attributions" ("siren", "rang_attente")
+CREATE UNIQUE INDEX "attributions_en_attente" ON "attributions" ("siren", "rang_attente")
   WHERE "statut" = 'en_attente';
 
 -- ── attributions : l'horloge du dépôt (REQ-DM-005, HYP-A02-PRECISION-DEPOT) ─────────────────

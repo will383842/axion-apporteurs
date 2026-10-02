@@ -812,7 +812,7 @@ describe('REQ-SEC-013 — `dependancesDeProduction` : clés, adresse, délai et 
 
   it('REQ-INT-020 — le cache lit `REDIS_URL` dans l’environnement : absente, il échoue sans rien inventer', async () => {
     vi.stubEnv('REDIS_URL', '');
-    await expect(dependancesDeProduction(SECRETS).cache.lire('entreprise:v1:test')).rejects.toThrow(
+    await expect(dependancesDeProduction(SECRETS).cache.lire('entreprise:v2:test')).rejects.toThrow(
       /REDIS_URL absente/
     );
   });
