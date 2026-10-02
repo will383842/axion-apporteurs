@@ -65,12 +65,12 @@ sont pas écrites à la naissance. C'est ce qui laisse `schema: false` les tâch
 DM-11 ne crée que le dossier de conformité ; INT-T12 crée l'enveloppe de signature.
 
 **4. Journal : un type par GENRE de transition, jamais par transition.** `attribution_etat_modifie`
-porte `{de, vers, evenement}`, où `evenement` est un `z.enum` dérivé de la matrice d'états ;
+porte `{de, vers, transition}`, où `transition` est un `z.enum` dérivé de la matrice d'états ;
 `apporteur_statut_modifie` fait de même pour l'apporteur. Ajouter un événement à une matrice modifie
 une charge Zod de `src/domain/evenement/charges.ts`, jamais le schéma. Les treize valeurs des phases
 0 et 1 et leur créateur sont au glossaire §4.1. Chacune entre dans la ligne `TypeEvenementJournal` du
 glossaire avec la migration qui la crée, pas avant. Un texte qui nomme un événement pointé désigne le
-type de son genre avec la valeur d'`evenement` correspondante.
+type de son genre avec la valeur de `transition` correspondante.
 
 **5. Un vocabulaire fermé s'appelle `motif` et c'est un enum ; une explication rédigée s'appelle
 `justification`**, en `Text` avec un `CHECK` de longueur minimale. Un identifiant de palier s'appelle
@@ -124,9 +124,22 @@ sur ce qui est haché ou opposable ; une date calendaire sans heure est `@db.Dat
 suffixe ; clés étrangères en `Restrict` ; toute table en ajout seul reçoit les déclencheurs du journal
 (ligne et troncature).
 
+**Exception nommée : `attributions.deposeeAt` en `Timestamptz(6)`, et elle seule** (DM-07,
+HYP-A02-PRECISION-DEPOT). REQ-DM-005 et REQ-SEC-014 exigent la microseconde en toutes lettres : une
+exigence sourcée prévaut sur la forme commune. La colonne est écrite par un déclencheur `BEFORE
+INSERT` qui écrase toute valeur fournie par `clock_timestamp()`, lu sous le verrou consultatif du
+SIREN ; une fois posée, elle ne se réécrit pas. **Un défaut `dbgenerated` est admis sur une colonne
+opposable si, et seulement si, un déclencheur l'écrase** : il ne sert alors qu'au typage du client.
+
 **12. Purge.** Une colonne `…Chiffre` d'un tiers est remise à nul par le cron de purge ; le
 déclencheur d'une table en ajout seul l'autorise, et seulement cela. Les durées vivent dans
-`src/domain/seuils/retention.ts` sous `HYP-A02-RETENTION`.
+`src/domain/seuils/retention.ts` sous `HYP-A02-RETENTION`. Ce déclencheur est le GABARIT
+`refuser_modification_sauf()` (DM-07, HYP-A02-GABARIT-AJOUT-SEUL) : une fonction unique, sans
+`EXECUTE`, à laquelle une table se branche par `CREATE TRIGGER` (ligne et troncature) en nommant ses
+exceptions — `purge:<colonne>` (une valeur devient nulle, sans retour) et `une_fois:<colonne>` (nulle,
+elle reçoit une valeur une fois). Une colonne nommée absente lève ; DELETE et TRUNCATE sont refusés.
+On ne la remplace jamais (`CREATE OR REPLACE`). Premiers usages : `depots_refuses` (aucune exception)
+et `personnes_declarees` (`purge:nom_chiffre`, `purge:prenom_chiffre`, `une_fois:retiree_at`).
 
 **13. Migrations en parallèle.** Le lot qui fusionne en second renomme son dossier de migration avec
 un horodatage postérieur au dernier de `main` et régénère la partie calculée par Prisma. Une

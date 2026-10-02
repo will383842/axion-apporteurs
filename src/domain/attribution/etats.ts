@@ -42,8 +42,9 @@ export type EtatOccupant = (typeof ETATS_OCCUPANTS)[number];
  * La clause `IN (…)` de l'index partiel, GÉNÉRÉE depuis la constante.
  *
  * Elle est ici, et pas dans le fichier de migration, pour la raison qui fonde RM-06 : une clause
- * tapée dans un fichier SQL ne suit jamais la constante. Le test `pg_indexes` de DM-07 comparera
- * la définition lue en base à ce que cette fonction produit.
+ * tapée dans un fichier SQL ne suit jamais la constante. La migration de DM-07 en porte la sortie
+ * EXACTE (`partners:schema:enums` le vérifie), et `tests/integration/index-partiel.spec.ts` compare
+ * l'ensemble des états lus dans `pg_indexes` à `ETATS_OCCUPANTS`.
  */
 export function clauseEtatsOccupants(): string {
   return ETATS_OCCUPANTS.map((e) => `'${e}'`).join(', ');

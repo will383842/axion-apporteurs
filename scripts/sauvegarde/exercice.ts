@@ -30,6 +30,112 @@ import { PostgreSqlContainer } from '@testcontainers/postgresql';
 import { IMAGE_BASE, prismaCli, RACINE } from '../../tests/integration/harnais';
 import { dechiffrer, estChiffre } from './chiffrement';
 
+/** La forme des rôles de Partners : la seule qu'une restauration recrée (décision A02, DM-45). */
+export const FORME_DES_ROLES = /^partners_[a-z_]+$/;
+
+/** Ce que le schéma d'un vidage dit des rôles et de la propriété. */
+export type RolesDuVidage = {
+  /** Les rôles à recréer en NOLOGIN avant la restauration, triés. */
+  roles: string[];
+  /** Les `ALTER … OWNER TO partners_*` à rejouer APRÈS la restauration, dans l'ordre du vidage. */
+  proprietes: string[];
+  /** Les rôles nommés par un GRANT hors de `FORME_DES_ROLES` : la restauration ÉCHOUE en les nommant. */
+  horsForme: string[];
+  /**
+   * Les lignes qui donnent la propriété à un rôle `partners_*` SANS avoir la forme ancrée et entière
+   * de `FORME_DE_PROPRIETE` (deux instructions collées, casse forgée, objet inattendu) : la
+   * restauration ÉCHOUE, rien n'est rejoué (condition de la lentille sécurité, DM-45).
+   */
+  pieges: string[];
+};
+
+/**
+ * La SEULE forme d'une propriété rejouée : une instruction entière, ancrée du début à la fin, sur une
+ * table ou une séquence nommée par identifiants simples, vers un rôle de `FORME_DES_ROLES`.
+ */
+export const FORME_DE_PROPRIETE =
+  /^ALTER (?:TABLE|SEQUENCE) (?:[a-z_][a-z0-9_]*\.)?"?[a-z_][a-z0-9_]*"? OWNER TO (partners_[a-z_]+);$/;
+
+/**
+ * Les rôles et la propriété que le vidage NOMME. Un rôle est un objet GLOBAL du serveur : `pg_dump`
+ * ne l'emporte pas, et une restauration sur un serveur neuf s'arrête sur le premier GRANT qui le
+ * nomme. `--no-owner` jette de son côté chaque `ALTER … OWNER TO`, et avec lui la propriété du
+ * journal (`partners_journal`) : perdue EN SILENCE, l'exercice resterait vert. Tout est DÉRIVÉ du
+ * vidage, jamais tapé ici.
+ *   — ALTER … OWNER TO <rôle> : seul un rôle de la forme est recréé et sa propriété rejouée ; un autre
+ *     propriétaire (celui qui a migré la base source) est celui que `--no-owner` remplace par le
+ *     restaurateur, et c'est voulu : il n'est ni créé, ni rejoué, ni refusé.
+ *   — GRANT … TO <rôle> : deux bénéficiaires sont EXEMPTÉS — `PUBLIC`, et le propriétaire source
+ *     (un rôle hors forme qui n'apparaît que comme cible d'un OWNER TO, et à qui `pg_dump` donne
+ *     parfois les droits du schéma public). Tout AUTRE rôle hors de `FORME_DES_ROLES` est une faute
+ *     nommée (décision A02, DM-45).
+ */
+/**
+ * QA-T66 — les rôles HORS `FORME_DES_ROLES` qui portent un `ALTER … OWNER TO` : celui qui a migré la
+ * base source, triés. Il n'y en a qu'UN au plus ; un second serait un rôle inconnu dont les GRANT
+ * seraient exemptés en silence (décision de la coordination du 2026-10-02). Une fonction à part, et
+ * non une clé de plus de `RolesDuVidage` : la forme de ce retour est figée par son propre témoin.
+ */
+export function proprietairesSourceDuVidage(sqlDuSchema: string): string[] {
+  const sources = new Set<string>();
+  for (const m of sqlDuSchema.matchAll(
+    /^ALTER\s.+\sOWNER\s+TO\s+"?([A-Za-z_][A-Za-z0-9_]*)"?\s*;\s*$/gm
+  )) {
+    if (!FORME_DES_ROLES.test(m[1]!) && !/^partners_/i.test(m[1]!)) sources.add(m[1]!);
+  }
+  return [...sources].sort();
+}
+
+export function rolesDuVidage(sqlDuSchema: string): RolesDuVidage {
+  const roles = new Set<string>();
+  const horsForme = new Set<string>();
+  const proprietes: string[] = [];
+  const proprietairesSource = new Set(proprietairesSourceDuVidage(sqlDuSchema));
+  for (const m of sqlDuSchema.matchAll(/^GRANT\s.+?\sTO\s+"?([A-Za-z_][A-Za-z0-9_]*)"?\s*;/gm)) {
+    const role = m[1]!;
+    if (role.toLowerCase() === 'public' || proprietairesSource.has(role)) continue;
+    (FORME_DES_ROLES.test(role) ? roles : horsForme).add(role);
+  }
+  const pieges: string[] = [];
+  // Toute ligne qui VISE un rôle de Partners comme propriétaire, quelle que soit sa casse : elle est
+  // rejouée si et seulement si elle a la forme ancrée ; sinon, c'est un piège, et l'exercice échoue.
+  // Un autre propriétaire (celui qui a migré la base source) est laissé à `--no-owner`, voulu.
+  for (const ligne of sqlDuSchema.split('\n')) {
+    if (!/OWNER\s+TO\s+"?partners_/i.test(ligne)) continue;
+    const m = FORME_DE_PROPRIETE.exec(ligne);
+    if (m === null) {
+      pieges.push(ligne);
+      continue;
+    }
+    roles.add(m[1]!);
+    proprietes.push(ligne);
+  }
+  return {
+    roles: [...roles].sort(),
+    proprietes,
+    horsForme: [...horsForme].sort(),
+    pieges,
+  };
+}
+
+/**
+ * Le jugement des rôles, AVANT toute création de rôle et toute restauration : le motif de l'échec,
+ * ou `null`. Il nomme des RÔLES, jamais une ligne du vidage (« rien ne sort de la base restaurée ») ;
+ * une ligne piégée n'est que comptée.
+ */
+export function jugerLesRoles(
+  lu: RolesDuVidage,
+  proprietairesSource: readonly string[]
+): string | null {
+  if (proprietairesSource.length > 1)
+    return `restauration : [proprietaires_multiples] plus d’un propriétaire source dans le vidage — ${proprietairesSource.join(', ')}`;
+  if (lu.horsForme.length > 0)
+    return `restauration : rôle hors de la forme partners_* — ${lu.horsForme.join(', ')}`;
+  if (lu.pieges.length > 0)
+    return `restauration : ${lu.pieges.length} propriété(s) hors de la forme ancrée, rien n'est rejoué`;
+  return null;
+}
+
 export type Verdict = {
   date: string;
   verdict: 'reussi' | 'echec';
@@ -68,7 +174,16 @@ export function jugerFraicheur(
   return { ok: true, ageJours };
 }
 
-export async function exercer(fichier: string, schema: string, phrase: string): Promise<Verdict> {
+/**
+ * `inspecter`, pour les témoins seulement : lit la base restaurée AVANT sa destruction, par des
+ * requêtes dont rien ne sort du verdict (propriétaire et droits du journal, DM-45).
+ */
+export async function exercer(
+  fichier: string,
+  schema: string,
+  phrase: string,
+  inspecter?: (requete: (sql: string) => string) => void | Promise<void>
+): Promise<Verdict> {
   const brut = readFileSync(fichier);
   const temoin = tableTemoin(schema);
   const base: Verdict = {
@@ -89,7 +204,50 @@ export async function exercer(fichier: string, schema: string, phrase: string): 
   }
 
   const pg = await new PostgreSqlContainer(IMAGE_BASE).start();
+  /** Une instruction contre la base restaurée ; le texte de la sortie, jamais journalisé. */
+  const psql = (requete: string) =>
+    spawnSync(
+      'docker',
+      [
+        'exec',
+        pg.getId(),
+        'psql',
+        '-X',
+        '-v',
+        'ON_ERROR_STOP=1',
+        '-U',
+        pg.getUsername(),
+        '-d',
+        pg.getDatabase(),
+        '-tAc',
+        requete,
+      ],
+      { encoding: 'utf8' }
+    );
   try {
+    // TROIS TEMPS, comme une remise en service réelle (runbook ; décision A02, DM-45).
+    // 1. Les rôles d'abord : lus dans le SCHÉMA du vidage, filtrés par `FORME_DES_ROLES`, créés
+    //    NOLOGIN, sans mot de passe. Un rôle hors de la forme fait échouer, nommé.
+    const schemaSql = spawnSync(
+      'docker',
+      ['exec', '-i', pg.getId(), 'pg_restore', '--schema-only', '-f', '-'],
+      { input: vidage, maxBuffer: 64 * 1024 * 1024 }
+    );
+    if (schemaSql.status !== 0)
+      return echec(`restauration : lecture du schéma du vidage sort en ${schemaSql.status}`);
+    const schemaLu = schemaSql.stdout.toString('utf8');
+    const lu = rolesDuVidage(schemaLu);
+    // Le compte seulement, jamais le texte : une ligne piégée peut porter n'importe quoi.
+    const faute = jugerLesRoles(lu, proprietairesSourceDuVidage(schemaLu));
+    if (faute !== null) return echec(faute);
+    for (const role of lu.roles) {
+      const cree = psql(
+        `DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '${role}') THEN CREATE ROLE ${role} NOLOGIN; END IF; END $$;`
+      );
+      if (cree.status !== 0)
+        return echec(`restauration : création du rôle ${role} sort en ${cree.status}`);
+    }
+
     const restauration = spawnSync(
       'docker',
       [
@@ -108,6 +266,19 @@ export async function exercer(fichier: string, schema: string, phrase: string): 
     );
     if (restauration.status !== 0)
       return echec(`restauration : pg_restore sort en ${restauration.status}`);
+
+    // 3. La propriété rejouée : `--no-owner` a jeté chaque `ALTER … OWNER TO`, et avec lui le
+    //    propriétaire du journal. Seules les instructions vers un rôle de la forme sont rejouées.
+    for (const propriete of lu.proprietes) {
+      const rejouee = psql(propriete);
+      if (rejouee.status !== 0)
+        return echec(`restauration : propriété non rejouée, psql sort en ${rejouee.status}`);
+    }
+    await inspecter?.((requete) => {
+      const r = psql(requete);
+      if (r.status !== 0) throw new Error(`inspection : psql sort en ${r.status}`);
+      return (r.stdout ?? '').trim();
+    });
 
     try {
       prismaCli(pg.getConnectionUri(), [
