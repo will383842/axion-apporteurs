@@ -20,7 +20,7 @@
  *     `deposeeAt` restent.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { randomUUID } from 'node:crypto';
+import { randomBytes, randomUUID } from 'node:crypto';
 import { Prisma } from '@prisma/client';
 import { demarrerBase, type Base } from './harnais';
 import { MODELES_CLOISONNES, MODELES_EN_AJOUT_SEUL } from '../../src/server/acces/for-apporteur';
@@ -59,6 +59,32 @@ async function unApporteur(): Promise<string> {
 }
 
 /** Le code SQLSTATE et le message d'une erreur remontée par Prisma. */
+/**
+ * Une table TÉMOIN branchée sur le gabarit avec `argument`, une ligne insérée, puis `cas(table)` ;
+ * la table est SUPPRIMÉE à la fin, quoi qu’il arrive.
+ *
+ * POURQUOI PAS UNE TABLE TEMPORAIRE. Une `TEMP TABLE` n’existe que sur la connexion qui l’a créée ;
+ * or Prisma répartit les appels successifs sur un POOL de connexions. Le `CREATE`, l’`INSERT` et
+ * l’`UPDATE` pouvaient donc tomber sur des connexions différentes : 42P01 « relation does not
+ * exist », selon l’ordre du pool. Une table ordinaire, au nom UNIQUE par cas, est vue de toutes
+ * les connexions et ne gêne aucun autre cas ; la supprimer à la fin garde vrais les témoins qui
+ * confrontent les branchements du gabarit aux colonnes et aux modèles.
+ */
+async function avecTableTemoin(argument: string, cas: (table: string) => Promise<void>) {
+  const table = `temoin_${randomBytes(6).toString('hex')}`;
+  await base.prisma.$executeRawUnsafe(`CREATE TABLE ${table} (id int PRIMARY KEY, a text)`);
+  try {
+    await base.prisma.$executeRawUnsafe(
+      `CREATE TRIGGER ${table}_ajout_seul BEFORE UPDATE OR DELETE ON ${table}
+       FOR EACH ROW EXECUTE FUNCTION refuser_modification_sauf('${argument}')`
+    );
+    await base.prisma.$executeRawUnsafe(`INSERT INTO ${table} VALUES (1, 'x')`);
+    await cas(table);
+  } finally {
+    await base.prisma.$executeRawUnsafe(`DROP TABLE IF EXISTS ${table} CASCADE`);
+  }
+}
+
 async function refus(p: Promise<unknown>): Promise<string> {
   try {
     await p;
@@ -220,31 +246,19 @@ describe('REQ-DM-031 — chaque argument du gabarit nomme une colonne qui existe
   });
 
   it('REQ-DM-031 : TÉMOIN — une nature d’argument inconnue lève à l’appel, nommée', async () => {
-    await base.prisma.$executeRawUnsafe(
-      `CREATE TEMP TABLE temoin_nature (id int PRIMARY KEY, a text)`
-    );
-    await base.prisma.$executeRawUnsafe(
-      `CREATE TRIGGER temoin_nature_ajout_seul BEFORE UPDATE OR DELETE ON temoin_nature
-       FOR EACH ROW EXECUTE FUNCTION refuser_modification_sauf('efface:a')`
-    );
-    await base.prisma.$executeRawUnsafe(`INSERT INTO temoin_nature VALUES (1, 'x')`);
-    expect(
-      await refus(base.prisma.$executeRawUnsafe(`UPDATE temoin_nature SET a = NULL WHERE id = 1`))
-    ).toMatch(/argument « efface:a » mal formé/);
+    await avecTableTemoin('efface:a', async (table) => {
+      expect(
+        await refus(base.prisma.$executeRawUnsafe(`UPDATE ${table} SET a = NULL WHERE id = 1`))
+      ).toMatch(/argument « efface:a » mal formé/);
+    });
   });
 
   it('REQ-DM-031 : TÉMOIN — un branchement qui nomme une colonne absente lève à l’appel', async () => {
-    await base.prisma.$executeRawUnsafe(
-      `CREATE TEMP TABLE temoin_gabarit (id int PRIMARY KEY, a text)`
-    );
-    await base.prisma.$executeRawUnsafe(
-      `CREATE TRIGGER temoin_gabarit_ajout_seul BEFORE UPDATE OR DELETE ON temoin_gabarit
-       FOR EACH ROW EXECUTE FUNCTION refuser_modification_sauf('purge:colonne_absente')`
-    );
-    await base.prisma.$executeRawUnsafe(`INSERT INTO temoin_gabarit VALUES (1, 'x')`);
-    expect(
-      await refus(base.prisma.$executeRawUnsafe(`UPDATE temoin_gabarit SET a = NULL WHERE id = 1`))
-    ).toMatch(/colonne_absente/);
+    await avecTableTemoin('purge:colonne_absente', async (table) => {
+      expect(
+        await refus(base.prisma.$executeRawUnsafe(`UPDATE ${table} SET a = NULL WHERE id = 1`))
+      ).toMatch(/colonne_absente/);
+    });
   });
 });
 
