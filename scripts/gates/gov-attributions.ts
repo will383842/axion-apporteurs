@@ -1471,10 +1471,8 @@ export const DETTE_GATE_NON_RECIPROQUE: DetteGate[] = [
 export const CITATIONS_DECLAREES: Citation[] = [
   // UX-P0-01 nomme sa VOISINE pour dire ce qui n'est PAS dans son périmètre. Retirer le nom rendrait
   // la phrase inutilisable : un lecteur saurait qu'une chose est exclue, sans savoir qui la porte.
-  // Le script est PARTAGÉ depuis GOV-113 (entrée GATE-UX-CONSOLE-ROUTES) : le lieu porte donc
-  // l'identifiant de l'entrée (`lieuDansGates`).
   {
-    ou: 'docs/gates.json(scripts/gates/ux-exhaustivite.ts)@ux:exhaustivite.verifie',
+    ou: 'docs/gates.json(scripts/gates/ux-exhaustivite.ts).verifie',
     ligne: 1,
     id: 'UX-P0-01b',
     nature: 'contexte',
