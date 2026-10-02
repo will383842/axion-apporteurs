@@ -346,13 +346,17 @@ describe('la structure : un seul producteur, qui tire, sans droit sur le registr
     const wf = (await lireYaml(texte)) as {
       jobs: Record<string, { steps?: (Etape & { if?: unknown })[] }>;
     };
-    const etape = (wf.jobs['deployer']?.steps ?? []).find(
-      (s) => s.run === 'pnpm deploy:attendre-porte-a'
-    );
-    if (etape === undefined) return ['porte_a_absente'];
+    const etapes = wf.jobs['deployer']?.steps ?? [];
+    const rang = etapes.findIndex((s) => s.run === 'pnpm deploy:attendre-porte-a');
+    if (rang < 0) return ['porte_a_absente'];
+    const etape = etapes[rang]!;
     const f: string[] = [];
     if (etape['continue-on-error'] !== undefined) f.push('porte_a_toleree');
     if (etape.if !== undefined) f.push('porte_a_conditionnelle');
+    // Le trou voisin (lentille securite) : un `if: always()`, `!cancelled()` ou `failure()` sur une
+    // étape QUI SUIT la porte A la ferait tourner après son échec. Aucune ne porte de `if:`.
+    for (const s of etapes.slice(rang + 1))
+      if (s.if !== undefined) f.push(`apres_porte_a_conditionnelle : ${s.run ?? s.uses ?? '?'}`);
     return f;
   }
 
@@ -364,6 +368,16 @@ describe('la structure : un seul producteur, qui tire, sans droit sur le registr
     expect(await porteABloquante(reel)).toEqual([]);
     expect(await porteABloquante(avant('continue-on-error: true'))).toEqual(['porte_a_toleree']);
     expect(await porteABloquante(avant('if: ${{ false }}'))).toEqual(['porte_a_conditionnelle']);
+  });
+
+  it('REQ-GOV-014 : TÉMOIN — deploy:coolify avec if: always() rougit en se nommant : il tournerait après l’échec de la porte A', async () => {
+    const reel = readFileSync('.github/workflows/deploy.yml', 'utf8');
+    const ligne = '        run: pnpm deploy:coolify';
+    expect(reel).toContain(ligne);
+    for (const condition of ['always()', '!cancelled()', 'failure()'])
+      expect(
+        await porteABloquante(reel.replace(ligne, `        if: \${{ ${condition} }}\n${ligne}`))
+      ).toEqual(['apres_porte_a_conditionnelle : pnpm deploy:coolify']);
   });
 
   it('les étapes sont des scripts nommés, sans continue-on-error, et le seul appel à la plateforme est `pnpm deploy:coolify`', () => {
