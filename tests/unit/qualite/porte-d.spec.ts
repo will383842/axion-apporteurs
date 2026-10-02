@@ -188,4 +188,33 @@ describe('REQ-QA-021 — le vidage N−1 est SEMÉ, pas vide', () => {
     for (const l of inserts)
       expect(l).toMatch(/WHERE NOT EXISTS \(SELECT 1 FROM "(apporteurs|jetons)"\);$/);
   });
+
+  it('REQ-QA-021 — DM-07 : les CHECK qui LIENT deux colonnes nullables sont remplis ensemble, et un porteur exclusif n’en remplit qu’un', () => {
+    const uuid = (colonne: string, nonNul = false) => ({
+      table: 'attrib',
+      colonne,
+      type: 'uuid',
+      nonNul,
+      defaut: false,
+      valeurs: null,
+    });
+    const check = (definition: string) => ({
+      table: 'attrib',
+      genre: 'c' as const,
+      definition,
+      colonnes: [],
+      cible: null,
+      colonnesCibles: null,
+    });
+    const s = semis({
+      colonnes: [uuid('id', true), uuid('porteur_a'), uuid('porteur_b'), uuid('grille')],
+      contraintes: [
+        check('CHECK (((grille IS NOT NULL) = (porteur_a IS NOT NULL)))'),
+        check('CHECK ((num_nonnulls(porteur_a, porteur_b) = 1))'),
+      ],
+    });
+    const u = "CAST('00000000-0000-4000-8000-000000000001' AS uuid)";
+    // Le candidat que les deux CHECK admettent : porteur_a ET sa grille, sans porteur_b.
+    expect(s.sql).toContain(`SELECT ${u}, ${u}, NULL, ${u} WHERE`);
+  });
 });

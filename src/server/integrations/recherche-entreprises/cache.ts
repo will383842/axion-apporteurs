@@ -32,7 +32,12 @@ export interface CacheDeProjections {
   ecrire(cle: string, valeur: Projection | FicheEntreprise, ttlSecondes: number): Promise<void>;
 }
 
-const ESPACE = 'entreprise:v1';
+/**
+ * La VERSION de l'espace de clés suit le format de ce qui est mis en cache : DM-07 a changé le format
+ * de l'empreinte des dirigeants, que portent les fiches et les projections — v2, pour qu'aucune
+ * empreinte à l'ancien format ne survive dans le cache (24 h).
+ */
+const ESPACE = 'entreprise:v2';
 
 /** La clé d'une recherche : l'empreinte de la saisie normalisée, jamais la saisie en clair. */
 export function cleDeRecherche(q: string): string {

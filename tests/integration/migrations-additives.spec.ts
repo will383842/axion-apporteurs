@@ -67,10 +67,35 @@ function porteD(...args: string[]): { code: number | null; sortie: string } {
   return { code: r.status, sortie: `${r.stdout}${r.stderr}` };
 }
 
+/**
+ * La version N−1, calculée comme la porte (`scripts/gates/gate-d.sh`, l. 65-70) : la base de fusion
+ * avec `origin/main`, ou `HEAD^1` quand cette base est HEAD lui-même (exécution sur main). Le parent
+ * du dernier commit qui touche `prisma/migrations` était faux dès qu'une PR RENOMME une migration :
+ * N−1 portait déjà la migration sous son ancien nom, et la copie la rejouait sous le nouveau (42710).
+ * Deux replis, et aucun n'affaiblit le témoin : sans `origin/main`, l'ancienne règle ; et quand N−1
+ * porte les MÊMES migrations que HEAD (une PR qui n'en touche aucune), l'ancienne règle aussi, pour
+ * que la copie migrée joue toujours au moins une migration au lieu de passer à vide.
+ */
+function versionPrecedente(): string {
+  const parDerniereMigration = (): string =>
+    git('rev-parse', `${git('log', '-1', '--format=%H', '--', 'prisma/migrations')}^`);
+  const origine = spawnSync('git', ['rev-parse', '--verify', '-q', 'origin/main'], {
+    cwd: RACINE,
+    encoding: 'utf8',
+  });
+  if (origine.status !== 0) return parDerniereMigration();
+  const fusion = git('merge-base', 'HEAD', 'origin/main');
+  const precedente = fusion === git('rev-parse', 'HEAD') ? git('rev-parse', 'HEAD^1') : fusion;
+  const memesMigrations =
+    spawnSync('git', ['diff', '--quiet', precedente, 'HEAD', '--', 'prisma/migrations'], {
+      cwd: RACINE,
+    }).status === 0;
+  return memesMigrations ? parDerniereMigration() : precedente;
+}
+
 beforeAll(async () => {
   base = await demarrerBase();
-  // La version précédente : le parent du dernier commit qui a touché aux migrations.
-  sha = git('rev-parse', `${git('log', '-1', '--format=%H', '--', 'prisma/migrations')}^`);
+  sha = versionPrecedente();
   arbre = mkdtempSync(join(tmpdir(), 'porte-d-'));
   const archive = join(arbre, 'n-1.tar');
   git('archive', '--format=tar', '-o', archive, sha, 'prisma', 'src');
