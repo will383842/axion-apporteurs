@@ -331,6 +331,9 @@ describe('REQ-QA-030 — le module rechargé : les listes dérivées du schéma,
     const m = await envRecharge();
     expect(m.NOMS_DE_CONFIGURATION).toEqual([
       'DATABASE_URL',
+      // QA-T62 : l'URL du rôle propriétaire, réservée à la migration ; requise en production par
+      // l'entrée de l'image, jamais facultative pour la vue.
+      'DATABASE_MIGRATION_URL',
       'REDIS_URL',
       'NOTIFY_SINK',
       'PARTNERS_ENV',
@@ -361,7 +364,7 @@ describe('REQ-QA-030 — le module rechargé : les listes dérivées du schéma,
     // Douze secrets toujours exigés, lus au schéma : leurs noms ne sont pas retapés ici.
     expect(m.NOMS_DES_SECRETS).toHaveLength(12);
     expect(m.NOMS_DES_SECRETS).toContain(CLE_HEX);
-    expect(m.NOMS_DES_VARIABLES).toHaveLength(26);
+    expect(m.NOMS_DES_VARIABLES).toHaveLength(27);
     expect(m.NOMS_DES_VARIABLES).toEqual([
       ...m.NOMS_DES_SECRETS,
       ...m.NOMS_DES_SECRETS_CONDITIONNELS,

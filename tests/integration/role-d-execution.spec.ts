@@ -3,7 +3,7 @@
  * Le serveur s'exécute sous un rôle de connexion NON superutilisateur, membre de
  * `partners_execution` et JAMAIS de `partners_journal` — en base RÉELLE (QA-T62, REQ-DM-024).
  *
- * Céder la propriété d'`evenements` à `partners_journal` (DM-45) ne protège rien tant que le serveur
+ * Céder la propriété d'`evenements` à `partners_journal` ne protège rien tant que le serveur
  * se connecte en superutilisateur : il pourrait désarmer les déclencheurs du journal. Ce témoin se
  * connecte COMME LE SERVEUR, sous le rôle que `provisionnerRoleDExecution` pose avec l'URL de
  * migration, et constate :
