@@ -1,4 +1,5 @@
 // @req REQ-CPL-009
+// @no-red-first: garde-fou de non-régression, l'ordre aipd:signee puis deploy:coolify est déjà juste sur main ; ses deux copies cassées (étape déplacée, étape retirée) rougissent, nommées
 /**
  * QA-T60, point (1) — aucun dépôt réel sans l'AIPD signée, et c'est l'ORDRE du job qui le garantit
  * (note de la lentille securite sur la vérification de l’AIPD avant déploiement).
