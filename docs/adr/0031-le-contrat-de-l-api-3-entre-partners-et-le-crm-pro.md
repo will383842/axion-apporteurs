@@ -1,4 +1,4 @@
-# partners/ADR-0030 — Le contrat de l'API 3 : Partners enregistre et décide, le CRM Pro demande et affiche
+# partners/ADR-0031 — Le contrat de l'API 3 : Partners enregistre et décide, le CRM Pro demande et affiche
 
 | Champ | Valeur |
 | --- | --- |
