@@ -13,7 +13,7 @@
  *      `mon-contrat.html`, et chacune renvoie à l'autre ;
  *   5. aucun lien `fichier.html#etat` de ces maquettes ne pointe vers un état absent.
  * Chaque règle est une fonction pure, jugée sur le dépôt ET sur un dépôt cassé d'un geste (RM-02).
- * La règle générale des états d'un écran (toutes les maquettes) est celle de GOV-113 ; ce fichier ne
+ * La règle générale des états d'un écran (toutes les maquettes) est celle de la garde `maquettes-validees` ; ce fichier ne
  * garde que le périmètre de UX-P1-45.
  */
 import { describe, it, expect } from 'vitest';
