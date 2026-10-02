@@ -13,11 +13,13 @@
  * Aucune adresse réelle : le domaine est réservé (`.invalid`).
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { randomUUID } from 'node:crypto';
+import { randomBytes, randomUUID } from 'node:crypto';
 import { demarrerBase, type Base } from './harnais';
-import { NOMS_DES_SECRETS } from '../../src/lib/env';
+import { NOMS_DES_SECRETS, kidDe } from '../../src/lib/env';
 import { clesPii, colonnesPii } from '../../src/server/securite/pii';
-import { MODELE_UTILISATEUR_CONSOLE } from '../../prisma/seed/06-console';
+import { tirerJeton } from '../../src/server/auth/lien-magique';
+import { depotDeSessionsConsole, requireRole } from '../../src/server/roles/require-role';
+import { MODELE_UTILISATEUR_CONSOLE, semerSessionConsole } from '../../prisma/seed/06-console';
 
 let base: Base;
 
@@ -132,6 +134,32 @@ describe('REQ-SEC-023 — l’adresse d’un utilisateur de la console, et sa d�
         )
       )
     ).toContain(CONTRAINTE);
+  });
+
+  it('REQ-SEC-023 : un utilisateur désactivé SANS adresse ne se connecte pas — sa session est refusée', async () => {
+    const id = randomUUID();
+    await inserer(id, null, null, DESACTIVE);
+    const secretLien = randomBytes(32).toString('hex');
+    const secretSession = randomBytes(32).toString('hex');
+    const configuration = {
+      lien: { secret: secretLien, kid: kidDe(secretLien) },
+      session: { secret: secretSession, kid: kidDe(secretSession) },
+    };
+    const jetonSession = tirerJeton();
+    await semerSessionConsole(base.prisma, {
+      utilisateurConsoleId: id,
+      jetonLien: tirerJeton(),
+      jetonSession,
+      consommeAt: CREE,
+      ipHash: null,
+      configuration,
+    });
+    const v = await requireRole('action:lever_gel', jetonSession, {
+      maintenant: () => new Date(CREE.getTime() + 60_000),
+      depot: depotDeSessionsConsole(base.prisma),
+      configuration: configuration.session,
+    });
+    expect(v).toEqual({ ok: false, motif: 'desactive' });
   });
 
   it('REQ-SEC-023 : l’unicité de l’empreinte ne vaut que sur les valeurs non nulles', async () => {
