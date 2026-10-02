@@ -8305,7 +8305,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "Cron de purge, condition de la lentille sécurité (rattrapage 52, 2026-10-02), SI le point 13 de la séance de Williams retient l'avis d'A02 sur les coordonnées du siège : le témoin de purge vérifie que `latitudeMicrodeg` et `longitudeMicrodeg` d'une ENTREPRISE INDIVIDUELLE passent à NULL avec la purge du contact (`purge_contact_at`, REQ-DM-031), et que la colonne qui distingue l'entreprise individuelle est bien lue à la purge. Le reste de l'acceptance de cette tâche (phase 3) est à écrire à sa revendication. EXTRACTION (rattrapage 52, décision de la coordination) : la purge PLANIFIÉE du contact d'une attribution libérée ou convertie, et la condition ci-dessus sur l'entreprise individuelle, passent à DM-48 (phase 1, bloquante pour la mise en service) ; DM-20 garde le reste."
+      "acceptance": "Cron de purge, condition de la lentille sécurité (rattrapage 52, 2026-10-02), DÉCISION DE WILLIAMS DU 02/10 (point 13 de la séance : coordonnées du siège d'une entreprise individuelle effacées avec celles du contact, garde anti-score, affichage à la commune) : le témoin de purge vérifie que `latitudeMicrodeg` et `longitudeMicrodeg` d'une ENTREPRISE INDIVIDUELLE passent à NULL avec la purge du contact (`purge_contact_at`, REQ-DM-031), et que la colonne qui distingue l'entreprise individuelle est bien lue à la purge. Le reste de l'acceptance de cette tâche (phase 3) est à écrire à sa revendication. EXTRACTION (rattrapage 52, décision de la coordination) : la purge PLANIFIÉE du contact d'une attribution libérée ou convertie, et la condition ci-dessus sur l'entreprise individuelle, passent à DM-48 (phase 1, bloquante pour la mise en service) ; DM-20 garde le reste."
     },
     {
       "id": "DM-21",
@@ -14587,7 +14587,7 @@
         "REQ-JUR-060"
       ],
       "estimateDays": 0.75,
-      "acceptance": "Source : docs/chantiers/W20-confirmation-par-email.md (décision de Williams du 2026-09-29, session -d7, phase 1). Réalise la part texte de REQ-UX-060, REQ-UX-061 et REQ-JUR-060 (Exigence nouvelle proposée au §3 du plan, à inscrire par la passe gardien-spec puis à ajouter à `reqs` ; les HYP-W20 citées ici ne sont pas encore au §2 de docs/DECISIONS.md, elles entreront dans `hyp` par la même passe.). (1) Tous les textes W20 vivent dans la SSOT de micro-copy, en gabarits à variables (prénom, nom, entreprise, heure) ; aucun texte recopié ailleurs (RM-01). (2) Message avant le bouton, repris mot pour mot de la décision de Williams, sauf la fin proposée « Axion-IA pourra aussi l'appeler. » (question 15 du plan, valeur par défaut confirmée par Williams le 2026-09-29) : il INFORME et ne donne aucune consigne (REQ-JUR-039). (3) Un champ exigé n'est jamais marqué « obligatoire » (mot interdit par REQ-JUR-037) ; seuls les champs facultatifs portent « (facultatif) ». (4) Les valeurs saisies par l'apporteur et reprises dans l'e-mail sont rendues en texte brut, échappées, sans lien (HYP-W20-CONTEXTE). (5) Témoins : la garde lexicale reste verte sur tout texte vu par l'apporteur ; un texte « vous devez confirmer » posé dans le fichier la fait rougir. (6) Amendée le 2026-09-29 (réponse de Williams à la question 2 et exigence d'expérience, docs/chantiers/W20-confirmation-par-email.md §2, §4 et §9) : la SSOT porte aussi les quatre libellés du badge de REQ-UX-062, plus, depuis la correction de sécurité du 2026-09-29 (refus de la lentille securite sur 2340a63, docs/chantiers/W20-confirmation-par-email.md §2, §8 et question 18), le libellé de la demande signalée « En attente de confirmation — Axion-IA va appeler votre contact » (neutre, sans consigne, sans date), l'action « Corriger l'adresse », la phrase d'aide unique « Sans réponse de votre contact, votre dépôt est confirmé 30 jours après la réception de notre e-mail. » (le nombre interpolé depuis CONFIRMATION_TACITE_JOURS, jamais recopié) et le texte de la notification de l'e-mail reparti après correction ; depuis les réponses de Williams du 2026-09-29 vers 20 h (session -d7, questions 18 et 19), le libellé ⚪ « Réservation terminée · l'entreprise est de nouveau disponible » (sans date, sans action, sans phrase d'aide) et le texte de la notification de libération, neutre et sans consigne, proposé : « La réservation de <Entreprise> a pris fin sans confirmation. L'entreprise est de nouveau disponible. », qui ne dit ni la raison, ni la vérification, ni le nombre d'appels ; la date en toutes lettres est formatée par une seule fonction, dans le fuseau de l'apporteur. Garde lexicale verte sur ces textes. AMENDEMENT (vérification V2 (GOV-132, 2026-10-01), A1-12) : `public/**` et `courriels/**` sont en portée `apporteur`, attendue. AMENDEMENT (audit indépendant du plan de la Phase 1 (2026-10-01), écart C15 de la vérification de bout en bout) : réécrit la phrase d'états vides qui promet un gain dès la signature du client (contraire à l'art. 4.2), dans `src/content/micro-copy/espace/etats-vides.ts` et dans la maquette `docs/maquettes/accueil.html`, et transpose `jur:copy-indicative` dans Partners (`src/content/**`, `docs/maquettes/**`), avec un témoin rouge sur cette phrase. AMENDEMENT (rattrapage 44, demande de A07) : le corps de l'e-mail de confirmation (`courriels/confirmation-contact.ts`) IMPORTE `INFORMATION_ARTICLE_14` et `ORDRE_INFORMATION_ARTICLE_14` de JUR-T09, sans les réécrire. NOTE DE A07 (rattrapage 44, relayée par la coordination, 2026-10-01) : le dépliant de l’information de l’art. 14 rend le texte de JUR-T09 (INFORMATION_ARTICLE_14), sans le réécrire ; les formules « la personne que vous avez rencontrée » et « vous proposer un rendez-vous » sont interdites. AMENDEMENT (rattrapage 45) : DÉCISION DE WILLIAMS (2026-10-01 soir, option A, REQ-UX-062 et HYP-W20-BADGE ; séquence hors dépôt `_REPRISE-AXION-APPORTEURS/SEQUENCE-DECISION-BADGE-W20-2026-10-01.md`) : « ok pour ca ▎ 🟡 En attente · confirmée automatiquement le 31 octobre. » Le badge jaune dit « En attente · confirmée automatiquement le <date> » (libellé choisi par Williams), PARTOUT : badge de « Mes entreprises » et carte du dépôt. La phrase d'aide « Sans réponse de votre contact, votre dépôt est confirmé 30 jours après la réception de notre e-mail. » (le nombre lu dans la SSOT), sous 🟡 et sous 🔴, est PROPOSÉE et reste à valider par Williams en séance (point 7 de la séance du 2026-10-02) : elle ne lui a pas été montrée explicitement (note de la lentille exactitude). L'ancien libellé (« réservée pour vous jusqu'au… ») se lisait comme une fin de réservation, à contresens de l'art. 3.2 al. 5. Remarque de Williams, sans décision (même séance) : l'e-mail au contact a le ton d'une prise de contact commerciale d'Axion-IA, pas d'une vérification ; son texte est validé par Williams en séance de maquettes. GARDE-FOUS DE A07, MOT POUR MOT (relayés par la coordination, 2026-10-01) : (1) « La question de l'échange reste EXPLICITE : le \"Oui, nous avons échangé\" confirme l'attribution (art. 3.2), le \"Non\" confirmé est le démenti exprès (art. 3.7) ; habillage permis (\"Pour donner suite, pouvez-vous nous confirmer votre échange avec <Prénom Nom> ?\"), mais aucun bouton ne vaut confirmation sous un autre sens (pas de \"Être rappelé\"). » (2) « Aucun lien ni pièce jointe en plus (REQ-JUR-060) : seuls les deux boutons et l'opposition. » (3) « L'information art. 14 est entière, importée de JUR-T09, sans résumé. » (4) « Ni date du contact (REQ-JUR-040), ni consigne au contact, ni promesse commerciale chiffrée. » TROU LEXICAL (rattrapage 45, relevé par A07) : aucun motif de `MOTIFS` (`scripts/gates/lexique-apporteurs.ts`) ne couvre `src/content/micro-copy/courriels/**` ; les textes envoyés au contact au nom d’Axion-IA (`information-article-14.ts` de JUR-T09, `confirmation-contact.ts` de cette tâche) ne sont jugés par aucune garde lexicale. Cette tâche ajoute le motif `src/content/micro-copy/courriels/**`, en portée « dépôt » au minimum (ces textes ne sont pas lus par l’apporteur), avec sa preuve rouge. CONDITION DE LA LENTILLE SÉCURITÉ (rattrapage 45, relayée par la coordination, 2026-10-02), MOT POUR MOT : « (a) le journal de l'envoi ne porte que version, identifiant et statut, jamais adresse, nom, fonction ni téléphone ; (b) la case de mise en service est tenue par le CODE : un drapeau de mise en service absent ou faux donne un refus nommé de tout envoi réel, avec un témoin ».",
+      "acceptance": "Source : docs/chantiers/W20-confirmation-par-email.md (décision de Williams du 2026-09-29, session -d7, phase 1). Réalise la part texte de REQ-UX-060, REQ-UX-061 et REQ-JUR-060 (Exigence nouvelle proposée au §3 du plan, à inscrire par la passe gardien-spec puis à ajouter à `reqs` ; les HYP-W20 citées ici ne sont pas encore au §2 de docs/DECISIONS.md, elles entreront dans `hyp` par la même passe.). (1) Tous les textes W20 vivent dans la SSOT de micro-copy, en gabarits à variables (prénom, nom, entreprise, heure) ; aucun texte recopié ailleurs (RM-01). (2) Message avant le bouton, repris mot pour mot de la décision de Williams, sauf la fin proposée « Axion-IA pourra aussi l'appeler. » (question 15 du plan, valeur par défaut confirmée par Williams le 2026-09-29) : il INFORME et ne donne aucune consigne (REQ-JUR-039). (3) Un champ exigé n'est jamais marqué « obligatoire » (mot interdit par REQ-JUR-037) ; seuls les champs facultatifs portent « (facultatif) ». (4) Les valeurs saisies par l'apporteur et reprises dans l'e-mail sont rendues en texte brut, échappées, sans lien (HYP-W20-CONTEXTE). (5) Témoins : la garde lexicale reste verte sur tout texte vu par l'apporteur ; un texte « vous devez confirmer » posé dans le fichier la fait rougir. (6) Amendée le 2026-09-29 (réponse de Williams à la question 2 et exigence d'expérience, docs/chantiers/W20-confirmation-par-email.md §2, §4 et §9) : la SSOT porte aussi les quatre libellés du badge de REQ-UX-062, plus, depuis la correction de sécurité du 2026-09-29 (refus de la lentille securite sur 2340a63, docs/chantiers/W20-confirmation-par-email.md §2, §8 et question 18), le libellé de la demande signalée « En attente de confirmation — Axion-IA va appeler votre contact » (neutre, sans consigne, sans date), l'action « Corriger l'adresse », la phrase d'aide unique « Sans réponse de votre contact, votre dépôt est confirmé 30 jours après la réception de notre e-mail. » (le nombre interpolé depuis CONFIRMATION_TACITE_JOURS, jamais recopié) et le texte de la notification de l'e-mail reparti après correction ; depuis les réponses de Williams du 2026-09-29 vers 20 h (session -d7, questions 18 et 19), le libellé ⚪ « Réservation terminée · l'entreprise est de nouveau disponible » (sans date, sans action, sans phrase d'aide) et le texte de la notification de libération, neutre et sans consigne, proposé : « La réservation de <Entreprise> a pris fin sans confirmation. L'entreprise est de nouveau disponible. », qui ne dit ni la raison, ni la vérification, ni le nombre d'appels ; la date en toutes lettres est formatée par une seule fonction, dans le fuseau de l'apporteur. Garde lexicale verte sur ces textes. AMENDEMENT (vérification V2 (GOV-132, 2026-10-01), A1-12) : `public/**` et `courriels/**` sont en portée `apporteur`, attendue. AMENDEMENT (audit indépendant du plan de la Phase 1 (2026-10-01), écart C15 de la vérification de bout en bout) : réécrit la phrase d'états vides qui promet un gain dès la signature du client (contraire à l'art. 4.2), dans `src/content/micro-copy/espace/etats-vides.ts` et dans la maquette `docs/maquettes/accueil.html`, et transpose `jur:copy-indicative` dans Partners (`src/content/**`, `docs/maquettes/**`), avec un témoin rouge sur cette phrase. AMENDEMENT (rattrapage 44, demande de A07) : le corps de l'e-mail de confirmation (`courriels/confirmation-contact.ts`) IMPORTE `INFORMATION_ARTICLE_14` et `ORDRE_INFORMATION_ARTICLE_14` de JUR-T09, sans les réécrire. NOTE DE A07 (rattrapage 44, relayée par la coordination, 2026-10-01) : le dépliant de l’information de l’art. 14 rend le texte de JUR-T09 (INFORMATION_ARTICLE_14), sans le réécrire ; les formules « la personne que vous avez rencontrée » et « vous proposer un rendez-vous » sont interdites. AMENDEMENT (rattrapage 45) : DÉCISION DE WILLIAMS (2026-10-01 soir, option A, REQ-UX-062 et HYP-W20-BADGE ; séquence hors dépôt `_REPRISE-AXION-APPORTEURS/SEQUENCE-DECISION-BADGE-W20-2026-10-01.md`) : « ok pour ca ▎ 🟡 En attente · confirmée automatiquement le 31 octobre. » Le badge jaune dit « En attente · confirmée automatiquement le <date> » (libellé choisi par Williams), PARTOUT : badge de « Mes entreprises » et carte du dépôt. La phrase d'aide « Sans réponse de votre contact, votre dépôt est confirmé 30 jours après la réception de notre e-mail. » (le nombre lu dans la SSOT), sous 🟡 et sous 🔴, est PROPOSÉE et reste à valider par Williams en séance (point 7 de la séance du 2026-10-02) : elle ne lui a pas été montrée explicitement (note de la lentille exactitude). L'ancien libellé (« réservée pour vous jusqu'au… ») se lisait comme une fin de réservation, à contresens de l'art. 3.2 al. 5. Remarque de Williams, sans décision (même séance) : l'e-mail au contact a le ton d'une prise de contact commerciale d'Axion-IA, pas d'une vérification ; son texte est validé par Williams en séance de maquettes. GARDE-FOUS DE A07, MOT POUR MOT (relayés par la coordination, 2026-10-01) : (1) « La question de l'échange reste EXPLICITE : le \"Oui, nous avons échangé\" confirme l'attribution (art. 3.2), le \"Non\" confirmé est le démenti exprès (art. 3.7) ; habillage permis (\"Pour donner suite, pouvez-vous nous confirmer votre échange avec <Prénom Nom> ?\"), mais aucun bouton ne vaut confirmation sous un autre sens (pas de \"Être rappelé\"). » (2) « Aucun lien ni pièce jointe en plus (REQ-JUR-060) : seuls les deux boutons et l'opposition. » (3) « L'information art. 14 est entière, importée de JUR-T09, sans résumé. » (4) « Ni date du contact (REQ-JUR-040), ni consigne au contact, ni promesse commerciale chiffrée. » TROU LEXICAL (rattrapage 45, relevé par A07) : aucun motif de `MOTIFS` (`scripts/gates/lexique-apporteurs.ts`) ne couvre `src/content/micro-copy/courriels/**` ; les textes envoyés au contact au nom d’Axion-IA (`information-article-14.ts` de JUR-T09, `confirmation-contact.ts` de cette tâche) ne sont jugés par aucune garde lexicale. Cette tâche ajoute le motif `src/content/micro-copy/courriels/**`, en portée « dépôt » au minimum (ces textes ne sont pas lus par l’apporteur), avec sa preuve rouge. CONDITION DE LA LENTILLE SÉCURITÉ (rattrapage 45, relayée par la coordination, 2026-10-02), MOT POUR MOT : « (a) le journal de l'envoi ne porte que version, identifiant et statut, jamais adresse, nom, fonction ni téléphone ; (b) la case de mise en service est tenue par le CODE : un drapeau de mise en service absent ou faux donne un refus nommé de tout envoi réel, avec un témoin ». LOT OPCO (rattrapage 54 ; D-OPCO-1 par délégation, texte d'A07 du 2026-10-02, conditions de la lentille sécurité) : l'e-mail W20 porte la PRÉSENTATION d'Axion-IA, et il n'y a AUCUN second e-mail. Texte (paramètres entre accolades, aucune valeur en clair) — Objet : « {prenomApporteur} {nomApporteur} nous a parlé de {entreprise} » ; corps : « Bonjour {prenomContact}, {prenomApporteur} {nomApporteur}, apporteur d'affaires indépendant, nous indique avoir échangé avec vous récemment au sujet de {entreprise}, et pense que l'intelligence artificielle pourrait vous faire gagner du temps. Axion-IA aide les entreprises à repérer ce qui peut être automatisé, à le mettre en place et à former leurs équipes. Nos formations peuvent être financées par votre opérateur de compétences, selon votre éligibilité : nous vous accompagnons dans le montage du dossier. Pour donner suite, pouvez-vous nous confirmer cet échange ? [ Oui, nous avons échangé ] [ Non ] Si vous le souhaitez, nous pourrons aussi vous appeler pour en parler. » ; puis le bloc INFORMATION_ARTICLE_14 rendu entier avec LIEN_OPPOSITION ; signature : prénom et nom d'une personne d'Axion-IA, adresse humaine du domaine authentifié. RÈGLES : trois liens et seulement eux (les deux réponses et l'opposition, REQ-JUR-060 ; ni rendez-vous, ni catalogue, ni site) ; financement « peuvent être financées […] selon votre éligibilité », jamais « éligibles » ni « nous nous occupons de tout » (REQ-JUR-024, REQ-CPL-023), sans citer Qualiopi ; « récemment », jamais la date du contact (REQ-JUR-040) ; « apporteur d'affaires indépendant », jamais « partenaire » ; l'appel est PROPOSÉ, jamais annoncé (D-OPCO-2 : la liste d'appels est ciblée). NOM DE L'APPORTEUR (arbitrage A01, accepté par A07 et la lentille sécurité) : prénom ET nom (HYP-W20-IDENTITE-APPORTEUR, contrat art. 3.2 al. 4), LUS du contrat signé à l'envoi, JAMAIS une saisie libre de l'apporteur ; jamais une coordonnée de l'apporteur ; rien avant la signature (SEC-43). TÉMOINS : le nom vient du contrat (une saisie libre différente ne passe pas) ; l'e-mail porte exactement trois liens ; aucune phrase n'annonce un appel.",
       "tests": {
         "REQ-JUR-039": [
           "tests/unit/micro-copy/confirmation-par-courriel.spec.ts"
@@ -15522,7 +15522,7 @@
       "externe": null,
       "estimateDays": 0.6,
       "statut": "a_faire",
-      "acceptance": "DETTE BLOQUANTE POUR LA MISE EN SERVICE, relevee par la lentille A07 juriste sur la PR #242 (JUR-T34), et deja signalee par la lentille securite. La page /confidentialite, lisible sans session, affiche le registre de l article 30 tel quel : les rubriques A completer y montrent la question interne posee a Williams, le prenom Will apparait (a confirmer par Will), et le mot attribution, refuse par le lexique de l espace, y est lu. A LIVRER : (1) la page n affiche jamais une question interne ni un nom de personne ; une rubrique encore A completer s affiche comme en cours de redaction, sans la question ; (2) aucun mot du lexique interdit de l espace n atteint la page, que la garde lexicale lise le texte a l execution ou que le registre soit reformule pour l apporteur ; (3) le choix est ecrit ; (4) TEMOIN rouge d abord : un registre de fixture qui porte une question interne, le prenom Will et le mot attribution produit une page qui n en montre aucun, et le temoin nomme ce qu il a filtre. Aucune mise en service de l espace avant cette tache. Dette apres lancement notee a part : l historique des versions acceptees, et la micro-copie Votre espace s ouvre une fois cette politique acceptee, inexacte tant qu aucune route ne verifie l accord hors connexion. REQ-UX-047 (passe GOV-115, 2026-09-30) : geste principal : DETTE NOMMÉE, geste non encore connu, à écrire à la revendication ; budget : lu dans `BUDGETS_UX` (consultation au plus 3 interactions, saisie au plus 8), mesuré par la fixture QA-T33. la maquette de l'écran est validée dans `docs/maquettes/VALIDATION.md` avant la première ligne de code ; cinq états (REQ-UX-019 amendée).",
+      "acceptance": "DETTE BLOQUANTE POUR LA MISE EN SERVICE, relevee par la lentille A07 juriste sur la PR #242 (JUR-T34), et deja signalee par la lentille securite. La page /confidentialite, lisible sans session, affiche le registre de l article 30 tel quel : les rubriques A completer y montrent la question interne posee a Williams, le prenom Will apparait (a confirmer par Will), et le mot attribution, refuse par le lexique de l espace, y est lu. A LIVRER : (1) la page n affiche jamais une question interne ni un nom de personne ; une rubrique encore A completer s affiche comme en cours de redaction, sans la question ; (2) aucun mot du lexique interdit de l espace n atteint la page, que la garde lexicale lise le texte a l execution ou que le registre soit reformule pour l apporteur ; (3) le choix est ecrit ; (4) TEMOIN rouge d abord : un registre de fixture qui porte une question interne, le prenom Will et le mot attribution produit une page qui n en montre aucun, et le temoin nomme ce qu il a filtre. Aucune mise en service de l espace avant cette tache. Dette apres lancement notee a part : l historique des versions acceptees, et la micro-copie Votre espace s ouvre une fois cette politique acceptee, inexacte tant qu aucune route ne verifie l accord hors connexion. REQ-UX-047 (passe GOV-115, 2026-09-30) : geste principal : DETTE NOMMÉE, geste non encore connu, à écrire à la revendication ; budget : lu dans `BUDGETS_UX` (consultation au plus 3 interactions, saisie au plus 8), mesuré par la fixture QA-T33. la maquette de l'écran est validée dans `docs/maquettes/VALIDATION.md` avant la première ligne de code ; cinq états (REQ-UX-019 amendée). NOTICE (rattrapage 54, texte d'A07, LOT OPCO) : `docs/rgpd/registre-article-30.md`, TRT-APPORTEURS, rubrique « Destinataires », reçoit : « la personne que vous déclarez, qui reçoit vos prénom et nom dans la demande de confirmation, jamais vos coordonnées » (sources : contrat art. 3.2 · HYP-W20-IDENTITE-APPORTEUR) ; la politique la DÉRIVE (`politique.ts`, RM-01), jamais recopiée. A07 relit la fidélité.",
       "tests": {
         "REQ-JUR-025": [
           "tests/unit/juridique/politique-publique-sans-note-interne.spec.ts"
@@ -16376,7 +16376,7 @@
       "externe": null,
       "estimateDays": 0.5,
       "statut": "a_faire",
-      "acceptance": "Réponse de Williams du 2026-09-29 à la question 22 (option A) : les conseillers travaillent dans le CRM Pro, Partners garde le registre et décide. AUCUN CODE. (1) ROUTES, sous `/api/integrations/crm-pro/`, corps et codes de réponse écrits et versionnés : `POST /prises-en-charge` (SIREN, référence du conseiller, clé d'idempotence) répond `acceptee` avec `until`, ou `non_disponible` sans aucun détail (ni mois, ni cause, ni occupant) ; la même clé d'idempotence rend la même réponse ; `GET /prises-en-charge?conseiller=` rend les prises en charge de ce seul conseiller ; l'avis J-15, dans la forme que l'ADR fixe (champ d'échéance de la liste ou route dédiée), produit par UX-P2-13. (2) AUTHENTIFICATION : un jeton de service propre au CRM Pro, distinct de celui de l'API 1, limité à ces routes ; débit limité ; journal de chaque appel ; alerte de volume sur le jeton et sur la Société, agrégée et jamais nominative, active dès l'émission du jeton et sans condition, et alerte d'anomalie par conseiller une fois la condition HYP-W19-CSE remplie (SEC-34, point (4)). Rotation décrite ; le secret ne transite jamais par le dépôt ni une conversation (REQ-INT-031). (3) IDENTITÉ : la référence du conseiller est rattachée à un utilisateur de console `conseiller_salarie` par DM-32, et Partners vérifie à chaque appel que ce conseiller est actif ; le CRM Pro ne désigne jamais un apporteur ni un autre rôle. L'ADR l'écrit comme une HYPOTHÈSE DE CONFIANCE (HYP-W19-IDENTITE-CRM, relecture de la lentille `securite` sur #230 (`830a648`)) : l'identité est dérivée de la session CRM Pro authentifiée du conseiller, jamais saisie ni choisie dans un champ ; Partners vérifie le jeton et le rattachement d'une référence active, pas la personne. L'ADR nomme ce qu'un CRM Pro compromis peut faire (agir au nom de tout conseiller actif) et ce qui le borne : la limite de la Société, fixe et basse (HYP-W19-LIMITES), l'alerte de volume sans condition, le journal, la révocation du jeton. (4) BORNES : toutes appliquées par Partners seul (cycle, délai d'attente, fenêtre du rang 1, limites, délai après un acte d'apporteur, départ, anti-cumul) ; le CRM Pro n'en calcule aucune et ne garde rien qui vaudrait décision. (5) SOURCE : seule une prise en charge enregistrée par Partners (console admin ou API 3) occupe un SIREN ; rien n'est déduit d'un statut CRM ni d'un devis (HYP-W19-SOURCE). Partners indisponible : le CRM Pro l'affiche et n'enregistre rien. (6) EXIGENCES DU RÔLE CRM, listées pour la session CRM Pro, qui les réalise dans son dépôt : rôle « commercial » neuf, sans export, sans suppression, sans accès en masse aux données personnelles, qui ne réutilise pas `operator` ; session de 12 h au plus, expirée après 8 h d'inactivité, reconnexion en au plus 3 gestes ; pas de brouillon persistant, aucune occupation affichée avant la réponse de Partners ; cibles d'au moins 48 px et corps de texte d'au moins 16 px ; vocabulaire de REQ-JUR-044 ; présentation de la notice et de la déclaration de conflit d'intérêts à la première connexion ; durcissement multi-utilisateur. Les valeurs de session, de hors-ligne et d'accessibilité sont celles que le plan W19 tenait en hypothèses avant la question 22. (7) CE QUE L'API 3 NE TRANSPORTE JAMAIS : le nom de rôle du CRM Pro, l'identité ou la population d'un autre occupant, une donnée d'apporteur. (8) Le contrat est validé par Williams et l'ADR accepté AVANT toute ligne de code du CRM Pro ; son gel est signalé sur le ticket #220 ; tout changement ultérieur est une nouvelle version de l'ADR. Fiche `docs/tiers/crm-pro.md` : le CRM Pro comme système appelant, ses données, son jeton. La fiche W19 porte « externe will » : la validation de Williams est une étape de cette acceptance, pas un préalable ; la tâche reste éligible pour produire ce qu'il validera (patron UX-P1-40 ; le schéma lie un externe non nul au statut attente_externe, qui bloquerait le travail). Arbitrage A01 du 2026-09-30. CHEMINS ARRÊTÉS (rattrapage 53, avec A05) : l'ADR `docs/adr/0030-le-contrat-de-l-api-3-entre-partners-et-le-crm-pro.md`, décidée par A02 (Décideur architecte) PUIS validée par Williams (point (8) : contrat validé et ADR acceptée avant tout code du CRM Pro) ; nom « API 3 (CRM Pro) », distinct de la troisième API du contrat axion-ia (ADR-0023). `docs/tiers/README.md` reçoit la ligne du tiers (`fiches-tiers.spec.ts`). `docs/adr/INDEX.md` est une vue (`pnpm adr:index`), sans chemin. `gov:adr` exige des numéros consécutifs : la PR attend la fusion de l'ADR 0029 (#392). Label `role:documentaliste`."
+      "acceptance": "Réponse de Williams du 2026-09-29 à la question 22 (option A) : les conseillers travaillent dans le CRM Pro, Partners garde le registre et décide. AUCUN CODE. (1) ROUTES, sous `/api/integrations/crm-pro/`, corps et codes de réponse écrits et versionnés : `POST /prises-en-charge` (SIREN, référence du conseiller, clé d'idempotence) répond `acceptee` avec `until`, ou `non_disponible` sans aucun détail (ni mois, ni cause, ni occupant) ; la même clé d'idempotence rend la même réponse ; `GET /prises-en-charge?conseiller=` rend les prises en charge de ce seul conseiller ; l'avis J-15, dans la forme que l'ADR fixe (champ d'échéance de la liste ou route dédiée), produit par UX-P2-13. (2) AUTHENTIFICATION : un jeton de service propre au CRM Pro, distinct de celui de l'API 1, limité à ces routes ; débit limité ; journal de chaque appel ; alerte de volume sur le jeton et sur la Société, agrégée et jamais nominative, active dès l'émission du jeton et sans condition, et alerte d'anomalie par conseiller une fois la condition HYP-W19-CSE remplie (SEC-34, point (4)). Rotation décrite ; le secret ne transite jamais par le dépôt ni une conversation (REQ-INT-031). (3) IDENTITÉ : la référence du conseiller est rattachée à un utilisateur de console `conseiller_salarie` par DM-32, et Partners vérifie à chaque appel que ce conseiller est actif ; le CRM Pro ne désigne jamais un apporteur ni un autre rôle. L'ADR l'écrit comme une HYPOTHÈSE DE CONFIANCE (HYP-W19-IDENTITE-CRM, relecture de la lentille `securite` sur #230 (`830a648`)) : l'identité est dérivée de la session CRM Pro authentifiée du conseiller, jamais saisie ni choisie dans un champ ; Partners vérifie le jeton et le rattachement d'une référence active, pas la personne. L'ADR nomme ce qu'un CRM Pro compromis peut faire (agir au nom de tout conseiller actif) et ce qui le borne : la limite de la Société, fixe et basse (HYP-W19-LIMITES), l'alerte de volume sans condition, le journal, la révocation du jeton. (4) BORNES : toutes appliquées par Partners seul (cycle, délai d'attente, fenêtre du rang 1, limites, délai après un acte d'apporteur, départ, anti-cumul) ; le CRM Pro n'en calcule aucune et ne garde rien qui vaudrait décision. (5) SOURCE : seule une prise en charge enregistrée par Partners (console admin ou API 3) occupe un SIREN ; rien n'est déduit d'un statut CRM ni d'un devis (HYP-W19-SOURCE). Partners indisponible : le CRM Pro l'affiche et n'enregistre rien. (6) EXIGENCES DU RÔLE CRM, listées pour la session CRM Pro, qui les réalise dans son dépôt : rôle « commercial » neuf, sans export, sans suppression, sans accès en masse aux données personnelles, qui ne réutilise pas `operator` ; session de 12 h au plus, expirée après 8 h d'inactivité, reconnexion en au plus 3 gestes ; pas de brouillon persistant, aucune occupation affichée avant la réponse de Partners ; cibles d'au moins 48 px et corps de texte d'au moins 16 px ; vocabulaire de REQ-JUR-044 ; présentation de la notice et de la déclaration de conflit d'intérêts à la première connexion ; durcissement multi-utilisateur. Les valeurs de session, de hors-ligne et d'accessibilité sont celles que le plan W19 tenait en hypothèses avant la question 22. (7) CE QUE L'API 3 NE TRANSPORTE JAMAIS : le nom de rôle du CRM Pro, l'identité ou la population d'un autre occupant, une donnée d'apporteur. (8) Le contrat est validé par Williams et l'ADR accepté AVANT toute ligne de code du CRM Pro ; son gel est signalé sur le ticket #220 ; tout changement ultérieur est une nouvelle version de l'ADR. Fiche `docs/tiers/crm-pro.md` : le CRM Pro comme système appelant, ses données, son jeton. La fiche W19 porte « externe will » : la validation de Williams est une étape de cette acceptance, pas un préalable ; la tâche reste éligible pour produire ce qu'il validera (patron UX-P1-40 ; le schéma lie un externe non nul au statut attente_externe, qui bloquerait le travail). Arbitrage A01 du 2026-09-30. CHEMINS ARRÊTÉS (rattrapage 53, avec A05) : l'ADR `docs/adr/0030-le-contrat-de-l-api-3-entre-partners-et-le-crm-pro.md`, décidée par A02 (Décideur architecte) à valider par Williams (point (8) : contrat validé et ADR acceptée avant tout code du CRM Pro) ; nom « API 3 (CRM Pro) », distinct de la troisième API du contrat axion-ia (ADR-0023). `docs/tiers/README.md` reçoit la ligne du tiers (`fiches-tiers.spec.ts`). `docs/adr/INDEX.md` est une vue (`pnpm adr:index`), sans chemin. `gov:adr` exige des numéros consécutifs : la PR attend la fusion de l'ADR 0029 (#392). Label `role:documentaliste`."
     },
     {
       "id": "GOV-114",
@@ -17499,7 +17499,8 @@
       "paths": [
         "prisma/schema.prisma",
         "prisma/migrations/",
-        "tests/integration/utilisateur-console-desactive.spec.ts"
+        "tests/integration/utilisateur-console-desactive.spec.ts",
+        "tests/integration/utilisateurs-console.spec.ts"
       ],
       "schema": true,
       "sensible": [
@@ -17515,7 +17516,7 @@
       "externe": null,
       "estimateDays": 0.5,
       "statut": "a_faire",
-      "acceptance": "Vérification V2 (GOV-132, écart B-04) : l'adresse d'un utilisateur de console désactivé ne peut pas être effacée aujourd'hui, `email_chiffre` étant obligatoire. (1) `utilisateurs_console.email_chiffre` ET `email_hash` deviennent nullables, sous le même CHECK de désactivation ; l'unicité de `email_hash` reste sur les valeurs non nulles (audit du plan de la Phase 1, écart B-04). (2) HYP-A02-RETENTION est amendée au registre des décisions par le lot dédié (durée de conservation de l'adresse après désactivation). (3) TÉMOINS rouges d'abord : un utilisateur actif sans adresse est refusé par la base ; un utilisateur désactivé sans adresse est admis. Relecture de la lentille `schema`."
+      "acceptance": "Vérification V2 (GOV-132, écart B-04) : l'adresse d'un utilisateur de console désactivé ne peut pas être effacée aujourd'hui, `email_chiffre` étant obligatoire. (1) `utilisateurs_console.email_chiffre` ET `email_hash` deviennent nullables, sous le même CHECK de désactivation ; l'unicité de `email_hash` reste sur les valeurs non nulles (audit du plan de la Phase 1, écart B-04). (2) HYP-A02-RETENTION est amendée au registre des décisions par le lot dédié (durée de conservation de l'adresse après désactivation). (3) TÉMOINS rouges d'abord : un utilisateur actif sans adresse est refusé par la base ; un utilisateur désactivé sans adresse est admis. Relecture de la lentille `schema`. CHEMIN (rattrapage 54, mesure d'A05) : `tests/integration/utilisateurs-console.spec.ts` (l. 117) passe `emailChiffre` à `decryptPii` : la colonne devenue nullable change le type Prisma (`Buffer | null`) ; le correctif est une assertion non nulle avec un commentaire qui cite le CHECK `utilisateurs_console_adresse_si_actif` (un utilisateur actif a toujours son adresse). Migration `20261002000500_utilisateurs_console_adresse_effacable`, après celles de DM-07 et de #392."
     },
     {
       "id": "GOV-133",
@@ -19392,7 +19393,7 @@
       "externe": null,
       "estimateDays": 0.75,
       "statut": "a_faire",
-      "acceptance": "Extraite de DM-20 (phase 3) par décision de la coordination du 2026-10-02 sous délégation, comme condition RGPD de la mise en service, et non choix d'affaires : les attributions et les coordonnées du contact d'un tiers naissent en phase 1 (DM-07), et sans cette tâche aucune purge ne les toucherait avant la phase 3. BLOQUANTE pour la mise en service (case au runbook, label `role:documentaliste`). Forme relue par A02 (2026-10-02). (1) Une tâche planifiée, inscrite au lanceur (GOV-137, `inscriptions.ts`, clé du registre des tâches), SÉLECTIONNE les attributions où `purge_contact_at` <= maintenant ET `contact_purge_at` IS NULL, remet à NULL les colonnes chiffrées et les empreintes du contact (nom, prénom, e-mail, téléphone, contexte, fonction) ainsi que `lien_interet_precision_chiffre` (`lien_interet_declare` reste), pose `contact_purge_at`, et écrit l'événement de journal `attribution_contact_purge` (`{ purgeAt, acteur: { par: 'systeme' } }`) dans la même transaction, par un UPDATE ordinaire (`attributions` n'est pas en ajout seul). (2) Le calcul de l'échéance `purge_contact_at` appartient à la transition (DM-08) : libérée (états `invalidee`, `perdue`, `expiree`, `perimee`) + `CONTACT_PURGE_APRES_LIBERATION_JOURS`, convertie : dernier contact + `CONTACT_PURGE_CONVERTIE_APRES_DERNIER_CONTACT_JOURS`. Tant que DM-08 n'est pas livrée, DM-48 calcule l'échéance à la volée, et le dit dans sa PR. (3) Les deux constantes vivent dans `src/domain/seuils/retention.ts` (ADR-0022 §12) sous HYP-RGPD-RETENTION, valeurs PROVISOIRES à confirmer par Williams, avec `source` et `verifieLe` ; jamais un littéral ailleurs. (4) Idempotente, lue sur `contact_purge_at` : une attribution déjà purgée n'est ni réécrite ni rejournalisée ; un passage tué reprend sans double événement. (5) CONDITIONNEL au point 13 de la séance : si l'avis d'A02 est retenu, `latitudeMicrodeg` et `longitudeMicrodeg` d'une ENTREPRISE INDIVIDUELLE passent à NULL avec la purge du contact ; TÉMOIN À DEUX FACES (lentille sécurité) : entreprise individuelle → coordonnées à NULL ; personne morale → coordonnées GARDÉES ; la forme est lue depuis `nature_juridique`. (6) TÉMOINS rouges d'abord : sous l'échéance, rien ; au-delà, purge et un seul événement ; une attribution occupante n'est jamais purgée ; un second passage ne change rien ; le journal ne porte aucune donnée personnelle. DM-20 garde le reste (export article 15, purge des journaux, effacement des tiers à la demande, registre) en phase 3. Auteur : A05, après DM-07. SOUS-MODULE DE LA SSOT (rattrapage 53, condition d'A02) : `src/domain/seuils/retention.ts` est un SOUS-MODULE de la SSOT, chaque durée sous la forme `Seuil` (valeur, unité, source, renvois, `verifieLe`) sous HYP-RGPD-RETENTION ; `SEUILS` de `src/domain/seuils/ssot.ts` les ÉTALE (`...DUREES_DE_RETENTION`), l'accès reste unique (`SEUILS.X`) et la garde `seuils-ssot` les juge. DM-48 DÉPLACE `CANDIDATURE_NON_TRAITEE_MINIMISEE_APRES_JOURS` (INT-T56) dans `retention.ts`, nom et accès inchangés. TÉMOIN : chaque clé de `retention.ts` est dans `SEUILS`, et aucune clé n'est définie aux deux endroits. `scripts/gates/seuils-ssot.ts` n'entre aux chemins que si A05 mesure que la garde lit `ssot.ts` comme un texte.",
+      "acceptance": "Extraite de DM-20 (phase 3) par décision de la coordination du 2026-10-02 sous délégation, comme condition RGPD de la mise en service, et non choix d'affaires : les attributions et les coordonnées du contact d'un tiers naissent en phase 1 (DM-07), et sans cette tâche aucune purge ne les toucherait avant la phase 3. BLOQUANTE pour la mise en service (case au runbook, label `role:documentaliste`). Forme relue par A02 (2026-10-02). (1) Une tâche planifiée, inscrite au lanceur (GOV-137, `inscriptions.ts`, clé du registre des tâches), SÉLECTIONNE les attributions où `purge_contact_at` <= maintenant ET `contact_purge_at` IS NULL, remet à NULL les colonnes chiffrées et les empreintes du contact (nom, prénom, e-mail, téléphone, contexte, fonction) ainsi que `lien_interet_precision_chiffre` (`lien_interet_declare` reste), pose `contact_purge_at`, et écrit l'événement de journal `attribution_contact_purge` (`{ purgeAt, acteur: { par: 'systeme' } }`) dans la même transaction, par un UPDATE ordinaire (`attributions` n'est pas en ajout seul). (2) Le calcul de l'échéance `purge_contact_at` appartient à la transition (DM-08) : libérée (états `invalidee`, `perdue`, `expiree`, `perimee`) + `CONTACT_PURGE_APRES_LIBERATION_JOURS`, convertie : dernier contact + `CONTACT_PURGE_CONVERTIE_APRES_DERNIER_CONTACT_JOURS`. DM-48 livre la fonction PURE `echeanceDePurge(statut, dateDeReference)` (durées lues dans `SEUILS`, sous-module `retention.ts`), que DM-08 appellera pour poser `purge_contact_at` ; la tâche planifiée sélectionne sur `purge_contact_at`, jamais sur une échéance recalculée (A02, rattrapage 54). (3) Les deux constantes vivent dans `src/domain/seuils/retention.ts` (ADR-0022 §12) sous HYP-RGPD-RETENTION, valeurs PROVISOIRES à confirmer par Williams, avec `source` et `verifieLe` ; jamais un littéral ailleurs. (4) Idempotente, lue sur `contact_purge_at` : une attribution déjà purgée n'est ni réécrite ni rejournalisée ; un passage tué reprend sans double événement. (5) DÉCISION DE WILLIAMS DU 02/10 (point 13) : `latitudeMicrodeg` et `longitudeMicrodeg` d'une ENTREPRISE INDIVIDUELLE passent à NULL avec la purge du contact ; TÉMOIN À DEUX FACES (lentille sécurité) : entreprise individuelle → coordonnées à NULL ; personne morale → coordonnées GARDÉES ; la forme est jugée par une fonction ou une constante NOMMÉE, lue depuis `nature_juridique` et sourcée INSEE (catégorie juridique 1). (6) TÉMOINS rouges d'abord : sous l'échéance, rien ; au-delà, purge et un seul événement ; une occupante NON convertie n'est jamais purgée, même à échéance passée (la requête exclut les états occupants hors `convertie`, par une liste DÉRIVÉE de `ETATS_OCCUPANTS`) ; un second passage ne change rien ; le journal ne porte aucune donnée personnelle. DM-20 garde le reste (export article 15, purge des journaux, effacement des tiers à la demande, registre) en phase 3. Auteur : A05, après DM-07. SOUS-MODULE DE LA SSOT (rattrapage 53, condition d'A02) : `src/domain/seuils/retention.ts` est un SOUS-MODULE de la SSOT, chaque durée sous la forme `Seuil` (valeur, unité, source, renvois, `verifieLe`) sous HYP-RGPD-RETENTION ; `SEUILS` de `src/domain/seuils/ssot.ts` les ÉTALE (`...DUREES_DE_RETENTION`), l'accès reste unique (`SEUILS.X`) et la garde `seuils-ssot` les juge. DM-48 DÉPLACE `CANDIDATURE_NON_TRAITEE_MINIMISEE_APRES_JOURS` (INT-T56) dans `retention.ts`, nom et accès inchangés. TÉMOIN : chaque clé de `retention.ts` est dans `SEUILS`, et aucune clé n'est définie aux deux endroits. `scripts/gates/seuils-ssot.ts` n'entre aux chemins que si A05 mesure que la garde lit `ssot.ts` comme un texte.",
       "tests": {
         "REQ-DM-031": [
           "tests/unit/domaine/purge-du-contact.spec.ts",
@@ -19468,6 +19469,528 @@
       "tests": {
         "REQ-GOV-014": [
           "tests/unit/qualite/image-par-empreinte.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "UX-P1-47",
+      "titre": "La case « j'ai informé » au dépôt : une vraie case, une attestation d'information, sa version gardée avec le dépôt",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "espace",
+      "paths": [
+        "docs/maquettes/deposer.html",
+        "docs/maquettes/depot-lien-prive.html",
+        "src/content/micro-copy/espace/case-information-tiers.ts",
+        "tests/unit/micro-copy/case-information-tiers.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "UX-P1-17"
+      ],
+      "reqs": [
+        "REQ-JUR-008",
+        "REQ-UX-001"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "acceptance": "LOT OPCO (rattrapage 54) : cahier OPCO du 2026-10-02 ABSORBÉ par Williams (« MAIS TOUTE UNE 2QUIPE ET HI2RARCHIE EN PLACE POUR METTRE CA EN PLACE SANS risuq eet sans ne rien oublier »), plan relu par A02, A07, la lentille sécurité et la lentille exactitude ; pilote A01. D-OPCO-7. (1) TEXTE validé par Williams (2026-10-02) : « Je confirme avoir informé <Prénom Nom> que je transmets ses coordonnées à Axion-IA. », où <Prénom Nom> est le contact saisi ; il remplace « Cette personne sait qu'Axion-IA va la contacter. » dans `deposer.html` (cinq occurrences et la note de la l. 2996) et dans `depot-lien-prive.html`. (2) NATURE (A07) : une ATTESTATION d'information (contrat art. 7.1, RGPD art. 13), JAMAIS un consentement ; aucun texte ne dit « consent ». (3) FORME (coordination, option A, par délégation) : une VRAIE case, présentée DÉCOCHÉE ; le budget de gestes passe de 8 à 9, écart nommé dans REQ-UX-001. (4) PREUVE (A02) : aucun booléen ni schéma ; la micro-copie porte une VERSION, et le dépôt écrit cette version dans `information_tiers_version` (DM-07). (5) TÉMOIN : le texte et sa version viennent de la SSOT ; une case cochée d'office rougit ; aucune maquette ne garde l'ancien texte. Auteur : A06, après UX-P1-17 (qui porte aussi `deposer.html`). Lentilles : A07 et exactitude.",
+      "tests": {
+        "REQ-JUR-008": [
+          "tests/unit/micro-copy/case-information-tiers.spec.ts"
+        ],
+        "REQ-UX-001": [
+          "tests/unit/micro-copy/case-information-tiers.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "JUR-T47",
+      "titre": "L'avenant de l'art. 4.4 : une commande sous condition suspensive est datée de sa signature, et réputée n'avoir jamais existé si la condition défaille",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "juridique",
+      "paths": [
+        "docs/contrat/CONTRAT-APPORTEUR-V1.md",
+        "tests/unit/contrat/commande-sous-condition.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "JUR-T42"
+      ],
+      "reqs": [
+        "REQ-JUR-061",
+        "REQ-DM-022"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.25,
+      "statut": "a_faire",
+      "acceptance": "LOT OPCO (rattrapage 54) : cahier OPCO du 2026-10-02 ABSORBÉ par Williams (« MAIS TOUTE UNE 2QUIPE ET HI2RARCHIE EN PLACE POUR METTRE CA EN PLACE SANS risuq eet sans ne rien oublier »), plan relu par A02, A07, la lentille sécurité et la lentille exactitude ; pilote A01. D-OPCO-8, avis d'A07 (C. civ. art. 1304, 1304-4, 1304-6). (1) L'art. 4.4 reçoit la phrase d'A07 : « Une commande conclue sous condition suspensive est datée de sa signature ; elle est réputée n'avoir jamais existé si la condition défaille. » ; une condition défaillie vaut annulation au sens de l'art. 3.3 (JUR-T42). (2) La RENONCIATION du client avant la date limite garde la date de la commande ; un accord APRÈS un refus de l'OPCO est une NOUVELLE commande, datée de sa signature, qui peut tomber hors de la durée d'attribution. (3) REQ-DM-022 est amendée pour renvoyer à REQ-JUR-061. (4) Le texte est rédigé par A07 et VALIDÉ PAR WILLIAMS avant tout premier envoi en signature : la tâche peut se coder, la PR attend sa validation. TÉMOIN de gabarit : l'article porte la phrase, et aucune autre clause ne date la commande à la levée de la condition.",
+      "tests": {
+        "REQ-JUR-061": [
+          "tests/unit/contrat/commande-sous-condition.spec.ts"
+        ],
+        "REQ-DM-022": [
+          "tests/unit/contrat/commande-sous-condition.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "DM-49",
+      "titre": "attributions.idcc_saisi : l'IDCC facultatif de quatre chiffres, en clair, sans aucun document",
+      "phase": 2,
+      "repo": "partners",
+      "zone": "domaine",
+      "paths": [
+        "prisma/schema.prisma",
+        "prisma/migrations/",
+        "src/server/acces/for-apporteur.ts",
+        "tests/unit/securite/acces-scope.spec.ts",
+        "tests/integration/idcc-saisi.spec.ts",
+        "docs/rgpd/registre-article-30.md"
+      ],
+      "schema": true,
+      "sensible": [],
+      "deps": [
+        "DM-07"
+      ],
+      "reqs": [
+        "REQ-DM-064"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "acceptance": "LOT OPCO (rattrapage 54) : cahier OPCO du 2026-10-02 ABSORBÉ par Williams (« MAIS TOUTE UNE 2QUIPE ET HI2RARCHIE EN PLACE POUR METTRE CA EN PLACE SANS risuq eet sans ne rien oublier »), plan relu par A02, A07, la lentille sécurité et la lentille exactitude ; pilote A01. D-OPCO-6 ; formes d'A02, acceptées par la lentille sécurité. (1) Colonne ADDITIVE `attributions.idcc_saisi` : `Char(4)` nullable, `CHECK (idcc_saisi ~ '^[0-9]{4}$')`, en TEXTE (les zéros de tête comptent : « 0044 »), en CLAIR (un IDCC désigne la convention collective de l'entreprise, pas une personne) ; posée par DM-49 comme tâche de cadrage (ADR-0022, Conséquences) : DM-07 n'est pas rouvert. (2) Dans `CHAMPS_RENDUS` de l'apporteur (c'est sa saisie). (3) AUCUN champ de document, aucune route de téléversement : jamais de bulletin de paie. (4) Registre de l'article 30 : finalité « orienter le financement », durée de l'attribution. TÉMOINS : « 44 » et « 00A4 » refusés par la base ; rendu à l'apporteur. Auteur : A05, après DM-07. Lentille schema (A02).",
+      "tests": {
+        "REQ-DM-064": [
+          "tests/integration/idcc-saisi.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "UX-P2-16",
+      "titre": "Le formulaire de dépôt accepte un IDCC facultatif, avec une aide qui ne renvoie jamais au bulletin de paie",
+      "phase": 2,
+      "repo": "partners",
+      "zone": "espace",
+      "paths": [
+        "src/components/espace/formulaire-de-depot.tsx",
+        "src/content/micro-copy/espace/champ-idcc.ts",
+        "tests/unit/espace/champ-idcc.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "DM-49",
+        "UX-P1-02"
+      ],
+      "reqs": [
+        "REQ-DM-064"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "acceptance": "LOT OPCO (rattrapage 54) : cahier OPCO du 2026-10-02 ABSORBÉ par Williams (« MAIS TOUTE UNE 2QUIPE ET HI2RARCHIE EN PLACE POUR METTRE CA EN PLACE SANS risuq eet sans ne rien oublier »), plan relu par A02, A07, la lentille sécurité et la lentille exactitude ; pilote A01. D-OPCO-6. (1) Champ FACULTATIF, quatre chiffres, hors du budget de gestes (il ne compte que s'il est rempli). (2) Aide (A07) : « Le code à quatre chiffres de la convention collective de l'entreprise, si votre contact vous l'a indiqué. Facultatif. » ; aucune mention du bulletin de paie, qui serait une méthode suggérée (M07). (3) Une saisie invalide est signalée sans bloquer le dépôt (le champ est vidé avec un message). TÉMOIN : l'aide vient de la SSOT et ne contient ni « bulletin » ni « paie » ; un dépôt sans IDCC passe. Auteur : A06. Lentilles : A07 et exactitude.",
+      "tests": {
+        "REQ-DM-064": [
+          "tests/unit/espace/champ-idcc.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "INT-T58-A",
+      "titre": "axion-ia lit la version de l'API 1 qui porte l'IDCC et la version de l'attestation, avant que Partners ne l'émette",
+      "phase": 2,
+      "repo": "axionia",
+      "zone": "integration",
+      "paths": [
+        "axionia/src/server/partners/client-attributions.ts",
+        "axionia/src/server/partners/__tests__/client-attributions-idcc.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "INT-T07-A"
+      ],
+      "reqs": [
+        "REQ-DM-064"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "acceptance": "LOT OPCO (rattrapage 54) : cahier OPCO du 2026-10-02 ABSORBÉ par Williams (« MAIS TOUTE UNE 2QUIPE ET HI2RARCHIE EN PLACE POUR METTRE CA EN PLACE SANS risuq eet sans ne rien oublier »), plan relu par A02, A07, la lentille sécurité et la lentille exactitude ; pilote A01. LOCKSTEP INVERSÉ (A02) : ici Partners PRODUIT, donc axion-ia sait lire la nouvelle version AVANT que Partners ne l'émette. (1) Le client de l'API 1 accepte l'ancienne et la nouvelle version (`idccSaisi` : chaîne `^[0-9]{4}$` ou null ; `informationTiersVersion` : chaîne), en objets fermés, avec l'empreinte du descripteur recopiée À L'IDENTIQUE et épinglée. (2) Une version INCONNUE est mise en attente et alertée, jamais rejetée (comme `held` de Partners). Auteur : A05.",
+      "tests": {
+        "REQ-DM-064": [
+          "axionia/src/server/partners/__tests__/client-attributions-idcc.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "INT-T58-P",
+      "titre": "L'API 1 rend l'IDCC saisi et la version de l'attestation, dans une nouvelle version fermée du contrat",
+      "phase": 2,
+      "repo": "partners",
+      "zone": "integration",
+      "paths": [
+        "packages/contracts/api.ts",
+        "packages/contracts/contracts.sha256",
+        "src/server/integrations/axionia/attributions-dto.ts",
+        "tests/unit/integration/contrat-api-idcc-hash.spec.ts"
+      ],
+      "schema": true,
+      "sensible": [],
+      "deps": [
+        "DM-49",
+        "INT-T07-P",
+        "INT-T58-A",
+        "UX-P1-47"
+      ],
+      "reqs": [
+        "REQ-DM-064"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "acceptance": "LOT OPCO (rattrapage 54) : cahier OPCO du 2026-10-02 ABSORBÉ par Williams (« MAIS TOUTE UNE 2QUIPE ET HI2RARCHIE EN PLACE POUR METTRE CA EN PLACE SANS risuq eet sans ne rien oublier »), plan relu par A02, A07, la lentille sécurité et la lentille exactitude ; pilote A01. Formes d'A02. (1) Changement ADDITIF : `idccSaisi` et `informationTiersVersion` entrent dans une NOUVELLE version de schéma de la réponse de l'API 1, objets fermés, empreinte épinglée des deux côtés (patron contrat-hash, ADR-0008). (2) Partners n'émet la nouvelle version qu'APRÈS la fusion d'INT-T58-A (dep). Auteur : A05. Lentille schema (A02).",
+      "tests": {
+        "REQ-DM-064": [
+          "tests/unit/integration/contrat-api-idcc-hash.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "INT-T59-P",
+      "titre": "La liste d'appels est lisible par axion-ia : un secret de portée appels:lire, une réponse fermée sans aucune coordonnée du contact",
+      "phase": 2,
+      "repo": "partners",
+      "zone": "integration",
+      "paths": [
+        "src/app/api/integrations/axionia/appels/route.ts",
+        "packages/contracts/appels.ts",
+        "tests/unit/integration/contrat-appels-hash.spec.ts",
+        "tests/integration/appels-lecture.spec.ts",
+        "docs/rgpd/registre-article-30.md"
+      ],
+      "schema": true,
+      "sensible": [],
+      "deps": [
+        "DM-43",
+        "SEC-44"
+      ],
+      "reqs": [
+        "REQ-INT-061"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.75,
+      "statut": "a_faire",
+      "acceptance": "LOT OPCO (rattrapage 54) : cahier OPCO du 2026-10-02 ABSORBÉ par Williams (« MAIS TOUTE UNE 2QUIPE ET HI2RARCHIE EN PLACE POUR METTRE CA EN PLACE SANS risuq eet sans ne rien oublier »), plan relu par A02, A07, la lentille sécurité et la lentille exactitude ; pilote A01. D-OPCO-2 ; arbitrage A01 accepté par A02 et la lentille sécurité. (1) CANAL : secret DISTINCT, portée `appels:lire`, son `kid` ; même juge que l'API entrante (HMAC horodaté, allowlist SEC-44) ; temps constant ; 404 indistinct ; compteur à son nom (`surPanne: refuser`) ; débit après l'authentification ; pagination keyset. (2) RÉPONSE FERMÉE `{ reference, siren, raisonSociale, entrepriseIndividuelle, aAppelerDepuis }` : `reference` = l'uuid de l'attribution, qui sert au lien de la console (A02) ; `entrepriseIndividuelle` dérivé de la nature juridique, catégorie 1 (sécurité) ; RIEN d'autre (ni prénom, ni nom, ni téléphone, ni e-mail, ni apporteur, ni IDCC). (3) FILTRE EN BASE : une attribution en opposition ou au contact purgé (`contact_purge_at` non nul) n'y figure JAMAIS. (4) Volume borné ; chaque lecture journalisée (horodatage, nombre de lignes, jamais une donnée). (5) Registre art. 30 : axion-ia destinataire de données d'ENTREPRISE, finalité « rappel d'appel » ; le SIREN, finalité « rapprochement ». TÉMOINS : réponse à champs exacts (un champ de plus rougit) ; opposition et purge absentes ; mauvais secret, mauvaise portée et IP hors liste → 404 indistinct. Auteur : A05. Lentilles schema (A02) et sécurité.",
+      "tests": {
+        "REQ-INT-061": [
+          "tests/integration/appels-lecture.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "UX-P2-17",
+      "titre": "Console : l'IDCC saisi et l'OPCO probable rendu par axion-ia, en lecture seule, toujours marqués « probable » tant qu'ils ne sont pas confirmés",
+      "phase": 2,
+      "repo": "partners",
+      "zone": "console",
+      "paths": [
+        "src/content/micro-copy/console/idcc-opco.ts",
+        "tests/unit/micro-copy/idcc-opco-probable.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "INT-T58-P",
+        "INT-T61-A"
+      ],
+      "reqs": [
+        "REQ-INT-062"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "acceptance": "LOT OPCO (rattrapage 54) : cahier OPCO du 2026-10-02 ABSORBÉ par Williams (« MAIS TOUTE UNE 2QUIPE ET HI2RARCHIE EN PLACE POUR METTRE CA EN PLACE SANS risuq eet sans ne rien oublier »), plan relu par A02, A07, la lentille sécurité et la lentille exactitude ; pilote A01. Cahier §11 (fiabilité). La fiche de qualification affiche l'IDCC saisi et l'OPCO tel qu'axion-ia le rend, en LECTURE SEULE ; tant que le statut n'est pas `confirme`, le libellé dit « probable ». Aucune modification depuis Partners. Les chemins de l'écran de la console sont arrêtés avec A06 au versement suivant (la console de qualification n'existe pas encore sur main). TÉMOIN : un OPCO non confirmé n'est jamais affiché sans « probable ». Auteur : A06.",
+      "tests": {
+        "REQ-INT-062": [
+          "tests/unit/micro-copy/idcc-opco-probable.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "INT-T60-A",
+      "titre": "axion-ia : la table IDCC → OPCO importée de la source officielle, mise à jour chaque mois, ses changements journalisés",
+      "phase": 2,
+      "repo": "axionia",
+      "zone": "integration",
+      "paths": [
+        "axionia/prisma/schema.prisma",
+        "axionia/src/server/qualiopi/crm/naf-opco.ts",
+        "axionia/src/server/qualiopi/financements/idcc-import.ts",
+        "axionia/src/server/qualiopi/financements/__tests__/idcc-import.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [],
+      "reqs": [
+        "REQ-INT-062"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1,
+      "statut": "a_faire",
+      "acceptance": "LOT OPCO (rattrapage 54) : cahier OPCO du 2026-10-02 ABSORBÉ par Williams (« MAIS TOUTE UNE 2QUIPE ET HI2RARCHIE EN PLACE POUR METTRE CA EN PLACE SANS risuq eet sans ne rien oublier »), plan relu par A02, A07, la lentille sécurité et la lentille exactitude ; pilote A01. Formes d'A02. (1) PRÉALABLE RM-08 : la source officielle de la correspondance IDCC → OPCO est LUE, son URL et sa date écrites ; sans source lisible, la tâche s'arrête et remonte à A01. (2) `Idcc { code Char(4) PK (^[0-9]{4}$), intitule, opco (enum Opco existant), sourceUrl, sourceDate, importedAt }` ; une table À PART des changements (code, ancien OPCO, nouvel OPCO, importedAt), jamais un écrasement silencieux ; import IDEMPOTENT ; tâche planifiée mensuelle. (3) `IDCC_OPCO_MAP` de `naf-opco.ts` (une seule entrée) est remplacée par la lecture de la table ; les intitulés d'OPCO s'alignent sur la source. TÉMOINS : double import sans effet ; un changement d'OPCO est journalisé. Auteur : A05. Lentilles A02 et exactitude.",
+      "tests": {
+        "REQ-INT-062": [
+          "axionia/src/server/qualiopi/financements/__tests__/idcc-import.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "INT-T61-A",
+      "titre": "axion-ia : le contrôle croisé de l'IDCC en neuf cas, un statut fermé, et une confirmation par preuve déclarative sans aucun fichier",
+      "phase": 2,
+      "repo": "axionia",
+      "zone": "integration",
+      "paths": [
+        "axionia/prisma/schema.prisma",
+        "axionia/src/server/qualiopi/financements/idcc-controle.ts",
+        "axionia/src/server/qualiopi/financements/__tests__/idcc-controle.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "INT-T60-A",
+        "INT-T58-A"
+      ],
+      "reqs": [
+        "REQ-INT-062"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.5,
+      "statut": "a_faire",
+      "acceptance": "LOT OPCO (rattrapage 54) : cahier OPCO du 2026-10-02 ABSORBÉ par Williams (« MAIS TOUTE UNE 2QUIPE ET HI2RARCHIE EN PLACE POUR METTRE CA EN PLACE SANS risuq eet sans ne rien oublier »), plan relu par A02, A07, la lentille sécurité et la lentille exactitude ; pilote A01. Cahier §10.1 ; formes d'A02, conditions de la sécurité. (1) Statut en ENUM fermé {non_renseigne, probable, concordant, anomalie, confirme}. (2) Les NEUF cas du cahier (IDCC saisi, `liste_idcc` de l'API Recherche d'entreprises — champ CONFIRMÉ par RM-08 avant le code —, NAF) sont neuf TÉMOINS. (3) `confirme` ⇔ une PREUVE DÉCLARATIVE typée (enum : attestation_entreprise, declaration_opco, …), avec son auteur et sa date (CHECK) ; AUCUN champ de fichier, AUCUNE route de téléversement ; jamais le bulletin de paie (D-OPCO-6). TÉMOINS : aucun téléversement possible ; le journal ne porte aucun contenu. Auteur : A05. Lentilles A02 et sécurité.",
+      "tests": {
+        "REQ-INT-062": [
+          "axionia/src/server/qualiopi/financements/__tests__/idcc-controle.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "INT-T62-A",
+      "titre": "axion-ia : les anomalies d'IDCC dans un tableau de bord, leur résolution motivée, et l'alerte au changement d'OPCO",
+      "phase": 2,
+      "repo": "axionia",
+      "zone": "console",
+      "paths": [
+        "axionia/src/server/qualiopi/financements/idcc-anomalies.ts",
+        "axionia/src/server/qualiopi/financements/__tests__/idcc-anomalies.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "INT-T61-A"
+      ],
+      "reqs": [
+        "REQ-INT-062"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.75,
+      "statut": "a_faire",
+      "acceptance": "LOT OPCO (rattrapage 54) : cahier OPCO du 2026-10-02 ABSORBÉ par Williams (« MAIS TOUTE UNE 2QUIPE ET HI2RARCHIE EN PLACE POUR METTRE CA EN PLACE SANS risuq eet sans ne rien oublier »), plan relu par A02, A07, la lentille sécurité et la lentille exactitude ; pilote A01. Cahier §10.2-10.3. Tableau filtrable des statuts `anomalie` ; résolution : corriger, demander confirmation, ou ignorer AVEC un motif obligatoire ; une alerte quand une mise à jour de la table change l'OPCO d'une entreprise suivie (INT-T60-A). Le nom « anomalie » est propre à axion-ia : il ne se confond pas avec l'`Anomalie` de sincérité de Partners (glossaire). Auteur : A05. Lentille exactitude.",
+      "tests": {
+        "REQ-INT-062": [
+          "axionia/src/server/qualiopi/financements/__tests__/idcc-anomalies.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "INT-T63-A",
+      "titre": "axion-ia : le rappel d'agenda posé sur la liste d'appels de Partners, minimal, sans participant, retiré à la sortie de la liste",
+      "phase": 2,
+      "repo": "axionia",
+      "zone": "integration",
+      "paths": [
+        "axionia/src/server/google-calendar/rappels-partners.ts",
+        "axionia/src/server/google-calendar/__tests__/rappels-partners.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "INT-T59-P",
+        "DM-48"
+      ],
+      "reqs": [
+        "REQ-INT-061"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.75,
+      "statut": "a_faire",
+      "acceptance": "LOT OPCO (rattrapage 54) : cahier OPCO du 2026-10-02 ABSORBÉ par Williams (« MAIS TOUTE UNE 2QUIPE ET HI2RARCHIE EN PLACE POUR METTRE CA EN PLACE SANS risuq eet sans ne rien oublier »), plan relu par A02, A07, la lentille sécurité et la lentille exactitude ; pilote A01. D-OPCO-2 ; conditions de la lentille sécurité. (1) Le compte de service EXISTANT (`google-calendar/auth.ts`, `events.ts`) pose un événement par entrée de la liste lue par INT-T59-P, IDEMPOTENT (clé = `reference`). (2) CONTENU MINIMAL : la raison sociale pour une personne morale, un libellé NEUTRE (« Rappel : entreprise individuelle ») pour une entreprise individuelle, et le lien vers la fiche de la console Partners ; jamais le SIREN, ni un nom de personne, ni l'apporteur, ni l'OPCO probable, ni le statut IDCC. (3) AUCUN participant (le contact n'est jamais invité) ; agenda PRIVÉ. (4) Retrait à la sortie de la liste, à l'opposition et à la purge du contact (DM-48). (5) Google devient destinataire : registre et AIPD écrits AVANT le premier événement réel. TÉMOINS : à deux faces, personne morale (raison sociale au titre) et entreprise individuelle (libellé neutre, aucune trace du nom) ; un événement sans participant ; retrait. Auteur : A05. Lentille sécurité.",
+      "tests": {
+        "REQ-INT-061": [
+          "axionia/src/server/google-calendar/__tests__/rappels-partners.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "INT-T64-A",
+      "titre": "axion-ia : le mode de dépôt de chaque OPCO (par l'OF mandaté ou depuis le compte adhérent)",
+      "phase": 2,
+      "repo": "axionia",
+      "zone": "domaine",
+      "paths": [
+        "axionia/prisma/schema.prisma",
+        "axionia/src/server/qualiopi/financements/opco-referentiel.ts",
+        "axionia/src/server/qualiopi/financements/opco-referentiel.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "INT-T60-A"
+      ],
+      "reqs": [
+        "REQ-INT-062"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.25,
+      "statut": "a_faire",
+      "acceptance": "LOT OPCO (rattrapage 54) : cahier OPCO du 2026-10-02 ABSORBÉ par Williams (« MAIS TOUTE UNE 2QUIPE ET HI2RARCHIE EN PLACE POUR METTRE CA EN PLACE SANS risuq eet sans ne rien oublier »), plan relu par A02, A07, la lentille sécurité et la lentille exactitude ; pilote A01. Cahier §8 chantier 1. Un ENUM `ModeDeDepot { of_mandate, compte_adherent }` sur l'OPCO (A02), jamais un booléen ; la valeur de chaque OPCO est sourcée (RM-08). Auteur : A05.",
+      "tests": {
+        "REQ-INT-062": [
+          "axionia/src/server/qualiopi/financements/opco-referentiel.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "INT-T65-A",
+      "titre": "axion-ia : la convention sous condition suspensive, sa renonciation, sa caducité et le rappel avant la date limite",
+      "phase": 2,
+      "repo": "axionia",
+      "zone": "juridique",
+      "paths": [
+        "axionia/prisma/schema.prisma",
+        "axionia/src/server/qualiopi/documents/templates/convention.tsx",
+        "axionia/src/server/qualiopi/documents/templates/conventions.spec.tsx",
+        "axionia/src/server/qualiopi/financements/condition-suspensive.ts",
+        "axionia/src/server/qualiopi/financements/__tests__/condition-suspensive.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "JUR-T47"
+      ],
+      "reqs": [
+        "REQ-JUR-061"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.5,
+      "statut": "a_faire",
+      "acceptance": "LOT OPCO (rattrapage 54) : cahier OPCO du 2026-10-02 ABSORBÉ par Williams (« MAIS TOUTE UNE 2QUIPE ET HI2RARCHIE EN PLACE POUR METTRE CA EN PLACE SANS risuq eet sans ne rien oublier »), plan relu par A02, A07, la lentille sécurité et la lentille exactitude ; pilote A01. Cahier §6.4 ; avis d'A07 ; formes d'A02. (1) Variante de `convention.tsx` avec la clause de condition suspensive (texte d'A07). (2) `seuilType` enum {pourcentage, montant}, `seuilBps` Int OU `seuilCents` Int (CHECK : exactement un selon le type, aucun flottant), `dateLimite` @db.Date ; états fermés {en_attente, active, caduque}, transitions journalisées. (3) La clause PERMET la RENONCIATION du client avant la date limite (C. civ. 1304-4) : la convention reste, à sa date ; un accord APRÈS un refus de l'OPCO est une NOUVELLE convention, datée de sa signature. (4) Rappel avant la date limite. Auteur : A05. Lentilles A07 et A02.",
+      "tests": {
+        "REQ-JUR-061": [
+          "axionia/src/server/qualiopi/financements/__tests__/condition-suspensive.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "INT-T66-A",
+      "titre": "axion-ia : le mandat de l'entreprise pour agir auprès de son OPCO, spécial, limité, révocable, signé par DocuSeal",
+      "phase": 2,
+      "repo": "axionia",
+      "zone": "juridique",
+      "paths": [
+        "axionia/src/server/qualiopi/documents/templates/mandat-opco.tsx",
+        "axionia/src/server/qualiopi/documents/templates/mandat-opco.spec.tsx"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [],
+      "reqs": [
+        "REQ-JUR-061"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.75,
+      "statut": "a_faire",
+      "acceptance": "LOT OPCO (rattrapage 54) : cahier OPCO du 2026-10-02 ABSORBÉ par Williams (« MAIS TOUTE UNE 2QUIPE ET HI2RARCHIE EN PLACE POUR METTRE CA EN PLACE SANS risuq eet sans ne rien oublier »), plan relu par A02, A07, la lentille sécurité et la lentille exactitude ; pilote A01. Cahier §6.3 ; accord de principe d'A07 ; D-OPCO-5. Le mandat est SPÉCIAL (la demande de prise en charge d'une action désignée), LIMITÉ, RÉVOCABLE, sans AUCUN pouvoir de recevoir des fonds, et distinct de l'annexe 2 du contrat d'apporteur ; signé par DocuSeal (signature simple, ADR 0014 d'axion-ia), archivé ; envoyé avec la convention. A07 relit le gabarit avant fusion. Auteur : A05.",
+      "tests": {
+        "REQ-JUR-061": [
+          "axionia/src/server/qualiopi/documents/templates/mandat-opco.spec.tsx"
+        ]
+      }
+    },
+    {
+      "id": "INT-T67-A",
+      "titre": "axion-ia : le dossier de financement ne se génère pas tant que l'IDCC n'est pas confirmé",
+      "phase": 2,
+      "repo": "axionia",
+      "zone": "domaine",
+      "paths": [
+        "axionia/src/server/qualiopi/financements/blocage-idcc.ts",
+        "axionia/src/server/qualiopi/financements/__tests__/blocage-idcc.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "INT-T61-A"
+      ],
+      "reqs": [
+        "REQ-INT-062"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "acceptance": "LOT OPCO (rattrapage 54) : cahier OPCO du 2026-10-02 ABSORBÉ par Williams (« MAIS TOUTE UNE 2QUIPE ET HI2RARCHIE EN PLACE POUR METTRE CA EN PLACE SANS risuq eet sans ne rien oublier »), plan relu par A02, A07, la lentille sécurité et la lentille exactitude ; pilote A01. Cahier §8 chantier 4. La génération du dossier de financement REFUSE en le nommant tant que le statut IDCC n'est pas `confirme` ; rappel « déposer avant le début de la formation ». TÉMOIN : statut `probable` → refus nommé ; `confirme` → génération. Auteur : A05. Lentille exactitude.",
+      "tests": {
+        "REQ-INT-062": [
+          "axionia/src/server/qualiopi/financements/__tests__/blocage-idcc.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "QA-T66",
+      "titre": "L'exercice de sauvegarde refuse un vidage qui porte plus d'un propriétaire source",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "qualite",
+      "paths": [
+        "scripts/sauvegarde/exercice.ts",
+        "tests/unit/qualite/sauvegarde-proprietaire-unique.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [],
+      "reqs": [
+        "REQ-DM-024"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.25,
+      "statut": "a_faire",
+      "acceptance": "Suite ORPHELINE de DM-45 (fusionnée), signalée par la lentille sécurité, versée sur décision de la coordination. `scripts/sauvegarde/exercice.ts` vérifie qu'il y a au plus UN propriétaire source dans le vidage, sinon il échoue en le NOMMANT. Témoin neuf (et non `sauvegarde-et-exercice.spec.ts`, aux chemins de DM-07 : pas de collision) : un vidage à deux propriétaires rougit, un vidage à un seul passe. Auteur : A05 ou A06.",
+      "tests": {
+        "REQ-DM-024": [
+          "tests/unit/qualite/sauvegarde-proprietaire-unique.spec.ts"
         ]
       }
     }
