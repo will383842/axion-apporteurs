@@ -37,6 +37,8 @@ import { colonnesPii, empreinteRecherche, type ClesPii } from '../../securite/pi
 import { ENTETE_KID_AXIONIA } from '../../../../packages/contracts/api';
 import type { Trousseau } from '../../../lib/env';
 import { ENTETE_HORODATAGE, ENTETE_SIGNATURE, verifierSignatureAxionia } from './reception';
+import { ajouterEvenement } from '../../evenement/journal';
+import { naissanceDApporteur } from '../../../domain/evenement/charges';
 
 /** Les en-têtes de la REQUÊTE signée, tels que le contrat les publie (confrontés par le test). */
 export const ENTETE_HORODATAGE_REQUETE = 'x-partners-timestamp';
@@ -171,7 +173,8 @@ export async function traiterCandidatureRecue(
 
     let resultat: ResultatCandidature = 'rattache';
     if (existant === null) {
-      await tx.apporteur.create({
+      const cree = await tx.apporteur.create({
+        select: { id: true },
         data: {
           statut: 'candidat',
           codeParrainage: genererCodeParrainage(d.aleatoire),
@@ -201,6 +204,15 @@ export async function traiterCandidatureRecue(
             d.cles
           ) as unknown as ColonnesApporteur),
         },
+      });
+      // DM-45 (REQ-DM-024) : la création s'inscrit au journal chaîné, dans CETTE transaction, par
+      // l'écrivain unique : la NAISSANCE, de nul vers `candidat`. Ni nom, ni courriel.
+      await ajouterEvenement(tx, {
+        type: 'apporteur_statut_modifie',
+        agregat: 'apporteur',
+        agregatId: cree.id,
+        survenuAt: d.maintenant(),
+        charge: naissanceDApporteur({ par: 'systeme' }),
       });
       resultat = 'cree';
     }

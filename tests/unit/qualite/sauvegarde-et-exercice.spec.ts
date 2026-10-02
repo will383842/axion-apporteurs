@@ -34,6 +34,9 @@ import { PostgreSqlContainer, type StartedPostgreSqlContainer } from '@testconta
 import { IMAGE_BASE, prismaCli, RACINE } from '../../integration/harnais';
 import {
   exercer,
+  FORME_DE_PROPRIETE,
+  FORME_DES_ROLES,
+  rolesDuVidage,
   tableTemoin,
   jugerFraicheur,
   type Verdict,
@@ -78,6 +81,84 @@ describe('REQ-QA-023 — la table témoin se dérive du schéma', () => {
   it('sur le vrai schéma du dépôt, la dérivation rend une table', () => {
     const t = tableTemoin(readFileSync(join(RACINE, 'prisma/schema.prisma'), 'utf8'));
     expect(t.table.length).toBeGreaterThan(0);
+  });
+});
+
+describe('REQ-QA-023 — les rôles et la propriété nommés par le vidage (DM-45)', () => {
+  const SCHEMA = [
+    'GRANT SELECT,INSERT ON TABLE public.evenements TO partners_execution;',
+    'GRANT USAGE ON SEQUENCE public.evenements_id_seq TO partners_execution;',
+    'GRANT SELECT ON TABLE public.autre TO PUBLIC;',
+    'ALTER TABLE public.evenements OWNER TO partners_journal;',
+    'ALTER SEQUENCE public.evenements_id_seq OWNER TO partners_journal;',
+    'ALTER TABLE public.apporteurs OWNER TO test;',
+    '-- GRANT SELECT ON TABLE t TO commentaire_seul;',
+  ].join('\n');
+
+  it('REQ-QA-023 : les rôles se DÉRIVENT des GRANT et des OWNER TO de la forme partners_* — ni PUBLIC, ni doublon, ni un rôle seulement cité', () => {
+    expect(rolesDuVidage(SCHEMA).roles).toEqual(['partners_execution', 'partners_journal']);
+    expect(rolesDuVidage(SCHEMA).horsForme).toEqual([]);
+    expect(rolesDuVidage(SCHEMA).pieges).toEqual([]);
+  });
+
+  it('REQ-QA-023 : la propriété à REJOUER est celle des rôles de la forme, dans l’ordre du vidage ; le propriétaire de la base source est laissé à --no-owner', () => {
+    expect(rolesDuVidage(SCHEMA).proprietes).toEqual([
+      'ALTER TABLE public.evenements OWNER TO partners_journal;',
+      'ALTER SEQUENCE public.evenements_id_seq OWNER TO partners_journal;',
+    ]);
+  });
+
+  it('REQ-QA-023 : TÉMOIN — un GRANT à un rôle hors de la forme est NOMMÉ, jamais ignoré', () => {
+    const lu = rolesDuVidage(`${SCHEMA}\nGRANT ALL ON TABLE public.x TO "lecteur_rapports";`);
+    expect(lu.horsForme).toEqual(['lecteur_rapports']);
+    expect(FORME_DES_ROLES.test('partners_execution')).toBe(true);
+    expect(FORME_DES_ROLES.test('postgres')).toBe(false);
+  });
+
+  it('REQ-QA-023 : TÉMOIN À DEUX FACES — PUBLIC et le propriétaire source sont exemptés ; tout AUTRE bénéficiaire hors forme échoue, nommé', () => {
+    const source = [
+      'ALTER SCHEMA public OWNER TO proprietaire_source;',
+      'ALTER TABLE public.apporteurs OWNER TO proprietaire_source;',
+      'GRANT ALL ON SCHEMA public TO proprietaire_source;',
+      'GRANT USAGE ON SCHEMA public TO PUBLIC;',
+    ].join('\n');
+    const lu = rolesDuVidage(`${SCHEMA}\n${source}`);
+    expect(lu.horsForme).toEqual([]);
+    expect(lu.roles).not.toContain('proprietaire_source');
+    expect(lu.proprietes.some((p) => p.includes('proprietaire_source'))).toBe(false);
+    expect(
+      rolesDuVidage(`${SCHEMA}\n${source}\nGRANT SELECT ON TABLE public.apporteurs TO intrus;`)
+        .horsForme
+    ).toEqual(['intrus']);
+  });
+
+  it.each([
+    [
+      'deux instructions collées',
+      'ALTER TABLE public.evenements OWNER TO partners_journal; DROP TABLE public.evenements;',
+    ],
+    ['une casse forgée', 'ALTER TABLE public.evenements OWNER TO PARTNERS_JOURNAL;'],
+    ['un rôle hors du filtre', 'ALTER TABLE public.evenements OWNER TO partners_journal2;'],
+    ['un objet inattendu', 'ALTER FUNCTION public.f() OWNER TO partners_journal;'],
+    ['une forme incomplète', 'ALTER TABLE public.evenements OWNER TO partners_journal'],
+  ])(
+    'REQ-QA-023 : TÉMOIN — une propriété piégée (%s) n’est PAS rejouée : elle est comptée, et l’exercice échoue',
+    (_quoi, ligne) => {
+      const lu = rolesDuVidage(`${SCHEMA}
+${ligne}`);
+      expect(lu.pieges).toEqual([ligne]);
+      expect(lu.proprietes).not.toContain(ligne);
+      expect(FORME_DE_PROPRIETE.test(ligne)).toBe(false);
+    }
+  );
+
+  it('REQ-QA-023 : un schéma sans GRANT ni propriété ne nomme aucun rôle', () => {
+    expect(rolesDuVidage('CREATE TABLE public.t (id int);')).toEqual({
+      roles: [],
+      proprietes: [],
+      horsForme: [],
+      pieges: [],
+    });
   });
 });
 
@@ -185,12 +266,36 @@ describe('REQ-QA-023 — TÉMOIN À DEUX FACES sur un vrai Postgres', () => {
     if (dossier) rmSync(dossier, { recursive: true, force: true });
   });
 
-  it('REQ-QA-023 : le vidage réel se restaure, migrations propres, lignes du témoin comptées', async () => {
+  it('REQ-QA-023 : le vidage réel se restaure, migrations propres, lignes du témoin comptées — et le journal garde son propriétaire et ses droits', async () => {
+    const vu: Record<string, string> = {};
     const v = await exercer(
       vidage,
       readFileSync(join(RACINE, 'prisma/schema.prisma'), 'utf8'),
-      CLE
+      CLE,
+      (requete) => {
+        vu.proprietaire = requete(
+          "SELECT tableowner FROM pg_tables WHERE schemaname = 'public' AND tablename = 'evenements'"
+        );
+        vu.insert = requete(
+          "SELECT has_table_privilege('partners_execution', 'evenements', 'INSERT')"
+        );
+        vu.update = requete(
+          "SELECT has_table_privilege('partners_execution', 'evenements', 'UPDATE')"
+        );
+        // Condition de la lentille sécurité : aucune table ni séquence n'appartient au rôle
+        // d'exécution, ni à un rôle LOGIN de Partners — la propriété contournerait les droits.
+        vu.possedeesParLExecution = requete(
+          "SELECT count(*) FROM pg_class c JOIN pg_roles r ON r.oid = c.relowner WHERE c.relkind IN ('r', 'p', 'S') AND (r.rolname = 'partners_execution' OR (r.rolcanlogin AND r.rolname LIKE 'partners\\_%'))"
+        );
+      }
     );
+    // DM-45 : sans la propriété rejouée, `--no-owner` donnait le journal au restaurateur, en silence.
+    expect(vu).toEqual({
+      proprietaire: 'partners_journal',
+      insert: 't',
+      update: 'f',
+      possedeesParLExecution: '0',
+    });
     expect(v.motif).toBeNull();
     expect(v.verdict).toBe('reussi');
     expect(v.temoin.lignes).toBeGreaterThan(0);
