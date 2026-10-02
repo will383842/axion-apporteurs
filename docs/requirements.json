@@ -875,7 +875,8 @@
       "etape": 10,
       "phase": 0,
       "taches": [
-        "INT-T09"
+        "INT-T09",
+        "QA-T68"
       ]
     },
     {
@@ -918,6 +919,7 @@
       "phase": 0,
       "taches": [
         "DM-31",
+        "QA-T68",
         "SEC-03",
         "SEC-10"
       ]
@@ -5809,9 +5811,12 @@
       "remplaceePar": null,
       "module": null,
       "etape": 9,
-      "phase": 2,
+      "phase": 1,
       "taches": [
-        "EXT-T07"
+        "EXT-T07",
+        "JUR-T54",
+        "UX-P2-18",
+        "UX-P2-19"
       ]
     },
     {
@@ -6229,7 +6234,7 @@
     {
       "id": "REQ-JUR-062",
       "domaine": "juridique",
-      "texte": "**Le contrat suit la décision de Williams du 2026-10-02 (option B : les données déclarées vont au CRM Pro dès la déclaration), dans des textes que Williams valide avant tout premier envoi en signature.** Le registre ne porte AUCUN texte de remplacement de l'art. 3.5 al. 4 : la manière de procéder attend Williams (décision de la coordination du 2026-10-02). Ce qui est déjà acquis par délégation : toute commande de l'entreprise attribuée signée pendant l'attribution reste commissionnée, quel que soit celui qui la conclut ; le délai `RESERVE_APRES_ACTE_APPORTEUR_JOURS` est gardé ; la conservation au CRM a sa durée propre, `CRM_DUREE_PROSPECT_ANS`, à compter du dernier échange à l'initiative de la personne, sauf opposition ; aucune émission avant les textes validés.",
+      "texte": "**Le contrat suit la décision de Williams du 2026-10-02 (option B : les données déclarées vont au CRM Pro dès la déclaration), dans des textes que Williams valide avant tout premier envoi en signature.** Williams a autorisé l'écriture du nouvel art. 3.5 al. 4, mot pour mot : « J'autorise l'écriture du nouvel article 3.5 alinéa 4 (option B : le CRM dès la déclaration), avec les deux protections pour l'apporteur. Vas-y. » (rattrapage 61) ; le texte, écrit par A07 avec les deux protections de l'apporteur (aucun démarchage pendant le délai de confirmation ; aucun usage des vérifications faites sans déclaration), reste à valider par Williams après la relecture de la suppléante. Ce qui est déjà acquis par délégation : toute commande de l'entreprise attribuée signée pendant l'attribution reste commissionnée, quel que soit celui qui la conclut ; le délai `RESERVE_APRES_ACTE_APPORTEUR_JOURS` est gardé ; la conservation au CRM a sa durée propre, `CRM_DUREE_PROSPECT_ANS`, à compter du dernier échange à l'initiative de la personne, sauf opposition ; aucune émission avant les textes validés.",
       "source": "Décision de Williams du 2026-10-02 (option B) ; textes d'A07 ; décisions de la coordination par délégation (délai de 30 jours gardé, deux phrases recommandées gardées par défaut)",
       "statut": "active",
       "remplaceePar": null,
