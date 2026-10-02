@@ -147,8 +147,10 @@ describe(
       // Sans journal et plus récent que PLAN-STATE : jugé, il rougirait deux familles.
       const horsArbre = git(process.cwd(), 'commit-tree', 'HEAD^{tree}', '-p', 'HEAD', '-m', 'GOV-141 banc');
       const { code, sortie } = lancer({ number: 9902, oid: horsArbre });
-      expect(sortie).not.toMatch(/pr_fusionnee_sans_journal[^\n]*#9902/);
-      expect(sortie).not.toMatch(/plan_state_perime[^\n]*#9902/);
+      // Les deux messages que la fusion produirait si elle était jugée (familles
+      // `pr_fusionnee_sans_journal` et `plan_state_perime`).
+      expect(sortie).not.toMatch(/PR #9902 [^\n]*aucune entrée/);
+      expect(sortie).not.toMatch(/dernière fusion \(PR #9902\)/);
       expect(sortie).toMatch(/1 fusion\(s\) hors de l’arbre testé/);
       expect(sortie).toContain('#9902');
       expect(code).toBe(0);
@@ -156,7 +158,8 @@ describe(
 
     it('REQ-GOV-023 : CONTRE-TÉMOIN — une fusion ANCÊTRE de l’arbre testé, sans journal, rougit en la nommant', () => {
       const { code, sortie } = lancer({ number: 9903, oid: git(process.cwd(), 'rev-parse', 'HEAD') });
-      expect(sortie).toMatch(/pr_fusionnee_sans_journal[^\n]*#9903/);
+      expect(sortie).toContain('── pr_fusionnee_sans_journal');
+      expect(sortie).toMatch(/PR #9903 [^\n]*aucune entrée/);
       expect(code).not.toBe(0);
     });
 
