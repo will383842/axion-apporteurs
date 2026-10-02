@@ -1,3 +1,4 @@
+// @req REQ-DM-043
 // @req REQ-DM-031
 // @req REQ-SEC-030
 /**
@@ -46,11 +47,21 @@ describe('REQ-SEC-030 — les durées de conservation du contact (HYP-RGPD-RETEN
   it('REQ-SEC-030 : TEST HYP — 90 jours après la libération, 1 095 après le dernier contact d’une convertie', () => {
     expect(SEUILS.CONTACT_PURGE_APRES_LIBERATION_JOURS.valeur).toBe(90);
     expect(SEUILS.CONTACT_PURGE_CONVERTIE_APRES_DERNIER_CONTACT_JOURS.valeur).toBe(1095);
-    for (const s of Object.values(DUREES_DE_RETENTION)) {
+    for (const s of [
+      SEUILS.CONTACT_PURGE_APRES_LIBERATION_JOURS,
+      SEUILS.CONTACT_PURGE_CONVERTIE_APRES_DERNIER_CONTACT_JOURS,
+    ]) {
       expect(s.unite).toBe('jours');
       expect(s.source).toContain('HYP-RGPD-RETENTION');
+    }
+    for (const s of Object.values(DUREES_DE_RETENTION)) {
       expect(s.verifieLe).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     }
+  });
+
+  it('REQ-DM-043 : TEST HYP — le SIREN d’un dépôt refusé s’efface douze mois après le refus (HYP-A02-RETENTION)', () => {
+    expect(SEUILS.DEPOT_REFUSE_SIREN_PURGE_APRES_MOIS).toMatchObject({ valeur: 12, unite: 'mois' });
+    expect(SEUILS.DEPOT_REFUSE_SIREN_PURGE_APRES_MOIS.source).toContain('HYP-A02-RETENTION');
   });
 
   it('REQ-SEC-030 : retention.ts est un sous-module de la SSOT — chaque durée dans SEUILS, aucune définie aux deux endroits', () => {
@@ -133,6 +144,12 @@ describe('REQ-DM-031 — ce que la purge efface', () => {
     // Aucun appel n'est fait : on ne lit que la composition.
     const client: unknown = {};
     expect(typeof inscriptions(client as PrismaClient).contacts_purger).toBe('function');
+  });
+
+  it('REQ-DM-043 : la purge du SIREN des dépôts refusés est une tâche du registre, inscrite au lanceur', () => {
+    expect(TACHES.siren_refuses_purger).toEqual({ req: 'REQ-DM-043' });
+    const client: unknown = {};
+    expect(typeof inscriptions(client as PrismaClient).siren_refuses_purger).toBe('function');
   });
 });
 
