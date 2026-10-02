@@ -21412,7 +21412,8 @@
       "zone": "juridique",
       "paths": [
         "docs/contrat/CONTRAT-APPORTEUR-V1.md",
-        "tests/unit/contrat/art-3-2-aligne-sur-3-7.spec.ts"
+        "tests/unit/contrat/art-3-2-aligne-sur-3-7.spec.ts",
+        ".github/CODEOWNERS"
       ],
       "schema": false,
       "sensible": [],
@@ -21424,7 +21425,7 @@
       "externe": null,
       "estimateDays": 0.25,
       "statut": "a_faire",
-      "acceptance": "Versée au rattrapage 70 sur la revue d'A07 de #501 (2026-10-02) : l'art. 3.2 dit que « L'article 3.7 ne s'applique qu'au cas où l'entreprise indique ne pas connaître l'Apporteur », alors que l'art. 3.7 al. 2 vise l'entreprise qui « indique expressément n'avoir eu aucun échange avec l'Apporteur » ; on peut connaître quelqu'un sans avoir eu d'échange récent avec lui. Texte d'A07, MOT POUR MOT : « …qu'au cas où l'entreprise indique expressément n'avoir eu aucun échange avec l'Apporteur, dans les conditions de l'article 3.7. » Le texte reste une PROPOSITION, non en vigueur, jusqu'à sa validation par Williams en séance ; cette validation est une étape de cette acceptance, pas un préalable. TÉMOIN (écrit par A05, pas par l'autrice) : le gabarit rendu ne porte plus « ne pas connaître l'Apporteur » à l'art. 3.2, et y porte la phrase d'A07. Autrice : A07 ; sa relecture revient à la suppléante (REQ-JUR-036).",
+      "acceptance": "Versée au rattrapage 70 sur la revue d'A07 de #501 (2026-10-02) : l'art. 3.2 dit que « L'article 3.7 ne s'applique qu'au cas où l'entreprise indique ne pas connaître l'Apporteur », alors que l'art. 3.7 al. 2 vise l'entreprise qui « indique expressément n'avoir eu aucun échange avec l'Apporteur » ; on peut connaître quelqu'un sans avoir eu d'échange récent avec lui. Texte d'A07, MOT POUR MOT : « …qu'au cas où l'entreprise indique expressément n'avoir eu aucun échange avec l'Apporteur, dans les conditions de l'article 3.7. » Le texte reste une PROPOSITION, non en vigueur, jusqu'à sa validation par Williams en séance ; cette validation est une étape de cette acceptance, pas un préalable. TÉMOIN (écrit par A05, pas par l'autrice) : le gabarit rendu ne porte plus « ne pas connaître l'Apporteur » à l'art. 3.2, et y porte la phrase d'A07. CODEOWNERS (rattrapage 71, remarque d'A07 vérifiée par la coordination) : `.github/CODEOWNERS` ne déclarait pas le poste A07 sur `docs/contrat/`, où vit le contrat de l'apporteur ; cette tâche y ajoute la ligne `/docs/contrat/` sous le poste A07 (`juriste`), sur la forme des entrées voisines. Autrice : A07 ; sa relecture revient à la suppléante (REQ-JUR-036).",
       "tests": {
         "REQ-JUR-031": [
           "tests/unit/contrat/art-3-2-aligne-sur-3-7.spec.ts"
