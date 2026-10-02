@@ -40,4 +40,12 @@ export const DUREES_DE_RETENTION = {
     renvois: [],
     verifieLe: '2026-10-02',
   },
+  /** DM-53 (REQ-DM-043) : le SIREN d'un dépôt refusé, effacé douze mois après le refus. */
+  DEPOT_REFUSE_SIREN_PURGE_APRES_MOIS: {
+    valeur: 12,
+    unite: 'mois',
+    source: 'REQ-DM-043, HYP-A02-RETENTION (durée de conservation de depots_refuses)',
+    renvois: [],
+    verifieLe: '2026-10-02',
+  },
 } as const satisfies Record<string, Seuil>;

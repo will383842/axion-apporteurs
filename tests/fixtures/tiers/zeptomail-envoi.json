@@ -1,0 +1,34 @@
+{
+  "Source": "Source: documentation officielle de ZeptoMail, Send Email API (https://www.zoho.com/zeptomail/help/api/email-sending.html), lue le 2026-10-02 par A05 pour INT-T57 : exemple de requete reduit aux champs que Partners emploie, reponses 200 et 400 copiees telles quelles. Aucun envoi reel enregistre a ce jour.",
+  "Confronte-a": "docs/tiers/zeptomail.md#2-source-officielle",
+  "requete": {
+    "methode": "POST",
+    "chemin": "/v1.1/email",
+    "entetes": {
+      "authorization": "Zoho-enczapikey {apiKey}",
+      "content-type": "application/json"
+    },
+    "corps": {
+      "from": { "address": "accounts@info.zylker.com" },
+      "to": [{ "email_address": { "address": "rudra.d@zylker.com" } }],
+      "subject": "Account Confirmation",
+      "textbody": "Kindly click on Verify Account to confirm your account.",
+      "client_reference": "order-12345"
+    }
+  },
+  "reponse200": {
+    "data": [
+      {
+        "code": "EM_104",
+        "additional_info": [{ "to": { "email_address": {} } }],
+        "message": "OK"
+      }
+    ],
+    "message": "OK",
+    "request_id": "req-xxxx"
+  },
+  "reponse400": {
+    "data": { "error_code": "TM_3004", "message": "Invalid request" },
+    "message": "error"
+  }
+}

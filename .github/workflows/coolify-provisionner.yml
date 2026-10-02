@@ -59,9 +59,12 @@ jobs:
           PARTNERS_MCP_SHARED_SECRET: ${{ secrets.PARTNERS_MCP_SHARED_SECRET }}
           ZEPTOMAIL_WEBHOOK_SECRET: ${{ secrets.ZEPTOMAIL_WEBHOOK_SECRET }}
           AXIONIA_RELECTURE_SECRET: ${{ secrets.AXIONIA_RELECTURE_SECRET }}
+          # INT-T57 : secret conditionnel, exige au demarrage seulement si l envoi reel est allume.
+          ZEPTOMAIL_SEND_TOKEN: ${{ secrets.ZEPTOMAIL_SEND_TOKEN }}
           LOG_LEVEL: ${{ vars.LOG_LEVEL }}
           SENTRY_DSN: ${{ vars.SENTRY_DSN }}
           PARTNERS_EMAIL_DMARC_VERIFIE: ${{ vars.PARTNERS_EMAIL_DMARC_VERIFIE }}
           PARTNERS_EMAIL_EXPEDITEUR: ${{ vars.PARTNERS_EMAIL_EXPEDITEUR }}
           AXIONIA_BASE_URL: ${{ vars.AXIONIA_BASE_URL }}
+          ZEPTOMAIL_API_URL: ${{ vars.ZEPTOMAIL_API_URL }}
         run: pnpm coolify:provisionner
