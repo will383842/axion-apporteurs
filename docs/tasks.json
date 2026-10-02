@@ -5111,30 +5111,38 @@
       "reqs": [
         "REQ-CPL-004",
         "REQ-CPL-005",
-        "REQ-DM-013",
         "REQ-DM-027",
-        "REQ-ARG-016",
-        "REQ-JUR-029",
-        "REQ-SEC-026"
+        "REQ-JUR-029"
       ],
       "hyp": [
         "HYP-RESIDENCE"
       ],
       "externe": null,
       "estimateDays": 1.5,
-      "statut": "a_faire",
-      "owner": null,
+      "statut": "fusionnee",
+      "owner": "A05",
       "lot": null,
-      "branch": null,
-      "pr": null,
+      "branch": "t/dm-11",
+      "pr": 476,
       "issue": null,
       "attempts": 0,
       "motif": null,
       "acceptance": "se limite aux données KYC et à `PieceKyc.valideJusquAu` ; la règle de vigilance et le blocage du versement sont la propriété de JUR-T16 (`controlesVersement()`). 🔴 **Complétée le 2026-09-03 (synthèse A-10 et M-20).** (1) **`rc_pro` porte `expireAt NOT NULL`** et un rappel d'échéance annuel (contrat art. 6.4 : attestation à la signature puis à chaque échéance, information de toute résiliation de police sous 15 jours) — **sans être ajoutée à `piecesBloquantPaiement()` ni à `controlesVersement()`** : l'art. 5.4 réécrit ferme la liste des pièces pouvant différer un versement. (2) Le KYC recueille et stocke le **statut d'exercice** de l'apporteur (`qualiteExercice`), qui alimente `{{APPORTEUR_QUALITE}}` du gabarit (JUR-T01) et la déclaration de l'art. 23 (« exercer sous un statut régulièrement déclaré l'autorisant à percevoir et à facturer les commissions », « ne faire l'objet ni d'une liquidation judiciaire ni d'une interdiction de gérer », M-29). 🔴 **Complétée le 2026-09-25 (décision du 2026-09-25, par délégation de Will, GOV-099, `HYP-DM06-IBAN`).** L'IBAN vit dans la pièce `rib` du KYC et nulle part ailleurs : chiffré par SEC-08 (`encryptPii` avec AAD égale à l'identifiant de la ligne), recherché par `ibanHash` ; **DM-11 pose, dans SA migration, la colonne de référence de `IdentitesFacturation` (créée par DM-06 sans elle) vers `PieceKyc` de type `rib`, et sa relation** ; la référence ne porte jamais l'IBAN. Tests : une identité de facturation référence une pièce `rib`, et une référence vers une pièce d'un autre type est refusée ; **aucune autre colonne du schéma ne porte un IBAN**, en clair ou chiffré (témoin : une colonne `iban` ajoutée ailleurs fait rougir le test). 🔴 **Complétée le 2026-09-26 (cadrage de l'architecte sur délégation de Will, partners/ADR-0022, GOV-102).** **Recentrée, conflit C1 : DM-11 NE CRÉE PAS `contrats`**, c'est DM-23 qui la crée, avec `grille_contrat_id` NOT NULL dès la naissance (Gate D refuserait l'ajout après coup d'une colonne NOT NULL sans défaut) ; REQ-DM-013, que DM-11 cite encore, est portée par DM-23. DM-11 crée `pieces_kyc` (REQ-DM-027, plus `ibanChiffre`, `ibanHash` et `remplaceeAt`), avec CHECK `(type = 'rib') OR (iban_chiffre IS NULL AND iban_hash IS NULL)`, `expire_at` NOT NULL pour `vigilance` et `rc_pro`, et DEUX index uniques partiels (conflit C6) : au plus une pièce COURANTE par (apporteur, type) `WHERE remplacee_at IS NULL AND statut <> 'a_verifier'`, au plus une EN VÉRIFICATION `WHERE statut = 'a_verifier'` — un changement de RIB crée une pièce `a_verifier` pendant que l'ancienne reste active (REQ-UX-027) ; `identites_facturation.piece_kyc_id` ; sur `apporteurs`, `qualiteExercice` et `professionReglementee`, nullables, dont les valeurs restent à inscrire au glossaire depuis le gabarit (JUR-T01) et REQ-JUR-022 AVANT cette tâche. Journal `piece_kyc_statut_modifie` (agrégat `piece_kyc`, charge `{de, vers: StatutPieceKyc, type: TypePieceKyc, acteurId?}`). AMENDEMENT (Décision D1 de Williams du 2026-10-01, dans la fenêtre de la coordination : après « c'est quoi a ou b ? » (08:04:10Z), la coordination reformule la question à 08:04:19Z — pendant les contrôles et avant la signature, « A : il peut entrer, mais il ne voit que deux pages : « Ma conformité », qui lui montre où en sont ses vérifications […], et « Mon contrat », pour lire le contrat avant de le signer. Il ne voit rien d'autre (ni clients ni commissions) tant qu'il n'a pas signé. » ou « B : il ne peut pas entrer du tout avant d'avoir signé. Il ne reçoit que des courriels. » — et Williams répond « A » à 08:11:11Z (séquence mot pour mot : `_REPRISE-AXION-APPORTEURS/SEQUENCE-DECISIONS-PHASE1-2026-10-01.md`, hors dépôt)) : un apporteur `kyc_en_cours` ou `pret_a_signer` dépose et suit ses pièces depuis « Ma conformité », en ouverture limitée de l'espace (SEC-43). DÉCOUPAGE ET FORMES (rattrapage 55 ; arbitrage A01 sur les avis d'A02, d'A07 et la recommandation d'A05) : (1) `qualiteExercice` et `professionReglementee` SORTENT de DM-11 vers DM-50 : de VRAIS enums entrés avec leurs colonnes dans une migration additive, jamais une colonne texte d'attente (A02) ; DM-11 ne les crée pas. (2) Le RAPPEL d'échéance de rc_pro (point (1)) SORT vers DM-51 (courriel à l'apporteur, apporteur-facing) ; DM-11 pose `expire_at` NULLABLE, avec CHECK `(type NOT IN ('rc_pro','vigilance') OR expire_at IS NOT NULL)` (rattrapage 56, A02 et l’exactitude d’accord) : la date est obligatoire pour `rc_pro` et `vigilance` (REQ-DM-027), et une pièce `rib`, `identite`, `siret` ou `tva` sans échéance n’en porte pas ; TÉMOIN PAR TYPE (rc_pro et vigilance sans date refusés ; rib, identite, siret, tva sans date admis). (3) `identites_facturation.piece_kyc_id` : CLÉ ÉTRANGÈRE COMPOSITE (`piece_kyc_id`, `piece_kyc_type`, `apporteur_id`) vers un UNIQUE (`id`, `type`, `apporteur_id`) de `pieces_kyc` ; noms neutres pour securite:schema-pii, A02 2026-10-02 ; `piece_kyc_type` constant `'rib'` avec son CHECK ; la base refuse le RIB d'un AUTRE apporteur, même par une écriture de la console ; Restrict/Restrict, plutôt qu'un déclencheur (A02 : déclaratif, visible de Prisma) ; témoin : l'identité de A vers la pièce rib de B est refusée (23503, identites_facturation_piece_rib_fkey). (4) « l'IBAN n'existe nulle part ailleurs que dans la pièce rib » (HYP-DM06-IBAN) est servi par le témoin `tests/unit/domaine/kyc-reference-piece-rib.spec.ts` (exactitude) ; `tests/unit/domaine/apporteur-identites-facturation.spec.ts` reste vrai. (5) RESTENT HORS de DM-11, écrits en reste dans sa PR : la purge du fichier de la pièce d'identité (DM-11 pose `fichier_purge_at`), `piecesBloquantPaiement()` (JUR-T16), l'écran « Ma conformité » (UX), le refus d'un SIRET non français (avenant HYP-RESIDENCE non tranché). Migration `20261002001000`. MIGRATION ET CHEMINS (rattrapage 56, mesure d’A05) : la migration tient en DEUX fichiers, `20261002001000_kyc_vocabulaire` (enums et ADD VALUE) puis `20261002001100_pieces_kyc` (la table), patron de DM-07 (une valeur ajoutée à un enum n’est utilisable qu’après la validation de sa transaction). `tests/integration/idor.spec.ts` entre parce que `pieceKyc` rejoint `MODELES_CLOISONNES`, que ce témoin parcourt ; `tests/unit/domaine/journal-charges.spec.ts` parce que le journal compte désormais quatre types, avec `piece_kyc_statut_modifie`. PRÉCISION (rattrapage 56, rectification d'A07) : la variable `{{APPORTEUR_QUALITE}}` sert l'art. 14 du gabarit (loi applicable et juridiction) ; la mention « et la déclaration de l'art. 23 » ci-dessus ne vaut que pour la déclaration du statut, sans cette variable. ORDRE DES MIGRATIONS (rattrapage 62, A02, définitif) : DM-08 `…000900`, DM-11 `20261002001000` et `20261002001100`, UX-P1-10 `…001200`. RGPD (rattrapage 68, demande de la coordination ; #476) : `pieces_kyc` est déclarée au registre art. 30, rattachée à son traitement (ligne rédigée par A07) ; la mention « Hors schéma à ce jour : pièces du dossier de conformité » (l. 39) est retirée (REQ-SEC-030). L'AIPD inscrit trois risques pour `pieces_kyc` : le détournement de RIB (pièce a_verifier, REQ-UX-027, et vérification hors bande), la fuite de pièces d'identité, l'accès interne excessif (A07, 2026-10-02).",
       "tests": {
         "REQ-CPL-005": [
-          "tests/unit/domaine/kyc-reference-piece-rib.spec.ts"
+          "tests/unit/domaine/kyc-reference-piece-rib.spec.ts",
+          "tests/integration/pieces-kyc.spec.ts",
+          "tests/unit/domaine/apporteur-identites-facturation.spec.ts"
+        ],
+        "REQ-DM-027": [
+          "tests/unit/domaine/kyc-reference-piece-rib.spec.ts",
+          "tests/integration/pieces-kyc.spec.ts"
         ]
+      },
+      "attestation": {
+        "pr": 476,
+        "sha": "156909ff3e33a6cda2010b8d8bfb8120d2561365",
+        "fusionneeAt": "2026-10-02T21:03:20Z"
       }
     },
     {
