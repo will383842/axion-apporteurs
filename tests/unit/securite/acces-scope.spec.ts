@@ -874,3 +874,41 @@ describe('REQ-DM-031 — DM-07 : le vocabulaire et les colonnes du dépôt, conf
     expect('empreinte' in CHAMPS_PII.fonctionContact).toBe(false);
   });
 });
+
+describe('REQ-SEC-008 — GOV-111 : la lecture ne transmet que ce qui a été demandé', () => {
+  it('REQ-SEC-008 : sans take, aucune clé take ne part ; avec take, elle part telle quelle', async () => {
+    const { client, appels } = fauxClient();
+    const vue = forApporteur(client, A).jetonDepot;
+    await vue.lister(brut({ where: { revoqueAt: null } }));
+    await vue.lister(brut({ where: { revoqueAt: null }, take: 5 }));
+    expect(appels).toHaveLength(2);
+    const sansTake = appels[0]!.args as Record<string, unknown>;
+    const avecTake = appels[1]!.args as Record<string, unknown>;
+    expect(Object.keys(sansTake).sort()).toEqual(['select', 'where']);
+    expect('take' in sansTake).toBe(false);
+    expect(Object.keys(avecTake).sort()).toEqual(['select', 'take', 'where']);
+    expect(avecTake.take).toBe(5);
+  });
+
+  it('REQ-SEC-008 : DÉFENSE EN PROFONDEUR — une relation classée par erreur parmi les colonnes rendues reste refusée en filtre et en tri', async () => {
+    // La confrontation au schéma interdit ce classement ; on le force ici pour juger la garde
+    // des relations SEULE, sans l'appui de la liste des colonnes rendues.
+    const rendus = CHAMPS_RENDUS.jetonDepot as unknown as string[];
+    rendus.push('apporteur');
+    try {
+      const { client, appels } = fauxClient();
+      const vue = forApporteur(client, A).jetonDepot;
+      expect(await refusDe(vue.lister(brut({ where: { apporteur: { is: {} } } })))).toBe(
+        REFUS.forme
+      );
+      expect(await refusDe(vue.lister(brut({ orderBy: { apporteur: { id: 'asc' } } })))).toBe(
+        REFUS.forme
+      );
+      expect(await refusDe(vue.compter(brut({ apporteur: {} })))).toBe(REFUS.forme);
+      expect(appels).toEqual([]);
+    } finally {
+      rendus.pop();
+    }
+    expect(CHAMPS_RENDUS.jetonDepot).not.toContain('apporteur');
+  });
+});
