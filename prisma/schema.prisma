@@ -293,13 +293,15 @@ model SessionEspace {
 /// colonnes auteur, traitePar et decidePar des phases 1 à 3. AUCUN mot de passe : il se connecte par
 /// le même lien magique que l'apporteur (partners/ADR-0004 §1). Son RÔLE n'est jamais mis en
 /// cookie : `requireRole` le relit à chaque requête, avec `desactiveAt`. Le courriel et le nom sont
-/// des blocs écrits par `colonnesPii` ; l'empreinte du courriel est unique.
+/// des blocs écrits par `colonnesPii` ; l'empreinte du courriel est unique. L'adresse (bloc ET
+/// empreinte, ensemble) ne peut manquer que sur un utilisateur désactivé (DM-44, CHECK
+/// `utilisateurs_console_adresse_si_actif`).
 model UtilisateurConsole {
   id           String      @id @default(uuid()) @db.Uuid
   role         ConsoleRole
   nomChiffre   Bytes?      @map("nom_chiffre")
-  emailChiffre Bytes       @map("email_chiffre")
-  emailHash    String      @unique @map("email_hash") @db.Char(64)
+  emailChiffre Bytes?      @map("email_chiffre")
+  emailHash    String?     @unique @map("email_hash") @db.Char(64)
   creeAt       DateTime    @map("cree_at") @db.Timestamptz(3)
   /// Non nulle : l'utilisateur ne franchit plus la requête suivante, quelle que soit la date posée.
   desactiveAt  DateTime?   @map("desactive_at") @db.Timestamptz(3)
