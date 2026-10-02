@@ -6,6 +6,9 @@
  *         pnpm partners:schema:enums --prove   (un témoin par famille, chacun vu rougir ;
  *                                               contre-témoins verts)
  *
+ * UNE ARRIVÉE N'EST PAS UN MEMBRE : la matrice des transitions (REQ-DM-006) nomme ses états
+ * d'arrivée, et ne les énumère pas (arbitrage d'A02 du 2026-10-02, DM-08).
+ *
  * LE PROBLÈME QU'ELLE TIENT. `docs/GLOSSAIRE.md` fixait le vocabulaire depuis GOV-006 et personne
  * n'allait le lire. `docs/PRESEANCE.md` §2 lui donne pourtant la primauté sur un terme et ses
  * synonymes interdits. Le résultat était mesurable : un paragraphe du glossaire a annoncé pendant
@@ -459,6 +462,23 @@ function jetonsEcma(texte: string, noms: ReadonlySet<string>): JetonDeCode[] {
   const membre = (valeur: string, l: number): void => {
     if (noms.has(valeur)) sortie.push({ type: 'membre', valeur, ligne: l });
   };
+  /** Les délimiteurs ouverts hors gabarit : une arrivée ne se lit que dans un `{}`. */
+  const ouverts: string[] = [];
+  /**
+   * UNE ARRIVÉE N'EST PAS UN MEMBRE (REQ-DM-006, arbitrage d'A02) : dans un `{}`, un état qui n'est
+   * que la VALEUR d'un membre `cle: 'etat'` ou `cle: E.etat`, dont la clé n'est PAS un état, est
+   * l'arrivée d'une ligne de matrice — une fonction, pas un ensemble. Il ne compte pas. Un état en
+   * élément, en clé ou dans une comparaison compte toujours.
+   */
+  const ARRIVEE =
+    /(?:^|[{,\s])([A-Za-z_$][\w$]*|'[^'\n]*'|"[^"\n]*")\s*:\s*(?:[A-Za-z_$][\w$]*\s*\.\s*)?$/;
+  const estArrivee = (debut: number): boolean => {
+    if (ouverts[ouverts.length - 1] !== '{') return false;
+    const m = ARRIVEE.exec(texte.slice(Math.max(0, debut - 200), debut));
+    if (!m) return false;
+    const cle = m[1]!.replace(/^['"]|['"]$/g, '');
+    return !noms.has(cle);
+  };
   const gabarit = (): void => {
     let valeur = '';
     const l = ligne;
@@ -503,6 +523,7 @@ function jetonsEcma(texte: string, noms: ReadonlySet<string>): JetonDeCode[] {
       continue;
     }
     if (c === "'" || c === '"') {
+      const debut = i;
       let valeur = '';
       i++;
       while (i < texte.length && texte[i] !== c && texte[i] !== LF) {
@@ -515,7 +536,7 @@ function jetonsEcma(texte: string, noms: ReadonlySet<string>): JetonDeCode[] {
         i++;
       }
       if (texte[i] === c) i++;
-      membre(valeur, ligne);
+      if (!estArrivee(debut)) membre(valeur, ligne);
       continue;
     }
     if (c === '`') {
@@ -533,6 +554,8 @@ function jetonsEcma(texte: string, noms: ReadonlySet<string>): JetonDeCode[] {
       if (pileGabarits.length > 0 && (c === '{' || c === '}')) {
         pileGabarits[pileGabarits.length - 1]! += c === '{' ? 1 : -1;
       }
+      if (OUVRANTS.has(c)) ouverts.push(c);
+      else ouverts.pop();
       sortie.push({ type: OUVRANTS.has(c) ? 'ouvre' : 'ferme', valeur: c, ligne });
       i++;
       continue;
@@ -540,7 +563,7 @@ function jetonsEcma(texte: string, noms: ReadonlySet<string>): JetonDeCode[] {
     IDENT.lastIndex = i;
     const m = IDENT.exec(texte);
     if (m) {
-      membre(m[0], ligne);
+      if (!estArrivee(i)) membre(m[0], ligne);
       i += m[0].length;
       continue;
     }
@@ -1299,6 +1322,57 @@ const TEMOINS: { famille: string; vue: () => Vue }[] = [
       code: [{ chemin: 'src/x/enum.ts', contenu: 'enum X { provisoire, active }' }],
     }),
   },
+  // DM-08, arbitrage d'A02 : la règle de l'ARRIVÉE ne vaut pas exemption de machine.ts — ce qui y
+  // est un ENSEMBLE d'occupants rougit comme ailleurs.
+  // un tableau de deux occupants, dans la matrice
+  {
+    famille: 'liste_litterale_d_etats',
+    vue: () => ({
+      ...VUE_CONFORME,
+      code: [
+        { chemin: 'src/domain/attribution/machine.ts', contenu: "const x = ['active', 'signee'];" },
+      ],
+    }),
+  },
+  // un objet à CLÉS occupantes, dans la matrice
+  {
+    famille: 'liste_litterale_d_etats',
+    vue: () => ({
+      ...VUE_CONFORME,
+      code: [
+        {
+          chemin: 'src/domain/attribution/machine.ts',
+          contenu: 'const x = { active: 1, signee: 2 };',
+        },
+      ],
+    }),
+  },
+  // une comparaison de deux occupants, dans la matrice
+  {
+    famille: 'liste_litterale_d_etats',
+    vue: () => ({
+      ...VUE_CONFORME,
+      code: [
+        {
+          chemin: 'src/domain/attribution/machine.ts',
+          contenu: "if (s === 'active' || s === 'signee') return;",
+        },
+      ],
+    }),
+  },
+  // un objet dont la clé ET la valeur sont des états, dans la matrice
+  {
+    famille: 'liste_litterale_d_etats',
+    vue: () => ({
+      ...VUE_CONFORME,
+      code: [
+        {
+          chemin: 'src/domain/attribution/machine.ts',
+          contenu: "const x = { active: 'signee', rdv_pris: 'proposition' };",
+        },
+      ],
+    }),
+  },
   // La clause EXACTE des occupants HORS d'une migration : la règle de projection ne vaut qu'en migration.
   {
     famille: 'liste_litterale_d_etats',
@@ -1419,6 +1493,20 @@ const TEMOINS: { famille: string; vue: () => Vue }[] = [
  */
 const CONTRE_TEMOINS: { quoi: string; vue: () => Vue }[] = [
   { quoi: 'la vue conforme', vue: () => VUE_CONFORME },
+  {
+    // DM-08 : une arrivée n'est pas un membre (arbitrage d'A02).
+    quoi: 'les lignes de la matrice des transitions nomment leurs ARRIVÉES, elles ne les énumèrent pas',
+    vue: () => ({
+      ...VUE_CONFORME,
+      code: [
+        {
+          chemin: 'src/domain/attribution/machine.ts',
+          contenu:
+            "const ligneUne = { paiement_recu: 'convertie', figee: 'figee_resiliation', commande_caduque: 'active' };\nconst ligneDeux = { rdv_pris: 'rdv_pris', devis_envoye: 'proposition', devis_signe: 'signee' };\nconst ligneTrois = { devis_signe: 'signee', perdue: 'perdue', figee: 'figee_resiliation' };\nconst T = { convertie: { expiree: 'expiree', figee: E.figee_resiliation, x: E.active } };",
+        },
+      ],
+    }),
+  },
   {
     quoi: 'un schéma en CRLF : CRLF est une fin de ligne, la garde le lit et ne le refuse pas',
     vue: () => ({ ...VUE_CONFORME, schema: VUE_CONFORME.schema.split(LF).join(CR + LF) }),

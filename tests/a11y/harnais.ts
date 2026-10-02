@@ -428,8 +428,9 @@ export function specsSansProjet(cfg: PlaywrightTestConfig, specs: readonly strin
       if (mobiles.length === 0) fautes.push(`${spec} : aucun projet mobile`);
       else if (bureaux.length > 0) fautes.push(`${spec} : pris par un projet de bureau`);
     } else if (relatif.startsWith('console/')) {
-      if (mobiles.length > 0) fautes.push(`${spec} : pris par un projet mobile`);
-      else if (bureaux.length === 0) fautes.push(`${spec} : aucun projet de bureau`);
+      // QA-T33 (REQ-QA-016 amendée W19) : le cadre de console à 375 px tourne AUSSI sur les projets
+      // mobiles ; ce qui reste exigé, c'est le bureau.
+      if (bureaux.length === 0) fautes.push(`${spec} : aucun projet de bureau`);
     } else {
       fautes.push(`${spec} : ni sous espace/ ni sous console/`);
     }
