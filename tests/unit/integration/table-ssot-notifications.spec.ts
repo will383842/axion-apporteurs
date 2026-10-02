@@ -27,6 +27,7 @@ import {
   type Gabarit,
   type LigneDeNotification,
 } from '../../../src/server/notifications/table-ssot';
+import { SEUILS } from '../../../src/domain/seuils/ssot';
 import { TEXTES_DES_NOTIFICATIONS } from '../../../src/content/micro-copy/courriels/notifications';
 import {
   ecrirePreference,
@@ -204,6 +205,21 @@ describe('REQ-UX-016 — le rendu d’une notification : les paramètres de sa c
     expect(r.appel).toBe('Déposer à nouveau cette entreprise');
     expect(parametresDe('lien_magique')).toEqual([]);
     expect(parametresDe('refus_declaration')).toEqual(['categorie', 'entreprise', 'motif']);
+  });
+
+  it('REQ-UX-016 : le délai de réponse vient de la SSOT, posé par l’envoi ; un émetteur qui le fournit est refusé', () => {
+    expect(parametresDe('decision_attribution')).toEqual(['entreprise', 'motif']);
+    const r = rendreLaNotification('decision_attribution', { entreprise: 'E', motif: 'Doublon' });
+    expect(r.corps).toContain(
+      `dans les ${SEUILS.REPONSE_CONTESTATION_JOURS.valeur} ${SEUILS.REPONSE_CONTESTATION_JOURS.unite}.`
+    );
+    expect(() =>
+      rendreLaNotification('decision_attribution', {
+        entreprise: 'E',
+        motif: 'Doublon',
+        delaiReponse: 'deux jours',
+      })
+    ).toThrow(/parametre_en_trop/);
   });
 
   it('REQ-UX-016 : TÉMOINS — une clé hors table, un paramètre manquant, en trop, vide ou porteur d’un saut de ligne : refusés, nommés', () => {

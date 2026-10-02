@@ -25,6 +25,7 @@
  * jamais parce que l'apporteur n'a rien fait.
  */
 import { z } from 'zod';
+import { SEUILS } from '../../domain/seuils/ssot';
 import {
   TEXTES_DES_NOTIFICATIONS,
   type TexteDeNotification,
@@ -122,7 +123,7 @@ export const GABARITS = {
   premier_rang_libere: {
     req: 'REQ-DM-004',
     emetteur: 'DM-08',
-    fondement: 'art. 3.5 al. 2 — quinze jours pour déclarer à nouveau, à compter de l’information',
+    fondement: `art. 3.5 al. 2 — ${SEUILS.FILE_FENETRE_REDECLARATION_JOURS.valeur} jours pour déclarer à nouveau, à compter de l’information`,
     declencheur: 'evenement',
     notificationObligatoire: true,
     faitCourirUnDelai: true,
@@ -148,7 +149,7 @@ export const GABARITS = {
   suspension_declarations: {
     req: 'REQ-SEC-018',
     emetteur: 'SEC-15',
-    fondement: 'art. 3.7 al. 3 — notifiée avec les faits qui la motivent, quinze jours au plus',
+    fondement: `art. 3.7 al. 3 — notifiée avec les faits qui la motivent, ${SEUILS.SUSPENSION_MAX_JOURS.valeur} jours au plus`,
     declencheur: 'evenement',
     notificationObligatoire: true,
     faitCourirUnDelai: true,

@@ -176,6 +176,7 @@ export const PARAMETRES_PERMIS: Readonly<Record<string, readonly string[]>> = {
   'courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › decision_attribution': [
     'entreprise',
     'motif',
+    'delaiReponse',
   ],
   'courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › premier_rang_libere': [
     'entreprise',

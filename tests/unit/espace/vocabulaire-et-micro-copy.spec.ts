@@ -817,7 +817,7 @@ describe('REQ-UX-002 — snapshot des libellés de l’espace, sans date, sans n
       courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › attribution_liberee › appel : Voir Mes entreprises
       courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › decision_attribution › titre : {entreprise} : une décision concerne votre dépôt
       courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › decision_attribution › appel : Contester cette décision par écrit
-      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › decision_attribution › corps : {motif}. Vous pouvez contester cette décision par écrit ; Axion-IA vous répond de façon motivée dans les quinze jours.
+      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › decision_attribution › corps : {motif}. Vous pouvez contester cette décision par écrit ; Axion-IA vous répond de façon motivée dans les {delaiReponse}.
       courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › premier_rang_libere › titre : {entreprise} : vous pouvez la déposer à nouveau jusqu'au {dateLimite}
       courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › premier_rang_libere › appel : Déposer à nouveau cette entreprise
       courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › premier_rang_libere › corps : Votre dépôt était le premier en attente. Sans nouveau dépôt d'ici le {dateLimite}, votre dépôt en attente est effacé.

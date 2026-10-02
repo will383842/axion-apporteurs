@@ -17,6 +17,7 @@
  * `lueAt` n'est lu ici par rien, et aucun délai ne s'y appuie (garde `notifications-lue-at-inerte`).
  */
 import type { StatutCourriel } from '@prisma/client';
+import { SEUILS } from '../../domain/seuils/ssot';
 import { TEXTES_DES_NOTIFICATIONS } from '../../content/micro-copy/courriels/notifications';
 import type { AccesApporteur } from '../acces/for-apporteur';
 import type { DemandeDEnvoi } from '../integrations/zeptomail/emetteur';
@@ -58,13 +59,21 @@ function cleDeLaTable(cle: string): Gabarit {
   return lue.data;
 }
 
-/** Les paramètres que les textes d'une clé nomment, triés. */
+/**
+ * Les paramètres qu'un délai du contrat remplit : posés ICI depuis la SSOT (RM-10), jamais fournis
+ * par l'émetteur, qui ne pourrait que les retaper.
+ */
+export const PARAMETRES_DE_LA_SSOT: Readonly<Record<string, string>> = {
+  delaiReponse: `${SEUILS.REPONSE_CONTESTATION_JOURS.valeur} jours`,
+};
+
+/** Les paramètres que l'ÉMETTEUR fournit pour une clé, triés : ceux des textes, hors SSOT. */
 export function parametresDe(cle: Gabarit): string[] {
   const t = TEXTES_DES_NOTIFICATIONS[cle];
   const noms = [t.titre, t.appel, t.corps ?? ''].flatMap((x) =>
     [...x.matchAll(PARAMETRE)].map((m) => m[1]!)
   );
-  return [...new Set(noms)].sort();
+  return [...new Set(noms)].filter((p) => !Object.hasOwn(PARAMETRES_DE_LA_SSOT, p)).sort();
 }
 
 export function rendreLaNotification(
@@ -83,7 +92,8 @@ export function rendreLaNotification(
     if (typeof v !== 'string' || !VALEUR.test(v))
       throw new NotificationRefusee('parametre_invalide', p);
   }
-  const remplir = (x: string) => x.replace(PARAMETRE, (_, nom: string) => parametres[nom]!);
+  const valeurs: Readonly<Record<string, string>> = { ...parametres, ...PARAMETRES_DE_LA_SSOT };
+  const remplir = (x: string) => x.replace(PARAMETRE, (_, nom: string) => valeurs[nom]!);
   const t = TEXTES_DES_NOTIFICATIONS[c];
   return {
     titre: remplir(t.titre),

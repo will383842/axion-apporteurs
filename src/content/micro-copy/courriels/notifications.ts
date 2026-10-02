@@ -38,8 +38,9 @@ export const TEXTES_DES_NOTIFICATIONS = {
   decision_attribution: {
     titre: '{entreprise} : une décision concerne votre dépôt',
     appel: 'Contester cette décision par écrit',
+    // {delaiReponse} : le délai de la SSOT (contrat art. 3.3 et 5.6), posé par l'envoi, jamais retapé.
     corps:
-      '{motif}. Vous pouvez contester cette décision par écrit ; Axion-IA vous répond de façon motivée dans les quinze jours.',
+      '{motif}. Vous pouvez contester cette décision par écrit ; Axion-IA vous répond de façon motivée dans les {delaiReponse}.',
   },
   premier_rang_libere: {
     titre: "{entreprise} : vous pouvez la déposer à nouveau jusqu'au {dateLimite}",
