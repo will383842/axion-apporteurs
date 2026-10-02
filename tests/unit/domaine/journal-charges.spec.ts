@@ -39,10 +39,13 @@ describe('REQ-DM-024 — les formes admises dans une charge', () => {
 });
 
 describe('REQ-DM-024 — une charge par type, fermée', () => {
-  it('REQ-DM-024 : les types du journal sont exactement ces trois-là', () => {
+  it('REQ-DM-024 : les types du journal sont exactement ceux-ci', () => {
     expect(Object.keys(CHARGES_PAR_TYPE).sort()).toEqual([
       'apporteur_statut_modifie',
       'attribution_contact_purge',
+      'attribution_etat_modifie',
+      'attribution_peremption_suspendue',
+      'attribution_porteur_reaffecte',
       'journal_ouvert',
     ]);
   });

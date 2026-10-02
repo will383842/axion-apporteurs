@@ -217,4 +217,41 @@ describe('REQ-QA-021 — le vidage N−1 est SEMÉ, pas vide', () => {
     // Le candidat que les deux CHECK admettent : porteur_a ET sa grille, sans porteur_b.
     expect(s.sql).toContain(`SELECT ${u}, ${u}, NULL, ${u} WHERE`);
   });
+
+  it('REQ-QA-021 — DM-53 : un CHECK à polarités OPPOSÉES (`(a IS NULL) = (b IS NOT NULL)`) est une EXCLUSION — le semeur remplit l’une sans l’autre', () => {
+    const colonne = (nom: string, type: string, nonNul = false) => ({
+      table: 'refus',
+      colonne: nom,
+      type,
+      nonNul,
+      defaut: false,
+      valeurs: null,
+    });
+    const check = (definition: string) => ({
+      table: 'refus',
+      genre: 'c' as const,
+      definition,
+      colonnes: [],
+      cible: null,
+      colonnesCibles: null,
+    });
+    const s = semis({
+      colonnes: [
+        colonne('id', 'uuid', true),
+        colonne('siren', 'character(9)'),
+        colonne('siren_purge_at', 'timestamp(3) with time zone'),
+      ],
+      contraintes: [
+        check("CHECK ((siren ~ '^[0-9]{9}$'::text))"),
+        check('CHECK (((siren IS NULL) = (siren_purge_at IS NOT NULL)))'),
+      ],
+    });
+    const inserts = s.sql.split('\n').filter((l) => l.startsWith('INSERT'));
+    // Les candidats que le CHECK admet existent : le SIREN SEUL, sans date de purge, et la date seule.
+    // (Les autres candidats, que la base refuse, sont essayés puis écartés : c'est le mécanisme.)
+    expect(inserts.some((l) => /CAST\('\d{9}' AS character\(9\)\), NULL WHERE/.test(l))).toBe(true);
+    expect(
+      inserts.some((l) => /, NULL, CAST\('[^']*' AS timestamp\(3\) with time zone\) WHERE/.test(l))
+    ).toBe(true);
+  });
 });
