@@ -126,7 +126,7 @@ contact est concluante lorsque l'entreprise y confirme l'échange ; lorsqu'elle 
 s'applique. **Lorsque l'entreprise
 ne peut être jointe, ne répond pas, ou ne se prononce pas sur l'existence de l'échange, l'attribution
 demeure provisoire et suit les alinéas 5 et 6. L'article 3.7 ne s'applique qu'au cas où l'entreprise
-indique ne pas connaître l'Apporteur.**
+indique expressément n'avoir eu aucun échange avec l'Apporteur, dans les conditions de l'article 3.7.**
 
 **La demande de confirmation** est adressée par la Société, par courrier électronique, à l'adresse de la
 personne mentionnée dans la déclaration, après l'enregistrement de celle-ci. **Elle désigne l'Apporteur
