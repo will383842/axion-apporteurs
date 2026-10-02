@@ -1081,3 +1081,76 @@ describe('la garde ux-exhaustivite, lancée comme la CI la lance (REQ-UX-002, RE
     expect(ISSUES_DEPOT).toContain(i);
   });
 });
+
+/**
+ * UX-P1-17 (REQ-SEC-042, REQ-UX-002, REQ-JUR-043) — l'occupation par la Société ne se lit pas dans
+ * l'espace. Art. 3.5 amendé : une entreprise peut être déjà prise « par un autre apporteur ou par la
+ * Société ou ses préposés », l'effet est le même, et la Société ne révèle jamais qui l'occupe. Les
+ * textes sont lus comme VALEURS des modules de micro-copie (jamais leurs commentaires) :
+ *   — aucun texte de l'espace ne porte un nom de rôle de console, ni une forme composée du rôle des
+ *     préposés (« conseiller salarié ») ; « salarié » et « conseiller » seuls ne sont pas visés ;
+ *   — aucun texte ne nomme la Société, ni un conseiller, comme occupant d'une entreprise ;
+ *   — `vocabulaire.ts` n'emploie pas le verbe « suivre » pour une entreprise.
+ */
+describe('REQ-SEC-042 REQ-UX-002 REQ-JUR-043 — l’occupant d’une entreprise ne se révèle pas dans l’espace', () => {
+  // `\b` ne voit pas les lettres accentuées (« salarié » finit par une non-lettre pour lui) : la
+  // frontière de mot est écrite sur les LETTRES Unicode.
+  const mot = (corps: string) =>
+    new RegExp(`(?<![\\p{L}\\p{N}_])(?:${corps})(?![\\p{L}\\p{N}_])`, 'iu');
+  const ROLES = mot('admin|qualifieur|comptable|lecteur|conseillers? salariés?|conseiller_salarie');
+  const SOCIETE_OCCUPANTE = mot(
+    '(?:réservée?s?|prises?|occupées?|pris)\\s+(?:par|pour)\\s+(?:la Société|Axion-IA|un conseiller|ses préposés|un préposé)'
+  );
+  const SUIVRE = mot('suivi|suivie|suivis|suivies|suivait|suivaient|suivre');
+
+  /** Toutes les chaînes d'une valeur, à toute profondeur. */
+  const chaines = (v: unknown): string[] =>
+    typeof v === 'string'
+      ? [v]
+      : typeof v === 'object' && v !== null
+        ? Object.values(v).flatMap(chaines)
+        : [];
+
+  function fautesDOccupation(fichier: string, textes: readonly string[]): string[] {
+    const f: string[] = [];
+    for (const t of textes) {
+      if (ROLES.test(t)) f.push(`${fichier} : nom de rôle de console — « ${t} »`);
+      if (SOCIETE_OCCUPANTE.test(t))
+        f.push(`${fichier} : la Société nommée comme occupante — « ${t} »`);
+      if (fichier.endsWith('vocabulaire.ts') && SUIVRE.test(t))
+        f.push(`${fichier} : le verbe « suivre » pour une entreprise — « ${t} »`);
+    }
+    return f;
+  }
+
+  const DOSSIER = 'src/content/micro-copy/espace';
+  const fichiers = readdirSync(DOSSIER).filter((n) => n.endsWith('.ts'));
+
+  it('REQ-SEC-042 REQ-UX-002 REQ-JUR-043 : la micro-copie RÉELLE de l’espace ne révèle ni rôle, ni Société occupante, ni « suivre »', async () => {
+    expect(fichiers.length).toBeGreaterThan(0);
+    const fautes: string[] = [];
+    for (const n of fichiers) {
+      const module: unknown = await import(`../../../${DOSSIER}/${n}`);
+      fautes.push(...fautesDOccupation(`${DOSSIER}/${n}`, chaines(module)));
+    }
+    expect(fautes).toEqual([]);
+  });
+
+  it('REQ-SEC-042 REQ-JUR-043 : TÉMOINS — un rôle, une Société occupante, « suivie » dans le vocabulaire rougissent ; CONTRE-TÉMOINS — « former ses salariés » et « conseiller » seul restent verts', () => {
+    const v = `${DOSSIER}/vocabulaire.ts`;
+    expect(fautesDOccupation(v, ['Pris en charge par un conseiller salarié'])).toHaveLength(1);
+    expect(fautesDOccupation(v, ['déjà réservée par la Société'])).toEqual([
+      `${v} : la Société nommée comme occupante — « déjà réservée par la Société »`,
+    ]);
+    expect(fautesDOccupation(v, ['entreprise déjà suivie'])).toEqual([
+      `${v} : le verbe « suivre » pour une entreprise — « entreprise déjà suivie »`,
+    ]);
+    expect(fautesDOccupation(v, ['visible par le qualifieur'])).toHaveLength(1);
+    expect(
+      fautesDOccupation(`${DOSSIER}/etats-vides.ts`, [
+        'Quand vous rencontrez une entreprise qui pourrait former ses salariés',
+        'Un conseiller de la banque vous répondra',
+      ])
+    ).toEqual([]);
+  });
+});
