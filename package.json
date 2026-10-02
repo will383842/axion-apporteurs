@@ -196,13 +196,10 @@
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.7",
     "@vitest/coverage-v8": "2.1.9",
-    "ajv": "^8.17.1",
     "eslint": "^10.10.0",
     "eslint-config-prettier": "^10.1.8",
     "globals": "^17.12.0",
     "prettier": "^3.9.6",
-    "prisma": "5.22.0",
-    "tsx": "^4.19.2",
     "typescript": "^5.6.3",
     "typescript-eslint": "^8.70.0",
     "vitest": "^2.1.8"
@@ -210,11 +207,14 @@
   "dependencies": {
     "@prisma/client": "5.22.0",
     "@sentry/node": "10.75.0",
+    "ajv": "^8.17.1",
     "ioredis": "5.11.1",
     "next": "16.3.8",
     "pino": "10.3.1",
+    "prisma": "5.22.0",
     "react": "19.2.8",
     "react-dom": "19.2.8",
+    "tsx": "^4.19.2",
     "zod": "3.25.76"
   }
 }
