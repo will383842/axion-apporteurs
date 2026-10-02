@@ -123,6 +123,15 @@
       durées), constat de l'auteur (un battement récent de `contacts_purger`)._
 - [ ] Base de production vidée de son semis synthétique, puis `deploy:verify` vert. _Porteur :
       Williams._
+- [ ] **Relais de courriels** (INT-T57, REQ-INT-022), AVANT le drapeau d'allumage de l'envoi réel
+      (`PARTNERS_EMAIL_DMARC_VERIFIE`) : l'hôte d'envoi est relevé dans « Setup info » de l'agent
+      d'envoi, daté dans `docs/tiers/zeptomail.md` §2, et IDENTIQUE à `ZEPTOMAIL_API_URL` ; son pays
+      CONCORDE avec `{mentionTransfert}` de JUR-T09 (le centre de données annoncé aux personnes) ;
+      `ZEPTOMAIL_SEND_TOKEN` et `ZEPTOMAIL_API_URL` sont posés dans l'environnement `production`.
+      `ZEPTOMAIL_SEND_TOKEN` est le jeton d'un agent d'envoi PROPRE à Partners, distinct de tout jeton
+      d'axion-ia ; constaté dans la console ZeptoMail avant l'allumage. Le
+      drapeau allumé sans eux, le démarrage refuse (`requise_envoi_actif`). _Porteur : Williams
+      (relevé, valeurs, drapeau), constat de l'auteur._
 
 ## 5. L'ouverture, dans cet ordre
 

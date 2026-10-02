@@ -2590,6 +2590,18 @@ export const PORTE_A_FIGEE: PorteFigee = {
       uses: 'actions/setup-node@v4',
       cles: { with: { 'node-version': '22', cache: 'pnpm' } },
     },
+    // QA-T59 : le cache des navigateurs des passes d'accessibilité, AVANT toute commande (point 5),
+    // sa clé dérivée du verrou (point 6 : aucune commande pour lire une version).
+    {
+      nom: 'Cache des navigateurs des passes d accessibilite',
+      uses: 'actions/cache@v4',
+      cles: {
+        with: {
+          path: '~/.cache/ms-playwright',
+          key: "navigateurs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}",
+        },
+      },
+    },
     { nom: 'run: pnpm install --frozen-lockfile', run: 'pnpm install --frozen-lockfile' },
     // GOV-123 : les vues se rendent AVANT toute étape qui en lit une ; aucune ne revient sous git.
     {
@@ -2753,7 +2765,13 @@ export const PORTE_A_FIGEE: PorteFigee = {
     },
     { nom: 'La garde red-first sait rougir', run: 'pnpm red-first:prove' },
     { nom: 'Harnais de l adaptateur MCP', run: 'pnpm harnais-mcp' },
-    { nom: 'Navigateurs des passes d accessibilite', run: 'pnpm a11y:navigateurs' },
+    // QA-T59 : trois tentatives bornées chacune par `timeout`, l'étape entière par `timeout-minutes` ;
+    // toutes échouées, l'étape ÉCHOUE (jamais un vert de complaisance).
+    {
+      nom: 'Navigateurs des passes d accessibilite',
+      run: 'pnpm a11y:navigateurs:bornes',
+      cles: { 'timeout-minutes': '15' },
+    },
     { nom: 'Tests', run: 'pnpm test', cles: JETON_DE_LA_FORGE },
     {
       nom: 'req:check — chaque paire (tache, REQ) a son test annote et VERT',
@@ -2932,6 +2950,7 @@ export const PORTE_A_FIGEE: PorteFigee = {
     'red-first:prove': 'tsx scripts/gates/red-first.ts --prove',
     'harnais-mcp': 'tsx scripts/gates/harnais-mcp.ts',
     'a11y:navigateurs': 'playwright install --with-deps chromium webkit',
+    'a11y:navigateurs:bornes': 'tsx scripts/ci/navigateurs-bornes.ts',
     test: 'vitest run --coverage --reporter=default --reporter=json --outputFile.json=test-results/vitest.json',
     'req:check': 'tsx scripts/gates/gov-trace.ts --resultats test-results/vitest.json',
     'mutation:prove': 'tsx scripts/mutation/rapport.ts --prove',
@@ -3009,6 +3028,13 @@ export const OUTILLAGE_FIGE: OutillageFige = {
       commit: '49933ea5288caeca8642d1e84afbd3f7d6820020',
       execution: 'node20',
       releve: '2026-09-29',
+    },
+    // QA-T59 : tag v4 lu sur la forge (`repos/actions/cache/git/ref/tags/v4`), et `runs.using` de son
+    // `action.yml` à ce commit.
+    'actions/cache@v4': {
+      commit: '0057852bfaa89a56745cba8c7296529d2fc39830',
+      execution: 'node20',
+      releve: '2026-10-01',
     },
   },
 };

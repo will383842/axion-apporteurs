@@ -689,13 +689,16 @@ model Attribution {
 /// Un dépôt refusé (REQ-DM-043) : de quoi contester, aucune coordonnée du contact. Ajout seul,
 /// sans exception (gabarit `refuser_modification_sauf()`, SQL brut). Réservé aux apporteurs.
 model DepotRefuse {
-  id          String          @id @default(uuid()) @db.Uuid
-  apporteurId String          @map("apporteur_id") @db.Uuid
-  apporteur   Apporteur       @relation(fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  siren       String          @db.Char(9)
-  motif       MotifRefusDepot
-  canal       CanalDepot
-  refuseAt    DateTime        @map("refuse_at") @db.Timestamptz(3)
+  id           String          @id @default(uuid()) @db.Uuid
+  apporteurId  String          @map("apporteur_id") @db.Uuid
+  apporteur    Apporteur       @relation(fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  /// Effacé douze mois après le refus (DM-53, partners/ADR-0030) : la ligne reste, sans lui.
+  siren        String?         @db.Char(9)
+  motif        MotifRefusDepot
+  canal        CanalDepot
+  refuseAt     DateTime        @map("refuse_at") @db.Timestamptz(3)
+  /// La date de la purge du SIREN, liée à lui (CHECK) ; écrite une fois (gabarit).
+  sirenPurgeAt DateTime?       @map("siren_purge_at") @db.Timestamptz(3)
 
   @@index([apporteurId])
   @@index([siren])
