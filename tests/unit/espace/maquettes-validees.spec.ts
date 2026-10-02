@@ -468,7 +468,7 @@ describe('maquettes-validees — la SORTIE du binaire, sur un arbre jetable', ()
 describe('maquettes-validees — le script sur le dépôt réel', () => {
   it('REQ-UX-008 — le dépôt sort en zéro, et la sortie COMPTE ce qu’elle a lu', () => {
     const { code, sortie } = lancer();
-    expect(sortie).toMatch(/18 ligne\(s\) lue\(s\)/);
+    expect(sortie).toMatch(/24 ligne\(s\) lue\(s\)/);
     expect(code).toBe(0);
   });
 
@@ -478,11 +478,11 @@ describe('maquettes-validees — le script sur le dépôt réel', () => {
     expect(code).toBe(0);
   });
 
-  it('REQ-UX-008 — la vue du dépôt lit les dix-huit maquettes et les tâches du registre', () => {
+  it('REQ-UX-008 — la vue du dépôt lit les vingt-quatre maquettes et les tâches du registre', () => {
     const v = vueDuDepot();
     expect(v.maquettes).toContain('accueil.html');
     expect(v.taches.find((t) => t.id === 'UX-P1-08')).toBeDefined();
-    expect(lireValidation(v.validation).lignes).toHaveLength(18);
+    expect(lireValidation(v.validation).lignes).toHaveLength(24);
   });
 });
 
@@ -555,8 +555,8 @@ describe('REQ-UX-008 — l’accueil maquetté : 3 chiffres, 1 alerte au plus, 1
     expect((nominal.corps.match(/<input\b/g) ?? []).length).toBe(1);
   });
 
-  it('REQ-UX-008 — les sept maquettes de l’espace portent la MÊME barre, celle d’ESPACE-ROUTES', () => {
-    expect(MAQUETTES_ESPACE).toHaveLength(7);
+  it('REQ-UX-008 — les treize maquettes de l’espace portent la MÊME barre, celle d’ESPACE-ROUTES', () => {
+    expect(MAQUETTES_ESPACE).toHaveLength(13);
     const attendus = ongletsDeclares();
     let barres = 0;
     for (const f of MAQUETTES_ESPACE) {
@@ -707,7 +707,7 @@ describe('REQ-UX-017 — la moitié statique : autonomes, langue déclarée, cha
   const toutes = readdirSync(DOSSIER).filter((f) => f.endsWith('.html'));
 
   it('REQ-UX-017 — aucune maquette ne charge quoi que ce soit hors d’elle-même', () => {
-    expect(toutes.length).toBe(19);
+    expect(toutes.length).toBe(25);
     for (const f of toutes) {
       const html = lire(f);
       expect(html.match(/(?:src|href)\s*=\s*["']?(?:https?:)?\/\//gi) ?? [], f).toEqual([]);
