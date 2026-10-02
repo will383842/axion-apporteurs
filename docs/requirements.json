@@ -5811,9 +5811,10 @@
       "remplaceePar": null,
       "module": null,
       "etape": 9,
-      "phase": 2,
+      "phase": 1,
       "taches": [
         "EXT-T07",
+        "JUR-T54",
         "UX-P2-18",
         "UX-P2-19"
       ]
@@ -6243,8 +6244,7 @@
       "taches": [
         "JUR-T50",
         "JUR-T51",
-        "JUR-T52",
-        "JUR-T54"
+        "JUR-T52"
       ]
     },
     {
