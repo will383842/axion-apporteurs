@@ -163,13 +163,21 @@ describe('REQ-UX-027 — remplacee_at et fichier_purge_at s’écrivent une fois
     expect(await refus(poser(id, 'fichier_purge_at', null))).toContain(FIGEES);
   });
 
-  it('REQ-DM-027 : TÉMOIN — fichier_purge_at posé SEUL, le fichier encore présent, est refusé', async () => {
+  it('REQ-DM-027 : TÉMOIN — fichier_purge_at posé SEUL, le fichier encore présent, est refusé ; la purge complète passe ensuite', async () => {
     const id = await piece('identite', 'stockage/identite-2');
     expect(await refus(poser(id, 'fichier_purge_at', MAINTENANT))).toContain(FIGEES);
     // La pièce reste reprenable par la purge : ni date posée, ni fichier effacé.
     const [l] = await base.prisma.$queryRaw<{ ref: string | null; purge: Date | null }[]>`
       SELECT fichier_ref AS ref, fichier_purge_at AS purge FROM pieces_kyc WHERE id = ${id}::uuid`;
     expect(l).toStrictEqual({ ref: 'stockage/identite-2', purge: null });
+    // Puis la purge COMPLÈTE, fichier effacé et date posée ensemble, passe.
+    await expect(
+      base.prisma.$executeRawUnsafe(
+        `UPDATE pieces_kyc SET fichier_ref = NULL, fichier_purge_at = $2 WHERE id = $1::uuid`,
+        id,
+        MAINTENANT
+      )
+    ).resolves.toBe(1);
   });
 });
 
