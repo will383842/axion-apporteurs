@@ -135,6 +135,10 @@ describe('REQ-SEC-024 — le format du bloc, confronté à un bloc assemblé à 
     expect((e as BlocIllisiblePii).message).toBe(
       'bloc_illisible : Apporteur.nomChiffre (id id-temoin-1) ne porte pas un bloc au format version 1'
     );
+    // Le bloc de la chaîne vide coupé à 21 octets (étiquette de 4 octets) : la garde de longueur le
+    // refuse avant le déchiffreur, qui accepterait sinon une étiquette courte.
+    const tronque = encryptPii(LIGNE, '', CLES).subarray(0, 21);
+    expect(levee(() => decryptPii(LIGNE, tronque, CLES))).toBeInstanceOf(BlocIllisiblePii);
   });
 
   it('REQ-SEC-024 : un bloc d’une autre clé est refusé, nommé, avec la ligne', () => {
