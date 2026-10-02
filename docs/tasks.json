@@ -4756,8 +4756,7 @@
         "axionia/src/app/api/partners/reconciliation/route.ts",
         "axionia/src/server/partners-sync/reconciliation.ts",
         "axionia/src/server/partners-sync/__tests__/reconciliation.spec.ts",
-        "axionia/tests/integration/reconciliation.spec.ts",
-        "axionia/src/server/partners-sync/__tests__/relecture-contrat-v3.spec.ts"
+        "axionia/tests/integration/reconciliation.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -4782,7 +4781,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "Vérification V2 (GOV-132, C-01, condition 4) : axion-ia rend la relecture de son outbox par `after_sequence` et `rejouerEvenement` appelable (route ou script), dans des bornes nommées ; témoins rouges d'abord. AMENDEMENT (audit indépendant du plan de la Phase 1 (2026-10-01), écart B-07) : la route de relecture est déclarée dans `packages/contracts/api.ts`, dans la même montée v3. RECENTRAGE (rattrapage 66, coordination avec A05) : la relecture par `after_sequence` EXISTE déjà (INT-T02) ; INT-T08-A se recentre sur `rejouerEvenement` (`reconciliation.ts` et `POST /api/partners/reconciliation`). La déclaration de la route au contrat relève d'INT-T70-P ; INT-T08-A en est l'ADOPTION unique côté axion-ia : sa copie de `contracts.v3.json` est vérifiée par `sha256sum -c contracts.sha256`, avec l'empreinte égale à celle de Partners ; le témoin de sa route valide sa réponse contre `api_relecture_reponse` de SA copie et rougit si un champ sort du schéma (A02)."
+      "acceptance": "Vérification V2 (GOV-132, C-01, condition 4) : axion-ia rend la relecture de son outbox par `after_sequence` et `rejouerEvenement` appelable (route ou script), dans des bornes nommées ; témoins rouges d'abord. AMENDEMENT (audit indépendant du plan de la Phase 1 (2026-10-01), écart B-07) : la route de relecture est déclarée dans `packages/contracts/api.ts`, dans la même montée v3. RECENTRAGE (rattrapage 66, décision de la coordination) : la relecture par `after_sequence` EXISTE déjà (INT-T02) ; INT-T08-A porte `rejouerEvenement` et `POST /api/partners/reconciliation` SEUL, deps inchangées. CONTRAT (A02) : INT-T08-A ne touche aucun fichier de contrat (ni copie de `contracts.v3.json`, ni `contracts.sha256`, ni schéma de la route) ; le témoin `relecture-contrat-v3.spec.ts` passe à la tâche d'adoption INT-T70-A ; toute validation de sortie se fait contre la v2 adoptée. SÉCURITÉ (lentille sécurité) : route réservée, sous l'authentification signée du contrat Partners ↔ axion-ia (ou le rôle admin de la console avec ré-authentification), jamais publique ni sous un simple jeton de session ; rejeu sous l'identifiant d'ORIGINE, neutralisé par l'idempotence de Partners ; bornes (`REJEU_MAX_PAR_APPEL`, débit) et journal sans donnée de personne ; témoins : un appel non authentifié est refusé, et le rejeu d'un événement déjà reçu reste sans effet."
     },
     {
       "id": "INT-T08-P",
@@ -9011,7 +9010,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "enum `origine`, `canal` contraint par `CampagneRecrutement`, hash e-mail et téléphone normalisés, rattachement au lieu de création. 🔴 **Complétée le 2026-09-25 (décision du 2026-09-25, par délégation de Will, GOV-099).** EXT-T03 porte la dérivation de `sourceCanal` — chaîne transportée figée par DM-06 (REQ-DM-035) — vers l'enum `CanalCandidature` (`site`, `linkedin`, `jobboard`, `saisie_console`, `autre`, glossaire §4) : une table de correspondance chemin → canal, côté Partners, en SSOT ; un chemin inconnu donne `autre` et est journalisé, jamais un canal deviné. Tests : chaque entrée de la table → son canal ; chemin inconnu → `autre` et une entrée de journal ; `sourceCanal` nulle → `autre` ; la valeur transportée n'est jamais modifiée par la dérivation. ⚠️ **Dette de cadrage, NON tranchée ici — à cadrer avant EXT-T03** : le producteur axionia émet aujourd'hui une **constante de chemin** pour `sourceCanal` ; `linkedin` et `jobboard` ne seront donc atteignables que par les paramètres `utm`, que DM-06 ne stocke pas. Tant que ce point n'est pas cadré, la table chemin → canal ne sait produire que `site`, `saisie_console` ou `autre`. 🔴 **Complétée le 2026-09-26 (cadrage de l'architecte sur délégation de Will, partners/ADR-0022, GOV-102).** Schéma : `enum OrigineCandidature {tunnel, saisie_console, import, parrainage}` et `enum TypeFichierCv {pdf, docx, jpg, png}` ; sur `apporteurs` : `origine`, `canalCandidature` et `campagneId` (clé étrangère), nullables ; NOT NULL RELÂCHÉ sur `candidature_id`, `reponses_json`, `score_initial`, `score_parts_json` et `score_bareme_version` (saisie console et `score_indisponible`, REQ-EXT-010 ; relâcher est additif), avec CHECK « les trois colonnes de score présentes ensemble ». Tables `campagnes_recrutement {canal CanalCandidature, libelle, coutCents Int >= 0, debutAt, finAt}` et `pieces_jointes_candidature {apporteurId, cle (objet privé), typeFichier, tailleOctets entre 1 et 10485760, empreinteSha256 Char(64), deposeeAt, purgeeAt}`. Journal `candidature_rattachee` (agrégat `apporteur`, charge `{apporteurIdRattache}`). EXT-T04 écrit dans ces tables sans migration. (vérification V2 (GOV-132, 2026-10-01), A2-15 : pas d'écran, REQ-UX-047 retirée.) PORTÉE (rattrapage 66, décision de la coordination) : portée par la console d'axion-ia en V1 (ADR 0051 d'axion-ia, B1 de Will du 2026-09-19 : l'origine et la provenance sont portées par la `Submission`) ; reprise côté Partners si les seuils de l'ADR 0051 sont franchis (import si plus de 10 candidatures par mois ; table dédiée au-delà d'environ 500 lignes apporteurs). Revendication relâchée avant toute ligne de code (A05). QUESTIONS OUVERTES (A05) : Q1, la campagne d'une candidature du tunnel (REQ-EXT-008 : « refusée sans campagne ») ; Q2, la durée de purge du CV, absente de `retention.ts`. CONSTAT : le rattachement par empreinte (REQ-EXT-009) existe déjà côté Partners dans `candidature-recue.ts` (INT-T26) ; seul l'événement `candidature_rattachee` manque."
+      "acceptance": "enum `origine`, `canal` contraint par `CampagneRecrutement`, hash e-mail et téléphone normalisés, rattachement au lieu de création. 🔴 **Complétée le 2026-09-25 (décision du 2026-09-25, par délégation de Will, GOV-099).** EXT-T03 porte la dérivation de `sourceCanal` — chaîne transportée figée par DM-06 (REQ-DM-035) — vers l'enum `CanalCandidature` (`site`, `linkedin`, `jobboard`, `saisie_console`, `autre`, glossaire §4) : une table de correspondance chemin → canal, côté Partners, en SSOT ; un chemin inconnu donne `autre` et est journalisé, jamais un canal deviné. Tests : chaque entrée de la table → son canal ; chemin inconnu → `autre` et une entrée de journal ; `sourceCanal` nulle → `autre` ; la valeur transportée n'est jamais modifiée par la dérivation. ⚠️ **Dette de cadrage, NON tranchée ici — à cadrer avant EXT-T03** : le producteur axionia émet aujourd'hui une **constante de chemin** pour `sourceCanal` ; `linkedin` et `jobboard` ne seront donc atteignables que par les paramètres `utm`, que DM-06 ne stocke pas. Tant que ce point n'est pas cadré, la table chemin → canal ne sait produire que `site`, `saisie_console` ou `autre`. 🔴 **Complétée le 2026-09-26 (cadrage de l'architecte sur délégation de Will, partners/ADR-0022, GOV-102).** Schéma : `enum OrigineCandidature {tunnel, saisie_console, import, parrainage}` et `enum TypeFichierCv {pdf, docx, jpg, png}` ; sur `apporteurs` : `origine`, `canalCandidature` et `campagneId` (clé étrangère), nullables ; NOT NULL RELÂCHÉ sur `candidature_id`, `reponses_json`, `score_initial`, `score_parts_json` et `score_bareme_version` (saisie console et `score_indisponible`, REQ-EXT-010 ; relâcher est additif), avec CHECK « les trois colonnes de score présentes ensemble ». Tables `campagnes_recrutement {canal CanalCandidature, libelle, coutCents Int >= 0, debutAt, finAt}` et `pieces_jointes_candidature {apporteurId, cle (objet privé), typeFichier, tailleOctets entre 1 et 10485760, empreinteSha256 Char(64), deposeeAt, purgeeAt}`. Journal `candidature_rattachee` (agrégat `apporteur`, charge `{apporteurIdRattache}`). EXT-T04 écrit dans ces tables sans migration. (vérification V2 (GOV-132, 2026-10-01), A2-15 : pas d'écran, REQ-UX-047 retirée.) PORTÉE (rattrapage 66, décision de la coordination) : portée par la console d'axion-ia en V1 (ADR 0051 d'axion-ia, acceptée par B1 de Will du 2026-09-19 ; selon cette ADR, l'origine et la provenance sont portées par la `Submission`) ; reprise côté Partners si les seuils de l'ADR 0051 sont franchis (import si plus de 10 candidatures par mois ; table dédiée au-delà d'environ 500 lignes apporteurs). Revendication relâchée avant toute ligne de code (A05). QUESTIONS OUVERTES (A05) : Q1, la campagne d'une candidature du tunnel (REQ-EXT-008 : « refusée sans campagne ») ; Q2, la durée de purge du CV, absente de `retention.ts`. CONSTAT : le rattachement par empreinte (REQ-EXT-009) existe déjà côté Partners dans `candidature-recue.ts` (INT-T26) ; seul l'événement `candidature_rattachee` manque."
     },
     {
       "id": "EXT-T04",
@@ -20979,6 +20978,37 @@
       "tests": {
         "REQ-INT-012": [
           "tests/unit/integration/contrat-relecture.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "INT-T70-A",
+      "titre": "axion-ia adopte la v3 du contrat : sa copie vérifiée par empreinte, et la réponse de la relecture validée contre elle",
+      "phase": 1,
+      "repo": "axionia",
+      "zone": "integration",
+      "paths": [
+        "axionia/src/server/partners/contrat/contracts.v3.json",
+        "axionia/src/server/partners/contrat/contracts.sha256",
+        "axionia/src/server/partners/contrat/empreinte.ts",
+        "axionia/src/server/partners-sync/__tests__/relecture-contrat-v3.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "INT-T70-P"
+      ],
+      "reqs": [
+        "REQ-INT-012"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.25,
+      "statut": "a_faire",
+      "acceptance": "Versée au rattrapage 66 sur décision de la coordination (2026-10-02), pour tenir l'ordre d'A02 sans bloquer `rejouerEvenement` (INT-T08-A, déjà codée) : l'ADOPTION unique de la v3 côté axion-ia vient APRÈS la déclaration de la route (INT-T70-P). (1) La copie de `contracts.v3.json` dans axion-ia est vérifiée par `sha256sum -c contracts.sha256`, avec l'empreinte égale à celle de Partners. (2) Le témoin de la route de relecture valide sa réponse contre `api_relecture_reponse` de SA copie, et rougit si un champ sort du schéma. Une fois cette adoption fusionnée, la v3 est FIGÉE : toute route de plus est une v4 (A02). Auteur : A05.",
+      "tests": {
+        "REQ-INT-012": [
+          "axionia/src/server/partners-sync/__tests__/relecture-contrat-v3.spec.ts"
         ]
       }
     }
