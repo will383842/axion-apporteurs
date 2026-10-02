@@ -46,12 +46,15 @@ BEGIN
            AND OLD."charge" ? 'reponsesJson'
            AND NEW."charge" = OLD."charge" - 'reponsesJson'
            AND (
+             -- Le marqueur jamais posé dans la session rend NULL, et non '' : sans COALESCE, le cas
+             -- (ii) vaudrait NULL, la clause entière NULL, et un IF NULL ne lève RIEN — une
+             -- réécriture sans marqueur passerait (vu rouge par le témoin d'intégration).
              -- (i) le traitant : passage à traite, HORS du fond
              (OLD."statut" <> 'traite' AND NEW."statut" = 'traite'
-               AND current_setting('partners.minimisation_de_fond', true) IS DISTINCT FROM 'oui')
+               AND COALESCE(current_setting('partners.minimisation_de_fond', true), '') <> 'oui')
              -- (ii) le fond : statut inchangé et différent de traite, SOUS le marqueur
              OR (NEW."statut" = OLD."statut" AND OLD."statut" <> 'traite'
-               AND current_setting('partners.minimisation_de_fond', true) = 'oui')
+               AND COALESCE(current_setting('partners.minimisation_de_fond', true), '') = 'oui')
            )
          ))
      OR NEW."payload_hash" IS DISTINCT FROM OLD."payload_hash"
