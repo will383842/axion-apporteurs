@@ -67,6 +67,7 @@ import * as ISSUES_DE_L_ESPACE from '../../src/content/micro-copy/espace/issues-
 import * as ETATS_VIDES_DE_L_ESPACE from '../../src/content/micro-copy/espace/etats-vides';
 import * as VOCABULAIRE_DE_L_ESPACE from '../../src/content/micro-copy/espace/vocabulaire';
 import * as TYPES_DE_LA_MICRO_COPIE from '../../src/content/micro-copy/types';
+import * as NOTIFICATIONS_DE_L_APPORTEUR from '../../src/content/micro-copy/courriels/notifications';
 import { ETATS_VIDES_CONSOLE } from '../../src/content/micro-copy/console/etats-vides';
 import { GABARITS } from '../../src/server/notifications/table-ssot';
 import type { ActionEcran, EtatVide, TexteIssue } from '../../src/content/micro-copy/types';
@@ -98,6 +99,8 @@ const MICRO_COPIE_DE_L_ESPACE: Readonly<Record<string, unknown>> = {
   'espace/vocabulaire.ts': VOCABULAIRE_DE_L_ESPACE,
   // Hors d'`espace/`, mais importé par chaque module de l'espace : parcouru comme eux.
   'types.ts': TYPES_DE_LA_MICRO_COPIE,
+  // UX-P1-10 : les notifications de l'apporteur (e-mail et espace), lues par lui : parcourues aussi.
+  'courriels/notifications.ts': NOTIFICATIONS_DE_L_APPORTEUR,
 };
 
 /**
@@ -162,6 +165,37 @@ export const PARAMETRES_PERMIS: Readonly<Record<string, readonly string[]>> = {
   'espace/vocabulaire.ts › FORMULES › droitACommissionJusquau': ['dateFin'],
   'espace/vocabulaire.ts › FORMULES › courrierDeSuspension': ['dateCourrier'],
   'espace/vocabulaire.ts › FORMULES › limiteDeVerification': ['limiteParJour'],
+  // UX-P1-10 : les notifications de l'apporteur, clé par clé (textes d'A07). Chaque paramètre dit
+  // SON entreprise, SON contact, et la décision, le motif ou la date qui le concernent ; jamais un
+  // autre apporteur ni l'occupant d'une entreprise (art. 3.5).
+  'courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › depot_injoignable_j5': [
+    'entreprise',
+    'contact',
+  ],
+  'courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › attribution_liberee': ['entreprise'],
+  'courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › decision_attribution': [
+    'entreprise',
+    'motif',
+  ],
+  'courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › premier_rang_libere': [
+    'entreprise',
+    'dateLimite',
+  ],
+  'courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › refus_declaration': [
+    'entreprise',
+    'categorie',
+    'motif',
+  ],
+  'courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › suspension_declarations': [
+    'faits',
+    'dateLevee',
+  ],
+  'courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › rappel_rc_pro': ['dateEcheance'],
+  'courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › rattachement_decide': [
+    'entreprise',
+    'decision',
+    'motif',
+  ],
 };
 
 /**

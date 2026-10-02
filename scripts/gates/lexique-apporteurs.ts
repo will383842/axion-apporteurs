@@ -135,6 +135,15 @@ export const MOTIFS: readonly Motif[] = [
     req: 'REQ-GOV-017',
   },
   // La micro-copy est lue par l'apporteur : elle relève de la portée la plus stricte.
+  // UX-P1-10 : les textes des notifications de l'apporteur (e-mail et espace), avant qu'UX-P1-41
+  // n'étende la portée à tout `courriels/` : aucun texte destiné à l'apporteur ne passe sans lexique.
+  {
+    nom: 'src/content/micro-copy/courriels/notifications.ts',
+    reg: /^src\/content\/micro-copy\/courriels\/notifications\.ts$/,
+    portee: 'apporteur',
+    attendu: true,
+    req: 'REQ-GOV-017',
+  },
   {
     nom: 'messages/**',
     reg: /^messages\/.+\.json$/,

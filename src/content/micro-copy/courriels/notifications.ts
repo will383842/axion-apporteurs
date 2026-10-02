@@ -3,7 +3,7 @@
  * 2026-10-02, repris MOT POUR MOT.
  *
  * Pour chaque clé de la table (`src/server/notifications/table-ssot.ts`) : un TITRE, UN appel à
- * l'action, et, quand le contrat l'exige, UNE phrase de corps obligatoire que la tâche émettrice
+ * l'action, et, quand le contrat l'exige, la phrase de corps qu'il impose et que la tâche émettrice
  * reprend telle quelle. Les variables sont entre accolades et remplies par l'émetteur.
  *
  * Aucun texte n'est une instruction, une relance d'activité, ni une menace (charte relationnelle,
