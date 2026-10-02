@@ -84,6 +84,8 @@ const UNITES: readonly Seuil['unite'][] = [
   'mois',
   'ans',
   'centimes',
+  // JUR-T40 : un compte, pas une durée (LIBERATION_SIGNALEE_INJOIGNABLE_MAX).
+  'tentatives',
 ];
 
 function dateIsoReelle(v: string): boolean {
@@ -329,7 +331,9 @@ export function montantDansLaLigne(
   return null;
 }
 
-const JOURS_PAR_UNITE: Readonly<Record<Exclude<Seuil['unite'], 'centimes'>, number>> = {
+const JOURS_PAR_UNITE: Readonly<
+  Record<Exclude<Seuil['unite'], 'centimes' | 'tentatives'>, number>
+> = {
   // Une minute, en jours : 90 minutes rendent 0,0625 jour, 1,5 heure, 90 minutes, sans reste.
   minutes: 1 / 1440,
   jours: 1,
@@ -352,7 +356,8 @@ const ECHELLES: readonly (readonly [string, number])[] = [
 export function delaisExprimes(seuils: Readonly<Record<string, Seuil>>): Map<number, string> {
   const delais = new Map<number, string>();
   for (const [cle, s] of Object.entries(seuils)) {
-    if (s.unite === 'centimes') continue;
+    // Un montant et un compte ne sont pas des délais.
+    if (s.unite === 'centimes' || s.unite === 'tentatives') continue;
     const jours = new Set([s.valeur * JOURS_PAR_UNITE[s.unite]]);
     if (s.unite === 'mois' && s.valeur % 12 === 0) jours.add((s.valeur / 12) * 365);
     for (const j of jours) {
@@ -520,18 +525,31 @@ export function preavisIndexes(fichiers: readonly Fichier[]): Faute[] {
 // ── 4. La cohérence gabarit ↔ SSOT ──────────────────────────────────────────────────────────────
 
 /**
- * Un entier de 0 à 999 en lettres (orthographe traditionnelle, traits d'union) ; `null` au-delà.
- * QA-T57 : une durée de la SSOT peut dépasser 99 (`DERNIER_VIDAGE_MAX_MINUTES` = 120). Règle du « s »
+ * Un entier de 0 à 999 999 en lettres (orthographe traditionnelle, traits d'union) ; `null` au-delà.
+ * QA-T57 : une durée de la SSOT peut dépasser 99 (`DERNIER_VIDAGE_MAX_MINUTES` = 120) ; et elle
+ * peut dépasser 999 (`CONTACT_PURGE_CONVERTIE_APRES_DERNIER_CONTACT_JOURS` = 1 095). Règles du « s »
  * de cent : il prend la marque du pluriel quand il est multiplié ET termine le nombre (« deux
- * cents »), jamais suivi d'un autre nombre (« deux cent un », « cent vingt »).
+ * cents »), jamais suivi d'un autre nombre (« deux cent un », « cent vingt »), ni de « mille »
+ * (« deux cent mille »). « Mille » est invariable et ne prend pas « un » devant lui.
  */
 export function enLettres(n: number): string | null {
-  if (!Number.isInteger(n) || n < 0 || n > 999) return null;
-  if (n < 100) return deZeroAQuatreVingtDixNeuf(n);
+  if (!Number.isInteger(n) || n < 0 || n > 999_999) return null;
+  if (n < 1000) return jusquaNeufCentQuatreVingtDixNeuf(n, true);
+  const m = Math.floor(n / 1000);
+  const r = n % 1000;
+  const milliers = m === 1 ? 'mille' : `${jusquaNeufCentQuatreVingtDixNeuf(m, false)} mille`;
+  return r === 0 ? milliers : `${milliers} ${jusquaNeufCentQuatreVingtDixNeuf(r, true)}`;
+}
+
+/** Un entier de 0 à 999 ; `final` : il termine le nombre (le « s » de cent n'y est admis qu'alors). */
+function jusquaNeufCentQuatreVingtDixNeuf(n: number, final: boolean): string {
+  // « quatre-vingts » perd aussi son « s » devant « mille » (« quatre-vingt mille »).
+  const sansS = (t: string) => (final ? t : t.replace(/quatre-vingts$/, 'quatre-vingt'));
+  if (n < 100) return sansS(deZeroAQuatreVingtDixNeuf(n));
   const c = Math.floor(n / 100);
   const r = n % 100;
-  const centaine = c === 1 ? 'cent' : `${UNITES_FR[c]} cent${r === 0 ? 's' : ''}`;
-  return r === 0 ? centaine : `${centaine} ${deZeroAQuatreVingtDixNeuf(r)}`;
+  const centaine = c === 1 ? 'cent' : `${UNITES_FR[c]} cent${r === 0 && final ? 's' : ''}`;
+  return r === 0 ? centaine : `${centaine} ${sansS(deZeroAQuatreVingtDixNeuf(r))}`;
 }
 
 /** Un entier de 0 à 99 en lettres (orthographe traditionnelle, traits d'union). */
@@ -559,6 +577,7 @@ const UNITE_ECRITE: Readonly<Record<Seuil['unite'], string>> = {
   mois: 'mois',
   ans: '(?:ans|ann[ée]es)',
   centimes: '(?!)',
+  tentatives: 'tentatives?',
 };
 
 export function fautesDeCoherence(entree: {
