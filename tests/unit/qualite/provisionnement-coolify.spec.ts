@@ -251,7 +251,9 @@ describe('REQ-INT-031 — sur une plateforme vide, tout est créé puis les vari
       docker_registry_image_name: 'ghcr.io/will383842/axion-apporteurs',
       docker_registry_image_tag: `sha-${SHA.slice(0, 7)}`,
       ports_exposes: '3000',
-      health_check_enabled: false,
+      health_check_enabled: true,
+      health_check_path: '/api/readyz',
+      health_check_port: '3000',
       domains: 'https://partners.exemple.fr',
       instant_deploy: false,
     });
@@ -308,7 +310,7 @@ describe('REQ-INT-031 — sur une plateforme vide, tout est créé puis les vari
  * HEALTHCHECK natif de l'image (en node, Dockerfile) reste la sonde de vérité. Le réglage vise
  * l'application Partners SEULE, à la création ET sur une application existante, sans effet si on relance.
  */
-describe('REQ-INT-031 — la sonde de la plateforme est coupée sur l’application Partners seule', () => {
+describe('REQ-INT-031 — la sonde de la plateforme, sur /api/readyz, posée sur l’application Partners seule', () => {
   const envDeBase = (url: string): Record<string, string> => ({
     ...secretsApplicatifs(),
     COOLIFY_URL: url,
@@ -321,7 +323,7 @@ describe('REQ-INT-031 — la sonde de la plateforme est coupée sur l’applicat
       (a) => a.methode === 'PATCH' && /^\/api\/v1\/applications\/[\w-]+$/.test(a.chemin)
     );
 
-  it('REQ-INT-031 : une application EXISTANTE reçoit health_check_enabled=false, par son seul uuid', async () => {
+  it('REQ-INT-031 : une application EXISTANTE reçoit la sonde de la plateforme sur /api/readyz (QA-T57), par son seul uuid', async () => {
     const p = await plateforme({
       ...PLATEFORME_VIDE,
       applications: [
@@ -337,7 +339,11 @@ describe('REQ-INT-031 — la sonde de la plateforme est coupée sur l’applicat
     expect(r.code).toBe(0);
     const faits = reglages(p);
     expect(faits.map((a) => a.chemin)).toEqual(['/api/v1/applications/app-partners']);
-    expect(faits[0]!.corps).toEqual({ health_check_enabled: false });
+    expect(faits[0]!.corps).toEqual({
+      health_check_enabled: true,
+      health_check_path: '/api/readyz',
+      health_check_port: '3000',
+    });
     // Jamais une base, jamais une autre application.
     expect(p.appels.some((a) => a.methode === 'PATCH' && a.chemin.includes('app-voisine'))).toBe(
       false
@@ -347,12 +353,13 @@ describe('REQ-INT-031 — la sonde de la plateforme est coupée sur l’applicat
     );
   });
 
-  it('REQ-INT-031 : une application CRÉÉE naît sans la sonde de la plateforme, et le réglage est reposé', async () => {
+  it('REQ-INT-031 : une application CRÉÉE naît avec la sonde de la plateforme sur /api/readyz (QA-T57), et le réglage est reposé', async () => {
     const p = await plateforme(PLATEFORME_VIDE);
     expect((await lancer(envDeBase(p.url))).code).toBe(0);
     const creee = p.appels.find((a) => a.chemin === '/api/v1/applications/dockerimage')!
       .corps as Record<string, unknown>;
-    expect(creee.health_check_enabled).toBe(false);
+    expect(creee.health_check_enabled).toBe(true);
+    expect(creee.health_check_path).toBe('/api/readyz');
     const faits = reglages(p);
     expect(faits).toHaveLength(1);
     expect(faits[0]!.chemin).toBe(`/api/v1/applications/${p.applications[0]!.uuid}`);

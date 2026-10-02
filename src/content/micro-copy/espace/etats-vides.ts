@@ -109,11 +109,42 @@ export const ETATS_VIDES_ESPACE: Readonly<Record<string, EtatVide>> = {
     phrase: 'Un lien de connexion ne sert qu’une fois. Un nouveau lien peut vous être envoyé.',
     action: { libelle: "M'envoyer un nouveau lien", route: null },
   },
+  // UX-P1-45 : les états vides des écrans trouvés sans maquette, repris de leur maquette.
+  '/mes-entreprises/<id>': {
+    titre: 'Aucun échange noté',
+    phrase: 'Rien n’est attendu ici : les étapes d’Axion-IA s’affichent dans la frise.',
+    action: { libelle: 'Noter un échange', route: null },
+  },
+  '/profil/personnes': {
+    titre: 'Personne n’agit pour vous',
+    phrase:
+      'Si quelqu’un rencontre des entreprises pour vous, vous pouvez le déclarer ici. Seules vos propres rencontres et celles des personnes déclarées permettent de réserver une entreprise pour vous.',
+    action: { libelle: 'Déclarer une personne', route: null },
+  },
+  '/mon-contrat': {
+    titre: 'Votre contrat est en préparation',
+    phrase:
+      'Il est préparé quand vos pièces sont vérifiées. Vous le lirez ici avant de le signer ; rien n’est à faire d’ici là.',
+    action: { libelle: 'Voir mes vérifications', route: '/conformite' },
+  },
+  '/notifications': {
+    titre: 'Aucune notification',
+    phrase:
+      'Les nouvelles de vos entreprises apparaîtront ici. Rien n’est à consulter régulièrement : les avis importants arrivent aussi par e-mail.',
+    action: RETOUR_ACCUEIL,
+  },
   // JUR-T34 : la politique se lit dans le registre ; vide, c'est qu'aucun destinataire n'y est nommé.
   '/confidentialite': {
     titre: 'Aucun destinataire nommé',
     phrase:
       'Le registre des traitements ne nomme encore aucun prestataire ni organisme qui reçoive vos données.',
     action: RETOUR_ACCUEIL,
+  },
+  // UX-P1-40 (W20) : la page du contact ; vide, c'est un lien inconnu ou expiré — un seul texte, sans oracle.
+  '/confirmer/<jeton>': {
+    titre: 'Ce lien n’est plus valable',
+    phrase:
+      'Il a peut-être déjà servi, ou il est trop ancien. Axion-IA reste joignable par écrit si besoin.',
+    action: { libelle: 'Contacter Axion-IA', route: null },
   },
 };

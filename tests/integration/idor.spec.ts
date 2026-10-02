@@ -61,6 +61,7 @@ import {
   repondre,
   type AccesApporteur,
   REFUS,
+  SECRETS,
   type ClientCloisonnable,
   type ModeleCloisonne,
 } from '../../src/server/acces/for-apporteur';
@@ -433,9 +434,17 @@ async function attaquer(vue: Vue, modele: ModeleCloisonne, n: number): Promise<s
   if ((await vue.trouver(idB)) !== null) breches.push('lecture');
   if ((await liste()).includes(idB)) breches.push('liste');
   if ((await liste({ where: { id: idB } })).length > 0) breches.push('liste_ciblee_par_id');
-  if ((await liste({ where: { apporteurId: B } })).length > 0)
+  // SEC-47 : un filtre sur `apporteurId` (colonne tue) n'est plus gardé en conjonction, il est
+  // REFUSÉ avant tout appel. La brèche, c'est qu'il passe ; le compte se cible par une colonne rendue.
+  const refuse = (p: Promise<unknown>) =>
+    p.then(
+      () => false,
+      (e: unknown) => (e as Error).message === REFUS.forme
+    );
+  if (!(await refuse(vue.lister(brut({ where: { apporteurId: B } })))))
     breches.push('liste_ciblee_par_apporteur');
-  if ((await vue.compter(brut({ apporteurId: B }))) > 0) breches.push('compte');
+  if (!(await refuse(vue.compter(brut({ apporteurId: B }))))) breches.push('compte_par_apporteur');
+  if ((await vue.compter(brut({ id: idB }))) > 0) breches.push('compte');
 
   const avant = JSON.stringify(await relire(modele, idB));
   const verdict = await vue.modifier(idB, modification(modele, n) as never);
@@ -533,6 +542,7 @@ describe('REQ-SEC-009 — A ne lit, ne liste, ne compte, ne modifie ni ne crée 
           'liste',
           'liste_ciblee_par_id',
           'liste_ciblee_par_apporteur',
+          'compte_par_apporteur',
           'compte',
           'modification_acceptee',
           'modification_ecrite',
@@ -759,4 +769,59 @@ describe('REQ-SEC-008 — le vrai sérialiseur de Prisma ne reçoit que ce que l
     expect(envoye).toContain(A);
     expect(envoye).not.toContain(B);
   });
+
+  // ── GOV-111 : les options de lecture, les filtres de relation, la sélection explicite ──────────
+
+  it('REQ-SEC-008 : TÉMOIN DU BANC — sans la couche, une relation HÉRITÉE dans le filtre part au moteur', async () => {
+    const { client, envois } = clientIntercepte();
+    await client.jetonDepot
+      .findMany({ where: Object.create({ apporteur: { is: { id: B } } }) as never })
+      .catch(() => undefined);
+    expect(envois.join('\n')).toContain(B);
+  });
+
+  it.each([
+    [
+      'une relation héritée dans le filtre',
+      { where: Object.create({ apporteur: { is: { id: B } } }) },
+    ],
+    ['une relation nommée dans un OR', { where: { OR: [{ apporteur: { is: { id: B } } }] } }],
+    ['un include', { include: { apporteur: true } }],
+    ['un select qui demande un secret', { select: { tokenHash: true } }],
+  ])(
+    'REQ-SEC-008 : par la couche, lister avec %s est refusé, et RIEN n’est envoyé',
+    async (_quoi, options) => {
+      const { client, envois } = clientIntercepte();
+      const vue = forApporteur(client as unknown as ClientCloisonnable, A).jetonDepot;
+      expect(await refusDe(vue.lister(options as never))).toBe(REFUS.forme);
+      expect(envois).toEqual([]);
+    }
+  );
+
+  it.each(MODELES_CLOISONNES)(
+    'REQ-SEC-008 : par la couche, ce qui part au moteur pour %s ne nomme aucun secret',
+    async (modele) => {
+      const { client, envois } = clientIntercepte();
+      const vue = forApporteur(client as unknown as ClientCloisonnable, A)[modele];
+      await vue.lister().catch(() => undefined);
+      await vue.trouver(randomUUID()).catch(() => undefined);
+      expect(envois.length).toBe(2);
+      for (const secret of SECRETS) expect(envois.join('\n')).not.toContain(`"${secret}"`);
+    }
+  );
+});
+
+describe('REQ-SEC-008 — GOV-111 : en base réelle, une ligne rendue par la couche ne porte aucun secret', () => {
+  it.each(MODELES_CLOISONNES)(
+    'REQ-SEC-008 : %s — trouver et lister rendent la ligne sans secret',
+    async (modele) => {
+      const vue = accesDe(base.prisma, A)[modele];
+      const lue = (await vue.trouver(lignes[modele].a)) as Record<string, unknown> | null;
+      expect(lue).not.toBeNull();
+      const listees = (await vue.lister()) as Record<string, unknown>[];
+      expect(listees.length).toBeGreaterThan(0);
+      for (const ligne of [lue!, ...listees])
+        for (const secret of SECRETS) expect(Object.hasOwn(ligne, secret)).toBe(false);
+    }
+  );
 });

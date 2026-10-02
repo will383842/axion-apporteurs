@@ -979,12 +979,19 @@ describe('REQ-JUR-003 — JUR-T31 : l’art. 3.5, entreprise déjà prise, borne
     // L'acte de la Société n'est jamais une déclaration : ni « la Société déclare », ni « ses préposés
     // déclarent », ni « déclaration de la Société », ni « déclarée par la Société ». Les déclarations
     // de l'apporteur, elles, restent nommées.
-    for (const forme of [
-      /(?:la Société|ses préposés|les préposés)s+(?:nes+)?déclar/i,
-      /déclarations?s+(?:de|par)s+(?:la Société|ses préposés|les préposés)/i,
-      /déclarée?s?s+pars+(?:la Société|ses préposés|les préposés)/i,
-    ])
-      expect(a).not.toMatch(forme);
+    const formes = [
+      /(?:la Société|ses préposés|les préposés)\s+(?:ne\s+)?déclar/i,
+      /déclarations?\s+(?:de|par)\s+(?:la Société|ses préposés|les préposés)/i,
+      /déclarée?s?\s+par\s+(?:la Société|ses préposés|les préposés)/i,
+    ];
+    for (const forme of formes) expect(a).not.toMatch(forme);
+    // Le juge n’est pas vide : chaque phrase fautive qu’il vise rougit, une par motif.
+    const fautives = [
+      'La Société déclare l’entreprise.',
+      'la déclaration de la Société',
+      'une entreprise déclarée par ses préposés',
+    ];
+    formes.forEach((forme, i) => expect(fautives[i]).toMatch(forme));
     expect(a).toContain('prise en charge');
   });
 

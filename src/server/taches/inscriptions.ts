@@ -1,0 +1,116 @@
+/**
+ * Les inscriptions des tâches de fond — GOV-137 (REQ-QA-027) : la COMPOSITION, partagée par la route
+ * qui reçoit les événements (`src/app/api/webhooks/axionia/route.ts`, juste après la réponse) et par
+ * le lanceur des passages planifiés (`src/server/taches/lanceur.ts`, chaque minute).
+ *
+ * Arbitrage de la coordination (GOV-137, option (a)) : le lanceur est lancé par une tâche planifiée
+ * de la plateforme ; la route et lui jouent le MÊME passage, composé ici une seule fois (RM-01).
+ *
+ * DÉPLACÉ DE LA ROUTE, AVEC SES GARDES (RM-07). Le traitant de la candidature et le registre des
+ * traitants vivaient dans la route (INT-T26, INT-T43). Leur seul appelant était `POST` ; ils sont
+ * déplacés tels quels : les secrets sont relus À CHAQUE traitement, par le même juge que le
+ * démarrage, et un refus lève (l'événement passe `en_erreur` sous le NOM de l'erreur, jamais un
+ * secret).
+ */
+import { PrismaClient, TypeEvenementRecu } from '@prisma/client';
+import { sourceAleatoireSysteme } from '../../domain/apporteur/identifiants';
+import { lireEnvironnement, lireTrousseaux } from '../../lib/env';
+import { horlogeSysteme } from '../../lib/horloge';
+import {
+  clientCoordonnees,
+  PREFIXE_ATTENTE_COORDONNEES,
+  traiterCandidatureRecue,
+} from '../integrations/axionia/candidature-recue';
+import {
+  aiguiller,
+  depotDuTravail,
+  passerLeTravail,
+  reprendreLesAttentes,
+  reprendreLesTraitants,
+  type CompteursDuPassage,
+  type DepotDuTravail,
+  type EvenementATraiter,
+  type Traitants,
+} from '../queue/workers/evenement-recu';
+import { clesPii } from '../securite/pii';
+import { verifierChaine, type LigneJournal } from '../../domain/evenement/journal';
+import { lireJournalParLots } from '../evenement/journal';
+import type { Inscriptions } from './lanceur';
+
+/**
+ * Les traitants branchés, par type d'événement reçu. Un seul aujourd'hui : la candidature reçue
+ * (INT-T26). Les autres attendent `traitant:<type>`, jamais `traite` (INT-T43) ; brancher un
+ * traitant ici suffit pour qu'au passage suivant, ses événements en attente lui soient redonnés.
+ */
+export function traitantsDeReception(prisma: PrismaClient): Traitants {
+  return {
+    [TypeEvenementRecu.candidature_recue]: (recu) => traiterCandidature(prisma, recu),
+  };
+}
+
+/**
+ * Le passage des événements reçus : reprises en tête (coordonnées, puis traitants branchés), puis
+ * le travail. `depot` est fourni par l'appelant : la route garde le battement du dépôt, le lanceur
+ * l'écrit lui-même et passe un dépôt qui ne bat pas.
+ */
+export function passageDesEvenementsRecus(
+  prisma: PrismaClient,
+  depot: DepotDuTravail = depotDuTravail(prisma)
+): () => Promise<CompteursDuPassage> {
+  return () => {
+    const traitants = traitantsDeReception(prisma);
+    const reprendreCoordonnees = reprendreLesAttentes(prisma, PREFIXE_ATTENTE_COORDONNEES);
+    const reprendreTraitants = reprendreLesTraitants(prisma, traitants);
+    return passerLeTravail({
+      depot,
+      dispatch: aiguiller(traitants),
+      reprendre: async () => (await reprendreCoordonnees()) + (await reprendreTraitants()),
+      maintenant: () => new Date(horlogeSysteme.maintenant()),
+    });
+  };
+}
+
+/** Les inscriptions du lanceur : une clé du registre, un passage. Le battement est celui du lanceur. */
+export function inscriptions(prisma: PrismaClient): Inscriptions {
+  const depot = depotDuTravail(prisma);
+  return {
+    evenements_recus: passageDesEvenementsRecus(prisma, {
+      ...depot,
+      battre: async () => undefined,
+    }),
+    journal_verifier: passageDuJournal(() => lireJournalParLots(prisma)),
+  };
+}
+
+/**
+ * DM-45 (REQ-DM-024) — le passage `journal_verifier` : le journal, lu par lots, est VÉRIFIÉ par ses
+ * liens de hash (`verifierChaine`). Une chaîne rompue fait ÉCHOUER le passage, et son battement le
+ * dit ; l'erreur nomme la faute et l'id du maillon, jamais une charge.
+ */
+export function passageDuJournal(lire: () => Promise<LigneJournal[]>) {
+  return async (): Promise<{ maillons: number }> => {
+    const v = verifierChaine(await lire());
+    if (!v.ok) throw new Error(`chaine_rompue : ${v.faute}, maillon ${v.id ?? 'aucun'}`);
+    return { maillons: v.maillons };
+  };
+}
+
+/** Le traitant de la candidature reçue (déplacé de la route, inchangé). */
+async function traiterCandidature(prisma: PrismaClient, recu: EvenementATraiter): Promise<void> {
+  const lu = lireEnvironnement(process.env);
+  if (!lu.ok) throw new Error('environnement_refuse');
+  const rotation = lireTrousseaux(process.env, horlogeSysteme.maintenant());
+  if (!rotation.ok) throw new Error('environnement_refuse');
+  await traiterCandidatureRecue(prisma, recu, {
+    tirer: clientCoordonnees({
+      urlAxionia: process.env['AXIONIA_BASE_URL'],
+      secretRelecture: lu.env.AXIONIA_RELECTURE_SECRET,
+      trousseauEmission: rotation.trousseaux.AXIONIA_WEBHOOK_SECRET,
+      appeler: fetch,
+      maintenantMs: () => horlogeSysteme.maintenant(),
+    }),
+    cles: clesPii(process.env),
+    maintenant: () => new Date(horlogeSysteme.maintenant()),
+    aleatoire: sourceAleatoireSysteme,
+  });
+}

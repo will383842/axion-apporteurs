@@ -22,7 +22,15 @@
  * — puis l'erreur remonte à qui a lancé le passage.
  *
  * Aucun effet métier ici : `dispatch` est le port où les tâches de commission et de rattachement se
- * brancheront (DM-10-P, DM-15). En phase 0, il ne fait rien.
+ * brancheront (DM-10-P, DM-15).
+ *
+ * LE TYPE SANS TRAITANT (INT-T43). Un événement dont le type n'a pas encore de traitant n'est JAMAIS
+ * marqué `traite` : un `traite` n'est jamais redonné au dispatch, et un encaissement arrivé avant
+ * son traitant serait perdu pour les commissions. `aiguiller` lève `SansTraitant`, l'événement passe
+ * `en_attente_dependance` sous `traitant:<type>`, et la reprise en tête de passage
+ * (`reprendreLesTraitants`) ne remet en `recu` que les attentes dont le type a désormais un
+ * traitant : l'effet a lieu une fois, au premier passage qui le connaît (arbitrage d'A01, issue
+ * #331).
  */
 import { Prisma, TypeEvenementRecu, type PrismaClient } from '@prisma/client';
 import { schemaNomDeTache, type NomDeTache } from '../../taches/registre';
@@ -82,6 +90,41 @@ export class AttenteDeDependance extends Error {
   }
 }
 
+/** Le préfixe des attentes d'un traitant non branché (INT-T43). */
+export const PREFIXE_ATTENTE_TRAITANT = 'traitant:';
+
+/** La référence d'attente d'un type sans traitant : `traitant:<type>`. */
+export function refAttenteTraitant(type: TypeEvenementRecu): string {
+  return `${PREFIXE_ATTENTE_TRAITANT}${type}`;
+}
+
+/** Levée par `aiguiller` pour un type qui n'a pas de traitant : une attente, jamais un `traite`. */
+export class SansTraitant extends AttenteDeDependance {
+  constructor(type: TypeEvenementRecu) {
+    super(refAttenteTraitant(type));
+    this.name = 'SansTraitant';
+  }
+}
+
+/** Les traitants branchés, par type. Un type absent n'a pas de traitant. */
+export type Traitants = Partial<Record<TypeEvenementRecu, Dispatch>>;
+
+/** Le dispatch qui aiguille vers le traitant du type, et met en attente un type qui n'en a pas. */
+export function aiguiller(traitants: Traitants): Dispatch {
+  return async (recu) => {
+    const traitant = traitants[recu.eventType];
+    if (traitant === undefined) throw new SansTraitant(recu.eventType);
+    await traitant(recu);
+  };
+}
+
+/** Les références d'attente que les traitants branchés peuvent désormais lever. */
+export function refsDesTraitants(traitants: Traitants): string[] {
+  return (Object.keys(traitants) as TypeEvenementRecu[])
+    .filter((t) => traitants[t] !== undefined)
+    .map(refAttenteTraitant);
+}
+
 /**
  * Les dépendances de REQ-INT-011, et elles seules : le champ de la charge qui désigne le parent,
  * l'espace de référence du parent, et les types qui le font exister.
@@ -131,9 +174,18 @@ function nomDe(erreur: unknown): string {
 }
 
 /**
+ * INT-T55 — LE BUDGET D'UN PASSAGE. Le passage tourne sous le verrou de sa tâche, tenu par une
+ * transaction dont la patience est de dix minutes (`lanceur.ts`) : au-delà, la base relâche le
+ * verrou. Le passage ne commence donc plus d'événement passé ce budget, plus court, et ce qui reste
+ * `recu` attend le passage suivant (note de la lentille sécurité). C'est la marge d'un instrument,
+ * pas un seuil métier (RM-10) : elle laisse deux minutes au dernier événement commencé.
+ */
+export const BUDGET_D_UN_PASSAGE_MS = 8 * 60 * 1000;
+
+/**
  * Un passage : traite tout ce qui est `recu`, y compris ce que le passage réveille, jusqu'à ce qu'il
- * n'en reste plus. Chaque événement quitte `recu` à chaque tour ; un enfant n'y revient que si un
- * parent vient de passer `traite` — le passage se termine donc toujours.
+ * n'en reste plus, ou que son budget soit épuisé. Chaque événement quitte `recu` à chaque tour ; un
+ * enfant n'y revient que si un parent vient de passer `traite` — le passage se termine donc toujours.
  */
 export async function passerLeTravail(d: {
   depot: DepotDuTravail;
@@ -146,12 +198,17 @@ export async function passerLeTravail(d: {
   reprendre?: () => Promise<number>;
 }): Promise<CompteursDuPassage> {
   const compteurs: CompteursDuPassage = { traites: 0, enAttente: 0, enErreur: 0, reveilles: 0 };
+  const fin = d.maintenant().getTime() + BUDGET_D_UN_PASSAGE_MS;
+  const epuise = () => d.maintenant().getTime() >= fin;
   try {
     if (d.reprendre) compteurs.reveilles += await d.reprendre();
-    for (;;) {
+    passage: for (;;) {
       const lot = await d.depot.aTraiter();
       if (lot.length === 0) break;
-      for (const e of lot) await traiterUn(e, d, compteurs);
+      for (const e of lot) {
+        if (epuise()) break passage;
+        await traiterUn(e, d, compteurs);
+      }
     }
   } catch (erreur) {
     await d.depot.battre(TACHE_DE_RECEPTION, { echecAt: d.maintenant() }).catch(() => undefined);
@@ -224,6 +281,25 @@ export function reprendreLesAttentes(prisma: PrismaClient, prefixe: string): () 
   return async () => {
     const r = await prisma.evenementRecu.updateMany({
       where: { statut: 'en_attente_dependance', dependanceRef: { startsWith: prefixe } },
+      data: { statut: 'recu', dependanceRef: null },
+    });
+    return r.count;
+  };
+}
+
+/**
+ * La reprise des attentes `traitant:<type>` dont le type a désormais un traitant (INT-T43) : elles
+ * repassent `recu`, et elles seules. L'attente d'un type toujours sans traitant ne bouge pas.
+ */
+export function reprendreLesTraitants(
+  prisma: PrismaClient,
+  traitants: Traitants
+): () => Promise<number> {
+  return async () => {
+    const refs = refsDesTraitants(traitants);
+    if (refs.length === 0) return 0;
+    const r = await prisma.evenementRecu.updateMany({
+      where: { statut: 'en_attente_dependance', dependanceRef: { in: refs } },
       data: { statut: 'recu', dependanceRef: null },
     });
     return r.count;
