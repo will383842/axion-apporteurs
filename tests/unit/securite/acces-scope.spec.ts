@@ -846,6 +846,25 @@ describe('REQ-DM-031 — DM-07 : le vocabulaire et les colonnes du dépôt, conf
     }
   });
 
+  it('REQ-DM-031 : les coordonnées au micro-degré ne sont JAMAIS rendues — tues, absentes de chaque sélection de la vue apporteur', async () => {
+    const coordonnees = ['latitudeMicrodeg', 'longitudeMicrodeg'];
+    for (const c of coordonnees) {
+      expect(CHAMPS_TUS.attribution as readonly string[], c).toContain(c);
+      expect(CHAMPS_RENDUS.attribution as readonly string[], c).not.toContain(c);
+    }
+    const { client, appels } = fauxClient();
+    const vue = forApporteur(client, A).attribution;
+    await vue.trouver(randomUUID());
+    await vue.lister();
+    expect(appels.length).toBeGreaterThan(0);
+    for (const a of appels) {
+      const select = (a.args as { select: Record<string, unknown> }).select;
+      for (const c of coordonnees)
+        expect(Object.hasOwn(select, c), `${a.methode}.${c}`).toBe(false);
+    }
+    expect(await refusDe(vue.lister(brut({ where: { latitudeMicrodeg: 0 } })))).toBe(REFUS.forme);
+  });
+
   it('REQ-DM-031 : chaque colonne chiffrée de l’attribution est écrite par colonnesPii — un champ de CHAMPS_PII, sans empreinte de nom', () => {
     const attribution = Prisma.dmmf.datamodel.models.find((m) => m.name === 'Attribution')!;
     const chiffrees = attribution.fields.map((f) => f.name).filter((n) => n.endsWith('Chiffre'));

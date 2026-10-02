@@ -137,7 +137,7 @@ ordinaire **reste `prevue`** (l'attribution passe `figee_resiliation`) ; `conser
 | `CanalDepot`           | `espace`, `lien_prive`, `console` — le canal d'un dépôt ou d'un refus (DM-07) ; `console` : la prise en charge d'un conseiller salarié (W19), jamais un refus | REQ-DM-012 |
 | `EtatAdministratif`    | `actif`, `cesse` — projection de l'état administratif rendu par l'API publique, « A » et « C » (DM-07) ; ce `actif` qualifie un établissement, jamais un apporteur | REQ-DM-030 |
 | `CategorieEntreprise`  | `pme`, `eti`, `ge` — catégorie rendue par l'API publique (DM-07) | REQ-DM-030 |
-| `QualitePersonneDeclaree` | `associe`, `prepose`, `sous_traitant` — les mots du contrat v1, art. 2.6 (« associés, préposés ou sous-traitants ») ; un agent commercial ou un prestataire est `sous_traitant` ; colonne `qualite` de `personnes_declarees` (DM-07, valeurs A07 du 2026-10-02) | REQ-CPL-029 |
+| `QualitePersonneDeclaree` | `associe`, `prepose`, `sous_traitant` — les mots du contrat v1, art. 2.6 (« associés, préposés ou sous-traitants ») ; colonne `qualite` de `personnes_declarees` (DM-07, valeurs A07 du 2026-10-02) | REQ-CPL-029 |
 | `MotifRefusDepot`      | `anteriorite_client`, `anteriorite_devis`, `etablissement_cesse`, `entreprise_hors_perimetre`, `file_complete`, `opposition_demarchage`, `insincerite` — sept exactement, colonne `motif` de `depots_refuses` (DM-07) | REQ-SEC-022 |
 | `InteretContact`       | `eleve`, `moyen`, `faible`, `nul` — `HYP-A02-VOCABULAIRE-QUALIFICATION` (DM-09) | REQ-DM-008 |
 | `ProchaineEtape`       | `rdv`, `rappeler`, `proposition`, `perdue`, `aucune` — `HYP-A02-VOCABULAIRE-QUALIFICATION` (DM-09) | REQ-DM-008, REQ-UX-021 |
@@ -174,17 +174,17 @@ qui nomme un événement pointé — `attribution.confirmee_tacitement` (REQ-DM-
 
 | Valeur | Agrégat | Créateur | Charge fermée |
 | --- | --- | --- | --- |
-| `attribution_etat_modifie` | `attribution` | DM-08 | `{de, vers, evenement, acteurId?, lienInteret?}` ; `de` : `EtatAttribution` ou nul ; `evenement` : `z.enum(EVENEMENTS_ATTRIBUTION)` ; `lienInteret` : `declare` ou `non_declare` |
-| `attribution_peremption_suspendue` | `attribution` | DM-08 | `{acteurId, suspendueAt}` |
+| `attribution_etat_modifie` | `attribution` | DM-08 | `{de, vers, evenement, acteur, lienInteret?}` ; `de` : `EtatAttribution` ou nul ; `evenement` : `z.enum(EVENEMENTS_ATTRIBUTION)` ; `lienInteret` : `declare` ou `non_declare` |
+| `attribution_peremption_suspendue` | `attribution` | DM-08 | `{acteur, suspendueAt}` |
 | `attribution_contact_purge` | `attribution` | DM-07 | `{purgeAt, acteur}` ; `acteur` : `{par: 'systeme'}`, la purge est celle du cron |
-| `apporteur_statut_modifie` | `apporteur` | CPL-T06 | `{de, vers, evenement, resiliationMotif?, acteurId?}` ; `evenement` : `z.enum(EVENEMENTS_APPORTEUR)` |
-| `apporteur_gel_modifie` | `apporteur` | SEC-15 | `{de, vers, par, anomalieId?, acteurId?}` ; `de` et `vers` : `EtatGel` ; `par` : `role` ou `plein_droit` |
-| `anomalie_statut_modifie` | `apporteur` | DM-12 | `{anomalieId, de?, vers, acteurId?}` |
-| `contestation_modifiee` | `apporteur` | DM-12 | `{contestationId, de?, vers, acteurId?}` |
-| `rattachement_manuel_modifie` | `attribution` | DM-12 | `{rattachementId, vers, acteurId}` ; `vers` : `decide` ou `revoque` |
-| `piece_kyc_statut_modifie` | `piece_kyc` | DM-11 | `{de, vers, type, acteurId?}` ; `vers` : `StatutPieceKyc` ; `type` : `TypePieceKyc` |
-| `contrat_statut_modifie` | `contrat` | DM-23 | `{de?, vers, acteurId?}` ; `vers` : `StatutContrat` |
-| `grille_contrat_modifiee` | `contrat` | DM-23 | `{grilleContratId, lignes, acteurId}` ; `lignes` : les identifiants des lignes modifiées, jamais un compte |
+| `apporteur_statut_modifie` | `apporteur` | CPL-T06 | `{de, vers, evenement, resiliationMotif?, acteur}` ; `evenement` : `z.enum(EVENEMENTS_APPORTEUR)` |
+| `apporteur_gel_modifie` | `apporteur` | SEC-15 | `{de, vers, par, anomalieId?, acteur}` ; `de` et `vers` : `EtatGel` ; `par` : `role` ou `plein_droit` |
+| `anomalie_statut_modifie` | `apporteur` | DM-12 | `{anomalieId, de?, vers, acteur}` |
+| `contestation_modifiee` | `apporteur` | DM-12 | `{contestationId, de?, vers, acteur}` |
+| `rattachement_manuel_modifie` | `attribution` | DM-12 | `{rattachementId, vers, acteur}` ; `vers` : `decide` ou `revoque` |
+| `piece_kyc_statut_modifie` | `piece_kyc` | DM-11 | `{de, vers, type, acteur}` ; `vers` : `StatutPieceKyc` ; `type` : `TypePieceKyc` |
+| `contrat_statut_modifie` | `contrat` | DM-23 | `{de?, vers, acteur}` ; `vers` : `StatutContrat` |
+| `grille_contrat_modifiee` | `contrat` | DM-23 | `{grilleContratId, lignes, acteur}` ; `lignes` : les identifiants des lignes modifiées, jamais un compte |
 | `echange_saisi` | `attribution` | EXT-T01 | `{echangeId, canal}` ; `canal` : `CanalEchange` |
 | `candidature_rattachee` | `apporteur` | EXT-T03 | `{apporteurIdRattache}` |
 

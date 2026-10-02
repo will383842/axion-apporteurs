@@ -219,6 +219,20 @@ describe('REQ-DM-031 — chaque argument du gabarit nomme une colonne qui existe
     expect(absentes).toEqual([]);
   });
 
+  it('REQ-DM-031 : TÉMOIN — une nature d’argument inconnue lève à l’appel, nommée', async () => {
+    await base.prisma.$executeRawUnsafe(
+      `CREATE TEMP TABLE temoin_nature (id int PRIMARY KEY, a text)`
+    );
+    await base.prisma.$executeRawUnsafe(
+      `CREATE TRIGGER temoin_nature_ajout_seul BEFORE UPDATE OR DELETE ON temoin_nature
+       FOR EACH ROW EXECUTE FUNCTION refuser_modification_sauf('efface:a')`
+    );
+    await base.prisma.$executeRawUnsafe(`INSERT INTO temoin_nature VALUES (1, 'x')`);
+    expect(
+      await refus(base.prisma.$executeRawUnsafe(`UPDATE temoin_nature SET a = NULL WHERE id = 1`))
+    ).toMatch(/argument « efface:a » mal formé/);
+  });
+
   it('REQ-DM-031 : TÉMOIN — un branchement qui nomme une colonne absente lève à l’appel', async () => {
     await base.prisma.$executeRawUnsafe(
       `CREATE TEMP TABLE temoin_gabarit (id int PRIMARY KEY, a text)`
