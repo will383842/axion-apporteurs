@@ -60,6 +60,7 @@
 | --- | --- | --- | --- | --- |
 | `/confidentialite` | Politique de confidentialité dérivée du registre de l'article 30 ; lisible sans session ; acceptée à la première connexion, puis à chaque nouvelle version | REQ-JUR-025 | JUR-T34 | non |
 | `/mes-entreprises/<id>` | Fiche d'une entreprise : frise des étapes et des échanges, échanges visibles de la Société ; la fiche d'un autre compte rend la même page qu'un identifiant inexistant ; maquette `mes-entreprises-fiche.html` | REQ-EXT-002, REQ-EXT-003 | EXT-T01 | oui |
+| `/confirmer/<jeton>` | Réponse du contact rencontré (W20) : page publique, hors session, sans oracle ; deux actions, second geste pour « Non », information de l'article 14 et opposition ; ouvrir le lien ne répond rien, seule l'action sur la page répond. Maquette `confirmation-contact.html` | REQ-UX-061 | UX-P1-42 | oui |
 
 ## Règles qui s'appliquent à toutes les routes
 

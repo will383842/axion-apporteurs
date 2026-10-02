@@ -719,6 +719,9 @@ describe('REQ-UX-002 — snapshot des libellés de l’espace, sans date, sans n
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › /confidentialite › phrase : Le registre des traitements ne nomme encore aucun prestataire ni organisme qui reçoive vos données.
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › /confidentialite › action › libelle : Retour à l'accueil
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › /confidentialite › action › route : /
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /confirmer/<jeton> › titre : Ce lien n’est plus valable
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /confirmer/<jeton> › phrase : Il a peut-être déjà servi, ou il est trop ancien. Axion-IA reste joignable par écrit si besoin.
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /confirmer/<jeton> › action › libelle : Contacter Axion-IA
       espace/vocabulaire.ts › FORMULES › droitACommissionJusquau : Votre droit à commission sur cette entreprise court jusqu'au {dateFin}.
       espace/vocabulaire.ts › FORMULES › dejaReservee : déjà réservée pour un autre apporteur
       espace/vocabulaire.ts › FORMULES › finDuDroit : si ce droit prend fin
