@@ -1,6 +1,6 @@
 /**
- * csp-inline.ts — aucun style en ligne ni HTML injecté sous `src/app/` (SEC-46, écart C13 de la
- * vérification de bout en bout). Registre : `csp:inline`.
+ * csp-inline.ts — aucun style en ligne ni HTML injecté sous `src/app/` (SEC-46, l'écart du style
+ * en ligne relevé par la vérification de bout en bout). Registre : `csp:inline`.
  *
  * USAGE : pnpm csp:inline          juge `src/app/` ; sort 1 sur faute
  *         pnpm csp:inline:prove    un témoin par famille, des contre-témoins verts

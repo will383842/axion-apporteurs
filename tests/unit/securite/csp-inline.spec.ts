@@ -1,6 +1,6 @@
 // @req REQ-SEC-029
 /**
- * SEC-46 — la garde `csp:inline` (écart C13 de la vérification de bout en bout) : aucun attribut
+ * SEC-46 — la garde `csp:inline` (l'écart du style en ligne relevé par la vérification de bout en bout) : aucun attribut
  * `style` ni `dangerouslySetInnerHTML` sous `src/app/`, parce que la politique de contenu refuse un
  * style en ligne et ne voit pas venir du HTML injecté.
  *
