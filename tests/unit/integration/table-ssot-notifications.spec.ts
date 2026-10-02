@@ -33,6 +33,7 @@ import {
   notifier,
   parametresDe,
   rendreLaNotification,
+  type AccesDeLaNotification,
   type NotificationRefusee,
 } from '../../../src/server/notifications/envoyer';
 
@@ -178,7 +179,13 @@ function coucheEnMemoire() {
       },
     },
   };
-  return { acces, notifications, preferences, appels };
+  // Le faux ne rend que les colonnes que l'envoi lit : la forme, pas le type, est jugée ici.
+  return {
+    acces: acces as unknown as AccesDeLaNotification,
+    notifications,
+    preferences,
+    appels,
+  };
 }
 
 const ESPACE = new URL('https://partners.exemple.invalid');

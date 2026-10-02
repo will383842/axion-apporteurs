@@ -94,7 +94,7 @@ export function rendreLaNotification(
 
 export type IssueDuCourriel = StatutCourriel | 'desactive_par_preference';
 
-type AccesDeLaNotification = {
+export type AccesDeLaNotification = {
   readonly apporteurId: string;
   readonly notificationEspace: Pick<AccesApporteur['notificationEspace'], 'creer'>;
   readonly preferenceNotification: Pick<
@@ -130,19 +130,19 @@ export async function notifier(
 
   let notificationId: string | null = null;
   if (ligne.canaux.includes('espace')) {
-    const creee = (await d.acces.notificationEspace.creer({
+    const creee = await d.acces.notificationEspace.creer({
       cle,
       attributionId: demande.attributionId,
-    } as never)) as { id: string };
+    });
     notificationId = creee.id;
   }
 
   if (!ligne.canaux.includes('email')) return { notificationId, courriel: null };
   if (ligne.desactivable) {
-    const [preference] = (await d.acces.preferenceNotification.lister({
+    const [preference] = await d.acces.preferenceNotification.lister({
       where: { cle },
       take: 1,
-    } as never)) as { active: boolean }[];
+    });
     if (preference?.active === false)
       return { notificationId, courriel: 'desactive_par_preference' };
   }
@@ -179,16 +179,14 @@ export async function ecrirePreference(
   const p = schemaPreferenceNotification.parse(saisie);
   const vue = acces.preferenceNotification;
   const modifier = async (): Promise<'modifiee' | null> => {
-    const [existante] = (await vue.lister({ where: { cle: p.cle }, take: 1 } as never)) as {
-      id: string;
-    }[];
+    const [existante] = await vue.lister({ where: { cle: p.cle }, take: 1 });
     if (existante === undefined) return null;
-    await vue.modifier(existante.id, { active: p.active, modifieeAt: maintenant } as never);
+    await vue.modifier(existante.id, { active: p.active, modifieeAt: maintenant });
     return 'modifiee';
   };
   if ((await modifier()) !== null) return 'modifiee';
   try {
-    await vue.creer({ cle: p.cle, active: p.active, modifieeAt: maintenant } as never);
+    await vue.creer({ cle: p.cle, active: p.active, modifieeAt: maintenant });
     return 'creee';
   } catch (e) {
     if (!violeLUnicite(e)) throw e;
