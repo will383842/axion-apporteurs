@@ -47,12 +47,6 @@ export type RolesDuVidage = {
    * restauration ÉCHOUE, rien n'est rejoué (condition de la lentille sécurité, DM-45).
    */
   pieges: string[];
-  /**
-   * QA-T66 — les rôles HORS `FORME_DES_ROLES` qui portent un `ALTER … OWNER TO` : celui qui a migré
-   * la base source, triés. Il n'y en a qu'UN au plus ; un second serait un rôle inconnu dont les
-   * GRANT seraient exemptés en silence (décision de la coordination du 2026-10-02).
-   */
-  proprietairesSource: string[];
 };
 
 /**
@@ -76,16 +70,27 @@ export const FORME_DE_PROPRIETE =
  *     parfois les droits du schéma public). Tout AUTRE rôle hors de `FORME_DES_ROLES` est une faute
  *     nommée (décision A02, DM-45).
  */
+/**
+ * QA-T66 — les rôles HORS `FORME_DES_ROLES` qui portent un `ALTER … OWNER TO` : celui qui a migré la
+ * base source, triés. Il n'y en a qu'UN au plus ; un second serait un rôle inconnu dont les GRANT
+ * seraient exemptés en silence (décision de la coordination du 2026-10-02). Une fonction à part, et
+ * non une clé de plus de `RolesDuVidage` : la forme de ce retour est figée par son propre témoin.
+ */
+export function proprietairesSourceDuVidage(sqlDuSchema: string): string[] {
+  const sources = new Set<string>();
+  for (const m of sqlDuSchema.matchAll(
+    /^ALTER\s.+\sOWNER\s+TO\s+"?([A-Za-z_][A-Za-z0-9_]*)"?\s*;\s*$/gm
+  )) {
+    if (!FORME_DES_ROLES.test(m[1]!) && !/^partners_/i.test(m[1]!)) sources.add(m[1]!);
+  }
+  return [...sources].sort();
+}
+
 export function rolesDuVidage(sqlDuSchema: string): RolesDuVidage {
   const roles = new Set<string>();
   const horsForme = new Set<string>();
   const proprietes: string[] = [];
-  const proprietairesSource = new Set<string>();
-  for (const m of sqlDuSchema.matchAll(
-    /^ALTER\s.+\sOWNER\s+TO\s+"?([A-Za-z_][A-Za-z0-9_]*)"?\s*;\s*$/gm
-  )) {
-    if (!FORME_DES_ROLES.test(m[1]!) && !/^partners_/i.test(m[1]!)) proprietairesSource.add(m[1]!);
-  }
+  const proprietairesSource = new Set(proprietairesSourceDuVidage(sqlDuSchema));
   for (const m of sqlDuSchema.matchAll(/^GRANT\s.+?\sTO\s+"?([A-Za-z_][A-Za-z0-9_]*)"?\s*;/gm)) {
     const role = m[1]!;
     if (role.toLowerCase() === 'public' || proprietairesSource.has(role)) continue;
@@ -110,7 +115,6 @@ export function rolesDuVidage(sqlDuSchema: string): RolesDuVidage {
     proprietes,
     horsForme: [...horsForme].sort(),
     pieges,
-    proprietairesSource: [...proprietairesSource].sort(),
   };
 }
 
@@ -119,9 +123,12 @@ export function rolesDuVidage(sqlDuSchema: string): RolesDuVidage {
  * ou `null`. Il nomme des RÔLES, jamais une ligne du vidage (« rien ne sort de la base restaurée ») ;
  * une ligne piégée n'est que comptée.
  */
-export function jugerLesRoles(lu: RolesDuVidage): string | null {
-  if (lu.proprietairesSource.length > 1)
-    return `restauration : [proprietaires_multiples] plus d’un propriétaire source dans le vidage — ${lu.proprietairesSource.join(', ')}`;
+export function jugerLesRoles(
+  lu: RolesDuVidage,
+  proprietairesSource: readonly string[]
+): string | null {
+  if (proprietairesSource.length > 1)
+    return `restauration : [proprietaires_multiples] plus d’un propriétaire source dans le vidage — ${proprietairesSource.join(', ')}`;
   if (lu.horsForme.length > 0)
     return `restauration : rôle hors de la forme partners_* — ${lu.horsForme.join(', ')}`;
   if (lu.pieges.length > 0)
@@ -228,9 +235,10 @@ export async function exercer(
     );
     if (schemaSql.status !== 0)
       return echec(`restauration : lecture du schéma du vidage sort en ${schemaSql.status}`);
-    const lu = rolesDuVidage(schemaSql.stdout.toString('utf8'));
+    const schemaLu = schemaSql.stdout.toString('utf8');
+    const lu = rolesDuVidage(schemaLu);
     // Le compte seulement, jamais le texte : une ligne piégée peut porter n'importe quoi.
-    const faute = jugerLesRoles(lu);
+    const faute = jugerLesRoles(lu, proprietairesSourceDuVidage(schemaLu));
     if (faute !== null) return echec(faute);
     for (const role of lu.roles) {
       const cree = psql(

@@ -17,7 +17,14 @@
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { rolesDuVidage, jugerLesRoles } from '../../../scripts/sauvegarde/exercice';
+import {
+  rolesDuVidage,
+  jugerLesRoles,
+  proprietairesSourceDuVidage,
+} from '../../../scripts/sauvegarde/exercice';
+
+/** Le jugement tel que `exercer` le fait : les rôles du vidage, et ses propriétaires source. */
+const juger = (sql: string) => jugerLesRoles(rolesDuVidage(sql), proprietairesSourceDuVidage(sql));
 
 const SCHEMA_UN = [
   'ALTER TABLE public.apporteurs OWNER TO migrateur;',
@@ -29,12 +36,12 @@ const SCHEMA_DEUX = `${SCHEMA_UN}\nALTER TABLE public.secret OWNER TO intrus;\nG
 
 describe('REQ-QA-023 — au plus UN propriétaire source dans le vidage', () => {
   it('REQ-QA-023 : le propriétaire source est lu dans le schéma, hors partners_*', () => {
-    expect(rolesDuVidage(SCHEMA_UN).proprietairesSource).toEqual(['migrateur']);
-    expect(rolesDuVidage(SCHEMA_DEUX).proprietairesSource).toEqual(['intrus', 'migrateur']);
+    expect(proprietairesSourceDuVidage(SCHEMA_UN)).toEqual(['migrateur']);
+    expect(proprietairesSourceDuVidage(SCHEMA_DEUX)).toEqual(['intrus', 'migrateur']);
   });
 
   it('REQ-QA-023 : TÉMOIN — deux propriétaires source échouent sous proprietaires_multiples, les deux nommés, sans ligne du vidage', () => {
-    const faute = jugerLesRoles(rolesDuVidage(SCHEMA_DEUX));
+    const faute = juger(SCHEMA_DEUX);
     expect(faute).toBe(
       'restauration : [proprietaires_multiples] plus d’un propriétaire source dans le vidage — intrus, migrateur'
     );
@@ -43,28 +50,28 @@ describe('REQ-QA-023 — au plus UN propriétaire source dans le vidage', () => 
   });
 
   it('REQ-QA-023 : CONTRE-TÉMOINS — un seul propriétaire source passe, aucun propriétaire source passe', () => {
-    expect(jugerLesRoles(rolesDuVidage(SCHEMA_UN))).toBeNull();
+    expect(juger(SCHEMA_UN)).toBeNull();
     const sansProprietaire = SCHEMA_UN.split('\n')
       .filter((l) => !l.includes('migrateur'))
       .join('\n');
-    expect(rolesDuVidage(sansProprietaire).proprietairesSource).toEqual([]);
-    expect(jugerLesRoles(rolesDuVidage(sansProprietaire))).toBeNull();
+    expect(proprietairesSourceDuVidage(sansProprietaire)).toEqual([]);
+    expect(juger(sansProprietaire)).toBeNull();
   });
 
   it('REQ-QA-023 : les rôles partners_* restent gérés comme avant — jamais propriétaires source, rejoués quand la forme est ancrée', () => {
     const lu = rolesDuVidage(SCHEMA_UN);
-    expect(lu.proprietairesSource).not.toContain('partners_journal');
+    expect(proprietairesSourceDuVidage(SCHEMA_UN)).not.toContain('partners_journal');
     expect(lu.roles).toEqual(['partners_journal', 'partners_lecteur']);
     expect(lu.proprietes).toEqual(['ALTER TABLE public.journal OWNER TO partners_journal;']);
   });
 
   it('REQ-QA-023 : les fautes déjà gardées pour les rôles gardent leur message — rôle hors forme, propriété piégée', () => {
-    expect(jugerLesRoles(rolesDuVidage(`${SCHEMA_UN}\nGRANT SELECT ON TABLE x TO etranger;`))).toBe(
+    expect(juger(`${SCHEMA_UN}\nGRANT SELECT ON TABLE x TO etranger;`)).toBe(
       'restauration : rôle hors de la forme partners_* — etranger'
     );
-    expect(
-      jugerLesRoles(rolesDuVidage(`${SCHEMA_UN}\nALTER TABLE x OWNER TO PARTNERS_journal;`))
-    ).toBe("restauration : 1 propriété(s) hors de la forme ancrée, rien n'est rejoué");
+    expect(juger(`${SCHEMA_UN}\nALTER TABLE x OWNER TO PARTNERS_journal;`)).toBe(
+      "restauration : 1 propriété(s) hors de la forme ancrée, rien n'est rejoué"
+    );
   });
 
   it('REQ-QA-023 : l’exercice juge les rôles AVANT de créer un rôle ou de restaurer quoi que ce soit', () => {
