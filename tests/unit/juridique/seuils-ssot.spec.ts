@@ -262,6 +262,20 @@ describe('RM-01 — les durées des motifs sont DÉRIVÉES de la SSOT, jamais re
       ).not.toBeNull();
     }
   });
+
+  it('RM-01 — TÉMOIN : enLettres() couvre 0 à 999, avec la règle du « s » de cent (QA-T57)', () => {
+    expect(enLettres(99)).toBe('quatre-vingt-dix-neuf');
+    expect(enLettres(100)).toBe('cent');
+    expect(enLettres(101)).toBe('cent un');
+    expect(enLettres(120)).toBe('cent vingt');
+    expect(enLettres(200)).toBe('deux cents');
+    expect(enLettres(201)).toBe('deux cent un');
+    expect(enLettres(280)).toBe('deux cent quatre-vingts');
+    expect(enLettres(999)).toBe('neuf cent quatre-vingt-dix-neuf');
+    expect(enLettres(1000)).toBeNull();
+    expect(enLettres(-1)).toBeNull();
+    expect(enLettres(1.5)).toBeNull();
+  });
 });
 
 describe('REQ-JUR-015 — aucun littéral de seuil ni de délai hors de la SSOT', () => {

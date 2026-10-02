@@ -360,6 +360,11 @@ export function ecrituresHorsJournal(chemin: string, brut: string): number[] {
 
 // ── le contrôle ──────────────────────────────────────────────────────────────
 
+/** Un `refine` / `superRefine` : il restreint les valeurs, il ne les transforme pas. */
+function estUnRaffinement(schema: z.ZodTypeAny): schema is z.ZodEffects<z.ZodTypeAny> {
+  return schema instanceof z.ZodEffects && schema._def.effect.type === 'refinement';
+}
+
 type Forme = 'identifiant' | 'empreinte' | 'enum' | 'montant' | 'horodatage' | 'objet' | null;
 
 /** La forme d'une feuille, ou `null` si elle est hors de la liste fermée. */
@@ -367,6 +372,9 @@ function forme(schema: z.ZodTypeAny, cle: string): Forme {
   if (schema instanceof z.ZodOptional || schema instanceof z.ZodNullable) {
     return forme(schema.unwrap() as z.ZodTypeAny, cle);
   }
+  // DM-45 (HYP-A02-ACTEUR-JOURNAL) : un RAFFINEMENT ne fait que restreindre, jamais transformer ;
+  // la forme est celle du schéma qu'il enveloppe. Une transformation, elle, reste refusée.
+  if (estUnRaffinement(schema)) return forme(schema.innerType() as z.ZodTypeAny, cle);
   if (schema instanceof z.ZodObject) return 'objet';
   if (schema instanceof z.ZodEnum || schema instanceof z.ZodNativeEnum) return 'enum';
   if (schema instanceof z.ZodLiteral) return typeof schema.value === 'string' ? 'enum' : null;
@@ -389,6 +397,7 @@ function objetSous(schema: z.ZodTypeAny): z.AnyZodObject | undefined {
   if (schema instanceof z.ZodOptional || schema instanceof z.ZodNullable) {
     return objetSous(schema.unwrap() as z.ZodTypeAny);
   }
+  if (estUnRaffinement(schema)) return objetSous(schema.innerType() as z.ZodTypeAny);
   return schema instanceof z.ZodObject ? schema : undefined;
 }
 
