@@ -1,5 +1,6 @@
 // @req REQ-SEC-013
 // @req REQ-UX-020
+// @req REQ-QA-013
 /**
  * INT-T09 — le mandataire de recherche d'entreprises, vu du navigateur : ce qu'il rend, ce qu'il
  * ne rend jamais, et le repli qui fait que le dépôt ne s'arrête pas quand le tiers s'arrête.

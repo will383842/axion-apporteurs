@@ -1,6 +1,7 @@
 // @req REQ-SEC-001
 // @req REQ-SEC-002
 // @req REQ-SEC-016
+// @req REQ-QA-013
 /**
  * `lien-magique-production.spec.ts` — le CÂBLAGE du lien magique (SEC-03) : ce que l'action serveur
  * et la route donnent au noyau, sans base ni cache.
