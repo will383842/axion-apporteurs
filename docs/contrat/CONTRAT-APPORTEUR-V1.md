@@ -317,10 +317,12 @@ signé, la date d'émission de la première facture.**
 **Une commande conclue sous condition suspensive est datée de sa signature ; elle est réputée n'avoir
 jamais existé si la condition défaille.** Il en est ainsi notamment d'une convention conclue sous la
 condition de l'accord de prise en charge d'un opérateur de compétences. La défaillance de la condition rend
-la commande caduque, et cette caducité vaut annulation au sens de l'article 3.3. Si l'entreprise renonce à
-la condition avant sa défaillance, la commande conserve la date de sa signature. Un accord conclu après la
-défaillance constitue une nouvelle commande, datée de sa propre signature, qui n'est commissionnée que si
-elle est signée pendant la durée de l'attribution.
+la commande caduque, et cette caducité vaut annulation au sens de l'article 3.3 du devis qu'elle constitue,
+le cas échéant. Si la condition est levée par renonciation avant sa défaillance, la commande conserve la
+date de sa signature. Une convention signée par l'entreprise après la défaillance constitue une nouvelle
+commande, datée de sa propre signature, qui n'est commissionnée que si elle est signée pendant la durée de
+l'attribution ; un accord de prise en charge intervenu après la défaillance ne fait pas revivre la commande
+caduque.
 
 Sont commissionnées toutes les commandes de l'entreprise attribuée **signées pendant la durée de
 l'attribution**, pour les prestations figurant à la grille — quel que soit leur nombre. **Cette commission
