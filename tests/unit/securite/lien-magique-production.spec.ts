@@ -18,7 +18,7 @@
  * L'environnement de test est DÉRIVÉ de `NOMS_DES_SECRETS`, jamais recopié ; les courriels sont en
  * `example.org`.
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import type { PrismaClient } from '@prisma/client';
 import { NOMS_DES_SECRETS, kidDe } from '../../../src/lib/env';
 import { creerNotifieur } from '../../../src/lib/notify';
@@ -36,6 +36,15 @@ import {
   portsDeDemande,
   type DependancesDuLien,
 } from '../../../src/server/auth/lien-magique-production';
+import { limiter, sujetDepuisEmpreinte } from '../../../src/server/securite/rate-limit';
+
+// QA-T68 : un ESPION sur `limiter`, qui délègue au vrai compteur — les témoins des noms de compteur
+// lisent ses arguments, et tous les autres tests gardent le comportement réel. Il tue les mutants du
+// nom littéral, que la garde de famille juge sur le texte (hors du bac de Stryker).
+vi.mock('../../../src/server/securite/rate-limit', async (original) => {
+  const vrai = await original<typeof import('../../../src/server/securite/rate-limit')>();
+  return { ...vrai, limiter: vi.fn(vrai.limiter) };
+});
 
 const CLE_HEX = Array.from({ length: 32 }, (_, i) => i.toString(16).padStart(2, '0')).join('');
 const valeurTemoin = (nom: string): string => `temoin-sec03-${nom.toLowerCase()}-`.padEnd(48, '0');
@@ -133,6 +142,24 @@ describe('REQ-SEC-001 REQ-SEC-002 — les ports de la demande, câblés', () => 
     expect(etat).toBe('indisponible');
     expect(planifies).toHaveLength(0);
     expect(avertissements).toEqual([]);
+  });
+
+  it('REQ-QA-013 REQ-SEC-016 : TÉMOIN — compterAdresse appelle EXACTEMENT le compteur `magic:ip`, avec le sujet et l’instant reçus', async () => {
+    const espion = vi.mocked(limiter);
+    espion.mockClear();
+    await portsDeDemande(dependances().d).compterAdresse('0123456789abcdef', INSTANT);
+    expect(espion.mock.calls).toEqual([
+      ['magic:ip', sujetDepuisEmpreinte('0123456789abcdef'), INSTANT],
+    ]);
+  });
+
+  it('REQ-QA-013 REQ-SEC-016 : TÉMOIN — compterCourriel appelle EXACTEMENT le compteur `magic:courriel`, avec le sujet et l’instant reçus', async () => {
+    const espion = vi.mocked(limiter);
+    espion.mockClear();
+    await portsDeDemande(dependances().d).compterCourriel('fedcba9876543210', INSTANT);
+    expect(espion.mock.calls).toEqual([
+      ['magic:courriel', sujetDepuisEmpreinte('fedcba9876543210'), INSTANT],
+    ]);
   });
 
   it('REQ-SEC-001 : un échec du travail différé est signalé sans donnée personnelle', () => {

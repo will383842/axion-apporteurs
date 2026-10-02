@@ -23,10 +23,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { spawnSync } from 'node:child_process';
 import { copyFileSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
+import { createHash } from 'node:crypto';
 import { join } from 'node:path';
 import type { Horloge } from '../../../src/domain/temps/horloge';
 import {
   COMPTEURS,
+  limiter,
   magasinDepuis,
   sujetDepuisEmpreinte,
   type ConsommerDuMagasin,
@@ -34,20 +36,19 @@ import {
 } from '../../../src/server/securite/rate-limit';
 
 // Le magasin du registre est remplacé, SOUS LES TESTS, par un magasin en mémoire : c'est le vrai
-// `limiteurDuRegistre` (noms littéraux, conduites déclarées) qui est exercé, pas une copie.
+// `limiteurDuRegistre` (noms littéraux, conduites déclarées) qui est exercé, pas une copie. QA-T68 :
+// `limiter` est aussi un ESPION, pour que les témoins des noms de compteur lisent ses arguments.
 const partage = vi.hoisted(() => ({ magasin: null as unknown }));
 vi.mock('../../../src/server/securite/rate-limit', async (original) => {
   const m = await original<typeof import('../../../src/server/securite/rate-limit')>();
   return {
     ...m,
-    limiter: (
-      nom: Parameters<typeof m.limiter>[0],
-      sujet: Parameters<typeof m.limiter>[1],
-      ms: number
-    ) =>
-      partage.magasin === null
-        ? m.limiter(nom, sujet, ms)
-        : m.limiter(nom, sujet, ms, partage.magasin as MagasinDeCompteurs, () => undefined),
+    limiter: vi.fn(
+      (nom: Parameters<typeof m.limiter>[0], sujet: Parameters<typeof m.limiter>[1], ms: number) =>
+        partage.magasin === null
+          ? m.limiter(nom, sujet, ms)
+          : m.limiter(nom, sujet, ms, partage.magasin as MagasinDeCompteurs, () => undefined)
+    ),
   };
 });
 
@@ -470,6 +471,26 @@ describe('REQ-SEC-013 — limité par identité (120/j) et par empreinte d’adr
 });
 
 // ── REQ-SEC-013 : la garde dédiée, témoin à deux faces ──────────────────────────────────────────
+
+describe('REQ-QA-013 REQ-SEC-013 — le limiteur du mandataire appelle les compteurs du registre par leur nom EXACT (QA-T68)', () => {
+  it('REQ-QA-013 REQ-SEC-013 : TÉMOIN — global, identité et adresse appellent EXACTEMENT depot:entreprise-global, depot:entreprise-identite et depot:entreprise-ip', async () => {
+    const espion = vi.mocked(limiter);
+    espion.mockClear();
+    const instant = Date.UTC(2026, 9, 2, 12, 0, 0);
+    const sujet = sujetDepuisEmpreinte('0123456789abcdef');
+    const global = sujetDepuisEmpreinte(
+      createHash('sha256').update('partners.recherche-entreprises.global', 'utf8').digest('hex')
+    );
+    await limiteurDuRegistre.global(instant);
+    await limiteurDuRegistre.identite(sujet, instant);
+    await limiteurDuRegistre.adresse(sujet, instant);
+    expect(espion.mock.calls).toEqual([
+      ['depot:entreprise-global', global, instant],
+      ['depot:entreprise-identite', sujet, instant],
+      ['depot:entreprise-ip', sujet, instant],
+    ]);
+  });
+});
 
 describe('REQ-SEC-013 — la garde « aucune année de naissance » sait rougir, et nomme le champ', () => {
   const GARDE = 'scripts/gates/aucun-annee-de-naissance.ts';
