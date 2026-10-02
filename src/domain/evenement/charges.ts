@@ -26,6 +26,14 @@
  */
 import { z } from 'zod';
 import { ALGORITHME } from './journal';
+import { EVENEMENTS_APPORTEUR, MOTIFS_RESILIATION, STATUTS_APPORTEUR } from '../apporteur/statut';
+
+/**
+ * Les codes d'événement que porte `apporteur_statut_modifie` : la NAISSANCE (`creer`, `de` nul), puis
+ * les flèches de la matrice (`EVENEMENTS_APPORTEUR`, une par flèche de `matrice.ts`). DÉRIVÉS,
+ * jamais recopiés ; `creer` n'entre PAS dans la matrice : ce n'est pas une transition admise.
+ */
+export const TRANSITIONS_DU_JOURNAL_APPORTEUR = ['creer', ...EVENEMENTS_APPORTEUR] as const;
 
 /** L'empreinte admise : SHA-256 en hexadécimal minuscule. La SEULE expression d'empreinte admise. */
 export const HASH_HEX_64 = /^[0-9a-f]{64}$/;
@@ -36,12 +44,79 @@ export const FORMES = {
   empreinte: () => z.string().regex(HASH_HEX_64),
   montantCents: () => z.number().int(),
   horodatage: () => z.string().datetime(),
+  /**
+   * HYP-A02-ACTEUR-JOURNAL — QUI a produit l'événement : OBLIGATOIRE dans la charge hachée de tout
+   * type sauf la genèse, et sous CETTE forme seule. `id` est présent si et seulement si l'acteur
+   * n'est pas le système : le raffinement le dit. Le conseiller salarié (W19)
+   * est un `utilisateur_console` ; une écriture de l'intégration porte `{ par: 'systeme' }`.
+   */
+  acteur: () =>
+    z
+      .object({
+        par: z.enum(['apporteur', 'utilisateur_console', 'systeme']),
+        id: z.string().uuid().optional(),
+      })
+      .strict()
+      .superRefine((a, ctx) => {
+        if ((a.par === 'systeme') !== (a.id === undefined)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['id'],
+            message: 'acteur_id_incoherent',
+          });
+        }
+      }),
 };
 
 /** Les valeurs de l'enum Prisma `TypeEvenementJournal`, confrontées au schéma par la garde. */
-export type TypeEvenementJournal = 'journal_ouvert';
+export type TypeEvenementJournal =
+  'journal_ouvert' | 'apporteur_statut_modifie' | 'attribution_contact_purge';
 
 export const CHARGES_PAR_TYPE = {
   /** La genèse : l'algorithme de chaînage, inscrit DANS la chaîne. */
   journal_ouvert: z.object({ algorithme: z.literal(ALGORITHME) }).strict(),
+  /**
+   * Un changement de statut d'apporteur, NAISSANCE comprise (`de` nul, `transition: 'creer'`) : un type
+   * par GENRE de transition (ADR-0022 §4, rectification d'A02 sur DM-45). L'apporteur est l'agrégat ;
+   * la candidature est déjà portée par `apporteurs.candidature_id`. Aucune donnée personnelle.
+   */
+  apporteur_statut_modifie: z
+    .object({
+      de: z.enum(STATUTS_APPORTEUR).nullable(),
+      vers: z.enum(STATUTS_APPORTEUR),
+      transition: z.enum(TRANSITIONS_DU_JOURNAL_APPORTEUR),
+      resiliationMotif: z.enum(MOTIFS_RESILIATION).optional(),
+      acteur: FORMES.acteur(),
+    })
+    .strict()
+    .superRefine(({ de, transition }, ctx) => {
+      if ((de === null) !== (transition === 'creer')) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['de'],
+          message: 'naissance_incoherente',
+        });
+      }
+    }),
+  /**
+   * DM-07 (REQ-DM-031) : la purge du contact d'une attribution. Aucune donnée du contact, seulement
+   * l'instant ; l'acteur est la forme unique de `FORMES.acteur()`, RESTREINTE au système — la purge
+   * est celle du cron (décision A02 du 2026-10-02).
+   */
+  attribution_contact_purge: z
+    .object({
+      purgeAt: FORMES.horodatage(),
+      acteur: FORMES.acteur().refine((a) => a.par === 'systeme', {
+        message: 'acteur_systeme_attendu',
+      }),
+    })
+    .strict(),
 } satisfies Record<TypeEvenementJournal, z.ZodTypeAny>;
+
+/**
+ * DM-45 — la charge de NAISSANCE d'un apporteur (`apporteur_statut_modifie`, `de` nul) : construite ICI,
+ * dans le domaine du journal, pour qu'aucun appelant n'écrive le vocabulaire du journal à la main.
+ */
+export function naissanceDApporteur(acteur: z.input<ReturnType<typeof FORMES.acteur>>) {
+  return { de: null, vers: 'candidat', transition: 'creer', acteur } as const;
+}

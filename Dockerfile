@@ -29,6 +29,12 @@ RUN pnpm exec next build
 
 FROM base AS execution
 ENV NODE_ENV=production
+# QA-T57 : la sonde de la PLATEFORME s'exécute DANS le conteneur, par curl ; sans lui, la plateforme
+# retirait tout nouveau conteneur (premier déploiement réel, 2026-09-30). Posé ici, à l'exécution
+# seule : l'étape de construction n'en a pas besoin.
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends curl \
+  && rm -rf /var/lib/apt/lists/*
 # Le même sha à l'exécution : `next start` relit next.config.ts, qui doit rendre le même en-tête.
 ARG GITHUB_SHA
 ENV PARTNERS_BUILD_SHA=${GITHUB_SHA}

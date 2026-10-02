@@ -456,6 +456,30 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
         'en fin de fichier ; les familles, elles, sont couvertes par `--prove` et par ' +
         'attributions-resolvent.spec.ts — un témoin d’effet prouve la famille qu’il injecte, jamais la gate.',
     },
+    // ── QA-T60 : UNE sortie, à code VARIABLE, dans le rappel d'écriture du rapport ─────────────
+    'scripts/gates/gov-inventaire.ts': {
+      total: 1,
+      porte: 1,
+      temoins: 0,
+      raison:
+        'QA-T60 — note de la lentille securite sur GOV-140 : `--rapport` écrit son JSON puis sort ' +
+        'DANS le rappel d’écriture, `process.exit(err ? 1 : 0)`. Comptée non nulle par le motif, elle ' +
+        'vaut 0 quand le rapport est livré et 1 quand l’écriture échoue (tube fermé, EPIPE), là où ' +
+        'l’ancienne forme sortait en 0. Témoin d’effet HORS du tableau REFUS (temoins : 0) : sortie-des-gardes-entiere.spec.ts, un tube ' +
+        'fermé avant la fin fait sortir la garde en non nul.',
+    },
+    // ── JUR-T35 : UNE sortie différée, celle du refus ──────────────────────────────────────────
+    'scripts/gates/aipd-signee.ts': {
+      total: 1,
+      porte: 1,
+      temoins: 0,
+      raison:
+        'JUR-T35 — aucun dépôt réel sans l’AIPD signée. `process.exitCode = 1` : le refus de la ' +
+        'mise en service, DIFFÉRÉ pour que la ligne `::error::` s’imprime. Ses quatre familles ' +
+        '(aipd_non_signee, variable_absente, variable_illisible, dates_discordantes) sont ' +
+        'éprouvées sur la fonction par aucun-depot-reel-sans-aipd-signee.spec.ts ; la sortie du binaire ' +
+        'n’a aucun témoin dans `REFUS`. Dette DÉCLARÉE.',
+    },
     'scripts/gates/jur-grille-chiffree.ts': {
       total: 4,
       porte: 4,
@@ -877,6 +901,13 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
         'est vu sortir en 0 sur le dépôt dans la même spec ; ⛔ ce témoin d’effet ne vit pas dans ' +
         '`REFUS`. Dette DÉCLARÉE.',
     },
+    'scripts/ci/navigateurs-bornes.ts': {
+      total: 1,
+      porte: 1,
+      temoins: 0,
+      raison:
+        'QA-T59 — REQ-QA-016, l installation bornee des navigateurs des passes a11y. `process.exitCode` pose sur 1 quand les trois tentatives echouent, sinon 0. Le coeur pur est vu par navigateurs-bornes.spec.ts ; aucun temoin ne vit dans `REFUS`. N importe pas `fichiersSuivisOuRefus`. Dette DECLAREE.',
+    },
     'scripts/deploiement/provisionner.ts': {
       total: 2,
       porte: 2,
@@ -919,6 +950,19 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
     // ── JUR-T26 : QUATRE gardes neuves de la charte relationnelle, UNE sortie chacune ────────
     // Le cliquet a rougi en NOMMANT la première (`jur-aucun-agregat-reseau.ts ajoute 1 …`) ; les
     // trois autres étaient dans le même cas, comptées sur le disque contre `origin/main`, pas devinées.
+    // SEC-46 — la garde des styles en ligne : UNE sortie terminale, à code variable.
+    'scripts/gates/csp-inline.ts': {
+      total: 1,
+      porte: 1,
+      temoins: 0,
+      raison:
+        'SEC-46 — aucun style en ligne ni HTML injecté sous src/app/. `process.exit(decision.code)` : ' +
+        'sortie TERMINALE à code variable, commune au jugement et à `--prove` — 0 quand la garde passe, ' +
+        '1 sur une faute (`style_en_ligne`, `html_injecte`, `source_illisible`). Les familles sont vues ' +
+        'rougir sur des sources INJECTÉES dans la fonction pure (csp-inline.spec.ts), et le binaire est ' +
+        'vu sortir sous `--prove` ; aucun témoin ne le voit sortir en 1, et aucun ne vit dans `REFUS`. ' +
+        'Le REFUS DE PÉRIMÈTRE vient de `fichiersSuivisOuRefus`. Dette DÉCLARÉE.',
+    },
     'scripts/gates/jur-aucun-agregat-reseau.ts': {
       total: 1,
       porte: 1,
@@ -2372,6 +2416,8 @@ const GARDES_QUI_BALAIENT = [
   // `src/server/pdf/`) dans les fichiers SUIVIS. La réciproque ci-dessous a rougi en les nommant.
   'scripts/gates/jur-aucun-agregat-reseau.ts',
   'scripts/gates/jur-aucune-progression.ts',
+  // SEC-46 — `csp:inline` juge les fichiers SUIVIS sous `src/app/`.
+  'scripts/gates/csp-inline.ts',
   'scripts/gates/jur-lexique-social.ts',
   // SEC-17 — `securite:roles` dérive les actions et les routes de la console des fichiers SUIVIS
   // sous `src/app/(console)/` et `src/server/console/`.
