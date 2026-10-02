@@ -1,3 +1,4 @@
+-- ADR: partners/ADR-0029
 -- INT-T56 (REQ-DM-036, REQ-JUR-029) — la charge d'une candidature reçue minimisée UNE fois.
 --
 -- `evenements_recus.charge` est conservée dix ans et ne doit porter aucune donnée personnelle une fois
