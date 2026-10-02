@@ -1057,4 +1057,32 @@ describe('REQ-DM-014 — JUR-T46 : un palier sans prix public rend « sur devis 
     expect(valeurDePrixPublic(source(), 150000)).toHaveProperty('manque');
     expect(valeurDePrixPublic({ genre: 'question', question: 'Q' }, null)).toHaveProperty('manque');
   });
+
+  it('REQ-JUR-003 : la conférence ne se publie pas avec un prix public nul — « sur devis » seulement', () => {
+    // Un prix nul n'est pas un prix : il contredirait la note ² et laisserait croire à une
+    // conférence gratuite. Il se lit comme une absence de prix public.
+    expect(valeurDePrixPublic(source(), 0)).toEqual({ valeur: 'sur devis' });
+    expect(valeurDePrixPublic(source(), -0)).toEqual({ valeur: 'sur devis' });
+    const r = valeurDePrixPublic(source(), 0) as { valeur: string };
+    const rendu = rendre(gabarit(), { PRIX_INTERVENTION_CONFERENCE: r.valeur }, [SENTINELLE]);
+    const ligne = rendu.split(/\r?\n/).find((l) => l.includes('`intervention-conference`'));
+    expect(ligne).toContain('| sur devis ');
+    expect(ligne).not.toMatch(/\|\s*0[\s,.]/);
+    // Un prix négatif ou à virgule n'est ni un prix ni une absence : il ne résout pas.
+    expect(valeurDePrixPublic(source(), -100)).toHaveProperty('manque');
+    expect(valeurDePrixPublic(source(), 0.5)).toHaveProperty('manque');
+    // Contre-témoin : l'absence de prix public rend toujours « sur devis ».
+    expect(valeurDePrixPublic(source(), null)).toEqual({ valeur: 'sur devis' });
+  });
+
+  it('REQ-DM-014 : la conférence, sans prix public, est exclue du prorata de remise (note ²)', () => {
+    const g = gabarit();
+    expect(g).toMatch(/² \*La conférence est vendue sur devis et n'a pas de prix public/);
+    expect(g).toMatch(
+      /son forfait est dû en entier, sans\s+réduction au titre de l'article 4\.1 bis/
+    );
+    // La ligne de la conférence porte bien l'appel de la note.
+    const ligne = g.split(/\r?\n/).find((l) => l.includes('`intervention-conference`'));
+    expect(ligne).toContain('{{PRIX_INTERVENTION_CONFERENCE}} ²');
+  });
 });
