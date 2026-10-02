@@ -13,10 +13,10 @@
  *   2. drapeau fermé : la ligne est `retenu_dmarc_non_verifie`, et AUCUN appel (REQ-INT-022) ;
  *   3. le jeton n'est conservé nulle part après l'envoi : ni dans la ligne, ni au journal ;
  *   4. hors production, l'envoi reste au puits du notifieur, et aucune ligne n'est écrite ;
- *   5. le relais de production refuse tant que le relais réel n'est pas livré : la ligne le dit
- *      (`echec`, code fermé), jamais un envoi fantôme.
+ *   5. le relais de production sans sa configuration refuse : la ligne le dit (`echec`, code
+ *      fermé), jamais un envoi fantôme.
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import type { PrismaClient } from '@prisma/client';
 import { NOMS_DES_SECRETS } from '../../../src/lib/env';
 import { domaines } from '../../../src/config/entite';
@@ -30,9 +30,12 @@ import {
   envoiDuProcessus,
   portsDeConsommation,
   portsDeDemande,
-  relaisDeProduction,
   type DependancesDuLien,
 } from '../../../src/server/auth/lien-magique-production';
+import { relaisZeptomail } from '../../../src/server/integrations/zeptomail/relais';
+
+/** Le relais réel de la production (INT-T57), SANS sa configuration : il refuse en se nommant. */
+const relaisNonConfigure = relaisZeptomail({ url: undefined, jeton: undefined });
 import type {
   DependancesDeLEmetteur,
   LigneCourriel,
@@ -139,8 +142,8 @@ describe('REQ-SEC-001 REQ-INT-022 — en production, le lien part par l’émett
     expect(conserve).not.toContain(COURRIEL);
   });
 
-  it('REQ-INT-022 : le relais de production refuse tant que le relais réel n’est pas livré — la ligne dit l’échec', async () => {
-    const e = emetteurSimule(true, relaisDeProduction);
+  it('REQ-INT-022 : le relais de production sans sa configuration refuse — la ligne dit l’échec', async () => {
+    const e = emetteurSimule(true, relaisNonConfigure);
     const { d } = dependances(PRODUCTION, () => e.deps);
     await envoyerUnLien(d);
     expect(e.lignes).toHaveLength(1);
@@ -197,16 +200,16 @@ describe('REQ-SEC-001 — hors production, l’envoi reste au puits du notifieur
 });
 
 describe('REQ-SEC-001 — le câblage du processus', () => {
-  it('REQ-INT-022 : le relais de production refuse en se nommant', async () => {
+  it('REQ-INT-022 : le relais de production sans sa configuration refuse en se nommant', async () => {
     await expect(
-      relaisDeProduction.envoyer({
+      relaisNonConfigure.envoyer({
         de: 'a@b.c',
         a: 'd@e.f',
         sujet: 's',
         corps: 'c',
         reference: 'r',
       })
-    ).rejects.toThrow('relais_non_livre');
+    ).rejects.toThrow('relais_non_configure');
   });
 
   it('REQ-SEC-001 : un client de base par processus, et `planifier` confié à `apres`', () => {
@@ -246,5 +249,96 @@ describe('REQ-SEC-001 — le câblage du processus', () => {
     expect(() => configurationDuLien({ NODE_ENV: 'test' })).toThrow(
       /environnement refusé par src\/lib\/env\.ts — /
     );
+  });
+});
+
+describe('REQ-SEC-001 — le câblage du processus, à la lettre', () => {
+  it('REQ-SEC-001 : un environnement refusé nomme CHAQUE refus, séparés par « ; », jamais une valeur', () => {
+    const attendu =
+      'environnement refusé par src/lib/env.ts — ' +
+      NOMS_DES_SECRETS.map((n) => `${n} : absente`).join(' ; ');
+    expect(() => configurationDuLien({ NODE_ENV: 'test' })).toThrow(attendu);
+    let message = '';
+    try {
+      configurationDuLien({ NODE_ENV: 'test' });
+    } catch (e) {
+      message = (e as Error).message;
+    }
+    expect(message).toBe(attendu);
+  });
+
+  it('REQ-SEC-001 : le client de base du processus EXISTE — il est créé au premier appel, puis réutilisé', () => {
+    const env = { ...ENV, NOTIFY_SINK: 'true' };
+    const d = dependancesDuProcessus({ apres: () => undefined, env });
+    expect(d.prisma).not.toBeNull();
+    expect(typeof d.prisma).toBe('object');
+    expect(dependancesDuProcessus({ apres: () => undefined, env }).prisma).toBe(d.prisma);
+  });
+
+  it('REQ-INT-022 : en production configurée, le processus envoie par le relais RÉEL — l’URL et le jeton de l’environnement, une ligne horodatée `envoye`', async () => {
+    const lignes: Array<Record<string, unknown>> = [];
+    const appels: Array<{ url: string; autorisation: string | null }> = [];
+    const jeton = valeurTemoin('ZEPTOMAIL_SEND_TOKEN');
+    const url = 'https://api.zeptomail.eu/v1.1/email';
+    vi.resetModules();
+    // Le domaine d'envoi du registre est une sentinelle tant qu'il n'est pas renseigné : il est
+    // remplacé ici par un domaine réservé, pour que l'émetteur aille jusqu'au relais.
+    vi.doMock('../../../src/config/entite', async (original) => ({
+      ...(await original<typeof import('../../../src/config/entite')>()),
+      domaines: () => ({ servi: 'partners.exemple.invalid', envoi: 'envoi.exemple.invalid' }),
+    }));
+    // Aucune base : le client du processus est un double qui consigne les lignes.
+    vi.doMock('@prisma/client', async (original) => ({
+      ...(await original<typeof import('@prisma/client')>()),
+      PrismaClient: class {
+        suppressionCourriel = { findUnique: async () => null };
+        courrielEnvoye = {
+          create: async ({ data }: { data: Record<string, unknown> }) => void lignes.push(data),
+        };
+      },
+    }));
+    // Aucun réseau : le `fetch` global est un double qui répond comme le relais.
+    vi.stubGlobal('fetch', async (cible: string | URL | Request, init?: RequestInit) => {
+      appels.push({
+        url: String(cible),
+        autorisation: new Headers(init?.headers).get('authorization'),
+      });
+      return new Response(JSON.stringify({ request_id: 'id-relais-factice' }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      });
+    });
+    try {
+      const m = await import('../../../src/server/auth/lien-magique-production');
+      const d = m.dependancesDuProcessus({
+        apres: () => undefined,
+        env: {
+          ...PRODUCTION,
+          PARTNERS_EMAIL_EXPEDITEUR: 'contact@envoi.exemple.invalid',
+          PARTNERS_EMAIL_DMARC_VERIFIE: 'true',
+          ZEPTOMAIL_API_URL: url,
+          ZEPTOMAIL_SEND_TOKEN: jeton,
+        },
+      });
+      const avant = Date.now();
+      await d.envoi.envoyer({ a: 'destinataire@exemple.invalid', sujet: 's', corps: 'c' });
+      expect(appels).toEqual([{ url, autorisation: `Zoho-enczapikey ${jeton}` }]);
+      expect(lignes).toHaveLength(1);
+      const ligne = lignes[0]!;
+      expect(ligne).toMatchObject({
+        gabarit: 'lien_magique',
+        statut: 'envoye',
+        fournisseurMessageId: 'id-relais-factice',
+      });
+      expect(ligne.demandeAt).toBeInstanceOf(Date);
+      expect((ligne.demandeAt as Date).getTime()).toBeGreaterThanOrEqual(avant - 1_000);
+      expect(ligne.envoyeAt).toBeInstanceOf(Date);
+      expect(JSON.stringify(ligne)).not.toContain(jeton);
+    } finally {
+      vi.doUnmock('../../../src/config/entite');
+      vi.doUnmock('@prisma/client');
+      vi.unstubAllGlobals();
+      vi.resetModules();
+    }
   });
 });

@@ -25,6 +25,7 @@ import {
   EntreeRefuseePii,
   clesPii,
   colonnesPii,
+  effacementPii,
   decryptPii,
   empreinteRecherche,
   empreinteSousCle,
@@ -303,6 +304,25 @@ describe('REQ-SEC-024 — colonnesPii n’écrit que ce qui est fourni, et refus
 
   it('REQ-SEC-024 : une ligne sans identifiant est refusée avant toute écriture', () => {
     const e = levee(() => colonnesPii({ modele: 'Apporteur', id: '' }, { nom: 'Martin' }, CLES));
+    expect(e).toBeInstanceOf(EntreeRefuseePii);
+    expect((e as EntreeRefuseePii).motif).toBe('ligne_incomplete');
+  });
+});
+
+describe('REQ-SEC-024 — effacementPii : bloc et empreinte à null, ensemble, et rien d’autre', () => {
+  it('REQ-SEC-024 : les champs nommés rendent exactement leurs colonnes chiffrée et d’empreinte, toutes à null, sans identifiant', () => {
+    expect(effacementPii(['email', 'nom', 'telephone'])).toEqual({
+      emailChiffre: null,
+      emailHash: null,
+      nomChiffre: null,
+      telephoneChiffre: null,
+      phoneHash: null,
+    });
+    expect(Object.keys(effacementPii(['contexte']))).toEqual(['contexteChiffre']);
+  });
+
+  it('REQ-SEC-024 : une liste vide est refusée', () => {
+    const e = levee(() => effacementPii([]));
     expect(e).toBeInstanceOf(EntreeRefuseePii);
     expect((e as EntreeRefuseePii).motif).toBe('ligne_incomplete');
   });

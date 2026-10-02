@@ -90,6 +90,8 @@
     "ssot:seuils:prove": "tsx scripts/gates/seuils-ssot.ts --prove",
     "jur:aucun-agregat-reseau": "tsx scripts/gates/jur-aucun-agregat-reseau.ts",
     "jur:aucun-agregat-reseau:prove": "tsx scripts/gates/jur-aucun-agregat-reseau.ts --prove",
+    "csp:inline": "tsx scripts/gates/csp-inline.ts",
+    "csp:inline:prove": "tsx scripts/gates/csp-inline.ts --prove",
     "jur:aucune-progression": "tsx scripts/gates/jur-aucune-progression.ts",
     "jur:aucune-progression:prove": "tsx scripts/gates/jur-aucune-progression.ts --prove",
     "jur:revue-apporteur-facing": "tsx scripts/gates/jur-revue-apporteur-facing.ts",
@@ -152,6 +154,7 @@
     "mutation:prove": "tsx scripts/mutation/rapport.ts --prove",
     "mutation:pr": "tsx scripts/mutation/pr.ts",
     "a11y:navigateurs": "playwright install --with-deps chromium webkit",
+    "a11y:navigateurs:bornes": "tsx scripts/ci/navigateurs-bornes.ts",
     "image:construire": "docker build --build-arg GITHUB_SHA --tag partners:construite .",
     "image:temoin-build-sans-base": "sh scripts/image/temoin-build-sans-base.sh",
     "gate-c": "sh scripts/gates/gate-c.sh partners:construite",
@@ -176,6 +179,7 @@
     "taches:lancer": "tsx src/server/taches/lanceur.ts",
     "deploy:verify": "tsx scripts/gates/deploy-verify.ts --verifier",
     "deploy:coolify": "tsx scripts/gates/deploy-verify.ts --declencher",
+    "deploy:attendre-porte-a": "tsx scripts/gates/deploy-verify.ts --attendre-porte-a",
     "deploy:alerter": "tsx scripts/gates/deploy-verify.ts --alerter",
     "aipd:signee": "tsx scripts/gates/aipd-signee.ts",
     "deploy:retour-arriere": "tsx scripts/gates/deploy-verify.ts --retour-arriere",
@@ -193,13 +197,10 @@
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.7",
     "@vitest/coverage-v8": "2.1.9",
-    "ajv": "^8.17.1",
     "eslint": "^10.10.0",
     "eslint-config-prettier": "^10.1.8",
     "globals": "^17.12.0",
     "prettier": "^3.9.6",
-    "prisma": "5.22.0",
-    "tsx": "^4.19.2",
     "typescript": "^5.6.3",
     "typescript-eslint": "^8.70.0",
     "vitest": "^2.1.8"
@@ -207,11 +208,14 @@
   "dependencies": {
     "@prisma/client": "5.22.0",
     "@sentry/node": "10.75.0",
+    "ajv": "^8.17.1",
     "ioredis": "5.11.1",
     "next": "16.3.8",
     "pino": "10.3.1",
+    "prisma": "5.22.0",
     "react": "19.2.8",
     "react-dom": "19.2.8",
+    "tsx": "^4.19.2",
     "zod": "3.25.76"
   }
 }

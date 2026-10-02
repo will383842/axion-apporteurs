@@ -439,7 +439,7 @@ describe('REQ-GOV-013 — `pnpm pre-gate` : les étapes RAPIDES de la porte A, l
       expect(commandes).toContain(c);
     }
     expect(commandes).not.toContain('pnpm test');
-    expect(commandes).not.toContain('pnpm a11y:navigateurs');
+    expect(commandes).not.toContain('pnpm a11y:navigateurs:bornes');
     expect(commandes).not.toContain('pnpm mutation:pr');
     expect(lentes.map((e) => e.nom).join('\n')).toMatch(/Tests/);
     for (const e of lentes) expect(e.motif.length).toBeGreaterThan(10);
@@ -447,13 +447,34 @@ describe('REQ-GOV-013 — `pnpm pre-gate` : les étapes RAPIDES de la porte A, l
   });
 
   it('REQ-GOV-013 — chaque étape lente déclarée est bien une étape de la porte A (aucune liste morte)', async () => {
+    // QA-T59 : une étape lance le script selon la MÊME règle que `etapesRapides()` (le script
+    // nommé après `pnpm`, sans suite de nom), et non par l'égalité de la commande. Elle doit en
+    // outre être classée LENTE par le pré-contrôle.
     const { jouees } = await etapesDeLaPorteA(readFileSync('.github/workflows/ci.yml', 'utf8'));
+    const scripts = (
+      JSON.parse(readFileSync('package.json', 'utf8')) as { scripts: Record<string, string> }
+    ).scripts;
+    const lance = (commande: string, script: string) =>
+      new RegExp(`\\bpnpm\\s+${script.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\w:-])`).test(
+        commande
+      );
+    const lentesQuiLancent = (etapes: typeof jouees, script: string) => {
+      const lentes = new Set(etapesRapides(etapes, scripts).lentes.map((l) => l.nom));
+      return etapes.filter((e) => lentes.has(e.nom) && lance(e.commande, script));
+    };
+    for (const s of ETAPES_LENTES)
+      expect(lentesQuiLancent(jouees, s.script), s.script).not.toEqual([]);
+    // Témoin contraire : une porte A dont aucune étape ne lance le script laisse la déclaration morte.
     for (const s of ETAPES_LENTES) {
-      expect(
-        jouees.map((e) => e.commande),
-        s.script
-      ).toContain(`pnpm ${s.script}`);
+      const sans = jouees.filter((e) => !lance(e.commande, s.script));
+      expect(lentesQuiLancent(sans, s.script), s.script).toEqual([]);
     }
+    // Et la règle ne se contente pas d'un nom voisin : `pnpm a11y:navigateurs-x` ne lance pas le
+    // script, ni `pnpm a11y:navigateurs:bornes` — d'où sa PROPRE entrée dans ETAPES_LENTES (QA-T59) :
+    // sans elle, le pré-contrôle la jouerait en local comme une étape rapide.
+    expect(lance('pnpm a11y:navigateurs-x', 'a11y:navigateurs')).toBe(false);
+    expect(lance('pnpm a11y:navigateurs:bornes', 'a11y:navigateurs')).toBe(false);
+    expect(lance('pnpm a11y:navigateurs:bornes', 'a11y:navigateurs:bornes')).toBe(true);
   });
 
   it('REQ-GOV-013 — pre-gate est déclaré, et la documentation le prescrit avant d’ouvrir une PR', () => {
