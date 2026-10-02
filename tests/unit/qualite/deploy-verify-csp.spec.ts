@@ -1,7 +1,8 @@
 // @req REQ-SEC-029
 /**
  * SEC-46 — la politique de contenu SERVIE est celle de la configuration (`deploy-verify`,
- * condition de la lentille sécurité au glissement du témoin sur serveur construit vers QA-T16).
+ * condition de la lentille sécurité ; le témoin sur serveur construit vit avec le terrain e2e
+ * de la porte mobile).
  *
  * CE QU'IL PROUVE, sur un serveur local qui sert l'en-tête choisi :
  *   1. la politique de la configuration, servie avec un nonce quelconque : « atterri » (0) ;
