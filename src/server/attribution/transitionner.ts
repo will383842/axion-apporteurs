@@ -9,7 +9,8 @@
  *   2. le triplet (état, transition, type de porteur) est jugé ; un refus lève une erreur typée et
  *      RIEN n'est écrit ;
  *   3. l'état et les colonnes de temps recalculées (`effetsDeTransition`) sont écrits, et le rang
- *      d'attente quitte la ligne avec la file ;
+ *      d'attente quitte la ligne avec la file ; à l'entrée dans un état LIBÉRÉ, `purge_contact_at` est
+ *      posé par `echeanceDePurge(vers, maintenant)` (DM-48, REQ-DM-031) ;
  *   4. l'événement `attribution_etat_modifie` est écrit par l'écrivain unique du journal.
  *
  * CE QU'IL NE DÉCIDE PAS : quand une transition a lieu. Les passages planifiés (péremption, file,
@@ -28,11 +29,10 @@ import {
   type TypePorteur,
 } from '../../domain/attribution/machine';
 import { ajouterEvenement } from '../evenement/journal';
+import { ETATS_LIBERES, echeanceDePurge } from '../taches/purger-contacts';
 
 type Tx = Prisma.TransactionClient;
-type Acteur =
-  | { par: 'systeme' }
-  | { par: 'apporteur' | 'utilisateur_console'; id: string };
+type Acteur = { par: 'systeme' } | { par: 'apporteur' | 'utilisateur_console'; id: string };
 
 type Ligne = {
   statut: EtatAttribution;
@@ -53,6 +53,10 @@ async function verrouiller(tx: Tx, attributionId: string): Promise<Ligne> {
   if (!l) throw new ErreurTransitionAttribution('etat_inconnu', 'attribution introuvable');
   return l;
 }
+
+/** Le domaine compte en instants ; la base, en dates. */
+const instant = (d: Date | null): number | null => (d === null ? null : d.getTime());
+const date = (i: number | null): Date | null => (i === null ? null : new Date(i));
 
 const porteurDe = (l: Ligne): TypePorteur => (l.apporteur_id === null ? 'conseiller' : 'apporteur');
 const lienDe = (l: Ligne) => (l.lien_interet_declare ? 'declare' : 'non_declare');
@@ -75,24 +79,27 @@ export async function transitionnerUneAttribution(
   const vers = transitionnerAttribution({ de, transition, porteur: porteurDe(l) });
   const t = effetsDeTransition(
     {
-      premierContactAt: l.premier_contact_at,
-      peremptionSuspendueAt: l.peremption_suspendue_at,
-      confirmeeAt: l.confirmee_at,
-      fenetreFinAt: l.fenetre_fin_at,
-      peremptionAt: l.peremption_at,
+      premierContactAt: instant(l.premier_contact_at),
+      peremptionSuspendueAt: instant(l.peremption_suspendue_at),
+      confirmeeAt: instant(l.confirmee_at),
+      fenetreFinAt: instant(l.fenetre_fin_at),
+      peremptionAt: instant(l.peremption_at),
     },
     transition,
     vers,
-    maintenant
+    maintenant.getTime()
   );
   await tx.attribution.update({
     where: { id: attributionId },
     data: {
       statut: vers,
       ...(de === 'en_attente' ? { rangAttente: null } : {}),
-      confirmeeAt: t.confirmeeAt,
-      fenetreFinAt: t.fenetreFinAt,
-      peremptionAt: t.peremptionAt,
+      confirmeeAt: date(t.confirmeeAt),
+      fenetreFinAt: date(t.fenetreFinAt),
+      peremptionAt: date(t.peremptionAt),
+      ...((ETATS_LIBERES as readonly EtatAttribution[]).includes(vers)
+        ? { purgeContactAt: echeanceDePurge(vers, maintenant) }
+        : {}),
     },
   });
   await ajouterEvenement(tx, {
@@ -171,6 +178,6 @@ export async function constaterLaCaducite(
   if (l.fenetre_fin_at === null) {
     throw new ErreurTransitionAttribution('transition_refusee', `${l.statut} × commande_caduque`);
   }
-  const transition = codeDeCaducite(l.fenetre_fin_at, demande.maintenant);
+  const transition = codeDeCaducite(l.fenetre_fin_at.getTime(), demande.maintenant.getTime());
   return { vers: (await transitionnerUneAttribution(tx, { ...demande, transition })).vers };
 }

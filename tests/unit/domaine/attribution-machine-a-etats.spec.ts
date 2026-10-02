@@ -226,8 +226,10 @@ describe('REQ-SEC-042 — W19 : le conseiller, un témoin par refus', () => {
   });
 });
 
-const T0 = new Date('2026-10-02T10:00:00.000Z');
-const plus = (d: Date, jours: number) => new Date(d.getTime() + jours * MS_PAR_JOUR);
+/** Le domaine compte en instants (ms) : on les écrit depuis des dates ISO lisibles. */
+const iso = (t: string) => Date.parse(t);
+const T0 = iso('2026-10-02T10:00:00.000Z');
+const plus = (d: number, jours: number) => d + jours * MS_PAR_JOUR;
 const AVANT = {
   premierContactAt: null,
   peremptionSuspendueAt: null,
@@ -241,17 +243,12 @@ describe('REQ-DM-007 — les effets recalculés à chaque transition', () => {
     const e = effetsDeTransition(AVANT, 'confirmee', 'active', T0);
     expect(e.confirmeeAt).toEqual(T0);
     expect(SEUILS.FENETRE_MOIS.valeur).toBe(6);
-    expect(e.fenetreFinAt).toEqual(new Date('2027-04-02T10:00:00.000Z'));
+    expect(e.fenetreFinAt).toEqual(iso('2027-04-02T10:00:00.000Z'));
   });
 
   it('REQ-DM-007 : le dernier jour d’un mois plus court est pris quand le jour n’existe pas', () => {
-    const e = effetsDeTransition(
-      AVANT,
-      'confirmee',
-      'active',
-      new Date('2026-08-31T10:00:00.000Z')
-    );
-    expect(e.fenetreFinAt).toEqual(new Date('2027-02-28T11:00:00.000Z'));
+    const e = effetsDeTransition(AVANT, 'confirmee', 'active', iso('2026-08-31T10:00:00.000Z'));
+    expect(e.fenetreFinAt).toEqual(iso('2027-02-28T11:00:00.000Z'));
   });
 
   it('REQ-DM-007 : TÉMOIN — confirmée sans premier contact à J+200 → peremptionAt nul', () => {

@@ -24,6 +24,7 @@
 import { SEUILS } from '../seuils/ssot';
 import { MS_PAR_JOUR, joursDeLaDate } from '../temps/calendrier-civil';
 import { depuisParis, versParis } from '../temps/paris';
+import type { Instant } from '../temps/horloge';
 
 /** Les treize états (REQ-DM-006, `docs/GLOSSAIRE.md` §1), dans l'ordre du cycle de vie. */
 export const ETATS_ATTRIBUTION = [
@@ -228,12 +229,10 @@ export function transitionnerAttribution(demande: DemandeTransitionAttribution):
  * fenêtre, jamais de l'appelant. Fenêtre close à `fenetreFinAt` incluse.
  */
 export function codeDeCaducite(
-  fenetreFinAt: Date,
-  maintenant: Date
+  fenetreFinAt: Instant,
+  maintenant: Instant
 ): 'commande_caduque' | 'commande_caduque_hors_fenetre' {
-  return maintenant.getTime() < fenetreFinAt.getTime()
-    ? 'commande_caduque'
-    : 'commande_caduque_hors_fenetre';
+  return maintenant < fenetreFinAt ? 'commande_caduque' : 'commande_caduque_hors_fenetre';
 }
 
 /** Les transitions qui CONFIRMENT : elles ouvrent la fenêtre (REQ-DM-007, HYP-E1-9). */
@@ -244,8 +243,8 @@ const CONFIRMATIONS: readonly TransitionAttribution[] = [
 ];
 
 /** Ajoute des mois CIVILS en heure de Paris ; un jour absent du mois d'arrivée devient son dernier. */
-export function ajouterMoisParis(instant: Date, mois: number): Date {
-  const p = versParis(instant.getTime());
+export function ajouterMoisParis(instant: Instant, mois: number): Instant {
+  const p = versParis(instant);
   const total = p.annee * 12 + (p.mois - 1) + mois;
   const annee = Math.floor(total / 12);
   const moisArrivee = (total % 12) + 1;
@@ -255,25 +254,26 @@ export function ajouterMoisParis(instant: Date, mois: number): Date {
     jour: 1,
   });
   const dernier = premierSuivant - joursDeLaDate({ annee, mois: moisArrivee, jour: 1 });
-  return new Date(depuisParis({ ...p, annee, mois: moisArrivee, jour: Math.min(p.jour, dernier) }));
+  return depuisParis({ ...p, annee, mois: moisArrivee, jour: Math.min(p.jour, dernier) });
 }
 
 export interface TempsDeLAttribution {
-  readonly premierContactAt: Date | null;
-  readonly peremptionSuspendueAt: Date | null;
-  readonly confirmeeAt: Date | null;
-  readonly fenetreFinAt: Date | null;
-  readonly peremptionAt: Date | null;
+  readonly premierContactAt: Instant | null;
+  readonly peremptionSuspendueAt: Instant | null;
+  readonly confirmeeAt: Instant | null;
+  readonly fenetreFinAt: Instant | null;
+  readonly peremptionAt: Instant | null;
 }
 
 export interface TempsRecalcules {
-  readonly confirmeeAt: Date | null;
-  readonly fenetreFinAt: Date | null;
-  readonly peremptionAt: Date | null;
+  readonly confirmeeAt: Instant | null;
+  readonly fenetreFinAt: Instant | null;
+  readonly peremptionAt: Instant | null;
 }
 
 /**
- * Les colonnes de temps RECALCULÉES à chaque transition (REQ-DM-007) :
+ * Les colonnes de temps RECALCULÉES à chaque transition (REQ-DM-007), en instants (le domaine ne lit
+ * pas l'heure : l'appelant la lui passe) :
  *   — une confirmation pose `confirmeeAt` et `fenetreFinAt` (+ `FENETRE_MOIS` mois) ; rien d'autre
  *     ne les touche, la caducité d'une commande comprise ;
  *   — `peremptionAt` n'existe qu'en `active`, à `premierContactAt` + `PEREMPTION_JOURS` ; nulle tant
@@ -284,7 +284,7 @@ export function effetsDeTransition(
   avant: TempsDeLAttribution,
   transition: TransitionAttribution,
   vers: EtatAttribution,
-  maintenant: Date
+  maintenant: Instant
 ): TempsRecalcules {
   const confirme = CONFIRMATIONS.includes(transition);
   const confirmeeAt = confirme ? maintenant : avant.confirmeeAt;
@@ -297,7 +297,7 @@ export function effetsDeTransition(
     avant.premierContactAt !== null &&
     avant.peremptionSuspendueAt === null;
   const peremptionAt = chrono
-    ? new Date(avant.premierContactAt!.getTime() + SEUILS.PEREMPTION_JOURS.valeur * MS_PAR_JOUR)
+    ? avant.premierContactAt! + SEUILS.PEREMPTION_JOURS.valeur * MS_PAR_JOUR
     : null;
   return { confirmeeAt, fenetreFinAt, peremptionAt };
 }

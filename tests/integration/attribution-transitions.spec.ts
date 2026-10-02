@@ -3,6 +3,7 @@
 // @req REQ-DM-004
 // @req REQ-DM-022
 // @req REQ-QA-004
+// @req REQ-DM-031
 /**
  * DM-08 — l'écrivain des transitions d'attribution, en base RÉELLE.
  *
@@ -27,6 +28,7 @@ import {
   transitionnerUneAttribution,
 } from '../../src/server/attribution/transitionner';
 import { MS_PAR_JOUR } from '../../src/domain/temps/calendrier-civil';
+import { echeanceDePurge } from '../../src/server/taches/purger-contacts';
 
 let base: Base;
 let grilleId: string;
@@ -199,6 +201,31 @@ describe('REQ-QA-004 — l’état, le temps et l’événement, dans la même t
     const echec = issues.find((i) => i.status === 'rejected') as PromiseRejectedResult;
     expect(String(echec.reason)).toContain('active × confirmee');
     expect(await evenements(id)).toHaveLength(1);
+  });
+});
+
+describe('REQ-DM-031 — la libération pose l’échéance de la purge du contact', () => {
+  it('REQ-DM-031 : TÉMOIN — une attribution libérée reçoit purge_contact_at = echeanceDePurge(vers, maintenant) ; une occupante non', async () => {
+    const libre = await semer({ statut: 'active' });
+    const occupante = await semer({ statut: 'active' });
+    await base.prisma.$transaction(async (tx) => {
+      await transitionnerUneAttribution(tx, {
+        attributionId: libre,
+        transition: 'perdue',
+        acteur: SYSTEME,
+        maintenant: MAINTENANT,
+      });
+      await transitionnerUneAttribution(tx, {
+        attributionId: occupante,
+        transition: 'rdv_pris',
+        acteur: SYSTEME,
+        maintenant: MAINTENANT,
+      });
+    });
+    const l = await base.prisma.attribution.findUniqueOrThrow({ where: { id: libre } });
+    expect(l.purgeContactAt).toEqual(echeanceDePurge('perdue', MAINTENANT));
+    const o = await base.prisma.attribution.findUniqueOrThrow({ where: { id: occupante } });
+    expect(o.purgeContactAt).toBeNull();
   });
 });
 
