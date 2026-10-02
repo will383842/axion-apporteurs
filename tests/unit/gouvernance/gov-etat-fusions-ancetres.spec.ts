@@ -23,7 +23,7 @@
  */
 import { describe, it, expect, afterAll } from 'vitest';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { copyFileSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -171,6 +171,8 @@ describe(
         superficiel,
       ]);
       symlinkSync(resolve('node_modules'), join(superficiel, 'node_modules'), 'junction');
+      // PLAN-STATE est une vue rendue, hors suivi (`pnpm vues:rendre`) : le clone n'en porte pas.
+      copyFileSync('docs/PLAN-STATE.md', join(superficiel, 'docs/PLAN-STATE.md'));
       const { code, sortie } = lancer({ number: 9904, oid: 'e'.repeat(40) }, superficiel);
       expect(sortie).toContain('clone_superficiel');
       expect(sortie).toContain('fetch-depth: 0');
