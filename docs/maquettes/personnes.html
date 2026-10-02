@@ -1226,7 +1226,7 @@
                       <li>
                         <div class="carte">
                           <p class="fort">Lucie Démo-Martin</p>
-                          <p class="doux">Associée · déclarée le 12/09</p>
+                          <p class="doux">Associé · déclarée le 12/09</p>
                           <a class="bouton lien" style="width: auto" href="#etat-retirer"
                             >Retirer</a
                           >
@@ -1235,7 +1235,7 @@
                       <li>
                         <div class="carte">
                           <p class="fort">Hugo Exemple</p>
-                          <p class="doux">Salarié · déclaré le 20/09</p>
+                          <p class="doux">Préposé · déclaré le 20/09</p>
                           <a class="bouton lien" style="width: auto" href="#etat-retirer"
                             >Retirer</a
                           >
@@ -1296,12 +1296,12 @@
                     /></label>
                     <label class="champ"
                       ><span class="etiquette">Sa qualité</span
-                      ><input
-                        type="text"
-                        placeholder="Ex. : associé, salarié"
-                        autocomplete="off"
-                        value="Salarié"
-                    /></label>
+                      ><select>
+                        <option>Associé</option>
+                        <option selected>Préposé (salarié, apprenti…)</option>
+                        <option>Sous-traitant</option>
+                      </select></label
+                    >
                     <a class="bouton" href="#etat-nominal"><span>Enregistrer</span></a>
                     <a class="bouton second" href="#etat-nominal"><span>Annuler</span></a>
                   </div>
@@ -1409,8 +1409,9 @@
                     <div class="carte">
                       <h3>Personne n’agit pour vous</h3>
                       <p>
-                        Si quelqu’un rencontre des entreprises pour vous, déclarez-le ici : il sera
-                        proposé au moment du dépôt.
+                        Si quelqu’un rencontre des entreprises pour vous, vous pouvez le déclarer
+                        ici. Seules vos propres rencontres et celles des personnes déclarées ouvrent
+                        droit à une attribution.
                       </p>
                     </div>
                     <a class="bouton second" href="#etat-ajouter"

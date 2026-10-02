@@ -112,13 +112,13 @@ export const ETATS_VIDES_ESPACE: Readonly<Record<string, EtatVide>> = {
   // UX-P1-45 : les états vides des écrans trouvés sans maquette, repris de leur maquette.
   '/mes-entreprises/<id>': {
     titre: 'Aucun échange noté',
-    phrase: 'Rien n’est attendu ici : vous suivez les étapes d’Axion-IA dans la frise.',
+    phrase: 'Rien n’est attendu ici : les étapes d’Axion-IA s’affichent dans la frise.',
     action: { libelle: 'Noter un échange', route: null },
   },
   '/profil/personnes': {
     titre: 'Personne n’agit pour vous',
     phrase:
-      'Si quelqu’un rencontre des entreprises pour vous, déclarez-le ici : il sera proposé au moment du dépôt.',
+      'Si quelqu’un rencontre des entreprises pour vous, vous pouvez le déclarer ici. Seules vos propres rencontres et celles des personnes déclarées ouvrent droit à une attribution.',
     action: { libelle: 'Déclarer une personne', route: null },
   },
   '/mon-contrat': {

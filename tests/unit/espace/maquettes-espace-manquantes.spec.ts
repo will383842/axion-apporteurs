@@ -34,6 +34,21 @@ const ECRANS = [
 /** Ce qui compte comme état vide d'un écran de l'espace : `etat-vide`, ou le formulaire encore vierge. */
 const VIDE = ['etat-vide', 'etat-adresse'];
 
+/**
+ * Les qualités d'une personne déclarée, dans les mots de l'article 2.6 du contrat (relecture du
+ * juriste A07) : un CHOIX FERMÉ, jamais un texte libre, sans « autre ». À REMPLACER par l'enum
+ * `QualitePersonneDeclaree` de DM-07 dès qu'il est sur `main` : Williams tranche (point 11) s'il faut
+ * y ajouter « mandataire social » ; la maquette suivra l'enum, jamais une seconde liste.
+ */
+const QUALITES_DECLARABLES = ['Associé', 'Préposé (salarié, apprenti…)', 'Sous-traitant'] as const;
+
+/** Les options du choix « Sa qualité » de `personnes.html` ; `null` si ce n'est pas un choix fermé. */
+function qualitesProposees(html: string): string[] | null {
+  const champ = /<span class="etiquette">Sa qualité<\/span\s*>([\s\S]*?)<\/label/.exec(html);
+  if (!champ || !/<select\b/.test(champ[1]!)) return null;
+  return [...champ[1]!.matchAll(/<option\b[^>]*>([^<]+)<\/option>/g)].map((m) => m[1]!.trim());
+}
+
 type Depot = {
   routes: string;
   validation: string;
@@ -129,6 +144,23 @@ describe('REQ-UX-047 — les écrans de l’espace trouvés sans maquette ont la
     const lienMort = `${d.maquettes['personnes.html']!}<a href="notifications.html#etat-fantome">x</a>`;
     expect(fautes({ ...d, maquettes: { ...d.maquettes, 'personnes.html': lienMort } })).toEqual([
       'personnes.html : lien mort vers notifications.html#etat-fantome',
+    ]);
+  });
+
+  it('REQ-UX-047 — la qualité d’une personne déclarée est un CHOIX FERMÉ, aux mots de l’article 2.6', () => {
+    expect(qualitesProposees(d.maquettes['personnes.html']!)).toEqual([...QUALITES_DECLARABLES]);
+  });
+
+  it('REQ-UX-047 — TÉMOINS : un texte libre, une qualité « Autre » ou un mot changé rougissent', () => {
+    const html = d.maquettes['personnes.html']!;
+    expect(
+      qualitesProposees(html.replace(/<select>[\s\S]*?<\/select>/, '<input type="text" />'))
+    ).toBeNull();
+    expect(
+      qualitesProposees(html.replace('</select>', '<option>Autre</option></select>'))
+    ).not.toEqual([...QUALITES_DECLARABLES]);
+    expect(qualitesProposees(html.replace('Sous-traitant', 'Prestataire'))).not.toEqual([
+      ...QUALITES_DECLARABLES,
     ]);
   });
 });
