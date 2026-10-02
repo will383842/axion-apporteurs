@@ -4561,15 +4561,44 @@
       ],
       "externe": null,
       "estimateDays": 1.5,
-      "statut": "a_faire",
-      "owner": null,
+      "statut": "fusionnee",
+      "owner": "A05",
       "lot": null,
-      "branch": null,
-      "pr": null,
+      "branch": "t/dm-08",
+      "pr": 475,
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "ELLE ÉCRIT LE SCHÉMA (label `schema`, seule de sa famille dans son lot) : seul écrivain légitime de la matrice d'attribution (partners/ADR-0022, cadrage de l'architecte du 2026-09-26 sur délégation de Will). Le comportement de la machine est celui de ses exigences ; ce qui suit est ce qu'elle écrit au schéma. (1) Elle ajoute à `TypeEvenementJournal` deux valeurs par `ALTER TYPE type_evenement_journal ADD VALUE`, jamais employées dans la même migration : `attribution_etat_modifie` (agrégat `attribution`, charge fermée `{de: EtatAttribution | null, vers, evenement: z.enum(EVENEMENTS_ATTRIBUTION), acteurId?: uuid, lienInteret?: 'declare' | 'non_declare'}`) et `attribution_peremption_suspendue` (`{acteurId: uuid, suspendueAt}`). (2) UN TYPE PAR GENRE DE TRANSITION, PAS PAR TRANSITION : `EVENEMENTS_ATTRIBUTION` est exporté de `machine.ts` et lu par la charge ; ajouter un événement à la matrice modifie une charge Zod dans `charges.ts`, jamais le schéma. (3) La charge reste fermée (REQ-DM-041) : un booléen s'y écrit `z.enum(['oui','non'])`, aucune chaîne libre. 🔴 Complétée le 2026-09-29 (chantier W20, décision de Williams, session -d7, docs/chantiers/W20-confirmation-par-email.md §6). (4) La matrice gagne trois transitions W20, par genre et non par transition : provisoire → annulee (annulation par l'apporteur pendant le délai avant envoi, HYP-W20-ANNULATION), provisoire → active (clic « Oui » retenu, source courriel, HYP-W20-SOURCE), provisoire → invalidee (« Non » confirmé en second geste, valeur non_confirme, HYP-W20-NON). Une annulation après l'échéance est une transition absente de la matrice : erreur typée, rien n'est écrit (REQ-DM-006). Contraintes W19 à intégrer (GOV-115, décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §6) : (1) Entrée dérivée « type de porteur ». (2) Événement de naissance `prise_en_charge_par_la_societe`. Vu de l'espace et de l'API 1, l'état suit la même chronologie qu'un dépôt d'apporteur (question 2, HYP-W19-CYCLE) : même état d'entrée, passage à `active` au même délai que la confirmation d'un dépôt, par l'horloge serveur et sans qualifieur. (3) Refus typé, pour un conseiller, de : confirmation tacite par un apporteur, `non_confirme`, gel, `figee_resiliation`, rang, contestation ; aucun de ces refus ne se voit de l'espace. (4) Prolongation W9 identique à celle de l'apporteur. (5) Événement `porteur_reaffecte {de, vers, acteurId, motif}`, de conseiller à conseiller seulement. (6) Désactivation : les prises en charge sans suite passent `perimee` sous 15 jours. (7) Test exhaustif des triplets (état, événement, type de porteur), et test : à chaque stade, l'état visible d'une prise en charge égale celui d'un dépôt d'apporteur aux mêmes dates. Les 13 valeurs d'`EtatAttribution` sont inchangées. AMENDEMENT (vérification V2 (GOV-132, 2026-10-01), A1-07) : la matrice W20 gagne CINQ transitions et non trois : en plus de celles écrites en (4), « provisoire → active, `confirmee_tacitement` (DM-24) » et « provisoire → perimee, `liberee_sans_confirmation` (DM-13) ». AMENDEMENT (note de la lentille exactitude sur la PR 316, annexe V2 R1) : le témoin de la garde partners:transitions:exhaustive vit sous `tests/unit/domaine/attribution-machine-a-etats.spec.ts` (include vitest), témoin unitaire que la tâche déclare déjà, et non sous `tests/domain/transitions.spec.ts`, hors de ces portées ; `docs/gates.json` (champ `script`) est réaligné par cette tâche à sa revendication, avec les clés de site de `scripts/gates/gov-attributions.ts` qui en dépendent, et `tests/domain/transitions.spec.ts` est alors retiré de ses `paths`. AMENDEMENT (audit indépendant du plan de la Phase 1 (2026-10-01, `_REPRISE-AXION-APPORTEURS/AUDIT-PLAN-PHASE-1.md`), écart B-10) : index `(agregat, agregat_id)` sur `evenements`. DÉCISION DE L'ARCHITECTE (A02, 2026-10-02, rattrapage 48) : dans la charge de `attribution_etat_modifie`, la clé du code de la matrice s'appelle `transition`, et non `evenement` (la garde `journal:sans-pii` interdit ce mot dans le domaine du journal) ; le glossaire §4.1 et `partners/ADR-0022` §4 sont mis à jour par DM-45. La charge porte aussi `acteur` obligatoire (décision sur l'acteur du journal, rattrapage 48). PRÉCISIONS (rattrapage 58 ; mesure d'A05, avis d'A02 et d'A07). (1) ÉCRITURE : `machine.ts` reste pur ; un module serveur `src/server/attribution/transitionner.ts` écrit la transition (état, délai recalculé, événement `attribution_etat_modifie` dans la MÊME transaction, `purge_contact_at` posé par `echeanceDePurge` de DM-48 à la libération), avec son témoin en base `tests/integration/attribution-transitions.spec.ts` (événement en transaction, REQ-QA-004). (2) RÉALIGNEMENT R1 : le champ `script` de `partners:transitions:exhaustive` (`docs/gates.json`) et les clés de site de `scripts/gates/gov-attributions.ts` qui en dépendent ; `tests/domain/transitions.spec.ts` sort des chemins au rattrapage qui suit la PR de DM-08, une fois la garde réalignée (sinon `gate_non_reciproque`). (3) RÉAFFECTATION DU PORTEUR (W19 (5), A02) : une valeur À PART, `attribution_porteur_reaffecte` (préfixe de l'agrégat `attribution`), charge fermée `.strict()` `{ de: Porteur, vers: Porteur, acteur }` avec `Porteur = { type: 'apporteur' | 'utilisateur_console', id: uuid }`, forme unique dans `FORMES`, aucune donnée de personne ni date, raffinement `de` ≠ `vers` ; second raffinement porteur_non_conseiller : de.type et vers.type valent utilisateur_console, sinon refus nommé du côté fautif (W19 (5)) ; témoins : apporteur en de, apporteur en vers ; ADD VALUE EN FIN, non utilisée dans la même migration ; glossaire §4 et §4.1 (créateur DM-08) ; « treize valeurs » des phases 0 et 1 (glossaire §4.1, ADR-0022 §4) devient QUATORZE dans la même PR. (4) Le passage « prises en charge sans suite → `perimee` sous 15 jours à la désactivation d'un conseiller » (W19 (6)) SORT vers DM-30 ; DM-08 livre l'événement et la transition. (5) CONDITION SUSPENSIVE (A07 et A02) : AUCUNE flèche `provisoire` → `signee` ; quand la condition défaille, `signee` → `active` (fenêtre en cours, même date de fin) ou `signee` → `expiree` (fenêtre passée), JAMAIS vers `provisoire` ni `proposition` ; un TÉMOIN par flèche. (6) Migration au numéro libre suivant ; DM-08 et DM-11 ajoutent des valeurs à `TypeEvenementJournal` : la seconde fusionnée intègre main. (7) MATRICE (A02, 2026-10-02) : codes de transition au PARTICIPE (`deposee`, `deposee_en_file`, `prise_en_charge`, `retiree`, `file_expiree`, `redeclaree`, `confirmee`, `confirmee_par_courriel`, `confirmee_tacitement`, `non_confirmee`, `non_confirmee_par_courriel`, `annulee_par_apporteur`, `annulee_par_la_console`, `liberee_sans_confirmation`, `anomalie_confirmee`, `figee`, `rdv_pris`, `devis_envoye`, `devis_signe`, `perdue`, `perimee`, `expiree`, `paiement_recu`) ; l'attente au rang 1 qui se redéclare passe `expiree` par `redeclaree`, la nouvelle attribution naissant par `deposee` dans la même transaction ; une commande reçue en `provisoire` est gardée, et à la confirmation le module enchaîne `confirmee` puis `devis_signe` dans la même transaction (deux événements) ; les deux retours de condition suspensive sont deux CODES, `commande_caduque` (→ active) et `commande_caduque_hors_fenetre` (→ expiree), choisis par le module selon `fenetreFinAt`, sans aucun recalcul (fenêtre, confirmation et péremption inchangées), et refusés si une AUTRE commande valable existe ; refus W19 jugé sur le triplet (état, transition, type de porteur), un témoin par refus. ÉMETTRICE (rattrapage 60, arrêt définitif d'A02 avec A07, 2026-10-02, relayé par la coordination) : les clés `decision_attribution` (obligatoire, sans délai) et `premier_rang_libere` (obligatoire, fait courir un délai) sont ÉMISES PAR DM-55, après UX-P1-10 (A02) ; DM-08 n'émet rien (décision de la coordination du 2026-10-02 : DM-08 fusionne sans elle, la table des notifications n'étant pas encore sur main). LABELS de sa PR (A02) : `role:gardien-spec`, `role:architecte` et `schema`. SEMEUR DE LA PORTE D (rattrapage 64, BLOQUANT, décision de la coordination du 02/10) : le semeur lit la polarité des deux NOT d'un CHECK de paire : mêmes polarités → ensemble, polarités différentes → exclusives (CHECK de DM-53) ; témoin dans porte-d.spec.ts, avec une ligne valide semée (coordination, 02/10). Cause : `liensDesChecks` lisait `(siren IS NULL) = (siren_purge_at IS NOT NULL)` en ignorant les NOT, ne semait plus `depots_refuses`, et migrations-additives (REQ-QA-021) rougissait sur toute PR à migration. Porté par DM-08, qui fusionne la première."
+      "acceptance": "ELLE ÉCRIT LE SCHÉMA (label `schema`, seule de sa famille dans son lot) : seul écrivain légitime de la matrice d'attribution (partners/ADR-0022, cadrage de l'architecte du 2026-09-26 sur délégation de Will). Le comportement de la machine est celui de ses exigences ; ce qui suit est ce qu'elle écrit au schéma. (1) Elle ajoute à `TypeEvenementJournal` deux valeurs par `ALTER TYPE type_evenement_journal ADD VALUE`, jamais employées dans la même migration : `attribution_etat_modifie` (agrégat `attribution`, charge fermée `{de: EtatAttribution | null, vers, evenement: z.enum(EVENEMENTS_ATTRIBUTION), acteurId?: uuid, lienInteret?: 'declare' | 'non_declare'}`) et `attribution_peremption_suspendue` (`{acteurId: uuid, suspendueAt}`). (2) UN TYPE PAR GENRE DE TRANSITION, PAS PAR TRANSITION : `EVENEMENTS_ATTRIBUTION` est exporté de `machine.ts` et lu par la charge ; ajouter un événement à la matrice modifie une charge Zod dans `charges.ts`, jamais le schéma. (3) La charge reste fermée (REQ-DM-041) : un booléen s'y écrit `z.enum(['oui','non'])`, aucune chaîne libre. 🔴 Complétée le 2026-09-29 (chantier W20, décision de Williams, session -d7, docs/chantiers/W20-confirmation-par-email.md §6). (4) La matrice gagne trois transitions W20, par genre et non par transition : provisoire → annulee (annulation par l'apporteur pendant le délai avant envoi, HYP-W20-ANNULATION), provisoire → active (clic « Oui » retenu, source courriel, HYP-W20-SOURCE), provisoire → invalidee (« Non » confirmé en second geste, valeur non_confirme, HYP-W20-NON). Une annulation après l'échéance est une transition absente de la matrice : erreur typée, rien n'est écrit (REQ-DM-006). Contraintes W19 à intégrer (GOV-115, décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §6) : (1) Entrée dérivée « type de porteur ». (2) Événement de naissance `prise_en_charge_par_la_societe`. Vu de l'espace et de l'API 1, l'état suit la même chronologie qu'un dépôt d'apporteur (question 2, HYP-W19-CYCLE) : même état d'entrée, passage à `active` au même délai que la confirmation d'un dépôt, par l'horloge serveur et sans qualifieur. (3) Refus typé, pour un conseiller, de : confirmation tacite par un apporteur, `non_confirme`, gel, `figee_resiliation`, rang, contestation ; aucun de ces refus ne se voit de l'espace. (4) Prolongation W9 identique à celle de l'apporteur. (5) Événement `porteur_reaffecte {de, vers, acteurId, motif}`, de conseiller à conseiller seulement. (6) Désactivation : les prises en charge sans suite passent `perimee` sous 15 jours. (7) Test exhaustif des triplets (état, événement, type de porteur), et test : à chaque stade, l'état visible d'une prise en charge égale celui d'un dépôt d'apporteur aux mêmes dates. Les 13 valeurs d'`EtatAttribution` sont inchangées. AMENDEMENT (vérification V2 (GOV-132, 2026-10-01), A1-07) : la matrice W20 gagne CINQ transitions et non trois : en plus de celles écrites en (4), « provisoire → active, `confirmee_tacitement` (DM-24) » et « provisoire → perimee, `liberee_sans_confirmation` (DM-13) ». AMENDEMENT (note de la lentille exactitude sur la PR 316, annexe V2 R1) : le témoin de la garde partners:transitions:exhaustive vit sous `tests/unit/domaine/attribution-machine-a-etats.spec.ts` (include vitest), témoin unitaire que la tâche déclare déjà, et non sous `tests/domain/transitions.spec.ts`, hors de ces portées ; `docs/gates.json` (champ `script`) est réaligné par cette tâche à sa revendication, avec les clés de site de `scripts/gates/gov-attributions.ts` qui en dépendent, et `tests/domain/transitions.spec.ts` est alors retiré de ses `paths`. AMENDEMENT (audit indépendant du plan de la Phase 1 (2026-10-01, `_REPRISE-AXION-APPORTEURS/AUDIT-PLAN-PHASE-1.md`), écart B-10) : index `(agregat, agregat_id)` sur `evenements`. DÉCISION DE L'ARCHITECTE (A02, 2026-10-02, rattrapage 48) : dans la charge de `attribution_etat_modifie`, la clé du code de la matrice s'appelle `transition`, et non `evenement` (la garde `journal:sans-pii` interdit ce mot dans le domaine du journal) ; le glossaire §4.1 et `partners/ADR-0022` §4 sont mis à jour par DM-45. La charge porte aussi `acteur` obligatoire (décision sur l'acteur du journal, rattrapage 48). PRÉCISIONS (rattrapage 58 ; mesure d'A05, avis d'A02 et d'A07). (1) ÉCRITURE : `machine.ts` reste pur ; un module serveur `src/server/attribution/transitionner.ts` écrit la transition (état, délai recalculé, événement `attribution_etat_modifie` dans la MÊME transaction, `purge_contact_at` posé par `echeanceDePurge` de DM-48 à la libération), avec son témoin en base `tests/integration/attribution-transitions.spec.ts` (événement en transaction, REQ-QA-004). (2) RÉALIGNEMENT R1 : le champ `script` de `partners:transitions:exhaustive` (`docs/gates.json`) et les clés de site de `scripts/gates/gov-attributions.ts` qui en dépendent ; `tests/domain/transitions.spec.ts` sort des chemins au rattrapage qui suit la PR de DM-08, une fois la garde réalignée (sinon `gate_non_reciproque`). (3) RÉAFFECTATION DU PORTEUR (W19 (5), A02) : une valeur À PART, `attribution_porteur_reaffecte` (préfixe de l'agrégat `attribution`), charge fermée `.strict()` `{ de: Porteur, vers: Porteur, acteur }` avec `Porteur = { type: 'apporteur' | 'utilisateur_console', id: uuid }`, forme unique dans `FORMES`, aucune donnée de personne ni date, raffinement `de` ≠ `vers` ; second raffinement porteur_non_conseiller : de.type et vers.type valent utilisateur_console, sinon refus nommé du côté fautif (W19 (5)) ; témoins : apporteur en de, apporteur en vers ; ADD VALUE EN FIN, non utilisée dans la même migration ; glossaire §4 et §4.1 (créateur DM-08) ; « treize valeurs » des phases 0 et 1 (glossaire §4.1, ADR-0022 §4) devient QUATORZE dans la même PR. (4) Le passage « prises en charge sans suite → `perimee` sous 15 jours à la désactivation d'un conseiller » (W19 (6)) SORT vers DM-30 ; DM-08 livre l'événement et la transition. (5) CONDITION SUSPENSIVE (A07 et A02) : AUCUNE flèche `provisoire` → `signee` ; quand la condition défaille, `signee` → `active` (fenêtre en cours, même date de fin) ou `signee` → `expiree` (fenêtre passée), JAMAIS vers `provisoire` ni `proposition` ; un TÉMOIN par flèche. (6) Migration au numéro libre suivant ; DM-08 et DM-11 ajoutent des valeurs à `TypeEvenementJournal` : la seconde fusionnée intègre main. (7) MATRICE (A02, 2026-10-02) : codes de transition au PARTICIPE (`deposee`, `deposee_en_file`, `prise_en_charge`, `retiree`, `file_expiree`, `redeclaree`, `confirmee`, `confirmee_par_courriel`, `confirmee_tacitement`, `non_confirmee`, `non_confirmee_par_courriel`, `annulee_par_apporteur`, `annulee_par_la_console`, `liberee_sans_confirmation`, `anomalie_confirmee`, `figee`, `rdv_pris`, `devis_envoye`, `devis_signe`, `perdue`, `perimee`, `expiree`, `paiement_recu`) ; l'attente au rang 1 qui se redéclare passe `expiree` par `redeclaree`, la nouvelle attribution naissant par `deposee` dans la même transaction ; une commande reçue en `provisoire` est gardée, et à la confirmation le module enchaîne `confirmee` puis `devis_signe` dans la même transaction (deux événements) ; les deux retours de condition suspensive sont deux CODES, `commande_caduque` (→ active) et `commande_caduque_hors_fenetre` (→ expiree), choisis par le module selon `fenetreFinAt`, sans aucun recalcul (fenêtre, confirmation et péremption inchangées), et refusés si une AUTRE commande valable existe ; refus W19 jugé sur le triplet (état, transition, type de porteur), un témoin par refus. ÉMETTRICE (rattrapage 60, arrêt définitif d'A02 avec A07, 2026-10-02, relayé par la coordination) : les clés `decision_attribution` (obligatoire, sans délai) et `premier_rang_libere` (obligatoire, fait courir un délai) sont ÉMISES PAR DM-55, après UX-P1-10 (A02) ; DM-08 n'émet rien (décision de la coordination du 2026-10-02 : DM-08 fusionne sans elle, la table des notifications n'étant pas encore sur main). LABELS de sa PR (A02) : `role:gardien-spec`, `role:architecte` et `schema`. SEMEUR DE LA PORTE D (rattrapage 64, BLOQUANT, décision de la coordination du 02/10) : le semeur lit la polarité des deux NOT d'un CHECK de paire : mêmes polarités → ensemble, polarités différentes → exclusives (CHECK de DM-53) ; témoin dans porte-d.spec.ts, avec une ligne valide semée (coordination, 02/10). Cause : `liensDesChecks` lisait `(siren IS NULL) = (siren_purge_at IS NOT NULL)` en ignorant les NOT, ne semait plus `depots_refuses`, et migrations-additives (REQ-QA-021) rougissait sur toute PR à migration. Porté par DM-08, qui fusionne la première.",
+      "tests": {
+        "REQ-DM-004": [
+          "tests/unit/domaine/attribution-machine-a-etats.spec.ts",
+          "tests/integration/attribution-transitions.spec.ts"
+        ],
+        "REQ-DM-006": [
+          "tests/unit/domaine/attribution-machine-a-etats.spec.ts",
+          "tests/integration/attribution-transitions.spec.ts"
+        ],
+        "REQ-DM-007": [
+          "tests/unit/domaine/attribution-machine-a-etats.spec.ts",
+          "tests/integration/attribution-transitions.spec.ts"
+        ],
+        "REQ-DM-022": [
+          "tests/integration/attribution-transitions.spec.ts"
+        ],
+        "REQ-QA-004": [
+          "tests/unit/domaine/attribution-machine-a-etats.spec.ts",
+          "tests/integration/attribution-transitions.spec.ts"
+        ],
+        "REQ-SEC-042": [
+          "tests/unit/domaine/attribution-machine-a-etats.spec.ts"
+        ]
+      },
+      "attestation": {
+        "pr": 475,
+        "sha": "9820f0c3bd363bc913964d1968fbe8bd90633a91",
+        "fusionneeAt": "2026-10-02T18:16:32Z"
+      }
     },
     {
       "id": "DM-24",
@@ -5780,11 +5809,11 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
-      "owner": null,
+      "statut": "fusionnee",
+      "owner": "A06",
       "lot": null,
-      "branch": null,
-      "pr": null,
+      "branch": "t/jur-t13",
+      "pr": 477,
       "issue": null,
       "attempts": 0,
       "motif": null,
@@ -5796,7 +5825,12 @@
           "textes-apporteurs-charte-relationnelle.spec.ts"
         ]
       },
-      "acceptance": "Porté par l'audit indépendant du plan de la Phase 1 (2026-10-01, `_REPRISE-AXION-APPORTEURS/AUDIT-PLAN-PHASE-1.md`) (écart B-17). Audit des textes de l'espace et des courriels contre la charte relationnelle. La garde existe (`scripts/gates/lexique-apporteurs.ts`, GOV-013, GOV-106, GOV-109) : on étend `src/domain/lexique/lexique-interdit.ts` pour REQ-JUR-012 et REQ-JUR-013, jamais une garde nouvelle. TÉMOIN rouge par famille ajoutée. CHEMIN (rattrapage 53) : `src/domain/lexique/lexique-interdit.ts`, que l'acceptance étend, entre aux chemins. MUTATION (rattrapage 63, rectifiée au rattrapage 64 par la lentille sécurité) : le témoin « REQ-JUR-034 : le binaire sur le dépôt sort en 0 et imprime les fichiers et clés confrontés », seul et par son titre exact, entre dans ECARTES ; il lance la garde sur les fichiers suivis du dépôt, que le bac à sable instrumenté ne reproduit pas (motif de la lentille sécurité, validé pour ce témoin le 2026-10-02) ; jamais de Stryker disable. Les autres témoins de la describe « REQ-JUR-034 — aucun agrégat du réseau dans un DTO de l'espace », qui exécutent le code, restent mutés. QUATRE TÉMOINS (rattrapage 66, validés par la lentille sécurité le 2026-10-02), chacun seul par son titre exact, qui lancent une garde sur les fichiers suivis : « REQ-JUR-034 : le binaire sur le dépôt sort en 0 et imprime les fichiers et clés confrontés » ; « REQ-JUR-035 : le binaire sur le dépôt sort en 0 et imprime les noms confrontés » ; « REQ-JUR-037 : le binaire `jur:lexique-social` sur le dépôt sort en 0 et imprime les fichiers lus » ; « REQ-SEC-029 : le dépôt réel — aucune faute, et un plancher de fichiers et d’attributs confrontés » (`csp-inline.spec.ts` ; ses témoins synthétiques restent mutés). Tous les autres témoins de ces describe restent mutés."
+      "acceptance": "Porté par l'audit indépendant du plan de la Phase 1 (2026-10-01, `_REPRISE-AXION-APPORTEURS/AUDIT-PLAN-PHASE-1.md`) (écart B-17). Audit des textes de l'espace et des courriels contre la charte relationnelle. La garde existe (`scripts/gates/lexique-apporteurs.ts`, GOV-013, GOV-106, GOV-109) : on étend `src/domain/lexique/lexique-interdit.ts` pour REQ-JUR-012 et REQ-JUR-013, jamais une garde nouvelle. TÉMOIN rouge par famille ajoutée. CHEMIN (rattrapage 53) : `src/domain/lexique/lexique-interdit.ts`, que l'acceptance étend, entre aux chemins. MUTATION (rattrapage 63, rectifiée au rattrapage 64 par la lentille sécurité) : le témoin « REQ-JUR-034 : le binaire sur le dépôt sort en 0 et imprime les fichiers et clés confrontés », seul et par son titre exact, entre dans ECARTES ; il lance la garde sur les fichiers suivis du dépôt, que le bac à sable instrumenté ne reproduit pas (motif de la lentille sécurité, validé pour ce témoin le 2026-10-02) ; jamais de Stryker disable. Les autres témoins de la describe « REQ-JUR-034 — aucun agrégat du réseau dans un DTO de l'espace », qui exécutent le code, restent mutés. QUATRE TÉMOINS (rattrapage 66, validés par la lentille sécurité le 2026-10-02), chacun seul par son titre exact, qui lancent une garde sur les fichiers suivis : « REQ-JUR-034 : le binaire sur le dépôt sort en 0 et imprime les fichiers et clés confrontés » ; « REQ-JUR-035 : le binaire sur le dépôt sort en 0 et imprime les noms confrontés » ; « REQ-JUR-037 : le binaire `jur:lexique-social` sur le dépôt sort en 0 et imprime les fichiers lus » ; « REQ-SEC-029 : le dépôt réel — aucune faute, et un plancher de fichiers et d’attributs confrontés » (`csp-inline.spec.ts` ; ses témoins synthétiques restent mutés). Tous les autres témoins de ces describe restent mutés.",
+      "attestation": {
+        "pr": 477,
+        "sha": "acc361838ba7384372b454cbc93033d3e4d51e29",
+        "fusionneeAt": "2026-10-02T17:41:56Z"
+      }
     },
     {
       "id": "CPL-T06",
@@ -17740,7 +17774,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "Écart C4 de la vérification de bout en bout (GOV-131, VERIF-1-RAPPORT.md), versé sur demande de la coordination, en tête du lot 2, AVANT tout événement d'argent : la réception n'applique pas les `$defs` fermés du contrat (`payload: z.record(unknown)`) ; un payload hors schéma (champ en trop, montant en chaîne, montant négatif) est accepté 200, marqué `sent` côté axion-ia, et jamais rejoué. (1) TÉMOIN rouge d'abord : un `candidature.recue` signé portant `payload.champIntrus` est refusé 422 `hors_schema` ; de même un montant en chaîne. (2) La validation porte sur `#/$defs/payload_<type>` du contrat publié, après `enveloppeReconnue`, et seulement si `schema_version === SCHEMA_VERSION`. (3) Un payload conforme reste accepté (contre-témoin). Relecture de la lentille securite exigée. (4) Condition de la lentille securite : un événement mis en attente (`held`) pour une autre `schema_version`, puis rejoué après une montée de version, passe par la MÊME validation des `$defs`. TÉMOIN : un tel événement hors schéma, rejoué après la montée, est refusé `hors_schema`. CONDITION DE LA LENTILLE SÉCURITÉ (rattrapage 45, relayée par la coordination, 2026-10-01), MOT POUR MOT : « Au rejeu d'un `held`, la validation juge la charge conservée contre le `$defs` du type PRIVÉ des `CHAMPS_NON_CONSERVES` (retirés des propriétés et de `required`), sans jamais les réintroduire ; TÉMOIN : un `held` conforme, conservé sans `utm`, est rejoué et accepté. » Motif : `utm` est requis par `payload_candidature_recue` mais n'est plus conservé depuis INT-T44 ; une validation naïve refuserait en `hors_schema` toute `candidature.recue` en attente. INT-T45 dépend d'INT-T44 (même `reception.ts`). DÉCISION DE LA COORDINATION (rattrapage 46, 2026-10-02, sur mesure de A05) : le `$defs` v2 publié n'a aucun `minimum` (les montants y sont `{\"type\":\"integer\"}`) ; un montant NÉGATIF n'est donc refusé qu'à partir de la v3, qui porte le minimum (INT-T46-P) — trou connu, jamais ouvert sur des données réelles (le minimum est préalable à `PARTNERS_SYNC_ENABLED` et à DM-15). Une règle propre à la réception serait un schéma retapé hors du contrat (RM-01) : écartée. Témoins : `tests/unit/integration/reception-hors-schema.spec.ts` en processus ; les témoins de SEC-06 (`webhook-signature.spec.ts`, `webhook.spec.ts`, `webhook-verdicts.spec.ts`) envoient désormais la charge du producteur réel, refusée à juste titre quand elle est factice, sans changer ce qu'ils prouvent.",
       "tests": {
         "REQ-INT-003": [
@@ -17751,7 +17785,16 @@
           "tests/integration/reception-hors-schema.spec.ts",
           "tests/unit/integration/reception-hors-schema.spec.ts"
         ]
-      }
+      },
+      "branch": "t/int-t45",
+      "owner": "A05",
+      "pr": 388,
+      "attestation": {
+        "pr": 388,
+        "sha": "544d76ab849413207c444686194f967a62368501",
+        "fusionneeAt": "2026-10-02T00:20:00Z"
+      },
+      "motif": null
     },
     {
       "id": "QA-T55",
@@ -18968,7 +19011,8 @@
         "docs/env.md",
         "docs/runbooks/mise-en-service.md",
         ".github/workflows/coolify-provisionner.yml",
-        "scripts/deploiement/provisionner.ts"
+        "scripts/deploiement/provisionner.ts",
+        "tests/unit/qualite/env-fail-fast.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -19126,7 +19170,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.75,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "Écart du plan relevé par l'auteur écrans (A06) en livrant UX-P1-19, versé par la coordination le 2026-10-01 : l'éditeur de grille (UX-P1-14) et la saisie manuelle avec pièce jointe CV (EXT-T04) sont des écrans de console sans aucune maquette déclarée. Patron UX-P1-19, label `role:ux-redaction`. (1) Les deux maquettes, en 1280×800 et 375×667, avec leurs cinq états, dans les deux thèmes, et une micro-copy de console proposée ; en-têtes filtrés par rôle comme UX-P1-18. (2) Leurs lignes dans `VALIDATION.md` (section « Console »), nommant UX-P1-14 et EXT-T04 ; leurs routes dans `CONSOLE-ROUTES.md` ; leurs cartes dans `index.html` ; leurs états vides dans `etats-vides.ts` (ux-exhaustivite). (3) Les comptes figés de `maquettes-validees.spec.ts` changent, et eux seuls : chacun est nommé avant → après dans la PR, la logique du test est inchangée. (4) TÉMOIN rouge d'abord : chaque maquette existe, a sa ligne de validation et sa route. (5) La validation de Williams est une étape de cette acceptance, pas un préalable : elle est groupée avec la séance déjà prévue (deposer.html, mes-entreprises.html, « Appel de contrôle »). UX-P1-14 et EXT-T04 en dépendent.",
       "tests": {
         "REQ-UX-047": [
@@ -19135,7 +19179,16 @@
         "REQ-UX-018": [
           "tests/unit/console/maquettes-grille-et-saisie.spec.ts"
         ]
-      }
+      },
+      "branch": "t/ux-p1-46",
+      "owner": "A06",
+      "pr": 407,
+      "attestation": {
+        "pr": 407,
+        "sha": "ba1132ee3e1c5bf5474b68807a89ea966e5e9770",
+        "fusionneeAt": "2026-10-02T17:56:38Z"
+      },
+      "motif": null
     },
     {
       "id": "INT-T56",
@@ -20292,7 +20345,7 @@
       "externe": null,
       "estimateDays": 0.5,
       "statut": "a_faire",
-      "acceptance": "Extraite de DM-11 au rattrapage 55 (arbitrage A01 sur l'avis d'A02 : de VRAIS enums, ADR-0022 §5 et §16, et PAS de colonne texte d'attente, dont la conversion ne serait pas additive). Les deux colonnes `apporteurs.qualite_exercice` et `apporteurs.profession_reglementee` (nullables) entrent AVEC leur enum dans une migration additive. (1) `QualiteExercice`, liste FERMÉE d'A07 (2026-10-02) : `commercant` « commerçant », `societe_commerciale` « société commerciale », `artisan` « artisan », `profession_liberale` « professionnel libéral » ; les deux premières rendent applicable la clause attributive de juridiction (art. 48 CPC), les deux autres renvoient au droit commun (TÉMOIN qui le fige) ; « micro-entrepreneur » n’est pas une valeur (un régime, pas une qualité), et la liste est FERMÉE à ces quatre valeurs (motifs d’A07 hors dépôt). LA PR ATTEND LA VALIDATION DE CETTE LISTE PAR WILLIAMS (avis d'A02) : la tâche peut se coder. (2) `ProfessionReglementee` : les noms d'ADR-0022 §16, `expertise_comptable`, `auxiliaire_services_financiers`, `intermediaire_assurance` (codes NAF 69.20Z, 66.19B, 66.22Z, HYP-JUR-PROF-REGLEMENTEES), liste figée par un TÉMOIN. (3) Glossaire §4 : les deux enums, sans synonymes interdits. Auteur : A05. Lentilles schema (A02) et A07.",
+      "acceptance": "Extraite de DM-11 au rattrapage 55 (arbitrage A01 sur l'avis d'A02 : de VRAIS enums, ADR-0022 §5 et §16, et PAS de colonne texte d'attente, dont la conversion ne serait pas additive). Les deux colonnes `apporteurs.qualite_exercice` et `apporteurs.profession_reglementee` (nullables) entrent AVEC leur enum dans une migration additive. (1) `QualiteExercice`, liste FERMÉE d'A07 (2026-10-02) : `commercant` « commerçant », `societe_commerciale` « société commerciale », `artisan` « artisan », `profession_liberale` « professionnel libéral » ; les deux premières rendent applicable la clause attributive de juridiction (art. 48 CPC), les deux autres renvoient au droit commun (TÉMOIN qui le fige) ; « micro-entrepreneur » n’est pas une valeur (un régime, pas une qualité), et la liste est FERMÉE à ces quatre valeurs (motifs d’A07 hors dépôt). Question SOLDÉE (rattrapage 67) : la décision de Williams du 2026-10-02 sur l'avis d'A07 garde `QualiteExercice` à ces quatre valeurs ; le statut juridique est une liste distincte, rangée dans ces qualités (DM-56). (2) `ProfessionReglementee` : les noms d'ADR-0022 §16, `expertise_comptable`, `auxiliaire_services_financiers`, `intermediaire_assurance` (codes NAF 69.20Z, 66.19B, 66.22Z, HYP-JUR-PROF-REGLEMENTEES), liste figée par un TÉMOIN. (3) Glossaire §4 : les deux enums, sans synonymes interdits. Auteur : A05. Lentilles schema (A02) et A07.",
       "tests": {
         "REQ-JUR-022": [
           "tests/unit/domaine/qualite-et-profession.spec.ts"
@@ -21009,6 +21062,74 @@
       "tests": {
         "REQ-INT-012": [
           "axionia/src/server/partners-sync/__tests__/relecture-contrat-v3.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "DM-56",
+      "titre": "Le statut juridique de l'apporteur devient une liste fermée rangée dans sa qualité, et le KYC refuse par motif nommé",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "domaine",
+      "paths": [
+        "prisma/schema.prisma",
+        "prisma/migrations/",
+        "docs/GLOSSAIRE.md",
+        "src/domain/kyc/statut-juridique.ts",
+        "src/domain/kyc/admission.ts",
+        "tests/unit/domaine/statut-juridique.spec.ts",
+        "tests/unit/domaine/kyc-admission.spec.ts",
+        "tests/integration/statut-juridique-check.spec.ts"
+      ],
+      "schema": true,
+      "sensible": [],
+      "deps": [
+        "DM-11",
+        "DM-50"
+      ],
+      "reqs": [
+        "REQ-DM-065",
+        "REQ-JUR-063"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.75,
+      "statut": "a_faire",
+      "acceptance": "Versée au rattrapage 67 sur la décision de Williams du 2026-10-02 (« ok donc rajoute tous les statuts autorisés »), selon l'avis d'A07 du même jour (hors dépôt), relayée par la coordination. Elle vient APRÈS DM-11 (pièces KYC) et DM-50 (enum `QualiteExercice`). (1) `StatutJuridique`, un vrai enum dans une migration additive (ADR-0022 §5) : `micro_entrepreneur`, `entrepreneur_individuel`, `sarl`, `eurl`, `sas`, `sasu`, `sa`, `snc`. Il alimente `{{APPORTEUR_STATUT}}` par son libellé du glossaire. (2) La correspondance vers `QualiteExercice` est une fonction pure : les six sociétés donnent `societe_commerciale` ; `micro_entrepreneur` et `entrepreneur_individuel` donnent la qualité de l'activité déclarée (`commercant`, `artisan` ou `profession_liberale`). Un TÉMOIN fige la liste et la correspondance. `QualiteExercice` reste à quatre valeurs (DM-50). (3) L'admission refuse avec trois motifs NOMMÉS, chacun avec son témoin : `siren_inactif`, `lien_avec_la_societe` (salarié, dirigeant ou associé d'Axion-IA, sur sa seule déclaration), `statut_hors_liste`. Contre l'oracle (lentille sécurité, 2026-10-02) : (1) le motif nommé `lien_avec_la_societe` ne naît QUE de la déclaration de la personne ; (2) le contrôle croisé (REQ-CPL-030) ne refuse pas : il BLOQUE pour revue humaine, avec une réponse IDENTIQUE au candidat, qu'il y ait correspondance ou non ; (3) témoin : deux candidatures, correspondante et non correspondante, reçoivent la même réponse ; (4) comparaison par empreintes (`PII_HASH_KEY`), journal sans nom ni adresse. (4) Professions réglementées : le signal bloquant de REQ-JUR-022 reste inchangé ; on y ajoute l'EXCLUSION D'OFFICE des avocats, notaires, commissaires de justice et professions de santé, par une liste de codes NAF arrêtée par A07 et figée par un témoin, sous le motif nommé `profession_exclue`. (5) Le portage salarial et l'entrepreneur-salarié de coopérative ne sont pas des valeurs : ils relèvent de la phase 2, car ils changent qui signe et qui facture. Auteur : A05. Lentilles schema (A02) et A07. PRÉCISIONS D'A02 (rattrapage 67, mot pour mot) : (0) préfixe `20261002001400`, une seule migration (CREATE TYPE et la colonne ensemble, sans ADD VALUE). (a) « `apporteurs.statut_juridique` `StatutJuridique` NULLABLE, sans défaut (les apporteurs existants n'ont pas de statut saisi ; additif) ». (b) « CHECK nommé `apporteurs_qualite_suit_le_statut` : `statut_juridique IS NULL OR qualite_exercice IS NULL OR ((statut_juridique IN ('sarl','eurl','sas','sasu','sa','snc')) = (qualite_exercice = 'societe_commerciale'))`, avec deux témoins en base sur son nom (une SAS commerçante refusée, un micro-entrepreneur en société commerciale refusé) ; la fonction pure est la correspondance d'écriture, le CHECK en est le garde-fou (ADR-0022 §8) » ; ces témoins vivent dans `tests/integration/statut-juridique-check.spec.ts`. (c) « les motifs siren_inactif, lien_avec_la_societe, statut_hors_liste et profession_exclue sont des codes du domaine, NON persistés ; aucune migration pour eux ». (d) « le GLOSSAIRE §4 reçoit les huit valeurs avec leur libellé, lu par {{APPORTEUR_STATUT}} ; schema:enums confronte l'enum Prisma au glossaire ».",
+      "tests": {
+        "REQ-DM-065": [
+          "tests/unit/domaine/statut-juridique.spec.ts",
+          "tests/integration/statut-juridique-check.spec.ts"
+        ],
+        "REQ-JUR-063": [
+          "tests/unit/domaine/kyc-admission.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "JUR-T55",
+      "titre": "Art. 23 : l'Apporteur déclare n'être tenu envers aucun employeur d'une obligation qui lui interdirait le contrat",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "juridique",
+      "paths": [
+        "docs/contrat/CONTRAT-APPORTEUR-V1.md",
+        "tests/unit/contrat/declaration-employeur-art-23.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [],
+      "reqs": [
+        "REQ-JUR-064"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.25,
+      "statut": "a_faire",
+      "acceptance": "Versée au rattrapage 67 sur l'avis d'A07 du 2026-10-02, retenu par la décision de Williams du même jour, relayée par la coordination. Texte d'A07, une phrase et rien d'autre, ajoutée aux déclarations de l'Apporteur (art. 23) : « L'Apporteur déclare n'être tenu envers aucun employeur d'une obligation qui lui interdirait le présent contrat. » Le texte reste une PROPOSITION, non en vigueur, tant que Williams ne l'a pas validé. Cette validation est une étape de cette acceptance, pas un préalable : la tâche reste éligible pour produire ce qu'il validera. TÉMOIN (écrit par A05, pas par l'autrice) : le gabarit rendu porte la phrase exacte, une seule fois, à l'art. 23. Autrice : A07 ; sa relecture revient donc à la suppléante (REQ-JUR-036).",
+      "tests": {
+        "REQ-JUR-064": [
+          "tests/unit/contrat/declaration-employeur-art-23.spec.ts"
         ]
       }
     }

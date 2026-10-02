@@ -5523,6 +5523,20 @@
       ]
     },
     {
+      "id": "REQ-DM-065",
+      "domaine": "domaine-donnees",
+      "texte": "**Le statut juridique de l'apporteur est une liste FERMÉE.** `StatutJuridique` est un vrai enum : `micro_entrepreneur`, `entrepreneur_individuel`, `sarl`, `eurl`, `sas`, `sasu`, `sa`, `snc` ; il alimente `{{APPORTEUR_STATUT}}` au préambule du contrat par son libellé du glossaire, jamais par une chaîne libre. Chaque statut se range dans UNE `QualiteExercice` (REQ-JUR-022, liste de quatre valeurs inchangée) : les deux premiers selon l'activité déclarée (`commercant`, `artisan` ou `profession_liberale`), les six sociétés en `societe_commerciale`. Un témoin fige la liste et la correspondance. Le portage salarial et l'entrepreneur-salarié de coopérative changent qui signe et qui facture : ils relèvent de la phase 2.",
+      "source": "Décision de Williams du 2026-10-02 (« ok donc rajoute tous les statuts autorisés »), sur l'avis d'A07 du même jour (hors dépôt) ; relayée par la coordination",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": 4,
+      "etape": 4,
+      "phase": 1,
+      "taches": [
+        "DM-56"
+      ]
+    },
+    {
       "id": "REQ-QA-035",
       "domaine": "Annexe — passe de dédoublonnage (à appliquer par le Gardien du spec, GOV-001)",
       "texte": "Le score de candidature est calculé **une seule fois par axionia** et transporté figé (total, parts, `scoreBaremeVersion`) ; Partners ne le recalcule jamais ; test de parité sur fixtures exportées.",
@@ -6251,6 +6265,34 @@
         "JUR-T50",
         "JUR-T51",
         "JUR-T52"
+      ]
+    },
+    {
+      "id": "REQ-JUR-063",
+      "domaine": "juridique",
+      "texte": "**L'admission au KYC refuse, avec un motif NOMMÉ pour chacun :** (1) l'absence de SIREN actif ; (2) la personne salariée, dirigeante ou associée d'Axion-IA, sur sa seule déclaration ; (3) un statut hors de la liste de REQ-DM-065. Les professions dont la déontologie interdit de percevoir un apport sont EXCLUES D'OFFICE (avocats, notaires, commissaires de justice, professions de santé), par une liste de codes figée par un témoin. Le signal bloquant « attestation spécifique requise » de REQ-JUR-022 reste inchangé pour les professions réglementées qui peuvent être admises. Contre l'oracle (lentille sécurité, 2026-10-02) : (1) le motif nommé `lien_avec_la_societe` ne naît QUE de la déclaration de la personne ; (2) le contrôle croisé (REQ-CPL-030) ne refuse pas : il BLOQUE pour revue humaine, avec une réponse IDENTIQUE au candidat, qu'il y ait correspondance ou non ; (3) témoin : deux candidatures, correspondante et non correspondante, reçoivent la même réponse ; (4) comparaison par empreintes (`PII_HASH_KEY`), journal sans nom ni adresse. Aucun refus ne laisse de donnée conservée au-delà de ce que le registre de traitement prévoit (sécurité, 2026-10-02 : les motifs non persistés ne couvrent pas ce qu'a saisi la personne refusée).",
+      "source": "Décision de Williams du 2026-10-02 (« ok donc rajoute tous les statuts autorisés »), sur l'avis d'A07 du même jour (hors dépôt) ; relayée par la coordination",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": 4,
+      "etape": 4,
+      "phase": 1,
+      "taches": [
+        "DM-56"
+      ]
+    },
+    {
+      "id": "REQ-JUR-064",
+      "domaine": "juridique",
+      "texte": "**L'art. 23 du contrat (déclarations de l'Apporteur) porte une phrase de plus :** « L'Apporteur déclare n'être tenu envers aucun employeur d'une obligation qui lui interdirait le présent contrat. » Le texte reste une PROPOSITION, non en vigueur, tant que Williams ne l'a pas validé ; un témoin vérifie que le gabarit rendu porte la phrase exacte, une seule fois.",
+      "source": "Avis d'A07 du 2026-10-02 (hors dépôt), retenu par la décision de Williams du même jour ; relayé par la coordination",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": 11,
+      "etape": 10,
+      "phase": 1,
+      "taches": [
+        "JUR-T55"
       ]
     },
     {
