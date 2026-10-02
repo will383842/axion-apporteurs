@@ -37,6 +37,11 @@ BEGIN
   IF OLD.fichier_purge_at IS NOT NULL AND NEW.fichier_purge_at IS DISTINCT FROM OLD.fichier_purge_at THEN
     RAISE EXCEPTION '% : fichier_purge_at s''écrit une fois (REQ-JUR-029)', TG_NAME;
   END IF;
+  -- Une pièce ne se dit pas purgée tant que son fichier existe : la purge, qui lit
+  -- `fichier_purge_at`, ne la reprendrait plus (A02).
+  IF OLD.fichier_purge_at IS NULL AND NEW.fichier_purge_at IS NOT NULL AND NEW.fichier_ref IS NOT NULL THEN
+    RAISE EXCEPTION '% : fichier_purge_at ne se pose qu''avec l''effacement de fichier_ref (REQ-JUR-029)', TG_NAME;
+  END IF;
   RETURN NEW;
 END;
 $$;

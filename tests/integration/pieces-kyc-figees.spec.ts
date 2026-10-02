@@ -162,6 +162,15 @@ describe('REQ-UX-027 — remplacee_at et fichier_purge_at s’écrivent une fois
     expect(await refus(poser(id, 'fichier_purge_at', PLUS_TARD))).toContain(FIGEES);
     expect(await refus(poser(id, 'fichier_purge_at', null))).toContain(FIGEES);
   });
+
+  it('REQ-DM-027 : TÉMOIN — fichier_purge_at posé SEUL, le fichier encore présent, est refusé', async () => {
+    const id = await piece('identite', 'stockage/identite-2');
+    expect(await refus(poser(id, 'fichier_purge_at', MAINTENANT))).toContain(FIGEES);
+    // La pièce reste reprenable par la purge : ni date posée, ni fichier effacé.
+    const [l] = await base.prisma.$queryRaw<{ ref: string | null; purge: Date | null }[]>`
+      SELECT fichier_ref AS ref, fichier_purge_at AS purge FROM pieces_kyc WHERE id = ${id}::uuid`;
+    expect(l).toStrictEqual({ ref: 'stockage/identite-2', purge: null });
+  });
 });
 
 describe('REQ-DM-027 — une pièce ne disparaît pas', () => {
