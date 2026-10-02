@@ -193,6 +193,28 @@ describe('REQ-DM-031 — la purge planifiée du contact', () => {
     expect(await evenements(id)).toHaveLength(1);
   });
 
+  it('REQ-DM-031 : TÉMOIN — un passage ULTÉRIEUR qui purge d’autres lignes ne réécrit RIEN de ce qui est déjà purgé', async () => {
+    // Un jour plus tard que le reste du banc : le premier passage solde toutes les lignes échues
+    // des témoins précédents, et le second ne trouve que B.
+    const t = new Date(MAINTENANT.getTime() + 24 * 60 * MINUTE);
+    const tPlus10 = new Date(t.getTime() + 10 * MINUTE);
+    const a = await semer({ statut: 'perdue', purgeContactAt: new Date(t.getTime() - MINUTE) });
+    const b = await semer({ statut: 'perdue', purgeContactAt: new Date(t.getTime() + 5 * MINUTE) });
+
+    await purgerLesContacts(base.prisma, t);
+    const aApresPremier = await lire(a);
+    expect(aApresPremier['contact_purge_at']).toEqual(t);
+    expect(await evenements(a)).toHaveLength(1);
+    expect(intacte(await lire(b))).toBe(true);
+
+    expect((await purgerLesContacts(base.prisma, tPlus10)).purgees).toBe(1);
+    expect(await lire(a)).toEqual(aApresPremier);
+    expect((await lire(a))['contact_purge_at']).toEqual(t);
+    expect(await evenements(a)).toHaveLength(1);
+    expect((await lire(b))['contact_purge_at']).toEqual(tPlus10);
+    expect(await evenements(b)).toHaveLength(1);
+  });
+
   it('REQ-DM-031 : TÉMOIN — une attribution ANNULÉE reçoit son échéance et perd son contact', async () => {
     const liberation = new Date(
       MAINTENANT.getTime() - SEUILS.CONTACT_PURGE_APRES_LIBERATION_JOURS.valeur * MS_PAR_JOUR
