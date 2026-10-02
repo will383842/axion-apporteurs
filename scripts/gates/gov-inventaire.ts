@@ -35,6 +35,7 @@ import { readFileSync, existsSync } from 'node:fs';
 import { DEPOT_LOCAL, MOTIF_SHA, depotDeLaTache, type Attestation } from '../lot/attestation';
 import { cheminsProposesDuDepot } from '../lot/paths-proposes';
 import { estUneVueDerivee } from '../vues/vues';
+import { ecrireEtSortir } from '../lib/sortie';
 
 /**
  * `--taches <chemin>` : juger un AUTRE backlog que celui du dépôt (GOV-038). Même motif que le
@@ -487,9 +488,12 @@ function resolue(e: Etat): LigneChantier {
 }
 
 // ── mode --rapport : le même calcul, en JSON ─────────────────────────────────
+// GOV-140 : le rapport dépasse le tampon d'un pipe ; `ecrireEtSortir` attend que la sortie soit
+// vidée avant de sortir. L'écriture étant asynchrone, les modes suivants sont en `else` : aucun ne
+// doit s'exécuter (ni sortir) pendant que le rapport s'écrit.
 if (process.argv.includes('--rapport')) {
   const e = etatDuDepot;
-  console.log(
+  ecrireEtSortir(
     JSON.stringify(
       {
         legende: [...LEGENDE],
@@ -513,13 +517,13 @@ if (process.argv.includes('--rapport')) {
       },
       null,
       2
-    )
+    ),
+    0
   );
-  process.exit(0);
 }
 
 // ── mode --prove : un témoin par famille, des contre-témoins qui restent verts ─
-if (process.argv.includes('--prove')) {
+else if (process.argv.includes('--prove')) {
   const base = controler(etatDuDepot);
   if (base.length > 0) {
     console.error(`❌ La preuve part d'un état DÉJÀ fautif (${base.length}) — corrige d'abord :`);
@@ -737,39 +741,41 @@ if (process.argv.includes('--prove')) {
 }
 
 // ── mode normal ──────────────────────────────────────────────────────────────
-const fautes = controler(etatDuDepot);
-if (fautes.length === 0) {
-  const avancees = etatDuDepot.taches.filter((t) => {
-    const p = PLANCHER[t.statut];
-    return p != null && rang(p) >= SEUIL_PREUVE;
-  });
-  const chantiersAvances = etatDuDepot.chantiers.filter(
-    (c) => c.etat !== null && rang(c.etat as Avancement) >= SEUIL_PREUVE
-  );
-  const nonResolus = etatDuDepot.chantiers.filter((c) => !c.referentResolu).length;
+else {
+  const fautes = controler(etatDuDepot);
+  if (fautes.length === 0) {
+    const avancees = etatDuDepot.taches.filter((t) => {
+      const p = PLANCHER[t.statut];
+      return p != null && rang(p) >= SEUIL_PREUVE;
+    });
+    const chantiersAvances = etatDuDepot.chantiers.filter(
+      (c) => c.etat !== null && rang(c.etat as Avancement) >= SEUIL_PREUVE
+    );
+    const nonResolus = etatDuDepot.chantiers.filter((c) => !c.referentResolu).length;
 
-  console.log(
-    `✅ gov:inventaire — ${avancees.length} tâche(s) en état ≥ « code » portent chacune une preuve ` +
-      `qui résout, sur ${etatDuDepot.taches.length}.`
-  );
-  console.log(
-    `   ${etatDuDepot.statutsDuSchema.length} statuts du schéma, tous rangés sur la légende de ` +
-      `${EXIGENCE} (${LEGENDE.length} états).`
-  );
-  console.log(
-    `   ${CHEMIN_INVENTAIRE} : ${etatDuDepot.chantiers.length} chantiers, ` +
-      `${chantiersAvances.length} en état ≥ « code » avec preuve, ` +
-      `${nonResolus} sans référent résolu dans ce dépôt (donc sans état — c'est voulu).`
-  );
-  process.exit(0);
-}
+    console.log(
+      `✅ gov:inventaire — ${avancees.length} tâche(s) en état ≥ « code » portent chacune une preuve ` +
+        `qui résout, sur ${etatDuDepot.taches.length}.`
+    );
+    console.log(
+      `   ${etatDuDepot.statutsDuSchema.length} statuts du schéma, tous rangés sur la légende de ` +
+        `${EXIGENCE} (${LEGENDE.length} états).`
+    );
+    console.log(
+      `   ${CHEMIN_INVENTAIRE} : ${etatDuDepot.chantiers.length} chantiers, ` +
+        `${chantiersAvances.length} en état ≥ « code » avec preuve, ` +
+        `${nonResolus} sans référent résolu dans ce dépôt (donc sans état — c'est voulu).`
+    );
+    process.exit(0);
+  }
 
-const parFamille = new Map<string, Faute[]>();
-for (const f of fautes) parFamille.set(f.famille, [...(parFamille.get(f.famille) ?? []), f]);
-console.error(`❌ gov:inventaire — ${fautes.length} état(s) d'avancement sans preuve :\n`);
-for (const [famille, liste] of parFamille) {
-  console.error(`   ── ${famille} (${liste.length})`);
-  liste.slice(0, 12).forEach((f) => console.error(`      ${f.message}`));
-  if (liste.length > 12) console.error(`      … et ${liste.length - 12} autre(s).`);
+  const parFamille = new Map<string, Faute[]>();
+  for (const f of fautes) parFamille.set(f.famille, [...(parFamille.get(f.famille) ?? []), f]);
+  console.error(`❌ gov:inventaire — ${fautes.length} état(s) d'avancement sans preuve :\n`);
+  for (const [famille, liste] of parFamille) {
+    console.error(`   ── ${famille} (${liste.length})`);
+    liste.slice(0, 12).forEach((f) => console.error(`      ${f.message}`));
+    if (liste.length > 12) console.error(`      … et ${liste.length - 12} autre(s).`);
+  }
+  process.exit(1);
 }
-process.exit(1);
