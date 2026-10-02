@@ -33,6 +33,12 @@
 
 export const VERSION_INFORMATION_ARTICLE_14 = 'information-article-14/v4';
 
+/**
+ * Le destinataire : le contact rencontré, jamais l'apporteur (liste `COURRIELS_AU_CONTACT` de
+ * `gov:lexique`). Ce n'est pas un texte du bloc : la version ne change pas.
+ */
+export const DESTINATAIRE = 'contact';
+
 /** Le libellé du lien d'opposition, posé par le gabarit de l'e-mail à la fin du bloc. */
 export const LIEN_OPPOSITION = {
   libelle: "Ne plus recevoir de message ni d'appel d'Axion-IA au sujet des présentations",

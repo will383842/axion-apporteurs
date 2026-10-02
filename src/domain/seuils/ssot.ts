@@ -435,3 +435,16 @@ export function budgetUx(nom: string): BudgetUx {
     );
   return BUDGETS_UX[nom as NomDeBudgetUx];
 }
+
+/**
+ * W20 (UX-P1-41, HYP-W20-CONTEXTE) — la longueur maximale du contexte d'un dépôt, seule saisie libre
+ * de l'apporteur reprise dans l'e-mail au contact. Entrée isolée : ni un délai du contrat, ni un
+ * montant, ni un budget d'expérience. Condition (a) de la lentille sécurité (2026-10-02) : la ligne de
+ * contexte est BORNÉE par cette constante, à la saisie comme au rendu.
+ */
+export const CONTEXTE_DEPOT_CARACTERES_MAX = {
+  valeur: 140,
+  unite: 'caracteres',
+  source: 'docs/chantiers/W20-confirmation-par-email.md §2, HYP-W20-CONTEXTE',
+  verifieLe: '2026-10-02',
+} as const;
