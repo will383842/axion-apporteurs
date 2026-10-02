@@ -28,6 +28,13 @@ import {
   type LigneDeNotification,
 } from '../../../src/server/notifications/table-ssot';
 import { TEXTES_DES_NOTIFICATIONS } from '../../../src/content/micro-copy/courriels/notifications';
+import {
+  ecrirePreference,
+  notifier,
+  parametresDe,
+  rendreLaNotification,
+  type NotificationRefusee,
+} from '../../../src/server/notifications/envoyer';
 
 type Tache = { id: string; phase: number; reqs?: string[]; acceptance?: string };
 const REGISTRE = (JSON.parse(readFileSync('docs/tasks.json', 'utf8')) as { taches: Tache[] })
@@ -128,5 +135,206 @@ describe('REQ-UX-016 — une préférence ne désactive jamais une notification 
     expect(r.success).toBe(false);
     expect(JSON.stringify(r.error?.issues)).toContain('obligatoire');
     expect(ecrire('relance_dormance', true).success).toBe(false);
+  });
+});
+
+// ── l'envoi (`src/server/notifications/envoyer.ts`) ─────────────────────────────────────────────
+
+type LignePref = { id: string; cle: string; active: boolean; modifieeAt: Date };
+
+/** Une couche cloisonnée en mémoire, pour UN apporteur : ce qu'elle reçoit est ce que le test juge. */
+function coucheEnMemoire() {
+  const notifications: { id: string; cle: string; attributionId?: string | null }[] = [];
+  const preferences: LignePref[] = [];
+  const appels: string[] = [];
+  let n = 0;
+  const acces = {
+    apporteurId: '00000000-0000-4000-8000-000000000001',
+    notificationEspace: {
+      async creer(data: { cle: string; attributionId?: string | null }) {
+        appels.push('notification.creer');
+        const ligne = { id: `n${++n}`, ...data };
+        notifications.push(ligne);
+        return ligne;
+      },
+    },
+    preferenceNotification: {
+      async lister(o?: { where?: { cle?: string }; take?: number }) {
+        appels.push('preference.lister');
+        return preferences.filter((p) => p.cle === o?.where?.cle).slice(0, o?.take);
+      },
+      async creer(data: Omit<LignePref, 'id'>) {
+        appels.push('preference.creer');
+        const ligne = { id: `p${++n}`, ...data };
+        preferences.push(ligne);
+        return ligne;
+      },
+      async modifier(id: string, data: Partial<LignePref>) {
+        appels.push('preference.modifier');
+        const l = preferences.find((p) => p.id === id);
+        if (!l) return 'introuvable' as const;
+        Object.assign(l, data);
+        return 'modifiee' as const;
+      },
+    },
+  };
+  return { acces, notifications, preferences, appels };
+}
+
+const ESPACE = new URL('https://partners.exemple.invalid');
+const MAINTENANT = new Date('2026-10-02T12:00:00.000Z');
+
+describe('REQ-UX-016 — le rendu d’une notification : les paramètres de sa clé, ni plus ni moins', () => {
+  it('REQ-UX-016 : chaque paramètre des textes est rempli, et la phrase du contrat est reprise telle quelle', () => {
+    const r = rendreLaNotification('premier_rang_libere', {
+      entreprise: 'Entreprise témoin',
+      dateLimite: '12 octobre 2026',
+    });
+    expect(r.titre).toBe(
+      "Entreprise témoin : vous pouvez la déposer à nouveau jusqu'au 12 octobre 2026"
+    );
+    expect(r.corps).toContain("Sans nouveau dépôt d'ici le 12 octobre 2026");
+    expect(r.appel).toBe('Déposer à nouveau cette entreprise');
+    expect(parametresDe('lien_magique')).toEqual([]);
+    expect(parametresDe('refus_declaration')).toEqual(['categorie', 'entreprise', 'motif']);
+  });
+
+  it('REQ-UX-016 : TÉMOINS — une clé hors table, un paramètre manquant, en trop, vide ou porteur d’un saut de ligne : refusés, nommés', () => {
+    const motif = (f: () => unknown) => {
+      try {
+        f();
+      } catch (e) {
+        return (e as NotificationRefusee).motif;
+      }
+      return 'aucun_refus';
+    };
+    expect(motif(() => rendreLaNotification('relance_dormance', {}))).toBe('cle_inconnue');
+    expect(motif(() => rendreLaNotification('attribution_liberee', {}))).toBe('parametre_manquant');
+    expect(
+      motif(() => rendreLaNotification('attribution_liberee', { entreprise: 'X', contact: 'Y' }))
+    ).toBe('parametre_en_trop');
+    expect(
+      motif(() => rendreLaNotification('attribution_liberee', { entreprise: 'X\nBcc: y' }))
+    ).toBe('parametre_invalide');
+    expect(motif(() => rendreLaNotification('attribution_liberee', { entreprise: '' }))).toBe(
+      'parametre_invalide'
+    );
+  });
+});
+
+describe('REQ-UX-016 REQ-JUR-039 — l’envoi : l’espace, puis le courriel, selon la table', () => {
+  it('REQ-UX-016 : une clé obligatoire écrit dans l’espace ET demande le courriel, préférence ou pas', async () => {
+    const c = coucheEnMemoire();
+    c.preferences.push({
+      id: 'p0',
+      cle: 'refus_declaration',
+      active: false,
+      modifieeAt: MAINTENANT,
+    });
+    const demandes: {
+      gabarit: string;
+      sujet: string;
+      corps: string;
+      apporteurId: string | null;
+    }[] = [];
+    const issue = await notifier(
+      {
+        cle: 'refus_declaration',
+        a: 'apporteur@exemple.invalid',
+        parametres: { entreprise: 'E', categorie: 'Doublon', motif: 'déjà déposée' },
+        attributionId: null,
+      },
+      {
+        acces: c.acces,
+        urlDeLEspace: ESPACE,
+        envoyerCourriel: async (d) => {
+          demandes.push(d);
+          return 'envoye';
+        },
+      }
+    );
+    expect(issue).toEqual({ notificationId: 'n1', courriel: 'envoye' });
+    expect(c.notifications).toEqual([{ id: 'n1', cle: 'refus_declaration', attributionId: null }]);
+    expect(demandes).toHaveLength(1);
+    expect(demandes[0]).toMatchObject({
+      gabarit: 'refus_declaration',
+      sujet: 'E : dépôt non enregistré — Doublon',
+      apporteurId: c.acces.apporteurId,
+    });
+    expect(demandes[0]!.corps).toContain("n'est pas un manquement");
+    expect(demandes[0]!.corps).toContain('Contester ce refus par écrit');
+  });
+
+  it('REQ-UX-016 : TÉMOIN — une clé désactivable que l’apporteur a désactivée : l’espace oui, le courriel non, nommé', async () => {
+    const c = coucheEnMemoire();
+    c.preferences.push({ id: 'p0', cle: 'rappel_rc_pro', active: false, modifieeAt: MAINTENANT });
+    let appels = 0;
+    const issue = await notifier(
+      {
+        cle: 'rappel_rc_pro',
+        a: 'apporteur@exemple.invalid',
+        parametres: { dateEcheance: '1er novembre 2026' },
+        attributionId: null,
+      },
+      {
+        acces: c.acces,
+        urlDeLEspace: ESPACE,
+        envoyerCourriel: async () => {
+          appels++;
+          return 'envoye';
+        },
+      }
+    );
+    expect(issue).toEqual({ notificationId: 'n1', courriel: 'desactive_par_preference' });
+    expect(appels).toBe(0);
+  });
+
+  it('REQ-UX-016 : l’appel à l’action mène à la route déclarée de la table, sur l’adresse de l’espace', async () => {
+    const c = coucheEnMemoire();
+    let corps = '';
+    await notifier(
+      {
+        cle: 'rappel_rc_pro',
+        a: 'apporteur@exemple.invalid',
+        parametres: { dateEcheance: '1er novembre 2026' },
+        attributionId: null,
+      },
+      {
+        acces: c.acces,
+        urlDeLEspace: ESPACE,
+        envoyerCourriel: async (d) => {
+          corps = d.corps;
+          return 'envoye';
+        },
+      }
+    );
+    expect(corps).toContain(
+      `Déposer la nouvelle attestation : ${new URL('/conformite', ESPACE).href}`
+    );
+  });
+});
+
+describe('REQ-UX-016 — la préférence s’écrit par la couche cloisonnée, en upsert sur (apporteur, clé)', () => {
+  it('REQ-UX-016 : TÉMOIN — deux écritures sur la même clé laissent UNE ligne, la dernière valeur, le même id', async () => {
+    const c = coucheEnMemoire();
+    expect(
+      await ecrirePreference(c.acces, { cle: 'rappel_rc_pro', active: false }, MAINTENANT)
+    ).toBe('creee');
+    const id = c.preferences[0]!.id;
+    const plusTard = new Date(MAINTENANT.getTime() + 60_000);
+    expect(await ecrirePreference(c.acces, { cle: 'rappel_rc_pro', active: true }, plusTard)).toBe(
+      'modifiee'
+    );
+    expect(c.preferences).toEqual([
+      { id, cle: 'rappel_rc_pro', active: true, modifieeAt: plusTard },
+    ]);
+  });
+
+  it('REQ-UX-016 : TÉMOIN — désactiver une clé obligatoire est refusé AVANT la couche : aucun appel', async () => {
+    const c = coucheEnMemoire();
+    await expect(
+      ecrirePreference(c.acces, { cle: 'suspension_declarations', active: false }, MAINTENANT)
+    ).rejects.toThrow(/obligatoire/);
+    expect(c.appels).toEqual([]);
   });
 });
