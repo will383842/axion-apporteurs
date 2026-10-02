@@ -19703,7 +19703,8 @@
         "tests/integration/role-d-execution.spec.ts",
         "src/server/deploiement/role-d-execution.ts",
         "tests/unit/qualite/provisionnement-coolify.spec.ts",
-        "tests/unit/qualite/env-fail-fast.spec.ts"
+        "tests/unit/qualite/env-fail-fast.spec.ts",
+        "scripts/gates/gate-c.sh"
       ],
       "schema": false,
       "sensible": [
@@ -19719,7 +19720,7 @@
       "externe": null,
       "estimateDays": 0.75,
       "statut": "a_faire",
-      "acceptance": "Risque nommé par DM-45 (décision A02 du 2026-10-02, option (a)), versé au rattrapage 48 ; BLOQUANTE avant la mise en service. Aujourd'hui, `prisma migrate deploy` et le serveur partagent la même `DATABASE_URL`, sous un rôle SUPERUTILISATEUR : céder la propriété d'`evenements` à `partners_journal` ne protège rien tant que l'exécution tourne sous lui. (1) DEUX URL : celle de la migration (rôle propriétaire, qui seul peut être membre de `partners_journal`) et celle de l'exécution (rôle LOGIN non superutilisateur), au schéma de `src/lib/env.ts` ; `docker-entrypoint.sh` migre avec la première et lance le serveur avec la seconde. (2) Le rôle LOGIN d'exécution et son secret sont créés AU PROVISIONNEMENT, hors migration ; `GRANT partners_execution TO <rôle LOGIN>`, privilèges sur les autres tables et default privileges posés au même endroit. (3) RÈGLE : le rôle d'exécution n'est JAMAIS membre de `partners_journal` (l'héritage lui rendrait le droit de DISABLE TRIGGER), et n'est ni superutilisateur, ni propriétaire d'aucune table protégée. TÉMOIN `tests/integration/role-d-execution.spec.ts` : connecté comme le serveur, `rolsuper` faux, aucune appartenance à `partners_journal`, DISABLE TRIGGER sur `evenements` refusé (42501). (4) Case du runbook : rôle d'exécution provisionné, serveur relancé sous lui, constat des trois faits du témoin en production. Gestes de Williams : le secret du rôle d'exécution. CHEMIN (rattrapage 57, mesure d'A05) : `provisionner.ts` tourne dans la forge et ne joint pas la base interne ; le rôle LOGIN se crée DANS le conteneur, avec l'URL de migration (propriétaire), par un module idempotent `src/server/deploiement/role-d-execution.ts` : CREATE ROLE s'il manque, ALTER ROLE … PASSWORD, GRANT partners_execution, privilèges et default privileges sur les autres tables ; refus de démarrer si le rôle est superutilisateur ou membre de partners_journal ; `docker-entrypoint.sh` l'appelle entre la migration et le serveur, et le témoin aussi. `provisionner.ts` pose les deux URL et le secret du rôle (geste de Williams). `tests/integration/harnais.ts` n'est pas touché. CHEMIN (rattrapage 58, mesure d'A05) : `tests/unit/qualite/provisionnement-coolify.spec.ts` : `provisionner.ts` exige `PARTNERS_DB_EXECUTION_SECRET` (refus avant tout appel) et pose `DATABASE_MIGRATION_URL` (propriétaire) et `DATABASE_URL` (rôle d'exécution, masquée) ; les cas du témoin reçoivent un secret factice, et un cas vérifie les deux URL et leur masque.",
+      "acceptance": "Risque nommé par DM-45 (décision A02 du 2026-10-02, option (a)), versé au rattrapage 48 ; BLOQUANTE avant la mise en service. Aujourd'hui, `prisma migrate deploy` et le serveur partagent la même `DATABASE_URL`, sous un rôle SUPERUTILISATEUR : céder la propriété d'`evenements` à `partners_journal` ne protège rien tant que l'exécution tourne sous lui. (1) DEUX URL : celle de la migration (rôle propriétaire, qui seul peut être membre de `partners_journal`) et celle de l'exécution (rôle LOGIN non superutilisateur), au schéma de `src/lib/env.ts` ; `docker-entrypoint.sh` migre avec la première et lance le serveur avec la seconde. (2) Le rôle LOGIN d'exécution et son secret sont créés AU PROVISIONNEMENT, hors migration ; `GRANT partners_execution TO <rôle LOGIN>`, privilèges sur les autres tables et default privileges posés au même endroit. (3) RÈGLE : le rôle d'exécution n'est JAMAIS membre de `partners_journal` (l'héritage lui rendrait le droit de DISABLE TRIGGER), et n'est ni superutilisateur, ni propriétaire d'aucune table protégée. TÉMOIN `tests/integration/role-d-execution.spec.ts` : connecté comme le serveur, `rolsuper` faux, aucune appartenance à `partners_journal`, DISABLE TRIGGER sur `evenements` refusé (42501). (4) Case du runbook : rôle d'exécution provisionné, serveur relancé sous lui, constat des trois faits du témoin en production. Gestes de Williams : le secret du rôle d'exécution. CHEMIN (rattrapage 57, mesure d'A05) : `provisionner.ts` tourne dans la forge et ne joint pas la base interne ; le rôle LOGIN se crée DANS le conteneur, avec l'URL de migration (propriétaire), par un module idempotent `src/server/deploiement/role-d-execution.ts` : CREATE ROLE s'il manque, ALTER ROLE … PASSWORD, GRANT partners_execution, privilèges et default privileges sur les autres tables ; refus de démarrer si le rôle est superutilisateur ou membre de partners_journal ; `docker-entrypoint.sh` l'appelle entre la migration et le serveur, et le témoin aussi. `provisionner.ts` pose les deux URL et le secret du rôle (geste de Williams). `tests/integration/harnais.ts` n'est pas touché. CHEMIN (rattrapage 58, mesure d'A05) : `tests/unit/qualite/provisionnement-coolify.spec.ts` : `provisionner.ts` exige `PARTNERS_DB_EXECUTION_SECRET` (refus avant tout appel) et pose `DATABASE_MIGRATION_URL` (propriétaire) et `DATABASE_URL` (rôle d'exécution, masquée) ; les cas du témoin reçoivent un secret factice, et un cas vérifie les deux URL et leur masque. PORTE C (rattrapage 73, mesure de l'auteur back, demande de la coordination) : la porte C (`scripts/gates/gate-c.sh`) fournit, comme la production, `DATABASE_MIGRATION_URL` (superutilisateur éphémère) ET `DATABASE_URL` (`partners_app`, secret tiré à l'exécution), puisque le constat inconditionnel refuse désormais une image connectée en superutilisateur.",
       "tests": {
         "REQ-DM-024": [
           "tests/integration/role-d-execution.spec.ts"
@@ -19852,7 +19853,7 @@
       "externe": null,
       "estimateDays": 0.75,
       "statut": "a_faire",
-      "acceptance": "Versée au rattrapage 53 (suite de QA-T63, limite d'API GitHub ; règle de débit de la coordination). (1) Une étape `pnpm forge:instantane` en tête du job gate-a lit la forge UNE fois et écrit l'instantané (JSON) dans `$RUNNER_TEMP`, puis exporte `GOV_FORGE` ; `gov:etat`, `gov:pr`, `gov:trace` et `tests/setup-forge.ts` lisent `GOV_FORGE`. (2) `GOV_FORGE` posé mais absent, illisible ou d'une autre forme → échec NOMMÉ, jamais un vert sur une forge non lue. (3) PRÉSÉANCE : `GOV_ETAT_GH` posé l'emporte. (4) CONDITION DE LA LENTILLE SÉCURITÉ : `GOV_FORGE` est REFUSÉ (échec nommé) hors du contexte prévu (hors CI, hors vitest) : un instantané forgé ne fait jamais passer une porte réelle. (5) Réserve acceptée : une revue publiée pendant le job n'est pas vue par ce run ; le rejeu la voit. (6) TÉMOIN `tests/unit/gouvernance/forge-instantane.spec.ts` : un run fait une lecture par type ; instantané corrompu rouge ; `GOV_FORGE` hors contexte rouge. (7) MESURE avant/après (appels à l'API par porte A) obligatoire dans la PR. `package.json` et `.github/workflows/ci.yml` : label `role:architecte`. Auteur : A06, après QA-T63.",
+      "acceptance": "Versée au rattrapage 53 (suite de QA-T63, limite d'API GitHub ; règle de débit de la coordination). (1) Une étape `pnpm forge:instantane` en tête du job gate-a lit la forge UNE fois et écrit l'instantané (JSON) dans `$RUNNER_TEMP`, puis exporte `GOV_FORGE` ; `gov:etat` (ses trois lectures), `gov:trace` (les PR fusionnées et leur corps) et `tests/setup-forge.ts` (les mêmes quatre lectures, sans relire la forge quand `GOV_FORGE` est posée) lisent l'instantané par un lecteur unique, `scripts/gates/forge-instantane.ts`. `gov:pr` n'y est pas branché : en porte A, il tourne sans argument et ne fait aucune lecture de la forge (mesuré). Ses lectures ne partent que sous `--pr` ou `--apres-fusion`, à la main avant une fusion, et dépendent du numéro de la PR. Brancher gov:pr exigerait un repli sur `gh`, que le point (2) interdit. (2) `GOV_FORGE` posé mais absent, illisible ou d'une autre forme → échec NOMMÉ, jamais un vert sur une forge non lue. (3) PRÉSÉANCE : `GOV_ETAT_GH` posé l'emporte. (4) CONDITION DE LA LENTILLE SÉCURITÉ : `GOV_FORGE` est REFUSÉ (échec nommé) hors du contexte prévu (hors CI, hors vitest) : un instantané forgé ne fait jamais passer une porte réelle. (5) Réserve acceptée : une revue publiée pendant le job n'est pas vue par ce run ; le rejeu la voit. (6) TÉMOIN `tests/unit/gouvernance/forge-instantane.spec.ts` : un run fait une lecture par type ; instantané corrompu rouge ; `GOV_FORGE` hors contexte rouge. (7) MESURE avant/après (appels à l'API par porte A) obligatoire dans la PR. `package.json` et `.github/workflows/ci.yml` : label `role:architecte`. Auteur : A06, après QA-T63.",
       "tests": {
         "REQ-GOV-006": [
           "tests/unit/gouvernance/forge-instantane.spec.ts"
@@ -20917,8 +20918,6 @@
       "repo": "partners",
       "zone": "qualite",
       "paths": [
-        "tests/unit/securite/lien-magique-production-espion.spec.ts",
-        "tests/unit/integration/limiteur-espion.spec.ts",
         "tests/unit/securite/lien-magique-production.spec.ts",
         "tests/unit/integration/recherche-entreprises-repli.spec.ts"
       ],
@@ -20935,14 +20934,29 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.25,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "Suite de la forme tranchée par la lentille sécurité (2026-10-02, relayée par la coordination) : les témoins des gardes qui jugent le TEXTE des sources rougissent sous l'instrumentation de Stryker, qui enveloppe les littéraux. JAMAIS de `Stryker disable`. Le témoin de la garde de famille (REQ-SEC-016) entre dans `ECARTES` de `vitest.mutation.config.ts` avec le motif « juge les sources du dépôt, pas le code sous mutation : le bac à sable instrumenté n'est pas la source » (par SEC-44, #414, qui porte aussi l'espion d'`api-entrante.ts` (le site de #414)). Cette tâche porte les deux autres sites : un témoin-ESPION par site tue le mutant du nom, pour `src/server/auth/lien-magique-production.ts` (l. 103 et 105) et `src/server/integrations/recherche-entreprises/limiteur.ts` (l. 35 à 37). TÉMOINS (rattrapage 61, mesure d'A05) : les espions vont dans les specs EXISTANTS, un fichier par module (`tests/unit/securite/lien-magique-production.spec.ts` et `tests/unit/integration/recherche-entreprises-repli.spec.ts`, qui juge `limiteur.ts`), et non dans deux fichiers neufs (les noms neufs et les `tests{}` se réalignent à la clôture de QA-T68, une fois les `it()` nommés sur main) : red-first ne juge que les fichiers AJOUTÉS, et un fichier neuf qui espionne un code déjà correct naîtrait vert ; le rouge se prouve par mutation à la main (nom permuté ou vidé) dans le bloc ROUGE/VERT, comme sur #414. Les `it()` citent REQ-QA-013 (la porte de mutation que l'espion sert) et la REQ que le nom du compteur prouve : REQ-SEC-016 pour le lien magique, REQ-SEC-013 pour le limiteur du mandataire. Auteur : A05.",
       "tests": {
         "REQ-QA-013": [
-          "tests/unit/securite/lien-magique-production-espion.spec.ts",
-          "tests/unit/integration/limiteur-espion.spec.ts"
+          "tests/unit/securite/lien-magique-production.spec.ts",
+          "tests/unit/integration/recherche-entreprises-repli.spec.ts"
+        ],
+        "REQ-SEC-016": [
+          "tests/unit/securite/lien-magique-production.spec.ts"
+        ],
+        "REQ-SEC-013": [
+          "tests/unit/integration/recherche-entreprises-repli.spec.ts"
         ]
-      }
+      },
+      "branch": "t/qa-t68",
+      "owner": "A05",
+      "pr": 513,
+      "attestation": {
+        "pr": 513,
+        "sha": "7e34b578f473cfc9b4e7566384b5d883aaeeaaca",
+        "fusionneeAt": "2026-10-02T23:21:56Z"
+      },
+      "motif": null
     },
     {
       "id": "JUR-T54",
