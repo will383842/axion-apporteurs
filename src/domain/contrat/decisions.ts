@@ -214,7 +214,10 @@ export const QUESTIONS_POUR_WILL: readonly Question[] = [
     id: 'JUR-T01-Q16',
     decision: 'HYP-W19-NON-EXPLOITATION',
     objet:
-      'Clause de non-exploitation (W19), à écrire au gabarit par JUR-T31. Ligne avenant non tranchée.',
+      'Art. 3.5 al. 4 (option B de Williams, 2026-10-02) : la Société peut utiliser les entreprises ' +
+      'déclarées et les coordonnées transmises ; la commission reste due pendant l’attribution, quel ' +
+      'que soit celui qui conclut ; pas de démarchage pendant le délai de confirmation de l’art. 3.2, ' +
+      'ni dans la réserve qui suit un acte de l’Apporteur. Ligne avenant non tranchée.',
     variables: [],
   },
   {
