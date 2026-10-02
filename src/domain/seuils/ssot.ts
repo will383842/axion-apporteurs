@@ -284,6 +284,17 @@ export const SEUILS = {
     renvois: [],
     verifieLe: '2026-10-02',
   },
+  // QA-T57 : la plateforme vide la base chaque heure ; au-delà, le dernier vidage du dépôt est
+  // périmé, la fraîcheur rougit et alerte (`vidage_perime`). Une heure de marge absorbe un run
+  // planifié retardé.
+  DERNIER_VIDAGE_MAX_MINUTES: {
+    valeur: 120,
+    unite: 'minutes',
+    source:
+      'acceptation QA-T57 (REQ-QA-023), âge du dernier vidage relevé par la vérification de bout en bout ; arbitrage A01 au rattrapage 46',
+    renvois: [],
+    verifieLe: '2026-10-01',
+  },
 } as const satisfies Record<string, Seuil>;
 
 export type NomDeSeuil = keyof typeof SEUILS;
