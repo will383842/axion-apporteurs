@@ -1,7 +1,7 @@
 // @req REQ-CPL-009
 /**
  * QA-T60, point (1) — aucun dépôt réel sans l'AIPD signée, et c'est l'ORDRE du job qui le garantit
- * (note de la lentille securite sur JUR-T35).
+ * (note de la lentille securite sur la vérification de l’AIPD avant déploiement).
  *
  * Dans le job `deployer` de `.github/workflows/deploy.yml`, l'étape qui lance `pnpm aipd:signee`
  * précède celle qui lance `pnpm deploy:coolify` : la plateforme ne reçoit jamais l'ordre de tirer une

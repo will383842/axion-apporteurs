@@ -2,7 +2,7 @@
 // @req REQ-GOV-026
 /**
  * QA-T60, point (2) — le fichier qui porte `MISE_EN_SERVICE` est SENSIBLE (note de la lentille
- * securite sur JUR-T35).
+ * securite sur la vérification de l’AIPD avant déploiement).
  *
  * `scripts/gates/runbooks-exerces.ts` porte la date de mise en service, qui garde l'exercice des
  * runbooks avant la première donnée réelle. Le déplacer ou la vider est une décision de sécurité. Le
