@@ -468,7 +468,7 @@ describe('maquettes-validees — la SORTIE du binaire, sur un arbre jetable', ()
 describe('maquettes-validees — le script sur le dépôt réel', () => {
   it('REQ-UX-008 — le dépôt sort en zéro, et la sortie COMPTE ce qu’elle a lu', () => {
     const { code, sortie } = lancer();
-    expect(sortie).toMatch(/18 ligne\(s\) lue\(s\)/);
+    expect(sortie).toMatch(/20 ligne\(s\) lue\(s\)/);
     expect(code).toBe(0);
   });
 
