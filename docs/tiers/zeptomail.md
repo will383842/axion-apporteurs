@@ -26,7 +26,7 @@ d'envoi. La fiche n'est donc pas une documentation d'accompagnement : c'est la p
 | Date de lecture | 2026-10-02, par A05 (auteur back), pour INT-T57 |
 | Extrait cité | « API key of an agent. Send the header as `Authorization: Zoho-enczapikey {apiKey}`. The agent and account are derived from the key. » |
 | Requête | `POST https://cpaas.zoho.com/v1.1/email` (référence) ; `https://api.zeptomail.com/v1.1/email` (article) ; en-tête `content-type: application/json` |
-| Exemple officiel (extrait, champs que Partners emploie) | `{"from":{"address":"accounts@info.zylker.com","name":"Paula"},"to":[{"email_address":{"address":"rudra.d@zylker.com","name":"Rudra"}}],"subject":"Account Confirmation","textbody":"Kindly click on Verify Account to confirm your account.","client_reference":"order-12345"}` |
+| Exemple officiel (extrait, champs que Partners emploie) | la charge de l’exemple de la documentation officielle, réduite à ses champs `from.address`, `to[].email_address.address`, `subject`, `textbody` et `client_reference` ; ses adresses d’exemple ne sont pas recopiées ici (dépôt public), la fixture `tests/fixtures/tiers/zeptomail-envoi.json` porte l’exemple entier |
 | Réponse 200 officielle | `{"data":[{"code":"EM_104","additional_info":[{"to":{"email_address":{}}}],"message":"OK"}],"message":"OK","request_id":"req-xxxx"}` |
 | Réponse 400 officielle | `{"data":{"error_code":"TM_3004","message":"Invalid request"},"message":"error"}` |
 
