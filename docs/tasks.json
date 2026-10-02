@@ -18555,7 +18555,8 @@
         ".github/workflows/ci.yml",
         "scripts/gates/gov-conventions.ts",
         "scripts/gates/deploy-verify.ts",
-        "tests/unit/qualite/deploy-verify-csp.spec.ts"
+        "tests/unit/qualite/deploy-verify-csp.spec.ts",
+        "tests/unit/qualite/un-seul-producteur-de-deploiement.spec.ts"
       ],
       "schema": false,
       "sensible": [
