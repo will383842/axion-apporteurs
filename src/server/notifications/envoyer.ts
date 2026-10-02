@@ -18,7 +18,11 @@
  */
 import type { StatutCourriel } from '@prisma/client';
 import { SEUILS } from '../../domain/seuils/ssot';
-import { TEXTES_DES_NOTIFICATIONS } from '../../content/micro-copy/courriels/notifications';
+import {
+  CORPS_DE_LA_LIBERATION,
+  TEXTES_DES_NOTIFICATIONS,
+  type CauseDeLiberation,
+} from '../../content/micro-copy/courriels/notifications';
 import type { AccesApporteur } from '../acces/for-apporteur';
 import type { DemandeDEnvoi } from '../integrations/zeptomail/emetteur';
 import {
@@ -34,6 +38,8 @@ export const MOTIFS_DE_REFUS = [
   'parametre_manquant',
   'parametre_en_trop',
   'parametre_invalide',
+  'cause_manquante',
+  'cause_en_trop',
 ] as const;
 export type MotifDeRefus = (typeof MOTIFS_DE_REFUS)[number];
 
@@ -70,10 +76,24 @@ export const PARAMETRES_DE_LA_SSOT: Readonly<Record<string, string>> = {
   delaiReponse: `${SEUILS.REPONSE_CONTESTATION_JOURS.valeur} ${SEUILS.REPONSE_CONTESTATION_JOURS.unite}`,
 };
 
+/**
+ * Le corps d'une clé. Celui d'`attribution_liberee` dépend de la CAUSE de la fin (A07, 2026-10-02) :
+ * l'émettrice la donne, faute de quoi la notification est refusée. Aucune autre clé n'en reçoit.
+ */
+function corpsDe(cle: Gabarit, cause: string | undefined): string | null {
+  if (cle !== 'attribution_liberee') {
+    if (cause !== undefined) throw new NotificationRefusee('cause_en_trop', cause);
+    return TEXTES_DES_NOTIFICATIONS[cle].corps;
+  }
+  if (cause === undefined || !Object.hasOwn(CORPS_DE_LA_LIBERATION, cause))
+    throw new NotificationRefusee('cause_manquante', String(cause));
+  return CORPS_DE_LA_LIBERATION[cause as CauseDeLiberation];
+}
+
 /** Les paramètres que l'ÉMETTEUR fournit pour une clé, triés : ceux des textes, hors SSOT. */
-export function parametresDe(cle: Gabarit): string[] {
+export function parametresDe(cle: Gabarit, cause?: CauseDeLiberation): string[] {
   const t = TEXTES_DES_NOTIFICATIONS[cle];
-  const noms = [t.titre, t.appel, t.corps ?? ''].flatMap((x) =>
+  const noms = [t.titre, t.appel, corpsDe(cle, cause) ?? ''].flatMap((x) =>
     [...x.matchAll(PARAMETRE)].map((m) => m[1]!)
   );
   return [...new Set(noms)].filter((p) => !Object.hasOwn(PARAMETRES_DE_LA_SSOT, p)).sort();
@@ -81,10 +101,12 @@ export function parametresDe(cle: Gabarit): string[] {
 
 export function rendreLaNotification(
   cle: string,
-  parametres: Readonly<Record<string, string>>
+  parametres: Readonly<Record<string, string>>,
+  cause?: CauseDeLiberation
 ): TexteRendu {
   const c = cleDeLaTable(cle);
-  const attendus = parametresDe(c);
+  const corps = corpsDe(c, cause);
+  const attendus = parametresDe(c, cause);
   const fournis = Object.keys(parametres);
   const manquant = attendus.find((p) => !Object.hasOwn(parametres, p));
   if (manquant !== undefined) throw new NotificationRefusee('parametre_manquant', manquant);
@@ -101,7 +123,7 @@ export function rendreLaNotification(
   return {
     titre: remplir(t.titre),
     appel: remplir(t.appel),
-    corps: t.corps === null ? null : remplir(t.corps),
+    corps: corps === null ? null : remplir(corps),
   };
 }
 
@@ -131,13 +153,15 @@ export interface DemandeDeNotification {
   a: string;
   parametres: Readonly<Record<string, string>>;
   attributionId: string | null;
+  /** La cause de la fin, pour `attribution_liberee` seule (A07). */
+  cause?: CauseDeLiberation;
 }
 
 export async function notifier(
   demande: DemandeDeNotification,
   d: DependancesDeLaNotification
 ): Promise<{ notificationId: string | null; courriel: IssueDuCourriel | null }> {
-  const texte = rendreLaNotification(demande.cle, demande.parametres);
+  const texte = rendreLaNotification(demande.cle, demande.parametres, demande.cause);
   const cle = cleDeLaTable(demande.cle);
   const ligne: LigneDeNotification = GABARITS[cle];
 

@@ -393,6 +393,9 @@ function donneesNeuves(modele: ModeleCloisonne, lienMagiqueId: string): Record<s
       };
     case 'identiteFacturation':
       return { siren: '123456789', regimeTva: 'assujetti', debutAt: creeAt };
+    // DM-11 : une pièce déjà REMPLACÉE, hors des deux index partiels — la batterie en sème plusieurs.
+    case 'pieceKyc':
+      return { type: 'siret', statut: 'refusee', remplaceeAt: creeAt };
     case 'jetonDepot':
       return { tokenHash: hex(32), creeAt };
     case 'lienMagique':
@@ -430,6 +433,8 @@ function modification(modele: ModeleCloisonne, n: number): Record<string, unknow
       return { erreur: `code_essai_${n}` };
     case 'identiteFacturation':
       return { finAt: new Date(t0 + (n + 1) * 24 * 60 * MINUTE) };
+    case 'pieceKyc':
+      return { fichierRef: `essai_${n}` };
     case 'jetonDepot':
       return { dernierUsageAt: instant };
     case 'lienMagique':

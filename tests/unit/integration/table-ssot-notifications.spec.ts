@@ -232,22 +232,48 @@ describe('REQ-UX-016 — le rendu d’une notification : les paramètres de sa c
       return 'aucun_refus';
     };
     expect(motif(() => rendreLaNotification('relance_dormance', {}))).toBe('cle_inconnue');
-    expect(motif(() => rendreLaNotification('attribution_liberee', {}))).toBe('parametre_manquant');
     expect(
-      motif(() => rendreLaNotification('attribution_liberee', { entreprise: 'X', contact: 'Y' }))
+      motif(() => rendreLaNotification('attribution_liberee', {}, 'peremption_ou_fin_de_duree'))
+    ).toBe('parametre_manquant');
+    expect(
+      motif(() =>
+        rendreLaNotification(
+          'attribution_liberee',
+          { entreprise: 'X', contact: 'Y' },
+          'peremption_ou_fin_de_duree'
+        )
+      )
     ).toBe('parametre_en_trop');
     expect(
-      motif(() => rendreLaNotification('attribution_liberee', { entreprise: 'X\nBcc: y' }))
+      motif(() =>
+        rendreLaNotification(
+          'attribution_liberee',
+          { entreprise: 'X\nBcc: y' },
+          'peremption_ou_fin_de_duree'
+        )
+      )
     ).toBe('parametre_invalide');
-    expect(motif(() => rendreLaNotification('attribution_liberee', { entreprise: '' }))).toBe(
-      'parametre_invalide'
-    );
+    expect(
+      motif(() =>
+        rendreLaNotification(
+          'attribution_liberee',
+          { entreprise: '' },
+          'peremption_ou_fin_de_duree'
+        )
+      )
+    ).toBe('parametre_invalide');
     // Un caractère de FORMAT (\p{Cf}) retourne ou masque le sujet d'un courriel : U+202E inverse le
     // sens de lecture, U+200B à U+200F et U+2066 à U+2069 cachent ou isolent un texte.
-    for (const format of ['‮', '​', '‏', '⁦', '⁩'])
+    for (const format of [0x202e, 0x200b, 0x200f, 0x2066, 0x2069].map((c) =>
+      String.fromCharCode(c)
+    ))
       expect(
         motif(() =>
-          rendreLaNotification('attribution_liberee', { entreprise: `Entreprise${format}fdp.exe` })
+          rendreLaNotification(
+            'attribution_liberee',
+            { entreprise: `Entreprise${format}fdp.exe` },
+            'peremption_ou_fin_de_duree'
+          )
         )
       ).toBe('parametre_invalide');
   });
@@ -367,5 +393,69 @@ describe('REQ-UX-016 — la préférence s’écrit par la couche cloisonnée, e
       ecrirePreference(c.acces, { cle: 'suspension_declarations', active: false }, MAINTENANT)
     ).rejects.toThrow(/obligatoire/);
     expect(c.appels).toEqual([]);
+  });
+});
+
+describe('REQ-UX-016 — la fin d’une réservation se dit selon sa cause (A07, 2026-10-02)', () => {
+  it('REQ-UX-016 : TÉMOIN — une demande vérifiée libérée : la carence et sa date de redépôt, mot pour mot', () => {
+    const r = rendreLaNotification(
+      'attribution_liberee',
+      { entreprise: 'Entreprise témoin', dateRedepot: '2 novembre 2026' },
+      'demande_verifiee'
+    );
+    expect(r.titre).toBe('Entreprise témoin : ce dépôt a pris fin');
+    expect(r.corps).toBe(
+      "Ce dépôt a pris fin sans confirmation de l'échange. Vous pourrez déposer à nouveau cette entreprise à partir du 2 novembre 2026. Cette fin n'emporte aucune autre conséquence pour vous."
+    );
+    expect(parametresDe('attribution_liberee', 'demande_verifiee')).toEqual([
+      'dateRedepot',
+      'entreprise',
+    ]);
+  });
+
+  it('REQ-UX-016 : TÉMOIN — une péremption ou une fin de durée : l’entreprise de nouveau disponible, sans date', () => {
+    const r = rendreLaNotification(
+      'attribution_liberee',
+      { entreprise: 'Entreprise témoin' },
+      'peremption_ou_fin_de_duree'
+    );
+    expect(r.corps).toBe(
+      'Cette entreprise est de nouveau disponible, y compris pour un nouveau dépôt de votre part.'
+    );
+    expect(parametresDe('attribution_liberee', 'peremption_ou_fin_de_duree')).toEqual([
+      'entreprise',
+    ]);
+  });
+
+  it('REQ-UX-016 : TÉMOINS — sans cause, ou une cause donnée à une autre clé : refusés, nommés', () => {
+    const motif = (f: () => unknown) => {
+      try {
+        f();
+      } catch (e) {
+        return (e as NotificationRefusee).motif;
+      }
+      return 'aucun_refus';
+    };
+    expect(motif(() => rendreLaNotification('attribution_liberee', { entreprise: 'E' }))).toBe(
+      'cause_manquante'
+    );
+    expect(
+      motif(() =>
+        rendreLaNotification(
+          'rappel_rc_pro',
+          { dateEcheance: '1er novembre 2026' },
+          'demande_verifiee'
+        )
+      )
+    ).toBe('cause_en_trop');
+    expect(
+      motif(() =>
+        rendreLaNotification(
+          'attribution_liberee',
+          { entreprise: 'E', dateRedepot: '2 novembre 2026' },
+          'peremption_ou_fin_de_duree'
+        )
+      )
+    ).toBe('parametre_en_trop');
   });
 });

@@ -71,6 +71,10 @@ enum TypeEvenementJournal {
   journal_ouvert
   apporteur_statut_modifie
   attribution_contact_purge
+  attribution_etat_modifie
+  attribution_peremption_suspendue
+  attribution_porteur_reaffecte
+  piece_kyc_statut_modifie
 
   @@map("type_evenement_journal")
 }
@@ -100,6 +104,7 @@ model Evenement {
   prevHash  String               @unique @map("prev_hash") @db.Char(64)
   selfHash  String               @unique @map("self_hash") @db.Char(64)
 
+  @@index([agregat, agregatId])
   @@map("evenements")
 }
 
@@ -129,6 +134,29 @@ enum MotifResiliation {
   manquement_grave
 
   @@map("motif_resiliation")
+}
+
+/// Le type d'une pièce du KYC (REQ-DM-027, `docs/GLOSSAIRE.md` §4).
+enum TypePieceKyc {
+  siret
+  tva
+  rib
+  identite
+  vigilance
+  rc_pro
+
+  @@map("type_piece_kyc")
+}
+
+/// Le statut d'une pièce du KYC (REQ-DM-027, `docs/GLOSSAIRE.md` §4).
+enum StatutPieceKyc {
+  manquante
+  a_verifier
+  valide
+  perimee
+  refusee
+
+  @@map("statut_piece_kyc")
 }
 
 /// Le régime de TVA d'une identité de facturation (REQ-ARG-033, `docs/GLOSSAIRE.md` §4).
@@ -207,6 +235,7 @@ model Apporteur {
   attributions            Attribution[]
   depotsRefuses           DepotRefuse[]
   personnesDeclarees      PersonneDeclaree[]
+  piecesKyc               PieceKyc[]
   notificationsEspace     NotificationEspace[]
   preferencesNotification PreferenceNotification[]
 
@@ -339,16 +368,52 @@ model ChangementCourriel {
 /// Une identité de facturation DATÉE, valable sur [debutAt, finAt) (REQ-CPL-005). Un relevé qui
 /// en chevauche deux produit deux autofactures. AUCUNE colonne de RIB ni d'IBAN (HYP-DM06-IBAN).
 model IdentiteFacturation {
-  id          String    @id @default(uuid()) @db.Uuid
-  apporteurId String    @map("apporteur_id") @db.Uuid
-  apporteur   Apporteur @relation(fields: [apporteurId], references: [id], onDelete: Restrict)
-  siren       String    @db.Char(9)
-  regimeTva   RegimeTva @map("regime_tva")
-  debutAt     DateTime  @map("debut_at") @db.Timestamptz(3)
-  finAt       DateTime? @map("fin_at") @db.Timestamptz(3)
+  id           String       @id @default(uuid()) @db.Uuid
+  apporteurId  String       @map("apporteur_id") @db.Uuid
+  apporteur    Apporteur    @relation(fields: [apporteurId], references: [id], onDelete: Restrict)
+  siren        String       @db.Char(9)
+  regimeTva    RegimeTva    @map("regime_tva")
+  debutAt      DateTime     @map("debut_at") @db.Timestamptz(3)
+  finAt        DateTime?    @map("fin_at") @db.Timestamptz(3)
+  /// DM-11 (HYP-DM06-IBAN) : la pièce `rib` de l'identité ; l'IBAN n'est QUE dans cette pièce.
+  /// Clé étrangère composite (id, type, apporteur) : la base refuse une pièce d'un autre type, et
+  /// celle d'un autre apporteur.
+  /// La pièce RIB de l'identité de facturation (type contraint à 'rib').
+  pieceKycId   String?      @map("piece_kyc_id") @db.Uuid
+  pieceKycType TypePieceKyc @default(rib) @map("piece_kyc_type")
+  pieceKyc     PieceKyc?    @relation(fields: [pieceKycId, pieceKycType, apporteurId], references: [id, type, apporteurId], onDelete: Restrict, onUpdate: Restrict, map: "identites_facturation_piece_rib_fkey")
 
   @@index([apporteurId])
+  @@index([pieceKycId])
   @@map("identites_facturation")
+}
+
+/// Une pièce du KYC (DM-11, REQ-DM-027). Au plus une pièce COURANTE et au plus une EN
+/// VÉRIFICATION par (apporteur, type) : deux index uniques partiels, en SQL brut. L'IBAN n'existe
+/// QUE sur une pièce `rib`, chiffré (SEC-08) et empreint (CHECK). `expireAt` est obligatoire pour
+/// `vigilance` et `rc_pro` (CHECK). Le fichier vit sur un stockage privé (REQ-SEC-026).
+model PieceKyc {
+  id             String         @id @default(uuid()) @db.Uuid
+  apporteurId    String         @map("apporteur_id") @db.Uuid
+  apporteur      Apporteur      @relation(fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  type           TypePieceKyc
+  statut         StatutPieceKyc
+  verifieeAt     DateTime?      @map("verifiee_at") @db.Timestamptz(3)
+  expireAt       DateTime?      @map("expire_at") @db.Timestamptz(3)
+  /// La référence du fichier sur le stockage privé, jamais une URL publique.
+  fichierRef     String?        @map("fichier_ref") @db.VarChar(300)
+  /// La purge du fichier (la pièce d'identité, dès validation : REQ-JUR-029).
+  fichierPurgeAt DateTime?      @map("fichier_purge_at") @db.Timestamptz(3)
+  remplaceeAt    DateTime?      @map("remplacee_at") @db.Timestamptz(3)
+  ibanChiffre    Bytes?         @map("iban_chiffre")
+  ibanHash       String?        @map("iban_hash") @db.Char(64)
+
+  identitesFacturation IdentiteFacturation[]
+
+  @@unique([id, type, apporteurId], map: "pieces_kyc_id_type_apporteur_key")
+  @@index([apporteurId])
+  @@index([ibanHash])
+  @@map("pieces_kyc")
 }
 
 // ── SEC-06 : la réception des webhooks et le battement des tâches de fond (partners/ADR-0022) ──

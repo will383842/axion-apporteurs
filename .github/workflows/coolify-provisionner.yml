@@ -61,10 +61,14 @@ jobs:
           AXIONIA_RELECTURE_SECRET: ${{ secrets.AXIONIA_RELECTURE_SECRET }}
           # INT-T57 : secret conditionnel, exige au demarrage seulement si l envoi reel est allume.
           ZEPTOMAIL_SEND_TOKEN: ${{ secrets.ZEPTOMAIL_SEND_TOKEN }}
+          # INT-T54 : le canal d alerte du serveur, jamais exige au demarrage.
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           LOG_LEVEL: ${{ vars.LOG_LEVEL }}
           SENTRY_DSN: ${{ vars.SENTRY_DSN }}
           PARTNERS_EMAIL_DMARC_VERIFIE: ${{ vars.PARTNERS_EMAIL_DMARC_VERIFIE }}
           PARTNERS_EMAIL_EXPEDITEUR: ${{ vars.PARTNERS_EMAIL_EXPEDITEUR }}
           AXIONIA_BASE_URL: ${{ vars.AXIONIA_BASE_URL }}
+          AXIONIA_API_ALLOWLIST: ${{ vars.AXIONIA_API_ALLOWLIST }}
           ZEPTOMAIL_API_URL: ${{ vars.ZEPTOMAIL_API_URL }}
         run: pnpm coolify:provisionner

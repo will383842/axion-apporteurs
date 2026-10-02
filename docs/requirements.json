@@ -64,6 +64,7 @@
         "DM-07",
         "DM-08",
         "DM-13",
+        "DM-55",
         "JUR-T49"
       ]
     },
@@ -97,7 +98,8 @@
         "DM-08",
         "DM-13",
         "DM-24",
-        "DM-41"
+        "DM-41",
+        "DM-55"
       ]
     },
     {
@@ -437,6 +439,7 @@
         "DM-19",
         "DM-51",
         "JUR-T16",
+        "SEC-49",
         "T-ARG-032"
       ]
     },
@@ -1082,7 +1085,8 @@
       "etape": 4,
       "phase": 1,
       "taches": [
-        "DM-11"
+        "DM-11",
+        "DM-58"
       ]
     },
     {
@@ -1649,6 +1653,7 @@
       "etape": 11,
       "phase": 2,
       "taches": [
+        "DM-57",
         "T-ARG-017"
       ]
     },
@@ -2130,7 +2135,9 @@
         "INT-T08-P",
         "INT-T21-A",
         "INT-T21-P",
-        "INT-T51"
+        "INT-T51",
+        "INT-T70-A",
+        "INT-T70-P"
       ]
     },
     {
@@ -2257,7 +2264,7 @@
     {
       "id": "REQ-INT-021",
       "domaine": "integration",
-      "texte": "Depuis la réponse API, Partners persiste `siren, siret (siège), nom_complet, nature_juridique, activite_principale, tranche_effectif_salarie, etat_administratif, categorie_entreprise, siege.{code_postal, libelle_commune, departement, region}` ; des dirigeants, seulement un hash normalisé de `nom+prenoms` et `qualite` ; jamais `annee_de_naissance` ; `statut_diffusion` est respecté à l'affichage.",
+      "texte": "Depuis la réponse API, Partners persiste `siren, siret, nom_complet, nature_juridique, activite_principale, tranche_effectif_salarie, etat_administratif, categorie_entreprise, siege.{code_postal, libelle_commune, departement, region, latitude_microdeg, longitude_microdeg}`, le `siret` étant celui du siège ; la position du siège est gardée en micro-degrés entiers, calculés par le serveur depuis le WGS84 du tiers, et seulement quand la diffusion de l'unité légale et du siège est pleine (échec fermé) ; des dirigeants, seulement un hash normalisé de `nom+prenoms` et `qualite` ; jamais `annee_de_naissance` ; `statut_diffusion` est respecté à l'affichage.",
       "source": "audit anti-abus M5 ; INT-F16",
       "statut": "active",
       "remplaceePar": null,
@@ -2265,6 +2272,7 @@
       "etape": 10,
       "phase": 0,
       "taches": [
+        "EXT-T08",
         "INT-T09"
       ]
     },
@@ -2431,7 +2439,8 @@
         "JUR-T29",
         "JUR-T44",
         "JUR-T44b",
-        "JUR-T45"
+        "JUR-T45",
+        "QA-T69"
       ]
     },
     {
@@ -2447,7 +2456,8 @@
       "taches": [
         "JUR-T03",
         "JUR-T29",
-        "JUR-T45"
+        "JUR-T45",
+        "QA-T69"
       ]
     },
     {
@@ -3200,6 +3210,7 @@
       "phase": 1,
       "taches": [
         "UX-P1-06",
+        "UX-P1-07",
         "UX-P1-19"
       ]
     },
@@ -3291,6 +3302,7 @@
       "phase": 1,
       "taches": [
         "SEC-22",
+        "SEC-49",
         "UX-P1-09"
       ]
     },
@@ -5398,7 +5410,7 @@
     {
       "id": "REQ-DM-046",
       "domaine": "domaine-donnees",
-      "texte": "Au dépôt, le code NAF (`activite_principale`, nomenclature NAF rév. 2) rendu par le client recherche-entreprises (REQ-INT-021) est **stocké sur l'attribution** (REQ-DM-030). Un dépôt fait en **repli manuel** (tiers indisponible, REQ-INT-020) porte un code NAF **nul — jamais deviné, jamais saisi par l'apporteur** ; il est complété par un nouvel appel au tiers après la fermeture du disjoncteur (`HYP-W15-SECTEUR`) et reste « non renseigné » tant que le tiers ne l'a pas rendu. Décision W15 (4), 2026-09-25. Tests : fixture enregistrée → code stocké égal à celui de la fixture ; repli manuel → code nul, puis complété par la reprise sur fixture ; le formulaire de dépôt ne porte aucun champ de code NAF.",
+      "texte": "Au dépôt, le code NAF (`activite_principale`, nomenclature NAF rév. 2) rendu par le client recherche-entreprises (REQ-INT-021) est **stocké sur l'attribution** (REQ-DM-030). Un dépôt fait en **repli manuel** (tiers indisponible, REQ-INT-020) porte un code NAF **nul — jamais deviné, jamais saisi par l'apporteur** ; il est complété par un nouvel appel au tiers après la fermeture du disjoncteur (`HYP-W15-SECTEUR`) et reste « non renseigné » tant que le tiers ne l'a pas rendu. Décision W15 (4), 2026-09-25. Tests : fixture enregistrée → code stocké égal à celui de la fixture s'il est en NAF rév. 2, nul sinon (CHECK de DM-07) ; repli manuel → code nul, puis complété par la reprise sur fixture ; le formulaire de dépôt ne porte aucun champ de code NAF.",
       "source": "décision de Will du 2026-09-25, W15 (point 4)",
       "statut": "active",
       "remplaceePar": null,
@@ -5515,6 +5527,20 @@
         "INT-T58-A",
         "INT-T58-P",
         "UX-P2-16"
+      ]
+    },
+    {
+      "id": "REQ-DM-065",
+      "domaine": "domaine-donnees",
+      "texte": "**Le statut juridique de l'apporteur est une liste FERMÉE.** `StatutJuridique` est un vrai enum : `micro_entrepreneur`, `entrepreneur_individuel`, `sarl`, `eurl`, `sas`, `sasu`, `sa`, `snc` ; il alimente `{{APPORTEUR_STATUT}}` au préambule du contrat par son libellé du glossaire, jamais par une chaîne libre. Chaque statut se range dans UNE `QualiteExercice` (REQ-JUR-022, liste de quatre valeurs inchangée) : les deux premiers selon l'activité déclarée (`commercant`, `artisan` ou `profession_liberale`), les six sociétés en `societe_commerciale`. Un témoin fige la liste et la correspondance. Le portage salarial et l'entrepreneur-salarié de coopérative changent qui signe et qui facture : ils relèvent de la phase 2.",
+      "source": "Décision de Williams du 2026-10-02 (« ok donc rajoute tous les statuts autorisés »), sur l'avis d'A07 du même jour (hors dépôt) ; relayée par la coordination",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": 4,
+      "etape": 4,
+      "phase": 1,
+      "taches": [
+        "DM-56"
       ]
     },
     {
@@ -6249,6 +6275,34 @@
       ]
     },
     {
+      "id": "REQ-JUR-063",
+      "domaine": "juridique",
+      "texte": "**L'admission au KYC refuse, avec un motif NOMMÉ pour chacun :** (1) l'absence de SIREN actif ; (2) la personne salariée, dirigeante ou associée d'Axion-IA, sur sa seule déclaration ; (3) un statut hors de la liste de REQ-DM-065. Les professions dont la déontologie interdit de percevoir un apport sont EXCLUES D'OFFICE (avocats, notaires, commissaires de justice, professions de santé), par une liste de codes figée par un témoin. Le signal bloquant « attestation spécifique requise » de REQ-JUR-022 reste inchangé pour les professions réglementées qui peuvent être admises. Contre l'oracle (lentille sécurité, 2026-10-02) : (1) le motif nommé `lien_avec_la_societe` ne naît QUE de la déclaration de la personne ; (2) le contrôle croisé (REQ-CPL-030) ne refuse pas : il BLOQUE pour revue humaine, avec une réponse IDENTIQUE au candidat, qu'il y ait correspondance ou non ; (3) témoin : deux candidatures, correspondante et non correspondante, reçoivent la même réponse ; (4) comparaison par empreintes (`PII_HASH_KEY`), journal sans nom ni adresse. Aucun refus ne laisse de donnée conservée au-delà de ce que le registre de traitement prévoit (sécurité, 2026-10-02 : les motifs non persistés ne couvrent pas ce qu'a saisi la personne refusée).",
+      "source": "Décision de Williams du 2026-10-02 (« ok donc rajoute tous les statuts autorisés »), sur l'avis d'A07 du même jour (hors dépôt) ; relayée par la coordination",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": 4,
+      "etape": 4,
+      "phase": 1,
+      "taches": [
+        "DM-56"
+      ]
+    },
+    {
+      "id": "REQ-JUR-064",
+      "domaine": "juridique",
+      "texte": "**L'art. 23 du contrat (déclarations de l'Apporteur) couvre la situation envers un employeur :** il déclare que l'activité n'est contraire ni à une clause de non-concurrence ou d'exclusivité, et qu'il a vérifié sa situation, le cas échéant, auprès de son employeur. Ce texte EXISTANT suffit, et aucune phrase n'y est ajoutée (une redite pourrait se lire comme deux obligations, art. 1190 C. civ. ; A07, 2026-10-02). Un témoin vérifie que le gabarit porte les deux fragments « clause de non-concurrence ou d'exclusivité » et « auprès de son employeur ».",
+      "source": "Avis d'A07 du 2026-10-02 (hors dépôt), retenu par la décision de Williams du même jour ; relayé par la coordination",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": 11,
+      "etape": 10,
+      "phase": 1,
+      "taches": [
+        "JUR-T55"
+      ]
+    },
+    {
       "id": "REQ-GOV-031",
       "domaine": "charte relationnelle (REQ-JUR-031 → 038)",
       "texte": "🔴 **Règle de publication (dépôt PUBLIC, décision W13).** Le dépôt `axion-apporteurs` est public : tout ce qui y est poussé est définitivement lisible, y compris après un passage en privé (forks, caches, miroirs). Trois catégories n'y entrent **jamais** : Amendement W19 (décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §4.2) : Extension : plans de part variable, montants et matricules des salariés n'entrent jamais dans le dépôt ni dans les journaux (valeurs factices dans les seeds). Témoin ajouté à `gov:publication`.",
@@ -6271,7 +6325,8 @@
         "GOV-089",
         "GOV-092",
         "GOV-094",
-        "GOV-105"
+        "GOV-105",
+        "SEC-48"
       ]
     },
     {

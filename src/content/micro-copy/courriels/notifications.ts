@@ -74,3 +74,18 @@ export const TEXTES_DES_NOTIFICATIONS = {
 } as const satisfies Readonly<Record<string, TexteDeNotification>>;
 
 export type CleDeNotification = keyof typeof TEXTES_DES_NOTIFICATIONS;
+
+/**
+ * Le corps d'`attribution_liberee`, choisi par la CAUSE de la fin (textes d'A07 du 2026-10-02, mot
+ * pour mot ; titre et appel inchangés). Une demande vérifiée libérée ouvre une carence de redépôt
+ * (art. 3.2 al. 6), seule conséquence de la libération ; une péremption ou une fin de durée
+ * (art. 3.4) n'en ouvre aucune. `{dateRedepot}` est fourni par l'émettrice.
+ */
+export const CORPS_DE_LA_LIBERATION = {
+  demande_verifiee:
+    "Ce dépôt a pris fin sans confirmation de l'échange. Vous pourrez déposer à nouveau cette entreprise à partir du {dateRedepot}. Cette fin n'emporte aucune autre conséquence pour vous.",
+  peremption_ou_fin_de_duree:
+    'Cette entreprise est de nouveau disponible, y compris pour un nouveau dépôt de votre part.',
+} as const;
+
+export type CauseDeLiberation = keyof typeof CORPS_DE_LA_LIBERATION;

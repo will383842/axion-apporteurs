@@ -197,6 +197,8 @@ export const PARAMETRES_PERMIS: Readonly<Record<string, readonly string[]>> = {
     'decision',
     'motif',
   ],
+  // La fin de SA réservation, choisie par la cause (A07) : la date où il pourra redéposer.
+  'courriels/notifications.ts › CORPS_DE_LA_LIBERATION › demande_verifiee': ['dateRedepot'],
 };
 
 /**

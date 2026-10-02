@@ -15,10 +15,9 @@
  * aussi : les routes exportent donc les SEPT méthodes (`gestionnaires`), et un attrape-tout sous la
  * frontière rend le même refus à un chemin qui n'existe pas.
  *
- * ÉCHEC FERMÉ PARTOUT. Le débit par défaut REFUSE (503, `limite_non_configuree`) : le compteur de
- * 60 par minute ne peut pas entrer au registre de SEC-10 tant que le texte de REQ-SEC-012 ne le
- * chiffre pas sous la forme que la garde `securite:rate-famille` lit (« N / M min », `surPanne:`).
- * La lecture par défaut n'est pas branchée (503) : la correspondance des états d'attribution vers
+ * ÉCHEC FERMÉ PARTOUT. Le débit de production est le compteur `auth:axionia-ip` du registre de
+ * SEC-10 (SEC-44 : 60 / 1 min par empreinte d'adresse, `surPanne: refuser`) : une panne du cache
+ * rend 503, jamais un passage. La lecture par défaut n'est pas branchée (503) : la correspondance des états d'attribution vers
  * `libre | attribuee | cliente` appartient à INT-T07-P. Jamais « libre » par défaut : ce serait
  * échouer ouvert contre l'apporteur.
  *
@@ -43,8 +42,9 @@ import { cleDuKid, lireEnvironnement, lireTrousseaux, type Trousseau } from '../
 import { horlogeSysteme } from '../../../lib/horloge';
 import { SAUTS_DE_CONFIANCE, adresseDuClient } from '../../securite/adresse-du-client';
 import { executerAuPlancher, type HorlogeDePlancher } from '../../securite/pot-de-miel';
-import { egalATempsConstant, limiteNonDeclaree } from '../../securite/primitives-de-porte';
+import { egalATempsConstant } from '../../securite/primitives-de-porte';
 import {
+  limiter,
   sujetDepuisEmpreinte,
   type SujetDeCompteur,
   type VerdictDeLimite,
@@ -146,8 +146,8 @@ export function frontiereDeProduction(): Frontiere {
       maintenantMs: () => horlogeSysteme.maintenant(),
       attendre: (ms) => new Promise((resoudre) => setTimeout(resoudre, ms)),
     },
-    // Tant que le registre ne porte pas son compteur : refus, en panne (primitive partagée).
-    debit: limiteNonDeclaree,
+    // SEC-44 : le compteur du registre, appelé à nom LITTÉRAL — la forme que `rate-famille` lit.
+    debit: (sujet, maintenantMs) => limiter('auth:axionia-ip', sujet, maintenantMs),
     lire: lecteurNonBranche,
     puits: (ligne) => {
       process.stderr.write(`${ligne}\n`);

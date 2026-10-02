@@ -61,6 +61,28 @@ export const SEUILS = {
     renvois: art('3.2'),
     verifieLe: LE,
   },
+  // INT-T49 — combien de temps une candidature qui attend ses coordonnées est reprise par le
+  // lanceur ; au-delà, elle ne l'est plus, et une alerte `attente_depassee` part. Un paramètre
+  // d'exploitation, pas une durée de conservation : il reste SOUS les 30 jours de minimisation
+  // d'INT-T56, qui demeurent le plafond (7 < 30).
+  ATTENTE_DES_COORDONNEES_JOURS: {
+    valeur: 7,
+    unite: 'jours',
+    source: 'coordination, 2026-10-01 (UTC), proposition de A05 (couvre un week-end prolongé)',
+    renvois: [],
+    verifieLe: '2026-10-01',
+  },
+  // INT-T54 — combien de temps un événement qui attend un TRAITANT (`traitant:<type>`) ou un PARENT
+  // (la facture d'un paiement, par exemple) attend avant qu'une alerte `attente_depassee` parte.
+  // Un paramètre d'exploitation : un type sans traitant ou un parent absent se voit vite.
+  ATTENTE_D_UNE_DEPENDANCE_JOURS: {
+    valeur: 2,
+    unite: 'jours',
+    source:
+      'arbitrage A01, 2026-10-01 (UTC), proposition de A05 (un type sans traitant ou un parent absent se voit vite)',
+    renvois: [],
+    verifieLe: '2026-10-01',
+  },
   // JUR-T40 — la fin d'une demande vérifiée sans prise de contact concluante (HYP-W20-LIBERATION,
   // tranchée par Williams le 2026-09-29) et la carence avant une nouvelle déclaration
   // (HYP-W20-CARENCE-REDEPOT, arbitrage de -d7 sur délégation, même jour). L'art. 3.2 en est la

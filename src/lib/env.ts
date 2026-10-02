@@ -80,6 +80,12 @@ const secret = z.string().superRefine((v, ctx) => {
   }
 });
 
+/** INT-T54 : l'identifiant d'un salon Telegram, un entier signé — court, donc pas un `secret` de 32 octets. */
+const IDENTIFIANT_DE_SALON = /^-?\d{1,20}$/;
+const identifiantDeSalon = z.string().superRefine((v, ctx) => {
+  if (presenteEtNette(v, ctx) && !IDENTIFIANT_DE_SALON.test(v)) refuser(ctx, 'format_invalide');
+});
+
 const cleHexadecimale = z.string().superRefine((v, ctx) => {
   if (presenteEtNette(v, ctx) && !CLE_HEXADECIMALE.test(v)) refuser(ctx, 'format_invalide');
 });
@@ -122,6 +128,12 @@ export type Secrets = z.infer<typeof schemaSecrets>;
 export const schemaSecretsConditionnels = z.object({
   // Le jeton d'envoi du relais de courriels (`Authorization: Zoho-enczapikey <jeton>`).
   ZEPTOMAIL_SEND_TOKEN: secret.optional(),
+  // INT-T54 : le jeton du canal d'alerte (Telegram) du SERVEUR. Exigé par aucune règle de démarrage :
+  // une alerte due sans canal fait échouer le passage en le nommant (`canal_alerte_absent`).
+  TELEGRAM_BOT_TOKEN: secret.optional(),
+  // INT-T54 : le salon, classé là où il vit déjà (un secret de l'environnement `production`, lu par
+  // backup.yml, deploy.yml et nightly.yml) : une seule source, aucune recopie.
+  TELEGRAM_CHAT_ID: identifiantDeSalon.optional(),
 });
 export type SecretsConditionnels = z.infer<typeof schemaSecretsConditionnels>;
 export const NOMS_DES_SECRETS_CONDITIONNELS: readonly string[] = Object.keys(
@@ -190,6 +202,10 @@ export const schemaConfiguration = z.object({
   // INT-T26 (REQ-INT-032) : l'adresse d'axionia pour les lectures de Partners. Absente, le canal est
   // fermé de ce côté : une candidature reçue attend ses coordonnées, rien ne part.
   AXIONIA_BASE_URL: urlDe(['https:']).optional(),
+  // SEC-44 (REQ-SEC-012) : les adresses d'où axionia appelle l'API entrante, séparées par des
+  // virgules. Absente, personne n'entre ; posée, elle n'est jamais vide. Sa forme fine (adresses
+  // lisibles) est jugée à chaque appel par `listeDAdresses` (`api-entrante.ts`).
+  AXIONIA_API_ALLOWLIST: nette.optional(),
   // INT-T57 (REQ-INT-022) : l'URL d'envoi du relais ; son hôte est jugé contre la liste fermée de
   // `src/server/integrations/zeptomail/relais.ts`. Exigée au démarrage si l'envoi réel est allumé.
   ZEPTOMAIL_API_URL: urlDe(['https:']).optional(),
@@ -537,8 +553,13 @@ const ROLES: Record<NomDeVariable, string> = {
     "adresse humaine d'expédition, du sous-domaine d'envoi ; jamais une adresse sans réponse",
   AXIONIA_BASE_URL:
     "adresse d'axionia pour les lectures de Partners ; absente, aucune coordonnée n'est tirée",
+  AXIONIA_API_ALLOWLIST:
+    "adresses d'où axionia appelle l'API entrante, séparées par des virgules ; absente, personne n'entre",
   ZEPTOMAIL_SEND_TOKEN:
     "jeton d'envoi du relais de courriels ; exigé quand l'envoi réel est allumé (`PARTNERS_EMAIL_DMARC_VERIFIE`)",
+  TELEGRAM_BOT_TOKEN:
+    "jeton du canal d'alerte du serveur ; une alerte due sans lui fait échouer le passage en le nommant",
+  TELEGRAM_CHAT_ID: "salon du canal d'alerte du serveur ; voir TELEGRAM_BOT_TOKEN",
   ZEPTOMAIL_API_URL:
     "URL d'envoi du relais de courriels, d'un hôte de la liste fermée ; exigée quand l'envoi réel est allumé",
 };
@@ -546,6 +567,7 @@ const ROLES: Record<NomDeVariable, string> = {
 /** La règle de forme, dite une fois par espèce de variable — celle que le schéma applique. */
 function regleDe(nom: NomDeVariable): string {
   if (nom === 'PII_ENCRYPTION_KEY') return 'exactement 64 caractères hexadécimaux';
+  if (nom === 'TELEGRAM_CHAT_ID') return 'entier signé, au plus 20 chiffres';
   if (NOMS_DES_SECRETS.includes(nom) || NOMS_DES_SECRETS_CONDITIONNELS.includes(nom)) {
     return 'au moins 32 octets, distincte des autres secrets ; préfixes `dev_` et `stub` refusés en production';
   }
@@ -579,7 +601,8 @@ function presenceDe(nom: string): string {
   if ((EXIGES_SI_ENVOI_ACTIF as readonly string[]).includes(nom)) {
     return 'facultative, requise si l’envoi réel est allumé';
   }
-  if (NOMS_DES_SECRETS_CONDITIONNELS.includes(nom)) return 'facultative';
+  if (NOMS_DES_SECRETS_CONDITIONNELS.includes(nom))
+    return 'facultative, jamais requise au démarrage';
   return NOMS_FACULTATIFS.includes(nom) ? 'facultative' : 'requise';
 }
 

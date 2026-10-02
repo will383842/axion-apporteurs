@@ -343,7 +343,7 @@
     {
       "id": "partners:transitions:exhaustive",
       "phase": 1,
-      "script": "tests/domain/transitions.spec.ts",
+      "script": "tests/unit/domaine/attribution-machine-a-etats.spec.ts",
       "tache": "DM-08",
       "verifie": "100 % des cellules (etat x evenement) testees pour Attribution (13 etats), Apporteur et LigneCommission (etendue en phase 2 par T-ARG-010)",
       "fixtureRouge": "retirer une cellule de la matrice",
