@@ -3,6 +3,8 @@
 // @req REQ-JUR-012
 // @req REQ-UX-003
 // @req REQ-JUR-060
+// @req REQ-UX-060
+// @req REQ-UX-061
 /**
  * UX-P1-41 — les textes W20 de la confirmation par e-mail, dans la SSOT de micro-copy
  * (`docs/chantiers/W20-confirmation-par-email.md`, texte OPCO d'A07 du 2026-10-02).
@@ -30,7 +32,10 @@ import {
   BADGES_DU_DEPOT,
   CARENCE_DU_REDEPOT,
 } from '../../../src/content/micro-copy/espace/confirmation-du-depot';
-import { PAGE_DE_CONFIRMATION } from '../../../src/content/micro-copy/public/confirmation-contact';
+import {
+  ETATS_DE_LA_PAGE,
+  PAGE_DE_CONFIRMATION,
+} from '../../../src/content/micro-copy/public/confirmation-contact';
 import * as COURRIEL from '../../../src/content/micro-copy/courriels/confirmation-contact';
 import * as INFORMATION from '../../../src/content/micro-copy/courriels/information-article-14';
 import {
@@ -65,7 +70,7 @@ describe('REQ-JUR-039 REQ-JUR-012 — les textes de l’apporteur informent, san
 });
 
 describe('REQ-JUR-037 — un champ exigé n’est jamais marqué, seul le facultatif le dit', () => {
-  it('REQ-JUR-037 : seul le contexte porte « (facultatif) », et aucun libellé ne dit « obligatoire »', () => {
+  it('REQ-UX-060 REQ-JUR-037 : seul le contexte porte « (facultatif) », et aucun libellé ne dit « obligatoire »', () => {
     const libelles = Object.entries(FORMULAIRE_DU_CONTACT);
     expect(libelles.filter(([, t]) => t.includes('(facultatif)')).map(([k]) => k)).toEqual([
       'contexte',
@@ -224,7 +229,34 @@ describe('REQ-UX-003 — la fin d’une réservation se dit selon sa cause (A07)
     expect(CARENCE_DU_REDEPOT).toContain('{dateRedepot}');
   });
 
-  it('REQ-JUR-060 : l’opposition de la page publique DÉRIVE celle de l’art. 14, sans promettre davantage', () => {
+  it('REQ-UX-061 REQ-JUR-060 : l’opposition de la page publique DÉRIVE celle de l’art. 14, sans promettre davantage', () => {
     expect(PAGE_DE_CONFIRMATION.opposition).toBe(INFORMATION.LIEN_OPPOSITION.libelle);
+  });
+});
+
+describe('REQ-UX-060 REQ-UX-061 — le message du dépôt, et la page de réponse du contact', () => {
+  it('REQ-UX-060 : le message avant le bouton dit qui reçoit l’e-mail, dans quel délai et pourquoi ; le bouton nomme le contact', () => {
+    const m = FORMULAIRE_DU_CONTACT.messageAvantLeBouton;
+    expect(m).toContain('{prenomContact} {nomContact}');
+    expect(m).toContain('{delaiAvantEnvoi}');
+    expect(m).toContain('pour confirmer votre échange');
+    expect(FORMULAIRE_DU_CONTACT.bouton).toBe('Déposer et prévenir {prenomContact} {nomContact}');
+    expect(FORMULAIRE_DU_CONTACT.boutonCourt).toBe('Déposer et prévenir');
+  });
+
+  it('REQ-UX-061 : deux réponses explicites, un second geste pour « Non », et les cinq états de la page', () => {
+    expect([PAGE_DE_CONFIRMATION.oui, PAGE_DE_CONFIRMATION.non]).toEqual([
+      'Oui, nous avons échangé',
+      'Non',
+    ]);
+    expect(PAGE_DE_CONFIRMATION.confirmerLeNon).toBe("Je confirme n'avoir eu aucun échange");
+    expect(PAGE_DE_CONFIRMATION.question).toBeTruthy();
+    expect(Object.keys(ETATS_DE_LA_PAGE)).toEqual([
+      'merci',
+      'dejaRepondu',
+      'lienInvalide',
+      'erreur',
+      'reessayer',
+    ]);
   });
 });
