@@ -26,7 +26,16 @@ import { join } from 'node:path';
 /** Les trois lectures de `scripts/gates/gov-etat.ts`, mot pour mot : la clé de l'instantané. */
 export const LECTURES_DE_LA_FORGE = [
   ['pr', 'list', '--state', 'open', '--json', 'number,title', '--limit', '100'],
-  ['pr', 'list', '--state', 'merged', '--json', 'number,title,mergeCommit,mergedAt', '--limit', '100'],
+  [
+    'pr',
+    'list',
+    '--state',
+    'merged',
+    '--json',
+    'number,title,mergeCommit,mergedAt',
+    '--limit',
+    '100',
+  ],
   ['issue', 'list', '--state', 'open', '--json', 'number,title,labels', '--limit', '200'],
 ] as const;
 

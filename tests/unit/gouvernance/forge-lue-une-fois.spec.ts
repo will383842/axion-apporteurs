@@ -30,9 +30,9 @@ function ecrire(nom: string, contenu: string): string {
 
 /** Un environnement SANS `gh` sur le chemin : seul le dossier de node y reste. */
 function sansGh(extra: Record<string, string | undefined>): NodeJS.ProcessEnv {
-  const env: NodeJS.ProcessEnv = {};
-  for (const [k, v] of Object.entries(process.env))
-    if (!/^(path|gov_etat_forge|gov_etat_gh)$/i.test(k)) env[k] = v;
+  const env: NodeJS.ProcessEnv = { ...process.env };
+  for (const k of Object.keys(env))
+    if (/^(path|gov_etat_forge|gov_etat_gh)$/i.test(k)) delete env[k];
   env['PATH'] = dirname(process.execPath);
   for (const [k, v] of Object.entries(extra)) if (v !== undefined) env[k] = v;
   return env;
@@ -106,7 +106,10 @@ describe('REQ-GOV-006 REQ-QA-013 — le run de tests lit la forge une fois', () 
 
   it('REQ-GOV-006 REQ-QA-013 : sans GOV_ETAT_FORGE, gov:etat appelle la forge (PATH sans gh : échec nommé)', () => {
     const r = govEtat(sansGh({}));
-    expect([r.code, r.sortie]).toEqual([1, expect.stringContaining(`${ILLISIBLE} \`gh pr list --state open\``)]);
+    expect([r.code, r.sortie]).toEqual([
+      1,
+      expect.stringContaining(`${ILLISIBLE} \`gh pr list --state open\``),
+    ]);
   }, 60_000);
 
   it('REQ-GOV-006 REQ-QA-013 : un instantané corrompu, ou sans l’une des lectures, fait échouer en le nommant', () => {
@@ -124,9 +127,7 @@ describe('REQ-GOV-006 REQ-QA-013 — le run de tests lit la forge une fois', () 
   it('REQ-GOV-006 REQ-QA-013 : PRÉSÉANCE — GOV_ETAT_GH posé, l’instantané (même corrompu) est ignoré', () => {
     const faux = ecrire('faux-gh.mjs', "process.stdout.write('[]');\n");
     const corrompu = ecrire('ignore.json', '{ pas du json');
-    const r = govEtat(
-      sansGh({ GOV_ETAT_FORGE: corrompu, GOV_ETAT_GH: `node ${faux}` })
-    );
+    const r = govEtat(sansGh({ GOV_ETAT_FORGE: corrompu, GOV_ETAT_GH: `node ${faux}` }));
     expect(r.sortie).not.toContain(ILLISIBLE);
     expect(r.sortie).not.toContain(corrompu);
   }, 60_000);

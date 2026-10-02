@@ -282,7 +282,9 @@ function lireInstantane(chemin: string, cle: string): string {
   try {
     brut = JSON.parse(readFileSync(chemin, 'utf8'));
   } catch (e) {
-    throw new Error(`instantané de la forge illisible (${chemin}) : ${(e as Error).message}`);
+    throw new Error(`instantané de la forge illisible (${chemin}) : ${(e as Error).message}`, {
+      cause: e,
+    });
   }
   const lu =
     typeof brut === 'object' && brut !== null ? (brut as Record<string, unknown>)[cle] : undefined;
