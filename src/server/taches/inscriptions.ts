@@ -38,6 +38,7 @@ import { lireJournalParLots } from '../evenement/journal';
 import type { Inscriptions } from './lanceur';
 import { minimiserCandidatures } from './minimiser-candidatures';
 import { purgerLesContacts } from './purger-contacts';
+import { purgerLesSirenRefuses } from './purger-siren-refuses';
 
 /**
  * Les traitants branchés, par type d'événement reçu. Un seul aujourd'hui : la candidature reçue
@@ -87,6 +88,9 @@ export function inscriptions(prisma: PrismaClient): Inscriptions {
     journal_verifier: passageDuJournal(() => lireJournalParLots(prisma)),
     // DM-48 (REQ-DM-031) : la purge du contact à échéance, à l'heure du système.
     contacts_purger: () => purgerLesContacts(prisma, new Date(horlogeSysteme.maintenant())),
+    // DM-53 (REQ-DM-043) : le SIREN des dépôts refusés, douze mois après le refus.
+    siren_refuses_purger: () =>
+      purgerLesSirenRefuses(prisma, new Date(horlogeSysteme.maintenant())),
   };
 }
 
