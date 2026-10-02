@@ -15,7 +15,7 @@
  *   4. L'ENTREPRISE INDIVIDUELLE, lue sur la nature juridique ;
  *   5. LES COLONNES effacées, exactement, et la tâche inscrite au registre.
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { EtatAttribution } from '@prisma/client';
 import { SEUILS } from '../../../src/domain/seuils/ssot';
@@ -23,14 +23,21 @@ import { DUREES_DE_RETENTION } from '../../../src/domain/seuils/retention';
 import { ETATS_OCCUPANTS } from '../../../src/domain/attribution/etats';
 import { MS_PAR_JOUR } from '../../../src/domain/temps/calendrier-civil';
 import {
+  CHAMPS_DU_CONTACT,
   colonnesDuContact,
   ETATS_LIBERES,
   echeanceDePurge,
   coordonneesSEffacent,
+  purgerLesContacts,
 } from '../../../src/server/taches/purger-contacts';
+import { effacementPii } from '../../../src/server/securite/pii';
 import { TACHES } from '../../../src/server/taches/registre';
 import { inscriptions } from '../../../src/server/taches/inscriptions';
 import type { PrismaClient } from '@prisma/client';
+
+// L'écrivain du journal est simulé : ce spec juge ce que la tâche lui DONNE, et sur quel client.
+const journal = vi.hoisted(() => ({ ajouterEvenement: vi.fn() }));
+vi.mock('../../../src/server/evenement/journal', () => journal);
 
 const REFERENCE = new Date('2026-10-02T08:00:00.000Z');
 const plus = (jours: number) => new Date(REFERENCE.getTime() + jours * MS_PAR_JOUR);
@@ -126,5 +133,141 @@ describe('REQ-DM-031 — ce que la purge efface', () => {
     // Aucun appel n'est fait : on ne lit que la composition.
     const client: unknown = {};
     expect(typeof inscriptions(client as PrismaClient).contacts_purger).toBe('function');
+  });
+});
+
+/**
+ * LA TÂCHE, sur un client SIMULÉ (exigence de la mutation : le témoin en base n'est pas joué par
+ * Stryker). Le client enregistre chaque appel, dans l'ordre, et le client de transaction est un
+ * objet distinct : on juge que l'effacement et l'événement passent par LE MÊME.
+ */
+type Ligne = { id: string; natureJuridique: string | null };
+function clientSimule(lots: Ligne[][], comptes: Record<string, number> = {}) {
+  const ordre: string[] = [];
+  const clients: unknown[] = [];
+  const lectures: unknown[] = [];
+  const effacements: { where: unknown; data: Record<string, unknown> }[] = [];
+  const tx = {
+    attribution: {
+      updateMany: vi.fn(async (args: { where: { id: string }; data: Record<string, unknown> }) => {
+        ordre.push(`effacer:${args.where.id}`);
+        effacements.push(args);
+        return { count: comptes[args.where.id] ?? 1 };
+      }),
+    },
+  };
+  const client = {
+    attribution: {
+      findMany: vi.fn(async (args: unknown) => {
+        lectures.push(args);
+        ordre.push('lire');
+        return lots.shift() ?? [];
+      }),
+    },
+    $transaction: vi.fn(async (corps: (t: typeof tx) => Promise<unknown>) => corps(tx)),
+  };
+  journal.ajouterEvenement.mockImplementation(async (t: unknown, e: { agregatId: string }) => {
+    clients.push(t);
+    ordre.push(`journal:${e.agregatId}`);
+    return { id: '1', selfHash: 'h' };
+  });
+  return {
+    client: client as unknown as PrismaClient,
+    client_: client,
+    tx,
+    ordre,
+    lectures,
+    effacements,
+    clients,
+  };
+}
+
+const lignes = (n: number, prefixe = 'a'): Ligne[] =>
+  Array.from({ length: n }, (_, i) => ({ id: `${prefixe}${i}`, natureJuridique: '5710' }));
+
+describe('REQ-DM-031 — la tâche de purge, sur un client simulé', () => {
+  beforeEach(() => {
+    journal.ajouterEvenement.mockReset();
+  });
+
+  it('REQ-DM-031 : la SÉLECTION — échéance passée, pas encore purgée, occupants non convertis exclus, par lot de 100 dans l’ordre des échéances', async () => {
+    const s = clientSimule([]);
+    expect(await purgerLesContacts(s.client, REFERENCE)).toEqual({ purgees: 0 });
+    expect(s.lectures).toEqual([
+      {
+        where: {
+          purgeContactAt: { lte: REFERENCE },
+          contactPurgeAt: null,
+          statut: { notIn: ETATS_OCCUPANTS.filter((e) => e !== 'convertie') },
+        },
+        select: { id: true, natureJuridique: true },
+        orderBy: [{ purgeContactAt: 'asc' }, { id: 'asc' }],
+        take: 100,
+      },
+    ]);
+    expect(s.client_.$transaction).not.toHaveBeenCalled();
+    expect(journal.ajouterEvenement).not.toHaveBeenCalled();
+  });
+
+  it('REQ-DM-031 : TÉMOIN — l’EFFACEMENT exact : le contact par effacementPii, la date de purge, et le siège d’une forme non prouvée', async () => {
+    const s = clientSimule([
+      [
+        { id: 'ei', natureJuridique: '1000' },
+        { id: 'pm', natureJuridique: '5710' },
+      ],
+    ]);
+    expect(await purgerLesContacts(s.client, REFERENCE)).toEqual({ purgees: 2 });
+    const contact = effacementPii(CHAMPS_DU_CONTACT);
+    expect(s.effacements).toEqual([
+      {
+        where: { id: 'ei', contactPurgeAt: null },
+        data: {
+          ...contact,
+          contactPurgeAt: REFERENCE,
+          latitudeMicrodeg: null,
+          longitudeMicrodeg: null,
+        },
+      },
+      {
+        where: { id: 'pm', contactPurgeAt: null },
+        data: { ...contact, contactPurgeAt: REFERENCE },
+      },
+    ]);
+  });
+
+  it('REQ-DM-031 : TÉMOIN — l’ÉVÉNEMENT, sur le client de la transaction, APRÈS l’effacement, une fois par ligne', async () => {
+    const s = clientSimule([[{ id: 'x', natureJuridique: null }]]);
+    await purgerLesContacts(s.client, REFERENCE);
+    expect(s.ordre).toEqual(['lire', 'effacer:x', 'journal:x']);
+    expect(s.clients).toEqual([s.tx]);
+    expect(s.clients[0]).toBe(s.tx);
+    expect(journal.ajouterEvenement).toHaveBeenCalledTimes(1);
+    expect(journal.ajouterEvenement).toHaveBeenCalledWith(s.tx, {
+      type: 'attribution_contact_purge',
+      agregat: 'attribution',
+      agregatId: 'x',
+      survenuAt: REFERENCE,
+      charge: { purgeAt: REFERENCE.toISOString(), acteur: { par: 'systeme' } },
+    });
+  });
+
+  it('REQ-DM-031 : TÉMOIN — une ligne déjà purgée entre la lecture et l’écriture (compte 0) : ni événement, ni compte', async () => {
+    const s = clientSimule([[...lignes(2)]], { a0: 0 });
+    expect(await purgerLesContacts(s.client, REFERENCE)).toEqual({ purgees: 1 });
+    expect(s.ordre).toEqual(['lire', 'effacer:a0', 'effacer:a1', 'journal:a1']);
+  });
+
+  it('REQ-DM-031 : TÉMOIN — le DISJONCTEUR des lots : un lot plein relit, un lot partiel s’arrête', async () => {
+    const plein = clientSimule([lignes(100), lignes(1, 'b')]);
+    expect(await purgerLesContacts(plein.client, REFERENCE)).toEqual({ purgees: 101 });
+    expect(plein.client_.attribution.findMany).toHaveBeenCalledTimes(2);
+
+    const partiel = clientSimule([lignes(99), lignes(1, 'b')]);
+    expect(await purgerLesContacts(partiel.client, REFERENCE)).toEqual({ purgees: 99 });
+    expect(partiel.client_.attribution.findMany).toHaveBeenCalledTimes(1);
+
+    const exact = clientSimule([lignes(100)]);
+    expect(await purgerLesContacts(exact.client, REFERENCE)).toEqual({ purgees: 100 });
+    expect(exact.client_.attribution.findMany).toHaveBeenCalledTimes(2);
   });
 });
