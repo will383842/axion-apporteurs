@@ -80,6 +80,28 @@ rien n'est lu ni écrit. Exception : la garde des clairs, une fois `PARTNERS_SAU
 2. Le restaurer sur la base de remplacement : `pnpm sauvegarde:exercice-local -- --vidage <fichier>`
    prouve d'abord qu'il se déchiffre et se restaure sur un Postgres éphémère ; la même clé déchiffre
    ensuite pour la restauration réelle.
+   **Trois temps** (DM-45, décision A02) — l'exercice les joue tels quels, en lisant le schéma du
+   vidage (`pg_restore --schema-only -f -`) :
+   1. **Les rôles d'abord.** Un rôle est un objet global du serveur, que le vidage n'emporte pas. Ceux
+      que nomment ses droits et sa propriété, de la forme `partners_*` et d'elle seule, sont créés
+      en `NOLOGIN`, sans mot de passe, s'ils n'existent pas. Un droit donné à un rôle hors de cette
+      forme fait échouer, le rôle nommé.
+   2. **La restauration, avec les droits** : `--no-owner`, jamais `--no-acl`.
+   3. **La propriété rejouée.** `--no-owner` a jeté chaque `ALTER … OWNER TO`, et avec lui le
+      propriétaire du journal : ne sont rejouées, une par une, que les instructions de la forme
+      ancrée `ALTER TABLE|SEQUENCE <objet> OWNER TO partners_*;`. Toute autre ligne qui donne la
+      propriété à un rôle `partners_*` fait échouer, et rien n'est rejoué.
+
+   Le rôle LOGIN de l'exécution (QA-T62) n'est **pas** restauré : il se reprovisionne, avec son
+   secret, comme à la mise en service.
+
+   **La restauration tourne sous le rôle de migration ou d'administration**, jamais sous le rôle
+   LOGIN d'exécution ni sous `partners_execution` : aucune table ni séquence ne doit leur appartenir,
+   sans quoi la propriété contournerait les droits. L'exercice le vérifie après chaque restauration.
+
+   Un `ALTER FUNCTION … OWNER TO partners_*` tombe en piège : échec fermé, et c'est voulu. Le jour où
+   une fonction `SECURITY DEFINER` appartiendra à un rôle `partners_*`, la forme ancrée s'ÉTEND pour
+   la nommer, elle ne s'assouplit jamais.
 3. Vérifier `GET /api/readyz` (200, `enDefaut` vide) et l'en-tête `x-partners-build-sha`.
 
 Aucune commande manuelle contre la base de production hors de ce geste (`docs/CONVENTIONS.md` §7).
@@ -93,6 +115,7 @@ verdict sous `partners/exercices/`, dont le motif nomme l'étape :
 | --- | --- |
 | `vidage non chiffré côté client` | le rechiffrement horaire n'a pas tourné ou n'a pas ses secrets |
 | `déchiffrement` | vidage altéré, ou `PARTNERS_BACKUP_PASSPHRASE` changée sans rechiffrer l'historique |
+| `restauration : rôle hors de la forme…` ou `… propriété(s) hors de la forme ancrée` | le vidage nomme un rôle étranger à Partners, ou une propriété qui n'a pas la forme attendue : rien n'est rejoué, à examiner avant toute restauration réelle |
 | `restauration : pg_restore sort en …` | vidage incomplet, ou format de la plateforme non lisible par `pg_restore` |
 | `migrations` | la base sauvegardée n'est pas au niveau des migrations du dépôt |
 | `témoin : … est vide` | la base sauvegardée est vide |
