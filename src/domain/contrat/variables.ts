@@ -201,8 +201,10 @@ export const SANS_PRIX_PUBLIC = 'sur devis';
 /**
  * La valeur d'une variable `PRIX_<palier>`, lue dans l'export de pricing. Un palier SANS prix
  * public (la conférence, vendue sur devis) rend « sur devis » : jamais 0, jamais une chaîne vide,
- * jamais un montant. Un prix absent de l'export (`undefined`) ne résout pas. Un montant, lui,
- * appartient au rendu de l'export de pricing (DM-03-A) : il n'est pas mis en forme ici.
+ * jamais un montant. Un prix NUL se lit comme une absence (décision A07 du 2026-10-02) : un « 0 »
+ * contredirait la note ² et laisserait croire à une conférence gratuite. Un prix absent de l'export
+ * (`undefined`), négatif ou à virgule ne résout pas. Un montant, lui, appartient au rendu de l'export
+ * de pricing (DM-03-A) : il n'est pas mis en forme ici.
  */
 export function valeurDePrixPublic(
   source: SourceDeVariable,
@@ -211,9 +213,14 @@ export function valeurDePrixPublic(
   if (source.genre !== 'pricing' || source.champ !== 'prixReferenceHt') {
     return { manque: `source « ${source.genre} », pas le prix public de l'export de pricing` };
   }
-  if (prixPublicHtCentimes === null) return { valeur: SANS_PRIX_PUBLIC };
+  if (prixPublicHtCentimes === null || prixPublicHtCentimes === 0) {
+    return { valeur: SANS_PRIX_PUBLIC };
+  }
   if (prixPublicHtCentimes === undefined) {
     return { manque: `prix public absent de l'export de pricing (${source.tache})` };
+  }
+  if (!Number.isInteger(prixPublicHtCentimes) || prixPublicHtCentimes < 0) {
+    return { manque: `prix public hors forme : un entier de centimes ≥ 0 (${source.tache})` };
   }
   return { manque: `mise en forme d'un montant : rendu de l'export de pricing (${source.tache})` };
 }
