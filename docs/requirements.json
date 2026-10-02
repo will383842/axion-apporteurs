@@ -1082,9 +1082,11 @@
       "remplaceePar": null,
       "module": 4,
       "etape": 4,
-      "phase": 2,
+      "phase": 1,
       "taches": [
-        "DM-58"
+        "CPL-T07",
+        "DM-58",
+        "UX-P1-09"
       ]
     },
     {
@@ -2846,7 +2848,6 @@
       "etape": 11,
       "phase": 0,
       "taches": [
-        "DM-11",
         "INT-T44",
         "INT-T56",
         "JUR-T02",
@@ -4575,8 +4576,7 @@
       "etape": 4,
       "phase": -1,
       "taches": [
-        "CPL-T01",
-        "DM-11"
+        "CPL-T01"
       ]
     },
     {
