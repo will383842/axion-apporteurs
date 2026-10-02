@@ -96,15 +96,27 @@ describe('REQ-DM-036 REQ-ARG-003 — deux passages simultanés, un seul effet', 
     const id = await unRecu();
     let entre!: () => void;
     const dedans = new Promise<void>((r) => (entre = r));
-    const tue = passageExclusif(async () => {
-      entre();
-      await new Promise(() => undefined);
-    }).catch(() => 'tue');
+    let relacher!: () => void;
+    const tenu = new Promise<void>((r) => (relacher = r));
+    // Le processus qui va mourir TIENT le verrou de la tâche, dans sa transaction, sans avoir encore
+    // touché à l'événement.
+    const tue = verrouConsultatif(base.prisma)
+      .sous(cleDuVerrou(TACHE_DE_RECEPTION), async () => {
+        entre();
+        await tenu;
+        return 0;
+      })
+      .then(
+        () => 'vivant',
+        () => 'tue'
+      );
     await dedans;
-    // La mort du processus : sa connexion tombe, et la base relâche le verrou de transaction.
+    // La mort du processus : sa connexion tombe, et la base relâche le verrou de transaction. Sa
+    // transaction ne peut plus aboutir.
     await base.prisma.$queryRaw`
       SELECT pg_terminate_backend(pid) FROM pg_locks
       WHERE locktype = 'advisory' AND pid <> pg_backend_pid()`;
+    relacher();
     expect(await tue).toBe('tue');
     expect(await statutDe(id)).toBe('recu');
     const effets: string[] = [];
@@ -131,9 +143,12 @@ describe('REQ-DM-036 — le passage est BORNÉ : il ne garde jamais le verrou au
         maintenant: () => new Date(t),
       })
     );
+    // Un seul événement commencé ; ceux de CE test qui n'ont pas été joués restent `recu` (un
+    // événement laissé par un autre test peut avoir été le premier joué : il est hors du compte).
     expect(effets).toHaveLength(1);
     const restants = (await Promise.all(ids.map(statutDe))).filter((s) => s === 'recu');
-    expect(restants).toHaveLength(2);
+    expect(restants).toHaveLength(ids.length - effets.filter((e) => ids.includes(e)).length);
+    expect(restants.length).toBeGreaterThanOrEqual(2);
     const suite: string[] = [];
     await passageExclusif(async (e) => void suite.push(e.id));
     expect(ids.every((id) => [...effets, ...suite].includes(id))).toBe(true);
