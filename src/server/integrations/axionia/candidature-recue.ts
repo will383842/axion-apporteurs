@@ -157,7 +157,8 @@ export function chargeMinimisee(charge: unknown): Record<string, unknown> {
     throw new Error('charge de candidature : un objet est attendu');
   if (!Object.hasOwn(charge, 'reponsesJson'))
     throw new Error('charge de candidature : reponsesJson absent, déjà minimisée ?');
-  const { reponsesJson: _retire, ...reste } = charge as Record<string, unknown>;
+  const reste: Record<string, unknown> = { ...(charge as Record<string, unknown>) };
+  delete reste.reponsesJson;
   return reste;
 }
 

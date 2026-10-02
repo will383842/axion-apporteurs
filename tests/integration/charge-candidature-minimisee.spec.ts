@@ -129,7 +129,9 @@ describe('REQ-DM-036 — (i) le traitant : la charge minimisée au passage à tr
   it('REQ-DM-036 : TÉMOIN — une seconde réécriture est refusée par le déclencheur', async () => {
     const e = await inscrire('recu');
     await ecrire(e.id, chargeMinimisee(e.charge), 'traite');
-    const { reponsesJson: _r, candidatureId: _c, ...encorePlusPetite } = e.charge;
+    const encorePlusPetite: Record<string, unknown> = { ...e.charge };
+    delete encorePlusPetite.reponsesJson;
+    delete encorePlusPetite.candidatureId;
     await expect(ecrire(e.id, encorePlusPetite)).rejects.toThrow(REFUS);
   });
 

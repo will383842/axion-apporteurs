@@ -30,7 +30,8 @@ describe('REQ-DM-036 — la forme minimisée de la charge, pure', () => {
     expect(CHARGE).toHaveProperty('reponsesJson');
     const m = chargeMinimisee(CHARGE);
     expect(m).not.toHaveProperty('reponsesJson');
-    const { reponsesJson: _retire, ...reste } = CHARGE;
+    const reste: Record<string, unknown> = { ...CHARGE };
+    delete reste.reponsesJson;
     expect(m).toEqual(reste);
     expect(Object.keys(m)).toEqual(Object.keys(CHARGE).filter((k) => k !== 'reponsesJson'));
   });
@@ -43,7 +44,8 @@ describe('REQ-DM-036 — la forme minimisée de la charge, pure', () => {
   });
 
   it('REQ-DM-036 : TÉMOINS — une charge sans reponsesJson, un tableau, null ou un texte sont refusés', () => {
-    const { reponsesJson: _r, ...sans } = CHARGE;
+    const sans: Record<string, unknown> = { ...CHARGE };
+    delete sans.reponsesJson;
     expect(() => chargeMinimisee(sans)).toThrow(/reponsesJson/);
     expect(() => chargeMinimisee([CHARGE])).toThrow(/objet/);
     expect(() => chargeMinimisee(null)).toThrow(/objet/);
