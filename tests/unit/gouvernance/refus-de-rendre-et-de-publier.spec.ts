@@ -460,12 +460,13 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
     'scripts/gates/aipd-signee.ts': {
       total: 1,
       porte: 1,
-      temoins: 1,
+      temoins: 0,
       raison:
         'JUR-T35 — aucun dépôt réel sans l’AIPD signée. `process.exitCode = 1` : le refus de la ' +
         'mise en service, DIFFÉRÉ pour que la ligne `::error::` s’imprime. Ses quatre familles ' +
         '(aipd_non_signee, variable_absente, variable_illisible, dates_discordantes) sont ' +
-        'éprouvées par aucun-depot-reel-sans-aipd-signee.spec.ts.',
+        'éprouvées sur la fonction par aucun-depot-reel-sans-aipd-signee.spec.ts ; la sortie du binaire ' +
+        'n’a aucun témoin dans `REFUS`. Dette DÉCLARÉE.',
     },
     'scripts/gates/jur-grille-chiffree.ts': {
       total: 4,
