@@ -1,6 +1,9 @@
 -- DM-50 (REQ-JUR-022, partners/ADR-0022 §5 et §16) : les deux vocabulaires de conformité de
 -- l'apporteur, en VRAIS enums, et leurs colonnes nullables. Additive : un apporteur existant n'a pas
 -- encore déclaré sa qualité ni sa profession, et une colonne nullable sans défaut ne réécrit rien.
+-- Retour arrière : DROP COLUMN "qualite_exercice" et "profession_reglementee" sur "apporteurs", puis
+-- DROP TYPE "qualite_exercice" et "profession_reglementee" ; seules les qualités et professions
+-- déclarées depuis sont perdues, le reste de la fiche de l'apporteur ne bouge pas.
 
 -- CreateEnum
 -- La liste FERMÉE d'A07 (2026-10-02) : « micro-entrepreneur » n'est pas une valeur (un régime, pas une
