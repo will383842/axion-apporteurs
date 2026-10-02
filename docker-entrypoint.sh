@@ -20,7 +20,10 @@ if [ "${SKIP_MIGRATE:-}" = "1" ]; then
   echo "SKIP_MIGRATE=1 : migration sautee (runbook de retour arriere seulement)." >&2
 else
   # `-k 5` : une migration qui ignore SIGTERM reçoit SIGKILL cinq secondes après — 60 s au plus.
-  if ! timeout -k 5 "$DELAI_MIGRATION_S" node "$PRISMA" migrate deploy --schema prisma/schema.prisma; then
+  # QA-T62 (REQ-DM-024) : la migration passe sous le rôle PROPRIÉTAIRE (`DATABASE_MIGRATION_URL`) ; le
+  # serveur, lui, ne connaîtra que `DATABASE_URL`, son rôle d'exécution. Hors production, sans URL de
+  # migration, la seule URL sert aux deux.
+  if ! DATABASE_URL="${DATABASE_MIGRATION_URL:-${DATABASE_URL:-}}" timeout -k 5 "$DELAI_MIGRATION_S" node "$PRISMA" migrate deploy --schema prisma/schema.prisma; then
     echo "Demarrage refuse : la migration a echoue ou depasse ${DELAI_MIGRATION_S} s. Le serveur n'est pas lance." >&2
     exit 1
   fi
@@ -40,5 +43,17 @@ if [ -n "${SEMEUR_INSTANT:-}" ]; then
     exit 1
   fi
 fi
+
+# QA-T62 (REQ-DM-024) : le rôle d'exécution est provisionné (hors migration, avec l'URL de migration)
+# puis CONSTATÉ connecté comme le serveur : ni superutilisateur, ni membre de `partners_journal`, ni
+# propriétaire d'une table. Sinon, le serveur n'est pas lancé.
+if [ "${SKIP_MIGRATE:-}" != "1" ]; then
+  if ! node "$ICI/node_modules/tsx/dist/cli.mjs" "$ICI/src/server/deploiement/role-d-execution.ts"; then
+    exit 1
+  fi
+fi
+
+# Le serveur ne garde pas l'URL du rôle propriétaire (QA-T62).
+unset DATABASE_MIGRATION_URL
 
 exec "$@"

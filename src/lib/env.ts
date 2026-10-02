@@ -187,6 +187,10 @@ const nette = z.string().superRefine((v, ctx) => {
  */
 export const schemaConfiguration = z.object({
   DATABASE_URL: urlDe(['postgresql:', 'postgres:']),
+  // QA-T62 (REQ-DM-024) : l'URL du rôle PROPRIÉTAIRE, lue par l'entrée de l'image seulement (migration,
+  // provisionnement du rôle d'exécution), puis retirée de l'environnement du serveur. Son exigence en
+  // production est jugée par `src/server/deploiement/role-d-execution.ts`, avant le serveur.
+  DATABASE_MIGRATION_URL: urlDe(['postgresql:', 'postgres:']).optional(),
   REDIS_URL: urlDe(['redis:', 'rediss:']),
   NOTIFY_SINK: z.string().optional(),
   PARTNERS_ENV: nette.optional(),
@@ -541,7 +545,10 @@ const ROLES: Record<NomDeVariable, string> = {
     'authentifie les webhooks de rebonds du relais de courriel, en-tête `Producer-Signature`',
   AXIONIA_RELECTURE_SECRET:
     "signe les lectures de Partners chez axionia (coordonnées d'un candidat), en-tête `x-partners-signature`",
-  DATABASE_URL: 'la base Postgres ; `readyz` la sonde',
+  DATABASE_URL:
+    "la base Postgres, sous le rôle d'exécution du serveur (jamais superutilisateur, jamais membre de `partners_journal`) ; `readyz` la sonde",
+  DATABASE_MIGRATION_URL:
+    "la base sous le rôle propriétaire : migration et provisionnement du rôle d'exécution, par l'entrée de l'image seulement ; exigée en production, retirée avant le serveur",
   REDIS_URL: 'le cache Redis ; `readyz` le sonde',
   NOTIFY_SINK: "retient toute notification dans le journal au lieu de l'envoyer",
   PARTNERS_ENV: "nom de l'environnement ; `production` avec `NODE_ENV=production` vaut production",
@@ -573,6 +580,7 @@ function regleDe(nom: NomDeVariable): string {
   }
   switch (nom) {
     case 'DATABASE_URL':
+    case 'DATABASE_MIGRATION_URL':
       return 'URL `postgresql:` ou `postgres:`';
     case 'REDIS_URL':
       return 'URL `redis:` ou `rediss:`';

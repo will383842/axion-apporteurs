@@ -21,8 +21,10 @@ import { randomBytes } from 'node:crypto';
 import { PrismaClient } from '@prisma/client';
 import { demarrerBase, type Base } from './harnais';
 import {
+  ROLE_D_EXECUTION,
   constaterRoleDExecution,
   provisionnerRoleDExecution,
+  urlDuRoleDExecution,
 } from '../../src/server/deploiement/role-d-execution';
 
 let base: Base;
@@ -95,7 +97,7 @@ describe('REQ-DM-024 — le rôle d’exécution, constaté connecté comme le s
       serveur.$queryRawUnsafe(`SELECT count(*) FROM "evenements"`)
     ).resolves.toBeDefined();
     await expect(serveur.apporteur.count()).resolves.toBeGreaterThanOrEqual(0);
-    const [{ ecrire }] = await serveur.$queryRawUnsafe<{ ecrire: boolean }[]>(
+    const [privileges] = await serveur.$queryRawUnsafe<{ ecrire: boolean }[]>(
       `SELECT bool_and(has_table_privilege(current_user, format('%I', c.relname), 'SELECT,INSERT,UPDATE'))
               AS ecrire
        FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
@@ -103,14 +105,14 @@ describe('REQ-DM-024 — le rôle d’exécution, constaté connecté comme le s
          AND pg_get_userbyid(c.relowner) <> 'partners_journal'
          AND c.relname <> '_prisma_migrations'`
     );
-    expect(ecrire).toBe(true);
+    expect(privileges?.ecrire).toBe(true);
   });
 
   it('REQ-DM-024 : le serveur ne possède aucune table', async () => {
-    const [{ n }] = await serveur.$queryRawUnsafe<{ n: number }[]>(
+    const [possedees] = await serveur.$queryRawUnsafe<{ n: number }[]>(
       `SELECT count(*)::int AS n FROM pg_class WHERE relowner = (SELECT oid FROM pg_roles WHERE rolname = current_user)`
     );
-    expect(n).toBe(0);
+    expect(possedees?.n).toBe(0);
   });
 });
 
@@ -141,11 +143,37 @@ describe('REQ-DM-024 — le provisionnement', () => {
   });
 });
 
+describe('REQ-DM-024 — l’URL du serveur, dérivée de celle du propriétaire', () => {
+  it('REQ-DM-024 : même hôte et même base, sous partners_app et son secret', () => {
+    const s = secret();
+    const u = new URL(urlDuRoleDExecution('postgresql://proprio:mdp@hote:5432/partners', s));
+    expect([u.username, u.password, u.host, u.pathname]).toEqual([
+      ROLE_D_EXECUTION,
+      s,
+      'hote:5432',
+      '/partners',
+    ]);
+  });
+
+  it('REQ-DM-024 : TÉMOIN — un secret trop court ou hors alphabet est refusé, sans être imprimé', () => {
+    for (const mauvais of ['', 'court', `${'a'.repeat(40)}'`, `${'a'.repeat(40)} b`]) {
+      let message = '';
+      try {
+        urlDuRoleDExecution('postgresql://proprio:mdp@hote/partners', mauvais);
+      } catch (e) {
+        message = (e as Error).message;
+      }
+      expect(message).toMatch(/secret/);
+      if (mauvais !== '') expect(message).not.toContain(mauvais);
+    }
+  });
+});
+
 describe('REQ-DM-024 — docker-entrypoint.sh : migrer, provisionner, puis servir', () => {
   const texte = readFileSync('docker-entrypoint.sh', 'utf8');
 
   it('REQ-DM-024 : la migration passe sous DATABASE_MIGRATION_URL, le provisionnement suit, le serveur vient après', () => {
-    const migre = texte.indexOf('DATABASE_URL="$DATABASE_MIGRATION_URL"');
+    const migre = texte.indexOf('DATABASE_URL="${DATABASE_MIGRATION_URL:-${DATABASE_URL:-}}"');
     const provisionne = texte.indexOf('role-d-execution');
     const sert = texte.lastIndexOf('exec "$@"');
     expect(migre).toBeGreaterThan(-1);
