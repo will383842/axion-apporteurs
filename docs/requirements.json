@@ -69,7 +69,7 @@
     {
       "id": "REQ-DM-005",
       "domaine": "domaine-donnees",
-      "texte": "`deposeeAt` est l'horodatage de la transaction serveur (now() Postgres, timestamptz(6)) ; il n'est jamais fourni par le client ; l'égalité est départagée par l'id séquentiel de l'événement de dépôt ; `clientCapturedAt` est informatif et non opposable.",
+      "texte": "`deposeeAt` est l'horodatage de la transaction serveur (now() Postgres, timestamptz(6)) ; il n'est jamais fourni par le client ; l'égalité est départagée par l'id séquentiel de l'événement de dépôt ; `clientCapturedAt` est informatif et non opposable. Précision de l'architecte (A02, 2026-10-02) : « now() Postgres » se lit « horloge du serveur Postgres au moment de l'écriture, sous le verrou » (`clock_timestamp()` lu après les verrous consultatifs, déclencheur `BEFORE INSERT` qui écrase toute valeur fournie).",
       "source": "fonctionnement R3 ; contrat art. 1.5 ; nouvelle (F-DM-15)",
       "statut": "active",
       "remplaceePar": null,
@@ -385,6 +385,7 @@
         "DM-01",
         "DM-20",
         "DM-45",
+        "QA-T62",
         "SEC-30"
       ]
     },
@@ -496,6 +497,7 @@
         "DM-13",
         "DM-20",
         "DM-40",
+        "DM-48",
         "JUR-T41"
       ]
     },
@@ -843,7 +845,7 @@
     {
       "id": "REQ-SEC-012",
       "domaine": "anti-abus-securite",
-      "texte": "Les API appelées par axionia répondent 404 sans jeton bearer dédié (≥ 32 octets, temps constant), sont restreintes à une allowlist d'IP, limitées à 60/min, journalisent chaque appel ; `/attributions` ne renvoie ni nom ni email d'apporteur, seulement un booléen, un mois de fin et une référence opaque.",
+      "texte": "Les API appelées par axionia répondent 404 sans jeton bearer dédié (≥ 32 octets, temps constant), sont restreintes à une allowlist d'IP, limitées à 60 / 1 min par hash IP, avec `surPanne: refuser`, journalisent chaque appel ; `/attributions` ne renvoie ni nom ni email d'apporteur, seulement un booléen, un mois de fin et une référence opaque.",
       "source": "audit-outil §2.3 ; fonctionnement R3",
       "statut": "active",
       "remplaceePar": null,
@@ -3594,10 +3596,13 @@
         "GOV-063",
         "GOV-076",
         "GOV-083",
+        "GOV-140",
         "QA-T00",
         "QA-T01",
         "QA-T07",
-        "QA-T28"
+        "QA-T28",
+        "QA-T63",
+        "QA-T64"
       ]
     },
     {
@@ -3675,7 +3680,8 @@
       "etape": null,
       "phase": 0,
       "taches": [
-        "QA-T05"
+        "QA-T05",
+        "QA-T61"
       ]
     },
     {
@@ -4014,7 +4020,9 @@
         "GOV-032",
         "GOV-060",
         "GOV-119",
-        "GOV-123"
+        "GOV-123",
+        "QA-T63",
+        "QA-T64"
       ]
     },
     {
@@ -4108,7 +4116,8 @@
         "GOV-097",
         "GOV-101",
         "GOV-124",
-        "GOV-126"
+        "GOV-126",
+        "QA-T60"
       ]
     },
     {
@@ -4170,7 +4179,8 @@
         "GOV-012",
         "GOV-057",
         "QA-T54",
-        "QA-T55"
+        "QA-T55",
+        "QA-T65"
       ]
     },
     {
@@ -4409,7 +4419,9 @@
         "GOV-122",
         "GOV-125",
         "GOV-127",
-        "GOV-128"
+        "GOV-128",
+        "GOV-140",
+        "QA-T60"
       ]
     },
     {
@@ -4613,7 +4625,8 @@
       "taches": [
         "JUR-T04",
         "JUR-T32",
-        "JUR-T35"
+        "JUR-T35",
+        "QA-T60"
       ]
     },
     {
