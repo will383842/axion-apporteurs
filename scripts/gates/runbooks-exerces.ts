@@ -225,27 +225,72 @@ function prouver(): number {
   return 0;
 }
 
-function controler(): number {
+/**
+ * QA-T56 (REQ-QA-027) — tant que les runbooks sont une CONDITION de la mise en service, ce qui reste
+ * à exercer n'est pas une panne du nightly. `MISE_EN_SERVICE` est la seule source : `now` (FOURNI
+ * par `--now`, jamais lu à l'horloge) strictement antérieur à la date posée, ou date non posée, c'est
+ * AVANT. Le jour même ou après, `now` absent ou illisible, ou une date illisible : verdict complet,
+ * échec fermé.
+ */
+export function avantLaMiseEnService(
+  now: string | null,
+  miseEnService: string | null = MISE_EN_SERVICE.valeur
+): boolean {
+  if (now === null || !JOUR.test(now)) return false;
+  if (miseEnService === null) return true;
+  return JOUR.test(miseEnService) && now < miseEnService;
+}
+
+/**
+ * Le verdict imprimé. Avant la mise en service, chaque faute devient un avertissement de GitHub qui
+ * la NOMME (`::notice::`), et la sortie est zéro : rien n'est tu, rien ne rougit.
+ */
+export function issueDuControle(
+  fautes: readonly Faute[],
+  confrontes: number,
+  avant: boolean
+): { code: 0 | 1; lignes: string[] } {
+  if (fautes.length === 0)
+    return {
+      code: 0,
+      lignes: [
+        `✅ runbooks:exerces — ${confrontes} runbook(s) confronté(s), tous exercés (${ENVIRONNEMENTS_ADMIS.join(' | ')}), corps inchangés.`,
+      ],
+    };
+  if (avant)
+    return {
+      code: 0,
+      lignes: [
+        ...fautes.map(
+          (f) =>
+            `::notice::runbooks:exerces — condition de mise en service, non jugée avant le ${MISE_EN_SERVICE.valeur ?? '(date non posée)'} : [${f.famille}] ${f.message}`
+        ),
+        `✅ runbooks:exerces — ${fautes.length} runbook(s) sur ${confrontes} encore à exercer : condition de mise en service, non jugée par le nightly avant la date.`,
+      ],
+    };
+  return {
+    code: 1,
+    lignes: [
+      `❌ runbooks:exerces — ${fautes.length} runbook(s) non exercé(s) sur ${confrontes} :`,
+      ...fautes.map((f) => `   [${f.famille}] ${f.message}`),
+    ],
+  };
+}
+
+function controler(now: string | null): number {
   const lus = RUNBOOKS_EXIGES.map((r) => ({
     chemin: r.chemin,
     texte: existsSync(r.chemin) ? readFileSync(r.chemin, 'utf8') : null,
   }));
-  const fautes = juger(lus);
-  if (fautes.length > 0) {
-    console.error(
-      `❌ runbooks:exerces — ${fautes.length} runbook(s) non exercé(s) sur ${lus.length} :`
-    );
-    for (const f of fautes) console.error(`   [${f.famille}] ${f.message}`);
-    return 1;
-  }
-  console.log(
-    `✅ runbooks:exerces — ${lus.length} runbook(s) confronté(s), tous exercés (${ENVIRONNEMENTS_ADMIS.join(' | ')}), corps inchangés.`
-  );
-  return 0;
+  const { code, lignes } = issueDuControle(juger(lus), lus.length, avantLaMiseEnService(now));
+  for (const l of lignes) (code === 0 ? console.log : console.error)(l);
+  return code;
 }
 
 const APPELE_DIRECTEMENT = /runbooks-exerces\.ts$/.test(process.argv[1] ?? '');
 
 if (APPELE_DIRECTEMENT) {
-  process.exitCode = process.argv.includes('--prove') ? prouver() : controler();
+  const i = process.argv.indexOf('--now');
+  const now = i >= 0 ? (process.argv[i + 1] ?? null) : null;
+  process.exitCode = process.argv.includes('--prove') ? prouver() : controler(now);
 }
