@@ -262,7 +262,47 @@ const COMMANDE_GH = (process.env['GOV_ETAT_GH'] || 'gh').split(/\s+/).filter(Boo
 const BINAIRE_GH = COMMANDE_GH[0] ?? 'gh';
 const PREFIXE_GH = COMMANDE_GH.slice(1);
 
+/**
+ * QA-T63 (REQ-GOV-006, REQ-QA-013) — L'INSTANTANÉ DE LA FORGE D'UN RUN DE TESTS. Chaque témoin qui
+ * lançait cette garde sur l'état réel relisait la forge, et une dizaine de portes A ensemble
+ * épuisaient la limite d'API (« GraphQL: API rate limit already exceeded », 2026-10-02). Le
+ * `globalSetup` de vitest (`tests/setup-forge.ts`) lit la forge UNE fois et pose `GOV_ETAT_FORGE` :
+ * un fichier JSON temporaire, une sortie de `gh` par lecture, indexée par ses arguments.
+ *   — PRÉSÉANCE : `GOV_ETAT_GH` posé (un faux `gh`, le banc d'attaque) → l'instantané est IGNORÉ ;
+ *   — posée, l'instantané fait foi pour TOUTES les lectures : absent, illisible, d'une autre forme
+ *     ou sans la lecture demandée, il fait ÉCHOUER en le nommant — jamais un repli silencieux ;
+ *   — hors tests, la variable n'est jamais posée : rien ne change ;
+ *   — et si elle l'est HORS de vitest (`VITEST` absente), elle est REFUSÉE, nommée (lentille
+ *     `securite`, #416) : un instantané forgé ne fait jamais passer une porte réelle. C'est une
+ *     défense en profondeur, pas un secret — qui pose les deux variables contrôle déjà le job.
+ */
+const INSTANTANE_DE_LA_FORGE = process.env['GOV_ETAT_GH']
+  ? undefined
+  : process.env['GOV_ETAT_FORGE'] || undefined;
+
+function lireInstantane(chemin: string, cle: string): string {
+  if (!process.env['VITEST'])
+    throw new Error(
+      `GOV_ETAT_FORGE refusée hors de vitest (${chemin}) : l'instantané ne sert qu'aux témoins, une porte réelle lit la forge`
+    );
+  let brut: unknown;
+  try {
+    brut = JSON.parse(readFileSync(chemin, 'utf8'));
+  } catch (e) {
+    throw new Error(`instantané de la forge illisible (${chemin}) : ${(e as Error).message}`, {
+      cause: e,
+    });
+  }
+  const lu =
+    typeof brut === 'object' && brut !== null ? (brut as Record<string, unknown>)[cle] : undefined;
+  if (typeof lu !== 'string')
+    throw new Error(`instantané de la forge sans la lecture « ${cle} » (${chemin})`);
+  return lu;
+}
+
 function gh(args: string[]): string {
+  if (INSTANTANE_DE_LA_FORGE !== undefined)
+    return lireInstantane(INSTANTANE_DE_LA_FORGE, args.join(' '));
   return execFileSync(BINAIRE_GH, [...PREFIXE_GH, ...args], {
     encoding: 'utf8',
     maxBuffer: 32 * 1024 * 1024,

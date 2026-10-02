@@ -279,6 +279,7 @@ export function confronterNoms(
  * est un refus qu'on doit regarder.
  */
 export const REFUS_NOMMES: Readonly<Record<string, readonly string[]>> = {
+  'scripts/gates/aipd-signee.ts': ['module › si APPELE_DIRECTEMENT › sinon v.ok › (= 1)'],
   'scripts/gates/aucun-annee-de-naissance.ts': [
     'principal(process.argv.slice(2)).then › ∅ › (code)',
     'principal(process.argv.slice(2)).then › ∅ › (2)',
