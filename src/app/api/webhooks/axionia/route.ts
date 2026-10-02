@@ -20,6 +20,8 @@ import {
 } from '../../../../server/integrations/axionia/reception';
 import { creerAlerteurPlafonne } from '../../../../server/securite/primitives-de-porte';
 import { passageDesEvenementsRecus } from '../../../../server/taches/inscriptions';
+import { cleDuVerrou, verrouConsultatif } from '../../../../server/taches/lanceur';
+import { TACHE_DE_RECEPTION } from '../../../../server/queue/workers/evenement-recu';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -41,7 +43,12 @@ export function POST(requete: Request): Promise<Response> {
         try {
           // Le passage est composé une seule fois, partagé avec le lanceur des passages planifiés
           // (GOV-137) : `src/server/taches/inscriptions.ts`. Ici, il écrit son propre battement.
-          await passageDesEvenementsRecus(prisma)();
+          // INT-T55 : sous le MÊME verrou que le lanceur. Tenu ailleurs, ce passage saute : les
+          // événements restent `recu`, et le passage qui tient le verrou ou le suivant les prend.
+          await verrouConsultatif(prisma).sous(
+            cleDuVerrou(TACHE_DE_RECEPTION),
+            passageDesEvenementsRecus(prisma)
+          );
         } catch (erreur) {
           journal.error('travail_evenements_recus_en_echec', {
             nom: erreur instanceof Error ? erreur.name : 'Erreur',

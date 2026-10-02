@@ -124,7 +124,12 @@
       axion-ia. _Porteur : la session axion-ia._ **Fait le 2026-09-30** : `2bbe3482` (squash de la PR
       1250) servi par axion-ia.com (`x-axion-build-sha`), run « Build & Deploy » 36735033118, job de
       déploiement vert.
-- [ ] `PARTNERS_SYNC_ENABLED` ouvert côté axion-ia, **en DERNIER**, après les deux cases précédentes.
+- [ ] Le passage EXCLUSIF des événements reçus (INT-T55, REQ-ARG-003) est FUSIONNÉ et DÉPLOYÉ : la route
+      du webhook et le lanceur prennent le même verrou, et un passage ne dépasse pas son budget. Sans
+      lui, deux webhooks rapprochés dispatchent deux fois le même événement. `PARTNERS_SYNC_ENABLED`
+      reste faux jusque-là. _Porteur : la forge (déploiement de la fusion), constat de l'auteur ;
+      cochée après réception par Williams._
+- [ ] `PARTNERS_SYNC_ENABLED` ouvert côté axion-ia, **en DERNIER**, après les cases précédentes.
       _Porteur : Williams._
 - [ ] Première donnée réelle : date et sha consignés ci-dessous. _Porteur : Williams, l'auteur (PR)._
 
