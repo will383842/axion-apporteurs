@@ -2436,7 +2436,8 @@
         "JUR-T29",
         "JUR-T44",
         "JUR-T44b",
-        "JUR-T45"
+        "JUR-T45",
+        "QA-T69"
       ]
     },
     {
@@ -2452,7 +2453,8 @@
       "taches": [
         "JUR-T03",
         "JUR-T29",
-        "JUR-T45"
+        "JUR-T45",
+        "QA-T69"
       ]
     },
     {
@@ -3205,6 +3207,7 @@
       "phase": 1,
       "taches": [
         "UX-P1-06",
+        "UX-P1-07",
         "UX-P1-19"
       ]
     },
@@ -6284,7 +6287,7 @@
     {
       "id": "REQ-JUR-064",
       "domaine": "juridique",
-      "texte": "**L'art. 23 du contrat (déclarations de l'Apporteur) porte une phrase de plus :** « L'Apporteur déclare n'être tenu envers aucun employeur d'une obligation qui lui interdirait le présent contrat. » Le texte reste une PROPOSITION, non en vigueur, tant que Williams ne l'a pas validé ; un témoin vérifie que le gabarit rendu porte la phrase exacte, une seule fois.",
+      "texte": "**L'art. 23 du contrat (déclarations de l'Apporteur) couvre la situation envers un employeur :** il déclare que l'activité n'est contraire ni à une clause de non-concurrence ou d'exclusivité, et qu'il a vérifié sa situation, le cas échéant, auprès de son employeur. Ce texte EXISTANT suffit, et aucune phrase n'y est ajoutée (une redite pourrait se lire comme deux obligations, art. 1190 C. civ. ; A07, 2026-10-02). Un témoin vérifie que le gabarit porte les deux fragments « clause de non-concurrence ou d'exclusivité » et « auprès de son employeur ».",
       "source": "Avis d'A07 du 2026-10-02 (hors dépôt), retenu par la décision de Williams du même jour ; relayé par la coordination",
       "statut": "active",
       "remplaceePar": null,
