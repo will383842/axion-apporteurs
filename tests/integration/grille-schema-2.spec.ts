@@ -28,7 +28,6 @@ import {
   empreinteGrille,
   lirePublication,
   typeDeLigne,
-  type PublicationGrille,
 } from '../../src/domain/commission/grille';
 import { importerGrille } from '../../src/server/grille/import';
 

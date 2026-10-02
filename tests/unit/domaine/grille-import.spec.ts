@@ -93,6 +93,9 @@ describe('REQ-ARG-031 → REQ-DM-014, REQ-INT-017 — la publication du producte
 
   it('TÉMOIN — une ligne sans empreinte, une empreinte sans ligne, une ligne en double', () => {
     const pub = lue();
+    // Typage seul (INT-T47-P) : la fixture du producteur est en schema 1, et le dire restreint
+    // l'union des contenus pour que les paliers se reconstruisent sous leur forme exacte.
+    if (pub.contenu.schema !== 1) throw new Error('la fixture du producteur est en schema 1');
     const [premiere] = pub.contenu.commissions;
     const annoncees = { ...pub.empreintesLignes.commissions };
     delete annoncees[premiere!.commissionId];
