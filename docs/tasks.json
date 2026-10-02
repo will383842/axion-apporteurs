@@ -18977,6 +18977,37 @@
           "tests/unit/contrat/contract-template-complete.spec.ts"
         ]
       }
+    },
+    {
+      "id": "GOV-140",
+      "titre": "La sortie d'une garde lue par un pipe arrive entière : aucun script de garde ne fait console.log puis process.exit immédiat",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "scripts/gates/gov-inventaire.ts",
+        "tests/unit/gouvernance/sortie-des-gardes-entiere.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [],
+      "reqs": [
+        "REQ-GOV-026",
+        "REQ-QA-013"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.25,
+      "statut": "a_faire",
+      "acceptance": "Diagnostic A01 du 2026-10-02, tâche BLOQUANTE (hors gel de la gouvernance) validée par la coordination : #384 et #372 rougissaient sur `tests/unit/gouvernance/inventaire-prouve.spec.ts` (« Expected ',' or ']' after array element in JSON at position 146080 ») alors que le test est vert en local. `scripts/gates/gov-inventaire.ts`, mode `--rapport`, fait `console.log(JSON.stringify(…))` puis `process.exit(0)` aussitôt : sur Linux, une sortie vers un PIPE est asynchrone et `process.exit` coupe le dernier morceau (le rapport dépasse 146 Ko et grossit avec le registre) ; sous Windows le pipe est synchrone, d'où le vert local. (1) Le mode `--rapport` écrit sa charge par `process.stdout.write(…, rappel)` et ne sort qu'une fois l'écriture vidée (ou pose `process.exitCode` sans `process.exit`). (2) TÉMOIN : le rapport lu par un pipe (`spawnSync` sans fichier) est un JSON complet dont la longueur égale celle de l'écriture ; il rougit sur l'ancien code quand la sortie dépasse la taille du tampon du pipe (un rapport gonflé artificiellement, ou un écrivain de démonstration). (3) BALAYAGE : aucun autre script de `scripts/gates/` (ni de `scripts/lot/`) ne fait `console.log`/`process.stdout.write` d'une sortie potentiellement grosse suivi d'un `process.exit` synchrone ; le témoin balaie ces répertoires et nomme tout fichier fautif ; chaque fichier corrigé entre aux `paths` (rattrapage ou entrée de cette PR). La PR verse cette tâche elle-même (`verser-tache`, label `role:gardien-spec`) et fusionne AVANT #384 et #372, qui se mettent ensuite à jour.",
+      "tests": {
+        "REQ-GOV-026": [
+          "tests/unit/gouvernance/sortie-des-gardes-entiere.spec.ts"
+        ],
+        "REQ-QA-013": [
+          "tests/unit/gouvernance/sortie-des-gardes-entiere.spec.ts"
+        ]
+      }
     }
   ]
 }

@@ -14,6 +14,7 @@
  * `${secondes}.${corps}`, l'horodatage en secondes Unix et en chiffres seuls.
  */
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { createHash, createHmac, randomBytes, randomUUID } from 'node:crypto';
 import { NOMS_DES_SECRETS, kidDe, type Trousseau } from '../../../src/lib/env';
 import { ENTETE_KID_AXIONIA } from '../../../packages/contracts/api';
@@ -90,6 +91,22 @@ function enveloppe(champs: {
 
 const CLIENT = TYPES_EVENEMENT[0];
 const PAIEMENT = TYPES_EVENEMENT.find((t) => t.startsWith('paiement.'))!;
+
+/**
+ * INT-T45 : la réception juge le payload contre le `$defs` fermé de son type. Les faces vertes
+ * envoient donc la charge du PRODUCTEUR RÉEL (RM-03), en version 2 — le seul renommage de la v2
+ * (`amountHtCents` → `montantHtCents` du paiement) appliqué, comme `contrat-hash.spec.ts` le nomme.
+ */
+const PRODUCTEUR = JSON.parse(
+  readFileSync('tests/fixtures/axionia/fixtures-producteur.v1.json', 'utf8')
+) as { evenements: { event_type: string; payload: Record<string, unknown> }[] };
+function chargeDuProducteur(type: string): Record<string, unknown> {
+  const e = PRODUCTEUR.evenements.find((x) => x.event_type === type);
+  if (e === undefined) throw new Error(`fixture du producteur : aucun ${type}`);
+  if (type !== 'paiement.recu') return { ...e.payload };
+  const { amountHtCents, ...reste } = e.payload;
+  return { ...reste, montantHtCents: amountHtCents };
+}
 
 function requete(corps: string, entetes: Record<string, string>): Request {
   return new Request('https://partners.test/api/webhooks/axionia', {
@@ -446,7 +463,7 @@ describe('REQ-SEC-010 — la route : témoin à deux faces, compté en lignes', 
       enveloppe({
         type: CLIENT,
         sujet: { client_id: randomUUID() },
-        payload: {},
+        payload: chargeDuProducteur(CLIENT),
         version: SCHEMA_VERSION,
       })
     );
@@ -467,7 +484,7 @@ describe('REQ-SEC-010 — la route : témoin à deux faces, compté en lignes', 
       enveloppe({
         type: CLIENT,
         sujet: { client_id: randomUUID() },
-        payload: {},
+        payload: chargeDuProducteur(CLIENT),
         version: SCHEMA_VERSION,
       })
     );
@@ -486,7 +503,7 @@ describe('REQ-SEC-010 — la route : témoin à deux faces, compté en lignes', 
       enveloppe({
         type: CLIENT,
         sujet: { client_id: randomUUID() },
-        payload: {},
+        payload: chargeDuProducteur(CLIENT),
         version: SCHEMA_VERSION,
       })
     );
@@ -506,7 +523,7 @@ describe('REQ-SEC-010 — la route : témoin à deux faces, compté en lignes', 
     const e = enveloppe({
       type: CLIENT,
       sujet: { client_id: 'c-1' },
-      payload: {},
+      payload: chargeDuProducteur(CLIENT),
       version: SCHEMA_VERSION,
     });
     const corps = JSON.stringify(e);
@@ -534,7 +551,12 @@ describe('REQ-SEC-010 — la route : témoin à deux faces, compté en lignes', 
     const env = environnementValide();
     const b = banc(env);
     const corps = JSON.stringify(
-      enveloppe({ type: CLIENT, sujet: { client_id: 'c-2' }, payload: {}, version: SCHEMA_VERSION })
+      enveloppe({
+        type: CLIENT,
+        sujet: { client_id: 'c-2' },
+        payload: chargeDuProducteur(CLIENT),
+        version: SCHEMA_VERSION,
+      })
     );
     const r1 = await b.recevoir(signee(env.AXIONIA_WEBHOOK_SECRET!, corps));
     const r2 = await b.recevoir(signee(env.AXIONIA_WEBHOOK_SECRET!, corps));
@@ -567,7 +589,12 @@ describe('REQ-SEC-010 — la route : témoin à deux faces, compté en lignes', 
     delete env.AXIONIA_WEBHOOK_SECRET;
     const b = banc(env);
     const corps = JSON.stringify(
-      enveloppe({ type: CLIENT, sujet: { client_id: 'c-4' }, payload: {}, version: SCHEMA_VERSION })
+      enveloppe({
+        type: CLIENT,
+        sujet: { client_id: 'c-4' },
+        payload: chargeDuProducteur(CLIENT),
+        version: SCHEMA_VERSION,
+      })
     );
     const r = await b.recevoir(signee(secret, corps));
     expect(r.status).toBe(503);
@@ -581,7 +608,7 @@ describe('REQ-SEC-010 — la route : témoin à deux faces, compté en lignes', 
     const e = enveloppe({
       type: CLIENT,
       sujet: { client_id: 'c-5' },
-      payload: {},
+      payload: chargeDuProducteur(CLIENT),
       version: SCHEMA_VERSION,
     });
     for (const corps of [
@@ -637,7 +664,12 @@ describe('REQ-SEC-010 — la route : témoin à deux faces, compté en lignes', 
       },
     } as unknown as typeof b.depot;
     const corps = JSON.stringify(
-      enveloppe({ type: CLIENT, sujet: { client_id: 'c-7' }, payload: {}, version: SCHEMA_VERSION })
+      enveloppe({
+        type: CLIENT,
+        sujet: { client_id: 'c-7' },
+        payload: chargeDuProducteur(CLIENT),
+        version: SCHEMA_VERSION,
+      })
     );
     const r = await b.recevoir(signee(env.AXIONIA_WEBHOOK_SECRET!, corps));
     expect(r.status).toBe(503);
@@ -650,7 +682,12 @@ describe('REQ-SEC-010 — la route : témoin à deux faces, compté en lignes', 
       throw new Error('file_indisponible');
     };
     const corps = JSON.stringify(
-      enveloppe({ type: CLIENT, sujet: { client_id: 'c-8' }, payload: {}, version: SCHEMA_VERSION })
+      enveloppe({
+        type: CLIENT,
+        sujet: { client_id: 'c-8' },
+        payload: chargeDuProducteur(CLIENT),
+        version: SCHEMA_VERSION,
+      })
     );
     const r = await b.recevoir(signee(env.AXIONIA_WEBHOOK_SECRET!, corps));
     expect(r.status).toBe(200);
@@ -664,7 +701,7 @@ describe('REQ-SEC-010 — la route : témoin à deux faces, compté en lignes', 
       enveloppe({
         type: CLIENT,
         sujet: { client_id: 'c-9' },
-        payload: {},
+        payload: chargeDuProducteur(CLIENT),
         version: SCHEMA_VERSION + 1,
       })
     );
@@ -682,7 +719,7 @@ describe('REQ-SEC-010 — la route : témoin à deux faces, compté en lignes', 
     const env = environnementValide();
     const b = banc(env);
     const s = env.AXIONIA_WEBHOOK_SECRET!;
-    const payload = { paymentId: 'pay-1', factureId: 'f-1' };
+    const payload = { ...chargeDuProducteur(PAIEMENT), paymentId: 'pay-1' };
     const r1 = await b.recevoir(
       signee(
         s,
@@ -1125,14 +1162,14 @@ describe('REQ-INT-026 — la porte MCP, jugée en processus', () => {
 // ── La route : ses corps de refus, ses bornes et ses réarmements ──────────────────────────────
 
 describe('REQ-SEC-010 — la route, refus par refus', () => {
-  const client = (sujet: unknown, payload: Record<string, unknown> = {}) =>
+  const client = (sujet: unknown, payload: Record<string, unknown> = chargeDuProducteur(CLIENT)) =>
     JSON.stringify(enveloppe({ type: CLIENT, sujet, payload, version: SCHEMA_VERSION }));
   const paiement = (paymentId: unknown) =>
     JSON.stringify(
       enveloppe({
         type: PAIEMENT,
         sujet: { payment_id: 'p' },
-        payload: { paymentId, factureId: 'f-1' },
+        payload: { ...chargeDuProducteur(PAIEMENT), paymentId },
         version: SCHEMA_VERSION,
       })
     );
