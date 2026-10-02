@@ -222,8 +222,11 @@ describe('maquettes-validees — la garde exécutée sur des vues injectées', (
     expect([...FAMILLES].sort()).toEqual(
       [
         'date_invalide',
+        'ecran_attribue_sans_ligne',
         'ecran_attribue_sans_validation',
+        'ecran_sans_req_ux_047',
         'ligne_mal_formee',
+        'maquette_sans_cinq_etats',
         'maquette_absente',
         'maquette_sans_ligne',
         'tableau_illisible',
@@ -232,6 +235,85 @@ describe('maquettes-validees — la garde exécutée sur des vues injectées', (
         'validation_partielle',
       ].sort()
     );
+  });
+
+  // GOV-113 — les tâches d'écran et les états de leurs maquettes.
+  const CARTE_CONSOLE =
+    '| Route | Écran | Tâche |\n| --- | --- | --- |\n| `/console/candidatures` | Saisie | EXT-T04 |\n';
+  const ecran = (statut: string, owner: string | null, reqs: string[]) => ({
+    id: 'EXT-T04',
+    statut,
+    owner,
+    reqs,
+    paths: ['src/app/(console)/console/candidatures/'],
+  });
+  const avec = (...taches: Vue['taches']) => ({ taches: [...vue('').taches, ...taches] });
+
+  it('REQ-UX-047 — TÉMOIN : une tâche d’écran (chemin de page) qui ne cite pas REQ-UX-047 rougit ; fusionnée, elle n’est plus jugée', () => {
+    expect(
+      familles(vue(tableau(MILIEU_VALIDE), avec(ecran('a_faire', null, ['REQ-EXT-011']))))
+    ).toEqual(['ecran_sans_req_ux_047']);
+    expect(
+      familles(vue(tableau(MILIEU_VALIDE), avec(ecran('a_faire', null, ['REQ-UX-047']))))
+    ).toEqual([]);
+    expect(
+      familles(vue(tableau(MILIEU_VALIDE), avec(ecran('fusionnee', 'A05', ['REQ-EXT-011']))))
+    ).toEqual([]);
+  });
+
+  it('REQ-UX-047 — TÉMOIN : une tâche nommée par la carte, ATTRIBUÉE, sans ligne, rougit ; à faire, elle reste une dette', () => {
+    const nommeeParLaCarte = (statut: string, owner: string | null) =>
+      vue(tableau(MILIEU_VALIDE), {
+        cartes: [CARTE_CONSOLE],
+        ...avec({ ...ecran(statut, owner, ['REQ-UX-047']), paths: [] }),
+      });
+    expect(familles(nommeeParLaCarte('en_cours', 'A05'))).toEqual(['ecran_attribue_sans_ligne']);
+    expect(familles(nommeeParLaCarte('a_faire', null))).toEqual([]);
+    // Nommée par la PROSE de la carte, hors de la colonne « Tâche » : ce n'est pas un écran.
+    expect(
+      familles(
+        vue(tableau(MILIEU_VALIDE), {
+          cartes: ['EXT-T04 est citée ici en prose.\n'],
+          ...avec({ ...ecran('en_cours', 'A05', ['REQ-UX-047']), paths: [] }),
+        })
+      )
+    ).toEqual([]);
+  });
+
+  it('REQ-UX-047 — TÉMOIN : une maquette sans état de chargement rougit en le nommant ; la console exige aussi le refus', () => {
+    const sections = (...ids: string[]) =>
+      ids
+        .map((id) => `<section class="ecran" id="${id}" aria-label="État : ${id}"></section>`)
+        .join('');
+    const complete = sections('etat-nominal', 'etat-vide', 'etat-chargement', 'etat-erreur');
+    const html = (milieu: string) => ({
+      html: { 'accueil.html': '', 'entreprise.html': milieu, 'lot.html': complete },
+    });
+    const sansChargement = controler(
+      vue(tableau(MILIEU_VALIDE), html(sections('etat-nominal', 'etat-vide', 'etat-erreur')))
+    );
+    expect(sansChargement.map((f) => f.famille)).toEqual(['maquette_sans_cinq_etats']);
+    expect(sansChargement[0]!.message).toContain('entreprise.html');
+    expect(sansChargement[0]!.message).toContain('« chargement »');
+    // Contre-témoins : complète, elle passe ; un alias nommé vaut l'état ; `accueil.html`, non
+    // rétroactive, n'est pas jugée même vide.
+    expect(familles(vue(tableau(MILIEU_VALIDE), html(complete)))).toEqual([]);
+    expect(
+      familles(
+        vue(
+          tableau(MILIEU_VALIDE),
+          html(sections('etat-nominal', 'etat-adresse', 'etat-envoi', 'etat-erreur-envoi'))
+        )
+      )
+    ).toEqual([]);
+    // Sous une section de console, l'état de refus est exigé en plus.
+    const enConsole = tableau(MILIEU_VALIDE).replace('## Espace apporteur', '## Console');
+    const refus = controler(vue(enConsole, html(complete)));
+    expect(refus.map((f) => f.famille)).toEqual([
+      'maquette_sans_cinq_etats',
+      'maquette_sans_cinq_etats',
+    ]);
+    expect(refus.every((f) => f.message.includes('« refus »'))).toBe(true);
   });
 
   it('REQ-UX-008 — CÂBLAGE : l’ensemble que la garde écarte, donné au VRAI composeur, écarte la tâche', () => {
@@ -352,8 +434,12 @@ describe('maquettes-validees — la SORTIE du binaire, sur un arbre jetable', ()
     const arbre = mkdtempSync(join(tmpdir(), 'maquettes-validees-'));
     try {
       mkdirSync(join(arbre, 'docs/maquettes'), { recursive: true });
+      // GOV-113 : la garde lit les états de chaque maquette ; celles de l'arbre les dessinent.
+      const etatsDessines = ['etat-nominal', 'etat-vide', 'etat-chargement', 'etat-erreur']
+        .map((id) => `<section class="ecran" id="${id}" aria-label="État : ${id}"></section>`)
+        .join('');
       for (const f of ['accueil.html', 'entreprise.html', 'lot.html', 'index.html'])
-        writeFileSync(join(arbre, 'docs/maquettes', f), '<!doctype html>');
+        writeFileSync(join(arbre, 'docs/maquettes', f), `<!doctype html>${etatsDessines}`);
       const registre = (proprietaire: string | null) =>
         JSON.stringify({
           taches: [
@@ -382,7 +468,7 @@ describe('maquettes-validees — la SORTIE du binaire, sur un arbre jetable', ()
 describe('maquettes-validees — le script sur le dépôt réel', () => {
   it('REQ-UX-008 — le dépôt sort en zéro, et la sortie COMPTE ce qu’elle a lu', () => {
     const { code, sortie } = lancer();
-    expect(sortie).toMatch(/17 ligne\(s\) lue\(s\)/);
+    expect(sortie).toMatch(/13 ligne\(s\) lue\(s\)/);
     expect(code).toBe(0);
   });
 
@@ -392,11 +478,11 @@ describe('maquettes-validees — le script sur le dépôt réel', () => {
     expect(code).toBe(0);
   });
 
-  it('REQ-UX-008 — la vue du dépôt lit les dix-sept maquettes et les tâches du registre', () => {
+  it('REQ-UX-008 — la vue du dépôt lit les douze maquettes et les tâches du registre', () => {
     const v = vueDuDepot();
     expect(v.maquettes).toContain('accueil.html');
     expect(v.taches.find((t) => t.id === 'UX-P1-08')).toBeDefined();
-    expect(lireValidation(v.validation).lignes).toHaveLength(17);
+    expect(lireValidation(v.validation).lignes).toHaveLength(13);
   });
 });
 
@@ -469,8 +555,8 @@ describe('REQ-UX-008 — l’accueil maquetté : 3 chiffres, 1 alerte au plus, 1
     expect((nominal.corps.match(/<input\b/g) ?? []).length).toBe(1);
   });
 
-  it('REQ-UX-008 — les six maquettes de l’espace portent la MÊME barre, celle d’ESPACE-ROUTES', () => {
-    expect(MAQUETTES_ESPACE).toHaveLength(6);
+  it('REQ-UX-008 — les sept maquettes de l’espace portent la MÊME barre, celle d’ESPACE-ROUTES', () => {
+    expect(MAQUETTES_ESPACE).toHaveLength(7);
     const attendus = ongletsDeclares();
     let barres = 0;
     for (const f of MAQUETTES_ESPACE) {
@@ -592,7 +678,7 @@ describe('REQ-UX-034 — mode clair et mode sombre de l’espace, jetons propres
       expect(jetons(lire(f), CLAIR), f).toEqual(reference);
       expect(jetons(lire(f), SOMBRE), f).toEqual(jetons(lire(MAQUETTES_ESPACE[0]!), SOMBRE));
     }
-    expect(MAQUETTES_CONSOLE).toHaveLength(11);
+    expect(MAQUETTES_CONSOLE).toHaveLength(6);
     const consoleClair = jetons(lire(MAQUETTES_CONSOLE[0]!), CLAIR);
     expect(consoleClair.fond).toBeDefined();
     expect(consoleClair.fond).not.toBe(reference.fond);
@@ -621,7 +707,7 @@ describe('REQ-UX-017 — la moitié statique : autonomes, langue déclarée, cha
   const toutes = readdirSync(DOSSIER).filter((f) => f.endsWith('.html'));
 
   it('REQ-UX-017 — aucune maquette ne charge quoi que ce soit hors d’elle-même', () => {
-    expect(toutes.length).toBe(18);
+    expect(toutes.length).toBe(14);
     for (const f of toutes) {
       const html = lire(f);
       expect(html.match(/(?:src|href)\s*=\s*["']?(?:https?:)?\/\//gi) ?? [], f).toEqual([]);

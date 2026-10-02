@@ -11,31 +11,17 @@
  * depuis la précédente. Jamais un en-tête, jamais un extrait du corps.
  */
 import { after } from 'next/server';
-import { PrismaClient, TypeEvenementRecu } from '@prisma/client';
-import { sourceAleatoireSysteme } from '../../../../domain/apporteur/identifiants';
-import { lireEnvironnement, lireTrousseaux } from '../../../../lib/env';
+import { PrismaClient } from '@prisma/client';
 import { horlogeSysteme } from '../../../../lib/horloge';
 import { creerJournal } from '../../../../lib/logger';
 import {
   depotDeReception,
   recevoirEvenementAxionia,
 } from '../../../../server/integrations/axionia/reception';
-import {
-  clientCoordonnees,
-  PREFIXE_ATTENTE_COORDONNEES,
-  traiterCandidatureRecue,
-} from '../../../../server/integrations/axionia/candidature-recue';
-import {
-  aiguiller,
-  depotDuTravail,
-  passerLeTravail,
-  reprendreLesAttentes,
-  reprendreLesTraitants,
-  type EvenementATraiter,
-  type Traitants,
-} from '../../../../server/queue/workers/evenement-recu';
-import { clesPii } from '../../../../server/securite/pii';
 import { creerAlerteurPlafonne } from '../../../../server/securite/primitives-de-porte';
+import { passageDesEvenementsRecus } from '../../../../server/taches/inscriptions';
+import { cleDuVerrou, verrouConsultatif } from '../../../../server/taches/lanceur';
+import { TACHE_DE_RECEPTION } from '../../../../server/queue/workers/evenement-recu';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -55,49 +41,20 @@ export function POST(requete: Request): Promise<Response> {
     declencher: () =>
       after(async () => {
         try {
-          // Un seul type a un traitant aujourd'hui : la candidature reçue (INT-T26). Les autres
-          // attendent `traitant:<type>`, jamais `traite` (INT-T43) ; brancher un traitant ici
-          // suffit pour qu'au passage suivant, ses événements en attente lui soient redonnés.
-          const traitants: Traitants = {
-            [TypeEvenementRecu.candidature_recue]: (recu) => traiterCandidature(prisma, recu),
-          };
-          const reprendreCoordonnees = reprendreLesAttentes(prisma, PREFIXE_ATTENTE_COORDONNEES);
-          const reprendreTraitants = reprendreLesTraitants(prisma, traitants);
-          await passerLeTravail({
-            depot: depotDuTravail(prisma),
-            dispatch: aiguiller(traitants),
-            reprendre: async () => (await reprendreCoordonnees()) + (await reprendreTraitants()),
-            maintenant: () => new Date(horlogeSysteme.maintenant()),
-          });
+          // Le passage est composé une seule fois, partagé avec le lanceur des passages planifiés
+          // (GOV-137) : `src/server/taches/inscriptions.ts`. Ici, il écrit son propre battement.
+          // INT-T55 : sous le MÊME verrou que le lanceur. Tenu ailleurs, ce passage saute : les
+          // événements restent `recu`, et le passage qui tient le verrou ou le suivant les prend.
+          await verrouConsultatif(prisma).sous(
+            cleDuVerrou(TACHE_DE_RECEPTION),
+            passageDesEvenementsRecus(prisma)
+          );
         } catch (erreur) {
           journal.error('travail_evenements_recus_en_echec', {
             nom: erreur instanceof Error ? erreur.name : 'Erreur',
           });
         }
       }),
-  });
-}
-
-/**
- * Le traitant de la candidature reçue. Les secrets sont relus À CHAQUE traitement, par le même juge que le démarrage :
- * un refus lève (l'événement passe `en_erreur` sous le NOM de l'erreur, jamais un secret).
- */
-async function traiterCandidature(prisma: PrismaClient, recu: EvenementATraiter): Promise<void> {
-  const lu = lireEnvironnement(process.env);
-  if (!lu.ok) throw new Error('environnement_refuse');
-  const rotation = lireTrousseaux(process.env, horlogeSysteme.maintenant());
-  if (!rotation.ok) throw new Error('environnement_refuse');
-  await traiterCandidatureRecue(prisma, recu, {
-    tirer: clientCoordonnees({
-      urlAxionia: process.env['AXIONIA_BASE_URL'],
-      secretRelecture: lu.env.AXIONIA_RELECTURE_SECRET,
-      trousseauEmission: rotation.trousseaux.AXIONIA_WEBHOOK_SECRET,
-      appeler: fetch,
-      maintenantMs: () => horlogeSysteme.maintenant(),
-    }),
-    cles: clesPii(process.env),
-    maintenant: () => new Date(horlogeSysteme.maintenant()),
-    aleatoire: sourceAleatoireSysteme,
   });
 }
 

@@ -434,9 +434,17 @@ async function attaquer(vue: Vue, modele: ModeleCloisonne, n: number): Promise<s
   if ((await vue.trouver(idB)) !== null) breches.push('lecture');
   if ((await liste()).includes(idB)) breches.push('liste');
   if ((await liste({ where: { id: idB } })).length > 0) breches.push('liste_ciblee_par_id');
-  if ((await liste({ where: { apporteurId: B } })).length > 0)
+  // SEC-47 : un filtre sur `apporteurId` (colonne tue) n'est plus gardé en conjonction, il est
+  // REFUSÉ avant tout appel. La brèche, c'est qu'il passe ; le compte se cible par une colonne rendue.
+  const refuse = (p: Promise<unknown>) =>
+    p.then(
+      () => false,
+      (e: unknown) => (e as Error).message === REFUS.forme
+    );
+  if (!(await refuse(vue.lister(brut({ where: { apporteurId: B } })))))
     breches.push('liste_ciblee_par_apporteur');
-  if ((await vue.compter(brut({ apporteurId: B }))) > 0) breches.push('compte');
+  if (!(await refuse(vue.compter(brut({ apporteurId: B }))))) breches.push('compte_par_apporteur');
+  if ((await vue.compter(brut({ id: idB }))) > 0) breches.push('compte');
 
   const avant = JSON.stringify(await relire(modele, idB));
   const verdict = await vue.modifier(idB, modification(modele, n) as never);
@@ -534,6 +542,7 @@ describe('REQ-SEC-009 — A ne lit, ne liste, ne compte, ne modifie ni ne crée 
           'liste',
           'liste_ciblee_par_id',
           'liste_ciblee_par_apporteur',
+          'compte_par_apporteur',
           'compte',
           'modification_acceptee',
           'modification_ecrite',
