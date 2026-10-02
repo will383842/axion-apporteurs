@@ -15,15 +15,13 @@ import type { EtatVide } from '../../../content/micro-copy/types';
 import { ETATS_VIDES_ESPACE } from '../../../content/micro-copy/espace/etats-vides';
 import { CONFIDENTIALITE } from '../../../content/micro-copy/espace/vocabulaire';
 import type { EtatDAcceptation } from '../../../server/rgpd/acceptation';
+// Mobile d'abord, par une feuille de la même origine : un style en ligne serait refusé par la CSP.
+import styles from './confidentialite.module.css';
 
 type Action = (formData: FormData) => void | Promise<void>;
 
 /** La route de la carte des écrans (docs/ESPACE-ROUTES.md) dont l'état vide est lu ici. */
 const ROUTE = '/confidentialite';
-
-/** Mobile d'abord : un corps lisible, une colonne, des boutons faciles à toucher. */
-const STYLE_PAGE = { fontSize: '1.125rem', lineHeight: 1.5, maxWidth: '40rem', padding: '1rem' };
-const STYLE_BOUTON = { minHeight: '3rem', minWidth: '3rem', fontSize: '1.125rem' };
 
 function etatVide(): EtatVide {
   const ecran = ETATS_VIDES_ESPACE[ROUTE];
@@ -99,7 +97,7 @@ function Accord({
     <form action={action}>
       <p>{CONFIDENTIALITE.accord.phrase}</p>
       <input type="hidden" name="version" value={version} />
-      <button type="submit" style={STYLE_BOUTON}>
+      <button type="submit" className={styles.bouton}>
         {CONFIDENTIALITE.accord.action}
       </button>
     </form>
@@ -116,7 +114,7 @@ export function EcranConfidentialite({
   action: Action;
 }) {
   return (
-    <main style={STYLE_PAGE}>
+    <main className={styles.page}>
       <h1>{CONFIDENTIALITE.titre}</h1>
       <p>{CONFIDENTIALITE.phrase}</p>
       {politique.rubriques.map((r) => (
@@ -135,7 +133,7 @@ export function EcranConfidentialite({
 export function EcranErreurConfidentialite() {
   const t = CONFIDENTIALITE.erreur;
   return (
-    <main style={STYLE_PAGE}>
+    <main className={styles.page}>
       <h1>{t.titre}</h1>
       <p role="alert">{t.phrase}</p>
       <a href={ROUTE}>{t.action}</a>

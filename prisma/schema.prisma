@@ -70,6 +70,7 @@ enum ConsoleRole {
 enum TypeEvenementJournal {
   journal_ouvert
   apporteur_statut_modifie
+  attribution_contact_purge
 
   @@map("type_evenement_journal")
 }
@@ -203,6 +204,9 @@ model Apporteur {
   sessionsEspace       SessionEspace[]
   courrielsEnvoyes     CourrielEnvoye[]
   changementsCourriel  ChangementCourriel[]
+  attributions         Attribution[]
+  depotsRefuses        DepotRefuse[]
+  personnesDeclarees   PersonneDeclaree[]
 
   @@index([phoneHash])
   @@map("apporteurs")
@@ -218,6 +222,8 @@ model JetonDepot {
   creeAt         DateTime  @map("cree_at") @db.Timestamptz(3)
   revoqueAt      DateTime? @map("revoque_at") @db.Timestamptz(3)
   dernierUsageAt DateTime? @map("dernier_usage_at") @db.Timestamptz(3)
+
+  attributions Attribution[]
 
   @@index([apporteurId])
   @@map("jetons_depot")
@@ -287,19 +293,23 @@ model SessionEspace {
 /// colonnes auteur, traitePar et decidePar des phases 1 à 3. AUCUN mot de passe : il se connecte par
 /// le même lien magique que l'apporteur (partners/ADR-0004 §1). Son RÔLE n'est jamais mis en
 /// cookie : `requireRole` le relit à chaque requête, avec `desactiveAt`. Le courriel et le nom sont
-/// des blocs écrits par `colonnesPii` ; l'empreinte du courriel est unique.
+/// des blocs écrits par `colonnesPii` ; l'empreinte du courriel est unique. L'adresse (bloc ET
+/// empreinte, ensemble) ne peut manquer que sur un utilisateur désactivé (DM-44, CHECK
+/// `utilisateurs_console_adresse_si_actif`).
 model UtilisateurConsole {
   id           String      @id @default(uuid()) @db.Uuid
   role         ConsoleRole
   nomChiffre   Bytes?      @map("nom_chiffre")
-  emailChiffre Bytes       @map("email_chiffre")
-  emailHash    String      @unique @map("email_hash") @db.Char(64)
+  emailChiffre Bytes?      @map("email_chiffre")
+  emailHash    String?     @unique @map("email_hash") @db.Char(64)
   creeAt       DateTime    @map("cree_at") @db.Timestamptz(3)
   /// Non nulle : l'utilisateur ne franchit plus la requête suivante, quelle que soit la date posée.
   desactiveAt  DateTime?   @map("desactive_at") @db.Timestamptz(3)
 
-  liensMagiques  LienMagique[]
-  sessionsEspace SessionEspace[]
+  liensMagiques           LienMagique[]
+  sessionsEspace          SessionEspace[]
+  attributions            Attribution[]   @relation("AttributionsDuConseiller")
+  suspensionsDePeremption Attribution[]   @relation("SuspensionsDePeremption")
 
   @@map("utilisateurs_console")
 }
@@ -456,7 +466,7 @@ enum MotifSuppressionCourriel {
 }
 
 /// Chaque demande d'envoi, qu'elle parte ou non (REQ-INT-022, REQ-INT-023, REQ-UX-016). Aucun corps,
-/// aucune adresse : l'empreinte de recherche seule. DM-07 y ajoutera `attribution_id`.
+/// aucune adresse : l'empreinte de recherche seule. DM-07 y a ajouté `attribution_id`.
 model CourrielEnvoye {
   id                   String         @id @default(uuid()) @db.Uuid
   /// Exception E2 de partners/ADR-0022 (point 9) : clé de `src/server/notifications/table-ssot.ts`.
@@ -472,10 +482,14 @@ model CourrielEnvoye {
   fournisseurMessageId String?        @map("fournisseur_message_id") @db.VarChar(200)
   /// Un code fermé, jamais la réponse du relais.
   erreur               String?        @db.VarChar(300)
+  /// L'attribution dont le courriel parle (DM-07), nulle sinon.
+  attributionId        String?        @map("attribution_id") @db.Uuid
+  attribution          Attribution?   @relation(fields: [attributionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
 
   @@index([emailHash])
   @@index([apporteurId, gabarit])
   @@index([statut, demandeAt])
+  @@index([attributionId])
   @@map("courriels_envoyes")
 }
 
@@ -506,5 +520,198 @@ model GrilleCommission {
   publieeAt   DateTime @map("publiee_at") @db.Timestamptz(3)
   importeeAt  DateTime @map("importee_at") @db.Timestamptz(3)
 
+  attributions Attribution[]
+
   @@map("grilles_commission")
+}
+
+// ── DM-07 : la persistance du dépôt (partners/ADR-0022, points 1, 2, 6, 11 et 12) ───────────────
+
+/// Le canal d'un dépôt ou d'un refus (REQ-DM-012). `console` : la prise en charge d'un conseiller
+/// salarié (W19), et lui seul — CHECK en SQL brut.
+enum CanalDepot {
+  espace
+  lien_prive
+  console
+
+  @@map("canal_depot")
+}
+
+/// La projection de l'état administratif rendu par l'API publique, « A » et « C » (REQ-DM-030).
+enum EtatAdministratif {
+  actif
+  cesse
+
+  @@map("etat_administratif")
+}
+
+/// La catégorie d'entreprise rendue par l'API publique (REQ-DM-030).
+enum CategorieEntreprise {
+  pme
+  eti
+  ge
+
+  @@map("categorie_entreprise")
+}
+
+/// Les sept motifs de refus d'un dépôt (REQ-SEC-022), exactement.
+enum MotifRefusDepot {
+  anteriorite_client
+  anteriorite_devis
+  etablissement_cesse
+  entreprise_hors_perimetre
+  file_complete
+  opposition_demarchage
+  insincerite
+
+  @@map("motif_refus_depot")
+}
+
+/// La qualité d'une personne déclarée (REQ-CPL-029) : les mots du contrat v1, art. 2.6 —
+/// « associés, préposés ou sous-traitants ». Liste fermée, la plus petite confirmée (A07).
+enum QualitePersonneDeclaree {
+  associe
+  prepose
+  sous_traitant
+
+  @@map("qualite_personne_declaree")
+}
+
+/// Une attribution : un dépôt d'apporteur, ou la prise en charge d'un conseiller salarié (W19).
+/// Exactement un porteur (CHECK). L'unicité de l'occupant par SIREN est l'index PARTIEL généré
+/// depuis `ETATS_OCCUPANTS` (REQ-DM-003), en SQL brut. Toutes les colonnes connues des phases 0 et
+/// 1 sont posées ici, nulles si elles ne sont pas écrites à la naissance (partners/ADR-0022, point 2).
+model Attribution {
+  id                      String              @id @default(uuid()) @db.Uuid
+  /// Le porteur : un apporteur OU un conseiller salarié, jamais les deux, jamais aucun (CHECK).
+  apporteurId             String?             @map("apporteur_id") @db.Uuid
+  apporteur               Apporteur?          @relation(fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  /// Un utilisateur de rôle `conseiller_salarie` non désactivé (déclencheur en SQL brut).
+  utilisateurConsoleId    String?             @map("utilisateur_console_id") @db.Uuid
+  utilisateurConsole      UtilisateurConsole? @relation("AttributionsDuConseiller", fields: [utilisateurConsoleId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  statut                  EtatAttribution
+  /// 1 ou 2, présent si et seulement si `en_attente` ; réservé à l'apporteur (CHECK).
+  rangAttente             Int?                @map("rang_attente") @db.SmallInt
+  siren                   String              @db.Char(9)
+  siret                   String?             @db.Char(14)
+  /// UNE version de grille (REQ-DM-014) : présente si et seulement si le porteur est un apporteur.
+  grilleCommissionId      String?             @map("grille_commission_id") @db.Uuid
+  grilleCommission        GrilleCommission?   @relation(fields: [grilleCommissionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  canal                   CanalDepot
+  jetonDepotId            String?             @map("jeton_depot_id") @db.Uuid
+  jetonDepot              JetonDepot?         @relation(fields: [jetonDepotId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  /// L'horloge de la BASE, lue sous le verrou par SIREN (REQ-DM-005, HYP-A02-PRECISION-DEPOT) : le
+  /// déclencheur `attributions_horloge_du_depot` ÉCRASE toute valeur fournie par
+  /// `clock_timestamp()`. Le défaut ne sert qu'au typage. Seule colonne en précision 6
+  /// (partners/ADR-0022, point 11).
+  deposeeAt               DateTime            @default(dbgenerated("clock_timestamp()")) @map("deposee_at") @db.Timestamptz(6)
+  /// L'heure de l'appareil à la saisie, informative, jamais opposable.
+  clientCapturedAt        DateTime?           @map("client_captured_at") @db.Timestamptz(3)
+  /// La date calendaire du contact (REQ-JUR-040).
+  dateContact             DateTime            @map("date_contact") @db.Date
+  /// La version de l'information des tiers acceptée au dépôt (REQ-JUR-008).
+  informationTiersVersion String?             @map("information_tiers_version") @db.VarChar(32)
+  verificationPrioritaire Boolean             @map("verification_prioritaire")
+  /// Empreinte tronquée de l'adresse réseau ; empreinte de l'en-tête de navigateur (type `agent`).
+  ipHash                  String?             @map("ip_hash") @db.Char(16)
+  agentHash               String?             @map("agent_hash") @db.Char(64)
+
+  // L'entreprise telle que rendue par l'API publique (REQ-DM-030, REQ-INT-021).
+  raisonSociale       String?              @map("raison_sociale") @db.VarChar(300)
+  natureJuridique     String?              @map("nature_juridique") @db.VarChar(4)
+  /// Nul en repli (DM-28).
+  codeNaf             String?              @map("code_naf") @db.VarChar(6)
+  trancheEffectif     String?              @map("tranche_effectif") @db.VarChar(2)
+  etatAdministratif   EtatAdministratif?   @map("etat_administratif")
+  categorieEntreprise CategorieEntreprise? @map("categorie_entreprise")
+  codePostalChiffre   Bytes?               @map("code_postal_chiffre")
+  communeSiege        String?              @map("commune_siege") @db.VarChar(100)
+  departement         String?              @db.VarChar(3)
+  region              String?              @db.VarChar(3)
+  /// Micro-degrés (EXT-T08) : jamais un flottant. Présentes ensemble (CHECK).
+  latitudeMicrodeg    Int?                 @map("latitude_microdeg")
+  longitudeMicrodeg   Int?                 @map("longitude_microdeg")
+  /// Empreinte (`nom_personne`) et qualité des dirigeants, jamais un nom.
+  dirigeantsJson      Json?                @map("dirigeants_json")
+  entrepriseAVerifier Boolean              @map("entreprise_a_verifier")
+
+  // Le contact rencontré (REQ-DM-031) : blocs écrits par `colonnesPii`, purgés ensemble.
+  nomContactChiffre           Bytes?            @map("nom_contact_chiffre")
+  prenomContactChiffre        Bytes?            @map("prenom_contact_chiffre")
+  emailChiffre                Bytes?            @map("email_chiffre")
+  emailHash                   String?           @map("email_hash") @db.Char(64)
+  telephoneChiffre            Bytes?            @map("telephone_chiffre")
+  phoneHash                   String?           @map("phone_hash") @db.Char(64)
+  /// Chiffrée (décision A02 du 2026-10-02) : la borne de 120 caractères porte sur le clair.
+  fonctionContactChiffre      Bytes?            @map("fonction_contact_chiffre")
+  contexteChiffre             Bytes?            @map("contexte_chiffre")
+  /// La personne déclarée qui a rencontré le contact (UX-P1-15).
+  personneDeclareeId          String?           @map("personne_declaree_id") @db.Uuid
+  personneDeclaree            PersonneDeclaree? @relation(fields: [personneDeclareeId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  /// REQ-UX-039 : la précision n'existe que si le lien est déclaré (CHECK).
+  lienInteretDeclare          Boolean           @map("lien_interet_declare")
+  lienInteretPrecisionChiffre Bytes?            @map("lien_interet_precision_chiffre")
+
+  // Le temps de la machine (REQ-DM-004, REQ-DM-007, REQ-UX-022).
+  aQualifierDepuisAt               DateTime?           @map("a_qualifier_depuis_at") @db.Timestamptz(3)
+  premierContactAt                 DateTime?           @map("premier_contact_at") @db.Timestamptz(3)
+  confirmeeAt                      DateTime?           @map("confirmee_at") @db.Timestamptz(3)
+  fenetreFinAt                     DateTime?           @map("fenetre_fin_at") @db.Timestamptz(3)
+  peremptionAt                     DateTime?           @map("peremption_at") @db.Timestamptz(3)
+  /// La suspension de péremption : les trois ensemble ou aucune (CHECK).
+  peremptionSuspendueAt            DateTime?           @map("peremption_suspendue_at") @db.Timestamptz(3)
+  peremptionSuspendueParId         String?             @map("peremption_suspendue_par_id") @db.Uuid
+  peremptionSuspenduePar           UtilisateurConsole? @relation("SuspensionsDePeremption", fields: [peremptionSuspendueParId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  peremptionSuspendueJustification String?             @map("peremption_suspendue_justification") @db.Text
+  fenetreRedeclarationFinAt        DateTime?           @map("fenetre_redeclaration_fin_at") @db.Timestamptz(3)
+  purgeContactAt                   DateTime?           @map("purge_contact_at") @db.Timestamptz(3)
+  contactPurgeAt                   DateTime?           @map("contact_purge_at") @db.Timestamptz(3)
+  /// Verrou optimiste de la fiche (REQ-CPL-024).
+  versionQualification             Int                 @default(0) @map("version_qualification")
+
+  courrielsEnvoyes CourrielEnvoye[]
+
+  @@index([apporteurId])
+  @@index([utilisateurConsoleId])
+  @@index([grilleCommissionId])
+  @@index([jetonDepotId])
+  @@index([personneDeclareeId])
+  @@index([peremptionSuspendueParId])
+  @@index([emailHash])
+  @@index([phoneHash])
+  @@map("attributions")
+}
+
+/// Un dépôt refusé (REQ-DM-043) : de quoi contester, aucune coordonnée du contact. Ajout seul,
+/// sans exception (gabarit `refuser_modification_sauf()`, SQL brut). Réservé aux apporteurs.
+model DepotRefuse {
+  id          String          @id @default(uuid()) @db.Uuid
+  apporteurId String          @map("apporteur_id") @db.Uuid
+  apporteur   Apporteur       @relation(fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  siren       String          @db.Char(9)
+  motif       MotifRefusDepot
+  canal       CanalDepot
+  refuseAt    DateTime        @map("refuse_at") @db.Timestamptz(3)
+
+  @@index([apporteurId])
+  @@index([siren])
+  @@map("depots_refuses")
+}
+
+/// Une personne déclarée par l'apporteur (REQ-CPL-029). Ajout seul, sauf la purge du nom et du
+/// prénom et l'écriture unique du retrait (gabarit, SQL brut). Réservé aux apporteurs.
+model PersonneDeclaree {
+  id            String                  @id @default(uuid()) @db.Uuid
+  apporteurId   String                  @map("apporteur_id") @db.Uuid
+  apporteur     Apporteur               @relation(fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  nomChiffre    Bytes?                  @map("nom_chiffre")
+  prenomChiffre Bytes?                  @map("prenom_chiffre")
+  qualite       QualitePersonneDeclaree
+  declareeAt    DateTime                @map("declaree_at") @db.Timestamptz(3)
+  retireeAt     DateTime?               @map("retiree_at") @db.Timestamptz(3)
+
+  attributions Attribution[]
+
+  @@index([apporteurId])
+  @@map("personnes_declarees")
 }

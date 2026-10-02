@@ -517,7 +517,9 @@ if (process.argv.includes('--rapport')) {
     null,
     2
   );
-  process.stdout.write(`${rapport}\n`, () => process.exit(0));
+  // QA-T60 (note de la lentille securite sur GOV-140) : une écriture qui échoue (tube fermé, EPIPE)
+  // n'a pas livré le rapport ; elle sort en non nul, jamais en 0.
+  process.stdout.write(`${rapport}\n`, (err) => process.exit(err ? 1 : 0));
 }
 
 // ── mode --prove : un témoin par famille, des contre-témoins qui restent verts ─

@@ -283,6 +283,12 @@ jobs:
         run: pnpm jur:aucun-agregat-reseau
       - name: La garde des agregats du reseau sait rougir
         run: pnpm jur:aucun-agregat-reseau:prove
+      # SEC-46 : aucun style en ligne ni HTML injecte sous src/app/ — la politique de contenu les
+      # refuserait en silence. La preuve suit, par paire.
+      - name: Securite — aucun style en ligne sous src/app
+        run: pnpm csp:inline
+      - name: La garde des styles en ligne sait rougir
+        run: pnpm csp:inline:prove
       - name: Charte — aucune progression vers un seuil dans l espace
         run: pnpm jur:aucune-progression
       - name: La garde des progressions sait rougir

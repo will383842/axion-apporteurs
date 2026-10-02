@@ -62,6 +62,27 @@
 | `/mes-entreprises/<id>` | Fiche d'une entreprise : frise des étapes et des échanges, échanges visibles de la Société ; la fiche d'un autre compte rend la même page qu'un identifiant inexistant ; maquette `mes-entreprises-fiche.html` | REQ-EXT-002, REQ-EXT-003 | EXT-T01 | oui |
 | `/confirmer/<jeton>` | Réponse du contact rencontré (W20) : page publique, hors session, sans oracle ; deux actions, second geste pour « Non », information de l'article 14 et opposition ; ouvrir le lien ne répond rien, seule l'action sur la page répond. Maquette `confirmation-contact.html` | REQ-UX-061 | UX-P1-42 | oui |
 
+## Ouverture — qui atteint quoi (SEC-43)
+
+décision de Williams du 2026-10-01 ; forme à plat, décision A02 du 2026-10-02. Trois niveaux, un
+seul verdict (`src/domain/apporteur/acces-espace.ts`) : **pleine** pour `signe` et `suspendu`,
+**limitée** pour `kyc_en_cours` et `pret_a_signer`, **fermée** pour tout autre statut. Le segment est
+le premier dossier sous `src/app/(espace)/` (l'accueil s'appelle `accueil`), et ses listes sont
+fermées dans le domaine : cette table les RAPPORTE, elle n'en est pas la source.
+
+| Segment | Ouverture | Ce qui le tient |
+| --- | --- | --- |
+| `conformite`, `mon-contrat` | limitée (et pleine) | `SEGMENTS_LIMITES` |
+| `confidentialite` | page publique ; l'action d'acceptation, limitée (et pleine) | `SEGMENT_DE_L_ACCEPTATION` |
+| `accueil`, `mes-entreprises`, `mes-commissions`, `plus`, `entreprise`, `deposer`, `documents`, `filleuls`, `profil`, `notifications`, `activite`, `ressources`, `aide` | pleine seulement | `SEGMENTS_PLEINS` |
+| `connexion`, `d`, `confirmer` | publique, sans session | `SEGMENTS_PUBLICS` |
+
+Chaque page et chaque route appellent `exigerSessionPour(<son segment>)`, et chaque action serveur
+`actionEspace(<son segment>, …)`, comme **premier acte** ; un layout ne protège jamais. Un segment
+absent de ces listes est refusé à tout niveau. Le témoin du disque
+(`tests/unit/securite/acces-espace-avant-signature.spec.ts`) dérive le segment de chaque chemin et
+rougit sur un fichier non protégé, au mauvais segment, ou dont l'appel n'est pas le premier acte.
+
 ## Règles qui s'appliquent à toutes les routes
 
 1. **Mobile d'abord** : cibles ≥ 48 px, corps ≥ 18 px, reflow à 320 px et zoom 200 %, `axe` = 0.
