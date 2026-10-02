@@ -38,7 +38,7 @@ export type CourrielRendu = { objet: string; texte: string; html: string };
 const RESSEMBLE_A_UN_LIEN =
   /\b(?:[a-z][a-z0-9+.-]*:\/\/\S+|www\.\S+|[\w.+-]+@[\w-]+(?:\.[\w-]+)+|[a-z0-9-]+(?:\.[a-z0-9-]+)*\.[a-z]{2,}(?:\/\S*)?)/gi;
 
-/** Contrôle (\p{Cc}) et format (\p{Cf}, dont les marques de direction et les espaces nulles). */
+/** Contrôle (catégorie Unicode Cc) et format (catégorie Cf, dont les marques de direction et les espaces nulles). */
 const CONTROLE_OU_FORMAT = /[\p{Cc}\p{Cf}]/gu;
 
 /** Une saisie de contexte refusée, nommée ; `null` si elle est admise (vide compris). */
@@ -54,7 +54,7 @@ export function fauteDuContexte(saisie: string): 'trop_long' | 'ressemble_a_un_l
  * format retirés, tout lien désamorcé (« exemple[.]com », « nom[@]domaine »), borné. Vide → `''`.
  */
 export function contexteRendu(saisie: string): string {
-  // Les retours à la ligne (dont U+2028 et U+2029) sont des blancs : `\s` les réduit à une espace,
+  // Les retours à la ligne (dont U+2028 et U+2029) sont des blancs : la classe des blancs les réduit à une espace,
   // AVANT que le contrôle et le format ne soient retirés, pour qu'aucun mot ne se colle au suivant.
   const aplati = saisie
     .replace(/\s+/g, ' ')
