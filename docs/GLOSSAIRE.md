@@ -127,7 +127,7 @@ ordinaire **reste `prevue`** (l'attribution passe `figee_resiliation`) ; `conser
 | `RegimeTva`            | `assujetti`, `franchise_293b` — historique daté, figé sur chaque autofacture | REQ-ARG-033 |
 | `CanalCandidature`     | `site`, `linkedin`, `jobboard`, `saisie_console`, `autre` — dérivé par EXT-T03 de `sourceCanal`, chaîne transportée figée ; chemin inconnu → `autre`, journalisé | REQ-DM-035, REQ-EXT-008 |
 | `StatutTache`          | `a_faire`, `en_cours`, `en_revue`, `fusionnee`, `deployee`, `verifiee`, `bloquee`, `attente_externe`, `proposee` — **neuf valeurs**, celles de `scripts/lot/tasks.schema.json` ; `proposee` manquait ici depuis GOV-017a et rien ne l'attrapait | REQ-GOV-021 |
-| `TypeEvenementJournal` | `journal_ouvert` — la genèse du journal `evenements`, écrite par la première migration et portant l'algorithme de hachage ; ensuite, un type par GENRE de transition journalisée (partners/ADR-0022), chacun à charge fermée sans donnée personnelle ; les treize valeurs décidées pour les phases 0 et 1 et leur tâche créatrice sont au §4.1, et chacune entre dans cette ligne avec la migration qui la crée | REQ-DM-024, REQ-DM-041 |
+| `TypeEvenementJournal` | `journal_ouvert`, `apporteur_statut_modifie` — la genèse du journal `evenements`, écrite par la première migration et portant l'algorithme de hachage, puis le changement de statut d'un apporteur, naissance comprise (`de` nul, DM-45) ; ensuite, un type par GENRE de transition journalisée (partners/ADR-0022), chacun à charge fermée sans donnée personnelle ; les treize valeurs décidées pour les phases 0 et 1 et leur tâche créatrice sont au §4.1, et chacune entre dans cette ligne avec la migration qui la crée | REQ-DM-024, REQ-DM-041 |
 | `AgregatJournal`       | `attribution`, `apporteur`, `ligne_commission`, `releve`, `piece_kyc`, `contrat` — l'agrégat dont la transition s'écrit au journal, dans la même transaction ; l'événement le désigne par `agregatId`, jamais par une donnée de la personne | REQ-DM-024 |
 | `SourceEvenementRecu`  | `axionia`, `docuseal` — colonne `source` de `EvenementRecu` (SEC-06) | REQ-DM-036 |
 | `TypeEvenementRecu`    | `client_cree`, `client_mis_a_jour`, `devis_signe`, `facture_emise`, `avoir_emis`, `paiement_recu`, `paiement_rembourse`, `candidature_recue`, `financement_mis_a_jour`, `facture_annulee`, `client_fusionne` — les onze de `TYPES_EVENEMENT`, dans leur ordre ; identifiant Prisma ET libellé Postgres en snake_case, le nom de fil dont le point devient un souligné, sans `@map` (partners/ADR-0022, point 10) ; les sept premiers créés par SEC-06, les quatre derniers ajoutés en fin d'enum avec la `schema_version` 2 (INT-T01c) ; INT-T12 y fera entrer `submission_completed`, `form_declined` et `submission_expired` : chacune passe dans cette liste avec la migration qui la crée | REQ-DM-036, REQ-INT-004 |
@@ -169,14 +169,14 @@ charge Zod de `src/domain/evenement/charges.ts`, jamais le schéma. Chaque valeu
 `TypeEvenementJournal` du §4 **avec la migration de sa tâche créatrice**, et pas avant : la ligne énumère ce
 que le schéma porte, sans quoi `partners:schema:enums` rougirait en `enum_divergent_du_glossaire`. Un texte
 qui nomme un événement pointé — `attribution.confirmee_tacitement` (REQ-DM-042) — désigne
-`attribution_etat_modifie` avec `evenement: 'confirmee_tacitement'`.
+`attribution_etat_modifie` avec `transition: 'confirmee_tacitement'`.
 
 | Valeur | Agrégat | Créateur | Charge fermée |
 | --- | --- | --- | --- |
-| `attribution_etat_modifie` | `attribution` | DM-08 | `{de, vers, evenement, acteurId?, lienInteret?}` ; `de` : `EtatAttribution` ou nul ; `evenement` : `z.enum(EVENEMENTS_ATTRIBUTION)` ; `lienInteret` : `declare` ou `non_declare` |
+| `attribution_etat_modifie` | `attribution` | DM-08 | `{de, vers, transition, acteurId?, lienInteret?}` ; `de` : `EtatAttribution` ou nul ; `transition` : `z.enum(EVENEMENTS_ATTRIBUTION)` ; `lienInteret` : `declare` ou `non_declare` |
 | `attribution_peremption_suspendue` | `attribution` | DM-08 | `{acteurId, suspendueAt}` |
 | `attribution_contact_purge` | `attribution` | DM-07 | `{purgeAt}` |
-| `apporteur_statut_modifie` | `apporteur` | CPL-T06 | `{de, vers, evenement, resiliationMotif?, acteurId?}` ; `evenement` : `z.enum(EVENEMENTS_APPORTEUR)` |
+| `apporteur_statut_modifie` | `apporteur` | DM-45 | `{de, vers, transition, resiliationMotif?, acteur}` ; `de` : `StatutApporteur` ou nul (la naissance) ; `transition` : `creer` ou une flèche de la matrice (`EVENEMENTS_APPORTEUR`), dérivés ; `acteur` : `{par, id?}` (HYP-A02-ACTEUR-JOURNAL) |
 | `apporteur_gel_modifie` | `apporteur` | SEC-15 | `{de, vers, par, anomalieId?, acteurId?}` ; `de` et `vers` : `EtatGel` ; `par` : `role` ou `plein_droit` |
 | `anomalie_statut_modifie` | `apporteur` | DM-12 | `{anomalieId, de?, vers, acteurId?}` |
 | `contestation_modifiee` | `apporteur` | DM-12 | `{contestationId, de?, vers, acteurId?}` |

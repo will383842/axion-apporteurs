@@ -131,3 +131,39 @@ export async function lireJournal(
     selfHash: l.selfHash,
   }));
 }
+
+/** La taille d'un lot de lecture du journal : une lecture bornée, jamais toute la table d'un coup. */
+const LOT_DU_JOURNAL = 1000;
+
+/**
+ * DM-45 — le journal lu PAR LOTS ordonnés par id, dans la forme que `verifierChaine()` lit. L'ordre
+ * des lots n'est qu'une lecture : la vérification suit les liens de hash, pas l'ordre des ids.
+ */
+export async function lireJournalParLots(
+  client: PrismaClient | Prisma.TransactionClient,
+  taille: number = LOT_DU_JOURNAL
+): Promise<LigneJournal[]> {
+  const lignes: LigneJournal[] = [];
+  let apres: bigint | null = null;
+  for (;;) {
+    const lot: Awaited<ReturnType<typeof client.evenement.findMany>> =
+      await client.evenement.findMany({
+        where: apres === null ? {} : { id: { gt: apres } },
+        orderBy: { id: 'asc' },
+        take: taille,
+      });
+    for (const l of lot)
+      lignes.push({
+        id: l.id.toString(),
+        type: l.type,
+        agregat: l.agregat,
+        agregatId: l.agregatId,
+        survenuAt: l.survenuAt.toISOString(),
+        charge: l.charge,
+        prevHash: l.prevHash,
+        selfHash: l.selfHash,
+      });
+    if (lot.length < taille) return lignes;
+    apres = lot[lot.length - 1]!.id;
+  }
+}
