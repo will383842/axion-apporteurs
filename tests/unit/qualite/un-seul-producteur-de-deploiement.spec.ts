@@ -24,11 +24,22 @@ import { spawn } from 'node:child_process';
 import { createServer, type IncomingMessage, type Server } from 'node:http';
 import { readFileSync } from 'node:fs';
 import { lireYaml } from '../../../scripts/lib/lire-yaml';
+import { jugerLesChecks, jugerLeRun } from '../../../scripts/gates/deploy-verify';
+import { politiqueDeContenu } from '../../../src/server/securite/entetes';
 
 const SCRIPT = 'scripts/gates/deploy-verify.ts';
 const TSX = 'node_modules/tsx/dist/cli.mjs';
 const SHA = 'a'.repeat(40);
 const AUTRE = 'b'.repeat(40);
+/**
+ * Ce que sert une application ATTERRIE : le sha, et la politique de contenu de la configuration, avec
+ * son propre nonce. `deploy:verify` compare aussi la politique servie à celle de la configuration :
+ * un faux serveur qui ne la servirait pas serait un atterrissage refusé.
+ */
+const ATTERRIE = {
+  'x-partners-build-sha': SHA,
+  'content-security-policy': politiqueDeContenu({ nonce: 'nonceDuTemoin01', developpement: false }),
+};
 
 type Requete = { methode: string; url: string; auth: string | undefined; corps: string };
 let serveurs: Server[] = [];
@@ -91,7 +102,7 @@ describe('deploy:verify — l’atterrissage se lit sur l’en-tête servi', () 
   it('sur le sha servi, sort en zéro', async () => {
     const app = await serveur(() => ({
       statut: 200,
-      entetes: { 'x-partners-build-sha': SHA },
+      entetes: ATTERRIE,
       corps: '',
     }));
     const r = await lancer(['--verifier', SHA, ...RAPIDE], { PARTNERS_URL_PUBLIQUE: app.url });
@@ -135,7 +146,7 @@ describe('deploy:verify — l’atterrissage se lit sur l’en-tête servi', () 
   it('lit le sha dans GITHUB_SHA quand aucun n’est donné', async () => {
     const app = await serveur(() => ({
       statut: 200,
-      entetes: { 'x-partners-build-sha': SHA },
+      entetes: ATTERRIE,
       corps: '',
     }));
     const r = await lancer(['--verifier', ...RAPIDE], {
@@ -206,7 +217,7 @@ describe('deploy:coolify — la plateforme tire l’image, ou le saut est NOMMÉ
     );
     const app = await serveur(() => ({
       statut: 200,
-      entetes: { 'x-partners-build-sha': SHA },
+      entetes: ATTERRIE,
       corps: '',
     }));
     const r = await lancer(['--declencher', ...RAPIDE], {
@@ -299,8 +310,74 @@ describe('la structure : un seul producteur, qui tire, sans droit sur le registr
     expect(String(deployer!.concurrency?.['cancel-in-progress'])).toBe('false');
   });
 
-  it('aucun droit d’écriture : ni sur le registre, ni sur le dépôt', () => {
-    expect(deployer!.permissions).toEqual({ contents: 'read' });
+  it('REQ-GOV-014 : aucun droit d’écriture — EXACTEMENT trois lectures : le dépôt, les checks, les runs', () => {
+    // QA-T55 (lentille securite, voie V2) : `checks: read` pour le check-run `gate-a`, `actions: read`
+    // pour remonter à son workflow (`path`). Une permission de plus, ou une écriture, rougit.
+    expect(deployer!.permissions).toEqual({
+      contents: 'read',
+      checks: 'read',
+      actions: 'read',
+    });
+  });
+
+  it('REQ-GOV-014 : la porte A du même sha est attendue AVANT l’AIPD et la plateforme, jeton à l’étape seule', () => {
+    const runs = (deployer!.steps ?? []).map((s) => s.run ?? '');
+    const porte = runs.indexOf('pnpm deploy:attendre-porte-a');
+    expect(porte).toBeGreaterThan(-1);
+    expect(porte).toBeLessThan(runs.indexOf('pnpm aipd:signee'));
+    expect(porte).toBeLessThan(runs.indexOf('pnpm deploy:coolify'));
+    const etape = (deployer!.steps ?? [])[porte];
+    expect(Object.keys(etape?.env ?? {})).toEqual(['GH_TOKEN']);
+    for (const s of deployer!.steps ?? [])
+      if (s !== etape) expect(Object.keys(s.env ?? {})).not.toContain('GH_TOKEN');
+    expect((deployer as { env?: unknown }).env).toBeUndefined();
+    const pkg = JSON.parse(readFileSync('package.json', 'utf8')) as {
+      scripts: Record<string, string>;
+    };
+    expect(pkg.scripts['deploy:attendre-porte-a']).toBe(
+      'tsx scripts/gates/deploy-verify.ts --attendre-porte-a'
+    );
+  });
+
+  // L'ORDRE ne suffit pas, il faut le BLOCAGE (relevé de la lentille securite sur #460) : une étape
+  // de la porte A tolérée (`continue-on-error`) ou conditionnée (`if:`) laisserait partir le
+  // déploiement d'un sha que la porte A n'a pas jugé, tout en restant « avant ».
+  async function porteABloquante(texte: string): Promise<string[]> {
+    const wf = (await lireYaml(texte)) as {
+      jobs: Record<string, { steps?: (Etape & { if?: unknown })[] }>;
+    };
+    const etapes = wf.jobs['deployer']?.steps ?? [];
+    const rang = etapes.findIndex((s) => s.run === 'pnpm deploy:attendre-porte-a');
+    if (rang < 0) return ['porte_a_absente'];
+    const etape = etapes[rang]!;
+    const f: string[] = [];
+    if (etape['continue-on-error'] !== undefined) f.push('porte_a_toleree');
+    if (etape.if !== undefined) f.push('porte_a_conditionnelle');
+    // Le trou voisin (lentille securite) : un `if: always()`, `!cancelled()` ou `failure()` sur une
+    // étape QUI SUIT la porte A la ferait tourner après son échec. Aucune ne porte de `if:`.
+    for (const s of etapes.slice(rang + 1))
+      if (s.if !== undefined) f.push(`apres_porte_a_conditionnelle : ${s.run ?? s.uses ?? '?'}`);
+    return f;
+  }
+
+  it('REQ-GOV-014 : l’étape de la porte A est BLOQUANTE — ni continue-on-error ni if:, jugé sur deux copies cassées', async () => {
+    const reel = readFileSync('.github/workflows/deploy.yml', 'utf8');
+    const ligne = '        run: pnpm deploy:attendre-porte-a';
+    expect(reel).toContain(ligne);
+    const avant = (cle: string) => reel.replace(ligne, `        ${cle}\n${ligne}`);
+    expect(await porteABloquante(reel)).toEqual([]);
+    expect(await porteABloquante(avant('continue-on-error: true'))).toEqual(['porte_a_toleree']);
+    expect(await porteABloquante(avant('if: ${{ false }}'))).toEqual(['porte_a_conditionnelle']);
+  });
+
+  it('REQ-GOV-014 : TÉMOIN — deploy:coolify avec if: always() rougit en se nommant : il tournerait après l’échec de la porte A', async () => {
+    const reel = readFileSync('.github/workflows/deploy.yml', 'utf8');
+    const ligne = '        run: pnpm deploy:coolify';
+    expect(reel).toContain(ligne);
+    for (const condition of ['always()', '!cancelled()', 'failure()'])
+      expect(
+        await porteABloquante(reel.replace(ligne, `        if: \${{ ${condition} }}\n${ligne}`))
+      ).toEqual(['apres_porte_a_conditionnelle : pnpm deploy:coolify']);
   });
 
   it('les étapes sont des scripts nommés, sans continue-on-error, et le seul appel à la plateforme est `pnpm deploy:coolify`', () => {
@@ -393,5 +470,126 @@ describe('REQ-GOV-014 — les secrets de production ne sont lus que dans l’env
       fautes,
       `jobs qui lisent un secret de production hors de l'environnement production :\n${fautes.join('\n')}`
     ).toEqual([]);
+  });
+});
+
+/**
+ * QA-T55 (REQ-GOV-014) — le déploiement attend la porte A du MÊME sha. Avant lui, `deployer` partait
+ * sur tout push de `main`, que la porte A soit verte, rouge ou encore en cours. La provenance est
+ * exigée (lentille securite, voie V2) : un check « gate-a » peut être posé par une autre application,
+ * ou par l'API depuis un autre workflow ; seul celui de `.github/workflows/ci.yml` fait foi.
+ */
+describe('REQ-GOV-014 — le déploiement attend la porte A du même sha, de la bonne provenance', () => {
+  const CI = '.github/workflows/ci.yml';
+  const check = (o: Record<string, unknown>) => ({
+    name: 'gate-a',
+    app: { slug: 'github-actions' },
+    head_sha: SHA,
+    status: 'completed',
+    conclusion: 'success',
+    started_at: '2026-10-02T10:00:00Z',
+    details_url: 'https://github.com/o/r/actions/runs/77/job/1',
+    ...o,
+  });
+  const reponse = (...c: Record<string, unknown>[]) => ({ total_count: c.length, check_runs: c });
+
+  it('REQ-GOV-014 : la porte A réussie, de github-actions, sur le sha : son run est rendu', () => {
+    expect(jugerLesChecks(reponse(check({})), SHA)).toEqual({ etat: 'reussie', runId: 77 });
+  });
+
+  it('REQ-GOV-014 : TÉMOINS — une autre application, un échec plus récent, une réponse illisible : refusés, nommés', () => {
+    expect(jugerLesChecks(reponse(check({ app: { slug: 'autre-app' } })), SHA)).toMatchObject({
+      etat: 'refusee',
+      raison: expect.stringContaining('autre_application'),
+    });
+    const ok = check({ started_at: '2026-10-02T10:00:00Z' });
+    const ko = check({ started_at: '2026-10-02T10:05:00Z', conclusion: 'failure' });
+    expect(jugerLesChecks(reponse(ok, ko), SHA)).toMatchObject({
+      etat: 'refusee',
+      raison: expect.stringContaining('failure'),
+    });
+    for (const illisible of [null, 'texte', { check_runs: 'non' }])
+      expect(jugerLesChecks(illisible, SHA)).toMatchObject({
+        etat: 'refusee',
+        raison: expect.stringContaining('illisible'),
+      });
+    expect(jugerLesChecks(reponse(check({ details_url: 'https://ailleurs' })), SHA)).toMatchObject({
+      etat: 'refusee',
+    });
+  });
+
+  it('REQ-GOV-014 : absente ou en cours : on attend ; un check d’un autre sha ne compte pas', () => {
+    expect(jugerLesChecks(reponse(), SHA)).toEqual({ etat: 'absente' });
+    expect(jugerLesChecks(reponse(check({ head_sha: AUTRE })), SHA)).toEqual({ etat: 'absente' });
+    expect(
+      jugerLesChecks(reponse(check({ status: 'in_progress', conclusion: null })), SHA)
+    ).toEqual({ etat: 'en_cours' });
+  });
+
+  it('REQ-GOV-014 : TÉMOINS — le run doit être celui de ci.yml, sur le même sha', () => {
+    expect(jugerLeRun({ path: CI, head_sha: SHA }, SHA)).toEqual({ etat: 'reussie' });
+    expect(jugerLeRun({ path: '.github/workflows/autre.yml', head_sha: SHA }, SHA)).toMatchObject({
+      etat: 'refusee',
+      raison: expect.stringContaining('autre_workflow'),
+    });
+    expect(jugerLeRun({ path: CI, head_sha: AUTRE }, SHA)).toMatchObject({ etat: 'refusee' });
+    expect(jugerLeRun('illisible', SHA)).toMatchObject({
+      etat: 'refusee',
+      raison: expect.stringContaining('illisible'),
+    });
+  });
+
+  async function forge(chemin: string) {
+    type Reponse = { statut: number; entetes: Record<string, string>; corps: string };
+    return serveur((r): Reponse => {
+      if (r.url.startsWith(`/repos/o/r/commits/${SHA}/check-runs`))
+        return {
+          statut: 200,
+          entetes: { 'content-type': 'application/json' },
+          corps: JSON.stringify(reponse(check({}))),
+        };
+      if (r.url === '/repos/o/r/actions/runs/77')
+        return {
+          statut: 200,
+          entetes: { 'content-type': 'application/json' },
+          corps: JSON.stringify({ path: chemin, head_sha: SHA }),
+        };
+      return { statut: 404, entetes: {}, corps: '' };
+    });
+  }
+
+  it('REQ-GOV-014 : de bout en bout — la porte A de ci.yml réussie : 0 ; d’un autre workflow : non nul, sans jeton imprimé', async () => {
+    const JETON = 'jeton-de-test-ne-doit-pas-sortir';
+    const bonne = await forge(CI);
+    const env = (url: string) => ({
+      GITHUB_API_URL: url,
+      GITHUB_REPOSITORY: 'o/r',
+      GITHUB_SHA: SHA,
+      GH_TOKEN: JETON,
+    });
+    const r = await lancer(['--attendre-porte-a', ...RAPIDE], env(bonne.url));
+    expect([r.code, r.sortie]).toEqual([0, expect.stringContaining('gate-a')]);
+    expect(bonne.recues.every((q) => q.auth === `Bearer ${JETON}`)).toBe(true);
+    const mauvaise = await forge('.github/workflows/autre.yml');
+    const s = await lancer(['--attendre-porte-a', ...RAPIDE], env(mauvaise.url));
+    expect(s.code).not.toBe(0);
+    expect(s.sortie).toContain('autre_workflow');
+    expect(r.sortie + s.sortie).not.toContain(JETON);
+  });
+
+  it('REQ-GOV-014 : la porte A jamais vue dans la borne : non nul, nommé', async () => {
+    const vide = await serveur(() => ({
+      statut: 200,
+      entetes: { 'content-type': 'application/json' },
+      corps: JSON.stringify(reponse()),
+    }));
+    const r = await lancer(['--attendre-porte-a', ...RAPIDE], {
+      GITHUB_API_URL: vide.url,
+      GITHUB_REPOSITORY: 'o/r',
+      GITHUB_SHA: SHA,
+      GH_TOKEN: 'x',
+    });
+    expect(r.code).not.toBe(0);
+    expect(r.sortie).toContain('absente');
   });
 });

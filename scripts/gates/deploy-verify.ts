@@ -44,6 +44,7 @@
 import { randomUUID } from 'node:crypto';
 import { appendFileSync } from 'node:fs';
 import { ENTETE_DE_BUILD } from '../../next.config';
+import { politiqueDeContenu } from '../../src/server/securite/entetes';
 import {
   creerAlerteur,
   shaLisible,
@@ -279,6 +280,69 @@ function shaDemande(argv: string[]): string {
   return sha;
 }
 
+// ── SEC-46 : la politique de contenu SERVIE est celle de la configuration ─────────────────────
+
+/** Le nonce neutre qui remplace, des deux côtés, celui que chaque réponse tire. */
+const NONCE_NEUTRE = 'nonce-de-comparaison';
+
+/** La route où la politique se lit : une page publique, que le proxy couvre comme toute page. */
+const ROUTE_DE_LA_POLITIQUE = '/confidentialite';
+
+/**
+ * La politique de PRODUCTION telle que la configuration la produit (`politiqueDeContenu`), nonce
+ * neutralisé. Ce n'est pas un second exemplaire des directives : la configuration est jugée par
+ * `tests/unit/securite/headers.spec.ts` ; ici ne se juge que l'écart entre elle et ce que le domaine
+ * SERT — un mandataire qui la retire ou la réécrit, un proxy qui ne tourne pas.
+ */
+export function politiqueAttendue(): string {
+  return politiqueDeContenu({ nonce: NONCE_NEUTRE, developpement: false });
+}
+
+export type JugementDeLaPolitique =
+  { ok: true } | { ok: false; motif: 'csp_absente' | 'csp_differente' };
+
+/** La politique servie, nonce neutralisé, égale-t-elle celle de la configuration ? */
+export function jugerLaPolitique(servie: string | null): JugementDeLaPolitique {
+  if (servie === null || servie.trim() === '') return { ok: false, motif: 'csp_absente' };
+  const neutre = servie.replace(/'nonce-[A-Za-z0-9+/=_-]+'/g, `'nonce-${NONCE_NEUTRE}'`);
+  return neutre === politiqueAttendue() ? { ok: true } : { ok: false, motif: 'csp_differente' };
+}
+
+/**
+ * Après l'atterrissage du sha COURANT (jamais d'un retour arrière, dont l'image porte sa propre
+ * politique) : l'en-tête `Content-Security-Policy` servi doit être celui de la configuration.
+ * Sinon, NON ATTERRI — correcte en configuration, altérée au service, c'est une politique absente.
+ */
+export async function verifierLaPolitique(base: URL): Promise<0 | 1> {
+  let servie: string | null;
+  try {
+    const r = await fetch(new URL(ROUTE_DE_LA_POLITIQUE, base), {
+      method: 'HEAD',
+      redirect: 'manual',
+      cache: 'no-store',
+    });
+    servie = r.headers.get('content-security-policy');
+  } catch (e) {
+    console.error(
+      `❌ NON ATTERRI : ${base.origin}${ROUTE_DE_LA_POLITIQUE} ne répond pas (${(e as Error).message})`
+    );
+    return 1;
+  }
+  const j = jugerLaPolitique(servie);
+  if (j.ok) {
+    console.log(
+      `✅ politique de contenu servie = configuration (${base.origin}${ROUTE_DE_LA_POLITIQUE})`
+    );
+    return 0;
+  }
+  console.error(
+    `❌ NON ATTERRI : la politique de contenu servie n'est pas celle de la configuration (${j.motif})`
+  );
+  console.error(`   attendue : ${politiqueAttendue()}`);
+  console.error(`   servie   : ${servie ?? 'en-tête absent'}`);
+  return 1;
+}
+
 async function commandeVerifier(argv: string[]): Promise<number> {
   const sha = shaDemande(argv);
   const brut = process.env.PARTNERS_URL_PUBLIQUE ?? '';
@@ -289,7 +353,9 @@ async function commandeVerifier(argv: string[]): Promise<number> {
     );
     return 2;
   }
-  return verifier(sha, adresseSure(brut, 'PARTNERS_URL_PUBLIQUE'), options(argv));
+  const base = adresseSure(brut, 'PARTNERS_URL_PUBLIQUE');
+  const code = await verifier(sha, base, options(argv));
+  return code === 0 ? verifierLaPolitique(base) : code;
 }
 
 async function appel(
@@ -365,7 +431,148 @@ async function commandeDeclencher(argv: string[]): Promise<number> {
   console.log(`   déploiement déclenché — lecture de ${ENTETE_DE_BUILD} sur ${publique.origin}`);
   const r = await atterrir(sha, publique, options(argv));
   ecrireLaSortie(r.servi);
-  return r.code;
+  return r.code === 0 ? verifierLaPolitique(publique) : r.code;
+}
+
+// ── QA-T55 (REQ-GOV-014) : la porte A du MÊME sha, de la bonne provenance ─────────────────────
+
+/**
+ * Le job `deployer` partait sur tout push de `main`, que la porte A soit verte, rouge ou encore en
+ * cours. `pnpm deploy:attendre-porte-a` l'attend, AVANT l'AIPD et la plateforme. Voie V2 de la
+ * lentille `securite` : un check « gate-a » peut être posé par une autre application, ou par l'API
+ * depuis n'importe quel workflow qui a `checks: write` ; seul fait foi le PLUS RÉCENT check-run de
+ * `github-actions` sur ce sha, réussi, dont le run appartient à `.github/workflows/ci.yml`. Le job
+ * porte EXACTEMENT `contents`, `checks` et `actions` en lecture ; le jeton n'est servi qu'à cette
+ * étape. Échec FERMÉ et nommé partout ; ni le jeton ni les adresses appelées ne sont imprimés.
+ */
+export const CHECK_DE_LA_PORTE_A = 'gate-a';
+export const WORKFLOW_DE_LA_PORTE_A = '.github/workflows/ci.yml';
+
+export type VerdictDesChecks =
+  | { etat: 'reussie'; runId: number }
+  | { etat: 'absente' }
+  | { etat: 'en_cours' }
+  | { etat: 'refusee'; raison: string };
+
+type CheckRun = {
+  name?: unknown;
+  app?: { slug?: unknown } | null;
+  head_sha?: unknown;
+  status?: unknown;
+  conclusion?: unknown;
+  started_at?: unknown;
+  details_url?: unknown;
+};
+
+export function jugerLesChecks(brut: unknown, sha: string): VerdictDesChecks {
+  const liste =
+    typeof brut === 'object' && brut !== null
+      ? (brut as { check_runs?: unknown }).check_runs
+      : undefined;
+  if (!Array.isArray(liste))
+    return { etat: 'refusee', raison: 'reponse_illisible : la liste des check-runs' };
+  const duSha = (liste as CheckRun[]).filter(
+    (c) => c?.name === CHECK_DE_LA_PORTE_A && c.head_sha === sha
+  );
+  if (duSha.length === 0) return { etat: 'absente' };
+  const etrangers = duSha.filter((c) => c.app?.slug !== 'github-actions');
+  if (etrangers.length > 0)
+    return {
+      etat: 'refusee',
+      raison: `autre_application : un check « ${CHECK_DE_LA_PORTE_A} » posé par « ${String(etrangers[0]!.app?.slug)} »`,
+    };
+  const date = (c: CheckRun) => Date.parse(typeof c.started_at === 'string' ? c.started_at : '');
+  const recent = [...duSha].sort((a, b) => (date(b) || 0) - (date(a) || 0))[0]!;
+  if (recent.status !== 'completed') return { etat: 'en_cours' };
+  if (recent.conclusion !== 'success')
+    return {
+      etat: 'refusee',
+      raison: `echec : le check « ${CHECK_DE_LA_PORTE_A} » le plus récent conclut « ${String(recent.conclusion)} »`,
+    };
+  const run = /\/actions\/runs\/(\d+)\//.exec(
+    typeof recent.details_url === 'string' ? recent.details_url : ''
+  );
+  if (run === null) return { etat: 'refusee', raison: 'reponse_illisible : le run du check' };
+  return { etat: 'reussie', runId: Number(run[1]) };
+}
+
+export function jugerLeRun(
+  brut: unknown,
+  sha: string
+): { etat: 'reussie' } | { etat: 'refusee'; raison: string } {
+  if (typeof brut !== 'object' || brut === null)
+    return { etat: 'refusee', raison: 'reponse_illisible : le run' };
+  const r = brut as { path?: unknown; head_sha?: unknown };
+  if (r.path !== WORKFLOW_DE_LA_PORTE_A)
+    return {
+      etat: 'refusee',
+      raison: `autre_workflow : le run vient de « ${String(r.path)} », pas de ${WORKFLOW_DE_LA_PORTE_A}`,
+    };
+  if (r.head_sha !== sha)
+    return { etat: 'refusee', raison: 'autre_sha : le run porte un autre sha' };
+  return { etat: 'reussie' };
+}
+
+async function lireLaForge(chemin: string, jeton: string): Promise<unknown> {
+  const api = adresseSure(process.env.GITHUB_API_URL ?? 'https://api.github.com', 'GITHUB_API_URL');
+  try {
+    const r = await fetch(new URL(chemin, api), {
+      headers: { authorization: `Bearer ${jeton}`, accept: 'application/vnd.github+json' },
+      redirect: 'manual',
+    });
+    if (!r.ok) {
+      await r.body?.cancel();
+      return null;
+    }
+    return (await r.json()) as unknown;
+  } catch {
+    return null;
+  }
+}
+
+async function commandeAttendrePorteA(argv: string[]): Promise<number> {
+  const sha = shaDemande(argv);
+  const depot = process.env.GITHUB_REPOSITORY ?? '';
+  const jeton = process.env.GH_TOKEN ?? '';
+  if (!/^[\w.-]+\/[\w.-]+$/.test(depot) || jeton === '') {
+    console.error('❌ porte A non vérifiable : GITHUB_REPOSITORY et GH_TOKEN sont exigés — refusé');
+    return 1;
+  }
+  const o = options(argv);
+  let dernier: VerdictDesChecks = { etat: 'absente' };
+  for (let essai = 1; essai <= o.essais; essai++) {
+    dernier = jugerLesChecks(
+      await lireLaForge(
+        `/repos/${depot}/commits/${sha}/check-runs?check_name=${CHECK_DE_LA_PORTE_A}&per_page=100`,
+        jeton
+      ),
+      sha
+    );
+    if (dernier.etat === 'reussie' || dernier.etat === 'refusee') break;
+    if (essai < o.essais) await new Promise((ok) => setTimeout(ok, o.delaiMs));
+  }
+  if (dernier.etat === 'refusee') {
+    console.error(`❌ porte A refusée pour ${sha} — ${dernier.raison}`);
+    return 1;
+  }
+  if (dernier.etat !== 'reussie') {
+    console.error(
+      `❌ porte A ${dernier.etat === 'absente' ? 'absente' : 'toujours en cours'} pour ${sha} après ${o.essais} lecture(s) — déploiement refusé`
+    );
+    return 1;
+  }
+  const run = jugerLeRun(
+    await lireLaForge(`/repos/${depot}/actions/runs/${dernier.runId}`, jeton),
+    sha
+  );
+  if (run.etat === 'refusee') {
+    console.error(`❌ porte A refusée pour ${sha} — ${run.raison}`);
+    return 1;
+  }
+  console.log(
+    `✅ porte A « ${CHECK_DE_LA_PORTE_A} » réussie sur ${sha}, run de ${WORKFLOW_DE_LA_PORTE_A} — le déploiement peut partir`
+  );
+  return 0;
 }
 
 /**
@@ -554,10 +761,12 @@ if (APPELE_DIRECTEMENT) {
           ? commandeRetirerEchappatoire
           : argv.includes('--alerter')
             ? commandeAlerter
-            : null;
+            : argv.includes('--attendre-porte-a')
+              ? commandeAttendrePorteA
+              : null;
   if (mode === null) {
     console.error(
-      'usage : deploy-verify.ts --verifier [<sha>] | --declencher | --retour-arriere | --retirer-echappatoire | --alerter'
+      'usage : deploy-verify.ts --verifier [<sha>] | --declencher | --retour-arriere | --retirer-echappatoire | --alerter | --attendre-porte-a'
     );
     process.exit(1);
   }
@@ -567,7 +776,8 @@ if (APPELE_DIRECTEMENT) {
     argv.filter(
       (a) =>
         !['--declencher', '--verifier', '--retour-arriere', '--retirer-echappatoire'].includes(a) &&
-        a !== '--alerter'
+        a !== '--alerter' &&
+        a !== '--attendre-porte-a'
     )
   ).then(
     (code) => {

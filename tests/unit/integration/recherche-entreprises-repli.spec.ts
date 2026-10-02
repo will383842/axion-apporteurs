@@ -83,7 +83,14 @@ import {
 import { empreinteAdresse } from '../../../src/server/integrations/axionia/api-entrante';
 import { clientDuTiers } from '../../../src/server/integrations/recherche-entreprises/tiers';
 import { creerDisjoncteur } from '../../../src/server/integrations/recherche-entreprises/disjoncteur';
-import { empreinteurDeDirigeants } from '../../../src/server/integrations/recherche-entreprises/projection';
+import {
+  empreinteurDeDirigeants,
+  normaliser,
+  normaliserNomDeDirigeant,
+  projeter,
+  versFiche,
+  versSuggestion,
+} from '../../../src/server/integrations/recherche-entreprises/projection';
 import { schemaReponseDuTiers } from '../../../src/server/integrations/recherche-entreprises/schemas';
 import {
   classerSuggestions,
@@ -97,8 +104,19 @@ import {
 } from '../../../src/server/integrations/recherche-entreprises/repli';
 import { creerAntiRebond } from '../../../src/server/integrations/recherche-entreprises/anti-rebond';
 import { PARAMETRES } from '../../../src/server/integrations/recherche-entreprises/parametres';
-import type { CacheDeProjections } from '../../../src/server/integrations/recherche-entreprises/cache';
-import type { Suggestion } from '../../../src/server/integrations/recherche-entreprises/schemas';
+import {
+  cacheRedis,
+  cacheSurClient,
+  cleDeFiche,
+  cleDeRecherche,
+  relireFiche,
+  type CacheDeProjections,
+  type ClientDuCache,
+} from '../../../src/server/integrations/recherche-entreprises/cache';
+import type {
+  ResultatDuTiers,
+  Suggestion,
+} from '../../../src/server/integrations/recherche-entreprises/schemas';
 import {
   lireFixtures,
   type FixtureEnregistree,
@@ -755,8 +773,15 @@ describe('REQ-SEC-013 — `dependancesDeProduction` : clés, adresse, délai et 
 
   it('REQ-SEC-013 — format FIXÉ des empreintes : vecteurs connus (HMAC-SHA-256, étiquette, séparateur U+001F)', () => {
     // Calculés une fois hors du code livré ; une empreinte persistée qui change de format rougit ici.
+    // DM-07 (décision A02 du 2026-10-02) : l'empreinte d'un dirigeant est celle de
+    // `empreinteRecherche('nom_personne', …)` ; l'ancien format (`partners.dirigeant.v1`) disparaît,
+    // aucune empreinte n'ayant encore été stockée. Entrée normalisée, en clair :
+    //   partners.empreinte.v1 U+001F nom_personne U+001F PP U+001F LEFEVRE U+001F JEAN
+    // Commande exacte :
+    //   printf 'partners.empreinte.v1\x1fnom_personne\x1fPP\x1fLEFEVRE\x1fJEAN' \
+    //     | openssl dgst -sha256 -hmac 'cle-de-vecteur'
     expect(empreinteurDeDirigeants('cle-de-vecteur')('pp\u001fLEFEVRE\u001fJEAN')).toBe(
-      'dafcc5f1e7e142fa48d4be88684d51e7bcafffa04f92497fce89270a6b73f180'
+      '3540e9bab2292366e4b5f42b72077a697dddf108709c600b8630120229c190f5'
     );
     expect(
       appelantDepuis('apporteur-42', new Headers(), {
@@ -805,8 +830,217 @@ describe('REQ-SEC-013 — `dependancesDeProduction` : clés, adresse, délai et 
 
   it('REQ-INT-020 — le cache lit `REDIS_URL` dans l’environnement : absente, il échoue sans rien inventer', async () => {
     vi.stubEnv('REDIS_URL', '');
-    await expect(dependancesDeProduction(SECRETS).cache.lire('entreprise:v1:test')).rejects.toThrow(
+    await expect(dependancesDeProduction(SECRETS).cache.lire('entreprise:v2:test')).rejects.toThrow(
       /REDIS_URL absente/
     );
+  });
+});
+
+// ── REQ-SEC-013 : les clés, la relecture et le client du cache, jugés à valeur exacte ──────────
+
+describe('REQ-SEC-013 — le cache : espace de clés versionné, relecture par schéma, client à la demande', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.restoreAllMocks();
+  });
+
+  /** Un client simulé au niveau de `ClientDuCache` : il enregistre chaque appel, dans l'ordre. */
+  function clientFactice(status: string, stocke: string | null = null) {
+    const appels: unknown[][] = [];
+    const client: ClientDuCache = {
+      status,
+      connect: async () => {
+        appels.push(['connect']);
+        return undefined;
+      },
+      get: async (cle) => {
+        appels.push(['get', cle]);
+        return stocke;
+      },
+      set: async (...args) => {
+        appels.push(['set', ...args]);
+        return 'OK';
+      },
+    };
+    return { client, appels };
+  }
+
+  it('REQ-SEC-013 — la clé d’une recherche est l’empreinte SHA-256 hexadécimale de la saisie normalisée en minuscules', () => {
+    // printf 'boulangerie du moulin' | openssl dgst -sha256
+    const attendue =
+      'entreprise:v2:recherche:5120c38bc8a11a9c1a6e9aae2d48fa69c2e2d82191f98993b549926a0b657091';
+    expect(cleDeRecherche('  Boulangerie   du MOULIN ')).toBe(attendue);
+    expect(cleDeRecherche('boulangerie du moulin')).toBe(attendue);
+  });
+
+  it('REQ-SEC-013 — la clé d’une fiche est le SIREN sous l’espace versionné', () => {
+    expect(cleDeFiche('123456789')).toBe('entreprise:v2:fiche:123456789');
+  });
+
+  it('REQ-SEC-013 — une fiche relue passe son schéma ; une valeur altérée est une absence', () => {
+    const f = fixtureAvecDirigeants();
+    const projection = projeter(
+      schemaReponseDuTiers.parse(f.reponse),
+      empreinteurDeDirigeants(CLE_DE_TEST)
+    );
+    const fiche = projection.fiches[0]!;
+    expect(relireFiche(structuredClone(fiche))).toEqual(fiche);
+    expect(relireFiche({ ...fiche, intrus: 'valeur' })).toBeNull();
+    expect(relireFiche({})).toBeNull();
+    expect(relireFiche(null)).toBeNull();
+  });
+
+  it.each([
+    ['wait', true],
+    ['end', true],
+    ['ready', false],
+    ['connecting', false],
+  ])(
+    'REQ-SEC-013 — un client à l’état %s est connecté avant usage : %s',
+    async (status, connecte) => {
+      const { client, appels } = clientFactice(status, null);
+      await cacheSurClient(() => client).lire('entreprise:v2:fiche:123456789');
+      expect(appels).toEqual([
+        ...(connecte ? [['connect']] : []),
+        ['get', 'entreprise:v2:fiche:123456789'],
+      ]);
+    }
+  );
+
+  it('REQ-SEC-013 — lire rend null sur une clé absente, la valeur désérialisée sinon', async () => {
+    const absent = clientFactice('ready', null);
+    expect(await cacheSurClient(() => absent.client).lire('k')).toBeNull();
+    const present = clientFactice('ready', '{"suggestions":[],"fiches":[]}');
+    expect(await cacheSurClient(() => present.client).lire('k')).toEqual({
+      suggestions: [],
+      fiches: [],
+    });
+  });
+
+  it('REQ-SEC-013 — écrire pose la valeur sérialisée avec une expiration `EX` en secondes', async () => {
+    const { client, appels } = clientFactice('wait');
+    const valeur = { suggestions: [], fiches: [] };
+    await cacheSurClient(() => client).ecrire('entreprise:v2:recherche:x', valeur, 86_400);
+    expect(appels).toEqual([
+      ['connect'],
+      ['set', 'entreprise:v2:recherche:x', JSON.stringify(valeur), 'EX', 86_400],
+    ]);
+  });
+
+  it('REQ-SEC-013 — le client de production : `REDIS_URL` absente ou vide refuse ; présente, le client est construit UNE fois, sans bruit', async () => {
+    const bruit = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    vi.stubEnv('REDIS_URL', undefined);
+    await expect(cacheRedis.lire('entreprise:v2:test')).rejects.toThrow(/REDIS_URL absente/);
+    vi.stubEnv('REDIS_URL', '');
+    await expect(cacheRedis.lire('entreprise:v2:test')).rejects.toThrow(/REDIS_URL absente/);
+
+    // Un port fermé : la connexion échoue vite (options à panne rapide), sans service réel.
+    vi.stubEnv('REDIS_URL', 'redis://127.0.0.1:1');
+    const premiere = await cacheRedis.lire('entreprise:v2:test').then(
+      () => null,
+      (e: unknown) => e as Error
+    );
+    expect(premiere).toBeInstanceOf(Error);
+    expect(premiere?.message).not.toMatch(/REDIS_URL absente/);
+
+    // Le client est gardé : la variable retirée ensuite ne le défait pas.
+    vi.stubEnv('REDIS_URL', '');
+    const seconde = await cacheRedis.lire('entreprise:v2:test').then(
+      () => null,
+      (e: unknown) => e as Error
+    );
+    expect(seconde).toBeInstanceOf(Error);
+    expect(seconde?.message).not.toMatch(/REDIS_URL absente/);
+
+    // Une panne est rendue à l'appelant ; le client ne l'imprime pas, faute d'écouteur.
+    expect(bruit.mock.calls.flat().map(String).join('\n')).not.toMatch(/ioredis/i);
+  }, 10_000);
+});
+
+// ── REQ-SEC-013 : la projection, branche par branche ───────────────────────────────────────────
+
+describe('REQ-SEC-013 — la projection : diffusion en échec fermé, texte empreint par type de dirigeant', () => {
+  function resultat(
+    statut: string,
+    statutSiege: string,
+    dirigeants: ResultatDuTiers['dirigeants'] = []
+  ): ResultatDuTiers {
+    return {
+      siren: '123456789',
+      nom_complet: 'ENTREPRISE FICTIVE',
+      nature_juridique: '5710',
+      activite_principale: '62.01Z',
+      tranche_effectif_salarie: '00',
+      etat_administratif: 'A',
+      categorie_entreprise: 'PME',
+      statut_diffusion: statut,
+      siege: {
+        siret: '12345678900011',
+        code_postal: '00000',
+        libelle_commune: 'VILLE FICTIVE',
+        departement: '00',
+        region: '00',
+        statut_diffusion_etablissement: statutSiege,
+      },
+      dirigeants,
+    };
+  }
+
+  it.each([
+    ['O', 'O', true],
+    ['O', 'P', false],
+    ['P', 'O', false],
+    ['P', 'P', false],
+    ['', '', false],
+    ['o', 'O', false],
+  ])('REQ-SEC-013 — unité %j, siège %j : adresse rendue = %s', (statut, statutSiege, pleine) => {
+    expect(versSuggestion(resultat(statut, statutSiege))).toEqual({
+      siren: '123456789',
+      siret: '12345678900011',
+      nom: 'ENTREPRISE FICTIVE',
+      codePostal: pleine ? '00000' : null,
+      commune: pleine ? 'VILLE FICTIVE' : null,
+    });
+  });
+
+  it('REQ-SEC-013 — le texte empreint distingue personne physique (nom, prénoms) et personne morale (dénomination)', () => {
+    const textes: string[] = [];
+    const fiche = versFiche(
+      resultat('O', 'O', [
+        {
+          type_dirigeant: 'personne physique',
+          nom: 'Dupont-Fictif',
+          prenoms: 'Jean Émile',
+          qualite: 'Président',
+        },
+        {
+          type_dirigeant: 'personne morale',
+          siren: '987654321',
+          denomination: 'Holding Fictive',
+          qualite: 'Commissaire aux comptes',
+        },
+      ]),
+      (texte) => {
+        textes.push(texte);
+        return `empreinte-${textes.length}`;
+      }
+    );
+    expect(textes).toEqual(['pp\u001fDUPONT FICTIF\u001fJEAN EMILE', 'pm\u001fHOLDING FICTIVE']);
+    expect(fiche.dirigeants).toEqual([
+      { empreinte: 'empreinte-1', qualite: 'Président' },
+      { empreinte: 'empreinte-2', qualite: 'Commissaire aux comptes' },
+    ]);
+  });
+
+  it('REQ-SEC-013 — un texte absent se normalise en chaîne vide, rien d’inventé', () => {
+    expect(normaliser(null)).toBe('');
+    expect(normaliserNomDeDirigeant(null, null)).toBe('pp\u001f\u001f');
+  });
+
+  it('REQ-SEC-013 — un empreinteur sans clé est refusé, en le disant ; une clé non vide est acceptée', () => {
+    expect(() => empreinteurDeDirigeants('')).toThrow(
+      'empreinteur_sans_cle : une empreinte sans clé est inversible'
+    );
+    expect(() => empreinteurDeDirigeants('Stryker was here!')).not.toThrow();
   });
 });

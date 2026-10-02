@@ -9,14 +9,15 @@
  *   — la FICHE, ce que le serveur persistera : exactement les champs de REQ-INT-021, et des
  *     dirigeants une EMPREINTE et la qualité.
  *
- * L'EMPREINTE D'UN DIRIGEANT. HMAC-SHA-256 sous `PII_HASH_KEY` — la clé des empreintes de recherche
- * des données personnelles (`src/lib/env.ts`), jamais une empreinte nue qu'un dictionnaire de noms
- * inverserait. Le texte empreint est NORMALISÉ (casse, accents, ponctuation, espaces) pour que le
+ * L'EMPREINTE D'UN DIRIGEANT. `empreinteRecherche('nom_personne', …)` sous `PII_HASH_KEY` — la clé
+ * des empreintes de recherche des données personnelles (`src/lib/env.ts`), jamais une empreinte nue
+ * qu'un dictionnaire de noms inverserait (DM-07, partners/ADR-0022 point 6). Le texte empreint est NORMALISÉ (casse, accents, ponctuation, espaces) pour que le
  * signal interne rapproche « Jean-Émile » et « JEAN EMILE ». Un dirigeant personne morale est
  * empreint sur sa dénomination, sous une étiquette distincte : l'exigence ne dit que « nom +
  * prénoms », et l'option retenue est la plus fermée — rien en clair (question ouverte au rendu).
  */
 import { createHmac } from 'node:crypto';
+import { empreinteSousCle, normaliserSegmentDeNom } from '../../securite/pii';
 import type {
   DirigeantDuTiers,
   FicheEntreprise,
@@ -30,30 +31,27 @@ import { schemaProjection } from './schemas';
 /** Rend l'empreinte (64 hexadécimaux) d'un texte déjà normalisé. */
 export type Empreinteur = (texteNormalise: string) => string;
 
-const ETIQUETTE = 'partners.dirigeant.v1';
-
-/** HMAC-SHA-256 séparé par domaine (64 hex) : SEULE écriture du module, étiquette en paramètre. */
+/** HMAC-SHA-256 séparé par domaine (64 hex), étiquette en paramètre : l'identité de l'appelant. */
 export function empreinteEtiquetee(cle: string, etiquette: string, texte: string): string {
   return createHmac('sha256', cle).update(`${etiquette}\u001f${texte}`, 'utf8').digest('hex');
 }
 
-/** La fabrique de l'empreinteur : la clé est reçue, jamais lue ici. */
+/**
+ * La fabrique de l'empreinteur : la clé est reçue, jamais lue ici. L'empreinte est celle de
+ * `empreinteRecherche('nom_personne', …)` (DM-07) — le format vit une fois, dans `pii.ts`.
+ */
 export function empreinteurDeDirigeants(cle: string): Empreinteur {
   if (cle === '') throw new Error('empreinteur_sans_cle : une empreinte sans clé est inversible');
-  return (texte) => empreinteEtiquetee(cle, ETIQUETTE, texte);
+  return (texte) => empreinteSousCle('nom_personne', texte, cle);
 }
 
 /**
- * Majuscules, sans accents, toute ponctuation réduite à une espace, espaces réduites. SEULE
- * normalisation du module : l'empreinte des dirigeants et le classement des suggestions la partagent.
+ * Majuscules, sans accents, toute ponctuation réduite à une espace, espaces réduites. La
+ * normalisation d'un segment de nom de `pii.ts`, et elle seule (RM-01) : l'empreinte des
+ * dirigeants et le classement des suggestions la partagent.
  */
 export function normaliser(texte: string | null): string {
-  return (texte ?? '')
-    .normalize('NFD')
-    .replace(/\p{M}+/gu, '')
-    .toUpperCase()
-    .replace(/[^\p{L}\p{N}]+/gu, ' ')
-    .trim();
+  return normaliserSegmentDeNom(texte ?? '');
 }
 
 /** Le texte empreint d'une personne physique : nom et prénoms normalisés, séparés sans ambiguïté. */
