@@ -44,6 +44,7 @@ import {
   codeBienForme,
   demanderLien,
   empreinteDeSession,
+  empreinteDAttente,
   empreinteDuCode,
   tirerCode,
   verifierLeCode,
@@ -742,5 +743,75 @@ describe('REQ-SEC-001 — l’effacement du cookie d’attente, accepté par le 
         { httpOnly: true, secure: true, path: '/', sameSite: 'strict', maxAge: 0 },
       ],
     ]);
+  });
+});
+
+/**
+ * Survivants de la passe de mutation de la PR 578 : les ancres des deux formes à 64 hexadécimaux,
+ * la consommation perdue entre l'essai et l'écriture, et l'apporteur qui ne peut plus ouvrir.
+ */
+describe('REQ-SEC-001 — les bords de la vérification du code', () => {
+  it('REQ-SEC-001 : TÉMOIN — l’empreinte d’attente est 64 hexadécimaux minuscules EXACTEMENT, ancrée des deux côtés', () => {
+    expect(empreinteDAttente(HASH_ADRESSE)).toBe(HASH_ADRESSE);
+    for (const hors of [
+      `z${HASH_ADRESSE}`,
+      `${HASH_ADRESSE}z`,
+      HASH_ADRESSE.slice(1),
+      HASH_ADRESSE.toUpperCase(),
+      '',
+      null,
+      undefined,
+    ])
+      expect(empreinteDAttente(hors), String(hors)).toBeNull();
+  });
+
+  it('REQ-SEC-001 : TÉMOIN — une empreinte stockée abîmée (préfixe ou suffixe hors forme) ne vaut jamais le bon code', async () => {
+    for (const abimee of [
+      `${empreinteDuCode('042137', CONFIG.secret)}zz`,
+      `zz${empreinteDuCode('042137', CONFIG.secret)}`,
+    ]) {
+      const u = univers({ lien: { codeHash: abimee } });
+      expect(await verifier(u, '042137')).toEqual({ etat: 'code_refuse' });
+      expect(u.sessions).toEqual([]);
+      expect(u.signaux).toEqual(['code_refuse']);
+    }
+  });
+
+  it('REQ-SEC-001 : TÉMOIN — l’essai part sur l’identifiant FACTICE quand aucun lien valide n’existe', async () => {
+    const u = univers({ compte: false });
+    const vus: string[] = [];
+    const transaction = u.ports.transaction;
+    u.ports.transaction = (travail) =>
+      transaction((tx) =>
+        travail({
+          ...tx,
+          compterEssai: (id, t) => {
+            vus.push(id);
+            return tx.compterEssai(id, t);
+          },
+        })
+      );
+    expect(await verifier(u, '042137')).toEqual({ etat: 'code_refuse' });
+    expect(vus).toEqual(['00000000-0000-0000-0000-000000000000']);
+    expect(u.signaux).toEqual(['code_refuse']);
+  });
+
+  it('REQ-SEC-001 : TÉMOIN — le bon code dont la consommation est perdue (course) est refusé, sans session', async () => {
+    const u = univers();
+    const transaction = u.ports.transaction;
+    u.ports.transaction = (travail) =>
+      transaction((tx) => travail({ ...tx, consommerParId: async () => 0 }));
+    expect(await verifier(u, u.code)).toEqual({ etat: 'code_refuse' });
+    expect(u.sessions).toEqual([]);
+    expect(u.signaux).toEqual(['code_refuse']);
+  });
+
+  it('REQ-SEC-001 : TÉMOIN — le bon code d’un apporteur qui ne peut plus ouvrir son espace est refusé, sans session', async () => {
+    const u = univers();
+    const transaction = u.ports.transaction;
+    u.ports.transaction = (travail) =>
+      transaction((tx) => travail({ ...tx, statutApporteur: async () => null }));
+    expect(await verifier(u, u.code)).toEqual({ etat: 'code_refuse' });
+    expect(u.sessions).toEqual([]);
   });
 });
