@@ -78,7 +78,7 @@
 | Pièces du dossier de conformité (`pieces_kyc`) | Données à caractère hautement personnel : un document d'identité et des coordonnées bancaires, dont la compromission permet une usurpation d'identité ou une fraude au virement | REQ-DM-027 · HYP-DM06-IBAN |
 | Risque — détournement de RIB | Fraude au changement de coordonnées bancaires. Mesure : un nouveau RIB naît `a_verifier` pendant que l'ancien reste actif, avec une vérification hors bande avant activation | REQ-UX-027 · REQ-DM-027 |
 | Risque — fuite de pièces d'identité | Mesures : purge du fichier dès la validation, stockage privé, URL signées à courte durée | REQ-SEC-026 · REQ-JUR-029 |
-| Risque — accès interne excessif | Mesures : droits par rôle, défaut = refus, et accès journalisé | REQ-SEC-023 |
+| Risque — accès interne excessif | Mesures : droits par rôle, défaut = refus ; accès journalisé : À compléter — mesure prévue par SEC-58 | REQ-SEC-023 |
 | Cotation des risques | À compléter — source manquante. Question : quelle vraisemblance et quelle gravité Will retient-il, pour chacun des quatre objets de la section 2, d'un accès illégitime, d'une modification non désirée et d'une disparition des données ? | REQ-CPL-009 |
 | Mesures complémentaires | À compléter — source manquante. Question : au-delà des mesures sourcées ci-dessus, quelles mesures Will ajoute-t-il au vu de la cotation ? | REQ-CPL-009 |
 

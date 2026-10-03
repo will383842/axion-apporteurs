@@ -40,6 +40,15 @@ export const TACHES = {
    * et de pièces RIB lues au journal (`src/server/taches/ouvrir-anomalies-auto-parrainage.ts`).
    */
   auto_parrainage_ouvrir: { req: 'REQ-SEC-031' },
+  /**
+   * DM-62 — l'anonymisation des anomalies à leur échéance, et le NOMBRE des mesures ouvertes au-delà
+   * de `MESURE_OUVERTE_ALERTE_JOURS` (`anonymiserLesAnomalies`).
+   */
+  anomalies_anonymiser: { req: 'REQ-DM-033' },
+  /** DM-62 — le vidage du texte et de la réponse d'une contestation à son échéance. */
+  contestations_purger: { req: 'REQ-DM-043' },
+  /** DM-62 — la purge dédiée du démenti d'un contact, que la purge du contact excepte. */
+  dementis_purger: { req: 'REQ-DM-043' },
 } as const satisfies Readonly<Record<string, { req: `REQ-${string}` }>>;
 
 export type NomDeTache = keyof typeof TACHES;

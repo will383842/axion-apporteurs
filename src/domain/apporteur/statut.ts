@@ -34,6 +34,8 @@ export const MOTIFS_RESILIATION = [
   'ordinaire_apporteur',
   'ordinaire_axion',
   'manquement_grave',
+  // DM-64 (contrat art. 12.5) : décès, cessation ou radiation ; sans préavis, ni décision de la Société.
+  'fin_de_plein_droit',
 ] as const;
 
 export type MotifResiliation = (typeof MOTIFS_RESILIATION)[number];
@@ -43,7 +45,7 @@ export function estStatutApporteur(valeur: string): valeur is StatutApporteur {
   return (STATUTS_APPORTEUR as readonly string[]).includes(valeur);
 }
 
-/** Vrai si la valeur est l'un des trois motifs de résiliation. */
+/** Vrai si la valeur est l'un des motifs de résiliation. */
 export function estMotifResiliation(valeur: string): valeur is MotifResiliation {
   return (MOTIFS_RESILIATION as readonly string[]).includes(valeur);
 }

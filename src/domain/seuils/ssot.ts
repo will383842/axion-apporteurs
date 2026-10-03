@@ -401,6 +401,16 @@ export const SEUILS = {
     renvois: [],
     verifieLe: '2026-10-02',
   },
+  // DM-62 (REQ-DM-033) : une mesure fondée sur une anomalie confirmée, ouverte depuis plus de ce
+  // délai (compté de la clôture) sans que sa fin soit posée, est signalée par la purge planifiée.
+  // Le signal ne porte qu'un NOMBRE vers l'extérieur ; les anomalies ne sont nommées qu'en console.
+  MESURE_OUVERTE_ALERTE_JOURS: {
+    valeur: 90,
+    unite: 'jours',
+    source: 'REQ-DM-033, demande de la juriste au rattrapage 85 (DM-62)',
+    renvois: [],
+    verifieLe: '2026-10-03',
+  },
 } as const satisfies Record<string, Seuil>;
 
 /**
