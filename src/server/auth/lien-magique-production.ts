@@ -34,6 +34,8 @@ import { limiter, sujetDepuisEmpreinte, type VerdictDeLimite } from '../securite
 import { CONNEXION } from '../../content/micro-copy/espace/vocabulaire';
 import { CONNEXION_CONSOLE } from '../../content/micro-copy/console/connexion';
 import { DUREES_AUTH } from './durees';
+import { empreinteDeSessionConsole } from './lien-magique';
+import { depotDeSessionsConsole, type PortsDeRole } from '../roles/require-role';
 import { CODE_DU_COURRIEL_DE_CONNEXION } from '../../content/micro-copy/courriels/notifications';
 import type {
   ConfigurationDuLien,
@@ -438,4 +440,39 @@ export function dependancesDuProcessus(outils: {
     }),
     journal,
   };
+}
+
+/**
+ * SEC-29 : les ports de `requireRole` pour le processus — le dépôt des sessions de la console, son
+ * horloge, et le secret des sessions (celui de l'espace : même table, domaine d'empreinte distinct).
+ */
+export function portsDeRoleConsole(
+  d: Pick<DependancesDuLien, 'env' | 'prisma' | 'horloge'>
+): PortsDeRole {
+  const { session } = configurationDuLien(d.env);
+  return {
+    maintenant: () => new Date(d.horloge.maintenant()),
+    depot: depotDeSessionsConsole(d.prisma),
+    configuration: session,
+  };
+}
+
+/**
+ * SEC-29 : la déconnexion de la console. La session est RÉVOQUÉE en base (une écriture
+ * conditionnelle, sur une session de la console encore ouverte), puis son cookie est effacé par
+ * l'appelant : un jeton copié ailleurs ne rouvre rien.
+ */
+export async function revoquerSessionConsole(
+  d: Pick<DependancesDuLien, 'env' | 'prisma' | 'horloge'>,
+  jeton: string
+): Promise<void> {
+  const { session } = configurationDuLien(d.env);
+  await d.prisma.sessionEspace.updateMany({
+    where: {
+      tokenHash: empreinteDeSessionConsole(jeton, session.secret),
+      utilisateurConsoleId: { not: null },
+      revoqueAt: null,
+    },
+    data: { revoqueAt: new Date(d.horloge.maintenant()) },
+  });
 }

@@ -23,7 +23,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NOMS_DES_SECRETS } from '../../../src/lib/env';
 import { horlogeFigee } from '../../../src/domain/temps/horloge';
 import { COMPTEURS, limiter, sujetDepuisEmpreinte } from '../../../src/server/securite/rate-limit';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { GABARITS, type LigneDeNotification } from '../../../src/server/notifications/table-ssot';
@@ -37,6 +37,7 @@ import {
   texteDuRefusDeCodeConsole,
 } from '../../../src/app/(connexion-console)/console/connexion/ecran';
 import { destinationConsoleBornee } from '../../../src/app/(connexion-console)/console/connexion/destination';
+import PageConnexionConsole from '../../../src/app/(connexion-console)/console/connexion/page';
 import {
   ESSAIS_DU_CODE_MAX,
   consommerLien,
@@ -694,5 +695,75 @@ describe('REQ-SEC-062 — la console a ses propres compteurs, nommés à l’ép
     expect(corps.startsWith(CONNEXION_CONSOLE.courriel.corps)).toBe(true);
     expect(corps).toContain('\n\nhttps://partners.example.org/console/connexion/x\n\n');
     expect(corps).toMatch(/\n042137\n/);
+  });
+});
+
+// ── le groupe hors de la garde des rôles : la connexion, et elle seule ─────────────────────────
+
+describe('REQ-SEC-003 — le groupe (connexion-console) ne porte que la connexion', () => {
+  const RACINE_DU_GROUPE = 'src/app/(connexion-console)';
+  const FICHIERS_ADMIS = [
+    'layout.tsx',
+    'console/connexion/actions.ts',
+    'console/connexion/destination.ts',
+    'console/connexion/ecran.tsx',
+    'console/connexion/page.tsx',
+    'console/connexion/[jeton]/page.tsx',
+  ];
+  /** Les seuls modules qu'un fichier du groupe peut importer : ni la console gardée, ni une lecture métier. */
+  const IMPORT_ADMIS =
+    /^(?:\.\/[^/]+$|\.\.\/(?:actions|ecran)$|react$|next\/|(?:\.\.\/)+(?:server\/auth\/|server\/securite\/(?:pii|pot-de-miel)$|content\/micro-copy\/))/;
+
+  function fichiersDe(dossier: string, prefixe = ''): string[] {
+    return readdirSync(dossier, { withFileTypes: true }).flatMap((e) =>
+      e.isDirectory()
+        ? fichiersDe(`${dossier}/${e.name}`, `${prefixe}${e.name}/`)
+        : [`${prefixe}${e.name}`]
+    );
+  }
+  const importsDe = (source: string) =>
+    [...source.matchAll(/^import[^'"]*['"]([^'"]+)['"]/gm)].map((m) => m[1]!);
+
+  it('REQ-SEC-003 : TÉMOIN — le groupe ne contient que les fichiers de la connexion, et n’importe ni la console gardée ni une lecture métier', () => {
+    expect(fichiersDe(RACINE_DU_GROUPE).sort()).toEqual([...FICHIERS_ADMIS].sort());
+    for (const f of FICHIERS_ADMIS) {
+      const imports = importsDe(readFileSync(`${RACINE_DU_GROUPE}/${f}`, 'utf8'));
+      for (const i of imports) expect(i, `${f} importe ${i}`).toMatch(IMPORT_ADMIS);
+      expect(imports.join(), f).not.toMatch(/server\/console|server\/roles|prisma/);
+    }
+  });
+
+  it('REQ-SEC-003 : CONTRE-TÉMOINS — la règle rougit sur un import de la console gardée ou d’une lecture métier', () => {
+    for (const faute of [
+      '../../../../server/console/session',
+      '../../../../server/apporteurs/lecture',
+      '@prisma/client',
+    ])
+      expect(faute).not.toMatch(IMPORT_ADMIS);
+    expect('../../../../server/auth/lien-magique').toMatch(IMPORT_ADMIS);
+  });
+});
+
+describe('REQ-UX-048 — la page /console/connexion lit l’état et n’accepte que les listes fermées', () => {
+  const page = async (q: Record<string, string>) =>
+    renderToStaticMarkup(await PageConnexionConsole({ searchParams: Promise.resolve(q) }));
+
+  it('REQ-UX-048 : TÉMOIN — la demande, le code après l’envoi, le refus en alerte, l’issue « déjà utilisé » ; une valeur inconnue ne dit rien', async () => {
+    const vide = ETATS_VIDES_CONSOLE['connexion-console']!;
+    expect(await page({})).toContain(`<h1>${vide.titre}</h1>`);
+    expect(await page({ etat: 'envoye' })).toContain(CONNEXION_CONSOLE.envoye.titre);
+    expect(await page({ code: 'code_refuse' })).toContain(CONNEXION_CONSOLE.code.refus);
+    expect(await page({ issue: 'deja_utilise' })).toContain(CONNEXION_CONSOLE.dejaUtilise.titre);
+    const inconnue = await page({ code: '<script>', issue: 'ouverte' });
+    expect(inconnue).not.toContain(CONNEXION_CONSOLE.code.refus);
+    expect(inconnue).toContain(`<h1>${vide.titre}</h1>`);
+  });
+
+  it('REQ-SEC-003 : TÉMOIN — la suite n’est portée que si elle passe la borne de la console', async () => {
+    expect(await page({ suite: '/console/apporteurs' })).toContain(
+      'name="suite" value="/console/apporteurs"'
+    );
+    expect(await page({ suite: '//exemple.invalid' })).not.toContain('name="suite"');
+    expect(await page({ suite: '/mes-entreprises' })).not.toContain('name="suite"');
   });
 });

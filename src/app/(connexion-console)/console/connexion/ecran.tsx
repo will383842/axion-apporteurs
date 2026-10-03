@@ -48,9 +48,11 @@ function Statut({ texte }: { texte: string }) {
 export function EcranConnexionConsole({
   etat,
   action,
+  suite = null,
 }: {
   etat: EtatDeDemande | null;
   action: Action;
+  suite?: string | null;
 }) {
   const ecran = etatVide();
   return (
@@ -65,6 +67,7 @@ export function EcranConnexionConsole({
         <div hidden>
           <input type="text" name="site" tabIndex={-1} autoComplete="off" />
         </div>
+        {suite === null ? null : <input type="hidden" name="suite" value={suite} />}
         <button type="submit">{ecran.action.libelle}</button>
         <p>{CONNEXION_CONSOLE.aideDemande}</p>
       </form>
