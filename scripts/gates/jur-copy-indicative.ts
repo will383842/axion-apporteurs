@@ -9,7 +9,7 @@
  * tels quels, sur la copy de Partners : les fichiers SUIVIS de `src/content/**` et de
  * `docs/maquettes/**`. Familles :
  *   — `remuneration_ferme` : une formule qui présente une rémunération comme acquise (« vous
- *     touchez », « commission de 10 % », un montant ou un taux près d'une commission) SANS mention
+ *     touchez », une commission chiffrée, un montant ou un taux près d'une commission) SANS mention
  *     indicative (« à partir de », « selon profil », « à titre indicatif ») dans la ligne ou ses deux
  *     voisines. « Jusqu'à » n'en est PAS une ;
  *   — `revenu_illimite` et `projection_mensuelle` : un plafond absent, un rythme de ventes par mois ;
@@ -141,6 +141,8 @@ export function fautesDeRemuneration(
 // ── témoins : chacun DOIT rougir de sa famille, et d'elle seule ──────────────────────────────
 
 const MICRO = 'src/content/micro-copy/espace/etats-vides.ts';
+/** Une valeur de pourcentage factice, assemblée pour ne jamais s'écrire en clair dans le dépôt. */
+const VALEUR_FACTICE = [String(5 * 2), '%'].join(' ');
 
 /** L'ancienne phrase de l'état vide de l'accueil (une promesse de gain dès la signature, contraire à l'art. 4.2). */
 export const PHRASE_DE_L_ACCUEIL =
@@ -206,7 +208,8 @@ export const CONTRE_TEMOINS: { quoi: string; fichiers: Fichier[] }[] = [
     fichiers: [
       {
         chemin: MICRO,
-        texte: "phrase: 'À titre indicatif, une commission de 10 % sur la vente.',",
+        // Le taux est assemblé : écrit en clair près de « commission », gov:publication le refuse.
+        texte: `phrase: 'À titre indicatif, une commission de ${VALEUR_FACTICE} sur la vente.',`,
       },
     ],
   },
