@@ -164,3 +164,49 @@ describe('REQ-CPL-006 — de bout en bout : la décision, le statut et le journa
     expect(e.charge).toMatchObject({ de: 'candidat', vers: 'retenu', transition: 'retenir' });
   });
 });
+
+describe('REQ-CPL-006 — le motif se PURGE, et seulement avec sa date (rattrapage 81, forme d’A02)', () => {
+  const purger = (id: string, justification: string | null, at: Date | null) =>
+    base.prisma.$executeRaw`UPDATE "decisions_candidature"
+      SET "justification" = ${justification}, "justification_purgee_at" = ${at}
+      WHERE "id" = ${id}::uuid`;
+
+  it('REQ-CPL-006 : une décision SANS motif est refusée à l’insertion — nul ou à blancs', async () => {
+    const apporteurId = await unCandidat();
+    for (const justification of [null, '   ']) {
+      await expect(
+        base.prisma.$executeRaw`INSERT INTO "decisions_candidature"
+          ("id", "apporteur_id", "resultat", "justification", "auteur_id", "decidee_at")
+          VALUES (${randomUUID()}::uuid, ${apporteurId}::uuid, 'refuse', ${justification}, ${auteurId}::uuid, now())`
+      ).rejects.toThrow(/decisions_candidature_justification_(non_vide|purge_liee)/);
+    }
+  });
+
+  it('REQ-CPL-006 : la purge — le motif passe à NULL AVEC sa date — est acceptée, et la décision reste', async () => {
+    const d = await uneDecision(await unCandidat());
+    await purger(d.id, null, MAINTENANT);
+    const apres = await base.prisma.decisionCandidature.findUniqueOrThrow({ where: { id: d.id } });
+    expect([apres.justification, apres.justificationPurgeeAt, apres.resultat]).toEqual([
+      null,
+      MAINTENANT,
+      'vivier',
+    ]);
+  });
+
+  it('REQ-CPL-006 : un motif vidé SANS date, ou une date SANS vidage, est refusé', async () => {
+    const d = await uneDecision(await unCandidat());
+    await expect(purger(d.id, null, null)).rejects.toThrow(/justification_purge_liee/);
+    await expect(purger(d.id, d.justification, MAINTENANT)).rejects.toThrow(
+      /justification_purge_liee/
+    );
+  });
+
+  it('REQ-CPL-006 : un motif purgé ne REVIENT pas, et sa date ne se réécrit pas', async () => {
+    const d = await uneDecision(await unCandidat());
+    await purger(d.id, null, MAINTENANT);
+    await expect(purger(d.id, 'Motif réécrit.', null)).rejects.toThrow(/ne se réécrit pas/);
+    await expect(purger(d.id, null, new Date('2026-10-04T09:00:00.000Z'))).rejects.toThrow(
+      /ne se réécrit pas/
+    );
+  });
+});
