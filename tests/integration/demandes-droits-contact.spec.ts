@@ -19,6 +19,11 @@
  * Joué par Gate D, sur la base fraîchement migrée.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { PrismaClient } from '@prisma/client';
+import {
+  ROLE_D_EXECUTION,
+  provisionnerRoleDExecution,
+} from '../../src/server/deploiement/role-d-execution';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { demarrerBase, type Base } from './harnais';
 import { purgerLesValeursDesDroits } from '../../src/server/taches/purger-valeurs-droits-contact';
@@ -33,8 +38,22 @@ let sirens = 400000000;
 const unSiren = () => String((sirens += 1));
 const GABARIT = 'refuser_modification_sauf';
 
+/**
+ * Le client du SERVEUR : la base sous `partners_app`, provisionné comme en production. Les
+ * insertions jugées, les écritures des témoins et les purges passent par lui ; les fixtures, les
+ * lectures et le recul d'horloge (un ALTER TABLE d'administrateur) restent sous le propriétaire.
+ * `partners_app` n'a pas TRUNCATE : le refus du déclencheur d'instruction se juge sous le
+ * propriétaire, le seul rôle qui pourrait tronquer.
+ */
+let app: PrismaClient;
+
 beforeAll(async () => {
   base = await demarrerBase();
+  const u = new URL(base.url);
+  u.username = ROLE_D_EXECUTION;
+  u.password = randomBytes(24).toString('hex');
+  await provisionnerRoleDExecution({ urlMigration: base.url, urlExecution: u.toString() });
+  app = new PrismaClient({ datasourceUrl: u.toString() });
   const MAINTENANT = new Date('2026-10-02T12:00:00.000Z');
   grilleId = (
     await base.prisma.grilleCommission.create({
@@ -65,6 +84,7 @@ beforeAll(async () => {
 }, 180_000);
 
 afterAll(async () => {
+  await app?.$disconnect();
   await base?.arreter();
 });
 
@@ -110,7 +130,7 @@ type Demande = {
 async function demande(d: Demande): Promise<string> {
   const id = randomUUID();
   const rectification = d.droit === 'rectification';
-  await base.prisma.$executeRawUnsafe(
+  await app.$executeRawUnsafe(
     `INSERT INTO demandes_droits_contact (id, attribution_id, droit, donnee_visee, valeur_chiffree,
        valeur_purgee_at)
      VALUES ($1::uuid, $2::uuid, $3::droit_contact, $4::donnee_contact, $5, $6)`,
@@ -163,7 +183,8 @@ async function refus(promesse: Promise<unknown>): Promise<string> {
   throw new Error('aucun refus');
 }
 
-const maj = (sql: string, ...valeurs: unknown[]) => base.prisma.$executeRawUnsafe(sql, ...valeurs);
+const maj = (sql: string, ...valeurs: unknown[]) => app.$executeRawUnsafe(sql, ...valeurs);
+const tronquer = (table: string) => base.prisma.$executeRawUnsafe(`TRUNCATE ${table}`);
 
 describe('REQ-JUR-065 — les formes d’une demande de droit', () => {
   it('REQ-JUR-065 : TÉMOIN — une rectification sans donnée visée, et une donnée visée sur un autre droit, sont refusées', async () => {
@@ -304,7 +325,7 @@ describe('REQ-JUR-065 — la trace ne change pas après l’insertion', () => {
     expect(
       await refus(maj(`DELETE FROM demandes_droits_contact WHERE id = $1::uuid`, id))
     ).toContain(GABARIT);
-    expect(await refus(maj(`TRUNCATE demandes_droits_contact`))).toContain(GABARIT);
+    expect(await refus(tronquer('demandes_droits_contact'))).toContain(GABARIT);
   });
 });
 
@@ -314,9 +335,9 @@ describe('REQ-JUR-065 — la valeur non traitée s’efface à l’échéance, e
   it('REQ-JUR-065 : TÉMOIN — sans prolongation, effacée à un mois, pas la veille', async () => {
     const id = await demande({ droit: 'rectification' });
     await reculer(id, RECUE);
-    await purgerLesValeursDesDroits(base.prisma, new Date('2026-07-15T09:59:59.999Z'));
+    await purgerLesValeursDesDroits(app, new Date('2026-07-15T09:59:59.999Z'));
     expect((await ligne(id)).valeur_chiffree).not.toBeNull();
-    await purgerLesValeursDesDroits(base.prisma, new Date('2026-07-15T10:00:00.000Z'));
+    await purgerLesValeursDesDroits(app, new Date('2026-07-15T10:00:00.000Z'));
     const l = await ligne(id);
     expect(l.valeur_chiffree).toBeNull();
     expect(l.valeur_purgee_at).toEqual(new Date('2026-07-15T10:00:00.000Z'));
@@ -330,19 +351,19 @@ describe('REQ-JUR-065 — la valeur non traitée s’efface à l’échéance, e
       id,
       new Date('2026-06-20T10:00:00.000Z')
     );
-    await purgerLesValeursDesDroits(base.prisma, new Date('2026-07-15T10:00:00.000Z'));
+    await purgerLesValeursDesDroits(app, new Date('2026-07-15T10:00:00.000Z'));
     expect((await ligne(id)).valeur_chiffree).not.toBeNull();
-    await purgerLesValeursDesDroits(base.prisma, new Date('2026-09-15T09:59:59.999Z'));
+    await purgerLesValeursDesDroits(app, new Date('2026-09-15T09:59:59.999Z'));
     expect((await ligne(id)).valeur_chiffree).not.toBeNull();
-    await purgerLesValeursDesDroits(base.prisma, new Date('2026-09-15T10:00:00.000Z'));
+    await purgerLesValeursDesDroits(app, new Date('2026-09-15T10:00:00.000Z'));
     expect((await ligne(id)).valeur_chiffree).toBeNull();
   });
 
   it('REQ-JUR-065 : TÉMOIN — un second passage ne réécrit pas la date d’effacement', async () => {
     const id = await demande({ droit: 'rectification' });
     await reculer(id, RECUE);
-    await purgerLesValeursDesDroits(base.prisma, new Date('2026-08-01T00:00:00.000Z'));
-    await purgerLesValeursDesDroits(base.prisma, new Date('2026-09-01T00:00:00.000Z'));
+    await purgerLesValeursDesDroits(app, new Date('2026-08-01T00:00:00.000Z'));
+    await purgerLesValeursDesDroits(app, new Date('2026-09-01T00:00:00.000Z'));
     expect((await ligne(id)).valeur_purgee_at).toEqual(new Date('2026-08-01T00:00:00.000Z'));
   });
 
@@ -350,7 +371,7 @@ describe('REQ-JUR-065 — la valeur non traitée s’efface à l’échéance, e
     const valeur = randomBytes(40);
     const id = await demande({ droit: 'rectification', valeur });
     await reculer(id, RECUE);
-    await purgerLesValeursDesDroits(base.prisma, new Date('2026-08-01T00:00:00.000Z'));
+    await purgerLesValeursDesDroits(app, new Date('2026-08-01T00:00:00.000Z'));
     const [compte] = await base.prisma.$queryRaw<{ n: bigint }[]>`
       SELECT count(*) AS n FROM evenements
       WHERE charge::text LIKE ${'%' + valeur.toString('hex') + '%'}
@@ -381,7 +402,7 @@ describe('REQ-JUR-065 — le jeton des droits de l’attribution', () => {
 
   it('REQ-JUR-065 : TÉMOIN — la purge planifiée du contact efface le jeton dans la même instruction', async () => {
     const id = await uneAttribution({ purgeContactAt: new Date('2026-01-01T00:00:00.000Z') });
-    await purgerLesContacts(base.prisma, new Date('2026-10-02T12:00:00.000Z'));
+    await purgerLesContacts(app, new Date('2026-10-02T12:00:00.000Z'));
     const [l] = await base.prisma.$queryRaw<{ jeton: string | null; purge: Date | null }[]>`
       SELECT jeton_droits_hash AS jeton, contact_purge_at AS purge FROM attributions
       WHERE id = ${id}::uuid`;
