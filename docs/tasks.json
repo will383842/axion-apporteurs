@@ -4995,7 +4995,8 @@
         "tests/integration/ajout-seul-gabarit.spec.ts",
         "docs/rgpd/registre-article-30.md",
         "tests/unit/juridique/registre-rgpd.spec.ts",
-        "docs/GLOSSAIRE.md"
+        "docs/GLOSSAIRE.md",
+        "src/server/acces/for-apporteur.ts"
       ],
       "schema": true,
       "sensible": [
