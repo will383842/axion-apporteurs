@@ -59,6 +59,11 @@ import { purgerLesContacts } from './purger-contacts';
 import { purgerLesSirenRefuses } from './purger-siren-refuses';
 import { purgerLesValeursDesDroits } from './purger-valeurs-droits-contact';
 import { anonymiserLesTracesDesDroits } from './anonymiser-traces-droits-contact';
+import {
+  anonymiserLesAnomalies,
+  purgerLesContestations,
+  purgerLesDementis,
+} from './purger-contestations-anomalies';
 import { completerLesCodesNaf, portsDeBase } from './completer-code-naf';
 import { creerDisjoncteur } from '../integrations/recherche-entreprises/disjoncteur';
 import { PARAMETRES } from '../integrations/recherche-entreprises/parametres';
@@ -201,6 +206,14 @@ export function inscriptions(
     // DM-60 (REQ-JUR-065) : la trace d'une demande de droit, anonymisée cinq ans après sa clôture.
     droits_contact_anonymiser: () =>
       anonymiserLesTracesDesDroits(prisma, new Date(horlogeSysteme.maintenant())),
+    // DM-62 (REQ-DM-033, REQ-DM-043) : les anomalies, les contestations et le démenti d'un contact,
+    // chacun à son échéance, à l'heure du système. Le passage des anomalies ne rend qu'un NOMBRE de
+    // mesures ouvertes : les anomalies en cause ne sont nommées qu'en console.
+    anomalies_anonymiser: () =>
+      anonymiserLesAnomalies(prisma, new Date(horlogeSysteme.maintenant())),
+    contestations_purger: () =>
+      purgerLesContestations(prisma, new Date(horlogeSysteme.maintenant())),
+    dementis_purger: () => purgerLesDementis(prisma, new Date(horlogeSysteme.maintenant())),
     // DM-28 (REQ-DM-046) : la reprise des codes NAF nuls. Un disjoncteur par passage : le tiers en
     // panne interrompt la reprise, le passage suivant la relance.
     naf_completer: () =>

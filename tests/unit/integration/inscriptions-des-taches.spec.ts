@@ -9,7 +9,7 @@
  * reprises s'additionnent, que le lanceur reçoit un dépôt qui ne bat pas, et que le traitant de la
  * candidature relit ses secrets À CHAQUE traitement et refuse sans eux.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { TypeEvenementRecu, type PrismaClient } from '@prisma/client';
 
 const m = vi.hoisted(() => ({
@@ -23,21 +23,26 @@ const m = vi.hoisted(() => ({
   traiterCandidatureRecue: vi.fn(),
   clientCoordonnees: vi.fn(),
   clesPii: vi.fn(),
+  // DM-62 : les passages planifiés, simulés pour juger ce que chaque inscription leur passe.
   minimiserCandidatures: vi.fn(),
   purgerLesContacts: vi.fn(),
   purgerLesSirenRefuses: vi.fn(),
   purgerLesValeursDesDroits: vi.fn(),
+  // DM-60 : l'anonymisation des traces de droits, et la réconciliation composée sur ses ports.
   anonymiserLesTracesDesDroits: vi.fn(),
   passageQuotidien: vi.fn(),
   reconcilier: vi.fn(),
   clientRejeu: vi.fn(),
   portsDeReconciliation: vi.fn(),
   clientRelecture: vi.fn(),
+  anonymiserLesAnomalies: vi.fn(),
+  purgerLesContestations: vi.fn(),
+  purgerLesDementis: vi.fn(),
   completerLesCodesNaf: vi.fn(),
   portsDeBaseNaf: vi.fn(),
   clientDuTiers: vi.fn(),
   creerDisjoncteur: vi.fn(),
-  limiteGlobal: vi.fn(),
+  debitGlobal: vi.fn(),
 }));
 
 vi.mock('../../../src/server/queue/workers/evenement-recu', async (original) => ({
@@ -84,6 +89,11 @@ vi.mock('../../../src/server/integrations/axionia/reconciliation', () => ({
 vi.mock('../../../src/server/integrations/axionia/relecture', () => ({
   clientRelecture: m.clientRelecture,
 }));
+vi.mock('../../../src/server/taches/purger-contestations-anomalies', () => ({
+  anonymiserLesAnomalies: m.anonymiserLesAnomalies,
+  purgerLesContestations: m.purgerLesContestations,
+  purgerLesDementis: m.purgerLesDementis,
+}));
 vi.mock('../../../src/server/taches/completer-code-naf', () => ({
   completerLesCodesNaf: m.completerLesCodesNaf,
   portsDeBase: m.portsDeBaseNaf,
@@ -95,7 +105,7 @@ vi.mock('../../../src/server/integrations/recherche-entreprises/disjoncteur', ()
   creerDisjoncteur: m.creerDisjoncteur,
 }));
 vi.mock('../../../src/server/integrations/recherche-entreprises/limiteur', () => ({
-  limiteurDuRegistre: { global: m.limiteGlobal },
+  limiteurDuRegistre: { global: m.debitGlobal },
 }));
 
 import {
@@ -108,6 +118,7 @@ import {
   traitantsDeReception,
 } from '../../../src/server/taches/inscriptions';
 import { TACHE_DE_RECEPTION } from '../../../src/server/queue/workers/evenement-recu';
+import { PARAMETRES } from '../../../src/server/integrations/recherche-entreprises/parametres';
 
 const PRISMA = { nom: 'client-de-test' } as unknown as PrismaClient;
 const RECU = {
@@ -229,61 +240,140 @@ describe('REQ-QA-027 — le traitant de la candidature relit ses secrets à chaq
   });
 });
 
-describe('REQ-QA-027 — les tâches planifiées, branchées sur leur module', () => {
-  it('REQ-QA-027 : chaque tâche planifiée appelle SON module, avec le client et l’instant du passage, et rend son résultat', async () => {
-    const branchees = [
-      ['minimiser_candidatures', m.minimiserCandidatures, 3, { minimisees: 3 }],
-      ['contacts_purger', m.purgerLesContacts, { purgees: 1 }, { purgees: 1 }],
-      ['siren_refuses_purger', m.purgerLesSirenRefuses, { purges: 2 }, { purges: 2 }],
-      ['droits_contact_purger', m.purgerLesValeursDesDroits, { effacees: 4 }, { effacees: 4 }],
-      [
-        'droits_contact_anonymiser',
-        m.anonymiserLesTracesDesDroits,
-        { anonymisees: 5 },
-        { anonymisees: 5 },
-      ],
-    ] as const;
-    for (const [tache, module, rendu, attendu] of branchees) {
-      for (const f of Object.values(m)) f.mockReset();
-      module.mockResolvedValue(rendu);
-      const avant = Date.now();
-      expect([tache, await inscriptions(PRISMA, {})[tache]!()]).toEqual([tache, attendu]);
-      expect([tache, module.mock.calls.length]).toEqual([tache, 1]);
-      const [prisma, instant] = module.mock.calls[0]! as [unknown, Date];
-      expect([tache, prisma]).toEqual([tache, PRISMA]);
-      expect(instant).toBeInstanceOf(Date);
-      expect(instant.getTime()).toBeGreaterThanOrEqual(avant);
-      expect(instant.getTime()).toBeLessThanOrEqual(Date.now());
-    }
+// ── DM-62 : chaque passage planifié joue SA tâche, sur le client donné, à l'heure du système ─────
+
+describe('REQ-QA-027 — les passages planifiés reçoivent le client et l’heure du système', () => {
+  const INSTANT = new Date('2026-10-03T08:00:00.000Z');
+  beforeEach(() => {
+    vi.useFakeTimers({ now: INSTANT, toFake: ['Date'] });
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  const PURGES = [
+    ['contacts_purger', 'purgerLesContacts'],
+    ['siren_refuses_purger', 'purgerLesSirenRefuses'],
+    ['droits_contact_purger', 'purgerLesValeursDesDroits'],
+    ['droits_contact_anonymiser', 'anonymiserLesTracesDesDroits'],
+    ['anomalies_anonymiser', 'anonymiserLesAnomalies'],
+    ['contestations_purger', 'purgerLesContestations'],
+    ['dementis_purger', 'purgerLesDementis'],
+  ] as const;
+
+  for (const [cle, purge] of PURGES) {
+    it(`REQ-QA-027 : \`${cle}\` joue \`${purge}\` sur le client, à l'heure du système, et rend ses compteurs`, async () => {
+      const compteurs = { [cle]: 7 };
+      m[purge].mockResolvedValue(compteurs);
+      expect(await inscriptions(PRISMA)[cle]!()).toBe(compteurs);
+      expect(m[purge]).toHaveBeenCalledTimes(1);
+      expect(m[purge]).toHaveBeenCalledWith(PRISMA, INSTANT);
+      for (const [, autre] of PURGES) if (autre !== purge) expect(m[autre]).not.toHaveBeenCalled();
+    });
+  }
+
+  it('REQ-QA-027 : la minimisation des candidatures rend le nombre minimisé, à l’heure du système', async () => {
+    m.minimiserCandidatures.mockResolvedValue(4);
+    expect(await inscriptions(PRISMA).minimiser_candidatures!()).toEqual({ minimisees: 4 });
+    expect(m.minimiserCandidatures).toHaveBeenCalledWith(PRISMA, INSTANT);
+  });
+
+  it('REQ-QA-027 : la reprise des codes NAF reçoit ses ports, le tiers réglé par ses paramètres, un disjoncteur neuf et le débit partagé', async () => {
+    m.portsDeBaseNaf.mockReturnValue({ lire: 'lire', ecrire: 'ecrire' });
+    m.clientDuTiers.mockReturnValue('tiers');
+    m.creerDisjoncteur.mockReturnValue('disjoncteur');
+    m.completerLesCodesNaf.mockResolvedValue({ completes: 1 });
+    m.debitGlobal.mockResolvedValue('passe');
+    expect(await inscriptions(PRISMA).naf_completer!()).toEqual({ completes: 1 });
+    expect(m.portsDeBaseNaf).toHaveBeenCalledWith(PRISMA);
+    expect(m.clientDuTiers).toHaveBeenCalledWith({
+      fetch,
+      urlDeBase: PARAMETRES.urlDeBase.valeur,
+      delaiMs: PARAMETRES.delaiAttenteMs.valeur,
+    });
+    const ports = m.completerLesCodesNaf.mock.calls[0]![0] as {
+      lire: unknown;
+      ecrire: unknown;
+      tiers: unknown;
+      disjoncteur: unknown;
+      debit: (ms: number) => Promise<unknown>;
+      maintenantMs: () => number;
+    };
+    expect([ports.lire, ports.ecrire, ports.tiers, ports.disjoncteur]).toEqual([
+      'lire',
+      'ecrire',
+      'tiers',
+      'disjoncteur',
+    ]);
+    expect(await ports.debit(250)).toBe('passe');
+    expect(m.debitGlobal).toHaveBeenCalledWith(250);
+    expect(ports.maintenantMs()).toBe(INSTANT.getTime());
   });
 });
 
-describe('REQ-QA-027 — le canal d’alerte et les alertes d’attente, en fin de passage', () => {
-  it('REQ-QA-027 : sans jeton ou sans salon, vides compris, aucun canal ; avec les deux, un canal', () => {
-    expect(canalDAlerte({})).toBeNull();
-    expect(canalDAlerte({ TELEGRAM_BOT_TOKEN: '', TELEGRAM_CHAT_ID: 'salon' })).toBeNull();
-    expect(canalDAlerte({ TELEGRAM_BOT_TOKEN: 'jeton', TELEGRAM_CHAT_ID: '' })).toBeNull();
-    expect(canalDAlerte({ TELEGRAM_BOT_TOKEN: 'jeton' })).toBeNull();
-    expect(canalDAlerte({ TELEGRAM_CHAT_ID: 'salon' })).toBeNull();
-    const canal = canalDAlerte({ TELEGRAM_BOT_TOKEN: 'jeton', TELEGRAM_CHAT_ID: 'salon' });
-    expect(typeof canal?.alerter).toBe('function');
+describe('REQ-QA-027 — le battement de la réconciliation, lu en base', () => {
+  it('REQ-QA-027 : le dernier succès et les compteurs viennent du battement de `reconciliation_axionia`', async () => {
+    const succes = new Date('2026-10-02T00:00:00.000Z');
+    const findUnique = vi.fn(async () => ({
+      dernierSuccesAt: succes,
+      compteurs: { manquants: 2 },
+    }));
+    const b = battementDeLaReconciliation({ battement: { findUnique } } as unknown as PrismaClient);
+    expect(await b.dernierSucces()).toBe(succes);
+    expect(await b.derniersCompteurs()).toEqual({ manquants: 2 });
+    expect(findUnique).toHaveBeenCalledWith({
+      where: { tache: 'reconciliation_axionia' },
+      select: { dernierSuccesAt: true, compteurs: true },
+    });
   });
 
-  it('REQ-QA-027 : des alertes données sont jouées APRÈS le passage, et pas sans elles', async () => {
+  it('REQ-QA-027 : sans battement (premier passage), ni succès ni compteurs', async () => {
+    const findUnique = vi.fn(async () => null);
+    const b = battementDeLaReconciliation({ battement: { findUnique } } as unknown as PrismaClient);
+    expect(await b.dernierSucces()).toBeNull();
+    expect(await b.derniersCompteurs()).toBeNull();
+  });
+});
+
+describe('REQ-QA-027 — le canal d’alerte du serveur', () => {
+  it('REQ-QA-027 : sans jeton ou sans salon, absent ou vide, aucun canal', () => {
+    for (const env of [
+      {},
+      { TELEGRAM_CHAT_ID: '42' },
+      { TELEGRAM_BOT_TOKEN: 'jeton' },
+      { TELEGRAM_BOT_TOKEN: '', TELEGRAM_CHAT_ID: '42' },
+      { TELEGRAM_BOT_TOKEN: 'jeton', TELEGRAM_CHAT_ID: '' },
+    ]) {
+      expect(canalDAlerte(env)).toBeNull();
+    }
+  });
+
+  it('REQ-QA-027 : avec un jeton et un salon, un canal qui alerte', () => {
+    const canal = canalDAlerte({ TELEGRAM_BOT_TOKEN: 'jeton', TELEGRAM_CHAT_ID: '42' });
+    expect(canal).not.toBeNull();
+    expect(typeof canal!.alerter).toBe('function');
+  });
+});
+
+describe('REQ-QA-027 — l’alerte des attentes, en fin de passage', () => {
+  it('REQ-QA-027 : avec des alertes branchées, le passage lit les attentes ; sans, il ne les lit pas', async () => {
     m.reprendreLesAttentes.mockReturnValue(async () => 0);
     m.reprendreLesTraitants.mockReturnValue(async () => 0);
-    m.passerLeTravail.mockResolvedValue({ traites: 0 });
+    m.passerLeTravail.mockResolvedValue({});
     const lire = vi.fn(async () => []);
+    const alertes = { lireLesAttentes: lire, dernierSucces: vi.fn(), alerteur: null };
     const depot = { battre: vi.fn() };
-    const r = await passageDesEvenementsRecus(PRISMA, depot as never, {
-      lireLesAttentes: lire,
-      dernierSucces: async () => null,
-      alerteur: null,
-    })();
-    expect(r).toEqual({ traites: 0 });
+    await passageDesEvenementsRecus(PRISMA, depot as never, alertes as never)();
     expect(lire).toHaveBeenCalledTimes(1);
+    lire.mockClear();
+    await passageDesEvenementsRecus(PRISMA, depot as never, null)();
+    expect(lire).not.toHaveBeenCalled();
   });
+});
 
+// ── DM-60 : les témoins qui ferment les mutants de la composition ──────────────────────────────
+
+describe('REQ-QA-027 — les alertes d’attente dues, bornées par le dernier succès', () => {
   /** Une attente reçue à l'époque Unix : au-delà de tout seuil, donc DUE si rien ne l'a déjà vue. */
   const ATTENTE_ANCIENNE = {
     eventType: TypeEvenementRecu.candidature_recue,
@@ -417,47 +507,9 @@ describe('REQ-QA-027 — la réconciliation quotidienne, composée sur ses ports
       sansCanal.signaler({ genre: 'trou_rattrape', nombre: 1 })
     ).resolves.toBeUndefined();
   });
-
-  it('REQ-QA-027 : le battement de la réconciliation se lit en base — son dernier succès et ses compteurs, ou rien', async () => {
-    const findUnique = vi.fn();
-    const b = battementDeLaReconciliation({ battement: { findUnique } } as unknown as PrismaClient);
-    const succes = new Date('2026-10-03T00:00:00Z');
-    findUnique.mockResolvedValue({ dernierSuccesAt: succes, compteurs: { relus: 2 } });
-    expect(await b.dernierSucces()).toBe(succes);
-    expect(await b.derniersCompteurs()).toEqual({ relus: 2 });
-    expect(findUnique).toHaveBeenCalledWith({
-      where: { tache: 'reconciliation_axionia' },
-      select: { dernierSuccesAt: true, compteurs: true },
-    });
-    findUnique.mockResolvedValue(null);
-    expect(await b.dernierSucces()).toBeNull();
-    expect(await b.derniersCompteurs()).toBeNull();
-  });
 });
 
-describe('REQ-QA-027 — la reprise des codes NAF et la vérification du journal, branchées', () => {
-  it('REQ-QA-027 : la reprise NAF reçoit les ports de la base, le tiers, un disjoncteur, le débit partagé et l’horloge', async () => {
-    m.portsDeBaseNaf.mockReturnValue({ port: 'naf' });
-    m.clientDuTiers.mockReturnValue('tiers');
-    m.creerDisjoncteur.mockReturnValue('disjoncteur');
-    m.limiteGlobal.mockReturnValue('debit-rendu');
-    m.completerLesCodesNaf.mockResolvedValue({ completes: 2 });
-    expect(await inscriptions(PRISMA, {}).naf_completer!()).toEqual({ completes: 2 });
-    expect(m.portsDeBaseNaf).toHaveBeenCalledWith(PRISMA);
-    expect(m.clientDuTiers.mock.calls[0]![0]).toMatchObject({ fetch });
-    const ports = m.completerLesCodesNaf.mock.calls[0]![0] as {
-      port: string;
-      tiers: string;
-      disjoncteur: string;
-      debit: (ms: number) => unknown;
-      maintenantMs: () => number;
-    };
-    expect([ports.port, ports.tiers, ports.disjoncteur]).toEqual(['naf', 'tiers', 'disjoncteur']);
-    expect(ports.debit(1234)).toBe('debit-rendu');
-    expect(m.limiteGlobal).toHaveBeenCalledWith(1234);
-    expect(typeof ports.maintenantMs()).toBe('number');
-  });
-
+describe('REQ-QA-027 — la vérification du journal et l’adresse relue du traitant', () => {
   it('REQ-QA-027 : une chaîne vide fait échouer la vérification, en nommant la faute et « aucun » maillon', async () => {
     await expect(passageDuJournal(async () => [])()).rejects.toThrow(
       'chaine_rompue : chaine_vide, maillon aucun'

@@ -85,4 +85,51 @@ export const DUREES_DE_RETENTION = {
     renvois: [],
     verifieLe: '2026-10-03',
   },
+  /**
+   * DM-62 (REQ-DM-033) : une anomalie LEVÉE sans suite est anonymisée à ce délai de sa levée
+   * (`traite_at`). Elle n'est jamais gelée.
+   */
+  ANOMALIE_LEVEE_ANONYMISEE_APRES_MOIS: {
+    valeur: 2,
+    unite: 'mois',
+    source: 'REQ-DM-033, décision de Williams du 2026-10-03 (DM-62), texte de la juriste',
+    renvois: [],
+    verifieLe: '2026-10-03',
+  },
+  /**
+   * DM-62 (REQ-DM-033) : une anomalie CONFIRMÉE est anonymisée à ce délai de la fin de la mesure
+   * qu'elle a fondée (`mesure_terminee_at`), ou dès la levée d'un gel pour litige si elle vient
+   * plus tard ; jamais tant que la fin de la mesure n'est pas posée.
+   */
+  ANOMALIE_CONFIRMEE_ANONYMISEE_APRES_ANS: {
+    valeur: 5,
+    unite: 'ans',
+    source: 'REQ-DM-033, décision de Williams du 2026-10-03 (DM-62), texte de la juriste',
+    renvois: [],
+    verifieLe: '2026-10-03',
+  },
+  /**
+   * DM-62 (REQ-DM-043) : le texte et la réponse d'une contestation sont vidés à ce délai de la
+   * réponse, à défaut de la réception, ou dès la levée d'un gel pour litige si elle vient plus tard.
+   */
+  CONTESTATION_TEXTES_VIDES_APRES_ANS: {
+    valeur: 5,
+    unite: 'ans',
+    source: 'REQ-DM-043, décision de Williams du 2026-10-03 (DM-62), texte de la juriste',
+    renvois: [],
+    verifieLe: '2026-10-03',
+  },
+  /**
+   * DM-62 (REQ-DM-043) : le démenti exprès d'un contact (`non_confirme`, contrat art. 3.7), gardé
+   * chiffré au-delà de la purge du contact, est vidé à ce délai de la qualification (`cree_at`,
+   * forme d'A02).
+   */
+  DEMENTI_CONTACT_VIDE_APRES_ANS: {
+    valeur: 5,
+    unite: 'ans',
+    source:
+      'REQ-DM-043, décision de Williams du 2026-10-03 (démenti d’un contact), forme d’A02 (DM-62)',
+    renvois: [],
+    verifieLe: '2026-10-03',
+  },
 } as const satisfies Record<string, Seuil>;
