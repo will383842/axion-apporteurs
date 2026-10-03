@@ -169,7 +169,8 @@ l'article 4.
 
 **3.3 — Antériorité de la Société.** Aucune attribution ne peut porter sur une entreprise que la Société
 connaît déjà à la date de la déclaration, c'est-à-dire **cliente au titre d'une prestation facturée au
-cours des vingt-quatre derniers mois, ou destinataire d'un devis de moins de six mois**. Le contrôle est
+cours des vingt-quatre derniers mois, destinataire d'un devis de moins de six mois, ou ayant signé un devis
+qui n'a été ni entièrement facturé, ni annulé, quelle que soit sa date**. Le contrôle est
 opéré automatiquement sur les données dont la Société dispose à cet instant, et la déclaration est refusée
 immédiatement, le motif étant indiqué. **Lorsque l'antériorité est établie postérieurement à
 l'enregistrement, l'attribution est annulée, l'Apporteur en est informé avec le motif, et aucune commission
