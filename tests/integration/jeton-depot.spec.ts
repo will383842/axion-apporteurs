@@ -106,8 +106,8 @@ describe('REQ-SEC-005 — un seul jeton actif par apporteur, tenu par la base', 
          AND indexname = ${INDEX_UN_ACTIF_PAR_APPORTEUR}`;
     expect(INDEX_UN_ACTIF_PAR_APPORTEUR).toBe('jetons_depot_un_actif_par_apporteur');
     expect(lignes).toHaveLength(1);
-    expect(lignes[0].indexdef).toMatch(/^CREATE UNIQUE INDEX jetons_depot_un_actif_par_apporteur /);
-    expect(lignes[0].indexdef).toContain('(apporteur_id) WHERE (revoque_at IS NULL)');
+    expect(lignes[0]?.indexdef).toMatch(/^CREATE UNIQUE INDEX jetons_depot_un_actif_par_apporteur /);
+    expect(lignes[0]?.indexdef).toContain('(apporteur_id) WHERE (revoque_at IS NULL)');
   });
 
   it('REQ-SEC-005 : face ROUGE — un second jeton actif est refusé en SQL brut, l’index se nomme', async () => {
@@ -149,7 +149,7 @@ describe('REQ-DM-012 — l’émission : l’empreinte seule, le clair une fois'
     expect(ligne.revoqueAt).toBeNull();
     const brut = await base.prisma.$queryRaw<{ n: bigint }[]>`
       SELECT count(*) AS n FROM jetons_depot WHERE row_to_json(jetons_depot)::text LIKE ${`%${clair}%`}`;
-    expect(Number(brut[0].n)).toBe(0);
+    expect(Number(brut[0]?.n)).toBe(0);
   });
 
   it('REQ-SEC-005 : un second appel d’émission sur un apporteur qui a déjà un jeton actif est refusé par la base', async () => {
