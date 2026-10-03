@@ -77,3 +77,9 @@ CREATE TRIGGER qualifications_ajout_seul BEFORE UPDATE OR DELETE ON "qualificati
   FOR EACH ROW EXECUTE FUNCTION refuser_modification_sauf('purge:personne_interrogee_chiffre', 'purge:termes_reponse_chiffre', 'une_fois:contact_purge_at');
 CREATE TRIGGER qualifications_troncature BEFORE TRUNCATE ON "qualifications"
   FOR EACH STATEMENT EXECUTE FUNCTION refuser_modification_sauf('purge:personne_interrogee_chiffre', 'purge:termes_reponse_chiffre', 'une_fois:contact_purge_at');
+
+-- Le démenti (Williams, 2026-10-03 : « oui 5 ans ») : le nom et les termes d'une qualification
+-- `non_confirme` qui a éteint l'attribution sont gardés, chiffrés, au-delà de la purge du contact ;
+-- leur purge dédiée (DM-62) pose `contact_purge_at` plus tard. L'index partiel sert cette purge.
+CREATE INDEX "qualifications_dementi_a_purger_idx" ON "qualifications"("attribution_id")
+  WHERE "resultat_contact" = 'non_confirme' AND "contact_purge_at" IS NULL;
