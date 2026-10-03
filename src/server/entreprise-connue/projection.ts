@@ -1,7 +1,7 @@
 /**
  * La projection locale de l'antériorité (DM-10-P, REQ-DM-029, REQ-DM-028) : les événements d'axionia
- * gardés dans `evenements_recus` (`client.*`, `devis.emis`, `devis.signe`, `facture.emise`,
- * `avoir.emis`, `facture.annulee`) alimentent `devis_connus` et `entreprises_connues` ; la liste tenue
+ * gardés dans `evenements_recus` (les types de `TYPES_DE_L_ANTERIORITE` : le client, le devis émis
+ * puis signé, la facture, l'avoir et l'annulation) alimentent `devis_connus` et `entreprises_connues` ; la liste tenue
  * par la Société (`sirens_liste_noire`) fait l'origine `financeur`.
  *
  * La projection RECALCULE depuis les faits, elle n'incrémente jamais : le marquage `traite` n'est pas
