@@ -184,6 +184,7 @@
       "taches": [
         "DM-06",
         "DM-18",
+        "DM-63",
         "SEC-19"
       ]
     },
@@ -503,6 +504,7 @@
       "phase": 1,
       "taches": [
         "DM-07",
+        "DM-09",
         "DM-13",
         "DM-20",
         "DM-40",
@@ -1757,8 +1759,8 @@
     {
       "id": "REQ-ARG-026",
       "domaine": "argent",
-      "texte": "Sortie : à `resilie`, **quel que soit le motif** : les lignes `acquise` sont portées au dernier relevé, produit au lot suivant **sans le seuil de versement minimal** (HYP-E1-17) ; les lignes `prevue` restent `prevue` et deviennent `acquise` si l'encaissement survient dans les conditions du contrat art. 12.3 ; un solde ≤ 0 devient une `creance_apporteur` exportée en compta, sans virement. Les attributions `convertie` restent résolubles jusqu'à leur expiration. Aucune ligne `dechue` n'existe (REQ-DM-020, REQ-JUR-007).",
-      "source": "audit-outil §5 étape 12, D11 ; anti-abus §4 ; ARG-15, ARG-25 ; réécrite le 2026-09-03 — déchéance retirée du produit",
+      "texte": "Sortie : à `resilie`, **quel que soit le motif** : les lignes `acquise` sont portées au dernier relevé, produit au lot suivant **sans le seuil de versement minimal** (HYP-E1-17) ; les lignes `prevue` restent `prevue` et deviennent `acquise` si l'encaissement survient dans les conditions du contrat art. 12.3 ; un solde ≤ 0 devient une `creance_apporteur` exportée en compta, sans virement. Les attributions `signee` et `convertie` gardent leur état ; la commande signée avant la fin du contrat continue d'ouvrir droit à commission au fur et à mesure de ses encaissements, quelle qu'en soit la date (contrat art. 12.3). Aucune ligne `dechue` n'existe (REQ-DM-020, REQ-JUR-007).",
+      "source": "audit-outil §5 étape 12, D11 ; anti-abus §4 ; ARG-15, ARG-25 ; réécrite le 2026-09-03 — déchéance retirée du produit ; amendée le 2026-10-03, texte de la juriste (oubli de `signee`, et « jusqu'à leur expiration » contredisait l'art. 12.3), rattrapage 88",
       "statut": "active",
       "remplaceePar": null,
       "module": 15,
@@ -2417,7 +2419,6 @@
       "phase": 1,
       "taches": [
         "INT-T08-A",
-        "INT-T08-P",
         "QA-T19"
       ]
     },
@@ -5335,6 +5336,7 @@
         "UX-P1-18",
         "UX-P1-20",
         "UX-P1-50",
+        "UX-P1-52",
         "UX-P2-03",
         "UX-P2-05",
         "UX-P3-04",
@@ -6354,6 +6356,20 @@
       "phase": 1,
       "taches": [
         "INT-T71-A"
+      ]
+    },
+    {
+      "id": "REQ-JUR-067",
+      "domaine": "juridique",
+      "texte": "Aucun contrat d'apporteur n'est envoyé en signature tant que la chaîne des commissions n'est pas opérationnelle de bout en bout : le calcul des commissions (DM-15), leur acquisition à l'encaissement et les reprises (art. 4.2 à 4.5), le relevé et l'autofacturation (art. 5 et annexe 2), le paiement (T-ARG-033, REQ-ARG-026), et les effets de la fin du contrat sur les commissions (DM-18). Décision de Williams du 2026-10-03 : « non il n'y aura pas de contrats avant que cet outil sont fonctionnelet opérationnel ».",
+      "source": "texte de la juriste (2026-10-03), sur la décision de Williams du 2026-10-03 citée mot pour mot ; rattrapage 88",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": null,
+      "etape": null,
+      "phase": 1,
+      "taches": [
+        "INT-T12"
       ]
     },
     {
