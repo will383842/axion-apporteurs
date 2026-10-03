@@ -1401,6 +1401,129 @@
           display: flex;
         }
       }
+      /* epure:atelier — l'atelier replié par défaut (UX-P1-52) */
+      body:not(.atelier-ouvert) .atelier {
+        grid-template-columns: minmax(0, 1fr);
+      }
+      body:not(.atelier-ouvert) .etats,
+      body:not(.atelier-ouvert) .notes {
+        display: none;
+      }
+      body:not(.atelier-ouvert) .scene {
+        grid-column: 1;
+      }
+      .atelier-tete h1 small {
+        display: none;
+      }
+      .atelier-tete {
+        padding: 8px 20px;
+      }
+      .atelier-tete h1 {
+        font-size: 20px;
+      }
+      .fictif {
+        font-size: 14px;
+        padding: 4px 10px;
+      }
+      #voir-atelier[aria-pressed='true'] {
+        background: var(--atelier-texte);
+        color: var(--atelier-surface);
+      }
+      /* epure:ecran — contraste et hiérarchie (UX-P1-52). Mocha franc sur ivoire, carte
+         blanche détachée, bouton terracotta plein ; aucun gris pâle pour une information utile. */
+      .defile.centre {
+        background: var(--fond);
+      }
+      .defile.centre .panneau {
+        background: var(--surface);
+        border: 1px solid var(--surface-2);
+        border-radius: 16px;
+        box-shadow:
+          0 2px 4px rgba(42, 37, 32, 0.08),
+          0 12px 32px rgba(42, 37, 32, 0.12);
+        padding: 32px;
+        width: min(420px, 100%);
+        gap: 20px;
+        color: var(--texte);
+      }
+      .defile.centre .panneau h2 {
+        font-size: 28px;
+        font-weight: 800;
+        letter-spacing: -0.01em;
+      }
+      .defile.centre .panneau .etiquette {
+        font-weight: 700;
+        color: var(--texte);
+      }
+      .defile.centre .panneau input {
+        min-height: 52px;
+        font-size: 18px;
+        border: 2px solid var(--bord);
+      }
+      .defile.centre .panneau .c-bouton {
+        min-height: 52px;
+        font-size: 18px;
+        width: 100%;
+      }
+      .defile.centre .panneau .aide {
+        margin: 0;
+        font-size: 15px;
+        color: var(--texte-doux);
+        text-align: center;
+      }
+      .defile.centre .panneau .doux {
+        color: var(--texte-doux);
+      }
+      /* Toutes les pages : le fond ivoire, des cartes blanches détachées, un titre qui domine. */
+      .app .defile {
+        background: var(--fond);
+      }
+      .app .defile .carte {
+        background: var(--surface);
+        border: 1px solid var(--surface-2);
+        border-radius: 14px;
+        box-shadow:
+          0 1px 2px rgba(42, 37, 32, 0.08),
+          0 6px 18px rgba(42, 37, 32, 0.1);
+      }
+      .app .c-titre {
+        font-size: 30px;
+        font-weight: 800;
+        letter-spacing: -0.01em;
+        color: var(--texte);
+      }
+      .app .doux {
+        color: var(--texte-doux);
+      }
+      /* Un état vide ou un refus : une carte pleine, pas un cadre pointillé. */
+      .app .defile .vide {
+        background: var(--surface);
+        border: 1px solid var(--surface-2);
+        border-radius: 14px;
+        box-shadow:
+          0 1px 2px rgba(42, 37, 32, 0.08),
+          0 6px 18px rgba(42, 37, 32, 0.1);
+      }
+      /* Les tableaux sur une carte blanche, les adresses dans la police du texte. */
+      .app .defile table {
+        background: var(--surface);
+        border-radius: 12px;
+        box-shadow:
+          0 1px 2px rgba(42, 37, 32, 0.08),
+          0 6px 18px rgba(42, 37, 32, 0.1);
+      }
+      .app .mono {
+        font-family: inherit;
+        font-size: 15px;
+      }
+      .defile.centre .panneau .rangee {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px 16px;
+        margin: 0;
+      }
 
       /* charte:fin */
       .cache {
@@ -1424,6 +1547,7 @@
       </h1>
       <p class="fictif">Données fictives : aucune entreprise, personne ni adresse réelles.</p>
       <div class="reglages" role="group" aria-label="Réglages de la maquette">
+        <button type="button" id="voir-atelier" aria-pressed="false">États et notes</button>
         <button type="button" data-largeur="1280" data-hauteur="800" aria-pressed="true">
           Bureau 1280
         </button>
@@ -1822,10 +1946,7 @@
                         >
                       </div>
                     </fieldset>
-                    <p class="doux">
-                      L’invitation expire si elle n’est pas acceptée à temps ; la date s’affiche
-                      dans la liste. Le rôle se change ensuite à tout moment, sauf le vôtre.
-                    </p>
+                    <p class="doux">Le rôle pourra être changé ensuite.</p>
                     <p class="rangee">
                       <a class="c-bouton" href="#etat-liste">Envoyer l’invitation</a
                       ><a class="c-bouton second" href="#etat-liste">Annuler</a>
@@ -1967,8 +2088,8 @@
                   <div class="dialogue" role="group" aria-label="Confirmer la désactivation">
                     <h3>Désactiver Sophie Démo ?</h3>
                     <p>
-                      Sa session se ferme <b>immédiatement</b>, sur tous ses appareils. Ce qu’elle a
-                      fait reste au journal. Vous pourrez réactiver le compte plus tard.
+                      Sa session se ferme <b>tout de suite</b>. Vous pourrez réactiver le compte
+                      plus tard.
                     </p>
                     <label class="champ"
                       ><span class="etiquette"
@@ -2342,11 +2463,7 @@
                         <path d="M8 11V8a4 4 0 018 0v3" /></svg
                       >Votre propre rôle ne se change pas ici
                     </p>
-                    <p>
-                      Personne ne modifie ses propres droits : c’est un autre administrateur qui
-                      change votre rôle ou désactive votre compte. Cela garantit qu’un compte volé
-                      ne peut pas s’ouvrir davantage.
-                    </p>
+                    <p>Seul un autre administrateur peut changer votre rôle.</p>
                   </div>
                   <div class="rangee ecarte">
                     <h2 class="c-titre">Utilisateurs de la console</h2>
@@ -2576,10 +2693,7 @@
                   <h2 class="c-titre">Utilisateurs de la console</h2>
                   <div class="vide">
                     <h3>Personne d’autre n’utilise la console</h3>
-                    <p>
-                      Invitez la personne qui qualifiera les dépôts, ou celle qui tiendra les lots.
-                      Elle reçoit un lien ; c’est vous qui fixez son rôle.
-                    </p>
+                    <p>Invitez une personne et choisissez son rôle.</p>
                     <a class="c-bouton" href="#etat-inviter">Inviter une personne</a>
                   </div>
                 </div>
@@ -2851,11 +2965,7 @@
                         <path d="M12 10v5M12 18v.5" /></svg
                       >La désactivation n’a pas été enregistrée
                     </p>
-                    <p>
-                      Le serveur n’a pas répondu : le compte de Sophie Démo est
-                      <b>toujours actif</b>. Recommencez ; un second essai ne crée pas de doublon au
-                      journal.
-                    </p>
+                    <p>Le compte est <b>toujours actif</b>. Réessayez.</p>
                     <p><a class="c-bouton" href="#etat-desactiver">Recommencer</a></p>
                   </div>
                   <div class="rangee ecarte">
@@ -3071,10 +3181,7 @@
                         <path d="M8 11V8a4 4 0 018 0v3" /></svg
                       >Cette page n’est pas ouverte à votre rôle
                     </p>
-                    <p>
-                      Les utilisateurs de la console sont gérés par les administrateurs. Pour
-                      changer le rôle d’une personne, ou le vôtre, adressez-vous à l’un d’eux.
-                    </p>
+                    <p>Seuls les administrateurs gèrent les utilisateurs.</p>
                     <p class="rangee">
                       <a class="c-bouton" href="console-cadre.html#etat-qualifieur"
                         >Retour à mon accueil</a
@@ -3562,6 +3669,25 @@
               champ.focus();
             }
           }
+        });
+      })();
+    </script>
+    <script>
+      // epure:atelier — ouvrir ou replier la liste des états et les notes, puis réajuster l'écran.
+      (function () {
+        var b = document.getElementById('voir-atelier');
+        var ajuster = function () {
+          var z = document.getElementById('zoom-ajuster');
+          if (z) z.click();
+        };
+        if (b)
+          b.addEventListener('click', function () {
+            var ouvert = document.body.classList.toggle('atelier-ouvert');
+            b.setAttribute('aria-pressed', String(ouvert));
+            setTimeout(ajuster, 0);
+          });
+        window.addEventListener('load', function () {
+          setTimeout(ajuster, 50);
         });
       })();
     </script>

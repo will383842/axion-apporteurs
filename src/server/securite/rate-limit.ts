@@ -80,6 +80,27 @@ export const COMPTEURS = {
     ancre: 'par email',
     verifieLe: '2026-09-19',
   },
+  // SEC-54 — la VÉRIFICATION du code à six chiffres : deux compteurs distincts de ceux de la demande
+  // de lien, en plus du plafond de cinq essais par lien que la base tient. Sujet : une EMPREINTE
+  // (adresse réseau, adresse saisie normalisée), jamais l'adresse en clair. Échec fermé.
+  'magic:code-ip': {
+    prefixe: 'magic:',
+    limite: 20,
+    fenetreSecondes: 900,
+    surPanne: 'refuser',
+    source: 'REQ-SEC-002',
+    ancre: 'par hash IP au code',
+    verifieLe: '2026-10-03',
+  },
+  'magic:code-courriel': {
+    prefixe: 'magic:',
+    limite: 10,
+    fenetreSecondes: 900,
+    surPanne: 'refuser',
+    source: 'REQ-SEC-002',
+    ancre: 'par email au code',
+    verifieLe: '2026-10-03',
+  },
   'depot:ip': {
     prefixe: 'depot:',
     limite: 20,
