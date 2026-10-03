@@ -438,6 +438,18 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
     string,
     { total: number; porte: number; temoins: number; raison: string }
   > = {
+    // QA-T64 — la forge lue une fois par porte A : UNE sortie différée.
+    'scripts/gates/forge-instantane.ts': {
+      total: 1,
+      porte: 1,
+      temoins: 0,
+      raison:
+        'QA-T64 — `forge:instantane`, REQ-GOV-006 et REQ-QA-013 : la forge lue UNE fois en tête de ' +
+        'la porte A. `process.exitCode = 1` : sortie DIFFÉRÉE, quand RUNNER_TEMP manque ou qu’une ' +
+        'lecture échoue ou ne rend pas du JSON — aucun instantané partiel. Le refus est éprouvé par ' +
+        'forge-instantane.spec.ts sur `poserLInstantane` ; aucun témoin de `REFUS` ne voit le binaire ' +
+        'sortir en 1 (il parlerait à la forge). Elle ne lit aucun fichier suivi. Dette DÉCLARÉE.',
+    },
     // ── GOV-037 : UNE sortie, à code VARIABLE ───────────────────────────────────────────────
     // 🔑 CE QUE LE CLIQUET NE PEUT PAS SAVOIR, ET QUI CHANGE LE TÉMOIN QU'IL FAUT. Le motif
     // `process.exit(\s*(?!0\s*\))` compte cette sortie comme non nulle : il lit une EXPRESSION,

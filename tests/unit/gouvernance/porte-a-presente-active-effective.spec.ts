@@ -320,10 +320,12 @@ const ALTERATIONS: readonly Alteration[] = [
     quoi: 'l’`env:` d’une étape RETIRÉ',
     famille: 'porte_a_alteree',
     nomme: ['Tests', 'env'],
+    // Le bloc ENTIER : depuis QA-T64, l'étape porte aussi l'instantané de la forge (`GOV_FORGE`).
     ci: (t) =>
       remplacerUneFois(
         t,
-        '        run: pnpm test\n        env:\n          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}\n',
+        '        run: pnpm test\n        env:\n          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}\n' +
+          '          GOV_FORGE: ${{ runner.temp }}/forge-instantane.json\n',
         '        run: pnpm test\n'
       ),
   },

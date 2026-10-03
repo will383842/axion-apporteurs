@@ -39,6 +39,14 @@
 - [ ] **Provisionnement** (REQ-INT-031) : aucune ressource nommée `axion-partners-postgres`,
       `axion-partners-redis` ou `axion-partners` n'existe hors du projet `Axion-Partners` de la plateforme.
       _Porteur : Williams (constat dans la plateforme)._
+- [ ] **Rôle d'exécution du serveur** (QA-T62, REQ-DM-024) : le secret `PARTNERS_DB_EXECUTION_SECRET`
+      (au moins 32 caractères parmi `A-Z a-z 0-9 _ . ~ -`) est posé dans l'environnement `production`
+      de la forge, `Provisionnement Coolify` est relancé (il pose `DATABASE_MIGRATION_URL` et
+      `DATABASE_URL`), puis l'application est redéployée : l'entrée de l'image provisionne
+      `partners_app` et relance le serveur sous lui. Constat en production, connecté sous
+      `DATABASE_URL` : `rolsuper` faux, aucune appartenance à `partners_journal`, et
+      `ALTER TABLE evenements DISABLE TRIGGER ALL` refusé en `42501`. _Porteur : Williams (secret),
+      constat de l'auteur._
 - [ ] **Données personnelles dans le dépôt public** : tant que la garde `detectPii` n'est pas armée,
       toute PR qui touche `tests/fixtures/**` ou `docs/spec/**` passe par un scan à la main de la lentille
       `securite`. La case se coche à l'armement de `detectPii`. _Porteur : la lentille `securite`,

@@ -19725,7 +19725,8 @@
         "tests/unit/qualite/provisionnement-coolify.spec.ts",
         "tests/unit/qualite/env-fail-fast.spec.ts",
         "scripts/gates/gate-c.sh",
-        "tests/integration/sondes-de-vie.spec.ts"
+        "tests/integration/sondes-de-vie.spec.ts",
+        "tests/unit/securite/role-d-execution.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -19878,7 +19879,7 @@
       "externe": null,
       "estimateDays": 0.75,
       "statut": "a_faire",
-      "acceptance": "Versée au rattrapage 53 (suite de QA-T63, limite d'API GitHub ; règle de débit de la coordination). (1) Une étape `pnpm forge:instantane` en tête du job gate-a lit la forge UNE fois et écrit l'instantané (JSON) dans `$RUNNER_TEMP`, sous un nom fixe ; chaque étape de la porte A qui lit la forge reçoit `GOV_FORGE` dans son `env:`, figé dans `PORTE_A_FIGEE` (aucune écriture dans l'environnement du job, refusée par gov:conventions) ; `gov:etat` (ses trois lectures), `gov:trace` (les PR fusionnées et leur corps) et `tests/setup-forge.ts` (les mêmes quatre lectures, sans relire la forge quand `GOV_FORGE` est posée) lisent l'instantané par un lecteur unique, `scripts/gates/forge-instantane.ts`. `gov:pr` n'y est pas branché : en porte A, il tourne sans argument et ne fait aucune lecture de la forge (mesuré). Ses lectures ne partent que sous `--pr` ou `--apres-fusion`, à la main avant une fusion, et dépendent du numéro de la PR. Brancher gov:pr exigerait un repli sur `gh`, que le point (2) interdit. (2) `GOV_FORGE` posé mais absent, illisible ou d'une autre forme → échec NOMMÉ, jamais un vert sur une forge non lue. (3) PRÉSÉANCE : `GOV_ETAT_GH` posé l'emporte. (4) CONDITION DE LA LENTILLE SÉCURITÉ : `GOV_FORGE` est REFUSÉ (échec nommé) hors du contexte prévu (hors CI, hors vitest) : un instantané forgé ne fait jamais passer une porte réelle. (5) Réserve acceptée : une revue publiée pendant le job n'est pas vue par ce run ; le rejeu la voit. (6) TÉMOIN `tests/unit/gouvernance/forge-instantane.spec.ts` : un run fait une lecture par type ; instantané corrompu rouge ; `GOV_FORGE` hors contexte rouge. (7) MESURE avant/après (appels à l'API par porte A) obligatoire dans la PR. `package.json` et `.github/workflows/ci.yml` : label `role:architecte`. Auteur : A06, après QA-T63.",
+      "acceptance": "Versée au rattrapage 53 (suite de QA-T63, limite d'API GitHub ; règle de débit de la coordination). (1) Une étape `pnpm forge:instantane` du job gate-a, placée après les vues et avant toute garde qui lit la forge (exactitude, rattrapage 77), lit la forge UNE fois et écrit l'instantané (JSON) dans `$RUNNER_TEMP`, sous un nom fixe ; chaque étape de la porte A qui lit la forge reçoit `GOV_FORGE` dans son `env:`, figé dans `PORTE_A_FIGEE` (aucune écriture dans l'environnement du job, refusée par gov:conventions) ; `gov:etat` (ses trois lectures), `gov:trace` (les PR fusionnées et leur corps) et `tests/setup-forge.ts` (les mêmes quatre lectures, sans relire la forge quand `GOV_FORGE` est posée) lisent l'instantané par un lecteur unique, `scripts/gates/forge-instantane.ts`. `gov:pr` n'y est pas branché : en porte A, il tourne sans argument et ne fait aucune lecture de la forge (mesuré). Ses lectures ne partent que sous `--pr` ou `--apres-fusion`, à la main avant une fusion, et dépendent du numéro de la PR. Brancher gov:pr exigerait un repli sur `gh`, que le point (2) interdit. (2) `GOV_FORGE` posé mais absent, illisible ou d'une autre forme → échec NOMMÉ, jamais un vert sur une forge non lue. (3) PRÉSÉANCE : `GOV_ETAT_GH` posé l'emporte. (4) CONDITION DE LA LENTILLE SÉCURITÉ : `GOV_FORGE` est REFUSÉ (échec nommé) hors du contexte prévu (hors CI, hors vitest) : un instantané forgé ne fait jamais passer une porte réelle. (5) Réserve acceptée : une revue publiée pendant le job n'est pas vue par ce run ; le rejeu la voit. (6) TÉMOIN `tests/unit/gouvernance/forge-instantane.spec.ts` : un run fait une lecture par type ; instantané corrompu rouge ; `GOV_FORGE` hors contexte rouge. (7) MESURE avant/après (appels à l'API par porte A) obligatoire dans la PR. `package.json` et `.github/workflows/ci.yml` : label `role:architecte`. Auteur : A06, après QA-T63.",
       "tests": {
         "REQ-GOV-006": [
           "tests/unit/gouvernance/forge-instantane.spec.ts"
@@ -20460,7 +20461,10 @@
         "prisma/schema.prisma",
         "prisma/migrations/",
         "docs/GLOSSAIRE.md",
-        "tests/unit/domaine/qualite-et-profession.spec.ts"
+        "tests/unit/domaine/qualite-et-profession.spec.ts",
+        "src/server/acces/for-apporteur.ts",
+        "tests/unit/securite/acces-scope.spec.ts",
+        "tests/unit/securite/champs-rendus-apporteur.spec.ts"
       ],
       "schema": true,
       "sensible": [],
@@ -20474,7 +20478,7 @@
       "externe": null,
       "estimateDays": 0.5,
       "statut": "a_faire",
-      "acceptance": "Extraite de DM-11 au rattrapage 55 (arbitrage A01 sur l'avis d'A02 : de VRAIS enums, ADR-0022 §5 et §16, et PAS de colonne texte d'attente, dont la conversion ne serait pas additive). Les deux colonnes `apporteurs.qualite_exercice` et `apporteurs.profession_reglementee` (nullables) entrent AVEC leur enum dans une migration additive. (1) `QualiteExercice`, liste FERMÉE d'A07 (2026-10-02) : `commercant` « commerçant », `societe_commerciale` « société commerciale », `artisan` « artisan », `profession_liberale` « professionnel libéral » ; les deux premières rendent applicable la clause attributive de juridiction (art. 48 CPC), les deux autres renvoient au droit commun (TÉMOIN qui le fige) ; « micro-entrepreneur » n’est pas une valeur (un régime, pas une qualité), et la liste est FERMÉE à ces quatre valeurs (motifs d’A07 hors dépôt). Question SOLDÉE (rattrapage 67) : la décision de Williams du 2026-10-02 sur l'avis d'A07 garde `QualiteExercice` à ces quatre valeurs ; le statut juridique est une liste distincte, rangée dans ces qualités (DM-56). (2) `ProfessionReglementee` : les noms d'ADR-0022 §16, `expertise_comptable`, `auxiliaire_services_financiers`, `intermediaire_assurance` (codes NAF 69.20Z, 66.19B, 66.22Z, HYP-JUR-PROF-REGLEMENTEES), liste figée par un TÉMOIN. (3) Glossaire §4 : les deux enums, sans synonymes interdits. Auteur : A05. Lentilles schema (A02) et A07.",
+      "acceptance": "Extraite de DM-11 au rattrapage 55 (arbitrage A01 sur l'avis d'A02 : de VRAIS enums, ADR-0022 §5 et §16, et PAS de colonne texte d'attente, dont la conversion ne serait pas additive). Les deux colonnes `apporteurs.qualite_exercice` et `apporteurs.profession_reglementee` (nullables) entrent AVEC leur enum dans une migration additive. (1) `QualiteExercice`, liste FERMÉE d'A07 (2026-10-02) : `commercant` « commerçant », `societe_commerciale` « société commerciale », `artisan` « artisan », `profession_liberale` « professionnel libéral » ; les deux premières rendent applicable la clause attributive de juridiction (art. 48 CPC), les deux autres renvoient au droit commun (TÉMOIN qui le fige) ; « micro-entrepreneur » n’est pas une valeur (un régime, pas une qualité), et la liste est FERMÉE à ces quatre valeurs (motifs d’A07 hors dépôt). Question SOLDÉE (rattrapage 67) : la décision de Williams du 2026-10-02 sur l'avis d'A07 garde `QualiteExercice` à ces quatre valeurs ; le statut juridique est une liste distincte, rangée dans ces qualités (DM-56). (2) `ProfessionReglementee` : les noms d'ADR-0022 §16, `expertise_comptable`, `auxiliaire_services_financiers`, `intermediaire_assurance` (codes NAF 69.20Z, 66.19B, 66.22Z, HYP-JUR-PROF-REGLEMENTEES), liste figée par un TÉMOIN. (3) Glossaire §4 : les deux enums, sans synonymes interdits. Auteur : A05. Lentilles schema (A02) et A07. CHAMPS RENDUS (rattrapage 77) : qualiteExercice et professionReglementee sont classées RENDUES à l'apporteur, sous un libellé et jamais sous le code brut ; tout autre verdict interne reste TU (arbitrage de la coordination, avis d'A07 et de la sécurité). La couche cloisonnée (`src/server/acces/for-apporteur.ts`) et son témoin (`tests/unit/securite/acces-scope.spec.ts`) le portent.",
       "tests": {
         "REQ-JUR-022": [
           "tests/unit/domaine/qualite-et-profession.spec.ts"
@@ -21309,7 +21313,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "Versée au rattrapage 68 : sortie d'UX-P1-41 (écart C15 de la vérification de bout en bout) sur la mesure d'A06, avec l'accord de la coordination du 2026-10-02, parce que la garde a son propre câblage. Elle se code APRÈS UX-P1-41 et QA-T33. (1) La garde `jur:copy-indicative` d'axion-ia (JUR-T29) est transposée dans Partners sur `src/content/**` et `docs/maquettes/**` : toute mention de rémunération reste en formulation indicative, et aucun taux ni montant n'est présenté comme ferme. (2) CÂBLAGE, sur le patron de `jur:lexique-social` : ses scripts `jur:copy-indicative-partners` et `jur:copy-indicative-partners:prove` dans `package.json` (REQ-GOV-008 : jamais `jur:copy-indicative`, qui désigne au registre la garde d'axion-ia ; arbitrage de la coordination, rattrapage 74) (cette PR passe par A02), son étape dans `.github/workflows/ci.yml`, son entrée dans `PORTE_A_FIGEE` (`scripts/gates/gov-conventions.ts`), ses sorties non nulles DÉCLARÉES (`scripts/gates/registre-des-refus.ts`, `tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts`) ; l'entrée de `docs/gates.json` se pose APRÈS l'étape de CI (sinon `garde_ecrite_jamais_appelee`). (3) TÉMOIN ROUGE : la phrase d'états vides que C15 a réécrite (une promesse de gain dès la signature du client, contraire à l'art. 4.2), reposée dans une copie de test, fait rougir la garde ; le dépôt réel la laisse verte. Auteur : A06. IDENTIFIANT (rattrapage 72) : la garde s'enregistre dans `docs/gates.json` sous `jur:copy-indicative-partners`, car `jur:copy-indicative` y est déjà pris par celle d'axion-ia (JUR-T29) ; l'instantané de `tests/unit/espace/vocabulaire-et-micro-copy.spec.ts` qui fige la phrase d'`etats-vides.ts` est mis à jour avec la tournure d'A07.",
       "tests": {
         "REQ-JUR-001": [
@@ -21318,7 +21322,16 @@
         "REQ-JUR-002": [
           "tests/unit/juridique/copy-indicative.spec.ts"
         ]
-      }
+      },
+      "branch": "t/qa-t69",
+      "owner": "A06",
+      "pr": 518,
+      "attestation": {
+        "pr": 518,
+        "sha": "591225f3c9a8045b111f55759f1fd85036a577b4",
+        "fusionneeAt": "2026-10-03T01:35:36Z"
+      },
+      "motif": null
     },
     {
       "id": "DM-57",
