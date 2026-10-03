@@ -237,16 +237,17 @@ describe('REQ-JUR-025 — chaque retenue a son témoin, module chargé à neuf',
   });
 });
 
-describe('REQ-JUR-025 — la notice d’A07 sur la personne déclarée, dérivée du registre', () => {
-  it('REQ-JUR-025 : TÉMOIN — les destinataires de TRT-APPORTEURS nomment la personne déclarée, mot pour mot, sans ses coordonnées', () => {
+describe('REQ-JUR-025 — la notice d’A07 sur le contact déclaré, dérivée du registre', () => {
+  it('REQ-JUR-025 : TÉMOIN — les destinataires de TRT-APPORTEURS nomment le contact déclaré, mot pour mot, sans ses coordonnées ; « personne déclarée » est réservé à l’art. 2.6', () => {
     const destinataires = lue(REGISTRE).politique.rubriques.find((r) => r.cle === 'destinataires');
     expect(destinataires?.contenu).toEqual([
       {
         type: 'texte',
         texte: expect.stringContaining(
-          'la personne que vous déclarez, qui reçoit vos prénom et nom dans la demande de confirmation, jamais vos coordonnées'
+          "le contact de l'entreprise que l'apporteur déclare, qui reçoit ses prénom et nom dans la demande de confirmation ou lors d'une prise de contact de la Société, jamais ses coordonnées"
         ),
       },
     ]);
+    expect(lisible(lue(REGISTRE))).not.toMatch(/personne que vous déclarez/);
   });
 });
