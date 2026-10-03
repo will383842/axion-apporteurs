@@ -4,7 +4,7 @@
  *
  * PUR. Ce module ne lit ni la base ni l'heure : il rend ce qu'il faut écrire — la ligne de
  * `decisions_candidature`, le statut d'arrivée de l'apporteur, et la charge de son changement de
- * statut (type `apporteur_statut_modifie`, `src/domain/evenement/charges.ts`). L'écrivain les pose
+ * statut (type `apporteur_statut_modifie`, schéma fermé de `CHARGES_PAR_TYPE`). L'écrivain les pose
  * dans UNE transaction.
  *
  * LA MATRICE DÉCIDE, PAS CE MODULE. Un résultat se traduit en un code de transition de la matrice
