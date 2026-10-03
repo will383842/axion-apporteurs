@@ -45,6 +45,7 @@ import type {
   Attribution,
   ChangementCourriel,
   CourrielEnvoye,
+  DecisionCandidature,
   DepotRefuse,
   IdentiteFacturation,
   JetonDepot,
@@ -65,6 +66,7 @@ export const MODELES_CLOISONNES = [
   'attribution',
   'changementCourriel',
   'courrielEnvoye',
+  'decisionCandidature',
   'depotRefuse',
   'identiteFacturation',
   'jetonDepot',
@@ -84,6 +86,7 @@ export type ModeleCloisonne = (typeof MODELES_CLOISONNES)[number];
  * cette liste à `pg_trigger`, sur les modèles cloisonnés.
  */
 export const MODELES_EN_AJOUT_SEUL = [
+  'decisionCandidature',
   'depotRefuse',
   'personneDeclaree',
 ] as const satisfies readonly ModeleCloisonne[];
@@ -117,6 +120,9 @@ export const CLES_REFUSEES = {
   ],
   changementCourriel: ['id', 'apporteurId', 'apporteur'],
   courrielEnvoye: ['id', 'apporteurId', 'apporteur', 'attribution'],
+  // CPL-T06 : une décision naît de la console, jamais de l'espace — son auteur est une clé refusée,
+  // et la base l'exige : aucune création n'aboutit par cette couche.
+  decisionCandidature: ['id', 'apporteurId', 'apporteur', 'auteurId', 'auteur'],
   depotRefuse: ['id', 'apporteurId', 'apporteur'],
   // DM-11 : la pièce rib référencée est une référence vérifiée, jamais une relation écrite de l'espace.
   identiteFacturation: ['id', 'apporteurId', 'apporteur', 'pieceKyc', 'pieceKycType'],
@@ -191,6 +197,7 @@ export const RELATIONS = {
   ],
   changementCourriel: ['apporteur'],
   courrielEnvoye: ['apporteur', 'attribution'],
+  decisionCandidature: ['apporteur', 'auteur'],
   depotRefuse: ['apporteur'],
   identiteFacturation: ['apporteur', 'pieceKyc'],
   jetonDepot: ['apporteur', 'attributions'],
@@ -272,6 +279,8 @@ export const CHAMPS_RENDUS = {
   ],
   changementCourriel: ['id', 'demandeAt', 'confirmeAt', 'annuleAt'],
   courrielEnvoye: ['id', 'gabarit', 'statut', 'demandeAt', 'envoyeAt'],
+  // CPL-T06 : l'issue de sa candidature et sa date, que son statut dit déjà ; jamais le motif.
+  decisionCandidature: ['id', 'resultat', 'decideeAt'],
   depotRefuse: ['id', 'siren', 'motif', 'canal', 'refuseAt'],
   identiteFacturation: ['id', 'siren', 'regimeTva', 'debutAt', 'finAt'],
   jetonDepot: ['id', 'creeAt', 'revoqueAt', 'dernierUsageAt'],
@@ -337,6 +346,15 @@ export const CHAMPS_TUS = {
   ],
   changementCourriel: ['apporteurId', 'emailChiffre', 'emailHash', 'tokenHash', 'kid'],
   courrielEnvoye: ['apporteurId', 'emailHash', 'fournisseurMessageId', 'erreur', 'attributionId'],
+  // CPL-T06 : le motif (interne, purgé à l'échéance) et sa purge, l'auteur de la console, et la
+  // présence au webinaire, déclarative et lue par rien (REQ-JUR-013).
+  decisionCandidature: [
+    'apporteurId',
+    'justification',
+    'justificationPurgeeAt',
+    'webinaireSuivi',
+    'auteurId',
+  ],
   // DM-53 : la date de la purge du SIREN, une trace technique ; le SIREN, lui, reste rendu (NULL une fois purgé).
   depotRefuse: ['apporteurId', 'sirenPurgeAt'],
   identiteFacturation: ['apporteurId', 'pieceKycId', 'pieceKycType'],
@@ -455,6 +473,10 @@ type WRefus = Prisma.DepotRefuseWhereInput;
 type CRefus = Prisma.DepotRefuseUncheckedCreateInput;
 type URefus = Prisma.DepotRefuseUncheckedUpdateManyInput;
 type ORefus = Prisma.DepotRefuseOrderByWithRelationInput;
+type WDecision = Prisma.DecisionCandidatureWhereInput;
+type CDecision = Prisma.DecisionCandidatureUncheckedCreateInput;
+type UDecision = Prisma.DecisionCandidatureUncheckedUpdateManyInput;
+type ODecision = Prisma.DecisionCandidatureOrderByWithRelationInput;
 type WPersonne = Prisma.PersonneDeclareeWhereInput;
 type CPersonne = Prisma.PersonneDeclareeUncheckedCreateInput;
 type UPersonne = Prisma.PersonneDeclareeUncheckedUpdateManyInput;
@@ -507,6 +529,13 @@ export interface AccesApporteur {
     SansProprietaire<CAttribution>,
     UAttribution,
     OAttribution
+  >;
+  decisionCandidature: VueCloisonnee<
+    Rendu<DecisionCandidature, 'decisionCandidature'>,
+    WDecision,
+    SansProprietaire<CDecision>,
+    UDecision,
+    ODecision
   >;
   depotRefuse: VueCloisonnee<
     Rendu<DepotRefuse, 'depotRefuse'>,

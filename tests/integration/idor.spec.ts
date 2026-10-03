@@ -367,6 +367,15 @@ function donneesNeuves(modele: ModeleCloisonne, lienMagiqueId: string): Record<s
         entrepriseAVerifier: false,
         lienInteretDeclare: false,
       };
+    // CPL-T06 : semée HORS de la couche (voir `SEMES_HORS_COUCHE`) — l'auteur de la console est une
+    // clé refusée à l'espace, et la base l'exige.
+    case 'decisionCandidature':
+      return {
+        resultat: 'vivier',
+        justification: 'motif factice du cloisonnement',
+        auteurId: consoleId,
+        decideeAt: creeAt,
+      };
     case 'depotRefuse':
       return { siren: '123456789', motif: 'file_complete', canal: 'espace', refuseAt: creeAt };
     case 'personneDeclaree':
@@ -422,7 +431,9 @@ function modification(modele: ModeleCloisonne, n: number): Record<string, unknow
   switch (modele) {
     case 'attribution':
       return { versionQualification: n };
-    // Les deux tables en ajout seul : une modification que la BASE refuse, quel que soit l'auteur.
+    // Les tables en ajout seul : une modification que la BASE refuse, quel que soit l'auteur.
+    case 'decisionCandidature':
+      return { resultat: 'retenu' };
     case 'depotRefuse':
       return { motif: 'insincerite' };
     case 'personneDeclaree':
@@ -463,9 +474,11 @@ const brut = (o: object): never => o as never;
  * Les modèles semés HORS de la couche : l'attribution d'un apporteur porte une version de grille
  * (REQ-DM-014), clé que l'espace n'écrit jamais — le dépôt passe par son propre chemin serveur, sous
  * verrou. La batterie l'attaque par la couche comme les autres ; seule sa naissance est directe.
+ * CPL-T06 : la décision sur une candidature, de même — son auteur est un utilisateur de la console.
  */
-const SEMES_HORS_COUCHE: readonly ModeleCloisonne[] = ['attribution'];
+const SEMES_HORS_COUCHE: readonly ModeleCloisonne[] = ['attribution', 'decisionCandidature'];
 let grilleId: string;
+let consoleId: string;
 
 /** Ce qui est semé : pour chaque modèle, la ligne de A et la ligne de B. */
 const lignes = Object.fromEntries([]) as Record<ModeleCloisonne, { a: string; b: string }>;
@@ -566,6 +579,13 @@ beforeAll(async () => {
   journalise.$on('query', (e) => requetes.push(e.query));
   A = await apporteur();
   B = await apporteur();
+  consoleId = (
+    await base.prisma.utilisateurConsole.create({
+      // Désactivé : un compte actif exige une adresse chiffrée (CHECK), sans rapport avec l'essai.
+      data: { role: 'qualifieur', creeAt: new Date(t0), desactiveAt: new Date(t0) },
+      select: { id: true },
+    })
+  ).id;
   grilleId = (
     await base.prisma.grilleCommission.create({
       data: {

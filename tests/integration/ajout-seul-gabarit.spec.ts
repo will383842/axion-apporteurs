@@ -258,6 +258,7 @@ describe('REQ-DM-031 — chaque argument du gabarit nomme une colonne qui existe
         AND c.relpersistence = 'p'`;
     const tables = new Set(branchements.map((b) => b.table));
     expect([...tables].sort()).toEqual([
+      'decisions_candidature',
       'demandes_droits_contact',
       'depots_refuses',
       'personnes_declarees',
