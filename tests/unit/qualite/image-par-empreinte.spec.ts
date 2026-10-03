@@ -13,17 +13,20 @@
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import {
-  etiquetteParEmpreinte,
-  jugerLEmpreinteServie,
-} from '../../../scripts/gates/deploy-verify';
+import { etiquetteParEmpreinte, jugerLEmpreinteServie } from '../../../scripts/gates/deploy-verify';
 
 const HEX = 'a'.repeat(64);
 const EMPREINTE = `sha256:${HEX}`;
 
 describe('REQ-GOV-014 — l’image déployée est tirée par empreinte', () => {
   it('REQ-GOV-014 : TÉMOIN — une étiquette mobile au lieu d’une empreinte est refusée, nommée', () => {
-    for (const mobile of ['latest', 'sha-1a2b3c4', 'sha256:court', `sha256:${HEX.toUpperCase()}`, ''])
+    for (const mobile of [
+      'latest',
+      'sha-1a2b3c4',
+      'sha256:court',
+      `sha256:${HEX.toUpperCase()}`,
+      '',
+    ])
       expect(() => etiquetteParEmpreinte(mobile)).toThrow(/empreinte_attendue/);
     expect(etiquetteParEmpreinte(EMPREINTE)).toBe(`sha256-${HEX}`);
   });
