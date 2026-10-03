@@ -1,14 +1,14 @@
 // @req REQ-SEC-058
 /**
  * SEC-58 — le journal des accès à la console, par identifiants seuls, jugé sans base : un faux client
- * enregistre chaque appel, dans l'ordre. La base réelle (ajout seul, CHECK, purge sous marqueur) est
- * jouée par `tests/integration/journal-acces-console.spec.ts`.
+ * enregistre chaque appel, dans l'ordre. La base réelle (ajout seul par le gabarit commun, CHECK,
+ * purge qui vide les identifiants) est jouée par `tests/integration/journal-des-acces-console.spec.ts`.
  *
  * CE QUE CE FICHIER GARDE : la trace est écrite AVANT la lecture, dans la même transaction, et une
  * trace qui échoue ne laisse rien lire (échec fermé) ; une cible inconnue est refusée sans trace ; une
- * connexion se trace sans cible ; la purge pose son marqueur, supprime par lots l'échu seul et s'arrête
- * sur un lot vide ; aucune lecture de coordonnées ne contourne le lecteur unique ; le marqueur de la
- * purge n'apparaît que dans la migration et dans la tâche de purge.
+ * connexion réussie se trace sans cible, avec l'empreinte tronquée de l'adresse réseau ; la purge
+ * VIDE l'utilisateur, la cible et l'empreinte de l'échu seul, pose sa date, par lots, et s'arrête sur
+ * un lot vide ; aucune lecture de coordonnées ne contourne le lecteur unique ; rien ne supprime.
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
@@ -20,18 +20,27 @@ import {
   journaliserConnexionConsole,
   lireCoordonneesDeLApporteur,
   lireCoordonneesDuContact,
-} from '../../../src/server/console/journal-acces';
+} from '../../../src/server/console/journal-des-acces';
 import {
   LOT_DE_PURGE_DU_JOURNAL_DES_ACCES,
   limiteDuJournalDesAcces,
   purgerLeJournalDesAccesConsole,
 } from '../../../src/server/taches/purger-journal-acces-console';
-import type { ClesPii } from '../../../src/server/securite/pii';
+import { clesPii } from '../../../src/server/securite/pii';
+import { NOMS_DES_SECRETS } from '../../../src/lib/env';
 
 const UTILISATEUR = '0190a5c0-0000-7000-8000-000000000001';
 const APPORTEUR = '0190a5c0-0000-7000-8000-000000000002';
 const ATTRIBUTION = '0190a5c0-0000-7000-8000-000000000003';
-const CLES = {} as ClesPii;
+const IP_HASH = '0123456789abcdef';
+/** Des clés de test, fabriquées à l'exécution (jamais un secret réel). */
+const CLES = clesPii({
+  NODE_ENV: 'test',
+  ...Object.fromEntries(
+    NOMS_DES_SECRETS.map((n) => [n, `temoin-sec-58-${n.toLowerCase()}-`.padEnd(48, '0')])
+  ),
+  PII_ENCRYPTION_KEY: 'e'.repeat(64),
+});
 
 type Appel = { quoi: string; args: unknown };
 
@@ -70,7 +79,7 @@ describe('REQ-SEC-058 — la trace d’une lecture de coordonnées précède la 
     const f = fauxClient();
     await lireCoordonneesDeLApporteur(
       f.client,
-      { utilisateurConsoleId: UTILISATEUR, apporteurId: APPORTEUR },
+      { utilisateurConsoleId: UTILISATEUR, apporteurId: APPORTEUR, ipHash: IP_HASH },
       CLES
     );
     expect(f.appels.map((a) => a.quoi)).toEqual([
@@ -84,6 +93,7 @@ describe('REQ-SEC-058 — la trace d’une lecture de coordonnées précède la 
         utilisateurConsoleId: UTILISATEUR,
         nature: 'lecture_coordonnees_apporteur',
         cibleId: APPORTEUR,
+        ipHash: IP_HASH,
       }),
     });
   });
@@ -92,7 +102,7 @@ describe('REQ-SEC-058 — la trace d’une lecture de coordonnées précède la 
     const f = fauxClient();
     await lireCoordonneesDuContact(
       f.client,
-      { utilisateurConsoleId: UTILISATEUR, attributionId: ATTRIBUTION },
+      { utilisateurConsoleId: UTILISATEUR, attributionId: ATTRIBUTION, ipHash: null },
       CLES
     );
     expect(f.appels.map((a) => a.quoi)).toEqual([
@@ -113,7 +123,7 @@ describe('REQ-SEC-058 — la trace d’une lecture de coordonnées précède la 
     await expect(
       lireCoordonneesDeLApporteur(
         f.client,
-        { utilisateurConsoleId: UTILISATEUR, apporteurId: APPORTEUR },
+        { utilisateurConsoleId: UTILISATEUR, apporteurId: APPORTEUR, ipHash: null },
         CLES
       )
     ).rejects.toThrow('trace refusée');
@@ -125,24 +135,34 @@ describe('REQ-SEC-058 — la trace d’une lecture de coordonnées précède la 
     await expect(
       lireCoordonneesDuContact(
         f.client,
-        { utilisateurConsoleId: UTILISATEUR, attributionId: ATTRIBUTION },
+        { utilisateurConsoleId: UTILISATEUR, attributionId: ATTRIBUTION, ipHash: null },
         CLES
       )
     ).rejects.toBeInstanceOf(CibleInconnue);
     expect(f.appels.map((a) => a.quoi)).toEqual(['attribution.findUnique']);
   });
 
-  it('REQ-SEC-058 : une connexion se trace sans cible, et la trace ne porte que des identifiants', async () => {
+  it('REQ-SEC-058 : une connexion réussie se trace sans cible, avec l’empreinte tronquée, et rien d’autre', async () => {
     const f = fauxClient();
-    await journaliserConnexionConsole(f.client, UTILISATEUR);
+    await journaliserConnexionConsole(f.client, {
+      utilisateurConsoleId: UTILISATEUR,
+      ipHash: IP_HASH,
+    });
     expect(f.appels).toHaveLength(1);
     const { data } = f.appels[0]!.args as { data: Record<string, unknown> };
     expect(data).toMatchObject({
       utilisateurConsoleId: UTILISATEUR,
       nature: 'connexion',
       cibleId: null,
+      ipHash: IP_HASH,
     });
-    expect(Object.keys(data).sort()).toEqual(['cibleId', 'id', 'nature', 'utilisateurConsoleId']);
+    expect(Object.keys(data).sort()).toEqual([
+      'cibleId',
+      'id',
+      'ipHash',
+      'nature',
+      'utilisateurConsoleId',
+    ]);
   });
 });
 
@@ -151,67 +171,65 @@ describe('REQ-SEC-058 — la trace d’une lecture de coordonnées précède la 
 const MAINTENANT = new Date('2027-10-03T12:00:00.000Z');
 
 function fauxClientDePurge(lots: number[], compte: (n: number) => number = (n) => n) {
-  const suite: string[] = [];
   const lectures: unknown[] = [];
+  const ecritures: { where: unknown; data: unknown }[] = [];
   let rang = 0;
-  const tx = {
-    $executeRaw: async (morceaux: TemplateStringsArray) => {
-      suite.push(`sql:${morceaux.join('?')}`);
-      return 0;
-    },
+  const client = {
     journalAccesConsole: {
       findMany: async (a: unknown) => {
-        suite.push('findMany');
         lectures.push(a);
         const n = lots[rang] ?? 0;
         rang += 1;
         return Array.from({ length: n }, (_, i) => ({ id: `j-${rang}-${i}` }));
       },
-      deleteMany: async (a: { where: { id: { in: string[] } } }) => {
-        suite.push('deleteMany');
+      updateMany: async (a: { where: { id: { in: string[] } }; data: unknown }) => {
+        ecritures.push(a);
         return { count: compte(a.where.id.in.length) };
       },
     },
-  };
-  const client = {
-    $transaction: async (f: (t: typeof tx) => Promise<unknown>) => f(tx),
   } as unknown as PrismaClient;
-  return { client, suite, lectures };
+  return { client, lectures, ecritures };
 }
 
-describe('REQ-SEC-058 — la purge à l’échéance, sous marqueur', () => {
-  it('REQ-SEC-058 : la durée vient de la SSOT des durées, en mois', () => {
-    expect(SEUILS.JOURNAL_ACCES_CONSOLE_CONSERVATION_MOIS.unite).toBe('mois');
-    expect(SEUILS.JOURNAL_ACCES_CONSOLE_CONSERVATION_MOIS.valeur).toBeGreaterThan(0);
-    expect(limiteDuJournalDesAcces(MAINTENANT).getTime()).toBeLessThan(MAINTENANT.getTime());
+describe('REQ-SEC-058 — la purge à l’échéance vide les identifiants, la ligne nue reste', () => {
+  it('REQ-SEC-058 : la durée vient de la SSOT des durées : douze mois, décision de Williams', () => {
+    expect(SEUILS.JOURNAL_ACCES_CONSOLE_CONSERVATION_MOIS).toMatchObject({
+      valeur: 12,
+      unite: 'mois',
+    });
+    expect(limiteDuJournalDesAcces(MAINTENANT)).toEqual(new Date('2026-10-03T12:00:00.000Z'));
   });
 
-  it('REQ-SEC-058 : TÉMOIN — le marqueur est posé AVANT toute suppression, local à la transaction', async () => {
-    const f = fauxClientDePurge([2]);
-    await purgerLeJournalDesAccesConsole(f.client, MAINTENANT);
-    expect(f.suite[0]).toContain("set_config('partners.purge_journal_acces', 'on', true)");
-    expect(f.suite.indexOf('deleteMany')).toBeGreaterThan(0);
-  });
-
-  it('REQ-SEC-058 : TÉMOIN — chaque lecture vise l’échu seul, ordonnée, bornée au lot', async () => {
+  it('REQ-SEC-058 : TÉMOIN — chaque lecture vise l’échu NON purgé, ordonnée, bornée au lot', async () => {
     const f = fauxClientDePurge([1]);
     await purgerLeJournalDesAccesConsole(f.client, MAINTENANT);
     expect(f.lectures[0]).toEqual({
-      where: { survenuAt: { lt: limiteDuJournalDesAcces(MAINTENANT) } },
+      where: { survenuAt: { lt: limiteDuJournalDesAcces(MAINTENANT) }, purgeAt: null },
       select: { id: true },
       orderBy: [{ survenuAt: 'asc' }, { id: 'asc' }],
       take: LOT_DE_PURGE_DU_JOURNAL_DES_ACCES,
     });
   });
 
+  it('REQ-SEC-058 : TÉMOIN — la purge VIDE l’utilisateur, la cible et l’empreinte, et pose sa date, en une écriture par lot', async () => {
+    const f = fauxClientDePurge([2]);
+    await purgerLeJournalDesAccesConsole(f.client, MAINTENANT);
+    expect(f.ecritures).toEqual([
+      {
+        where: { id: { in: ['j-1-0', 'j-1-1'] }, purgeAt: null },
+        data: { utilisateurConsoleId: null, cibleId: null, ipHash: null, purgeAt: MAINTENANT },
+      },
+    ]);
+  });
+
   it('REQ-SEC-058 : TÉMOIN — par lots jusqu’à épuisement, la somme est celle de la base, et un lot qui n’enlève rien arrête', async () => {
     const f = fauxClientDePurge([LOT_DE_PURGE_DU_JOURNAL_DES_ACCES, 3]);
     expect(await purgerLeJournalDesAccesConsole(f.client, MAINTENANT)).toEqual({
-      supprimees: LOT_DE_PURGE_DU_JOURNAL_DES_ACCES + 3,
+      purgees: LOT_DE_PURGE_DU_JOURNAL_DES_ACCES + 3,
     });
     const g = fauxClientDePurge([2, 2, 2], () => 0);
-    expect(await purgerLeJournalDesAccesConsole(g.client, MAINTENANT)).toEqual({ supprimees: 0 });
-    expect(g.suite.filter((s) => s === 'deleteMany')).toHaveLength(1);
+    expect(await purgerLeJournalDesAccesConsole(g.client, MAINTENANT)).toEqual({ purgees: 0 });
+    expect(g.ecritures).toHaveLength(1);
   });
 });
 
@@ -225,9 +243,9 @@ function fichiers(racine: string): string[] {
   });
 }
 
-describe('REQ-SEC-058 — aucune lecture ne contourne la trace', () => {
+describe('REQ-SEC-058 — aucune lecture ne contourne la trace, et rien ne supprime', () => {
   it('REQ-SEC-058 : TÉMOIN — sous la console, seul le lecteur unique déchiffre', () => {
-    const LECTEUR = 'src/server/console/journal-acces.ts';
+    const LECTEUR = 'src/server/console/journal-des-acces.ts';
     const fautifs = [...fichiers('src/server/console'), ...fichiers('src/app/console')]
       .filter((f) => f !== LECTEUR)
       .filter((f) => /\bdecryptPii\b/.test(readFileSync(f, 'utf8')));
@@ -235,17 +253,12 @@ describe('REQ-SEC-058 — aucune lecture ne contourne la trace', () => {
     expect(readFileSync(LECTEUR, 'utf8')).toMatch(/\bdecryptPii\b/);
   });
 
-  it('REQ-SEC-058 : TÉMOIN — le marqueur de la purge n’apparaît que dans la migration et dans la tâche de purge', () => {
-    const MARQUEUR = 'partners.purge_journal_acces';
-    const admis = [
-      'prisma/migrations/20261003001600_journal_acces_console/migration.sql',
-      'src/server/taches/purger-journal-acces-console.ts',
-    ];
-    const porteurs = [...fichiers('src'), ...fichiers('scripts'), ...fichiers('prisma')]
-      .concat(admis)
-      .filter((f, i, t) => t.indexOf(f) === i && existsSync(f))
-      .filter((f) => readFileSync(f, 'utf8').includes(MARQUEUR))
-      .sort();
-    expect(porteurs).toEqual([...admis].sort());
+  it('REQ-SEC-058 : TÉMOIN — aucun code ne supprime une trace : la purge vide, elle n’efface pas', () => {
+    const fautifs = fichiers('src').filter((f) =>
+      /journalAccesConsole\.(delete|deleteMany)\b|DELETE FROM\s+"?journal_acces_console/.test(
+        readFileSync(f, 'utf8')
+      )
+    );
+    expect(fautifs).toEqual([]);
   });
 });
