@@ -56,6 +56,25 @@ function entier(c: Charge, champ: string): number | null {
   return typeof v === 'number' && Number.isInteger(v) ? v : null;
 }
 
+/** Levée quand une charge n'a pas le montant que le contrat exige : rien n'est projeté. */
+export class ChargeIncomplete extends Error {
+  constructor(champ: string) {
+    super(`charge sans ${champ}`);
+    this.name = 'ChargeIncomplete';
+  }
+}
+
+/**
+ * Un montant EXIGÉ par le contrat, lu strictement. Absent ou mal formé, il n'est JAMAIS lu comme zéro :
+ * un zéro libérerait en silence une entreprise cliente (remarque de la juriste sur DM-10-P). La
+ * réception refuse déjà une telle charge ; ici, la projection échoue nommée plutôt que d'ouvrir.
+ */
+export function montantRequis(c: Charge, champ: string): number {
+  const v = entier(c, champ);
+  if (v === null) throw new ChargeIncomplete(champ);
+  return v;
+}
+
 function instant(c: Charge, champ: string): Date | null {
   const v = texte(c, champ);
   if (v === null) return null;
@@ -145,13 +164,14 @@ export async function recalculerDevis(db: Client, devisRef: string): Promise<str
       ? new Date(Math.min(emisLu.getTime(), signeAt.getTime()))
       : (emisLu ?? signeAt);
   if (emisAt === null) return null;
-  const montant = dernierSigne === null ? 0 : (entier(dernierSigne, 'montantTotalHtCents') ?? 0);
+  // Un devis seulement émis n'a pas de montant (contrat v3) ; signé, son montant est exigé.
+  const montant = dernierSigne === null ? 0 : montantRequis(dernierSigne, 'montantTotalHtCents');
   const facture = factureHtDuDevis(
     factures.map((f) => ({
-      montantHtCents: entier(f, 'montantHtCents') ?? 0,
+      montantHtCents: montantRequis(f, 'montantHtCents'),
       annulee: sansSuite.has(texte(f, 'factureId') ?? ''),
     })),
-    avoirs.map((a) => ({ montantHtCents: entier(a, 'montantHtCents') ?? 0 }))
+    avoirs.map((a) => ({ montantHtCents: montantRequis(a, 'montantHtCents') }))
   );
 
   const ligne = {
@@ -196,8 +216,8 @@ async function datesDesFactures(db: Client, s: string): Promise<Date[]> {
     const avoirs =
       id === '' ? [] : await charges(db, [TypeEvenementRecu.avoir_emis], 'avoirDeFactureId', id);
     const facturee = estPrestationFacturee(
-      { montantHtCents: entier(f, 'montantHtCents') ?? 0, annulee: sansSuite.has(id) },
-      avoirs.map((a) => ({ montantHtCents: entier(a, 'montantHtCents') ?? 0 }))
+      { montantHtCents: montantRequis(f, 'montantHtCents'), annulee: sansSuite.has(id) },
+      avoirs.map((a) => ({ montantHtCents: montantRequis(a, 'montantHtCents') }))
     );
     const d = instant(f, 'emiseLe');
     if (facturee && d !== null) dates.push(d);
