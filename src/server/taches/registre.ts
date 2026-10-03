@@ -30,6 +30,11 @@ export const TACHES = {
   naf_completer: { req: 'REQ-DM-046' },
   /** DM-59 — l'effacement, à échéance, de la valeur d'une rectification demandée par le contact. */
   droits_contact_purger: { req: 'REQ-JUR-065' },
+  /**
+   * INT-T08-P — la réconciliation quotidienne avec axion-ia : relecture de sa file depuis la plus
+   * haute séquence reçue, rejeu des trous (`src/server/jobs/reconciliation.ts`).
+   */
+  reconciliation_axionia: { req: 'REQ-INT-013' },
 } as const satisfies Readonly<Record<string, { req: `REQ-${string}` }>>;
 
 export type NomDeTache = keyof typeof TACHES;
