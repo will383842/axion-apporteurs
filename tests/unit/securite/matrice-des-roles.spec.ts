@@ -29,6 +29,7 @@ import { existsSync } from 'node:fs';
 import { ConsoleRole, type PrismaClient } from '@prisma/client';
 import { kidDe } from '../../../src/lib/env';
 import { DUREES_AUTH } from '../../../src/server/auth/durees';
+import { jugerChangementDeRole } from '../../../src/server/console/utilisateurs/regles';
 import {
   consommerLien,
   empreinteDeSessionConsole,
@@ -1410,5 +1411,70 @@ describe('REQ-SEC-023 — la garde `securite:roles` confronte le disque à la ma
     const sortie = `${r.stdout ?? ''}${r.stderr ?? ''}`;
     expect(sortie).toMatch(/couple\(s\) écran-rôle confronté\(s\)/);
     expect(r.status).toBe(0);
+  });
+});
+
+// ── 5. SEC-30 : la version de session de la console, et le refus de l'auto-changement de rôle ─────
+
+describe('REQ-SEC-003 — SEC-30 : un changement de rôle ou une désactivation coupe toutes les sessions', () => {
+  const ligne = (versionSession: number, versionUtilisateur: number) => ({
+    ...valide(),
+    sessionVersion: versionSession,
+    utilisateurConsole: {
+      id: 'u-admin',
+      role: 'admin' as const,
+      desactiveAt: null,
+      sessionVersion: versionUtilisateur,
+    },
+  });
+
+  it('REQ-SEC-003 : TÉMOIN À DEUX FACES — une session d’une version antérieure à celle de son utilisateur est refusée ; la même version passe', () => {
+    expect(jugerAcces('action:lever_gel', ligne(0, 1), T0, KID)).toEqual({
+      ok: false,
+      motif: 'version_perimee',
+    });
+    expect(jugerAcces('action:lever_gel', ligne(1, 1), T0, KID).ok).toBe(true);
+  });
+
+  it('REQ-SEC-003 : le motif de la version périmée entre dans la liste fermée', () => {
+    expect(MOTIFS_DE_REFUS_CONSOLE).toContain('version_perimee');
+  });
+});
+
+describe('REQ-SEC-023 — SEC-30 : personne ne change son propre rôle', () => {
+  const admin = { id: 'u-admin', role: 'admin' as const };
+
+  it('REQ-SEC-023 : TÉMOIN — l’auto-changement de rôle est refusé, nommé ; le changement du rôle d’un autre par un admin passe', () => {
+    expect(
+      jugerChangementDeRole({
+        acteur: admin,
+        cible: { id: 'u-admin', role: 'admin' },
+        vers: 'lecteur',
+      })
+    ).toEqual({ ok: false, motif: 'auto_changement' });
+    expect(
+      jugerChangementDeRole({
+        acteur: admin,
+        cible: { id: 'u-q', role: 'qualifieur' },
+        vers: 'admin',
+      })
+    ).toEqual({ ok: true });
+  });
+
+  it('REQ-SEC-023 : TÉMOIN — un non-admin ne change aucun rôle ; un changement vers le même rôle n’est pas un changement', () => {
+    expect(
+      jugerChangementDeRole({
+        acteur: { id: 'u-c', role: 'comptable' },
+        cible: { id: 'u-q', role: 'qualifieur' },
+        vers: 'lecteur',
+      })
+    ).toEqual({ ok: false, motif: 'droit_absent' });
+    expect(
+      jugerChangementDeRole({
+        acteur: admin,
+        cible: { id: 'u-q', role: 'qualifieur' },
+        vers: 'qualifieur',
+      })
+    ).toEqual({ ok: false, motif: 'sans_changement' });
   });
 });
