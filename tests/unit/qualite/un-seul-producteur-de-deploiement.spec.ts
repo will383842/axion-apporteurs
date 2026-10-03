@@ -10,7 +10,7 @@
  *   2. `deploy:coolify` — secrets absents : SAUTÉ, 0, et CHAQUE secret manquant est nommé dans une
  *      annotation `::warning::` (arbitrage -d7 sur délégation de Williams du 2026-09-29 : un `main`
  *      rouge en permanence finit désarmé) ; secrets présents et plateforme qui refuse : ROUGE.
- *      Secrets présents et plateforme qui accepte : l'étiquette `sha-<7>` est posée PUIS le
+ *      Secrets présents et plateforme qui accepte : l'EMPREINTE de l'image `sha-<7>` est posée PUIS le
  *      déploiement déclenché, dans cet ordre — la plateforme tire, elle ne construit rien.
  *   3. La structure : un job de déploiement après la publication, sur `main` seulement, une file
  *      par environnement qui n'annule jamais un déploiement commencé, sans droit d'écriture sur le
@@ -24,11 +24,24 @@ import { spawn } from 'node:child_process';
 import { createServer, type IncomingMessage, type Server } from 'node:http';
 import { readFileSync } from 'node:fs';
 import { lireYaml } from '../../../scripts/lib/lire-yaml';
+import { politiqueDeContenu } from '../../../src/server/securite/entetes';
 
 const SCRIPT = 'scripts/gates/deploy-verify.ts';
 const TSX = 'node_modules/tsx/dist/cli.mjs';
 const SHA = 'a'.repeat(40);
 const AUTRE = 'b'.repeat(40);
+/** QA-T65 : l'empreinte de l'image `sha-<7>` publiée, et l'étiquette que la plateforme reçoit pour elle. */
+const EMPREINTE = `sha256:${'c'.repeat(64)}`;
+const ETIQUETTE = `sha256-${'c'.repeat(64)}`;
+/**
+ * Ce que sert une application ATTERRIE : le sha, et la politique de contenu de la configuration, avec
+ * son propre nonce. `deploy:verify` compare aussi la politique servie à celle de la configuration :
+ * un faux serveur qui ne la servirait pas serait un atterrissage refusé.
+ */
+const ATTERRIE = {
+  'x-partners-build-sha': SHA,
+  'content-security-policy': politiqueDeContenu({ nonce: 'nonceDuTemoin01', developpement: false }),
+};
 
 type Requete = { methode: string; url: string; auth: string | undefined; corps: string };
 let serveurs: Server[] = [];
@@ -66,6 +79,22 @@ async function serveur(
   return { url: `http://127.0.0.1:${adresse.port}`, recues };
 }
 
+/**
+ * QA-T65 : le registre factice, où l'image `sha-<7>` est publiée et rend son empreinte (lecture
+ * anonyme, comme sur ghcr.io). Les variables qu'il faut au déployeur pour le lire.
+ */
+async function registre(): Promise<Record<string, string>> {
+  const r = await serveur(
+    (q): { statut: number; entetes: Record<string, string>; corps: string } =>
+      q.url.startsWith('/token')
+        ? { statut: 200, entetes: {}, corps: '{"token":"jeton-anonyme"}' }
+        : q.url === `/v2/proprio/depot/manifests/sha-${SHA.slice(0, 7)}`
+          ? { statut: 200, entetes: { 'docker-content-digest': EMPREINTE }, corps: '' }
+          : { statut: 404, entetes: {}, corps: '' }
+  );
+  return { PARTNERS_REGISTRE_URL: r.url, GITHUB_REPOSITORY: 'proprio/depot' };
+}
+
 /** Asynchrone : le serveur de test tourne dans CE processus, un appel synchrone le bloquerait. */
 function lancer(
   args: string[],
@@ -75,7 +104,12 @@ function lancer(
     // Aucune variable du poste ne fuit dans le témoin : ce que le test fait varier, il le pose (RM-11).
     const propre: NodeJS.ProcessEnv = { ...process.env };
     for (const k of Object.keys(propre)) {
-      if (/^(COOLIFY_|PARTNERS_URL_PUBLIQUE|GITHUB_SHA)/.test(k)) delete propre[k];
+      if (
+        /^(COOLIFY_|PARTNERS_URL_PUBLIQUE|PARTNERS_REGISTRE_URL|GITHUB_SHA|GITHUB_REPOSITORY)/.test(
+          k
+        )
+      )
+        delete propre[k];
     }
     const p = spawn(process.execPath, [TSX, SCRIPT, ...args], { env: { ...propre, ...env } });
     let sortie = '';
@@ -91,7 +125,7 @@ describe('deploy:verify — l’atterrissage se lit sur l’en-tête servi', () 
   it('sur le sha servi, sort en zéro', async () => {
     const app = await serveur(() => ({
       statut: 200,
-      entetes: { 'x-partners-build-sha': SHA },
+      entetes: ATTERRIE,
       corps: '',
     }));
     const r = await lancer(['--verifier', SHA, ...RAPIDE], { PARTNERS_URL_PUBLIQUE: app.url });
@@ -135,7 +169,7 @@ describe('deploy:verify — l’atterrissage se lit sur l’en-tête servi', () 
   it('lit le sha dans GITHUB_SHA quand aucun n’est donné', async () => {
     const app = await serveur(() => ({
       statut: 200,
-      entetes: { 'x-partners-build-sha': SHA },
+      entetes: ATTERRIE,
       corps: '',
     }));
     const r = await lancer(['--verifier', ...RAPIDE], {
@@ -187,26 +221,33 @@ describe('deploy:coolify — la plateforme tire l’image, ou le saut est NOMMÉ
       COOLIFY_API_TOKEN: 'jeton-factice-de-test',
       COOLIFY_APP_UUID: 'uuid-factice',
       PARTNERS_URL_PUBLIQUE: 'http://127.0.0.1:1',
+      ...(await registre()),
     });
     expect(r.code).not.toBe(0);
     expect(r.sortie).toContain('401');
     expect(r.sortie).not.toContain('jeton-factice-de-test');
   });
 
-  it('secrets présents, plateforme qui accepte : étiquette sha-<7> posée PUIS déploiement, puis atterrissage vérifié', async () => {
+  it('secrets présents, plateforme qui accepte : EMPREINTE de l’image posée PUIS déploiement, puis atterrissage vérifié et empreinte relue', async () => {
     const coolify = await serveur((q) =>
       q.methode === 'PATCH'
         ? { statut: 200, entetes: {}, corps: '{"uuid":"uuid-factice"}' }
-        : {
-            statut: 200,
-            entetes: {},
-            corps:
-              '{"deployments":[{"message":"ok","resource_uuid":"uuid-factice","deployment_uuid":"d1"}]}',
-          }
+        : q.methode === 'GET'
+          ? {
+              statut: 200,
+              entetes: {},
+              corps: JSON.stringify({ docker_registry_image_tag: ETIQUETTE }),
+            }
+          : {
+              statut: 200,
+              entetes: {},
+              corps:
+                '{"deployments":[{"message":"ok","resource_uuid":"uuid-factice","deployment_uuid":"d1"}]}',
+            }
     );
     const app = await serveur(() => ({
       statut: 200,
-      entetes: { 'x-partners-build-sha': SHA },
+      entetes: ATTERRIE,
       corps: '',
     }));
     const r = await lancer(['--declencher', ...RAPIDE], {
@@ -215,15 +256,14 @@ describe('deploy:coolify — la plateforme tire l’image, ou le saut est NOMMÉ
       COOLIFY_API_TOKEN: 'jeton-factice-de-test',
       COOLIFY_APP_UUID: 'uuid-factice',
       PARTNERS_URL_PUBLIQUE: app.url,
+      ...(await registre()),
     });
     expect(r.sortie).not.toContain('jeton-factice-de-test');
     expect(r.code).toBe(0);
-    expect(coolify.recues.map((q) => q.methode)).toEqual(['PATCH', 'POST']);
+    expect(coolify.recues.map((q) => q.methode)).toEqual(['PATCH', 'POST', 'GET']);
     const [patch, post] = coolify.recues;
     expect(patch!.url).toBe('/api/v1/applications/uuid-factice');
-    expect(JSON.parse(patch!.corps)).toEqual({
-      docker_registry_image_tag: `sha-${SHA.slice(0, 7)}`,
-    });
+    expect(JSON.parse(patch!.corps)).toEqual({ docker_registry_image_tag: ETIQUETTE });
     expect(post!.url).toBe('/api/v1/deploy?uuid=uuid-factice&force=false');
     for (const q of coolify.recues) expect(q.auth).toBe('Bearer jeton-factice-de-test');
   });
@@ -245,6 +285,7 @@ describe('deploy:coolify — la plateforme tire l’image, ou le saut est NOMMÉ
       COOLIFY_API_TOKEN: 'jeton-factice-de-test',
       COOLIFY_APP_UUID: 'uuid-factice',
       PARTNERS_URL_PUBLIQUE: app.url,
+      ...(await registre()),
     });
     expect(r.code).not.toBe(0);
     expect(r.sortie).toContain(SHA);
@@ -299,8 +340,87 @@ describe('la structure : un seul producteur, qui tire, sans droit sur le registr
     expect(String(deployer!.concurrency?.['cancel-in-progress'])).toBe('false');
   });
 
-  it('aucun droit d’écriture : ni sur le registre, ni sur le dépôt', () => {
-    expect(deployer!.permissions).toEqual({ contents: 'read' });
+  // QA-T67 (lentille securite du 2026-10-02) : la PAIRE. `actions: read` lit les runs de ci.yml et
+  // les jobs du run (`deploy-attendre-porte-a.spec.ts`) ; `checks: read` n'a plus d'usage. Une
+  // permission de plus, `checks: read` compris, ou une écriture, rougit.
+  const PAIRE = { contents: 'read', actions: 'read' };
+  async function permissionsDuDeployeur(texte: string): Promise<unknown> {
+    const wf = (await lireYaml(texte)) as { jobs: Record<string, { permissions?: unknown }> };
+    return wf.jobs['deployer']?.permissions;
+  }
+
+  it('REQ-GOV-014 : aucun droit d’écriture — EXACTEMENT deux lectures : le dépôt et les runs', () => {
+    expect(deployer!.permissions).toEqual(PAIRE);
+  });
+
+  it('REQ-GOV-014 : TÉMOIN — la paire figée : checks: read rajouté, ou une écriture, rougit', async () => {
+    const reel = readFileSync('.github/workflows/deploy.yml', 'utf8');
+    // L'unique `actions: read` de deploy.yml est celui du job `deployer`.
+    const ligne = '      actions: read\n';
+    expect(reel.split(ligne)).toHaveLength(2);
+    expect(await permissionsDuDeployeur(reel)).toEqual(PAIRE);
+    for (const ajout of ['      checks: read\n', '      statuses: write\n'])
+      expect(await permissionsDuDeployeur(reel.replace(ligne, ligne + ajout))).not.toEqual(PAIRE);
+  });
+
+  it('REQ-GOV-014 : la porte A du même sha est attendue AVANT l’AIPD et la plateforme, jeton à l’étape seule', () => {
+    const runs = (deployer!.steps ?? []).map((s) => s.run ?? '');
+    const porte = runs.indexOf('pnpm deploy:attendre-porte-a');
+    expect(porte).toBeGreaterThan(-1);
+    expect(porte).toBeLessThan(runs.indexOf('pnpm aipd:signee'));
+    expect(porte).toBeLessThan(runs.indexOf('pnpm deploy:coolify'));
+    const etape = (deployer!.steps ?? [])[porte];
+    expect(Object.keys(etape?.env ?? {})).toEqual(['GH_TOKEN']);
+    for (const s of deployer!.steps ?? [])
+      if (s !== etape) expect(Object.keys(s.env ?? {})).not.toContain('GH_TOKEN');
+    expect((deployer as { env?: unknown }).env).toBeUndefined();
+    const pkg = JSON.parse(readFileSync('package.json', 'utf8')) as {
+      scripts: Record<string, string>;
+    };
+    expect(pkg.scripts['deploy:attendre-porte-a']).toBe(
+      'tsx scripts/gates/deploy-verify.ts --attendre-porte-a'
+    );
+  });
+
+  // L'ORDRE ne suffit pas, il faut le BLOCAGE (relevé de la lentille securite sur #460) : une étape
+  // de la porte A tolérée (`continue-on-error`) ou conditionnée (`if:`) laisserait partir le
+  // déploiement d'un sha que la porte A n'a pas jugé, tout en restant « avant ».
+  async function porteABloquante(texte: string): Promise<string[]> {
+    const wf = (await lireYaml(texte)) as {
+      jobs: Record<string, { steps?: (Etape & { if?: unknown })[] }>;
+    };
+    const etapes = wf.jobs['deployer']?.steps ?? [];
+    const rang = etapes.findIndex((s) => s.run === 'pnpm deploy:attendre-porte-a');
+    if (rang < 0) return ['porte_a_absente'];
+    const etape = etapes[rang]!;
+    const f: string[] = [];
+    if (etape['continue-on-error'] !== undefined) f.push('porte_a_toleree');
+    if (etape.if !== undefined) f.push('porte_a_conditionnelle');
+    // Le trou voisin (lentille securite) : un `if: always()`, `!cancelled()` ou `failure()` sur une
+    // étape QUI SUIT la porte A la ferait tourner après son échec. Aucune ne porte de `if:`.
+    for (const s of etapes.slice(rang + 1))
+      if (s.if !== undefined) f.push(`apres_porte_a_conditionnelle : ${s.run ?? s.uses ?? '?'}`);
+    return f;
+  }
+
+  it('REQ-GOV-014 : l’étape de la porte A est BLOQUANTE — ni continue-on-error ni if:, jugé sur deux copies cassées', async () => {
+    const reel = readFileSync('.github/workflows/deploy.yml', 'utf8');
+    const ligne = '        run: pnpm deploy:attendre-porte-a';
+    expect(reel).toContain(ligne);
+    const avant = (cle: string) => reel.replace(ligne, `        ${cle}\n${ligne}`);
+    expect(await porteABloquante(reel)).toEqual([]);
+    expect(await porteABloquante(avant('continue-on-error: true'))).toEqual(['porte_a_toleree']);
+    expect(await porteABloquante(avant('if: ${{ false }}'))).toEqual(['porte_a_conditionnelle']);
+  });
+
+  it('REQ-GOV-014 : TÉMOIN — deploy:coolify avec if: always() rougit en se nommant : il tournerait après l’échec de la porte A', async () => {
+    const reel = readFileSync('.github/workflows/deploy.yml', 'utf8');
+    const ligne = '        run: pnpm deploy:coolify';
+    expect(reel).toContain(ligne);
+    for (const condition of ['always()', '!cancelled()', 'failure()'])
+      expect(
+        await porteABloquante(reel.replace(ligne, `        if: \${{ ${condition} }}\n${ligne}`))
+      ).toEqual(['apres_porte_a_conditionnelle : pnpm deploy:coolify']);
   });
 
   it('les étapes sont des scripts nommés, sans continue-on-error, et le seul appel à la plateforme est `pnpm deploy:coolify`', () => {

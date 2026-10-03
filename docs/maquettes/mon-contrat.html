@@ -9,32 +9,32 @@
       /* charte:debut — bloc commun aux maquettes (espace) : ne pas modifier ici seul, le propager aux autres fichiers */
       :root {
         color-scheme: light;
-        --fond: #f7f4ee;
+        --fond: #faf8f3;
         --surface: #ffffff;
-        --surface-2: #e9e3d9;
-        --texte: #1c1917;
-        --texte-doux: #57534e;
-        --bord: #8a8178;
-        --primaire: #c2410c;
+        --surface-2: #ddd1bf;
+        --texte: #2a2520;
+        --texte-doux: #5c544c;
+        --bord: #8a7f73;
+        --primaire: #c24a1b;
         --sur-primaire: #ffffff;
-        --lien: #a8390b;
-        --accent-fond: #fcebe2;
+        --lien: #a83c12;
+        --accent-fond: #fbe7dc;
         --accent-texte: #9a3412;
-        --nav-fond: #1c1917;
-        --nav-texte: #e7e5e4;
-        --nav-actif-fond: #c2410c;
+        --nav-fond: #2a2520;
+        --nav-texte: #f3ede4;
+        --nav-actif-fond: #c24a1b;
         --nav-actif-texte: #ffffff;
-        --ok-fond: #fce3d6;
-        --ok-texte: #9a3412;
-        --attente-fond: #f5ebcd;
-        --attente-texte: #6a4b00;
-        --bloque-fond: #fbe4e1;
-        --bloque-texte: #991b1b;
-        --info-fond: #e0eafb;
-        --info-texte: #1e40af;
+        --ok-fond: #dcfce7;
+        --ok-texte: #166534;
+        --attente-fond: #fef3c7;
+        --attente-texte: #854d0e;
+        --bloque-fond: #fee2e2;
+        --bloque-texte: #b91c1c;
+        --info-fond: #e6edfc;
+        --info-texte: #1a4dd9;
         --neutre-fond: #e7e5e4;
         --neutre-texte: #44403c;
-        --focus: #1d4ed8;
+        --focus: #1a4dd9;
         --atelier-fond: #e4ded3;
         --atelier-surface: #ffffff;
         --atelier-texte: #1c1917;
@@ -64,8 +64,8 @@
           --nav-texte: #e7e5e4;
           --nav-actif-fond: #f08a4b;
           --nav-actif-texte: #1c1917;
-          --ok-fond: #3d2112;
-          --ok-texte: #fdba8c;
+          --ok-fond: #13301f;
+          --ok-texte: #86efac;
           --attente-fond: #3a2f10;
           --attente-texte: #f3d37a;
           --bloque-fond: #3f1714;
@@ -104,8 +104,8 @@
         --nav-texte: #e7e5e4;
         --nav-actif-fond: #f08a4b;
         --nav-actif-texte: #1c1917;
-        --ok-fond: #3d2112;
-        --ok-texte: #fdba8c;
+        --ok-fond: #13301f;
+        --ok-texte: #86efac;
         --attente-fond: #3a2f10;
         --attente-texte: #f3d37a;
         --bloque-fond: #3f1714;
@@ -1138,8 +1138,106 @@
         text-align: center;
         color: var(--texte-doux);
       }
+      /* relief (UX-P1-49, version 2 retenue par Williams le 2026-10-03) : cartes et encarts
+         cadrés et ombrés, action terracotta, la barre d'onglets reste mocha */
+      .carte,
+      .chiffres a {
+        border: 1px solid var(--surface-2);
+        box-shadow:
+          0 1px 2px rgba(28, 25, 23, 0.1),
+          0 6px 16px rgba(42, 37, 32, 0.12);
+      }
+      .chiffres a {
+        border-left: 5px solid var(--primaire);
+      }
+      .chiffres .montant {
+        font-size: 28px;
+        color: var(--texte);
+      }
+      .app-tete {
+        background: var(--surface);
+        border-bottom: 1px solid var(--surface-2);
+        box-shadow: 0 2px 6px rgba(28, 25, 23, 0.06);
+      }
+      .app-titre {
+        font-size: 28px;
+        font-weight: 800;
+        letter-spacing: -0.01em;
+        padding-top: 12px;
+      }
+      .encart {
+        border: 1px solid color-mix(in srgb, var(--t) 30%, transparent);
+        border-left-width: 6px;
+        border-left-color: var(--t);
+        box-shadow: 0 2px 8px rgba(28, 25, 23, 0.06);
+      }
+      .pastille {
+        border: 1px solid color-mix(in srgb, var(--t) 35%, transparent);
+      }
+      .bouton {
+        box-shadow: 0 2px 6px rgba(194, 74, 27, 0.25);
+      }
 
       /* charte:fin */
+    </style>
+    <style>
+      /* page:debut — propre à mon-contrat.html, hors de la charte commune. Les tableaux de l'annexe
+         (la grille) : à plat sur grand écran ; SOUS 640 PX, chaque ligne devient une carte empilée
+         (libellé puis valeur), sans aucun défilement latéral de la page (demande de Williams, 2026-10-03). */
+      .app table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 12px 0;
+      }
+      .app caption {
+        text-align: left;
+        font-weight: 700;
+        padding-bottom: 8px;
+      }
+      .app th,
+      .app td {
+        text-align: left;
+        vertical-align: top;
+        padding: 8px;
+        border-bottom: 1px solid var(--bord);
+        overflow-wrap: anywhere;
+        word-break: break-word;
+      }
+      @media (max-width: 640px) {
+        .app table,
+        .app tbody,
+        .app tr,
+        .app td {
+          display: block;
+          width: 100%;
+        }
+        .app thead {
+          position: absolute;
+          width: 1px;
+          height: 1px;
+          overflow: hidden;
+          clip: rect(0 0 0 0);
+          white-space: nowrap;
+        }
+        .app tr {
+          border: 1px solid var(--bord);
+          border-radius: 12px;
+          padding: 8px 12px;
+          margin-bottom: 8px;
+          background: var(--surface);
+        }
+        .app td {
+          border: 0;
+          padding: 4px 0;
+        }
+        .app td::before {
+          content: attr(data-libelle);
+          display: block;
+          font-weight: 700;
+          color: var(--texte-doux);
+        }
+      }
+      /* page:fin */
     </style>
   </head>
   <body>
@@ -1252,14 +1350,14 @@
                       </thead>
                       <tbody>
                         <tr>
-                          <td>Formations</td>
-                          <td>‹ taux publié ›</td>
-                          <td>‹ identique ›</td>
+                          <td data-libelle="Prestation">Formations</td>
+                          <td data-libelle="Grille publiée">‹ taux publié ›</td>
+                          <td data-libelle="Votre contrat">‹ identique ›</td>
                         </tr>
                         <tr>
-                          <td>Audits</td>
-                          <td>‹ taux publié ›</td>
-                          <td>
+                          <td data-libelle="Prestation">Audits</td>
+                          <td data-libelle="Grille publiée">‹ taux publié ›</td>
+                          <td data-libelle="Votre contrat">
                             ‹ en écart › <span class="pastille info">Écart justifié</span
                             ><br /><span class="doux"
                               >« Secteur déjà couvert par un autre apporteur de la zone » — fixé par
@@ -1405,14 +1503,14 @@
                       </thead>
                       <tbody>
                         <tr>
-                          <td>Formations</td>
-                          <td>‹ taux publié ›</td>
-                          <td>‹ identique ›</td>
+                          <td data-libelle="Prestation">Formations</td>
+                          <td data-libelle="Grille publiée">‹ taux publié ›</td>
+                          <td data-libelle="Votre contrat">‹ identique ›</td>
                         </tr>
                         <tr>
-                          <td>Audits</td>
-                          <td>‹ taux publié ›</td>
-                          <td>
+                          <td data-libelle="Prestation">Audits</td>
+                          <td data-libelle="Grille publiée">‹ taux publié ›</td>
+                          <td data-libelle="Votre contrat">
                             ‹ en écart › <span class="pastille info">Écart justifié</span
                             ><br /><span class="doux"
                               >« Secteur déjà couvert par un autre apporteur de la zone » — fixé par

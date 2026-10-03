@@ -284,6 +284,9 @@ export const REFUS_NOMMES: Readonly<Record<string, readonly string[]>> = {
     'principal(process.argv.slice(2)).then › ∅ › (code)',
     'principal(process.argv.slice(2)).then › ∅ › (2)',
   ],
+  'scripts/gates/forge-instantane.ts': [
+    'module › si APPELE_DIRECTEMENT › si refus !== null › (= 1)',
+  ],
   'scripts/gates/gov-attestation.ts': [
     "module › si !process.argv.includes('--en-ligne') › (2)",
     'module › si !existsSync(CHEMIN_TACHES) › (1)',
@@ -293,6 +296,19 @@ export const REFUS_NOMMES: Readonly<Record<string, readonly string[]>> = {
     'module › si process.argv[1] !== undefined && /gov-attributions[.](ts|js… › (verdict.code)',
   ],
   'scripts/gates/gov-check.ts': ['module › si APPELE_DIRECTEMENT › (decision.code)'],
+  // QA-T60 : déclaré quand `--rapport` a reçu sa sortie à code variable (écriture en échec → 1) ;
+  // ses huit autres sorties, déjà présentes, sont nommées avec elle.
+  'scripts/gates/gov-inventaire.ts': [
+    'module › si !existsSync(f) › (1)',
+    'sansPreuve › si !t › (1)',
+    'resolue › si !c › (1)',
+    'process.stdout.write › ∅ › (err ? 1 : 0)',
+    "module › sinon process.argv.includes('--rapport') › si process.argv.includes('--prove') › si base.length > 0 › (1)",
+    "module › sinon process.argv.includes('--rapport') › si process.argv.includes('--prove') › si f.length > 0 › (1)",
+    "module › sinon process.argv.includes('--rapport') › si process.argv.includes('--prove') › si !f.some((x) => x.famille === t.famille) › (1)",
+    "module › sinon process.argv.includes('--rapport') › si process.argv.includes('--prove') › si sansTemoin.length > 0 › (1)",
+    "module › sinon process.argv.includes('--rapport') › sinon process.argv.includes('--prove') › (1)",
+  ],
   'scripts/gates/gov-conventions.ts': [
     "module › si process.argv.includes('--prove') › (await prouver())",
     "module › sinon process.argv.includes('--prove') › (1)",
@@ -326,6 +342,7 @@ export const REFUS_NOMMES: Readonly<Record<string, readonly string[]>> = {
     'module › si LANCE_EN_SCRIPT › si iPr >= 0 || iApres >= 0 › catch › (1)',
     'module › si LANCE_EN_SCRIPT › (1)',
   ],
+  'scripts/ci/navigateurs-bornes.ts': ['module › si APPELE_DIRECTEMENT › (= r.code)'],
   'scripts/deploiement/provisionner.ts': [
     'provisionner(process.env).then › ∅ › (= code)',
     'provisionner(process.env).then › ∅ › (= 1)',
@@ -368,6 +385,10 @@ export const REFUS_NOMMES: Readonly<Record<string, readonly string[]>> = {
   ],
   'scripts/gates/harnais-mcp.ts': ['principal().then › ∅ › (code)'],
   'scripts/gates/journal-sans-pii.ts': ['module › si LANCE_EN_SCRIPT › (decision.code)'],
+  'scripts/gates/csp-inline.ts': ['module › si LANCE_EN_SCRIPT › (decision.code)'],
+  'scripts/gates/notifications-lue-at-inerte.ts': [
+    'module › si APPELE_DIRECTEMENT › si echecs.length > 0 › (= 1)',
+  ],
   'scripts/gates/jur-aucun-agregat-reseau.ts': ['module › si LANCE_EN_SCRIPT › (decision.code)'],
   'scripts/gates/jur-aucune-progression.ts': ['module › si LANCE_EN_SCRIPT › (decision.code)'],
   'scripts/gates/jur-grille-chiffree.ts': [
@@ -377,6 +398,9 @@ export const REFUS_NOMMES: Readonly<Record<string, readonly string[]>> = {
     'module › si APPELE_DIRECTEMENT › si fautes.length > 0 › (1)',
   ],
   'scripts/gates/jur-lexique-social.ts': ['module › si LANCE_EN_SCRIPT › (decision.code)'],
+  'scripts/gates/jur-copy-indicative.ts': [
+    'module › si APPELE_DIRECTEMENT › si echecs.length > 0 › (= 1)',
+  ],
   'scripts/gates/jur-revue-apporteur-facing.ts': ['module › si LANCE_EN_SCRIPT › (decision.code)'],
   'scripts/gates/lexique-apporteurs.ts': [
     'echouer › ∅ › (1)',

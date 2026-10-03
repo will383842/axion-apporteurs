@@ -349,8 +349,15 @@ async function apporteur(): Promise<string> {
   return id;
 }
 
-/** Une ligne neuve de chaque modèle, SANS apporteur : c'est la couche qui l'écrit. */
-function donneesNeuves(modele: ModeleCloisonne, lienMagiqueId: string): Record<string, unknown> {
+/**
+ * Une ligne neuve de chaque modèle, SANS apporteur : c'est la couche qui l'écrit. `ids` porte les
+ * lignes déjà semées de la MÊME session, pour les références vérifiées.
+ */
+function donneesNeuves(
+  modele: ModeleCloisonne,
+  ids: Partial<Record<ModeleCloisonne, string>>
+): Record<string, unknown> {
+  const lienMagiqueId = ids.lienMagique ?? '';
   const creeAt = new Date(t0);
   switch (modele) {
     // DM-07 : semée HORS de la couche (voir `SEMES_HORS_COUCHE`) — la grille est une clé refusée à
@@ -393,6 +400,9 @@ function donneesNeuves(modele: ModeleCloisonne, lienMagiqueId: string): Record<s
       };
     case 'identiteFacturation':
       return { siren: '123456789', regimeTva: 'assujetti', debutAt: creeAt };
+    // DM-11 : une pièce déjà REMPLACÉE, hors des deux index partiels — la batterie en sème plusieurs.
+    case 'pieceKyc':
+      return { type: 'siret', statut: 'refusee', remplaceeAt: creeAt };
     case 'jetonDepot':
       return { tokenHash: hex(32), creeAt };
     case 'lienMagique':
@@ -405,6 +415,24 @@ function donneesNeuves(modele: ModeleCloisonne, lienMagiqueId: string): Record<s
         creeAt,
         expireAt: new Date(t0 + 60 * MINUTE),
       };
+    // UX-P1-10 : une clé de la FORME admise par la base ; sa valeur se juge en amont, par Zod.
+    case 'notificationEspace':
+      return { cle: 'essai_cloisonnement', creeAt };
+    case 'preferenceNotification':
+      return { cle: 'essai_cloisonnement', active: true, modifieeAt: creeAt };
+    // DM-12 : écrites par le serveur ; ici, par la couche, au nom de la session.
+    case 'alerteLiberation':
+      return { siren: '123456789', creeAt };
+    // Une contestation vise une attribution DE LA SESSION, semée avant elle (référence vérifiée).
+    case 'contestation':
+      return {
+        objet: 'annulation_attribution',
+        attributionId: ids.attribution,
+        texteChiffre: randomBytes(32),
+        recueAt: creeAt,
+      };
+    case 'verification':
+      return { siren: '123456789', resultat: 'libre', ipHash: hex(8), verifieeAt: creeAt };
   }
 }
 
@@ -425,14 +453,35 @@ function modification(modele: ModeleCloisonne, n: number): Record<string, unknow
       return { erreur: `code_essai_${n}` };
     case 'identiteFacturation':
       return { finAt: new Date(t0 + (n + 1) * 24 * 60 * MINUTE) };
+    case 'pieceKyc':
+      // SEC-49 : le fichier d'une pièce est figé par la base ; la date de vérification reste libre.
+      return { verifieeAt: instant };
     case 'jetonDepot':
       return { dernierUsageAt: instant };
     case 'lienMagique':
       return { tentativesCode: n };
     case 'sessionEspace':
       return { derniereVueAt: instant };
+    case 'notificationEspace':
+      return { lueAt: instant };
+    case 'preferenceNotification':
+      return { modifieeAt: instant };
+    // DM-12 : des tables que la BASE garde ; une modification qu'elle refuse, quel que soit l'auteur.
+    case 'alerteLiberation':
+      return { siren: '987654321' };
+    case 'contestation':
+      return { texteChiffre: randomBytes(32) };
+    case 'verification':
+      return { resultat: 'fermee' };
   }
 }
+
+/**
+ * Les modèles dont la BASE refuse la modification : l'ajout seul du gabarit, et la contestation,
+ * gardée par sa fonction dédiée (DM-12). Leur refus en base est un verdict, pas une panne.
+ */
+const REFUS_EN_BASE: readonly string[] = [...MODELES_EN_AJOUT_SEUL, 'contestation'];
+const MESSAGES_DE_REFUS_EN_BASE = /refuser_modification_sauf|contestations_refuser_substitution/;
 
 /** La ligne relue en base, hors de toute couche : ce que la batterie compare avant et après. */
 type Delegue = { findUnique(a: { where: { id: string } }): Promise<unknown> };
@@ -487,12 +536,12 @@ async function attaquer(vue: Vue, modele: ModeleCloisonne, n: number): Promise<s
 
   // DM-07 : une table en AJOUT SEUL refuse la modification EN BASE (`refuser_modification_sauf`) ;
   // ce refus est lu comme un verdict, pas comme une panne de la batterie.
-  const enAjoutSeul = (MODELES_EN_AJOUT_SEUL as readonly string[]).includes(modele);
+  const enAjoutSeul = REFUS_EN_BASE.includes(modele);
   const modifier = (id: string) =>
     vue.modifier(id, modification(modele, n) as never).then(
       (v) => v,
       (e: unknown) => {
-        if (enAjoutSeul && /refuser_modification_sauf/.test((e as Error).message))
+        if (enAjoutSeul && MESSAGES_DE_REFUS_EN_BASE.test((e as Error).message))
           return 'refusee_par_la_base' as const;
         throw e;
       }
@@ -507,7 +556,15 @@ async function attaquer(vue: Vue, modele: ModeleCloisonne, n: number): Promise<s
 
   const compteB = await base.prisma[modele as 'jetonDepot'].count({ where: { apporteurId: B } });
   try {
-    await vue.creer(brut({ ...donneesNeuves(modele, lignes.lienMagique.b), apporteurId: B }));
+    await vue.creer(
+      brut({
+        ...donneesNeuves(modele, {
+          lienMagique: lignes.lienMagique.b,
+          attribution: lignes.attribution.b,
+        }),
+        apporteurId: B,
+      })
+    );
   } catch {
     /* un refus est l'issue attendue ; seule la ligne écrite est une brèche */
   }
@@ -566,19 +623,19 @@ beforeAll(async () => {
     const acces = accesDe(base.prisma, qui);
     const ids = Object.fromEntries([]) as Record<ModeleCloisonne, string>;
     ids.lienMagique = (
-      (await acces.lienMagique.creer(donneesNeuves('lienMagique', '') as never)) as { id: string }
+      (await acces.lienMagique.creer(donneesNeuves('lienMagique', {}) as never)) as { id: string }
     ).id;
     for (const m of MODELES_CLOISONNES.filter((x) => x !== 'lienMagique')) {
       if (SEMES_HORS_COUCHE.includes(m)) {
         const directe = (await (
           base.prisma[m] as unknown as { create(a: object): Promise<{ id: string }> }
-        ).create({ data: { ...donneesNeuves(m, ids.lienMagique), apporteurId: qui } })) as {
+        ).create({ data: { ...donneesNeuves(m, ids), apporteurId: qui } })) as {
           id: string;
         };
         ids[m] = directe.id;
         continue;
       }
-      const ligne = (await acces[m].creer(donneesNeuves(m, ids.lienMagique) as never)) as {
+      const ligne = (await acces[m].creer(donneesNeuves(m, ids) as never)) as {
         id: string;
       };
       ids[m] = ligne.id;
@@ -609,7 +666,7 @@ describe('REQ-SEC-009 — A ne lit, ne liste, ne compte, ne modifie ni ne crée 
       const breches = await attaquer(vueSansWhere(m), m, 2);
       // Une table en ajout seul refuse la modification EN BASE, même sans `where` : la défense en
       // profondeur tient, et ces deux brèches-là n'y apparaissent pas.
-      const modification = (MODELES_EN_AJOUT_SEUL as readonly string[]).includes(m)
+      const modification = REFUS_EN_BASE.includes(m)
         ? []
         : ['modification_acceptee', 'modification_ecrite'];
       expect([m, breches]).toEqual([
@@ -647,7 +704,7 @@ describe('REQ-SEC-009 — A ne lit, ne liste, ne compte, ne modifie ni ne crée 
     const vue = accesDe(base.prisma, A).sessionEspace;
     const avant = await base.prisma.sessionEspace.count();
     await expect(
-      vue.creer(donneesNeuves('sessionEspace', lignes.lienMagique.b) as never)
+      vue.creer(donneesNeuves('sessionEspace', { lienMagique: lignes.lienMagique.b }) as never)
     ).rejects.toThrow();
     expect(await base.prisma.sessionEspace.count()).toBe(avant);
   });
@@ -655,7 +712,7 @@ describe('REQ-SEC-009 — A ne lit, ne liste, ne compte, ne modifie ni ne crée 
   it('REQ-SEC-009 : DM-07 — le RETRAIT d’une personne déclarée : B ne retire pas celle de A ; A la retire UNE fois, la base refuse le second', async () => {
     const vueA = accesDe(base.prisma, A).personneDeclaree;
     const vueB = accesDe(base.prisma, B).personneDeclaree;
-    const { id } = (await vueA.creer(donneesNeuves('personneDeclaree', '') as never)) as {
+    const { id } = (await vueA.creer(donneesNeuves('personneDeclaree', {}) as never)) as {
       id: string;
     };
     const avant = JSON.stringify(await relire('personneDeclaree', id));

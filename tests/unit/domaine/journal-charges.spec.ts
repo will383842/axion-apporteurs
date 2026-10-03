@@ -39,11 +39,20 @@ describe('REQ-DM-024 — les formes admises dans une charge', () => {
 });
 
 describe('REQ-DM-024 — une charge par type, fermée', () => {
-  it('REQ-DM-024 : les types du journal sont exactement ces trois-là', () => {
+  it('REQ-DM-024 : les types du journal sont exactement ceux-ci', () => {
     expect(Object.keys(CHARGES_PAR_TYPE).sort()).toEqual([
+      'anomalie_gel_modifie',
+      'anomalie_statut_modifie',
       'apporteur_statut_modifie',
       'attribution_contact_purge',
+      'attribution_etat_modifie',
+      'attribution_peremption_suspendue',
+      'attribution_porteur_reaffecte',
+      'contestation_modifiee',
+      'demande_confirmation_etat_modifie',
       'journal_ouvert',
+      'piece_kyc_statut_modifie',
+      'rattachement_manuel_modifie',
     ]);
   });
 
@@ -86,5 +95,112 @@ describe('REQ-DM-031 — la purge du contact : l’instant, et le système pour 
       purge.safeParse({ purgeAt: INSTANT, acteur: { par: 'systeme' }, nomContact: 'Martin' })
         .success
     ).toBe(false);
+  });
+});
+
+describe('REQ-DM-033 — DM-12, décision (d) de la juriste : la charge d’une anomalie ne relie à personne', () => {
+  const charge = CHARGES_PAR_TYPE.anomalie_statut_modifie;
+  const naissance = { de: null, vers: 'ouverte', acteur: { par: 'systeme' } };
+
+  it('REQ-DM-033 : la naissance et la clôture passent, acteur sans identifiant', () => {
+    expect(charge.safeParse(naissance).success).toBe(true);
+    expect(
+      charge.safeParse({ de: 'ouverte', vers: 'levee', acteur: { par: 'utilisateur_console' } })
+        .success
+    ).toBe(true);
+  });
+
+  it.each(['apporteurId', 'attributionId', 'anomalieId', 'justification', 'score'])(
+    'REQ-DM-033 : TÉMOIN — une charge qui porte « %s » est refusée',
+    (cle) => {
+      expect(charge.safeParse({ ...naissance, [cle]: 'x' }).success).toBe(false);
+    }
+  );
+
+  it('REQ-DM-033 : TÉMOIN — un acteur avec un identifiant est refusé (exception nommée à HYP-A02-ACTEUR-JOURNAL)', () => {
+    const id = '00000000-0000-4000-8000-000000000000';
+    expect(
+      charge.safeParse({ ...naissance, acteur: { par: 'utilisateur_console', id } }).success
+    ).toBe(false);
+    expect(charge.safeParse({ ...naissance, acteur: { par: 'apporteur' } }).success).toBe(false);
+  });
+
+  it('REQ-DM-033 : `de` est nul à la naissance seulement', () => {
+    expect(charge.safeParse({ ...naissance, vers: 'levee' }).success).toBe(false);
+    expect(
+      charge.safeParse({ de: 'ouverte', vers: 'ouverte', acteur: { par: 'systeme' } }).success
+    ).toBe(false);
+  });
+
+  it('REQ-DM-033 : TÉMOIN — aucune charge du journal ne porte la clé anomalieId : l’EFFET part sans id d’anomalie', () => {
+    for (const [type, schema] of Object.entries(CHARGES_PAR_TYPE)) {
+      const forme = (schema as { _def: { schema?: { shape?: object } } })._def;
+      const shape = (schema as unknown as { shape?: object }).shape ?? forme.schema?.shape ?? {};
+      expect(Object.keys(shape).length, `${type} : forme lue`).toBeGreaterThan(0);
+      expect(Object.keys(shape), type).not.toContain('anomalieId');
+    }
+  });
+});
+
+describe('REQ-DM-033 REQ-DM-043 — le gel pour litige au journal : le geste, jamais sa référence', () => {
+  it('REQ-DM-033 : le gel d’une anomalie, posé ou levé, passe avec un acteur sans identifiant', () => {
+    const charge = CHARGES_PAR_TYPE.anomalie_gel_modifie;
+    for (const vers of ['gel_pose', 'gel_leve']) {
+      expect(charge.safeParse({ vers, acteur: { par: 'utilisateur_console' } }).success).toBe(true);
+    }
+    expect(charge.safeParse({ vers: 'gele', acteur: { par: 'systeme' } }).success).toBe(false);
+    expect(
+      charge.safeParse({
+        vers: 'gel_pose',
+        acteur: { par: 'utilisateur_console', id: '00000000-0000-4000-8000-000000000000' },
+      }).success
+    ).toBe(false);
+  });
+
+  it('REQ-DM-043 : contestation_modifiee admet le gel posé et levé', () => {
+    const charge = CHARGES_PAR_TYPE.contestation_modifiee;
+    for (const vers of ['gel_pose', 'gel_leve']) {
+      expect(
+        charge.safeParse({
+          contestationId: '00000000-0000-4000-8000-000000000000',
+          de: 'recue',
+          vers,
+          acteur: { par: 'systeme' },
+        }).success
+      ).toBe(true);
+    }
+  });
+
+  it.each(['gelLitigeRef', 'ref', 'reference'])(
+    'REQ-DM-033 : TÉMOIN — une charge du gel qui porte « %s » est refusée',
+    (cle) => {
+      expect(
+        CHARGES_PAR_TYPE.anomalie_gel_modifie.safeParse({
+          vers: 'gel_pose',
+          acteur: { par: 'systeme' },
+          [cle]: 'RG-24/01234',
+        }).success
+      ).toBe(false);
+      expect(
+        CHARGES_PAR_TYPE.contestation_modifiee.safeParse({
+          contestationId: '00000000-0000-4000-8000-000000000000',
+          de: 'recue',
+          vers: 'gel_pose',
+          acteur: { par: 'systeme' },
+          [cle]: 'RG-24/01234',
+        }).success
+      ).toBe(false);
+    }
+  );
+
+  it('REQ-DM-033 : TÉMOIN — aucune charge du journal ne déclare une clé de référence ou de litige', () => {
+    for (const [type, schema] of Object.entries(CHARGES_PAR_TYPE)) {
+      const forme = (schema as { _def: { schema?: { shape?: object } } })._def;
+      const shape = (schema as unknown as { shape?: object }).shape ?? forme.schema?.shape ?? {};
+      expect(Object.keys(shape).length, `${type} : forme lue`).toBeGreaterThan(0);
+      for (const cle of Object.keys(shape)) {
+        expect(cle, type).not.toMatch(/ref|litige/i);
+      }
+    }
   });
 });

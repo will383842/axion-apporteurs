@@ -239,14 +239,21 @@ attribution**, la Société et l'ensemble de ses préposés comptant pour un seu
 alinéa 5 ; le délai de **{{PEREMPTION_JOURS}} jours** court de la prise en charge, et l'exception de l'article
 3.4 alinéa 2 tirée d'une absence imputable à la Société ne s'applique pas à la prise en charge ; la
 prolongation de l'article 3.4 alinéa 3 ne s'applique qu'une fois, dans les mêmes conditions ; la prise en
-charge ne fait l'objet d'aucune reconduction. **La Société ne prend pas en charge une
-entreprise dont l'attribution ou la prise en charge a pris fin depuis moins de
-{{CARENCE_CONSEILLER_JOURS}} jours**, quel qu'en ait été l'occupant, ni pendant le délai de quinze jours
-ouvert à l'Apporteur en attente au premier rang.
+charge ne fait l'objet d'aucune reconduction. **La Société ne prend pas en charge une entreprise pendant
+le délai de quinze jours ouvert à l'Apporteur en attente au premier rang.**
 
-**La Société n'utilise ni les vérifications d'entreprise faites par un Apporteur, ni ses déclarations
-refusées ou en attente, ni les coordonnées qu'il a déclarées, pour prendre elle-même en charge une
-entreprise.**
+**La Société conserve dans ses propres outils, et peut utiliser à ses propres fins commerciales, les
+entreprises déclarées par l'Apporteur et les coordonnées qu'il a transmises, y compris pour les démarcher
+elle-même ou par ses préposés. Cette utilisation ne retire rien aux droits de l'Apporteur : pendant la
+durée de l'attribution, toute commande de l'entreprise attribuée est commissionnée dans les conditions de
+l'article 4.4, qu'elle résulte des démarches de l'Apporteur, de celles de la Société ou de ses préposés,
+ou d'une initiative de l'entreprise. Tant que l'attribution est provisoire, la Société ne démarche pas l'entreprise déclarée ; la demande de
+confirmation et les prises de contact de l'article 3.2 ne constituent pas un démarchage. Dans les
+{{RESERVE_APRES_ACTE_APPORTEUR_JOURS}} jours qui suivent une vérification d'entreprise faite par
+l'Apporteur, ou une déclaration de sa part refusée ou en attente, la Société ne démarche pas l'entreprise concernée et ne la prend pas en charge ; cette réserve ne
+s'applique ni à une entreprise que la Société connaissait déjà au sens de l'article 3.3, ni à une
+entreprise dont une attribution ou une prise en charge était en cours à la date de cette vérification ou de
+cette déclaration.**
 
 Les parties conviennent que l'horodatage attribué par le serveur de la Société fait foi entre elles
 **jusqu'à preuve contraire** pour l'application du présent article, conformément à l'article 1356 du code
@@ -520,8 +527,9 @@ professionnelles d'une personne physique. Il garantit avoir informé cette perso
 de l'article 13 du règlement (UE) 2016/679**, de la transmission de ses coordonnées et de sa finalité.
 
 **7.2** La Société est responsable du traitement de ces données. Elle en informe la personne concernée dans
-les conditions de l'article 14 du règlement (UE) 2016/679 et les conserve pour la durée nécessaire au
-suivi de l'affaire.
+les conditions de l'article 14 du règlement (UE) 2016/679 et les conserve pour la durée nécessaire au suivi de l'affaire et aux finalités de l'article 3.5 alinéa
+4, dans la limite des durées de conservation qu'elle porte à la connaissance de la personne ; elle l'informe
+de son droit de s'opposer à tout moment à la prospection.
 
 **7.3** L'Apporteur ne collecte ni ne transmet aucune donnée relevant de l'article 9 du même règlement.
 
@@ -692,7 +700,7 @@ DE COMMERÇANT. À DÉFAUT, LES RÈGLES DE COMPÉTENCE DE DROIT COMMUN S'APPLIQU
 **Les parties reconnaissent que la présente clause a fait l'objet, dans l'enveloppe de signature
 électronique, d'une acceptation distincte et spécialement signalée, conservée dans le fichier de preuve
 (article 48 du code de procédure civile : spécification très apparente). L'Apporteur déclare contracter en
-qualité de {{APPORTEUR_QUALITE}}.**
+la qualité suivante : {{APPORTEUR_QUALITE}}.**
 
 > *Cette clause a été portée à la connaissance de l'Apporteur et acceptée par lui de manière spécifique,
 > par une case distincte au moment de la signature électronique (article 48 du code de procédure civile).*

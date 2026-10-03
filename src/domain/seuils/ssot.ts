@@ -16,7 +16,11 @@
  * configuration (`HYP-E1-19`, `src/domain/contrat/variables.ts`).
  *
  * Les montants sont en CENTIMES hors taxes (`docs/CONVENTIONS.md`, argent en centimes).
+ *
+ * LES DURÉES DE CONSERVATION vivent dans le sous-module `retention.ts` (partners/ADR-0022 §12) et sont
+ * ÉTALÉES ici : l'accès reste `SEUILS.X`, la garde les juge, et aucune n'est définie aux deux endroits.
  */
+import { DUREES_DE_RETENTION } from './retention';
 
 export type UniteDeSeuil =
   'minutes' | 'jours' | 'jours_ouvres' | 'mois' | 'ans' | 'centimes' | 'tentatives';
@@ -40,6 +44,7 @@ const art = (...unites: string[]): Renvoi[] =>
   unites.map((unite) => ({ document: 'contrat', unite }));
 
 export const SEUILS = {
+  ...DUREES_DE_RETENTION,
   // JUR-T40 : l'art. 3.2 n'écrit plus ce délai (W20, REQ-CPL-026) ; il reste l'objectif interne de
   // la console pour une prise de contact, sans engagement contractuel (recommandation d'A07).
   PRISE_DE_CONTACT_JOURS_OUVRES: {
@@ -55,6 +60,28 @@ export const SEUILS = {
     source: 'contrat art. 3.2',
     renvois: art('3.2'),
     verifieLe: LE,
+  },
+  // INT-T49 — combien de temps une candidature qui attend ses coordonnées est reprise par le
+  // lanceur ; au-delà, elle ne l'est plus, et une alerte `attente_depassee` part. Un paramètre
+  // d'exploitation, pas une durée de conservation : il reste SOUS les 30 jours de minimisation
+  // d'INT-T56, qui demeurent le plafond (7 < 30).
+  ATTENTE_DES_COORDONNEES_JOURS: {
+    valeur: 7,
+    unite: 'jours',
+    source: 'coordination, 2026-10-01 (UTC), proposition de A05 (couvre un week-end prolongé)',
+    renvois: [],
+    verifieLe: '2026-10-01',
+  },
+  // INT-T54 — combien de temps un événement qui attend un TRAITANT (`traitant:<type>`) ou un PARENT
+  // (la facture d'un paiement, par exemple) attend avant qu'une alerte `attente_depassee` parte.
+  // Un paramètre d'exploitation : un type sans traitant ou un parent absent se voit vite.
+  ATTENTE_D_UNE_DEPENDANCE_JOURS: {
+    valeur: 2,
+    unite: 'jours',
+    source:
+      'arbitrage A01, 2026-10-01 (UTC), proposition de A05 (un type sans traitant ou un parent absent se voit vite)',
+    renvois: [],
+    verifieLe: '2026-10-01',
   },
   // JUR-T40 — la fin d'une demande vérifiée sans prise de contact concluante (HYP-W20-LIBERATION,
   // tranchée par Williams le 2026-09-29) et la carence avant une nouvelle déclaration
@@ -81,14 +108,16 @@ export const SEUILS = {
     renvois: art('3.2'),
     verifieLe: '2026-10-01',
   },
-  // JUR-T31 — la Société ne prend pas en charge une entreprise libérée depuis moins de ce délai,
-  // quel qu'en ait été l'occupant (HYP-W19-CARENCE, valeur par défaut). L'art. 3.5 en est la source.
-  CARENCE_CONSEILLER_JOURS: {
-    valeur: 90,
+  // JUR-T31 — la réserve de la Société après un acte de l'Apporteur (art. 3.5 al. 4, option B de
+  // Williams du 2026-10-02). Le délai d'attente après libération (HYP-W19-CARENCE) est supprimé.
+  RESERVE_APRES_ACTE_APPORTEUR_JOURS: {
+    valeur: 30,
     unite: 'jours',
-    source: 'contrat art. 3.5 (HYP-W19-CARENCE)',
+    source:
+      'décision de Williams du 2026-10-02 : autorisation de l’option B (art. 3.5 al. 4, « avec les ' +
+      'deux protections pour l’apporteur ») et réponse « A. » au point 6, réserve de 30 jours gardée',
     renvois: art('3.5'),
-    verifieLe: '2026-10-01',
+    verifieLe: '2026-10-03',
   },
   CARENCE_REDEPOT_APRES_SECONDE_LIBERATION_JOURS: {
     valeur: 90,
@@ -328,7 +357,50 @@ export const SEUILS = {
     renvois: [],
     verifieLe: '2026-10-01',
   },
+  // DM-40 (REQ-DM-060, HYP-W20-DELAI) : la demande de confirmation part après ce délai, compté de
+  // l'horodatage serveur du dépôt ; pendant ce délai, l'apporteur peut annuler ou corriger.
+  DELAI_AVANT_ENVOI_CONFIRMATION_MINUTES: {
+    valeur: 15,
+    unite: 'minutes',
+    source: 'docs/chantiers/W20-confirmation-par-email.md §2, HYP-W20-DELAI (Williams, 2026-09-29)',
+    renvois: [],
+    verifieLe: '2026-10-02',
+  },
+  // DM-40 (REQ-DM-060, HYP-W20-SANS-REPONSE) : passé ce délai sans clic, le dépôt entre dans la
+  // liste d'appels ; jours ouvrés du calendrier de CPL-T13.
+  CONFIRMATION_SANS_REPONSE_JOURS_OUVRES: {
+    valeur: 5,
+    unite: 'jours_ouvres',
+    source: 'docs/chantiers/W20-confirmation-par-email.md §2, HYP-W20-SANS-REPONSE',
+    renvois: [],
+    verifieLe: '2026-10-02',
+  },
+  // DM-40 (REQ-DM-060, HYP-W20-REBOND) : au-delà, le dépôt reste dans la liste d'appels et l'action
+  // « Corriger l'adresse » disparaît.
+  CORRECTIONS_ADRESSE_MAX: {
+    valeur: 2,
+    unite: 'tentatives',
+    source: 'docs/chantiers/W20-confirmation-par-email.md §2, HYP-W20-REBOND',
+    renvois: [],
+    verifieLe: '2026-10-02',
+  },
 } as const satisfies Record<string, Seuil>;
+
+/**
+ * DM-40 (REQ-DM-060, HYP-W20-APPELS, REQ-GOV-031) : les CLÉS des paramètres d'appel dont la valeur
+ * vit HORS DU DÉPÔT. Le dépôt est public : publier la part des dépôts appelés dirait au fraudeur ses
+ * chances. La valeur arrive par la configuration de la plateforme ; ici, seule sa clé et sa source.
+ */
+export const PARAMETRES_HORS_DEPOT_CONFIRMATION = {
+  CONFIRMATION_TAUX_ECHANTILLON: {
+    valeur: 'hors-depot',
+    source: 'docs/chantiers/W20-confirmation-par-email.md, question 12, HYP-W20-APPELS',
+  },
+  CONFIRMATION_PREMIERS_DEPOTS_APPELES: {
+    valeur: 'hors-depot',
+    source: 'docs/chantiers/W20-confirmation-par-email.md, question 12, HYP-W20-APPELS',
+  },
+} as const;
 
 export type NomDeSeuil = keyof typeof SEUILS;
 
@@ -439,3 +511,16 @@ export function budgetUx(nom: string): BudgetUx {
     );
   return BUDGETS_UX[nom as NomDeBudgetUx];
 }
+
+/**
+ * W20 (UX-P1-41, HYP-W20-CONTEXTE) — la longueur maximale du contexte d'un dépôt, seule saisie libre
+ * de l'apporteur reprise dans l'e-mail au contact. Entrée isolée : ni un délai du contrat, ni un
+ * montant, ni un budget d'expérience. Condition (a) de la lentille sécurité (2026-10-02) : la ligne de
+ * contexte est BORNÉE par cette constante, à la saisie comme au rendu.
+ */
+export const CONTEXTE_DEPOT_CARACTERES_MAX = {
+  valeur: 140,
+  unite: 'caracteres',
+  source: 'docs/chantiers/W20-confirmation-par-email.md §2, HYP-W20-CONTEXTE',
+  verifieLe: '2026-10-02',
+} as const;

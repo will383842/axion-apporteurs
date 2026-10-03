@@ -34,6 +34,27 @@ comportement au démarrage d'un container qui échoue, et la procédure de retou
 trois dernières commandent des exigences de vérification, elles ne peuvent pas être déduites de notre
 spécification.
 
+### 2.1 L'image tirée par empreinte — lecture du 2026-10-03 (QA-T65, RM-08)
+
+**Question.** Coolify accepte-t-il une empreinte d'image (`sha256:<64 hex>`) dans le champ
+`docker_registry_image_tag` de `PATCH /api/v1/applications/{uuid}`, au lieu d'une étiquette ?
+
+**Réponse : oui, sous la forme `sha256-<64 hex>`.** Lu le 2026-10-03 par A06 :
+
+| Source | Ce qu'elle dit |
+| --- | --- |
+| `openapi.json` du dépôt `coollabsio/coolify`, branche `main` (ETag `5eb476ee14e779668a96402ea647cfd1928d2526e58abeb8769be9385ac21275`) | `docker_registry_image_tag` : `{"type":"string","description":"The docker registry image tag."}`. Le contrat ne dit rien d'une empreinte. |
+| `app/Jobs/ApplicationDeploymentJob.php`, même dépôt, commit `c0d81d4c` de `main`, l. 1361-1366 | « Check if this is an image hash deployment » : pour le build pack `dockerimage`, une étiquette qui commence par `sha256-` donne `production_image_name = "{$this->dockerImage}@sha256:{$hash}"`. |
+| même fichier, l. 698-705 | le même test (`startsWith('sha256-')`) donne le nom affiché `<image>@sha256:<hash>`. |
+| `app/Support/ValidationPatterns.php`, l. 151 | `DOCKER_IMAGE_TAG_PATTERN = '/\A[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}\z/'` : `sha256-` suivi de 64 hex passe, `sha256:` (deux-points) est refusé. |
+
+**Conséquence appliquée** (`scripts/gates/deploy-verify.ts`) : le déploiement et le retour arrière posent
+`sha256-<hex>`, l'empreinte du manifeste `sha-<7>` publié lue au registre (en-tête `Docker-Content-Digest`),
+et jamais l'étiquette. Après l'atterrissage, l'étiquette que l'application tire est relue : une autre
+empreinte rend NON ATTERRI. **Limite** : le comportement est celui du CODE de Coolify, pas de son contrat
+documenté ; une version qui le retirerait ferait échouer le déploiement de façon visible (image introuvable),
+jamais en silence. À relire à chaque montée de version de Coolify.
+
 ## 3. Données qui lui sont confiées
 
 Toutes. C'est le tiers le plus exposé du dossier : le serveur porte la base de production, donc les données
@@ -100,3 +121,25 @@ Confronte-a: docs/tiers/coolify.md#2-source-officielle
 
 Toute fixture de configuration de déploiement ou de réponse de sonde porte ces deux lignes. Tant que la
 rubrique 2 est vide, la seconde ligne porte la mention `non confrontée`.
+
+## 10. Sauts de confiance — combien de mandataires devant l'application
+
+Ajoutée par **SEC-44** (REQ-SEC-012, écart de la vérification de bout en bout). L'adresse du client se lit dans `X-Forwarded-For`, à
+droite, en sautant les mandataires de confiance (`src/server/securite/adresse-du-client.ts`). Trop peu
+de sauts, et toutes les requêtes portent l'adresse du mandataire : un seul quota pour tout le site.
+Trop, et l'on lit une valeur écrite par le client.
+
+**Mesuré le 2026-10-02 à 03:32 UTC**, sur le domaine de production `apporteurs.axion-ia.com` :
+
+| Mesure | Méthode | Résultat |
+| --- | --- | --- |
+| Proxy de Cloudflare devant le domaine | lecture de l'enregistrement DNS dans la zone `axion-ia.com` (API Cloudflare, lecture seule) | enregistrement `A`, `proxied: false` : pas de proxy Cloudflare |
+| En-têtes de la réponse | `curl -sI https://apporteurs.axion-ia.com/api/readyz` | `HTTP/1.1 200`, `x-partners-build-sha` présent ; aucun `cf-ray`, aucun `server: cloudflare`, aucun `via` |
+| Mandataire de la plateforme | Coolify sert l'application derrière son mandataire inverse | un saut |
+
+Conclusion : **`SAUTS_DE_CONFIANCE` = 1**, la valeur du code. Un témoin
+(`tests/unit/securite/api-entrante-ip.spec.ts`) confronte la constante à cette ligne.
+
+**Remesurer** avant toute modification de la chaîne : passage du DNS en `proxied: true`, mandataire
+ajouté devant Coolify, changement d'hébergeur. Chaque mandataire de confiance ajoute un saut, et la
+constante change dans la même PR que cette rubrique.
