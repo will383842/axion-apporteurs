@@ -310,6 +310,13 @@ jobs:
         run: pnpm jur:lexique-social
       - name: La garde du lexique social sait rougir
         run: pnpm jur:lexique-social:prove
+      # QA-T69 (REQ-JUR-001, REQ-JUR-002) : la remuneration d un apporteur ne se promet pas. La garde
+      # d axion-ia (JUR-T29) transposee sur src/content/ et docs/maquettes/ : aucun taux ni montant
+      # presente comme ferme sans mention indicative, aucun revenu sans plafond, aucun rythme mensuel.
+      - name: Charte — aucune remuneration presentee comme ferme
+        run: pnpm jur:copy-indicative-partners
+      - name: La garde de la remuneration indicative sait rougir
+        run: pnpm jur:copy-indicative-partners:prove
       # JUR-T01 : l'annexe 1 du gabarit de contrat ne nomme jamais un forfait, un bareme ou un
       # pourcentage sans valeur numerique. Sur le gabarit source les montants sont des variables :
       # c'est un fil tendu ; la regle protege au rendu (exigerGabaritPubliable, src/domain/contrat).
@@ -325,6 +332,13 @@ jobs:
         run: pnpm ssot:seuils
       - name: La garde des seuils sait rougir, famille par famille, sans faux positif
         run: pnpm ssot:seuils:prove
+      # UX-P1-10 (REQ-JUR-039, REQ-UX-016) : la date de lecture d une notification de l espace n est
+      # le point de depart d aucun delai ; un delai court de courriels_envoyes.envoye_at. La garde lit
+      # l arbre syntaxique de src/ et le SQL des migrations, et nomme chaque lecture hors permission.
+      - name: La date de lecture d une notification ne fait courir aucun delai
+        run: pnpm notifications:lue-at-inerte
+      - name: La garde de la date de lecture sait rougir, famille par famille
+        run: pnpm notifications:lue-at-inerte:prove
       # UX-P0-02 : une tache d'ecran ne s'attribue pas avant que Will ait valide sa maquette
       # (docs/maquettes/VALIDATION.md). Le composeur l'appliquait seul, au moment de composer ;
       # une attribution faite a la main ne rougissait nulle part. La garde lit le tableau par ses
