@@ -10,7 +10,7 @@
  *       un bloc `charte:debut … charte:fin` recopié dans chaque maquette. Une copie qui dérive est une
  *       charte qui ment. Le bloc est le MÊME dans les treize maquettes de l'espace, et le même dans
  *       les treize de la console (la console a ses jetons propres, REQ-UX-034, et sa barre latérale
- *       viendra avec UX-P1-50).
+ *       viendra avec sa propre refonte).
  *
  *   (2) LES COULEURS DE LA MARQUE, dans le thème clair de l'espace : terracotta pour l'action, ivoire
  *       en fond, mocha pour le texte, bleu pour l'information et le focus, et une ALERTE en rouge
@@ -173,8 +173,11 @@ describe('REQ-UX-017 — le contraste AA, recalculé dans chaque maquette de l�
   });
 
   it('REQ-UX-017 — TÉMOIN : un texte doux éclairci sous le seuil rougit', () => {
-    const t = { ...jetons(charte(lire(ESPACE[0]!)), CLAIR), 'texte-doux': '#b8b2aa' };
-    expect(rapport(t['texte-doux'], t.fond!)).toBeLessThan(4.5);
+    const t: Record<string, string> = {
+      ...jetons(charte(lire(ESPACE[0]!)), CLAIR),
+      'texte-doux': '#b8b2aa',
+    };
+    expect(rapport(t['texte-doux']!, t.fond!)).toBeLessThan(4.5);
   });
 });
 
