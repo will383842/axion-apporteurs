@@ -5,7 +5,9 @@
 
 -- Les valeurs du GLOSSAIRE, mot pour mot (partners:schema:enums).
 CREATE TYPE "origine_entreprise_connue" AS ENUM ('client', 'devis', 'financeur');
-CREATE TYPE "motif_liste_noire" AS ENUM ('opco', 'france_travail', 'region', 'of_partenaire', 'autre');
+-- Les CATÉGORIES de l'art. 3.3 bis (b), sans valeur « autre » (exigence de la juriste, 2026-10-03) :
+-- un refus fondé sur la liste se notifie par sa catégorie (REQ-DM-028), jamais par un organisme.
+CREATE TYPE "motif_liste_noire" AS ENUM ('administration', 'financeur_public', 'financeur_paritaire', 'organisme_de_formation_partenaire');
 
 -- La liste tenue par la Société (REQ-DM-028) : un SIREN d'ORGANISME, ce n'est pas une donnée de personne.
 CREATE TABLE "sirens_liste_noire" (
@@ -33,12 +35,12 @@ ALTER TABLE "entreprises_connues" ADD CONSTRAINT "entreprises_connues_ordre" CHE
 -- « Entièrement facturé » (art. 3.3, écart B-11) se juge DEVIS PAR DEVIS : la somme HT facturée, avoirs
 -- déduits, comparée au montant HT du devis. Une ligne par devis d'axionia, sans aucune donnée de personne.
 CREATE TABLE "devis_connus" (
-    "devis_ref" TEXT NOT NULL,
+    "devis_ref" VARCHAR(64) NOT NULL,
     "siren" CHAR(9) NOT NULL,
     "emis_at" TIMESTAMPTZ(3) NOT NULL,
     "signe_at" TIMESTAMPTZ(3),
-    "montant_total_ht_cents" BIGINT NOT NULL,
-    "facture_ht_cents" BIGINT NOT NULL DEFAULT 0,
+    "montant_total_ht_cents" INTEGER NOT NULL,
+    "facture_ht_cents" INTEGER NOT NULL DEFAULT 0,
     "maj_at" TIMESTAMPTZ(3) NOT NULL DEFAULT clock_timestamp(),
     CONSTRAINT "devis_connus_pkey" PRIMARY KEY ("devis_ref")
 );
