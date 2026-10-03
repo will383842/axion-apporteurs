@@ -19839,7 +19839,9 @@
         "package.json",
         "tests/unit/gouvernance/forge-instantane.spec.ts",
         "tests/unit/gouvernance/forge-lue-une-fois.spec.ts",
-        "docs/gates.json"
+        "docs/gates.json",
+        "scripts/gates/registre-des-refus.ts",
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts"
       ],
       "schema": false,
       "sensible": [],
