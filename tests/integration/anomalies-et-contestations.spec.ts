@@ -216,26 +216,46 @@ async function uneVerification(p: { ipHash?: string | null } = {}): Promise<stri
 
 describe('REQ-DM-032 — verifications : un porteur, en ajout seul, l’empreinte d’IP purgeable une fois', () => {
   it('REQ-DM-032 : TÉMOIN — aucun porteur, ou les deux : refusé (verifications_porteur_unique)', async () => {
-    for (const [a, u] of [
-      [null, null],
-      [apporteurId, adminId],
-    ]) {
-      expect(
-        await refus(
-          ecrire(
-            `INSERT INTO verifications (id, apporteur_id, utilisateur_console_id, siren, resultat,
-               ip_hash, verifiee_at)
-             VALUES ($1::uuid, $2::uuid, $3::uuid, $4, 'libre', $5, $6)`,
-            randomUUID(),
-            a,
-            u,
-            unSiren(),
-            hex(8),
-            MAINTENANT
-          )
-        )
-      ).toContain('verifications_porteur_unique');
-    }
+    const inserer = (
+      client: Pick<PrismaClient, '$executeRawUnsafe'>,
+      a: string | null,
+      u: string | null
+    ) =>
+      client.$executeRawUnsafe(
+        `INSERT INTO verifications (id, apporteur_id, utilisateur_console_id, siren, resultat,
+           ip_hash, verifiee_at)
+         VALUES ($1::uuid, $2::uuid, $3::uuid, $4, 'libre', $5, $6)`,
+        randomUUID(),
+        a,
+        u,
+        unSiren(),
+        hex(8),
+        MAINTENANT
+      );
+    // Aucun porteur : sous `partners_app`, le déclencheur du conseiller n'a rien à juger.
+    expect(await refus(inserer(app, null, null))).toContain('verifications_porteur_unique');
+    // Les deux : le rôle `conseiller_salarie` n'existe pas encore dans `console_role` (SEC-31) ; le
+    // déclencheur du porteur refuserait donc TOUT utilisateur console, et — déclencheur BEFORE —
+    // avant le CHECK. Neutralisé le temps d'une transaction ANNULÉE (patron d'`index-partiel.spec.ts`),
+    // il laisse juger le CHECK seul ; rendue, la base l'a réactivé.
+    const annulee = new Error('annulee');
+    let message = '';
+    await base.prisma
+      .$transaction(async (tx) => {
+        await tx.$executeRawUnsafe(
+          'ALTER TABLE verifications DISABLE TRIGGER verifications_porteur_conseiller'
+        );
+        message = await refus(inserer(tx, apporteurId, adminId));
+        throw annulee;
+      })
+      .catch((e: unknown) => {
+        if (e !== annulee) throw e;
+      });
+    expect(message).toContain('verifications_porteur_unique');
+    // Et le déclencheur est bien rendu : hors de la transaction, il refuse de nouveau.
+    expect(await refus(inserer(app, apporteurId, adminId))).toContain(
+      'verifications_porteur_conseiller'
+    );
   });
 
   it('REQ-DM-032 : TÉMOIN — un porteur console qui n’est pas conseiller est refusé (verifications_porteur_conseiller)', async () => {
