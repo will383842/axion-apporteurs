@@ -708,15 +708,16 @@
     {
       "id": "REQ-SEC-002",
       "domaine": "anti-abus-securite",
-      "texte": "La demande de lien magique est limitée à 10 / 15 min par hash IP et 5 / 15 min par email, avec `surPanne: refuser` ; le message générique explique la suspension sans révéler l'existence du compte.",
-      "source": "nouvelle (patron `auth.actions.ts`)",
+      "texte": "La demande de lien magique est limitée à 10 / 15 min par hash IP et 5 / 15 min par email, avec `surPanne: refuser` ; le message générique explique la suspension sans révéler l'existence du compte. La vérification du code à six chiffres (SEC-54) est limitée, en plus du plafond de cinq essais par lien tenu par la base, à 20 / 15 min par hash IP au code et à 10 / 15 min par email au code, avec `surPanne: refuser` ; ces deux compteurs sont distincts de ceux de la demande de lien, une saisie mal formée y est comptée, et leur refus a la forme de la réponse générique (statut 429), sans révéler l'existence du compte.",
+      "source": "nouvelle (patron `auth.actions.ts`) ; complétée le 2026-10-03 (cadrage de la lentille sécurité pour SEC-54, rattrapage 86)",
       "statut": "active",
       "remplaceePar": null,
       "module": 21,
       "etape": 12,
       "phase": 0,
       "taches": [
-        "SEC-03"
+        "SEC-03",
+        "SEC-54"
       ]
     },
     {
@@ -2147,7 +2148,8 @@
         "INT-T21-P",
         "INT-T51",
         "INT-T70-A",
-        "INT-T70-P"
+        "INT-T70-P",
+        "INT-T74-P"
       ]
     },
     {
@@ -3636,6 +3638,7 @@
         "GOV-076",
         "GOV-083",
         "GOV-140",
+        "GOV-142",
         "QA-T00",
         "QA-T01",
         "QA-T07",
