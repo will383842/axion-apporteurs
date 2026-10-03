@@ -186,7 +186,7 @@ describe('REQ-SEC-022 — le même refus quel que soit l’occupant ; la réserv
           'ALTER TABLE attributions DISABLE TRIGGER attributions_porteur_conseiller'
         );
         const u = await tx.utilisateurConsole.create({
-          data: { role: 'admin', creeAt: T0 },
+          data: { role: 'admin', creeAt: T0, desactiveAt: T0 },
           select: { id: true },
         });
         await tx.$executeRawUnsafe(

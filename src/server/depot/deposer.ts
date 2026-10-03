@@ -1,0 +1,257 @@
+/**
+ * deposer.ts — la transaction de dépôt d'un apporteur (SEC-12 ; REQ-SEC-014, REQ-SEC-022,
+ * REQ-SEC-032, REQ-JUR-008, REQ-CPL-008).
+ *
+ * L'ORDRE, ET POURQUOI.
+ *   1. La SAISIE se juge avant toute écriture, au serveur : les quatre coordonnées du contact (nom,
+ *      prénom, fonction, e-mail, téléphone), chacune nommée si elle manque ou est hors forme ; la
+ *      case d'information des tiers cochée. Une adresse webmail ou générique passe (HYP-W20-DESTINATAIRE).
+ *   2. Dans UNE transaction : le verrou consultatif du PORTEUR, puis celui du SIREN, toujours dans cet
+ *      ordre ; puis le statut de l'apporteur relu SOUS VERROU de sa ligne. Un statut qui n'ouvre pas
+ *      pleinement l'espace (résilié compris) ne dépose pas : `DepotInterdit`, rien n'est écrit.
+ *      Suspendu : l'issue est `gele`, rien n'est écrit.
+ *   3. Les faits, lus sous les verrous : l'antériorité (locale, DM-10-P), l'état administratif de la
+ *      fiche déjà lue par l'écran (aucun appel réseau ici), l'opposition au démarchage (port),
+ *      l'occupation et la file. Le porteur de l'occupant n'est jamais lu : un apporteur et une prise
+ *      en charge par la Société donnent le même refus.
+ *   4. La décision pure (`deciderDuDepot`). Un refus de catégorie est tracé dans `depots_refuses` ;
+ *      un dépôt enregistré naît (`deposee` ou `deposee_en_file`), est journalisé, et sa demande de
+ *      confirmation naît dans la MÊME transaction — pour l'occupant seulement : une déclaration en
+ *      file n'appelle personne tant qu'elle n'occupe pas.
+ *
+ * `deposee_at` est écrit par la BASE, sous le verrou par SIREN (déclencheur `attributions_horloge_du_depot`).
+ * La transaction est exposée (`deposerDans`) pour qu'une autre écriture la compose.
+ */
+import type { Prisma, PrismaClient } from '@prisma/client';
+import { randomUUID } from 'node:crypto';
+import { deciderDuDepot, type FaitsDuDepot, type IssueDepot } from '../../domain/depot/issue-depot';
+import { niveauDAcces } from '../../domain/apporteur/acces-espace';
+import { clauseEtatsOccupants } from '../../domain/attribution/etats';
+import { anterioriteDe } from '../entreprise-connue/projection';
+import { journaliserLaNaissance } from '../attribution/transitionner';
+import { creerLaDemande } from '../confirmation/demandes';
+import { tirerLesJetonsDeLaDemande } from '../confirmation/jetons';
+import { colonnesPii, empreinteRecherche, type ClesPii } from '../securite/pii';
+import { VERSION_INFORMATION_TIERS } from '../../content/micro-copy/espace/information-tiers';
+
+type Tx = Prisma.TransactionClient;
+
+export interface ContactDuDepot {
+  readonly nom: string;
+  readonly prenom: string;
+  readonly fonction: string;
+  readonly email: string;
+  readonly telephone: string;
+}
+
+export interface SaisieDuDepot {
+  readonly siren: string;
+  readonly siret: string | null;
+  /** La date calendaire du contact, `AAAA-MM-JJ`. */
+  readonly dateContact: string;
+  readonly contact: ContactDuDepot;
+  readonly contexte: string | null;
+  readonly informationTiersCochee: boolean;
+  readonly lienInteretDeclare: boolean;
+}
+
+/** La fiche de l'entreprise telle que l'écran l'a lue ; nulle si l'API publique n'a pas répondu. */
+export interface FicheDuDepot {
+  readonly raisonSociale: string | null;
+  readonly etatAdministratif: 'actif' | 'cesse' | null;
+}
+
+export interface DemandeDeDepot {
+  readonly apporteurId: string;
+  readonly canal: 'espace' | 'lien_prive';
+  readonly jetonDepotId: string | null;
+  readonly saisie: SaisieDuDepot;
+  readonly fiche: FicheDuDepot;
+  readonly ipHash: string | null;
+  readonly agentHash: string | null;
+  readonly clientCapturedAt: Date | null;
+}
+
+export interface PortsDuDepot {
+  readonly cles: ClesPii;
+  /** Le secret des jetons de confirmation (DM-40). */
+  readonly secretConfirmation: string;
+  maintenant(): Date;
+  /** Art. 3.3 bis d : le registre d'opposition tenu par la Société. */
+  oppositionDemarchage(tx: Tx, siren: string): Promise<boolean>;
+}
+
+export interface IssueDuDepot {
+  readonly issue: IssueDepot;
+  readonly attributionId: string | null;
+}
+
+export type ChampDeSaisie = keyof ContactDuDepot | 'informationTiers';
+
+/** Une saisie refusée au serveur : chaque champ en cause est NOMMÉ, jamais un refus muet. */
+export class ErreurSaisieDepot extends Error {
+  readonly champs: readonly ChampDeSaisie[];
+
+  constructor(champs: readonly ChampDeSaisie[]) {
+    super(`saisie_refusee : ${champs.join(', ')}`);
+    this.name = 'ErreurSaisieDepot';
+    this.champs = champs;
+  }
+}
+
+/** Un apporteur dont le statut n'ouvre pas le dépôt (résilié compris) : rien n'est écrit. */
+export class DepotInterdit extends Error {
+  constructor() {
+    super('depot_interdit : le statut relu de l’apporteur n’ouvre pas le dépôt');
+    this.name = 'DepotInterdit';
+  }
+}
+
+const forme = (type: 'courriel' | 'telephone', valeur: string, cles: ClesPii): boolean => {
+  try {
+    empreinteRecherche(type, valeur, cles);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+/** Les champs refusés de la saisie, dans l'ordre du formulaire ; vide si tout est recevable. */
+export function champsRefuses(saisie: SaisieDuDepot, cles: ClesPii): ChampDeSaisie[] {
+  const c = saisie.contact;
+  const refuses: ChampDeSaisie[] = [];
+  for (const champ of ['nom', 'prenom', 'fonction'] as const) {
+    if (c[champ].trim() === '') refuses.push(champ);
+  }
+  if (!forme('courriel', c.email, cles)) refuses.push('email');
+  if (!forme('telephone', c.telephone, cles)) refuses.push('telephone');
+  if (!saisie.informationTiersCochee) refuses.push('informationTiers');
+  return refuses;
+}
+
+async function verrou(tx: Tx, cle: string): Promise<void> {
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${cle}, 0))`;
+}
+
+/** Le dépôt, dans une transaction ouverte par l'appelant. */
+export async function deposerDans(
+  tx: Tx,
+  demande: DemandeDeDepot,
+  ports: PortsDuDepot
+): Promise<IssueDuDepot> {
+  const refuses = champsRefuses(demande.saisie, ports.cles);
+  if (refuses.length > 0) throw new ErreurSaisieDepot(refuses);
+  const { apporteurId } = demande;
+  const { siren } = demande.saisie;
+  const maintenant = ports.maintenant();
+
+  await verrou(tx, `depot:porteur:${apporteurId}`);
+  await verrou(tx, `depot:siren:${siren}`);
+
+  const [a] = await tx.$queryRaw<{ statut: string }[]>`
+    SELECT statut::text AS statut
+      FROM apporteurs WHERE id = ${apporteurId}::uuid FOR UPDATE`;
+  if (a === undefined || niveauDAcces(a.statut) !== 'plein') throw new DepotInterdit();
+
+  const anteriorite = await anterioriteDe(tx, siren, maintenant);
+  const [occupation] = await tx.$queryRawUnsafe<{ occupee: boolean; en_attente: number }[]>(
+    `SELECT EXISTS (SELECT 1 FROM attributions WHERE siren = $1 AND statut IN (${clauseEtatsOccupants()})) AS occupee,
+            (SELECT count(*)::int FROM attributions WHERE siren = $1 AND statut = 'en_attente') AS en_attente`,
+    siren
+  );
+  const faits: FaitsDuDepot = {
+    apporteurGele: a.statut === 'suspendu',
+    etablissementCesse: demande.fiche.etatAdministratif === 'cesse',
+    anteriorite: anteriorite.connue ? anteriorite.origine : 'aucune',
+    oppositionDemarchage: await ports.oppositionDemarchage(tx, siren),
+    occupee: occupation?.occupee ?? false,
+    enAttente: occupation?.en_attente ?? 0,
+    verificationPrioritaire: false,
+  };
+  const decision = deciderDuDepot(faits);
+
+  if (decision.statut === null) {
+    if (decision.issue !== 'gele') {
+      await tx.depotRefuse.create({
+        data: {
+          apporteurId,
+          siren,
+          motif: decision.issue,
+          canal: demande.canal,
+          refuseAt: maintenant,
+        },
+      });
+    }
+    return { issue: decision.issue, attributionId: null };
+  }
+
+  const grille = await tx.grilleCommission.findFirst({
+    orderBy: { version: 'desc' },
+    select: { id: true },
+  });
+  if (grille === null) throw new Error('grille_absente : aucune grille de commission publiée');
+
+  const id = randomUUID();
+  const s = demande.saisie;
+  await tx.attribution.create({
+    data: {
+      ...(colonnesPii(
+        { modele: 'attribution', id },
+        {
+          nomContact: s.contact.nom.trim(),
+          prenomContact: s.contact.prenom.trim(),
+          fonctionContact: s.contact.fonction.trim(),
+          email: s.contact.email,
+          telephone: s.contact.telephone,
+          contexte: s.contexte,
+        },
+        ports.cles
+      ) as unknown as Prisma.AttributionUncheckedCreateInput),
+      id,
+      apporteurId,
+      statut: decision.statut,
+      rangAttente: decision.rangAttente,
+      siren,
+      siret: s.siret,
+      grilleCommissionId: grille.id,
+      canal: demande.canal,
+      jetonDepotId: demande.jetonDepotId,
+      clientCapturedAt: demande.clientCapturedAt,
+      dateContact: new Date(`${s.dateContact}T00:00:00.000Z`),
+      informationTiersVersion: VERSION_INFORMATION_TIERS,
+      verificationPrioritaire: faits.verificationPrioritaire,
+      entrepriseAVerifier: demande.fiche.etatAdministratif === null,
+      raisonSociale: demande.fiche.raisonSociale,
+      etatAdministratif: demande.fiche.etatAdministratif,
+      lienInteretDeclare: s.lienInteretDeclare,
+      ipHash: demande.ipHash,
+      agentHash: demande.agentHash,
+    },
+  });
+  const acteur = { par: 'apporteur' as const, id: apporteurId };
+  await journaliserLaNaissance(tx, {
+    attributionId: id,
+    transition: decision.statut === 'provisoire' ? 'deposee' : 'deposee_en_file',
+    acteur,
+    maintenant,
+  });
+  if (decision.statut === 'provisoire') {
+    const jetons = tirerLesJetonsDeLaDemande(ports.secretConfirmation);
+    await creerLaDemande(tx, {
+      attributionId: id,
+      jetonOuiHash: jetons.oui.empreinte,
+      jetonNonHash: jetons.non.empreinte,
+      acteur,
+    });
+  }
+  return { issue: decision.issue, attributionId: id };
+}
+
+/** Le dépôt, dans sa propre transaction. */
+export async function deposer(
+  prisma: PrismaClient,
+  demande: DemandeDeDepot,
+  ports: PortsDuDepot
+): Promise<IssueDuDepot> {
+  return prisma.$transaction((tx) => deposerDans(tx, demande, ports), { timeout: 30_000 });
+}
