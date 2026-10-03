@@ -89,6 +89,15 @@ jobs:
         run: pnpm vues:rendre
       - name: Aucune vue derivee sous git — une PR qui en rajoute une est refusee, le fichier nomme
         run: pnpm vues:hors-git
+      # QA-T64, REQ-GOV-006, REQ-QA-013. La forge lue UNE fois par porte A : les lectures de
+      # `gov:etat` et `gov:trace` (que `pnpm test` faisait aussi) sont figees dans un instantane
+      # sous RUNNER_TEMP ; chaque etape qui lit la forge recoit `GOV_FORGE` dans son env:. Une lecture qui
+      # echoue fait echouer l etape ; un instantane illisible fait echouer la garde qui le lit.
+      # APRES les vues : `vues:rendre` suit l installation (REQ-GOV-032).
+      - name: La forge est lue une fois pour toute la porte A
+        run: pnpm forge:instantane
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Regle de publication (depot public)
         run: pnpm gov:publication
       - name: La garde de publication sait rougir
@@ -180,6 +189,7 @@ jobs:
         run: pnpm gov:trace
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GOV_FORGE: ${{ runner.temp }}/forge-instantane.json
       - name: La matrice de tracabilite sait rougir
         run: pnpm gov:trace:prove
       - name: La vue de tracabilite est derivee de ses sources
@@ -484,6 +494,7 @@ jobs:
         run: pnpm test
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GOV_FORGE: ${{ runner.temp }}/forge-instantane.json
       # QA-T03, REQ-QA-014. LA MEME garde que "Matrice de tracabilite" plus haut (`gov-trace.ts`),
       # relancee ICI avec les RESULTATS que `pnpm test` vient d ecrire (`test-results/vitest.json`) :
       # c est la seule passe qui sache qu un test est VERT, et pas seulement ecrit. Juste apres
@@ -494,6 +505,7 @@ jobs:
         run: pnpm req:check
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GOV_FORGE: ${{ runner.temp }}/forge-instantane.json
       # GOV-101, REQ-QA-002 — decision de Will du 2026-09-26 (W16, partners/ADR-0024) : la lentille
       # `mutation` n est plus une revue d agent, c est cette mesure. Stryker, en BAC A SABLE, sur les
       # seuls fichiers de `src/domain/`, `src/server/` et `src/lib/` que la PR ajoute ou modifie
@@ -521,6 +533,7 @@ jobs:
         run: pnpm gov:etat --now "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GOV_FORGE: ${{ runner.temp }}/forge-instantane.json
       - name: La garde de l etat vivant sait rougir
         run: pnpm gov:etat:prove
       # QA-T20 : construire puis mesurer, EN DERNIER. `next build` ecrit `.next/` et
