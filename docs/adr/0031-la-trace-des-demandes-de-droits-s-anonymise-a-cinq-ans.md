@@ -2,9 +2,9 @@
 
 | Champ | Valeur |
 | --- | --- |
-| **Statut** | `propose` |
+| **Statut** | `accepte` |
 | **Date** | 2026-10-03 |
-| **Décideur** | `architecte` — cet ADR consigne la forme d'A02 versée au rattrapage 79 (patron de DM-53, `partners/ADR-0030`) ; il passe `accepte` quand A02 l'accepte en revue |
+| **Décideur** | `architecte` — cet ADR consigne la forme d'A02 versée au rattrapage 79 (patron de DM-53, `partners/ADR-0030`) ; accepté par A02 en revue de la PR de DM-60, le 2026-10-03 (revue 5400573808) |
 | **Tâche** | DM-60 |
 | **Exigences servies** | REQ-JUR-065, REQ-DM-037 |
 | **Décisions du registre citées** | — (la durée de cinq ans est une décision de Williams du 2026-10-03, versée au registre des tâches par le rattrapage 79) |
@@ -115,7 +115,6 @@ colonne perd son NOT NULL, et le champ Prisma devient `attributionId String?`, r
 
 ## Reste à faire
 
-- L'acceptation de cet ADR par A02, en revue de la PR de DM-60.
 - `gov:adr` exige des numéros consécutifs : les ADR 0031 et 0032 n'étant pas sur `main` à
   l'ouverture de la PR, celui-ci prend le 0031 (comme au rattrapage 59). Le registre des tâches
   nomme `docs/adr/0033-la-trace-des-demandes-de-droits-s-anonymise-a-cinq-ans.md` : le chemin se
