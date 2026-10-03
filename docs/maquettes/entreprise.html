@@ -1345,8 +1345,8 @@
                         >Libre</span
                       >
                       <p>
-                        Personne ne suit cette entreprise aujourd’hui. Si vous la déposez, elle est
-                        enregistrée à votre nom, à l’heure de votre envoi.
+                        Cette entreprise est disponible aujourd’hui. Si vous la déposez, votre dépôt
+                        est enregistré à l’heure de votre envoi.
                       </p>
                     </article>
                     <a class="bouton" href="deposer.html#etat-pre-rempli"
@@ -1364,9 +1364,9 @@
             <section
               class="ecran"
               id="etat-suivie-place"
-              aria-label="État : Carte : suivie, place en attente"
+              aria-label="État : Carte : réservée, place en attente"
             >
-              <p class="sans-js-titre">État : Carte : suivie, place en attente</p>
+              <p class="sans-js-titre">État : Carte : réservée, place en attente</p>
               <div class="app">
                 <div class="app-principal">
                   <div class="barre-etat" aria-hidden="true">
@@ -1390,12 +1390,14 @@
                         ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                           <circle cx="12" cy="12" r="9" />
                           <path d="M12 7v5l3.5 2" /></svg
-                        >Déjà suivie · une place en attente</span
+                        >Déjà réservée · une place en attente</span
                       >
-                      <p>Un autre apporteur suit cette entreprise jusqu’au <b>14 mars 2027</b>.</p>
+                      <p>Cette entreprise est déjà réservée.</p>
                       <p>
-                        Vous pouvez tout de même la déposer : votre dépôt attend, et prend la suite
-                        si ce suivi s’arrête avant.
+                        Vous pouvez tout de même la déposer : votre dépôt attend. Si cette
+                        réservation prend fin alors que votre dépôt est le premier en attente, vous
+                        serez prévenu, et vous aurez quinze jours pour déposer à nouveau cette
+                        entreprise.
                       </p>
                     </article>
                     <a class="bouton" href="deposer.html#etat-pre-rempli"
@@ -1412,9 +1414,9 @@
             <section
               class="ecran"
               id="etat-suivie-complete"
-              aria-label="État : Carte : suivie, attente complète"
+              aria-label="État : Carte : réservée, attente complète"
             >
-              <p class="sans-js-titre">État : Carte : suivie, attente complète</p>
+              <p class="sans-js-titre">État : Carte : réservée, attente complète</p>
               <div class="app">
                 <div class="app-principal">
                   <div class="barre-etat" aria-hidden="true">
@@ -1437,15 +1439,14 @@
                       <span class="pastille neutre"
                         ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                           <circle cx="12" cy="12" r="4" /></svg
-                        >Déjà suivie · attente complète</span
+                        >Déjà réservée · attente complète</span
                       >
                       <p>
-                        Un autre apporteur suit cette entreprise, et deux dépôts attendent déjà leur
-                        tour. Un nouveau dépôt ne serait pas enregistré.
+                        Cette entreprise est déjà réservée, et deux dépôts attendent déjà leur tour.
+                        Un nouveau dépôt ne serait pas enregistré.
                       </p>
                       <p>
-                        La situation change si un suivi s’arrête : vous pourrez la vérifier à
-                        nouveau plus tard.
+                        La situation peut changer : vous pourrez la vérifier à nouveau plus tard.
                       </p>
                     </article>
                     <a class="bouton second" href="#etat-resultats"
@@ -1786,8 +1787,8 @@
                         >Libre</span
                       >
                       <p>
-                        Personne ne suit cette entreprise aujourd’hui. Si vous la déposez, elle est
-                        enregistrée à votre nom, à l’heure de votre envoi.
+                        Cette entreprise est disponible aujourd’hui. Si vous la déposez, votre dépôt
+                        est enregistré à l’heure de votre envoi.
                       </p>
                     </article>
                     <a class="bouton" href="deposer.html#etat-pre-rempli"
@@ -1885,8 +1886,8 @@
         <p class="groupe">Les 4 états de la carte</p>
         <ul>
           <li><a href="#etat-libre">Carte : libre</a></li>
-          <li><a href="#etat-suivie-place">Carte : suivie, place en attente</a></li>
-          <li><a href="#etat-suivie-complete">Carte : suivie, attente complète</a></li>
+          <li><a href="#etat-suivie-place">Carte : réservée, place en attente</a></li>
+          <li><a href="#etat-suivie-complete">Carte : réservée, attente complète</a></li>
           <li><a href="#etat-non-disponible">Carte : non disponible</a></li>
         </ul>
         <p class="groupe">Chercher</p>
@@ -1933,16 +1934,17 @@
           <p class="req">REQ-UX-007 : pas de date affichée pour une entreprise libre.</p>
         </section>
         <section class="note" data-pour="etat-suivie-place">
-          <h2>Carte : suivie, place en attente</h2>
+          <h2>Carte : réservée, place en attente</h2>
           <p>
-            État <code>suivie_place_disponible</code>. La date « jusqu’au » n’apparaît
-            <b>que si le suivi en place est confirmé</b> (<code>active</code>, REQ-UX-007) ; sinon
-            la phrase devient « Un autre apporteur suit déjà cette entreprise. »
+            État <code>suivie_place_disponible</code> (code du glossaire, non lu par l’apporteur).
+            <b>Aucune date n’apparaît</b> : une réservation peut prendre fin avant son terme (art.
+            3.4), et une date montrée pour certains occupants seulement trahirait lequel occupe
+            (art. 3.5, texte d’A07). La phrase est « Cette entreprise est déjà réservée. »
           </p>
           <p>Rien ne dit qui, ni depuis quand, ni si l’entreprise est cliente (REQ-SEC-022).</p>
         </section>
         <section class="note" data-pour="etat-suivie-complete">
-          <h2>Carte : suivie, attente complète</h2>
+          <h2>Carte : réservée, attente complète</h2>
           <p>
             État <code>suivie_file_complete</code> (contrat, article 3.3 bis c : deux dépôts au plus
             en attente).
