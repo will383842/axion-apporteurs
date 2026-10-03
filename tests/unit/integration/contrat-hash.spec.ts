@@ -263,7 +263,9 @@ function clesProduites(valeur: unknown, schema: Schema, chemin: string, acc: Set
 }
 
 describe("le contrat d'événements est fermé, dérivé, et son empreinte le tient", () => {
-  it('REQ-INT-004 — la liste des types est FERMÉE sur les douze que le registre énumère, dans son ordre', () => {
+  it('REQ-INT-004 — la liste des types est FERMÉE sur les onze que le registre énumère, dans son ordre', () => {
+    // Le TITRE est celui que promet INT-T01a (`tests{}` de `docs/tasks.json`) : il dit encore
+    // « onze », la liste en compte douze depuis la v3. Le renommer est un geste du gardien.
     const selonLExigence = typesSelonLExigence();
     expect(selonLExigence).toHaveLength(12);
     expect([...TYPES_EVENEMENT]).toEqual(selonLExigence);
@@ -330,7 +332,7 @@ describe("le contrat d'événements est fermé, dérivé, et son empreinte le ti
     expect(empreinte(renomme)).not.toBe(attendue);
   });
 
-  it('REQ-GOV-020 → REQ-QA-007 — la fixture est celle du PRODUCTEUR RÉEL, et elle couvre tous les types sauf l’exempté nommé (RM-03)', () => {
+  it('REQ-GOV-020 → REQ-QA-007 — la fixture est celle du PRODUCTEUR RÉEL, et elle couvre les onze types (RM-03)', () => {
     expect(PRODUCTEUR.Source).toMatch(
       /^GÉNÉRÉE — ne pas éditer à la main\. Producteur : axionia, scripts\/partners\/fixtures\.ts/
     );
