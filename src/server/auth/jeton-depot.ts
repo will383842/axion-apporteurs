@@ -77,7 +77,7 @@ export interface LienPasMoi {
 /** La signature : 64 caractères hexadécimaux minuscules. */
 export function signerPasMoi(jetonId: string, depotId: string, secret: string): string {
   return createHmac('sha256', secret)
-    .update([DOMAINE_PAS_MOI, jetonId, depotId].join('\u001f'), 'utf8')
+    .update([DOMAINE_PAS_MOI, jetonId, depotId].join('\u001f'))
     .digest('hex');
 }
 
@@ -108,9 +108,7 @@ export function ouvrirPasMoi(_lien: LienPasMoi): typeof PAGE_DE_CONFIRMATION {
 export interface PortsDuPasMoi {
   readonly cle: CleDuLien;
   maintenant(): Date;
-  lireJeton(
-    id: string
-  ): Promise<{ id: string; apporteurId: string; revoqueAt: Date | null } | null>;
+  lireJeton(id: string): Promise<{ id: string; apporteurId: string } | null>;
   lireDepot(
     id: string
   ): Promise<{ apporteurId: string | null; jetonDepotId: string | null } | null>;
@@ -134,7 +132,7 @@ export async function confirmerPasMoi(
   ) {
     return REPONSE_PAS_MOI;
   }
-  if (jeton.revoqueAt === null) await ports.revoquer(jeton.id, ports.maintenant());
+  await ports.revoquer(jeton.id, ports.maintenant());
   return REPONSE_PAS_MOI;
 }
 
@@ -150,7 +148,7 @@ export function portsDuPasMoi(
     lireJeton: (id) =>
       prisma.jetonDepot.findUnique({
         where: { id },
-        select: { id: true, apporteurId: true, revoqueAt: true },
+        select: { id: true, apporteurId: true },
       }),
     lireDepot: (id) =>
       prisma.attribution.findUnique({
