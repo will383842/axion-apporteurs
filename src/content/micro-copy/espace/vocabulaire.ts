@@ -130,8 +130,8 @@ export const CONFIDENTIALITE = {
     donnees: 'Ce qui leur est confié',
     localisation: 'Où elles sont traitées',
   },
-  aCompleter: 'À compléter',
-  question: 'Question en attente de réponse :',
+  // JUR-T36 : un passage que le registre ne tranche pas encore. Aucune question interne n'est lue.
+  aCompleter: 'En cours de rédaction',
   accord: {
     phrase: 'Votre espace s’ouvre une fois cette politique acceptée.',
     action: 'J’accepte cette politique',

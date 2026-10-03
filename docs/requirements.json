@@ -390,7 +390,8 @@
         "DM-20",
         "DM-45",
         "QA-T62",
-        "SEC-30"
+        "SEC-30",
+        "SEC-50"
       ]
     },
     {
@@ -2791,6 +2792,7 @@
         "JUR-T04",
         "JUR-T34",
         "JUR-T36",
+        "JUR-T57",
         "T-ARG-033"
       ]
     },
@@ -3116,6 +3118,7 @@
       "phase": 1,
       "taches": [
         "DM-55",
+        "DM-61",
         "INT-T24",
         "UX-P1-09",
         "UX-P1-10",
@@ -3777,7 +3780,8 @@
         "QA-T12",
         "QA-T53",
         "QA-T57",
-        "QA-T66"
+        "QA-T66",
+        "QA-T70"
       ]
     },
     {
@@ -5106,8 +5110,7 @@
       "etape": 8,
       "phase": 1,
       "taches": [
-        "DM-13",
-        "UX-P1-10"
+        "DM-13"
       ]
     },
     {
@@ -6169,7 +6172,6 @@
       "taches": [
         "JUR-T24",
         "SEC-19",
-        "UX-P1-10",
         "UX-P1-12"
       ]
     },
@@ -6303,7 +6305,7 @@
     {
       "id": "REQ-JUR-065",
       "domaine": "juridique",
-      "texte": "**La page ouverte par le lien du courriel au contact permet TOUS ses droits** (accès, rectification, effacement, limitation, opposition), chacun distinct, sans compte et sans condition, avec DEUX actions distinctes : exercer un droit, et s'opposer. C'est le moyen électronique de l'art. 12 du RGPD, puisque `{adresseDroits}` est postale dans le courriel ; la clé `droits` de l'information de l'art. 14 (v5) y renvoie. Condition de mise en service d'A07 (2026-10-02), mot pour mot : « Aucun courriel en v5 ne doit partir tant que cette page n'offre pas ces droits, chacun distinct de l'opposition et sans compte. Sinon, l'information de l'art. 14 serait inexacte. » La page n'est pas mise en service avant la réponse de Williams sur la durée de la trace des demandes de droits (art. 5.1.e ; demande d'A07, rattrapage 74).",
+      "texte": "**La page ouverte par le lien du courriel au contact permet TOUS ses droits** (accès, rectification, effacement, limitation, opposition), chacun distinct, sans compte et sans condition, avec DEUX actions distinctes : exercer un droit, et s'opposer. C'est le moyen électronique de l'art. 12 du RGPD, puisque `{adresseDroits}` est postale dans le courriel ; la clé `droits` de l'information de l'art. 14 (v5) y renvoie. Condition de mise en service d'A07 (2026-10-02), mot pour mot : « Aucun courriel en v5 ne doit partir tant que cette page n'offre pas ces droits, chacun distinct de l'opposition et sans compte. Sinon, l'information de l'art. 14 serait inexacte. »",
       "source": "Arbitrage de la coordination du 2026-10-02, accepté par A07 et la lentille sécurité ; condition de mise en service d'A07 (2026-10-02)",
       "statut": "active",
       "remplaceePar": null,
@@ -6312,6 +6314,7 @@
       "phase": 1,
       "taches": [
         "DM-59",
+        "DM-60",
         "UX-P1-48"
       ]
     },
