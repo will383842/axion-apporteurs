@@ -81,14 +81,6 @@ jobs:
           path: ~/.cache/ms-playwright
           key: navigateurs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
       - run: pnpm install --frozen-lockfile
-      # QA-T64, REQ-GOV-006, REQ-QA-013. La forge lue UNE fois par porte A : les lectures de
-      # `gov:etat` et `gov:trace` (que `pnpm test` faisait aussi) sont figees dans un instantane
-      # sous RUNNER_TEMP, et `GOV_FORGE` est posee pour les etapes suivantes. Une lecture qui
-      # echoue fait echouer l etape ; un instantane illisible fait echouer la garde qui le lit.
-      - name: La forge est lue une fois pour toute la porte A
-        run: pnpm forge:instantane
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       # GOV-123, REQ-GOV-032. Les vues derivees ne sont plus commitees : elles se RENDENT ici,
       # avant toute etape qui en lit une, puis une seconde fois pour que deux rendus identiques
       # octet par octet soient exiges (la vue non reproductible est nommee). Aucun jeton : les
@@ -97,6 +89,15 @@ jobs:
         run: pnpm vues:rendre
       - name: Aucune vue derivee sous git — une PR qui en rajoute une est refusee, le fichier nomme
         run: pnpm vues:hors-git
+      # QA-T64, REQ-GOV-006, REQ-QA-013. La forge lue UNE fois par porte A : les lectures de
+      # `gov:etat` et `gov:trace` (que `pnpm test` faisait aussi) sont figees dans un instantane
+      # sous RUNNER_TEMP ; chaque etape qui lit la forge recoit `GOV_FORGE` dans son env:. Une lecture qui
+      # echoue fait echouer l etape ; un instantane illisible fait echouer la garde qui le lit.
+      # APRES les vues : `vues:rendre` suit l installation (REQ-GOV-032).
+      - name: La forge est lue une fois pour toute la porte A
+        run: pnpm forge:instantane
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Regle de publication (depot public)
         run: pnpm gov:publication
       - name: La garde de publication sait rougir

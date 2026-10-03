@@ -18,7 +18,7 @@ import {
   LECTURES_DE_LA_PORTE_A,
   NOM_DE_L_INSTANTANE,
   cleDeLecture,
-  contexteAdmis,
+  contextesAdmis,
   figerLesLectures,
   instantaneEnVigueur,
   lireDansLInstantane,
@@ -83,7 +83,20 @@ describe('REQ-GOV-006 REQ-QA-013 — la forge lue une fois par porte A', () => {
     expect(() => lireDansLInstantane(bon, lecture, { CI: 'true' })).toThrow(/refusée/);
     expect(lireDansLInstantane(bon, lecture, CI)).toBe('[]');
     expect(lireDansLInstantane(bon, lecture, { VITEST: 'true' })).toBe('[]');
-    expect(contexteAdmis({})).toBeNull();
+    expect(contextesAdmis({})).toEqual({ ci: false, vitest: false });
+  });
+
+  it('REQ-GOV-006 : TÉMOIN — vitest lancé EN CI reste vitest : GOV_ETAT_FORGE y est admise, et refusée en CI hors de vitest', () => {
+    const lecture = LECTURES_DE_LA_PORTE_A[0];
+    const temoin = {
+      variable: 'GOV_ETAT_FORGE' as const,
+      chemin: ecrire(JSON.stringify({ [cleDeLecture(lecture)]: '[]' })),
+    };
+    expect(contextesAdmis({ ...CI, VITEST: 'true' })).toEqual({ ci: true, vitest: true });
+    expect(lireDansLInstantane(temoin, lecture, { ...CI, VITEST: 'true' })).toBe('[]');
+    expect(() => lireDansLInstantane(temoin, lecture, CI)).toThrow(
+      /GOV_ETAT_FORGE refusée hors de vitest/
+    );
   });
 
   it('REQ-GOV-006 : PRÉSÉANCE — GOV_ETAT_GH l’emporte ; GOV_ETAT_FORGE (vitest) prime sur GOV_FORGE', () => {

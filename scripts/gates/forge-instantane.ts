@@ -78,11 +78,16 @@ export function figerLesLectures(
   return instantane;
 }
 
-/** Le contexte où un instantané est admis : la CI, ou un run de vitest. Ailleurs, `null`. */
-export function contexteAdmis(env: Env): 'ci' | 'vitest' | null {
-  if (env['CI'] === 'true' && env['GITHUB_ACTIONS'] === 'true') return 'ci';
-  if (env['VITEST']) return 'vitest';
-  return null;
+/**
+ * Les contextes où un instantané est admis : la CI, un run de vitest — ou les DEUX à la fois, comme
+ * `pnpm test` dans la porte A. Un contexte n'en masque jamais un autre : vitest lancé en CI reste
+ * vitest (mesuré sur la porte A de la PR 521, où `GOV_ETAT_FORGE` était refusée sous vitest).
+ */
+export function contextesAdmis(env: Env): { ci: boolean; vitest: boolean } {
+  return {
+    ci: env['CI'] === 'true' && env['GITHUB_ACTIONS'] === 'true',
+    vitest: Boolean(env['VITEST']),
+  };
 }
 
 /**
@@ -105,12 +110,12 @@ export function lireDansLInstantane(
   env: Env
 ): string {
   const { variable, chemin } = instantane;
-  const contexte = contexteAdmis(env);
-  if (variable === 'GOV_ETAT_FORGE' && contexte !== 'vitest')
+  const contexte = contextesAdmis(env);
+  if (variable === 'GOV_ETAT_FORGE' && !contexte.vitest)
     throw new Error(
       `GOV_ETAT_FORGE refusée hors de vitest (${chemin}) : l'instantané ne sert qu'aux témoins, une porte réelle lit la forge`
     );
-  if (variable === 'GOV_FORGE' && contexte === null)
+  if (variable === 'GOV_FORGE' && !contexte.ci && !contexte.vitest)
     throw new Error(
       `GOV_FORGE refusée hors de la CI et de vitest (${chemin}) : un instantané forgé ne fait pas passer une porte réelle`
     );

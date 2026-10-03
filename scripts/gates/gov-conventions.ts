@@ -2610,12 +2610,6 @@ export const PORTE_A_FIGEE: PorteFigee = {
       },
     },
     { nom: 'run: pnpm install --frozen-lockfile', run: 'pnpm install --frozen-lockfile' },
-    // QA-T64 : la forge lue une fois, en tête, pour toutes les gardes qui la lisent.
-    {
-      nom: 'La forge est lue une fois pour toute la porte A',
-      run: 'pnpm forge:instantane',
-      cles: JETON_DE_LA_FORGE,
-    },
     // GOV-123 : les vues se rendent AVANT toute étape qui en lit une ; aucune ne revient sous git.
     {
       nom: 'Les vues derivees sont rendues, et le rendu est reproductible',
@@ -2624,6 +2618,12 @@ export const PORTE_A_FIGEE: PorteFigee = {
     {
       nom: 'Aucune vue derivee sous git — une PR qui en rajoute une est refusee, le fichier nomme',
       run: 'pnpm vues:hors-git',
+    },
+    // QA-T64 : la forge lue une fois, après les vues et avant toute garde qui la lit.
+    {
+      nom: 'La forge est lue une fois pour toute la porte A',
+      run: 'pnpm forge:instantane',
+      cles: JETON_DE_LA_FORGE,
     },
     { nom: 'Regle de publication (depot public)', run: 'pnpm gov:publication' },
     { nom: 'La garde de publication sait rougir', run: 'pnpm gov:publication:prove' },
