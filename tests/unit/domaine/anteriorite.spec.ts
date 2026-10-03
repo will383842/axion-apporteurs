@@ -31,7 +31,7 @@ function ilYA(mois: number): Date {
   return d;
 }
 
-const RIEN: FaitsDUneEntreprise = { derniereFactureAt: null, devis: [], financeur: false };
+const RIEN: FaitsDUneEntreprise = { derniereFactureAt: null, devis: [], financeur: null };
 
 /** Un devis émis il y a `emis` mois, jamais signé. */
 const emis = (mois: number): DevisConnu => ({
@@ -120,10 +120,13 @@ describe('REQ-DM-029 — l’antériorité, évaluée localement (art. 3.3)', ()
     ).toMatchObject({ connue: true, origine: 'client' });
   });
 
-  it('REQ-DM-029 : une entreprise inscrite sur la liste de la Société est connue (financeur), avant toute autre origine', () => {
+  it('REQ-DM-029 : TÉMOIN — une entreprise inscrite sur la liste de la Société est connue (financeur), avant toute autre origine, et le refus rend sa CATÉGORIE', () => {
     expect(
-      evaluerAnteriorite({ ...RIEN, financeur: true, derniereFactureAt: ilYA(1) }, MAINTENANT)
-    ).toEqual({ connue: true, origine: 'financeur', depuis: null });
+      evaluerAnteriorite(
+        { ...RIEN, financeur: 'financeur_paritaire', derniereFactureAt: ilYA(1) },
+        MAINTENANT
+      )
+    ).toEqual({ connue: true, origine: 'financeur', depuis: null, categorie: 'financeur_paritaire' });
   });
 });
 
