@@ -1,4 +1,5 @@
 // @req REQ-JUR-003
+// @req REQ-DM-004
 /**
  * `redeclaration-et-suspension.spec.ts` — le délai de redéclaration de l'art. 3.5 ne court pas
  * pendant une suspension de l'Apporteur (art. 3.7).
@@ -30,7 +31,7 @@ describe('REQ-JUR-003 — le délai de redéclaration et la suspension (art. 3.5
     expect(alineasDuDelai()).toHaveLength(1);
   });
 
-  it('REQ-JUR-003 : (b) cet alinéa garde le délai de quinze jours pour déclarer à nouveau', () => {
+  it('REQ-JUR-003, REQ-DM-004 : (b) cet alinéa garde le délai de quinze jours pour déclarer à nouveau', () => {
     expect(alineasDuDelai()[0]).toContain(DELAI);
   });
 
