@@ -160,8 +160,25 @@ done <"$TEMP/touchees.txt"
 
 # Le vidage passe par l'hôte : c'est un fichier, celui qu'une restauration réelle relirait.
 docker exec "$ID-base" pg_dump -U porte -Fc -d precedente >"$TEMP/n-1.dump"
+# QA-T70 (REQ-QA-023) : la restauration se fait COMME LE RUNBOOK (`docs/runbooks/sauvegarde.md`,
+# étape 3), par le plan UNIQUE de l'exercice (`planDeLaPropriete`, `scripts/sauvegarde/exercice.ts`) :
+# les rôles de la forme d'abord, puis les droits (`--no-owner`, jamais `--no-acl`), puis la propriété
+# REJOUÉE, dont celle du journal. Sans elle, `evenements` appartiendrait au superutilisateur de la
+# porte, et l'image N−1 démarrerait sur une base que la production n'a jamais.
+docker exec -i "$ID-base" pg_restore --schema-only -f - <"$TEMP/n-1.dump" >"$TEMP/schema-n-1.sql" ||
+  echouer "le schéma du vidage N−1 ne se lit pas."
+pnpm exec tsx scripts/sauvegarde/exercice.ts --plan-de-propriete avant \
+  <"$TEMP/schema-n-1.sql" >"$TEMP/plan-avant.sql" ||
+  echouer "vidage N−1 : le plan de la propriété refuse (rôle ou propriété hors de la forme)."
+pnpm exec tsx scripts/sauvegarde/exercice.ts --plan-de-propriete apres \
+  <"$TEMP/schema-n-1.sql" >"$TEMP/plan-apres.sql" ||
+  echouer "vidage N−1 : le plan de la propriété refuse (rôle ou propriété hors de la forme)."
 creer migree
+sql migree <"$TEMP/plan-avant.sql" >/dev/null
 docker exec -i "$ID-base" pg_restore -U porte --exit-on-error --no-owner -d migree <"$TEMP/n-1.dump"
+sql migree <"$TEMP/plan-apres.sql" >/dev/null
+[ -s "$TEMP/plan-apres.sql" ] ||
+  echouer "vidage N−1 : aucune propriété à rejouer — le journal y perdrait son propriétaire."
 migrer migree "$TEMP/n" "vidage N−1 semé"
 diff_vide migree "vidage N−1 migré"
 comptes migree >"$TEMP/apres.txt"

@@ -257,7 +257,11 @@ describe('REQ-QA-021 — le vidage N−1 est SEMÉ, pas vide', () => {
 });
 
 describe('REQ-QA-023 — QA-T70 : la porte D rejoue la propriété comme le runbook de restauration', () => {
-  const porte = readFileSync('scripts/gates/gate-d.sh', 'utf8');
+  // Le CODE seul : un commentaire qui cite une option ou une étape ne compte pas.
+  const porte = readFileSync('scripts/gates/gate-d.sh', 'utf8')
+    .split('\n')
+    .filter((l) => !l.trimStart().startsWith('#'))
+    .join('\n');
   const position = (motif: string) => {
     const i = porte.indexOf(motif);
     expect(i, motif).toBeGreaterThanOrEqual(0);
@@ -265,9 +269,13 @@ describe('REQ-QA-023 — QA-T70 : la porte D rejoue la propriété comme le runb
   };
 
   it('REQ-QA-023 : TÉMOIN — rôles AVANT la restauration, --no-owner, propriété APRÈS, puis la migration de la PR', () => {
-    const avant = position('scripts/sauvegarde/exercice.ts --plan-de-propriete avant');
+    // Les deux moments du plan sont CALCULÉS par la fonction unique de l'exercice ; c'est leur
+    // APPLICATION qui encadre la restauration.
+    position('scripts/sauvegarde/exercice.ts --plan-de-propriete avant');
+    position('scripts/sauvegarde/exercice.ts --plan-de-propriete apres');
+    const avant = position('sql migree <"$TEMP/plan-avant.sql"');
     const restauration = position('pg_restore -U porte --exit-on-error --no-owner -d migree');
-    const apres = position('scripts/sauvegarde/exercice.ts --plan-de-propriete apres');
+    const apres = position('sql migree <"$TEMP/plan-apres.sql"');
     const migration = position('migrer migree');
     expect(avant).toBeLessThan(restauration);
     expect(restauration).toBeLessThan(apres);
