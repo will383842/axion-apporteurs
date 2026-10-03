@@ -23,6 +23,8 @@ import { describe, it, expect } from 'vitest';
 import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { FORMULES } from '../../../src/content/micro-copy/espace/vocabulaire';
+import { SEUILS } from '../../../src/domain/seuils/ssot';
+import { BADGES_DU_DEPOT } from '../../../src/content/micro-copy/espace/confirmation-du-depot';
 import {
   ISSUES_DEPOT,
   ISSUES_DE_REFUS,
@@ -600,15 +602,15 @@ describe('REQ-UX-002 — snapshot des libellés de l’espace, sans date, sans n
       espace/issues-depot.ts › TEXTES_DES_ISSUES › prioritaire › actionSecondaire › route : /mes-entreprises
       espace/issues-depot.ts › TEXTES_DES_ISSUES › en_attente › pastille : En attente
       espace/issues-depot.ts › TEXTES_DES_ISSUES › en_attente › titre : Enregistré en attente
-      espace/issues-depot.ts › TEXTES_DES_ISSUES › en_attente › pourquoi : Cette entreprise est déjà réservée pour un autre apporteur. Votre dépôt attend, avec son heure d’envoi.
-      espace/issues-depot.ts › TEXTES_DES_ISSUES › en_attente › quoiFaire : Si ce droit prend fin, votre dépôt prend la suite, à l'heure où vous l'avez envoyé. Rien à faire de votre côté : vous serez prévenu.
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › en_attente › pourquoi : Cette entreprise est déjà réservée. Votre dépôt attend, avec son heure d’envoi.
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › en_attente › quoiFaire : Si cette réservation prend fin alors que votre dépôt est le premier en attente, vous serez prévenu, et vous aurez {delaiRedeclaration} pour déposer à nouveau cette entreprise. Sans nouveau dépôt dans ce délai, votre dépôt en attente est effacé.
       espace/issues-depot.ts › TEXTES_DES_ISSUES › en_attente › actionPrincipale › libelle : Déposer une autre entreprise
       espace/issues-depot.ts › TEXTES_DES_ISSUES › en_attente › actionPrincipale › route : /deposer
       espace/issues-depot.ts › TEXTES_DES_ISSUES › en_attente › actionSecondaire › libelle : Voir Mes entreprises
       espace/issues-depot.ts › TEXTES_DES_ISSUES › en_attente › actionSecondaire › route : /mes-entreprises
       espace/issues-depot.ts › TEXTES_DES_ISSUES › file_complete › pastille : Pas enregistré
       espace/issues-depot.ts › TEXTES_DES_ISSUES › file_complete › titre : Pas enregistré : l'attente est complète
-      espace/issues-depot.ts › TEXTES_DES_ISSUES › file_complete › pourquoi : Cette entreprise est déjà réservée pour un autre apporteur, et l'attente prévue par le contrat est complète (article 3.3 bis).
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › file_complete › pourquoi : Cette entreprise est déjà réservée, et l'attente prévue par le contrat est complète (article 3.3 bis).
       espace/issues-depot.ts › TEXTES_DES_ISSUES › file_complete › quoiFaire : Rien à faire. Vous pourrez la vérifier à nouveau plus tard.
       espace/issues-depot.ts › TEXTES_DES_ISSUES › file_complete › actionPrincipale › libelle : Retour à l'accueil
       espace/issues-depot.ts › TEXTES_DES_ISSUES › file_complete › actionPrincipale › route : /
@@ -750,8 +752,8 @@ describe('REQ-UX-002 — snapshot des libellés de l’espace, sans date, sans n
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › /confirmer/<jeton> › phrase : Il a peut-être déjà servi, ou il est trop ancien. Axion-IA reste joignable par écrit si besoin.
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › /confirmer/<jeton> › action › libelle : Contacter Axion-IA
       espace/vocabulaire.ts › FORMULES › droitACommissionJusquau : Votre droit à commission sur cette entreprise court jusqu'au {dateFin}.
-      espace/vocabulaire.ts › FORMULES › dejaReservee : déjà réservée pour un autre apporteur
-      espace/vocabulaire.ts › FORMULES › finDuDroit : si ce droit prend fin
+      espace/vocabulaire.ts › FORMULES › dejaReservee : déjà réservée
+      espace/vocabulaire.ts › FORMULES › finDuDroit : si cette réservation prend fin
       espace/vocabulaire.ts › FORMULES › sansSuite : Sans suite
       espace/vocabulaire.ts › FORMULES › depotsSuspendus : vos nouveaux dépôts sont suspendus le temps d'un échange avec Axion-IA
       espace/vocabulaire.ts › FORMULES › courrierDeSuspension : Le courrier électronique du {dateCourrier} en donne la raison et vous dit comment nous répondre.
@@ -784,6 +786,15 @@ describe('REQ-UX-002 — snapshot des libellés de l’espace, sans date, sans n
       espace/vocabulaire.ts › CONNEXION › arrivee › phrase : Confirmez pour utiliser votre lien de connexion sur cet appareil.
       espace/vocabulaire.ts › CONNEXION › arrivee › action : Utiliser mon lien
       espace/vocabulaire.ts › CONNEXION › arrivee › ouverte : Votre lien de connexion a bien été utilisé.
+      espace/vocabulaire.ts › CONNEXION › code › champ : Code reçu par e-mail
+      espace/vocabulaire.ts › CONNEXION › code › aide : Le code sert si le lien s’ouvre sur un autre appareil.
+      espace/vocabulaire.ts › CONNEXION › code › action : Me connecter
+      espace/vocabulaire.ts › CONNEXION › code › changer : Changer d’adresse
+      espace/vocabulaire.ts › CONNEXION › code › refus : Ce code n’est pas valable. Demandez un nouveau lien de connexion.
+      espace/vocabulaire.ts › CONNEXION › code › debit : Trop d’essais. Réessayez dans quelques minutes.
+      espace/vocabulaire.ts › CONNEXION › code › installee › titre : Vous utilisez l’application installée
+      espace/vocabulaire.ts › CONNEXION › code › installee › phrase : Le lien de l’e-mail s’ouvre dans le navigateur, pas dans l’application. Tapez plutôt le code reçu par e-mail ici.
+      espace/vocabulaire.ts › CONNEXION › dejaUtilise › phrase : Un lien de connexion ne sert qu’une fois : c’est ce qui protège votre espace si l’e-mail est transféré.
       espace/vocabulaire.ts › CONNEXION › courriel › sujet : Votre lien de connexion à votre espace
       espace/vocabulaire.ts › CONNEXION › courriel › corps : Voici votre lien de connexion. Il ne sert qu’une fois et expire rapidement. Si vous n’avez rien demandé, ignorez ce message.
       espace/vocabulaire.ts › CONFIDENTIALITE › titre : Vos données personnelles
@@ -1160,5 +1171,166 @@ describe('la garde ux-exhaustivite, lancée comme la CI la lance (REQ-UX-002, RE
   it('REQ-UX-002 : le type IssueDepot est dérivé de la constante, jamais retapé', () => {
     const i: IssueDepot = ISSUES_DEPOT[0];
     expect(ISSUES_DEPOT).toContain(i);
+  });
+});
+
+/**
+ * UX-P1-17 (REQ-SEC-042, REQ-UX-002, REQ-JUR-043) — l'occupation par la Société ne se lit pas dans
+ * l'espace. Art. 3.5 amendé : une entreprise peut être déjà prise « par un autre apporteur ou par la
+ * Société ou ses préposés », l'effet est le même, et la Société ne révèle jamais qui l'occupe. Les
+ * textes sont lus comme VALEURS des modules de micro-copie (jamais leurs commentaires) :
+ *   — aucun texte de l'espace ne porte un nom de rôle de console, ni une forme composée du rôle des
+ *     préposés (« conseiller salarié ») ; « salarié » et « conseiller » seuls ne sont pas visés ;
+ *   — aucun texte ne nomme la Société, ni un conseiller, comme occupant d'une entreprise ;
+ *   — `vocabulaire.ts` n'emploie pas le verbe « suivre » pour une entreprise.
+ */
+describe('REQ-SEC-042 REQ-UX-002 REQ-JUR-043 — l’occupant d’une entreprise ne se révèle pas dans l’espace', () => {
+  // `\b` ne voit pas les lettres accentuées (« salarié » finit par une non-lettre pour lui) : la
+  // frontière de mot est écrite sur les LETTRES Unicode.
+  const mot = (corps: string) =>
+    new RegExp(`(?<![\\p{L}\\p{N}_])(?:${corps})(?![\\p{L}\\p{N}_])`, 'iu');
+  const ROLES = mot('admin|qualifieur|comptable|lecteur|conseillers? salariés?|conseiller_salarie');
+  const SOCIETE_OCCUPANTE = mot(
+    '(?:réservée?s?|prises?|occupées?|pris)\\s+(?:par|pour)\\s+(?:la Société|Axion-IA|un conseiller|ses préposés|un préposé)'
+  );
+  const SUIVRE = mot('suivi|suivie|suivis|suivies|suivait|suivaient|suivre');
+
+  /** Toutes les chaînes d'une valeur, à toute profondeur. */
+  const chaines = (v: unknown): string[] =>
+    typeof v === 'string'
+      ? [v]
+      : typeof v === 'object' && v !== null
+        ? Object.values(v).flatMap(chaines)
+        : [];
+
+  function fautesDOccupation(fichier: string, textes: readonly string[]): string[] {
+    const f: string[] = [];
+    for (const t of textes) {
+      if (ROLES.test(t)) f.push(`${fichier} : nom de rôle de console — « ${t} »`);
+      if (SOCIETE_OCCUPANTE.test(t))
+        f.push(`${fichier} : la Société nommée comme occupante — « ${t} »`);
+      if (fichier.endsWith('vocabulaire.ts') && SUIVRE.test(t))
+        f.push(`${fichier} : le verbe « suivre » pour une entreprise — « ${t} »`);
+    }
+    return f;
+  }
+
+  const DOSSIER = 'src/content/micro-copy/espace';
+  const fichiers = readdirSync(DOSSIER).filter((n) => n.endsWith('.ts'));
+
+  it('REQ-SEC-042 REQ-UX-002 REQ-JUR-043 : la micro-copie RÉELLE de l’espace ne révèle ni rôle, ni Société occupante, ni « suivre »', async () => {
+    expect(fichiers.length).toBeGreaterThan(0);
+    const fautes: string[] = [];
+    for (const n of fichiers) {
+      const module: unknown = await import(`../../../${DOSSIER}/${n}`);
+      fautes.push(...fautesDOccupation(`${DOSSIER}/${n}`, chaines(module)));
+    }
+    expect(fautes).toEqual([]);
+  });
+
+  it('REQ-JUR-043 : l’attente dit la redéclaration sous délai et l’effacement — ni « rien à faire », ni « prend la suite » (art. 3.5 al. 2)', () => {
+    const t = TEXTES_DES_ISSUES.en_attente;
+    const texte = `${t.pourquoi} ${t.quoiFaire}`;
+    expect(texte).not.toContain(FORMULES.rienAFaire);
+    expect(texte).not.toMatch(/prend la suite/i);
+    expect(t.quoiFaire).toContain('{delaiRedeclaration}');
+    expect(t.quoiFaire).toMatch(/déposer à nouveau/);
+    expect(t.quoiFaire).toMatch(/effacé/);
+    // Le texte RENDU, le paramètre rempli depuis la SSOT comme l'écran de dépôt le fera.
+    const rendu = t.quoiFaire.replace(
+      '{delaiRedeclaration}',
+      `${SEUILS.FILE_FENETRE_REDECLARATION_JOURS.valeur} jours`
+    );
+    expect(rendu).toContain(
+      `vous aurez ${SEUILS.FILE_FENETRE_REDECLARATION_JOURS.valeur} jours pour déposer à nouveau cette entreprise`
+    );
+    expect(rendu).not.toMatch(/\{[^}]*\}/);
+    // Les autres « Rien à faire » de l'espace restent : ils ne visent pas l'attente.
+    expect(TEXTES_DES_ISSUES.enregistree.quoiFaire).toContain(FORMULES.rienAFaire);
+  });
+
+  it('REQ-JUR-043 : les maquettes de l’espace n’emploient « suivre » ni pour une entreprise ni pour la période de l’apporteur, et ne nomment pas l’occupant', () => {
+    // Le texte LU : les codes et ids `suivie_*`, termes du glossaire non lus par l'apporteur, sont
+    // retirés avant le jugement (avis d'A07 du 2026-10-02).
+    const fautes: string[] = [];
+    for (const m of ['deposer', 'entreprise', 'mes-entreprises']) {
+      const lu = readFileSync(`docs/maquettes/${m}.html`, 'utf8')
+        .replace(/(etat-)?suivie[_-][a-z_-]+/g, '')
+        .split('\n');
+      lu.forEach((l, i) => {
+        if (SUIVRE.test(l) || mot('suit|suivent').test(l) || /autre apporteur suit/i.test(l))
+          fautes.push(`${m}.html:${i + 1} — ${l.trim()}`);
+      });
+    }
+    expect(fautes).toEqual([]);
+  });
+
+  it('REQ-SEC-042 REQ-JUR-043 : les formules d’occupation ne nomment plus l’occupant ni « ce droit »', () => {
+    expect(FORMULES.dejaReservee).toBe('déjà réservée');
+    expect(FORMULES.finDuDroit).toBe('si cette réservation prend fin');
+  });
+
+  it('REQ-SEC-042 REQ-JUR-043 : TÉMOINS — un rôle, une Société occupante, « suivie » dans le vocabulaire rougissent ; CONTRE-TÉMOINS — « former ses salariés » et « conseiller » seul restent verts', () => {
+    const v = `${DOSSIER}/vocabulaire.ts`;
+    expect(fautesDOccupation(v, ['Pris en charge par un conseiller salarié'])).toHaveLength(1);
+    expect(fautesDOccupation(v, ['déjà réservée par la Société'])).toEqual([
+      `${v} : la Société nommée comme occupante — « déjà réservée par la Société »`,
+    ]);
+    expect(fautesDOccupation(v, ['entreprise déjà suivie'])).toEqual([
+      `${v} : le verbe « suivre » pour une entreprise — « entreprise déjà suivie »`,
+    ]);
+    expect(fautesDOccupation(v, ['visible par le qualifieur'])).toHaveLength(1);
+    expect(
+      fautesDOccupation(`${DOSSIER}/etats-vides.ts`, [
+        'Quand vous rencontrez une entreprise qui pourrait former ses salariés',
+        'Un conseiller de la banque vous répondra',
+      ])
+    ).toEqual([]);
+  });
+
+  /**
+   * Art. 3.5 (rattrapage 89, texte de la juriste) : le refus d'une entreprise déjà prise est
+   * IDENTIQUE quel que soit l'occupant, et la réserve de l'alinéa 4 n'est pas une occupation. Côté
+   * micro-copie, cela se lit ainsi : aucune issue n'est propre à un occupant ou à la réserve, et les
+   * deux issues d'une entreprise prise ne disent pas qui la tient. La moitié serveur du témoin (le
+   * même refus rendu pour les deux occupants, une déclaration pendant la réserve qui passe) est
+   * celle de SEC-12, sur `tests/integration/concurrence.spec.ts`.
+   */
+  it('REQ-SEC-042 REQ-JUR-043 : TÉMOIN art. 3.5 — un seul texte pour une entreprise prise, quel que soit l’occupant, et aucune issue pour la réserve', () => {
+    const OCCUPANT_OU_RESERVE = mot(
+      'société|axion-ia|préposés?|conseillers?|prise en charge|réserve de la Société'
+    );
+    for (const i of ISSUES_DEPOT)
+      expect(i, `issue ${i}`).not.toMatch(/societe|conseiller|prepose|prise_en_charge|reserve/);
+    for (const i of ['en_attente', 'file_complete'] as const) {
+      const { pastille, titre, pourquoi, quoiFaire } = TEXTES_DES_ISSUES[i];
+      for (const t of [pastille, titre, pourquoi, quoiFaire])
+        expect(t, `${i} › ${t}`).not.toMatch(OCCUPANT_OU_RESERVE);
+      expect(pourquoi).toContain(FORMULES.dejaReservee);
+    }
+  });
+
+  it('REQ-JUR-043 : la carte « une place en attente » d’entreprise.html porte la phrase de la juriste, MOT POUR MOT : seul le premier en attente est prévenu, et il a un délai (art. 3.5 al. 2)', () => {
+    const lu = readFileSync('docs/maquettes/entreprise.html', 'utf8').replace(/\s+/g, ' ');
+    expect(lu).toContain(
+      'Vous pouvez tout de même la déposer : votre dépôt attend. Si cette réservation prend fin alors que votre dépôt est le premier en attente, vous serez prévenu, et vous aurez quinze jours pour déposer à nouveau cette entreprise.'
+    );
+    expect(lu).not.toContain('vous serez prévenu et pourrez la déposer à nouveau');
+  });
+
+  it('REQ-JUR-043 : la fin d’une demande vérifiée suit le libellé d’UX-P1-41, « de nouveau disponible » ne reste qu’à la péremption et à la fin de durée (rattrapage 70)', () => {
+    const lu = readFileSync('docs/maquettes/mes-entreprises.html', 'utf8');
+    const libelles = [...lu.matchAll(/>\s*(Réservation terminée · [^<]+?)\s*</g)].map((m) =>
+      m[1]!.replace(/\s+/g, ' ')
+    );
+    // Chaque fin s'écrit par l'un des DEUX badges d'UX-P1-41, choisi par sa cause, et les deux
+    // figurent : la demande vérifiée libérée (carence, avec la date), la péremption ou la fin de
+    // durée (art. 3.4, sans date ; c'est aussi un badge de REQ-UX-062).
+    const verifiee = BADGES_DU_DEPOT.reservationTermineeVerifiee.split('{dateRedepot}')[0]!;
+    const disponible = BADGES_DU_DEPOT.reservationTerminee.replace(/'/g, '’');
+    for (const l of libelles) expect(l.startsWith(verifiee) || l === disponible, l).toBe(true);
+    expect(libelles.filter((l) => l.startsWith(verifiee))).toHaveLength(1);
+    expect(libelles.filter((l) => l === disponible)).toHaveLength(1);
+    expect(lu).toMatch(/de nouveau disponible[^<]*ne sert qu’à la péremption/);
   });
 });

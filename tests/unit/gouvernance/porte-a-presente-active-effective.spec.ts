@@ -63,6 +63,17 @@ function remplacerUneFois(texte: string, cherche: string, par: string): string {
   return texte.slice(0, i) + par + texte.slice(i + cherche.length);
 }
 
+/**
+ * GOV-142 : la porte A a plusieurs jobs, dont les étapes du socle se répètent. Remplace la PREMIÈRE
+ * occurrence APRÈS l'en-tête du job nommé, et refuse si le job ou le texte n'y sont pas.
+ */
+function remplacerDansLeJob(texte: string, job: string, cherche: string, par: string): string {
+  const debut = texte.indexOf(`\n  ${job}:\n`);
+  const i = debut < 0 ? -1 : texte.indexOf(cherche, debut);
+  if (i < 0) throw new Error(`témoin mal posé : « ${cherche.slice(0, 60)} » absent du job ${job}`);
+  return texte.slice(0, i) + par + texte.slice(i + cherche.length);
+}
+
 const CI_REEL = readFileSync(CI, 'utf8');
 const PKG_REEL = readFileSync('package.json', 'utf8');
 
@@ -186,10 +197,13 @@ async function messagesDe(vue: Vue): Promise<string> {
   return [...controler(vue), ...porte.fautes].map((f) => f.message).join('\n');
 }
 
-/** Le nombre d'étapes du job `gate-a`, recompté ICI par l'analyseur partagé — pas par la garde. */
+/**
+ * Le nombre d'étapes de la porte A, TOUS jobs confondus (GOV-142), recompté ICI par l'analyseur
+ * partagé — pas par la garde.
+ */
 async function etapesDuJob(): Promise<number> {
   const w = (await lireYaml(CI_REEL)) as { jobs: Record<string, { steps: unknown[] }> };
-  return w.jobs['gate-a']!.steps.length;
+  return Object.values(w.jobs).reduce((n, j) => n + j.steps.length, 0);
 }
 
 describe('REQ-QA-013 — la porte A du dépôt est présente, active et effective', () => {
@@ -211,9 +225,10 @@ describe('REQ-QA-013 — la porte A du dépôt est présente, active et effectiv
   it('REQ-QA-013 — chaque script de `package.json` lancé par une étape du job est FIGÉ', async () => {
     const w = (await lireYaml(CI_REEL)) as { jobs: Record<string, { steps: { run?: string }[] }> };
     const scripts = (JSON.parse(PKG_REEL) as { scripts: Record<string, string> }).scripts;
-    const lances = w.jobs['gate-a']!.steps.map(
-      (e) => /^pnpm\s+(\S+)/.exec((e.run ?? '').trim())?.[1]
-    ).filter((s): s is string => s !== undefined && Object.hasOwn(scripts, s));
+    const lances = Object.values(w.jobs)
+      .flatMap((j) => j.steps)
+      .map((e) => /^pnpm\s+(\S+)/.exec((e.run ?? '').trim())?.[1])
+      .filter((s): s is string => s !== undefined && Object.hasOwn(scripts, s));
     expect(lances.length).toBeGreaterThan(0);
     expect(lances.filter((s) => !Object.hasOwn(PORTE_A_FIGEE.scripts, s))).toEqual([]);
   });
@@ -279,8 +294,8 @@ const ALTERATIONS: readonly Alteration[] = [
     ci: (t) =>
       remplacerUneFois(
         t,
-        '    runs-on: ubuntu-latest\n',
-        "    runs-on: ubuntu-latest\n    defaults:\n      run:\n        shell: sh -c 'exit 0' {0}\n"
+        '\n  gate-a:\n',
+        "\n  gate-a:\n    defaults:\n      run:\n        shell: sh -c 'exit 0' {0}\n"
       ),
   },
   {
@@ -288,8 +303,9 @@ const ALTERATIONS: readonly Alteration[] = [
     famille: 'porte_a_alteree',
     nomme: ['uses: actions/checkout@v4', 'with'],
     ci: (t) =>
-      remplacerUneFois(
+      remplacerDansLeJob(
         t,
+        'gardes',
         '        with: { fetch-depth: 0 }\n',
         '        with: { fetch-depth: 0, ref: main }\n'
       ),
@@ -308,25 +324,27 @@ const ALTERATIONS: readonly Alteration[] = [
   {
     quoi: 'l’`env:` d’une étape MODIFIÉ',
     famille: 'porte_a_alteree',
-    nomme: ['Tests', 'env'],
+    nomme: ['Tests — un eclat de la suite', 'env'],
     ci: (t) =>
-      remplacerUneFois(
+      remplacerDansLeJob(
         t,
-        '        run: pnpm test\n        env:\n          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}\n',
-        '        run: pnpm test\n        env:\n          GH_TOKEN: ${{ secrets.AUTRE }}\n'
+        'tests-2',
+        '        run: pnpm test:eclat\n        env:\n          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}\n',
+        '        run: pnpm test:eclat\n        env:\n          GH_TOKEN: ${{ secrets.AUTRE }}\n'
       ),
   },
   {
     quoi: 'l’`env:` d’une étape RETIRÉ',
     famille: 'porte_a_alteree',
-    nomme: ['Tests', 'env'],
-    // Le bloc ENTIER : depuis QA-T64, l'étape porte aussi l'instantané de la forge (`GOV_FORGE`).
+    nomme: ['Tests — un eclat de la suite', 'env'],
+    // Le bloc ENTIER : l'instantané de la forge (`GOV_FORGE`, QA-T64) et le numéro de l'éclat (GOV-142).
     ci: (t) =>
-      remplacerUneFois(
+      remplacerDansLeJob(
         t,
-        '        run: pnpm test\n        env:\n          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}\n' +
-          '          GOV_FORGE: ${{ runner.temp }}/forge-instantane.json\n',
-        '        run: pnpm test\n'
+        'tests-2',
+        '        run: pnpm test:eclat\n        env:\n          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}\n' +
+          '          GOV_FORGE: ${{ runner.temp }}/forge-instantane.json\n          ECLAT: 2/2\n',
+        '        run: pnpm test:eclat\n'
       ),
   },
   {
