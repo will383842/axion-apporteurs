@@ -18214,7 +18214,9 @@
         "tests/unit/integration/reception-hors-schema.spec.ts",
         "tests/integration/reception-hors-schema.spec.ts",
         "tests/unit/gouvernance/termes-interdits.spec.ts",
-        "docs/requirements.json"
+        "docs/requirements.json",
+        "scripts/gates/gov-check.ts",
+        "tests/integration/webhook-verdicts.spec.ts"
       ],
       "schema": true,
       "sensible": [
@@ -22560,7 +22562,9 @@
         "src/server/taches/inscriptions.ts",
         "src/domain/seuils/retention.ts",
         "tests/integration/purge-contestations-anomalies.spec.ts",
-        "src/domain/seuils/ssot.ts"
+        "src/domain/seuils/ssot.ts",
+        "tests/unit/integration/purge-contestations-anomalies.spec.ts",
+        "tests/unit/integration/inscriptions-des-taches.spec.ts"
       ],
       "schema": false,
       "sensible": [
