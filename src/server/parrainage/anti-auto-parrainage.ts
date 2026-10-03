@@ -50,10 +50,16 @@ export interface ResultatDuControle {
   anomalieOuverte: boolean;
 }
 
+/** Le résultat d'un contrôle sans couple à confronter (apporteur inconnu), neuf à chaque appel. */
+function aucun(): ResultatDuControle {
+  return { correspondances: [], anomalieOuverte: false };
+}
+
 // ── le cœur pur ──────────────────────────────────────────────────────────────────────────────────
 
+/** Deux empreintes présentes et égales : une absente n'égale jamais rien, pas même une absente. */
 function egales(a: string | null, b: string | null): boolean {
-  return a !== null && b !== null && a === b;
+  return a !== null && a === b;
 }
 
 function seCroisent(a: readonly string[], b: readonly string[]): boolean {
@@ -196,8 +202,9 @@ export async function controlerALaCandidature(
   journal?: (ligne: LigneDuJournal) => void
 ): Promise<ResultatDuControle> {
   const filleul = await lire(prisma, { id: filleulId });
-  const parrain = filleul === null ? null : await parrainDe(prisma, filleul);
-  const couples = filleul !== null && parrain !== null ? [[filleul, parrain] as const] : [];
+  if (filleul === null) return aucun();
+  const parrain = await parrainDe(prisma, filleul);
+  const couples = parrain === null ? [] : [[filleul, parrain] as const];
   return controler(prisma, couples, 'candidature', journal);
 }
 
@@ -211,7 +218,7 @@ export async function controlerAuChangementDeRib(
   journal?: (ligne: LigneDuJournal) => void
 ): Promise<ResultatDuControle> {
   const a = await lire(prisma, { id: apporteurId });
-  if (a === null) return controler(prisma, [], 'rib', journal);
+  if (a === null) return aucun();
   const parrain = await parrainDe(prisma, a);
   const filleuls = await filleulsDe(prisma, a);
   const couples = [
