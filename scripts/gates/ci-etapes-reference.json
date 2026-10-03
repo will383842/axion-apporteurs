@@ -1,0 +1,507 @@
+{
+  "source": ".github/workflows/ci.yml@7d18f0aa7a95d1c16a9a63830826e5608f97be08",
+  "jobs": {
+    "gate-a": {
+      "runs-on": "ubuntu-latest",
+      "if": "${{ github.event.pull_request.merged != true }}",
+      "permissions": {
+        "contents": "read",
+        "pull-requests": "read"
+      },
+      "steps": [
+        {
+          "uses": "actions/checkout@v4",
+          "with": {
+            "fetch-depth": "0"
+          }
+        },
+        {
+          "uses": "pnpm/action-setup@v4"
+        },
+        {
+          "uses": "actions/setup-node@v4",
+          "with": {
+            "node-version": "22",
+            "cache": "pnpm"
+          }
+        },
+        {
+          "name": "Cache des navigateurs des passes d accessibilite",
+          "uses": "actions/cache@v4",
+          "with": {
+            "path": "~/.cache/ms-playwright",
+            "key": "navigateurs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}"
+          }
+        },
+        {
+          "run": "pnpm install --frozen-lockfile"
+        },
+        {
+          "name": "Les vues derivees sont rendues, et le rendu est reproductible",
+          "run": "pnpm vues:rendre"
+        },
+        {
+          "name": "Aucune vue derivee sous git — une PR qui en rajoute une est refusee, le fichier nomme",
+          "run": "pnpm vues:hors-git"
+        },
+        {
+          "name": "La forge est lue une fois pour toute la porte A",
+          "run": "pnpm forge:instantane",
+          "env": {
+            "GH_TOKEN": "${{ secrets.GITHUB_TOKEN }}"
+          }
+        },
+        {
+          "name": "Regle de publication (depot public)",
+          "run": "pnpm gov:publication"
+        },
+        {
+          "name": "La garde de publication sait rougir",
+          "run": "pnpm gov:publication:prove"
+        },
+        {
+          "name": "Identifiants qualifies",
+          "run": "pnpm gov:identifiants"
+        },
+        {
+          "name": "La garde des identifiants sait rougir",
+          "run": "pnpm gov:identifiants:prove"
+        },
+        {
+          "name": "Coherence du backlog",
+          "run": "pnpm gov:tasks"
+        },
+        {
+          "name": "La garde du backlog sait rougir",
+          "run": "pnpm gov:tasks:prove"
+        },
+        {
+          "name": "La vue du backlog est egale a sa source",
+          "run": "pnpm gov:tasks:verifie-rendu"
+        },
+        {
+          "name": "Registre des exigences",
+          "run": "pnpm gov:requirements"
+        },
+        {
+          "name": "La garde du registre sait rougir",
+          "run": "pnpm gov:requirements:prove"
+        },
+        {
+          "name": "La vue des exigences est egale a sa source",
+          "run": "pnpm gov:requirements:verifie-rendu"
+        },
+        {
+          "name": "Registre des decisions",
+          "run": "pnpm gov:hypotheses"
+        },
+        {
+          "name": "La garde des decisions sait rougir",
+          "run": "pnpm gov:hypotheses:prove"
+        },
+        {
+          "name": "Table de preseance",
+          "run": "pnpm gov:preseance"
+        },
+        {
+          "name": "La garde de preseance sait rougir",
+          "run": "pnpm gov:preseance:prove"
+        },
+        {
+          "name": "Affirmations verifiees sur axionia",
+          "run": "pnpm gov:sonde"
+        },
+        {
+          "name": "La sonde sait rougir",
+          "run": "pnpm gov:sonde:prove"
+        },
+        {
+          "name": "ADR — index derive et gabarit",
+          "run": "pnpm gov:adr"
+        },
+        {
+          "name": "La garde des ADR sait rougir",
+          "run": "pnpm gov:adr:prove"
+        },
+        {
+          "name": "Matrice d autonomie des agents et garde des pushes",
+          "run": "pnpm gov:autonomie"
+        },
+        {
+          "name": "La garde d autonomie sait rougir",
+          "run": "pnpm gov:autonomie:prove"
+        },
+        {
+          "name": "Gabarit de PR, CODEOWNERS et charte des agents",
+          "run": "pnpm gov:pr"
+        },
+        {
+          "name": "Inventaire prouve — tout etat >= code porte une preuve",
+          "run": "pnpm gov:inventaire"
+        },
+        {
+          "name": "La garde de l inventaire sait rougir",
+          "run": "pnpm gov:inventaire:prove"
+        },
+        {
+          "name": "Fiches de role derivees de docs/agents.json",
+          "run": "pnpm gov:agents"
+        },
+        {
+          "name": "La garde des fiches sait rougir",
+          "run": "pnpm gov:agents:prove"
+        },
+        {
+          "name": "Les fiches sur le disque sont egales a leur source",
+          "run": "pnpm gov:agents:verifier"
+        },
+        {
+          "name": "Registre d entite — sentinelle tenue dans les deux sens",
+          "run": "pnpm gov:entite"
+        },
+        {
+          "name": "La garde du registre d entite sait rougir",
+          "run": "pnpm gov:entite:prove"
+        },
+        {
+          "name": "Le corps PUBLIE de la PR ne porte aucune coordonnee",
+          "if": "github.event_name == 'pull_request'",
+          "run": "pnpm gov:entite:corps",
+          "env": {
+            "GH_TOKEN": "${{ secrets.GITHUB_TOKEN }}"
+          }
+        },
+        {
+          "name": "La garde du corps publie sait rougir",
+          "run": "pnpm gov:entite:corps:prove"
+        },
+        {
+          "name": "La garde du depot sait rougir",
+          "run": "pnpm gov:depot-visibilite:prove"
+        },
+        {
+          "name": "Matrice de tracabilite REQ vers tache vers test vers PR",
+          "run": "pnpm gov:trace",
+          "env": {
+            "GH_TOKEN": "${{ secrets.GITHUB_TOKEN }}",
+            "GOV_FORGE": "${{ runner.temp }}/forge-instantane.json"
+          }
+        },
+        {
+          "name": "La matrice de tracabilite sait rougir",
+          "run": "pnpm gov:trace:prove"
+        },
+        {
+          "name": "La vue de tracabilite est derivee de ses sources",
+          "run": "pnpm gov:trace:verifier"
+        },
+        {
+          "name": "La vue de l etat vivant est egale a sa source",
+          "run": "pnpm plan-state:verifier"
+        },
+        {
+          "name": "Attributions — garde, poste, lot et identifiants nommes confrontes a leurs sources",
+          "run": "pnpm gov:attributions"
+        },
+        {
+          "name": "La garde des attributions sait rougir, et laisse passer la citation legitime",
+          "run": "pnpm gov:attributions:prove"
+        },
+        {
+          "name": "contracts:hash — le contrat est derive, et son empreinte le tient",
+          "run": "pnpm contracts:hash"
+        },
+        {
+          "name": "La garde de PR sait rougir",
+          "run": "pnpm gov:pr:prove"
+        },
+        {
+          "name": "Vue GATES.md derivee du registre",
+          "run": "pnpm gov:gates-derivees"
+        },
+        {
+          "name": "Le decompte des gardes sait rougir",
+          "run": "pnpm gates:prouvees:prove"
+        },
+        {
+          "name": "Les paths derives sont a jour",
+          "run": "pnpm lot:paths:check"
+        },
+        {
+          "name": "Vocabulaire — enums, glossaire et etats occupants",
+          "run": "pnpm partners:schema:enums"
+        },
+        {
+          "name": "La garde du vocabulaire sait rougir",
+          "run": "pnpm partners:schema:enums:prove"
+        },
+        {
+          "name": "Centimes — aucun flottant, montants en Cents",
+          "run": "pnpm partners:schema:cents"
+        },
+        {
+          "name": "La garde des centimes sait rougir",
+          "run": "pnpm partners:schema:cents:prove"
+        },
+        {
+          "name": "Migrations additives",
+          "run": "pnpm partners:migrations:additive"
+        },
+        {
+          "name": "La garde des migrations sait rougir",
+          "run": "pnpm partners:migrations:additive:prove"
+        },
+        {
+          "name": "La porte D sait rougir — une colonne encore lue, supprimee, est nommee",
+          "run": "pnpm gate-d:prove"
+        },
+        {
+          "name": "Porte D — expand/contract, base vierge, vidage N-1 seme, diff vide, image N-1",
+          "run": "pnpm gate-d"
+        },
+        {
+          "name": "Termes interdits — nomenclature, modeles d axionia et synonymes",
+          "run": "pnpm gov:termes-interdits"
+        },
+        {
+          "name": "La garde des termes interdits sait rougir",
+          "run": "pnpm gov:termes-interdits:prove"
+        },
+        {
+          "name": "Lexique interdit — aucun usage prescriptif dans le perimetre de REQ-GOV-017",
+          "run": "pnpm gov:lexique"
+        },
+        {
+          "name": "La garde du lexique sait rougir, et laisse passer la negation qui protege",
+          "run": "pnpm gov:lexique:prove"
+        },
+        {
+          "name": "Charte — aucun agregat du reseau dans l espace",
+          "run": "pnpm jur:aucun-agregat-reseau"
+        },
+        {
+          "name": "La garde des agregats du reseau sait rougir",
+          "run": "pnpm jur:aucun-agregat-reseau:prove"
+        },
+        {
+          "name": "Securite — aucun style en ligne sous src/app",
+          "run": "pnpm csp:inline"
+        },
+        {
+          "name": "La garde des styles en ligne sait rougir",
+          "run": "pnpm csp:inline:prove"
+        },
+        {
+          "name": "Charte — aucune progression vers un seuil dans l espace",
+          "run": "pnpm jur:aucune-progression"
+        },
+        {
+          "name": "La garde des progressions sait rougir",
+          "run": "pnpm jur:aucune-progression:prove"
+        },
+        {
+          "name": "Charte — revue du juriste sur ce qu un apporteur lit, label et checklist",
+          "run": "pnpm jur:revue-apporteur-facing"
+        },
+        {
+          "name": "La garde de la revue apporteur-facing sait rougir",
+          "run": "pnpm jur:revue-apporteur-facing:prove"
+        },
+        {
+          "name": "Charte — aucun terme ni rubrique du droit social",
+          "run": "pnpm jur:lexique-social"
+        },
+        {
+          "name": "La garde du lexique social sait rougir",
+          "run": "pnpm jur:lexique-social:prove"
+        },
+        {
+          "name": "Charte — aucune remuneration presentee comme ferme",
+          "run": "pnpm jur:copy-indicative-partners"
+        },
+        {
+          "name": "La garde de la remuneration indicative sait rougir",
+          "run": "pnpm jur:copy-indicative-partners:prove"
+        },
+        {
+          "name": "Grille du contrat — aucun forfait, bareme ou pourcentage sans chiffre dans l annexe 1",
+          "run": "pnpm jur:grille-chiffree"
+        },
+        {
+          "name": "La garde de la grille chiffree sait rougir",
+          "run": "pnpm jur:grille-chiffree:prove"
+        },
+        {
+          "name": "Seuils et delais du contrat — une seule source, aucun litteral hors SSOT",
+          "run": "pnpm ssot:seuils"
+        },
+        {
+          "name": "La garde des seuils sait rougir, famille par famille, sans faux positif",
+          "run": "pnpm ssot:seuils:prove"
+        },
+        {
+          "name": "La date de lecture d une notification ne fait courir aucun delai",
+          "run": "pnpm notifications:lue-at-inerte"
+        },
+        {
+          "name": "La garde de la date de lecture sait rougir, famille par famille",
+          "run": "pnpm notifications:lue-at-inerte:prove"
+        },
+        {
+          "name": "Maquettes — aucune tache d'ecran attribuee sans validation de Will",
+          "run": "pnpm gov:maquettes-validees"
+        },
+        {
+          "name": "La garde des maquettes sait rougir, y compris sur une ligne du milieu du tableau",
+          "run": "pnpm gov:maquettes-validees:prove"
+        },
+        {
+          "name": "Micro-copie — chaque issue et chaque ecran ont leur texte, aucun libelle en dur",
+          "run": "pnpm ux:exhaustivite"
+        },
+        {
+          "name": "La garde de la micro-copie sait rougir, en nommant la valeur, l'ecran ou le fichier",
+          "run": "pnpm ux:exhaustivite:prove"
+        },
+        {
+          "name": "Budgets de performance derives de REQ-GOV-028",
+          "run": "pnpm perf:budgets"
+        },
+        {
+          "name": "La garde des budgets sait rougir",
+          "run": "pnpm perf:budgets:prove"
+        },
+        {
+          "name": "Les budgets sur le disque sont le rendu de leur exigence",
+          "run": "pnpm perf:budgets:verifier"
+        },
+        {
+          "name": "La mesure du poids par route sait rougir, y compris sur zero octet",
+          "run": "pnpm perf:bundle:prove"
+        },
+        {
+          "name": "Compteurs de debit — conduite sur panne declaree et executee, famille close",
+          "run": "pnpm securite:rate-famille"
+        },
+        {
+          "name": "La garde des compteurs de debit sait rougir",
+          "run": "pnpm securite:rate-famille:prove"
+        },
+        {
+          "name": "Conventions et gardes transposees d axionia",
+          "run": "pnpm gov:conventions"
+        },
+        {
+          "name": "La garde des conventions sait rougir",
+          "run": "pnpm gov:conventions:prove"
+        },
+        {
+          "name": "Journal sans donnee personnelle",
+          "run": "pnpm journal:sans-pii"
+        },
+        {
+          "name": "La garde du journal sait rougir",
+          "run": "pnpm journal:sans-pii:prove"
+        },
+        {
+          "name": "Donnees personnelles chiffrees, schema et chemins d ecriture",
+          "run": "pnpm securite:schema-pii"
+        },
+        {
+          "name": "La garde des donnees personnelles sait rougir",
+          "run": "pnpm securite:schema-pii:prove"
+        },
+        {
+          "name": "Roles de la console — requireRole partout, droits dans la matrice",
+          "run": "pnpm securite:roles"
+        },
+        {
+          "name": "La garde des roles sait rougir",
+          "run": "pnpm securite:roles:prove"
+        },
+        {
+          "name": "Lint",
+          "run": "pnpm lint"
+        },
+        {
+          "name": "Semgrep — regles maison et jeux publics sur src",
+          "run": "pnpm sec:semgrep"
+        },
+        {
+          "name": "Semgrep — chaque regle maison mord sur son temoin, nosemgrep n eteint rien",
+          "run": "pnpm sec:semgrep:prove"
+        },
+        {
+          "name": "Format",
+          "run": "pnpm format:check"
+        },
+        {
+          "name": "Typecheck",
+          "run": "pnpm typecheck"
+        },
+        {
+          "name": "red-first — les tests nouveaux de la PR rougissent contre sa base",
+          "if": "github.event_name == 'pull_request'",
+          "run": "pnpm red-first"
+        },
+        {
+          "name": "La garde red-first sait rougir",
+          "run": "pnpm red-first:prove"
+        },
+        {
+          "name": "Harnais de l adaptateur MCP",
+          "run": "pnpm harnais-mcp"
+        },
+        {
+          "name": "Navigateurs des passes d accessibilite",
+          "timeout-minutes": "15",
+          "run": "pnpm a11y:navigateurs:bornes"
+        },
+        {
+          "name": "Tests",
+          "run": "pnpm test",
+          "env": {
+            "GH_TOKEN": "${{ secrets.GITHUB_TOKEN }}",
+            "GOV_FORGE": "${{ runner.temp }}/forge-instantane.json"
+          }
+        },
+        {
+          "name": "req:check — chaque paire (tache, REQ) a son test annote et VERT",
+          "run": "pnpm req:check",
+          "env": {
+            "GH_TOKEN": "${{ secrets.GITHUB_TOKEN }}",
+            "GOV_FORGE": "${{ runner.temp }}/forge-instantane.json"
+          }
+        },
+        {
+          "name": "Le lecteur du rapport de mutation sait rougir",
+          "run": "pnpm mutation:prove"
+        },
+        {
+          "name": "Mutation des fichiers de la PR — Stryker en bac a sable, survivants nommes",
+          "run": "pnpm mutation:pr"
+        },
+        {
+          "name": "Etat vivant — fraicheur, verrou d owner, journal",
+          "run": "pnpm gov:etat --now \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"",
+          "env": {
+            "GH_TOKEN": "${{ secrets.GITHUB_TOKEN }}",
+            "GOV_FORGE": "${{ runner.temp }}/forge-instantane.json"
+          }
+        },
+        {
+          "name": "La garde de l etat vivant sait rougir",
+          "run": "pnpm gov:etat:prove"
+        },
+        {
+          "name": "Construire l application pour la mesure",
+          "run": "pnpm perf:bundle:construire"
+        },
+        {
+          "name": "Poids par route de l espace — JS propre et socle commun",
+          "run": "pnpm perf:bundle"
+        }
+      ]
+    }
+  }
+}

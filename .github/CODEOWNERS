@@ -93,3 +93,7 @@
 /src/content/micro-copy/courriels/ @will383842
 # poste A07 (`juriste`)
 /src/content/micro-copy/public/ @will383842
+
+# --- Le contrat d'apporteur : poste A07 (`juriste`), auteur du gabarit (JUR-T56, rattrapage 71).
+# poste A07 (`juriste`)
+/docs/contrat/                  @will383842

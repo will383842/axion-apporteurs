@@ -39,6 +39,13 @@ import type { Prisma, PrismaClient, TypeEvenementJournal, AgregatJournal } from 
 import { CHARGES_PAR_TYPE } from '../../domain/evenement/charges';
 import { calculerSelfHash, type LigneJournal } from '../../domain/evenement/journal';
 
+/**
+ * SEC-50 : le nom qualifié de la table du journal, écrit UNE fois, ici, chez son seul écrivain (RM-01).
+ * Le constat du rôle d'exécution le reçoit en PARAMÈTRE pour lire le propriétaire et les privilèges
+ * de la table, sans jamais la nommer lui-même ni y écrire.
+ */
+export const TABLE_DU_JOURNAL = 'public.evenements';
+
 /** La clé du verrou consultatif de l'écrivain : une seule chaîne, donc une seule clé. */
 const CLE_VERROU = 'evenements';
 

@@ -54,20 +54,18 @@ function etapesDeLaChaine(chaine: string): string[] {
   return [...chaine.matchAll(/pnpm ([\w:.-]+)/g)].map((m) => m[1]!);
 }
 
-/** Les `pnpm <script>` que le job `gate-a` de `ci.yml` joue — lus dans le BLOC du job. */
+/**
+ * Les `pnpm <script>` que la porte A de `ci.yml` joue. GOV-142 : la porte A est le WORKFLOW, découpé
+ * en jobs dont `gate-a` est la porte finale ; sans `gate-a`, ce n'est pas la porte A, et rien n'est
+ * rendu. Sinon, les étapes de TOUS ses jobs, lues à partir de `jobs:`.
+ */
 function etapesDeLaPorteA(texte: string): string[] {
   const lignes = texte.split('\n');
-  const debut = lignes.findIndex((l) => /^ {2}gate-a:\s*$/.test(l));
+  if (!lignes.some((l) => /^ {2}gate-a:\s*$/.test(l))) return [];
+  const debut = lignes.findIndex((l) => /^jobs:\s*$/.test(l));
   if (debut < 0) return [];
-  let fin = lignes.length;
-  for (let i = debut + 1; i < lignes.length; i += 1) {
-    if (/^ {2}[\w-]+:\s*$/.test(lignes[i]!)) {
-      fin = i;
-      break;
-    }
-  }
   return lignes
-    .slice(debut, fin)
+    .slice(debut)
     .map((l) => /^\s*(?:- )?run:\s*pnpm ([\w:.-]+)/.exec(l)?.[1])
     .filter((n): n is string => n !== undefined)
     .filter((n) => n !== 'install');
