@@ -19725,7 +19725,8 @@
         "tests/unit/qualite/provisionnement-coolify.spec.ts",
         "tests/unit/qualite/env-fail-fast.spec.ts",
         "scripts/gates/gate-c.sh",
-        "tests/integration/sondes-de-vie.spec.ts"
+        "tests/integration/sondes-de-vie.spec.ts",
+        "tests/unit/securite/role-d-execution.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -21309,7 +21310,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "Versée au rattrapage 68 : sortie d'UX-P1-41 (écart C15 de la vérification de bout en bout) sur la mesure d'A06, avec l'accord de la coordination du 2026-10-02, parce que la garde a son propre câblage. Elle se code APRÈS UX-P1-41 et QA-T33. (1) La garde `jur:copy-indicative` d'axion-ia (JUR-T29) est transposée dans Partners sur `src/content/**` et `docs/maquettes/**` : toute mention de rémunération reste en formulation indicative, et aucun taux ni montant n'est présenté comme ferme. (2) CÂBLAGE, sur le patron de `jur:lexique-social` : ses scripts `jur:copy-indicative-partners` et `jur:copy-indicative-partners:prove` dans `package.json` (REQ-GOV-008 : jamais `jur:copy-indicative`, qui désigne au registre la garde d'axion-ia ; arbitrage de la coordination, rattrapage 74) (cette PR passe par A02), son étape dans `.github/workflows/ci.yml`, son entrée dans `PORTE_A_FIGEE` (`scripts/gates/gov-conventions.ts`), ses sorties non nulles DÉCLARÉES (`scripts/gates/registre-des-refus.ts`, `tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts`) ; l'entrée de `docs/gates.json` se pose APRÈS l'étape de CI (sinon `garde_ecrite_jamais_appelee`). (3) TÉMOIN ROUGE : la phrase d'états vides que C15 a réécrite (une promesse de gain dès la signature du client, contraire à l'art. 4.2), reposée dans une copie de test, fait rougir la garde ; le dépôt réel la laisse verte. Auteur : A06. IDENTIFIANT (rattrapage 72) : la garde s'enregistre dans `docs/gates.json` sous `jur:copy-indicative-partners`, car `jur:copy-indicative` y est déjà pris par celle d'axion-ia (JUR-T29) ; l'instantané de `tests/unit/espace/vocabulaire-et-micro-copy.spec.ts` qui fige la phrase d'`etats-vides.ts` est mis à jour avec la tournure d'A07.",
       "tests": {
         "REQ-JUR-001": [
@@ -21318,7 +21319,16 @@
         "REQ-JUR-002": [
           "tests/unit/juridique/copy-indicative.spec.ts"
         ]
-      }
+      },
+      "branch": "t/qa-t69",
+      "owner": "A06",
+      "pr": 518,
+      "attestation": {
+        "pr": 518,
+        "sha": "591225f3c9a8045b111f55759f1fd85036a577b4",
+        "fusionneeAt": "2026-10-03T01:35:36Z"
+      },
+      "motif": null
     },
     {
       "id": "DM-57",

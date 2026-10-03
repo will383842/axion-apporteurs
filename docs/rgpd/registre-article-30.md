@@ -106,6 +106,8 @@ ou un utilisateur de la console) : le test le vérifie aussi.
 | `revisions_demande_confirmation` | TRT-TIERS | L'ancienne valeur, chiffrée, et ses empreintes de recherche, du contact ou du contexte corrigés pendant le délai avant envoi : purgées avec le contact de l'attribution (mêmes durées que la ligne `attributions`), la date de purge seule restant | table `revisions_demande_confirmation` · REQ-DM-060 · REQ-DM-031 · HYP-W20-ANNULATION |
 | `depots_refuses` | TRT-APPORTEURS | À compléter — source manquante. Question : combien de temps un dépôt refusé est-il conservé, sachant qu'il ne sert qu'à la contestation écrite du refus (REQ-DM-043) ? | table `depots_refuses` · REQ-DM-043 |
 | `personnes_declarees` | TRT-APPORTEURS | Nom et prénom chiffrés : purgés selon une durée À compléter — source manquante. Question : combien de temps après le retrait d'une personne déclarée, ou la fin du contrat de l'apporteur, son nom et son prénom sont-ils conservés ? Qualité et dates de déclaration et de retrait : même question | table `personnes_declarees` · REQ-CPL-029 · contrat art. 2.6 |
+| `notifications_espace` | TRT-APPORTEURS | À compléter — source manquante. Question : combien de temps une notification reste-t-elle visible dans l'espace, la preuve étant le courriel (`courriels_envoyes`) ? Proposition d'A07 : 12 mois après l'envoi, et au plus tard jusqu'à l'effacement de la fiche. | table `notifications_espace` · REQ-UX-016 |
+| `preferences_notification` | TRT-APPORTEURS | Effacée avec la fiche de l'apporteur : elle hérite de la durée de la fiche. | table `apporteurs` · RGPD art. 5.1.e |
 
 ## 4. Destinataires tiers et sous-traitants
 

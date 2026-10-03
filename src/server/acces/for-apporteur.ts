@@ -49,8 +49,10 @@ import type {
   IdentiteFacturation,
   JetonDepot,
   LienMagique,
+  NotificationEspace,
   PersonneDeclaree,
   PieceKyc,
+  PreferenceNotification,
   Prisma,
   PrismaClient,
   SessionEspace,
@@ -67,8 +69,10 @@ export const MODELES_CLOISONNES = [
   'identiteFacturation',
   'jetonDepot',
   'lienMagique',
+  'notificationEspace',
   'personneDeclaree',
   'pieceKyc',
+  'preferenceNotification',
   'sessionEspace',
 ] as const;
 export type ModeleCloisonne = (typeof MODELES_CLOISONNES)[number];
@@ -108,6 +112,7 @@ export const CLES_REFUSEES = {
     'peremptionSuspenduePar',
     'courrielsEnvoyes',
     'demandeConfirmation',
+    'notificationsEspace',
   ],
   changementCourriel: ['id', 'apporteurId', 'apporteur'],
   courrielEnvoye: ['id', 'apporteurId', 'apporteur', 'attribution'],
@@ -133,6 +138,10 @@ export const CLES_REFUSEES = {
   ],
   personneDeclaree: ['id', 'apporteurId', 'apporteur', 'attributions'],
   pieceKyc: ['id', 'apporteurId', 'apporteur', 'identitesFacturation'],
+  // UX-P1-10 : l'attribution d'une notification est une référence vérifiée ; la clé d'une
+  // préférence s'écrit, et Zod la juge contre la table des notifications avant la couche.
+  notificationEspace: ['id', 'apporteurId', 'apporteur', 'attribution'],
+  preferenceNotification: ['id', 'apporteurId', 'apporteur'],
 } as const satisfies Record<ModeleCloisonne, readonly string[]>;
 
 /** Les clés étrangères vers une autre table cloisonnée : admises si la ligne visée est de la session. */
@@ -144,6 +153,7 @@ export const REFERENCES_CLOISONNEES: Partial<
   courrielEnvoye: { attributionId: 'attribution' },
   // DM-11 : la pièce rib d'une identité de facturation est une pièce de la session.
   identiteFacturation: { pieceKycId: 'pieceKyc' },
+  notificationEspace: { attributionId: 'attribution' },
 };
 
 /** Les messages de refus : une liste FERMÉE, qui part au journal et jamais au navigateur. */
@@ -175,6 +185,7 @@ export const RELATIONS = {
     'peremptionSuspenduePar',
     'courrielsEnvoyes',
     'demandeConfirmation',
+    'notificationsEspace',
   ],
   changementCourriel: ['apporteur'],
   courrielEnvoye: ['apporteur', 'attribution'],
@@ -185,6 +196,8 @@ export const RELATIONS = {
   personneDeclaree: ['apporteur', 'attributions'],
   pieceKyc: ['apporteur', 'identitesFacturation'],
   sessionEspace: ['apporteur', 'utilisateurConsole', 'lienMagique'],
+  notificationEspace: ['apporteur', 'attribution'],
+  preferenceNotification: ['apporteur'],
 } as const satisfies Record<ModeleCloisonne, readonly string[]>;
 
 /**
@@ -263,6 +276,9 @@ export const CHAMPS_RENDUS = {
   // DM-11 : ce que « Ma conformité » montre d'une pièce — son type, son état, ses dates.
   pieceKyc: ['id', 'type', 'statut', 'verifieeAt', 'expireAt', 'remplaceeAt'],
   sessionEspace: ['id', 'creeAt', 'expireAt', 'revoqueAt', 'derniereVueAt', 'sessionVersion'],
+  // UX-P1-10 : la notification telle que l'espace l'affiche, et la préférence que l'apporteur règle.
+  notificationEspace: ['id', 'cle', 'creeAt', 'lueAt'],
+  preferenceNotification: ['id', 'cle', 'active', 'modifieeAt'],
   // SEC-47 : ce que l'apporteur lit de sa propre fiche — son état, son code, ce qu'il a accepté.
   apporteur: [
     'id',
@@ -326,6 +342,9 @@ export const CHAMPS_TUS = {
     'kid',
     'ipHash',
   ],
+  // UX-P1-10 : le propriétaire, et l'attribution dont la notification parle (comme un courriel).
+  notificationEspace: ['apporteurId', 'attributionId'],
+  preferenceNotification: ['apporteurId'],
   // SEC-47 : les secrets, le jugement de la candidature (seuil, score, parts, réponses, barème),
   // les traces d'acquisition et de parrainage, le marqueur de test, la version de session.
   apporteur: [
@@ -457,6 +476,14 @@ type WSession = Prisma.SessionEspaceWhereInput;
 type CSession = Prisma.SessionEspaceUncheckedCreateInput;
 type USession = Prisma.SessionEspaceUncheckedUpdateManyInput;
 type OSession = Prisma.SessionEspaceOrderByWithRelationInput;
+type WNotification = Prisma.NotificationEspaceWhereInput;
+type CNotification = Prisma.NotificationEspaceUncheckedCreateInput;
+type UNotification = Prisma.NotificationEspaceUncheckedUpdateManyInput;
+type ONotification = Prisma.NotificationEspaceOrderByWithRelationInput;
+type WPreference = Prisma.PreferenceNotificationWhereInput;
+type CPreference = Prisma.PreferenceNotificationUncheckedCreateInput;
+type UPreference = Prisma.PreferenceNotificationUncheckedUpdateManyInput;
+type OPreference = Prisma.PreferenceNotificationOrderByWithRelationInput;
 
 /** L'accès de l'espace, pour UN apporteur : une vue par modèle cloisonné, et sa propre fiche. */
 export interface AccesApporteur {
@@ -532,6 +559,20 @@ export interface AccesApporteur {
     SansProprietaire<CSession>,
     USession,
     OSession
+  >;
+  notificationEspace: VueCloisonnee<
+    Rendu<NotificationEspace, 'notificationEspace'>,
+    WNotification,
+    SansProprietaire<CNotification>,
+    UNotification,
+    ONotification
+  >;
+  preferenceNotification: VueCloisonnee<
+    Rendu<PreferenceNotification, 'preferenceNotification'>,
+    WPreference,
+    SansProprietaire<CPreference>,
+    UPreference,
+    OPreference
   >;
 }
 

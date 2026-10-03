@@ -284,6 +284,9 @@ export const REFUS_NOMMES: Readonly<Record<string, readonly string[]>> = {
     'principal(process.argv.slice(2)).then › ∅ › (code)',
     'principal(process.argv.slice(2)).then › ∅ › (2)',
   ],
+  'scripts/gates/forge-instantane.ts': [
+    'module › si APPELE_DIRECTEMENT › si refus !== null › (= 1)',
+  ],
   'scripts/gates/gov-attestation.ts': [
     "module › si !process.argv.includes('--en-ligne') › (2)",
     'module › si !existsSync(CHEMIN_TACHES) › (1)',
@@ -383,6 +386,9 @@ export const REFUS_NOMMES: Readonly<Record<string, readonly string[]>> = {
   'scripts/gates/harnais-mcp.ts': ['principal().then › ∅ › (code)'],
   'scripts/gates/journal-sans-pii.ts': ['module › si LANCE_EN_SCRIPT › (decision.code)'],
   'scripts/gates/csp-inline.ts': ['module › si LANCE_EN_SCRIPT › (decision.code)'],
+  'scripts/gates/notifications-lue-at-inerte.ts': [
+    'module › si APPELE_DIRECTEMENT › si echecs.length > 0 › (= 1)',
+  ],
   'scripts/gates/jur-aucun-agregat-reseau.ts': ['module › si LANCE_EN_SCRIPT › (decision.code)'],
   'scripts/gates/jur-aucune-progression.ts': ['module › si LANCE_EN_SCRIPT › (decision.code)'],
   'scripts/gates/jur-grille-chiffree.ts': [

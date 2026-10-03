@@ -228,16 +228,18 @@ model Apporteur {
   confidentialiteAccepteeAt DateTime? @map("confidentialite_acceptee_at") @db.Timestamptz(3)
   confidentialiteVersion    String?   @map("confidentialite_version") @db.VarChar(32)
 
-  jetonsDepot          JetonDepot[]
-  identitesFacturation IdentiteFacturation[]
-  liensMagiques        LienMagique[]
-  sessionsEspace       SessionEspace[]
-  courrielsEnvoyes     CourrielEnvoye[]
-  changementsCourriel  ChangementCourriel[]
-  attributions         Attribution[]
-  depotsRefuses        DepotRefuse[]
-  personnesDeclarees   PersonneDeclaree[]
-  piecesKyc            PieceKyc[]
+  jetonsDepot             JetonDepot[]
+  identitesFacturation    IdentiteFacturation[]
+  liensMagiques           LienMagique[]
+  sessionsEspace          SessionEspace[]
+  courrielsEnvoyes        CourrielEnvoye[]
+  changementsCourriel     ChangementCourriel[]
+  attributions            Attribution[]
+  depotsRefuses           DepotRefuse[]
+  personnesDeclarees      PersonneDeclaree[]
+  piecesKyc               PieceKyc[]
+  notificationsEspace     NotificationEspace[]
+  preferencesNotification PreferenceNotification[]
 
   @@index([phoneHash])
   @@map("apporteurs")
@@ -560,6 +562,45 @@ model CourrielEnvoye {
   @@map("courriels_envoyes")
 }
 
+/// UX-P1-10 (REQ-UX-016, REQ-JUR-039) — une notification de l'ESPACE de l'apporteur. `cle` est une clé
+/// de la table des notifications (`src/server/notifications/table-ssot.ts`), exception E3 de
+/// partners/ADR-0022 : la base en tient la FORME (CHECK), le code la VALEUR. `lueAt` n'est lu par
+/// AUCUN calcul de délai : un délai court de `courriels_envoyes.envoye_at` (garde
+/// `notifications-lue-at-inerte`).
+model NotificationEspace {
+  id            String       @id @default(uuid()) @db.Uuid
+  apporteurId   String       @map("apporteur_id") @db.Uuid
+  apporteur     Apporteur    @relation(fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  cle           String       @db.VarChar(64)
+  attributionId String?      @map("attribution_id") @db.Uuid
+  attribution   Attribution? @relation(fields: [attributionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  /// L'heure d'inscription dans l'espace, PAS un horodatage opposable : aucun délai ne s'y appuie ;
+  /// un délai court de `courriels_envoyes.envoye_at` (relecture A02, 2026-10-02).
+  creeAt        DateTime     @default(now()) @map("cree_at") @db.Timestamptz(3)
+  lueAt         DateTime?    @map("lue_at") @db.Timestamptz(3)
+
+  @@index([apporteurId, creeAt])
+  @@index([attributionId])
+  @@map("notifications_espace")
+}
+
+/// UX-P1-10 (REQ-UX-016) — la préférence d'un apporteur pour une clé de notification. Une clé OBLIGATOIRE
+/// (`notificationObligatoire`) n'a pas de préférence désactivable : la table de code le refuse avant
+/// l'écriture.
+model PreferenceNotification {
+  id          String    @id @default(uuid()) @db.Uuid
+  apporteurId String    @map("apporteur_id") @db.Uuid
+  apporteur   Apporteur @relation(fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  cle         String    @db.VarChar(64)
+  active      Boolean
+  modifieeAt  DateTime  @map("modifiee_at") @db.Timestamptz(3)
+
+  /// Une préférence par (apporteur, clé) ; sert aussi d'index à la clé étrangère. La clé primaire `id`
+  /// fait passer la ligne par la couche cloisonnée sans exception (A02, 2026-10-02).
+  @@unique([apporteurId, cle], map: "preferences_notification_apporteur_cle_unique")
+  @@map("preferences_notification")
+}
+
 /// La liste de suppression (REQ-INT-023). Idempotente par construction : une adresse, une ligne.
 model SuppressionCourriel {
   id        String                   @id @default(uuid()) @db.Uuid
@@ -738,6 +779,7 @@ model Attribution {
 
   courrielsEnvoyes    CourrielEnvoye[]
   demandeConfirmation DemandeConfirmation?
+  notificationsEspace NotificationEspace[]
 
   @@index([apporteurId])
   @@index([utilisateurConsoleId])
