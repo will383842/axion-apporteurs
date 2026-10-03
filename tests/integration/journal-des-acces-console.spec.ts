@@ -1,4 +1,5 @@
 // @req REQ-SEC-023
+// @req REQ-SEC-058
 /**
  * SEC-58 — le journal des accès à la console, en base RÉELLE (forme commune d'A02 et de la sécurité).
  * Ajout seul par le gabarit commun `refuser_modification_sauf` : la purge vide l'utilisateur, la cible
@@ -125,7 +126,7 @@ async function refus(p: Promise<unknown>): Promise<string> {
 const GABARIT = /refuser_modification_sauf|ajout seul/i;
 
 describe('REQ-SEC-023 — une ligne par accès, par identifiants seuls', () => {
-  it('REQ-SEC-023 : TÉMOIN — une lecture de coordonnées écrit UNE ligne, et rend le clair', async () => {
+  it('REQ-SEC-023, REQ-SEC-058 : TÉMOIN — une lecture de coordonnées écrit UNE ligne, et rend le clair', async () => {
     const u = await unUtilisateur();
     const a = await unApporteur();
     const lu = await lireCoordonneesDeLApporteur(
@@ -145,7 +146,7 @@ describe('REQ-SEC-023 — une ligne par accès, par identifiants seuls', () => {
     });
   });
 
-  it('REQ-SEC-023 : TÉMOIN — une connexion réussie écrit une ligne sans cible ; une connexion échouée n’en écrit aucune', async () => {
+  it('REQ-SEC-023, REQ-SEC-058 : TÉMOIN — une connexion réussie écrit une ligne sans cible ; une connexion échouée n’en écrit aucune', async () => {
     const u = await unUtilisateur();
     await journaliserConnexionConsole(app, { utilisateurConsoleId: u, adresse: ADRESSE }, cles);
     const lignes = await base.prisma.journalAccesConsole.findMany({
@@ -163,7 +164,7 @@ describe('REQ-SEC-023 — une ligne par accès, par identifiants seuls', () => {
     ).toContain('journal_acces_console_purge_liee');
   });
 
-  it('REQ-SEC-023 : TÉMOIN — aucune colonne ne peut porter une donnée de personne', async () => {
+  it('REQ-SEC-023, REQ-SEC-058 : TÉMOIN — aucune colonne ne peut porter une donnée de personne', async () => {
     const colonnes = (
       await base.prisma.$queryRawUnsafe<{ c: string; t: string }[]>(
         `SELECT column_name AS c, data_type AS t FROM information_schema.columns
@@ -181,7 +182,7 @@ describe('REQ-SEC-023 — une ligne par accès, par identifiants seuls', () => {
     ]);
   });
 
-  it('REQ-SEC-023 : TÉMOIN — une empreinte hors forme est refusée sur le nom du CHECK', async () => {
+  it('REQ-SEC-023, REQ-SEC-058 : TÉMOIN — une empreinte hors forme est refusée sur le nom du CHECK', async () => {
     const u = await unUtilisateur();
     expect(
       await refus(
@@ -197,7 +198,7 @@ describe('REQ-SEC-023 — une ligne par accès, par identifiants seuls', () => {
     ).toContain('journal_acces_console_ip_hash_hex');
   });
 
-  it('REQ-SEC-023 : TÉMOIN — une connexion avec cible, ou une lecture sans cible, est refusée (journal_acces_console_cible)', async () => {
+  it('REQ-SEC-023, REQ-SEC-058 : TÉMOIN — une connexion avec cible, ou une lecture sans cible, est refusée (journal_acces_console_cible)', async () => {
     const u = await unUtilisateur();
     const ecrire = (nature: 'connexion' | 'lecture_coordonnees_contact', cibleId: string | null) =>
       app.journalAccesConsole.create({
@@ -211,7 +212,7 @@ describe('REQ-SEC-023 — une ligne par accès, par identifiants seuls', () => {
 });
 
 describe('REQ-SEC-023 — ajout seul, sauf la purge', () => {
-  it('REQ-SEC-023 : TÉMOIN — un UPDATE hors purge, un DELETE et un TRUNCATE sont refusés', async () => {
+  it('REQ-SEC-023, REQ-SEC-058 : TÉMOIN — un UPDATE hors purge, un DELETE et un TRUNCATE sont refusés', async () => {
     const id = await uneTrace(await unUtilisateur(), MAINTENANT);
     expect(
       await refus(
@@ -231,7 +232,7 @@ describe('REQ-SEC-023 — ajout seul, sauf la purge', () => {
     );
   });
 
-  it('REQ-SEC-023 : TÉMOIN — une purge PARTIELLE est refusée (journal_acces_console_purge_liee)', async () => {
+  it('REQ-SEC-023, REQ-SEC-058 : TÉMOIN — une purge PARTIELLE est refusée (journal_acces_console_purge_liee)', async () => {
     const id = await uneTrace(await unUtilisateur(), MAINTENANT);
     expect(
       await refus(
@@ -243,7 +244,7 @@ describe('REQ-SEC-023 — ajout seul, sauf la purge', () => {
     ).toContain('journal_acces_console_purge_liee');
   });
 
-  it('REQ-SEC-023 : TÉMOIN — après la purge, un purge_at réécrit ou une valeur qui revient est refusé', async () => {
+  it('REQ-SEC-023, REQ-SEC-058 : TÉMOIN — après la purge, un purge_at réécrit ou une valeur qui revient est refusé', async () => {
     const u = await unUtilisateur();
     const id = await uneTrace(u, new Date('2020-01-01T00:00:00.000Z'));
     await purgerLeJournalDesAccesConsole(app, MAINTENANT);
@@ -268,7 +269,7 @@ describe('REQ-SEC-023 — ajout seul, sauf la purge', () => {
 });
 
 describe('REQ-SEC-023 — la purge à l’échéance', () => {
-  it('REQ-SEC-023 : TÉMOIN — la purge vide l’échu, à la milliseconde, garde le reste, et garde la ligne nue', async () => {
+  it('REQ-SEC-023, REQ-SEC-058 : TÉMOIN — la purge vide l’échu, à la milliseconde, garde le reste, et garde la ligne nue', async () => {
     const u = await unUtilisateur();
     const limite = limiteDuJournalDesAcces(MAINTENANT);
     const echue = await uneTrace(u, new Date(limite.getTime() - 1));
