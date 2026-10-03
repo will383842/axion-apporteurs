@@ -22,13 +22,33 @@
  */
 import { createHash } from 'node:crypto';
 import { SEUILS, type Seuil, type UniteDeSeuil } from '../seuils/ssot';
+import { famillesPourPortee } from '../lexique/lexique-interdit';
 
 // ── les formes ──────────────────────────────────────────────────────────────────────────────────
 
-/** Un morceau de contenu : un texte du registre, ou un manque déclaré avec sa question. */
+/**
+ * Un morceau de contenu : un texte du registre, ou un passage EN COURS DE RÉDACTION. Ce dernier ne
+ * porte rien du registre (JUR-T36) : ni la question interne d'un manque déclaré, ni un texte retenu
+ * parce qu'il nomme une personne ou emploie un mot que le lexique de l'espace refuse.
+ */
 export type Segment =
-  | { readonly type: 'texte'; readonly texte: string }
-  | { readonly type: 'a_completer'; readonly question: string };
+  { readonly type: 'texte'; readonly texte: string } | { readonly type: 'a_completer' };
+
+/**
+ * Ce que la lecture a retenu, et pourquoi (JUR-T36) : la page publique ne montre pas la note
+ * interne, la lecture la NOMME. `ou` est la clé de la rubrique, ou « nom du tiers · colonne ».
+ */
+export type Filtre = {
+  readonly ou: string;
+  readonly motif: 'question_interne' | 'nom_de_personne' | 'lexique_interdit';
+  readonly detail?: string;
+};
+
+/**
+ * Les personnes que le registre nomme dans ses notes internes : l'arbitre des questions juridiques
+ * du projet (registre, en-tête et section 6). Aucun texte qui les nomme n'atteint la page publique.
+ */
+export const PERSONNES_DU_REGISTRE: readonly string[] = ['Will', 'Williams'];
 
 /** Les rubriques de TRT-APPORTEURS affichées, et leur nom exact dans le registre. */
 export const RUBRIQUES_AFFICHEES = {
@@ -69,7 +89,7 @@ export type Politique = {
 };
 
 export type LecturePolitique =
-  | { readonly ok: true; readonly politique: Politique }
+  | { readonly ok: true; readonly politique: Politique; readonly filtres: readonly Filtre[] }
   | { readonly ok: false; readonly refus: string };
 
 /** La longueur de la version : celle de la colonne `confidentialite_version` du schéma. */
@@ -98,6 +118,9 @@ const UNITES: Readonly<Record<UniteDeSeuil, string>> = {
 
 /** Un refus du registre : son message est le motif, rendu tel quel. */
 const refus = (motif: string): Error => new Error(motif);
+
+const REFUS_CONSEILLERS =
+  'l’extrait mentionne les conseillers : leur information passe par un autre canal';
 
 // ── la lecture du Markdown ──────────────────────────────────────────────────────────────────────
 
@@ -150,20 +173,55 @@ function resoudre(texte: string): string {
   });
 }
 
-/** Une cellule en segments : le texte, puis chaque manque déclaré avec sa question. */
-function segments(contenu: string): Segment[] {
+/** Les formes que le lexique de l'espace refuse à l'apporteur, chacune jugée comme un mot entier. */
+const FORMES_REFUSEES = famillesPourPortee('apporteur').flatMap((f) =>
+  f.formes.map((forme) => ({ forme, motif: motDe(forme, 'iu') }))
+);
+const PERSONNES = PERSONNES_DU_REGISTRE.map((p) => motDe(p, 'u'));
+
+function motDe(mot: string, drapeaux: string): RegExp {
+  const litteral = mot.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`(?<![\\p{L}\\p{N}])${litteral}(?![\\p{L}\\p{N}])`, drapeaux);
+}
+
+/**
+ * Le texte tel que la page publique peut le montrer : un texte qui nomme une personne, ou qui
+ * emploie un mot refusé, est RETENU en entier (on ne réécrit pas le registre à sa place) et la page
+ * l'annonce en cours de rédaction ; la retenue est nommée dans `filtres`.
+ */
+function texteAffichable(texte: string, ou: string, filtres: Filtre[]): Segment {
+  // Le refus des conseillers se juge AVANT toute retenue : retenir le texte ne doit pas le taire.
+  if (/conseill/i.test(texte)) throw refus(REFUS_CONSEILLERS);
+  if (PERSONNES.some((p) => p.test(texte))) {
+    filtres.push({ ou, motif: 'nom_de_personne' });
+    return { type: 'a_completer' };
+  }
+  const refusee = FORMES_REFUSEES.find((f) => f.motif.test(texte));
+  if (refusee !== undefined) {
+    filtres.push({ ou, motif: 'lexique_interdit', detail: refusee.forme });
+    return { type: 'a_completer' };
+  }
+  return { type: 'texte', texte };
+}
+
+/**
+ * Une cellule en segments : le texte, puis chaque manque déclaré. La question qui suit un manque
+ * est une note INTERNE, posée à l'arbitre : elle ne sort pas du domaine (JUR-T36), seul le manque
+ * est annoncé, et la retenue est nommée.
+ */
+function segments(contenu: string, ou: string, filtres: Filtre[]): Segment[] {
   const morceaux = resoudre(contenu).split(MARQUE_A_COMPLETER);
+  const manques = morceaux.slice(1).map((): Segment => {
+    filtres.push({ ou, motif: 'question_interne' });
+    return { type: 'a_completer' };
+  });
   // Un seul élément au plus : `join()` sans séparateur, comme dans `cellule`.
   const avant = morceaux.slice(0, 1).join().trim();
-  const texte: Segment[] = avant === '' ? [] : [{ type: 'texte', texte: avant }];
-  const manques = morceaux.slice(1).map((m): Segment => ({
-    type: 'a_completer',
-    question: m.trim().replace(/^Question\s*:\s*/, ''),
-  }));
+  const texte: Segment[] = avant === '' ? [] : [texteAffichable(avant, ou, filtres)];
   return [...texte, ...manques];
 }
 
-function lireRubriques(lignes: readonly string[]): Rubrique[] {
+function lireRubriques(lignes: readonly string[], filtres: Filtre[]): Rubrique[] {
   const tableau = lignesDeTableau(
     section(lignes, new RegExp(`^### ${TRAITEMENT}\\b`), /^#{1,3} /, TRAITEMENT)
   );
@@ -171,7 +229,7 @@ function lireRubriques(lignes: readonly string[]): Rubrique[] {
     const nom = RUBRIQUES_AFFICHEES[cle];
     const ligne = tableau.find((c) => normaliser(cellule(c, 0)) === nom);
     if (ligne === undefined) throw refus(`rubrique absente de ${TRAITEMENT} : ${nom}`);
-    return { cle, contenu: segments(cellule(ligne, 1)) };
+    return { cle, contenu: segments(cellule(ligne, 1), cle, filtres) };
   });
 }
 
@@ -187,7 +245,7 @@ function tableauDesTiers(lignes: readonly string[]) {
   return { corps: tableau.slice(1), colonne };
 }
 
-function lireDestinataires(lignes: readonly string[]): Destinataire[] {
+function lireDestinataires(lignes: readonly string[], filtres: Filtre[]): Destinataire[] {
   const { corps, colonne } = tableauDesTiers(lignes);
   const c = {
     nom: colonne(COLONNES.nom),
@@ -202,12 +260,17 @@ function lireDestinataires(lignes: readonly string[]): Destinataire[] {
         .split(/[,;]/)
         .some((t) => t.trim() === TRAITEMENT)
     )
-    .map((l) => ({
-      nom: resoudre(cellule(l, c.nom)),
-      qualification: segments(cellule(l, c.qualification)),
-      donnees: segments(cellule(l, c.donnees)),
-      localisation: segments(cellule(l, c.localisation)),
-    }));
+    .map((l) => {
+      const nom = resoudre(cellule(l, c.nom));
+      const lire = (i: number, colonne: string) =>
+        segments(cellule(l, i), `${nom} · ${colonne}`, filtres);
+      return {
+        nom,
+        qualification: lire(c.qualification, COLONNES.qualification),
+        donnees: lire(c.donnees, COLONNES.donnees),
+        localisation: lire(c.localisation, COLONNES.localisation),
+      };
+    });
 }
 
 /** La version : sha256 du contenu extrait, tronqué à la longueur de la colonne. */
@@ -222,13 +285,13 @@ function versionDe(contenu: Omit<Politique, 'version'>): string {
 export function extrairePolitique(registre: string): LecturePolitique {
   try {
     const lignes = registre.split(/\r?\n/);
-    const contenu = { rubriques: lireRubriques(lignes), destinataires: lireDestinataires(lignes) };
-    if (/conseill/i.test(JSON.stringify(contenu))) {
-      throw refus(
-        'l’extrait mentionne les conseillers : leur information passe par un autre canal'
-      );
-    }
-    return { ok: true, politique: { ...contenu, version: versionDe(contenu) } };
+    const filtres: Filtre[] = [];
+    const contenu = {
+      rubriques: lireRubriques(lignes, filtres),
+      destinataires: lireDestinataires(lignes, filtres),
+    };
+    if (/conseill/i.test(JSON.stringify(contenu))) throw refus(REFUS_CONSEILLERS);
+    return { ok: true, politique: { ...contenu, version: versionDe(contenu) }, filtres };
   } catch (e) {
     return { ok: false, refus: String(e).replace(/^Error: /, '') };
   }

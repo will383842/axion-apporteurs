@@ -5,7 +5,8 @@
  * AUCUN CONTENU DE LA POLITIQUE N'EST ÉCRIT ICI. Chaque rubrique arrive du registre de l'article 30,
  * extraite par `src/domain/rgpd/politique.ts` ; les titres et les phrases de l'écran viennent de la
  * micro-copie (`CONFIDENTIALITE`, et l'état vide de `/confidentialite`). Un manque déclaré au
- * registre s'affiche « À compléter », avec la question posée : rien n'est inventé.
+ * registre s'affiche en cours de rédaction, SANS la question interne posée à l'arbitre (JUR-T36) :
+ * rien n'est inventé, et aucune note interne n'atteint cette page publique.
  *
  * Le formulaire d'accord n'apparaît que pour une session d'espace dont la politique reste à
  * accepter ; il porte la version affichée, et l'action n'écrit que cette version.
@@ -38,8 +39,6 @@ function Contenu({ segments }: { segments: readonly Segment[] }) {
         ) : (
           <p key={i}>
             <strong>{CONFIDENTIALITE.aCompleter}</strong>
-            {' — '}
-            {CONFIDENTIALITE.question} {s.question}
           </p>
         )
       )}

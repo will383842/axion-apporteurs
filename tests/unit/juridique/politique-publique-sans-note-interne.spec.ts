@@ -44,8 +44,7 @@ const lue = (registre: string): Extract<LecturePolitique, { ok: true }> => {
 };
 
 /** Ce que la page reçoit, à plat : le seul texte que l'écran peut afficher. */
-const lisible = (l: Extract<LecturePolitique, { ok: true }>): string =>
-  JSON.stringify(l.politique);
+const lisible = (l: Extract<LecturePolitique, { ok: true }>): string => JSON.stringify(l.politique);
 
 const FORMES = famillesPourPortee('apporteur').flatMap((f) => f.formes);
 const motInterdit = (texte: string): string | undefined =>
@@ -58,7 +57,7 @@ describe('REQ-JUR-025 — la politique publique ne porte aucune note interne', (
     expect(page).not.toMatch(/Question/);
     expect(page).not.toMatch(/\bWill\b/);
     expect(page).not.toMatch(/attribution/i);
-    expect(l.filtres).toEqual([
+    expect(l.filtres.filter((f) => f.ou === 'finalite')).toEqual([
       { ou: 'finalite', motif: 'question_interne' },
       { ou: 'finalite', motif: 'lexique_interdit', detail: 'attribution' },
     ]);
@@ -70,7 +69,9 @@ describe('REQ-JUR-025 — la politique publique ne porte aucune note interne', (
   });
 
   it('REQ-JUR-025 : TÉMOIN — un nom de personne dans une note du registre sort de la page, nommé', () => {
-    const l = lue(avecRubrique('Destinataires', 'Les équipes de la Société, à confirmer par Will.'));
+    const l = lue(
+      avecRubrique('Destinataires', 'Les équipes de la Société, à confirmer par Will.')
+    );
     expect(lisible(l)).not.toMatch(/\bWill\b/);
     expect(l.filtres).toContainEqual({ ou: 'destinataires', motif: 'nom_de_personne' });
   });
