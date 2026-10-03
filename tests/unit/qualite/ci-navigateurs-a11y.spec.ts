@@ -51,8 +51,22 @@ function cacheDuJob(
   const iEtape = yml.search(new RegExp(`- name: ${nom}\\s*\\n`));
   if (iEtape < 0) return null;
   const job = yml.slice(yml.lastIndexOf('steps:', iEtape), iEtape);
-  const i = job.indexOf('uses: actions/cache@');
-  if (i < 0) return null;
+  // GOV-142 : un job peut porter plusieurs caches (les moteurs de Prisma, puis les navigateurs) ;
+  // celui des navigateurs est celui dont l'étape porte leur chemin, à défaut le premier.
+  const caches: number[] = [];
+  for (
+    let k = job.indexOf('uses: actions/cache@');
+    k >= 0;
+    k = job.indexOf('uses: actions/cache@', k + 1)
+  )
+    caches.push(k);
+  if (caches.length === 0) return null;
+  const etapeDe = (k: number): string =>
+    job.slice(
+      job.lastIndexOf('\n      - ', k),
+      job.indexOf('\n      - ', k) < 0 ? undefined : job.indexOf('\n      - ', k)
+    );
+  const i = caches.find((k) => /~\/\.cache\/ms-playwright/.test(etapeDe(k))) ?? caches[0]!;
   const debut = job.lastIndexOf('\n      - ', i);
   const fin = job.indexOf('\n      - ', i);
   const premiereCommande = job.search(/\n\s+(?:- )?run:/);
@@ -131,17 +145,27 @@ describe('REQ-QA-016 — les navigateurs des passes d’accessibilité, bornés 
       expect(fautes(ligne(run))).toContain(
         `script_non_borne : l’étape lance « ${run} » au lieu de « ${COMMANDE} »`
       );
-    const enDur = yml.replace(/(key:\s*.*)\$\{\{\s*hashFiles\([^)]*\)\s*\}\}/, '$1 1.63.0');
+    // GOV-142 : la clé du cache des NAVIGATEURS (un job porte aussi celui des moteurs de Prisma).
+    const enDur = yml.replace(
+      /(key:\s*navigateurs-.*)\$\{\{\s*hashFiles\([^)]*\)\s*\}\}/,
+      '$1 1.63.0'
+    );
     expect(fautes(enDur)).toEqual(
       expect.arrayContaining([
         'cle_non_derivee : la clé ne dérive pas du verrou pnpm-lock.yaml',
         'version_en_dur : la clé écrit une version en dur',
       ])
     );
+    // Le cache déplacé APRÈS l'installation du MÊME job (le premier qui porte l'étape des navigateurs).
     const cache = cacheDuJob(yml, NOM)!.etape;
-    const apresUneCommande = yml
-      .replace(cache, '')
-      .replace(/(\n\s+- run: pnpm install --frozen-lockfile)/, `$1${cache}`);
+    const sansCache = yml.replace(cache, '');
+    const iNav = sansCache.search(new RegExp(`- name: ${NOM}\\s*\\n`));
+    const install = '\n      - run: pnpm install --frozen-lockfile';
+    const iInstall = sansCache.lastIndexOf(install, iNav);
+    const apresUneCommande =
+      sansCache.slice(0, iInstall + install.length) +
+      cache +
+      sansCache.slice(iInstall + install.length);
     expect(fautes(apresUneCommande)).toContain(
       'cache_apres_une_commande : l’action suit une commande du job'
     );

@@ -174,8 +174,8 @@
     {
       "id": "REQ-DM-011",
       "domaine": "domaine-donnees",
-      "texte": "Le statut d'apporteur est un enum {candidat, retenu, vivier, refuse, kyc_en_cours, pret_a_signer, signe, suspendu, resilie} avec matrice de transitions ; `resiliationMotif` enum {ordinaire_apporteur, ordinaire_axion, manquement_grave} — le mot « faute » est proscrit (décision du 2026-09-03), le vocabulaire disciplinaire est retiré du produit ; la résiliation applique ses effets sur les attributions et les lignes dans une seule transaction qui écrit un événement par effet.",
-      "source": "outil §5 étape 12 ; anti-abus F9, §4 ; nouvelle (F-DM-12, F-DM-24)",
+      "texte": "Le statut d'apporteur est un enum {candidat, retenu, vivier, refuse, kyc_en_cours, pret_a_signer, signe, suspendu, resilie} avec matrice de transitions ; `resiliationMotif` enum {ordinaire_apporteur, ordinaire_axion, manquement_grave} [l'enum compte TROIS valeurs aujourd'hui, celles ci-dessus, dans le code et le schéma ; la valeur `fin_de_plein_droit` est À VENIR : DM-64 l'ajoutera EN FIN d'enum, à sa livraison, et amendera alors cette liste (rattrapage 92 ; contrat art. 12.5 : décès, cessation ou radiation, sans préavis ni décision de la Société ; une procédure collective n'en est pas une, juriste)] — le mot « faute » est proscrit (décision du 2026-09-03), le vocabulaire disciplinaire est retiré du produit ; la résiliation applique ses effets sur les attributions et les lignes dans une seule transaction qui écrit un événement par effet.",
+      "source": "outil §5 étape 12 ; anti-abus F9, §4 ; nouvelle (F-DM-12, F-DM-24) ; art. 12.5, juriste et A02 (DM-64), rattrapage 92",
       "statut": "active",
       "remplaceePar": null,
       "module": 4,
@@ -185,6 +185,7 @@
         "DM-06",
         "DM-18",
         "DM-63",
+        "DM-64",
         "SEC-19"
       ]
     },
@@ -394,7 +395,8 @@
         "DM-45",
         "QA-T62",
         "SEC-30",
-        "SEC-50"
+        "SEC-50",
+        "SEC-57"
       ]
     },
     {
@@ -686,7 +688,6 @@
         "DM-31",
         "DM-53",
         "DM-62",
-        "JUR-T31",
         "UX-P1-51"
       ]
     },
@@ -1342,7 +1343,6 @@
         "DM-30",
         "DM-31",
         "INT-T28",
-        "JUR-T31",
         "QA-T31",
         "SEC-34",
         "SEC-51",
@@ -2008,7 +2008,7 @@
     {
       "id": "REQ-INT-004",
       "domaine": "integration",
-      "texte": "Les types d'événements sont : `client.cree`, `client.mis_a_jour`, `devis.signe`, `facture.emise`, `avoir.emis`, `paiement.recu`, `paiement.rembourse`, `candidature.recue`, `financement.mis_a_jour`, `facture.annulee`, `client.fusionne` — nommés sur les modèles réels (Client, Devis, FactureFormation, Payment, Submission, DossierPayeur) ; aucun événement ne référence `Invoice` ni `Refund`. La liste est fermée et portée par le contrat en `schema_version` 2 : les quatre derniers types y sont entrés ensemble, publiés des deux côtés dans la même fenêtre (partners/ADR-0008, partners/ADR-0023).",
+      "texte": "Les types d'événements sont : `client.cree`, `client.mis_a_jour`, `devis.signe`, `facture.emise`, `avoir.emis`, `paiement.recu`, `paiement.rembourse`, `candidature.recue`, `financement.mis_a_jour`, `facture.annulee`, `client.fusionne`, `devis.emis` — nommés sur les modèles réels (Client, Devis, FactureFormation, Payment, Submission, DossierPayeur) ; aucun événement ne référence `Invoice` ni `Refund`. La liste est fermée et portée par le contrat en `schema_version` 3 : `financement.mis_a_jour`, `facture.annulee`, `client.fusionne` et `candidature.recue` y sont entrés ensemble en version 2, publiés des deux côtés dans la même fenêtre (partners/ADR-0008, partners/ADR-0023) ; `devis.emis` y entre en version 3 (décision de Williams du 2026-10-01, option A ; INT-T46-P).",
       "source": "audit-outil §2.3 corrigé par INT-F02/INT-F24",
       "statut": "active",
       "remplaceePar": null,
@@ -2486,6 +2486,7 @@
       "taches": [
         "JUR-T01",
         "JUR-T01b",
+        "JUR-T31",
         "JUR-T40",
         "JUR-T46",
         "JUR-T48"
@@ -3533,7 +3534,7 @@
     {
       "id": "REQ-QA-007",
       "domaine": "qualite-ci-devops",
-      "texte": "Les onze types d'événements du webhook entrant d'axionia (liste fermée de REQ-INT-004, `TYPES_EVENEMENT` de `packages/contracts/events.ts`) et les 3 API sortantes (la vérification d'attribution, la relecture de l'outbox, et `GET /api/partners/candidatures/{candidatureId}/coordonnees` qui rend les coordonnées d'un candidat — partners/ADR-0023) ont chacun un schéma Zod versionné (`schemaVersion`) transcrit à l'identique dans les deux dépôts, avec un test de transcription datée de chaque côté ; les fixtures de contrat sont générées par le producteur réel d'axionia (FactureFormation, Payment, Devis, Client, Submission) et non écrites à la main.",
+      "texte": "Les douze types d'événements du webhook entrant d'axionia (liste fermée de REQ-INT-004, `TYPES_EVENEMENT` de `packages/contracts/events.ts`) et les 3 API sortantes (la vérification d'attribution, la relecture de l'outbox, et `GET /api/partners/candidatures/{candidatureId}/coordonnees` qui rend les coordonnées d'un candidat — partners/ADR-0023) ont chacun un schéma Zod versionné (`schemaVersion`) transcrit à l'identique dans les deux dépôts, avec un test de transcription datée de chaque côté ; les fixtures de contrat sont générées par le producteur réel d'axionia (FactureFormation, Payment, Devis, Client, Submission) et non écrites à la main.",
       "source": "audit-outil-bout-en-bout §2.3 + QA-F01, QA-F14 · patron tests/e2e-crm-sync/contract.spec.ts",
       "statut": "active",
       "remplaceePar": null,
@@ -5475,7 +5476,6 @@
         "DM-07",
         "DM-30",
         "INT-T28",
-        "JUR-T31",
         "QA-T31",
         "SEC-34",
         "UX-P2-12"
@@ -6233,7 +6233,6 @@
       "taches": [
         "DM-30",
         "INT-T28",
-        "JUR-T31",
         "SEC-34",
         "UX-P2-15"
       ]
@@ -6288,8 +6287,8 @@
     {
       "id": "REQ-JUR-062",
       "domaine": "juridique",
-      "texte": "**Le contrat suit la décision de Williams du 2026-10-02 (option B : les données déclarées vont au CRM Pro dès la déclaration), dans des textes que Williams valide avant tout premier envoi en signature.** Williams a autorisé l'écriture du nouvel art. 3.5 al. 4, mot pour mot : « J'autorise l'écriture du nouvel article 3.5 alinéa 4 (option B : le CRM dès la déclaration), avec les deux protections pour l'apporteur. Vas-y. » (rattrapage 61) ; le texte, écrit par A07 avec les deux protections de l'apporteur (aucun démarchage pendant le délai de confirmation ; texte du CONTRAT VALIDÉ, art. 3.5 al. 4 (tête 9b34a278 de #433), MOT POUR MOT : « Dans les {{RESERVE_APRES_ACTE_APPORTEUR_JOURS}} jours qui suivent une vérification d'entreprise faite par l'Apporteur, ou une déclaration de sa part refusée ou en attente, la Société ne démarche pas l'entreprise concernée et ne la prend pas en charge ; cette réserve ne s'applique ni à une entreprise que la Société connaissait déjà au sens de l'article 3.3, ni à une entreprise dont une attribution ou une prise en charge était en cours à la date de cette vérification ou de cette déclaration. ») ; EXIGENCE SÉPARÉE, HORS CONTRAT (texte de la juriste, plus stricte, qui s'impose au code sans être du texte contractuel ; rattrapage 90, voie (a)) : « Une vérification faite par un apporteur sans déclaration n'est versée à aucun outil commercial de la Société et ne sert qu'à la preuve de la réserve de l'article 3.5 alinéa 4 : pendant {{RESERVE_APRES_ACTE_APPORTEUR_JOURS}} jours, la Société ne démarche pas l'entreprise vérifiée et ne la prend pas en charge, sauf si elle la connaissait déjà au sens de l'article 3.3 ou si une attribution ou une prise en charge était en cours. », reste à valider par Williams après la relecture de la suppléante. Ce qui est déjà acquis par délégation : toute commande de l'entreprise attribuée signée pendant l'attribution reste commissionnée, quel que soit celui qui la conclut ; le délai `RESERVE_APRES_ACTE_APPORTEUR_JOURS` est gardé ; [la durée propre `CRM_DUREE_PROSPECT_ANS` est RETIRÉE au rattrapage 90 : décision de Williams du 2026-10-03, ticket #220, « Option 3 : sans limite » ; la conservation au CRM suit JUR-T52] ; aucune émission avant les textes validés.",
-      "source": "Décision de Williams du 2026-10-02 (option B) ; textes d'A07 ; décisions de la coordination par délégation (délai de 30 jours gardé, deux phrases recommandées gardées par défaut) ; protection des vérifications sans déclaration réécrite le 2026-10-03, texte de la juriste (rattrapage 90) ; al. 4 cité depuis le contrat validé (#433, 9b34a278) et durée CRM retirée (ticket #220), rattrapage 90",
+      "texte": "**Le contrat suit la décision de Williams du 2026-10-02 (option B : les données déclarées vont au CRM Pro dès la déclaration), dans des textes que Williams valide avant tout premier envoi en signature.** Williams a autorisé l'écriture du nouvel art. 3.5 al. 4, mot pour mot : « J'autorise l'écriture du nouvel article 3.5 alinéa 4 (option B : le CRM dès la déclaration), avec les deux protections pour l'apporteur. Vas-y. » (rattrapage 61) ; le texte, écrit par A07 avec les deux protections de l'apporteur (aucun démarchage pendant le délai de confirmation ; texte du CONTRAT VALIDÉ, art. 3.5 al. 4 (tête 9b34a278 de #433), MOT POUR MOT : « Dans les {{RESERVE_APRES_ACTE_APPORTEUR_JOURS}} jours qui suivent une vérification d'entreprise faite par l'Apporteur, ou une déclaration de sa part refusée ou en attente, la Société ne démarche pas l'entreprise concernée et ne la prend pas en charge ; cette réserve ne s'applique ni à une entreprise que la Société connaissait déjà au sens de l'article 3.3, ni à une entreprise dont une attribution ou une prise en charge était en cours à la date de cette vérification ou de cette déclaration. ») ; EXIGENCE SÉPARÉE, HORS CONTRAT (texte de la juriste, plus stricte, qui s'impose au code sans être du texte contractuel ; rattrapage 90, voie (a)) : « Une vérification faite par un apporteur sans déclaration n'est versée à aucun outil commercial de la Société et ne sert qu'à la preuve de la réserve de l'article 3.5 alinéa 4 : pendant {{RESERVE_APRES_ACTE_APPORTEUR_JOURS}} jours, la Société ne démarche pas l'entreprise vérifiée et ne la prend pas en charge, sauf si elle la connaissait déjà au sens de l'article 3.3 ou si une attribution ou une prise en charge était en cours. » ; [rattrapage 91, note de l'exactitude] la mention « reste à valider par Williams » visait le texte CONTRACTUEL de l'al. 4, que Williams a VALIDÉ (#433) ; l'exigence séparée ci-dessus n'est pas un texte contractuel et s'impose au code sans cette validation. Ce qui est déjà acquis par délégation : toute commande de l'entreprise attribuée signée pendant l'attribution reste commissionnée, quel que soit celui qui la conclut ; le délai `RESERVE_APRES_ACTE_APPORTEUR_JOURS` est gardé ; [la durée propre `CRM_DUREE_PROSPECT_ANS` est RETIRÉE au rattrapage 90 : décision de Williams du 2026-10-03, ticket #220, « Option 3 : sans limite » ; la conservation au CRM suit JUR-T52] ; aucune émission avant les textes validés.",
+      "source": "Décision de Williams du 2026-10-02 (option B) ; textes d'A07 ; décisions de la coordination par délégation (délai de 30 jours gardé, deux phrases recommandées gardées par défaut) ; protection des vérifications sans déclaration réécrite le 2026-10-03, texte de la juriste (rattrapage 90) ; al. 4 cité depuis le contrat validé (#433, 9b34a278) et durée CRM retirée (ticket #220), rattrapage 90 ; note de l'exactitude sur la validation, rattrapage 91",
       "statut": "active",
       "remplaceePar": null,
       "module": 11,

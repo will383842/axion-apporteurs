@@ -126,7 +126,7 @@ contact est concluante lorsque l'entreprise y confirme l'échange ; lorsqu'elle 
 s'applique. **Lorsque l'entreprise
 ne peut être jointe, ne répond pas, ou ne se prononce pas sur l'existence de l'échange, l'attribution
 demeure provisoire et suit les alinéas 5 et 6. L'article 3.7 ne s'applique qu'au cas où l'entreprise
-indique ne pas connaître l'Apporteur.**
+indique expressément n'avoir eu aucun échange avec l'Apporteur, dans les conditions de l'article 3.7.**
 
 **La demande de confirmation** est adressée par la Société, par courrier électronique, à l'adresse de la
 personne mentionnée dans la déclaration, après l'enregistrement de celle-ci. **Elle désigne l'Apporteur
@@ -169,7 +169,8 @@ l'article 4.
 
 **3.3 — Antériorité de la Société.** Aucune attribution ne peut porter sur une entreprise que la Société
 connaît déjà à la date de la déclaration, c'est-à-dire **cliente au titre d'une prestation facturée au
-cours des vingt-quatre derniers mois, ou destinataire d'un devis de moins de six mois**. Le contrôle est
+cours des vingt-quatre derniers mois, destinataire d'un devis de moins de six mois, ou ayant signé un devis
+qui n'a été ni entièrement facturé, ni annulé, quelle que soit sa date**. Le contrôle est
 opéré automatiquement sur les données dont la Société dispose à cet instant, et la déclaration est refusée
 immédiatement, le motif étant indiqué. **Lorsque l'antériorité est établie postérieurement à
 l'enregistrement, l'attribution est annulée, l'Apporteur en est informé avec le motif, et aucune commission
@@ -227,7 +228,9 @@ conservées en attente par entreprise, dans l'ordre de leur horodatage ; au-del�
 conservée et l'Apporteur en est informé. Lorsque l'attribution en cours, ou la prise en charge de
 l'entreprise par la Société ou ses préposés, prend fin, l'Apporteur dont la déclaration est en attente au
 premier rang en est informé et dispose de quinze jours pour déclarer à nouveau l'entreprise ; à défaut, sa
-déclaration est effacée et l'entreprise redevient librement déclarable par tous. Aucune attribution ne naît
+déclaration est effacée et l'entreprise redevient librement déclarable par tous. Ce délai ne court pas tant que
+l'enregistrement des déclarations de l'Apporteur est suspendu en application de l'article 3.7 ; il
+reprend, pour sa durée restante, à la fin de la suspension. Aucune attribution ne naît
 d'une déclaration conservée sans nouvelle déclaration de l'Apporteur. Une déclaration en attente s'éteint
 en tout état de cause douze mois après son enregistrement.**
 
@@ -342,8 +345,22 @@ totale.
 signé par l'entreprise attribuée ; la date retenue est celle de cette signature et, à défaut de document
 signé, la date d'émission de la première facture.**
 
+**Une commande conclue sous condition suspensive est datée de sa signature ; elle est réputée n'avoir
+jamais existé si la condition défaille.** Il en est ainsi notamment d'une convention conclue sous la
+condition de l'accord de prise en charge d'un opérateur de compétences. La défaillance de la condition rend
+la commande caduque, et cette caducité vaut annulation au sens de l'article 3.3 du devis qu'elle constitue,
+le cas échéant. Si la partie dans l'intérêt exclusif de laquelle la condition est stipulée l'abandonne
+avant sa défaillance, la commande conserve la date de sa signature. Une convention signée par l'entreprise après la défaillance constitue une nouvelle
+commande, datée de sa propre signature, qui n'est commissionnée que si elle est signée pendant la durée de
+l'attribution ; un accord de prise en charge intervenu après la défaillance ne fait pas revivre la commande
+caduque.
+
 Sont commissionnées toutes les commandes de l'entreprise attribuée **signées pendant la durée de
-l'attribution**, pour les prestations figurant à la grille — quel que soit leur nombre. **Cette commission
+l'attribution**, pour les prestations figurant à la grille — quel que soit leur nombre. Une commande signée entre la
+déclaration et la confirmation de l'attribution est commissionnée si l'attribution est ensuite confirmée,
+y compris tacitement ; elle est réputée signée pendant la durée de l'attribution. Lorsqu'une commande est
+signée alors que la demande de confirmation fait l'objet d'une vérification, la Société demande à
+l'entreprise, à cette occasion, de confirmer l'échange. **Cette commission
 rémunère la seule mise en relation initiale, dont le prix est ainsi forfaitisé sur la durée de
 l'attribution ; elle ne rémunère aucun suivi, aucune intervention ni aucune mission de l'Apporteur
 postérieure à sa déclaration, dont le contrat ne met aucune à sa charge (article 2.2).**
