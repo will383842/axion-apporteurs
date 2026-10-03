@@ -42,7 +42,8 @@ import {
   type TypeEvenement,
 } from '../../../../packages/contracts/events';
 import { enveloppeEvenement } from '../../../../packages/contracts/events.zod';
-import contratPublie from '../../../../packages/contracts/contracts.v2.json';
+import contratV2 from '../../../../packages/contracts/contracts.v2.json';
+import contratV3 from '../../../../packages/contracts/contracts.v3.json';
 import { ENTETE_KID_AXIONIA } from '../../../../packages/contracts/api';
 import { cleDuKid, lireTrousseaux, type MotifDeCle, type Trousseau } from '../../../lib/env';
 import {
@@ -166,12 +167,33 @@ export const CHAMPS_NON_CONSERVES = ['utm'] as const;
 
 // ── INT-T45 : les `$defs` fermés du contrat publié ──────────────────────────────────────────────
 
-/** Le `$defs` publié de la charge d'un type, jamais un schéma retapé ici. */
+type ContratPublie = { $defs: Record<string, Record<string, unknown>> };
+
+/**
+ * INT-T46-P — les contrats PUBLIÉS, par version. Un `held` se juge contre les `$defs` de SA version,
+ * jamais contre ceux de la courante : une `facture.emise` mise en attente en version 2 ne porte pas
+ * le `devisId` que la version 3 exige, et elle est pourtant conforme à ce qu'elle était. Chaque
+ * artefact est celui que `pnpm contracts:export` a écrit et que l'empreinte a tenu ; aucun n'est
+ * retapé ici. Une version absente de cette table n'a pas de contrat : rien ne s'y juge conforme.
+ */
+const CONTRATS_PUBLIES: Readonly<Record<number, ContratPublie>> = {
+  2: contratV2 as ContratPublie,
+  3: contratV3 as ContratPublie,
+};
+
+/**
+ * Le `$defs` publié de la charge d'un type, dans une version, jamais un schéma retapé ici ; `null`
+ * quand la version n'est pas publiée ou ne connaît pas ce type.
+ */
+function defsPublie(type: TypeEvenement, version: number): Record<string, unknown> | null {
+  const contrat = Object.hasOwn(CONTRATS_PUBLIES, version) ? CONTRATS_PUBLIES[version] : undefined;
+  return contrat?.$defs[`payload_${type.replace('.', '_')}`] ?? null;
+}
+
+/** Le `$defs` de la version COURANTE : il existe pour chaque type, sinon le contrat a divergé. */
 function defsDuPayload(type: TypeEvenement): Record<string, unknown> {
-  const nom = `payload_${type.replace('.', '_')}`;
-  const defs = (contratPublie as { $defs: Record<string, Record<string, unknown>> }).$defs;
-  const d = defs[nom];
-  if (d === undefined) throw new Error(`contrat_sans_defs : ${nom}`);
+  const d = defsPublie(type, SCHEMA_VERSION);
+  if (d === null) throw new Error(`contrat_sans_defs : payload_${type.replace('.', '_')}`);
   return d;
 }
 
@@ -180,8 +202,7 @@ function defsDuPayload(type: TypeEvenement): Record<string, unknown> {
  * jamais réintroduits. C'est contre lui que se juge une charge CONSERVÉE (condition de la lentille
  * sécurité, rattrapage 45) : `utm` est requis à la réception et n'est plus conservé (INT-T44).
  */
-function defsDeLaCharge(type: TypeEvenement): Record<string, unknown> {
-  const d = defsDuPayload(type);
+function defsDeLaCharge(d: Record<string, unknown>): Record<string, unknown> {
   const exclus: readonly string[] = CHAMPS_NON_CONSERVES;
   const proprietes = (d.properties ?? {}) as Record<string, unknown>;
   const requis = (d.required ?? []) as readonly string[];
@@ -211,10 +232,14 @@ export function payloadConforme(type: TypeEvenement, payload: unknown): boolean 
 
 /**
  * La charge CONSERVÉE d'un type — celle d'un `held` qu'on rejoue après une montée de version —,
- * jugée par la MÊME validation, contre le `$defs` privé des champs non conservés.
+ * jugée par la MÊME validation, contre le `$defs` de SA version (`schemaVersion` de la ligne),
+ * privé des champs non conservés. Une version sans contrat publié, ou qui ne connaît pas le type,
+ * n'est jamais conforme : le rejeu échoue fermé.
  */
-export function chargeConforme(type: TypeEvenement, charge: unknown): boolean {
-  return valideur(`conserve:${type}`, () => defsDeLaCharge(type))(charge);
+export function chargeConforme(type: TypeEvenement, charge: unknown, version: number): boolean {
+  const d = defsPublie(type, version);
+  if (d === null) return false;
+  return valideur(`conserve:v${version}:${type}`, () => defsDeLaCharge(d))(charge);
 }
 
 /** La charge conservée : le payload reçu, sans les champs de `CHAMPS_NON_CONSERVES`. */

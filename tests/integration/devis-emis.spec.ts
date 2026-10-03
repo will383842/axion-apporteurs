@@ -3,20 +3,20 @@
 // @req REQ-DM-028
 /**
  * INT-T46-P — le contrat d'événements passe en version 3 : le type « devis émis » (`devis.emis`)
- * entre dans la liste fermée (décision D2 de Williams du 2026-10-01, option A).
+ * entre dans la liste fermée (`HYP-ANTERIORITE-DEVIS`, décision de Williams du 2026-10-01).
  *
  * Par la vraie porte (`recevoirEvenementAxionia`) et le vrai dépôt (`depotDeReception`), en base
  * réelle : l'enum `type_evenement_recu` doit porter `devis_emis` pour qu'un « devis émis » se range.
  *
  * D'OÙ VIENNENT LES CHARGES (RM-03). Le producteur de `devis.emis` n'existe pas encore : il est la
- * tâche INT-T46-A d'axion-ia, qui attend ce contrat (lockstep). La charge d'un « devis émis » est donc
+ * tâche jumelle côté axion-ia, qui attend ce contrat (lockstep). La charge d'un « devis émis » est donc
  * PRISE, champ pour champ, dans la fixture du producteur réel : `devisId`, `numero` et `clientId`
  * du `devis.signe` produit, `siren` du `client.cree` produit, et l'instant d'émission est
  * l'`occurred_at` du `devis.signe`. Rien n'est inventé ; la fixture du producteur de `devis.emis`
- * remplacera cette dérivation quand INT-T46-A l'aura générée.
+ * remplacera cette dérivation quand la tâche jumelle l'aura générée.
  *
  * LA VERSION D'UN `held` (amendement de l'audit du plan de la Phase 1, note de la lentille
- * exactitude sur INT-T45) : un événement mis en attente sous une version antérieure se juge contre
+ * exactitude au rattrapage 48) : un événement mis en attente sous une version antérieure se juge contre
  * les `$defs` de SA version, jamais contre ceux de la version courante.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
@@ -149,7 +149,8 @@ describe('REQ-INT-004 — le « devis émis » entre dans la liste fermée, en v
   });
 
   it('REQ-INT-004 : un `devis.emis` privé de son instant d’émission est refusé 422', async () => {
-    const { emisLe: _retire, ...sansDate } = devisEmis();
+    const sansDate = devisEmis();
+    delete sansDate.emisLe;
     const { statut, eventId } = await envoyer(
       'devis.emis',
       { devis_id: devisEmis().devisId },
@@ -214,7 +215,12 @@ describe('REQ-QA-007 — la version 3 : `devisId` sur la facture, montants jamai
     const { statut } = await envoyer(
       'paiement.recu',
       { payment_id: randomUUID() },
-      { ...reste, montantHtCents: amountHtCents, paymentId: randomUUID(), montantEncaisseTtcCents: -1 },
+      {
+        ...reste,
+        montantHtCents: amountHtCents,
+        paymentId: randomUUID(),
+        montantEncaisseTtcCents: -1,
+      },
       SCHEMA_VERSION
     );
     expect(statut).toBe(422);
@@ -276,7 +282,12 @@ describe('REQ-QA-007 — un `held` se juge contre les `$defs` de SA version', ()
 
   it('REQ-QA-007 : un `held` d’une version dont aucun contrat n’est publié n’est JAMAIS conforme — échec fermé', async () => {
     const d = produit('devis.signe');
-    const { eventId } = await envoyer('devis.signe', { devis_id: d.payload.devisId }, d.payload, 99);
+    const { eventId } = await envoyer(
+      'devis.signe',
+      { devis_id: d.payload.devisId },
+      d.payload,
+      99
+    );
     const l = await ligne(eventId);
     expect(l?.statut).toBe('held');
     expect(chargeConforme('devis.signe', l?.charge, 99)).toBe(false);
