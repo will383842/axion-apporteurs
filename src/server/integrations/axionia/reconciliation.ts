@@ -1,5 +1,6 @@
 /**
- * La réconciliation avec axion-ia — INT-T08-P (REQ-INT-012, REQ-INT-013).
+ * La réconciliation avec axion-ia — INT-T08-P (REQ-INT-012). Elle prépare le job quotidien de
+ * REQ-INT-013 sans le couvrir : la comparaison des encaissements par SIREN reste à une tâche.
  *
  * UN PASSAGE. Partners relit la file de sortie d'axion-ia (`relecture.ts`) depuis la plus haute
  * séquence qu'il a REÇUE, moins `RECOUVREMENT_SEQUENCES`, page après page, au plus

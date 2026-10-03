@@ -1,5 +1,5 @@
 /**
- * La tâche quotidienne de réconciliation avec axion-ia — INT-T08-P (REQ-INT-013, REQ-QA-026).
+ * La tâche quotidienne de réconciliation avec axion-ia — INT-T08-P (REQ-QA-026 ; le job de REQ-INT-013).
  *
  * Le lanceur joue chaque tâche inscrite à chaque minute ; celle-ci n'est DUE qu'une fois par jour
  * civil UTC. Elle lit l'instant de son dernier succès (son battement) : réussie aujourd'hui, elle

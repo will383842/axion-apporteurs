@@ -51,7 +51,8 @@ export type MotifDeRelecture =
   | `statut_${number}`
   | 'signature_refusee'
   | 'entete_illisible'
-  | 'ligne_illisible';
+  | 'ligne_illisible'
+  | 'ligne_hors_ordre';
 
 export type PageRelue =
   | {
@@ -160,9 +161,14 @@ export function clientRelecture(c: CanalAxionia): LirePage {
       return { ok: false, motif: 'entete_illisible' };
     }
     const lignes: LigneRelue[] = [];
+    // Chaque séquence croît STRICTEMENT depuis `apres` : une page rejouée, mélangée ou d'une autre
+    // lecture (la réponse n'est liée à la requête que par cet ordre) est refusée entière.
+    let precedente = apres;
     for (const corps of r.texte === '' ? [] : r.texte.split('\n')) {
       const ligne = lireLigne(corps);
       if (ligne === null) return { ok: false, motif: 'ligne_illisible' };
+      if (ligne.sequence <= precedente) return { ok: false, motif: 'ligne_hors_ordre' };
+      precedente = ligne.sequence;
       lignes.push(ligne);
     }
     const derniereSequence = BigInt(derniere);

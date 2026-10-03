@@ -1,5 +1,4 @@
 // @req REQ-INT-012
-// @req REQ-INT-013
 // @req REQ-QA-026
 /**
  * INT-T08-P — le client de relecture de Partners et la réconciliation quotidienne.
@@ -106,6 +105,8 @@ function axionia(options: {
   limiteServeur?: number;
   statut?: number;
   signatureFausse?: boolean;
+  /** Rend les lignes d'une page dans l'ordre INVERSE : une page rejouée ou mélangée. */
+  melanger?: boolean;
 }) {
   const appels: Appel[] = [];
   const repondre = (corps: string, entetes: Record<string, string> = {}) => {
@@ -139,7 +140,8 @@ function axionia(options: {
       const limite = Math.min(Number(url.searchParams.get('limit')), options.limiteServeur ?? 500);
       const suivantes = options.file.filter((l) => l.sequence > apres);
       const rendues = suivantes.slice(0, limite);
-      return repondre(rendues.map((l) => l.corps).join('\n'), {
+      const ordre = options.melanger ? [...rendues].reverse() : rendues;
+      return repondre(ordre.map((l) => l.corps).join('\n'), {
         'x-axionia-derniere-sequence': String(rendues.at(-1)?.sequence ?? apres),
         'x-axionia-suite': suivantes.length > limite ? '1' : '0',
       });
@@ -235,8 +237,8 @@ describe('REQ-INT-012 — Partners relit la file de sortie depuis le dernier `af
   });
 });
 
-describe('REQ-INT-013 — un trou rattrapé est signalé, et son rejeu demandé sous l’identifiant d’origine', () => {
-  it('REQ-INT-013 : quatre événements jamais reçus sont signalés et leur rejeu demandé, identifiants nommés', async () => {
+describe('REQ-INT-012 — un trou rattrapé est signalé, et son rejeu demandé sous l’identifiant d’origine', () => {
+  it('REQ-INT-012 : quatre événements jamais reçus sont signalés et leur rejeu demandé, identifiants nommés', async () => {
     const file = uneFile();
     await recevoir(file, 6);
     const a = axionia({ file });
@@ -250,7 +252,7 @@ describe('REQ-INT-013 — un trou rattrapé est signalé, et son rejeu demandé 
     expect(compteurs).toMatchObject({ relus: 10, manquants: 4, rearmes: 4, introuvables: 0 });
   });
 
-  it('REQ-INT-013 : un trou AU MILIEU — le quatrième jamais reçu, les suivants reçus — est retrouvé par le recouvrement, et lui seul est rejoué', async () => {
+  it('REQ-INT-012 : un trou AU MILIEU — le quatrième jamais reçu, les suivants reçus — est retrouvé par le recouvrement, et lui seul est rejoué', async () => {
     const file = uneFile();
     await recevoir(file.slice(0, 3), 3);
     await recevoir(file.slice(4), file.length - 4);
@@ -263,7 +265,7 @@ describe('REQ-INT-013 — un trou rattrapé est signalé, et son rejeu demandé 
     expect(compteurs).toMatchObject({ manquants: 1, rearmes: 1 });
   });
 
-  it('REQ-INT-013 : CONTRE-TÉMOIN — rien ne manque : aucun signal, aucun rejeu, et les compteurs sont rendus quand même', async () => {
+  it('REQ-INT-012 : CONTRE-TÉMOIN — rien ne manque : aucun signal, aucun rejeu, et les compteurs sont rendus quand même', async () => {
     const file = uneFile();
     await recevoir(file, file.length);
     const a = axionia({ file });
@@ -274,14 +276,14 @@ describe('REQ-INT-013 — un trou rattrapé est signalé, et son rejeu demandé 
     expect(compteurs).toMatchObject({ pages: 1, relus: 10, manquants: 0, rearmes: 0 });
   });
 
-  it('REQ-INT-013 : une relecture en panne (503) est signalée `relecture_echouee`, et le passage ÉCHOUE', async () => {
+  it('REQ-INT-012 : une relecture en panne (503) est signalée `relecture_echouee`, et le passage ÉCHOUE', async () => {
     const a = axionia({ file: uneFile(), statut: 503 });
     const { signaux, passer } = brancher(a);
     await expect(passer()).rejects.toThrow(/relecture_echouee/);
     expect(signaux).toEqual([{ genre: 'relecture_echouee', motif: 'statut_503' }]);
   });
 
-  it('REQ-INT-013 : une réponse dont la signature ne tient pas est refusée comme une panne — rien n’est rejoué', async () => {
+  it('REQ-INT-012 : une réponse dont la signature ne tient pas est refusée comme une panne — rien n’est rejoué', async () => {
     const a = axionia({ file: uneFile(), signatureFausse: true });
     const { signaux, passer } = brancher(a);
     await expect(passer()).rejects.toThrow(/relecture_echouee/);
@@ -289,7 +291,7 @@ describe('REQ-INT-013 — un trou rattrapé est signalé, et son rejeu demandé 
     expect(a.appels.some((x) => x.methode === 'POST')).toBe(false);
   });
 
-  it('REQ-INT-013 : une requête signée sous un AUTRE secret est refusée par axion-ia (401), et c’est une panne signalée', async () => {
+  it('REQ-INT-012 : une requête signée sous un AUTRE secret est refusée par axion-ia (401), et c’est une panne signalée', async () => {
     const a = axionia({ file: uneFile() });
     const signaux: Signal[] = [];
     const commun = {
@@ -313,8 +315,18 @@ describe('REQ-INT-013 — un trou rattrapé est signalé, et son rejeu demandé 
   });
 });
 
+describe('REQ-INT-012 — une page hors d’ordre est refusée entière', () => {
+  it('REQ-INT-012 : des lignes dont la séquence ne croît pas strictement depuis `after_sequence` font refuser la page `ligne_hors_ordre` — rien n’est rejoué', async () => {
+    const a = axionia({ file: uneFile(), melanger: true });
+    const { signaux, passer } = brancher(a);
+    await expect(passer()).rejects.toThrow(/relecture_echouee/);
+    expect(signaux).toEqual([{ genre: 'relecture_echouee', motif: 'ligne_hors_ordre' }]);
+    expect(a.appels.some((x) => x.methode === 'POST')).toBe(false);
+  });
+});
+
 describe('REQ-QA-026 — la réconciliation est une tâche du registre, jouée une fois par jour', () => {
-  it('REQ-QA-026 : `reconciliation_axionia` est au registre des tâches, sous REQ-INT-013', () => {
+  it('REQ-QA-026 : `reconciliation_axionia` est au registre des tâches, sous l’exigence du job quotidien', () => {
     expect(TACHES.reconciliation_axionia).toEqual({ req: 'REQ-INT-013' });
   });
 
