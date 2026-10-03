@@ -331,9 +331,11 @@ describe('REQ-SEC-003 — SEC-55 (1) et (5) : la purge, au plus la durée d’un
   it('REQ-SEC-003 : la purge est une tâche du registre, sous son exigence, inscrite au lanceur à l’heure du système', async () => {
     expect(TACHES.appareils_purger).toEqual({ req: 'REQ-SEC-003' });
     const { d, prisma } = unDouble();
+    const passage = inscriptions(prisma).appareils_purger;
+    expect(typeof passage).toBe('function');
     vi.useFakeTimers({ now: T, toFake: ['Date'] });
     try {
-      expect(await inscriptions(prisma).appareils_purger()).toEqual({ purges: 4 });
+      expect(await passage?.()).toEqual({ purges: 4 });
     } finally {
       vi.useRealTimers();
     }

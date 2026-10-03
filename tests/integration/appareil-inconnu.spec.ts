@@ -354,7 +354,10 @@ describe('REQ-SEC-003 — SEC-55 (1) : la base ne garde que la forme minimale', 
       /appareils_connus_apporteur_id_fkey/
     );
     expect(await inserer({})).toBe(1);
-    await expect(inserer({})).rejects.toThrow(/appareils_connus_apporteur_id_empreinte_kid_key/);
+    // Le doublon : Prisma ne rend que le code et le détail de l'index unique, pas son nom.
+    await expect(inserer({})).rejects.toThrow(
+      /Code: `23505`\. Message: `Key \(apporteur_id, empreinte, kid\)=/
+    );
   });
 });
 
