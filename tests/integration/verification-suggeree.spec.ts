@@ -1,4 +1,5 @@
-// @req REQ-SEC-060 REQ-SEC-024
+// @req REQ-SEC-060
+// @req REQ-SEC-024
 /**
  * SEC-41 — les raisons « Vérification suggérée » lues sur la base RÉELLE (HYP-W20-VERIFICATION).
  *

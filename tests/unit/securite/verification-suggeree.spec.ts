@@ -1,4 +1,8 @@
-// @req REQ-SEC-060 REQ-SEC-017 REQ-SEC-036 REQ-SEC-021 REQ-JUR-031
+// @req REQ-SEC-060
+// @req REQ-SEC-017
+// @req REQ-SEC-036
+// @req REQ-SEC-021
+// @req REQ-JUR-031
 /**
  * SEC-41 — les raisons « Vérification suggérée », jugées PURES (HYP-W20-VERIFICATION).
  *
