@@ -237,16 +237,34 @@ describe('REQ-JUR-025 — chaque retenue a son témoin, module chargé à neuf',
   });
 });
 
-describe('REQ-JUR-025 — la notice d’A07 sur la personne déclarée, dérivée du registre', () => {
-  it('REQ-JUR-025 : TÉMOIN — les destinataires de TRT-APPORTEURS nomment la personne déclarée, mot pour mot, sans ses coordonnées', () => {
+describe('REQ-JUR-025 — la notice d’A07 sur le contact déclaré, dérivée du registre', () => {
+  it('REQ-JUR-025 : TÉMOIN — les destinataires de TRT-APPORTEURS nomment le contact déclaré, mot pour mot, sans ses coordonnées ; « personne déclarée » est réservé à l’art. 2.6', () => {
     const destinataires = lue(REGISTRE).politique.rubriques.find((r) => r.cle === 'destinataires');
     expect(destinataires?.contenu).toEqual([
       {
         type: 'texte',
         texte: expect.stringContaining(
-          'la personne que vous déclarez, qui reçoit vos prénom et nom dans la demande de confirmation, jamais vos coordonnées'
+          "le contact de l'entreprise que l'apporteur déclare, qui reçoit ses prénom et nom dans la demande de confirmation ou lors d'une prise de contact de la Société, jamais ses coordonnées"
         ),
       },
     ]);
+    expect(lisible(lue(REGISTRE))).not.toMatch(/personne que vous déclarez/);
+  });
+});
+
+describe('REQ-JUR-025 — le contrôle des déclarations, dit dans la politique (texte d’A07)', () => {
+  it('REQ-JUR-025 : TÉMOIN — la finalité nomme le contrôle, sa finalité, ses critères généraux et l’intervention humaine, mot pour mot, sans retenue', () => {
+    const l = lue(REGISTRE);
+    const finalite = l.politique.rubriques.find((r) => r.cle === 'finalite');
+    expect(finalite?.contenu).toHaveLength(1);
+    const texte = finalite?.contenu[0]?.type === 'texte' ? finalite.contenu[0].texte : '';
+    for (const element of [
+      'contrôler la sincérité des déclarations d’entreprises',
+      'selon des critères généraux tenant à chaque déclaration',
+      'aucun de ces critères ne tient au nombre des déclarations, à leur rythme, à l’heure ou au lieu, ni à la zone, au secteur ou à la méthode de l’apporteur',
+      'toute suite donnée est décidée par une personne de la Société, jamais par le seul traitement automatique',
+    ])
+      expect(texte).toContain(element.replace(/’/g, "'"));
+    expect(l.filtres.filter((f) => f.ou === 'finalite')).toEqual([]);
   });
 });

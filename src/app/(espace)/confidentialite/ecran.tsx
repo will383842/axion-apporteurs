@@ -90,10 +90,12 @@ function Accord({
   action: Action;
 }) {
   if (etat === 'sans_session') return null;
-  if (etat === 'acceptee') {
+  if (etat === 'acceptee' || etat === 'non_publiable') {
+    // JUR-T57 : une politique non publiable n'est jamais présentée à l'acceptation ; le formulaire
+    // n'existe QUE pour l'état `a_accepter` (refus fermé : aucun autre état ne le montre).
     return (
       <p role="status" aria-live="polite">
-        {CONFIDENTIALITE.acceptee}
+        {etat === 'acceptee' ? CONFIDENTIALITE.acceptee : CONFIDENTIALITE.nonPubliable}
       </p>
     );
   }

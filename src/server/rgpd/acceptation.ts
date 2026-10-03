@@ -8,6 +8,12 @@
  * l'apporteur est invité à accepter de nouveau. Une acceptation ne porte que sur la version que la
  * page a AFFICHÉE : si le registre a changé entre l'affichage et l'envoi, rien n'est écrit.
  *
+ * JUR-T57 — LA POLITIQUE PUBLIABLE (condition de mise en service d'A07). Une politique qui porte un
+ * seul segment « en cours de rédaction » n'est JAMAIS présentée à l'acceptation : l'état est
+ * `non_publiable`, nommé, et l'acceptation est REFUSÉE. Le refus tient FERMÉ (aucune acceptation
+ * implicite) et se REJUGE au moment d'écrire : `accepterLaPolitique` reçoit la politique elle-même,
+ * jamais un drapeau fourni par l'appelant, et juge sa publiabilité avant sa version.
+ *
  * CŒUR PUR, PORTS INJECTÉS, comme la session (`src/server/auth/session.ts`) : le dépôt d'acceptation
  * et les ports de session entrent en argument ; l'adaptateur Prisma est `depotDAcceptation`, le
  * câblage du processus `portsDuProcessus`, la lecture du registre sur disque `lireLaPolitique`.
@@ -15,7 +21,12 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { PrismaClient } from '@prisma/client';
-import { extrairePolitique, type LecturePolitique } from '../../domain/rgpd/politique';
+import {
+  estPubliable,
+  extrairePolitique,
+  type LecturePolitique,
+  type Politique,
+} from '../../domain/rgpd/politique';
 import { configurationDuLien, type DependancesDuLien } from '../auth/lien-magique-production';
 import {
   depotDeSessions,
@@ -30,6 +41,8 @@ export const CHEMIN_DU_REGISTRE = 'docs/rgpd/registre-article-30.md';
 /** Les routes que ce module désigne. */
 export const ROUTE_CONFIDENTIALITE = '/confidentialite';
 export const ROUTE_ISSUE_OUVERTE = '/connexion?issue=ouverte';
+/** JUR-T57 : l'état d'indisponibilité de l'espace, quand ni la session ni l'acceptation ne se lisent. */
+export const ROUTE_INDISPONIBLE = '/connexion?etat=indisponible';
 
 // ── le cœur ──────────────────────────────────────────────────────────────────────────────────────
 
@@ -45,36 +58,51 @@ export interface DepotDAcceptation {
   ecrire(apporteurId: string, accepteeAt: Date, version: string): Promise<void>;
 }
 
-/** Les états de la page : sans session (lecture seule), à accepter, acceptée. */
-export const ETATS_D_ACCEPTATION = ['sans_session', 'a_accepter', 'acceptee'] as const;
+/**
+ * Les états de la page : sans session (lecture seule), à accepter, acceptée — et non publiable
+ * (JUR-T57) : la politique porte un segment en cours de rédaction, elle n'est pas présentée à
+ * l'acceptation.
+ */
+export const ETATS_D_ACCEPTATION = [
+  'sans_session',
+  'a_accepter',
+  'acceptee',
+  'non_publiable',
+] as const;
 export type EtatDAcceptation = (typeof ETATS_D_ACCEPTATION)[number];
 
-/** L'état d'un apporteur (ou d'aucun) face à la version courante. */
+/** L'état d'un apporteur (ou d'aucun) face à la politique COURANTE. */
 export async function etatDAcceptation(
   apporteurId: string | null,
-  versionCourante: string,
+  courante: Politique,
   depot: DepotDAcceptation
 ): Promise<EtatDAcceptation> {
   if (apporteurId === null) return 'sans_session';
+  if (!estPubliable(courante)) return 'non_publiable';
   const lue = await depot.lire(apporteurId);
-  const acceptee = lue !== null && lue.accepteeAt !== null && lue.version === versionCourante;
+  const acceptee = lue !== null && lue.accepteeAt !== null && lue.version === courante.version;
   return acceptee ? 'acceptee' : 'a_accepter';
 }
 
-export type IssueDAcceptation = 'acceptee' | 'version_perimee';
+export type IssueDAcceptation = 'acceptee' | 'version_perimee' | 'non_publiable';
 
-/** Écrit l'acceptation de la version AFFICHÉE, si elle est encore la version courante. */
+/**
+ * Écrit l'acceptation de la version AFFICHÉE, si la politique courante est PUBLIABLE et si la version
+ * affichée est encore la sienne. La publiabilité se rejuge ICI, au moment d'écrire (lentille
+ * sécurité) : un formulaire envoyé avant que le registre ne rouvre une rubrique n'écrit rien.
+ */
 export async function accepterLaPolitique(
   entree: {
     apporteurId: string;
     versionVue: string | null;
-    versionCourante: string;
+    courante: Politique;
     maintenant: Date;
   },
   depot: DepotDAcceptation
 ): Promise<IssueDAcceptation> {
-  if (entree.versionVue !== entree.versionCourante) return 'version_perimee';
-  await depot.ecrire(entree.apporteurId, entree.maintenant, entree.versionCourante);
+  if (!estPubliable(entree.courante)) return 'non_publiable';
+  if (entree.versionVue !== entree.courante.version) return 'version_perimee';
+  await depot.ecrire(entree.apporteurId, entree.maintenant, entree.courante.version);
   return 'acceptee';
 }
 
@@ -87,22 +115,21 @@ export interface PortsDAcceptation {
 /** L'état de la requête qui porte `jeton` : la session est relue en base (SEC-04). */
 export async function etatDeLaRequete(
   jeton: string | undefined,
-  versionCourante: string,
+  courante: Politique,
   ports: PortsDAcceptation
 ): Promise<EtatDAcceptation> {
   const verdict = await exigerSession(jeton, ports.session);
-  return etatDAcceptation(
-    verdict.ok ? verdict.session.apporteurId : null,
-    versionCourante,
-    ports.depot
-  );
+  return etatDAcceptation(verdict.ok ? verdict.session.apporteurId : null, courante, ports.depot);
 }
 
 /**
- * Où mène une connexion qui vient d'ouvrir sa session : vers la politique si elle reste à accepter,
- * sinon vers l'issue habituelle. Une politique illisible ou une base injoignable ne bloquent pas la
- * connexion : l'issue habituelle, et le motif part au journal (la politique sera redemandée à la
- * connexion suivante, et reste lisible sur sa page).
+ * Où mène une connexion qui vient d'ouvrir sa session : l'issue habituelle SEULEMENT si la version
+ * publiable courante est acceptée ; sinon la politique (JUR-T57). L'espace ne s'ouvre JAMAIS sans
+ * acceptation vérifiée (lentille sécurité, 2026-10-03), et le motif part au journal :
+ *   — registre illisible : la politique en vigueur est inconnue, l'acceptation ne peut pas se juger ;
+ *     la page de la politique, dans son état d'ERREUR, sans formulaire ;
+ *   — base injoignable : ni la session ni l'acceptation ne se lisent ; l'indisponibilité de l'espace,
+ *     jamais la page de la politique, qui laisserait croire qu'un accord est possible.
  */
 export async function destinationDeLOuverture(
   jetonSession: string,
@@ -114,13 +141,14 @@ export async function destinationDeLOuverture(
     const lue = lecture();
     if (!lue.ok) {
       signaler('confidentialite_registre_illisible');
-      return ROUTE_ISSUE_OUVERTE;
+      return ROUTE_CONFIDENTIALITE;
     }
-    const etat = await etatDeLaRequete(jetonSession, lue.politique.version, ports());
-    return etat === 'a_accepter' ? ROUTE_CONFIDENTIALITE : ROUTE_ISSUE_OUVERTE;
+    const etat = await etatDeLaRequete(jetonSession, lue.politique, ports());
+    // Non publiable : la page de la politique, jamais l'issue habituelle (refus FERMÉ, JUR-T57).
+    return etat === 'acceptee' ? ROUTE_ISSUE_OUVERTE : ROUTE_CONFIDENTIALITE;
   } catch {
     signaler('confidentialite_etat_illisible');
-    return ROUTE_ISSUE_OUVERTE;
+    return ROUTE_INDISPONIBLE;
   }
 }
 

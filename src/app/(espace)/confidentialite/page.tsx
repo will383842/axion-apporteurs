@@ -27,7 +27,7 @@ export default async function PageConfidentialite() {
       ? 'sans_session'
       : await etatDeLaRequete(
           jeton,
-          lue.politique.version,
+          lue.politique,
           portsDuProcessus(dependancesDuProcessus({ apres: after, env: process.env }))
         );
   return (
