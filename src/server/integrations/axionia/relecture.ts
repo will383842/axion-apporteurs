@@ -1,6 +1,6 @@
 /**
  * Le client de RELECTURE de la file de sortie d'axion-ia — INT-T08-P (REQ-INT-012). C'est le client
- * UNIQUE de la route `GET /api/partners/evenements?after_sequence=&limit=` : la réconciliation
+ * UNIQUE de la route de relecture (`GET`, `CHEMIN_RELECTURE` ci-dessous, paramètres `after_sequence` et `limit`) : la réconciliation
  * quotidienne l'emploie, le rattrapage historique le réemploiera tel quel (audit du plan de la
  * Phase 1, écart B-07).
  *
