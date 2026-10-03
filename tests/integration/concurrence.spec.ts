@@ -20,6 +20,8 @@
  *   5. LA SAISIE SERVEUR : les quatre coordonnées du contact sont exigées, nommées par champ ; une
  *      adresse webmail passe ; la case d'information des tiers non cochée est refusée, nommée ; sa
  *      version est enregistrée ;
+ *   7. LE REFUS EST NOTIFIÉ (`refus_declaration`) : une fois, au bon apporteur, après la transaction ;
+ *      la même catégorie pour les deux antériorités ; ni `gele` ni un dépôt enregistré ne notifient ;
  *   6. UNE DEMANDE DE CONFIRMATION par dépôt enregistré, dans la même transaction ; aucune pour un
  *      refus, aucune pour un dépôt annulé.
  */
@@ -37,6 +39,9 @@ import {
   type PortsDuDepot,
 } from '../../src/server/depot/deposer';
 import { issueRendue } from '../../src/content/micro-copy/espace/issues-depot';
+import { notifier } from '../../src/server/notifications/envoyer';
+import { forApporteur } from '../../src/server/acces/for-apporteur';
+import type { DemandeDeNotification } from '../../src/server/notifications/envoyer';
 import { VERSION_INFORMATION_TIERS } from '../../src/content/micro-copy/espace/information-tiers';
 
 let base: Base;
@@ -56,6 +61,8 @@ const PORTS: PortsDuDepot = {
   secretConfirmation: randomBytes(32).toString('hex'),
   maintenant: () => T0,
   oppositionDemarchage: async () => false,
+  adresseDe: async () => 'apporteur.temoin@example.org',
+  notifier: async () => undefined,
 };
 const hex = (n: number) => randomBytes(n).toString('hex');
 const unSiren = () => String((sirens += 1));
@@ -363,5 +370,85 @@ describe('REQ-JUR-008 — la saisie se juge au serveur', () => {
       },
     });
     expect(evenements).toBe(1);
+  });
+});
+
+describe('REQ-SEC-022 — le refus est notifié (`refus_declaration`)', () => {
+  function portsQuiNotifient() {
+    const envois: { apporteurId: string; demande: DemandeDeNotification }[] = [];
+    const courriels: { gabarit: string; apporteurId: string; a: string; sujet: string }[] = [];
+    const ports: PortsDuDepot = {
+      ...PORTS,
+      adresseDe: async (id) => `adresse-de-${id.slice(0, 8)}@example.org`,
+      notifier: async (apporteurId, demande) => {
+        envois.push({ apporteurId, demande });
+        return notifier(demande, {
+          acces: forApporteur(base.prisma, apporteurId),
+          urlDeLEspace: new URL('https://partners.exemple.invalid'),
+          envoyerCourriel: async (d) => {
+            courriels.push({
+              gabarit: d.gabarit,
+              apporteurId: d.apporteurId ?? '',
+              a: d.a,
+              sujet: d.sujet,
+            });
+            return 'retenu_dmarc_non_verifie';
+          },
+        });
+      },
+    };
+    return { ports, envois, courriels };
+  }
+
+  it('REQ-SEC-022 : TÉMOIN — un refus de catégorie : la clé part UNE fois, au bon apporteur, dans l’espace et par courriel', async () => {
+    const siren = unSiren();
+    await base.prisma.entrepriseConnue.create({
+      data: { siren, origine: 'client', connueDepuisAt: T0, dernierContactAt: T0 },
+    });
+    const a = await apporteur('signe');
+    const autre = await apporteur('signe');
+    const { ports, courriels } = portsQuiNotifient();
+    await deposer(base.prisma, demande(a, siren), ports);
+    const notifications = await base.prisma.notificationEspace.findMany({
+      where: { cle: 'refus_declaration', apporteurId: { in: [a, autre] } },
+      select: { apporteurId: true, attributionId: true },
+    });
+    expect(notifications).toEqual([{ apporteurId: a, attributionId: null }]);
+    expect(courriels).toEqual([
+      {
+        gabarit: 'refus_declaration',
+        apporteurId: a,
+        a: `adresse-de-${a.slice(0, 8)}@example.org`,
+        sujet:
+          'Entreprise Témoin SAS : dépôt non enregistré — entreprise déjà connue de la Société',
+      },
+    ]);
+  });
+
+  it('REQ-SEC-022 : les deux antériorités envoient les MÊMES paramètres ; aucun ne dit le critère', async () => {
+    const cliente = unSiren();
+    const devis = unSiren();
+    await base.prisma.entrepriseConnue.create({
+      data: { siren: cliente, origine: 'client', connueDepuisAt: T0, dernierContactAt: T0 },
+    });
+    await base.prisma.devisConnu.create({
+      data: { devisRef: `D-${hex(4)}`, siren: devis, emisAt: T0, montantTotalHtCents: 100_000n },
+    });
+    const a = await apporteur('signe');
+    const { ports, envois } = portsQuiNotifient();
+    await deposer(base.prisma, demande(a, cliente), ports);
+    await deposer(base.prisma, demande(a, devis), ports);
+    expect(envois).toHaveLength(2);
+    expect(JSON.stringify(envois[0]?.demande)).toBe(JSON.stringify(envois[1]?.demande));
+    expect(JSON.stringify(envois[0]?.demande.parametres)).not.toMatch(/client|devis|factur|sign/i);
+  });
+
+  it('REQ-SEC-022 : un dépôt enregistré, en file ou `gele` ne notifie aucun refus', async () => {
+    const siren = unSiren();
+    const { ports, envois } = portsQuiNotifient();
+    await deposer(base.prisma, demande(await apporteur('signe'), siren), ports);
+    await deposer(base.prisma, demande(await apporteur('signe'), siren), ports);
+    await deposer(base.prisma, demande(await apporteur('suspendu'), unSiren()), ports);
+    expect(envois).toEqual([]);
   });
 });
