@@ -75,6 +75,7 @@ enum TypeEvenementJournal {
   attribution_peremption_suspendue
   attribution_porteur_reaffecte
   piece_kyc_statut_modifie
+  demande_confirmation_etat_modifie
 
   @@map("type_evenement_journal")
 }
@@ -87,6 +88,7 @@ enum AgregatJournal {
   releve
   piece_kyc
   contrat
+  demande_confirmation
 
   @@map("agregat_journal")
 }
@@ -157,6 +159,36 @@ enum StatutPieceKyc {
   refusee
 
   @@map("statut_piece_kyc")
+}
+
+/// Le droit qu'exerce le contact d'une attribution (REQ-JUR-065, `docs/GLOSSAIRE.md` §4).
+enum DroitContact {
+  acces
+  rectification
+  effacement
+  limitation
+  opposition
+
+  @@map("droit_contact")
+}
+
+/// La donnée du contact que vise une rectification (REQ-JUR-065, `docs/GLOSSAIRE.md` §4).
+enum DonneeContact {
+  nom
+  prenom
+  fonction
+  telephone
+  email
+
+  @@map("donnee_contact")
+}
+
+/// La suite donnée à une demande de droit (REQ-JUR-065, `docs/GLOSSAIRE.md` §4).
+enum IssueDemandeDroit {
+  appliquee
+  refusee
+
+  @@map("issue_demande_droit")
 }
 
 /// Le régime de TVA d'une identité de facturation (REQ-ARG-033, `docs/GLOSSAIRE.md` §4).
@@ -438,6 +470,26 @@ model PieceKyc {
   @@index([apporteurId])
   @@index([ibanHash])
   @@map("pieces_kyc")
+}
+
+/// DM-59 (REQ-JUR-065) : une demande de droit du contact, tracée. `recueAt` est l'heure de la
+/// BASE (déclencheur), et fait courir le délai d'un mois de l'art. 12.3. Aucune donnée en clair :
+/// la nouvelle valeur d'une rectification est chiffrée, puis effacée à la clôture ou à l'échéance.
+model DemandeDroitContact {
+  id             String             @id @default(uuid()) @db.Uuid
+  attributionId  String             @map("attribution_id") @db.Uuid
+  attribution    Attribution        @relation(fields: [attributionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  droit          DroitContact
+  recueAt        DateTime           @default(dbgenerated("clock_timestamp()")) @map("recue_at") @db.Timestamptz(3)
+  traiteeAt      DateTime?          @map("traitee_at") @db.Timestamptz(3)
+  issue          IssueDemandeDroit?
+  donneeVisee    DonneeContact?     @map("donnee_visee")
+  valeurChiffree Bytes?             @map("valeur_chiffree")
+  valeurPurgeeAt DateTime?          @map("valeur_purgee_at") @db.Timestamptz(3)
+  prolongeeAt    DateTime?          @map("prolongee_at") @db.Timestamptz(3)
+
+  @@index([attributionId])
+  @@map("demandes_droits_contact")
 }
 
 // ── SEC-06 : la réception des webhooks et le battement des tâches de fond (partners/ADR-0022) ──
@@ -796,11 +848,16 @@ model Attribution {
   fenetreRedeclarationFinAt        DateTime?           @map("fenetre_redeclaration_fin_at") @db.Timestamptz(3)
   purgeContactAt                   DateTime?           @map("purge_contact_at") @db.Timestamptz(3)
   contactPurgeAt                   DateTime?           @map("contact_purge_at") @db.Timestamptz(3)
+  /// L'empreinte HMAC du jeton de la page des droits du contact, jamais le jeton (DM-59). Unique
+  /// quand posée (index partiel en SQL), effacée par la purge du contact.
+  jetonDroitsHash                  String?             @map("jeton_droits_hash") @db.Char(64)
   /// Verrou optimiste de la fiche (REQ-CPL-024).
   versionQualification             Int                 @default(0) @map("version_qualification")
 
-  courrielsEnvoyes    CourrielEnvoye[]
-  notificationsEspace NotificationEspace[]
+  courrielsEnvoyes      CourrielEnvoye[]
+  demandeConfirmation   DemandeConfirmation?
+  demandesDroitsContact DemandeDroitContact[]
+  notificationsEspace   NotificationEspace[]
 
   @@index([apporteurId])
   @@index([utilisateurConsoleId])
@@ -848,4 +905,82 @@ model PersonneDeclaree {
 
   @@index([apporteurId])
   @@map("personnes_declarees")
+}
+
+/// DM-40 (REQ-DM-060) : l'état d'une demande de confirmation par e-mail (`docs/GLOSSAIRE.md` §4).
+enum EtatDemandeConfirmation {
+  planifiee
+  annulee
+  envoyee
+  retenue
+  rebond
+  repondue_oui
+  repondue_non
+  clic_non_retenu
+  opposee
+  expiree
+
+  @@map("etat_demande_confirmation")
+}
+
+/// DM-40 (REQ-DM-060) : la demande de confirmation d'un dépôt, UNE par attribution. Une TRACE : son
+/// identité est figée, elle ne se supprime pas ; seuls son état et ses dates changent. L'échéance
+/// d'envoi se DÉRIVE de `deposeeAt` et de la SSOT : elle ne se stocke pas. Les jetons vivent dans ses
+/// émissions.
+model DemandeConfirmation {
+  id            String                  @id @default(uuid()) @db.Uuid
+  attributionId String                  @unique @map("attribution_id") @db.Uuid
+  attribution   Attribution             @relation(fields: [attributionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  etat          EtatDemandeConfirmation @default(planifiee)
+  creeeAt       DateTime                @default(dbgenerated("clock_timestamp()")) @map("creee_at") @db.Timestamptz(3)
+  envoyeeAt     DateTime?               @map("envoyee_at") @db.Timestamptz(3)
+  reponduAt     DateTime?               @map("repondu_at") @db.Timestamptz(3)
+
+  emissions EmissionDemandeConfirmation[]
+  revisions RevisionDemandeConfirmation[]
+
+  @@map("demandes_confirmation")
+}
+
+/// DM-40 (REQ-DM-060, HYP-W20-LIEN, HYP-W20-REBOND) : un ENVOI de la demande, une ligne par envoi, en
+/// AJOUT SEUL. Ses deux jetons n'existent qu'en EMPREINTE ; une seule émission est active par demande
+/// (index unique partiel). Une correction après rebond crée une émission et révoque la précédente.
+model EmissionDemandeConfirmation {
+  id           String              @id @default(uuid()) @db.Uuid
+  demandeId    String              @map("demande_id") @db.Uuid
+  demande      DemandeConfirmation @relation(fields: [demandeId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  emiseAt      DateTime            @default(dbgenerated("clock_timestamp()")) @map("emise_at") @db.Timestamptz(3)
+  /// L'empreinte du jeton « Oui », jamais le jeton.
+  jetonOuiHash String?             @map("jeton_oui_hash") @db.Char(64)
+  /// L'empreinte du jeton « Non », jamais le jeton.
+  jetonNonHash String?             @map("jeton_non_hash") @db.Char(64)
+  revoqueeAt   DateTime?           @map("revoquee_at") @db.Timestamptz(3)
+  /// L'empreinte TRONQUÉE et salée de l'adresse réseau du clic (REQ-SEC-024), jamais l'adresse.
+  clicIpHash   String?             @map("clic_ip_hash") @db.Char(16)
+
+  @@index([demandeId])
+  @@map("emissions_demande_confirmation")
+}
+
+/// DM-40 (REQ-DM-060, HYP-W20-ANNULATION) : une correction du contact ou du contexte pendant le délai
+/// avant envoi, en AJOUT SEUL. Elle garde l'ANCIENNE valeur, recopiée telle quelle depuis
+/// l'attribution : chaque bloc reste lié à l'attribution (son AAD nomme l'attribution et le champ).
+/// Purgée avec le contact.
+model RevisionDemandeConfirmation {
+  id                     String              @id @default(uuid()) @db.Uuid
+  demandeId              String              @map("demande_id") @db.Uuid
+  demande                DemandeConfirmation @relation(fields: [demandeId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  reviseeAt              DateTime            @default(dbgenerated("clock_timestamp()")) @map("revisee_at") @db.Timestamptz(3)
+  nomContactChiffre      Bytes?              @map("nom_contact_chiffre")
+  prenomContactChiffre   Bytes?              @map("prenom_contact_chiffre")
+  emailChiffre           Bytes?              @map("email_chiffre")
+  emailHash              String?             @map("email_hash") @db.Char(64)
+  telephoneChiffre       Bytes?              @map("telephone_chiffre")
+  phoneHash              String?             @map("phone_hash") @db.Char(64)
+  fonctionContactChiffre Bytes?              @map("fonction_contact_chiffre")
+  contexteChiffre        Bytes?              @map("contexte_chiffre")
+  purgeeAt               DateTime?           @map("purgee_at") @db.Timestamptz(3)
+
+  @@index([demandeId])
+  @@map("revisions_demande_confirmation")
 }

@@ -358,6 +358,113 @@ async function commandeVerifier(argv: string[]): Promise<number> {
   return code === 0 ? verifierLaPolitique(base) : code;
 }
 
+// ── QA-T65 (REQ-GOV-014) : l'image tirée par EMPREINTE ───────────────────────────────────────────
+
+/**
+ * L'étiquette `sha-<7>` est immuable par CONVENTION : le registre accepte qu'on la repousse.
+ * L'empreinte désigne un CONTENU. Coolify la lit dans `docker_registry_image_tag` sous la forme
+ * `sha256-<hex>` et tire alors `<image>@sha256:<hex>` (vérifié dans son code, `docs/tiers/coolify.md`) ;
+ * `sha256:<hex>` serait refusé par son motif d'étiquette.
+ */
+const EMPREINTE = /^sha256:[0-9a-f]{64}$/;
+
+/** L'étiquette à poser pour une empreinte ; toute autre valeur (étiquette mobile) est refusée, nommée. */
+export function etiquetteParEmpreinte(empreinte: string): string {
+  if (!EMPREINTE.test(empreinte)) {
+    throw new Error(
+      `empreinte_attendue : « ${empreinte} » n'est pas une empreinte sha256 — une étiquette se déplace, une empreinte non`
+    );
+  }
+  return `sha256-${empreinte.slice('sha256:'.length)}`;
+}
+
+export type JugementDeLEmpreinte = { atterri: true } | { atterri: false; raison: string };
+
+/** L'image que l'application tire, confrontée à l'empreinte publiée : différente, NON ATTERRI. */
+export function jugerLEmpreinteServie(
+  publiee: string,
+  servie: string | null
+): JugementDeLEmpreinte {
+  return servie === etiquetteParEmpreinte(publiee)
+    ? { atterri: true }
+    : {
+        atterri: false,
+        raison: `l'application tire ${servie ?? 'une image non lue'}, et non l'empreinte publiée ${publiee}`,
+      };
+}
+
+/**
+ * L'empreinte de l'image `sha-<7>` publiée, lue au registre (anonymement : l'image est publique),
+ * sur l'en-tête `Docker-Content-Digest` du manifeste. Échec FERMÉ et nommé.
+ */
+async function empreintePubliee(sha: string): Promise<string> {
+  const depot = (process.env.GITHUB_REPOSITORY ?? '').toLowerCase();
+  if (!/^[\w.-]+\/[\w.-]+$/.test(depot)) {
+    throw new Error("GITHUB_REPOSITORY est exigé pour lire l'empreinte de l'image publiée");
+  }
+  const registre = adresseSure(
+    process.env.PARTNERS_REGISTRE_URL ?? 'https://ghcr.io',
+    'PARTNERS_REGISTRE_URL'
+  );
+  const etiquette = `sha-${sha.slice(0, 7)}`;
+  const t = await fetch(new URL(`/token?scope=repository:${depot}:pull`, registre));
+  const anonyme = t.ok
+    ? ((await t.json()) as { token?: unknown }).token
+    : (await t.body?.cancel(), null);
+  const manifeste = await fetch(new URL(`/v2/${depot}/manifests/${etiquette}`, registre), {
+    method: 'HEAD',
+    headers: {
+      ...(typeof anonyme === 'string' ? { authorization: `Bearer ${anonyme}` } : {}),
+      accept:
+        'application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.v2+json',
+    },
+  });
+  await manifeste.body?.cancel();
+  if (!manifeste.ok) {
+    throw new Error(
+      `l'image ${etiquette} n'a jamais été publiée (registre : HTTP ${manifeste.status}) — refusé`
+    );
+  }
+  const empreinte = manifeste.headers.get('docker-content-digest') ?? '';
+  etiquetteParEmpreinte(empreinte);
+  return empreinte;
+}
+
+/** L'étiquette que l'application tire, relue sur la plateforme après le déploiement. */
+async function etiquetteServie(
+  racine: string,
+  uuid: string,
+  jeton: string
+): Promise<string | null> {
+  const r = await fetch(new URL(`${racine}/api/v1/applications/${uuid}`), {
+    headers: { authorization: `Bearer ${jeton}`, accept: 'application/json' },
+    redirect: 'manual',
+  });
+  if (!r.ok) {
+    await r.body?.cancel();
+    return null;
+  }
+  const lue = ((await r.json()) as { docker_registry_image_tag?: unknown })
+    .docker_registry_image_tag;
+  return typeof lue === 'string' ? lue : null;
+}
+
+/** Après l'en-tête : l'application tire-t-elle l'empreinte publiée ? Sinon NON ATTERRI, nommé. */
+async function exigerLEmpreinteServie(
+  publiee: string,
+  racine: string,
+  uuid: string,
+  jeton: string
+): Promise<0 | 1> {
+  const j = jugerLEmpreinteServie(publiee, await etiquetteServie(racine, uuid, jeton));
+  if (j.atterri) {
+    console.log(`   empreinte servie : ${publiee}`);
+    return 0;
+  }
+  console.error(`❌ NON ATTERRI — ${j.raison}`);
+  return 1;
+}
+
 async function appel(
   url: URL,
   methode: 'PATCH' | 'POST',
@@ -404,14 +511,15 @@ async function commandeDeclencher(argv: string[]): Promise<number> {
   const publique = adresseSure(env.PARTNERS_URL_PUBLIQUE, 'PARTNERS_URL_PUBLIQUE');
   const racine = plateforme.href.replace(/\/+$/, '');
   const uuid = encodeURIComponent(env.COOLIFY_APP_UUID);
-  const etiquette = `sha-${sha.slice(0, 7)}`;
+  const empreinte = await empreintePubliee(sha);
+  const etiquette = etiquetteParEmpreinte(empreinte);
 
   const s1 = await appel(
     new URL(`${racine}/api/v1/applications/${uuid}`),
     'PATCH',
     env.COOLIFY_API_TOKEN,
     {
-      docker_registry_image_tag: etiquette,
+      docker_registry_image_tag: etiquetteParEmpreinte(empreinte),
     }
   );
   if (s1 < 200 || s1 > 299) {
@@ -431,7 +539,10 @@ async function commandeDeclencher(argv: string[]): Promise<number> {
   console.log(`   déploiement déclenché — lecture de ${ENTETE_DE_BUILD} sur ${publique.origin}`);
   const r = await atterrir(sha, publique, options(argv));
   ecrireLaSortie(r.servi);
-  return r.code === 0 ? verifierLaPolitique(publique) : r.code;
+  if (r.code !== 0) return r.code;
+  if ((await exigerLEmpreinteServie(empreinte, racine, uuid, env.COOLIFY_API_TOKEN)) !== 0)
+    return 1;
+  return verifierLaPolitique(publique);
 }
 
 // ── QA-T55, QA-T67 (REQ-GOV-014) : la porte A du MÊME sha, de la bonne provenance ─────────────
@@ -601,7 +712,7 @@ async function commandeAttendrePorteA(argv: string[]): Promise<number> {
  * est publique). Jamais une image de branche. Les deux contrôles précèdent tout appel à la plateforme,
  * et échouent fermé.
  */
-async function exigerUnShaLivre(cible: string): Promise<void> {
+async function exigerUnShaLivre(cible: string): Promise<string> {
   const depot = process.env.GITHUB_REPOSITORY ?? '';
   const jetonForge = process.env.GH_TOKEN ?? '';
   if (!/^[\w.-]+\/[\w.-]+$/.test(depot) || jetonForge === '') {
@@ -621,30 +732,8 @@ async function exigerUnShaLivre(cible: string): Promise<void> {
       `le sha ${cible} n'est pas un ancêtre de main (comparaison : ${String(statut ?? comparaison.status)}) — refusé`
     );
   }
-  const registre = adresseSure(
-    process.env.PARTNERS_REGISTRE_URL ?? 'https://ghcr.io',
-    'PARTNERS_REGISTRE_URL'
-  );
-  const nom = depot.toLowerCase();
-  const etiquette = `sha-${cible.slice(0, 7)}`;
-  const t = await fetch(new URL(`/token?scope=repository:${nom}:pull`, registre));
-  const anonyme = t.ok
-    ? ((await t.json()) as { token?: unknown }).token
-    : (await t.body?.cancel(), null);
-  const manifeste = await fetch(new URL(`/v2/${nom}/manifests/${etiquette}`, registre), {
-    method: 'HEAD',
-    headers: {
-      ...(typeof anonyme === 'string' ? { authorization: `Bearer ${anonyme}` } : {}),
-      accept:
-        'application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.v2+json',
-    },
-  });
-  await manifeste.body?.cancel();
-  if (!manifeste.ok) {
-    throw new Error(
-      `l'image ${etiquette} n'a jamais été publiée (registre : HTTP ${manifeste.status}) — refusé`
-    );
-  }
+  // L'image doit avoir été PUBLIÉE ; son empreinte est ce que le retour arrière tire (QA-T65).
+  return empreintePubliee(cible);
 }
 
 /** L'échappatoire, remise à `0` — l'étape `if: always()` du workflow, jouée même après un échec. */
@@ -713,7 +802,7 @@ async function commandeRetourArriere(argv: string[]): Promise<number> {
   const plateforme = adresseSure(lire('COOLIFY_URL'), 'COOLIFY_URL');
   const publique = adresseSure(lire('PARTNERS_URL_PUBLIQUE'), 'PARTNERS_URL_PUBLIQUE');
   const jeton = lire('COOLIFY_API_TOKEN');
-  await exigerUnShaLivre(cible);
+  const empreinte = await exigerUnShaLivre(cible);
   const racine = plateforme.href.replace(/\/+$/, '');
   const uuid = encodeURIComponent(lire('COOLIFY_APP_UUID'));
   const variables = new URL(`${racine}/api/v1/applications/${uuid}/envs/bulk`);
@@ -727,9 +816,9 @@ async function commandeRetourArriere(argv: string[]): Promise<number> {
       console.error(`❌ la plateforme refuse SKIP_MIGRATE=1 : HTTP ${s0}`);
       return 1;
     }
-    const etiquette = `sha-${cible.slice(0, 7)}`;
+    const etiquette = etiquetteParEmpreinte(empreinte);
     const s1 = await appel(new URL(`${racine}/api/v1/applications/${uuid}`), 'PATCH', jeton, {
-      docker_registry_image_tag: etiquette,
+      docker_registry_image_tag: etiquetteParEmpreinte(empreinte),
     });
     if (s1 < 200 || s1 > 299) {
       console.error(`❌ la plateforme refuse l'étiquette ${etiquette} : HTTP ${s1}`);
@@ -745,6 +834,7 @@ async function commandeRetourArriere(argv: string[]): Promise<number> {
       return 1;
     }
     if ((await verifier(cible, publique, options(argv))) !== 0) return 1;
+    if ((await exigerLEmpreinteServie(empreinte, racine, uuid, jeton)) !== 0) return 1;
     const sante = await readyz(publique);
     if (sante !== 200) {
       console.error(

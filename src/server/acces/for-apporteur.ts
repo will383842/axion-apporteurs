@@ -111,6 +111,8 @@ export const CLES_REFUSEES = {
     'peremptionSuspendueParId',
     'peremptionSuspenduePar',
     'courrielsEnvoyes',
+    'demandeConfirmation',
+    'demandesDroitsContact',
     'notificationsEspace',
   ],
   changementCourriel: ['id', 'apporteurId', 'apporteur'],
@@ -183,6 +185,8 @@ export const RELATIONS = {
     'personneDeclaree',
     'peremptionSuspenduePar',
     'courrielsEnvoyes',
+    'demandeConfirmation',
+    'demandesDroitsContact',
     'notificationsEspace',
   ],
   changementCourriel: ['apporteur'],
@@ -225,6 +229,8 @@ export const SECRETS = Object.freeze([
   // DM-11 : l'IBAN de la pièce rib, chiffré et empreint (HYP-DM06-IBAN).
   'ibanChiffre',
   'ibanHash',
+  // DM-59 : l'empreinte du jeton de la page des droits du contact.
+  'jetonDroitsHash',
 ] as const);
 
 /**
@@ -326,6 +332,8 @@ export const CHAMPS_TUS = {
     'purgeContactAt',
     'contactPurgeAt',
     'versionQualification',
+    // DM-59 : l'empreinte du jeton de la page des droits du contact, jamais rendue à l'apporteur.
+    'jetonDroitsHash',
   ],
   changementCourriel: ['apporteurId', 'emailChiffre', 'emailHash', 'tokenHash', 'kid'],
   courrielEnvoye: ['apporteurId', 'emailHash', 'fournisseurMessageId', 'erreur', 'attributionId'],
