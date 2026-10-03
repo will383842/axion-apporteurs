@@ -5,7 +5,7 @@
  * Une entreprise est connue de la Société, à une date donnée, si elle est :
  *   — inscrite sur la liste tenue par la Société (origine `financeur`, REQ-DM-028) ;
  *   — cliente au titre d'une prestation facturée au cours des `ANTERIORITE_CLIENT_MOIS` derniers mois ;
- *   — signataire d'un devis qui n'est pas entièrement facturé, quelle que soit sa date (JUR-T42) ;
+ *   — signataire d'un devis qui n'est pas entièrement facturé, quelle que soit sa date (art. 3.3) ;
  *   — destinataire d'un devis émis il y a moins de `ANTERIORITE_DEVIS_MOIS` mois.
  * Les fenêtres sont lues dans la SSOT, en mois civils UTC, bornes comprises.
  */

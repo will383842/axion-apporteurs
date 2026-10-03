@@ -5,7 +5,7 @@
  * si elle est :
  *   — cliente au titre d'une prestation FACTURÉE au cours des `ANTERIORITE_CLIENT_MOIS` derniers mois ;
  *   — destinataire d'un devis ÉMIS il y a moins de `ANTERIORITE_DEVIS_MOIS` mois ;
- *   — signataire d'un devis qui n'est pas entièrement facturé, quelle que soit sa date (JUR-T42) ;
+ *   — signataire d'un devis qui n'est pas entièrement facturé, quelle que soit sa date (art. 3.3) ;
  *   — inscrite sur la liste tenue par la Société (origine `financeur`, REQ-DM-028).
  * Les deux fenêtres viennent de la SSOT, jamais d'un nombre recopié ici. « Entièrement facturé » se
  * juge devis par devis : la somme HT des factures non annulées, avoirs déduits, au moins égale au
@@ -91,7 +91,7 @@ describe('REQ-DM-029 — l’antériorité, évaluée localement (art. 3.3)', ()
     });
   });
 
-  it('REQ-DM-029 : TÉMOIN — un devis signé il y a plus de 6 mois et non facturé rend l’entreprise connue, quelle que soit sa date (JUR-T42)', () => {
+  it('REQ-DM-029 : TÉMOIN — un devis signé il y a plus de 6 mois et non facturé rend l’entreprise connue, quelle que soit sa date (art. 3.3)', () => {
     expect(evaluerAnteriorite({ ...RIEN, devis: [signe(39, 0)] }, MAINTENANT)).toEqual({
       connue: true,
       origine: 'devis',
