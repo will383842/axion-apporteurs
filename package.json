@@ -17,6 +17,8 @@
     "gov:partiel": "pnpm gov:publication && pnpm gov:identifiants && pnpm gov:tasks && pnpm gov:requirements && pnpm gov:hypotheses && pnpm gov:preseance && pnpm gov:sonde && pnpm gov:adr && pnpm gov:pr && pnpm gov:autonomie && pnpm gov:inventaire && pnpm gov:agents && pnpm gov:etat && pnpm gov:trace && pnpm gov:attributions && pnpm gov:lexique && pnpm gov:conventions",
     "test": "vitest run --coverage --reporter=default --reporter=json --outputFile.json=test-results/vitest.json",
     "test:integration": "vitest run tests/integration",
+    "test:eclat": "tsx scripts/ci/tests-eclat.ts",
+    "test:fusion": "tsx scripts/ci/tests-fusion.ts",
     "typecheck": "tsc --noEmit",
     "gov:tasks": "tsx scripts/gates/gov-tasks.ts",
     "gov:tasks:prove": "tsx scripts/gates/gov-tasks.ts --prove",
