@@ -77,3 +77,12 @@ export async function semerContestation(
     select: { id: true },
   });
 }
+
+/**
+ * Le module par défaut du chargeur (`prisma/seed.ts`) : rien à semer d'office. Une anomalie vise un
+ * apporteur que l'appelant fournit, et une contestation chiffre son texte avec SES clés : le semeur
+ * ne les fabrique pas. Les deux fonctions ci-dessus servent les témoins qui fournissent ces entrées.
+ */
+export default async function semerParDefaut(): Promise<void> {
+  // Rien à semer : voir ci-dessus.
+}

@@ -173,6 +173,28 @@ function codeSql(e: unknown): string | null {
   return m?.[1] ?? null;
 }
 
+/**
+ * Une violation d'UNICITÉ, lue sur son SQLSTATE (23505) et sur les colonnes de la clé que le message
+ * nomme : le message que rend Prisma ne porte pas le nom de l'index. Le nom, lui, se juge sur
+ * `pg_indexes` (`indexUnique`).
+ */
+async function refusDUnicite(promesse: Promise<unknown>): Promise<string> {
+  try {
+    await promesse;
+  } catch (e) {
+    const cle = /Key \(([^)]*)\)=/.exec(String((e as Error).message))?.[1];
+    return `${codeSql(e) ?? '?'} (${cle ?? '?'})`;
+  }
+  throw new Error('aucun refus');
+}
+
+/** La définition d'un index unique, lue par son NOM. */
+async function indexUnique(nom: string): Promise<string> {
+  const [l] = await base.prisma.$queryRaw<{ d: string }[]>`
+    SELECT indexdef AS d FROM pg_indexes WHERE indexname = ${nom}`;
+  return l?.d ?? '';
+}
+
 /** Une écriture du SERVEUR, sous `partners_app`. */
 const ecrire = (sql: string, ...valeurs: unknown[]) => app.$executeRawUnsafe(sql, ...valeurs);
 /** Une troncature, sous le seul rôle qui pourrait tronquer. */
@@ -201,12 +223,14 @@ describe('REQ-DM-032 — verifications : un porteur, en ajout seul, l’empreint
       expect(
         await refus(
           ecrire(
-            `INSERT INTO verifications (id, apporteur_id, utilisateur_console_id, siren, resultat, verifiee_at)
-             VALUES ($1::uuid, $2::uuid, $3::uuid, $4, 'libre', $5)`,
+            `INSERT INTO verifications (id, apporteur_id, utilisateur_console_id, siren, resultat,
+               ip_hash, verifiee_at)
+             VALUES ($1::uuid, $2::uuid, $3::uuid, $4, 'libre', $5, $6)`,
             randomUUID(),
             a,
             u,
             unSiren(),
+            hex(8),
             MAINTENANT
           )
         )
@@ -295,7 +319,10 @@ describe('REQ-DM-032 — alertes_liberation : une seule en attente, l’envoi po
         MAINTENANT
       );
     await nouvelle();
-    expect(await refus(nouvelle())).toContain('alertes_liberation_une_en_attente');
+    expect(await refusDUnicite(nouvelle())).toBe('23505 (apporteur_id, siren)');
+    expect(await indexUnique('alertes_liberation_une_en_attente')).toMatch(
+      /UNIQUE INDEX alertes_liberation_une_en_attente .*\(apporteur_id, siren\) WHERE \(envoyee_at IS NULL\)/
+    );
     await ecrire(
       `UPDATE alertes_liberation SET envoyee_at = $2 WHERE apporteur_id = $1::uuid AND siren = $3`,
       apporteurId,
@@ -872,8 +899,11 @@ describe('REQ-DM-034 — rattachements_manuels : justifiés, antérieurs au dép
     const siren = unSiren();
     const { id, deposeeAt } = await uneAttribution();
     const premier = await unRattachement({ attributionId: id, siren, lienAt: deposeeAt });
-    expect(await refus(unRattachement({ attributionId: id, siren, lienAt: deposeeAt }))).toContain(
-      'rattachements_manuels_un_actif_par_siren'
+    expect(
+      await refusDUnicite(unRattachement({ attributionId: id, siren, lienAt: deposeeAt }))
+    ).toBe('23505 (siren_commande)');
+    expect(await indexUnique('rattachements_manuels_un_actif_par_siren')).toMatch(
+      /UNIQUE INDEX rattachements_manuels_un_actif_par_siren .*\(siren_commande\) WHERE \(revoque_at IS NULL\)/
     );
     await ecrire(
       `UPDATE rattachements_manuels SET revoque_at = $2 WHERE id = $1::uuid`,
