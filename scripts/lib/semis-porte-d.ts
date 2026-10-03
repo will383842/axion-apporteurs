@@ -81,15 +81,20 @@ const litteral = (v: string): string => `'${v.replace(/'/g, "''")}'`;
 /**
  * Une chaîne qui satisfait une expression régulière SIMPLE : littéraux, échappements, classes et
  * quantificateurs. Un groupe ou une alternative rend `null` : la colonne prend alors sa valeur de
- * type, et si le CHECK la refuse, la table se déclare non semée.
+ * type, et si le CHECK la refuse, la table se déclare non semée. Le RANG choisit un autre caractère
+ * de chaque classe (SEC-45) : deux colonnes au même motif d'une même ligne reçoivent ainsi deux
+ * valeurs distinctes, ce qu'exige un CHECK comme `jeton_oui_hash <> jeton_non_hash`.
  */
-export function chaineQuiSatisfait(motif: string): string | null {
+export function chaineQuiSatisfait(motif: string, rang = 0): string | null {
   let sortie = '';
   let i = 0;
   const premierDeClasse = (corps: string): string => {
     const nie = corps.startsWith('^');
     const c = nie ? corps.slice(1) : corps;
-    if (!nie) return c[0] === '\\' ? (c[1] === 'd' ? '0' : (c[1] ?? 'a')) : (c[0] ?? 'a');
+    if (!nie) {
+      const possibles = caracteresDeClasse(c);
+      return possibles.length === 0 ? 'a' : possibles[rang % possibles.length]!;
+    }
     return [...'abcdefghijklmnopqrstuvwxyz0123456789'].find((x) => !c.includes(x)) ?? 'z';
   };
   while (i < motif.length) {
@@ -107,7 +112,7 @@ export function chaineQuiSatisfait(motif: string): string | null {
       i = fin + 1;
     } else if (car === '\\') {
       const e = motif[i + 1] ?? '';
-      atome = e === 'd' ? '0' : e === 'w' ? 'a' : e === 's' ? ' ' : e;
+      atome = e === 'd' ? String(rang % 10) : e === 'w' ? 'a' : e === 's' ? ' ' : e;
       i += 2;
     } else if (car === '.') {
       atome = 'a';
@@ -123,6 +128,27 @@ export function chaineQuiSatisfait(motif: string): string | null {
       i += q[0].length;
     }
     sortie += atome.repeat(fois);
+  }
+  return sortie;
+}
+
+/** Les caractères d'une classe non niée, plages comprises (`0-9a-f`) ; `\d` vaut ses dix chiffres. */
+function caracteresDeClasse(corps: string): string[] {
+  const sortie: string[] = [];
+  for (let i = 0; i < corps.length; i++) {
+    const c = corps[i]!;
+    if (c === '\\') {
+      const e = corps[i + 1] ?? '';
+      sortie.push(...(e === 'd' ? [...'0123456789'] : [e]));
+      i++;
+    } else if (corps[i + 1] === '-' && i + 2 < corps.length) {
+      for (let k = c.charCodeAt(0); k <= corps.charCodeAt(i + 2); k++) {
+        sortie.push(String.fromCharCode(k));
+      }
+      i += 2;
+    } else {
+      sortie.push(c);
+    }
   }
   return sortie;
 }
@@ -199,12 +225,12 @@ function fermeture(
 }
 
 /** La valeur SQL d'une colonne remplie, hors enum et hors clé étrangère. */
-function valeurDeType(c: ColonneVue, motif: string | undefined): string {
+function valeurDeType(c: ColonneVue, motif: string | undefined, rang = 0): string {
   const t = c.type.toLowerCase();
   const typee = (v: string): string => `CAST(${litteral(v)} AS ${c.type})`;
   if (t.endsWith('[]')) return typee('{}');
   if (motif !== undefined) {
-    const v = chaineQuiSatisfait(motif);
+    const v = chaineQuiSatisfait(motif, rang);
     if (v !== null) return typee(v);
   }
   if (/^(smallint|integer|bigint|numeric|real|double precision)/.test(t)) return typee('1');
@@ -260,11 +286,21 @@ function candidatsDe(table: string, schema: SchemaVu): string[] {
   }
   const ecrites = colonnes.filter((c) => !c.defaut);
   const retenues = ecrites.length > 0 ? ecrites : colonnes.slice(0, 1);
+  // Le rang de chaque colonne parmi celles de la ligne qui partagent son motif : deux empreintes au
+  // même motif reçoivent deux valeurs distinctes (SEC-45, `jeton_oui_hash <> jeton_non_hash`).
+  const rangDuMotif = new Map<string, number>();
+  const vus = new Map<string, number>();
+  for (const c of retenues) {
+    const m = motifs.get(c.colonne);
+    if (m === undefined) continue;
+    rangDuMotif.set(c.colonne, vus.get(m) ?? 0);
+    vus.set(m, (vus.get(m) ?? 0) + 1);
+  }
   const remplie = (c: ColonneVue, rang = 0): string =>
     cle.get(c.colonne) ??
     (c.valeurs !== null && c.valeurs.length > 0
       ? `CAST(${litteral(c.valeurs[rang % c.valeurs.length]!)} AS ${c.type})`
-      : valeurDeType(c, motifs.get(c.colonne)));
+      : valeurDeType(c, motifs.get(c.colonne), rangDuMotif.get(c.colonne) ?? 0));
   const base = new Map(retenues.map((c) => [c.colonne, c.nonNul ? remplie(c) : 'NULL']));
   const variantesEnum: Map<string, string>[] = [base];
   for (const c of retenues) {
