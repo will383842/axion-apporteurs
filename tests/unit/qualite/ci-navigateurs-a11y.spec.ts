@@ -145,7 +145,11 @@ describe('REQ-QA-016 — les navigateurs des passes d’accessibilité, bornés 
       expect(fautes(ligne(run))).toContain(
         `script_non_borne : l’étape lance « ${run} » au lieu de « ${COMMANDE} »`
       );
-    const enDur = yml.replace(/(key:\s*.*)\$\{\{\s*hashFiles\([^)]*\)\s*\}\}/, '$1 1.63.0');
+    // GOV-142 : la clé du cache des NAVIGATEURS (un job porte aussi celui des moteurs de Prisma).
+    const enDur = yml.replace(
+      /(key:\s*navigateurs-.*)\$\{\{\s*hashFiles\([^)]*\)\s*\}\}/,
+      '$1 1.63.0'
+    );
     expect(fautes(enDur)).toEqual(
       expect.arrayContaining([
         'cle_non_derivee : la clé ne dérive pas du verrou pnpm-lock.yaml',
