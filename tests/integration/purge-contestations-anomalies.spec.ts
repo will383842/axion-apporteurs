@@ -249,8 +249,14 @@ describe('REQ-DM-033 — l’anonymisation des anomalies à leur échéance', ()
   });
 
   it('REQ-DM-033 : TÉMOIN — une CONFIRMÉE sans fin de mesure posée n’est JAMAIS anonymisée, ni une OUVERTE', async () => {
-    const sansFin = await uneAnomalie({ statut: 'confirmee', traiteAt: d('2026-04-21T15:02:03.004Z') });
-    const ouverte = await uneAnomalie({ statut: 'ouverte', ouverteAt: d('2020-01-15T10:00:00.000Z') });
+    const sansFin = await uneAnomalie({
+      statut: 'confirmee',
+      traiteAt: d('2026-04-21T15:02:03.004Z'),
+    });
+    const ouverte = await uneAnomalie({
+      statut: 'ouverte',
+      ouverteAt: d('2020-01-15T10:00:00.000Z'),
+    });
     const avantSansFin = await lire('anomalies', sansFin);
     const avantOuverte = await lire('anomalies', ouverte);
 
@@ -553,7 +559,11 @@ describe('REQ-DM-033 et REQ-DM-043 — les durées vivent dans la SSOT, chaque p
     expect(TACHES.contestations_purger.req).toBe('REQ-DM-043');
     expect(TACHES.dementis_purger.req).toBe('REQ-DM-043');
     const inscrites = inscriptions(app, {});
-    for (const cle of ['anomalies_anonymiser', 'contestations_purger', 'dementis_purger'] as const) {
+    for (const cle of [
+      'anomalies_anonymiser',
+      'contestations_purger',
+      'dementis_purger',
+    ] as const) {
       const passage = inscrites[cle];
       expect(typeof passage).toBe('function');
       // Joué à l'heure du système : il rend des compteurs, rien d'autre.
