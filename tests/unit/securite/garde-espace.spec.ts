@@ -23,6 +23,7 @@ import {
   MOTIFS_DE_LA_GARDE,
   estExempte,
   exigerAcceptation,
+  portsDeLaGarde,
   type PortsDeLaGarde,
 } from '../../../src/server/auth/garde-espace';
 import {
@@ -185,6 +186,41 @@ describe('REQ-JUR-025 — la garde de l’espace : session valide ET version pub
       ok: false,
       motif: 'politique_illisible',
     });
+  });
+
+  it('REQ-JUR-025 : une lecture du registre qui LÈVE ferme l’espace, nommée, sans lire l’acceptation', async () => {
+    const g = garde(ACCEPTEE_V2);
+    g.lirePolitique = () => {
+      throw new Error('disque illisible');
+    };
+    expect(await pageEspace('accueil', JETON, ports(g))).toEqual({
+      ok: false,
+      motif: 'politique_illisible',
+    });
+    expect(g.lus).toEqual([]);
+  });
+
+  it('REQ-JUR-025 : les ports du processus lisent le registre donné et l’acceptation en base', async () => {
+    const lues: unknown[] = [];
+    const prisma = {
+      apporteur: {
+        findUnique: async (args: unknown) => {
+          lues.push(args);
+          return { confidentialiteAccepteeAt: T0, confidentialiteVersion: V2 };
+        },
+      },
+    } as unknown as Parameters<typeof portsDeLaGarde>[0];
+    const p = portsDeLaGarde(prisma, () => ({ ok: true, politique: politique(V2), filtres: [] }));
+    expect(await exigerAcceptation('apporteur-1', 'accueil', p)).toEqual({ ok: true });
+    expect(lues).toEqual([
+      {
+        where: { id: 'apporteur-1' },
+        select: { confidentialiteAccepteeAt: true, confidentialiteVersion: true },
+      },
+    ]);
+    // Sans lecteur donné, c'est le registre du dépôt qui est lu, à chaque appel.
+    const parDefaut = portsDeLaGarde(prisma).lirePolitique();
+    expect(typeof parDefaut.ok).toBe('boolean');
   });
 
   it('REQ-JUR-025 : le port d’acceptation ABSENT vaut refus — un câblage oublié ne rouvre pas l’espace', async () => {
