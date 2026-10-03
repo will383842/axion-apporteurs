@@ -72,7 +72,7 @@ const JSONLD = /\b(?:incentiveCompensation|baseSalary|MonetaryAmount)\b|"JobPost
 const COMMENTAIRE = /^\s*(?:\/\/|\*|\/\*|<!--)/;
 const FENETRE = 2;
 
-const ENTITES: Readonly<Record<string, string>> = {
+const ENTITES = {
   '&nbsp;': ' ',
   '&apos;': "'",
   '&#39;': "'",
@@ -81,13 +81,15 @@ const ENTITES: Readonly<Record<string, string>> = {
   '&lt;': '<',
   '&gt;': '>',
   '&amp;': '&',
-};
+} as const;
+type Entite = keyof typeof ENTITES;
+
+/** Le motif des entités, DÉRIVÉ de la table : il ne reconnaît que les clés qu'elle décode. */
+const MOTIF_DES_ENTITES = new RegExp((Object.keys(ENTITES) as Entite[]).join('|'), 'g');
 
 /** La ligne telle qu'on la lit : balises retirées, entités décodées. */
 export function telleQueLue(ligne: string): string {
-  return ligne
-    .replace(/<[^>]*>/g, ' ')
-    .replace(/&(?:nbsp|apos|#39|rsquo|quot|lt|gt|amp);/g, (e) => ENTITES[e] ?? e);
+  return ligne.replace(/<[^>]*>/g, ' ').replace(MOTIF_DES_ENTITES, (e) => ENTITES[e as Entite]);
 }
 
 /**
