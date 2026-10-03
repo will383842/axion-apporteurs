@@ -109,6 +109,14 @@ describe('REQ-CPL-006 — la décision sur une candidature fait passer l’appor
       expect(() =>
         deciderCandidature({ ...demande('candidat', 'refuse', null), justification })
       ).toThrow(ErreurDecisionCandidature);
+      expect(() =>
+        deciderCandidature({ ...demande('candidat', 'refuse', null), justification })
+      ).toThrow(
+        expect.objectContaining({
+          name: 'ErreurDecisionCandidature',
+          message: 'decision_refusee : justification_vide',
+        })
+      );
     }
   });
 
