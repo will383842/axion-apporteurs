@@ -96,6 +96,8 @@ export default defineConfig({
       // La SSOT des seuils et des delais du contrat (JUR-T02) : sans ces tests, les mutants de
       // `src/domain/seuils/ssot.ts` ne sont juges par rien.
       'tests/unit/juridique/**/*.spec.ts',
+      // UX-P1-41 : les témoins du rendu de l'e-mail au contact (`src/domain/confirmation/`), en processus.
+      'tests/unit/micro-copy/**/*.spec.ts',
     ],
     exclude: [
       ...(base.test?.exclude ?? []),
