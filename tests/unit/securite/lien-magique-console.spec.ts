@@ -19,7 +19,10 @@
  *       `durees.ts`, plus courtes que la session de l'espace ; `requireRole` refuse une session
  *       inactive, et touche la dernière vue de celle qu'il laisse passer.
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { NOMS_DES_SECRETS } from '../../../src/lib/env';
+import { horlogeFigee } from '../../../src/domain/temps/horloge';
+import { COMPTEURS, limiter, sujetDepuisEmpreinte } from '../../../src/server/securite/rate-limit';
 import { readFileSync } from 'node:fs';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
@@ -58,7 +61,9 @@ import {
   COOKIE_DATTENTE,
   COOKIE_DATTENTE_CONSOLE,
   COOKIE_DE_SESSION_CONSOLE,
+  corpsDuCourrielConsole,
   effacerUnCookie,
+  portsDuCodeConsole,
 } from '../../../src/server/auth/lien-magique-production';
 import { jugerAcces } from '../../../src/server/roles/require-role';
 import type { PrismaClient } from '@prisma/client';
@@ -600,5 +605,94 @@ describe('REQ-SEC-003 — (3) la redirection de la console est BORNÉE à la con
       '',
     ])
       expect(destinationConsoleBornee(hostile), hostile).toBe('/console');
+  });
+});
+
+// ── le câblage de production : les compteurs de la console (REQ-SEC-062) ─────────────────────────
+
+vi.mock('../../../src/server/securite/rate-limit', async (original) => {
+  const vrai = await original<typeof import('../../../src/server/securite/rate-limit')>();
+  return { ...vrai, limiter: vi.fn(vrai.limiter) };
+});
+
+const ENV_PROD: Record<string, string> = {
+  NODE_ENV: 'test',
+  ...Object.fromEntries(
+    NOMS_DES_SECRETS.map((n) => [n, `temoin-sec29-${n.toLowerCase()}-`.padEnd(48, '0')])
+  ),
+  PII_ENCRYPTION_KEY: 'e'.repeat(64),
+};
+const INSTANT = Date.UTC(2026, 9, 3, 10, 0, 0);
+const SANS_BASE = new Proxy(
+  {},
+  {
+    get: () => {
+      throw new Error('base touchée');
+    },
+  }
+) as unknown as PrismaClient;
+
+function productionConsole() {
+  const avertissements: string[] = [];
+  const d = {
+    env: ENV_PROD,
+    prisma: SANS_BASE,
+    horloge: horlogeFigee(INSTANT),
+    journal: { warn: (m: string) => avertissements.push(m) },
+  };
+  return { code: portsDuCodeConsole(d), avertissements };
+}
+
+describe('REQ-SEC-062 — la console a ses propres compteurs, nommés à l’épuisement', () => {
+  beforeEach(() => {
+    vi.mocked(limiter).mockClear();
+  });
+
+  it('REQ-SEC-062 : TÉMOIN — le code de la console compte sous SES clés, jamais celles de l’espace', async () => {
+    const { code } = productionConsole();
+    await code.compterAdresseCode('0123456789abcdef', INSTANT);
+    await code.compterCourrielCode('a1'.repeat(32), INSTANT);
+    expect(vi.mocked(limiter).mock.calls).toEqual([
+      ['magic:console-code-ip', sujetDepuisEmpreinte('0123456789abcdef'), INSTANT],
+      ['magic:console-code-courriel', sujetDepuisEmpreinte('a1'.repeat(32)), INSTANT],
+    ]);
+  });
+
+  it('REQ-SEC-062 : TÉMOIN À DEUX FACES — un compteur ÉPUISÉ est signalé sous sa CLÉ ; un compteur admis ne signale rien', async () => {
+    const { code, avertissements } = productionConsole();
+    vi.mocked(limiter).mockResolvedValueOnce({ autorise: true, panne: false } as never);
+    await code.compterAdresseCode('0123456789abcdef', INSTANT);
+    expect(avertissements).toEqual([]);
+    vi.mocked(limiter).mockResolvedValueOnce({ autorise: false, panne: false } as never);
+    await code.compterCourrielCode('a1'.repeat(32), INSTANT);
+    expect(avertissements).toEqual(['compteur_epuise:magic:console-code-courriel']);
+    expect(avertissements.join()).not.toContain('a1a1');
+  });
+
+  it('REQ-SEC-062 : les quatre compteurs de la console sont au registre, plus stricts que ceux de l’espace', () => {
+    const c = (n: keyof typeof COMPTEURS) => COMPTEURS[n];
+    expect(c('magic:console-demande-ip').limite).toBeLessThanOrEqual(c('magic:ip').limite);
+    expect(c('magic:console-demande-courriel').limite).toBeLessThan(c('magic:courriel').limite);
+    expect(c('magic:console-code-ip').limite).toBeLessThan(c('magic:code-ip').limite);
+    expect(c('magic:console-code-courriel').limite).toBeLessThan(c('magic:code-courriel').limite);
+    for (const n of [
+      'magic:console-demande-ip',
+      'magic:console-demande-courriel',
+      'magic:console-code-ip',
+      'magic:console-code-courriel',
+    ] as const) {
+      expect(c(n).surPanne, n).toBe('refuser');
+      expect(c(n).source, n).toBe('REQ-SEC-062');
+    }
+  });
+
+  it('REQ-UX-048 : le courriel de la console part sous son gabarit, avec son sujet et sa phrase, l’URL puis le code', () => {
+    const corps = corpsDuCourrielConsole(
+      'https://partners.example.org/console/connexion/x',
+      '042137'
+    );
+    expect(corps.startsWith(CONNEXION_CONSOLE.courriel.corps)).toBe(true);
+    expect(corps).toContain('\n\nhttps://partners.example.org/console/connexion/x\n\n');
+    expect(corps).toMatch(/\n042137\n/);
   });
 });

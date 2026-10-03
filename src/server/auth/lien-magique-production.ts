@@ -30,21 +30,29 @@ import { creerNotifieur, productionDeclaree, type Notifieur } from '../../lib/no
 import { SAUTS_DE_CONFIANCE, adresseDuClient } from '../securite/adresse-du-client';
 import { clesPii, empreinteAdresseReseau, empreinteRecherche, type ClesPii } from '../securite/pii';
 import { signalerPotDeMiel } from '../securite/pot-de-miel';
-import { limiter, sujetDepuisEmpreinte } from '../securite/rate-limit';
+import { limiter, sujetDepuisEmpreinte, type NomDeCompteur } from '../securite/rate-limit';
 import { CONNEXION } from '../../content/micro-copy/espace/vocabulaire';
+import { CONNEXION_CONSOLE } from '../../content/micro-copy/console/connexion';
 import { DUREES_AUTH } from './durees';
 import { CODE_DU_COURRIEL_DE_CONNEXION } from '../../content/micro-copy/courriels/notifications';
 import type {
   ConfigurationDuLien,
   PortsDeConsommation,
+  PortsDeConsommationConsole,
   PortsDeDemande,
+  PortsDeDemandeConsole,
   PortsDuCode,
+  PortsDuCodeConsole,
 } from './lien-magique';
 import {
   ecrituresDeLien,
+  ecrituresDeLienConsole,
   lectureDuCompte,
+  lectureDuCompteConsole,
   transactionDeConsommation,
+  transactionDeConsommationConsole,
   transactionDuCode,
+  transactionDuCodeConsole,
 } from './lien-magique-depot';
 import {
   configurationDeLEmetteur,
@@ -58,7 +66,13 @@ export { MODELE_APPORTEUR } from './lien-magique-depot';
 
 /** L'envoi du lien : l'adresse stockée, un sujet, un corps qui porte l'URL. */
 export interface EnvoiDuLien {
-  envoyer(message: { a: string; sujet: string; corps: string }): Promise<void>;
+  /** SEC-29 : `gabarit` absent vaut `lien_magique`, celui de l'espace. */
+  envoyer(message: {
+    a: string;
+    sujet: string;
+    corps: string;
+    gabarit?: 'lien_magique' | 'lien_magique_console';
+  }): Promise<void>;
 }
 
 export interface DependancesDuLien {
@@ -258,6 +272,82 @@ export function envoiParLeNotifieur(notifieur: Notifieur): EnvoiDuLien {
   };
 }
 
+// ── SEC-29 : la console ──────────────────────────────────────────────────────────────────────────
+
+/** Le corps du courriel de la console : sa phrase (juriste), l'URL, puis le code et sa phrase. */
+export function corpsDuCourrielConsole(url: string, code: string): string {
+  const { avant, apres } = CODE_DU_COURRIEL_DE_CONNEXION;
+  return `${CONNEXION_CONSOLE.courriel.corps}
+
+${url}
+
+${avant}
+${code}
+${apres}`;
+}
+
+/**
+ * Un compteur de la console (REQ-SEC-062). Un compteur ÉPUISÉ se signale sous sa CLÉ, jamais sous
+ * sa seule famille (condition de la lentille sécurité) : la console, cible de plus grande valeur, a
+ * ses propres signaux. Le motif est fermé : le nom du compteur, ni sujet, ni adresse, ni empreinte.
+ */
+function compteurDeLaConsole(
+  nom: NomDeCompteur,
+  journal: DependancesDuLien['journal']
+): (sujet: string, maintenantMs: number) => ReturnType<typeof limiter> {
+  return async (sujet, maintenantMs) => {
+    const verdict = await limiter(nom, sujetDepuisEmpreinte(sujet), maintenantMs);
+    if (!verdict.autorise) journal.warn(`compteur_epuise:${nom}`);
+    return verdict;
+  };
+}
+
+export function portsDeDemandeConsole(d: DependancesDuLien): PortsDeDemandeConsole {
+  const cles = clesPii(d.env);
+  const espace = portsDeDemande(d);
+  return {
+    ...espace,
+    compterAdresse: compteurDeLaConsole('magic:console-demande-ip', d.journal),
+    compterCourriel: compteurDeLaConsole('magic:console-demande-courriel', d.journal),
+    emission: {
+      ...lectureDuCompteConsole(d.prisma, cles),
+      ...ecrituresDeLienConsole(d.prisma),
+      envoyer: ({ a, url, code }) =>
+        d.envoi.envoyer({
+          a,
+          sujet: CONNEXION_CONSOLE.courriel.sujet,
+          corps: corpsDuCourrielConsole(url, code),
+          gabarit: 'lien_magique_console',
+        }),
+      signalerPotDeMiel: espace.emission.signalerPotDeMiel,
+      signalerEchec: (motif) => d.journal.warn(`lien_magique_console_${motif}`),
+    },
+  };
+}
+
+export function portsDeConsommationConsole(
+  d: Pick<DependancesDuLien, 'env' | 'prisma' | 'horloge'>
+): PortsDeConsommationConsole {
+  return {
+    maintenant: () => new Date(d.horloge.maintenant()),
+    transaction: transactionDeConsommationConsole(d.prisma),
+    configuration: configurationDuLien(d.env),
+  };
+}
+
+export function portsDuCodeConsole(
+  d: Pick<DependancesDuLien, 'env' | 'prisma' | 'horloge' | 'journal'>,
+  lienAnnule?: () => void
+): PortsDuCodeConsole {
+  return {
+    ...portsDuCode(d, lienAnnule),
+    compterAdresseCode: compteurDeLaConsole('magic:console-code-ip', d.journal),
+    compterCourrielCode: compteurDeLaConsole('magic:console-code-courriel', d.journal),
+    transaction: transactionDuCodeConsole(d.prisma),
+    signaler: (motif) => d.journal.warn(`lien_magique_console_${motif}`),
+  };
+}
+
 /**
  * SEC-42 — l'envoi par l'ÉMETTEUR de courriels (INT-T10) : chaque demande écrit sa ligne
  * `courriels_envoyes` (gabarit, empreinte de l'adresse, statut — ni adresse, ni corps, donc ni
@@ -267,11 +357,8 @@ export function envoiParLeNotifieur(notifieur: Notifieur): EnvoiDuLien {
  */
 export function envoiParLEmetteur(emetteur: () => DependancesDeLEmetteur): EnvoiDuLien {
   return {
-    async envoyer({ a, sujet, corps }) {
-      await demanderEnvoi(
-        { gabarit: 'lien_magique', a, sujet, corps, apporteurId: null },
-        emetteur()
-      );
+    async envoyer({ a, sujet, corps, gabarit = 'lien_magique' }) {
+      await demanderEnvoi({ gabarit, a, sujet, corps, apporteurId: null }, emetteur());
     },
   };
 }

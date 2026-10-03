@@ -28,9 +28,11 @@ import { spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { ConsoleRole, type PrismaClient } from '@prisma/client';
 import { kidDe } from '../../../src/lib/env';
+import { DUREES_AUTH } from '../../../src/server/auth/durees';
 import {
   consommerLien,
   empreinteDeSession,
+  empreinteDeSessionConsole,
   empreinteDuJeton,
   type PortsDeConsommation,
   type TransactionDeConsommation,
@@ -130,6 +132,8 @@ const valide = (): Session => ({
   kid: KID,
   expireAt: new Date(T0.getTime() + HEURE),
   revoqueAt: null,
+  // SEC-29 : vue à l'instant ; une session jamais vue est refusée comme inactive.
+  derniereVueAt: T0,
 });
 
 /** Un dépôt en mémoire qui relit son état À CHAQUE appel, et compte ses lectures. */
@@ -142,7 +146,7 @@ function univers(utilisateur: Utilisateur | null, ligne: Session) {
     depot: {
       lire: async (tokenHash) => {
         etat.lectures.push(tokenHash);
-        if (tokenHash !== empreinteDeSession(JETON, SECRET)) return null;
+        if (tokenHash !== empreinteDeSessionConsole(JETON, SECRET)) return null;
         return {
           ...etat.ligne,
           utilisateurConsole: etat.utilisateur === null ? null : { ...etat.utilisateur },
@@ -200,8 +204,8 @@ describe('REQ-SEC-023 — requireRole : le défaut est le refus, le rôle est re
       motif: 'role_refuse',
     });
     expect(u.etat.lectures).toEqual([
-      empreinteDeSession(JETON, SECRET),
-      empreinteDeSession(JETON, SECRET),
+      empreinteDeSessionConsole(JETON, SECRET),
+      empreinteDeSessionConsole(JETON, SECRET),
     ]);
   });
 
@@ -267,6 +271,51 @@ describe('REQ-SEC-023 — requireRole : le défaut est le refus, le rôle est re
     });
   });
 
+  // SEC-29 : la session de la console expire par INACTIVITÉ (durées de `durees.ts`).
+  it('REQ-SEC-003 : TÉMOIN À DEUX FACES — vue il y a l’inactivité, la session est refusée ; un instant avant, elle passe', async () => {
+    const inactivite = DUREES_AUTH.inactiviteConsoleMs.valeur;
+    const vieille = univers(admin(), {
+      ...valide(),
+      derniereVueAt: new Date(T0.getTime() - inactivite),
+    });
+    expect(await requireRole('action:lever_gel', JETON, vieille.ports)).toEqual({
+      ok: false,
+      motif: 'inactive',
+    });
+    const jamais = univers(admin(), { ...valide(), derniereVueAt: null });
+    expect((await requireRole('action:lever_gel', JETON, jamais.ports)).ok).toBe(false);
+    const recente = univers(admin(), {
+      ...valide(),
+      derniereVueAt: new Date(T0.getTime() - inactivite + 1),
+    });
+    expect((await requireRole('action:lever_gel', JETON, recente.ports)).ok).toBe(true);
+  });
+
+  it('REQ-SEC-003 : la dernière vue n’est touchée qu’une fois par période, et seulement pour une session admise', async () => {
+    const touches: Date[] = [];
+    const avec = (derniereVueAt: Date) => {
+      const u = univers(admin(), { ...valide(), derniereVueAt });
+      u.ports.depot.toucher = async (_h, t) => {
+        touches.push(t);
+      };
+      return u;
+    };
+    const periode = DUREES_AUTH.toucheVueConsoleMs.valeur;
+    await requireRole('action:lever_gel', JETON, avec(new Date(T0.getTime() - periode + 1)).ports);
+    expect(touches).toEqual([]);
+    await requireRole('action:lever_gel', JETON, avec(new Date(T0.getTime() - periode)).ports);
+    expect(touches).toEqual([T0]);
+    const refusee = univers(comptable(), {
+      ...valide(),
+      derniereVueAt: new Date(T0.getTime() - periode),
+    });
+    refusee.ports.depot.toucher = async (_h, t) => {
+      touches.push(t);
+    };
+    await requireRole('action:lever_gel', JETON, refusee.ports);
+    expect(touches).toEqual([T0]);
+  });
+
   it('REQ-SEC-023 : les motifs sont une liste FERMÉE, et le juge n’en rend pas d’autre', () => {
     expect(MOTIFS_DE_REFUS_CONSOLE).toEqual([
       'droit_absent',
@@ -278,6 +327,7 @@ describe('REQ-SEC-023 — requireRole : le défaut est le refus, le rôle est re
       'hors_console',
       'desactive',
       'role_refuse',
+      'inactive',
     ]);
     expect(jugerAcces('action:lever_gel', null, T0, KID)).toEqual({
       ok: false,
@@ -312,6 +362,7 @@ describe('REQ-SEC-023 — l’adaptateur Prisma de requireRole', () => {
           kid: true,
           expireAt: true,
           revoqueAt: true,
+          derniereVueAt: true,
           utilisateurConsole: { select: { id: true, role: true, desactiveAt: true } },
         },
       },
