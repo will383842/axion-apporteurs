@@ -173,11 +173,45 @@ export const COOKIE_DATTENTE = {
  * accepté qu'avec Secure et Path=/, et un effacement nu (`delete`) sans Secure serait REJETÉ par le
  * navigateur, le cookie restant jusqu'à son terme (lentille sécurité, 2026-10-03).
  */
-export function effacerLeCookieDAttente(pot: {
-  set(nom: string, valeur: string, attributs: Record<string, unknown>): unknown;
-}): void {
-  pot.set(COOKIE_DATTENTE.nom, '', { ...COOKIE_DATTENTE.attributs, maxAge: 0 });
+export function effacerLeCookieDAttente(pot: PotDeCookies): void {
+  effacerUnCookie(pot, COOKIE_DATTENTE);
 }
+
+/** Ce qu'un effacement lit du magasin de cookies de Next : la pose seule. */
+type PotDeCookies = {
+  set(nom: string, valeur: string, attributs: Record<string, unknown>): unknown;
+};
+
+/** SEC-29 : l'effacement d'un cookie `__Host-`, quel qu'il soit, par le même en-tête que sa pose. */
+export function effacerUnCookie(
+  pot: PotDeCookies,
+  cookie: { readonly nom: string; readonly attributs: Readonly<Record<string, unknown>> }
+): void {
+  pot.set(cookie.nom, '', { ...cookie.attributs, maxAge: 0 });
+}
+
+/**
+ * SEC-29 (lentille sécurité, condition b) : les cookies de la CONSOLE sont DISTINCTS de ceux de
+ * l'espace. La session de la console porte son nom `__Host-` propre et dure ce que dure une session
+ * de la console (`durees.ts`), sans « rester connecté » ; SameSite=Strict : seule une requête du
+ * même site la porte. L'attente du code de la console a son propre nom, mêmes attributs que celle
+ * de l'espace.
+ */
+export const COOKIE_DE_SESSION_CONSOLE = {
+  nom: '__Host-partners-console',
+  attributs: {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'strict',
+    path: '/',
+    maxAge: DUREES_AUTH.sessionConsoleMs.valeur / 1000,
+  },
+} as const;
+
+export const COOKIE_DATTENTE_CONSOLE = {
+  nom: '__Host-console_code',
+  attributs: COOKIE_DATTENTE.attributs,
+} as const;
 
 /** L'empreinte de recherche de l'adresse saisie, comme à l'émission, ou `null` si elle est hors forme. */
 export function empreinteDeLaSaisie(env: DependancesDuLien['env'], saisie: string): string | null {

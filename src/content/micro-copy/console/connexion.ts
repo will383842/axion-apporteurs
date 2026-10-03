@@ -55,4 +55,15 @@ export const CONNEXION_CONSOLE = {
     action: 'Réessayer',
   },
   deconnexion: 'Se déconnecter',
+  /**
+   * Le courriel du lien de la console (gabarit `lien_magique_console`). Textes de la juriste du
+   * 2026-10-03, mot pour mot : le sujet, l'appel, et la phrase propre à la console. La phrase du code
+   * est celle de l'espace, reprise telle quelle par l'émetteur.
+   */
+  courriel: {
+    sujet: 'Votre lien de connexion à la console',
+    appel: 'Ouvrir la console',
+    corps:
+      'Ne transférez pas ce message : le lien et le code ouvrent la console à votre nom. Si vous n’avez pas demandé à vous connecter, ignorez-le.',
+  },
 } as const;

@@ -26,6 +26,7 @@
  */
 import { z } from 'zod';
 import { SEUILS } from '../../domain/seuils/ssot';
+import { CONNEXION_CONSOLE } from '../../content/micro-copy/console/connexion';
 import {
   TEXTES_DES_NOTIFICATIONS,
   type TexteDeNotification,
@@ -77,6 +78,29 @@ export const GABARITS = {
     desactivable: false,
     actions: action('lien_magique'),
     route: '/connexion/<jeton>',
+    routeEnAttente: null,
+  },
+  /**
+   * SEC-29 : le lien de connexion de la CONSOLE. Lu par ses utilisateurs seuls ; ses textes vivent
+   * avec ceux de la connexion de la console, jamais parmi ceux de l'apporteur.
+   */
+  lien_magique_console: {
+    req: 'REQ-UX-048',
+    emetteur: 'SEC-29',
+    fondement:
+      'REQ-UX-048 et REQ-SEC-003 — connexion de la console par lien et code, transactionnel',
+    declencheur: 'evenement',
+    notificationObligatoire: true,
+    faitCourirUnDelai: false,
+    canaux: ['email'],
+    desactivable: false,
+    actions: [
+      {
+        libelle: CONNEXION_CONSOLE.courriel.appel,
+        source: 'src/content/micro-copy/console/connexion.ts',
+      },
+    ],
+    route: '/console/connexion',
     routeEnAttente: null,
   },
   depot_injoignable_j5: {

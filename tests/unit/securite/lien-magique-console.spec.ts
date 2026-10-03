@@ -26,6 +26,8 @@ import {
   conditionDeConsommationConsole,
   consommerLienConsole,
   demanderLienConsole,
+  empreinteDeSession,
+  empreinteDeSessionConsole,
   empreinteDuCode,
   empreinteDuJeton,
   tirerJeton,
@@ -37,6 +39,13 @@ import {
   type PortsDuCodeConsole,
 } from '../../../src/server/auth/lien-magique';
 import { DUREES_AUTH } from '../../../src/server/auth/durees';
+import { COOKIE_DE_SESSION } from '../../../src/server/auth/session';
+import {
+  COOKIE_DATTENTE,
+  COOKIE_DATTENTE_CONSOLE,
+  COOKIE_DE_SESSION_CONSOLE,
+  effacerUnCookie,
+} from '../../../src/server/auth/lien-magique-production';
 import { jugerAcces } from '../../../src/server/roles/require-role';
 import type { PrismaClient } from '@prisma/client';
 import {
@@ -434,5 +443,37 @@ describe('REQ-SEC-003 — (a) les adaptateurs jugent la population à chaque lec
       where: { emailHash: 'e'.repeat(64) },
       select: { id: true, desactiveAt: true },
     });
+  });
+});
+
+describe('REQ-SEC-003 — (b) les cookies de la console sont DISTINCTS de ceux de l’espace', () => {
+  it('REQ-SEC-003 : TÉMOIN — session et attente du code : noms __Host- propres, Secure, HttpOnly, Path=/, SameSite=Strict, la durée de la console', () => {
+    expect(COOKIE_DE_SESSION_CONSOLE.nom).toMatch(/^__Host-/);
+    expect(COOKIE_DE_SESSION_CONSOLE.nom).not.toBe(COOKIE_DE_SESSION.nom);
+    expect(COOKIE_DE_SESSION_CONSOLE.attributs).toEqual({
+      httpOnly: true,
+      secure: true,
+      sameSite: 'strict',
+      path: '/',
+      maxAge: DUREES_AUTH.sessionConsoleMs.valeur / 1000,
+    });
+    expect(COOKIE_DATTENTE_CONSOLE.nom).toMatch(/^__Host-/);
+    expect(COOKIE_DATTENTE_CONSOLE.nom).not.toBe(COOKIE_DATTENTE.nom);
+    expect(COOKIE_DATTENTE_CONSOLE.attributs).toEqual(COOKIE_DATTENTE.attributs);
+  });
+
+  it('REQ-SEC-003 : TÉMOIN À DEUX FACES — le jeton d’une session de l’espace ne se lit pas comme une session de la console, et inversement', () => {
+    const jeton = tirerJeton();
+    const { secret } = CONFIG.session;
+    expect(empreinteDeSessionConsole(jeton, secret)).not.toBe(empreinteDeSession(jeton, secret));
+    expect(empreinteDeSessionConsole(jeton, secret)).toMatch(/^[0-9a-f]{64}$/);
+  });
+
+  it('REQ-SEC-003 : TÉMOIN — l’effacement d’un cookie de la console garde ses attributs et pose Max-Age=0', () => {
+    const poses: [string, string, Record<string, unknown>][] = [];
+    effacerUnCookie({ set: (n, v, a) => poses.push([n, v, a]) }, COOKIE_DATTENTE_CONSOLE);
+    expect(poses).toEqual([
+      [COOKIE_DATTENTE_CONSOLE.nom, '', { ...COOKIE_DATTENTE_CONSOLE.attributs, maxAge: 0 }],
+    ]);
   });
 });
