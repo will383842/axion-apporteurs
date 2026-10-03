@@ -318,8 +318,8 @@ signé, la date d'émission de la première facture.**
 jamais existé si la condition défaille.** Il en est ainsi notamment d'une convention conclue sous la
 condition de l'accord de prise en charge d'un opérateur de compétences. La défaillance de la condition rend
 la commande caduque, et cette caducité vaut annulation au sens de l'article 3.3 du devis qu'elle constitue,
-le cas échéant. Si la condition est levée par renonciation avant sa défaillance, la commande conserve la
-date de sa signature. Une convention signée par l'entreprise après la défaillance constitue une nouvelle
+le cas échéant. Si la partie dans l'intérêt exclusif de laquelle la condition est stipulée l'abandonne
+avant sa défaillance, la commande conserve la date de sa signature. Une convention signée par l'entreprise après la défaillance constitue une nouvelle
 commande, datée de sa propre signature, qui n'est commissionnée que si elle est signée pendant la durée de
 l'attribution ; un accord de prise en charge intervenu après la défaillance ne fait pas revivre la commande
 caduque.
