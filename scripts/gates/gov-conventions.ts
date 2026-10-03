@@ -2847,12 +2847,28 @@ export const PORTE_A_FIGEE: PorteFigee = {
       run: 'pnpm jur:lexique-social:prove',
     },
     {
+      nom: 'Charte — aucune remuneration presentee comme ferme',
+      run: 'pnpm jur:copy-indicative-partners',
+    },
+    {
+      nom: 'La garde de la remuneration indicative sait rougir',
+      run: 'pnpm jur:copy-indicative-partners:prove',
+    },
+    {
       nom: 'Seuils et delais du contrat — une seule source, aucun litteral hors SSOT',
       run: 'pnpm ssot:seuils',
     },
     {
       nom: 'La garde des seuils sait rougir, famille par famille, sans faux positif',
       run: 'pnpm ssot:seuils:prove',
+    },
+    {
+      nom: 'La date de lecture d une notification ne fait courir aucun delai',
+      run: 'pnpm notifications:lue-at-inerte',
+    },
+    {
+      nom: 'La garde de la date de lecture sait rougir, famille par famille',
+      run: 'pnpm notifications:lue-at-inerte:prove',
     },
     {
       nom: 'Roles de la console — requireRole partout, droits dans la matrice',
@@ -2974,8 +2990,12 @@ export const PORTE_A_FIGEE: PorteFigee = {
     'jur:revue-apporteur-facing:prove': 'tsx scripts/gates/jur-revue-apporteur-facing.ts --prove',
     'jur:lexique-social': 'tsx scripts/gates/jur-lexique-social.ts',
     'jur:lexique-social:prove': 'tsx scripts/gates/jur-lexique-social.ts --prove',
+    'jur:copy-indicative-partners': 'tsx scripts/gates/jur-copy-indicative.ts',
+    'jur:copy-indicative-partners:prove': 'tsx scripts/gates/jur-copy-indicative.ts --prove',
     'ssot:seuils': 'tsx scripts/gates/seuils-ssot.ts',
     'ssot:seuils:prove': 'tsx scripts/gates/seuils-ssot.ts --prove',
+    'notifications:lue-at-inerte': 'tsx scripts/gates/notifications-lue-at-inerte.ts',
+    'notifications:lue-at-inerte:prove': 'tsx scripts/gates/notifications-lue-at-inerte.ts --prove',
     'securite:roles': 'tsx scripts/gates/roles.ts',
     'securite:roles:prove': 'tsx scripts/gates/roles.ts --prove',
   },

@@ -211,7 +211,6 @@
       "etape": 5,
       "phase": 1,
       "taches": [
-        "DM-11",
         "DM-23",
         "INT-T23"
       ]
@@ -1085,8 +1084,9 @@
       "etape": 4,
       "phase": 1,
       "taches": [
-        "DM-11",
-        "DM-58"
+        "CPL-T07",
+        "DM-58",
+        "UX-P1-09"
       ]
     },
     {
@@ -1597,9 +1597,8 @@
       "remplaceePar": null,
       "module": 4,
       "etape": 4,
-      "phase": 1,
+      "phase": 2,
       "taches": [
-        "DM-11",
         "JUR-T16",
         "T-ARG-015",
         "T-ARG-032",
@@ -2744,7 +2743,6 @@
       "etape": 4,
       "phase": 1,
       "taches": [
-        "DM-11",
         "DM-50"
       ]
     },
@@ -2850,7 +2848,6 @@
       "etape": 11,
       "phase": 0,
       "taches": [
-        "DM-11",
         "INT-T44",
         "INT-T56",
         "JUR-T02",
@@ -4579,8 +4576,7 @@
       "etape": 4,
       "phase": -1,
       "taches": [
-        "CPL-T01",
-        "DM-11"
+        "CPL-T01"
       ]
     },
     {
@@ -5264,6 +5260,7 @@
         "UX-P1-44",
         "UX-P1-45",
         "UX-P1-46",
+        "UX-P1-48",
         "UX-P2-01",
         "UX-P2-02",
         "UX-P2-03",
@@ -5994,6 +5991,7 @@
         "JUR-T24",
         "JUR-T27",
         "JUR-T28",
+        "JUR-T56",
         "SEC-14",
         "SEC-15",
         "SEC-41",
@@ -6300,6 +6298,35 @@
       "phase": 1,
       "taches": [
         "JUR-T55"
+      ]
+    },
+    {
+      "id": "REQ-JUR-065",
+      "domaine": "juridique",
+      "texte": "**La page ouverte par le lien du courriel au contact permet TOUS ses droits** (accès, rectification, effacement, limitation, opposition), chacun distinct, sans compte et sans condition, avec DEUX actions distinctes : exercer un droit, et s'opposer. C'est le moyen électronique de l'art. 12 du RGPD, puisque `{adresseDroits}` est postale dans le courriel ; la clé `droits` de l'information de l'art. 14 (v5) y renvoie. Condition de mise en service d'A07 (2026-10-02), mot pour mot : « Aucun courriel en v5 ne doit partir tant que cette page n'offre pas ces droits, chacun distinct de l'opposition et sans compte. Sinon, l'information de l'art. 14 serait inexacte. » La page n'est pas mise en service avant la réponse de Williams sur la durée de la trace des demandes de droits (art. 5.1.e ; demande d'A07, rattrapage 74).",
+      "source": "Arbitrage de la coordination du 2026-10-02, accepté par A07 et la lentille sécurité ; condition de mise en service d'A07 (2026-10-02)",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": null,
+      "etape": null,
+      "phase": 1,
+      "taches": [
+        "DM-59",
+        "UX-P1-48"
+      ]
+    },
+    {
+      "id": "REQ-JUR-066",
+      "domaine": "juridique",
+      "texte": "**Une personne qui répond à une annonce de commercial salarié n'entre dans le tunnel des apporteurs qu'après avoir accepté une proposition.** Le script d'import des CV la route vers le parcours « proposer le réseau » qui existe déjà ; il ne crée ni ne rattache aucune fiche d'apporteur sans ce consentement. Les deux populations, salariés et apporteurs, restent séparées dès le départ.",
+      "source": "Décision de Williams du 2026-10-02, point 4 de la séance (« Pour le point 4 = A. ») ; HYP-CANDIDATS-INDEED",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": null,
+      "etape": null,
+      "phase": 1,
+      "taches": [
+        "INT-T71-A"
       ]
     },
     {
