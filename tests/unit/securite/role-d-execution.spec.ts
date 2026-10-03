@@ -73,9 +73,21 @@ const ETAT_SAIN = {
   journal: false,
   tables: 0,
   courant: false,
+  // SEC-50 : le journal appartient à partners_journal, et ni partners_execution ni le rôle ne peuvent
+  // le réécrire (UPDATE, DELETE ou TRUNCATE sur evenements).
+  possede: true,
+  groupe: false,
+  reecrit: false,
 };
 /** Le constat d'un serveur sain. */
-const CONSTAT_SAIN = { superutilisateur: false, journal: false, execution: true, tables: 0 };
+const CONSTAT_SAIN = {
+  superutilisateur: false,
+  journal: false,
+  execution: true,
+  tables: 0,
+  possede: true,
+  reecrit: false,
+};
 
 beforeEach(() => {
   etat.urls.length = 0;
@@ -180,6 +192,21 @@ describe('REQ-DM-024 — le provisionnement : refus AVANT d’écrire, puis un l
       { tables: 1 },
       'le rôle d’exécution ne peut être propriétaire d’aucune table',
     ],
+    [
+      'un journal à un autre propriétaire',
+      { possede: false },
+      'le journal n’appartient pas à partners_journal',
+    ],
+    [
+      'un journal que partners_execution peut réécrire',
+      { groupe: true },
+      'partners_execution peut réécrire le journal',
+    ],
+    [
+      'un journal que le rôle d’exécution peut réécrire',
+      { reecrit: true },
+      'le rôle d’exécution peut réécrire le journal',
+    ],
   ])('REQ-DM-024 : TÉMOIN — %s est refusé, et RIEN n’est écrit', async (_q, ecart, message) => {
     etat.reponses.push([{ ...ETAT_SAIN, ...ecart }]);
     const e = await refus(
@@ -207,6 +234,25 @@ describe('REQ-DM-024 — le provisionnement : refus AVANT d’écrire, puis un l
     expect(tous).toContain('GRANT SELECT ON _prisma_migrations TO partners_execution');
     expect(etat.deconnexions).toBe(1);
   });
+
+  it('REQ-DM-024 : TÉMOIN — la boucle des droits exclut le journal par son NOM, sans le déduire de son propriétaire', async () => {
+    etat.reponses.push([ETAT_SAIN]);
+    await provisionnerRoleDExecution({ urlMigration: URL_PROPRIO, urlExecution: URL_SERVEUR });
+    const boucle = etat.transactions[0]!.find((x) => x.sql.includes('FOR t IN'));
+    expect(boucle?.sql).toContain(
+      "c.relname NOT IN ('evenements', 'evenements_id_seq', '_prisma_migrations')"
+    );
+    expect(boucle?.sql).not.toContain('relowner');
+  });
+
+  it('REQ-DM-024 : l’état du journal est lu AVANT tout lot, dans la même requête que celui du rôle', async () => {
+    etat.reponses.push([ETAT_SAIN]);
+    await provisionnerRoleDExecution({ urlMigration: URL_PROPRIO, urlExecution: URL_SERVEUR });
+    expect(etat.requetes).toHaveLength(1);
+    const lu = etat.requetes[0]!.sql;
+    expect(lu).toContain("to_regclass('public.evenements')");
+    expect(lu).toContain("'UPDATE, DELETE, TRUNCATE'");
+  });
 });
 
 describe('REQ-DM-024 — le constat, connecté comme le serveur', () => {
@@ -220,6 +266,12 @@ describe('REQ-DM-024 — le constat, connecté comme le serveur', () => {
       'le serveur n’est pas membre de partners_execution',
     ],
     ['propriétaire de tables', { tables: 2 }, 'le serveur est propriétaire de tables'],
+    [
+      'un journal à un autre propriétaire',
+      { possede: false },
+      'le journal n’appartient pas à partners_journal',
+    ],
+    ['un journal réinscriptible', { reecrit: true }, 'le serveur peut réécrire le journal'],
   ])('REQ-DM-024 : TÉMOIN — %s : refus nommé', async (_q, ecart, message) => {
     etat.reponses.push(ecart === null ? [] : [{ ...CONSTAT_SAIN, ...ecart }]);
     const e = await refus(constaterRoleDExecution(URL_SERVEUR));
