@@ -1073,11 +1073,11 @@ const CLES_DU_WORKFLOW = ['name', 'on', 'permissions', 'concurrency', 'jobs'];
  */
 /**
  * GOV-142 : le lint et le format vivent dans le job `gardes` (la porte A est découpée en jobs, et
- * `gate-a` n'en est plus que la porte finale). `outputs` y entre : l'empreinte de l'instantané de la
- * forge, que les autres jobs comparent avant usage.
+ * `gate-a` n'en est plus que la porte finale). `needs` y entre : le job `forge`, dont il reçoit
+ * l'instantané de la forge, empreinte comparée avant usage.
  */
 const JOB_DU_LINT = 'gardes';
-const CLES_DE_GATE_A = ['runs-on', 'if', 'permissions', 'outputs', 'steps'];
+const CLES_DE_GATE_A = ['runs-on', 'if', 'permissions', 'needs', 'steps'];
 
 /**
  * Ce que FAIT Gate A, lue comme un objet. Les étapes de lint et de format ont la forme EXACTE
@@ -1541,6 +1541,13 @@ describe('REQ-GOV-018 — lint et format sont ÉPINGLÉS, SCRIPTÉS, et BLOQUANT
     // La ligne de condition du job, LUE et non retapée : une mutation qui ne mute rien rendrait
     // le témoin vert en ne mesurant rien, et une copie du texte divergerait à la première retouche.
     const CONDITION_DU_JOB = /^ {4}if: .*$/m.exec(ci)?.[0];
+    // GOV-142 : le job `forge` ouvre le fichier et porte la même condition ; chaque mutation de la
+    // condition se joue dans le job `gardes`, à partir de son en-tête, jamais sur la première venue.
+    const EN_TETE_DES_GARDES = ci.indexOf('\n  gardes:\n');
+    if (EN_TETE_DES_GARDES < 0)
+      throw new Error('le job `gardes` est introuvable : ce témoin ne mesure rien');
+    const dansLesGardes = (f: (suite: string) => string): string =>
+      ci.slice(0, EN_TETE_DES_GARDES) + f(ci.slice(EN_TETE_DES_GARDES));
     // LÈVE plutôt que d'assertionner : sans cette ligne, les deux mutations ci-dessous muteraient
     // une chaîne vide, et le témoin resterait vert en ne mesurant rien.
     if (CONDITION_DU_JOB === undefined) {
@@ -1557,19 +1564,20 @@ describe('REQ-GOV-018 — lint et format sont ÉPINGLÉS, SCRIPTÉS, et BLOQUANT
       // La condition RÉELLE remplacée par un désarmement franc : `if: false` n’éteint pas une
       // étape, il éteint les 71. On SUBSTITUE la ligne au lieu d’en ajouter une seconde :
       // `lireYaml` refuse une clé en double, et le témoin lèverait au lieu de nommer la faute.
-      ci.replace(CONDITION_DU_JOB, '    if: false'),
+      dansLesGardes((g) => g.replace(CONDITION_DU_JOB, '    if: false')),
       // Et la condition RETIRÉE : la clé est déclarée, donc son absence est une divergence.
-      ci.replace(`${CONDITION_DU_JOB}\n`, ''),
+      dansLesGardes((g) => g.replace(`${CONDITION_DU_JOB}\n`, '')),
       // Une clé de job posée dans le job, hors de ses étapes. Pas `if:` ici : le job en porte déjà un,
       // et deux clés de même nom font LEVER l’analyseur au lieu de nommer. GOV-142 : le job du lint
-      // n'est plus le dernier du fichier ; la clé se pose juste avant SES étapes.
+      // n'est plus le dernier du fichier ; la clé se pose dans SON en-tête, sous son commentaire.
       ci.replace(
-        '      empreinte_forge: ${{ steps.forge.outputs.empreinte }}\n    steps:\n',
-        '      empreinte_forge: ${{ steps.forge.outputs.empreinte }}\n    continue-on-error: true\n    steps:\n'
+        '    # eclats. Il recoit l instantane de la forge du job `forge`, comme les eclats.\n',
+        '    # eclats. Il recoit l instantane de la forge du job `forge`, comme les eclats.\n    continue-on-error: true\n'
       ),
+      // GOV-142 : le job `forge` ouvre le fichier ; la première ligne `needs: [forge]` est celle des gardes.
       ci.replace(
-        '    steps:\n',
-        '    defaults:\n      run:\n        shell: true {0}\n    steps:\n'
+        '    needs: [forge]\n    steps:\n',
+        '    needs: [forge]\n    defaults:\n      run:\n        shell: true {0}\n    steps:\n'
       ),
       ci.replace(
         '        run: pnpm gov:conventions\n',
@@ -1577,7 +1585,10 @@ describe('REQ-GOV-018 — lint et format sont ÉPINGLÉS, SCRIPTÉS, et BLOQUANT
       ),
       `${ci}defaults:\n  run:\n    shell: true {0}\n`,
       // Une clé déclarée qui manque au job : la liste et le workflow divergent.
-      ci.replace('    permissions:\n      contents: read\n      pull-requests: read\n', ''),
+      ci.replace(
+        '    permissions:\n      contents: read\n      pull-requests: read\n    needs: [forge]\n',
+        '    needs: [forge]\n'
+      ),
     ];
     for (const d of desarmes) {
       expect(d).not.toBe(ci);

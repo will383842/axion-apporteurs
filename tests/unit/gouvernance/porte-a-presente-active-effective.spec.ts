@@ -343,7 +343,7 @@ const ALTERATIONS: readonly Alteration[] = [
         t,
         'tests-2',
         '        run: pnpm test:eclat\n        env:\n          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}\n' +
-          '          GOV_FORGE: ${{ runner.temp }}/forge-instantane.json\n          ECLAT: 2/4\n',
+          '          GOV_FORGE: ${{ runner.temp }}/forge-instantane.json\n          ECLAT: 2/2\n',
         '        run: pnpm test:eclat\n'
       ),
   },

@@ -1,7 +1,7 @@
 /**
- * tests-fusion.ts — GOV-142 : la fusion des quatre éclats de la suite, et le verdict de couverture.
+ * tests-fusion.ts — GOV-142 : la fusion des deux éclats de la suite, et le verdict de couverture.
  *
- * 1. EXACTEMENT les quatre blobs attendus (`blob-<i>-4.json`), aucun de plus : un blob manquant
+ * 1. EXACTEMENT les deux blobs attendus (`blob-<i>-2.json`), aucun de plus : un blob manquant
  *    rougit, ce n'est jamais une couverture calculée sur trois éclats.
  * 2. `vitest run --merge-reports --coverage`, aux seuils de `vitest.config.ts`, LUS et jamais
  *    recopiés : aucune surcharge `--coverage.*` ici, à la différence des éclats. Les rapports sont

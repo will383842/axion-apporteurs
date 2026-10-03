@@ -479,11 +479,11 @@ export const ETAPES_DE_LA_FORGE: readonly { script: string; motif: string }[] = 
 ];
 
 /**
- * GOV-142 : en CI, la suite se joue en quatre éclats puis se fusionne ; en local, `pnpm prevol` la
+ * GOV-142 : en CI, la suite se joue en deux éclats puis se fusionne ; en local, `pnpm prevol` la
  * joue ENTIÈRE, une fois, à la place des éclats. Elle écrit le même `test-results/vitest.json`.
  */
 export const SUITE_A_LA_PLACE_DES_ECLATS: Etape = {
-  nom: 'Tests — la suite entière, à la place des quatre éclats et de leur fusion',
+  nom: 'Tests — la suite entière, à la place des éclats et de leur fusion',
   commande: 'pnpm test',
 };
 
@@ -659,12 +659,12 @@ export async function etapesDeLaPorteA(
       ecartees.push({ nom, motif: deLaForge.motif });
       continue;
     }
-    // GOV-142 : les quatre éclats et leur fusion ne se jouent pas en local ; la suite ENTIÈRE les
+    // GOV-142 : les éclats et leur fusion ne se jouent pas en local ; la suite ENTIÈRE les
     // remplace, une fois, comme avant le découpage (et `req:check` relit son rapport).
     if (lanceLeScript(run, 'test:fusion')) {
       ecartees.push({
         nom,
-        motif: 'fusionne les blobs des quatre éclats ; en local, la suite entière les remplace',
+        motif: 'fusionne les blobs des éclats ; en local, la suite entière les remplace',
       });
       continue;
     }

@@ -465,13 +465,13 @@ describe('REQ-QA-013 — aucune gate ne se désarme par `continue-on-error`, et 
 
   it('REQ-QA-013 — la tolérance posée sur l’étape de fusion des tests est nommée, elle seule, à toute valeur', async () => {
     const ci = readFileSync(CI, 'utf8');
-    // GOV-142 : « Tests » est devenue quatre éclats et une fusion ; la fusion, unique, porte le témoin.
+    // GOV-142 : « Tests » est devenue deux éclats et une fusion ; la fusion, unique, porte le témoin.
     const TESTS =
-      '      - name: Tests — fusion des quatre eclats, aux seuils de la configuration\n        run: pnpm test:fusion\n';
+      '      - name: Tests — fusion des eclats, aux seuils de la configuration\n        run: pnpm test:fusion\n';
     for (const valeur of ['${{ true }}', 'true', 'false', "${{ github.event_name == 'push' }}"]) {
       const desarme = substituer(ci, TESTS, `${TESTS}        ${TOLERANCE}: ${valeur}\n`);
       expect((await relever(CI, desarme)).fautes, valeur).toEqual([
-        `${CI} › apres-tests › « Tests — fusion des quatre eclats, aux seuils de la configuration » : ${TOLERANCE}`,
+        `${CI} › apres-tests › « Tests — fusion des eclats, aux seuils de la configuration » : ${TOLERANCE}`,
       ]);
     }
   });
@@ -548,13 +548,13 @@ describe('REQ-QA-013 — aucune gate ne se désarme par `continue-on-error`, et 
       .flatMap((t) => t.split('\n'))
       .filter((l) => /^\s*#.*continue-on-error/.test(l));
     expect(citations.length).toBeGreaterThan(0);
-    // GOV-142 : « Tests » est devenue quatre éclats et une fusion ; la fusion, unique, porte le témoin.
+    // GOV-142 : « Tests » est devenue deux éclats et une fusion ; la fusion, unique, porte le témoin.
     const TESTS =
-      '      - name: Tests — fusion des quatre eclats, aux seuils de la configuration\n        run: pnpm test:fusion\n';
+      '      - name: Tests — fusion des eclats, aux seuils de la configuration\n        run: pnpm test:fusion\n';
     const script = substituer(
       ci,
       TESTS,
-      `      - name: Tests — fusion des quatre eclats, aux seuils de la configuration\n        run: |\n          echo "${TOLERANCE}: true"\n          pnpm test:fusion\n`
+      `      - name: Tests — fusion des eclats, aux seuils de la configuration\n        run: |\n          echo "${TOLERANCE}: true"\n          pnpm test:fusion\n`
     );
     expect((await relever(CI, script)).fautes).toEqual([]);
   });

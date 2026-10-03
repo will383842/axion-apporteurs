@@ -31,9 +31,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
-  gardes:
-    # GOV-142 : toutes les gardes qui ne lisent ni les tests ni l historique, en parallele des
-    # eclats. Il lit la forge UNE fois et la passe aux autres jobs.
+  forge:
+    # GOV-142 : la forge lue UNE fois pour toute la porte A, dans un job COURT : les gardes et les
+    # eclats n attendent que lui (decision de la coordination, sur la mesure du premier run).
     runs-on: ubuntu-latest
     if: ${{ github.event.pull_request.merged != true }}
     permissions:
@@ -56,19 +56,11 @@ jobs:
           path: ~/.cache/prisma
           key: prisma-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
       - run: pnpm install --frozen-lockfile
-      # GOV-123, REQ-GOV-032. Les vues derivees ne sont plus commitees : elles se RENDENT ici,
-      # avant toute etape qui en lit une, puis une seconde fois pour que deux rendus identiques
-      # octet par octet soient exiges (la vue non reproductible est nommee). Aucun jeton : les
-      # lectures de la forge de PLAN-STATE echouent de la meme facon aux deux rendus.
-      - name: Les vues derivees sont rendues, et le rendu est reproductible
-        run: pnpm vues:rendre
-      - name: Aucune vue derivee sous git — une PR qui en rajoute une est refusee, le fichier nomme
-        run: pnpm vues:hors-git
       # QA-T64, REQ-GOV-006, REQ-QA-013. La forge lue UNE fois par porte A : les lectures de
       # `gov:etat` et `gov:trace` (que `pnpm test` faisait aussi) sont figees dans un instantane
       # sous RUNNER_TEMP ; chaque etape qui lit la forge recoit `GOV_FORGE` dans son env:. Une lecture qui
       # echoue fait echouer l etape ; un instantane illisible fait echouer la garde qui le lit.
-      # APRES les vues : `vues:rendre` suit l installation (REQ-GOV-032).
+      # GOV-142 : dans son propre job, apres l installation ; elle ne lit aucune vue.
       - name: La forge est lue une fois pour toute la porte A
         run: pnpm forge:instantane
         env:
@@ -81,6 +73,59 @@ jobs:
         run: pnpm ci:artefact:publier
         env:
           ARTEFACT: ${{ runner.temp }}/forge-instantane.json
+      # GOV-142 : le depot, en fin de job : aucune commande ne suit une action.
+      - name: Depot de l instantane de la forge
+        uses: actions/upload-artifact@v4
+        with:
+          name: forge-instantane
+          path: ${{ runner.temp }}/forge-instantane.json
+          overwrite: false
+          if-no-files-found: error
+          retention-days: 1
+  gardes:
+    # GOV-142 : toutes les gardes qui ne lisent ni les tests ni l historique, en parallele des
+    # eclats. Il recoit l instantane de la forge du job `forge`, comme les eclats.
+    runs-on: ubuntu-latest
+    if: ${{ github.event.pull_request.merged != true }}
+    permissions:
+      contents: read
+      pull-requests: read
+    needs: [forge]
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      # La version de pnpm vient de `packageManager` dans package.json — une seule source.
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      # GOV-142 : les moteurs de Prisma, que `pnpm install` telecharge (crochet postinstall), en cache par
+      # la cle du verrou ; une action, donc avant toute commande.
+      - name: Cache des moteurs de Prisma
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/prisma
+          key: prisma-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+      # GOV-142 : l instantane de la forge, lu UNE fois par le job `forge`, recu du run courant (ni
+      # run-id ni jeton) et compare a l empreinte que ce job a publiee, avant tout usage.
+      - name: Reception de l instantane de la forge
+        uses: actions/download-artifact@v4
+        with:
+          name: forge-instantane
+          path: ${{ runner.temp }}
+      - run: pnpm install --frozen-lockfile
+      # GOV-123, REQ-GOV-032. Les vues derivees ne sont plus commitees : elles se RENDENT ici,
+      # avant toute etape qui en lit une, puis une seconde fois pour que deux rendus identiques
+      # octet par octet soient exiges (la vue non reproductible est nommee). Aucun jeton : les
+      # lectures de la forge de PLAN-STATE echouent de la meme facon aux deux rendus.
+      - name: Les vues derivees sont rendues, et le rendu est reproductible
+        run: pnpm vues:rendre
+      - name: Aucune vue derivee sous git — une PR qui en rajoute une est refusee, le fichier nomme
+        run: pnpm vues:hors-git
+      - name: L instantane de la forge est celui que le job forge a publie
+        run: pnpm ci:artefact:verifier
+        env:
+          ARTEFACT: ${{ runner.temp }}/forge-instantane.json
+          EMPREINTE_ATTENDUE: ${{ needs.forge.outputs.empreinte_forge }}
       - name: Regle de publication (depot public)
         run: pnpm gov:publication
       - name: La garde de publication sait rougir
@@ -436,15 +481,7 @@ jobs:
       # n est pas rejoue ici. Le temoin a deux faces vit dans `tests/integration/adaptateur-mcp.spec.ts`.
       - name: Harnais de l adaptateur MCP
         run: pnpm harnais-mcp
-      # GOV-142 : le depot, en fin de job : aucune commande ne suit une action.
-      - name: Depot de l instantane de la forge
-        uses: actions/upload-artifact@v4
-        with:
-          name: forge-instantane
-          path: ${{ runner.temp }}/forge-instantane.json
-          overwrite: false
-          if-no-files-found: error
-          retention-days: 1
+
   porte-d:
     # GOV-142 : ce qui confronte la PR a sa base dans l historique (`fetch-depth: 0`) : la porte D et
     # red-first, en parallele.
@@ -498,11 +535,11 @@ jobs:
       - name: La garde red-first sait rougir
         run: pnpm red-first:prove
   tests-1:
-    # GOV-142 : la suite en QUATRE jobs explicites, identiques hormis `ECLAT` et le nom de leur
+    # GOV-142 : la suite en DEUX jobs explicites, identiques hormis `ECLAT` et le nom de leur
     # artefact (temoin : `gov:ci-etapes`, famille `eclats_divergents`). Pas de matrice : chaque
     # job publie l empreinte de SON blob par ses propres `outputs`, que la fusion relit.
     runs-on: ubuntu-latest
-    needs: [gardes]
+    needs: [forge]
     if: ${{ github.event.pull_request.merged != true }}
     permissions:
       contents: read
@@ -532,7 +569,7 @@ jobs:
         with:
           path: ~/.cache/ms-playwright
           key: navigateurs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
-      # GOV-142 : l instantane de la forge, lu UNE fois par le job `gardes`, recu du run courant (ni
+      # GOV-142 : l instantane de la forge, lu UNE fois par le job `forge`, recu du run courant (ni
       # run-id ni jeton) et compare a l empreinte que ce job a publiee, avant tout usage.
       - name: Reception de l instantane de la forge
         uses: actions/download-artifact@v4
@@ -546,11 +583,11 @@ jobs:
       # lectures de la forge de PLAN-STATE echouent de la meme facon aux deux rendus.
       - name: Les vues derivees sont rendues, et le rendu est reproductible
         run: pnpm vues:rendre
-      - name: L instantane de la forge est celui que le job gardes a publie
+      - name: L instantane de la forge est celui que le job forge a publie
         run: pnpm ci:artefact:verifier
         env:
           ARTEFACT: ${{ runner.temp }}/forge-instantane.json
-          EMPREINTE_ATTENDUE: ${{ needs.gardes.outputs.empreinte_forge }}
+          EMPREINTE_ATTENDUE: ${{ needs.forge.outputs.empreinte_forge }}
       # UX-P0-03, REQ-UX-017. Les passes d accessibilite de `tests/a11y/` tournent DANS `pnpm test`
       # et pilotent un vrai navigateur : WebKit pour le profil iPhone, Chromium pour le bureau. Sans
       # eux, la suite rougirait sur une absence d outil, pas sur une faute. Avant `Tests`, donc.
@@ -573,23 +610,23 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GOV_FORGE: ${{ runner.temp }}/forge-instantane.json
-          ECLAT: 1/4
+          ECLAT: 1/2
       - name: Empreinte du blob de l eclat
         id: blob
         run: pnpm ci:artefact:publier
         env:
-          ARTEFACT: .vitest-reports/blob-1-4.json
+          ARTEFACT: .vitest-reports/blob-1-2.json
       - name: Depot du blob de l eclat
         uses: actions/upload-artifact@v4
         with:
           name: blob-1
-          path: .vitest-reports/blob-1-4.json
+          path: .vitest-reports/blob-1-2.json
           overwrite: false
           if-no-files-found: error
           retention-days: 1
   tests-2:
     runs-on: ubuntu-latest
-    needs: [gardes]
+    needs: [forge]
     if: ${{ github.event.pull_request.merged != true }}
     permissions:
       contents: read
@@ -619,7 +656,7 @@ jobs:
         with:
           path: ~/.cache/ms-playwright
           key: navigateurs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
-      # GOV-142 : l instantane de la forge, lu UNE fois par le job `gardes`, recu du run courant (ni
+      # GOV-142 : l instantane de la forge, lu UNE fois par le job `forge`, recu du run courant (ni
       # run-id ni jeton) et compare a l empreinte que ce job a publiee, avant tout usage.
       - name: Reception de l instantane de la forge
         uses: actions/download-artifact@v4
@@ -633,11 +670,11 @@ jobs:
       # lectures de la forge de PLAN-STATE echouent de la meme facon aux deux rendus.
       - name: Les vues derivees sont rendues, et le rendu est reproductible
         run: pnpm vues:rendre
-      - name: L instantane de la forge est celui que le job gardes a publie
+      - name: L instantane de la forge est celui que le job forge a publie
         run: pnpm ci:artefact:verifier
         env:
           ARTEFACT: ${{ runner.temp }}/forge-instantane.json
-          EMPREINTE_ATTENDUE: ${{ needs.gardes.outputs.empreinte_forge }}
+          EMPREINTE_ATTENDUE: ${{ needs.forge.outputs.empreinte_forge }}
       # UX-P0-03, REQ-UX-017. Les passes d accessibilite de `tests/a11y/` tournent DANS `pnpm test`
       # et pilotent un vrai navigateur : WebKit pour le profil iPhone, Chromium pour le bureau. Sans
       # eux, la suite rougirait sur une absence d outil, pas sur une faute. Avant `Tests`, donc.
@@ -660,199 +697,25 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GOV_FORGE: ${{ runner.temp }}/forge-instantane.json
-          ECLAT: 2/4
+          ECLAT: 2/2
       - name: Empreinte du blob de l eclat
         id: blob
         run: pnpm ci:artefact:publier
         env:
-          ARTEFACT: .vitest-reports/blob-2-4.json
+          ARTEFACT: .vitest-reports/blob-2-2.json
       - name: Depot du blob de l eclat
         uses: actions/upload-artifact@v4
         with:
           name: blob-2
-          path: .vitest-reports/blob-2-4.json
-          overwrite: false
-          if-no-files-found: error
-          retention-days: 1
-  tests-3:
-    runs-on: ubuntu-latest
-    needs: [gardes]
-    if: ${{ github.event.pull_request.merged != true }}
-    permissions:
-      contents: read
-      pull-requests: read
-    outputs:
-      empreinte: ${{ steps.blob.outputs.empreinte }}
-    steps:
-      - uses: actions/checkout@v4
-        with: { fetch-depth: 0 }
-      # La version de pnpm vient de `packageManager` dans package.json — une seule source.
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: 22, cache: pnpm }
-      # GOV-142 : les moteurs de Prisma, que `pnpm install` telecharge (crochet postinstall), en cache par
-      # la cle du verrou ; une action, donc avant toute commande.
-      - name: Cache des moteurs de Prisma
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/prisma
-          key: prisma-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
-      # QA-T59. Le cache des navigateurs des passes d accessibilite, AVANT toute commande (une
-      # action qui suit une commande peut reecrire l arbre que les gardes mesurent). Sa CLE derive
-      # du verrou, qui epingle Playwright (RM-01) : aucune version ecrite ici, aucune commande pour
-      # la lire ; une montee de dependance refroidit le cache une fois, jamais un navigateur perime.
-      - name: Cache des navigateurs des passes d accessibilite
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/ms-playwright
-          key: navigateurs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
-      # GOV-142 : l instantane de la forge, lu UNE fois par le job `gardes`, recu du run courant (ni
-      # run-id ni jeton) et compare a l empreinte que ce job a publiee, avant tout usage.
-      - name: Reception de l instantane de la forge
-        uses: actions/download-artifact@v4
-        with:
-          name: forge-instantane
-          path: ${{ runner.temp }}
-      - run: pnpm install --frozen-lockfile
-      # GOV-123, REQ-GOV-032. Les vues derivees ne sont plus commitees : elles se RENDENT ici,
-      # avant toute etape qui en lit une, puis une seconde fois pour que deux rendus identiques
-      # octet par octet soient exiges (la vue non reproductible est nommee). Aucun jeton : les
-      # lectures de la forge de PLAN-STATE echouent de la meme facon aux deux rendus.
-      - name: Les vues derivees sont rendues, et le rendu est reproductible
-        run: pnpm vues:rendre
-      - name: L instantane de la forge est celui que le job gardes a publie
-        run: pnpm ci:artefact:verifier
-        env:
-          ARTEFACT: ${{ runner.temp }}/forge-instantane.json
-          EMPREINTE_ATTENDUE: ${{ needs.gardes.outputs.empreinte_forge }}
-      # UX-P0-03, REQ-UX-017. Les passes d accessibilite de `tests/a11y/` tournent DANS `pnpm test`
-      # et pilotent un vrai navigateur : WebKit pour le profil iPhone, Chromium pour le bureau. Sans
-      # eux, la suite rougirait sur une absence d outil, pas sur une faute. Avant `Tests`, donc.
-      # QA-T59. Cette etape est restee bloquee plus de 25 min : un telechargement qui ne repond plus
-      # immobilisait toute la porte A. `scripts/ci/navigateurs-bornes.ts` tente trois fois au plus,
-      # chaque tentative tuee a quatre minutes ; si toutes echouent, l etape ECHOUE — une nouvelle
-      # tentative, jamais un vert de complaisance ; `timeout-minutes` borne l etape entiere. Un script
-      # du depot, sous une forme fermee (REQ-GOV-018) ; `pnpm pre-gate` le classe lent. Le cache des
-      # navigateurs est en tete du job. Temoins : `tests/unit/qualite/ci-navigateurs-a11y.spec.ts` et
-      # `tests/unit/qualite/navigateurs-bornes.spec.ts`.
-      - name: Navigateurs des passes d accessibilite
-        timeout-minutes: 15
-        run: pnpm a11y:navigateurs:bornes
-      # `pnpm test` a besoin du jeton pour la MEME raison que l etape `gov:etat` ci-dessous :
-      # `plan-state-frais.spec.ts` et `une-tache-un-owner.spec.ts` lancent la garde contre le depot
-      # REEL, et elle echoue quand elle ne peut pas lire la forge — c est ce qu on lui demande.
-      # Sans le jeton ici, la suite rougissait sur deux tests qui ne disaient rien du code.
-      - name: Tests — un eclat de la suite
-        run: pnpm test:eclat
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GOV_FORGE: ${{ runner.temp }}/forge-instantane.json
-          ECLAT: 3/4
-      - name: Empreinte du blob de l eclat
-        id: blob
-        run: pnpm ci:artefact:publier
-        env:
-          ARTEFACT: .vitest-reports/blob-3-4.json
-      - name: Depot du blob de l eclat
-        uses: actions/upload-artifact@v4
-        with:
-          name: blob-3
-          path: .vitest-reports/blob-3-4.json
-          overwrite: false
-          if-no-files-found: error
-          retention-days: 1
-  tests-4:
-    runs-on: ubuntu-latest
-    needs: [gardes]
-    if: ${{ github.event.pull_request.merged != true }}
-    permissions:
-      contents: read
-      pull-requests: read
-    outputs:
-      empreinte: ${{ steps.blob.outputs.empreinte }}
-    steps:
-      - uses: actions/checkout@v4
-        with: { fetch-depth: 0 }
-      # La version de pnpm vient de `packageManager` dans package.json — une seule source.
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: 22, cache: pnpm }
-      # GOV-142 : les moteurs de Prisma, que `pnpm install` telecharge (crochet postinstall), en cache par
-      # la cle du verrou ; une action, donc avant toute commande.
-      - name: Cache des moteurs de Prisma
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/prisma
-          key: prisma-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
-      # QA-T59. Le cache des navigateurs des passes d accessibilite, AVANT toute commande (une
-      # action qui suit une commande peut reecrire l arbre que les gardes mesurent). Sa CLE derive
-      # du verrou, qui epingle Playwright (RM-01) : aucune version ecrite ici, aucune commande pour
-      # la lire ; une montee de dependance refroidit le cache une fois, jamais un navigateur perime.
-      - name: Cache des navigateurs des passes d accessibilite
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/ms-playwright
-          key: navigateurs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
-      # GOV-142 : l instantane de la forge, lu UNE fois par le job `gardes`, recu du run courant (ni
-      # run-id ni jeton) et compare a l empreinte que ce job a publiee, avant tout usage.
-      - name: Reception de l instantane de la forge
-        uses: actions/download-artifact@v4
-        with:
-          name: forge-instantane
-          path: ${{ runner.temp }}
-      - run: pnpm install --frozen-lockfile
-      # GOV-123, REQ-GOV-032. Les vues derivees ne sont plus commitees : elles se RENDENT ici,
-      # avant toute etape qui en lit une, puis une seconde fois pour que deux rendus identiques
-      # octet par octet soient exiges (la vue non reproductible est nommee). Aucun jeton : les
-      # lectures de la forge de PLAN-STATE echouent de la meme facon aux deux rendus.
-      - name: Les vues derivees sont rendues, et le rendu est reproductible
-        run: pnpm vues:rendre
-      - name: L instantane de la forge est celui que le job gardes a publie
-        run: pnpm ci:artefact:verifier
-        env:
-          ARTEFACT: ${{ runner.temp }}/forge-instantane.json
-          EMPREINTE_ATTENDUE: ${{ needs.gardes.outputs.empreinte_forge }}
-      # UX-P0-03, REQ-UX-017. Les passes d accessibilite de `tests/a11y/` tournent DANS `pnpm test`
-      # et pilotent un vrai navigateur : WebKit pour le profil iPhone, Chromium pour le bureau. Sans
-      # eux, la suite rougirait sur une absence d outil, pas sur une faute. Avant `Tests`, donc.
-      # QA-T59. Cette etape est restee bloquee plus de 25 min : un telechargement qui ne repond plus
-      # immobilisait toute la porte A. `scripts/ci/navigateurs-bornes.ts` tente trois fois au plus,
-      # chaque tentative tuee a quatre minutes ; si toutes echouent, l etape ECHOUE — une nouvelle
-      # tentative, jamais un vert de complaisance ; `timeout-minutes` borne l etape entiere. Un script
-      # du depot, sous une forme fermee (REQ-GOV-018) ; `pnpm pre-gate` le classe lent. Le cache des
-      # navigateurs est en tete du job. Temoins : `tests/unit/qualite/ci-navigateurs-a11y.spec.ts` et
-      # `tests/unit/qualite/navigateurs-bornes.spec.ts`.
-      - name: Navigateurs des passes d accessibilite
-        timeout-minutes: 15
-        run: pnpm a11y:navigateurs:bornes
-      # `pnpm test` a besoin du jeton pour la MEME raison que l etape `gov:etat` ci-dessous :
-      # `plan-state-frais.spec.ts` et `une-tache-un-owner.spec.ts` lancent la garde contre le depot
-      # REEL, et elle echoue quand elle ne peut pas lire la forge — c est ce qu on lui demande.
-      # Sans le jeton ici, la suite rougissait sur deux tests qui ne disaient rien du code.
-      - name: Tests — un eclat de la suite
-        run: pnpm test:eclat
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GOV_FORGE: ${{ runner.temp }}/forge-instantane.json
-          ECLAT: 4/4
-      - name: Empreinte du blob de l eclat
-        id: blob
-        run: pnpm ci:artefact:publier
-        env:
-          ARTEFACT: .vitest-reports/blob-4-4.json
-      - name: Depot du blob de l eclat
-        uses: actions/upload-artifact@v4
-        with:
-          name: blob-4
-          path: .vitest-reports/blob-4-4.json
+          path: .vitest-reports/blob-2-2.json
           overwrite: false
           if-no-files-found: error
           retention-days: 1
   apres-tests:
-    # GOV-142 : ce qui lit les RESULTATS de la suite. La fusion des quatre blobs juge la couverture
+    # GOV-142 : ce qui lit les RESULTATS de la suite. La fusion des blobs juge la couverture
     # aux seuils de vitest.config.ts et ecrit test-results/vitest.json, comme `pnpm test`.
     runs-on: ubuntu-latest
-    needs: [gardes, tests-1, tests-2, tests-3, tests-4]
+    needs: [forge, tests-1, tests-2]
     if: ${{ github.event.pull_request.merged != true }}
     permissions:
       contents: read
@@ -871,7 +734,7 @@ jobs:
         with:
           path: ~/.cache/prisma
           key: prisma-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
-      # GOV-142 : l instantane de la forge, lu UNE fois par le job `gardes`, recu du run courant (ni
+      # GOV-142 : l instantane de la forge, lu UNE fois par le job `forge`, recu du run courant (ni
       # run-id ni jeton) et compare a l empreinte que ce job a publiee, avant tout usage.
       - name: Reception de l instantane de la forge
         uses: actions/download-artifact@v4
@@ -888,16 +751,6 @@ jobs:
         with:
           name: blob-2
           path: .vitest-reports
-      - name: Reception du blob de l eclat 3
-        uses: actions/download-artifact@v4
-        with:
-          name: blob-3
-          path: .vitest-reports
-      - name: Reception du blob de l eclat 4
-        uses: actions/download-artifact@v4
-        with:
-          name: blob-4
-          path: .vitest-reports
       - run: pnpm install --frozen-lockfile
       # GOV-123, REQ-GOV-032. Les vues derivees ne sont plus commitees : elles se RENDENT ici,
       # avant toute etape qui en lit une, puis une seconde fois pour que deux rendus identiques
@@ -905,32 +758,22 @@ jobs:
       # lectures de la forge de PLAN-STATE echouent de la meme facon aux deux rendus.
       - name: Les vues derivees sont rendues, et le rendu est reproductible
         run: pnpm vues:rendre
-      - name: L instantane de la forge est celui que le job gardes a publie
+      - name: L instantane de la forge est celui que le job forge a publie
         run: pnpm ci:artefact:verifier
         env:
           ARTEFACT: ${{ runner.temp }}/forge-instantane.json
-          EMPREINTE_ATTENDUE: ${{ needs.gardes.outputs.empreinte_forge }}
+          EMPREINTE_ATTENDUE: ${{ needs.forge.outputs.empreinte_forge }}
       - name: Le blob de l eclat 1 est celui que son job a publie
         run: pnpm ci:artefact:verifier
         env:
-          ARTEFACT: .vitest-reports/blob-1-4.json
+          ARTEFACT: .vitest-reports/blob-1-2.json
           EMPREINTE_ATTENDUE: ${{ needs.tests-1.outputs.empreinte }}
       - name: Le blob de l eclat 2 est celui que son job a publie
         run: pnpm ci:artefact:verifier
         env:
-          ARTEFACT: .vitest-reports/blob-2-4.json
+          ARTEFACT: .vitest-reports/blob-2-2.json
           EMPREINTE_ATTENDUE: ${{ needs.tests-2.outputs.empreinte }}
-      - name: Le blob de l eclat 3 est celui que son job a publie
-        run: pnpm ci:artefact:verifier
-        env:
-          ARTEFACT: .vitest-reports/blob-3-4.json
-          EMPREINTE_ATTENDUE: ${{ needs.tests-3.outputs.empreinte }}
-      - name: Le blob de l eclat 4 est celui que son job a publie
-        run: pnpm ci:artefact:verifier
-        env:
-          ARTEFACT: .vitest-reports/blob-4-4.json
-          EMPREINTE_ATTENDUE: ${{ needs.tests-4.outputs.empreinte }}
-      - name: Tests — fusion des quatre eclats, aux seuils de la configuration
+      - name: Tests — fusion des eclats, aux seuils de la configuration
         run: pnpm test:fusion
       # QA-T03, REQ-QA-014. LA MEME garde que "Matrice de tracabilite" plus haut (`gov-trace.ts`),
       # relancee ICI avec les RESULTATS que `pnpm test` vient d ecrire (`test-results/vitest.json`) :
@@ -1044,7 +887,7 @@ jobs:
     # garde deviendrait INSATISFIABLE — exactement ce qu'on apprend a sauter. Nommer le droit
     # ici, c'est le soustraire a un reglage qu'on ne relit jamais.
     runs-on: ubuntu-latest
-    needs: [gardes, porte-d, tests-1, tests-2, tests-3, tests-4, apres-tests, poids]
+    needs: [forge, gardes, porte-d, tests-1, tests-2, apres-tests, poids]
     if: ${{ always() && github.event.pull_request.merged != true }}
     permissions:
       contents: read

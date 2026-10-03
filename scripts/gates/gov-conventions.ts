@@ -2965,17 +2965,17 @@ const ETAPES_FIGEES: readonly EtapeFigee[] = [
     cles: { with: { name: 'forge-instantane', path: '${{ runner.temp }}' } },
   },
   {
-    nom: 'L instantane de la forge est celui que le job gardes a publie',
+    nom: 'L instantane de la forge est celui que le job forge a publie',
     run: 'pnpm ci:artefact:verifier',
     cles: {
       env: {
         ARTEFACT: '${{ runner.temp }}/forge-instantane.json',
-        EMPREINTE_ATTENDUE: '${{ needs.gardes.outputs.empreinte_forge }}',
+        EMPREINTE_ATTENDUE: '${{ needs.forge.outputs.empreinte_forge }}',
       },
     },
   },
   {
-    nom: 'Tests — fusion des quatre eclats, aux seuils de la configuration',
+    nom: 'Tests — fusion des eclats, aux seuils de la configuration',
     run: 'pnpm test:fusion',
   },
   {
@@ -3011,12 +3011,12 @@ const etapesDeLEclat = (i: number): EtapeFigee[] => [
   {
     nom: 'Tests — un eclat de la suite',
     run: 'pnpm test:eclat',
-    cles: { env: { ...JETON_ET_INSTANTANE.env, ECLAT: `${i}/4` } },
+    cles: { env: { ...JETON_ET_INSTANTANE.env, ECLAT: `${i}/2` } },
   },
   {
     nom: 'Empreinte du blob de l eclat',
     run: 'pnpm ci:artefact:publier',
-    cles: { id: 'blob', env: { ARTEFACT: `.vitest-reports/blob-${i}-4.json` } },
+    cles: { id: 'blob', env: { ARTEFACT: `.vitest-reports/blob-${i}-2.json` } },
   },
   {
     nom: 'Depot du blob de l eclat',
@@ -3024,7 +3024,7 @@ const etapesDeLEclat = (i: number): EtapeFigee[] => [
     cles: {
       with: {
         name: `blob-${i}`,
-        path: `.vitest-reports/blob-${i}-4.json`,
+        path: `.vitest-reports/blob-${i}-2.json`,
         overwrite: 'false',
         'if-no-files-found': 'error',
         'retention-days': '1',
@@ -3044,17 +3044,18 @@ const etapesDuBlob = (i: number): EtapeFigee[] => [
     run: 'pnpm ci:artefact:verifier',
     cles: {
       env: {
-        ARTEFACT: `.vitest-reports/blob-${i}-4.json`,
+        ARTEFACT: `.vitest-reports/blob-${i}-2.json`,
         EMPREINTE_ATTENDUE: `${'${{'} needs.tests-${i}.outputs.empreinte }}`,
       },
     },
   },
 ];
-const ECLATS = [1, 2, 3, 4] as const;
+const ECLATS = [1, 2] as const;
 export const PORTE_A_FIGEE: PorteFigee = {
   jobs: [
+    // GOV-142 : la forge lue une fois, dans un job court que les gardes et les éclats attendent seul.
     {
-      job: 'gardes',
+      job: 'forge',
       si: '${{ github.event.pull_request.merged != true }}',
       cles: {
         'runs-on': 'ubuntu-latest',
@@ -3067,10 +3068,29 @@ export const PORTE_A_FIGEE: PorteFigee = {
         'uses: actions/setup-node@v4',
         'Cache des moteurs de Prisma',
         'run: pnpm install --frozen-lockfile',
-        'Les vues derivees sont rendues, et le rendu est reproductible',
-        'Aucune vue derivee sous git — une PR qui en rajoute une est refusee, le fichier nomme',
         'La forge est lue une fois pour toute la porte A',
         'Empreinte de l instantane de la forge',
+        'Depot de l instantane de la forge'
+      ),
+    },
+    {
+      job: 'gardes',
+      si: '${{ github.event.pull_request.merged != true }}',
+      cles: {
+        'runs-on': 'ubuntu-latest',
+        needs: ['forge'],
+        permissions: { contents: 'read', 'pull-requests': 'read' },
+      },
+      etapes: figer(
+        'uses: actions/checkout@v4',
+        'uses: pnpm/action-setup@v4',
+        'uses: actions/setup-node@v4',
+        'Cache des moteurs de Prisma',
+        'Reception de l instantane de la forge',
+        'run: pnpm install --frozen-lockfile',
+        'Les vues derivees sont rendues, et le rendu est reproductible',
+        'Aucune vue derivee sous git — une PR qui en rajoute une est refusee, le fichier nomme',
+        'L instantane de la forge est celui que le job forge a publie',
         'Regle de publication (depot public)',
         'La garde de publication sait rougir',
         'Identifiants qualifies',
@@ -3166,8 +3186,7 @@ export const PORTE_A_FIGEE: PorteFigee = {
         'Semgrep — chaque regle maison mord sur son temoin, nosemgrep n eteint rien',
         'Format',
         'Typecheck',
-        'Harnais de l adaptateur MCP',
-        'Depot de l instantane de la forge'
+        'Harnais de l adaptateur MCP'
       ),
     },
     {
@@ -3192,7 +3211,7 @@ export const PORTE_A_FIGEE: PorteFigee = {
       si: '${{ github.event.pull_request.merged != true }}',
       cles: {
         'runs-on': 'ubuntu-latest',
-        needs: ['gardes'],
+        needs: ['forge'],
         permissions: { contents: 'read', 'pull-requests': 'read' },
         outputs: { empreinte: '${{ steps.blob.outputs.empreinte }}' },
       },
@@ -3206,7 +3225,7 @@ export const PORTE_A_FIGEE: PorteFigee = {
           'Reception de l instantane de la forge',
           'run: pnpm install --frozen-lockfile',
           'Les vues derivees sont rendues, et le rendu est reproductible',
-          'L instantane de la forge est celui que le job gardes a publie',
+          'L instantane de la forge est celui que le job forge a publie',
           'Navigateurs des passes d accessibilite'
         ),
         ...etapesDeLEclat(1),
@@ -3217,7 +3236,7 @@ export const PORTE_A_FIGEE: PorteFigee = {
       si: '${{ github.event.pull_request.merged != true }}',
       cles: {
         'runs-on': 'ubuntu-latest',
-        needs: ['gardes'],
+        needs: ['forge'],
         permissions: { contents: 'read', 'pull-requests': 'read' },
         outputs: { empreinte: '${{ steps.blob.outputs.empreinte }}' },
       },
@@ -3231,60 +3250,10 @@ export const PORTE_A_FIGEE: PorteFigee = {
           'Reception de l instantane de la forge',
           'run: pnpm install --frozen-lockfile',
           'Les vues derivees sont rendues, et le rendu est reproductible',
-          'L instantane de la forge est celui que le job gardes a publie',
+          'L instantane de la forge est celui que le job forge a publie',
           'Navigateurs des passes d accessibilite'
         ),
         ...etapesDeLEclat(2),
-      ],
-    },
-    {
-      job: 'tests-3',
-      si: '${{ github.event.pull_request.merged != true }}',
-      cles: {
-        'runs-on': 'ubuntu-latest',
-        needs: ['gardes'],
-        permissions: { contents: 'read', 'pull-requests': 'read' },
-        outputs: { empreinte: '${{ steps.blob.outputs.empreinte }}' },
-      },
-      etapes: [
-        ...figer(
-          'uses: actions/checkout@v4',
-          'uses: pnpm/action-setup@v4',
-          'uses: actions/setup-node@v4',
-          'Cache des moteurs de Prisma',
-          'Cache des navigateurs des passes d accessibilite',
-          'Reception de l instantane de la forge',
-          'run: pnpm install --frozen-lockfile',
-          'Les vues derivees sont rendues, et le rendu est reproductible',
-          'L instantane de la forge est celui que le job gardes a publie',
-          'Navigateurs des passes d accessibilite'
-        ),
-        ...etapesDeLEclat(3),
-      ],
-    },
-    {
-      job: 'tests-4',
-      si: '${{ github.event.pull_request.merged != true }}',
-      cles: {
-        'runs-on': 'ubuntu-latest',
-        needs: ['gardes'],
-        permissions: { contents: 'read', 'pull-requests': 'read' },
-        outputs: { empreinte: '${{ steps.blob.outputs.empreinte }}' },
-      },
-      etapes: [
-        ...figer(
-          'uses: actions/checkout@v4',
-          'uses: pnpm/action-setup@v4',
-          'uses: actions/setup-node@v4',
-          'Cache des moteurs de Prisma',
-          'Cache des navigateurs des passes d accessibilite',
-          'Reception de l instantane de la forge',
-          'run: pnpm install --frozen-lockfile',
-          'Les vues derivees sont rendues, et le rendu est reproductible',
-          'L instantane de la forge est celui que le job gardes a publie',
-          'Navigateurs des passes d accessibilite'
-        ),
-        ...etapesDeLEclat(4),
       ],
     },
     {
@@ -3292,7 +3261,7 @@ export const PORTE_A_FIGEE: PorteFigee = {
       si: '${{ github.event.pull_request.merged != true }}',
       cles: {
         'runs-on': 'ubuntu-latest',
-        needs: ['gardes', 'tests-1', 'tests-2', 'tests-3', 'tests-4'],
+        needs: ['forge', 'tests-1', 'tests-2'],
         permissions: { contents: 'read', 'pull-requests': 'read' },
       },
       etapes: [
@@ -3304,8 +3273,8 @@ export const PORTE_A_FIGEE: PorteFigee = {
           'Reception de l instantane de la forge',
           'run: pnpm install --frozen-lockfile',
           'Les vues derivees sont rendues, et le rendu est reproductible',
-          'L instantane de la forge est celui que le job gardes a publie',
-          'Tests — fusion des quatre eclats, aux seuils de la configuration',
+          'L instantane de la forge est celui que le job forge a publie',
+          'Tests — fusion des eclats, aux seuils de la configuration',
           'req:check — chaque paire (tache, REQ) a son test annote et VERT',
           'Le lecteur du rapport de mutation sait rougir',
           'Mutation des fichiers de la PR — Stryker en bac a sable, survivants nommes',
@@ -3334,16 +3303,7 @@ export const PORTE_A_FIGEE: PorteFigee = {
       si: '${{ always() && github.event.pull_request.merged != true }}',
       cles: {
         'runs-on': 'ubuntu-latest',
-        needs: [
-          'gardes',
-          'porte-d',
-          'tests-1',
-          'tests-2',
-          'tests-3',
-          'tests-4',
-          'apres-tests',
-          'poids',
-        ],
+        needs: ['forge', 'gardes', 'porte-d', 'tests-1', 'tests-2', 'apres-tests', 'poids'],
         permissions: { contents: 'read' },
       },
       etapes: figer(

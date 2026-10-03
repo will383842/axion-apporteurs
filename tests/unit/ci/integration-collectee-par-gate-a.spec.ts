@@ -108,19 +108,19 @@ describe('REQ-QA-006 — l’étape « Tests » de Gate A atteint le harnais d�
     const admise = /^--(coverage|reporter=[a-z-]+|outputFile\.json=[\w./-]+)$/;
     expect(options.filter((o) => !admise.test(o))).toEqual([]);
 
-    // GOV-142 : en porte A, la suite se joue en QUATRE éclats (`tests-1` à `tests-4`), chacun par
+    // GOV-142 : en porte A, la suite se joue en DEUX éclats (`tests-1` et `tests-2`), chacun par
     // `pnpm test:eclat`, dont les arguments ne choisissent aucun fichier : la liste FERMÉE ci-dessous
     // n'admet que la couverture (seuils neutralisés, jugés à la fusion), le rapporteur et l'éclat.
     const admiseALEclat =
-      /^(exec|vitest|run|--coverage|--coverage\.thresholds\.src\/domain\/\*\*\.(lines|branches)=0|--reporter=(blob|default)|--shard=[1-4]\/4)$/;
-    for (const i of [1, 2, 3, 4]) {
+      /^(exec|vitest|run|--coverage|--coverage\.thresholds\.src\/domain\/\*\*\.(lines|branches)=0|--reporter=(blob|default)|--shard=[1-2]\/2)$/;
+    for (const i of [1, 2]) {
       expect(
         argumentsDeLEclat(i).filter((o) => !admiseALEclat.test(o)),
         `éclat ${i}`
       ).toEqual([]);
     }
     const lignes = readFileSync(join(RACINE, '.github/workflows/ci.yml'), 'utf8').split(/\r?\n/);
-    for (const nomDuJob of ['tests-1', 'tests-2', 'tests-3', 'tests-4']) {
+    for (const nomDuJob of ['tests-1', 'tests-2']) {
       const debutJob = lignes.findIndex((l) => l === `  ${nomDuJob}:`);
       expect(debutJob, `aucun job ${nomDuJob} dans ci.yml`).toBeGreaterThanOrEqual(0);
       const finJob = lignes.findIndex((l, i) => i > debutJob && /^ {2}\S/.test(l));

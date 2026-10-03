@@ -18,14 +18,14 @@
  *  2. Les étapes du SOCLE (récupérer le dépôt, installer pnpm et node, les caches, `pnpm install`)
  *     et les étapes RÉPÉTABLES nommées dans `REPETABLES`, chacune avec sa raison, se répètent à
  *     l'identique : jamais altérées, jamais retirées de tous les jobs.
- *  3. Une étape qui CHANGE pour être découpée (« Tests » devient quatre éclats et une fusion) est
+ *  3. Une étape qui CHANGE pour être découpée (« Tests » devient des éclats et une fusion) est
  *     déclarée dans `TRANSFORMATIONS`, avec les noms qui la remplacent et la raison. Un nom déclaré
  *     absent de la tête : `transformation_sans_cible`.
  *  4. Chaque job porte la garde de fusion au niveau du job : `job_sans_garde_de_fusion`.
  *  5. Quand la tête a plusieurs jobs : un seul job s'appelle `gate-a`, aucun autre ne s'en approche
  *     (`nom_de_porte_usurpe`) ; il attend TOUS les autres (`porte_finale_incomplete`) et tourne
  *     toujours, `always()` à sa condition (`porte_finale_sans_always`).
- *  6. Les éclats `tests-<i>` sont exactement `tests-1` à `tests-4`, chacun avec `ECLAT: <i>/4`
+ *  6. Les éclats `tests-<i>` sont exactement `tests-1` à `tests-2`, chacun avec `ECLAT: <i>/2`
  *     (`eclat_manquant_ou_double`), et IDENTIQUES hormis ce numéro et le nom de leur blob
  *     (`eclats_divergents`) : un éclat ne dérive pas en silence.
  *  7. LISTE FERMÉE DES AJOUTS (acceptance de GOV-142, point 6) : toute étape de la tête est soit une
@@ -48,7 +48,7 @@ export const WORKFLOW = '.github/workflows/ci.yml';
 export const REFERENCE = 'scripts/gates/ci-etapes-reference.json';
 export const PORTE_FINALE = 'gate-a';
 export const GARDE_DE_FUSION = 'github.event.pull_request.merged != true';
-export const NOMBRE_D_ECLATS = 4;
+export const NOMBRE_D_ECLATS = 2;
 
 export type Etape = Readonly<Record<string, unknown>>;
 export interface Job {
@@ -70,10 +70,10 @@ export const TRANSFORMATIONS: Readonly<Record<string, Transformation>> = {
   Tests: {
     vers: [
       'Tests — un eclat de la suite',
-      'Tests — fusion des quatre eclats, aux seuils de la configuration',
+      'Tests — fusion des eclats, aux seuils de la configuration',
     ],
     pourquoi:
-      'la suite se joue en quatre éclats parallèles (`pnpm test:eclat`), puis la fusion juge la ' +
+      'la suite se joue en deux éclats parallèles (`pnpm test:eclat`), puis la fusion juge la ' +
       'couverture aux seuils de la configuration et écrit le rapport de `pnpm test` (`pnpm test:fusion`).',
   },
 };
@@ -95,7 +95,7 @@ export interface AjoutAdmis {
 
 const DEPOT = 'actions/upload-artifact@v4';
 const RECEPTION = 'actions/download-artifact@v4';
-const ECLATS = [1, 2, 3, 4] as const;
+const ECLATS = [1, 2] as const;
 
 /**
  * LA LISTE FERMÉE des étapes que la tête AJOUTE à la base (acceptance de GOV-142, point 6 : (a) la
@@ -106,7 +106,7 @@ const ECLATS = [1, 2, 3, 4] as const;
  */
 export const AJOUTS_ADMIS: Readonly<Record<string, AjoutAdmis>> = {
   'Tests — un eclat de la suite': { categorie: '(a) l’éclat', run: 'pnpm test:eclat' },
-  'Tests — fusion des quatre eclats, aux seuils de la configuration': {
+  'Tests — fusion des eclats, aux seuils de la configuration': {
     categorie: '(c) la fusion des rapports',
     run: 'pnpm test:fusion',
   },
@@ -126,7 +126,7 @@ export const AJOUTS_ADMIS: Readonly<Record<string, AjoutAdmis>> = {
     categorie: '(e) calcul d’empreinte',
     run: 'pnpm ci:artefact:publier',
   },
-  'L instantane de la forge est celui que le job gardes a publie': {
+  'L instantane de la forge est celui que le job forge a publie': {
     categorie: '(e) vérification d’empreinte',
     run: 'pnpm ci:artefact:verifier',
   },
@@ -443,7 +443,12 @@ interface Cas {
 const etapeJugee = (jobs: readonly Job[]): { job: Job; etape: Etape } => {
   for (const job of jobs) {
     const etape = job.etapes.find(
-      (x) => !estDuSocle(x) && REPETABLES[nomDeLEtape(x)] === undefined && x.env === undefined
+      // Une étape de la RÉFÉRENCE : un ajout admis retiré n'est pas une étape disparue.
+      (x) =>
+        !estDuSocle(x) &&
+        REPETABLES[nomDeLEtape(x)] === undefined &&
+        AJOUTS_ADMIS[nomDeLEtape(x)] === undefined &&
+        x.env === undefined
     );
     if (etape !== undefined && !FORME_D_UN_ECLAT.test(job.nom)) return { job, etape };
   }
@@ -563,12 +568,12 @@ export const CAS_DE_PREUVE: readonly Cas[] = [
   {
     famille: 'eclat_manquant_ou_double',
     planter: (t) => ({
-      tete: remplacerLeJob(t, 'tests-3', (j) =>
+      tete: remplacerLeJob(t, 'tests-2', (j) =>
         avecEtapes(
           j,
           j.etapes.map((e) =>
             estObjet(e.env) && e.env.ECLAT !== undefined
-              ? { ...e, env: { ...e.env, ECLAT: '2/4' } }
+              ? { ...e, env: { ...e.env, ECLAT: '1/2' } }
               : e
           )
         )

@@ -104,12 +104,12 @@ describe('REQ-QA-013 — GOV-142 : la même liste d’étapes, au regroupement p
   });
 
   it('REQ-QA-013 : TÉMOIN — retirer une seule étape de la tête rougit, en la nommant', () => {
-    const [premier, ...autres] = tete;
-    const victime = premier!.etapes.find((e) => e.name === 'La sonde sait rougir')!;
-    const amputee: Job[] = [
-      { ...premier!, etapes: premier!.etapes.filter((e) => e !== victime) },
-      ...autres,
-    ];
+    // GOV-142 : le job de la sonde est cherché par son étape, jamais pris au rang : la forge ouvre le fichier.
+    const job = tete.find((j) => j.etapes.some((e) => e.name === 'La sonde sait rougir'))!;
+    const victime = job.etapes.find((e) => e.name === 'La sonde sait rougir')!;
+    const amputee: Job[] = tete.map((j) =>
+      j === job ? { ...j, etapes: j.etapes.filter((e) => e !== victime) } : j
+    );
     expect(jugerLesEtapes(reference, amputee)).toEqual([
       { famille: 'etape_disparue', message: "« La sonde sait rougir » n'est plus dans aucun job." },
     ]);
@@ -117,15 +117,15 @@ describe('REQ-QA-013 — GOV-142 : la même liste d’étapes, au regroupement p
 });
 
 describe('REQ-QA-013 — GOV-142 : l’éclat, la fusion, l’empreinte et la porte finale', () => {
-  it('REQ-QA-013 : ECLAT en forme FERMÉE ^[1-4]/4$ ; toute autre valeur est refusée', () => {
-    for (const i of [1, 2, 3, 4]) expect(lireLEclat(`${i}/4`)).toBe(i);
-    for (const v of ['0/4', '5/4', '1/3', '1/4 ', ' 1/4', '1', '', undefined, '01/4', '1/04']) {
+  it('REQ-QA-013 : ECLAT en forme FERMÉE ^[1-2]/2$ ; toute autre valeur est refusée', () => {
+    for (const i of [1, 2]) expect(lireLEclat(`${i}/2`)).toBe(i);
+    for (const v of ['0/2', '3/2', '1/4', '1/2 ', ' 1/2', '1', '', undefined, '01/2', '1/02']) {
       expect(typeof lireLEclat(v), String(v)).toBe('object');
     }
   });
 
-  it('REQ-QA-013 : un éclat collecte la couverture, seuils ramenés à zéro, en blob, sur SON quart', () => {
-    expect(argumentsDeLEclat(3)).toEqual([
+  it('REQ-QA-013 : un éclat collecte la couverture, seuils ramenés à zéro, en blob, sur SA moitié', () => {
+    expect(argumentsDeLEclat(2)).toEqual([
       'exec',
       'vitest',
       'run',
@@ -134,21 +134,16 @@ describe('REQ-QA-013 — GOV-142 : l’éclat, la fusion, l’empreinte et la po
       '--coverage.thresholds.src/domain/**.branches=0',
       '--reporter=blob',
       '--reporter=default',
-      '--shard=3/4',
+      '--shard=2/2',
     ]);
   });
 
-  it('REQ-QA-013 : TÉMOIN — la fusion exige EXACTEMENT les quatre blobs', () => {
-    expect(blobsAttendus()).toEqual([
-      'blob-1-4.json',
-      'blob-2-4.json',
-      'blob-3-4.json',
-      'blob-4-4.json',
-    ]);
+  it('REQ-QA-013 : TÉMOIN — la fusion exige EXACTEMENT les deux blobs', () => {
+    expect(blobsAttendus()).toEqual(['blob-1-2.json', 'blob-2-2.json']);
     expect(jugerLesBlobs(blobsAttendus())).toEqual([]);
-    expect(jugerLesBlobs(blobsAttendus().slice(0, 3))).toEqual(['blob manquant : blob-4-4.json']);
-    expect(jugerLesBlobs([...blobsAttendus(), 'blob-5-4.json'])).toEqual([
-      'blob inattendu : blob-5-4.json',
+    expect(jugerLesBlobs(blobsAttendus().slice(0, 1))).toEqual(['blob manquant : blob-2-2.json']);
+    expect(jugerLesBlobs([...blobsAttendus(), 'blob-3-2.json'])).toEqual([
+      'blob inattendu : blob-3-2.json',
     ]);
   });
 
@@ -214,14 +209,7 @@ describe('REQ-QA-013 — GOV-142 : les points de la lentille sécurité, lus dan
       .filter(([, j]) => JSON.stringify(j).includes('secrets.GITHUB_TOKEN'))
       .map(([n]) => n)
       .sort();
-    expect(avecJeton).toEqual([
-      'apres-tests',
-      'gardes',
-      'tests-1',
-      'tests-2',
-      'tests-3',
-      'tests-4',
-    ]);
+    expect(avecJeton).toEqual(['apres-tests', 'forge', 'gardes', 'tests-1', 'tests-2']);
   });
 
   it('REQ-QA-013 : chaque artefact a UN producteur, overwrite false, et se reçoit du run courant seulement', () => {
@@ -241,9 +229,7 @@ describe('REQ-QA-013 — GOV-142 : les points de la lentille sécurité, lus dan
     expect([...producteurs.entries()].sort()).toEqual([
       ['blob-1', ['tests-1']],
       ['blob-2', ['tests-2']],
-      ['blob-3', ['tests-3']],
-      ['blob-4', ['tests-4']],
-      ['forge-instantane', ['gardes']],
+      ['forge-instantane', ['forge']],
     ]);
   });
 });

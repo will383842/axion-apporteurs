@@ -2,7 +2,7 @@
  * forge-instantane.ts — `forge:instantane` (QA-T64 ; REQ-GOV-006, REQ-QA-013) : la forge lue UNE fois
  * par porte A.
  *
- * USAGE (en tête du job `gardes` de la porte A, GOV-142) : npx tsx scripts/gates/forge-instantane.ts
+ * USAGE (dans le job `forge` de la porte A, GOV-142) : npx tsx scripts/gates/forge-instantane.ts
  *
  * LE DÉFAUT MESURÉ. Une porte A lisait la forge plusieurs fois, et souvent les MÊMES listes : les
  * trois de `gov:etat` (PR ouvertes, PR fusionnées, issues ouvertes) relues par `pnpm test`

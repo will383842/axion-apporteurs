@@ -1,8 +1,8 @@
 /**
  * tests-eclat.ts — GOV-142 : UN éclat de la suite, lancé par la matrice de la porte A.
  *
- * La suite ne change pas : chaque éclat lance `vitest run --coverage --shard=<i>/4` avec le reporter
- * `blob`, et le job qui suit fusionne les quatre éclats (`pnpm test:fusion`, `tests-fusion.ts`) en
+ * La suite ne change pas : chaque éclat lance `vitest run --coverage --shard=<i>/2` avec le reporter
+ * `blob`, et le job qui suit fusionne les deux éclats (`pnpm test:fusion`, `tests-fusion.ts`) en
  * appliquant les seuils de couverture de `vitest.config.ts` et en écrivant le MÊME
  * `test-results/vitest.json` que `pnpm test`.
  *
@@ -11,20 +11,22 @@
  * son blob, seuils ramenés à zéro par la ligne de commande ; la fusion, elle, lit les seuils de la
  * configuration sans aucune surcharge, et c'est son verdict qui compte.
  *
- * L'éclat se lit dans `ECLAT`, posé par la seule matrice, sous la forme FERMÉE `^[1-4]/4$` : la
+ * L'éclat se lit dans `ECLAT`, posé par la seule matrice, sous la forme FERMÉE `^[1-2]/2$` : la
  * commande de l'étape reste `pnpm test:eclat` (REQ-GOV-018). Une valeur absente ou autre fait
  * ÉCHOUER l'étape : un éclat qui lancerait toute la suite, ou aucune, ne se lit pas comme un vert.
  */
 import { spawnSync } from 'node:child_process';
 
-export const NOMBRE_D_ECLATS = 4;
-const FORME_DE_L_ECLAT = /^([1-4])\/4$/;
+export const NOMBRE_D_ECLATS = 2;
+const FORME_DE_L_ECLAT = /^([1-2])\/2$/;
 
-/** PURE. L'indice de l'éclat (1 à 4), ou une raison de refus. */
+/** PURE. L'indice de l'éclat (1 à NOMBRE_D_ECLATS), ou une raison de refus. */
 export function lireLEclat(valeur: string | undefined): number | { refus: string } {
   const m = FORME_DE_L_ECLAT.exec(valeur ?? '');
   return m === null
-    ? { refus: `ECLAT vaut « ${valeur ?? ''} », attendu i/${NOMBRE_D_ECLATS} avec 1 ≤ i ≤ 4` }
+    ? {
+        refus: `ECLAT vaut « ${valeur ?? ''} », attendu i/${NOMBRE_D_ECLATS} avec 1 ≤ i ≤ ${NOMBRE_D_ECLATS}`,
+      }
     : Number(m[1]);
 }
 

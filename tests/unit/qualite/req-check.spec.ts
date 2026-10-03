@@ -285,7 +285,7 @@ describe('REQ-QA-014 — `pnpm req:check` est la garde inscrite, lancée avec le
 });
 
 /**
- * GOV-142 : la suite se joue en quatre éclats, et c'est la FUSION (`pnpm test:fusion`, job
+ * GOV-142 : la suite se joue en deux éclats, et c'est la FUSION (`pnpm test:fusion`, job
  * `apres-tests`) qui écrit `test-results/vitest.json`. `req:check` doit la suivre juste après.
  */
 const JOB_DES_RESULTATS = 'apres-tests';

@@ -466,7 +466,7 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
       porte: 2,
       temoins: 0,
       raison:
-        'GOV-142 — `test:eclat` : 1 sur un `ECLAT` hors de la forme fermée ^[1-4]/4$ (jugée par ' +
+        'GOV-142 — `test:eclat` : 1 sur un `ECLAT` hors de la forme fermée ^[1-2]/2$ (jugée par ' +
         '`lireLEclat`, ci-etapes-identiques.spec.ts), et le code de vitest relayé. Aucun témoin de ' +
         '`REFUS`. Dette DÉCLARÉE.',
     },
