@@ -13,14 +13,23 @@
  * journal chaîné (par son écrivain unique), dans une transaction. La table
  * est en ajout seul : un second semis de la même décision est une seconde ligne, d'où le contrôle
  * d'existence de l'appelant.
+ *
+ * LE MOTIF EST CHIFFRÉ (forme d'A02) : `colonnesPii`, champ `justification`, lié à SA
+ * ligne (modèle `decisionCandidature`, id, champ) ; l'identifiant est donc tiré AVANT l'écriture.
+ * Aucun clair n'est écrit, ni au journal : la charge du changement de statut ne le porte pas.
  */
 
+import { randomUUID } from 'node:crypto';
 import type { PrismaClient, StatutApporteur } from '@prisma/client';
 import {
   deciderCandidature,
   type ResultatDecisionCandidature,
 } from '../../src/domain/candidature/decision';
 import { ajouterEvenement } from '../../src/server/evenement/journal';
+import { colonnesPii, type ClesPii } from '../../src/server/securite/pii';
+
+/** Le modèle auquel le bloc chiffré du motif est lié (AAD : modèle, id, champ). */
+export const MODELE_DECISION_CANDIDATURE = 'decisionCandidature';
 
 export interface DecisionASemer {
   readonly apporteurId: string;
@@ -30,6 +39,7 @@ export interface DecisionASemer {
   readonly webinaireSuivi: boolean | null;
   readonly auteurId: string;
   readonly decideeAt: Date;
+  readonly cles: ClesPii;
 }
 
 export async function semerDecisionCandidature(
@@ -37,9 +47,21 @@ export async function semerDecisionCandidature(
   d: DecisionASemer
 ): Promise<{ id: string }> {
   const r = deciderCandidature(d);
+  const { justification, ...decision } = r.decision;
+  const { id, justificationChiffre } = colonnesPii(
+    { modele: MODELE_DECISION_CANDIDATURE, id: randomUUID() },
+    { justification },
+    d.cles
+  );
+  if (!justificationChiffre) throw new Error('motif de décision absent');
   return prisma.$transaction(async (tx) => {
     const ligne = await tx.decisionCandidature.create({
-      data: { apporteurId: d.apporteurId, ...r.decision },
+      data: {
+        id,
+        apporteurId: d.apporteurId,
+        ...decision,
+        justificationChiffre: Buffer.from(justificationChiffre),
+      },
       select: { id: true },
     });
     await tx.apporteur.update({ where: { id: d.apporteurId }, data: { statut: r.statut } });
