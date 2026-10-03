@@ -120,6 +120,19 @@ describe('REQ-CPL-006 — la décision sur une candidature fait passer l’appor
     }
   });
 
+  it('REQ-CPL-006 : aucune charge de journal ne porte la justification — ni sa clé, ni son texte', () => {
+    const motif = 'Motif qui ne doit jamais atteindre le journal.';
+    for (const resultat of RESULTATS_DECISION_CANDIDATURE) {
+      const { chargeStatut } = deciderCandidature({
+        ...demande('candidat', resultat, true),
+        justification: motif,
+      });
+      expect(Object.keys(chargeStatut).sort()).toEqual(['acteur', 'de', 'transition', 'vers']);
+      expect(JSON.stringify(chargeStatut)).not.toContain(motif);
+      expect(JSON.stringify(chargeStatut)).not.toMatch(/justification/i);
+    }
+  });
+
   it('REQ-CPL-006 : la présence au webinaire est DÉCLARATIVE — oui, non ou inconnue, la décision et la transition sont les mêmes (REQ-JUR-013)', () => {
     for (const resultat of RESULTATS_DECISION_CANDIDATURE) {
       const [oui, non, inconnue] = [true, false, null].map((w) =>

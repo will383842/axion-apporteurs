@@ -5,7 +5,9 @@
  * PUR. Ce module ne lit ni la base ni l'heure : il rend ce qu'il faut écrire — la ligne de
  * `decisions_candidature`, le statut d'arrivée de l'apporteur, et la charge de son changement de
  * statut (type `apporteur_statut_modifie`, schéma fermé de `CHARGES_PAR_TYPE`). L'écrivain les pose
- * dans UNE transaction.
+ * dans UNE transaction, et CHIFFRE le motif avant de l'écrire (`colonnesPii`, forme d'A02) :
+ * il peut nommer une personne. Le motif vide ou fait de blancs est refusé ICI, avant le chiffrement ;
+ * la charge du journal ne le porte jamais.
  *
  * LA MATRICE DÉCIDE, PAS CE MODULE. Un résultat se traduit en un code de transition de la matrice
  * (`retenir`, `mettre_en_vivier`, `refuser`), et c'est `transitionner` qui juge le couple : décider

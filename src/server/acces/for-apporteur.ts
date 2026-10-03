@@ -285,7 +285,8 @@ export const SECRETS = Object.freeze([
   // DM-12 : le texte et la réponse d'une contestation, chiffrés.
   'texteChiffre',
   'reponseChiffre',
-  // DM-12 : la justification d'une anomalie, chiffrée ; aucune vue de l'espace ne la porte.
+  // DM-12 : la justification d'une anomalie, chiffrée ; CPL-T06 : le motif d'une décision de
+  // candidature, chiffré sous le même champ. Aucune vue de l'espace ne les porte.
   'justificationChiffre',
 ] as const);
 
@@ -422,11 +423,13 @@ export const CHAMPS_TUS = {
   ],
   changementCourriel: ['apporteurId', 'emailChiffre', 'emailHash', 'tokenHash', 'kid'],
   courrielEnvoye: ['apporteurId', 'emailHash', 'fournisseurMessageId', 'erreur', 'attributionId'],
-  // CPL-T06 : le motif (interne, purgé à l'échéance) et sa purge, l'auteur de la console, et la
-  // présence au webinaire, déclarative et lue par rien (REQ-JUR-013).
+  // CPL-T06 : le motif chiffré (interne, purgé à l'échéance) et sa purge, la sortie du lien à
+  // l'apporteur, l'auteur de la console, et la présence au webinaire, déclarative et lue par rien
+  // (REQ-JUR-013).
   decisionCandidature: [
     'apporteurId',
-    'justification',
+    'apporteurPurgeAt',
+    'justificationChiffre',
     'justificationPurgeeAt',
     'webinaireSuivi',
     'auteurId',

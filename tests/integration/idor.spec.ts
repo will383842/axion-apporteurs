@@ -379,7 +379,7 @@ function donneesNeuves(
     case 'decisionCandidature':
       return {
         resultat: 'vivier',
-        justification: 'motif factice du cloisonnement',
+        justificationChiffre: randomBytes(32),
         auteurId: consoleId,
         decideeAt: creeAt,
       };
