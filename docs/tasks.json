@@ -14824,7 +14824,8 @@
         "tests/unit/domaine/purge-du-contact.spec.ts",
         "tests/integration/ajout-seul-gabarit.spec.ts",
         "src/server/attribution/transitionner.ts",
-        "src/server/confirmation/demandes.ts"
+        "src/server/confirmation/demandes.ts",
+        "src/domain/temps/calendrier-civil.ts"
       ],
       "deps": [
         "DM-07",
