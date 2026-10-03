@@ -33,6 +33,7 @@ import {
   NAISSANCES_ATTRIBUTION,
 } from '../attribution/machine';
 import { STATUTS_PIECE_KYC, TYPES_PIECE_KYC } from '../kyc/pieces';
+import { ETATS_CONTESTATION, GESTES_RATTACHEMENT, STATUTS_ANOMALIE } from '../anomalie/regles';
 
 /**
  * Les codes d'événement que porte `apporteur_statut_modifie` : la NAISSANCE (`creer`, `de` nul), puis
@@ -82,7 +83,10 @@ export type TypeEvenementJournal =
   | 'attribution_etat_modifie'
   | 'attribution_peremption_suspendue'
   | 'attribution_porteur_reaffecte'
-  | 'piece_kyc_statut_modifie';
+  | 'piece_kyc_statut_modifie'
+  | 'anomalie_statut_modifie'
+  | 'contestation_modifiee'
+  | 'rattachement_manuel_modifie';
 
 /** DM-08 : le porteur d'une attribution, une forme UNIQUE — sa population et son identifiant. */
 const PORTEUR = () =>
@@ -198,6 +202,32 @@ export const CHARGES_PAR_TYPE = {
       de: z.enum(STATUTS_PIECE_KYC).nullable(),
       vers: z.enum(STATUTS_PIECE_KYC),
       type: z.enum(TYPES_PIECE_KYC),
+      acteur: FORMES.acteur(),
+    })
+    .strict(),
+  // DM-12 (REQ-DM-033) : l'ouverture (`de` nul) ou la clôture d'une anomalie, agrégat `apporteur`.
+  anomalie_statut_modifie: z
+    .object({
+      anomalieId: FORMES.identifiant(),
+      de: z.enum(STATUTS_ANOMALIE).nullable(),
+      vers: z.enum(STATUTS_ANOMALIE),
+      acteur: FORMES.acteur(),
+    })
+    .strict(),
+  // DM-12 (REQ-DM-043) : la réception (`de` nul) ou la réponse d'une contestation, agrégat `apporteur`.
+  contestation_modifiee: z
+    .object({
+      contestationId: FORMES.identifiant(),
+      de: z.enum(ETATS_CONTESTATION).nullable(),
+      vers: z.enum(ETATS_CONTESTATION),
+      acteur: FORMES.acteur(),
+    })
+    .strict(),
+  // DM-12 (REQ-DM-034) : la décision ou la révocation d'un rattachement manuel, agrégat `attribution`.
+  rattachement_manuel_modifie: z
+    .object({
+      rattachementId: FORMES.identifiant(),
+      vers: z.enum(GESTES_RATTACHEMENT),
       acteur: FORMES.acteur(),
     })
     .strict(),

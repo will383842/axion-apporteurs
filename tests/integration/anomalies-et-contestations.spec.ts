@@ -10,7 +10,7 @@
  * les lectures et les TRUNCATE restent sous le propriétaire (`partners_app` n'a pas ce droit : sous
  * lui, le refus prouverait le droit, pas le déclencheur). Chaque refus est attendu sur son NOM.
  *
- * Le rôle `conseiller_salarie` n'existe pas avant SEC-31 : le refus d'un conseiller se juge par la
+ * Le rôle `conseiller_salarie` n'existe pas encore dans `console_role` : le refus d'un conseiller se juge par la
  * fonction partagée (son corps compare `role::text`) et par les arguments de ses déclencheurs, qui
  * nomment chacun une colonne de leur table.
  */
@@ -204,11 +204,11 @@ describe('REQ-DM-032 — verifications : un porteur, en ajout seul, l’empreint
     ).toContain('verifications_ip_hash_purge_liee');
     expect(
       await refus(
-        ecrire(`UPDATE verifications SET ip_hash_purge_at = $2 WHERE id = $1::uuid`, id, MAINTENANT)
+        ecrire(`UPDATE verifications SET empreinte_reseau_purgee_at = $2 WHERE id = $1::uuid`, id, MAINTENANT)
       )
     ).toContain('verifications_ip_hash_purge_liee');
     await ecrire(
-      `UPDATE verifications SET ip_hash = NULL, ip_hash_purge_at = $2 WHERE id = $1::uuid`,
+      `UPDATE verifications SET ip_hash = NULL, empreinte_reseau_purgee_at = $2 WHERE id = $1::uuid`,
       id,
       MAINTENANT
     );
@@ -218,7 +218,7 @@ describe('REQ-DM-032 — verifications : un porteur, en ajout seul, l’empreint
     expect(
       await refus(
         ecrire(
-          `UPDATE verifications SET ip_hash_purge_at = $2 WHERE id = $1::uuid`,
+          `UPDATE verifications SET empreinte_reseau_purgee_at = $2 WHERE id = $1::uuid`,
           id,
           new Date(MAINTENANT.getTime() + 1)
         )

@@ -10,8 +10,15 @@ import { instantDepuisLocal, localDepuisInstant } from '../temps/paris';
 
 /** Les types d'anomalie (glossaire, `TypeAnomalie`) : aucune valeur de rythme. */
 export type TypeAnomalie = 'sincerite' | 'appareil_inconnu' | 'ramassage' | 'auto_parrainage';
-/** Les statuts d'une anomalie (glossaire, `StatutAnomalie`). */
-export type StatutAnomalie = 'ouverte' | 'levee' | 'confirmee';
+/** Les statuts d'une anomalie (glossaire, `StatutAnomalie`), confrontés à l'enum Prisma par un témoin. */
+export const STATUTS_ANOMALIE = ['ouverte', 'levee', 'confirmee'] as const;
+export type StatutAnomalie = (typeof STATUTS_ANOMALIE)[number];
+
+/** Les deux moments d'une contestation que le journal trace : sa réception, puis sa réponse. */
+export const ETATS_CONTESTATION = ['recue', 'repondue'] as const;
+
+/** Les deux gestes sur un rattachement manuel que le journal trace (glossaire §4.1). */
+export const GESTES_RATTACHEMENT = ['decide', 'revoque'] as const;
 
 export class AnomalieMalFormee extends Error {
   constructor(motif: string) {

@@ -75,6 +75,9 @@ enum TypeEvenementJournal {
   attribution_peremption_suspendue
   attribution_porteur_reaffecte
   piece_kyc_statut_modifie
+  anomalie_statut_modifie
+  contestation_modifiee
+  rattachement_manuel_modifie
 
   @@map("type_evenement_journal")
 }
@@ -262,6 +265,10 @@ model Apporteur {
   piecesKyc               PieceKyc[]
   notificationsEspace     NotificationEspace[]
   preferencesNotification PreferenceNotification[]
+  verifications           Verification[]
+  alertesLiberation       AlerteLiberation[]
+  anomalies               Anomalie[]
+  contestations           Contestation[]
 
   @@index([phoneHash])
   @@map("apporteurs")
@@ -363,8 +370,12 @@ model UtilisateurConsole {
 
   liensMagiques           LienMagique[]
   sessionsEspace          SessionEspace[]
-  attributions            Attribution[]   @relation("AttributionsDuConseiller")
-  suspensionsDePeremption Attribution[]   @relation("SuspensionsDePeremption")
+  attributions            Attribution[]        @relation("AttributionsDuConseiller")
+  suspensionsDePeremption Attribution[]        @relation("SuspensionsDePeremption")
+  verifications           Verification[]
+  anomaliesTraitees       Anomalie[]
+  rattachementsDecides    RattachementManuel[]
+  contestationsRepondues  Contestation[]
 
   @@map("utilisateurs_console")
 }
@@ -799,8 +810,11 @@ model Attribution {
   /// Verrou optimiste de la fiche (REQ-CPL-024).
   versionQualification             Int                 @default(0) @map("version_qualification")
 
-  courrielsEnvoyes    CourrielEnvoye[]
-  notificationsEspace NotificationEspace[]
+  courrielsEnvoyes     CourrielEnvoye[]
+  notificationsEspace  NotificationEspace[]
+  anomalies            Anomalie[]
+  rattachementsManuels RattachementManuel[]
+  contestations        Contestation[]
 
   @@index([apporteurId])
   @@index([utilisateurConsoleId])
@@ -816,16 +830,17 @@ model Attribution {
 /// Un dépôt refusé (REQ-DM-043) : de quoi contester, aucune coordonnée du contact. Ajout seul,
 /// sans exception (gabarit `refuser_modification_sauf()`, SQL brut). Réservé aux apporteurs.
 model DepotRefuse {
-  id           String          @id @default(uuid()) @db.Uuid
-  apporteurId  String          @map("apporteur_id") @db.Uuid
-  apporteur    Apporteur       @relation(fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  id            String          @id @default(uuid()) @db.Uuid
+  apporteurId   String          @map("apporteur_id") @db.Uuid
+  apporteur     Apporteur       @relation(fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   /// Effacé douze mois après le refus (DM-53, partners/ADR-0030) : la ligne reste, sans lui.
-  siren        String?         @db.Char(9)
-  motif        MotifRefusDepot
-  canal        CanalDepot
-  refuseAt     DateTime        @map("refuse_at") @db.Timestamptz(3)
+  siren         String?         @db.Char(9)
+  motif         MotifRefusDepot
+  canal         CanalDepot
+  refuseAt      DateTime        @map("refuse_at") @db.Timestamptz(3)
   /// La date de la purge du SIREN, liée à lui (CHECK) ; écrite une fois (gabarit).
-  sirenPurgeAt DateTime?       @map("siren_purge_at") @db.Timestamptz(3)
+  sirenPurgeAt  DateTime?       @map("siren_purge_at") @db.Timestamptz(3)
+  contestations Contestation[]
 
   @@index([apporteurId])
   @@index([siren])
@@ -848,4 +863,152 @@ model PersonneDeclaree {
 
   @@index([apporteurId])
   @@map("personnes_declarees")
+}
+
+// ── DM-12 : vérifications, alertes de libération, anomalies, rattachements manuels, contestations ──
+// Forme d'A02 (2026-10-03). Les CHECK, les index partiels, les fonctions et les déclencheurs vivent
+// en SQL brut dans la migration (partners/ADR-0015).
+
+/// Le résultat d'une vérification d'entreprise (REQ-DM-032), journal serveur, jamais exposé tel quel.
+enum ResultatVerification {
+  libre
+  suivie
+  cliente
+  liste_noire
+  fermee
+
+  @@map("resultat_verification")
+}
+
+/// Le type d'une anomalie (REQ-DM-033) : aucune valeur de rythme (REQ-SEC-017).
+enum TypeAnomalie {
+  sincerite
+  appareil_inconnu
+  ramassage
+  auto_parrainage
+
+  @@map("type_anomalie")
+}
+
+/// Le statut d'une anomalie : elle ne quitte `ouverte` qu'une fois, sans retour.
+enum StatutAnomalie {
+  ouverte
+  levee
+  confirmee
+
+  @@map("statut_anomalie")
+}
+
+/// L'objet d'une contestation écrite (REQ-DM-043, REQ-DM-034).
+enum ObjetContestation {
+  refus_depot
+  annulation_attribution
+  demande_rattachement
+
+  @@map("objet_contestation")
+}
+
+/// Une vérification d'entreprise, en ajout seul (REQ-DM-032, REQ-SEC-021). Un porteur et un seul :
+/// l'apporteur ou le conseiller salarié (W19, CHECK et déclencheur). Le plafond de vérifications est
+/// un COMPTE, jamais une colonne. Seule l'empreinte d'adresse réseau se purge, avec sa date.
+model Verification {
+  id                      String               @id @default(uuid()) @db.Uuid
+  apporteurId             String?              @map("apporteur_id") @db.Uuid
+  apporteur               Apporteur?           @relation(fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  utilisateurConsoleId    String?              @map("utilisateur_console_id") @db.Uuid
+  utilisateurConsole      UtilisateurConsole?  @relation(fields: [utilisateurConsoleId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  siren                   String               @db.Char(9)
+  resultat                ResultatVerification
+  ipHash                  String?              @map("ip_hash") @db.Char(16)
+  empreinteReseauPurgeeAt DateTime?            @map("empreinte_reseau_purgee_at") @db.Timestamptz(3)
+  verifieeAt              DateTime             @default(now()) @map("verifiee_at") @db.Timestamptz(3)
+
+  @@index([apporteurId])
+  @@index([utilisateurConsoleId])
+  @@index([siren])
+  @@map("verifications")
+}
+
+/// Une alerte de libération d'une entreprise suivie (REQ-DM-032) : une seule en attente par
+/// (apporteur, SIREN), index partiel ; l'envoi se pose une fois.
+model AlerteLiberation {
+  id          String    @id @default(uuid()) @db.Uuid
+  apporteurId String    @map("apporteur_id") @db.Uuid
+  apporteur   Apporteur @relation(fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  siren       String    @db.Char(9)
+  creeAt      DateTime  @default(now()) @map("cree_at") @db.Timestamptz(3)
+  envoyeeAt   DateTime? @map("envoyee_at") @db.Timestamptz(3)
+
+  @@index([apporteurId])
+  @@map("alertes_liberation")
+}
+
+/// Une anomalie (REQ-DM-033). Le score n'existe que pour la sincérité ; la clôture pose statut,
+/// date, auteur et justification ensemble, une fois, sans retour (fonction dédiée).
+model Anomalie {
+  id            String              @id @default(uuid()) @db.Uuid
+  type          TypeAnomalie
+  score         Int?                @db.SmallInt
+  apporteurId   String              @map("apporteur_id") @db.Uuid
+  apporteur     Apporteur           @relation(fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  attributionId String?             @map("attribution_id") @db.Uuid
+  attribution   Attribution?        @relation(fields: [attributionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  statut        StatutAnomalie      @default(ouverte)
+  ouverteAt     DateTime            @default(now()) @map("ouverte_at") @db.Timestamptz(3)
+  traiteParId   String?             @map("traite_par_id") @db.Uuid
+  traitePar     UtilisateurConsole? @relation(fields: [traiteParId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  traiteAt      DateTime?           @map("traite_at") @db.Timestamptz(3)
+  justification String?
+
+  @@index([apporteurId])
+  @@index([attributionId])
+  @@index([traiteParId])
+  @@map("anomalies")
+}
+
+/// Un rattachement manuel d'une commande à une attribution (REQ-DM-034) : justifié (vingt caractères
+/// utiles au moins), lien de contrôle antérieur au dépôt (déclencheur), un seul actif par SIREN de
+/// commande (index partiel) ; la révocation se pose une fois.
+model RattachementManuel {
+  id                   String             @id @default(uuid()) @db.Uuid
+  attributionId        String             @map("attribution_id") @db.Uuid
+  attribution          Attribution        @relation(fields: [attributionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  sirenCommande        String             @map("siren_commande") @db.Char(9)
+  justification        String
+  lienControleEtabliAt DateTime           @map("lien_controle_etabli_at") @db.Timestamptz(3)
+  lienControleSource   String             @map("lien_controle_source")
+  decideParId          String             @map("decide_par_id") @db.Uuid
+  decidePar            UtilisateurConsole @relation(fields: [decideParId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  decideAt             DateTime           @default(now()) @map("decide_at") @db.Timestamptz(3)
+  revoqueAt            DateTime?          @map("revoque_at") @db.Timestamptz(3)
+
+  @@index([attributionId])
+  @@index([decideParId])
+  @@map("rattachements_manuels")
+}
+
+/// Une contestation écrite (REQ-DM-043, et la DEMANDE de rattachement de REQ-DM-034). La cible suit
+/// l'objet (CHECK) ; texte et réponse sont chiffrés (`CHAMPS_PII`) ; la réponse se pose ensemble et
+/// une fois. L'échéance de réponse se DÉRIVE de `recueAt` et de la SSOT : aucune colonne.
+model Contestation {
+  id             String              @id @default(uuid()) @db.Uuid
+  apporteurId    String              @map("apporteur_id") @db.Uuid
+  apporteur      Apporteur           @relation(fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  objet          ObjetContestation
+  depotRefuseId  String?             @map("depot_refuse_id") @db.Uuid
+  depotRefuse    DepotRefuse?        @relation(fields: [depotRefuseId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  attributionId  String?             @map("attribution_id") @db.Uuid
+  attribution    Attribution?        @relation(fields: [attributionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  texteChiffre   Bytes               @map("texte_chiffre")
+  recueAt        DateTime            @default(now()) @map("recue_at") @db.Timestamptz(3)
+  reponseChiffre Bytes?              @map("reponse_chiffre")
+  repondueParId  String?             @map("repondue_par_id") @db.Uuid
+  reponduePar    UtilisateurConsole? @relation(fields: [repondueParId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  repondueAt     DateTime?           @map("repondue_at") @db.Timestamptz(3)
+
+  @@index([apporteurId])
+  @@index([depotRefuseId])
+  @@index([attributionId])
+  @@index([repondueParId])
+  @@map("contestations")
 }
