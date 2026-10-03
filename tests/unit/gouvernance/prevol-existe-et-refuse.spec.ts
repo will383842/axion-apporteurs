@@ -705,9 +705,14 @@ describe('REQ-GOV-013 — il DIT ce qu’il joue, ce qu’il écarte, et pourquo
     expect(r.status).toBe(0);
     const sortie = (r.stdout ?? '') + (r.stderr ?? '');
     const b = surLeDepot();
-    expect(sortie).toContain(`${b.brut.length} fichier(s) suivi(s) portent la chaîne`);
-    expect(sortie).toContain(`${b.retenus.length} retenu(s) (compte APRÈS EXCLUSION)`);
-    expect(sortie).toContain(`${b.prescripteurs.length} PRESCRIPTEUR(S)`);
+    // GOV-142 : la liste de la porte en jobs est longue, et le rapport de vitest tronque la sortie
+    // AVANT le balayage. En cas de rouge, le message porte donc le balayage lui-même et les
+    // porteurs comptés par le témoin : les deux comptes se lisent côte à côte.
+    const balayage = sortie.slice(sortie.indexOf('balayage des porteurs'));
+    const contexte = `${balayage}\n— porteurs comptés par le témoin : ${b.brut.join(', ')}`;
+    expect(sortie, contexte).toContain(`${b.brut.length} fichier(s) suivi(s) portent la chaîne`);
+    expect(sortie, contexte).toContain(`${b.retenus.length} retenu(s) (compte APRÈS EXCLUSION)`);
+    expect(sortie, contexte).toContain(`${b.prescripteurs.length} PRESCRIPTEUR(S)`);
     for (const { nom } of BACKLOG_ET_SES_VUES) expect(sortie).toContain(nom);
   });
 
