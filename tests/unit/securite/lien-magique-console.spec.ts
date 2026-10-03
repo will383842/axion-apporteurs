@@ -665,7 +665,7 @@ describe('REQ-SEC-062 — la console a ses propres compteurs, nommés à l’ép
     expect(avertissements).toEqual([]);
     vi.mocked(limiter).mockResolvedValueOnce({ autorise: false, panne: false } as never);
     await code.compterCourrielCode('a1'.repeat(32), INSTANT);
-    expect(avertissements).toEqual(['compteur_epuise:magic:console-code-courriel']);
+    expect(avertissements).toEqual(['compteur_epuise:console-code-courriel']);
     expect(avertissements.join()).not.toContain('a1a1');
   });
 

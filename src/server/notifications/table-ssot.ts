@@ -71,22 +71,24 @@ const action = (cle: keyof typeof TEXTES_DES_NOTIFICATIONS) => [
   },
 ];
 
+/** Le lien de connexion de l'espace apporteur (SEC-03, puis SEC-42 en production). */
+const LIEN_DE_L_ESPACE = {
+  destinataire: 'apporteur',
+  req: 'REQ-SEC-001',
+  emetteur: 'SEC-42',
+  fondement: 'REQ-SEC-001 — connexion par lien, transactionnel',
+  declencheur: 'evenement',
+  notificationObligatoire: true,
+  faitCourirUnDelai: false,
+  canaux: ['email'],
+  desactivable: false,
+  actions: action('lien_magique'),
+  route: '/connexion/<jeton>',
+  routeEnAttente: null,
+} as const satisfies LigneDeNotification;
+
 export const GABARITS = {
-  /** Le lien de connexion de l'espace apporteur (SEC-03, puis SEC-42 en production). */
-  lien_magique: {
-    destinataire: 'apporteur',
-    req: 'REQ-SEC-001',
-    emetteur: 'SEC-42',
-    fondement: 'REQ-SEC-001 — connexion par lien, transactionnel',
-    declencheur: 'evenement',
-    notificationObligatoire: true,
-    faitCourirUnDelai: false,
-    canaux: ['email'],
-    desactivable: false,
-    actions: action('lien_magique'),
-    route: '/connexion/<jeton>',
-    routeEnAttente: null,
-  },
+  lien_magique: LIEN_DE_L_ESPACE,
   /**
    * SEC-29 : le lien de connexion de la CONSOLE. Lu par ses utilisateurs seuls ; ses textes vivent
    * avec ceux de la connexion de la console, jamais parmi ceux de l'apporteur.
@@ -97,11 +99,13 @@ export const GABARITS = {
     emetteur: 'SEC-29',
     fondement:
       'REQ-UX-048 et REQ-SEC-003 — connexion de la console par lien et code, transactionnel',
-    declencheur: 'evenement',
-    notificationObligatoire: true,
-    faitCourirUnDelai: false,
-    canaux: ['email'],
-    desactivable: false,
+    // La forme est CALQUÉE sur le lien de l'espace (forme d'A02) : le même déclencheur, la même
+    // obligation, l'e-mail seul, jamais désactivable.
+    declencheur: LIEN_DE_L_ESPACE.declencheur,
+    notificationObligatoire: LIEN_DE_L_ESPACE.notificationObligatoire,
+    faitCourirUnDelai: LIEN_DE_L_ESPACE.faitCourirUnDelai,
+    canaux: LIEN_DE_L_ESPACE.canaux,
+    desactivable: LIEN_DE_L_ESPACE.desactivable,
     actions: [
       {
         libelle: CONNEXION_CONSOLE.courriel.appel,

@@ -30,7 +30,7 @@ import { creerNotifieur, productionDeclaree, type Notifieur } from '../../lib/no
 import { SAUTS_DE_CONFIANCE, adresseDuClient } from '../securite/adresse-du-client';
 import { clesPii, empreinteAdresseReseau, empreinteRecherche, type ClesPii } from '../securite/pii';
 import { signalerPotDeMiel } from '../securite/pot-de-miel';
-import { limiter, sujetDepuisEmpreinte, type NomDeCompteur } from '../securite/rate-limit';
+import { limiter, sujetDepuisEmpreinte, type VerdictDeLimite } from '../securite/rate-limit';
 import { CONNEXION } from '../../content/micro-copy/espace/vocabulaire';
 import { CONNEXION_CONSOLE } from '../../content/micro-copy/console/connexion';
 import { DUREES_AUTH } from './durees';
@@ -287,19 +287,22 @@ ${apres}`;
 }
 
 /**
- * Un compteur de la console (REQ-SEC-062). Un compteur ÉPUISÉ se signale sous sa CLÉ, jamais sous
- * sa seule famille (condition de la lentille sécurité) : la console, cible de plus grande valeur, a
- * ses propres signaux. Le motif est fermé : le nom du compteur, ni sujet, ni adresse, ni empreinte.
+ * Les compteurs de la console (REQ-SEC-062). Chaque appel à `limiter` est DIRECT, à nom littéral
+ * du registre (garde `securite:rate-famille`). Un compteur ÉPUISÉ se signale sous sa CLÉ, jamais
+ * sous sa seule famille (condition de la lentille sécurité) : la console, cible de plus grande
+ * valeur, a ses propres signaux. La clé s'écrit par son suffixe, qui la désigne seule (la famille ne
+ * s'écrit qu'au registre) ; le motif est fermé : ni sujet, ni adresse, ni empreinte.
  */
-function compteurDeLaConsole(
-  nom: NomDeCompteur,
+type CleDeLaConsole =
+  'console-demande-ip' | 'console-demande-courriel' | 'console-code-ip' | 'console-code-courriel';
+
+function signalerSiEpuise(
+  verdict: VerdictDeLimite,
+  cle: CleDeLaConsole,
   journal: DependancesDuLien['journal']
-): (sujet: string, maintenantMs: number) => ReturnType<typeof limiter> {
-  return async (sujet, maintenantMs) => {
-    const verdict = await limiter(nom, sujetDepuisEmpreinte(sujet), maintenantMs);
-    if (!verdict.autorise) journal.warn(`compteur_epuise:${nom}`);
-    return verdict;
-  };
+): VerdictDeLimite {
+  if (!verdict.autorise) journal.warn(`compteur_epuise:${cle}`);
+  return verdict;
 }
 
 export function portsDeDemandeConsole(d: DependancesDuLien): PortsDeDemandeConsole {
@@ -307,8 +310,18 @@ export function portsDeDemandeConsole(d: DependancesDuLien): PortsDeDemandeConso
   const espace = portsDeDemande(d);
   return {
     ...espace,
-    compterAdresse: compteurDeLaConsole('magic:console-demande-ip', d.journal),
-    compterCourriel: compteurDeLaConsole('magic:console-demande-courriel', d.journal),
+    compterAdresse: async (sujet, maintenantMs) =>
+      signalerSiEpuise(
+        await limiter('magic:console-demande-ip', sujetDepuisEmpreinte(sujet), maintenantMs),
+        'console-demande-ip',
+        d.journal
+      ),
+    compterCourriel: async (sujet, maintenantMs) =>
+      signalerSiEpuise(
+        await limiter('magic:console-demande-courriel', sujetDepuisEmpreinte(sujet), maintenantMs),
+        'console-demande-courriel',
+        d.journal
+      ),
     emission: {
       ...lectureDuCompteConsole(d.prisma, cles),
       ...ecrituresDeLienConsole(d.prisma),
@@ -341,8 +354,18 @@ export function portsDuCodeConsole(
 ): PortsDuCodeConsole {
   return {
     ...portsDuCode(d, lienAnnule),
-    compterAdresseCode: compteurDeLaConsole('magic:console-code-ip', d.journal),
-    compterCourrielCode: compteurDeLaConsole('magic:console-code-courriel', d.journal),
+    compterAdresseCode: async (sujet, maintenantMs) =>
+      signalerSiEpuise(
+        await limiter('magic:console-code-ip', sujetDepuisEmpreinte(sujet), maintenantMs),
+        'console-code-ip',
+        d.journal
+      ),
+    compterCourrielCode: async (sujet, maintenantMs) =>
+      signalerSiEpuise(
+        await limiter('magic:console-code-courriel', sujetDepuisEmpreinte(sujet), maintenantMs),
+        'console-code-courriel',
+        d.journal
+      ),
     transaction: transactionDuCodeConsole(d.prisma),
     signaler: (motif) => d.journal.warn(`lien_magique_console_${motif}`),
   };
