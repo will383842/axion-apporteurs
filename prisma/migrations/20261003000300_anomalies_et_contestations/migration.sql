@@ -3,7 +3,8 @@
 -- quatre enums, cinq tables neuves, leurs fonctions et déclencheurs, trois valeurs de journal en fin.
 -- Retour arrière : DROP TABLE "contestations", "rattachements_manuels", "anomalies",
 -- "alertes_liberation", "verifications" ; DROP FUNCTION refuser_acteur_conseiller(),
--- anomalies_refuser_substitution(), rattachement_lien_anterieur(), verifications_porteur_conseiller() ;
+-- anomalies_refuser_substitution(), contestations_refuser_substitution(), rattachement_lien_anterieur(),
+-- verifications_porteur_conseiller() ;
 -- DROP TYPE "objet_contestation", "statut_anomalie", "type_anomalie", "resultat_verification". Les
 -- trois valeurs du journal restent (un ADD VALUE ne se retire pas) : elles ne sont alors plus émises.
 
@@ -11,8 +12,9 @@
 CREATE TYPE "resultat_verification" AS ENUM ('libre', 'suivie', 'cliente', 'liste_noire', 'fermee');
 
 -- CreateEnum
--- Aucune valeur de rythme (REQ-SEC-017, REQ-JUR-031, REQ-SEC-021 amendée).
-CREATE TYPE "type_anomalie" AS ENUM ('sincerite', 'appareil_inconnu', 'ramassage', 'auto_parrainage');
+-- La DÉCLARATION seule, jamais le nombre, le rythme, l'heure, le lieu, la zone, le secteur ni la
+-- méthode de l'apporteur (REQ-SEC-017, REQ-JUR-031, arbitrage de la juriste du 2026-10-03).
+CREATE TYPE "type_anomalie" AS ENUM ('sincerite', 'auto_parrainage');
 
 -- CreateEnum
 CREATE TYPE "statut_anomalie" AS ENUM ('ouverte', 'levee', 'confirmee');
@@ -84,11 +86,12 @@ CREATE TABLE "contestations" (
     "objet" "objet_contestation" NOT NULL,
     "depot_refuse_id" UUID,
     "attribution_id" UUID,
-    "texte_chiffre" BYTEA NOT NULL,
+    "texte_chiffre" BYTEA,
     "recue_at" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "reponse_chiffre" BYTEA,
     "repondue_par_id" UUID,
     "repondue_at" TIMESTAMPTZ(3),
+    "purgee_at" TIMESTAMPTZ(3),
 
     CONSTRAINT "contestations_pkey" PRIMARY KEY ("id")
 );
@@ -295,17 +298,68 @@ CREATE TRIGGER rattachements_manuels_ajout_seul BEFORE UPDATE OR DELETE ON "ratt
 CREATE TRIGGER rattachements_manuels_troncature BEFORE TRUNCATE ON "rattachements_manuels"
   FOR EACH STATEMENT EXECUTE FUNCTION refuser_modification_sauf('une_fois:revoque_at');
 
--- ── contestations : un objet, une cible, une réponse posée ensemble et une fois ─────────────
+-- ── contestations : un objet, une cible, une réponse posée une fois, une purge tracée ───────
 ALTER TABLE "contestations" ADD CONSTRAINT "contestations_objet_cible"
   CHECK (CASE WHEN "objet" = 'refus_depot'
               THEN "depot_refuse_id" IS NOT NULL AND "attribution_id" IS NULL
               ELSE "attribution_id" IS NOT NULL AND "depot_refuse_id" IS NULL END);
+-- L'auteur et la date de la réponse vont ensemble ; avant la purge, la réponse va avec eux. Après
+-- la purge, l'auteur et la date restent seuls, comme trace.
 ALTER TABLE "contestations" ADD CONSTRAINT "contestations_reponse_ensemble"
-  CHECK (num_nonnulls("reponse_chiffre", "repondue_par_id", "repondue_at") IN (0, 3));
-CREATE TRIGGER contestations_ajout_seul BEFORE UPDATE OR DELETE ON "contestations"
-  FOR EACH ROW EXECUTE FUNCTION refuser_modification_sauf('une_fois:reponse_chiffre', 'une_fois:repondue_par_id', 'une_fois:repondue_at');
+  CHECK (num_nonnulls("repondue_par_id", "repondue_at") IN (0, 2)
+         AND ("purgee_at" IS NOT NULL OR ("reponse_chiffre" IS NULL) = ("repondue_at" IS NULL)));
+-- La purge vide le texte et la réponse, et pose sa date : l'un ne va jamais sans l'autre.
+ALTER TABLE "contestations" ADD CONSTRAINT "contestations_purge_liee"
+  CHECK (("purgee_at" IS NULL) = ("texte_chiffre" IS NOT NULL)
+         AND ("purgee_at" IS NULL OR "reponse_chiffre" IS NULL));
+
+-- Une fonction DÉDIÉE, et non le gabarit : la réponse va de NULL à une valeur, PUIS à NULL par la
+-- purge, ce que le gabarit ne sait pas dire sur une même colonne (forme d'A02, patron de SEC-49).
+-- Sans EXECUTE. Sont FIGÉS : l'identité, l'apporteur, l'objet, la cible et la réception. Un texte
+-- ou une réponse ne passe jamais d'une valeur à une autre. La réponse (réponse, auteur, date) se
+-- pose une fois, ensemble, sur une contestation non purgée. La purge pose `purgee_at` une fois,
+-- avec le texte et la réponse vidés ; après elle, plus rien ne bouge. DELETE et TRUNCATE refusés.
+CREATE FUNCTION contestations_refuser_substitution() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF TG_OP = 'DELETE' OR TG_OP = 'TRUNCATE' THEN
+    RAISE EXCEPTION 'contestations_refuser_substitution : % refusé, une contestation ne disparaît pas (REQ-DM-043)', TG_OP;
+  END IF;
+  IF NEW."id" IS DISTINCT FROM OLD."id"
+     OR NEW."apporteur_id" IS DISTINCT FROM OLD."apporteur_id"
+     OR NEW."objet" IS DISTINCT FROM OLD."objet"
+     OR NEW."depot_refuse_id" IS DISTINCT FROM OLD."depot_refuse_id"
+     OR NEW."attribution_id" IS DISTINCT FROM OLD."attribution_id"
+     OR NEW."recue_at" IS DISTINCT FROM OLD."recue_at" THEN
+    RAISE EXCEPTION 'contestations_refuser_substitution : l''identité d''une contestation est figée (REQ-DM-043)';
+  END IF;
+  IF OLD."purgee_at" IS NOT NULL THEN
+    IF NEW IS DISTINCT FROM OLD THEN
+      RAISE EXCEPTION 'contestations_refuser_substitution : une contestation purgée ne change plus (REQ-DM-043)';
+    END IF;
+    RETURN NEW;
+  END IF;
+  -- Une valeur ne devient jamais une autre valeur : seulement NULL vers valeur, ou valeur vers NULL.
+  IF (OLD."texte_chiffre" IS NOT NULL AND NEW."texte_chiffre" IS NOT NULL
+        AND NEW."texte_chiffre" IS DISTINCT FROM OLD."texte_chiffre")
+     OR (OLD."reponse_chiffre" IS NOT NULL AND NEW."reponse_chiffre" IS NOT NULL
+        AND NEW."reponse_chiffre" IS DISTINCT FROM OLD."reponse_chiffre")
+     OR (OLD."repondue_par_id" IS NOT NULL AND NEW."repondue_par_id" IS DISTINCT FROM OLD."repondue_par_id")
+     OR (OLD."repondue_at" IS NOT NULL AND NEW."repondue_at" IS DISTINCT FROM OLD."repondue_at")
+     OR (OLD."texte_chiffre" IS NULL AND NEW."texte_chiffre" IS NOT NULL) THEN
+    RAISE EXCEPTION 'contestations_refuser_substitution : un texte, une réponse, son auteur ou sa date ne se réécrit pas (REQ-DM-043)';
+  END IF;
+  -- La réponse se pose ENSEMBLE : réponse, auteur et date dans la même écriture.
+  IF OLD."repondue_at" IS NULL AND NEW."purgee_at" IS NULL
+     AND num_nonnulls(NEW."reponse_chiffre", NEW."repondue_par_id", NEW."repondue_at") NOT IN (0, 3) THEN
+    RAISE EXCEPTION 'contestations_refuser_substitution : la réponse pose texte, auteur et date ensemble (REQ-DM-043)';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+CREATE TRIGGER contestations_trace BEFORE UPDATE OR DELETE ON "contestations"
+  FOR EACH ROW EXECUTE FUNCTION contestations_refuser_substitution();
 CREATE TRIGGER contestations_troncature BEFORE TRUNCATE ON "contestations"
-  FOR EACH STATEMENT EXECUTE FUNCTION refuser_modification_sauf('une_fois:reponse_chiffre', 'une_fois:repondue_par_id', 'une_fois:repondue_at');
+  FOR EACH STATEMENT EXECUTE FUNCTION contestations_refuser_substitution();
 
 -- ── W19 : jamais un conseiller pour traiter, décider ou répondre ─────────────────────────────
 -- UNE fonction partagée (forme d'A02), sans EXECUTE : la colonne est lue par `to_jsonb(NEW)`, et

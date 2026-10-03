@@ -8,8 +8,8 @@ import { MS_PAR_JOUR } from '../temps/calendrier-civil';
 import type { Instant } from '../temps/horloge';
 import { instantDepuisLocal, localDepuisInstant } from '../temps/paris';
 
-/** Les types d'anomalie (glossaire, `TypeAnomalie`) : aucune valeur de rythme. */
-export type TypeAnomalie = 'sincerite' | 'appareil_inconnu' | 'ramassage' | 'auto_parrainage';
+/** Les types d'anomalie (glossaire, `TypeAnomalie`) : la déclaration seule, jamais le rythme. */
+export type TypeAnomalie = 'sincerite' | 'auto_parrainage';
 /** Les statuts d'une anomalie (glossaire, `StatutAnomalie`), confrontés à l'enum Prisma par un témoin. */
 export const STATUTS_ANOMALIE = ['ouverte', 'levee', 'confirmee'] as const;
 export type StatutAnomalie = (typeof STATUTS_ANOMALIE)[number];

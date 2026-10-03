@@ -423,8 +423,6 @@ function donneesNeuves(
     // DM-12 : écrites par le serveur ; ici, par la couche, au nom de la session.
     case 'alerteLiberation':
       return { siren: '123456789', creeAt };
-    case 'anomalie':
-      return { type: 'ramassage', statut: 'ouverte', ouverteAt: creeAt };
     // Une contestation vise une attribution DE LA SESSION, semée avant elle (référence vérifiée).
     case 'contestation':
       return {
@@ -470,8 +468,6 @@ function modification(modele: ModeleCloisonne, n: number): Record<string, unknow
     // DM-12 : des tables que la BASE garde ; une modification qu'elle refuse, quel que soit l'auteur.
     case 'alerteLiberation':
       return { siren: '987654321' };
-    case 'anomalie':
-      return { type: 'sincerite' };
     case 'contestation':
       return { texteChiffre: randomBytes(32) };
     case 'verification':
@@ -480,11 +476,11 @@ function modification(modele: ModeleCloisonne, n: number): Record<string, unknow
 }
 
 /**
- * Les modèles dont la BASE refuse la modification : l'ajout seul du gabarit, et l'anomalie, gardée
- * par sa fonction dédiée (DM-12). Leur refus en base est un verdict, pas une panne.
+ * Les modèles dont la BASE refuse la modification : l'ajout seul du gabarit, et la contestation,
+ * gardée par sa fonction dédiée (DM-12). Leur refus en base est un verdict, pas une panne.
  */
-const REFUS_EN_BASE: readonly string[] = [...MODELES_EN_AJOUT_SEUL, 'anomalie'];
-const MESSAGES_DE_REFUS_EN_BASE = /refuser_modification_sauf|anomalies_refuser_substitution/;
+const REFUS_EN_BASE: readonly string[] = [...MODELES_EN_AJOUT_SEUL, 'contestation'];
+const MESSAGES_DE_REFUS_EN_BASE = /refuser_modification_sauf|contestations_refuser_substitution/;
 
 /** La ligne relue en base, hors de toute couche : ce que la batterie compare avant et après. */
 type Delegue = { findUnique(a: { where: { id: string } }): Promise<unknown> };

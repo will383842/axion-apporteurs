@@ -41,7 +41,7 @@ describe('REQ-DM-033 — une anomalie : le score n’existe que pour la sincéri
     expect(e.message).toBe('anomalie_mal_formee : score requis pour sincerite');
   });
 
-  it.each(['appareil_inconnu', 'ramassage', 'auto_parrainage'] as const)(
+  it.each(['auto_parrainage'] as const)(
     'REQ-DM-033 : TÉMOIN — %s sans score : admise ; avec score : refusée',
     (type) => {
       expect(() => jugerAnomalie({ type, score: null })).not.toThrow();

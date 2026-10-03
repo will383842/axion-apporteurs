@@ -880,11 +880,10 @@ enum ResultatVerification {
   @@map("resultat_verification")
 }
 
-/// Le type d'une anomalie (REQ-DM-033) : aucune valeur de rythme (REQ-SEC-017).
+/// Le type d'une anomalie (REQ-DM-033) : la DÉCLARATION seule, jamais le rythme (REQ-SEC-017,
+/// arbitrage de la juriste du 2026-10-03).
 enum TypeAnomalie {
   sincerite
-  appareil_inconnu
-  ramassage
   auto_parrainage
 
   @@map("type_anomalie")
@@ -989,7 +988,7 @@ model RattachementManuel {
 
 /// Une contestation écrite (REQ-DM-043, et la DEMANDE de rattachement de REQ-DM-034). La cible suit
 /// l'objet (CHECK) ; texte et réponse sont chiffrés (`CHAMPS_PII`) ; la réponse se pose ensemble et
-/// une fois. L'échéance de réponse se DÉRIVE de `recueAt` et de la SSOT : aucune colonne.
+/// une fois, la purge vide texte et réponse en posant sa date. L'échéance de réponse se DÉRIVE de `recueAt` et de la SSOT : aucune colonne.
 model Contestation {
   id             String              @id @default(uuid()) @db.Uuid
   apporteurId    String              @map("apporteur_id") @db.Uuid
@@ -999,12 +998,14 @@ model Contestation {
   depotRefuse    DepotRefuse?        @relation(fields: [depotRefuseId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   attributionId  String?             @map("attribution_id") @db.Uuid
   attribution    Attribution?        @relation(fields: [attributionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  texteChiffre   Bytes               @map("texte_chiffre")
+  texteChiffre   Bytes?              @map("texte_chiffre")
   recueAt        DateTime            @default(now()) @map("recue_at") @db.Timestamptz(3)
   reponseChiffre Bytes?              @map("reponse_chiffre")
   repondueParId  String?             @map("repondue_par_id") @db.Uuid
   reponduePar    UtilisateurConsole? @relation(fields: [repondueParId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   repondueAt     DateTime?           @map("repondue_at") @db.Timestamptz(3)
+  /// La purge du texte et de la réponse, tracée et posée une fois (fonction dédiée).
+  purgeeAt       DateTime?           @map("purgee_at") @db.Timestamptz(3)
 
   @@index([apporteurId])
   @@index([depotRefuseId])

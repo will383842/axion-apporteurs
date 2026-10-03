@@ -43,6 +43,7 @@ import {
   SECRETS,
   CORPS_INTROUVABLE,
   MODELES_CLOISONNES,
+  MODELES_SANS_VUE_APPORTEUR,
   REFERENCES_CLOISONNEES,
   REFUS,
   forApporteur,
@@ -442,13 +443,29 @@ describe('REQ-QA-011 → REQ-SEC-008 — la liste des modèles cloisonnés est c
   const modeles = Prisma.dmmf.datamodel.models;
   const delegue = (nom: string) => nom.charAt(0).toLowerCase() + nom.slice(1);
 
-  it('REQ-QA-011 → REQ-SEC-008 : les modèles cloisonnés sont EXACTEMENT ceux du schéma qui portent `apporteurId`', () => {
+  it('REQ-QA-011 → REQ-SEC-008 : les modèles cloisonnés sont EXACTEMENT ceux du schéma qui portent `apporteurId`, hors des modèles SANS VUE déclarés', () => {
     const portantApporteur = modeles
       .filter((m) => m.fields.some((f) => f.name === 'apporteurId'))
       .map((m) => delegue(m.name))
       .sort();
     expect(portantApporteur.length).toBeGreaterThan(0);
-    expect([...MODELES_CLOISONNES].sort()).toEqual(portantApporteur);
+    expect([...MODELES_CLOISONNES, ...MODELES_SANS_VUE_APPORTEUR].sort()).toEqual(portantApporteur);
+  });
+
+  it('REQ-SEC-008 : TÉMOIN — DM-12 : l’anomalie n’a AUCUNE vue dans l’espace, et aucune relation de l’espace n’y mène', () => {
+    expect([...MODELES_SANS_VUE_APPORTEUR]).toEqual(['anomalie']);
+    const vues = forApporteur(fauxClient().client, A) as unknown as Record<string, unknown>;
+    expect(Object.hasOwn(vues, 'anomalie')).toBe(false);
+    const relations = RELATIONS as unknown as Record<string, readonly string[]>;
+    const refusees = CLES_REFUSEES as unknown as Record<string, readonly string[]>;
+    for (const m of modeles) {
+      for (const f of m.fields.filter((x) => x.kind === 'object' && x.type === 'Anomalie')) {
+        const d = delegue(m.name);
+        if (!(MODELES_CLOISONNES as readonly string[]).includes(d)) continue;
+        expect(relations[d], `${d}.${f.name}`).toContain(f.name);
+        expect(refusees[d], `${d}.${f.name}`).toContain(f.name);
+      }
+    }
   });
 
   it.each(MODELES_CLOISONNES)(

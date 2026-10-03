@@ -376,6 +376,9 @@ export const CHAMPS_PII = {
   contexte: { chiffre: 'contexteChiffre' },
   codePostal: { chiffre: 'codePostalChiffre' },
   lienInteretPrecision: { chiffre: 'lienInteretPrecisionChiffre' },
+  // DM-12 : le texte d'une contestation et sa réponse (REQ-DM-043), chiffrés, sans empreinte.
+  texte: { chiffre: 'texteChiffre' },
+  reponse: { chiffre: 'reponseChiffre' },
 } as const satisfies Record<
   string,
   { chiffre: string } | { chiffre: string; empreinte: string; type: TypeEmpreinte }

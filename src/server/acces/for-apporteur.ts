@@ -42,7 +42,6 @@
 
 import type {
   AlerteLiberation,
-  Anomalie,
   Apporteur,
   Attribution,
   ChangementCourriel,
@@ -67,7 +66,6 @@ import type {
 /** Les délégués du client dont les lignes appartiennent à un apporteur (colonne `apporteurId`). */
 export const MODELES_CLOISONNES = [
   'alerteLiberation',
-  'anomalie',
   'attribution',
   'changementCourriel',
   'contestation',
@@ -86,6 +84,14 @@ export const MODELES_CLOISONNES = [
 export type ModeleCloisonne = (typeof MODELES_CLOISONNES)[number];
 
 /**
+ * DM-12 : les modèles qui portent `apporteurId` et n'ont AUCUNE vue dans l'espace (arbitrage de la
+ * coordination, sécurité et juriste, 2026-10-03). Une anomalie n'est jamais affichée à l'apporteur :
+ * son EFFET l'est, par la vue qui le porte, et son existence l'est sur demande d'accès (art. 15).
+ * Aucune relation de l'espace n'y mène : elles sont refusées sur chaque modèle qui les porte.
+ */
+export const MODELES_SANS_VUE_APPORTEUR = ['anomalie'] as const;
+
+/**
  * DM-07 : les modèles cloisonnés dont la table est en AJOUT SEUL — branchée sur le gabarit
  * `refuser_modification_sauf()` (HYP-A02-GABARIT-AJOUT-SEUL). La base y refuse toute modification
  * hors de ce que le branchement admet ; `tests/integration/ajout-seul-gabarit.spec.ts` confronte
@@ -93,7 +99,6 @@ export type ModeleCloisonne = (typeof MODELES_CLOISONNES)[number];
  */
 export const MODELES_EN_AJOUT_SEUL = [
   'alerteLiberation',
-  'contestation',
   'depotRefuse',
   'personneDeclaree',
   'verification',
@@ -129,9 +134,6 @@ export const CLES_REFUSEES = {
   ],
   // DM-12 : une alerte de libération s'écrit par le serveur, pour l'apporteur de la session.
   alerteLiberation: ['id', 'apporteurId', 'apporteur'],
-  // DM-12 : l'auteur du traitement ne s'écrit jamais de l'espace ; l'attribution est une référence
-  // vérifiée.
-  anomalie: ['id', 'apporteurId', 'apporteur', 'attribution', 'traiteParId', 'traitePar'],
   changementCourriel: ['id', 'apporteurId', 'apporteur'],
   // DM-12 : la cible d'une contestation est une référence vérifiée ; l'auteur de la réponse ne
   // s'écrit jamais de l'espace.
@@ -185,10 +187,8 @@ export const REFERENCES_CLOISONNEES: Partial<
   // DM-11 : la pièce rib d'une identité de facturation est une pièce de la session.
   identiteFacturation: { pieceKycId: 'pieceKyc' },
   notificationEspace: { attributionId: 'attribution' },
-  // DM-12 : une contestation vise un refus ou une attribution DE LA SESSION ; une anomalie, une
-  // attribution de la session.
+  // DM-12 : une contestation vise un refus ou une attribution DE LA SESSION.
   contestation: { depotRefuseId: 'depotRefuse', attributionId: 'attribution' },
-  anomalie: { attributionId: 'attribution' },
 };
 
 /** Les messages de refus : une liste FERMÉE, qui part au journal et jamais au navigateur. */
@@ -225,7 +225,6 @@ export const RELATIONS = {
     'contestations',
   ],
   alerteLiberation: ['apporteur'],
-  anomalie: ['apporteur', 'attribution', 'traitePar'],
   changementCourriel: ['apporteur'],
   contestation: ['apporteur', 'depotRefuse', 'attribution', 'reponduePar'],
   courrielEnvoye: ['apporteur', 'attribution'],
@@ -281,9 +280,6 @@ export const SECRETS = Object.freeze([
 export const CHAMPS_RENDUS = {
   // DM-12 : l'alerte telle que l'espace l'affiche.
   alerteLiberation: ['id', 'siren', 'creeAt', 'envoyeeAt'],
-  // DM-12 : rien de l'anomalie n'est rendu à l'apporteur, hormis son identifiant (score, type et
-  // justification sont des jugements internes).
-  anomalie: ['id'],
   // DM-12 : la contestation, sans son texte ni sa réponse chiffrés, ni l'auteur de la réponse.
   contestation: ['id', 'objet', 'depotRefuseId', 'attributionId', 'recueAt', 'repondueAt'],
   // DM-12 : l'entreprise vérifiée et la date ; le résultat est un journal serveur, jamais exposé tel
@@ -353,18 +349,7 @@ export const CHAMPS_RENDUS = {
 /** Ce que la couche TAIT : le propriétaire (connu de la session), les secrets, les traces techniques. */
 export const CHAMPS_TUS = {
   alerteLiberation: ['apporteurId'],
-  anomalie: [
-    'type',
-    'score',
-    'apporteurId',
-    'attributionId',
-    'statut',
-    'ouverteAt',
-    'traiteParId',
-    'traiteAt',
-    'justification',
-  ],
-  contestation: ['apporteurId', 'texteChiffre', 'reponseChiffre', 'repondueParId'],
+  contestation: ['apporteurId', 'texteChiffre', 'reponseChiffre', 'repondueParId', 'purgeeAt'],
   verification: [
     'apporteurId',
     'utilisateurConsoleId',
@@ -567,10 +552,6 @@ type WAlerte = Prisma.AlerteLiberationWhereInput;
 type CAlerte = Prisma.AlerteLiberationUncheckedCreateInput;
 type UAlerte = Prisma.AlerteLiberationUncheckedUpdateManyInput;
 type OAlerte = Prisma.AlerteLiberationOrderByWithRelationInput;
-type WAnomalie = Prisma.AnomalieWhereInput;
-type CAnomalie = Prisma.AnomalieUncheckedCreateInput;
-type UAnomalie = Prisma.AnomalieUncheckedUpdateManyInput;
-type OAnomalie = Prisma.AnomalieOrderByWithRelationInput;
 type WContestation = Prisma.ContestationWhereInput;
 type CContestation = Prisma.ContestationUncheckedCreateInput;
 type UContestation = Prisma.ContestationUncheckedUpdateManyInput;
@@ -675,13 +656,6 @@ export interface AccesApporteur {
     SansProprietaire<CAlerte>,
     UAlerte,
     OAlerte
-  >;
-  anomalie: VueCloisonnee<
-    Rendu<Anomalie, 'anomalie'>,
-    WAnomalie,
-    SansProprietaire<CAnomalie>,
-    UAnomalie,
-    OAnomalie
   >;
   contestation: VueCloisonnee<
     Rendu<Contestation, 'contestation'>,

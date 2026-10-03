@@ -36,6 +36,7 @@ const unSiren = () => String((sirens += 1));
 
 const GABARIT = 'refuser_modification_sauf';
 const ANOMALIES = 'anomalies_refuser_substitution';
+const CONTESTATIONS = 'contestations_refuser_substitution';
 const CONSEILLER = 'refuser_acteur_conseiller';
 
 beforeAll(async () => {
@@ -197,6 +198,12 @@ describe('REQ-DM-032 — verifications : un porteur, en ajout seul, l’empreint
     ).toContain('verifications_porteur_conseiller');
   });
 
+  it('REQ-DM-032 : TÉMOIN — une vérification qui naît SANS empreinte d’adresse réseau est refusée (verifications_ip_hash_purge_liee)', async () => {
+    expect(await refus(uneVerification({ ipHash: null }))).toContain(
+      'verifications_ip_hash_purge_liee'
+    );
+  });
+
   it('REQ-DM-032 : TÉMOIN — la purge de l’empreinte : ensemble, acceptée ; à moitié, ou une seconde fois, refusée', async () => {
     const id = await uneVerification();
     expect(
@@ -204,7 +211,11 @@ describe('REQ-DM-032 — verifications : un porteur, en ajout seul, l’empreint
     ).toContain('verifications_ip_hash_purge_liee');
     expect(
       await refus(
-        ecrire(`UPDATE verifications SET empreinte_reseau_purgee_at = $2 WHERE id = $1::uuid`, id, MAINTENANT)
+        ecrire(
+          `UPDATE verifications SET empreinte_reseau_purgee_at = $2 WHERE id = $1::uuid`,
+          id,
+          MAINTENANT
+        )
       )
     ).toContain('verifications_ip_hash_purge_liee');
     await ecrire(
@@ -277,7 +288,10 @@ describe('REQ-DM-032 — alertes_liberation : une seule en attente, l’envoi po
 });
 
 describe('REQ-DM-033 — anomalies : la forme, une clôture une seule fois, sans retour', () => {
-  async function uneAnomalie(type = 'ramassage', score: number | null = null): Promise<string> {
+  async function uneAnomalie(
+    type = 'auto_parrainage',
+    score: number | null = null
+  ): Promise<string> {
     const id = randomUUID();
     await ecrire(
       `INSERT INTO anomalies (id, type, score, apporteur_id, statut, ouverte_at)
@@ -294,8 +308,17 @@ describe('REQ-DM-033 — anomalies : la forme, une clôture une seule fois, sans
   it('REQ-DM-033 : TÉMOIN — le score n’existe que pour la sincérité (anomalies_score_sincerite)', async () => {
     await expect(uneAnomalie('sincerite', 40)).resolves.toBeDefined();
     expect(await refus(uneAnomalie('sincerite', null))).toContain('anomalies_score_sincerite');
-    expect(await refus(uneAnomalie('ramassage', 40))).toContain('anomalies_score_sincerite');
+    expect(await refus(uneAnomalie('auto_parrainage', 40))).toContain('anomalies_score_sincerite');
     expect(await refus(uneAnomalie('sincerite', 101))).toContain('anomalies_score_sincerite');
+  });
+
+  it('REQ-DM-033 : TÉMOIN — un type de RYTHME ou d’appareil n’existe pas : la base refuse ramassage et appareil_inconnu', async () => {
+    const [e] = await base.prisma.$queryRaw<{ valeurs: string[] }[]>`
+      SELECT enum_range(NULL::type_anomalie)::text[] AS valeurs`;
+    expect(e!.valeurs).toEqual(['sincerite', 'auto_parrainage']);
+    for (const type of ['ramassage', 'appareil_inconnu']) {
+      expect(await refus(uneAnomalie(type)), type).toMatch(/type_anomalie/);
+    }
   });
 
   it('REQ-DM-033 : TÉMOIN — la clôture pose statut, traite_at, traite_par_id et justification ENSEMBLE, une fois', async () => {
@@ -325,7 +348,9 @@ describe('REQ-DM-033 — anomalies : la forme, une clôture une seule fois, sans
   it('REQ-DM-033 : TÉMOIN — l’identité est figée ; DELETE et TRUNCATE refusés', async () => {
     const id = await uneAnomalie();
     expect(
-      await refus(ecrire(`UPDATE anomalies SET type = 'ramassage' WHERE id = $1::uuid`, id))
+      await refus(
+        ecrire(`UPDATE anomalies SET type = 'sincerite', score = 10 WHERE id = $1::uuid`, id)
+      )
     ).toContain(ANOMALIES);
     expect(
       await refus(
@@ -465,19 +490,13 @@ describe('REQ-DM-043 — contestations : un objet, une cible, une réponse posé
     }
   });
 
-  it('REQ-DM-043 : TÉMOIN — la réponse : à moitié, refusée (contestations_reponse_ensemble) ; ensemble, admise ; une seconde fois, refusée', async () => {
+  /** Une contestation d'attribution, neuve. */
+  async function neuve(): Promise<string> {
     const { id: attributionId } = await uneAttribution();
-    const id = await uneContestation({ objet: 'demande_rattachement', attributionId });
-    expect(
-      await refus(
-        ecrire(
-          `UPDATE contestations SET reponse_chiffre = $2 WHERE id = $1::uuid`,
-          id,
-          randomBytes(40)
-        )
-      )
-    ).toContain('contestations_reponse_ensemble');
-    await ecrire(
+    return uneContestation({ objet: 'demande_rattachement', attributionId });
+  }
+  const repondre = (id: string) =>
+    ecrire(
       `UPDATE contestations SET reponse_chiffre = $2, repondue_par_id = $3::uuid, repondue_at = $4
        WHERE id = $1::uuid`,
       id,
@@ -485,6 +504,16 @@ describe('REQ-DM-043 — contestations : un objet, une cible, une réponse posé
       adminId,
       MAINTENANT
     );
+  const purger = (id: string) =>
+    ecrire(
+      `UPDATE contestations SET texte_chiffre = NULL, reponse_chiffre = NULL, purgee_at = $2
+       WHERE id = $1::uuid`,
+      id,
+      MAINTENANT
+    );
+
+  it('REQ-DM-043 : TÉMOIN — la réponse en deux temps est refusée ; posée ensemble, admise ; réécrite, refusée', async () => {
+    const id = await neuve();
     expect(
       await refus(
         ecrire(
@@ -493,7 +522,61 @@ describe('REQ-DM-043 — contestations : un objet, une cible, une réponse posé
           randomBytes(40)
         )
       )
-    ).toContain(GABARIT);
+    ).toContain(CONTESTATIONS);
+    await repondre(id);
+    expect(
+      await refus(
+        ecrire(
+          `UPDATE contestations SET reponse_chiffre = $2 WHERE id = $1::uuid`,
+          id,
+          randomBytes(40)
+        )
+      )
+    ).toContain(CONTESTATIONS);
+    expect(
+      await refus(
+        ecrire(
+          `UPDATE contestations SET repondue_at = $2 WHERE id = $1::uuid`,
+          id,
+          new Date(MAINTENANT.getTime() + 1)
+        )
+      )
+    ).toContain(CONTESTATIONS);
+  });
+
+  it('REQ-DM-043 : TÉMOIN — la purge : sans sa date, ou la date sans la purge, refusée (contestations_purge_liee) ; ensemble, admise, la réponse gardée en trace', async () => {
+    const id = await neuve();
+    await repondre(id);
+    expect(
+      await refus(
+        ecrire(
+          `UPDATE contestations SET texte_chiffre = NULL, reponse_chiffre = NULL WHERE id = $1::uuid`,
+          id
+        )
+      )
+    ).toContain('contestations_purge_liee');
+    expect(
+      await refus(
+        ecrire(`UPDATE contestations SET purgee_at = $2 WHERE id = $1::uuid`, id, MAINTENANT)
+      )
+    ).toContain('contestations_purge_liee');
+    await purger(id);
+    const [l] = await base.prisma.$queryRaw<
+      { texte: Buffer | null; reponse: Buffer | null; par: string | null; at: Date | null }[]
+    >`SELECT texte_chiffre AS texte, reponse_chiffre AS reponse, repondue_par_id AS par,
+        repondue_at AS at FROM contestations WHERE id = ${id}::uuid`;
+    expect([l!.texte, l!.reponse, l!.par, l!.at?.toISOString()]).toEqual([
+      null,
+      null,
+      adminId,
+      MAINTENANT.toISOString(),
+    ]);
+  });
+
+  it('REQ-DM-043 : TÉMOIN — après la purge, plus rien ne bouge : réponse, texte qui revient, date réécrite, refusés', async () => {
+    const id = await neuve();
+    await purger(id);
+    expect(await refus(repondre(id))).toContain(CONTESTATIONS);
     expect(
       await refus(
         ecrire(
@@ -502,8 +585,42 @@ describe('REQ-DM-043 — contestations : un objet, une cible, une réponse posé
           randomBytes(40)
         )
       )
-    ).toContain(GABARIT);
-    expect(await refus(tronquer('contestations'))).toContain(GABARIT);
+    ).toContain(CONTESTATIONS);
+    expect(
+      await refus(
+        ecrire(
+          `UPDATE contestations SET purgee_at = $2 WHERE id = $1::uuid`,
+          id,
+          new Date(MAINTENANT.getTime() + 1)
+        )
+      )
+    ).toContain(CONTESTATIONS);
+  });
+
+  it('REQ-DM-043 : TÉMOIN — un texte réécrit, l’identité changée, DELETE et TRUNCATE : refusés', async () => {
+    const id = await neuve();
+    expect(
+      await refus(
+        ecrire(
+          `UPDATE contestations SET texte_chiffre = $2 WHERE id = $1::uuid`,
+          id,
+          randomBytes(40)
+        )
+      )
+    ).toContain(CONTESTATIONS);
+    expect(
+      await refus(
+        ecrire(
+          `UPDATE contestations SET recue_at = $2 WHERE id = $1::uuid`,
+          id,
+          new Date(MAINTENANT.getTime() + 1)
+        )
+      )
+    ).toContain(CONTESTATIONS);
+    expect(await refus(ecrire(`DELETE FROM contestations WHERE id = $1::uuid`, id))).toContain(
+      CONTESTATIONS
+    );
+    expect(await refus(tronquer('contestations'))).toContain(CONTESTATIONS);
   });
 });
 
