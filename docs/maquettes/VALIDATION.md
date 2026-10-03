@@ -13,17 +13,17 @@
 | --- | --- | --- | --- | --- |
 | Accueil (3 chiffres, 1 alerte, 1 champ, 4 onglets) | `accueil.html` | UX-P1-08 | 2026-09-19 | Will |
 | Entreprise (recherche + carte 4 états + « Déposer ») | `entreprise.html` | UX-P1-01 | 2026-09-19 | Will |
-| Déposer un contact (W20 : quatre coordonnées, message, carte Annuler / Corriger) | `deposer.html` | UX-P1-02 | — | — |
-| Mes entreprises (W20 : badges de la confirmation) | `mes-entreprises.html` | UX-P1-05 | — | — |
-| Réponse du contact (page publique /confirmer) | `confirmation-contact.html` | UX-P1-42 | — | — |
+| Déposer un contact (W20 : quatre coordonnées, message, carte Annuler / Corriger) | `deposer.html` | UX-P1-02 | 2026-10-03 | Will |
+| Mes entreprises (W20 : badges de la confirmation) | `mes-entreprises.html` | UX-P1-05 | 2026-10-03 | Will |
+| Réponse du contact (page publique /confirmer) | `confirmation-contact.html` | UX-P1-42 | 2026-10-03 | Will |
 | Mes commissions | `mes-commissions.html` | UX-P2-01 | 2026-09-19 | Will |
-| Ma conformité / Mon profil (ouverture limitée, état vide) | `conformite.html` | UX-P1-09 | — | — |
-| Se connecter (lien, code à 6 chiffres, lien déjà utilisé) | `connexion.html` | UX-P1-04 | — | — |
-| Mon contrat | `mon-contrat.html` | UX-P1-44 | — | — |
-| Fiche d'une entreprise (frise, échanges) | `mes-entreprises-fiche.html` | EXT-T01 | — | — |
-| Personnes qui agissent pour l'apporteur | `personnes.html` | UX-P1-15 | — | — |
-| Dépôt par lien privé | `depot-lien-prive.html` | UX-P1-03 | — | — |
-| Notifications | `notifications.html` | UX-P1-08 | — | — |
+| Ma conformité / Mon profil (ouverture limitée, état vide) | `conformite.html` | UX-P1-09 | 2026-10-03 | Will |
+| Se connecter (lien, code à 6 chiffres, lien déjà utilisé) | `connexion.html` | UX-P1-04 | 2026-10-03 | Will |
+| Mon contrat | `mon-contrat.html` | UX-P1-44 | 2026-10-03 | Will |
+| Fiche d'une entreprise (frise, échanges) | `mes-entreprises-fiche.html` | EXT-T01 | 2026-10-03 | Will |
+| Personnes qui agissent pour l'apporteur | `personnes.html` | UX-P1-15 | 2026-10-03 | Will |
+| Dépôt par lien privé | `depot-lien-prive.html` | UX-P1-03 | 2026-10-03 | Will |
+| Notifications | `notifications.html` | UX-P1-08 | 2026-10-03 | Will |
 
 ### Séance de validation W20 (confirmation par e-mail)
 
@@ -34,6 +34,13 @@ note de l'état « Formulaire (depuis la carte) », la carte « Annuler / Corrig
 contact, de 320 à 414 px) et `file-qualification.html` (l'onglet « À appeler aujourd'hui », qui se valide
 avec les maquettes de la console). `deposer.html` et `mes-entreprises.html`, validées le 2026-09-19, ont
 changé en substance : leur ligne repart vide.
+
+**Séance du 2026-10-03.** Williams valide les trois maquettes de l'espace de la série dans la même séance :
+`deposer.html` (« OUI PARFAIT »), `mes-entreprises.html` (« OUI ») et `confirmation-contact.html` (« OUI »).
+`file-qualification.html` n'est PAS validée (« POUR la console d'adminsitration, j'ai l'impression qu'il fait
+très veillote et j'aurai aimé plutot un sidebar et que ce soit plus moderne ») : elle se valide avec les
+maquettes de la console, refondues par UX-P1-50. La tâche d'écran de la file attend donc sa maquette ; celles
+de l'espace ont les leurs.
 
 ## Console
 
