@@ -469,6 +469,25 @@ describe('REQ-SEC-031 — la tâche différée ouvre l’anomalie, une fois, jou
     expect(b.traces).toEqual([
       { signal: 'auto_parrainage_soupconne', moment: 'rib', correspondances: ['iban'] },
     ]);
+    expect(b.lectures).toContainEqual({
+      where: { id: 'piece-1' },
+      select: { apporteurId: true },
+    });
+  });
+
+  it('REQ-SEC-031 : sans port de trace, la tâche ouvre et journalise quand même', async () => {
+    const b = baseDeLaTache({
+      lignes: [PARRAIN, filleul({ phoneHash: H('b') })],
+      evenements: [NAISSANCE_CANDIDATURE],
+    });
+    const complets = b.ports();
+    const ports = {
+      maintenant: complets.maintenant,
+      precedent: complets.precedent,
+      journaliser: complets.journaliser,
+    };
+    expect((await ouvrirLesAnomaliesDAutoParrainage(b.prisma, ports)).ouvertes).toBe(1);
+    expect(b.journalises).toEqual([OUVERTURE_JOURNALISEE]);
   });
 
   it('REQ-SEC-031 : ce qui n’est pas une naissance utile avance le curseur sans rien juger', async () => {

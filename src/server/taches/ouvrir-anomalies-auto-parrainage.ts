@@ -94,20 +94,20 @@ interface Naissance {
   agregatId: string;
 }
 
+/**
+ * Une naissance utile, ou `null`. Le filtre de lecture ne rend que les deux types : une naissance
+ * d'apporteur est une candidature ; une naissance de pièce n'est utile que pour une pièce `rib`.
+ */
 function naissanceDe(e: {
   type: string;
   agregatId: string | null;
   charge: Prisma.JsonValue;
 }): Naissance | null {
-  if (e.agregatId === null || typeof e.charge !== 'object' || e.charge === null) return null;
-  const c = e.charge as Record<string, unknown>;
-  if (c.de !== null) return null;
+  const c = e.charge as { de?: unknown; type?: unknown } | null;
+  if (e.agregatId === null || c?.de !== null) return null;
   if (e.type === 'apporteur_statut_modifie')
     return { moment: 'candidature', agregatId: e.agregatId };
-  if (e.type === 'piece_kyc_statut_modifie' && c.type === 'rib') {
-    return { moment: 'rib', agregatId: e.agregatId };
-  }
-  return null;
+  return c.type === 'rib' ? { moment: 'rib', agregatId: e.agregatId } : null;
 }
 
 async function soupconsDe(prisma: PrismaClient, n: Naissance): Promise<Soupcon[]> {
