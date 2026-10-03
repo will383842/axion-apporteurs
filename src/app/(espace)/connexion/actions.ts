@@ -21,12 +21,13 @@
 import { cookies, headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { after } from 'next/server';
-import { consommerLien, demanderLien } from '../../../server/auth/lien-magique';
+import { consommerLien, demanderLien, verifierLeCode } from '../../../server/auth/lien-magique';
 import {
   dependancesDuProcessus,
   empreinteReseauDeLaRequete,
   portsDeConsommation,
   portsDeDemande,
+  portsDuCode,
 } from '../../../server/auth/lien-magique-production';
 import { COOKIE_DE_SESSION } from '../../../server/auth/session';
 import { clesPii } from '../../../server/securite/pii';
@@ -52,21 +53,51 @@ export async function demanderUnLienDeConnexion(formulaire: FormData): Promise<v
   redirect(`/connexion?etat=${etat}`);
 }
 
+/**
+ * Une session ouverte, par le clic OU par le code (SEC-54, point 8) : le MÊME cookie, posé avant la
+ * redirection, et la MÊME destination (première connexion comprise).
+ */
+async function ouvrirLaConnexion(
+  jetonSession: string,
+  d: ReturnType<typeof dependancesDuProcessus>
+): Promise<never> {
+  const { nom, attributs } = COOKIE_DE_SESSION;
+  (await cookies()).set(nom, jetonSession, attributs);
+  redirect(
+    await destinationDeLOuverture(
+      jetonSession,
+      () => lireLaPolitique(),
+      () => portsDuProcessus(d),
+      (motif) => d.journal.warn(motif)
+    )
+  );
+}
+
 export async function consommerUnLienDeConnexion(jeton: string): Promise<void> {
   const d = dependancesDuProcessus({ apres: after, env: process.env });
   const ipHash = empreinteReseauDeLaRequete(await headers(), clesPii(d.env));
   const resultat = await consommerLien({ jeton, ipHash }, portsDeConsommation(d));
-  if (resultat.etat === 'ouverte') {
-    const { nom, attributs } = COOKIE_DE_SESSION;
-    (await cookies()).set(nom, resultat.jetonSession, attributs);
-    redirect(
-      await destinationDeLOuverture(
-        resultat.jetonSession,
-        () => lireLaPolitique(),
-        () => portsDuProcessus(d),
-        (motif) => d.journal.warn(motif)
-      )
-    );
-  }
+  if (resultat.etat === 'ouverte') await ouvrirLaConnexion(resultat.jetonSession, d);
   redirect(`/connexion?issue=${resultat.etat}`);
+}
+
+/**
+ * SEC-54 — la vérification du code à six chiffres. Une redirection 303 par issue, et une seule par
+ * issue (lentille sécurité, 2026-10-03) : `?code=code_refuse` pour TOUT refus de code, `?code=debit`
+ * pour TOUT refus de débit (compteur réseau, compteur d'adresse, limiteur en panne), sans autre
+ * paramètre ni rien qui distingue le compteur ou le compte. Le statut 429 est celui d'une route ;
+ * une action serveur répond par cette redirection unique (REQ-SEC-002, amendement au rattrapage 87).
+ */
+export async function verifierUnCodeDeConnexion(formulaire: FormData): Promise<void> {
+  const d = dependancesDuProcessus({ apres: after, env: process.env });
+  const resultat = await verifierLeCode(
+    {
+      saisie: texte(formulaire.get('courriel')) ?? '',
+      code: texte(formulaire.get('code')) ?? '',
+      entetes: await headers(),
+    },
+    portsDuCode(d)
+  );
+  if (resultat.etat === 'ouverte') await ouvrirLaConnexion(resultat.jetonSession, d);
+  redirect(`/connexion?code=${resultat.etat}`);
 }

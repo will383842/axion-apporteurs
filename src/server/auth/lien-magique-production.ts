@@ -33,8 +33,18 @@ import { signalerPotDeMiel } from '../securite/pot-de-miel';
 import { limiter, sujetDepuisEmpreinte } from '../securite/rate-limit';
 import { CONNEXION } from '../../content/micro-copy/espace/vocabulaire';
 import { CODE_DU_COURRIEL_DE_CONNEXION } from '../../content/micro-copy/courriels/notifications';
-import type { ConfigurationDuLien, PortsDeConsommation, PortsDeDemande } from './lien-magique';
-import { ecrituresDeLien, lectureDuCompte, transactionDeConsommation } from './lien-magique-depot';
+import type {
+  ConfigurationDuLien,
+  PortsDeConsommation,
+  PortsDeDemande,
+  PortsDuCode,
+} from './lien-magique';
+import {
+  ecrituresDeLien,
+  lectureDuCompte,
+  transactionDeConsommation,
+  transactionDuCode,
+} from './lien-magique-depot';
 import {
   configurationDeLEmetteur,
   demanderEnvoi,
@@ -134,6 +144,36 @@ export function portsDeConsommation(
   return {
     maintenant: () => new Date(d.horloge.maintenant()),
     transaction: transactionDeConsommation(d.prisma),
+    configuration: configurationDuLien(d.env),
+  };
+}
+
+/**
+ * SEC-54 — les ports de la vérification du code. Les empreintes sont celles de la demande de lien
+ * (l'adresse saisie normalisée EXACTEMENT comme à l'émission) ; les deux compteurs sont ceux du
+ * registre, appelés directement par leur nom ; le journal ne reçoit qu'un motif fermé.
+ */
+export function portsDuCode(
+  d: Pick<DependancesDuLien, 'env' | 'prisma' | 'horloge' | 'journal'>
+): PortsDuCode {
+  const cles = clesPii(d.env);
+  return {
+    maintenant: () => new Date(d.horloge.maintenant()),
+    adresseDuClient: (entetes) => adresseDuClient(entetes, SAUTS_DE_CONFIANCE),
+    empreinteAdresseReseau: (adresse) => empreinteAdresseReseau(adresse, cles),
+    empreinteCourriel: (saisie) => {
+      try {
+        return empreinteRecherche('courriel', saisie, cles);
+      } catch {
+        return null;
+      }
+    },
+    compterAdresseCode: (sujet, maintenantMs) =>
+      limiter('magic:code-ip', sujetDepuisEmpreinte(sujet), maintenantMs),
+    compterCourrielCode: (sujet, maintenantMs) =>
+      limiter('magic:code-courriel', sujetDepuisEmpreinte(sujet), maintenantMs),
+    transaction: transactionDuCode(d.prisma),
+    signaler: (motif) => d.journal.warn(`lien_magique_${motif}`),
     configuration: configurationDuLien(d.env),
   };
 }

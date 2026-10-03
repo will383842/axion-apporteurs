@@ -86,6 +86,7 @@ describe('REQ-SEC-001 — les écritures de l’émission', () => {
     const lien = {
       apporteurId: 'apporteur-a',
       tokenHash: 'a'.repeat(64),
+      codeHash: 'c'.repeat(64),
       kid: '0123abcd',
       creeAt: T,
       expireAt: new Date(T.getTime() + 1),

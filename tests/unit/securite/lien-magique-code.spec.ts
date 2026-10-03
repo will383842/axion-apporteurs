@@ -1,4 +1,5 @@
 // @req REQ-SEC-001
+// @req REQ-SEC-002
 /**
  * `lien-magique-code.spec.ts` — le code à six chiffres du courriel de connexion (SEC-54), sur ports
  * simulés. Le témoin en base (`tests/integration/lien-magique-code.spec.ts`) tient la concurrence
@@ -50,6 +51,20 @@ import {
   type ResultatDuCode,
 } from '../../../src/server/auth/lien-magique';
 import { DUREES_AUTH } from '../../../src/server/auth/durees';
+import type { PrismaClient } from '@prisma/client';
+import { NOMS_DES_SECRETS } from '../../../src/lib/env';
+import { horlogeFigee } from '../../../src/domain/temps/horloge';
+import { corpsDuCourriel, portsDuCode } from '../../../src/server/auth/lien-magique-production';
+import { CONNEXION } from '../../../src/content/micro-copy/espace/vocabulaire';
+import { CODE_DU_COURRIEL_DE_CONNEXION } from '../../../src/content/micro-copy/courriels/notifications';
+import { limiter, sujetDepuisEmpreinte } from '../../../src/server/securite/rate-limit';
+
+// REQ-SEC-002 : un ESPION sur `limiter`, qui délègue au vrai compteur — les témoins des noms de
+// compteur lisent ses arguments (comme `lien-magique-production.spec.ts`, QA-T68).
+vi.mock('../../../src/server/securite/rate-limit', async (original) => {
+  const vrai = await original<typeof import('../../../src/server/securite/rate-limit')>();
+  return { ...vrai, limiter: vi.fn(vrai.limiter) };
+});
 
 const MAINTENANT = new Date('2026-10-03T10:00:00.000Z');
 const CONFIG: ConfigurationDuLien = {
@@ -431,5 +446,97 @@ describe('REQ-SEC-001 — (7) un motif fermé, rien de la personne', () => {
     const tout = JSON.stringify(u.signaux);
     for (const interdit of [u.code, '999999', ADRESSE, HASH_ADRESSE, HASH_RESEAU])
       expect(tout).not.toContain(interdit);
+  });
+});
+
+// ── le câblage de production : compteurs, courriel, journal ────────────────────────────────────
+
+const ENV: Record<string, string> = {
+  NODE_ENV: 'test',
+  ...Object.fromEntries(
+    NOMS_DES_SECRETS.map((n) => [n, `temoin-sec54-${n.toLowerCase()}-`.padEnd(48, '0')])
+  ),
+  PII_ENCRYPTION_KEY: 'e'.repeat(64),
+};
+const INSTANT = Date.UTC(2026, 9, 3, 10, 0, 0);
+
+function production() {
+  const avertissements: string[] = [];
+  const ports = portsDuCode({
+    env: ENV,
+    // La vérification ne touche pas la base dans ces témoins : tout accès lèverait.
+    prisma: new Proxy(
+      {},
+      {
+        get: () => {
+          throw new Error('base touchée');
+        },
+      }
+    ) as unknown as PrismaClient,
+    horloge: horlogeFigee(INSTANT),
+    journal: { warn: (m: string) => avertissements.push(m) },
+  });
+  return { ports, avertissements };
+}
+
+describe('REQ-SEC-002 — les deux compteurs de la vérification du code', () => {
+  // Des accolades : une fonction RENDUE par beforeEach est un nettoyage, que vitest appellerait.
+  beforeEach(() => {
+    vi.mocked(limiter).mockClear();
+  });
+
+  it('REQ-SEC-002 : TÉMOIN — compterAdresseCode appelle EXACTEMENT `magic:code-ip`, avec le sujet et l’instant reçus', async () => {
+    await production().ports.compterAdresseCode('0123456789abcdef', INSTANT);
+    expect(vi.mocked(limiter).mock.calls).toEqual([
+      ['magic:code-ip', sujetDepuisEmpreinte('0123456789abcdef'), INSTANT],
+    ]);
+  });
+
+  it('REQ-SEC-002 : TÉMOIN — compterCourrielCode appelle EXACTEMENT `magic:code-courriel`, distinct de la demande de lien', async () => {
+    await production().ports.compterCourrielCode('fedcba9876543210', INSTANT);
+    expect(vi.mocked(limiter).mock.calls).toEqual([
+      ['magic:code-courriel', sujetDepuisEmpreinte('fedcba9876543210'), INSTANT],
+    ]);
+  });
+
+  it('REQ-SEC-002 : TÉMOIN — chaque compteur épuisé rend la réponse générique, la même pour les deux', async () => {
+    const reponses: string[] = [];
+    for (const port of ['compterAdresseCode', 'compterCourrielCode'] as const) {
+      const u = univers();
+      (u.ports[port] as ReturnType<typeof vi.fn>).mockResolvedValue({
+        autorise: false,
+        panne: false,
+      });
+      reponses.push(JSON.stringify(await verifier(u, u.code)));
+    }
+    expect(reponses).toEqual([
+      JSON.stringify({ etat: 'debit' }),
+      JSON.stringify({ etat: 'debit' }),
+    ]);
+  });
+});
+
+describe('REQ-SEC-001 — le courriel et le journal de production', () => {
+  it('REQ-SEC-001 : TÉMOIN — le corps porte l’URL, puis le code SEUL sur sa ligne, entre ses deux phrases', () => {
+    const corps = corpsDuCourriel('https://partners.example.org/connexion/JETON', '004217');
+    expect(corps.split('\n')).toEqual([
+      CONNEXION.courriel.corps,
+      '',
+      'https://partners.example.org/connexion/JETON',
+      '',
+      CODE_DU_COURRIEL_DE_CONNEXION.avant,
+      '004217',
+      CODE_DU_COURRIEL_DE_CONNEXION.apres,
+    ]);
+  });
+
+  it('REQ-SEC-001 : TÉMOIN — le journal ne reçoit qu’un motif fermé', () => {
+    const { ports, avertissements } = production();
+    for (const motif of ['code_refuse', 'code_epuise', 'debit'] as const) ports.signaler(motif);
+    expect(avertissements).toEqual([
+      'lien_magique_code_refuse',
+      'lien_magique_code_epuise',
+      'lien_magique_debit',
+    ]);
   });
 });
