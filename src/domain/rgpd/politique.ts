@@ -40,7 +40,7 @@ export type Segment =
  */
 export type Filtre = {
   readonly ou: string;
-  readonly motif: 'question_interne' | 'nom_de_personne' | 'lexique_interdit';
+  readonly motif: 'question_interne' | 'nom_de_personne' | 'lexique_interdit' | 'non_tranche';
   readonly detail?: string;
 };
 
@@ -178,6 +178,8 @@ const FORMES_REFUSEES = famillesPourPortee('apporteur').flatMap((f) =>
   f.formes.map((forme) => ({ forme, motif: motDe(forme, 'iu') }))
 );
 const PERSONNES = PERSONNES_DU_REGISTRE.map((p) => motDe(p, 'u'));
+/** Une qualification, ou toute mention, que le registre dit encore « à confirmer ». */
+const NON_TRANCHE = /à confirmer/i;
 
 function motDe(mot: string, drapeaux: string): RegExp {
   const litteral = mot.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -187,14 +189,19 @@ function motDe(mot: string, drapeaux: string): RegExp {
 /**
  * Le texte tel que la page publique peut le montrer : un texte qui nomme une personne, ou qui
  * emploie un mot refusé, est RETENU en entier (on ne réécrit pas le registre à sa place) et la page
- * l'annonce en cours de rédaction ; la retenue est nommée dans `filtres`.
+ * l'annonce en cours de rédaction. Un texte qui se dit « à confirmer » n'est pas annoncé du tout
+ * (A07, art. 13 : la politique dit ce qui EST) : il est OMIS (`null`). Chaque retenue est nommée.
  */
-function texteAffichable(texte: string, ou: string, filtres: Filtre[]): Segment {
+function texteAffichable(texte: string, ou: string, filtres: Filtre[]): Segment | null {
   // Le refus des conseillers se juge AVANT toute retenue : retenir le texte ne doit pas le taire.
   if (/conseill/i.test(texte)) throw refus(REFUS_CONSEILLERS);
   if (PERSONNES.some((p) => p.test(texte))) {
     filtres.push({ ou, motif: 'nom_de_personne' });
     return { type: 'a_completer' };
+  }
+  if (NON_TRANCHE.test(texte)) {
+    filtres.push({ ou, motif: 'non_tranche' });
+    return null;
   }
   const refusee = FORMES_REFUSEES.find((f) => f.motif.test(texte));
   if (refusee !== undefined) {
@@ -217,7 +224,8 @@ function segments(contenu: string, ou: string, filtres: Filtre[]): Segment[] {
   });
   // Un seul élément au plus : `join()` sans séparateur, comme dans `cellule`.
   const avant = morceaux.slice(0, 1).join().trim();
-  const texte: Segment[] = avant === '' ? [] : [texteAffichable(avant, ou, filtres)];
+  const affichable = avant === '' ? null : texteAffichable(avant, ou, filtres);
+  const texte: Segment[] = affichable === null ? [] : [affichable];
   return [...texte, ...manques];
 }
 

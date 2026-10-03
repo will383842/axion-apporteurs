@@ -63,8 +63,13 @@ function Destinataires({ politique }: { politique: Politique }) {
       {politique.destinataires.map((d) => (
         <article key={d.nom}>
           <h3>{d.nom}</h3>
-          <h4>{t.qualite}</h4>
-          <Contenu segments={d.qualification} />
+          {/* Une qualification non tranchée est omise : la page dit le rôle, pas un titre à confirmer. */}
+          {d.qualification.length > 0 && (
+            <>
+              <h4>{t.qualite}</h4>
+              <Contenu segments={d.qualification} />
+            </>
+          )}
           <h4>{t.donnees}</h4>
           <Contenu segments={d.donnees} />
           <h4>{t.localisation}</h4>

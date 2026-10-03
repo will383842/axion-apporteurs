@@ -82,4 +82,27 @@ describe('REQ-JUR-025 — la politique publique ne porte aucune note interne', (
     expect(page).not.toMatch(/\bWill\b/);
     expect(motInterdit(page)).toBeUndefined();
   });
+
+  it('REQ-JUR-025 : TÉMOIN (A07) — la finalité réelle s’affiche en entier, avec la réservation qui découle de la déclaration', () => {
+    const finalite = lue(REGISTRE).politique.rubriques.find((r) => r.cle === 'finalite');
+    expect(finalite?.contenu).toEqual([
+      {
+        type: 'texte',
+        texte: expect.stringContaining(
+          'déclaration des entreprises et réservation qui en découle, rémunération'
+        ),
+      },
+    ]);
+    expect(lue(REGISTRE).filtres.filter((f) => f.ou === 'finalite')).toEqual([]);
+  });
+
+  it('REQ-JUR-025 : TÉMOIN (A07) — une qualification « à confirmer » n’est pas affichée : la Banque et l’URSSAF n’en portent aucune', () => {
+    const l = lue(REGISTRE);
+    for (const nom of ['Banque', 'URSSAF']) {
+      const d = l.politique.destinataires.find((x) => x.nom === nom);
+      expect([nom, d?.qualification]).toEqual([nom, []]);
+      expect(l.filtres).toContainEqual({ ou: `${nom} · Qualification`, motif: 'non_tranche' });
+    }
+    expect(lisible(l)).not.toMatch(/à confirmer/i);
+  });
 });
