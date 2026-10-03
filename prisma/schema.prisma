@@ -1270,16 +1270,20 @@ enum NatureAccesConsole {
 }
 
 /// Le journal des accès à la console (SEC-58), par identifiants SEULS : qui, quand, quelle fiche,
-/// aucun contenu. Ajout seul tenu par la base (`journal_acces_console_refuser`) ; seule la purge
-/// planifiée supprime, à l'échéance de la SSOT. `cibleId` est polymorphe (un apporteur, ou
-/// l'attribution qui porte le contact), sans clé étrangère : le code la vérifie avant d'écrire.
+/// l'empreinte tronquée de l'adresse réseau ; aucun contenu. Ajout seul par le gabarit commun
+/// (`refuser_modification_sauf`) : la purge, à l'échéance de la SSOT, vide l'utilisateur, la cible et
+/// l'empreinte et pose `purgeAt`, une fois ; la ligne nue (nature, date) reste. `cibleId` est
+/// polymorphe (un apporteur, ou l'attribution qui porte le contact), sans clé étrangère : le code la
+/// vérifie avant d'écrire. Seule une connexion RÉUSSIE s'inscrit.
 model JournalAccesConsole {
-  id                   String             @id @db.Uuid
-  utilisateurConsoleId String             @map("utilisateur_console_id") @db.Uuid
-  utilisateurConsole   UtilisateurConsole @relation(fields: [utilisateurConsoleId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  id                   String              @id @db.Uuid
+  utilisateurConsoleId String?             @map("utilisateur_console_id") @db.Uuid
+  utilisateurConsole   UtilisateurConsole? @relation(fields: [utilisateurConsoleId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   nature               NatureAccesConsole
-  cibleId              String?            @map("cible_id") @db.Uuid
-  survenuAt            DateTime           @default(dbgenerated("clock_timestamp()")) @map("survenu_at") @db.Timestamptz(3)
+  cibleId              String?             @map("cible_id") @db.Uuid
+  ipHash               String?             @map("ip_hash") @db.Char(16)
+  survenuAt            DateTime            @default(dbgenerated("clock_timestamp()")) @map("survenu_at") @db.Timestamptz(3)
+  purgeAt              DateTime?           @map("purge_at") @db.Timestamptz(3)
 
   @@index([survenuAt])
   @@index([utilisateurConsoleId, survenuAt], map: "journal_acces_console_utilisateur_survenu_idx")

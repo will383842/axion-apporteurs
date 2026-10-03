@@ -3,8 +3,9 @@
  *
  * Chaque connexion à la console, et chaque lecture des coordonnées d'un apporteur ou d'un contact
  * depuis elle, laisse UNE trace, par identifiants seuls : qui (l'utilisateur de la console), quand
- * (l'horodatage du serveur), quelle fiche (l'apporteur, ou l'attribution qui porte le contact). Aucun
- * contenu, aucun terme de recherche, aucune adresse réseau.
+ * (l'horodatage du serveur), quelle fiche (l'apporteur, ou l'attribution qui porte le contact), et
+ * l'empreinte TRONQUÉE de l'adresse réseau. Aucun contenu, aucun terme de recherche, jamais l'adresse.
+ * Seule une connexion RÉUSSIE se trace ici ; une tentative échouée n'a pas d'utilisateur.
  *
  * L'ORDRE, DANS UNE SEULE TRANSACTION : la cible est vérifiée par son seul identifiant, la trace est
  * écrite, PUIS les blocs sont lus et déchiffrés. Une trace qui échoue fait échouer la lecture : aucune
@@ -13,7 +14,7 @@
  */
 import { randomUUID } from 'node:crypto';
 import type { NatureAccesConsole, Prisma, PrismaClient } from '@prisma/client';
-import { decryptPii, type ClesPii } from '../securite/pii';
+import { decryptPii, empreinteAdresseReseau, type ClesPii } from '../securite/pii';
 import { MODELE_APPORTEUR } from '../auth/lien-magique-depot';
 
 /**
@@ -35,7 +36,14 @@ export class CibleInconnue extends Error {
 /** Écrit UNE trace, dans la transaction de l'accès. */
 async function tracer(
   tx: Tx,
-  a: { utilisateurConsoleId: string; nature: NatureAccesConsole; cibleId: string | null }
+  a: {
+    utilisateurConsoleId: string;
+    nature: NatureAccesConsole;
+    cibleId: string | null;
+    /** L'adresse réseau de la requête : seule son empreinte tronquée est écrite. */
+    adresse: string | null;
+  },
+  cles: ClesPii
 ): Promise<void> {
   await tx.journalAccesConsole.create({
     data: {
@@ -43,17 +51,19 @@ async function tracer(
       utilisateurConsoleId: a.utilisateurConsoleId,
       nature: a.nature,
       cibleId: a.cibleId,
+      ipHash: a.adresse === null ? null : empreinteAdresseReseau(a.adresse, cles),
     },
   });
 }
 
-/** Trace une connexion à la console : sans cible. */
+/** Trace une connexion RÉUSSIE à la console : sans cible. */
 export async function journaliserConnexionConsole(
   prisma: PrismaClient,
-  utilisateurConsoleId: string
+  connexion: { utilisateurConsoleId: string; adresse: string | null },
+  cles: ClesPii
 ): Promise<void> {
   await prisma.$transaction((tx) =>
-    tracer(tx, { utilisateurConsoleId, nature: 'connexion', cibleId: null })
+    tracer(tx, { ...connexion, nature: 'connexion', cibleId: null }, cles)
   );
 }
 
@@ -77,18 +87,23 @@ export type CoordonneesApporteur = {
 /** Les coordonnées d'un apporteur, lues pour la console : tracées AVANT d'être lues. */
 export async function lireCoordonneesDeLApporteur(
   prisma: PrismaClient,
-  demande: { utilisateurConsoleId: string; apporteurId: string },
+  demande: { utilisateurConsoleId: string; apporteurId: string; adresse: string | null },
   cles: ClesPii
 ): Promise<CoordonneesApporteur> {
   const id = demande.apporteurId;
   return prisma.$transaction(async (tx) => {
     const existe = await tx.apporteur.findUnique({ where: { id }, select: { id: true } });
     if (existe === null) throw new CibleInconnue('lecture_coordonnees_apporteur');
-    await tracer(tx, {
-      utilisateurConsoleId: demande.utilisateurConsoleId,
-      nature: 'lecture_coordonnees_apporteur',
-      cibleId: id,
-    });
+    await tracer(
+      tx,
+      {
+        utilisateurConsoleId: demande.utilisateurConsoleId,
+        nature: 'lecture_coordonnees_apporteur',
+        cibleId: id,
+        adresse: demande.adresse,
+      },
+      cles
+    );
     const l = await tx.apporteur.findUnique({
       where: { id },
       select: { nomChiffre: true, prenomChiffre: true, emailChiffre: true, telephoneChiffre: true },
@@ -114,18 +129,23 @@ export type CoordonneesContact = {
 /** Les coordonnées du contact d'une attribution, lues pour la console : tracées AVANT d'être lues. */
 export async function lireCoordonneesDuContact(
   prisma: PrismaClient,
-  demande: { utilisateurConsoleId: string; attributionId: string },
+  demande: { utilisateurConsoleId: string; attributionId: string; adresse: string | null },
   cles: ClesPii
 ): Promise<CoordonneesContact> {
   const id = demande.attributionId;
   return prisma.$transaction(async (tx) => {
     const existe = await tx.attribution.findUnique({ where: { id }, select: { id: true } });
     if (existe === null) throw new CibleInconnue('lecture_coordonnees_contact');
-    await tracer(tx, {
-      utilisateurConsoleId: demande.utilisateurConsoleId,
-      nature: 'lecture_coordonnees_contact',
-      cibleId: id,
-    });
+    await tracer(
+      tx,
+      {
+        utilisateurConsoleId: demande.utilisateurConsoleId,
+        nature: 'lecture_coordonnees_contact',
+        cibleId: id,
+        adresse: demande.adresse,
+      },
+      cles
+    );
     const l = await tx.attribution.findUnique({
       where: { id },
       select: {

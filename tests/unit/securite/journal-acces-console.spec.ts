@@ -26,13 +26,13 @@ import {
   limiteDuJournalDesAcces,
   purgerLeJournalDesAccesConsole,
 } from '../../../src/server/taches/purger-journal-acces-console';
-import { clesPii } from '../../../src/server/securite/pii';
+import { clesPii, empreinteAdresseReseau } from '../../../src/server/securite/pii';
 import { NOMS_DES_SECRETS } from '../../../src/lib/env';
 
 const UTILISATEUR = '0190a5c0-0000-7000-8000-000000000001';
 const APPORTEUR = '0190a5c0-0000-7000-8000-000000000002';
 const ATTRIBUTION = '0190a5c0-0000-7000-8000-000000000003';
-const IP_HASH = '0123456789abcdef';
+const ADRESSE = '203.0.113.7';
 /** Des clés de test, fabriquées à l'exécution (jamais un secret réel). */
 const CLES = clesPii({
   NODE_ENV: 'test',
@@ -79,7 +79,7 @@ describe('REQ-SEC-058 — la trace d’une lecture de coordonnées précède la 
     const f = fauxClient();
     await lireCoordonneesDeLApporteur(
       f.client,
-      { utilisateurConsoleId: UTILISATEUR, apporteurId: APPORTEUR, ipHash: IP_HASH },
+      { utilisateurConsoleId: UTILISATEUR, apporteurId: APPORTEUR, adresse: ADRESSE },
       CLES
     );
     expect(f.appels.map((a) => a.quoi)).toEqual([
@@ -93,7 +93,7 @@ describe('REQ-SEC-058 — la trace d’une lecture de coordonnées précède la 
         utilisateurConsoleId: UTILISATEUR,
         nature: 'lecture_coordonnees_apporteur',
         cibleId: APPORTEUR,
-        ipHash: IP_HASH,
+        ipHash: empreinteAdresseReseau(ADRESSE, CLES),
       }),
     });
   });
@@ -102,7 +102,7 @@ describe('REQ-SEC-058 — la trace d’une lecture de coordonnées précède la 
     const f = fauxClient();
     await lireCoordonneesDuContact(
       f.client,
-      { utilisateurConsoleId: UTILISATEUR, attributionId: ATTRIBUTION, ipHash: null },
+      { utilisateurConsoleId: UTILISATEUR, attributionId: ATTRIBUTION, adresse: null },
       CLES
     );
     expect(f.appels.map((a) => a.quoi)).toEqual([
@@ -123,7 +123,7 @@ describe('REQ-SEC-058 — la trace d’une lecture de coordonnées précède la 
     await expect(
       lireCoordonneesDeLApporteur(
         f.client,
-        { utilisateurConsoleId: UTILISATEUR, apporteurId: APPORTEUR, ipHash: null },
+        { utilisateurConsoleId: UTILISATEUR, apporteurId: APPORTEUR, adresse: null },
         CLES
       )
     ).rejects.toThrow('trace refusée');
@@ -135,7 +135,7 @@ describe('REQ-SEC-058 — la trace d’une lecture de coordonnées précède la 
     await expect(
       lireCoordonneesDuContact(
         f.client,
-        { utilisateurConsoleId: UTILISATEUR, attributionId: ATTRIBUTION, ipHash: null },
+        { utilisateurConsoleId: UTILISATEUR, attributionId: ATTRIBUTION, adresse: null },
         CLES
       )
     ).rejects.toBeInstanceOf(CibleInconnue);
@@ -144,17 +144,18 @@ describe('REQ-SEC-058 — la trace d’une lecture de coordonnées précède la 
 
   it('REQ-SEC-058 : une connexion réussie se trace sans cible, avec l’empreinte tronquée, et rien d’autre', async () => {
     const f = fauxClient();
-    await journaliserConnexionConsole(f.client, {
-      utilisateurConsoleId: UTILISATEUR,
-      ipHash: IP_HASH,
-    });
+    await journaliserConnexionConsole(
+      f.client,
+      { utilisateurConsoleId: UTILISATEUR, adresse: ADRESSE },
+      CLES
+    );
     expect(f.appels).toHaveLength(1);
     const { data } = f.appels[0]!.args as { data: Record<string, unknown> };
     expect(data).toMatchObject({
       utilisateurConsoleId: UTILISATEUR,
       nature: 'connexion',
       cibleId: null,
-      ipHash: IP_HASH,
+      ipHash: empreinteAdresseReseau(ADRESSE, CLES),
     });
     expect(Object.keys(data).sort()).toEqual([
       'cibleId',

@@ -24,7 +24,7 @@ import {
   purgerLeJournalDesAccesConsole,
 } from '../../src/server/taches/purger-journal-acces-console';
 import { MODELE_APPORTEUR } from '../../src/server/auth/lien-magique-depot';
-import { clesPii, colonnesPii } from '../../src/server/securite/pii';
+import { clesPii, colonnesPii, empreinteAdresseReseau } from '../../src/server/securite/pii';
 import { NOMS_DES_SECRETS } from '../../src/lib/env';
 
 let base: Base;
@@ -32,7 +32,7 @@ let base: Base;
 let app: PrismaClient;
 
 const MAINTENANT = new Date('2027-10-03T12:00:00.000Z');
-const IP_HASH = '0123456789abcdef';
+const ADRESSE = '203.0.113.7';
 const hex = (octets: number) => randomBytes(octets).toString('hex');
 /** Des clés de test, fabriquées à l'exécution (jamais un secret réel). */
 const cles = clesPii({
@@ -42,6 +42,8 @@ const cles = clesPii({
   ),
   PII_ENCRYPTION_KEY: 'e'.repeat(64),
 });
+/** L'empreinte tronquée de l'adresse, par la primitive, jamais l'adresse. */
+const IP_HASH = empreinteAdresseReseau(ADRESSE, cles);
 
 beforeAll(async () => {
   base = await demarrerBase();
@@ -124,7 +126,7 @@ describe('REQ-SEC-058 — une ligne par accès, par identifiants seuls', () => {
     const a = await unApporteur();
     const lu = await lireCoordonneesDeLApporteur(
       app,
-      { utilisateurConsoleId: u, apporteurId: a, ipHash: IP_HASH },
+      { utilisateurConsoleId: u, apporteurId: a, adresse: ADRESSE },
       cles
     );
     expect(lu.nom).toBe('Témoin');
@@ -141,7 +143,7 @@ describe('REQ-SEC-058 — une ligne par accès, par identifiants seuls', () => {
 
   it('REQ-SEC-058 : TÉMOIN — une connexion réussie écrit une ligne sans cible ; une connexion échouée n’en écrit aucune', async () => {
     const u = await unUtilisateur();
-    await journaliserConnexionConsole(app, { utilisateurConsoleId: u, ipHash: IP_HASH });
+    await journaliserConnexionConsole(app, { utilisateurConsoleId: u, adresse: ADRESSE }, cles);
     const lignes = await base.prisma.journalAccesConsole.findMany({
       where: { utilisateurConsoleId: u },
     });
