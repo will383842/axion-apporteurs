@@ -888,8 +888,8 @@
       }
       .c-barre [aria-current='page'],
       .c-barre [aria-expanded='true'] {
-        background: var(--info-fond);
-        color: var(--info-texte);
+        background: var(--primaire);
+        color: var(--sur-primaire);
         font-weight: 800;
       }
       .c-menu {
@@ -1038,7 +1038,13 @@
         font-size: 13px;
       }
       .s-replier,
-      .s-qui-bouton,
+      .s-qui-bouton {
+        background: transparent;
+        border: 0;
+        color: inherit;
+        font: inherit;
+        cursor: pointer;
+      }
       .s-replier {
         display: grid;
         place-items: center;
@@ -1084,7 +1090,7 @@
           600 12px/1 ui-monospace,
           Consolas,
           monospace;
-        color: #9e9387;
+        color: var(--b-doux);
         border: 1px solid rgba(236, 228, 216, 0.25);
         border-radius: 6px;
         padding: 4px 6px;
@@ -1120,7 +1126,6 @@
       .s-entree:focus-visible,
       .s-qui-bouton:focus-visible,
       .s-replier:focus-visible,
-      .s-ouvrir:focus-visible,
       .s-marque:focus-visible {
         outline: 2px solid #f0a37f;
         outline-offset: 2px;
@@ -1309,14 +1314,6 @@
           border-bottom: 1px solid var(--surface-2);
           font-weight: 800;
         }
-        .s-ouvrir {
-          display: grid;
-          place-items: center;
-          width: 48px;
-          height: 48px;
-          border-radius: 10px;
-          color: var(--texte);
-        }
         .app.avec-barre .c-tete.s-barre {
           position: absolute;
           top: 0;
@@ -1366,37 +1363,6 @@
           color: #f3ede4;
           border-bottom: 0;
         }
-        .app.avec-barre .c-marque {
-          color: #ffffff;
-          font-size: 18px;
-          padding: 0 8px 12px;
-          border-bottom: 1px solid rgba(243, 237, 228, 0.18);
-        }
-        .app.avec-barre .c-nav {
-          flex-direction: column;
-          gap: 2px;
-        }
-        .app.avec-barre .c-nav a {
-          color: #f3ede4;
-          border-radius: 10px;
-          padding: 0 14px;
-        }
-        .app.avec-barre .c-nav a[aria-current='page'] {
-          background: #c24a1b;
-          color: #ffffff;
-        }
-        .app.avec-barre .c-recherche {
-          order: -1;
-        }
-        .app.avec-barre .c-compte {
-          margin-top: auto;
-          color: #f3ede4;
-          background: rgba(243, 237, 228, 0.08);
-          border-color: rgba(243, 237, 228, 0.25);
-          justify-content: flex-start;
-          font-size: 14px;
-          text-align: left;
-        }
         .app.avec-barre .defile {
           grid-column: 2;
           grid-row: 1;
@@ -1414,6 +1380,10 @@
             0 1px 2px rgba(28, 25, 23, 0.08),
             0 4px 12px rgba(28, 25, 23, 0.08);
         }
+      }
+      /* La cible du champ de recherche est toute la hauteur de son étiquette (44 px). */
+      .s-recherche input {
+        align-self: stretch;
       }
       @container (min-width: 768px) {
         .app.avec-barre .c-barre {
@@ -1433,6 +1403,13 @@
       }
 
       /* charte:fin */
+
+      /* Propre à la page, hors charte (UX-P1-50, point 6) : une pastille longue de la file passe à la
+         ligne au lieu de sortir de l'écran à 360 px. */
+      .rangee .pastille {
+        white-space: normal;
+        max-width: 100%;
+      }
     </style>
   </head>
   <body>
