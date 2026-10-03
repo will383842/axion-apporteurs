@@ -945,7 +945,7 @@ enum ResultatDecisionCandidature {
 /// CPL-T06 (REQ-CPL-006 ; cadrage de l'architecte du 2026-09-26, partners/ADR-0022) — l'étape 3 du
 /// cycle. EN AJOUT SEUL : une nouvelle décision est une nouvelle ligne ; mise à jour, suppression et
 /// troncature sont refusées par la base (`refuser_modification_sauf`, migration
-/// `20261003000800_decisions_candidature`). Le changement de statut de l'apporteur qui la suit entre
+/// `20261003001200_decisions_candidature`). Le changement de statut de l'apporteur qui la suit entre
 /// au journal sous `apporteur_statut_modifie`.
 model DecisionCandidature {
   id                    String                      @id @default(uuid()) @db.Uuid
