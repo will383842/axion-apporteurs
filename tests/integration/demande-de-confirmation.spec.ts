@@ -86,8 +86,13 @@ afterAll(async () => {
   await base?.arreter();
 });
 
-/** Une attribution `provisoire` d'apporteur, au contact complet (blocs factices), par SQL brut. */
-async function uneAttribution(p: { purgeContactAt?: Date | null } = {}): Promise<string> {
+/**
+ * Une attribution d'apporteur, `provisoire` par défaut, au contact complet (blocs factices), par
+ * SQL brut. La purge ne touche jamais un état occupant : son témoin sème un état libéré.
+ */
+async function uneAttribution(
+  p: { purgeContactAt?: Date | null; statut?: string } = {}
+): Promise<string> {
   const id = randomUUID();
   const bloc = () => randomBytes(40);
   await base.prisma.$executeRawUnsafe(
@@ -95,7 +100,7 @@ async function uneAttribution(p: { purgeContactAt?: Date | null } = {}): Promise
        date_contact, verification_prioritaire, entreprise_a_verifier,
        nom_contact_chiffre, prenom_contact_chiffre, email_chiffre, email_hash, telephone_chiffre,
        phone_hash, fonction_contact_chiffre, contexte_chiffre, lien_interet_declare, purge_contact_at)
-     VALUES ($1::uuid, $2::uuid, 'provisoire'::etat_attribution, $3, 'espace', $4::uuid, '2026-10-01',
+     VALUES ($1::uuid, $2::uuid, $14::etat_attribution, $3, 'espace', $4::uuid, '2026-10-01',
        false, false, $5, $6, $7, $8, $9, $10, $11, $12, false, $13)`,
     id,
     apporteurId,
@@ -109,7 +114,8 @@ async function uneAttribution(p: { purgeContactAt?: Date | null } = {}): Promise
     hex(32),
     bloc(),
     bloc(),
-    p.purgeContactAt ?? null
+    p.purgeContactAt ?? null,
+    p.statut ?? 'provisoire'
   );
   return id;
 }
@@ -607,7 +613,10 @@ describe('REQ-DM-005 — la correction est une révision tracée, deposee_at inc
 
 describe('REQ-DM-031 — la purge du contact révoque TOUTES les émissions, vide l’empreinte du clic, purge les révisions', () => {
   it('REQ-DM-031 : TÉMOIN — après la purge, plus de jeton, plus d’empreinte de clic, plus de bloc dans les révisions', async () => {
-    const a = await uneAttribution({ purgeContactAt: new Date('2026-01-01T00:00:00.000Z') });
+    const a = await uneAttribution({
+      statut: 'perdue',
+      purgeContactAt: new Date('2026-01-01T00:00:00.000Z'),
+    });
     const id = await base.prisma.$transaction((tx) =>
       creerLaDemande(tx, { attributionId: a, ...jetons(), acteur: ACTEUR })
     );
@@ -629,6 +638,10 @@ describe('REQ-DM-031 — la purge du contact révoque TOUTES les émissions, vid
       hex(32)
     );
     await purgerLesContacts(base.prisma, new Date('2026-10-02T12:00:00.000Z'));
+    // La purge a bien eu lieu : sans elle, ce témoin ne prouverait rien.
+    const [p] = await base.prisma.$queryRaw<{ faite: Date | null }[]>`
+      SELECT contact_purge_at AS faite FROM attributions WHERE id = ${a}::uuid`;
+    expect(p!.faite).not.toBeNull();
     const e = await emissionsDe(id);
     expect(e).toHaveLength(2);
     for (const x of e) {
