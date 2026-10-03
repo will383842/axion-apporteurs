@@ -295,4 +295,63 @@ describe('REQ-SEC-003 — SEC-45 : un nouveau RIB révoque les sessions, le prem
     await Promise.all([premiere, seconde]);
     expect(await version(a)).toBe(1);
   });
+
+  it('REQ-SEC-003 : TÉMOIN — SANS DEADLOCK : les deux transactions tiennent d’abord FOR KEY SHARE sur l’apporteur (comme la clé étrangère), puis insèrent ; aucune erreur, et la version vaut 1', async () => {
+    const a = await apporteur();
+    const rib = (tx: Pick<PrismaClient, '$executeRawUnsafe'>, statut: string) =>
+      tx.$executeRawUnsafe(
+        `INSERT INTO pieces_kyc (id, apporteur_id, type, statut, iban_chiffre, iban_hash)
+         VALUES ($1::uuid, $2::uuid, 'rib', $3::statut_piece_kyc, $4, $5)`,
+        randomUUID(),
+        a,
+        statut,
+        randomBytes(40),
+        hex(32)
+      );
+    const partager = (tx: Pick<PrismaClient, '$executeRawUnsafe'>) =>
+      tx.$executeRawUnsafe(`SELECT 1 FROM apporteurs WHERE id = $1::uuid FOR KEY SHARE`, a);
+    const signal = () => {
+      let donner!: () => void;
+      const attendre = new Promise<void>((r) => (donner = r));
+      return { donner, attendre };
+    };
+    const premierPartage = signal();
+    const secondPartage = signal();
+    const premiereInseree = signal();
+    const relache = signal();
+    // Ordre forcé : les DEUX tiennent KEY SHARE avant toute insertion — le cas qui bloquait FOR UPDATE.
+    const premiere = app.$transaction(
+      async (tx) => {
+        await partager(tx);
+        premierPartage.donner();
+        await secondPartage.attendre;
+        await rib(tx, 'valide');
+        premiereInseree.donner();
+        await relache.attendre;
+      },
+      { timeout: 30_000 }
+    );
+    const seconde = app2.$transaction(
+      async (tx) => {
+        await premierPartage.attendre;
+        await partager(tx);
+        secondPartage.donner();
+        await premiereInseree.attendre;
+        await rib(tx, 'a_verifier');
+      },
+      { timeout: 30_000 }
+    );
+    await premiereInseree.attendre;
+    for (let i = 0; ; i += 1) {
+      const [attente] = await base.prisma.$queryRaw<{ n: number }[]>`
+        SELECT count(*)::int AS n FROM pg_stat_activity
+        WHERE wait_event_type = 'Lock' AND usename = 'partners_app'`;
+      if ((attente?.n ?? 0) > 0) break;
+      if (i > 200) throw new Error('la seconde insertion n’a jamais attendu le verrou');
+      await new Promise((r) => setTimeout(r, 50));
+    }
+    relache.donner();
+    await expect(Promise.all([premiere, seconde])).resolves.toBeDefined();
+    expect(await version(a)).toBe(1);
+  });
 });

@@ -14,13 +14,17 @@
 -- `NEW.apporteur_id`, jamais l'acteur.
 -- LA COURSE (A02 et la sécurité) : sous READ COMMITTED, deux PREMIERS RIB insérés en même temps ne se
 -- verraient pas, et aucun ne révoquerait. La ligne de l'apporteur est donc VERROUILLÉE avant l'EXISTS :
--- la seconde insertion attend la première, puis la voit, et révoque.
+-- la seconde insertion attend la première, puis la voit, et révoque. FOR NO KEY UPDATE, et non FOR
+-- UPDATE (A02) : la clé étrangère `pieces_kyc.apporteur_id` pose un FOR KEY SHARE sur l'apporteur
+-- AVANT ce déclencheur ; FOR UPDATE, en conflit avec KEY SHARE, mettrait deux insertions concurrentes
+-- en DEADLOCK. FOR NO KEY UPDATE est compatible avec KEY SHARE et en conflit avec lui-même : la
+-- sérialisation est gardée, sans deadlock.
 CREATE FUNCTION pieces_kyc_revoquer_sessions_au_changement_de_rib() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
   IF NEW."type" <> 'rib' THEN
     RETURN NULL;
   END IF;
-  PERFORM 1 FROM "apporteurs" WHERE "id" = NEW."apporteur_id" FOR UPDATE;
+  PERFORM 1 FROM "apporteurs" WHERE "id" = NEW."apporteur_id" FOR NO KEY UPDATE;
   IF EXISTS (
     SELECT 1 FROM "pieces_kyc"
     WHERE "apporteur_id" = NEW."apporteur_id" AND "type" = 'rib' AND "id" <> NEW."id"
