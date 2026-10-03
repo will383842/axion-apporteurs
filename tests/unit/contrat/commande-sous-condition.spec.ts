@@ -8,7 +8,7 @@
  *   (a) l'art. 4.4 porte la phrase, mot pour mot ;
  *   (b) AUCUNE clause ne date une commande à la levée ou à la réalisation de la condition ;
  *   (c) la défaillance vaut annulation au sens de l'art. 3.3 ;
- *   (d) la renonciation avant la défaillance garde la date ; un accord après est une nouvelle commande.
+ *   (d) la levée de la condition avant la défaillance garde la date ; un accord après est une nouvelle commande.
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -51,9 +51,11 @@ describe('REQ-JUR-061 — la commande sous condition suspensive est datée de sa
     expect(article44()).toContain("vaut annulation au sens de l'article 3.3");
   });
 
-  it('REQ-DM-022 : (d) la renonciation avant la défaillance garde la date ; une convention signée après est une nouvelle commande, et un accord tardif ne fait pas revivre la caduque', () => {
+  it('REQ-DM-022 : (d) la levée de la condition avant la défaillance garde la date ; une convention signée après est une nouvelle commande, et un accord tardif ne fait pas revivre la caduque', () => {
     const a = article44();
-    expect(a).toContain('la condition est levée par renonciation avant sa défaillance');
+    expect(a).toContain(
+      "la partie dans l'intérêt exclusif de laquelle la condition est stipulée l'abandonne avant sa défaillance"
+    );
     expect(a).toContain('la commande conserve la date de sa signature');
     expect(a).toContain(
       'un accord de prise en charge intervenu après la défaillance ne fait pas revivre la commande caduque'
