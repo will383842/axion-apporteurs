@@ -848,18 +848,21 @@ enum ResultatDecisionCandidature {
 /// `20261003000200_decisions_candidature`). Le changement de statut de l'apporteur qui la suit entre
 /// au journal sous `apporteur_statut_modifie`.
 model DecisionCandidature {
-  id             String                      @id @default(uuid()) @db.Uuid
-  apporteurId    String                      @map("apporteur_id") @db.Uuid
-  apporteur      Apporteur                   @relation(fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  resultat       ResultatDecisionCandidature
-  /// Le motif de la décision : exigé, jamais vide (CHECK en SQL brut).
-  justification  String                      @db.Text
+  id                    String                      @id @default(uuid()) @db.Uuid
+  apporteurId           String                      @map("apporteur_id") @db.Uuid
+  apporteur             Apporteur                   @relation(fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  resultat              ResultatDecisionCandidature
+  /// Le motif de la décision : exigé à l'insertion, jamais vide (CHECK en SQL brut). Il se PURGE
+  /// (rattrapage 81) : passé à NULL avec `justificationPurgeeAt`, ensemble ou pas du tout (CHECK
+  /// `decisions_candidature_justification_purge_liee`), et ne revient jamais.
+  justification         String?                     @db.Text
+  justificationPurgeeAt DateTime?                   @map("justification_purgee_at") @db.Timestamptz(3)
   /// Déclaratif et informatif (REQ-JUR-013) : aucune transition n'en dépend. Nul quand la présence
   /// n'est pas connue.
-  webinaireSuivi Boolean?                    @map("webinaire_suivi")
-  auteurId       String                      @map("auteur_id") @db.Uuid
-  auteur         UtilisateurConsole          @relation(fields: [auteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  decideeAt      DateTime                    @map("decidee_at") @db.Timestamptz(3)
+  webinaireSuivi        Boolean?                    @map("webinaire_suivi")
+  auteurId              String                      @map("auteur_id") @db.Uuid
+  auteur                UtilisateurConsole          @relation(fields: [auteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  decideeAt             DateTime                    @map("decidee_at") @db.Timestamptz(3)
 
   @@index([apporteurId, decideeAt])
   @@map("decisions_candidature")
