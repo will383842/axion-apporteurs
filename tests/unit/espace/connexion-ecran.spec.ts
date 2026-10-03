@@ -3,7 +3,7 @@
 /**
  * UX-P1-04 — l'écran « Se connecter » de l'espace, côté écran : le code à six chiffres, ses deux
  * refus, la page « lien déjà utilisé », le mode installé et la redirection bornée. Le mécanisme du
- * code vit dans `lien-magique.ts` (SEC-54) ; l'écran ne fait que l'afficher.
+ * code vit dans `lien-magique.ts` ; l'écran ne fait que l'afficher.
  *
  * CE QU'IL GARDE :
  *   (1) LES TEXTES DE LA JURISTE, mot pour mot (rattrapage 88) : un SEUL texte pour tout refus de
