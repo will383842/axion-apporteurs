@@ -29,6 +29,7 @@ import {
 } from '../../src/server/taches/ouvrir-anomalies-auto-parrainage';
 import { ajouterEvenement } from '../../src/server/evenement/journal';
 import { naissanceDApporteur } from '../../src/domain/evenement/charges';
+import { SEUILS } from '../../src/domain/seuils/ssot';
 
 let base: Base;
 let adminId: string;
@@ -306,6 +307,40 @@ describe('REQ-SEC-031 — le geste n’ouvre rien ; la tâche différée ouvre, 
     expect(toutes.map((a) => a.statut).sort()).toEqual(['levee', 'ouverte']);
     const seconde = toutes.find((a) => a.statut === 'ouverte')!;
     expect(await ouvertures(seconde.id)).toHaveLength(1);
+  });
+
+  it('REQ-SEC-031 : TÉMOIN — après une levée par la console, sans fait nouveau, le passage suivant ne rouvre rien ; une naissance postérieure, si', async () => {
+    const commun = hex(32);
+    const parrain = await apporteur({ phoneHash: commun });
+    const vise = await apporteur({ parrainCode: parrain.code, phoneHash: commun });
+    await naitreCandidature(vise.id);
+    const premier = await passage();
+    const [ouverte] = await anomalies(vise.id);
+    expect(ouverte).toMatchObject({ type: 'auto_parrainage', statut: 'ouverte' });
+    await base.prisma.$executeRawUnsafe(
+      `UPDATE anomalies SET statut = 'levee', traite_at = $2, traite_par_id = $3::uuid,
+         justification_chiffre = $4 WHERE id = $1::uuid`,
+      ouverte!.id,
+      MAINTENANT,
+      adminId,
+      randomBytes(40)
+    );
+    // Le passage suivant repart du curseur que le premier a rendu (son battement).
+    const apres = new Date(
+      MAINTENANT.getTime() + SEUILS.AUTO_PARRAINAGE_CADENCE_MINUTES.valeur * 60_000
+    );
+    const suivant = (curseur: number) =>
+      ouvrirLesAnomaliesDAutoParrainage(base.prisma, {
+        maintenant: () => apres,
+        precedent: async () => ({ curseur, passeAtMs: MAINTENANT.getTime() }),
+      });
+    expect((await suivant(premier.curseur)).ouvertes).toBe(0);
+    expect((await anomalies(vise.id)).map((a) => a.statut)).toEqual(['levee']);
+    // Une pièce RIB née APRÈS la levée est un fait nouveau : elle se juge, et rouvre.
+    const piece = await rib(vise.id, hex(32));
+    await naitreRib(piece, vise.id);
+    expect((await suivant(premier.curseur)).ouvertes).toBe(1);
+    expect((await anomalies(vise.id)).map((a) => a.statut).sort()).toEqual(['levee', 'ouverte']);
   });
 
   it('REQ-SEC-031 : aucun événement de l’agrégat anomalie ne partage une transaction (xmin) avec un événement de l’agrégat apporteur ; la charge d’ouverture ne nomme personne', async () => {

@@ -25,7 +25,8 @@ import { randomUUID } from 'node:crypto';
 import type { Prisma, PrismaClient } from '@prisma/client';
 import { SEUILS } from '../../domain/seuils/ssot';
 import { MS_PAR_JOUR, MS_PAR_MINUTE } from '../../domain/temps/calendrier-civil';
-import { ajouterEvenement, type NouvelEvenement } from '../evenement/journal';
+import type { LigneJournal } from '../../domain/evenement/journal';
+import { ajouterEvenement, lireJournalParLots, type NouvelEvenement } from '../evenement/journal';
 import {
   famillesDe,
   soupconsALaCandidature,
@@ -39,7 +40,11 @@ import {
 export const TACHE_AUTO_PARRAINAGE = 'auto_parrainage_ouvrir' as const;
 
 /** Un lot de lecture du journal : la tâche reprend au lot suivant, dans le même passage. */
-const LOT = 200;
+/** Les deux types d'événement qui portent une naissance : candidature et pièce KYC. */
+const TYPES_DE_NAISSANCE: ReadonlySet<string> = new Set([
+  'apporteur_statut_modifie',
+  'piece_kyc_statut_modifie',
+]);
 
 export interface PortsDeLOuverture {
   maintenant(): Date;
@@ -47,6 +52,11 @@ export interface PortsDeLOuverture {
   precedent(): Promise<{ curseur: number; passeAtMs: number } | null>;
   /** La trace sans donnée de personne : le moment et les familles. */
   journal?: (ligne: LigneDuJournal) => void;
+  /**
+   * Le lecteur du journal ; `lireJournalParLots` par défaut. Le journal ne se lit que par son module
+   * (`journal:sans-pii`) : la tâche ne touche jamais la table, elle filtre ce que le module rend.
+   */
+  lireJournal?: () => Promise<LigneJournal[]>;
   /** L'écrivain du journal, dans la transaction de l'ouverture ; `ajouterEvenement` par défaut. */
   journaliser?: (tx: Prisma.TransactionClient, e: NouvelEvenement) => Promise<unknown>;
 }
@@ -95,13 +105,13 @@ interface Naissance {
 }
 
 /**
- * Une naissance utile, ou `null`. Le filtre de lecture ne rend que les deux types : une naissance
- * d'apporteur est une candidature ; une naissance de pièce n'est utile que pour une pièce `rib`.
+ * Une naissance utile, ou `null`. Le passage ne lui donne que les deux types de naissance : celle
+ * d'un apporteur est une candidature ; celle d'une pièce n'est utile que pour une pièce `rib`.
  */
 function naissanceDe(e: {
   type: string;
   agregatId: string | null;
-  charge: Prisma.JsonValue;
+  charge: unknown;
 }): Naissance | null {
   const c = e.charge as { de?: unknown; type?: unknown } | null;
   if (e.agregatId === null || c?.de !== null) return null;
@@ -133,37 +143,31 @@ export async function ouvrirLesAnomaliesDAutoParrainage(
   const borne = new Date(
     maintenant.getTime() - SEUILS.AUTO_PARRAINAGE_FENETRE_JOURS.valeur * MS_PAR_JOUR
   );
-  let curseur = precedent?.curseur ?? 0;
+  const depart = precedent?.curseur ?? 0;
+  let curseur = depart;
   let naissancesLues = 0;
   let ouvertes = 0;
-  for (;;) {
-    const lot = await prisma.evenement.findMany({
-      where: {
-        id: { gt: BigInt(curseur) },
-        type: { in: ['apporteur_statut_modifie', 'piece_kyc_statut_modifie'] },
-        survenuAt: { gte: borne },
-      },
-      select: { id: true, type: true, agregatId: true, charge: true },
-      orderBy: { id: 'asc' },
-      take: LOT,
-    });
-    for (const e of lot) {
-      curseur = Number(e.id);
-      const n = naissanceDe(e);
-      if (n === null) continue;
-      naissancesLues += 1;
-      const soupcons = await soupconsDe(prisma, n);
-      if (soupcons.length === 0) continue;
-      for (const s of soupcons) {
-        if (await ouvrirUneAnomalie(prisma, s.filleulId, ports)) ouvertes += 1;
-      }
-      ports.journal?.({
-        signal: 'auto_parrainage_soupconne',
-        moment: n.moment,
-        correspondances: famillesDe(soupcons),
-      });
+  const lignes = await (ports.lireJournal ?? (() => lireJournalParLots(prisma)))();
+  for (const l of lignes) {
+    const id = Number(l.id);
+    // Seuls les faits NOUVEAUX depuis le dernier passage se jugent : une anomalie levée par la
+    // console ne se rouvre pas sans une naissance postérieure.
+    if (id <= depart) continue;
+    curseur = Math.max(curseur, id);
+    if (!TYPES_DE_NAISSANCE.has(l.type) || Date.parse(l.survenuAt) < borne.getTime()) continue;
+    const n = naissanceDe(l);
+    if (n === null) continue;
+    naissancesLues += 1;
+    const soupcons = await soupconsDe(prisma, n);
+    if (soupcons.length === 0) continue;
+    for (const s of soupcons) {
+      if (await ouvrirUneAnomalie(prisma, s.filleulId, ports)) ouvertes += 1;
     }
-    if (lot.length < LOT) break;
+    ports.journal?.({
+      signal: 'auto_parrainage_soupconne',
+      moment: n.moment,
+      correspondances: famillesDe(soupcons),
+    });
   }
   return { curseur, passeAtMs: maintenant.getTime(), naissancesLues, ouvertes };
 }

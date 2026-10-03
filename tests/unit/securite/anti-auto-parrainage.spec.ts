@@ -15,7 +15,7 @@
  *      transaction, journalise l'ouverture SEULEMENT si une ligne est rendue, et respecte sa cadence ;
  *   4. LES DEUX RÉPONSES : nommée côté console, NEUTRE côté espace.
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import type { PrismaClient } from '@prisma/client';
 import {
   FAMILLES_D_EMPREINTE,
@@ -312,6 +312,7 @@ interface Evt {
   type: string;
   agregatId: string | null;
   charge: unknown;
+  survenuAt?: Date;
 }
 
 function baseDeLaTache(o: {
@@ -338,25 +339,27 @@ function baseDeLaTache(o: {
         return apporteurId === undefined ? null : { apporteurId };
       },
     },
-    evenement: {
-      findMany: async (args: {
-        where: { id: { gt: bigint }; survenuAt: { gte: Date } };
-        take: number;
-      }) => {
-        lectures.push(args);
-        return o.evenements
-          .filter((e) => BigInt(e.id) > args.where.id.gt)
-          .slice(0, args.take)
-          .map((e) => ({ ...e, id: BigInt(e.id) }));
-      },
-    },
     $transaction: async <T>(f: (t: unknown) => Promise<T>) => f(tx),
   };
   const journalises: unknown[] = [];
   const traces: LigneDuJournal[] = [];
+  const lireJournal = async () => {
+    lectures.push('journal');
+    return o.evenements.map((e) => ({
+      id: String(e.id),
+      type: e.type,
+      agregat: 'x',
+      agregatId: e.agregatId,
+      survenuAt: (e.survenuAt ?? T0).toISOString(),
+      charge: e.charge,
+      prevHash: '',
+      selfHash: '',
+    }));
+  };
   const ports = (precedent: { curseur: number; passeAtMs: number } | null = null) => ({
     maintenant: () => T0,
     precedent: async () => precedent,
+    lireJournal,
     journal: (l: LigneDuJournal) => traces.push(l),
     journaliser: async (t: unknown, e: unknown) => {
       expect(t).toBe(tx);
@@ -484,6 +487,7 @@ describe('REQ-SEC-031 — la tâche différée ouvre l’anomalie, une fois, jou
     const ports = {
       maintenant: complets.maintenant,
       precedent: complets.precedent,
+      lireJournal: complets.lireJournal,
       journaliser: complets.journaliser,
     };
     expect((await ouvrirLesAnomaliesDAutoParrainage(b.prisma, ports)).ouvertes).toBe(1);
@@ -521,24 +525,40 @@ describe('REQ-SEC-031 — la tâche différée ouvre l’anomalie, une fois, jou
     expect(b.ecrits).toEqual([]);
   });
 
-  it('REQ-SEC-031 : la lecture part du curseur du dernier passage, ne relit que les deux types, et reste bornée par la fenêtre de la SSOT', async () => {
-    const b = baseDeLaTache({ lignes: [PARRAIN], evenements: [] });
+  it('REQ-SEC-031 : seuls les faits NOUVEAUX se jugent — au-delà du curseur, des deux types, dans la fenêtre de la SSOT', async () => {
+    const fenetreMs = SEUILS.AUTO_PARRAINAGE_FENETRE_JOURS.valeur * 86_400_000;
+    const b = baseDeLaTache({
+      lignes: [PARRAIN, filleul({ phoneHash: H('b') })],
+      evenements: [
+        { ...NAISSANCE_CANDIDATURE, id: 42 },
+        { ...NAISSANCE_CANDIDATURE, id: 43, type: 'attribution_statut_modifie' },
+        { ...NAISSANCE_CANDIDATURE, id: 44, survenuAt: new Date(T0.getTime() - fenetreMs - 1) },
+        { ...NAISSANCE_CANDIDATURE, id: 45, survenuAt: new Date(T0.getTime() - fenetreMs) },
+      ],
+    });
     const avant = T0.getTime() - 2 * SEUILS.AUTO_PARRAINAGE_CADENCE_MINUTES.valeur * 60_000;
     expect(
       await ouvrirLesAnomaliesDAutoParrainage(b.prisma, b.ports({ curseur: 42, passeAtMs: avant }))
-    ).toEqual({ curseur: 42, passeAtMs: T0.getTime(), naissancesLues: 0, ouvertes: 0 });
-    expect(b.lectures[0]).toEqual({
-      where: {
-        id: { gt: 42n },
-        type: { in: ['apporteur_statut_modifie', 'piece_kyc_statut_modifie'] },
-        survenuAt: {
-          gte: new Date(T0.getTime() - SEUILS.AUTO_PARRAINAGE_FENETRE_JOURS.valeur * 86_400_000),
-        },
-      },
-      select: { id: true, type: true, agregatId: true, charge: true },
-      orderBy: { id: 'asc' },
-      take: 200,
+    ).toEqual({ curseur: 45, passeAtMs: T0.getTime(), naissancesLues: 1, ouvertes: 1 });
+    expect(b.lectures.filter((l) => l === 'journal')).toHaveLength(1);
+  });
+
+  it('REQ-SEC-031 : TÉMOIN — après une levée, sans fait nouveau, rien ne se rouvre : le passage suivant repart du curseur rendu', async () => {
+    const b = baseDeLaTache({
+      lignes: [PARRAIN, filleul({ phoneHash: H('b') })],
+      evenements: [NAISSANCE_CANDIDATURE],
     });
+    const premier = await ouvrirLesAnomaliesDAutoParrainage(b.prisma, b.ports());
+    expect(premier.ouvertes).toBe(1);
+    // La console lève l'anomalie : rien ne l'empêche plus, côté base, d'en ouvrir une autre.
+    const suivant = T0.getTime() + SEUILS.AUTO_PARRAINAGE_CADENCE_MINUTES.valeur * 60_000;
+    expect(
+      await ouvrirLesAnomaliesDAutoParrainage(b.prisma, {
+        ...b.ports({ curseur: premier.curseur, passeAtMs: T0.getTime() }),
+        maintenant: () => new Date(suivant),
+      })
+    ).toEqual({ curseur: 10, passeAtMs: suivant, naissancesLues: 0, ouvertes: 0 });
+    expect(b.ecrits).toHaveLength(1);
   });
 
   it('REQ-SEC-031 : avant sa cadence, le passage rend le MÊME curseur et ne lit rien', async () => {
@@ -556,15 +576,19 @@ describe('REQ-SEC-031 — la tâche différée ouvre l’anomalie, une fois, jou
     ).toBe(10);
   });
 
-  it('REQ-SEC-031 : un lot plein appelle le lot suivant, dans le même passage', async () => {
-    const evenements = Array.from({ length: 201 }, (_, i) => ({
-      ...NAISSANCE_CANDIDATURE,
-      id: i + 1,
-      charge: { de: 'candidat', vers: 'retenu' },
-    }));
-    const b = baseDeLaTache({ lignes: [PARRAIN], evenements });
-    expect((await ouvrirLesAnomaliesDAutoParrainage(b.prisma, b.ports())).curseur).toBe(201);
-    expect(b.lectures).toHaveLength(2);
+  it('REQ-SEC-031 : sans port de lecture, le journal se lit par son module, `lireJournalParLots`', async () => {
+    const findMany = vi.fn(async () => []);
+    const b = baseDeLaTache({ lignes: [PARRAIN], evenements: [] });
+    const { lireJournal: _ignore, ...sansLecteur } = b.ports();
+    void _ignore;
+    const prisma = { ...(b.prisma as object), evenement: { findMany } } as unknown as PrismaClient;
+    expect(await ouvrirLesAnomaliesDAutoParrainage(prisma, sansLecteur)).toEqual({
+      curseur: 0,
+      passeAtMs: T0.getTime(),
+      naissancesLues: 0,
+      ouvertes: 0,
+    });
+    expect(findMany).toHaveBeenCalledWith({ where: {}, orderBy: { id: 'asc' }, take: 1000 });
   });
 
   it('REQ-SEC-031 : le précédent passage se relit au battement de la tâche ; une forme inattendue vaut un premier passage', async () => {
