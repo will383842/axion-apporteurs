@@ -1,3 +1,4 @@
+// @req REQ-DM-031
 // @req REQ-CPL-009
 // @req REQ-JUR-009
 // @req REQ-JUR-025
@@ -392,6 +393,30 @@ describe('tiers rencontré et destinataires', () => {
     expect(tiers?.rubriques.get('Droits et modalités d’exercice')?.sources).toContain(
       'REQ-SEC-030'
     );
+  });
+
+  it('REQ-DM-031 — la qualification d’un appel : finalité et destinataires de la juriste, purge avec le contact, démenti exprès gardé cinq ans', () => {
+    const tiers = traitements(REGISTRE).find((t) => t.id === 'TRT-TIERS');
+    expect(tiers?.rubriques.get('Finalité')?.contenu).toContain(
+      "consigner le résultat de l'appel de confirmation"
+    );
+    const destinataires = tiers?.rubriques.get('Destinataires')?.contenu ?? '';
+    expect(destinataires).toContain('pour le seul extrait de la réponse');
+    expect(destinataires).toContain("jamais l'intérêt, la prochaine étape ni le motif de perte");
+
+    const ligne = lignesDeTableau(section(REGISTRE, '3.')).find((l) => l[0] === '`qualifications`');
+    expect(ligne, 'ligne qualifications au §3').toBeDefined();
+    const [, traitement, duree, sources] = ligne!;
+    expect(traitement).toBe('TRT-TIERS');
+    // La règle : nom et termes chiffrés purgés avec le contact. L'unique exception : le démenti exprès,
+    // gardé cinq ans après la fin de l'attribution, sur la décision de Williams — plus une question.
+    expect(duree).toMatch(/purgés avec le contact de l'attribution/);
+    expect(duree).toMatch(/démenti exprès, article 3\.7/);
+    expect(duree).toMatch(/cinq ans après la fin de l'attribution/);
+    expect(duree).not.toMatch(/À compléter/);
+    expect(sources).toContain('décision de Williams du 2026-10-03');
+    expect(sources).toContain('REQ-DM-031');
+    expect(sourcesDe(ligne!.join(' ')).fautes).toEqual([]);
   });
 
   it('REQ-JUR-025 — chaque fiche tiers du dépôt a sa ligne au registre des destinataires (dérivé de docs/tiers)', () => {
