@@ -28,6 +28,8 @@ export const TACHES = {
   siren_refuses_purger: { req: 'REQ-DM-043' },
   /** DM-28 — la reprise des codes NAF nuls d'un dépôt en repli manuel (`completerLesCodesNaf`). */
   naf_completer: { req: 'REQ-DM-046' },
+  /** DM-59 — l'effacement, à échéance, de la valeur d'une rectification demandée par le contact. */
+  droits_contact_purger: { req: 'REQ-JUR-065' },
 } as const satisfies Readonly<Record<string, { req: `REQ-${string}` }>>;
 
 export type NomDeTache = keyof typeof TACHES;
