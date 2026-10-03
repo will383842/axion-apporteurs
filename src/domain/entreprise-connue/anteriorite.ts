@@ -68,6 +68,20 @@ export function factureHtDuDevis(
   return avoirs.reduce((s, a) => s - Math.abs(a.montantHtCents), facture);
 }
 
+/**
+ * Une PRESTATION FACTURÉE, au sens de la fenêtre cliente (art. 3.3) : une facture que rien n'éteint.
+ * Une facture annulée, ou entièrement éteinte par ses avoirs (déduits quel que soit leur signe), ne
+ * compte pas (remarque de la juriste sur DM-10-P).
+ */
+export function estPrestationFacturee(
+  laFacture: { montantHtCents: number; annulee: boolean },
+  avoirs: readonly { montantHtCents: number }[]
+): boolean {
+  if (laFacture.annulee) return false;
+  const credite = avoirs.reduce((s, a) => s + Math.abs(a.montantHtCents), 0);
+  return credite < laFacture.montantHtCents;
+}
+
 /** L'antériorité d'une entreprise à la date `maintenant`. */
 export function evaluerAnteriorite(faits: FaitsDUneEntreprise, maintenant: Date): Anteriorite {
   // Un refus fondé sur la liste se notifie par sa CATÉGORIE, jamais par un organisme (REQ-DM-028).

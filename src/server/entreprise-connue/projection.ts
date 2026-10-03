@@ -16,6 +16,7 @@ import { Prisma, TypeEvenementRecu, type PrismaClient } from '@prisma/client';
 import type { Traitants, EvenementATraiter } from '../queue/workers/evenement-recu';
 import {
   evaluerAnteriorite,
+  estPrestationFacturee,
   factureHtDuDevis,
   type Anteriorite,
   type DevisConnu,
@@ -171,7 +172,10 @@ export async function recalculerDevis(db: Client, devisRef: string): Promise<str
 
 // ── le recalcul d'une entreprise ────────────────────────────────────────────────────────────────
 
-/** Les dates des factures non annulées d'un SIREN, portées par la facture ou par son client. */
+/**
+ * Les dates des PRESTATIONS FACTURÉES d'un SIREN, portées par la facture ou par son client : une
+ * facture annulée, ou entièrement éteinte par ses avoirs, ne compte pas (`estPrestationFacturee`).
+ */
 async function datesDesFactures(db: Client, s: string): Promise<Date[]> {
   const parSiren = await charges(db, [TypeEvenementRecu.facture_emise], 'siren', s);
   const clients = await charges(db, TYPES_CLIENT, 'siren', s);
@@ -186,10 +190,19 @@ async function datesDesFactures(db: Client, s: string): Promise<Date[]> {
   const toutes = [...parSiren, ...parClient];
   const ids = toutes.map((f) => texte(f, 'factureId')).filter((x): x is string => !!x);
   const sansSuite = await annulees(db, ids);
-  return toutes
-    .filter((f) => !sansSuite.has(texte(f, 'factureId') ?? ''))
-    .map((f) => instant(f, 'emiseLe'))
-    .filter((d): d is Date => d !== null);
+  const dates: Date[] = [];
+  for (const f of toutes) {
+    const id = texte(f, 'factureId') ?? '';
+    const avoirs =
+      id === '' ? [] : await charges(db, [TypeEvenementRecu.avoir_emis], 'avoirDeFactureId', id);
+    const facturee = estPrestationFacturee(
+      { montantHtCents: entier(f, 'montantHtCents') ?? 0, annulee: sansSuite.has(id) },
+      avoirs.map((a) => ({ montantHtCents: entier(a, 'montantHtCents') ?? 0 }))
+    );
+    const d = instant(f, 'emiseLe');
+    if (facturee && d !== null) dates.push(d);
+  }
+  return dates;
 }
 
 /** Pose ou retire la ligne d'une origine, selon les dates qui la fondent. */
