@@ -136,6 +136,41 @@ export function jugerLesRoles(
   return null;
 }
 
+/**
+ * QA-T70 — LE plan de la propriété, UNIQUE, partagé par l'exercice et par la porte D : les rôles de la
+ * forme à créer AVANT la restauration (`--no-owner`), puis les `ALTER … OWNER TO partners_*` à rejouer
+ * APRÈS, dans l'ordre du vidage. Une faute (rôle hors de la forme, propriété piégée, propriétaires
+ * source multiples) rend la faute nommée, et AUCUN plan : rien n'est rejoué.
+ */
+export function planDeLaPropriete(
+  sqlDuSchema: string
+): { faute: string } | { avant: string[]; apres: string[] } {
+  const lu = rolesDuVidage(sqlDuSchema);
+  const faute = jugerLesRoles(lu, proprietairesSourceDuVidage(sqlDuSchema));
+  if (faute !== null) return { faute };
+  return {
+    avant: lu.roles.map(
+      (role) =>
+        `DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '${role}') THEN CREATE ROLE ${role} NOLOGIN; END IF; END $$;`
+    ),
+    apres: lu.proprietes,
+  };
+}
+
+/**
+ * La sortie du plan pour la ligne de commande (`--plan-de-propriete avant|apres`, schéma du vidage
+ * sur l'entrée standard) : une instruction par ligne, ou la faute, en échec fermé.
+ */
+export function sortieDuPlan(
+  moment: 'avant' | 'apres',
+  sqlDuSchema: string
+): { code: 0 | 1; texte: string } {
+  const plan = planDeLaPropriete(sqlDuSchema);
+  if ('faute' in plan) return { code: 1, texte: `❌ ${plan.faute}\n` };
+  const lignes = plan[moment];
+  return { code: 0, texte: lignes.length === 0 ? '' : `${lignes.join('\n')}\n` };
+}
+
 export type Verdict = {
   date: string;
   verdict: 'reussi' | 'echec';
@@ -235,17 +270,14 @@ export async function exercer(
     );
     if (schemaSql.status !== 0)
       return echec(`restauration : lecture du schéma du vidage sort en ${schemaSql.status}`);
-    const schemaLu = schemaSql.stdout.toString('utf8');
-    const lu = rolesDuVidage(schemaLu);
-    // Le compte seulement, jamais le texte : une ligne piégée peut porter n'importe quoi.
-    const faute = jugerLesRoles(lu, proprietairesSourceDuVidage(schemaLu));
-    if (faute !== null) return echec(faute);
-    for (const role of lu.roles) {
-      const cree = psql(
-        `DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '${role}') THEN CREATE ROLE ${role} NOLOGIN; END IF; END $$;`
-      );
+    // Le plan UNIQUE (QA-T70), partagé avec la porte D. La faute nomme des rôles et compte les
+    // lignes piégées, jamais leur texte : une ligne piégée peut porter n'importe quoi.
+    const plan = planDeLaPropriete(schemaSql.stdout.toString('utf8'));
+    if ('faute' in plan) return echec(plan.faute);
+    for (const creation of plan.avant) {
+      const cree = psql(creation);
       if (cree.status !== 0)
-        return echec(`restauration : création du rôle ${role} sort en ${cree.status}`);
+        return echec(`restauration : création d’un rôle de la forme sort en ${cree.status}`);
     }
 
     const restauration = spawnSync(
@@ -269,7 +301,7 @@ export async function exercer(
 
     // 3. La propriété rejouée : `--no-owner` a jeté chaque `ALTER … OWNER TO`, et avec lui le
     //    propriétaire du journal. Seules les instructions vers un rôle de la forme sont rejouées.
-    for (const propriete of lu.proprietes) {
+    for (const propriete of plan.apres) {
       const rejouee = psql(propriete);
       if (rejouee.status !== 0)
         return echec(`restauration : propriété non rejouée, psql sort en ${rejouee.status}`);
@@ -323,6 +355,15 @@ function arg(nom: string): string | undefined {
 }
 
 async function principal(): Promise<number> {
+  // QA-T70 : la porte D lit le plan de la propriété, le schéma du vidage sur l'entrée standard.
+  const moment = arg('--plan-de-propriete');
+  if (moment !== undefined) {
+    if (moment !== 'avant' && moment !== 'apres')
+      throw new Error('usage : --plan-de-propriete avant|apres < schéma du vidage');
+    const { code, texte } = sortieDuPlan(moment, readFileSync(0, 'utf8'));
+    (code === 0 ? process.stdout : process.stderr).write(texte);
+    return code;
+  }
   const fichier = arg('--vidage');
   if (!fichier) throw new Error('usage : --vidage <fichier> [--verdict <sortie.json>]');
   const phrase = process.env.PARTNERS_BACKUP_PASSPHRASE ?? '';
