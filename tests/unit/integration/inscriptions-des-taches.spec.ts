@@ -23,6 +23,11 @@ const m = vi.hoisted(() => ({
   traiterCandidatureRecue: vi.fn(),
   clientCoordonnees: vi.fn(),
   clesPii: vi.fn(),
+  minimiserCandidatures: vi.fn(),
+  purgerLesContacts: vi.fn(),
+  purgerLesSirenRefuses: vi.fn(),
+  purgerLesValeursDesDroits: vi.fn(),
+  anonymiserLesTracesDesDroits: vi.fn(),
 }));
 
 vi.mock('../../../src/server/queue/workers/evenement-recu', async (original) => ({
@@ -43,6 +48,21 @@ vi.mock('../../../src/server/integrations/axionia/candidature-recue', () => ({
   clientCoordonnees: m.clientCoordonnees,
 }));
 vi.mock('../../../src/server/securite/pii', () => ({ clesPii: m.clesPii }));
+vi.mock('../../../src/server/taches/minimiser-candidatures', () => ({
+  minimiserCandidatures: m.minimiserCandidatures,
+}));
+vi.mock('../../../src/server/taches/purger-contacts', () => ({
+  purgerLesContacts: m.purgerLesContacts,
+}));
+vi.mock('../../../src/server/taches/purger-siren-refuses', () => ({
+  purgerLesSirenRefuses: m.purgerLesSirenRefuses,
+}));
+vi.mock('../../../src/server/taches/purger-valeurs-droits-contact', () => ({
+  purgerLesValeursDesDroits: m.purgerLesValeursDesDroits,
+}));
+vi.mock('../../../src/server/taches/anonymiser-traces-droits-contact', () => ({
+  anonymiserLesTracesDesDroits: m.anonymiserLesTracesDesDroits,
+}));
 
 import {
   inscriptions,
@@ -167,5 +187,34 @@ describe('REQ-QA-027 — le traitant de la candidature relit ses secrets à chaq
     ];
     expect([prisma, recu, deps.tirer, deps.cles]).toEqual([PRISMA, RECU, tirer, 'cles']);
     expect(deps.maintenant()).toBeInstanceOf(Date);
+  });
+});
+
+describe('REQ-QA-027 — les tâches planifiées, branchées sur leur module', () => {
+  it('REQ-QA-027 : chaque tâche planifiée appelle SON module, avec le client et l’instant du passage, et rend son résultat', async () => {
+    const branchees = [
+      ['minimiser_candidatures', m.minimiserCandidatures, 3, { minimisees: 3 }],
+      ['contacts_purger', m.purgerLesContacts, { purgees: 1 }, { purgees: 1 }],
+      ['siren_refuses_purger', m.purgerLesSirenRefuses, { purges: 2 }, { purges: 2 }],
+      ['droits_contact_purger', m.purgerLesValeursDesDroits, { effacees: 4 }, { effacees: 4 }],
+      [
+        'droits_contact_anonymiser',
+        m.anonymiserLesTracesDesDroits,
+        { anonymisees: 5 },
+        { anonymisees: 5 },
+      ],
+    ] as const;
+    for (const [tache, module, rendu, attendu] of branchees) {
+      for (const f of Object.values(m)) f.mockReset();
+      module.mockResolvedValue(rendu);
+      const avant = Date.now();
+      expect([tache, await inscriptions(PRISMA, {})[tache]!()]).toEqual([tache, attendu]);
+      expect([tache, module.mock.calls.length]).toEqual([tache, 1]);
+      const [prisma, instant] = module.mock.calls[0]! as [unknown, Date];
+      expect([tache, prisma]).toEqual([tache, PRISMA]);
+      expect(instant).toBeInstanceOf(Date);
+      expect(instant.getTime()).toBeGreaterThanOrEqual(avant);
+      expect(instant.getTime()).toBeLessThanOrEqual(Date.now());
+    }
   });
 });
