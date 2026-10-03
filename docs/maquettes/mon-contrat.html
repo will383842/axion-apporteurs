@@ -1141,6 +1141,64 @@
 
       /* charte:fin */
     </style>
+    <style>
+      /* page:debut — propre à mon-contrat.html, hors de la charte commune. Les tableaux de l'annexe
+         (la grille) : à plat sur grand écran ; SOUS 640 PX, chaque ligne devient une carte empilée
+         (libellé puis valeur), sans aucun défilement latéral de la page (demande de Williams, 2026-10-03). */
+      .app table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 12px 0;
+      }
+      .app caption {
+        text-align: left;
+        font-weight: 700;
+        padding-bottom: 8px;
+      }
+      .app th,
+      .app td {
+        text-align: left;
+        vertical-align: top;
+        padding: 8px;
+        border-bottom: 1px solid var(--bord);
+        overflow-wrap: anywhere;
+      }
+      @media (max-width: 640px) {
+        .app table,
+        .app tbody,
+        .app tr,
+        .app td {
+          display: block;
+          width: 100%;
+        }
+        .app thead {
+          position: absolute;
+          width: 1px;
+          height: 1px;
+          overflow: hidden;
+          clip: rect(0 0 0 0);
+          white-space: nowrap;
+        }
+        .app tr {
+          border: 1px solid var(--bord);
+          border-radius: 12px;
+          padding: 8px 12px;
+          margin-bottom: 8px;
+          background: var(--surface);
+        }
+        .app td {
+          border: 0;
+          padding: 4px 0;
+        }
+        .app td::before {
+          content: attr(data-libelle);
+          display: block;
+          font-weight: 700;
+          color: var(--texte-doux);
+        }
+      }
+      /* page:fin */
+    </style>
   </head>
   <body>
     <svg width="0" height="0" style="position: absolute" aria-hidden="true" focusable="false">
@@ -1252,14 +1310,14 @@
                       </thead>
                       <tbody>
                         <tr>
-                          <td>Formations</td>
-                          <td>‹ taux publié ›</td>
-                          <td>‹ identique ›</td>
+                          <td data-libelle="Prestation">Formations</td>
+                          <td data-libelle="Grille publiée">‹ taux publié ›</td>
+                          <td data-libelle="Votre contrat">‹ identique ›</td>
                         </tr>
                         <tr>
-                          <td>Audits</td>
-                          <td>‹ taux publié ›</td>
-                          <td>
+                          <td data-libelle="Prestation">Audits</td>
+                          <td data-libelle="Grille publiée">‹ taux publié ›</td>
+                          <td data-libelle="Votre contrat">
                             ‹ en écart › <span class="pastille info">Écart justifié</span
                             ><br /><span class="doux"
                               >« Secteur déjà couvert par un autre apporteur de la zone » — fixé par
@@ -1405,14 +1463,14 @@
                       </thead>
                       <tbody>
                         <tr>
-                          <td>Formations</td>
-                          <td>‹ taux publié ›</td>
-                          <td>‹ identique ›</td>
+                          <td data-libelle="Prestation">Formations</td>
+                          <td data-libelle="Grille publiée">‹ taux publié ›</td>
+                          <td data-libelle="Votre contrat">‹ identique ›</td>
                         </tr>
                         <tr>
-                          <td>Audits</td>
-                          <td>‹ taux publié ›</td>
-                          <td>
+                          <td data-libelle="Prestation">Audits</td>
+                          <td data-libelle="Grille publiée">‹ taux publié ›</td>
+                          <td data-libelle="Votre contrat">
                             ‹ en écart › <span class="pastille info">Écart justifié</span
                             ><br /><span class="doux"
                               >« Secteur déjà couvert par un autre apporteur de la zone » — fixé par
