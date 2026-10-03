@@ -322,6 +322,34 @@ export function extrairePolitique(registre: string): LecturePolitique {
   }
 }
 
+// ── JUR-T57 : la politique PUBLIABLE ────────────────────────────────────────────────────────────
+
+/**
+ * Les segments « en cours de rédaction » de la politique rendue, rubriques et destinataires compris,
+ * quel qu'en soit le motif. Une qualification non tranchée est OMISE (aucun segment) : elle ne compte
+ * pas — c'est la seule omission admise (A07, rattrapage 80).
+ */
+export function segmentsEnCours(politique: Omit<Politique, 'version'>): number {
+  const tous = [
+    ...politique.rubriques.flatMap((r) => r.contenu),
+    ...politique.destinataires.flatMap((d) => [
+      ...d.qualification,
+      ...d.donnees,
+      ...d.localisation,
+    ]),
+  ];
+  return tous.filter((s) => s.type === 'a_completer').length;
+}
+
+/**
+ * CONDITION DE MISE EN SERVICE (A07, mot pour mot) : « la page ne peut pas être présentée à
+ * l'acceptation d'un Apporteur tant que la politique rendue contient un seul segment `a_completer`,
+ * quel qu'en soit le motif. Seule l'omission d'une qualification non tranchée est admise. »
+ */
+export function estPubliable(politique: Omit<Politique, 'version'>): boolean {
+  return segmentsEnCours(politique) === 0;
+}
+
 // ── le témoin de la page ────────────────────────────────────────────────────────────────────────
 
 /** Une durée écrite en chiffres, suivie de son unité (jours, semaines, mois, ans, heures). */
