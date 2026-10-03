@@ -54,10 +54,20 @@ until docker exec "$ID-base" pg_isready -U porte -d porte >/dev/null 2>&1; do
   sleep 1
 done
 
+# Le secret du rôle d'exécution : 64 hexadécimaux, dans l'alphabet que le provisionnement admet.
+SECRET_EXECUTION=$(secret)
+# Masqué AVANT tout usage, dans les journaux de la forge (aucun `set -x` dans ce script).
+echo "::add-mask::$SECRET_EXECUTION"
 FICHIER_ENV="$(mktemp)"
 for v in $REQUISES; do
   case "$v" in
-    DATABASE_URL) echo "DATABASE_URL=postgresql://porte:porte@$ID-base:5432/porte" ;;
+    # QA-T62 (REQ-DM-024) : comme la production, DEUX URL. La migration et le provisionnement passent
+    # sous le superutilisateur ÉPHÉMÈRE ; le serveur, sous son rôle d'exécution, dont le secret est
+    # tiré ici, puis CONSTATÉ par l'entrée de l'image (échec fermé).
+    DATABASE_URL)
+      echo "DATABASE_MIGRATION_URL=postgresql://porte:porte@$ID-base:5432/porte"
+      echo "DATABASE_URL=postgresql://partners_app:$SECRET_EXECUTION@$ID-base:5432/porte"
+      ;;
     REDIS_URL) echo "REDIS_URL=redis://$ID-cache:6379" ;;
     *) echo "$v=$(secret)" ;;
   esac
