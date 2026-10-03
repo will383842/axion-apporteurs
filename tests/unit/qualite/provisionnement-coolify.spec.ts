@@ -31,6 +31,8 @@ import { NOMS_DES_SECRETS, NOMS_DE_CONFIGURATION, NOMS_FACULTATIFS } from '../..
 const SCRIPT = 'scripts/deploiement/provisionner.ts';
 const TSX = 'node_modules/tsx/dist/cli.mjs';
 const SHA = 'c'.repeat(40);
+/** QA-T62 : le secret factice du rôle d'exécution, à la règle de `role-d-execution.ts`. */
+const SECRET_EXECUTION = 'secret-factice-du-role-d-execution-0123456789';
 
 type Appel = { methode: string; chemin: string; corps: unknown; auth: string | undefined };
 type Plateforme = {
@@ -171,6 +173,7 @@ function sansValeurDeSecret(brute: string, env: Record<string, string>) {
   }
   expect(sortie).not.toContain('mdp-base-factice');
   expect(sortie).not.toContain('mdp-cache-factice');
+  expect(sortie).not.toContain(SECRET_EXECUTION);
 }
 
 const PLATEFORME_VIDE = { statut: 200, adresseInterne: true, applications: [], bases: [] };
@@ -180,7 +183,12 @@ describe('REQ-INT-031 — sans ses secrets, le provisionnement ÉCHOUE et nomme 
     const r = await lancer({ ...secretsApplicatifs(), GITHUB_SHA: SHA });
     expect(r.code).toBe(1);
     expect(r.sortie).not.toContain('SAUTÉ');
-    for (const nom of ['COOLIFY_URL', 'COOLIFY_API_TOKEN', 'PARTNERS_URL_PUBLIQUE'])
+    for (const nom of [
+      'COOLIFY_URL',
+      'COOLIFY_API_TOKEN',
+      'PARTNERS_URL_PUBLIQUE',
+      'PARTNERS_DB_EXECUTION_SECRET',
+    ])
       expect(r.sortie).toContain(`::error title=coolify:provisionner::${nom}`);
   });
 
@@ -190,6 +198,7 @@ describe('REQ-INT-031 — sans ses secrets, le provisionnement ÉCHOUE et nomme 
       ...secretsApplicatifs(),
       COOLIFY_URL: p.url,
       COOLIFY_API_TOKEN: 'jeton-factice-plateforme',
+      PARTNERS_DB_EXECUTION_SECRET: SECRET_EXECUTION,
       PARTNERS_URL_PUBLIQUE: 'https://partners.exemple.fr',
       GITHUB_SHA: SHA,
     };
@@ -210,6 +219,7 @@ describe('REQ-INT-031 — une valeur hors règle est refusée avant tout appel',
       ...secretsApplicatifs(),
       COOLIFY_URL: p.url,
       COOLIFY_API_TOKEN: 'jeton-factice-plateforme',
+      PARTNERS_DB_EXECUTION_SECRET: SECRET_EXECUTION,
       PARTNERS_URL_PUBLIQUE: 'https://partners.exemple.fr',
       GITHUB_SHA: SHA,
     };
@@ -229,6 +239,7 @@ describe('REQ-INT-031 — sur une plateforme vide, tout est créé puis les vari
       ...secretsApplicatifs(),
       COOLIFY_URL: p.url,
       COOLIFY_API_TOKEN: 'jeton-factice-plateforme',
+      PARTNERS_DB_EXECUTION_SECRET: SECRET_EXECUTION,
       PARTNERS_URL_PUBLIQUE: 'https://partners.exemple.fr',
       GITHUB_SHA: SHA,
     };
@@ -272,8 +283,14 @@ describe('REQ-INT-031 — sur une plateforme vide, tout est créé puis les vari
       (p.envs.get(p.applications[0]!.uuid) ?? []).map((v) => [v.key, v.value])
     );
     for (const nom of NOMS_DES_SECRETS) expect(posees.get(nom)).toBe(env[nom]);
-    expect(posees.get('DATABASE_URL')).toMatch(
+    // QA-T62 (REQ-DM-024) : le propriétaire migre, le serveur se connecte sous son rôle d'exécution.
+    expect(posees.get('DATABASE_MIGRATION_URL')).toMatch(
       /^postgres:\/\/postgres:mdp-base-factice@base-\d+:5432\/postgres$/
+    );
+    expect(posees.get('DATABASE_URL')).toBe(
+      posees
+        .get('DATABASE_MIGRATION_URL')!
+        .replace('postgres:mdp-base-factice@', `partners_app:${SECRET_EXECUTION}@`)
     );
     expect(posees.get('REDIS_URL')).toMatch(
       /^redis:\/\/default:mdp-cache-factice@base-\d+:6379\/0$/
@@ -289,6 +306,7 @@ describe('REQ-INT-031 — sur une plateforme vide, tout est créé puis les vari
       ...secretsApplicatifs(),
       COOLIFY_URL: p.url,
       COOLIFY_API_TOKEN: 'jeton-factice-plateforme',
+      PARTNERS_DB_EXECUTION_SECRET: SECRET_EXECUTION,
       PARTNERS_URL_PUBLIQUE: 'https://partners.exemple.fr',
       GITHUB_SHA: SHA,
     };
@@ -315,6 +333,7 @@ describe('REQ-INT-031 — la sonde de la plateforme, sur /api/readyz, posée sur
     ...secretsApplicatifs(),
     COOLIFY_URL: url,
     COOLIFY_API_TOKEN: 'jeton-factice-plateforme',
+    PARTNERS_DB_EXECUTION_SECRET: SECRET_EXECUTION,
     PARTNERS_URL_PUBLIQUE: 'https://partners.exemple.fr',
     GITHUB_SHA: SHA,
   });
@@ -395,6 +414,7 @@ describe('REQ-QA-030 — la clé précédente et son échéance sont posées sur
     ...secretsApplicatifs(),
     COOLIFY_URL: url,
     COOLIFY_API_TOKEN: 'jeton-factice-plateforme',
+    PARTNERS_DB_EXECUTION_SECRET: SECRET_EXECUTION,
     PARTNERS_URL_PUBLIQUE: 'https://partners.exemple.fr',
     GITHUB_SHA: SHA,
   });
@@ -469,6 +489,7 @@ describe('REQ-INT-031 — dans la forge, chaque valeur dérivée est masquée d�
       ...secretsApplicatifs(),
       COOLIFY_URL: p.url,
       COOLIFY_API_TOKEN: 'jeton-factice-plateforme',
+      PARTNERS_DB_EXECUTION_SECRET: SECRET_EXECUTION,
       PARTNERS_URL_PUBLIQUE: 'https://partners.exemple.fr',
       GITHUB_SHA: SHA,
       GITHUB_ACTIONS: 'true',
@@ -477,12 +498,32 @@ describe('REQ-INT-031 — dans la forge, chaque valeur dérivée est masquée d�
     expect(r.code).toBe(0);
     const lignes = r.sortie.split('\n');
     const masques = lignes.filter((l) => l.startsWith('::add-mask::'));
-    expect(masques).toHaveLength(2);
+    expect(masques).toHaveLength(3);
     expect(masques.some((l) => l.includes('mdp-base-factice'))).toBe(true);
+    expect(masques.some((l) => l.includes(SECRET_EXECUTION))).toBe(true);
     expect(masques.some((l) => l.includes('mdp-cache-factice'))).toBe(true);
     const annonce = lignes.findIndex((l) => l.includes('variable(s) posée(s)'));
     expect(Math.max(...masques.map((m) => lignes.indexOf(m)))).toBeLessThan(annonce);
     sansValeurDeSecret(r.sortie, env);
+  });
+});
+
+describe('REQ-DM-024 — le secret du rôle d’exécution est jugé avant tout appel (QA-T62)', () => {
+  it('REQ-DM-024 : TÉMOIN — un secret hors règle : code 1, nommé, valeur tue, rien appelé', async () => {
+    const p = await plateforme(PLATEFORME_VIDE);
+    const court = 'trop-court';
+    const r = await lancer({
+      ...secretsApplicatifs(),
+      COOLIFY_URL: p.url,
+      COOLIFY_API_TOKEN: 'jeton-factice-plateforme',
+      PARTNERS_DB_EXECUTION_SECRET: court,
+      PARTNERS_URL_PUBLIQUE: 'https://partners.exemple.fr',
+      GITHUB_SHA: SHA,
+    });
+    expect(r.code).toBe(1);
+    expect(r.sortie).toContain('PARTNERS_DB_EXECUTION_SECRET');
+    expect(r.sortie).not.toContain(court);
+    expect(p.appels).toHaveLength(0);
   });
 });
 
@@ -493,6 +534,7 @@ describe('REQ-INT-031 — ce que la plateforme ne dit pas n’est jamais deviné
       ...secretsApplicatifs(),
       COOLIFY_URL: p.url,
       COOLIFY_API_TOKEN: 'jeton-factice-plateforme',
+      PARTNERS_DB_EXECUTION_SECRET: SECRET_EXECUTION,
       PARTNERS_URL_PUBLIQUE: 'https://partners.exemple.fr',
       GITHUB_SHA: SHA,
     };
@@ -508,6 +550,7 @@ describe('REQ-INT-031 — ce que la plateforme ne dit pas n’est jamais deviné
       ...secretsApplicatifs(),
       COOLIFY_URL: p.url,
       COOLIFY_API_TOKEN: 'jeton-factice-plateforme',
+      PARTNERS_DB_EXECUTION_SECRET: SECRET_EXECUTION,
       PARTNERS_URL_PUBLIQUE: 'https://partners.exemple.fr',
       GITHUB_SHA: SHA,
     };
@@ -522,6 +565,7 @@ describe('REQ-INT-031 — ce que la plateforme ne dit pas n’est jamais deviné
       ...secretsApplicatifs(),
       COOLIFY_URL: 'http://coolify.exemple.fr',
       COOLIFY_API_TOKEN: 'jeton-factice-plateforme',
+      PARTNERS_DB_EXECUTION_SECRET: SECRET_EXECUTION,
       PARTNERS_URL_PUBLIQUE: 'https://partners.exemple.fr',
       GITHUB_SHA: SHA,
     };
@@ -571,6 +615,9 @@ describe('REQ-INT-031 — le workflow : manuel, sans droit, chaque secret par so
     // DATABASE_URL et REDIS_URL viennent des bases créées, jamais d'un secret.
     expect(env.DATABASE_URL).toBeUndefined();
     expect(env.REDIS_URL).toBeUndefined();
+    // QA-T62 : le secret du rôle d'exécution vient du secret de MÊME nom ; l'URL de migration, de la base.
+    expect(env.PARTNERS_DB_EXECUTION_SECRET).toBe('${{ secrets.PARTNERS_DB_EXECUTION_SECRET }}');
+    expect(env.DATABASE_MIGRATION_URL).toBeUndefined();
   });
 });
 
@@ -635,6 +682,7 @@ describe('REQ-INT-031 — le provisionnement ne tourne que sur main, et ne réut
       ...secretsApplicatifs(),
       COOLIFY_URL: p.url,
       COOLIFY_API_TOKEN: 'jeton-factice-plateforme',
+      PARTNERS_DB_EXECUTION_SECRET: SECRET_EXECUTION,
       PARTNERS_URL_PUBLIQUE: 'https://partners.exemple.fr',
       GITHUB_SHA: SHA,
     };

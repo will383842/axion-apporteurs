@@ -40,6 +40,7 @@ jobs:
         env:
           COOLIFY_URL: ${{ secrets.COOLIFY_URL }}
           COOLIFY_API_TOKEN: ${{ secrets.COOLIFY_API_TOKEN }}
+          PARTNERS_DB_EXECUTION_SECRET: ${{ secrets.PARTNERS_DB_EXECUTION_SECRET }}
           COOLIFY_SERVER_UUID: ${{ vars.COOLIFY_SERVER_UUID }}
           PARTNERS_URL_PUBLIQUE: ${{ vars.PARTNERS_URL_PUBLIQUE }}
           SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
