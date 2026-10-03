@@ -316,9 +316,14 @@ describe('REQ-CPL-006 — le motif se PURGE, et seulement avec sa date (rattrapa
   it('REQ-CPL-006 : un motif vidé SANS date, ou une date SANS vidage, est refusé', async () => {
     const id = await uneDecision(await unCandidat());
     expect(await refus(purgerLeMotif(id, null, null))).toMatch(/justification_purge_liee/);
-    expect(await refus(purgerLeMotif(id, blocDuMotif(id), MAINTENANT))).toMatch(
-      /justification_purge_liee/
-    );
+    // La date seule : le bloc n'est pas réécrit (un nouveau chiffrement du même motif serait un
+    // AUTRE bloc, que le gabarit refuserait avant le CHECK).
+    expect(
+      await refus(
+        app.$executeRaw`UPDATE "decisions_candidature" SET "justification_purgee_at" = ${MAINTENANT}
+          WHERE "id" = ${id}::uuid`
+      )
+    ).toMatch(/justification_purge_liee/);
   });
 
   it('REQ-CPL-006 : un motif purgé ne REVIENT pas, et sa date ne se réécrit pas', async () => {
