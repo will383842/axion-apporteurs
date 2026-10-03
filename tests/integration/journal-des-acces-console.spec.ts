@@ -62,7 +62,11 @@ afterAll(async () => {
 async function unUtilisateur(): Promise<string> {
   return (
     await base.prisma.utilisateurConsole.create({
-      data: { role: 'admin', creeAt: new Date('2026-01-01T00:00:00.000Z') },
+      data: {
+        role: 'admin',
+        creeAt: new Date('2026-01-01T00:00:00.000Z'),
+        desactiveAt: new Date('2026-01-02T00:00:00.000Z'),
+      },
     })
   ).id;
 }
