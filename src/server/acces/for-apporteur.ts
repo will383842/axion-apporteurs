@@ -357,7 +357,17 @@ export const CHAMPS_RENDUS = {
 /** Ce que la couche TAIT : le propriétaire (connu de la session), les secrets, les traces techniques. */
 export const CHAMPS_TUS = {
   alerteLiberation: ['apporteurId', 'apporteurPurgeAt'],
-  contestation: ['apporteurId', 'texteChiffre', 'reponseChiffre', 'repondueParId', 'purgeeAt'],
+  contestation: [
+    'apporteurId',
+    'texteChiffre',
+    'reponseChiffre',
+    'repondueParId',
+    'purgeeAt',
+    // Le gel pour litige est une mesure de la console : l'espace ne le montre pas.
+    'gelLitigeAt',
+    'gelLitigeLeveAt',
+    'gelLitigeRef',
+  ],
   verification: [
     'apporteurId',
     'utilisateurConsoleId',

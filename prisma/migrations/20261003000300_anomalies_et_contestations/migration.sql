@@ -72,6 +72,10 @@ CREATE TABLE "anomalies" (
     "justification_chiffre" BYTEA,
     "justification_purgee_at" TIMESTAMPTZ(3),
     "anonymisee_at" TIMESTAMPTZ(3),
+    "mesure_terminee_at" TIMESTAMPTZ(3),
+    "gel_litige_at" TIMESTAMPTZ(3),
+    "gel_litige_leve_at" TIMESTAMPTZ(3),
+    "gel_litige_ref" VARCHAR(64),
 
     CONSTRAINT "anomalies_pkey" PRIMARY KEY ("id")
 );
@@ -107,6 +111,9 @@ CREATE TABLE "contestations" (
     "repondue_par_id" UUID,
     "repondue_at" TIMESTAMPTZ(3),
     "purgee_at" TIMESTAMPTZ(3),
+    "gel_litige_at" TIMESTAMPTZ(3),
+    "gel_litige_leve_at" TIMESTAMPTZ(3),
+    "gel_litige_ref" VARCHAR(64),
 
     CONSTRAINT "contestations_pkey" PRIMARY KEY ("id")
 );
@@ -259,7 +266,8 @@ ALTER TABLE "anomalies" ADD CONSTRAINT "anomalies_apporteur_present"
 ALTER TABLE "anomalies" ADD CONSTRAINT "anomalies_anonymisation_liee"
   CHECK ("anonymisee_at" IS NULL OR (
     "statut" <> 'ouverte'
-    AND num_nonnulls("score", "apporteur_id", "attribution_id", "traite_par_id", "justification_chiffre", "justification_purgee_at") = 0
+    AND num_nonnulls("score", "apporteur_id", "attribution_id", "traite_par_id", "justification_chiffre", "justification_purgee_at",
+                     "mesure_terminee_at", "gel_litige_at", "gel_litige_leve_at", "gel_litige_ref") = 0
     AND date_trunc('month', "ouverte_at" AT TIME ZONE 'UTC') = ("ouverte_at" AT TIME ZONE 'UTC')
     AND date_trunc('month', "traite_at" AT TIME ZONE 'UTC') = ("traite_at" AT TIME ZONE 'UTC')));
 -- La justification porte un soupçon sur une personne : CHIFFRÉE (`colonnesPii`), jamais en clair, ni
@@ -271,6 +279,23 @@ ALTER TABLE "anomalies" ADD CONSTRAINT "anomalies_justification_purge_liee"
 -- Un chiffré vide n'est pas une justification.
 ALTER TABLE "anomalies" ADD CONSTRAINT "anomalies_justification_non_vide"
   CHECK ("justification_chiffre" IS NULL OR octet_length("justification_chiffre") > 0);
+-- LE GEL POUR LITIGE (exigence de la juriste, forme d'A02) : posé une fois avec sa référence, levé
+-- une fois, après. Aucun identifiant de la personne de la console n'est stocké : le geste est journalisé.
+ALTER TABLE "anomalies" ADD CONSTRAINT "anomalies_gel_litige_forme"
+  CHECK (("gel_litige_at" IS NULL) = ("gel_litige_ref" IS NULL)
+         AND ("gel_litige_leve_at" IS NULL OR "gel_litige_at" IS NOT NULL)
+         AND ("gel_litige_leve_at" IS NULL OR "gel_litige_leve_at" >= "gel_litige_at"));
+-- La référence du litige : le motif unique de la référence de source, un numéro de rôle ou de
+-- dossier, jamais un nom ; VARCHAR(64) borne la longueur.
+ALTER TABLE "anomalies" ADD CONSTRAINT "anomalies_gel_litige_ref_forme"
+  CHECK ("gel_litige_ref" IS NULL OR "gel_litige_ref" ~ '^[A-Za-z0-9._/-]*[0-9][A-Za-z0-9._/-]*$');
+-- LA FIN RÉELLE DE LA MESURE (exigence de la juriste, forme d'A02) : elle n'existe que sur une anomalie
+-- confirmée, jamais avant sa clôture ; une anomalie levée n'en a pas, rien ne la retient.
+ALTER TABLE "anomalies" ADD CONSTRAINT "anomalies_mesure_terminee"
+  CHECK ("mesure_terminee_at" IS NULL OR ("statut" = 'confirmee' AND "mesure_terminee_at" >= "traite_at"));
+-- Seule une anomalie CONFIRMÉE se gèle : une anomalie levée n'est jamais gelée.
+ALTER TABLE "anomalies" ADD CONSTRAINT "anomalies_gel_litige_confirmee"
+  CHECK ("gel_litige_at" IS NULL OR "statut" = 'confirmee');
 
 -- Une fonction DÉDIÉE, et non le gabarit : `statut` passe d'une valeur à une autre, ce que `purge:`
 -- et `une_fois:` ne savent pas dire (forme d'A02, patron de SEC-49). Sans EXECUTE. Sont FIGÉS :
@@ -280,6 +305,12 @@ ALTER TABLE "anomalies" ADD CONSTRAINT "anomalies_justification_non_vide"
 -- (le texte va à NULL, `justification_purgee_at` posée, une fois) ; après la purge, plus rien ne
 -- bouge. L'ANONYMISATION d'une anomalie close vide d'un coup tout ce qui désigne une personne et
 -- tronque ses dates au mois (UTC) ; après elle, plus rien ne bouge. DELETE et TRUNCATE sont refusés.
+-- LE GEL POUR LITIGE (forme d'A02) : posé une fois (date et référence ensemble, sans levée), levé une
+-- fois, sans second gel ; le geste s'écrit seul, sur une anomalie close, purgée ou non. Tant qu'il est
+-- ACTIF, l'anonymisation et la purge de la justification sont refusées ; l'anonymisation le vide.
+-- LA FIN DE LA MESURE (forme d'A02) : posée à la clôture (une mesure sans durée, elle vaut alors
+-- `traite_at`) ou plus tard, une fois, sur une anomalie close, purgée ou non ; aucun événement.
+-- Une anomalie confirmée ne s'anonymise qu'avec une mesure terminée et un gel inactif.
 CREATE FUNCTION anomalies_refuser_substitution() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
   IF TG_OP = 'DELETE' OR TG_OP = 'TRUNCATE' THEN
@@ -292,6 +323,12 @@ BEGIN
     RETURN NEW;
   END IF;
   IF NEW."anonymisee_at" IS NOT NULL THEN
+    IF OLD."gel_litige_at" IS NOT NULL AND OLD."gel_litige_leve_at" IS NULL THEN
+      RAISE EXCEPTION 'anomalies_refuser_substitution : gel pour litige actif, l''anonymisation est refusée (REQ-DM-033)';
+    END IF;
+    IF OLD."statut" = 'confirmee' AND OLD."mesure_terminee_at" IS NULL THEN
+      RAISE EXCEPTION 'anomalies_refuser_substitution : mesure non terminée, l''anonymisation est refusée (REQ-DM-033)';
+    END IF;
     IF OLD."statut" = 'ouverte'
        OR NEW."id" IS DISTINCT FROM OLD."id" OR NEW."type" IS DISTINCT FROM OLD."type"
        OR NEW."statut" IS DISTINCT FROM OLD."statut"
@@ -309,8 +346,47 @@ BEGIN
      OR NEW."ouverte_at" IS DISTINCT FROM OLD."ouverte_at" THEN
     RAISE EXCEPTION 'anomalies_refuser_substitution : l''identité d''une anomalie est figée (REQ-DM-033)';
   END IF;
+  IF NEW."gel_litige_at" IS DISTINCT FROM OLD."gel_litige_at"
+     OR NEW."gel_litige_leve_at" IS DISTINCT FROM OLD."gel_litige_leve_at"
+     OR NEW."gel_litige_ref" IS DISTINCT FROM OLD."gel_litige_ref" THEN
+    IF NEW."statut" IS DISTINCT FROM OLD."statut"
+       OR NEW."traite_at" IS DISTINCT FROM OLD."traite_at"
+       OR NEW."traite_par_id" IS DISTINCT FROM OLD."traite_par_id"
+       OR NEW."justification_chiffre" IS DISTINCT FROM OLD."justification_chiffre"
+       OR NEW."justification_purgee_at" IS DISTINCT FROM OLD."justification_purgee_at"
+       OR NEW."mesure_terminee_at" IS DISTINCT FROM OLD."mesure_terminee_at" THEN
+      RAISE EXCEPTION 'anomalies_refuser_substitution : le geste du gel pour litige s''écrit seul (REQ-DM-033)';
+    END IF;
+    IF OLD."gel_litige_at" IS NOT NULL
+       AND (NEW."gel_litige_at" IS DISTINCT FROM OLD."gel_litige_at"
+            OR NEW."gel_litige_ref" IS DISTINCT FROM OLD."gel_litige_ref") THEN
+      RAISE EXCEPTION 'anomalies_refuser_substitution : le gel pour litige se pose une fois, sa référence ne se réécrit pas (REQ-DM-033)';
+    END IF;
+    IF OLD."gel_litige_leve_at" IS NOT NULL
+       AND NEW."gel_litige_leve_at" IS DISTINCT FROM OLD."gel_litige_leve_at" THEN
+      RAISE EXCEPTION 'anomalies_refuser_substitution : la levée du gel pour litige s''écrit une fois (REQ-DM-033)';
+    END IF;
+    IF OLD."gel_litige_at" IS NULL AND NEW."gel_litige_at" IS NOT NULL
+       AND NEW."gel_litige_leve_at" IS NOT NULL THEN
+      RAISE EXCEPTION 'anomalies_refuser_substitution : le gel pour litige se pose sans sa levée (REQ-DM-033)';
+    END IF;
+    RETURN NEW;
+  END IF;
+  IF OLD."gel_litige_at" IS NOT NULL AND OLD."gel_litige_leve_at" IS NULL
+     AND (NEW."justification_chiffre" IS DISTINCT FROM OLD."justification_chiffre"
+          OR NEW."justification_purgee_at" IS DISTINCT FROM OLD."justification_purgee_at") THEN
+    RAISE EXCEPTION 'anomalies_refuser_substitution : gel pour litige actif, la purge de la justification est refusée (REQ-DM-033)';
+  END IF;
+  IF OLD."mesure_terminee_at" IS NOT NULL
+     AND NEW."mesure_terminee_at" IS DISTINCT FROM OLD."mesure_terminee_at" THEN
+    RAISE EXCEPTION 'anomalies_refuser_substitution : la fin de la mesure se pose une fois (REQ-DM-033)';
+  END IF;
   IF OLD."justification_purgee_at" IS NOT NULL THEN
-    IF NEW IS DISTINCT FROM OLD THEN
+    IF NEW."statut" IS DISTINCT FROM OLD."statut"
+       OR NEW."traite_at" IS DISTINCT FROM OLD."traite_at"
+       OR NEW."traite_par_id" IS DISTINCT FROM OLD."traite_par_id"
+       OR NEW."justification_chiffre" IS DISTINCT FROM OLD."justification_chiffre"
+       OR NEW."justification_purgee_at" IS DISTINCT FROM OLD."justification_purgee_at" THEN
       RAISE EXCEPTION 'anomalies_refuser_substitution : une anomalie purgée ne change plus (REQ-DM-033)';
     END IF;
   ELSIF OLD."statut" <> 'ouverte' THEN
@@ -325,12 +401,14 @@ BEGIN
       RAISE EXCEPTION 'anomalies_refuser_substitution : la justification ne se réécrit pas ; seule la purge la vide, avec sa date (REQ-DM-033)';
     END IF;
   ELSIF NEW."statut" = 'ouverte' THEN
-    IF num_nonnulls(NEW."traite_at", NEW."traite_par_id", NEW."justification_chiffre", NEW."justification_purgee_at") > 0 THEN
+    IF num_nonnulls(NEW."traite_at", NEW."traite_par_id", NEW."justification_chiffre", NEW."justification_purgee_at", NEW."mesure_terminee_at") > 0 THEN
       RAISE EXCEPTION 'anomalies_refuser_substitution : le traitement ne se pose qu''avec la clôture (REQ-DM-033)';
     END IF;
   ELSIF num_nonnulls(NEW."traite_at", NEW."traite_par_id", NEW."justification_chiffre") < 3
         OR NEW."justification_purgee_at" IS NOT NULL THEN
     RAISE EXCEPTION 'anomalies_refuser_substitution : la clôture pose statut, traite_at, traite_par_id et la justification ensemble (REQ-DM-033)';
+  ELSIF NEW."mesure_terminee_at" IS DISTINCT FROM NEW."traite_at" AND NEW."mesure_terminee_at" IS NOT NULL THEN
+    RAISE EXCEPTION 'anomalies_refuser_substitution : à la clôture, la fin de la mesure vaut traite_at, ou se pose plus tard (REQ-DM-033)';
   END IF;
   RETURN NEW;
 END;
@@ -393,6 +471,16 @@ ALTER TABLE "contestations" ADD CONSTRAINT "contestations_reponse_ensemble"
 ALTER TABLE "contestations" ADD CONSTRAINT "contestations_purge_liee"
   CHECK (("purgee_at" IS NULL) = ("texte_chiffre" IS NOT NULL)
          AND ("purgee_at" IS NULL OR "reponse_chiffre" IS NULL));
+-- LE GEL POUR LITIGE (exigence de la juriste, forme d'A02) : posé une fois avec sa référence, levé
+-- une fois, après. Aucun identifiant de la personne de la console n'est stocké : le geste est journalisé.
+ALTER TABLE "contestations" ADD CONSTRAINT "contestations_gel_litige_forme"
+  CHECK (("gel_litige_at" IS NULL) = ("gel_litige_ref" IS NULL)
+         AND ("gel_litige_leve_at" IS NULL OR "gel_litige_at" IS NOT NULL)
+         AND ("gel_litige_leve_at" IS NULL OR "gel_litige_leve_at" >= "gel_litige_at"));
+-- La référence du litige : le motif unique de la référence de source, un numéro de rôle ou de
+-- dossier, jamais un nom ; VARCHAR(64) borne la longueur.
+ALTER TABLE "contestations" ADD CONSTRAINT "contestations_gel_litige_ref_forme"
+  CHECK ("gel_litige_ref" IS NULL OR "gel_litige_ref" ~ '^[A-Za-z0-9._/-]*[0-9][A-Za-z0-9._/-]*$');
 
 -- Une fonction DÉDIÉE, et non le gabarit : la réponse va de NULL à une valeur, PUIS à NULL par la
 -- purge, ce que le gabarit ne sait pas dire sur une même colonne (forme d'A02, patron de SEC-49).
@@ -400,6 +488,8 @@ ALTER TABLE "contestations" ADD CONSTRAINT "contestations_purge_liee"
 -- ou une réponse ne passe jamais d'une valeur à une autre. La réponse (réponse, auteur, date) se
 -- pose une fois, ensemble, sur une contestation non purgée. La purge pose `purgee_at` une fois,
 -- avec le texte et la réponse vidés ; après elle, plus rien ne bouge. DELETE et TRUNCATE refusés.
+-- LE GEL POUR LITIGE (forme d'A02) : posé une fois (date et référence ensemble, sans levée), levé une
+-- fois, sans second gel ; le geste s'écrit seul, avant la purge. Tant qu'il est ACTIF, la purge est refusée.
 CREATE FUNCTION contestations_refuser_substitution() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
   IF TG_OP = 'DELETE' OR TG_OP = 'TRUNCATE' THEN
@@ -418,6 +508,34 @@ BEGIN
       RAISE EXCEPTION 'contestations_refuser_substitution : une contestation purgée ne change plus (REQ-DM-043)';
     END IF;
     RETURN NEW;
+  END IF;
+  IF NEW."gel_litige_at" IS DISTINCT FROM OLD."gel_litige_at"
+     OR NEW."gel_litige_leve_at" IS DISTINCT FROM OLD."gel_litige_leve_at"
+     OR NEW."gel_litige_ref" IS DISTINCT FROM OLD."gel_litige_ref" THEN
+    IF NEW."texte_chiffre" IS DISTINCT FROM OLD."texte_chiffre"
+       OR NEW."reponse_chiffre" IS DISTINCT FROM OLD."reponse_chiffre"
+       OR NEW."repondue_par_id" IS DISTINCT FROM OLD."repondue_par_id"
+       OR NEW."repondue_at" IS DISTINCT FROM OLD."repondue_at"
+       OR NEW."purgee_at" IS DISTINCT FROM OLD."purgee_at" THEN
+      RAISE EXCEPTION 'contestations_refuser_substitution : le geste du gel pour litige s''écrit seul (REQ-DM-043)';
+    END IF;
+    IF OLD."gel_litige_at" IS NOT NULL
+       AND (NEW."gel_litige_at" IS DISTINCT FROM OLD."gel_litige_at"
+            OR NEW."gel_litige_ref" IS DISTINCT FROM OLD."gel_litige_ref") THEN
+      RAISE EXCEPTION 'contestations_refuser_substitution : le gel pour litige se pose une fois, sa référence ne se réécrit pas (REQ-DM-043)';
+    END IF;
+    IF OLD."gel_litige_leve_at" IS NOT NULL
+       AND NEW."gel_litige_leve_at" IS DISTINCT FROM OLD."gel_litige_leve_at" THEN
+      RAISE EXCEPTION 'contestations_refuser_substitution : la levée du gel pour litige s''écrit une fois (REQ-DM-043)';
+    END IF;
+    IF OLD."gel_litige_at" IS NULL AND NEW."gel_litige_at" IS NOT NULL
+       AND NEW."gel_litige_leve_at" IS NOT NULL THEN
+      RAISE EXCEPTION 'contestations_refuser_substitution : le gel pour litige se pose sans sa levée (REQ-DM-043)';
+    END IF;
+    RETURN NEW;
+  END IF;
+  IF NEW."purgee_at" IS NOT NULL AND OLD."gel_litige_at" IS NOT NULL AND OLD."gel_litige_leve_at" IS NULL THEN
+    RAISE EXCEPTION 'contestations_refuser_substitution : gel pour litige actif, la purge est refusée (REQ-DM-043)';
   END IF;
   -- Une valeur ne devient jamais une autre valeur : seulement NULL vers valeur, ou valeur vers NULL.
   IF (OLD."texte_chiffre" IS NOT NULL AND NEW."texte_chiffre" IS NOT NULL
@@ -489,3 +607,7 @@ ALTER TYPE "type_evenement_journal" ADD VALUE 'rattachement_manuel_modifie';
 -- AlterEnum
 -- Décision (d) de la juriste : les événements de cycle de vie d'une anomalie ont pour agrégat l'ANOMALIE.
 ALTER TYPE "agregat_journal" ADD VALUE 'anomalie';
+
+-- AlterEnum
+-- Le gel pour litige d'une anomalie, posé ou levé, sur l'agrégat ANOMALIE, sans la référence.
+ALTER TYPE "type_evenement_journal" ADD VALUE 'anomalie_gel_modifie';

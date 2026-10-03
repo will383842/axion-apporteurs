@@ -500,6 +500,10 @@ describe('REQ-DM-033 — anomalies : la forme, une clôture une seule fois, sans
     traite_par_id: 'NULL',
     justification_chiffre: 'NULL',
     justification_purgee_at: 'NULL',
+    mesure_terminee_at: 'NULL',
+    gel_litige_at: 'NULL',
+    gel_litige_leve_at: 'NULL',
+    gel_litige_ref: 'NULL',
     ouverte_at: "date_trunc('month', ouverte_at AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'",
     traite_at: "date_trunc('month', traite_at AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'",
     anonymisee_at: '$2',
@@ -574,6 +578,130 @@ describe('REQ-DM-033 — anomalies : la forme, une clôture une seule fois, sans
     await clore(id);
     expect(await refus(anonymiser(id, { statut: "'confirmee'" }))).toContain(ANOMALIES);
     expect(await refus(anonymiser(id, { type: "'sincerite'" }))).toContain(ANOMALIES);
+  });
+
+  /** Une retenue : la clôture CONFIRMÉE, la fin de la mesure posée ou non dans la même écriture. */
+  const confirmer = (id: string, mesureTermineeAt: Date | null = null) =>
+    ecrire(
+      `UPDATE anomalies SET statut = 'confirmee', traite_at = $2, traite_par_id = $3::uuid,
+         justification_chiffre = $4, mesure_terminee_at = $5
+       WHERE id = $1::uuid`,
+      id,
+      MAINTENANT,
+      adminId,
+      randomBytes(40),
+      mesureTermineeAt
+    );
+  const plusTard = (ms: number) => new Date(MAINTENANT.getTime() + ms);
+  const terminerLaMesure = (id: string, at: Date = plusTard(60_000)) =>
+    ecrire(`UPDATE anomalies SET mesure_terminee_at = $2 WHERE id = $1::uuid`, id, at);
+  const geler = (id: string, ref: string | null = 'RG-24/01234', at: Date = plusTard(1_000)) =>
+    ecrire(
+      `UPDATE anomalies SET gel_litige_at = $2, gel_litige_ref = $3 WHERE id = $1::uuid`,
+      id,
+      at,
+      ref
+    );
+  const lever = (id: string, at: Date = plusTard(2_000)) =>
+    ecrire(`UPDATE anomalies SET gel_litige_leve_at = $2 WHERE id = $1::uuid`, id, at);
+  const ACTIF = 'gel pour litige actif';
+  const NON_TERMINEE = 'mesure non terminée';
+
+  it('REQ-DM-033 : TÉMOIN — la fin de la mesure : un refus clos avec sa fin à traite_at passe ; une retenue close sans fin, puis sa fin posée plus tard, passe', async () => {
+    const refusClos = await uneAnomalie();
+    await expect(confirmer(refusClos, MAINTENANT)).resolves.toBe(1);
+    const retenue = await uneAnomalie();
+    await confirmer(retenue);
+    await expect(terminerLaMesure(retenue)).resolves.toBe(1);
+  });
+
+  it('REQ-DM-033 : TÉMOIN — une fin sur une anomalie levée, ou antérieure à traite_at, est refusée (anomalies_mesure_terminee) ; réécrite, refusée', async () => {
+    const levee = await uneAnomalie();
+    await clore(levee);
+    expect(await refus(terminerLaMesure(levee))).toContain('anomalies_mesure_terminee');
+    const retenue = await uneAnomalie();
+    await confirmer(retenue);
+    expect(await refus(terminerLaMesure(retenue, plusTard(-1)))).toContain(
+      'anomalies_mesure_terminee'
+    );
+    await terminerLaMesure(retenue);
+    expect(await refus(terminerLaMesure(retenue, plusTard(120_000)))).toContain(ANOMALIES);
+  });
+
+  it('REQ-DM-033 : TÉMOIN — l’anonymisation d’une confirmée sans fin est refusée (mesure non terminée) ; avec sa fin, elle passe et la vide', async () => {
+    const id = await uneAnomalie();
+    await confirmer(id);
+    expect(await refus(anonymiser(id))).toContain(NON_TERMINEE);
+    await terminerLaMesure(id);
+    await expect(anonymiser(id)).resolves.toBe(1);
+    const [l] = await base.prisma.$queryRaw<{ fin: Date | null }[]>`
+      SELECT mesure_terminee_at AS fin FROM anomalies WHERE id = ${id}::uuid`;
+    expect(l!.fin).toBeNull();
+  });
+
+  it('REQ-DM-033 : TÉMOIN — le gel pour litige posé puis levé passe ; sur une anomalie levée, refusé (anomalies_gel_litige_confirmee)', async () => {
+    const id = await uneAnomalie();
+    await confirmer(id);
+    await expect(geler(id)).resolves.toBe(1);
+    await expect(lever(id)).resolves.toBe(1);
+    const levee = await uneAnomalie();
+    await clore(levee);
+    expect(await refus(geler(levee))).toContain('anomalies_gel_litige_confirmee');
+  });
+
+  it('REQ-DM-033 : TÉMOIN — une référence sans chiffre ou avec un espace est refusée (anomalies_gel_litige_ref_forme)', async () => {
+    const id = await uneAnomalie();
+    await confirmer(id);
+    for (const ref of ['Dupont', 'RG 24/01234']) {
+      expect(await refus(geler(id, ref)), ref).toContain('anomalies_gel_litige_ref_forme');
+    }
+  });
+
+  it('REQ-DM-033 : TÉMOIN — un gel sans référence, ou une levée sans gel, est refusé (anomalies_gel_litige_forme)', async () => {
+    const id = await uneAnomalie();
+    await confirmer(id);
+    expect(await refus(geler(id, null))).toContain('anomalies_gel_litige_forme');
+    expect(await refus(lever(id))).toContain('anomalies_gel_litige_forme');
+  });
+
+  it('REQ-DM-033 : TÉMOIN — un gel reposé, une référence réécrite, une levée réécrite, un second gel après la levée : refusés', async () => {
+    const id = await uneAnomalie();
+    await confirmer(id);
+    await geler(id);
+    expect(await refus(geler(id, 'RG-24/01234', plusTard(5_000)))).toContain(ANOMALIES);
+    expect(await refus(geler(id, 'RG-24/09999'))).toContain(ANOMALIES);
+    await lever(id);
+    expect(await refus(lever(id, plusTard(9_000)))).toContain(ANOMALIES);
+    expect(await refus(geler(id, 'RG-25/00001', plusTard(10_000)))).toContain(ANOMALIES);
+  });
+
+  it('REQ-DM-033 : TÉMOIN — sous un gel actif, l’anonymisation et la purge de la justification sont refusées (gel pour litige actif)', async () => {
+    const id = await uneAnomalie();
+    await confirmer(id, MAINTENANT);
+    await geler(id);
+    expect(await refus(anonymiser(id))).toContain(ACTIF);
+    expect(await refus(purgerLaJustification(id))).toContain(ACTIF);
+  });
+
+  it('REQ-DM-033 : TÉMOIN — le gel et la fin de la mesure sont indépendants : purgée, l’anomalie se gèle encore ; après la levée et la fin, l’anonymisation passe et vide le gel', async () => {
+    const id = await uneAnomalie();
+    await confirmer(id);
+    await purgerLaJustification(id);
+    await geler(id);
+    await terminerLaMesure(id);
+    expect(await refus(anonymiser(id))).toContain(ACTIF);
+    await lever(id);
+    await expect(anonymiser(id)).resolves.toBe(1);
+    const [l] = await base.prisma.$queryRaw<{ n: number }[]>`
+      SELECT num_nonnulls(gel_litige_at, gel_litige_leve_at, gel_litige_ref, mesure_terminee_at)::int AS n
+      FROM anomalies WHERE id = ${id}::uuid`;
+    expect(l!.n).toBe(0);
+  });
+
+  it('REQ-DM-033 : TÉMOIN — une anomalie levée s’anonymise sans fin de mesure', async () => {
+    const id = await uneAnomalie();
+    await clore(id);
+    await expect(anonymiser(id)).resolves.toBe(1);
   });
 
   it('REQ-DM-033 : TÉMOIN — un apporteur NULL sans anonymisation est refusé (anomalies_apporteur_present)', async () => {
@@ -979,6 +1107,59 @@ describe('REQ-DM-043 — contestations : un objet, une cible, une réponse posé
       CONTESTATIONS
     );
     expect(await refus(tronquer('contestations'))).toContain(CONTESTATIONS);
+  });
+
+  const gelerLaContestation = (
+    id: string,
+    ref: string | null = 'RG-24/05678',
+    at: Date = new Date(MAINTENANT.getTime() + 1_000)
+  ) =>
+    ecrire(
+      `UPDATE contestations SET gel_litige_at = $2, gel_litige_ref = $3 WHERE id = $1::uuid`,
+      id,
+      at,
+      ref
+    );
+  const leverLaContestation = (id: string, at: Date = new Date(MAINTENANT.getTime() + 2_000)) =>
+    ecrire(`UPDATE contestations SET gel_litige_leve_at = $2 WHERE id = $1::uuid`, id, at);
+
+  it('REQ-DM-043 : TÉMOIN — le gel pour litige posé puis levé passe ; la référence sans chiffre ou avec un espace est refusée (contestations_gel_litige_ref_forme)', async () => {
+    const id = await neuve();
+    for (const ref of ['Dupont', 'RG 24/05678']) {
+      expect(await refus(gelerLaContestation(id, ref)), ref).toContain(
+        'contestations_gel_litige_ref_forme'
+      );
+    }
+    await expect(gelerLaContestation(id)).resolves.toBe(1);
+    await expect(leverLaContestation(id)).resolves.toBe(1);
+  });
+
+  it('REQ-DM-043 : TÉMOIN — un gel sans référence, ou une levée sans gel, est refusé (contestations_gel_litige_forme)', async () => {
+    const id = await neuve();
+    expect(await refus(gelerLaContestation(id, null))).toContain('contestations_gel_litige_forme');
+    expect(await refus(leverLaContestation(id))).toContain('contestations_gel_litige_forme');
+  });
+
+  it('REQ-DM-043 : TÉMOIN — un gel reposé, une référence réécrite, une levée réécrite : refusés', async () => {
+    const id = await neuve();
+    await gelerLaContestation(id);
+    expect(
+      await refus(gelerLaContestation(id, 'RG-24/05678', new Date(MAINTENANT.getTime() + 5_000)))
+    ).toContain(CONTESTATIONS);
+    expect(await refus(gelerLaContestation(id, 'RG-24/09999'))).toContain(CONTESTATIONS);
+    await leverLaContestation(id);
+    expect(await refus(leverLaContestation(id, new Date(MAINTENANT.getTime() + 9_000)))).toContain(
+      CONTESTATIONS
+    );
+  });
+
+  it('REQ-DM-043 : TÉMOIN — sous un gel actif, la purge est refusée (gel pour litige actif) ; après la levée, elle passe', async () => {
+    const id = await neuve();
+    await repondre(id);
+    await gelerLaContestation(id);
+    expect(await refus(purger(id))).toContain('gel pour litige actif');
+    await leverLaContestation(id);
+    await expect(purger(id)).resolves.toBe(1);
   });
 });
 

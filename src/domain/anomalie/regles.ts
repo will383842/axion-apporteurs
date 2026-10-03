@@ -21,6 +21,9 @@ export const ETATS_CONTESTATION = ['recue', 'repondue'] as const;
 /** Les deux gestes sur un rattachement manuel que le journal trace (glossaire §4.1). */
 export const GESTES_RATTACHEMENT = ['decide', 'revoque'] as const;
 
+/** Les deux gestes du gel pour litige que le journal trace, sur une anomalie ou une contestation. */
+export const GESTES_DU_GEL = ['gel_pose', 'gel_leve'] as const;
+
 export class AnomalieMalFormee extends Error {
   constructor(motif: string) {
     super(`anomalie_mal_formee : ${motif}`);

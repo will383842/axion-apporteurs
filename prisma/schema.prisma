@@ -79,6 +79,7 @@ enum TypeEvenementJournal {
   anomalie_statut_modifie
   contestation_modifiee
   rattachement_manuel_modifie
+  anomalie_gel_modifie
 
   @@map("type_evenement_journal")
 }
@@ -1116,6 +1117,13 @@ model Anomalie {
   /// L'ANONYMISATION : tout ce qui désigne une personne est vidé ; restent l'id, le type, le statut
   /// et les mois d'ouverture et de traitement (forme d'A02).
   anonymiseeAt          DateTime?           @map("anonymisee_at") @db.Timestamptz(3)
+  /// La fin réelle de la mesure fondée sur une anomalie confirmée, posée une fois, jamais avant
+  /// `traiteAt` ; elle fait courir l'échéance de l'anonymisation.
+  mesureTermineeAt      DateTime?           @map("mesure_terminee_at") @db.Timestamptz(3)
+  /// Le gel pour litige : posé une fois avec sa référence (un numéro, jamais un nom), levé une fois.
+  gelLitigeAt           DateTime?           @map("gel_litige_at") @db.Timestamptz(3)
+  gelLitigeLeveAt       DateTime?           @map("gel_litige_leve_at") @db.Timestamptz(3)
+  gelLitigeRef          String?             @map("gel_litige_ref") @db.VarChar(64)
 
   @@index([apporteurId])
   @@index([attributionId])
@@ -1153,22 +1161,26 @@ model RattachementManuel {
 /// l'objet (CHECK) ; texte et réponse sont chiffrés (`CHAMPS_PII`) ; la réponse se pose ensemble et
 /// une fois, la purge vide texte et réponse en posant sa date. L'échéance de réponse se DÉRIVE de `recueAt` et de la SSOT : aucune colonne.
 model Contestation {
-  id             String              @id @default(uuid()) @db.Uuid
-  apporteurId    String              @map("apporteur_id") @db.Uuid
-  apporteur      Apporteur           @relation(fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  objet          ObjetContestation
-  depotRefuseId  String?             @map("depot_refuse_id") @db.Uuid
-  depotRefuse    DepotRefuse?        @relation(fields: [depotRefuseId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  attributionId  String?             @map("attribution_id") @db.Uuid
-  attribution    Attribution?        @relation(fields: [attributionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  texteChiffre   Bytes?              @map("texte_chiffre")
-  recueAt        DateTime            @default(now()) @map("recue_at") @db.Timestamptz(3)
-  reponseChiffre Bytes?              @map("reponse_chiffre")
-  repondueParId  String?             @map("repondue_par_id") @db.Uuid
-  reponduePar    UtilisateurConsole? @relation(fields: [repondueParId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  repondueAt     DateTime?           @map("repondue_at") @db.Timestamptz(3)
+  id              String              @id @default(uuid()) @db.Uuid
+  apporteurId     String              @map("apporteur_id") @db.Uuid
+  apporteur       Apporteur           @relation(fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  objet           ObjetContestation
+  depotRefuseId   String?             @map("depot_refuse_id") @db.Uuid
+  depotRefuse     DepotRefuse?        @relation(fields: [depotRefuseId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  attributionId   String?             @map("attribution_id") @db.Uuid
+  attribution     Attribution?        @relation(fields: [attributionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  texteChiffre    Bytes?              @map("texte_chiffre")
+  recueAt         DateTime            @default(now()) @map("recue_at") @db.Timestamptz(3)
+  reponseChiffre  Bytes?              @map("reponse_chiffre")
+  repondueParId   String?             @map("repondue_par_id") @db.Uuid
+  reponduePar     UtilisateurConsole? @relation(fields: [repondueParId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  repondueAt      DateTime?           @map("repondue_at") @db.Timestamptz(3)
   /// La purge du texte et de la réponse, tracée et posée une fois (fonction dédiée).
-  purgeeAt       DateTime?           @map("purgee_at") @db.Timestamptz(3)
+  purgeeAt        DateTime?           @map("purgee_at") @db.Timestamptz(3)
+  /// Le gel pour litige : posé une fois avec sa référence (un numéro, jamais un nom), levé une fois.
+  gelLitigeAt     DateTime?           @map("gel_litige_at") @db.Timestamptz(3)
+  gelLitigeLeveAt DateTime?           @map("gel_litige_leve_at") @db.Timestamptz(3)
+  gelLitigeRef    String?             @map("gel_litige_ref") @db.VarChar(64)
 
   @@index([apporteurId])
   @@index([depotRefuseId])

@@ -34,7 +34,12 @@ import {
 } from '../attribution/machine';
 import { STATUTS_PIECE_KYC, TYPES_PIECE_KYC } from '../kyc/pieces';
 import { ETATS_DEMANDE_CONFIRMATION } from '../confirmation/demande';
-import { ETATS_CONTESTATION, GESTES_RATTACHEMENT, STATUTS_ANOMALIE } from '../anomalie/regles';
+import {
+  ETATS_CONTESTATION,
+  GESTES_DU_GEL,
+  GESTES_RATTACHEMENT,
+  STATUTS_ANOMALIE,
+} from '../anomalie/regles';
 
 /**
  * Les codes d'événement que porte `apporteur_statut_modifie` : la NAISSANCE (`creer`, `de` nul), puis
@@ -95,7 +100,8 @@ export type TypeEvenementJournal =
   | 'demande_confirmation_etat_modifie'
   | 'anomalie_statut_modifie'
   | 'contestation_modifiee'
-  | 'rattachement_manuel_modifie';
+  | 'rattachement_manuel_modifie'
+  | 'anomalie_gel_modifie';
 
 /** DM-08 : le porteur d'une attribution, une forme UNIQUE — sa population et son identifiant. */
 const PORTEUR = () =>
@@ -246,12 +252,21 @@ export const CHARGES_PAR_TYPE = {
         });
       }
     }),
-  // DM-12 (REQ-DM-043) : la réception (`de` nul) ou la réponse d'une contestation, agrégat `apporteur`.
+  // DM-12 (REQ-DM-033) : le gel pour litige d'une anomalie, posé ou levé, sur l'agrégat ANOMALIE.
+  // Ni la référence du litige, ni personne : comme `anomalie_statut_modifie`.
+  anomalie_gel_modifie: z
+    .object({
+      vers: z.enum(GESTES_DU_GEL),
+      acteur: FORMES.acteurSansIdentite(),
+    })
+    .strict(),
+  // DM-12 (REQ-DM-043) : la réception (`de` nul) ou la réponse d'une contestation, agrégat `apporteur` ;
+  // et le gel pour litige, posé ou levé, sans sa référence.
   contestation_modifiee: z
     .object({
       contestationId: FORMES.identifiant(),
       de: z.enum(ETATS_CONTESTATION).nullable(),
-      vers: z.enum(ETATS_CONTESTATION),
+      vers: z.enum([...ETATS_CONTESTATION, ...GESTES_DU_GEL]),
       acteur: FORMES.acteur(),
     })
     .strict(),
