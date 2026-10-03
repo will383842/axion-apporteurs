@@ -23408,6 +23408,33 @@
           "tests/integration/liste-noire-trace.spec.ts"
         ]
       }
+    },
+    {
+      "id": "GOV-144",
+      "titre": "gov:trace ne confronte une PR fusionnée au registre du disque que si son commit de fusion est un ancêtre de la tête : un rattrapage ne rougit plus les PR ouvertes",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "scripts/gates/gov-trace.ts",
+        "tests/unit/gouvernance/trace-fusion-ancetre.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [],
+      "reqs": [
+        "REQ-QA-014"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.25,
+      "statut": "a_faire",
+      "acceptance": "Versée au rattrapage 95, PRIORITÉ HAUTE (coordination : frein systémique, le gel ne s'applique pas). CONSTAT : `gov:trace` lit les PR FUSIONNÉES sur la forge, mais le registre sur le DISQUE de la branche. Après chaque rattrapage qui ajoute une exigence, toute PR ouverte rougit en `pr_couvre_req_inconnue` (« La PR 637 déclare couvrir REQ-SEC-058, qui n'est pas au registre » sur #605 ; même cause sur #598 et #623 avec la PR 626 et REQ-SEC-062) jusqu'à sa mise à jour, et chaque mise à jour relance les accords. CORRECTIF : `gov:trace` ne confronte une PR fusionnée au registre du disque QUE si son commit de fusion est un ANCÊTRE de HEAD (`git merge-base --is-ancestor`) ; une PR fusionnée après la base de la branche n'est pas encore « sur ce disque ». TÉMOIN À DEUX FACES (`tests/unit/gouvernance/trace-fusion-ancetre.spec.ts`) : une fusion ANCÊTRE dont l'exigence est inconnue rougit toujours (`pr_couvre_req_inconnue`) ; une fusion NON ANCÊTRE est ignorée, et NOMMÉE dans la sortie. Échec fermé : un commit de fusion illisible n'est jamais tenu pour non ancêtre. Auteur : A05. Lentilles exactitude et sécurité.",
+      "tests": {
+        "REQ-QA-014": [
+          "tests/unit/gouvernance/trace-fusion-ancetre.spec.ts"
+        ]
+      }
     }
   ]
 }
