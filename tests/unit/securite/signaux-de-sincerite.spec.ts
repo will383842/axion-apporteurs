@@ -1,4 +1,10 @@
-// @req REQ-SEC-017 REQ-SEC-020 REQ-SEC-036 REQ-SEC-038 REQ-JUR-031 REQ-JUR-040 REQ-DM-033
+// @req REQ-SEC-017
+// @req REQ-SEC-020
+// @req REQ-SEC-036
+// @req REQ-SEC-038
+// @req REQ-JUR-031
+// @req REQ-JUR-040
+// @req REQ-DM-033
 /**
  * SEC-14 — les détecteurs de sincérité, jugés PURS : la NATURE des signaux retenus, jamais leurs
  * valeurs. Les poids et le seuil vivent en configuration hors dépôt (REQ-GOV-031) : les réglages

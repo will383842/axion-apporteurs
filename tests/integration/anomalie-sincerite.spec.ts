@@ -1,4 +1,7 @@
-// @req REQ-SEC-017 REQ-DM-033 REQ-SEC-038 REQ-SEC-036
+// @req REQ-SEC-017
+// @req REQ-DM-033
+// @req REQ-SEC-038
+// @req REQ-SEC-036
 /**
  * SEC-14 — l'ouverture d'une anomalie de sincérité, contre la base RÉELLE.
  *
