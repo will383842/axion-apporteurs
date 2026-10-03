@@ -4988,7 +4988,15 @@
         "prisma/seed/11-qualifications.ts",
         "src/domain/qualification/",
         "src/server/qualification/",
-        "tests/integration/qualification-append-only.spec.ts"
+        "tests/integration/qualification-append-only.spec.ts",
+        "tests/unit/domaine/qualification.spec.ts",
+        "src/server/taches/purger-contacts.ts",
+        "tests/unit/domaine/purge-du-contact.spec.ts",
+        "tests/integration/ajout-seul-gabarit.spec.ts",
+        "docs/rgpd/registre-article-30.md",
+        "tests/unit/juridique/registre-rgpd.spec.ts",
+        "docs/GLOSSAIRE.md",
+        "src/server/acces/for-apporteur.ts"
       ],
       "schema": true,
       "sensible": [
@@ -5022,7 +5030,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "le seuil prioritaire est lu depuis `seuilPrioritaire()` de `src/domain/attribution/seuil-prioritaire.ts` (livré par CPL-T13) (règle D3 : `min(palierConfiance, capaciteRestante)`, surcharge manuelle > 0 remplace le min), jamais recalculé ici ; **aucun compteur de gradation, aucun rang, aucun délai de « contradictoire »** (décision du 2026-09-03) — une déclaration `non_confirme` suspend, c'est SEC-15 qui porte la suspension. 🔴 **Complétée le 2026-09-03 (synthèse A-3 et M-7) : les QUATRE résultats de contact n'ont pas les mêmes effets.** Seul `non_confirme` — le représentant indique **expressément** n'avoir eu aucun échange — éteint l'attribution et ouvre l'article 3.7 ; `injoignable`, `ne_se_souvient_pas`, le changement d'interlocuteur et le refus de répondre **maintiennent l'attribution `provisoire`** et ne sont imputables à personne : aucune suspension, aucun signal défavorable, aucune invalidation. La Qualification **journalise la date, la personne interrogée et les termes** de la réponse, et l'extrait en est communiqué à l'apporteur sur sa demande (route cloisonnée). `premierContactAt` est posé ici et c'est lui qui démarre le chrono de péremption (DM-13). 🔴 **Complétée le 2026-09-25 (cadrage de DM-06, GOV-099).** DM-09 porte le TÉMOIN de REQ-DM-010 retiré de DM-06 : un dépôt au-delà du seuil de vérification prioritaire est ACCEPTÉ, horodaté et porte `verificationPrioritaire = true` ; le test vérifie l'acceptation, pas seulement le drapeau, et un témoin qui refuserait ce dépôt le fait rougir. 🔴 **Complétée le 2026-09-26 (cadrage de l'architecte sur délégation de Will, partners/ADR-0022, GOV-102).** ELLE ÉCRIT LE SCHÉMA (label `schema`, seule de sa famille dans son lot) : enums `InteretContact {eleve, moyen, faible, nul}`, `ProchaineEtape {rdv, rappeler, proposition, perdue, aucune}` et `MotifPerte {pas_de_besoin, deja_equipe, hors_cible, injoignable_definitif, autre}` — valeurs décidées sous `HYP-A02-VOCABULAIRE-QUALIFICATION`, aucune n'est `non_confirme` (une déclaration `non_confirme` mène à `invalidee`, REQ-UX-021 amendée) — avec `ResultatContact`. `Qualification` -> `qualifications`, APPEND-ONLY (REQ-DM-008) : `attributionId`, `resultatContact`, `interet` nullable, `prochaineEtape`, `motifPerte` nullable, `rdvAt`, `rappelerAt`, `personneInterrogeeChiffre` et `termesReponseChiffre` (données d'un tiers, chiffrées, purgées avec le contact, REQ-DM-031), `auteurId` vers `utilisateurs_console`, `creeAt` posé par la base en Timestamptz(6). CHECK : `(prochaine_etape = 'perdue') = (motif_perte IS NOT NULL)`, `rdv_at` exigé pour `rdv`, `rappeler_at` exigé pour `rappeler` ; déclencheur append-only dont la seule exception est la remise à NULL des deux colonnes chiffrées par la purge, toute autre colonne inchangée. `CHAMPS_PII` gagne `personneInterrogee` et `termesReponse`. Le compteur de tentatives « injoignable » est DÉRIVÉ du compte des qualifications, jamais stocké. Module du semeur `prisma/seed/11-qualifications.ts`. 🔴 Complétée le 2026-09-29 (chantier W20, décision de Williams, session -d7, docs/chantiers/W20-confirmation-par-email.md §6). La Qualification reste append-only et ne décrit que l'appel ; une confirmation par clic du contact (DM-41) compte pour la dérivation du palier exactement comme une Qualification confirme, et un « Non » confirmé comme un non_confirme. Aucune Qualification n'est fabriquée pour un clic : la source de la confirmation se lit sur la demande de confirmation (DM-40). Contraintes W19 à intégrer (GOV-115, décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §6) : palier, taux et `verificationPrioritaire` se dérivent des seules qualifications d'apporteurs (témoin de volume). DÉCISIONS DE L'ARCHITECTE (A02) DU 2026-10-02, versées au rattrapage 48 ; leurs lignes HYP-A02-PRECISION-DEPOT, HYP-A02-ACTEUR-JOURNAL, HYP-A02-GABARIT-AJOUT-SEUL et HYP-A02-EMPREINTE-NOM-CONTACT entrent à `docs/DECISIONS.md` §2 au prochain lot dédié du gardien-spec. Pour DM-09 : `creeAt` en `Timestamptz(3)` (seul `deposeeAt` de DM-07 est à la microseconde) ; ses deux colonnes chiffrées sont gardées par le gabarit `refuser_modification_sauf()` de DM-07 (`purge:<colonne>`), branché par `CREATE TRIGGER` ; acteur du journal selon la forme `acteur` obligatoire.",
+      "acceptance": "le seuil prioritaire est lu depuis `seuilPrioritaire()` de `src/domain/attribution/seuil-prioritaire.ts` (livré par CPL-T13) (règle D3 : `min(palierConfiance, capaciteRestante)`, surcharge manuelle > 0 remplace le min), jamais recalculé ici ; **aucun compteur de gradation, aucun rang, aucun délai de « contradictoire »** (décision du 2026-09-03) — une déclaration `non_confirme` suspend, c'est SEC-15 qui porte la suspension. 🔴 **Complétée le 2026-09-03 (synthèse A-3 et M-7) : les QUATRE résultats de contact n'ont pas les mêmes effets.** Seul `non_confirme` — le représentant indique **expressément** n'avoir eu aucun échange — éteint l'attribution et ouvre l'article 3.7 ; `injoignable`, `ne_se_souvient_pas`, le changement d'interlocuteur et le refus de répondre **maintiennent l'attribution `provisoire`** et ne sont imputables à personne : aucune suspension, aucun signal défavorable, aucune invalidation. La Qualification **journalise la date, la personne interrogée et les termes** de la réponse, et l'extrait en est communiqué à l'apporteur sur sa demande (route cloisonnée). `premierContactAt` est posé ici et c'est lui qui démarre le chrono de péremption (DM-13). 🔴 **Complétée le 2026-09-25 (cadrage de DM-06, GOV-099).** DM-09 porte le TÉMOIN de REQ-DM-010 retiré de DM-06 : un dépôt au-delà du seuil de vérification prioritaire est ACCEPTÉ, horodaté et porte `verificationPrioritaire = true` ; le test vérifie l'acceptation, pas seulement le drapeau, et un témoin qui refuserait ce dépôt le fait rougir. 🔴 **Complétée le 2026-09-26 (cadrage de l'architecte sur délégation de Will, partners/ADR-0022, GOV-102).** ELLE ÉCRIT LE SCHÉMA (label `schema`, seule de sa famille dans son lot) : enums `InteretContact {eleve, moyen, faible, nul}`, `ProchaineEtape {rdv, rappeler, proposition, perdue, aucune}` et `MotifPerte {pas_de_besoin, deja_equipe, hors_cible, injoignable_definitif, autre}` — valeurs décidées sous `HYP-A02-VOCABULAIRE-QUALIFICATION`, aucune n'est `non_confirme` (une déclaration `non_confirme` mène à `invalidee`, REQ-UX-021 amendée) — avec `ResultatContact`. `Qualification` -> `qualifications`, APPEND-ONLY (REQ-DM-008) : `attributionId`, `resultatContact`, `interet` nullable, `prochaineEtape`, `motifPerte` nullable, `rdvAt`, `rappelerAt`, `personneInterrogeeChiffre` et `termesReponseChiffre` (données d'un tiers, chiffrées, purgées avec le contact, REQ-DM-031), `auteurId` vers `utilisateurs_console`, `creeAt` posé par la base en Timestamptz(6). CHECK : `(prochaine_etape = 'perdue') = (motif_perte IS NOT NULL)`, `rdv_at` exigé pour `rdv`, `rappeler_at` exigé pour `rappeler` ; déclencheur append-only dont la seule exception est la remise à NULL des deux colonnes chiffrées par la purge, toute autre colonne inchangée. `CHAMPS_PII` gagne `personneInterrogee` et `termesReponse`. Le compteur de tentatives « injoignable » est DÉRIVÉ du compte des qualifications, jamais stocké. Module du semeur `prisma/seed/11-qualifications.ts`. 🔴 Complétée le 2026-09-29 (chantier W20, décision de Williams, session -d7, docs/chantiers/W20-confirmation-par-email.md §6). La Qualification reste append-only et ne décrit que l'appel ; une confirmation par clic du contact (DM-41) compte pour la dérivation du palier exactement comme une Qualification confirme, et un « Non » confirmé comme un non_confirme. Aucune Qualification n'est fabriquée pour un clic : la source de la confirmation se lit sur la demande de confirmation (DM-40). Contraintes W19 à intégrer (GOV-115, décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §6) : palier, taux et `verificationPrioritaire` se dérivent des seules qualifications d'apporteurs (témoin de volume). DÉCISIONS DE L'ARCHITECTE (A02) DU 2026-10-02, versées au rattrapage 48 ; leurs lignes HYP-A02-PRECISION-DEPOT, HYP-A02-ACTEUR-JOURNAL, HYP-A02-GABARIT-AJOUT-SEUL et HYP-A02-EMPREINTE-NOM-CONTACT entrent à `docs/DECISIONS.md` §2 au prochain lot dédié du gardien-spec. Pour DM-09 : `creeAt` en `Timestamptz(3)` (seul `deposeeAt` de DM-07 est à la microseconde) ; ses deux colonnes chiffrées sont gardées par le gabarit `refuser_modification_sauf()` de DM-07 (`purge:<colonne>`), branché par `CREATE TRIGGER` ; acteur du journal selon la forme `acteur` obligatoire. FORME D'A02 (rattrapage 83, relayée par la coordination) : `contact_purge_at` en écriture unique (`une_fois`) ; CHECK `qualifications_purge_liee` liant la purge et sa date ; CHECK d'étape en ÉGALITÉ (`qualifications_perte_motivee`, `qualifications_rdv_date`, `qualifications_rappel_date`) ; `octet_length(...) > 0` sur les colonnes chiffrées ; index `(attribution_id, cree_at)` ; la purge est branchée dans `src/server/taches/purger-contacts.ts` (REQ-DM-031). `qualifications` entre à la liste figée du gabarit d'ajout seul. Table neuve portant des données d'un tiers : sa ligne au registre de l'article 30, texte fourni par la juriste. `src/domain/qualification/` est couvert à 100 % par des tests unitaires (`tests/unit/domaine/qualification.spec.ts`). REGISTRE DE L'ARTICLE 30 (rattrapage 83, texte d'A07 du 2026-10-03, MOT POUR MOT). Au bloc TRT-TIERS, FINALITÉ, ajouter : « consigner le résultat de l'appel de confirmation, preuve de la confirmation ou du démenti de l'échange, dont l'extrait est communiqué à l'apporteur sur sa demande (contrat art. 3.7) ». DESTINATAIRES, ajouter : « l'apporteur, pour le seul extrait de la réponse donnée sur sa déclaration (date, personne interrogée, termes), et sur sa demande ; jamais l'intérêt, la prochaine étape ni le motif de perte, qui restent internes à la Société ». LIGNE DU §3 : « `qualifications` | TRT-TIERS | Le résultat de l'appel, ses dates (appel, rendez-vous ou rappel), l'intérêt, la prochaine étape et le motif de perte, sans donnée de personne : aussi longtemps que la preuve de l'attribution à laquelle l'appel se rattache. Le nom de la personne interrogée et les termes de sa réponse, chiffrés : purgés avec le contact de l'attribution, sauf lorsque la réponse a mis fin à l'attribution (démenti exprès, article 3.7) : À compléter — source manquante. Question : garde-t-on alors, chiffrés, le nom de la personne et les termes de son démenti cinq ans après la fin de l'attribution, preuve de cette fin si l'apporteur la conteste ? Proposition d'A07 : oui. | table `qualifications` · contrat art. 3.2 · contrat art. 3.7 · REQ-DM-031 · code civil art. 2224 ». La règle de purge des contacts (DM-48) reste la règle ; le démenti en est l'unique exception, à faire valider par Williams.",
       "tests": {
         "REQ-DM-010": [
           "tests/unit/domaine/depot-au-dela-du-seuil.spec.ts"
@@ -5163,7 +5171,19 @@
         "src/domain/anomalie/",
         "tests/integration/anomalies-et-contestations.spec.ts",
         "src/server/acces/for-apporteur.ts",
-        "tests/unit/securite/acces-scope.spec.ts"
+        "tests/unit/securite/acces-scope.spec.ts",
+        "src/server/roles/matrice.ts",
+        "tests/unit/securite/matrice-des-roles.spec.ts",
+        "src/server/rattachement/decider.ts",
+        "tests/unit/securite/rattachement-decide.spec.ts",
+        "tests/unit/domaine/journal-charges.spec.ts",
+        "tests/integration/ajout-seul-gabarit.spec.ts",
+        "docs/rgpd/registre-article-30.md",
+        "tests/unit/juridique/registre-rgpd.spec.ts",
+        "tests/unit/domaine/anomalie.spec.ts",
+        "tests/integration/idor.spec.ts",
+        "src/server/anomalie/justification.ts",
+        "tests/unit/securite/justification-anomalie.spec.ts"
       ],
       "schema": true,
       "sensible": [
@@ -5191,7 +5211,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "ELLE ÉCRIT LE SCHÉMA (label `schema`, seule de sa famille dans son lot). Cadrage de l'architecte du 2026-09-26 sur délégation de Will (partners/ADR-0022) : ce que la tâche crée ; le comportement est celui de ses exigences. (1) Enums `TypeAnomalie {sincerite, appareil_inconnu, ramassage, auto_parrainage}` — aucune valeur de rythme (REQ-SEC-017, REQ-JUR-031, REQ-SEC-021 amendée) — et `ObjetContestation {refus_depot, annulation_attribution, demande_rattachement}`, avec `ResultatVerification` et `StatutAnomalie`. (2) `Verification` -> `verifications` (REQ-DM-032, REQ-SEC-021), append-only : `apporteurId`, `siren`, `resultat`, `ipHash` Char(16), `verifieeAt` ; le plafond de vérifications est un compte, jamais une colonne. `AlerteLiberation` -> `alertes_liberation` : `apporteurId`, `siren`, `creeAt`, `envoyeeAt`, unique tant que non envoyée (`WHERE envoyee_at IS NULL`). `Anomalie` -> `anomalies` (REQ-DM-033) : `type`, `score` (présent si et seulement si `sincerite`), `apporteurId`, `attributionId`, `statut`, `ouverteAt`, `traiteParId`, `traiteAt`, `justification` ; CHECK `(statut = 'ouverte') = (traite_at IS NULL)` et `(traite_at IS NULL) = (traite_par_id IS NULL)`. `RattachementManuel` -> `rattachements_manuels` (REQ-DM-034) : `attributionId`, `sirenCommande`, `justification` d'au moins 20 caractères utiles (renommée de `motif` : un texte libre ne porte jamais un nom de vocabulaire), `lienControleEtabliAt`, `lienControleSource` non vide, `decideParId`, `decideAt`, `revoqueAt` ; `UNIQUE (siren_commande) WHERE revoque_at IS NULL` ; le déclencheur `rattachement_lien_anterieur` refuse `lien_controle_etabli_at > attributions.deposee_at`. `Contestation` -> `contestations` (REQ-DM-043, et la DEMANDE de rattachement de REQ-DM-034) : `apporteurId`, `objet`, `depotRefuseId` (si et seulement si `refus_depot`, `attributionId` sinon), `texteChiffre`, `recueAt`, `reponseChiffre`, `repondueParId`, `repondueAt` (réponse présente ensemble) ; l'échéance de réponse est `recueAt` plus la durée SSOT, jamais stockée. (3) Journal : `anomalie_statut_modifie` et `contestation_modifiee` (agrégat `apporteur`, charge `{anomalieId | contestationId, de?, vers, acteurId?}`), `rattachement_manuel_modifie` (agrégat `attribution`, `{rattachementId, vers: 'decide' | 'revoque', acteurId}`). `CHAMPS_PII` gagne `texte` et `reponse`. Module du semeur `prisma/seed/12-console-cas.ts`. Contraintes W19 à intégrer (GOV-115, décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §6) : Sans changer l'estimation. `verifications` reçoit le porteur XOR. `decide_par_id`, `traite_par_id` et `repondue_par_id` ne désignent jamais un conseiller : DÉCLENCHEUR, et non une assertion de test. AMENDEMENT (vérification V2 (GOV-132, 2026-10-01), A1-01) : la tâche déclare `action:rattacher_manuellement` dans `src/server/roles/matrice.ts`. AMENDEMENT (audit indépendant du plan de la Phase 1 (2026-10-01, `_REPRISE-AXION-APPORTEURS/AUDIT-PLAN-PHASE-1.md`), écart B-03) : le déclencheur W19 compare `role::text = 'conseiller_salarie'`, ou il est posé par SEC-31 (même règle que DM-07 (a)). ÉMETTRICE (rattrapage 60, arrêt définitif d'A02 avec A07, 2026-10-02, relayé par la coordination) : cette tâche émet la notification `rattachement_decide` de la table d'UX-P1-10 (obligatoire), avec un TEST D'INTÉGRATION à sa livraison (la clé part, une seule fois, au bon apporteur). RÈGLE (rattrapage 62, décision de la coordination du 2026-10-02) : si cette tâche livre AVANT UX-P1-10 (la table des notifications), elle fusionne SANS l'émission de sa clé ; l'émission suit UX-P1-10, dans une tâche de suite versée au rattrapage qui suit sa fusion, avec son test d'intégration ; la tâche de suite DEVIENT l'émettrice nommée de la clé, dans la table d'UX-P1-10 et dans `table-ssot.ts` (`emetteur`), au même rattrapage (A02). NOTE DE LA LENTILLE SÉCURITÉ (rattrapage 64) : les liens dans les paramètres `{motif}`, `{faits}` et `{decision}` d'une notification sont REFUSÉS à la saisie, chez chaque émettrice ; TÉMOIN."
+      "acceptance": "ELLE ÉCRIT LE SCHÉMA (label `schema`, seule de sa famille dans son lot). Cadrage de l'architecte du 2026-09-26 sur délégation de Will (partners/ADR-0022) : ce que la tâche crée ; le comportement est celui de ses exigences. (1) Enums `TypeAnomalie {sincerite, auto_parrainage}` (amendement du rattrapage 82) — aucune valeur de rythme (REQ-SEC-017, REQ-JUR-031, REQ-SEC-021 amendée) — et `ObjetContestation {refus_depot, annulation_attribution, demande_rattachement}`, avec `ResultatVerification` et `StatutAnomalie`. (2) `Verification` -> `verifications` (REQ-DM-032, REQ-SEC-021), append-only : `apporteurId`, `siren`, `resultat`, `ipHash` Char(16), `verifieeAt` ; le plafond de vérifications est un compte, jamais une colonne. `AlerteLiberation` -> `alertes_liberation` : `apporteurId`, `siren`, `creeAt`, `envoyeeAt`, unique tant que non envoyée (`WHERE envoyee_at IS NULL`). `Anomalie` -> `anomalies` (REQ-DM-033) : `type`, `score` (présent si et seulement si `sincerite`), `apporteurId`, `attributionId`, `statut`, `ouverteAt`, `traiteParId`, `traiteAt`, `justification` ; CHECK `(statut = 'ouverte') = (traite_at IS NULL)` et `(traite_at IS NULL) = (traite_par_id IS NULL)`. `RattachementManuel` -> `rattachements_manuels` (REQ-DM-034) : `attributionId`, `sirenCommande`, `justification` d'au moins 20 caractères utiles (renommée de `motif` : un texte libre ne porte jamais un nom de vocabulaire), `lienControleEtabliAt`, `lienControleSource` non vide, `decideParId`, `decideAt`, `revoqueAt` ; `UNIQUE (siren_commande) WHERE revoque_at IS NULL` ; le déclencheur `rattachement_lien_anterieur` refuse `lien_controle_etabli_at > attributions.deposee_at`. `Contestation` -> `contestations` (REQ-DM-043, et la DEMANDE de rattachement de REQ-DM-034) : `apporteurId`, `objet`, `depotRefuseId` (si et seulement si `refus_depot`, `attributionId` sinon), `texteChiffre`, `recueAt`, `reponseChiffre`, `repondueParId`, `repondueAt` (réponse présente ensemble) ; l'échéance de réponse est `recueAt` plus la durée SSOT, jamais stockée. (3) Journal : `anomalie_statut_modifie` et `contestation_modifiee` (agrégat `apporteur`, charge `{anomalieId | contestationId, de?, vers, acteurId?}`), `rattachement_manuel_modifie` (agrégat `attribution`, `{rattachementId, vers: 'decide' | 'revoque', acteurId}`). `CHAMPS_PII` gagne `texte` et `reponse`. Module du semeur `prisma/seed/12-console-cas.ts`. Contraintes W19 à intégrer (GOV-115, décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §6) : Sans changer l'estimation. `verifications` reçoit le porteur XOR. `decide_par_id`, `traite_par_id` et `repondue_par_id` ne désignent jamais un conseiller : DÉCLENCHEUR, et non une assertion de test. AMENDEMENT (vérification V2 (GOV-132, 2026-10-01), A1-01) : la tâche déclare `action:rattacher_manuellement` dans `src/server/roles/matrice.ts`. AMENDEMENT (audit indépendant du plan de la Phase 1 (2026-10-01, `_REPRISE-AXION-APPORTEURS/AUDIT-PLAN-PHASE-1.md`), écart B-03) : le déclencheur W19 compare `role::text = 'conseiller_salarie'`, ou il est posé par SEC-31 (même règle que DM-07 (a)). ÉMETTRICE (rattrapage 60, arrêt définitif d'A02 avec A07, 2026-10-02, relayé par la coordination) : cette tâche émet la notification `rattachement_decide` de la table d'UX-P1-10 (obligatoire), avec un TEST D'INTÉGRATION à sa livraison (la clé part, une seule fois, au bon apporteur). RÈGLE (rattrapage 62, décision de la coordination du 2026-10-02) : si cette tâche livre AVANT UX-P1-10 (la table des notifications), elle fusionne SANS l'émission de sa clé ; l'émission suit UX-P1-10, dans une tâche de suite versée au rattrapage qui suit sa fusion, avec son test d'intégration ; la tâche de suite DEVIENT l'émettrice nommée de la clé, dans la table d'UX-P1-10 et dans `table-ssot.ts` (`emetteur`), au même rattrapage (A02). NOTE DE LA LENTILLE SÉCURITÉ (rattrapage 64) : les liens dans les paramètres `{motif}`, `{faits}` et `{decision}` d'une notification sont REFUSÉS à la saisie, chez chaque émettrice ; TÉMOIN. AMENDEMENT (rattrapage 82, arbitrage de la coordination sur les réponses de la juriste et de la sécurité, 2026-10-03) : (a) `TypeAnomalie` se réduit à {sincerite, auto_parrainage}. Le RAMASSAGE en sort (REQ-EXT-007 amendée, texte de la juriste : « Le dépôt d'une entreprise libre que la Société a déjà travaillée n'est pas une anomalie et ne produit aucun effet sur le dépôt ni sur l'apporteur : ni vérification, ni suspension, ni statut. Il peut seulement placer la demande de confirmation en tête de la liste des appels de la Société, au titre de la prise de contact que l'article 3.2 lui permet. Aucun compte, aucune proportion et aucune fenêtre de temps ne sont calculés sur les dépôts d'un apporteur. ») ; l'APPAREIL INCONNU en sort aussi (SEC-55, texte de la juriste : « Un appareil inconnu est un signal de sécurité du compte, jamais une anomalie de dépôt. Son seul effet est une mesure de sécurité de la connexion (confirmation renforcée ou nouvelle authentification) ; il n'est inscrit ni au dossier de l'apporteur ni sur ses dépôts, et il n'entre dans aucune décision qui le concerne. L'empreinte de l'appareil est minimale, conservée au plus la durée des sessions, et inscrite au registre de l'article 30. »). (b) LIMITE DE FOND DE LA JURISTE, MOT POUR MOT : « Une anomalie qui sert à déclencher une vérification (art. 3.2 al. 4) ou une suspension (art. 3.7 al. 3) ne peut être fondée, même partiellement, « sur le nombre de déclarations, sur leur rythme, sur l'heure ou le lieu […], ni sur la zone, le secteur ou la méthode de l'Apporteur ». Les règles de détection portent sur la DÉCLARATION (coordonnées, réponse, fabrication), jamais sur la manière de travailler. » (c) L'anomalie n'a AUCUNE vue apporteur : rien n'est rendu à l'espace, pas même son id. (d) EXCEPTIONS DE PURGE, point (iv) de la lentille sécurité, MOT POUR MOT : « AJOUT SEUL : une table en ajout seul qui porte une donnée de personne doit naître avec ses exceptions de purge, sinon l'effacement exigera plus tard une migration de famille journal_desarme. — contestations : le gabarit admet une_fois:reponse_chiffre, une_fois:repondue_at et une_fois:repondue_par_id (la réponse vient après), plus purge:texte_chiffre, purge:reponse_chiffre et une_fois:purgee_at, avec un CHECK liant la purge et la date. — verifications : purge:ip_hash et une_fois:…purgee_at, l'empreinte d'IP étant une donnée pseudonyme. — Chaque table neuve reçoit sa ligne au registre de l'article 30. » NOTE D'A02, à garder : pour `contestations`, la forme retenue est une fonction dédiée `contestations_refuser_substitution()`, avec `texte_chiffre` nullable, `purgee_at` et deux CHECK nommés, car le gabarit ne sait pas exprimer « posée une fois puis purgée ». La table sort de la liste figée du gabarit et entre au témoin `pg_trigger`. `TypeAnomalie` naît avec deux valeurs seulement, sans ALTER TYPE. (e) Les CINQ tables neuves (`verifications`, `alertes_liberation`, `anomalies`, `rattachements_manuels`, `contestations`, mesure de l'auteur back) ont chacune leur ligne au registre de l'article 30 (`docs/rgpd/registre-article-30.md`). L'effet notifié d'une anomalie est porté par JUR-T58, son entrée à l'export de l'article 15 par DM-20, la relecture de sa contestation par l'apporteur par UX-P1-51. CADRAGE DE LA LENTILLE SÉCURITÉ, À LA DEMANDE DE LA JURISTE (rattrapage 83, relayé par la coordination), MOT POUR MOT : « JUSTIFICATION D'UNE ANOMALIE, CHIFFRÉE (demande de la juriste, cadrage de la lentille sécurité). (1) COLONNE : `anomalies.justification` (TEXT en clair) devient `justification_chiffre` [nom corrigé par A02 : suffixe _chiffre reconnu par securite:schema-pii ; Prisma `justificationChiffre` ; CHECK `anomalies_justification_a_la_cloture`, `anomalies_justification_purge_liee` et `anomalies_justification_non_vide`] BYTEA, NULLABLE pour la purge. Aucune colonne en clair ne subsiste, ni copie, ni empreinte, ni extrait. (2) CHIFFREMENT : par `colonnesPii` (`src/server/securite/pii.ts`), sous `PII_ENCRYPTION_KEY`, ÉTALÉ comme les autres blocs, pour que la garde `securite:schema-pii` voie la colonne. AAD = le modèle `anomalie`, l'identifiant de la ligne et le nom du champ, si bien qu'un bloc recopié vers une autre anomalie ou un autre champ ne se déchiffre pas. (3) RÈGLE DE FORME AVANT CHIFFREMENT : le plancher de caractères utiles (et toute règle sur le contenu) se juge dans le DOMAINE, avant le chiffrement, puisque la base ne peut plus juger un chiffré. La justification est posée À LA CLÔTURE, dans la MÊME instruction qui fait quitter `ouverte` à l'anomalie, et une seule fois : la fonction dédiée refuse qu'elle passe d'une valeur à une autre, ou qu'elle revienne après la purge. En base, sa présence est tenue par les deux CHECK du point (5). (4) SECRETS : `justificationChiffre` entre aux SECRETS de la couche cloisonnée ; l'anomalie n'a de toute façon aucune vue apporteur. Côté console, un LECTEUR UNIQUE la déchiffre, réservé aux rôles que la matrice des droits habilite (qualifieur, admin), jamais par une sélection générique. La justification n'entre jamais dans la charge d'un événement du journal, ni dans un journal applicatif, ni dans Sentry, ni dans une alerte. Le MÊME lecteur unique sert l'export de l'article 15 (DM-20). L'export ne déchiffre que les anomalies qui visent l'apporteur DEMANDEUR, identifié par la procédure de la demande de droit, jamais par un paramètre libre. Il ne passe par aucune sélection générique, et les seuils et la pondération internes n'y figurent pas. L'export lui-même n'est journalisé que par identifiants : jamais le texte, ni dans un journal applicatif, ni dans Sentry. Témoin : l'export d'un apporteur ne contient aucune anomalie d'un autre. (5) PURGE : la fonction dédiée des anomalies admet la purge de `justification_chiffre` et l'écriture unique de `justification_purgee_at`, sur une anomalie CLOSE seulement. Deux CHECK nommés (forme d'A02) : `anomalies_justification_a_la_cloture` : `(statut = 'ouverte') = (justification_chiffre IS NULL AND justification_purgee_at IS NULL)` ; `anomalies_justification_purge_liee` : `justification_purgee_at IS NULL OR justification_chiffre IS NULL`. Ainsi, une anomalie ouverte n'a ni justification ni purge, et une anomalie close a sa justification ou sa date de purge, jamais les deux, jamais aucune. Sa durée est à la ligne `anomalies` du registre de l'article 30 (à défaut, « À compléter » et la question à Williams). La tâche qui purge à l'échéance peut suivre, mais l'exception est au schéma dès la naissance de la table. (6) TÉMOINS : la valeur en base n'est jamais le texte clair ; un bloc permuté entre deux anomalies, ou vers un autre champ, échoue au déchiffrement ; une justification sous le plancher est refusée AVANT écriture ; un rôle non habilité ne la lit pas ; aucune occurrence du texte dans les journaux capturés ; purge acceptée une fois, et le texte ne revient pas ; clôture sans justification, refusée ; justification posée sur une anomalie ouverte, refusée ; justification réécrite après la clôture, refusée ; purge d'une anomalie ouverte, refusée ; justification ET date de purge ensemble, refusées. » TROISIÈME CHECK (lentille sécurité, rattrapage 83), MOT POUR MOT : « `anomalies_justification_non_vide` porte sur un CHIFFRÉ. Il ne peut donc juger que la présence d'octets : `justification_chiffre IS NULL OR octet_length(justification_chiffre) > 0`. Jamais un btrim ni une longueur de texte, qui n'auraient pas de sens sur un BYTEA. Le plancher des caractères utiles reste jugé dans le DOMAINE, avant le chiffrement, comme dit au point (3). » Il prime sur le champ `justification` en clair décrit au point (2) pour `Anomalie`. Les durées de conservation des anomalies et des contestations attendent Williams : leurs lignes du registre portent « À compléter » et la question."
     },
     {
       "id": "DM-13",
@@ -5915,7 +5935,9 @@
         "src/server/auth/code-court.ts",
         "tests/unit/securite/code-a-six-chiffres.spec.ts",
         "tests/e2e/espace/connexion-mobile.spec.ts",
-        "src/app/(espace)/connexion/ecran.tsx"
+        "src/app/(espace)/connexion/ecran.tsx",
+        "src/content/micro-copy/espace/vocabulaire.ts",
+        "src/content/micro-copy/espace/etats-vides.ts"
       ],
       "schema": false,
       "sensible": [
@@ -5927,7 +5949,8 @@
         "SEC-04",
         "QA-T33",
         "UX-P1-45",
-        "SEC-42"
+        "SEC-42",
+        "SEC-54"
       ],
       "reqs": [
         "REQ-SEC-003",
@@ -5945,7 +5968,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "Contraintes W19 à intégrer (GOV-115, décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §6) : un lien d'apporteur consommé redirige en une action vers « / » ou vers l'URL demandée, bornée aux chemins relatifs de l'espace. Fin du cul-de-sac de `src/app/(espace)/connexion/ecran.tsx`. Le mécanisme du code à 6 chiffres est écrit pour être réutilisé par SEC-29. REQ-UX-047 (passe GOV-115, 2026-09-30) : geste principal : DETTE NOMMÉE, geste non encore connu, à écrire à la revendication ; budget : lu dans `BUDGETS_UX` (consultation au plus 3 interactions, saisie au plus 8), mesuré par la fixture QA-T33. la maquette de l'écran est validée dans `docs/maquettes/VALIDATION.md` avant la première ligne de code ; cinq états (REQ-UX-019 amendée)."
+      "acceptance": "Contraintes W19 à intégrer (GOV-115, décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §6) : un lien d'apporteur consommé redirige en une action vers « / » ou vers l'URL demandée, bornée aux chemins relatifs de l'espace. Fin du cul-de-sac de `src/app/(espace)/connexion/ecran.tsx`. Le mécanisme du code à 6 chiffres est écrit pour être réutilisé par SEC-29. REQ-UX-047 (passe GOV-115, 2026-09-30) : geste principal : DETTE NOMMÉE, geste non encore connu, à écrire à la revendication ; budget : lu dans `BUDGETS_UX` (consultation au plus 3 interactions, saisie au plus 8), mesuré par la fixture QA-T33. la maquette de l'écran est validée dans `docs/maquettes/VALIDATION.md` avant la première ligne de code ; cinq états (REQ-UX-019 amendée). DÉCOUPAGE (rattrapage 82, mesure de l'auteur écrans, arbitrage de la coordination) : le côté serveur du code à six chiffres (génération à l'émission du lien, envoi dans le courriel, vérification atomique, cinq essais, `deja_utilise` distinct de `lien_invalide`) est porté par SEC-54, à ses deps. Cette tâche reste l'ÉCRAN : les états de la maquette validée, la détection du mode installé (standalone), la redirection bornée, avec `src/server/auth/code-court.ts` ; les textes des états vivent dans `src/content/micro-copy/espace/vocabulaire.ts` et `src/content/micro-copy/espace/etats-vides.ts`."
     },
     {
       "id": "UX-P1-01",
@@ -6172,7 +6195,8 @@
         "SEC-41",
         "JUR-T09",
         "UX-P1-41",
-        "DM-41"
+        "DM-41",
+        "SEC-52"
       ],
       "reqs": [
         "REQ-CPL-024",
@@ -6191,7 +6215,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "Contraintes W20 à intégrer (chantier W20, décision de Williams du 2026-09-29, session -d7, docs/chantiers/W20-confirmation-par-email.md §6) : (1) La fiche montre, avant la zone de qualification, l'état de la demande de confirmation par e-mail (planifiée, envoyée, retenue, rebond, réponse avec son horodatage, clic non retenu) et la ou les raisons de « Vérification suggérée » de SEC-41, en clair. (2) L'appel devient la seconde source de confirmation, à côté du clic du contact (REQ-DM-008 amendée au plan) : une qualification sur un dépôt déjà confirmé par clic est refusée avec l'état courant. (3) Le script d'appel porte la mention de l'article 14 (JUR-T09). (4) Budget de REQ-UX-021 inchangé. Contraintes W19 à intégrer (GOV-115, décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §6) : écran de console : zone `console` au registre ; son droit `ecran:*` est ajouté à la matrice ; il cite REQ-UX-047 et REQ-UX-048 ; il dépend d'UX-P1-16 et de la maquette de sa phase (UX-P1-19). Son chemin réel sous `src/app/(console)/console/` est celui que fixe `docs/CONSOLE-ROUTES.md` (UX-P1-18) : le chemin gabarit du registre est remplacé à la revendication. AMENDEMENT (vérification V2 (GOV-132, 2026-10-01), A1-01) : la tâche déclare `action:qualifier` {qualifieur, admin} et `ecran:file_qualification` dans `src/server/roles/matrice.ts`."
+      "acceptance": "Contraintes W20 à intégrer (chantier W20, décision de Williams du 2026-09-29, session -d7, docs/chantiers/W20-confirmation-par-email.md §6) : (1) La fiche montre, avant la zone de qualification, l'état de la demande de confirmation par e-mail (planifiée, envoyée, retenue, rebond, réponse avec son horodatage, clic non retenu) et la ou les raisons de « Vérification suggérée » de SEC-41, en clair. (2) L'appel devient la seconde source de confirmation, à côté du clic du contact (REQ-DM-008 amendée au plan) : une qualification sur un dépôt déjà confirmé par clic est refusée avec l'état courant. (3) Le script d'appel porte la mention de l'article 14 (JUR-T09). (4) Budget de REQ-UX-021 inchangé. Contraintes W19 à intégrer (GOV-115, décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §6) : écran de console : zone `console` au registre ; son droit `ecran:*` est ajouté à la matrice ; il cite REQ-UX-047 et REQ-UX-048 ; il dépend d'UX-P1-16 et de la maquette de sa phase (UX-P1-19). Son chemin réel sous `src/app/(console)/console/` est celui que fixe `docs/CONSOLE-ROUTES.md` (UX-P1-18) : le chemin gabarit du registre est remplacé à la revendication. AMENDEMENT (vérification V2 (GOV-132, 2026-10-01), A1-01) : la tâche déclare `action:qualifier` {qualifieur, admin} et `ecran:file_qualification` dans `src/server/roles/matrice.ts`. COORDONNÉES DU CONTACT (rattrapage 82, arbitrage de la coordination) : l'écran les lit par l'accesseur unique de SEC-52 (`src/server/securite/acces-coordonnees.ts`), jamais par un autre déchiffrement ; SEC-52 est à ses deps."
     },
     {
       "id": "UX-P1-07",
@@ -6288,7 +6312,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "Contraintes à intégrer : REQ-UX-047 (passe GOV-115, 2026-09-30) : geste principal : DETTE NOMMÉE, geste non encore connu, à écrire à la revendication ; budget : lu dans `BUDGETS_UX` (consultation au plus 3 interactions, saisie au plus 8), mesuré par la fixture QA-T33. la maquette de l'écran est validée dans `docs/maquettes/VALIDATION.md` avant la première ligne de code ; cinq états (REQ-UX-019 amendée). AMENDEMENT (note de la lentille exactitude sur la PR 316, annexe V2 R1) : le témoin de la garde GATE-UX-ETATS-VIDES vit sous `tests/unit/…` (include vitest) ou sous `tests/e2e/…` (testMatch Playwright), au choix de la tâche selon ce qu'il éprouve, et non sous `tests/ux/etats-vides.spec.ts`, hors de ces portées ; `docs/gates.json` (champ `script`) est réaligné par cette tâche à sa revendication, avec les clés de site de `scripts/gates/gov-attributions.ts` qui en dépendent, et `tests/ux/etats-vides.spec.ts` est alors retiré de ses `paths`. AMENDEMENT (audit indépendant du plan de la Phase 1 (2026-10-01), écarts B-19, A-09) : la barre est dérivée des routes livrées (en Phase 1 : Accueil, Mes entreprises, Conformité et Profil ; aucun onglet vers un écran non livré ; en ouverture limitée, seules « Ma conformité » et « Mon contrat ») ; l'alerte priorisée et la liste des notifications viennent de `notifications_espace` ; l'ouverture écrit `lueAt`, qui ne fait courir aucun délai (REQ-JUR-039)."
+      "acceptance": "Contraintes à intégrer : REQ-UX-047 (passe GOV-115, 2026-09-30) : geste principal : DETTE NOMMÉE, geste non encore connu, à écrire à la revendication ; budget : lu dans `BUDGETS_UX` (consultation au plus 3 interactions, saisie au plus 8), mesuré par la fixture QA-T33. la maquette de l'écran est validée dans `docs/maquettes/VALIDATION.md` avant la première ligne de code ; cinq états (REQ-UX-019 amendée). AMENDEMENT (note de la lentille exactitude sur la PR 316, annexe V2 R1) : le témoin de la garde GATE-UX-ETATS-VIDES vit sous `tests/unit/…` (include vitest) ou sous `tests/e2e/…` (testMatch Playwright), au choix de la tâche selon ce qu'il éprouve, et non sous `tests/ux/etats-vides.spec.ts`, hors de ces portées ; `docs/gates.json` (champ `script`) est réaligné par cette tâche à sa revendication, avec les clés de site de `scripts/gates/gov-attributions.ts` qui en dépendent, et `tests/ux/etats-vides.spec.ts` est alors retiré de ses `paths`. AMENDEMENT (audit indépendant du plan de la Phase 1 (2026-10-01), écarts B-19, A-09) : la barre est dérivée des routes livrées (en Phase 1 : Accueil, Mes entreprises, Conformité et Profil ; aucun onglet vers un écran non livré ; en ouverture limitée, seules « Ma conformité » et « Mon contrat ») ; l'alerte priorisée et la liste des notifications viennent de `notifications_espace` ; l'ouverture écrit `lueAt`, qui ne fait courir aucun délai (REQ-JUR-039). MOBILE (rattrapage 82, Williams a signalé que `mon-contrat` déborde sur mobile, relayé par la coordination) : à 360 px, aucun défilement horizontal de la page ; un tableau passe en cartes sous 640 px. Témoin e2e à 360 px. La règle vaut pour toute page de l'espace, portée par le cadre de navigation de cette tâche ; REQ-UX-017 (320 px) tient toujours."
     },
     {
       "id": "QA-T20b",
@@ -8456,7 +8480,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "Cron de purge, condition de la lentille sécurité (rattrapage 52, 2026-10-02), DÉCISION DE WILLIAMS DU 02/10 (point 13 de la séance : coordonnées du siège d'une entreprise individuelle effacées avec celles du contact, garde anti-score, affichage à la commune) : le témoin de purge vérifie que `latitudeMicrodeg` et `longitudeMicrodeg` d'une ENTREPRISE INDIVIDUELLE passent à NULL avec la purge du contact (`purge_contact_at`, REQ-DM-031), et que la colonne qui distingue l'entreprise individuelle est bien lue à la purge. Le reste de l'acceptance de cette tâche (phase 3) est à écrire à sa revendication. EXTRACTION (rattrapage 52, décision de la coordination) : la purge PLANIFIÉE du contact d'une attribution libérée ou convertie, et la condition ci-dessus sur l'entreprise individuelle, passent à DM-48 (phase 1, bloquante pour la mise en service) ; DM-20 garde le reste."
+      "acceptance": "Cron de purge, condition de la lentille sécurité (rattrapage 52, 2026-10-02), DÉCISION DE WILLIAMS DU 02/10 (point 13 de la séance : coordonnées du siège d'une entreprise individuelle effacées avec celles du contact, garde anti-score, affichage à la commune) : le témoin de purge vérifie que `latitudeMicrodeg` et `longitudeMicrodeg` d'une ENTREPRISE INDIVIDUELLE passent à NULL avec la purge du contact (`purge_contact_at`, REQ-DM-031), et que la colonne qui distingue l'entreprise individuelle est bien lue à la purge. Le reste de l'acceptance de cette tâche (phase 3) est à écrire à sa revendication. EXTRACTION (rattrapage 52, décision de la coordination) : la purge PLANIFIÉE du contact d'une attribution libérée ou convertie, et la condition ci-dessus sur l'entreprise individuelle, passent à DM-48 (phase 1, bloquante pour la mise en service) ; DM-20 garde le reste. ANOMALIES À L'EXPORT DE L'ARTICLE 15 (rattrapage 82, arbitrage de la coordination sur les réponses de la juriste et de la sécurité, 2026-10-03), texte de la juriste, point (3), MOT POUR MOT : l'export inclut toute anomalie qui vise l'apporteur, « son existence, sa date, sa catégorie, son statut et la suite donnée. Seuls peuvent être tus le détail des seuils et la pondération interne de la détection, dans la mesure nécessaire à son efficacité, et jamais l'anomalie elle-même. » Jusqu'à cet export, la demande d'accès se traite à la main (JUR-T59, le runbook des demandes de droits). SCORE ET JUSTIFICATION (rattrapage 83, réponse de la juriste du 2026-10-03, relayée par la coordination), MOT POUR MOT : « score et justification internes TUS à l'écran, mais exportés sur demande d'accès, sauf les seuils ». LECTEUR DE L'EXPORT (cadrage de la lentille sécurité, point (4) de la justification chiffrée de DM-12, rattrapage 83), MOT POUR MOT : « Le MÊME lecteur unique sert l'export de l'article 15 (DM-20). L'export ne déchiffre que les anomalies qui visent l'apporteur DEMANDEUR, identifié par la procédure de la demande de droit, jamais par un paramètre libre. Il ne passe par aucune sélection générique, et les seuils et la pondération internes n'y figurent pas. L'export lui-même n'est journalisé que par identifiants : jamais le texte, ni dans un journal applicatif, ni dans Sentry. Témoin : l'export d'un apporteur ne contient aucune anomalie d'un autre. »"
     },
     {
       "id": "DM-21",
@@ -9046,7 +9070,8 @@
         "EXT-T01",
         "SEC-17",
         "UX-P1-16",
-        "UX-P1-19"
+        "UX-P1-19",
+        "SEC-52"
       ],
       "reqs": [
         "REQ-EXT-003",
@@ -9065,7 +9090,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "Contraintes W19 à intégrer (GOV-115, décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §6) : écran de console : zone `console` au registre ; son droit `ecran:*` est ajouté à la matrice ; il cite REQ-UX-047 et REQ-UX-048 ; il dépend d'UX-P1-16 et de la maquette de sa phase (UX-P1-19). Son chemin réel sous `src/app/(console)/console/` est celui que fixe `docs/CONSOLE-ROUTES.md` (UX-P1-18) : le chemin gabarit du registre est remplacé à la revendication."
+      "acceptance": "Contraintes W19 à intégrer (GOV-115, décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §6) : écran de console : zone `console` au registre ; son droit `ecran:*` est ajouté à la matrice ; il cite REQ-UX-047 et REQ-UX-048 ; il dépend d'UX-P1-16 et de la maquette de sa phase (UX-P1-19). Son chemin réel sous `src/app/(console)/console/` est celui que fixe `docs/CONSOLE-ROUTES.md` (UX-P1-18) : le chemin gabarit du registre est remplacé à la revendication. COORDONNÉES DU CONTACT (rattrapage 82, arbitrage de la coordination) : l'écran les lit par l'accesseur unique de SEC-52 (`src/server/securite/acces-coordonnees.ts`), jamais par un autre déchiffrement ; SEC-52 est à ses deps."
     },
     {
       "id": "EXT-T03",
@@ -9163,15 +9188,13 @@
     },
     {
       "id": "EXT-T06",
-      "titre": "Signal « déjà travaillée » + détecteur de ramassage",
+      "titre": "Signal « déjà travaillée » : l'écran distingue l'entreprise déjà travaillée, et son dépôt n'est jamais une anomalie",
       "phase": 1,
       "repo": "partners",
       "zone": "espace",
       "paths": [
         "src/domain/verification/etats.ts",
-        "src/server/anomalie/ramassage.ts",
         "src/lib/env.ts",
-        "tests/unit/securite/detecteur-de-ramassage.spec.ts",
         "tests/integration/signal-deja-travaillee.spec.ts"
       ],
       "schema": false,
@@ -9202,7 +9225,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "cinquième état `libre_deja_travaillee` dans le DTO de vérification ; signal d'anomalie au-delà du seuil de configuration prévu pour la part de dépôts sur des entreprises déjà travaillées (valeur hors dépôt, REQ-GOV-031). (audit indépendant du plan de la Phase 1 (2026-10-01), écart B-18 : pas d'écran, REQ-UX-047 retirée.) LOT CRM PRO (rattrapage 57, sécurité) : les données reçues par le CRM Pro ne servent jamais à refuser un dépôt ni à signaler une entreprise « déjà travaillée » : seul Partners fait foi de l'occupation (HYP-W19-SOURCE)."
+      "acceptance": "cinquième état `libre_deja_travaillee` dans le DTO de vérification ; signal d'anomalie au-delà du seuil de configuration prévu pour la part de dépôts sur des entreprises déjà travaillées (valeur hors dépôt, REQ-GOV-031). (audit indépendant du plan de la Phase 1 (2026-10-01), écart B-18 : pas d'écran, REQ-UX-047 retirée.) LOT CRM PRO (rattrapage 57, sécurité) : les données reçues par le CRM Pro ne servent jamais à refuser un dépôt ni à signaler une entreprise « déjà travaillée » : seul Partners fait foi de l'occupation (HYP-W19-SOURCE). AMENDEMENT (rattrapage 82, arbitrage de la coordination sur les réponses de la juriste et de la sécurité, 2026-10-03) : il n'y a plus de DÉTECTEUR DE RAMASSAGE. REQ-EXT-007 devient, mot pour mot : « Le dépôt d'une entreprise libre que la Société a déjà travaillée n'est pas une anomalie et ne produit aucun effet sur le dépôt ni sur l'apporteur : ni vérification, ni suspension, ni statut. Il peut seulement placer la demande de confirmation en tête de la liste des appels de la Société, au titre de la prise de contact que l'article 3.2 lui permet. Aucun compte, aucune proportion et aucune fenêtre de temps ne sont calculés sur les dépôts d'un apporteur. » La priorité d'appel qui en découle est portée par DM-43. TÉMOIN : le dépôt d'une entreprise `libre_deja_travaillee` n'ouvre aucune anomalie, ne change aucun statut et ne compte rien sur l'apporteur."
     },
     {
       "id": "EXT-T02b",
@@ -14826,7 +14849,7 @@
         "HYP-W20-SALARIES"
       ],
       "externe": null,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "phase": 1,
       "id": "DM-40",
       "titre": "Demande de confirmation par e-mail : table, états fermés, délai avant envoi, annulation et correction tracées, jetons hachés",
@@ -14887,7 +14910,16 @@
           "tests/integration/demande-de-confirmation.spec.ts",
           "tests/unit/domaine/demande-de-confirmation.spec.ts"
         ]
-      }
+      },
+      "branch": "t/dm-40",
+      "owner": "A05",
+      "pr": 522,
+      "attestation": {
+        "pr": 522,
+        "sha": "b3d195be8bc4afa8b7e5b02f82f01d0000aae0ee",
+        "fusionneeAt": "2026-10-03T08:21:36Z"
+      },
+      "motif": null
     },
     {
       "repo": "partners",
@@ -15098,7 +15130,7 @@
         "REQ-DM-062"
       ],
       "estimateDays": 1,
-      "acceptance": "Source : docs/chantiers/W20-confirmation-par-email.md (décision de Williams du 2026-09-29, session -d7, phase 1). Réalise REQ-DM-062 (Exigence nouvelle proposée au §3 du plan, à inscrire par la passe gardien-spec puis à ajouter à `reqs` ; les HYP-W20 citées ici ne sont pas encore au §2 de docs/DECISIONS.md, elles entreront dans `hyp` par la même passe.) ; hypothèses HYP-W20-APPELS, HYP-W20-SANS-REPONSE. (1) Un dépôt provisoire entre dans la liste s'il est tiré dans l'échantillon, s'il fait partie des premiers dépôts d'un nouvel apporteur, si sa demande est en rebond non corrigé, sans réponse depuis le délai SSOT en jours ouvrés, ou s'il porte une raison de vérification de SEC-41 ; il en sort à la première réponse (clic retenu ou qualification). (2) Tri : raison de vérification, rebond, premiers dépôts et critères de tri de revue humaine, sans réponse, échantillon ; à égalité, aQualifierDepuis croissant. Fonction pure, horloge injectée, calendrier de CPL-T13. (3) Le tirage est fait au dépôt par un générateur cryptographique, stocké, jamais servi à l'espace ; valeurs lues d'une configuration hors dépôt ; clé absente = aucun échantillon et un avertissement d'exploitation, jamais une valeur devinée. (4) Aucun critère de rythme n'est une raison affichée (REQ-SEC-017, REQ-JUR-031). Tests : un cas par entrée, l'ordre de tri, un dépôt confirmé par clic n'y figure jamais.",
+      "acceptance": "Source : docs/chantiers/W20-confirmation-par-email.md (décision de Williams du 2026-09-29, session -d7, phase 1). Réalise REQ-DM-062 (Exigence nouvelle proposée au §3 du plan, à inscrire par la passe gardien-spec puis à ajouter à `reqs` ; les HYP-W20 citées ici ne sont pas encore au §2 de docs/DECISIONS.md, elles entreront dans `hyp` par la même passe.) ; hypothèses HYP-W20-APPELS, HYP-W20-SANS-REPONSE. (1) Un dépôt provisoire entre dans la liste s'il est tiré dans l'échantillon, s'il fait partie des premiers dépôts d'un nouvel apporteur, si sa demande est en rebond non corrigé, sans réponse depuis le délai SSOT en jours ouvrés, ou s'il porte une raison de vérification de SEC-41 ; il en sort à la première réponse (clic retenu ou qualification). (2) Tri : raison de vérification, rebond, premiers dépôts et critères de tri de revue humaine, sans réponse, échantillon ; à égalité, aQualifierDepuis croissant. Fonction pure, horloge injectée, calendrier de CPL-T13. (3) Le tirage est fait au dépôt par un générateur cryptographique, stocké, jamais servi à l'espace ; valeurs lues d'une configuration hors dépôt ; clé absente = aucun échantillon et un avertissement d'exploitation, jamais une valeur devinée. (4) Aucun critère de rythme n'est une raison affichée (REQ-SEC-017, REQ-JUR-031). Tests : un cas par entrée, l'ordre de tri, un dépôt confirmé par clic n'y figure jamais. RAMASSAGE, PRIORITÉ D'APPEL (rattrapage 82, arbitrage de la coordination sur les réponses de la juriste et de la sécurité, 2026-10-03), cadrage de la lentille sécurité MOT POUR MOT : « la priorité se juge DÉPÔT PAR DÉPÔT, sur le seul statut de l'entreprise déclarée (libre_deja_travaillee), sans compter les dépôts de l'apporteur, sans proportion ni fenêtre (témoin : le même dépôt a la même priorité, quel que soit l'historique de l'apporteur). Elle ne laisse aucune trace sur l'apporteur, n'est jamais rendue à l'apporteur, et ne donne lieu ni à un statut, ni à une ligne d'anomalie, ni à un score. »",
       "tests": {
         "REQ-UX-022": [
           "tests/unit/domaine/liste-d-appels.spec.ts"
@@ -16824,7 +16856,8 @@
         "SEC-16",
         "DM-10-P",
         "DM-08",
-        "JUR-T31"
+        "JUR-T31",
+        "SEC-51"
       ],
       "reqs": [
         "REQ-DM-048",
@@ -16845,7 +16878,7 @@
       "externe": null,
       "estimateDays": 1.5,
       "statut": "a_faire",
-      "acceptance": "TÂCHE SENSIBLE (attribution). (0) Une seule fonction de prise en charge, appelée par l'API 3 (SEC-34) et par la console admin (UX-P2-12), jamais recopiée : c'est la seule écriture qui fasse naître une prise en charge (HYP-W19-SOURCE, question 22). (1) La tâche APPELLE la transaction de SEC-12 sans la recopier : verrou SIREN, index, horodatage, antériorité DM-10-P, établissement cessé, liste 3.3 bis (b) et registre d'opposition (témoin nommé pour l'opposition). (2) Le porteur est un `conseiller_salarie` actif, vérifié par Partners au moment de la transaction (référence rattachée par DM-32 pour l'API 3, choix de l'admin en console), sinon `role_refuse`. Naissance par `prise_en_charge_par_la_societe`, canal `console` ; l'état visible depuis l'espace et l'API 1 suit la chronologie d'un dépôt d'apporteur (HYP-W19-CYCLE, machine de DM-08). (3) `IssuePriseEnCharge` renvoie `non_disponible`, SANS mois et sans identité, dans tous ces cas : SIREN occupé ; délai d'attente après toute libération (témoin : relais A → B à J+90 refusé) ; fenêtre d'un rang 1 (témoin : rang 1 notifié, prise en charge à J+1 refusée) ; moins de `RESERVE_APRES_ACTE_APPORTEUR_JOURS` après une vérification ou un dépôt refusé d'un apporteur. (4) Limites par conseiller (verrou par `utilisateurConsoleId`) et par Société, en SSOT (HYP-W19-LIMITES). Anomalie au-delà du seuil journalier. (5) Côté apporteur (question 2, art. 3.5) : AUCUNE valeur ajoutée à `IssueDepot`, `MotifRefusDepot` ni `ISSUES_DE_REFUS` ; `ux-exhaustivite` reste verte à 12 valeurs. Le dépôt d'un apporteur sur un SIREN pris en charge reçoit l'issue d'une occupation par un apporteur (`en_attente` au rang 1 ou 2, ou `file_complete`), et « Vérifier » le même état et la même date. Témoin d'indistinction, repris par QA-T31 : corps identiques octet à octet face à un occupant apporteur au même stade et aux mêmes dates. (6) Case d'information du tiers exigée côté serveur. Origine de la collecte (art. 13) au journal. (7) Course mixte : 20 concurrents, apporteurs et conseillers, donnent exactement un occupant. (8) Mise en service après l'AIPD signée et la condition HYP-W19-CSE remplie ; ni l'une ni l'autre ne bloque la livraison de la tâche. LOT CRM PRO (rattrapage 57) : la décision de Williams du 2026-10-02, option B (« il faut que toutes les données que l'on récupère aille dans le crm pro soit pour nouveau prospect ou cleitn saist par approteurs ou commercial ou nous ou soit tout ce qui est l'enrichissment de chaaque fiche », verbatim) remet en cause HYP-W19-NON-EXPLOITATION, dont cette tâche tire une partie de son acceptance ; la manière de procéder attend Williams, et rien de ce qui en dépend ne se code avant. `RESERVE_APRES_ACTE_APPORTEUR_JOURS` (30 jours) est gardé (coordination). PASSAGE PLANIFIÉ (rattrapage 58, sorti de DM-08, recommandation d'A05) : à la désactivation d'un conseiller, ses prises en charge sans suite passent `perimee` sous 15 jours, par un passage du lanceur (`src/server/taches/perimer-prises-en-charge.ts`, inscrit au registre des tâches) qui appelle la transition de DM-08 ; TÉMOIN. LEVÉE (rattrapage 61) : Williams a autorisé l'écriture du nouvel art. 3.5 al. 4 (option B, avec les deux protections de l'apporteur), écrit par A07 sur #433 ; ce que cette tâche tirait de la non-exploitation se relit sur ce nouvel al. 4 (usage commercial des données ; commission due pendant l'attribution quel que soit celui qui conclut ; aucun démarchage pendant le délai de confirmation ; réserve de `RESERVE_APRES_ACTE_APPORTEUR_JOURS` jours après une vérification ou une déclaration refusée ou en attente). Texte final à valider par Williams.",
+      "acceptance": "TÂCHE SENSIBLE (attribution). (0) Une seule fonction de prise en charge, appelée par l'API 3 (SEC-34) et par la console admin (UX-P2-12), jamais recopiée : c'est la seule écriture qui fasse naître une prise en charge (HYP-W19-SOURCE, question 22). (1) La tâche APPELLE la transaction de SEC-12 sans la recopier : verrou SIREN, index, horodatage, antériorité DM-10-P, établissement cessé, liste 3.3 bis (b) et registre d'opposition (témoin nommé pour l'opposition). (2) Le porteur est un `conseiller_salarie` actif, vérifié par Partners au moment de la transaction (référence rattachée par DM-32 pour l'API 3, choix de l'admin en console), sinon `role_refuse`. Naissance par `prise_en_charge_par_la_societe`, canal `console` ; l'état visible depuis l'espace et l'API 1 suit la chronologie d'un dépôt d'apporteur (HYP-W19-CYCLE, machine de DM-08). (3) `IssuePriseEnCharge` renvoie `non_disponible`, SANS mois et sans identité, dans tous ces cas : SIREN occupé ; délai d'attente après toute libération (témoin : relais A → B à J+90 refusé) ; fenêtre d'un rang 1 (témoin : rang 1 notifié, prise en charge à J+1 refusée) ; moins de `RESERVE_APRES_ACTE_APPORTEUR_JOURS` après une vérification ou un dépôt refusé d'un apporteur. (4) Limites par conseiller (verrou par `utilisateurConsoleId`) et par Société, en SSOT (HYP-W19-LIMITES). Anomalie au-delà du seuil journalier. (5) Côté apporteur (question 2, art. 3.5) : AUCUNE valeur ajoutée à `IssueDepot`, `MotifRefusDepot` ni `ISSUES_DE_REFUS` ; `ux-exhaustivite` reste verte à 12 valeurs. Le dépôt d'un apporteur sur un SIREN pris en charge reçoit l'issue d'une occupation par un apporteur (`en_attente` au rang 1 ou 2, ou `file_complete`), et « Vérifier » le même état et la même date. Témoin d'indistinction, repris par QA-T31 : corps identiques octet à octet face à un occupant apporteur au même stade et aux mêmes dates. (6) Case d'information du tiers exigée côté serveur. Origine de la collecte (art. 13) au journal. (7) Course mixte : 20 concurrents, apporteurs et conseillers, donnent exactement un occupant. (8) Mise en service après l'AIPD signée et la condition HYP-W19-CSE remplie ; ni l'une ni l'autre ne bloque la livraison de la tâche. LOT CRM PRO (rattrapage 57) : la décision de Williams du 2026-10-02, option B (« il faut que toutes les données que l'on récupère aille dans le crm pro soit pour nouveau prospect ou cleitn saist par approteurs ou commercial ou nous ou soit tout ce qui est l'enrichissment de chaaque fiche », verbatim) remet en cause HYP-W19-NON-EXPLOITATION, dont cette tâche tire une partie de son acceptance ; la manière de procéder attend Williams, et rien de ce qui en dépend ne se code avant. `RESERVE_APRES_ACTE_APPORTEUR_JOURS` (30 jours) est gardé (coordination). PASSAGE PLANIFIÉ (rattrapage 58, sorti de DM-08, recommandation d'A05) : à la désactivation d'un conseiller, ses prises en charge sans suite passent `perimee` sous 15 jours, par un passage du lanceur (`src/server/taches/perimer-prises-en-charge.ts`, inscrit au registre des tâches) qui appelle la transition de DM-08 ; TÉMOIN. LEVÉE (rattrapage 61) : Williams a autorisé l'écriture du nouvel art. 3.5 al. 4 (option B, avec les deux protections de l'apporteur), écrit par A07 sur #433 ; ce que cette tâche tirait de la non-exploitation se relit sur ce nouvel al. 4 (usage commercial des données ; commission due pendant l'attribution quel que soit celui qui conclut ; aucun démarchage pendant le délai de confirmation ; réserve de `RESERVE_APRES_ACTE_APPORTEUR_JOURS` jours après une vérification ou une déclaration refusée ou en attente). Texte final à valider par Williams. GARDE DE DÉMARCHAGE (rattrapage 82, arbitrage de la coordination, délégation de Williams) : la prise en charge appelle la garde unique de SEC-51 (`src/server/demarchage/garde-reserve.ts`), sans copier sa règle ; SEC-51 est à ses deps.",
       "tests": {
         "REQ-DM-048": [
           "tests/unit/domaine/prise-en-charge.spec.ts",
@@ -18650,7 +18683,7 @@
       "externe": null,
       "estimateDays": 1.1,
       "statut": "a_faire",
-      "acceptance": "Porté par l'audit indépendant du plan de la Phase 1 (2026-10-01) (écart A-03) ; écran « Mon contrat » de la décision D1 de Williams du 2026-10-01 (SEC-43). (1) Lecture de la version à signer : annexe générée de la grille du contrat, lignes en écart avec leur justification. (2) Accès à la signature DocuSeal et état de l'enveloppe. (3) Cinq états ; atteignable en ouverture limitée comme en ouverture pleine. La maquette est validée dans `docs/maquettes/VALIDATION.md` (UX-P1-45) avant la première ligne de code."
+      "acceptance": "Porté par l'audit indépendant du plan de la Phase 1 (2026-10-01) (écart A-03) ; écran « Mon contrat » de la décision D1 de Williams du 2026-10-01 (SEC-43). (1) Lecture de la version à signer : annexe générée de la grille du contrat, lignes en écart avec leur justification. (2) Accès à la signature DocuSeal et état de l'enveloppe. (3) Cinq états ; atteignable en ouverture limitée comme en ouverture pleine. La maquette est validée dans `docs/maquettes/VALIDATION.md` (UX-P1-45) avant la première ligne de code. MOBILE (rattrapage 82, Williams a signalé que `mon-contrat` déborde sur mobile, relayé par la coordination) : à 360 px, aucun défilement horizontal de la page ; un tableau passe en cartes sous 640 px. Témoin de largeur à 360 px dans `tests/e2e/espace/mon-contrat.spec.ts`."
     },
     {
       "id": "UX-P1-45",
@@ -18856,7 +18889,9 @@
       "paths": [
         "prisma/schema.prisma",
         "prisma/migrations/",
-        "tests/integration/iban-et-session.spec.ts"
+        "tests/integration/iban-et-session.spec.ts",
+        "scripts/lib/semis-porte-d.ts",
+        "tests/unit/qualite/porte-d.spec.ts"
       ],
       "schema": true,
       "sensible": [
@@ -19971,13 +20006,22 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
-      "acceptance": "Versée au rattrapage 53 : l'amendement « tirer par EMPREINTE » (écart C29 de la vérification de bout en bout) sort de QA-T55. (1) VÉRIFICATION PRÉALABLE (RM-08) : Coolify accepte-t-il une empreinte dans `docker_registry_image_tag` ? Lue dans l'openapi de Coolify et écrite dans `docs/tiers/coolify.md` (label `role:documentaliste`), avec la source et la date. Si non : la tâche s'arrête et l'écart remonte à A01, jamais un contournement. (2) `scripts/image/publier.sh` rend l'empreinte de l'image publiée ; `scripts/gates/deploy-verify.ts` la pose et vérifie que l'image servie a cette empreinte, sinon NON ATTERRI. (3) TÉMOIN `tests/unit/qualite/image-par-empreinte.spec.ts` : une étiquette mobile au lieu d'une empreinte rougit ; une empreinte différente de celle publiée rougit. Relecture sécurité.",
+      "statut": "fusionnee",
+      "acceptance": "Versée au rattrapage 53 : l'amendement « tirer par EMPREINTE » (écart C29 de la vérification de bout en bout) sort de QA-T55. (1) VÉRIFICATION PRÉALABLE (RM-08) : Coolify accepte-t-il une empreinte dans `docker_registry_image_tag` ? Lue dans l'openapi de Coolify et écrite dans `docs/tiers/coolify.md` (label `role:documentaliste`), avec la source et la date. Si non : la tâche s'arrête et l'écart remonte à A01, jamais un contournement. (2) `scripts/image/publier.sh` rend l'empreinte de l'image publiée ; `scripts/gates/deploy-verify.ts` la pose et vérifie que l'image servie a cette empreinte, sinon NON ATTERRI. (3) TÉMOIN `tests/unit/qualite/image-par-empreinte.spec.ts` : une étiquette mobile au lieu d'une empreinte rougit ; une empreinte différente de celle publiée rougit. Relecture sécurité. SOURCE RATIFIÉE PAR A01 (rattrapage 83, demande de l'exactitude) : sur le déploiement par Coolify, c'est le code de Coolify (commit c0d81d4c) qui tranche, pas l'openapi ; la fiche tiers le déclare comme LIMITE.",
       "tests": {
         "REQ-GOV-014": [
           "tests/unit/qualite/image-par-empreinte.spec.ts"
         ]
-      }
+      },
+      "branch": "t/qa-t65",
+      "owner": "A06",
+      "pr": 553,
+      "attestation": {
+        "pr": 553,
+        "sha": "4b3063f17c9c013624ba06f31f4d03895562b33a",
+        "fusionneeAt": "2026-10-03T08:27:30Z"
+      },
+      "motif": null
     },
     {
       "id": "UX-P1-47",
@@ -20608,13 +20652,22 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.25,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "Versée au rattrapage 55 sur demande d'A07 (2026-10-02) : l'art. 14 du gabarit (loi applicable et juridiction, et non l'art. 23 : rectification d'A07 au rattrapage 56) écrit « en qualité de {{APPORTEUR_QUALITE}} », ce qui casse l'élision avec « artisan » (DM-50). Texte d’A07, une phrase et rien d’autre : « L’Apporteur déclare contracter en la qualité suivante : {{APPORTEUR_QUALITE}}. » Correction du gabarit à faire AVANT le premier envoi DocuSeal. TÉMOIN (écrit par A05, pas par l’autrice) : le gabarit rendu avec chacune des quatre qualités de DM-50 ne porte ni « de artisan » ni « de société » mal élidés, et la variable reste unique. Autrice : A07 (sa relecture revient donc à la suppléante, REQ-JUR-036).",
       "tests": {
         "REQ-JUR-003": [
           "tests/unit/contrat/qualite-art-23.spec.ts"
         ]
-      }
+      },
+      "branch": "t/jur-t48",
+      "owner": "A07",
+      "pr": 449,
+      "attestation": {
+        "pr": 449,
+        "sha": "8872521d71ca45beea294c9c8c3f8b0bc4a7eab7",
+        "fusionneeAt": "2026-10-03T07:06:10Z"
+      },
+      "motif": null
     },
     {
       "id": "JUR-T49",
@@ -20847,7 +20900,8 @@
         "JUR-T31",
         "JUR-T51",
         "JUR-T52",
-        "DM-48"
+        "DM-48",
+        "SEC-51"
       ],
       "reqs": [
         "REQ-INT-063"
@@ -20856,7 +20910,7 @@
       "externe": null,
       "estimateDays": 1.5,
       "statut": "a_faire",
-      "acceptance": "LOT CRM PRO (rattrapage 57), décision de Williams du 2026-10-02, option B : tout ce qui est déclaré (entreprise ET contact), et chaque enrichissement, part au CRM Pro DÈS LA DÉCLARATION. Formes d'A02 et conditions de la lentille sécurité. (1) API DISTINCTE de l'API 3 ; Partners POUSSE seul ; aucune route de lecture ouverte au CRM. (2) OUTBOX : seulement la référence (uuid de l'attribution), le type et la version, jamais un clair ; la charge se construit à l'envoi depuis les colonnes courantes (chiffrées), et le contrôle d'opposition se fait dans la MÊME transaction ; une ligne envoyée ne garde aucune charge. (3) Requêtes HMAC-SHA256 (horodatage et corps exact, 300 s), secret DÉDIÉ (distinct d'axion-ia et d'`appels:lire`) avec `kid` et rotation ; hôte en liste fermée, HTTPS, `redirect: 'error'`, aucun secret dans l'URL ; `Idempotency-Key` = (référence, type, version) ; reprises bornées, alerte nommée SANS donnée au-delà d'un seuil de la SSOT ; journal : identifiant, version, statut, nombre, jamais la charge. (4) CONTRAT `.strict()` dans `packages/contracts/crm-pro.ts`, empreinte épinglée des deux côtés : `reference` ; `entreprise { siren, siret?, raisonSociale, natureJuridique, codeNaf, trancheEffectif, etatAdministratif, categorieEntreprise, communeSiege, departement, region }` ; `contact { prenom, nom, email?, telephone?, fonction? }` ; `provenance` {apporteur, commercial, societe} ; `informationTiersVersion`. (5) NE SORTENT JAMAIS, liste fermée avec TÉMOIN (un champ de plus rougit) : la date du contact (REQ-JUR-040) et AUCUNE date d'acte (`deposee_at` compris : le CRM date la réception, arbitrage A01) ; toute identité de l'apporteur, même un identifiant opaque stable ; ses empreintes (`emailHash`, `phoneHash`) ; le contexte libre et la précision du lien d'intérêt ; `ipHash`, `agentHash`, `verificationPrioritaire` et tout signal de sincérité ; l'état d'un dépôt refusé ou en attente ; les coordonnées géographiques. (6) ENTREPRISE INDIVIDUELLE : rien n'est émis pour une forme qui n'est pas une personne morale PROUVÉE, par la MÊME fonction nommée que DM-48 (premier rang INSEE 3 à 9), jamais une copie ; une EI en diffusion partielle n'est jamais émise. (7) INFORMATION : seule une personne informée par la v5 (JUR-T51) est émise. (8) PRÉALABLE (option (b) de la coordination, le CRM Pro relève de sa propre gouvernance) : le CRM lit la version N du contrat AVANT toute émission ; la preuve (réponse de version du CRM) est collée dans la PR. Le dédoublonnage (entreprise par SIREN, contact par (SIREN, e-mail normalisé) puis (SIREN, téléphone normalisé), provenance ajoutée sans écraser) vit côté CRM ; la clé SIREN unique du CRM est vérifiée avant la première émission. (9) Aucune émission avant que les textes validés par Williams (JUR-T31, JUR-T51) ne soient en vigueur, ni avant JUR-T52 (registre et AIPD), dépendance BLOQUANTE. (10) Le CRM ne refuse jamais un dépôt : seul Partners fait foi de l'occupation (HYP-W19-SOURCE) ; le CRM peut recevoir l'état « occupée », sans qui ni depuis quand. TÉMOINS : opposition posée entre la mise en file et l'envoi → rien ne part ; EI → rien ; un champ de plus → rouge. `docs/tiers/crm-pro.md` et `.env.example` : label `role:documentaliste`. Auteur : A05. Lentilles schema (A02) et sécurité. CORRECTION D'A02 (rattrapage 57, tranchée par la coordination) : le contrat fermé du point (4) porte aussi `occupee: boolean`, sans date ni statut détaillé ; il sert aussi à tenir la protection « pas de démarchage pendant le délai de confirmation », si Williams la garde ; TÉMOIN.",
+      "acceptance": "LOT CRM PRO (rattrapage 57), décision de Williams du 2026-10-02, option B : tout ce qui est déclaré (entreprise ET contact), et chaque enrichissement, part au CRM Pro DÈS LA DÉCLARATION. Formes d'A02 et conditions de la lentille sécurité. (1) API DISTINCTE de l'API 3 ; Partners POUSSE seul ; aucune route de lecture ouverte au CRM. (2) OUTBOX : seulement la référence (uuid de l'attribution), le type et la version, jamais un clair ; la charge se construit à l'envoi depuis les colonnes courantes (chiffrées), et le contrôle d'opposition se fait dans la MÊME transaction ; une ligne envoyée ne garde aucune charge. (3) Requêtes HMAC-SHA256 (horodatage et corps exact, 300 s), secret DÉDIÉ (distinct d'axion-ia et d'`appels:lire`) avec `kid` et rotation ; hôte en liste fermée, HTTPS, `redirect: 'error'`, aucun secret dans l'URL ; `Idempotency-Key` = (référence, type, version) ; reprises bornées, alerte nommée SANS donnée au-delà d'un seuil de la SSOT ; journal : identifiant, version, statut, nombre, jamais la charge. (4) CONTRAT `.strict()` dans `packages/contracts/crm-pro.ts`, empreinte épinglée des deux côtés : `reference` ; `entreprise { siren, siret?, raisonSociale, natureJuridique, codeNaf, trancheEffectif, etatAdministratif, categorieEntreprise, communeSiege, departement, region }` ; `contact { prenom, nom, email?, telephone?, fonction? }` ; `provenance` {apporteur, commercial, societe} ; `informationTiersVersion`. (5) NE SORTENT JAMAIS, liste fermée avec TÉMOIN (un champ de plus rougit) : la date du contact (REQ-JUR-040) et AUCUNE date d'acte (`deposee_at` compris : le CRM date la réception, arbitrage A01) ; toute identité de l'apporteur, même un identifiant opaque stable ; ses empreintes (`emailHash`, `phoneHash`) ; le contexte libre et la précision du lien d'intérêt ; `ipHash`, `agentHash`, `verificationPrioritaire` et tout signal de sincérité ; l'état d'un dépôt refusé ou en attente ; les coordonnées géographiques. (6) ENTREPRISE INDIVIDUELLE : rien n'est émis pour une forme qui n'est pas une personne morale PROUVÉE, par la MÊME fonction nommée que DM-48 (premier rang INSEE 3 à 9), jamais une copie ; une EI en diffusion partielle n'est jamais émise. (7) INFORMATION : seule une personne informée par la v5 (JUR-T51) est émise. (8) PRÉALABLE (option (b) de la coordination, le CRM Pro relève de sa propre gouvernance) : le CRM lit la version N du contrat AVANT toute émission ; la preuve (réponse de version du CRM) est collée dans la PR. Le dédoublonnage (entreprise par SIREN, contact par (SIREN, e-mail normalisé) puis (SIREN, téléphone normalisé), provenance ajoutée sans écraser) vit côté CRM ; la clé SIREN unique du CRM est vérifiée avant la première émission. (9) Aucune émission avant que les textes validés par Williams (JUR-T31, JUR-T51) ne soient en vigueur, ni avant JUR-T52 (registre et AIPD), dépendance BLOQUANTE. (10) Le CRM ne refuse jamais un dépôt : seul Partners fait foi de l'occupation (HYP-W19-SOURCE) ; le CRM peut recevoir l'état « occupée », sans qui ni depuis quand. TÉMOINS : opposition posée entre la mise en file et l'envoi → rien ne part ; EI → rien ; un champ de plus → rouge. `docs/tiers/crm-pro.md` et `.env.example` : label `role:documentaliste`. Auteur : A05. Lentilles schema (A02) et sécurité. CORRECTION D'A02 (rattrapage 57, tranchée par la coordination) : le contrat fermé du point (4) porte aussi `occupee: boolean`, sans date ni statut détaillé ; il sert aussi à tenir la protection « pas de démarchage pendant le délai de confirmation », si Williams la garde ; TÉMOIN. GARDE DE DÉMARCHAGE (rattrapage 82, arbitrage de la coordination) : l'émission vers le CRM Pro, unitaire ou groupée, appelle la garde unique de SEC-51 au moment de l'envoi ; SEC-51 est à ses deps.",
       "tests": {
         "REQ-INT-063": [
           "tests/integration/crm-pro-emission.spec.ts",
@@ -21491,7 +21545,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "Versée au rattrapage 69 sur le refus de la lentille sécurité (2026-10-02) : `pieces_kyc` étant mutable, un simple UPDATE de `iban_chiffre` et `iban_hash` sur le RIB COURANT et validé changerait le compte de versement sans nouvelle pièce `a_verifier`, sans vérification hors bande et sans deux personnes. Forme d'A02, retenue par la coordination (le gabarit générique `refuser_modification_sauf()` figerait aussi le statut et les dates). (1) Une FONCTION DÉDIÉE, nouvelle et additive, `pieces_kyc_refuser_substitution()`, sans EXECUTE, refuse en UPDATE tout changement de `id`, `apporteur_id`, `type`, `iban_chiffre`, `iban_hash` et `fichier_ref`, avec une seule exception : `fichier_ref` peut passer à NULL, sans retour, en même temps que `fichier_purge_at` est posé (la purge de la pièce d'identité de DM-11, REQ-JUR-029). `statut`, `verifiee_at` et `expire_at` restent libres ; `remplacee_at` et `fichier_purge_at` sont en ÉCRITURE UNIQUE (de NULL à une valeur, une fois, sans modification ni retour à NULL) : un ancien RIB ne peut pas être remis en service (lentille sécurité, 2026-10-02). DÉCLENCHEURS : `pieces_kyc_coordonnees_figees` (BEFORE UPDATE OR DELETE, FOR EACH ROW ; DELETE refusé, puisqu'une pièce ne disparaît pas) et `pieces_kyc_troncature` (BEFORE TRUNCATE, FOR EACH STATEMENT). Un changement de RIB est TOUJOURS une nouvelle pièce (`a_verifier`), et l'ancienne reçoit `remplacee_at` (REQ-UX-027). (2) SANS exception de purge d'IBAN en phase 1 : `iban_purge_at` n'existe qu'avec DM-58 (phase 2), et la fonction ne peut pas la nommer avant ; l'IBAN est donc ENTIÈREMENT figé, et DM-58 assouplira la fonction pour sa seule purge, avec un ADR. (3) PRÉFIXE `20261002001500` (001400 est réservé à DM-56) ; la migration vient après 001100, donc SEC-49 fusionne APRÈS DM-11 (#476). Label `schema`. (4) TÉMOINS, chaque refus attendu sur le nom du déclencheur ou de la fonction : sur une pièce rib `valide`, un UPDATE de `iban_chiffre`, de `iban_hash`, de `type`, d'`apporteur_id` ou de `fichier_ref` est refusé ; `statut`, `verifiee_at` et `expire_at` passent ; `remplacee_at` se pose une fois, puis sa modification et son retour à NULL sont refusés ; `fichier_purge_at` de même, et il ne se pose qu'avec la purge de `fichier_ref` (rattrapage 70) ; la purge de la pièce d'identité (`fichier_ref` à NULL avec `fichier_purge_at`) passe, et le retour de `fichier_ref` est refusé ; DELETE et TRUNCATE sont refusés ; un test lit `pg_trigger` et rougit si l'un des deux déclencheurs manque. CLAUSE LIVRÉE DANS #511 (rattrapage 71, plus stricte que la lettre précédente) : « fichier_purge_at ne se pose qu'avec l'effacement de fichier_ref : la date seule sur une pièce qui a un fichier est refusée, avec un témoin sur le nom du déclencheur (A02 et sécurité, 2026-10-02) ». Auteur : A05. Lentilles sécurité et schema (A02).",
       "tests": {
         "REQ-UX-027": [
@@ -21500,7 +21554,16 @@
         "REQ-DM-027": [
           "tests/integration/pieces-kyc-figees.spec.ts"
         ]
-      }
+      },
+      "branch": "t/sec-49",
+      "owner": "A05",
+      "pr": 511,
+      "attestation": {
+        "pr": 511,
+        "sha": "9e65d245544a681259ae017811eda59e04fb1a27",
+        "fusionneeAt": "2026-10-03T06:56:47Z"
+      },
+      "motif": null
     },
     {
       "id": "UX-P1-48",
@@ -21631,13 +21694,22 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "Versée au rattrapage 70 sur le constat d'A02, relayé par la coordination (2026-10-02) : une demande de droit RGPD doit être tracée, puisque la date de réception fait courir le délai d'un mois (art. 12.3), et aucune table ne la portait (le registre n'a que des listes d'opposition : HYP-W20-OPPOSITION, `suppressions_courriel` d'INT-T10, la synchronisation d'INT-T69-P). FORME D'A02, MOT POUR MOT, avec la voie (c) d'A07 pour la rectification (pas de texte libre : des champs structurés). ENUMS (vrais enums, ADR-0022 §5, glossaire §4) : `DroitContact {acces, rectification, effacement, limitation, opposition}` ; `DonneeContact {nom, prenom, fonction, telephone, email}` ; `IssueDemandeDroit {appliquee, refusee}`. TABLE `demandes_droits_contact` : `id` UUID ; `attribution_id` UUID NOT NULL, clé étrangère Restrict/Restrict ; `droit` DroitContact NOT NULL ; `recue_at` Timestamptz(3) NOT NULL, `dbgenerated` et écrasée par la base (patron de `deposeeAt`), la date du délai d'un mois ; `traitee_at` Timestamptz(3) NULL ; `issue` IssueDemandeDroit NULL ; `donnee_visee` DonneeContact NULL ; `valeur_chiffree` BYTEA NULL (la nouvelle valeur, chiffrée comme les autres données du contact, inscrite à `CHAMPS_PII` en `{chiffre}` seul, SANS empreinte) ; `valeur_purgee_at` Timestamptz(3) NULL. Index sur `(attribution_id)`, et un index partiel `(recue_at) WHERE traitee_at IS NULL` pour la file et l'échéance. CHECK NOMMÉS : `demandes_droits_contact_traitement` : `(traitee_at IS NULL) = (issue IS NULL)` ; `demandes_droits_contact_donnee_si_rectification` : `(droit = 'rectification') = (donnee_visee IS NOT NULL)` ; `demandes_droits_contact_valeur_purge_liee` : `(droit = 'rectification' AND (valeur_chiffree IS NULL) = (valeur_purgee_at IS NOT NULL)) OR (droit <> 'rectification' AND valeur_chiffree IS NULL AND valeur_purgee_at IS NULL)`. Une rectification porte donc sa valeur chiffrée, ou sa date d'effacement, jamais les deux ni aucune. PROTECTION : `refuser_modification_sauf('une_fois:traitee_at', 'une_fois:issue', 'purge:valeur_chiffree', 'une_fois:valeur_purgee_at')` (complétée par `'une_fois:prolongee_at'`, voir PROLONGATION), avec DELETE et TRUNCATE refusés (gabarit de DM-07). Rien d'autre ne change après l'insertion : la trace (quelle donnée, quand, quelle suite) reste. EFFACEMENT DE LA VALEUR : il se fait dans la MÊME transaction que l'application ou le refus. Une tâche de fond efface aussi toute valeur dont la demande n'est pas traitée à `recue_at` plus le délai, la constante `DROITS_CONTACT_DELAI_REPONSE_MOIS` = 1 de `retention.ts` (art. 12.3 RGPD) : « au plus un mois », même sans traitement. L'alerte de demande en retard relève de la console, pas de ce schéma. PREUVE DANS LE JOURNAL : aucun événement de journal ne porte la valeur. Si un événement est voulu, sa charge fermée ne contient que `droit`, `donnee_visee`, `issue` et `acteur`. DURÉES (A07, 2026-10-02) : la nouvelle valeur chiffrée est « effacée à la CLÔTURE de la demande (rectification appliquée ou refus motivé notifié), au plus tard un mois après la réception, porté à trois mois si le délai est prolongé dans les conditions de l'art. 12.3 ». PROLONGATION (art. 12.3, précision d'A07) : colonne `prolongee_at` Timestamptz(3) NULL, en ÉCRITURE UNIQUE (ajouter `'une_fois:prolongee_at'` aux arguments du gabarit, d'où `refuser_modification_sauf('une_fois:traitee_at', 'une_fois:issue', 'purge:valeur_chiffree', 'une_fois:valeur_purgee_at', 'une_fois:prolongee_at')`). CHECK nommé `demandes_droits_contact_prolongation_avant_traitement` : `prolongee_at IS NULL OR traitee_at IS NULL OR prolongee_at <= traitee_at`. La borne « dans le premier mois » se juge dans le CODE, contre `DROITS_CONTACT_DELAI_REPONSE_MOIS`, et non par un intervalle littéral en SQL : la SSOT reste la seule source du délai. Une constante `DROITS_CONTACT_PROLONGATION_MOIS` = 2 entre dans `retention.ts` (source : art. 12.3, « de deux mois », d'où trois mois au total). L'échéance de la valeur se DÉRIVE : `recue_at` + `DROITS_CONTACT_DELAI_REPONSE_MOIS`, plus `DROITS_CONTACT_PROLONGATION_MOIS` si `prolongee_at` est posée ; aucune colonne d'échéance (ADR-0022 §8). L'information de la personne sur la prolongation et ses motifs part par courriel, tracé dans `courriels_envoyes` : aucun motif en clair dans cette table. La TRACE sans valeur (type de demande, date, suite) est conservée cinq ans après la clôture de la demande (art. 2224 C. civ.) : décision de Williams du 2026-10-03 (« oui 5 ans »), sur la proposition d'A07. La ligne `demandes_droits_contact` du registre de l'article 30 remplace « À compléter — source manquante. Question : … » par le texte d'A07, mot pour mot : « La trace sans valeur (droit, donnée visée, dates, suite) : cinq ans après la clôture de la demande, preuve que la demande a été traitée. », et ajoute à ses sources « décision de Williams du 2026-10-03 ». L'anonymisation à l'échéance relève de DM-60, qui porte la constante, la tâche de fond et l'exception de purge. La table reçoit sa ligne au registre de l'article 30 dans la même PR. TÉMOINS, chaque refus attendu sur son nom : une rectification sans donnée visée, et une donnée visée sur un autre droit, sont refusées ; une valeur sur un autre droit est refusée ; la valeur et la date d'effacement ensemble sont refusées ; après l'effacement, le retour de la valeur est refusé ; `traitee_at` sans `issue` est refusé, et un second traitement aussi ; une modification de `droit` ou de `attribution_id` est refusée par le déclencheur ; la tâche de fond efface au-delà du mois une valeur non traitée ; la valeur n'apparaît dans aucun journal ni aucune réponse de la couche ; une seconde prolongation est refusée par le déclencheur ; une prolongation après le traitement est refusée par le CHECK, sur son nom ; une prolongation au-delà du premier mois est refusée par le code, avec une erreur nommée ; sans prolongation, la valeur non traitée est effacée à un mois ; avec prolongation, elle l'est à trois mois et pas avant. JETON DES DROITS (condition de la lentille sécurité dans UX-P1-48) : colonne `attributions.jeton_droits_hash` CHAR(64) NULL : l'empreinte HMAC du jeton, jamais le jeton ; index UNIQUE partiel `attributions_jeton_droits_hash_key` `WHERE jeton_droits_hash IS NOT NULL` ; CHECK nommé `attributions_jeton_droits_hex` (`jeton_droits_hash IS NULL OR jeton_droits_hash ~ '^[0-9a-f]{64}$'`) ; CHECK nommé `attributions_jeton_droits_purge` (`contact_purge_at IS NULL OR jeton_droits_hash IS NULL`) : la purge du contact (DM-48) efface le jeton dans la même instruction, ce qui l'invalide à l'effacement des données. Le jeton n'est pas consommé par la réponse oui ou non (SEC-40), et la purge de DM-48 ajoute `jeton_droits_hash` à son jeu de colonnes. TÉMOINS : une empreinte hors forme refusée ; une attribution purgée qui garde son jeton refusée sur `attributions_jeton_droits_purge` ; deux attributions au même jeton refusées sur l'index. Le témoin sans oracle du jeton des droits (un jeton inconnu ou purgé donne la même réponse qu'un jeton faux) vit dans SEC-40, qui porte la lecture des jetons par la page publique (rattrapage 72, accord de la coordination). Label `schema`, préfixe à la revendication. Auteur : A05. Lentilles schema (A02) et sécurité.",
       "tests": {
         "REQ-JUR-065": [
           "tests/integration/demandes-droits-contact.spec.ts"
         ]
-      }
+      },
+      "branch": "t/dm-59",
+      "owner": "A05",
+      "pr": 517,
+      "attestation": {
+        "pr": 517,
+        "sha": "8cfd393359fe9a46355f52ce9512d1e347c04191",
+        "fusionneeAt": "2026-10-03T07:44:01Z"
+      },
+      "motif": null
     },
     {
       "id": "SEC-50",
@@ -21796,7 +21868,9 @@
         "src/app/(espace)/confidentialite/ecran.tsx",
         "src/app/(espace)/confidentialite/page.tsx",
         "src/content/micro-copy/espace/vocabulaire.ts",
-        "tests/unit/espace/vocabulaire-et-micro-copy.spec.ts"
+        "tests/unit/espace/vocabulaire-et-micro-copy.spec.ts",
+        "tests/unit/securite/connexion-actions.spec.ts",
+        "tests/unit/securite/revocation.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -21813,7 +21887,7 @@
       "externe": null,
       "estimateDays": 0.25,
       "statut": "a_faire",
-      "acceptance": "Versée au rattrapage 80 sur la revue d'A07 de #535 (2026-10-03), relayée par la coordination. CONDITION DE MISE EN SERVICE, MOT POUR MOT : « la page ne peut pas être présentée à l'acceptation d'un Apporteur tant que la politique rendue contient un seul segment `a_completer`, quel qu'en soit le motif. Seule l'omission d'une qualification non tranchée est admise. » (1) Le domaine (`src/domain/rgpd/politique.ts`) expose si la politique rendue est PUBLIABLE : zéro segment `a_completer`, quel qu'en soit le motif ; seule l'omission d'une qualification non tranchée est admise. (2) Le parcours d'acceptation de JUR-T34 (`src/server/rgpd/acceptation.ts`, `src/app/(espace)/confidentialite/actions.ts`) REFUSE de présenter la politique à l'acceptation tant qu'elle n'est pas publiable, par un refus nommé. (3) TÉMOINS dans `tests/unit/juridique/politique-de-confidentialite.spec.ts` : un seul `a_completer` fait refuser l'acceptation ; zéro `a_completer` la laisse passer ; une qualification non tranchée et omise ne bloque pas. (4) NOTICE DES DESTINATAIRES (rattrapage 80, demande de la coordination, texte d'A07) : la rubrique « Destinataires » de TRT-APPORTEURS (`docs/rgpd/registre-article-30.md`) remplace la notice de JUR-T36 par le texte d'A07, mot pour mot : « le contact de l'entreprise que l'apporteur déclare, qui reçoit ses prénom et nom dans la demande de confirmation ou lors d'une prise de contact de la Société, jamais ses coordonnées » ; « personne déclarée » est réservé à `personnes_declarees` (art. 2.6). Le témoin de la notice (`tests/unit/juridique/politique-publique-sans-note-interne.spec.ts`) suit. (5) ÉCRAN (rattrapage 81, mesure d'A06) : le formulaire d'accord ne s'affiche que pour l'état `a_accepter` (refus fermé) ; l'état `non_publiable` affiche un message d'état de la micro-copie (`CONFIDENTIALITE.nonPubliable`, texte relu par A07) ; la page juge la publiabilité sur le contenu de la politique, pas sur sa seule version. (6) LENTILLE SÉCURITÉ (2026-10-03) : (a) registre illisible → `/confidentialite` en état d'erreur, SANS formulaire d'accord ; (b) base injoignable → état d'indisponibilité, pas `/confidentialite` ; (c) dans les deux cas, motif journalisé, rien d'écrit. Le rejugement « acceptée et publiable » sur CHAQUE route et action de l'espace relève de la garde d'espace unique, SEC-53 (rattrapage 81). REQ-UX-047 (passe GOV-115, 2026-09-30) : geste principal : DETTE NOMMÉE, geste non encore connu, à écrire à la revendication ; budget : lu dans `BUDGETS_UX` (consultation au plus 3 interactions, saisie au plus 8), mesuré par la fixture QA-T33. la maquette de l'écran est validée dans `docs/maquettes/VALIDATION.md` avant la première ligne de code ; cinq états (REQ-UX-019 amendée). Pour cette tâche, sans changement de mise en page ni d'états : la page existe (JUR-T34), un état et un libellé s'ajoutent (le refus nommé et l'indisponibilité), aucune maquette à valider (coordination, rattrapage 81, comme JUR-T36 au rattrapage 78) ; une maquette reste due à toute refonte. Auteur : A06. Lentille A07.",
+      "acceptance": "Versée au rattrapage 80 sur la revue d'A07 de #535 (2026-10-03), relayée par la coordination. CONDITION DE MISE EN SERVICE, MOT POUR MOT : « la page ne peut pas être présentée à l'acceptation d'un Apporteur tant que la politique rendue contient un seul segment `a_completer`, quel qu'en soit le motif. Seule l'omission d'une qualification non tranchée est admise. » (1) Le domaine (`src/domain/rgpd/politique.ts`) expose si la politique rendue est PUBLIABLE : zéro segment `a_completer`, quel qu'en soit le motif ; seule l'omission d'une qualification non tranchée est admise. (2) Le parcours d'acceptation de JUR-T34 (`src/server/rgpd/acceptation.ts`, `src/app/(espace)/confidentialite/actions.ts`) REFUSE de présenter la politique à l'acceptation tant qu'elle n'est pas publiable, par un refus nommé. (3) TÉMOINS dans `tests/unit/juridique/politique-de-confidentialite.spec.ts` : un seul `a_completer` fait refuser l'acceptation ; zéro `a_completer` la laisse passer ; une qualification non tranchée et omise ne bloque pas. (4) NOTICE DES DESTINATAIRES (rattrapage 80, demande de la coordination, texte d'A07) : la rubrique « Destinataires » de TRT-APPORTEURS (`docs/rgpd/registre-article-30.md`) remplace la notice de JUR-T36 par le texte d'A07, mot pour mot : « le contact de l'entreprise que l'apporteur déclare, qui reçoit ses prénom et nom dans la demande de confirmation ou lors d'une prise de contact de la Société, jamais ses coordonnées » ; « personne déclarée » est réservé à `personnes_declarees` (art. 2.6). Le témoin de la notice (`tests/unit/juridique/politique-publique-sans-note-interne.spec.ts`) suit. (5) ÉCRAN (rattrapage 81, mesure d'A06) : le formulaire d'accord ne s'affiche que pour l'état `a_accepter` (refus fermé) ; l'état `non_publiable` affiche un message d'état de la micro-copie (`CONFIDENTIALITE.nonPubliable`, texte relu par A07) ; la page juge la publiabilité sur le contenu de la politique, pas sur sa seule version. (6) LENTILLE SÉCURITÉ (2026-10-03) : (a) registre illisible → `/confidentialite` en état d'erreur, SANS formulaire d'accord ; (b) base injoignable → état d'indisponibilité, pas `/confidentialite` ; (c) dans les deux cas, motif journalisé, rien d'écrit. Le rejugement « acceptée et publiable » sur CHAQUE route et action de l'espace relève de la garde d'espace unique, SEC-53 (rattrapage 81). REQ-UX-047 (passe GOV-115, 2026-09-30) : geste principal : DETTE NOMMÉE, geste non encore connu, à écrire à la revendication ; budget : lu dans `BUDGETS_UX` (consultation au plus 3 interactions, saisie au plus 8), mesuré par la fixture QA-T33. la maquette de l'écran est validée dans `docs/maquettes/VALIDATION.md` avant la première ligne de code ; cinq états (REQ-UX-019 amendée). Pour cette tâche, sans changement de mise en page ni d'états : la page existe (JUR-T34), un état et un libellé s'ajoutent (le refus nommé et l'indisponibilité), aucune maquette à valider (coordination, rattrapage 81, comme JUR-T36 au rattrapage 78) ; une maquette reste due à toute refonte. (7) CONTRÔLE DES DÉCLARATIONS (rattrapage 82, arbitrage de la coordination sur les réponses de la juriste et de la sécurité, 2026-10-03), texte de la juriste, point (5), MOT POUR MOT : « La politique de confidentialité mentionne l'existence de ce contrôle, sa finalité (la sincérité des déclarations), ses critères en termes généraux, et l'intervention humaine. » Auteur : A06. Lentille A07.",
       "tests": {
         "REQ-JUR-025": [
           "tests/unit/juridique/politique-de-confidentialite.spec.ts"
@@ -21915,6 +21989,327 @@
         "REQ-JUR-025": [
           "tests/unit/securite/garde-espace.spec.ts",
           "tests/integration/garde-espace.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "SEC-51",
+      "titre": "La console ne peut démarcher aucune entreprise réservée par un apporteur : un refus nommé côté serveur",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "securite",
+      "paths": [
+        "src/server/demarchage/garde-reserve.ts",
+        "src/server/demarchage/actions-classees.ts",
+        "src/content/micro-copy/console/refus.ts",
+        "tests/unit/securite/garde-reserve.spec.ts",
+        "tests/unit/securite/demarchage-classe.spec.ts",
+        "tests/integration/garde-reserve.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [
+        "attribution"
+      ],
+      "deps": [],
+      "reqs": [
+        "REQ-SEC-042"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.75,
+      "statut": "a_faire",
+      "acceptance": "Versée au rattrapage 82 sur une réserve de l'auteur back et d'A07 (#433, JUR-T31), arbitrage de la coordination : le contrat interdit à la Société de démarcher une entreprise pendant la réserve d'un apporteur, mais aucun contrôle du CODE ne l'empêche hors de la prise en charge par un conseiller (DM-30, point (3)). À faire AVANT la mise en service de l'option B (le CRM Pro dès la déclaration). (1) Une GARDE UNIQUE côté serveur (`src/server/demarchage/garde-reserve.ts`) dit si une entreprise est réservée, et chaque action de démarchage de la console l'appelle ; un refus NOMMÉ, jamais un silence. (2) PÉRIMÈTRE : la réserve après acte d'un apporteur (`RESERVE_APRES_ACTE_APPORTEUR_JOURS`, après une vérification ou une déclaration refusée ou en attente) et le délai de confirmation (« aucun démarchage pendant le délai de confirmation », HYP-W19-NON-EXPLOITATION). La VÉRIFICATION (la liste d'appels de confirmation) n'est pas du démarchage et passe. La règle de DM-30 sur la prise en charge appellera cette garde, sans copie : la garde existe avant qui l'appelle, DM-30 (phase 2) porte SEC-51 à ses deps (arbitrage de la coordination, délégation de Williams, rattrapage 82). (3) Les points d'appel exacts (la prise en charge de DM-30, l'émission vers le CRM Pro d'INT-T68-P, toute prise de contact commerciale de la console) sont fixés à la revendication avec l'auteur ; INT-T68-P en dépendra pour son émission. (4) TÉMOINS : entreprise réservée → refus nommé ; réserve échue → l'action passe ; un appel de vérification pendant la réserve → passe ; la réponse ne révèle ni qui a réservé ni pourquoi (REQ-SEC-042). (5) AVIS DE LA LENTILLE SÉCURITÉ (2026-10-03), MOT POUR MOT pour le fond : « 1. TOUTE voie EN MASSE vers un démarchage : les exports de fiches ou de listes (CSV, segment), et l'envoi groupé vers le CRM Pro, pas seulement l'émission unitaire. 2. Les envois DIFFÉRÉS : séquences, campagnes, tâches de fond. La garde se rejuge AU MOMENT de l'envoi, pas seulement à la mise en file, car une réserve peut naître entre les deux. Une même fonction dans la même transaction que l'action, sous verrou de l'attribution comme DM-30, pour éviter la course. 3. ÉCHEC FERMÉ : si l'état de la réserve ne peut pas être lu (erreur de base, attribution illisible), refus. 4. Liste FERMÉE dans les deux sens : chaque action de la console et chaque tâche qui contacte une entreprise se déclare « démarchage » ou « vérification ». Un témoin dérivé des fichiers suivis, comme securite:roles, rougit sur toute action neuve non classée. » (6) REFUS NON RÉVÉLATEUR, en deux couches (sécurité) : côté serveur, un CODE fixe nommé `entreprise_reservee`, journalisé avec les identifiants seuls ; côté écran, un message GÉNÉRIQUE de la micro-copie, « Entreprise indisponible pour une prise de contact commerciale », sans l'apporteur, sans la cause (acte ou délai de confirmation) et sans la date de fin ; si un rôle doit voir la date pour son métier, c'est une lecture de la fiche selon la matrice des droits, pas un détail du refus. TÉMOIN : le corps du refus est identique pour les deux causes (REQ-SEC-042). La LECTURE d'une fiche reste permise ; la journalisation de l'accès aux COORDONNÉES du contact d'une entreprise réservée relève d'une tâche jumelle. Auteur : A05. Lentille sécurité.",
+      "tests": {
+        "REQ-SEC-042": [
+          "tests/unit/securite/garde-reserve.spec.ts",
+          "tests/unit/securite/demarchage-classe.spec.ts",
+          "tests/integration/garde-reserve.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "SEC-52",
+      "titre": "Tout accès de la console aux coordonnées du contact d'une entreprise réservée est journalisé, par identifiants seuls",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "securite",
+      "paths": [
+        "src/server/securite/acces-coordonnees.ts",
+        "src/domain/evenement/charges.ts",
+        "prisma/schema.prisma",
+        "prisma/migrations/",
+        "docs/GLOSSAIRE.md",
+        "tests/unit/domaine/journal-charges.spec.ts",
+        "tests/unit/securite/acces-coordonnees.spec.ts",
+        "tests/integration/acces-coordonnees.spec.ts"
+      ],
+      "schema": true,
+      "sensible": [
+        "attribution",
+        "rgpd"
+      ],
+      "deps": [
+        "SEC-51"
+      ],
+      "reqs": [
+        "REQ-SEC-042"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "acceptance": "Versée au rattrapage 82, tâche jumelle de SEC-51, sur le point 5 de l'avis de la lentille sécurité (2026-10-03), arbitrage de la coordination. La LECTURE d'une fiche n'est pas du démarchage et reste permise, la vérification en a besoin. Mais l'accès aux COORDONNÉES du contact d'une entreprise réservée est journalisé (acteur, attribution, date, par identifiants seuls) : c'est la seule trace qui permette de constater un démarchage hors outil pendant la réserve (HYP-W19-NON-EXPLOITATION). (1) Un accesseur UNIQUE côté serveur (`src/server/securite/acces-coordonnees.ts`) déchiffre les coordonnées du contact (via `pii.ts`) pour la console, et écrit un événement de journal, dans la même transaction, quand l'entreprise est réservée (la garde de SEC-51). Aucune autre voie de la console ne déchiffre ces coordonnées. (2) La charge de l'événement est fermée : type, acteur, attribution, horodatage ; jamais de nom, d'adresse, de téléphone ni de cause de la réserve. Le type de journal entre à l'enum et au glossaire (migration additive ; forme à confirmer par A02 à la revendication). (3) Les écrans de console qui affichent les coordonnées (fiche de qualification, fiche prospect) appellent cet accesseur. (4) TÉMOINS : un accès pendant la réserve → un événement, par identifiants seuls ; un accès hors réserve → aucun ; un déchiffrement par une autre voie de la console → rouge (témoin dérivé des fichiers suivis). Auteur : A05. Lentilles sécurité et schema (A02).",
+      "tests": {
+        "REQ-SEC-042": [
+          "tests/unit/securite/acces-coordonnees.spec.ts",
+          "tests/integration/acces-coordonnees.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "UX-P1-49",
+      "titre": "La charte commune des maquettes gagne en contraste et en lisibilité, montrée à Williams avant d'être propagée",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "espace",
+      "paths": [
+        "docs/maquettes/",
+        "tests/a11y/harnais.ts",
+        "tests/a11y/axe.spec.ts",
+        "tests/unit/espace/charte-commune.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [],
+      "reqs": [
+        "REQ-UX-017"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1,
+      "statut": "a_faire",
+      "acceptance": "Versée au rattrapage 82 sur la décision de Williams du 2026-10-03 : sa remarque, « POUR TOUS LES ECRAN? JE TROUVE QU4IL MANQUE UN PEU DE CONTRASTE ET CA fait très textuel non ? », et son choix, « OK pour 1 » (continuer à valider les écrans, et une tâche dédiée retravaille le style commun). (1) La tâche retravaille la charte commune des maquettes, le bloc `<style>` délimité « charte:debut » et recopié dans chacune des maquettes de `docs/maquettes/` (mesure d'A06 : il n'existe ni feuille de style commune ni jetons séparés) : contraste renforcé, couleurs d'état (réservée, confirmée, perdue…), icônes, cartes, hiérarchie visuelle. Le contenu et la disposition validés ne changent pas. (2) MONTRÉE À WILLIAMS AVANT D'ÊTRE APPLIQUÉE : sur `docs/maquettes/index.html` (la page de la charte) et sur une maquette témoin AVANT/APRÈS (`accueil.html`), puis propagée aux autres maquettes seulement après sa validation. (3) Les validations déjà données dans `VALIDATION.md` ne sont PAS remises à vide par ce changement de STYLE SEUL, sans contenu ni disposition, puisque Williams l'a demandé lui-même ; une note de la séance de style y est ajoutée. (4) ACCESSIBILITÉ AA : une spec neuve (`tests/unit/espace/charte-commune.spec.ts`) exige le bloc charte IDENTIQUE dans toutes les maquettes, et chaque paire texte/fond des jetons ≥ 4,5:1 (≥ 3:1 pour les bordures et l'état focus) ; le harnais d'accessibilité (`tests/a11y/`) reste vert (REQ-UX-017). La tâche couvre tout `docs/maquettes/`, dont le correctif mobile de `mon-contrat.html` (à 360 px, aucun défilement horizontal ; un tableau passe en cartes sous 640 px), demandé par Williams. (5) Aucun fichier de `src/` : les jetons de l'application viendront avec les écrans. Pendant la propagation, aucune autre PR sur `docs/maquettes/` ne fusionne, sauf une PR qui ne touche que `VALIDATION.md`. Auteur : A06.",
+      "tests": {
+        "REQ-UX-017": [
+          "tests/unit/espace/charte-commune.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "SEC-54",
+      "titre": "Le code à six chiffres est généré à l'émission du lien, envoyé dans son courriel et vérifié de façon atomique, cinq essais au plus",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "securite",
+      "paths": [
+        "src/server/auth/lien-magique.ts",
+        "src/server/auth/lien-magique-depot.ts",
+        "src/server/auth/lien-magique-production.ts",
+        "src/app/(espace)/connexion/actions.ts",
+        "src/content/micro-copy/courriels/notifications.ts",
+        "tests/integration/lien-magique.spec.ts",
+        "tests/integration/lien-magique-production.spec.ts",
+        "tests/integration/lien-magique-code.spec.ts",
+        "tests/unit/securite/lien-magique-code.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [
+        "auth"
+      ],
+      "deps": [
+        "SEC-03",
+        "SEC-42"
+      ],
+      "reqs": [
+        "REQ-SEC-001"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.75,
+      "statut": "a_faire",
+      "acceptance": "Versée au rattrapage 82 sur un découpage mesuré par l'auteur écrans et arbitré par la coordination : UX-P1-04 (« Se connecter ») ne peut pas se livrer, car aucun code court n'est jamais généré ni envoyé, et le côté serveur vit dans les fichiers de SEC-03 et SEC-42. Cette tâche porte ce côté serveur : génération du code à l'émission du lien, envoi dans le courriel `lien_magique`, vérification atomique qui compte la tentative (cinq essais, puis le lien est annulé), état de consommation `deja_utilise` distinct de `lien_invalide`. Le schéma existe déjà (`liens_magiques.code_hash`, `tentatives_code`, CHECK et déclencheur `liens_magiques_code_fige`) : aucune migration. CADRAGE DE LA LENTILLE SÉCURITÉ (2026-10-03), MOT POUR MOT : « (1) LE CODE EST LE LIEN. Le code à six chiffres est une seconde forme du MÊME lien magique (`liens_magiques.code_hash`, HMAC de domaine `partners.code.v1`, ADR-0013 décision 14). Même durée de vie que le lien (`expire_at`, 15 min, REQ-SEC-001), sans prolongation. Même usage UNIQUE : consommer le lien par le code, ou par le clic, rend l'autre inutilisable, et une session au plus par lien. Le code est tiré par CSPRNG, uniforme sur 000000 à 999999 (`randomInt`, sans biais de modulo), posé une fois, jamais stocké ni journalisé en clair. (2) CLÉ DE RECHERCHE. L'adresse saisie, normalisée EXACTEMENT comme à l'émission, puis prise en empreinte sous la clé des empreintes de personnes (comme `email_hash`). On cherche le SEUL lien ACTIF le plus récent de cet apporteur : non consommé, non annulé, non expiré, population apporteur. Émettre un nouveau lien annule les précédents. (3) MÊME RÉPONSE (REQ-SEC-001, anti-énumération). Compte inconnu, aucun lien actif, code faux, lien expiré, épuisé ou consommé : la réponse est IDENTIQUE, même statut, même message générique de la micro-copie (« Ce code n'est pas valide ou a expiré »), même forme. Le temps est égalisé : un compte inconnu passe aussi par un calcul HMAC et une comparaison factices. (4) TEMPS CONSTANT. On compare les empreintes HMAC par `timingSafeEqual`, sur des tampons de longueur fixe, jamais le code en clair, jamais par `===`. (5) CINQ ESSAIS, SANS COURSE. L'essai est COMPTÉ AVANT la comparaison, en une instruction atomique : `UPDATE … SET tentatives_code = tentatives_code + 1 WHERE id = … AND tentatives_code < 5 AND consomme_at IS NULL AND annule_at IS NULL AND expire_at > now() RETURNING code_hash`. Ainsi, des essais concurrents ne dépassent jamais cinq. Au cinquième échec, le lien est ANNULÉ (`annule_at`) : le clic sur le lien ne marche plus non plus, il faut en redemander un. Le plafond est aussi tenu par la base (CHECK et déclencheur `liens_magiques_code_fige`). (6) LIMITE DE DÉBIT. Sur la vérification du code, deux compteurs nommés par `limiter` : par empreinte d'adresse réseau et par empreinte d'adresse saisie, pour empêcher la pulvérisation sur de nombreux comptes. L'émission de liens garde sa limite existante. Un limiteur indisponible fait REFUSER, en échec fermé. Le refus de débit a la même forme que (3), avec le statut 429. (7) RIEN DANS LES JOURNAUX ni dans Sentry : ni code, ni adresse, ni empreinte. Seulement un motif fermé (`code_refuse`, `code_epuise`, `debit`), sans identifiant de personne. (8) LA SESSION ouverte par le code est EXACTEMENT celle du clic : même fonction, même rotation, mêmes attributs de cookie, `lien_magique_id` unique. TÉMOINS (sous `partners_app`) : bon code → session, puis le lien et le code sont inutilisables ; code faux, compte inconnu, lien expiré : réponses identiques, corps et statut compris ; cinq faux → lien annulé, et le sixième est refusé même avec le bon code ; cinq essais concurrents → jamais plus de cinq comptés (le compteur en base fait foi) ; nouveau lien → l'ancien code est refusé ; limiteur indisponible → refus ; espions sur `limiter` pour les noms des deux compteurs ; aucune occurrence du code ni de l'adresse dans les journaux capturés. » Les témoins sur des ports en mémoire (espions sur `limiter`, réponse identique, `timingSafeEqual`) vivent dans le témoin UNITAIRE `tests/unit/securite/lien-magique-code.spec.ts`, que la mutation joue ; les témoins en base restent dans `tests/integration/lien-magique-code.spec.ts` (demande de la lentille sécurité). DEUX CHOIX DE L'AUTEUR ÉCRANS, TRANCHÉS PAR LA LENTILLE SÉCURITÉ (2026-10-03), MOT POUR MOT : (a) « Une saisie mal formée (autre chose que six chiffres ASCII) est refusée AVANT toute recherche du lien et ne consomme pas d'essai. Son refus ne dépend ni de l'existence du compte ni de l'état du lien, et elle reste comptée par la limite de débit (6). » (b) « Le code n'a pas de durée propre, il vit et meurt avec son lien (expiration, consommation, annulation). » L'action serveur de vérification du code (`src/app/(espace)/connexion/actions.ts`) appartient à cette tâche ; l'écran reste à UX-P1-04. Le mécanisme reste réutilisable par SEC-29 (la connexion de la console). UX-P1-04 (l'écran) en dépend. Auteur : A05. Lentille sécurité.",
+      "tests": {
+        "REQ-SEC-001": [
+          "tests/unit/securite/lien-magique-code.spec.ts",
+          "tests/integration/lien-magique-code.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "UX-P1-50",
+      "titre": "Les maquettes de la console passent à une navigation par barre latérale, dans un style moderne, montrées à Williams avant d'être propagées",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "console",
+      "paths": [
+        "docs/maquettes/",
+        "tests/unit/console/maquettes-barre-laterale.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "UX-P1-49"
+      ],
+      "reqs": [
+        "REQ-UX-048"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1,
+      "statut": "a_faire",
+      "acceptance": "Versée au rattrapage 82 sur la demande de Williams, relayée par la coordination, verbatim : « POUR la console d'adminsitration, j'ai l'impression qu'il fait très veillote et j'aurai aimé plutot un sidebar et que ce soit plus moderne ». (1) La tâche refond les maquettes de la CONSOLE en navigation par BARRE LATÉRALE et dans un style moderne : `console-cadre.html` d'abord, puis les autres écrans de la console de `docs/maquettes/`. Le contenu fonctionnel ne change pas : entrées, rôles, états et textes restent ceux des maquettes. (2) MONTRÉE À WILLIAMS AVANT D'ÊTRE PROPAGÉE, sur `console-cadre.html` et `file-qualification.html` ; la propagation aux autres écrans de la console vient seulement après sa validation. (3) ARTICULATION avec UX-P1-49 : même charte commune (le bloc « charte:debut »), la console y ajoute sa barre latérale ; cette tâche passe après UX-P1-49, dont la règle de propagation vaut ici aussi (aucune autre PR sur `docs/maquettes/` ne fusionne pendant la propagation, sauf une PR qui ne touche que `VALIDATION.md`). (4) REQ-UX-048 tient toujours : au bureau, au plus sept entrées de premier niveau groupées par métier, dans la barre latérale ; moins de 768 px, la barre inférieure d'au plus quatre entrées plus un menu, sans défilement horizontal à 320 px. Une spec neuve (`tests/unit/console/maquettes-barre-laterale.spec.ts`) le vérifie sur les maquettes de la console. (5) VALIDATION.md : la ligne d'UX-P1-16 (le cadre de la console) repart à vide si elle était validée ; `file-qualification.html` n'est pas validée et suit cette refonte. Le texte « quatre maquettes à valider ensemble » de la séance W20 est amendé par l'auteur écrans, dans une PR qui ne touche que `VALIDATION.md` : les trois écrans apporteur et contact validés par Williams (`deposer.html`, `mes-entreprises.html`, `confirmation-contact.html`) s'y inscrivent, et `file-qualification.html` renvoie à cette tâche. (6) MOBILE : « file-qualification.html : la pastille qui sort à 450 px dans 5 états (nominal, lien-interet, erreur-date, non-confirme, erreur) tient à 360 px » (auteur écrans, relayé par la coordination). (7) Aucun fichier de `src/` : la navigation réelle de la console reste à UX-P1-16. Auteur : A06.",
+      "tests": {
+        "REQ-UX-048": [
+          "tests/unit/console/maquettes-barre-laterale.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "SEC-55",
+      "titre": "Un appareil inconnu est un signal de sécurité du compte : une confirmation renforcée avant toute action sensible, jamais une anomalie",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "securite",
+      "paths": [
+        "src/server/auth/appareil.ts",
+        "src/server/auth/session.ts",
+        "src/server/taches/purger-appareils.ts",
+        "src/server/taches/inscriptions.ts",
+        "src/server/taches/registre.ts",
+        "prisma/schema.prisma",
+        "prisma/migrations/",
+        "docs/GLOSSAIRE.md",
+        "docs/rgpd/registre-article-30.md",
+        "tests/unit/securite/appareil-inconnu.spec.ts",
+        "tests/integration/appareil-inconnu.spec.ts"
+      ],
+      "schema": true,
+      "sensible": [
+        "auth",
+        "rgpd"
+      ],
+      "deps": [
+        "SEC-03",
+        "SEC-54"
+      ],
+      "reqs": [
+        "REQ-SEC-003"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.75,
+      "statut": "a_faire",
+      "acceptance": "Versée au rattrapage 82 : l'APPAREIL INCONNU sort des anomalies de DM-12 (arbitrage de la coordination sur la réponse de la juriste, 2026-10-03). TEXTE DE LA JURISTE, MOT POUR MOT : « Un appareil inconnu est un signal de sécurité du compte, jamais une anomalie de dépôt. Son seul effet est une mesure de sécurité de la connexion (confirmation renforcée ou nouvelle authentification) ; il n'est inscrit ni au dossier de l'apporteur ni sur ses dépôts, et il n'entre dans aucune décision qui le concerne. L'empreinte de l'appareil est minimale, conservée au plus la durée des sessions, et inscrite au registre de l'article 30. » Base : intérêt légitime de sécurité (art. 6.1.f et 32) ; la lecture d'un identifiant sur l'appareil, strictement nécessaire à l'authentification, est exemptée de consentement (art. 82 de la loi Informatique et Libertés). CADRAGE DE LA LENTILLE SÉCURITÉ, MOT POUR MOT : « (1) l'empreinte est minimale, un HMAC tronqué sous une clé dédiée, de l'appareil tel que la session le voit, jamais l'adresse réseau en clair ; elle est gardée au plus la durée des sessions, avec une purge et sa ligne au registre ; (2) le SEUL effet est une mesure de connexion : une confirmation renforcée (code ou nouveau lien à l'adresse vérifiée) avant toute action sensible, dont RIB, coordonnées et adresse de connexion, et un avis à l'adresse vérifiée ; aucune ligne d'anomalie, aucun statut, aucun effet sur un dépôt ; (3) la console n'en voit pas de « jugement », tout au plus un événement de sécurité du compte, par identifiants ; (4) en échec fermé : une empreinte illisible compte comme un appareil inconnu ; (5) témoins : nouvel appareil → confirmation exigée avant l'action sensible, puis l'appareil est connu ; aucune trace dans les tables d'anomalie ; purge à l'échéance. » La table des appareils connus, sa purge et sa ligne au registre de l'article 30 (TRT-APPORTEURS) entrent dans cette tâche ; label `schema`, préfixe à la revendication, forme à confirmer par A02. La confirmation renforcée réutilise le code de SEC-54. Auteur : A05. Lentilles sécurité, schema (A02) et A07.",
+      "tests": {
+        "REQ-SEC-003": [
+          "tests/unit/securite/appareil-inconnu.spec.ts",
+          "tests/integration/appareil-inconnu.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "JUR-T58",
+      "titre": "L'effet d'une anomalie sur l'apporteur lui est notifié avec son motif et la voie de contestation, et une personne de la console le décide",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "juridique",
+      "paths": [
+        "src/server/anomalie/effets.ts",
+        "src/content/micro-copy/courriels/notifications.ts",
+        "tests/unit/juridique/anomalie-effet-notifie.spec.ts",
+        "tests/integration/anomalie-effet-notifie.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [
+        "rgpd"
+      ],
+      "deps": [
+        "DM-12",
+        "SEC-14",
+        "SEC-15"
+      ],
+      "reqs": [
+        "REQ-JUR-031"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "acceptance": "Versée au rattrapage 82 sur les réponses de la juriste à DM-12, arbitrage de la coordination (2026-10-03). Phase 1 : la vérification et la suspension (SEC-14, SEC-15) produisent des effets dès la phase 1. TEXTE DE LA JURISTE, point (2), MOT POUR MOT : « Dès qu'une anomalie produit un effet sur l'apporteur (vérification d'une demande, refus, suspension, retenue d'un versement), cet effet lui est notifié avec son motif, dans les termes que le contrat prévoit (art. 3.3 bis, 3.7 al. 3), et il peut le contester par écrit. » Point (4), MOT POUR MOT : « Aucune décision produisant un effet n'est prise sur le seul fondement d'un traitement automatisé : une personne de la console la prend, et l'auteur du traitement est journalisé. » (1) Un point d'entrée unique (`src/server/anomalie/effets.ts`) applique l'effet décidé par une personne de la console, l'auteur journalisé, et émet la notification avec son motif et la voie de contestation. (2) L'anomalie elle-même n'est jamais rendue à l'espace (DM-12 (c)) : seul l'effet et son motif le sont. (3) Les liens dans le paramètre du motif sont refusés à la saisie (note de la lentille sécurité du rattrapage 64). TÉMOINS : un effet sans décideur humain est refusé ; un effet décidé → une notification, une seule, au bon apporteur, avec motif et voie de contestation ; aucun identifiant d'anomalie dans la notification. Auteur : A05. Lentille A07.",
+      "tests": {
+        "REQ-JUR-031": [
+          "tests/unit/juridique/anomalie-effet-notifie.spec.ts",
+          "tests/integration/anomalie-effet-notifie.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "UX-P1-51",
+      "titre": "L'apporteur relit sa contestation et la réponse de la Société, et seulement la sienne",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "espace",
+      "paths": [
+        "src/app/(espace)/contestations/[id]/page.tsx",
+        "src/app/(espace)/contestations/[id]/ecran.tsx",
+        "src/server/contestation/relire.ts",
+        "src/content/micro-copy/espace/vocabulaire.ts",
+        "tests/unit/securite/contestation-relecture.spec.ts",
+        "tests/integration/contestation-relecture.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [
+        "rgpd"
+      ],
+      "deps": [
+        "DM-12",
+        "DM-25",
+        "SEC-53"
+      ],
+      "reqs": [
+        "REQ-DM-043",
+        "REQ-UX-047"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "acceptance": "Versée au rattrapage 82 sur les réponses de la juriste à DM-12, arbitrage de la coordination (2026-10-03) : une vue dédiée où l'apporteur relit sa contestation et la réponse de la Société (REQ-DM-043). CONDITION DE LA LENTILLE SÉCURITÉ : seulement la contestation de l'apporteur de la session ; le déchiffrement du texte et de la réponse se fait avec une AAD liée à l'id de la contestation et au champ ; jamais de sélection générique, et rien au journal. (1) Un lecteur unique côté serveur (`src/server/contestation/relire.ts`) filtre par l'apporteur de la session et déchiffre champ par champ ; une contestation d'un autre apporteur, ou inconnue, reçoit la même réponse. (2) La page passe par la garde de l'espace (SEC-53). TÉMOINS : la contestation d'un autre apporteur → même réponse qu'une inconnue ; un chiffré permuté entre deux contestations, ou entre le texte et la réponse, échoue au déchiffrement ; aucun texte dans les journaux capturés. REQ-UX-047 (passe GOV-115, 2026-09-30) : geste principal : DETTE NOMMÉE, geste non encore connu, à écrire à la revendication ; budget : lu dans `BUDGETS_UX` (consultation au plus 3 interactions, saisie au plus 8), mesuré par la fixture QA-T33. la maquette de l'écran est validée dans `docs/maquettes/VALIDATION.md` avant la première ligne de code ; cinq états (REQ-UX-019 amendée). Auteur : A06. Lentilles sécurité et A07.",
+      "tests": {
+        "REQ-DM-043": [
+          "tests/unit/securite/contestation-relecture.spec.ts",
+          "tests/integration/contestation-relecture.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "JUR-T59",
+      "titre": "Le runbook des demandes de droits dit comment traiter à la main une demande d'accès, anomalies comprises, tant que l'export n'existe pas",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "juridique",
+      "paths": [
+        "docs/runbooks/demandes-de-droits.md",
+        "tests/unit/juridique/runbook-demandes-de-droits.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [
+        "rgpd"
+      ],
+      "deps": [
+        "DM-59"
+      ],
+      "reqs": [
+        "REQ-JUR-065"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.25,
+      "statut": "a_faire",
+      "acceptance": "Versée au rattrapage 82, tâche dédiée sur arbitrage de la coordination (2026-10-03) : DM-59 est au stade de sa fusion (#517) et ne gagne ni acceptance ni chemin. TEXTE DE LA JURISTE, MOT POUR MOT : « Tant que l'export de l'art. 15 n'existe pas, une demande d'accès reçue, à laquelle il faut répondre sous un mois (art. 12.3), est traitée à la main. La procédure de la console doit alors dire expressément d'y joindre les anomalies qui visent l'apporteur. » (1) `docs/runbooks/demandes-de-droits.md` décrit la réception d'une demande de droit (la trace de DM-59, dont la date de réception fait courir le délai d'un mois), puis la réponse à une demande d'accès à la main : les données de l'apporteur ET les anomalies qui le visent (leur existence, leur date, leur catégorie, leur statut et la suite donnée, comme le prévoit DM-20). (2) Aucune donnée de personne dans le runbook : il nomme des tables et des écrans, jamais une personne. (3) Il cesse de servir pour l'accès quand l'export de l'art. 15 (DM-20) est livré, et le dit. TÉMOIN (`tests/unit/juridique/runbook-demandes-de-droits.spec.ts`) : le runbook existe, cite le délai d'un mois et exige de joindre les anomalies qui visent l'apporteur. Auteur : A07.",
+      "tests": {
+        "REQ-JUR-065": [
+          "tests/unit/juridique/runbook-demandes-de-droits.spec.ts"
         ]
       }
     }
