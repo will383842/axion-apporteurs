@@ -316,6 +316,18 @@ export const CONCORDANCES: readonly Concordance[] = [
     gabarit: ['par un autre apporteur ou par la Société ou ses préposés'],
     absents: [],
   },
+  // JUR-T42 — un devis signé qui n'est pas encore entièrement facturé rend l'entreprise
+  // indisponible, quelle que soit sa date. Le fragment s'arrête à « entièrement facturé » : la suite
+  // (« ni annulé ») a été validée par Williams le 2026-10-02 (séance, point 2) ; l'ancrage s'arrête
+  // avant elle, et reste valable si le texte devait encore changer.
+  {
+    decision: 'HYP-ANTERIORITE-DEVIS',
+    article: '3.3',
+    alinea: null,
+    registre: ["ayant accepté un devis qui n'est pas encore entièrement facturé"],
+    gabarit: ["ayant signé un devis qui n'a été ni entièrement facturé"],
+    absents: [],
+  },
   {
     decision: 'HYP-W19-CONCOURS',
     article: '3.3',
