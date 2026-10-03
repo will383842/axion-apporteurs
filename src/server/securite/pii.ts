@@ -376,6 +376,13 @@ export const CHAMPS_PII = {
   contexte: { chiffre: 'contexteChiffre' },
   codePostal: { chiffre: 'codePostalChiffre' },
   lienInteretPrecision: { chiffre: 'lienInteretPrecisionChiffre' },
+  // DM-59 (REQ-JUR-065) : la nouvelle valeur d'une rectification demandée par le contact, chiffrée
+  // comme ses autres données, SANS empreinte (on ne la cherche jamais), effacée à la clôture.
+  valeurRectification: { chiffre: 'valeurChiffree' },
+  // DM-09 (REQ-DM-008, REQ-DM-031) : la personne interrogée lors d'un appel de qualification et les
+  // termes de sa réponse — des données d'un tiers, chiffrées, SANS empreinte, purgées avec le contact.
+  personneInterrogee: { chiffre: 'personneInterrogeeChiffre' },
+  termesReponse: { chiffre: 'termesReponseChiffre' },
 } as const satisfies Record<
   string,
   { chiffre: string } | { chiffre: string; empreinte: string; type: TypeEmpreinte }

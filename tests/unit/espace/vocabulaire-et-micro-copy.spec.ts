@@ -798,11 +798,11 @@ describe('REQ-UX-002 — snapshot des libellés de l’espace, sans date, sans n
       espace/vocabulaire.ts › CONFIDENTIALITE › tiers › qualite : À quel titre
       espace/vocabulaire.ts › CONFIDENTIALITE › tiers › donnees : Ce qui leur est confié
       espace/vocabulaire.ts › CONFIDENTIALITE › tiers › localisation : Où elles sont traitées
-      espace/vocabulaire.ts › CONFIDENTIALITE › aCompleter : À compléter
-      espace/vocabulaire.ts › CONFIDENTIALITE › question : Question en attente de réponse :
+      espace/vocabulaire.ts › CONFIDENTIALITE › aCompleter : En cours de rédaction
       espace/vocabulaire.ts › CONFIDENTIALITE › accord › phrase : Votre espace s’ouvre une fois cette politique acceptée.
       espace/vocabulaire.ts › CONFIDENTIALITE › accord › action : J’accepte cette politique
       espace/vocabulaire.ts › CONFIDENTIALITE › acceptee : Vous avez accepté cette politique.
+      espace/vocabulaire.ts › CONFIDENTIALITE › nonPubliable : Cette politique est encore en cours de rédaction. Vous pourrez l’accepter dès qu’elle sera complète.
       espace/vocabulaire.ts › CONFIDENTIALITE › chargement : Chargement de la politique de confidentialité…
       espace/vocabulaire.ts › CONFIDENTIALITE › erreur › titre : La politique ne s’affiche pas
       espace/vocabulaire.ts › CONFIDENTIALITE › erreur › phrase : La politique de confidentialité n’a pas pu être affichée. Réessayez un peu plus tard.
