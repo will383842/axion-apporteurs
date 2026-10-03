@@ -23,6 +23,7 @@ import { describe, it, expect } from 'vitest';
 import {
   ESSAIS_DU_CODE_MAX,
   consommerLien,
+  conditionDeConsommationConsole,
   consommerLienConsole,
   demanderLienConsole,
   empreinteDuCode,
@@ -37,6 +38,13 @@ import {
 } from '../../../src/server/auth/lien-magique';
 import { DUREES_AUTH } from '../../../src/server/auth/durees';
 import { jugerAcces } from '../../../src/server/roles/require-role';
+import type { PrismaClient } from '@prisma/client';
+import {
+  ecrituresDeLienConsole,
+  lectureDuCompteConsole,
+  transactionDeConsommationConsole,
+  transactionDuCodeConsole,
+} from '../../../src/server/auth/lien-magique-depot';
 
 const MAINTENANT = new Date('2026-10-03T10:00:00.000Z');
 const CONFIG: ConfigurationDuLien = {
@@ -304,5 +312,127 @@ describe('REQ-SEC-003 — (5) la session de la console est courte', () => {
       motif: 'inactive',
     });
     expect(jugerAcces(droit, ligne(inactivite - 1), MAINTENANT, CONFIG.session.kid).ok).toBe(true);
+  });
+});
+
+// ── les adaptateurs Prisma de la console ─────────────────────────────────────────────────────────
+
+type Appel = { delegue: string; methode: string; args: unknown };
+
+/** Un faux client : chaque délégué enregistre ses appels et rend la réponse prévue. */
+function fauxClient(reponses: Record<string, unknown> = {}) {
+  const appels: Appel[] = [];
+  const delegue = (nom: string) =>
+    new Proxy(
+      {},
+      {
+        get: (_c, methode: string) => async (args: unknown) => {
+          appels.push({ delegue: nom, methode, args });
+          return reponses[`${nom}.${methode}`];
+        },
+      }
+    );
+  const client = {
+    lienMagique: delegue('lienMagique'),
+    sessionEspace: delegue('sessionEspace'),
+    utilisateurConsole: delegue('utilisateurConsole'),
+    $transaction: async (travail: (tx: unknown) => Promise<unknown>) => travail(client),
+  };
+  return { prisma: client as unknown as PrismaClient, appels };
+}
+
+describe('REQ-SEC-003 — (a) les adaptateurs jugent la population à chaque lecture et écriture', () => {
+  it('REQ-SEC-003 : TÉMOIN — le lien actif du code ne se cherche que parmi les liens de la CONSOLE', async () => {
+    const { prisma, appels } = fauxClient({
+      'lienMagique.findFirst': { id: 'l', utilisateurConsoleId: 'u', kid: 'k' },
+    });
+    const lu = await transactionDuCodeConsole(prisma)((tx) =>
+      tx.lienActifDeConsole('e'.repeat(64), MAINTENANT)
+    );
+    expect(lu).toEqual({ id: 'l', utilisateurConsoleId: 'u', kid: 'k' });
+    expect(appels[0]!.args).toEqual({
+      where: {
+        utilisateurConsole: { emailHash: 'e'.repeat(64) },
+        utilisateurConsoleId: { not: null },
+        consommeAt: null,
+        annuleAt: null,
+        expireAt: { gt: MAINTENANT },
+        codeHash: { not: null },
+      },
+      orderBy: [{ creeAt: 'desc' }, { id: 'desc' }],
+      select: { id: true, utilisateurConsoleId: true, kid: true },
+    });
+    const sansUtilisateur = fauxClient({
+      'lienMagique.findFirst': { id: 'l', utilisateurConsoleId: null, kid: 'k' },
+    });
+    expect(
+      await transactionDuCodeConsole(sansUtilisateur.prisma)((tx) =>
+        tx.lienActifDeConsole('e'.repeat(64), MAINTENANT)
+      )
+    ).toBeNull();
+  });
+
+  it('REQ-SEC-003 : TÉMOIN — la consommation passe la condition de la console telle quelle ; le « déjà consommé » est de la console', async () => {
+    const { prisma, appels } = fauxClient({
+      'lienMagique.updateMany': { count: 1 },
+      'lienMagique.count': 1,
+    });
+    const condition = conditionDeConsommationConsole('t'.repeat(64), MAINTENANT);
+    expect(condition.utilisateurConsoleId).toEqual({ not: null });
+    await transactionDeConsommationConsole(prisma)(async (tx) => {
+      await tx.consommer(condition, { consommeAt: MAINTENANT });
+      expect(await tx.dejaConsommeConsole!('t'.repeat(64), 'kid')).toBe(true);
+    });
+    expect(appels).toEqual([
+      {
+        delegue: 'lienMagique',
+        methode: 'updateMany',
+        args: { where: condition, data: { consommeAt: MAINTENANT } },
+      },
+      {
+        delegue: 'lienMagique',
+        methode: 'count',
+        args: {
+          where: {
+            tokenHash: 't'.repeat(64),
+            kid: 'kid',
+            utilisateurConsoleId: { not: null },
+            consommeAt: { not: null },
+          },
+        },
+      },
+    ]);
+  });
+
+  it('REQ-SEC-003 : TÉMOIN — un utilisateur introuvable ou désactivé n’est pas actif ; l’annulation ne touche que SES liens', async () => {
+    for (const [reponse, attendu] of [
+      [null, false],
+      [{ desactiveAt: MAINTENANT }, false],
+      [{ desactiveAt: null }, true],
+    ] as const) {
+      const { prisma } = fauxClient({ 'utilisateurConsole.findUnique': reponse });
+      expect(await transactionDeConsommationConsole(prisma)((tx) => tx.utilisateurActif('u'))).toBe(
+        attendu
+      );
+    }
+    const { prisma, appels } = fauxClient();
+    await ecrituresDeLienConsole(prisma).annulerLiensActifs('u', MAINTENANT);
+    expect(appels[0]!.args).toEqual({
+      where: { utilisateurConsoleId: 'u', consommeAt: null, annuleAt: null },
+      data: { annuleAt: MAINTENANT },
+    });
+  });
+
+  it('REQ-SEC-003 : TÉMOIN — le compte de la console se cherche par l’empreinte du courriel, avec sa désactivation', async () => {
+    const { prisma, appels } = fauxClient({
+      'utilisateurConsole.findUnique': { id: 'u', desactiveAt: null },
+    });
+    expect(
+      await lectureDuCompteConsole(prisma, {} as never).trouverUtilisateurConsole('e'.repeat(64))
+    ).toEqual({ id: 'u', desactiveAt: null });
+    expect(appels[0]!.args).toEqual({
+      where: { emailHash: 'e'.repeat(64) },
+      select: { id: true, desactiveAt: true },
+    });
   });
 });
