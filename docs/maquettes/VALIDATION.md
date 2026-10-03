@@ -98,7 +98,9 @@ La console est alors ÉPURÉE :
 - l'écran de connexion garde un titre, un champ, un bouton et une phrase d'aide ;
 - cartes, tableaux et états vides sont détachés sur fond ivoire ;
 - les textes longs sont ramenés à « quoi, puis quoi faire ». Les phrases à valeur contractuelle ou
-  juridique ne bougent pas.
+  juridique ne bougent pas ;
+- le refus d'un code reprend le texte unique de la juriste (rattrapage 88) : « Ce code n'est pas
+  valable. Demandez un nouveau lien de connexion. »
 
 Réponses de Williams, verbatim :
 - sur le style épuré (« Ce style épuré vous convient ? ») : « OK », ce qui valide la nouvelle `connexion-console.html` ;
