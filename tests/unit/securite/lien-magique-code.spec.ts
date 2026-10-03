@@ -356,6 +356,27 @@ describe('REQ-SEC-001 — (6) la limite de débit, en échec fermé', () => {
     expect(u.trace).toEqual([]);
   });
 
+  it('REQ-SEC-001 : TÉMOIN (sécurité) — une adresse saisie HORS FORME ne lit jamais le lien', async () => {
+    const u = univers();
+    expect(await verifier(u, u.code, 'pas-une-adresse')).toEqual({ etat: 'code_refuse' });
+    expect(u.trace).toEqual([]);
+    expect(u.liens[0]!.tentatives).toBe(0);
+    // Sans empreinte, pas de compteur par adresse : le compteur IP, lui, a été consulté.
+    expect(u.ports.compterAdresseCode).toHaveBeenCalledTimes(1);
+    expect(u.ports.compterCourrielCode).not.toHaveBeenCalled();
+  });
+
+  it('REQ-SEC-001 : TÉMOIN (sécurité) — le compteur IP passe AVANT le contrôle de forme : IP épuisée → debit, même hors forme', async () => {
+    const u = univers();
+    (u.ports.compterAdresseCode as ReturnType<typeof vi.fn>).mockResolvedValue({
+      autorise: false,
+      panne: false,
+    });
+    expect(await verifier(u, '12a456', 'pas-une-adresse')).toEqual({ etat: 'debit' });
+    expect(await verifier(u, u.code, 'pas-une-adresse')).toEqual({ etat: 'debit' });
+    expect(u.trace).toEqual([]);
+  });
+
   it('REQ-SEC-001 : TÉMOIN (sécurité, condition 1) — compteur épuisé : compte connu ou inconnu, la MÊME réponse, octet pour octet', async () => {
     const reponses: string[] = [];
     for (const compte of [true, false]) {
