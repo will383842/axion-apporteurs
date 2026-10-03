@@ -62,19 +62,19 @@ tableaux de l'annexe passent en cartes sous 640 px.
 
 | Écran | Fichier | Tâche | Validé le | Par |
 | --- | --- | --- | --- | --- |
-| File de qualification + fiche 60 s | `file-qualification.html` | UX-P1-07 | — | — |
-| Lot du mois | `lot-paiement.html` | UX-P2-03 | — | — |
-| Cadre de la console, instantané par rôle, accueil par rôle et par phase | `console-cadre.html` | UX-P1-16 | — | — |
-| Accès refusé | `acces-refuse.html` | UX-P1-16 | — | — |
-| Connexion à la console (lien, code à 6 chiffres, lien déjà utilisé) | `connexion-console.html` | SEC-29 · UX-P1-16 | — | — |
-| Utilisateurs de la console et « Votre rôle » | `utilisateurs-console.html` | SEC-30 · UX-P1-20 | — | — |
-| Fiche de qualification (W20 : état de la demande, raisons de vérification) | `fiche-qualification.html` | UX-P1-06 | — | — |
-| Apporteurs : liste | `apporteurs.html` | UX-P1-12 | — | — |
-| Fiche apporteur : cinq blocs, décision, dossier de conformité | `apporteur-fiche.html` | UX-P1-12 · CPL-T07 | — | — |
-| Attributions et contrats | `attributions-contrats.html` | UX-P1-13 | — | — |
-| Fiche prospect | `fiche-prospect.html` | EXT-T02a | — | — |
-| Éditeur de grille (modèle, édition en masse, complétude) | `grille-console.html` | UX-P1-14 | — | — |
-| Saisie manuelle d'une candidature et CV | `saisie-manuelle-console.html` | EXT-T04 | — | — |
+| File de qualification + fiche 60 s | `file-qualification.html` | UX-P1-07 | 2026-10-03 | Will |
+| Lot du mois | `lot-paiement.html` | UX-P2-03 | 2026-10-03 | Will |
+| Cadre de la console, instantané par rôle, accueil par rôle et par phase | `console-cadre.html` | UX-P1-16 | 2026-10-03 | Will |
+| Accès refusé | `acces-refuse.html` | UX-P1-16 | 2026-10-03 | Will |
+| Connexion à la console (lien, code à 6 chiffres, lien déjà utilisé) | `connexion-console.html` | SEC-29 · UX-P1-16 | 2026-10-03 | Will |
+| Utilisateurs de la console et « Votre rôle » | `utilisateurs-console.html` | SEC-30 · UX-P1-20 | 2026-10-03 | Will |
+| Fiche de qualification (W20 : état de la demande, raisons de vérification) | `fiche-qualification.html` | UX-P1-06 | 2026-10-03 | Will |
+| Apporteurs : liste | `apporteurs.html` | UX-P1-12 | 2026-10-03 | Will |
+| Fiche apporteur : cinq blocs, décision, dossier de conformité | `apporteur-fiche.html` | UX-P1-12 · CPL-T07 | 2026-10-03 | Will |
+| Attributions et contrats | `attributions-contrats.html` | UX-P1-13 | 2026-10-03 | Will |
+| Fiche prospect | `fiche-prospect.html` | EXT-T02a | 2026-10-03 | Will |
+| Éditeur de grille (modèle, édition en masse, complétude) | `grille-console.html` | UX-P1-14 | 2026-10-03 | Will |
+| Saisie manuelle d'une candidature et CV | `saisie-manuelle-console.html` | EXT-T04 | 2026-10-03 | Will |
 
 ### Refonte de la console en barre latérale (UX-P1-50)
 
@@ -85,6 +85,25 @@ pour l'espace et la console (rattrapage 85). Au bureau, la barre latérale group
 Sous 768 px, la barre du bas reste, et son « Menu » ouvre la barre latérale en tiroir (REQ-UX-048). Les
 entrées, les rôles, les états et les textes ne changent pas. Aucune ligne de la console n'était validée :
 aucune ne repart à vide, et la séance groupée ci-dessous se tient sur cette version.
+
+### Séance du 2026-10-03 : la console validée, en version épurée (UX-P1-52)
+
+Les treize maquettes ont été montrées à Williams dans l'ordre de lecture ci-dessous, au bureau et au téléphone.
+`console-cadre.html` est validée : « OUI ». La première `connexion-console.html` est refusée, verbatim :
+« JE trouve que ca fait enormement texte avec manque de contraste un peu... on se perd tellement il y a
+d'informaitons non ? ».
+
+La console est alors ÉPURÉE :
+- l'atelier est replié par défaut, derrière un bouton « États et notes » ;
+- l'écran de connexion garde un titre, un champ, un bouton et une phrase d'aide ;
+- cartes, tableaux et états vides sont détachés sur fond ivoire ;
+- les textes longs sont ramenés à « quoi, puis quoi faire ». Les phrases à valeur contractuelle ou
+  juridique ne bougent pas.
+
+Réponses de Williams, verbatim :
+- sur le style épuré (« Ce style épuré vous convient ? ») : « OK », ce qui valide la nouvelle `connexion-console.html` ;
+- `acces-refuse.html` : « OUI » ;
+- pour les dix autres : « VALIDE TOUS LES ECRANS direcmtent ».
 
 ### Séance de validation groupée de la console
 
