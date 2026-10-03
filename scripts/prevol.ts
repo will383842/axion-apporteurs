@@ -794,6 +794,10 @@ async function courir(): Promise<void> {
     console.log(`  ${balayage.resume}`);
     for (const f of balayage.fautes) console.log(`  ❌ ${f}`);
     direLeBanc();
+    // Sous Linux, vers un tube, l'écriture est ASYNCHRONE : `process.exit` coupait la fin de la
+    // liste, le balayage compris (mesuré en CI sur GOV-142, vert sous Windows). On attend que tout
+    // ce qui précède soit remis au système avant de sortir.
+    await new Promise<void>((vide) => process.stdout.write('', () => vide()));
     process.exit(0);
   }
 
