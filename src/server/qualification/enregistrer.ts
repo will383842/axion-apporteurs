@@ -71,6 +71,14 @@ export async function enregistrerUneQualification(
   const id = randomUUID();
   await tx.qualification.create({
     data: {
+      // Les blocs naissent de colonnesPii, ÉTALÉ (garde securite:schema-pii) ; son `id` est celui de
+      // la ligne. Prisma 5 accepte un Uint8Array là où il type Buffer. Étalé EN TÊTE : il ne porte que
+      // l'identifiant et les deux blocs, et les colonnes écrites ensuite ne recouvrent rien.
+      ...(colonnesPii(
+        { modele: 'qualification', id },
+        { personneInterrogee: s.personneInterrogee, termesReponse: s.termesReponse },
+        s.cles
+      ) as unknown as Prisma.QualificationUncheckedCreateInput),
       attributionId: s.attributionId,
       resultatContact: s.resultatContact,
       interet: s.interet,
@@ -79,16 +87,6 @@ export async function enregistrerUneQualification(
       rdvAt: s.rdvAt,
       rappelerAt: s.rappelerAt,
       auteurId: s.auteurId,
-      // Les blocs naissent de colonnesPii, ÉTALÉ (garde securite:schema-pii) ; son `id` est celui de
-      // la ligne. Prisma 5 accepte un Uint8Array là où il type Buffer.
-      ...(colonnesPii(
-        { modele: 'qualification', id },
-        { personneInterrogee: s.personneInterrogee, termesReponse: s.termesReponse },
-        s.cles
-      ) as unknown as Pick<
-        Prisma.QualificationUncheckedCreateInput,
-        'id' | 'personneInterrogeeChiffre' | 'termesReponseChiffre'
-      >),
     },
   });
 
