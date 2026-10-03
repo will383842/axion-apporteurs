@@ -1,8 +1,8 @@
 /**
- * `pnpm gov:ci-etapes [--base <ref>]` · `pnpm gov:ci-etapes:prove` — le découpage de la porte A en
- * jobs ne perd, ne double ni n'altère AUCUNE étape.
+ * `pnpm gov:ci-etapes [--base <ref>]` · `pnpm gov:ci-etapes:prove` — GOV-142 : le découpage de la
+ * porte A en jobs ne perd, ne double ni n'altère AUCUNE étape.
  *
- * POURQUOI. La porte A tient en un job d'environ cent vingt étapes, dont « Tests » prend l'essentiel
+ * POURQUOI. La porte A tenait en un job d'environ cent vingt étapes, dont « Tests » prenait l'essentiel
  * du temps. La couper en jobs parallèles est un gain de temps ; c'est aussi l'occasion idéale de
  * perdre une garde sans que rien ne rougisse : une étape oubliée dans la copie, une étape jouée deux
  * fois et dont l'une est désarmée, un `if:` glissé au passage. Ce témoin confronte les étapes de la
@@ -11,21 +11,24 @@
  * LES RÈGLES.
  *  1. Chaque étape de la base SURVIT à l'identique (même contenu, clé par clé, nom compris) dans
  *     EXACTEMENT un job de la tête. Absente : `etape_disparue`. Présente sous le même nom avec un
- *     autre contenu : `etape_alteree`. Présente dans deux jobs : `etape_dupliquee`. Un job à matrice
- *     compte UNE fois : ses éclats exécutent la même étape écrite une fois.
- *  2. Les étapes du SOCLE (récupérer le dépôt, installer pnpm et node, `pnpm install`, les caches)
- *     sont l'installation de chaque job : elles peuvent être répétées, jamais retirées de tous.
- *  3. Une étape qui doit CHANGER pour être découpée (« Tests » devient des éclats et une fusion)
- *     est déclarée dans `TRANSFORMATIONS`, avec les noms qui la remplacent et la raison. Un nom
- *     déclaré absent de la tête : `transformation_sans_cible`.
- *  4. Chaque job de la tête porte la garde de fusion au niveau du job (`merged != true`), sans
- *     quoi un job sauterait sans rouge : `job_sans_garde_de_fusion`.
- *  5. Quand la tête a plusieurs jobs, le job `gate-a` est la porte finale et attend TOUS les
- *     autres (`needs:`) : `porte_finale_incomplete`.
+ *     autre contenu : `etape_alteree`. Présente dans deux jobs : `etape_dupliquee`.
+ *  2. Les étapes du SOCLE (récupérer le dépôt, installer pnpm et node, les caches, `pnpm install`)
+ *     et les étapes RÉPÉTABLES nommées dans `REPETABLES`, chacune avec sa raison, se répètent à
+ *     l'identique : jamais altérées, jamais retirées de tous les jobs.
+ *  3. Une étape qui CHANGE pour être découpée (« Tests » devient quatre éclats et une fusion) est
+ *     déclarée dans `TRANSFORMATIONS`, avec les noms qui la remplacent et la raison. Un nom déclaré
+ *     absent de la tête : `transformation_sans_cible`.
+ *  4. Chaque job porte la garde de fusion au niveau du job : `job_sans_garde_de_fusion`.
+ *  5. Quand la tête a plusieurs jobs : un seul job s'appelle `gate-a`, aucun autre ne s'en approche
+ *     (`nom_de_porte_usurpe`) ; il attend TOUS les autres (`porte_finale_incomplete`) et tourne
+ *     toujours, `always()` à sa condition (`porte_finale_sans_always`).
+ *  6. Les éclats `tests-<i>` sont exactement `tests-1` à `tests-4`, chacun avec `ECLAT: <i>/4`
+ *     (`eclat_manquant_ou_double`), et IDENTIQUES hormis ce numéro et le nom de leur blob
+ *     (`eclats_divergents`) : un éclat ne dérive pas en silence.
  *
  * CE QU'IL NE JUGE PAS, ET C'EST DIT. Une étape NOUVELLE de la tête est permise (une fusion de
- * rapports, un dépôt d'artefact) et nommée dans la sortie. L'ordre des étapes dans un job n'est pas
- * jugé : `req:check` et les lecteurs de résultats jugent leur propre place.
+ * rapports, un dépôt d'artefact) : c'est le constat `PORTE_A_FIGEE` de `gov:conventions` qui la fige.
+ * L'ordre des étapes dans un job n'est pas jugé ici.
  */
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
@@ -36,6 +39,7 @@ import { estObjet, lireYaml } from '../lib/lire-yaml';
 export const WORKFLOW = '.github/workflows/ci.yml';
 export const PORTE_FINALE = 'gate-a';
 export const GARDE_DE_FUSION = 'github.event.pull_request.merged != true';
+export const NOMBRE_D_ECLATS = 4;
 
 export type Etape = Readonly<Record<string, unknown>>;
 export interface Job {
@@ -43,6 +47,8 @@ export interface Job {
   readonly si: string | null;
   readonly attend: readonly string[];
   readonly etapes: readonly Etape[];
+  /** Le job tel que lu, toutes clés : la comparaison des éclats le lit entier. */
+  readonly brut: Readonly<Record<string, unknown>>;
 }
 
 /** Une étape de la base qui change pour être découpée, et ce qui la remplace dans la tête. */
@@ -51,8 +57,25 @@ export interface Transformation {
   readonly pourquoi: string;
 }
 
-/** Les transformations déclarées. Vide tant que la porte A n'est pas découpée. */
-export const TRANSFORMATIONS: Readonly<Record<string, Transformation>> = {};
+export const TRANSFORMATIONS: Readonly<Record<string, Transformation>> = {
+  Tests: {
+    vers: [
+      'Tests — un eclat de la suite',
+      'Tests — fusion des quatre eclats, aux seuils de la configuration',
+    ],
+    pourquoi:
+      'la suite se joue en quatre éclats parallèles (`pnpm test:eclat`), puis la fusion juge la ' +
+      'couverture aux seuils de la configuration et écrit le rapport de `pnpm test` (`pnpm test:fusion`).',
+  },
+};
+
+/** Les étapes, hors socle, qu'un job rejoue À L'IDENTIQUE parce qu'il en a besoin, et pourquoi. */
+export const REPETABLES: Readonly<Record<string, string>> = {
+  'Les vues derivees sont rendues, et le rendu est reproductible':
+    'les vues ne sont pas commitées (REQ-GOV-032) : chaque job qui en lit une les rend lui-même.',
+  'Navigateurs des passes d accessibilite':
+    'chaque éclat peut tirer une passe d’accessibilité, qui pilote un vrai navigateur.',
+};
 
 export type Famille =
   | 'etape_disparue'
@@ -60,7 +83,11 @@ export type Famille =
   | 'etape_dupliquee'
   | 'transformation_sans_cible'
   | 'job_sans_garde_de_fusion'
-  | 'porte_finale_incomplete';
+  | 'porte_finale_incomplete'
+  | 'porte_finale_sans_always'
+  | 'nom_de_porte_usurpe'
+  | 'eclat_manquant_ou_double'
+  | 'eclats_divergents';
 
 export interface Faute {
   readonly famille: Famille;
@@ -125,15 +152,105 @@ export function lesJobs(workflow: unknown): Job[] {
         if (!estObjet(e)) throw new Error(`le job « ${nom} », étape ${i}, n'est pas un objet`);
         return e;
       }),
+      brut: job,
     };
   });
+}
+
+const FORME_D_UN_ECLAT = /^tests-(\d+)$/;
+
+/** L'`ECLAT` que portent les étapes d'un job, toutes valeurs lues. */
+function eclatsDuJob(job: Job): string[] {
+  return job.etapes.flatMap((e) =>
+    estObjet(e.env) && e.env.ECLAT !== undefined ? [String(e.env.ECLAT)] : []
+  );
+}
+
+/** Un éclat ramené à sa forme commune : son numéro effacé là où il a le droit d'être. */
+function formeCommune(job: Job, i: number): string {
+  return canonique(job.brut)
+    .split(`"ECLAT":"${i}/${NOMBRE_D_ECLATS}"`)
+    .join('"ECLAT":"<i>"')
+    .split(`blob-${i}-${NOMBRE_D_ECLATS}.json`)
+    .join('blob-<i>.json')
+    .split(`"blob-${i}"`)
+    .join('"blob-<i>"');
+}
+
+function jugerLesEclats(tete: readonly Job[]): Faute[] {
+  const eclats = tete
+    .map((j) => ({ job: j, m: FORME_D_UN_ECLAT.exec(j.nom) }))
+    .filter((x): x is { job: Job; m: RegExpExecArray } => x.m !== null);
+  if (eclats.length === 0) return [];
+  const fautes: Faute[] = [];
+  const attendus = Array.from({ length: NOMBRE_D_ECLATS }, (_, i) => `tests-${i + 1}`);
+  const presents = eclats.map((x) => x.job.nom);
+  const ecarts = [
+    ...attendus.filter((n) => !presents.includes(n)).map((n) => `${n} manque`),
+    ...presents.filter((n) => !attendus.includes(n)).map((n) => `${n} n'est pas attendu`),
+    ...eclats.flatMap(({ job, m }) => {
+      const lus = eclatsDuJob(job);
+      const voulu = `${m[1]}/${NOMBRE_D_ECLATS}`;
+      return lus.length === 1 && lus[0] === voulu
+        ? []
+        : [`${job.nom} porte ECLAT ${lus.join(', ') || 'absent'}, attendu ${voulu}`];
+    }),
+  ];
+  for (const e of ecarts) fautes.push({ famille: 'eclat_manquant_ou_double', message: e });
+  const formes = eclats.map(({ job, m }) => ({
+    nom: job.nom,
+    forme: formeCommune(job, Number(m[1])),
+  }));
+  const reference = formes[0]!;
+  for (const f of formes.slice(1)) {
+    if (f.forme !== reference.forme) {
+      fautes.push({
+        famille: 'eclats_divergents',
+        message: `${f.nom} diffère de ${reference.nom} au-delà de son numéro et de son blob.`,
+      });
+    }
+  }
+  return fautes;
+}
+
+function jugerLaPorteFinale(tete: readonly Job[]): Faute[] {
+  if (tete.length <= 1) return [];
+  const fautes: Faute[] = [];
+  for (const j of tete) {
+    if (j.nom !== PORTE_FINALE && /gate[\s._-]*a/i.test(j.nom)) {
+      fautes.push({
+        famille: 'nom_de_porte_usurpe',
+        message: `Le job « ${j.nom} » s'approche du nom réservé « ${PORTE_FINALE} ».`,
+      });
+    }
+  }
+  const porte = tete.find((j) => j.nom === PORTE_FINALE);
+  const autres = tete.filter((j) => j.nom !== PORTE_FINALE).map((j) => j.nom);
+  const manquants = porte === undefined ? autres : autres.filter((n) => !porte.attend.includes(n));
+  if (porte === undefined || manquants.length > 0) {
+    fautes.push({
+      famille: 'porte_finale_incomplete',
+      message:
+        porte === undefined
+          ? `Aucun job « ${PORTE_FINALE} » : la porte finale manque.`
+          : `« ${PORTE_FINALE} » n'attend pas : ${manquants.join(', ')}.`,
+    });
+  }
+  if (porte !== undefined && !(porte.si ?? '').includes('always()')) {
+    fautes.push({
+      famille: 'porte_finale_sans_always',
+      message: `« ${PORTE_FINALE} » sans always() : un job requis en échec la ferait sauter, et un saut requis compte comme réussi.`,
+    });
+  }
+  return fautes;
 }
 
 /** Le juge, pur : la base, la tête et les transformations déclarées donnent les fautes. */
 export function jugerLesEtapes(
   base: readonly Job[],
   tete: readonly Job[],
-  transformations: Readonly<Record<string, Transformation>> = TRANSFORMATIONS
+  transformations: Readonly<Record<string, Transformation>> = TRANSFORMATIONS,
+  repetables: Readonly<Record<string, string>> = REPETABLES
 ): Faute[] {
   const fautes: Faute[] = [];
   const ou = new Map<string, string[]>();
@@ -165,26 +282,27 @@ export function jugerLesEtapes(
       continue;
     }
     const jobs = ou.get(c) ?? [];
-    if (estDuSocle(e)) {
-      if (jobs.length === 0) {
-        fautes.push({
-          famille: 'etape_disparue',
-          message: `L'étape du socle « ${nom} » n'est plus dans aucun job.`,
-        });
-      }
-      continue;
-    }
     if (jobs.length === 0) {
       const homonymes = parNom.get(nom) ?? [];
       fautes.push(
         homonymes.length > 0
           ? {
               famille: 'etape_alteree',
-              message: `« ${nom} » existe dans ${homonymes.join(', ')} avec un autre contenu que dans la base.`,
+              message: `« ${nom} » existe dans ${[...new Set(homonymes)].join(', ')} avec un autre contenu que dans la base.`,
             }
           : { famille: 'etape_disparue', message: `« ${nom} » n'est plus dans aucun job.` }
       );
-    } else if (jobs.length > 1) {
+      continue;
+    }
+    // Une étape altérée dans UN job se lit même quand une copie intacte vit ailleurs.
+    const alteres = (parNom.get(nom) ?? []).length - jobs.length;
+    if (alteres > 0) {
+      fautes.push({
+        famille: 'etape_alteree',
+        message: `« ${nom} » existe ${alteres} fois avec un autre contenu que dans la base.`,
+      });
+    }
+    if (jobs.length > 1 && !estDuSocle(e) && repetables[nom] === undefined) {
       fautes.push({
         famille: 'etape_dupliquee',
         message: `« ${nom} » est jouée dans ${jobs.length} jobs (${jobs.join(', ')}) : une seule place.`,
@@ -199,108 +317,170 @@ export function jugerLesEtapes(
       });
     }
   }
-  if (tete.length > 1) {
-    const porte = tete.find((j) => j.nom === PORTE_FINALE);
-    const autres = tete.filter((j) => j.nom !== PORTE_FINALE).map((j) => j.nom);
-    const manquants =
-      porte === undefined ? autres : autres.filter((n) => !porte.attend.includes(n));
-    if (porte === undefined || manquants.length > 0) {
-      fautes.push({
-        famille: 'porte_finale_incomplete',
-        message:
-          porte === undefined
-            ? `Aucun job « ${PORTE_FINALE} » : la porte finale manque.`
-            : `« ${PORTE_FINALE} » n'attend pas : ${manquants.join(', ')}.`,
-      });
-    }
-  }
-  return fautes;
+  return [...fautes, ...jugerLaPorteFinale(tete), ...jugerLesEclats(tete)];
 }
 
-// ── la preuve : chaque famille rougit sur une faute plantée dans la base ──────────────────────
+// ── la preuve : chaque famille rougit sur une faute plantée ───────────────────────────────────
 
+interface Plante {
+  readonly tete: readonly Job[];
+  readonly transformations?: Record<string, Transformation>;
+}
 interface Cas {
   readonly famille: Famille;
-  readonly planter: (base: readonly Job[]) => {
-    tete: Job[];
-    transformations?: Record<string, Transformation>;
-  };
+  /** La faute plantée dans la TÊTE (jugée contre la base), qui a plusieurs jobs. */
+  readonly planter: (tete: readonly Job[]) => Plante;
 }
 
-const garde = `\${{ ${GARDE_DE_FUSION} }}`;
-const premiereNonSocle = (jobs: readonly Job[]): Etape => {
-  const e = jobs.flatMap((j) => j.etapes).find((x) => !estDuSocle(x));
-  if (e === undefined) throw new Error('la base ne porte aucune étape hors socle');
-  return e;
+const etapeJugee = (jobs: readonly Job[]): { job: Job; etape: Etape } => {
+  for (const job of jobs) {
+    const etape = job.etapes.find(
+      (x) => !estDuSocle(x) && REPETABLES[nomDeLEtape(x)] === undefined && x.env === undefined
+    );
+    if (etape !== undefined && !FORME_D_UN_ECLAT.test(job.nom)) return { job, etape };
+  }
+  throw new Error('la tête ne porte aucune étape jugée hors socle');
 };
-const sans = (jobs: readonly Job[], cible: Etape): Job[] =>
-  jobs.map((j) => ({ ...j, etapes: j.etapes.filter((e) => e !== cible) }));
+const remplacerLeJob = (jobs: readonly Job[], nom: string, f: (j: Job) => Job): Job[] =>
+  jobs.map((j) => (j.nom === nom ? f(j) : j));
+const avecEtapes = (j: Job, etapes: readonly Etape[]): Job => ({
+  ...j,
+  etapes,
+  brut: { ...j.brut, steps: etapes },
+});
 
 export const CAS_DE_PREUVE: readonly Cas[] = [
   {
     famille: 'etape_disparue',
-    planter: (b) => ({ tete: sans(b, premiereNonSocle(b)) }),
+    planter: (t) => {
+      const { job, etape } = etapeJugee(t);
+      return {
+        tete: remplacerLeJob(t, job.nom, (j) =>
+          avecEtapes(
+            j,
+            j.etapes.filter((e) => e !== etape)
+          )
+        ),
+      };
+    },
   },
   {
     famille: 'etape_alteree',
-    planter: (b) => {
-      const e = premiereNonSocle(b);
+    planter: (t) => {
+      const { job, etape } = etapeJugee(t);
       return {
-        tete: b.map((j) => ({
-          ...j,
-          etapes: j.etapes.map((x) => (x === e ? { ...x, 'continue-on-error': true } : x)),
-        })),
+        tete: remplacerLeJob(t, job.nom, (j) =>
+          avecEtapes(
+            j,
+            j.etapes.map((e) => (e === etape ? { ...e, 'continue-on-error': true } : e))
+          )
+        ),
       };
     },
   },
   {
     famille: 'etape_dupliquee',
-    planter: (b) => {
-      const e = premiereNonSocle(b);
-      const second: Job = { nom: 'eclat', si: garde, attend: [], etapes: [e] };
-      const porte = b.map((j) => ({ ...j, nom: PORTE_FINALE, attend: ['eclat'] }));
-      return { tete: [...porte, second] };
-    },
-  },
-  {
-    famille: 'transformation_sans_cible',
-    planter: (b) => {
-      const e = premiereNonSocle(b);
+    planter: (t) => {
+      const { job, etape } = etapeJugee(t);
+      const autre = t.find((j) => j.nom !== job.nom && j.nom !== PORTE_FINALE)!;
       return {
-        tete: sans(b, e),
-        transformations: {
-          [nomDeLEtape(e)]: { vers: ['une étape qui n’existe pas'], pourquoi: 'preuve' },
-        },
+        tete: remplacerLeJob(t, autre.nom, (j) => avecEtapes(j, [...j.etapes, etape])),
       };
     },
   },
   {
+    famille: 'transformation_sans_cible',
+    planter: (t) => ({
+      tete: t,
+      transformations: {
+        ...TRANSFORMATIONS,
+        Tests: { vers: ['une étape qui n’existe pas'], pourquoi: 'preuve' },
+      },
+    }),
+  },
+  {
     famille: 'job_sans_garde_de_fusion',
-    planter: (b) => ({ tete: b.map((j) => ({ ...j, si: null })) }),
+    planter: (t) => ({ tete: remplacerLeJob(t, t[0]!.nom, (j) => ({ ...j, si: null })) }),
   },
   {
     famille: 'porte_finale_incomplete',
-    planter: (b) => {
-      const e = premiereNonSocle(b);
-      const autre: Job = { nom: 'gardes', si: garde, attend: [], etapes: [e] };
-      return { tete: [...sans(b, e).map((j) => ({ ...j, nom: PORTE_FINALE })), autre] };
+    planter: (t) => ({
+      tete: remplacerLeJob(t, PORTE_FINALE, (j) => ({ ...j, attend: j.attend.slice(1) })),
+    }),
+  },
+  {
+    famille: 'porte_finale_sans_always',
+    planter: (t) => ({
+      tete: remplacerLeJob(t, PORTE_FINALE, (j) => ({ ...j, si: `\${{ ${GARDE_DE_FUSION} }}` })),
+    }),
+  },
+  {
+    famille: 'nom_de_porte_usurpe',
+    planter: (t) => {
+      const autre = t.find((j) => j.nom !== PORTE_FINALE)!;
+      return {
+        tete: t.map((j) =>
+          j.nom === autre.nom
+            ? { ...j, nom: 'gate-a-1' }
+            : j.nom === PORTE_FINALE
+              ? { ...j, attend: [...j.attend, 'gate-a-1'] }
+              : j
+        ),
+      };
     },
+  },
+  {
+    famille: 'eclat_manquant_ou_double',
+    planter: (t) => ({
+      tete: remplacerLeJob(t, 'tests-3', (j) =>
+        avecEtapes(
+          j,
+          j.etapes.map((e) =>
+            estObjet(e.env) && e.env.ECLAT !== undefined
+              ? { ...e, env: { ...e.env, ECLAT: '2/4' } }
+              : e
+          )
+        )
+      ),
+    }),
+  },
+  {
+    famille: 'eclats_divergents',
+    planter: (t) => ({
+      tete: remplacerLeJob(t, 'tests-2', (j) => ({
+        ...j,
+        brut: { ...j.brut, 'timeout-minutes': '5' },
+      })),
+    }),
   },
 ];
 
-export function prouver(base: readonly Job[]): { code: number; lignes: string[] } {
+export function prouver(
+  base: readonly Job[],
+  tete: readonly Job[]
+): { code: number; lignes: string[] } {
   const lignes: string[] = [];
   let code = 0;
-  const temoin = jugerLesEtapes(base, base, {});
-  if (temoin.length > 0) {
-    code = 1;
-    lignes.push(
-      `❌ la base jugée contre elle-même rougit : ${temoin.map((f) => f.famille).join(', ')}`
-    );
+  for (const [quoi, t, transformations] of [
+    // Sans transformation : la base ne porte pas les étapes qui remplacent celle qu'on transforme.
+    ['la base jugée contre elle-même', base, {}],
+    ['la tête jugée contre la base', tete, TRANSFORMATIONS],
+  ] as const) {
+    const temoin = jugerLesEtapes(base, t, transformations);
+    if (temoin.length > 0) {
+      code = 1;
+      lignes.push(`❌ ${quoi} rougit : ${temoin.map((f) => f.famille).join(', ')}`);
+    }
+  }
+  if (tete.length <= 1) {
+    lignes.push('❌ la preuve exige une tête découpée en plusieurs jobs');
+    return { code: 1, lignes };
   }
   for (const cas of CAS_DE_PREUVE) {
-    const { tete, transformations } = cas.planter(base);
-    const familles = jugerLesEtapes(base, tete, transformations ?? {}).map((f) => f.famille);
+    const { tete: plantee, transformations } = cas.planter(tete);
+    const familles = jugerLesEtapes(base, plantee, transformations ?? TRANSFORMATIONS).map(
+      (f) => f.famille
+    );
     if (familles.includes(cas.famille)) {
       lignes.push(`✅ ${cas.famille} : rougit sur sa faute plantée`);
     } else {
@@ -330,18 +510,18 @@ async function principal(): Promise<number> {
   const ref = i > 0 && process.argv[i + 1] ? process.argv[i + 1]! : 'origin/main';
   const texteBase = execFileSync('git', ['show', `${ref}:${WORKFLOW}`], { encoding: 'utf8' });
   const base = await lire(texteBase);
+  const tete = await lire(readFileSync(WORKFLOW, 'utf8'));
   if (process.argv.includes('--prove')) {
-    const v = prouver(base);
+    const v = prouver(base, tete);
     (v.code === 0 ? console.log : console.error)(v.lignes.join('\n'));
     return v.code;
   }
-  const tete = await lire(readFileSync(WORKFLOW, 'utf8'));
   const fautes = jugerLesEtapes(base, tete);
   const etapesBase = base.reduce((n, j) => n + j.etapes.length, 0);
   const etapesTete = tete.reduce((n, j) => n + j.etapes.length, 0);
   if (fautes.length === 0) {
     console.log(
-      `✅ gov:ci-etapes — ${etapesBase} étape(s) de ${ref} confrontée(s) aux ${etapesTete} étape(s) de ${tete.length} job(s) de la tête ; ${Object.keys(TRANSFORMATIONS).length} transformation(s) déclarée(s).`
+      `✅ gov:ci-etapes — ${etapesBase} étape(s) de ${ref} confrontée(s) aux ${etapesTete} étape(s) de ${tete.length} job(s) de la tête ; ${Object.keys(TRANSFORMATIONS).length} transformation(s) et ${Object.keys(REPETABLES).length} répétable(s) déclarée(s).`
     );
     return 0;
   }
