@@ -1,6 +1,8 @@
 // @req REQ-UX-002
 // @req REQ-UX-003
 // @req REQ-UX-019
+// @req REQ-SEC-042
+// @req REQ-JUR-043
 /**
  * `vocabulaire-et-micro-copy.spec.ts` — la micro-copie de l'espace a UNE source (UX-P0-01).
  *
