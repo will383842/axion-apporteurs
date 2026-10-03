@@ -1312,9 +1312,14 @@ describe('REQ-SEC-042 REQ-UX-002 REQ-JUR-043 — l’occupant d’une entreprise
     const libelles = [...lu.matchAll(/>\s*(Réservation terminée · [^<]+?)\s*</g)].map((m) =>
       m[1]!.replace(/\s+/g, ' ')
     );
-    expect(libelles.length).toBeGreaterThan(0);
-    const avant = BADGES_DU_DEPOT.reservationTermineeVerifiee.split('{dateRedepot}')[0]!;
-    for (const l of libelles) expect(l.startsWith(avant), l).toBe(true);
+    // Chaque fin s'écrit par l'un des DEUX badges d'UX-P1-41, choisi par sa cause, et les deux
+    // figurent : la demande vérifiée libérée (carence, avec la date), la péremption ou la fin de
+    // durée (art. 3.4, sans date ; c'est aussi un badge de REQ-UX-062).
+    const verifiee = BADGES_DU_DEPOT.reservationTermineeVerifiee.split('{dateRedepot}')[0]!;
+    const disponible = BADGES_DU_DEPOT.reservationTerminee.replace(/'/g, '’');
+    for (const l of libelles) expect(l.startsWith(verifiee) || l === disponible, l).toBe(true);
+    expect(libelles.filter((l) => l.startsWith(verifiee))).toHaveLength(1);
+    expect(libelles.filter((l) => l === disponible)).toHaveLength(1);
     expect(lu).toMatch(/de nouveau disponible[^<]*ne sert qu’à la péremption/);
   });
 });
