@@ -2,7 +2,8 @@
  * La réconciliation avec axion-ia — INT-T08-P (REQ-INT-012, REQ-INT-013).
  *
  * UN PASSAGE. Partners relit la file de sortie d'axion-ia (`relecture.ts`) depuis la plus haute
- * séquence qu'il a REÇUE, page après page, au plus `PAGES_MAX_PAR_PASSAGE` pages. Toute ligne relue
+ * séquence qu'il a REÇUE, moins `RECOUVREMENT_SEQUENCES`, page après page, au plus
+ * `PAGES_MAX_PAR_PASSAGE` pages. Toute ligne relue
  * dont l'`event_id` n'a jamais été inscrit dans `evenements_recus` est un TROU : il est signalé, et
  * son rejeu est demandé à axion-ia (`POST /api/partners/reconciliation`, INT-T08-A de l'autre dépôt),
  * qui réarme la ligne de sa file : le MÊME corps repart, sous l'identifiant d'ORIGINE, par le relais
@@ -36,6 +37,14 @@ export const REJEU_MAX_PAR_APPEL = 100;
  * s'arrête, le signale, et le suivant reprend : un passage n'est jamais une boucle sans fin.
  */
 export const PAGES_MAX_PAR_PASSAGE = 10;
+
+/**
+ * Le RECOUVREMENT : la relecture repart de la plus haute séquence reçue MOINS cinq cents. Sans lui,
+ * un événement perdu au milieu (le 7 jamais arrivé, le 8 reçu) ne serait jamais relu : le curseur
+ * l'aurait déjà dépassé. Cinq cents séquences, soit cinq pages : la moitié de la borne d'un
+ * passage, l'autre moitié restant aux événements nouveaux.
+ */
+export const RECOUVREMENT_SEQUENCES = 500n;
 
 export type Signal =
   | { readonly genre: 'relecture_echouee'; readonly motif: MotifDeRelecture }
@@ -76,7 +85,7 @@ export function clientRejeu(c: CanalAxionia): Rejouer {
 }
 
 export type PortsDeReconciliation = {
-  /** La plus haute séquence REÇUE d'axion-ia, ou zéro. */
+  /** La plus haute séquence REÇUE d'axion-ia, ou zéro. Le recouvrement est retranché par `reconcilier`. */
   curseur(): Promise<bigint>;
   /** Parmi ces identifiants, ceux déjà inscrits dans `evenements_recus`. */
   dejaRecus(eventIds: readonly string[]): Promise<ReadonlySet<string>>;
@@ -129,7 +138,8 @@ export async function reconcilier(
     introuvables: 0,
   };
   const manquants = new Set<string>();
-  let apres = await d.curseur();
+  const recue = await d.curseur();
+  let apres = recue > RECOUVREMENT_SEQUENCES ? recue - RECOUVREMENT_SEQUENCES : 0n;
   let suite = true;
   while (suite && c.pages < PAGES_MAX_PAR_PASSAGE) {
     const page = await d.lire(apres);

@@ -32,6 +32,7 @@ import {
 import {
   CHEMIN_REJEU,
   PAGES_MAX_PAR_PASSAGE,
+  RECOUVREMENT_SEQUENCES,
   clientRejeu,
   portsDeBase,
   reconcilier,
@@ -211,14 +212,14 @@ describe('REQ-INT-012 — Partners relit la file de sortie depuis le dernier `af
     );
   });
 
-  it('REQ-INT-012 : la relecture part de la plus haute séquence REÇUE, signée sur la cible exacte, bornée par page', async () => {
+  it('REQ-INT-012 : la relecture part de la plus haute séquence REÇUE moins le recouvrement, signée sur la cible exacte, bornée par page', async () => {
     const file = uneFile();
     await recevoir(file, 6);
     const a = axionia({ file });
     await brancher(a).passer();
     expect(a.appels[0]).toEqual({
       methode: 'GET',
-      cible: `${CHEMIN_RELECTURE}?after_sequence=${file[5]!.sequence}&limit=${LIMITE_PAR_PAGE}`,
+      cible: `${CHEMIN_RELECTURE}?after_sequence=${BigInt(file[5]!.sequence) - RECOUVREMENT_SEQUENCES}&limit=${LIMITE_PAR_PAGE}`,
       corps: '',
     });
   });
@@ -246,7 +247,20 @@ describe('REQ-INT-013 — un trou rattrapé est signalé, et son rejeu demandé 
     const rejeu = a.appels.find((x) => x.methode === 'POST');
     expect(rejeu?.cible).toBe(CHEMIN_REJEU);
     expect(JSON.parse(rejeu!.corps)).toEqual({ eventIds: manquants });
-    expect(compteurs).toMatchObject({ relus: 4, manquants: 4, rearmes: 4, introuvables: 0 });
+    expect(compteurs).toMatchObject({ relus: 10, manquants: 4, rearmes: 4, introuvables: 0 });
+  });
+
+  it('REQ-INT-013 : un trou AU MILIEU — le quatrième jamais reçu, les suivants reçus — est retrouvé par le recouvrement, et lui seul est rejoué', async () => {
+    const file = uneFile();
+    await recevoir(file.slice(0, 3), 3);
+    await recevoir(file.slice(4), file.length - 4);
+    const a = axionia({ file });
+    const { signaux, passer } = brancher(a);
+    const compteurs = await passer();
+    expect(signaux).toEqual([{ genre: 'trou_rattrape', nombre: 1 }]);
+    const rejeu = a.appels.find((x) => x.methode === 'POST');
+    expect(JSON.parse(rejeu!.corps)).toEqual({ eventIds: [file[3]!.eventId] });
+    expect(compteurs).toMatchObject({ manquants: 1, rearmes: 1 });
   });
 
   it('REQ-INT-013 : CONTRE-TÉMOIN — rien ne manque : aucun signal, aucun rejeu, et les compteurs sont rendus quand même', async () => {
@@ -257,7 +271,7 @@ describe('REQ-INT-013 — un trou rattrapé est signalé, et son rejeu demandé 
     const compteurs = await passer();
     expect(signaux).toEqual([]);
     expect(a.appels.some((x) => x.methode === 'POST')).toBe(false);
-    expect(compteurs).toMatchObject({ pages: 1, relus: 0, manquants: 0, rearmes: 0 });
+    expect(compteurs).toMatchObject({ pages: 1, relus: 10, manquants: 0, rearmes: 0 });
   });
 
   it('REQ-INT-013 : une relecture en panne (503) est signalée `relecture_echouee`, et le passage ÉCHOUE', async () => {
