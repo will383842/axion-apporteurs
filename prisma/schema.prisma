@@ -159,6 +159,36 @@ enum StatutPieceKyc {
   @@map("statut_piece_kyc")
 }
 
+/// Le droit qu'exerce le contact d'une attribution (REQ-JUR-065, `docs/GLOSSAIRE.md` §4).
+enum DroitContact {
+  acces
+  rectification
+  effacement
+  limitation
+  opposition
+
+  @@map("droit_contact")
+}
+
+/// La donnée du contact que vise une rectification (REQ-JUR-065, `docs/GLOSSAIRE.md` §4).
+enum DonneeContact {
+  nom
+  prenom
+  fonction
+  telephone
+  email
+
+  @@map("donnee_contact")
+}
+
+/// La suite donnée à une demande de droit (REQ-JUR-065, `docs/GLOSSAIRE.md` §4).
+enum IssueDemandeDroit {
+  appliquee
+  refusee
+
+  @@map("issue_demande_droit")
+}
+
 /// Le régime de TVA d'une identité de facturation (REQ-ARG-033, `docs/GLOSSAIRE.md` §4).
 enum RegimeTva {
   assujetti
@@ -438,6 +468,26 @@ model PieceKyc {
   @@index([apporteurId])
   @@index([ibanHash])
   @@map("pieces_kyc")
+}
+
+/// DM-59 (REQ-JUR-065) : une demande de droit du contact, tracée. `recueAt` est l'heure de la
+/// BASE (déclencheur), et fait courir le délai d'un mois de l'art. 12.3. Aucune donnée en clair :
+/// la nouvelle valeur d'une rectification est chiffrée, puis effacée à la clôture ou à l'échéance.
+model DemandeDroitContact {
+  id             String             @id @default(uuid()) @db.Uuid
+  attributionId  String             @map("attribution_id") @db.Uuid
+  attribution    Attribution        @relation(fields: [attributionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  droit          DroitContact
+  recueAt        DateTime           @default(dbgenerated("clock_timestamp()")) @map("recue_at") @db.Timestamptz(3)
+  traiteeAt      DateTime?          @map("traitee_at") @db.Timestamptz(3)
+  issue          IssueDemandeDroit?
+  donneeVisee    DonneeContact?     @map("donnee_visee")
+  valeurChiffree Bytes?             @map("valeur_chiffree")
+  valeurPurgeeAt DateTime?          @map("valeur_purgee_at") @db.Timestamptz(3)
+  prolongeeAt    DateTime?          @map("prolongee_at") @db.Timestamptz(3)
+
+  @@index([attributionId])
+  @@map("demandes_droits_contact")
 }
 
 // ── SEC-06 : la réception des webhooks et le battement des tâches de fond (partners/ADR-0022) ──
@@ -796,11 +846,15 @@ model Attribution {
   fenetreRedeclarationFinAt        DateTime?           @map("fenetre_redeclaration_fin_at") @db.Timestamptz(3)
   purgeContactAt                   DateTime?           @map("purge_contact_at") @db.Timestamptz(3)
   contactPurgeAt                   DateTime?           @map("contact_purge_at") @db.Timestamptz(3)
+  /// L'empreinte HMAC du jeton de la page des droits du contact, jamais le jeton (DM-59). Unique
+  /// quand posée (index partiel en SQL), effacée par la purge du contact.
+  jetonDroitsHash                  String?             @map("jeton_droits_hash") @db.Char(64)
   /// Verrou optimiste de la fiche (REQ-CPL-024).
   versionQualification             Int                 @default(0) @map("version_qualification")
 
-  courrielsEnvoyes    CourrielEnvoye[]
-  notificationsEspace NotificationEspace[]
+  courrielsEnvoyes      CourrielEnvoye[]
+  demandesDroitsContact DemandeDroitContact[]
+  notificationsEspace   NotificationEspace[]
 
   @@index([apporteurId])
   @@index([utilisateurConsoleId])

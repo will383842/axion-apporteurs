@@ -7,7 +7,8 @@
  *   1. TÉMOIN À DEUX FACES. Une durée changée dans le registre change la page rendue (et sa
  *      version) sans toucher la page ; une page qui retape une durée ou un prestataire fait rougir
  *      `valeursRetapees` en nommant la valeur — et le source réel de la route ne retape rien.
- *   2. Une rubrique « À compléter » du registre s'affiche telle quelle, avec sa question.
+ *   2. Une rubrique « À compléter » du registre s'affiche en cours de rédaction, SANS sa question :
+ *      la question est une note interne, posée à l'arbitre (JUR-T36).
  *   3. La page ne dit rien des conseillers ; un registre qui les ferait entrer dans l'extrait est
  *      refusé en le nommant.
  *   4. La version est stable, bornée à la colonne du schéma, et suit le contenu.
@@ -203,17 +204,20 @@ describe('REQ-JUR-025 — témoin à deux faces : la page lit le registre, elle 
 // ── « À compléter », les conseillers, la version ─────────────────────────────────────────────────
 
 describe('REQ-JUR-025 — ce que le registre ne tranche pas s’affiche comme tel', () => {
-  it('REQ-JUR-025 — la base légale « À compléter » est rendue « À compléter », avec sa question, sans valeur inventée', () => {
+  it('REQ-JUR-025 — la base légale « À compléter » est rendue en cours de rédaction, SANS sa question, sans valeur inventée', () => {
     const p = politiqueDe(REGISTRE);
     const base = p.rubriques.find((r) => r.cle === 'baseLegale')!;
     expect(base.contenu).toHaveLength(1);
     expect(base.contenu[0]!.type).toBe('a_completer');
     const cellule = rubrique(REGISTRE, 'Base légale');
     const question = cellule.replace(MARQUE_A_COMPLETER, '').replace(/^\s*Question\s*:\s*/, '');
-    expect(base.contenu[0]).toEqual({ type: 'a_completer', question });
+    expect(question.length).toBeGreaterThan(0);
+    // JUR-T36 : la question est une note interne, posée à l'arbitre ; elle ne sort pas du domaine.
+    expect(base.contenu[0]).toEqual({ type: 'a_completer' });
     const html = rendre(p);
     expect(html).toContain(CONFIDENTIALITE.aCompleter);
-    expect(html).toContain(CONFIDENTIALITE.question);
+    expect(html).not.toContain(question);
+    expect(html).not.toMatch(/Question/);
     // Une durée « à compléter » garde son texte ET son manque, dans l'ordre du registre.
     const duree = p.rubriques.find((r) => r.cle === 'duree')!;
     expect(duree.contenu.map((s) => s.type)).toEqual(['texte', 'a_completer']);
@@ -459,7 +463,7 @@ const REGISTRE_TEMOIN = [
 ].join('\n');
 
 const texte = (t: string) => ({ type: 'texte', texte: t });
-const manque = (question: string) => ({ type: 'a_completer', question });
+const manque = () => ({ type: 'a_completer' });
 
 describe('REQ-JUR-025 — le lecteur du registre, pièce à pièce', () => {
   it('REQ-JUR-025 — le registre témoin rend exactement ses six rubriques, dans l’ordre d’affichage, et ses trois destinataires', async () => {
@@ -468,11 +472,11 @@ describe('REQ-JUR-025 — le lecteur du registre, pièce à pièce', () => {
     if (!lue.ok) throw new Error(`registre témoin refusé : ${lue.refus}`);
     expect(lue.politique.rubriques).toEqual([
       { cle: 'finalite', contenu: [texte('Tenir le contrat')] },
-      { cle: 'baseLegale', contenu: [manque('laquelle ?')] },
+      { cle: 'baseLegale', contenu: [manque()] },
       { cle: 'duree', contenu: [texte(`Pièces : ${ANS} ans.`)] },
       { cle: 'destinataires', contenu: [texte('La Société (voir la note # 2)')] },
-      { cle: 'transferts', contenu: [texte('Aucun.'), manque('Qui tranche ? Question : Will.')] },
-      { cle: 'droits', contenu: [manque('à qui écrire ?')] },
+      { cle: 'transferts', contenu: [texte('Aucun.'), manque()] },
+      { cle: 'droits', contenu: [manque()] },
     ]);
     expect(lue.politique.destinataires).toEqual([
       {

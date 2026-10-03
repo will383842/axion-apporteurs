@@ -434,7 +434,8 @@ function modification(modele: ModeleCloisonne, n: number): Record<string, unknow
     case 'identiteFacturation':
       return { finAt: new Date(t0 + (n + 1) * 24 * 60 * MINUTE) };
     case 'pieceKyc':
-      return { fichierRef: `essai_${n}` };
+      // SEC-49 : le fichier d'une pièce est figé par la base ; la date de vérification reste libre.
+      return { verifieeAt: instant };
     case 'jetonDepot':
       return { dernierUsageAt: instant };
     case 'lienMagique':

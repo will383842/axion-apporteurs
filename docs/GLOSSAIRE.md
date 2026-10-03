@@ -112,6 +112,9 @@ ordinaire **reste `prevue`** (l'attribution passe `figee_resiliation`) ; `conser
 | `StatutContrat`        | `envoye`, `signe`, `remplace`, `resilie`                                                   | REQ-DM-013   |
 | `StatutPieceKyc`       | `manquante`, `a_verifier`, `valide`, `perimee`, `refusee`                                  | REQ-DM-027   |
 | `TypePieceKyc`         | `siret`, `tva`, `rib`, `identite`, `vigilance`, `rc_pro`                                   | REQ-DM-027   |
+| `DroitContact` | `acces`, `rectification`, `effacement`, `limitation`, `opposition` | REQ-JUR-065 |
+| `DonneeContact` | `nom`, `prenom`, `fonction`, `telephone`, `email` | REQ-JUR-065 |
+| `IssueDemandeDroit` | `appliquee`, `refusee` | REQ-JUR-065 |
 | `ResultatContact`      | `confirme`, `non_confirme`, `injoignable`, `ne_se_souvient_pas`                           | REQ-DM-008   |
 | `ResultatVerification` | `libre`, `suivie`, `cliente`, `liste_noire`, `fermee` (journal serveur, jamais exposé tel quel) | REQ-DM-032 |
 | `EtatVerificationDto`  | `libre`, `suivie_place_disponible`, `suivie_file_complete`, `non_disponible` — **4 états** exposés à l'apporteur ; un client existant est rendu `non_disponible` ou `suivie_*` ; aucune clé ne distingue cliente de suivie (REQ-UX-007 corrigée, HYP-E1-10) | REQ-UX-007 |
