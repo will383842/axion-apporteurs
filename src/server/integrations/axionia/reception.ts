@@ -171,7 +171,7 @@ type ContratPublie = { $defs: Record<string, Record<string, unknown>> };
 
 /**
  * INT-T46-P — les contrats PUBLIÉS, par version. Un `held` se juge contre les `$defs` de SA version,
- * jamais contre ceux de la courante : une `facture.emise` mise en attente en version 2 ne porte pas
+ * jamais contre ceux de la courante : une facture mise en attente en version 2 ne porte pas
  * le `devisId` que la version 3 exige, et elle est pourtant conforme à ce qu'elle était. Chaque
  * artefact est celui que `pnpm contracts:export` a écrit et que l'empreinte a tenu ; aucun n'est
  * retapé ici. Une version absente de cette table n'a pas de contrat : rien ne s'y juge conforme.
