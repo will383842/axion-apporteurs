@@ -131,6 +131,37 @@ const RENOMMAGES_V2: readonly { type: string; avant: string; apres: string }[] =
   { type: 'paiement.recu', avant: 'amountHtCents', apres: 'montantHtCents' },
 ];
 
+/**
+ * L'EXEMPTION NOMMÉE DE LA VERSION 3 (rattrapage 80, INT-T46-P) — deux noms, et rien d'autre : le
+ * TYPE `devis.emis` et le CHAMP `devisId` de `facture.emise`, entrés au contrat en v3 avant que le
+ * producteur d'axion-ia (INT-T46-A) ne les émette. Ils sont exemptés de la confrontation RM-03 à la
+ * fixture du producteur, et de nulle autre : le contrat PUBLIÉ les exige (témoin ci-dessous). Aucun
+ * motif, aucune liste ouverte. Un TÉMOIN rougit dès que la fixture du producteur porte l'un d'eux :
+ * l'exemption tombe alors, et la confrontation reprend sur la charge produite.
+ */
+const SANS_FIXTURE_V3 = {
+  type: 'devis.emis',
+  champ: { type: 'facture.emise', nom: 'devisId' },
+} as const;
+
+/** Les types confrontés à la fixture : tous, sauf le type exempté. */
+const TYPES_CONFRONTES = TYPES_EVENEMENT.filter((t) => t !== SANS_FIXTURE_V3.type);
+
+/**
+ * Le contrat contre lequel la charge PRODUITE se juge : le contrat publié, privé du seul champ
+ * exempté (retiré des propriétés et de `required` du `$defs` de son type). Rien n'est ajouté à la
+ * charge produite : elle est vérifiée, jamais complétée (RM-03).
+ */
+function contratConfronte(): Schema {
+  const contrat = structuredClone(contratJsonSchema());
+  const def = (contrat['$defs'] as Record<string, Schema>)[
+    nomDefPayload(SANS_FIXTURE_V3.champ.type)
+  ]!;
+  delete (def['properties'] as Record<string, unknown>)[SANS_FIXTURE_V3.champ.nom];
+  def['required'] = (def['required'] as string[]).filter((c) => c !== SANS_FIXTURE_V3.champ.nom);
+  return contrat;
+}
+
 function enV2(charge: Charge): Charge {
   const payload: Record<string, unknown> = {};
   for (const [cle, valeur] of Object.entries(charge.payload)) {
@@ -140,7 +171,7 @@ function enV2(charge: Charge): Charge {
   return { ...charge, payload };
 }
 
-/** Toutes les charges produites, des onze types, lues en version 2. */
+/** Toutes les charges produites, des types que le producteur émet, lues en version 2. */
 const CHARGES_PRODUITES: Charge[] = [...PRODUCTEUR.evenements, ...PRODUCTEUR.horsContratV1].map(
   enV2
 );
@@ -178,7 +209,7 @@ function valideur(): (donnee: unknown) => boolean {
     options: Record<string, unknown>
   ) => { compile: (schema: unknown) => (donnee: unknown) => boolean };
   return new Constructeur({ strict: true, validateFormats: false, allErrors: true }).compile(
-    contratJsonSchema()
+    contratConfronte()
   );
 }
 
@@ -195,7 +226,7 @@ function valideurDe(nomDef: string): Valideur {
     options: Record<string, unknown>
   ) => { compile: (schema: unknown) => Valideur };
   // Les `$defs` du contrat, et rien d'autre de sa racine : l'enveloppe ne s'applique pas à une charge.
-  const contrat = contratJsonSchema();
+  const contrat = contratConfronte();
   return new Constructeur({ strict: true, validateFormats: false, allErrors: true }).compile({
     $schema: contrat['$schema'],
     $defs: contrat['$defs'],
@@ -232,9 +263,9 @@ function clesProduites(valeur: unknown, schema: Schema, chemin: string, acc: Set
 }
 
 describe("le contrat d'événements est fermé, dérivé, et son empreinte le tient", () => {
-  it('REQ-INT-004 — la liste des types est FERMÉE sur les onze que le registre énumère, dans son ordre', () => {
+  it('REQ-INT-004 — la liste des types est FERMÉE sur les douze que le registre énumère, dans son ordre', () => {
     const selonLExigence = typesSelonLExigence();
-    expect(selonLExigence).toHaveLength(11);
+    expect(selonLExigence).toHaveLength(12);
     expect([...TYPES_EVENEMENT]).toEqual(selonLExigence);
   });
 
@@ -299,13 +330,13 @@ describe("le contrat d'événements est fermé, dérivé, et son empreinte le ti
     expect(empreinte(renomme)).not.toBe(attendue);
   });
 
-  it('REQ-GOV-020 → REQ-QA-007 — la fixture est celle du PRODUCTEUR RÉEL, et elle couvre les onze types (RM-03)', () => {
+  it('REQ-GOV-020 → REQ-QA-007 — la fixture est celle du PRODUCTEUR RÉEL, et elle couvre tous les types sauf l’exempté nommé (RM-03)', () => {
     expect(PRODUCTEUR.Source).toMatch(
       /^GÉNÉRÉE — ne pas éditer à la main\. Producteur : axionia, scripts\/partners\/fixtures\.ts/
     );
     // Un jeu incomplet laisserait un type sans aucun exemple produit : son `$defs` serait deviné.
     const produits = new Set(CHARGES_PRODUITES.map((c) => c.event_type));
-    expect([...TYPES_EVENEMENT].filter((t) => !produits.has(t))).toEqual([]);
+    expect([...TYPES_EVENEMENT].filter((t) => !produits.has(t))).toEqual([SANS_FIXTURE_V3.type]);
     expect(
       [...produits].filter((t) => !(TYPES_EVENEMENT as readonly string[]).includes(t))
     ).toEqual([]);
@@ -338,9 +369,9 @@ describe("le contrat d'événements est fermé, dérivé, et son empreinte le ti
     }
   });
 
-  it('REQ-QA-007 — les onze `$defs` de payload sont FERMÉS et égaux, clé pour clé, à ce que le producteur réel produit', () => {
-    const defs = contratJsonSchema()['$defs'] as Record<string, Schema>;
-    for (const type of TYPES_EVENEMENT) {
+  it('REQ-QA-007 — les `$defs` de payload confrontés sont FERMÉS et égaux, clé pour clé, à ce que le producteur réel produit', () => {
+    const defs = contratConfronte()['$defs'] as Record<string, Schema>;
+    for (const type of TYPES_CONFRONTES) {
       const schema = defs[nomDefPayload(type)]!;
       expect(schema['additionalProperties'], type).toBe(false);
       expect([...((schema['required'] as string[] | undefined) ?? [])].sort(), type).toEqual(
@@ -362,7 +393,7 @@ describe("le contrat d'événements est fermé, dérivé, et son empreinte le ti
   });
 
   it('REQ-QA-007 — TÉMOIN À DEUX FACES : un champ non déclaré est refusé et NOMMÉ, la charge produite passe', () => {
-    for (const type of TYPES_EVENEMENT) {
+    for (const type of TYPES_CONFRONTES) {
       const charge = CHARGES_PRODUITES.find((c) => c.event_type === type)!;
       const valide = valideurDe(nomDefPayload(type));
       expect(valide(charge.payload), type).toBe(true);
@@ -375,6 +406,41 @@ describe("le contrat d'événements est fermé, dérivé, et son empreinte le ti
       expect(valideur()(aLEmission(charge)), type).toBe(true);
       expect(valideur()({ ...aLEmission(charge), payload: avecIntrus }), type).toBe(false);
     }
+  });
+
+  it('REQ-QA-007 — l’exemption de la v3 ne masque rien : le contrat PUBLIÉ ferme `devis.emis` et EXIGE `devisId` sur `facture.emise`', () => {
+    const defs = contratJsonSchema()['$defs'] as Record<string, Schema>;
+    const devisEmis = defs[nomDefPayload(SANS_FIXTURE_V3.type)]!;
+    expect(devisEmis['additionalProperties']).toBe(false);
+    expect(devisEmis['required']).toEqual(Object.keys(devisEmis['properties'] as object));
+    const facture = defs[nomDefPayload(SANS_FIXTURE_V3.champ.type)]!;
+    expect(facture['required']).toContain(SANS_FIXTURE_V3.champ.nom);
+    expect(Object.keys(facture['properties'] as object)).toContain(SANS_FIXTURE_V3.champ.nom);
+    // Et la confrontation n'en retire QUE ce champ-là.
+    const confronte = (contratConfronte()['$defs'] as Record<string, Schema>)[
+      nomDefPayload(SANS_FIXTURE_V3.champ.type)
+    ]!;
+    expect(
+      Object.keys(facture['properties'] as object).filter(
+        (c) => !Object.keys(confronte['properties'] as object).includes(c)
+      )
+    ).toEqual([SANS_FIXTURE_V3.champ.nom]);
+  });
+
+  it('REQ-QA-007 — TÉMOIN DE LEVÉE : dès que la fixture du producteur porte `devis.emis` ou `devisId`, l’exemption de la v3 doit tomber', () => {
+    const toutes = [...PRODUCTEUR.evenements, ...PRODUCTEUR.horsContratV1];
+    expect(
+      toutes.filter((c) => c.event_type === SANS_FIXTURE_V3.type),
+      'la fixture porte `devis.emis` : retirer le type de SANS_FIXTURE_V3'
+    ).toEqual([]);
+    expect(
+      toutes.filter(
+        (c) =>
+          c.event_type === SANS_FIXTURE_V3.champ.type &&
+          Object.hasOwn(c.payload, SANS_FIXTURE_V3.champ.nom)
+      ),
+      'la fixture porte `devisId` : retirer le champ de SANS_FIXTURE_V3'
+    ).toEqual([]);
   });
 
   it('REQ-QA-007 — le contrat compte les API que le registre compte, et la route des coordonnées est sous son empreinte', async () => {
@@ -400,7 +466,7 @@ describe("le contrat d'événements est fermé, dérivé, et son empreinte le ti
       'coordonnees_du_contact',
     ]);
 
-    // Sur les charges du producteur réel, des onze types : rien ne traverse.
+    // Sur les charges du producteur réel : rien ne traverse.
     for (const charge of CHARGES_PRODUITES) {
       expect(champsInterdits(aLEmission(charge)), charge.event_type).toEqual([]);
     }
