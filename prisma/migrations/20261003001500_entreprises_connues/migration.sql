@@ -5,7 +5,9 @@
 
 -- Les valeurs du GLOSSAIRE, mot pour mot (partners:schema:enums).
 CREATE TYPE "origine_entreprise_connue" AS ENUM ('client', 'devis', 'financeur');
-CREATE TYPE "motif_liste_noire" AS ENUM ('opco', 'france_travail', 'region', 'of_partenaire', 'autre');
+-- Les CATÉGORIES de l'art. 3.3 bis (b), sans valeur « autre » (exigence de la juriste, 2026-10-03) :
+-- un refus fondé sur la liste se notifie par sa catégorie (REQ-DM-028), jamais par un organisme.
+CREATE TYPE "motif_liste_noire" AS ENUM ('administration', 'financeur_public', 'financeur_paritaire', 'organisme_de_formation_partenaire');
 
 -- La liste tenue par la Société (REQ-DM-028) : un SIREN d'ORGANISME, ce n'est pas une donnée de personne.
 CREATE TABLE "sirens_liste_noire" (

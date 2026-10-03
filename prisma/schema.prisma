@@ -1271,11 +1271,10 @@ enum OrigineEntrepriseConnue {
 
 /// Le motif d'inscription d'un SIREN sur la liste tenue par la Société (REQ-DM-028).
 enum MotifListeNoire {
-  opco
-  france_travail
-  region
-  of_partenaire
-  autre
+  administration
+  financeur_public
+  financeur_paritaire
+  organisme_de_formation_partenaire
 
   @@map("motif_liste_noire")
 }

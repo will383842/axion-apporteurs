@@ -321,13 +321,13 @@ export function traitantsDeLAnteriorite(prisma: PrismaClient): Traitants {
 /** L'antériorité d'un SIREN à `maintenant`, sur les seules projections locales, sans réseau. */
 export async function anterioriteDe(db: Client, s: string, maintenant: Date): Promise<Anteriorite> {
   const [financeur, client, devis] = await Promise.all([
-    db.sirenListeNoire.count({ where: { siren: s } }),
+    db.sirenListeNoire.findUnique({ where: { siren: s }, select: { motif: true } }),
     db.entrepriseConnue.findUnique({ where: { siren_origine: { siren: s, origine: 'client' } } }),
     db.devisConnu.findMany({ where: { siren: s } }),
   ]);
   return evaluerAnteriorite(
     {
-      financeur: financeur > 0,
+      financeur: financeur?.motif ?? null,
       derniereFactureAt: client?.dernierContactAt ?? null,
       devis: devis.map((d): DevisConnu => ({
         emisAt: d.emisAt,

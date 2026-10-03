@@ -16,6 +16,13 @@ import { ajouterMoisParis } from '../attribution/machine';
 /** L'origine d'une entreprise connue : les valeurs du glossaire (`OrigineEntrepriseConnue`). */
 export type OrigineEntrepriseConnue = 'client' | 'devis' | 'financeur';
 
+/** La catégorie d'un SIREN de la liste de la Société (art. 3.3 bis (b)) : les valeurs du glossaire. */
+export type CategorieListe =
+  | 'administration'
+  | 'financeur_public'
+  | 'financeur_paritaire'
+  | 'organisme_de_formation_partenaire';
+
 /** Un devis d'axionia, tel que projeté (`devis_connus`). */
 export type DevisConnu = {
   emisAt: Date;
@@ -30,13 +37,13 @@ export type FaitsDUneEntreprise = {
   /** La date de la dernière facture non annulée, ou `null` si aucune. */
   derniereFactureAt: Date | null;
   devis: readonly DevisConnu[];
-  /** Inscrite sur la liste tenue par la Société. */
-  financeur: boolean;
+  /** La catégorie sous laquelle elle est inscrite sur la liste de la Société, ou `null`. */
+  financeur: CategorieListe | null;
 };
 
 export type Anteriorite =
   | { connue: false }
-  | { connue: true; origine: 'financeur'; depuis: null }
+  | { connue: true; origine: 'financeur'; depuis: null; categorie: CategorieListe }
   | { connue: true; origine: 'client' | 'devis'; depuis: Date };
 
 /** L'instant `mois` mois civils avant `maintenant`, à l'heure de Paris. */
@@ -63,7 +70,10 @@ export function factureHtDuDevis(
 
 /** L'antériorité d'une entreprise à la date `maintenant`. */
 export function evaluerAnteriorite(faits: FaitsDUneEntreprise, maintenant: Date): Anteriorite {
-  if (faits.financeur) return { connue: true, origine: 'financeur', depuis: null };
+  // Un refus fondé sur la liste se notifie par sa CATÉGORIE, jamais par un organisme (REQ-DM-028).
+  if (faits.financeur !== null) {
+    return { connue: true, origine: 'financeur', depuis: null, categorie: faits.financeur };
+  }
 
   const limiteClient = moisAvant(maintenant, SEUILS.ANTERIORITE_CLIENT_MOIS.valeur);
   if (faits.derniereFactureAt !== null && faits.derniereFactureAt.getTime() >= limiteClient) {
