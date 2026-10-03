@@ -189,6 +189,7 @@ describe('REQ-CPL-006 — de bout en bout : la décision, le statut et le journa
   it('REQ-CPL-006 : retenir un candidat inscrit la décision, le passe `retenu`, et journalise `candidat → retenu` sous `retenir`', async () => {
     const apporteurId = await unCandidat();
     const { id } = await semerDecisionCandidature(app, {
+      id: randomUUID(),
       apporteurId,
       statutActuel: 'candidat',
       resultat: 'retenu',
@@ -221,6 +222,7 @@ describe('REQ-CPL-006 — de bout en bout : la décision, le statut et le journa
     for (const justification of ['', '   ', ' \t\n']) {
       await expect(
         semerDecisionCandidature(app, {
+          id: randomUUID(),
           apporteurId,
           statutActuel: 'candidat',
           resultat: 'refuse',

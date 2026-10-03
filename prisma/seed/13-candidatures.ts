@@ -15,11 +15,11 @@
  * d'existence de l'appelant.
  *
  * LE MOTIF EST CHIFFRÉ (forme d'A02) : `colonnesPii`, champ `justification`, lié à SA
- * ligne (modèle `decisionCandidature`, id, champ) ; l'identifiant est donc tiré AVANT l'écriture.
+ * ligne (modèle `decisionCandidature`, id, champ) ; l'identifiant est donc FOURNI par l'appelant,
+ * avant l'écriture — le semeur ne tire rien (REQ-QA-015).
  * Aucun clair n'est écrit, ni au journal : la charge du changement de statut ne le porte pas.
  */
 
-import { randomUUID } from 'node:crypto';
 import type { PrismaClient, StatutApporteur } from '@prisma/client';
 import {
   deciderCandidature,
@@ -32,6 +32,8 @@ import { colonnesPii, type ClesPii } from '../../src/server/securite/pii';
 export const MODELE_DECISION_CANDIDATURE = 'decisionCandidature';
 
 export interface DecisionASemer {
+  /** L'identifiant de la décision, auquel le bloc chiffré du motif est lié. */
+  readonly id: string;
   readonly apporteurId: string;
   readonly statutActuel: StatutApporteur;
   readonly resultat: ResultatDecisionCandidature;
@@ -49,7 +51,7 @@ export async function semerDecisionCandidature(
   const r = deciderCandidature(d);
   const { justification, ...decision } = r.decision;
   const { id, justificationChiffre } = colonnesPii(
-    { modele: MODELE_DECISION_CANDIDATURE, id: randomUUID() },
+    { modele: MODELE_DECISION_CANDIDATURE, id: d.id },
     { justification },
     d.cles
   );
