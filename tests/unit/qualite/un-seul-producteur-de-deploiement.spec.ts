@@ -84,12 +84,13 @@ async function serveur(
  * anonyme, comme sur ghcr.io). Les variables qu'il faut au déployeur pour le lire.
  */
 async function registre(): Promise<Record<string, string>> {
-  const r = await serveur((q) =>
-    q.url.startsWith('/token')
-      ? { statut: 200, entetes: {}, corps: '{"token":"jeton-anonyme"}' }
-      : q.url === `/v2/proprio/depot/manifests/sha-${SHA.slice(0, 7)}`
-        ? { statut: 200, entetes: { 'docker-content-digest': EMPREINTE }, corps: '' }
-        : { statut: 404, entetes: {}, corps: '' }
+  const r = await serveur(
+    (q): { statut: number; entetes: Record<string, string>; corps: string } =>
+      q.url.startsWith('/token')
+        ? { statut: 200, entetes: {}, corps: '{"token":"jeton-anonyme"}' }
+        : q.url === `/v2/proprio/depot/manifests/sha-${SHA.slice(0, 7)}`
+          ? { statut: 200, entetes: { 'docker-content-digest': EMPREINTE }, corps: '' }
+          : { statut: 404, entetes: {}, corps: '' }
   );
   return { PARTNERS_REGISTRE_URL: r.url, GITHUB_REPOSITORY: 'proprio/depot' };
 }
