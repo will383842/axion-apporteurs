@@ -1,8 +1,8 @@
 // @req REQ-GOV-026
 /**
- * GOV-143 — UNE EXCEPTION DE BRANCHE NOMMÉE, FERMÉE ET DATÉE. INT-T08-P a été fusionnée par #539
- * depuis `feat/INT-T08-P`, que le motif de branche (partners/ADR-0007) refuse. La règle ne change
- * pas : une liste d'UN couple (tâche, branche), attesté par sa PR et son sha, l'admet, et lui seul.
+ * GOV-143 — UNE EXCEPTION DE BRANCHE NOMMÉE, FERMÉE ET DATÉE. La tâche livrée par #539 l'a été
+ * depuis une branche que le motif de branche (partners/ADR-0007) refuse. La règle ne change pas :
+ * une liste d'UN couple (tâche, branche), attesté par sa PR et son sha, l'admet, et lui seul.
  *
  * CE QUE CE FICHIER GARDE : la liste est fermée et datée avant la règle donnée aux auteurs ; le
  * schéma admet ce couple et aucun autre ; `lot:cloture` ne l'admet que sur la PR et le sha attestés ;
