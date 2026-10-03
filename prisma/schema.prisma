@@ -397,6 +397,7 @@ model UtilisateurConsole {
   sessionsEspace          SessionEspace[]
   attributions            Attribution[]   @relation("AttributionsDuConseiller")
   suspensionsDePeremption Attribution[]   @relation("SuspensionsDePeremption")
+  qualificationsSaisies   Qualification[]
 
   @@map("utilisateurs_console")
 }
@@ -858,6 +859,7 @@ model Attribution {
   demandeConfirmation   DemandeConfirmation?
   demandesDroitsContact DemandeDroitContact[]
   notificationsEspace   NotificationEspace[]
+  qualifications        Qualification[]
 
   @@index([apporteurId])
   @@index([utilisateurConsoleId])
@@ -983,4 +985,70 @@ model RevisionDemandeConfirmation {
 
   @@index([demandeId])
   @@map("revisions_demande_confirmation")
+}
+
+/// DM-09 (REQ-DM-008, HYP-A02-VOCABULAIRE-QUALIFICATION) : le résultat d'un appel de qualification.
+/// Seul `non_confirme` éteint l'attribution et ouvre l'article 3.7.
+enum ResultatContact {
+  confirme
+  non_confirme
+  injoignable
+  ne_se_souvient_pas
+
+  @@map("resultat_contact")
+}
+
+enum InteretContact {
+  eleve
+  moyen
+  faible
+  nul
+
+  @@map("interet_contact")
+}
+
+enum ProchaineEtape {
+  rdv
+  rappeler
+  proposition
+  perdue
+  aucune
+
+  @@map("prochaine_etape")
+}
+
+enum MotifPerte {
+  pas_de_besoin
+  deja_equipe
+  hors_cible
+  injoignable_definitif
+  autre
+
+  @@map("motif_perte")
+}
+
+/// DM-09 (REQ-DM-008) : une Qualification, en AJOUT SEUL — une nouvelle ne modifie jamais la
+/// précédente. La personne interrogée et les termes de sa réponse sont des données d'un tiers,
+/// chiffrées, purgées avec le contact (REQ-DM-031) : seule la purge les remet à NULL, avec sa date
+/// (`contactPurgeAt`, posée une fois). Le nombre d'« injoignable » est DÉRIVÉ, jamais stocké.
+model Qualification {
+  id                        String             @id @default(uuid()) @db.Uuid
+  attributionId             String             @map("attribution_id") @db.Uuid
+  attribution               Attribution        @relation(fields: [attributionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  resultatContact           ResultatContact    @map("resultat_contact")
+  interet                   InteretContact?
+  prochaineEtape            ProchaineEtape     @map("prochaine_etape")
+  motifPerte                MotifPerte?        @map("motif_perte")
+  rdvAt                     DateTime?          @map("rdv_at") @db.Timestamptz(3)
+  rappelerAt                DateTime?          @map("rappeler_at") @db.Timestamptz(3)
+  personneInterrogeeChiffre Bytes?             @map("personne_interrogee_chiffre")
+  termesReponseChiffre      Bytes?             @map("termes_reponse_chiffre")
+  contactPurgeAt            DateTime?          @map("contact_purge_at") @db.Timestamptz(3)
+  auteurId                  String             @map("auteur_id") @db.Uuid
+  auteur                    UtilisateurConsole @relation(fields: [auteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  creeAt                    DateTime           @default(dbgenerated("clock_timestamp()")) @map("cree_at") @db.Timestamptz(3)
+
+  @@index([attributionId, creeAt])
+  @@index([auteurId])
+  @@map("qualifications")
 }

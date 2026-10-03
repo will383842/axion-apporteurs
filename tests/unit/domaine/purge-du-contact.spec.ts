@@ -165,6 +165,7 @@ function clientSimule(lots: Ligne[][], comptes: Record<string, number> = {}) {
   const lectures: unknown[] = [];
   const effacements: { where: unknown; data: Record<string, unknown> }[] = [];
   const revocations: unknown[] = [];
+  const qualifications: unknown[] = [];
   const tx = {
     attribution: {
       updateMany: vi.fn(async (args: { where: { id: string }; data: Record<string, unknown> }) => {
@@ -192,6 +193,14 @@ function clientSimule(lots: Ligne[][], comptes: Record<string, number> = {}) {
         return { count: 1 };
       }),
     },
+    // DM-09 : les blocs des qualifications de l'attribution, sauf le démenti.
+    qualification: {
+      updateMany: vi.fn(async (args: { where: { attributionId: string } }) => {
+        ordre.push(`purger-qualifications:${args.where.attributionId}`);
+        qualifications.push(args);
+        return { count: 1 };
+      }),
+    },
   };
   const client = {
     attribution: {
@@ -216,6 +225,7 @@ function clientSimule(lots: Ligne[][], comptes: Record<string, number> = {}) {
     lectures,
     effacements,
     revocations,
+    qualifications,
     clients,
   };
 }
@@ -306,6 +316,25 @@ describe('REQ-DM-031 — la tâche de purge, sur un client simulé', () => {
     ]);
   });
 
+  it('REQ-DM-031 : TÉMOIN — la purge vide les blocs des qualifications de l’attribution, SAUF le démenti exprès (non_confirme), gardé cinq ans', async () => {
+    const s = clientSimule([[{ id: 'x', natureJuridique: null }]]);
+    await purgerLesContacts(s.client, REFERENCE);
+    expect(s.qualifications).toStrictEqual([
+      {
+        where: {
+          attributionId: 'x',
+          contactPurgeAt: null,
+          resultatContact: { not: 'non_confirme' },
+        },
+        data: {
+          personneInterrogeeChiffre: null,
+          termesReponseChiffre: null,
+          contactPurgeAt: REFERENCE,
+        },
+      },
+    ]);
+  });
+
   it('REQ-DM-031 : TÉMOIN — l’ÉVÉNEMENT, sur le client de la transaction, APRÈS l’effacement, une fois par ligne', async () => {
     const s = clientSimule([[{ id: 'x', natureJuridique: null }]]);
     await purgerLesContacts(s.client, REFERENCE);
@@ -315,6 +344,7 @@ describe('REQ-DM-031 — la tâche de purge, sur un client simulé', () => {
       'revoquer:x',
       'vider:x',
       'purger-revisions:x',
+      'purger-qualifications:x',
       'journal:x',
     ]);
     expect(s.clients).toEqual([s.tx]);
@@ -340,6 +370,7 @@ describe('REQ-DM-031 — la tâche de purge, sur un client simulé', () => {
       'revoquer:a1',
       'vider:a1',
       'purger-revisions:a1',
+      'purger-qualifications:a1',
       'journal:a1',
     ]);
   });
