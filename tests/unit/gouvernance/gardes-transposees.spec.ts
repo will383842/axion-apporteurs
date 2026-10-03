@@ -1047,7 +1047,9 @@ const SCRIPTS_EXACTS: Readonly<Record<string, string>> = {
  * liste sans écrire la clé dans le workflow rougit aussi. Liste tapée EXPRÈS : sa divergence est le
  * signal, dans les deux sens.
  */
-const CLES_DU_WORKFLOW = ['name', 'on', 'jobs'];
+// GOV-142 : `permissions` entre au niveau du workflow, `contents: read` par défaut (lentille sécurité).
+// GOV-142 : `concurrency` aussi — un run par PR, main jamais annulé.
+const CLES_DU_WORKFLOW = ['name', 'on', 'permissions', 'concurrency', 'jobs'];
 /**
  * ⚠️ `if` EST ENTRE DANS CETTE LISTE LE 2026-09-22, ET UNE LISTE QUI S'ALLONGE EST UNE GARDE
  * QUI S’AFFAIBLIT — sauf si ce qu’elle laisse entrer est JUGÉ. C’est la condition de son entrée.
@@ -1069,7 +1071,13 @@ const CLES_DU_WORKFLOW = ['name', 'on', 'jobs'];
  * `tests/unit/gouvernance/revendication-par-branche.spec.ts` qui exige l’autre moitié, et les deux
  * lisent le MÊME évaluateur pour ne pas diverger.
  */
-const CLES_DE_GATE_A = ['runs-on', 'if', 'permissions', 'steps'];
+/**
+ * GOV-142 : le lint et le format vivent dans le job `gardes` (la porte A est découpée en jobs, et
+ * `gate-a` n'en est plus que la porte finale). `needs` y entre : le job `forge`, dont il reçoit
+ * l'instantané de la forge, empreinte comparée avant usage.
+ */
+const JOB_DU_LINT = 'gardes';
+const CLES_DE_GATE_A = ['runs-on', 'if', 'permissions', 'needs', 'steps'];
 
 /**
  * Ce que FAIT Gate A, lue comme un objet. Les étapes de lint et de format ont la forme EXACTE
@@ -1085,9 +1093,10 @@ function fautesDActe(ci: unknown): string[] {
     for (const cle of cles) if (!Object.hasOwn(objet, cle)) fautes.push(`${lieu} ⏎ ${cle} absente`);
   };
   clesExactes('workflow', ci, CLES_DU_WORKFLOW);
-  const job = estObjet(ci.jobs) ? ci.jobs['gate-a'] : undefined;
-  if (!estObjet(job) || !Array.isArray(job.steps)) return [...fautes, 'job `gate-a` introuvable'];
-  clesExactes('gate-a', job, CLES_DE_GATE_A);
+  const job = estObjet(ci.jobs) ? ci.jobs[JOB_DU_LINT] : undefined;
+  if (!estObjet(job) || !Array.isArray(job.steps))
+    return [...fautes, `job \`${JOB_DU_LINT}\` introuvable`];
+  clesExactes(JOB_DU_LINT, job, CLES_DE_GATE_A);
   // La condition du job, quand elle est là : elle ne doit éteindre AUCUN des événements que la
   // porte A mesure. UNE seule faute, qui les NOMME — un désarmement se lit, il ne se compte pas.
   if (Object.hasOwn(job, 'if')) {
@@ -1096,12 +1105,12 @@ function fautesDActe(ci: unknown): string[] {
       typeof condition === 'string'
         ? contextesEteints(condition, CONTEXTES_MESURES)
         : [`\`if:\` n'est pas une chaîne : ${JSON.stringify(condition)}`];
-    if (eteints.length > 0) fautes.push(`gate-a ⏎ if éteint : ${eteints.join(', ')}`);
+    if (eteints.length > 0) fautes.push(`${JOB_DU_LINT} ⏎ if éteint : ${eteints.join(', ')}`);
   }
   const lances = new Map<string, number>();
   for (const etape of job.steps) {
     if (!estObjet(etape)) {
-      fautes.push(`gate-a ⏎ étape illisible : ${JSON.stringify(etape)}`);
+      fautes.push(`${JOB_DU_LINT} ⏎ étape illisible : ${JSON.stringify(etape)}`);
       continue;
     }
     const run = etape.run;
@@ -1114,15 +1123,16 @@ function fautesDActe(ci: unknown): string[] {
         run === `pnpm ${script}` &&
         typeof etape.name === 'string' &&
         Object.keys(etape).sort().join(',') === 'name,run';
-      if (!exacte) fautes.push(`gate-a ⏎ ${JSON.stringify(etape)}`);
+      if (!exacte) fautes.push(`${JOB_DU_LINT} ⏎ ${JSON.stringify(etape)}`);
       continue;
     }
     for (const cle of ['shell', 'continue-on-error']) {
-      if (cle in etape) fautes.push(`gate-a ⏎ ${JSON.stringify(etape)}`);
+      if (cle in etape) fautes.push(`${JOB_DU_LINT} ⏎ ${JSON.stringify(etape)}`);
     }
   }
   for (const s of Object.keys(SCRIPTS_EXACTS)) {
-    if (lances.get(s) !== 1) fautes.push(`gate-a ⏎ \`pnpm ${s}\` lancé ${lances.get(s) ?? 0} fois`);
+    if (lances.get(s) !== 1)
+      fautes.push(`${JOB_DU_LINT} ⏎ \`pnpm ${s}\` lancé ${lances.get(s) ?? 0} fois`);
   }
   return fautes;
 }
@@ -1531,10 +1541,17 @@ describe('REQ-GOV-018 — lint et format sont ÉPINGLÉS, SCRIPTÉS, et BLOQUANT
     // La ligne de condition du job, LUE et non retapée : une mutation qui ne mute rien rendrait
     // le témoin vert en ne mesurant rien, et une copie du texte divergerait à la première retouche.
     const CONDITION_DU_JOB = /^ {4}if: .*$/m.exec(ci)?.[0];
+    // GOV-142 : le job `forge` ouvre le fichier et porte la même condition ; chaque mutation de la
+    // condition se joue dans le job `gardes`, à partir de son en-tête, jamais sur la première venue.
+    const EN_TETE_DES_GARDES = ci.indexOf('\n  gardes:\n');
+    if (EN_TETE_DES_GARDES < 0)
+      throw new Error('le job `gardes` est introuvable : ce témoin ne mesure rien');
+    const dansLesGardes = (f: (suite: string) => string): string =>
+      ci.slice(0, EN_TETE_DES_GARDES) + f(ci.slice(EN_TETE_DES_GARDES));
     // LÈVE plutôt que d'assertionner : sans cette ligne, les deux mutations ci-dessous muteraient
     // une chaîne vide, et le témoin resterait vert en ne mesurant rien.
     if (CONDITION_DU_JOB === undefined) {
-      throw new Error('le job `gate-a` ne porte plus de `if:` : ce témoin ne mesure rien');
+      throw new Error('le job `gardes` ne porte plus de `if:` : ce témoin ne mesure rien');
     }
     expect(ci).toContain(LINT);
     expect(ci.endsWith('\n')).toBe(true);
@@ -1547,15 +1564,20 @@ describe('REQ-GOV-018 — lint et format sont ÉPINGLÉS, SCRIPTÉS, et BLOQUANT
       // La condition RÉELLE remplacée par un désarmement franc : `if: false` n’éteint pas une
       // étape, il éteint les 71. On SUBSTITUE la ligne au lieu d’en ajouter une seconde :
       // `lireYaml` refuse une clé en double, et le témoin lèverait au lieu de nommer la faute.
-      ci.replace(CONDITION_DU_JOB, '    if: false'),
+      dansLesGardes((g) => g.replace(CONDITION_DU_JOB, '    if: false')),
       // Et la condition RETIRÉE : la clé est déclarée, donc son absence est une divergence.
-      ci.replace(`${CONDITION_DU_JOB}\n`, ''),
-      // Une clé de job posée APRÈS la liste des étapes est une clé du job. Pas `if:` ici : le job
-      // en porte déjà un, et deux clés de même nom font LEVER l’analyseur au lieu de nommer.
-      `${ci}    continue-on-error: true\n`,
+      dansLesGardes((g) => g.replace(`${CONDITION_DU_JOB}\n`, '')),
+      // Une clé de job posée dans le job, hors de ses étapes. Pas `if:` ici : le job en porte déjà un,
+      // et deux clés de même nom font LEVER l’analyseur au lieu de nommer. GOV-142 : le job du lint
+      // n'est plus le dernier du fichier ; la clé se pose dans SON en-tête, sous son commentaire.
       ci.replace(
-        '    steps:\n',
-        '    defaults:\n      run:\n        shell: true {0}\n    steps:\n'
+        '    # eclats. Il recoit l instantane de la forge du job `forge`, comme les eclats.\n',
+        '    # eclats. Il recoit l instantane de la forge du job `forge`, comme les eclats.\n    continue-on-error: true\n'
+      ),
+      // GOV-142 : le job `forge` ouvre le fichier ; la première ligne `needs: [forge]` est celle des gardes.
+      ci.replace(
+        '    needs: [forge]\n    steps:\n',
+        '    needs: [forge]\n    defaults:\n      run:\n        shell: true {0}\n    steps:\n'
       ),
       ci.replace(
         '        run: pnpm gov:conventions\n',
@@ -1563,7 +1585,10 @@ describe('REQ-GOV-018 — lint et format sont ÉPINGLÉS, SCRIPTÉS, et BLOQUANT
       ),
       `${ci}defaults:\n  run:\n    shell: true {0}\n`,
       // Une clé déclarée qui manque au job : la liste et le workflow divergent.
-      ci.replace('    permissions:\n      contents: read\n      pull-requests: read\n', ''),
+      ci.replace(
+        '    permissions:\n      contents: read\n      pull-requests: read\n    needs: [forge]\n',
+        '    needs: [forge]\n'
+      ),
     ];
     for (const d of desarmes) {
       expect(d).not.toBe(ci);

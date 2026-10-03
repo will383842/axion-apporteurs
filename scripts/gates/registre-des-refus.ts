@@ -284,6 +284,24 @@ export const REFUS_NOMMES: Readonly<Record<string, readonly string[]>> = {
     'principal(process.argv.slice(2)).then › ∅ › (code)',
     'principal(process.argv.slice(2)).then › ∅ › (2)',
   ],
+  // GOV-142 : les cinq scripts de la porte A découpée, déclarés au cliquet, nommés ici.
+  'scripts/ci/artefact-empreinte.ts': [
+    "module › si process.argv[1]?.replace(/\\\\/g, '/').endsWith('scripts/ci/a… › (mode === '--publier' ? publier() : mode === '--verifier' ? …)",
+  ],
+  'scripts/ci/porte-finale.ts': [
+    "module › si process.argv[1]?.replace(/\\\\/g, '/').endsWith('scripts/ci/p… › si refus.length > 0 › (1)",
+  ],
+  'scripts/ci/tests-eclat.ts': [
+    "module › si process.argv[1]?.replace(/\\\\/g, '/').endsWith('scripts/ci/t… › si typeof lu !== 'number' › (1)",
+    "module › si process.argv[1]?.replace(/\\\\/g, '/').endsWith('scripts/ci/t… › (r.status ?? 1)",
+  ],
+  'scripts/ci/tests-fusion.ts': [
+    "module › si process.argv[1]?.replace(/\\\\/g, '/').endsWith('scripts/ci/t… › (principal())",
+  ],
+  'scripts/gates/ci-etapes-identiques.ts': [
+    'principal().then › ∅ › (code)',
+    'principal().then › ∅ › (1)',
+  ],
   'scripts/gates/forge-instantane.ts': [
     'module › si APPELE_DIRECTEMENT › si refus !== null › (= 1)',
   ],
@@ -503,8 +521,10 @@ export const REFUS_NOMMES: Readonly<Record<string, readonly string[]>> = {
     'module › sinon !LANCE_EN_SCRIPT › sinon MODE_VERIFIER › si questions.length > PLAFOND_QUESTIONS › (= 1)',
   ],
   'scripts/prevol.ts': [
-    'etapesDeLaPorteA › si !estObjet(job) › (1)',
-    'etapesDeLaPorteA › si !Array.isArray(etapes) › (1)',
+    // GOV-142 : la porte A est un workflow de jobs ; le refus porte sur la porte FINALE absente, puis
+    // sur un job de la porte (gate-a et ses needs) sans liste d'étapes.
+    'etapesDeLaPorteA › si !estObjet(jobs[JOB_DE_LA_PORTE_A]) › (1)',
+    'etapesDeLaPorteA › si !Array.isArray(duJob) › (1)',
     "etapesDeLaPorteA › si substitution || commande.includes('\\n') › (1)",
     'etapesDeLaPorteA › si jouees.length === 0 › (1)',
     'courir › si !existsSync(CI) › (1)',
