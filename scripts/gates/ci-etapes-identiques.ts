@@ -28,10 +28,14 @@
  *  6. Les éclats `tests-<i>` sont exactement `tests-1` à `tests-4`, chacun avec `ECLAT: <i>/4`
  *     (`eclat_manquant_ou_double`), et IDENTIQUES hormis ce numéro et le nom de leur blob
  *     (`eclats_divergents`) : un éclat ne dérive pas en silence.
+ *  7. LISTE FERMÉE DES AJOUTS (acceptance de GOV-142, point 6) : toute étape de la tête est soit une
+ *     étape de la base (identique, ou cible déclarée d'une transformation), soit une étape du socle
+ *     (d), soit un ajout NOMMÉ dans `AJOUTS_ADMIS`, avec sa catégorie et la commande (`run`) ou
+ *     l'action (`uses`) qu'il doit lancer. Toute autre : `etape_non_admise`. Une étape quelconque
+ *     ajoutée à un éclat rougit donc ici, même si la même PR la fige dans `PORTE_A_FIGEE`.
  *
- * CE QU'IL NE JUGE PAS, ET C'EST DIT. Une étape NOUVELLE de la tête est permise (une fusion de
- * rapports, un dépôt d'artefact) : c'est le constat `PORTE_A_FIGEE` de `gov:conventions` qui la fige.
- * L'ordre des étapes dans un job n'est pas jugé ici.
+ * CE QU'IL NE JUGE PAS, ET C'EST DIT. L'ordre des étapes dans un job. Et, pour un ajout admis, ses
+ * clés autres que `run` et `uses` (`with`, `env`, `id`) : `PORTE_A_FIGEE` les fige, clé par clé.
  */
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
@@ -82,7 +86,76 @@ export const REPETABLES: Readonly<Record<string, string>> = {
     'chaque éclat peut tirer une passe d’accessibilité, qui pilote un vrai navigateur.',
 };
 
+/** Un ajout admis : sa catégorie de la liste fermée, et ce qu'il lance. */
+export interface AjoutAdmis {
+  readonly categorie: string;
+  readonly run?: string;
+  readonly uses?: string;
+}
+
+const DEPOT = 'actions/upload-artifact@v4';
+const RECEPTION = 'actions/download-artifact@v4';
+const ECLATS = [1, 2, 3, 4] as const;
+
+/**
+ * LA LISTE FERMÉE des étapes que la tête AJOUTE à la base (acceptance de GOV-142, point 6 : (a) la
+ * commande de test devenue l'éclat, (b) l'envoi et la réception d'artefacts, (c) la fusion des
+ * rapports, (d) les caches — ceux-ci sont du socle —, (e) le calcul et la vérification des
+ * empreintes, (f) le contrôle des `needs` du job final), plus le témoin lui-même, que l'acceptance
+ * veut appelé depuis le workflow. Un nom absent d'ici, ou une commande autre, rougit.
+ */
+export const AJOUTS_ADMIS: Readonly<Record<string, AjoutAdmis>> = {
+  'Tests — un eclat de la suite': { categorie: '(a) l’éclat', run: 'pnpm test:eclat' },
+  'Tests — fusion des quatre eclats, aux seuils de la configuration': {
+    categorie: '(c) la fusion des rapports',
+    run: 'pnpm test:fusion',
+  },
+  'Depot de l instantane de la forge': { categorie: '(b) envoi d’artefact', uses: DEPOT },
+  'Reception de l instantane de la forge': {
+    categorie: '(b) réception d’artefact',
+    uses: RECEPTION,
+  },
+  'Depot du blob de l eclat': { categorie: '(b) envoi d’artefact', uses: DEPOT },
+  ...Object.fromEntries(
+    ECLATS.map((i) => [
+      `Reception du blob de l eclat ${i}`,
+      { categorie: '(b) réception d’artefact', uses: RECEPTION },
+    ])
+  ),
+  'Empreinte de l instantane de la forge': {
+    categorie: '(e) calcul d’empreinte',
+    run: 'pnpm ci:artefact:publier',
+  },
+  'L instantane de la forge est celui que le job gardes a publie': {
+    categorie: '(e) vérification d’empreinte',
+    run: 'pnpm ci:artefact:verifier',
+  },
+  'Empreinte du blob de l eclat': {
+    categorie: '(e) calcul d’empreinte',
+    run: 'pnpm ci:artefact:publier',
+  },
+  ...Object.fromEntries(
+    ECLATS.map((i) => [
+      `Le blob de l eclat ${i} est celui que son job a publie`,
+      { categorie: '(e) vérification d’empreinte', run: 'pnpm ci:artefact:verifier' },
+    ])
+  ),
+  'Chaque job de la porte A a reussi': {
+    categorie: '(f) le contrôle des needs du job final',
+    run: 'pnpm ci:porte-finale',
+  },
+  'Les etapes de la porte A sont celles d avant le decoupage': {
+    categorie: '(6) le témoin, appelé depuis le workflow',
+    run: 'pnpm gov:ci-etapes',
+  },
+  'La garde des etapes de la porte A sait rougir': {
+    categorie: '(6) la preuve du témoin',
+    run: 'pnpm gov:ci-etapes:prove',
+  },
+};
+
 export type Famille =
+  | 'etape_non_admise'
   | 'etape_disparue'
   | 'etape_alteree'
   | 'etape_dupliquee'
@@ -255,7 +328,8 @@ export function jugerLesEtapes(
   base: readonly Job[],
   tete: readonly Job[],
   transformations: Readonly<Record<string, Transformation>> = TRANSFORMATIONS,
-  repetables: Readonly<Record<string, string>> = REPETABLES
+  repetables: Readonly<Record<string, string>> = REPETABLES,
+  ajouts: Readonly<Record<string, AjoutAdmis>> = AJOUTS_ADMIS
 ): Faute[] {
   const fautes: Faute[] = [];
   const ou = new Map<string, string[]>();
@@ -314,6 +388,34 @@ export function jugerLesEtapes(
       });
     }
   }
+  // 7. La liste FERMÉE des ajouts. Une étape de la tête qui porte le NOM d'une étape de la base sans
+  // son contenu est déjà nommée `etape_alteree` : elle n'est pas comptée une seconde fois ici.
+  const contenusDeLaBase = new Set(base.flatMap((j) => j.etapes).map(canonique));
+  const nomsDeLaBase = new Set(base.flatMap((j) => j.etapes).map(nomDeLEtape));
+  for (const job of tete) {
+    for (const e of job.etapes) {
+      const nom = nomDeLEtape(e);
+      if (contenusDeLaBase.has(canonique(e)) || estDuSocle(e) || nomsDeLaBase.has(nom)) continue;
+      const admis = ajouts[nom];
+      if (admis === undefined) {
+        fautes.push({
+          famille: 'etape_non_admise',
+          message: `« ${nom} » (job ${job.nom}) n'est ni une étape de la base, ni du socle, ni un ajout de la liste fermée.`,
+        });
+        continue;
+      }
+      const run = typeof e.run === 'string' ? e.run.trim() : undefined;
+      const uses = typeof e.uses === 'string' ? e.uses.trim() : undefined;
+      if (run !== admis.run || uses !== admis.uses) {
+        fautes.push({
+          famille: 'etape_non_admise',
+          message:
+            `« ${nom} » (job ${job.nom}) est un ajout admis, ${admis.categorie}, mais lance ` +
+            `« ${run ?? uses ?? '—'} » au lieu de « ${admis.run ?? admis.uses} ».`,
+        });
+      }
+    }
+  }
   for (const job of tete) {
     if (job.si === null || !job.si.includes(GARDE_DE_FUSION)) {
       fautes.push({
@@ -355,6 +457,29 @@ const avecEtapes = (j: Job, etapes: readonly Etape[]): Job => ({
 });
 
 export const CAS_DE_PREUVE: readonly Cas[] = [
+  {
+    // Le cas relevé par l'exactitude : une étape quelconque ajoutée à un éclat.
+    famille: 'etape_non_admise',
+    planter: (t) => ({
+      tete: remplacerLeJob(t, 'tests-2', (j) =>
+        avecEtapes(j, [...j.etapes, { name: 'Une etape ajoutee', run: 'pnpm lint' }])
+      ),
+    }),
+  },
+  {
+    // Un NOM admis qui lance autre chose que ce que la liste fermée lui attribue.
+    famille: 'etape_non_admise',
+    planter: (t) => ({
+      tete: remplacerLeJob(t, PORTE_FINALE, (j) =>
+        avecEtapes(
+          j,
+          j.etapes.map((e) =>
+            e.name === 'Chaque job de la porte A a reussi' ? { ...e, run: 'pnpm lint' } : e
+          )
+        )
+      ),
+    }),
+  },
   {
     famille: 'etape_disparue',
     planter: (t) => {

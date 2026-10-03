@@ -55,8 +55,26 @@ describe('REQ-QA-013 — GOV-142 : la même liste d’étapes, au regroupement p
   it('REQ-QA-013 : TÉMOIN — la preuve rougit sur chaque faute plantée, et les deux contre-témoins restent verts', () => {
     const v = prouver(reference, tete);
     expect(v.lignes.filter((l) => l.startsWith('❌'))).toEqual([]);
-    expect(v.lignes.filter((l) => l.startsWith('✅')).length).toBe(10);
+    // Douze fautes plantées : onze familles, dont `etape_non_admise` sous ses deux formes.
+    expect(v.lignes.filter((l) => l.startsWith('✅')).length).toBe(12);
     expect(v.code).toBe(0);
+  });
+
+  it('REQ-QA-013 : TÉMOIN — une étape quelconque ajoutée à un éclat rougit, même figée ailleurs (etape_non_admise)', () => {
+    const ajoutee: Job[] = tete.map((j) =>
+      j.nom === 'tests-1'
+        ? { ...j, etapes: [...j.etapes, { name: 'Une etape ajoutee', run: 'pnpm lint' }] }
+        : j
+    );
+    expect(
+      jugerLesEtapes(reference, ajoutee).filter((f) => f.famille === 'etape_non_admise')
+    ).toEqual([
+      {
+        famille: 'etape_non_admise',
+        message:
+          "« Une etape ajoutee » (job tests-1) n'est ni une étape de la base, ni du socle, ni un ajout de la liste fermée.",
+      },
+    ]);
   });
 
   it('REQ-QA-013 : TÉMOIN — retirer une seule étape de la tête rougit, en la nommant', () => {
