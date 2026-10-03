@@ -20,6 +20,20 @@
  *       inactive, et touche la dernière vue de celle qu'il laisse passer.
  */
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { GABARITS, type LigneDeNotification } from '../../../src/server/notifications/table-ssot';
+import { CONNEXION_CONSOLE } from '../../../src/content/micro-copy/console/connexion';
+import { ETATS_VIDES_CONSOLE } from '../../../src/content/micro-copy/console/etats-vides';
+import {
+  EcranArriveeConsole,
+  EcranCodeConsole,
+  EcranConnexionConsole,
+  EcranIssueConsole,
+  texteDuRefusDeCodeConsole,
+} from '../../../src/app/(connexion-console)/console/connexion/ecran';
+import { destinationConsoleBornee } from '../../../src/app/(connexion-console)/console/connexion/destination';
 import {
   ESSAIS_DU_CODE_MAX,
   consommerLien,
@@ -475,5 +489,116 @@ describe('REQ-SEC-003 — (b) les cookies de la console sont DISTINCTS de ceux d
     expect(poses).toEqual([
       [COOKIE_DATTENTE_CONSOLE.nom, '', { ...COOKIE_DATTENTE_CONSOLE.attributs, maxAge: 0 }],
     ]);
+  });
+});
+
+describe('REQ-UX-048 — le courriel de la console, ligne de la table des notifications (forme d’A02)', () => {
+  const lignes = Object.entries(GABARITS) as [string, LigneDeNotification][];
+
+  it('REQ-UX-048 : TÉMOIN — une ligne de la console n’a que l’e-mail, n’est jamais désactivable, et sa route est déclarée dans la carte de la console', () => {
+    const carte = readFileSync('docs/CONSOLE-ROUTES.md', 'utf8');
+    const console_ = lignes.filter(([, l]) => l.destinataire === 'utilisateur_console');
+    expect(console_.map(([cle]) => cle)).toEqual(['lien_magique_console']);
+    for (const [cle, l] of console_) {
+      expect(cle).toMatch(/^[a-z][a-z0-9_]*$/);
+      expect(l.canaux, cle).toEqual(['email']);
+      expect(l.desactivable, cle).toBe(false);
+      expect(l.notificationObligatoire, cle).toBe(true);
+      expect(l.emetteur, cle).toBe('SEC-29');
+      expect(carte, cle).toContain(`\`${l.route}\``);
+    }
+    expect(GABARITS.lien_magique_console.actions).toEqual([
+      {
+        libelle: CONNEXION_CONSOLE.courriel.appel,
+        source: 'src/content/micro-copy/console/connexion.ts',
+      },
+    ]);
+  });
+
+  it('REQ-UX-048 : TÉMOIN À DEUX FACES — la règle rougit sur une ligne de la console qui porterait l’espace ou serait désactivable ; les lignes de l’apporteur gardent leur destinataire', () => {
+    const fautes = (l: LigneDeNotification) =>
+      l.destinataire === 'utilisateur_console' && (l.canaux.includes('espace') || l.desactivable);
+    const ligne = GABARITS.lien_magique_console as LigneDeNotification;
+    expect(fautes({ ...ligne, canaux: ['email', 'espace'] })).toBe(true);
+    expect(fautes({ ...ligne, desactivable: true })).toBe(true);
+    expect(fautes(ligne)).toBe(false);
+    expect(lignes.filter(([, l]) => l.destinataire === 'apporteur')).toHaveLength(
+      lignes.length - 1
+    );
+  });
+});
+
+describe('REQ-UX-048 — les écrans de la connexion de la console', () => {
+  const rien = async (): Promise<void> => undefined;
+  const rendu = (e: Parameters<typeof createElement>[0], p: object) =>
+    renderToStaticMarkup(createElement(e as never, p as never));
+
+  it('REQ-UX-048 : TÉMOIN — la demande : l’état vide de la maquette, un champ étiqueté, le piège caché, et la MÊME réponse pour tout compte', () => {
+    const h = rendu(EcranConnexionConsole, { etat: null, action: rien });
+    const vide = ETATS_VIDES_CONSOLE['connexion-console']!;
+    expect(h).toContain(`<h1>${vide.titre}</h1>`);
+    expect(h).toContain(`<label for="console-courriel">${CONNEXION_CONSOLE.champCourriel}</label>`);
+    expect(h).toContain(vide.action.libelle);
+    expect(h).toMatch(/<div hidden="">.*name="site".*<\/div>/s);
+    expect(rendu(EcranConnexionConsole, { etat: 'envoye', action: rien })).toContain(
+      CONNEXION_CONSOLE.reponses.envoye
+    );
+  });
+
+  it('REQ-UX-048 : TÉMOIN — le code : un champ numérique, un seul texte pour tout refus, en alerte, puis « Recevoir un nouveau code »', () => {
+    const h = rendu(EcranCodeConsole, { refus: null, verifier: rien, changer: rien, suite: null });
+    expect(h).toContain(CONNEXION_CONSOLE.envoye.titre);
+    expect(h).toMatch(/inputMode="numeric"|inputmode="numeric"/);
+    expect(h).toContain(CONNEXION_CONSOLE.code.changer);
+    const refuse = rendu(EcranCodeConsole, {
+      refus: 'code_refuse',
+      verifier: rien,
+      changer: rien,
+      suite: '/console/apporteurs',
+    });
+    expect(refuse).toContain(`role="alert">${CONNEXION_CONSOLE.code.refus}`);
+    expect(refuse).toContain(`href="/console/connexion">${CONNEXION_CONSOLE.code.nouveauCode}`);
+    expect(refuse).toContain('name="suite" value="/console/apporteurs"');
+    expect(texteDuRefusDeCodeConsole('debit')).toBe(CONNEXION_CONSOLE.code.debit);
+  });
+
+  it('REQ-UX-048 : TÉMOIN — « déjà utilisé » a sa page, distincte d’un lien invalide, sans adresse ni nom ; l’arrivée ne consomme rien', () => {
+    const deja = rendu(EcranIssueConsole, { etat: 'deja_utilise' });
+    const invalide = rendu(EcranIssueConsole, { etat: 'lien_invalide' });
+    expect(deja).toContain(CONNEXION_CONSOLE.dejaUtilise.phrase);
+    expect(deja).toContain(`href="/console/connexion">${CONNEXION_CONSOLE.dejaUtilise.action}`);
+    expect(deja).not.toBe(invalide);
+    expect(deja).not.toMatch(/@/);
+    const arrivee = rendu(EcranArriveeConsole, { action: rien });
+    expect(arrivee).toContain(`<button type="submit">${CONNEXION_CONSOLE.arriveeAction}</button>`);
+  });
+});
+
+describe('REQ-SEC-003 — (3) la redirection de la console est BORNÉE à la console', () => {
+  it('REQ-SEC-003 : TÉMOIN — un chemin de la console passe, résolu ; tout le reste mène à /console', () => {
+    expect(destinationConsoleBornee(null)).toBe('/console');
+    expect(destinationConsoleBornee('/console/apporteurs?statut=a#x')).toBe(
+      '/console/apporteurs?statut=a#x'
+    );
+    expect(destinationConsoleBornee('/console/a/../apporteurs')).toBe('/console/apporteurs');
+    for (const hostile of [
+      '//exemple.invalid/console',
+      '/\exemple.invalid',
+      'https://exemple.invalid/console',
+      'javascript:alert(1)',
+      'console/apporteurs',
+      '/mes-entreprises',
+      '/api/console',
+      '/console/connexion',
+      '/console/connexion/' + 'J'.repeat(43),
+      '/console/x/../connexion',
+      '/console/../api/y',
+      '/console/%2e%2e/api',
+      '/consoleX',
+      '/console/%zz',
+      '/console/' + 'a'.repeat(600),
+      '',
+    ])
+      expect(destinationConsoleBornee(hostile), hostile).toBe('/console');
   });
 });
