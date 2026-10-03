@@ -1,4 +1,4 @@
-// @req REQ-SEC-058
+// @req REQ-SEC-023
 /**
  * SEC-58 — le journal des accès à la console, par identifiants seuls, jugé sans base : un faux client
  * enregistre chaque appel, dans l'ordre. La base réelle (ajout seul par le gabarit commun, CHECK,
@@ -74,8 +74,8 @@ const lectures = (appels: Appel[]) =>
     .filter((a) => a.quoi.endsWith('.findUnique'))
     .map((a) => Object.keys((a.args as { select: object }).select).sort());
 
-describe('REQ-SEC-058 — la trace d’une lecture de coordonnées précède la lecture', () => {
-  it('REQ-SEC-058 : TÉMOIN — apporteur : la cible est vérifiée par son id, la trace est écrite, PUIS les blocs sont lus', async () => {
+describe('REQ-SEC-023 — la trace d’une lecture de coordonnées précède la lecture', () => {
+  it('REQ-SEC-023 : TÉMOIN — apporteur : la cible est vérifiée par son id, la trace est écrite, PUIS les blocs sont lus', async () => {
     const f = fauxClient();
     await lireCoordonneesDeLApporteur(
       f.client,
@@ -98,7 +98,7 @@ describe('REQ-SEC-058 — la trace d’une lecture de coordonnées précède la 
     });
   });
 
-  it('REQ-SEC-058 : TÉMOIN — contact : la même suite, sur l’attribution qui le porte', async () => {
+  it('REQ-SEC-023 : TÉMOIN — contact : la même suite, sur l’attribution qui le porte', async () => {
     const f = fauxClient();
     await lireCoordonneesDuContact(
       f.client,
@@ -118,7 +118,7 @@ describe('REQ-SEC-058 — la trace d’une lecture de coordonnées précède la 
     });
   });
 
-  it('REQ-SEC-058 : TÉMOIN — ÉCHEC FERMÉ : une trace qui échoue ne laisse lire aucun bloc', async () => {
+  it('REQ-SEC-023 : TÉMOIN — ÉCHEC FERMÉ : une trace qui échoue ne laisse lire aucun bloc', async () => {
     const f = fauxClient({ traceEchoue: true });
     await expect(
       lireCoordonneesDeLApporteur(
@@ -130,7 +130,7 @@ describe('REQ-SEC-058 — la trace d’une lecture de coordonnées précède la 
     expect(lectures(f.appels)).toEqual([['id']]);
   });
 
-  it('REQ-SEC-058 : TÉMOIN — une cible inconnue est refusée, nommée, et rien n’est tracé', async () => {
+  it('REQ-SEC-023 : TÉMOIN — une cible inconnue est refusée, nommée, et rien n’est tracé', async () => {
     const f = fauxClient({ cibleExiste: false });
     await expect(
       lireCoordonneesDuContact(
@@ -142,7 +142,7 @@ describe('REQ-SEC-058 — la trace d’une lecture de coordonnées précède la 
     expect(f.appels.map((a) => a.quoi)).toEqual(['attribution.findUnique']);
   });
 
-  it('REQ-SEC-058 : une connexion réussie se trace sans cible, avec l’empreinte tronquée, et rien d’autre', async () => {
+  it('REQ-SEC-023 : une connexion réussie se trace sans cible, avec l’empreinte tronquée, et rien d’autre', async () => {
     const f = fauxClient();
     await journaliserConnexionConsole(
       f.client,
@@ -192,8 +192,8 @@ function fauxClientDePurge(lots: number[], compte: (n: number) => number = (n) =
   return { client, lectures, ecritures };
 }
 
-describe('REQ-SEC-058 — la purge à l’échéance vide les identifiants, la ligne nue reste', () => {
-  it('REQ-SEC-058 : la durée vient de la SSOT des durées : douze mois, décision de Williams', () => {
+describe('REQ-SEC-023 — la purge à l’échéance vide les identifiants, la ligne nue reste', () => {
+  it('REQ-SEC-023 : la durée vient de la SSOT des durées : douze mois, décision de Williams', () => {
     expect(SEUILS.JOURNAL_ACCES_CONSOLE_CONSERVATION_MOIS).toMatchObject({
       valeur: 12,
       unite: 'mois',
@@ -201,7 +201,7 @@ describe('REQ-SEC-058 — la purge à l’échéance vide les identifiants, la l
     expect(limiteDuJournalDesAcces(MAINTENANT)).toEqual(new Date('2026-10-03T12:00:00.000Z'));
   });
 
-  it('REQ-SEC-058 : TÉMOIN — chaque lecture vise l’échu NON purgé, ordonnée, bornée au lot', async () => {
+  it('REQ-SEC-023 : TÉMOIN — chaque lecture vise l’échu NON purgé, ordonnée, bornée au lot', async () => {
     const f = fauxClientDePurge([1]);
     await purgerLeJournalDesAccesConsole(f.client, MAINTENANT);
     expect(f.lectures[0]).toEqual({
@@ -212,7 +212,7 @@ describe('REQ-SEC-058 — la purge à l’échéance vide les identifiants, la l
     });
   });
 
-  it('REQ-SEC-058 : TÉMOIN — la purge VIDE l’utilisateur, la cible et l’empreinte, et pose sa date, en une écriture par lot', async () => {
+  it('REQ-SEC-023 : TÉMOIN — la purge VIDE l’utilisateur, la cible et l’empreinte, et pose sa date, en une écriture par lot', async () => {
     const f = fauxClientDePurge([2]);
     await purgerLeJournalDesAccesConsole(f.client, MAINTENANT);
     expect(f.ecritures).toEqual([
@@ -223,7 +223,7 @@ describe('REQ-SEC-058 — la purge à l’échéance vide les identifiants, la l
     ]);
   });
 
-  it('REQ-SEC-058 : TÉMOIN — par lots jusqu’à épuisement, la somme est celle de la base, et un lot qui n’enlève rien arrête', async () => {
+  it('REQ-SEC-023 : TÉMOIN — par lots jusqu’à épuisement, la somme est celle de la base, et un lot qui n’enlève rien arrête', async () => {
     const f = fauxClientDePurge([LOT_DE_PURGE_DU_JOURNAL_DES_ACCES, 3]);
     expect(await purgerLeJournalDesAccesConsole(f.client, MAINTENANT)).toEqual({
       purgees: LOT_DE_PURGE_DU_JOURNAL_DES_ACCES + 3,
@@ -244,8 +244,8 @@ function fichiers(racine: string): string[] {
   });
 }
 
-describe('REQ-SEC-058 — aucune lecture ne contourne la trace, et rien ne supprime', () => {
-  it('REQ-SEC-058 : TÉMOIN — sous la console, seul le lecteur unique déchiffre', () => {
+describe('REQ-SEC-023 — aucune lecture ne contourne la trace, et rien ne supprime', () => {
+  it('REQ-SEC-023 : TÉMOIN — sous la console, seul le lecteur unique déchiffre', () => {
     const LECTEUR = 'src/server/console/journal-des-acces.ts';
     const fautifs = [...fichiers('src/server/console'), ...fichiers('src/app/console')]
       .filter((f) => f !== LECTEUR)
@@ -254,7 +254,7 @@ describe('REQ-SEC-058 — aucune lecture ne contourne la trace, et rien ne suppr
     expect(readFileSync(LECTEUR, 'utf8')).toMatch(/\bdecryptPii\b/);
   });
 
-  it('REQ-SEC-058 : TÉMOIN — aucun code ne supprime une trace : la purge vide, elle n’efface pas', () => {
+  it('REQ-SEC-023 : TÉMOIN — aucun code ne supprime une trace : la purge vide, elle n’efface pas', () => {
     const fautifs = fichiers('src').filter((f) =>
       /journalAccesConsole\.(delete|deleteMany)\b|DELETE FROM\s+"?journal_acces_console/.test(
         readFileSync(f, 'utf8')
