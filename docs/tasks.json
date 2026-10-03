@@ -665,7 +665,8 @@
         "tests/unit/gouvernance/tasks-schema-et-paths.spec.ts",
         "docs/LECONS.md",
         "tests/unit/gouvernance/une-tache-en-cours-appartient-a-un-lot.spec.ts",
-        "scripts/lot/paths-proposes.ts"
+        "scripts/lot/paths-proposes.ts",
+        "scripts/gates/gov-attributions.ts"
       ],
       "schema": false,
       "sensible": [
