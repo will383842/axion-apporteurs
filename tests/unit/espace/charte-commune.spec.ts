@@ -197,4 +197,13 @@ describe('REQ-UX-017 — le relief : cartes et encarts ne sont plus du texte à 
     expect(regle('.encart')).toMatch(/border:\s*1px solid/);
     expect(regle('.encart')).toMatch(/box-shadow:/);
   });
+
+  it('REQ-UX-017 — la barre d’onglets garde son fond mocha : son texte clair ne tombe jamais sur un fond clair', () => {
+    // Vu par axe sur l'aperçu : un relief qui repeignait la barre en blanc laissait `--nav-texte`
+    // (clair) sur `--surface`. La DERNIÈRE couleur de fond posée sur `.onglets` est celle qui gagne.
+    const fonds = [...regle('.onglets').matchAll(/background:\s*([^;]+);/g)].map((m) => m[1]);
+    expect(fonds.at(-1)).toBe('var(--nav-fond)');
+    const t = jetons(css, CLAIR);
+    expect(rapport(t['nav-texte']!, t['nav-fond']!)).toBeGreaterThanOrEqual(4.5);
+  });
 });
