@@ -31,6 +31,7 @@ import {
   depotDAppareils,
   empreinteDAppareil,
   exigerAppareilConfirme,
+  jugerAppareil,
   tirerIdentifiantDAppareil,
   type DepotDAppareils,
   type PortsDAppareil,
@@ -265,6 +266,39 @@ describe('REQ-SEC-003 — SEC-55 (2) : une confirmation renforcée avant toute a
       expect(texte).not.toContain(IDENTIFIANT);
       expect(texte).not.toContain(EMPREINTE);
     }
+  });
+});
+
+describe('REQ-SEC-003 — SEC-55 dans une action de l’espace : après `actionEspace` (SEC-53)', () => {
+  const session = (consommeAt: Date | null): SessionOuverte => ({
+    id: 'session-x',
+    apporteurId: APPORTEUR,
+    lienConsommeAt: consommeAt,
+    niveau: 'plein',
+    statut: 'signe',
+  });
+
+  it('REQ-SEC-003 : `jugerAppareil` juge la session DÉJÀ acceptée, sans la relire : connu, il passe ; inconnu et frais, avis puis confirmation ; inconnu et ancien, refusé', async () => {
+    const connu = ports(ligne(T), true);
+    expect(await jugerAppareil(session(new Date(0)), IDENTIFIANT, connu.p)).toEqual({ ok: true });
+    expect(connu.p.session.depot.lire).not.toHaveBeenCalled();
+
+    const frais = ports(ligne(T), false);
+    expect(await jugerAppareil(session(T), IDENTIFIANT, frais.p)).toEqual({ ok: true });
+    expect(frais.ordre).toEqual(['aviser', 'confirmer']);
+    expect(frais.p.session.depot.lire).not.toHaveBeenCalled();
+
+    const ancien = ports(ligne(T), false);
+    expect(await jugerAppareil(session(new Date(0)), IDENTIFIANT, ancien.p)).toEqual({
+      ok: false,
+      motif: 'appareil_inconnu',
+    });
+    expect(await jugerAppareil(session(T), undefined, ancien.p)).toEqual({
+      ok: false,
+      motif: 'appareil_inconnu',
+    });
+    expect(ancien.depot.confirmer).not.toHaveBeenCalled();
+    expect(ancien.aviser).not.toHaveBeenCalled();
   });
 });
 
