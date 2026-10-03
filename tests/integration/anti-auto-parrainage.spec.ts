@@ -16,6 +16,7 @@ import {
   controlerALaCandidature,
   controlerAuChangementDeRib,
   type LigneDuJournal,
+  type PortsDuControle,
 } from '../../src/server/parrainage/anti-auto-parrainage';
 
 let base: Base;
@@ -102,6 +103,12 @@ async function anomalies(apporteurId: string) {
   });
 }
 
+/** Les ports réels : l'horloge, et l'écrivain du journal par défaut (`ajouterEvenement`). */
+const ports = (journal?: LigneDuJournal[]): PortsDuControle => ({
+  maintenant: () => MAINTENANT,
+  ...(journal === undefined ? {} : { journal: (l: LigneDuJournal) => journal.push(l) }),
+});
+
 const OUVERTE = { type: 'auto_parrainage', statut: 'ouverte', score: null, traiteAt: null };
 
 describe('REQ-SEC-031 — à la candidature parrainée, en base réelle', () => {
@@ -122,7 +129,7 @@ describe('REQ-SEC-031 — à la candidature parrainée, en base réelle', () => 
       });
       await identite(vise.id, famille === 'siren' ? s : siren());
       const journal: LigneDuJournal[] = [];
-      expect(await controlerALaCandidature(base.prisma, vise.id, (l) => journal.push(l))).toEqual({
+      expect(await controlerALaCandidature(base.prisma, vise.id, ports(journal))).toEqual({
         correspondances: [famille],
         anomalieOuverte: true,
       });
@@ -138,7 +145,7 @@ describe('REQ-SEC-031 — à la candidature parrainée, en base réelle', () => 
         phoneHash: hex(32),
       });
       await identite(distinct.id, siren());
-      expect(await controlerALaCandidature(base.prisma, distinct.id)).toEqual({
+      expect(await controlerALaCandidature(base.prisma, distinct.id, ports())).toEqual({
         correspondances: [],
         anomalieOuverte: false,
       });
@@ -156,12 +163,42 @@ describe('REQ-SEC-031 — à la candidature parrainée, en base réelle', () => 
     const commun = hex(32);
     const parrain = await apporteur({ phoneHash: commun });
     const vise = await apporteur({ parrainCode: parrain.code.toLowerCase(), phoneHash: commun });
-    expect((await controlerALaCandidature(base.prisma, vise.id)).anomalieOuverte).toBe(true);
-    expect(await controlerALaCandidature(base.prisma, vise.id)).toEqual({
+    expect((await controlerALaCandidature(base.prisma, vise.id, ports())).anomalieOuverte).toBe(
+      true
+    );
+    expect(await controlerALaCandidature(base.prisma, vise.id, ports())).toEqual({
       correspondances: ['telephone'],
       anomalieOuverte: false,
     });
     expect(await anomalies(vise.id)).toEqual([OUVERTE]);
+  });
+});
+
+describe('REQ-SEC-031 — l’ouverture, une seule et journalisée, sous des contrôles simultanés', () => {
+  it('REQ-SEC-031 : TÉMOIN DE CONCURRENCE — dix contrôles simultanés du même filleul ouvrent UNE anomalie, et UN événement d’ouverture', async () => {
+    const commun = hex(32);
+    const parrain = await apporteur({ phoneHash: commun });
+    const vise = await apporteur({ parrainCode: parrain.code, phoneHash: commun });
+    const resultats = await Promise.all(
+      Array.from({ length: 10 }, (_, i) =>
+        i % 2 === 0
+          ? controlerALaCandidature(base.prisma, vise.id, ports())
+          : controlerAuChangementDeRib(base.prisma, vise.id, ports())
+      )
+    );
+    expect(resultats.filter((r) => r.anomalieOuverte)).toHaveLength(1);
+    const ouvertes = await base.prisma.anomalie.findMany({
+      where: { apporteurId: vise.id },
+      select: { id: true, statut: true },
+    });
+    expect(ouvertes).toHaveLength(1);
+    const evenements = await base.prisma.evenement.findMany({
+      where: { type: 'anomalie_statut_modifie', agregatId: ouvertes[0]!.id },
+      select: { agregat: true, charge: true },
+    });
+    expect(evenements).toEqual([
+      { agregat: 'anomalie', charge: { de: null, vers: 'ouverte', acteur: { par: 'systeme' } } },
+    ]);
   });
 });
 
@@ -172,7 +209,7 @@ describe('REQ-SEC-031 — au changement de RIB, en base réelle', () => {
     await rib(parrain.id, iban);
     const vise = await apporteur({ parrainCode: parrain.code });
     await rib(vise.id, hex(32));
-    expect(await controlerAuChangementDeRib(base.prisma, vise.id)).toEqual({
+    expect(await controlerAuChangementDeRib(base.prisma, vise.id, ports())).toEqual({
       correspondances: [],
       anomalieOuverte: false,
     });
@@ -180,7 +217,7 @@ describe('REQ-SEC-031 — au changement de RIB, en base réelle', () => {
     // Le RIB change : la nouvelle pièce, en vérification, porte l'IBAN du parrain.
     const autre = await apporteur({ parrainCode: parrain.code });
     await rib(autre.id, iban);
-    expect(await controlerAuChangementDeRib(base.prisma, autre.id)).toEqual({
+    expect(await controlerAuChangementDeRib(base.prisma, autre.id, ports())).toEqual({
       correspondances: ['iban'],
       anomalieOuverte: true,
     });
@@ -195,7 +232,7 @@ describe('REQ-SEC-031 — au changement de RIB, en base réelle', () => {
     const autre = await apporteur({ parrainCode: parrain.code });
     await rib(autre.id, hex(32));
     await rib(parrain.id, iban);
-    expect(await controlerAuChangementDeRib(base.prisma, parrain.id)).toEqual({
+    expect(await controlerAuChangementDeRib(base.prisma, parrain.id, ports())).toEqual({
       correspondances: ['iban'],
       anomalieOuverte: true,
     });
@@ -213,7 +250,7 @@ describe('REQ-SEC-031 — au changement de RIB, en base réelle', () => {
     const vise = await apporteur({ parrainCode: parrain.code });
     await rib(vise.id, iban);
     await identite(vise.id, s);
-    expect(await controlerAuChangementDeRib(base.prisma, vise.id)).toEqual({
+    expect(await controlerAuChangementDeRib(base.prisma, vise.id, ports())).toEqual({
       correspondances: [],
       anomalieOuverte: false,
     });

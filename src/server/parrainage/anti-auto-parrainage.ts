@@ -11,8 +11,16 @@
  * LES DEUX MOMENTS. À la candidature parrainée, et à toute saisie ou modification de RIB — dans les
  * DEUX sens : l'apporteur comme filleul de son parrain, et comme parrain de ses filleuls. Une
  * correspondance ouvre UNE anomalie `auto_parrainage` (DM-12, REQ-DM-033) sur le filleul ; une
- * anomalie déjà ouverte sur lui n'est pas doublée. La décision appartient à la console, qui lit
+ * anomalie déjà ouverte sur lui n'est pas doublée, même sous des contrôles simultanés (verrou
+ * consultatif par filleul, en tête de la transaction). La décision appartient à la console, qui lit
  * l'anomalie : ce module ne refuse rien de lui-même, il marque.
+ *
+ * UN TRAITEMENT DIFFÉRÉ, JAMAIS UN APPEL EN LIGNE (DM-12, texte de la juriste) : « l'ouverture d'une
+ * anomalie se fait par un traitement distinct et différé, jamais au moment du dépôt ». Ces deux
+ * contrôles sont le corps d'une tâche du lanceur qui balaie les candidatures et les RIB récents ;
+ * aucune action de l'apporteur ne les appelle. L'OUVERTURE est journalisée
+ * (`anomalie_statut_modifie`, `de` nul vers `ouverte`, acteur `systeme`) dans la transaction qui crée
+ * l'anomalie, et dans celle-là seule : aucun événement de l'agrégat apporteur n'y est écrit.
  *
  * LES DEUX RÉPONSES. La console reçoit un refus NOMMÉ, avec les familles en cause (`verdictConsole`).
  * L'espace reçoit une réponse NEUTRE et figée, la même qu'il y ait correspondance ou non
@@ -21,6 +29,7 @@
  */
 import type { Prisma, PrismaClient } from '@prisma/client';
 import { normaliserCodeParrainage } from '../../domain/parrainage/code';
+import { ajouterEvenement, type NouvelEvenement } from '../evenement/journal';
 
 /** Les familles d'empreinte comparées, dans l'ordre où elles se nomment. */
 export const FAMILLES_D_EMPREINTE = ['identite', 'courriel', 'telephone', 'iban', 'siren'] as const;
@@ -43,6 +52,14 @@ export interface LigneDuJournal {
   signal: 'auto_parrainage_soupconne';
   moment: MomentDuControle;
   correspondances: FamilleDEmpreinte[];
+}
+
+/** Les ports d'un contrôle : l'horloge, la trace sans donnée de personne, l'écrivain du journal. */
+export interface PortsDuControle {
+  maintenant(): Date;
+  journal?: (ligne: LigneDuJournal) => void;
+  /** L'écrivain du journal, dans la transaction qui crée l'anomalie ; `ajouterEvenement` par défaut. */
+  journaliser?: (tx: Prisma.TransactionClient, e: NouvelEvenement) => Promise<unknown>;
 }
 
 export interface ResultatDuControle {
@@ -158,16 +175,34 @@ async function filleulsDe(client: Client, a: ApporteurLu): Promise<ApporteurLu[]
     .filter((f) => normaliserCodeParrainage(f.parrainCodeCapture) === a.codeParrainage);
 }
 
-/** Ouvre l'anomalie sur le filleul, sauf si une `auto_parrainage` y est déjà ouverte. */
-async function marquer(prisma: PrismaClient, filleulId: string): Promise<boolean> {
+/**
+ * Ouvre l'anomalie sur le filleul, sauf si une `auto_parrainage` y est déjà ouverte. Le verrou
+ * consultatif du filleul, pris en tête, sérialise les contrôles simultanés : le second lit l'anomalie
+ * du premier. L'ouverture est journalisée dans la même transaction, sur l'agrégat ANOMALIE.
+ */
+async function marquer(
+  prisma: PrismaClient,
+  filleulId: string,
+  ports: PortsDuControle
+): Promise<boolean> {
+  const journaliser = ports.journaliser ?? ajouterEvenement;
   return prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`auto_parrainage:${filleulId}`}, 0))`;
     const ouverte = await tx.anomalie.findFirst({
       where: { type: 'auto_parrainage', apporteurId: filleulId, statut: 'ouverte' },
       select: { id: true },
     });
     if (ouverte !== null) return false;
-    await tx.anomalie.create({
+    const creee = await tx.anomalie.create({
       data: { type: 'auto_parrainage', apporteurId: filleulId, score: null },
+      select: { id: true },
+    });
+    await journaliser(tx, {
+      type: 'anomalie_statut_modifie',
+      agregat: 'anomalie',
+      agregatId: creee.id,
+      survenuAt: ports.maintenant(),
+      charge: { de: null, vers: 'ouverte', acteur: { par: 'systeme' } },
     });
     return true;
   });
@@ -178,7 +213,7 @@ async function controler(
   prisma: PrismaClient,
   couples: readonly (readonly [ApporteurLu, ApporteurLu])[],
   moment: MomentDuControle,
-  journal?: (ligne: LigneDuJournal) => void
+  ports: PortsDuControle
 ): Promise<ResultatDuControle> {
   const vues = new Set<FamilleDEmpreinte>();
   let anomalieOuverte = false;
@@ -186,11 +221,11 @@ async function controler(
     const trouvees = correspondances(filleul, parrain);
     if (trouvees.length === 0) continue;
     trouvees.forEach((f) => vues.add(f));
-    if (await marquer(prisma, filleul.id)) anomalieOuverte = true;
+    if (await marquer(prisma, filleul.id, ports)) anomalieOuverte = true;
   }
   const familles = FAMILLES_D_EMPREINTE.filter((f) => vues.has(f));
   if (familles.length > 0) {
-    journal?.({ signal: 'auto_parrainage_soupconne', moment, correspondances: familles });
+    ports.journal?.({ signal: 'auto_parrainage_soupconne', moment, correspondances: familles });
   }
   return { correspondances: familles, anomalieOuverte };
 }
@@ -199,13 +234,13 @@ async function controler(
 export async function controlerALaCandidature(
   prisma: PrismaClient,
   filleulId: string,
-  journal?: (ligne: LigneDuJournal) => void
+  ports: PortsDuControle
 ): Promise<ResultatDuControle> {
   const filleul = await lire(prisma, { id: filleulId });
   if (filleul === null) return aucun();
   const parrain = await parrainDe(prisma, filleul);
   const couples = parrain === null ? [] : [[filleul, parrain] as const];
-  return controler(prisma, couples, 'candidature', journal);
+  return controler(prisma, couples, 'candidature', ports);
 }
 
 /**
@@ -215,7 +250,7 @@ export async function controlerALaCandidature(
 export async function controlerAuChangementDeRib(
   prisma: PrismaClient,
   apporteurId: string,
-  journal?: (ligne: LigneDuJournal) => void
+  ports: PortsDuControle
 ): Promise<ResultatDuControle> {
   const a = await lire(prisma, { id: apporteurId });
   if (a === null) return aucun();
@@ -225,5 +260,5 @@ export async function controlerAuChangementDeRib(
     ...(parrain === null ? [] : [[a, parrain] as const]),
     ...filleuls.map((f) => [f, a] as const),
   ];
-  return controler(prisma, couples, 'rib', journal);
+  return controler(prisma, couples, 'rib', ports);
 }

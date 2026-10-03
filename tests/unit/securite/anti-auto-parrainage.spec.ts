@@ -27,6 +27,7 @@ import {
   verdictConsole,
   type EmpreintesDUnApporteur,
   type LigneDuJournal,
+  type PortsDuControle,
 } from '../../../src/server/parrainage/anti-auto-parrainage';
 
 const H = (c: string) => c.repeat(64);
@@ -142,16 +143,36 @@ function baseSimulee(lignes: Ligne[], anomaliesOuvertes: string[] = []) {
     create: async (args: unknown) => {
       appels.push({ quoi: 'anomalie.create', args });
       creees.push(args);
-      return { id: 'neuve' };
+      return { id: '55555555-5555-4555-8555-555555555555' };
+    },
+  };
+  const evenements: unknown[] = [];
+  const tx = {
+    apporteur,
+    anomalie,
+    $executeRaw: async (gabarit: TemplateStringsArray, ...valeurs: unknown[]) => {
+      appels.push({ quoi: '$executeRaw', args: { sql: gabarit.join('?'), valeurs } });
+      return 1;
     },
   };
   const prisma = {
     apporteur,
     anomalie,
-    $transaction: async <T>(f: (tx: unknown) => Promise<T>) => f({ apporteur, anomalie }),
+    $transaction: async <T>(f: (tx: unknown) => Promise<T>) => f(tx),
   };
-  return { prisma: prisma as unknown as PrismaClient, appels, creees };
+  /** Les ports d'un contrôle : l'horloge figée, et un écrivain du journal qui enregistre. */
+  const ports = (journal?: LigneDuJournal[]): PortsDuControle => ({
+    maintenant: () => T0,
+    ...(journal === undefined ? {} : { journal: (l: LigneDuJournal) => journal.push(l) }),
+    journaliser: async (t, e) => {
+      expect(t).toBe(tx);
+      evenements.push(e);
+    },
+  });
+  return { prisma: prisma as unknown as PrismaClient, appels, creees, evenements, ports };
 }
+
+const T0 = new Date('2026-10-03T08:00:00.000Z');
 
 const PARRAIN: Ligne = {
   id: 'parrain',
@@ -178,15 +199,33 @@ function filleul(e: Partial<Ligne> = {}): Ligne {
 
 const ANOMALIE_ATTENDUE = {
   data: { type: 'auto_parrainage', apporteurId: 'filleul', score: null },
+  select: { id: true },
+};
+
+/** L'événement d'OUVERTURE, sur l'agrégat anomalie : ni apporteur, ni empreinte. */
+const OUVERTURE_JOURNALISEE = {
+  type: 'anomalie_statut_modifie',
+  agregat: 'anomalie',
+  agregatId: '55555555-5555-4555-8555-555555555555',
+  survenuAt: new Date('2026-10-03T08:00:00.000Z'),
+  charge: { de: null, vers: 'ouverte', acteur: { par: 'systeme' } },
 };
 
 describe('REQ-SEC-031 — à la candidature parrainée, une correspondance ouvre UNE anomalie', () => {
   it('REQ-SEC-031 : TÉMOIN À DEUX FACES — même téléphone : une anomalie auto_parrainage sur le filleul ; aucune correspondance : rien n’est écrit', async () => {
     const meme = baseSimulee([PARRAIN, filleul({ phoneHash: H('b') })]);
     const journal: LigneDuJournal[] = [];
-    const r = await controlerALaCandidature(meme.prisma, 'filleul', (l) => journal.push(l));
+    const r = await controlerALaCandidature(meme.prisma, 'filleul', meme.ports(journal));
     expect(r).toEqual({ correspondances: ['telephone'], anomalieOuverte: true });
     expect(meme.creees).toEqual([ANOMALIE_ATTENDUE]);
+    expect(meme.evenements).toEqual([OUVERTURE_JOURNALISEE]);
+    // Le verrou du filleul est pris en tête de la transaction, avant toute lecture d'anomalie.
+    const iVerrou = meme.appels.findIndex((a) => a.quoi === '$executeRaw');
+    expect(meme.appels[iVerrou]?.args).toEqual({
+      sql: 'SELECT pg_advisory_xact_lock(hashtextextended(?, 0))',
+      valeurs: ['auto_parrainage:filleul'],
+    });
+    expect(iVerrou).toBeLessThan(meme.appels.findIndex((a) => a.quoi === 'anomalie.findFirst'));
     expect(journal).toEqual([
       {
         signal: 'auto_parrainage_soupconne',
@@ -198,9 +237,10 @@ describe('REQ-SEC-031 — à la candidature parrainée, une correspondance ouvre
     const distinct = baseSimulee([PARRAIN, filleul()]);
     const journalVide: LigneDuJournal[] = [];
     expect(
-      await controlerALaCandidature(distinct.prisma, 'filleul', (l) => journalVide.push(l))
+      await controlerALaCandidature(distinct.prisma, 'filleul', distinct.ports(journalVide))
     ).toEqual({ correspondances: [], anomalieOuverte: false });
     expect(distinct.creees).toEqual([]);
+    expect(distinct.evenements).toEqual([]);
     expect(journalVide).toEqual([]);
   });
 
@@ -209,7 +249,7 @@ describe('REQ-SEC-031 — à la candidature parrainée, une correspondance ouvre
       PARRAIN,
       filleul({ parrainCodeCapture: '  axabcdef ', emailHash: H('a') }),
     ]);
-    expect(await controlerALaCandidature(b.prisma, 'filleul')).toEqual({
+    expect(await controlerALaCandidature(b.prisma, 'filleul', b.ports())).toEqual({
       correspondances: ['courriel'],
       anomalieOuverte: true,
     });
@@ -222,14 +262,17 @@ describe('REQ-SEC-031 — à la candidature parrainée, une correspondance ouvre
   it('REQ-SEC-031 : sans parrain (aucun code, code mal formé, code inconnu, filleul inconnu), rien n’est écrit', async () => {
     for (const capture of [null, 'pas-un-code', 'AXQQQQQQ']) {
       const b = baseSimulee([PARRAIN, filleul({ parrainCodeCapture: capture, emailHash: H('a') })]);
-      expect(await controlerALaCandidature(b.prisma, 'filleul'), String(capture)).toEqual({
+      expect(
+        await controlerALaCandidature(b.prisma, 'filleul', b.ports()),
+        String(capture)
+      ).toEqual({
         correspondances: [],
         anomalieOuverte: false,
       });
       expect(b.creees).toEqual([]);
     }
     const b = baseSimulee([PARRAIN]);
-    expect(await controlerALaCandidature(b.prisma, 'inconnu')).toEqual({
+    expect(await controlerALaCandidature(b.prisma, 'inconnu', b.ports())).toEqual({
       correspondances: [],
       anomalieOuverte: false,
     });
@@ -237,11 +280,12 @@ describe('REQ-SEC-031 — à la candidature parrainée, une correspondance ouvre
 
   it('REQ-SEC-031 : une anomalie auto_parrainage déjà OUVERTE sur le filleul n’est pas doublée', async () => {
     const b = baseSimulee([PARRAIN, filleul({ ibans: [H('c')] })], ['filleul']);
-    expect(await controlerALaCandidature(b.prisma, 'filleul')).toEqual({
+    expect(await controlerALaCandidature(b.prisma, 'filleul', b.ports())).toEqual({
       correspondances: ['iban'],
       anomalieOuverte: false,
     });
     expect(b.creees).toEqual([]);
+    expect(b.evenements).toEqual([]);
     expect(b.appels).toContainEqual({
       quoi: 'anomalie.findFirst',
       args: {
@@ -253,7 +297,7 @@ describe('REQ-SEC-031 — à la candidature parrainée, une correspondance ouvre
 
   it('REQ-SEC-031 : une pièce RIB lue sans empreinte ne compte pas, même face à une autre sans empreinte', async () => {
     const b = baseSimulee([{ ...PARRAIN, ibans: [null] }, filleul({ ibans: [null] })]);
-    expect(await controlerALaCandidature(b.prisma, 'filleul')).toEqual({
+    expect(await controlerALaCandidature(b.prisma, 'filleul', b.ports())).toEqual({
       correspondances: [],
       anomalieOuverte: false,
     });
@@ -261,7 +305,7 @@ describe('REQ-SEC-031 — à la candidature parrainée, une correspondance ouvre
 
   it('REQ-SEC-031 : les empreintes se lisent sur les pièces RIB non remplacées et les identités de facturation en cours', async () => {
     const b = baseSimulee([PARRAIN, filleul()]);
-    await controlerALaCandidature(b.prisma, 'filleul');
+    await controlerALaCandidature(b.prisma, 'filleul', b.ports());
     const lecture = b.appels.find((a) => a.quoi === 'apporteur.findUnique');
     expect(lecture?.args).toEqual({
       where: { id: 'filleul' },
@@ -285,7 +329,7 @@ describe('REQ-SEC-031 — au changement de RIB, dans les deux sens', () => {
   it('REQ-SEC-031 : le filleul qui saisit l’IBAN de son parrain ouvre une anomalie sur lui', async () => {
     const b = baseSimulee([PARRAIN, filleul({ ibans: [H('c')] })]);
     const journal: LigneDuJournal[] = [];
-    expect(await controlerAuChangementDeRib(b.prisma, 'filleul', (l) => journal.push(l))).toEqual({
+    expect(await controlerAuChangementDeRib(b.prisma, 'filleul', b.ports(journal))).toEqual({
       correspondances: ['iban'],
       anomalieOuverte: true,
     });
@@ -299,7 +343,7 @@ describe('REQ-SEC-031 — au changement de RIB, dans les deux sens', () => {
     const autre: Ligne = { ...filleul(), id: 'autre-filleul', ibans: [H('7')] };
     const vise = filleul({ ibans: [H('c')] });
     const b = baseSimulee([PARRAIN, vise, autre]);
-    expect(await controlerAuChangementDeRib(b.prisma, 'parrain')).toEqual({
+    expect(await controlerAuChangementDeRib(b.prisma, 'parrain', b.ports())).toEqual({
       correspondances: ['iban'],
       anomalieOuverte: true,
     });
@@ -308,21 +352,21 @@ describe('REQ-SEC-031 — au changement de RIB, dans les deux sens', () => {
 
   it('REQ-SEC-031 : un apporteur sans parrain ni filleul, ou sans correspondance, n’écrit rien', async () => {
     const seul = baseSimulee([{ ...PARRAIN }]);
-    expect(await controlerAuChangementDeRib(seul.prisma, 'parrain')).toEqual({
+    expect(await controlerAuChangementDeRib(seul.prisma, 'parrain', seul.ports())).toEqual({
       correspondances: [],
       anomalieOuverte: false,
     });
     const distinct = baseSimulee([PARRAIN, filleul()]);
-    expect(await controlerAuChangementDeRib(distinct.prisma, 'filleul')).toEqual({
+    expect(await controlerAuChangementDeRib(distinct.prisma, 'filleul', distinct.ports())).toEqual({
       correspondances: [],
       anomalieOuverte: false,
     });
-    expect(await controlerAuChangementDeRib(distinct.prisma, 'parrain')).toEqual({
+    expect(await controlerAuChangementDeRib(distinct.prisma, 'parrain', distinct.ports())).toEqual({
       correspondances: [],
       anomalieOuverte: false,
     });
     expect(distinct.creees).toEqual([]);
-    expect(await controlerAuChangementDeRib(distinct.prisma, 'inconnu')).toEqual({
+    expect(await controlerAuChangementDeRib(distinct.prisma, 'inconnu', distinct.ports())).toEqual({
       correspondances: [],
       anomalieOuverte: false,
     });
@@ -331,7 +375,7 @@ describe('REQ-SEC-031 — au changement de RIB, dans les deux sens', () => {
   it('REQ-SEC-031 : les filleuls se cherchent par le code du parrain, et seul le code canonique exact retient', async () => {
     const proche = { ...filleul(), id: 'proche', parrainCodeCapture: 'AXABCDEFG', ibans: [H('c')] };
     const b = baseSimulee([PARRAIN, proche]);
-    expect(await controlerAuChangementDeRib(b.prisma, 'parrain')).toEqual({
+    expect(await controlerAuChangementDeRib(b.prisma, 'parrain', b.ports())).toEqual({
       correspondances: [],
       anomalieOuverte: false,
     });
