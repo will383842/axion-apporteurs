@@ -24,7 +24,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NOMS_DES_SECRETS } from '../../../src/lib/env';
 import { horlogeFigee } from '../../../src/domain/temps/horloge';
-import { COMPTEURS, limiter, sujetDepuisEmpreinte } from '../../../src/server/securite/rate-limit';
+import {
+  COMPTEURS,
+  limiter,
+  sujetDepuisEmpreinte,
+  type VerdictDeLimite,
+} from '../../../src/server/securite/rate-limit';
+import { clesPii } from '../../../src/server/securite/pii';
 import { readFileSync, readdirSync } from 'node:fs';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
@@ -464,7 +470,9 @@ describe('REQ-SEC-003 — (a) les adaptateurs jugent la population à chaque lec
       'utilisateurConsole.findUnique': { id: 'u', desactiveAt: null },
     });
     expect(
-      await lectureDuCompteConsole(prisma, {} as never).trouverUtilisateurConsole('e'.repeat(64))
+      await lectureDuCompteConsole(prisma, clesPii(ENV_PROD)).trouverUtilisateurConsole(
+        'e'.repeat(64)
+      )
     ).toEqual({ id: 'u', desactiveAt: null });
     expect(appels[0]!.args).toEqual({
       where: { emailHash: 'e'.repeat(64) },
@@ -596,7 +604,7 @@ describe('REQ-SEC-003 — (3) la redirection de la console est BORNÉE à la con
     expect(destinationConsoleBornee('/console/a/../apporteurs')).toBe('/console/apporteurs');
     for (const hostile of [
       '//exemple.invalid/console',
-      '/\exemple.invalid',
+      '/\\exemple.invalid',
       'https://exemple.invalid/console',
       'javascript:alert(1)',
       'console/apporteurs',
@@ -668,10 +676,24 @@ describe('REQ-SEC-062 — la console a ses propres compteurs, nommés à l’ép
 
   it('REQ-SEC-062 : TÉMOIN À DEUX FACES — un compteur ÉPUISÉ est signalé sous sa CLÉ ; un compteur admis ne signale rien', async () => {
     const { code, avertissements } = productionConsole();
-    vi.mocked(limiter).mockResolvedValueOnce({ autorise: true, panne: false } as never);
+    const admis: VerdictDeLimite = {
+      autorise: true,
+      restant: 1,
+      repriseAt: null,
+      panne: false,
+      motif: 'admis',
+    };
+    const epuise: VerdictDeLimite = {
+      autorise: false,
+      restant: 0,
+      repriseAt: INSTANT + 60_000,
+      panne: false,
+      motif: 'limite_atteinte',
+    };
+    vi.mocked(limiter).mockResolvedValueOnce(admis);
     await code.compterAdresseCode('0123456789abcdef', INSTANT);
     expect(avertissements).toEqual([]);
-    vi.mocked(limiter).mockResolvedValueOnce({ autorise: false, panne: false } as never);
+    vi.mocked(limiter).mockResolvedValueOnce(epuise);
     await code.compterCourrielCode('a1'.repeat(32), INSTANT);
     expect(avertissements).toEqual(['compteur_epuise:console-code-courriel']);
     expect(avertissements.join()).not.toContain('a1a1');
