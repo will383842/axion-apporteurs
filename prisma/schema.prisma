@@ -76,6 +76,10 @@ enum TypeEvenementJournal {
   attribution_porteur_reaffecte
   piece_kyc_statut_modifie
   demande_confirmation_etat_modifie
+  anomalie_statut_modifie
+  contestation_modifiee
+  rattachement_manuel_modifie
+  anomalie_gel_modifie
 
   @@map("type_evenement_journal")
 }
@@ -89,6 +93,7 @@ enum AgregatJournal {
   piece_kyc
   contrat
   demande_confirmation
+  anomalie
 
   @@map("agregat_journal")
 }
@@ -294,6 +299,10 @@ model Apporteur {
   piecesKyc               PieceKyc[]
   notificationsEspace     NotificationEspace[]
   preferencesNotification PreferenceNotification[]
+  verifications           Verification[]
+  alertesLiberation       AlerteLiberation[]
+  anomalies               Anomalie[]
+  contestations           Contestation[]
 
   @@index([phoneHash])
   @@map("apporteurs")
@@ -395,8 +404,12 @@ model UtilisateurConsole {
 
   liensMagiques           LienMagique[]
   sessionsEspace          SessionEspace[]
-  attributions            Attribution[]   @relation("AttributionsDuConseiller")
-  suspensionsDePeremption Attribution[]   @relation("SuspensionsDePeremption")
+  attributions            Attribution[]        @relation("AttributionsDuConseiller")
+  suspensionsDePeremption Attribution[]        @relation("SuspensionsDePeremption")
+  verifications           Verification[]
+  anomaliesTraitees       Anomalie[]
+  rattachementsDecides    RattachementManuel[]
+  contestationsRepondues  Contestation[]
   qualificationsSaisies   Qualification[]
 
   @@map("utilisateurs_console")
@@ -861,6 +874,9 @@ model Attribution {
   demandeConfirmation   DemandeConfirmation?
   demandesDroitsContact DemandeDroitContact[]
   notificationsEspace   NotificationEspace[]
+  anomalies             Anomalie[]
+  rattachementsManuels  RattachementManuel[]
+  contestations         Contestation[]
   qualifications        Qualification[]
 
   @@index([apporteurId])
@@ -877,16 +893,17 @@ model Attribution {
 /// Un dépôt refusé (REQ-DM-043) : de quoi contester, aucune coordonnée du contact. Ajout seul,
 /// sans exception (gabarit `refuser_modification_sauf()`, SQL brut). Réservé aux apporteurs.
 model DepotRefuse {
-  id           String          @id @default(uuid()) @db.Uuid
-  apporteurId  String          @map("apporteur_id") @db.Uuid
-  apporteur    Apporteur       @relation(fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  id            String          @id @default(uuid()) @db.Uuid
+  apporteurId   String          @map("apporteur_id") @db.Uuid
+  apporteur     Apporteur       @relation(fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   /// Effacé douze mois après le refus (DM-53, partners/ADR-0030) : la ligne reste, sans lui.
-  siren        String?         @db.Char(9)
-  motif        MotifRefusDepot
-  canal        CanalDepot
-  refuseAt     DateTime        @map("refuse_at") @db.Timestamptz(3)
+  siren         String?         @db.Char(9)
+  motif         MotifRefusDepot
+  canal         CanalDepot
+  refuseAt      DateTime        @map("refuse_at") @db.Timestamptz(3)
   /// La date de la purge du SIREN, liée à lui (CHECK) ; écrite une fois (gabarit).
-  sirenPurgeAt DateTime?       @map("siren_purge_at") @db.Timestamptz(3)
+  sirenPurgeAt  DateTime?       @map("siren_purge_at") @db.Timestamptz(3)
+  contestations Contestation[]
 
   @@index([apporteurId])
   @@index([siren])
@@ -987,6 +1004,193 @@ model RevisionDemandeConfirmation {
 
   @@index([demandeId])
   @@map("revisions_demande_confirmation")
+}
+
+// ── DM-12 : vérifications, alertes de libération, anomalies, rattachements manuels, contestations ──
+// Forme d'A02 (2026-10-03). Les CHECK, les index partiels, les fonctions et les déclencheurs vivent
+// en SQL brut dans la migration (partners/ADR-0015).
+
+/// Le résultat d'une vérification d'entreprise (REQ-DM-032), journal serveur, jamais exposé tel quel.
+enum ResultatVerification {
+  libre
+  suivie
+  cliente
+  liste_noire
+  fermee
+
+  @@map("resultat_verification")
+}
+
+/// Le type d'une anomalie (REQ-DM-033) : la DÉCLARATION seule, jamais le rythme (REQ-SEC-017,
+/// arbitrage de la juriste du 2026-10-03).
+enum TypeAnomalie {
+  sincerite
+  auto_parrainage
+
+  @@map("type_anomalie")
+}
+
+/// Le statut d'une anomalie : elle ne quitte `ouverte` qu'une fois, sans retour.
+enum StatutAnomalie {
+  ouverte
+  levee
+  confirmee
+
+  @@map("statut_anomalie")
+}
+
+/// Ce qui prouve le lien de contrôle d'un rattachement manuel (contrat art. 3.6) : une pièce publique
+/// de l'entreprise, jamais un texte libre (restriction de la sécurité).
+enum SourceLienControle {
+  rne
+  kbis
+  statuts
+  bodacc
+  comptes_annuels
+
+  @@map("source_lien_controle")
+}
+
+/// L'objet d'une contestation écrite (REQ-DM-043, REQ-DM-034).
+enum ObjetContestation {
+  refus_depot
+  annulation_attribution
+  demande_rattachement
+
+  @@map("objet_contestation")
+}
+
+/// Une vérification d'entreprise, en ajout seul (REQ-DM-032, REQ-SEC-021). Un porteur et un seul :
+/// l'apporteur ou le conseiller salarié (W19, CHECK et déclencheur). Le plafond de vérifications est
+/// un COMPTE, jamais une colonne. Seule l'empreinte d'adresse réseau se purge, avec sa date.
+model Verification {
+  id                      String               @id @default(uuid()) @db.Uuid
+  apporteurId             String?              @map("apporteur_id") @db.Uuid
+  apporteur               Apporteur?           @relation(fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  utilisateurConsoleId    String?              @map("utilisateur_console_id") @db.Uuid
+  utilisateurConsole      UtilisateurConsole?  @relation(fields: [utilisateurConsoleId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  siren                   String               @db.Char(9)
+  resultat                ResultatVerification
+  ipHash                  String?              @map("ip_hash") @db.Char(16)
+  empreinteReseauPurgeeAt DateTime?            @map("empreinte_reseau_purgee_at") @db.Timestamptz(3)
+  /// La purge du porteur à l'échéance du registre, posée une fois.
+  porteurPurgeAt          DateTime?            @map("porteur_purge_at") @db.Timestamptz(3)
+  verifieeAt              DateTime             @default(now()) @map("verifiee_at") @db.Timestamptz(3)
+
+  @@index([apporteurId])
+  @@index([utilisateurConsoleId])
+  @@index([siren])
+  @@map("verifications")
+}
+
+/// Une alerte de libération d'une entreprise suivie (REQ-DM-032) : une seule en attente par
+/// (apporteur, SIREN), index partiel ; l'envoi se pose une fois.
+model AlerteLiberation {
+  id               String     @id @default(uuid()) @db.Uuid
+  apporteurId      String?    @map("apporteur_id") @db.Uuid
+  apporteur        Apporteur? @relation(fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  siren            String     @db.Char(9)
+  creeAt           DateTime   @default(now()) @map("cree_at") @db.Timestamptz(3)
+  envoyeeAt        DateTime?  @map("envoyee_at") @db.Timestamptz(3)
+  /// La purge de l'apporteur à l'échéance du registre, posée une fois.
+  apporteurPurgeAt DateTime?  @map("apporteur_purge_at") @db.Timestamptz(3)
+
+  @@index([apporteurId])
+  @@map("alertes_liberation")
+}
+
+/// Une anomalie (REQ-DM-033). Le score n'existe que pour la sincérité ; la clôture pose statut,
+/// date, auteur et justification ensemble, une fois, sans retour (fonction dédiée).
+model Anomalie {
+  id                    String              @id @default(uuid()) @db.Uuid
+  type                  TypeAnomalie
+  score                 Int?                @db.SmallInt
+  apporteurId           String?             @map("apporteur_id") @db.Uuid
+  apporteur             Apporteur?          @relation(fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  attributionId         String?             @map("attribution_id") @db.Uuid
+  attribution           Attribution?        @relation(fields: [attributionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  statut                StatutAnomalie      @default(ouverte)
+  ouverteAt             DateTime            @default(now()) @map("ouverte_at") @db.Timestamptz(3)
+  traiteParId           String?             @map("traite_par_id") @db.Uuid
+  traitePar             UtilisateurConsole? @relation(fields: [traiteParId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  traiteAt              DateTime?           @map("traite_at") @db.Timestamptz(3)
+  /// La justification, CHIFFRÉE (`CHAMPS_PII`) : elle porte un soupçon sur une personne. Posée à la
+  /// clôture, vidée par la purge seule.
+  justificationChiffre  Bytes?              @map("justification_chiffre")
+  justificationPurgeeAt DateTime?           @map("justification_purgee_at") @db.Timestamptz(3)
+  /// L'ANONYMISATION : tout ce qui désigne une personne est vidé ; restent l'id, le type, le statut
+  /// et les mois d'ouverture et de traitement (forme d'A02).
+  anonymiseeAt          DateTime?           @map("anonymisee_at") @db.Timestamptz(3)
+  /// La fin réelle de la mesure fondée sur une anomalie confirmée, posée une fois, jamais avant
+  /// `traiteAt` ; elle fait courir l'échéance de l'anonymisation.
+  mesureTermineeAt      DateTime?           @map("mesure_terminee_at") @db.Timestamptz(3)
+  /// Le gel pour litige : posé une fois avec sa référence (un numéro, jamais un nom), levé une fois.
+  gelLitigeAt           DateTime?           @map("gel_litige_at") @db.Timestamptz(3)
+  gelLitigeLeveAt       DateTime?           @map("gel_litige_leve_at") @db.Timestamptz(3)
+  gelLitigeRef          String?             @map("gel_litige_ref") @db.VarChar(64)
+
+  @@index([apporteurId])
+  @@index([attributionId])
+  @@index([traiteParId])
+  @@map("anomalies")
+}
+
+/// Un rattachement manuel d'une commande à une attribution (REQ-DM-034) : justifié (vingt caractères
+/// utiles au moins), lien de contrôle antérieur au dépôt (déclencheur), un seul actif par SIREN de
+/// commande (index partiel) ; la révocation se pose une fois.
+model RattachementManuel {
+  id                     String             @id @default(uuid()) @db.Uuid
+  attributionId          String             @map("attribution_id") @db.Uuid
+  attribution            Attribution        @relation(fields: [attributionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  sirenCommande          String             @map("siren_commande") @db.Char(9)
+  /// La justification, CHIFFRÉE (`CHAMPS_PII`) : elle peut nommer une personne ; vidée par la purge.
+  justificationChiffre   Bytes?             @map("justification_chiffre")
+  justificationPurgeeAt  DateTime?          @map("justification_purgee_at") @db.Timestamptz(3)
+  /// La date de la pièce qui établit le lien, au début de son jour à Paris ; au plus tard au dépôt.
+  lienControleEtabliAt   DateTime           @map("lien_controle_etabli_at") @db.Timestamptz(3)
+  lienControleSourceType SourceLienControle @map("lien_controle_source_type")
+  /// La référence de la pièce : identifiant court, un chiffre au moins, ni phrase ni nom (CHECK).
+  lienControleSourceRef  String             @map("lien_controle_source_ref") @db.VarChar(64)
+  decideParId            String             @map("decide_par_id") @db.Uuid
+  decidePar              UtilisateurConsole @relation(fields: [decideParId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  decideAt               DateTime           @default(now()) @map("decide_at") @db.Timestamptz(3)
+  revoqueAt              DateTime?          @map("revoque_at") @db.Timestamptz(3)
+
+  @@index([attributionId])
+  @@index([decideParId])
+  @@map("rattachements_manuels")
+}
+
+/// Une contestation écrite (REQ-DM-043, et la DEMANDE de rattachement de REQ-DM-034). La cible suit
+/// l'objet (CHECK) ; texte et réponse sont chiffrés (`CHAMPS_PII`) ; la réponse se pose ensemble et
+/// une fois, la purge vide texte et réponse en posant sa date. L'échéance de réponse se DÉRIVE de `recueAt` et de la SSOT : aucune colonne.
+model Contestation {
+  id              String              @id @default(uuid()) @db.Uuid
+  apporteurId     String              @map("apporteur_id") @db.Uuid
+  apporteur       Apporteur           @relation(fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  objet           ObjetContestation
+  depotRefuseId   String?             @map("depot_refuse_id") @db.Uuid
+  depotRefuse     DepotRefuse?        @relation(fields: [depotRefuseId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  attributionId   String?             @map("attribution_id") @db.Uuid
+  attribution     Attribution?        @relation(fields: [attributionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  texteChiffre    Bytes?              @map("texte_chiffre")
+  recueAt         DateTime            @default(now()) @map("recue_at") @db.Timestamptz(3)
+  reponseChiffre  Bytes?              @map("reponse_chiffre")
+  repondueParId   String?             @map("repondue_par_id") @db.Uuid
+  reponduePar     UtilisateurConsole? @relation(fields: [repondueParId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  repondueAt      DateTime?           @map("repondue_at") @db.Timestamptz(3)
+  /// La purge du texte et de la réponse, tracée et posée une fois (fonction dédiée).
+  purgeeAt        DateTime?           @map("purgee_at") @db.Timestamptz(3)
+  /// Le gel pour litige : posé une fois avec sa référence (un numéro, jamais un nom), levé une fois.
+  gelLitigeAt     DateTime?           @map("gel_litige_at") @db.Timestamptz(3)
+  gelLitigeLeveAt DateTime?           @map("gel_litige_leve_at") @db.Timestamptz(3)
+  gelLitigeRef    String?             @map("gel_litige_ref") @db.VarChar(64)
+
+  @@index([apporteurId])
+  @@index([depotRefuseId])
+  @@index([attributionId])
+  @@index([repondueParId])
+  @@map("contestations")
 }
 
 /// DM-09 (REQ-DM-008, HYP-A02-VOCABULAIRE-QUALIFICATION) : le résultat d'un appel de qualification.

@@ -101,6 +101,11 @@ export const LISTE_BLANCHE_PAR_CONTENU: { chemin: string; motif: string; lignes:
     lignes: ['"$id": "https://axion-ia.com/contrats/partners/evenements/v3",'],
   },
   {
+    chemin: 'src/server/integrations/axionia/relecture.ts',
+    motif: 'le chemin de la route de relecture d’axion-ia (INT-T08-P), pas la table',
+    lignes: ["export const CHEMIN_RELECTURE = '/api/partners/evenements';"],
+  },
+  {
     chemin: 'packages/contracts/events.ts',
     motif: 'un paramètre `evenement` du contrat inter-dépôts et l’URL de son schéma, sans client',
     lignes: [
