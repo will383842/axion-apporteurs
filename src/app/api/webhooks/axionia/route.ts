@@ -4,13 +4,16 @@
  *
  * Tout le chemin — secret, borne du corps, signature, enveloppe, inscription — vit dans
  * `src/server/integrations/axionia/reception.ts`. Cette route ne fait que lui passer l'environnement
- * du processus, lu À CHAQUE APPEL, l'horloge, la base, l'alerteur plafonné du processus, et le
- * travail de fond confié à `after()` : il s'exécute APRÈS la réponse, jamais dans la requête.
+ * du processus, lu À CHAQUE APPEL, l'horloge, la base et l'alerteur plafonné du processus.
+ *
+ * AUCUN TRAVAIL DE FOND ICI (INT-T49). La route inscrit, et c'est tout : le passage des événements
+ * reçus et la reprise des attentes appartiennent au lanceur des passages planifiés (GOV-137,
+ * `pnpm taches:lancer`, chaque minute), qui les joue sous le verrou de la tâche. Une inscription
+ * attend donc au plus le passage suivant ; aucun chemin d'appel ne joue le passage hors du lanceur.
  *
  * L'alerte s'écrit au journal en `error` : la porte, un motif fermé, et le nombre de refus tus
  * depuis la précédente. Jamais un en-tête, jamais un extrait du corps.
  */
-import { after } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import { horlogeSysteme } from '../../../../lib/horloge';
 import { creerJournal } from '../../../../lib/logger';
@@ -19,9 +22,6 @@ import {
   recevoirEvenementAxionia,
 } from '../../../../server/integrations/axionia/reception';
 import { creerAlerteurPlafonne } from '../../../../server/securite/primitives-de-porte';
-import { passageDesEvenementsRecus } from '../../../../server/taches/inscriptions';
-import { cleDuVerrou, verrouConsultatif } from '../../../../server/taches/lanceur';
-import { TACHE_DE_RECEPTION } from '../../../../server/queue/workers/evenement-recu';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -38,23 +38,8 @@ export function POST(requete: Request): Promise<Response> {
     maintenantMs: horlogeSysteme.maintenant(),
     depot: depotDeReception(prisma),
     alerteur,
-    declencher: () =>
-      after(async () => {
-        try {
-          // Le passage est composé une seule fois, partagé avec le lanceur des passages planifiés
-          // (GOV-137) : `src/server/taches/inscriptions.ts`. Ici, il écrit son propre battement.
-          // INT-T55 : sous le MÊME verrou que le lanceur. Tenu ailleurs, ce passage saute : les
-          // événements restent `recu`, et le passage qui tient le verrou ou le suivant les prend.
-          await verrouConsultatif(prisma).sous(
-            cleDuVerrou(TACHE_DE_RECEPTION),
-            passageDesEvenementsRecus(prisma)
-          );
-        } catch (erreur) {
-          journal.error('travail_evenements_recus_en_echec', {
-            nom: erreur instanceof Error ? erreur.name : 'Erreur',
-          });
-        }
-      }),
+    // Le lanceur prend l'inscription au passage suivant (INT-T49).
+    declencher: () => undefined,
   });
 }
 

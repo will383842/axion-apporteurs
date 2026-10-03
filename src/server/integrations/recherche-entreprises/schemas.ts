@@ -62,6 +62,9 @@ const schemaSiegeDuTiers = z.object({
   departement: texteOuNul,
   region: texteOuNul,
   statut_diffusion_etablissement: z.string(),
+  // EXT-T08 (REQ-EXT-015) : WGS84, en chaînes décimales ; absentes d'une réponse ancienne.
+  latitude: texteOuNul.optional(),
+  longitude: texteOuNul.optional(),
 });
 
 const schemaResultatDuTiers = z.object({
@@ -170,8 +173,15 @@ export const schemaFicheEntreprise = z
         libelle_commune: texteOuNul,
         departement: texteOuNul,
         region: texteOuNul,
+        // EXT-T08 (REQ-EXT-015) : la position du siège en micro-degrés entiers, calculée par le
+        // serveur ; la paire ensemble, comme le CHECK `attributions_coordonnees`.
+        latitude_microdeg: z.number().int().min(-90_000_000).max(90_000_000).nullable(),
+        longitude_microdeg: z.number().int().min(-180_000_000).max(180_000_000).nullable(),
       })
-      .strict(),
+      .strict()
+      .refine((s) => (s.latitude_microdeg === null) === (s.longitude_microdeg === null), {
+        message: 'coordonnees_incompletes',
+      }),
     dirigeants: z.array(schemaDirigeantPersiste),
   })
   .strict();

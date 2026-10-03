@@ -2043,7 +2043,7 @@ export const EXEMPTIONS_FIGEES: ExemptionFigee[] = [
   {
     nature: 'mention_paths_en_partie_gabarit',
     tache: 'T-ARG-010',
-    site: 'docs/gates.json(tests/domain/transitions.spec.ts).verifie:1',
+    site: 'docs/gates.json(tests/unit/domaine/attribution-machine-a-etats.spec.ts).verifie:1',
   },
   {
     nature: 'mention_paths_non_resolus',

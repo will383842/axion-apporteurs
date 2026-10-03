@@ -39,6 +39,14 @@
 - [ ] **Provisionnement** (REQ-INT-031) : aucune ressource nommée `axion-partners-postgres`,
       `axion-partners-redis` ou `axion-partners` n'existe hors du projet `Axion-Partners` de la plateforme.
       _Porteur : Williams (constat dans la plateforme)._
+- [ ] **Rôle d'exécution du serveur** (QA-T62, REQ-DM-024) : le secret `PARTNERS_DB_EXECUTION_SECRET`
+      (au moins 32 caractères parmi `A-Z a-z 0-9 _ . ~ -`) est posé dans l'environnement `production`
+      de la forge, `Provisionnement Coolify` est relancé (il pose `DATABASE_MIGRATION_URL` et
+      `DATABASE_URL`), puis l'application est redéployée : l'entrée de l'image provisionne
+      `partners_app` et relance le serveur sous lui. Constat en production, connecté sous
+      `DATABASE_URL` : `rolsuper` faux, aucune appartenance à `partners_journal`, et
+      `ALTER TABLE evenements DISABLE TRIGGER ALL` refusé en `42501`. _Porteur : Williams (secret),
+      constat de l'auteur._
 - [ ] **Données personnelles dans le dépôt public** : tant que la garde `detectPii` n'est pas armée,
       toute PR qui touche `tests/fixtures/**` ou `docs/spec/**` passe par un scan à la main de la lentille
       `securite`. La case se coche à l'armement de `detectPii`. _Porteur : la lentille `securite`,
@@ -69,6 +77,14 @@
 - [ ] `TELEGRAM_BOT_TOKEN` et `TELEGRAM_CHAT_ID` posés dans l'environnement `production`, et une alerte
       `rechiffrement_echoue` réellement REÇUE dans le salon (échec provoqué pendant l'exercice).
       _Porteur : Williams (secrets, réception), l'auteur (consignation)._
+- [ ] **Canal d'alerte du SERVEUR** (INT-T49, INT-T54) : `TELEGRAM_BOT_TOKEN` (secret de l'environnement
+      `production`) et `TELEGRAM_CHAT_ID` (secret du même environnement, une seule source avec
+      backup.yml, deploy.yml et nightly.yml) passent à l'APPLICATION par le provisionnement :
+      **provisionnement relancé**, et une alerte `attente_depassee` d'essai
+      réellement REÇUE dans le salon. À cocher
+      AVANT l'ouverture du canal côté axion-ia : sans ce canal, une attente au-delà de son seuil fait
+      échouer le passage du lanceur (`canal_alerte_absent`), sans jamais perdre l'alerte. _Porteur :
+      Williams (valeurs, réception), l'auteur (consignation)._
 - [ ] `PARTNERS_SAUVEGARDE_ACTIVEE` = `oui`, posé AVANT `Sauvegarde` / `configurer`. _Porteur :
       Williams (`poser-secrets-production.ps1 -Etape sauvegarde`)._
 - [ ] `configurer`, un vidage, `rechiffrer`, puis `exercice` : **verdict réussi** sous
@@ -116,8 +132,22 @@
       texte (`src/content/micro-copy/courriels/information-article-14.ts`) les rendent. Tant que cette
       case n'est pas cochée, **aucun e-mail de confirmation réel ne part**. Cochée après réception par
       Williams. _Porteur : Williams (les trois décisions), A07 (relecture du texte rendu)._
+- [ ] **Purge planifiée du contact active** (REQ-DM-031, REQ-SEC-030, DM-48) : la tâche
+      `contacts_purger` est inscrite au lanceur et bat chaque minute ; les durées de
+      `src/domain/seuils/retention.ts` (HYP-RGPD-RETENTION) sont confirmées par Williams au registre.
+      Sans cette case, aucune coordonnée d'un tiers réel n'entre en base. _Porteur : Williams (les
+      durées), constat de l'auteur (un battement récent de `contacts_purger`)._
 - [ ] Base de production vidée de son semis synthétique, puis `deploy:verify` vert. _Porteur :
       Williams._
+- [ ] **Relais de courriels** (INT-T57, REQ-INT-022), AVANT le drapeau d'allumage de l'envoi réel
+      (`PARTNERS_EMAIL_DMARC_VERIFIE`) : l'hôte d'envoi est relevé dans « Setup info » de l'agent
+      d'envoi, daté dans `docs/tiers/zeptomail.md` §2, et IDENTIQUE à `ZEPTOMAIL_API_URL` ; son pays
+      CONCORDE avec `{mentionTransfert}` de JUR-T09 (le centre de données annoncé aux personnes) ;
+      `ZEPTOMAIL_SEND_TOKEN` et `ZEPTOMAIL_API_URL` sont posés dans l'environnement `production`.
+      `ZEPTOMAIL_SEND_TOKEN` est le jeton d'un agent d'envoi PROPRE à Partners, distinct de tout jeton
+      d'axion-ia ; constaté dans la console ZeptoMail avant l'allumage. Le
+      drapeau allumé sans eux, le démarrage refuse (`requise_envoi_actif`). _Porteur : Williams
+      (relevé, valeurs, drapeau), constat de l'auteur._
 
 ## 5. L'ouverture, dans cet ordre
 

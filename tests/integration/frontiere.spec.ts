@@ -20,12 +20,13 @@
  * `X-Forwarded-For` (sans lui, l'en-tête est écrit par le client et la liste d'adresses tombe — le
  * jeton reste). Ni l'une ni l'autre ne se mesure sans serveur déployé.
  */
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createHash } from 'node:crypto';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 import { NOMS_DES_SECRETS, ROTATION_MAX_MS, kidDe } from '../../src/lib/env';
 import { ENTETE_KID_AXIONIA } from '../../packages/contracts/api';
+import { demarrerCache, type Cache } from './harnais';
 import type { SujetDeCompteur, VerdictDeLimite } from '../../src/server/securite/rate-limit';
 import type { HorlogeDePlancher } from '../../src/server/securite/pot-de-miel';
 import {
@@ -765,4 +766,50 @@ describe('REQ-INT-014 — la réponse minimale, et rien d’autre', () => {
       expect(lignes[0]).not.toContain('forge');
     }
   });
+});
+
+// ── SEC-44 : le compteur de production, sur un vrai cache ───────────────────────────────────────
+
+/**
+ * Le débit de PRODUCTION (`auth:axionia-ip` du registre, SEC-44), sur un Redis réel : seul le
+ * lecteur est remplacé (INT-T07-P ne l'a pas encore branché) et le puits détourné. Placé en FIN de
+ * fichier : le registre garde le client du cache pour tout le processus, et les cas précédents
+ * jugent l'absence de `REDIS_URL`.
+ */
+describe('REQ-SEC-012 — le débit de production : 60 appels par minute et par adresse, le 61e reçoit 429', () => {
+  let cache: Cache;
+  beforeAll(async () => {
+    cache = await demarrerCache();
+  }, 180_000);
+  afterAll(async () => {
+    vi.unstubAllEnvs();
+    await cache?.arreter();
+  });
+
+  it('REQ-SEC-012 — le 60e appel d’un appelant autorisé rend 200, le 61e rend 429 avec retry-after ; l’empreinte seule est comptée', async () => {
+    for (const [k, v] of Object.entries({ ...ENV_VALIDE, REDIS_URL: cache.url })) vi.stubEnv(k, v);
+    const h = horlogeFactice(1_000_000);
+    const lignes: string[] = [];
+    const production: Frontiere = {
+      ...frontiereDeProduction(),
+      horloge: h.horloge,
+      lire: async () => null,
+      puits: (l) => lignes.push(l),
+    };
+    const appeler = () =>
+      traiterAppel(
+        requete(`/attributions?siren=${SIREN_LIBRE}`, 'GET', ADRESSE_AUTORISEE, `Bearer ${JETON}`),
+        'attributions',
+        production
+      );
+    const statuts: number[] = [];
+    for (let i = 0; i < 61; i += 1) statuts.push((await appeler()).status);
+    expect(statuts.slice(0, 60).every((s) => s === 200)).toBe(true);
+    expect(statuts[60]).toBe(429);
+    expect(JSON.parse(lignes[60] ?? '{}')).toMatchObject({ resultat: 'debit_depasse' });
+    const cles = (await cache.commande(['--scan', '--pattern', 'auth:axionia-ip:*'])).split('\n');
+    expect(cles).toEqual([
+      `auth:axionia-ip:${empreinteAdresse(ADRESSE_AUTORISEE, SECRETS.IP_HASH_SALT ?? '')}`,
+    ]);
+  }, 120_000);
 });

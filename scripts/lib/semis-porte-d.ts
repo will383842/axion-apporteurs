@@ -141,8 +141,9 @@ function motifsDesChecks(contraintes: ContrainteVue[]): Map<string, string> {
 }
 
 /**
- * Les colonnes que des CHECK LIENT (DM-07) : `(a IS [NOT] NULL) = (b IS [NOT] NULL)` dit que a et b
- * sont présentes ensemble ou absentes ensemble ; `num_nonnulls(a, b, …) = 1` dit qu'une seule
+ * Les colonnes que des CHECK LIENT (DM-07, DM-53) : `(a IS NULL) = (b IS NULL)` dit que a et b
+ * sont présentes ensemble ou absentes ensemble, `(a IS NULL) = (b IS NOT NULL)` que l'une l'est sans
+ * l'autre ; `num_nonnulls(a, b, …) = 1` dit qu'une seule
  * l'est. Lus dans la définition que rend le catalogue, jamais dans un nom de table.
  */
 function liensDesChecks(contraintes: ContrainteVue[]): {
@@ -155,14 +156,19 @@ function liensDesChecks(contraintes: ContrainteVue[]): {
     if (!m.has(a)) m.set(a, new Set());
     m.get(a)!.add(b);
   };
+  // Les deux polarités sont LUES (DM-53) : `(a IS NULL) = (b IS NULL)` et `(a IS NOT NULL) = (b IS NOT
+  // NULL)` lient a et b ENSEMBLE ; `(a IS NULL) = (b IS NOT NULL)` dit que l'une est remplie sans
+  // l'autre — une EXCLUSION, que `fermeture` ne franchit pas.
   const paire =
-    /\(\(?"?([A-Za-z_]\w*)"? IS (?:NOT )?NULL\)?\s*=\s*\(?"?([A-Za-z_]\w*)"? IS (?:NOT )?NULL\)/g;
+    /\(\(?"?([A-Za-z_]\w*)"? IS (NOT )?NULL\)?\s*=\s*\(?"?([A-Za-z_]\w*)"? IS (NOT )?NULL\)/g;
   const unSeul = /num_nonnulls\(([^)]*)\)\s*=\s*1\b/g;
   for (const k of contraintes) {
     if (k.genre !== 'c') continue;
     for (const m of k.definition.matchAll(paire)) {
-      lier(ensemble, m[1]!, m[2]!);
-      lier(ensemble, m[2]!, m[1]!);
+      const [, a, nonA, b, nonB] = m;
+      const lien = (nonA === undefined) === (nonB === undefined) ? ensemble : exclusives;
+      lier(lien, a!, b!);
+      lier(lien, b!, a!);
     }
     for (const m of k.definition.matchAll(unSeul)) {
       const membres = m[1]!.split(',').map((x) => x.trim().replace(/^"|"$/g, ''));
