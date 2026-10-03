@@ -16,7 +16,11 @@
  * configuration (`HYP-E1-19`, `src/domain/contrat/variables.ts`).
  *
  * Les montants sont en CENTIMES hors taxes (`docs/CONVENTIONS.md`, argent en centimes).
+ *
+ * LES DURÉES DE CONSERVATION vivent dans le sous-module `retention.ts` (partners/ADR-0022 §12) et sont
+ * ÉTALÉES ici : l'accès reste `SEUILS.X`, la garde les juge, et aucune n'est définie aux deux endroits.
  */
+import { DUREES_DE_RETENTION } from './retention';
 
 export type UniteDeSeuil =
   'minutes' | 'jours' | 'jours_ouvres' | 'mois' | 'ans' | 'centimes' | 'tentatives';
@@ -40,6 +44,7 @@ const art = (...unites: string[]): Renvoi[] =>
   unites.map((unite) => ({ document: 'contrat', unite }));
 
 export const SEUILS = {
+  ...DUREES_DE_RETENTION,
   // JUR-T40 : l'art. 3.2 n'écrit plus ce délai (W20, REQ-CPL-026) ; il reste l'objectif interne de
   // la console pour une prise de contact, sans engagement contractuel (recommandation d'A07).
   PRISE_DE_CONTACT_JOURS_OUVRES: {
@@ -55,6 +60,28 @@ export const SEUILS = {
     source: 'contrat art. 3.2',
     renvois: art('3.2'),
     verifieLe: LE,
+  },
+  // INT-T49 — combien de temps une candidature qui attend ses coordonnées est reprise par le
+  // lanceur ; au-delà, elle ne l'est plus, et une alerte `attente_depassee` part. Un paramètre
+  // d'exploitation, pas une durée de conservation : il reste SOUS les 30 jours de minimisation
+  // d'INT-T56, qui demeurent le plafond (7 < 30).
+  ATTENTE_DES_COORDONNEES_JOURS: {
+    valeur: 7,
+    unite: 'jours',
+    source: 'coordination, 2026-10-01 (UTC), proposition de A05 (couvre un week-end prolongé)',
+    renvois: [],
+    verifieLe: '2026-10-01',
+  },
+  // INT-T54 — combien de temps un événement qui attend un TRAITANT (`traitant:<type>`) ou un PARENT
+  // (la facture d'un paiement, par exemple) attend avant qu'une alerte `attente_depassee` parte.
+  // Un paramètre d'exploitation : un type sans traitant ou un parent absent se voit vite.
+  ATTENTE_D_UNE_DEPENDANCE_JOURS: {
+    valeur: 2,
+    unite: 'jours',
+    source:
+      'arbitrage A01, 2026-10-01 (UTC), proposition de A05 (un type sans traitant ou un parent absent se voit vite)',
+    renvois: [],
+    verifieLe: '2026-10-01',
   },
   // JUR-T40 — la fin d'une demande vérifiée sans prise de contact concluante (HYP-W20-LIBERATION,
   // tranchée par Williams le 2026-09-29) et la carence avant une nouvelle déclaration
@@ -430,3 +457,16 @@ export function budgetUx(nom: string): BudgetUx {
     );
   return BUDGETS_UX[nom as NomDeBudgetUx];
 }
+
+/**
+ * W20 (UX-P1-41, HYP-W20-CONTEXTE) — la longueur maximale du contexte d'un dépôt, seule saisie libre
+ * de l'apporteur reprise dans l'e-mail au contact. Entrée isolée : ni un délai du contrat, ni un
+ * montant, ni un budget d'expérience. Condition (a) de la lentille sécurité (2026-10-02) : la ligne de
+ * contexte est BORNÉE par cette constante, à la saisie comme au rendu.
+ */
+export const CONTEXTE_DEPOT_CARACTERES_MAX = {
+  valeur: 140,
+  unite: 'caracteres',
+  source: 'docs/chantiers/W20-confirmation-par-email.md §2, HYP-W20-CONTEXTE',
+  verifieLe: '2026-10-02',
+} as const;

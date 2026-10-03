@@ -33,6 +33,7 @@ export const MOTIFS_DE_REFUS = [
   'egale_a',
   'requise_hors_production',
   'echeance_au_dela_de_24_h',
+  'requise_envoi_actif',
 ] as const;
 export type MotifDeRefus = (typeof MOTIFS_DE_REFUS)[number];
 
@@ -79,6 +80,12 @@ const secret = z.string().superRefine((v, ctx) => {
   }
 });
 
+/** INT-T54 : l'identifiant d'un salon Telegram, un entier signé — court, donc pas un `secret` de 32 octets. */
+const IDENTIFIANT_DE_SALON = /^-?\d{1,20}$/;
+const identifiantDeSalon = z.string().superRefine((v, ctx) => {
+  if (presenteEtNette(v, ctx) && !IDENTIFIANT_DE_SALON.test(v)) refuser(ctx, 'format_invalide');
+});
+
 const cleHexadecimale = z.string().superRefine((v, ctx) => {
   if (presenteEtNette(v, ctx) && !CLE_HEXADECIMALE.test(v)) refuser(ctx, 'format_invalide');
 });
@@ -113,6 +120,27 @@ export const schemaSecrets = z.object({
 export type Secrets = z.infer<typeof schemaSecrets>;
 
 /**
+ * INT-T57 (REQ-INT-022) — les secrets CONDITIONNELS : des secrets, soumis aux règles de REQ-SEC-028
+ * dès qu'ils sont posés (longueur, préfixe, égalité, jamais imprimés), mais exigés au démarrage
+ * seulement quand leur fonction est allumée (`EXIGES_SI_ENVOI_ACTIF`, dans `lireDemarrage`). Ils
+ * restent hors de `Secrets` : un porteur des secrets toujours exigés ne les voit jamais absents.
+ */
+export const schemaSecretsConditionnels = z.object({
+  // Le jeton d'envoi du relais de courriels (`Authorization: Zoho-enczapikey <jeton>`).
+  ZEPTOMAIL_SEND_TOKEN: secret.optional(),
+  // INT-T54 : le jeton du canal d'alerte (Telegram) du SERVEUR. Exigé par aucune règle de démarrage :
+  // une alerte due sans canal fait échouer le passage en le nommant (`canal_alerte_absent`).
+  TELEGRAM_BOT_TOKEN: secret.optional(),
+  // INT-T54 : le salon, classé là où il vit déjà (un secret de l'environnement `production`, lu par
+  // backup.yml, deploy.yml et nightly.yml) : une seule source, aucune recopie.
+  TELEGRAM_CHAT_ID: identifiantDeSalon.optional(),
+});
+export type SecretsConditionnels = z.infer<typeof schemaSecretsConditionnels>;
+export const NOMS_DES_SECRETS_CONDITIONNELS: readonly string[] = Object.keys(
+  schemaSecretsConditionnels.shape
+);
+
+/**
  * Les CLÉS D'EMPREINTE, nommées ICI et nulle part ailleurs. Deux usages, deux clés (SEC-01) : la
  * clé des empreintes de personnes et le sel des adresses. Un porteur qui n'a besoin que de l'une
  * prend `CleDesPersonnes` : le moindre privilège est conservé SANS que les noms des secrets soient
@@ -121,6 +149,9 @@ export type Secrets = z.infer<typeof schemaSecrets>;
  */
 export type CleDesPersonnes = Pick<Secrets, 'PII_HASH_KEY'>;
 export type ClesDEmpreinte = CleDesPersonnes & Pick<Secrets, 'IP_HASH_SALT'>;
+
+/** INT-T57 : ce que l'envoi réel exige au démarrage, quand il est allumé. */
+export const EXIGES_SI_ENVOI_ACTIF = ['ZEPTOMAIL_SEND_TOKEN', 'ZEPTOMAIL_API_URL'] as const;
 
 /** Les noms, DÉRIVÉS du schéma, dans son ordre. */
 export const NOMS_DES_SECRETS: readonly string[] = Object.keys(schemaSecrets.shape);
@@ -156,6 +187,10 @@ const nette = z.string().superRefine((v, ctx) => {
  */
 export const schemaConfiguration = z.object({
   DATABASE_URL: urlDe(['postgresql:', 'postgres:']),
+  // QA-T62 (REQ-DM-024) : l'URL du rôle PROPRIÉTAIRE, lue par l'entrée de l'image seulement (migration,
+  // provisionnement du rôle d'exécution), puis retirée de l'environnement du serveur. Son exigence en
+  // production est jugée par `src/server/deploiement/role-d-execution.ts`, avant le serveur.
+  DATABASE_MIGRATION_URL: urlDe(['postgresql:', 'postgres:']).optional(),
   REDIS_URL: urlDe(['redis:', 'rediss:']),
   NOTIFY_SINK: z.string().optional(),
   PARTNERS_ENV: nette.optional(),
@@ -171,10 +206,17 @@ export const schemaConfiguration = z.object({
   // INT-T26 (REQ-INT-032) : l'adresse d'axionia pour les lectures de Partners. Absente, le canal est
   // fermé de ce côté : une candidature reçue attend ses coordonnées, rien ne part.
   AXIONIA_BASE_URL: urlDe(['https:']).optional(),
+  // SEC-44 (REQ-SEC-012) : les adresses d'où axionia appelle l'API entrante, séparées par des
+  // virgules. Absente, personne n'entre ; posée, elle n'est jamais vide. Sa forme fine (adresses
+  // lisibles) est jugée à chaque appel par `listeDAdresses` (`api-entrante.ts`).
+  AXIONIA_API_ALLOWLIST: nette.optional(),
+  // INT-T57 (REQ-INT-022) : l'URL d'envoi du relais ; son hôte est jugé contre la liste fermée de
+  // `src/server/integrations/zeptomail/relais.ts`. Exigée au démarrage si l'envoi réel est allumé.
+  ZEPTOMAIL_API_URL: urlDe(['https:']).optional(),
 });
 
 export type Configuration = z.infer<typeof schemaConfiguration>;
-export type Environnement = Secrets & Configuration;
+export type Environnement = Secrets & SecretsConditionnels & Configuration;
 
 /** Les noms de configuration, DÉRIVÉS du schéma, dans son ordre. */
 export const NOMS_DE_CONFIGURATION: readonly string[] = Object.keys(schemaConfiguration.shape);
@@ -182,15 +224,20 @@ export const NOMS_DE_CONFIGURATION: readonly string[] = Object.keys(schemaConfig
 /** TOUTES les variables jugées au démarrage : les secrets, puis la configuration. */
 export const NOMS_DES_VARIABLES: readonly string[] = [
   ...NOMS_DES_SECRETS,
+  ...NOMS_DES_SECRETS_CONDITIONNELS,
   ...NOMS_DE_CONFIGURATION,
 ];
 
 /**
  * Les variables que le schéma déclare facultatives, DÉRIVÉES de lui. `NOTIFY_SINK` n'en est pas :
- * facultative pour Zod, elle est exigée hors production par la règle de REQ-CPL-021.
+ * facultative pour Zod, elle est exigée hors production par la règle de REQ-CPL-021. La
+ * CONFIGURATION seule : les secrets conditionnels ont leur propre liste, et se provisionnent comme
+ * des secrets, jamais comme des variables.
  */
 export const NOMS_FACULTATIFS: readonly string[] = Object.entries(schemaConfiguration.shape)
-  .filter(([nom, type]) => type.isOptional() && nom !== 'NOTIFY_SINK')
+  .filter(
+    ([nom, type]) => type.isOptional() && nom !== 'NOTIFY_SINK' && nom !== 'DATABASE_MIGRATION_URL'
+  )
   .map(([nom]) => nom);
 
 /** Le motif est construit ICI : le `message` d'une issue Zod peut porter la valeur reçue. */
@@ -215,15 +262,19 @@ export type LectureDuDemarrage = { ok: true; env: Environnement } | { ok: false;
 export function lireEnvironnement(source: Readonly<Record<string, string | undefined>>): Lecture {
   const refus: Refus[] = [];
   const lu = schemaSecrets.safeParse(source);
-  if (!lu.success) {
-    for (const issue of lu.error.issues) {
-      refus.push({ variable: String(issue.path[0]), motif: motifDe(issue) });
-    }
+  // INT-T57 : les secrets conditionnels, jugés par les MÊMES règles dès qu'ils sont posés.
+  const conditionnels = schemaSecretsConditionnels.safeParse(source);
+  for (const issue of [
+    ...(lu.success ? [] : lu.error.issues),
+    ...(conditionnels.success ? [] : conditionnels.error.issues),
+  ]) {
+    refus.push({ variable: String(issue.path[0]), motif: motifDe(issue) });
   }
   const refusees = new Set(refus.map((r) => r.variable));
+  const tousLesSecrets = [...NOMS_DES_SECRETS, ...NOMS_DES_SECRETS_CONDITIONNELS];
 
   if (!HORS_PRODUCTION.has(source.NODE_ENV ?? '')) {
-    for (const nom of NOMS_DES_SECRETS) {
+    for (const nom of tousLesSecrets) {
       const v = source[nom];
       if (v !== undefined && !refusees.has(nom) && PREFIXE_INTERDIT.test(v)) {
         refus.push({ variable: nom, motif: 'prefixe_interdit' });
@@ -234,7 +285,7 @@ export function lireEnvironnement(source: Readonly<Record<string, string | undef
   // L'égalité se juge sur des EMPREINTES, jamais en comparant ni en imprimant les valeurs, et sur
   // TOUT le jeu : chaque groupe de deux noms ou plus qui partagent une valeur est un refus unique.
   const parEmpreinte = new Map<string, string[]>();
-  for (const nom of NOMS_DES_SECRETS) {
+  for (const nom of tousLesSecrets) {
     const v = source[nom];
     if (v === undefined || v === '') continue;
     const empreinte = createHash('sha256').update(v, 'utf8').digest('hex');
@@ -246,7 +297,7 @@ export function lireEnvironnement(source: Readonly<Record<string, string | undef
     }
   }
 
-  if (!lu.success || refus.length > 0) return { ok: false, refus };
+  if (!lu.success || !conditionnels.success || refus.length > 0) return { ok: false, refus };
   return { ok: true, env: lu.data };
 }
 
@@ -274,8 +325,21 @@ export function lireDemarrage(
   if (!productionDeclaree(source) && source.NOTIFY_SINK !== 'true') {
     refus.push({ variable: 'NOTIFY_SINK', motif: 'requise_hors_production' });
   }
+  // INT-T57 (REQ-INT-022) : l'envoi réel allumé (`PARTNERS_EMAIL_DMARC_VERIFIE`), le relais doit
+  // pouvoir partir — son jeton et son URL sont exigés ; éteint, ils peuvent manquer, et le relais
+  // refuse alors en se nommant (`relais_non_configure`).
+  if (source.PARTNERS_EMAIL_DMARC_VERIFIE === 'true') {
+    for (const nom of EXIGES_SI_ENVOI_ACTIF) {
+      const v = source[nom];
+      if (v === undefined || v === '') refus.push({ variable: nom, motif: 'requise_envoi_actif' });
+    }
+  }
   if (!secrets.ok || !configuration.success || refus.length > 0) return { ok: false, refus };
-  return { ok: true, env: { ...secrets.env, ...configuration.data } };
+  const conditionnels = schemaSecretsConditionnels.safeParse(source);
+  return {
+    ok: true,
+    env: { ...secrets.env, ...(conditionnels.data ?? {}), ...configuration.data },
+  };
 }
 
 /** Une ligne de refus : le nom, le motif, et pour une égalité les autres noms. Jamais la valeur. */
@@ -483,7 +547,10 @@ const ROLES: Record<NomDeVariable, string> = {
     'authentifie les webhooks de rebonds du relais de courriel, en-tête `Producer-Signature`',
   AXIONIA_RELECTURE_SECRET:
     "signe les lectures de Partners chez axionia (coordonnées d'un candidat), en-tête `x-partners-signature`",
-  DATABASE_URL: 'la base Postgres ; `readyz` la sonde',
+  DATABASE_URL:
+    "la base Postgres, sous le rôle d'exécution du serveur (jamais superutilisateur, jamais membre de `partners_journal`) ; `readyz` la sonde",
+  DATABASE_MIGRATION_URL:
+    "la base sous le rôle propriétaire : migration et provisionnement du rôle d'exécution, par l'entrée de l'image seulement ; exigée en production, retirée avant le serveur",
   REDIS_URL: 'le cache Redis ; `readyz` le sonde',
   NOTIFY_SINK: "retient toute notification dans le journal au lieu de l'envoyer",
   PARTNERS_ENV: "nom de l'environnement ; `production` avec `NODE_ENV=production` vaut production",
@@ -495,16 +562,27 @@ const ROLES: Record<NomDeVariable, string> = {
     "adresse humaine d'expédition, du sous-domaine d'envoi ; jamais une adresse sans réponse",
   AXIONIA_BASE_URL:
     "adresse d'axionia pour les lectures de Partners ; absente, aucune coordonnée n'est tirée",
+  AXIONIA_API_ALLOWLIST:
+    "adresses d'où axionia appelle l'API entrante, séparées par des virgules ; absente, personne n'entre",
+  ZEPTOMAIL_SEND_TOKEN:
+    "jeton d'envoi du relais de courriels ; exigé quand l'envoi réel est allumé (`PARTNERS_EMAIL_DMARC_VERIFIE`)",
+  TELEGRAM_BOT_TOKEN:
+    "jeton du canal d'alerte du serveur ; une alerte due sans lui fait échouer le passage en le nommant",
+  TELEGRAM_CHAT_ID: "salon du canal d'alerte du serveur ; voir TELEGRAM_BOT_TOKEN",
+  ZEPTOMAIL_API_URL:
+    "URL d'envoi du relais de courriels, d'un hôte de la liste fermée ; exigée quand l'envoi réel est allumé",
 };
 
 /** La règle de forme, dite une fois par espèce de variable — celle que le schéma applique. */
 function regleDe(nom: NomDeVariable): string {
   if (nom === 'PII_ENCRYPTION_KEY') return 'exactement 64 caractères hexadécimaux';
-  if (NOMS_DES_SECRETS.includes(nom)) {
+  if (nom === 'TELEGRAM_CHAT_ID') return 'entier signé, au plus 20 chiffres';
+  if (NOMS_DES_SECRETS.includes(nom) || NOMS_DES_SECRETS_CONDITIONNELS.includes(nom)) {
     return 'au moins 32 octets, distincte des autres secrets ; préfixes `dev_` et `stub` refusés en production';
   }
   switch (nom) {
     case 'DATABASE_URL':
+    case 'DATABASE_MIGRATION_URL':
       return 'URL `postgresql:` ou `postgres:`';
     case 'REDIS_URL':
       return 'URL `redis:` ou `rediss:`';
@@ -517,6 +595,8 @@ function regleDe(nom: NomDeVariable): string {
     case 'SENTRY_DSN':
     case 'AXIONIA_BASE_URL':
       return 'URL `https:`';
+    case 'ZEPTOMAIL_API_URL':
+      return 'URL `https:`, hôte de la liste fermée du relais, chemin `/v1.1/email`';
     case 'PARTNERS_EMAIL_DMARC_VERIFIE':
       return schemaConfiguration.shape.PARTNERS_EMAIL_DMARC_VERIFIE.unwrap()
         .options.map((n) => `\`${n}\``)
@@ -528,6 +608,12 @@ function regleDe(nom: NomDeVariable): string {
 
 function presenceDe(nom: string): string {
   if (nom === 'NOTIFY_SINK') return 'requise hors production';
+  if (nom === 'DATABASE_MIGRATION_URL') return "requise en production, par l'entrée de l'image";
+  if ((EXIGES_SI_ENVOI_ACTIF as readonly string[]).includes(nom)) {
+    return 'facultative, requise si l’envoi réel est allumé';
+  }
+  if (NOMS_DES_SECRETS_CONDITIONNELS.includes(nom))
+    return 'facultative, jamais requise au démarrage';
   return NOMS_FACULTATIFS.includes(nom) ? 'facultative' : 'requise';
 }
 
@@ -554,6 +640,7 @@ export function documenterEnvironnement(): string {
     '| Variable | Présence | Règle | Rôle |',
     '| --- | --- | --- | --- |',
     ...lignes(NOMS_DES_SECRETS),
+    ...lignes(NOMS_DES_SECRETS_CONDITIONNELS),
     '',
     '## Configuration',
     '',

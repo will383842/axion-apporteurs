@@ -49,7 +49,10 @@ import type {
   IdentiteFacturation,
   JetonDepot,
   LienMagique,
+  NotificationEspace,
   PersonneDeclaree,
+  PieceKyc,
+  PreferenceNotification,
   Prisma,
   PrismaClient,
   SessionEspace,
@@ -66,7 +69,10 @@ export const MODELES_CLOISONNES = [
   'identiteFacturation',
   'jetonDepot',
   'lienMagique',
+  'notificationEspace',
   'personneDeclaree',
+  'pieceKyc',
+  'preferenceNotification',
   'sessionEspace',
 ] as const;
 export type ModeleCloisonne = (typeof MODELES_CLOISONNES)[number];
@@ -105,11 +111,13 @@ export const CLES_REFUSEES = {
     'peremptionSuspendueParId',
     'peremptionSuspenduePar',
     'courrielsEnvoyes',
+    'notificationsEspace',
   ],
   changementCourriel: ['id', 'apporteurId', 'apporteur'],
   courrielEnvoye: ['id', 'apporteurId', 'apporteur', 'attribution'],
   depotRefuse: ['id', 'apporteurId', 'apporteur'],
-  identiteFacturation: ['id', 'apporteurId', 'apporteur'],
+  // DM-11 : la pièce rib référencée est une référence vérifiée, jamais une relation écrite de l'espace.
+  identiteFacturation: ['id', 'apporteurId', 'apporteur', 'pieceKyc', 'pieceKycType'],
   jetonDepot: ['id', 'apporteurId', 'apporteur', 'attributions'],
   lienMagique: [
     'id',
@@ -128,6 +136,11 @@ export const CLES_REFUSEES = {
     'lienMagique',
   ],
   personneDeclaree: ['id', 'apporteurId', 'apporteur', 'attributions'],
+  pieceKyc: ['id', 'apporteurId', 'apporteur', 'identitesFacturation'],
+  // UX-P1-10 : l'attribution d'une notification est une référence vérifiée ; la clé d'une
+  // préférence s'écrit, et Zod la juge contre la table des notifications avant la couche.
+  notificationEspace: ['id', 'apporteurId', 'apporteur', 'attribution'],
+  preferenceNotification: ['id', 'apporteurId', 'apporteur'],
 } as const satisfies Record<ModeleCloisonne, readonly string[]>;
 
 /** Les clés étrangères vers une autre table cloisonnée : admises si la ligne visée est de la session. */
@@ -137,6 +150,9 @@ export const REFERENCES_CLOISONNEES: Partial<
   sessionEspace: { lienMagiqueId: 'lienMagique' },
   attribution: { jetonDepotId: 'jetonDepot', personneDeclareeId: 'personneDeclaree' },
   courrielEnvoye: { attributionId: 'attribution' },
+  // DM-11 : la pièce rib d'une identité de facturation est une pièce de la session.
+  identiteFacturation: { pieceKycId: 'pieceKyc' },
+  notificationEspace: { attributionId: 'attribution' },
 };
 
 /** Les messages de refus : une liste FERMÉE, qui part au journal et jamais au navigateur. */
@@ -167,15 +183,19 @@ export const RELATIONS = {
     'personneDeclaree',
     'peremptionSuspenduePar',
     'courrielsEnvoyes',
+    'notificationsEspace',
   ],
   changementCourriel: ['apporteur'],
   courrielEnvoye: ['apporteur', 'attribution'],
   depotRefuse: ['apporteur'],
-  identiteFacturation: ['apporteur'],
+  identiteFacturation: ['apporteur', 'pieceKyc'],
   jetonDepot: ['apporteur', 'attributions'],
   lienMagique: ['apporteur', 'utilisateurConsole', 'session'],
   personneDeclaree: ['apporteur', 'attributions'],
+  pieceKyc: ['apporteur', 'identitesFacturation'],
   sessionEspace: ['apporteur', 'utilisateurConsole', 'lienMagique'],
+  notificationEspace: ['apporteur', 'attribution'],
+  preferenceNotification: ['apporteur'],
 } as const satisfies Record<ModeleCloisonne, readonly string[]>;
 
 /**
@@ -202,6 +222,9 @@ export const SECRETS = Object.freeze([
   'codePostalChiffre',
   'lienInteretPrecisionChiffre',
   'agentHash',
+  // DM-11 : l'IBAN de la pièce rib, chiffré et empreint (HYP-DM06-IBAN).
+  'ibanChiffre',
+  'ibanHash',
 ] as const);
 
 /**
@@ -248,8 +271,16 @@ export const CHAMPS_RENDUS = {
   jetonDepot: ['id', 'creeAt', 'revoqueAt', 'dernierUsageAt'],
   lienMagique: ['id', 'creeAt', 'expireAt', 'consommeAt', 'annuleAt', 'tentativesCode'],
   personneDeclaree: ['id', 'qualite', 'declareeAt', 'retireeAt'],
+  // DM-11 : ce que « Ma conformité » montre d'une pièce — son type, son état, ses dates.
+  pieceKyc: ['id', 'type', 'statut', 'verifieeAt', 'expireAt', 'remplaceeAt'],
   sessionEspace: ['id', 'creeAt', 'expireAt', 'revoqueAt', 'derniereVueAt', 'sessionVersion'],
+  // UX-P1-10 : la notification telle que l'espace l'affiche, et la préférence que l'apporteur règle.
+  notificationEspace: ['id', 'cle', 'creeAt', 'lueAt'],
+  preferenceNotification: ['id', 'cle', 'active', 'modifieeAt'],
   // SEC-47 : ce que l'apporteur lit de sa propre fiche — son état, son code, ce qu'il a accepté.
+  // DM-50 : sa qualité d'exercice et sa profession réglementée, telles qu'il les a DÉCLARÉES, à
+  // relire et rectifier ; atteintes par sa session seule, jamais par une relation. Un verdict
+  // interne sur elles serait une autre colonne, classée TUE.
   apporteur: [
     'id',
     'statut',
@@ -258,6 +289,8 @@ export const CHAMPS_RENDUS = {
     'creeAt',
     'confidentialiteAccepteeAt',
     'confidentialiteVersion',
+    'qualiteExercice',
+    'professionReglementee',
   ],
 } as const satisfies Record<ModeleRendu, readonly string[]>;
 
@@ -296,11 +329,14 @@ export const CHAMPS_TUS = {
   ],
   changementCourriel: ['apporteurId', 'emailChiffre', 'emailHash', 'tokenHash', 'kid'],
   courrielEnvoye: ['apporteurId', 'emailHash', 'fournisseurMessageId', 'erreur', 'attributionId'],
-  depotRefuse: ['apporteurId'],
-  identiteFacturation: ['apporteurId'],
+  // DM-53 : la date de la purge du SIREN, une trace technique ; le SIREN, lui, reste rendu (NULL une fois purgé).
+  depotRefuse: ['apporteurId', 'sirenPurgeAt'],
+  identiteFacturation: ['apporteurId', 'pieceKycId', 'pieceKycType'],
   jetonDepot: ['apporteurId', 'tokenHash'],
   lienMagique: ['apporteurId', 'utilisateurConsoleId', 'tokenHash', 'kid', 'codeHash'],
   personneDeclaree: ['apporteurId', 'nomChiffre', 'prenomChiffre'],
+  // DM-11 : le fichier (stockage privé, REQ-SEC-026), sa purge, et l'IBAN chiffré et empreint.
+  pieceKyc: ['apporteurId', 'fichierRef', 'fichierPurgeAt', 'ibanChiffre', 'ibanHash'],
   sessionEspace: [
     'apporteurId',
     'utilisateurConsoleId',
@@ -309,6 +345,9 @@ export const CHAMPS_TUS = {
     'kid',
     'ipHash',
   ],
+  // UX-P1-10 : le propriétaire, et l'attribution dont la notification parle (comme un courriel).
+  notificationEspace: ['apporteurId', 'attributionId'],
+  preferenceNotification: ['apporteurId'],
   // SEC-47 : les secrets, le jugement de la candidature (seuil, score, parts, réponses, barème),
   // les traces d'acquisition et de parrainage, le marqueur de test, la version de session.
   apporteur: [
@@ -412,6 +451,10 @@ type WPersonne = Prisma.PersonneDeclareeWhereInput;
 type CPersonne = Prisma.PersonneDeclareeUncheckedCreateInput;
 type UPersonne = Prisma.PersonneDeclareeUncheckedUpdateManyInput;
 type OPersonne = Prisma.PersonneDeclareeOrderByWithRelationInput;
+type WPiece = Prisma.PieceKycWhereInput;
+type CPiece = Prisma.PieceKycUncheckedCreateInput;
+type UPiece = Prisma.PieceKycUncheckedUpdateManyInput;
+type OPiece = Prisma.PieceKycOrderByWithRelationInput;
 type WChangement = Prisma.ChangementCourrielWhereInput;
 type CChangement = Prisma.ChangementCourrielUncheckedCreateInput;
 type UChangement = Prisma.ChangementCourrielUncheckedUpdateManyInput;
@@ -436,6 +479,14 @@ type WSession = Prisma.SessionEspaceWhereInput;
 type CSession = Prisma.SessionEspaceUncheckedCreateInput;
 type USession = Prisma.SessionEspaceUncheckedUpdateManyInput;
 type OSession = Prisma.SessionEspaceOrderByWithRelationInput;
+type WNotification = Prisma.NotificationEspaceWhereInput;
+type CNotification = Prisma.NotificationEspaceUncheckedCreateInput;
+type UNotification = Prisma.NotificationEspaceUncheckedUpdateManyInput;
+type ONotification = Prisma.NotificationEspaceOrderByWithRelationInput;
+type WPreference = Prisma.PreferenceNotificationWhereInput;
+type CPreference = Prisma.PreferenceNotificationUncheckedCreateInput;
+type UPreference = Prisma.PreferenceNotificationUncheckedUpdateManyInput;
+type OPreference = Prisma.PreferenceNotificationOrderByWithRelationInput;
 
 /** L'accès de l'espace, pour UN apporteur : une vue par modèle cloisonné, et sa propre fiche. */
 export interface AccesApporteur {
@@ -462,6 +513,13 @@ export interface AccesApporteur {
     SansProprietaire<CPersonne>,
     UPersonne,
     OPersonne
+  >;
+  pieceKyc: VueCloisonnee<
+    Rendu<PieceKyc, 'pieceKyc'>,
+    WPiece,
+    SansProprietaire<CPiece>,
+    UPiece,
+    OPiece
   >;
   changementCourriel: VueCloisonnee<
     Rendu<ChangementCourriel, 'changementCourriel'>,
@@ -504,6 +562,20 @@ export interface AccesApporteur {
     SansProprietaire<CSession>,
     USession,
     OSession
+  >;
+  notificationEspace: VueCloisonnee<
+    Rendu<NotificationEspace, 'notificationEspace'>,
+    WNotification,
+    SansProprietaire<CNotification>,
+    UNotification,
+    ONotification
+  >;
+  preferenceNotification: VueCloisonnee<
+    Rendu<PreferenceNotification, 'preferenceNotification'>,
+    WPreference,
+    SansProprietaire<CPreference>,
+    UPreference,
+    OPreference
   >;
 }
 

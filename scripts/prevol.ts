@@ -401,7 +401,7 @@ export const ETAPES_LENTES: readonly { script: string; motif: string }[] = [
     motif: 'relit les résultats de `pnpm test`, qui ne tourne pas dans le pré-contrôle rapide',
   },
   {
-    script: 'a11y:navigateurs',
+    script: 'a11y:navigateurs:bornes',
     motif: 'télécharge et installe les navigateurs de Playwright, qui ne servent qu’à la suite',
   },
   {

@@ -63,7 +63,9 @@
       "taches": [
         "DM-07",
         "DM-08",
-        "DM-13"
+        "DM-13",
+        "DM-55",
+        "JUR-T49"
       ]
     },
     {
@@ -96,7 +98,8 @@
         "DM-08",
         "DM-13",
         "DM-24",
-        "DM-41"
+        "DM-41",
+        "DM-55"
       ]
     },
     {
@@ -208,7 +211,6 @@
       "etape": 5,
       "phase": 1,
       "taches": [
-        "DM-11",
         "DM-23",
         "INT-T23"
       ]
@@ -355,7 +357,8 @@
       "taches": [
         "DM-08",
         "DM-15",
-        "JUR-T47"
+        "JUR-T47",
+        "JUR-T53"
       ]
     },
     {
@@ -387,8 +390,8 @@
         "DM-20",
         "DM-45",
         "QA-T62",
-        "QA-T66",
-        "SEC-30"
+        "SEC-30",
+        "SEC-50"
       ]
     },
     {
@@ -434,7 +437,9 @@
         "CPL-T07",
         "DM-11",
         "DM-19",
+        "DM-51",
         "JUR-T16",
+        "SEC-49",
         "T-ARG-032"
       ]
     },
@@ -500,6 +505,7 @@
         "DM-20",
         "DM-40",
         "DM-48",
+        "DM-52",
         "JUR-T41"
       ]
     },
@@ -673,6 +679,7 @@
       "taches": [
         "DM-25",
         "DM-31",
+        "DM-53",
         "JUR-T31"
       ]
     },
@@ -857,8 +864,7 @@
       "taches": [
         "INT-T50-A",
         "SEC-07",
-        "SEC-44",
-        "SEC-46"
+        "SEC-44"
       ]
     },
     {
@@ -872,7 +878,8 @@
       "etape": 10,
       "phase": 0,
       "taches": [
-        "INT-T09"
+        "INT-T09",
+        "QA-T68"
       ]
     },
     {
@@ -915,6 +922,7 @@
       "phase": 0,
       "taches": [
         "DM-31",
+        "QA-T68",
         "SEC-03",
         "SEC-10"
       ]
@@ -1077,7 +1085,9 @@
       "etape": 4,
       "phase": 1,
       "taches": [
-        "DM-11"
+        "CPL-T07",
+        "DM-58",
+        "UX-P1-09"
       ]
     },
     {
@@ -1119,13 +1129,14 @@
       "etape": null,
       "phase": 0,
       "taches": [
-        "SEC-02"
+        "SEC-02",
+        "SEC-46"
       ]
     },
     {
       "id": "REQ-SEC-030",
       "domaine": "anti-abus-securite",
-      "texte": "Les coordonnées du tiers rencontré sont purgées par le cron de REQ-DM-031 selon `retention.ts` : `CONTACT_PURGE_APRES_LIBERATION_JOURS` (défaut 90, états `invalidee`/`perdue`/`expiree`/`perimee`) et `CONTACT_PURGE_CONVERTIE_APRES_DERNIER_CONTACT_JOURS` (défaut 1 095), toutes deux sous marqueur `HYP-RGPD-RETENTION` **jusqu'à la décision de Will consignée dans `DECISIONS.md`** (il n'y a pas de DPO sur le projet, décision du 2026-09-03), avec un test HYP qui échoue si la valeur change ; l'information art. 14 est délivrée selon REQ-JUR-009 ; apporteur et tiers disposent d'une voie d'accès et d'effacement par jeton (1/jour, `surPanne: refuser`, testée) ; le registre art. 30 décrit trois traitements et un test vérifie qu'il en liste exactement trois.",
+      "texte": "Les coordonnées du tiers rencontré sont purgées par le cron de REQ-DM-031 selon `retention.ts` : `CONTACT_PURGE_APRES_LIBERATION_JOURS` (défaut 90, états `invalidee`/`perdue`/`expiree`/`perimee`/`annulee`) et `CONTACT_PURGE_CONVERTIE_APRES_DERNIER_CONTACT_JOURS` (défaut 1 095), toutes deux sous marqueur `HYP-RGPD-RETENTION` **jusqu'à la décision de Will consignée dans `DECISIONS.md`** (il n'y a pas de DPO sur le projet, décision du 2026-09-03), avec un test HYP qui échoue si la valeur change ; l'information art. 14 est délivrée selon REQ-JUR-009 ; apporteur et tiers disposent d'une voie d'accès et d'effacement par jeton (1/jour, `surPanne: refuser`, testée) ; le registre art. 30 décrit trois traitements et un test vérifie qu'il en liste exactement trois.",
       "source": "audit-outil §3.3, §5 étape 12 ; audit-attribution P8 ; reformulation d'annexe appliquée le 2026-09-03",
       "statut": "active",
       "remplaceePar": null,
@@ -1587,9 +1598,8 @@
       "remplaceePar": null,
       "module": 4,
       "etape": 4,
-      "phase": 1,
+      "phase": 2,
       "taches": [
-        "DM-11",
         "JUR-T16",
         "T-ARG-015",
         "T-ARG-032",
@@ -1643,6 +1653,7 @@
       "etape": 11,
       "phase": 2,
       "taches": [
+        "DM-57",
         "T-ARG-017"
       ]
     },
@@ -2124,7 +2135,9 @@
         "INT-T08-P",
         "INT-T21-A",
         "INT-T21-P",
-        "INT-T51"
+        "INT-T51",
+        "INT-T70-A",
+        "INT-T70-P"
       ]
     },
     {
@@ -2251,7 +2264,7 @@
     {
       "id": "REQ-INT-021",
       "domaine": "integration",
-      "texte": "Depuis la réponse API, Partners persiste `siren, siret (siège), nom_complet, nature_juridique, activite_principale, tranche_effectif_salarie, etat_administratif, categorie_entreprise, siege.{code_postal, libelle_commune, departement, region}` ; des dirigeants, seulement un hash normalisé de `nom+prenoms` et `qualite` ; jamais `annee_de_naissance` ; `statut_diffusion` est respecté à l'affichage.",
+      "texte": "Depuis la réponse API, Partners persiste `siren, siret, nom_complet, nature_juridique, activite_principale, tranche_effectif_salarie, etat_administratif, categorie_entreprise, siege.{code_postal, libelle_commune, departement, region, latitude_microdeg, longitude_microdeg}`, le `siret` étant celui du siège ; la position du siège est gardée en micro-degrés entiers, calculés par le serveur depuis le WGS84 du tiers, et seulement quand la diffusion de l'unité légale et du siège est pleine (échec fermé) ; des dirigeants, seulement un hash normalisé de `nom+prenoms` et `qualite` ; jamais `annee_de_naissance` ; `statut_diffusion` est respecté à l'affichage.",
       "source": "audit anti-abus M5 ; INT-F16",
       "statut": "active",
       "remplaceePar": null,
@@ -2259,6 +2272,7 @@
       "etape": 10,
       "phase": 0,
       "taches": [
+        "EXT-T08",
         "INT-T09"
       ]
     },
@@ -2425,7 +2439,8 @@
         "JUR-T29",
         "JUR-T44",
         "JUR-T44b",
-        "JUR-T45"
+        "JUR-T45",
+        "QA-T69"
       ]
     },
     {
@@ -2441,7 +2456,8 @@
       "taches": [
         "JUR-T03",
         "JUR-T29",
-        "JUR-T45"
+        "JUR-T45",
+        "QA-T69"
       ]
     },
     {
@@ -2458,7 +2474,8 @@
         "JUR-T01",
         "JUR-T01b",
         "JUR-T40",
-        "JUR-T46"
+        "JUR-T46",
+        "JUR-T48"
       ]
     },
     {
@@ -2727,7 +2744,7 @@
       "etape": 4,
       "phase": 1,
       "taches": [
-        "DM-11"
+        "DM-50"
       ]
     },
     {
@@ -2832,7 +2849,6 @@
       "etape": 11,
       "phase": 0,
       "taches": [
-        "DM-11",
         "INT-T44",
         "INT-T56",
         "JUR-T02",
@@ -3100,6 +3116,8 @@
       "etape": 12,
       "phase": 1,
       "taches": [
+        "DM-55",
+        "DM-61",
         "INT-T24",
         "UX-P1-09",
         "UX-P1-10",
@@ -3191,6 +3209,7 @@
       "phase": 1,
       "taches": [
         "UX-P1-06",
+        "UX-P1-07",
         "UX-P1-19"
       ]
     },
@@ -3282,6 +3301,7 @@
       "phase": 1,
       "taches": [
         "SEC-22",
+        "SEC-49",
         "UX-P1-09"
       ]
     },
@@ -3606,7 +3626,8 @@
         "QA-T07",
         "QA-T28",
         "QA-T63",
-        "QA-T64"
+        "QA-T64",
+        "QA-T68"
       ]
     },
     {
@@ -3757,7 +3778,9 @@
       "taches": [
         "QA-T12",
         "QA-T53",
-        "QA-T57"
+        "QA-T57",
+        "QA-T66",
+        "QA-T70"
       ]
     },
     {
@@ -4025,6 +4048,7 @@
         "GOV-060",
         "GOV-119",
         "GOV-123",
+        "GOV-141",
         "QA-T63",
         "QA-T64"
       ]
@@ -4184,7 +4208,8 @@
         "GOV-057",
         "QA-T54",
         "QA-T55",
-        "QA-T65"
+        "QA-T65",
+        "QA-T67"
       ]
     },
     {
@@ -4358,7 +4383,8 @@
         "GOV-052",
         "GOV-073",
         "GOV-091",
-        "GOV-108"
+        "GOV-108",
+        "GOV-141"
       ]
     },
     {
@@ -4553,8 +4579,7 @@
       "etape": 4,
       "phase": -1,
       "taches": [
-        "CPL-T01",
-        "DM-11"
+        "CPL-T01"
       ]
     },
     {
@@ -4967,6 +4992,21 @@
       ]
     },
     {
+      "id": "REQ-INT-063",
+      "domaine": "integration",
+      "texte": "**L'API 4 : Partners pousse vers le CRM Pro ce qui est déclaré (décision de Williams du 2026-10-02, option B).** Partners POUSSE seul (aucune route de lecture n'est ouverte au CRM), par une outbox qui ne garde que la référence et la version, jamais un clair ; la charge se construit à l'envoi depuis les colonnes courantes, et le contrôle d'opposition se fait dans la MÊME transaction. Requêtes signées HMAC-SHA256 (horodatage et corps, 300 s), secret DÉDIÉ avec `kid`, hôte en liste fermée, HTTPS, aucune redirection ; idempotence par `Idempotency-Key` ; journal sans charge. Contrat `.strict()` à empreinte épinglée des deux côtés : `reference`, `entreprise{…}`, `contact{prenom, nom, email?, telephone?, fonction?}`, `provenance` {apporteur, commercial, societe}, `informationTiersVersion`. Ne sortent JAMAIS : la date du contact ni aucune date d'acte, toute identité de l'apporteur (même un identifiant opaque), ses empreintes, le contexte libre, la précision du lien d'intérêt, les signaux de sincérité, l'état d'un dépôt refusé ou en attente, les coordonnées géographiques. Une entreprise individuelle (forme non prouvée personne morale) n'est jamais émise. Aucune émission avant que le CRM ne lise la version, ni avant les textes validés par Williams et le registre et l'AIPD amendés.",
+      "source": "Décision de Williams du 2026-10-02 (option B, verbatim dans REPONSES-WILLIAMS-SEANCE-2026-10-02.md, hors dépôt) ; A02, lentille sécurité et A07 (2026-10-02)",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": null,
+      "etape": null,
+      "phase": 2,
+      "taches": [
+        "INT-T68-P",
+        "INT-T69-P"
+      ]
+    },
+    {
       "id": "REQ-CPL-027",
       "domaine": "Annexe — passe de dédoublonnage (à appliquer par le Gardien du spec, GOV-001)",
       "texte": "`actif` (premier dépôt confirmé) et `dormant` (> 60 j sans dépôt, paramètre SSOT) sont **dérivés** par fonction pure, jamais stockés, et restent des indicateurs de **console** : **aucun message n'est envoyé à un apporteur en raison de son inactivité** (REQ-JUR-033, qui remplace toute relance de dormance par la lettre du réseau, identique pour tous, à intervalle fixe, dont le job d'envoi ne reçoit aucun filtre sur la date du dernier dépôt). La « relance de dormance » est retirée du produit le 2026-09-03.",
@@ -5069,8 +5109,7 @@
       "etape": 8,
       "phase": 1,
       "taches": [
-        "DM-13",
-        "UX-P1-10"
+        "DM-13"
       ]
     },
     {
@@ -5223,6 +5262,7 @@
         "UX-P1-44",
         "UX-P1-45",
         "UX-P1-46",
+        "UX-P1-48",
         "UX-P2-01",
         "UX-P2-02",
         "UX-P2-03",
@@ -5369,7 +5409,7 @@
     {
       "id": "REQ-DM-046",
       "domaine": "domaine-donnees",
-      "texte": "Au dépôt, le code NAF (`activite_principale`, nomenclature NAF rév. 2) rendu par le client recherche-entreprises (REQ-INT-021) est **stocké sur l'attribution** (REQ-DM-030). Un dépôt fait en **repli manuel** (tiers indisponible, REQ-INT-020) porte un code NAF **nul — jamais deviné, jamais saisi par l'apporteur** ; il est complété par un nouvel appel au tiers après la fermeture du disjoncteur (`HYP-W15-SECTEUR`) et reste « non renseigné » tant que le tiers ne l'a pas rendu. Décision W15 (4), 2026-09-25. Tests : fixture enregistrée → code stocké égal à celui de la fixture ; repli manuel → code nul, puis complété par la reprise sur fixture ; le formulaire de dépôt ne porte aucun champ de code NAF.",
+      "texte": "Au dépôt, le code NAF (`activite_principale`, nomenclature NAF rév. 2) rendu par le client recherche-entreprises (REQ-INT-021) est **stocké sur l'attribution** (REQ-DM-030). Un dépôt fait en **repli manuel** (tiers indisponible, REQ-INT-020) porte un code NAF **nul — jamais deviné, jamais saisi par l'apporteur** ; il est complété par un nouvel appel au tiers après la fermeture du disjoncteur (`HYP-W15-SECTEUR`) et reste « non renseigné » tant que le tiers ne l'a pas rendu. Décision W15 (4), 2026-09-25. Tests : fixture enregistrée → code stocké égal à celui de la fixture s'il est en NAF rév. 2, nul sinon (CHECK de DM-07) ; repli manuel → code nul, puis complété par la reprise sur fixture ; le formulaire de dépôt ne porte aucun champ de code NAF.",
       "source": "décision de Will du 2026-09-25, W15 (point 4)",
       "statut": "active",
       "remplaceePar": null,
@@ -5486,6 +5526,20 @@
         "INT-T58-A",
         "INT-T58-P",
         "UX-P2-16"
+      ]
+    },
+    {
+      "id": "REQ-DM-065",
+      "domaine": "domaine-donnees",
+      "texte": "**Le statut juridique de l'apporteur est une liste FERMÉE.** `StatutJuridique` est un vrai enum : `micro_entrepreneur`, `entrepreneur_individuel`, `sarl`, `eurl`, `sas`, `sasu`, `sa`, `snc` ; il alimente `{{APPORTEUR_STATUT}}` au préambule du contrat par son libellé du glossaire, jamais par une chaîne libre. Chaque statut se range dans UNE `QualiteExercice` (REQ-JUR-022, liste de quatre valeurs inchangée) : les deux premiers selon l'activité déclarée (`commercant`, `artisan` ou `profession_liberale`), les six sociétés en `societe_commerciale`. Un témoin fige la liste et la correspondance. Le portage salarial et l'entrepreneur-salarié de coopérative changent qui signe et qui facture : ils relèvent de la phase 2.",
+      "source": "Décision de Williams du 2026-10-02 (« ok donc rajoute tous les statuts autorisés »), sur l'avis d'A07 du même jour (hors dépôt) ; relayée par la coordination",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": 4,
+      "etape": 4,
+      "phase": 1,
+      "taches": [
+        "DM-56"
       ]
     },
     {
@@ -5777,15 +5831,18 @@
     {
       "id": "REQ-EXT-020",
       "domaine": "extensions du 2026-09-03 (REQ-EXT)",
-      "texte": "Si la prolongation de fenêtre est retenue (HYP-W9) : une attribution dont un devis est `en cours` au terme de la fenêtre d'attribution (`FENETRE_MOIS`) est prolongée **une seule fois de 3 mois**, automatiquement, les deux parties étant notifiées ; la prolongation est journalisée et visible dans la fiche.",
+      "texte": "**PROPOSITION (JUR-T54, en attente de la validation finale de Williams ; principe validé : « il ne faut pas qu'il perde l'entreprise tant qu'il s'en occupe »).** Une attribution est prolongée **une seule fois de 3 mois** au terme de la fenêtre (`FENETRE_MOIS`) si la Société s'occupe de l'entreprise (rendez-vous tenu ou planifié, ou échange consigné dans les `PROLONGATION_FAITS_RECENTS_JOURS` derniers jours) OU si l'apporteur la DEMANDE (un clic, ouvert dans les `PROLONGATION_DEMANDE_OUVERTE_JOURS` derniers jours) et que l'entreprise confirme son intérêt à la Société ; l'absence de demande n'emporte aucune conséquence. La prolongation est notifiée aux deux parties, journalisée et visible dans la fiche. Remplace la prolongation automatique « si un devis est en cours » (HYP-W9).",
       "source": "EXTENSIONS §3.3",
       "statut": "active",
       "remplaceePar": null,
       "module": null,
       "etape": 9,
-      "phase": 2,
+      "phase": 1,
       "taches": [
-        "EXT-T07"
+        "EXT-T07",
+        "JUR-T54",
+        "UX-P2-18",
+        "UX-P2-19"
       ]
     },
     {
@@ -5936,6 +5993,7 @@
         "JUR-T24",
         "JUR-T27",
         "JUR-T28",
+        "JUR-T56",
         "SEC-14",
         "SEC-15",
         "SEC-41",
@@ -6113,7 +6171,6 @@
       "taches": [
         "JUR-T24",
         "SEC-19",
-        "UX-P1-10",
         "UX-P1-12"
       ]
     },
@@ -6170,7 +6227,7 @@
     {
       "id": "REQ-JUR-060",
       "domaine": "juridique",
-      "texte": "**Ce que dit l'e-mail au contact.** L'e-mail est envoyé depuis une adresse humaine d'un domaine authentifié (REQ-INT-022). Il nomme l'apporteur (prénom et nom), l'entreprise et le contexte s'il existe, sans date du contact (REQ-JUR-040) ; il porte les deux liens, l'information de l'art. 14 (identité du responsable, finalité, base légale, destinataires, durée, droits, source des données : l'apporteur) et un lien d'opposition. Il ne demande rien d'autre qu'un clic ; il ne contient ni pièce jointe ni lien autre que ceux-là. Le texte envoyé est versionné et la version est journalisée avec l'envoi.",
+      "texte": "**Ce que dit l'e-mail au contact.** L'e-mail est envoyé depuis une adresse humaine d'un domaine authentifié (REQ-INT-022). Il nomme l'apporteur (prénom et nom), l'entreprise et le contexte s'il existe, sans date du contact (REQ-JUR-040) ; il porte les deux liens, l'information de l'art. 14 (identité du responsable, finalité, base légale, destinataires, durée, droits, source des données : l'apporteur) et un lien d'opposition. Il ne demande rien d'autre qu'un clic ; il ne contient ni pièce jointe ni lien autre que ceux-là. Le texte envoyé est versionné et la version est journalisée avec l'envoi. Amendement LOT CRM PRO (rattrapage 57) : après la décision de Williams du 2026-10-02 (option B), l'information de l'art. 14 nomme aussi le CRM d'Axion-IA, la finalité commerciale, la base légale, la durée propre et l'opposition à la prospection présentée à part, dans la version 5 du bloc (JUR-T51), dont le texte est validé par Williams avant tout envoi.",
       "source": "décision de Will du 2026-09-29, W20 (docs/chantiers/W20-confirmation-par-email.md §3.1), passe gardien-spec W20 portée par GOV-112 (8)(b) ; module et étape repris de REQ-JUR-009",
       "statut": "active",
       "remplaceePar": null,
@@ -6180,6 +6237,7 @@
       "taches": [
         "INT-T40",
         "JUR-T09",
+        "JUR-T51",
         "UX-P1-41"
       ]
     },
@@ -6197,6 +6255,80 @@
         "INT-T65-A",
         "INT-T66-A",
         "JUR-T47"
+      ]
+    },
+    {
+      "id": "REQ-JUR-062",
+      "domaine": "juridique",
+      "texte": "**Le contrat suit la décision de Williams du 2026-10-02 (option B : les données déclarées vont au CRM Pro dès la déclaration), dans des textes que Williams valide avant tout premier envoi en signature.** Williams a autorisé l'écriture du nouvel art. 3.5 al. 4, mot pour mot : « J'autorise l'écriture du nouvel article 3.5 alinéa 4 (option B : le CRM dès la déclaration), avec les deux protections pour l'apporteur. Vas-y. » (rattrapage 61) ; le texte, écrit par A07 avec les deux protections de l'apporteur (aucun démarchage pendant le délai de confirmation ; aucun usage des vérifications faites sans déclaration), reste à valider par Williams après la relecture de la suppléante. Ce qui est déjà acquis par délégation : toute commande de l'entreprise attribuée signée pendant l'attribution reste commissionnée, quel que soit celui qui la conclut ; le délai `RESERVE_APRES_ACTE_APPORTEUR_JOURS` est gardé ; la conservation au CRM a sa durée propre, `CRM_DUREE_PROSPECT_ANS`, à compter du dernier échange à l'initiative de la personne, sauf opposition ; aucune émission avant les textes validés.",
+      "source": "Décision de Williams du 2026-10-02 (option B) ; textes d'A07 ; décisions de la coordination par délégation (délai de 30 jours gardé, deux phrases recommandées gardées par défaut)",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": 11,
+      "etape": 10,
+      "phase": 1,
+      "taches": [
+        "JUR-T50",
+        "JUR-T51",
+        "JUR-T52"
+      ]
+    },
+    {
+      "id": "REQ-JUR-063",
+      "domaine": "juridique",
+      "texte": "**L'admission au KYC refuse, avec un motif NOMMÉ pour chacun :** (1) l'absence de SIREN actif ; (2) la personne salariée, dirigeante ou associée d'Axion-IA, sur sa seule déclaration ; (3) un statut hors de la liste de REQ-DM-065. Les professions dont la déontologie interdit de percevoir un apport sont EXCLUES D'OFFICE (avocats, notaires, commissaires de justice, professions de santé), par une liste de codes figée par un témoin. Le signal bloquant « attestation spécifique requise » de REQ-JUR-022 reste inchangé pour les professions réglementées qui peuvent être admises. Contre l'oracle (lentille sécurité, 2026-10-02) : (1) le motif nommé `lien_avec_la_societe` ne naît QUE de la déclaration de la personne ; (2) le contrôle croisé (REQ-CPL-030) ne refuse pas : il BLOQUE pour revue humaine, avec une réponse IDENTIQUE au candidat, qu'il y ait correspondance ou non ; (3) témoin : deux candidatures, correspondante et non correspondante, reçoivent la même réponse ; (4) comparaison par empreintes (`PII_HASH_KEY`), journal sans nom ni adresse. Aucun refus ne laisse de donnée conservée au-delà de ce que le registre de traitement prévoit (sécurité, 2026-10-02 : les motifs non persistés ne couvrent pas ce qu'a saisi la personne refusée).",
+      "source": "Décision de Williams du 2026-10-02 (« ok donc rajoute tous les statuts autorisés »), sur l'avis d'A07 du même jour (hors dépôt) ; relayée par la coordination",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": 4,
+      "etape": 4,
+      "phase": 1,
+      "taches": [
+        "DM-56"
+      ]
+    },
+    {
+      "id": "REQ-JUR-064",
+      "domaine": "juridique",
+      "texte": "**L'art. 23 du contrat (déclarations de l'Apporteur) couvre la situation envers un employeur :** il déclare que l'activité n'est contraire ni à une clause de non-concurrence ou d'exclusivité, et qu'il a vérifié sa situation, le cas échéant, auprès de son employeur. Ce texte EXISTANT suffit, et aucune phrase n'y est ajoutée (une redite pourrait se lire comme deux obligations, art. 1190 C. civ. ; A07, 2026-10-02). Un témoin vérifie que le gabarit porte les deux fragments « clause de non-concurrence ou d'exclusivité » et « auprès de son employeur ».",
+      "source": "Avis d'A07 du 2026-10-02 (hors dépôt), retenu par la décision de Williams du même jour ; relayé par la coordination",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": 11,
+      "etape": 10,
+      "phase": 1,
+      "taches": [
+        "JUR-T55"
+      ]
+    },
+    {
+      "id": "REQ-JUR-065",
+      "domaine": "juridique",
+      "texte": "**La page ouverte par le lien du courriel au contact permet TOUS ses droits** (accès, rectification, effacement, limitation, opposition), chacun distinct, sans compte et sans condition, avec DEUX actions distinctes : exercer un droit, et s'opposer. C'est le moyen électronique de l'art. 12 du RGPD, puisque `{adresseDroits}` est postale dans le courriel ; la clé `droits` de l'information de l'art. 14 (v5) y renvoie. Condition de mise en service d'A07 (2026-10-02), mot pour mot : « Aucun courriel en v5 ne doit partir tant que cette page n'offre pas ces droits, chacun distinct de l'opposition et sans compte. Sinon, l'information de l'art. 14 serait inexacte. »",
+      "source": "Arbitrage de la coordination du 2026-10-02, accepté par A07 et la lentille sécurité ; condition de mise en service d'A07 (2026-10-02)",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": null,
+      "etape": null,
+      "phase": 1,
+      "taches": [
+        "DM-59",
+        "DM-60",
+        "UX-P1-48"
+      ]
+    },
+    {
+      "id": "REQ-JUR-066",
+      "domaine": "juridique",
+      "texte": "**Une personne qui répond à une annonce de commercial salarié n'entre dans le tunnel des apporteurs qu'après avoir accepté une proposition.** Le script d'import des CV la route vers le parcours « proposer le réseau » qui existe déjà ; il ne crée ni ne rattache aucune fiche d'apporteur sans ce consentement. Les deux populations, salariés et apporteurs, restent séparées dès le départ.",
+      "source": "Décision de Williams du 2026-10-02, point 4 de la séance (« Pour le point 4 = A. ») ; HYP-CANDIDATS-INDEED",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": null,
+      "etape": null,
+      "phase": 1,
+      "taches": [
+        "INT-T71-A"
       ]
     },
     {
@@ -6222,7 +6354,8 @@
         "GOV-089",
         "GOV-092",
         "GOV-094",
-        "GOV-105"
+        "GOV-105",
+        "SEC-48"
       ]
     },
     {

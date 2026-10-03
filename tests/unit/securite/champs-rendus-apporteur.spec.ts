@@ -20,6 +20,7 @@ import { Prisma } from '@prisma/client';
 import {
   CHAMPS_RENDUS,
   CHAMPS_TUS,
+  CLES_REFUSEES,
   MODELES_CLOISONNES,
   REFUS,
   SECRETS,
@@ -201,4 +202,29 @@ describe('REQ-SEC-008 — SEC-47 : filtres et tris bornés aux champs RENDUS', (
       });
     }
   );
+});
+
+describe('REQ-SEC-008 — DM-50 : la qualité d’exercice et la profession déclarées, rendues sur SA fiche seulement', () => {
+  const DECLAREES = ['qualiteExercice', 'professionReglementee'] as const;
+
+  it('REQ-SEC-008 : moi() rend la qualité d’exercice et la profession réglementée que l’apporteur a déclarées', async () => {
+    const { client, appels } = fauxClient();
+    await forApporteur(client, A).moi();
+    const select = (appels[0]!.args as { select?: Record<string, unknown> }).select ?? {};
+    for (const c of DECLAREES) {
+      expect(rendus(), c).toContain(c);
+      expect(tus(), c).not.toContain(c);
+      expect(select[c], c).toBe(true);
+    }
+  });
+
+  it('REQ-SEC-008 : aucune relation ne mène à la fiche : `apporteur` est refusé sur chaque modèle cloisonné qui la porte', () => {
+    const versApporteur = Prisma.dmmf.datamodel.models
+      .filter((m) => m.fields.some((f) => f.kind === 'object' && f.type === 'Apporteur'))
+      .map((m) => m.name.charAt(0).toLowerCase() + m.name.slice(1))
+      .filter((m) => (MODELES_CLOISONNES as readonly string[]).includes(m));
+    expect(versApporteur.length).toBeGreaterThan(0);
+    const refusees = CLES_REFUSEES as unknown as Record<string, readonly string[]>;
+    for (const m of versApporteur) expect(refusees[m], m).toContain('apporteur');
+  });
 });

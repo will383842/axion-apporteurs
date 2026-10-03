@@ -21,7 +21,7 @@ export const ETATS_VIDES_ESPACE: Readonly<Record<string, EtatVide>> = {
   '/': {
     titre: 'Bienvenue dans votre espace',
     phrase:
-      "Quand vous rencontrez une entreprise qui pourrait former ses salariés, vous pouvez taper son nom ci-dessous. Vous vérifiez qu'elle est libre, vous dites qui vous avez rencontré, et Axion-IA l'appelle. Si elle signe, vous touchez une commission.",
+      "Quand vous rencontrez une entreprise qui pourrait former ses salariés, vous pouvez taper son nom ci-dessous. Vous vérifiez qu'elle est libre, vous dites qui vous avez rencontré, et Axion-IA l'appelle. Si elle passe commande pendant la durée de votre droit à commission, une commission vous revient au fil des paiements.",
     action: { libelle: 'Vérifier', route: '/entreprise?q=' },
   },
   '/mes-entreprises': {
@@ -33,7 +33,7 @@ export const ETATS_VIDES_ESPACE: Readonly<Record<string, EtatVide>> = {
   '/mes-commissions': {
     titre: 'Pas encore de commission',
     phrase:
-      "Elles apparaissent ici quand une entreprise que vous avez déposée signe, puis quand elle paie. Vous verrez alors ce que vous touchez, quand, et d'où vient chaque montant.",
+      "Elles apparaissent ici quand une entreprise que vous avez déposée signe, puis quand elle paie. Vous verrez alors ce qui vous revient, quand, et d'où vient chaque montant.",
     action: RETOUR_ACCUEIL,
   },
   '/plus': {

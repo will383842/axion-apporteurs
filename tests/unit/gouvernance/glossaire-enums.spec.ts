@@ -182,6 +182,34 @@ describe('REQ-GOV-016 — chaque famille rougit sur son témoin', () => {
     expect(familles({ ...VUE_CONFORME, code })).toEqual(['liste_litterale_d_etats']);
   });
 
+  it('liste_litterale_d_etats — DM-08 : une ARRIVÉE n’est pas un membre — les lignes de la matrice passent', () => {
+    // Une ligne de matrice est une FONCTION (transition → état d'arrivée), pas un ensemble.
+    const code = [
+      {
+        chemin: 'src/domain/attribution/machine.ts',
+        contenu:
+          "const ligneUne = { paiement_recu: 'convertie', figee: 'figee_resiliation', commande_caduque: 'active' };\nconst ligneDeux = { rdv_pris: 'rdv_pris', devis_envoye: 'proposition', devis_signe: 'signee' };\nconst ligneTrois = { devis_signe: 'signee', perdue: 'perdue', figee: 'figee_resiliation' };\nconst T = { convertie: { expiree: 'expiree', figee: E.figee_resiliation, x: E.active } };",
+      },
+    ];
+    expect(familles({ ...VUE_CONFORME, code })).toEqual([]);
+  });
+
+  it.each([
+    ['un tableau de deux occupants', "const x = ['active', 'signee'];"],
+    ['un objet à CLÉS occupantes', 'const x = { active: 1, signee: 2 };'],
+    ['une comparaison de deux occupants', "if (s === 'active' || s === 'signee') return;"],
+    [
+      'un objet dont la clé ET la valeur sont des états',
+      "const x = { active: 'signee', rdv_pris: 'proposition' };",
+    ],
+  ])(
+    'liste_litterale_d_etats — DM-08 : TÉMOIN — %s rougit, même dans la matrice',
+    (_quoi, contenu) => {
+      const code = [{ chemin: 'src/domain/attribution/machine.ts', contenu }];
+      expect(familles({ ...VUE_CONFORME, code })).toEqual(['liste_litterale_d_etats']);
+    }
+  );
+
   it('liste_litterale_d_etats — la SOURCE unique, elle, a le droit de la porter', () => {
     // Le contre-témoin qui empêche la garde d'interdire la solution qu'elle exige.
     const code = [

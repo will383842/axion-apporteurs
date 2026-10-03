@@ -1,6 +1,8 @@
 // @req REQ-UX-008
 // @req REQ-UX-017
 // @req REQ-UX-034
+// @req REQ-UX-021
+// @req REQ-UX-047
 /**
  * UX-P0-02 — les maquettes de l'espace, et la garde qui les rend OBLIGATOIRES avant tout code d'écran.
  *
@@ -468,7 +470,7 @@ describe('maquettes-validees — la SORTIE du binaire, sur un arbre jetable', ()
 describe('maquettes-validees — le script sur le dépôt réel', () => {
   it('REQ-UX-008 — le dépôt sort en zéro, et la sortie COMPTE ce qu’elle a lu', () => {
     const { code, sortie } = lancer();
-    expect(sortie).toMatch(/19 ligne\(s\) lue\(s\)/);
+    expect(sortie).toMatch(/26 ligne\(s\) lue\(s\)/);
     expect(code).toBe(0);
   });
 
@@ -478,11 +480,11 @@ describe('maquettes-validees — le script sur le dépôt réel', () => {
     expect(code).toBe(0);
   });
 
-  it('REQ-UX-008 — la vue du dépôt lit les dix-neuf maquettes et les tâches du registre', () => {
+  it('REQ-UX-008 — la vue du dépôt lit les vingt-six maquettes et les tâches du registre', () => {
     const v = vueDuDepot();
     expect(v.maquettes).toContain('accueil.html');
     expect(v.taches.find((t) => t.id === 'UX-P1-08')).toBeDefined();
-    expect(lireValidation(v.validation).lignes).toHaveLength(19);
+    expect(lireValidation(v.validation).lignes).toHaveLength(26);
   });
 });
 
@@ -678,7 +680,7 @@ describe('REQ-UX-034 — mode clair et mode sombre de l’espace, jetons propres
       expect(jetons(lire(f), CLAIR), f).toEqual(reference);
       expect(jetons(lire(f), SOMBRE), f).toEqual(jetons(lire(MAQUETTES_ESPACE[0]!), SOMBRE));
     }
-    expect(MAQUETTES_CONSOLE).toHaveLength(6);
+    expect(MAQUETTES_CONSOLE).toHaveLength(13);
     const consoleClair = jetons(lire(MAQUETTES_CONSOLE[0]!), CLAIR);
     expect(consoleClair.fond).toBeDefined();
     expect(consoleClair.fond).not.toBe(reference.fond);
@@ -707,7 +709,7 @@ describe('REQ-UX-017 — la moitié statique : autonomes, langue déclarée, cha
   const toutes = readdirSync(DOSSIER).filter((f) => f.endsWith('.html'));
 
   it('REQ-UX-017 — aucune maquette ne charge quoi que ce soit hors d’elle-même', () => {
-    expect(toutes.length).toBe(20);
+    expect(toutes.length).toBe(27);
     for (const f of toutes) {
       const html = lire(f);
       expect(html.match(/(?:src|href)\s*=\s*["']?(?:https?:)?\/\//gi) ?? [], f).toEqual([]);
@@ -737,5 +739,38 @@ describe('REQ-UX-017 — la moitié statique : autonomes, langue déclarée, cha
       }
     }
     expect(champs).toBeGreaterThan(50);
+  });
+});
+
+/**
+ * UX-P1-19 — la fiche de qualification de la console, telle que REQ-UX-021 la décrit : un appel
+ * `tel:`, le compteur des appels, la validation conditionnelle de la date (son état d'erreur), et
+ * « Non confirmé » offert à côté de « Perdue », sans être une perte. Jugé sur la maquette réelle ET
+ * sur une copie cassée d'un geste (RM-02). La mesure E2E du cas nominal appartient à l'écran codé.
+ */
+describe('REQ-UX-021 — la maquette de la fiche de qualification porte ce que l’exigence demande', () => {
+  const FICHE = 'docs/maquettes/fiche-qualification.html';
+  const manques = (html: string): string[] => {
+    const texte = html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ');
+    const f: string[] = [];
+    if (!/href="tel:\+?\d+"/.test(html)) f.push('appel_tel');
+    if (!/Appels : \d+/.test(texte)) f.push('compteur_des_appels');
+    if (!/data-pour="etat-erreur-date"/.test(html)) f.push('erreur_de_date_conditionnelle');
+    if (!/Non confirmé/.test(texte) || !/Perdue/.test(texte)) f.push('non_confirme_et_perdue');
+    return f;
+  };
+
+  it('REQ-UX-021 : la fiche porte l’appel tel:, le compteur des appels, l’erreur de date conditionnelle, et « Non confirmé » à côté de « Perdue »', () => {
+    expect(manques(readFileSync(FICHE, 'utf8'))).toEqual([]);
+  });
+
+  it('REQ-UX-021 : TÉMOIN — chacun retiré d’une copie de la maquette rougit, nommé', () => {
+    const reelle = readFileSync(FICHE, 'utf8');
+    expect(manques(reelle.replace(/href="tel:[^"]*"/g, 'href="#"'))).toEqual(['appel_tel']);
+    expect(manques(reelle.replace(/Appels : \d+/g, 'Appels : —'))).toEqual(['compteur_des_appels']);
+    expect(manques(reelle.replace(/data-pour="etat-erreur-date"/g, ''))).toEqual([
+      'erreur_de_date_conditionnelle',
+    ]);
+    expect(manques(reelle.replace(/Non\s+confirmé/g, 'Autre'))).toEqual(['non_confirme_et_perdue']);
   });
 });

@@ -126,6 +126,19 @@ export type Motif = {
   readonly req: string;
 };
 
+/**
+ * Les courriels adressés au CONTACT rencontré, jamais à l'apporteur — liste NOMINATIVE (arbitrage de
+ * la coordination, 2026-10-02). Chacun déclare `DESTINATAIRE = 'contact'`, ce que le témoin
+ * `tests/unit/micro-copy/confirmation-par-courriel.spec.ts` exige. Un fichier absent d'ici est jugé
+ * en portée apporteur.
+ */
+export const COURRIELS_AU_CONTACT = [
+  'information-article-14.ts',
+  'confirmation-contact.ts',
+] as const;
+
+const echapper = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 export const MOTIFS: readonly Motif[] = [
   {
     nom: 'prisma/**',
@@ -205,6 +218,38 @@ export const MOTIFS: readonly Motif[] = [
     portee: 'depot',
     attendu: true,
     req: 'REQ-GOV-017',
+  },
+  // W20 (UX-P1-41) : les courriels et la page publique. Aucun motif ne les couvrait (trou relevé par
+  // A07, rattrapage 45). Arbitrage de la coordination, sur la recommandation d'A07 (2026-10-02) :
+  // `courriels/**` est en portée apporteur PAR DÉFAUT ; seuls les fichiers NOMMÉS dans
+  // `COURRIELS_AU_CONTACT`, adressés au contact et jamais à l'apporteur, relèvent du dépôt. Comme la
+  // portée la plus large l'emporte (`porteeDuFichier`), le motif par défaut les EXCLUT nommément.
+  {
+    nom: 'src/content/micro-copy/courriels/**',
+    reg: new RegExp(
+      `^src/content/micro-copy/courriels/(?!(?:${COURRIELS_AU_CONTACT.map(echapper).join('|')})$).+\\.(ts|json)$`
+    ),
+    portee: 'apporteur',
+    // Aucun courriel à l'apporteur n'est encore sur main : le premier (les notifications,
+    // UX-P1-10) le rendra attendu.
+    attendu: false,
+    req: 'REQ-JUR-012',
+  },
+  {
+    nom: 'courriels au contact',
+    reg: new RegExp(
+      `^src/content/micro-copy/courriels/(?:${COURRIELS_AU_CONTACT.map(echapper).join('|')})$`
+    ),
+    portee: 'depot',
+    attendu: true,
+    req: 'REQ-JUR-012',
+  },
+  {
+    nom: 'src/content/micro-copy/public/**',
+    reg: /^src\/content\/micro-copy\/public\/.+\.(ts|json)$/,
+    portee: 'apporteur',
+    attendu: true,
+    req: 'REQ-JUR-012',
   },
   {
     nom: 'docs/adr/**',
@@ -1607,6 +1652,22 @@ const TEMOINS: { famille: string; quoi: string; vue: () => Vue }[] = [
           contenu: "  titre: 'Votre attribution court jusqu’au {dateFin}',",
         },
       ]),
+  },
+  // JUR-T13 (REQ-JUR-012, REQ-JUR-013) — les trois familles de la charte relationnelle, texte d'A07.
+  {
+    famille: 'challenge',
+    quoi: 'un challenge entre apporteurs annoncé dans l’espace (REQ-JUR-012)',
+    vue: () => vue([MICRO('{ "bandeau": "Le challenge d’octobre est lancé" }')]),
+  },
+  {
+    famille: 'formation_exigee',
+    quoi: 'un webinaire présenté comme une condition, dans un courriel (REQ-JUR-013)',
+    vue: () => vue([COURRIEL('<p>Votre webinaire requis a lieu jeudi.</p>')]),
+  },
+  {
+    famille: 'inactivite_sanctionnee',
+    quoi: 'une conséquence attachée à l’inactivité de l’apporteur (REQ-JUR-039)',
+    vue: () => vue([ESPACE('<p>Votre compte suspendu sera rouvert sur demande.</p>')]),
   },
   {
     famille: LISTE_NOIRE_GABARIT.nom,
