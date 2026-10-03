@@ -146,12 +146,14 @@ export interface RequeteDuJeton {
 
 /**
  * Le débit d'abord, puis la forme : rien de ce qui précède la lecture de la base ne dépend de
- * l'existence du jeton. Une adresse illisible n'ouvre pas un seau commun : elle est refusée.
+ * l'existence du jeton. Une adresse illisible n'ouvre pas un seau commun : elle est refusée. Un
+ * compteur en panne refuse aussi, quelle que soit sa conduite déclarée : un compteur `laisser-passer`
+ * rend `autorise: true` pendant la panne, et la page ne s'ouvre pas pour autant.
  */
 async function admettre(requete: RequeteDuJeton, ports: PortsDesJetons): Promise<Refus | null> {
   if (requete.empreinteAdresse === null) return REPONSE_A_REESSAYER;
   const verdict = await ports.compterAdresse(requete.empreinteAdresse, requete.maintenantMs);
-  if (!verdict.autorise) return REPONSE_A_REESSAYER;
+  if (!verdict.autorise || verdict.panne) return REPONSE_A_REESSAYER;
   if (!aLaFormeDUnJeton(requete.jeton)) return REPONSE_SANS_SUITE;
   return null;
 }

@@ -316,6 +316,9 @@ describe('SEC-40 — le débit, par empreinte d’adresse', () => {
     for (const verdict of [
       { autorise: false, panne: false },
       { autorise: false, panne: true },
+      // Un compteur déclaré `laisser-passer` rend `autorise: true` PENDANT la panne : la page ne
+      // s'ouvre pas pour autant (note de la lentille sécurité sur #567).
+      { autorise: true, panne: true },
     ]) {
       const b = baseInterdite();
       const requete = { jeton: tirerUnJeton(), empreinteAdresse: EMPREINTE_IP, maintenantMs: 0 };
