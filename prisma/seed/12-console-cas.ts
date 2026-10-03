@@ -13,6 +13,8 @@ import { colonnesPii, type ClesPii } from '../../src/server/securite/pii';
 
 /** Le nom du modèle dans la donnée authentifiée du bloc chiffré d'une contestation. */
 export const MODELE_CONTESTATION = 'Contestation';
+/** Le nom du modèle dans la donnée authentifiée du bloc chiffré d'une anomalie. */
+export const MODELE_ANOMALIE = 'Anomalie';
 
 export interface AnomalieASemer {
   id: string;

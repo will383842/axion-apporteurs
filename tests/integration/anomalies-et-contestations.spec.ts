@@ -26,8 +26,12 @@ import { forApporteur } from '../../src/server/acces/for-apporteur';
 import { notifier } from '../../src/server/notifications/envoyer';
 import { deciderLeRattachement } from '../../src/server/rattachement/decider';
 import { NOMS_DES_SECRETS } from '../../src/lib/env';
-import { clesPii, decryptPii } from '../../src/server/securite/pii';
-import { MODELE_CONTESTATION, semerContestation } from '../../prisma/seed/12-console-cas';
+import { clesPii, colonnesPii, decryptPii } from '../../src/server/securite/pii';
+import {
+  MODELE_ANOMALIE,
+  MODELE_CONTESTATION,
+  semerContestation,
+} from '../../prisma/seed/12-console-cas';
 
 let base: Base;
 let app: PrismaClient;
@@ -335,19 +339,32 @@ describe('REQ-DM-033 — anomalies : la forme, une clôture une seule fois, sans
     }
   });
 
-  it('REQ-DM-033 : TÉMOIN — la clôture pose statut, traite_at, traite_par_id et justification ENSEMBLE, une fois', async () => {
+  /** La clôture : statut, auteur, date et justification chiffrée, dans la MÊME écriture. */
+  const clore = (id: string, justification: Buffer | null = randomBytes(40)) =>
+    ecrire(
+      `UPDATE anomalies SET statut = 'levee', traite_at = $2, traite_par_id = $3::uuid,
+         justification_chiffre = $4
+       WHERE id = $1::uuid`,
+      id,
+      MAINTENANT,
+      adminId,
+      justification
+    );
+  const purgerLaJustification = (id: string) =>
+    ecrire(
+      `UPDATE anomalies SET justification_chiffre = NULL, justification_purgee_at = $2
+       WHERE id = $1::uuid`,
+      id,
+      MAINTENANT
+    );
+
+  it('REQ-DM-033 : TÉMOIN — la clôture pose statut, auteur, date et justification ENSEMBLE ; sans justification, refusée ; close, elle ne change plus', async () => {
     const id = await uneAnomalie();
     expect(
       await refus(ecrire(`UPDATE anomalies SET statut = 'levee' WHERE id = $1::uuid`, id))
     ).toContain(ANOMALIES);
-    await ecrire(
-      `UPDATE anomalies SET statut = 'levee', traite_at = $2, traite_par_id = $3::uuid,
-         justification = 'levée après vérification du dossier'
-       WHERE id = $1::uuid`,
-      id,
-      MAINTENANT,
-      adminId
-    );
+    expect(await refus(clore(id, null))).toContain(ANOMALIES);
+    await clore(id);
     expect(
       await refus(ecrire(`UPDATE anomalies SET statut = 'confirmee' WHERE id = $1::uuid`, id))
     ).toContain(ANOMALIES);
@@ -355,8 +372,90 @@ describe('REQ-DM-033 — anomalies : la forme, une clôture une seule fois, sans
       await refus(ecrire(`UPDATE anomalies SET statut = 'ouverte' WHERE id = $1::uuid`, id))
     ).toContain(ANOMALIES);
     expect(
-      await refus(ecrire(`UPDATE anomalies SET justification = 'autre' WHERE id = $1::uuid`, id))
+      await refus(
+        ecrire(
+          `UPDATE anomalies SET justification_chiffre = $2 WHERE id = $1::uuid`,
+          id,
+          randomBytes(40)
+        )
+      )
     ).toContain(ANOMALIES);
+  });
+
+  it('REQ-DM-033 : TÉMOIN — la justification ne naît qu’à la clôture : ouverte avec une justification, ou purgée, refusée (anomalies_justification_a_la_cloture)', async () => {
+    const inserer = (statut: string, justification: Buffer | null, purgeeAt: Date | null) =>
+      ecrire(
+        `INSERT INTO anomalies (id, type, apporteur_id, statut, ouverte_at, traite_at, traite_par_id,
+           justification_chiffre, justification_purgee_at)
+         VALUES ($1::uuid, 'auto_parrainage', $2::uuid, $3::statut_anomalie, $4, $5, $6::uuid, $7, $8)`,
+        randomUUID(),
+        apporteurId,
+        statut,
+        MAINTENANT,
+        statut === 'ouverte' ? null : MAINTENANT,
+        statut === 'ouverte' ? null : adminId,
+        justification,
+        purgeeAt
+      );
+    expect(await refus(inserer('ouverte', randomBytes(40), null))).toContain(
+      'anomalies_justification_a_la_cloture'
+    );
+    expect(await refus(inserer('ouverte', null, MAINTENANT))).toContain(
+      'anomalies_justification_a_la_cloture'
+    );
+    expect(await refus(inserer('levee', null, null))).toContain(
+      'anomalies_justification_a_la_cloture'
+    );
+    expect(await refus(inserer('levee', randomBytes(40), MAINTENANT))).toContain(
+      'anomalies_justification_purge_liee'
+    );
+    expect(await refus(inserer('levee', Buffer.alloc(0), null))).toContain(
+      'anomalies_justification_non_vide'
+    );
+  });
+
+  it('REQ-DM-033 : TÉMOIN — la purge de la justification : sur une anomalie ouverte, refusée ; close, admise une fois ; ensuite plus rien ne bouge', async () => {
+    const ouverte = await uneAnomalie();
+    expect(await refus(purgerLaJustification(ouverte))).toContain(ANOMALIES);
+    const id = await uneAnomalie();
+    await clore(id);
+    await purgerLaJustification(id);
+    expect(
+      await refus(
+        ecrire(
+          `UPDATE anomalies SET justification_chiffre = $2 WHERE id = $1::uuid`,
+          id,
+          randomBytes(40)
+        )
+      )
+    ).toContain(ANOMALIES);
+    expect(
+      await refus(
+        ecrire(
+          `UPDATE anomalies SET justification_purgee_at = $2 WHERE id = $1::uuid`,
+          id,
+          new Date(MAINTENANT.getTime() + 1)
+        )
+      )
+    ).toContain(ANOMALIES);
+  });
+
+  it('REQ-DM-033 : TÉMOIN — la justification est chiffrée pour SA ligne : jamais le clair en base, et un bloc déplacé sur une autre anomalie ne se déchiffre pas', async () => {
+    const clair = 'parrainage croisé constaté sur deux fiches';
+    const id = await uneAnomalie();
+    const { justificationChiffre } = colonnesPii(
+      { modele: MODELE_ANOMALIE, id },
+      { justification: clair },
+      CLES
+    );
+    await clore(id, Buffer.from(justificationChiffre!));
+    const [l] = await base.prisma.$queryRaw<{ j: Buffer }[]>`
+      SELECT justification_chiffre AS j FROM anomalies WHERE id = ${id}::uuid`;
+    expect(l!.j.toString('utf8')).not.toContain(clair);
+    const ligne = { modele: MODELE_ANOMALIE, champ: 'justificationChiffre', id };
+    expect(decryptPii(ligne, l!.j, CLES)).toBe(clair);
+    expect(() => decryptPii({ ...ligne, id: randomUUID() }, l!.j, CLES)).toThrow();
+    expect(() => decryptPii({ ...ligne, champ: 'texteChiffre' }, l!.j, CLES)).toThrow();
   });
 
   it('REQ-DM-033 : TÉMOIN — l’identité est figée ; DELETE et TRUNCATE refusés', async () => {
