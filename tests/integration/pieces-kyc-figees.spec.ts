@@ -20,7 +20,12 @@
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { randomBytes, randomUUID } from 'node:crypto';
+import { PrismaClient } from '@prisma/client';
 import { demarrerBase, type Base } from './harnais';
+import {
+  ROLE_D_EXECUTION,
+  provisionnerRoleDExecution,
+} from '../../src/server/deploiement/role-d-execution';
 
 let base: Base;
 
@@ -30,11 +35,25 @@ const hex = (octets: number) => randomBytes(octets).toString('hex');
 const FIGEES = 'pieces_kyc_coordonnees_figees';
 const TRONCATURE = 'pieces_kyc_troncature';
 
+/**
+ * Le client du SERVEUR : la base sous `partners_app`, provisionné comme en production. Les insertions
+ * et les écritures des témoins passent par lui ; la fixture d'apporteur et les lectures restent sous
+ * le propriétaire. `partners_app` n'a pas TRUNCATE : le refus du déclencheur d'instruction se juge
+ * sous le propriétaire, le seul rôle qui pourrait tronquer.
+ */
+let app: PrismaClient;
+
 beforeAll(async () => {
   base = await demarrerBase();
+  const u = new URL(base.url);
+  u.username = ROLE_D_EXECUTION;
+  u.password = randomBytes(24).toString('hex');
+  await provisionnerRoleDExecution({ urlMigration: base.url, urlExecution: u.toString() });
+  app = new PrismaClient({ datasourceUrl: u.toString() });
 }, 180_000);
 
 afterAll(async () => {
+  await app?.$disconnect();
   await base?.arreter();
 });
 
@@ -60,7 +79,7 @@ async function unApporteur(): Promise<string> {
 async function piece(type: 'rib' | 'identite', fichierRef: string | null = null): Promise<string> {
   const id = randomUUID();
   const rib = type === 'rib';
-  await base.prisma.$executeRawUnsafe(
+  await app.$executeRawUnsafe(
     `INSERT INTO pieces_kyc (id, apporteur_id, type, statut, fichier_ref, iban_chiffre, iban_hash)
      VALUES ($1::uuid, $2::uuid, $3::type_piece_kyc, 'valide', $4, $5, $6)`,
     id,
@@ -75,7 +94,7 @@ async function piece(type: 'rib' | 'identite', fichierRef: string | null = null)
 
 /** Une modification d'une colonne, paramétrée ; le nom de colonne vient de la liste de ce fichier. */
 async function poser(id: string, colonne: string, valeur: unknown): Promise<number> {
-  return base.prisma.$executeRawUnsafe(
+  return app.$executeRawUnsafe(
     `UPDATE pieces_kyc SET ${colonne} = $2 WHERE id = $1::uuid`,
     id,
     valeur
@@ -104,7 +123,7 @@ describe('REQ-UX-027 — l’IBAN et l’identité de la pièce sont figés', ()
     const id = await piece('rib');
     expect(
       await refus(
-        base.prisma.$executeRawUnsafe(
+        app.$executeRawUnsafe(
           `UPDATE pieces_kyc SET iban_chiffre = NULL, iban_hash = NULL WHERE id = $1::uuid`,
           id
         )
@@ -116,7 +135,7 @@ describe('REQ-UX-027 — l’IBAN et l’identité de la pièce sont figés', ()
     const id = await piece('identite', 'stockage/essai-1');
     expect(
       await refus(
-        base.prisma.$executeRawUnsafe(
+        app.$executeRawUnsafe(
           `UPDATE pieces_kyc SET type = 'siret'::type_piece_kyc WHERE id = $1::uuid`,
           id
         )
@@ -125,7 +144,7 @@ describe('REQ-UX-027 — l’IBAN et l’identité de la pièce sont figés', ()
     // Transtypée `::uuid` : sinon Postgres refuse le TYPE (42804) avant que le déclencheur ne juge.
     expect(
       await refus(
-        base.prisma.$executeRawUnsafe(
+        app.$executeRawUnsafe(
           `UPDATE pieces_kyc SET apporteur_id = $2::uuid WHERE id = $1::uuid`,
           id,
           await unApporteur()
@@ -139,7 +158,7 @@ describe('REQ-UX-027 — l’IBAN et l’identité de la pièce sont figés', ()
   it('REQ-DM-027 : le statut, la date de vérification et l’échéance restent libres', async () => {
     const id = await piece('rib');
     await expect(
-      base.prisma.$executeRawUnsafe(
+      app.$executeRawUnsafe(
         `UPDATE pieces_kyc SET statut = 'refusee'::statut_piece_kyc WHERE id = $1::uuid`,
         id
       )
@@ -161,7 +180,7 @@ describe('REQ-UX-027 — remplacee_at et fichier_purge_at s’écrivent une fois
   it('REQ-DM-027 : TÉMOIN — la purge de la pièce d’identité passe, une fois, et le fichier ne revient pas', async () => {
     const id = await piece('identite', 'stockage/identite-1');
     await expect(
-      base.prisma.$executeRawUnsafe(
+      app.$executeRawUnsafe(
         `UPDATE pieces_kyc SET fichier_ref = NULL, fichier_purge_at = $2 WHERE id = $1::uuid`,
         id,
         MAINTENANT
@@ -181,7 +200,7 @@ describe('REQ-UX-027 — remplacee_at et fichier_purge_at s’écrivent une fois
     expect(l).toStrictEqual({ ref: 'stockage/identite-2', purge: null });
     // Puis la purge COMPLÈTE, fichier effacé et date posée ensemble, passe.
     await expect(
-      base.prisma.$executeRawUnsafe(
+      app.$executeRawUnsafe(
         `UPDATE pieces_kyc SET fichier_ref = NULL, fichier_purge_at = $2 WHERE id = $1::uuid`,
         id,
         MAINTENANT
@@ -194,7 +213,7 @@ describe('REQ-DM-027 — une pièce ne disparaît pas', () => {
   it('REQ-DM-027 : TÉMOIN — DELETE est refusé', async () => {
     const id = await piece('rib');
     expect(
-      await refus(base.prisma.$executeRawUnsafe(`DELETE FROM pieces_kyc WHERE id = $1::uuid`, id))
+      await refus(app.$executeRawUnsafe(`DELETE FROM pieces_kyc WHERE id = $1::uuid`, id))
     ).toContain(FIGEES);
   });
 
