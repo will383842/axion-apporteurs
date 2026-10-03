@@ -4841,7 +4841,11 @@
         "src/server/integrations/axionia/reconciliation.ts",
         "src/server/taches/registre.ts",
         "tests/integration/reconciliation-quotidienne.spec.ts",
-        "src/server/integrations/axionia/relecture.ts"
+        "src/server/integrations/axionia/relecture.ts",
+        "src/server/taches/inscriptions.ts",
+        "src/server/integrations/telegram/alertes.ts",
+        "scripts/gates/journal-sans-pii.ts",
+        "tests/unit/integration/reconciliation.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -4870,7 +4874,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "Vérification V2 (GOV-132, C-01, condition 4) : le client de relecture Partners relit l'outbox d'axion-ia depuis le dernier `after_sequence` reçu, dans des bornes nommées, et alerte quand la relecture échoue ou rattrape un trou ; témoins rouges d'abord. AMENDEMENT (audit indépendant du plan de la Phase 1 (2026-10-01), écart B-07) : client unique `src/server/integrations/axionia/relecture.ts`, réutilisé par INT-T21-P."
+      "acceptance": "Vérification V2 (GOV-132, C-01, condition 4) : le client de relecture Partners relit l'outbox d'axion-ia depuis le dernier `after_sequence` reçu, dans des bornes nommées, et alerte quand la relecture échoue ou rattrape un trou ; témoins rouges d'abord. AMENDEMENT (audit indépendant du plan de la Phase 1 (2026-10-01), écart B-07) : client unique `src/server/integrations/axionia/relecture.ts`, réutilisé par INT-T21-P. RATTRAPAGE 81 (revue de l'exactitude sur #539, avis de la lentille sécurité, arbitrage de la coordination). (1) CHEMINS : le branchement au lanceur (`src/server/taches/inscriptions.ts`), la catégorie d'alerte `reconciliation` (`src/server/integrations/telegram/alertes.ts`), la ligne `CHEMIN_RELECTURE` à `LISTE_BLANCHE_PAR_CONTENU` (`scripts/gates/journal-sans-pii.ts`, le nom de la route d'axion-ia, pas une table) et un témoin unitaire sur ports en mémoire (`tests/unit/integration/reconciliation.spec.ts`, pour la mutation). (2) RECOUVREMENT : un passage relit depuis la plus haute séquence reçue moins `RECOUVREMENT_SEQUENCES` (500, borne nommée de la SSOT), au plus `PAGES_MAX_PAR_PASSAGE` pages de `LIMITE_PAR_PAGE` ; un trou au milieu de la file est ainsi relu (témoin). (3) NOMINATION, EN DEUX TEMPS (sécurité) : seul le NOMBRE part vers l'extérieur (signal Telegram, Sentry, journaux de la plateforme), et le signal fermé `trou_rattrape` ne change pas ; les `event_id` manquants sont nommés DANS Partners seulement, par le retour de `reconcilier()` et le résultat du passage au battement de la tâche (une ligne de base lisible par la console relèverait d'une tâche de schéma). REQ-INT-013 reste à cette tâche pour cette nomination interne ; la comparaison Σ encaissements HT par SIREN part dans INT-T73-P. VÉRIFICATION DE LA RÉPONSE (A02, rattrapage 81) : le client vérifie la signature de la réponse selon ce périmètre (en-têtes compris, liaison à la requête), et refuse une réponse dont un en-tête signé manque ou diffère ; témoin."
     },
     {
       "id": "SEC-11",
@@ -5871,7 +5875,8 @@
         "docs/GLOSSAIRE.md",
         "src/domain/candidature/decision.ts",
         "tests/unit/domaine/decision-candidature.spec.ts",
-        "tests/integration/decision-candidature.spec.ts"
+        "tests/integration/decision-candidature.spec.ts",
+        "docs/rgpd/registre-article-30.md"
       ],
       "schema": true,
       "sensible": [
@@ -5897,7 +5902,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "ELLE ÉCRIT LE SCHÉMA (label `schema`, seule de sa famille dans son lot). Cadrage de l'architecte du 2026-09-26 sur délégation de Will (partners/ADR-0022) : ce que la tâche crée ; le comportement est celui de ses exigences. (1) `enum ResultatDecisionCandidature {retenu, vivier, refuse}` ; `DecisionCandidature` -> `decisions_candidature` (REQ-CPL-006), APPEND-ONLY — une nouvelle décision est une nouvelle ligne, trio de déclencheurs du journal : `apporteurId`, `resultat`, `justification`, `webinaireSuivi` Boolean nullable, déclaratif et informatif, dont aucune transition ne dépend (REQ-JUR-013), `auteurId` vers `utilisateurs_console`, `decideeAt`. (2) Journal `apporteur_statut_modifie` (agrégat `apporteur`, charge fermée `{de: StatutApporteur, vers, evenement: z.enum(EVENEMENTS_APPORTEUR), resiliationMotif?: MotifResiliation, acteurId?: uuid}`) : CPL-T06 en est le premier écrivain ; SEC-19, DM-11 et INT-T12 l'emploient ensuite sans migration. Module du semeur `prisma/seed/13-candidatures.ts`. RECTIFICATION DE L'ARCHITECTE (A02, 2026-10-02, rattrapage 48) : la valeur `apporteur_statut_modifie` est CRÉÉE par DM-45 (naissance d'un apporteur, `de: null`, ADR-0022 §4 « un type par genre de transition ») ; CPL-T06 n'ajoute donc PAS de valeur d'enum : ses codes de décision (`retenir`, `mettre_en_vivier`, `refuser`) sont DÉJÀ dans `TRANSITIONS_APPORTEUR` : elle ne touche ni la matrice ni le schéma de l'enum ; sa charge passe par la forme de `src/domain/evenement/charges.ts`. Dans sa charge, la clé du code est `transition` (pas `evenement`, décision A02), `de` est `StatutApporteur` ou nul, `acteur` est obligatoire (décision sur l'acteur du journal), `resiliationMotif?` reste à elle."
+      "acceptance": "ELLE ÉCRIT LE SCHÉMA (label `schema`, seule de sa famille dans son lot). Cadrage de l'architecte du 2026-09-26 sur délégation de Will (partners/ADR-0022) : ce que la tâche crée ; le comportement est celui de ses exigences. (1) `enum ResultatDecisionCandidature {retenu, vivier, refuse}` ; `DecisionCandidature` -> `decisions_candidature` (REQ-CPL-006), APPEND-ONLY — une nouvelle décision est une nouvelle ligne, trio de déclencheurs du journal : `apporteurId`, `resultat`, `justification`, `webinaireSuivi` Boolean nullable, déclaratif et informatif, dont aucune transition ne dépend (REQ-JUR-013), `auteurId` vers `utilisateurs_console`, `decideeAt`. (2) Journal `apporteur_statut_modifie` (agrégat `apporteur`, charge fermée `{de: StatutApporteur, vers, evenement: z.enum(EVENEMENTS_APPORTEUR), resiliationMotif?: MotifResiliation, acteurId?: uuid}`) : CPL-T06 en est le premier écrivain ; SEC-19, DM-11 et INT-T12 l'emploient ensuite sans migration. Module du semeur `prisma/seed/13-candidatures.ts`. RECTIFICATION DE L'ARCHITECTE (A02, 2026-10-02, rattrapage 48) : la valeur `apporteur_statut_modifie` est CRÉÉE par DM-45 (naissance d'un apporteur, `de: null`, ADR-0022 §4 « un type par genre de transition ») ; CPL-T06 n'ajoute donc PAS de valeur d'enum : ses codes de décision (`retenir`, `mettre_en_vivier`, `refuser`) sont DÉJÀ dans `TRANSITIONS_APPORTEUR` : elle ne touche ni la matrice ni le schéma de l'enum ; sa charge passe par la forme de `src/domain/evenement/charges.ts`. Dans sa charge, la clé du code est `transition` (pas `evenement`, décision A02), `de` est `StatutApporteur` ou nul, `acteur` est obligatoire (décision sur l'acteur du journal), `resiliationMotif?` reste à elle. REGISTRE (rattrapage 81, demande d'A02 sur #546) : la ligne `decisions_candidature` du registre de l'article 30 (TRT-APPORTEURS) est écrite dans la même PR, avec sa durée ou « À compléter » et sa question ; la durée d'un candidat refusé suit la proposition d'A07, au texte exact d'A07. PURGE DU MOTIF (rattrapage, demande de la lentille sécurité, forme d'A02) : `justification` est TEXT NULLABLE et `justification_purgee_at` Timestamptz(3) NULL ; le CHECK `decisions_candidature_justification_non_vide` devient `justification IS NULL OR btrim(justification) <> ''` ; CHECK nommé `decisions_candidature_justification_purge_liee` : `(justification IS NULL) = (justification_purgee_at IS NOT NULL)` (à l'insertion, le motif est donc exigé) ; le gabarit, de ligne et de troncature, devient `refuser_modification_sauf('purge:justification', 'une_fois:justification_purgee_at')`. La purge à l'échéance que Williams fixera est une tâche suivante, sans ADR. TÉMOINS : décision sans motif, ou à blancs, refusée ; purge ensemble acceptée, la ligne restant ; motif vidé sans date, ou date sans vidage, refusé ; motif qui revient, ou date réécrite, refusé ; autre colonne, DELETE et TRUNCATE refusés. REGISTRE : `docs/rgpd/registre-article-30.md` entre aux paths ; la ligne `decisions_candidature` (TRT-APPORTEURS) porte la durée du motif, ou « À compléter » et sa question. (A02, revue 5399394276 sur #546.)"
     },
     {
       "id": "UX-P1-04",
@@ -15737,7 +15742,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.6,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "DETTE BLOQUANTE POUR LA MISE EN SERVICE, relevee par la lentille A07 juriste sur la PR #242 (JUR-T34), et deja signalee par la lentille securite. La page /confidentialite, lisible sans session, affiche le registre de l article 30 tel quel : les rubriques A completer y montrent la question interne posee a Williams, le prenom Will apparait (a confirmer par Will), et le mot attribution, refuse par le lexique de l espace, y est lu. A LIVRER : (1) la page n affiche jamais une question interne ni un nom de personne ; une rubrique encore A completer s affiche comme en cours de redaction, sans la question ; (2) aucun mot du lexique interdit de l espace n atteint la page, que la garde lexicale lise le texte a l execution ou que le registre soit reformule pour l apporteur ; (3) le choix est ecrit ; (4) TEMOIN rouge d abord : un registre de fixture qui porte une question interne, le prenom Will et le mot attribution produit une page qui n en montre aucun, et le temoin nomme ce qu il a filtre. Aucune mise en service de l espace avant cette tache. Dette apres lancement notee a part : l historique des versions acceptees, et la micro-copie Votre espace s ouvre une fois cette politique acceptee, inexacte tant qu aucune route ne verifie l accord hors connexion. REQ-UX-047 (passe GOV-115, 2026-09-30) : geste principal : DETTE NOMMÉE, geste non encore connu, à écrire à la revendication ; budget : lu dans `BUDGETS_UX` (consultation au plus 3 interactions, saisie au plus 8), mesuré par la fixture QA-T33. la maquette de l'écran est validée dans `docs/maquettes/VALIDATION.md` avant la première ligne de code ; cinq états (REQ-UX-019 amendée). Pour cette tâche, sans changement de mise en page ni d'états : la page existe (JUR-T34), seul un libellé change, aucune maquette à valider (coordination, rattrapage 78) ; une maquette reste due à toute refonte. NOTICE (rattrapage 54, texte d'A07, LOT OPCO) : `docs/rgpd/registre-article-30.md`, TRT-APPORTEURS, rubrique « Destinataires », reçoit : « la personne que vous déclarez, qui reçoit vos prénom et nom dans la demande de confirmation, jamais vos coordonnées » (sources : contrat art. 3.2 · HYP-W20-IDENTITE-APPORTEUR) ; la politique la DÉRIVE (`politique.ts`, RM-01), jamais recopiée. A07 relit la fidélité. CONDITION DE MISE EN SERVICE (rattrapage 80), MOT POUR MOT : « la page ne peut pas être présentée à l'acceptation d'un Apporteur tant que la politique rendue contient un seul segment `a_completer`, quel qu'en soit le motif. Seule l'omission d'une qualification non tranchée est admise. » (A07, revue de #535, 2026-10-03). La garde qui la tient est JUR-T57. La NOTICE des destinataires citée plus haut (rattrapage 54) est remplacée par JUR-T57, avec le texte d'A07 du rattrapage 80.",
       "tests": {
         "REQ-JUR-025": [
@@ -15745,10 +15750,14 @@
         ]
       },
       "issue": null,
-      "owner": null,
-      "branch": null,
-      "pr": null,
-      "attestation": null,
+      "owner": "A06",
+      "branch": "t/jur-t36",
+      "pr": 535,
+      "attestation": {
+        "pr": 535,
+        "sha": "533bfb73e774bb8b089e384fa3627e75a1485257",
+        "fusionneeAt": "2026-10-03T06:27:37Z"
+      },
       "motif": null
     },
     {
@@ -19947,7 +19956,9 @@
         "scripts/image/publier.sh",
         "scripts/gates/deploy-verify.ts",
         "docs/tiers/coolify.md",
-        "tests/unit/qualite/image-par-empreinte.spec.ts"
+        "tests/unit/qualite/image-par-empreinte.spec.ts",
+        "tests/unit/qualite/retour-arriere.spec.ts",
+        "tests/unit/qualite/un-seul-producteur-de-deploiement.spec.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -20525,13 +20536,22 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "Extraite de DM-11 au rattrapage 55 (arbitrage A01 sur l'avis d'A02 : de VRAIS enums, ADR-0022 §5 et §16, et PAS de colonne texte d'attente, dont la conversion ne serait pas additive). Les deux colonnes `apporteurs.qualite_exercice` et `apporteurs.profession_reglementee` (nullables) entrent AVEC leur enum dans une migration additive. (1) `QualiteExercice`, liste FERMÉE d'A07 (2026-10-02) : `commercant` « commerçant », `societe_commerciale` « société commerciale », `artisan` « artisan », `profession_liberale` « professionnel libéral » ; les deux premières rendent applicable la clause attributive de juridiction (art. 48 CPC), les deux autres renvoient au droit commun (TÉMOIN qui le fige) ; « micro-entrepreneur » n’est pas une valeur (un régime, pas une qualité), et la liste est FERMÉE à ces quatre valeurs (motifs d’A07 hors dépôt). Question SOLDÉE (rattrapage 67) : la décision de Williams du 2026-10-02 sur l'avis d'A07 garde `QualiteExercice` à ces quatre valeurs ; le statut juridique est une liste distincte, rangée dans ces qualités (DM-56). (2) `ProfessionReglementee` : les noms d'ADR-0022 §16, `expertise_comptable`, `auxiliaire_services_financiers`, `intermediaire_assurance` (codes NAF 69.20Z, 66.19B, 66.22Z, HYP-JUR-PROF-REGLEMENTEES), liste figée par un TÉMOIN. (3) Glossaire §4 : les deux enums, sans synonymes interdits. Auteur : A05. Lentilles schema (A02) et A07. CHAMPS RENDUS (rattrapage 77) : qualiteExercice et professionReglementee sont classées RENDUES à l'apporteur, sous un libellé et jamais sous le code brut ; tout autre verdict interne reste TU (arbitrage de la coordination, avis d'A07 et de la sécurité). La couche cloisonnée (`src/server/acces/for-apporteur.ts`) et son témoin (`tests/unit/securite/acces-scope.spec.ts`) le portent. CONDITIONS DE LA SÉCURITÉ (rattrapage 78, rendues opposables) : rendues seulement sur SA fiche, atteinte par l'identifiant de session, jamais par une relation (`apporteur` reste dans CLES_REFUSEES des modèles cloisonnés) ; la correspondance NAF → profession reste côté serveur et n'est jamais exposée.",
       "tests": {
         "REQ-JUR-022": [
           "tests/unit/domaine/qualite-et-profession.spec.ts"
         ]
-      }
+      },
+      "branch": "t/dm-50",
+      "owner": "A05",
+      "pr": 504,
+      "attestation": {
+        "pr": 504,
+        "sha": "7dcae1301996533d5a0e50ec109afca9d044d0fc",
+        "fusionneeAt": "2026-10-03T06:02:56Z"
+      },
+      "motif": null
     },
     {
       "id": "DM-51",
@@ -21221,7 +21241,7 @@
       "externe": null,
       "estimateDays": 0.5,
       "statut": "a_faire",
-      "acceptance": "Versée au rattrapage 66 (option (b) de la coordination ; forme d'A02, 2026-10-02 ; amendement B-07) : la relecture par `after_sequence` tourne déjà (INT-T02) sans être déclarée au contrat. (1) deps INT-T46-P ; amende la v3 tant qu'axion-ia ne l'a pas adoptée, sinon v4 (A02). Un numéro de version se FIGE à sa première adoption par l'autre côté (axion-ia épingle l'empreinte), pas à la fusion dans Partners ; tant qu'il n'est pas adopté, ajouter la route est un AMENDEMENT : même `contracts.v3.json`, et `contracts.sha256` RÉGÉNÉRÉ par `pnpm contracts:export`, jamais retapé. Ordre : INT-T46-P (crée la v3), puis INT-T70-P (amende la v3), puis l'adoption unique côté axion-ia (INT-T08-A et la reprise de l'empreinte), une seule fenêtre de bascule. (2) La route entre dans `packages/contracts/api.ts` (« les API du contrat qui ne sont pas des webhooks »), pas dans un module dédié, en `$defs` fermés : `api_relecture_parametres` (`after_sequence` et une borne `limite` nommée) et `api_relecture_reponse` (une liste d'enveloppes déjà au contrat), `additionalProperties: false`, sous la MÊME authentification signée que les autres routes, avec un `$comment` qui porte ce que le schéma ne dit pas (bornes, absence de cache, journalisation sans donnée de personne) ; `contratJsonSchema` les inclut, donc l'empreinte les couvre. (3) TÉMOINS : `pnpm contracts:hash` (export --verifier) et `tests/unit/integration/contrat-hash.spec.ts`, existants, plus `tests/unit/integration/contrat-relecture.spec.ts` : la route est dans `$defs`, fermée, et l'empreinte change quand un champ de la route change. Auteur : A05. Lentille schema (A02).",
+      "acceptance": "Versée au rattrapage 66 (option (b) de la coordination ; forme d'A02, 2026-10-02 ; amendement B-07) : la relecture par `after_sequence` tourne déjà (INT-T02) sans être déclarée au contrat. (1) deps INT-T46-P ; amende la v3 tant qu'axion-ia ne l'a pas adoptée, sinon v4 (A02). Un numéro de version se FIGE à sa première adoption par l'autre côté (axion-ia épingle l'empreinte), pas à la fusion dans Partners ; tant qu'il n'est pas adopté, ajouter la route est un AMENDEMENT : même `contracts.v3.json`, et `contracts.sha256` RÉGÉNÉRÉ par `pnpm contracts:export`, jamais retapé. Ordre : INT-T46-P (crée la v3), puis INT-T70-P (amende la v3), puis l'adoption unique côté axion-ia (INT-T08-A et la reprise de l'empreinte), une seule fenêtre de bascule. (2) La route entre dans `packages/contracts/api.ts` (« les API du contrat qui ne sont pas des webhooks »), pas dans un module dédié, en `$defs` fermés : `api_relecture_parametres` (`after_sequence` et une borne `limite` nommée) et `api_relecture_reponse` (une liste d'enveloppes déjà au contrat), `additionalProperties: false`, sous la MÊME authentification signée que les autres routes, avec un `$comment` qui porte ce que le schéma ne dit pas (bornes, absence de cache, journalisation sans donnée de personne) ; `contratJsonSchema` les inclut, donc l'empreinte les couvre. (3) TÉMOINS : `pnpm contracts:hash` (export --verifier) et `tests/unit/integration/contrat-hash.spec.ts`, existants, plus `tests/unit/integration/contrat-relecture.spec.ts` : la route est dans `$defs`, fermée, et l'empreinte change quand un champ de la route change. Auteur : A05. Lentille schema (A02). SIGNATURE DE LA RÉPONSE (A02, rattrapage 81) : la signature de la réponse couvre le corps, Derniere-Sequence, Suite et ce qui lie la réponse à sa requête (after_sequence et la limite demandés), dans un ordre canonique écrit au $comment (A02, rattrapage 81). Elle amende la v3 tant qu'axion-ia ne l'a pas adoptée.",
       "tests": {
         "REQ-INT-012": [
           "tests/unit/integration/contrat-relecture.spec.ts"
@@ -21510,7 +21530,7 @@
       "externe": null,
       "estimateDays": 1,
       "statut": "a_faire",
-      "acceptance": "Versée au rattrapage 70 sur l'arbitrage de la coordination du 2026-10-02, accepté par A07 et la lentille sécurité. (1) La page ouverte par le lien d'opposition du courriel au contact permet TOUS les droits (accès, rectification, effacement, limitation, opposition), sans compte et sans condition, avec DEUX actions distinctes : exercer un droit, et s'opposer. C'est le moyen électronique de l'art. 12, puisque `{adresseDroits}` est postale dans le courriel ; la clé `droits` de l'art. 14 (v5) y renvoie déjà. (2) CONDITION DE MISE EN SERVICE d'A07, MOT POUR MOT : « Aucun courriel en v5 ne doit partir tant que cette page n'offre pas ces droits, chacun distinct de l'opposition et sans compte. Sinon, l'information de l'art. 14 serait inexacte. » (A07, 2026-10-02). (3) Écran public : maquette et cinq états (REQ-UX-047), textes dans la SSOT de micro-copy, garde lexicale verte. (4) TÉMOINS : chacun des cinq droits est offert et distinct ; aucune étape ne demande de compte ; les deux actions mènent à deux demandes distinctes. TRACE (rattrapage 70, A02) : chaque demande est une ligne de `demandes_droits_contact` (DM-59, à ses deps) ; une opposition entre en plus dans la liste d'opposition de la personne (HYP-W20-OPPOSITION) et se synchronise par INT-T69-P. CONDITIONS DE LA LENTILLE SÉCURITÉ, MOT POUR MOT : « (1) un jeton DÉDIÉ aux droits : au moins 256 bits, haché, lié à UNE personne déclarée, non consommé par la réponse oui/non, valable tant que ses données existent, invalidé à leur effacement ; (2) les règles de SEC-40 sur la page : GET sans écriture, réponse sans oracle, débit par empreinte d'IP, no-referrer, noindex, aucun jeton journalisé ; (3) la page n'AFFICHE aucune donnée de la personne (entreprise et nom de l'apporteur seuls) ; l'accès est une DEMANDE, avec une réponse au courriel déjà connu ; (4) rectification, effacement et limitation sont des DEMANDES traitées par un humain (délai de l'art. 12) ; seule l'opposition prend effet au clic ; PAS de texte libre : la personne choisit la donnée à corriger parmi celles que nous tenons (nom, prénom, fonction, téléphone, adresse électronique), puis saisit la nouvelle valeur au format contrôlé ; la valeur est CHIFFRÉE comme celle qu'elle remplace, et effacée à la CLÔTURE de la demande (rectification appliquée ou refus motivé notifié), au plus tard un mois après la réception, porté à trois mois si le délai est prolongé dans les conditions de l'art. 12.3 ; la ligne ne garde que la trace (quelle donnée, quand, quelle suite) ; une nouvelle adresse électronique n'est appliquée qu'après un lien de vérification envoyé à cette NOUVELLE adresse (A07, 2026-10-02) ; (5) un témoin pour chacun de ces points (sécurité, 02/10) ». RECTIFICATION, lentille sécurité, MOT POUR MOT : « (a) la liste « la donnée à corriger » ne montre que des NOMS de champ (nom, prénom, fonction, courriel, téléphone), jamais la valeur que nous tenons ; (b) quand une nouvelle adresse est appliquée, un avis part aussi à l'ANCIENNE adresse, sans la nouvelle en clair, pour que le contact voie un détournement éventuel (sécurité, 02/10) ». Consigne d'A07 sous le champ, soumise à la garde lexicale : « Indiquez seulement la donnée à corriger et sa nouvelle valeur. » Auteur : A06. Lentilles A07 et sécurité.",
+      "acceptance": "Versée au rattrapage 70 sur l'arbitrage de la coordination du 2026-10-02, accepté par A07 et la lentille sécurité. (1) La page ouverte par le lien d'opposition du courriel au contact permet TOUS les droits (accès, rectification, effacement, limitation, opposition), sans compte et sans condition, avec DEUX actions distinctes : exercer un droit, et s'opposer. C'est le moyen électronique de l'art. 12, puisque `{adresseDroits}` est postale dans le courriel ; la clé `droits` de l'art. 14 (v5) y renvoie déjà. (2) CONDITION DE MISE EN SERVICE d'A07, MOT POUR MOT : « Aucun courriel en v5 ne doit partir tant que cette page n'offre pas ces droits, chacun distinct de l'opposition et sans compte. Sinon, l'information de l'art. 14 serait inexacte. » (A07, 2026-10-02). (3) Écran public : maquette et cinq états (REQ-UX-047), textes dans la SSOT de micro-copy, garde lexicale verte. (4) TÉMOINS : chacun des cinq droits est offert et distinct ; aucune étape ne demande de compte ; les deux actions mènent à deux demandes distinctes. TRACE (rattrapage 70, A02) : chaque demande est une ligne de `demandes_droits_contact` (DM-59, à ses deps) ; une opposition entre en plus dans la liste d'opposition de la personne (HYP-W20-OPPOSITION) et se synchronise par INT-T69-P. CONDITIONS DE LA LENTILLE SÉCURITÉ, MOT POUR MOT : « (1) un jeton DÉDIÉ aux droits : au moins 256 bits, haché, lié à UNE personne déclarée, non consommé par la réponse oui/non, valable tant que ses données existent, invalidé à leur effacement ; (2) les règles de SEC-40 sur la page : GET sans écriture, réponse sans oracle, débit par empreinte d'IP, no-referrer, noindex, aucun jeton journalisé ; (3) la page n'AFFICHE aucune donnée de la personne (entreprise et nom de l'apporteur seuls) ; l'accès est une DEMANDE, avec une réponse au courriel déjà connu ; (4) rectification, effacement et limitation sont des DEMANDES traitées par un humain (délai de l'art. 12) ; seule l'opposition prend effet au clic ; PAS de texte libre : la personne choisit la donnée à corriger parmi celles que nous tenons (nom, prénom, fonction, téléphone, adresse électronique), puis saisit la nouvelle valeur au format contrôlé ; la valeur est CHIFFRÉE comme celle qu'elle remplace, et effacée à la CLÔTURE de la demande (rectification appliquée ou refus motivé notifié), au plus tard un mois après la réception, porté à trois mois si le délai est prolongé dans les conditions de l'art. 12.3 ; la ligne ne garde que la trace (quelle donnée, quand, quelle suite) ; une nouvelle adresse électronique n'est appliquée qu'après un lien de vérification envoyé à cette NOUVELLE adresse (A07, 2026-10-02) ; (5) un témoin pour chacun de ces points (sécurité, 02/10) ». RECTIFICATION, lentille sécurité, MOT POUR MOT : « (a) la liste « la donnée à corriger » ne montre que des NOMS de champ (nom, prénom, fonction, courriel, téléphone), jamais la valeur que nous tenons ; (b) quand une nouvelle adresse est appliquée, un avis part aussi à l'ANCIENNE adresse, sans la nouvelle en clair, pour que le contact voie un détournement éventuel (sécurité, 02/10) ». Consigne d'A07 sous le champ, soumise à la garde lexicale : « Indiquez seulement la donnée à corriger et sa nouvelle valeur. » Auteur : A06. Lentilles A07 et sécurité. La page n'est pas non plus mise en service avant la livraison de DM-60 (l'anonymisation de la trace à cinq ans) : sinon la durée décidée par Williams le 2026-10-03 ne serait pas exécutée (A07, rattrapage 81).",
       "tests": {
         "REQ-JUR-065": [
           "tests/unit/public/page-des-droits.spec.ts"
@@ -21636,7 +21656,8 @@
         "auth"
       ],
       "deps": [
-        "QA-T62"
+        "QA-T62",
+        "QA-T70"
       ],
       "reqs": [
         "REQ-DM-024"
@@ -21668,7 +21689,7 @@
       "schema": false,
       "sensible": [],
       "deps": [
-        "SEC-50"
+        "QA-T62"
       ],
       "reqs": [
         "REQ-QA-023"
@@ -21677,7 +21698,7 @@
       "externe": null,
       "estimateDays": 0.5,
       "statut": "a_faire",
-      "acceptance": "Versée au rattrapage 79 sur la demande de la lentille sécurité, relayée par la coordination. (1) `scripts/gates/gate-d.sh` rejoue la propriété des tables comme le runbook (`docs/runbooks/sauvegarde.md`, étape 3), avec la même fonction que `scripts/sauvegarde/exercice.ts`, au lieu de `--no-owner` seul. (2) FIDÉLITÉ : une fois SEC-50 livrée, la porte D rougira tant que cette tâche ne sera pas faite, ce qui prouvera SEC-50 ; la porte D redevient verte quand la propriété est rejouée à l'identique. (3) La fonction de rejeu est UNIQUE, partagée par la porte D et l'exercice de restauration ; aucune copie. Auteur : A05.",
+      "acceptance": "Versée au rattrapage 79 sur la demande de la lentille sécurité, relayée par la coordination. (1) `scripts/gates/gate-d.sh` rejoue la propriété des tables comme le runbook (`docs/runbooks/sauvegarde.md`, étape 3), avec la même fonction que `scripts/sauvegarde/exercice.ts`, au lieu de `--no-owner` seul. (2) ORDRE (rattrapage 81, mesure de l'auteur back) : QA-T70 fusionne AVANT SEC-50, sinon la porte D rougit ; l'image N−1 restaurée en `--no-owner` a un journal à un autre propriétaire, que le constat de SEC-50 refuse. La porte D reste verte quand la propriété est rejouée à l'identique. (3) La fonction de rejeu est UNIQUE, partagée par la porte D et l'exercice de restauration ; aucune copie. Auteur : A05.",
       "tests": {
         "REQ-QA-023": [
           "tests/unit/qualite/sauvegarde-et-exercice.spec.ts"
@@ -21687,7 +21708,7 @@
     {
       "id": "DM-60",
       "titre": "La trace d'une demande de droit du contact s'anonymise cinq ans après sa clôture",
-      "phase": 2,
+      "phase": 1,
       "repo": "partners",
       "zone": "domaine",
       "paths": [
@@ -21715,7 +21736,7 @@
       "externe": null,
       "estimateDays": 0.5,
       "statut": "a_faire",
-      "acceptance": "Versée au rattrapage 79, forme d'A02 adoptée par la coordination, MOT POUR MOT : « La trace d'une demande de droit du contact s'anonymise CINQ ANS après sa clôture (décision de Williams du 2026-10-03 ; constante `DROITS_CONTACT_TRACE_ANS` = 5 dans `retention.ts`, avec sa source) : une tâche de fond met `attribution_id` à NULL et pose `trace_anonymisee_at`, en une instruction, pour toute demande dont `COALESCE(traitee_at, recue_at)` a plus de cinq ans ; la ligne reste (droit, donnée visée, issue, dates), sans lien à une personne. SCHÉMA (patron de DM-53, ADR-0030) : `attribution_id` passe en DROP NOT NULL ; colonne `trace_anonymisee_at` Timestamptz(3) NULL ; CHECK nommé `demandes_droits_contact_trace_anonymisee_liee` : `(attribution_id IS NULL) = (trace_anonymisee_at IS NOT NULL)` ; CHECK nommé `demandes_droits_contact_anonymisee_sans_valeur` : `trace_anonymisee_at IS NULL OR valeur_chiffree IS NULL` ; le déclencheur `demandes_droits_contact_ajout_seul` est remplacé par `CREATE OR REPLACE TRIGGER` (atomique, sans fenêtre) avec les arguments de DM-59 PLUS `'purge:attribution_id'` et `'une_fois:trace_anonymisee_at'` ; c'est la famille journal_desarme : un ADR ACCEPTÉ, cité en ligne 1 de la migration (prochain numéro libre après 0032, soit 0033), décrit la décision et son retour arrière. La clé étrangère vers `attributions` reste en Restrict (une valeur NULL n'est pas vérifiée). TÉMOINS : sous l'échéance, rien ; pile et au-delà, lien vidé et date posée, la ligne restant ; second passage sans effet ; le lien ne revient pas, et la date ne se réécrit pas ; la date posée sans vider le lien, ou le lien vidé sans la date, refusés sur le CHECK ; une anonymisation d'une demande qui porte encore une valeur, refusée ; toute autre modification et DELETE, toujours refusés. Préfixe de migration donné à la revendication. Le registre de l'article 30 reçoit la durée. » PRÉCISIONS D'A02 : (1) les ARGUMENTS COMPLETS du gabarit après remplacement, dans cet ordre : `refuser_modification_sauf('une_fois:traitee_at', 'une_fois:issue', 'purge:valeur_chiffree', 'une_fois:valeur_purgee_at', 'une_fois:prolongee_at', 'purge:attribution_id', 'une_fois:trace_anonymisee_at')`, pour le déclencheur de ligne ET celui de troncature (`demandes_droits_contact_troncature`, lui aussi par `CREATE OR REPLACE TRIGGER`) ; (2) L'INDEX : rien ne change ; `demandes_droits_contact_attribution_id_idx` (btree simple) admet les NULL, et l'index partiel `demandes_droits_contact_a_traiter_idx` n'est pas touché ; seule la COLONNE perd son NOT NULL (`ALTER COLUMN \"attribution_id\" DROP NOT NULL`), et le champ Prisma devient `attributionId String?` avec la relation optionnelle. REGISTRE : DM-60 nomme sa tâche dans la ligne `demandes_droits_contact` du registre de l'article 30, à la place de « …relève de la tâche de purge de cette trace, à venir », écrite sans identifiant par DM-59. TÉMOIN DE PLUS (coordination) : une demande non close s'anonymise cinq ans après sa réception ; une demande jamais close au bout de cinq ans est une anomalie (délai légal d'un mois, trois au plus), et la minimisation l'emporte. Le nom de l'ADR est donné ici pour le registre ; son titre définitif se fixe à la revendication, et si 0031 ou 0032 n'est pas sur main à sa PR, l'ordre se règle comme au rattrapage 59. Auteur : A05. Lentilles schema (A02) et sécurité.",
+      "acceptance": "Versée au rattrapage 79, forme d'A02 adoptée par la coordination, MOT POUR MOT : « La trace d'une demande de droit du contact s'anonymise CINQ ANS après sa clôture (décision de Williams du 2026-10-03 ; constante `DROITS_CONTACT_TRACE_ANS` = 5 dans `retention.ts`, avec sa source) : une tâche de fond met `attribution_id` à NULL et pose `trace_anonymisee_at`, en une instruction, pour toute demande dont `COALESCE(traitee_at, recue_at)` a plus de cinq ans ; la ligne reste (droit, donnée visée, issue, dates), sans lien à une personne. SCHÉMA (patron de DM-53, ADR-0030) : `attribution_id` passe en DROP NOT NULL ; colonne `trace_anonymisee_at` Timestamptz(3) NULL ; CHECK nommé `demandes_droits_contact_trace_anonymisee_liee` : `(attribution_id IS NULL) = (trace_anonymisee_at IS NOT NULL)` ; CHECK nommé `demandes_droits_contact_anonymisee_sans_valeur` : `trace_anonymisee_at IS NULL OR valeur_chiffree IS NULL` ; le déclencheur `demandes_droits_contact_ajout_seul` est remplacé par `CREATE OR REPLACE TRIGGER` (atomique, sans fenêtre) avec les arguments de DM-59 PLUS `'purge:attribution_id'` et `'une_fois:trace_anonymisee_at'` ; c'est la famille journal_desarme : un ADR ACCEPTÉ, cité en ligne 1 de la migration (prochain numéro libre après 0032, soit 0033), décrit la décision et son retour arrière. La clé étrangère vers `attributions` reste en Restrict (une valeur NULL n'est pas vérifiée). TÉMOINS : sous l'échéance, rien ; pile et au-delà, lien vidé et date posée, la ligne restant ; second passage sans effet ; le lien ne revient pas, et la date ne se réécrit pas ; la date posée sans vider le lien, ou le lien vidé sans la date, refusés sur le CHECK ; une anonymisation d'une demande qui porte encore une valeur, refusée ; toute autre modification et DELETE, toujours refusés. Préfixe de migration donné à la revendication. Le registre de l'article 30 reçoit la durée. » PRÉCISIONS D'A02 : (1) les ARGUMENTS COMPLETS du gabarit après remplacement, dans cet ordre : `refuser_modification_sauf('une_fois:traitee_at', 'une_fois:issue', 'purge:valeur_chiffree', 'une_fois:valeur_purgee_at', 'une_fois:prolongee_at', 'purge:attribution_id', 'une_fois:trace_anonymisee_at')`, pour le déclencheur de ligne ET celui de troncature (`demandes_droits_contact_troncature`, lui aussi par `CREATE OR REPLACE TRIGGER`) ; (2) L'INDEX : rien ne change ; `demandes_droits_contact_attribution_id_idx` (btree simple) admet les NULL, et l'index partiel `demandes_droits_contact_a_traiter_idx` n'est pas touché ; seule la COLONNE perd son NOT NULL (`ALTER COLUMN \"attribution_id\" DROP NOT NULL`), et le champ Prisma devient `attributionId String?` avec la relation optionnelle. REGISTRE : DM-60 nomme sa tâche dans la ligne `demandes_droits_contact` du registre de l'article 30, à la place de « …relève de la tâche de purge de cette trace, à venir », écrite sans identifiant par DM-59. TÉMOIN DE PLUS (coordination) : une demande non close s'anonymise cinq ans après sa réception ; une demande jamais close au bout de cinq ans est une anomalie (délai légal d'un mois, trois au plus), et la minimisation l'emporte. Le nom de l'ADR est donné ici pour le registre ; son titre définitif se fixe à la revendication, et si 0031 ou 0032 n'est pas sur main à sa PR, l'ordre se règle comme au rattrapage 59. Auteur : A05. Lentilles schema (A02) et sécurité. PHASE 1 (rattrapage 81, rappel d'A07) : livrée au plus tard avant la mise en service de la page des droits (UX-P1-48), sinon la durée n'est pas exécutée.",
       "tests": {
         "REQ-JUR-065": [
           "tests/integration/demandes-droits-contact-anonymisation.spec.ts"
@@ -21771,7 +21792,11 @@
         "src/app/(espace)/confidentialite/actions.ts",
         "tests/unit/juridique/politique-de-confidentialite.spec.ts",
         "docs/rgpd/registre-article-30.md",
-        "tests/unit/juridique/politique-publique-sans-note-interne.spec.ts"
+        "tests/unit/juridique/politique-publique-sans-note-interne.spec.ts",
+        "src/app/(espace)/confidentialite/ecran.tsx",
+        "src/app/(espace)/confidentialite/page.tsx",
+        "src/content/micro-copy/espace/vocabulaire.ts",
+        "tests/unit/espace/vocabulaire-et-micro-copy.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -21781,16 +21806,115 @@
         "JUR-T36"
       ],
       "reqs": [
-        "REQ-JUR-025"
+        "REQ-JUR-025",
+        "REQ-UX-047"
       ],
       "hyp": [],
       "externe": null,
       "estimateDays": 0.25,
       "statut": "a_faire",
-      "acceptance": "Versée au rattrapage 80 sur la revue d'A07 de #535 (2026-10-03), relayée par la coordination. CONDITION DE MISE EN SERVICE, MOT POUR MOT : « la page ne peut pas être présentée à l'acceptation d'un Apporteur tant que la politique rendue contient un seul segment `a_completer`, quel qu'en soit le motif. Seule l'omission d'une qualification non tranchée est admise. » (1) Le domaine (`src/domain/rgpd/politique.ts`) expose si la politique rendue est PUBLIABLE : zéro segment `a_completer`, quel qu'en soit le motif ; seule l'omission d'une qualification non tranchée est admise. (2) Le parcours d'acceptation de JUR-T34 (`src/server/rgpd/acceptation.ts`, `src/app/(espace)/confidentialite/actions.ts`) REFUSE de présenter la politique à l'acceptation tant qu'elle n'est pas publiable, par un refus nommé. (3) TÉMOINS dans `tests/unit/juridique/politique-de-confidentialite.spec.ts` : un seul `a_completer` fait refuser l'acceptation ; zéro `a_completer` la laisse passer ; une qualification non tranchée et omise ne bloque pas. (4) NOTICE DES DESTINATAIRES (rattrapage 80, demande de la coordination, texte d'A07) : la rubrique « Destinataires » de TRT-APPORTEURS (`docs/rgpd/registre-article-30.md`) remplace la notice de JUR-T36 par le texte d'A07, mot pour mot : « le contact de l'entreprise que l'apporteur déclare, qui reçoit ses prénom et nom dans la demande de confirmation ou lors d'une prise de contact de la Société, jamais ses coordonnées » ; « personne déclarée » est réservé à `personnes_declarees` (art. 2.6). Le témoin de la notice (`tests/unit/juridique/politique-publique-sans-note-interne.spec.ts`) suit. Auteur : A06. Lentille A07.",
+      "acceptance": "Versée au rattrapage 80 sur la revue d'A07 de #535 (2026-10-03), relayée par la coordination. CONDITION DE MISE EN SERVICE, MOT POUR MOT : « la page ne peut pas être présentée à l'acceptation d'un Apporteur tant que la politique rendue contient un seul segment `a_completer`, quel qu'en soit le motif. Seule l'omission d'une qualification non tranchée est admise. » (1) Le domaine (`src/domain/rgpd/politique.ts`) expose si la politique rendue est PUBLIABLE : zéro segment `a_completer`, quel qu'en soit le motif ; seule l'omission d'une qualification non tranchée est admise. (2) Le parcours d'acceptation de JUR-T34 (`src/server/rgpd/acceptation.ts`, `src/app/(espace)/confidentialite/actions.ts`) REFUSE de présenter la politique à l'acceptation tant qu'elle n'est pas publiable, par un refus nommé. (3) TÉMOINS dans `tests/unit/juridique/politique-de-confidentialite.spec.ts` : un seul `a_completer` fait refuser l'acceptation ; zéro `a_completer` la laisse passer ; une qualification non tranchée et omise ne bloque pas. (4) NOTICE DES DESTINATAIRES (rattrapage 80, demande de la coordination, texte d'A07) : la rubrique « Destinataires » de TRT-APPORTEURS (`docs/rgpd/registre-article-30.md`) remplace la notice de JUR-T36 par le texte d'A07, mot pour mot : « le contact de l'entreprise que l'apporteur déclare, qui reçoit ses prénom et nom dans la demande de confirmation ou lors d'une prise de contact de la Société, jamais ses coordonnées » ; « personne déclarée » est réservé à `personnes_declarees` (art. 2.6). Le témoin de la notice (`tests/unit/juridique/politique-publique-sans-note-interne.spec.ts`) suit. (5) ÉCRAN (rattrapage 81, mesure d'A06) : le formulaire d'accord ne s'affiche que pour l'état `a_accepter` (refus fermé) ; l'état `non_publiable` affiche un message d'état de la micro-copie (`CONFIDENTIALITE.nonPubliable`, texte relu par A07) ; la page juge la publiabilité sur le contenu de la politique, pas sur sa seule version. (6) LENTILLE SÉCURITÉ (2026-10-03) : (a) registre illisible → `/confidentialite` en état d'erreur, SANS formulaire d'accord ; (b) base injoignable → état d'indisponibilité, pas `/confidentialite` ; (c) dans les deux cas, motif journalisé, rien d'écrit. Le rejugement « acceptée et publiable » sur CHAQUE route et action de l'espace relève de la garde d'espace unique, SEC-53 (rattrapage 81). REQ-UX-047 (passe GOV-115, 2026-09-30) : geste principal : DETTE NOMMÉE, geste non encore connu, à écrire à la revendication ; budget : lu dans `BUDGETS_UX` (consultation au plus 3 interactions, saisie au plus 8), mesuré par la fixture QA-T33. la maquette de l'écran est validée dans `docs/maquettes/VALIDATION.md` avant la première ligne de code ; cinq états (REQ-UX-019 amendée). Pour cette tâche, sans changement de mise en page ni d'états : la page existe (JUR-T34), un état et un libellé s'ajoutent (le refus nommé et l'indisponibilité), aucune maquette à valider (coordination, rattrapage 81, comme JUR-T36 au rattrapage 78) ; une maquette reste due à toute refonte. Auteur : A06. Lentille A07.",
       "tests": {
         "REQ-JUR-025": [
           "tests/unit/juridique/politique-de-confidentialite.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "INT-T72-A",
+      "titre": "axion-ia pose l'en-tête du kid sur ses réponses de relecture et de rejeu vers Partners",
+      "phase": 1,
+      "repo": "axionia",
+      "zone": "integration",
+      "paths": [
+        "axionia/src/server/partners-sync/relecture.ts",
+        "axionia/src/server/partners-sync/reconciliation.ts",
+        "axionia/src/server/partners-sync/__tests__/kid-emis.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "INT-T41",
+        "INT-T70-P"
+      ],
+      "reqs": [
+        "REQ-QA-030"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.25,
+      "statut": "a_faire",
+      "acceptance": "Versée au rattrapage 81 sur le constat du deuxième auteur dans #539 (INT-T08-P), relayé par la coordination : les réponses signées de la relecture (`relecture.ts`) et du rejeu (`reconciliation.ts`) d'axion-ia ne posent PAS l'en-tête `X-Axionia-Kid`. Or `verifierSignatureAxionia` refuse une réponse sans kid (`kid_absent`, QA-T52) : le canal réel de la réconciliation serait bloqué. (1) Chaque réponse signée de ces deux routes porte l'en-tête du kid de la clé qui a signé, dérivé par `kidDe`, comme les webhooks et la réponse des coordonnées (INT-T41). (2) TÉMOIN dans `kid-emis.spec.ts` : la réponse de relecture et celle du rejeu portent le kid ; une réponse sans kid ferait rougir le témoin. (3) NOTES DE LA LENTILLE SÉCURITÉ sur #539 : les en-têtes `Derniere-Sequence` et `Suite` entrent dans la signature (ils sont aujourd'hui hors signature) ; l'ordre des séquences est exigé dans la réponse ; la réponse est liée à sa requête (la signature couvre ce qui la rattache à la demande). Un témoin pour chaque point. Le kid absent reste le point bloquant pour le canal réel. (4) ORDRE LOCKSTEP (A02, rattrapage 81) : Partners (INT-T08-P) accepte le nouveau périmètre de signature AVANT qu'axion-ia le pose, ou les deux passent dans la fenêtre de bascule de l'adoption de la v3 (INT-T70-A). Le périmètre est celui que déclare INT-T70-P au contrat. Auteur : A05. Lentille sécurité.",
+      "tests": {
+        "REQ-QA-030": [
+          "axionia/src/server/partners-sync/__tests__/kid-emis.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "INT-T73-P",
+      "titre": "La réconciliation compare, sur sept jours glissants, les encaissements HT par SIREN attribué des deux côtés",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "integration",
+      "paths": [
+        "src/server/integrations/axionia/reconciliation-sommes.ts",
+        "tests/integration/reconciliation-sommes.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [
+        "argent"
+      ],
+      "deps": [
+        "INT-T08-P"
+      ],
+      "reqs": [
+        "REQ-INT-013"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "acceptance": "Versée au rattrapage 81 : la part de REQ-INT-013 qu'INT-T08-P ne livre pas (revue de l'exactitude sur #539, arbitrage de la coordination). (1) Le job quotidien compare, sur 7 jours glissants, Σ encaissements HT par SIREN attribué côté axion-ia et côté Partners ; tout écart produit une alerte. (2) Même règle qu'INT-T08-P (sécurité) : seul le NOMBRE d'écarts part vers l'extérieur ; les SIREN et les event_id en cause sont nommés DANS Partners seulement. (3) La source côté axion-ia (une route de sommes, ou la relecture déjà au contrat) est à fixer à la revendication, avec A02 : si une route neuve est nécessaire, elle entre au contrat et une tâche -A la porte. TÉMOINS : sommes égales → rien ; un écart → une alerte au nombre, et le SIREN nommé en interne. Auteur : A08 (arbitrage de la coordination). Lentilles sécurité et schema (A02).",
+      "tests": {
+        "REQ-INT-013": [
+          "tests/integration/reconciliation-sommes.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "SEC-53",
+      "titre": "Chaque page, route et action de l'espace exige une session valide et l'acceptation de la version publiable courante",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "securite",
+      "paths": [
+        "src/server/auth/session.ts",
+        "src/server/auth/garde-espace.ts",
+        "tests/unit/securite/garde-espace.spec.ts",
+        "tests/integration/garde-espace.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [
+        "auth",
+        "espace"
+      ],
+      "deps": [
+        "SEC-43",
+        "JUR-T57"
+      ],
+      "reqs": [
+        "REQ-JUR-025"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "acceptance": "Versée au rattrapage 81 sur l'arbitrage de la coordination (le rejugement sur chaque route, sorti de JUR-T57) et le cadrage de la lentille sécurité, MOT POUR MOT : « Une fonction serveur appelée en tête de chaque page, route et action de src/app/(espace)/, qui exige session valide ET acceptation de la version publiable courante, en échec fermé avec un motif nommé. Un témoin dérivé des fichiers suivis, avec une exemption NOMMÉE pour /confidentialite et la connexion. Témoins : lien direct, ancienne version acceptée, base injoignable. Condition de MISE EN SERVICE de l'espace. » La garde vit dans `pageEspace` et `actionEspace` (`src/server/auth/session.ts`), qui l'appellent. Elle lève la dette que l'acceptance de JUR-T36 nomme « après lancement ». Auteur : A05. Lentille sécurité.",
+      "tests": {
+        "REQ-JUR-025": [
+          "tests/unit/securite/garde-espace.spec.ts",
+          "tests/integration/garde-espace.spec.ts"
         ]
       }
     }
