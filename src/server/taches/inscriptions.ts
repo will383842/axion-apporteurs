@@ -46,10 +46,18 @@ import {
 } from '../integrations/telegram/alertes';
 import { verifierChaine, type LigneJournal } from '../../domain/evenement/journal';
 import { lireJournalParLots } from '../evenement/journal';
-import type { Inscriptions } from './lanceur';
+import type { Inscriptions, Passage } from './lanceur';
+import { clientRelecture, type CanalAxionia } from '../integrations/axionia/relecture';
+import {
+  clientRejeu,
+  portsDeBase as portsDeReconciliation,
+  reconcilier,
+} from '../integrations/axionia/reconciliation';
+import { passageQuotidien } from '../jobs/reconciliation';
 import { minimiserCandidatures } from './minimiser-candidatures';
 import { purgerLesContacts } from './purger-contacts';
 import { purgerLesSirenRefuses } from './purger-siren-refuses';
+import { purgerLesValeursDesDroits } from './purger-valeurs-droits-contact';
 import { completerLesCodesNaf, portsDeBase } from './completer-code-naf';
 import { creerDisjoncteur } from '../integrations/recherche-entreprises/disjoncteur';
 import { PARAMETRES } from '../integrations/recherche-entreprises/parametres';
@@ -186,6 +194,9 @@ export function inscriptions(
     // DM-53 (REQ-DM-043) : le SIREN des dépôts refusés, douze mois après le refus.
     siren_refuses_purger: () =>
       purgerLesSirenRefuses(prisma, new Date(horlogeSysteme.maintenant())),
+    // DM-59 (REQ-JUR-065) : la valeur d'une rectification, effacée à son échéance même sans traitement.
+    droits_contact_purger: () =>
+      purgerLesValeursDesDroits(prisma, new Date(horlogeSysteme.maintenant())),
     // DM-28 (REQ-DM-046) : la reprise des codes NAF nuls. Un disjoncteur par passage : le tiers en
     // panne interrompt la reprise, le passage suivant la relance.
     naf_completer: () =>
@@ -201,6 +212,73 @@ export function inscriptions(
         debit: (ms) => limiteurDuRegistre.global(ms),
         maintenantMs: () => horlogeSysteme.maintenant(),
       }),
+    // INT-T08-P (REQ-INT-013) : la réconciliation quotidienne avec axion-ia.
+    reconciliation_axionia: passageDeReconciliation(prisma, env, canalDAlerte(env)),
+  };
+}
+
+/**
+ * INT-T08-P — le passage `reconciliation_axionia` : dû une fois par jour civil UTC (son battement le
+ * dit), il relit la file d'axion-ia et demande le rejeu des trous. Les secrets sont relus À CHAQUE
+ * passage, par le même juge que le démarrage ; un refus lève, et le battement passe en échec. Un
+ * signal part en alerte `reconciliation` (genre, motif fermé, nombre) ; sans canal d'alerte, il est
+ * perdu, et le battement reste la trace.
+ *
+ * Le retour porte les `event_id` manquants (`eventIdsManquants`) : le battement les conserve, dans
+ * Partners, tout le jour — chaque minute différée reporte les compteurs qu'il porte
+ * (`passageQuotidien`). Le type `Passage` du lanceur ne déclare que des compteurs numériques ; la
+ * colonne `battements.compteurs` est du JSON, et la liste y est écrite telle quelle.
+ */
+export function passageDeReconciliation(
+  prisma: PrismaClient,
+  env: Readonly<Record<string, string | undefined>>,
+  alerteur: Alerteur | null
+): Passage {
+  const passage = passageQuotidien({
+    ...battementDeLaReconciliation(prisma),
+    maintenant: () => new Date(horlogeSysteme.maintenant()),
+    reconcilier: () => {
+      const lu = lireEnvironnement(env);
+      if (!lu.ok) throw new Error('environnement_refuse');
+      const rotation = lireTrousseaux(env, horlogeSysteme.maintenant());
+      if (!rotation.ok) throw new Error('environnement_refuse');
+      const canal: CanalAxionia = {
+        urlAxionia: env['AXIONIA_BASE_URL'],
+        secretRelecture: lu.env.AXIONIA_RELECTURE_SECRET,
+        trousseauEmission: rotation.trousseaux.AXIONIA_WEBHOOK_SECRET,
+        appeler: fetch,
+        maintenantMs: () => horlogeSysteme.maintenant(),
+      };
+      return reconcilier({
+        ...portsDeReconciliation(prisma),
+        lire: clientRelecture(canal),
+        rejouer: clientRejeu(canal),
+        signaler: async (s) => {
+          await alerteur?.alerter({
+            categorie: 'reconciliation',
+            id: randomUUID(),
+            reconciliation: {
+              genre: s.genre,
+              ...('motif' in s ? { motif: s.motif } : { nombre: s.nombre }),
+            },
+          });
+        },
+      });
+    },
+  });
+  return passage as unknown as Passage;
+}
+
+/** Le battement de `reconciliation_axionia`, lu en base : son dernier succès et les compteurs qu'il porte. */
+export function battementDeLaReconciliation(prisma: PrismaClient) {
+  const lire = () =>
+    prisma.battement.findUnique({
+      where: { tache: 'reconciliation_axionia' },
+      select: { dernierSuccesAt: true, compteurs: true },
+    });
+  return {
+    dernierSucces: async (): Promise<Date | null> => (await lire())?.dernierSuccesAt ?? null,
+    derniersCompteurs: async (): Promise<unknown> => (await lire())?.compteurs ?? null,
   };
 }
 

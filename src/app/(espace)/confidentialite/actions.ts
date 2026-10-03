@@ -5,7 +5,8 @@
  *
  * La session est relue en base (SEC-04) : sans session d'espace valide, rien n'est écrit et la
  * connexion s'ouvre. L'accord ne porte que sur la version AFFICHÉE ; si le registre a changé entre
- * l'affichage et l'envoi, rien n'est écrit et la page montre la nouvelle version. Aucun identifiant
+ * l'affichage et l'envoi, rien n'est écrit et la page montre la nouvelle version. Une politique non
+ * publiable (JUR-T57) n'est jamais acceptée : l'action la REJUGE au moment d'écrire. Aucun identifiant
  * n'arrive du navigateur : l'apporteur est celui de la session.
  */
 import { cookies } from 'next/headers';
@@ -35,7 +36,7 @@ export async function accepterLaPolitiqueDeConfidentialite(formulaire: FormData)
       {
         apporteurId: session.apporteurId,
         versionVue: typeof versionVue === 'string' ? versionVue : null,
-        versionCourante: lue.politique.version,
+        courante: lue.politique,
         maintenant: ports.session.maintenant(),
       },
       ports.depot
