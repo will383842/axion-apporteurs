@@ -683,8 +683,16 @@ describe('REQ-UX-034 — mode clair et mode sombre de l’espace, jetons propres
     expect(MAQUETTES_CONSOLE).toHaveLength(13);
     const consoleClair = jetons(lire(MAQUETTES_CONSOLE[0]!), CLAIR);
     expect(consoleClair.fond).toBeDefined();
-    expect(consoleClair.fond).not.toBe(reference.fond);
-    expect(consoleClair.primaire).not.toBe(reference.primaire);
+    // UNE SEULE MARQUE (rattrapage 85, décision de Williams du 2026-10-03) : les VALEURS peuvent être
+    // celles de l'espace ; ce qui reste PROPRE, c'est le bloc. La console déclare ses jetons dans SA
+    // charte, distincte de celle de l'espace, et ils passent les mêmes seuils (boucle ci-dessous).
+    const charteDe = (f: string) => (lire(f).match(/charte:debut[\s\S]*?charte:fin/) ?? [''])[0];
+    expect(charteDe(MAQUETTES_CONSOLE[0]!)).toMatch(/bloc commun aux maquettes \(console\)/);
+    expect(charteDe(MAQUETTES_ESPACE[0]!)).toMatch(/bloc commun aux maquettes \(espace\)/);
+    expect(charteDe(MAQUETTES_CONSOLE[0]!)).not.toBe(charteDe(MAQUETTES_ESPACE[0]!));
+    expect(Object.keys(consoleClair).length).toBeGreaterThanOrEqual(
+      charte.get('Console')!.length / 2
+    );
     for (const p of charte.get('Console')!) {
       expect(
         rapport(consoleClair[p.avant]!, consoleClair[p.arriere]!),
