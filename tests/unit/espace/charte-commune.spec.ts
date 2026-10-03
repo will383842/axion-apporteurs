@@ -1,8 +1,8 @@
 // @req REQ-UX-017
 /**
  * UX-P1-49 — la charte commune des maquettes, retravaillée en contraste et en lisibilité (Williams,
- * 2026-10-03 : « il manque un peu de contraste et ça fait très textuel », puis la VERSION 2 de
- * l'aperçu retenue).
+ * 2026-10-03 : il trouve que les maquettes manquent de contraste et font trop textuelles, puis il
+ * retient la VERSION 2 de l'aperçu).
  *
  * CE QUE CE FICHIER GARDE.
  *

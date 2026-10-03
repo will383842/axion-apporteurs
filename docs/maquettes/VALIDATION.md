@@ -44,9 +44,9 @@ de l'espace ont les leurs.
 
 ### Séance de style du 2026-10-03 (UX-P1-49)
 
-Williams trouve qu'il « manque un peu de contraste » et que « ça fait très textuel ». Un aperçu AVANT/APRÈS
-de `index.html` et d'`accueil.html` lui est montré. Il refuse la version « orange en fond » et retient la
-version 2 (« C'ÉTAIT MIEUX JUSTE AVANT »). Le bloc charte des treize maquettes de l'espace prend cette
+Williams, verbatim : « JE TROUVE QU4IL MANQUE UN PEU DE CONTRASTE ET CA fait très textuel non ? ». Un aperçu
+AVANT/APRÈS de `index.html` et d'`accueil.html` lui est montré. Sur la version 3, orange en fond, il
+répond : « NON C4ETAIT MIEUX JUSTE AVANT ». La version 2 est donc retenue. Le bloc charte des treize maquettes de l'espace prend cette
 version, à l'identique :
 - terracotta pour l'action, fond ivoire, texte et navigation mocha, bleu pour l'information et le focus ;
 - l'issue heureuse en vert ; l'alerte en rouge distinct du terracotta ;
