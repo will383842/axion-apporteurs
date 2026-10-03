@@ -123,6 +123,9 @@ export async function purgerLesContacts(
           where: { id: a.id, contactPurgeAt: null },
           data: {
             ...efface,
+            // DM-59 : le jeton des droits du contact meurt avec ses données, dans la même instruction
+            // (CHECK `attributions_jeton_droits_purge`).
+            jetonDroitsHash: null,
             contactPurgeAt: maintenant,
             ...(coordonneesSEffacent(a.natureJuridique)
               ? { latitudeMicrodeg: null, longitudeMicrodeg: null }
@@ -130,6 +133,56 @@ export async function purgerLesContacts(
           },
         });
         if (count === 0) return false;
+        // DM-40 : les émissions de la demande de confirmation meurent avec le contact. Les actives sont
+        // révoquées, vidées de leurs jetons et de l'empreinte du clic, en UNE instruction ; les déjà
+        // révoquées sont vidées sans que leur date de révocation soit réécrite. Les révisions du
+        // contact perdent leurs blocs. La trace (dates, états) reste.
+        await tx.emissionDemandeConfirmation.updateMany({
+          where: { demande: { attributionId: a.id }, revoqueeAt: null },
+          data: {
+            revoqueeAt: maintenant,
+            jetonOuiHash: null,
+            jetonNonHash: null,
+            clicIpHash: null,
+          },
+        });
+        await tx.emissionDemandeConfirmation.updateMany({
+          where: {
+            demande: { attributionId: a.id },
+            OR: [{ jetonOuiHash: { not: null } }, { clicIpHash: { not: null } }],
+          },
+          data: { jetonOuiHash: null, jetonNonHash: null, clicIpHash: null },
+        });
+        await tx.revisionDemandeConfirmation.updateMany({
+          where: { demande: { attributionId: a.id }, purgeeAt: null },
+          data: {
+            nomContactChiffre: null,
+            prenomContactChiffre: null,
+            emailChiffre: null,
+            emailHash: null,
+            telephoneChiffre: null,
+            phoneHash: null,
+            fonctionContactChiffre: null,
+            contexteChiffre: null,
+            purgeeAt: maintenant,
+          },
+        });
+        // DM-09 : la personne interrogée et les termes de sa réponse, chiffrés, partent avec le contact,
+        // sauf le DÉMENTI EXPRÈS (`non_confirme`, contrat art. 3.7) : il est conservé, chiffré, cinq
+        // ans après la fin de l'attribution, preuve de cette fin si l'apporteur la conteste, puis
+        // effacé (décision de Williams du 2026-10-03 ; sa purge propre est une tâche à part).
+        await tx.qualification.updateMany({
+          where: {
+            attributionId: a.id,
+            contactPurgeAt: null,
+            resultatContact: { not: 'non_confirme' },
+          },
+          data: {
+            personneInterrogeeChiffre: null,
+            termesReponseChiffre: null,
+            contactPurgeAt: maintenant,
+          },
+        });
         await ajouterEvenement(tx, {
           type: 'attribution_contact_purge',
           agregat: 'attribution',

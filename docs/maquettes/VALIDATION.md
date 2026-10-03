@@ -13,17 +13,17 @@
 | --- | --- | --- | --- | --- |
 | Accueil (3 chiffres, 1 alerte, 1 champ, 4 onglets) | `accueil.html` | UX-P1-08 | 2026-09-19 | Will |
 | Entreprise (recherche + carte 4 états + « Déposer ») | `entreprise.html` | UX-P1-01 | 2026-09-19 | Will |
-| Déposer un contact (W20 : quatre coordonnées, message, carte Annuler / Corriger) | `deposer.html` | UX-P1-02 | — | — |
-| Mes entreprises (W20 : badges de la confirmation) | `mes-entreprises.html` | UX-P1-05 | — | — |
-| Réponse du contact (page publique /confirmer) | `confirmation-contact.html` | UX-P1-42 | — | — |
+| Déposer un contact (W20 : quatre coordonnées, message, carte Annuler / Corriger) | `deposer.html` | UX-P1-02 | 2026-10-03 | Will |
+| Mes entreprises (W20 : badges de la confirmation) | `mes-entreprises.html` | UX-P1-05 | 2026-10-03 | Will |
+| Réponse du contact (page publique /confirmer) | `confirmation-contact.html` | UX-P1-42 | 2026-10-03 | Will |
 | Mes commissions | `mes-commissions.html` | UX-P2-01 | 2026-09-19 | Will |
-| Ma conformité / Mon profil (ouverture limitée, état vide) | `conformite.html` | UX-P1-09 | — | — |
-| Se connecter (lien, code à 6 chiffres, lien déjà utilisé) | `connexion.html` | UX-P1-04 | — | — |
-| Mon contrat | `mon-contrat.html` | UX-P1-44 | — | — |
-| Fiche d'une entreprise (frise, échanges) | `mes-entreprises-fiche.html` | EXT-T01 | — | — |
-| Personnes qui agissent pour l'apporteur | `personnes.html` | UX-P1-15 | — | — |
-| Dépôt par lien privé | `depot-lien-prive.html` | UX-P1-03 | — | — |
-| Notifications | `notifications.html` | UX-P1-08 | — | — |
+| Ma conformité / Mon profil (ouverture limitée, état vide) | `conformite.html` | UX-P1-09 | 2026-10-03 | Will |
+| Se connecter (lien, code à 6 chiffres, lien déjà utilisé) | `connexion.html` | UX-P1-04 | 2026-10-03 | Will |
+| Mon contrat | `mon-contrat.html` | UX-P1-44 | 2026-10-03 | Will |
+| Fiche d'une entreprise (frise, échanges) | `mes-entreprises-fiche.html` | EXT-T01 | 2026-10-03 | Will |
+| Personnes qui agissent pour l'apporteur | `personnes.html` | UX-P1-15 | 2026-10-03 | Will |
+| Dépôt par lien privé | `depot-lien-prive.html` | UX-P1-03 | 2026-10-03 | Will |
+| Notifications | `notifications.html` | UX-P1-08 | 2026-10-03 | Will |
 
 ### Séance de validation W20 (confirmation par e-mail)
 
@@ -34,6 +34,29 @@ note de l'état « Formulaire (depuis la carte) », la carte « Annuler / Corrig
 contact, de 320 à 414 px) et `file-qualification.html` (l'onglet « À appeler aujourd'hui », qui se valide
 avec les maquettes de la console). `deposer.html` et `mes-entreprises.html`, validées le 2026-09-19, ont
 changé en substance : leur ligne repart vide.
+
+**Séance du 2026-10-03.** Williams valide les trois maquettes de l'espace de la série dans la même séance :
+`deposer.html` (« OUI PARFAIT »), `mes-entreprises.html` (« OUI ») et `confirmation-contact.html` (« OUI »).
+`file-qualification.html` n'est PAS validée (« POUR la console d'adminsitration, j'ai l'impression qu'il fait
+très veillote et j'aurai aimé plutot un sidebar et que ce soit plus moderne ») : elle se valide avec les
+maquettes de la console, refondues par UX-P1-50. La tâche d'écran de la file attend donc sa maquette ; celles
+de l'espace ont les leurs.
+
+### Séance de style du 2026-10-03 (UX-P1-49)
+
+Williams, verbatim : « JE TROUVE QU4IL MANQUE UN PEU DE CONTRASTE ET CA fait très textuel non ? ». Un aperçu
+AVANT/APRÈS de `index.html` et d'`accueil.html` lui est montré. Sur la version 3, orange en fond, il
+répond : « NON C4ETAIT MIEUX JUSTE AVANT ». La version 2 est donc retenue. Le bloc charte des treize maquettes de l'espace prend cette
+version, à l'identique :
+- terracotta pour l'action, fond ivoire, texte et navigation mocha, bleu pour l'information et le focus ;
+- l'issue heureuse en vert ; l'alerte en rouge distinct du terracotta ;
+- cartes et encarts cadrés et ombrés.
+
+C'est un changement de STYLE SEUL, demandé par Williams : aucun texte, aucune disposition ne bouge. Les
+validations ci-dessus ne sont donc PAS remises à vide.
+
+`mon-contrat.html` reçoit en plus son correctif mobile : à 360 px, aucun défilement horizontal, et les
+tableaux de l'annexe passent en cartes sous 640 px.
 
 ## Console
 
@@ -52,6 +75,16 @@ changé en substance : leur ligne repart vide.
 | Fiche prospect | `fiche-prospect.html` | EXT-T02a | — | — |
 | Éditeur de grille (modèle, édition en masse, complétude) | `grille-console.html` | UX-P1-14 | — | — |
 | Saisie manuelle d'une candidature et CV | `saisie-manuelle-console.html` | EXT-T04 | — | — |
+
+### Refonte de la console en barre latérale (UX-P1-50)
+
+Williams, verbatim : « POUR la console d'adminsitration, j'ai l'impression qu'il fait très veillote et
+j'aurai aimé plutot un sidebar et que ce soit plus moderne ». L'aperçu de `console-cadre.html` en barre
+latérale lui a été montré, puis il a été propagé aux treize maquettes de la console, avec une seule marque
+pour l'espace et la console (rattrapage 85). Au bureau, la barre latérale groupe les entrées par métier.
+Sous 768 px, la barre du bas reste, et son « Menu » ouvre la barre latérale en tiroir (REQ-UX-048). Les
+entrées, les rôles, les états et les textes ne changent pas. Aucune ligne de la console n'était validée :
+aucune ne repart à vide, et la séance groupée ci-dessous se tient sur cette version.
 
 ### Séance de validation groupée de la console
 

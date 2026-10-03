@@ -7,7 +7,8 @@
  *   1. TÉMOIN À DEUX FACES. Une durée changée dans le registre change la page rendue (et sa
  *      version) sans toucher la page ; une page qui retape une durée ou un prestataire fait rougir
  *      `valeursRetapees` en nommant la valeur — et le source réel de la route ne retape rien.
- *   2. Une rubrique « À compléter » du registre s'affiche telle quelle, avec sa question.
+ *   2. Une rubrique « À compléter » du registre s'affiche en cours de rédaction, SANS sa question :
+ *      la question est une note interne, posée à l'arbitre (JUR-T36).
  *   3. La page ne dit rien des conseillers ; un registre qui les ferait entrer dans l'extrait est
  *      refusé en le nommant.
  *   4. La version est stable, bornée à la colonne du schéma, et suit le contenu.
@@ -28,12 +29,15 @@ import { SEUILS } from '../../../src/domain/seuils/ssot';
 import {
   LONGUEUR_DE_VERSION,
   MARQUE_A_COMPLETER,
+  estPubliable,
   extrairePolitique,
+  segmentsEnCours,
   valeursRetapees,
   type Politique,
 } from '../../../src/domain/rgpd/politique';
 import {
   ROUTE_CONFIDENTIALITE,
+  ROUTE_INDISPONIBLE,
   ROUTE_ISSUE_OUVERTE,
   accepterLaPolitique,
   depotDAcceptation,
@@ -60,6 +64,14 @@ import { ETATS_VIDES_ESPACE } from '../../../src/content/micro-copy/espace/etats
 const RACINE = process.cwd();
 const REGISTRE = readFileSync(join(RACINE, 'docs/rgpd/registre-article-30.md'), 'utf8');
 const DOSSIER_DE_LA_ROUTE = 'src/app/(espace)/confidentialite';
+/**
+ * JUR-T57 : le registre réel porte encore des rubriques à compléter ; la politique qu'il rend n'est
+ * pas PUBLIABLE. Les témoins de l'accord jouent sur ce registre, chaque manque tranché.
+ */
+const REGISTRE_PUBLIABLE = REGISTRE.replace(
+  /À compléter — source manquante.[^|]*/g,
+  'Tranché au registre. '
+);
 
 function politiqueDe(registre: string): Politique {
   const lue = extrairePolitique(registre);
@@ -203,17 +215,20 @@ describe('REQ-JUR-025 — témoin à deux faces : la page lit le registre, elle 
 // ── « À compléter », les conseillers, la version ─────────────────────────────────────────────────
 
 describe('REQ-JUR-025 — ce que le registre ne tranche pas s’affiche comme tel', () => {
-  it('REQ-JUR-025 — la base légale « À compléter » est rendue « À compléter », avec sa question, sans valeur inventée', () => {
+  it('REQ-JUR-025 — la base légale « À compléter » est rendue en cours de rédaction, SANS sa question, sans valeur inventée', () => {
     const p = politiqueDe(REGISTRE);
     const base = p.rubriques.find((r) => r.cle === 'baseLegale')!;
     expect(base.contenu).toHaveLength(1);
     expect(base.contenu[0]!.type).toBe('a_completer');
     const cellule = rubrique(REGISTRE, 'Base légale');
     const question = cellule.replace(MARQUE_A_COMPLETER, '').replace(/^\s*Question\s*:\s*/, '');
-    expect(base.contenu[0]).toEqual({ type: 'a_completer', question });
+    expect(question.length).toBeGreaterThan(0);
+    // JUR-T36 : la question est une note interne, posée à l'arbitre ; elle ne sort pas du domaine.
+    expect(base.contenu[0]).toEqual({ type: 'a_completer' });
     const html = rendre(p);
     expect(html).toContain(CONFIDENTIALITE.aCompleter);
-    expect(html).toContain(CONFIDENTIALITE.question);
+    expect(html).not.toContain(question);
+    expect(html).not.toMatch(/Question/);
     // Une durée « à compléter » garde son texte ET son manque, dans l'ordre du registre.
     const duree = p.rubriques.find((r) => r.cle === 'duree')!;
     expect(duree.contenu.map((s) => s.type)).toEqual(['texte', 'a_completer']);
@@ -263,18 +278,18 @@ function depotEnMemoire(initial: Record<string, AcceptationLue> = {}) {
 const MAINTENANT = new Date('2026-09-29T08:00:00.000Z');
 
 describe('REQ-JUR-025 — l’accord de l’apporteur', () => {
-  const p = politiqueDe(REGISTRE);
+  const p = politiqueDe(REGISTRE_PUBLIABLE);
 
   it('REQ-JUR-025 — sans session, la politique se lit sans formulaire', async () => {
     const { depot } = depotEnMemoire();
-    const etat = await etatDAcceptation(null, p.version, depot);
+    const etat = await etatDAcceptation(null, p, depot);
     expect(etat).toBe('sans_session');
     expect(rendre(p, etat)).not.toContain('<form');
   });
 
   it('REQ-JUR-025 — non acceptée : formulaire ; acceptée à la version courante : plus de formulaire', async () => {
     const { depot, ecritures } = depotEnMemoire({ a1: { accepteeAt: null, version: null } });
-    const avant = await etatDAcceptation('a1', p.version, depot);
+    const avant = await etatDAcceptation('a1', p, depot);
     expect(avant).toBe('a_accepter');
     const formulaire = rendre(p, avant);
     expect(formulaire).toContain('<form');
@@ -285,14 +300,14 @@ describe('REQ-JUR-025 — l’accord de l’apporteur', () => {
       {
         apporteurId: 'a1',
         versionVue: p.version,
-        versionCourante: p.version,
+        courante: p,
         maintenant: MAINTENANT,
       },
       depot
     );
     expect(issue).toBe('acceptee');
     expect(ecritures).toEqual([{ apporteurId: 'a1', version: p.version }]);
-    const apres = await etatDAcceptation('a1', p.version, depot);
+    const apres = await etatDAcceptation('a1', p, depot);
     expect(apres).toBe('acceptee');
     const html = rendre(p, apres);
     expect(html).not.toContain('<form');
@@ -302,19 +317,19 @@ describe('REQ-JUR-025 — l’accord de l’apporteur', () => {
   it('REQ-JUR-025 — une version changée au registre est à accepter de nouveau', async () => {
     const { depot } = depotEnMemoire({ a1: { accepteeAt: MAINTENANT, version: p.version } });
     const nouvelle = politiqueDe(
-      REGISTRE.replace('purgée dès validation', 'purgée à la validation')
+      REGISTRE_PUBLIABLE.replace('purgée dès validation', 'purgée à la validation')
     );
-    expect(await etatDAcceptation('a1', p.version, depot)).toBe('acceptee');
-    expect(await etatDAcceptation('a1', nouvelle.version, depot)).toBe('a_accepter');
+    expect(await etatDAcceptation('a1', p, depot)).toBe('acceptee');
+    expect(await etatDAcceptation('a1', nouvelle, depot)).toBe('a_accepter');
     // Un apporteur introuvable n'a rien accepté.
-    expect(await etatDAcceptation('inconnu', p.version, depot)).toBe('a_accepter');
+    expect(await etatDAcceptation('inconnu', p, depot)).toBe('a_accepter');
   });
 
   it('REQ-JUR-025 — une version affichée périmée, ou absente, n’écrit rien', async () => {
     const { depot, ecritures } = depotEnMemoire();
     for (const versionVue of ['0'.repeat(LONGUEUR_DE_VERSION), null]) {
       const issue = await accepterLaPolitique(
-        { apporteurId: 'a1', versionVue, versionCourante: p.version, maintenant: MAINTENANT },
+        { apporteurId: 'a1', versionVue, courante: p, maintenant: MAINTENANT },
         depot
       );
       expect(issue).toBe('version_perimee');
@@ -353,8 +368,8 @@ function portsAvecSession(depot: DepotDAcceptation): PortsDAcceptation {
 }
 
 describe('REQ-JUR-025 — la première connexion mène à la politique', () => {
-  const p = politiqueDe(REGISTRE);
-  const lecture = () => extrairePolitique(REGISTRE);
+  const p = politiqueDe(REGISTRE_PUBLIABLE);
+  const lecture = () => extrairePolitique(REGISTRE_PUBLIABLE);
 
   it('REQ-JUR-025 — non acceptée : la connexion mène à /confidentialite ; acceptée : à l’issue habituelle', async () => {
     const motifs: string[] = [];
@@ -379,7 +394,7 @@ describe('REQ-JUR-025 — la première connexion mène à la politique', () => {
     expect(motifs).toEqual([]);
   });
 
-  it('REQ-JUR-025 — un registre ou une base illisibles ne bloquent pas la connexion, et le motif est signalé', async () => {
+  it('REQ-JUR-025 — TÉMOIN (JUR-T57, sécurité) : registre illisible → la politique en erreur ; base injoignable → l’indisponibilité ; jamais l’espace, et le motif est signalé', async () => {
     const motifs: string[] = [];
     const neuf = depotEnMemoire().depot;
     expect(
@@ -389,7 +404,7 @@ describe('REQ-JUR-025 — la première connexion mène à la politique', () => {
         () => portsAvecSession(neuf),
         (m) => motifs.push(m)
       )
-    ).toBe(ROUTE_ISSUE_OUVERTE);
+    ).toBe(ROUTE_CONFIDENTIALITE);
     expect(
       await destinationDeLOuverture(
         'jeton',
@@ -399,7 +414,7 @@ describe('REQ-JUR-025 — la première connexion mène à la politique', () => {
         },
         (m) => motifs.push(m)
       )
-    ).toBe(ROUTE_ISSUE_OUVERTE);
+    ).toBe(ROUTE_INDISPONIBLE);
     expect(motifs).toEqual([
       'confidentialite_registre_illisible',
       'confidentialite_etat_illisible',
@@ -459,7 +474,7 @@ const REGISTRE_TEMOIN = [
 ].join('\n');
 
 const texte = (t: string) => ({ type: 'texte', texte: t });
-const manque = (question: string) => ({ type: 'a_completer', question });
+const manque = () => ({ type: 'a_completer' });
 
 describe('REQ-JUR-025 — le lecteur du registre, pièce à pièce', () => {
   it('REQ-JUR-025 — le registre témoin rend exactement ses six rubriques, dans l’ordre d’affichage, et ses trois destinataires', async () => {
@@ -468,11 +483,11 @@ describe('REQ-JUR-025 — le lecteur du registre, pièce à pièce', () => {
     if (!lue.ok) throw new Error(`registre témoin refusé : ${lue.refus}`);
     expect(lue.politique.rubriques).toEqual([
       { cle: 'finalite', contenu: [texte('Tenir le contrat')] },
-      { cle: 'baseLegale', contenu: [manque('laquelle ?')] },
+      { cle: 'baseLegale', contenu: [manque()] },
       { cle: 'duree', contenu: [texte(`Pièces : ${ANS} ans.`)] },
       { cle: 'destinataires', contenu: [texte('La Société (voir la note # 2)')] },
-      { cle: 'transferts', contenu: [texte('Aucun.'), manque('Qui tranche ? Question : Will.')] },
-      { cle: 'droits', contenu: [manque('à qui écrire ?')] },
+      { cle: 'transferts', contenu: [texte('Aucun.'), manque()] },
+      { cle: 'droits', contenu: [manque()] },
     ]);
     expect(lue.politique.destinataires).toEqual([
       {
@@ -653,11 +668,13 @@ describe('REQ-JUR-025 — l’acceptation, ses routes et son câblage', () => {
     expect(m.CHEMIN_DU_REGISTRE).toBe('docs/rgpd/registre-article-30.md');
     expect(m.ROUTE_CONFIDENTIALITE).toBe('/confidentialite');
     expect(m.ROUTE_ISSUE_OUVERTE).toBe('/connexion?issue=ouverte');
+    expect(m.ROUTE_INDISPONIBLE).toBe('/connexion?etat=indisponible');
   });
 
   it('REQ-JUR-025 — une version courante sans date d’acceptation reste à accepter', async () => {
     const { depot } = depotEnMemoire({ a1: { accepteeAt: null, version: 'v-courante' } });
-    expect(await etatDAcceptation('a1', 'v-courante', depot)).toBe('a_accepter');
+    const courante = { ...politiqueDe(REGISTRE_PUBLIABLE), version: 'v-courante' };
+    expect(await etatDAcceptation('a1', courante, depot)).toBe('a_accepter');
   });
 
   it('REQ-JUR-025 — le dépôt Prisma lit les deux colonnes de l’apporteur, et rend null sans apporteur', async () => {
@@ -715,5 +732,82 @@ describe('REQ-JUR-025 — l’acceptation, ses routes et son câblage', () => {
       'sessionEspace.findUnique',
       'apporteur.findUnique',
     ]);
+  });
+});
+
+// ── JUR-T57 : la politique n'est présentée à l'acceptation que PUBLIABLE ─────────────────────────
+
+describe('REQ-JUR-025 — la politique n’est présentée à l’acceptation que si elle ne porte aucun segment à compléter', () => {
+  const publiable = politiqueDe(REGISTRE_PUBLIABLE);
+  /** Le registre publiable, UNE rubrique rouverte : un seul segment en cours de rédaction. */
+  const unManque = politiqueDe(
+    REGISTRE_PUBLIABLE.replace(
+      /^(\| Base légale \|)[^|]*\|/m,
+      `$1 ${MARQUE_A_COMPLETER} Question : laquelle ? |`
+    )
+  );
+
+  it('REQ-JUR-025 : TÉMOIN — un seul segment à compléter fait REFUSER l’acceptation, nommée, sans rien écrire ni montrer de formulaire', async () => {
+    expect(segmentsEnCours(unManque)).toBe(1);
+    expect(estPubliable(unManque)).toBe(false);
+    const { depot, ecritures } = depotEnMemoire({ a1: { accepteeAt: null, version: null } });
+    const etat = await etatDAcceptation('a1', unManque, depot);
+    expect(etat).toBe('non_publiable');
+    const html = rendre(unManque, etat);
+    expect(html).not.toContain('<form');
+    expect(html).toContain(CONFIDENTIALITE.nonPubliable);
+    // L'action REJUGE au moment d'écrire, même avec la bonne version affichée.
+    const issue = await accepterLaPolitique(
+      {
+        apporteurId: 'a1',
+        versionVue: unManque.version,
+        courante: unManque,
+        maintenant: MAINTENANT,
+      },
+      depot
+    );
+    expect(issue).toBe('non_publiable');
+    expect(ecritures).toEqual([]);
+  });
+
+  it('REQ-JUR-025 : TÉMOIN — zéro segment à compléter laisse passer l’acceptation', async () => {
+    expect(segmentsEnCours(publiable)).toBe(0);
+    expect(estPubliable(publiable)).toBe(true);
+    const { depot, ecritures } = depotEnMemoire({ a1: { accepteeAt: null, version: null } });
+    expect(await etatDAcceptation('a1', publiable, depot)).toBe('a_accepter');
+    expect(
+      await accepterLaPolitique(
+        {
+          apporteurId: 'a1',
+          versionVue: publiable.version,
+          courante: publiable,
+          maintenant: MAINTENANT,
+        },
+        depot
+      )
+    ).toBe('acceptee');
+    expect(ecritures).toEqual([{ apporteurId: 'a1', version: publiable.version }]);
+  });
+
+  it('REQ-JUR-025 : TÉMOIN — une qualification non tranchée, OMISE, ne bloque pas', () => {
+    const banque = publiable.destinataires.find((d) => d.nom === 'Banque');
+    expect(banque?.qualification).toEqual([]);
+    expect(estPubliable(publiable)).toBe(true);
+  });
+
+  it('REQ-JUR-025 : le registre RÉEL n’est pas publiable aujourd’hui : la connexion mène à la politique, jamais à l’issue habituelle', async () => {
+    const reelle = politiqueDe(REGISTRE);
+    expect(estPubliable(reelle)).toBe(false);
+    const motifs: string[] = [];
+    const deja = depotEnMemoire({ a1: { accepteeAt: MAINTENANT, version: reelle.version } }).depot;
+    expect(
+      await destinationDeLOuverture(
+        'jeton',
+        () => extrairePolitique(REGISTRE),
+        () => portsAvecSession(deja),
+        (m) => motifs.push(m)
+      )
+    ).toBe(ROUTE_CONFIDENTIALITE);
+    expect(motifs).toEqual([]);
   });
 });
