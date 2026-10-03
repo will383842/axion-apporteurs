@@ -5,8 +5,10 @@
 -- "alertes_liberation", "verifications" ; DROP FUNCTION refuser_acteur_conseiller(),
 -- anomalies_refuser_substitution(), contestations_refuser_substitution(), rattachement_lien_anterieur(),
 -- verifications_porteur_conseiller() ;
--- DROP TYPE "objet_contestation", "statut_anomalie", "type_anomalie", "resultat_verification". Les
--- trois valeurs du journal restent (un ADD VALUE ne se retire pas) : elles ne sont alors plus émises.
+-- DROP TYPE "objet_contestation", "source_lien_controle", "statut_anomalie", "type_anomalie",
+-- "resultat_verification". Les
+-- trois valeurs de `type_evenement_journal` et la valeur `anomalie` de `agregat_journal` restent (un
+-- ADD VALUE ne se retire pas) : elles ne sont alors plus émises.
 
 -- CreateEnum
 CREATE TYPE "resultat_verification" AS ENUM ('libre', 'suivie', 'cliente', 'liste_noire', 'fermee');
@@ -18,6 +20,13 @@ CREATE TYPE "type_anomalie" AS ENUM ('sincerite', 'auto_parrainage');
 
 -- CreateEnum
 CREATE TYPE "statut_anomalie" AS ENUM ('ouverte', 'levee', 'confirmee');
+
+-- CreateEnum
+-- Ce qui prouve le lien de contrôle (contrat art. 3.6) : une pièce PUBLIQUE de l'entreprise, jamais
+-- un texte libre (restriction de la sécurité, forme d'A02).
+-- Liste arrêtée par la juriste : le registre des bénéficiaires effectifs n'en est pas (fermé au public
+-- depuis l'arrêt de la CJUE du 22/11/2022).
+CREATE TYPE "source_lien_controle" AS ENUM ('rne', 'kbis', 'statuts', 'bodacc', 'comptes_annuels');
 
 -- CreateEnum
 CREATE TYPE "objet_contestation" AS ENUM ('refus_depot', 'annulation_attribution', 'demande_rattachement');
@@ -52,7 +61,7 @@ CREATE TABLE "anomalies" (
     "id" UUID NOT NULL,
     "type" "type_anomalie" NOT NULL,
     "score" SMALLINT,
-    "apporteur_id" UUID NOT NULL,
+    "apporteur_id" UUID,
     "attribution_id" UUID,
     "statut" "statut_anomalie" NOT NULL DEFAULT 'ouverte',
     "ouverte_at" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -60,6 +69,7 @@ CREATE TABLE "anomalies" (
     "traite_at" TIMESTAMPTZ(3),
     "justification_chiffre" BYTEA,
     "justification_purgee_at" TIMESTAMPTZ(3),
+    "anonymisee_at" TIMESTAMPTZ(3),
 
     CONSTRAINT "anomalies_pkey" PRIMARY KEY ("id")
 );
@@ -69,9 +79,11 @@ CREATE TABLE "rattachements_manuels" (
     "id" UUID NOT NULL,
     "attribution_id" UUID NOT NULL,
     "siren_commande" CHAR(9) NOT NULL,
-    "justification" TEXT NOT NULL,
+    "justification_chiffre" BYTEA,
+    "justification_purgee_at" TIMESTAMPTZ(3),
     "lien_controle_etabli_at" TIMESTAMPTZ(3) NOT NULL,
-    "lien_controle_source" TEXT NOT NULL,
+    "lien_controle_source_type" "source_lien_controle" NOT NULL,
+    "lien_controle_source_ref" VARCHAR(64) NOT NULL,
     "decide_par_id" UUID NOT NULL,
     "decide_at" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "revoque_at" TIMESTAMPTZ(3),
@@ -224,17 +236,30 @@ CREATE TRIGGER alertes_liberation_troncature BEFORE TRUNCATE ON "alertes_liberat
   FOR EACH STATEMENT EXECUTE FUNCTION refuser_modification_sauf('une_fois:envoyee_at');
 
 -- ── anomalies : la forme, et une clôture une seule fois, sans retour ────────────────────────
--- Le score existe si et seulement si l'anomalie est de sincérité, entier de 0 à 100.
+-- Le score existe si et seulement si l'anomalie est de sincérité, entier de 0 à 100 ; l'anonymisation
+-- l'efface.
 ALTER TABLE "anomalies" ADD CONSTRAINT "anomalies_score_sincerite"
-  CHECK (("score" IS NOT NULL) = ("type" = 'sincerite') AND ("score" IS NULL OR "score" BETWEEN 0 AND 100));
+  CHECK (("anonymisee_at" IS NOT NULL OR ("score" IS NOT NULL) = ("type" = 'sincerite'))
+         AND ("score" IS NULL OR "score" BETWEEN 0 AND 100));
 ALTER TABLE "anomalies" ADD CONSTRAINT "anomalies_statut_traite"
   CHECK (("statut" = 'ouverte') = ("traite_at" IS NULL));
 ALTER TABLE "anomalies" ADD CONSTRAINT "anomalies_traite_par"
-  CHECK (("traite_at" IS NULL) = ("traite_par_id" IS NULL));
+  CHECK ("anonymisee_at" IS NOT NULL OR ("traite_at" IS NULL) = ("traite_par_id" IS NULL));
+-- L'apporteur est présent tant que l'anomalie n'est pas anonymisée.
+ALTER TABLE "anomalies" ADD CONSTRAINT "anomalies_apporteur_present"
+  CHECK ("anonymisee_at" IS NOT NULL OR "apporteur_id" IS NOT NULL);
+-- L'ANONYMISATION (forme d'A02) : une anomalie close, dont plus rien ne désigne une personne ; ne
+-- restent que l'id, le type, le statut et les MOIS d'ouverture et de traitement, tronqués en UTC.
+ALTER TABLE "anomalies" ADD CONSTRAINT "anomalies_anonymisation_liee"
+  CHECK ("anonymisee_at" IS NULL OR (
+    "statut" <> 'ouverte'
+    AND num_nonnulls("score", "apporteur_id", "attribution_id", "traite_par_id", "justification_chiffre", "justification_purgee_at") = 0
+    AND date_trunc('month', "ouverte_at" AT TIME ZONE 'UTC') = ("ouverte_at" AT TIME ZONE 'UTC')
+    AND date_trunc('month', "traite_at" AT TIME ZONE 'UTC') = ("traite_at" AT TIME ZONE 'UTC')));
 -- La justification porte un soupçon sur une personne : CHIFFRÉE (`colonnesPii`), jamais en clair, ni
 -- copie, ni empreinte, ni extrait. Elle naît à la clôture, et seule la purge la vide (forme d'A02).
 ALTER TABLE "anomalies" ADD CONSTRAINT "anomalies_justification_a_la_cloture"
-  CHECK (("statut" = 'ouverte') = ("justification_chiffre" IS NULL AND "justification_purgee_at" IS NULL));
+  CHECK (("statut" = 'ouverte') = ("justification_chiffre" IS NULL AND "justification_purgee_at" IS NULL AND "anonymisee_at" IS NULL));
 ALTER TABLE "anomalies" ADD CONSTRAINT "anomalies_justification_purge_liee"
   CHECK ("justification_purgee_at" IS NULL OR "justification_chiffre" IS NULL);
 -- Un chiffré vide n'est pas une justification.
@@ -247,11 +272,28 @@ ALTER TABLE "anomalies" ADD CONSTRAINT "anomalies_justification_non_vide"
 -- `ouverte` qu'une fois, sans retour, dans la MÊME écriture qui pose `traite_at`, `traite_par_id`
 -- et la justification chiffrée. Une anomalie close ne change plus, sauf la PURGE de sa justification
 -- (le texte va à NULL, `justification_purgee_at` posée, une fois) ; après la purge, plus rien ne
--- bouge. DELETE et TRUNCATE sont refusés.
+-- bouge. L'ANONYMISATION d'une anomalie close vide d'un coup tout ce qui désigne une personne et
+-- tronque ses dates au mois (UTC) ; après elle, plus rien ne bouge. DELETE et TRUNCATE sont refusés.
 CREATE FUNCTION anomalies_refuser_substitution() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
   IF TG_OP = 'DELETE' OR TG_OP = 'TRUNCATE' THEN
     RAISE EXCEPTION 'anomalies_refuser_substitution : % refusé, une anomalie ne disparaît pas (REQ-DM-033)', TG_OP;
+  END IF;
+  IF OLD."anonymisee_at" IS NOT NULL THEN
+    IF NEW IS DISTINCT FROM OLD THEN
+      RAISE EXCEPTION 'anomalies_refuser_substitution : une anomalie anonymisée ne change plus (REQ-DM-033)';
+    END IF;
+    RETURN NEW;
+  END IF;
+  IF NEW."anonymisee_at" IS NOT NULL THEN
+    IF OLD."statut" = 'ouverte'
+       OR NEW."id" IS DISTINCT FROM OLD."id" OR NEW."type" IS DISTINCT FROM OLD."type"
+       OR NEW."statut" IS DISTINCT FROM OLD."statut"
+       OR NEW."ouverte_at" IS DISTINCT FROM (date_trunc('month', OLD."ouverte_at" AT TIME ZONE 'UTC') AT TIME ZONE 'UTC')
+       OR NEW."traite_at" IS DISTINCT FROM (date_trunc('month', OLD."traite_at" AT TIME ZONE 'UTC') AT TIME ZONE 'UTC') THEN
+      RAISE EXCEPTION 'anomalies_refuser_substitution : l''anonymisation garde l''id, le type, le statut et les mois, en une écriture, sur une anomalie close (REQ-DM-033)';
+    END IF;
+    RETURN NEW;
   END IF;
   IF NEW."id" IS DISTINCT FROM OLD."id"
      OR NEW."type" IS DISTINCT FROM OLD."type"
@@ -295,15 +337,24 @@ CREATE TRIGGER anomalies_troncature BEFORE TRUNCATE ON "anomalies"
 -- ── rattachements_manuels : justifiés, antérieurs au dépôt, un actif par SIREN ──────────────
 ALTER TABLE "rattachements_manuels" ADD CONSTRAINT "rattachements_manuels_siren_forme"
   CHECK ("siren_commande" ~ '^[0-9]{9}$');
--- Au moins vingt caractères utiles : les blancs ne comptent pas.
-ALTER TABLE "rattachements_manuels" ADD CONSTRAINT "rattachements_manuels_justification"
-  CHECK (length(regexp_replace("justification", '\s', '', 'g')) >= 20);
-ALTER TABLE "rattachements_manuels" ADD CONSTRAINT "rattachements_manuels_source"
-  CHECK ("lien_controle_source" ~ '\S');
+-- La justification, CHIFFRÉE (`colonnesPii`) : elle peut nommer une personne. Le plancher de vingt
+-- caractères utiles se juge dans le DOMAINE, avant le chiffrement ; on ne mesure pas un chiffré. Elle
+-- existe dès la décision, et seule la purge à l'échéance la vide, avec sa date (forme d'A02).
+ALTER TABLE "rattachements_manuels" ADD CONSTRAINT "rattachements_manuels_justification_purge_liee"
+  CHECK (("justification_purgee_at" IS NULL) = ("justification_chiffre" IS NOT NULL));
+ALTER TABLE "rattachements_manuels" ADD CONSTRAINT "rattachements_manuels_justification_non_vide"
+  CHECK ("justification_chiffre" IS NULL OR octet_length("justification_chiffre") > 0);
+-- La référence de la pièce : un identifiant court, sans espace ni lettre accentuée, et qui porte un
+-- chiffre (numéro d'annonce, date d'extrait, millésime, numéro d'inscription) : ni phrase, ni nom.
+ALTER TABLE "rattachements_manuels" ADD CONSTRAINT "rattachements_manuels_source_ref_forme"
+  CHECK ("lien_controle_source_ref" ~ '^[A-Za-z0-9._/-]{1,64}$' AND "lien_controle_source_ref" ~ '[0-9]');
 CREATE UNIQUE INDEX "rattachements_manuels_un_actif_par_siren" ON "rattachements_manuels" ("siren_commande")
   WHERE "revoque_at" IS NULL;
 
--- Le lien de contrôle est établi au plus tard au dépôt de l'attribution rattachée.
+-- Le lien de contrôle est établi au plus tard au dépôt de l'attribution rattachée : un lien né après
+-- n'ouvre aucun droit. `lien_controle_etabli_at` est la DATE DE LA PIÈCE qui établit le lien, posée
+-- par le domaine au début de son jour à Paris ; la date du dépôt vit dans `attributions`, et ce
+-- déclencheur la lit, sans copie qui pourrait diverger.
 CREATE FUNCTION rattachement_lien_anterieur() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
   IF NEW."lien_controle_etabli_at" > (
@@ -318,9 +369,9 @@ CREATE TRIGGER rattachement_lien_anterieur
   BEFORE INSERT OR UPDATE OF "lien_controle_etabli_at", "attribution_id" ON "rattachements_manuels"
   FOR EACH ROW EXECUTE FUNCTION rattachement_lien_anterieur();
 CREATE TRIGGER rattachements_manuels_ajout_seul BEFORE UPDATE OR DELETE ON "rattachements_manuels"
-  FOR EACH ROW EXECUTE FUNCTION refuser_modification_sauf('une_fois:revoque_at');
+  FOR EACH ROW EXECUTE FUNCTION refuser_modification_sauf('une_fois:revoque_at', 'purge:justification_chiffre', 'une_fois:justification_purgee_at');
 CREATE TRIGGER rattachements_manuels_troncature BEFORE TRUNCATE ON "rattachements_manuels"
-  FOR EACH STATEMENT EXECUTE FUNCTION refuser_modification_sauf('une_fois:revoque_at');
+  FOR EACH STATEMENT EXECUTE FUNCTION refuser_modification_sauf('une_fois:revoque_at', 'purge:justification_chiffre', 'une_fois:justification_purgee_at');
 
 -- ── contestations : un objet, une cible, une réponse posée une fois, une purge tracée ───────
 ALTER TABLE "contestations" ADD CONSTRAINT "contestations_objet_cible"
@@ -423,3 +474,7 @@ ALTER TYPE "type_evenement_journal" ADD VALUE 'contestation_modifiee';
 
 -- AlterEnum
 ALTER TYPE "type_evenement_journal" ADD VALUE 'rattachement_manuel_modifie';
+
+-- AlterEnum
+-- Décision (d) de la juriste : les événements de cycle de vie d'une anomalie ont pour agrégat l'ANOMALIE.
+ALTER TYPE "agregat_journal" ADD VALUE 'anomalie';

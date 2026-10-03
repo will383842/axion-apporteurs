@@ -92,6 +92,7 @@ enum AgregatJournal {
   piece_kyc
   contrat
   demande_confirmation
+  anomalie
 
   @@map("agregat_journal")
 }
@@ -1033,6 +1034,18 @@ enum StatutAnomalie {
   @@map("statut_anomalie")
 }
 
+/// Ce qui prouve le lien de contrôle d'un rattachement manuel (contrat art. 3.6) : une pièce publique
+/// de l'entreprise, jamais un texte libre (restriction de la sécurité).
+enum SourceLienControle {
+  rne
+  kbis
+  statuts
+  bodacc
+  comptes_annuels
+
+  @@map("source_lien_controle")
+}
+
 /// L'objet d'une contestation écrite (REQ-DM-043, REQ-DM-034).
 enum ObjetContestation {
   refus_depot
@@ -1083,8 +1096,8 @@ model Anomalie {
   id                    String              @id @default(uuid()) @db.Uuid
   type                  TypeAnomalie
   score                 Int?                @db.SmallInt
-  apporteurId           String              @map("apporteur_id") @db.Uuid
-  apporteur             Apporteur           @relation(fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  apporteurId           String?             @map("apporteur_id") @db.Uuid
+  apporteur             Apporteur?          @relation(fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   attributionId         String?             @map("attribution_id") @db.Uuid
   attribution           Attribution?        @relation(fields: [attributionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   statut                StatutAnomalie      @default(ouverte)
@@ -1096,6 +1109,9 @@ model Anomalie {
   /// clôture, vidée par la purge seule.
   justificationChiffre  Bytes?              @map("justification_chiffre")
   justificationPurgeeAt DateTime?           @map("justification_purgee_at") @db.Timestamptz(3)
+  /// L'ANONYMISATION : tout ce qui désigne une personne est vidé ; restent l'id, le type, le statut
+  /// et les mois d'ouverture et de traitement (forme d'A02).
+  anonymiseeAt          DateTime?           @map("anonymisee_at") @db.Timestamptz(3)
 
   @@index([apporteurId])
   @@index([attributionId])
@@ -1107,17 +1123,22 @@ model Anomalie {
 /// utiles au moins), lien de contrôle antérieur au dépôt (déclencheur), un seul actif par SIREN de
 /// commande (index partiel) ; la révocation se pose une fois.
 model RattachementManuel {
-  id                   String             @id @default(uuid()) @db.Uuid
-  attributionId        String             @map("attribution_id") @db.Uuid
-  attribution          Attribution        @relation(fields: [attributionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  sirenCommande        String             @map("siren_commande") @db.Char(9)
-  justification        String
-  lienControleEtabliAt DateTime           @map("lien_controle_etabli_at") @db.Timestamptz(3)
-  lienControleSource   String             @map("lien_controle_source")
-  decideParId          String             @map("decide_par_id") @db.Uuid
-  decidePar            UtilisateurConsole @relation(fields: [decideParId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  decideAt             DateTime           @default(now()) @map("decide_at") @db.Timestamptz(3)
-  revoqueAt            DateTime?          @map("revoque_at") @db.Timestamptz(3)
+  id                     String             @id @default(uuid()) @db.Uuid
+  attributionId          String             @map("attribution_id") @db.Uuid
+  attribution            Attribution        @relation(fields: [attributionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  sirenCommande          String             @map("siren_commande") @db.Char(9)
+  /// La justification, CHIFFRÉE (`CHAMPS_PII`) : elle peut nommer une personne ; vidée par la purge.
+  justificationChiffre   Bytes?             @map("justification_chiffre")
+  justificationPurgeeAt  DateTime?          @map("justification_purgee_at") @db.Timestamptz(3)
+  /// La date de la pièce qui établit le lien, au début de son jour à Paris ; au plus tard au dépôt.
+  lienControleEtabliAt   DateTime           @map("lien_controle_etabli_at") @db.Timestamptz(3)
+  lienControleSourceType SourceLienControle @map("lien_controle_source_type")
+  /// La référence de la pièce : identifiant court, un chiffre au moins, ni phrase ni nom (CHECK).
+  lienControleSourceRef  String             @map("lien_controle_source_ref") @db.VarChar(64)
+  decideParId            String             @map("decide_par_id") @db.Uuid
+  decidePar              UtilisateurConsole @relation(fields: [decideParId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  decideAt               DateTime           @default(now()) @map("decide_at") @db.Timestamptz(3)
+  revoqueAt              DateTime?          @map("revoque_at") @db.Timestamptz(3)
 
   @@index([attributionId])
   @@index([decideParId])

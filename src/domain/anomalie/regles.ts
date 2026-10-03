@@ -6,7 +6,8 @@
 import { SEUILS } from '../seuils/ssot';
 import { MS_PAR_JOUR } from '../temps/calendrier-civil';
 import type { Instant } from '../temps/horloge';
-import { instantDepuisLocal, localDepuisInstant } from '../temps/paris';
+import { depuisParis, instantDepuisLocal, localDepuisInstant } from '../temps/paris';
+import type { DateCivile } from '../temps/calendrier-civil';
 
 /** Les types d'anomalie (glossaire, `TypeAnomalie`) : la déclaration seule, jamais le rythme. */
 export type TypeAnomalie = 'sincerite' | 'auto_parrainage';
@@ -93,4 +94,33 @@ export function echeanceDeReponse(recueAt: Instant): Instant {
   return instantDepuisLocal(
     localDepuisInstant(recueAt) + SEUILS.REPONSE_CONTESTATION_JOURS.valeur * MS_PAR_JOUR
   );
+}
+
+/**
+ * La DATE d'une pièce qui établit le lien de contrôle : une pièce est datée d'un JOUR, posé au début
+ * de ce jour à Paris, jamais à l'heure de la saisie. Une pièce du jour même du dépôt passe donc la
+ * règle « antérieure ou égale » (forme d'A02). La seule fonction qui la pose.
+ */
+export function dateDeLaPiece(jour: DateCivile): Instant {
+  return depuisParis({ ...jour, heure: 0, minute: 0, seconde: 0, milliseconde: 0 });
+}
+
+/**
+ * La forme d'une référence de pièce : un identifiant court, sans espace ni lettre accentuée, et qui
+ * porte un chiffre (numéro d'annonce, date d'extrait, millésime, numéro d'inscription). Le même motif
+ * que le CHECK `rattachements_manuels_source_ref_forme`.
+ */
+export const FORME_REFERENCE_DE_SOURCE = /^[A-Za-z0-9._/-]{1,64}$/;
+
+export class ReferenceDeSourceMalFormee extends Error {
+  constructor() {
+    super('reference_de_source_mal_formee');
+    this.name = 'ReferenceDeSourceMalFormee';
+  }
+}
+
+export function jugerReferenceDeSource(ref: string): void {
+  if (!FORME_REFERENCE_DE_SOURCE.test(ref) || !/[0-9]/.test(ref)) {
+    throw new ReferenceDeSourceMalFormee();
+  }
 }

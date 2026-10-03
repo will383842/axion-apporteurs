@@ -74,6 +74,13 @@ export const FORMES = {
           });
         }
       }),
+  /**
+   * EXCEPTION NOMMÉE à HYP-A02-ACTEUR-JOURNAL (décision d'A02 sur la décision (d) de la juriste,
+   * 2026-10-03), pour les seuls événements de cycle de vie d'une ANOMALIE : l'acteur dit QUI a agi
+   * (la console ou le système), JAMAIS son identifiant. Qui a traité l'anomalie se lit sur
+   * `anomalies.traite_par_id`, et plus du tout après son anonymisation : c'est voulu.
+   */
+  acteurSansIdentite: () => z.object({ par: z.enum(['utilisateur_console', 'systeme']) }).strict(),
 };
 
 /** Les valeurs de l'enum Prisma `TypeEvenementJournal`, confrontées au schéma par la garde. */
@@ -218,15 +225,27 @@ export const CHARGES_PAR_TYPE = {
       acteur: FORMES.acteur(),
     })
     .strict(),
-  // DM-12 (REQ-DM-033) : l'ouverture (`de` nul) ou la clôture d'une anomalie, agrégat `apporteur`.
+  // DM-12 (REQ-DM-033), décision (d) de la juriste : l'ouverture (`de` nul) ou la clôture d'une
+  // anomalie, sur l'agrégat ANOMALIE (son id est `agregatId`). Ni apporteur, ni attribution, ni
+  // utilisateur de la console, ni justification, ni score : à l'anonymisation, plus rien ne relie
+  // l'événement à une personne. L'EFFET sur l'apporteur part ailleurs, sans id d'anomalie.
   anomalie_statut_modifie: z
     .object({
-      anomalieId: FORMES.identifiant(),
       de: z.enum(STATUTS_ANOMALIE).nullable(),
       vers: z.enum(STATUTS_ANOMALIE),
-      acteur: FORMES.acteur(),
+      acteur: FORMES.acteurSansIdentite(),
     })
-    .strict(),
+    .strict()
+    .superRefine((c, ctx) => {
+      // `de` nul à la naissance seulement, qui ouvre l'anomalie.
+      if ((c.de === null) !== (c.vers === 'ouverte')) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['de'],
+          message: 'de_nul_a_la_naissance',
+        });
+      }
+    }),
   // DM-12 (REQ-DM-043) : la réception (`de` nul) ou la réponse d'une contestation, agrégat `apporteur`.
   contestation_modifiee: z
     .object({
