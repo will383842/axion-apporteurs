@@ -164,12 +164,32 @@ function clientSimule(lots: Ligne[][], comptes: Record<string, number> = {}) {
   const clients: unknown[] = [];
   const lectures: unknown[] = [];
   const effacements: { where: unknown; data: Record<string, unknown> }[] = [];
+  const revocations: unknown[] = [];
   const tx = {
     attribution: {
       updateMany: vi.fn(async (args: { where: { id: string }; data: Record<string, unknown> }) => {
         ordre.push(`effacer:${args.where.id}`);
         effacements.push(args);
         return { count: comptes[args.where.id] ?? 1 };
+      }),
+    },
+    // DM-40 : les émissions de la demande de confirmation, et les révisions du contact.
+    emissionDemandeConfirmation: {
+      updateMany: vi.fn(
+        async (args: { where: { demande: { attributionId: string }; revoqueeAt?: null } }) => {
+          ordre.push(
+            `${'revoqueeAt' in args.where ? 'revoquer' : 'vider'}:${args.where.demande.attributionId}`
+          );
+          revocations.push(args);
+          return { count: 1 };
+        }
+      ),
+    },
+    revisionDemandeConfirmation: {
+      updateMany: vi.fn(async (args: { where: { demande: { attributionId: string } } }) => {
+        ordre.push(`purger-revisions:${args.where.demande.attributionId}`);
+        revocations.push(args);
+        return { count: 1 };
       }),
     },
   };
@@ -195,6 +215,7 @@ function clientSimule(lots: Ligne[][], comptes: Record<string, number> = {}) {
     ordre,
     lectures,
     effacements,
+    revocations,
     clients,
   };
 }
@@ -253,10 +274,49 @@ describe('REQ-DM-031 — la tâche de purge, sur un client simulé', () => {
     ]);
   });
 
+  it('REQ-DM-031 : TÉMOIN — la purge révoque TOUTES les émissions, vide jetons et empreinte du clic, et purge les révisions, à la valeur près', async () => {
+    const s = clientSimule([[{ id: 'x', natureJuridique: null }]]);
+    await purgerLesContacts(s.client, REFERENCE);
+    expect(s.revocations).toStrictEqual([
+      {
+        where: { demande: { attributionId: 'x' }, revoqueeAt: null },
+        data: { revoqueeAt: REFERENCE, jetonOuiHash: null, jetonNonHash: null, clicIpHash: null },
+      },
+      {
+        where: {
+          demande: { attributionId: 'x' },
+          OR: [{ jetonOuiHash: { not: null } }, { clicIpHash: { not: null } }],
+        },
+        data: { jetonOuiHash: null, jetonNonHash: null, clicIpHash: null },
+      },
+      {
+        where: { demande: { attributionId: 'x' }, purgeeAt: null },
+        data: {
+          nomContactChiffre: null,
+          prenomContactChiffre: null,
+          emailChiffre: null,
+          emailHash: null,
+          telephoneChiffre: null,
+          phoneHash: null,
+          fonctionContactChiffre: null,
+          contexteChiffre: null,
+          purgeeAt: REFERENCE,
+        },
+      },
+    ]);
+  });
+
   it('REQ-DM-031 : TÉMOIN — l’ÉVÉNEMENT, sur le client de la transaction, APRÈS l’effacement, une fois par ligne', async () => {
     const s = clientSimule([[{ id: 'x', natureJuridique: null }]]);
     await purgerLesContacts(s.client, REFERENCE);
-    expect(s.ordre).toEqual(['lire', 'effacer:x', 'journal:x']);
+    expect(s.ordre).toEqual([
+      'lire',
+      'effacer:x',
+      'revoquer:x',
+      'vider:x',
+      'purger-revisions:x',
+      'journal:x',
+    ]);
     expect(s.clients).toEqual([s.tx]);
     expect(s.clients[0]).toBe(s.tx);
     expect(journal.ajouterEvenement).toHaveBeenCalledTimes(1);
@@ -272,7 +332,16 @@ describe('REQ-DM-031 — la tâche de purge, sur un client simulé', () => {
   it('REQ-DM-031 : TÉMOIN — une ligne déjà purgée entre la lecture et l’écriture (compte 0) : ni événement, ni compte', async () => {
     const s = clientSimule([[...lignes(2)]], { a0: 0 });
     expect(await purgerLesContacts(s.client, REFERENCE)).toEqual({ purgees: 1 });
-    expect(s.ordre).toEqual(['lire', 'effacer:a0', 'effacer:a1', 'journal:a1']);
+    // La ligne à compte 0 n'est ni révoquée ni journalisée : seule a1 l'est.
+    expect(s.ordre).toEqual([
+      'lire',
+      'effacer:a0',
+      'effacer:a1',
+      'revoquer:a1',
+      'vider:a1',
+      'purger-revisions:a1',
+      'journal:a1',
+    ]);
   });
 
   it('REQ-DM-031 : TÉMOIN — le DISJONCTEUR des lots : un lot plein relit, un lot partiel s’arrête', async () => {

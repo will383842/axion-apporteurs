@@ -680,7 +680,8 @@
         "DM-25",
         "DM-31",
         "DM-53",
-        "JUR-T31"
+        "JUR-T31",
+        "UX-P1-51"
       ]
     },
     {
@@ -695,7 +696,8 @@
       "phase": 0,
       "taches": [
         "SEC-03",
-        "SEC-42"
+        "SEC-42",
+        "SEC-54"
       ]
     },
     {
@@ -728,6 +730,7 @@
         "SEC-29",
         "SEC-30",
         "SEC-45",
+        "SEC-55",
         "UX-P1-04"
       ]
     },
@@ -1335,6 +1338,8 @@
         "JUR-T31",
         "QA-T31",
         "SEC-34",
+        "SEC-51",
+        "SEC-52",
         "UX-P1-17"
       ]
     },
@@ -3142,7 +3147,8 @@
       "taches": [
         "UX-P0-02",
         "UX-P0-03",
-        "UX-P1-42"
+        "UX-P1-42",
+        "UX-P1-49"
       ]
     },
     {
@@ -5268,6 +5274,7 @@
         "UX-P1-45",
         "UX-P1-46",
         "UX-P1-48",
+        "UX-P1-51",
         "UX-P2-01",
         "UX-P2-02",
         "UX-P2-03",
@@ -5318,6 +5325,7 @@
         "UX-P1-16",
         "UX-P1-18",
         "UX-P1-20",
+        "UX-P1-50",
         "UX-P2-03",
         "UX-P2-05",
         "UX-P3-04",
@@ -5652,8 +5660,8 @@
     {
       "id": "REQ-EXT-007",
       "domaine": "extensions du 2026-09-03 (REQ-EXT)",
-      "texte": "Un apporteur dont une part de dépôts au-delà du seuil de configuration d'une fenêtre glissante portent sur des entreprises `libre_deja_travaillee` produit un signal d'anomalie (ramassage), jamais un refus.",
-      "source": "EXTENSIONS §3.2",
+      "texte": "Le dépôt d'une entreprise libre que la Société a déjà travaillée n'est pas une anomalie et ne produit aucun effet sur le dépôt ni sur l'apporteur : ni vérification, ni suspension, ni statut. Il peut seulement placer la demande de confirmation en tête de la liste des appels de la Société, au titre de la prise de contact que l'article 3.2 lui permet. Aucun compte, aucune proportion et aucune fenêtre de temps ne sont calculés sur les dépôts d'un apporteur.",
+      "source": "EXTENSIONS §3.2 ; amendée le 2026-10-03 par la juriste (art. 3.2 al. 4 et art. 3.7 al. 3 du contrat : le nombre et le rythme sont exclus « même partiellement »), rattrapage 82",
       "statut": "active",
       "remplaceePar": null,
       "module": 10,
@@ -5999,6 +6007,7 @@
         "JUR-T27",
         "JUR-T28",
         "JUR-T56",
+        "JUR-T58",
         "SEC-14",
         "SEC-15",
         "SEC-41",
@@ -6319,6 +6328,7 @@
       "taches": [
         "DM-59",
         "DM-60",
+        "JUR-T59",
         "UX-P1-48"
       ]
     },

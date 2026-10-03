@@ -261,6 +261,7 @@ describe('REQ-DM-031 — chaque argument du gabarit nomme une colonne qui existe
       'demandes_droits_contact',
       'depots_refuses',
       'personnes_declarees',
+      'revisions_demande_confirmation',
     ]);
     const absentes: string[] = [];
     for (const b of branchements) {

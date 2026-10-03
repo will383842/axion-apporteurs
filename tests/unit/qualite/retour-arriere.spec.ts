@@ -22,6 +22,9 @@ const SCRIPT = 'scripts/gates/deploy-verify.ts';
 const TSX = 'node_modules/tsx/dist/cli.mjs';
 const CIBLE = 'd'.repeat(40);
 const AUTRE = 'e'.repeat(40);
+/** QA-T65 : l'empreinte de l'image publiée, et l'étiquette que la plateforme reçoit pour elle. */
+const EMPREINTE = `sha256:${'c'.repeat(64)}`;
+const ETIQUETTE = `sha256-${'c'.repeat(64)}`;
 
 type Appel = { methode: string; chemin: string; corps: unknown };
 let serveurs: Server[] = [];
@@ -73,11 +76,15 @@ function lancer(env: Record<string, string>): Promise<{ code: number; sortie: st
   });
 }
 
-const plateformeQuiAccepte = () =>
-  serveur(() => ({
+/** La plateforme accepte, et rend l'étiquette que l'application tire (QA-T65 : relue après le déploiement). */
+const plateformeQuiAccepte = (tiree: string = ETIQUETTE) =>
+  serveur((a) => ({
     statut: 200,
     entetes: { 'content-type': 'application/json' },
-    corps: '{"message":"ok"}',
+    corps:
+      a.methode === 'GET' && a.chemin === '/api/v1/applications/uuid-factice'
+        ? JSON.stringify({ docker_registry_image_tag: tiree })
+        : '{"message":"ok"}',
   }));
 const application = (sha: string | null, readyz: number) =>
   serveur((a) =>
@@ -106,7 +113,11 @@ async function forge(ancetre: boolean, image: boolean): Promise<Record<string, s
       if (a.chemin.startsWith('/token'))
         return { statut: 200, entetes: {}, corps: '{"token":"jeton-anonyme"}' };
       if (a.chemin.startsWith('/v2/proprio/depot/manifests/sha-'))
-        return { statut: image ? 200 : 404, entetes: {}, corps: '' };
+        return {
+          statut: image ? 200 : 404,
+          entetes: (image ? { 'docker-content-digest': EMPREINTE } : {}) as Record<string, string>,
+          corps: '',
+        };
       return { statut: 404, entetes: {}, corps: '' };
     }
   );
@@ -123,7 +134,7 @@ const envs = (p: { appels: Appel[] }) =>
     .map((a) => (a.corps as { data: { key: string; value: string }[] }).data);
 
 describe('REQ-QA-022 — le retour arrière remet en place, puis le VÉRIFIE', () => {
-  it('REQ-QA-022 : SKIP_MIGRATE=1, étiquette sha-<cible>, déploiement, en-tête et readyz vérifiés, puis SKIP_MIGRATE=0', async () => {
+  it('REQ-QA-022 : SKIP_MIGRATE=1, empreinte de l’image cible, déploiement, en-tête et readyz vérifiés, puis SKIP_MIGRATE=0', async () => {
     const coolify = await plateformeQuiAccepte();
     const app = await application(CIBLE, 200);
     const r = await lancer({
@@ -140,6 +151,8 @@ describe('REQ-QA-022 — le retour arrière remet en place, puis le VÉRIFIE', (
       'PATCH /api/v1/applications/uuid-factice/envs/bulk',
       'PATCH /api/v1/applications/uuid-factice',
       'POST /api/v1/deploy?uuid=uuid-factice&force=false',
+      // QA-T65 : l'étiquette que l'application tire est RELUE après le déploiement.
+      'GET /api/v1/applications/uuid-factice',
       'PATCH /api/v1/applications/uuid-factice/envs/bulk',
     ]);
     expect(envs(coolify)).toEqual([
@@ -147,7 +160,7 @@ describe('REQ-QA-022 — le retour arrière remet en place, puis le VÉRIFIE', (
       [{ key: 'SKIP_MIGRATE', value: '0' }],
     ]);
     expect(coolify.appels[1]!.corps).toEqual({
-      docker_registry_image_tag: `sha-${CIBLE.slice(0, 7)}`,
+      docker_registry_image_tag: ETIQUETTE,
     });
     expect(app.appels.some((a) => a.chemin === '/api/readyz')).toBe(true);
   });
@@ -295,5 +308,22 @@ describe('REQ-QA-022 — le retour arrière ne part que de main, dans l’enviro
     const job = Object.values(wf.jobs ?? {})[0]!;
     expect(job.environment).toBe('production');
     expect(job.if).toContain("github.ref == 'refs/heads/main'");
+  });
+
+  it('REQ-QA-022 : TÉMOIN — la plateforme tire une AUTRE empreinte que celle publiée : NON ATTERRI, et SKIP_MIGRATE remis à 0', async () => {
+    const coolify = await plateformeQuiAccepte(`sha256-${'f'.repeat(64)}`);
+    const app = await application(CIBLE, 200);
+    const r = await lancer({
+      ...(await forge(true, true)),
+      COOLIFY_URL: coolify.url,
+      COOLIFY_API_TOKEN: 'j',
+      COOLIFY_APP_UUID: 'uuid-factice',
+      PARTNERS_URL_PUBLIQUE: app.url,
+      SHA_CIBLE: CIBLE,
+    });
+    expect(r.code).not.toBe(0);
+    expect(r.sortie).toContain('NON ATTERRI');
+    expect(r.sortie).toContain(EMPREINTE);
+    expect(envs(coolify).at(-1)).toEqual([{ key: 'SKIP_MIGRATE', value: '0' }]);
   });
 });
