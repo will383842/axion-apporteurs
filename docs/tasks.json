@@ -5517,9 +5517,15 @@
       "paths": [
         "src/server/parrainage/anti-auto-parrainage.ts",
         "tests/unit/securite/anti-auto-parrainage.spec.ts",
-        "tests/integration/anti-auto-parrainage.spec.ts"
+        "tests/integration/anti-auto-parrainage.spec.ts",
+        "prisma/migrations/",
+        "prisma/schema.prisma",
+        "src/server/taches/ouvrir-anomalies-auto-parrainage.ts",
+        "src/server/taches/inscriptions.ts",
+        "src/server/taches/registre.ts",
+        "src/domain/seuils/ssot.ts"
       ],
-      "schema": false,
+      "schema": true,
       "sensible": [
         "rgpd",
         "argent"
@@ -5546,7 +5552,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "Porté par l'audit indépendant du plan de la Phase 1 (2026-10-01, `_REPRISE-AXION-APPORTEURS/AUDIT-PLAN-PHASE-1.md`). Les empreintes (courriel, téléphone, IBAN, SIREN) sont comparées entre filleul et parrain à la candidature et au changement de RIB ; refus nommé côté console, réponse neutre côté espace ; journalisé sans donnée personnelle. TÉMOINS à deux faces."
+      "acceptance": "Porté par l'audit indépendant du plan de la Phase 1 (2026-10-01, `_REPRISE-AXION-APPORTEURS/AUDIT-PLAN-PHASE-1.md`). Les empreintes (courriel, téléphone, IBAN, SIREN) sont comparées entre filleul et parrain à la candidature et au changement de RIB ; refus nommé côté console, réponse neutre côté espace ; journalisé sans donnée personnelle. TÉMOINS à deux faces. FORME D'A02 (rattrapage 91, sur #601, réponse aux deux refus de la sécurité ; préfixe de migration réservé 20261003001300) : (1) CONTRE LA COURSE : une migration ADDITIVE, sans ADR, crée l'index unique partiel `anomalies_auto_parrainage_une_ouverte` sur `anomalies (apporteur_id) WHERE type = 'auto_parrainage' AND statut = 'ouverte'` ; l'écriture est UNE instruction idempotente, `INSERT … ON CONFLICT (apporteur_id) WHERE type = 'auto_parrainage' AND statut = 'ouverte' DO NOTHING RETURNING id`, en SQL paramétré, sans verrou consultatif. (2) OUVERTURE DISTINCTE ET DIFFÉRÉE (texte de la juriste, DM-12) : le geste de l'apporteur (candidature, RIB) n'ouvre rien ; une tâche du lanceur, `src/server/taches/ouvrir-anomalies-auto-parrainage.ts`, inscrite à `inscriptions.ts` et `registre.ts`, lit sur une fenêtre bornée les candidatures et pièces RIB récentes, juge les empreintes par la fonction pure existante, et ouvre chaque anomalie dans SA PROPRE transaction : l'`INSERT … ON CONFLICT DO NOTHING RETURNING` et, SEULEMENT si une ligne est rendue, l'événement `anomalie_statut_modifie` sur l'agrégat `anomalie` (`{ de: null, vers: 'ouverte', acteur: { par: 'systeme' } }`) ; aucun événement de l'agrégat `apporteur` dans cette transaction ; cadence et fenêtre dans la SSOT. TÉMOINS (sous `partners_app`) : dix ouvertures SIMULTANÉES pour un même filleul donnent exactement UNE anomalie ouverte et UN événement ; une seconde ouverte est refusée par la base (`anomalies_auto_parrainage_une_ouverte`) ; après clôture, une nouvelle peut s'ouvrir ; le geste n'écrit aucune ligne d'`anomalies` ; témoin `xmin` (aucun événement d'`anomalie` dans la transaction d'un événement d'`apporteur`) ; la charge ne porte ni apporteur, ni attribution, ni identifiant d'acteur ; une ouverture en conflit n'écrit aucun événement. La PR porte le label `schema`."
     },
     {
       "id": "SEC-19",
@@ -21851,14 +21857,23 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "Versée au rattrapage 79 sur la demande de la lentille sécurité, relayée par la coordination : à faire AVANT la mise en service sous partners_app. (1) Le CONSTAT refuse de démarrer, en échec fermé, si la table `evenements` n'appartient pas à `partners_journal`, ou si `partners_execution` ou le rôle du serveur a UPDATE, DELETE ou TRUNCATE sur `evenements` (`has_table_privilege`). (2) Le PROVISIONNEMENT refuse de même AVANT d'accorder quoi que ce soit, au lieu de déduire le journal de son propriétaire (`role-d-execution.ts`, l. 165 sur main). (3) TÉMOINS sous partners_app : journal à un autre propriétaire → refus ; UPDATE accordé à la main → refus ; chaque refus est nommé. Auteur : A05. Lentille sécurité. JOURNAL (rattrapage 89, voie A, coordination) : `src/server/evenement/journal.ts`, l'écrivain unique, exporte le nom de la table du journal en constante ; `role-d-execution.ts` l'importe et le passe en paramètre SQL, pour lire le propriétaire et les privilèges sans littéral (la garde `journal:sans-pii` rougissait sur ces mentions).",
       "tests": {
         "REQ-DM-024": [
           "tests/integration/role-d-execution.spec.ts",
           "tests/unit/securite/role-d-execution.spec.ts"
         ]
-      }
+      },
+      "branch": "t/sec-50",
+      "owner": "A05",
+      "pr": 593,
+      "attestation": {
+        "pr": 593,
+        "sha": "38d6e288531607f6e7f77b6518ef5e1667a5eebf",
+        "fusionneeAt": "2026-10-03T15:27:28Z"
+      },
+      "motif": null
     },
     {
       "id": "QA-T70",
@@ -21884,13 +21899,22 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "Versée au rattrapage 79 sur la demande de la lentille sécurité, relayée par la coordination. (1) `scripts/gates/gate-d.sh` rejoue la propriété des tables comme le runbook (`docs/runbooks/sauvegarde.md`, étape 3), avec la même fonction que `scripts/sauvegarde/exercice.ts`, au lieu de `--no-owner` seul. (2) ORDRE (rattrapage 81, mesure de l'auteur back) : QA-T70 fusionne AVANT SEC-50, sinon la porte D rougit ; l'image N−1 restaurée en `--no-owner` a un journal à un autre propriétaire, que le constat de SEC-50 refuse. La porte D reste verte quand la propriété est rejouée à l'identique. (3) La fonction de rejeu est UNIQUE, partagée par la porte D et l'exercice de restauration ; aucune copie. Auteur : A05. TÉMOIN DU PLAN UNIQUE (rattrapage 89, coordination) : `tests/unit/qualite/sauvegarde-proprietaire-unique.spec.ts` suit le plan unique : dans `exercer`, `planDeLaPropriete(` précède `'--no-owner'` ; dans `planDeLaPropriete`, `jugerLesRoles(` précède `CREATE ROLE`.",
       "tests": {
         "REQ-QA-023": [
           "tests/unit/qualite/sauvegarde-et-exercice.spec.ts"
         ]
-      }
+      },
+      "branch": "t/qa-t70",
+      "owner": "A05",
+      "pr": 582,
+      "attestation": {
+        "pr": 582,
+        "sha": "d3ea5f5c06effc2ec3b33cfdf3324c29387055da",
+        "fusionneeAt": "2026-10-03T15:22:41Z"
+      },
+      "motif": null
     },
     {
       "id": "DM-60",
@@ -22653,7 +22677,7 @@
       "externe": null,
       "estimateDays": 1,
       "statut": "a_faire",
-      "acceptance": "Versée au rattrapage 86 sur la décision de Williams du 2026-10-03 : à la question « Je fais lancer ce chantier [raccourcir les contrôles automatiques, sans enlever ni alléger aucun contrôle : parallélisation et cache, liste des contrôles identique prouvée par un témoin], avec cette règle ? Oui ou non ? », sa réponse : « OUI vas-y lance le chantier ». OBJECTIF : ramener la porte A de 16 à 23 min (mesure des runs 37113951093 et 37114121933 : « Tests » 700 à 890 s, plus de 60 % ; Stryker 152 s ; 118 autres étapes, 274 s) à 10 à 15 min. RÈGLE NON NÉGOCIABLE : aucun contrôle retiré, aucun allégé, aucun seuil changé, aucune étape rendue facultative ; seule la manière de les exécuter change. (1) « Tests » est découpé en quatre jobs explicites `tests-1` à `tests-4` (option A retenue par la sécurité), chacun `vitest run --shard=<ECLAT> --reporter=blob`, puis un job fusionne les rapports (`--merge-reports`) et rend `test-results/vitest.json` et la couverture. Chaque shard monte sa propre base, et les tests d'intégration ne partagent aucun état entre shards. La couverture fusionnée est comparée aux MÊMES seuils, sur les mêmes fichiers ; un shard rouge rend gate-a rouge. (2) `req:check`, Stryker et toute étape qui lit les résultats tournent après la fusion, sans changement de commande. (3) Les gardes gov, le lint, le typecheck et Semgrep forment un job parallèle aux shards ; Stryker et la mesure du build, un autre. (4) Caches : store pnpm, client Prisma, navigateurs Playwright, par clé du lock ; aucune réinstallation évitable. (5) « gate-a » reste LE check requis : un job final, `needs:` tous les autres, qui échoue si l'un d'eux n'est pas `success`. (6) TÉMOIN (`scripts/gates/ci-etapes-identiques.ts`, joué en CI) : il extrait de `ci.yml` la liste des étapes (nom et commande `run`), avant et après, et exige l'IDENTITÉ au regroupement près. LISTE FERMÉE des écarts admis (A02, exactitude, coordination) : (a) la commande de test devenue `vitest run --shard=<ECLAT> --reporter=blob`, ECLAT en forme fermée `^[1-4]/4$` ; (b) l'envoi et la réception d'artefacts ; (c) la fusion des rapports `vitest --merge-reports --coverage`, qui rend `test-results/vitest.json` et la couverture ; (d) les caches du point (4) (store pnpm, client Prisma, navigateurs Playwright) ; (e) le calcul et la vérification des empreintes des artefacts (option A, point (5) de la sécurité) ; (f) le contrôle des `needs.<job>.result` du job final. Tout autre écart reste rouge. (7) SÉCURITÉ : permissions minimales par job (`contents: read` par défaut), aucun `pull_request_target`, secrets transmis aux seuls jobs qui les lisent aujourd'hui, artefacts à rétention courte. (8) Mesure avant/après, étape par étape, dans le corps de la PR. OPTION A DE LA SÉCURITÉ (retenue par la coordination) : quatre jobs `tests-1` à `tests-4` EXPLICITES, identiques hormis ECLAT, chacun avec son `outputs.empreinte` vérifiée avant usage, et une fusion qui exige exactement 4 blobs. FORME DU TÉMOIN (6), arbitrage d'A02 : les écarts admis sont ceux de la liste fermée du point (6). La référence de l'« avant » est un fichier versionné, `scripts/gates/ci-etapes-reference.json`, généré depuis le `ci.yml` de main AVANT le découpage ; le témoin s'appelle par `pnpm gov:ci-etapes` depuis le workflow, et la garde a son entrée dans `docs/gates.json` (`verifie`, `fixtureRouge`, `preuveRouge`). GARDES QUI LISENT `ci.yml` COMME UN SEUL JOB (A02) : `porte-a-presente-active-effective.spec.ts` (PORTE_A_FIGEE devient un constat par job, point (7)), `outillage-de-la-porte-a.spec.ts`, `gov-conventions.ts` et son entrée de `docs/gates.json` (`lint_non_bloquant`, « une gate qu'aucun workflow n'appelle »), `forge-instantane.ts` et l'entrée QA-T64 de `docs/gates.json` (l'instantané passe en tête du job des gardes, puisque `gate-a` n'exécute plus de garde, et le texte de QA-T64 suit), et les trois témoins `deploy-attendre-porte-a.spec.ts`, `ci-navigateurs-a11y.spec.ts` et `la-porte-a-ne-depend-pas-des-autres-pr.spec.ts`, à confronter. La PR touche `package.json` (A02 prévenu) et `docs/gates.json` (label `role:gardien-spec`). OUTILLAGE DE L'OPTION A (mesure de l'auteur back) : `scripts/ci/tests-eclat.ts`, `tests-fusion.ts`, `artefact-empreinte.ts` (empreinte SHA-256 des artefacts) et `porte-finale.ts` (contrôle de `toJSON(needs)`). `scripts/prevol.ts` suit : `pnpm pre-gate` lit les gardes là où elles tournent désormais. Les seuils de couverture restent ceux de `vitest.config.ts` : les éclats les neutralisent par la ligne de commande et la fusion les applique sans surcharge. `docs/gates.json` (l'entrée de `gov:ci-etapes`, et le champ « verifie » de `gov:conventions`) s'écrit par les verbes d'A01, au rattrapage qui suit, sur les textes de l'auteur. SEPT POINTS DE LA LENTILLE SÉCURITÉ (rattrapage 86, relayés par la coordination) : (1) le nom gate-a est réservé au seul job final ; (2) chaque needs.<job>.result vaut exactement success, et un job sauté ne vaut jamais réussite (if: always()) ; (3) ECLAT est en forme fermée ; (4) la fusion exige exactement 4 blobs, sans perdre aucun test ; (5) chaque artefact a un seul producteur, overwrite: false, une empreinte en outputs vérifiée avant usage, et provient du run courant seulement (ni fork ni autre run) ; (6) permissions minimales par job, et secrets dans les seuls jobs qui les lisent ; (7) PORTE_A_FIGEE devient un constat par job, needs, outputs et permissions compris. Auteur : A05 (session de l'auteur back, en PRIORITÉ : ce chantier accélère tous les autres). Arbitre de la forme : A02. Lentilles sécurité et exactitude.",
+      "acceptance": "Versée au rattrapage 86 sur la décision de Williams du 2026-10-03 : à la question « Je fais lancer ce chantier [raccourcir les contrôles automatiques, sans enlever ni alléger aucun contrôle : parallélisation et cache, liste des contrôles identique prouvée par un témoin], avec cette règle ? Oui ou non ? », sa réponse : « OUI vas-y lance le chantier ». OBJECTIF : ramener la porte A de 16 à 23 min (mesure des runs 37113951093 et 37114121933 : « Tests » 700 à 890 s, plus de 60 % ; Stryker 152 s ; 118 autres étapes, 274 s) à 10 à 15 min. RÈGLE NON NÉGOCIABLE : aucun contrôle retiré, aucun allégé, aucun seuil changé, aucune étape rendue facultative ; seule la manière de les exécuter change. (1) « Tests » est découpé en quatre jobs explicites `tests-1` à `tests-4` (option A retenue par la sécurité) [REMPLACÉ au rattrapage 91 : DEUX éclats, voir l'amendement ci-dessous], chacun `vitest run --shard=<ECLAT> --reporter=blob`, puis un job fusionne les rapports (`--merge-reports`) et rend `test-results/vitest.json` et la couverture. Chaque shard monte sa propre base, et les tests d'intégration ne partagent aucun état entre shards. La couverture fusionnée est comparée aux MÊMES seuils, sur les mêmes fichiers ; un shard rouge rend gate-a rouge. (2) `req:check`, Stryker et toute étape qui lit les résultats tournent après la fusion, sans changement de commande. (3) Les gardes gov, le lint, le typecheck et Semgrep forment un job parallèle aux shards ; Stryker et la mesure du build, un autre. (4) Caches : store pnpm, client Prisma, navigateurs Playwright, par clé du lock ; aucune réinstallation évitable. (5) « gate-a » reste LE check requis : un job final, `needs:` tous les autres, qui échoue si l'un d'eux n'est pas `success`. (6) TÉMOIN (`scripts/gates/ci-etapes-identiques.ts`, joué en CI) : il extrait de `ci.yml` la liste des étapes (nom et commande `run`), avant et après, et exige l'IDENTITÉ au regroupement près. LISTE FERMÉE des écarts admis (A02, exactitude, coordination) : (a) la commande de test devenue `vitest run --shard=<ECLAT> --reporter=blob`, ECLAT en forme fermée `^[1-4]/4$` [REMPLACÉ au rattrapage 91 : `^[1-2]/2$`] ; (b) l'envoi et la réception d'artefacts ; (c) la fusion des rapports `vitest --merge-reports --coverage`, qui rend `test-results/vitest.json` et la couverture ; (d) les caches du point (4) (store pnpm, client Prisma, navigateurs Playwright) ; (e) le calcul et la vérification des empreintes des artefacts (option A, point (5) de la sécurité) ; (f) le contrôle des `needs.<job>.result` du job final. Tout autre écart reste rouge. (7) SÉCURITÉ : permissions minimales par job (`contents: read` par défaut), aucun `pull_request_target`, secrets transmis aux seuls jobs qui les lisent aujourd'hui, artefacts à rétention courte. (8) Mesure avant/après, étape par étape, dans le corps de la PR. OPTION A DE LA SÉCURITÉ (retenue par la coordination) : quatre jobs `tests-1` à `tests-4` EXPLICITES [REMPLACÉ au rattrapage 91 : deux], identiques hormis ECLAT, chacun avec son `outputs.empreinte` vérifiée avant usage, et une fusion qui exige exactement 4 blobs [REMPLACÉ au rattrapage 91 : exactement 2 blobs]. FORME DU TÉMOIN (6), arbitrage d'A02 : les écarts admis sont ceux de la liste fermée du point (6). La référence de l'« avant » est un fichier versionné, `scripts/gates/ci-etapes-reference.json`, généré depuis le `ci.yml` de main AVANT le découpage ; le témoin s'appelle par `pnpm gov:ci-etapes` depuis le workflow, et la garde a son entrée dans `docs/gates.json` (`verifie`, `fixtureRouge`, `preuveRouge`). GARDES QUI LISENT `ci.yml` COMME UN SEUL JOB (A02) : `porte-a-presente-active-effective.spec.ts` (PORTE_A_FIGEE devient un constat par job, point (7)), `outillage-de-la-porte-a.spec.ts`, `gov-conventions.ts` et son entrée de `docs/gates.json` (`lint_non_bloquant`, « une gate qu'aucun workflow n'appelle »), `forge-instantane.ts` et l'entrée QA-T64 de `docs/gates.json` (l'instantané passe en tête du job des gardes, puisque `gate-a` n'exécute plus de garde, et le texte de QA-T64 suit), et les trois témoins `deploy-attendre-porte-a.spec.ts`, `ci-navigateurs-a11y.spec.ts` et `la-porte-a-ne-depend-pas-des-autres-pr.spec.ts`, à confronter. La PR touche `package.json` (A02 prévenu) et `docs/gates.json` (label `role:gardien-spec`). OUTILLAGE DE L'OPTION A (mesure de l'auteur back) : `scripts/ci/tests-eclat.ts`, `tests-fusion.ts`, `artefact-empreinte.ts` (empreinte SHA-256 des artefacts) et `porte-finale.ts` (contrôle de `toJSON(needs)`). `scripts/prevol.ts` suit : `pnpm pre-gate` lit les gardes là où elles tournent désormais. Les seuils de couverture restent ceux de `vitest.config.ts` : les éclats les neutralisent par la ligne de commande et la fusion les applique sans surcharge. `docs/gates.json` (l'entrée de `gov:ci-etapes`, et le champ « verifie » de `gov:conventions`) s'écrit par les verbes d'A01, au rattrapage qui suit, sur les textes de l'auteur. SEPT POINTS DE LA LENTILLE SÉCURITÉ (rattrapage 86, relayés par la coordination) : (1) le nom gate-a est réservé au seul job final ; (2) chaque needs.<job>.result vaut exactement success, et un job sauté ne vaut jamais réussite (if: always()) ; (3) ECLAT est en forme fermée ; (4) la fusion exige exactement 4 blobs [REMPLACÉ au rattrapage 91 : exactement 2 blobs], sans perdre aucun test ; (5) chaque artefact a un seul producteur, overwrite: false, une empreinte en outputs vérifiée avant usage, et provient du run courant seulement (ni fork ni autre run) ; (6) permissions minimales par job, et secrets dans les seuls jobs qui les lisent ; (7) PORTE_A_FIGEE devient un constat par job, needs, outputs et permissions compris. Auteur : A05 (session de l'auteur back, en PRIORITÉ : ce chantier accélère tous les autres). Arbitre de la forme : A02. Lentilles sécurité et exactitude. AMENDEMENT (rattrapage 91) : décision (i)+(ii) de la coordination, le 2026-10-03 vers 14h55 UTC, sur la mesure de l'auteur back (quatre éclats coûtaient ×1,9 en minutes-runner, sans gain de latence) ; accord écrit de la sécurité, le 2026-10-03 vers 15h35 UTC, relecture de #579 sur e125cf2d : « Les 2 éclats et le job forge tiennent mes points au nombre près : ECLAT fermé ^[1-2]/2$, exactement 2 blobs, gate-a qui attend les 7 autres jobs avec success, lecture seule. » ; quatre points de l'exactitude, confirmés par la coordination. (1) ÉCLATS, texte de la sécurité, MOT POUR MOT : « deux jobs explicites tests-1 et tests-2, identiques hormis ECLAT, de forme fermée ^[1-2]/2$, et une fusion d'exactement deux blobs ; le nombre d'éclats est une constante unique (NOMBRE_D_ECLATS), et changer ce nombre change ensemble la forme, les jobs et la fusion, sous le témoin gov:ci-etapes » ; chaque test est joué une fois, aux mêmes seuils. (2) JOB FORGE : un job court produit l'instantané de la forge et son empreinte ; les gardes et les éclats l'attendent (`needs`). (3) CONCURRENCY : un run par PR, une clé par numéro de PR, `main` jamais annulée, le déploiement hors du groupe ; une douzième famille du témoin, `concurrence_non_conforme`, conforme aux six conditions de la sécurité. (4) SORTIES NOMMÉES au registre des refus (`scripts/gates/registre-des-refus.ts`, déjà aux chemins depuis le rattrapage 89) : `artefact-empreinte`, `porte-finale`, `tests-eclat`, `tests-fusion` et `ci-etapes-identiques`.",
       "tests": {
         "REQ-QA-013": [
           "tests/unit/gouvernance/ci-etapes-identiques.spec.ts"
@@ -22850,6 +22874,68 @@
       "tests": {
         "REQ-GOV-032": [
           "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "DM-64",
+      "titre": "La fin de plein droit du contrat (art. 12.5 : décès, cessation, radiation) a sa valeur dans le motif de résiliation",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "domaine",
+      "paths": [
+        "prisma/schema.prisma",
+        "prisma/migrations/",
+        "docs/GLOSSAIRE.md",
+        "tests/unit/gouvernance/glossaire-enums.spec.ts",
+        "tests/integration/motif-resiliation-plein-droit.spec.ts"
+      ],
+      "schema": true,
+      "sensible": [],
+      "deps": [],
+      "reqs": [
+        "REQ-DM-011"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.25,
+      "statut": "a_faire",
+      "acceptance": "Versée au rattrapage 91 sur le signalement de la juriste, relayé par la coordination : l'enum du motif de résiliation (REQ-DM-011 : `ordinaire_apporteur`, `ordinaire_axion`, `manquement_grave`) n'a aucune valeur pour la fin de plein droit de l'art. 12.5 (décès, cessation, radiation). (1) Une valeur est ajoutée EN FIN d'enum (`ALTER TYPE … ADD VALUE`, migration additive), sans toucher aux valeurs existantes ; son NOM est fixé à la revendication avec A02 (forme) et la juriste (sens), et REQ-DM-011 est amendée au rattrapage qui suit, avec ce nom. (2) Son libellé entre au GLOSSAIRE, dans la PR de cette tâche, sous `role:gardien-spec`. (3) TÉMOINS (`tests/integration/motif-resiliation-plein-droit.spec.ts`) : une résiliation de plein droit s'enregistre avec cette valeur ; les valeurs existantes ne changent pas ; le glossaire et l'enum concordent (`glossaire-enums.spec.ts`). Label `schema`, préfixe à la revendication. Auteur : A05. Lentilles schema (A02) et A07.",
+      "tests": {
+        "REQ-DM-011": [
+          "tests/integration/motif-resiliation-plein-droit.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "SEC-57",
+      "titre": "Le rôle propriétaire du journal ne possède que le journal et sa séquence : le provisionnement refuse tout autre objet",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "securite",
+      "paths": [
+        "src/server/deploiement/role-d-execution.ts",
+        "tests/unit/securite/role-d-execution.spec.ts",
+        "tests/integration/role-d-execution.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [
+        "auth"
+      ],
+      "deps": [
+        "SEC-50"
+      ],
+      "reqs": [
+        "REQ-DM-024"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.25,
+      "statut": "a_faire",
+      "acceptance": "Versée au rattrapage 91, suite de SEC-50 (#593, 38d6e288), recommandation NON BLOQUANTE de la lentille sécurité, relayée par la coordination : le provisionnement REFUSE si le rôle `partners_journal` possède autre chose que la table du journal et sa séquence (nom de la table lu depuis la constante exportée par `src/server/evenement/journal.ts`, jamais un littéral). Le refus est nommé, en échec fermé. TÉMOIN (`tests/integration/role-d-execution.spec.ts`) : un objet de plus possédé par `partners_journal` fait refuser le démarrage ; le journal et sa séquence seuls passent. Auteur : A05. Lentille sécurité.",
+      "tests": {
+        "REQ-DM-024": [
+          "tests/integration/role-d-execution.spec.ts"
         ]
       }
     }
