@@ -36,10 +36,12 @@ import { COOKIE_DE_SESSION } from '../../../server/auth/session';
 import { clesPii } from '../../../server/securite/pii';
 import { evaluerPotDeMiel } from '../../../server/securite/pot-de-miel';
 import {
+  ROUTE_ISSUE_OUVERTE,
   destinationDeLOuverture,
   lireLaPolitique,
   portsDuProcessus,
 } from '../../../server/rgpd/acceptation';
+import { destinationBornee } from './destination';
 
 const texte = (valeur: FormDataEntryValue | null): string | null =>
   typeof valeur === 'string' ? valeur : null;
@@ -75,7 +77,8 @@ export async function changerDAdresse(): Promise<void> {
  */
 async function ouvrirLaConnexion(
   jetonSession: string,
-  d: ReturnType<typeof dependancesDuProcessus>
+  d: ReturnType<typeof dependancesDuProcessus>,
+  suite: string | null = null
 ): Promise<never> {
   const { nom, attributs } = COOKIE_DE_SESSION;
   const pot = await cookies();
@@ -83,14 +86,16 @@ async function ouvrirLaConnexion(
   // SEC-54 : la session ouverte, le cookie d'attente du code n'a plus d'objet. Effacé s'il existe :
   // une ouverture par le clic, sans demande sur cet appareil, n'en porte aucun.
   if (pot.get?.(COOKIE_DATTENTE.nom) !== undefined) effacerLeCookieDAttente(pot);
-  redirect(
-    await destinationDeLOuverture(
-      jetonSession,
-      () => lireLaPolitique(),
-      () => portsDuProcessus(d),
-      (motif) => d.journal.warn(motif)
-    )
+  const destination = await destinationDeLOuverture(
+    jetonSession,
+    () => lireLaPolitique(),
+    () => portsDuProcessus(d),
+    (motif) => d.journal.warn(motif)
   );
+  // UX-P1-04 (W19) : l'issue habituelle n'est plus un cul-de-sac. Elle mène, en une action, à l'URL
+  // demandée si elle est un chemin relatif de l'espace, sinon à l'accueil. La politique à accepter et
+  // l'indisponibilité gardent leur route.
+  redirect(destination === ROUTE_ISSUE_OUVERTE ? destinationBornee(suite) : destination);
 }
 
 export async function consommerUnLienDeConnexion(jeton: string): Promise<void> {
@@ -123,7 +128,8 @@ export async function verifierUnCodeDeConnexion(formulaire: FormData): Promise<v
       lienAnnule = true;
     })
   );
-  if (resultat.etat === 'ouverte') await ouvrirLaConnexion(resultat.jetonSession, d);
+  if (resultat.etat === 'ouverte')
+    await ouvrirLaConnexion(resultat.jetonSession, d, texte(formulaire.get('suite')));
   // Le lien annulé au cinquième échec : le cookie d'attente part avec lui.
   if (lienAnnule) effacerLeCookieDAttente(pot);
   redirect(`/connexion?code=${resultat.etat}`);

@@ -97,6 +97,34 @@ export const CONNEXION = {
     action: 'Utiliser mon lien',
     ouverte: 'Votre lien de connexion a bien été utilisé.',
   },
+  /**
+   * UX-P1-04 — le code à six chiffres, saisi après l'envoi (maquette `connexion.html`, validée le
+   * 2026-10-03). Les deux refus sont les textes de la juriste, MOT POUR MOT (rattrapage 88) : un SEUL
+   * texte pour tout refus de code, et le débit sans durée en dur.
+   */
+  code: {
+    // Le nombre de chiffres n'est pas écrit ici (RM-10) : le champ le borne, la garde le refuse en clair.
+    champ: 'Code reçu par e-mail',
+    aide: 'Le code sert si le lien s’ouvre sur un autre appareil.',
+    action: 'Me connecter',
+    changer: 'Changer d’adresse',
+    refus: 'Ce code n’est pas valable. Demandez un nouveau lien de connexion.',
+    debit: 'Trop d’essais. Réessayez dans quelques minutes.',
+    installee: {
+      titre: 'Vous utilisez l’application installée',
+      phrase:
+        'Le lien de l’e-mail s’ouvre dans le navigateur, pas dans l’application. Tapez plutôt le code reçu par e-mail ici.',
+    },
+  },
+  /**
+   * UX-P1-04 — un lien déjà consommé, distinct d'un lien invalide (maquette « Lien déjà utilisé »).
+   * Le titre et l'action sont ceux de l'état vide de `/connexion/<jeton>` (`etats-vides.ts`), non
+   * réécrits ; seule la phrase, qui dit POURQUOI le lien ne sert qu'une fois, vit ici.
+   */
+  dejaUtilise: {
+    phrase:
+      'Un lien de connexion ne sert qu’une fois : c’est ce qui protège votre espace si l’e-mail est transféré.',
+  },
   courriel: {
     sujet: 'Votre lien de connexion à votre espace',
     corps:
