@@ -12,7 +12,11 @@
  * montant HT du devis (écart B-11).
  */
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { SEUILS } from '../../../src/domain/seuils/ssot';
+import { chargeConforme } from '../../../src/server/integrations/axionia/reception';
+import { SCHEMA_VERSION } from '../../../packages/contracts/events';
+import { ChargeIncomplete, montantRequis } from '../../../src/server/entreprise-connue/projection';
 import {
   evaluerAnteriorite,
   estPrestationFacturee,
@@ -189,5 +193,39 @@ describe('REQ-DM-029 — « prestation facturée » : une facture que rien n’�
       ])
     ).toBe(true);
     expect(estPrestationFacturee({ montantHtCents: 10_000, annulee: true }, [])).toBe(false);
+  });
+});
+
+describe('REQ-DM-029 — un montant absent ferme la protection, il ne l’ouvre jamais (remarque de la juriste)', () => {
+  const PRODUCTEUR = JSON.parse(
+    readFileSync('tests/fixtures/axionia/fixtures-producteur.v1.json', 'utf8')
+  ) as { evenements: { event_type: string; payload: Record<string, unknown> }[] };
+  const charge = (type: string): Record<string, unknown> => {
+    const p = { ...PRODUCTEUR.evenements.find((x) => x.event_type === type)!.payload };
+    if (type === 'facture.emise') p.devisId = null;
+    return p;
+  };
+  const sansChamp = (c: Record<string, unknown>, champ: string) =>
+    Object.fromEntries(Object.entries(c).filter(([k]) => k !== champ));
+
+  it('REQ-DM-029 : TÉMOIN — à l’ENTRÉE, une charge sans montant est refusée par le contrat ; avec lui, elle passe', () => {
+    for (const [type, champ] of [
+      ['facture.emise', 'montantHtCents'],
+      ['devis.signe', 'montantTotalHtCents'],
+      ['avoir.emis', 'montantHtCents'],
+    ] as const) {
+      expect(chargeConforme(type, charge(type), SCHEMA_VERSION), type).toBe(true);
+      expect(chargeConforme(type, sansChamp(charge(type), champ), SCHEMA_VERSION), type).toBe(
+        false
+      );
+    }
+  });
+
+  it('REQ-DM-029 : TÉMOIN — dans la PROJECTION, un montant absent n’est jamais lu comme zéro : la lecture lève, nommée', () => {
+    expect(montantRequis({ montantHtCents: 1_000 }, 'montantHtCents')).toBe(1_000);
+    expect(() => montantRequis({}, 'montantHtCents')).toThrow(ChargeIncomplete);
+    expect(() => montantRequis({ montantHtCents: '1000' }, 'montantHtCents')).toThrow(
+      ChargeIncomplete
+    );
   });
 });

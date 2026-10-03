@@ -340,6 +340,21 @@ describe('REQ-DM-029 — l’antériorité projetée, sous le rôle du serveur (
     expect(await anterioriteDe(app, siren, MAINTENANT)).toEqual({ connue: false });
   });
 
+  it('REQ-DM-029 : TÉMOIN — une facture sans montant fait échouer la projection, nommée ; rien n’est lu comme zéro', async () => {
+    const siren = unSiren();
+    await expect(
+      recevoir(TypeEvenementRecu.facture_emise, {
+        factureId: randomUUID(),
+        numero: 'F-9',
+        clientId: null,
+        siren,
+        emiseLe: ilYA(2),
+        devisId: null,
+      })
+    ).rejects.toMatchObject({ name: 'ChargeIncomplete' });
+    expect(await base.prisma.entrepriseConnue.count({ where: { siren } })).toBe(0);
+  });
+
   it('REQ-DM-029 : une facture annulée ne rend pas l’entreprise cliente, quel que soit l’ordre d’arrivée', async () => {
     const siren = unSiren();
     const factureId = randomUUID();
