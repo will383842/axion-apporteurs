@@ -959,3 +959,90 @@ describe('REQ-JUR-003 — les lecteurs du gabarit et du registre, sur leurs cas 
     expect(motifs2).toContain('clause CL-INVENTEE absente de la table de correspondance');
   });
 });
+
+// ── JUR-T31 — l'art. 3.5 : l'entreprise déjà prise par un autre apporteur ou par la Société ──────
+
+describe('REQ-JUR-003 — JUR-T31 : l’art. 3.5, entreprise déjà prise, bornes de la Société, non-exploitation', () => {
+  const art35 = (): string =>
+    normaliser(
+      (unitesDuGabarit(readFileSync(GABARIT, 'utf8')).get('3.5')?.alineas ?? []).join(' ')
+    );
+
+  it('REQ-JUR-003 : l’occupant peut être un autre apporteur, la Société ou ses préposés — nommés en toutes lettres', () => {
+    expect(art35()).toContain('par un autre apporteur ou par la Société ou ses préposés');
+    expect(art35()).toContain('préposés de la Société');
+  });
+
+  it('REQ-JUR-003 : l’acte de la Société s’appelle « prise en charge » — ni « suivi », ni « déclaration » de la Société', () => {
+    const a = art35();
+    expect(a).not.toMatch(/\bsuivie?s?\b/i);
+    // L'acte de la Société n'est jamais une déclaration : ni « la Société déclare », ni « ses préposés
+    // déclarent », ni « déclaration de la Société », ni « déclarée par la Société ». Les déclarations
+    // de l'apporteur, elles, restent nommées.
+    const formes = [
+      /(?:la Société|ses préposés|les préposés)\s+(?:ne\s+)?déclar/i,
+      /déclarations?\s+(?:de|par)\s+(?:la Société|ses préposés|les préposés)/i,
+      /déclarée?s?\s+par\s+(?:la Société|ses préposés|les préposés)/i,
+    ];
+    for (const forme of formes) expect(a).not.toMatch(forme);
+    // Le juge n’est pas vide : chaque phrase fautive qu’il vise rougit, une par motif.
+    const fautives = [
+      'La Société déclare l’entreprise.',
+      'la déclaration de la Société',
+      'une entreprise déclarée par ses préposés',
+    ];
+    formes.forEach((forme, i) => expect(fautives[i]).toMatch(forme));
+    expect(a).toContain('prise en charge');
+  });
+
+  it('REQ-JUR-003 : les bornes de la Société sont écrites par variables (RM-10), et aucune reconduction', () => {
+    const a = art35();
+    for (const v of ['FENETRE_MOIS', 'PEREMPTION_JOURS', 'CARENCE_CONSEILLER_JOURS'])
+      expect(a).toContain(`{{${v}}}`);
+    const bornes = a.slice(
+      a.indexOf('obéit aux mêmes bornes'),
+      a.indexOf('La Société conserve dans ses propres outils')
+    );
+    expect(bornes.length).toBeGreaterThan(0);
+    expect(bornes).not.toMatch(/(?<![\d{])(?:6|60|90)(?![\d}])/);
+    expect(bornes).not.toMatch(/\b(?:six|soixante|quatre-vingt-dix)\b/i);
+    expect(a).toContain('aucune reconduction');
+  });
+
+  it('REQ-JUR-003 : al. 4 (option B) — l’usage commercial est permis, et la commission reste due quel que soit celui qui conclut', () => {
+    const a = art35();
+    expect(a).not.toContain("n'utilise ni les vérifications");
+    expect(a).toContain('peut utiliser à ses propres fins commerciales');
+    expect(a).toContain(
+      "qu'elle résulte des démarches de l'Apporteur, de celles de la Société ou de ses préposés, ou d'une initiative de l'entreprise"
+    );
+    expect(a).toContain("dans les conditions de l'article 4.4");
+  });
+
+  it('REQ-JUR-003 : al. 4 — deux protections : pas de démarchage tant que l’attribution est provisoire, ni dans la réserve après un acte de l’Apporteur', () => {
+    const a = art35();
+    expect(a).toContain(
+      "Tant que l'attribution est provisoire, la Société ne démarche pas l'entreprise déclarée ; la demande de confirmation et les prises de contact de l'article 3.2 ne constituent pas un démarchage."
+    );
+    expect(a).toContain(
+      "Dans les {{RESERVE_APRES_ACTE_APPORTEUR_JOURS}} jours qui suivent une vérification d'entreprise faite par l'Apporteur, ou une déclaration de sa part refusée ou en attente, la Société ne démarche pas l'entreprise concernée et ne la prend pas en charge ; cette réserve ne s'applique ni à une entreprise que la Société connaissait déjà au sens de l'article 3.3, ni à une entreprise dont une attribution ou une prise en charge était en cours à la date de cette vérification ou de cette déclaration."
+    );
+    expect(VARIABLES['RESERVE_APRES_ACTE_APPORTEUR_JOURS' as keyof typeof VARIABLES]).toMatchObject(
+      {
+        constante: 'RESERVE_APRES_ACTE_APPORTEUR_JOURS',
+      }
+    );
+  });
+
+  it('REQ-JUR-003 : la preuve vaut quel que soit l’occupant, et l’extrait ne révèle pas qui occupe', () => {
+    expect(art35()).toContain("quel que soit l'occupant");
+    expect(art35()).toContain('ne révèle pas qui occupe');
+  });
+
+  it('REQ-JUR-003 : CARENCE_CONSEILLER_JOURS est une variable du contrat, déclarée sur la SSOT', () => {
+    expect(VARIABLES).toHaveProperty('CARENCE_CONSEILLER_JOURS');
+    expect(VARIABLES['CARENCE_CONSEILLER_JOURS' as keyof typeof VARIABLES]).toMatchObject({
+      constante: 'CARENCE_CONSEILLER_JOURS',
+    });
+  });
+});

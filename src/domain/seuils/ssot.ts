@@ -108,6 +108,24 @@ export const SEUILS = {
     renvois: art('3.2'),
     verifieLe: '2026-10-01',
   },
+  // JUR-T31 — la Société ne prend pas en charge une entreprise libérée depuis moins de ce délai,
+  // quel qu'en ait été l'occupant (HYP-W19-CARENCE, valeur par défaut). L'art. 3.5 en est la source.
+  // JUR-T31 — la réserve de la Société après un acte de l'Apporteur (art. 3.5 al. 4, option B de
+  // Williams du 2026-10-02) : la durée décidée par HYP-W19-NON-EXPLOITATION.
+  RESERVE_APRES_ACTE_APPORTEUR_JOURS: {
+    valeur: 30,
+    unite: 'jours',
+    source: 'contrat art. 3.5 al. 4 (HYP-W19-NON-EXPLOITATION)',
+    renvois: art('3.5'),
+    verifieLe: '2026-10-02',
+  },
+  CARENCE_CONSEILLER_JOURS: {
+    valeur: 90,
+    unite: 'jours',
+    source: 'contrat art. 3.5 (HYP-W19-CARENCE)',
+    renvois: art('3.5'),
+    verifieLe: '2026-10-01',
+  },
   CARENCE_REDEPOT_APRES_SECONDE_LIBERATION_JOURS: {
     valeur: 90,
     unite: 'jours',

@@ -68,6 +68,13 @@ export const VARIABLES: Readonly<Record<string, SourceDeVariable>> = {
   // JUR-T40 — les cinq délais de l'art. 3.2 (W20), tous dans la SSOT (`src/domain/seuils/ssot.ts`),
   // source « contrat art. 3.2 » ; le gabarit les résout. DM-13 les lit sans les redéclarer.
   CONFIRMATION_TACITE_JOURS: { ...SSOT_SEUILS, constante: 'CONFIRMATION_TACITE_JOURS' },
+  // JUR-T31 — la carence avant que la Société ne prenne en charge une entreprise libérée (art. 3.5).
+  CARENCE_CONSEILLER_JOURS: { ...SSOT_SEUILS, constante: 'CARENCE_CONSEILLER_JOURS' },
+  // JUR-T31 — la réserve après un acte de l'Apporteur (art. 3.5 al. 4).
+  RESERVE_APRES_ACTE_APPORTEUR_JOURS: {
+    ...SSOT_SEUILS,
+    constante: 'RESERVE_APRES_ACTE_APPORTEUR_JOURS',
+  },
   LIBERATION_SIGNALEE_INJOIGNABLE_MAX: {
     ...SSOT_SEUILS,
     constante: 'LIBERATION_SIGNALEE_INJOIGNABLE_MAX',
