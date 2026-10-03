@@ -112,6 +112,7 @@ export const CLES_REFUSEES = {
     'peremptionSuspenduePar',
     'courrielsEnvoyes',
     'demandeConfirmation',
+    'demandesDroitsContact',
     'notificationsEspace',
   ],
   changementCourriel: ['id', 'apporteurId', 'apporteur'],
@@ -185,6 +186,7 @@ export const RELATIONS = {
     'peremptionSuspenduePar',
     'courrielsEnvoyes',
     'demandeConfirmation',
+    'demandesDroitsContact',
     'notificationsEspace',
   ],
   changementCourriel: ['apporteur'],
@@ -227,6 +229,8 @@ export const SECRETS = Object.freeze([
   // DM-11 : l'IBAN de la pièce rib, chiffré et empreint (HYP-DM06-IBAN).
   'ibanChiffre',
   'ibanHash',
+  // DM-59 : l'empreinte du jeton de la page des droits du contact.
+  'jetonDroitsHash',
 ] as const);
 
 /**
@@ -280,6 +284,9 @@ export const CHAMPS_RENDUS = {
   notificationEspace: ['id', 'cle', 'creeAt', 'lueAt'],
   preferenceNotification: ['id', 'cle', 'active', 'modifieeAt'],
   // SEC-47 : ce que l'apporteur lit de sa propre fiche — son état, son code, ce qu'il a accepté.
+  // DM-50 : sa qualité d'exercice et sa profession réglementée, telles qu'il les a DÉCLARÉES, à
+  // relire et rectifier ; atteintes par sa session seule, jamais par une relation. Un verdict
+  // interne sur elles serait une autre colonne, classée TUE.
   apporteur: [
     'id',
     'statut',
@@ -288,6 +295,8 @@ export const CHAMPS_RENDUS = {
     'creeAt',
     'confidentialiteAccepteeAt',
     'confidentialiteVersion',
+    'qualiteExercice',
+    'professionReglementee',
   ],
 } as const satisfies Record<ModeleRendu, readonly string[]>;
 
@@ -323,6 +332,8 @@ export const CHAMPS_TUS = {
     'purgeContactAt',
     'contactPurgeAt',
     'versionQualification',
+    // DM-59 : l'empreinte du jeton de la page des droits du contact, jamais rendue à l'apporteur.
+    'jetonDroitsHash',
   ],
   changementCourriel: ['apporteurId', 'emailChiffre', 'emailHash', 'tokenHash', 'kid'],
   courrielEnvoye: ['apporteurId', 'emailHash', 'fournisseurMessageId', 'erreur', 'attributionId'],

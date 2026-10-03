@@ -261,6 +261,7 @@ describe('REQ-DM-031 — la tâche de purge, sur un client simulé', () => {
         where: { id: 'ei', contactPurgeAt: null },
         data: {
           ...contact,
+          jetonDroitsHash: null,
           contactPurgeAt: REFERENCE,
           latitudeMicrodeg: null,
           longitudeMicrodeg: null,
@@ -268,7 +269,7 @@ describe('REQ-DM-031 — la tâche de purge, sur un client simulé', () => {
       },
       {
         where: { id: 'pm', contactPurgeAt: null },
-        data: { ...contact, contactPurgeAt: REFERENCE },
+        data: { ...contact, jetonDroitsHash: null, contactPurgeAt: REFERENCE },
       },
     ]);
   });
