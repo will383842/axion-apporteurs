@@ -10,7 +10,7 @@
  * porte A d'une PR en cours, après une fusion qui citait une exigence de son propre rattrapage.
  *
  * LA RÈGLE, TROIS FACES (précision de la lentille sécurité) : la place d'un commit de fusion se lit
- * sur le GRAPHE (`git merge-base --is-ancestor`, classement partagé de GOV-141) :
+ * sur le GRAPHE (`git merge-base --is-ancestor`, classement partagé de `scripts/lib/classer-la-fusion.ts`) :
  *   — ANCÊTRE de HEAD : la PR est jugée, comme avant ;
  *   — code 1, hors de l'arbre testé : la PR est IGNORÉE et NOMMÉE, jamais un rouge ;
  *   — tout autre code (objet absent, clone superficiel) : ÉCHEC FERMÉ, rouge nommé ; un commit
