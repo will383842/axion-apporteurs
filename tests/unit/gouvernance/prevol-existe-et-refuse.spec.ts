@@ -467,6 +467,29 @@ describe('REQ-GOV-013 — la dérivation REFUSE au lieu de se taire, et sait de 
     expect(jouees.map((e) => e.nom)).toEqual(['Etape de gate-a']);
   });
 
+  it('REQ-GOV-013 — GOV-142 : un job que `gate-a` ATTEND (needs, de proche en proche) est de la porte A, lu dans l’ordre du fichier', async () => {
+    const texte = ciAPlusieursJobs([
+      { job: 'gardes', etapes: [{ nom: 'Etape des gardes', commande: 'node -e 0' }] },
+      { job: 'apres', etapes: [{ nom: 'Etape d apres', commande: 'node -e 0' }] },
+      { job: 'hors-porte', etapes: [{ nom: 'Etape hors porte', commande: 'node -e 0' }] },
+      { job: 'gate-a', etapes: [{ nom: 'Etape de gate-a', commande: 'node -e 0' }] },
+    ])
+      .replace(
+        '  apres:\n    runs-on: ubuntu-latest\n',
+        '  apres:\n    runs-on: ubuntu-latest\n    needs: [gardes]\n'
+      )
+      .replace(
+        '  gate-a:\n    runs-on: ubuntu-latest\n',
+        '  gate-a:\n    runs-on: ubuntu-latest\n    needs: [apres]\n'
+      );
+    const { jouees } = await etapesDeLaPorteA(texte);
+    expect(jouees.map((e) => e.nom)).toEqual([
+      'Etape des gardes',
+      'Etape d apres',
+      'Etape de gate-a',
+    ]);
+  });
+
   it('REQ-GOV-013 — et le corps du job s’arrête au job SUIVANT : ce qui le suit n’est pas à lui', async () => {
     const { jouees } = await etapesDeLaPorteA(
       ciAPlusieursJobs([
@@ -682,9 +705,14 @@ describe('REQ-GOV-013 — il DIT ce qu’il joue, ce qu’il écarte, et pourquo
     expect(r.status).toBe(0);
     const sortie = (r.stdout ?? '') + (r.stderr ?? '');
     const b = surLeDepot();
-    expect(sortie).toContain(`${b.brut.length} fichier(s) suivi(s) portent la chaîne`);
-    expect(sortie).toContain(`${b.retenus.length} retenu(s) (compte APRÈS EXCLUSION)`);
-    expect(sortie).toContain(`${b.prescripteurs.length} PRESCRIPTEUR(S)`);
+    // GOV-142 : la liste de la porte en jobs est longue, et le rapport de vitest tronque la sortie
+    // AVANT le balayage. En cas de rouge, le message porte donc le balayage lui-même et les
+    // porteurs comptés par le témoin : les deux comptes se lisent côte à côte.
+    const balayage = sortie.slice(sortie.indexOf('balayage des porteurs'));
+    const contexte = `${balayage}\n— porteurs comptés par le témoin : ${b.brut.join(', ')}`;
+    expect(sortie, contexte).toContain(`${b.brut.length} fichier(s) suivi(s) portent la chaîne`);
+    expect(sortie, contexte).toContain(`${b.retenus.length} retenu(s) (compte APRÈS EXCLUSION)`);
+    expect(sortie, contexte).toContain(`${b.prescripteurs.length} PRESCRIPTEUR(S)`);
     for (const { nom } of BACKLOG_ET_SES_VUES) expect(sortie).toContain(nom);
   });
 

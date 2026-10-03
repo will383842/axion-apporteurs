@@ -158,20 +158,28 @@ describe('REQ-INT-003 REQ-QA-007 — un payload hors schéma est refusé 422, av
   });
 });
 
+/**
+ * La version d'un `held` qu'on rejoue : la version publiée ANTÉRIEURE à la courante. Depuis
+ * INT-T46-P, un `held` se juge contre les `$defs` de SA version, et une version sans contrat publié
+ * (la courante + 1) n'est jamais conforme : le témoin d'une charge conforme part donc d'une version
+ * publiée.
+ */
+const VERSION_DU_HELD = SCHEMA_VERSION - 1;
+
 describe('REQ-INT-003 — condition de la sécurité : le rejeu d’un `held` passe par la MÊME validation', () => {
   it('REQ-INT-003 : un `held` conforme, conservé sans `utm`, est jugé conforme à son rejeu', async () => {
     const { statut, eventId } = await envoyer(
       'candidature.recue',
       CANDIDATURE.evenement.subject_ref,
       CANDIDATURE.evenement.payload,
-      SCHEMA_VERSION + 1
+      VERSION_DU_HELD
     );
     expect(statut).toBe(200);
     const ligne = await base.prisma.evenementRecu.findFirstOrThrow({ where: { eventId } });
     expect(ligne.statut).toBe('held');
     const charge = ligne.charge as Record<string, unknown>;
     expect(Object.hasOwn(charge, 'utm')).toBe(false);
-    expect(chargeConforme('candidature.recue', charge)).toBe(true);
+    expect(chargeConforme('candidature.recue', charge, VERSION_DU_HELD)).toBe(true);
   });
 
   it('REQ-INT-003 : un `held` hors schéma est refusé `hors_schema` à son rejeu, sans que `utm` soit réintroduit', async () => {
@@ -179,12 +187,12 @@ describe('REQ-INT-003 — condition de la sécurité : le rejeu d’un `held` pa
       'candidature.recue',
       CANDIDATURE.evenement.subject_ref,
       { ...CANDIDATURE.evenement.payload, champIntrus: 'x' },
-      SCHEMA_VERSION + 1
+      VERSION_DU_HELD
     );
     const ligne = await base.prisma.evenementRecu.findFirstOrThrow({ where: { eventId } });
     expect(ligne.statut).toBe('held');
-    expect(chargeConforme('candidature.recue', ligne.charge as Record<string, unknown>)).toBe(
-      false
-    );
+    expect(
+      chargeConforme('candidature.recue', ligne.charge as Record<string, unknown>, VERSION_DU_HELD)
+    ).toBe(false);
   });
 });

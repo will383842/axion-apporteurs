@@ -290,14 +290,14 @@ function poser(depot: string, fichiers: Record<string, string | Uint8Array>): vo
 }
 
 describe('REQ-INT-004 — la nomenclature des événements est LUE, jamais recopiée', () => {
-  it('REQ-INT-004 : les onze types se lisent dans le texte de l’exigence', () => {
+  it('REQ-INT-004 : tous les types du contrat se lisent dans le texte de l’exigence', () => {
     const derives = typesEvenementDeLaReq(VUE_CONFORME.reqInt004);
-    expect(derives).toHaveLength(11);
+    expect(derives).toHaveLength(TYPES_EVENEMENT.length);
     expect(derives).toContain('paiement.rembourse');
 
     // Renversement : un type retiré d'une COPIE du texte disparaît de la dérivation.
     const ampute = VUE_CONFORME.reqInt004.replace(', `paiement.rembourse`', '');
-    expect(typesEvenementDeLaReq(ampute)).toHaveLength(10);
+    expect(typesEvenementDeLaReq(ampute)).toHaveLength(TYPES_EVENEMENT.length - 1);
     expect(typesEvenementDeLaReq(ampute)).not.toContain('paiement.rembourse');
   });
 

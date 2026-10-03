@@ -144,28 +144,37 @@ describe('REQ-INT-003 REQ-QA-007 — la réception applique les `$defs` fermés 
   });
 });
 
+/**
+ * La version d'un `held` qu'on rejoue : la version publiée ANTÉRIEURE à la courante. Depuis
+ * INT-T46-P, un `held` se juge contre les `$defs` de SA version, et une version sans contrat publié
+ * (la courante + 1) n'est jamais conforme : le témoin d'une charge conforme part donc d'une version
+ * publiée.
+ */
+const VERSION_DU_HELD = SCHEMA_VERSION - 1;
+
 describe('REQ-INT-003 — condition de la sécurité : le rejeu d’un `held` passe par la MÊME validation', () => {
   it('REQ-INT-003 : un `held` conforme, conservé sans `utm`, est jugé conforme à son rejeu', async () => {
     const r = await recevoir(
       'candidature.recue',
       CANDIDATURE.evenement.subject_ref,
       CANDIDATURE.evenement.payload,
-      SCHEMA_VERSION + 1
+      VERSION_DU_HELD
     );
+    expect(r.inscrites.map((e) => e.statut)).toEqual(['held']);
     const charge = r.inscrites[0]!.charge;
     expect(Object.hasOwn(charge, 'utm')).toBe(false);
-    expect(chargeConforme('candidature.recue', charge)).toBe(true);
+    expect(chargeConforme('candidature.recue', charge, VERSION_DU_HELD)).toBe(true);
   });
 
   it('REQ-INT-003 : un `held` hors schéma est refusé à son rejeu', () => {
     const charge = chargeConservee({ ...CANDIDATURE.evenement.payload, champIntrus: 'x' });
-    expect(chargeConforme('candidature.recue', charge)).toBe(false);
+    expect(chargeConforme('candidature.recue', charge, VERSION_DU_HELD)).toBe(false);
   });
 
   it('REQ-INT-003 : les champs non conservés ne sont JAMAIS réintroduits — une charge qui porte `utm` est refusée au rejeu', () => {
     expect(CHAMPS_NON_CONSERVES).toContain('utm');
     const avecUtm = { ...chargeConservee(CANDIDATURE.evenement.payload), utm: null };
-    expect(chargeConforme('candidature.recue', avecUtm)).toBe(false);
+    expect(chargeConforme('candidature.recue', avecUtm, VERSION_DU_HELD)).toBe(false);
   });
 
   it('REQ-INT-003 : la charge reçue, elle, exige `utm` — le payload sans lui est hors schéma à la réception', () => {

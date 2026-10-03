@@ -2008,7 +2008,7 @@
     {
       "id": "REQ-INT-004",
       "domaine": "integration",
-      "texte": "Les types d'événements sont : `client.cree`, `client.mis_a_jour`, `devis.signe`, `facture.emise`, `avoir.emis`, `paiement.recu`, `paiement.rembourse`, `candidature.recue`, `financement.mis_a_jour`, `facture.annulee`, `client.fusionne` — nommés sur les modèles réels (Client, Devis, FactureFormation, Payment, Submission, DossierPayeur) ; aucun événement ne référence `Invoice` ni `Refund`. La liste est fermée et portée par le contrat en `schema_version` 2 : les quatre derniers types y sont entrés ensemble, publiés des deux côtés dans la même fenêtre (partners/ADR-0008, partners/ADR-0023).",
+      "texte": "Les types d'événements sont : `client.cree`, `client.mis_a_jour`, `devis.signe`, `facture.emise`, `avoir.emis`, `paiement.recu`, `paiement.rembourse`, `candidature.recue`, `financement.mis_a_jour`, `facture.annulee`, `client.fusionne`, `devis.emis` — nommés sur les modèles réels (Client, Devis, FactureFormation, Payment, Submission, DossierPayeur) ; aucun événement ne référence `Invoice` ni `Refund`. La liste est fermée et portée par le contrat en `schema_version` 3 : `financement.mis_a_jour`, `facture.annulee`, `client.fusionne` et `candidature.recue` y sont entrés ensemble en version 2, publiés des deux côtés dans la même fenêtre (partners/ADR-0008, partners/ADR-0023) ; `devis.emis` y entre en version 3 (décision de Williams du 2026-10-01, option A ; INT-T46-P).",
       "source": "audit-outil §2.3 corrigé par INT-F02/INT-F24",
       "statut": "active",
       "remplaceePar": null,
@@ -3534,7 +3534,7 @@
     {
       "id": "REQ-QA-007",
       "domaine": "qualite-ci-devops",
-      "texte": "Les onze types d'événements du webhook entrant d'axionia (liste fermée de REQ-INT-004, `TYPES_EVENEMENT` de `packages/contracts/events.ts`) et les 3 API sortantes (la vérification d'attribution, la relecture de l'outbox, et `GET /api/partners/candidatures/{candidatureId}/coordonnees` qui rend les coordonnées d'un candidat — partners/ADR-0023) ont chacun un schéma Zod versionné (`schemaVersion`) transcrit à l'identique dans les deux dépôts, avec un test de transcription datée de chaque côté ; les fixtures de contrat sont générées par le producteur réel d'axionia (FactureFormation, Payment, Devis, Client, Submission) et non écrites à la main.",
+      "texte": "Les douze types d'événements du webhook entrant d'axionia (liste fermée de REQ-INT-004, `TYPES_EVENEMENT` de `packages/contracts/events.ts`) et les 3 API sortantes (la vérification d'attribution, la relecture de l'outbox, et `GET /api/partners/candidatures/{candidatureId}/coordonnees` qui rend les coordonnées d'un candidat — partners/ADR-0023) ont chacun un schéma Zod versionné (`schemaVersion`) transcrit à l'identique dans les deux dépôts, avec un test de transcription datée de chaque côté ; les fixtures de contrat sont générées par le producteur réel d'axionia (FactureFormation, Payment, Devis, Client, Submission) et non écrites à la main.",
       "source": "audit-outil-bout-en-bout §2.3 + QA-F01, QA-F14 · patron tests/e2e-crm-sync/contract.spec.ts",
       "statut": "active",
       "remplaceePar": null,
