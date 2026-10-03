@@ -26,6 +26,7 @@ import {
   type NiveauDAcces,
   type SegmentProtege,
 } from '../../domain/apporteur/acces-espace';
+import { exigerAcceptation, type MotifDeLaGarde, type PortsDeLaGarde } from './garde-espace';
 
 // ── le cookie ────────────────────────────────────────────────────────────────────────────────────
 
@@ -154,6 +155,11 @@ export interface PortsDeSession {
    * de personne ni l'identifiant de la session. Absent, le refus tient : seule sa trace manque.
    */
   journal?: (ligne: RefusDOuvertureLimitee) => void;
+  /**
+   * La garde d'acceptation (SEC-53) : la politique courante et l'acceptation de l'apporteur. Absente,
+   * toute route hors des exemptions nommées est REFUSÉE (`acceptation_illisible`).
+   */
+  acceptation?: PortsDeLaGarde;
 }
 
 /** La seule ligne qu'un refus d'ouverture limitée écrit. */
@@ -202,18 +208,49 @@ export async function exigerSessionPour(
   return refus('hors_ouverture_limitee');
 }
 
+/** Le verdict de l'espace : celui de la session, ou un refus de la garde d'acceptation (SEC-53). */
+export type VerdictDeLEspace =
+  { ok: true; session: SessionOuverte } | { ok: false; motif: MotifDeRefus | MotifDeLaGarde };
+
 /**
- * L'enveloppe d'une ACTION serveur de l'espace (SEC-43) : la session pour CE segment est son premier
- * acte, et le corps ne s'exécute que sur une session acceptée. Le refus est rendu tel quel : l'action
- * répond comme à une route inconnue, sans rien révéler.
+ * LA GARDE de chaque page et route de l'espace (SEC-53, REQ-JUR-025), son PREMIER acte : la session
+ * pour CE segment (SEC-43), puis l'acceptation de la version publiable courante de la politique
+ * (`./garde-espace`), hors des exemptions nommées. Échec FERMÉ : une base qui ne répond pas est un
+ * refus nommé (`session_illisible`, `acceptation_illisible`), jamais un passage ni une erreur qui
+ * laisserait l'appelant décider.
+ */
+export async function pageEspace(
+  segment: SegmentProtege,
+  jeton: string | undefined,
+  ports: PortsDeSession
+): Promise<VerdictDeLEspace> {
+  let verdict: VerdictDeSession;
+  try {
+    verdict = await exigerSessionPour(segment, jeton, ports);
+  } catch {
+    return { ok: false, motif: 'session_illisible' };
+  }
+  if (!verdict.ok) return verdict;
+  const acceptation = await exigerAcceptation(
+    verdict.session.apporteurId,
+    segment,
+    ports.acceptation
+  );
+  return acceptation.ok ? verdict : acceptation;
+}
+
+/**
+ * L'enveloppe d'une ACTION serveur de l'espace (SEC-43, SEC-53) : la garde de `pageEspace` pour CE
+ * segment est son premier acte, et le corps ne s'exécute que si elle passe. Le refus est rendu tel
+ * quel : l'action répond comme à une route inconnue, sans rien révéler.
  */
 export async function actionEspace<T>(
   segment: SegmentProtege,
   jeton: string | undefined,
   ports: PortsDeSession,
   corps: (session: SessionOuverte) => Promise<T>
-): Promise<{ ok: true; valeur: T } | { ok: false; motif: MotifDeRefus }> {
-  const verdict = await exigerSessionPour(segment, jeton, ports);
+): Promise<{ ok: true; valeur: T } | { ok: false; motif: MotifDeRefus | MotifDeLaGarde }> {
+  const verdict = await pageEspace(segment, jeton, ports);
   if (!verdict.ok) return verdict;
   return { ok: true, valeur: await corps(verdict.session) };
 }
