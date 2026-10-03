@@ -1,4 +1,5 @@
 'use client';
+// use-client: lit display-mode du navigateur pour l'avis du mode installé.
 /**
  * UX-P1-04 — la détection du MODE INSTALLÉ : dans l'application installée, le lien de l'e-mail
  * s'ouvre dans le navigateur et non dans l'application ; l'avis met alors le code devant le lien.
