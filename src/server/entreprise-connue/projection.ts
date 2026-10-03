@@ -1,7 +1,7 @@
 /**
  * La projection locale de l'antériorité (DM-10-P, REQ-DM-029, REQ-DM-028) : les événements d'axionia
- * gardés dans `evenements_recus` (`client.*`, `devis.emis`, `devis.signe`, `facture.emise`,
- * `avoir.emis`, `facture.annulee`) alimentent `devis_connus` et `entreprises_connues` ; la liste tenue
+ * gardés dans `evenements_recus` (les types de `TYPES_DE_L_ANTERIORITE` : le client, le devis émis
+ * puis signé, la facture, l'avoir et l'annulation) alimentent `devis_connus` et `entreprises_connues` ; la liste tenue
  * par la Société (`sirens_liste_noire`) fait l'origine `financeur`.
  *
  * La projection RECALCULE depuis les faits, elle n'incrémente jamais : le marquage `traite` n'est pas
@@ -16,6 +16,7 @@ import { Prisma, TypeEvenementRecu, type PrismaClient } from '@prisma/client';
 import type { Traitants, EvenementATraiter } from '../queue/workers/evenement-recu';
 import {
   evaluerAnteriorite,
+  estPrestationFacturee,
   factureHtDuDevis,
   type Anteriorite,
   type DevisConnu,
@@ -53,6 +54,25 @@ function texte(c: Charge, champ: string): string | null {
 function entier(c: Charge, champ: string): number | null {
   const v = c[champ];
   return typeof v === 'number' && Number.isInteger(v) ? v : null;
+}
+
+/** Levée quand une charge n'a pas le montant que le contrat exige : rien n'est projeté. */
+export class ChargeIncomplete extends Error {
+  constructor(champ: string) {
+    super(`charge sans ${champ}`);
+    this.name = 'ChargeIncomplete';
+  }
+}
+
+/**
+ * Un montant EXIGÉ par le contrat, lu strictement. Absent ou mal formé, il n'est JAMAIS lu comme zéro :
+ * un zéro libérerait en silence une entreprise cliente (remarque de la juriste sur DM-10-P). La
+ * réception refuse déjà une telle charge ; ici, la projection échoue nommée plutôt que d'ouvrir.
+ */
+export function montantRequis(c: Charge, champ: string): number {
+  const v = entier(c, champ);
+  if (v === null) throw new ChargeIncomplete(champ);
+  return v;
 }
 
 function instant(c: Charge, champ: string): Date | null {
@@ -144,21 +164,22 @@ export async function recalculerDevis(db: Client, devisRef: string): Promise<str
       ? new Date(Math.min(emisLu.getTime(), signeAt.getTime()))
       : (emisLu ?? signeAt);
   if (emisAt === null) return null;
-  const montant = dernierSigne === null ? 0 : (entier(dernierSigne, 'montantTotalHtCents') ?? 0);
+  // Un devis seulement émis n'a pas de montant (contrat v3) ; signé, son montant est exigé.
+  const montant = dernierSigne === null ? 0 : montantRequis(dernierSigne, 'montantTotalHtCents');
   const facture = factureHtDuDevis(
     factures.map((f) => ({
-      montantHtCents: entier(f, 'montantHtCents') ?? 0,
+      montantHtCents: montantRequis(f, 'montantHtCents'),
       annulee: sansSuite.has(texte(f, 'factureId') ?? ''),
     })),
-    avoirs.map((a) => ({ montantHtCents: entier(a, 'montantHtCents') ?? 0 }))
+    avoirs.map((a) => ({ montantHtCents: montantRequis(a, 'montantHtCents') }))
   );
 
   const ligne = {
     siren: s,
     emisAt,
     signeAt,
-    montantTotalHtCents: BigInt(Math.max(montant, 0)),
-    factureHtCents: BigInt(facture),
+    montantTotalHtCents: Math.max(montant, 0),
+    factureHtCents: facture,
     majAt: new Date(),
   };
   await db.devisConnu.upsert({
@@ -171,7 +192,10 @@ export async function recalculerDevis(db: Client, devisRef: string): Promise<str
 
 // ── le recalcul d'une entreprise ────────────────────────────────────────────────────────────────
 
-/** Les dates des factures non annulées d'un SIREN, portées par la facture ou par son client. */
+/**
+ * Les dates des PRESTATIONS FACTURÉES d'un SIREN, portées par la facture ou par son client : une
+ * facture annulée, ou entièrement éteinte par ses avoirs, ne compte pas (`estPrestationFacturee`).
+ */
 async function datesDesFactures(db: Client, s: string): Promise<Date[]> {
   const parSiren = await charges(db, [TypeEvenementRecu.facture_emise], 'siren', s);
   const clients = await charges(db, TYPES_CLIENT, 'siren', s);
@@ -186,10 +210,19 @@ async function datesDesFactures(db: Client, s: string): Promise<Date[]> {
   const toutes = [...parSiren, ...parClient];
   const ids = toutes.map((f) => texte(f, 'factureId')).filter((x): x is string => !!x);
   const sansSuite = await annulees(db, ids);
-  return toutes
-    .filter((f) => !sansSuite.has(texte(f, 'factureId') ?? ''))
-    .map((f) => instant(f, 'emiseLe'))
-    .filter((d): d is Date => d !== null);
+  const dates: Date[] = [];
+  for (const f of toutes) {
+    const id = texte(f, 'factureId') ?? '';
+    const avoirs =
+      id === '' ? [] : await charges(db, [TypeEvenementRecu.avoir_emis], 'avoirDeFactureId', id);
+    const facturee = estPrestationFacturee(
+      { montantHtCents: montantRequis(f, 'montantHtCents'), annulee: sansSuite.has(id) },
+      avoirs.map((a) => ({ montantHtCents: montantRequis(a, 'montantHtCents') }))
+    );
+    const d = instant(f, 'emiseLe');
+    if (facturee && d !== null) dates.push(d);
+  }
+  return dates;
 }
 
 /** Pose ou retire la ligne d'une origine, selon les dates qui la fondent. */
@@ -321,19 +354,19 @@ export function traitantsDeLAnteriorite(prisma: PrismaClient): Traitants {
 /** L'antériorité d'un SIREN à `maintenant`, sur les seules projections locales, sans réseau. */
 export async function anterioriteDe(db: Client, s: string, maintenant: Date): Promise<Anteriorite> {
   const [financeur, client, devis] = await Promise.all([
-    db.sirenListeNoire.count({ where: { siren: s } }),
+    db.sirenListeNoire.findUnique({ where: { siren: s }, select: { motif: true } }),
     db.entrepriseConnue.findUnique({ where: { siren_origine: { siren: s, origine: 'client' } } }),
     db.devisConnu.findMany({ where: { siren: s } }),
   ]);
   return evaluerAnteriorite(
     {
-      financeur: financeur > 0,
+      financeur: financeur?.motif ?? null,
       derniereFactureAt: client?.dernierContactAt ?? null,
       devis: devis.map((d): DevisConnu => ({
         emisAt: d.emisAt,
         signeAt: d.signeAt,
-        montantTotalHtCents: Number(d.montantTotalHtCents),
-        factureHtCents: Number(d.factureHtCents),
+        montantTotalHtCents: d.montantTotalHtCents,
+        factureHtCents: d.factureHtCents,
       })),
     },
     maintenant

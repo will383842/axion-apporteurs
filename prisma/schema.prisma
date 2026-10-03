@@ -139,6 +139,7 @@ enum MotifResiliation {
   ordinaire_apporteur
   ordinaire_axion
   manquement_grave
+  fin_de_plein_droit
 
   @@map("motif_resiliation")
 }
@@ -1322,11 +1323,10 @@ enum OrigineEntrepriseConnue {
 
 /// Le motif d'inscription d'un SIREN sur la liste tenue par la Société (REQ-DM-028).
 enum MotifListeNoire {
-  opco
-  france_travail
-  region
-  of_partenaire
-  autre
+  administration
+  financeur_public
+  financeur_paritaire
+  organisme_de_formation_partenaire
 
   @@map("motif_liste_noire")
 }
@@ -1349,6 +1349,8 @@ model EntrepriseConnue {
   siren            String                  @db.Char(9)
   origine          OrigineEntrepriseConnue
   connueDepuisAt   DateTime                @map("connue_depuis_at") @db.Timestamptz(3)
+  /// Origine client : la date de la DERNIÈRE prestation facturée (dernière facture non annulée), d'où
+  /// se compte l'effacement à vingt-quatre mois. Origine devis : la dernière émission ou signature.
   dernierContactAt DateTime                @map("dernier_contact_at") @db.Timestamptz(3)
 
   @@id([siren, origine])
@@ -1358,12 +1360,12 @@ model EntrepriseConnue {
 /// Un devis d'axionia, projeté pour juger « entièrement facturé » devis par devis (art. 3.3, écart B-11) :
 /// le facturé HT, avoirs déduits, comparé au montant HT. Aucune donnée de personne.
 model DevisConnu {
-  devisRef            String    @id @map("devis_ref")
+  devisRef            String    @id @map("devis_ref") @db.VarChar(64)
   siren               String    @db.Char(9)
   emisAt              DateTime  @map("emis_at") @db.Timestamptz(3)
   signeAt             DateTime? @map("signe_at") @db.Timestamptz(3)
-  montantTotalHtCents BigInt    @map("montant_total_ht_cents")
-  factureHtCents      BigInt    @default(0) @map("facture_ht_cents")
+  montantTotalHtCents Int       @map("montant_total_ht_cents")
+  factureHtCents      Int       @default(0) @map("facture_ht_cents")
   majAt               DateTime  @default(dbgenerated("clock_timestamp()")) @map("maj_at") @db.Timestamptz(3)
 
   @@index([siren])
