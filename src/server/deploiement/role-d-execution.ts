@@ -99,6 +99,8 @@ type Etat = {
   groupe: boolean;
   /** SEC-50 : le rôle d'exécution lui-même peut réécrire le journal. */
   reecrit: boolean;
+  /** SEC-57 : ce que `partners_journal` possède d'autre que le journal et sa séquence, décrit. */
+  etrangers: string[];
 };
 
 async function etatDu(c: PrismaClient, role: string): Promise<Etat> {
@@ -124,7 +126,21 @@ async function etatDu(c: PrismaClient, role: string): Promise<Etat> {
              THEN false
              ELSE has_table_privilege(${role}::name, to_regclass(${TABLE_DU_JOURNAL}::text),
                     'UPDATE, DELETE, TRUNCATE')
-           END AS reecrit`;
+           END AS reecrit,
+           -- SEC-57 : la PROPRIÉTÉ d'un objet, dans cette base ou partagée (pg_shdepend, 'o'). Les
+           -- index, le TOAST et le type de ligne d'une table n'y ont pas d'entrée propre : ils
+           -- suivent leur table. Le journal et sa séquence sont désignés par le NOM lié.
+           ARRAY(SELECT pg_describe_object(d.classid, d.objid, d.objsubid) FROM pg_shdepend d
+             WHERE d.refclassid = 'pg_authid'::regclass
+               AND d.refobjid = (SELECT oid FROM pg_roles WHERE rolname = 'partners_journal')
+               AND d.deptype = 'o'
+               AND d.dbid IN (0, (SELECT oid FROM pg_database WHERE datname = current_database()))
+               AND (d.classid <> 'pg_class'::regclass
+                 OR (d.objid IS DISTINCT FROM to_regclass(${TABLE_DU_JOURNAL}::text)::oid
+                   AND d.objid IS DISTINCT FROM (CASE WHEN to_regclass(${TABLE_DU_JOURNAL}::text) IS NULL
+                     THEN NULL
+                     ELSE pg_get_serial_sequence(${TABLE_DU_JOURNAL}::text, 'id')::regclass::oid END)))
+             ORDER BY 1) AS etrangers`;
   return e!;
 }
 
@@ -134,7 +150,8 @@ async function etatDu(c: PrismaClient, role: string): Promise<Etat> {
  * garde ses seuls droits d'ajout, posés par sa migration (DM-45).
  * REFUSE, AVANT toute écriture, un rôle superutilisateur, propriétaire d'une table, ou celui de la
  * migration ; et, SEC-50, un journal qui n'appartient pas à `partners_journal`, ou que
- * `partners_execution` ou le rôle d'exécution peuvent réécrire.
+ * `partners_execution` ou le rôle d'exécution peuvent réécrire ; et, SEC-57, un `partners_journal`
+ * qui possède autre chose que le journal et sa séquence, chaque objet nommé.
  */
 export async function provisionnerRoleDExecution(urls: {
   urlMigration: string;
@@ -158,6 +175,11 @@ export async function provisionnerRoleDExecution(urls: {
     }
     if (!e.possede)
       throw new RoleDExecutionRefuse('le journal n’appartient pas à partners_journal');
+    if (e.etrangers.length > 0) {
+      throw new RoleDExecutionRefuse(
+        `partners_journal possède autre chose que le journal et sa séquence : ${e.etrangers.join(', ')}`
+      );
+    }
     if (e.groupe) throw new RoleDExecutionRefuse('partners_execution peut réécrire le journal');
     if (e.reecrit) throw new RoleDExecutionRefuse('le rôle d’exécution peut réécrire le journal');
     // AUCUNE valeur dans le texte SQL : le nom du rôle est le littéral `partners_app`, et le
