@@ -130,6 +130,8 @@ describe('REQ-SEC-003 — SEC-55 (1) : l’empreinte de l’appareil est minimal
       `${IDENTIFIANT.slice(1)} `,
       42,
       { identifiant: IDENTIFIANT },
+      // Un tableau dont la forme texte EST un identifiant (deux cookies du même nom, par exemple).
+      [IDENTIFIANT],
     ]) {
       expect(empreinteDAppareil(illisible, CLE.secret), String(illisible)).toBeNull();
     }
@@ -147,7 +149,11 @@ describe('REQ-SEC-003 — SEC-55 (1) : l’empreinte de l’appareil est minimal
     const attendue = Buffer.from(
       hkdfSync('sha256', SECRET_DES_SESSIONS, Buffer.alloc(0), 'partners.appareil.v1', 32)
     ).toString('hex');
-    expect(CLE).toEqual({ secret: attendue, kid: kidDe(attendue) });
+    // Calculée DANS le test, jamais reprise de la constante du module, évaluée au chargement.
+    expect(cleDesAppareils(SECRET_DES_SESSIONS)).toEqual({
+      secret: attendue,
+      kid: kidDe(attendue),
+    });
     expect(CLE.secret).not.toBe(SECRET_DES_SESSIONS);
     expect(CLE.kid).not.toBe(KID_DES_SESSIONS);
     expect(cleDesAppareils('un-autre-secret'.padEnd(64, '2')).secret).not.toBe(CLE.secret);
