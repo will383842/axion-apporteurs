@@ -1401,6 +1401,129 @@
           display: flex;
         }
       }
+      /* epure:atelier — l'atelier replié par défaut (UX-P1-52) */
+      body:not(.atelier-ouvert) .atelier {
+        grid-template-columns: minmax(0, 1fr);
+      }
+      body:not(.atelier-ouvert) .etats,
+      body:not(.atelier-ouvert) .notes {
+        display: none;
+      }
+      body:not(.atelier-ouvert) .scene {
+        grid-column: 1;
+      }
+      .atelier-tete h1 small {
+        display: none;
+      }
+      .atelier-tete {
+        padding: 8px 20px;
+      }
+      .atelier-tete h1 {
+        font-size: 20px;
+      }
+      .fictif {
+        font-size: 14px;
+        padding: 4px 10px;
+      }
+      #voir-atelier[aria-pressed='true'] {
+        background: var(--atelier-texte);
+        color: var(--atelier-surface);
+      }
+      /* epure:ecran — contraste et hiérarchie (UX-P1-52). Mocha franc sur ivoire, carte
+         blanche détachée, bouton terracotta plein ; aucun gris pâle pour une information utile. */
+      .defile.centre {
+        background: var(--fond);
+      }
+      .defile.centre .panneau {
+        background: var(--surface);
+        border: 1px solid var(--surface-2);
+        border-radius: 16px;
+        box-shadow:
+          0 2px 4px rgba(42, 37, 32, 0.08),
+          0 12px 32px rgba(42, 37, 32, 0.12);
+        padding: 32px;
+        width: min(420px, 100%);
+        gap: 20px;
+        color: var(--texte);
+      }
+      .defile.centre .panneau h2 {
+        font-size: 28px;
+        font-weight: 800;
+        letter-spacing: -0.01em;
+      }
+      .defile.centre .panneau .etiquette {
+        font-weight: 700;
+        color: var(--texte);
+      }
+      .defile.centre .panneau input {
+        min-height: 52px;
+        font-size: 18px;
+        border: 2px solid var(--bord);
+      }
+      .defile.centre .panneau .c-bouton {
+        min-height: 52px;
+        font-size: 18px;
+        width: 100%;
+      }
+      .defile.centre .panneau .aide {
+        margin: 0;
+        font-size: 15px;
+        color: var(--texte-doux);
+        text-align: center;
+      }
+      .defile.centre .panneau .doux {
+        color: var(--texte-doux);
+      }
+      /* Toutes les pages : le fond ivoire, des cartes blanches détachées, un titre qui domine. */
+      .app .defile {
+        background: var(--fond);
+      }
+      .app .defile .carte {
+        background: var(--surface);
+        border: 1px solid var(--surface-2);
+        border-radius: 14px;
+        box-shadow:
+          0 1px 2px rgba(42, 37, 32, 0.08),
+          0 6px 18px rgba(42, 37, 32, 0.1);
+      }
+      .app .c-titre {
+        font-size: 30px;
+        font-weight: 800;
+        letter-spacing: -0.01em;
+        color: var(--texte);
+      }
+      .app .doux {
+        color: var(--texte-doux);
+      }
+      /* Un état vide ou un refus : une carte pleine, pas un cadre pointillé. */
+      .app .defile .vide {
+        background: var(--surface);
+        border: 1px solid var(--surface-2);
+        border-radius: 14px;
+        box-shadow:
+          0 1px 2px rgba(42, 37, 32, 0.08),
+          0 6px 18px rgba(42, 37, 32, 0.1);
+      }
+      /* Les tableaux sur une carte blanche, les adresses dans la police du texte. */
+      .app .defile table {
+        background: var(--surface);
+        border-radius: 12px;
+        box-shadow:
+          0 1px 2px rgba(42, 37, 32, 0.08),
+          0 6px 18px rgba(42, 37, 32, 0.1);
+      }
+      .app .mono {
+        font-family: inherit;
+        font-size: 15px;
+      }
+      .defile.centre .panneau .rangee {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px 16px;
+        margin: 0;
+      }
 
       /* charte:fin */
 
@@ -1424,6 +1547,7 @@
       </h1>
       <p class="fictif">Données fictives : aucune entreprise, personne ni numéro réels.</p>
       <div class="reglages" role="group" aria-label="Réglages de la maquette">
+        <button type="button" id="voir-atelier" aria-pressed="false">États et notes</button>
         <button type="button" data-largeur="1280" aria-pressed="true">Bureau 1280</button>
         <button type="button" data-largeur="1024" aria-pressed="false">1024</button>
         <button type="button" data-largeur="390" data-hauteur="844" aria-pressed="false">
@@ -1866,10 +1990,7 @@
                   </div>
                   <div class="carte">
                     <p class="fort">Personne à appeler aujourd’hui</p>
-                    <p>
-                      Les contacts ont répondu à leur e-mail, ou leur délai court encore. Les dépôts
-                      à qualifier restent dans « Tous les dépôts ».
-                    </p>
+                    <p>Les autres dépôts sont dans « Tous les dépôts ».</p>
                     <p><a href="#etat-nominal">Voir tous les dépôts</a></p>
                   </div>
                 </div>
@@ -4115,10 +4236,7 @@
                   <h2 class="c-titre">File de qualification</h2>
                   <div class="carte">
                     <h3>Aucun dépôt à qualifier</h3>
-                    <p>
-                      Les nouveaux dépôts arrivent ici, triés automatiquement. Les contestations en
-                      attente sont dans <a href="#">Contestations</a>.
-                    </p>
+                    <p>Les nouveaux dépôts arriveront ici.</p>
                   </div>
                 </div>
                 <nav class="c-barre" aria-label="Console, barre du bas">
@@ -4778,10 +4896,7 @@
                         <path d="M8 11V8a4 4 0 018 0v3" /></svg
                       >Consultation seule
                     </p>
-                    <p>
-                      Votre rôle (lecteur) permet de voir la file, pas de qualifier. Pour qualifier,
-                      un administrateur ajoute le rôle qualifieur à votre compte.
-                    </p>
+                    <p>Votre rôle permet de voir la file, pas de qualifier.</p>
                   </div>
                   <h2 class="c-titre">File de qualification</h2>
                   <table>
@@ -5077,10 +5192,7 @@
                         <path d="M8 11V8a4 4 0 018 0v3" /></svg
                       >Cette page n’est pas ouverte à votre rôle
                     </p>
-                    <p>
-                      La file de qualification est tenue par les administrateurs et les qualifieurs.
-                      Votre rôle (comptable) suit les apporteurs et leurs paiements.
-                    </p>
+                    <p>La file est réservée aux administrateurs et aux qualifieurs.</p>
                     <p class="rangee">
                       <a class="c-bouton" href="console-cadre.html#etat-comptable"
                         >Retour à mon accueil</a
@@ -5496,6 +5608,25 @@
               champ.focus();
             }
           }
+        });
+      })();
+    </script>
+    <script>
+      // epure:atelier — ouvrir ou replier la liste des états et les notes, puis réajuster l'écran.
+      (function () {
+        var b = document.getElementById('voir-atelier');
+        var ajuster = function () {
+          var z = document.getElementById('zoom-ajuster');
+          if (z) z.click();
+        };
+        if (b)
+          b.addEventListener('click', function () {
+            var ouvert = document.body.classList.toggle('atelier-ouvert');
+            b.setAttribute('aria-pressed', String(ouvert));
+            setTimeout(ajuster, 0);
+          });
+        window.addEventListener('load', function () {
+          setTimeout(ajuster, 50);
         });
       })();
     </script>
