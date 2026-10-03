@@ -323,6 +323,23 @@ describe('REQ-DM-029 — l’antériorité projetée, sous le rôle du serveur (
     });
   });
 
+  it('REQ-DM-029 : TÉMOIN — une facture entièrement éteinte par un avoir ne rend pas l’entreprise cliente (remarque de la juriste)', async () => {
+    const siren = unSiren();
+    const factureId = randomUUID();
+    await factureEmise(factureId, siren, ilYA(2), 1_000, null);
+    expect(await anterioriteDe(app, siren, MAINTENANT)).toMatchObject({ origine: 'client' });
+    await recevoir(TypeEvenementRecu.avoir_emis, {
+      avoirId: randomUUID(),
+      numero: 'A-2',
+      avoirDeFactureId: factureId,
+      clientId: null,
+      siren,
+      montantHtCents: -1_000,
+      emisLe: ilYA(1),
+    });
+    expect(await anterioriteDe(app, siren, MAINTENANT)).toEqual({ connue: false });
+  });
+
   it('REQ-DM-029 : une facture annulée ne rend pas l’entreprise cliente, quel que soit l’ordre d’arrivée', async () => {
     const siren = unSiren();
     const factureId = randomUUID();

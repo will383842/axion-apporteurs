@@ -15,6 +15,7 @@ import { describe, it, expect } from 'vitest';
 import { SEUILS } from '../../../src/domain/seuils/ssot';
 import {
   evaluerAnteriorite,
+  estPrestationFacturee,
   factureHtDuDevis,
   type DevisConnu,
   type FaitsDUneEntreprise,
@@ -126,7 +127,12 @@ describe('REQ-DM-029 — l’antériorité, évaluée localement (art. 3.3)', ()
         { ...RIEN, financeur: 'financeur_paritaire', derniereFactureAt: ilYA(1) },
         MAINTENANT
       )
-    ).toEqual({ connue: true, origine: 'financeur', depuis: null, categorie: 'financeur_paritaire' });
+    ).toEqual({
+      connue: true,
+      origine: 'financeur',
+      depuis: null,
+      categorie: 'financeur_paritaire',
+    });
   });
 });
 
@@ -163,5 +169,25 @@ describe('REQ-DM-029 — « entièrement facturé », devis par devis (écart B-
         MAINTENANT
       )
     ).toMatchObject({ connue: true, origine: 'devis' });
+  });
+});
+
+describe('REQ-DM-029 — « prestation facturée » : une facture que rien n’éteint (remarque de la juriste)', () => {
+  it('REQ-DM-029 : TÉMOIN — une facture entièrement éteinte par des avoirs ne compte pas comme prestation facturée', () => {
+    const facture = { montantHtCents: 10_000, annulee: false };
+    expect(estPrestationFacturee(facture, [])).toBe(true);
+    expect(estPrestationFacturee(facture, [{ montantHtCents: -10_000 }])).toBe(false);
+    expect(
+      estPrestationFacturee(facture, [{ montantHtCents: 4_000 }, { montantHtCents: -6_000 }])
+    ).toBe(false);
+  });
+
+  it('REQ-DM-029 : TÉMOIN — un avoir partiel la laisse facturée ; une facture annulée ne l’est jamais', () => {
+    expect(
+      estPrestationFacturee({ montantHtCents: 10_000, annulee: false }, [
+        { montantHtCents: -9_999 },
+      ])
+    ).toBe(true);
+    expect(estPrestationFacturee({ montantHtCents: 10_000, annulee: true }, [])).toBe(false);
   });
 });
