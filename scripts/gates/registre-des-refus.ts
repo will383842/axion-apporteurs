@@ -503,8 +503,10 @@ export const REFUS_NOMMES: Readonly<Record<string, readonly string[]>> = {
     'module › sinon !LANCE_EN_SCRIPT › sinon MODE_VERIFIER › si questions.length > PLAFOND_QUESTIONS › (= 1)',
   ],
   'scripts/prevol.ts': [
-    'etapesDeLaPorteA › si !estObjet(job) › (1)',
-    'etapesDeLaPorteA › si !Array.isArray(etapes) › (1)',
+    // GOV-142 : la porte A est un workflow de jobs ; le refus porte sur la porte FINALE absente, puis
+    // sur un job de la porte (gate-a et ses needs) sans liste d'étapes.
+    'etapesDeLaPorteA › si !estObjet(jobs[JOB_DE_LA_PORTE_A]) › (1)',
+    'etapesDeLaPorteA › si !Array.isArray(duJob) › (1)',
     "etapesDeLaPorteA › si substitution || commande.includes('\\n') › (1)",
     'etapesDeLaPorteA › si jouees.length === 0 › (1)',
     'courir › si !existsSync(CI) › (1)',
