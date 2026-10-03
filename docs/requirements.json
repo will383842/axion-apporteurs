@@ -1008,8 +1008,8 @@
     {
       "id": "REQ-SEC-021",
       "domaine": "anti-abus-securite",
-      "texte": "« Vérifier une entreprise » n'est accessible qu'en session authentifiée, limité par identité et par hash IP selon la configuration, journalisé (`verification_events`) ; aucun rythme de dépôt ne pose de signal d'anomalie (REQ-SEC-017, REQ-JUR-031 : `TypeAnomalie` n'a pas de valeur de rythme) ; la date de libération est arrondie au mois ; l'identité de l'autre apporteur n'est jamais révélée.",
-      "source": "audit-outil §1.3 D5 (précisé)",
+      "texte": "« Vérifier une entreprise » n'est accessible qu'en session authentifiée, limité par identité et par hash IP selon la configuration, journalisé (`verification_events` [REMPLACÉ au rattrapage 95 : la table s'appelle `verifications`, livrée par DM-12]) ; aucun rythme de dépôt ne pose de signal d'anomalie (REQ-SEC-017, REQ-JUR-031 : `TypeAnomalie` n'a pas de valeur de rythme) ; la date de libération est arrondie au mois ; l'identité de l'autre apporteur n'est jamais révélée.",
+      "source": "audit-outil §1.3 D5 (précisé) ; nom de la table aligné sur `verifications` (DM-12), rattrapage 95",
       "statut": "active",
       "remplaceePar": null,
       "module": 13,
@@ -2639,8 +2639,8 @@
     {
       "id": "REQ-JUR-011",
       "domaine": "juridique",
-      "texte": "La réponse de « Vérifier une entreprise » est binaire (libre / non disponible), ne distingue jamais « cliente » de « suivie », n'expose ni identifiant d'apporteur ni date au jour (mois seul) ; chaque consultation est journalisée et plafonnée.",
-      "source": "audit bout-en-bout §1.3 D5 · fonctionnement R3 · nouvelle (secret des affaires)",
+      "texte": "La réponse de « Vérifier une entreprise » est binaire (libre / non disponible) [REMPLACÉ au rattrapage 95, accord de la juriste : quatre états, dont aucun ne distingue cliente de suivie ; un client existant rend une réponse identique, octet pour octet, à celle d'une autre cause du même état ; la date est suspendue jusqu'à la décision de Williams], ne distingue jamais « cliente » de « suivie », n'expose ni identifiant d'apporteur ni date au jour (mois seul) ; chaque consultation est journalisée et plafonnée.",
+      "source": "audit bout-en-bout §1.3 D5 · fonctionnement R3 · nouvelle (secret des affaires) ; quatre états, rattrapage 95 (juriste)",
       "statut": "active",
       "remplaceePar": null,
       "module": 10,
@@ -3033,8 +3033,8 @@
     {
       "id": "REQ-UX-007",
       "domaine": "produit-ux",
-      "texte": "« Vérifier une entreprise » retourne un des 5 états (libre, suivie_place_disponible, suivie_file_complete, deja_connue, non_disponible) ; la date « jusqu'au » n'est affichée que si l'attribution est `active` ; l'état ne distingue jamais « cliente » de « en discussion » ; 30 vérifications/jour, la 31e affiche un message et laisse « Déposer » actif. Amendement W19 (décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §4.2) : Un SIREN pris en charge par un conseiller est rendu à l'apporteur comme un SIREN occupé par un autre apporteur au même stade : même état (`suivie_place_disponible` ou `suivie_file_complete`), même date « jusqu'au », au même moment. Cela ne tranche pas la contradiction 4 ou 5 états, que le gardien-spec règle avant SEC-16.",
-      "source": "audit-outil §1.3 et D5 ; anti-abus M1, M2 ; nouvelle (UX-04, UX-09)",
+      "texte": "« Vérifier une entreprise » retourne un des 5 états (libre, suivie_place_disponible, suivie_file_complete, deja_connue, non_disponible) [REMPLACÉ au rattrapage 95, accord de la juriste et de la sécurité : QUATRE états, `libre`, `suivie_place_disponible`, `suivie_file_complete`, `non_disponible` ; `deja_connue` distinguerait une cliente, et `non_disponible` regroupe l'antériorité, la liste de la Société et l'entreprise fermée ; la date « jusqu'au » est suspendue jusqu'à la décision de Williams] ; la date « jusqu'au » n'est affichée que si l'attribution est `active` ; l'état ne distingue jamais « cliente » de « en discussion » ; 30 vérifications/jour, la 31e affiche un message et laisse « Déposer » actif. Amendement W19 (décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §4.2) : Un SIREN pris en charge par un conseiller est rendu à l'apporteur comme un SIREN occupé par un autre apporteur au même stade : même état (`suivie_place_disponible` ou `suivie_file_complete`), même date « jusqu'au », au même moment. Cela ne tranche pas la contradiction 4 ou 5 états, que le gardien-spec règle avant SEC-16.",
+      "source": "audit-outil §1.3 et D5 ; anti-abus M1, M2 ; nouvelle (UX-04, UX-09) ; quatre états, rattrapage 95 (juriste, sécurité)",
       "statut": "active",
       "remplaceePar": null,
       "module": 10,
