@@ -50,8 +50,10 @@
   - `ordinaire_axion` pour une résiliation par la Société sans motif ;
   - `manquement_grave` pour une résiliation au titre de l'art. 11.2.
 
-  Aucune valeur ne porte encore la fin de plein droit de l'art. 12.5 : en ce cas, il faut ouvrir une
-  décision avant le geste, sans choisir une valeur qui dirait autre chose que le fait.
+  La fin de plein droit de l'art. 12.5 aura la valeur `fin_de_plein_droit` (DM-64). Tant que cette valeur
+  n'est pas livrée, il faut ouvrir une décision avant le geste, sans choisir une valeur qui dirait autre
+  chose que le fait. **Une procédure collective n'est pas une fin de plein droit** (art. 12.5) : elle ne
+  donne lieu à aucun geste de résiliation.
 - Le statut de l'apporteur passe à `resilie`.
 
 ## 5. Les effets (art. 12, DM-63)
@@ -67,6 +69,15 @@ Ils s'appliquent d'eux-mêmes au geste, dans la même transaction :
 - un **solde négatif** s'impute sur les commissions à venir (art. 12.4) ;
 - **l'accès en lecture** de l'apporteur à son espace est **maintenu** jusqu'à l'extinction de ses droits,
   ou ses relevés, factures et motifs de blocage lui sont envoyés par courriel (art. 12.3).
+
+**Fin de plein droit (art. 12.5) : à qui verser.** Les commissions acquises à la date de la fin sont
+versées, selon le cas, à l'apporteur, à ses ayants droit (décès) ou au mandataire désigné (mandataire
+successoral ou de justice). Le versement attend que soient fournis :
+- la justification de leur qualité (acte de notoriété, ou décision qui désigne le mandataire) ;
+- des coordonnées bancaires à leur nom.
+
+L'article 5.4 est alors écarté pour le seul numéro SIREN (art. 12.5). Les pièces reçues rejoignent le dossier de l'apporteur tenu par la Société,
+hors du dépôt public. Elles ne sont recopiées nulle part ailleurs.
 
 On vérifie, après le geste, que ces effets apparaissent sur la fiche de l'apporteur. Si l'un manque, il ne
 faut rien corriger à la main : on ouvre un incident.
