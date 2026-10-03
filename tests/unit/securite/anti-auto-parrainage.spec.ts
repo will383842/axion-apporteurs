@@ -80,8 +80,10 @@ describe('REQ-ARG-012 — le cœur pur compare les empreintes du filleul et du p
     expect(correspondances(empreintes('x'), empreintes('x'))).toEqual(['identite']);
   });
 
-  it('REQ-ARG-012 : une empreinte absente ne correspond jamais à une autre absente', () => {
+  it('REQ-ARG-012 : une empreinte absente ne correspond jamais à une autre absente, ni à une présente', () => {
     expect(correspondances(empreintes('f'), empreintes('p'))).toEqual([]);
+    expect(correspondances(empreintes('f', { emailHash: H('a') }), empreintes('p'))).toEqual([]);
+    expect(correspondances(empreintes('f'), empreintes('p', { phoneHash: H('b') }))).toEqual([]);
   });
 });
 
@@ -93,7 +95,7 @@ interface Ligne {
   parrainCodeCapture: string | null;
   emailHash: string | null;
   phoneHash: string | null;
-  ibans: string[];
+  ibans: (string | null)[];
   sirens: string[];
 }
 
@@ -110,8 +112,12 @@ function baseSimulee(lignes: Ligne[], anomaliesOuvertes: string[] = []) {
     identitesFacturation: l.sirens.map((siren) => ({ siren })),
   });
   const apporteur = {
-    findUnique: async (args: { where: { id?: string; codeParrainage?: string } }) => {
+    findUnique: async (args: { where: { id?: string; codeParrainage?: string | null } }) => {
       appels.push({ quoi: 'apporteur.findUnique', args });
+      // Comme Prisma : une clé unique nulle est une requête invalide, jamais « aucun résultat ».
+      if (args.where.id === undefined && typeof args.where.codeParrainage !== 'string') {
+        throw new Error('findUnique sans clé');
+      }
       const l = lignes.find((x) =>
         args.where.id !== undefined
           ? x.id === args.where.id
@@ -242,6 +248,14 @@ describe('REQ-SEC-031 — à la candidature parrainée, une correspondance ouvre
         where: { type: 'auto_parrainage', apporteurId: 'filleul', statut: 'ouverte' },
         select: { id: true },
       },
+    });
+  });
+
+  it('REQ-SEC-031 : une pièce RIB lue sans empreinte ne compte pas, même face à une autre sans empreinte', async () => {
+    const b = baseSimulee([{ ...PARRAIN, ibans: [null] }, filleul({ ibans: [null] })]);
+    expect(await controlerALaCandidature(b.prisma, 'filleul')).toEqual({
+      correspondances: [],
+      anomalieOuverte: false,
     });
   });
 
