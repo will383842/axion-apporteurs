@@ -1071,7 +1071,7 @@ export function cleDeCouverture(famille: string, refus?: string): string {
 const REQ_INT_004_FIXTURE =
   "Les types d'événements sont : `client.cree`, `client.mis_a_jour`, `devis.signe`, " +
   '`facture.emise`, `avoir.emis`, `paiement.recu`, `paiement.rembourse`, `candidature.recue`, ' +
-  '`financement.mis_a_jour`, `facture.annulee`, `client.fusionne` — nommés sur les modèles ' +
+  '`financement.mis_a_jour`, `facture.annulee`, `client.fusionne`, `devis.emis` — nommés sur les modèles ' +
   'réels (Client, Devis, FactureFormation, Payment, Submission, DossierPayeur) ; aucun événement ne ' +
   'référence `Invoice` ni `Refund`.';
 
@@ -1139,6 +1139,7 @@ export const VUE_CONFORME: Vue = {
     'financement.mis_a_jour',
     'facture.annulee',
     'client.fusionne',
+    'devis.emis',
   ],
   racines: racinesDuGlossaire(GLOSSAIRE_FIXTURE),
   fichiers: [fichierTexte('src/config/fixture.ts', 'export const rien = true;\n')],
