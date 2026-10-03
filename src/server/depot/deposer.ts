@@ -44,6 +44,7 @@ import { colonnesPii, empreinteRecherche, type ClesPii } from '../securite/pii';
 import { VERSION_INFORMATION_TIERS } from '../../content/micro-copy/espace/information-tiers';
 import { issueRendue } from '../../content/micro-copy/espace/issues-depot';
 import type { DemandeDeNotification } from '../notifications/envoyer';
+import { limiter, sujetDepuisEmpreinte, type MagasinDeCompteurs } from '../securite/rate-limit';
 
 type Tx = Prisma.TransactionClient;
 
@@ -79,6 +80,8 @@ export interface DemandeDeDepot {
   readonly saisie: SaisieDuDepot;
   readonly fiche: FicheDuDepot;
   readonly ipHash: string | null;
+  /** La réponse au défi anti-automatisation, si l'écran en a présenté un. */
+  readonly reponseCaptcha: string | null;
   readonly agentHash: string | null;
   readonly clientCapturedAt: Date | null;
 }
@@ -94,6 +97,51 @@ export interface PortsDuDepot {
   adresseDe(apporteurId: string): Promise<string>;
   /** L'émetteur des notifications (`notifier`, lié à la couche cloisonnée du destinataire). */
   notifier(apporteurId: string, demande: DemandeDeNotification): Promise<unknown>;
+  /** La limite de débit technique (`controlerLeDebit` en production), jugée avant toute lecture. */
+  debit(ipHash: string): Promise<DebitDuDepot>;
+  /**
+   * Le défi anti-automatisation (REQ-DM-010) : décidé sur un signal TECHNIQUE de l'empreinte réseau,
+   * identique pour tous. Le port ne reçoit ni l'apporteur ni ses dépôts — il ne peut pas les compter.
+   */
+  captcha(ipHash: string | null, reponse: string | null): Promise<VerdictDuCaptcha>;
+}
+
+/** `a_presenter` : l'écran montre le défi, rien n'est écrit ; `resolu` ne refuse aucun dépôt. */
+export type VerdictDuCaptcha = 'non_requis' | 'resolu' | 'a_presenter';
+
+export interface DebitDuDepot {
+  readonly autorise: boolean;
+  /** Quand réessayer (ms), si la limite est atteinte ; `null` sinon. */
+  readonly repriseAt: number | null;
+}
+
+/** Au-delà du débit : la requête est à réessayer. Rien n'est écrit, rien n'est compté à l'apporteur. */
+export interface DepotAReessayer {
+  readonly reessayer: true;
+  readonly repriseAt: number | null;
+}
+
+/**
+ * LA limite de débit du dépôt (REQ-DM-009, texte de la juriste) : TECHNIQUE, identique pour tous,
+ * sur l'EMPREINTE réseau seule — le compteur `depot:ip` du registre, jamais un compteur par
+ * identité. Son seul effet est de faire réessayer : aucune trace au dossier, aucun statut.
+ */
+export async function controlerLeDebit(
+  ipHash: string,
+  maintenantMs: number,
+  magasin?: MagasinDeCompteurs
+): Promise<DebitDuDepot> {
+  const v =
+    magasin === undefined
+      ? await limiter('depot:ip', sujetDepuisEmpreinte(ipHash), maintenantMs)
+      : await limiter(
+          'depot:ip',
+          sujetDepuisEmpreinte(ipHash),
+          maintenantMs,
+          magasin,
+          () => undefined
+        );
+  return { autorise: v.autorise, repriseAt: v.autorise ? null : v.repriseAt };
 }
 
 export interface IssueDuDepot {
@@ -281,12 +329,22 @@ export function parametresDuRefus(issue: IssueDepot, entreprise: string): Record
   };
 }
 
-/** Le dépôt, dans sa propre transaction ; un refus de catégorie est notifié après elle. */
+/**
+ * Le dépôt, dans sa propre transaction, derrière la limite de débit ; un refus de catégorie est
+ * notifié après elle.
+ */
 export async function deposer(
   prisma: PrismaClient,
   demande: DemandeDeDepot,
   ports: PortsDuDepot
-): Promise<IssueDuDepot> {
+): Promise<IssueDuDepot | DepotAReessayer> {
+  if (demande.ipHash !== null) {
+    const d = await ports.debit(demande.ipHash);
+    if (!d.autorise) return { reessayer: true, repriseAt: d.repriseAt };
+  }
+  if ((await ports.captcha(demande.ipHash, demande.reponseCaptcha)) === 'a_presenter') {
+    return { issue: 'captcha', attributionId: null };
+  }
   const r = await prisma.$transaction((tx) => deposerDans(tx, demande, ports), { timeout: 30_000 });
   if (estUnRefus(r.issue)) {
     await ports.notifier(demande.apporteurId, {

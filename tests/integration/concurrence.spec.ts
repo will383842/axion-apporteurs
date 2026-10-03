@@ -63,7 +63,18 @@ const PORTS: PortsDuDepot = {
   oppositionDemarchage: async () => false,
   adresseDe: async () => 'apporteur.temoin@example.org',
   notifier: async () => undefined,
+  debit: async () => ({ autorise: true, repriseAt: null }),
+  captcha: async () => 'non_requis',
 };
+
+/** Le dépôt, sous un débit qui laisse passer : un « réessayer » ici serait un défaut du banc. */
+async function deposerOuEchouer(
+  ...args: Parameters<typeof deposer>
+): Promise<Exclude<Awaited<ReturnType<typeof deposer>>, { reessayer: true }>> {
+  const r = await deposer(...args);
+  if ('reessayer' in r) throw new Error('débit refusé : le banc ne doit jamais l’atteindre');
+  return r;
+}
 const hex = (n: number) => randomBytes(n).toString('hex');
 const unSiren = () => String((sirens += 1));
 
@@ -128,6 +139,7 @@ function demande(apporteurId: string, siren: string): DemandeDeDepot {
     },
     fiche: { raisonSociale: 'Entreprise Témoin SAS', etatAdministratif: 'actif' },
     ipHash: hex(8),
+    reponseCaptcha: null,
     agentHash: hex(32),
     clientCapturedAt: null,
   };
@@ -152,7 +164,7 @@ describe('REQ-SEC-014 — vingt dépôts simultanés sur un même SIREN', () => 
     const siren = unSiren();
     const ids = await Promise.all(Array.from({ length: 20 }, () => apporteur('signe')));
     const issues = await Promise.all(
-      ids.map((id) => deposer(base.prisma, demande(id, siren), PORTS))
+      ids.map((id) => deposerOuEchouer(base.prisma, demande(id, siren), PORTS))
     );
     const compte = (i: string) => issues.filter((x) => x.issue === i).length;
     expect([compte('enregistree'), compte('en_attente'), compte('file_complete')]).toEqual([
@@ -179,9 +191,13 @@ describe('REQ-SEC-022 — le même refus quel que soit l’occupant ; la réserv
     const parApporteur = unSiren();
     const parConseiller = unSiren();
     const occupant = await apporteur('signe');
-    await deposer(base.prisma, demande(occupant, parApporteur), PORTS);
+    await deposerOuEchouer(base.prisma, demande(occupant, parApporteur), PORTS);
     const declarant = await apporteur('signe');
-    const derriereApporteur = await deposer(base.prisma, demande(declarant, parApporteur), PORTS);
+    const derriereApporteur = await deposerOuEchouer(
+      base.prisma,
+      demande(declarant, parApporteur),
+      PORTS
+    );
 
     // Le rôle `conseiller_salarie` n'existe pas encore : son déclencheur est neutralisé le temps
     // d'une transaction ANNULÉE (patron d'`index-partiel.spec.ts`).
@@ -219,12 +235,12 @@ describe('REQ-SEC-022 — le même refus quel que soit l’occupant ; la réserv
   it('REQ-SEC-022 : une attribution LIBÉRÉE d’un autre apporteur (réserve de l’art. 3.5 al. 4) n’empêche pas le dépôt', async () => {
     const siren = unSiren();
     const autre = await apporteur('signe');
-    const premier = await deposer(base.prisma, demande(autre, siren), PORTS);
+    const premier = await deposerOuEchouer(base.prisma, demande(autre, siren), PORTS);
     await base.prisma.$executeRawUnsafe(
       `UPDATE attributions SET statut = 'annulee' WHERE id = $1::uuid`,
       premier.attributionId
     );
-    const r = await deposer(base.prisma, demande(await apporteur('signe'), siren), PORTS);
+    const r = await deposerOuEchouer(base.prisma, demande(await apporteur('signe'), siren), PORTS);
     expect(r.issue).toBe('enregistree');
   });
 });
@@ -240,8 +256,8 @@ describe('REQ-SEC-022 — l’art. 3.3 : refus tracé, motif distinct, issue ren
       data: { devisRef: `D-${hex(4)}`, siren: devis, emisAt: T0, montantTotalHtCents: 100_000n },
     });
     const a = await apporteur('signe');
-    const rc = await deposer(base.prisma, demande(a, cliente), PORTS);
-    const rd = await deposer(base.prisma, demande(a, devis), PORTS);
+    const rc = await deposerOuEchouer(base.prisma, demande(a, cliente), PORTS);
+    const rd = await deposerOuEchouer(base.prisma, demande(a, devis), PORTS);
     expect([rc, rd]).toEqual([
       { issue: 'anteriorite_client', attributionId: null },
       { issue: 'anteriorite_devis', attributionId: null },
@@ -264,13 +280,13 @@ describe('REQ-SEC-022 — l’art. 3.3 : refus tracé, motif distinct, issue ren
   it('REQ-SEC-022 : un établissement cessé, une entreprise en opposition : refusés, tracés', async () => {
     const a = await apporteur('signe');
     const cesse = unSiren();
-    const r1 = await deposer(
+    const r1 = await deposerOuEchouer(
       base.prisma,
       { ...demande(a, cesse), fiche: { raisonSociale: 'Fermée SARL', etatAdministratif: 'cesse' } },
       PORTS
     );
     const oppose = unSiren();
-    const r2 = await deposer(base.prisma, demande(a, oppose), {
+    const r2 = await deposerOuEchouer(base.prisma, demande(a, oppose), {
       ...PORTS,
       oppositionDemarchage: async (_tx, s) => s === oppose,
     });
@@ -283,7 +299,7 @@ describe('REQ-SEC-032 — le statut se relit dans la transaction', () => {
   it('REQ-SEC-032 : face ROUGE — un apporteur résilié ne dépose pas : refus nommé, rien n’est écrit', async () => {
     const siren = unSiren();
     const a = await apporteur('resilie');
-    expect(await refus(deposer(base.prisma, demande(a, siren), PORTS))).toBeInstanceOf(
+    expect(await refus(deposerOuEchouer(base.prisma, demande(a, siren), PORTS))).toBeInstanceOf(
       DepotInterdit
     );
     expect(await base.prisma.attribution.count({ where: { siren } })).toBe(0);
@@ -293,7 +309,7 @@ describe('REQ-SEC-032 — le statut se relit dans la transaction', () => {
   it('REQ-SEC-032 : un apporteur suspendu : `gele`, rien n’est écrit, aucune trace de refus', async () => {
     const siren = unSiren();
     const a = await apporteur('suspendu');
-    expect(await deposer(base.prisma, demande(a, siren), PORTS)).toEqual({
+    expect(await deposerOuEchouer(base.prisma, demande(a, siren), PORTS)).toEqual({
       issue: 'gele',
       attributionId: null,
     });
@@ -342,7 +358,11 @@ describe('REQ-JUR-008 — la saisie se juge au serveur', () => {
   it('REQ-JUR-008 : face ROUGE — la case d’information des tiers non cochée : refus nommé', async () => {
     const d = demande(await apporteur('signe'), unSiren());
     const e = await refus(
-      deposer(base.prisma, { ...d, saisie: { ...d.saisie, informationTiersCochee: false } }, PORTS)
+      deposerOuEchouer(
+        base.prisma,
+        { ...d, saisie: { ...d.saisie, informationTiersCochee: false } },
+        PORTS
+      )
     );
     expect((e as ErreurSaisieDepot).champs).toEqual(['informationTiers']);
   });
@@ -350,7 +370,7 @@ describe('REQ-JUR-008 — la saisie se juge au serveur', () => {
   it('REQ-CPL-008 : un dépôt enregistré : contact chiffré, empreintes posées, version de l’information des tiers, une demande', async () => {
     const siren = unSiren();
     const a = await apporteur('signe');
-    const r = await deposer(base.prisma, demande(a, siren), PORTS);
+    const r = await deposerOuEchouer(base.prisma, demande(a, siren), PORTS);
     expect(r.issue).toBe('enregistree');
     const l = await base.prisma.attribution.findUniqueOrThrow({ where: { id: r.attributionId! } });
     expect(l.apporteurId).toBe(a);
@@ -408,7 +428,7 @@ describe('REQ-SEC-022 — le refus est notifié (`refus_declaration`)', () => {
     const a = await apporteur('signe');
     const autre = await apporteur('signe');
     const { ports, courriels } = portsQuiNotifient();
-    await deposer(base.prisma, demande(a, siren), ports);
+    await deposerOuEchouer(base.prisma, demande(a, siren), ports);
     const notifications = await base.prisma.notificationEspace.findMany({
       where: { cle: 'refus_declaration', apporteurId: { in: [a, autre] } },
       select: { apporteurId: true, attributionId: true },
@@ -436,8 +456,8 @@ describe('REQ-SEC-022 — le refus est notifié (`refus_declaration`)', () => {
     });
     const a = await apporteur('signe');
     const { ports, envois } = portsQuiNotifient();
-    await deposer(base.prisma, demande(a, cliente), ports);
-    await deposer(base.prisma, demande(a, devis), ports);
+    await deposerOuEchouer(base.prisma, demande(a, cliente), ports);
+    await deposerOuEchouer(base.prisma, demande(a, devis), ports);
     expect(envois).toHaveLength(2);
     expect(JSON.stringify(envois[0]?.demande)).toBe(JSON.stringify(envois[1]?.demande));
     expect(JSON.stringify(envois[0]?.demande.parametres)).not.toMatch(/client|devis|factur|sign/i);
@@ -446,9 +466,22 @@ describe('REQ-SEC-022 — le refus est notifié (`refus_declaration`)', () => {
   it('REQ-SEC-022 : un dépôt enregistré, en file ou `gele` ne notifie aucun refus', async () => {
     const siren = unSiren();
     const { ports, envois } = portsQuiNotifient();
-    await deposer(base.prisma, demande(await apporteur('signe'), siren), ports);
-    await deposer(base.prisma, demande(await apporteur('signe'), siren), ports);
-    await deposer(base.prisma, demande(await apporteur('suspendu'), unSiren()), ports);
+    await deposerOuEchouer(base.prisma, demande(await apporteur('signe'), siren), ports);
+    await deposerOuEchouer(base.prisma, demande(await apporteur('signe'), siren), ports);
+    await deposerOuEchouer(base.prisma, demande(await apporteur('suspendu'), unSiren()), ports);
     expect(envois).toEqual([]);
+  });
+});
+
+describe('REQ-DM-010 — un captcha résolu ne refuse aucun dépôt', () => {
+  it('REQ-DM-010 : défi résolu → le dépôt est enregistré, comme sans défi', async () => {
+    const siren = unSiren();
+    const r = await deposerOuEchouer(
+      base.prisma,
+      { ...demande(await apporteur('signe'), siren), reponseCaptcha: 'reponse-du-defi' },
+      { ...PORTS, captcha: async (_ip, reponse) => (reponse === null ? 'a_presenter' : 'resolu') }
+    );
+    expect(r.issue).toBe('enregistree');
+    expect(await base.prisma.attribution.count({ where: { siren } })).toBe(1);
   });
 });
