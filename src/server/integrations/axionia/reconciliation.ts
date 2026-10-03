@@ -119,6 +119,12 @@ export type CompteursDeReconciliation = {
   manquants: number;
   rearmes: number;
   introuvables: number;
+  /**
+   * Les `event_id` manquants, NOMMÉS DANS Partners seulement (rattrapage 81) : le retour du passage,
+   * que le battement de la tâche conserve. Ils ne partent qu'à axion-ia, dans la demande de rejeu ;
+   * jamais dans un signal, une alerte ou un journal de la plateforme.
+   */
+  eventIdsManquants: string[];
 };
 
 export type DependancesDeReconciliation = PortsDeReconciliation & {
@@ -137,6 +143,7 @@ export async function reconcilier(
     manquants: 0,
     rearmes: 0,
     introuvables: 0,
+    eventIdsManquants: [],
   };
   const manquants = new Set<string>();
   const recue = await d.curseur();
@@ -158,6 +165,7 @@ export async function reconcilier(
   if (suite) await d.signaler({ genre: 'relecture_bornee', nombre: c.pages });
 
   c.manquants = manquants.size;
+  c.eventIdsManquants = [...manquants];
   if (manquants.size === 0) return c;
   await d.signaler({ genre: 'trou_rattrape', nombre: manquants.size });
   const ids = [...manquants];

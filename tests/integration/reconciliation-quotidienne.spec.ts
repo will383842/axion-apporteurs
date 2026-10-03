@@ -334,7 +334,14 @@ describe('REQ-QA-026 — la réconciliation est une tâche du registre, jouée u
     let jouee = 0;
     const reconcilierCompte = async () => {
       jouee += 1;
-      return { pages: 1, relus: 0, manquants: 0, rearmes: 0, introuvables: 0 };
+      return {
+        pages: 1,
+        relus: 0,
+        manquants: 0,
+        rearmes: 0,
+        introuvables: 0,
+        eventIdsManquants: [],
+      };
     };
     const ceMatin = new Date(Date.UTC(2026, 9, 3, 0, 5));
     const hier = new Date(Date.UTC(2026, 9, 2, 23, 55));
