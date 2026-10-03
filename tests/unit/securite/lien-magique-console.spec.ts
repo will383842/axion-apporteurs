@@ -1,5 +1,7 @@
 // @req REQ-SEC-003
 // @req REQ-UX-048
+// @req REQ-UX-047
+// @req REQ-UX-015
 /**
  * `lien-magique-console.spec.ts` — la connexion de la console par lien et code (SEC-29), sur ports
  * simulés. Le MÊME mécanisme que l'espace, paramétré par la population : une demande, une
@@ -556,7 +558,7 @@ describe('REQ-UX-048 — les écrans de la connexion de la console', () => {
     );
   });
 
-  it('REQ-UX-048 : TÉMOIN — le code : un champ numérique, un seul texte pour tout refus, en alerte, puis « Recevoir un nouveau code »', () => {
+  it('REQ-UX-048 REQ-UX-015 : TÉMOIN — le code : un champ numérique, un seul texte pour tout refus, en alerte, puis « Recevoir un nouveau code »', () => {
     const h = rendu(EcranCodeConsole, { refus: null, verifier: rien, changer: rien, suite: null });
     expect(h).toContain(CONNEXION_CONSOLE.envoye.titre);
     expect(h).toMatch(/inputMode="numeric"|inputmode="numeric"/);
@@ -573,7 +575,7 @@ describe('REQ-UX-048 — les écrans de la connexion de la console', () => {
     expect(texteDuRefusDeCodeConsole('debit')).toBe(CONNEXION_CONSOLE.code.debit);
   });
 
-  it('REQ-UX-048 : TÉMOIN — « déjà utilisé » a sa page, distincte d’un lien invalide, sans adresse ni nom ; l’arrivée ne consomme rien', () => {
+  it('REQ-UX-048 REQ-UX-015 : TÉMOIN — « déjà utilisé » a sa page, distincte d’un lien invalide, sans adresse ni nom ; l’arrivée ne consomme rien', () => {
     const deja = rendu(EcranIssueConsole, { etat: 'deja_utilise' });
     const invalide = rendu(EcranIssueConsole, { etat: 'lien_invalide' });
     expect(deja).toContain(CONNEXION_CONSOLE.dejaUtilise.phrase);
@@ -784,5 +786,26 @@ describe('REQ-UX-048 — la clé de la console n’est pas une notification de l
     expect(rendreLaNotification('lien_magique', {}).appel).toBe('Ouvrir mon espace');
     expect(estGabaritDeLApporteur('lien_magique_console')).toBe(false);
     expect(estGabaritDeLApporteur('lien_magique')).toBe(true);
+  });
+});
+
+describe('REQ-UX-047 — le geste principal : le code reçu, puis « Se connecter »', () => {
+  const rien = async (): Promise<void> => undefined;
+  /** Les éléments qu'on touche : champs visibles et boutons ; les champs cachés n'en sont pas. */
+  const interactions = (h: string) =>
+    [...h.matchAll(/<(input|button|select|textarea)\b[^>]*>/g)].filter(
+      (m) => !/type="hidden"/.test(m[0]) && !/tabindex="-1"|tabIndex="-1"/.test(m[0])
+    ).length;
+
+  it('REQ-UX-047 REQ-UX-015 : TÉMOIN — le formulaire du code ne demande que DEUX interactions (le champ et « Se connecter ») ; la demande, deux aussi (l’adresse et « Recevoir mon lien »)', () => {
+    const code = renderToStaticMarkup(
+      createElement(EcranCodeConsole, { refus: null, verifier: rien, changer: rien, suite: null })
+    );
+    const formulaireDuCode = code.slice(0, code.indexOf('</form>'));
+    expect(interactions(formulaireDuCode)).toBe(2);
+    const demande = renderToStaticMarkup(
+      createElement(EcranConnexionConsole, { etat: null, action: rien })
+    );
+    expect(interactions(demande)).toBe(2);
   });
 });
