@@ -2152,7 +2152,8 @@
       "phase": 1,
       "taches": [
         "INT-T08-A",
-        "INT-T08-P"
+        "INT-T08-P",
+        "INT-T73-P"
       ]
     },
     {
@@ -2793,6 +2794,7 @@
         "JUR-T34",
         "JUR-T36",
         "JUR-T57",
+        "SEC-53",
         "T-ARG-033"
       ]
     },
@@ -3891,6 +3893,7 @@
         "INT-T12",
         "INT-T41",
         "INT-T42",
+        "INT-T72-A",
         "QA-T04",
         "QA-T52"
       ]
