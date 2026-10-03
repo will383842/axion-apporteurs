@@ -435,10 +435,14 @@ export async function verifierLeCode(
   const calculee = empreinteDuCode(requete.code, ports.configuration.secret);
   return ports.transaction(async (tx) => {
     const lien = await tx.lienActifDe(emailHash, maintenant);
-    const essai =
-      lien !== null && lien.kid === ports.configuration.kid
-        ? await tx.compterEssai(lien.id, maintenant)
-        : null;
+    // L'essai part dans TOUS les cas, pour que l'aller-retour en base ne dise rien de l'existence du
+    // lien (lentille sécurité, 2026-10-03) : sur un identifiant FACTICE quand aucun lien valide
+    // n'existe, que l'écriture conditionnelle ne trouve jamais.
+    const valide = lien !== null && lien.kid === ports.configuration.kid;
+    const essai = await tx.compterEssai(
+      valide ? lien.id : '00000000-0000-0000-0000-000000000000',
+      maintenant
+    );
     // (3) et (4) : la comparaison a lieu dans TOUS les cas, factice si rien n'est attendu.
     const bon = memeEmpreinte(calculee, essai?.codeHash ?? null);
     if (lien === null || essai === null || !bon) {

@@ -291,6 +291,14 @@ describe('REQ-SEC-001 — la même réponse, à temps constant', () => {
     await verifier(u, u.code);
     expect(egaliteConstante.appels).toBe(1);
   });
+
+  it('REQ-SEC-001 : TÉMOIN (sécurité) — compte inconnu ou lien d’une autre clé : l’essai part AUSSI en base, sans rien compter', async () => {
+    for (const u of [univers({ compte: false }), univers({ lien: { kid: 'ffffffff' } })]) {
+      expect(await verifier(u, u.code)).toEqual({ etat: 'code_refuse' });
+      expect(u.trace).toEqual(['lienActifDe', 'compterEssai']);
+      for (const l of u.liens) expect(l.tentatives).toBe(0);
+    }
+  });
 });
 
 // ── (5) : cinq essais ────────────────────────────────────────────────────────────────────────────
