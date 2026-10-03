@@ -2143,8 +2143,8 @@
     {
       "id": "REQ-INT-013",
       "domaine": "integration",
-      "texte": "Un job quotidien de réconciliation compare, sur 7 jours glissants, Σ encaissements HT par SIREN attribué côté axionia et côté Partners ; tout écart produit une alerte nommant les event_id manquants et déclenche leur rejeu ; le job journalise ses compteurs même quand tout va bien.",
-      "source": "crm-sync/reconcile.ts (dérivé) ; INT-F10/F22",
+      "texte": "Un job quotidien de réconciliation compare, sur 7 jours glissants, Σ encaissements HT par SIREN attribué côté axionia et côté Partners ; tout écart produit une alerte au nombre d'écarts ; les event_id manquants sont nommés dans Partners, jamais à l'extérieur, et leur rejeu est déclenché ; le job journalise ses compteurs même quand tout va bien.",
+      "source": "crm-sync/reconcile.ts (dérivé) ; INT-F10/F22 ; amendée le 2026-10-03 : alerte au nombre, event_id nommés dans Partners seulement (arbitrage de la sécurité et de la coordination, rattrapage 81)",
       "statut": "active",
       "remplaceePar": null,
       "module": null,
