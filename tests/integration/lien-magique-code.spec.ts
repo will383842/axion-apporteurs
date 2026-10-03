@@ -152,7 +152,8 @@ describe('REQ-SEC-001 — le bon code, une fois', () => {
       { jeton, ipHash: null },
       { maintenant: () => MAINTENANT, transaction: transactionDeConsommation(app), configuration }
     );
-    expect(clic).toEqual({ etat: 'lien_invalide' });
+    // Le clic après le code : le lien est DÉJÀ UTILISÉ, distinct d'un lien invalide (SEC-54).
+    expect(clic).toEqual({ etat: 'deja_utilise' });
     expect(await base.prisma.sessionEspace.count({ where: { lienMagiqueId: l.id } })).toBe(1);
   });
 
@@ -165,6 +166,23 @@ describe('REQ-SEC-001 — le bon code, une fois', () => {
     );
     expect(clic.etat).toBe('ouverte');
     expect(await verifier(a.emailHash, code)).toEqual({ etat: 'code_refuse' });
+  });
+});
+
+describe('REQ-SEC-001 — déjà utilisé, distinct d’invalide', () => {
+  it('REQ-SEC-001 : TÉMOIN — un second clic dit « déjà utilisé » ; un jeton inconnu reste « invalide »', async () => {
+    const a = await apporteur();
+    const { jeton } = await emettre(a.id);
+    const ports = {
+      maintenant: () => MAINTENANT,
+      transaction: transactionDeConsommation(app),
+      configuration,
+    };
+    expect((await consommerLien({ jeton, ipHash: null }, ports)).etat).toBe('ouverte');
+    expect(await consommerLien({ jeton, ipHash: null }, ports)).toEqual({ etat: 'deja_utilise' });
+    expect(await consommerLien({ jeton: tirerJeton(), ipHash: null }, ports)).toEqual({
+      etat: 'lien_invalide',
+    });
   });
 });
 

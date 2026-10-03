@@ -82,6 +82,13 @@ function consommationSur(tx: Prisma.TransactionClient): TransactionDeConsommatio
         select: { id: true, apporteurId: true, kid: true },
       });
     },
+    // SEC-54 : déjà consommé, sous la clé courante, et lien de l'espace (population apporteur).
+    async dejaConsomme(tokenHash, kid) {
+      const n = await tx.lienMagique.count({
+        where: { tokenHash, kid, apporteurId: { not: null }, consommeAt: { not: null } },
+      });
+      return n === 1;
+    },
     async statutApporteur(apporteurId) {
       const a = await tx.apporteur.findUnique({
         where: { id: apporteurId },

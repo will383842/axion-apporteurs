@@ -38,6 +38,9 @@ vi.mock('node:crypto', async (original) => {
 
 import {
   ESSAIS_DU_CODE_MAX,
+  consommerLien,
+  tirerJeton,
+  type TransactionDeConsommation,
   codeBienForme,
   demanderLien,
   empreinteDeSession,
@@ -546,5 +549,61 @@ describe('REQ-SEC-001 — le courriel et le journal de production', () => {
       'lien_magique_code_epuise',
       'lien_magique_debit',
     ]);
+  });
+});
+
+// ── « déjà utilisé », distinct de « invalide » ──────────────────────────────────────────────────
+
+describe('REQ-SEC-001 — un lien déjà consommé se dit « déjà utilisé »', () => {
+  function consommation(dejaConsomme?: (tokenHash: string, kid: string) => Promise<boolean>) {
+    const appels: [string, string][] = [];
+    const tx: TransactionDeConsommation = {
+      consommer: async () => 0,
+      lireLien: async () => null,
+      statutApporteur: async () => 'signe',
+      ouvrirSession: async () => undefined,
+      ...(dejaConsomme
+        ? {
+            dejaConsomme: async (t: string, k: string) => {
+              appels.push([t, k]);
+              return dejaConsomme(t, k);
+            },
+          }
+        : {}),
+    };
+    const ports = {
+      maintenant: () => MAINTENANT,
+      transaction: async <T>(w: (t: typeof tx) => Promise<T>) => w(tx),
+      configuration: CONFIG,
+    };
+    return { ports, appels };
+  }
+
+  it('REQ-SEC-001 : TÉMOIN — consommation refusée, lien déjà consommé → deja_utilise, sous la clé courante', async () => {
+    const jeton = tirerJeton();
+    const c = consommation(async () => true);
+    expect(await consommerLien({ jeton, ipHash: null }, c.ports)).toEqual({ etat: 'deja_utilise' });
+    expect(c.appels).toHaveLength(1);
+    expect(c.appels[0]![1]).toBe(CONFIG.kid);
+  });
+
+  it('REQ-SEC-001 : TÉMOIN — consommation refusée, lien non consommé (inconnu, expiré, annulé) → lien_invalide', async () => {
+    const c = consommation(async () => false);
+    expect(await consommerLien({ jeton: tirerJeton(), ipHash: null }, c.ports)).toEqual({
+      etat: 'lien_invalide',
+    });
+  });
+
+  it('REQ-SEC-001 : TÉMOIN — sans le port, l’échec reste « invalide » ; un jeton mal formé ne lit rien', async () => {
+    expect(
+      await consommerLien({ jeton: tirerJeton(), ipHash: null }, consommation().ports)
+    ).toEqual({
+      etat: 'lien_invalide',
+    });
+    const c = consommation(async () => true);
+    expect(await consommerLien({ jeton: 'trop-court', ipHash: null }, c.ports)).toEqual({
+      etat: 'lien_invalide',
+    });
+    expect(c.appels).toEqual([]);
   });
 });

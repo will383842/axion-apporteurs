@@ -93,7 +93,7 @@ function memeEmpreinte(calculee: string, attendue: string | null): boolean {
 export const ETATS_DE_DEMANDE = ['envoye', 'suspendu', 'indisponible', 'adresse_invalide'] as const;
 export type EtatDeDemande = (typeof ETATS_DE_DEMANDE)[number];
 /** Les issues d'une consommation, dans le même ordre que `ResultatDeConsommation`. */
-export const ETATS_DE_CONSOMMATION = ['ouverte', 'lien_invalide'] as const;
+export const ETATS_DE_CONSOMMATION = ['ouverte', 'lien_invalide', 'deja_utilise'] as const;
 export type EtatDeConsommation = (typeof ETATS_DE_CONSOMMATION)[number];
 
 /**
@@ -104,7 +104,7 @@ export function etatLu<E extends string>(liste: readonly E[], valeur: unknown): 
   return (liste as readonly unknown[]).includes(valeur) ? (valeur as E) : null;
 }
 export type ResultatDeConsommation =
-  { etat: 'ouverte'; jetonSession: string } | { etat: 'lien_invalide' };
+  { etat: 'ouverte'; jetonSession: string } | { etat: 'lien_invalide' } | { etat: 'deja_utilise' };
 
 // ── les ports ────────────────────────────────────────────────────────────────────────────────────
 
@@ -283,6 +283,11 @@ export interface TransactionDeConsommation {
   lireLien(
     tokenHash: string
   ): Promise<{ id: string; apporteurId: string | null; kid: string } | null>;
+  /**
+   * SEC-54 : le lien de l'espace, sous la clé courante, est-il DÉJÀ CONSOMMÉ ? Lu seulement quand la
+   * consommation a échoué, pour dire « déjà utilisé » plutôt que « invalide ». Absent : « invalide ».
+   */
+  dejaConsomme?(tokenHash: string, kid: string): Promise<boolean>;
   statutApporteur(apporteurId: string): Promise<string | null>;
   /** Enregistre une session neuve. */
   ouvrirSession(s: NouvelleSession): Promise<void>;
@@ -307,7 +312,13 @@ export async function consommerLien(
     const ecrites = await tx.consommer(conditionDeConsommation(tokenHash, maintenant), {
       consommeAt: maintenant,
     });
-    if (ecrites !== 1) return INVALIDE;
+    if (ecrites !== 1) {
+      // SEC-54 : un lien de l'espace DÉJÀ CONSOMMÉ (par le clic ou par le code) se dit comme tel ;
+      // tout autre échec (inconnu, expiré, annulé, autre clé, console) reste « invalide ». Le jeton
+      // est un secret de 256 bits : le dire déjà utilisé n'apprend rien d'un compte.
+      const dejaUtilise = (await tx.dejaConsomme?.(tokenHash, ports.configuration.kid)) === true;
+      return dejaUtilise ? { etat: 'deja_utilise' } : INVALIDE;
+    }
     const lien = await tx.lireLien(tokenHash);
     if (lien === null || lien.kid !== ports.configuration.kid) return INVALIDE;
     // Un lien de la CONSOLE ne s'ouvre pas ici : l'espace n'ouvre de session qu'à un apporteur.
