@@ -27,7 +27,7 @@
  * La transaction est exposée (`deposerDans`) pour qu'une autre écriture la compose.
  */
 import type { Prisma, PrismaClient } from '@prisma/client';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import {
   deciderDuDepot,
   estUnRefus,
@@ -40,13 +40,27 @@ import { anterioriteDe } from '../entreprise-connue/projection';
 import { journaliserLaNaissance } from '../attribution/transitionner';
 import { creerLaDemande } from '../confirmation/demandes';
 import { tirerLesJetonsDeLaDemande } from '../confirmation/jetons';
-import { colonnesPii, empreinteRecherche, type ClesPii } from '../securite/pii';
-import { VERSION_INFORMATION_TIERS } from '../../content/micro-copy/espace/information-tiers';
+import {
+  colonnesPii,
+  empreinteAdresseReseau,
+  empreinteRecherche,
+  type ClesPii,
+} from '../securite/pii';
+import { CASE_INFORMATION_TIERS } from '../../content/micro-copy/espace/information-tiers';
 import { issueRendue } from '../../content/micro-copy/espace/issues-depot';
 import type { DemandeDeNotification } from '../notifications/envoyer';
-import { limiter, sujetDepuisEmpreinte, type MagasinDeCompteurs } from '../securite/rate-limit';
+import { limiter, sujetDepuisEmpreinte } from '../securite/rate-limit';
 
 type Tx = Prisma.TransactionClient;
+
+/**
+ * La version du texte de la case d'information des tiers, enregistrée au dépôt (REQ-JUR-008) :
+ * les 32 premiers caractères hexadécimaux du SHA-256 du texte (colonne de 32 caractères). DÉRIVÉE,
+ * jamais tapée : un texte réécrit a une autre version, et le texte accepté reste identifiable.
+ */
+export function versionDeLInformationDesTiers(): string {
+  return createHash('sha256').update(CASE_INFORMATION_TIERS).digest('hex').slice(0, 32);
+}
 
 export interface ContactDuDepot {
   readonly nom: string;
@@ -79,10 +93,12 @@ export interface DemandeDeDepot {
   readonly jetonDepotId: string | null;
   readonly saisie: SaisieDuDepot;
   readonly fiche: FicheDuDepot;
-  readonly ipHash: string | null;
+  /** L'adresse réseau du client, telle que lue par le serveur ; jamais stockée, seule son empreinte. */
+  readonly adresseReseau: string | null;
   /** La réponse au défi anti-automatisation, si l'écran en a présenté un. */
   readonly reponseCaptcha: string | null;
-  readonly agentHash: string | null;
+  /** L'en-tête de navigateur ; jamais stocké, seule son empreinte (type `agent`). */
+  readonly agentUtilisateur: string | null;
   readonly clientCapturedAt: Date | null;
 }
 
@@ -128,19 +144,9 @@ export interface DepotAReessayer {
  */
 export async function controlerLeDebit(
   ipHash: string,
-  maintenantMs: number,
-  magasin?: MagasinDeCompteurs
+  maintenantMs: number
 ): Promise<DebitDuDepot> {
-  const v =
-    magasin === undefined
-      ? await limiter('depot:ip', sujetDepuisEmpreinte(ipHash), maintenantMs)
-      : await limiter(
-          'depot:ip',
-          sujetDepuisEmpreinte(ipHash),
-          maintenantMs,
-          magasin,
-          () => undefined
-        );
+  const v = await limiter('depot:ip', sujetDepuisEmpreinte(ipHash), maintenantMs);
   return { autorise: v.autorise, repriseAt: v.autorise ? null : v.repriseAt };
 }
 
@@ -208,8 +214,8 @@ export async function deposerDans(
   const { siren } = demande.saisie;
   const maintenant = ports.maintenant();
 
-  await verrou(tx, `depot:porteur:${apporteurId}`);
-  await verrou(tx, `depot:siren:${siren}`);
+  await verrou(tx, `verrou-du-depot.porteur.${apporteurId}`);
+  await verrou(tx, `verrou-du-depot.siren.${siren}`);
 
   const [a] = await tx.$queryRaw<{ statut: string }[]>`
     SELECT statut::text AS statut
@@ -281,14 +287,20 @@ export async function deposerDans(
       jetonDepotId: demande.jetonDepotId,
       clientCapturedAt: demande.clientCapturedAt,
       dateContact: new Date(`${s.dateContact}T00:00:00.000Z`),
-      informationTiersVersion: VERSION_INFORMATION_TIERS,
+      informationTiersVersion: versionDeLInformationDesTiers(),
       verificationPrioritaire: faits.verificationPrioritaire,
       entrepriseAVerifier: demande.fiche.etatAdministratif === null,
       raisonSociale: demande.fiche.raisonSociale,
       etatAdministratif: demande.fiche.etatAdministratif,
       lienInteretDeclare: s.lienInteretDeclare,
-      ipHash: demande.ipHash,
-      agentHash: demande.agentHash,
+      ipHash:
+        demande.adresseReseau === null
+          ? null
+          : empreinteAdresseReseau(demande.adresseReseau, ports.cles),
+      agentHash:
+        demande.agentUtilisateur === null
+          ? null
+          : empreinteRecherche('agent', demande.agentUtilisateur, ports.cles),
     },
   });
   const acteur = { par: 'apporteur' as const, id: apporteurId };
@@ -338,11 +350,15 @@ export async function deposer(
   demande: DemandeDeDepot,
   ports: PortsDuDepot
 ): Promise<IssueDuDepot | DepotAReessayer> {
-  if (demande.ipHash !== null) {
-    const d = await ports.debit(demande.ipHash);
+  const ipHash =
+    demande.adresseReseau === null
+      ? null
+      : empreinteAdresseReseau(demande.adresseReseau, ports.cles);
+  if (ipHash !== null) {
+    const d = await ports.debit(ipHash);
     if (!d.autorise) return { reessayer: true, repriseAt: d.repriseAt };
   }
-  if ((await ports.captcha(demande.ipHash, demande.reponseCaptcha)) === 'a_presenter') {
+  if ((await ports.captcha(ipHash, demande.reponseCaptcha)) === 'a_presenter') {
     return { issue: 'captcha', attributionId: null };
   }
   const r = await prisma.$transaction((tx) => deposerDans(tx, demande, ports), { timeout: 30_000 });
