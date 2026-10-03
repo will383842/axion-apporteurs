@@ -388,11 +388,15 @@ describe('REQ-QA-013 — l’instrument est épinglé et ses options ne se négo
 });
 
 describe('REQ-QA-013 — Gate A lance semgrep, sans tolérance', () => {
-  /** Les étapes du job `gate-a`, chacune avec son texte. Lecture de lignes : pas de YAML ici. */
+  /**
+   * GOV-142 : la porte A est découpée en jobs, et Semgrep tourne dans `gardes`, que la porte finale
+   * `gate-a` attend. Les étapes de ce job, chacune avec son texte. Lecture de lignes : pas de YAML ici.
+   */
+  const JOB_DE_SEMGREP = 'gardes';
   function etapesDeGateA(ci: string): string[] {
     const lignes = ci.split('\n');
-    const debut = lignes.findIndex((l) => /^ {2}gate-a:\s*$/.test(l));
-    expect(debut, 'job gate-a introuvable').toBeGreaterThanOrEqual(0);
+    const debut = lignes.findIndex((l) => l === `  ${JOB_DE_SEMGREP}:`);
+    expect(debut, `job ${JOB_DE_SEMGREP} introuvable`).toBeGreaterThanOrEqual(0);
     const fin = lignes.findIndex((l, i) => i > debut && /^ {2}\S/.test(l));
     const corps = lignes.slice(debut, fin < 0 ? undefined : fin);
     const etapes: string[] = [];
@@ -404,11 +408,11 @@ describe('REQ-QA-013 — Gate A lance semgrep, sans tolérance', () => {
   }
 
   it.each(['pnpm sec:semgrep', 'pnpm sec:semgrep:prove'])(
-    'REQ-QA-013 — l’étape `%s` existe dans gate-a, sans `continue-on-error` ni `if:`',
+    'REQ-QA-013 — l’étape `%s` existe dans le job des gardes, sans `continue-on-error` ni `if:`',
     (commande) => {
       const etapes = etapesDeGateA(readFileSync('.github/workflows/ci.yml', 'utf8'));
       const la = etapes.filter((e) => e.split('\n').some((l) => l.trim() === `run: ${commande}`));
-      expect(la.length, `aucune étape « run: ${commande} » dans gate-a`).toBe(1);
+      expect(la.length, `aucune étape « run: ${commande} » dans ${JOB_DE_SEMGREP}`).toBe(1);
       expect(la[0]).not.toMatch(/continue-on-error/);
       expect(la[0]).not.toMatch(/^\s*if:/m);
     }

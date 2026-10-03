@@ -451,6 +451,42 @@ export const RED_FIRST_SIMULE: Etape = {
   commande: 'pnpm red-first --base origin/main',
 };
 
+/** Vrai si la commande lance exactement ce script (`pnpm <script>`, sans suffixe `:…`). */
+export function lanceLeScript(commande: string, script: string): boolean {
+  return new RegExp(`\\bpnpm\\s+${script.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\w:-])`).test(
+    commande
+  );
+}
+
+/**
+ * GOV-142 : les étapes qui ne lisent QUE ce que la forge leur passe — une sortie de job, un
+ * artefact du run, `toJSON(needs)` —, absent en local. Écartées et nommées, jamais jouées : leur
+ * rouge local ne dirait rien du code.
+ */
+export const ETAPES_DE_LA_FORGE: readonly { script: string; motif: string }[] = [
+  {
+    script: 'ci:artefact:publier',
+    motif: 'publie l’empreinte d’un artefact dans GITHUB_OUTPUT, qui n’existe qu’en CI',
+  },
+  {
+    script: 'ci:artefact:verifier',
+    motif: 'compare un artefact du run à l’empreinte qu’un autre job a publiée, absente en local',
+  },
+  {
+    script: 'ci:porte-finale',
+    motif: 'juge le résultat de chaque job de la porte A (`toJSON(needs)`), absent en local',
+  },
+];
+
+/**
+ * GOV-142 : en CI, la suite se joue en deux éclats puis se fusionne ; en local, `pnpm prevol` la
+ * joue ENTIÈRE, une fois, à la place des éclats. Elle écrit le même `test-results/vitest.json`.
+ */
+export const SUITE_A_LA_PLACE_DES_ECLATS: Etape = {
+  nom: 'Tests — la suite entière, à la place des éclats et de leur fusion',
+  commande: 'pnpm test',
+};
+
 /**
  * Les fichiers de test qui exigent le démon Docker — DÉRIVÉS du disque en deux sauts, jamais listés :
  * le harnais est le fichier suivi de `tests/` qui instancie le conteneur, les fichiers de banc sont
@@ -543,8 +579,10 @@ export async function etapesDeLaPorteA(
     illisible = e instanceof Error ? e.message : String(e);
   }
   const jobs = estObjet(workflow) && estObjet(workflow.jobs) ? workflow.jobs : {};
-  const job = jobs[JOB_DE_LA_PORTE_A];
-  if (!estObjet(job)) {
+  // GOV-142 : la porte A est un workflow de plusieurs jobs, dont `gate-a` n'est que la porte
+  // FINALE. Sans elle, le fichier n'est pas celui de la porte A : on refuse plutôt que de jouer
+  // les étapes d'un autre workflow.
+  if (!estObjet(jobs[JOB_DE_LA_PORTE_A])) {
     console.error(
       illisible !== null
         ? `❌ prevol — \`${CI}\` : l'analyseur YAML partagé le REFUSE (${illisible}). Une ancre ` +
@@ -556,14 +594,35 @@ export async function etapesDeLaPorteA(
     );
     process.exit(1);
   }
-  // Une clé `steps:` sans valeur est une séquence VIDE, pas une clé absente : elle tombe sur le
-  // refus « aucune étape jouable » plus bas, qui dit ce qu'il a lu.
-  const etapes = job.steps ?? (Object.hasOwn(job, 'steps') ? [] : undefined);
-  if (!Array.isArray(etapes)) {
-    console.error(
-      `❌ prevol — \`${CI}\` : aucun bloc \`steps:\` de job trouvé. La porte A n'a pas de source.`
+  // Les jobs DE LA PORTE A, et eux seuls : `gate-a` et ceux qu'il attend, `needs` suivi de proche en
+  // proche. Un job du workflow hors de cette fermeture n'est pas la porte A, et son étape ne tourne
+  // jamais sur la machine du développeur (lentille sécurité, 2026-09-23). Dans l'ordre du fichier.
+  // Une clé `steps:` sans valeur est une séquence VIDE, pas une clé absente : elle tombe sur le refus
+  // « aucune étape jouable » plus bas.
+  const deLaPorte = new Set<string>();
+  const aVisiter = [JOB_DE_LA_PORTE_A];
+  while (aVisiter.length > 0) {
+    const nom = aVisiter.pop()!;
+    if (deLaPorte.has(nom) || !estObjet(jobs[nom])) continue;
+    deLaPorte.add(nom);
+    const besoin = (jobs[nom] as Record<string, unknown>).needs;
+    aVisiter.push(
+      ...(Array.isArray(besoin) ? besoin.map(String) : typeof besoin === 'string' ? [besoin] : [])
     );
-    process.exit(1);
+  }
+  const etapes: unknown[] = [];
+  for (const [nomDuJob, job] of Object.entries(jobs).filter(([n]) => deLaPorte.has(n))) {
+    const duJob = estObjet(job)
+      ? (job.steps ?? (Object.hasOwn(job, 'steps') ? [] : undefined))
+      : undefined;
+    if (!Array.isArray(duJob)) {
+      console.error(
+        `❌ prevol — \`${CI}\` : le job \`${nomDuJob}\` ne porte aucun bloc \`steps:\`. La porte A ` +
+          `n'a pas de source.`
+      );
+      process.exit(1);
+    }
+    etapes.push(...duJob);
   }
 
   const texteDe = (v: unknown): string | undefined =>
@@ -594,6 +653,29 @@ export async function etapesDeLaPorteA(
       });
       continue;
     }
+    // GOV-142 : ce que seule la forge fournit (sorties de jobs, artefacts du run, `toJSON(needs)`).
+    const deLaForge = ETAPES_DE_LA_FORGE.find((s) => lanceLeScript(run, s.script));
+    if (deLaForge !== undefined) {
+      ecartees.push({ nom, motif: deLaForge.motif });
+      continue;
+    }
+    // GOV-142 : les éclats et leur fusion ne se jouent pas en local ; la suite ENTIÈRE les
+    // remplace, une fois, comme avant le découpage (et `req:check` relit son rapport).
+    if (lanceLeScript(run, 'test:fusion')) {
+      ecartees.push({
+        nom,
+        motif: 'fusionne les blobs des éclats ; en local, la suite entière les remplace',
+      });
+      continue;
+    }
+    if (lanceLeScript(run, 'test:eclat')) {
+      if (!jouees.some((e) => e.nom === SUITE_A_LA_PLACE_DES_ECLATS.nom)) {
+        jouees.push(SUITE_A_LA_PLACE_DES_ECLATS);
+      }
+      continue;
+    }
+    // Une étape répétée dans plusieurs jobs (le rendu des vues) se joue UNE fois.
+    if (jouees.some((e) => e.nom === nom && e.commande === run)) continue;
     const commande = run
       .split(SUBSTITUTION_TOLEREE)
       .join(new Date().toISOString().replace(/\.\d+Z$/, 'Z'));
@@ -702,16 +784,20 @@ async function courir(): Promise<void> {
 
   if (process.argv.includes('--liste')) {
     console.log(
-      `prevol — ${toutes.length} étape(s), dont ${RENDUS.length} locale(s) et ${jouees.length} de \`gate-a\` :`
+      `prevol — ${toutes.length} étape(s), dont ${RENDUS.length} locale(s) et ${jouees.length} de la porte A :`
     );
     for (const [i, e] of toutes.entries())
       console.log(`  ${String(i + 1).padStart(3)}. ${e.nom}  —  ${e.commande}`);
-    console.log(`\n${ecartees.length} étape(s) de \`gate-a\` NON jouées :`);
+    console.log(`\n${ecartees.length} étape(s) de la porte A NON jouées :`);
     for (const e of ecartees) console.log(`  · ${e.nom} — ${e.motif}`);
     console.log(`\nbalayage des porteurs de \`pnpm ${NOM_DU_SCRIPT}\` (REQ-GOV-013) :`);
     console.log(`  ${balayage.resume}`);
     for (const f of balayage.fautes) console.log(`  ❌ ${f}`);
     direLeBanc();
+    // Sous Linux, vers un tube, l'écriture est ASYNCHRONE : `process.exit` coupait la fin de la
+    // liste, le balayage compris (mesuré en CI sur GOV-142, vert sous Windows). On attend que tout
+    // ce qui précède soit remis au système avant de sortir.
+    await new Promise<void>((vide) => process.stdout.write('', () => vide()));
     process.exit(0);
   }
 

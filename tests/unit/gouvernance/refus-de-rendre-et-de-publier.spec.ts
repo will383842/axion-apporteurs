@@ -450,6 +450,53 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
         'forge-instantane.spec.ts sur `poserLInstantane` ; aucun témoin de `REFUS` ne voit le binaire ' +
         'sortir en 1 (il parlerait à la forge). Elle ne lit aucun fichier suivi. Dette DÉCLARÉE.',
     },
+    // ── GOV-142 : la porte A en jobs — le témoin du découpage et les scripts de l'option A ──────
+    'scripts/gates/ci-etapes-identiques.ts': {
+      total: 2,
+      porte: 2,
+      temoins: 0,
+      raison:
+        'GOV-142 — `gov:ci-etapes`, REQ-QA-013 : une sortie à code VARIABLE (0 si aucune faute, 1 ' +
+        'sinon), et une sortie 1 quand le workflow est illisible. Les onze familles sont vues rougir ' +
+        'par `--prove` et par ci-etapes-identiques.spec.ts sur la tête découpée ; aucun témoin de ' +
+        '`REFUS` ne voit le binaire. Dette DÉCLARÉE.',
+    },
+    'scripts/ci/tests-eclat.ts': {
+      total: 2,
+      porte: 2,
+      temoins: 0,
+      raison:
+        'GOV-142 — `test:eclat` : 1 sur un `ECLAT` hors de la forme fermée ^[1-2]/2$ (jugée par ' +
+        '`lireLEclat`, ci-etapes-identiques.spec.ts), et le code de vitest relayé. Aucun témoin de ' +
+        '`REFUS`. Dette DÉCLARÉE.',
+    },
+    'scripts/ci/tests-fusion.ts': {
+      total: 1,
+      porte: 1,
+      temoins: 0,
+      raison:
+        'GOV-142 — `test:fusion` : 1 sur un blob manquant ou inattendu, une fusion rouge ou un fichier ' +
+        'de test perdu entre les éclats (`jugerLesBlobs`, `jugerLesFichiers`, éprouvés par ' +
+        'ci-etapes-identiques.spec.ts). Aucun témoin de `REFUS`. Dette DÉCLARÉE.',
+    },
+    'scripts/ci/artefact-empreinte.ts': {
+      total: 1,
+      porte: 1,
+      temoins: 0,
+      raison:
+        'GOV-142 — `ci:artefact:publier|verifier` : 1 sur un artefact introuvable, une empreinte ' +
+        'absente, mal formée ou différente (`jugerLEmpreinte`, éprouvé par ' +
+        'ci-etapes-identiques.spec.ts). Aucun témoin de `REFUS`. Dette DÉCLARÉE.',
+    },
+    'scripts/ci/porte-finale.ts': {
+      total: 1,
+      porte: 1,
+      temoins: 0,
+      raison:
+        'GOV-142 — `ci:porte-finale` : 1 si un job de `needs` ne vaut pas exactement `success`, ou si ' +
+        '`toJSON(needs)` est illisible ou vide (`jugerLesResultats`, éprouvé par ' +
+        'ci-etapes-identiques.spec.ts). Aucun témoin de `REFUS`. Dette DÉCLARÉE.',
+    },
     // ── GOV-037 : UNE sortie, à code VARIABLE ───────────────────────────────────────────────
     // 🔑 CE QUE LE CLIQUET NE PEUT PAS SAVOIR, ET QUI CHANGE LE TÉMOIN QU'IL FAUT. Le motif
     // `process.exit(\s*(?!0\s*\))` compte cette sortie comme non nulle : il lit une EXPRESSION,
