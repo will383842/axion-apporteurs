@@ -270,6 +270,8 @@ export const SECRETS = Object.freeze([
   // DM-12 : le texte et la réponse d'une contestation, chiffrés.
   'texteChiffre',
   'reponseChiffre',
+  // DM-12 : la justification d'une anomalie, chiffrée ; aucune vue de l'espace ne la porte.
+  'justificationChiffre',
 ] as const);
 
 /**

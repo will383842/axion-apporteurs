@@ -379,6 +379,8 @@ export const CHAMPS_PII = {
   // DM-12 : le texte d'une contestation et sa réponse (REQ-DM-043), chiffrés, sans empreinte.
   texte: { chiffre: 'texteChiffre' },
   reponse: { chiffre: 'reponseChiffre' },
+  // DM-12 : la justification d'une anomalie (REQ-DM-033), chiffrée, sans empreinte ni extrait.
+  justification: { chiffre: 'justificationChiffre' },
 } as const satisfies Record<
   string,
   { chiffre: string } | { chiffre: string; empreinte: string; type: TypeEmpreinte }

@@ -58,7 +58,8 @@ CREATE TABLE "anomalies" (
     "ouverte_at" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "traite_par_id" UUID,
     "traite_at" TIMESTAMPTZ(3),
-    "justification" TEXT,
+    "justification_chiffre" BYTEA,
+    "justification_purgee_at" TIMESTAMPTZ(3),
 
     CONSTRAINT "anomalies_pkey" PRIMARY KEY ("id")
 );
@@ -230,12 +231,23 @@ ALTER TABLE "anomalies" ADD CONSTRAINT "anomalies_statut_traite"
   CHECK (("statut" = 'ouverte') = ("traite_at" IS NULL));
 ALTER TABLE "anomalies" ADD CONSTRAINT "anomalies_traite_par"
   CHECK (("traite_at" IS NULL) = ("traite_par_id" IS NULL));
+-- La justification porte un soupçon sur une personne : CHIFFRÉE (`colonnesPii`), jamais en clair, ni
+-- copie, ni empreinte, ni extrait. Elle naît à la clôture, et seule la purge la vide (forme d'A02).
+ALTER TABLE "anomalies" ADD CONSTRAINT "anomalies_justification_a_la_cloture"
+  CHECK (("statut" = 'ouverte') = ("justification_chiffre" IS NULL AND "justification_purgee_at" IS NULL));
+ALTER TABLE "anomalies" ADD CONSTRAINT "anomalies_justification_purge_liee"
+  CHECK ("justification_purgee_at" IS NULL OR "justification_chiffre" IS NULL);
+-- Un chiffré vide n'est pas une justification.
+ALTER TABLE "anomalies" ADD CONSTRAINT "anomalies_justification_non_vide"
+  CHECK ("justification_chiffre" IS NULL OR octet_length("justification_chiffre") > 0);
 
 -- Une fonction DÉDIÉE, et non le gabarit : `statut` passe d'une valeur à une autre, ce que `purge:`
 -- et `une_fois:` ne savent pas dire (forme d'A02, patron de SEC-49). Sans EXECUTE. Sont FIGÉS :
 -- l'identité, le type, le score, l'apporteur, l'attribution et l'ouverture. `statut` ne quitte
 -- `ouverte` qu'une fois, sans retour, dans la MÊME écriture qui pose `traite_at`, `traite_par_id`
--- et `justification` ; une anomalie close ne change plus. DELETE et TRUNCATE sont refusés.
+-- et la justification chiffrée. Une anomalie close ne change plus, sauf la PURGE de sa justification
+-- (le texte va à NULL, `justification_purgee_at` posée, une fois) ; après la purge, plus rien ne
+-- bouge. DELETE et TRUNCATE sont refusés.
 CREATE FUNCTION anomalies_refuser_substitution() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
   IF TG_OP = 'DELETE' OR TG_OP = 'TRUNCATE' THEN
@@ -249,16 +261,28 @@ BEGIN
      OR NEW."ouverte_at" IS DISTINCT FROM OLD."ouverte_at" THEN
     RAISE EXCEPTION 'anomalies_refuser_substitution : l''identité d''une anomalie est figée (REQ-DM-033)';
   END IF;
-  IF OLD."statut" <> 'ouverte' THEN
+  IF OLD."justification_purgee_at" IS NOT NULL THEN
     IF NEW IS DISTINCT FROM OLD THEN
+      RAISE EXCEPTION 'anomalies_refuser_substitution : une anomalie purgée ne change plus (REQ-DM-033)';
+    END IF;
+  ELSIF OLD."statut" <> 'ouverte' THEN
+    IF NEW."statut" IS DISTINCT FROM OLD."statut"
+       OR NEW."traite_at" IS DISTINCT FROM OLD."traite_at"
+       OR NEW."traite_par_id" IS DISTINCT FROM OLD."traite_par_id" THEN
       RAISE EXCEPTION 'anomalies_refuser_substitution : une anomalie close ne change plus (REQ-DM-033)';
     END IF;
+    IF (NEW."justification_chiffre" IS DISTINCT FROM OLD."justification_chiffre"
+        OR NEW."justification_purgee_at" IS DISTINCT FROM OLD."justification_purgee_at")
+       AND NOT (NEW."justification_chiffre" IS NULL AND NEW."justification_purgee_at" IS NOT NULL) THEN
+      RAISE EXCEPTION 'anomalies_refuser_substitution : la justification ne se réécrit pas ; seule la purge la vide, avec sa date (REQ-DM-033)';
+    END IF;
   ELSIF NEW."statut" = 'ouverte' THEN
-    IF num_nonnulls(NEW."traite_at", NEW."traite_par_id", NEW."justification") > 0 THEN
+    IF num_nonnulls(NEW."traite_at", NEW."traite_par_id", NEW."justification_chiffre", NEW."justification_purgee_at") > 0 THEN
       RAISE EXCEPTION 'anomalies_refuser_substitution : le traitement ne se pose qu''avec la clôture (REQ-DM-033)';
     END IF;
-  ELSIF num_nonnulls(NEW."traite_at", NEW."traite_par_id", NEW."justification") < 3 THEN
-    RAISE EXCEPTION 'anomalies_refuser_substitution : la clôture pose statut, traite_at, traite_par_id et justification ensemble (REQ-DM-033)';
+  ELSIF num_nonnulls(NEW."traite_at", NEW."traite_par_id", NEW."justification_chiffre") < 3
+        OR NEW."justification_purgee_at" IS NOT NULL THEN
+    RAISE EXCEPTION 'anomalies_refuser_substitution : la clôture pose statut, traite_at, traite_par_id et la justification ensemble (REQ-DM-033)';
   END IF;
   RETURN NEW;
 END;

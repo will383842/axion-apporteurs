@@ -945,19 +945,22 @@ model AlerteLiberation {
 /// Une anomalie (REQ-DM-033). Le score n'existe que pour la sincérité ; la clôture pose statut,
 /// date, auteur et justification ensemble, une fois, sans retour (fonction dédiée).
 model Anomalie {
-  id            String              @id @default(uuid()) @db.Uuid
-  type          TypeAnomalie
-  score         Int?                @db.SmallInt
-  apporteurId   String              @map("apporteur_id") @db.Uuid
-  apporteur     Apporteur           @relation(fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  attributionId String?             @map("attribution_id") @db.Uuid
-  attribution   Attribution?        @relation(fields: [attributionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  statut        StatutAnomalie      @default(ouverte)
-  ouverteAt     DateTime            @default(now()) @map("ouverte_at") @db.Timestamptz(3)
-  traiteParId   String?             @map("traite_par_id") @db.Uuid
-  traitePar     UtilisateurConsole? @relation(fields: [traiteParId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  traiteAt      DateTime?           @map("traite_at") @db.Timestamptz(3)
-  justification String?
+  id                    String              @id @default(uuid()) @db.Uuid
+  type                  TypeAnomalie
+  score                 Int?                @db.SmallInt
+  apporteurId           String              @map("apporteur_id") @db.Uuid
+  apporteur             Apporteur           @relation(fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  attributionId         String?             @map("attribution_id") @db.Uuid
+  attribution           Attribution?        @relation(fields: [attributionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  statut                StatutAnomalie      @default(ouverte)
+  ouverteAt             DateTime            @default(now()) @map("ouverte_at") @db.Timestamptz(3)
+  traiteParId           String?             @map("traite_par_id") @db.Uuid
+  traitePar             UtilisateurConsole? @relation(fields: [traiteParId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  traiteAt              DateTime?           @map("traite_at") @db.Timestamptz(3)
+  /// La justification, CHIFFRÉE (`CHAMPS_PII`) : elle porte un soupçon sur une personne. Posée à la
+  /// clôture, vidée par la purge seule.
+  justificationChiffre  Bytes?              @map("justification_chiffre")
+  justificationPurgeeAt DateTime?           @map("justification_purgee_at") @db.Timestamptz(3)
 
   @@index([apporteurId])
   @@index([attributionId])
