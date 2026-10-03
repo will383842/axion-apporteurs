@@ -80,6 +80,8 @@ const ETAT_SAIN = {
   possede: true,
   groupe: false,
   reecrit: false,
+  // SEC-57 : partners_journal ne possède rien d'autre que le journal et sa séquence.
+  etrangers: [] as string[],
 };
 /** Le constat d'un serveur sain. */
 const CONSTAT_SAIN = {
@@ -200,6 +202,11 @@ describe('REQ-DM-024 — le provisionnement : refus AVANT d’écrire, puis un l
       'le journal n’appartient pas à partners_journal',
     ],
     [
+      'SEC-57 : un objet de plus possédé par partners_journal',
+      { etrangers: ['function public.temoin()', 'table public.autre'] },
+      'partners_journal possède autre chose que le journal et sa séquence : function public.temoin(), table public.autre',
+    ],
+    [
       'un journal que partners_execution peut réécrire',
       { groupe: true },
       'partners_execution peut réécrire le journal',
@@ -273,6 +280,20 @@ describe('REQ-DM-024 — le provisionnement : refus AVANT d’écrire, puis un l
     expect(lu).toContain('to_regclass($::text)');
     expect(etat.requetes[0]!.valeurs).toContain(TABLE_DU_JOURNAL);
     expect(lu).toContain("'UPDATE, DELETE, TRUNCATE'");
+  });
+
+  it('REQ-DM-024 : TÉMOIN — SEC-57 : ce que possède partners_journal est lu dans pg_shdepend, hors du journal et de sa séquence désignés par le NOM lié', async () => {
+    etat.reponses.push([ETAT_SAIN]);
+    await provisionnerRoleDExecution({ urlMigration: URL_PROPRIO, urlExecution: URL_SERVEUR });
+    const lu = etat.requetes[0]!.sql;
+    // La propriété d'un objet, dans cette base ou partagée, et chaque objet nommé dans le refus.
+    expect(lu).toContain('FROM pg_shdepend');
+    expect(lu).toContain("d.deptype = 'o'");
+    expect(lu).toContain('pg_describe_object(d.classid, d.objid, d.objsubid)');
+    // Le journal et sa séquence, exclus par le nom de l'écrivain, jamais par un littéral.
+    expect(lu).toContain('d.objid IS DISTINCT FROM to_regclass($::text)');
+    expect(lu).toContain("pg_get_serial_sequence($::text, 'id')::regclass");
+    expect(lu).not.toContain('evenements');
   });
 });
 

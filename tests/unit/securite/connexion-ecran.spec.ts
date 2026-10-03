@@ -29,6 +29,7 @@ import * as ETATS_VIDES_DE_L_ESPACE from '../../../src/content/micro-copy/espace
 import * as VOCABULAIRE_DE_L_ESPACE from '../../../src/content/micro-copy/espace/vocabulaire';
 import {
   EcranArrivee,
+  EcranCode,
   EcranConnexion,
   EcranIssue,
 } from '../../../src/app/(espace)/connexion/ecran';
@@ -81,12 +82,23 @@ describe('REQ-SEC-001 — la page lit l’état et n’accepte que la liste ferm
   const page = async (etat: string | string[] | undefined) =>
     renderToStaticMarkup(await PageConnexion({ searchParams: Promise.resolve({ etat }) }));
 
-  it('REQ-SEC-001 : `?etat=envoye` rend l’écran de l’état envoyé, octet pour octet', async () => {
+  // UX-P1-04 (rattrapage 90) : après l'envoi, la page rend l'ÉCRAN DU CODE, qui remplace l'ancien
+  // formulaire d'adresse. Seule cette attente change ; aucun autre témoin n'est retiré.
+  it('REQ-SEC-001 : `?etat=envoye` rend l’écran du code, octet pour octet', async () => {
     const h = await page('envoye');
     expect(h).toContain(CONNEXION.reponses.envoye);
-    // Le formulaire de la page porte une action serveur : on compare le reste de l'écran.
-    const sansAction = (x: string) => x.replace(/<form[^>]*>/, '<form>');
-    expect(sansAction(h)).toBe(sansAction(html('envoye')));
+    // Les formulaires de la page portent des actions serveur : on compare le reste de l'écran.
+    const sansAction = (x: string) => x.replace(/<form[^>]*>/g, '<form>');
+    const code = renderToStaticMarkup(
+      createElement(EcranCode, {
+        refus: null,
+        verifier: rien,
+        changer: rien,
+        suite: null,
+        intro: CONNEXION.reponses.envoye,
+      })
+    );
+    expect(sansAction(h)).toBe(sansAction(code));
   });
 
   it('REQ-SEC-001 : un état inconnu, répété ou absent rend le formulaire nu', async () => {
