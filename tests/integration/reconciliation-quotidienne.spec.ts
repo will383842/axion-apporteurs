@@ -17,9 +17,9 @@
  * stockés, en-têtes `X-Axionia-Derniere-Sequence` et `X-Axionia-Suite`. Les corps sont ceux de la
  * fixture du producteur réel (RM-03), tels quels.
  */
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { createHash, createHmac, randomBytes } from 'node:crypto';
+import { createHash, createHmac, randomBytes, randomUUID } from 'node:crypto';
 import { TypeEvenementRecu } from '@prisma/client';
 import { demarrerBase, type Base } from './harnais';
 import { kidDe, type Trousseau } from '../../src/lib/env';
@@ -60,12 +60,33 @@ const PRODUCTEUR = JSON.parse(
   readFileSync('tests/fixtures/axionia/fixtures-producteur.v1.json', 'utf8')
 ) as { evenements: Produit[] };
 
-/** La file de sortie d'axion-ia : les corps du producteur réel, tels quels, par séquence. */
-const FILE = PRODUCTEUR.evenements.map((e) => ({
-  sequence: e.sequence,
-  eventId: e.event_id,
-  corps: JSON.stringify(e),
-}));
+type Ligne = { sequence: number; eventId: string; corps: string; produit: Produit };
+
+/**
+ * La file de sortie d'axion-ia : les événements du producteur réel, leurs charges TELLES QUELLES.
+ * `evenements_recus` est IMMUABLE (REQ-DM-036 : aucun DELETE) : un test ne vide pas la table. Chaque
+ * file reçoit donc des identifiants neufs et des séquences décalées au-delà de toutes les
+ * précédentes — les seuls champs d'enveloppe que le test fait varier ; la charge n'est pas touchée.
+ * Le curseur étant la plus haute séquence reçue, les cas s'enchaînent dans l'ordre du fichier.
+ */
+let decalage = 0;
+function uneFile(longueur = PRODUCTEUR.evenements.length): Ligne[] {
+  decalage += 10_000;
+  return Array.from({ length: longueur }, (_, i) => {
+    const source = PRODUCTEUR.evenements[i % PRODUCTEUR.evenements.length]!;
+    const produit = {
+      ...structuredClone(source),
+      event_id: randomUUID(),
+      sequence: decalage + i + 1,
+    };
+    return {
+      sequence: produit.sequence,
+      eventId: produit.event_id,
+      corps: JSON.stringify(produit),
+      produit,
+    };
+  });
+}
 
 const MAINTENANT_MS = Date.UTC(2026, 9, 3, 6, 0, 0);
 const SECRET_RELECTURE = randomBytes(32).toString('hex');
@@ -80,7 +101,7 @@ type Appel = { methode: string; cible: string; corps: string };
 
 /** Le double d'axion-ia : les deux routes, leur authentification et leurs réponses signées. */
 function axionia(options: {
-  file: typeof FILE;
+  file: readonly Ligne[];
   limiteServeur?: number;
   statut?: number;
   signatureFausse?: boolean;
@@ -137,9 +158,9 @@ function axionia(options: {
   return { appels, appeler };
 }
 
-/** Inscrit en base les événements de la file jusqu'à la séquence `jusqua` : ils sont REÇUS. */
-async function recevoirJusqua(jusqua: number): Promise<void> {
-  for (const e of PRODUCTEUR.evenements.filter((x) => x.sequence <= jusqua)) {
+/** Inscrit en base les `combien` premiers événements de la file : ils sont REÇUS. */
+async function recevoir(file: readonly Ligne[], combien: number): Promise<void> {
+  for (const { produit: e } of file.slice(0, combien)) {
     await base.prisma.evenementRecu.create({
       data: {
         source: 'axionia',
@@ -180,22 +201,8 @@ function brancher(a: ReturnType<typeof axionia>) {
   return { signaux, passer };
 }
 
-beforeEach(async () => {
-  await base.prisma.evenementRecu.deleteMany({});
-});
-
 describe('REQ-INT-012 — Partners relit la file de sortie depuis le dernier `after_sequence` reçu', () => {
-  it('REQ-INT-012 : la relecture part de la plus haute séquence REÇUE, signée sur la cible exacte, bornée par page', async () => {
-    await recevoirJusqua(6);
-    const a = axionia({ file: FILE });
-    await brancher(a).passer();
-    expect(a.appels[0]).toEqual({
-      methode: 'GET',
-      cible: `${CHEMIN_RELECTURE}?after_sequence=6&limit=${LIMITE_PAR_PAGE}`,
-      corps: '',
-    });
-  });
-
+  // EN PREMIER : la table est vierge, et aucun cas ne la vide (elle est immuable).
   it('REQ-INT-012 : sans aucun événement reçu, la relecture part de zéro', async () => {
     const a = axionia({ file: [] });
     await brancher(a).passer();
@@ -204,12 +211,20 @@ describe('REQ-INT-012 — Partners relit la file de sortie depuis le dernier `af
     );
   });
 
+  it('REQ-INT-012 : la relecture part de la plus haute séquence REÇUE, signée sur la cible exacte, bornée par page', async () => {
+    const file = uneFile();
+    await recevoir(file, 6);
+    const a = axionia({ file });
+    await brancher(a).passer();
+    expect(a.appels[0]).toEqual({
+      methode: 'GET',
+      cible: `${CHEMIN_RELECTURE}?after_sequence=${file[5]!.sequence}&limit=${LIMITE_PAR_PAGE}`,
+      corps: '',
+    });
+  });
+
   it('REQ-INT-012 : la relecture suit `X-Axionia-Suite` page après page, et s’arrête à `PAGES_MAX_PAR_PASSAGE` en le signalant', async () => {
-    const longue = Array.from({ length: PAGES_MAX_PAR_PASSAGE + 2 }, (_, i) => ({
-      ...FILE[0]!,
-      sequence: i + 1,
-    }));
-    const a = axionia({ file: longue, limiteServeur: 1 });
+    const a = axionia({ file: uneFile(PAGES_MAX_PAR_PASSAGE + 2), limiteServeur: 1 });
     const { signaux, passer } = brancher(a);
     const compteurs = await passer();
     const lectures = a.appels.filter((x) => x.methode === 'GET');
@@ -221,11 +236,12 @@ describe('REQ-INT-012 — Partners relit la file de sortie depuis le dernier `af
 
 describe('REQ-INT-013 — un trou rattrapé est signalé, et son rejeu demandé sous l’identifiant d’origine', () => {
   it('REQ-INT-013 : quatre événements jamais reçus sont signalés et leur rejeu demandé, identifiants nommés', async () => {
-    await recevoirJusqua(6);
-    const a = axionia({ file: FILE });
+    const file = uneFile();
+    await recevoir(file, 6);
+    const a = axionia({ file });
     const { signaux, passer } = brancher(a);
     const compteurs = await passer();
-    const manquants = FILE.filter((l) => l.sequence > 6).map((l) => l.eventId);
+    const manquants = file.slice(6).map((l) => l.eventId);
     expect(signaux).toEqual([{ genre: 'trou_rattrape', nombre: 4 }]);
     const rejeu = a.appels.find((x) => x.methode === 'POST');
     expect(rejeu?.cible).toBe(CHEMIN_REJEU);
@@ -234,8 +250,9 @@ describe('REQ-INT-013 — un trou rattrapé est signalé, et son rejeu demandé 
   });
 
   it('REQ-INT-013 : CONTRE-TÉMOIN — rien ne manque : aucun signal, aucun rejeu, et les compteurs sont rendus quand même', async () => {
-    await recevoirJusqua(10);
-    const a = axionia({ file: FILE });
+    const file = uneFile();
+    await recevoir(file, file.length);
+    const a = axionia({ file });
     const { signaux, passer } = brancher(a);
     const compteurs = await passer();
     expect(signaux).toEqual([]);
@@ -244,14 +261,14 @@ describe('REQ-INT-013 — un trou rattrapé est signalé, et son rejeu demandé 
   });
 
   it('REQ-INT-013 : une relecture en panne (503) est signalée `relecture_echouee`, et le passage ÉCHOUE', async () => {
-    const a = axionia({ file: FILE, statut: 503 });
+    const a = axionia({ file: uneFile(), statut: 503 });
     const { signaux, passer } = brancher(a);
     await expect(passer()).rejects.toThrow(/relecture_echouee/);
     expect(signaux).toEqual([{ genre: 'relecture_echouee', motif: 'statut_503' }]);
   });
 
   it('REQ-INT-013 : une réponse dont la signature ne tient pas est refusée comme une panne — rien n’est rejoué', async () => {
-    const a = axionia({ file: FILE, signatureFausse: true });
+    const a = axionia({ file: uneFile(), signatureFausse: true });
     const { signaux, passer } = brancher(a);
     await expect(passer()).rejects.toThrow(/relecture_echouee/);
     expect(signaux).toEqual([{ genre: 'relecture_echouee', motif: 'signature_refusee' }]);
@@ -259,7 +276,7 @@ describe('REQ-INT-013 — un trou rattrapé est signalé, et son rejeu demandé 
   });
 
   it('REQ-INT-013 : une requête signée sous un AUTRE secret est refusée par axion-ia (401), et c’est une panne signalée', async () => {
-    const a = axionia({ file: FILE });
+    const a = axionia({ file: uneFile() });
     const signaux: Signal[] = [];
     const commun = {
       urlAxionia: URL_AXIONIA,

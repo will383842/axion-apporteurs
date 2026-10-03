@@ -28,6 +28,11 @@ export const TACHES = {
   siren_refuses_purger: { req: 'REQ-DM-043' },
   /** DM-28 — la reprise des codes NAF nuls d'un dépôt en repli manuel (`completerLesCodesNaf`). */
   naf_completer: { req: 'REQ-DM-046' },
+  /**
+   * INT-T08-P — la réconciliation quotidienne avec axion-ia : relecture de sa file depuis la plus
+   * haute séquence reçue, rejeu des trous (`src/server/jobs/reconciliation.ts`).
+   */
+  reconciliation_axionia: { req: 'REQ-INT-013' },
 } as const satisfies Readonly<Record<string, { req: `REQ-${string}` }>>;
 
 export type NomDeTache = keyof typeof TACHES;
