@@ -284,6 +284,9 @@ export const REFUS_NOMMES: Readonly<Record<string, readonly string[]>> = {
     'principal(process.argv.slice(2)).then › ∅ › (code)',
     'principal(process.argv.slice(2)).then › ∅ › (2)',
   ],
+  'scripts/gates/forge-instantane.ts': [
+    'module › si APPELE_DIRECTEMENT › si refus !== null › (= 1)',
+  ],
   'scripts/gates/gov-attestation.ts': [
     "module › si !process.argv.includes('--en-ligne') › (2)",
     'module › si !existsSync(CHEMIN_TACHES) › (1)',
