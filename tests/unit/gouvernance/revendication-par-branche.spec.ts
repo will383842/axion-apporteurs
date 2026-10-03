@@ -222,7 +222,7 @@ describe('REQ-QA-013 — un rouge de `gov:etat` ne fait plus sauter les étapes 
       /^pnpm lint$/,
       /^pnpm format:check$/,
       /^pnpm typecheck$/,
-      /^pnpm test$/,
+      /^pnpm test:fusion$/,
       /^pnpm req:check$/,
     ]) {
       const i = rang(mesure);
@@ -336,7 +336,8 @@ describe('REQ-QA-013 — la porte A ne tourne pas sur une PR DÉJÀ FUSIONNÉE',
     for (const [quoi, sources] of cas) {
       const ws = await workflowsSurPullRequest(sources);
       const tournent = CONTEXTES_FUSIONNES.flatMap(([, ctx]) => jobsQuiTournent(ws, ctx));
-      expect(tournent, quoi).toContain(`${CI_YML}#gate-a`);
+      // GOV-142 : la mutation touche le PREMIER `if:` de job du fichier, celui de `gardes`.
+      expect(tournent, quoi).toContain(`${CI_YML}#gardes`);
     }
   });
 

@@ -1047,7 +1047,8 @@ const SCRIPTS_EXACTS: Readonly<Record<string, string>> = {
  * liste sans écrire la clé dans le workflow rougit aussi. Liste tapée EXPRÈS : sa divergence est le
  * signal, dans les deux sens.
  */
-const CLES_DU_WORKFLOW = ['name', 'on', 'jobs'];
+// GOV-142 : `permissions` entre au niveau du workflow, `contents: read` par défaut (lentille sécurité).
+const CLES_DU_WORKFLOW = ['name', 'on', 'permissions', 'jobs'];
 /**
  * ⚠️ `if` EST ENTRE DANS CETTE LISTE LE 2026-09-22, ET UNE LISTE QUI S'ALLONGE EST UNE GARDE
  * QUI S’AFFAIBLIT — sauf si ce qu’elle laisse entrer est JUGÉ. C’est la condition de son entrée.
@@ -1069,7 +1070,13 @@ const CLES_DU_WORKFLOW = ['name', 'on', 'jobs'];
  * `tests/unit/gouvernance/revendication-par-branche.spec.ts` qui exige l’autre moitié, et les deux
  * lisent le MÊME évaluateur pour ne pas diverger.
  */
-const CLES_DE_GATE_A = ['runs-on', 'if', 'permissions', 'steps'];
+/**
+ * GOV-142 : le lint et le format vivent dans le job `gardes` (la porte A est découpée en jobs, et
+ * `gate-a` n'en est plus que la porte finale). `outputs` y entre : l'empreinte de l'instantané de la
+ * forge, que les autres jobs comparent avant usage.
+ */
+const JOB_DU_LINT = 'gardes';
+const CLES_DE_GATE_A = ['runs-on', 'if', 'permissions', 'outputs', 'steps'];
 
 /**
  * Ce que FAIT Gate A, lue comme un objet. Les étapes de lint et de format ont la forme EXACTE
@@ -1085,9 +1092,10 @@ function fautesDActe(ci: unknown): string[] {
     for (const cle of cles) if (!Object.hasOwn(objet, cle)) fautes.push(`${lieu} ⏎ ${cle} absente`);
   };
   clesExactes('workflow', ci, CLES_DU_WORKFLOW);
-  const job = estObjet(ci.jobs) ? ci.jobs['gate-a'] : undefined;
-  if (!estObjet(job) || !Array.isArray(job.steps)) return [...fautes, 'job `gate-a` introuvable'];
-  clesExactes('gate-a', job, CLES_DE_GATE_A);
+  const job = estObjet(ci.jobs) ? ci.jobs[JOB_DU_LINT] : undefined;
+  if (!estObjet(job) || !Array.isArray(job.steps))
+    return [...fautes, `job \`${JOB_DU_LINT}\` introuvable`];
+  clesExactes(JOB_DU_LINT, job, CLES_DE_GATE_A);
   // La condition du job, quand elle est là : elle ne doit éteindre AUCUN des événements que la
   // porte A mesure. UNE seule faute, qui les NOMME — un désarmement se lit, il ne se compte pas.
   if (Object.hasOwn(job, 'if')) {
@@ -1096,12 +1104,12 @@ function fautesDActe(ci: unknown): string[] {
       typeof condition === 'string'
         ? contextesEteints(condition, CONTEXTES_MESURES)
         : [`\`if:\` n'est pas une chaîne : ${JSON.stringify(condition)}`];
-    if (eteints.length > 0) fautes.push(`gate-a ⏎ if éteint : ${eteints.join(', ')}`);
+    if (eteints.length > 0) fautes.push(`${JOB_DU_LINT} ⏎ if éteint : ${eteints.join(', ')}`);
   }
   const lances = new Map<string, number>();
   for (const etape of job.steps) {
     if (!estObjet(etape)) {
-      fautes.push(`gate-a ⏎ étape illisible : ${JSON.stringify(etape)}`);
+      fautes.push(`${JOB_DU_LINT} ⏎ étape illisible : ${JSON.stringify(etape)}`);
       continue;
     }
     const run = etape.run;
@@ -1114,15 +1122,16 @@ function fautesDActe(ci: unknown): string[] {
         run === `pnpm ${script}` &&
         typeof etape.name === 'string' &&
         Object.keys(etape).sort().join(',') === 'name,run';
-      if (!exacte) fautes.push(`gate-a ⏎ ${JSON.stringify(etape)}`);
+      if (!exacte) fautes.push(`${JOB_DU_LINT} ⏎ ${JSON.stringify(etape)}`);
       continue;
     }
     for (const cle of ['shell', 'continue-on-error']) {
-      if (cle in etape) fautes.push(`gate-a ⏎ ${JSON.stringify(etape)}`);
+      if (cle in etape) fautes.push(`${JOB_DU_LINT} ⏎ ${JSON.stringify(etape)}`);
     }
   }
   for (const s of Object.keys(SCRIPTS_EXACTS)) {
-    if (lances.get(s) !== 1) fautes.push(`gate-a ⏎ \`pnpm ${s}\` lancé ${lances.get(s) ?? 0} fois`);
+    if (lances.get(s) !== 1)
+      fautes.push(`${JOB_DU_LINT} ⏎ \`pnpm ${s}\` lancé ${lances.get(s) ?? 0} fois`);
   }
   return fautes;
 }
@@ -1534,7 +1543,7 @@ describe('REQ-GOV-018 — lint et format sont ÉPINGLÉS, SCRIPTÉS, et BLOQUANT
     // LÈVE plutôt que d'assertionner : sans cette ligne, les deux mutations ci-dessous muteraient
     // une chaîne vide, et le témoin resterait vert en ne mesurant rien.
     if (CONDITION_DU_JOB === undefined) {
-      throw new Error('le job `gate-a` ne porte plus de `if:` : ce témoin ne mesure rien');
+      throw new Error('le job `gardes` ne porte plus de `if:` : ce témoin ne mesure rien');
     }
     expect(ci).toContain(LINT);
     expect(ci.endsWith('\n')).toBe(true);
@@ -1550,9 +1559,13 @@ describe('REQ-GOV-018 — lint et format sont ÉPINGLÉS, SCRIPTÉS, et BLOQUANT
       ci.replace(CONDITION_DU_JOB, '    if: false'),
       // Et la condition RETIRÉE : la clé est déclarée, donc son absence est une divergence.
       ci.replace(`${CONDITION_DU_JOB}\n`, ''),
-      // Une clé de job posée APRÈS la liste des étapes est une clé du job. Pas `if:` ici : le job
-      // en porte déjà un, et deux clés de même nom font LEVER l’analyseur au lieu de nommer.
-      `${ci}    continue-on-error: true\n`,
+      // Une clé de job posée dans le job, hors de ses étapes. Pas `if:` ici : le job en porte déjà un,
+      // et deux clés de même nom font LEVER l’analyseur au lieu de nommer. GOV-142 : le job du lint
+      // n'est plus le dernier du fichier ; la clé se pose juste avant SES étapes.
+      ci.replace(
+        '      empreinte_forge: ${{ steps.forge.outputs.empreinte }}\n    steps:\n',
+        '      empreinte_forge: ${{ steps.forge.outputs.empreinte }}\n    continue-on-error: true\n    steps:\n'
+      ),
       ci.replace(
         '    steps:\n',
         '    defaults:\n      run:\n        shell: true {0}\n    steps:\n'

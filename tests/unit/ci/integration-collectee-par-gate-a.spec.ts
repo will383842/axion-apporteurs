@@ -24,6 +24,7 @@ import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSy
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import configuration from '../../../vitest.config';
+import { argumentsDeLEclat } from '../../../scripts/ci/tests-eclat';
 
 /**
  * Le dossier d'intégration, TAPÉ : c'est l'attente, et sa divergence avec la configuration est le
@@ -95,7 +96,7 @@ describe('REQ-QA-006 — l’étape « Tests » de Gate A atteint le harnais d�
     }
   }, 120_000);
 
-  it('REQ-QA-006 — `pnpm test` lance vitest sans filtre, et l’étape « Tests » du job gate-a le lance sans condition', () => {
+  it('REQ-QA-006 — `pnpm test` lance vitest sans filtre, et chaque éclat de la porte A le lance sans condition ni filtre', () => {
     const paquet = JSON.parse(readFileSync(join(RACINE, 'package.json'), 'utf8')) as {
       scripts: Record<string, string>;
     };
@@ -107,24 +108,37 @@ describe('REQ-QA-006 — l’étape « Tests » de Gate A atteint le harnais d�
     const admise = /^--(coverage|reporter=[a-z-]+|outputFile\.json=[\w./-]+)$/;
     expect(options.filter((o) => !admise.test(o))).toEqual([]);
 
+    // GOV-142 : en porte A, la suite se joue en QUATRE éclats (`tests-1` à `tests-4`), chacun par
+    // `pnpm test:eclat`, dont les arguments ne choisissent aucun fichier : la liste FERMÉE ci-dessous
+    // n'admet que la couverture (seuils neutralisés, jugés à la fusion), le rapporteur et l'éclat.
+    const admiseALEclat =
+      /^(exec|vitest|run|--coverage|--coverage\.thresholds\.src\/domain\/\*\*\.(lines|branches)=0|--reporter=blob|--shard=[1-4]\/4)$/;
+    for (const i of [1, 2, 3, 4]) {
+      expect(
+        argumentsDeLEclat(i).filter((o) => !admiseALEclat.test(o)),
+        `éclat ${i}`
+      ).toEqual([]);
+    }
     const lignes = readFileSync(join(RACINE, '.github/workflows/ci.yml'), 'utf8').split(/\r?\n/);
-    const debutJob = lignes.findIndex((l) => /^ {2}gate-a:\s*$/.test(l));
-    expect(debutJob, 'aucun job gate-a dans ci.yml').toBeGreaterThanOrEqual(0);
-    const finJob = lignes.findIndex((l, i) => i > debutJob && /^ {2}\S/.test(l));
-    const job = lignes.slice(debutJob, finJob === -1 ? undefined : finJob);
-    const ligneRun = job.findIndex((l) => /^\s+(- )?run:\s*pnpm test\s*$/.test(l));
-    expect(ligneRun, 'aucune étape `run: pnpm test` dans le job gate-a').toBeGreaterThan(0);
-    let debutEtape = ligneRun;
-    while (debutEtape > 0 && !/^\s+- /.test(job[debutEtape]!)) debutEtape--;
-    const indentation = job[debutEtape]!.search(/-/);
-    const finEtape = job.findIndex(
-      (l, i) => i > ligneRun && l.trim() !== '' && l.search(/\S/) <= indentation
-    );
-    const etape = job.slice(debutEtape, finEtape === -1 ? undefined : finEtape);
-    const conditions = etape.filter((l) => /^\s*(- )?(if|continue-on-error)\s*:/.test(l));
-    expect(
-      conditions,
-      `l'étape qui lance pnpm test est conditionnée : ${conditions.join(' | ')}`
-    ).toEqual([]);
+    for (const nomDuJob of ['tests-1', 'tests-2', 'tests-3', 'tests-4']) {
+      const debutJob = lignes.findIndex((l) => l === `  ${nomDuJob}:`);
+      expect(debutJob, `aucun job ${nomDuJob} dans ci.yml`).toBeGreaterThanOrEqual(0);
+      const finJob = lignes.findIndex((l, i) => i > debutJob && /^ {2}\S/.test(l));
+      const job = lignes.slice(debutJob, finJob === -1 ? undefined : finJob);
+      const ligneRun = job.findIndex((l) => /^\s+(- )?run:\s*pnpm test:eclat\s*$/.test(l));
+      expect(ligneRun, `aucune étape \`run: pnpm test:eclat\` dans ${nomDuJob}`).toBeGreaterThan(0);
+      let debutEtape = ligneRun;
+      while (debutEtape > 0 && !/^\s+- /.test(job[debutEtape]!)) debutEtape--;
+      const indentation = job[debutEtape]!.search(/-/);
+      const finEtape = job.findIndex(
+        (l, i) => i > ligneRun && l.trim() !== '' && l.search(/\S/) <= indentation
+      );
+      const etape = job.slice(debutEtape, finEtape === -1 ? undefined : finEtape);
+      const conditions = etape.filter((l) => /^\s*(- )?(if|continue-on-error)\s*:/.test(l));
+      expect(
+        conditions,
+        `l'étape qui lance l'éclat de ${nomDuJob} est conditionnée : ${conditions.join(' | ')}`
+      ).toEqual([]);
+    }
   });
 });

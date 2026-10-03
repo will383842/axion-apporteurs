@@ -74,11 +74,16 @@ describe('REQ-GOV-014 — les valeurs attendues sont DÉRIVÉES du dépôt (RM-0
 
   it('REQ-QA-013 — le nom du check requis se lit dans les jobs de ci.yml, il n’est pas tapé', () => {
     // GitHub nomme le check d'après le `name:` du job, ou à défaut d'après son identifiant.
-    // `ci.yml` déclare le job `gate-a` sans `name:` : le check s'appelle donc `gate-a`.
-    expect(checksProduits(readFileSync(CI, 'utf8'))).toEqual(['gate-a']);
+    // `ci.yml` déclare le job `gate-a` sans `name:` : le check s'appelle donc `gate-a`. Depuis GOV-142,
+    // la porte A a plusieurs jobs, et chacun produit son check ; `gate-a` est la porte FINALE, le seul
+    // que la protection exige.
+    const produits = checksProduits(readFileSync(CI, 'utf8'));
+    expect(produits).toContain('gate-a');
+    expect(produits.length).toBeGreaterThan(1);
 
-    const renomme = readFileSync(CI, 'utf8').replace('  gate-a:', '  gate-zzz:');
-    expect(checksProduits(renomme)).toEqual(['gate-zzz']);
+    const renomme = readFileSync(CI, 'utf8').replace('\n  gate-a:\n', '\n  gate-zzz:\n');
+    expect(checksProduits(renomme)).toContain('gate-zzz');
+    expect(checksProduits(renomme)).not.toContain('gate-a');
   });
 
   it('REQ-QA-013 — un workflow qui ne se déclenche pas sur `pull_request` ne produit aucun check de PR', () => {

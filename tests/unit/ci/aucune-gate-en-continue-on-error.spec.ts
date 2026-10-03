@@ -463,31 +463,33 @@ describe('REQ-QA-013 — aucune gate ne se désarme par `continue-on-error`, et 
     expect(releves.flatMap((r) => r.fautes)).toEqual([]);
   });
 
-  it('REQ-QA-013 — la tolérance posée sur l’étape « Tests » de gate-a est nommée, elle seule, à toute valeur', async () => {
+  it('REQ-QA-013 — la tolérance posée sur l’étape de fusion des tests est nommée, elle seule, à toute valeur', async () => {
     const ci = readFileSync(CI, 'utf8');
-    const TESTS = '      - name: Tests\n        run: pnpm test\n';
+    // GOV-142 : « Tests » est devenue quatre éclats et une fusion ; la fusion, unique, porte le témoin.
+    const TESTS =
+      '      - name: Tests — fusion des quatre eclats, aux seuils de la configuration\n        run: pnpm test:fusion\n';
     for (const valeur of ['${{ true }}', 'true', 'false', "${{ github.event_name == 'push' }}"]) {
       const desarme = substituer(ci, TESTS, `${TESTS}        ${TOLERANCE}: ${valeur}\n`);
       expect((await relever(CI, desarme)).fautes, valeur).toEqual([
-        `${CI} › gate-a › « Tests » : ${TOLERANCE}`,
+        `${CI} › apres-tests › « Tests — fusion des quatre eclats, aux seuils de la configuration » : ${TOLERANCE}`,
       ]);
     }
   });
 
   it('REQ-QA-013 — au MILIEU de la liste (rang dérivé), en avant-dernière, clé écrite AVANT le nom, entre accolades ou entre guillemets : l’étape qui la porte est nommée', async () => {
     const ci = readFileSync(CI, 'utf8');
-    // L'étape du MILIEU de `gate-a`, dérivée de son rang dans le workflow lu — ni la première, ni la
+    // L'étape du MILIEU de `gardes` (GOV-142 : le job qui porte les gardes), dérivée de son rang dans le workflow lu — ni la première, ni la
     // dernière : un détecteur qui ne verrait que l'une des deux bornes la laisserait passer.
     const workflow = await lireYaml(ci);
-    const job = estObjet(workflow) && estObjet(workflow.jobs) ? workflow.jobs['gate-a'] : undefined;
+    const job = estObjet(workflow) && estObjet(workflow.jobs) ? workflow.jobs['gardes'] : undefined;
     const etapes: unknown[] = estObjet(job) && Array.isArray(job.steps) ? job.steps : [];
     expect(etapes.length).toBeGreaterThan(2);
     const rang = Math.floor(etapes.length / 2);
     const milieu = etapes[rang];
     const nomMilieu = estObjet(milieu) && typeof milieu.name === 'string' ? milieu.name : '';
-    expect(nomMilieu, `l'étape n° ${rang + 1} de gate-a n'a pas de nom`).not.toBe('');
+    expect(nomMilieu, `l'étape n° ${rang + 1} de gardes n'a pas de nom`).not.toBe('');
     console.info(
-      `[QA-T01] étape du milieu de gate-a : n° ${rang + 1} sur ${etapes.length}, « ${nomMilieu} »`
+      `[QA-T01] étape du milieu de gardes : n° ${rang + 1} sur ${etapes.length}, « ${nomMilieu} »`
     );
     const TYPECHECK = '      - name: Typecheck\n        run: pnpm typecheck\n';
     const FORMAT = '      - name: Format\n        run: pnpm format:check\n';
@@ -521,7 +523,7 @@ describe('REQ-QA-013 — aucune gate ne se désarme par `continue-on-error`, et 
     ];
     for (const [variante, nom] of cas) {
       expect((await relever(CI, variante)).fautes).toEqual([
-        `${CI} › gate-a › « ${nom} » : ${TOLERANCE}`,
+        `${CI} › gardes › « ${nom} » : ${TOLERANCE}`,
       ]);
     }
   });
@@ -546,11 +548,13 @@ describe('REQ-QA-013 — aucune gate ne se désarme par `continue-on-error`, et 
       .flatMap((t) => t.split('\n'))
       .filter((l) => /^\s*#.*continue-on-error/.test(l));
     expect(citations.length).toBeGreaterThan(0);
-    const TESTS = '      - name: Tests\n        run: pnpm test\n';
+    // GOV-142 : « Tests » est devenue quatre éclats et une fusion ; la fusion, unique, porte le témoin.
+    const TESTS =
+      '      - name: Tests — fusion des quatre eclats, aux seuils de la configuration\n        run: pnpm test:fusion\n';
     const script = substituer(
       ci,
       TESTS,
-      `      - name: Tests\n        run: |\n          echo "${TOLERANCE}: true"\n          pnpm test\n`
+      `      - name: Tests — fusion des quatre eclats, aux seuils de la configuration\n        run: |\n          echo "${TOLERANCE}: true"\n          pnpm test:fusion\n`
     );
     expect((await relever(CI, script)).fautes).toEqual([]);
   });
@@ -560,10 +564,24 @@ describe('REQ-QA-013 — aucune gate ne se désarme par `continue-on-error`, et 
     await expect(relever(CI, 'name: x\non: push\n')).rejects.toThrow(/aucun `jobs`/);
     await expect(relever(CI, 'name: x\non: push\njobs: {}\n')).rejects.toThrow(/vide/);
     await expect(
-      relever(CI, substituer(ci, '    steps:\n', '    steps: &etapes\n'))
+      relever(
+        CI,
+        substituer(
+          ci,
+          '      empreinte_forge: ${{ steps.forge.outputs.empreinte }}\n    steps:\n',
+          '      empreinte_forge: ${{ steps.forge.outputs.empreinte }}\n    steps: &etapes\n'
+        )
+      )
     ).rejects.toThrow(/ancre/);
     await expect(
-      relever(CI, substituer(ci, '    steps:\n', '    steps: 3\n    x:\n'))
+      relever(
+        CI,
+        substituer(
+          ci,
+          '      empreinte_forge: ${{ steps.forge.outputs.empreinte }}\n    steps:\n',
+          '      empreinte_forge: ${{ steps.forge.outputs.empreinte }}\n    steps: 3\n    x:\n'
+        )
+      )
     ).rejects.toThrow();
   });
 

@@ -67,7 +67,7 @@ describe('REQ-QA-013 — GOV-142 : la même liste d’étapes, au regroupement p
       ...autres,
     ];
     expect(jugerLesEtapes(reference, amputee)).toEqual([
-      { famille: 'etape_disparue', message: '« La sonde sait rougir » n\'est plus dans aucun job.' },
+      { famille: 'etape_disparue', message: "« La sonde sait rougir » n'est plus dans aucun job." },
     ]);
   });
 });
@@ -94,7 +94,12 @@ describe('REQ-QA-013 — GOV-142 : l’éclat, la fusion, l’empreinte et la po
   });
 
   it('REQ-QA-013 : TÉMOIN — la fusion exige EXACTEMENT les quatre blobs', () => {
-    expect(blobsAttendus()).toEqual(['blob-1-4.json', 'blob-2-4.json', 'blob-3-4.json', 'blob-4-4.json']);
+    expect(blobsAttendus()).toEqual([
+      'blob-1-4.json',
+      'blob-2-4.json',
+      'blob-3-4.json',
+      'blob-4-4.json',
+    ]);
     expect(jugerLesBlobs(blobsAttendus())).toEqual([]);
     expect(jugerLesBlobs(blobsAttendus().slice(0, 3))).toEqual(['blob manquant : blob-4-4.json']);
     expect(jugerLesBlobs([...blobsAttendus(), 'blob-5-4.json'])).toEqual([
@@ -164,7 +169,14 @@ describe('REQ-QA-013 — GOV-142 : les points de la lentille sécurité, lus dan
       .filter(([, j]) => JSON.stringify(j).includes('secrets.GITHUB_TOKEN'))
       .map(([n]) => n)
       .sort();
-    expect(avecJeton).toEqual(['apres-tests', 'gardes', 'tests-1', 'tests-2', 'tests-3', 'tests-4']);
+    expect(avecJeton).toEqual([
+      'apres-tests',
+      'gardes',
+      'tests-1',
+      'tests-2',
+      'tests-3',
+      'tests-4',
+    ]);
   });
 
   it('REQ-QA-013 : chaque artefact a UN producteur, overwrite false, et se reçoit du run courant seulement', () => {

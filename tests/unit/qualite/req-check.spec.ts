@@ -284,16 +284,23 @@ describe('REQ-QA-014 — `pnpm req:check` est la garde inscrite, lancée avec le
   });
 });
 
-/** La place de l'étape `pnpm req:check` dans `gate-a`. Rend les défauts NOMMÉS, jamais un booléen. */
+/**
+ * GOV-142 : la suite se joue en quatre éclats, et c'est la FUSION (`pnpm test:fusion`, job
+ * `apres-tests`) qui écrit `test-results/vitest.json`. `req:check` doit la suivre juste après.
+ */
+const JOB_DES_RESULTATS = 'apres-tests';
+const ECRIT_LES_RESULTATS = 'pnpm test:fusion';
+
+/** La place de l'étape `pnpm req:check` après la fusion. Rend les défauts NOMMÉS, jamais un booléen. */
 function jugerEtapeReqCheck(workflow: unknown): string[] {
   if (!estObjet(workflow) || !estObjet(workflow.jobs)) return ['workflow illisible'];
-  const job = workflow.jobs['gate-a'];
-  if (!estObjet(job) || !Array.isArray(job.steps)) return ['job gate-a illisible'];
+  const job = workflow.jobs[JOB_DES_RESULTATS];
+  if (!estObjet(job) || !Array.isArray(job.steps)) return [`job ${JOB_DES_RESULTATS} illisible`];
   const etapes = job.steps.filter(estObjet);
-  const iTests = etapes.findIndex((e) => e.run === 'pnpm test');
+  const iTests = etapes.findIndex((e) => e.run === ECRIT_LES_RESULTATS);
   const iReq = etapes.findIndex((e) => e.run === 'pnpm req:check');
-  if (iTests < 0) return ['étape « Tests » (`pnpm test`) introuvable'];
-  if (iReq < 0) return ['étape `pnpm req:check` ABSENTE de gate-a'];
+  if (iTests < 0) return [`étape « Tests » (\`${ECRIT_LES_RESULTATS}\`) introuvable`];
+  if (iReq < 0) return [`étape \`pnpm req:check\` ABSENTE de ${JOB_DES_RESULTATS}`];
   const defauts: string[] = [];
   if (iReq < iTests)
     defauts.push('étape `pnpm req:check` placée AVANT « Tests » : elle ne verrait aucun résultat');
@@ -314,7 +321,7 @@ describe('REQ-QA-014 — panne-8 : Gate A lance `pnpm req:check` juste après «
     const reel = (await lireYaml(readFileSync(CI, 'utf8'))) as {
       jobs: Record<string, { steps: Record<string, unknown>[] }>;
     };
-    const etapes = reel.jobs['gate-a']!.steps;
+    const etapes = reel.jobs[JOB_DES_RESULTATS]!.steps;
     const iReq = etapes.findIndex((e) => e.run === 'pnpm req:check');
     expect(
       iReq,
@@ -322,17 +329,19 @@ describe('REQ-QA-014 — panne-8 : Gate A lance `pnpm req:check` juste après «
     ).toBeGreaterThan(0);
 
     const sans = structuredClone(reel);
-    sans.jobs['gate-a']!.steps.splice(iReq, 1);
+    sans.jobs[JOB_DES_RESULTATS]!.steps.splice(iReq, 1);
     expect(jugerEtapeReqCheck(sans).join(' ; ')).toContain('ABSENTE');
 
     const avant = structuredClone(reel);
-    const [etape] = avant.jobs['gate-a']!.steps.splice(iReq, 1);
-    const iTests = avant.jobs['gate-a']!.steps.findIndex((e) => e.run === 'pnpm test');
-    avant.jobs['gate-a']!.steps.splice(iTests, 0, etape!);
+    const [etape] = avant.jobs[JOB_DES_RESULTATS]!.steps.splice(iReq, 1);
+    const iTests = avant.jobs[JOB_DES_RESULTATS]!.steps.findIndex(
+      (e) => e.run === ECRIT_LES_RESULTATS
+    );
+    avant.jobs[JOB_DES_RESULTATS]!.steps.splice(iTests, 0, etape!);
     expect(jugerEtapeReqCheck(avant).join(' ; ')).toContain('AVANT « Tests »');
 
     const tolerante = structuredClone(reel);
-    tolerante.jobs['gate-a']!.steps[iReq]!['continue-on-error'] = true;
+    tolerante.jobs[JOB_DES_RESULTATS]!.steps[iReq]!['continue-on-error'] = true;
     expect(jugerEtapeReqCheck(tolerante).join(' ; ')).toContain('tolérante');
   });
 });

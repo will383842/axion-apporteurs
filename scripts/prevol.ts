@@ -594,10 +594,24 @@ export async function etapesDeLaPorteA(
     );
     process.exit(1);
   }
-  // Tous les jobs, dans l'ordre du fichier. Une clé `steps:` sans valeur est une séquence VIDE, pas
-  // une clé absente : elle tombe sur le refus « aucune étape jouable » plus bas.
+  // Les jobs DE LA PORTE A, et eux seuls : `gate-a` et ceux qu'il attend, `needs` suivi de proche en
+  // proche. Un job du workflow hors de cette fermeture n'est pas la porte A, et son étape ne tourne
+  // jamais sur la machine du développeur (lentille sécurité, 2026-09-23). Dans l'ordre du fichier.
+  // Une clé `steps:` sans valeur est une séquence VIDE, pas une clé absente : elle tombe sur le refus
+  // « aucune étape jouable » plus bas.
+  const deLaPorte = new Set<string>();
+  const aVisiter = [JOB_DE_LA_PORTE_A];
+  while (aVisiter.length > 0) {
+    const nom = aVisiter.pop()!;
+    if (deLaPorte.has(nom) || !estObjet(jobs[nom])) continue;
+    deLaPorte.add(nom);
+    const besoin = (jobs[nom] as Record<string, unknown>).needs;
+    aVisiter.push(
+      ...(Array.isArray(besoin) ? besoin.map(String) : typeof besoin === 'string' ? [besoin] : [])
+    );
+  }
   const etapes: unknown[] = [];
-  for (const [nomDuJob, job] of Object.entries(jobs)) {
+  for (const [nomDuJob, job] of Object.entries(jobs).filter(([n]) => deLaPorte.has(n))) {
     const duJob = estObjet(job)
       ? (job.steps ?? (Object.hasOwn(job, 'steps') ? [] : undefined))
       : undefined;
