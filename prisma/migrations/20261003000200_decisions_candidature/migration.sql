@@ -22,10 +22,10 @@ CREATE TABLE "decisions_candidature" (
 CREATE INDEX "decisions_candidature_apporteur_id_decidee_at_idx" ON "decisions_candidature"("apporteur_id", "decidee_at");
 
 -- AddForeignKey
-ALTER TABLE "decisions_candidature" ADD CONSTRAINT "decisions_candidature_apporteur_id_fkey" FOREIGN KEY ("apporteur_id") REFERENCES "apporteurs"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "decisions_candidature" ADD CONSTRAINT "decisions_candidature_apporteur_id_fkey" FOREIGN KEY ("apporteur_id") REFERENCES "apporteurs"("id") ON DELETE RESTRICT ON UPDATE RESTRICT;
 
 -- AddForeignKey
-ALTER TABLE "decisions_candidature" ADD CONSTRAINT "decisions_candidature_auteur_id_fkey" FOREIGN KEY ("auteur_id") REFERENCES "utilisateurs_console"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "decisions_candidature" ADD CONSTRAINT "decisions_candidature_auteur_id_fkey" FOREIGN KEY ("auteur_id") REFERENCES "utilisateurs_console"("id") ON DELETE RESTRICT ON UPDATE RESTRICT;
 
 -- Le motif de la décision est exigé (REQ-CPL-006) : jamais vide, blancs compris.
 ALTER TABLE "decisions_candidature" ADD CONSTRAINT "decisions_candidature_justification_non_vide"

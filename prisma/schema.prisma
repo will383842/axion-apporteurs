@@ -400,7 +400,7 @@ model IdentiteFacturation {
 model PieceKyc {
   id             String         @id @default(uuid()) @db.Uuid
   apporteurId    String         @map("apporteur_id") @db.Uuid
-  apporteur      Apporteur      @relation(fields: [apporteurId], references: [id], onDelete: Restrict)
+  apporteur      Apporteur      @relation(fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   type           TypePieceKyc
   statut         StatutPieceKyc
   verifieeAt     DateTime?      @map("verifiee_at") @db.Timestamptz(3)
@@ -556,7 +556,7 @@ model CourrielEnvoye {
   erreur               String?        @db.VarChar(300)
   /// L'attribution dont le courriel parle (DM-07), nulle sinon.
   attributionId        String?        @map("attribution_id") @db.Uuid
-  attribution          Attribution?   @relation(fields: [attributionId], references: [id], onDelete: Restrict)
+  attribution          Attribution?   @relation(fields: [attributionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
 
   @@index([emailHash])
   @@index([apporteurId, gabarit])
@@ -573,10 +573,10 @@ model CourrielEnvoye {
 model NotificationEspace {
   id            String       @id @default(uuid()) @db.Uuid
   apporteurId   String       @map("apporteur_id") @db.Uuid
-  apporteur     Apporteur    @relation(fields: [apporteurId], references: [id], onDelete: Restrict)
+  apporteur     Apporteur    @relation(fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   cle           String       @db.VarChar(64)
   attributionId String?      @map("attribution_id") @db.Uuid
-  attribution   Attribution? @relation(fields: [attributionId], references: [id], onDelete: Restrict)
+  attribution   Attribution? @relation(fields: [attributionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   /// L'heure d'inscription dans l'espace, PAS un horodatage opposable : aucun délai ne s'y appuie ;
   /// un délai court de `courriels_envoyes.envoye_at` (relecture A02, 2026-10-02).
   creeAt        DateTime     @default(now()) @map("cree_at") @db.Timestamptz(3)
@@ -593,7 +593,7 @@ model NotificationEspace {
 model PreferenceNotification {
   id          String    @id @default(uuid()) @db.Uuid
   apporteurId String    @map("apporteur_id") @db.Uuid
-  apporteur   Apporteur @relation(fields: [apporteurId], references: [id], onDelete: Restrict)
+  apporteur   Apporteur @relation(fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   cle         String    @db.VarChar(64)
   active      Boolean
   modifieeAt  DateTime  @map("modifiee_at") @db.Timestamptz(3)
@@ -696,10 +696,10 @@ model Attribution {
   id                      String              @id @default(uuid()) @db.Uuid
   /// Le porteur : un apporteur OU un conseiller salarié, jamais les deux, jamais aucun (CHECK).
   apporteurId             String?             @map("apporteur_id") @db.Uuid
-  apporteur               Apporteur?          @relation(fields: [apporteurId], references: [id], onDelete: Restrict)
+  apporteur               Apporteur?          @relation(fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   /// Un utilisateur de rôle `conseiller_salarie` non désactivé (déclencheur en SQL brut).
   utilisateurConsoleId    String?             @map("utilisateur_console_id") @db.Uuid
-  utilisateurConsole      UtilisateurConsole? @relation("AttributionsDuConseiller", fields: [utilisateurConsoleId], references: [id], onDelete: Restrict)
+  utilisateurConsole      UtilisateurConsole? @relation("AttributionsDuConseiller", fields: [utilisateurConsoleId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   statut                  EtatAttribution
   /// 1 ou 2, présent si et seulement si `en_attente` ; réservé à l'apporteur (CHECK).
   rangAttente             Int?                @map("rang_attente") @db.SmallInt
@@ -707,10 +707,10 @@ model Attribution {
   siret                   String?             @db.Char(14)
   /// UNE version de grille (REQ-DM-014) : présente si et seulement si le porteur est un apporteur.
   grilleCommissionId      String?             @map("grille_commission_id") @db.Uuid
-  grilleCommission        GrilleCommission?   @relation(fields: [grilleCommissionId], references: [id], onDelete: Restrict)
+  grilleCommission        GrilleCommission?   @relation(fields: [grilleCommissionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   canal                   CanalDepot
   jetonDepotId            String?             @map("jeton_depot_id") @db.Uuid
-  jetonDepot              JetonDepot?         @relation(fields: [jetonDepotId], references: [id], onDelete: Restrict)
+  jetonDepot              JetonDepot?         @relation(fields: [jetonDepotId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   /// L'horloge de la BASE, lue sous le verrou par SIREN (REQ-DM-005, HYP-A02-PRECISION-DEPOT) : le
   /// déclencheur `attributions_horloge_du_depot` ÉCRASE toute valeur fournie par
   /// `clock_timestamp()`. Le défaut ne sert qu'au typage. Seule colonne en précision 6
@@ -758,7 +758,7 @@ model Attribution {
   contexteChiffre             Bytes?            @map("contexte_chiffre")
   /// La personne déclarée qui a rencontré le contact (UX-P1-15).
   personneDeclareeId          String?           @map("personne_declaree_id") @db.Uuid
-  personneDeclaree            PersonneDeclaree? @relation(fields: [personneDeclareeId], references: [id], onDelete: Restrict)
+  personneDeclaree            PersonneDeclaree? @relation(fields: [personneDeclareeId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   /// REQ-UX-039 : la précision n'existe que si le lien est déclaré (CHECK).
   lienInteretDeclare          Boolean           @map("lien_interet_declare")
   lienInteretPrecisionChiffre Bytes?            @map("lien_interet_precision_chiffre")
@@ -772,7 +772,7 @@ model Attribution {
   /// La suspension de péremption : les trois ensemble ou aucune (CHECK).
   peremptionSuspendueAt            DateTime?           @map("peremption_suspendue_at") @db.Timestamptz(3)
   peremptionSuspendueParId         String?             @map("peremption_suspendue_par_id") @db.Uuid
-  peremptionSuspenduePar           UtilisateurConsole? @relation("SuspensionsDePeremption", fields: [peremptionSuspendueParId], references: [id], onDelete: Restrict)
+  peremptionSuspenduePar           UtilisateurConsole? @relation("SuspensionsDePeremption", fields: [peremptionSuspendueParId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   peremptionSuspendueJustification String?             @map("peremption_suspendue_justification") @db.Text
   fenetreRedeclarationFinAt        DateTime?           @map("fenetre_redeclaration_fin_at") @db.Timestamptz(3)
   purgeContactAt                   DateTime?           @map("purge_contact_at") @db.Timestamptz(3)
@@ -799,7 +799,7 @@ model Attribution {
 model DepotRefuse {
   id           String          @id @default(uuid()) @db.Uuid
   apporteurId  String          @map("apporteur_id") @db.Uuid
-  apporteur    Apporteur       @relation(fields: [apporteurId], references: [id], onDelete: Restrict)
+  apporteur    Apporteur       @relation(fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   /// Effacé douze mois après le refus (DM-53, partners/ADR-0030) : la ligne reste, sans lui.
   siren        String?         @db.Char(9)
   motif        MotifRefusDepot
@@ -818,7 +818,7 @@ model DepotRefuse {
 model PersonneDeclaree {
   id            String                  @id @default(uuid()) @db.Uuid
   apporteurId   String                  @map("apporteur_id") @db.Uuid
-  apporteur     Apporteur               @relation(fields: [apporteurId], references: [id], onDelete: Restrict)
+  apporteur     Apporteur               @relation(fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   nomChiffre    Bytes?                  @map("nom_chiffre")
   prenomChiffre Bytes?                  @map("prenom_chiffre")
   qualite       QualitePersonneDeclaree
@@ -850,7 +850,7 @@ enum ResultatDecisionCandidature {
 model DecisionCandidature {
   id             String                      @id @default(uuid()) @db.Uuid
   apporteurId    String                      @map("apporteur_id") @db.Uuid
-  apporteur      Apporteur                   @relation(fields: [apporteurId], references: [id], onDelete: Restrict)
+  apporteur      Apporteur                   @relation(fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   resultat       ResultatDecisionCandidature
   /// Le motif de la décision : exigé, jamais vide (CHECK en SQL brut).
   justification  String                      @db.Text
@@ -858,7 +858,7 @@ model DecisionCandidature {
   /// n'est pas connue.
   webinaireSuivi Boolean?                    @map("webinaire_suivi")
   auteurId       String                      @map("auteur_id") @db.Uuid
-  auteur         UtilisateurConsole          @relation(fields: [auteurId], references: [id], onDelete: Restrict)
+  auteur         UtilisateurConsole          @relation(fields: [auteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   decideeAt      DateTime                    @map("decidee_at") @db.Timestamptz(3)
 
   @@index([apporteurId, decideeAt])
