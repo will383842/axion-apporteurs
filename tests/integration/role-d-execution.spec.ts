@@ -159,6 +159,46 @@ describe('REQ-DM-024 — le provisionnement', () => {
     expect(await refus(constaterRoleDExecution(url))).toMatch(/partners_journal/);
     await base.prisma.$executeRawUnsafe(`REVOKE partners_journal FROM partners_app`);
   });
+
+  it('REQ-DM-024 : TÉMOIN — SEC-50 : un journal à un autre propriétaire est refusé, au provisionnement comme au constat', async () => {
+    const url = urlSous(ROLE_D_EXECUTION, secret());
+    await provisionnerRoleDExecution({ urlMigration: base.url, urlExecution: url });
+    await base.prisma.$executeRawUnsafe(`ALTER TABLE evenements OWNER TO CURRENT_USER`);
+    try {
+      const attendu = 'le journal n’appartient pas à partners_journal';
+      expect(
+        await refus(provisionnerRoleDExecution({ urlMigration: base.url, urlExecution: url }))
+      ).toBe(attendu);
+      expect(await refus(constaterRoleDExecution(url))).toBe(attendu);
+    } finally {
+      await base.prisma.$executeRawUnsafe(`ALTER TABLE evenements OWNER TO partners_journal`);
+    }
+    await expect(constaterRoleDExecution(url)).resolves.toBeUndefined();
+  });
+
+  it('REQ-DM-024 : TÉMOIN — SEC-50 : un droit de réécriture accordé à la main sur le journal est refusé, au groupe comme au rôle', async () => {
+    const url = urlSous(ROLE_D_EXECUTION, secret());
+    await provisionnerRoleDExecution({ urlMigration: base.url, urlExecution: url });
+    await base.prisma.$executeRawUnsafe(`GRANT UPDATE ON evenements TO partners_execution`);
+    try {
+      expect(
+        await refus(provisionnerRoleDExecution({ urlMigration: base.url, urlExecution: url }))
+      ).toBe('partners_execution peut réécrire le journal');
+      expect(await refus(constaterRoleDExecution(url))).toBe('le serveur peut réécrire le journal');
+    } finally {
+      await base.prisma.$executeRawUnsafe(`REVOKE UPDATE ON evenements FROM partners_execution`);
+    }
+    await base.prisma.$executeRawUnsafe(`GRANT TRUNCATE ON evenements TO partners_app`);
+    try {
+      expect(
+        await refus(provisionnerRoleDExecution({ urlMigration: base.url, urlExecution: url }))
+      ).toBe('le rôle d’exécution peut réécrire le journal');
+      expect(await refus(constaterRoleDExecution(url))).toBe('le serveur peut réécrire le journal');
+    } finally {
+      await base.prisma.$executeRawUnsafe(`REVOKE TRUNCATE ON evenements FROM partners_app`);
+    }
+    await expect(constaterRoleDExecution(url)).resolves.toBeUndefined();
+  });
 });
 
 /** Le rôle est-il membre de partners_journal, lu par le propriétaire ? */

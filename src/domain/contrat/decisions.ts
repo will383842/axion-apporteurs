@@ -206,15 +206,18 @@ export const QUESTIONS_POUR_WILL: readonly Question[] = [
     id: 'JUR-T01-Q15',
     decision: 'HYP-W19-CARENCE',
     objet:
-      'Délai d’attente de la Société après toute libération (W19, CARENCE_CONSEILLER_JOURS), à écrire ' +
-      'au gabarit par JUR-T31. Ligne avenant non tranchée.',
+      'Délai d’attente de la Société après toute libération (W19) : SUPPRIMÉ par Williams le ' +
+      '2026-10-02 (réponse « A. » au point 6) ; l’art. 3.5 ne garde que les quinze jours du premier rang.',
     variables: [],
   },
   {
     id: 'JUR-T01-Q16',
     decision: 'HYP-W19-NON-EXPLOITATION',
     objet:
-      'Clause de non-exploitation (W19), à écrire au gabarit par JUR-T31. Ligne avenant non tranchée.',
+      'Art. 3.5 al. 4 (option B de Williams, 2026-10-02) : la Société peut utiliser les entreprises ' +
+      'déclarées et les coordonnées transmises ; la commission reste due pendant l’attribution, quel ' +
+      'que soit celui qui conclut ; pas de démarchage pendant le délai de confirmation de l’art. 3.2, ' +
+      'ni dans la réserve qui suit un acte de l’Apporteur. Ligne avenant non tranchée.',
     variables: [],
   },
   {
@@ -311,6 +314,18 @@ export const CONCORDANCES: readonly Concordance[] = [
     alinea: null,
     registre: ['art. 3.5 amendé, HYP-W19-CONCOURS'],
     gabarit: ['par un autre apporteur ou par la Société ou ses préposés'],
+    absents: [],
+  },
+  // JUR-T42 — un devis signé qui n'est pas encore entièrement facturé rend l'entreprise
+  // indisponible, quelle que soit sa date. Le fragment s'arrête à « entièrement facturé » : la suite
+  // (« ni annulé ») a été validée par Williams le 2026-10-02 (séance, point 2) ; l'ancrage s'arrête
+  // avant elle, et reste valable si le texte devait encore changer.
+  {
+    decision: 'HYP-ANTERIORITE-DEVIS',
+    article: '3.3',
+    alinea: null,
+    registre: ["ayant accepté un devis qui n'est pas encore entièrement facturé"],
+    gabarit: ["ayant signé un devis qui n'a été ni entièrement facturé"],
     absents: [],
   },
   {
@@ -620,7 +635,7 @@ export const DIVERGENCES_DECLAREES: readonly Divergence[] = [
   },
   {
     cle: 'HYP-E1-12:3.5:al4',
-    constat: 'le registre cite l’al. 4 de l’art. 3.5, qui n’en compte que trois',
+    constat: 'le registre cite l’al. 4 de l’art. 3.5 ; l’horodatage en est le 5e alinéa',
     question: 'JUR-T01-Q03',
   },
   {
@@ -642,16 +657,6 @@ export const DIVERGENCES_DECLAREES: readonly Divergence[] = [
     cle: 'W11:identifiants',
     constat: 'W11 annonce 23 identifiants ; le gabarit et REQ-JUR-003 en portent 22',
     question: 'JUR-T01-Q13',
-  },
-  {
-    cle: 'W19:3.5',
-    constat: 'l’art. 3.5 amendé (la Société ou ses préposés) n’est pas encore écrit au gabarit',
-    question: 'JUR-T01-Q17',
-  },
-  {
-    cle: 'HYP-W19-CONCOURS:3.5',
-    constat: 'l’art. 3.5 amendé (la Société ou ses préposés) n’est pas encore écrit au gabarit',
-    question: 'JUR-T01-Q17',
   },
 ];
 
