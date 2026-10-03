@@ -2,7 +2,7 @@
  * artefact-empreinte.ts — GOV-142 : l'empreinte SHA-256 d'un artefact passé d'un job à l'autre.
  *
  *   pnpm ci:artefact:publier   (le PRODUCTEUR) : lit `ARTEFACT`, écrit `empreinte=<hex>` dans
- *                              `GITHUB_OUTPUT`, que le job expose en `outputs` — jamais `GITHUB_ENV`.
+ *                              `GITHUB_OUTPUT`, que le job expose en `outputs`, jamais dans l’environnement des étapes suivantes.
  *   pnpm ci:artefact:verifier  (le CONSOMMATEUR, avant tout usage) : lit `ARTEFACT` et
  *                              `EMPREINTE_ATTENDUE` (relue par `needs.<producteur>.outputs`). Une
  *                              empreinte absente, vide, mal formée ou différente fait ÉCHOUER l'étape.

@@ -478,22 +478,32 @@ const CLES_DE_WORKFLOW_JUGEES_A_PART = new Set(['jobs']);
  * en DEUX endroits, dans le même diff, et c'est voulu : le diff de ce constat est ce qu'un relecteur
  * lit pour savoir ce que la porte a gagné ou perdu.
  */
-export interface PorteFigee {
+export interface JobFige {
   readonly job: string;
   /** La condition du JOB. `null` = aucune. */
   readonly si: string | null;
   /**
-   * TOUTES les autres clés du JOB (`runs-on`, `permissions`, et — absentes, donc refusées si on les
-   * pose — `defaults`, `env`, `container`, `services`, `strategy`, `needs`, `timeout-minutes`,
-   * `outputs`, `concurrency`…), sous leur forme canonique. Hors `if`, `continue-on-error`, `steps`.
+   * TOUTES les autres clés du JOB (`runs-on`, `permissions`, `needs`, `outputs`, et — absentes, donc
+   * refusées si on les pose — `defaults`, `env`, `container`, `services`, `strategy`,
+   * `timeout-minutes`, `concurrency`…), sous leur forme canonique. Hors `if`, `continue-on-error`,
+   * `steps`.
    */
   readonly cles: Readonly<Record<string, unknown>>;
+  readonly etapes: readonly EtapeFigee[];
+}
+
+/**
+ * GOV-142 : la porte A est un WORKFLOW de plusieurs jobs, chacun figé ENTIER ; un job du workflow
+ * absent du constat, ou un job du constat absent du workflow, est une faute nommée. Le cliquet du
+ * paquet (scripts, crochets, gestionnaire, configuration) reste UNIQUE : il vaut pour tous.
+ */
+export interface PorteFigee {
+  readonly jobs: readonly JobFige[];
   /**
-   * TOUTES les clés du WORKFLOW hors `jobs` (`name`, `on`, et — absentes, donc refusées si on les
-   * pose — `defaults`, `env`, `permissions`, `concurrency`, `run-name`…) : elles agissent sur le job.
+   * TOUTES les clés du WORKFLOW hors `jobs` (`name`, `on`, `permissions`, et — absentes, donc refusées
+   * si on les pose — `defaults`, `env`, `concurrency`, `run-name`…) : elles agissent sur les jobs.
    */
   readonly workflow: Readonly<Record<string, unknown>>;
-  readonly etapes: readonly EtapeFigee[];
   readonly scripts: Readonly<Record<string, string>>;
   /**
    * LA CONFIGURATION DU GESTIONNAIRE DE PAQUETS, figée ABSENTE (veto de sécurité (1) sur la PR 175, un
@@ -1028,8 +1038,10 @@ function tolereLEchec(champs: Record<string, unknown>): string | null {
 }
 
 export interface ConfrontationDeLaPorteA {
-  /** Le nombre d'étapes du job RÉELLEMENT confrontées au constat — le compte que le vert imprime. */
+  /** Le nombre d'étapes des jobs RÉELLEMENT confrontées au constat — le compte que le vert imprime. */
   readonly etapes: number;
+  /** Le nombre de jobs du constat. */
+  readonly jobs: number;
   /** Le nombre de scripts de `package.json` confrontés à leur définition figée. */
   readonly scripts: number;
   /** Le nombre de crochets de cycle de vie confrontés à leur valeur ou à leur absence figées. */
@@ -1064,6 +1076,7 @@ export async function confronterLaPorteA(vue: Vue): Promise<ConfrontationDeLaPor
   const fautes: Faute[] = [];
   const illisible = (pourquoi: string): ConfrontationDeLaPorteA => ({
     etapes: 0,
+    jobs: 0,
     scripts: 0,
     crochets: 0,
     fautes: [
@@ -1087,37 +1100,14 @@ export async function confronterLaPorteA(vue: Vue): Promise<ConfrontationDeLaPor
       `l'analyseur YAML partagé le refuse (${e instanceof Error ? e.message : String(e)})`
     );
   }
-  const jobs = estObjet(workflow) && estObjet(workflow.jobs) ? workflow.jobs : {};
-  const job = jobs[figee.job];
-  if (!estObjet(job) || !Array.isArray(job.steps)) {
-    return illisible(`aucun job \`${figee.job}\` portant une liste d'étapes`);
-  }
+  const jobs: Record<string, unknown> =
+    estObjet(workflow) && estObjet(workflow.jobs) ? workflow.jobs : {};
+  if (figee.jobs.length === 0) return illisible('le constat ne fige aucun job');
   const aRetenir =
     'Si le changement est VOULU, fige-le dans `PORTE_A_FIGEE` ' +
     '(`scripts/gates/gov-conventions.ts`), dans le même diff.';
 
-  // ── le JOB lui-même : sa condition et sa tolérance désarment TOUTES ses étapes ──
-  const siDuJob = ecrite(job.if) ?? null;
-  if (siDuJob !== figee.si) {
-    fautes.push({
-      famille: 'etape_conditionnee',
-      message:
-        `le job \`${figee.job}\` porte la condition ${JSON.stringify(siDuJob)} au lieu de ` +
-        `${JSON.stringify(figee.si)} : une condition de JOB saute TOUTES ses étapes, et un job ` +
-        `sauté se lit « skipped », sans aucun rouge. ${aRetenir}`,
-    });
-  }
-  const toleranceDuJob = tolereLEchec(job);
-  if (toleranceDuJob !== null) {
-    fautes.push({
-      famille: 'etape_toleree',
-      message:
-        `le job \`${figee.job}\` porte \`continue-on-error: ${toleranceDuJob}\` : toutes ses étapes ` +
-        `peuvent échouer sans que la porte rougisse. Seul \`false\` écrit en toutes lettres est admis.`,
-    });
-  }
-
-  // ── le workflow et le job ENTIERS : toute autre clé change ce que le job exécute ──
+  // ── le workflow et chaque job ENTIERS : toute autre clé change ce que le job exécute ──
   const alterees = (
     ou: string,
     lu: Record<string, unknown>,
@@ -1141,83 +1131,138 @@ export async function confronterLaPorteA(vue: Vue): Promise<ConfrontationDeLaPor
     figee.workflow,
     CLES_DE_WORKFLOW_JUGEES_A_PART
   );
-  alterees(`le job \`${figee.job}\``, job, figee.cles, CLES_DE_JOB_JUGEES_A_PART);
 
-  // ── les étapes, une par une ──
-  const lues = job.steps.map((e: unknown) => (estObjet(e) ? e : {}));
-  const parNom = new Map(lues.map((e) => [nomDEtape(e), e]));
-  const figees = new Map(figee.etapes.map((e) => [e.nom, e]));
-  // UNIQUE : deux étapes de même nom se confondraient dans ces tables, et la seconde ne serait
-  // jamais confrontée. Le constat lui-même est soumis à la même règle.
-  const enDouble = (noms: readonly string[]): string[] =>
-    [...new Set(noms.filter((n, i) => noms.indexOf(n) !== i))].sort();
-  for (const [ou, noms] of [
-    [`le job \`${figee.job}\``, lues.map(nomDEtape)],
-    ['le constat `PORTE_A_FIGEE`', figee.etapes.map((e) => e.nom)],
-  ] as const) {
-    for (const nom of enDouble(noms)) {
-      fautes.push({
-        famille: 'etape_en_double',
-        message:
-          `${ou} porte plusieurs étapes nommées « ${nom} ». La confrontation est indexée par nom : ` +
-          `une seule serait jugée, et l'autre — n'importe laquelle de ses clés — passerait sans ` +
-          `un rouge. Donnez à chaque étape un nom unique. ${aRetenir}`,
-      });
-    }
-  }
-  for (const f of figee.etapes) {
-    if (parNom.has(f.nom)) continue;
+  // ── les jobs : chacun présent au constat ET au workflow ──
+  const jobsFiges = new Set(figee.jobs.map((j) => j.job));
+  for (const nom of Object.keys(jobs).filter((n) => !jobsFiges.has(n))) {
     fautes.push({
-      famille: 'etape_absente',
+      famille: 'etape_non_figee',
       message:
-        `l'étape « ${f.nom} » (\`${f.run ?? f.uses ?? '—'}\`) n'est plus dans le job ` +
-        `\`${figee.job}\` — retirée, ou réduite à un commentaire. Ce qu'elle mesurait ne l'est plus ` +
-        `nulle part, et rien d'autre ne le dirait. ${aRetenir}`,
+        `le job \`${nom}\` n'est pas au constat de la porte A : aucune de ses étapes n'est figée, ` +
+        `et son retrait futur ne rougirait rien. ${aRetenir}`,
     });
   }
-  for (const [nom, e] of parNom) {
-    const f = figees.get(nom);
-    if (f === undefined) {
-      fautes.push({
-        famille: 'etape_non_figee',
-        message:
-          `l'étape « ${nom} » du job \`${figee.job}\` n'est pas au constat de la porte A : sans lui, ` +
-          `son retrait futur ne rougirait rien. ${aRetenir}`,
-      });
+  // UNIQUE : deux étapes, ou deux jobs, de même nom se confondraient dans ces tables, et le second
+  // ne serait jamais confronté. Le constat lui-même est soumis à la même règle.
+  const enDouble = (noms: readonly string[]): string[] =>
+    [...new Set(noms.filter((n, i) => noms.indexOf(n) !== i))].sort();
+  for (const nom of enDouble(figee.jobs.map((j) => j.job))) {
+    fautes.push({
+      famille: 'etape_en_double',
+      message: `le constat \`PORTE_A_FIGEE\` fige deux fois le job \`${nom}\`. ${aRetenir}`,
+    });
+  }
+
+  let etapesConfrontees = 0;
+  for (const fige of figee.jobs) {
+    const job = jobs[fige.job];
+    if (!estObjet(job) || !Array.isArray(job.steps)) {
+      for (const f of fige.etapes) {
+        fautes.push({
+          famille: 'etape_absente',
+          message:
+            `l'étape « ${f.nom} » (\`${f.run ?? f.uses ?? '—'}\`) n'est plus dans le workflow : le ` +
+            `job \`${fige.job}\` qui la portait n'y est plus, ou n'a plus de liste d'étapes. ${aRetenir}`,
+        });
+      }
       continue;
     }
-    const si = ecrite(e.if);
-    if (si !== f.si) {
+
+    // ── le JOB lui-même : sa condition et sa tolérance désarment TOUTES ses étapes ──
+    const siDuJob = ecrite(job.if) ?? null;
+    if (siDuJob !== fige.si) {
       fautes.push({
         famille: 'etape_conditionnee',
         message:
-          `l'étape « ${nom} » porte la condition ${si === undefined ? '(aucune)' : `« ${si} »`} au ` +
-          `lieu de ${f.si === undefined ? '(aucune)' : `« ${f.si} »`}. Une condition toujours fausse ` +
-          `désarme l'étape sans bruit : elle se lit « skipped ». ${aRetenir}`,
+          `le job \`${fige.job}\` porte la condition ${JSON.stringify(siDuJob)} au lieu de ` +
+          `${JSON.stringify(fige.si)} : une condition de JOB saute TOUTES ses étapes, et un job ` +
+          `sauté se lit « skipped », sans aucun rouge. ${aRetenir}`,
       });
     }
-    const tolerance = tolereLEchec(e);
-    if (tolerance !== null) {
+    const toleranceDuJob = tolereLEchec(job);
+    if (toleranceDuJob !== null) {
       fautes.push({
         famille: 'etape_toleree',
         message:
-          `l'étape « ${nom} » porte \`continue-on-error: ${tolerance}\`. La valeur est lue sous sa ` +
-          `forme ÉVALUÉE : toute autre écriture que \`false\` tolère l'échec, et une étape qui peut ` +
-          `échouer sans faire rougir la porte ne garde rien.`,
+          `le job \`${fige.job}\` porte \`continue-on-error: ${toleranceDuJob}\` : toutes ses étapes ` +
+          `peuvent échouer sans que la porte rougisse. Seul \`false\` écrit en toutes lettres est admis.`,
       });
     }
-    for (const cle of ['run', 'uses'] as const) {
-      const lu = typeof e[cle] === 'string' ? (e[cle] as string).trim() : undefined;
-      if (lu === f[cle]) continue;
+    alterees(`le job \`${fige.job}\``, job, fige.cles, CLES_DE_JOB_JUGEES_A_PART);
+
+    // ── les étapes du job, une par une ──
+    const lues = job.steps.map((e: unknown) => (estObjet(e) ? e : {}));
+    etapesConfrontees += lues.length;
+    const parNom = new Map(lues.map((e) => [nomDEtape(e), e]));
+    const figees = new Map(fige.etapes.map((e) => [e.nom, e]));
+    for (const [ou, noms] of [
+      [`le job \`${fige.job}\``, lues.map(nomDEtape)],
+      [`le constat \`PORTE_A_FIGEE\` du job \`${fige.job}\``, fige.etapes.map((e) => e.nom)],
+    ] as const) {
+      for (const nom of enDouble(noms)) {
+        fautes.push({
+          famille: 'etape_en_double',
+          message:
+            `${ou} porte plusieurs étapes nommées « ${nom} ». La confrontation est indexée par nom : ` +
+            `une seule serait jugée, et l'autre — n'importe laquelle de ses clés — passerait sans ` +
+            `un rouge. Donnez à chaque étape un nom unique. ${aRetenir}`,
+        });
+      }
+    }
+    for (const f of fige.etapes) {
+      if (parNom.has(f.nom)) continue;
       fautes.push({
-        famille: 'etape_repointee',
+        famille: 'etape_absente',
         message:
-          `l'étape « ${nom} » porte \`${cle}: ${lu ?? '(absent)'}\` au lieu de ` +
-          `\`${f[cle] ?? '(absent)'}\` : elle ne lance plus ce qu'on croit qu'elle mesure — une ` +
-          `tolérance écrite dans le shell (\`|| true\`) est une tolérance comme une autre. ${aRetenir}`,
+          `l'étape « ${f.nom} » (\`${f.run ?? f.uses ?? '—'}\`) n'est plus dans le job ` +
+          `\`${fige.job}\` — retirée, ou réduite à un commentaire. Ce qu'elle mesurait ne l'est plus ` +
+          `nulle part, et rien d'autre ne le dirait. ${aRetenir}`,
       });
     }
-    alterees(`l'étape « ${nom} »`, e, f.cles ?? {}, CLES_D_ETAPE_JUGEES_A_PART);
+    for (const [nom, e] of parNom) {
+      const f = figees.get(nom);
+      if (f === undefined) {
+        fautes.push({
+          famille: 'etape_non_figee',
+          message:
+            `l'étape « ${nom} » du job \`${fige.job}\` n'est pas au constat de la porte A : sans ` +
+            `lui, son retrait futur ne rougirait rien. ${aRetenir}`,
+        });
+        continue;
+      }
+      const si = ecrite(e.if);
+      if (si !== f.si) {
+        fautes.push({
+          famille: 'etape_conditionnee',
+          message:
+            `l'étape « ${nom} » porte la condition ${si === undefined ? '(aucune)' : `« ${si} »`} au ` +
+            `lieu de ${f.si === undefined ? '(aucune)' : `« ${f.si} »`}. Une condition toujours fausse ` +
+            `désarme l'étape sans bruit : elle se lit « skipped ». ${aRetenir}`,
+        });
+      }
+      const tolerance = tolereLEchec(e);
+      if (tolerance !== null) {
+        fautes.push({
+          famille: 'etape_toleree',
+          message:
+            `l'étape « ${nom} » porte \`continue-on-error: ${tolerance}\`. La valeur est lue sous sa ` +
+            `forme ÉVALUÉE : toute autre écriture que \`false\` tolère l'échec, et une étape qui peut ` +
+            `échouer sans faire rougir la porte ne garde rien.`,
+        });
+      }
+      for (const cle of ['run', 'uses'] as const) {
+        const lu = typeof e[cle] === 'string' ? (e[cle] as string).trim() : undefined;
+        if (lu === f[cle]) continue;
+        fautes.push({
+          famille: 'etape_repointee',
+          message:
+            `l'étape « ${nom} » porte \`${cle}: ${lu ?? '(absent)'}\` au lieu de ` +
+            `\`${f[cle] ?? '(absent)'}\` : elle ne lance plus ce qu'on croit qu'elle mesure — une ` +
+            `tolérance écrite dans le shell (\`|| true\`) est une tolérance comme une autre. ${aRetenir}`,
+        });
+      }
+      alterees(`l'étape « ${nom} »`, e, f.cles ?? {}, CLES_D_ETAPE_JUGEES_A_PART);
+    }
   }
 
   // ── les scripts de `package.json` que ces étapes lancent : figés, donc non repointables ──
@@ -1313,7 +1358,8 @@ export async function confronterLaPorteA(vue: Vue): Promise<ConfrontationDeLaPor
     });
   }
   return {
-    etapes: lues.length,
+    etapes: etapesConfrontees,
+    jobs: figee.jobs.length,
     scripts: Object.keys(figee.scripts).length,
     crochets: crochets.size,
     fautes,
@@ -1323,8 +1369,9 @@ export async function confronterLaPorteA(vue: Vue): Promise<ConfrontationDeLaPor
 /** Le décompte de la porte A, RENDU : une confrontation qu'on n'imprime pas ne se relit pas. */
 export function lignesDeLaPorteA(c: ConfrontationDeLaPorteA): string[] {
   return [
-    `PORTE A — ${c.etapes} étape(s) du job confrontée(s) au constat, chacune présente, active, ` +
-      `effective et ENTIÈRE (toutes ses clés), le job et le workflow hors \`jobs\` figés de même ; ` +
+    `PORTE A — ${c.etapes} étape(s) de ${c.jobs} job(s) confrontée(s) au constat, chacune ` +
+      `présente, active, effective et ENTIÈRE (toutes ses clés), chaque job et le workflow hors ` +
+      `\`jobs\` figés de même ; ` +
       `${c.scripts} script(s) de \`package.json\` confronté(s) à leur définition figée ; ` +
       `${c.crochets} crochet(s) de cycle de vie confronté(s) à leur valeur ou à leur absence figée.`,
   ];
@@ -1686,10 +1733,14 @@ export async function confronterLOutillage(vue: Vue): Promise<ConfrontationDeLOu
   }
 
   const jobs = estObjet(workflow.jobs) ? workflow.jobs : {};
-  const nomDuJob = vue.porteA?.job ?? PORTE_A_FIGEE.job;
-  const job = jobs[nomDuJob];
-  const etapes: Record<string, unknown>[] =
-    estObjet(job) && Array.isArray(job.steps) ? job.steps.filter(estObjet) : [];
+  // GOV-142 : la porte A est faite de plusieurs jobs ; chacun est lu, avec ses étapes dans l'ordre.
+  const etapesParJob: { nom: string; etapes: Record<string, unknown>[] }[] = Object.entries(
+    jobs
+  ).map(([nom, j]) => ({
+    nom,
+    etapes: estObjet(j) && Array.isArray(j.steps) ? j.steps.filter(estObjet) : [],
+  }));
+  const etapes: Record<string, unknown>[] = etapesParJob.flatMap((j) => j.etapes);
 
   // ── 4. les actions tierces du workflow de la porte A ──
   {
@@ -1750,38 +1801,46 @@ export async function confronterLOutillage(vue: Vue): Promise<ConfrontationDeLOu
   // ── 5. une étape qui réécrit l'arbre avant une garde ──
   {
     const f = 'outillage_etape_amont_ecrivante' as const;
-    let premiereCommande: number | null = null;
     let commandes = 0;
-    for (const [i, e] of etapes.entries()) {
-      const nom = nomDEtape(e);
-      if (typeof e.uses === 'string' && premiereCommande !== null) {
-        refuser(
-          f,
-          `l'étape « ${nom} » appelle une action APRÈS la première commande du job : elle peut ` +
-            `réécrire l'arbre que les gardes suivantes mesurent. Les actions précèdent toute commande.`
-        );
-      }
-      if (typeof e.run !== 'string') continue;
-      premiereCommande ??= i;
-      const run = e.run.trim();
-      const crochets = run === INSTALLATION_DE_LA_PORTE_A ? [...CROCHETS_D_INSTALLATION] : [];
-      const depart = [
-        run,
-        ...crochets.filter((c) => Object.hasOwn(scripts, c)).map((c) => scripts[c]!),
-      ];
-      for (const c of commandesSuivies(depart, scripts)) {
-        commandes += 1;
-        if (!ECRIT_L_ARBRE.test(c)) continue;
-        refuser(
-          f,
-          `l'étape « ${nom} » exécute \`${c}\`, qui RÉÉCRIT l'arbre de travail : les gardes qui la ` +
-            `suivent mesurent l'arbre réécrit, pas celui de la PR.`
-        );
+    // Job par job. Une action peut réécrire l'arbre : entre deux commandes, la seconde mesurerait
+    // l'arbre réécrit. Une action APRÈS la dernière commande (un dépôt d'artefact en fin de job,
+    // GOV-142) ne précède plus aucune mesure : elle est admise.
+    for (const { nom: nomDuJob, etapes: duJob } of etapesParJob) {
+      let derniereCommande = -1;
+      for (const [i, e] of duJob.entries()) if (typeof e.run === 'string') derniereCommande = i;
+      let premiereCommande: number | null = null;
+      for (const [i, e] of duJob.entries()) {
+        const nom = nomDEtape(e);
+        if (typeof e.uses === 'string' && premiereCommande !== null && i < derniereCommande) {
+          refuser(
+            f,
+            `l'étape « ${nom} » du job \`${nomDuJob}\` appelle une action ENTRE deux commandes : ` +
+              `elle peut réécrire l'arbre que les gardes suivantes mesurent. Les actions précèdent ` +
+              `toute commande, ou suivent la dernière.`
+          );
+        }
+        if (typeof e.run !== 'string') continue;
+        premiereCommande ??= i;
+        const run = e.run.trim();
+        const crochets = run === INSTALLATION_DE_LA_PORTE_A ? [...CROCHETS_D_INSTALLATION] : [];
+        const depart = [
+          run,
+          ...crochets.filter((c) => Object.hasOwn(scripts, c)).map((c) => scripts[c]!),
+        ];
+        for (const c of commandesSuivies(depart, scripts)) {
+          commandes += 1;
+          if (!ECRIT_L_ARBRE.test(c)) continue;
+          refuser(
+            f,
+            `l'étape « ${nom} » exécute \`${c}\`, qui RÉÉCRIT l'arbre de travail : les gardes qui la ` +
+              `suivent mesurent l'arbre réécrit, pas celui de la PR.`
+          );
+        }
       }
     }
     lus.set(f, {
       confronte: etapes.length > 0,
-      lu: `${etapes.length} étape(s) du job \`${nomDuJob}\`, ${commandes} commande(s) suivie(s) à travers \`package.json\``,
+      lu: `${etapes.length} étape(s) de ${etapesParJob.length} job(s), ${commandes} commande(s) suivie(s) à travers \`package.json\``,
     });
   }
 
@@ -2569,13 +2628,708 @@ const JETON_ET_INSTANTANE = {
   },
 } as const;
 
-export const PORTE_A_FIGEE: PorteFigee = {
-  job: 'gate-a',
-  si: '${{ github.event.pull_request.merged != true }}',
-  cles: {
-    'runs-on': 'ubuntu-latest',
-    permissions: { contents: 'read', 'pull-requests': 'read' },
+/**
+ * GOV-142 : CHAQUE étape figée de la porte A, UNE fois, indexée par son nom. Un job du constat se
+ * compose par la liste des noms de ses étapes (`figer`) : une étape répétée dans plusieurs jobs (le
+ * socle, le rendu des vues) n'a qu'une définition, et un nom inconnu fait ÉCHOUER le chargement de
+ * la garde — fermée, jamais un job à moitié figé.
+ */
+const ETAPES_FIGEES: readonly EtapeFigee[] = [
+  {
+    nom: 'uses: actions/checkout@v4',
+    uses: 'actions/checkout@v4',
+    cles: { with: { 'fetch-depth': '0' } },
   },
+  { nom: 'uses: pnpm/action-setup@v4', uses: 'pnpm/action-setup@v4' },
+  {
+    nom: 'uses: actions/setup-node@v4',
+    uses: 'actions/setup-node@v4',
+    cles: { with: { 'node-version': '22', cache: 'pnpm' } },
+  },
+  // QA-T59 : le cache des navigateurs des passes d'accessibilité, AVANT toute commande (point 5),
+  // sa clé dérivée du verrou (point 6 : aucune commande pour lire une version).
+  {
+    nom: 'Cache des navigateurs des passes d accessibilite',
+    uses: 'actions/cache@v4',
+    cles: {
+      with: {
+        path: '~/.cache/ms-playwright',
+        key: "navigateurs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}",
+      },
+    },
+  },
+  { nom: 'run: pnpm install --frozen-lockfile', run: 'pnpm install --frozen-lockfile' },
+  // GOV-123 : les vues se rendent AVANT toute étape qui en lit une ; aucune ne revient sous git.
+  {
+    nom: 'Les vues derivees sont rendues, et le rendu est reproductible',
+    run: 'pnpm vues:rendre',
+  },
+  {
+    nom: 'Aucune vue derivee sous git — une PR qui en rajoute une est refusee, le fichier nomme',
+    run: 'pnpm vues:hors-git',
+  },
+  // QA-T64 : la forge lue une fois, après les vues et avant toute garde qui la lit.
+  {
+    nom: 'La forge est lue une fois pour toute la porte A',
+    run: 'pnpm forge:instantane',
+    cles: JETON_DE_LA_FORGE,
+  },
+  { nom: 'Regle de publication (depot public)', run: 'pnpm gov:publication' },
+  { nom: 'La garde de publication sait rougir', run: 'pnpm gov:publication:prove' },
+  { nom: 'Identifiants qualifies', run: 'pnpm gov:identifiants' },
+  { nom: 'La garde des identifiants sait rougir', run: 'pnpm gov:identifiants:prove' },
+  { nom: 'Coherence du backlog', run: 'pnpm gov:tasks' },
+  { nom: 'La garde du backlog sait rougir', run: 'pnpm gov:tasks:prove' },
+  { nom: 'La vue du backlog est egale a sa source', run: 'pnpm gov:tasks:verifie-rendu' },
+  { nom: 'Registre des exigences', run: 'pnpm gov:requirements' },
+  { nom: 'La garde du registre sait rougir', run: 'pnpm gov:requirements:prove' },
+  {
+    nom: 'La vue des exigences est egale a sa source',
+    run: 'pnpm gov:requirements:verifie-rendu',
+  },
+  { nom: 'Registre des decisions', run: 'pnpm gov:hypotheses' },
+  { nom: 'La garde des decisions sait rougir', run: 'pnpm gov:hypotheses:prove' },
+  { nom: 'Table de preseance', run: 'pnpm gov:preseance' },
+  { nom: 'La garde de preseance sait rougir', run: 'pnpm gov:preseance:prove' },
+  { nom: 'Affirmations verifiees sur axionia', run: 'pnpm gov:sonde' },
+  { nom: 'La sonde sait rougir', run: 'pnpm gov:sonde:prove' },
+  { nom: 'ADR — index derive et gabarit', run: 'pnpm gov:adr' },
+  { nom: 'La garde des ADR sait rougir', run: 'pnpm gov:adr:prove' },
+  { nom: 'Matrice d autonomie des agents et garde des pushes', run: 'pnpm gov:autonomie' },
+  { nom: 'La garde d autonomie sait rougir', run: 'pnpm gov:autonomie:prove' },
+  { nom: 'Gabarit de PR, CODEOWNERS et charte des agents', run: 'pnpm gov:pr' },
+  { nom: 'Inventaire prouve — tout etat >= code porte une preuve', run: 'pnpm gov:inventaire' },
+  { nom: 'La garde de l inventaire sait rougir', run: 'pnpm gov:inventaire:prove' },
+  { nom: 'Fiches de role derivees de docs/agents.json', run: 'pnpm gov:agents' },
+  { nom: 'La garde des fiches sait rougir', run: 'pnpm gov:agents:prove' },
+  { nom: 'Les fiches sur le disque sont egales a leur source', run: 'pnpm gov:agents:verifier' },
+  { nom: 'Registre d entite — sentinelle tenue dans les deux sens', run: 'pnpm gov:entite' },
+  { nom: 'La garde du registre d entite sait rougir', run: 'pnpm gov:entite:prove' },
+  {
+    nom: 'Le corps PUBLIE de la PR ne porte aucune coordonnee',
+    run: 'pnpm gov:entite:corps',
+    si: "github.event_name == 'pull_request'",
+    cles: JETON_DE_LA_FORGE,
+  },
+  { nom: 'La garde du corps publie sait rougir', run: 'pnpm gov:entite:corps:prove' },
+  { nom: 'La garde du depot sait rougir', run: 'pnpm gov:depot-visibilite:prove' },
+  {
+    nom: 'Matrice de tracabilite REQ vers tache vers test vers PR',
+    run: 'pnpm gov:trace',
+    cles: JETON_ET_INSTANTANE,
+  },
+  { nom: 'La matrice de tracabilite sait rougir', run: 'pnpm gov:trace:prove' },
+  { nom: 'La vue de tracabilite est derivee de ses sources', run: 'pnpm gov:trace:verifier' },
+  { nom: 'La vue de l etat vivant est egale a sa source', run: 'pnpm plan-state:verifier' },
+  {
+    nom: 'Attributions — garde, poste, lot et identifiants nommes confrontes a leurs sources',
+    run: 'pnpm gov:attributions',
+  },
+  {
+    nom: 'La garde des attributions sait rougir, et laisse passer la citation legitime',
+    run: 'pnpm gov:attributions:prove',
+  },
+  {
+    nom: 'contracts:hash — le contrat est derive, et son empreinte le tient',
+    run: 'pnpm contracts:hash',
+  },
+  { nom: 'La garde de PR sait rougir', run: 'pnpm gov:pr:prove' },
+  { nom: 'Vue GATES.md derivee du registre', run: 'pnpm gov:gates-derivees' },
+  { nom: 'Le decompte des gardes sait rougir', run: 'pnpm gates:prouvees:prove' },
+  { nom: 'Les paths derives sont a jour', run: 'pnpm lot:paths:check' },
+  { nom: 'Vocabulaire — enums, glossaire et etats occupants', run: 'pnpm partners:schema:enums' },
+  { nom: 'La garde du vocabulaire sait rougir', run: 'pnpm partners:schema:enums:prove' },
+  { nom: 'Centimes — aucun flottant, montants en Cents', run: 'pnpm partners:schema:cents' },
+  { nom: 'La garde des centimes sait rougir', run: 'pnpm partners:schema:cents:prove' },
+  { nom: 'Migrations additives', run: 'pnpm partners:migrations:additive' },
+  { nom: 'La garde des migrations sait rougir', run: 'pnpm partners:migrations:additive:prove' },
+  // QA-T11 : la porte D et sa preuve, figées par la PR qui les ajoute à `gate-a`.
+  {
+    nom: 'La porte D sait rougir — une colonne encore lue, supprimee, est nommee',
+    run: 'pnpm gate-d:prove',
+  },
+  {
+    nom: 'Porte D — expand/contract, base vierge, vidage N-1 seme, diff vide, image N-1',
+    run: 'pnpm gate-d',
+  },
+  {
+    nom: 'Termes interdits — nomenclature, modeles d axionia et synonymes',
+    run: 'pnpm gov:termes-interdits',
+  },
+  { nom: 'La garde des termes interdits sait rougir', run: 'pnpm gov:termes-interdits:prove' },
+  {
+    nom: 'Lexique interdit — aucun usage prescriptif dans le perimetre de REQ-GOV-017',
+    run: 'pnpm gov:lexique',
+  },
+  {
+    nom: 'La garde du lexique sait rougir, et laisse passer la negation qui protege',
+    run: 'pnpm gov:lexique:prove',
+  },
+  {
+    nom: 'Grille du contrat — aucun forfait, bareme ou pourcentage sans chiffre dans l annexe 1',
+    run: 'pnpm jur:grille-chiffree',
+  },
+  { nom: 'La garde de la grille chiffree sait rougir', run: 'pnpm jur:grille-chiffree:prove' },
+  {
+    nom: "Maquettes — aucune tache d'ecran attribuee sans validation de Will",
+    run: 'pnpm gov:maquettes-validees',
+  },
+  {
+    nom: 'La garde des maquettes sait rougir, y compris sur une ligne du milieu du tableau',
+    run: 'pnpm gov:maquettes-validees:prove',
+  },
+  {
+    nom: 'Micro-copie — chaque issue et chaque ecran ont leur texte, aucun libelle en dur',
+    run: 'pnpm ux:exhaustivite',
+  },
+  {
+    nom: "La garde de la micro-copie sait rougir, en nommant la valeur, l'ecran ou le fichier",
+    run: 'pnpm ux:exhaustivite:prove',
+  },
+  { nom: 'Budgets de performance derives de REQ-GOV-028', run: 'pnpm perf:budgets' },
+  { nom: 'La garde des budgets sait rougir', run: 'pnpm perf:budgets:prove' },
+  {
+    nom: 'Les budgets sur le disque sont le rendu de leur exigence',
+    run: 'pnpm perf:budgets:verifier',
+  },
+  {
+    nom: 'La mesure du poids par route sait rougir, y compris sur zero octet',
+    run: 'pnpm perf:bundle:prove',
+  },
+  {
+    nom: 'Compteurs de debit — conduite sur panne declaree et executee, famille close',
+    run: 'pnpm securite:rate-famille',
+  },
+  { nom: 'La garde des compteurs de debit sait rougir', run: 'pnpm securite:rate-famille:prove' },
+  { nom: 'Conventions et gardes transposees d axionia', run: 'pnpm gov:conventions' },
+  { nom: 'La garde des conventions sait rougir', run: 'pnpm gov:conventions:prove' },
+  { nom: 'Journal sans donnee personnelle', run: 'pnpm journal:sans-pii' },
+  { nom: 'La garde du journal sait rougir', run: 'pnpm journal:sans-pii:prove' },
+  {
+    nom: 'Donnees personnelles chiffrees, schema et chemins d ecriture',
+    run: 'pnpm securite:schema-pii',
+  },
+  { nom: 'La garde des donnees personnelles sait rougir', run: 'pnpm securite:schema-pii:prove' },
+  { nom: 'Lint', run: 'pnpm lint' },
+  // QA-T07 : la gate de sécurité Semgrep et sa preuve. Figées ici par la PR qui les ajoute à
+  // `gate-a` : sans elles au constat, leur retrait futur ne rougirait rien.
+  { nom: 'Semgrep — regles maison et jeux publics sur src', run: 'pnpm sec:semgrep' },
+  {
+    nom: 'Semgrep — chaque regle maison mord sur son temoin, nosemgrep n eteint rien',
+    run: 'pnpm sec:semgrep:prove',
+  },
+  { nom: 'Format', run: 'pnpm format:check' },
+  { nom: 'Typecheck', run: 'pnpm typecheck' },
+  {
+    nom: 'red-first — les tests nouveaux de la PR rougissent contre sa base',
+    run: 'pnpm red-first',
+    si: "github.event_name == 'pull_request'",
+  },
+  { nom: 'La garde red-first sait rougir', run: 'pnpm red-first:prove' },
+  { nom: 'Harnais de l adaptateur MCP', run: 'pnpm harnais-mcp' },
+  // QA-T59 : trois tentatives bornées chacune par `timeout`, l'étape entière par `timeout-minutes` ;
+  // toutes échouées, l'étape ÉCHOUE (jamais un vert de complaisance).
+  {
+    nom: 'Navigateurs des passes d accessibilite',
+    run: 'pnpm a11y:navigateurs:bornes',
+    cles: { 'timeout-minutes': '15' },
+  },
+  {
+    nom: 'req:check — chaque paire (tache, REQ) a son test annote et VERT',
+    run: 'pnpm req:check',
+    cles: JETON_ET_INSTANTANE,
+  },
+  { nom: 'Le lecteur du rapport de mutation sait rougir', run: 'pnpm mutation:prove' },
+  {
+    nom: 'Mutation des fichiers de la PR — Stryker en bac a sable, survivants nommes',
+    run: 'pnpm mutation:pr',
+  },
+  {
+    nom: 'Etat vivant — fraicheur, verrou d owner, journal',
+    run: 'pnpm gov:etat --now "$(date -u +%Y-%m-%dT%H:%M:%SZ)"',
+    cles: JETON_ET_INSTANTANE,
+  },
+  { nom: 'La garde de l etat vivant sait rougir', run: 'pnpm gov:etat:prove' },
+  { nom: 'Construire l application pour la mesure', run: 'pnpm perf:bundle:construire' },
+  { nom: 'Poids par route de l espace — JS propre et socle commun', run: 'pnpm perf:bundle' },
+  // ── LES DOUZE ÉTAPES VENUES DE `main` PENDANT QUE CETTE BRANCHE VIVAIT (PR #165 et #180).
+  //    CE QUI EST VERSIONNÉ ICI EST UNE COPIE FIGÉE, et c'est la raison d'être d'un constat : on
+  //    ne confronte pas un workflow à lui-même. La dérivation dit COMMENT cette copie a été
+  //    produite, elle ne change pas ce qu'elle EST — précision d'une revue `exactitude`, et elle
+  //    compte, parce que RM-01 dit « dériver, jamais recopier » : ici la copie est le livrable.
+  //    Elle a été produite depuis
+  //    `.github/workflows/ci.yml` après `pnpm vues:fusion`, nom et commande lus tels quels, et
+  //    leur compte est confronté à celui que `gov:conventions` nomme — douze, ni onze ni
+  //    quatorze. Une première dérivation en annonçait QUATORZE : elle ne relevait les noms déjà
+  //    figés qu'entre apostrophes simples, et manquait les deux que Prettier écrit en guillemets
+  //    doubles parce que leur libellé contient une apostrophe. Les deux auraient été ajoutées en
+  //    DOUBLE, ce que la famille `etape_en_double` refuse. Le compte de la garde est l’arbitre.
+  //    Chaque garde vient avec sa preuve qu’elle sait rougir : c’est RM-02, et le constat le
+  //    montre par paires. ──
+  {
+    nom: 'Charte — aucun agregat du reseau dans l espace',
+    run: 'pnpm jur:aucun-agregat-reseau',
+  },
+  {
+    nom: 'La garde des agregats du reseau sait rougir',
+    run: 'pnpm jur:aucun-agregat-reseau:prove',
+  },
+  // SEC-46 — la garde des styles en ligne, et sa preuve, par paire.
+  {
+    nom: 'Securite — aucun style en ligne sous src/app',
+    run: 'pnpm csp:inline',
+  },
+  {
+    nom: 'La garde des styles en ligne sait rougir',
+    run: 'pnpm csp:inline:prove',
+  },
+  {
+    nom: 'Charte — aucune progression vers un seuil dans l espace',
+    run: 'pnpm jur:aucune-progression',
+  },
+  {
+    nom: 'La garde des progressions sait rougir',
+    run: 'pnpm jur:aucune-progression:prove',
+  },
+  {
+    nom: 'Charte — revue du juriste sur ce qu un apporteur lit, label et checklist',
+    run: 'pnpm jur:revue-apporteur-facing',
+  },
+  {
+    nom: 'La garde de la revue apporteur-facing sait rougir',
+    run: 'pnpm jur:revue-apporteur-facing:prove',
+  },
+  {
+    nom: 'Charte — aucun terme ni rubrique du droit social',
+    run: 'pnpm jur:lexique-social',
+  },
+  {
+    nom: 'La garde du lexique social sait rougir',
+    run: 'pnpm jur:lexique-social:prove',
+  },
+  {
+    nom: 'Charte — aucune remuneration presentee comme ferme',
+    run: 'pnpm jur:copy-indicative-partners',
+  },
+  {
+    nom: 'La garde de la remuneration indicative sait rougir',
+    run: 'pnpm jur:copy-indicative-partners:prove',
+  },
+  {
+    nom: 'Seuils et delais du contrat — une seule source, aucun litteral hors SSOT',
+    run: 'pnpm ssot:seuils',
+  },
+  {
+    nom: 'La garde des seuils sait rougir, famille par famille, sans faux positif',
+    run: 'pnpm ssot:seuils:prove',
+  },
+  {
+    nom: 'La date de lecture d une notification ne fait courir aucun delai',
+    run: 'pnpm notifications:lue-at-inerte',
+  },
+  {
+    nom: 'La garde de la date de lecture sait rougir, famille par famille',
+    run: 'pnpm notifications:lue-at-inerte:prove',
+  },
+  {
+    nom: 'Roles de la console — requireRole partout, droits dans la matrice',
+    run: 'pnpm securite:roles',
+  },
+  {
+    nom: 'La garde des roles sait rougir',
+    run: 'pnpm securite:roles:prove',
+  },
+  // GOV-142 : l'instantané de la forge, déposé une fois par `gardes`, reçu et vérifié ailleurs ; la
+  // fusion des éclats ; la porte finale.
+  {
+    nom: 'Empreinte de l instantane de la forge',
+    run: 'pnpm ci:artefact:publier',
+    cles: { id: 'forge', env: { ARTEFACT: '${{ runner.temp }}/forge-instantane.json' } },
+  },
+  {
+    nom: 'Depot de l instantane de la forge',
+    uses: 'actions/upload-artifact@v4',
+    cles: {
+      with: {
+        name: 'forge-instantane',
+        path: '${{ runner.temp }}/forge-instantane.json',
+        overwrite: 'false',
+        'if-no-files-found': 'error',
+        'retention-days': '1',
+      },
+    },
+  },
+  {
+    nom: 'Reception de l instantane de la forge',
+    uses: 'actions/download-artifact@v4',
+    cles: { with: { name: 'forge-instantane', path: '${{ runner.temp }}' } },
+  },
+  {
+    nom: 'L instantane de la forge est celui que le job gardes a publie',
+    run: 'pnpm ci:artefact:verifier',
+    cles: {
+      env: {
+        ARTEFACT: '${{ runner.temp }}/forge-instantane.json',
+        EMPREINTE_ATTENDUE: '${{ needs.gardes.outputs.empreinte_forge }}',
+      },
+    },
+  },
+  {
+    nom: 'Tests — fusion des quatre eclats, aux seuils de la configuration',
+    run: 'pnpm test:fusion',
+  },
+  {
+    nom: 'Chaque job de la porte A a reussi',
+    run: 'pnpm ci:porte-finale',
+    cles: { env: { RESULTATS: '${{ toJSON(needs) }}' } },
+  },
+];
+const FIGEES_PAR_NOM = new Map(ETAPES_FIGEES.map((e) => [e.nom, e]));
+const figer = (...noms: readonly string[]): EtapeFigee[] =>
+  noms.map((nom) => {
+    const e = FIGEES_PAR_NOM.get(nom);
+    if (e === undefined) throw new Error(`PORTE_A_FIGEE : aucune étape figée nommée « ${nom} »`);
+    return e;
+  });
+/** Les trois étapes PROPRES à un éclat de la suite : son numéro, son blob et son empreinte. */
+const etapesDeLEclat = (i: number): EtapeFigee[] => [
+  {
+    nom: 'Tests — un eclat de la suite',
+    run: 'pnpm test:eclat',
+    cles: { env: { ...JETON_ET_INSTANTANE.env, ECLAT: `${i}/4` } },
+  },
+  {
+    nom: 'Empreinte du blob de l eclat',
+    run: 'pnpm ci:artefact:publier',
+    cles: { id: 'blob', env: { ARTEFACT: `.vitest-reports/blob-${i}-4.json` } },
+  },
+  {
+    nom: 'Depot du blob de l eclat',
+    uses: 'actions/upload-artifact@v4',
+    cles: {
+      with: {
+        name: `blob-${i}`,
+        path: `.vitest-reports/blob-${i}-4.json`,
+        overwrite: 'false',
+        'if-no-files-found': 'error',
+        'retention-days': '1',
+      },
+    },
+  },
+];
+/** La réception et la vérification du blob d'un éclat, dans `apres-tests`. */
+const etapesDuBlob = (i: number): EtapeFigee[] => [
+  {
+    nom: `Reception du blob de l eclat ${i}`,
+    uses: 'actions/download-artifact@v4',
+    cles: { with: { name: `blob-${i}`, path: '.vitest-reports' } },
+  },
+  {
+    nom: `Le blob de l eclat ${i} est celui que son job a publie`,
+    run: 'pnpm ci:artefact:verifier',
+    cles: {
+      env: {
+        ARTEFACT: `.vitest-reports/blob-${i}-4.json`,
+        EMPREINTE_ATTENDUE: `${'${{'} needs.tests-${i}.outputs.empreinte }}`,
+      },
+    },
+  },
+];
+const ECLATS = [1, 2, 3, 4] as const;
+export const PORTE_A_FIGEE: PorteFigee = {
+  jobs: [
+    {
+      job: 'gardes',
+      si: '${{ github.event.pull_request.merged != true }}',
+      cles: {
+        'runs-on': 'ubuntu-latest',
+        permissions: { contents: 'read', 'pull-requests': 'read' },
+        outputs: { empreinte_forge: '${{ steps.forge.outputs.empreinte }}' },
+      },
+      etapes: figer(
+        'uses: actions/checkout@v4',
+        'uses: pnpm/action-setup@v4',
+        'uses: actions/setup-node@v4',
+        'run: pnpm install --frozen-lockfile',
+        'Les vues derivees sont rendues, et le rendu est reproductible',
+        'Aucune vue derivee sous git — une PR qui en rajoute une est refusee, le fichier nomme',
+        'La forge est lue une fois pour toute la porte A',
+        'Empreinte de l instantane de la forge',
+        'Regle de publication (depot public)',
+        'La garde de publication sait rougir',
+        'Identifiants qualifies',
+        'La garde des identifiants sait rougir',
+        'Coherence du backlog',
+        'La garde du backlog sait rougir',
+        'La vue du backlog est egale a sa source',
+        'Registre des exigences',
+        'La garde du registre sait rougir',
+        'La vue des exigences est egale a sa source',
+        'Registre des decisions',
+        'La garde des decisions sait rougir',
+        'Table de preseance',
+        'La garde de preseance sait rougir',
+        'Affirmations verifiees sur axionia',
+        'La sonde sait rougir',
+        'ADR — index derive et gabarit',
+        'La garde des ADR sait rougir',
+        'Matrice d autonomie des agents et garde des pushes',
+        'La garde d autonomie sait rougir',
+        'Gabarit de PR, CODEOWNERS et charte des agents',
+        'Inventaire prouve — tout etat >= code porte une preuve',
+        'La garde de l inventaire sait rougir',
+        'Fiches de role derivees de docs/agents.json',
+        'La garde des fiches sait rougir',
+        'Les fiches sur le disque sont egales a leur source',
+        'Registre d entite — sentinelle tenue dans les deux sens',
+        'La garde du registre d entite sait rougir',
+        'Le corps PUBLIE de la PR ne porte aucune coordonnee',
+        'La garde du corps publie sait rougir',
+        'La garde du depot sait rougir',
+        'Matrice de tracabilite REQ vers tache vers test vers PR',
+        'La matrice de tracabilite sait rougir',
+        'La vue de tracabilite est derivee de ses sources',
+        'La vue de l etat vivant est egale a sa source',
+        'Attributions — garde, poste, lot et identifiants nommes confrontes a leurs sources',
+        'La garde des attributions sait rougir, et laisse passer la citation legitime',
+        'contracts:hash — le contrat est derive, et son empreinte le tient',
+        'La garde de PR sait rougir',
+        'Vue GATES.md derivee du registre',
+        'Le decompte des gardes sait rougir',
+        'Les paths derives sont a jour',
+        'Vocabulaire — enums, glossaire et etats occupants',
+        'La garde du vocabulaire sait rougir',
+        'Centimes — aucun flottant, montants en Cents',
+        'La garde des centimes sait rougir',
+        'Migrations additives',
+        'La garde des migrations sait rougir',
+        'Termes interdits — nomenclature, modeles d axionia et synonymes',
+        'La garde des termes interdits sait rougir',
+        'Lexique interdit — aucun usage prescriptif dans le perimetre de REQ-GOV-017',
+        'La garde du lexique sait rougir, et laisse passer la negation qui protege',
+        'Charte — aucun agregat du reseau dans l espace',
+        'La garde des agregats du reseau sait rougir',
+        'Securite — aucun style en ligne sous src/app',
+        'La garde des styles en ligne sait rougir',
+        'Charte — aucune progression vers un seuil dans l espace',
+        'La garde des progressions sait rougir',
+        'Charte — revue du juriste sur ce qu un apporteur lit, label et checklist',
+        'La garde de la revue apporteur-facing sait rougir',
+        'Charte — aucun terme ni rubrique du droit social',
+        'La garde du lexique social sait rougir',
+        'Charte — aucune remuneration presentee comme ferme',
+        'La garde de la remuneration indicative sait rougir',
+        'Grille du contrat — aucun forfait, bareme ou pourcentage sans chiffre dans l annexe 1',
+        'La garde de la grille chiffree sait rougir',
+        'Seuils et delais du contrat — une seule source, aucun litteral hors SSOT',
+        'La garde des seuils sait rougir, famille par famille, sans faux positif',
+        'La date de lecture d une notification ne fait courir aucun delai',
+        'La garde de la date de lecture sait rougir, famille par famille',
+        "Maquettes — aucune tache d'ecran attribuee sans validation de Will",
+        'La garde des maquettes sait rougir, y compris sur une ligne du milieu du tableau',
+        'Micro-copie — chaque issue et chaque ecran ont leur texte, aucun libelle en dur',
+        "La garde de la micro-copie sait rougir, en nommant la valeur, l'ecran ou le fichier",
+        'Budgets de performance derives de REQ-GOV-028',
+        'La garde des budgets sait rougir',
+        'Les budgets sur le disque sont le rendu de leur exigence',
+        'La mesure du poids par route sait rougir, y compris sur zero octet',
+        'Compteurs de debit — conduite sur panne declaree et executee, famille close',
+        'La garde des compteurs de debit sait rougir',
+        'Conventions et gardes transposees d axionia',
+        'La garde des conventions sait rougir',
+        'Journal sans donnee personnelle',
+        'La garde du journal sait rougir',
+        'Donnees personnelles chiffrees, schema et chemins d ecriture',
+        'La garde des donnees personnelles sait rougir',
+        'Roles de la console — requireRole partout, droits dans la matrice',
+        'La garde des roles sait rougir',
+        'Lint',
+        'Semgrep — regles maison et jeux publics sur src',
+        'Semgrep — chaque regle maison mord sur son temoin, nosemgrep n eteint rien',
+        'Format',
+        'Typecheck',
+        'Harnais de l adaptateur MCP',
+        'Depot de l instantane de la forge'
+      ),
+    },
+    {
+      job: 'porte-d',
+      si: '${{ github.event.pull_request.merged != true }}',
+      cles: { 'runs-on': 'ubuntu-latest', permissions: { contents: 'read' } },
+      etapes: figer(
+        'uses: actions/checkout@v4',
+        'uses: pnpm/action-setup@v4',
+        'uses: actions/setup-node@v4',
+        'run: pnpm install --frozen-lockfile',
+        'Les vues derivees sont rendues, et le rendu est reproductible',
+        'La porte D sait rougir — une colonne encore lue, supprimee, est nommee',
+        'Porte D — expand/contract, base vierge, vidage N-1 seme, diff vide, image N-1',
+        'red-first — les tests nouveaux de la PR rougissent contre sa base',
+        'La garde red-first sait rougir'
+      ),
+    },
+    {
+      job: 'tests-1',
+      si: '${{ github.event.pull_request.merged != true }}',
+      cles: {
+        'runs-on': 'ubuntu-latest',
+        needs: ['gardes'],
+        permissions: { contents: 'read', 'pull-requests': 'read' },
+        outputs: { empreinte: '${{ steps.blob.outputs.empreinte }}' },
+      },
+      etapes: [
+        ...figer(
+          'uses: actions/checkout@v4',
+          'uses: pnpm/action-setup@v4',
+          'uses: actions/setup-node@v4',
+          'Cache des navigateurs des passes d accessibilite',
+          'Reception de l instantane de la forge',
+          'run: pnpm install --frozen-lockfile',
+          'Les vues derivees sont rendues, et le rendu est reproductible',
+          'L instantane de la forge est celui que le job gardes a publie',
+          'Navigateurs des passes d accessibilite'
+        ),
+        ...etapesDeLEclat(1),
+      ],
+    },
+    {
+      job: 'tests-2',
+      si: '${{ github.event.pull_request.merged != true }}',
+      cles: {
+        'runs-on': 'ubuntu-latest',
+        needs: ['gardes'],
+        permissions: { contents: 'read', 'pull-requests': 'read' },
+        outputs: { empreinte: '${{ steps.blob.outputs.empreinte }}' },
+      },
+      etapes: [
+        ...figer(
+          'uses: actions/checkout@v4',
+          'uses: pnpm/action-setup@v4',
+          'uses: actions/setup-node@v4',
+          'Cache des navigateurs des passes d accessibilite',
+          'Reception de l instantane de la forge',
+          'run: pnpm install --frozen-lockfile',
+          'Les vues derivees sont rendues, et le rendu est reproductible',
+          'L instantane de la forge est celui que le job gardes a publie',
+          'Navigateurs des passes d accessibilite'
+        ),
+        ...etapesDeLEclat(2),
+      ],
+    },
+    {
+      job: 'tests-3',
+      si: '${{ github.event.pull_request.merged != true }}',
+      cles: {
+        'runs-on': 'ubuntu-latest',
+        needs: ['gardes'],
+        permissions: { contents: 'read', 'pull-requests': 'read' },
+        outputs: { empreinte: '${{ steps.blob.outputs.empreinte }}' },
+      },
+      etapes: [
+        ...figer(
+          'uses: actions/checkout@v4',
+          'uses: pnpm/action-setup@v4',
+          'uses: actions/setup-node@v4',
+          'Cache des navigateurs des passes d accessibilite',
+          'Reception de l instantane de la forge',
+          'run: pnpm install --frozen-lockfile',
+          'Les vues derivees sont rendues, et le rendu est reproductible',
+          'L instantane de la forge est celui que le job gardes a publie',
+          'Navigateurs des passes d accessibilite'
+        ),
+        ...etapesDeLEclat(3),
+      ],
+    },
+    {
+      job: 'tests-4',
+      si: '${{ github.event.pull_request.merged != true }}',
+      cles: {
+        'runs-on': 'ubuntu-latest',
+        needs: ['gardes'],
+        permissions: { contents: 'read', 'pull-requests': 'read' },
+        outputs: { empreinte: '${{ steps.blob.outputs.empreinte }}' },
+      },
+      etapes: [
+        ...figer(
+          'uses: actions/checkout@v4',
+          'uses: pnpm/action-setup@v4',
+          'uses: actions/setup-node@v4',
+          'Cache des navigateurs des passes d accessibilite',
+          'Reception de l instantane de la forge',
+          'run: pnpm install --frozen-lockfile',
+          'Les vues derivees sont rendues, et le rendu est reproductible',
+          'L instantane de la forge est celui que le job gardes a publie',
+          'Navigateurs des passes d accessibilite'
+        ),
+        ...etapesDeLEclat(4),
+      ],
+    },
+    {
+      job: 'apres-tests',
+      si: '${{ github.event.pull_request.merged != true }}',
+      cles: {
+        'runs-on': 'ubuntu-latest',
+        needs: ['gardes', 'tests-1', 'tests-2', 'tests-3', 'tests-4'],
+        permissions: { contents: 'read', 'pull-requests': 'read' },
+      },
+      etapes: [
+        ...figer(
+          'uses: actions/checkout@v4',
+          'uses: pnpm/action-setup@v4',
+          'uses: actions/setup-node@v4',
+          'Reception de l instantane de la forge',
+          'run: pnpm install --frozen-lockfile',
+          'Les vues derivees sont rendues, et le rendu est reproductible',
+          'L instantane de la forge est celui que le job gardes a publie',
+          'Tests — fusion des quatre eclats, aux seuils de la configuration',
+          'req:check — chaque paire (tache, REQ) a son test annote et VERT',
+          'Le lecteur du rapport de mutation sait rougir',
+          'Mutation des fichiers de la PR — Stryker en bac a sable, survivants nommes',
+          'Etat vivant — fraicheur, verrou d owner, journal',
+          'La garde de l etat vivant sait rougir'
+        ),
+        ...ECLATS.flatMap(etapesDuBlob),
+      ],
+    },
+    {
+      job: 'poids',
+      si: '${{ github.event.pull_request.merged != true }}',
+      cles: { 'runs-on': 'ubuntu-latest', permissions: { contents: 'read' } },
+      etapes: figer(
+        'uses: actions/checkout@v4',
+        'uses: pnpm/action-setup@v4',
+        'uses: actions/setup-node@v4',
+        'run: pnpm install --frozen-lockfile',
+        'Construire l application pour la mesure',
+        'Poids par route de l espace — JS propre et socle commun'
+      ),
+    },
+    {
+      job: 'gate-a',
+      si: '${{ always() && github.event.pull_request.merged != true }}',
+      cles: {
+        'runs-on': 'ubuntu-latest',
+        needs: [
+          'gardes',
+          'porte-d',
+          'tests-1',
+          'tests-2',
+          'tests-3',
+          'tests-4',
+          'apres-tests',
+          'poids',
+        ],
+        permissions: { contents: 'read' },
+      },
+      etapes: figer(
+        'uses: actions/checkout@v4',
+        'uses: pnpm/action-setup@v4',
+        'uses: actions/setup-node@v4',
+        'run: pnpm install --frozen-lockfile',
+        'Chaque job de la porte A a reussi'
+      ),
+    },
+  ],
   workflow: {
     name: 'Gate A',
     on: {
@@ -2584,314 +3338,8 @@ export const PORTE_A_FIGEE: PorteFigee = {
         types: ['opened', 'synchronize', 'reopened', 'edited', 'labeled', 'unlabeled'],
       },
     },
+    permissions: { contents: 'read' },
   },
-  etapes: [
-    {
-      nom: 'uses: actions/checkout@v4',
-      uses: 'actions/checkout@v4',
-      cles: { with: { 'fetch-depth': '0' } },
-    },
-    { nom: 'uses: pnpm/action-setup@v4', uses: 'pnpm/action-setup@v4' },
-    {
-      nom: 'uses: actions/setup-node@v4',
-      uses: 'actions/setup-node@v4',
-      cles: { with: { 'node-version': '22', cache: 'pnpm' } },
-    },
-    // QA-T59 : le cache des navigateurs des passes d'accessibilité, AVANT toute commande (point 5),
-    // sa clé dérivée du verrou (point 6 : aucune commande pour lire une version).
-    {
-      nom: 'Cache des navigateurs des passes d accessibilite',
-      uses: 'actions/cache@v4',
-      cles: {
-        with: {
-          path: '~/.cache/ms-playwright',
-          key: "navigateurs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}",
-        },
-      },
-    },
-    { nom: 'run: pnpm install --frozen-lockfile', run: 'pnpm install --frozen-lockfile' },
-    // GOV-123 : les vues se rendent AVANT toute étape qui en lit une ; aucune ne revient sous git.
-    {
-      nom: 'Les vues derivees sont rendues, et le rendu est reproductible',
-      run: 'pnpm vues:rendre',
-    },
-    {
-      nom: 'Aucune vue derivee sous git — une PR qui en rajoute une est refusee, le fichier nomme',
-      run: 'pnpm vues:hors-git',
-    },
-    // QA-T64 : la forge lue une fois, après les vues et avant toute garde qui la lit.
-    {
-      nom: 'La forge est lue une fois pour toute la porte A',
-      run: 'pnpm forge:instantane',
-      cles: JETON_DE_LA_FORGE,
-    },
-    { nom: 'Regle de publication (depot public)', run: 'pnpm gov:publication' },
-    { nom: 'La garde de publication sait rougir', run: 'pnpm gov:publication:prove' },
-    { nom: 'Identifiants qualifies', run: 'pnpm gov:identifiants' },
-    { nom: 'La garde des identifiants sait rougir', run: 'pnpm gov:identifiants:prove' },
-    { nom: 'Coherence du backlog', run: 'pnpm gov:tasks' },
-    { nom: 'La garde du backlog sait rougir', run: 'pnpm gov:tasks:prove' },
-    { nom: 'La vue du backlog est egale a sa source', run: 'pnpm gov:tasks:verifie-rendu' },
-    { nom: 'Registre des exigences', run: 'pnpm gov:requirements' },
-    { nom: 'La garde du registre sait rougir', run: 'pnpm gov:requirements:prove' },
-    {
-      nom: 'La vue des exigences est egale a sa source',
-      run: 'pnpm gov:requirements:verifie-rendu',
-    },
-    { nom: 'Registre des decisions', run: 'pnpm gov:hypotheses' },
-    { nom: 'La garde des decisions sait rougir', run: 'pnpm gov:hypotheses:prove' },
-    { nom: 'Table de preseance', run: 'pnpm gov:preseance' },
-    { nom: 'La garde de preseance sait rougir', run: 'pnpm gov:preseance:prove' },
-    { nom: 'Affirmations verifiees sur axionia', run: 'pnpm gov:sonde' },
-    { nom: 'La sonde sait rougir', run: 'pnpm gov:sonde:prove' },
-    { nom: 'ADR — index derive et gabarit', run: 'pnpm gov:adr' },
-    { nom: 'La garde des ADR sait rougir', run: 'pnpm gov:adr:prove' },
-    { nom: 'Matrice d autonomie des agents et garde des pushes', run: 'pnpm gov:autonomie' },
-    { nom: 'La garde d autonomie sait rougir', run: 'pnpm gov:autonomie:prove' },
-    { nom: 'Gabarit de PR, CODEOWNERS et charte des agents', run: 'pnpm gov:pr' },
-    { nom: 'Inventaire prouve — tout etat >= code porte une preuve', run: 'pnpm gov:inventaire' },
-    { nom: 'La garde de l inventaire sait rougir', run: 'pnpm gov:inventaire:prove' },
-    { nom: 'Fiches de role derivees de docs/agents.json', run: 'pnpm gov:agents' },
-    { nom: 'La garde des fiches sait rougir', run: 'pnpm gov:agents:prove' },
-    { nom: 'Les fiches sur le disque sont egales a leur source', run: 'pnpm gov:agents:verifier' },
-    { nom: 'Registre d entite — sentinelle tenue dans les deux sens', run: 'pnpm gov:entite' },
-    { nom: 'La garde du registre d entite sait rougir', run: 'pnpm gov:entite:prove' },
-    {
-      nom: 'Le corps PUBLIE de la PR ne porte aucune coordonnee',
-      run: 'pnpm gov:entite:corps',
-      si: "github.event_name == 'pull_request'",
-      cles: JETON_DE_LA_FORGE,
-    },
-    { nom: 'La garde du corps publie sait rougir', run: 'pnpm gov:entite:corps:prove' },
-    { nom: 'La garde du depot sait rougir', run: 'pnpm gov:depot-visibilite:prove' },
-    {
-      nom: 'Matrice de tracabilite REQ vers tache vers test vers PR',
-      run: 'pnpm gov:trace',
-      cles: JETON_ET_INSTANTANE,
-    },
-    { nom: 'La matrice de tracabilite sait rougir', run: 'pnpm gov:trace:prove' },
-    { nom: 'La vue de tracabilite est derivee de ses sources', run: 'pnpm gov:trace:verifier' },
-    { nom: 'La vue de l etat vivant est egale a sa source', run: 'pnpm plan-state:verifier' },
-    {
-      nom: 'Attributions — garde, poste, lot et identifiants nommes confrontes a leurs sources',
-      run: 'pnpm gov:attributions',
-    },
-    {
-      nom: 'La garde des attributions sait rougir, et laisse passer la citation legitime',
-      run: 'pnpm gov:attributions:prove',
-    },
-    {
-      nom: 'contracts:hash — le contrat est derive, et son empreinte le tient',
-      run: 'pnpm contracts:hash',
-    },
-    { nom: 'La garde de PR sait rougir', run: 'pnpm gov:pr:prove' },
-    { nom: 'Vue GATES.md derivee du registre', run: 'pnpm gov:gates-derivees' },
-    { nom: 'Le decompte des gardes sait rougir', run: 'pnpm gates:prouvees:prove' },
-    { nom: 'Les paths derives sont a jour', run: 'pnpm lot:paths:check' },
-    { nom: 'Vocabulaire — enums, glossaire et etats occupants', run: 'pnpm partners:schema:enums' },
-    { nom: 'La garde du vocabulaire sait rougir', run: 'pnpm partners:schema:enums:prove' },
-    { nom: 'Centimes — aucun flottant, montants en Cents', run: 'pnpm partners:schema:cents' },
-    { nom: 'La garde des centimes sait rougir', run: 'pnpm partners:schema:cents:prove' },
-    { nom: 'Migrations additives', run: 'pnpm partners:migrations:additive' },
-    { nom: 'La garde des migrations sait rougir', run: 'pnpm partners:migrations:additive:prove' },
-    // QA-T11 : la porte D et sa preuve, figées par la PR qui les ajoute à `gate-a`.
-    {
-      nom: 'La porte D sait rougir — une colonne encore lue, supprimee, est nommee',
-      run: 'pnpm gate-d:prove',
-    },
-    {
-      nom: 'Porte D — expand/contract, base vierge, vidage N-1 seme, diff vide, image N-1',
-      run: 'pnpm gate-d',
-    },
-    {
-      nom: 'Termes interdits — nomenclature, modeles d axionia et synonymes',
-      run: 'pnpm gov:termes-interdits',
-    },
-    { nom: 'La garde des termes interdits sait rougir', run: 'pnpm gov:termes-interdits:prove' },
-    {
-      nom: 'Lexique interdit — aucun usage prescriptif dans le perimetre de REQ-GOV-017',
-      run: 'pnpm gov:lexique',
-    },
-    {
-      nom: 'La garde du lexique sait rougir, et laisse passer la negation qui protege',
-      run: 'pnpm gov:lexique:prove',
-    },
-    {
-      nom: 'Grille du contrat — aucun forfait, bareme ou pourcentage sans chiffre dans l annexe 1',
-      run: 'pnpm jur:grille-chiffree',
-    },
-    { nom: 'La garde de la grille chiffree sait rougir', run: 'pnpm jur:grille-chiffree:prove' },
-    {
-      nom: "Maquettes — aucune tache d'ecran attribuee sans validation de Will",
-      run: 'pnpm gov:maquettes-validees',
-    },
-    {
-      nom: 'La garde des maquettes sait rougir, y compris sur une ligne du milieu du tableau',
-      run: 'pnpm gov:maquettes-validees:prove',
-    },
-    {
-      nom: 'Micro-copie — chaque issue et chaque ecran ont leur texte, aucun libelle en dur',
-      run: 'pnpm ux:exhaustivite',
-    },
-    {
-      nom: "La garde de la micro-copie sait rougir, en nommant la valeur, l'ecran ou le fichier",
-      run: 'pnpm ux:exhaustivite:prove',
-    },
-    { nom: 'Budgets de performance derives de REQ-GOV-028', run: 'pnpm perf:budgets' },
-    { nom: 'La garde des budgets sait rougir', run: 'pnpm perf:budgets:prove' },
-    {
-      nom: 'Les budgets sur le disque sont le rendu de leur exigence',
-      run: 'pnpm perf:budgets:verifier',
-    },
-    {
-      nom: 'La mesure du poids par route sait rougir, y compris sur zero octet',
-      run: 'pnpm perf:bundle:prove',
-    },
-    {
-      nom: 'Compteurs de debit — conduite sur panne declaree et executee, famille close',
-      run: 'pnpm securite:rate-famille',
-    },
-    { nom: 'La garde des compteurs de debit sait rougir', run: 'pnpm securite:rate-famille:prove' },
-    { nom: 'Conventions et gardes transposees d axionia', run: 'pnpm gov:conventions' },
-    { nom: 'La garde des conventions sait rougir', run: 'pnpm gov:conventions:prove' },
-    { nom: 'Journal sans donnee personnelle', run: 'pnpm journal:sans-pii' },
-    { nom: 'La garde du journal sait rougir', run: 'pnpm journal:sans-pii:prove' },
-    {
-      nom: 'Donnees personnelles chiffrees, schema et chemins d ecriture',
-      run: 'pnpm securite:schema-pii',
-    },
-    { nom: 'La garde des donnees personnelles sait rougir', run: 'pnpm securite:schema-pii:prove' },
-    { nom: 'Lint', run: 'pnpm lint' },
-    // QA-T07 : la gate de sécurité Semgrep et sa preuve. Figées ici par la PR qui les ajoute à
-    // `gate-a` : sans elles au constat, leur retrait futur ne rougirait rien.
-    { nom: 'Semgrep — regles maison et jeux publics sur src', run: 'pnpm sec:semgrep' },
-    {
-      nom: 'Semgrep — chaque regle maison mord sur son temoin, nosemgrep n eteint rien',
-      run: 'pnpm sec:semgrep:prove',
-    },
-    { nom: 'Format', run: 'pnpm format:check' },
-    { nom: 'Typecheck', run: 'pnpm typecheck' },
-    {
-      nom: 'red-first — les tests nouveaux de la PR rougissent contre sa base',
-      run: 'pnpm red-first',
-      si: "github.event_name == 'pull_request'",
-    },
-    { nom: 'La garde red-first sait rougir', run: 'pnpm red-first:prove' },
-    { nom: 'Harnais de l adaptateur MCP', run: 'pnpm harnais-mcp' },
-    // QA-T59 : trois tentatives bornées chacune par `timeout`, l'étape entière par `timeout-minutes` ;
-    // toutes échouées, l'étape ÉCHOUE (jamais un vert de complaisance).
-    {
-      nom: 'Navigateurs des passes d accessibilite',
-      run: 'pnpm a11y:navigateurs:bornes',
-      cles: { 'timeout-minutes': '15' },
-    },
-    { nom: 'Tests', run: 'pnpm test', cles: JETON_ET_INSTANTANE },
-    {
-      nom: 'req:check — chaque paire (tache, REQ) a son test annote et VERT',
-      run: 'pnpm req:check',
-      cles: JETON_ET_INSTANTANE,
-    },
-    { nom: 'Le lecteur du rapport de mutation sait rougir', run: 'pnpm mutation:prove' },
-    {
-      nom: 'Mutation des fichiers de la PR — Stryker en bac a sable, survivants nommes',
-      run: 'pnpm mutation:pr',
-    },
-    {
-      nom: 'Etat vivant — fraicheur, verrou d owner, journal',
-      run: 'pnpm gov:etat --now "$(date -u +%Y-%m-%dT%H:%M:%SZ)"',
-      cles: JETON_ET_INSTANTANE,
-    },
-    { nom: 'La garde de l etat vivant sait rougir', run: 'pnpm gov:etat:prove' },
-    { nom: 'Construire l application pour la mesure', run: 'pnpm perf:bundle:construire' },
-    { nom: 'Poids par route de l espace — JS propre et socle commun', run: 'pnpm perf:bundle' },
-    // ── LES DOUZE ÉTAPES VENUES DE `main` PENDANT QUE CETTE BRANCHE VIVAIT (PR #165 et #180).
-    //    CE QUI EST VERSIONNÉ ICI EST UNE COPIE FIGÉE, et c'est la raison d'être d'un constat : on
-    //    ne confronte pas un workflow à lui-même. La dérivation dit COMMENT cette copie a été
-    //    produite, elle ne change pas ce qu'elle EST — précision d'une revue `exactitude`, et elle
-    //    compte, parce que RM-01 dit « dériver, jamais recopier » : ici la copie est le livrable.
-    //    Elle a été produite depuis
-    //    `.github/workflows/ci.yml` après `pnpm vues:fusion`, nom et commande lus tels quels, et
-    //    leur compte est confronté à celui que `gov:conventions` nomme — douze, ni onze ni
-    //    quatorze. Une première dérivation en annonçait QUATORZE : elle ne relevait les noms déjà
-    //    figés qu'entre apostrophes simples, et manquait les deux que Prettier écrit en guillemets
-    //    doubles parce que leur libellé contient une apostrophe. Les deux auraient été ajoutées en
-    //    DOUBLE, ce que la famille `etape_en_double` refuse. Le compte de la garde est l’arbitre.
-    //    Chaque garde vient avec sa preuve qu’elle sait rougir : c’est RM-02, et le constat le
-    //    montre par paires. ──
-    {
-      nom: 'Charte — aucun agregat du reseau dans l espace',
-      run: 'pnpm jur:aucun-agregat-reseau',
-    },
-    {
-      nom: 'La garde des agregats du reseau sait rougir',
-      run: 'pnpm jur:aucun-agregat-reseau:prove',
-    },
-    // SEC-46 — la garde des styles en ligne, et sa preuve, par paire.
-    {
-      nom: 'Securite — aucun style en ligne sous src/app',
-      run: 'pnpm csp:inline',
-    },
-    {
-      nom: 'La garde des styles en ligne sait rougir',
-      run: 'pnpm csp:inline:prove',
-    },
-    {
-      nom: 'Charte — aucune progression vers un seuil dans l espace',
-      run: 'pnpm jur:aucune-progression',
-    },
-    {
-      nom: 'La garde des progressions sait rougir',
-      run: 'pnpm jur:aucune-progression:prove',
-    },
-    {
-      nom: 'Charte — revue du juriste sur ce qu un apporteur lit, label et checklist',
-      run: 'pnpm jur:revue-apporteur-facing',
-    },
-    {
-      nom: 'La garde de la revue apporteur-facing sait rougir',
-      run: 'pnpm jur:revue-apporteur-facing:prove',
-    },
-    {
-      nom: 'Charte — aucun terme ni rubrique du droit social',
-      run: 'pnpm jur:lexique-social',
-    },
-    {
-      nom: 'La garde du lexique social sait rougir',
-      run: 'pnpm jur:lexique-social:prove',
-    },
-    {
-      nom: 'Charte — aucune remuneration presentee comme ferme',
-      run: 'pnpm jur:copy-indicative-partners',
-    },
-    {
-      nom: 'La garde de la remuneration indicative sait rougir',
-      run: 'pnpm jur:copy-indicative-partners:prove',
-    },
-    {
-      nom: 'Seuils et delais du contrat — une seule source, aucun litteral hors SSOT',
-      run: 'pnpm ssot:seuils',
-    },
-    {
-      nom: 'La garde des seuils sait rougir, famille par famille, sans faux positif',
-      run: 'pnpm ssot:seuils:prove',
-    },
-    {
-      nom: 'La date de lecture d une notification ne fait courir aucun delai',
-      run: 'pnpm notifications:lue-at-inerte',
-    },
-    {
-      nom: 'La garde de la date de lecture sait rougir, famille par famille',
-      run: 'pnpm notifications:lue-at-inerte:prove',
-    },
-    {
-      nom: 'Roles de la console — requireRole partout, droits dans la matrice',
-      run: 'pnpm securite:roles',
-    },
-    {
-      nom: 'La garde des roles sait rougir',
-      run: 'pnpm securite:roles:prove',
-    },
-  ],
   scripts: {
     'sec:semgrep': 'tsx scripts/gates/semgrep.ts',
     'sec:semgrep:prove': 'tsx scripts/gates/semgrep.ts --prove',
@@ -3070,6 +3518,19 @@ export const OUTILLAGE_FIGE: OutillageFige = {
       execution: 'node20',
       releve: '2026-10-01',
     },
+    // GOV-142 : les artefacts du run courant (instantané de la forge, blobs des éclats). Tag v4 lu
+    // sur la forge (`repos/actions/<action>/git/ref/tags/v4`, un commit), et `runs.using` de son
+    // `action.yml` à ce commit.
+    'actions/upload-artifact@v4': {
+      commit: 'ea165f8d65b6e75b540449e92b4886f43607fa02',
+      execution: 'node20',
+      releve: '2026-10-03',
+    },
+    'actions/download-artifact@v4': {
+      commit: 'd3f86a106a0bac45b974a628896c90dbdf5c8093',
+      execution: 'node20',
+      releve: '2026-10-03',
+    },
   },
 };
 
@@ -3127,15 +3588,19 @@ const CHARTE_CONFORME =
 
 /** Le constat de la porte A de la vue de référence : les trois étapes de `CI_CONFORME`, figées. */
 export const PORTE_CONFORME: PorteFigee = {
-  job: 'gate-a',
-  si: null,
-  cles: {},
-  workflow: { name: 'Gate A' },
-  etapes: [
-    { nom: 'Lint', run: 'pnpm lint' },
-    { nom: 'Format', run: 'pnpm format:check' },
-    { nom: 'Conventions transposees', run: 'pnpm gov:conventions' },
+  jobs: [
+    {
+      job: 'gate-a',
+      si: null,
+      cles: {},
+      etapes: [
+        { nom: 'Lint', run: 'pnpm lint' },
+        { nom: 'Format', run: 'pnpm format:check' },
+        { nom: 'Conventions transposees', run: 'pnpm gov:conventions' },
+      ],
+    },
   ],
+  workflow: { name: 'Gate A' },
   scripts: {
     lint: 'eslint .',
     'format:check': 'prettier --check .',

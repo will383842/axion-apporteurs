@@ -60,21 +60,13 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       # GOV-142 : l instantane de la forge passe aux autres jobs par un artefact du run courant, a nom
-      # fixe et sans remplacement ; son empreinte SHA-256 sort du job par `outputs` (jamais GITHUB_ENV),
-      # et chaque consommateur la compare AVANT usage.
+      # fixe et sans remplacement ; son empreinte SHA-256 sort du job par `outputs`, et chaque
+      # consommateur la compare AVANT usage.
       - name: Empreinte de l instantane de la forge
         id: forge
         run: pnpm ci:artefact:publier
         env:
           ARTEFACT: ${{ runner.temp }}/forge-instantane.json
-      - name: Depot de l instantane de la forge
-        uses: actions/upload-artifact@v4
-        with:
-          name: forge-instantane
-          path: ${{ runner.temp }}/forge-instantane.json
-          overwrite: false
-          if-no-files-found: error
-          retention-days: 1
       - name: Regle de publication (depot public)
         run: pnpm gov:publication
       - name: La garde de publication sait rougir
@@ -424,6 +416,15 @@ jobs:
       # n est pas rejoue ici. Le temoin a deux faces vit dans `tests/integration/adaptateur-mcp.spec.ts`.
       - name: Harnais de l adaptateur MCP
         run: pnpm harnais-mcp
+      # GOV-142 : le depot, en fin de job : aucune commande ne suit une action.
+      - name: Depot de l instantane de la forge
+        uses: actions/upload-artifact@v4
+        with:
+          name: forge-instantane
+          path: ${{ runner.temp }}/forge-instantane.json
+          overwrite: false
+          if-no-files-found: error
+          retention-days: 1
   porte-d:
     # GOV-142 : ce qui confronte la PR a sa base dans l historique (`fetch-depth: 0`) : la porte D et
     # red-first, en parallele.
@@ -497,13 +498,6 @@ jobs:
         with:
           path: ~/.cache/ms-playwright
           key: navigateurs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
-      - run: pnpm install --frozen-lockfile
-      # GOV-123, REQ-GOV-032. Les vues derivees ne sont plus commitees : elles se RENDENT ici,
-      # avant toute etape qui en lit une, puis une seconde fois pour que deux rendus identiques
-      # octet par octet soient exiges (la vue non reproductible est nommee). Aucun jeton : les
-      # lectures de la forge de PLAN-STATE echouent de la meme facon aux deux rendus.
-      - name: Les vues derivees sont rendues, et le rendu est reproductible
-        run: pnpm vues:rendre
       # GOV-142 : l instantane de la forge, lu UNE fois par le job `gardes`, recu du run courant (ni
       # run-id ni jeton) et compare a l empreinte que ce job a publiee, avant tout usage.
       - name: Reception de l instantane de la forge
@@ -511,6 +505,13 @@ jobs:
         with:
           name: forge-instantane
           path: ${{ runner.temp }}
+      - run: pnpm install --frozen-lockfile
+      # GOV-123, REQ-GOV-032. Les vues derivees ne sont plus commitees : elles se RENDENT ici,
+      # avant toute etape qui en lit une, puis une seconde fois pour que deux rendus identiques
+      # octet par octet soient exiges (la vue non reproductible est nommee). Aucun jeton : les
+      # lectures de la forge de PLAN-STATE echouent de la meme facon aux deux rendus.
+      - name: Les vues derivees sont rendues, et le rendu est reproductible
+        run: pnpm vues:rendre
       - name: L instantane de la forge est celui que le job gardes a publie
         run: pnpm ci:artefact:verifier
         env:
@@ -577,13 +578,6 @@ jobs:
         with:
           path: ~/.cache/ms-playwright
           key: navigateurs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
-      - run: pnpm install --frozen-lockfile
-      # GOV-123, REQ-GOV-032. Les vues derivees ne sont plus commitees : elles se RENDENT ici,
-      # avant toute etape qui en lit une, puis une seconde fois pour que deux rendus identiques
-      # octet par octet soient exiges (la vue non reproductible est nommee). Aucun jeton : les
-      # lectures de la forge de PLAN-STATE echouent de la meme facon aux deux rendus.
-      - name: Les vues derivees sont rendues, et le rendu est reproductible
-        run: pnpm vues:rendre
       # GOV-142 : l instantane de la forge, lu UNE fois par le job `gardes`, recu du run courant (ni
       # run-id ni jeton) et compare a l empreinte que ce job a publiee, avant tout usage.
       - name: Reception de l instantane de la forge
@@ -591,6 +585,13 @@ jobs:
         with:
           name: forge-instantane
           path: ${{ runner.temp }}
+      - run: pnpm install --frozen-lockfile
+      # GOV-123, REQ-GOV-032. Les vues derivees ne sont plus commitees : elles se RENDENT ici,
+      # avant toute etape qui en lit une, puis une seconde fois pour que deux rendus identiques
+      # octet par octet soient exiges (la vue non reproductible est nommee). Aucun jeton : les
+      # lectures de la forge de PLAN-STATE echouent de la meme facon aux deux rendus.
+      - name: Les vues derivees sont rendues, et le rendu est reproductible
+        run: pnpm vues:rendre
       - name: L instantane de la forge est celui que le job gardes a publie
         run: pnpm ci:artefact:verifier
         env:
@@ -657,13 +658,6 @@ jobs:
         with:
           path: ~/.cache/ms-playwright
           key: navigateurs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
-      - run: pnpm install --frozen-lockfile
-      # GOV-123, REQ-GOV-032. Les vues derivees ne sont plus commitees : elles se RENDENT ici,
-      # avant toute etape qui en lit une, puis une seconde fois pour que deux rendus identiques
-      # octet par octet soient exiges (la vue non reproductible est nommee). Aucun jeton : les
-      # lectures de la forge de PLAN-STATE echouent de la meme facon aux deux rendus.
-      - name: Les vues derivees sont rendues, et le rendu est reproductible
-        run: pnpm vues:rendre
       # GOV-142 : l instantane de la forge, lu UNE fois par le job `gardes`, recu du run courant (ni
       # run-id ni jeton) et compare a l empreinte que ce job a publiee, avant tout usage.
       - name: Reception de l instantane de la forge
@@ -671,6 +665,13 @@ jobs:
         with:
           name: forge-instantane
           path: ${{ runner.temp }}
+      - run: pnpm install --frozen-lockfile
+      # GOV-123, REQ-GOV-032. Les vues derivees ne sont plus commitees : elles se RENDENT ici,
+      # avant toute etape qui en lit une, puis une seconde fois pour que deux rendus identiques
+      # octet par octet soient exiges (la vue non reproductible est nommee). Aucun jeton : les
+      # lectures de la forge de PLAN-STATE echouent de la meme facon aux deux rendus.
+      - name: Les vues derivees sont rendues, et le rendu est reproductible
+        run: pnpm vues:rendre
       - name: L instantane de la forge est celui que le job gardes a publie
         run: pnpm ci:artefact:verifier
         env:
@@ -737,13 +738,6 @@ jobs:
         with:
           path: ~/.cache/ms-playwright
           key: navigateurs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
-      - run: pnpm install --frozen-lockfile
-      # GOV-123, REQ-GOV-032. Les vues derivees ne sont plus commitees : elles se RENDENT ici,
-      # avant toute etape qui en lit une, puis une seconde fois pour que deux rendus identiques
-      # octet par octet soient exiges (la vue non reproductible est nommee). Aucun jeton : les
-      # lectures de la forge de PLAN-STATE echouent de la meme facon aux deux rendus.
-      - name: Les vues derivees sont rendues, et le rendu est reproductible
-        run: pnpm vues:rendre
       # GOV-142 : l instantane de la forge, lu UNE fois par le job `gardes`, recu du run courant (ni
       # run-id ni jeton) et compare a l empreinte que ce job a publiee, avant tout usage.
       - name: Reception de l instantane de la forge
@@ -751,6 +745,13 @@ jobs:
         with:
           name: forge-instantane
           path: ${{ runner.temp }}
+      - run: pnpm install --frozen-lockfile
+      # GOV-123, REQ-GOV-032. Les vues derivees ne sont plus commitees : elles se RENDENT ici,
+      # avant toute etape qui en lit une, puis une seconde fois pour que deux rendus identiques
+      # octet par octet soient exiges (la vue non reproductible est nommee). Aucun jeton : les
+      # lectures de la forge de PLAN-STATE echouent de la meme facon aux deux rendus.
+      - name: Les vues derivees sont rendues, et le rendu est reproductible
+        run: pnpm vues:rendre
       - name: L instantane de la forge est celui que le job gardes a publie
         run: pnpm ci:artefact:verifier
         env:
@@ -808,13 +809,6 @@ jobs:
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: pnpm }
-      - run: pnpm install --frozen-lockfile
-      # GOV-123, REQ-GOV-032. Les vues derivees ne sont plus commitees : elles se RENDENT ici,
-      # avant toute etape qui en lit une, puis une seconde fois pour que deux rendus identiques
-      # octet par octet soient exiges (la vue non reproductible est nommee). Aucun jeton : les
-      # lectures de la forge de PLAN-STATE echouent de la meme facon aux deux rendus.
-      - name: Les vues derivees sont rendues, et le rendu est reproductible
-        run: pnpm vues:rendre
       # GOV-142 : l instantane de la forge, lu UNE fois par le job `gardes`, recu du run courant (ni
       # run-id ni jeton) et compare a l empreinte que ce job a publiee, avant tout usage.
       - name: Reception de l instantane de la forge
@@ -822,46 +816,53 @@ jobs:
         with:
           name: forge-instantane
           path: ${{ runner.temp }}
-      - name: L instantane de la forge est celui que le job gardes a publie
-        run: pnpm ci:artefact:verifier
-        env:
-          ARTEFACT: ${{ runner.temp }}/forge-instantane.json
-          EMPREINTE_ATTENDUE: ${{ needs.gardes.outputs.empreinte_forge }}
       - name: Reception du blob de l eclat 1
         uses: actions/download-artifact@v4
         with:
           name: blob-1
           path: .vitest-reports
-      - name: Le blob de l eclat 1 est celui que son job a publie
-        run: pnpm ci:artefact:verifier
-        env:
-          ARTEFACT: .vitest-reports/blob-1-4.json
-          EMPREINTE_ATTENDUE: ${{ needs.tests-1.outputs.empreinte }}
       - name: Reception du blob de l eclat 2
         uses: actions/download-artifact@v4
         with:
           name: blob-2
           path: .vitest-reports
-      - name: Le blob de l eclat 2 est celui que son job a publie
-        run: pnpm ci:artefact:verifier
-        env:
-          ARTEFACT: .vitest-reports/blob-2-4.json
-          EMPREINTE_ATTENDUE: ${{ needs.tests-2.outputs.empreinte }}
       - name: Reception du blob de l eclat 3
         uses: actions/download-artifact@v4
         with:
           name: blob-3
           path: .vitest-reports
-      - name: Le blob de l eclat 3 est celui que son job a publie
-        run: pnpm ci:artefact:verifier
-        env:
-          ARTEFACT: .vitest-reports/blob-3-4.json
-          EMPREINTE_ATTENDUE: ${{ needs.tests-3.outputs.empreinte }}
       - name: Reception du blob de l eclat 4
         uses: actions/download-artifact@v4
         with:
           name: blob-4
           path: .vitest-reports
+      - run: pnpm install --frozen-lockfile
+      # GOV-123, REQ-GOV-032. Les vues derivees ne sont plus commitees : elles se RENDENT ici,
+      # avant toute etape qui en lit une, puis une seconde fois pour que deux rendus identiques
+      # octet par octet soient exiges (la vue non reproductible est nommee). Aucun jeton : les
+      # lectures de la forge de PLAN-STATE echouent de la meme facon aux deux rendus.
+      - name: Les vues derivees sont rendues, et le rendu est reproductible
+        run: pnpm vues:rendre
+      - name: L instantane de la forge est celui que le job gardes a publie
+        run: pnpm ci:artefact:verifier
+        env:
+          ARTEFACT: ${{ runner.temp }}/forge-instantane.json
+          EMPREINTE_ATTENDUE: ${{ needs.gardes.outputs.empreinte_forge }}
+      - name: Le blob de l eclat 1 est celui que son job a publie
+        run: pnpm ci:artefact:verifier
+        env:
+          ARTEFACT: .vitest-reports/blob-1-4.json
+          EMPREINTE_ATTENDUE: ${{ needs.tests-1.outputs.empreinte }}
+      - name: Le blob de l eclat 2 est celui que son job a publie
+        run: pnpm ci:artefact:verifier
+        env:
+          ARTEFACT: .vitest-reports/blob-2-4.json
+          EMPREINTE_ATTENDUE: ${{ needs.tests-2.outputs.empreinte }}
+      - name: Le blob de l eclat 3 est celui que son job a publie
+        run: pnpm ci:artefact:verifier
+        env:
+          ARTEFACT: .vitest-reports/blob-3-4.json
+          EMPREINTE_ATTENDUE: ${{ needs.tests-3.outputs.empreinte }}
       - name: Le blob de l eclat 4 est celui que son job a publie
         run: pnpm ci:artefact:verifier
         env:
