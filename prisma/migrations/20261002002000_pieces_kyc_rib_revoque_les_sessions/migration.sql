@@ -12,9 +12,16 @@
 -- (`apporteurs_version_de_session`) reste juge de l'écriture.
 -- Une fonction DÉDIÉE, plpgsql, sans EXECUTE, SECURITY INVOKER (le défaut) ; elle juge
 -- `NEW.apporteur_id`, jamais l'acteur.
+-- LA COURSE (A02 et la sécurité) : sous READ COMMITTED, deux PREMIERS RIB insérés en même temps ne se
+-- verraient pas, et aucun ne révoquerait. La ligne de l'apporteur est donc VERROUILLÉE avant l'EXISTS :
+-- la seconde insertion attend la première, puis la voit, et révoque.
 CREATE FUNCTION pieces_kyc_revoquer_sessions_au_changement_de_rib() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
-  IF NEW."type" = 'rib' AND EXISTS (
+  IF NEW."type" <> 'rib' THEN
+    RETURN NULL;
+  END IF;
+  PERFORM 1 FROM "apporteurs" WHERE "id" = NEW."apporteur_id" FOR UPDATE;
+  IF EXISTS (
     SELECT 1 FROM "pieces_kyc"
     WHERE "apporteur_id" = NEW."apporteur_id" AND "type" = 'rib' AND "id" <> NEW."id"
   ) THEN

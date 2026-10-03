@@ -37,6 +37,8 @@ import {
 let base: Base;
 /** Le client du SERVEUR : la base sous `partners_app`, provisionné comme en production. */
 let app: PrismaClient;
+/** Une SECONDE connexion du serveur, sous le même rôle : le témoin de la course. */
+let app2: PrismaClient;
 
 beforeAll(async () => {
   base = await demarrerBase();
@@ -45,10 +47,12 @@ beforeAll(async () => {
   u.password = randomBytes(24).toString('hex');
   await provisionnerRoleDExecution({ urlMigration: base.url, urlExecution: u.toString() });
   app = new PrismaClient({ datasourceUrl: u.toString() });
+  app2 = new PrismaClient({ datasourceUrl: u.toString() });
 }, 180_000);
 
 afterAll(async () => {
   await app?.$disconnect();
+  await app2?.$disconnect();
   await base?.arreter();
 });
 
@@ -247,5 +251,48 @@ describe('REQ-SEC-003 — SEC-45 : un nouveau RIB révoque les sessions, le prem
     expect(d!.type & 0b10).toBe(0);
     expect(d!.type & 0b100).toBe(0b100);
     expect(d!.type & 0b10000).toBe(0);
+  });
+
+  it('REQ-SEC-003 : TÉMOIN — la COURSE : deux premiers RIB insérés en concurrence par deux connexions révoquent quand même, une fois', async () => {
+    const a = await apporteur();
+    /** Une insertion de RIB par SQL brut, dans la transaction donnée. */
+    const rib = (tx: Pick<PrismaClient, '$executeRawUnsafe'>, statut: string) =>
+      tx.$executeRawUnsafe(
+        `INSERT INTO pieces_kyc (id, apporteur_id, type, statut, iban_chiffre, iban_hash)
+         VALUES ($1::uuid, $2::uuid, 'rib', $3::statut_piece_kyc, $4, $5)`,
+        randomUUID(),
+        a,
+        statut,
+        randomBytes(40),
+        hex(32)
+      );
+    let insere!: () => void;
+    const premiereInseree = new Promise<void>((r) => (insere = r));
+    let relacher!: () => void;
+    const tenue = new Promise<void>((r) => (relacher = r));
+    // La première transaction insère son RIB, puis RESTE OUVERTE.
+    const premiere = app.$transaction(
+      async (tx) => {
+        await rib(tx, 'valide');
+        insere();
+        await tenue;
+      },
+      { timeout: 30_000 }
+    );
+    await premiereInseree;
+    // La seconde, sur une AUTRE connexion, insère le sien : son déclencheur attend le verrou.
+    const seconde = app2.$transaction(async (tx) => rib(tx, 'a_verifier'), { timeout: 30_000 });
+    // On ne relâche la première qu'une fois la seconde VUE en attente d'un verrou.
+    for (let i = 0; ; i += 1) {
+      const [attente] = await base.prisma.$queryRaw<{ n: number }[]>`
+        SELECT count(*)::int AS n FROM pg_stat_activity
+        WHERE wait_event_type = 'Lock' AND usename = 'partners_app'`;
+      if ((attente?.n ?? 0) > 0) break;
+      if (i > 200) throw new Error('la seconde insertion n’a jamais attendu le verrou');
+      await new Promise((r) => setTimeout(r, 50));
+    }
+    relacher();
+    await Promise.all([premiere, seconde]);
+    expect(await version(a)).toBe(1);
   });
 });
