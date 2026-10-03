@@ -21,6 +21,11 @@
  * Joué par Gate D, sur la base fraîchement migrée.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { PrismaClient } from '@prisma/client';
+import {
+  ROLE_D_EXECUTION,
+  provisionnerRoleDExecution,
+} from '../../src/server/deploiement/role-d-execution';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { demarrerBase, type Base } from './harnais';
 import {
@@ -51,8 +56,21 @@ const CLES = clesPii({
   PII_ENCRYPTION_KEY: 'c'.repeat(64),
 });
 
+/**
+ * Le client du SERVEUR : la base sous `partners_app`, provisionné comme en production. Le code
+ * jugé et les écritures des témoins passent par lui ; les fixtures et les lectures restent sous le
+ * propriétaire. `partners_app` n'a pas TRUNCATE : le refus du déclencheur d'instruction se juge
+ * sous le propriétaire, le seul rôle qui pourrait tronquer.
+ */
+let app: PrismaClient;
+
 beforeAll(async () => {
   base = await demarrerBase();
+  const u = new URL(base.url);
+  u.username = ROLE_D_EXECUTION;
+  u.password = randomBytes(24).toString('hex');
+  await provisionnerRoleDExecution({ urlMigration: base.url, urlExecution: u.toString() });
+  app = new PrismaClient({ datasourceUrl: u.toString() });
   const MAINTENANT = new Date('2026-10-02T12:00:00.000Z');
   grilleId = (
     await base.prisma.grilleCommission.create({
@@ -83,6 +101,7 @@ beforeAll(async () => {
 }, 180_000);
 
 afterAll(async () => {
+  await app?.$disconnect();
   await base?.arreter();
 });
 
@@ -158,13 +177,14 @@ async function emissionsDe(demandeId: string) {
 async function uneDemande(): Promise<{ a: string; id: string; j: ReturnType<typeof jetons> }> {
   const a = await uneAttribution();
   const j = jetons();
-  const id = await base.prisma.$transaction((tx) =>
+  const id = await app.$transaction((tx) =>
     creerLaDemande(tx, { attributionId: a, ...j, acteur: ACTEUR })
   );
   return { a, id, j };
 }
 
-const maj = (sql: string, ...valeurs: unknown[]) => base.prisma.$executeRawUnsafe(sql, ...valeurs);
+const maj = (sql: string, ...valeurs: unknown[]) => app.$executeRawUnsafe(sql, ...valeurs);
+const tronquer = (table: string) => base.prisma.$executeRawUnsafe(`TRUNCATE ${table}`);
 
 describe('REQ-DM-060 — une demande par dépôt, planifiée, et son événement', () => {
   it('REQ-DM-060 : TÉMOIN — creerLaDemande écrit UNE demande `planifiee`, sa PREMIÈRE émission et son événement', async () => {
@@ -187,7 +207,7 @@ describe('REQ-DM-060 — une demande par dépôt, planifiée, et son événement
   it('REQ-DM-060 : TÉMOIN — une seconde demande pour la même attribution est refusée par l’index unique', async () => {
     const { a } = await uneDemande();
     const m = await refus(
-      base.prisma.$transaction((tx) =>
+      app.$transaction((tx) =>
         creerLaDemande(tx, { attributionId: a, ...jetons(), acteur: ACTEUR })
       )
     );
@@ -198,7 +218,7 @@ describe('REQ-DM-060 — une demande par dépôt, planifiée, et son événement
 describe('REQ-SEC-061 — les jetons n’existent qu’en empreinte, une seule émission active', () => {
   it('REQ-SEC-061 : TÉMOIN — une empreinte hors forme, et un « Oui » égal au « Non », sont refusés', async () => {
     const hors = await refus(
-      base.prisma.$transaction(async (tx) =>
+      app.$transaction(async (tx) =>
         creerLaDemande(tx, {
           attributionId: await uneAttribution(),
           jetonOuiHash: 'Z'.repeat(64),
@@ -211,7 +231,7 @@ describe('REQ-SEC-061 — les jetons n’existent qu’en empreinte, une seule �
     expect(hors).toContain('emissions_demande_confirmation_jeton_oui_hex');
     const meme = hex(32);
     const egal = await refus(
-      base.prisma.$transaction(async (tx) =>
+      app.$transaction(async (tx) =>
         creerLaDemande(tx, {
           attributionId: await uneAttribution(),
           jetonOuiHash: meme,
@@ -227,7 +247,7 @@ describe('REQ-SEC-061 — les jetons n’existent qu’en empreinte, une seule �
   it('REQ-SEC-061 : TÉMOIN — deux émissions au même jeton sont refusées par l’index unique', async () => {
     const { j } = await uneDemande();
     const m = await refus(
-      base.prisma.$transaction(async (tx) =>
+      app.$transaction(async (tx) =>
         creerLaDemande(tx, {
           attributionId: await uneAttribution(),
           jetonOuiHash: j.jetonOuiHash,
@@ -279,7 +299,7 @@ describe('REQ-SEC-061 — les jetons n’existent qu’en empreinte, une seule �
   it('REQ-SEC-061 : TÉMOIN — une ré-émission révoque la précédente et en crée une neuve, dans la MÊME transaction', async () => {
     const { id, j } = await uneDemande();
     const neufs = jetons();
-    await base.prisma.$transaction((tx) =>
+    await app.$transaction((tx) =>
       emettreDeNouveau(tx, { demandeId: id, ...neufs, maintenant: new Date() })
     );
     const e = await emissionsDe(id);
@@ -288,7 +308,7 @@ describe('REQ-SEC-061 — les jetons n’existent qu’en empreinte, une seule �
     expect([e[0]!.jetonOuiHash, e[0]!.jetonNonHash]).toEqual([null, null]);
     expect([e[1]!.jetonOuiHash, e[1]!.revoqueeAt]).toEqual([neufs.jetonOuiHash, null]);
     // Un jeton d'une émission révoquée ne résout plus rien ; celui de l'active, si.
-    await base.prisma.$transaction(async (tx) => {
+    await app.$transaction(async (tx) => {
       expect(await emissionActiveParJeton(tx, j.jetonOuiHash)).toBeNull();
       expect(await emissionActiveParJeton(tx, neufs.jetonNonHash)).toEqual({
         demandeId: id,
@@ -417,7 +437,7 @@ describe('REQ-SEC-061 — l’émission est en ajout seul', () => {
     );
     expect(del).toContain(DECLENCHEUR);
     expect(del).toContain(TRACE);
-    const tronc = await refus(maj(`TRUNCATE emissions_demande_confirmation`));
+    const tronc = await refus(tronquer('emissions_demande_confirmation'));
     expect(tronc).toContain('emissions_demande_confirmation_troncature');
   });
 });
@@ -454,7 +474,7 @@ describe('REQ-DM-060 — la demande est une trace : mutable pour son état et se
     const del = await refus(maj(`DELETE FROM demandes_confirmation WHERE id = $1::uuid`, id));
     expect(del).toContain(DECLENCHEUR);
     expect(del).toContain(TRACE);
-    expect(await refus(maj(`TRUNCATE demandes_confirmation CASCADE`))).toContain(
+    expect(await refus(tronquer('demandes_confirmation CASCADE'))).toContain(
       'demandes_confirmation_troncature'
     );
   });
@@ -479,10 +499,10 @@ describe('REQ-DM-060 — la demande est une trace : mutable pour son état et se
 describe('REQ-DM-008 — l’annulation de l’apporteur, ensemble ou rien', () => {
   it('REQ-DM-008 : TÉMOIN — annulee_par_apporteur fait passer la demande à `annulee` dans la MÊME transaction, avec les deux événements', async () => {
     const a = await uneAttribution();
-    const id = await base.prisma.$transaction((tx) =>
+    const id = await app.$transaction((tx) =>
       creerLaDemande(tx, { attributionId: a, ...jetons(), acteur: ACTEUR })
     );
-    await base.prisma.$transaction((tx) =>
+    await app.$transaction((tx) =>
       transitionnerUneAttribution(tx, {
         attributionId: a,
         transition: 'annulee_par_apporteur',
@@ -502,17 +522,17 @@ describe('REQ-DM-008 — l’annulation de l’apporteur, ensemble ou rien', () 
 
   it('REQ-DM-008 : TÉMOIN — une demande déjà envoyée ne s’annule pas : l’attribution reste `provisoire`, aucun événement', async () => {
     const a = await uneAttribution();
-    const id = await base.prisma.$transaction((tx) =>
+    const id = await app.$transaction((tx) =>
       creerLaDemande(tx, { attributionId: a, ...jetons(), acteur: ACTEUR })
     );
-    await base.prisma.$executeRawUnsafe(
+    await app.$executeRawUnsafe(
       `UPDATE demandes_confirmation SET etat = 'envoyee' WHERE id = $1::uuid`,
       id
     );
     const avant = (await evenements(a)).length;
     expect(
       await refus(
-        base.prisma.$transaction((tx) =>
+        app.$transaction((tx) =>
           transitionnerUneAttribution(tx, {
             attributionId: a,
             transition: 'annulee_par_apporteur',
@@ -532,13 +552,13 @@ describe('REQ-DM-008 — l’annulation de l’apporteur, ensemble ou rien', () 
 describe('REQ-DM-005 — la correction est une révision tracée, deposee_at inchangée', () => {
   it('REQ-DM-005 : TÉMOIN — corriger le contact garde l’ancienne valeur dans une révision, et ne touche pas deposee_at', async () => {
     const a = await uneAttribution();
-    await base.prisma.$transaction((tx) =>
+    await app.$transaction((tx) =>
       creerLaDemande(tx, { attributionId: a, ...jetons(), acteur: ACTEUR })
     );
     const [avant] = await base.prisma.$queryRaw<
       { deposee_at: Date; email_chiffre: Buffer }[]
     >`SELECT deposee_at, email_chiffre FROM attributions WHERE id = ${a}::uuid`;
-    await base.prisma.$transaction((tx) =>
+    await app.$transaction((tx) =>
       corrigerLeContact(tx, {
         attributionId: a,
         clairs: { email: 'nouvelle-adresse@exemple.invalid' },
@@ -560,14 +580,14 @@ describe('REQ-DM-005 — la correction est une révision tracée, deposee_at inc
 
   it('REQ-DM-005 : TÉMOIN — passé le délai avant envoi, la correction libre est refusée', async () => {
     const a = await uneAttribution();
-    await base.prisma.$transaction((tx) =>
+    await app.$transaction((tx) =>
       creerLaDemande(tx, { attributionId: a, ...jetons(), acteur: ACTEUR })
     );
     const [l] = await base.prisma.$queryRaw<{ deposee_at: Date }[]>`
       SELECT deposee_at FROM attributions WHERE id = ${a}::uuid`;
     expect(
       await refus(
-        base.prisma.$transaction((tx) =>
+        app.$transaction((tx) =>
           corrigerLeContact(tx, {
             attributionId: a,
             clairs: { email: 'trop-tard@exemple.invalid' },
@@ -581,12 +601,12 @@ describe('REQ-DM-005 — la correction est une révision tracée, deposee_at inc
 
   it('REQ-DM-005 : TÉMOIN — une révision ne se réécrit pas, ne se supprime pas, la table ne se vide pas', async () => {
     const a = await uneAttribution();
-    await base.prisma.$transaction((tx) =>
+    await app.$transaction((tx) =>
       creerLaDemande(tx, { attributionId: a, ...jetons(), acteur: ACTEUR })
     );
     const [l] = await base.prisma.$queryRaw<{ deposee_at: Date }[]>`
       SELECT deposee_at FROM attributions WHERE id = ${a}::uuid`;
-    await base.prisma.$transaction((tx) =>
+    await app.$transaction((tx) =>
       corrigerLeContact(tx, {
         attributionId: a,
         clairs: { contexte: 'un contexte corrigé' },
@@ -596,18 +616,18 @@ describe('REQ-DM-005 — la correction est une révision tracée, deposee_at inc
     );
     expect(
       await refus(
-        base.prisma.$executeRawUnsafe(
+        app.$executeRawUnsafe(
           `UPDATE revisions_demande_confirmation SET contexte_chiffre = $1`,
           randomBytes(40)
         )
       )
     ).toContain('refuser_modification_sauf');
     expect(
-      await refus(base.prisma.$executeRawUnsafe(`DELETE FROM revisions_demande_confirmation`))
+      await refus(app.$executeRawUnsafe(`DELETE FROM revisions_demande_confirmation`))
     ).toContain('refuser_modification_sauf');
-    expect(
-      await refus(base.prisma.$executeRawUnsafe(`TRUNCATE revisions_demande_confirmation`))
-    ).toContain('refuser_modification_sauf');
+    expect(await refus(tronquer('revisions_demande_confirmation'))).toContain(
+      'refuser_modification_sauf'
+    );
   });
 });
 
@@ -617,11 +637,11 @@ describe('REQ-DM-031 — la purge du contact révoque TOUTES les émissions, vid
       statut: 'perdue',
       purgeContactAt: new Date('2026-01-01T00:00:00.000Z'),
     });
-    const id = await base.prisma.$transaction((tx) =>
+    const id = await app.$transaction((tx) =>
       creerLaDemande(tx, { attributionId: a, ...jetons(), acteur: ACTEUR })
     );
     // Une émission déjà révoquée, puis l'active, cliquée.
-    await base.prisma.$transaction((tx) =>
+    await app.$transaction((tx) =>
       emettreDeNouveau(tx, { demandeId: id, ...jetons(), maintenant: new Date() })
     );
     await maj(
@@ -637,7 +657,7 @@ describe('REQ-DM-031 — la purge du contact révoque TOUTES les émissions, vid
       randomBytes(40),
       hex(32)
     );
-    await purgerLesContacts(base.prisma, new Date('2026-10-02T12:00:00.000Z'));
+    await purgerLesContacts(app, new Date('2026-10-02T12:00:00.000Z'));
     // La purge a bien eu lieu : sans elle, ce témoin ne prouverait rien.
     const [p] = await base.prisma.$queryRaw<{ faite: Date | null }[]>`
       SELECT contact_purge_at AS faite FROM attributions WHERE id = ${a}::uuid`;
