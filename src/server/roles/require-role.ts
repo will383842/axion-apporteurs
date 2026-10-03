@@ -23,7 +23,13 @@
 import type { ConsoleRole, PrismaClient } from '@prisma/client';
 import { DUREES_AUTH } from '../auth/durees';
 import { empreinteDeSessionConsole } from '../auth/lien-magique';
-import { droitDeclare, exigeLeStepUp, roleAutorise, type DroitConsole } from './matrice';
+import {
+  droitDeclare,
+  exigeLeStepUp,
+  ouvertATousLesRoles,
+  roleAutorise,
+  type DroitConsole,
+} from './matrice';
 
 /** Les motifs de refus : une liste FERMÉE. Le motif part au journal, jamais au navigateur. */
 export const MOTIFS_DE_REFUS_CONSOLE = [
@@ -43,6 +49,8 @@ export const MOTIFS_DE_REFUS_CONSOLE = [
   'version_perimee',
   // SEC-30 : un droit à step-up, sur une session ouverte depuis le délai de relèvement ou plus.
   'releve_requis',
+  // SEC-30 (quatre yeux) : un admin non validé par un autre admin n'a aucun droit d'administrateur.
+  'admin_en_attente',
 ] as const;
 export type MotifDeRefusConsole = (typeof MOTIFS_DE_REFUS_CONSOLE)[number];
 
@@ -66,6 +74,8 @@ export interface LigneDeSessionConsole {
     desactiveAt: Date | null;
     /** SEC-30 : incrémentée à chaque changement de rôle ou désactivation. */
     sessionVersion: number;
+    /** SEC-30 (quatre yeux) : nulle sur un admin, l'admin est EN ATTENTE de validation. */
+    valideAt: Date | null;
   } | null;
 }
 
@@ -96,6 +106,8 @@ export function jugerAcces(
   if (ligne.sessionVersion !== utilisateur.sessionVersion) return refus('version_perimee');
   if (!vueRecemment(ligne.derniereVueAt, maintenant)) return refus('inactive');
   if (!roleAutorise(droit, utilisateur.role)) return refus('role_refuse');
+  if (utilisateur.role === 'admin' && utilisateur.valideAt === null && !ouvertATousLesRoles(droit))
+    return refus('admin_en_attente');
   if (exigeLeStepUp(droit) && !ouverteRecemment(ligne.creeAt, maintenant))
     return refus('releve_requis');
   return { ok: true, utilisateur: { id: utilisateur.id, role: utilisateur.role } };
@@ -177,7 +189,13 @@ export function depotDeSessionsConsole(prisma: PrismaClient): DepotDeSessionsCon
           creeAt: true,
           sessionVersion: true,
           utilisateurConsole: {
-            select: { id: true, role: true, desactiveAt: true, sessionVersion: true },
+            select: {
+              id: true,
+              role: true,
+              desactiveAt: true,
+              sessionVersion: true,
+              valideAt: true,
+            },
           },
         },
       });

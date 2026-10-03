@@ -157,7 +157,13 @@ function univers(utilisateur: Utilisateur | null, ligne: Session) {
           ...etat.ligne,
           // SEC-30 : l'utilisateur est à la version 0, celle de `valide()`.
           utilisateurConsole:
-            etat.utilisateur === null ? null : { ...etat.utilisateur, sessionVersion: 0 },
+            etat.utilisateur === null
+              ? null
+              : {
+                  ...etat.utilisateur,
+                  sessionVersion: 0,
+                  valideAt: etat.utilisateur.role === 'admin' ? T0 : null,
+                },
         };
       },
     },
@@ -338,6 +344,7 @@ describe('REQ-SEC-023 — requireRole : le défaut est le refus, le rôle est re
       'inactive',
       'version_perimee',
       'releve_requis',
+      'admin_en_attente',
     ]);
     expect(jugerAcces('action:lever_gel', null, T0, KID)).toEqual({
       ok: false,
@@ -376,7 +383,13 @@ describe('REQ-SEC-023 — l’adaptateur Prisma de requireRole', () => {
           creeAt: true,
           sessionVersion: true,
           utilisateurConsole: {
-            select: { id: true, role: true, desactiveAt: true, sessionVersion: true },
+            select: {
+              id: true,
+              role: true,
+              desactiveAt: true,
+              sessionVersion: true,
+              valideAt: true,
+            },
           },
         },
       },
@@ -1439,6 +1452,7 @@ describe('REQ-SEC-003 — SEC-30 : un changement de rôle ou une désactivation 
       role: 'admin' as const,
       desactiveAt: null,
       sessionVersion: versionUtilisateur,
+      valideAt: T0,
     },
   });
 
@@ -1502,6 +1516,7 @@ describe('REQ-SEC-023 — SEC-30 : le step-up déclaré dans la matrice (arbitra
       role: 'admin' as const,
       desactiveAt: null,
       sessionVersion: 0,
+      valideAt: T0,
     },
   });
   const releve = DUREES_AUTH.releveMs.valeur;
@@ -1539,6 +1554,39 @@ describe('REQ-SEC-023 — SEC-30 : le step-up déclaré dans la matrice (arbitra
     expect(MATRICE_DES_ROLES['action:lever_gel'].stepUp).toBe(true);
     for (const [droit, entree] of Object.entries(MATRICE_DES_ROLES))
       expect(typeof (entree as { stepUp?: unknown }).stepUp, droit).toBe('boolean');
+  });
+});
+
+// Forme d'A02 (rattrapage 96, quatre yeux) : un admin dont `valide_at` est nul est EN ATTENTE ; il
+// n'a aucun droit d'administrateur. Il garde ce qui est ouvert aux quatre rôles : arriver, partir.
+describe('REQ-SEC-023 — SEC-30 : un administrateur non validé par un autre n’a aucun droit d’administrateur', () => {
+  const ligneDAdmin = (valideAt: Date | null) => ({
+    ...valide(),
+    utilisateurConsole: {
+      id: 'u-admin',
+      role: 'admin' as const,
+      desactiveAt: null,
+      sessionVersion: 0,
+      valideAt,
+    },
+  });
+
+  it('REQ-SEC-023 : TÉMOIN À DEUX FACES — un admin en attente est refusé « admin_en_attente » sur une action d’admin ; validé, même appel, il passe', () => {
+    expect(jugerAcces('action:suspendre_apporteur', ligneDAdmin(null), T0, KID)).toEqual({
+      ok: false,
+      motif: 'admin_en_attente',
+    });
+    expect(jugerAcces('action:suspendre_apporteur', ligneDAdmin(T0), T0, KID).ok).toBe(true);
+  });
+
+  it('REQ-SEC-023 : TÉMOIN — en attente, il arrive et part (droits ouverts aux quatre rôles) ; le motif entre dans la liste fermée', () => {
+    expect(jugerAcces('ecran:accueil', ligneDAdmin(null), T0, KID).ok).toBe(true);
+    expect(jugerAcces('action:se_deconnecter', ligneDAdmin(null), T0, KID).ok).toBe(true);
+    expect(jugerAcces('action:approuver_lot', ligneDAdmin(null), T0, KID)).toEqual({
+      ok: false,
+      motif: 'admin_en_attente',
+    });
+    expect(MOTIFS_DE_REFUS_CONSOLE).toContain('admin_en_attente');
   });
 });
 

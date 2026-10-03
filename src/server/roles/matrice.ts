@@ -96,3 +96,11 @@ export function roleAutorise(droit: string, role: ConsoleRole): boolean {
 export function exigeLeStepUp(droit: string): boolean {
   return !droitDeclare(droit) || MATRICE_DES_ROLES[droit].stepUp;
 }
+
+/**
+ * SEC-30 (quatre yeux) : vrai si le droit est ouvert aux QUATRE rôles — arriver, partir. C'est tout
+ * ce qu'un admin en attente de validation garde. Un droit absent de la table : faux.
+ */
+export function ouvertATousLesRoles(droit: string): boolean {
+  return ROLES_CONSOLE.every((role) => roleAutorise(droit, role));
+}
