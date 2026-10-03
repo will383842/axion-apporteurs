@@ -35,13 +35,20 @@ import {
   tirerUnJeton,
   type PortsDesJetons,
 } from '../../../src/server/confirmation/jetons';
-import type { ClesPii } from '../../../src/server/securite/pii';
+import { clesPii, encryptPii } from '../../../src/server/securite/pii';
+import { MODELE_APPORTEUR } from '../../../src/server/auth/lien-magique-depot';
+import { NOMS_DES_SECRETS } from '../../../src/lib/env';
 
 const SECRET = randomBytes(32).toString('hex');
 const EMPREINTE_IP = randomBytes(8).toString('hex');
-/** Le module n'en déchiffre rien sur les chemins jugés ici : une valeur opaque suffit. */
-const OPAQUE = {};
-const CLES = OPAQUE as ClesPii;
+/** Des clés de test, fabriquées à l'exécution (jamais un secret réel). */
+const CLES = clesPii({
+  NODE_ENV: 'test',
+  ...Object.fromEntries(
+    NOMS_DES_SECRETS.map((n) => [n, `temoin-sec-40-u-${n.toLowerCase()}-`.padEnd(48, '0')])
+  ),
+  PII_ENCRYPTION_KEY: 'e'.repeat(64),
+});
 
 /** Une base qui LÈVE au premier contact, et qui compte les contacts. */
 function baseInterdite() {
@@ -68,6 +75,20 @@ function baseVide() {
     prisma: prisma as never,
     tx: tx as never,
   };
+}
+
+/** Une base qui rend les lignes données à toute lecture, et qui ENREGISTRE chaque requête. */
+function baseQuiRepond(lignes: unknown[]) {
+  const appels: { sql: string; valeurs: unknown[] }[] = [];
+  const enregistrer =
+    (rendu: unknown) =>
+    (morceaux: TemplateStringsArray, ...valeurs: unknown[]) => {
+      appels.push({ sql: morceaux.join('?').replace(/\s+/g, ' '), valeurs });
+      return Promise.resolve(rendu);
+    };
+  const tx = { $queryRaw: enregistrer(lignes), $executeRaw: enregistrer(1) };
+  const prisma = { $transaction: (f: (t: unknown) => unknown) => Promise.resolve(f(tx)) };
+  return { prisma: prisma as never, tx: tx as never, appels };
 }
 
 function ports(verdict: { autorise: boolean; panne: boolean }): PortsDesJetons & {
@@ -141,6 +162,7 @@ describe('SEC-40 — la page', () => {
       '',
       'abc',
       `${tirerUnJeton()}=`,
+      `!${tirerUnJeton()}`,
       tirerUnJeton().slice(1),
       '../../etc',
       'é'.repeat(43),
@@ -174,6 +196,109 @@ describe('SEC-40 — la page', () => {
     expect(Object.isFrozen(REPONSE_SANS_SUITE)).toBe(true);
     // La réponse ne porte que son état : aucun identifiant, aucune raison.
     expect(Object.keys(REPONSE_SANS_SUITE)).toEqual(['etat']);
+  });
+});
+
+describe('SEC-40 — un jeton bien formé, sur une base simulée qui répond', () => {
+  const ID = '0b5a7e1c-0000-4000-8000-000000000001';
+  const bloc = (champ: string, clair: string) =>
+    encryptPii({ modele: MODELE_APPORTEUR, champ, id: ID }, clair, CLES);
+  const requete = (jeton: string) => ({ jeton, empreinteAdresse: EMPREINTE_IP, maintenantMs: 0 });
+
+  it('REQ-SEC-061 : TÉMOIN — l’ouverture lit en LECTURE SEULE, sous ses conditions, et ne révèle que l’entreprise, l’apporteur et le sens', async () => {
+    const jeton = tirerUnJeton();
+    for (const [oui, sens] of [
+      [true, 'oui'],
+      [false, 'non'],
+    ] as const) {
+      const b = baseQuiRepond([
+        {
+          oui,
+          entreprise: 'Entreprise Témoin SAS',
+          apporteur_id: ID,
+          nom: bloc('nomChiffre', 'Témoin'),
+          prenom: bloc('prenomChiffre', 'Camille'),
+        },
+      ]);
+      expect(await ouvrirLeLien(b.prisma, requete(jeton), ports(ADMIS))).toEqual({
+        etat: 'a_repondre',
+        sens,
+        entreprise: 'Entreprise Témoin SAS',
+        apporteur: { prenom: 'Camille', nom: 'Témoin' },
+      });
+      expect(b.appels).toHaveLength(2);
+      expect(b.appels[0]!.sql).toBe('SET TRANSACTION READ ONLY');
+      const lecture = b.appels[1]!;
+      for (const condition of [
+        'e.revoquee_at IS NULL',
+        "d.etat = 'envoyee'",
+        'd.repondu_at IS NULL',
+        "a.statut = 'provisoire'",
+      ]) {
+        expect(lecture.sql).toContain(condition);
+      }
+      // La base ne reçoit que l'EMPREINTE : jamais le jeton.
+      expect(lecture.valeurs).toContain(empreinteDuJetonDeConfirmation(jeton, SECRET));
+      expect(JSON.stringify(b.appels)).not.toContain(jeton);
+    }
+  });
+
+  it('REQ-SEC-061 : TÉMOIN — un apporteur sans nom chiffré : la page le dit vide, elle n’invente rien', async () => {
+    const b = baseQuiRepond([
+      { oui: true, entreprise: null, apporteur_id: ID, nom: null, prenom: null },
+    ]);
+    expect(await ouvrirLeLien(b.prisma, requete(tirerUnJeton()), ports(ADMIS))).toEqual({
+      etat: 'a_repondre',
+      sens: 'oui',
+      entreprise: null,
+      apporteur: { prenom: null, nom: null },
+    });
+  });
+
+  it('REQ-SEC-061 : TÉMOIN — la réponse est UNE écriture conditionnelle, puis l’empreinte du clic sur SON émission', async () => {
+    const jeton = tirerUnJeton();
+    for (const [oui, sens] of [
+      [true, 'oui'],
+      [false, 'non'],
+    ] as const) {
+      const b = baseQuiRepond([{ demande_id: 'd-1', emission_id: 'e-1', oui }]);
+      expect(await consommerLeJeton(b.tx, requete(jeton), ports(ADMIS))).toEqual({
+        etat: 'retenue',
+        demandeId: 'd-1',
+        sens,
+      });
+      expect(b.appels).toHaveLength(2);
+      const [ecriture, clic] = b.appels;
+      expect(ecriture!.sql).toMatch(
+        /^ UPDATE demandes_confirmation d SET repondu_at = clock_timestamp\(\)/
+      );
+      for (const condition of [
+        'e.revoquee_at IS NULL',
+        "d.etat = 'envoyee'",
+        'd.repondu_at IS NULL',
+        "a.statut = 'provisoire'",
+      ]) {
+        expect(ecriture!.sql).toContain(condition);
+      }
+      expect(clic!.sql).toContain('UPDATE emissions_demande_confirmation SET clic_ip_hash = ?');
+      expect(clic!.sql).toContain('clic_ip_hash IS NULL');
+      expect(clic!.valeurs).toEqual([EMPREINTE_IP, 'e-1']);
+      expect(JSON.stringify(b.appels)).not.toContain(jeton);
+    }
+  });
+
+  it('REQ-SEC-061 : TÉMOIN — la page des droits lit en LECTURE SEULE l’empreinte du domaine des droits, contact non purgé', async () => {
+    const jeton = tirerUnJeton();
+    const b = baseQuiRepond([{ id: 'a-1' }]);
+    expect(await ouvrirLaPageDesDroits(b.prisma, requete(jeton), ports(ADMIS))).toEqual({
+      etat: 'a_exercer',
+      attributionId: 'a-1',
+    });
+    expect(b.appels).toHaveLength(2);
+    expect(b.appels[0]!.sql).toBe('SET TRANSACTION READ ONLY');
+    expect(b.appels[1]!.sql).toContain('jeton_droits_hash = ?');
+    expect(b.appels[1]!.sql).toContain('contact_purge_at IS NULL');
+    expect(b.appels[1]!.valeurs).toEqual([empreinteDuJetonDesDroits(jeton, SECRET)]);
   });
 });
 

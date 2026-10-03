@@ -63,14 +63,17 @@ export interface JetonTire {
   readonly empreinte: string;
 }
 
-/** Les deux jetons d'une demande (« Oui », « Non »), jamais égaux, avec leurs empreintes. */
+/**
+ * Les deux jetons d'une demande (« Oui », « Non »), avec leurs empreintes. Deux tirages de 256 bits
+ * ne se rencontrent pas ; s'ils le faisaient, la base refuserait l'émission (CHECK
+ * `emissions_demande_confirmation_oui_ne_non`) plutôt que d'accepter deux jetons égaux.
+ */
 export function tirerLesJetonsDeLaDemande(secret: string): {
   readonly oui: JetonTire;
   readonly non: JetonTire;
 } {
   const oui = tirerUnJeton();
-  let non = tirerUnJeton();
-  while (non === oui) non = tirerUnJeton();
+  const non = tirerUnJeton();
   return {
     oui: { jeton: oui, empreinte: empreinteDuJetonDeConfirmation(oui, secret) },
     non: { jeton: non, empreinte: empreinteDuJetonDeConfirmation(non, secret) },
