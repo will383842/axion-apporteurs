@@ -133,9 +133,11 @@ export const COMPTEURS = {
   },
   'magic:console-code-courriel': {
     prefixe: 'magic:',
+    // L'ordre des champs diffère des autres entrées : le bloc « limite, fenêtre, conduite » de
+    // `magic:courriel` reste unique, et le témoin d'effet de rate-famille y retire la conduite.
+    surPanne: 'refuser',
     limite: 5,
     fenetreSecondes: 900,
-    surPanne: 'refuser',
     source: 'REQ-SEC-062',
     ancre: 'par email au code de la console',
     verifieLe: '2026-10-03',

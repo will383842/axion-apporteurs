@@ -31,7 +31,6 @@ import { kidDe } from '../../../src/lib/env';
 import { DUREES_AUTH } from '../../../src/server/auth/durees';
 import {
   consommerLien,
-  empreinteDeSession,
   empreinteDeSessionConsole,
   empreinteDuJeton,
   type PortsDeConsommation,

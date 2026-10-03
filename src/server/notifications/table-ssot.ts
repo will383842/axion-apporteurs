@@ -233,6 +233,19 @@ export const GABARITS = {
 
 export type Gabarit = keyof typeof GABARITS;
 
+/**
+ * SEC-29 (forme d'A02) : les clés des notifications de l'APPORTEUR. Une ligne `utilisateur_console`
+ * n'en est pas : elle n'a ni texte d'apporteur ni préférence. `envoyer.ts` (les notifications de
+ * l'apporteur) refuse donc la clé de la console comme une clé inconnue.
+ */
+export type GabaritDeLApporteur = {
+  [C in Gabarit]: (typeof GABARITS)[C]['destinataire'] extends 'apporteur' ? C : never;
+}[Gabarit];
+
+export function estGabaritDeLApporteur(cle: Gabarit): cle is GabaritDeLApporteur {
+  return GABARITS[cle].destinataire === 'apporteur';
+}
+
 const CLES = Object.keys(GABARITS) as [Gabarit, ...Gabarit[]];
 
 /** La validation à l'écriture : une clé hors de la table ne devient jamais une ligne. */

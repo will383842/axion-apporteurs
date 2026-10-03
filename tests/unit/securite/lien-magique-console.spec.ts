@@ -26,7 +26,12 @@ import { COMPTEURS, limiter, sujetDepuisEmpreinte } from '../../../src/server/se
 import { readFileSync, readdirSync } from 'node:fs';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { GABARITS, type LigneDeNotification } from '../../../src/server/notifications/table-ssot';
+import {
+  GABARITS,
+  estGabaritDeLApporteur,
+  type LigneDeNotification,
+} from '../../../src/server/notifications/table-ssot';
+import { rendreLaNotification } from '../../../src/server/notifications/envoyer';
 import { CONNEXION_CONSOLE } from '../../../src/content/micro-copy/console/connexion';
 import { ETATS_VIDES_CONSOLE } from '../../../src/content/micro-copy/console/etats-vides';
 import {
@@ -536,8 +541,8 @@ describe('REQ-UX-048 — le courriel de la console, ligne de la table des notifi
 
 describe('REQ-UX-048 — les écrans de la connexion de la console', () => {
   const rien = async (): Promise<void> => undefined;
-  const rendu = (e: Parameters<typeof createElement>[0], p: object) =>
-    renderToStaticMarkup(createElement(e as never, p as never));
+  const rendu = <P extends object>(e: (props: P) => ReturnType<typeof createElement>, p: P) =>
+    renderToStaticMarkup(createElement(e, p));
 
   it('REQ-UX-048 : TÉMOIN — la demande : l’état vide de la maquette, un champ étiqueté, le piège caché, et la MÊME réponse pour tout compte', () => {
     const h = rendu(EcranConnexionConsole, { etat: null, action: rien });
@@ -671,7 +676,10 @@ describe('REQ-SEC-062 — la console a ses propres compteurs, nommés à l’ép
   });
 
   it('REQ-SEC-062 : les quatre compteurs de la console sont au registre, plus stricts que ceux de l’espace', () => {
-    const c = (n: keyof typeof COMPTEURS) => COMPTEURS[n];
+    const c = (n: keyof typeof COMPTEURS) => ({
+      ...COMPTEURS[n],
+      limite: Number(COMPTEURS[n].limite),
+    });
     expect(c('magic:console-demande-ip').limite).toBeLessThanOrEqual(c('magic:ip').limite);
     expect(c('magic:console-demande-courriel').limite).toBeLessThan(c('magic:courriel').limite);
     expect(c('magic:console-code-ip').limite).toBeLessThan(c('magic:code-ip').limite);
@@ -765,5 +773,16 @@ describe('REQ-UX-048 — la page /console/connexion lit l’état et n’accepte
     );
     expect(await page({ suite: '//exemple.invalid' })).not.toContain('name="suite"');
     expect(await page({ suite: '/mes-entreprises' })).not.toContain('name="suite"');
+  });
+});
+
+describe('REQ-UX-048 — la clé de la console n’est pas une notification de l’apporteur (forme d’A02)', () => {
+  it('REQ-UX-048 : TÉMOIN À DEUX FACES — l’envoi des notifications de l’apporteur refuse la clé de la console comme inconnue ; la clé de l’espace passe', () => {
+    expect(() => rendreLaNotification('lien_magique_console', {})).toThrow(
+      'notification_refusee : cle_inconnue (lien_magique_console)'
+    );
+    expect(rendreLaNotification('lien_magique', {}).appel).toBe('Ouvrir mon espace');
+    expect(estGabaritDeLApporteur('lien_magique_console')).toBe(false);
+    expect(estGabaritDeLApporteur('lien_magique')).toBe(true);
   });
 });
