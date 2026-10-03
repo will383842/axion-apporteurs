@@ -5093,7 +5093,8 @@
         "tests/integration/entreprise-connue.spec.ts",
         "src/server/taches/inscriptions.ts",
         "tests/unit/integration/inscriptions-des-taches.spec.ts",
-        "docs/GLOSSAIRE.md"
+        "docs/GLOSSAIRE.md",
+        "docs/rgpd/registre-article-30.md"
       ],
       "schema": true,
       "sensible": [
