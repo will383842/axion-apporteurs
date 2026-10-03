@@ -1,5 +1,7 @@
 // @req REQ-SEC-003
 // @req REQ-UX-048
+// @req REQ-UX-047
+// @req REQ-UX-015
 /**
  * `connexion-console.spec.ts` — la connexion de la console (SEC-29) contre une VRAIE base, sous le
  * rôle d'exécution. Ce que les faux ne prouvent pas : que la population est jugée DANS l'écriture
@@ -129,7 +131,7 @@ const portsConsole = () => ({
 });
 
 describe('REQ-SEC-003 — la session de la console, en base', () => {
-  it('REQ-SEC-003 : TÉMOIN — le lien de la console ouvre UNE session de console : son utilisateur, sa durée, sa dernière vue, son empreinte', async () => {
+  it('REQ-SEC-003 REQ-UX-048 REQ-UX-015 : TÉMOIN — le lien de la console ouvre UNE session de console : son utilisateur, sa durée, sa dernière vue, son empreinte', async () => {
     const u = await utilisateurConsole();
     const jeton = await lien({ utilisateurConsoleId: u.id });
     const r = await consommerLienConsole({ jeton, ipHash: null }, portsConsole());
@@ -183,7 +185,7 @@ describe('REQ-SEC-003 — la session de la console, en base', () => {
     );
   });
 
-  it('REQ-SEC-003 : TÉMOIN — le code de la console ouvre sa session ; un lien de l’espace n’est jamais le lien actif de la console', async () => {
+  it('REQ-SEC-003 REQ-UX-047 REQ-UX-015 : TÉMOIN — le code de la console ouvre sa session, en UNE vérification ; un lien de l’espace n’est jamais le lien actif de la console', async () => {
     const u = await utilisateurConsole();
     await lien({ utilisateurConsoleId: u.id }, '314159');
     const ports = {
