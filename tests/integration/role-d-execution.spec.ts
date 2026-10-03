@@ -15,7 +15,7 @@
  *   — il REFUSE un rôle d'exécution superutilisateur, ou propriétaire d'une table ;
  *   — `docker-entrypoint.sh` migre avec l'URL de migration, provisionne, puis lance le serveur.
  */
-import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
 import { PrismaClient } from '@prisma/client';
@@ -138,11 +138,18 @@ describe('REQ-DM-024 — le provisionnement', () => {
     );
   });
 
-  it('REQ-DM-024 : TÉMOIN — un rôle d’exécution superutilisateur est refusé', async () => {
-    expect(
-      await refus(provisionnerRoleDExecution({ urlMigration: base.url, urlExecution: base.url }))
-    ).toMatch(/superutilisateur|propri/);
-    expect(await refus(constaterRoleDExecution(base.url))).toMatch(/superutilisateur/);
+  it('REQ-DM-024 : TÉMOIN — partners_app rendu superutilisateur est refusé, au provisionnement comme au constat', async () => {
+    const url = urlSous(ROLE_D_EXECUTION, secret());
+    await provisionnerRoleDExecution({ urlMigration: base.url, urlExecution: url });
+    await base.prisma.$executeRawUnsafe(`ALTER ROLE partners_app SUPERUSER`);
+    try {
+      expect(
+        await refus(provisionnerRoleDExecution({ urlMigration: base.url, urlExecution: url }))
+      ).toMatch(/superutilisateur/);
+      expect(await refus(constaterRoleDExecution(url))).toMatch(/superutilisateur/);
+    } finally {
+      await base.prisma.$executeRawUnsafe(`ALTER ROLE partners_app NOSUPERUSER`);
+    }
   });
 
   it('REQ-DM-024 : TÉMOIN — un rôle d’exécution membre de partners_journal est refusé au constat', async () => {
@@ -177,18 +184,12 @@ describe('REQ-DM-024 — le chemin de l’entrée de l’image (principal), en �
 
   /** `principal`, sa sortie d'erreur CAPTURÉE : le motif prouve QUEL contrôle a refusé. */
   async function principalCapture(
-    env: NodeJS.ProcessEnv
+    env: Record<string, string>,
+    options: { constatSeul?: boolean } = {}
   ): Promise<{ code: number; sortie: string }> {
     const ecrit: string[] = [];
-    const espion = vi.spyOn(process.stderr, 'write').mockImplementation((t) => {
-      ecrit.push(String(t));
-      return true;
-    });
-    try {
-      return { code: await principal(env), sortie: ecrit.join('') };
-    } finally {
-      espion.mockRestore();
-    }
+    const code = await principal(env, { ...options, ecrire: (texte) => void ecrit.push(texte) });
+    return { code, sortie: ecrit.join('') };
   }
 
   /** partners_app provisionné, puis rendu membre du journal APRÈS : seul le CONSTAT peut refuser. */
@@ -210,15 +211,17 @@ describe('REQ-DM-024 — le chemin de l’entrée de l’image (principal), en �
     }
   });
 
-  it('REQ-DM-024 : TÉMOIN — sous SKIP_MIGRATE=1, le CONSTAT tourne et refuse un membre du journal', async () => {
+  it('REQ-DM-024 : TÉMOIN — en constat seul (le retour arrière), le CONSTAT tourne et refuse un membre du journal', async () => {
     const url = await membreApresProvisionnement();
     try {
-      const r = await principalCapture({
-        NODE_ENV: 'test',
-        SKIP_MIGRATE: '1',
-        DATABASE_MIGRATION_URL: base.url,
-        DATABASE_URL: url,
-      });
+      const r = await principalCapture(
+        {
+          NODE_ENV: 'test',
+          DATABASE_MIGRATION_URL: base.url,
+          DATABASE_URL: url,
+        },
+        { constatSeul: true }
+      );
       expect(r.code).toBe(1);
       expect(r.sortie).toContain('le serveur est membre de partners_journal');
     } finally {
@@ -226,17 +229,19 @@ describe('REQ-DM-024 — le chemin de l’entrée de l’image (principal), en �
     }
   });
 
-  it('REQ-DM-024 : TÉMOIN — sous SKIP_MIGRATE=1, rien n’est provisionné : un secret neuf n’est pas posé, un bon rôle passe', async () => {
-    // Un secret NEUF, sous SKIP_MIGRATE : rien n'est provisionné, donc le secret n'est pas posé et
+  it('REQ-DM-024 : TÉMOIN — en constat seul (le retour arrière), rien n’est provisionné : un secret neuf n’est pas posé, un bon rôle passe', async () => {
+    // Un secret NEUF, en constat seul : rien n'est provisionné, donc le secret n'est pas posé et
     // le constat ne peut pas se connecter.
     const neuf = urlSous(ROLE_D_EXECUTION, secret());
     expect(
-      await principal({
-        NODE_ENV: 'test',
-        SKIP_MIGRATE: '1',
-        DATABASE_MIGRATION_URL: base.url,
-        DATABASE_URL: neuf,
-      })
+      await principal(
+        {
+          NODE_ENV: 'test',
+          DATABASE_MIGRATION_URL: base.url,
+          DATABASE_URL: neuf,
+        },
+        { constatSeul: true }
+      )
     ).toBe(1);
     expect(await refus(connecter(neuf).$queryRawUnsafe(`SELECT 1`))).toMatch(
       /authentication|authentification|password/i
@@ -244,12 +249,14 @@ describe('REQ-DM-024 — le chemin de l’entrée de l’image (principal), en �
     const bon = urlSous(ROLE_D_EXECUTION, secret());
     await provisionnerRoleDExecution({ urlMigration: base.url, urlExecution: bon });
     expect(
-      await principal({
-        NODE_ENV: 'test',
-        SKIP_MIGRATE: '1',
-        DATABASE_MIGRATION_URL: base.url,
-        DATABASE_URL: bon,
-      })
+      await principal(
+        {
+          NODE_ENV: 'test',
+          DATABASE_MIGRATION_URL: base.url,
+          DATABASE_URL: bon,
+        },
+        { constatSeul: true }
+      )
     ).toBe(0);
   });
 
@@ -274,12 +281,14 @@ describe('REQ-DM-024 — le nom du rôle d’exécution est fixe', () => {
       await principal({ NODE_ENV: 'test', DATABASE_MIGRATION_URL: base.url, DATABASE_URL: autre })
     ).toBe(1);
     expect(
-      await principal({
-        NODE_ENV: 'test',
-        SKIP_MIGRATE: '1',
-        DATABASE_MIGRATION_URL: base.url,
-        DATABASE_URL: autre,
-      })
+      await principal(
+        {
+          NODE_ENV: 'test',
+          DATABASE_MIGRATION_URL: base.url,
+          DATABASE_URL: autre,
+        },
+        { constatSeul: true }
+      )
     ).toBe(1);
     const [cree] = await base.prisma.$queryRawUnsafe<{ n: number }[]>(
       `SELECT count(*)::int AS n FROM pg_roles WHERE rolname = 'partners_autre'`

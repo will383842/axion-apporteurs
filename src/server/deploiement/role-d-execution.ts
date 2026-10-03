@@ -209,21 +209,31 @@ export async function constaterRoleDExecution(urlExecution: string): Promise<voi
  * En PRODUCTION, l'URL de migration est exigée ; ailleurs (poste, CI), son absence laisse le serveur
  * sous l'unique URL, et le dit.
  */
-export async function principal(env: NodeJS.ProcessEnv = process.env): Promise<number> {
+/** Les options de l'entrée : le constat seul (le retour arrière, sans migration), et l'écrivain. */
+export type OptionsPrincipal = {
+  readonly constatSeul?: boolean;
+  readonly ecrire?: (texte: string) => void;
+};
+
+export async function principal(
+  env: Readonly<Record<string, string | undefined>> = process.env,
+  options: OptionsPrincipal = {}
+): Promise<number> {
+  const ecrire = options.ecrire ?? ((texte: string) => void process.stderr.write(texte));
   const urlMigration = env.DATABASE_MIGRATION_URL;
   const urlExecution = env.DATABASE_URL;
-  // SKIP_MIGRATE=1 (le runbook de retour arrière) : aucune migration, donc aucun provisionnement, qui
-  // écrit ; l'URL du propriétaire n'est alors pas exigée.
-  const migrer = env.SKIP_MIGRATE !== '1';
+  // Le CONSTAT SEUL, décidé par l'entrée (le retour arrière, sans migration) : aucun provisionnement,
+  // qui écrit ; l'URL du propriétaire n'est alors pas exigée.
+  const migrer = options.constatSeul !== true;
   if (!urlExecution) {
     // Sans base, rien à constater : le serveur refusera lui-même de démarrer (DATABASE_URL est exigée
     // par le schéma de src/lib/env.ts). Hors retour arrière, l'entrée refuse dès ici, comme avant.
     if (!migrer) return 0;
-    process.stderr.write('Demarrage refuse : DATABASE_URL est requise.\n');
+    ecrire('Demarrage refuse : DATABASE_URL est requise.\n');
     return 1;
   }
   if (migrer && !urlMigration && productionDeclaree(env)) {
-    process.stderr.write('Demarrage refuse : DATABASE_MIGRATION_URL est requise en production.\n');
+    ecrire('Demarrage refuse : DATABASE_MIGRATION_URL est requise en production.\n');
     return 1;
   }
   // Le CONSTAT tourne dès que DATABASE_URL est posée, quel que soit l'environnement déclaré : un
@@ -238,7 +248,7 @@ export async function principal(env: NodeJS.ProcessEnv = process.env): Promise<n
     return 0;
   } catch (e) {
     const motif = e instanceof RoleDExecutionRefuse ? e.message : 'erreur de la base, non imprimée';
-    process.stderr.write(`Demarrage refuse : role d'execution — ${motif}.\n`);
+    ecrire(`Demarrage refuse : role d'execution — ${motif}.\n`);
     return 1;
   }
 }
@@ -246,7 +256,9 @@ export async function principal(env: NodeJS.ProcessEnv = process.env): Promise<n
 // Lancé par `docker-entrypoint.sh` (`tsx src/server/deploiement/role-d-execution.ts`).
 if (process.argv[1]?.endsWith('role-d-execution.ts')) {
   // `exitCode`, jamais la sortie immédiate : les connexions se ferment d'elles-mêmes (provisionner.ts).
-  void principal().then((code) => {
-    process.exitCode = code;
-  });
+  void principal(process.env, { constatSeul: process.argv.includes('--constat-seul') }).then(
+    (code) => {
+      process.exitCode = code;
+    }
+  );
 }
