@@ -92,6 +92,12 @@ type Etat = {
   journal: boolean;
   tables: number;
   courant: boolean;
+  /** SEC-50 : le journal (`evenements`) appartient à `partners_journal`. Absent, il ne l'est pas. */
+  possede: boolean;
+  /** SEC-50 : `partners_execution` peut réécrire le journal (UPDATE, DELETE ou TRUNCATE). */
+  groupe: boolean;
+  /** SEC-50 : le rôle d'exécution lui-même peut réécrire le journal. */
+  reecrit: boolean;
 };
 
 async function etatDu(c: PrismaClient, role: string): Promise<Etat> {
@@ -103,7 +109,19 @@ async function etatDu(c: PrismaClient, role: string): Promise<Etat> {
              AND pg_has_role(${role}::name, 'partners_journal', 'MEMBER')) AS journal,
            (SELECT count(*)::int FROM pg_class c JOIN pg_roles r ON r.oid = c.relowner
              WHERE r.rolname = ${role}::name) AS tables,
-           (${role}::name = current_user) AS courant`;
+           (${role}::name = current_user) AS courant,
+           COALESCE((SELECT pg_get_userbyid(relowner) = 'partners_journal' FROM pg_class
+             WHERE oid = to_regclass('public.evenements')), false) AS possede,
+           CASE WHEN to_regclass('public.evenements') IS NULL
+                  OR NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'partners_execution')
+             THEN false
+             ELSE has_table_privilege('partners_execution', 'public.evenements', 'UPDATE, DELETE, TRUNCATE')
+           END AS groupe,
+           CASE WHEN to_regclass('public.evenements') IS NULL
+                  OR NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = ${role}::name)
+             THEN false
+             ELSE has_table_privilege(${role}::name, 'public.evenements', 'UPDATE, DELETE, TRUNCATE')
+           END AS reecrit`;
   return e!;
 }
 
@@ -112,7 +130,8 @@ async function etatDu(c: PrismaClient, role: string): Promise<Etat> {
  * (la rotation du secret prend effet au démarrage suivant), appartenances et privilèges. Le journal
  * garde ses seuls droits d'ajout, posés par sa migration (DM-45).
  * REFUSE, AVANT toute écriture, un rôle superutilisateur, propriétaire d'une table, ou celui de la
- * migration.
+ * migration ; et, SEC-50, un journal qui n'appartient pas à `partners_journal`, ou que
+ * `partners_execution` ou le rôle d'exécution peuvent réécrire.
  */
 export async function provisionnerRoleDExecution(urls: {
   urlMigration: string;
@@ -134,6 +153,10 @@ export async function provisionnerRoleDExecution(urls: {
         'le rôle d’exécution ne peut être propriétaire d’aucune table'
       );
     }
+    if (!e.possede)
+      throw new RoleDExecutionRefuse('le journal n’appartient pas à partners_journal');
+    if (e.groupe) throw new RoleDExecutionRefuse('partners_execution peut réécrire le journal');
+    if (e.reecrit) throw new RoleDExecutionRefuse('le rôle d’exécution peut réécrire le journal');
     // AUCUNE valeur dans le texte SQL : le nom du rôle est le littéral `partners_app`, et le
     // vérificateur du secret passe en PARAMÈTRE LIÉ (`set_config`, local à la transaction) qu'un bloc
     // CONSTANT relit, le verbe choisi dans le bloc et la valeur citée par `%L`.
@@ -155,14 +178,16 @@ $corps$`,
       // La sonde de disponibilité (`readyz`) LIT l'état des migrations sous le rôle du serveur ; elle
       // n'en écrit aucun. La lecture seule, et rien d'autre, sur la table de suivi des migrations.
       c.$executeRaw`GRANT SELECT ON _prisma_migrations TO partners_execution`,
-      // Les tables et séquences hors journal : lecture et écriture, à `partners_execution`.
+      // Les tables et séquences hors journal : lecture et écriture, à `partners_execution`. Le journal
+      // est exclu par son NOM, jamais déduit de son propriétaire (SEC-50) : sa propriété est vérifiée
+      // plus haut, avant tout lot, et ses seuls droits d'ajout viennent de sa migration.
       c.$executeRaw`DO $corps$
 DECLARE t record;
 BEGIN
   FOR t IN
     SELECT c.relname, c.relkind FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
     WHERE n.nspname = 'public' AND c.relkind IN ('r', 'p', 'S')
-      AND pg_get_userbyid(c.relowner) <> 'partners_journal' AND c.relname <> '_prisma_migrations'
+      AND c.relname NOT IN ('evenements', 'evenements_id_seq', '_prisma_migrations')
   LOOP
     IF t.relkind = 'S' THEN
       EXECUTE format('GRANT USAGE, SELECT ON SEQUENCE %I TO partners_execution', t.relname);
@@ -180,17 +205,30 @@ $corps$`,
 
 /**
  * Le constat, connecté COMME LE SERVEUR : `rolsuper` faux, aucune appartenance à `partners_journal`,
- * membre de `partners_execution`, aucune table possédée. Lève en nommant le fait manquant.
+ * membre de `partners_execution`, aucune table possédée ; et, SEC-50, un journal possédé par
+ * `partners_journal` que le serveur ne peut pas réécrire. Lève en nommant le fait manquant.
  */
 export async function constaterRoleDExecution(urlExecution: string): Promise<void> {
   await avec(urlExecution, async (c) => {
     const [f] = await c.$queryRaw<
-      { superutilisateur: boolean; journal: boolean; execution: boolean; tables: number }[]
+      {
+        superutilisateur: boolean;
+        journal: boolean;
+        execution: boolean;
+        tables: number;
+        possede: boolean;
+        reecrit: boolean;
+      }[]
     >`
       SELECT r.rolsuper AS superutilisateur,
              pg_has_role(current_user, 'partners_journal', 'MEMBER') AS journal,
              pg_has_role(current_user, 'partners_execution', 'MEMBER') AS execution,
-             (SELECT count(*)::int FROM pg_class WHERE relowner = r.oid) AS tables
+             (SELECT count(*)::int FROM pg_class WHERE relowner = r.oid) AS tables,
+             COALESCE((SELECT pg_get_userbyid(relowner) = 'partners_journal' FROM pg_class
+               WHERE oid = to_regclass('public.evenements')), false) AS possede,
+             CASE WHEN to_regclass('public.evenements') IS NULL THEN false
+               ELSE has_table_privilege('public.evenements', 'UPDATE, DELETE, TRUNCATE')
+             END AS reecrit
       FROM pg_roles r WHERE r.rolname = current_user`;
     if (!f || f.superutilisateur) {
       throw new RoleDExecutionRefuse('le serveur est connecté en superutilisateur');
@@ -200,6 +238,9 @@ export async function constaterRoleDExecution(urlExecution: string): Promise<voi
       throw new RoleDExecutionRefuse('le serveur n’est pas membre de partners_execution');
     }
     if (f.tables > 0) throw new RoleDExecutionRefuse('le serveur est propriétaire de tables');
+    if (!f.possede)
+      throw new RoleDExecutionRefuse('le journal n’appartient pas à partners_journal');
+    if (f.reecrit) throw new RoleDExecutionRefuse('le serveur peut réécrire le journal');
   });
 }
 
