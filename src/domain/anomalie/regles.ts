@@ -51,16 +51,16 @@ export class LienPosterieurAuDepot extends Error {
   }
 }
 
-/** Le score d'une anomalie : présent si et seulement si `sincerite`, entier de 0 à 100. */
+/** Le score d'une anomalie : présent si et seulement si `sincerite`, entier. */
 export function jugerAnomalie(a: { type: TypeAnomalie; score: number | null }): void {
   if (a.type !== 'sincerite') {
     if (a.score !== null) throw new AnomalieMalFormee(`aucun score pour ${a.type}`);
     return;
   }
   if (a.score === null) throw new AnomalieMalFormee('score requis pour sincerite');
-  if (!Number.isInteger(a.score) || a.score < 0 || a.score > 100) {
-    throw new AnomalieMalFormee('score entier de 0 à 100');
-  }
+  // L'échelle du score est tenue par la base (`anomalies_score_sincerite`) ; le domaine n'en recopie
+  // pas les bornes. Le seuil qui ouvre une anomalie n'est pas ici : il vit hors du dépôt public.
+  if (!Number.isInteger(a.score)) throw new AnomalieMalFormee('score entier');
 }
 
 /** Une anomalie ne quitte `ouverte` qu'une fois, vers une valeur de clôture, sans retour. */

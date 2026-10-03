@@ -54,14 +54,11 @@ describe('REQ-DM-033 — une anomalie : le score n’existe que pour la sincéri
     }
   );
 
-  it('REQ-DM-033 : un score hors de 0 à 100, ou non entier, est refusé', () => {
-    for (const score of [-1, 101, 4.5]) {
-      expect(refus(() => jugerAnomalie({ type: 'sincerite', score })).message, String(score)).toBe(
-        'anomalie_mal_formee : score entier de 0 à 100'
-      );
-    }
+  it('REQ-DM-033 : un score non entier est refusé ; l’échelle est tenue par la base', () => {
+    expect(refus(() => jugerAnomalie({ type: 'sincerite', score: 4.5 })).message).toBe(
+      'anomalie_mal_formee : score entier'
+    );
     expect(() => jugerAnomalie({ type: 'sincerite', score: 0 })).not.toThrow();
-    expect(() => jugerAnomalie({ type: 'sincerite', score: 100 })).not.toThrow();
   });
 });
 
