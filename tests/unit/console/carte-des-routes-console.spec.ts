@@ -345,7 +345,12 @@ function entetes(
     .slice(1)
     .map((m) => {
       const corps = m.split(/<\/section\s*>/)[0]!;
-      const role = /class="c-(?:qui|compte)"[\s\S]*?<b>([a-z_]+)<\/b\s*>/.exec(corps)?.[1] ?? null;
+      // Le rôle affiché : dans le compte de la barre latérale (UX-P1-50), `<span class="s-qui">
+      // <b>nom</b><small>rôle</small>`, ou dans l'en-tête d'un état sans navigation.
+      const role =
+        /class="s-qui"\s*><b>[^<]*<\/b\s*><small>([a-z_]+)<\/small\s*>/.exec(corps)?.[1] ??
+        /class="c-(?:qui|compte)"[\s\S]*?<b>([a-z_]+)<\/b\s*>/.exec(corps)?.[1] ??
+        null;
       const liens = (bloc: RegExp) =>
         [...(bloc.exec(corps)?.[0] ?? '').matchAll(/<a\b[^>]*>([\s\S]*?)<\/a\s*>/g)].map((x) =>
           texteDe(x[1]!)
@@ -353,7 +358,8 @@ function entetes(
       return {
         id: /id="([^"]+)"/.exec(m)?.[1] ?? '?',
         role,
-        nav: liens(/<nav\s+class="c-nav"[\s\S]*?<\/nav\s*>/),
+        // La navigation : la barre latérale en sections (UX-P1-50).
+        nav: liens(/<nav\s+class="s-nav"[\s\S]*?<\/nav\s*>/),
         barre: liens(/<nav\s+class="c-barre"[\s\S]*?<\/nav\s*>/),
       };
     });

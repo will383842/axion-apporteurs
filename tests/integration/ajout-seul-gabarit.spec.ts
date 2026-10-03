@@ -262,6 +262,7 @@ describe('REQ-DM-031 — chaque argument du gabarit nomme une colonne qui existe
       'demandes_droits_contact',
       'depots_refuses',
       'personnes_declarees',
+      'qualifications',
       'rattachements_manuels',
       'revisions_demande_confirmation',
       'verifications',

@@ -384,6 +384,10 @@ export const CHAMPS_PII = {
   reponse: { chiffre: 'reponseChiffre' },
   // DM-12 : la justification d'une anomalie (REQ-DM-033), chiffrée, sans empreinte ni extrait.
   justification: { chiffre: 'justificationChiffre' },
+  // DM-09 (REQ-DM-008, REQ-DM-031) : la personne interrogée lors d'un appel de qualification et les
+  // termes de sa réponse — des données d'un tiers, chiffrées, SANS empreinte, purgées avec le contact.
+  personneInterrogee: { chiffre: 'personneInterrogeeChiffre' },
+  termesReponse: { chiffre: 'termesReponseChiffre' },
 } as const satisfies Record<
   string,
   { chiffre: string } | { chiffre: string; empreinte: string; type: TypeEmpreinte }

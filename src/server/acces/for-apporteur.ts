@@ -133,6 +133,7 @@ export const CLES_REFUSEES = {
     'anomalies',
     'rattachementsManuels',
     'contestations',
+    'qualifications',
   ],
   // DM-12 : une alerte de libération s'écrit par le serveur, pour l'apporteur de la session.
   alerteLiberation: ['id', 'apporteurId', 'apporteur'],
@@ -227,6 +228,7 @@ export const RELATIONS = {
     'anomalies',
     'rattachementsManuels',
     'contestations',
+    'qualifications',
   ],
   alerteLiberation: ['apporteur'],
   changementCourriel: ['apporteur'],
