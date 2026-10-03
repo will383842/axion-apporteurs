@@ -1,4 +1,5 @@
 // @req REQ-INT-012
+// @req REQ-INT-013
 // @req REQ-QA-026
 /**
  * INT-T08-P — le client de relecture de Partners et la réconciliation quotidienne.
@@ -38,6 +39,9 @@ import {
   type Signal,
 } from '../../src/server/integrations/axionia/reconciliation';
 import { passageQuotidien } from '../../src/server/jobs/reconciliation';
+import { battementDeLaReconciliation } from '../../src/server/taches/inscriptions';
+import { lancerLesPassages, verrouConsultatif } from '../../src/server/taches/lanceur';
+import { depotDuTravail } from '../../src/server/queue/workers/evenement-recu';
 
 let base: Base;
 
@@ -368,5 +372,52 @@ describe('REQ-QA-026 — la réconciliation est une tâche du registre, jouée u
       reconcilier: reconcilierCompte,
     })();
     expect(jouee).toBe(2);
+  });
+
+  it('REQ-INT-013 : en base réelle, les event_id manquants du passage restent au battement après les minutes différées du même jour', async () => {
+    // Le lanceur, son verrou consultatif et le dépôt de production ; le battement est lu par le
+    // port de l'inscription. Seul le passage lui-même est remplacé (il appellerait axion-ia).
+    const resultat = {
+      pages: 1,
+      relus: 3,
+      manquants: 1,
+      rearmes: 1,
+      introuvables: 0,
+      eventIdsManquants: [randomUUID()],
+    };
+    let jouee = 0;
+    let instant = Date.UTC(2026, 9, 5, 0, 1, 0);
+    const maintenant = () => new Date(instant);
+    const minute = () =>
+      lancerLesPassages({
+        inscriptions: {
+          reconciliation_axionia: passageQuotidien({
+            ...battementDeLaReconciliation(base.prisma),
+            maintenant,
+            reconcilier: async () => {
+              jouee += 1;
+              return resultat;
+            },
+          }) as never,
+        },
+        verrou: verrouConsultatif(base.prisma),
+        battre: depotDuTravail(base.prisma).battre,
+        maintenant,
+      });
+    const lu = async () =>
+      (
+        await base.prisma.battement.findUniqueOrThrow({
+          where: { tache: 'reconciliation_axionia' },
+        })
+      ).compteurs;
+
+    expect(await minute()).toEqual({ reconciliation_axionia: 'joue' });
+    expect(await lu()).toEqual(resultat);
+    instant += 60_000;
+    expect(await minute()).toEqual({ reconciliation_axionia: 'joue' });
+    instant += 60 * 60_000;
+    expect(await minute()).toEqual({ reconciliation_axionia: 'joue' });
+    expect(jouee).toBe(1);
+    expect(await lu()).toEqual({ ...resultat, differee: 1 });
   });
 });

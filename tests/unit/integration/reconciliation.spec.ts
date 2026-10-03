@@ -32,6 +32,12 @@ import {
 } from '../../../src/server/integrations/axionia/reconciliation';
 import { passageQuotidien } from '../../../src/server/jobs/reconciliation';
 import {
+  lancerLesPassages,
+  type Passage,
+  type VerrouConsultatif,
+} from '../../../src/server/taches/lanceur';
+import type { Battre } from '../../../src/server/queue/workers/evenement-recu';
+import {
   GENRES_RECONCILIATION,
   messageDAlerte,
 } from '../../../src/server/integrations/telegram/alertes';
@@ -400,6 +406,51 @@ describe('REQ-QA-026 — la tâche quotidienne et son alerte', () => {
     expect(await essai(new Date(Date.UTC(2026, 9, 2, 23, 59, 59)))).toEqual(compteurs);
     expect(await essai(null)).toEqual(compteurs);
     expect(jouee).toBe(2);
+  });
+
+  it('REQ-INT-013 : les event_id manquants RESTENT au battement tout le jour — chaque minute différée reporte le résultat du passage', async () => {
+    // Le battement tel que l'écrit le dépôt (`depotDuTravail().battre`) : un succès REMPLACE la
+    // colonne des compteurs ; le lanceur joue la tâche chaque minute, sous son verrou.
+    let battement: { succesAt: Date | null; compteurs: unknown } = {
+      succesAt: null,
+      compteurs: null,
+    };
+    const battre: Battre = async (_tache, b) => {
+      if ('succesAt' in b) battement = { succesAt: b.succesAt, compteurs: { ...b.compteurs } };
+    };
+    const verrou: VerrouConsultatif = {
+      sous: async (_cle, travail) => ({ pris: true, valeur: await travail() }),
+    };
+    const resultat = { ...compteurs, manquants: 1, rearmes: 1, eventIdsManquants: ['e7'] };
+    let jouee = 0;
+    let instant = Date.UTC(2026, 9, 3, 0, 1, 0);
+    const maintenant = () => new Date(instant);
+    const inscriptions = {
+      reconciliation_axionia: passageQuotidien({
+        dernierSucces: async () => battement.succesAt,
+        derniersCompteurs: async () => battement.compteurs,
+        maintenant,
+        reconcilier: async () => {
+          jouee += 1;
+          return resultat;
+        },
+      }) as unknown as Passage,
+    };
+    const minute = () => lancerLesPassages({ inscriptions, verrou, battre, maintenant });
+
+    expect(await minute()).toEqual({ reconciliation_axionia: 'joue' });
+    expect(battement.compteurs).toEqual(resultat);
+    for (const decalage of [1, 2, 60]) {
+      instant = Date.UTC(2026, 9, 3, 0, 1 + decalage, 0);
+      expect(await minute()).toEqual({ reconciliation_axionia: 'joue' });
+      expect(battement.compteurs).toEqual({ ...resultat, differee: 1 });
+    }
+    expect(jouee).toBe(1);
+    // Le lendemain, le passage est rejoué, et son résultat remplace celui de la veille.
+    instant = Date.UTC(2026, 9, 4, 0, 1, 0);
+    await minute();
+    expect(jouee).toBe(2);
+    expect(battement.compteurs).toEqual(resultat);
   });
 
   it('REQ-QA-026 : les genres d’alerte sont ceux des signaux, et l’alerte ne montre qu’un genre, un motif fermé et un nombre', () => {
