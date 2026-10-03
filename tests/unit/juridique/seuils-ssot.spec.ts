@@ -263,7 +263,7 @@ describe('RM-01 — les durées des motifs sont DÉRIVÉES de la SSOT, jamais re
     }
   });
 
-  it('RM-01 — TÉMOIN : enLettres() couvre 0 à 999, avec la règle du « s » de cent (QA-T57)', () => {
+  it('RM-01 — TÉMOIN : enLettres() couvre 0 à 999 999, avec les règles du « s » de cent et de quatre-vingts (QA-T57)', () => {
     expect(enLettres(99)).toBe('quatre-vingt-dix-neuf');
     expect(enLettres(100)).toBe('cent');
     expect(enLettres(101)).toBe('cent un');
@@ -272,7 +272,18 @@ describe('RM-01 — les durées des motifs sont DÉRIVÉES de la SSOT, jamais re
     expect(enLettres(201)).toBe('deux cent un');
     expect(enLettres(280)).toBe('deux cent quatre-vingts');
     expect(enLettres(999)).toBe('neuf cent quatre-vingt-dix-neuf');
-    expect(enLettres(1000)).toBeNull();
+    // Au-delà de 999 : « mille » invariable, sans « un » devant ; « cent » et « quatre-vingts »
+    // perdent leur « s » devant « mille ».
+    expect(enLettres(1000)).toBe('mille');
+    expect(enLettres(1001)).toBe('mille un');
+    expect(enLettres(1095)).toBe('mille quatre-vingt-quinze');
+    expect(enLettres(2000)).toBe('deux mille');
+    expect(enLettres(80000)).toBe('quatre-vingt mille');
+    expect(enLettres(200000)).toBe('deux cent mille');
+    expect(enLettres(999999)).toBe(
+      'neuf cent quatre-vingt-dix-neuf mille neuf cent quatre-vingt-dix-neuf'
+    );
+    expect(enLettres(1000000)).toBeNull();
     expect(enLettres(-1)).toBeNull();
     expect(enLettres(1.5)).toBeNull();
   });

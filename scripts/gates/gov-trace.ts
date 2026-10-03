@@ -61,6 +61,7 @@
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { basename, posix } from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { instantaneEnVigueur, lireDansLInstantane } from './forge-instantane';
 import { LIVREE as LIVREE_DERIVEE, verifierExhaustivite } from '../lot/avancement';
 import { DEPOT_LOCAL } from '../lot/attestation';
 import {
@@ -1282,22 +1283,30 @@ function lirePr(): { pr: PullRequest[] | null; indisponible: string | null } {
   if (process.env.GOV_TRACE_SANS_PR === '1' || process.argv.includes('--sans-pr')) {
     return { pr: null, indisponible: 'coupée par GOV_TRACE_SANS_PR / --sans-pr' };
   }
-  const r = spawnSync(
-    'gh',
-    ['pr', 'list', '--state', 'merged', '--limit', '200', '--json', 'number,body'],
-    {
+  const lecture = ['pr', 'list', '--state', 'merged', '--limit', '200', '--json', 'number,body'];
+  // QA-T64 : l'instantané de la forge, posé par la porte A (`GOV_FORGE`) ou par le run de tests
+  // (`GOV_ETAT_FORGE`), fait foi. Absent, illisible ou sans cette lecture, il LÈVE, nommé : la
+  // source reste facultative quand on la coupe, jamais quand un instantané dit l'avoir lue.
+  const instantane = instantaneEnVigueur(process.env);
+  let sortie: string;
+  if (instantane !== undefined) {
+    sortie = lireDansLInstantane(instantane, lecture, process.env);
+  } else {
+    const r = spawnSync('gh', lecture, {
       encoding: 'utf8',
       shell: true,
       maxBuffer: 64 * 1024 * 1024,
       timeout: 120_000,
+    });
+    if (r.error || r.status !== 0) {
+      const raison =
+        (r.stderr ?? '').trim().split('\n')[0] ?? String(r.error ?? `code ${r.status}`);
+      return { pr: null, indisponible: `\`gh\` n'a rien rendu (${raison || 'sans message'})` };
     }
-  );
-  if (r.error || r.status !== 0) {
-    const raison = (r.stderr ?? '').trim().split('\n')[0] ?? String(r.error ?? `code ${r.status}`);
-    return { pr: null, indisponible: `\`gh\` n'a rien rendu (${raison || 'sans message'})` };
+    sortie = r.stdout ?? '[]';
   }
   try {
-    const brut = JSON.parse(r.stdout ?? '[]') as { number: number; body: string | null }[];
+    const brut = JSON.parse(sortie) as { number: number; body: string | null }[];
     return {
       pr: brut.map((p) => {
         const corps = p.body ?? '';

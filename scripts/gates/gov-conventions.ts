@@ -2561,6 +2561,13 @@ export function lireVue(): Vue {
  */
 /** Le jeton que cinq étapes reçoivent pour lire la forge — une valeur, écrite une fois (RM-01). */
 const JETON_DE_LA_FORGE = { env: { GH_TOKEN: '${{ secrets.GITHUB_TOKEN }}' } } as const;
+/** QA-T64 : les étapes qui lisent la forge relisent l'instantané de `forge:instantane`, nommé ici. */
+const JETON_ET_INSTANTANE = {
+  env: {
+    GH_TOKEN: '${{ secrets.GITHUB_TOKEN }}',
+    GOV_FORGE: '${{ runner.temp }}/forge-instantane.json',
+  },
+} as const;
 
 export const PORTE_A_FIGEE: PorteFigee = {
   job: 'gate-a',
@@ -2590,6 +2597,18 @@ export const PORTE_A_FIGEE: PorteFigee = {
       uses: 'actions/setup-node@v4',
       cles: { with: { 'node-version': '22', cache: 'pnpm' } },
     },
+    // QA-T59 : le cache des navigateurs des passes d'accessibilité, AVANT toute commande (point 5),
+    // sa clé dérivée du verrou (point 6 : aucune commande pour lire une version).
+    {
+      nom: 'Cache des navigateurs des passes d accessibilite',
+      uses: 'actions/cache@v4',
+      cles: {
+        with: {
+          path: '~/.cache/ms-playwright',
+          key: "navigateurs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}",
+        },
+      },
+    },
     { nom: 'run: pnpm install --frozen-lockfile', run: 'pnpm install --frozen-lockfile' },
     // GOV-123 : les vues se rendent AVANT toute étape qui en lit une ; aucune ne revient sous git.
     {
@@ -2599,6 +2618,12 @@ export const PORTE_A_FIGEE: PorteFigee = {
     {
       nom: 'Aucune vue derivee sous git — une PR qui en rajoute une est refusee, le fichier nomme',
       run: 'pnpm vues:hors-git',
+    },
+    // QA-T64 : la forge lue une fois, après les vues et avant toute garde qui la lit.
+    {
+      nom: 'La forge est lue une fois pour toute la porte A',
+      run: 'pnpm forge:instantane',
+      cles: JETON_DE_LA_FORGE,
     },
     { nom: 'Regle de publication (depot public)', run: 'pnpm gov:publication' },
     { nom: 'La garde de publication sait rougir', run: 'pnpm gov:publication:prove' },
@@ -2642,7 +2667,7 @@ export const PORTE_A_FIGEE: PorteFigee = {
     {
       nom: 'Matrice de tracabilite REQ vers tache vers test vers PR',
       run: 'pnpm gov:trace',
-      cles: JETON_DE_LA_FORGE,
+      cles: JETON_ET_INSTANTANE,
     },
     { nom: 'La matrice de tracabilite sait rougir', run: 'pnpm gov:trace:prove' },
     { nom: 'La vue de tracabilite est derivee de ses sources', run: 'pnpm gov:trace:verifier' },
@@ -2753,12 +2778,18 @@ export const PORTE_A_FIGEE: PorteFigee = {
     },
     { nom: 'La garde red-first sait rougir', run: 'pnpm red-first:prove' },
     { nom: 'Harnais de l adaptateur MCP', run: 'pnpm harnais-mcp' },
-    { nom: 'Navigateurs des passes d accessibilite', run: 'pnpm a11y:navigateurs' },
-    { nom: 'Tests', run: 'pnpm test', cles: JETON_DE_LA_FORGE },
+    // QA-T59 : trois tentatives bornées chacune par `timeout`, l'étape entière par `timeout-minutes` ;
+    // toutes échouées, l'étape ÉCHOUE (jamais un vert de complaisance).
+    {
+      nom: 'Navigateurs des passes d accessibilite',
+      run: 'pnpm a11y:navigateurs:bornes',
+      cles: { 'timeout-minutes': '15' },
+    },
+    { nom: 'Tests', run: 'pnpm test', cles: JETON_ET_INSTANTANE },
     {
       nom: 'req:check — chaque paire (tache, REQ) a son test annote et VERT',
       run: 'pnpm req:check',
-      cles: JETON_DE_LA_FORGE,
+      cles: JETON_ET_INSTANTANE,
     },
     { nom: 'Le lecteur du rapport de mutation sait rougir', run: 'pnpm mutation:prove' },
     {
@@ -2768,7 +2799,7 @@ export const PORTE_A_FIGEE: PorteFigee = {
     {
       nom: 'Etat vivant — fraicheur, verrou d owner, journal',
       run: 'pnpm gov:etat --now "$(date -u +%Y-%m-%dT%H:%M:%SZ)"',
-      cles: JETON_DE_LA_FORGE,
+      cles: JETON_ET_INSTANTANE,
     },
     { nom: 'La garde de l etat vivant sait rougir', run: 'pnpm gov:etat:prove' },
     { nom: 'Construire l application pour la mesure', run: 'pnpm perf:bundle:construire' },
@@ -2795,6 +2826,15 @@ export const PORTE_A_FIGEE: PorteFigee = {
       nom: 'La garde des agregats du reseau sait rougir',
       run: 'pnpm jur:aucun-agregat-reseau:prove',
     },
+    // SEC-46 — la garde des styles en ligne, et sa preuve, par paire.
+    {
+      nom: 'Securite — aucun style en ligne sous src/app',
+      run: 'pnpm csp:inline',
+    },
+    {
+      nom: 'La garde des styles en ligne sait rougir',
+      run: 'pnpm csp:inline:prove',
+    },
     {
       nom: 'Charte — aucune progression vers un seuil dans l espace',
       run: 'pnpm jur:aucune-progression',
@@ -2820,12 +2860,28 @@ export const PORTE_A_FIGEE: PorteFigee = {
       run: 'pnpm jur:lexique-social:prove',
     },
     {
+      nom: 'Charte — aucune remuneration presentee comme ferme',
+      run: 'pnpm jur:copy-indicative-partners',
+    },
+    {
+      nom: 'La garde de la remuneration indicative sait rougir',
+      run: 'pnpm jur:copy-indicative-partners:prove',
+    },
+    {
       nom: 'Seuils et delais du contrat — une seule source, aucun litteral hors SSOT',
       run: 'pnpm ssot:seuils',
     },
     {
       nom: 'La garde des seuils sait rougir, famille par famille, sans faux positif',
       run: 'pnpm ssot:seuils:prove',
+    },
+    {
+      nom: 'La date de lecture d une notification ne fait courir aucun delai',
+      run: 'pnpm notifications:lue-at-inerte',
+    },
+    {
+      nom: 'La garde de la date de lecture sait rougir, famille par famille',
+      run: 'pnpm notifications:lue-at-inerte:prove',
     },
     {
       nom: 'Roles de la console — requireRole partout, droits dans la matrice',
@@ -2841,6 +2897,7 @@ export const PORTE_A_FIGEE: PorteFigee = {
     'sec:semgrep:prove': 'tsx scripts/gates/semgrep.ts --prove',
     // GOV-123 : les deux étapes des vues, lancées par la porte A, figées comme les autres.
     'vues:rendre': 'tsx scripts/vues/rendre-apres-fusion.ts',
+    'forge:instantane': 'tsx scripts/gates/forge-instantane.ts',
     'vues:hors-git': 'tsx scripts/vues/rendre-apres-fusion.ts --hors-git',
     'gov:publication': 'tsx scripts/gates/gov-publication.ts',
     'gov:publication:prove': 'tsx scripts/gates/gov-publication.ts --prove',
@@ -2923,6 +2980,7 @@ export const PORTE_A_FIGEE: PorteFigee = {
     'red-first:prove': 'tsx scripts/gates/red-first.ts --prove',
     'harnais-mcp': 'tsx scripts/gates/harnais-mcp.ts',
     'a11y:navigateurs': 'playwright install --with-deps chromium webkit',
+    'a11y:navigateurs:bornes': 'tsx scripts/ci/navigateurs-bornes.ts',
     test: 'vitest run --coverage --reporter=default --reporter=json --outputFile.json=test-results/vitest.json',
     'req:check': 'tsx scripts/gates/gov-trace.ts --resultats test-results/vitest.json',
     'mutation:prove': 'tsx scripts/mutation/rapport.ts --prove',
@@ -2938,14 +2996,20 @@ export const PORTE_A_FIGEE: PorteFigee = {
     //    Dérivés de `package.json` par le MÊME calcul que le témoin, lu dans son code. ──
     'jur:aucun-agregat-reseau': 'tsx scripts/gates/jur-aucun-agregat-reseau.ts',
     'jur:aucun-agregat-reseau:prove': 'tsx scripts/gates/jur-aucun-agregat-reseau.ts --prove',
+    'csp:inline': 'tsx scripts/gates/csp-inline.ts',
+    'csp:inline:prove': 'tsx scripts/gates/csp-inline.ts --prove',
     'jur:aucune-progression': 'tsx scripts/gates/jur-aucune-progression.ts',
     'jur:aucune-progression:prove': 'tsx scripts/gates/jur-aucune-progression.ts --prove',
     'jur:revue-apporteur-facing': 'tsx scripts/gates/jur-revue-apporteur-facing.ts',
     'jur:revue-apporteur-facing:prove': 'tsx scripts/gates/jur-revue-apporteur-facing.ts --prove',
     'jur:lexique-social': 'tsx scripts/gates/jur-lexique-social.ts',
     'jur:lexique-social:prove': 'tsx scripts/gates/jur-lexique-social.ts --prove',
+    'jur:copy-indicative-partners': 'tsx scripts/gates/jur-copy-indicative.ts',
+    'jur:copy-indicative-partners:prove': 'tsx scripts/gates/jur-copy-indicative.ts --prove',
     'ssot:seuils': 'tsx scripts/gates/seuils-ssot.ts',
     'ssot:seuils:prove': 'tsx scripts/gates/seuils-ssot.ts --prove',
+    'notifications:lue-at-inerte': 'tsx scripts/gates/notifications-lue-at-inerte.ts',
+    'notifications:lue-at-inerte:prove': 'tsx scripts/gates/notifications-lue-at-inerte.ts --prove',
     'securite:roles': 'tsx scripts/gates/roles.ts',
     'securite:roles:prove': 'tsx scripts/gates/roles.ts --prove',
   },
@@ -2998,6 +3062,13 @@ export const OUTILLAGE_FIGE: OutillageFige = {
       commit: '49933ea5288caeca8642d1e84afbd3f7d6820020',
       execution: 'node20',
       releve: '2026-09-29',
+    },
+    // QA-T59 : tag v4 lu sur la forge (`repos/actions/cache/git/ref/tags/v4`), et `runs.using` de son
+    // `action.yml` à ce commit.
+    'actions/cache@v4': {
+      commit: '0057852bfaa89a56745cba8c7296529d2fc39830',
+      execution: 'node20',
+      releve: '2026-10-01',
     },
   },
 };

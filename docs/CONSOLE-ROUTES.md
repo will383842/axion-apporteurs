@@ -87,8 +87,8 @@ encore, l'accueil montre un état vide guidant qui dit ce qui arrive et à quel 
 | `/console/attributions` | Attributions : filtres état, département, apporteur ; rattachement manuel motivé | admin, qualifieur, lecteur (lecture) | 1 | prévue | REQ-UX-037 | `attributions-contrats.html` | UX-P1-13 | non |
 | `/console/attributions/[id]` | Fiche prospect : échanges, fiche de qualification, journal | admin, qualifieur | 1 | prévue | REQ-EXT-003, REQ-EXT-005 | `fiche-prospect.html` | EXT-T02a | non |
 | `/console/contrats` | Contrats : versions signées | admin, comptable | 1 | prévue | REQ-UX-037 | `attributions-contrats.html` | UX-P1-13 | non |
-| `/console/grille` | Éditeur de grille : modèles, édition en masse, complétude | admin | 1 | prévue | REQ-EXT-023, REQ-UX-026 | — | UX-P1-14 | non |
-| `/console/candidatures` | Saisie manuelle d'une candidature et pièce jointe | admin | 1 | prévue | REQ-EXT-011, REQ-EXT-012 | — | EXT-T04 | non |
+| `/console/grille` | Éditeur de grille : modèles, édition en masse, complétude | admin | 1 | prévue | REQ-EXT-023, REQ-UX-026 | `grille-console.html` | UX-P1-14 | non |
+| `/console/candidatures` | Saisie manuelle d'une candidature et pièce jointe | admin | 1 | prévue | REQ-EXT-011, REQ-EXT-012 | `saisie-manuelle-console.html` | EXT-T04 | non |
 | `/console/utilisateurs` | Utilisateurs : invitation qui expire, rôle expliqué, désactivation immédiate | admin | 1 | prévue | REQ-SEC-023, REQ-DM-024 | `utilisateurs-console.html` | SEC-30 | non |
 
 ## Écrans des phases 2 et 3

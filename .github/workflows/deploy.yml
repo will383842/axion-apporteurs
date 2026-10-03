@@ -127,8 +127,12 @@ jobs:
     concurrency:
       group: deploiement-production
       cancel-in-progress: false
+    # QA-T67 : EXACTEMENT deux lectures. actions lit les runs de ci.yml (push de main, meme sha) et
+    # les jobs du run retenu ; aucun check-run n est lu, checks n a plus d usage (lentille securite
+    # du 2026-10-02). Aucune ecriture.
     permissions:
       contents: read
+      actions: read
     # QA-T54 : le sha servi, deja mis en forme par le script (hexadecimal, illisible, ou vide),
     # passe au job alerter. Aucun secret de canal ici : deployer n en lit que trois.
     outputs:
@@ -138,6 +142,16 @@ jobs:
         with: { persist-credentials: false }
       - uses: pnpm/action-setup@v4
       - run: pnpm install --frozen-lockfile
+
+      # QA-T67 (REQ-GOV-014) — la porte A du MEME sha, avant tout le reste : le plus recent run de
+      # ci.yml sur push de main (run_number, puis run_attempt), reussi, dont le job gate-a est
+      # reussi. Absente, en cours au-dela de la borne, rouge, un run hors filtre ou sans gate-a :
+      # refus nomme. Le jeton est servi a CETTE etape seule, jamais au job, ni a l AIPD, ni a la
+      # plateforme.
+      - name: Le deploiement attend la porte A du meme sha
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: pnpm deploy:attendre-porte-a
 
       # JUR-T35 (REQ-CPL-009) — aucun depot reel sans l AIPD signee : a partir de MISE_EN_SERVICE, l etat
       # « signee le <date> par <signataire> » de docs/rgpd/aipd.md et la variable AIPD_SIGNEE_LE de

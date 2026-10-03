@@ -413,3 +413,28 @@ export function colonnesPii(
   }
   return sortie as ColonnesPii;
 }
+
+/** Les colonnes que l'effacement des champs `C` met à `null` : leur bloc, et leur empreinte s'il y en a une. */
+export type EffacementPii<C extends ChampPii> = {
+  [K in ChampsPii[C]['chiffre'] | Extract<ChampsPii[C], { empreinte: string }>['empreinte']]: null;
+};
+
+/**
+ * L'EFFACEMENT des champs de personne nommés, prêt à étaler dans `data` : le bloc chiffré de chacun
+ * ET son empreinte, s'il en a une, à `null` — ensemble, par construction, comme les CHECK l'exigent.
+ * Aucune clé ni aucun clair : rien n'est chiffré, rien n'est lu. La SOURCE est `CHAMPS_PII`, jamais une
+ * liste de colonnes recopiée. Une liste vide est refusée : un effacement qui n'efface rien est une
+ * erreur d'appel.
+ */
+export function effacementPii<C extends ChampPii>(champs: readonly C[]): EffacementPii<C> {
+  if (champs.length === 0) {
+    throw new EntreeRefuseePii('ligne_incomplete', 'l’effacement exige au moins un champ');
+  }
+  const sortie: Record<string, null> = {};
+  for (const champ of champs) {
+    const def: ChampsPii[ChampPii] = CHAMPS_PII[champ];
+    sortie[def.chiffre] = null;
+    if ('empreinte' in def) sortie[def.empreinte] = null;
+  }
+  return sortie as EffacementPii<C>;
+}

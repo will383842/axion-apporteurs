@@ -71,6 +71,10 @@ enum TypeEvenementJournal {
   journal_ouvert
   apporteur_statut_modifie
   attribution_contact_purge
+  attribution_etat_modifie
+  attribution_peremption_suspendue
+  attribution_porteur_reaffecte
+  piece_kyc_statut_modifie
 
   @@map("type_evenement_journal")
 }
@@ -100,6 +104,7 @@ model Evenement {
   prevHash  String               @unique @map("prev_hash") @db.Char(64)
   selfHash  String               @unique @map("self_hash") @db.Char(64)
 
+  @@index([agregat, agregatId])
   @@map("evenements")
 }
 
@@ -131,6 +136,29 @@ enum MotifResiliation {
   @@map("motif_resiliation")
 }
 
+/// Le type d'une pièce du KYC (REQ-DM-027, `docs/GLOSSAIRE.md` §4).
+enum TypePieceKyc {
+  siret
+  tva
+  rib
+  identite
+  vigilance
+  rc_pro
+
+  @@map("type_piece_kyc")
+}
+
+/// Le statut d'une pièce du KYC (REQ-DM-027, `docs/GLOSSAIRE.md` §4).
+enum StatutPieceKyc {
+  manquante
+  a_verifier
+  valide
+  perimee
+  refusee
+
+  @@map("statut_piece_kyc")
+}
+
 /// Le régime de TVA d'une identité de facturation (REQ-ARG-033, `docs/GLOSSAIRE.md` §4).
 enum RegimeTva {
   assujetti
@@ -142,17 +170,41 @@ enum RegimeTva {
 /// L'apporteur d'affaires (DM-06). Aucune coordonnée ici : nom, courriel et téléphone sont des
 /// données chiffrées posées par la tâche du chiffrement ; l'IBAN vit dans la pièce `rib` du KYC
 /// (HYP-DM06-IBAN), jamais dans cette table ni dans `identites_facturation`.
+/// DM-50 : la qualité d'exercice de l'apporteur, liste FERMÉE d'A07 (2026-10-02). Les deux premières
+/// rendent applicable la clause attributive de juridiction (art. 48 CPC) ; « micro-entrepreneur » est un
+/// régime, pas une qualité.
+enum QualiteExercice {
+  commercant
+  societe_commerciale
+  artisan
+  profession_liberale
+
+  @@map("qualite_exercice")
+}
+
+/// DM-50 : une valeur par code NAF de REQ-JUR-022 (HYP-JUR-PROF-REGLEMENTEES) — 69.20Z, 66.19B, 66.22Z.
+enum ProfessionReglementee {
+  expertise_comptable
+  auxiliaire_services_financiers
+  intermediaire_assurance
+
+  @@map("profession_reglementee")
+}
+
 model Apporteur {
-  id               String            @id @default(uuid()) @db.Uuid
-  statut           StatutApporteur
+  id                    String                 @id @default(uuid()) @db.Uuid
+  statut                StatutApporteur
   /// Nul hors `resilie` ; exigé par la matrice pour y entrer.
-  resiliationMotif MotifResiliation? @map("resiliation_motif")
+  resiliationMotif      MotifResiliation?      @map("resiliation_motif")
   /// Public, lisible, non énumérable : `AX` + 6 caractères Crockford base32, 30 bits aléatoires
   /// (REQ-DM-012, HYP-DM06-CODE-PARRAINAGE). Forme tenue par un CHECK en SQL brut.
-  codeParrainage   String            @unique @map("code_parrainage") @db.Char(8)
+  codeParrainage        String                 @unique @map("code_parrainage") @db.Char(8)
   /// Exclu de tout agrégat d'argent, du lot, de la déclaration annuelle et de l'entonnoir
   /// (REQ-CPL-020). Sans défaut : l'écrivain DIT si l'apporteur est de test.
-  isTest           Boolean           @map("is_test")
+  isTest                Boolean                @map("is_test")
+  /// DM-50 : déclarées au KYC ; nulles tant que l'apporteur ne les a pas déclarées.
+  qualiteExercice       QualiteExercice?       @map("qualite_exercice")
+  professionReglementee ProfessionReglementee? @map("profession_reglementee")
 
   /// Surcharge manuelle du seuil de vérification prioritaire (REQ-DM-010). NULLE = le défaut,
   /// DÉRIVÉ du palier par `seuilPrioritaire()` (HYP-D3) — aucun défaut littéral en base (RM-10).
@@ -198,15 +250,18 @@ model Apporteur {
   confidentialiteAccepteeAt DateTime? @map("confidentialite_acceptee_at") @db.Timestamptz(3)
   confidentialiteVersion    String?   @map("confidentialite_version") @db.VarChar(32)
 
-  jetonsDepot          JetonDepot[]
-  identitesFacturation IdentiteFacturation[]
-  liensMagiques        LienMagique[]
-  sessionsEspace       SessionEspace[]
-  courrielsEnvoyes     CourrielEnvoye[]
-  changementsCourriel  ChangementCourriel[]
-  attributions         Attribution[]
-  depotsRefuses        DepotRefuse[]
-  personnesDeclarees   PersonneDeclaree[]
+  jetonsDepot             JetonDepot[]
+  identitesFacturation    IdentiteFacturation[]
+  liensMagiques           LienMagique[]
+  sessionsEspace          SessionEspace[]
+  courrielsEnvoyes        CourrielEnvoye[]
+  changementsCourriel     ChangementCourriel[]
+  attributions            Attribution[]
+  depotsRefuses           DepotRefuse[]
+  personnesDeclarees      PersonneDeclaree[]
+  piecesKyc               PieceKyc[]
+  notificationsEspace     NotificationEspace[]
+  preferencesNotification PreferenceNotification[]
 
   @@index([phoneHash])
   @@map("apporteurs")
@@ -293,13 +348,15 @@ model SessionEspace {
 /// colonnes auteur, traitePar et decidePar des phases 1 à 3. AUCUN mot de passe : il se connecte par
 /// le même lien magique que l'apporteur (partners/ADR-0004 §1). Son RÔLE n'est jamais mis en
 /// cookie : `requireRole` le relit à chaque requête, avec `desactiveAt`. Le courriel et le nom sont
-/// des blocs écrits par `colonnesPii` ; l'empreinte du courriel est unique.
+/// des blocs écrits par `colonnesPii` ; l'empreinte du courriel est unique. L'adresse (bloc ET
+/// empreinte, ensemble) ne peut manquer que sur un utilisateur désactivé (DM-44, CHECK
+/// `utilisateurs_console_adresse_si_actif`).
 model UtilisateurConsole {
   id           String      @id @default(uuid()) @db.Uuid
   role         ConsoleRole
   nomChiffre   Bytes?      @map("nom_chiffre")
-  emailChiffre Bytes       @map("email_chiffre")
-  emailHash    String      @unique @map("email_hash") @db.Char(64)
+  emailChiffre Bytes?      @map("email_chiffre")
+  emailHash    String?     @unique @map("email_hash") @db.Char(64)
   creeAt       DateTime    @map("cree_at") @db.Timestamptz(3)
   /// Non nulle : l'utilisateur ne franchit plus la requête suivante, quelle que soit la date posée.
   desactiveAt  DateTime?   @map("desactive_at") @db.Timestamptz(3)
@@ -335,16 +392,52 @@ model ChangementCourriel {
 /// Une identité de facturation DATÉE, valable sur [debutAt, finAt) (REQ-CPL-005). Un relevé qui
 /// en chevauche deux produit deux autofactures. AUCUNE colonne de RIB ni d'IBAN (HYP-DM06-IBAN).
 model IdentiteFacturation {
-  id          String    @id @default(uuid()) @db.Uuid
-  apporteurId String    @map("apporteur_id") @db.Uuid
-  apporteur   Apporteur @relation(fields: [apporteurId], references: [id], onDelete: Restrict)
-  siren       String    @db.Char(9)
-  regimeTva   RegimeTva @map("regime_tva")
-  debutAt     DateTime  @map("debut_at") @db.Timestamptz(3)
-  finAt       DateTime? @map("fin_at") @db.Timestamptz(3)
+  id           String       @id @default(uuid()) @db.Uuid
+  apporteurId  String       @map("apporteur_id") @db.Uuid
+  apporteur    Apporteur    @relation(fields: [apporteurId], references: [id], onDelete: Restrict)
+  siren        String       @db.Char(9)
+  regimeTva    RegimeTva    @map("regime_tva")
+  debutAt      DateTime     @map("debut_at") @db.Timestamptz(3)
+  finAt        DateTime?    @map("fin_at") @db.Timestamptz(3)
+  /// DM-11 (HYP-DM06-IBAN) : la pièce `rib` de l'identité ; l'IBAN n'est QUE dans cette pièce.
+  /// Clé étrangère composite (id, type, apporteur) : la base refuse une pièce d'un autre type, et
+  /// celle d'un autre apporteur.
+  /// La pièce RIB de l'identité de facturation (type contraint à 'rib').
+  pieceKycId   String?      @map("piece_kyc_id") @db.Uuid
+  pieceKycType TypePieceKyc @default(rib) @map("piece_kyc_type")
+  pieceKyc     PieceKyc?    @relation(fields: [pieceKycId, pieceKycType, apporteurId], references: [id, type, apporteurId], onDelete: Restrict, onUpdate: Restrict, map: "identites_facturation_piece_rib_fkey")
 
   @@index([apporteurId])
+  @@index([pieceKycId])
   @@map("identites_facturation")
+}
+
+/// Une pièce du KYC (DM-11, REQ-DM-027). Au plus une pièce COURANTE et au plus une EN
+/// VÉRIFICATION par (apporteur, type) : deux index uniques partiels, en SQL brut. L'IBAN n'existe
+/// QUE sur une pièce `rib`, chiffré (SEC-08) et empreint (CHECK). `expireAt` est obligatoire pour
+/// `vigilance` et `rc_pro` (CHECK). Le fichier vit sur un stockage privé (REQ-SEC-026).
+model PieceKyc {
+  id             String         @id @default(uuid()) @db.Uuid
+  apporteurId    String         @map("apporteur_id") @db.Uuid
+  apporteur      Apporteur      @relation(fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  type           TypePieceKyc
+  statut         StatutPieceKyc
+  verifieeAt     DateTime?      @map("verifiee_at") @db.Timestamptz(3)
+  expireAt       DateTime?      @map("expire_at") @db.Timestamptz(3)
+  /// La référence du fichier sur le stockage privé, jamais une URL publique.
+  fichierRef     String?        @map("fichier_ref") @db.VarChar(300)
+  /// La purge du fichier (la pièce d'identité, dès validation : REQ-JUR-029).
+  fichierPurgeAt DateTime?      @map("fichier_purge_at") @db.Timestamptz(3)
+  remplaceeAt    DateTime?      @map("remplacee_at") @db.Timestamptz(3)
+  ibanChiffre    Bytes?         @map("iban_chiffre")
+  ibanHash       String?        @map("iban_hash") @db.Char(64)
+
+  identitesFacturation IdentiteFacturation[]
+
+  @@unique([id, type, apporteurId], map: "pieces_kyc_id_type_apporteur_key")
+  @@index([apporteurId])
+  @@index([ibanHash])
+  @@map("pieces_kyc")
 }
 
 // ── SEC-06 : la réception des webhooks et le battement des tâches de fond (partners/ADR-0022) ──
@@ -489,6 +582,45 @@ model CourrielEnvoye {
   @@index([statut, demandeAt])
   @@index([attributionId])
   @@map("courriels_envoyes")
+}
+
+/// UX-P1-10 (REQ-UX-016, REQ-JUR-039) — une notification de l'ESPACE de l'apporteur. `cle` est une clé
+/// de la table des notifications (`src/server/notifications/table-ssot.ts`), exception E3 de
+/// partners/ADR-0022 : la base en tient la FORME (CHECK), le code la VALEUR. `lueAt` n'est lu par
+/// AUCUN calcul de délai : un délai court de `courriels_envoyes.envoye_at` (garde
+/// `notifications-lue-at-inerte`).
+model NotificationEspace {
+  id            String       @id @default(uuid()) @db.Uuid
+  apporteurId   String       @map("apporteur_id") @db.Uuid
+  apporteur     Apporteur    @relation(fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  cle           String       @db.VarChar(64)
+  attributionId String?      @map("attribution_id") @db.Uuid
+  attribution   Attribution? @relation(fields: [attributionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  /// L'heure d'inscription dans l'espace, PAS un horodatage opposable : aucun délai ne s'y appuie ;
+  /// un délai court de `courriels_envoyes.envoye_at` (relecture A02, 2026-10-02).
+  creeAt        DateTime     @default(now()) @map("cree_at") @db.Timestamptz(3)
+  lueAt         DateTime?    @map("lue_at") @db.Timestamptz(3)
+
+  @@index([apporteurId, creeAt])
+  @@index([attributionId])
+  @@map("notifications_espace")
+}
+
+/// UX-P1-10 (REQ-UX-016) — la préférence d'un apporteur pour une clé de notification. Une clé OBLIGATOIRE
+/// (`notificationObligatoire`) n'a pas de préférence désactivable : la table de code le refuse avant
+/// l'écriture.
+model PreferenceNotification {
+  id          String    @id @default(uuid()) @db.Uuid
+  apporteurId String    @map("apporteur_id") @db.Uuid
+  apporteur   Apporteur @relation(fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  cle         String    @db.VarChar(64)
+  active      Boolean
+  modifieeAt  DateTime  @map("modifiee_at") @db.Timestamptz(3)
+
+  /// Une préférence par (apporteur, clé) ; sert aussi d'index à la clé étrangère. La clé primaire `id`
+  /// fait passer la ligne par la couche cloisonnée sans exception (A02, 2026-10-02).
+  @@unique([apporteurId, cle], map: "preferences_notification_apporteur_cle_unique")
+  @@map("preferences_notification")
 }
 
 /// La liste de suppression (REQ-INT-023). Idempotente par construction : une adresse, une ligne.
@@ -667,7 +799,8 @@ model Attribution {
   /// Verrou optimiste de la fiche (REQ-CPL-024).
   versionQualification             Int                 @default(0) @map("version_qualification")
 
-  courrielsEnvoyes CourrielEnvoye[]
+  courrielsEnvoyes    CourrielEnvoye[]
+  notificationsEspace NotificationEspace[]
 
   @@index([apporteurId])
   @@index([utilisateurConsoleId])
@@ -683,13 +816,16 @@ model Attribution {
 /// Un dépôt refusé (REQ-DM-043) : de quoi contester, aucune coordonnée du contact. Ajout seul,
 /// sans exception (gabarit `refuser_modification_sauf()`, SQL brut). Réservé aux apporteurs.
 model DepotRefuse {
-  id          String          @id @default(uuid()) @db.Uuid
-  apporteurId String          @map("apporteur_id") @db.Uuid
-  apporteur   Apporteur       @relation(fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  siren       String          @db.Char(9)
-  motif       MotifRefusDepot
-  canal       CanalDepot
-  refuseAt    DateTime        @map("refuse_at") @db.Timestamptz(3)
+  id           String          @id @default(uuid()) @db.Uuid
+  apporteurId  String          @map("apporteur_id") @db.Uuid
+  apporteur    Apporteur       @relation(fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  /// Effacé douze mois après le refus (DM-53, partners/ADR-0030) : la ligne reste, sans lui.
+  siren        String?         @db.Char(9)
+  motif        MotifRefusDepot
+  canal        CanalDepot
+  refuseAt     DateTime        @map("refuse_at") @db.Timestamptz(3)
+  /// La date de la purge du SIREN, liée à lui (CHECK) ; écrite une fois (gabarit).
+  sirenPurgeAt DateTime?       @map("siren_purge_at") @db.Timestamptz(3)
 
   @@index([apporteurId])
   @@index([siren])

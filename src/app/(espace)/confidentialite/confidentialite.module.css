@@ -1,0 +1,19 @@
+/*
+ * La politique de confidentialité (JUR-T34) : mobile d'abord, un corps lisible, une colonne, des
+ * boutons faciles à toucher. Une FEUILLE servie par la même origine, et non des styles en ligne :
+ * `style-src 'self'` l'admet sans nonce, là où un attribut `style` serait refusé en silence par la
+ * politique de contenu (SEC-46, garde `csp:inline`).
+ */
+.page {
+  font-size: 1.125rem;
+  line-height: 1.5;
+  max-width: 40rem;
+  padding: 1rem;
+}
+
+/* La cible de 48 px (3 rem) que le style en ligne perdait. */
+.bouton {
+  min-height: 3rem;
+  min-width: 3rem;
+  font-size: 1.125rem;
+}
