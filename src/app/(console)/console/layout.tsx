@@ -18,6 +18,10 @@ import {
   portsDeRoleConsole,
 } from '../../../server/auth/lien-magique-production';
 
+// Lue à chaque requête : elle lit le cookie de session et les secrets de l'environnement,
+// rien ne s'y pré-rend au build.
+export const dynamic = 'force-dynamic';
+
 export default async function CadreDeLaConsole({ children }: { children: ReactNode }) {
   const d = dependancesDuProcessus({ apres: after, env: process.env });
   const jeton = (await cookies()).get(COOKIE_DE_SESSION_CONSOLE.nom)?.value;
