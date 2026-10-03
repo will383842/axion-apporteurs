@@ -33,6 +33,13 @@
       déploiement échoue pour cette raison : ne rien réécrire à la main, ouvrir une décision. Une
       candidature `en_erreur` minimisée à 30 jours (plafond provisoire) ne peut plus être retraitée.
       _Porteur : Williams (réception), après la fusion d'INT-T56._
+- [ ] **Contrat d'événements v3 fusionné AVANT toute ouverture du canal, et AVANT DM-15** (INT-T46-P,
+      rattrapage 46) : les montants en centimes du contrat publié portent `minimum: 0`, sauf ceux de
+      `avoir.emis`, négatifs par conception. Constat : `packages/contracts/contracts.v3.json` est le
+      contrat courant, et un paiement reçu au montant négatif y est refusé 422
+      (`tests/integration/devis-emis.spec.ts`). Côté axion-ia, la copie du contrat est la v3, à
+      empreinte identique (INT-T46-A, lockstep). _Porteur : Williams (réception), après la fusion
+      d'INT-T46-P._
 - [ ] **Forge** : l'environnement `production` n'accepte que la branche `main` ; aucun secret ne reste au
       niveau du dépôt ; relecteurs requis sur `production` (recommandé). _Porteur : Williams
       (`poser-secrets-production.ps1 -Etape nettoyer`, réglages de la forge)._

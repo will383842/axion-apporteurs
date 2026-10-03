@@ -40,6 +40,14 @@ import type { TypeEvenement } from './events';
 const identifiant: FragmentSchema = { type: 'string', minLength: 1 };
 const chaine: FragmentSchema = { type: 'string' };
 const entier: FragmentSchema = { type: 'integer' };
+/**
+ * Un montant en centimes, jamais négatif (version 3, rattrapage 46). L'inventaire préalable des
+ * types porteurs de montants, lu dans la fixture du producteur réel : seul `avoir.emis` porte des
+ * montants négatifs PAR CONCEPTION (un avoir retranche) ; ses trois montants restent des `entier`.
+ * `paiement.rembourse` porte des montants positifs (le remboursement est un sens, pas un signe),
+ * `facture.annulee` n'en porte aucun.
+ */
+const centimes: FragmentSchema = { type: 'integer', minimum: 0 };
 const nombre: FragmentSchema = { type: 'number' };
 const booleen: FragmentSchema = { type: 'boolean' };
 /** Un instant RFC 3339 avec fuseau — la même forme que les instants de l'enveloppe. */
@@ -70,7 +78,7 @@ const liste = (items: FragmentSchema): FragmentSchema => ({ type: 'array', items
 // ── les morceaux partagés ────────────────────────────────────────────────────
 
 /** Un payeur et ce qu'on attend de lui — la ventilation d'une facture (REQ-INT-032). */
-const payeur = ferme({ payeurType: chaine, montantAttenduCents: entier });
+const payeur = ferme({ payeurType: chaine, montantAttenduCents: centimes });
 
 /** La fiche d'un client, identique à la création et à la mise à jour. */
 const client = ferme({
@@ -90,7 +98,7 @@ const client = ferme({
 const commissionDeLigne = ferme({
   statut: chaine,
   commissionId: ouNul(chaine),
-  montantCents: ouNul(entier),
+  montantCents: ouNul(centimes),
   motifBlocage: ouNul(chaine),
   libelleCommission: ouNul(chaine),
   grilleVersion: chaine,
@@ -100,18 +108,18 @@ const ligneDeDevis = ferme({
   designation: chaine,
   activite: ouNul(chaine),
   jours: ouNul(nombre),
-  montantHtCents: entier,
+  montantHtCents: centimes,
   offreCode: ouNul(chaine),
   commissionId: ouNul(chaine),
   commission: commissionDeLigne,
 });
 
-// ── les onze charges ─────────────────────────────────────────────────────────
+// ── les douze charges ────────────────────────────────────────────────────────
 
 /**
  * La charge de chaque type, indexée par son nom de fil. Les clés sont TYPÉES sur l'union des types
  * du contrat (import de type seulement, sans cycle à l'exécution) : une clé qui manque, ou une clé
- * de plus, est une erreur de compilation. Ces onze clés ne sont donc pas une seconde liste : ce sont
+ * de plus, est une erreur de compilation. Ces douze clés ne sont donc pas une seconde liste : ce sont
  * celles de `TYPES_EVENEMENT`, vérifiées par le compilateur.
  */
 export const CHARGES: { readonly [T in TypeEvenement]: FragmentSchema } = {
@@ -122,7 +130,7 @@ export const CHARGES: { readonly [T in TypeEvenement]: FragmentSchema } = {
     numero: chaine,
     clientId: identifiant,
     activite: ouNul(chaine),
-    montantTotalHtCents: entier,
+    montantTotalHtCents: centimes,
     signeLe: instant,
     lignes: liste(ligneDeDevis),
   }),
@@ -135,14 +143,17 @@ export const CHARGES: { readonly [T in TypeEvenement]: FragmentSchema } = {
     siren: ouNul(chaine),
     destinataire: chaine,
     subrogation: booleen,
-    montantHtCents: entier,
-    montantTvaCents: entier,
-    montantTtcCents: entier,
+    montantHtCents: centimes,
+    montantTvaCents: centimes,
+    montantTtcCents: centimes,
     regimeTva: chaine,
     emiseLe: instant,
     echeanceLe: ouNul(instant),
     echeanceFinanceurAt: ouNul(instant),
     payers: liste(payeur),
+    // Version 3 (JUR-T42, DM-10-P) : le devis dont la facture procède, nul quand elle n'en procède
+    // d'aucun. C'est par lui que se lit « entièrement facturé ».
+    devisId: ouNul(identifiant),
   }),
   'avoir.emis': ferme({
     avoirId: identifiant,
@@ -162,14 +173,14 @@ export const CHARGES: { readonly [T in TypeEvenement]: FragmentSchema } = {
     clientId: ouNul(identifiant),
     origineClient: chaine,
     siren: ouNul(chaine),
-    montantEncaisseTtcCents: entier,
-    factureMontantHtCents: entier,
-    factureMontantTtcCents: entier,
+    montantEncaisseTtcCents: centimes,
+    factureMontantHtCents: centimes,
+    factureMontantTtcCents: centimes,
     regimeTva: chaine,
-    totalEncaisseTtcCents: entier,
+    totalEncaisseTtcCents: centimes,
     paidAt: instant,
     provider: chaine,
-    montantHtCents: entier,
+    montantHtCents: centimes,
     soldeLaFacture: booleen,
   }),
   'paiement.rembourse': ferme({
@@ -177,8 +188,8 @@ export const CHARGES: { readonly [T in TypeEvenement]: FragmentSchema } = {
     factureId: identifiant,
     clientId: ouNul(identifiant),
     siren: ouNul(chaine),
-    montantHtCents: entier,
-    montantEncaisseTtcCents: entier,
+    montantHtCents: centimes,
+    montantEncaisseTtcCents: centimes,
     motif: chaine,
     forme: chaine,
     rembourseLe: instant,
@@ -208,5 +219,17 @@ export const CHARGES: { readonly [T in TypeEvenement]: FragmentSchema } = {
   'client.fusionne': ferme({
     survivorId: identifiant,
     absorbedId: identifiant,
+  }),
+  // Version 3 (INT-T46-P) : le devis ENVOYÉ, d'où se lit l'antériorité « devis » (DM-10-P). Le
+  // SIREN du destinataire et l'instant d'émission, rien d'autre : d'avant-signature, il ne porte
+  // aucun montant (REQ-INT-029), et `champsInterdits` le refuserait. Ses champs sont ceux que le
+  // producteur réel porte déjà sur le devis et le client ; le producteur de `devis.emis` est la
+  // tâche INT-T46-A, qui suit ce contrat.
+  'devis.emis': ferme({
+    devisId: identifiant,
+    numero: chaine,
+    clientId: identifiant,
+    siren: ouNul(chaine),
+    emisLe: instant,
   }),
 };
