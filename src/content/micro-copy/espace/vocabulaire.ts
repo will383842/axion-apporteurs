@@ -137,6 +137,9 @@ export const CONFIDENTIALITE = {
     action: 'J’accepte cette politique',
   },
   acceptee: 'Vous avez accepté cette politique.',
+  // JUR-T57 : la politique porte encore un passage en cours de rédaction ; elle n'est pas proposée à l'accord.
+  nonPubliable:
+    'Cette politique est encore en cours de rédaction. Vous pourrez l’accepter dès qu’elle sera complète.',
   chargement: 'Chargement de la politique de confidentialité…',
   erreur: {
     titre: 'La politique ne s’affiche pas',
