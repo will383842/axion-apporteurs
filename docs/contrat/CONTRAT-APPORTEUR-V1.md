@@ -343,7 +343,11 @@ signé par l'entreprise attribuée ; la date retenue est celle de cette signatur
 signé, la date d'émission de la première facture.**
 
 Sont commissionnées toutes les commandes de l'entreprise attribuée **signées pendant la durée de
-l'attribution**, pour les prestations figurant à la grille — quel que soit leur nombre. **Cette commission
+l'attribution**, pour les prestations figurant à la grille — quel que soit leur nombre. Une commande signée entre la
+déclaration et la confirmation de l'attribution est commissionnée si l'attribution est ensuite confirmée,
+y compris tacitement ; elle est réputée signée pendant la durée de l'attribution. Lorsqu'une commande est
+signée alors que la demande de confirmation fait l'objet d'une vérification, la Société demande à
+l'entreprise, à cette occasion, de confirmer l'échange. **Cette commission
 rémunère la seule mise en relation initiale, dont le prix est ainsi forfaitisé sur la durée de
 l'attribution ; elle ne rémunère aucun suivi, aucune intervention ni aucune mission de l'Apporteur
 postérieure à sa déclaration, dont le contrat ne met aucune à sa charge (article 2.2).**
