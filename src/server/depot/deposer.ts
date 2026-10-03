@@ -18,13 +18,22 @@
  *      un dépôt enregistré naît (`deposee` ou `deposee_en_file`), est journalisé, et sa demande de
  *      confirmation naît dans la MÊME transaction — pour l'occupant seulement : une déclaration en
  *      file n'appelle personne tant qu'elle n'occupe pas.
+ *   5. APRÈS la transaction, un refus de catégorie est notifié (`refus_declaration`, obligatoire, sans
+ *      délai : les quinze jours de l'art. 3.3 courent contre la Société). Ses paramètres DÉRIVENT de
+ *      l'issue rendue à l'écran : les deux antériorités envoient donc les mêmes octets. `gele` n'est
+ *      pas un refus de catégorie et ne notifie rien ici.
  *
  * `deposee_at` est écrit par la BASE, sous le verrou par SIREN (déclencheur `attributions_horloge_du_depot`).
  * La transaction est exposée (`deposerDans`) pour qu'une autre écriture la compose.
  */
 import type { Prisma, PrismaClient } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
-import { deciderDuDepot, type FaitsDuDepot, type IssueDepot } from '../../domain/depot/issue-depot';
+import {
+  deciderDuDepot,
+  estUnRefus,
+  type FaitsDuDepot,
+  type IssueDepot,
+} from '../../domain/depot/issue-depot';
 import { niveauDAcces } from '../../domain/apporteur/acces-espace';
 import { clauseEtatsOccupants } from '../../domain/attribution/etats';
 import { anterioriteDe } from '../entreprise-connue/projection';
@@ -33,6 +42,8 @@ import { creerLaDemande } from '../confirmation/demandes';
 import { tirerLesJetonsDeLaDemande } from '../confirmation/jetons';
 import { colonnesPii, empreinteRecherche, type ClesPii } from '../securite/pii';
 import { VERSION_INFORMATION_TIERS } from '../../content/micro-copy/espace/information-tiers';
+import { issueRendue } from '../../content/micro-copy/espace/issues-depot';
+import type { DemandeDeNotification } from '../notifications/envoyer';
 
 type Tx = Prisma.TransactionClient;
 
@@ -79,6 +90,10 @@ export interface PortsDuDepot {
   maintenant(): Date;
   /** Art. 3.3 bis d : le registre d'opposition tenu par la Société. */
   oppositionDemarchage(tx: Tx, siren: string): Promise<boolean>;
+  /** L'adresse de l'apporteur, déchiffrée par l'appelant : le courriel du refus y part. */
+  adresseDe(apporteurId: string): Promise<string>;
+  /** L'émetteur des notifications (`notifier`, lié à la couche cloisonnée du destinataire). */
+  notifier(apporteurId: string, demande: DemandeDeNotification): Promise<unknown>;
 }
 
 export interface IssueDuDepot {
@@ -247,11 +262,39 @@ export async function deposerDans(
   return { issue: decision.issue, attributionId: id };
 }
 
-/** Le dépôt, dans sa propre transaction. */
+const PREFIXE_DU_REFUS = 'Pas enregistré : ';
+
+/**
+ * Les paramètres de `refus_declaration`, DÉRIVÉS du texte que l'écran affiche pour cette issue
+ * (RM-01) : la catégorie est son titre sans le préfixe commun, le motif son « pourquoi » sans le
+ * point final (le gabarit le pose).
+ */
+export function parametresDuRefus(issue: IssueDepot, entreprise: string): Record<string, string> {
+  const t = issueRendue(issue);
+  if (!t.titre.startsWith(PREFIXE_DU_REFUS)) {
+    throw new Error(`refus_sans_categorie : l'issue ${issue} n'est pas un refus de l'écran`);
+  }
+  return {
+    entreprise,
+    categorie: t.titre.slice(PREFIXE_DU_REFUS.length),
+    motif: t.pourquoi.replace(/\.$/, ''),
+  };
+}
+
+/** Le dépôt, dans sa propre transaction ; un refus de catégorie est notifié après elle. */
 export async function deposer(
   prisma: PrismaClient,
   demande: DemandeDeDepot,
   ports: PortsDuDepot
 ): Promise<IssueDuDepot> {
-  return prisma.$transaction((tx) => deposerDans(tx, demande, ports), { timeout: 30_000 });
+  const r = await prisma.$transaction((tx) => deposerDans(tx, demande, ports), { timeout: 30_000 });
+  if (estUnRefus(r.issue)) {
+    await ports.notifier(demande.apporteurId, {
+      cle: 'refus_declaration',
+      a: await ports.adresseDe(demande.apporteurId),
+      parametres: parametresDuRefus(r.issue, demande.fiche.raisonSociale ?? demande.saisie.siren),
+      attributionId: null,
+    });
+  }
+  return r;
 }
