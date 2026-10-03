@@ -3,9 +3,10 @@
  * REQ-SEC-003 ; texte de la juriste et cadrage de la lentille sécurité, rattrapage 82).
  *
  * UNE GARDE, POSÉE AVANT SES APPELANTS. Toute action sensible de l'espace — RIB, coordonnées, adresse
- * de connexion — appelle `exigerAppareilConfirme` avant d'écrire. La garde ne décide que d'une mesure
- * de CONNEXION : elle n'écrit ni anomalie, ni statut, ni dépôt, ni événement ; la console n'en voit
- * aucun jugement. Elle n'écrit que `appareils_connus`.
+ * de connexion — juge l'appareil avant d'écrire : `jugerAppareil` sur la session qu'`actionEspace`
+ * (SEC-53) lui rend, ou `exigerAppareilConfirme`, qui relit d'abord la session. La garde ne décide
+ * que d'une mesure de CONNEXION : elle n'écrit ni anomalie, ni statut, ni dépôt, ni événement ; la
+ * console n'en voit aucun jugement. Elle n'écrit que `appareils_connus`.
  *
  * CINQ RÈGLES, ET CE QUI LES TIENT.
  *  1. L'empreinte est MINIMALE. L'appareil présente un identifiant tiré au hasard, posé dans son
@@ -37,6 +38,7 @@ import {
   exigerSession,
   sessionRelevee,
   type PortsDeSession,
+  type SessionOuverte,
   type VerdictDeSession,
 } from './session';
 
@@ -124,13 +126,35 @@ export type VerdictDAppareil = VerdictDeSession | { ok: false; motif: 'appareil_
 // ── la garde ─────────────────────────────────────────────────────────────────────────────────────
 
 /** Une déclaration de fonction, pas une constante : évaluée à l'appel, jamais figée au chargement. */
-function inconnu(): VerdictDAppareil {
+function inconnu(): { ok: false; motif: 'appareil_inconnu' } {
   return { ok: false, motif: 'appareil_inconnu' };
 }
 
 /**
- * La session de la requête, sur un appareil CONNU ou CONFIRMÉ à l'instant : à appeler dans toute
- * action sensible, avant d'écrire. Une session refusée est rendue telle quelle.
+ * L'appareil d'une session DÉJÀ acceptée : dans une action de l'espace, celle qu'`actionEspace`
+ * (SEC-53 : session et acceptation de la politique) rend à son corps, qui n'est pas relue ici.
+ * Connu, il passe ; inconnu, il est refusé, sauf confirmation renforcée sur cette session.
+ */
+export async function jugerAppareil(
+  session: SessionOuverte,
+  identifiant: unknown,
+  ports: PortsDAppareil
+): Promise<{ ok: true } | { ok: false; motif: 'appareil_inconnu' }> {
+  const empreinte = empreinteDAppareil(identifiant, ports.cle.secret);
+  if (empreinte === null) return inconnu();
+  const maintenant = ports.session.maintenant();
+  const appareil = { apporteurId: session.apporteurId, empreinte, kid: ports.cle.kid };
+  const vuApres = new Date(maintenant.getTime() - DUREES_AUTH.sessionMs.valeur);
+  if ((await ports.depot.reconnaitre(appareil, maintenant, vuApres)) === 1) return { ok: true };
+  if (!sessionRelevee(session, maintenant)) return inconnu();
+  await ports.aviser({ apporteurId: appareil.apporteurId, confirmeAt: maintenant });
+  await ports.depot.confirmer(appareil, maintenant);
+  return { ok: true };
+}
+
+/**
+ * La session de la requête, sur un appareil CONNU ou CONFIRMÉ à l'instant : la session d'abord,
+ * relue en base, puis `jugerAppareil`. Une session refusée est rendue telle quelle.
  */
 export async function exigerAppareilConfirme(
   jeton: string | undefined,
@@ -139,16 +163,8 @@ export async function exigerAppareilConfirme(
 ): Promise<VerdictDAppareil> {
   const verdict = await exigerSession(jeton, ports.session);
   if (!verdict.ok) return verdict;
-  const empreinte = empreinteDAppareil(identifiant, ports.cle.secret);
-  if (empreinte === null) return inconnu();
-  const maintenant = ports.session.maintenant();
-  const appareil = { apporteurId: verdict.session.apporteurId, empreinte, kid: ports.cle.kid };
-  const vuApres = new Date(maintenant.getTime() - DUREES_AUTH.sessionMs.valeur);
-  if ((await ports.depot.reconnaitre(appareil, maintenant, vuApres)) === 1) return verdict;
-  if (!sessionRelevee(verdict.session, maintenant)) return inconnu();
-  await ports.aviser({ apporteurId: appareil.apporteurId, confirmeAt: maintenant });
-  await ports.depot.confirmer(appareil, maintenant);
-  return verdict;
+  const appareil = await jugerAppareil(verdict.session, identifiant, ports);
+  return appareil.ok ? verdict : appareil;
 }
 
 // ── l'adaptateur Prisma ──────────────────────────────────────────────────────────────────────────
