@@ -321,16 +321,37 @@ function candidatsDe(table: string, schema: SchemaVu): string[] {
   const remplissages: ColonneVue[][] = [[], ...fermees, nullables];
   const sortie: string[] = [];
   const noms = retenues.map((c) => ident(c.colonne)).join(', ');
+  const candidat = (v: Map<string, string>, r: readonly ColonneVue[]): boolean => {
+    const ligne = new Map(v);
+    for (const c of r) if (ligne.get(c.colonne) === 'NULL') ligne.set(c.colonne, remplie(c));
+    const valeurs = retenues.map((c) => ligne.get(c.colonne)!).join(', ');
+    const sql =
+      `INSERT INTO ${ident(table)} (${noms}) SELECT ${valeurs} ` +
+      `WHERE NOT EXISTS (SELECT 1 FROM ${ident(table)});`;
+    if (!sortie.includes(sql)) sortie.push(sql);
+    return sortie.length >= CANDIDATS_MAX;
+  };
   for (const v of variantesEnum) {
-    for (const r of remplissages) {
-      const ligne = new Map(v);
-      for (const c of r) if (ligne.get(c.colonne) === 'NULL') ligne.set(c.colonne, remplie(c));
-      const valeurs = retenues.map((c) => ligne.get(c.colonne)!).join(', ');
-      const sql =
-        `INSERT INTO ${ident(table)} (${noms}) SELECT ${valeurs} ` +
-        `WHERE NOT EXISTS (SELECT 1 FROM ${ident(table)});`;
-      if (!sortie.includes(sql)) sortie.push(sql);
-      if (sortie.length >= CANDIDATS_MAX) return sortie;
+    for (const r of remplissages) if (candidat(v, r)) return sortie;
+  }
+  // SECONDE PASSE, APRÈS toutes les autres (tables de #556) : DEUX groupes de nullables remplis ENSEMBLE,
+  // l'union de deux fermetures. Un CHECK comme « exactement un porteur » (lu sous une forme que
+  // `liensDesChecks` ne reconnaît pas, `num_nonnulls(…) = CASE … END`) et un autre comme « l'empreinte
+  // ou sa purge » exigent un membre de CHACUN : aucun candidat d'une seule fermeture ne les tient.
+  // Venue après, elle ne change pas le candidat qui sème déjà une table. Deux fermetures qu'une
+  // exclusion CONNUE sépare ne sont jamais unies.
+  for (const v of variantesEnum) {
+    for (let a = 0; a < fermees.length; a++) {
+      const interdites = new Set(
+        fermees[a]!.flatMap((c) => [...(liens.exclusives.get(c.colonne) ?? [])])
+      );
+      for (let b = a + 1; b < fermees.length; b++) {
+        if (fermees[b]!.some((c) => interdites.has(c.colonne))) continue;
+        const union = [
+          ...new Map([...fermees[a]!, ...fermees[b]!].map((c) => [c.colonne, c])).values(),
+        ];
+        if (candidat(v, union)) return sortie;
+      }
     }
   }
   return sortie;
