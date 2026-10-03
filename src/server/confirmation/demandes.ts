@@ -78,12 +78,16 @@ export async function creerLaDemande(
     WHERE id = ${demande.attributionId}::uuid FOR UPDATE`;
   if (!a || a.apporteur_id === null) throw new DemandePourUnConseiller();
   const d = await tx.demandeConfirmation.create({
+    data: { attributionId: demande.attributionId },
+    select: { id: true, creeeAt: true },
+  });
+  // La première émission porte les jetons ; la base refuse une émission née sans eux.
+  await tx.emissionDemandeConfirmation.create({
     data: {
-      attributionId: demande.attributionId,
+      demandeId: d.id,
       jetonOuiHash: demande.jetonOuiHash,
       jetonNonHash: demande.jetonNonHash,
     },
-    select: { id: true, creeeAt: true },
   });
   await journaliser(tx, {
     demandeId: d.id,
@@ -93,6 +97,52 @@ export async function creerLaDemande(
     survenuAt: d.creeeAt,
   });
   return d.id;
+}
+
+/**
+ * Une NOUVELLE émission (HYP-W20-REBOND : la correction de l'adresse après un rebond) : l'émission
+ * active est révoquée et vidée de ses jetons, puis la nouvelle naît, dans la MÊME transaction. L'index
+ * unique partiel de la base refuse deux émissions actives, quel que soit l'appelant.
+ */
+export async function emettreDeNouveau(
+  tx: Tx,
+  emission: {
+    readonly demandeId: string;
+    readonly jetonOuiHash: string;
+    readonly jetonNonHash: string;
+    readonly maintenant: Date;
+  }
+): Promise<void> {
+  await tx.emissionDemandeConfirmation.updateMany({
+    where: { demandeId: emission.demandeId, revoqueeAt: null },
+    data: { revoqueeAt: emission.maintenant, jetonOuiHash: null, jetonNonHash: null },
+  });
+  await tx.emissionDemandeConfirmation.create({
+    data: {
+      demandeId: emission.demandeId,
+      jetonOuiHash: emission.jetonOuiHash,
+      jetonNonHash: emission.jetonNonHash,
+    },
+  });
+}
+
+/**
+ * La lecture d'un jeton par son empreinte : seule une émission NON révoquée le résout (condition de
+ * la sécurité pour SEC-40). Rend la demande et le sens du jeton, ou rien.
+ */
+export async function emissionActiveParJeton(
+  tx: Tx,
+  empreinte: string
+): Promise<{ readonly demandeId: string; readonly sens: 'oui' | 'non' } | null> {
+  const e = await tx.emissionDemandeConfirmation.findFirst({
+    where: {
+      revoqueeAt: null,
+      OR: [{ jetonOuiHash: empreinte }, { jetonNonHash: empreinte }],
+    },
+    select: { demandeId: true, jetonOuiHash: true },
+  });
+  if (!e) return null;
+  return { demandeId: e.demandeId, sens: e.jetonOuiHash === empreinte ? 'oui' : 'non' };
 }
 
 /**

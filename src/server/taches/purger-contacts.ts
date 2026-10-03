@@ -130,11 +130,25 @@ export async function purgerLesContacts(
           },
         });
         if (count === 0) return false;
-        // DM-40 : les jetons de la demande de confirmation meurent avec le contact, et les révisions
-        // du contact perdent leurs blocs ; la trace (dates, états) reste.
-        await tx.demandeConfirmation.updateMany({
-          where: { attributionId: a.id, jetonOuiHash: { not: null } },
-          data: { jetonOuiHash: null, jetonNonHash: null, jetonsRevoquesAt: maintenant },
+        // DM-40 : les émissions de la demande de confirmation meurent avec le contact. Les actives sont
+        // révoquées, vidées de leurs jetons et de l'empreinte du clic, en UNE instruction ; les déjà
+        // révoquées sont vidées sans que leur date de révocation soit réécrite. Les révisions du
+        // contact perdent leurs blocs. La trace (dates, états) reste.
+        await tx.emissionDemandeConfirmation.updateMany({
+          where: { demande: { attributionId: a.id }, revoqueeAt: null },
+          data: {
+            revoqueeAt: maintenant,
+            jetonOuiHash: null,
+            jetonNonHash: null,
+            clicIpHash: null,
+          },
+        });
+        await tx.emissionDemandeConfirmation.updateMany({
+          where: {
+            demande: { attributionId: a.id },
+            OR: [{ jetonOuiHash: { not: null } }, { clicIpHash: { not: null } }],
+          },
+          data: { jetonOuiHash: null, jetonNonHash: null, clicIpHash: null },
         });
         await tx.revisionDemandeConfirmation.updateMany({
           where: { demande: { attributionId: a.id }, purgeeAt: null },

@@ -2,6 +2,8 @@
 // @req REQ-DM-008
 // @req REQ-DM-031
 // @req REQ-DM-005
+// @req REQ-SEC-024
+// @req REQ-SEC-061
 /**
  * DM-40 (REQ-DM-060) — la demande de confirmation par e-mail, contre la base RÉELLE.
  *
@@ -21,7 +23,12 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { demarrerBase, type Base } from './harnais';
-import { creerLaDemande, corrigerLeContact } from '../../src/server/confirmation/demandes';
+import {
+  corrigerLeContact,
+  creerLaDemande,
+  emettreDeNouveau,
+  emissionActiveParJeton,
+} from '../../src/server/confirmation/demandes';
 import { transitionnerUneAttribution } from '../../src/server/attribution/transitionner';
 import { purgerLesContacts } from '../../src/server/taches/purger-contacts';
 import { clesPii } from '../../src/server/securite/pii';
@@ -130,17 +137,39 @@ async function evenements(agregatId: string) {
   });
 }
 
+/** Le SQLSTATE d'un refus, et son message : chaque témoin juge LES DEUX. */
+const DECLENCHEUR = 'P0001';
+const CONTRAINTE = '23514';
+const UNICITE = '23505';
+
+async function emissionsDe(demandeId: string) {
+  return base.prisma.emissionDemandeConfirmation.findMany({
+    where: { demandeId },
+    orderBy: { emiseAt: 'asc' },
+  });
+}
+
+async function uneDemande(): Promise<{ a: string; id: string; j: ReturnType<typeof jetons> }> {
+  const a = await uneAttribution();
+  const j = jetons();
+  const id = await base.prisma.$transaction((tx) =>
+    creerLaDemande(tx, { attributionId: a, ...j, acteur: ACTEUR })
+  );
+  return { a, id, j };
+}
+
+const maj = (sql: string, ...valeurs: unknown[]) => base.prisma.$executeRawUnsafe(sql, ...valeurs);
+
 describe('REQ-DM-060 — une demande par dépôt, planifiée, et son événement', () => {
-  it('REQ-DM-060 : TÉMOIN — creerLaDemande écrit UNE demande `planifiee` et son événement, dans la transaction', async () => {
-    const a = await uneAttribution();
-    const j = jetons();
-    const id = await base.prisma.$transaction((tx) =>
-      creerLaDemande(tx, { attributionId: a, ...j, acteur: ACTEUR })
-    );
+  it('REQ-DM-060 : TÉMOIN — creerLaDemande écrit UNE demande `planifiee`, sa PREMIÈRE émission et son événement', async () => {
+    const { a, id, j } = await uneDemande();
     const d = await demandeDe(a);
     expect(d.id).toBe(id);
     expect(d.etat).toBe('planifiee');
-    expect([d.jetonOuiHash, d.jetonNonHash]).toEqual([j.jetonOuiHash, j.jetonNonHash]);
+    const e = await emissionsDe(id);
+    expect(e.map((x) => [x.jetonOuiHash, x.jetonNonHash, x.revoqueeAt, x.clicIpHash])).toEqual([
+      [j.jetonOuiHash, j.jetonNonHash, null, null],
+    ]);
     expect(await evenements(id)).toEqual([
       {
         type: 'demande_confirmation_etat_modifie',
@@ -150,78 +179,294 @@ describe('REQ-DM-060 — une demande par dépôt, planifiée, et son événement
   });
 
   it('REQ-DM-060 : TÉMOIN — une seconde demande pour la même attribution est refusée par l’index unique', async () => {
-    const a = await uneAttribution();
-    await base.prisma.$transaction((tx) =>
-      creerLaDemande(tx, { attributionId: a, ...jetons(), acteur: ACTEUR })
-    );
-    expect(
-      await refus(
-        base.prisma.$transaction((tx) =>
-          creerLaDemande(tx, { attributionId: a, ...jetons(), acteur: ACTEUR })
-        )
+    const { a } = await uneDemande();
+    const m = await refus(
+      base.prisma.$transaction((tx) =>
+        creerLaDemande(tx, { attributionId: a, ...jetons(), acteur: ACTEUR })
       )
-    ).toMatch(/23505|Unique constraint/);
+    );
+    expect(m).toMatch(new RegExp(`${UNICITE}|Unique constraint`));
   });
 });
 
-describe('REQ-DM-060 — les jetons n’existent qu’en empreinte', () => {
-  it('REQ-DM-060 : TÉMOIN — une empreinte hors forme est refusée, et deux demandes au même jeton aussi', async () => {
-    expect(
-      await refus(
-        base.prisma.$transaction(async (tx) =>
-          creerLaDemande(tx, {
-            attributionId: await uneAttribution(),
-            jetonOuiHash: 'Z'.repeat(64),
-            jetonNonHash: hex(32),
-            acteur: ACTEUR,
-          })
-        )
+describe('REQ-SEC-061 — les jetons n’existent qu’en empreinte, une seule émission active', () => {
+  it('REQ-SEC-061 : TÉMOIN — une empreinte hors forme, et un « Oui » égal au « Non », sont refusés', async () => {
+    const hors = await refus(
+      base.prisma.$transaction(async (tx) =>
+        creerLaDemande(tx, {
+          attributionId: await uneAttribution(),
+          jetonOuiHash: 'Z'.repeat(64),
+          jetonNonHash: hex(32),
+          acteur: ACTEUR,
+        })
       )
-    ).toContain('demandes_confirmation_jeton_oui_hex');
-    const commun = hex(32);
-    await base.prisma.$transaction(async (tx) =>
-      creerLaDemande(tx, {
-        attributionId: await uneAttribution(),
-        jetonOuiHash: commun,
-        jetonNonHash: hex(32),
-        acteur: ACTEUR,
-      })
     );
-    expect(
-      await refus(
-        base.prisma.$transaction(async (tx) =>
-          creerLaDemande(tx, {
-            attributionId: await uneAttribution(),
-            jetonOuiHash: commun,
-            jetonNonHash: hex(32),
-            acteur: ACTEUR,
-          })
-        )
+    expect(hors).toContain(CONTRAINTE);
+    expect(hors).toContain('emissions_demande_confirmation_jeton_oui_hex');
+    const meme = hex(32);
+    const egal = await refus(
+      base.prisma.$transaction(async (tx) =>
+        creerLaDemande(tx, {
+          attributionId: await uneAttribution(),
+          jetonOuiHash: meme,
+          jetonNonHash: meme,
+          acteur: ACTEUR,
+        })
       )
-    ).toMatch(/23505|Unique constraint/);
+    );
+    expect(egal).toContain(CONTRAINTE);
+    expect(egal).toContain('emissions_demande_confirmation_oui_ne_non');
   });
 
-  it('REQ-SEC-024 : TÉMOIN — l’empreinte d’IP du clic n’a que la forme tronquée (16 hexadécimaux)', async () => {
-    const a = await uneAttribution();
-    const id = await base.prisma.$transaction((tx) =>
-      creerLaDemande(tx, { attributionId: a, ...jetons(), acteur: ACTEUR })
-    );
-    expect(
-      await refus(
-        base.prisma.$executeRawUnsafe(
-          `UPDATE demandes_confirmation SET clic_ip_hash = $2 WHERE id = $1::uuid`,
-          id,
-          '203.0.113.7'
-        )
+  it('REQ-SEC-061 : TÉMOIN — deux émissions au même jeton sont refusées par l’index unique', async () => {
+    const { j } = await uneDemande();
+    const m = await refus(
+      base.prisma.$transaction(async (tx) =>
+        creerLaDemande(tx, {
+          attributionId: await uneAttribution(),
+          jetonOuiHash: j.jetonOuiHash,
+          jetonNonHash: hex(32),
+          acteur: ACTEUR,
+        })
       )
-    ).toContain('demandes_confirmation_clic_ip_hash_hex');
-    await expect(
-      base.prisma.$executeRawUnsafe(
-        `UPDATE demandes_confirmation SET clic_ip_hash = $2 WHERE id = $1::uuid`,
+    );
+    expect(m).toMatch(new RegExp(`${UNICITE}|Unique constraint`));
+  });
+
+  it('REQ-SEC-061 : TÉMOIN — deux émissions ACTIVES pour une demande sont refusées par la base, pas par le code', async () => {
+    const { id } = await uneDemande();
+    const m = await refus(
+      maj(
+        `INSERT INTO emissions_demande_confirmation (id, demande_id, jeton_oui_hash, jeton_non_hash)
+         VALUES (gen_random_uuid(), $1::uuid, $2, $3)`,
         id,
-        hex(8)
+        hex(32),
+        hex(32)
+      )
+    );
+    expect(m).toContain(UNICITE);
+  });
+
+  it('REQ-SEC-061 : TÉMOIN — une émission naît avec ses jetons, sans clic ni révocation', async () => {
+    const { id } = await uneDemande();
+    await maj(
+      `UPDATE emissions_demande_confirmation SET revoquee_at = now() WHERE demande_id = $1::uuid`,
+      id
+    );
+    for (const [colonnes, valeurs] of [
+      ['jeton_oui_hash, jeton_non_hash, clic_ip_hash', [hex(32), hex(32), hex(8)]],
+      ['jeton_oui_hash, jeton_non_hash, revoquee_at', [hex(32), hex(32), new Date()]],
+    ] as const) {
+      const m = await refus(
+        maj(
+          `INSERT INTO emissions_demande_confirmation (id, demande_id, ${colonnes})
+           VALUES (gen_random_uuid(), $1::uuid, $2, $3, $4)`,
+          id,
+          ...valeurs
+        )
+      );
+      expect(m).toContain(DECLENCHEUR);
+      expect(m).toContain('emissions_demande_confirmation_naissance');
+    }
+  });
+
+  it('REQ-SEC-061 : TÉMOIN — une ré-émission révoque la précédente et en crée une neuve, dans la MÊME transaction', async () => {
+    const { id, j } = await uneDemande();
+    const neufs = jetons();
+    await base.prisma.$transaction((tx) =>
+      emettreDeNouveau(tx, { demandeId: id, ...neufs, maintenant: new Date() })
+    );
+    const e = await emissionsDe(id);
+    expect(e).toHaveLength(2);
+    expect(e[0]!.revoqueeAt).not.toBeNull();
+    expect([e[0]!.jetonOuiHash, e[0]!.jetonNonHash]).toEqual([null, null]);
+    expect([e[1]!.jetonOuiHash, e[1]!.revoqueeAt]).toEqual([neufs.jetonOuiHash, null]);
+    // Un jeton d'une émission révoquée ne résout plus rien ; celui de l'active, si.
+    await base.prisma.$transaction(async (tx) => {
+      expect(await emissionActiveParJeton(tx, j.jetonOuiHash)).toBeNull();
+      expect(await emissionActiveParJeton(tx, neufs.jetonNonHash)).toEqual({
+        demandeId: id,
+        sens: 'non',
+      });
+    });
+  });
+});
+
+describe('REQ-SEC-024 — l’empreinte d’IP du clic : posée une fois, effacée à la révocation', () => {
+  const TRACE = 'emissions_demande_confirmation_trace';
+  const clic = (id: string, valeur: string | null) =>
+    maj(
+      `UPDATE emissions_demande_confirmation SET clic_ip_hash = $2 WHERE demande_id = $1::uuid`,
+      id,
+      valeur
+    );
+
+  it('REQ-SEC-024 : TÉMOIN — une adresse en clair est refusée par la forme ; une empreinte tronquée passe', async () => {
+    const { id } = await uneDemande();
+    const m = await refus(clic(id, '203.0.113.7'));
+    expect(m).toContain(CONTRAINTE);
+    expect(m).toContain('emissions_demande_confirmation_clic_ip_hash_hex');
+    await expect(clic(id, hex(8))).resolves.toBe(1);
+  });
+
+  it('REQ-SEC-024 : TÉMOIN — un second clic qui écraserait l’empreinte est refusé', async () => {
+    const { id } = await uneDemande();
+    await clic(id, hex(8));
+    const m = await refus(clic(id, hex(8)));
+    expect(m).toContain(DECLENCHEUR);
+    expect(m).toContain(TRACE);
+  });
+
+  it('REQ-SEC-024 : TÉMOIN — un clic sur une émission révoquée est refusé', async () => {
+    const { id } = await uneDemande();
+    await maj(
+      `UPDATE emissions_demande_confirmation SET revoquee_at = now() WHERE demande_id = $1::uuid`,
+      id
+    );
+    const m = await refus(clic(id, hex(8)));
+    expect(m).toContain(DECLENCHEUR);
+    expect(m).toContain(TRACE);
+  });
+
+  it('REQ-SEC-024 : TÉMOIN — une empreinte vidée sans révocation est refusée', async () => {
+    const { id } = await uneDemande();
+    await clic(id, hex(8));
+    const m = await refus(clic(id, null));
+    expect(m).toContain(DECLENCHEUR);
+    expect(m).toContain(TRACE);
+  });
+});
+
+describe('REQ-SEC-061 — l’émission est en ajout seul', () => {
+  const TRACE = 'emissions_demande_confirmation_trace';
+
+  it('REQ-SEC-061 : TÉMOIN — un jeton qui change de valeur, ou qui renaît après la révocation, est refusé', async () => {
+    const { id } = await uneDemande();
+    const autre = await refus(
+      maj(
+        `UPDATE emissions_demande_confirmation SET jeton_oui_hash = $2 WHERE demande_id = $1::uuid`,
+        id,
+        hex(32)
+      )
+    );
+    expect(autre).toContain(DECLENCHEUR);
+    expect(autre).toContain(TRACE);
+    await maj(
+      `UPDATE emissions_demande_confirmation SET revoquee_at = now(), jeton_oui_hash = NULL,
+         jeton_non_hash = NULL WHERE demande_id = $1::uuid`,
+      id
+    );
+    const renait = await refus(
+      maj(
+        `UPDATE emissions_demande_confirmation SET jeton_oui_hash = $2, jeton_non_hash = $3
+         WHERE demande_id = $1::uuid`,
+        id,
+        hex(32),
+        hex(32)
+      )
+    );
+    expect(renait).toContain(DECLENCHEUR);
+    expect(renait).toContain(TRACE);
+  });
+
+  it('REQ-SEC-061 : TÉMOIN — vider un jeton sans révoquer est refusé ; la révocation s’écrit une fois', async () => {
+    const { id } = await uneDemande();
+    const sans = await refus(
+      maj(
+        `UPDATE emissions_demande_confirmation SET jeton_oui_hash = NULL, jeton_non_hash = NULL
+         WHERE demande_id = $1::uuid`,
+        id
+      )
+    );
+    expect(sans).toContain(DECLENCHEUR);
+    // Révoquer sans vider passe ; vider ensuite passe aussi.
+    await expect(
+      maj(
+        `UPDATE emissions_demande_confirmation SET revoquee_at = now() WHERE demande_id = $1::uuid`,
+        id
       )
     ).resolves.toBe(1);
+    await expect(
+      maj(
+        `UPDATE emissions_demande_confirmation SET jeton_oui_hash = NULL, jeton_non_hash = NULL
+         WHERE demande_id = $1::uuid`,
+        id
+      )
+    ).resolves.toBe(1);
+    const reecrite = await refus(
+      maj(
+        `UPDATE emissions_demande_confirmation SET revoquee_at = now() + interval '1 day'
+         WHERE demande_id = $1::uuid`,
+        id
+      )
+    );
+    expect(reecrite).toContain(DECLENCHEUR);
+    expect(reecrite).toContain(TRACE);
+  });
+
+  it('REQ-SEC-061 : TÉMOIN — DELETE et TRUNCATE d’une émission sont refusés', async () => {
+    const { id } = await uneDemande();
+    const del = await refus(
+      maj(`DELETE FROM emissions_demande_confirmation WHERE demande_id = $1::uuid`, id)
+    );
+    expect(del).toContain(DECLENCHEUR);
+    expect(del).toContain(TRACE);
+    const tronc = await refus(maj(`TRUNCATE emissions_demande_confirmation`));
+    expect(tronc).toContain('emissions_demande_confirmation_troncature');
+  });
+});
+
+describe('REQ-DM-060 — la demande est une trace : mutable pour son état et ses dates seulement', () => {
+  const TRACE = 'demandes_confirmation_trace';
+
+  it('REQ-DM-060 : l’état, la date d’envoi et la date de réponse restent libres', async () => {
+    const { id } = await uneDemande();
+    await expect(
+      maj(
+        `UPDATE demandes_confirmation SET etat = 'envoyee', envoyee_at = now(), repondu_at = now()
+         WHERE id = $1::uuid`,
+        id
+      )
+    ).resolves.toBe(1);
+  });
+
+  it('REQ-DM-060 : TÉMOIN — réécrire l’attribution d’une demande est refusé', async () => {
+    const { id } = await uneDemande();
+    const m = await refus(
+      maj(
+        `UPDATE demandes_confirmation SET attribution_id = $2::uuid WHERE id = $1::uuid`,
+        id,
+        await uneAttribution()
+      )
+    );
+    expect(m).toContain(DECLENCHEUR);
+    expect(m).toContain(TRACE);
+  });
+
+  it('REQ-DM-060 : TÉMOIN — DELETE et TRUNCATE d’une demande sont refusés', async () => {
+    const { id } = await uneDemande();
+    const del = await refus(maj(`DELETE FROM demandes_confirmation WHERE id = $1::uuid`, id));
+    expect(del).toContain(DECLENCHEUR);
+    expect(del).toContain(TRACE);
+    expect(await refus(maj(`TRUNCATE demandes_confirmation CASCADE`))).toContain(
+      'demandes_confirmation_troncature'
+    );
+  });
+
+  it('REQ-DM-060 : les déclencheurs des deux tables existent, lus dans pg_trigger', async () => {
+    const lignes = await base.prisma.$queryRaw<{ tgname: string }[]>`
+      SELECT tgname FROM pg_trigger
+      WHERE tgrelid IN ('demandes_confirmation'::regclass, 'emissions_demande_confirmation'::regclass)
+        AND NOT tgisinternal`;
+    expect(lignes.map((l) => l.tgname)).toEqual(
+      expect.arrayContaining([
+        TRACE,
+        'demandes_confirmation_troncature',
+        'emissions_demande_confirmation_naissance',
+        'emissions_demande_confirmation_trace',
+        'emissions_demande_confirmation_troncature',
+      ])
+    );
   });
 });
 
@@ -360,43 +605,40 @@ describe('REQ-DM-005 — la correction est une révision tracée, deposee_at inc
   });
 });
 
-describe('REQ-DM-031 — la purge du contact révoque les jetons et purge les révisions', () => {
-  it('REQ-DM-031 : TÉMOIN — après la purge, plus de jeton, plus de bloc dans les révisions', async () => {
+describe('REQ-DM-031 — la purge du contact révoque TOUTES les émissions, vide l’empreinte du clic, purge les révisions', () => {
+  it('REQ-DM-031 : TÉMOIN — après la purge, plus de jeton, plus d’empreinte de clic, plus de bloc dans les révisions', async () => {
     const a = await uneAttribution({ purgeContactAt: new Date('2026-01-01T00:00:00.000Z') });
-    await base.prisma.$transaction((tx) =>
+    const id = await base.prisma.$transaction((tx) =>
       creerLaDemande(tx, { attributionId: a, ...jetons(), acteur: ACTEUR })
     );
-    await base.prisma.$executeRawUnsafe(
+    // Une émission déjà révoquée, puis l'active, cliquée.
+    await base.prisma.$transaction((tx) =>
+      emettreDeNouveau(tx, { demandeId: id, ...jetons(), maintenant: new Date() })
+    );
+    await maj(
+      `UPDATE emissions_demande_confirmation SET clic_ip_hash = $2
+       WHERE demande_id = $1::uuid AND revoquee_at IS NULL`,
+      id,
+      hex(8)
+    );
+    await maj(
       `INSERT INTO revisions_demande_confirmation (id, demande_id, email_chiffre, email_hash)
-       SELECT gen_random_uuid(), d.id, $2, $3 FROM demandes_confirmation d
-       WHERE d.attribution_id = $1::uuid`,
-      a,
+       VALUES (gen_random_uuid(), $1::uuid, $2, $3)`,
+      id,
       randomBytes(40),
       hex(32)
     );
     await purgerLesContacts(base.prisma, new Date('2026-10-02T12:00:00.000Z'));
-    const d = await demandeDe(a);
-    expect([d.jetonOuiHash, d.jetonNonHash]).toEqual([null, null]);
-    expect(d.jetonsRevoquesAt).not.toBeNull();
+    const e = await emissionsDe(id);
+    expect(e).toHaveLength(2);
+    for (const x of e) {
+      expect([x.jetonOuiHash, x.jetonNonHash, x.clicIpHash]).toEqual([null, null, null]);
+      expect(x.revoqueeAt).not.toBeNull();
+    }
     const [r] = await base.prisma.$queryRaw<{ email: Buffer | null; purge: Date | null }[]>`
-      SELECT r.email_chiffre AS email, r.purgee_at AS purge FROM revisions_demande_confirmation r
-      JOIN demandes_confirmation d ON d.id = r.demande_id WHERE d.attribution_id = ${a}::uuid`;
+      SELECT email_chiffre AS email, purgee_at AS purge FROM revisions_demande_confirmation
+      WHERE demande_id = ${id}::uuid`;
     expect(r!.email).toBeNull();
     expect(r!.purge).not.toBeNull();
-  });
-
-  it('REQ-DM-031 : TÉMOIN — des jetons présents avec une date de révocation sont refusés', async () => {
-    const a = await uneAttribution();
-    const id = await base.prisma.$transaction((tx) =>
-      creerLaDemande(tx, { attributionId: a, ...jetons(), acteur: ACTEUR })
-    );
-    expect(
-      await refus(
-        base.prisma.$executeRawUnsafe(
-          `UPDATE demandes_confirmation SET jetons_revoques_at = now() WHERE id = $1::uuid`,
-          id
-        )
-      )
-    ).toContain('demandes_confirmation_jetons_revocation_liee');
   });
 });

@@ -803,28 +803,43 @@ enum EtatDemandeConfirmation {
   @@map("etat_demande_confirmation")
 }
 
-/// DM-40 (REQ-DM-060) : la demande de confirmation d'un dépôt, UNE par attribution. Les deux jetons
-/// ne sont stockés qu'en EMPREINTE ; ils sont révoqués à la purge du contact. L'échéance d'envoi se
-/// DÉRIVE de `deposeeAt` et de la SSOT : elle ne se stocke pas.
+/// DM-40 (REQ-DM-060) : la demande de confirmation d'un dépôt, UNE par attribution. Une TRACE : son
+/// identité est figée, elle ne se supprime pas ; seuls son état et ses dates changent. L'échéance
+/// d'envoi se DÉRIVE de `deposeeAt` et de la SSOT : elle ne se stocke pas. Les jetons vivent dans ses
+/// émissions.
 model DemandeConfirmation {
-  id               String                  @id @default(uuid()) @db.Uuid
-  attributionId    String                  @unique @map("attribution_id") @db.Uuid
-  attribution      Attribution             @relation(fields: [attributionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  etat             EtatDemandeConfirmation @default(planifiee)
-  creeeAt          DateTime                @default(dbgenerated("clock_timestamp()")) @map("creee_at") @db.Timestamptz(3)
-  envoyeeAt        DateTime?               @map("envoyee_at") @db.Timestamptz(3)
-  reponduAt        DateTime?               @map("repondu_at") @db.Timestamptz(3)
-  /// L'empreinte du jeton « Oui », jamais le jeton.
-  jetonOuiHash     String?                 @map("jeton_oui_hash") @db.Char(64)
-  /// L'empreinte du jeton « Non », jamais le jeton.
-  jetonNonHash     String?                 @map("jeton_non_hash") @db.Char(64)
-  jetonsRevoquesAt DateTime?               @map("jetons_revoques_at") @db.Timestamptz(3)
-  /// L'empreinte TRONQUÉE et salée de l'adresse réseau du clic (REQ-SEC-024), jamais l'adresse.
-  clicIpHash       String?                 @map("clic_ip_hash") @db.Char(16)
+  id            String                  @id @default(uuid()) @db.Uuid
+  attributionId String                  @unique @map("attribution_id") @db.Uuid
+  attribution   Attribution             @relation(fields: [attributionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  etat          EtatDemandeConfirmation @default(planifiee)
+  creeeAt       DateTime                @default(dbgenerated("clock_timestamp()")) @map("creee_at") @db.Timestamptz(3)
+  envoyeeAt     DateTime?               @map("envoyee_at") @db.Timestamptz(3)
+  reponduAt     DateTime?               @map("repondu_at") @db.Timestamptz(3)
 
+  emissions EmissionDemandeConfirmation[]
   revisions RevisionDemandeConfirmation[]
 
   @@map("demandes_confirmation")
+}
+
+/// DM-40 (REQ-DM-060, HYP-W20-LIEN, HYP-W20-REBOND) : un ENVOI de la demande, une ligne par envoi, en
+/// AJOUT SEUL. Ses deux jetons n'existent qu'en EMPREINTE ; une seule émission est active par demande
+/// (index unique partiel). Une correction après rebond crée une émission et révoque la précédente.
+model EmissionDemandeConfirmation {
+  id           String              @id @default(uuid()) @db.Uuid
+  demandeId    String              @map("demande_id") @db.Uuid
+  demande      DemandeConfirmation @relation(fields: [demandeId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  emiseAt      DateTime            @default(dbgenerated("clock_timestamp()")) @map("emise_at") @db.Timestamptz(3)
+  /// L'empreinte du jeton « Oui », jamais le jeton.
+  jetonOuiHash String?             @map("jeton_oui_hash") @db.Char(64)
+  /// L'empreinte du jeton « Non », jamais le jeton.
+  jetonNonHash String?             @map("jeton_non_hash") @db.Char(64)
+  revoqueeAt   DateTime?           @map("revoquee_at") @db.Timestamptz(3)
+  /// L'empreinte TRONQUÉE et salée de l'adresse réseau du clic (REQ-SEC-024), jamais l'adresse.
+  clicIpHash   String?             @map("clic_ip_hash") @db.Char(16)
+
+  @@index([demandeId])
+  @@map("emissions_demande_confirmation")
 }
 
 /// DM-40 (REQ-DM-060, HYP-W20-ANNULATION) : une correction du contact ou du contexte pendant le délai

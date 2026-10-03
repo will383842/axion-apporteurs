@@ -173,13 +173,17 @@ function clientSimule(lots: Ligne[][], comptes: Record<string, number> = {}) {
         return { count: comptes[args.where.id] ?? 1 };
       }),
     },
-    // DM-40 : les jetons de la demande de confirmation, et les révisions du contact.
-    demandeConfirmation: {
-      updateMany: vi.fn(async (args: { where: { attributionId: string } }) => {
-        ordre.push(`revoquer:${args.where.attributionId}`);
-        revocations.push(args);
-        return { count: 1 };
-      }),
+    // DM-40 : les émissions de la demande de confirmation, et les révisions du contact.
+    emissionDemandeConfirmation: {
+      updateMany: vi.fn(
+        async (args: { where: { demande: { attributionId: string }; revoqueeAt?: null } }) => {
+          ordre.push(
+            `${'revoqueeAt' in args.where ? 'revoquer' : 'vider'}:${args.where.demande.attributionId}`
+          );
+          revocations.push(args);
+          return { count: 1 };
+        }
+      ),
     },
     revisionDemandeConfirmation: {
       updateMany: vi.fn(async (args: { where: { demande: { attributionId: string } } }) => {
@@ -269,13 +273,20 @@ describe('REQ-DM-031 — la tâche de purge, sur un client simulé', () => {
     ]);
   });
 
-  it('REQ-DM-031 : TÉMOIN — la purge révoque les jetons de la demande et purge les révisions, à la valeur près', async () => {
+  it('REQ-DM-031 : TÉMOIN — la purge révoque TOUTES les émissions, vide jetons et empreinte du clic, et purge les révisions, à la valeur près', async () => {
     const s = clientSimule([[{ id: 'x', natureJuridique: null }]]);
     await purgerLesContacts(s.client, REFERENCE);
     expect(s.revocations).toStrictEqual([
       {
-        where: { attributionId: 'x', jetonOuiHash: { not: null } },
-        data: { jetonOuiHash: null, jetonNonHash: null, jetonsRevoquesAt: REFERENCE },
+        where: { demande: { attributionId: 'x' }, revoqueeAt: null },
+        data: { revoqueeAt: REFERENCE, jetonOuiHash: null, jetonNonHash: null, clicIpHash: null },
+      },
+      {
+        where: {
+          demande: { attributionId: 'x' },
+          OR: [{ jetonOuiHash: { not: null } }, { clicIpHash: { not: null } }],
+        },
+        data: { jetonOuiHash: null, jetonNonHash: null, clicIpHash: null },
       },
       {
         where: { demande: { attributionId: 'x' }, purgeeAt: null },
@@ -297,7 +308,14 @@ describe('REQ-DM-031 — la tâche de purge, sur un client simulé', () => {
   it('REQ-DM-031 : TÉMOIN — l’ÉVÉNEMENT, sur le client de la transaction, APRÈS l’effacement, une fois par ligne', async () => {
     const s = clientSimule([[{ id: 'x', natureJuridique: null }]]);
     await purgerLesContacts(s.client, REFERENCE);
-    expect(s.ordre).toEqual(['lire', 'effacer:x', 'revoquer:x', 'purger-revisions:x', 'journal:x']);
+    expect(s.ordre).toEqual([
+      'lire',
+      'effacer:x',
+      'revoquer:x',
+      'vider:x',
+      'purger-revisions:x',
+      'journal:x',
+    ]);
     expect(s.clients).toEqual([s.tx]);
     expect(s.clients[0]).toBe(s.tx);
     expect(journal.ajouterEvenement).toHaveBeenCalledTimes(1);
@@ -319,6 +337,7 @@ describe('REQ-DM-031 — la tâche de purge, sur un client simulé', () => {
       'effacer:a0',
       'effacer:a1',
       'revoquer:a1',
+      'vider:a1',
       'purger-revisions:a1',
       'journal:a1',
     ]);
