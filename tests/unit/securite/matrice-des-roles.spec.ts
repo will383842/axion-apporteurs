@@ -29,6 +29,7 @@ import { existsSync } from 'node:fs';
 import { ConsoleRole, type PrismaClient } from '@prisma/client';
 import { kidDe } from '../../../src/lib/env';
 import { DUREES_AUTH } from '../../../src/server/auth/durees';
+import { SEUILS } from '../../../src/domain/seuils/ssot';
 import {
   invitationOuverte,
   jugerChangementDeRole,
@@ -1511,8 +1512,18 @@ describe('REQ-SEC-023 — SEC-30 : le step-up déclaré dans la matrice (arbitra
   });
 
   it('REQ-SEC-023 : une action SANS step-up ne regarde pas l’âge de la session ; le motif entre dans la liste fermée', () => {
-    expect(jugerAcces('action:lever_gel', ligneOuverteIlYA(releve * 10), T0, KID).ok).toBe(true);
+    expect(jugerAcces('action:approuver_lot', ligneOuverteIlYA(releve * 10), T0, KID).ok).toBe(
+      true
+    );
     expect(MOTIFS_DE_REFUS_CONSOLE).toContain('releve_requis');
+  });
+
+  // Texte de la sécurité (rattrapage 96), point 4 : le step-up est déclaré dès maintenant pour la
+  // levée d'un gel, qui existe ; point 5 : chaque entrée porte un stepUp EXPLICITE.
+  it('REQ-SEC-023 : TÉMOIN — la levée d’un gel exige le step-up ; chaque entrée de la matrice déclare son stepUp, vrai ou faux', () => {
+    expect(MATRICE_DES_ROLES['action:lever_gel'].stepUp).toBe(true);
+    for (const [droit, entree] of Object.entries(MATRICE_DES_ROLES))
+      expect(typeof (entree as { stepUp?: unknown }).stepUp, droit).toBe('boolean');
   });
 });
 
@@ -1521,7 +1532,8 @@ describe('REQ-DM-024 — SEC-30 : une invitation expire si le compte n’est pas
     inviteeAt: new Date(T0.getTime() - ilYA),
     activeeAt,
   });
-  const delai = DUREES_AUTH.invitationConsoleMs.valeur;
+  // Texte de la sécurité (rattrapage 96) : INVITATION_CONSOLE_DUREE_H en SSOT, à valider par Williams.
+  const delai = SEUILS.INVITATION_CONSOLE_DUREE_H.valeur * 60 * 60 * 1000;
 
   it('REQ-DM-024 : TÉMOIN À DEUX FACES — non activée à l’échéance, l’invitation est expirée ; un instant avant, elle vaut encore ; activée, elle ne vieillit plus', () => {
     expect(invitationOuverte(invite(delai), T0)).toBe(false);
@@ -1529,8 +1541,9 @@ describe('REQ-DM-024 — SEC-30 : une invitation expire si le compte n’est pas
     expect(invitationOuverte(invite(delai * 10, new Date(T0.getTime() - delai)), T0)).toBe(true);
   });
 
-  it('REQ-DM-024 : le délai d’invitation vient de la SSOT des durées, à valider par Williams', () => {
-    expect(DUREES_AUTH.invitationConsoleMs.valeur).toBeGreaterThan(0);
-    expect(DUREES_AUTH.invitationConsoleMs.source).toMatch(/SEC-30/);
+  it('REQ-DM-024 : le délai d’invitation est une constante en heures de la SSOT, à valider par Williams', () => {
+    expect(SEUILS.INVITATION_CONSOLE_DUREE_H.unite).toBe('heures');
+    expect(SEUILS.INVITATION_CONSOLE_DUREE_H.valeur).toBeGreaterThan(0);
+    expect(SEUILS.INVITATION_CONSOLE_DUREE_H.source).toMatch(/SEC-30/);
   });
 });
