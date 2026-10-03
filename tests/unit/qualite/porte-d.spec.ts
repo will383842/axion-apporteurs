@@ -255,3 +255,27 @@ describe('REQ-QA-021 — le vidage N−1 est SEMÉ, pas vide', () => {
     ).toBe(true);
   });
 });
+
+describe('REQ-QA-023 — QA-T70 : la porte D rejoue la propriété comme le runbook de restauration', () => {
+  const porte = readFileSync('scripts/gates/gate-d.sh', 'utf8');
+  const position = (motif: string) => {
+    const i = porte.indexOf(motif);
+    expect(i, motif).toBeGreaterThanOrEqual(0);
+    return i;
+  };
+
+  it('REQ-QA-023 : TÉMOIN — rôles AVANT la restauration, --no-owner, propriété APRÈS, puis la migration de la PR', () => {
+    const avant = position('scripts/sauvegarde/exercice.ts --plan-de-propriete avant');
+    const restauration = position('pg_restore -U porte --exit-on-error --no-owner -d migree');
+    const apres = position('scripts/sauvegarde/exercice.ts --plan-de-propriete apres');
+    const migration = position('migrer migree');
+    expect(avant).toBeLessThan(restauration);
+    expect(restauration).toBeLessThan(apres);
+    expect(apres).toBeLessThan(migration);
+  });
+
+  it('REQ-QA-023 : les droits sont restaurés (jamais --no-acl), et le plan est lu dans le SCHÉMA du vidage', () => {
+    expect(porte).not.toContain('--no-acl');
+    expect(porte).toContain('pg_restore --schema-only -f -');
+  });
+});

@@ -38,7 +38,9 @@ import {
   exercer,
   FORME_DE_PROPRIETE,
   FORME_DES_ROLES,
+  planDeLaPropriete,
   rolesDuVidage,
+  sortieDuPlan,
   tableTemoin,
   jugerFraicheur,
   type Verdict,
@@ -108,6 +110,44 @@ describe('REQ-QA-023 — les rôles et la propriété nommés par le vidage (DM-
       'ALTER TABLE public.evenements OWNER TO partners_journal;',
       'ALTER SEQUENCE public.evenements_id_seq OWNER TO partners_journal;',
     ]);
+  });
+
+  it('REQ-QA-023 : QA-T70 — le plan de la propriété, UNIQUE : les rôles créés AVANT la restauration, la propriété rejouée APRÈS', () => {
+    const plan = planDeLaPropriete(SCHEMA);
+    expect('faute' in plan).toBe(false);
+    if ('faute' in plan) return;
+    expect(plan.avant).toEqual(
+      ['partners_execution', 'partners_journal'].map(
+        (r) =>
+          `DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '${r}') THEN CREATE ROLE ${r} NOLOGIN; END IF; END $$;`
+      )
+    );
+    expect(plan.apres).toEqual(rolesDuVidage(SCHEMA).proprietes);
+  });
+
+  it('REQ-QA-023 : TÉMOIN — QA-T70 : un rôle hors de la forme donne une FAUTE nommée, et aucun plan', () => {
+    const plan = planDeLaPropriete(`${SCHEMA}\nGRANT SELECT ON TABLE public.apporteurs TO intrus;`);
+    expect(plan).toEqual({ faute: 'restauration : rôle hors de la forme partners_* — intrus' });
+  });
+
+  it('REQ-QA-023 : TÉMOIN — QA-T70 : la sortie du plan en ligne de commande, un moment à la fois, et l’échec fermé', () => {
+    const avant = sortieDuPlan('avant', SCHEMA);
+    const apres = sortieDuPlan('apres', SCHEMA);
+    expect(avant.code).toBe(0);
+    expect(avant.texte.trim().split('\n')).toHaveLength(2);
+    expect(apres).toEqual({
+      code: 0,
+      texte:
+        'ALTER TABLE public.evenements OWNER TO partners_journal;\nALTER SEQUENCE public.evenements_id_seq OWNER TO partners_journal;\n',
+    });
+    const faute = sortieDuPlan(
+      'apres',
+      `${SCHEMA}\nGRANT SELECT ON TABLE public.apporteurs TO intrus;`
+    );
+    expect(faute).toEqual({
+      code: 1,
+      texte: '❌ restauration : rôle hors de la forme partners_* — intrus\n',
+    });
   });
 
   it('REQ-QA-023 : TÉMOIN — un GRANT à un rôle hors de la forme est NOMMÉ, jamais ignoré', () => {
