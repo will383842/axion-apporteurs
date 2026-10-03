@@ -29,7 +29,10 @@ import { existsSync } from 'node:fs';
 import { ConsoleRole, type PrismaClient } from '@prisma/client';
 import { kidDe } from '../../../src/lib/env';
 import { DUREES_AUTH } from '../../../src/server/auth/durees';
-import { jugerChangementDeRole } from '../../../src/server/console/utilisateurs/regles';
+import {
+  invitationOuverte,
+  jugerChangementDeRole,
+} from '../../../src/server/console/utilisateurs/regles';
 import {
   consommerLien,
   empreinteDeSessionConsole,
@@ -1476,5 +1479,58 @@ describe('REQ-SEC-023 — SEC-30 : personne ne change son propre rôle', () => {
         vers: 'qualifieur',
       })
     ).toEqual({ ok: false, motif: 'sans_changement' });
+  });
+});
+
+describe('REQ-SEC-023 — SEC-30 : le step-up déclaré dans la matrice (arbitrage de la sécurité)', () => {
+  const ligneOuverteIlYA = (ms: number) => ({
+    ...valide(),
+    creeAt: new Date(T0.getTime() - ms),
+    utilisateurConsole: { id: 'u-admin', role: 'admin' as const, desactiveAt: null },
+  });
+  const releve = DUREES_AUTH.releveMs.valeur;
+
+  it('REQ-SEC-023 : TÉMOIN — la gestion des utilisateurs est réservée à admin, avec step-up déclaré ; son écran aussi est à admin seul', () => {
+    expect(MATRICE_DES_ROLES['action:gerer_utilisateur_console']).toEqual({
+      roles: ['admin'],
+      stepUp: true,
+    });
+    expect(MATRICE_DES_ROLES['ecran:utilisateurs_console']).toEqual({
+      roles: ['admin'],
+      stepUp: false,
+    });
+  });
+
+  it('REQ-SEC-023 : TÉMOIN À DEUX FACES — une session ouverte il y a le délai de relèvement est refusée « releve_requis » sur une action à step-up ; un instant avant, elle passe', () => {
+    expect(
+      jugerAcces('action:gerer_utilisateur_console', ligneOuverteIlYA(releve), T0, KID)
+    ).toEqual({ ok: false, motif: 'releve_requis' });
+    expect(
+      jugerAcces('action:gerer_utilisateur_console', ligneOuverteIlYA(releve - 1), T0, KID).ok
+    ).toBe(true);
+  });
+
+  it('REQ-SEC-023 : une action SANS step-up ne regarde pas l’âge de la session ; le motif entre dans la liste fermée', () => {
+    expect(jugerAcces('action:lever_gel', ligneOuverteIlYA(releve * 10), T0, KID).ok).toBe(true);
+    expect(MOTIFS_DE_REFUS_CONSOLE).toContain('releve_requis');
+  });
+});
+
+describe('REQ-DM-024 — SEC-30 : une invitation expire si le compte n’est pas activé à temps', () => {
+  const invite = (ilYA: number, activeeAt: Date | null = null) => ({
+    inviteeAt: new Date(T0.getTime() - ilYA),
+    activeeAt,
+  });
+  const delai = DUREES_AUTH.invitationConsoleMs.valeur;
+
+  it('REQ-DM-024 : TÉMOIN À DEUX FACES — non activée à l’échéance, l’invitation est expirée ; un instant avant, elle vaut encore ; activée, elle ne vieillit plus', () => {
+    expect(invitationOuverte(invite(delai), T0)).toBe(false);
+    expect(invitationOuverte(invite(delai - 1), T0)).toBe(true);
+    expect(invitationOuverte(invite(delai * 10, new Date(T0.getTime() - delai)), T0)).toBe(true);
+  });
+
+  it('REQ-DM-024 : le délai d’invitation vient de la SSOT des durées, à valider par Williams', () => {
+    expect(DUREES_AUTH.invitationConsoleMs.valeur).toBeGreaterThan(0);
+    expect(DUREES_AUTH.invitationConsoleMs.source).toMatch(/SEC-30/);
   });
 });
