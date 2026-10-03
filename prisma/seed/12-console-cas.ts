@@ -10,11 +10,12 @@
 
 import type { ObjetContestation, PrismaClient, TypeAnomalie } from '@prisma/client';
 import { colonnesPii, type ClesPii } from '../../src/server/securite/pii';
+import { MODELE_DE_LA_JUSTIFICATION } from '../../src/server/anomalie/justification';
 
 /** Le nom du modèle dans la donnée authentifiée du bloc chiffré d'une contestation. */
 export const MODELE_CONTESTATION = 'Contestation';
-/** Le nom du modèle dans la donnée authentifiée du bloc chiffré d'une anomalie. */
-export const MODELE_ANOMALIE = 'Anomalie';
+/** Le nom du modèle d'une anomalie, repris du lecteur unique de sa justification : une seule source. */
+export const MODELE_ANOMALIE = MODELE_DE_LA_JUSTIFICATION;
 
 export interface AnomalieASemer {
   id: string;
