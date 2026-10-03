@@ -41,6 +41,8 @@ export const CHEMIN_DU_REGISTRE = 'docs/rgpd/registre-article-30.md';
 /** Les routes que ce module désigne. */
 export const ROUTE_CONFIDENTIALITE = '/confidentialite';
 export const ROUTE_ISSUE_OUVERTE = '/connexion?issue=ouverte';
+/** JUR-T57 : l'état d'indisponibilité de l'espace, quand ni la session ni l'acceptation ne se lisent. */
+export const ROUTE_INDISPONIBLE = '/connexion?etat=indisponible';
 
 // ── le cœur ──────────────────────────────────────────────────────────────────────────────────────
 
@@ -121,10 +123,13 @@ export async function etatDeLaRequete(
 }
 
 /**
- * Où mène une connexion qui vient d'ouvrir sa session : vers la politique si elle reste à accepter,
- * sinon vers l'issue habituelle. Une politique illisible ou une base injoignable ne bloquent pas la
- * connexion : l'issue habituelle, et le motif part au journal (la politique sera redemandée à la
- * connexion suivante, et reste lisible sur sa page).
+ * Où mène une connexion qui vient d'ouvrir sa session : l'issue habituelle SEULEMENT si la version
+ * publiable courante est acceptée ; sinon la politique (JUR-T57). L'espace ne s'ouvre JAMAIS sans
+ * acceptation vérifiée (lentille sécurité, 2026-10-03), et le motif part au journal :
+ *   — registre illisible : la politique en vigueur est inconnue, l'acceptation ne peut pas se juger ;
+ *     la page de la politique, dans son état d'ERREUR, sans formulaire ;
+ *   — base injoignable : ni la session ni l'acceptation ne se lisent ; l'indisponibilité de l'espace,
+ *     jamais la page de la politique, qui laisserait croire qu'un accord est possible.
  */
 export async function destinationDeLOuverture(
   jetonSession: string,
@@ -136,14 +141,14 @@ export async function destinationDeLOuverture(
     const lue = lecture();
     if (!lue.ok) {
       signaler('confidentialite_registre_illisible');
-      return ROUTE_ISSUE_OUVERTE;
+      return ROUTE_CONFIDENTIALITE;
     }
     const etat = await etatDeLaRequete(jetonSession, lue.politique, ports());
     // Non publiable : la page de la politique, jamais l'issue habituelle (refus FERMÉ, JUR-T57).
     return etat === 'acceptee' ? ROUTE_ISSUE_OUVERTE : ROUTE_CONFIDENTIALITE;
   } catch {
     signaler('confidentialite_etat_illisible');
-    return ROUTE_ISSUE_OUVERTE;
+    return ROUTE_INDISPONIBLE;
   }
 }
 

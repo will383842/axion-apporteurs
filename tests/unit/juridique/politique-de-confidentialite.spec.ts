@@ -37,6 +37,7 @@ import {
 } from '../../../src/domain/rgpd/politique';
 import {
   ROUTE_CONFIDENTIALITE,
+  ROUTE_INDISPONIBLE,
   ROUTE_ISSUE_OUVERTE,
   accepterLaPolitique,
   depotDAcceptation,
@@ -393,7 +394,7 @@ describe('REQ-JUR-025 — la première connexion mène à la politique', () => {
     expect(motifs).toEqual([]);
   });
 
-  it('REQ-JUR-025 — un registre ou une base illisibles ne bloquent pas la connexion, et le motif est signalé', async () => {
+  it('REQ-JUR-025 — TÉMOIN (JUR-T57, sécurité) : registre illisible → la politique en erreur ; base injoignable → l’indisponibilité ; jamais l’espace, et le motif est signalé', async () => {
     const motifs: string[] = [];
     const neuf = depotEnMemoire().depot;
     expect(
@@ -403,7 +404,7 @@ describe('REQ-JUR-025 — la première connexion mène à la politique', () => {
         () => portsAvecSession(neuf),
         (m) => motifs.push(m)
       )
-    ).toBe(ROUTE_ISSUE_OUVERTE);
+    ).toBe(ROUTE_CONFIDENTIALITE);
     expect(
       await destinationDeLOuverture(
         'jeton',
@@ -413,7 +414,7 @@ describe('REQ-JUR-025 — la première connexion mène à la politique', () => {
         },
         (m) => motifs.push(m)
       )
-    ).toBe(ROUTE_ISSUE_OUVERTE);
+    ).toBe(ROUTE_INDISPONIBLE);
     expect(motifs).toEqual([
       'confidentialite_registre_illisible',
       'confidentialite_etat_illisible',
@@ -667,6 +668,7 @@ describe('REQ-JUR-025 — l’acceptation, ses routes et son câblage', () => {
     expect(m.CHEMIN_DU_REGISTRE).toBe('docs/rgpd/registre-article-30.md');
     expect(m.ROUTE_CONFIDENTIALITE).toBe('/confidentialite');
     expect(m.ROUTE_ISSUE_OUVERTE).toBe('/connexion?issue=ouverte');
+    expect(m.ROUTE_INDISPONIBLE).toBe('/connexion?etat=indisponible');
   });
 
   it('REQ-JUR-025 — une version courante sans date d’acceptation reste à accepter', async () => {
