@@ -48,4 +48,27 @@ export const DUREES_DE_RETENTION = {
     renvois: [],
     verifieLe: '2026-10-02',
   },
+  /**
+   * DM-59 (REQ-JUR-065) : le délai de réponse à une demande de droit du contact, compté de sa
+   * réception. La nouvelle valeur d'une rectification ne survit pas au-delà, même sans traitement.
+   */
+  DROITS_CONTACT_DELAI_REPONSE_MOIS: {
+    valeur: 1,
+    unite: 'mois',
+    source: 'RGPD art. 12.3 (délai de réponse, compté de la réception de la demande), REQ-JUR-065',
+    renvois: [],
+    verifieLe: '2026-10-02',
+  },
+  /**
+   * DM-59 (REQ-JUR-065) : la prolongation du délai de réponse, posée dans le premier mois ; la
+   * valeur d'une rectification survit alors jusqu'à trois mois après la réception.
+   */
+  DROITS_CONTACT_PROLONGATION_MOIS: {
+    valeur: 2,
+    unite: 'mois',
+    source:
+      'RGPD art. 12.3 (prolongation du délai de réponse), REQ-JUR-065, précision d’A07 du 2026-10-02',
+    renvois: [],
+    verifieLe: '2026-10-02',
+  },
 } as const satisfies Record<string, Seuil>;

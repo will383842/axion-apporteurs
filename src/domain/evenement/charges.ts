@@ -33,6 +33,13 @@ import {
   NAISSANCES_ATTRIBUTION,
 } from '../attribution/machine';
 import { STATUTS_PIECE_KYC, TYPES_PIECE_KYC } from '../kyc/pieces';
+import { ETATS_DEMANDE_CONFIRMATION } from '../confirmation/demande';
+import {
+  ETATS_CONTESTATION,
+  GESTES_DU_GEL,
+  GESTES_RATTACHEMENT,
+  STATUTS_ANOMALIE,
+} from '../anomalie/regles';
 
 /**
  * Les codes d'événement que porte `apporteur_statut_modifie` : la NAISSANCE (`creer`, `de` nul), puis
@@ -72,6 +79,13 @@ export const FORMES = {
           });
         }
       }),
+  /**
+   * EXCEPTION NOMMÉE à HYP-A02-ACTEUR-JOURNAL (décision d'A02 sur la décision (d) de la juriste,
+   * 2026-10-03), pour les seuls événements de cycle de vie d'une ANOMALIE : l'acteur dit QUI a agi
+   * (la console ou le système), JAMAIS son identifiant. Qui a traité l'anomalie se lit sur
+   * `anomalies.traite_par_id`, et plus du tout après son anonymisation : c'est voulu.
+   */
+  acteurSansIdentite: () => z.object({ par: z.enum(['utilisateur_console', 'systeme']) }).strict(),
 };
 
 /** Les valeurs de l'enum Prisma `TypeEvenementJournal`, confrontées au schéma par la garde. */
@@ -82,7 +96,12 @@ export type TypeEvenementJournal =
   | 'attribution_etat_modifie'
   | 'attribution_peremption_suspendue'
   | 'attribution_porteur_reaffecte'
-  | 'piece_kyc_statut_modifie';
+  | 'piece_kyc_statut_modifie'
+  | 'demande_confirmation_etat_modifie'
+  | 'anomalie_statut_modifie'
+  | 'contestation_modifiee'
+  | 'rattachement_manuel_modifie'
+  | 'anomalie_gel_modifie';
 
 /** DM-08 : le porteur d'une attribution, une forme UNIQUE — sa population et son identifiant. */
 const PORTEUR = () =>
@@ -198,6 +217,64 @@ export const CHARGES_PAR_TYPE = {
       de: z.enum(STATUTS_PIECE_KYC).nullable(),
       vers: z.enum(STATUTS_PIECE_KYC),
       type: z.enum(TYPES_PIECE_KYC),
+      acteur: FORMES.acteur(),
+    })
+    .strict(),
+  /**
+   * DM-40 (REQ-DM-060) : un changement d'état de la demande de confirmation, naissance comprise (`de`
+   * nul, `planifiee`). Ni jeton, ni empreinte, ni donnée de personne : l'état seul.
+   */
+  demande_confirmation_etat_modifie: z
+    .object({
+      de: z.enum(ETATS_DEMANDE_CONFIRMATION).nullable(),
+      vers: z.enum(ETATS_DEMANDE_CONFIRMATION),
+      acteur: FORMES.acteur(),
+    })
+    .strict(),
+  // DM-12 (REQ-DM-033), décision (d) de la juriste : l'ouverture (`de` nul) ou la clôture d'une
+  // anomalie, sur l'agrégat ANOMALIE (son id est `agregatId`). Ni apporteur, ni attribution, ni
+  // utilisateur de la console, ni justification, ni score : à l'anonymisation, plus rien ne relie
+  // l'événement à une personne. L'EFFET sur l'apporteur part ailleurs, sans id d'anomalie.
+  anomalie_statut_modifie: z
+    .object({
+      de: z.enum(STATUTS_ANOMALIE).nullable(),
+      vers: z.enum(STATUTS_ANOMALIE),
+      acteur: FORMES.acteurSansIdentite(),
+    })
+    .strict()
+    .superRefine((c, ctx) => {
+      // `de` nul à la naissance seulement, qui ouvre l'anomalie.
+      if ((c.de === null) !== (c.vers === 'ouverte')) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['de'],
+          message: 'de_nul_a_la_naissance',
+        });
+      }
+    }),
+  // DM-12 (REQ-DM-033) : le gel pour litige d'une anomalie, posé ou levé, sur l'agrégat ANOMALIE.
+  // Ni la référence du litige, ni personne : comme `anomalie_statut_modifie`.
+  anomalie_gel_modifie: z
+    .object({
+      vers: z.enum(GESTES_DU_GEL),
+      acteur: FORMES.acteurSansIdentite(),
+    })
+    .strict(),
+  // DM-12 (REQ-DM-043) : la réception (`de` nul) ou la réponse d'une contestation, agrégat `apporteur` ;
+  // et le gel pour litige, posé ou levé, sans sa référence.
+  contestation_modifiee: z
+    .object({
+      contestationId: FORMES.identifiant(),
+      de: z.enum(ETATS_CONTESTATION).nullable(),
+      vers: z.enum([...ETATS_CONTESTATION, ...GESTES_DU_GEL]),
+      acteur: FORMES.acteur(),
+    })
+    .strict(),
+  // DM-12 (REQ-DM-034) : la décision ou la révocation d'un rattachement manuel, agrégat `attribution`.
+  rattachement_manuel_modifie: z
+    .object({
+      rattachementId: FORMES.identifiant(),
+      vers: z.enum(GESTES_RATTACHEMENT),
       acteur: FORMES.acteur(),
     })
     .strict(),

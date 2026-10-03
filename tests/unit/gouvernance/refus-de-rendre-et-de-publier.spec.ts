@@ -438,6 +438,18 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
     string,
     { total: number; porte: number; temoins: number; raison: string }
   > = {
+    // QA-T64 — la forge lue une fois par porte A : UNE sortie différée.
+    'scripts/gates/forge-instantane.ts': {
+      total: 1,
+      porte: 1,
+      temoins: 0,
+      raison:
+        'QA-T64 — `forge:instantane`, REQ-GOV-006 et REQ-QA-013 : la forge lue UNE fois en tête de ' +
+        'la porte A. `process.exitCode = 1` : sortie DIFFÉRÉE, quand RUNNER_TEMP manque ou qu’une ' +
+        'lecture échoue ou ne rend pas du JSON — aucun instantané partiel. Le refus est éprouvé par ' +
+        'forge-instantane.spec.ts sur `poserLInstantane` ; aucun témoin de `REFUS` ne voit le binaire ' +
+        'sortir en 1 (il parlerait à la forge). Elle ne lit aucun fichier suivi. Dette DÉCLARÉE.',
+    },
     // ── GOV-037 : UNE sortie, à code VARIABLE ───────────────────────────────────────────────
     // 🔑 CE QUE LE CLIQUET NE PEUT PAS SAVOIR, ET QUI CHANGE LE TÉMOIN QU'IL FAUT. Le motif
     // `process.exit(\s*(?!0\s*\))` compte cette sortie comme non nulle : il lit une EXPRESSION,
@@ -963,6 +975,19 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
         'vu sortir sous `--prove` ; aucun témoin ne le voit sortir en 1, et aucun ne vit dans `REFUS`. ' +
         'Le REFUS DE PÉRIMÈTRE vient de `fichiersSuivisOuRefus`. Dette DÉCLARÉE.',
     },
+    // UX-P1-10 — la date de lecture d'une notification ne fait courir aucun délai : UNE sortie.
+    'scripts/gates/notifications-lue-at-inerte.ts': {
+      total: 1,
+      porte: 1,
+      temoins: 0,
+      raison:
+        'UX-P1-10 — `notifications:lue-at-inerte`, REQ-JUR-039 et REQ-UX-016 : aucune lecture de ' +
+        '`lue_at` hors permission. `process.exitCode = 1` : sortie DIFFÉRÉE, commune au jugement ' +
+        'du dépôt et à `--prove` (un témoin resté vert, un contre-témoin rouge). Les cinq familles ' +
+        'sont éprouvées par `pnpm notifications:lue-at-inerte:prove` ; aucun témoin de `REFUS` ne ' +
+        'voit le binaire sortir en 1. Le REFUS DE PÉRIMÈTRE vient de `fichiersSuivisOuRefus`. ' +
+        'Dette DÉCLARÉE.',
+    },
     'scripts/gates/jur-aucun-agregat-reseau.ts': {
       total: 1,
       porte: 1,
@@ -1003,6 +1028,19 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
         'sortir en 0 sur le dépôt ; ⛔ aucun témoin ne le voit sortir en 1, et aucun ne vit dans ' +
         '`REFUS`. Elle juge les fichiers de la PR et CODEOWNERS, pas `git ls-files` : elle n’importe ' +
         'pas `fichiersSuivisOuRefus` et n’a rien à faire dans `GARDES_QUI_BALAIENT`. Dette DÉCLARÉE.',
+    },
+    // QA-T69 — la rémunération indicative, transposée d'axion-ia : UNE sortie différée.
+    'scripts/gates/jur-copy-indicative.ts': {
+      total: 1,
+      porte: 1,
+      temoins: 0,
+      raison:
+        'QA-T69 — `jur:copy-indicative-partners`, REQ-JUR-001 et REQ-JUR-002 : aucune rémunération présentée ' +
+        'comme ferme. `process.exitCode = 1` : sortie DIFFÉRÉE, commune au jugement du dépôt et à ' +
+        '`--prove` (un témoin resté vert, un contre-témoin rouge). Les familles sont éprouvées par ' +
+        '`pnpm jur:copy-indicative-partners:prove` et par copy-indicative.spec.ts ; aucun témoin de `REFUS` ne ' +
+        'voit le binaire sortir en 1. Le REFUS DE PÉRIMÈTRE vient de `fichiersSuivisOuRefus`. ' +
+        'Dette DÉCLARÉE.',
     },
     'scripts/gates/jur-lexique-social.ts': {
       total: 1,
@@ -2418,7 +2456,11 @@ const GARDES_QUI_BALAIENT = [
   'scripts/gates/jur-aucune-progression.ts',
   // SEC-46 — `csp:inline` juge les fichiers SUIVIS sous `src/app/`.
   'scripts/gates/csp-inline.ts',
+  // UX-P1-10 — `notifications:lue-at-inerte` juge les fichiers SUIVIS sous `src/` et les migrations.
+  'scripts/gates/notifications-lue-at-inerte.ts',
   'scripts/gates/jur-lexique-social.ts',
+  // QA-T69 — `jur:copy-indicative-partners` juge les fichiers SUIVIS de `src/content/` et `docs/maquettes/`.
+  'scripts/gates/jur-copy-indicative.ts',
   // SEC-17 — `securite:roles` dérive les actions et les routes de la console des fichiers SUIVIS
   // sous `src/app/(console)/` et `src/server/console/`.
   'scripts/gates/roles.ts',

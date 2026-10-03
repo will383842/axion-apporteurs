@@ -29,6 +29,7 @@ import {
   type TypePorteur,
 } from '../../domain/attribution/machine';
 import { ajouterEvenement } from '../evenement/journal';
+import { annulerLaDemandeDe } from '../confirmation/demandes';
 import { ETATS_LIBERES, echeanceDePurge } from '../taches/purger-contacts';
 
 type Tx = Prisma.TransactionClient;
@@ -109,6 +110,11 @@ export async function transitionnerUneAttribution(
     survenuAt: maintenant,
     charge: { de, vers, transition, acteur, lienInteret: lienDe(l) },
   });
+  // DM-40 (HYP-W20-ANNULATION) : l'annulation de l'apporteur annule sa demande de confirmation,
+  // dans la MÊME transaction ; une demande déjà envoyée fait tout tomber.
+  if (transition === 'annulee_par_apporteur') {
+    await annulerLaDemandeDe(tx, attributionId, acteur, maintenant);
+  }
   return { de, vers };
 }
 

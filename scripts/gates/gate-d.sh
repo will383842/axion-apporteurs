@@ -160,8 +160,25 @@ done <"$TEMP/touchees.txt"
 
 # Le vidage passe par l'hôte : c'est un fichier, celui qu'une restauration réelle relirait.
 docker exec "$ID-base" pg_dump -U porte -Fc -d precedente >"$TEMP/n-1.dump"
+# QA-T70 (REQ-QA-023) : la restauration se fait COMME LE RUNBOOK (`docs/runbooks/sauvegarde.md`,
+# étape 3), par le plan UNIQUE de l'exercice (`planDeLaPropriete`, `scripts/sauvegarde/exercice.ts`) :
+# les rôles de la forme d'abord, puis les droits (`--no-owner`, jamais `--no-acl`), puis la propriété
+# REJOUÉE, dont celle du journal. Sans elle, la table du journal appartiendrait au superutilisateur de la
+# porte, et l'image N−1 démarrerait sur une base que la production n'a jamais.
+docker exec -i "$ID-base" pg_restore --schema-only -f - <"$TEMP/n-1.dump" >"$TEMP/schema-n-1.sql" ||
+  echouer "le schéma du vidage N−1 ne se lit pas."
+pnpm exec tsx scripts/sauvegarde/exercice.ts --plan-de-propriete avant \
+  <"$TEMP/schema-n-1.sql" >"$TEMP/plan-avant.sql" ||
+  echouer "vidage N−1 : le plan de la propriété refuse (rôle ou propriété hors de la forme)."
+pnpm exec tsx scripts/sauvegarde/exercice.ts --plan-de-propriete apres \
+  <"$TEMP/schema-n-1.sql" >"$TEMP/plan-apres.sql" ||
+  echouer "vidage N−1 : le plan de la propriété refuse (rôle ou propriété hors de la forme)."
 creer migree
+sql migree <"$TEMP/plan-avant.sql" >/dev/null
 docker exec -i "$ID-base" pg_restore -U porte --exit-on-error --no-owner -d migree <"$TEMP/n-1.dump"
+sql migree <"$TEMP/plan-apres.sql" >/dev/null
+[ -s "$TEMP/plan-apres.sql" ] ||
+  echouer "vidage N−1 : aucune propriété à rejouer — le journal y perdrait son propriétaire."
 migrer migree "$TEMP/n" "vidage N−1 semé"
 diff_vide migree "vidage N−1 migré"
 comptes migree >"$TEMP/apres.txt"
@@ -187,9 +204,26 @@ docker run -d --name "$ID-cache" --network "$ID" redis:7-alpine >/dev/null
 REQUISES=$(sed -n 's/^| `\([A-Z0-9_]*\)` | requise |.*/\1/p' "$TEMP/n-1/docs/env.md")
 [ -n "$REQUISES" ] || echouer "docs/env.md de la base ne déclare aucune variable requise : la lecture a échoué."
 secret() { od -An -N32 -tx1 /dev/urandom | tr -d ' \n'; }
+# QA-T62 (REQ-DM-024) : une image N−1 qui connaît le rôle d'exécution reçoit, comme la production et
+# la porte C, DEUX URL. La migration et le provisionnement passent sous le superutilisateur
+# ÉPHÉMÈRE ; le serveur, sous `partners_app`, dont le secret est tiré ici, masqué, puis CONSTATÉ par
+# l'entrée de l'image (échec fermé). Une image N−1 plus ancienne, dont `docs/env.md` ne déclare pas
+# `DATABASE_MIGRATION_URL`, garde son URL unique : c'est le code qu'elle porte.
+DEUX_URL=""
+grep -q '^| `DATABASE_MIGRATION_URL` |' "$TEMP/n-1/docs/env.md" && DEUX_URL=1
+SECRET_EXECUTION=$(secret)
+# Masqué AVANT tout usage, dans les journaux de la forge (aucun `set -x` dans ce script).
+echo "::add-mask::$SECRET_EXECUTION"
 for v in $REQUISES; do
   case "$v" in
-    DATABASE_URL) echo "DATABASE_URL=postgresql://porte:porte@$ID-base:5432/migree" ;;
+    DATABASE_URL)
+      if [ -n "$DEUX_URL" ]; then
+        echo "DATABASE_MIGRATION_URL=postgresql://porte:porte@$ID-base:5432/migree"
+        echo "DATABASE_URL=postgresql://partners_app:$SECRET_EXECUTION@$ID-base:5432/migree"
+      else
+        echo "DATABASE_URL=postgresql://porte:porte@$ID-base:5432/migree"
+      fi
+      ;;
     REDIS_URL) echo "REDIS_URL=redis://$ID-cache:6379" ;;
     *) echo "$v=$(secret)" ;;
   esac
@@ -197,7 +231,13 @@ done >"$TEMP/env"
 echo "NOTIFY_SINK=true" >>"$TEMP/env"
 echo "PARTNERS_ENV=porte-d" >>"$TEMP/env"
 debut=$(date +%s)
-docker run -d --name "$ID-app" --network "$ID" --env-file "$TEMP/env" "$IMAGE" >/dev/null
+# Le fichier porte le secret de `partners_app` : effacé dès le lancement, et avec `$TEMP` entier par
+# `nettoyer`, en toute sortie.
+docker run -d --name "$ID-app" --network "$ID" --env-file "$TEMP/env" "$IMAGE" >/dev/null || {
+  rm -f "$TEMP/env"
+  echouer "l'image N−1 ($COURT) ne se lance pas."
+}
+rm -f "$TEMP/env"
 while :; do
   ecoule=$(($(date +%s) - debut))
   if [ "$(docker inspect -f '{{.State.Running}}' "$ID-app" 2>/dev/null)" != "true" ]; then

@@ -108,6 +108,17 @@ export const SEUILS = {
     renvois: art('3.2'),
     verifieLe: '2026-10-01',
   },
+  // JUR-T31 — la réserve de la Société après un acte de l'Apporteur (art. 3.5 al. 4, option B de
+  // Williams du 2026-10-02). Le délai d'attente après libération (HYP-W19-CARENCE) est supprimé.
+  RESERVE_APRES_ACTE_APPORTEUR_JOURS: {
+    valeur: 30,
+    unite: 'jours',
+    source:
+      'décision de Williams du 2026-10-02 : autorisation de l’option B (art. 3.5 al. 4, « avec les ' +
+      'deux protections pour l’apporteur ») et réponse « A. » au point 6, réserve de 30 jours gardée',
+    renvois: art('3.5'),
+    verifieLe: '2026-10-03',
+  },
   CARENCE_REDEPOT_APRES_SECONDE_LIBERATION_JOURS: {
     valeur: 90,
     unite: 'jours',
@@ -346,7 +357,50 @@ export const SEUILS = {
     renvois: [],
     verifieLe: '2026-10-01',
   },
+  // DM-40 (REQ-DM-060, HYP-W20-DELAI) : la demande de confirmation part après ce délai, compté de
+  // l'horodatage serveur du dépôt ; pendant ce délai, l'apporteur peut annuler ou corriger.
+  DELAI_AVANT_ENVOI_CONFIRMATION_MINUTES: {
+    valeur: 15,
+    unite: 'minutes',
+    source: 'docs/chantiers/W20-confirmation-par-email.md §2, HYP-W20-DELAI (Williams, 2026-09-29)',
+    renvois: [],
+    verifieLe: '2026-10-02',
+  },
+  // DM-40 (REQ-DM-060, HYP-W20-SANS-REPONSE) : passé ce délai sans clic, le dépôt entre dans la
+  // liste d'appels ; jours ouvrés du calendrier de CPL-T13.
+  CONFIRMATION_SANS_REPONSE_JOURS_OUVRES: {
+    valeur: 5,
+    unite: 'jours_ouvres',
+    source: 'docs/chantiers/W20-confirmation-par-email.md §2, HYP-W20-SANS-REPONSE',
+    renvois: [],
+    verifieLe: '2026-10-02',
+  },
+  // DM-40 (REQ-DM-060, HYP-W20-REBOND) : au-delà, le dépôt reste dans la liste d'appels et l'action
+  // « Corriger l'adresse » disparaît.
+  CORRECTIONS_ADRESSE_MAX: {
+    valeur: 2,
+    unite: 'tentatives',
+    source: 'docs/chantiers/W20-confirmation-par-email.md §2, HYP-W20-REBOND',
+    renvois: [],
+    verifieLe: '2026-10-02',
+  },
 } as const satisfies Record<string, Seuil>;
+
+/**
+ * DM-40 (REQ-DM-060, HYP-W20-APPELS, REQ-GOV-031) : les CLÉS des paramètres d'appel dont la valeur
+ * vit HORS DU DÉPÔT. Le dépôt est public : publier la part des dépôts appelés dirait au fraudeur ses
+ * chances. La valeur arrive par la configuration de la plateforme ; ici, seule sa clé et sa source.
+ */
+export const PARAMETRES_HORS_DEPOT_CONFIRMATION = {
+  CONFIRMATION_TAUX_ECHANTILLON: {
+    valeur: 'hors-depot',
+    source: 'docs/chantiers/W20-confirmation-par-email.md, question 12, HYP-W20-APPELS',
+  },
+  CONFIRMATION_PREMIERS_DEPOTS_APPELES: {
+    valeur: 'hors-depot',
+    source: 'docs/chantiers/W20-confirmation-par-email.md, question 12, HYP-W20-APPELS',
+  },
+} as const;
 
 export type NomDeSeuil = keyof typeof SEUILS;
 
@@ -457,3 +511,16 @@ export function budgetUx(nom: string): BudgetUx {
     );
   return BUDGETS_UX[nom as NomDeBudgetUx];
 }
+
+/**
+ * W20 (UX-P1-41, HYP-W20-CONTEXTE) — la longueur maximale du contexte d'un dépôt, seule saisie libre
+ * de l'apporteur reprise dans l'e-mail au contact. Entrée isolée : ni un délai du contrat, ni un
+ * montant, ni un budget d'expérience. Condition (a) de la lentille sécurité (2026-10-02) : la ligne de
+ * contexte est BORNÉE par cette constante, à la saisie comme au rendu.
+ */
+export const CONTEXTE_DEPOT_CARACTERES_MAX = {
+  valeur: 140,
+  unite: 'caracteres',
+  source: 'docs/chantiers/W20-confirmation-par-email.md §2, HYP-W20-CONTEXTE',
+  verifieLe: '2026-10-02',
+} as const;

@@ -37,6 +37,10 @@ import {
   type EtatDisponibilite,
 } from '../../src/server/sante/disponibilite';
 import { NOMS_DES_SECRETS } from '../../src/lib/env';
+import {
+  ROLE_D_EXECUTION,
+  provisionnerRoleDExecution,
+} from '../../src/server/deploiement/role-d-execution';
 import { fichiersSuivis } from '../../scripts/lot/fichiers-suivis';
 import {
   RACINE,
@@ -52,6 +56,8 @@ const ENTREE = join(RACINE, 'docker-entrypoint.sh');
 const MIGRATIONS = join(RACINE, 'prisma', 'migrations');
 /** Un port où rien n'écoute : la base ou le cache « coupé », sans toucher au conteneur partagé. */
 const BASE_COUPEE = 'postgresql://partners@127.0.0.1:1/partners';
+/** La même base coupée, sous le rôle d'exécution et un secret bien formé : seul le CONSTAT peut refuser. */
+const BASE_COUPEE_SOUS_LE_ROLE = `postgresql://partners_app:${'a'.repeat(40)}@127.0.0.1:1/partners`;
 const CACHE_COUPE = 'redis://127.0.0.1:1';
 
 const BAC = mkdtempSync(join(tmpdir(), 'qat04-sondes-'));
@@ -125,11 +131,17 @@ describe('REQ-QA-019 — l’entrée de l’image migre en bloquant, et son éch
     expect(s.stderr).toContain('migration');
   });
 
-  it('REQ-QA-019 : SKIP_MIGRATE=1 saute la migration, le dit sur la sortie d’erreur, et lance le serveur', () => {
-    const s = lancerEntree(RACINE, { DATABASE_URL: BASE_COUPEE, SKIP_MIGRATE: '1' });
-    expect(s.code).toBe(0);
-    expect(s.stdout).toContain('serveur lance');
+  it('REQ-QA-019 : SKIP_MIGRATE=1 saute la migration et le dit ; sur une base coupée, le constat du rôle refuse, et le serveur n’est PAS lancé', () => {
+    // QA-T62 : le constat du rôle d'exécution tourne aussi sous SKIP_MIGRATE=1, en échec fermé. Sur
+    // une base coupée, rien ne prouve que le rôle est sain : le serveur ne démarre pas. La preuve
+    // « SKIP_MIGRATE=1 lance le serveur » est au bloc des pannes, sur une vraie base.
+    const s = lancerEntree(RACINE, { DATABASE_URL: BASE_COUPEE_SOUS_LE_ROLE, SKIP_MIGRATE: '1' });
+    expect(s.code).not.toBe(0);
+    expect(s.stdout).not.toContain('serveur lance');
     expect(s.stderr).toContain('SKIP_MIGRATE=1');
+    expect(s.stderr.indexOf("role d'execution")).toBeGreaterThan(
+      s.stderr.indexOf('SKIP_MIGRATE=1')
+    );
     // Toute autre valeur n'est PAS l'échappatoire : la migration est tentée, et elle échoue ici.
     const presque = lancerEntree(RACINE, { DATABASE_URL: BASE_COUPEE, SKIP_MIGRATE: 'true' });
     expect(presque.code).not.toBe(0);
@@ -284,6 +296,17 @@ describe('REQ-QA-020 — readyz nomme le sous-système en défaut, livez répond
     const { statut, corps } = await juger(sain, MIGRATIONS);
     expect(statut).toBe(200);
     expect(corps.enDefaut).toEqual([]);
+  });
+
+  it('REQ-QA-019 : SKIP_MIGRATE=1 sur une vraie base, sous partners_app provisionné — la migration est sautée, le constat passe, et le serveur est lancé', async () => {
+    const u = new URL(base.url);
+    u.username = ROLE_D_EXECUTION;
+    u.password = randomBytes(24).toString('hex');
+    await provisionnerRoleDExecution({ urlMigration: base.url, urlExecution: u.toString() });
+    const s = lancerEntree(RACINE, { DATABASE_URL: u.toString(), SKIP_MIGRATE: '1' });
+    expect(s.code).toBe(0);
+    expect(s.stderr).toContain('SKIP_MIGRATE=1');
+    expect(s.stdout).toContain('serveur lance');
   });
 
   it('REQ-QA-019 : une migration cassée contre une vraie base — l’entrée sort en non nul, sans lancer le serveur', () => {

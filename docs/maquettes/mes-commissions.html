@@ -9,32 +9,32 @@
       /* charte:debut — bloc commun aux maquettes (espace) : ne pas modifier ici seul, le propager aux autres fichiers */
       :root {
         color-scheme: light;
-        --fond: #f7f4ee;
+        --fond: #faf8f3;
         --surface: #ffffff;
-        --surface-2: #e9e3d9;
-        --texte: #1c1917;
-        --texte-doux: #57534e;
-        --bord: #8a8178;
-        --primaire: #c2410c;
+        --surface-2: #ddd1bf;
+        --texte: #2a2520;
+        --texte-doux: #5c544c;
+        --bord: #8a7f73;
+        --primaire: #c24a1b;
         --sur-primaire: #ffffff;
-        --lien: #a8390b;
-        --accent-fond: #fcebe2;
+        --lien: #a83c12;
+        --accent-fond: #fbe7dc;
         --accent-texte: #9a3412;
-        --nav-fond: #1c1917;
-        --nav-texte: #e7e5e4;
-        --nav-actif-fond: #c2410c;
+        --nav-fond: #2a2520;
+        --nav-texte: #f3ede4;
+        --nav-actif-fond: #c24a1b;
         --nav-actif-texte: #ffffff;
-        --ok-fond: #fce3d6;
-        --ok-texte: #9a3412;
-        --attente-fond: #f5ebcd;
-        --attente-texte: #6a4b00;
-        --bloque-fond: #fbe4e1;
-        --bloque-texte: #991b1b;
-        --info-fond: #e0eafb;
-        --info-texte: #1e40af;
+        --ok-fond: #dcfce7;
+        --ok-texte: #166534;
+        --attente-fond: #fef3c7;
+        --attente-texte: #854d0e;
+        --bloque-fond: #fee2e2;
+        --bloque-texte: #b91c1c;
+        --info-fond: #e6edfc;
+        --info-texte: #1a4dd9;
         --neutre-fond: #e7e5e4;
         --neutre-texte: #44403c;
-        --focus: #1d4ed8;
+        --focus: #1a4dd9;
         --atelier-fond: #e4ded3;
         --atelier-surface: #ffffff;
         --atelier-texte: #1c1917;
@@ -64,8 +64,8 @@
           --nav-texte: #e7e5e4;
           --nav-actif-fond: #f08a4b;
           --nav-actif-texte: #1c1917;
-          --ok-fond: #3d2112;
-          --ok-texte: #fdba8c;
+          --ok-fond: #13301f;
+          --ok-texte: #86efac;
           --attente-fond: #3a2f10;
           --attente-texte: #f3d37a;
           --bloque-fond: #3f1714;
@@ -104,8 +104,8 @@
         --nav-texte: #e7e5e4;
         --nav-actif-fond: #f08a4b;
         --nav-actif-texte: #1c1917;
-        --ok-fond: #3d2112;
-        --ok-texte: #fdba8c;
+        --ok-fond: #13301f;
+        --ok-texte: #86efac;
         --attente-fond: #3a2f10;
         --attente-texte: #f3d37a;
         --bloque-fond: #3f1714;
@@ -1138,6 +1138,45 @@
         text-align: center;
         color: var(--texte-doux);
       }
+      /* relief (UX-P1-49, version 2 retenue par Williams le 2026-10-03) : cartes et encarts
+         cadrés et ombrés, action terracotta, la barre d'onglets reste mocha */
+      .carte,
+      .chiffres a {
+        border: 1px solid var(--surface-2);
+        box-shadow:
+          0 1px 2px rgba(28, 25, 23, 0.1),
+          0 6px 16px rgba(42, 37, 32, 0.12);
+      }
+      .chiffres a {
+        border-left: 5px solid var(--primaire);
+      }
+      .chiffres .montant {
+        font-size: 28px;
+        color: var(--texte);
+      }
+      .app-tete {
+        background: var(--surface);
+        border-bottom: 1px solid var(--surface-2);
+        box-shadow: 0 2px 6px rgba(28, 25, 23, 0.06);
+      }
+      .app-titre {
+        font-size: 28px;
+        font-weight: 800;
+        letter-spacing: -0.01em;
+        padding-top: 12px;
+      }
+      .encart {
+        border: 1px solid color-mix(in srgb, var(--t) 30%, transparent);
+        border-left-width: 6px;
+        border-left-color: var(--t);
+        box-shadow: 0 2px 8px rgba(28, 25, 23, 0.06);
+      }
+      .pastille {
+        border: 1px solid color-mix(in srgb, var(--t) 35%, transparent);
+      }
+      .bouton {
+        box-shadow: 0 2px 6px rgba(194, 74, 27, 0.25);
+      }
 
       /* charte:fin */
     </style>
@@ -1331,8 +1370,8 @@
                           <p>
                             Cette prestation n’a pas de ligne dans la grille de votre contrat. La
                             situation est réglée <b>avant le 18 novembre 2026</b>. Sans décision
-                            d’Axion-IA d’ici là, vous touchez le taux de la grille publiée à la date
-                            de la vente.
+                            d’Axion-IA d’ici là, la commission due est celle que la grille publiée
+                            portait à la date de la vente.
                           </p>
                           <a
                             class="bouton lien"
@@ -1750,8 +1789,8 @@
                         <p>Cette prestation n’a pas de ligne dans la grille de votre contrat.</p>
                         <p>
                           La situation est réglée avant le <b>18 novembre 2026</b>. Sans décision
-                          d’Axion-IA d’ici là, vous touchez le taux de la grille publiée à la date
-                          de la vente.
+                          d’Axion-IA d’ici là, la commission due est celle que la grille publiée
+                          portait à la date de la vente.
                         </p>
                       </li>
                       <li class="carte">
@@ -1940,8 +1979,8 @@
                           <p>
                             Cette prestation n’a pas de ligne dans la grille de votre contrat. La
                             situation est réglée <b>avant le 18 novembre 2026</b>. Sans décision
-                            d’Axion-IA d’ici là, vous touchez le taux de la grille publiée à la date
-                            de la vente.
+                            d’Axion-IA d’ici là, la commission due est celle que la grille publiée
+                            portait à la date de la vente.
                           </p>
                           <a
                             class="bouton lien"
@@ -2169,7 +2208,7 @@
                       <h3>Pas encore de commission</h3>
                       <p>
                         Elles apparaissent ici quand une entreprise que vous avez déposée signe,
-                        puis quand elle paie. Vous verrez alors ce que vous touchez, quand, et d’où
+                        puis quand elle paie. Vous verrez alors ce qui vous revient, quand, et d’où
                         vient chaque montant.
                       </p>
                     </div>
@@ -2469,8 +2508,8 @@
                           <p>
                             Cette prestation n’a pas de ligne dans la grille de votre contrat. La
                             situation est réglée <b>avant le 18 novembre 2026</b>. Sans décision
-                            d’Axion-IA d’ici là, vous touchez le taux de la grille publiée à la date
-                            de la vente.
+                            d’Axion-IA d’ici là, la commission due est celle que la grille publiée
+                            portait à la date de la vente.
                           </p>
                           <a
                             class="bouton lien"

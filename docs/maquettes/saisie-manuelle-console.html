@@ -9,26 +9,26 @@
       /* charte:debut — bloc commun aux maquettes (console) : ne pas modifier ici seul, le propager aux autres fichiers */
       :root {
         color-scheme: light;
-        --fond: #f6f7f9;
+        --fond: #faf8f3;
         --surface: #ffffff;
-        --surface-2: #e6e9ee;
-        --texte: #1a1d23;
-        --texte-doux: #4a5261;
-        --bord: #737c8a;
-        --primaire: #1f4e8c;
+        --surface-2: #ddd1bf;
+        --texte: #2a2520;
+        --texte-doux: #5c544c;
+        --bord: #8a7f73;
+        --primaire: #c24a1b;
         --sur-primaire: #ffffff;
-        --lien: #1f4e8c;
+        --lien: #a83c12;
         --ok-fond: #e2f2e7;
         --ok-texte: #1b5e34;
         --attente-fond: #fdf0d5;
         --attente-texte: #704000;
-        --bloque-fond: #fbe6e6;
-        --bloque-texte: #8f1d1d;
-        --info-fond: #e3ecf8;
-        --info-texte: #12427a;
+        --bloque-fond: #fee2e2;
+        --bloque-texte: #b91c1c;
+        --info-fond: #e6edfc;
+        --info-texte: #1a4dd9;
         --neutre-fond: #eceef2;
         --neutre-texte: #4a5261;
-        --focus: #b34700;
+        --focus: #1a4dd9;
         --atelier-fond: #e4ded3;
         --atelier-surface: #ffffff;
         --atelier-texte: #1c1917;
@@ -888,8 +888,8 @@
       }
       .c-barre [aria-current='page'],
       .c-barre [aria-expanded='true'] {
-        background: var(--info-fond);
-        color: var(--info-texte);
+        background: var(--primaire);
+        color: var(--sur-primaire);
         font-weight: 800;
       }
       .c-menu {
@@ -974,6 +974,557 @@
         }
       }
 
+      /* barre latérale (UX-P1-50, aperçu validé par Williams le 2026-10-03) : au bureau, la barre
+         mocha à sections, l'entrée courante terracotta ; sous 768 px, la barre du bas reste et son
+         « Menu » ouvre la même barre en tiroir (REQ-UX-048). */
+      .app.avec-barre {
+        position: relative;
+      }
+      .s-barre {
+        --b-fond: #2a2520;
+        --b-texte: #ece4d8;
+        --b-doux: #b5a999;
+        --b-survol: #3a332c;
+        --b-actif: #4b2c1e;
+        background: var(--b-fond);
+        color: var(--b-texte);
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        padding: 16px 12px;
+        font-size: 15px;
+        overflow-y: auto;
+      }
+      .s-barre .ico {
+        width: 20px;
+        height: 20px;
+        stroke-width: 1.9;
+      }
+      .s-haut {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 0 4px 12px;
+        border-bottom: 1px solid rgba(236, 228, 216, 0.14);
+      }
+      .s-marque {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: #ffffff;
+        text-decoration: none;
+        min-height: 44px;
+      }
+      .s-logo {
+        display: grid;
+        place-items: center;
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        background: #c24a1b;
+        color: #ffffff;
+        font-weight: 800;
+      }
+      .s-nom {
+        display: flex;
+        flex-direction: column;
+        font-weight: 800;
+        line-height: 1.15;
+      }
+      .s-nom small {
+        font-weight: 600;
+        color: var(--b-doux);
+        font-size: 13px;
+      }
+      .s-replier,
+      .s-qui-bouton {
+        background: transparent;
+        border: 0;
+        color: inherit;
+        font: inherit;
+        cursor: pointer;
+      }
+      .s-replier {
+        display: grid;
+        place-items: center;
+        width: 44px;
+        height: 44px;
+        border-radius: 10px;
+        color: var(--b-doux);
+      }
+      .s-replier:hover {
+        background: var(--b-survol);
+        color: var(--b-texte);
+      }
+      .s-recherche {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 44px;
+        padding: 0 10px;
+        border-radius: 10px;
+        background: var(--b-survol);
+        color: var(--b-doux);
+      }
+      .s-recherche input {
+        flex: 1;
+        min-width: 0;
+        background: transparent;
+        border: 0;
+        color: var(--b-texte);
+        font: inherit;
+      }
+      .s-recherche input::placeholder {
+        color: var(--b-doux);
+      }
+      .s-recherche input:focus {
+        outline: none;
+      }
+      .s-recherche:focus-within {
+        outline: 2px solid #f0a37f;
+        outline-offset: 2px;
+      }
+      .s-recherche kbd {
+        font:
+          600 12px/1 ui-monospace,
+          Consolas,
+          monospace;
+        color: var(--b-doux);
+        border: 1px solid rgba(236, 228, 216, 0.25);
+        border-radius: 6px;
+        padding: 4px 6px;
+      }
+      .s-nav {
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+      }
+      .s-titre {
+        margin: 0 0 6px;
+        padding: 0 10px;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--b-doux);
+      }
+      .s-entree {
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-height: 44px;
+        padding: 0 10px 0 12px;
+        border-radius: 10px;
+        color: var(--b-texte);
+        text-decoration: none;
+      }
+      .s-entree:hover {
+        background: var(--b-survol);
+      }
+      .s-entree:focus-visible,
+      .s-qui-bouton:focus-visible,
+      .s-replier:focus-visible,
+      .s-marque:focus-visible {
+        outline: 2px solid #f0a37f;
+        outline-offset: 2px;
+      }
+      .s-entree[aria-current='page'] {
+        background: var(--b-actif);
+        color: #ffffff;
+        font-weight: 700;
+      }
+      .s-entree[aria-current='page']::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 8px;
+        bottom: 8px;
+        width: 3px;
+        border-radius: 3px;
+        background: #c24a1b;
+      }
+      .s-badge {
+        margin-left: auto;
+        min-width: 24px;
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: #c24a1b;
+        color: #ffffff;
+        font-size: 13px;
+        font-weight: 700;
+        text-align: center;
+      }
+      .s-compte {
+        position: relative;
+        margin-top: auto;
+        padding-top: 12px;
+        border-top: 1px solid rgba(236, 228, 216, 0.14);
+      }
+      .s-qui-bouton {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+        min-height: 52px;
+        padding: 4px 8px;
+        border-radius: 10px;
+        text-align: left;
+      }
+      .s-qui-bouton:hover {
+        background: var(--b-survol);
+      }
+      .s-avatar {
+        display: grid;
+        place-items: center;
+        flex: none;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: #3a332c;
+        color: #ffffff;
+        font-weight: 800;
+        font-size: 14px;
+        border: 1px solid rgba(236, 228, 216, 0.3);
+      }
+      .s-qui {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        line-height: 1.2;
+      }
+      .s-qui b {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .s-qui small {
+        color: var(--b-doux);
+        font-size: 13px;
+      }
+      .s-menu {
+        position: absolute;
+        bottom: calc(100% + 6px);
+        left: 0;
+        right: 0;
+        background: #ffffff;
+        color: var(--texte);
+        border-radius: 12px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+        padding: 6px;
+        z-index: 3;
+      }
+      .s-menu a {
+        display: flex;
+        align-items: center;
+        min-height: 44px;
+        padding: 0 12px;
+        border-radius: 8px;
+        color: var(--texte);
+        text-decoration: none;
+      }
+      .s-menu a:hover {
+        background: var(--fond);
+      }
+      .s-mobile,
+      .s-voile {
+        display: none;
+      }
+      @container (min-width: 768px) {
+        .app.avec-barre {
+          grid-template-columns: 264px minmax(0, 1fr) !important;
+        }
+        .app.avec-barre .c-tete.s-barre {
+          padding: 16px 12px;
+          gap: 14px;
+        }
+        .app.avec-barre.est-replie {
+          grid-template-columns: 76px minmax(0, 1fr) !important;
+        }
+        .est-replie .s-nom,
+        .est-replie .s-titre,
+        .est-replie .s-libelle,
+        .est-replie .s-recherche input,
+        .est-replie .s-recherche kbd,
+        .est-replie .s-qui,
+        .est-replie .s-qui-bouton > .ico {
+          display: none;
+        }
+        .est-replie .s-haut {
+          flex-direction: column;
+          padding-bottom: 8px;
+        }
+        .est-replie .s-recherche {
+          justify-content: center;
+          padding: 0;
+        }
+        .est-replie .s-entree {
+          justify-content: center;
+          padding: 0;
+        }
+        .est-replie .s-badge {
+          position: absolute;
+          top: 2px;
+          right: 2px;
+          min-width: 18px;
+          padding: 0 5px;
+          font-size: 11px;
+        }
+        .est-replie .s-qui-bouton {
+          justify-content: center;
+          padding: 4px 0;
+        }
+        /* Les infobulles du mode replié : le libellé, au survol comme au focus. */
+        .est-replie [data-libelle]:hover::after,
+        .est-replie [data-libelle]:focus-visible::after {
+          content: attr(data-libelle);
+          position: absolute;
+          left: calc(100% + 10px);
+          top: 50%;
+          transform: translateY(-50%);
+          background: #2a2520;
+          color: #ffffff;
+          border: 1px solid rgba(236, 228, 216, 0.3);
+          padding: 6px 10px;
+          border-radius: 8px;
+          font-size: 14px;
+          font-weight: 600;
+          white-space: nowrap;
+          z-index: 4;
+        }
+        .est-replie .s-qui-bouton {
+          position: relative;
+        }
+      }
+      @container (max-width: 767px) {
+        .ecran:not([hidden]) {
+          height: 100%;
+        }
+        .app.avec-barre {
+          min-height: 100%;
+        }
+        .app.avec-barre .s-mobile {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          min-height: 56px;
+          padding: 0 8px;
+          background: var(--surface);
+          border-bottom: 1px solid var(--surface-2);
+          font-weight: 800;
+        }
+        .app.avec-barre .c-tete.s-barre {
+          position: absolute;
+          top: 0;
+          bottom: 0;
+          left: 0;
+          width: min(300px, 86%);
+          z-index: 5;
+          transform: translateX(-105%);
+          transition: transform 0.2s ease;
+          box-shadow: 0 0 30px rgba(0, 0, 0, 0.35);
+          flex-wrap: nowrap;
+          align-items: stretch;
+        }
+        .app.avec-barre.est-ouvert .c-tete.s-barre {
+          transform: none;
+        }
+        .app.avec-barre.est-ouvert .s-voile {
+          display: block;
+          position: absolute;
+          inset: 0;
+          z-index: 4;
+          background: rgba(20, 16, 12, 0.5);
+        }
+        .s-replier {
+          display: none;
+        }
+      }
+      @container (min-width: 768px) {
+        .ecran:not([hidden]) {
+          height: 100%;
+        }
+        .app.avec-barre {
+          min-height: 100%;
+          display: grid;
+          grid-template-columns: 248px minmax(0, 1fr);
+          grid-template-rows: minmax(0, 1fr);
+        }
+        .app.avec-barre .c-tete {
+          grid-column: 1;
+          grid-row: 1;
+          flex-direction: column;
+          flex-wrap: nowrap;
+          align-items: stretch;
+          gap: 16px;
+          padding: 20px 14px;
+          background: #2a2520;
+          color: #f3ede4;
+          border-bottom: 0;
+        }
+        .app.avec-barre .defile {
+          grid-column: 2;
+          grid-row: 1;
+          padding: 24px 32px;
+        }
+        .app.avec-barre .c-barre {
+          display: none;
+        }
+        .c-titre {
+          font-size: 28px;
+          font-weight: 800;
+        }
+        .carte {
+          box-shadow:
+            0 1px 2px rgba(28, 25, 23, 0.08),
+            0 4px 12px rgba(28, 25, 23, 0.08);
+        }
+      }
+      /* La cible du champ de recherche est toute la hauteur de son étiquette (44 px). */
+      .s-recherche input {
+        align-self: stretch;
+      }
+      @container (min-width: 768px) {
+        .app.avec-barre .c-barre {
+          display: none;
+        }
+        .s-voile {
+          display: none !important;
+        }
+      }
+      @container (max-width: 767px) {
+        .app.avec-barre {
+          position: relative;
+        }
+        .app.avec-barre .c-barre {
+          display: flex;
+        }
+      }
+      /* epure:atelier — l'atelier replié par défaut (UX-P1-52) */
+      body:not(.atelier-ouvert) .atelier {
+        grid-template-columns: minmax(0, 1fr);
+      }
+      body:not(.atelier-ouvert) .etats,
+      body:not(.atelier-ouvert) .notes {
+        display: none;
+      }
+      body:not(.atelier-ouvert) .scene {
+        grid-column: 1;
+      }
+      .atelier-tete h1 small {
+        display: none;
+      }
+      .atelier-tete {
+        padding: 8px 20px;
+      }
+      .atelier-tete h1 {
+        font-size: 20px;
+      }
+      .fictif {
+        font-size: 14px;
+        padding: 4px 10px;
+      }
+      #voir-atelier[aria-pressed='true'] {
+        background: var(--atelier-texte);
+        color: var(--atelier-surface);
+      }
+      /* epure:ecran — contraste et hiérarchie (UX-P1-52). Mocha franc sur ivoire, carte
+         blanche détachée, bouton terracotta plein ; aucun gris pâle pour une information utile. */
+      .defile.centre {
+        background: var(--fond);
+      }
+      .defile.centre .panneau {
+        background: var(--surface);
+        border: 1px solid var(--surface-2);
+        border-radius: 16px;
+        box-shadow:
+          0 2px 4px rgba(42, 37, 32, 0.08),
+          0 12px 32px rgba(42, 37, 32, 0.12);
+        padding: 32px;
+        width: min(420px, 100%);
+        gap: 20px;
+        color: var(--texte);
+      }
+      .defile.centre .panneau h2 {
+        font-size: 28px;
+        font-weight: 800;
+        letter-spacing: -0.01em;
+      }
+      .defile.centre .panneau .etiquette {
+        font-weight: 700;
+        color: var(--texte);
+      }
+      .defile.centre .panneau input {
+        min-height: 52px;
+        font-size: 18px;
+        border: 2px solid var(--bord);
+      }
+      .defile.centre .panneau .c-bouton {
+        min-height: 52px;
+        font-size: 18px;
+        width: 100%;
+      }
+      .defile.centre .panneau .aide {
+        margin: 0;
+        font-size: 15px;
+        color: var(--texte-doux);
+        text-align: center;
+      }
+      .defile.centre .panneau .doux {
+        color: var(--texte-doux);
+      }
+      /* Toutes les pages : le fond ivoire, des cartes blanches détachées, un titre qui domine. */
+      .app .defile {
+        background: var(--fond);
+      }
+      .app .defile .carte {
+        background: var(--surface);
+        border: 1px solid var(--surface-2);
+        border-radius: 14px;
+        box-shadow:
+          0 1px 2px rgba(42, 37, 32, 0.08),
+          0 6px 18px rgba(42, 37, 32, 0.1);
+      }
+      .app .c-titre {
+        font-size: 30px;
+        font-weight: 800;
+        letter-spacing: -0.01em;
+        color: var(--texte);
+      }
+      .app .doux {
+        color: var(--texte-doux);
+      }
+      /* Un état vide ou un refus : une carte pleine, pas un cadre pointillé. */
+      .app .defile .vide {
+        background: var(--surface);
+        border: 1px solid var(--surface-2);
+        border-radius: 14px;
+        box-shadow:
+          0 1px 2px rgba(42, 37, 32, 0.08),
+          0 6px 18px rgba(42, 37, 32, 0.1);
+      }
+      /* Les tableaux sur une carte blanche, les adresses dans la police du texte. */
+      .app .defile table {
+        background: var(--surface);
+        border-radius: 12px;
+        box-shadow:
+          0 1px 2px rgba(42, 37, 32, 0.08),
+          0 6px 18px rgba(42, 37, 32, 0.1);
+      }
+      .app .mono {
+        font-family: inherit;
+        font-size: 15px;
+      }
+      .defile.centre .panneau .rangee {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px 16px;
+        margin: 0;
+      }
+
       /* charte:fin */
       .cache {
         position: absolute;
@@ -996,6 +1547,7 @@
       </h1>
       <p class="fictif">Données fictives : aucune entreprise, personne ni adresse réelles.</p>
       <div class="reglages" role="group" aria-label="Réglages de la maquette">
+        <button type="button" id="voir-atelier" aria-pressed="false">États et notes</button>
         <button type="button" data-largeur="1280" data-hauteur="800" aria-pressed="true">
           Bureau 1280
         </button>
@@ -1028,17 +1580,27 @@
             <section class="ecran" id="etat-nominal" aria-label="État : Formulaire">
               <p class="sans-js-titre">État : Formulaire</p>
               <div class="app avec-barre">
-                <header class="c-tete">
-                  <a class="c-marque" href="console-cadre.html#etat-admin"
-                    >Console Axion Partners</a
-                  >
-                  <nav class="c-nav" aria-label="Console">
-                    <a href="file-qualification.html#etat-nominal">Qualification</a>
-                    <a href="console-cadre.html#etat-admin" aria-current="page">Apporteurs</a>
-                    <a href="console-cadre.html#etat-admin">Prospects</a>
-                    <a href="utilisateurs-console.html#etat-liste">Administration</a>
-                  </nav>
-                  <label class="c-recherche"
+                <div class="s-mobile"><span class="s-mobile-nom">Console Axion Partners</span></div>
+                <div class="s-voile" hidden></div>
+                <header class="c-tete s-barre" id="barre-etat-nominal">
+                  <div class="s-haut">
+                    <a class="s-marque" href="console-cadre.html#etat-admin"
+                      ><span class="s-logo" aria-hidden="true">A</span
+                      ><span class="s-nom">Axion Partners<small>Console</small></span></a
+                    ><button
+                      type="button"
+                      class="s-replier"
+                      aria-pressed="false"
+                      aria-label="Replier la barre"
+                      title="Replier la barre"
+                    >
+                      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <rect x="3" y="4" width="18" height="16" rx="2" />
+                        <path d="M9 4v16M15 10l-2 2 2 2" />
+                      </svg>
+                    </button>
+                  </div>
+                  <label class="s-recherche"
                     ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                       <circle cx="11" cy="11" r="6" />
                       <path d="M20 20l-4.5-4.5" /></svg
@@ -1047,21 +1609,89 @@
                       type="search"
                       placeholder="Rechercher"
                       aria-label="Rechercher dans la console"
-                  /></label>
-                  <button type="button" class="c-compte" aria-haspopup="menu">
-                    <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                      <circle cx="12" cy="8" r="4" />
-                      <path d="M4 21c1-4 4.5-6 8-6s7 2 8 6" /></svg
-                    >Alice Admin-Exemple · <b>admin</b>
-                  </button>
+                    /><kbd>Ctrl K</kbd></label
+                  >
+                  <nav class="s-nav" aria-label="Console">
+                    <div class="s-section">
+                      <p class="s-titre">Au quotidien</p>
+                      <a
+                        class="s-entree"
+                        href="file-qualification.html#etat-nominal"
+                        data-libelle="Qualification"
+                        ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <path d="M9 4h6v3H9z" />
+                          <path d="M8 5H6v15h12V5h-2" />
+                          <path d="M9 13l2 2 4-4" /></svg
+                        ><span class="s-libelle">Qualification</span></a
+                      >
+                    </div>
+                    <div class="s-section">
+                      <p class="s-titre">Réseau</p>
+                      <a
+                        class="s-entree"
+                        href="console-cadre.html#etat-admin"
+                        aria-current="page"
+                        data-libelle="Apporteurs"
+                        ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <circle cx="9" cy="8" r="3.5" />
+                          <path d="M2.5 20c.6-3.6 3.3-5.5 6.5-5.5s5.9 1.9 6.5 5.5" />
+                          <path d="M16 4.6a3.5 3.5 0 0 1 0 6.8" />
+                          <path d="M18 14.8c2 .8 3.2 2.6 3.5 5.2" /></svg
+                        ><span class="s-libelle">Apporteurs</span></a
+                      ><a
+                        class="s-entree"
+                        href="console-cadre.html#etat-admin"
+                        data-libelle="Prospects"
+                        ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <path d="M4 20V6l8-3v17" />
+                          <path d="M12 9h8v11" />
+                          <path d="M7 9h2M7 13h2M15 13h2M15 16h2" />
+                          <path d="M2 20h20" /></svg
+                        ><span class="s-libelle">Prospects</span></a
+                      >
+                    </div>
+                    <div class="s-section">
+                      <p class="s-titre">Réglages</p>
+                      <a
+                        class="s-entree"
+                        href="utilisateurs-console.html#etat-liste"
+                        data-libelle="Administration"
+                        ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <circle cx="12" cy="12" r="3" />
+                          <path
+                            d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"
+                          /></svg
+                        ><span class="s-libelle">Administration</span></a
+                      >
+                    </div>
+                  </nav>
+                  <div class="s-compte">
+                    <button
+                      type="button"
+                      class="s-qui-bouton"
+                      aria-haspopup="menu"
+                      aria-expanded="false"
+                      data-libelle="Alice Admin-Exemple"
+                    >
+                      <span class="s-avatar" aria-hidden="true">AA</span
+                      ><span class="s-qui"><b>Alice Admin-Exemple</b><small>admin</small></span
+                      ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M8 10l4 4 4-4" />
+                      </svg>
+                    </button>
+                    <div class="s-menu" role="menu" hidden>
+                      <a role="menuitem" href="utilisateurs-console.html#etat-votre-role"
+                        >Votre rôle : admin</a
+                      ><a role="menuitem" href="connexion-console.html#etat-adresse"
+                        >Se déconnecter</a
+                      >
+                    </div>
+                  </div>
                 </header>
                 <div class="defile" tabindex="0" role="region" aria-label="Candidature">
                   <p><a href="apporteurs.html#etat-nominal">← Apporteurs</a></p>
                   <h2 class="c-titre">Saisir une candidature</h2>
-                  <p class="doux">
-                    Les mêmes champs que le formulaire de candidature du site, pour une candidature
-                    reçue autrement (salon, appel).
-                  </p>
+                  <p class="doux">Pour une candidature reçue hors du site.</p>
                   <form class="carte" aria-label="Saisir une candidature">
                     <label class="champ"
                       ><span class="etiquette">Nom et prénom</span
@@ -1099,7 +1729,7 @@
                   <a href="file-qualification.html#etat-nominal">Qualification</a>
                   <a href="console-cadre.html#etat-admin" aria-current="page">Apporteurs</a>
                   <a href="console-cadre.html#etat-admin">Prospects</a>
-                  <button type="button" aria-expanded="false" aria-controls="menu-admin">
+                  <button type="button" aria-expanded="false" aria-controls="barre-etat-nominal">
                     <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                       <path d="M4 7h16M4 12h16M4 17h16" /></svg
                     >Menu
@@ -1114,17 +1744,27 @@
             >
               <p class="sans-js-titre">État : Candidature enregistrée</p>
               <div class="app avec-barre">
-                <header class="c-tete">
-                  <a class="c-marque" href="console-cadre.html#etat-admin"
-                    >Console Axion Partners</a
-                  >
-                  <nav class="c-nav" aria-label="Console">
-                    <a href="file-qualification.html#etat-nominal">Qualification</a>
-                    <a href="console-cadre.html#etat-admin" aria-current="page">Apporteurs</a>
-                    <a href="console-cadre.html#etat-admin">Prospects</a>
-                    <a href="utilisateurs-console.html#etat-liste">Administration</a>
-                  </nav>
-                  <label class="c-recherche"
+                <div class="s-mobile"><span class="s-mobile-nom">Console Axion Partners</span></div>
+                <div class="s-voile" hidden></div>
+                <header class="c-tete s-barre" id="barre-etat-enregistree">
+                  <div class="s-haut">
+                    <a class="s-marque" href="console-cadre.html#etat-admin"
+                      ><span class="s-logo" aria-hidden="true">A</span
+                      ><span class="s-nom">Axion Partners<small>Console</small></span></a
+                    ><button
+                      type="button"
+                      class="s-replier"
+                      aria-pressed="false"
+                      aria-label="Replier la barre"
+                      title="Replier la barre"
+                    >
+                      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <rect x="3" y="4" width="18" height="16" rx="2" />
+                        <path d="M9 4v16M15 10l-2 2 2 2" />
+                      </svg>
+                    </button>
+                  </div>
+                  <label class="s-recherche"
                     ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                       <circle cx="11" cy="11" r="6" />
                       <path d="M20 20l-4.5-4.5" /></svg
@@ -1133,13 +1773,84 @@
                       type="search"
                       placeholder="Rechercher"
                       aria-label="Rechercher dans la console"
-                  /></label>
-                  <button type="button" class="c-compte" aria-haspopup="menu">
-                    <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                      <circle cx="12" cy="8" r="4" />
-                      <path d="M4 21c1-4 4.5-6 8-6s7 2 8 6" /></svg
-                    >Alice Admin-Exemple · <b>admin</b>
-                  </button>
+                    /><kbd>Ctrl K</kbd></label
+                  >
+                  <nav class="s-nav" aria-label="Console">
+                    <div class="s-section">
+                      <p class="s-titre">Au quotidien</p>
+                      <a
+                        class="s-entree"
+                        href="file-qualification.html#etat-nominal"
+                        data-libelle="Qualification"
+                        ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <path d="M9 4h6v3H9z" />
+                          <path d="M8 5H6v15h12V5h-2" />
+                          <path d="M9 13l2 2 4-4" /></svg
+                        ><span class="s-libelle">Qualification</span></a
+                      >
+                    </div>
+                    <div class="s-section">
+                      <p class="s-titre">Réseau</p>
+                      <a
+                        class="s-entree"
+                        href="console-cadre.html#etat-admin"
+                        aria-current="page"
+                        data-libelle="Apporteurs"
+                        ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <circle cx="9" cy="8" r="3.5" />
+                          <path d="M2.5 20c.6-3.6 3.3-5.5 6.5-5.5s5.9 1.9 6.5 5.5" />
+                          <path d="M16 4.6a3.5 3.5 0 0 1 0 6.8" />
+                          <path d="M18 14.8c2 .8 3.2 2.6 3.5 5.2" /></svg
+                        ><span class="s-libelle">Apporteurs</span></a
+                      ><a
+                        class="s-entree"
+                        href="console-cadre.html#etat-admin"
+                        data-libelle="Prospects"
+                        ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <path d="M4 20V6l8-3v17" />
+                          <path d="M12 9h8v11" />
+                          <path d="M7 9h2M7 13h2M15 13h2M15 16h2" />
+                          <path d="M2 20h20" /></svg
+                        ><span class="s-libelle">Prospects</span></a
+                      >
+                    </div>
+                    <div class="s-section">
+                      <p class="s-titre">Réglages</p>
+                      <a
+                        class="s-entree"
+                        href="utilisateurs-console.html#etat-liste"
+                        data-libelle="Administration"
+                        ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <circle cx="12" cy="12" r="3" />
+                          <path
+                            d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"
+                          /></svg
+                        ><span class="s-libelle">Administration</span></a
+                      >
+                    </div>
+                  </nav>
+                  <div class="s-compte">
+                    <button
+                      type="button"
+                      class="s-qui-bouton"
+                      aria-haspopup="menu"
+                      aria-expanded="false"
+                      data-libelle="Alice Admin-Exemple"
+                    >
+                      <span class="s-avatar" aria-hidden="true">AA</span
+                      ><span class="s-qui"><b>Alice Admin-Exemple</b><small>admin</small></span
+                      ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M8 10l4 4 4-4" />
+                      </svg>
+                    </button>
+                    <div class="s-menu" role="menu" hidden>
+                      <a role="menuitem" href="utilisateurs-console.html#etat-votre-role"
+                        >Votre rôle : admin</a
+                      ><a role="menuitem" href="connexion-console.html#etat-adresse"
+                        >Se déconnecter</a
+                      >
+                    </div>
+                  </div>
                 </header>
                 <div class="defile" tabindex="0" role="region" aria-label="Candidature">
                   <p><a href="apporteurs.html#etat-nominal">← Apporteurs</a></p>
@@ -1165,7 +1876,11 @@
                   <a href="file-qualification.html#etat-nominal">Qualification</a>
                   <a href="console-cadre.html#etat-admin" aria-current="page">Apporteurs</a>
                   <a href="console-cadre.html#etat-admin">Prospects</a>
-                  <button type="button" aria-expanded="false" aria-controls="menu-admin">
+                  <button
+                    type="button"
+                    aria-expanded="false"
+                    aria-controls="barre-etat-enregistree"
+                  >
                     <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                       <path d="M4 7h16M4 12h16M4 17h16" /></svg
                     >Menu
@@ -1176,17 +1891,27 @@
             <section class="ecran" id="etat-fichier-refuse" aria-label="État : Fichier refusé">
               <p class="sans-js-titre">État : Fichier refusé</p>
               <div class="app avec-barre">
-                <header class="c-tete">
-                  <a class="c-marque" href="console-cadre.html#etat-admin"
-                    >Console Axion Partners</a
-                  >
-                  <nav class="c-nav" aria-label="Console">
-                    <a href="file-qualification.html#etat-nominal">Qualification</a>
-                    <a href="console-cadre.html#etat-admin" aria-current="page">Apporteurs</a>
-                    <a href="console-cadre.html#etat-admin">Prospects</a>
-                    <a href="utilisateurs-console.html#etat-liste">Administration</a>
-                  </nav>
-                  <label class="c-recherche"
+                <div class="s-mobile"><span class="s-mobile-nom">Console Axion Partners</span></div>
+                <div class="s-voile" hidden></div>
+                <header class="c-tete s-barre" id="barre-etat-fichier-refuse">
+                  <div class="s-haut">
+                    <a class="s-marque" href="console-cadre.html#etat-admin"
+                      ><span class="s-logo" aria-hidden="true">A</span
+                      ><span class="s-nom">Axion Partners<small>Console</small></span></a
+                    ><button
+                      type="button"
+                      class="s-replier"
+                      aria-pressed="false"
+                      aria-label="Replier la barre"
+                      title="Replier la barre"
+                    >
+                      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <rect x="3" y="4" width="18" height="16" rx="2" />
+                        <path d="M9 4v16M15 10l-2 2 2 2" />
+                      </svg>
+                    </button>
+                  </div>
+                  <label class="s-recherche"
                     ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                       <circle cx="11" cy="11" r="6" />
                       <path d="M20 20l-4.5-4.5" /></svg
@@ -1195,13 +1920,84 @@
                       type="search"
                       placeholder="Rechercher"
                       aria-label="Rechercher dans la console"
-                  /></label>
-                  <button type="button" class="c-compte" aria-haspopup="menu">
-                    <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                      <circle cx="12" cy="8" r="4" />
-                      <path d="M4 21c1-4 4.5-6 8-6s7 2 8 6" /></svg
-                    >Alice Admin-Exemple · <b>admin</b>
-                  </button>
+                    /><kbd>Ctrl K</kbd></label
+                  >
+                  <nav class="s-nav" aria-label="Console">
+                    <div class="s-section">
+                      <p class="s-titre">Au quotidien</p>
+                      <a
+                        class="s-entree"
+                        href="file-qualification.html#etat-nominal"
+                        data-libelle="Qualification"
+                        ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <path d="M9 4h6v3H9z" />
+                          <path d="M8 5H6v15h12V5h-2" />
+                          <path d="M9 13l2 2 4-4" /></svg
+                        ><span class="s-libelle">Qualification</span></a
+                      >
+                    </div>
+                    <div class="s-section">
+                      <p class="s-titre">Réseau</p>
+                      <a
+                        class="s-entree"
+                        href="console-cadre.html#etat-admin"
+                        aria-current="page"
+                        data-libelle="Apporteurs"
+                        ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <circle cx="9" cy="8" r="3.5" />
+                          <path d="M2.5 20c.6-3.6 3.3-5.5 6.5-5.5s5.9 1.9 6.5 5.5" />
+                          <path d="M16 4.6a3.5 3.5 0 0 1 0 6.8" />
+                          <path d="M18 14.8c2 .8 3.2 2.6 3.5 5.2" /></svg
+                        ><span class="s-libelle">Apporteurs</span></a
+                      ><a
+                        class="s-entree"
+                        href="console-cadre.html#etat-admin"
+                        data-libelle="Prospects"
+                        ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <path d="M4 20V6l8-3v17" />
+                          <path d="M12 9h8v11" />
+                          <path d="M7 9h2M7 13h2M15 13h2M15 16h2" />
+                          <path d="M2 20h20" /></svg
+                        ><span class="s-libelle">Prospects</span></a
+                      >
+                    </div>
+                    <div class="s-section">
+                      <p class="s-titre">Réglages</p>
+                      <a
+                        class="s-entree"
+                        href="utilisateurs-console.html#etat-liste"
+                        data-libelle="Administration"
+                        ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <circle cx="12" cy="12" r="3" />
+                          <path
+                            d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"
+                          /></svg
+                        ><span class="s-libelle">Administration</span></a
+                      >
+                    </div>
+                  </nav>
+                  <div class="s-compte">
+                    <button
+                      type="button"
+                      class="s-qui-bouton"
+                      aria-haspopup="menu"
+                      aria-expanded="false"
+                      data-libelle="Alice Admin-Exemple"
+                    >
+                      <span class="s-avatar" aria-hidden="true">AA</span
+                      ><span class="s-qui"><b>Alice Admin-Exemple</b><small>admin</small></span
+                      ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M8 10l4 4 4-4" />
+                      </svg>
+                    </button>
+                    <div class="s-menu" role="menu" hidden>
+                      <a role="menuitem" href="utilisateurs-console.html#etat-votre-role"
+                        >Votre rôle : admin</a
+                      ><a role="menuitem" href="connexion-console.html#etat-adresse"
+                        >Se déconnecter</a
+                      >
+                    </div>
+                  </div>
                 </header>
                 <div class="defile" tabindex="0" role="region" aria-label="Candidature">
                   <p><a href="apporteurs.html#etat-nominal">← Apporteurs</a></p>
@@ -1251,7 +2047,11 @@
                   <a href="file-qualification.html#etat-nominal">Qualification</a>
                   <a href="console-cadre.html#etat-admin" aria-current="page">Apporteurs</a>
                   <a href="console-cadre.html#etat-admin">Prospects</a>
-                  <button type="button" aria-expanded="false" aria-controls="menu-admin">
+                  <button
+                    type="button"
+                    aria-expanded="false"
+                    aria-controls="barre-etat-fichier-refuse"
+                  >
                     <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                       <path d="M4 7h16M4 12h16M4 17h16" /></svg
                     >Menu
@@ -1262,17 +2062,27 @@
             <section class="ecran" id="etat-vide" aria-label="État : Formulaire vierge">
               <p class="sans-js-titre">État : Formulaire vierge</p>
               <div class="app avec-barre">
-                <header class="c-tete">
-                  <a class="c-marque" href="console-cadre.html#etat-admin"
-                    >Console Axion Partners</a
-                  >
-                  <nav class="c-nav" aria-label="Console">
-                    <a href="file-qualification.html#etat-nominal">Qualification</a>
-                    <a href="console-cadre.html#etat-admin" aria-current="page">Apporteurs</a>
-                    <a href="console-cadre.html#etat-admin">Prospects</a>
-                    <a href="utilisateurs-console.html#etat-liste">Administration</a>
-                  </nav>
-                  <label class="c-recherche"
+                <div class="s-mobile"><span class="s-mobile-nom">Console Axion Partners</span></div>
+                <div class="s-voile" hidden></div>
+                <header class="c-tete s-barre" id="barre-etat-vide">
+                  <div class="s-haut">
+                    <a class="s-marque" href="console-cadre.html#etat-admin"
+                      ><span class="s-logo" aria-hidden="true">A</span
+                      ><span class="s-nom">Axion Partners<small>Console</small></span></a
+                    ><button
+                      type="button"
+                      class="s-replier"
+                      aria-pressed="false"
+                      aria-label="Replier la barre"
+                      title="Replier la barre"
+                    >
+                      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <rect x="3" y="4" width="18" height="16" rx="2" />
+                        <path d="M9 4v16M15 10l-2 2 2 2" />
+                      </svg>
+                    </button>
+                  </div>
+                  <label class="s-recherche"
                     ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                       <circle cx="11" cy="11" r="6" />
                       <path d="M20 20l-4.5-4.5" /></svg
@@ -1281,13 +2091,84 @@
                       type="search"
                       placeholder="Rechercher"
                       aria-label="Rechercher dans la console"
-                  /></label>
-                  <button type="button" class="c-compte" aria-haspopup="menu">
-                    <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                      <circle cx="12" cy="8" r="4" />
-                      <path d="M4 21c1-4 4.5-6 8-6s7 2 8 6" /></svg
-                    >Alice Admin-Exemple · <b>admin</b>
-                  </button>
+                    /><kbd>Ctrl K</kbd></label
+                  >
+                  <nav class="s-nav" aria-label="Console">
+                    <div class="s-section">
+                      <p class="s-titre">Au quotidien</p>
+                      <a
+                        class="s-entree"
+                        href="file-qualification.html#etat-nominal"
+                        data-libelle="Qualification"
+                        ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <path d="M9 4h6v3H9z" />
+                          <path d="M8 5H6v15h12V5h-2" />
+                          <path d="M9 13l2 2 4-4" /></svg
+                        ><span class="s-libelle">Qualification</span></a
+                      >
+                    </div>
+                    <div class="s-section">
+                      <p class="s-titre">Réseau</p>
+                      <a
+                        class="s-entree"
+                        href="console-cadre.html#etat-admin"
+                        aria-current="page"
+                        data-libelle="Apporteurs"
+                        ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <circle cx="9" cy="8" r="3.5" />
+                          <path d="M2.5 20c.6-3.6 3.3-5.5 6.5-5.5s5.9 1.9 6.5 5.5" />
+                          <path d="M16 4.6a3.5 3.5 0 0 1 0 6.8" />
+                          <path d="M18 14.8c2 .8 3.2 2.6 3.5 5.2" /></svg
+                        ><span class="s-libelle">Apporteurs</span></a
+                      ><a
+                        class="s-entree"
+                        href="console-cadre.html#etat-admin"
+                        data-libelle="Prospects"
+                        ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <path d="M4 20V6l8-3v17" />
+                          <path d="M12 9h8v11" />
+                          <path d="M7 9h2M7 13h2M15 13h2M15 16h2" />
+                          <path d="M2 20h20" /></svg
+                        ><span class="s-libelle">Prospects</span></a
+                      >
+                    </div>
+                    <div class="s-section">
+                      <p class="s-titre">Réglages</p>
+                      <a
+                        class="s-entree"
+                        href="utilisateurs-console.html#etat-liste"
+                        data-libelle="Administration"
+                        ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <circle cx="12" cy="12" r="3" />
+                          <path
+                            d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"
+                          /></svg
+                        ><span class="s-libelle">Administration</span></a
+                      >
+                    </div>
+                  </nav>
+                  <div class="s-compte">
+                    <button
+                      type="button"
+                      class="s-qui-bouton"
+                      aria-haspopup="menu"
+                      aria-expanded="false"
+                      data-libelle="Alice Admin-Exemple"
+                    >
+                      <span class="s-avatar" aria-hidden="true">AA</span
+                      ><span class="s-qui"><b>Alice Admin-Exemple</b><small>admin</small></span
+                      ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M8 10l4 4 4-4" />
+                      </svg>
+                    </button>
+                    <div class="s-menu" role="menu" hidden>
+                      <a role="menuitem" href="utilisateurs-console.html#etat-votre-role"
+                        >Votre rôle : admin</a
+                      ><a role="menuitem" href="connexion-console.html#etat-adresse"
+                        >Se déconnecter</a
+                      >
+                    </div>
+                  </div>
                 </header>
                 <div class="defile" tabindex="0" role="region" aria-label="Candidature">
                   <p><a href="apporteurs.html#etat-nominal">← Apporteurs</a></p>
@@ -1330,7 +2211,7 @@
                   <a href="file-qualification.html#etat-nominal">Qualification</a>
                   <a href="console-cadre.html#etat-admin" aria-current="page">Apporteurs</a>
                   <a href="console-cadre.html#etat-admin">Prospects</a>
-                  <button type="button" aria-expanded="false" aria-controls="menu-admin">
+                  <button type="button" aria-expanded="false" aria-controls="barre-etat-vide">
                     <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                       <path d="M4 7h16M4 12h16M4 17h16" /></svg
                     >Menu
@@ -1341,17 +2222,27 @@
             <section class="ecran" id="etat-chargement" aria-label="État : Envoi en cours">
               <p class="sans-js-titre">État : Envoi en cours</p>
               <div class="app avec-barre">
-                <header class="c-tete">
-                  <a class="c-marque" href="console-cadre.html#etat-admin"
-                    >Console Axion Partners</a
-                  >
-                  <nav class="c-nav" aria-label="Console">
-                    <a href="file-qualification.html#etat-nominal">Qualification</a>
-                    <a href="console-cadre.html#etat-admin" aria-current="page">Apporteurs</a>
-                    <a href="console-cadre.html#etat-admin">Prospects</a>
-                    <a href="utilisateurs-console.html#etat-liste">Administration</a>
-                  </nav>
-                  <label class="c-recherche"
+                <div class="s-mobile"><span class="s-mobile-nom">Console Axion Partners</span></div>
+                <div class="s-voile" hidden></div>
+                <header class="c-tete s-barre" id="barre-etat-chargement">
+                  <div class="s-haut">
+                    <a class="s-marque" href="console-cadre.html#etat-admin"
+                      ><span class="s-logo" aria-hidden="true">A</span
+                      ><span class="s-nom">Axion Partners<small>Console</small></span></a
+                    ><button
+                      type="button"
+                      class="s-replier"
+                      aria-pressed="false"
+                      aria-label="Replier la barre"
+                      title="Replier la barre"
+                    >
+                      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <rect x="3" y="4" width="18" height="16" rx="2" />
+                        <path d="M9 4v16M15 10l-2 2 2 2" />
+                      </svg>
+                    </button>
+                  </div>
+                  <label class="s-recherche"
                     ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                       <circle cx="11" cy="11" r="6" />
                       <path d="M20 20l-4.5-4.5" /></svg
@@ -1360,13 +2251,84 @@
                       type="search"
                       placeholder="Rechercher"
                       aria-label="Rechercher dans la console"
-                  /></label>
-                  <button type="button" class="c-compte" aria-haspopup="menu">
-                    <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                      <circle cx="12" cy="8" r="4" />
-                      <path d="M4 21c1-4 4.5-6 8-6s7 2 8 6" /></svg
-                    >Alice Admin-Exemple · <b>admin</b>
-                  </button>
+                    /><kbd>Ctrl K</kbd></label
+                  >
+                  <nav class="s-nav" aria-label="Console">
+                    <div class="s-section">
+                      <p class="s-titre">Au quotidien</p>
+                      <a
+                        class="s-entree"
+                        href="file-qualification.html#etat-nominal"
+                        data-libelle="Qualification"
+                        ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <path d="M9 4h6v3H9z" />
+                          <path d="M8 5H6v15h12V5h-2" />
+                          <path d="M9 13l2 2 4-4" /></svg
+                        ><span class="s-libelle">Qualification</span></a
+                      >
+                    </div>
+                    <div class="s-section">
+                      <p class="s-titre">Réseau</p>
+                      <a
+                        class="s-entree"
+                        href="console-cadre.html#etat-admin"
+                        aria-current="page"
+                        data-libelle="Apporteurs"
+                        ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <circle cx="9" cy="8" r="3.5" />
+                          <path d="M2.5 20c.6-3.6 3.3-5.5 6.5-5.5s5.9 1.9 6.5 5.5" />
+                          <path d="M16 4.6a3.5 3.5 0 0 1 0 6.8" />
+                          <path d="M18 14.8c2 .8 3.2 2.6 3.5 5.2" /></svg
+                        ><span class="s-libelle">Apporteurs</span></a
+                      ><a
+                        class="s-entree"
+                        href="console-cadre.html#etat-admin"
+                        data-libelle="Prospects"
+                        ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <path d="M4 20V6l8-3v17" />
+                          <path d="M12 9h8v11" />
+                          <path d="M7 9h2M7 13h2M15 13h2M15 16h2" />
+                          <path d="M2 20h20" /></svg
+                        ><span class="s-libelle">Prospects</span></a
+                      >
+                    </div>
+                    <div class="s-section">
+                      <p class="s-titre">Réglages</p>
+                      <a
+                        class="s-entree"
+                        href="utilisateurs-console.html#etat-liste"
+                        data-libelle="Administration"
+                        ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <circle cx="12" cy="12" r="3" />
+                          <path
+                            d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"
+                          /></svg
+                        ><span class="s-libelle">Administration</span></a
+                      >
+                    </div>
+                  </nav>
+                  <div class="s-compte">
+                    <button
+                      type="button"
+                      class="s-qui-bouton"
+                      aria-haspopup="menu"
+                      aria-expanded="false"
+                      data-libelle="Alice Admin-Exemple"
+                    >
+                      <span class="s-avatar" aria-hidden="true">AA</span
+                      ><span class="s-qui"><b>Alice Admin-Exemple</b><small>admin</small></span
+                      ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M8 10l4 4 4-4" />
+                      </svg>
+                    </button>
+                    <div class="s-menu" role="menu" hidden>
+                      <a role="menuitem" href="utilisateurs-console.html#etat-votre-role"
+                        >Votre rôle : admin</a
+                      ><a role="menuitem" href="connexion-console.html#etat-adresse"
+                        >Se déconnecter</a
+                      >
+                    </div>
+                  </div>
                 </header>
                 <div class="defile" tabindex="0" role="region" aria-label="Candidature">
                   <p><a href="apporteurs.html#etat-nominal">← Apporteurs</a></p>
@@ -1378,7 +2340,7 @@
                   <a href="file-qualification.html#etat-nominal">Qualification</a>
                   <a href="console-cadre.html#etat-admin" aria-current="page">Apporteurs</a>
                   <a href="console-cadre.html#etat-admin">Prospects</a>
-                  <button type="button" aria-expanded="false" aria-controls="menu-admin">
+                  <button type="button" aria-expanded="false" aria-controls="barre-etat-chargement">
                     <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                       <path d="M4 7h16M4 12h16M4 17h16" /></svg
                     >Menu
@@ -1389,17 +2351,27 @@
             <section class="ecran" id="etat-erreur" aria-label="État : Candidature non enregistrée">
               <p class="sans-js-titre">État : Candidature non enregistrée</p>
               <div class="app avec-barre">
-                <header class="c-tete">
-                  <a class="c-marque" href="console-cadre.html#etat-admin"
-                    >Console Axion Partners</a
-                  >
-                  <nav class="c-nav" aria-label="Console">
-                    <a href="file-qualification.html#etat-nominal">Qualification</a>
-                    <a href="console-cadre.html#etat-admin" aria-current="page">Apporteurs</a>
-                    <a href="console-cadre.html#etat-admin">Prospects</a>
-                    <a href="utilisateurs-console.html#etat-liste">Administration</a>
-                  </nav>
-                  <label class="c-recherche"
+                <div class="s-mobile"><span class="s-mobile-nom">Console Axion Partners</span></div>
+                <div class="s-voile" hidden></div>
+                <header class="c-tete s-barre" id="barre-etat-erreur">
+                  <div class="s-haut">
+                    <a class="s-marque" href="console-cadre.html#etat-admin"
+                      ><span class="s-logo" aria-hidden="true">A</span
+                      ><span class="s-nom">Axion Partners<small>Console</small></span></a
+                    ><button
+                      type="button"
+                      class="s-replier"
+                      aria-pressed="false"
+                      aria-label="Replier la barre"
+                      title="Replier la barre"
+                    >
+                      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <rect x="3" y="4" width="18" height="16" rx="2" />
+                        <path d="M9 4v16M15 10l-2 2 2 2" />
+                      </svg>
+                    </button>
+                  </div>
+                  <label class="s-recherche"
                     ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                       <circle cx="11" cy="11" r="6" />
                       <path d="M20 20l-4.5-4.5" /></svg
@@ -1408,13 +2380,84 @@
                       type="search"
                       placeholder="Rechercher"
                       aria-label="Rechercher dans la console"
-                  /></label>
-                  <button type="button" class="c-compte" aria-haspopup="menu">
-                    <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                      <circle cx="12" cy="8" r="4" />
-                      <path d="M4 21c1-4 4.5-6 8-6s7 2 8 6" /></svg
-                    >Alice Admin-Exemple · <b>admin</b>
-                  </button>
+                    /><kbd>Ctrl K</kbd></label
+                  >
+                  <nav class="s-nav" aria-label="Console">
+                    <div class="s-section">
+                      <p class="s-titre">Au quotidien</p>
+                      <a
+                        class="s-entree"
+                        href="file-qualification.html#etat-nominal"
+                        data-libelle="Qualification"
+                        ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <path d="M9 4h6v3H9z" />
+                          <path d="M8 5H6v15h12V5h-2" />
+                          <path d="M9 13l2 2 4-4" /></svg
+                        ><span class="s-libelle">Qualification</span></a
+                      >
+                    </div>
+                    <div class="s-section">
+                      <p class="s-titre">Réseau</p>
+                      <a
+                        class="s-entree"
+                        href="console-cadre.html#etat-admin"
+                        aria-current="page"
+                        data-libelle="Apporteurs"
+                        ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <circle cx="9" cy="8" r="3.5" />
+                          <path d="M2.5 20c.6-3.6 3.3-5.5 6.5-5.5s5.9 1.9 6.5 5.5" />
+                          <path d="M16 4.6a3.5 3.5 0 0 1 0 6.8" />
+                          <path d="M18 14.8c2 .8 3.2 2.6 3.5 5.2" /></svg
+                        ><span class="s-libelle">Apporteurs</span></a
+                      ><a
+                        class="s-entree"
+                        href="console-cadre.html#etat-admin"
+                        data-libelle="Prospects"
+                        ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <path d="M4 20V6l8-3v17" />
+                          <path d="M12 9h8v11" />
+                          <path d="M7 9h2M7 13h2M15 13h2M15 16h2" />
+                          <path d="M2 20h20" /></svg
+                        ><span class="s-libelle">Prospects</span></a
+                      >
+                    </div>
+                    <div class="s-section">
+                      <p class="s-titre">Réglages</p>
+                      <a
+                        class="s-entree"
+                        href="utilisateurs-console.html#etat-liste"
+                        data-libelle="Administration"
+                        ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <circle cx="12" cy="12" r="3" />
+                          <path
+                            d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"
+                          /></svg
+                        ><span class="s-libelle">Administration</span></a
+                      >
+                    </div>
+                  </nav>
+                  <div class="s-compte">
+                    <button
+                      type="button"
+                      class="s-qui-bouton"
+                      aria-haspopup="menu"
+                      aria-expanded="false"
+                      data-libelle="Alice Admin-Exemple"
+                    >
+                      <span class="s-avatar" aria-hidden="true">AA</span
+                      ><span class="s-qui"><b>Alice Admin-Exemple</b><small>admin</small></span
+                      ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M8 10l4 4 4-4" />
+                      </svg>
+                    </button>
+                    <div class="s-menu" role="menu" hidden>
+                      <a role="menuitem" href="utilisateurs-console.html#etat-votre-role"
+                        >Votre rôle : admin</a
+                      ><a role="menuitem" href="connexion-console.html#etat-adresse"
+                        >Se déconnecter</a
+                      >
+                    </div>
+                  </div>
                 </header>
                 <div class="defile" tabindex="0" role="region" aria-label="Candidature">
                   <p><a href="apporteurs.html#etat-nominal">← Apporteurs</a></p>
@@ -1465,7 +2508,7 @@
                   <a href="file-qualification.html#etat-nominal">Qualification</a>
                   <a href="console-cadre.html#etat-admin" aria-current="page">Apporteurs</a>
                   <a href="console-cadre.html#etat-admin">Prospects</a>
-                  <button type="button" aria-expanded="false" aria-controls="menu-admin">
+                  <button type="button" aria-expanded="false" aria-controls="barre-etat-erreur">
                     <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                       <path d="M4 7h16M4 12h16M4 17h16" /></svg
                     >Menu
@@ -1476,16 +2519,27 @@
             <section class="ecran" id="etat-refuse" aria-label="État : Ouverte par un qualifieur">
               <p class="sans-js-titre">État : Ouverte par un qualifieur</p>
               <div class="app avec-barre">
-                <header class="c-tete">
-                  <a class="c-marque" href="console-cadre.html#etat-qualifieur"
-                    >Console Axion Partners</a
-                  >
-                  <nav class="c-nav" aria-label="Console">
-                    <a href="file-qualification.html#etat-nominal">Qualification</a>
-                    <a href="console-cadre.html#etat-qualifieur">Apporteurs</a>
-                    <a href="console-cadre.html#etat-qualifieur">Prospects</a>
-                  </nav>
-                  <label class="c-recherche"
+                <div class="s-mobile"><span class="s-mobile-nom">Console Axion Partners</span></div>
+                <div class="s-voile" hidden></div>
+                <header class="c-tete s-barre" id="barre-etat-refuse">
+                  <div class="s-haut">
+                    <a class="s-marque" href="console-cadre.html#etat-qualifieur"
+                      ><span class="s-logo" aria-hidden="true">A</span
+                      ><span class="s-nom">Axion Partners<small>Console</small></span></a
+                    ><button
+                      type="button"
+                      class="s-replier"
+                      aria-pressed="false"
+                      aria-label="Replier la barre"
+                      title="Replier la barre"
+                    >
+                      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <rect x="3" y="4" width="18" height="16" rx="2" />
+                        <path d="M9 4v16M15 10l-2 2 2 2" />
+                      </svg>
+                    </button>
+                  </div>
+                  <label class="s-recherche"
                     ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                       <circle cx="11" cy="11" r="6" />
                       <path d="M20 20l-4.5-4.5" /></svg
@@ -1494,13 +2548,69 @@
                       type="search"
                       placeholder="Rechercher"
                       aria-label="Rechercher dans la console"
-                  /></label>
-                  <button type="button" class="c-compte" aria-haspopup="menu">
-                    <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                      <circle cx="12" cy="8" r="4" />
-                      <path d="M4 21c1-4 4.5-6 8-6s7 2 8 6" /></svg
-                    >Sophie Démo · <b>qualifieur</b>
-                  </button>
+                    /><kbd>Ctrl K</kbd></label
+                  >
+                  <nav class="s-nav" aria-label="Console">
+                    <div class="s-section">
+                      <p class="s-titre">Au quotidien</p>
+                      <a
+                        class="s-entree"
+                        href="file-qualification.html#etat-nominal"
+                        data-libelle="Qualification"
+                        ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <path d="M9 4h6v3H9z" />
+                          <path d="M8 5H6v15h12V5h-2" />
+                          <path d="M9 13l2 2 4-4" /></svg
+                        ><span class="s-libelle">Qualification</span></a
+                      >
+                    </div>
+                    <div class="s-section">
+                      <p class="s-titre">Réseau</p>
+                      <a
+                        class="s-entree"
+                        href="console-cadre.html#etat-qualifieur"
+                        data-libelle="Apporteurs"
+                        ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <circle cx="9" cy="8" r="3.5" />
+                          <path d="M2.5 20c.6-3.6 3.3-5.5 6.5-5.5s5.9 1.9 6.5 5.5" />
+                          <path d="M16 4.6a3.5 3.5 0 0 1 0 6.8" />
+                          <path d="M18 14.8c2 .8 3.2 2.6 3.5 5.2" /></svg
+                        ><span class="s-libelle">Apporteurs</span></a
+                      ><a
+                        class="s-entree"
+                        href="console-cadre.html#etat-qualifieur"
+                        data-libelle="Prospects"
+                        ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <path d="M4 20V6l8-3v17" />
+                          <path d="M12 9h8v11" />
+                          <path d="M7 9h2M7 13h2M15 13h2M15 16h2" />
+                          <path d="M2 20h20" /></svg
+                        ><span class="s-libelle">Prospects</span></a
+                      >
+                    </div>
+                  </nav>
+                  <div class="s-compte">
+                    <button
+                      type="button"
+                      class="s-qui-bouton"
+                      aria-haspopup="menu"
+                      aria-expanded="false"
+                      data-libelle="Sophie Démo"
+                    >
+                      <span class="s-avatar" aria-hidden="true">SD</span
+                      ><span class="s-qui"><b>Sophie Démo</b><small>qualifieur</small></span
+                      ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M8 10l4 4 4-4" />
+                      </svg>
+                    </button>
+                    <div class="s-menu" role="menu" hidden>
+                      <a role="menuitem" href="utilisateurs-console.html#etat-votre-role"
+                        >Votre rôle : qualifieur</a
+                      ><a role="menuitem" href="connexion-console.html#etat-adresse"
+                        >Se déconnecter</a
+                      >
+                    </div>
+                  </div>
                 </header>
                 <div class="defile" tabindex="0" role="region" aria-label="Accès refusé">
                   <div class="encart info">
@@ -1525,7 +2635,7 @@
                   <a href="file-qualification.html#etat-nominal">Qualification</a>
                   <a href="console-cadre.html#etat-qualifieur">Apporteurs</a>
                   <a href="console-cadre.html#etat-qualifieur">Prospects</a>
-                  <button type="button" aria-expanded="false" aria-controls="menu-qualifieur">
+                  <button type="button" aria-expanded="false" aria-controls="barre-etat-refuse">
                     <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                       <path d="M4 7h16M4 12h16M4 17h16" /></svg
                     >Menu
@@ -1757,6 +2867,109 @@
           appliquer();
         });
         if (!window.matchMedia('(max-width: 640px)').matches) ajuster();
+      })();
+    </script>
+    <script>
+      // barre:script (UX-P1-50) — repli mémorisé, tiroir ouvert par le « Menu » de la barre du bas,
+      // menu du compte, Échap, raccourci Ctrl K / ⌘K.
+      (function () {
+        var CLE = 'maquettes-console-barre-repliee';
+        var lire = function () {
+          try {
+            return localStorage.getItem(CLE) === '1';
+          } catch (e) {
+            return false;
+          }
+        };
+        var ecrire = function (v) {
+          try {
+            localStorage.setItem(CLE, v ? '1' : '0');
+          } catch (e) {}
+        };
+        var apps = Array.prototype.slice.call(document.querySelectorAll('.app.avec-barre'));
+        var replier = function (v) {
+          apps.forEach(function (a) {
+            a.classList.toggle('est-replie', v);
+            var b = a.querySelector('.s-replier');
+            if (b) {
+              b.setAttribute('aria-pressed', String(v));
+              b.setAttribute('aria-label', v ? 'Déplier la barre' : 'Replier la barre');
+              b.title = b.getAttribute('aria-label');
+            }
+          });
+        };
+        replier(lire());
+        apps.forEach(function (a) {
+          var b = a.querySelector('.s-replier');
+          if (b)
+            b.addEventListener('click', function () {
+              var v = !a.classList.contains('est-replie');
+              replier(v);
+              ecrire(v);
+            });
+          var o = a.querySelector('.c-barre button[aria-controls^="barre-"]');
+          var voile = a.querySelector('.s-voile');
+          var fermer = function () {
+            a.classList.remove('est-ouvert');
+            if (o) o.setAttribute('aria-expanded', 'false');
+          };
+          if (o)
+            o.addEventListener('click', function () {
+              a.classList.add('est-ouvert');
+              o.setAttribute('aria-expanded', 'true');
+              var p = a.querySelector('.s-entree');
+              if (p) p.focus();
+            });
+          if (voile) {
+            voile.hidden = false;
+            voile.addEventListener('click', fermer);
+          }
+          var q = a.querySelector('.s-qui-bouton');
+          var m = a.querySelector('.s-menu');
+          if (q && m)
+            q.addEventListener('click', function () {
+              var ouvert = m.hidden;
+              m.hidden = !ouvert;
+              q.setAttribute('aria-expanded', String(ouvert));
+            });
+          a.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+              fermer();
+              if (m) {
+                m.hidden = true;
+                if (q) q.setAttribute('aria-expanded', 'false');
+              }
+            }
+          });
+        });
+        document.addEventListener('keydown', function (e) {
+          if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) {
+            var champ = document.querySelector('.ecran:not([hidden]) .s-recherche input');
+            if (champ) {
+              e.preventDefault();
+              champ.focus();
+            }
+          }
+        });
+      })();
+    </script>
+    <script>
+      // epure:atelier — ouvrir ou replier la liste des états et les notes, puis réajuster l'écran.
+      (function () {
+        var b = document.getElementById('voir-atelier');
+        var ajuster = function () {
+          var z = document.getElementById('zoom-ajuster');
+          if (z) z.click();
+        };
+        if (b)
+          b.addEventListener('click', function () {
+            var ouvert = document.body.classList.toggle('atelier-ouvert');
+            b.setAttribute('aria-pressed', String(ouvert));
+            setTimeout(ajuster, 0);
+          });
+        window.addEventListener('load', function () {
+          setTimeout(ajuster, 50);
+        });
       })();
     </script>
   </body>

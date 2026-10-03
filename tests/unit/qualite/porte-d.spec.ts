@@ -255,3 +255,84 @@ describe('REQ-QA-021 — le vidage N−1 est SEMÉ, pas vide', () => {
     ).toBe(true);
   });
 });
+
+describe('REQ-QA-023 — QA-T70 : la porte D rejoue la propriété comme le runbook de restauration', () => {
+  // Le CODE seul : un commentaire qui cite une option ou une étape ne compte pas.
+  const porte = readFileSync('scripts/gates/gate-d.sh', 'utf8')
+    .split('\n')
+    .filter((l) => !l.trimStart().startsWith('#'))
+    .join('\n');
+  const position = (motif: string) => {
+    const i = porte.indexOf(motif);
+    expect(i, motif).toBeGreaterThanOrEqual(0);
+    return i;
+  };
+
+  it('REQ-QA-023 : TÉMOIN — rôles AVANT la restauration, --no-owner, propriété APRÈS, puis la migration de la PR', () => {
+    // Les deux moments du plan sont CALCULÉS par la fonction unique de l'exercice ; c'est leur
+    // APPLICATION qui encadre la restauration.
+    position('scripts/sauvegarde/exercice.ts --plan-de-propriete avant');
+    position('scripts/sauvegarde/exercice.ts --plan-de-propriete apres');
+    const avant = position('sql migree <"$TEMP/plan-avant.sql"');
+    const restauration = position('pg_restore -U porte --exit-on-error --no-owner -d migree');
+    const apres = position('sql migree <"$TEMP/plan-apres.sql"');
+    const migration = position('migrer migree');
+    expect(avant).toBeLessThan(restauration);
+    expect(restauration).toBeLessThan(apres);
+    expect(apres).toBeLessThan(migration);
+  });
+
+  it('REQ-QA-023 : les droits sont restaurés (jamais --no-acl), et le plan est lu dans le SCHÉMA du vidage', () => {
+    expect(porte).not.toContain('--no-acl');
+    expect(porte).toContain('pg_restore --schema-only -f -');
+  });
+});
+
+describe('REQ-QA-021 — SEC-45 : deux colonnes au même motif reçoivent des valeurs DISTINCTES', () => {
+  it('REQ-QA-021 — le rang choisit un autre caractère de la classe, sans sortir du motif', () => {
+    const motif = '^[0-9a-f]{64}$';
+    expect(chaineQuiSatisfait(motif)).toBe('0'.repeat(64));
+    expect(chaineQuiSatisfait(motif, 1)).toBe('1'.repeat(64));
+    expect(chaineQuiSatisfait(motif, 1)).toMatch(new RegExp(motif));
+    expect(chaineQuiSatisfait('^x[a-c]$', 4)).toBe('xb');
+  });
+
+  it('REQ-QA-021 — TÉMOIN : deux empreintes au même motif, liées et différentes par CHECK, se sèment chacune de sa valeur', () => {
+    const colonne = (nom: string, nonNul: boolean) => ({
+      table: 'emissions',
+      colonne: nom,
+      type: 'character(64)',
+      nonNul,
+      defaut: false,
+      valeurs: null,
+    });
+    const check = (definition: string, colonnes: string[]) => ({
+      table: 'emissions',
+      genre: 'c' as const,
+      definition,
+      colonnes,
+      cible: null,
+      colonnesCibles: null,
+    });
+    const s = semis({
+      colonnes: [colonne('jeton_oui_hash', false), colonne('jeton_non_hash', false)],
+      contraintes: [
+        check("CHECK (((jeton_oui_hash)::text ~ '^[0-9a-f]{64}$'::text))", ['jeton_oui_hash']),
+        check("CHECK (((jeton_non_hash)::text ~ '^[0-9a-f]{64}$'::text))", ['jeton_non_hash']),
+        check('CHECK (((jeton_oui_hash IS NULL) = (jeton_non_hash IS NULL)))', [
+          'jeton_oui_hash',
+          'jeton_non_hash',
+        ]),
+        check('CHECK ((jeton_oui_hash <> jeton_non_hash))', ['jeton_oui_hash', 'jeton_non_hash']),
+      ],
+    });
+    const remplies = s.sql
+      .split('\n')
+      .filter((l) => l.startsWith('INSERT') && !l.includes('SELECT NULL, NULL'));
+    expect(remplies.length).toBeGreaterThan(0);
+    for (const l of remplies) {
+      expect(l, l).toContain(`'${'0'.repeat(64)}'`);
+      expect(l, l).toContain(`'${'1'.repeat(64)}'`);
+    }
+  });
+});

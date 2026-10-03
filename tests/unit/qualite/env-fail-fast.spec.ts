@@ -331,6 +331,9 @@ describe('REQ-QA-030 — le module rechargé : les listes dérivées du schéma,
     const m = await envRecharge();
     expect(m.NOMS_DE_CONFIGURATION).toEqual([
       'DATABASE_URL',
+      // QA-T62 : l'URL du rôle propriétaire, réservée à la migration ; requise en production par
+      // l'entrée de l'image, jamais facultative pour la vue.
+      'DATABASE_MIGRATION_URL',
       'REDIS_URL',
       'NOTIFY_SINK',
       'PARTNERS_ENV',
@@ -361,7 +364,7 @@ describe('REQ-QA-030 — le module rechargé : les listes dérivées du schéma,
     // Douze secrets toujours exigés, lus au schéma : leurs noms ne sont pas retapés ici.
     expect(m.NOMS_DES_SECRETS).toHaveLength(12);
     expect(m.NOMS_DES_SECRETS).toContain(CLE_HEX);
-    expect(m.NOMS_DES_VARIABLES).toHaveLength(26);
+    expect(m.NOMS_DES_VARIABLES).toHaveLength(27);
     expect(m.NOMS_DES_VARIABLES).toEqual([
       ...m.NOMS_DES_SECRETS,
       ...m.NOMS_DES_SECRETS_CONDITIONNELS,
@@ -731,5 +734,61 @@ describe('REQ-QA-030 — l’identifiant du salon d’alerte, rechargé, à deux
   ])('REQ-QA-030 : TÉMOIN — %s est refusé', async (_q, salon) => {
     const m = await envRecharge();
     expect(m.schemaSecretsConditionnels.safeParse({ TELEGRAM_CHAT_ID: salon }).success).toBe(false);
+  });
+});
+
+describe('REQ-QA-030 — le module rechargé : chaque refus à son code exact (mutants nommés de QA-T62)', () => {
+  it.each([
+    ['un salon d’alerte hors forme', 'TELEGRAM_CHAT_ID', 'abc'],
+    ['une clé de chiffrement non hexadécimale', CLE_HEX, 'z'.repeat(64)],
+    ['une URL de base illisible', 'DATABASE_URL', 'pas une url'],
+    ['une URL de base au mauvais protocole', 'DATABASE_URL', 'mysql://partners@localhost/partners'],
+    [
+      'une URL de migration au mauvais protocole',
+      'DATABASE_MIGRATION_URL',
+      'mysql://proprio@localhost/partners',
+    ],
+  ])(
+    'REQ-QA-030 : TÉMOIN — %s est refusée `format_invalide`, ce motif exactement',
+    async (_q, nom, valeur) => {
+      const m = await envRecharge();
+      expect(lignesDe(m, { ...demarrageFactice(m), [nom]: valeur })).toEqual([
+        `${nom} : format_invalide`,
+      ]);
+    }
+  );
+
+  it.each([
+    'postgresql://proprio@localhost:5432/partners',
+    'postgres://proprio@localhost:5432/partners',
+  ])('REQ-QA-030 : l’URL de migration admet les deux protocoles de Postgres (%s)', async (url) => {
+    const m = await envRecharge();
+    expect(lignesDe(m, { ...demarrageFactice(m), DATABASE_MIGRATION_URL: url })).toEqual([]);
+  });
+
+  it('REQ-QA-030 : TÉMOIN — une échéance de rotation suivie d’un caractère de plus est refusée (instant ancré)', async () => {
+    const m = await envRecharge();
+    const nom = m.NOMS_EN_ROTATION[0]!;
+    const { cle, echeance } = m.variablesDeRotation(nom);
+    const r = m.lireTrousseaux(
+      {
+        ...demarrageFactice(m),
+        [cle]: valeurFactice('precedente'),
+        [echeance]: '2026-10-02T11:00:00Z!',
+      },
+      INSTANT_DE_REFERENCE
+    );
+    expect(r.ok ? [] : r.refus.map(m.formaterRefus)).toEqual([`${echeance} : format_invalide`]);
+  });
+
+  it('REQ-QA-030 : TÉMOIN — une échéance sans sa clé précédente nomme la clé `absente`, elle seule', async () => {
+    const m = await envRecharge();
+    const nom = m.NOMS_EN_ROTATION[0]!;
+    const { cle, echeance } = m.variablesDeRotation(nom);
+    const r = m.lireTrousseaux(
+      { ...demarrageFactice(m), [echeance]: '2026-10-02T11:00:00Z' },
+      INSTANT_DE_REFERENCE
+    );
+    expect(r.ok ? [] : r.refus.map(m.formaterRefus)).toEqual([`${cle} : absente`]);
   });
 });
