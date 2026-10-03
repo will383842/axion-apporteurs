@@ -2,8 +2,8 @@
 // @req REQ-UX-002
 /**
  * UX-P0-01b — les libellés que l'apporteur lit pour chacun des treize états de son dépôt
- * (`src/content/micro-copy/espace/etats-attribution.ts`). Suite d'UX-P0-01, livrée une fois les
- * états livrés par DM-07.
+ * (`src/content/micro-copy/espace/etats-attribution.ts`), écrits une fois les états posés dans
+ * le schéma.
  *
  * CE QU'IL GARDE :
  *   (1) CHAQUE état de l'enum a son libellé visible et sa phrase d'explication ; la liste des états
@@ -77,5 +77,44 @@ describe('REQ-UX-002 — (2) aucun libellé ne nomme l’autre apporteur', () =>
     ])
       expect(faute).toMatch(NOMME_L_OCCUPANT);
     expect('Votre dépôt est le premier en attente.').not.toMatch(NOMME_L_OCCUPANT);
+  });
+});
+
+describe('REQ-UX-002 — les textes tranchés par la juriste (2026-10-03)', () => {
+  it('REQ-UX-002 : TÉMOIN — mot pour mot, la confirmation en cours, la non-confirmation, l’annulation, la fin sans suite, la fin de contrat et la fin du droit', () => {
+    expect(LIBELLES_DES_ETATS.provisoire).toEqual({
+      libelle: 'En cours de confirmation',
+      phrase:
+        'Votre dépôt est enregistré. Axion-IA demande à l’entreprise de confirmer votre échange.',
+    });
+    expect(LIBELLES_DES_ETATS.invalidee).toEqual({
+      libelle: 'Non confirmée',
+      phrase: 'Ce dépôt a pris fin. Le motif vous a été indiqué par notification.',
+    });
+    expect(LIBELLES_DES_ETATS.annulee).toEqual({
+      libelle: 'Annulée',
+      phrase: 'Ce dépôt est annulé. Le motif vous a été indiqué par notification.',
+    });
+    expect(LIBELLES_DES_ETATS.perimee).toEqual({
+      libelle: 'Terminée sans suite',
+      phrase:
+        'Aucun rendez-vous, devis ni commande dans le délai prévu par le contrat : ce dépôt a pris fin. L’entreprise est de nouveau disponible.',
+    });
+    expect(LIBELLES_DES_ETATS.figee_resiliation).toEqual({
+      libelle: 'Contrat terminé',
+      phrase: 'Votre contrat a pris fin.',
+    });
+    expect(LIBELLES_DES_ETATS.expiree).toEqual({
+      libelle: 'Droit à commission terminé',
+      phrase:
+        'Ce dépôt a pris fin le {dateFin} : sa durée est écoulée, ou votre contrat a pris fin.',
+    });
+  });
+
+  it('REQ-UX-002 : TÉMOIN — aucun badge ne dit le motif ni n’accuse, ni ne promet un nouveau dépôt « pour cette fois »', () => {
+    for (const e of ETATS_ATTRIBUTION) {
+      const t = `${LIBELLES_DES_ETATS[e].libelle} ${LIBELLES_DES_ETATS[e].phrase}`;
+      expect(t, e).not.toMatch(/faute|anomalie|fraude|sanction|pour cette fois/i);
+    }
   });
 });
