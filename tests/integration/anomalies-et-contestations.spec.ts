@@ -161,6 +161,18 @@ async function refus(promesse: Promise<unknown>): Promise<string> {
   throw new Error('aucun refus');
 }
 
+/**
+ * Le SQLSTATE d'une erreur de Postgres remontée par Prisma, lu sur le CODE (`meta.code`, ou la
+ * mention « Code: » suivie du code du message brut), jamais sur un texte qui dépend de la langue du
+ * serveur.
+ */
+function codeSql(e: unknown): string | null {
+  const meta = (e as { meta?: { code?: string } } | null)?.meta?.code;
+  if (meta) return meta;
+  const m = /Code: `([0-9A-Z]{5})`/.exec(String((e as { message?: string } | null)?.message ?? ''));
+  return m?.[1] ?? null;
+}
+
 /** Une écriture du SERVEUR, sous `partners_app`. */
 const ecrire = (sql: string, ...valeurs: unknown[]) => app.$executeRawUnsafe(sql, ...valeurs);
 /** Une troncature, sous le seul rôle qui pourrait tronquer. */
@@ -619,14 +631,27 @@ describe('REQ-DM-034 — rattachements_manuels : justifiés, antérieurs au dép
     return new Date(dateDeLaPiece({ annee: jour[0], mois: jour[1], jour: jour[2] }));
   };
 
-  it('REQ-DM-034 : TÉMOIN — la référence de la source : sans chiffre, avec un espace, ou de 65 caractères, refusée (rattachements_manuels_source_ref_forme)', async () => {
+  it('REQ-DM-034 : TÉMOIN — la référence de la source : sans chiffre, ou avec un espace, refusée (rattachements_manuels_source_ref_forme)', async () => {
     const { id, deposeeAt } = await uneAttribution();
-    for (const ref of ['Dupont', 'kbis 2019', `${'x'.repeat(64)}1`]) {
+    for (const ref of ['Dupont', 'kbis 2019']) {
       expect(
         await refus(unRattachement({ attributionId: id, lienAt: deposeeAt, sourceRef: ref })),
         ref
-      ).toMatch(/rattachements_manuels_source_ref_forme|value too long/);
+      ).toContain('rattachements_manuels_source_ref_forme');
     }
+  });
+
+  it('REQ-DM-034 : TÉMOIN — une référence de 65 caractères est refusée par son TYPE, VARCHAR(64), SQLSTATE 22001, lu sur le code', async () => {
+    const { id, deposeeAt } = await uneAttribution();
+    let erreur: unknown = null;
+    await unRattachement({
+      attributionId: id,
+      lienAt: deposeeAt,
+      sourceRef: `${'x'.repeat(64)}1`,
+    }).catch((e: unknown) => {
+      erreur = e;
+    });
+    expect(codeSql(erreur)).toBe('22001');
   });
 
   it('REQ-DM-034 : TÉMOIN — une source hors de la liste fermée est refusée par l’enum ; le registre des bénéficiaires n’en est pas', async () => {
