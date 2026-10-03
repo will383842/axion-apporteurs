@@ -228,7 +228,9 @@ conservées en attente par entreprise, dans l'ordre de leur horodatage ; au-del�
 conservée et l'Apporteur en est informé. Lorsque l'attribution en cours, ou la prise en charge de
 l'entreprise par la Société ou ses préposés, prend fin, l'Apporteur dont la déclaration est en attente au
 premier rang en est informé et dispose de quinze jours pour déclarer à nouveau l'entreprise ; à défaut, sa
-déclaration est effacée et l'entreprise redevient librement déclarable par tous. Aucune attribution ne naît
+déclaration est effacée et l'entreprise redevient librement déclarable par tous. Ce délai ne court pas tant que
+l'enregistrement des déclarations de l'Apporteur est suspendu en application de l'article 3.7 ; il
+reprend, pour sa durée restante, à la fin de la suspension. Aucune attribution ne naît
 d'une déclaration conservée sans nouvelle déclaration de l'Apporteur. Une déclaration en attente s'éteint
 en tout état de cause douze mois après son enregistrement.**
 
