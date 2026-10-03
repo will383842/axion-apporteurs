@@ -218,6 +218,17 @@ export async function actionEspace<T>(
   return { ok: true, valeur: await corps(verdict.session) };
 }
 
+/**
+ * Le relèvement, UNE règle (REQ-SEC-004) : le lien qui a ouvert la session a été consommé il y a
+ * strictement moins de `releveMs`. Sans lien consommé, jamais. La confirmation renforcée d'un
+ * appareil inconnu (SEC-55, `appareil.ts`) est ce même relèvement.
+ */
+export function sessionRelevee(session: SessionOuverte, maintenant: Date): boolean {
+  const consommeAt = session.lienConsommeAt;
+  const age = consommeAt === null ? Infinity : maintenant.getTime() - consommeAt.getTime();
+  return age < DUREES_AUTH.releveMs.valeur;
+}
+
 /** La session de la requête, RELEVÉE : à appeler dans toute action qui modifie une coordonnée. */
 export async function exigerSessionRelevee(
   jeton: string | undefined,
@@ -225,9 +236,7 @@ export async function exigerSessionRelevee(
 ): Promise<VerdictDeSession> {
   const verdict = await exigerSession(jeton, ports);
   if (!verdict.ok) return verdict;
-  const consommeAt = verdict.session.lienConsommeAt;
-  const age = consommeAt === null ? Infinity : ports.maintenant().getTime() - consommeAt.getTime();
-  return age < DUREES_AUTH.releveMs.valeur ? verdict : refus('releve_requis');
+  return sessionRelevee(verdict.session, ports.maintenant()) ? verdict : refus('releve_requis');
 }
 
 // ── énumérer et révoquer ─────────────────────────────────────────────────────────────────────────
