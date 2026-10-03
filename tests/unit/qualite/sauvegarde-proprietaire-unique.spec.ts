@@ -75,11 +75,20 @@ describe('REQ-QA-023 — au plus UN propriétaire source dans le vidage', () => 
   });
 
   it('REQ-QA-023 : l’exercice juge les rôles AVANT de créer un rôle ou de restaurer quoi que ce soit', () => {
+    // QA-T70 : la création des rôles vit dans le plan UNIQUE (`planDeLaPropriete`), partagé avec la
+    // porte D. L'ordre se juge donc en deux temps : le plan juge les rôles AVANT de rendre la moindre
+    // création, et l'exercice obtient ce plan AVANT de restaurer.
     const source = readFileSync('scripts/sauvegarde/exercice.ts', 'utf8');
-    const corps = source.slice(source.indexOf('export async function exercer('));
-    const juge = corps.indexOf('jugerLesRoles(');
+    const plan = source.slice(
+      source.indexOf('export function planDeLaPropriete('),
+      source.indexOf('export function sortieDuPlan(')
+    );
+    const juge = plan.indexOf('jugerLesRoles(');
     expect(juge).toBeGreaterThan(-1);
-    expect(juge).toBeLessThan(corps.indexOf('CREATE ROLE'));
-    expect(juge).toBeLessThan(corps.indexOf("'--no-owner'"));
+    expect(juge).toBeLessThan(plan.indexOf('CREATE ROLE'));
+    const corps = source.slice(source.indexOf('export async function exercer('));
+    const obtenu = corps.indexOf('planDeLaPropriete(');
+    expect(obtenu).toBeGreaterThan(-1);
+    expect(obtenu).toBeLessThan(corps.indexOf("'--no-owner'"));
   });
 });
