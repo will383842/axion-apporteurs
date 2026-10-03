@@ -16,8 +16,9 @@ const ORIGINE = 'https://espace.invalid';
 
 export function destinationBornee(suite: string | null | undefined): string {
   if (typeof suite !== 'string' || suite.length === 0 || suite.length > LONGUEUR_MAX) return '/';
-  // Un seul « / » en tête, puis rien qui change d'origine : ni « // », ni « /\ », ni caractère de
-  // contrôle ou d'espacement que le navigateur pourrait réinterpréter.
+  // Un seul « / » en tête, puis rien qui change d'origine : ni « // », ni une barre oblique suivie
+  // d'une barre oblique inverse, ni caractère de contrôle ou d'espacement que le navigateur
+  // pourrait réinterpréter.
   if (!/^\/(?![/\\])[^\s\\]*$/.test(suite)) return '/';
   let u: URL;
   let chemin: string;
