@@ -342,3 +342,33 @@ describe('REQ-DM-038 — les noms de vocabulaire sont DÉRIVÉS de l’arbitrage
     }
   });
 });
+
+describe('REQ-DM-011 — DM-64 : la fin de plein droit a sa valeur dans le motif de résiliation (art. 12.5)', () => {
+  const LIBELLE =
+    "Fin de plein droit : décès de l'apporteur personne physique, cessation de son activité ou radiation de son immatriculation (contrat art. 12.5) ; sans préavis, ni décision de la Société";
+  const motifs = () =>
+    new Map(enumsDuSchema(readFileSync('prisma/schema.prisma', 'utf8'))).get('MotifResiliation');
+
+  it('REQ-DM-011 : TÉMOIN — `fin_de_plein_droit` est la DERNIÈRE valeur, les trois existantes inchangées et dans leur ordre', () => {
+    expect(motifs()).toEqual([
+      'ordinaire_apporteur',
+      'ordinaire_axion',
+      'manquement_grave',
+      'fin_de_plein_droit',
+    ]);
+  });
+
+  it('REQ-DM-011 : TÉMOIN — le glossaire porte le libellé de la juriste, mot pour mot', () => {
+    expect(glossaire()).toContain(LIBELLE);
+    expect(glossaire()).toMatch(/`MotifResiliation`[^\n]*`fin_de_plein_droit`/);
+  });
+
+  it('REQ-DM-011 : TÉMOIN — une procédure collective n’est PAS une fin de plein droit : aucune valeur ne la nomme, et le glossaire l’exclut', () => {
+    for (const v of motifs() ?? [])
+      expect(v).not.toMatch(/procedure|collective|redressement|liquidation/);
+    expect(LIBELLE).not.toMatch(/procédure collective/);
+    expect(glossaire()).toMatch(
+      /`MotifResiliation`[^\n]*une procédure collective n’en est pas une/
+    );
+  });
+});
