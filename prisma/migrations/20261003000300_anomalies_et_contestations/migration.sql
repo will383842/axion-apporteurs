@@ -310,7 +310,7 @@ ALTER TABLE "anomalies" ADD CONSTRAINT "anomalies_gel_litige_confirmee"
 -- ACTIF, l'anonymisation et la purge de la justification sont refusées ; l'anonymisation le vide.
 -- LA FIN DE LA MESURE (forme d'A02) : posée à la clôture (une mesure sans durée, elle vaut alors
 -- `traite_at`) ou plus tard, une fois, sur une anomalie close, purgée ou non ; aucun événement.
--- Une anomalie confirmée ne s'anonymise qu'avec une mesure terminée et un gel inactif.
+-- Une anomalie confirmée ne s'anonymise qu'avec une mesure terminée et un gel levé ou jamais posé.
 CREATE FUNCTION anomalies_refuser_substitution() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
   IF TG_OP = 'DELETE' OR TG_OP = 'TRUNCATE' THEN
