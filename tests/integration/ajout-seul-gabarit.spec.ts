@@ -259,6 +259,7 @@ describe('REQ-DM-031 — chaque argument du gabarit nomme une colonne qui existe
     const tables = new Set(branchements.map((b) => b.table));
     expect([...tables].sort()).toEqual([
       'alertes_liberation',
+      'decisions_candidature',
       'demandes_droits_contact',
       'depots_refuses',
       'personnes_declarees',
