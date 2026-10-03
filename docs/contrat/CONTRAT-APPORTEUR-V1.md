@@ -212,26 +212,54 @@ l'article 3.3.
 présent contrat : une attribution reconductible constituerait un portefeuille permanent, que les parties
 entendent écarter (article 1.4).*
 
-**3.5 — Concours entre deux Apporteurs.** Lorsque deux Apporteurs déclarent la même entreprise,
-l'attribution revient à celui dont la déclaration porte **l'horodatage serveur le plus ancien**. Cette
-règle s'applique de plein droit, sans appréciation de la Société, quelles que soient l'ancienneté ou
-l'intensité des démarches invoquées.
+**3.5 — Entreprise déjà prise, concours entre Apporteurs.** Une entreprise peut être déjà prise **par un
+autre apporteur ou par la Société ou ses préposés**, les préposés de la Société s'entendant des personnes
+qu'elle emploie, et non des préposés de l'Apporteur mentionnés à l'article 2. **L'effet pour l'Apporteur
+est le même quel que soit l'occupant, et la Société ne révèle jamais qui occupe une entreprise donnée.**
+Lorsque deux Apporteurs déclarent la même entreprise, ou lorsqu'une déclaration et une prise en charge par
+la Société ou ses préposés portent sur la même entreprise, l'entreprise revient à celui dont la
+déclaration ou la prise en charge porte **l'horodatage serveur le plus ancien**. Cette règle s'applique
+de plein droit, sans appréciation de la Société, quelles que soient l'ancienneté ou l'intensité des démarches invoquées.
 
-L'Apporteur dont la déclaration est postérieure est informé que l'entreprise est déjà suivie ; **l'identité
-du premier déclarant ne lui est jamais communiquée**. **Deux déclarations au plus sont conservées en
-attente par entreprise, dans l'ordre de leur horodatage ; au-delà, la déclaration n'est pas conservée et
-l'Apporteur en est informé. Lorsque l'attribution en cours prend fin, l'Apporteur dont la déclaration est
-en attente au premier rang en est informé et dispose de quinze jours pour déclarer à nouveau l'entreprise ;
-à défaut, sa déclaration est effacée et l'entreprise redevient librement déclarable par tous. Aucune
-attribution ne naît d'une déclaration conservée sans nouvelle déclaration de l'Apporteur. Une déclaration
-en attente s'éteint en tout état de cause douze mois après son enregistrement.**
+L'Apporteur dont la déclaration est postérieure est informé que l'entreprise n'est pas disponible ;
+**l'identité de celui qui l'occupe ne lui est jamais communiquée**. **Deux déclarations au plus sont
+conservées en attente par entreprise, dans l'ordre de leur horodatage ; au-delà, la déclaration n'est pas
+conservée et l'Apporteur en est informé. Lorsque l'attribution en cours, ou la prise en charge de
+l'entreprise par la Société ou ses préposés, prend fin, l'Apporteur dont la déclaration est en attente au
+premier rang en est informé et dispose de quinze jours pour déclarer à nouveau l'entreprise ; à défaut, sa
+déclaration est effacée et l'entreprise redevient librement déclarable par tous. Aucune attribution ne naît
+d'une déclaration conservée sans nouvelle déclaration de l'Apporteur. Une déclaration en attente s'éteint
+en tout état de cause douze mois après son enregistrement.**
+
+**La prise en charge d'une entreprise par la Société ou ses préposés obéit aux mêmes bornes qu'une
+attribution**, la Société et l'ensemble de ses préposés comptant pour un seul occupant. Les articles 3.4 et
+3.4 bis lui sont applicables comme à une attribution : la durée de **{{FENETRE_MOIS}} mois** court de la date
+à laquelle la prise en charge devient définitive, au plus tard à l'expiration du délai de l'article 3.2
+alinéa 5 ; le délai de **{{PEREMPTION_JOURS}} jours** court de la prise en charge, et l'exception de l'article
+3.4 alinéa 2 tirée d'une absence imputable à la Société ne s'applique pas à la prise en charge ; la
+prolongation de l'article 3.4 alinéa 3 ne s'applique qu'une fois, dans les mêmes conditions ; la prise en
+charge ne fait l'objet d'aucune reconduction. **La Société ne prend pas en charge une entreprise pendant
+le délai de quinze jours ouvert à l'Apporteur en attente au premier rang.**
+
+**La Société conserve dans ses propres outils, et peut utiliser à ses propres fins commerciales, les
+entreprises déclarées par l'Apporteur et les coordonnées qu'il a transmises, y compris pour les démarcher
+elle-même ou par ses préposés. Cette utilisation ne retire rien aux droits de l'Apporteur : pendant la
+durée de l'attribution, toute commande de l'entreprise attribuée est commissionnée dans les conditions de
+l'article 4.4, qu'elle résulte des démarches de l'Apporteur, de celles de la Société ou de ses préposés,
+ou d'une initiative de l'entreprise. Tant que l'attribution est provisoire, la Société ne démarche pas l'entreprise déclarée ; la demande de
+confirmation et les prises de contact de l'article 3.2 ne constituent pas un démarchage. Dans les
+{{RESERVE_APRES_ACTE_APPORTEUR_JOURS}} jours qui suivent une vérification d'entreprise faite par
+l'Apporteur, ou une déclaration de sa part refusée ou en attente, la Société ne démarche pas l'entreprise concernée et ne la prend pas en charge ; cette réserve ne
+s'applique ni à une entreprise que la Société connaissait déjà au sens de l'article 3.3, ni à une
+entreprise dont une attribution ou une prise en charge était en cours à la date de cette vérification ou de
+cette déclaration.**
 
 Les parties conviennent que l'horodatage attribué par le serveur de la Société fait foi entre elles
 **jusqu'à preuve contraire** pour l'application du présent article, conformément à l'article 1356 du code
-civil. Cet horodatage est inscrit
+civil, **quel que soit l'occupant de l'entreprise**. Cet horodatage est inscrit
 dans un journal inaltérable et chaîné ; l'Apporteur peut en obtenir sur simple demande un extrait relatif
-à ses propres déclarations. Une déclaration préparée hors connexion est horodatée à sa réception par le
-serveur.
+à ses propres déclarations, qui ne révèle pas qui occupe l'entreprise. Une déclaration préparée hors
+connexion est horodatée à sa réception par le serveur.
 
 **3.6 — Groupes de sociétés.** Chaque personne morale dispose de son propre SIREN. L'attribution d'une
 filiale n'emporte aucun droit sur sa société mère ni sur les autres sociétés du groupe.
@@ -498,8 +526,9 @@ professionnelles d'une personne physique. Il garantit avoir informé cette perso
 de l'article 13 du règlement (UE) 2016/679**, de la transmission de ses coordonnées et de sa finalité.
 
 **7.2** La Société est responsable du traitement de ces données. Elle en informe la personne concernée dans
-les conditions de l'article 14 du règlement (UE) 2016/679 et les conserve pour la durée nécessaire au
-suivi de l'affaire.
+les conditions de l'article 14 du règlement (UE) 2016/679 et les conserve pour la durée nécessaire au suivi de l'affaire et aux finalités de l'article 3.5 alinéa
+4, dans la limite des durées de conservation qu'elle porte à la connaissance de la personne ; elle l'informe
+de son droit de s'opposer à tout moment à la prospection.
 
 **7.3** L'Apporteur ne collecte ni ne transmet aucune donnée relevant de l'article 9 du même règlement.
 
