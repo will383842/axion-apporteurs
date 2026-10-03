@@ -141,22 +141,24 @@
     {
       "id": "REQ-DM-009",
       "domaine": "domaine-donnees",
-      "texte": "Le taux de confirmation et le palier d'un apporteur sont dérivés par fonction pure des N dernières Qualifications (fenêtre glissante de 10) ; aucun compteur mutable n'est stocké. Amendement W19 (décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §4.2) : palier et taux se dérivent des seules qualifications d'apporteurs.",
-      "source": "anti-abus M1, M3 ; outil §1.1",
+      "texte": "Aucun palier, aucun score et aucun taux n'est calculé par apporteur pour produire un effet sur ses déclarations, ses vérifications ou ses droits. Aucun plafond de dépôts, ni par période ni au total, n'est opposé à un apporteur. Seule une limite de débit technique, identique pour tous et commune à l'espace, protège le service contre l'automatisation et la saturation : elle porte sur la session et l'empreinte de l'adresse réseau, sur une fenêtre de l'ordre de la minute, à un niveau qu'un dépôt fait à la main n'atteint pas ; son seul effet est de faire réessayer la requête, sans trace au dossier de l'apporteur, sans statut ni anomalie, et sans effet sur ses déclarations déjà enregistrées. Chaque déclaration est jugée sur ses propres faits (contrat art. 3.2, 3.3 bis et 3.7). Un taux de confirmation peut être suivi par la Société pour l'ensemble des déclarations, sans rattachement à un apporteur, comme indicateur de qualité de son propre processus.",
+      "source": "anti-abus M1, M3 ; outil §1.1 ; amendée le 2026-10-03, texte de la juriste : décision de Williams du 2026-10-03 (« non pas pour le moment » : pas de limite des dépôts d'un apporteur selon son taux de confirmation) ; une réouverture exigerait un avenant au contrat (rattrapage 84)",
       "statut": "active",
       "remplaceePar": null,
       "module": 12,
       "etape": 8,
       "phase": 1,
       "taches": [
-        "DM-09"
+        "DM-09",
+        "SEC-12",
+        "SEC-56"
       ]
     },
     {
       "id": "REQ-DM-010",
       "domaine": "domaine-donnees",
-      "texte": "`Apporteur.seuilVerificationPrioritaire` est une colonne Int (défaut dérivé du palier, surcharge manuelle tracée) ; aucun dépôt n'est refusé pour dépassement de seuil — au-delà, l'attribution est acceptée, horodatée, opposable, et porte `verificationPrioritaire = true` ; au-delà d'un second seuil de dépôts sur 24 h pour une même identité (valeur en configuration, hors de ce dépôt public : REQ-GOV-031), chaque dépôt supplémentaire exige un `captcha` et est accepté de la même façon (issue `captcha` de REQ-UX-002), jamais refusé.",
-      "source": "outil §1.1, D3 ; texte décidé de l'annexe de dédoublonnage, remis le 2026-09-19 (décision de Will)",
+      "texte": "L'ordre des appels de confirmation de la Société est fixé par sa capacité et par une surcharge manuelle ; il ne compte rien par apporteur et ne produit aucun effet sur la demande ni sur l'apporteur. Une demande n'est mise en vérification, au sens de l'article 3.2 alinéa 4, que sur des éléments objectifs qui lui sont propres, tenant aux coordonnées déclarées ou aux conditions dans lesquelles la réponse est donnée, et jamais sur le nombre, le rythme, l'heure ou le lieu des déclarations d'un apporteur. La surcharge manuelle qui met une demande en vérification est motivée par ces éléments et journalisée. Un défi anti-automatisation (captcha) peut être présenté au dépôt sur un signal technique de la session ou de l'empreinte réseau, de même nature que la limite de débit, identique pour tous ; il ne compte pas les dépôts d'un apporteur, ne laisse aucune trace à son dossier, n'est ni un statut ni une anomalie, et ne refuse aucun dépôt d'une personne qui le résout.",
+      "source": "outil §1.1, D3 ; texte décidé de l'annexe de dédoublonnage, remis le 2026-09-19 (décision de Will) ; réécrite le 2026-10-03, texte de la juriste (le captcha remplace celui « au-delà de N dépôts sur 24 h ») : décision de Williams du 2026-10-03 (« non pas pour le moment » : pas de limite des dépôts d'un apporteur selon son taux de confirmation) ; une réouverture exigerait un avenant au contrat (rattrapage 84)",
       "statut": "active",
       "remplaceePar": null,
       "module": 9,
@@ -166,7 +168,8 @@
         "DM-06",
         "DM-09",
         "JUR-T24",
-        "SEC-12"
+        "SEC-12",
+        "SEC-56"
       ]
     },
     {
@@ -966,8 +969,8 @@
     {
       "id": "REQ-SEC-019",
       "domaine": "anti-abus-securite",
-      "texte": "🔴 **Le gel est un enum à TROIS valeurs — `libre`, `gele_non_confirmation`, `gele_fraude`** — avec motif, date et auteur (réécrite le 2026-09-03, A-3 (c) : `gele_anomalie` est renommée `gele_fraude` pour porter le mot du contrat, et `gele_manuel` **est supprimée** — un gel « manuel » sans motif écrit est exactement le pouvoir discrétionnaire que l'article 3.7 exclut ; la valeur `gele_strikes` avait déjà été renommée, « strike » étant un synonyme interdit au glossaire). **Tous les chemins de gel passent par une fonction unique** dont l'entrée est typée sur ces deux motifs et que garde `jur:suspension-motifs-fermes` (REQ-SEC-038). 🔴 **Portée strictement limitée** (contrat art. 3.7 al. 3 réécrit) : le gel porte **exclusivement sur l'enregistrement de nouvelles déclarations**. Il est **sans effet** sur les attributions en cours, provisoires ou définitives, sur les commandes signées, sur les commissions acquises ou à venir, et **sur l'accès de l'apporteur à son espace** — aucun jeton n'est révoqué, `sessionVersion` n'est pas incrémenté, aucune attribution n'est annulée (c'est REQ-SEC-032 qui réserve ces effets à la **résiliation**). Les attributions `provisoire` non qualifiées **restent `provisoire`**, portent `verificationPrioritaire = true` (la valeur `suspendue` n'existe pas dans l'enum fermé de REQ-DM-006) et libèrent la file M2. 🔴 **Durée maximale de quinze jours** (`SUSPENSION_MAX_JOURS`, SSOT, contrat art. 3.7) : un cron quotidien **lève de plein droit** tout gel de plus de quinze jours à compter de sa notification, écrit l'événement et notifie l'apporteur ; la Société demeure libre de résilier selon l'article 11. Une levée avant terme reste réservée à un rôle habilité et journalisée. Tests : gel posé à J0 → levé par le cron à J+15, jamais avant ; **un gel qui survit à J+16 → rouge** ; gel posé → jeton toujours valide, session vivante, attributions inchangées, lignes de commission inchangées (quatre assertions, **vues rougir** sur l'ancien comportement) ; `gele_manuel` ou `gele_anomalie` présent dans l'enum → gate rouge.",
-      "source": "audit-outil §1.1 ; contrat art. 3.7 al. 3 ; synthèse du 2026-09-03, A-3 (c) et (e)",
+      "texte": "🔴 **Le gel est un enum à TROIS valeurs — `libre`, `gele_non_confirmation`, `gele_fraude`** — avec motif, date et auteur (réécrite le 2026-09-03, A-3 (c) : `gele_anomalie` est renommée `gele_fraude` pour porter le mot du contrat, et `gele_manuel` **est supprimée** — un gel « manuel » sans motif écrit est exactement le pouvoir discrétionnaire que l'article 3.7 exclut ; la valeur `gele_strikes` avait déjà été renommée, « strike » étant un synonyme interdit au glossaire). **Tous les chemins de gel passent par une fonction unique** dont l'entrée est typée sur ces deux motifs et que garde `jur:suspension-motifs-fermes` (REQ-SEC-038). 🔴 **Portée strictement limitée** (contrat art. 3.7 al. 3 réécrit) : le gel porte **exclusivement sur l'enregistrement de nouvelles déclarations**. Il est **sans effet** sur les attributions en cours, provisoires ou définitives, sur les commandes signées, sur les commissions acquises ou à venir, et **sur l'accès de l'apporteur à son espace** — aucun jeton n'est révoqué, `sessionVersion` n'est pas incrémenté, aucune attribution n'est annulée (c'est REQ-SEC-032 qui réserve ces effets à la **résiliation**). Les attributions `provisoire` non qualifiées **restent `provisoire`** (la valeur `suspendue` n'existe pas dans l'enum fermé de REQ-DM-006) et libèrent la file M2. La suspension de l'enregistrement des déclarations d'un apporteur ne change rien à ses attributions en cours : aucune n'est mise en vérification de ce seul fait. La Société peut placer leurs demandes de confirmation en tête de son ordre d'appel, sans effet sur elles. Une demande n'est mise en vérification que sur des éléments objectifs qui lui sont propres (art. 3.2 al. 4). 🔴 **Durée maximale de quinze jours** (`SUSPENSION_MAX_JOURS`, SSOT, contrat art. 3.7) : un cron quotidien **lève de plein droit** tout gel de plus de quinze jours à compter de sa notification, écrit l'événement et notifie l'apporteur ; la Société demeure libre de résilier selon l'article 11. Une levée avant terme reste réservée à un rôle habilité et journalisée. Tests : gel posé à J0 → levé par le cron à J+15, jamais avant ; **un gel qui survit à J+16 → rouge** ; gel posé → jeton toujours valide, session vivante, attributions inchangées, lignes de commission inchangées (quatre assertions, **vues rougir** sur l'ancien comportement) ; `gele_manuel` ou `gele_anomalie` présent dans l'enum → gate rouge.",
+      "source": "audit-outil §1.1 ; contrat art. 3.7 al. 3 ; synthèse du 2026-09-03, A-3 (c) et (e) ; amendée le 2026-10-03, texte de la juriste : décision de Williams du 2026-10-03 (« non pas pour le moment » : pas de limite des dépôts d'un apporteur selon son taux de confirmation) ; une réouverture exigerait un avenant au contrat (rattrapage 84)",
       "statut": "active",
       "remplaceePar": null,
       "module": 21,
@@ -2937,8 +2940,8 @@
     {
       "id": "REQ-UX-004",
       "domaine": "produit-ux",
-      "texte": "Le statut affiché à l'apporteur est dérivé par une fonction pure exhaustive `statutApporteur(EtatAttribution)` ; chaque état interne (dont provisoire, en_attente, invalidée, perdue, expirée, périmée) a un libellé, une couleur et une phrase « prochaine étape et par qui » ; l'ajout d'une valeur d'enum sans libellé fait échouer le typecheck et le test. Amendement W20 (décision de Will du 2026-09-29, docs/chantiers/W20-confirmation-par-email.md §3.2) : pour un dépôt en phase de confirmation, le libellé de `statutApporteur` est le badge de REQ-UX-062, et la phrase « prochaine étape » est sa phrase d'aide ; les phrases de REQ-UX-023 ne s'y ajoutent pas, et « Nous vous appelons d'abord (vérification prioritaire) » n'est jamais affichée pour une raison de vérification W20 (HYP-W20-VERIFICATION).",
-      "source": "tableaux-de-bord §3.2 ; audit-outil §7 et §8",
+      "texte": "Le statut affiché à l'apporteur est dérivé par une fonction pure exhaustive `statutApporteur(EtatAttribution)` ; chaque état interne (dont provisoire, en_attente, invalidée, perdue, expirée, périmée) a un libellé, une couleur et une phrase « prochaine étape et par qui » ; l'ajout d'une valeur d'enum sans libellé fait échouer le typecheck et le test. Amendement W20 (décision de Will du 2026-09-29, docs/chantiers/W20-confirmation-par-email.md §3.2) : pour un dépôt en phase de confirmation, le libellé de `statutApporteur` est le badge de REQ-UX-062, et la phrase « prochaine étape » est sa phrase d'aide ; les phrases de REQ-UX-023 ne s'y ajoutent pas. Aucun texte montré à l'apporteur ne fait état d'une priorité d'appel. Le badge d'une demande vérifiée reste celui d'UX-P1-41 (« En attente de confirmation — Axion-IA va appeler votre contact »).",
+      "source": "tableaux-de-bord §3.2 ; audit-outil §7 et §8 ; amendée le 2026-10-03, texte de la juriste : décision de Williams du 2026-10-03 (« non pas pour le moment » : pas de limite des dépôts d'un apporteur selon son taux de confirmation) ; une réouverture exigerait un avenant au contrat (rattrapage 84)",
       "statut": "active",
       "remplaceePar": null,
       "module": null,
@@ -3225,8 +3228,8 @@
     {
       "id": "REQ-UX-022",
       "domaine": "produit-ux",
-      "texte": "La file de qualification est triée vérification prioritaire > `aQualifierDepuis` croissant ; le chrono SLA (48 h ouvrées, calendrier fériés France) porte sur `aQualifierDepuis` (posée à l'entrée en provisoire, y compris par promotion), jamais sur `deposeLe`. Amendement W20 (décision de Will du 2026-09-29, docs/chantiers/W20-confirmation-par-email.md §3.2) : `aQualifierDepuis` est posée à l'**entrée dans la liste d'appels** (REQ-DM-062), et non plus au dépôt, pour les dépôts confirmés par e-mail en premier lieu : le SLA de 48 h ouvrées porte sur un appel à passer, pas sur un dépôt que personne n'a à appeler.",
-      "source": "audit-outil §8, §9.2 ; anti-abus M2 ; nouvelle (UX-25)",
+      "texte": "La file est triée par la priorité d'appel (capacité de la Société, surcharge manuelle), puis par aQualifierDepuis ; cet ordre ne produit aucun effet sur la demande ni sur l'apporteur. Une surcharge de l'ordre n'a pas à être motivée ; seule la mise en vérification doit l'être. Le chrono SLA (48 h ouvrées, calendrier fériés France) porte sur `aQualifierDepuis` (posée à l'entrée en provisoire, y compris par promotion), jamais sur `deposeLe`. Amendement W20 (décision de Will du 2026-09-29, docs/chantiers/W20-confirmation-par-email.md §3.2) : `aQualifierDepuis` est posée à l'**entrée dans la liste d'appels** (REQ-DM-062), et non plus au dépôt, pour les dépôts confirmés par e-mail en premier lieu : le SLA de 48 h ouvrées porte sur un appel à passer, pas sur un dépôt que personne n'a à appeler.",
+      "source": "audit-outil §8, §9.2 ; anti-abus M2 ; nouvelle (UX-25) ; amendée le 2026-10-03, texte de la juriste : décision de Williams du 2026-10-03 (« non pas pour le moment » : pas de limite des dépôts d'un apporteur selon son taux de confirmation) ; une réouverture exigerait un avenant au contrat (rattrapage 84)",
       "statut": "active",
       "remplaceePar": null,
       "module": 12,
@@ -3242,8 +3245,8 @@
     {
       "id": "REQ-UX-023",
       "domaine": "produit-ux",
-      "texte": "Côté apporteur, une attribution en qualification affiche l'une des phrases dérivées serveur : « Axion-IA appelle avant le [date] », « Axion-IA a tenté N fois, prochaine tentative le … », « Nous vous appelons d'abord (vérification prioritaire) », « Rendez-vous le … », « Proposition envoyée » ; l'état invalidée affiche un texte non accusatoire avec la date de re-déclaration possible. Amendement W20 (décision de Will du 2026-09-29, docs/chantiers/W20-confirmation-par-email.md §3.2) : pour un dépôt en phase de confirmation, le libellé de `statutApporteur` est le badge de REQ-UX-062, et la phrase « prochaine étape » est sa phrase d'aide ; les phrases de REQ-UX-023 ne s'y ajoutent pas, et « Nous vous appelons d'abord (vérification prioritaire) » n'est jamais affichée pour une raison de vérification W20 (HYP-W20-VERIFICATION).",
-      "source": "audit-outil §7 Mes entreprises, §8 SLA ; anti-abus M1",
+      "texte": "Côté apporteur, une attribution en qualification affiche l'une des phrases dérivées serveur : « Axion-IA appelle avant le [date] », « Axion-IA a tenté N fois, prochaine tentative le … », « Rendez-vous le … », « Proposition envoyée » ; l'état invalidée affiche un texte non accusatoire avec la date de re-déclaration possible. Amendement W20 (décision de Will du 2026-09-29, docs/chantiers/W20-confirmation-par-email.md §3.2) : pour un dépôt en phase de confirmation, le libellé de `statutApporteur` est le badge de REQ-UX-062, et la phrase « prochaine étape » est sa phrase d'aide ; les phrases de REQ-UX-023 ne s'y ajoutent pas. Aucun texte montré à l'apporteur ne fait état d'une priorité d'appel. Le badge d'une demande vérifiée reste celui d'UX-P1-41 (« En attente de confirmation — Axion-IA va appeler votre contact »).",
+      "source": "audit-outil §7 Mes entreprises, §8 SLA ; anti-abus M1 ; amendée le 2026-10-03, texte de la juriste : décision de Williams du 2026-10-03 (« non pas pour le moment » : pas de limite des dépôts d'un apporteur selon son taux de confirmation) ; une réouverture exigerait un avenant au contrat (rattrapage 84)",
       "statut": "active",
       "remplaceePar": null,
       "module": 12,
@@ -3332,8 +3335,8 @@
     {
       "id": "REQ-UX-029",
       "domaine": "produit-ux",
-      "texte": "Mon activité n'affiche aucun objectif, classement ni comparaison à d'autres apporteurs ; le palier et ce qui le fait monter sont formulés comme un capital de confiance (contacts confirmés), jamais comme un quota de vente.",
-      "source": "audit-outil §3.2, §7 Mon activité ; plan §3.2",
+      "texte": "Mon activité n'affiche aucun objectif, classement ni comparaison à d'autres apporteurs ; aucun palier n'y est affiché, puisqu'aucun palier n'existe par apporteur (REQ-DM-009), et rien n'y est formulé comme un quota de vente.",
+      "source": "audit-outil §3.2, §7 Mon activité ; plan §3.2 ; palier retiré le 2026-10-03 (décision de Williams, aucun palier par apporteur, REQ-DM-009, rattrapage 84)",
       "statut": "active",
       "remplaceePar": null,
       "module": 13,
@@ -4908,8 +4911,8 @@
     {
       "id": "REQ-CPL-026",
       "domaine": "complétude (REQ-CPL)",
-      "texte": "Le SLA affiché à l'apporteur est paramétré par la capacité réelle (jours ouvrés × qualifieurs disponibles, calendrier d'absence) ; le seuil de vérification prioritaire (D3) se dérive de la capacité restante. ⚠️ **Le « nous prenons contact dans deux jours ouvrés » n'est plus un engagement ferme au contrat** (art. 3.2 réécrit : « la Société **s'efforce de** prendre contact ») — `MANQUES-ET-RISQUES` §F.2 n° 4 le classait parmi les cinq risques d'échec les plus probables. Le SLA reste un objectif **interne** de console (REQ-UX-022) ; sa seule conséquence externe est la confirmation tacite à trente jours (REQ-DM-042).",
-      "source": "critique de complétude (2026-09-03)",
+      "texte": "Le SLA affiché à l'apporteur est paramétré par la capacité réelle (jours ouvrés × qualifieurs disponibles, calendrier d'absence) ; l'ordre d'appel de la Société se dérive de sa capacité restante ; ce n'est pas un seuil, il ne compte rien par apporteur, et il ne met aucune demande en vérification. ⚠️ **Le « nous prenons contact dans deux jours ouvrés » n'est plus un engagement ferme au contrat** (art. 3.2 réécrit : « la Société **s'efforce de** prendre contact ») — `MANQUES-ET-RISQUES` §F.2 n° 4 le classait parmi les cinq risques d'échec les plus probables. Le SLA reste un objectif **interne** de console (REQ-UX-022) ; sa seule conséquence externe est la confirmation tacite à trente jours (REQ-DM-042).",
+      "source": "critique de complétude (2026-09-03) ; amendée le 2026-10-03, texte de la juriste : décision de Williams du 2026-10-03 (« non pas pour le moment » : pas de limite des dépôts d'un apporteur selon son taux de confirmation) ; une réouverture exigerait un avenant au contrat (rattrapage 84)",
       "statut": "active",
       "remplaceePar": null,
       "module": 12,
@@ -5211,8 +5214,8 @@
     {
       "id": "REQ-UX-046",
       "domaine": "produit-ux",
-      "texte": "La console tient une **bibliothèque de documents** mis à disposition des apporteurs : ajout, **remplacement versionné** (la version précédente est conservée et n'est plus servie), **retrait** (dépublication, la trace restant), **ciblage** (tous, un palier, un apporteur) et **date de publication**. Côté espace, un document apparaît dans « Ressources » (UX-P3-02) pour les seuls apporteurs ciblés, à partir de sa date de publication ; un document qui n'est pas ciblé sur l'apporteur connecté répond **404 byte-identique** à un identifiant inexistant (REQ-SEC-009, couche `forApporteur`, REQ-SEC-008). Les fichiers sont des **PDF** sur stockage privé servis par URL signée courte (REQ-SEC-026), sans logo ni charte (REQ-JUR-041), relus par Will avant publication (REQ-CPL-023) ; le vocabulaire est « documents de présentation », jamais le terme que REQ-JUR-041 bannit. Ajout, remplacement et retrait sont journalisés (`HYP-W15-BIBLIOTHEQUE`). Décision W15 (5), 2026-09-25. Tests : ciblage palier → visible pour ce palier, 404 pour un autre ; publication datée demain → invisible aujourd'hui ; remplacement → seule la dernière version est servie ; fichier non PDF (octets d'en-tête) → refus ; journal vérifié.",
-      "source": "décision de Will du 2026-09-25, W15 (point 5)",
+      "texte": "La console tient une **bibliothèque de documents** mis à disposition des apporteurs : ajout, **remplacement versionné** (la version précédente est conservée et n'est plus servie), **retrait** (dépublication, la trace restant), **ciblage** (tous, un apporteur) (le ciblage par palier est retiré au rattrapage 84 : aucun palier n'existe par apporteur, REQ-DM-009) et **date de publication**. Côté espace, un document apparaît dans « Ressources » (UX-P3-02) pour les seuls apporteurs ciblés, à partir de sa date de publication ; un document qui n'est pas ciblé sur l'apporteur connecté répond **404 byte-identique** à un identifiant inexistant (REQ-SEC-009, couche `forApporteur`, REQ-SEC-008). Les fichiers sont des **PDF** sur stockage privé servis par URL signée courte (REQ-SEC-026), sans logo ni charte (REQ-JUR-041), relus par Will avant publication (REQ-CPL-023) ; le vocabulaire est « documents de présentation », jamais le terme que REQ-JUR-041 bannit. Ajout, remplacement et retrait sont journalisés (`HYP-W15-BIBLIOTHEQUE`). Décision W15 (5), 2026-09-25. Tests : ciblage apporteur → visible pour cet apporteur, 404 pour un autre ; publication datée demain → invisible aujourd'hui ; remplacement → seule la dernière version est servie ; fichier non PDF (octets d'en-tête) → refus ; journal vérifié.",
+      "source": "décision de Will du 2026-09-25, W15 (point 5) ; ciblage par palier retiré le 2026-10-03 (décision de Williams, aucun palier par apporteur, rattrapage 84)",
       "statut": "active",
       "remplaceePar": null,
       "module": 7,
@@ -5602,8 +5605,8 @@
     {
       "id": "REQ-EXT-003",
       "domaine": "extensions du 2026-09-03 (REQ-EXT)",
-      "texte": "🔴 **Charte relationnelle** : aucun champ de suivi n'est obligatoire ; le nombre d'échanges n'entre ni dans le palier de confiance, ni dans le score, ni dans un classement, ni dans une alerte ; aucune relance automatique du type « vous n'avez rien saisi depuis N jours » n'existe. Test : une entreprise sans aucun échange n'affiche aucune alerte et ne change aucun compteur.",
-      "source": "EXTENSIONS §2.3 ; plan §3.2",
+      "texte": "🔴 **Charte relationnelle** : aucun champ de suivi n'est obligatoire ; le nombre d'échanges n'entre ni dans le score, ni dans un classement, ni dans une alerte ; aucune relance automatique du type « vous n'avez rien saisi depuis N jours » n'existe. Test : une entreprise sans aucun échange n'affiche aucune alerte et ne change aucun compteur.",
+      "source": "EXTENSIONS §2.3 ; plan §3.2 ; « palier de confiance » retiré le 2026-10-03 (décision de Williams du 2026-10-03 (« non pas pour le moment » : pas de limite des dépôts d'un apporteur selon son taux de confirmation) ; une réouverture exigerait un avenant au contrat, rattrapage 84)",
       "statut": "active",
       "remplaceePar": null,
       "module": 13,
@@ -5631,8 +5634,8 @@
     {
       "id": "REQ-EXT-005",
       "domaine": "extensions du 2026-09-03 (REQ-EXT)",
-      "texte": "La fiche prospect côté console montre **les échanges** (tous — la notion d'échange privé est supprimée, REQ-EXT-002 / M-14), la fiche de qualification, les lignes de commission rattachées et le journal immuable ; la navigation est **bidirectionnelle** : d'une ligne de commission vers la fiche, et de la fiche vers l'encaissement. ⚠️ Voir un échange **ne crée aucun compteur** : le nombre d'échanges n'entre ni dans le palier, ni dans le score, ni dans un classement, ni dans une alerte (REQ-EXT-003, inchangée).",
-      "source": "EXTENSIONS §2.5 ; tableaux-de-bord §4.4 ; synthèse du 2026-09-03, M-14",
+      "texte": "La fiche prospect côté console montre **les échanges** (tous — la notion d'échange privé est supprimée, REQ-EXT-002 / M-14), la fiche de qualification, les lignes de commission rattachées et le journal immuable ; la navigation est **bidirectionnelle** : d'une ligne de commission vers la fiche, et de la fiche vers l'encaissement. ⚠️ Voir un échange **ne crée aucun compteur** : le nombre d'échanges n'entre ni dans le score, ni dans un classement, ni dans une alerte (REQ-EXT-003, inchangée).",
+      "source": "EXTENSIONS §2.5 ; tableaux-de-bord §4.4 ; synthèse du 2026-09-03, M-14 ; palier retiré le 2026-10-03 (décision de Williams, aucun palier par apporteur, REQ-DM-009, rattrapage 84)",
       "statut": "active",
       "remplaceePar": null,
       "module": 20,
@@ -6017,15 +6020,16 @@
     {
       "id": "REQ-JUR-032",
       "domaine": "charte relationnelle (REQ-JUR-031 → 038)",
-      "texte": "🔴 Le palier est un **seuil de vérification prioritaire**, jamais un objectif **et jamais un plafond** : l'espace n'affiche **jamais** ce qui manque pour l'étape suivante ; aucun compte à rebours, aucune barre de progression, aucune notification de franchissement ; jamais nommé « niveau », « statut », « rang » ni « grade » ; le seuil **ne redescend jamais** pour cause d'inactivité. 🔴 **Le libellé « vous pouvez déclarer jusqu'à 15 entreprises par semaine » est RETIRÉ** (corrigé le 2026-09-03, P-2) : il annonçait un plafond que REQ-DM-010 ne pose pas — « **aucun dépôt n'est refusé pour dépassement de seuil** », le seuil 5/15/25 déclenche une **vérification prioritaire**, pas un refus. Soit l'espace mentait sur l'étendue des droits (art. 1112-1 C. civ., dont l'al. 5 est d'ordre public et que l'art. 17 ne peut pas écarter), soit le plafond existait et était inopposable. Libellé unique, qui ne promet ni ne restreint : « **Vos déclarations au-delà de quinze par semaine font l'objet d'une vérification prioritaire ; aucune n'est refusée.** » Tests : snapshot du libellé ; toute formulation contenant « jusqu'à N » ou « plafond » sur ce composant → **gate rouge** ; un dépôt au-delà du seuil aboutit avec `verificationPrioritaire = true`.",
-      "source": "note interne (hors dépôt) §3.2 B ; motifs 1 et 6 ; REQ-DM-010 ; art. 1112-1 C. civ. ; synthèse du 2026-09-03, P-2",
+      "texte": "Aucun palier ni seuil de dépôts n'existe par apporteur. La priorité d'appel est un ordre de travail interne de la Société, fondé sur sa capacité ; elle n'est pas une vérification, et n'en a aucun effet.",
+      "source": "note interne (hors dépôt) §3.2 B ; motifs 1 et 6 ; REQ-DM-010 ; art. 1112-1 C. civ. ; synthèse du 2026-09-03, P-2 ; réécrite le 2026-10-03, texte de la juriste : décision de Williams du 2026-10-03 (« non pas pour le moment » : pas de limite des dépôts d'un apporteur selon son taux de confirmation) ; une réouverture exigerait un avenant au contrat (rattrapage 84)",
       "statut": "active",
       "remplaceePar": null,
       "module": 9,
       "etape": 7,
       "phase": 1,
       "taches": [
-        "JUR-T24"
+        "JUR-T24",
+        "SEC-56"
       ]
     },
     {
