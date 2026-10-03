@@ -65,7 +65,7 @@ paramètres), `peremptionAt` (seule colonne recalculée). Synonymes interdits : 
 | `pret_a_signer`  | KYC valide, contrat envoyé (`Contrat.statut = envoye`)                      |
 | `signe`          | Contrat `signe` en vigueur ; peut déposer                                   |
 | `suspendu`       | Accès à l'espace **maintenu** (aucun jeton révoqué, `sessionVersion` inchangé) ; nouveaux dépôts refusés ; aucun envoi hors `toujours` (REQ-SEC-032, REQ-SEC-019, `HYP-SEC03-ACCES`) |
-| `resilie`        | Sortie de collaboration ; `resiliationMotif ∈ {ordinaire_apporteur, ordinaire_axion, manquement_grave}` — **synonymes interdits** : faute grave, faute, sanction |
+| `resilie`        | Sortie de collaboration ; `resiliationMotif ∈ {ordinaire_apporteur, ordinaire_axion, manquement_grave, fin_de_plein_droit}` — **synonymes interdits** : faute grave, faute, sanction |
 
 **Dérivés, jamais stockés** (REQ-CPL-027, fonction pure `activite(apporteur, depots, now)`) :
 
@@ -122,14 +122,14 @@ ordinaire **reste `prevue`** (l'attribution passe `figee_resiliation`) ; `conser
 | `IssueDepot`           | `enregistree`, `prioritaire`, `en_attente`, `file_complete`, `anteriorite_client`, `anteriorite_devis`, `etablissement_cesse`, `entreprise_hors_perimetre`, `opposition_demarchage`, `gele`, `captcha`, `brouillon_hors_ligne` — alignée le 2026-09-26 sur REQ-UX-002 et sur `ISSUES_DEPOT` : `fermee`, `financeur` et `deja_connue` sont renommées sur les catégories du contrat | REQ-UX-002 |
 | `StatutLot`            | `brouillon`, `approuve`, `exporte`, `rapproche`                                            | REQ-UX-025   |
 | `StatutAnomalie`       | `ouverte`, `levee`, `confirmee`                                                            | REQ-DM-033   |
-| `MotifListeNoire`      | `opco`, `france_travail`, `region`, `of_partenaire`, `autre`                               | REQ-DM-028   |
+| `MotifListeNoire`      | `administration`, `financeur_public`, `financeur_paritaire`, `organisme_de_formation_partenaire` — les catégories de l'art. 3.3 bis (b), sans valeur « autre » (exigence de la juriste, 2026-10-03) | REQ-DM-028   |
 | `OrigineEntrepriseConnue` | `client`, `devis`, `financeur` — `demande_entrante` retirée le 2026-09-26, comme REQ-DM-029 l'a retirée : aucun événement ne la transporte | REQ-DM-029   |
 | `TypeReprise`          | `avoir`, `paiement_rembourse` (synonyme interdit : `payment_refund`)                       | REQ-DM-019   |
 | `ConsoleRole`          | `admin`, `qualifieur`, `comptable`, `lecteur`                                              | REQ-SEC-023  |
 | `StatutApporteur`      | `candidat`, `retenu`, `vivier`, `refuse`, `kyc_en_cours`, `pret_a_signer`, `signe`, `suspendu`, `resilie` — sens au §2 ; `actif` et `dormant` sont dérivés, jamais stockés | REQ-DM-011 |
 | `QualiteExercice`      | `commercant`, `societe_commerciale`, `artisan`, `profession_liberale` — liste fermée d'A07 ; les deux premières rendent applicable la clause attributive de juridiction (art. 48 CPC) ; « micro-entrepreneur » est un régime, pas une qualité | REQ-JUR-022 |
 | `ProfessionReglementee` | `expertise_comptable`, `auxiliaire_services_financiers`, `intermediaire_assurance` — une valeur par code NAF (69.20Z, 66.19B, 66.22Z), HYP-JUR-PROF-REGLEMENTEES | REQ-JUR-022 |
-| `MotifResiliation`     | `ordinaire_apporteur`, `ordinaire_axion`, `manquement_grave` — colonne `resiliationMotif` | REQ-DM-011 |
+| `MotifResiliation`     | `ordinaire_apporteur`, `ordinaire_axion`, `manquement_grave`, `fin_de_plein_droit` — colonne `resiliationMotif` ; `fin_de_plein_droit` : « Fin de plein droit : décès de l'apporteur personne physique, cessation de son activité ou radiation de son immatriculation (contrat art. 12.5) ; sans préavis, ni décision de la Société » ; une procédure collective n’en est pas une | REQ-DM-011 |
 | `RegimeTva`            | `assujetti`, `franchise_293b` — historique daté, figé sur chaque autofacture | REQ-ARG-033 |
 | `CanalCandidature`     | `site`, `linkedin`, `jobboard`, `saisie_console`, `autre` — dérivé par EXT-T03 de `sourceCanal`, chaîne transportée figée ; chemin inconnu → `autre`, journalisé | REQ-DM-035, REQ-EXT-008 |
 | `StatutTache`          | `a_faire`, `en_cours`, `en_revue`, `fusionnee`, `deployee`, `verifiee`, `bloquee`, `attente_externe`, `proposee` — **neuf valeurs**, celles de `scripts/lot/tasks.schema.json` ; `proposee` manquait ici depuis GOV-017a et rien ne l'attrapait | REQ-GOV-021 |
