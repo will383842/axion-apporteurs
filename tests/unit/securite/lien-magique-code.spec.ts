@@ -355,6 +355,43 @@ describe('REQ-SEC-001 — (6) la limite de débit, en échec fermé', () => {
     expect(await verifier(u, u.code)).toEqual({ etat: 'debit' });
     expect(u.trace).toEqual([]);
   });
+
+  it('REQ-SEC-001 : TÉMOIN (sécurité, condition 1) — compteur épuisé : compte connu ou inconnu, la MÊME réponse, octet pour octet', async () => {
+    const reponses: string[] = [];
+    for (const compte of [true, false]) {
+      const u = univers({ compte });
+      (u.ports.compterCourrielCode as ReturnType<typeof vi.fn>).mockResolvedValue({
+        autorise: false,
+        panne: false,
+      });
+      reponses.push(JSON.stringify(await verifier(u, u.code)));
+      expect(u.trace, `compte ${compte}`).toEqual([]);
+    }
+    expect(reponses).toEqual([
+      JSON.stringify({ etat: 'debit' }),
+      JSON.stringify({ etat: 'debit' }),
+    ]);
+  });
+
+  it('REQ-SEC-001 : TÉMOIN (sécurité, condition 1) — les deux compteurs sont consultés AVANT toute lecture du lien', async () => {
+    const u = univers();
+    const ordre: string[] = [];
+    (u.ports.compterAdresseCode as ReturnType<typeof vi.fn>).mockImplementation(async () => {
+      ordre.push('compteur:ip');
+      return { autorise: true, panne: false };
+    });
+    (u.ports.compterCourrielCode as ReturnType<typeof vi.fn>).mockImplementation(async () => {
+      ordre.push('compteur:adresse');
+      return { autorise: true, panne: false };
+    });
+    const transaction = u.ports.transaction;
+    u.ports.transaction = (travail) => {
+      ordre.push('lecture du lien');
+      return transaction(travail);
+    };
+    await verifier(u, u.code);
+    expect(ordre).toEqual(['compteur:ip', 'compteur:adresse', 'lecture du lien']);
+  });
 });
 
 // ── (7) : rien dans les journaux ────────────────────────────────────────────────────────────────
