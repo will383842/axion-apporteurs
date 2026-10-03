@@ -14,7 +14,7 @@
 | Accueil (3 chiffres, 1 alerte, 1 champ, 4 onglets) | `accueil.html` | UX-P1-08 | 2026-09-19 | Will |
 | Entreprise (recherche + carte 4 états + « Déposer ») | `entreprise.html` | UX-P1-01 | 2026-09-19 | Will |
 | Déposer un contact (W20 : quatre coordonnées, message, carte Annuler / Corriger) | `deposer.html` | UX-P1-02 | 2026-10-03 | Will |
-| Mes entreprises (W20 : badges de la confirmation) | `mes-entreprises.html` | UX-P1-05 | 2026-10-03 | Will |
+| Mes entreprises (W20 : badges de la confirmation) — à revalider (libellé du rattrapage 70, après la validation du 03/10) | `mes-entreprises.html` | UX-P1-05 | 2026-10-03 | Will |
 | Réponse du contact (page publique /confirmer) | `confirmation-contact.html` | UX-P1-42 | 2026-10-03 | Will |
 | Mes commissions | `mes-commissions.html` | UX-P2-01 | 2026-09-19 | Will |
 | Ma conformité / Mon profil (ouverture limitée, état vide) | `conformite.html` | UX-P1-09 | 2026-10-03 | Will |
