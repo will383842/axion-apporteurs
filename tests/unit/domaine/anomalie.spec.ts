@@ -108,18 +108,16 @@ describe('REQ-DM-034 — le rattachement manuel : une justification, un lien ant
 
 describe('REQ-DM-043 — l’échéance de réponse d’une contestation : dérivée, jamais stockée', () => {
   it('REQ-DM-043 : l’échéance tombe REPONSE_CONTESTATION_JOURS jours civils plus tard, à la même heure de Paris', () => {
-    const recue = new Date('2026-03-20T09:30:00.000Z');
+    const recue = Date.parse('2026-03-20T09:30:00.000Z');
     const e = echeanceDeReponse(recue);
     const jours = SEUILS.REPONSE_CONTESTATION_JOURS.valeur;
-    expect(localDepuisInstant(e.getTime()) - localDepuisInstant(recue.getTime())).toBe(
-      jours * MS_PAR_JOUR
-    );
+    expect(localDepuisInstant(e) - localDepuisInstant(recue)).toBe(jours * MS_PAR_JOUR);
   });
 
   it('REQ-DM-043 : TÉMOIN — à travers le passage à l’heure d’été, l’heure de Paris est gardée (une heure de moins en temps universel)', () => {
-    const recue = new Date('2026-03-20T09:30:00.000Z');
+    const recue = Date.parse('2026-03-20T09:30:00.000Z');
     const e = echeanceDeReponse(recue);
-    expect(e.getTime() - recue.getTime()).toBe(
+    expect(e - recue).toBe(
       SEUILS.REPONSE_CONTESTATION_JOURS.valeur * MS_PAR_JOUR - MS_PAR_JOUR / 24
     );
   });
