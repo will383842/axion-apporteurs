@@ -65,7 +65,7 @@ paramètres), `peremptionAt` (seule colonne recalculée). Synonymes interdits : 
 | `pret_a_signer`  | KYC valide, contrat envoyé (`Contrat.statut = envoye`)                      |
 | `signe`          | Contrat `signe` en vigueur ; peut déposer                                   |
 | `suspendu`       | Accès à l'espace **maintenu** (aucun jeton révoqué, `sessionVersion` inchangé) ; nouveaux dépôts refusés ; aucun envoi hors `toujours` (REQ-SEC-032, REQ-SEC-019, `HYP-SEC03-ACCES`) |
-| `resilie`        | Sortie de collaboration ; `resiliationMotif ∈ {ordinaire_apporteur, ordinaire_axion, manquement_grave}` — **synonymes interdits** : faute grave, faute, sanction |
+| `resilie`        | Sortie de collaboration ; `resiliationMotif ∈ {ordinaire_apporteur, ordinaire_axion, manquement_grave, fin_de_plein_droit}` — **synonymes interdits** : faute grave, faute, sanction |
 
 **Dérivés, jamais stockés** (REQ-CPL-027, fonction pure `activite(apporteur, depots, now)`) :
 
@@ -129,7 +129,7 @@ ordinaire **reste `prevue`** (l'attribution passe `figee_resiliation`) ; `conser
 | `StatutApporteur`      | `candidat`, `retenu`, `vivier`, `refuse`, `kyc_en_cours`, `pret_a_signer`, `signe`, `suspendu`, `resilie` — sens au §2 ; `actif` et `dormant` sont dérivés, jamais stockés | REQ-DM-011 |
 | `QualiteExercice`      | `commercant`, `societe_commerciale`, `artisan`, `profession_liberale` — liste fermée d'A07 ; les deux premières rendent applicable la clause attributive de juridiction (art. 48 CPC) ; « micro-entrepreneur » est un régime, pas une qualité | REQ-JUR-022 |
 | `ProfessionReglementee` | `expertise_comptable`, `auxiliaire_services_financiers`, `intermediaire_assurance` — une valeur par code NAF (69.20Z, 66.19B, 66.22Z), HYP-JUR-PROF-REGLEMENTEES | REQ-JUR-022 |
-| `MotifResiliation`     | `ordinaire_apporteur`, `ordinaire_axion`, `manquement_grave` — colonne `resiliationMotif` | REQ-DM-011 |
+| `MotifResiliation`     | `ordinaire_apporteur`, `ordinaire_axion`, `manquement_grave`, `fin_de_plein_droit` — colonne `resiliationMotif` ; `fin_de_plein_droit` : « Fin de plein droit : décès de l'apporteur personne physique, cessation de son activité ou radiation de son immatriculation (contrat art. 12.5) ; sans préavis, ni décision de la Société » ; une procédure collective n’en est pas une | REQ-DM-011 |
 | `NatureAccesConsole`   | `connexion`, `lecture_coordonnees_apporteur`, `lecture_coordonnees_contact` — colonne `nature` du journal des accès à la console ; une connexion n'a pas de cible, une lecture en a toujours une | SEC-58 |
 | `RegimeTva`            | `assujetti`, `franchise_293b` — historique daté, figé sur chaque autofacture | REQ-ARG-033 |
 | `CanalCandidature`     | `site`, `linkedin`, `jobboard`, `saisie_console`, `autre` — dérivé par EXT-T03 de `sourceCanal`, chaîne transportée figée ; chemin inconnu → `autre`, journalisé | REQ-DM-035, REQ-EXT-008 |

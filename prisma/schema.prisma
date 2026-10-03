@@ -139,6 +139,7 @@ enum MotifResiliation {
   ordinaire_apporteur
   ordinaire_axion
   manquement_grave
+  fin_de_plein_droit
 
   @@map("motif_resiliation")
 }
