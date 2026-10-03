@@ -115,6 +115,43 @@ async function refus(p: Promise<unknown>): Promise<string> {
   throw new Error('aucun refus');
 }
 
+/** Le SQLSTATE d'une erreur de la base, lu sur son code (le message de Prisma ne le garantit pas). */
+function codeSql(e: unknown): string | null {
+  const meta = (e as { meta?: { code?: string } } | null)?.meta?.code;
+  if (meta) return meta;
+  const m = /Code: `([0-9A-Z]{5})`/.exec(String((e as { message?: string } | null)?.message ?? ''));
+  return m?.[1] ?? null;
+}
+
+describe('REQ-DM-029 — la référence d’un devis est bornée à 64 caractères', () => {
+  it('REQ-DM-029 : TÉMOIN — une référence de 65 caractères est refusée par son TYPE, VARCHAR(64), SQLSTATE 22001, lu sur le code', async () => {
+    let erreur: unknown = null;
+    await app.devisConnu
+      .create({
+        data: {
+          devisRef: `${'d'.repeat(64)}1`,
+          siren: unSiren(),
+          emisAt: new Date(ilYA(2)),
+          montantTotalHtCents: 0,
+        },
+      })
+      .catch((e: unknown) => {
+        erreur = e;
+      });
+    expect(codeSql(erreur)).toBe('22001');
+  });
+
+  it('REQ-DM-029 : TÉMOIN — la projection ne tronque pas : un devis à référence trop longue fait échouer le traitant, et rien n’est écrit', async () => {
+    const siren = unSiren();
+    const devisId = `${'r'.repeat(64)}1`;
+    await expect(devisEmis(devisId, siren, ilYA(2))).rejects.toBeTruthy();
+    expect(await base.prisma.devisConnu.count({ where: { siren } })).toBe(0);
+    expect(
+      await base.prisma.devisConnu.count({ where: { devisRef: { startsWith: 'r'.repeat(64) } } })
+    ).toBe(0);
+  });
+});
+
 describe('REQ-DM-029 — la forme des tables (A02)', () => {
   it('REQ-DM-029 : TÉMOIN — chaque CHECK est refusé sur son nom', async () => {
     const siren = unSiren();
