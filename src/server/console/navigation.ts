@@ -58,6 +58,8 @@ export const ENTREES_DE_LA_CONSOLE: readonly EntreeDeLaConsole[] = [
 export const ROUTES_LIVREES_DE_LA_CONSOLE: readonly string[] = [
   '/console/connexion',
   '/console/connexion/[jeton]',
+  '/console',
+  '/console/acces-refuse',
 ];
 
 /** La liste de préférence de l'accueil, rôle par rôle (`docs/CONSOLE-ROUTES.md`). */

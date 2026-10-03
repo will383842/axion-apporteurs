@@ -1,0 +1,52 @@
+/*
+ * La navigation de la console (UX-P1-16) : les entrées en ligne sur le bureau ; en dessous de
+ * 768 px, une barre de trois entrées et « Menu ». Une FEUILLE servie par la même origine, jamais un
+ * style en ligne (`style-src 'self'`, garde `csp:inline`). Cibles de 44 px au moins (REQ-UX-018) ;
+ * aucune largeur fixe : rien ne déborde à 320 px.
+ */
+.navigation ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.lien {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  min-width: 2.75rem;
+  padding: 0 0.75rem;
+}
+
+.bureau {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  align-items: center;
+}
+
+.compte {
+  margin-left: auto;
+}
+
+.barre {
+  display: none;
+}
+
+.menu ul {
+  display: flex;
+  flex-direction: column;
+}
+
+@media (max-width: 767.98px) {
+  .bureau {
+    display: none;
+  }
+
+  .barre {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    max-width: 100%;
+  }
+}

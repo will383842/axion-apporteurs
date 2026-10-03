@@ -16,6 +16,10 @@
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { NavigationConsole } from '../../../src/components/console/navigation';
+import { NAVIGATION_CONSOLE } from '../../../src/content/micro-copy/console/navigation';
 import type { ConsoleRole } from '@prisma/client';
 import { ROLES_CONSOLE, roleAutorise } from '../../../src/server/roles/matrice';
 import {
@@ -180,5 +184,43 @@ describe('REQ-UX-019 — (4) l’accueil : la première route livrée de la pré
     );
     // Aujourd'hui : aucun écran du menu n'est livré, l'accueil est l'état vide pour tous.
     for (const role of ROLES_CONSOLE) expect(accueilDuRole(role), role).toBeNull();
+  });
+});
+
+describe('REQ-UX-018 — le composant de navigation', () => {
+  const tous = (_d: string, _r: ConsoleRole) => true;
+  const rendu = (role: ConsoleRole, livrees: readonly string[], autorise = roleAutorise) =>
+    renderToStaticMarkup(
+      createElement(NavigationConsole, {
+        entrees: entreesDuRole(role, { livrees, autorise }),
+        compte: createElement('button', { type: 'submit' }, 'COMPTE'),
+      })
+    );
+
+  it('REQ-UX-018 : TÉMOIN — une navigation nommée ; le bureau porte les entrées et le compte ; la barre mobile trois entrées et « Menu », qui porte le reste et le compte', () => {
+    const h = rendu('admin', TOUTES_LES_ROUTES, tous);
+    expect(h).toContain(`<nav aria-label="${NAVIGATION_CONSOLE.etiquette}"`);
+    const [bureau, barre] = h.split('</ul>');
+    for (const e of ENTREES_DE_LA_CONSOLE) expect(bureau).toContain(`>${e.libelle}</a>`);
+    expect(bureau).toContain('COMPTE');
+    expect(barre).toBeDefined();
+    const menu = h.slice(h.indexOf('<details'));
+    expect(menu).toContain(`<summary`);
+    expect(menu).toContain(NAVIGATION_CONSOLE.menu);
+    expect(menu).toContain('COMPTE');
+    for (const e of ENTREES_DE_LA_CONSOLE.slice(3)) expect(menu).toContain(`>${e.libelle}</a>`);
+  });
+
+  it('REQ-UX-048 : TÉMOIN — un rôle sans écran livré n’a aucun lien, seulement son compte : aucun onglet vers un écran prévu', () => {
+    const h = rendu('comptable', []);
+    expect(h).not.toMatch(/href="\/console\//);
+    expect(h).toContain('COMPTE');
+  });
+
+  it('REQ-UX-018 : la feuille de la navigation tient les cibles de 44 px et la bascule à 768 px, sans style en ligne', () => {
+    const feuille = readFileSync('src/components/console/navigation.module.css', 'utf8');
+    expect(feuille).toMatch(/min-height:\s*2\.75rem/);
+    expect(feuille).toMatch(/@media \(max-width: 767\.98px\)/);
+    expect(readFileSync('src/components/console/navigation.tsx', 'utf8')).not.toMatch(/style=/);
   });
 });
