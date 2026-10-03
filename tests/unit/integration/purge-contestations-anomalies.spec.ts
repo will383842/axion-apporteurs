@@ -68,6 +68,30 @@ describe('REQ-DM-033 et REQ-DM-043 — les limites d’un passage', () => {
     limitesDePurge(m);
     expect(m).toEqual(MAINTENANT);
   });
+
+  // Les mois et les années sont CIVILS, en heure de Paris, comme le reste du domaine
+  // (`ajouterMoisParis`) : un jour absent du mois d'arrivée devient son dernier, jamais un débordement
+  // sur le mois suivant, qui ferait sortir une ligne avant son échéance.
+  it('REQ-DM-033 : mois civils de Paris — deux mois avant le 30 avril, c’est le 28 février, jamais le 2 mars', () => {
+    // 2027-04-30 12:00 à Paris (heure d'été) → 2027-02-28 12:00 à Paris (heure d'hiver).
+    const l = limitesDePurge(new Date('2027-04-30T10:00:00.000Z'));
+    expect(l.anomalieLevee).toEqual(new Date('2027-02-28T11:00:00.000Z'));
+  });
+
+  it('REQ-DM-033 : mois civils de Paris, à travers le changement d’heure — même heure légale, pas même heure UTC', () => {
+    // 2026-12-03 13:00 à Paris (heure d'hiver) → 2026-10-03 13:00 à Paris (heure d'été).
+    const l = limitesDePurge(new Date('2026-12-03T12:00:00.000Z'));
+    expect(l.anomalieLevee).toEqual(new Date('2026-10-03T11:00:00.000Z'));
+  });
+
+  it('REQ-DM-043 : années civiles de Paris — cinq ans avant un 29 février, c’est le 28 février, jamais le 1er mars', () => {
+    // 2032-02-29 13:00 à Paris → 2027-02-28 13:00 à Paris, les deux en heure d'hiver.
+    const l = limitesDePurge(new Date('2032-02-29T12:00:00.000Z'));
+    const attendue = new Date('2027-02-28T12:00:00.000Z');
+    expect(l.anomalieConfirmee).toEqual(attendue);
+    expect(l.contestation).toEqual(attendue);
+    expect(l.dementi).toEqual(attendue);
+  });
 });
 
 describe('REQ-DM-033 — l’anonymisation des anomalies, telle que la base la reçoit', () => {
