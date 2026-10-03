@@ -76,6 +76,16 @@ tableaux de l'annexe passent en cartes sous 640 px.
 | Éditeur de grille (modèle, édition en masse, complétude) | `grille-console.html` | UX-P1-14 | — | — |
 | Saisie manuelle d'une candidature et CV | `saisie-manuelle-console.html` | EXT-T04 | — | — |
 
+### Refonte de la console en barre latérale (UX-P1-50)
+
+Williams, verbatim : « POUR la console d'adminsitration, j'ai l'impression qu'il fait très veillote et
+j'aurai aimé plutot un sidebar et que ce soit plus moderne ». L'aperçu de `console-cadre.html` en barre
+latérale lui a été montré, puis il a été propagé aux treize maquettes de la console, avec une seule marque
+pour l'espace et la console (rattrapage 85). Au bureau, la barre latérale groupe les entrées par métier.
+Sous 768 px, la barre du bas reste, et son « Menu » ouvre la barre latérale en tiroir (REQ-UX-048). Les
+entrées, les rôles, les états et les textes ne changent pas. Aucune ligne de la console n'était validée :
+aucune ne repart à vide, et la séance groupée ci-dessous se tient sur cette version.
+
 ### Séance de validation groupée de la console
 
 **Rapprochement avec `docs/CONSOLE-ROUTES.md` (UX-P1-19).** Chaque écran de console de la phase 1 a sa
