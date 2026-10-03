@@ -9,17 +9,26 @@
  *   (b) `{{APPORTEUR_QUALITE}}` reste UNIQUE dans le gabarit ;
  *   (c) la phrase de l'art. 14, mot pour mot.
  *
- * Les libellés sont ceux de la liste fermée d'A07 (acceptance), la source de DM-50 n'étant pas
- * encore sur main : commerçant, société commerciale, artisan, professionnel libéral. Aucun libellé ne
- * porte de préposition : c'est le gabarit qui la porte.
+ * Les VALEURS sont lues à leur source, l'enum `QualiteExercice` du client généré (RM-01) ; aucun
+ * libellé n'est encore rendu par le code, si bien que les quatre libellés de la liste fermée d'A07
+ * (acceptance) vivent ici en table de correspondance, et un témoin vérifie qu'elle couvre exactement
+ * l'enum. Aucun libellé ne porte de préposition : c'est le gabarit qui la porte.
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
+import { QualiteExercice } from '@prisma/client';
 import { normaliser, rendre } from '../../../src/domain/contrat/gabarit';
 import { SENTINELLE } from '../../../src/config/entite';
 
 const GABARIT = readFileSync('docs/contrat/CONTRAT-APPORTEUR-V1.md', 'utf8');
-const QUALITES = ['commerçant', 'société commerciale', 'artisan', 'professionnel libéral'] as const;
+/** La correspondance VALEUR → LIBELLÉ de la liste fermée d'A07 ; les valeurs viennent de l'enum. */
+const LIBELLES: Readonly<Record<QualiteExercice, string>> = {
+  commercant: 'commerçant',
+  societe_commerciale: 'société commerciale',
+  artisan: 'artisan',
+  profession_liberale: 'professionnel libéral',
+};
+const QUALITES = Object.values(QualiteExercice).map((v) => LIBELLES[v]);
 
 describe('REQ-JUR-003 — la qualité de l’Apporteur à l’art. 14, sans élision fautive', () => {
   it.each(QUALITES)(
@@ -35,6 +44,11 @@ describe('REQ-JUR-003 — la qualité de l’Apporteur à l’art. 14, sans éli
       expect(phrase).not.toMatch(/\bde (?:artisan|société)/i);
     }
   );
+
+  it('REQ-JUR-003 : TÉMOIN — la table des libellés couvre EXACTEMENT les valeurs de l’enum QualiteExercice', () => {
+    expect(Object.keys(LIBELLES).sort()).toEqual(Object.values(QualiteExercice).sort());
+    expect(QUALITES).toHaveLength(4);
+  });
 
   it('REQ-JUR-003 : TÉMOIN — le juge de l’élision voit « de artisan » et « de société »', () => {
     expect('qualité de artisan').toMatch(/\bde [aeiouyàâéèêëîïôûh]/i);
