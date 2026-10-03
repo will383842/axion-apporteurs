@@ -324,12 +324,22 @@ export function motifDeBranche(repo?: string | null): RegExp {
   };
   parcourir(schema);
   type Cote = { properties?: { branch?: { pattern?: unknown } } };
-  type Regle = { if?: { properties?: { repo?: { const?: unknown } } }; then?: Cote; else?: Cote };
+  // GOV-143 : le côté Partners porte UNE exception nommée (`if id = INT-T08-P`), et le motif général
+  // dans son `else`. Le motif est lu là, et nulle part ailleurs.
+  type CotePartners = Cote & { if?: unknown; else?: Cote };
+  type Regle = {
+    if?: { properties?: { repo?: { const?: unknown } } };
+    then?: Cote;
+    else?: CotePartners;
+  };
   const regle = (schema.$defs?.tache?.allOf ?? []).find(
     (r): r is Regle => (r as Regle)?.if?.properties?.repo?.const === 'axionia'
   );
   const axionia = regle?.then?.properties?.branch?.pattern;
-  const partners = regle?.else?.properties?.branch?.pattern;
+  const partners =
+    regle?.else?.if === undefined
+      ? regle?.else?.properties?.branch?.pattern
+      : regle.else.else?.properties?.branch?.pattern;
   if (typeof axionia !== 'string' || typeof partners !== 'string' || motifs.length !== 2) {
     throw new Error(
       `${CHEMIN_SCHEMA_DES_TACHES} ne porte pas la règle de branche par dépôt (GOV-125) : ` +
@@ -446,6 +456,52 @@ export function passifDeLaDeclaration(
 }
 
 /**
+ * GOV-143 — LE JOUR OÙ LA RÈGLE DE BRANCHE A ÉTÉ DONNÉE AUX AUTEURS DU NAVIGATEUR (`t/<id>`). Une
+ * exception datée après lui n'a plus d'excuse : le témoin rougit si la liste grandit ainsi.
+ */
+export const REGLE_DES_BRANCHES_DONNEE_LE = '2026-10-03';
+
+/** Une branche hors motif ADMISE : une tâche, sa branche, la PR et le sha qui l'attestent. */
+export interface BrancheHorsMotifAdmise {
+  tache: string;
+  branche: string;
+  pr: number;
+  sha: string;
+  /** La livraison précède ce jour (`AAAA-MM-JJ`), au plus tard `REGLE_DES_BRANCHES_DONNEE_LE`. */
+  avant: string;
+}
+
+/**
+ * GOV-143 — LES BRANCHES HORS MOTIF ADMISES, liste FERMÉE et datée, dans les données : le motif de
+ * partners/ADR-0007 ne change pas. INT-T08-P a été fusionnée par #539 depuis `feat/INT-T08-P` ; le
+ * schéma admet ce couple, et lui seul (`tasks.schema.json`).
+ */
+export const BRANCHES_HORS_MOTIF_ADMISES: readonly BrancheHorsMotifAdmise[] = [
+  {
+    tache: 'INT-T08-P',
+    branche: 'feat/INT-T08-P',
+    pr: 539,
+    sha: 'f642921fb6e9c45e43131d899ef00d10b29417fc',
+    avant: '2026-10-03',
+  },
+];
+
+/** La branche de cette livraison est-elle admise hors motif ? Tout doit coïncider : tâche, branche, PR, sha. */
+export function brancheHorsMotifAdmise(
+  tacheId: string,
+  livraison: Livraison,
+  liste: readonly BrancheHorsMotifAdmise[] = BRANCHES_HORS_MOTIF_ADMISES
+): boolean {
+  return liste.some(
+    (e) =>
+      e.tache === tacheId &&
+      e.branche === livraison.branch &&
+      e.pr === livraison.pr &&
+      e.sha === livraison.sha
+  );
+}
+
+/**
  * CLORE UNE TÂCHE LIVRÉE SEULE, HORS DE TOUT LOT (GOV-057) — `--tache <id> --pr <n>`.
  *
  * Six tâches ont été livrées sans lot, et le mode `--lot` ne savait pas les clore : il ÉCRIT
@@ -555,7 +611,11 @@ export function cloturerUneTacheSeule(options: {
         'et elle se lit sur la forge (`headRefName`), elle ne se tape pas.',
     });
   }
-  if (livraison.branch && !motifDeBranche(t.repo).test(livraison.branch)) {
+  if (
+    livraison.branch &&
+    !motifDeBranche(t.repo).test(livraison.branch) &&
+    !brancheHorsMotifAdmise(t.id, livraison)
+  ) {
     refus.push({
       famille: 'branche_hors_motif',
       message:
