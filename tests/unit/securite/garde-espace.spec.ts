@@ -9,7 +9,7 @@
  *   2. ANCIENNE VERSION ACCEPTÉE : refusée `acceptation_requise` ;
  *   3. BASE INJOIGNABLE : la session ou l'acceptation ne se lisent pas — refus nommé, jamais un
  *      passage ;
- *   4. POLITIQUE NON PUBLIABLE (JUR-T57) ou registre illisible : refus nommé ;
+ *   4. POLITIQUE NON PUBLIABLE ou registre illisible : refus nommé ;
  *   5. LE PORT D'ACCEPTATION ABSENT vaut refus : un câblage oublié ne rouvre pas l'espace ;
  *   6. LES EXEMPTIONS sont NOMMÉES, et ce sont exactement `confidentialite` et `connexion` ;
  *   7. LE DISQUE : chaque page, route et action SUIVIE par git sous `src/app/(espace)/`, hors des
