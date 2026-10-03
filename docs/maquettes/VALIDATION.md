@@ -17,9 +17,9 @@
 | Mes entreprises (W20 : badges de la confirmation) | `mes-entreprises.html` | UX-P1-05 | — | — |
 | Réponse du contact (page publique /confirmer) | `confirmation-contact.html` | UX-P1-42 | — | — |
 | Mes commissions | `mes-commissions.html` | UX-P2-01 | 2026-09-19 | Will |
-| Ma conformité / Mon profil (ouverture limitée, état vide) | `conformite.html` | UX-P1-09 | — | — |
+| Ma conformité / Mon profil (ouverture limitée, état vide) | `conformite.html` | UX-P1-09 | 2026-10-03 | Will |
 | Se connecter (lien, code à 6 chiffres, lien déjà utilisé) | `connexion.html` | UX-P1-04 | 2026-10-03 | Will |
-| Mon contrat | `mon-contrat.html` | UX-P1-44 | — | — |
+| Mon contrat | `mon-contrat.html` | UX-P1-44 | 2026-10-03 | Will |
 | Fiche d'une entreprise (frise, échanges) | `mes-entreprises-fiche.html` | EXT-T01 | — | — |
 | Personnes qui agissent pour l'apporteur | `personnes.html` | UX-P1-15 | — | — |
 | Dépôt par lien privé | `depot-lien-prive.html` | UX-P1-03 | — | — |
