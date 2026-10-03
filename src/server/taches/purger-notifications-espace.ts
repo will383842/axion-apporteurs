@@ -38,6 +38,9 @@ export async function purgerLesNotificationsDeLEspace(
     const { count } = await prisma.notificationEspace.deleteMany({
       where: { id: { in: lot.map((l) => l.id) } },
     });
+    // Un lot échu dont la suppression n'enlève rien serait relu à l'identique : on s'arrête, et le
+    // passage suivant du lanceur le reprendra.
+    if (count === 0) return { supprimees };
     supprimees += count;
   }
 }
