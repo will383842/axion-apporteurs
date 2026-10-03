@@ -238,10 +238,8 @@ attribution**, la Société et l'ensemble de ses préposés comptant pour un seu
 alinéa 5 ; le délai de **{{PEREMPTION_JOURS}} jours** court de la prise en charge, et l'exception de l'article
 3.4 alinéa 2 tirée d'une absence imputable à la Société ne s'applique pas à la prise en charge ; la
 prolongation de l'article 3.4 alinéa 3 ne s'applique qu'une fois, dans les mêmes conditions ; la prise en
-charge ne fait l'objet d'aucune reconduction. **La Société ne prend pas en charge une
-entreprise dont l'attribution ou la prise en charge a pris fin depuis moins de
-{{CARENCE_CONSEILLER_JOURS}} jours**, quel qu'en ait été l'occupant, ni pendant le délai de quinze jours
-ouvert à l'Apporteur en attente au premier rang.
+charge ne fait l'objet d'aucune reconduction. **La Société ne prend pas en charge une entreprise pendant
+le délai de quinze jours ouvert à l'Apporteur en attente au premier rang.**
 
 **La Société conserve dans ses propres outils, et peut utiliser à ses propres fins commerciales, les
 entreprises déclarées par l'Apporteur et les coordonnées qu'il a transmises, y compris pour les démarcher

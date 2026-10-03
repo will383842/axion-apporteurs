@@ -206,8 +206,8 @@ export const QUESTIONS_POUR_WILL: readonly Question[] = [
     id: 'JUR-T01-Q15',
     decision: 'HYP-W19-CARENCE',
     objet:
-      'Délai d’attente de la Société après toute libération (W19, CARENCE_CONSEILLER_JOURS), à écrire ' +
-      'au gabarit par JUR-T31. Ligne avenant non tranchée.',
+      'Délai d’attente de la Société après toute libération (W19) : SUPPRIMÉ par Williams le ' +
+      '2026-10-02 (réponse « A. » au point 6) ; l’art. 3.5 ne garde que les quinze jours du premier rang.',
     variables: [],
   },
   {
