@@ -40,7 +40,11 @@ export function argumentsDeLEclat(indice: number): string[] {
     '--coverage',
     `--coverage.thresholds.${CLE_DES_SEUILS}.lines=0`,
     `--coverage.thresholds.${CLE_DES_SEUILS}.branches=0`,
+    // Le blob pour la fusion, et le rapport par défaut pour que le JOURNAL du job dise quel test
+    // rougit : le blob seul écrit les résultats sans les imprimer (mesuré sur le premier run de
+    // #579, un éclat sorti en 1 sans un mot).
     '--reporter=blob',
+    '--reporter=default',
     `--shard=${indice}/${NOMBRE_D_ECLATS}`,
   ];
 }

@@ -107,6 +107,7 @@ describe('REQ-QA-013 — GOV-142 : l’éclat, la fusion, l’empreinte et la po
       '--coverage.thresholds.src/domain/**.lines=0',
       '--coverage.thresholds.src/domain/**.branches=0',
       '--reporter=blob',
+      '--reporter=default',
       '--shard=3/4',
     ]);
   });

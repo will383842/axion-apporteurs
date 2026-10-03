@@ -112,7 +112,7 @@ describe('REQ-QA-006 — l’étape « Tests » de Gate A atteint le harnais d�
     // `pnpm test:eclat`, dont les arguments ne choisissent aucun fichier : la liste FERMÉE ci-dessous
     // n'admet que la couverture (seuils neutralisés, jugés à la fusion), le rapporteur et l'éclat.
     const admiseALEclat =
-      /^(exec|vitest|run|--coverage|--coverage\.thresholds\.src\/domain\/\*\*\.(lines|branches)=0|--reporter=blob|--shard=[1-4]\/4)$/;
+      /^(exec|vitest|run|--coverage|--coverage\.thresholds\.src\/domain\/\*\*\.(lines|branches)=0|--reporter=(blob|default)|--shard=[1-4]\/4)$/;
     for (const i of [1, 2, 3, 4]) {
       expect(
         argumentsDeLEclat(i).filter((o) => !admiseALEclat.test(o)),
