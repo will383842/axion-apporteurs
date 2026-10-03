@@ -116,7 +116,7 @@ describe('REQ-SEC-024 — l’empreinte d’IP du clic est tronquée', () => {
 describe('REQ-DM-060 — l’écrivain refuse un conseiller (HYP-W20-SALARIES)', () => {
   it('REQ-DM-060 : TÉMOIN — une attribution sans apporteur ne reçoit pas de demande, et rien n’est écrit', async () => {
     const ecrit: string[] = [];
-    const tx = {
+    const faux = {
       $queryRaw: async () => [{ apporteur_id: null }],
       demandeConfirmation: {
         create: async () => {
@@ -124,7 +124,8 @@ describe('REQ-DM-060 — l’écrivain refuse un conseiller (HYP-W20-SALARIES)',
           return { id: 'x' };
         },
       },
-    } as never;
+    };
+    const tx = faux as never;
     let e: unknown;
     try {
       await creerLaDemande(tx, {

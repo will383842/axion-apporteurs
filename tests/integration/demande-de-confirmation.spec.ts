@@ -24,6 +24,8 @@ import { demarrerBase, type Base } from './harnais';
 import { creerLaDemande, corrigerLeContact } from '../../src/server/confirmation/demandes';
 import { transitionnerUneAttribution } from '../../src/server/attribution/transitionner';
 import { purgerLesContacts } from '../../src/server/taches/purger-contacts';
+import { clesPii } from '../../src/server/securite/pii';
+import { NOMS_DES_SECRETS } from '../../src/lib/env';
 
 let base: Base;
 let grilleId: string;
@@ -33,6 +35,14 @@ const hex = (octets: number) => randomBytes(octets).toString('hex');
 let sirens = 500000000;
 const unSiren = () => String((sirens += 1));
 const ACTEUR = { par: 'systeme' } as const;
+/** Des clés de test, fabriquées à l'exécution (jamais un secret réel). */
+const CLES = clesPii({
+  NODE_ENV: 'test',
+  ...Object.fromEntries(
+    NOMS_DES_SECRETS.map((n) => [n, `temoin-dm-40-${n.toLowerCase()}-`.padEnd(48, '0')])
+  ),
+  PII_ENCRYPTION_KEY: 'c'.repeat(64),
+});
 
 beforeAll(async () => {
   base = await demarrerBase();
@@ -277,11 +287,11 @@ describe('REQ-DM-005 — la correction est une révision tracée, deposee_at inc
     const [avant] = await base.prisma.$queryRaw<
       { deposee_at: Date; email_chiffre: Buffer }[]
     >`SELECT deposee_at, email_chiffre FROM attributions WHERE id = ${a}::uuid`;
-    const nouveau = randomBytes(40);
     await base.prisma.$transaction((tx) =>
       corrigerLeContact(tx, {
         attributionId: a,
-        nouvelles: { emailChiffre: nouveau, emailHash: hex(32) },
+        clairs: { email: 'nouvelle-adresse@exemple.invalid' },
+        cles: CLES,
         maintenant: new Date(avant!.deposee_at.getTime() + 60_000),
       })
     );
@@ -289,7 +299,7 @@ describe('REQ-DM-005 — la correction est une révision tracée, deposee_at inc
       { deposee_at: Date; email_chiffre: Buffer }[]
     >`SELECT deposee_at, email_chiffre FROM attributions WHERE id = ${a}::uuid`;
     expect(apres!.deposee_at).toEqual(avant!.deposee_at);
-    expect(Buffer.compare(apres!.email_chiffre, nouveau)).toBe(0);
+    expect(Buffer.compare(apres!.email_chiffre, avant!.email_chiffre)).not.toBe(0);
     const revisions = await base.prisma.$queryRaw<{ email_chiffre: Buffer }[]>`
       SELECT r.email_chiffre FROM revisions_demande_confirmation r
       JOIN demandes_confirmation d ON d.id = r.demande_id WHERE d.attribution_id = ${a}::uuid`;
@@ -309,7 +319,8 @@ describe('REQ-DM-005 — la correction est une révision tracée, deposee_at inc
         base.prisma.$transaction((tx) =>
           corrigerLeContact(tx, {
             attributionId: a,
-            nouvelles: { emailChiffre: randomBytes(40), emailHash: hex(32) },
+            clairs: { email: 'trop-tard@exemple.invalid' },
+            cles: CLES,
             maintenant: new Date(l!.deposee_at.getTime() + 15 * 60_000),
           })
         )
@@ -327,7 +338,8 @@ describe('REQ-DM-005 — la correction est une révision tracée, deposee_at inc
     await base.prisma.$transaction((tx) =>
       corrigerLeContact(tx, {
         attributionId: a,
-        nouvelles: { contexteChiffre: randomBytes(40) },
+        clairs: { contexte: 'un contexte corrigé' },
+        cles: CLES,
         maintenant: new Date(l!.deposee_at.getTime() + 60_000),
       })
     );

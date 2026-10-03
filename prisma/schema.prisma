@@ -75,6 +75,7 @@ enum TypeEvenementJournal {
   attribution_peremption_suspendue
   attribution_porteur_reaffecte
   piece_kyc_statut_modifie
+  demande_confirmation_etat_modifie
 
   @@map("type_evenement_journal")
 }
@@ -87,6 +88,7 @@ enum AgregatJournal {
   releve
   piece_kyc
   contrat
+  demande_confirmation
 
   @@map("agregat_journal")
 }
@@ -734,7 +736,8 @@ model Attribution {
   /// Verrou optimiste de la fiche (REQ-CPL-024).
   versionQualification             Int                 @default(0) @map("version_qualification")
 
-  courrielsEnvoyes CourrielEnvoye[]
+  courrielsEnvoyes    CourrielEnvoye[]
+  demandeConfirmation DemandeConfirmation?
 
   @@index([apporteurId])
   @@index([utilisateurConsoleId])
@@ -782,4 +785,67 @@ model PersonneDeclaree {
 
   @@index([apporteurId])
   @@map("personnes_declarees")
+}
+
+/// DM-40 (REQ-DM-060) : l'état d'une demande de confirmation par e-mail (`docs/GLOSSAIRE.md` §4).
+enum EtatDemandeConfirmation {
+  planifiee
+  annulee
+  envoyee
+  retenue
+  rebond
+  repondue_oui
+  repondue_non
+  clic_non_retenu
+  opposee
+  expiree
+
+  @@map("etat_demande_confirmation")
+}
+
+/// DM-40 (REQ-DM-060) : la demande de confirmation d'un dépôt, UNE par attribution. Les deux jetons
+/// ne sont stockés qu'en EMPREINTE ; ils sont révoqués à la purge du contact. L'échéance d'envoi se
+/// DÉRIVE de `deposeeAt` et de la SSOT : elle ne se stocke pas.
+model DemandeConfirmation {
+  id               String                  @id @default(uuid()) @db.Uuid
+  attributionId    String                  @unique @map("attribution_id") @db.Uuid
+  attribution      Attribution             @relation(fields: [attributionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  etat             EtatDemandeConfirmation @default(planifiee)
+  creeeAt          DateTime                @default(dbgenerated("clock_timestamp()")) @map("creee_at") @db.Timestamptz(3)
+  envoyeeAt        DateTime?               @map("envoyee_at") @db.Timestamptz(3)
+  reponduAt        DateTime?               @map("repondu_at") @db.Timestamptz(3)
+  /// L'empreinte du jeton « Oui », jamais le jeton.
+  jetonOuiHash     String?                 @map("jeton_oui_hash") @db.Char(64)
+  /// L'empreinte du jeton « Non », jamais le jeton.
+  jetonNonHash     String?                 @map("jeton_non_hash") @db.Char(64)
+  jetonsRevoquesAt DateTime?               @map("jetons_revoques_at") @db.Timestamptz(3)
+  /// L'empreinte TRONQUÉE et salée de l'adresse réseau du clic (REQ-SEC-024), jamais l'adresse.
+  clicIpHash       String?                 @map("clic_ip_hash") @db.Char(16)
+
+  revisions RevisionDemandeConfirmation[]
+
+  @@map("demandes_confirmation")
+}
+
+/// DM-40 (REQ-DM-060, HYP-W20-ANNULATION) : une correction du contact ou du contexte pendant le délai
+/// avant envoi, en AJOUT SEUL. Elle garde l'ANCIENNE valeur, recopiée telle quelle depuis
+/// l'attribution : chaque bloc reste lié à l'attribution (son AAD nomme l'attribution et le champ).
+/// Purgée avec le contact.
+model RevisionDemandeConfirmation {
+  id                     String              @id @default(uuid()) @db.Uuid
+  demandeId              String              @map("demande_id") @db.Uuid
+  demande                DemandeConfirmation @relation(fields: [demandeId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  reviseeAt              DateTime            @default(dbgenerated("clock_timestamp()")) @map("revisee_at") @db.Timestamptz(3)
+  nomContactChiffre      Bytes?              @map("nom_contact_chiffre")
+  prenomContactChiffre   Bytes?              @map("prenom_contact_chiffre")
+  emailChiffre           Bytes?              @map("email_chiffre")
+  emailHash              String?             @map("email_hash") @db.Char(64)
+  telephoneChiffre       Bytes?              @map("telephone_chiffre")
+  phoneHash              String?             @map("phone_hash") @db.Char(64)
+  fonctionContactChiffre Bytes?              @map("fonction_contact_chiffre")
+  contexteChiffre        Bytes?              @map("contexte_chiffre")
+  purgeeAt               DateTime?           @map("purgee_at") @db.Timestamptz(3)
+
+  @@index([demandeId])
+  @@map("revisions_demande_confirmation")
 }

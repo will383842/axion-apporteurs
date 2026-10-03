@@ -33,6 +33,7 @@ import {
   NAISSANCES_ATTRIBUTION,
 } from '../attribution/machine';
 import { STATUTS_PIECE_KYC, TYPES_PIECE_KYC } from '../kyc/pieces';
+import { ETATS_DEMANDE_CONFIRMATION } from '../confirmation/demande';
 
 /**
  * Les codes d'événement que porte `apporteur_statut_modifie` : la NAISSANCE (`creer`, `de` nul), puis
@@ -82,7 +83,8 @@ export type TypeEvenementJournal =
   | 'attribution_etat_modifie'
   | 'attribution_peremption_suspendue'
   | 'attribution_porteur_reaffecte'
-  | 'piece_kyc_statut_modifie';
+  | 'piece_kyc_statut_modifie'
+  | 'demande_confirmation_etat_modifie';
 
 /** DM-08 : le porteur d'une attribution, une forme UNIQUE — sa population et son identifiant. */
 const PORTEUR = () =>
@@ -198,6 +200,17 @@ export const CHARGES_PAR_TYPE = {
       de: z.enum(STATUTS_PIECE_KYC).nullable(),
       vers: z.enum(STATUTS_PIECE_KYC),
       type: z.enum(TYPES_PIECE_KYC),
+      acteur: FORMES.acteur(),
+    })
+    .strict(),
+  /**
+   * DM-40 (REQ-DM-060) : un changement d'état de la demande de confirmation, naissance comprise (`de`
+   * nul, `planifiee`). Ni jeton, ni empreinte, ni donnée de personne : l'état seul.
+   */
+  demande_confirmation_etat_modifie: z
+    .object({
+      de: z.enum(ETATS_DEMANDE_CONFIRMATION).nullable(),
+      vers: z.enum(ETATS_DEMANDE_CONFIRMATION),
       acteur: FORMES.acteur(),
     })
     .strict(),
