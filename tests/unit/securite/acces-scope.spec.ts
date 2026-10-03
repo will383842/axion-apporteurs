@@ -752,7 +752,7 @@ function fautesDeClassement(
 }
 
 describe('REQ-SEC-008 — GOV-111 : la couche ne rend qu’une sélection EXPLICITE, sans secret', () => {
-  it('REQ-SEC-008 : les dix-neuf secrets sont figés — les six de GOV-111, les quatre de la fiche (SEC-47), les sept du dépôt (DM-07) et l’IBAN de la pièce rib (DM-11)', () => {
+  it('REQ-SEC-008 : les vingt et un secrets sont figés — les six de GOV-111, les quatre de la fiche (SEC-47), les sept du dépôt (DM-07), l’IBAN de la pièce rib (DM-11) et le texte et la réponse d’une contestation (DM-12)', () => {
     expect(Object.isFrozen(SECRETS)).toBe(true);
     expect([...SECRETS].sort()).toEqual(
       [
@@ -775,6 +775,8 @@ describe('REQ-SEC-008 — GOV-111 : la couche ne rend qu’une sélection EXPLIC
         'agentHash',
         'ibanChiffre',
         'ibanHash',
+        'texteChiffre',
+        'reponseChiffre',
       ].sort()
     );
   });

@@ -41,9 +41,12 @@
  */
 
 import type {
+  AlerteLiberation,
+  Anomalie,
   Apporteur,
   Attribution,
   ChangementCourriel,
+  Contestation,
   CourrielEnvoye,
   DepotRefuse,
   IdentiteFacturation,
@@ -56,14 +59,18 @@ import type {
   Prisma,
   PrismaClient,
   SessionEspace,
+  Verification,
 } from '@prisma/client';
 
 // ── ce qui est cloisonné ─────────────────────────────────────────────────────────────────────────
 
 /** Les délégués du client dont les lignes appartiennent à un apporteur (colonne `apporteurId`). */
 export const MODELES_CLOISONNES = [
+  'alerteLiberation',
+  'anomalie',
   'attribution',
   'changementCourriel',
+  'contestation',
   'courrielEnvoye',
   'depotRefuse',
   'identiteFacturation',
@@ -74,6 +81,7 @@ export const MODELES_CLOISONNES = [
   'pieceKyc',
   'preferenceNotification',
   'sessionEspace',
+  'verification',
 ] as const;
 export type ModeleCloisonne = (typeof MODELES_CLOISONNES)[number];
 
@@ -84,8 +92,11 @@ export type ModeleCloisonne = (typeof MODELES_CLOISONNES)[number];
  * cette liste à `pg_trigger`, sur les modèles cloisonnés.
  */
 export const MODELES_EN_AJOUT_SEUL = [
+  'alerteLiberation',
+  'contestation',
   'depotRefuse',
   'personneDeclaree',
+  'verification',
 ] as const satisfies readonly ModeleCloisonne[];
 
 /**
@@ -112,10 +123,29 @@ export const CLES_REFUSEES = {
     'peremptionSuspenduePar',
     'courrielsEnvoyes',
     'notificationsEspace',
+    'anomalies',
+    'rattachementsManuels',
+    'contestations',
   ],
+  // DM-12 : une alerte de libération s'écrit par le serveur, pour l'apporteur de la session.
+  alerteLiberation: ['id', 'apporteurId', 'apporteur'],
+  // DM-12 : l'auteur du traitement ne s'écrit jamais de l'espace ; l'attribution est une référence
+  // vérifiée.
+  anomalie: ['id', 'apporteurId', 'apporteur', 'attribution', 'traiteParId', 'traitePar'],
   changementCourriel: ['id', 'apporteurId', 'apporteur'],
+  // DM-12 : la cible d'une contestation est une référence vérifiée ; l'auteur de la réponse ne
+  // s'écrit jamais de l'espace.
+  contestation: [
+    'id',
+    'apporteurId',
+    'apporteur',
+    'depotRefuse',
+    'attribution',
+    'repondueParId',
+    'reponduePar',
+  ],
   courrielEnvoye: ['id', 'apporteurId', 'apporteur', 'attribution'],
-  depotRefuse: ['id', 'apporteurId', 'apporteur'],
+  depotRefuse: ['id', 'apporteurId', 'apporteur', 'contestations'],
   // DM-11 : la pièce rib référencée est une référence vérifiée, jamais une relation écrite de l'espace.
   identiteFacturation: ['id', 'apporteurId', 'apporteur', 'pieceKyc', 'pieceKycType'],
   jetonDepot: ['id', 'apporteurId', 'apporteur', 'attributions'],
@@ -141,6 +171,8 @@ export const CLES_REFUSEES = {
   // préférence s'écrit, et Zod la juge contre la table des notifications avant la couche.
   notificationEspace: ['id', 'apporteurId', 'apporteur', 'attribution'],
   preferenceNotification: ['id', 'apporteurId', 'apporteur'],
+  // DM-12 : le porteur console ne s'écrit jamais de l'espace.
+  verification: ['id', 'apporteurId', 'apporteur', 'utilisateurConsoleId', 'utilisateurConsole'],
 } as const satisfies Record<ModeleCloisonne, readonly string[]>;
 
 /** Les clés étrangères vers une autre table cloisonnée : admises si la ligne visée est de la session. */
@@ -153,6 +185,10 @@ export const REFERENCES_CLOISONNEES: Partial<
   // DM-11 : la pièce rib d'une identité de facturation est une pièce de la session.
   identiteFacturation: { pieceKycId: 'pieceKyc' },
   notificationEspace: { attributionId: 'attribution' },
+  // DM-12 : une contestation vise un refus ou une attribution DE LA SESSION ; une anomalie, une
+  // attribution de la session.
+  contestation: { depotRefuseId: 'depotRefuse', attributionId: 'attribution' },
+  anomalie: { attributionId: 'attribution' },
 };
 
 /** Les messages de refus : une liste FERMÉE, qui part au journal et jamais au navigateur. */
@@ -184,10 +220,16 @@ export const RELATIONS = {
     'peremptionSuspenduePar',
     'courrielsEnvoyes',
     'notificationsEspace',
+    'anomalies',
+    'rattachementsManuels',
+    'contestations',
   ],
+  alerteLiberation: ['apporteur'],
+  anomalie: ['apporteur', 'attribution', 'traitePar'],
   changementCourriel: ['apporteur'],
+  contestation: ['apporteur', 'depotRefuse', 'attribution', 'reponduePar'],
   courrielEnvoye: ['apporteur', 'attribution'],
-  depotRefuse: ['apporteur'],
+  depotRefuse: ['apporteur', 'contestations'],
   identiteFacturation: ['apporteur', 'pieceKyc'],
   jetonDepot: ['apporteur', 'attributions'],
   lienMagique: ['apporteur', 'utilisateurConsole', 'session'],
@@ -196,6 +238,7 @@ export const RELATIONS = {
   sessionEspace: ['apporteur', 'utilisateurConsole', 'lienMagique'],
   notificationEspace: ['apporteur', 'attribution'],
   preferenceNotification: ['apporteur'],
+  verification: ['apporteur', 'utilisateurConsole'],
 } as const satisfies Record<ModeleCloisonne, readonly string[]>;
 
 /**
@@ -225,6 +268,9 @@ export const SECRETS = Object.freeze([
   // DM-11 : l'IBAN de la pièce rib, chiffré et empreint (HYP-DM06-IBAN).
   'ibanChiffre',
   'ibanHash',
+  // DM-12 : le texte et la réponse d'une contestation, chiffrés.
+  'texteChiffre',
+  'reponseChiffre',
 ] as const);
 
 /**
@@ -233,6 +279,16 @@ export const SECRETS = Object.freeze([
  * `CHAMPS_TUS` : une colonne neuve non classée fait rougir la confrontation au schéma (RM-05).
  */
 export const CHAMPS_RENDUS = {
+  // DM-12 : l'alerte telle que l'espace l'affiche.
+  alerteLiberation: ['id', 'siren', 'creeAt', 'envoyeeAt'],
+  // DM-12 : rien de l'anomalie n'est rendu à l'apporteur, hormis son identifiant (score, type et
+  // justification sont des jugements internes).
+  anomalie: ['id'],
+  // DM-12 : la contestation, sans son texte ni sa réponse chiffrés, ni l'auteur de la réponse.
+  contestation: ['id', 'objet', 'depotRefuseId', 'attributionId', 'recueAt', 'repondueAt'],
+  // DM-12 : l'entreprise vérifiée et la date ; le résultat est un journal serveur, jamais exposé tel
+  // quel (glossaire, `ResultatVerification`).
+  verification: ['id', 'siren', 'verifieeAt'],
   // DM-07 : ce que l'apporteur lit de son dépôt — son état, l'entreprise telle que l'API publique
   // l'a rendue, et le temps de la machine qui le concerne. Jamais le contact, jamais un porteur.
   attribution: [
@@ -296,6 +352,26 @@ export const CHAMPS_RENDUS = {
 
 /** Ce que la couche TAIT : le propriétaire (connu de la session), les secrets, les traces techniques. */
 export const CHAMPS_TUS = {
+  alerteLiberation: ['apporteurId'],
+  anomalie: [
+    'type',
+    'score',
+    'apporteurId',
+    'attributionId',
+    'statut',
+    'ouverteAt',
+    'traiteParId',
+    'traiteAt',
+    'justification',
+  ],
+  contestation: ['apporteurId', 'texteChiffre', 'reponseChiffre', 'repondueParId'],
+  verification: [
+    'apporteurId',
+    'utilisateurConsoleId',
+    'resultat',
+    'ipHash',
+    'empreinteReseauPurgeeAt',
+  ],
   // DM-07 : le porteur, la grille, le jeton, les traces de sincérité, le contact chiffré et sa
   // purge, la suspension de péremption (un acte de la console) et le verrou de la fiche.
   attribution: [
@@ -487,6 +563,22 @@ type WPreference = Prisma.PreferenceNotificationWhereInput;
 type CPreference = Prisma.PreferenceNotificationUncheckedCreateInput;
 type UPreference = Prisma.PreferenceNotificationUncheckedUpdateManyInput;
 type OPreference = Prisma.PreferenceNotificationOrderByWithRelationInput;
+type WAlerte = Prisma.AlerteLiberationWhereInput;
+type CAlerte = Prisma.AlerteLiberationUncheckedCreateInput;
+type UAlerte = Prisma.AlerteLiberationUncheckedUpdateManyInput;
+type OAlerte = Prisma.AlerteLiberationOrderByWithRelationInput;
+type WAnomalie = Prisma.AnomalieWhereInput;
+type CAnomalie = Prisma.AnomalieUncheckedCreateInput;
+type UAnomalie = Prisma.AnomalieUncheckedUpdateManyInput;
+type OAnomalie = Prisma.AnomalieOrderByWithRelationInput;
+type WContestation = Prisma.ContestationWhereInput;
+type CContestation = Prisma.ContestationUncheckedCreateInput;
+type UContestation = Prisma.ContestationUncheckedUpdateManyInput;
+type OContestation = Prisma.ContestationOrderByWithRelationInput;
+type WVerification = Prisma.VerificationWhereInput;
+type CVerification = Prisma.VerificationUncheckedCreateInput;
+type UVerification = Prisma.VerificationUncheckedUpdateManyInput;
+type OVerification = Prisma.VerificationOrderByWithRelationInput;
 
 /** L'accès de l'espace, pour UN apporteur : une vue par modèle cloisonné, et sa propre fiche. */
 export interface AccesApporteur {
@@ -576,6 +668,34 @@ export interface AccesApporteur {
     SansProprietaire<CPreference>,
     UPreference,
     OPreference
+  >;
+  alerteLiberation: VueCloisonnee<
+    Rendu<AlerteLiberation, 'alerteLiberation'>,
+    WAlerte,
+    SansProprietaire<CAlerte>,
+    UAlerte,
+    OAlerte
+  >;
+  anomalie: VueCloisonnee<
+    Rendu<Anomalie, 'anomalie'>,
+    WAnomalie,
+    SansProprietaire<CAnomalie>,
+    UAnomalie,
+    OAnomalie
+  >;
+  contestation: VueCloisonnee<
+    Rendu<Contestation, 'contestation'>,
+    WContestation,
+    SansProprietaire<CContestation>,
+    UContestation,
+    OContestation
+  >;
+  verification: VueCloisonnee<
+    Rendu<Verification, 'verification'>,
+    WVerification,
+    SansProprietaire<CVerification>,
+    UVerification,
+    OVerification
   >;
 }
 
