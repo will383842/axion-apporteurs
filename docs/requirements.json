@@ -468,15 +468,17 @@
     {
       "id": "REQ-DM-029",
       "domaine": "domaine-donnees",
-      "texte": "EntrepriseConnue {siren, origine enum **{client, devis, financeur}**, connueDepuisAt, dernierContactAt, clientStatut enum miroir} est alimentée exclusivement par les webhooks d'axionia (`client.*`, `devis.signe`) et, pour `financeur`, par la saisie manuelle de la liste de REQ-DM-028. 🔴 **`demande_entrante` est RETIRÉE de l'enum** (arbitrage l. 424, confirmé le 2026-09-03) : aucun des cinq événements arrêtés ne la transporte, le contrat ne peut donc pas promettre une antériorité tirée d'« une demande entrante de moins de quatre-vingt-dix jours » — la mention a été retirée de l'article 3.3, et elle ne peut y revenir qu'avec un sixième événement, donc un **ADR amendant la décision D1**. 🔴 **Deux fenêtres distinctes, alignées sur l'article 3.3 réécrit** (A-12), et non un paramètre unique : `ANTERIORITE_CLIENT_MOIS = 24` (entreprise **cliente au titre d'une prestation facturée** au cours des 24 derniers mois) et `ANTERIORITE_DEVIS_MOIS = 6` (entreprise **destinataire d'un devis** de moins de 6 mois), toutes deux dans la SSOT avec leur source (REQ-JUR-015). L'évaluation est **locale**, sans appel réseau au dépôt : « le contrôle est opéré sur les données dont la Société dispose à cet instant », ce que le miroir asynchrone permet — et le contrat ne promet plus un contrôle « automatique et immédiat » sur des données qu'il n'a pas. Tests frontière : facture à 23 mois → refus, à 25 mois → dépôt accepté ; devis à 5 mois → refus, à 7 mois → accepté ; `demande_entrante` présente dans l'enum → gate rouge.",
-      "source": "contrat art. 3.3 ; anti-abus F13, C12 ; arbitrage l. 424 ; nouvelle (F-DM-17) ; synthèse du 2026-09-03, A-12",
+      "texte": "EntrepriseConnue {siren, origine enum **{client, devis, financeur}**, connueDepuisAt, dernierContactAt, clientStatut enum miroir [RETIRÉ au rattrapage 93, A02 : aucune source fermée, aucune règle ne le lit, minimisation]} est alimentée exclusivement par les webhooks d'axionia (`client.*`, `devis.signe`) [rattrapage 93, A02 : `client.*`, `devis.emis` (INT-T46-P), `devis.signe`, `facture.emise`, `avoir.emis`] et, pour `financeur`, par la saisie manuelle de la liste de REQ-DM-028. 🔴 **`demande_entrante` est RETIRÉE de l'enum** (arbitrage l. 424, confirmé le 2026-09-03) : aucun des cinq événements arrêtés ne la transporte, le contrat ne peut donc pas promettre une antériorité tirée d'« une demande entrante de moins de quatre-vingt-dix jours » — la mention a été retirée de l'article 3.3, et elle ne peut y revenir qu'avec un sixième événement, donc un **ADR amendant la décision D1**. 🔴 **Deux fenêtres distinctes, alignées sur l'article 3.3 réécrit** (A-12), et non un paramètre unique : `ANTERIORITE_CLIENT_MOIS = 24` (entreprise **cliente au titre d'une prestation facturée** au cours des 24 derniers mois) et `ANTERIORITE_DEVIS_MOIS = 6` (entreprise **destinataire d'un devis** de moins de 6 mois), toutes deux dans la SSOT avec leur source (REQ-JUR-015). L'évaluation est **locale**, sans appel réseau au dépôt : « le contrôle est opéré sur les données dont la Société dispose à cet instant », ce que le miroir asynchrone permet — et le contrat ne promet plus un contrôle « automatique et immédiat » sur des données qu'il n'a pas. Tests frontière : facture à 23 mois → refus, à 25 mois → dépôt accepté ; devis à 5 mois → refus, à 7 mois → accepté ; `demande_entrante` présente dans l'enum → gate rouge.",
+      "source": "contrat art. 3.3 ; anti-abus F13, C12 ; arbitrage l. 424 ; nouvelle (F-DM-17) ; synthèse du 2026-09-03, A-12 ; forme d'A02 pour DM-10-P, rattrapage 93",
       "statut": "active",
       "remplaceePar": null,
       "module": 9,
       "etape": 9,
       "phase": 1,
       "taches": [
-        "DM-10-P"
+        "DM-10-P",
+        "INT-T75-A",
+        "INT-T75-P"
       ]
     },
     {
@@ -1049,6 +1051,7 @@
         "SEC-17",
         "SEC-30",
         "SEC-31",
+        "SEC-58",
         "UX-P2-03",
         "UX-P3-05"
       ]
@@ -1346,8 +1349,7 @@
         "QA-T31",
         "SEC-34",
         "SEC-51",
-        "SEC-52",
-        "UX-P1-17"
+        "SEC-52"
       ]
     },
     {
@@ -1376,6 +1378,20 @@
       "phase": 1,
       "taches": [
         "SEC-40"
+      ]
+    },
+    {
+      "id": "REQ-SEC-062",
+      "domaine": "anti-abus-securite",
+      "texte": "La connexion de la console (SEC-29) a ses propres compteurs, distincts de ceux de l'espace et plus stricts : la demande de lien est limitée à 10 / 15 min par hash IP à la demande de la console et à 3 / 15 min par email à la demande de la console ; la vérification du code est limitée à 10 / 15 min par hash IP au code de la console et à 5 / 15 min par email au code de la console ; tous avec `surPanne: refuser`. Le sujet de chaque compteur est une empreinte, jamais l'adresse en clair ; un refus a la forme générique de SEC-54 (statut 429 pour une route, redirection unique pour une action serveur), identique que le compte existe, soit désactivé ou non.",
+      "source": "nouvelle (lentille sécurité, rattrapage 93, pour SEC-29) ; la console est une autre population que l'espace, REQ-SEC-002 reste celle de l'espace",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": 21,
+      "etape": 12,
+      "phase": 1,
+      "taches": [
+        "SEC-29"
       ]
     },
     {
@@ -5017,8 +5033,8 @@
     {
       "id": "REQ-INT-063",
       "domaine": "integration",
-      "texte": "**L'API 4 : Partners pousse vers le CRM Pro ce qui est déclaré (décision de Williams du 2026-10-02, option B).** Partners POUSSE seul (aucune route de lecture n'est ouverte au CRM), par une outbox qui ne garde que la référence et la version, jamais un clair ; la charge se construit à l'envoi depuis les colonnes courantes, et le contrôle d'opposition se fait dans la MÊME transaction. Requêtes signées HMAC-SHA256 (horodatage et corps, 300 s), secret DÉDIÉ avec `kid`, hôte en liste fermée, HTTPS, aucune redirection ; idempotence par `Idempotency-Key` ; journal sans charge. Contrat `.strict()` à empreinte épinglée des deux côtés : `reference`, `entreprise{…}`, `contact{prenom, nom, email?, telephone?, fonction?}`, `provenance` {apporteur, commercial, societe}, `informationTiersVersion`. Ne sortent JAMAIS : la date du contact ni aucune date d'acte, toute identité de l'apporteur (même un identifiant opaque), ses empreintes, le contexte libre, la précision du lien d'intérêt, les signaux de sincérité, l'état d'un dépôt refusé ou en attente, les coordonnées géographiques. Une entreprise individuelle (forme non prouvée personne morale) n'est jamais émise. Aucune émission avant que le CRM ne lise la version, ni avant les textes validés par Williams et le registre et l'AIPD amendés.",
-      "source": "Décision de Williams du 2026-10-02 (option B, verbatim dans REPONSES-WILLIAMS-SEANCE-2026-10-02.md, hors dépôt) ; A02, lentille sécurité et A07 (2026-10-02)",
+      "texte": "**L'API 4 : Partners pousse vers le CRM Pro ce qui est déclaré (décision de Williams du 2026-10-02, option B).** Partners POUSSE seul (aucune route de lecture n'est ouverte au CRM), par une outbox qui ne garde que la référence et la version, jamais un clair ; la charge se construit à l'envoi depuis les colonnes courantes, et le contrôle d'opposition se fait dans la MÊME transaction. Requêtes signées HMAC-SHA256 (horodatage et corps, 300 s) [REMPLACÉ au rattrapage 93, ticket #220 : la chaîne signée est « <ts>.<MÉTHODE> <chemin>.<Idempotency-Key>.<corps brut> », en-têtes X-Partners-Timestamp, X-Partners-Kid, Idempotency-Key et X-Partners-Signature, voir INT-T68-P], secret DÉDIÉ avec `kid`, hôte en liste fermée, HTTPS, aucune redirection ; idempotence par `Idempotency-Key` ; journal sans charge. Contrat `.strict()` à empreinte épinglée des deux côtés : `reference`, `entreprise{…}`, `contact{prenom, nom, email?, telephone?, fonction?}`, `provenance` {apporteur, commercial, societe}, `informationTiersVersion`. Ne sortent JAMAIS : la date du contact ni aucune date d'acte, toute identité de l'apporteur (même un identifiant opaque), ses empreintes, le contexte libre, la précision du lien d'intérêt, les signaux de sincérité, l'état d'un dépôt refusé ou en attente, les coordonnées géographiques. Une entreprise individuelle (forme non prouvée personne morale) n'est jamais émise. Aucune émission avant que le CRM ne lise la version, ni avant les textes validés par Williams et le registre et l'AIPD amendés.",
+      "source": "Décision de Williams du 2026-10-02 (option B, verbatim dans REPONSES-WILLIAMS-SEANCE-2026-10-02.md, hors dépôt) ; A02, lentille sécurité et A07 (2026-10-02) ; transport aligné sur le CRM Pro (ticket #220, sécurité), rattrapage 93",
       "statut": "active",
       "remplaceePar": null,
       "module": null,
@@ -6216,7 +6232,6 @@
         "GOV-114",
         "JUR-T32",
         "JUR-T33",
-        "UX-P1-17",
         "UX-P2-13"
       ]
     },
