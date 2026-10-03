@@ -114,7 +114,25 @@ export const CATEGORIES_ALERTE = [
    * ni la clé du vidage ni sa date n'entrent dans le message.
    */
   'vidage_perime',
+  /**
+   * `INT-T08-P` — la réconciliation quotidienne avec axion-ia (`REQ-INT-013`, rattrapage 81) : une
+   * relecture ou un rejeu en échec, un trou rattrapé, une relecture arrêtée par sa borne. Le message
+   * ne porte que le genre (liste fermée), un motif de forme fermée et un NOMBRE
+   * (`ObjetAlerte.reconciliation`) : les `event_id` manquants restent dans Partners, au battement.
+   */
+  'reconciliation',
 ] as const;
+
+/** Les genres d'une alerte de réconciliation : ceux des signaux de `reconcilier` (INT-T08-P). */
+export const GENRES_RECONCILIATION = [
+  'relecture_echouee',
+  'rejeu_echoue',
+  'trou_rattrape',
+  'relecture_bornee',
+] as const;
+
+/** La forme d'un motif de réconciliation : un code en minuscules (`statut_503`), rien d'autre. */
+const MOTIF_DE_RECONCILIATION = /^[a-z][a-z0-9_]{0,39}$/;
 
 export type CategorieAlerte = (typeof CATEGORIES_ALERTE)[number];
 
@@ -137,6 +155,11 @@ export type ObjetAlerte = {
    * INT-T49 / INT-T54 — ce qu'une alerte `attente_depassee` montre : la forme de l'attente et le type
    * d'événement, en listes fermées ; le nombre et l'âge, en entiers. Rien d'autre.
    */
+  readonly reconciliation?: {
+    readonly genre: string;
+    readonly motif?: string;
+    readonly nombre?: number;
+  };
   readonly attente?: {
     readonly forme: string;
     readonly type: string;
@@ -175,6 +198,10 @@ const typeDEvenement = dansLaListe(Object.values(TypeEvenementRecu));
 const entier = (v: unknown): string =>
   typeof v === 'number' && Number.isSafeInteger(v) && v >= 0 ? String(v) : ILLISIBLE;
 
+const genreDeReconciliation = dansLaListe(GENRES_RECONCILIATION);
+const motifDeReconciliation = (v: unknown): string =>
+  typeof v === 'string' && MOTIF_DE_RECONCILIATION.test(v) ? v : ILLISIBLE;
+
 const environnement = (v: unknown): string =>
   typeof v === 'string' && (ENVIRONNEMENTS_DE_DEPLOIEMENT as readonly string[]).includes(v)
     ? v
@@ -210,7 +237,14 @@ const ligneDeBase = (o: ObjetAlerte): string =>
   (o.attente === undefined
     ? ''
     : ` · attente ${formeDAttente(o.attente.forme)} · type ${typeDEvenement(o.attente.type)}` +
-      ` · ${entier(o.attente.nombre)} au-delà · la plus ancienne ${entier(o.attente.plusAncienneJours)} j`);
+      ` · ${entier(o.attente.nombre)} au-delà · la plus ancienne ${entier(o.attente.plusAncienneJours)} j`) +
+  (o.reconciliation === undefined
+    ? ''
+    : ` · réconciliation ${genreDeReconciliation(o.reconciliation.genre)}` +
+      (o.reconciliation.motif === undefined
+        ? ''
+        : ` · motif ${motifDeReconciliation(o.reconciliation.motif)}`) +
+      (o.reconciliation.nombre === undefined ? '' : ` · ${entier(o.reconciliation.nombre)}`));
 
 /**
  * Les gabarits de message, et eux seuls : la garde les confronte TOUS, en les énumérant ici. Chacun
