@@ -87,8 +87,8 @@ describe('REQ-SEC-003 — (4) un lien déjà consommé a sa page', () => {
   it('REQ-SEC-003 : TÉMOIN — « déjà utilisé » se dit comme tel, distinct d’un lien invalide', () => {
     const deja = renderToStaticMarkup(createElement(EcranIssue, { etat: 'deja_utilise' }));
     const invalide = renderToStaticMarkup(createElement(EcranIssue, { etat: 'lien_invalide' }));
-    expect(deja).toContain(CONNEXION.dejaUtilise.titre);
-    expect(deja).toContain(CONNEXION.dejaUtilise.action);
+    expect(deja).toContain(CONNEXION.dejaUtilise.phrase);
+    expect(deja).toContain('href="/connexion"');
     expect(deja).not.toBe(invalide);
   });
 });

@@ -116,12 +116,14 @@ export const CONNEXION = {
         'Le lien de l’e-mail s’ouvre dans le navigateur, pas dans l’application. Tapez plutôt ici le code reçu par e-mail.',
     },
   },
-  /** UX-P1-04 — un lien déjà consommé, distinct d'un lien invalide (maquette « Lien déjà utilisé »). */
+  /**
+   * UX-P1-04 — un lien déjà consommé, distinct d'un lien invalide (maquette « Lien déjà utilisé »).
+   * Le titre et l'action sont ceux de l'état vide de `/connexion/<jeton>` (`etats-vides.ts`), non
+   * réécrits ; seule la phrase, qui dit POURQUOI le lien ne sert qu'une fois, vit ici.
+   */
   dejaUtilise: {
-    titre: 'Ce lien a déjà servi',
     phrase:
       'Un lien de connexion ne sert qu’une fois : c’est ce qui protège votre espace si l’e-mail est transféré.',
-    action: 'M’envoyer un nouveau lien',
   },
   courriel: {
     sujet: 'Votre lien de connexion à votre espace',

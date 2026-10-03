@@ -144,12 +144,12 @@ export function EcranCode({
 
 export function EcranIssue({ etat }: { etat: EtatDeConsommation }) {
   if (etat === 'deja_utilise') {
-    const t = CONNEXION.dejaUtilise;
+    const ecran = etatVide(ROUTE_ARRIVEE);
     return (
       <main>
-        <h1>{t.titre}</h1>
-        <p>{t.phrase}</p>
-        <a href={ROUTE_DEMANDE}>{t.action}</a>
+        <h1>{ecran.titre}</h1>
+        <p>{CONNEXION.dejaUtilise.phrase}</p>
+        <a href={ROUTE_DEMANDE}>{ecran.action.libelle}</a>
       </main>
     );
   }
