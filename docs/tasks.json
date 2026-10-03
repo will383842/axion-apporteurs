@@ -18889,7 +18889,9 @@
       "paths": [
         "prisma/schema.prisma",
         "prisma/migrations/",
-        "tests/integration/iban-et-session.spec.ts"
+        "tests/integration/iban-et-session.spec.ts",
+        "scripts/lib/semis-porte-d.ts",
+        "tests/unit/qualite/porte-d.spec.ts"
       ],
       "schema": true,
       "sensible": [
