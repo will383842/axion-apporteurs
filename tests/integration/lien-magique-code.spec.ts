@@ -82,7 +82,10 @@ async function apporteur(): Promise<{ id: string; emailHash: string }> {
       sourceCanal: '/connexion',
       parrainCodeCapture: null,
       creeAt: MAINTENANT,
+      // L'empreinte et le bloc chiffré vont ensemble (`apporteurs_courriel_complet`) : un bloc
+      // factice, jamais une adresse réelle.
       emailHash,
+      emailChiffre: Buffer.from([1]),
     },
   });
   return { id: a.id, emailHash };
