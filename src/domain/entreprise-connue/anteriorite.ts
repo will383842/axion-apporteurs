@@ -96,8 +96,7 @@ export function evaluerAnteriorite(faits: FaitsDUneEntreprise, maintenant: Date)
 
   // Un devis signé et pas entièrement facturé, quelle que soit sa date : le plus ancien fait foi.
   const signesOuverts = faits.devis
-    .filter((d) => !estEntierementFacture(d))
-    .flatMap((d) => (d.signeAt === null ? [] : [d.signeAt]))
+    .flatMap((d) => (d.signeAt !== null && !estEntierementFacture(d) ? [d.signeAt] : []))
     .sort((a, b) => a.getTime() - b.getTime());
   if (signesOuverts.length > 0) {
     return { connue: true, origine: 'devis', depuis: signesOuverts[0]! };
