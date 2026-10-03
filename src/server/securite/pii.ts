@@ -376,6 +376,9 @@ export const CHAMPS_PII = {
   contexte: { chiffre: 'contexteChiffre' },
   codePostal: { chiffre: 'codePostalChiffre' },
   lienInteretPrecision: { chiffre: 'lienInteretPrecisionChiffre' },
+  // DM-59 (REQ-JUR-065) : la nouvelle valeur d'une rectification demandée par le contact, chiffrée
+  // comme ses autres données, SANS empreinte (on ne la cherche jamais), effacée à la clôture.
+  valeurRectification: { chiffre: 'valeurChiffree' },
   // DM-12 : le texte d'une contestation et sa réponse (REQ-DM-043), chiffrés, sans empreinte.
   texte: { chiffre: 'texteChiffre' },
   reponse: { chiffre: 'reponseChiffre' },

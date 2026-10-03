@@ -33,6 +33,7 @@ import {
   NAISSANCES_ATTRIBUTION,
 } from '../attribution/machine';
 import { STATUTS_PIECE_KYC, TYPES_PIECE_KYC } from '../kyc/pieces';
+import { ETATS_DEMANDE_CONFIRMATION } from '../confirmation/demande';
 import { ETATS_CONTESTATION, GESTES_RATTACHEMENT, STATUTS_ANOMALIE } from '../anomalie/regles';
 
 /**
@@ -84,6 +85,7 @@ export type TypeEvenementJournal =
   | 'attribution_peremption_suspendue'
   | 'attribution_porteur_reaffecte'
   | 'piece_kyc_statut_modifie'
+  | 'demande_confirmation_etat_modifie'
   | 'anomalie_statut_modifie'
   | 'contestation_modifiee'
   | 'rattachement_manuel_modifie';
@@ -202,6 +204,17 @@ export const CHARGES_PAR_TYPE = {
       de: z.enum(STATUTS_PIECE_KYC).nullable(),
       vers: z.enum(STATUTS_PIECE_KYC),
       type: z.enum(TYPES_PIECE_KYC),
+      acteur: FORMES.acteur(),
+    })
+    .strict(),
+  /**
+   * DM-40 (REQ-DM-060) : un changement d'état de la demande de confirmation, naissance comprise (`de`
+   * nul, `planifiee`). Ni jeton, ni empreinte, ni donnée de personne : l'état seul.
+   */
+  demande_confirmation_etat_modifie: z
+    .object({
+      de: z.enum(ETATS_DEMANDE_CONFIRMATION).nullable(),
+      vers: z.enum(ETATS_DEMANDE_CONFIRMATION),
       acteur: FORMES.acteur(),
     })
     .strict(),
