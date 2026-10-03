@@ -84,7 +84,7 @@ describe('REQ-SEC-023 — les quatre rôles et la matrice unique', () => {
   });
 
   it('REQ-SEC-023 : chaque droit de la matrice ne nomme que des rôles de l’enum, sans doublon', () => {
-    for (const [droit, roles] of Object.entries(MATRICE_DES_ROLES)) {
+    for (const [droit, { roles }] of Object.entries(MATRICE_DES_ROLES)) {
       expect(droit).toMatch(/^(action|ecran):[a-z0-9_]+$/);
       expect(roles.length).toBeGreaterThan(0);
       expect(new Set(roles).size).toBe(roles.length);
@@ -137,6 +137,9 @@ const valide = (): Session => ({
   revoqueAt: null,
   // SEC-29 : vue à l'instant ; une session jamais vue est refusée comme inactive.
   derniereVueAt: T0,
+  // SEC-30 : ouverte à l'instant (le step-up tient) et de la version de son utilisateur.
+  creeAt: T0,
+  sessionVersion: 0,
 });
 
 /** Un dépôt en mémoire qui relit son état À CHAQUE appel, et compte ses lectures. */
@@ -152,7 +155,9 @@ function univers(utilisateur: Utilisateur | null, ligne: Session) {
         if (tokenHash !== empreinteDeSessionConsole(JETON, SECRET)) return null;
         return {
           ...etat.ligne,
-          utilisateurConsole: etat.utilisateur === null ? null : { ...etat.utilisateur },
+          // SEC-30 : l'utilisateur est à la version 0, celle de `valide()`.
+          utilisateurConsole:
+            etat.utilisateur === null ? null : { ...etat.utilisateur, sessionVersion: 0 },
         };
       },
     },
@@ -331,6 +336,8 @@ describe('REQ-SEC-023 — requireRole : le défaut est le refus, le rôle est re
       'desactive',
       'role_refuse',
       'inactive',
+      'version_perimee',
+      'releve_requis',
     ]);
     expect(jugerAcces('action:lever_gel', null, T0, KID)).toEqual({
       ok: false,
@@ -366,7 +373,11 @@ describe('REQ-SEC-023 — l’adaptateur Prisma de requireRole', () => {
           expireAt: true,
           revoqueAt: true,
           derniereVueAt: true,
-          utilisateurConsole: { select: { id: true, role: true, desactiveAt: true } },
+          creeAt: true,
+          sessionVersion: true,
+          utilisateurConsole: {
+            select: { id: true, role: true, desactiveAt: true, sessionVersion: true },
+          },
         },
       },
     ]);
@@ -1486,7 +1497,12 @@ describe('REQ-SEC-023 — SEC-30 : le step-up déclaré dans la matrice (arbitra
   const ligneOuverteIlYA = (ms: number) => ({
     ...valide(),
     creeAt: new Date(T0.getTime() - ms),
-    utilisateurConsole: { id: 'u-admin', role: 'admin' as const, desactiveAt: null },
+    utilisateurConsole: {
+      id: 'u-admin',
+      role: 'admin' as const,
+      desactiveAt: null,
+      sessionVersion: 0,
+    },
   });
   const releve = DUREES_AUTH.releveMs.valeur;
 
