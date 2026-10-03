@@ -257,7 +257,13 @@ describe('REQ-DM-031 — chaque argument du gabarit nomme une colonne qui existe
       WHERE p.proname = 'refuser_modification_sauf' AND NOT t.tgisinternal
         AND c.relpersistence = 'p'`;
     const tables = new Set(branchements.map((b) => b.table));
-    expect([...tables].sort()).toEqual(['depots_refuses', 'personnes_declarees']);
+    expect([...tables].sort()).toEqual([
+      'alertes_liberation',
+      'depots_refuses',
+      'personnes_declarees',
+      'rattachements_manuels',
+      'verifications',
+    ]);
     const absentes: string[] = [];
     for (const b of branchements) {
       for (const arg of (b.args ?? []).filter((a) => a !== '')) {

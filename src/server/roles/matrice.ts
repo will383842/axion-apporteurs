@@ -36,6 +36,9 @@ export const MATRICE_DES_ROLES = {
   'action:suspendre_apporteur': ['admin'],
   'action:resilier_apporteur': ['admin'],
   'action:exporter_das2': ['admin'],
+  // DM-12 (REQ-DM-034, amendement A1-01) : le rattachement manuel motivé, au qualifieur (glossaire §7)
+  // et à l'admin ; jamais au comptable ni au lecteur.
+  'action:rattacher_manuellement': ['admin', 'qualifieur'],
 } as const satisfies Readonly<Record<`${'action' | 'ecran'}:${string}`, readonly ConsoleRole[]>>;
 
 /** Un droit DÉCLARÉ — le seul que le typage laisse passer à `requireRole`. */

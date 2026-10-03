@@ -22,6 +22,12 @@ import {
   ROLE_D_EXECUTION,
   provisionnerRoleDExecution,
 } from '../../src/server/deploiement/role-d-execution';
+import { forApporteur } from '../../src/server/acces/for-apporteur';
+import { notifier } from '../../src/server/notifications/envoyer';
+import { deciderLeRattachement } from '../../src/server/rattachement/decider';
+import { NOMS_DES_SECRETS } from '../../src/lib/env';
+import { clesPii, decryptPii } from '../../src/server/securite/pii';
+import { MODELE_CONTESTATION, semerContestation } from '../../prisma/seed/12-console-cas';
 
 let base: Base;
 let app: PrismaClient;
@@ -37,6 +43,14 @@ const unSiren = () => String((sirens += 1));
 const GABARIT = 'refuser_modification_sauf';
 const ANOMALIES = 'anomalies_refuser_substitution';
 const CONTESTATIONS = 'contestations_refuser_substitution';
+/** Des clés de test, fabriquées à l'exécution (jamais un secret réel). */
+const CLES = clesPii({
+  NODE_ENV: 'test',
+  ...Object.fromEntries(
+    NOMS_DES_SECRETS.map((n) => [n, `temoin-dm-12-${n.toLowerCase()}-`.padEnd(48, '0')])
+  ),
+  PII_ENCRYPTION_KEY: 'd'.repeat(64),
+});
 const CONSEILLER = 'refuser_acteur_conseiller';
 
 beforeAll(async () => {
@@ -469,6 +483,26 @@ describe('REQ-DM-043 — contestations : un objet, une cible, une réponse posé
     return id;
   }
 
+  it('REQ-DM-043 : le semeur chiffre le texte pour SA ligne : il se relit sous elle, jamais sous une autre', async () => {
+    const { id: attributionId } = await uneAttribution();
+    const id = randomUUID();
+    await semerContestation(base.prisma, {
+      id,
+      apporteurId,
+      objet: 'annulation_attribution',
+      depotRefuseId: null,
+      attributionId,
+      texte: 'je conteste cette annulation',
+      recueAt: MAINTENANT,
+      cles: CLES,
+    });
+    const [l] = await base.prisma.$queryRaw<{ t: Buffer }[]>`
+      SELECT texte_chiffre AS t FROM contestations WHERE id = ${id}::uuid`;
+    const ligne = { modele: MODELE_CONTESTATION, champ: 'texteChiffre', id };
+    expect(decryptPii(ligne, l!.t, CLES)).toBe('je conteste cette annulation');
+    expect(() => decryptPii({ ...ligne, id: randomUUID() }, l!.t, CLES)).toThrow();
+  });
+
   it('REQ-DM-043 : TÉMOIN — la cible suit l’objet (contestations_objet_cible)', async () => {
     const refusId = await unRefus();
     const { id: attributionId } = await uneAttribution();
@@ -624,6 +658,24 @@ describe('REQ-DM-043 — contestations : un objet, une cible, une réponse posé
   });
 });
 
+describe('REQ-DM-033 REQ-DM-043 — les deux fonctions dédiées sont branchées, ligne et instruction', () => {
+  it('REQ-DM-043 : TÉMOIN — anomalies et contestations portent chacune leur déclencheur de ligne et de troncature, sur leur fonction', async () => {
+    const lignes = await base.prisma.$queryRaw<{ table: string; nom: string; fonction: string }[]>`
+      SELECT c.relname AS table, t.tgname AS nom, p.proname AS fonction
+      FROM pg_trigger t
+      JOIN pg_class c ON c.oid = t.tgrelid
+      JOIN pg_proc p ON p.oid = t.tgfoid
+      WHERE p.proname IN (${ANOMALIES}, ${CONTESTATIONS}) AND NOT t.tgisinternal
+      ORDER BY t.tgname`;
+    expect(lignes.map((l) => [l.table, l.nom, l.fonction])).toEqual([
+      ['anomalies', 'anomalies_trace', ANOMALIES],
+      ['anomalies', 'anomalies_troncature', ANOMALIES],
+      ['contestations', 'contestations_trace', CONTESTATIONS],
+      ['contestations', 'contestations_troncature', CONTESTATIONS],
+    ]);
+  });
+});
+
 describe('W19 — jamais un conseiller pour traiter, décider ou répondre', () => {
   it('W19 : TÉMOIN — la fonction partagée compare role::text, sans EXECUTE, et refuse un argument qui ne nomme pas une colonne', async () => {
     const [f] = await base.prisma.$queryRaw<{ corps: string }[]>`
@@ -653,5 +705,53 @@ describe('W19 — jamais un conseiller pour traiter, décider ou répondre', () 
         WHERE table_name = ${l.table} AND column_name = ${l.colonne}`;
       expect(c!.n, `${l.table}.${l.colonne}`).toBe(1);
     }
+  });
+});
+
+describe('REQ-DM-034 — l’écrivain du rattachement, émetteur de rattachement_decide', () => {
+  it('REQ-DM-034 : TÉMOIN — la décision et son événement s’écrivent sous partners_app, et la clé part UNE fois, au bon apporteur', async () => {
+    const { id: attributionId, deposeeAt } = await uneAttribution();
+    const courriels: { gabarit: string; apporteurId: string }[] = [];
+    const r = await deciderLeRattachement(
+      {
+        attributionId,
+        sirenCommande: unSiren(),
+        justification: 'le Kbis montre une filiale à 100 % depuis 2019',
+        lienControleEtabliAt: deposeeAt,
+        lienControleSource: 'Kbis du 2019-04-01',
+        decideParId: adminId,
+        maintenant: MAINTENANT,
+        notification: {
+          a: 'apporteur@exemple.invalid',
+          entreprise: 'Entreprise Essai',
+          decision: 'La commande est rattachée à votre attribution',
+          motif: 'la société commandeuse est une filiale de celle que vous avez déclarée',
+        },
+      },
+      {
+        prisma: app,
+        notifier: (id, demande) =>
+          notifier(demande, {
+            acces: forApporteur(app, id),
+            urlDeLEspace: new URL('https://partners.exemple.invalid'),
+            envoyerCourriel: async (dem) => {
+              courriels.push({ gabarit: dem.gabarit, apporteurId: dem.apporteurId ?? '' });
+              return 'retenu_dmarc_non_verifie';
+            },
+          }),
+      }
+    );
+    expect(r.notifie).toBe(true);
+    const notifications = await base.prisma.notificationEspace.findMany({
+      where: { cle: 'rattachement_decide' },
+      select: { apporteurId: true, attributionId: true },
+    });
+    expect(notifications).toEqual([{ apporteurId, attributionId }]);
+    expect(courriels).toEqual([{ gabarit: 'rattachement_decide', apporteurId }]);
+    const evenements = await base.prisma.evenement.findMany({
+      where: { type: 'rattachement_manuel_modifie', agregatId: attributionId },
+      select: { agregat: true },
+    });
+    expect(evenements).toEqual([{ agregat: 'attribution' }]);
   });
 });
