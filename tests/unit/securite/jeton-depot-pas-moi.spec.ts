@@ -12,8 +12,8 @@
  *      vecteur figé, calculé hors du code (openssl), et une signature d'un autre domaine refusée ;
  *   3. OUVRIR le lien ne lit ni n'écrit rien : la page de confirmation est la même pour tout lien ;
  *   4. CONFIRMER révoque le jeton nommé, une fois : le même lien rejoué ne révoque pas deux fois (compte
- *      des révocations), et un lien faux, d'une clé retirée ou d'un jeton étranger au dépôt rend la
- *      MÊME réponse sans rien écrire.
+ *      des révocations), et un lien faux, d'une clé retirée, d'un jeton étranger au dépôt ou d'un jeton
+ *      qui n'a pas porté ce dépôt rend la MÊME réponse sans rien écrire.
  */
 import { describe, it, expect } from 'vitest';
 import { SEUILS } from '../../../src/domain/seuils/ssot';
@@ -108,7 +108,7 @@ describe('REQ-SEC-006 — la signature du lien « ce n’est pas moi »', () => 
 
 function ports(
   jetons: { id: string; apporteurId: string; revoqueAt: Date | null }[],
-  depots: { id: string; apporteurId: string }[]
+  depots: { id: string; apporteurId: string; jetonDepotId: string | null }[]
 ): PortsDuPasMoi & { revocations: string[]; lectures: number } {
   const etat = { revocations: [] as string[], lectures: 0 };
   return {
@@ -140,6 +140,7 @@ function ports(
 
 const APPORTEUR = '33333333-3333-4333-8333-333333333333';
 const AUTRE = '44444444-4444-4444-8444-444444444444';
+const AUTRE_JETON = '55555555-5555-4555-8555-555555555555';
 
 describe('REQ-SEC-006 — ouvrir ne révoque rien, confirmer révoque une fois', () => {
   it('REQ-SEC-006 : OUVRIR le lien rend la page de confirmation, la même pour un lien bon ou faux, sans rien lire', () => {
@@ -152,7 +153,7 @@ describe('REQ-SEC-006 — ouvrir ne révoque rien, confirmer révoque une fois',
   it('REQ-SEC-006 : TÉMOIN D’IDEMPOTENCE — confirmer révoque le jeton nommé ; rejoué, le même lien ne révoque pas une seconde fois et rend la même réponse', async () => {
     const p = ports(
       [{ id: JETON, apporteurId: APPORTEUR, revoqueAt: null }],
-      [{ id: DEPOT, apporteurId: APPORTEUR }]
+      [{ id: DEPOT, apporteurId: APPORTEUR, jetonDepotId: JETON }]
     );
     const lien = lienPasMoi(JETON, DEPOT, CLE);
     expect(await confirmerPasMoi(lien, p)).toBe(REPONSE_PAS_MOI);
@@ -163,7 +164,7 @@ describe('REQ-SEC-006 — ouvrir ne révoque rien, confirmer révoque une fois',
   it('REQ-SEC-006 : un jeton déjà révoqué par un autre chemin : même réponse, aucune révocation de plus', async () => {
     const p = ports(
       [{ id: JETON, apporteurId: APPORTEUR, revoqueAt: T0 }],
-      [{ id: DEPOT, apporteurId: APPORTEUR }]
+      [{ id: DEPOT, apporteurId: APPORTEUR, jetonDepotId: JETON }]
     );
     expect(await confirmerPasMoi(lienPasMoi(JETON, DEPOT, CLE), p)).toBe(REPONSE_PAS_MOI);
     expect(p.revocations).toEqual([]);
@@ -172,7 +173,7 @@ describe('REQ-SEC-006 — ouvrir ne révoque rien, confirmer révoque une fois',
   it('REQ-SEC-006 : un lien faux ne lit rien et n’écrit rien ; un jeton étranger au dépôt, un jeton ou un dépôt inconnus n’écrivent rien — même réponse', async () => {
     const faux = ports(
       [{ id: JETON, apporteurId: APPORTEUR, revoqueAt: null }],
-      [{ id: DEPOT, apporteurId: APPORTEUR }]
+      [{ id: DEPOT, apporteurId: APPORTEUR, jetonDepotId: JETON }]
     );
     expect(
       await confirmerPasMoi({ ...lienPasMoi(JETON, DEPOT, CLE), signature: '0'.repeat(64) }, faux)
@@ -182,18 +183,29 @@ describe('REQ-SEC-006 — ouvrir ne révoque rien, confirmer révoque une fois',
 
     const etranger = ports(
       [{ id: JETON, apporteurId: AUTRE, revoqueAt: null }],
-      [{ id: DEPOT, apporteurId: APPORTEUR }]
+      [{ id: DEPOT, apporteurId: APPORTEUR, jetonDepotId: JETON }]
     );
     expect(await confirmerPasMoi(lienPasMoi(JETON, DEPOT, CLE), etranger)).toBe(REPONSE_PAS_MOI);
     expect(etranger.revocations).toEqual([]);
 
     for (const [jetons, depots] of [
-      [[], [{ id: DEPOT, apporteurId: APPORTEUR }]],
+      [[], [{ id: DEPOT, apporteurId: APPORTEUR, jetonDepotId: JETON }]],
       [[{ id: JETON, apporteurId: APPORTEUR, revoqueAt: null }], []],
     ] as const) {
       const p = ports(
         jetons.map((j) => ({ ...j })),
         depots.map((d) => ({ ...d }))
+      );
+      expect(await confirmerPasMoi(lienPasMoi(JETON, DEPOT, CLE), p)).toBe(REPONSE_PAS_MOI);
+      expect(p.revocations).toEqual([]);
+    }
+  });
+
+  it('REQ-SEC-006 : face ROUGE — un dépôt porté par un AUTRE jeton du même apporteur, ou par aucun : rien n’est révoqué', async () => {
+    for (const jetonDepotId of [AUTRE_JETON, null]) {
+      const p = ports(
+        [{ id: JETON, apporteurId: APPORTEUR, revoqueAt: null }],
+        [{ id: DEPOT, apporteurId: APPORTEUR, jetonDepotId }]
       );
       expect(await confirmerPasMoi(lienPasMoi(JETON, DEPOT, CLE), p)).toBe(REPONSE_PAS_MOI);
       expect(p.revocations).toEqual([]);
