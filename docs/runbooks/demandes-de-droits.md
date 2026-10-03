@@ -90,9 +90,31 @@ Ces informations se lisent dans la politique de confidentialité et dans `docs/r
 - l'identité de l'utilisateur de la console qui a traité une anomalie ;
 - l'identité de l'occupant d'une entreprise.
 
-**Envoi** : un fichier chiffré, transmis à l'adresse vérifiée (section 1.5), avec le mot de passe par un
-autre canal. On note la date de l'envoi dans la trace de la demande. Ce fichier n'est conservé nulle part
-ailleurs.
+**Construire le fichier.**
+- **Une procédure dédiée, en lecture seule**, lancée par une personne habilitée de la Société. Elle est
+  tracée : qui l'a lancée, quand, et pour quel apporteur, désigné par son identifiant. Jamais une requête
+  libre dans une console de base de données.
+- Le fichier se construit **sur un poste de la Société**, et il est **chiffré dès sa création**. Il ne
+  passe jamais par un drive partagé ni par une messagerie, et n'est jamais joint en clair.
+
+**Relire et caviarder les tiers — étape obligatoire avant l'envoi.** Une personne relit tous les textes
+libres :
+- les justifications d'anomalie ;
+- les contestations et leurs réponses ;
+- les traces du journal.
+
+Elle y caviarde toute donnée d'un tiers : un autre apporteur, un contact, un client, un utilisateur de la
+console. Ce qui concerne le demandeur reste.
+
+**Chiffrer.** Le fichier est chiffré en AES-256, dans un format nommé : une archive 7z en AES-256 ou un
+fichier age. Jamais le chiffrement ZIP ancien. La phrase de passe :
+- est tirée au hasard ;
+- fait au moins 20 caractères ;
+- passe par un canal lié à l'identité vérifiée : l'espace connecté de l'apporteur, ou un appel ou un SMS
+  au téléphone enregistré. Jamais par le même courriel que le fichier.
+
+**Envoyer.** Le fichier part à l'adresse vérifiée (section 1.5). On note la date de l'envoi dans la trace
+de la demande. Après l'envoi, le fichier est **effacé** du poste, et il n'est conservé nulle part ailleurs.
 
 ## 4. Les autres droits, en bref
 
