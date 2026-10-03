@@ -32,8 +32,20 @@ import { clesPii, empreinteAdresseReseau, empreinteRecherche, type ClesPii } fro
 import { signalerPotDeMiel } from '../securite/pot-de-miel';
 import { limiter, sujetDepuisEmpreinte } from '../securite/rate-limit';
 import { CONNEXION } from '../../content/micro-copy/espace/vocabulaire';
-import type { ConfigurationDuLien, PortsDeConsommation, PortsDeDemande } from './lien-magique';
-import { ecrituresDeLien, lectureDuCompte, transactionDeConsommation } from './lien-magique-depot';
+import { DUREES_AUTH } from './durees';
+import { CODE_DU_COURRIEL_DE_CONNEXION } from '../../content/micro-copy/courriels/notifications';
+import type {
+  ConfigurationDuLien,
+  PortsDeConsommation,
+  PortsDeDemande,
+  PortsDuCode,
+} from './lien-magique';
+import {
+  ecrituresDeLien,
+  lectureDuCompte,
+  transactionDeConsommation,
+  transactionDuCode,
+} from './lien-magique-depot';
 import {
   configurationDeLEmetteur,
   demanderEnvoi,
@@ -86,6 +98,15 @@ export function empreinteReseauDeLaRequete(entetes: Headers, cles: ClesPii): str
   return adresse === null ? null : empreinteAdresseReseau(adresse, cles);
 }
 
+/**
+ * Le corps du courriel de connexion : la phrase du lien, l'URL, puis la phrase du code (SEC-54). Le
+ * code n'est écrit QUE là : ni au dépôt, ni au journal, ni au puits (qui n'écrit que la taille).
+ */
+export function corpsDuCourriel(url: string, code: string): string {
+  const { avant, apres } = CODE_DU_COURRIEL_DE_CONNEXION;
+  return `${CONNEXION.courriel.corps}\n\n${url}\n\n${avant}\n${code}\n${apres}`;
+}
+
 export function portsDeDemande(d: DependancesDuLien): PortsDeDemande {
   const cles = clesPii(d.env);
   const configuration = configurationDuLien(d.env);
@@ -108,12 +129,8 @@ export function portsDeDemande(d: DependancesDuLien): PortsDeDemande {
     emission: {
       ...lectureDuCompte(d.prisma, cles),
       ...ecrituresDeLien(d.prisma),
-      envoyer: ({ a, url }) =>
-        d.envoi.envoyer({
-          a,
-          sujet: CONNEXION.courriel.sujet,
-          corps: `${CONNEXION.courriel.corps}\n\n${url}`,
-        }),
+      envoyer: ({ a, url, code }) =>
+        d.envoi.envoyer({ a, sujet: CONNEXION.courriel.sujet, corps: corpsDuCourriel(url, code) }),
       signalerPotDeMiel: async ({ formulaire, adresseHash, survenuAt }) =>
         signalerPotDeMiel({ formulaire, adresseHash, survenuAt: survenuAt.getTime() }),
       signalerEchec: (motif) => d.journal.warn(`lien_magique_${motif}`),
@@ -128,6 +145,70 @@ export function portsDeConsommation(
   return {
     maintenant: () => new Date(d.horloge.maintenant()),
     transaction: transactionDeConsommation(d.prisma),
+    configuration: configurationDuLien(d.env),
+  };
+}
+
+/**
+ * SEC-54 — le COOKIE D'ATTENTE du code (cadrage de la lentille sécurité, 2026-10-03). Posé à la
+ * demande pour toute adresse bien formée, compte connu ou non, avec le même en-tête (seule la valeur
+ * change) ; il porte l'EMPREINTE de recherche de l'adresse, jamais l'adresse. Il dure ce que dure le
+ * lien, lu dans la SSOT des durées, et s'efface à l'ouverture de la session, au « Changer
+ * d'adresse » et à l'annulation du lien au cinquième échec. SameSite=Strict : seule une requête du
+ * même site le porte.
+ */
+export const COOKIE_DATTENTE = {
+  nom: '__Host-connexion_code',
+  attributs: {
+    httpOnly: true,
+    secure: true,
+    path: '/',
+    sameSite: 'strict',
+    maxAge: DUREES_AUTH.lienMagiqueMs.valeur / 1000,
+  },
+} as const;
+
+/**
+ * Efface le cookie d'attente PAR LE MÊME EN-TÊTE que sa pose, Max-Age=0 : un cookie `__Host-` n'est
+ * accepté qu'avec Secure et Path=/, et un effacement nu (`delete`) sans Secure serait REJETÉ par le
+ * navigateur, le cookie restant jusqu'à son terme (lentille sécurité, 2026-10-03).
+ */
+export function effacerLeCookieDAttente(pot: {
+  set(nom: string, valeur: string, attributs: Record<string, unknown>): unknown;
+}): void {
+  pot.set(COOKIE_DATTENTE.nom, '', { ...COOKIE_DATTENTE.attributs, maxAge: 0 });
+}
+
+/** L'empreinte de recherche de l'adresse saisie, comme à l'émission, ou `null` si elle est hors forme. */
+export function empreinteDeLaSaisie(env: DependancesDuLien['env'], saisie: string): string | null {
+  try {
+    return empreinteRecherche('courriel', saisie, clesPii(env));
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * SEC-54 — les ports de la vérification du code. L'empreinte de l'adresse vient du cookie
+ * d'attente, et non d'une saisie ; les deux compteurs sont ceux du registre, appelés directement par
+ * leur nom ; le journal ne reçoit qu'un motif fermé.
+ */
+export function portsDuCode(
+  d: Pick<DependancesDuLien, 'env' | 'prisma' | 'horloge' | 'journal'>,
+  lienAnnule?: () => void
+): PortsDuCode {
+  const cles = clesPii(d.env);
+  return {
+    maintenant: () => new Date(d.horloge.maintenant()),
+    adresseDuClient: (entetes) => adresseDuClient(entetes, SAUTS_DE_CONFIANCE),
+    empreinteAdresseReseau: (adresse) => empreinteAdresseReseau(adresse, cles),
+    ...(lienAnnule ? { lienAnnule } : {}),
+    compterAdresseCode: (sujet, maintenantMs) =>
+      limiter('magic:code-ip', sujetDepuisEmpreinte(sujet), maintenantMs),
+    compterCourrielCode: (sujet, maintenantMs) =>
+      limiter('magic:code-courriel', sujetDepuisEmpreinte(sujet), maintenantMs),
+    transaction: transactionDuCode(d.prisma),
+    signaler: (motif) => d.journal.warn(`lien_magique_${motif}`),
     configuration: configurationDuLien(d.env),
   };
 }

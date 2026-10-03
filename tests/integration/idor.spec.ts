@@ -108,6 +108,17 @@ const IDOR_CASES: readonly Cas[] = [
     motif: 'reçoit un jeton de connexion ; n’ouvre que la session du lien qui le porte',
   },
   {
+    surface: 'action verifierUnCodeDeConnexion',
+    cloisonnement: 'sans_ressource',
+    motif:
+      'reçoit une adresse saisie et un code ; réponse identique que le compte existe ou non ; n’ouvre que la session du lien actif de cette adresse',
+  },
+  {
+    surface: 'action changerDAdresse',
+    cloisonnement: 'sans_ressource',
+    motif: 'ne reçoit rien ; n’efface que le cookie d’attente du code de cet appareil',
+  },
+  {
     surface: 'page /confidentialite',
     cloisonnement: 'sans_ressource',
     motif:
@@ -243,7 +254,7 @@ describe('REQ-QA-010 → REQ-SEC-009 — garde statique : une surface neuve de l
   it('REQ-QA-010 → REQ-SEC-009 : TÉMOIN À DEUX FACES — le dépôt réel sort en 0 avec le compte des routes et des actions confrontées', () => {
     const { code, sortie } = confronter(deriverSurfaces(RACINE), IDOR_CASES);
     console.log(sortie);
-    expect(sortie).toBe('idor:check — ✓ 3 routes et 3 actions confrontées');
+    expect(sortie).toBe('idor:check — ✓ 3 routes et 5 actions confrontées');
     expect(code).toBe(0);
   });
 
