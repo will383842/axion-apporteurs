@@ -123,6 +123,9 @@ export async function purgerLesContacts(
           where: { id: a.id, contactPurgeAt: null },
           data: {
             ...efface,
+            // DM-59 : le jeton des droits du contact meurt avec ses données, dans la même instruction
+            // (CHECK `attributions_jeton_droits_purge`).
+            jetonDroitsHash: null,
             contactPurgeAt: maintenant,
             ...(coordonneesSEffacent(a.natureJuridique)
               ? { latitudeMicrodeg: null, longitudeMicrodeg: null }
