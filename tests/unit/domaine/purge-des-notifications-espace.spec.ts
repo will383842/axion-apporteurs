@@ -1,6 +1,6 @@
 // @req REQ-UX-016
 /**
- * La purge des notifications de l'espace (DM-61, REQ-UX-016), jugée sans base : un faux client
+ * La purge des notifications de l'espace (REQ-UX-016), jugée sans base : un faux client
  * enregistre chaque lecture et chaque suppression. La base réelle est jouée par le témoin
  * d'intégration (`tests/integration/notifications-espace-purge.spec.ts`) ; ce fichier tient la
  * boucle, les lots, l'ordre, la limite et l'arrêt sur une suppression vide.
