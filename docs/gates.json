@@ -818,7 +818,7 @@
       "script": "axionia/scripts/gates/jur-copy-indicative.ts",
       "tache": "JUR-T29",
       "verifie": "aucune formulation FERME de remuneration dans la copy publique : toute mention d'un taux, d'un forfait ou d'un montant de commission hors du gabarit de contrat porte la mention indicative et le renvoi a la grille annexee au contrat signe (W12) ; perimetre pages publiques d'axionia, kit de vente, ressources et e-mails de recrutement",
-      "fixtureRouge": "ecrire 'vous percevez 10 %' sans mention indicative dans une page publique",
+      "fixtureRouge": "écrire une promesse ferme de commission (un taux de commission présenté comme acquis, sans mention indicative) dans une page publique",
       "preuveRouge": null
     },
     {
