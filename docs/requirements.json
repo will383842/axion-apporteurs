@@ -451,8 +451,8 @@
     {
       "id": "REQ-DM-028",
       "domaine": "domaine-donnees",
-      "texte": "SirenListeNoire {siren PK, motif enum {opco, france_travail, region, of_partenaire, autre}, ajoutePar, ajouteAt} est consultée au dépôt, à la vérification et à la réception de client.* ; un SIREN listé ne peut être ni attribué ni EntrepriseConnue attribuable.",
-      "source": "fonctionnement R14 ; tableaux-de-bord B12 ; anti-abus M5",
+      "texte": "SirenListeNoire {siren PK, motif enum {administration, financeur_public, financeur_paritaire, organisme_de_formation_partenaire} [rattrapage 93 : catégories de l'art. 3.3 bis (b), sans « autre », exigence de la juriste ; forme d'A02 ; remplace {opco, france_travail, region, of_partenaire, autre}], ajoutePar, ajouteAt} est consultée au dépôt, à la vérification et à la réception de client.* ; un SIREN listé ne peut être ni attribué ni EntrepriseConnue attribuable.",
+      "source": "fonctionnement R14 ; tableaux-de-bord B12 ; anti-abus M5 ; catégories de l'art. 3.3 bis (b), juriste et A02, rattrapage 93",
       "statut": "active",
       "remplaceePar": null,
       "module": 9,
@@ -1349,7 +1349,8 @@
         "QA-T31",
         "SEC-34",
         "SEC-51",
-        "SEC-52"
+        "SEC-52",
+        "UX-P1-17"
       ]
     },
     {
@@ -6232,6 +6233,7 @@
         "GOV-114",
         "JUR-T32",
         "JUR-T33",
+        "UX-P1-17",
         "UX-P2-13"
       ]
     },
