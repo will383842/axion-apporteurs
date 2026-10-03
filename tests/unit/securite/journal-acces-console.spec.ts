@@ -1,6 +1,6 @@
 // @req REQ-SEC-023
 /**
- * SEC-58 — le journal des accès à la console, par identifiants seuls, jugé sans base : un faux client
+ * Le journal des accès à la console, par identifiants seuls, jugé sans base : un faux client
  * enregistre chaque appel, dans l'ordre. La base réelle (ajout seul par le gabarit commun, CHECK,
  * purge qui vide les identifiants) est jouée par `tests/integration/journal-des-acces-console.spec.ts`.
  *
