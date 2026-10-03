@@ -128,6 +128,8 @@
     "perf:bundle": "tsx scripts/gates/bundle-par-route.ts",
     "perf:bundle:prove": "tsx scripts/gates/bundle-par-route.ts --prove",
     "perf:bundle:construire": "next build",
+    "gov:ci-etapes": "tsx scripts/gates/ci-etapes-identiques.ts",
+    "gov:ci-etapes:prove": "tsx scripts/gates/ci-etapes-identiques.ts --prove",
     "gov:conventions": "tsx scripts/gates/gov-conventions.ts",
     "gov:conventions:prove": "tsx scripts/gates/gov-conventions.ts --prove",
     "gov:identifiants:compter": "tsx scripts/gates/gov-identifiants.ts --compter",
