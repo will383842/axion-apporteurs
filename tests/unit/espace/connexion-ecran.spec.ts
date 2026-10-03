@@ -123,4 +123,21 @@ describe('REQ-SEC-003 — (6) la redirection bornée', () => {
     ])
       expect(destinationBornee(hostile), hostile).toBe('/');
   });
+
+  it('REQ-SEC-003 : TÉMOIN (sécurité) — les SEGMENTS POINTÉS sont résolus avant l’exclusion : ils ne mènent ni à l’API, ni à la console, ni à la connexion', () => {
+    for (const pointe of [
+      '/x/../api/y',
+      '/x/%2e%2e/console',
+      '/./connexion',
+      '/%2e/api',
+      '/mes-entreprises/../../console/apporteurs',
+      '/x/%2E%2E/api/integrations',
+      '/%61pi/y',
+      '/Console/apporteurs',
+      '/x/%zz/y',
+    ])
+      expect(destinationBornee(pointe), pointe).toBe('/');
+    // Un chemin de l'espace qui se résout dans l'espace est rendu RÉSOLU, jamais tel quel.
+    expect(destinationBornee('/a/../mes-entreprises')).toBe('/mes-entreprises');
+  });
 });

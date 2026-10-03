@@ -113,7 +113,7 @@ export const CONNEXION = {
     installee: {
       titre: 'Vous utilisez l’application installée',
       phrase:
-        'Le lien de l’e-mail s’ouvre dans le navigateur, pas dans l’application. Tapez plutôt ici le code reçu par e-mail.',
+        'Le lien de l’e-mail s’ouvre dans le navigateur, pas dans l’application. Tapez plutôt le code reçu par e-mail ici.',
     },
   },
   /**

@@ -791,7 +791,7 @@ describe('REQ-UX-002 — snapshot des libellés de l’espace, sans date, sans n
       espace/vocabulaire.ts › CONNEXION › code › refus : Ce code n’est pas valable. Demandez un nouveau lien de connexion.
       espace/vocabulaire.ts › CONNEXION › code › debit : Trop d’essais. Réessayez dans quelques minutes.
       espace/vocabulaire.ts › CONNEXION › code › installee › titre : Vous utilisez l’application installée
-      espace/vocabulaire.ts › CONNEXION › code › installee › phrase : Le lien de l’e-mail s’ouvre dans le navigateur, pas dans l’application. Tapez plutôt ici le code reçu par e-mail.
+      espace/vocabulaire.ts › CONNEXION › code › installee › phrase : Le lien de l’e-mail s’ouvre dans le navigateur, pas dans l’application. Tapez plutôt le code reçu par e-mail ici.
       espace/vocabulaire.ts › CONNEXION › dejaUtilise › phrase : Un lien de connexion ne sert qu’une fois : c’est ce qui protège votre espace si l’e-mail est transféré.
       espace/vocabulaire.ts › CONNEXION › courriel › sujet : Votre lien de connexion à votre espace
       espace/vocabulaire.ts › CONNEXION › courriel › corps : Voici votre lien de connexion. Il ne sert qu’une fois et expire rapidement. Si vous n’avez rien demandé, ignorez ce message.
