@@ -304,6 +304,9 @@ model Apporteur {
   anomalies               Anomalie[]
   contestations           Contestation[]
 
+  /// CPL-T06 (REQ-CPL-006) : les décisions sur la candidature, en ajout seul.
+  decisionsCandidature DecisionCandidature[]
+
   @@index([phoneHash])
   @@map("apporteurs")
 }
@@ -406,13 +409,15 @@ model UtilisateurConsole {
 
   liensMagiques           LienMagique[]
   sessionsEspace          SessionEspace[]
-  attributions            Attribution[]        @relation("AttributionsDuConseiller")
-  suspensionsDePeremption Attribution[]        @relation("SuspensionsDePeremption")
+  attributions            Attribution[]         @relation("AttributionsDuConseiller")
+  suspensionsDePeremption Attribution[]         @relation("SuspensionsDePeremption")
   verifications           Verification[]
   anomaliesTraitees       Anomalie[]
   rattachementsDecides    RattachementManuel[]
   contestationsRepondues  Contestation[]
   qualificationsSaisies   Qualification[]
+  /// CPL-T06 : les décisions de candidature dont l'utilisateur est l'auteur.
+  decisionsCandidature    DecisionCandidature[]
 
   @@map("utilisateurs_console")
 }
@@ -928,6 +933,50 @@ model PersonneDeclaree {
 
   @@index([apporteurId])
   @@map("personnes_declarees")
+}
+
+/// CPL-T06 (REQ-CPL-006) — le résultat d'une décision sur une candidature. Chaque valeur est un statut
+/// d'apporteur, atteint par la transition de la matrice qui la porte (`TRANSITION_DU_RESULTAT`,
+/// `src/domain/candidature/decision.ts`).
+enum ResultatDecisionCandidature {
+  retenu
+  vivier
+  refuse
+
+  @@map("resultat_decision_candidature")
+}
+
+/// CPL-T06 (REQ-CPL-006 ; cadrage de l'architecte du 2026-09-26, partners/ADR-0022) — l'étape 3 du
+/// cycle. EN AJOUT SEUL : une nouvelle décision est une nouvelle ligne ; mise à jour, suppression et
+/// troncature sont refusées par la base (`refuser_modification_sauf`, migration
+/// `20261003001200_decisions_candidature`). Le changement de statut de l'apporteur qui la suit entre
+/// au journal sous `apporteur_statut_modifie`.
+model DecisionCandidature {
+  id                    String                      @id @default(uuid()) @db.Uuid
+  /// La fiche de l'apporteur. Le lien SORT de la ligne quand la fiche est effacée à l'échéance :
+  /// NULL avec `apporteurPurgeAt`, ensemble ou pas du tout (CHECK
+  /// `decisions_candidature_apporteur_purge_liee`), et au plus tard avec le motif (CHECK
+  /// `decisions_candidature_purge_ordre`) ; la clé RESTRICT ne retient plus alors la fiche.
+  apporteurId           String?                     @map("apporteur_id") @db.Uuid
+  apporteur             Apporteur?                  @relation(fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  apporteurPurgeAt      DateTime?                   @map("apporteur_purge_at") @db.Timestamptz(3)
+  resultat              ResultatDecisionCandidature
+  /// Le motif de la décision, CHIFFRÉ (`colonnesPii`, champ `justification`, lié au modèle
+  /// `decisionCandidature`, à l'id et au champ) : il peut nommer une personne. Exigé à l'insertion,
+  /// jamais vide (le domaine juge les blancs avant le chiffrement ; la base refuse un chiffré vide).
+  /// Il se PURGE : passé à NULL avec `justificationPurgeeAt`, ensemble ou pas du tout (CHECK
+  /// `decisions_candidature_justification_purge_liee`), et ne revient jamais.
+  justificationChiffre  Bytes?                      @map("justification_chiffre")
+  justificationPurgeeAt DateTime?                   @map("justification_purgee_at") @db.Timestamptz(3)
+  /// Déclaratif et informatif (REQ-JUR-013) : aucune transition n'en dépend. Nul quand la présence
+  /// n'est pas connue.
+  webinaireSuivi        Boolean?                    @map("webinaire_suivi")
+  auteurId              String                      @map("auteur_id") @db.Uuid
+  auteur                UtilisateurConsole          @relation(fields: [auteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  decideeAt             DateTime                    @map("decidee_at") @db.Timestamptz(3)
+
+  @@index([apporteurId, decideeAt])
+  @@map("decisions_candidature")
 }
 
 /// DM-40 (REQ-DM-060) : l'état d'une demande de confirmation par e-mail (`docs/GLOSSAIRE.md` §4).
