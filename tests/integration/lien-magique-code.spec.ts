@@ -107,16 +107,12 @@ async function emettre(apporteurId: string, creeAt = MAINTENANT, code = '042137'
   return { jeton, code };
 }
 
-function ports(
-  emailHash: string | null,
-  o: { maintenant?: Date; panne?: boolean } = {}
-): PortsDuCode {
+function ports(o: { maintenant?: Date; panne?: boolean } = {}): PortsDuCode {
   const verdict = async () => ({ autorise: !o.panne, panne: Boolean(o.panne) });
   return {
     maintenant: () => o.maintenant ?? MAINTENANT,
     adresseDuClient: () => '203.0.113.7',
     empreinteAdresseReseau: () => 'r'.repeat(64),
-    empreinteCourriel: () => emailHash,
     compterAdresseCode: verdict,
     compterCourrielCode: verdict,
     transaction: transactionDuCode(app),
@@ -125,11 +121,9 @@ function ports(
   };
 }
 
-const verifier = (emailHash: string | null, code: string, o: Parameters<typeof ports>[1] = {}) =>
-  verifierLeCode(
-    { saisie: 'apporteur@example.org', code, entetes: new Headers() },
-    ports(emailHash, o)
-  );
+/** L'empreinte, telle que l'action la lit dans le cookie d'attente. */
+const verifier = (emailHash: string | null, code: string, o: Parameters<typeof ports>[0] = {}) =>
+  verifierLeCode({ emailHash, code, entetes: new Headers() }, ports(o));
 
 async function lien(apporteurId: string) {
   return base.prisma.lienMagique.findFirstOrThrow({

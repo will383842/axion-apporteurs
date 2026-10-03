@@ -23,7 +23,9 @@ import { redirect } from 'next/navigation';
 import { after } from 'next/server';
 import { consommerLien, demanderLien, verifierLeCode } from '../../../server/auth/lien-magique';
 import {
+  COOKIE_DATTENTE,
   dependancesDuProcessus,
+  empreinteDeLaSaisie,
   empreinteReseauDeLaRequete,
   portsDeConsommation,
   portsDeDemande,
@@ -42,15 +44,28 @@ const texte = (valeur: FormDataEntryValue | null): string | null =>
   typeof valeur === 'string' ? valeur : null;
 
 export async function demanderUnLienDeConnexion(formulaire: FormData): Promise<void> {
+  const d = dependancesDuProcessus({ apres: after, env: process.env });
+  const saisie = texte(formulaire.get('courriel')) ?? '';
   const etat = await demanderLien(
     {
-      saisie: texte(formulaire.get('courriel')) ?? '',
+      saisie,
       piege: evaluerPotDeMiel(texte(formulaire.get('site'))).piege,
       entetes: await headers(),
     },
-    portsDeDemande(dependancesDuProcessus({ apres: after, env: process.env }))
+    portsDeDemande(d)
   );
+  // SEC-54 : le cookie d'attente du code, pour TOUTE adresse bien formée, que le compte existe ou
+  // non : même en-tête, seule l'empreinte change. Chaque demande remplace le précédent.
+  const empreinte = empreinteDeLaSaisie(d.env, saisie);
+  if (empreinte !== null)
+    (await cookies()).set(COOKIE_DATTENTE.nom, empreinte, COOKIE_DATTENTE.attributs);
   redirect(`/connexion?etat=${etat}`);
+}
+
+/** SEC-54 : « Changer d'adresse » efface le cookie d'attente, puis revient à la demande. */
+export async function changerDAdresse(): Promise<void> {
+  (await cookies()).delete({ name: COOKIE_DATTENTE.nom, path: COOKIE_DATTENTE.attributs.path });
+  redirect('/connexion');
 }
 
 /**
@@ -62,7 +77,12 @@ async function ouvrirLaConnexion(
   d: ReturnType<typeof dependancesDuProcessus>
 ): Promise<never> {
   const { nom, attributs } = COOKIE_DE_SESSION;
-  (await cookies()).set(nom, jetonSession, attributs);
+  const pot = await cookies();
+  pot.set(nom, jetonSession, attributs);
+  // SEC-54 : la session ouverte, le cookie d'attente du code n'a plus d'objet. Effacé s'il existe :
+  // une ouverture par le clic, sans demande sur cet appareil, n'en porte aucun.
+  if (pot.get?.(COOKIE_DATTENTE.nom) !== undefined)
+    pot.delete({ name: COOKIE_DATTENTE.nom, path: COOKIE_DATTENTE.attributs.path });
   redirect(
     await destinationDeLOuverture(
       jetonSession,
@@ -90,14 +110,21 @@ export async function consommerUnLienDeConnexion(jeton: string): Promise<void> {
  */
 export async function verifierUnCodeDeConnexion(formulaire: FormData): Promise<void> {
   const d = dependancesDuProcessus({ apres: after, env: process.env });
+  const pot = await cookies();
+  // L'empreinte vient du cookie d'attente, jugée par le noyau sur sa forme fermée avant tout.
+  let lienAnnule = false;
   const resultat = await verifierLeCode(
     {
-      saisie: texte(formulaire.get('courriel')) ?? '',
+      emailHash: pot.get(COOKIE_DATTENTE.nom)?.value ?? null,
       code: texte(formulaire.get('code')) ?? '',
       entetes: await headers(),
     },
-    portsDuCode(d)
+    portsDuCode(d, () => {
+      lienAnnule = true;
+    })
   );
   if (resultat.etat === 'ouverte') await ouvrirLaConnexion(resultat.jetonSession, d);
+  // Le lien annulé au cinquième échec : le cookie d'attente part avec lui.
+  if (lienAnnule) pot.delete({ name: COOKIE_DATTENTE.nom, path: COOKIE_DATTENTE.attributs.path });
   redirect(`/connexion?code=${resultat.etat}`);
 }

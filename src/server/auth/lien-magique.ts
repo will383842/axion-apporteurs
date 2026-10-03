@@ -401,14 +401,22 @@ export interface PortsDuCode {
   maintenant(): Date;
   adresseDuClient(entetes: Headers): string | null;
   empreinteAdresseReseau(adresse: string): string;
-  /** L'empreinte de recherche du courriel saisi, normalisé comme à l'émission, ou `null`. */
-  empreinteCourriel(saisie: string): string | null;
   /** Les deux compteurs de la vérification (point 6), un port chacun. */
   compterAdresseCode(sujet: string, maintenantMs: number): Promise<VerdictDeLimite>;
   compterCourrielCode(sujet: string, maintenantMs: number): Promise<VerdictDeLimite>;
   transaction<T>(travail: (tx: TransactionDuCode) => Promise<T>): Promise<T>;
   signaler(motif: MotifDuCode): void;
+  /** Appelé quand le lien est annulé au cinquième échec : l'action efface le cookie d'attente. */
+  lienAnnule?(): void;
   configuration: ConfigurationDuLien;
+}
+
+/**
+ * L'empreinte d'attente : 64 hexadécimaux minuscules, jamais une adresse. Jugée AVANT tout ; hors
+ * forme, elle vaut une adresse hors forme (lentille sécurité, condition 3).
+ */
+export function empreinteDAttente(valeur: string | null | undefined): string | null {
+  return typeof valeur === 'string' && /^[0-9a-f]{64}$/.test(valeur) ? valeur : null;
 }
 
 /** Les réponses, construites à l'appel : une seule forme par issue, quel que soit le motif. */
@@ -417,7 +425,12 @@ function refuse(): ResultatDuCode {
 }
 
 export async function verifierLeCode(
-  requete: { saisie: string; code: string; entetes: Headers },
+  /**
+   * `emailHash` : l'empreinte de l'adresse saisie à la DEMANDE, que l'action relit dans le cookie
+   * d'attente `__Host-connexion_code` (lentille sécurité, 2026-10-03). L'adresse n'est jamais
+   * redemandée ni transportée en clair.
+   */
+  requete: { emailHash: string | null; code: string; entetes: Headers },
   ports: PortsDuCode
 ): Promise<ResultatDuCode> {
   const maintenant = ports.maintenant();
@@ -433,7 +446,7 @@ export async function verifierLeCode(
     maintenant.getTime()
   );
   if (!parAdresse.autorise) return debit();
-  const emailHash = ports.empreinteCourriel(requete.saisie);
+  const emailHash = empreinteDAttente(requete.emailHash);
   if (emailHash !== null) {
     const parCourriel = await ports.compterCourrielCode(emailHash, maintenant.getTime());
     if (!parCourriel.autorise) return debit();
@@ -458,7 +471,10 @@ export async function verifierLeCode(
     const bon = memeEmpreinte(calculee, essai?.codeHash ?? null);
     if (lien === null || essai === null || !bon) {
       const epuise = lien !== null && essai !== null && essai.tentatives >= ESSAIS_DU_CODE_MAX;
-      if (epuise) await tx.annulerLien(lien.id, maintenant);
+      if (epuise) {
+        await tx.annulerLien(lien.id, maintenant);
+        ports.lienAnnule?.();
+      }
       ports.signaler(epuise ? 'code_epuise' : 'code_refuse');
       return refuse();
     }

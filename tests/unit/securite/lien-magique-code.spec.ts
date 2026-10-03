@@ -57,7 +57,14 @@ import { DUREES_AUTH } from '../../../src/server/auth/durees';
 import type { PrismaClient } from '@prisma/client';
 import { NOMS_DES_SECRETS } from '../../../src/lib/env';
 import { horlogeFigee } from '../../../src/domain/temps/horloge';
-import { corpsDuCourriel, portsDuCode } from '../../../src/server/auth/lien-magique-production';
+import {
+  COOKIE_DATTENTE,
+  corpsDuCourriel,
+  empreinteDeLaSaisie,
+  portsDuCode,
+} from '../../../src/server/auth/lien-magique-production';
+import { readFileSync } from 'node:fs';
+import { creerJournal } from '../../../src/lib/logger';
 import { CONNEXION } from '../../../src/content/micro-copy/espace/vocabulaire';
 import { CODE_DU_COURRIEL_DE_CONNEXION } from '../../../src/content/micro-copy/courriels/notifications';
 import { limiter, sujetDepuisEmpreinte } from '../../../src/server/securite/rate-limit';
@@ -77,7 +84,8 @@ const CONFIG: ConfigurationDuLien = {
   session: { secret: 'temoin-secret-des-sessions-'.padEnd(48, '0'), kid: 'ef56ab78' },
 };
 const ADRESSE = 'apporteur@example.org';
-const HASH_ADRESSE = 'h'.repeat(64);
+/** L'empreinte du cookie d'attente : 64 hexadécimaux, jamais une adresse. */
+const HASH_ADRESSE = 'a1'.repeat(32);
 const HASH_RESEAU = 'r'.repeat(64);
 
 // ── l'univers simulé ─────────────────────────────────────────────────────────────────────────────
@@ -121,7 +129,6 @@ function univers(o: { compte?: boolean; code?: string; lien?: Partial<Lien> } = 
     maintenant: () => MAINTENANT,
     adresseDuClient: () => '203.0.113.7',
     empreinteAdresseReseau: () => HASH_RESEAU,
-    empreinteCourriel: (s) => (s.includes('@') ? HASH_ADRESSE : null),
     compterAdresseCode: vi.fn(async () => ({ autorise: true, panne: false })),
     compterCourrielCode: vi.fn(async () => ({ autorise: true, panne: false })),
     signaler: (motif) => signaux.push(motif),
@@ -167,8 +174,19 @@ function univers(o: { compte?: boolean; code?: string; lien?: Partial<Lien> } = 
   return { ports, liens, sessions, signaux, trace, code };
 }
 
-const verifier = (u: ReturnType<typeof univers>, code: string, saisie = ADRESSE) =>
-  verifierLeCode({ saisie, code, entetes: new Headers() }, u.ports);
+/**
+ * L'action lit l'empreinte dans le cookie d'attente : une adresse bien formée y a laissé
+ * HASH_ADRESSE ; toute autre valeur passe telle quelle, comme un cookie absent ou forgé.
+ */
+const verifier = (u: ReturnType<typeof univers>, code: string, saisie: string | null = ADRESSE) =>
+  verifierLeCode(
+    {
+      emailHash: saisie !== null && saisie.includes('@') ? HASH_ADRESSE : saisie,
+      code,
+      entetes: new Headers(),
+    },
+    u.ports
+  );
 
 beforeEach(() => {
   egaliteConstante.appels = 0;
@@ -605,5 +623,107 @@ describe('REQ-SEC-001 — un lien déjà consommé se dit « déjà utilisé »'
       etat: 'lien_invalide',
     });
     expect(c.appels).toEqual([]);
+  });
+});
+
+// ── le cookie d'attente (lentille sécurité, 2026-10-03) ─────────────────────────────────────────
+
+describe('REQ-SEC-001 — le cookie d’attente du code', () => {
+  const ACTIONS = readFileSync('src/app/(espace)/connexion/actions.ts', 'utf8');
+
+  it('REQ-SEC-001 : TÉMOIN — ses attributs exacts : __Host-, HttpOnly, Secure, Path=/, SameSite=Strict, la durée du lien', () => {
+    expect(COOKIE_DATTENTE).toEqual({
+      nom: '__Host-connexion_code',
+      attributs: {
+        httpOnly: true,
+        secure: true,
+        path: '/',
+        sameSite: 'strict',
+        maxAge: DUREES_AUTH.lienMagiqueMs.valeur / 1000,
+      },
+    });
+    expect(Object.keys(COOKIE_DATTENTE.attributs)).not.toContain('domain');
+  });
+
+  it('REQ-SEC-001 : TÉMOIN — sa valeur est l’EMPREINTE de l’adresse (64 hexadécimaux), jamais l’adresse ; hors forme, rien', () => {
+    const e = empreinteDeLaSaisie(ENV, 'Apporteur@Example.org');
+    expect(e).toMatch(/^[0-9a-f]{64}$/);
+    expect(e).not.toContain('@');
+    expect(e).not.toContain('apporteur');
+    // Normalisée comme à l'émission : casse et blancs ne changent pas l'empreinte.
+    expect(empreinteDeLaSaisie(ENV, '  apporteur@example.org ')).toBe(e);
+    expect(empreinteDeLaSaisie(ENV, 'pas-une-adresse')).toBeNull();
+  });
+
+  it('REQ-SEC-001 : TÉMOIN — posé pour TOUTE adresse bien formée, sans dépendre du compte ni de l’issue de la demande', () => {
+    const demande = ACTIONS.slice(
+      ACTIONS.indexOf('export async function demanderUnLienDeConnexion'),
+      ACTIONS.indexOf('export async function changerDAdresse')
+    );
+    // La seule condition de la pose : l'empreinte bien formée. Ni l'état rendu, ni le compte.
+    expect(demande).toMatch(
+      /if \(empreinte !== null\)\s*\(await cookies\(\)\)\.set\(COOKIE_DATTENTE\.nom, empreinte, COOKIE_DATTENTE\.attributs\)/
+    );
+    expect(demande).not.toMatch(/if \(etat/);
+    // L'empreinte ne touche pas la base : la même adresse donne le même cookie, compte ou non.
+    expect(empreinteDeLaSaisie(ENV, 'inconnu@example.org')).toMatch(/^[0-9a-f]{64}$/);
+  });
+
+  it('REQ-SEC-001 : TÉMOIN — cookie absent, ou forgé hors forme : code_refuse, sans lecture du lien ni essai', async () => {
+    for (const forge of [
+      null,
+      'CAFE'.repeat(16),
+      'a1'.repeat(31),
+      'apporteur@example.org',
+      'g'.repeat(64),
+    ]) {
+      const u = univers();
+      expect(
+        await verifierLeCode({ emailHash: forge, code: u.code, entetes: new Headers() }, u.ports),
+        String(forge)
+      ).toEqual({ etat: 'code_refuse' });
+      expect(u.trace, String(forge)).toEqual([]);
+      expect(u.liens[0]!.tentatives).toBe(0);
+      expect(u.ports.compterAdresseCode).toHaveBeenCalledTimes(1);
+      expect(u.ports.compterCourrielCode).not.toHaveBeenCalled();
+    }
+  });
+
+  it('REQ-SEC-001 : TÉMOIN — effacé dans les trois cas : session ouverte, « Changer d’adresse », lien annulé au 5e échec', async () => {
+    const efface =
+      /\.delete\(\{ name: COOKIE_DATTENTE\.nom, path: COOKIE_DATTENTE\.attributs\.path \}\)/g;
+    expect(ACTIONS.match(efface)).toHaveLength(3);
+    const ouvrir = ACTIONS.slice(
+      ACTIONS.indexOf('async function ouvrirLaConnexion'),
+      ACTIONS.indexOf('export async function consommerUnLienDeConnexion')
+    );
+    expect(ouvrir).toMatch(efface);
+    const changer = ACTIONS.slice(
+      ACTIONS.indexOf('export async function changerDAdresse'),
+      ACTIONS.indexOf('async function ouvrirLaConnexion')
+    );
+    expect(changer).toMatch(efface);
+    expect(ACTIONS).toMatch(/if \(lienAnnule\) pot\.delete\(/);
+    // Et le noyau ne signale l'annulation qu'au cinquième échec, une fois.
+    const u = univers();
+    let annonces = 0;
+    u.ports.lienAnnule = () => {
+      annonces += 1;
+    };
+    for (let i = 0; i < ESSAIS_DU_CODE_MAX - 1; i += 1) await verifier(u, '999999');
+    expect(annonces).toBe(0);
+    await verifier(u, '999999');
+    expect(annonces).toBe(1);
+  });
+
+  it('REQ-SEC-001 : TÉMOIN — le cookie n’apparaît jamais au journal (rédaction de pino)', () => {
+    const lignes: string[] = [];
+    const journal = creerJournal({ sortie: { write: (l: string) => (lignes.push(l), true) } });
+    const empreinte = 'a1'.repeat(32);
+    journal.warn('requete', { headers: { cookie: `${COOKIE_DATTENTE.nom}=${empreinte}` } });
+    journal.warn('requete', { cookie: empreinte });
+    const tout = lignes.join('\n');
+    expect(lignes.length).toBeGreaterThan(0);
+    expect(tout).not.toContain(empreinte);
   });
 });
