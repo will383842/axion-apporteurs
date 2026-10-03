@@ -108,7 +108,9 @@ describe('REQ-SEC-003 — le cookie de session', () => {
       },
     ]);
     // Le cookie est posé AVANT la redirection, et l'URL ne porte pas le jeton de session.
-    expect(espions.redirections).toEqual(['/connexion?issue=ouverte']);
+    // JUR-T57 (lentille sécurité) : sans base lisible pour l'acceptation, la connexion ne mène JAMAIS
+    // à l'issue habituelle de l'espace, mais à son état d'indisponibilité. Ce banc n'a pas de base.
+    expect(espions.redirections).toEqual(['/connexion?etat=indisponible']);
     expect(COOKIE_DE_SESSION.nom.startsWith('__Host-')).toBe(true);
     expect(COOKIE_DE_SESSION.attributs).not.toHaveProperty('domain');
   });

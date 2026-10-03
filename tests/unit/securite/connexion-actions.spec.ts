@@ -135,7 +135,9 @@ describe('REQ-SEC-001 — la consommation, action serveur', () => {
         ),
       },
     ]);
-    expect(espions.redirections).toEqual(['/connexion?issue=ouverte']);
+    // JUR-T57 (lentille sécurité) : sans base lisible pour l'acceptation, la connexion ne mène JAMAIS
+    // à l'issue habituelle de l'espace, mais à son état d'indisponibilité. Ce banc n'a pas de base.
+    expect(espions.redirections).toEqual(['/connexion?etat=indisponible']);
     expect(espions.redirections.join()).not.toContain(JETON);
   });
 

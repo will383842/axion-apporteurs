@@ -6,7 +6,9 @@
  * branche par `CREATE TRIGGER … EXECUTE FUNCTION refuser_modification_sauf('purge:<c>', …)`.
  *
  * CE QU'IL PROUVE, sur ses deux premiers usages :
- *   — `depots_refuses` (aucun argument) : toute modification est refusée ;
+ *   — `depots_refuses` (`purge:siren`, `une_fois:siren_purge_at`, partners/ADR-0030) : le SIREN
+ *     passe à NULL avec sa date de purge ; toute autre colonne modifiée est refusée, un SIREN purgé ne
+ *     revient pas ;
  *   — `personnes_declarees` (`purge:nom_chiffre`, `purge:prenom_chiffre`, `une_fois:retiree_at`) :
  *     la colonne purgée passe à NULL, une autre colonne modifiée est refusée, un retour de NULL vers
  *     une valeur est refusé, `une_fois` réécrit est refusé ;
@@ -118,8 +120,36 @@ async function unePersonne(apporteurId: string): Promise<string> {
   return id;
 }
 
-describe('REQ-DM-043 — `depots_refuses` : ajout seul, sans aucune exception', () => {
-  it('REQ-DM-043 : toute modification d’un refus est refusée', async () => {
+describe('REQ-DM-043 — `depots_refuses` : ajout seul, sauf la purge du SIREN', () => {
+  it('REQ-DM-043 : la purge — le SIREN passe à NULL avec sa date de purge ; la ligne reste', async () => {
+    const id = await unRefus(await unApporteur());
+    await expect(
+      base.prisma.$executeRawUnsafe(
+        `UPDATE depots_refuses SET siren = NULL, siren_purge_at = $2 WHERE id = $1::uuid`,
+        id,
+        MAINTENANT
+      )
+    ).resolves.toBe(1);
+  });
+
+  it('REQ-DM-043 : TÉMOIN — un SIREN purgé ne revient pas de NULL vers une valeur', async () => {
+    const id = await unRefus(await unApporteur());
+    await base.prisma.$executeRawUnsafe(
+      `UPDATE depots_refuses SET siren = NULL, siren_purge_at = $2 WHERE id = $1::uuid`,
+      id,
+      MAINTENANT
+    );
+    expect(
+      await refus(
+        base.prisma.$executeRawUnsafe(
+          `UPDATE depots_refuses SET siren = '552100554', siren_purge_at = NULL WHERE id = $1::uuid`,
+          id
+        )
+      )
+    ).toMatch(/refuser_modification_sauf/i);
+  });
+
+  it('REQ-DM-043 : TÉMOIN — toute autre modification d’un refus est refusée', async () => {
     const id = await unRefus(await unApporteur());
     expect(
       await refus(
@@ -227,7 +257,16 @@ describe('REQ-DM-031 — chaque argument du gabarit nomme une colonne qui existe
       WHERE p.proname = 'refuser_modification_sauf' AND NOT t.tgisinternal
         AND c.relpersistence = 'p'`;
     const tables = new Set(branchements.map((b) => b.table));
-    expect([...tables].sort()).toEqual(['depots_refuses', 'personnes_declarees']);
+    expect([...tables].sort()).toEqual([
+      'alertes_liberation',
+      'demandes_droits_contact',
+      'depots_refuses',
+      'personnes_declarees',
+      'qualifications',
+      'rattachements_manuels',
+      'revisions_demande_confirmation',
+      'verifications',
+    ]);
     const absentes: string[] = [];
     for (const b of branchements) {
       for (const arg of (b.args ?? []).filter((a) => a !== '')) {

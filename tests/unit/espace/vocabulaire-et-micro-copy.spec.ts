@@ -21,7 +21,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { spawnSync } from 'node:child_process';
-import { readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { FORMULES } from '../../../src/content/micro-copy/espace/vocabulaire';
 import { SEUILS } from '../../../src/domain/seuils/ssot';
 import {
@@ -54,6 +54,7 @@ import {
   PARAMETRES_PERMIS,
   ECRAN_MES_ENTREPRISES,
   ROUTE_DU_DEPOT,
+  type Sources,
   type Vue,
 } from '../../../scripts/gates/ux-exhaustivite';
 import {
@@ -66,6 +67,30 @@ import {
 import { toutesLesFormes } from '../../../src/domain/lexique/lexique-interdit';
 
 const SCRIPT = 'scripts/gates/ux-exhaustivite.ts';
+
+/**
+ * QA-T56 (REQ-QA-027) — les fichiers que la garde lirait par `git ls-files`, tirés du DISQUE. Le bac
+ * à sable de Stryker n'est pas un dépôt git : `git ls-files` y échouait, et le run initial de la passe
+ * de mutation rougissait. Les racines sont celles que la garde lit — les composants sous `src/` et
+ * `emails/`, la micro-copie sous `src/content/micro-copy/`, et `messages/fr.json` —, avec la forme de
+ * chemin de git (séparateur « / »). Les tests qui ne PEUVENT pas recevoir cette liste (la garde en
+ * sous-processus, le lexique du dépôt) sont écartés de la passe de mutation, nommés dans
+ * `vitest.mutation.config.ts`, et joués dans `pnpm test` sur le vrai dépôt.
+ */
+function fichiersDuDisque(racines: readonly string[] = ['src', 'emails', 'messages']): string[] {
+  const fichiers: string[] = [];
+  const parcourir = (dossier: string): void => {
+    for (const e of readdirSync(dossier, { withFileTypes: true })) {
+      const chemin = `${dossier}/${e.name}`;
+      if (e.isDirectory()) {
+        if (e.name !== 'node_modules' && !e.name.startsWith('.')) parcourir(chemin);
+      } else fichiers.push(chemin);
+    }
+  };
+  for (const r of racines) if (existsSync(r)) parcourir(r);
+  return fichiers.sort();
+}
+const SOURCES: Sources = { lire: SOURCES_DU_DEPOT.lire, suivis: () => fichiersDuDisque() };
 
 function lancer(...args: string[]): { code: number; sortie: string } {
   const r = spawnSync('npx', ['tsx', SCRIPT, ...args], { encoding: 'utf8', shell: true });
@@ -168,7 +193,7 @@ describe('REQ-UX-002 — chaque issue du dépôt dit quoi, pourquoi, quoi faire 
   it('REQ-UX-002 : une valeur ajoutée à l’enum sans son texte fait rougir la garde, qui la NOMME', () => {
     // Le témoin ne diffère de la référence QUE par le texte absent : l'issue est au contrat et a
     // son horodatage — sans quoi il rougirait pour une autre raison et ne prouverait rien du texte.
-    const base = vueDuDepot();
+    const base = vueDuDepot(SOURCES);
     const vue: Vue = {
       ...base,
       issuesDeLEnum: [...base.issuesDeLEnum, 'issue_temoin'],
@@ -194,7 +219,7 @@ describe('REQ-UX-002 — chaque issue du dépôt dit quoi, pourquoi, quoi faire 
         : chemin === 'docs/ESPACE-ROUTES.md'
           ? carte
           : readFileSync(chemin, 'utf8');
-    const vue = vueDuDepot({ ...SOURCES_DU_DEPOT, lire });
+    const vue = vueDuDepot({ ...SOURCES, lire });
     expect([...new Set(familles(vue))].sort()).toEqual([
       'ecran_sans_etat_vide',
       'issue_du_contrat_sans_valeur',
@@ -213,7 +238,7 @@ describe('REQ-UX-002 — chaque issue du dépôt dit quoi, pourquoi, quoi faire 
         chemin === composant
           ? 'export const P = ({ t }: { t: string }) => <p dangerouslySetInnerHTML={{ __html: t }} />;'
           : SOURCES_DU_DEPOT.lire(chemin),
-      suivis: () => [...SOURCES_DU_DEPOT.suivis(), neuf, composant],
+      suivis: () => [...SOURCES.suivis(), neuf, composant],
     });
     expect([...new Set(familles(vue))].sort()).toEqual(['html_brut', 'micro_copie_non_lue']);
     expect(messages(vue)).toContain(neuf);
@@ -221,7 +246,7 @@ describe('REQ-UX-002 — chaque issue du dépôt dit quoi, pourquoi, quoi faire 
   });
 
   it('REQ-UX-002 : une valeur sans base contractuelle fait rougir la garde, qui la NOMME', () => {
-    const base = vueDuDepot();
+    const base = vueDuDepot(SOURCES);
     const vue: Vue = {
       ...base,
       issuesDeLEnum: [...base.issuesDeLEnum, 'fermee'],
@@ -233,14 +258,14 @@ describe('REQ-UX-002 — chaque issue du dépôt dit quoi, pourquoi, quoi faire 
   });
 
   it('REQ-UX-002 : une issue ajoutée au contrat sans valeur ni texte fait rougir la garde', () => {
-    const base = vueDuDepot();
+    const base = vueDuDepot(SOURCES);
     const vue: Vue = { ...base, issuesDuContrat: [...base.issuesDuContrat, 'insincerite'] };
     expect(familles(vue)).toContain('issue_du_contrat_sans_valeur');
     expect(messages(vue)).toContain('insincerite');
   });
 
   it('REQ-UX-002 : un refus qui révèle qui ou quand fait rougir la garde', () => {
-    const base = vueDuDepot();
+    const base = vueDuDepot(SOURCES);
     const bavard = {
       ...TEXTES_DES_ISSUES.file_complete,
       pourquoi: 'Déposée par {autreApporteur} le {dateDepot}.',
@@ -254,7 +279,7 @@ describe('REQ-UX-002 — chaque issue du dépôt dit quoi, pourquoi, quoi faire 
   });
 
   it('REQ-UX-002 : un refus déclaré à tort (ou oublié) fait rougir la garde', () => {
-    const base = vueDuDepot();
+    const base = vueDuDepot(SOURCES);
     const vue: Vue = { ...base, refusDeclares: [...base.refusDeclares, 'gele'] };
     expect(familles(vue)).toContain('refus_mal_declare');
     expect(messages(vue)).toContain('gele');
@@ -280,7 +305,7 @@ function avecTexte(base: Vue, fichier: string, chemin: readonly string[], valeur
 describe('REQ-UX-002 — un texte de l’espace ne porte que les paramètres que son contexte permet', () => {
   it('REQ-UX-002 : la collision au dépôt (en_attente) qui nomme et date l’autre apporteur rougit', () => {
     const vue = avecTexte(
-      vueDuDepot(),
+      vueDuDepot(SOURCES),
       'espace/issues-depot.ts',
       ['TEXTES_DES_ISSUES', 'en_attente', 'pourquoi'],
       'Cette entreprise est déjà réservée par {nomAutreApporteur} depuis le {dateDepotAutre}.'
@@ -293,7 +318,7 @@ describe('REQ-UX-002 — un texte de l’espace ne porte que les paramètres que
 
   it('REQ-UX-002 : un libellé d’ACTION qui nomme l’autre apporteur rougit aussi', () => {
     const vue = avecTexte(
-      vueDuDepot(),
+      vueDuDepot(SOURCES),
       'espace/issues-depot.ts',
       ['TEXTES_DES_ISSUES', 'etablissement_cesse', 'actionSecondaire', 'libelle'],
       'Voir le dépôt de {autreApporteur}'
@@ -305,7 +330,7 @@ describe('REQ-UX-002 — un texte de l’espace ne porte que les paramètres que
 
   it('REQ-UX-002 : la saisie reflétée {recherche} n’est permise que sur l’écran de recherche', () => {
     const vue = avecTexte(
-      vueDuDepot(),
+      vueDuDepot(SOURCES),
       'espace/etats-vides.ts',
       ['ETATS_VIDES_ESPACE', '/aide', 'phrase'],
       'Vous avez cherché « {recherche} ».'
@@ -323,6 +348,8 @@ describe('REQ-UX-002 — un texte de l’espace ne porte que les paramètres que
     'espace/issues-depot.ts': ['TEXTES_DES_ISSUES', 'opposition_demarchage', 'quoiFaire'],
     'espace/etats-vides.ts': ['ETATS_VIDES_ESPACE', '/plus', 'phrase'],
     'espace/vocabulaire.ts': ['FORMULES', 'sansSuite'],
+    'courriels/notifications.ts': ['TEXTES_DES_NOTIFICATIONS', 'lien_magique', 'titre'],
+    'espace/confirmation-du-depot.ts': ['FORMULAIRE_DU_CONTACT', 'titre'],
   };
 
   it('REQ-UX-002 : chaque paramètre permis rougit HORS de son contexte, dans le même fichier', () => {
@@ -334,14 +361,14 @@ describe('REQ-UX-002 — un texte de l’espace ne porte que les paramètres que
       const fichier = cle.split(' › ')[0]!;
       const etranger = CONTEXTE_ETRANGER[fichier];
       expect([cle, etranger !== undefined]).toEqual([cle, true]);
-      const vue = avecTexte(vueDuDepot(), fichier, etranger!, `Texte témoin {${nom}}.`);
+      const vue = avecTexte(vueDuDepot(SOURCES), fichier, etranger!, `Texte témoin {${nom}}.`);
       expect([cle, nom, familles(vue)]).toEqual([cle, nom, ['parametre_non_permis']]);
       expect([cle, nom, messages(vue).includes(`{${nom}}`)]).toEqual([cle, nom, true]);
     }
   });
 
   it('REQ-UX-002 : texte_calcule — un littéral qui écrit un texte dans une fonction rougit', () => {
-    const base = vueDuDepot();
+    const base = vueDuDepot(SOURCES);
     const vocabulaire = 'src/content/micro-copy/espace/vocabulaire.ts';
     const vue: Vue = {
       ...base,
@@ -360,7 +387,7 @@ describe('REQ-UX-002 — un texte de l’espace ne porte que les paramètres que
   });
 
   it('REQ-UX-002 : texte_calcule — une concaténation dans une fonction hors liste blanche rougit', () => {
-    const base = vueDuDepot();
+    const base = vueDuDepot(SOURCES);
     const vocabulaire = 'src/content/micro-copy/espace/vocabulaire.ts';
     const vue: Vue = {
       ...base,
@@ -378,18 +405,18 @@ describe('REQ-UX-002 — un texte de l’espace ne porte que les paramètres que
 
   it('REQ-UX-002 : contre-témoin — la date de fin, seule permise à la collision (REQ-SEC-022), reste verte', () => {
     const vue = avecTexte(
-      vueDuDepot(),
+      vueDuDepot(SOURCES),
       'espace/issues-depot.ts',
       ['TEXTES_DES_ISSUES', 'en_attente', 'pourquoi'],
       'Cette entreprise est déjà réservée pour un autre apporteur jusqu’au {dateFin}.'
     );
     expect(familles(vue)).toEqual([]);
-    expect(familles(vueDuDepot())).toEqual([]);
+    expect(familles(vueDuDepot(SOURCES))).toEqual([]);
   });
 
   it('REQ-UX-002 : un délai écrit en clair à la place de son paramètre rougit (RM-10)', () => {
     const vue = avecTexte(
-      vueDuDepot(),
+      vueDuDepot(SOURCES),
       'espace/etats-vides.ts',
       ['ETATS_VIDES_ESPACE', '/aide', 'phrase'],
       'Vous pouvez écrire à Axion-IA quand vous le souhaitez. Axion-IA vous répond sous 48 heures.'
@@ -400,7 +427,7 @@ describe('REQ-UX-002 — un texte de l’espace ne porte que les paramètres que
   });
 
   it('REQ-UX-002 : un fichier de micro-copie de l’espace que la garde ne lit pas rougit, nommé', () => {
-    const base = vueDuDepot();
+    const base = vueDuDepot(SOURCES);
     const nouveau = 'src/content/micro-copy/espace/nouvel-ecran.ts';
     const vue: Vue = { ...base, fichiersDeMicroCopie: [...base.fichiersDeMicroCopie, nouveau] };
     expect(familles(vue)).toEqual(['micro_copie_non_lue']);
@@ -414,7 +441,7 @@ describe('REQ-UX-002 — un texte de l’espace ne porte que les paramètres que
       "const e = ETATS_VIDES_ESPACE['/entreprise?q=']!;",
       'export const P = () => <p dangerouslySetInnerHTML={{ __html: e.phrase }} />;',
     ].join('\n');
-    const vue: Vue = { ...vueDuDepot(), composants: [{ chemin, contenu }] };
+    const vue: Vue = { ...vueDuDepot(SOURCES), composants: [{ chemin, contenu }] };
     expect(familles(vue)).toEqual(['html_brut']);
     expect(messages(vue)).toContain(`${chemin}:3`);
   });
@@ -425,7 +452,7 @@ describe('REQ-UX-002 — un texte de l’espace ne porte que les paramètres que
     '  `Déjà réservée par ${nom} depuis le ${depuis}`;\n';
 
   it('REQ-UX-002 : une fonction exportée collision(nom, depuis) rougit, à l’exécution et dans le source', () => {
-    const base = vueDuDepot();
+    const base = vueDuDepot(SOURCES);
     const vocabulaire = 'src/content/micro-copy/espace/vocabulaire.ts';
     const vue: Vue = {
       ...base,
@@ -448,7 +475,7 @@ describe('REQ-UX-002 — un texte de l’espace ne porte que les paramètres que
   });
 
   it('REQ-UX-002 : une Map exportée rougit — la garde ne sait pas la lire comme un texte', () => {
-    const base = vueDuDepot();
+    const base = vueDuDepot(SOURCES);
     const vue: Vue = {
       ...base,
       microCopieEspace: {
@@ -464,7 +491,7 @@ describe('REQ-UX-002 — un texte de l’espace ne porte que les paramètres que
   });
 
   it('REQ-UX-002 : un paramètre écrit dans une CLÉ d’objet rougit', () => {
-    const base = vueDuDepot();
+    const base = vueDuDepot(SOURCES);
     const vue: Vue = {
       ...base,
       microCopieEspace: {
@@ -480,7 +507,7 @@ describe('REQ-UX-002 — un texte de l’espace ne porte que les paramètres que
   });
 
   it('REQ-UX-002 : un module de micro-copie HORS espace/, ni parcouru ni déclaré, rougit', () => {
-    const base = vueDuDepot();
+    const base = vueDuDepot(SOURCES);
     const commun = 'src/content/micro-copy/commun/libelles.ts';
     const vue: Vue = { ...base, fichiersDeMicroCopie: [...base.fichiersDeMicroCopie, commun] };
     expect(familles(vue)).toEqual(['micro_copie_non_lue']);
@@ -488,7 +515,7 @@ describe('REQ-UX-002 — un texte de l’espace ne porte que les paramètres que
   });
 
   it('REQ-UX-002 : contre-témoin — les deux utilitaires de la liste blanche et les textes actuels restent verts', () => {
-    const base = vueDuDepot();
+    const base = vueDuDepot(SOURCES);
     expect(familles(base)).toEqual([]);
     const lus = (base.sourcesMicroCopie ?? []).map((f) => f.chemin);
     expect(lus).toEqual(
@@ -507,7 +534,7 @@ describe('REQ-UX-002 — un texte de l’espace ne porte que les paramètres que
       'export const P = ({ t }: { t: string }) => <p {...brut(t)} />;',
       "export const Q = ({ t }: { t: string }) => createElement('p', { ['dangerouslySetInnerHTML']: { __html: t } });",
     ].join('\n');
-    const vue: Vue = { ...vueDuDepot(), composants: [{ chemin, contenu }] };
+    const vue: Vue = { ...vueDuDepot(SOURCES), composants: [{ chemin, contenu }] };
     expect([...new Set(familles(vue))]).toEqual(['html_brut']);
     expect(messages(vue)).toContain(`${chemin}:2`);
     expect(messages(vue)).toContain(`${chemin}:4`);
@@ -548,7 +575,7 @@ function fuites(lignes: readonly { chemin: string; texte: string }[]): string[] 
 
 describe('REQ-UX-002 — snapshot des libellés de l’espace, sans date, sans nom, sans UUID', () => {
   it('REQ-UX-002 : le snapshot de TOUS les libellés rendus (tout champ chaîne, toute profondeur)', () => {
-    const lignes = textesDeLEspace(vueDuDepot());
+    const lignes = textesDeLEspace(vueDuDepot(SOURCES));
     expect(lignes.length).toBeGreaterThanOrEqual(100);
     expect(lignes.map((l) => `${l.chemin} : ${l.texte}`).join('\n')).toMatchInlineSnapshot(`
       "espace/issues-depot.ts › MENTIONS_HORODATAGE › a_votre_nom : Enregistré à votre nom le {dateEnregistrement}.
@@ -647,7 +674,7 @@ describe('REQ-UX-002 — snapshot des libellés de l’espace, sans date, sans n
       espace/issues-depot.ts › TEXTES_DES_ISSUES › brouillon_hors_ligne › actionPrincipale › libelle : Retour à l'accueil
       espace/issues-depot.ts › TEXTES_DES_ISSUES › brouillon_hors_ligne › actionPrincipale › route : /
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › / › titre : Bienvenue dans votre espace
-      espace/etats-vides.ts › ETATS_VIDES_ESPACE › / › phrase : Quand vous rencontrez une entreprise qui pourrait former ses salariés, vous pouvez taper son nom ci-dessous. Vous vérifiez qu'elle est libre, vous dites qui vous avez rencontré, et Axion-IA l'appelle. Si elle signe, vous touchez une commission.
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › / › phrase : Quand vous rencontrez une entreprise qui pourrait former ses salariés, vous pouvez taper son nom ci-dessous. Vous vérifiez qu'elle est libre, vous dites qui vous avez rencontré, et Axion-IA l'appelle. Si elle passe commande pendant la durée de votre droit à commission, une commission vous revient au fil des paiements.
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › / › action › libelle : Vérifier
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › / › action › route : /entreprise?q=
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › /mes-entreprises › titre : Vos entreprises apparaîtront ici
@@ -655,7 +682,7 @@ describe('REQ-UX-002 — snapshot des libellés de l’espace, sans date, sans n
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › /mes-entreprises › action › libelle : Déposer une entreprise
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › /mes-entreprises › action › route : /deposer
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › /mes-commissions › titre : Pas encore de commission
-      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /mes-commissions › phrase : Elles apparaissent ici quand une entreprise que vous avez déposée signe, puis quand elle paie. Vous verrez alors ce que vous touchez, quand, et d'où vient chaque montant.
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /mes-commissions › phrase : Elles apparaissent ici quand une entreprise que vous avez déposée signe, puis quand elle paie. Vous verrez alors ce qui vous revient, quand, et d'où vient chaque montant.
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › /mes-commissions › action › libelle : Retour à l'accueil
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › /mes-commissions › action › route : /
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › /plus › titre : Le reste de votre espace
@@ -772,23 +799,75 @@ describe('REQ-UX-002 — snapshot des libellés de l’espace, sans date, sans n
       espace/vocabulaire.ts › CONFIDENTIALITE › tiers › qualite : À quel titre
       espace/vocabulaire.ts › CONFIDENTIALITE › tiers › donnees : Ce qui leur est confié
       espace/vocabulaire.ts › CONFIDENTIALITE › tiers › localisation : Où elles sont traitées
-      espace/vocabulaire.ts › CONFIDENTIALITE › aCompleter : À compléter
-      espace/vocabulaire.ts › CONFIDENTIALITE › question : Question en attente de réponse :
+      espace/vocabulaire.ts › CONFIDENTIALITE › aCompleter : En cours de rédaction
       espace/vocabulaire.ts › CONFIDENTIALITE › accord › phrase : Votre espace s’ouvre une fois cette politique acceptée.
       espace/vocabulaire.ts › CONFIDENTIALITE › accord › action : J’accepte cette politique
       espace/vocabulaire.ts › CONFIDENTIALITE › acceptee : Vous avez accepté cette politique.
+      espace/vocabulaire.ts › CONFIDENTIALITE › nonPubliable : Cette politique est encore en cours de rédaction. Vous pourrez l’accepter dès qu’elle sera complète.
       espace/vocabulaire.ts › CONFIDENTIALITE › chargement : Chargement de la politique de confidentialité…
       espace/vocabulaire.ts › CONFIDENTIALITE › erreur › titre : La politique ne s’affiche pas
       espace/vocabulaire.ts › CONFIDENTIALITE › erreur › phrase : La politique de confidentialité n’a pas pu être affichée. Réessayez un peu plus tard.
       espace/vocabulaire.ts › CONFIDENTIALITE › erreur › action : Réessayer
       espace/vocabulaire.ts › CONFIDENTIALITE › horsLigne › titre : Vous êtes hors ligne
-      espace/vocabulaire.ts › CONFIDENTIALITE › horsLigne › phrase : La politique de confidentialité s’affichera dès le retour du réseau."
+      espace/vocabulaire.ts › CONFIDENTIALITE › horsLigne › phrase : La politique de confidentialité s’affichera dès le retour du réseau.
+      espace/confirmation-du-depot.ts › FORMULAIRE_DU_CONTACT › titre : Qui avez-vous rencontré ?
+      espace/confirmation-du-depot.ts › FORMULAIRE_DU_CONTACT › nom : Nom et prénom
+      espace/confirmation-du-depot.ts › FORMULAIRE_DU_CONTACT › fonction : Fonction
+      espace/confirmation-du-depot.ts › FORMULAIRE_DU_CONTACT › courriel : E-mail
+      espace/confirmation-du-depot.ts › FORMULAIRE_DU_CONTACT › telephone : Téléphone
+      espace/confirmation-du-depot.ts › FORMULAIRE_DU_CONTACT › contexte : Contexte (facultatif)
+      espace/confirmation-du-depot.ts › FORMULAIRE_DU_CONTACT › messageAvantLeBouton : {prenomContact} {nomContact} ({entreprise}) va recevoir un e-mail d'Axion-IA dans les {delaiAvantEnvoi} pour confirmer votre échange. Axion-IA pourra aussi l'appeler.
+      espace/confirmation-du-depot.ts › FORMULAIRE_DU_CONTACT › bouton : Déposer et prévenir {prenomContact} {nomContact}
+      espace/confirmation-du-depot.ts › FORMULAIRE_DU_CONTACT › boutonCourt : Déposer et prévenir
+      espace/confirmation-du-depot.ts › CARTE_DU_DEPOT › avantEnvoi : L'e-mail partira vers {heure}. Vous pouvez encore annuler ou corriger ce dépôt jusque-là.
+      espace/confirmation-du-depot.ts › CARTE_DU_DEPOT › annuler : Annuler
+      espace/confirmation-du-depot.ts › CARTE_DU_DEPOT › corriger : Corriger
+      espace/confirmation-du-depot.ts › CARTE_DU_DEPOT › envoye : E-mail envoyé à {prenomContact} {nomContact}
+      espace/confirmation-du-depot.ts › CARTE_DU_DEPOT › confirme : {prenomContact} {nomContact} a confirmé votre échange
+      espace/confirmation-du-depot.ts › CARTE_DU_DEPOT › rebond : L'e-mail n'a pas pu être remis à {adresse}. Si vous avez une autre adresse pour {prenomContact} {nomContact}, vous pouvez la corriger ici. Axion-IA pourra aussi l'appeler.
+      espace/confirmation-du-depot.ts › CARTE_DU_DEPOT › corrigerLAdresse : Corriger l'adresse
+      espace/confirmation-du-depot.ts › BADGES_DU_DEPOT › confirmee : Confirmée
+      espace/confirmation-du-depot.ts › BADGES_DU_DEPOT › enAttenteDatee : En attente · confirmée automatiquement le {date}
+      espace/confirmation-du-depot.ts › BADGES_DU_DEPOT › enAttente : En attente
+      espace/confirmation-du-depot.ts › BADGES_DU_DEPOT › enAttenteSignalee : En attente de confirmation — Axion-IA va appeler votre contact
+      espace/confirmation-du-depot.ts › BADGES_DU_DEPOT › courrielNonRecu : E-mail non reçu par le contact
+      espace/confirmation-du-depot.ts › BADGES_DU_DEPOT › nonConfirmee : Non confirmée par le contact
+      espace/confirmation-du-depot.ts › BADGES_DU_DEPOT › reservationTermineeVerifiee : Réservation terminée · nouveau dépôt possible à partir du {dateRedepot}
+      espace/confirmation-du-depot.ts › BADGES_DU_DEPOT › reservationTerminee : Réservation terminée · l'entreprise est de nouveau disponible
+      espace/confirmation-du-depot.ts › AIDE_DU_BADGE : Sans réponse de votre contact, votre dépôt est confirmé {delaiTacite} après la réception de notre e-mail.
+      espace/confirmation-du-depot.ts › CARENCE_DU_REDEPOT : Vous pourrez déposer à nouveau cette entreprise à partir du {dateRedepot}.
+      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › lien_magique › titre : Votre lien de connexion à votre espace
+      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › lien_magique › appel : Ouvrir mon espace
+      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › depot_injoignable_j5 › titre : {entreprise} : la confirmation de l'échange est en cours
+      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › depot_injoignable_j5 › appel : Voir Mes entreprises
+      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › depot_injoignable_j5 › corps : Axion-IA n'a pas encore pu joindre {contact}. Votre dépôt garde son heure d'enregistrement.
+      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › attribution_liberee › titre : {entreprise} : réservation terminée
+      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › attribution_liberee › appel : Voir Mes entreprises
+      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › decision_attribution › titre : {entreprise} : une décision concerne votre dépôt
+      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › decision_attribution › appel : Contester cette décision par écrit
+      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › decision_attribution › corps : {motif}. Vous pouvez contester cette décision par écrit ; Axion-IA vous répond de façon motivée dans les {delaiReponse}.
+      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › premier_rang_libere › titre : {entreprise} : vous pouvez la déposer à nouveau jusqu'au {dateLimite}
+      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › premier_rang_libere › appel : Déposer à nouveau cette entreprise
+      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › premier_rang_libere › corps : Votre dépôt était le premier en attente. Sans nouveau dépôt d'ici le {dateLimite}, votre dépôt en attente est effacé.
+      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › refus_declaration › titre : {entreprise} : dépôt non enregistré — {categorie}
+      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › refus_declaration › appel : Contester ce refus par écrit
+      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › refus_declaration › corps : {categorie} : {motif}. Ce refus n'a aucune autre conséquence pour vous et n'est pas un manquement.
+      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › suspension_declarations › titre : Vos nouveaux dépôts sont suspendus le temps d'un échange avec Axion-IA
+      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › suspension_declarations › appel : Lire le courrier et répondre
+      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › suspension_declarations › corps : {faits}. Cette suspension prend fin au plus tard le {dateLevee}. Rien ne change pour vos entreprises en cours, ni pour vos commissions, ni pour l'accès à votre espace.
+      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › rappel_rc_pro › titre : Votre attestation d'assurance arrive à échéance le {dateEcheance}
+      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › rappel_rc_pro › appel : Déposer la nouvelle attestation
+      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › rattachement_decide › titre : {entreprise} : décision de rattachement
+      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › rattachement_decide › appel : Voir Mes entreprises
+      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › rattachement_decide › corps : {decision}. Motif : {motif}.
+      courriels/notifications.ts › CORPS_DE_LA_LIBERATION › demande_verifiee : Ce dépôt a pris fin sans confirmation de l'échange. Vous pourrez déposer à nouveau cette entreprise à partir du {dateRedepot}. Cette fin n'emporte aucune autre conséquence pour vous.
+      courriels/notifications.ts › CORPS_DE_LA_LIBERATION › peremption_ou_fin_de_duree : Cette entreprise est de nouveau disponible, y compris pour un nouveau dépôt de votre part."
     `);
   });
 
   it('REQ-UX-002 : aucun libellé du snapshot ne porte de date, de nom, d’UUID ni de paramètre hors liste', () => {
-    expect(fuites(textesDeLEspace(vueDuDepot()))).toEqual([]);
-    expect(familles(vueDuDepot())).toEqual([]);
+    expect(fuites(textesDeLEspace(vueDuDepot(SOURCES)))).toEqual([]);
+    expect(familles(vueDuDepot(SOURCES))).toEqual([]);
   });
 
   it('REQ-UX-002 : témoin — un libellé piégé (nom, date, UUID) est vu par la lecture du snapshot', () => {
@@ -887,7 +966,7 @@ describe('REQ-UX-019 — chaque écran de l’espace et de la console a un état
 
   it('REQ-UX-019 : l’état vide de « Mes entreprises » mène au premier dépôt', () => {
     expect(ETATS_VIDES_ESPACE[ECRAN_MES_ENTREPRISES]!.action.route).toBe(ROUTE_DU_DEPOT);
-    const base = vueDuDepot();
+    const base = vueDuDepot(SOURCES);
     const detourne = {
       ...base.etatsVidesEspace[ECRAN_MES_ENTREPRISES]!,
       action: { libelle: 'Retour à l’accueil', route: '/' },
@@ -900,7 +979,7 @@ describe('REQ-UX-019 — chaque écran de l’espace et de la console a un état
   });
 
   it('REQ-UX-019 : un écran sans état vide déclaré fait rougir la garde, qui le NOMME', () => {
-    const base = vueDuDepot();
+    const base = vueDuDepot(SOURCES);
     const vue: Vue = { ...base, ecransEspace: [...base.ecransEspace, '/ecran-temoin'] };
     expect(familles(vue)).toEqual(['ecran_sans_etat_vide']);
     expect(messages(vue)).toContain('/ecran-temoin');
@@ -910,7 +989,7 @@ describe('REQ-UX-019 — chaque écran de l’espace et de la console a un état
   });
 
   it('REQ-UX-019 : une action qui mène à une route inconnue de la carte fait rougir la garde', () => {
-    const base = vueDuDepot();
+    const base = vueDuDepot(SOURCES);
     const perdu = {
       ...base.etatsVidesEspace['/aide']!,
       action: { libelle: 'Écrire à Axion-IA', route: '/route-inexistante' },
@@ -942,7 +1021,7 @@ describe('REQ-UX-019 — un libellé vit dans la micro-copie, jamais en dur dans
     expect(fautes.map((f) => f.ligne)).toEqual([4, 5, 6]);
     for (const f of fautes) expect(f.message).toContain(TEMOIN);
 
-    const base = vueDuDepot();
+    const base = vueDuDepot(SOURCES);
     const vue: Vue = { ...base, composants: [{ chemin: TEMOIN, contenu }] };
     expect([...new Set(familles(vue))]).toEqual(['libelle_en_dur']);
     expect(messages(vue)).toContain(`${TEMOIN}:5`);

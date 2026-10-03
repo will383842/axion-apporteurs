@@ -13,17 +13,17 @@
 | --- | --- | --- | --- | --- |
 | Accueil (3 chiffres, 1 alerte, 1 champ, 4 onglets) | `accueil.html` | UX-P1-08 | 2026-09-19 | Will |
 | Entreprise (recherche + carte 4 états + « Déposer ») | `entreprise.html` | UX-P1-01 | 2026-09-19 | Will |
-| Déposer un contact (W20 : quatre coordonnées, message, carte Annuler / Corriger) | `deposer.html` | UX-P1-02 | — | — |
-| Mes entreprises (W20 : badges de la confirmation) | `mes-entreprises.html` | UX-P1-05 | — | — |
-| Réponse du contact (page publique /confirmer) | `confirmation-contact.html` | UX-P1-42 | — | — |
+| Déposer un contact (W20 : quatre coordonnées, message, carte Annuler / Corriger) | `deposer.html` | UX-P1-02 | 2026-10-03 | Will |
+| Mes entreprises (W20 : badges de la confirmation) | `mes-entreprises.html` | UX-P1-05 | 2026-10-03 | Will |
+| Réponse du contact (page publique /confirmer) | `confirmation-contact.html` | UX-P1-42 | 2026-10-03 | Will |
 | Mes commissions | `mes-commissions.html` | UX-P2-01 | 2026-09-19 | Will |
-| Ma conformité / Mon profil (ouverture limitée, état vide) | `conformite.html` | UX-P1-09 | — | — |
-| Se connecter (lien, code à 6 chiffres, lien déjà utilisé) | `connexion.html` | UX-P1-04 | — | — |
-| Mon contrat | `mon-contrat.html` | UX-P1-44 | — | — |
-| Fiche d'une entreprise (frise, échanges) | `mes-entreprises-fiche.html` | EXT-T01 | — | — |
-| Personnes qui agissent pour l'apporteur | `personnes.html` | UX-P1-15 | — | — |
-| Dépôt par lien privé | `depot-lien-prive.html` | UX-P1-03 | — | — |
-| Notifications | `notifications.html` | UX-P1-08 | — | — |
+| Ma conformité / Mon profil (ouverture limitée, état vide) | `conformite.html` | UX-P1-09 | 2026-10-03 | Will |
+| Se connecter (lien, code à 6 chiffres, lien déjà utilisé) | `connexion.html` | UX-P1-04 | 2026-10-03 | Will |
+| Mon contrat | `mon-contrat.html` | UX-P1-44 | 2026-10-03 | Will |
+| Fiche d'une entreprise (frise, échanges) | `mes-entreprises-fiche.html` | EXT-T01 | 2026-10-03 | Will |
+| Personnes qui agissent pour l'apporteur | `personnes.html` | UX-P1-15 | 2026-10-03 | Will |
+| Dépôt par lien privé | `depot-lien-prive.html` | UX-P1-03 | 2026-10-03 | Will |
+| Notifications | `notifications.html` | UX-P1-08 | 2026-10-03 | Will |
 
 ### Séance de validation W20 (confirmation par e-mail)
 
@@ -35,18 +35,87 @@ contact, de 320 à 414 px) et `file-qualification.html` (l'onglet « À appeler 
 avec les maquettes de la console). `deposer.html` et `mes-entreprises.html`, validées le 2026-09-19, ont
 changé en substance : leur ligne repart vide.
 
+**Séance du 2026-10-03.** Williams valide les trois maquettes de l'espace de la série dans la même séance :
+`deposer.html` (« OUI PARFAIT »), `mes-entreprises.html` (« OUI ») et `confirmation-contact.html` (« OUI »).
+`file-qualification.html` n'est PAS validée (« POUR la console d'adminsitration, j'ai l'impression qu'il fait
+très veillote et j'aurai aimé plutot un sidebar et que ce soit plus moderne ») : elle se valide avec les
+maquettes de la console, refondues par UX-P1-50. La tâche d'écran de la file attend donc sa maquette ; celles
+de l'espace ont les leurs.
+
+### Séance de style du 2026-10-03 (UX-P1-49)
+
+Williams, verbatim : « JE TROUVE QU4IL MANQUE UN PEU DE CONTRASTE ET CA fait très textuel non ? ». Un aperçu
+AVANT/APRÈS de `index.html` et d'`accueil.html` lui est montré. Sur la version 3, orange en fond, il
+répond : « NON C4ETAIT MIEUX JUSTE AVANT ». La version 2 est donc retenue. Le bloc charte des treize maquettes de l'espace prend cette
+version, à l'identique :
+- terracotta pour l'action, fond ivoire, texte et navigation mocha, bleu pour l'information et le focus ;
+- l'issue heureuse en vert ; l'alerte en rouge distinct du terracotta ;
+- cartes et encarts cadrés et ombrés.
+
+C'est un changement de STYLE SEUL, demandé par Williams : aucun texte, aucune disposition ne bouge. Les
+validations ci-dessus ne sont donc PAS remises à vide.
+
+`mon-contrat.html` reçoit en plus son correctif mobile : à 360 px, aucun défilement horizontal, et les
+tableaux de l'annexe passent en cartes sous 640 px.
+
 ## Console
 
 | Écran | Fichier | Tâche | Validé le | Par |
 | --- | --- | --- | --- | --- |
-| File de qualification + fiche 60 s | `file-qualification.html` | UX-P1-07 | — | — |
-| Lot du mois | `lot-paiement.html` | UX-P2-03 | — | — |
-| Cadre de la console, instantané par rôle, accueil par rôle et par phase | `console-cadre.html` | UX-P1-16 | — | — |
-| Accès refusé | `acces-refuse.html` | UX-P1-16 | — | — |
-| Connexion à la console (lien, code à 6 chiffres, lien déjà utilisé) | `connexion-console.html` | SEC-29 · UX-P1-16 | — | — |
-| Utilisateurs de la console et « Votre rôle » | `utilisateurs-console.html` | SEC-30 · UX-P1-20 | — | — |
+| File de qualification + fiche 60 s | `file-qualification.html` | UX-P1-07 | 2026-10-03 | Will |
+| Lot du mois | `lot-paiement.html` | UX-P2-03 | 2026-10-03 | Will |
+| Cadre de la console, instantané par rôle, accueil par rôle et par phase | `console-cadre.html` | UX-P1-16 | 2026-10-03 | Will |
+| Accès refusé | `acces-refuse.html` | UX-P1-16 | 2026-10-03 | Will |
+| Connexion à la console (lien, code à 6 chiffres, lien déjà utilisé) | `connexion-console.html` | SEC-29 · UX-P1-16 | 2026-10-03 | Will |
+| Utilisateurs de la console et « Votre rôle » | `utilisateurs-console.html` | SEC-30 · UX-P1-20 | 2026-10-03 | Will |
+| Fiche de qualification (W20 : état de la demande, raisons de vérification) | `fiche-qualification.html` | UX-P1-06 | 2026-10-03 | Will |
+| Apporteurs : liste | `apporteurs.html` | UX-P1-12 | 2026-10-03 | Will |
+| Fiche apporteur : cinq blocs, décision, dossier de conformité | `apporteur-fiche.html` | UX-P1-12 · CPL-T07 | 2026-10-03 | Will |
+| Attributions et contrats | `attributions-contrats.html` | UX-P1-13 | 2026-10-03 | Will |
+| Fiche prospect | `fiche-prospect.html` | EXT-T02a | 2026-10-03 | Will |
+| Éditeur de grille (modèle, édition en masse, complétude) | `grille-console.html` | UX-P1-14 | 2026-10-03 | Will |
+| Saisie manuelle d'une candidature et CV | `saisie-manuelle-console.html` | EXT-T04 | 2026-10-03 | Will |
+
+### Refonte de la console en barre latérale (UX-P1-50)
+
+Williams, verbatim : « POUR la console d'adminsitration, j'ai l'impression qu'il fait très veillote et
+j'aurai aimé plutot un sidebar et que ce soit plus moderne ». L'aperçu de `console-cadre.html` en barre
+latérale lui a été montré, puis il a été propagé aux treize maquettes de la console, avec une seule marque
+pour l'espace et la console (rattrapage 85). Au bureau, la barre latérale groupe les entrées par métier.
+Sous 768 px, la barre du bas reste, et son « Menu » ouvre la barre latérale en tiroir (REQ-UX-048). Les
+entrées, les rôles, les états et les textes ne changent pas. Aucune ligne de la console n'était validée :
+aucune ne repart à vide, et la séance groupée ci-dessous se tient sur cette version.
+
+### Séance du 2026-10-03 : la console validée, en version épurée (UX-P1-52)
+
+Les treize maquettes ont été montrées à Williams dans l'ordre de lecture ci-dessous.
+`console-cadre.html`, dans sa version à barre latérale d'avant l'épuration, est validée : « OUI ». La
+première `connexion-console.html` est refusée, verbatim :
+« JE trouve que ca fait enormement texte avec manque de contraste un peu... on se perd tellement il y a
+d'informaitons non ? ».
+
+La console est alors ÉPURÉE :
+- l'atelier est replié par défaut, derrière un bouton « États et notes » ;
+- l'écran de connexion garde un titre, un champ, un bouton et une phrase d'aide ;
+- cartes, tableaux et états vides sont détachés sur fond ivoire ;
+- les textes longs sont ramenés à « quoi, puis quoi faire ». Les phrases à valeur contractuelle ou
+  juridique ne bougent pas ;
+- le refus d'un code reprend le texte unique de la juriste (rattrapage 88) : « Ce code n'est pas
+  valable. Demandez un nouveau lien de connexion. »
+
+Réponses de Williams, verbatim :
+- sur le style épuré (« Ce style épuré vous convient ? […] ») : « OK », ce qui valide la nouvelle `connexion-console.html` ;
+- `acces-refuse.html` : « OUI » ;
+- pour les dix autres : « VALIDE TOUS LES ECRANS direcmtent ».
 
 ### Séance de validation groupée de la console
+
+**Rapprochement avec `docs/CONSOLE-ROUTES.md` (UX-P1-19).** Chaque écran de console de la phase 1 a sa
+maquette ; les deux écarts relevés par UX-P1-19, l'éditeur de grille (`/console/grille`, UX-P1-14) et la
+saisie manuelle d'une candidature (`/console/candidatures`, EXT-T04), sont comblés par UX-P1-46 ; la file (UX-P1-07) est `file-qualification.html`, « Votre rôle » (UX-P1-20) est un état de
+`utilisateurs-console.html`, le dossier de conformité (CPL-T07) un état de `apporteur-fiche.html`. La
+ligne de `fiche-prospect.html` ne nomme que EXT-T02a : la garde ne lit encore que les identifiants
+`UX-P…`, et GOV-113 l'élargit.
 
 Les six maquettes de la console se valident **ensemble**, en une séance de Will, parce qu'elles
 partagent le même cadre : valider la file sans le cadre, c'est valider un en-tête qui va changer. La
@@ -68,7 +137,7 @@ Pour la console, Will regarde en plus :
 ## Ce que Will regarde
 
 1. **Le geste principal tient-il en 90 secondes**, sur un téléphone, sans lire de mode d'emploi ?
-2. Le vocabulaire est-il celui d'un apporteur (« votre entreprise », « ce que vous touchez ») et non
+2. Le vocabulaire est-il celui d'un apporteur (« votre entreprise », « ce qui vous revient ») et non
    celui du schéma (« attribution », « prorata », « déclaration non confirmée ») ?
 3. Chaque état bloqué dit-il **pourquoi** et **quoi faire** ?
 4. Y a-t-il quelque part un objectif, un classement, un compte à rebours de performance ? (Il ne doit

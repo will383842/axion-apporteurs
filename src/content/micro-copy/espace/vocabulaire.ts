@@ -130,13 +130,16 @@ export const CONFIDENTIALITE = {
     donnees: 'Ce qui leur est confié',
     localisation: 'Où elles sont traitées',
   },
-  aCompleter: 'À compléter',
-  question: 'Question en attente de réponse :',
+  // JUR-T36 : un passage que le registre ne tranche pas encore. Aucune question interne n'est lue.
+  aCompleter: 'En cours de rédaction',
   accord: {
     phrase: 'Votre espace s’ouvre une fois cette politique acceptée.',
     action: 'J’accepte cette politique',
   },
   acceptee: 'Vous avez accepté cette politique.',
+  // JUR-T57 : la politique porte encore un passage en cours de rédaction ; elle n'est pas proposée à l'accord.
+  nonPubliable:
+    'Cette politique est encore en cours de rédaction. Vous pourrez l’accepter dès qu’elle sera complète.',
   chargement: 'Chargement de la politique de confidentialité…',
   erreur: {
     titre: 'La politique ne s’affiche pas',

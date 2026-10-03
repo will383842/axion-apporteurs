@@ -5,7 +5,8 @@
  * AUCUN CONTENU DE LA POLITIQUE N'EST ÉCRIT ICI. Chaque rubrique arrive du registre de l'article 30,
  * extraite par `src/domain/rgpd/politique.ts` ; les titres et les phrases de l'écran viennent de la
  * micro-copie (`CONFIDENTIALITE`, et l'état vide de `/confidentialite`). Un manque déclaré au
- * registre s'affiche « À compléter », avec la question posée : rien n'est inventé.
+ * registre s'affiche en cours de rédaction, SANS la question interne posée à l'arbitre (JUR-T36) :
+ * rien n'est inventé, et aucune note interne n'atteint cette page publique.
  *
  * Le formulaire d'accord n'apparaît que pour une session d'espace dont la politique reste à
  * accepter ; il porte la version affichée, et l'action n'écrit que cette version.
@@ -15,15 +16,13 @@ import type { EtatVide } from '../../../content/micro-copy/types';
 import { ETATS_VIDES_ESPACE } from '../../../content/micro-copy/espace/etats-vides';
 import { CONFIDENTIALITE } from '../../../content/micro-copy/espace/vocabulaire';
 import type { EtatDAcceptation } from '../../../server/rgpd/acceptation';
+// Mobile d'abord, par une feuille de la même origine : un style en ligne serait refusé par la CSP.
+import styles from './confidentialite.module.css';
 
 type Action = (formData: FormData) => void | Promise<void>;
 
 /** La route de la carte des écrans (docs/ESPACE-ROUTES.md) dont l'état vide est lu ici. */
 const ROUTE = '/confidentialite';
-
-/** Mobile d'abord : un corps lisible, une colonne, des boutons faciles à toucher. */
-const STYLE_PAGE = { fontSize: '1.125rem', lineHeight: 1.5, maxWidth: '40rem', padding: '1rem' };
-const STYLE_BOUTON = { minHeight: '3rem', minWidth: '3rem', fontSize: '1.125rem' };
 
 function etatVide(): EtatVide {
   const ecran = ETATS_VIDES_ESPACE[ROUTE];
@@ -40,8 +39,6 @@ function Contenu({ segments }: { segments: readonly Segment[] }) {
         ) : (
           <p key={i}>
             <strong>{CONFIDENTIALITE.aCompleter}</strong>
-            {' — '}
-            {CONFIDENTIALITE.question} {s.question}
           </p>
         )
       )}
@@ -66,8 +63,13 @@ function Destinataires({ politique }: { politique: Politique }) {
       {politique.destinataires.map((d) => (
         <article key={d.nom}>
           <h3>{d.nom}</h3>
-          <h4>{t.qualite}</h4>
-          <Contenu segments={d.qualification} />
+          {/* Une qualification non tranchée est omise : la page dit le rôle, pas un titre à confirmer. */}
+          {d.qualification.length > 0 && (
+            <>
+              <h4>{t.qualite}</h4>
+              <Contenu segments={d.qualification} />
+            </>
+          )}
           <h4>{t.donnees}</h4>
           <Contenu segments={d.donnees} />
           <h4>{t.localisation}</h4>
@@ -88,10 +90,12 @@ function Accord({
   action: Action;
 }) {
   if (etat === 'sans_session') return null;
-  if (etat === 'acceptee') {
+  if (etat === 'acceptee' || etat === 'non_publiable') {
+    // JUR-T57 : une politique non publiable n'est jamais présentée à l'acceptation ; le formulaire
+    // n'existe QUE pour l'état `a_accepter` (refus fermé : aucun autre état ne le montre).
     return (
       <p role="status" aria-live="polite">
-        {CONFIDENTIALITE.acceptee}
+        {etat === 'acceptee' ? CONFIDENTIALITE.acceptee : CONFIDENTIALITE.nonPubliable}
       </p>
     );
   }
@@ -99,7 +103,7 @@ function Accord({
     <form action={action}>
       <p>{CONFIDENTIALITE.accord.phrase}</p>
       <input type="hidden" name="version" value={version} />
-      <button type="submit" style={STYLE_BOUTON}>
+      <button type="submit" className={styles.bouton}>
         {CONFIDENTIALITE.accord.action}
       </button>
     </form>
@@ -116,7 +120,7 @@ export function EcranConfidentialite({
   action: Action;
 }) {
   return (
-    <main style={STYLE_PAGE}>
+    <main className={styles.page}>
       <h1>{CONFIDENTIALITE.titre}</h1>
       <p>{CONFIDENTIALITE.phrase}</p>
       {politique.rubriques.map((r) => (
@@ -135,7 +139,7 @@ export function EcranConfidentialite({
 export function EcranErreurConfidentialite() {
   const t = CONFIDENTIALITE.erreur;
   return (
-    <main style={STYLE_PAGE}>
+    <main className={styles.page}>
       <h1>{t.titre}</h1>
       <p role="alert">{t.phrase}</p>
       <a href={ROUTE}>{t.action}</a>

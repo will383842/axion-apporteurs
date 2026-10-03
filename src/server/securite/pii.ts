@@ -376,6 +376,18 @@ export const CHAMPS_PII = {
   contexte: { chiffre: 'contexteChiffre' },
   codePostal: { chiffre: 'codePostalChiffre' },
   lienInteretPrecision: { chiffre: 'lienInteretPrecisionChiffre' },
+  // DM-59 (REQ-JUR-065) : la nouvelle valeur d'une rectification demandée par le contact, chiffrée
+  // comme ses autres données, SANS empreinte (on ne la cherche jamais), effacée à la clôture.
+  valeurRectification: { chiffre: 'valeurChiffree' },
+  // DM-12 : le texte d'une contestation et sa réponse (REQ-DM-043), chiffrés, sans empreinte.
+  texte: { chiffre: 'texteChiffre' },
+  reponse: { chiffre: 'reponseChiffre' },
+  // DM-12 : la justification d'une anomalie (REQ-DM-033), chiffrée, sans empreinte ni extrait.
+  justification: { chiffre: 'justificationChiffre' },
+  // DM-09 (REQ-DM-008, REQ-DM-031) : la personne interrogée lors d'un appel de qualification et les
+  // termes de sa réponse — des données d'un tiers, chiffrées, SANS empreinte, purgées avec le contact.
+  personneInterrogee: { chiffre: 'personneInterrogeeChiffre' },
+  termesReponse: { chiffre: 'termesReponseChiffre' },
 } as const satisfies Record<
   string,
   { chiffre: string } | { chiffre: string; empreinte: string; type: TypeEmpreinte }
@@ -412,4 +424,29 @@ export function colonnesPii(
     }
   }
   return sortie as ColonnesPii;
+}
+
+/** Les colonnes que l'effacement des champs `C` met à `null` : leur bloc, et leur empreinte s'il y en a une. */
+export type EffacementPii<C extends ChampPii> = {
+  [K in ChampsPii[C]['chiffre'] | Extract<ChampsPii[C], { empreinte: string }>['empreinte']]: null;
+};
+
+/**
+ * L'EFFACEMENT des champs de personne nommés, prêt à étaler dans `data` : le bloc chiffré de chacun
+ * ET son empreinte, s'il en a une, à `null` — ensemble, par construction, comme les CHECK l'exigent.
+ * Aucune clé ni aucun clair : rien n'est chiffré, rien n'est lu. La SOURCE est `CHAMPS_PII`, jamais une
+ * liste de colonnes recopiée. Une liste vide est refusée : un effacement qui n'efface rien est une
+ * erreur d'appel.
+ */
+export function effacementPii<C extends ChampPii>(champs: readonly C[]): EffacementPii<C> {
+  if (champs.length === 0) {
+    throw new EntreeRefuseePii('ligne_incomplete', 'l’effacement exige au moins un champ');
+  }
+  const sortie: Record<string, null> = {};
+  for (const champ of champs) {
+    const def: ChampsPii[ChampPii] = CHAMPS_PII[champ];
+    sortie[def.chiffre] = null;
+    if ('empreinte' in def) sortie[def.empreinte] = null;
+  }
+  return sortie as EffacementPii<C>;
 }

@@ -17,6 +17,7 @@
  * prénoms », et l'option retenue est la plus fermée — rien en clair (question ouverte au rendu).
  */
 import { createHmac } from 'node:crypto';
+import { coordonneesDuSiege } from '../../../domain/geo/micro-degres';
 import { empreinteSousCle, normaliserSegmentDeNom } from '../../securite/pii';
 import type {
   DirigeantDuTiers,
@@ -82,6 +83,11 @@ export function versSuggestion(r: ResultatDuTiers): Suggestion {
 }
 
 export function versFiche(r: ResultatDuTiers, empreindre: Empreinteur): FicheEntreprise {
+  // EXT-T08 (REQ-EXT-015) : la position du siège, côté serveur. ÉCHEC FERMÉ : une diffusion qui n'est
+  // pas pleine ne livre pas sa position — c'est souvent le domicile d'un entrepreneur individuel.
+  const position = diffusionPleine(r)
+    ? coordonneesDuSiege(r.siege.latitude, r.siege.longitude)
+    : { latitudeMicrodeg: null, longitudeMicrodeg: null };
   return {
     siren: r.siren,
     siret: r.siege.siret,
@@ -96,6 +102,8 @@ export function versFiche(r: ResultatDuTiers, empreindre: Empreinteur): FicheEnt
       libelle_commune: r.siege.libelle_commune,
       departement: r.siege.departement,
       region: r.siege.region,
+      latitude_microdeg: position.latitudeMicrodeg,
+      longitude_microdeg: position.longitudeMicrodeg,
     },
     dirigeants: r.dirigeants.map((d) => ({
       empreinte: empreindre(texteDuDirigeant(d)),

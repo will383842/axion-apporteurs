@@ -1,6 +1,7 @@
 // @req REQ-SEC-008
 // @req REQ-QA-011 → REQ-SEC-008
 // @req REQ-SEC-022
+// @req REQ-DM-043
 // @req REQ-QA-012 → REQ-SEC-022
 // @req REQ-DM-031
 /**
@@ -42,6 +43,7 @@ import {
   SECRETS,
   CORPS_INTROUVABLE,
   MODELES_CLOISONNES,
+  MODELES_SANS_VUE_APPORTEUR,
   REFERENCES_CLOISONNEES,
   REFUS,
   forApporteur,
@@ -441,13 +443,29 @@ describe('REQ-QA-011 → REQ-SEC-008 — la liste des modèles cloisonnés est c
   const modeles = Prisma.dmmf.datamodel.models;
   const delegue = (nom: string) => nom.charAt(0).toLowerCase() + nom.slice(1);
 
-  it('REQ-QA-011 → REQ-SEC-008 : les modèles cloisonnés sont EXACTEMENT ceux du schéma qui portent `apporteurId`', () => {
+  it('REQ-QA-011 → REQ-SEC-008 : les modèles cloisonnés sont EXACTEMENT ceux du schéma qui portent `apporteurId`, hors des modèles SANS VUE déclarés', () => {
     const portantApporteur = modeles
       .filter((m) => m.fields.some((f) => f.name === 'apporteurId'))
       .map((m) => delegue(m.name))
       .sort();
     expect(portantApporteur.length).toBeGreaterThan(0);
-    expect([...MODELES_CLOISONNES].sort()).toEqual(portantApporteur);
+    expect([...MODELES_CLOISONNES, ...MODELES_SANS_VUE_APPORTEUR].sort()).toEqual(portantApporteur);
+  });
+
+  it('REQ-SEC-008 : TÉMOIN — DM-12 : l’anomalie n’a AUCUNE vue dans l’espace, et aucune relation de l’espace n’y mène', () => {
+    expect([...MODELES_SANS_VUE_APPORTEUR]).toEqual(['anomalie']);
+    const vues = forApporteur(fauxClient().client, A) as unknown as Record<string, unknown>;
+    expect(Object.hasOwn(vues, 'anomalie')).toBe(false);
+    const relations = RELATIONS as unknown as Record<string, readonly string[]>;
+    const refusees = CLES_REFUSEES as unknown as Record<string, readonly string[]>;
+    for (const m of modeles) {
+      for (const f of m.fields.filter((x) => x.kind === 'object' && x.type === 'Anomalie')) {
+        const d = delegue(m.name);
+        if (!(MODELES_CLOISONNES as readonly string[]).includes(d)) continue;
+        expect(relations[d], `${d}.${f.name}`).toContain(f.name);
+        expect(refusees[d], `${d}.${f.name}`).toContain(f.name);
+      }
+    }
   });
 
   it.each(MODELES_CLOISONNES)(
@@ -475,9 +493,11 @@ describe('REQ-QA-011 → REQ-SEC-008 — la liste des modèles cloisonnés est c
       const m = modeles.find((x) => delegue(x.name) === modele)!;
       for (const f of m.fields.filter((x) => x.kind === 'object')) {
         const versCloisonnee = (MODELES_CLOISONNES as readonly string[]).includes(delegue(f.type));
-        for (const colonne of f.relationFromFields ?? []) {
+        // Une clé COMPOSITE (DM-11 : `(piece_kyc_id, piece_kyc_type)` vers la pièce `rib`) se vérifie par
+        // son identifiant, sa PREMIÈRE colonne ; le discriminant qui la complète n'est pas une référence.
+        for (const [i, colonne] of (f.relationFromFields ?? []).entries()) {
           const declaree = Object.keys(REFERENCES_CLOISONNEES[modele] ?? {}).includes(colonne);
-          expect(declaree, `${modele}.${colonne}`).toBe(versCloisonnee);
+          expect(declaree, `${modele}.${colonne}`).toBe(versCloisonnee && i === 0);
         }
       }
     }
@@ -749,7 +769,7 @@ function fautesDeClassement(
 }
 
 describe('REQ-SEC-008 — GOV-111 : la couche ne rend qu’une sélection EXPLICITE, sans secret', () => {
-  it('REQ-SEC-008 : les dix-sept secrets sont figés — les six de GOV-111, les quatre de la fiche (SEC-47) et les sept du dépôt (DM-07)', () => {
+  it('REQ-SEC-008 : les vingt-trois secrets sont figés — les six de GOV-111, les quatre de la fiche (SEC-47), les sept du dépôt (DM-07), l’IBAN de la pièce rib (DM-11), le jeton de la page des droits (DM-59), le texte et la réponse d’une contestation et la justification d’une anomalie (DM-12)', () => {
     expect(Object.isFrozen(SECRETS)).toBe(true);
     expect([...SECRETS].sort()).toEqual(
       [
@@ -770,6 +790,12 @@ describe('REQ-SEC-008 — GOV-111 : la couche ne rend qu’une sélection EXPLIC
         'codePostalChiffre',
         'lienInteretPrecisionChiffre',
         'agentHash',
+        'ibanChiffre',
+        'ibanHash',
+        'jetonDroitsHash',
+        'texteChiffre',
+        'reponseChiffre',
+        'justificationChiffre',
       ].sort()
     );
   });
@@ -872,6 +898,60 @@ describe('REQ-DM-031 — DM-07 : le vocabulaire et les colonnes du dépôt, conf
     for (const c of chiffrees) expect(ecrites, c).toContain(c);
     expect('empreinte' in CHAMPS_PII.nomContact).toBe(false);
     expect('empreinte' in CHAMPS_PII.fonctionContact).toBe(false);
+  });
+});
+
+describe('REQ-DM-043 — DM-53 : le refus reste visible, son SIREN rendu NULL une fois purgé, la date de purge jamais rendue', () => {
+  const colonnes = Prisma.dmmf.datamodel.models
+    .find((m) => m.name === 'DepotRefuse')!
+    .fields.filter((f) => f.kind !== 'object')
+    .map((f) => f.name);
+
+  it('REQ-DM-043 : siren est RENDU, sirenPurgeAt est TU — dans les listes et dans chaque sélection de la vue', async () => {
+    expect(CHAMPS_RENDUS.depotRefuse as readonly string[]).toContain('siren');
+    expect(CHAMPS_RENDUS.depotRefuse as readonly string[]).not.toContain('sirenPurgeAt');
+    expect(CHAMPS_TUS.depotRefuse as readonly string[]).toContain('sirenPurgeAt');
+    const { client, appels } = fauxClient();
+    const vue = forApporteur(client, A).depotRefuse;
+    await vue.trouver(randomUUID());
+    await vue.lister();
+    expect(appels.length).toBeGreaterThan(0);
+    for (const a of appels) {
+      const select = (a.args as { select: Record<string, unknown> }).select;
+      expect(select, a.methode).toEqual(selection('depotRefuse'));
+      expect(Object.hasOwn(select, 'siren'), `${a.methode}.siren`).toBe(true);
+      expect(Object.hasOwn(select, 'sirenPurgeAt'), `${a.methode}.sirenPurgeAt`).toBe(false);
+    }
+  });
+
+  it('REQ-DM-043 : TÉMOIN À DEUX FACES — la sélection livrée tait la date de purge ; une COPIE de toutes les colonnes la rendrait, et rougit à la même comparaison', async () => {
+    const { client, appels } = fauxClient();
+    await forApporteur(client, A).depotRefuse.lister();
+    const livree = Object.keys((appels[0]!.args as { select: object }).select).sort();
+    const copie = [...colonnes].sort();
+    const tue = (cles: string[]) => !cles.includes('sirenPurgeAt');
+    expect(tue(livree)).toBe(true);
+    expect(tue(copie)).toBe(false);
+    expect(copie).not.toEqual(livree);
+  });
+
+  it('REQ-DM-043 : un refus purgé est rendu avec un SIREN NULL — la ligne reste visible, sans lui', async () => {
+    const { client, reponses } = fauxClient();
+    const purge = {
+      id: randomUUID(),
+      siren: null,
+      motif: 'file_complete',
+      canal: 'espace',
+      refuseAt: new Date(0),
+    };
+    reponses.findFirst = purge;
+    const rendu = (await forApporteur(client, A).depotRefuse.trouver(purge.id)) as Record<
+      string,
+      unknown
+    >;
+    expect(rendu).toEqual(purge);
+    expect(rendu['siren']).toBeNull();
+    expect(Object.hasOwn(rendu, 'sirenPurgeAt')).toBe(false);
   });
 });
 
