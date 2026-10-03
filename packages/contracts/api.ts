@@ -146,8 +146,8 @@ const MOTIF_SEQUENCE = '^[0-9]{1,18}$';
 const LIMITE_MAX_RELECTURE = 500;
 
 /**
- * `GET /api/partners/evenements?after_sequence=<n>&limit=<l>` — la relecture de la file de sortie
- * d'axion-ia (REQ-INT-012), DÉCLARÉE au contrat en AMENDEMENT de la version 3 tant qu'axion-ia ne
+ * La relecture de la file de sortie d'axion-ia, `GET` au chemin ci-dessous, paramètres
+ * `after_sequence` et `limit` (REQ-INT-012), DÉCLARÉE au contrat en AMENDEMENT de la version 3 tant qu'axion-ia ne
  * l'a pas adoptée (rattrapage 66, forme de l'architecte) : elle tournait sans y être.
  *
  * Réponse 200 : les corps stockés, octet pour octet, un par ligne (NDJSON) — chacun une enveloppe
