@@ -125,6 +125,8 @@ export const MICRO_COPIE_HORS_PORTEE: Readonly<Record<string, string>> = {
   // SEC-29 : la connexion de la console et son courriel, lus par les utilisateurs de la console seuls.
   'console/connexion.ts':
     'connexion de la console et son courriel, lus par ses utilisateurs seuls (portée dépôt, REQ-GOV-017)',
+  'console/navigation.ts':
+    'le cadre de la console, lu par ses utilisateurs seuls (portée dépôt, REQ-GOV-017)',
 };
 
 /**

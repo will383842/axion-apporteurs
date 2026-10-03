@@ -33,7 +33,9 @@ const CARTE = readFileSync('docs/CONSOLE-ROUTES.md', 'utf8');
 function lignes(section: string): string[][] {
   const debut = CARTE.indexOf(section);
   const bloc = CARTE.slice(debut).split('\n## ')[0]!;
-  return bloc
+  // Le PREMIER tableau de la section seulement : ses lignes se suivent, sans ligne vide.
+  const tableau = bloc.slice(bloc.indexOf('\n| ')).split('\n\n')[0]!;
+  return tableau
     .split('\n')
     .filter((l) => l.startsWith('| ') && !l.startsWith('| ---'))
     .slice(1)
@@ -166,9 +168,16 @@ describe('REQ-UX-019 — (4) l’accueil : la première route livrée de la pré
     );
     expect(accueilDuRole('admin', { livrees: PHASES[3]! })).toBe('/console/qualification');
     expect(accueilDuRole('comptable', { livrees: ['/console/qualification'] })).toBeNull();
-    expect(accueilDuRole('comptable', { livrees: PHASES[4]! })).toBe('/console/lots');
+    // Les lots et les statistiques sont livrés, mais leurs droits n'entrent qu'avec leur phase :
+    // l'accueil passe à la préférence suivante, livrée ET permise.
+    expect(accueilDuRole('comptable', { livrees: PHASES[4]! })).toBe('/console/apporteurs');
     expect(accueilDuRole('lecteur', { livrees: PHASES[3]! })).toBe('/console/qualification');
-    expect(accueilDuRole('lecteur', { livrees: PHASES[4]! })).toBe('/console/statistiques');
+    expect(accueilDuRole('lecteur', { livrees: PHASES[4]! })).toBe('/console/qualification');
+    const avecPhase2 = (droit: string, role: ConsoleRole) =>
+      roleAutorise(droit, role) || (droit === 'ecran:lots' && role === 'comptable');
+    expect(accueilDuRole('comptable', { livrees: PHASES[4]!, autorise: avecPhase2 })).toBe(
+      '/console/lots'
+    );
     // Aujourd'hui : aucun écran du menu n'est livré, l'accueil est l'état vide pour tous.
     for (const role of ROLES_CONSOLE) expect(accueilDuRole(role), role).toBeNull();
   });
