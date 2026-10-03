@@ -168,7 +168,9 @@ describe('REQ-DM-029 — la forme des tables (A02)', () => {
     });
     expect(
       await refus(
-        app.sirenListeNoire.create({ data: { siren: '1234', motif: 'opco', ajouteParId: u.id } })
+        app.sirenListeNoire.create({
+          data: { siren: '1234', motif: 'administration', ajouteParId: u.id },
+        })
       )
     ).toContain('sirens_liste_noire_siren_forme');
   });
@@ -184,12 +186,12 @@ describe('REQ-DM-029 — la forme des tables (A02)', () => {
       ).map((r) => r.v);
     expect(await valeurs('origine_entreprise_connue')).toEqual(['client', 'devis', 'financeur']);
     expect(await valeurs('origine_entreprise_connue')).not.toContain('demande_entrante');
+    // Les catégories de l'art. 3.3 bis (b), sans « autre » (exigence de la juriste, forme d'A02).
     expect(await valeurs('motif_liste_noire')).toEqual([
-      'opco',
-      'france_travail',
-      'region',
-      'of_partenaire',
-      'autre',
+      'administration',
+      'financeur_public',
+      'financeur_paritaire',
+      'organisme_de_formation_partenaire',
     ]);
   });
 
@@ -298,10 +300,33 @@ describe('REQ-DM-029 — l’antériorité projetée, sous le rôle du serveur (
     const u = await base.prisma.utilisateurConsole.create({
       data: { role: 'admin', creeAt: new Date(ilYA(1)) },
     });
-    await base.prisma.sirenListeNoire.create({ data: { siren, motif: 'opco', ajouteParId: u.id } });
-    expect(await anterioriteDe(app, siren, MAINTENANT)).toMatchObject({
+    await base.prisma.sirenListeNoire.create({
+      data: { siren, motif: 'financeur_paritaire', ajouteParId: u.id },
+    });
+    expect(await anterioriteDe(app, siren, MAINTENANT)).toEqual({
       connue: true,
       origine: 'financeur',
+      depuis: null,
+      categorie: 'financeur_paritaire',
     });
+  });
+
+  it('REQ-DM-028 : TÉMOIN — « autre » et les anciens noms d’organisme sont refusés par la base', async () => {
+    const u = await base.prisma.utilisateurConsole.create({
+      data: { role: 'admin', creeAt: new Date(ilYA(1)) },
+    });
+    for (const motif of ['autre', 'opco', 'france_travail', 'region', 'of_partenaire']) {
+      expect(
+        await refus(
+          base.prisma.$executeRawUnsafe(
+            `INSERT INTO "sirens_liste_noire" ("siren", "motif", "ajoute_par_id") VALUES ($1, $2::motif_liste_noire, $3::uuid)`,
+            unSiren(),
+            motif,
+            u.id
+          )
+        ),
+        motif
+      ).toMatch(/motif_liste_noire|invalid input value/i);
+    }
   });
 });
