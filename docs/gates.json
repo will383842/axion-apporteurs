@@ -650,7 +650,7 @@
     {
       "id": "G-SEC-ORACLE",
       "phase": 1,
-      "script": "tests/security/oracle.spec.ts",
+      "script": "tests/unit/securite/verification-non-oracle.spec.ts",
       "tache": "SEC-16",
       "alias": [
         "GATE-JUR-VERIFIER-BINAIRE"
