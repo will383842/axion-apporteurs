@@ -92,7 +92,7 @@ describe('REQ-UX-016 — la table des notifications, ses neuf clés et leurs rè
     });
   });
 
-  it('REQ-UX-016 : TÉMOINS — chaque règle cassée d’un geste rougit, nommée', () => {
+  it('REQ-UX-016 REQ-JUR-033 : TÉMOINS — chaque règle cassée d’un geste rougit, nommée, dont la clé déclenchée par l’inactivité', () => {
     const casse = (cle: Gabarit, champs: Partial<LigneDeNotification>) => {
       const t = table();
       t[cle] = { ...t[cle]!, ...champs };
