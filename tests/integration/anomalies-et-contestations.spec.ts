@@ -1056,3 +1056,112 @@ describe('REQ-DM-034 — l’écrivain du rattachement, émetteur de rattachemen
     expect(evenements).toEqual([{ agregat: 'attribution' }]);
   });
 });
+
+describe('REQ-DM-032 REQ-DM-043 — les purges de l’échéance du registre (corrections d’A02)', () => {
+  it('REQ-DM-032 : TÉMOIN — verifications : le porteur se purge avec sa date (le déclencheur du conseiller laisse passer le NULL) ; sans date, ou la date sans le vide, refusé ; il ne revient pas', async () => {
+    const id = await uneVerification();
+    expect(
+      await refus(
+        ecrire(
+          `UPDATE verifications SET apporteur_id = NULL, utilisateur_console_id = NULL WHERE id = $1::uuid`,
+          id
+        )
+      )
+    ).toContain('verifications_porteur_unique');
+    expect(
+      await refus(
+        ecrire(`UPDATE verifications SET porteur_purge_at = $2 WHERE id = $1::uuid`, id, MAINTENANT)
+      )
+    ).toContain('verifications_porteur_unique');
+    await ecrire(
+      `UPDATE verifications SET apporteur_id = NULL, utilisateur_console_id = NULL, porteur_purge_at = $2
+       WHERE id = $1::uuid`,
+      id,
+      MAINTENANT
+    );
+    expect(
+      await refus(
+        ecrire(
+          `UPDATE verifications SET apporteur_id = $2::uuid WHERE id = $1::uuid`,
+          id,
+          apporteurId
+        )
+      )
+    ).toContain(GABARIT);
+    expect(
+      await refus(
+        ecrire(
+          `UPDATE verifications SET porteur_purge_at = $2 WHERE id = $1::uuid`,
+          id,
+          new Date(MAINTENANT.getTime() + 1)
+        )
+      )
+    ).toContain(GABARIT);
+  });
+
+  it('REQ-DM-032 : TÉMOIN — alertes_liberation : l’apporteur se purge avec sa date ; sans date, ou la date sans le vide, refusé (alertes_liberation_apporteur_purge_liee) ; il ne revient pas', async () => {
+    const id = randomUUID();
+    await ecrire(
+      `INSERT INTO alertes_liberation (id, apporteur_id, siren, cree_at) VALUES ($1::uuid, $2::uuid, $3, $4)`,
+      id,
+      apporteurId,
+      unSiren(),
+      MAINTENANT
+    );
+    expect(
+      await refus(
+        ecrire(`UPDATE alertes_liberation SET apporteur_id = NULL WHERE id = $1::uuid`, id)
+      )
+    ).toContain('alertes_liberation_apporteur_purge_liee');
+    expect(
+      await refus(
+        ecrire(
+          `UPDATE alertes_liberation SET apporteur_purge_at = $2 WHERE id = $1::uuid`,
+          id,
+          MAINTENANT
+        )
+      )
+    ).toContain('alertes_liberation_apporteur_purge_liee');
+    await ecrire(
+      `UPDATE alertes_liberation SET apporteur_id = NULL, apporteur_purge_at = $2 WHERE id = $1::uuid`,
+      id,
+      MAINTENANT
+    );
+    expect(
+      await refus(
+        ecrire(
+          `UPDATE alertes_liberation SET apporteur_id = $2::uuid, apporteur_purge_at = NULL
+           WHERE id = $1::uuid`,
+          id,
+          apporteurId
+        )
+      )
+    ).toContain(GABARIT);
+  });
+
+  it('REQ-DM-043 : TÉMOIN — une purge qui pose repondue_at sur une contestation jamais répondue est refusée', async () => {
+    const { id: attributionId } = await uneAttribution();
+    const id = randomUUID();
+    await ecrire(
+      `INSERT INTO contestations (id, apporteur_id, objet, attribution_id, texte_chiffre, recue_at)
+       VALUES ($1::uuid, $2::uuid, 'demande_rattachement', $3::uuid, $4, $5)`,
+      id,
+      apporteurId,
+      attributionId,
+      randomBytes(40),
+      MAINTENANT
+    );
+    expect(
+      await refus(
+        ecrire(
+          `UPDATE contestations SET texte_chiffre = NULL, purgee_at = $2,
+             repondue_par_id = $3::uuid, repondue_at = $2
+           WHERE id = $1::uuid`,
+          id,
+          MAINTENANT,
+          adminId
+        )
+      )
+    ).toContain(CONTESTATIONS);
+  });
+});

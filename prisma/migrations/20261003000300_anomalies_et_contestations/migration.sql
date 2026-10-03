@@ -353,7 +353,7 @@ ALTER TABLE "rattachements_manuels" ADD CONSTRAINT "rattachements_manuels_justif
 -- La référence de la pièce : un identifiant court, sans espace ni lettre accentuée, et qui porte un
 -- chiffre (numéro d'annonce, date d'extrait, millésime, numéro d'inscription) : ni phrase, ni nom.
 ALTER TABLE "rattachements_manuels" ADD CONSTRAINT "rattachements_manuels_source_ref_forme"
-  CHECK ("lien_controle_source_ref" ~ '^[A-Za-z0-9._/-]{1,64}$' AND "lien_controle_source_ref" ~ '[0-9]');
+  CHECK ("lien_controle_source_ref" ~ '^[A-Za-z0-9._/-]*[0-9][A-Za-z0-9._/-]*$' AND char_length("lien_controle_source_ref") <= 64);
 CREATE UNIQUE INDEX "rattachements_manuels_un_actif_par_siren" ON "rattachements_manuels" ("siren_commande")
   WHERE "revoque_at" IS NULL;
 

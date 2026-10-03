@@ -110,7 +110,9 @@ export function dateDeLaPiece(jour: DateCivile): Instant {
  * porte un chiffre (numéro d'annonce, date d'extrait, millésime, numéro d'inscription). Le même motif
  * que le CHECK `rattachements_manuels_source_ref_forme`.
  */
-export const FORME_REFERENCE_DE_SOURCE = /^[A-Za-z0-9._/-]{1,64}$/;
+/** Un SEUL motif, le chiffre obligatoire dedans, comme le CHECK ; la longueur se borne à part. */
+export const FORME_REFERENCE_DE_SOURCE = /^[A-Za-z0-9._/-]*[0-9][A-Za-z0-9._/-]*$/;
+export const REFERENCE_DE_SOURCE_LONGUEUR_MAX = 64;
 
 export class ReferenceDeSourceMalFormee extends Error {
   constructor() {
@@ -120,7 +122,7 @@ export class ReferenceDeSourceMalFormee extends Error {
 }
 
 export function jugerReferenceDeSource(ref: string): void {
-  if (!FORME_REFERENCE_DE_SOURCE.test(ref) || !/[0-9]/.test(ref)) {
+  if (!FORME_REFERENCE_DE_SOURCE.test(ref) || ref.length > REFERENCE_DE_SOURCE_LONGUEUR_MAX) {
     throw new ReferenceDeSourceMalFormee();
   }
 }
