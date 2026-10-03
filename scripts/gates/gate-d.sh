@@ -163,7 +163,7 @@ docker exec "$ID-base" pg_dump -U porte -Fc -d precedente >"$TEMP/n-1.dump"
 # QA-T70 (REQ-QA-023) : la restauration se fait COMME LE RUNBOOK (`docs/runbooks/sauvegarde.md`,
 # étape 3), par le plan UNIQUE de l'exercice (`planDeLaPropriete`, `scripts/sauvegarde/exercice.ts`) :
 # les rôles de la forme d'abord, puis les droits (`--no-owner`, jamais `--no-acl`), puis la propriété
-# REJOUÉE, dont celle du journal. Sans elle, `evenements` appartiendrait au superutilisateur de la
+# REJOUÉE, dont celle du journal. Sans elle, la table du journal appartiendrait au superutilisateur de la
 # porte, et l'image N−1 démarrerait sur une base que la production n'a jamais.
 docker exec -i "$ID-base" pg_restore --schema-only -f - <"$TEMP/n-1.dump" >"$TEMP/schema-n-1.sql" ||
   echouer "le schéma du vidage N−1 ne se lit pas."
