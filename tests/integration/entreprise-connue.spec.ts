@@ -53,10 +53,14 @@ function ilYA(mois: number): string {
 const unSiren = () => String(randomInt(100_000_000, 999_999_999));
 
 /** Pose un événement reçu, comme la réception le garde, puis le projette sous le rôle du serveur. */
+/** La séquence d'émission d'axionia, exigée par la base pour une source axionia. */
+let sequence = 1_000_000n;
+
 async function recevoir(type: TypeEvenementRecu, charge: Record<string, unknown>): Promise<void> {
   await base.prisma.evenementRecu.create({
     data: {
       source: 'axionia',
+      sequence: (sequence += 1n),
       eventId: randomUUID(),
       eventType: type,
       schemaVersion: 3,
@@ -201,7 +205,7 @@ describe('REQ-DM-029 — la forme des tables (A02)', () => {
 
   it('REQ-DM-028 : TÉMOIN — la liste de la Société refuse un SIREN mal formé, sur son nom', async () => {
     const u = await base.prisma.utilisateurConsole.create({
-      data: { role: 'admin', creeAt: new Date(ilYA(1)) },
+      data: { role: 'admin', creeAt: new Date(ilYA(1)), desactiveAt: new Date(ilYA(1)) },
     });
     expect(
       await refus(
@@ -335,7 +339,7 @@ describe('REQ-DM-029 — l’antériorité projetée, sous le rôle du serveur (
   it('REQ-DM-028 : une entreprise inscrite sur la liste de la Société est connue (financeur)', async () => {
     const siren = unSiren();
     const u = await base.prisma.utilisateurConsole.create({
-      data: { role: 'admin', creeAt: new Date(ilYA(1)) },
+      data: { role: 'admin', creeAt: new Date(ilYA(1)), desactiveAt: new Date(ilYA(1)) },
     });
     await base.prisma.sirenListeNoire.create({
       data: { siren, motif: 'financeur_paritaire', ajouteParId: u.id },
@@ -350,7 +354,7 @@ describe('REQ-DM-029 — l’antériorité projetée, sous le rôle du serveur (
 
   it('REQ-DM-028 : TÉMOIN — « autre » et les anciens noms d’organisme sont refusés par la base', async () => {
     const u = await base.prisma.utilisateurConsole.create({
-      data: { role: 'admin', creeAt: new Date(ilYA(1)) },
+      data: { role: 'admin', creeAt: new Date(ilYA(1)), desactiveAt: new Date(ilYA(1)) },
     });
     for (const motif of ['autre', 'opco', 'france_travail', 'region', 'of_partenaire']) {
       expect(
