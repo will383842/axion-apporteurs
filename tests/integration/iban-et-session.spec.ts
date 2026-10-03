@@ -15,10 +15,13 @@
  *   4. une insertion annulée : version inchangée ;
  *   5. un RIB qui suit un RIB refusé : +1 ;
  *   6. le déclencheur existe, sur `pieces_kyc`, AFTER INSERT, par ligne : sans lui, ce fichier rougit.
+ * Les pièces s'insèrent, les versions se lisent et les sessions se jugent sous `partners_app`, le
+ * rôle d'exécution PROVISIONNÉ : le déclencheur, SECURITY INVOKER, écrit avec SES droits.
  * Secrets et jetons sont tirés à l'exécution ; blocs et empreintes sont factices.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { randomBytes, randomUUID } from 'node:crypto';
+import { PrismaClient } from '@prisma/client';
 import { demarrerBase, type Base } from './harnais';
 import { NOMS_DES_SECRETS, kidDe } from '../../src/lib/env';
 import { clesPii, colonnesPii } from '../../src/server/securite/pii';
@@ -26,14 +29,26 @@ import { MODELE_APPORTEUR } from '../../src/server/auth/lien-magique-depot';
 import { tirerJeton } from '../../src/server/auth/lien-magique';
 import { depotDeSessions, exigerSession, type PortsDeSession } from '../../src/server/auth/session';
 import { semerSession } from '../../prisma/seed/05-sessions';
+import {
+  ROLE_D_EXECUTION,
+  provisionnerRoleDExecution,
+} from '../../src/server/deploiement/role-d-execution';
 
 let base: Base;
+/** Le client du SERVEUR : la base sous `partners_app`, provisionné comme en production. */
+let app: PrismaClient;
 
 beforeAll(async () => {
   base = await demarrerBase();
+  const u = new URL(base.url);
+  u.username = ROLE_D_EXECUTION;
+  u.password = randomBytes(24).toString('hex');
+  await provisionnerRoleDExecution({ urlMigration: base.url, urlExecution: u.toString() });
+  app = new PrismaClient({ datasourceUrl: u.toString() });
 }, 180_000);
 
 afterAll(async () => {
+  await app?.$disconnect();
   await base?.arreter();
 });
 
@@ -59,7 +74,7 @@ const hex = (octets: number) => randomBytes(octets).toString('hex');
 function ports(maintenant: Date): PortsDeSession {
   return {
     maintenant: () => maintenant,
-    depot: depotDeSessions(base.prisma),
+    depot: depotDeSessions(app),
     configuration: CONFIGURATION.session,
   };
 }
@@ -116,7 +131,7 @@ async function ouvrir(apporteurId: string): Promise<string> {
 }
 
 async function version(apporteurId: string): Promise<number> {
-  const a = await base.prisma.apporteur.findUniqueOrThrow({
+  const a = await app.apporteur.findUniqueOrThrow({
     where: { id: apporteurId },
     select: { sessionVersion: true },
   });
@@ -139,7 +154,7 @@ async function piece(p: {
   statut: string;
 }): Promise<void> {
   const rib = p.type === 'rib';
-  await base.prisma.$executeRawUnsafe(
+  await app.$executeRawUnsafe(
     `INSERT INTO pieces_kyc (id, apporteur_id, type, statut, iban_chiffre, iban_hash)
      VALUES ($1::uuid, $2::uuid, $3::type_piece_kyc, $4::statut_piece_kyc, $5, $6)`,
     randomUUID(),
@@ -190,7 +205,7 @@ describe('REQ-SEC-003 — SEC-45 : un nouveau RIB révoque les sessions, le prem
     const jeton = await ouvrir(a);
     const ANNULATION = 'annulation voulue par le témoin';
     await expect(
-      base.prisma.$transaction(async (tx) => {
+      app.$transaction(async (tx) => {
         await tx.$executeRawUnsafe(
           `INSERT INTO pieces_kyc (id, apporteur_id, type, statut, iban_chiffre, iban_hash)
            VALUES ($1::uuid, $2::uuid, 'rib', 'a_verifier', $3, $4)`,
