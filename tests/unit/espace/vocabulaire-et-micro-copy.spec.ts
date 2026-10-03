@@ -347,6 +347,8 @@ describe('REQ-UX-002 — un texte de l’espace ne porte que les paramètres que
     'espace/issues-depot.ts': ['TEXTES_DES_ISSUES', 'opposition_demarchage', 'quoiFaire'],
     'espace/etats-vides.ts': ['ETATS_VIDES_ESPACE', '/plus', 'phrase'],
     'espace/vocabulaire.ts': ['FORMULES', 'sansSuite'],
+    'courriels/notifications.ts': ['TEXTES_DES_NOTIFICATIONS', 'lien_magique', 'titre'],
+    'espace/confirmation-du-depot.ts': ['FORMULAIRE_DU_CONTACT', 'titre'],
   };
 
   it('REQ-UX-002 : chaque paramètre permis rougit HORS de son contexte, dans le même fichier', () => {
@@ -671,7 +673,7 @@ describe('REQ-UX-002 — snapshot des libellés de l’espace, sans date, sans n
       espace/issues-depot.ts › TEXTES_DES_ISSUES › brouillon_hors_ligne › actionPrincipale › libelle : Retour à l'accueil
       espace/issues-depot.ts › TEXTES_DES_ISSUES › brouillon_hors_ligne › actionPrincipale › route : /
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › / › titre : Bienvenue dans votre espace
-      espace/etats-vides.ts › ETATS_VIDES_ESPACE › / › phrase : Quand vous rencontrez une entreprise qui pourrait former ses salariés, vous pouvez taper son nom ci-dessous. Vous vérifiez qu'elle est libre, vous dites qui vous avez rencontré, et Axion-IA l'appelle. Si elle signe, vous touchez une commission.
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › / › phrase : Quand vous rencontrez une entreprise qui pourrait former ses salariés, vous pouvez taper son nom ci-dessous. Vous vérifiez qu'elle est libre, vous dites qui vous avez rencontré, et Axion-IA l'appelle. Si elle passe commande pendant la durée de votre droit à commission, une commission vous revient au fil des paiements.
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › / › action › libelle : Vérifier
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › / › action › route : /entreprise?q=
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › /mes-entreprises › titre : Vos entreprises apparaîtront ici
@@ -679,7 +681,7 @@ describe('REQ-UX-002 — snapshot des libellés de l’espace, sans date, sans n
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › /mes-entreprises › action › libelle : Déposer une entreprise
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › /mes-entreprises › action › route : /deposer
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › /mes-commissions › titre : Pas encore de commission
-      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /mes-commissions › phrase : Elles apparaissent ici quand une entreprise que vous avez déposée signe, puis quand elle paie. Vous verrez alors ce que vous touchez, quand, et d'où vient chaque montant.
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /mes-commissions › phrase : Elles apparaissent ici quand une entreprise que vous avez déposée signe, puis quand elle paie. Vous verrez alors ce qui vous revient, quand, et d'où vient chaque montant.
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › /mes-commissions › action › libelle : Retour à l'accueil
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › /mes-commissions › action › route : /
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › /plus › titre : Le reste de votre espace
@@ -806,7 +808,59 @@ describe('REQ-UX-002 — snapshot des libellés de l’espace, sans date, sans n
       espace/vocabulaire.ts › CONFIDENTIALITE › erreur › phrase : La politique de confidentialité n’a pas pu être affichée. Réessayez un peu plus tard.
       espace/vocabulaire.ts › CONFIDENTIALITE › erreur › action : Réessayer
       espace/vocabulaire.ts › CONFIDENTIALITE › horsLigne › titre : Vous êtes hors ligne
-      espace/vocabulaire.ts › CONFIDENTIALITE › horsLigne › phrase : La politique de confidentialité s’affichera dès le retour du réseau."
+      espace/vocabulaire.ts › CONFIDENTIALITE › horsLigne › phrase : La politique de confidentialité s’affichera dès le retour du réseau.
+      espace/confirmation-du-depot.ts › FORMULAIRE_DU_CONTACT › titre : Qui avez-vous rencontré ?
+      espace/confirmation-du-depot.ts › FORMULAIRE_DU_CONTACT › nom : Nom et prénom
+      espace/confirmation-du-depot.ts › FORMULAIRE_DU_CONTACT › fonction : Fonction
+      espace/confirmation-du-depot.ts › FORMULAIRE_DU_CONTACT › courriel : E-mail
+      espace/confirmation-du-depot.ts › FORMULAIRE_DU_CONTACT › telephone : Téléphone
+      espace/confirmation-du-depot.ts › FORMULAIRE_DU_CONTACT › contexte : Contexte (facultatif)
+      espace/confirmation-du-depot.ts › FORMULAIRE_DU_CONTACT › messageAvantLeBouton : {prenomContact} {nomContact} ({entreprise}) va recevoir un e-mail d'Axion-IA dans les {delaiAvantEnvoi} pour confirmer votre échange. Axion-IA pourra aussi l'appeler.
+      espace/confirmation-du-depot.ts › FORMULAIRE_DU_CONTACT › bouton : Déposer et prévenir {prenomContact} {nomContact}
+      espace/confirmation-du-depot.ts › FORMULAIRE_DU_CONTACT › boutonCourt : Déposer et prévenir
+      espace/confirmation-du-depot.ts › CARTE_DU_DEPOT › avantEnvoi : L'e-mail partira vers {heure}. Vous pouvez encore annuler ou corriger ce dépôt jusque-là.
+      espace/confirmation-du-depot.ts › CARTE_DU_DEPOT › annuler : Annuler
+      espace/confirmation-du-depot.ts › CARTE_DU_DEPOT › corriger : Corriger
+      espace/confirmation-du-depot.ts › CARTE_DU_DEPOT › envoye : E-mail envoyé à {prenomContact} {nomContact}
+      espace/confirmation-du-depot.ts › CARTE_DU_DEPOT › confirme : {prenomContact} {nomContact} a confirmé votre échange
+      espace/confirmation-du-depot.ts › CARTE_DU_DEPOT › rebond : L'e-mail n'a pas pu être remis à {adresse}. Si vous avez une autre adresse pour {prenomContact} {nomContact}, vous pouvez la corriger ici. Axion-IA pourra aussi l'appeler.
+      espace/confirmation-du-depot.ts › CARTE_DU_DEPOT › corrigerLAdresse : Corriger l'adresse
+      espace/confirmation-du-depot.ts › BADGES_DU_DEPOT › confirmee : Confirmée
+      espace/confirmation-du-depot.ts › BADGES_DU_DEPOT › enAttenteDatee : En attente · confirmée automatiquement le {date}
+      espace/confirmation-du-depot.ts › BADGES_DU_DEPOT › enAttente : En attente
+      espace/confirmation-du-depot.ts › BADGES_DU_DEPOT › enAttenteSignalee : En attente de confirmation — Axion-IA va appeler votre contact
+      espace/confirmation-du-depot.ts › BADGES_DU_DEPOT › courrielNonRecu : E-mail non reçu par le contact
+      espace/confirmation-du-depot.ts › BADGES_DU_DEPOT › nonConfirmee : Non confirmée par le contact
+      espace/confirmation-du-depot.ts › BADGES_DU_DEPOT › reservationTermineeVerifiee : Réservation terminée · nouveau dépôt possible à partir du {dateRedepot}
+      espace/confirmation-du-depot.ts › BADGES_DU_DEPOT › reservationTerminee : Réservation terminée · l'entreprise est de nouveau disponible
+      espace/confirmation-du-depot.ts › AIDE_DU_BADGE : Sans réponse de votre contact, votre dépôt est confirmé {delaiTacite} après la réception de notre e-mail.
+      espace/confirmation-du-depot.ts › CARENCE_DU_REDEPOT : Vous pourrez déposer à nouveau cette entreprise à partir du {dateRedepot}.
+      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › lien_magique › titre : Votre lien de connexion à votre espace
+      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › lien_magique › appel : Ouvrir mon espace
+      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › depot_injoignable_j5 › titre : {entreprise} : la confirmation de l'échange est en cours
+      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › depot_injoignable_j5 › appel : Voir Mes entreprises
+      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › depot_injoignable_j5 › corps : Axion-IA n'a pas encore pu joindre {contact}. Votre dépôt garde son heure d'enregistrement.
+      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › attribution_liberee › titre : {entreprise} : réservation terminée
+      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › attribution_liberee › appel : Voir Mes entreprises
+      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › decision_attribution › titre : {entreprise} : une décision concerne votre dépôt
+      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › decision_attribution › appel : Contester cette décision par écrit
+      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › decision_attribution › corps : {motif}. Vous pouvez contester cette décision par écrit ; Axion-IA vous répond de façon motivée dans les {delaiReponse}.
+      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › premier_rang_libere › titre : {entreprise} : vous pouvez la déposer à nouveau jusqu'au {dateLimite}
+      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › premier_rang_libere › appel : Déposer à nouveau cette entreprise
+      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › premier_rang_libere › corps : Votre dépôt était le premier en attente. Sans nouveau dépôt d'ici le {dateLimite}, votre dépôt en attente est effacé.
+      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › refus_declaration › titre : {entreprise} : dépôt non enregistré — {categorie}
+      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › refus_declaration › appel : Contester ce refus par écrit
+      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › refus_declaration › corps : {categorie} : {motif}. Ce refus n'a aucune autre conséquence pour vous et n'est pas un manquement.
+      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › suspension_declarations › titre : Vos nouveaux dépôts sont suspendus le temps d'un échange avec Axion-IA
+      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › suspension_declarations › appel : Lire le courrier et répondre
+      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › suspension_declarations › corps : {faits}. Cette suspension prend fin au plus tard le {dateLevee}. Rien ne change pour vos entreprises en cours, ni pour vos commissions, ni pour l'accès à votre espace.
+      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › rappel_rc_pro › titre : Votre attestation d'assurance arrive à échéance le {dateEcheance}
+      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › rappel_rc_pro › appel : Déposer la nouvelle attestation
+      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › rattachement_decide › titre : {entreprise} : décision de rattachement
+      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › rattachement_decide › appel : Voir Mes entreprises
+      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › rattachement_decide › corps : {decision}. Motif : {motif}.
+      courriels/notifications.ts › CORPS_DE_LA_LIBERATION › demande_verifiee : Ce dépôt a pris fin sans confirmation de l'échange. Vous pourrez déposer à nouveau cette entreprise à partir du {dateRedepot}. Cette fin n'emporte aucune autre conséquence pour vous.
+      courriels/notifications.ts › CORPS_DE_LA_LIBERATION › peremption_ou_fin_de_duree : Cette entreprise est de nouveau disponible, y compris pour un nouveau dépôt de votre part."
     `);
   });
 

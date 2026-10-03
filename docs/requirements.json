@@ -211,7 +211,6 @@
       "etape": 5,
       "phase": 1,
       "taches": [
-        "DM-11",
         "DM-23",
         "INT-T23"
       ]
@@ -391,7 +390,8 @@
         "DM-20",
         "DM-45",
         "QA-T62",
-        "SEC-30"
+        "SEC-30",
+        "SEC-50"
       ]
     },
     {
@@ -1085,8 +1085,9 @@
       "etape": 4,
       "phase": 1,
       "taches": [
-        "DM-11",
-        "DM-58"
+        "CPL-T07",
+        "DM-58",
+        "UX-P1-09"
       ]
     },
     {
@@ -1597,9 +1598,8 @@
       "remplaceePar": null,
       "module": 4,
       "etape": 4,
-      "phase": 1,
+      "phase": 2,
       "taches": [
-        "DM-11",
         "JUR-T16",
         "T-ARG-015",
         "T-ARG-032",
@@ -2744,7 +2744,6 @@
       "etape": 4,
       "phase": 1,
       "taches": [
-        "DM-11",
         "DM-50"
       ]
     },
@@ -2850,7 +2849,6 @@
       "etape": 11,
       "phase": 0,
       "taches": [
-        "DM-11",
         "INT-T44",
         "INT-T56",
         "JUR-T02",
@@ -3119,6 +3117,7 @@
       "phase": 1,
       "taches": [
         "DM-55",
+        "DM-61",
         "INT-T24",
         "UX-P1-09",
         "UX-P1-10",
@@ -3780,7 +3779,8 @@
         "QA-T12",
         "QA-T53",
         "QA-T57",
-        "QA-T66"
+        "QA-T66",
+        "QA-T70"
       ]
     },
     {
@@ -4579,8 +4579,7 @@
       "etape": 4,
       "phase": -1,
       "taches": [
-        "CPL-T01",
-        "DM-11"
+        "CPL-T01"
       ]
     },
     {
@@ -5110,8 +5109,7 @@
       "etape": 8,
       "phase": 1,
       "taches": [
-        "DM-13",
-        "UX-P1-10"
+        "DM-13"
       ]
     },
     {
@@ -6173,7 +6171,6 @@
       "taches": [
         "JUR-T24",
         "SEC-19",
-        "UX-P1-10",
         "UX-P1-12"
       ]
     },
@@ -6316,6 +6313,7 @@
       "phase": 1,
       "taches": [
         "DM-59",
+        "DM-60",
         "UX-P1-48"
       ]
     },
