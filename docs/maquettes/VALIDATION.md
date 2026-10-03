@@ -42,6 +42,22 @@ très veillote et j'aurai aimé plutot un sidebar et que ce soit plus moderne »
 maquettes de la console, refondues par UX-P1-50. La tâche d'écran de la file attend donc sa maquette ; celles
 de l'espace ont les leurs.
 
+### Séance de style du 2026-10-03 (UX-P1-49)
+
+Williams, verbatim : « JE TROUVE QU4IL MANQUE UN PEU DE CONTRASTE ET CA fait très textuel non ? ». Un aperçu
+AVANT/APRÈS de `index.html` et d'`accueil.html` lui est montré. Sur la version 3, orange en fond, il
+répond : « NON C4ETAIT MIEUX JUSTE AVANT ». La version 2 est donc retenue. Le bloc charte des treize maquettes de l'espace prend cette
+version, à l'identique :
+- terracotta pour l'action, fond ivoire, texte et navigation mocha, bleu pour l'information et le focus ;
+- l'issue heureuse en vert ; l'alerte en rouge distinct du terracotta ;
+- cartes et encarts cadrés et ombrés.
+
+C'est un changement de STYLE SEUL, demandé par Williams : aucun texte, aucune disposition ne bouge. Les
+validations ci-dessus ne sont donc PAS remises à vide.
+
+`mon-contrat.html` reçoit en plus son correctif mobile : à 360 px, aucun défilement horizontal, et les
+tableaux de l'annexe passent en cartes sous 640 px.
+
 ## Console
 
 | Écran | Fichier | Tâche | Validé le | Par |
