@@ -7,6 +7,7 @@
  */
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { randomUUID } from 'node:crypto';
+import type { ConsoleRole } from '@prisma/client';
 import { NOMS_DES_SECRETS } from '../../../src/lib/env';
 import { clesPii, colonnesPii } from '../../../src/server/securite/pii';
 import {
@@ -56,13 +57,13 @@ describe('REQ-DM-033 — la justification d’une anomalie : un lecteur unique, 
     }
   );
 
-  it.each(['comptable', 'lecteur'] as const)(
+  it.each(['comptable', 'lecteur', 'conseiller_salarie'] as const)(
     'REQ-DM-033 : TÉMOIN — le rôle %s est refusé AVANT toute lecture',
     async (role) => {
       const id = randomUUID();
       const c = client(chiffree(id));
       await expect(
-        lireLaJustification(c.prisma, { anomalieId: id, role }, CLES)
+        lireLaJustification(c.prisma, { anomalieId: id, role: role as ConsoleRole }, CLES)
       ).rejects.toBeInstanceOf(LectureDeJustificationRefusee);
       expect(c.lectures).toEqual([]);
     }

@@ -8,14 +8,27 @@
  * transaction ; la notification part APRÈS, une seule fois, à l'apporteur de l'attribution : un
  * courriel ne se rejoue pas, une transaction annulée n'en envoie aucun. Une attribution portée par
  * un conseiller n'a pas d'apporteur à notifier. Les textes (`{decision}`, `{motif}`) viennent de
- * l'appelant, jamais d'ici.
+ * l'appelant, jamais d'ici. La justification est CHIFFRÉE pour SA ligne (`colonnesPii`) : elle peut
+ * nommer une personne. La source du lien est une pièce publique (type fermé) et une référence courte ;
+ * la date de la pièce est posée au début de son jour à Paris (`dateDeLaPiece`).
  */
-import type { Prisma } from '@prisma/client';
-import { jugerJustification, jugerLienAnterieur } from '../../domain/anomalie/regles';
+import { randomUUID } from 'node:crypto';
+import type { Prisma, SourceLienControle } from '@prisma/client';
+import {
+  dateDeLaPiece,
+  jugerJustification,
+  jugerLienAnterieur,
+  jugerReferenceDeSource,
+} from '../../domain/anomalie/regles';
+import type { DateCivile } from '../../domain/temps/calendrier-civil';
+import { colonnesPii, type ClesPii } from '../securite/pii';
 import { ajouterEvenement, type NouvelEvenement } from '../evenement/journal';
 import type { DemandeDeNotification } from '../notifications/envoyer';
 
 type Tx = Prisma.TransactionClient;
+
+/** Le nom du modèle dans la donnée authentifiée du bloc chiffré d'un rattachement. */
+export const MODELE_DU_RATTACHEMENT = 'RattachementManuel';
 
 export class LienDansUnParametre extends Error {
   constructor(parametre: string) {
@@ -37,8 +50,10 @@ export interface DecisionDeRattachement {
   attributionId: string;
   sirenCommande: string;
   justification: string;
-  lienControleEtabliAt: Date;
-  lienControleSource: string;
+  /** Le JOUR de la pièce qui établit le lien, jamais l'heure de la saisie. */
+  lienControleDuJour: DateCivile;
+  sourceType: SourceLienControle;
+  sourceRef: string;
   decideParId: string;
   maintenant: Date;
   /** Ce qui part à l'apporteur : son adresse déchiffrée par l'appelant, et les trois paramètres. */
@@ -51,6 +66,10 @@ export interface PortsDuRattachement {
   journaliser?: (tx: Tx, e: NouvelEvenement) => Promise<unknown>;
   /** La notification, liée par l'appelant à la couche de l'apporteur DESTINATAIRE. */
   notifier: (apporteurId: string, demande: DemandeDeNotification) => Promise<unknown>;
+  /** Les clés de la couche des données personnelles : la justification est chiffrée. */
+  cles: ClesPii;
+  /** L'identifiant de la ligne, tiré AVANT l'écriture : il lie le bloc chiffré à sa ligne. */
+  identifiant?: () => string;
 }
 
 export async function deciderLeRattachement(
@@ -61,6 +80,9 @@ export async function deciderLeRattachement(
     if (LIEN.test(d.notification[p])) throw new LienDansUnParametre(p);
   }
   jugerJustification(d.justification);
+  jugerReferenceDeSource(d.sourceRef);
+  const lienControleEtabliAt = new Date(dateDeLaPiece(d.lienControleDuJour));
+  const id = (ports.identifiant ?? randomUUID)();
   const journaliser = ports.journaliser ?? ajouterEvenement;
 
   const { rattachementId, apporteurId } = await ports.prisma.$transaction(async (tx) => {
@@ -68,14 +90,19 @@ export async function deciderLeRattachement(
       where: { id: d.attributionId },
       select: { apporteurId: true, deposeeAt: true },
     });
-    jugerLienAnterieur(d.lienControleEtabliAt, attribution.deposeeAt);
+    jugerLienAnterieur(lienControleEtabliAt, attribution.deposeeAt);
     const cree = await tx.rattachementManuel.create({
       data: {
+        ...(colonnesPii(
+          { modele: MODELE_DU_RATTACHEMENT, id },
+          { justification: d.justification },
+          ports.cles
+        ) as unknown as Prisma.RattachementManuelUncheckedCreateInput),
         attributionId: d.attributionId,
         sirenCommande: d.sirenCommande,
-        justification: d.justification,
-        lienControleEtabliAt: d.lienControleEtabliAt,
-        lienControleSource: d.lienControleSource,
+        lienControleEtabliAt,
+        lienControleSourceType: d.sourceType,
+        lienControleSourceRef: d.sourceRef,
         decideParId: d.decideParId,
         decideAt: d.maintenant,
       },

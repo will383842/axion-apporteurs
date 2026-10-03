@@ -96,3 +96,47 @@ describe('REQ-DM-031 — la purge du contact : l’instant, et le système pour 
     ).toBe(false);
   });
 });
+
+describe('REQ-DM-033 — DM-12, décision (d) de la juriste : la charge d’une anomalie ne relie à personne', () => {
+  const charge = CHARGES_PAR_TYPE.anomalie_statut_modifie;
+  const naissance = { de: null, vers: 'ouverte', acteur: { par: 'systeme' } };
+
+  it('REQ-DM-033 : la naissance et la clôture passent, acteur sans identifiant', () => {
+    expect(charge.safeParse(naissance).success).toBe(true);
+    expect(
+      charge.safeParse({ de: 'ouverte', vers: 'levee', acteur: { par: 'utilisateur_console' } })
+        .success
+    ).toBe(true);
+  });
+
+  it.each(['apporteurId', 'attributionId', 'anomalieId', 'justification', 'score'])(
+    'REQ-DM-033 : TÉMOIN — une charge qui porte « %s » est refusée',
+    (cle) => {
+      expect(charge.safeParse({ ...naissance, [cle]: 'x' }).success).toBe(false);
+    }
+  );
+
+  it('REQ-DM-033 : TÉMOIN — un acteur avec un identifiant est refusé (exception nommée à HYP-A02-ACTEUR-JOURNAL)', () => {
+    const id = '00000000-0000-4000-8000-000000000000';
+    expect(
+      charge.safeParse({ ...naissance, acteur: { par: 'utilisateur_console', id } }).success
+    ).toBe(false);
+    expect(charge.safeParse({ ...naissance, acteur: { par: 'apporteur' } }).success).toBe(false);
+  });
+
+  it('REQ-DM-033 : `de` est nul à la naissance seulement', () => {
+    expect(charge.safeParse({ ...naissance, vers: 'levee' }).success).toBe(false);
+    expect(
+      charge.safeParse({ de: 'ouverte', vers: 'ouverte', acteur: { par: 'systeme' } }).success
+    ).toBe(false);
+  });
+
+  it('REQ-DM-033 : TÉMOIN — aucune charge du journal ne porte la clé anomalieId : l’EFFET part sans id d’anomalie', () => {
+    for (const [type, schema] of Object.entries(CHARGES_PAR_TYPE)) {
+      const forme = (schema as { _def: { schema?: { shape?: object } } })._def;
+      const shape = (schema as unknown as { shape?: object }).shape ?? forme.schema?.shape ?? {};
+      expect(Object.keys(shape).length, `${type} : forme lue`).toBeGreaterThan(0);
+      expect(Object.keys(shape), type).not.toContain('anomalieId');
+    }
+  });
+});

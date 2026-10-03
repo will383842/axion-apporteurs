@@ -25,6 +25,7 @@ import {
 import { forApporteur } from '../../src/server/acces/for-apporteur';
 import { notifier } from '../../src/server/notifications/envoyer';
 import { deciderLeRattachement } from '../../src/server/rattachement/decider';
+import { dateDeLaPiece } from '../../src/domain/anomalie/regles';
 import { NOMS_DES_SECRETS } from '../../src/lib/env';
 import { clesPii, colonnesPii, decryptPii } from '../../src/server/securite/pii';
 import {
@@ -475,55 +476,246 @@ describe('REQ-DM-033 — anomalies : la forme, une clôture une seule fois, sans
     );
     expect(await refus(tronquer('anomalies'))).toContain(ANOMALIES);
   });
+
+  /**
+   * L'anonymisation conforme (forme d'A02) : tout ce qui désigne une personne vidé, les deux dates
+   * tronquées au mois en UTC, en UNE écriture. `ecart` en remplace une partie, pour les refus.
+   */
+  const ANONYMISATION: Readonly<Record<string, string>> = {
+    apporteur_id: 'NULL',
+    attribution_id: 'NULL',
+    score: 'NULL',
+    traite_par_id: 'NULL',
+    justification_chiffre: 'NULL',
+    justification_purgee_at: 'NULL',
+    ouverte_at: "date_trunc('month', ouverte_at AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'",
+    traite_at: "date_trunc('month', traite_at AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'",
+    anonymisee_at: '$2',
+  };
+  /** Chaque colonne reçoit UNE expression ; `ecart` en remplace, sans double affectation. */
+  const anonymiser = (id: string, ecart: Readonly<Record<string, string>> = {}) =>
+    ecrire(
+      `UPDATE anomalies SET ${Object.entries({ ...ANONYMISATION, ...ecart })
+        .map(([c, v]) => `${c} = ${v}`)
+        .join(', ')} WHERE id = $1::uuid`,
+      id,
+      MAINTENANT
+    );
+
+  it('REQ-DM-033 : TÉMOIN — une anonymisation conforme passe (le déclencheur du conseiller reçoit NULL), puis plus rien ne bouge', async () => {
+    const id = await uneAnomalie('sincerite', 40);
+    await clore(id);
+    await anonymiser(id);
+    const [l] = await base.prisma.$queryRaw<
+      { apporteur: string | null; ouverte: Date; traite: Date; statut: string }[]
+    >`SELECT apporteur_id AS apporteur, ouverte_at AS ouverte, traite_at AS traite, statut::text AS statut
+      FROM anomalies WHERE id = ${id}::uuid`;
+    expect([l!.apporteur, l!.ouverte.toISOString(), l!.traite.toISOString(), l!.statut]).toEqual([
+      null,
+      '2026-10-01T00:00:00.000Z',
+      '2026-10-01T00:00:00.000Z',
+      'levee',
+    ]);
+    expect(
+      await refus(ecrire(`UPDATE anomalies SET statut = 'confirmee' WHERE id = $1::uuid`, id))
+    ).toContain(ANOMALIES);
+    expect(
+      await refus(
+        ecrire(`UPDATE anomalies SET anonymisee_at = $2 WHERE id = $1::uuid`, id, new Date())
+      )
+    ).toContain(ANOMALIES);
+  });
+
+  it('REQ-DM-033 : un cas d’auto-parrainage, sans score, s’anonymise aussi', async () => {
+    const id = await uneAnomalie('auto_parrainage', null);
+    await clore(id);
+    await expect(anonymiser(id)).resolves.toBe(1);
+  });
+
+  it('REQ-DM-033 : TÉMOIN — l’anonymisation d’une anomalie OUVERTE est refusée', async () => {
+    const id = await uneAnomalie();
+    expect(await refus(anonymiser(id))).toContain(ANOMALIES);
+  });
+
+  it('REQ-DM-033 : TÉMOIN — un champ oublié est refusé (anomalies_anonymisation_liee)', async () => {
+    const id = await uneAnomalie('sincerite', 40);
+    await clore(id);
+    expect(await refus(anonymiser(id, { score: '40' }))).toContain('anomalies_anonymisation_liee');
+  });
+
+  it('REQ-DM-033 : TÉMOIN — une date non tronquée, ou tronquée dans un autre fuseau, est refusée', async () => {
+    const id = await uneAnomalie();
+    await clore(id);
+    expect(await refus(anonymiser(id, { ouverte_at: 'ouverte_at' }))).toContain(ANOMALIES);
+    expect(
+      await refus(
+        anonymiser(id, {
+          traite_at:
+            "date_trunc('month', traite_at AT TIME ZONE 'Pacific/Kiritimati') AT TIME ZONE 'Pacific/Kiritimati'",
+        })
+      )
+    ).toContain(ANOMALIES);
+  });
+
+  it('REQ-DM-033 : TÉMOIN — un statut ou un type changé dans la même écriture est refusé', async () => {
+    const id = await uneAnomalie();
+    await clore(id);
+    expect(await refus(anonymiser(id, { statut: "'confirmee'" }))).toContain(ANOMALIES);
+    expect(await refus(anonymiser(id, { type: "'sincerite'" }))).toContain(ANOMALIES);
+  });
+
+  it('REQ-DM-033 : TÉMOIN — un apporteur NULL sans anonymisation est refusé (anomalies_apporteur_present)', async () => {
+    expect(
+      await refus(
+        ecrire(
+          `INSERT INTO anomalies (id, type, apporteur_id, statut, ouverte_at)
+           VALUES ($1::uuid, 'auto_parrainage', NULL, 'ouverte', $2)`,
+          randomUUID(),
+          MAINTENANT
+        )
+      )
+    ).toContain('anomalies_apporteur_present');
+  });
 });
 
 describe('REQ-DM-034 — rattachements_manuels : justifiés, antérieurs au dépôt, un actif par SIREN', () => {
   async function unRattachement(p: {
     attributionId: string;
     siren?: string;
-    justification?: string;
+    justification?: Buffer | null;
     lienAt: Date;
-    source?: string;
+    sourceType?: string;
+    sourceRef?: string;
   }): Promise<string> {
     const id = randomUUID();
     await ecrire(
-      `INSERT INTO rattachements_manuels (id, attribution_id, siren_commande, justification,
-         lien_controle_etabli_at, lien_controle_source, decide_par_id, decide_at)
-       VALUES ($1::uuid, $2::uuid, $3, $4, $5, $6, $7::uuid, $8)`,
+      `INSERT INTO rattachements_manuels (id, attribution_id, siren_commande, justification_chiffre,
+         lien_controle_etabli_at, lien_controle_source_type, lien_controle_source_ref, decide_par_id,
+         decide_at)
+       VALUES ($1::uuid, $2::uuid, $3, $4, $5, $6::source_lien_controle, $7, $8::uuid, $9)`,
       id,
       p.attributionId,
       p.siren ?? unSiren(),
-      p.justification ?? 'le Kbis montre une filiale à 100 % depuis 2019',
+      p.justification === undefined ? randomBytes(40) : p.justification,
       p.lienAt,
-      p.source ?? 'Kbis du 2019-04-01',
+      p.sourceType ?? 'kbis',
+      p.sourceRef ?? 'KBIS-2019-04-01',
       adminId,
       MAINTENANT
     );
     return id;
   }
+  /** Le début, à Paris, du jour d'un instant : la date d'une pièce datée de ce jour. */
+  const debutDuJourAParis = (instant: Date, decalageJours = 0) => {
+    const jour = new Intl.DateTimeFormat('fr-CA', {
+      timeZone: 'Europe/Paris',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    })
+      .format(new Date(instant.getTime() + decalageJours * 24 * 3600 * 1000))
+      .split('-')
+      .map(Number) as [number, number, number];
+    return new Date(dateDeLaPiece({ annee: jour[0], mois: jour[1], jour: jour[2] }));
+  };
 
-  it('REQ-DM-034 : TÉMOIN — moins de 20 caractères utiles, ou une source vide : refusé, nommé', async () => {
+  it('REQ-DM-034 : TÉMOIN — la référence de la source : sans chiffre, avec un espace, ou de 65 caractères, refusée (rattachements_manuels_source_ref_forme)', async () => {
     const { id, deposeeAt } = await uneAttribution();
-    const avant = new Date(deposeeAt.getTime() - 1000);
+    for (const ref of ['Dupont', 'kbis 2019', `${'x'.repeat(64)}1`]) {
+      expect(
+        await refus(unRattachement({ attributionId: id, lienAt: deposeeAt, sourceRef: ref })),
+        ref
+      ).toMatch(/rattachements_manuels_source_ref_forme|value too long/);
+    }
+  });
+
+  it('REQ-DM-034 : TÉMOIN — une source hors de la liste fermée est refusée par l’enum ; le registre des bénéficiaires n’en est pas', async () => {
+    const { id, deposeeAt } = await uneAttribution();
+    for (const type of ['registre_beneficiaires', 'piece_kyc', 'attestation']) {
+      expect(
+        await refus(unRattachement({ attributionId: id, lienAt: deposeeAt, sourceType: type })),
+        type
+      ).toMatch(/source_lien_controle/);
+    }
+  });
+
+  it('REQ-DM-034 : TÉMOIN — une justification absente ou vide est refusée (purge_liee, non_vide)', async () => {
+    const { id, deposeeAt } = await uneAttribution();
+    expect(
+      await refus(unRattachement({ attributionId: id, lienAt: deposeeAt, justification: null }))
+    ).toContain('rattachements_manuels_justification_purge_liee');
     expect(
       await refus(
-        unRattachement({ attributionId: id, lienAt: avant, justification: `  ${'x'.repeat(19)}  ` })
+        unRattachement({ attributionId: id, lienAt: deposeeAt, justification: Buffer.alloc(0) })
       )
-    ).toContain('rattachements_manuels_justification');
-    expect(
-      await refus(unRattachement({ attributionId: id, lienAt: avant, source: '   ' }))
-    ).toContain('rattachements_manuels_source');
+    ).toContain('rattachements_manuels_justification_non_vide');
   });
 
-  it('REQ-DM-034 : TÉMOIN — un lien établi APRÈS le dépôt est refusé (rattachement_lien_anterieur) ; au dépôt même, admis', async () => {
+  it('REQ-DM-034 : TÉMOIN — une pièce de la VEILLE du dépôt passe ; du JOUR même, au début du jour à Paris, passe ; du LENDEMAIN, refusée (rattachement_lien_anterieur)', async () => {
     const { id, deposeeAt } = await uneAttribution();
+    await expect(
+      unRattachement({ attributionId: id, lienAt: debutDuJourAParis(deposeeAt, -1) })
+    ).resolves.toBeDefined();
+    const { id: autre, deposeeAt: depot2 } = await uneAttribution();
+    await expect(
+      unRattachement({ attributionId: autre, lienAt: debutDuJourAParis(depot2) })
+    ).resolves.toBeDefined();
+    const { id: troisieme, deposeeAt: depot3 } = await uneAttribution();
     expect(
-      await refus(unRattachement({ attributionId: id, lienAt: new Date(deposeeAt.getTime() + 1) }))
+      await refus(
+        unRattachement({ attributionId: troisieme, lienAt: debutDuJourAParis(depot3, 1) })
+      )
     ).toContain('rattachement_lien_anterieur');
-    await expect(unRattachement({ attributionId: id, lienAt: deposeeAt })).resolves.toBeDefined();
   });
 
-  it('REQ-DM-034 : TÉMOIN — un seul rattachement actif par SIREN ; révoqué une fois, un neuf passe', async () => {
+  it('REQ-DM-034 : TÉMOIN — la purge de la justification : avec sa date, une fois ; sans date, ou la date sans le vide, refusée ; le texte ne revient pas, la date ne se réécrit pas', async () => {
+    const { id: attributionId, deposeeAt } = await uneAttribution();
+    const id = await unRattachement({ attributionId, lienAt: deposeeAt });
+    expect(
+      await refus(
+        ecrire(
+          `UPDATE rattachements_manuels SET justification_chiffre = NULL WHERE id = $1::uuid`,
+          id
+        )
+      )
+    ).toContain('rattachements_manuels_justification_purge_liee');
+    expect(
+      await refus(
+        ecrire(
+          `UPDATE rattachements_manuels SET justification_purgee_at = $2 WHERE id = $1::uuid`,
+          id,
+          MAINTENANT
+        )
+      )
+    ).toContain('rattachements_manuels_justification_purge_liee');
+    await ecrire(
+      `UPDATE rattachements_manuels SET justification_chiffre = NULL, justification_purgee_at = $2
+       WHERE id = $1::uuid`,
+      id,
+      MAINTENANT
+    );
+    expect(
+      await refus(
+        ecrire(
+          `UPDATE rattachements_manuels SET justification_chiffre = $2, justification_purgee_at = NULL
+           WHERE id = $1::uuid`,
+          id,
+          randomBytes(40)
+        )
+      )
+    ).toContain(GABARIT);
+    expect(
+      await refus(
+        ecrire(
+          `UPDATE rattachements_manuels SET justification_purgee_at = $2 WHERE id = $1::uuid`,
+          id,
+          new Date(MAINTENANT.getTime() + 1)
+        )
+      )
+    ).toContain(GABARIT);
+  });
+
+  it('REQ-DM-034 : TÉMOIN — un seul rattachement actif par SIREN ; révoqué une fois, un neuf passe ; la justification et la source ne se réécrivent pas', async () => {
     const siren = unSiren();
     const { id, deposeeAt } = await uneAttribution();
     const premier = await unRattachement({ attributionId: id, siren, lienAt: deposeeAt });
@@ -550,9 +742,17 @@ describe('REQ-DM-034 — rattachements_manuels : justifiés, antérieurs au dép
     expect(
       await refus(
         ecrire(
-          `UPDATE rattachements_manuels SET justification = $2 WHERE id = $1::uuid`,
+          `UPDATE rattachements_manuels SET justification_chiffre = $2 WHERE id = $1::uuid`,
           premier,
-          'x'.repeat(30)
+          randomBytes(40)
+        )
+      )
+    ).toContain(GABARIT);
+    expect(
+      await refus(
+        ecrire(
+          `UPDATE rattachements_manuels SET lien_controle_source_ref = 'KBIS-2020-01-01' WHERE id = $1::uuid`,
+          premier
         )
       )
     ).toContain(GABARIT);
@@ -809,15 +1009,16 @@ describe('W19 — jamais un conseiller pour traiter, décider ou répondre', () 
 
 describe('REQ-DM-034 — l’écrivain du rattachement, émetteur de rattachement_decide', () => {
   it('REQ-DM-034 : TÉMOIN — la décision et son événement s’écrivent sous partners_app, et la clé part UNE fois, au bon apporteur', async () => {
-    const { id: attributionId, deposeeAt } = await uneAttribution();
+    const { id: attributionId } = await uneAttribution();
     const courriels: { gabarit: string; apporteurId: string }[] = [];
     const r = await deciderLeRattachement(
       {
         attributionId,
         sirenCommande: unSiren(),
         justification: 'le Kbis montre une filiale à 100 % depuis 2019',
-        lienControleEtabliAt: deposeeAt,
-        lienControleSource: 'Kbis du 2019-04-01',
+        lienControleDuJour: { annee: 2019, mois: 4, jour: 1 },
+        sourceType: 'kbis',
+        sourceRef: 'KBIS-2019-04-01',
         decideParId: adminId,
         maintenant: MAINTENANT,
         notification: {
@@ -829,6 +1030,7 @@ describe('REQ-DM-034 — l’écrivain du rattachement, émetteur de rattachemen
       },
       {
         prisma: app,
+        cles: CLES,
         notifier: (id, demande) =>
           notifier(demande, {
             acces: forApporteur(app, id),

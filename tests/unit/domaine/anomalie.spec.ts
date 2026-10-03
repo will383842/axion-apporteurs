@@ -11,13 +11,16 @@ import {
   AnomalieMalFormee,
   JustificationTropCourte,
   LienPosterieurAuDepot,
+  ReferenceDeSourceMalFormee,
   TransitionAnomalieInterdite,
   JUSTIFICATION_CARACTERES_UTILES_MIN,
   caracteresUtiles,
+  dateDeLaPiece,
   echeanceDeReponse,
   jugerAnomalie,
   jugerJustification,
   jugerLienAnterieur,
+  jugerReferenceDeSource,
   jugerTransitionAnomalie,
 } from '../../../src/domain/anomalie/regles';
 import { SEUILS } from '../../../src/domain/seuils/ssot';
@@ -121,4 +124,31 @@ describe('REQ-DM-043 — l’échéance de réponse d’une contestation : déri
       SEUILS.REPONSE_CONTESTATION_JOURS.valeur * MS_PAR_JOUR - MS_PAR_JOUR / 24
     );
   });
+});
+
+describe('REQ-DM-034 — la pièce qui établit le lien : un jour, et une référence courte', () => {
+  it('REQ-DM-034 : TÉMOIN — la date de la pièce est le DÉBUT de son jour à Paris, en été comme en hiver', () => {
+    expect(new Date(dateDeLaPiece({ annee: 2026, mois: 10, jour: 1 })).toISOString()).toBe(
+      '2026-09-30T22:00:00.000Z'
+    );
+    expect(new Date(dateDeLaPiece({ annee: 2026, mois: 12, jour: 1 })).toISOString()).toBe(
+      '2026-11-30T23:00:00.000Z'
+    );
+  });
+
+  it.each(['KBIS-2019-04-01', 'bodacc/2021/A/123', 'comptes.2024', '7'])(
+    'REQ-DM-034 : la référence « %s » est admise',
+    (ref) => {
+      expect(() => jugerReferenceDeSource(ref)).not.toThrow();
+    }
+  );
+
+  it.each(['Dupont', 'kbis du 2019', 'x'.repeat(64) + '1', 'kbis_é2019', ''])(
+    'REQ-DM-034 : TÉMOIN — la référence « %s » est refusée (pas de chiffre, espace, trop longue, accent, vide)',
+    (ref) => {
+      const e = refus(() => jugerReferenceDeSource(ref));
+      expect(e).toBeInstanceOf(ReferenceDeSourceMalFormee);
+      expect(e.message).toBe('reference_de_source_mal_formee');
+    }
+  );
 });

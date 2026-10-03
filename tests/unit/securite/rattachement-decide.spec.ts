@@ -3,6 +3,8 @@
  * L'écrivain du rattachement manuel : il juge AVANT d'écrire (justification, lien antérieur, aucun
  * lien dans les paramètres de la notification), écrit la décision et son événement dans UNE
  * transaction, puis notifie `rattachement_decide` une fois, au bon apporteur, après la transaction.
+ * La justification part CHIFFRÉE pour SA ligne, jamais en clair ; la date de la pièce est posée au
+ * début de son jour à Paris ; la référence de la source est jugée avant toute transaction.
  * Le client et les ports sont simulés : c'est l'ordre et le refus qu'on juge ici ; la base les juge
  * en intégration.
  */
@@ -10,22 +12,36 @@ import { describe, it, expect } from 'vitest';
 import { randomUUID } from 'node:crypto';
 import {
   LienDansUnParametre,
+  MODELE_DU_RATTACHEMENT,
   deciderLeRattachement,
   type DecisionDeRattachement,
 } from '../../../src/server/rattachement/decider';
+import { NOMS_DES_SECRETS } from '../../../src/lib/env';
+import { clesPii, decryptPii } from '../../../src/server/securite/pii';
 
 const ATTRIBUTION = randomUUID();
 const APPORTEUR = randomUUID();
 const QUALIFIEUR = randomUUID();
+/** Le dépôt : le 1er octobre 2026 à midi, heure de Paris. */
 const DEPOT = new Date('2026-10-01T10:00:00.000Z');
+const RATTACHEMENT = randomUUID();
+const JUSTIFICATION = 'le Kbis montre une filiale à 100 % depuis 2019';
+const CLES = clesPii({
+  NODE_ENV: 'test',
+  ...Object.fromEntries(
+    NOMS_DES_SECRETS.map((n) => [n, `temoin-rattachement-${n.toLowerCase()}-`.padEnd(48, '0')])
+  ),
+  PII_ENCRYPTION_KEY: 'f'.repeat(64),
+});
 
 function decision(p: Partial<DecisionDeRattachement> = {}): DecisionDeRattachement {
   return {
     attributionId: ATTRIBUTION,
     sirenCommande: '123456789',
-    justification: 'le Kbis montre une filiale à 100 % depuis 2019',
-    lienControleEtabliAt: new Date('2019-04-01T00:00:00.000Z'),
-    lienControleSource: 'Kbis du 2019-04-01',
+    justification: JUSTIFICATION,
+    lienControleDuJour: { annee: 2019, mois: 4, jour: 1 },
+    sourceType: 'kbis',
+    sourceRef: 'KBIS-2019-04-01',
     decideParId: QUALIFIEUR,
     maintenant: new Date('2026-10-03T09:00:00.000Z'),
     notification: {
@@ -43,6 +59,7 @@ function ports(apporteurId: string | null = APPORTEUR) {
   const gestes: string[] = [];
   const evenements: unknown[] = [];
   const notifications: { apporteurId: string; demande: unknown }[] = [];
+  const creations: Record<string, unknown>[] = [];
   const tx = {
     attribution: {
       findUniqueOrThrow: async () => {
@@ -53,7 +70,8 @@ function ports(apporteurId: string | null = APPORTEUR) {
     rattachementManuel: {
       create: async (a: { data: Record<string, unknown> }) => {
         gestes.push('creer_rattachement');
-        return { id: 'r-1', ...a.data };
+        creations.push(a.data);
+        return { ...a.data };
       },
     },
   };
@@ -61,7 +79,10 @@ function ports(apporteurId: string | null = APPORTEUR) {
     gestes,
     evenements,
     notifications,
+    creations,
     ports: {
+      cles: CLES,
+      identifiant: () => RATTACHEMENT,
       prisma: {
         $transaction: async <T>(f: (t: never) => Promise<T>): Promise<T> => {
           gestes.push('ouvrir');
@@ -95,7 +116,7 @@ describe('REQ-DM-034 — le rattachement décidé : écrit, journalisé, puis no
   it('REQ-DM-034 : TÉMOIN — la décision et son événement dans la transaction, la notification APRÈS, une seule fois, au bon apporteur', async () => {
     const p = ports();
     const r = await deciderLeRattachement(decision(), p.ports);
-    expect(r).toEqual({ rattachementId: 'r-1', notifie: true });
+    expect(r).toEqual({ rattachementId: RATTACHEMENT, notifie: true });
     expect(p.gestes).toEqual([
       'ouvrir',
       'lire_attribution',
@@ -111,7 +132,7 @@ describe('REQ-DM-034 — le rattachement décidé : écrit, journalisé, puis no
         agregatId: ATTRIBUTION,
         survenuAt: new Date('2026-10-03T09:00:00.000Z'),
         charge: {
-          rattachementId: 'r-1',
+          rattachementId: RATTACHEMENT,
           vers: 'decide',
           acteur: { par: 'utilisateur_console', id: QUALIFIEUR },
         },
@@ -134,10 +155,39 @@ describe('REQ-DM-034 — le rattachement décidé : écrit, journalisé, puis no
     ]);
   });
 
+  it('REQ-DM-034 : TÉMOIN — la justification part CHIFFRÉE pour SA ligne : jamais le clair dans l’écriture, et un bloc déplacé ne se déchiffre pas', async () => {
+    const p = ports();
+    await deciderLeRattachement(decision(), p.ports);
+    const [ecrit] = p.creations;
+    expect(JSON.stringify(ecrit)).not.toContain(JUSTIFICATION);
+    expect(Object.hasOwn(ecrit!, 'justification')).toBe(false);
+    const bloc = ecrit!.justificationChiffre as Uint8Array;
+    const ligne = {
+      modele: MODELE_DU_RATTACHEMENT,
+      champ: 'justificationChiffre',
+      id: RATTACHEMENT,
+    };
+    expect(decryptPii(ligne, bloc, CLES)).toBe(JUSTIFICATION);
+    expect(() => decryptPii({ ...ligne, id: randomUUID() }, bloc, CLES)).toThrow();
+    expect([ecrit!.lienControleSourceType, ecrit!.lienControleSourceRef]).toEqual([
+      'kbis',
+      'KBIS-2019-04-01',
+    ]);
+  });
+
+  it('REQ-DM-034 : TÉMOIN — la pièce est datée du DÉBUT de son jour à Paris : une pièce du jour du dépôt passe', async () => {
+    const p = ports();
+    await deciderLeRattachement(
+      decision({ lienControleDuJour: { annee: 2026, mois: 10, jour: 1 } }),
+      p.ports
+    );
+    expect(p.creations[0]!.lienControleEtabliAt).toEqual(new Date('2026-09-30T22:00:00.000Z'));
+  });
+
   it('REQ-DM-034 : une attribution portée par un conseiller n’a pas d’apporteur à notifier : la décision s’écrit, rien ne part', async () => {
     const p = ports(null);
     expect(await deciderLeRattachement(decision(), p.ports)).toEqual({
-      rattachementId: 'r-1',
+      rattachementId: RATTACHEMENT,
       notifie: false,
     });
     expect(p.notifications).toEqual([]);
@@ -175,11 +225,21 @@ describe('REQ-DM-034 — les refus, AVANT toute écriture', () => {
     expect(p.gestes).toEqual([]);
   });
 
-  it('REQ-DM-034 : TÉMOIN — un lien de contrôle postérieur au dépôt est refusé dans la transaction, avant toute écriture', async () => {
+  it.each(['Dupont', 'kbis du 2019', 'x'.repeat(64) + '1', 'kbis_é2019'])(
+    'REQ-DM-034 : TÉMOIN — une référence de source « %s » (nom, phrase, trop longue, accent) est refusée avant toute transaction',
+    async (ref) => {
+      const p = ports();
+      const e = await refus(deciderLeRattachement(decision({ sourceRef: ref }), p.ports));
+      expect(e.message).toBe('reference_de_source_mal_formee');
+      expect(p.gestes).toEqual([]);
+    }
+  );
+
+  it('REQ-DM-034 : TÉMOIN — une pièce datée du LENDEMAIN du dépôt est refusée dans la transaction, avant toute écriture', async () => {
     const p = ports();
     const e = await refus(
       deciderLeRattachement(
-        decision({ lienControleEtabliAt: new Date(DEPOT.getTime() + 1) }),
+        decision({ lienControleDuJour: { annee: 2026, mois: 10, jour: 2 } }),
         p.ports
       )
     );
