@@ -141,4 +141,25 @@ describe('REQ-UX-016 — DM-61 : douze mois dans l’espace, puis la suppression
     expect(lignes).toHaveLength(1);
     expect(lignes[0]!.def).toMatch(/\(cree_at\)/);
   });
+
+  it('REQ-UX-016 : TÉMOIN — une suppression qui n’enlève rien arrête la boucle, au lieu de relire le même lot sans fin', async () => {
+    // Un client qui rend toujours le même lot échu, et dont la suppression n'enlève rien (une ligne
+    // verrouillée, un droit retiré) : sans arrêt, la boucle relirait ce lot indéfiniment.
+    let suppressions = 0;
+    const figee = {
+      notificationEspace: {
+        findMany: async () => [{ id: 'figee' }],
+        deleteMany: async () => {
+          suppressions += 1;
+          if (suppressions > 2)
+            throw new Error('boucle sans fin : le même lot relu après une suppression vide');
+          return { count: 0 };
+        },
+      },
+    } as unknown as PrismaClient;
+    await expect(purgerLesNotificationsDeLEspace(figee, MAINTENANT)).resolves.toEqual({
+      supprimees: 0,
+    });
+    expect(suppressions).toBe(1);
+  });
 });
