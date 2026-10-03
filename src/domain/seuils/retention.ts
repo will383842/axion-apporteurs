@@ -71,4 +71,18 @@ export const DUREES_DE_RETENTION = {
     renvois: [],
     verifieLe: '2026-10-02',
   },
+  /**
+   * DM-60 (REQ-JUR-065) : la trace d'une demande de droit du contact (droit, donnée visée, issue,
+   * dates, sans valeur), conservée comme preuve du traitement, puis ANONYMISÉE : son lien à
+   * l'attribution est vidé. Comptée de la clôture de la demande, ou de sa réception si elle n'a
+   * jamais été close.
+   */
+  DROITS_CONTACT_TRACE_ANS: {
+    valeur: 5,
+    unite: 'ans',
+    source:
+      'Décision de Williams du 2026-10-03 (trace des demandes de droits du contact), code civil art. 2224 (prescription quinquennale, texte non encore confronté), REQ-JUR-065',
+    renvois: [],
+    verifieLe: '2026-10-03',
+  },
 } as const satisfies Record<string, Seuil>;
