@@ -41,9 +41,9 @@ export function joursDepuisEpoque({ annee, mois, jour }: DateCivile): number {
   const a = mois <= 2 ? annee - 1 : annee;
   const ere = Math.floor(a / 400);
   const anneeDeLEre = a - ere * 400;
-  const jourDeLAnnee = Math.floor((153 * (mois > 2 ? mois - 3 : mois + 9) + 2) / 5) + jour - 1;
+  const quantieme = Math.floor((153 * (mois > 2 ? mois - 3 : mois + 9) + 2) / 5) + jour - 1;
   const jourDeLEre =
-    anneeDeLEre * 365 + Math.floor(anneeDeLEre / 4) - Math.floor(anneeDeLEre / 100) + jourDeLAnnee;
+    anneeDeLEre * 365 + Math.floor(anneeDeLEre / 4) - Math.floor(anneeDeLEre / 100) + quantieme;
   return ere * 146_097 + jourDeLEre - 719_468;
 }
 
@@ -59,10 +59,10 @@ export function dateDepuisJours(numero: number): DateCivile {
       Math.floor(jourDeLEre / 146_096)) /
       365
   );
-  const jourDeLAnnee =
+  const quantieme =
     jourDeLEre - (365 * anneeDeLEre + Math.floor(anneeDeLEre / 4) - Math.floor(anneeDeLEre / 100));
-  const moisDepuisMars = Math.floor((5 * jourDeLAnnee + 2) / 153);
-  const jour = jourDeLAnnee - Math.floor((153 * moisDepuisMars + 2) / 5) + 1;
+  const moisDepuisMars = Math.floor((5 * quantieme + 2) / 153);
+  const jour = quantieme - Math.floor((153 * moisDepuisMars + 2) / 5) + 1;
   const mois = moisDepuisMars < 10 ? moisDepuisMars + 3 : moisDepuisMars - 9;
   const annee = anneeDeLEre + ere * 400 + (mois <= 2 ? 1 : 0);
   return { annee, mois, jour };
