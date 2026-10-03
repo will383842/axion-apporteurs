@@ -165,7 +165,8 @@ export type Famille =
   | 'porte_finale_sans_always'
   | 'nom_de_porte_usurpe'
   | 'eclat_manquant_ou_double'
-  | 'eclats_divergents';
+  | 'eclats_divergents'
+  | 'concurrence_non_conforme';
 
 export interface Faute {
   readonly famille: Famille;
@@ -585,12 +586,86 @@ export const CAS_DE_PREUVE: readonly Cas[] = [
   },
 ];
 
+/**
+ * 8. LA CONCURRENCE DU WORKFLOW (lentille sécurité) : un run de la porte A par PR, le plus récent
+ * fait foi ; main JAMAIS annulé. La clé de groupe porte le NUMÉRO de la PR sur `pull_request` (jamais
+ * `head_ref`, qu'une autre PR peut porter), et le sha sinon ; l'annulation vaut sur `pull_request`
+ * seulement. Toute autre forme : `concurrence_non_conforme`.
+ */
+export const GROUPE_DE_CONCURRENCE =
+  "${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || github.sha }}";
+export const ANNULATION_EN_COURS = "${{ github.event_name == 'pull_request' }}";
+
+export function jugerLaConcurrence(concurrence: unknown): Faute[] {
+  const faute = (message: string): Faute[] => [{ famille: 'concurrence_non_conforme', message }];
+  if (!estObjet(concurrence)) {
+    return faute(
+      'le workflow ne porte aucune clé `concurrency` : les runs d’une même PR s’empilent.'
+    );
+  }
+  const groupe = concurrence.group;
+  const annulation = concurrence['cancel-in-progress'];
+  const fautes: Faute[] = [];
+  if (groupe !== GROUPE_DE_CONCURRENCE) {
+    fautes.push(
+      ...faute(
+        `le groupe vaut « ${String(groupe)} » au lieu de « ${GROUPE_DE_CONCURRENCE} » : sans le NUMÉRO ` +
+          'de la PR, deux PR partagent un groupe ; sans le sha sur main, deux commits de main se ' +
+          'disputent le même.'
+      )
+    );
+  }
+  if (annulation !== ANNULATION_EN_COURS) {
+    fautes.push(
+      ...faute(
+        `l’annulation vaut « ${String(annulation)} » au lieu de « ${ANNULATION_EN_COURS} » : main ` +
+          'ne doit JAMAIS être annulé, et une PR doit l’être.'
+      )
+    );
+  }
+  return fautes;
+}
+
+/** Les fautes de concurrence plantées dans la preuve, chacune UNE variation de la forme conforme. */
+export const CONCURRENCES_FAUTIVES: readonly { quoi: string; concurrence: unknown }[] = [
+  { quoi: 'la clé absente', concurrence: undefined },
+  {
+    quoi: 'la branche de tête au lieu du numéro',
+    concurrence: {
+      group: '${{ github.workflow }}-${{ github.head_ref || github.sha }}',
+      'cancel-in-progress': ANNULATION_EN_COURS,
+    },
+  },
+  {
+    quoi: 'l’annulation sur main aussi',
+    concurrence: { group: GROUPE_DE_CONCURRENCE, 'cancel-in-progress': 'true' },
+  },
+];
+
 export function prouver(
   base: readonly Job[],
-  tete: readonly Job[]
+  tete: readonly Job[],
+  concurrence?: unknown
 ): { code: number; lignes: string[] } {
   const lignes: string[] = [];
   let code = 0;
+  if (concurrence !== undefined) {
+    const temoin = jugerLaConcurrence(concurrence);
+    if (temoin.length > 0) {
+      code = 1;
+      lignes.push(
+        `❌ la concurrence de la tête rougit : ${temoin.map((f) => f.message).join(' ; ')}`
+      );
+    }
+    for (const c of CONCURRENCES_FAUTIVES) {
+      if (jugerLaConcurrence(c.concurrence).length > 0) {
+        lignes.push(`✅ concurrence_non_conforme : rougit sur ${c.quoi}`);
+      } else {
+        code = 1;
+        lignes.push(`❌ concurrence_non_conforme : ${c.quoi} passe`);
+      }
+    }
+  }
   for (const [quoi, t, transformations] of [
     // Sans transformation : la base ne porte pas les étapes qui remplacent celle qu'on transforme.
     ['la base jugée contre elle-même', base, {}],
@@ -651,13 +726,16 @@ async function principal(): Promise<number> {
       execFileSync('git', ['show', `${revision}:${WORKFLOW}`], { encoding: 'utf8' })
     );
   }
-  const tete = await lire(readFileSync(WORKFLOW, 'utf8'));
+  const workflowDeLaTete = await lireYaml(readFileSync(WORKFLOW, 'utf8'));
+  const tete = lesJobs(workflowDeLaTete);
+  const concurrence = estObjet(workflowDeLaTete) ? workflowDeLaTete.concurrency : undefined;
   if (process.argv.includes('--prove')) {
-    const v = prouver(base, tete);
+    // La concurrence de la tête, ou le témoin d'une clé absente : jamais « non jugée ».
+    const v = prouver(base, tete, concurrence ?? null);
     (v.code === 0 ? console.log : console.error)(v.lignes.join('\n'));
     return v.code;
   }
-  const fautes = jugerLesEtapes(base, tete);
+  const fautes = [...jugerLesEtapes(base, tete), ...jugerLaConcurrence(concurrence)];
   const etapesBase = base.reduce((n, j) => n + j.etapes.length, 0);
   const etapesTete = tete.reduce((n, j) => n + j.etapes.length, 0);
   if (fautes.length === 0) {

@@ -23,6 +23,13 @@ on:
 # GOV-142 : le jeton n a par defaut que la lecture du contenu ; chaque job nomme ses droits.
 permissions:
   contents: read
+# GOV-142 : une PR n a qu UN run de la porte A a la fois. Un evenement neuf (push, edited, labeled,
+# unlabeled) annule le run en cours de la MEME PR, cle par son NUMERO ; le dernier run fait foi.
+# Main n est JAMAIS annule : sur `push`, la cle porte le sha (un groupe par commit) et l annulation
+# est fausse. Temoin : `gov:ci-etapes`, famille `concurrence_non_conforme`.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   gardes:
     # GOV-142 : toutes les gardes qui ne lisent ni les tests ni l historique, en parallele des

@@ -1048,7 +1048,8 @@ const SCRIPTS_EXACTS: Readonly<Record<string, string>> = {
  * signal, dans les deux sens.
  */
 // GOV-142 : `permissions` entre au niveau du workflow, `contents: read` par défaut (lentille sécurité).
-const CLES_DU_WORKFLOW = ['name', 'on', 'permissions', 'jobs'];
+// GOV-142 : `concurrency` aussi — un run par PR, main jamais annulé.
+const CLES_DU_WORKFLOW = ['name', 'on', 'permissions', 'concurrency', 'jobs'];
 /**
  * ⚠️ `if` EST ENTRE DANS CETTE LISTE LE 2026-09-22, ET UNE LISTE QUI S'ALLONGE EST UNE GARDE
  * QUI S’AFFAIBLIT — sauf si ce qu’elle laisse entrer est JUGÉ. C’est la condition de son entrée.

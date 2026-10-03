@@ -3365,6 +3365,13 @@ export const PORTE_A_FIGEE: PorteFigee = {
       },
     },
     permissions: { contents: 'read' },
+    // GOV-142 : un run de la porte A par PR (clé par son numéro), l’ancien annulé ; main jamais
+    // annulé (clé par sha, annulation fausse sur `push`).
+    concurrency: {
+      group:
+        "${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || github.sha }}",
+      'cancel-in-progress': "${{ github.event_name == 'pull_request' }}",
+    },
   },
   scripts: {
     'sec:semgrep': 'tsx scripts/gates/semgrep.ts',

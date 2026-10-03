@@ -12,8 +12,12 @@ import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { estObjet, lireYaml } from '../../../scripts/lib/lire-yaml';
 import {
+  ANNULATION_EN_COURS,
+  CONCURRENCES_FAUTIVES,
+  GROUPE_DE_CONCURRENCE,
   REFERENCE,
   WORKFLOW,
+  jugerLaConcurrence,
   jugerLesEtapes,
   lesJobs,
   prouver,
@@ -53,12 +57,34 @@ describe('REQ-QA-013 — GOV-142 : la même liste d’étapes, au regroupement p
   });
 
   it('REQ-QA-013 : TÉMOIN — la preuve rougit sur chaque faute plantée, et les deux contre-témoins restent verts', () => {
-    const v = prouver(reference, tete);
+    const v = prouver(reference, tete, workflow.concurrency);
     expect(v.lignes.filter((l) => l.startsWith('❌'))).toEqual([]);
-    // Douze fautes plantées : onze familles, dont `etape_non_admise` sous ses deux formes.
-    expect(v.lignes.filter((l) => l.startsWith('✅')).length).toBe(12);
+    // Quinze fautes plantées : douze familles, dont `etape_non_admise` sous deux formes et
+    // `concurrence_non_conforme` sous trois.
+    expect(v.lignes.filter((l) => l.startsWith('✅')).length).toBe(15);
     expect(v.code).toBe(0);
   });
+
+  it('REQ-QA-013 : la concurrence de la porte A — un run par PR, clé par son NUMÉRO, main jamais annulé', () => {
+    expect(workflow.concurrency).toEqual({
+      group: GROUPE_DE_CONCURRENCE,
+      'cancel-in-progress': ANNULATION_EN_COURS,
+    });
+    expect(jugerLaConcurrence(workflow.concurrency)).toEqual([]);
+    expect(GROUPE_DE_CONCURRENCE).toContain('github.event.pull_request.number');
+    expect(GROUPE_DE_CONCURRENCE).not.toContain('head_ref');
+    expect(GROUPE_DE_CONCURRENCE).toContain('github.sha');
+    expect(Object.keys(workflow.on as object)).not.toContain('pull_request_target');
+  });
+
+  it.each(CONCURRENCES_FAUTIVES.map((c) => [c.quoi, c.concurrence]))(
+    'REQ-QA-013 : TÉMOIN — %s : concurrence_non_conforme',
+    (_quoi, concurrence) => {
+      expect(jugerLaConcurrence(concurrence).map((f) => f.famille)).toContain(
+        'concurrence_non_conforme'
+      );
+    }
+  );
 
   it('REQ-QA-013 : TÉMOIN — une étape quelconque ajoutée à un éclat rougit, même figée ailleurs (etape_non_admise)', () => {
     const ajoutee: Job[] = tete.map((j) =>
