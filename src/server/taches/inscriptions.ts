@@ -59,6 +59,10 @@ import { purgerLesContacts } from './purger-contacts';
 import { purgerLesSirenRefuses } from './purger-siren-refuses';
 import { purgerLesValeursDesDroits } from './purger-valeurs-droits-contact';
 import { completerLesCodesNaf, portsDeBase } from './completer-code-naf';
+import {
+  ouvrirLesAnomaliesDAutoParrainage,
+  precedentDuBattement,
+} from './ouvrir-anomalies-auto-parrainage';
 import { creerDisjoncteur } from '../integrations/recherche-entreprises/disjoncteur';
 import { PARAMETRES } from '../integrations/recherche-entreprises/parametres';
 import { clientDuTiers } from '../integrations/recherche-entreprises/tiers';
@@ -197,6 +201,13 @@ export function inscriptions(
     // DM-59 (REQ-JUR-065) : la valeur d'une rectification, effacée à son échéance même sans traitement.
     droits_contact_purger: () =>
       purgerLesValeursDesDroits(prisma, new Date(horlogeSysteme.maintenant())),
+    // SEC-18 (REQ-SEC-031) : l'ouverture DIFFÉRÉE des anomalies d'auto-parrainage, depuis le curseur
+    // que son propre battement porte.
+    auto_parrainage_ouvrir: () =>
+      ouvrirLesAnomaliesDAutoParrainage(prisma, {
+        maintenant: () => new Date(horlogeSysteme.maintenant()),
+        precedent: precedentDuBattement(prisma),
+      }),
     // DM-28 (REQ-DM-046) : la reprise des codes NAF nuls. Un disjoncteur par passage : le tiers en
     // panne interrompt la reprise, le passage suivant la relance.
     naf_completer: () =>

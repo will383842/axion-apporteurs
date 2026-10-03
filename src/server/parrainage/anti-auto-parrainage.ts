@@ -9,27 +9,23 @@
  * jamais à une autre absente.
  *
  * LES DEUX MOMENTS. À la candidature parrainée, et à toute saisie ou modification de RIB — dans les
- * DEUX sens : l'apporteur comme filleul de son parrain, et comme parrain de ses filleuls. Une
- * correspondance ouvre UNE anomalie `auto_parrainage` (DM-12, REQ-DM-033) sur le filleul ; une
- * anomalie déjà ouverte sur lui n'est pas doublée, même sous des contrôles simultanés (verrou
- * consultatif par filleul, en tête de la transaction). La décision appartient à la console, qui lit
- * l'anomalie : ce module ne refuse rien de lui-même, il marque.
+ * DEUX sens : l'apporteur comme filleul de son parrain, et comme parrain de ses filleuls. Le soupçon
+ * vise toujours le FILLEUL du couple.
  *
- * UN TRAITEMENT DIFFÉRÉ, JAMAIS UN APPEL EN LIGNE (DM-12, texte de la juriste) : « l'ouverture d'une
- * anomalie se fait par un traitement distinct et différé, jamais au moment du dépôt ». Ces deux
- * contrôles sont le corps d'une tâche du lanceur qui balaie les candidatures et les RIB récents ;
- * aucune action de l'apporteur ne les appelle. L'OUVERTURE est journalisée
- * (`anomalie_statut_modifie`, `de` nul vers `ouverte`, acteur `systeme`) dans la transaction qui crée
- * l'anomalie, et dans celle-là seule : aucun événement de l'agrégat apporteur n'y est écrit.
+ * CE MODULE NE FAIT QUE LIRE ET JUGER. Il n'ouvre rien, n'écrit rien. L'ouverture d'une anomalie
+ * `auto_parrainage` (DM-12, REQ-DM-033) est un traitement DISTINCT et DIFFÉRÉ, jamais au moment du
+ * geste de l'apporteur (texte de la juriste, forme d'A02) : la tâche du lanceur
+ * `src/server/taches/ouvrir-anomalies-auto-parrainage.ts` lit les naissances de candidatures et de
+ * pièces RIB depuis son dernier passage, appelle les deux lectures ci-dessous, et ouvre l'anomalie
+ * dans sa propre transaction. La décision appartient à la console, qui lit l'anomalie.
  *
  * LES DEUX RÉPONSES. La console reçoit un refus NOMMÉ, avec les familles en cause (`verdictConsole`).
  * L'espace reçoit une réponse NEUTRE et figée, la même qu'il y ait correspondance ou non
- * (`reponseEspace`) : l'apporteur n'apprend pas ce qui a été comparé. Le journal ne porte que le
+ * (`REPONSE_ESPACE`) : l'apporteur n'apprend pas ce qui a été comparé. La trace ne porte que le
  * moment et les familles : aucune empreinte, aucun identifiant, aucune donnée de personne.
  */
 import type { Prisma, PrismaClient } from '@prisma/client';
 import { normaliserCodeParrainage } from '../../domain/parrainage/code';
-import { ajouterEvenement, type NouvelEvenement } from '../evenement/journal';
 
 /** Les familles d'empreinte comparées, dans l'ordre où elles se nomment. */
 export const FAMILLES_D_EMPREINTE = ['identite', 'courriel', 'telephone', 'iban', 'siren'] as const;
@@ -54,22 +50,10 @@ export interface LigneDuJournal {
   correspondances: FamilleDEmpreinte[];
 }
 
-/** Les ports d'un contrôle : l'horloge, la trace sans donnée de personne, l'écrivain du journal. */
-export interface PortsDuControle {
-  maintenant(): Date;
-  journal?: (ligne: LigneDuJournal) => void;
-  /** L'écrivain du journal, dans la transaction qui crée l'anomalie ; `ajouterEvenement` par défaut. */
-  journaliser?: (tx: Prisma.TransactionClient, e: NouvelEvenement) => Promise<unknown>;
-}
-
-export interface ResultatDuControle {
+/** Un soupçon : le filleul visé, et les familles où il se confond avec son parrain. */
+export interface Soupcon {
+  filleulId: string;
   correspondances: FamilleDEmpreinte[];
-  anomalieOuverte: boolean;
-}
-
-/** Le résultat d'un contrôle sans couple à confronter (apporteur inconnu), neuf à chaque appel. */
-function aucun(): ResultatDuControle {
-  return { correspondances: [], anomalieOuverte: false };
 }
 
 // ── le cœur pur ──────────────────────────────────────────────────────────────────────────────────
@@ -100,22 +84,25 @@ export function correspondances(
 /** La réponse de l'espace : figée, la même dans tous les cas. */
 export const REPONSE_ESPACE = Object.freeze({ etat: 'recu' as const });
 
-export function reponseEspace(_resultat: ResultatDuControle): typeof REPONSE_ESPACE {
-  return REPONSE_ESPACE;
+/** Le verdict de la console : nommé, avec les familles en cause ; sans correspondance, aucun. */
+export function verdictConsole(
+  correspondancesTrouvees: readonly FamilleDEmpreinte[]
+): { verdict: 'auto_parrainage'; correspondances: FamilleDEmpreinte[] } | { verdict: 'aucun' } {
+  return correspondancesTrouvees.length > 0
+    ? { verdict: 'auto_parrainage', correspondances: [...correspondancesTrouvees] }
+    : { verdict: 'aucun' };
 }
 
-/** Le verdict de la console : nommé, avec les familles en cause. */
-export function verdictConsole(
-  resultat: ResultatDuControle
-): { verdict: 'auto_parrainage'; correspondances: FamilleDEmpreinte[] } | { verdict: 'aucun' } {
-  return resultat.correspondances.length > 0
-    ? { verdict: 'auto_parrainage', correspondances: resultat.correspondances }
-    : { verdict: 'aucun' };
+/** Les familles vues dans des soupçons, dans l'ordre de `FAMILLES_D_EMPREINTE`. */
+export function famillesDe(soupcons: readonly Soupcon[]): FamilleDEmpreinte[] {
+  const vues = new Set(soupcons.flatMap((s) => s.correspondances));
+  return FAMILLES_D_EMPREINTE.filter((f) => vues.has(f));
 }
 
 // ── la lecture en base ───────────────────────────────────────────────────────────────────────────
 
-type Client = Pick<PrismaClient, 'apporteur' | 'anomalie'>;
+/** La lecture seule : ce module ne touche à aucune autre table, et n'écrit rien. */
+type Client = Pick<PrismaClient, 'apporteur'>;
 
 /** Les empreintes d'un apporteur : pièces RIB non remplacées, identités de facturation en cours. */
 const SELECTION = {
@@ -175,90 +162,39 @@ async function filleulsDe(client: Client, a: ApporteurLu): Promise<ApporteurLu[]
     .filter((f) => normaliserCodeParrainage(f.parrainCodeCapture) === a.codeParrainage);
 }
 
-/**
- * Ouvre l'anomalie sur le filleul, sauf si une `auto_parrainage` y est déjà ouverte. Le verrou
- * consultatif du filleul, pris en tête, sérialise les contrôles simultanés : le second lit l'anomalie
- * du premier. L'ouverture est journalisée dans la même transaction, sur l'agrégat ANOMALIE.
- */
-async function marquer(
-  prisma: PrismaClient,
-  filleulId: string,
-  ports: PortsDuControle
-): Promise<boolean> {
-  const journaliser = ports.journaliser ?? ajouterEvenement;
-  return prisma.$transaction(async (tx) => {
-    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`auto_parrainage:${filleulId}`}, 0))`;
-    const ouverte = await tx.anomalie.findFirst({
-      where: { type: 'auto_parrainage', apporteurId: filleulId, statut: 'ouverte' },
-      select: { id: true },
-    });
-    if (ouverte !== null) return false;
-    const creee = await tx.anomalie.create({
-      data: { type: 'auto_parrainage', apporteurId: filleulId, score: null },
-      select: { id: true },
-    });
-    await journaliser(tx, {
-      type: 'anomalie_statut_modifie',
-      agregat: 'anomalie',
-      agregatId: creee.id,
-      survenuAt: ports.maintenant(),
-      charge: { de: null, vers: 'ouverte', acteur: { par: 'systeme' } },
-    });
-    return true;
+/** Les soupçons d'une liste de couples (filleul, parrain) : ceux qui se confondent. */
+function juger(couples: readonly (readonly [ApporteurLu, ApporteurLu])[]): Soupcon[] {
+  return couples.flatMap(([filleul, parrain]) => {
+    const trouvees = correspondances(filleul, parrain);
+    return trouvees.length === 0 ? [] : [{ filleulId: filleul.id, correspondances: trouvees }];
   });
 }
 
-/** Confronte chaque couple (filleul, parrain), marque, journalise une ligne si quelque chose correspond. */
-async function controler(
-  prisma: PrismaClient,
-  couples: readonly (readonly [ApporteurLu, ApporteurLu])[],
-  moment: MomentDuControle,
-  ports: PortsDuControle
-): Promise<ResultatDuControle> {
-  const vues = new Set<FamilleDEmpreinte>();
-  let anomalieOuverte = false;
-  for (const [filleul, parrain] of couples) {
-    const trouvees = correspondances(filleul, parrain);
-    if (trouvees.length === 0) continue;
-    trouvees.forEach((f) => vues.add(f));
-    if (await marquer(prisma, filleul.id, ports)) anomalieOuverte = true;
-  }
-  const familles = FAMILLES_D_EMPREINTE.filter((f) => vues.has(f));
-  if (familles.length > 0) {
-    ports.journal?.({ signal: 'auto_parrainage_soupconne', moment, correspondances: familles });
-  }
-  return { correspondances: familles, anomalieOuverte };
-}
-
-/** À la candidature parrainée : le filleul contre son parrain. */
-export async function controlerALaCandidature(
-  prisma: PrismaClient,
-  filleulId: string,
-  ports: PortsDuControle
-): Promise<ResultatDuControle> {
-  const filleul = await lire(prisma, { id: filleulId });
-  if (filleul === null) return aucun();
-  const parrain = await parrainDe(prisma, filleul);
-  const couples = parrain === null ? [] : [[filleul, parrain] as const];
-  return controler(prisma, couples, 'candidature', ports);
+/** À la candidature parrainée : le filleul contre son parrain. Lecture seule. */
+export async function soupconsALaCandidature(
+  client: Client,
+  filleulId: string
+): Promise<Soupcon[]> {
+  const filleul = await lire(client, { id: filleulId });
+  if (filleul === null) return [];
+  const parrain = await parrainDe(client, filleul);
+  return parrain === null ? [] : juger([[filleul, parrain]]);
 }
 
 /**
  * À la saisie ou à la modification d'un RIB : l'apporteur comme filleul de son parrain, et comme
- * parrain de chacun de ses filleuls. L'anomalie s'ouvre toujours sur le FILLEUL du couple.
+ * parrain de chacun de ses filleuls. Le soupçon vise toujours le FILLEUL du couple. Lecture seule.
  */
-export async function controlerAuChangementDeRib(
-  prisma: PrismaClient,
-  apporteurId: string,
-  ports: PortsDuControle
-): Promise<ResultatDuControle> {
-  const a = await lire(prisma, { id: apporteurId });
-  if (a === null) return aucun();
-  const parrain = await parrainDe(prisma, a);
-  const filleuls = await filleulsDe(prisma, a);
-  const couples = [
+export async function soupconsAuChangementDeRib(
+  client: Client,
+  apporteurId: string
+): Promise<Soupcon[]> {
+  const a = await lire(client, { id: apporteurId });
+  if (a === null) return [];
+  const parrain = await parrainDe(client, a);
+  const filleuls = await filleulsDe(client, a);
+  return juger([
     ...(parrain === null ? [] : [[a, parrain] as const]),
     ...filleuls.map((f) => [f, a] as const),
-  ];
-  return controler(prisma, couples, 'rib', ports);
+  ]);
 }

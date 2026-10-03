@@ -35,6 +35,11 @@ export const TACHES = {
    * haute séquence reçue, rejeu des trous (`src/server/jobs/reconciliation.ts`).
    */
   reconciliation_axionia: { req: 'REQ-INT-013' },
+  /**
+   * SEC-18 — l'ouverture DIFFÉRÉE des anomalies d'auto-parrainage, sur les naissances de candidatures
+   * et de pièces RIB lues au journal (`src/server/taches/ouvrir-anomalies-auto-parrainage.ts`).
+   */
+  auto_parrainage_ouvrir: { req: 'REQ-SEC-031' },
 } as const satisfies Readonly<Record<string, { req: `REQ-${string}` }>>;
 
 export type NomDeTache = keyof typeof TACHES;

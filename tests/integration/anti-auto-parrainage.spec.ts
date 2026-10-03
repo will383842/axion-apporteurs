@@ -1,28 +1,48 @@
 // @req REQ-ARG-012
 // @req REQ-SEC-031
 /**
- * SEC-18 en base RÉELLE — l'anti auto-parrainage, à la candidature et au RIB.
+ * SEC-18 en base RÉELLE, sous `partners_app` — l'anti auto-parrainage, dans la forme d'A02 (PR 601).
  *
- * TÉMOINS À DEUX FACES : un filleul qui partage avec son parrain le téléphone, l'IBAN ou le SIREN ouvre UNE anomalie `auto_parrainage` sur lui (et la base l'accepte telle quelle) ; un
- * filleul distinct n'en ouvre aucune. Le courriel, lui, ne se partage pas : la base l'interdit déjà
- * (index unique), le cœur le compare quand même (témoin en processus). Une anomalie ouverte n'est pas doublée ; une pièce RIB
- * remplacée et une identité de facturation close ne comptent plus. Le parrain qui saisit l'IBAN de
- * son filleul marque le filleul. Empreintes et blocs sont tirés au hasard : aucune donnée réelle.
+ * TÉMOINS :
+ *   — la lecture : un filleul qui partage avec son parrain le téléphone, l'IBAN ou le SIREN est
+ *     soupçonné, un filleul distinct ne l'est pas ; une pièce RIB remplacée et une identité close ne
+ *     comptent plus ; le courriel ne se partage même pas (index unique déjà en base) ;
+ *   — le geste n'écrit RIEN : la candidature et le RIB laissent `anomalies` vide jusqu'au passage ;
+ *   — la tâche différée lit les naissances au journal, ouvre UNE anomalie et UN événement ;
+ *   — l'index `anomalies_auto_parrainage_une_ouverte` : dix ouvertures simultanées sur dix
+ *     connexions donnent UNE anomalie et UN événement, sans erreur ; une seconde anomalie ouverte est
+ *     refusée sous ce nom ; après la clôture de la première, une nouvelle s'ouvre ;
+ *   — aucun événement de l'agrégat anomalie ne partage une transaction (`xmin`) avec un événement de
+ *     l'agrégat apporteur ; la charge de l'ouverture ne porte ni apporteur, ni attribution, ni acteur.
+ * Empreintes et blocs sont tirés au hasard : aucune donnée réelle.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { demarrerBase, type Base } from './harnais';
 import {
-  controlerALaCandidature,
-  controlerAuChangementDeRib,
-  type LigneDuJournal,
-  type PortsDuControle,
+  soupconsALaCandidature,
+  soupconsAuChangementDeRib,
 } from '../../src/server/parrainage/anti-auto-parrainage';
+import {
+  ouvrirLesAnomaliesDAutoParrainage,
+  ouvrirUneAnomalie,
+} from '../../src/server/taches/ouvrir-anomalies-auto-parrainage';
+import { ajouterEvenement } from '../../src/server/evenement/journal';
+import { naissanceDApporteur } from '../../src/domain/evenement/charges';
 
 let base: Base;
+let adminId: string;
 
 beforeAll(async () => {
   base = await demarrerBase();
+  const [u] = await base.prisma.$queryRawUnsafe<{ id: string }[]>(
+    `INSERT INTO utilisateurs_console (id, role, email_chiffre, email_hash, cree_at)
+     VALUES ($1::uuid, 'admin'::console_role, '\\x01'::bytea, $2, $3) RETURNING id`,
+    randomUUID(),
+    hex(32),
+    MAINTENANT
+  );
+  adminId = u!.id;
 }, 180_000);
 
 afterAll(async () => {
@@ -37,6 +57,8 @@ const code = () =>
 
 /** Un SIREN neuf, de neuf chiffres (sa clé de Luhn n'est pas jugée ici). */
 const siren = () => String(100_000_000 + (randomBytes(4).readUInt32BE() % 899_999_999));
+
+const PORTS = { maintenant: () => MAINTENANT };
 
 interface Identite {
   emailHash?: string;
@@ -70,18 +92,20 @@ async function apporteur(i: Identite = {}): Promise<{ id: string; code: string }
   return { id: a.id, code: c };
 }
 
-/** Une pièce RIB, par SQL brut : le bloc et l'empreinte vont ensemble. */
+/** Une pièce RIB, par SQL brut : le bloc et l'empreinte vont ensemble. Rend son id. */
 async function rib(apporteurId: string, ibanHash: string, remplaceeAt: Date | null = null) {
+  const id = randomUUID();
   await base.prisma.$executeRawUnsafe(
     `INSERT INTO pieces_kyc (id, apporteur_id, type, statut, remplacee_at, iban_chiffre, iban_hash)
      VALUES ($1::uuid, $2::uuid, 'rib', $3::statut_piece_kyc, $4, $5, $6)`,
-    randomUUID(),
+    id,
     apporteurId,
     remplaceeAt === null ? 'a_verifier' : 'valide',
     remplaceeAt,
     randomBytes(40),
     ibanHash
   );
+  return id;
 }
 
 async function identite(apporteurId: string, s: string, finAt: Date | null = null) {
@@ -96,164 +120,206 @@ async function identite(apporteurId: string, s: string, finAt: Date | null = nul
   );
 }
 
-async function anomalies(apporteurId: string) {
-  return base.prisma.anomalie.findMany({
+const anomalies = (apporteurId: string) =>
+  base.prisma.anomalie.findMany({
     where: { apporteurId },
-    select: { type: true, statut: true, score: true, traiteAt: true },
+    select: { id: true, type: true, statut: true, score: true },
   });
+
+const ouvertures = (anomalieId: string) =>
+  base.prisma.evenement.findMany({
+    where: { type: 'anomalie_statut_modifie', agregatId: anomalieId },
+    select: { agregat: true, charge: true },
+  });
+
+/** Les naissances, écrites au journal comme leurs écrivains les écrivent (sous le verrou du journal). */
+async function naitreCandidature(apporteurId: string) {
+  await base.prisma.$transaction((tx) =>
+    ajouterEvenement(tx, {
+      type: 'apporteur_statut_modifie',
+      agregat: 'apporteur',
+      agregatId: apporteurId,
+      survenuAt: MAINTENANT,
+      charge: naissanceDApporteur({ par: 'systeme' }),
+    })
+  );
 }
 
-/** Les ports réels : l'horloge, et l'écrivain du journal par défaut (`ajouterEvenement`). */
-const ports = (journal?: LigneDuJournal[]): PortsDuControle => ({
-  maintenant: () => MAINTENANT,
-  ...(journal === undefined ? {} : { journal: (l: LigneDuJournal) => journal.push(l) }),
-});
+async function naitreRib(pieceId: string, apporteurId: string) {
+  await base.prisma.$transaction((tx) =>
+    ajouterEvenement(tx, {
+      type: 'piece_kyc_statut_modifie',
+      agregat: 'piece_kyc',
+      agregatId: pieceId,
+      survenuAt: MAINTENANT,
+      charge: {
+        de: null,
+        vers: 'a_verifier',
+        type: 'rib',
+        acteur: { par: 'apporteur', id: apporteurId },
+      },
+    })
+  );
+}
 
-const OUVERTE = { type: 'auto_parrainage', statut: 'ouverte', score: null, traiteAt: null };
+/** Un passage de la tâche, comme un premier passage : depuis le début du journal. */
+const passage = () =>
+  ouvrirLesAnomaliesDAutoParrainage(base.prisma, { ...PORTS, precedent: async () => null });
 
-describe('REQ-SEC-031 — à la candidature parrainée, en base réelle', () => {
+describe('REQ-ARG-012 — la lecture et le jugement, en base réelle', () => {
   it.each(['telephone', 'siren'] as const)(
-    'REQ-SEC-031 : TÉMOIN À DEUX FACES — même %s : une anomalie ouverte sur le filleul ; un filleul distinct : aucune',
+    'REQ-ARG-012 : TÉMOIN À DEUX FACES — même %s : un soupçon sur le filleul ; un filleul distinct : aucun',
     async (famille) => {
       const commun = hex(32);
       const s = siren();
-      const parrain = await apporteur({
-        emailHash: hex(32),
-        phoneHash: famille === 'telephone' ? commun : hex(32),
-      });
+      const parrain = await apporteur({ phoneHash: famille === 'telephone' ? commun : hex(32) });
       await identite(parrain.id, famille === 'siren' ? s : siren());
       const vise = await apporteur({
         parrainCode: parrain.code,
-        emailHash: hex(32),
         phoneHash: famille === 'telephone' ? commun : hex(32),
       });
       await identite(vise.id, famille === 'siren' ? s : siren());
-      const journal: LigneDuJournal[] = [];
-      expect(await controlerALaCandidature(base.prisma, vise.id, ports(journal))).toEqual({
-        correspondances: [famille],
-        anomalieOuverte: true,
-      });
-      expect(await anomalies(vise.id)).toEqual([OUVERTE]);
-      expect(await anomalies(parrain.id)).toEqual([]);
-      expect(journal).toEqual([
-        { signal: 'auto_parrainage_soupconne', moment: 'candidature', correspondances: [famille] },
+      expect(await soupconsALaCandidature(base.prisma, vise.id)).toEqual([
+        { filleulId: vise.id, correspondances: [famille] },
       ]);
-      // Contre-témoin : un filleul du même parrain, sans rien de commun.
-      const distinct = await apporteur({
-        parrainCode: parrain.code,
-        emailHash: hex(32),
-        phoneHash: hex(32),
-      });
+      const distinct = await apporteur({ parrainCode: parrain.code, phoneHash: hex(32) });
       await identite(distinct.id, siren());
-      expect(await controlerALaCandidature(base.prisma, distinct.id, ports())).toEqual({
-        correspondances: [],
-        anomalieOuverte: false,
-      });
-      expect(await anomalies(distinct.id)).toEqual([]);
+      expect(await soupconsALaCandidature(base.prisma, distinct.id)).toEqual([]);
     }
   );
 
-  it('REQ-SEC-031 : le courriel ne se partage même pas — la base refuse déjà deux apporteurs au même courriel', async () => {
+  it('REQ-ARG-012 : le courriel ne se partage même pas — la base refuse déjà deux apporteurs au même courriel', async () => {
     const commun = hex(32);
     await apporteur({ emailHash: commun });
     await expect(apporteur({ emailHash: commun })).rejects.toThrow(/email_hash|Unique constraint/);
   });
 
-  it('REQ-SEC-031 : un second contrôle ne double pas l’anomalie ouverte', async () => {
-    const commun = hex(32);
-    const parrain = await apporteur({ phoneHash: commun });
-    const vise = await apporteur({ parrainCode: parrain.code.toLowerCase(), phoneHash: commun });
-    expect((await controlerALaCandidature(base.prisma, vise.id, ports())).anomalieOuverte).toBe(
-      true
-    );
-    expect(await controlerALaCandidature(base.prisma, vise.id, ports())).toEqual({
-      correspondances: ['telephone'],
-      anomalieOuverte: false,
-    });
-    expect(await anomalies(vise.id)).toEqual([OUVERTE]);
+  it('REQ-ARG-012 : au RIB, dans les deux sens ; une pièce REMPLACÉE et une identité CLOSE ne comptent plus', async () => {
+    const iban = hex(32);
+    const parrain = await apporteur();
+    const vise = await apporteur({ parrainCode: parrain.code });
+    await rib(vise.id, iban);
+    await rib(parrain.id, iban);
+    expect(await soupconsAuChangementDeRib(base.prisma, parrain.id)).toEqual([
+      { filleulId: vise.id, correspondances: ['iban'] },
+    ]);
+    expect(await soupconsAuChangementDeRib(base.prisma, vise.id)).toEqual([
+      { filleulId: vise.id, correspondances: ['iban'] },
+    ]);
+
+    const s = siren();
+    const ancien = await apporteur();
+    await rib(ancien.id, iban, new Date('2026-09-01T00:00:00.000Z'));
+    await identite(ancien.id, s, new Date('2026-09-01T00:00:00.000Z'));
+    const autre = await apporteur({ parrainCode: ancien.code });
+    await rib(autre.id, iban);
+    await identite(autre.id, s);
+    expect(await soupconsAuChangementDeRib(base.prisma, autre.id)).toEqual([]);
   });
 });
 
-describe('REQ-SEC-031 — l’ouverture, une seule et journalisée, sous des contrôles simultanés', () => {
-  it('REQ-SEC-031 : TÉMOIN DE CONCURRENCE — dix contrôles simultanés du même filleul ouvrent UNE anomalie, et UN événement d’ouverture', async () => {
+describe('REQ-SEC-031 — le geste n’ouvre rien ; la tâche différée ouvre, une fois, journalisée', () => {
+  it('REQ-SEC-031 : TÉMOIN DU GESTE — candidature et RIB soupçonnés laissent anomalies vide ; le passage de la tâche ouvre UNE anomalie et UN événement', async () => {
     const commun = hex(32);
     const parrain = await apporteur({ phoneHash: commun });
     const vise = await apporteur({ parrainCode: parrain.code, phoneHash: commun });
-    const resultats = await Promise.all(
-      Array.from({ length: 10 }, (_, i) =>
-        i % 2 === 0
-          ? controlerALaCandidature(base.prisma, vise.id, ports())
-          : controlerAuChangementDeRib(base.prisma, vise.id, ports())
-      )
-    );
-    expect(resultats.filter((r) => r.anomalieOuverte)).toHaveLength(1);
-    const ouvertes = await base.prisma.anomalie.findMany({
-      where: { apporteurId: vise.id },
-      select: { id: true, statut: true },
-    });
-    expect(ouvertes).toHaveLength(1);
-    const evenements = await base.prisma.evenement.findMany({
-      where: { type: 'anomalie_statut_modifie', agregatId: ouvertes[0]!.id },
-      select: { agregat: true, charge: true },
-    });
-    expect(evenements).toEqual([
+    await naitreCandidature(vise.id);
+    const piece = await rib(vise.id, hex(32));
+    await naitreRib(piece, vise.id);
+    expect(await anomalies(vise.id)).toEqual([]);
+
+    const compteurs = await passage();
+    expect(compteurs.ouvertes).toBeGreaterThanOrEqual(1);
+    const [a, ...autres] = await anomalies(vise.id);
+    expect(autres).toEqual([]);
+    expect(a).toMatchObject({ type: 'auto_parrainage', statut: 'ouverte', score: null });
+    expect(await ouvertures(a!.id)).toEqual([
       { agregat: 'anomalie', charge: { de: null, vers: 'ouverte', acteur: { par: 'systeme' } } },
     ]);
-  });
-});
-
-describe('REQ-SEC-031 — au changement de RIB, en base réelle', () => {
-  it('REQ-SEC-031 : TÉMOIN À DEUX FACES — le filleul saisit l’IBAN de son parrain : marqué ; un IBAN propre : rien', async () => {
-    const iban = hex(32);
-    const parrain = await apporteur();
-    await rib(parrain.id, iban);
-    const vise = await apporteur({ parrainCode: parrain.code });
-    await rib(vise.id, hex(32));
-    expect(await controlerAuChangementDeRib(base.prisma, vise.id, ports())).toEqual({
-      correspondances: [],
-      anomalieOuverte: false,
-    });
-    expect(await anomalies(vise.id)).toEqual([]);
-    // Le RIB change : la nouvelle pièce, en vérification, porte l'IBAN du parrain.
-    const autre = await apporteur({ parrainCode: parrain.code });
-    await rib(autre.id, iban);
-    expect(await controlerAuChangementDeRib(base.prisma, autre.id, ports())).toEqual({
-      correspondances: ['iban'],
-      anomalieOuverte: true,
-    });
-    expect(await anomalies(autre.id)).toEqual([OUVERTE]);
+    // Un second passage, sur le même journal : ni anomalie, ni événement de plus.
+    await passage();
+    expect(await anomalies(vise.id)).toHaveLength(1);
+    expect(await ouvertures(a!.id)).toHaveLength(1);
   });
 
-  it('REQ-SEC-031 : le PARRAIN qui saisit l’IBAN de son filleul marque ce filleul, et lui seul', async () => {
-    const iban = hex(32);
-    const parrain = await apporteur();
-    const vise = await apporteur({ parrainCode: parrain.code });
-    await rib(vise.id, iban);
-    const autre = await apporteur({ parrainCode: parrain.code });
-    await rib(autre.id, hex(32));
-    await rib(parrain.id, iban);
-    expect(await controlerAuChangementDeRib(base.prisma, parrain.id, ports())).toEqual({
-      correspondances: ['iban'],
-      anomalieOuverte: true,
-    });
-    expect(await anomalies(vise.id)).toEqual([OUVERTE]);
-    expect(await anomalies(autre.id)).toEqual([]);
-    expect(await anomalies(parrain.id)).toEqual([]);
+  it('REQ-SEC-031 : TÉMOIN DE CONCURRENCE — dix ouvertures SIMULTANÉES du même filleul, sur dix connexions : UNE anomalie, UN événement, sans erreur', async () => {
+    const vise = await apporteur();
+    const issues = await Promise.all(
+      Array.from({ length: 10 }, () => ouvrirUneAnomalie(base.prisma, vise.id, PORTS))
+    );
+    expect(issues.filter(Boolean)).toHaveLength(1);
+    const ouvertes = await anomalies(vise.id);
+    expect(ouvertes).toHaveLength(1);
+    expect(await ouvertures(ouvertes[0]!.id)).toHaveLength(1);
   });
 
-  it('REQ-SEC-031 : une pièce RIB REMPLACÉE et une identité de facturation CLOSE ne comptent plus', async () => {
-    const iban = hex(32);
-    const s = siren();
-    const parrain = await apporteur();
-    await rib(parrain.id, iban, new Date('2026-09-01T00:00:00.000Z'));
-    await identite(parrain.id, s, new Date('2026-09-01T00:00:00.000Z'));
-    const vise = await apporteur({ parrainCode: parrain.code });
-    await rib(vise.id, iban);
-    await identite(vise.id, s);
-    expect(await controlerAuChangementDeRib(base.prisma, vise.id, ports())).toEqual({
-      correspondances: [],
-      anomalieOuverte: false,
+  it('REQ-SEC-031 : une seconde anomalie auto_parrainage ouverte est refusée par la base, sous le nom de l’index ; une sincérité ne l’est pas', async () => {
+    const vise = await apporteur();
+    expect(await ouvrirUneAnomalie(base.prisma, vise.id, PORTS)).toBe(true);
+    // Le refus d'UNICITÉ rendu comme une donnée : Prisma ne transmet pas le nom de la contrainte
+    // d'une requête brute (`23505`, « Message: N/A »). Une fonction `pg_temp`, dans la MÊME
+    // transaction, attrape la violation et rend le SQLSTATE et le CONSTRAINT_NAME du diagnostic.
+    const erreur = await base.prisma.$transaction(async (tx) => {
+      await tx.$executeRawUnsafe(`
+        CREATE OR REPLACE FUNCTION pg_temp.essai_seconde(a uuid) RETURNS text LANGUAGE plpgsql AS $f$
+        DECLARE etat text; contrainte text;
+        BEGIN
+          INSERT INTO anomalies (id, type, apporteur_id, statut)
+          VALUES (gen_random_uuid(), 'auto_parrainage', a, 'ouverte');
+          RETURN 'insere';
+        EXCEPTION WHEN unique_violation THEN
+          GET STACKED DIAGNOSTICS etat = RETURNED_SQLSTATE, contrainte = CONSTRAINT_NAME;
+          RETURN etat || ' ' || coalesce(contrainte, '');
+        END $f$`);
+      const [r] = await tx.$queryRaw<{ r: string }[]>`
+        SELECT pg_temp.essai_seconde(${vise.id}::uuid) AS r`;
+      return r!.r;
     });
-    expect(await anomalies(vise.id)).toEqual([]);
+    expect(erreur).toBe('23505 anomalies_auto_parrainage_une_ouverte');
+    // L'index ne vise que l'auto-parrainage : deux anomalies de sincérité restent possibles.
+    for (let i = 0; i < 2; i += 1) {
+      await base.prisma.$executeRawUnsafe(
+        `INSERT INTO anomalies (id, type, score, apporteur_id, statut) VALUES ($1::uuid, 'sincerite', 50, $2::uuid, 'ouverte')`,
+        randomUUID(),
+        vise.id
+      );
+    }
+    expect((await anomalies(vise.id)).filter((a) => a.type === 'sincerite')).toHaveLength(2);
+  });
+
+  it('REQ-SEC-031 : après la clôture de la première, une nouvelle anomalie s’ouvre et s’écrit au journal ; en conflit, aucun événement', async () => {
+    const vise = await apporteur();
+    expect(await ouvrirUneAnomalie(base.prisma, vise.id, PORTS)).toBe(true);
+    const [premiere] = await anomalies(vise.id);
+    expect(await ouvrirUneAnomalie(base.prisma, vise.id, PORTS)).toBe(false);
+    expect(await ouvertures(premiere!.id)).toHaveLength(1);
+    await base.prisma.$executeRawUnsafe(
+      `UPDATE anomalies SET statut = 'levee', traite_at = $2, traite_par_id = $3::uuid,
+         justification_chiffre = $4 WHERE id = $1::uuid`,
+      premiere!.id,
+      MAINTENANT,
+      adminId,
+      randomBytes(40)
+    );
+    expect(await ouvrirUneAnomalie(base.prisma, vise.id, PORTS)).toBe(true);
+    const toutes = await anomalies(vise.id);
+    expect(toutes.map((a) => a.statut).sort()).toEqual(['levee', 'ouverte']);
+    const seconde = toutes.find((a) => a.statut === 'ouverte')!;
+    expect(await ouvertures(seconde.id)).toHaveLength(1);
+  });
+
+  it('REQ-SEC-031 : aucun événement de l’agrégat anomalie ne partage une transaction (xmin) avec un événement de l’agrégat apporteur ; la charge d’ouverture ne nomme personne', async () => {
+    const croisees = await base.prisma.$queryRaw<{ n: bigint }[]>`
+      SELECT count(*) AS n FROM evenements a JOIN evenements p ON a.xmin = p.xmin
+      WHERE a.agregat = 'anomalie' AND p.agregat = 'apporteur'`;
+    expect(croisees[0]!.n).toBe(0n);
+    const charges = await base.prisma.evenement.findMany({
+      where: { type: 'anomalie_statut_modifie' },
+      select: { charge: true },
+    });
+    expect(charges.length).toBeGreaterThan(0);
+    for (const { charge } of charges) {
+      expect(charge).toEqual({ de: null, vers: 'ouverte', acteur: { par: 'systeme' } });
+    }
   });
 });
