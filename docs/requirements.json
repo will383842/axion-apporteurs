@@ -184,6 +184,7 @@
       "taches": [
         "DM-06",
         "DM-18",
+        "DM-63",
         "SEC-19"
       ]
     },
@@ -503,6 +504,7 @@
       "phase": 1,
       "taches": [
         "DM-07",
+        "DM-09",
         "DM-13",
         "DM-20",
         "DM-40",
@@ -2417,7 +2419,6 @@
       "phase": 1,
       "taches": [
         "INT-T08-A",
-        "INT-T08-P",
         "QA-T19"
       ]
     },
@@ -5335,6 +5336,7 @@
         "UX-P1-18",
         "UX-P1-20",
         "UX-P1-50",
+        "UX-P1-52",
         "UX-P2-03",
         "UX-P2-05",
         "UX-P3-04",
@@ -6354,6 +6356,20 @@
       "phase": 1,
       "taches": [
         "INT-T71-A"
+      ]
+    },
+    {
+      "id": "REQ-JUR-067",
+      "domaine": "juridique",
+      "texte": "Aucun contrat d'apporteur n'est envoyé en signature tant que la chaîne des commissions n'est pas opérationnelle de bout en bout : le calcul des commissions (DM-15), leur acquisition à l'encaissement et les reprises (art. 4.2 à 4.5), le relevé et l'autofacturation (art. 5 et annexe 2), le paiement (T-ARG-033, REQ-ARG-026), et les effets de la fin du contrat sur les commissions (DM-18). Décision de Williams du 2026-10-03 : « non il n'y aura pas de contrats avant que cet outil sont fonctionnelet opérationnel ».",
+      "source": "texte de la juriste (2026-10-03), sur la décision de Williams du 2026-10-03 citée mot pour mot ; rattrapage 88",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": null,
+      "etape": null,
+      "phase": 1,
+      "taches": [
+        "INT-T12"
       ]
     },
     {
