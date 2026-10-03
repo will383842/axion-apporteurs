@@ -107,3 +107,31 @@ describe('REQ-UX-048 — (4) les treize validations de Williams', () => {
     }
   });
 });
+
+describe('REQ-UX-048 — l’épuration ne touche aucune phrase à valeur juridique', () => {
+  /**
+   * Les phrases à valeur contractuelle ou juridique des maquettes de la console, MOT POUR MOT telles
+   * qu'avant l'épuration (main 882bfb70) : l'article 3.7 du non-confirmé, les pénalités de retard du
+   * lot, la mention de l'article 14. Comparées aux blancs près, une coupure de ligne n'étant pas un mot.
+   */
+  const PHRASES_JURIDIQUES: readonly (readonly [string, string])[] = [
+    [
+      'file-qualification.html',
+      'La suite est forcée sur « Perdue », motif « non confirmé ». L’apporteur est informé par courrier électronique, en termes neutres. Selon le contrat (article 3.7), cela peut mettre ses dépôts en pause.',
+    ],
+    [
+      'lot-paiement.html',
+      'R-2026-07-0011 (Sophie Exemple-Martin), motif RIB manquant. Au-delà de 60 jours, le retard est une anomalie de premier rang, quel que soit le motif ; pénalités et indemnité de 40 € sont dues.',
+    ],
+    [
+      'fiche-qualification.html',
+      'Mention de l’article 14 (information de la personne appelée) : texte fourni par JUR-T09, non rédigé dans cette maquette.',
+    ],
+  ];
+
+  it('REQ-UX-048 : TÉMOIN — chaque phrase à valeur juridique reste mot pour mot celle d’avant l’épuration', () => {
+    for (const [f, phrase] of PHRASES_JURIDIQUES) {
+      expect(lire(f).replace(/\s+/g, ' '), f).toContain(phrase);
+    }
+  });
+});

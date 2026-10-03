@@ -88,8 +88,9 @@ aucune ne repart à vide, et la séance groupée ci-dessous se tient sur cette v
 
 ### Séance du 2026-10-03 : la console validée, en version épurée (UX-P1-52)
 
-Les treize maquettes ont été montrées à Williams dans l'ordre de lecture ci-dessous, au bureau et au téléphone.
-`console-cadre.html` est validée : « OUI ». La première `connexion-console.html` est refusée, verbatim :
+Les treize maquettes ont été montrées à Williams dans l'ordre de lecture ci-dessous.
+`console-cadre.html`, dans sa version à barre latérale d'avant l'épuration, est validée : « OUI ». La
+première `connexion-console.html` est refusée, verbatim :
 « JE trouve que ca fait enormement texte avec manque de contraste un peu... on se perd tellement il y a
 d'informaitons non ? ».
 
@@ -103,7 +104,7 @@ La console est alors ÉPURÉE :
   valable. Demandez un nouveau lien de connexion. »
 
 Réponses de Williams, verbatim :
-- sur le style épuré (« Ce style épuré vous convient ? ») : « OK », ce qui valide la nouvelle `connexion-console.html` ;
+- sur le style épuré (« Ce style épuré vous convient ? […] ») : « OK », ce qui valide la nouvelle `connexion-console.html` ;
 - `acces-refuse.html` : « OUI » ;
 - pour les dix autres : « VALIDE TOUS LES ECRANS direcmtent ».
 
