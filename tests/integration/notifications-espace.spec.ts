@@ -129,7 +129,25 @@ describe('REQ-UX-016 — la préférence : un upsert par la couche, une ligne pa
         B
       );
     await inserer();
-    await expect(inserer()).rejects.toThrow(/preferences_notification_apporteur_cle_unique/);
+    // Le message de Prisma ne nomme pas l'index : le refus se juge par son code et sa clé, et
+    // l'index par le catalogue, à son nom exact. C'est un INDEX unique (CREATE UNIQUE INDEX dans la
+    // migration), pas une contrainte de table : pg_constraint ne le verrait pas.
+    const refus = await inserer().then(
+      () => 'aucun refus',
+      (e: unknown) => String((e as Error).message)
+    );
+    expect(refus).toMatch(/23505/);
+    expect(refus).toMatch(/Key \(apporteur_id, cle\)=/);
+    const index = await base.prisma.$queryRawUnsafe<{ indexdef: string }[]>(
+      `SELECT indexdef FROM pg_indexes
+        WHERE tablename = 'preferences_notification'
+          AND indexname = 'preferences_notification_apporteur_cle_unique'`
+    );
+    expect(index.map((i) => i.indexdef)).toEqual([
+      expect.stringMatching(
+        /^CREATE UNIQUE INDEX preferences_notification_apporteur_cle_unique ON public\.preferences_notification USING btree \(apporteur_id, cle\)$/
+      ),
+    ]);
   });
 
   it('REQ-UX-016 : TÉMOIN — la préférence d’un autre apporteur est invisible par la couche', async () => {
