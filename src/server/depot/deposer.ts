@@ -80,6 +80,8 @@ export interface DemandeDeDepot {
   readonly saisie: SaisieDuDepot;
   readonly fiche: FicheDuDepot;
   readonly ipHash: string | null;
+  /** La réponse au défi anti-automatisation, si l'écran en a présenté un. */
+  readonly reponseCaptcha: string | null;
   readonly agentHash: string | null;
   readonly clientCapturedAt: Date | null;
 }
@@ -97,7 +99,15 @@ export interface PortsDuDepot {
   notifier(apporteurId: string, demande: DemandeDeNotification): Promise<unknown>;
   /** La limite de débit technique (`controlerLeDebit` en production), jugée avant toute lecture. */
   debit(ipHash: string): Promise<DebitDuDepot>;
+  /**
+   * Le défi anti-automatisation (REQ-DM-010) : décidé sur un signal TECHNIQUE de l'empreinte réseau,
+   * identique pour tous. Le port ne reçoit ni l'apporteur ni ses dépôts — il ne peut pas les compter.
+   */
+  captcha(ipHash: string | null, reponse: string | null): Promise<VerdictDuCaptcha>;
 }
+
+/** `a_presenter` : l'écran montre le défi, rien n'est écrit ; `resolu` ne refuse aucun dépôt. */
+export type VerdictDuCaptcha = 'non_requis' | 'resolu' | 'a_presenter';
 
 export interface DebitDuDepot {
   readonly autorise: boolean;
@@ -331,6 +341,9 @@ export async function deposer(
   if (demande.ipHash !== null) {
     const d = await ports.debit(demande.ipHash);
     if (!d.autorise) return { reessayer: true, repriseAt: d.repriseAt };
+  }
+  if ((await ports.captcha(demande.ipHash, demande.reponseCaptcha)) === 'a_presenter') {
+    return { issue: 'captcha', attributionId: null };
   }
   const r = await prisma.$transaction((tx) => deposerDans(tx, demande, ports), { timeout: 30_000 });
   if (estUnRefus(r.issue)) {
