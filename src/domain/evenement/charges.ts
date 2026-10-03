@@ -27,6 +27,12 @@
 import { z } from 'zod';
 import { ALGORITHME } from './journal';
 import { EVENEMENTS_APPORTEUR, MOTIFS_RESILIATION, STATUTS_APPORTEUR } from '../apporteur/statut';
+import {
+  ETATS_ATTRIBUTION,
+  EVENEMENTS_ATTRIBUTION,
+  NAISSANCES_ATTRIBUTION,
+} from '../attribution/machine';
+import { STATUTS_PIECE_KYC, TYPES_PIECE_KYC } from '../kyc/pieces';
 
 /**
  * Les codes d'événement que porte `apporteur_statut_modifie` : la NAISSANCE (`creer`, `de` nul), puis
@@ -70,7 +76,24 @@ export const FORMES = {
 
 /** Les valeurs de l'enum Prisma `TypeEvenementJournal`, confrontées au schéma par la garde. */
 export type TypeEvenementJournal =
-  'journal_ouvert' | 'apporteur_statut_modifie' | 'attribution_contact_purge';
+  | 'journal_ouvert'
+  | 'apporteur_statut_modifie'
+  | 'attribution_contact_purge'
+  | 'attribution_etat_modifie'
+  | 'attribution_peremption_suspendue'
+  | 'attribution_porteur_reaffecte'
+  | 'piece_kyc_statut_modifie';
+
+/** DM-08 : le porteur d'une attribution, une forme UNIQUE — sa population et son identifiant. */
+const PORTEUR = () =>
+  z
+    .object({
+      type: z.enum(['apporteur', 'utilisateur_console']),
+      id: FORMES.identifiant(),
+    })
+    .strict();
+
+const NAISSANCES: readonly string[] = Object.keys(NAISSANCES_ATTRIBUTION);
 
 export const CHARGES_PAR_TYPE = {
   /** La genèse : l'algorithme de chaînage, inscrit DANS la chaîne. */
@@ -109,6 +132,73 @@ export const CHARGES_PAR_TYPE = {
       acteur: FORMES.acteur().refine((a) => a.par === 'systeme', {
         message: 'acteur_systeme_attendu',
       }),
+    })
+    .strict(),
+  /**
+   * DM-08 (REQ-DM-006) : un changement d'état d'attribution, NAISSANCE comprise (`de` nul). Un type par
+   * GENRE de transition (partners/ADR-0022 §4) : `transition` est un code de la matrice
+   * (`EVENEMENTS_ATTRIBUTION`), dérivé ; ajouter une flèche modifie cette charge, jamais le schéma.
+   * Le lien d'intérêt s'écrit `declare` ou `non_declare` (REQ-DM-041), jamais un booléen.
+   */
+  attribution_etat_modifie: z
+    .object({
+      de: z.enum(ETATS_ATTRIBUTION).nullable(),
+      vers: z.enum(ETATS_ATTRIBUTION),
+      transition: z.enum(EVENEMENTS_ATTRIBUTION),
+      acteur: FORMES.acteur(),
+      lienInteret: z.enum(['declare', 'non_declare']).optional(),
+    })
+    .strict()
+    .superRefine(({ de, transition }, ctx) => {
+      if ((de === null) !== NAISSANCES.includes(transition)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['de'],
+          message: 'naissance_incoherente',
+        });
+      }
+    }),
+  /** DM-08 (REQ-DM-007) : le marqueur qui suspend la péremption, posé par un rôle habilité. */
+  attribution_peremption_suspendue: z
+    .object({ acteur: FORMES.acteur(), suspendueAt: FORMES.horodatage() })
+    .strict(),
+  /**
+   * DM-08 (W19 (5)) : le porteur réaffecté, de conseiller à conseiller ; aucune donnée de personne,
+   * aucune date, et jamais vers lui-même (décision A02 du 2026-10-02).
+   */
+  attribution_porteur_reaffecte: z
+    .object({ de: PORTEUR(), vers: PORTEUR(), acteur: FORMES.acteur() })
+    .strict()
+    .superRefine(({ de, vers }, ctx) => {
+      // W19 (5) ne connaît que la réaffectation ENTRE CONSEILLERS : retirer son entreprise à un
+      // apporteur, ou la lui donner, n'est pas une réaffectation (lentilles securite et schema). La forme
+      // unique du porteur reste ; un futur genre élargira ce raffinement, pas la forme.
+      for (const [cote, p] of [
+        ['de', de],
+        ['vers', vers],
+      ] as const) {
+        if (p.type !== 'utilisateur_console') {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: [cote],
+            message: 'porteur_non_conseiller',
+          });
+        }
+      }
+      if (de.type === vers.type && de.id === vers.id) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['vers'], message: 'meme_porteur' });
+      }
+    }),
+  /**
+   * DM-11 (REQ-DM-027) : un changement de statut d'une pièce du KYC, sur l'agrégat `piece_kyc`.
+   * `de` est nul à la naissance de la pièce. Ni fichier, ni IBAN, ni donnée de personne.
+   */
+  piece_kyc_statut_modifie: z
+    .object({
+      de: z.enum(STATUTS_PIECE_KYC).nullable(),
+      vers: z.enum(STATUTS_PIECE_KYC),
+      type: z.enum(TYPES_PIECE_KYC),
+      acteur: FORMES.acteur(),
     })
     .strict(),
 } satisfies Record<TypeEvenementJournal, z.ZodTypeAny>;

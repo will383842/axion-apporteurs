@@ -34,8 +34,8 @@
  * Il s'espace lui-même (300 ms, moins de 5 appels par seconde) : ce n'est pas l'application, il
  * ne passe pas par le registre des compteurs.
  */
-import { CAS_ENREGISTRES } from './cas-enregistres';
-import { lireFixtures } from './fixtures';
+import { CAS_ENREGISTRES, type CasEnregistre } from './cas-enregistres';
+import { lireFixtures, type FixtureEnregistree } from './fixtures';
 import { PARAMETRES, urlDeRecherche } from './parametres';
 import { schemaReponseDuTiers } from './schemas';
 
@@ -80,22 +80,72 @@ export function comparerFormes(enregistrees: Formes, vivantes: Formes): string[]
   return derives;
 }
 
-const pause = (ms: number) => new Promise((ok) => setTimeout(ok, ms));
+export const pause = (ms: number) => new Promise<void>((ok) => setTimeout(ok, ms));
 
-async function contrat(): Promise<number> {
+/** Un appel au tiers : la production passe `fetch`, le témoin une réponse fabriquée. */
+export type Appeler = (url: URL) => Promise<Response>;
+
+export const appelerLeTiers: Appeler = (url) =>
+  fetch(url, {
+    headers: { accept: 'application/json', 'user-agent': PARAMETRES.agentUtilisateur.valeur },
+    signal: AbortSignal.timeout(10_000),
+  });
+
+/**
+ * QA-T56 (REQ-QA-027) — la patience devant un 429. Le tiers limite son débit : un 429 dit « pas
+ * maintenant », pas « mon contrat a changé ». La sonde attend la durée de `Retry-After` (bornée,
+ * pour qu'un tiers ne suspende pas le job), rejoue, et après `TENTATIVES_SUR_429` refus le cas est
+ * NON MESURÉ — nommé, jamais compté comme dérive, jamais tu.
+ */
+export const TENTATIVES_SUR_429 = 3;
+// En SECONDES, comme `Retry-After` : la conversion est faite une fois, à l'usage.
+export const ATTENTE_PAR_DEFAUT_S = 5;
+export const ATTENTE_MAXIMALE_S = 60;
+
+/** `Retry-After` en millisecondes : des secondes, ou une date HTTP ; illisible → l'attente par défaut. */
+export function attenteDemandee(valeur: string | null, maintenant: number): number {
+  const brut = valeur?.trim() ?? '';
+  const ms = /^\d+$/.test(brut) ? Number(brut) * 1_000 : Date.parse(brut) - maintenant;
+  if (!Number.isFinite(ms) || ms < 0) return ATTENTE_PAR_DEFAUT_S * 1_000;
+  return Math.min(ms, ATTENTE_MAXIMALE_S * 1_000);
+}
+
+/** Ce que la nuit a mesuré : les dérives (le job rougit) et les cas que le tiers a refusé de servir. */
+export interface Mesure {
+  readonly derives: readonly string[];
+  readonly nonMesures: readonly string[];
+}
+
+/**
+ * Rejoue chaque cas contre le tiers et confronte les formes aux fixtures. L'appel et l'attente
+ * sont INJECTÉS : le témoin juge sans réseau ni horloge.
+ */
+export async function mesurer(
+  lesCas: readonly CasEnregistre[],
+  fixtures: readonly FixtureEnregistree[],
+  appeler: Appeler,
+  attendre: (ms: number) => Promise<void>,
+  maintenant: () => number = Date.now
+): Promise<Mesure> {
   const derives: string[] = [];
+  const nonMesures: string[] = [];
   const vivantes: unknown[] = [];
-  for (const { cas, q } of CAS_ENREGISTRES) {
+  const servis = new Set<string>();
+  for (const { cas, q } of lesCas) {
     try {
-      const reponse = await fetch(urlDeRecherche(q, PARAMETRES.urlDeBase.valeur), {
-        headers: { accept: 'application/json', 'user-agent': PARAMETRES.agentUtilisateur.valeur },
-        signal: AbortSignal.timeout(10_000),
-      });
-      if (reponse.status !== 200) {
+      let reponse = await appeler(urlDeRecherche(q, PARAMETRES.urlDeBase.valeur));
+      for (let t = 1; reponse.status === 429 && t < TENTATIVES_SUR_429; t++) {
+        await attendre(attenteDemandee(reponse.headers.get('retry-after'), maintenant()));
+        reponse = await appeler(urlDeRecherche(q, PARAMETRES.urlDeBase.valeur));
+      }
+      if (reponse.status === 429) {
+        nonMesures.push(cas);
+      } else if (reponse.status !== 200) {
         derives.push(`[appel] ${cas} : statut ${reponse.status}`);
       } else {
         const corps: unknown = await reponse.json();
         vivantes.push(corps);
+        servis.add(cas);
         const lu = schemaReponseDuTiers.safeParse(corps);
         if (!lu.success) {
           const i = lu.error.issues[0];
@@ -105,16 +155,37 @@ async function contrat(): Promise<number> {
     } catch (e) {
       derives.push(`[appel] ${cas} : ${e instanceof Error ? e.name : 'échec'}`);
     }
-    await pause(ESPACEMENT_MS);
+    await attendre(ESPACEMENT_MS);
   }
-  const enregistrees = formesDe(lireFixtures().map((f) => f.reponse));
+  // Les formes ne se confrontent qu'aux fixtures des cas SERVIS : un cas que le tiers n'a pas
+  // servi ne doit pas faire « disparaître » les clés qu'il était seul à porter.
+  const enregistrees = formesDe(fixtures.filter((f) => servis.has(f.cas)).map((f) => f.reponse));
   derives.push(...comparerFormes(enregistrees, formesDe(vivantes)));
-  process.stdout.write(
-    derives.length === 0
-      ? `✅ contrat recherche-entreprises — ${CAS_ENREGISTRES.length} cas rejoués contre l'API réelle, aucune dérive\n`
-      : `❌ contrat recherche-entreprises — ${derives.length} dérive(s) :\n${derives.map((d) => `  ${d}`).join('\n')}\n`
+  return { derives, nonMesures };
+}
+
+/**
+ * Le verdict imprimé, PUR : « non mesuré » n'est ni une dérive ni un vert silencieux — un
+ * avertissement nommé, que l'onglet du job affiche, et la sortie en zéro ; un 429 persistant ne
+ * rougit pas le nightly. Toute dérive rend 1.
+ */
+export function rendreLaMesure(m: Mesure, total: number): { code: 0 | 1; sortie: string } {
+  const avertissements = m.nonMesures.map(
+    (cas) =>
+      `::warning::contrat recherche-entreprises — ${cas} non mesuré : 429 après ${TENTATIVES_SUR_429} tentatives\n`
   );
-  return derives.length === 0 ? 0 : 1;
+  const verdict =
+    m.derives.length === 0
+      ? `✅ contrat recherche-entreprises — ${total - m.nonMesures.length} cas rejoués contre l'API réelle, aucune dérive, ${m.nonMesures.length} non mesuré(s)\n`
+      : `❌ contrat recherche-entreprises — ${m.derives.length} dérive(s) :\n${m.derives.map((d) => `  ${d}`).join('\n')}\n`;
+  return { code: m.derives.length === 0 ? 0 : 1, sortie: avertissements.join('') + verdict };
+}
+
+async function contrat(): Promise<number> {
+  const m = await mesurer(CAS_ENREGISTRES, lireFixtures(), appelerLeTiers, pause);
+  const { code, sortie } = rendreLaMesure(m, CAS_ENREGISTRES.length);
+  process.stdout.write(sortie);
+  return code;
 }
 
 if (process.argv[1]?.endsWith('derive-nocturne.ts') === true) {

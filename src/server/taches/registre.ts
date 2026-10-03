@@ -22,6 +22,12 @@ export const TACHES = {
   minimiser_candidatures: { req: 'REQ-JUR-029' },
   /** DM-45 — la vérification de la chaîne du journal, par ses liens de hash (`verifierChaine`). */
   journal_verifier: { req: 'REQ-DM-024' },
+  /** DM-48 — la purge du contact d'une attribution à échéance (`purgerLesContacts`). */
+  contacts_purger: { req: 'REQ-DM-031' },
+  /** DM-53 — la purge du SIREN des dépôts refusés, douze mois après le refus. */
+  siren_refuses_purger: { req: 'REQ-DM-043' },
+  /** DM-28 — la reprise des codes NAF nuls d'un dépôt en repli manuel (`completerLesCodesNaf`). */
+  naf_completer: { req: 'REQ-DM-046' },
 } as const satisfies Readonly<Record<string, { req: `REQ-${string}` }>>;
 
 export type NomDeTache = keyof typeof TACHES;

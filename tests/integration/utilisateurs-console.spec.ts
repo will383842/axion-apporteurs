@@ -114,7 +114,8 @@ describe('REQ-SEC-023 — requireRole en base réelle', () => {
     expect(
       decryptPii(
         { modele: MODELE_UTILISATEUR_CONSOLE, champ: CHAMPS_PII.email.chiffre, id },
-        u.emailChiffre,
+        // Actif : son adresse est présente (CHECK `utilisateurs_console_adresse_si_actif`).
+        u.emailChiffre!,
         CLES
       )
     ).toMatch(/^console-\d+@example\.org$/);
