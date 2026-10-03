@@ -1206,6 +1206,15 @@
       "alias": [
         "GATE-JUR-AIPD-SIGNEE"
       ]
+    },
+    {
+      "id": "forge:instantane",
+      "phase": 1,
+      "script": "scripts/gates/forge-instantane.ts",
+      "tache": "QA-T64",
+      "verifie": "La forge lue UNE fois par porte A : en tête du job gate-a, l'étape fait chaque lecture de LECTURES_DE_LA_PORTE_A (les trois de gov:etat, PR ouvertes, PR fusionnées, issues ouvertes, et les PR fusionnées avec leur corps de gov:trace) une seule fois et écrit l'instantané sous un nom fixe dans RUNNER_TEMP ; une lecture qui échoue ou ne rend pas du JSON fait échouer l'étape, sans instantané partiel. Les étapes qui lisent la forge (gov:trace, Tests, req:check, gov:etat) reçoivent GOV_FORGE dans leur env: figé dans PORTE_A_FIGEE, sans écriture dans l'environnement du job ; gov:etat, gov:trace et tests/setup-forge.ts le lisent par un lecteur unique, lireDansLInstantane : absent, illisible, d'une autre forme ou sans la lecture demandée, il fait échouer en le nommant, jamais un repli sur la forge. PRÉSÉANCE : GOV_ETAT_GH l'emporte. GOV_FORGE est refusé hors de la CI (CI et GITHUB_ACTIONS) et de vitest. CE QU'ELLE NE TIENT PAS : gov:pr n'y est pas branché, il ne lit pas la forge en porte A (il y tourne sans argument) ; une revue publiée pendant le job n'est pas vue par ce run, le rejeu la voit.",
+      "fixtureRouge": "un instantané corrompu (« { pas du json ») posé dans GOV_FORGE sous la CI : gov:trace et gov:etat échouent en nommant « instantané de la forge illisible » ; le même instantané hors de la CI et de vitest est refusé, nommé",
+      "preuveRouge": "Mesuré par A06 le 2026-10-03 : avant le branchement de gov:etat sur le lecteur partagé, le témoin « la vraie garde gov:etat, avec GOV_FORGE et sans gh sur le chemin » de tests/unit/gouvernance/forge-instantane.spec.ts rougissait sur [github_illisible] : gov:etat ignorait l'instantané et appelait la forge. Après branchement, 9/9 dans ce fichier, et 9/9 dans forge-lue-une-fois.spec.ts. Rouge constaté par: A06"
     }
   ]
 }
