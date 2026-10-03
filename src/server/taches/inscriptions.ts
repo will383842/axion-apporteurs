@@ -225,8 +225,9 @@ export function inscriptions(
  * perdu, et le battement reste la trace.
  *
  * Le retour porte les `event_id` manquants (`eventIdsManquants`) : le battement les conserve, dans
- * Partners. Le type `Passage` du lanceur ne déclare que des compteurs numériques ; la colonne
- * `battements.compteurs` est du JSON, et la liste y est écrite telle quelle.
+ * Partners, tout le jour — chaque minute différée reporte les compteurs qu'il porte
+ * (`passageQuotidien`). Le type `Passage` du lanceur ne déclare que des compteurs numériques ; la
+ * colonne `battements.compteurs` est du JSON, et la liste y est écrite telle quelle.
  */
 export function passageDeReconciliation(
   prisma: PrismaClient,
@@ -234,13 +235,7 @@ export function passageDeReconciliation(
   alerteur: Alerteur | null
 ): Passage {
   const passage = passageQuotidien({
-    dernierSucces: async () =>
-      (
-        await prisma.battement.findUnique({
-          where: { tache: 'reconciliation_axionia' },
-          select: { dernierSuccesAt: true },
-        })
-      )?.dernierSuccesAt ?? null,
+    ...battementDeLaReconciliation(prisma),
     maintenant: () => new Date(horlogeSysteme.maintenant()),
     reconcilier: () => {
       const lu = lireEnvironnement(env);
@@ -272,6 +267,19 @@ export function passageDeReconciliation(
     },
   });
   return passage as unknown as Passage;
+}
+
+/** Le battement de `reconciliation_axionia`, lu en base : son dernier succès et les compteurs qu'il porte. */
+export function battementDeLaReconciliation(prisma: PrismaClient) {
+  const lire = () =>
+    prisma.battement.findUnique({
+      where: { tache: 'reconciliation_axionia' },
+      select: { dernierSuccesAt: true, compteurs: true },
+    });
+  return {
+    dernierSucces: async (): Promise<Date | null> => (await lire())?.dernierSuccesAt ?? null,
+    derniersCompteurs: async (): Promise<unknown> => (await lire())?.compteurs ?? null,
+  };
 }
 
 /**

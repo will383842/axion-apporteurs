@@ -398,6 +398,7 @@ describe('REQ-QA-026 — la tâche quotidienne et son alerte', () => {
     const essai = (dernier: Date | null) =>
       passageQuotidien({
         dernierSucces: async () => dernier,
+        derniersCompteurs: async () => null,
         maintenant,
         reconcilier: reconcilierCompte,
       })();
@@ -451,6 +452,26 @@ describe('REQ-QA-026 — la tâche quotidienne et son alerte', () => {
     await minute();
     expect(jouee).toBe(2);
     expect(battement.compteurs).toEqual(resultat);
+  });
+
+  it('REQ-QA-026 : différée, elle ne reporte que des compteurs en objet — une colonne nulle, une liste, un nombre ou un texte ne reportent rien', async () => {
+    const essai = (porte: unknown) =>
+      passageQuotidien({
+        dernierSucces: async () => new Date(MAINTENANT_MS),
+        derniersCompteurs: async () => porte,
+        maintenant: () => new Date(MAINTENANT_MS),
+        reconcilier: async () => {
+          throw new Error('jamais appelée le jour même');
+        },
+      })();
+    for (const porte of [null, ['e7'], 4, 'e7'])
+      expect(await essai(porte)).toEqual({ differee: 1 });
+    expect(await essai({ manquants: 2, eventIdsManquants: ['e7'] })).toEqual({
+      manquants: 2,
+      eventIdsManquants: ['e7'],
+      differee: 1,
+    });
+    expect(await essai({ differee: 5 })).toEqual({ differee: 1 });
   });
 
   it('REQ-QA-026 : les genres d’alerte sont ceux des signaux, et l’alerte ne montre qu’un genre, un motif fermé et un nombre', () => {

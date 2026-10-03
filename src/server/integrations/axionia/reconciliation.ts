@@ -1,6 +1,7 @@
 /**
- * La réconciliation avec axion-ia — INT-T08-P (REQ-INT-012). Elle prépare le job quotidien de
- * REQ-INT-013 sans le couvrir : la comparaison des encaissements par SIREN reste à une tâche.
+ * La réconciliation avec axion-ia — INT-T08-P (REQ-INT-012, REQ-INT-013). Elle porte le job
+ * quotidien de REQ-INT-013 pour la nomination INTERNE des `event_id` manquants (rattrapage 81) ; la
+ * comparaison des encaissements par SIREN reste à INT-T73-P.
  *
  * UN PASSAGE. Partners relit la file de sortie d'axion-ia (`relecture.ts`) depuis la plus haute
  * séquence qu'il a REÇUE, moins `RECOUVREMENT_SEQUENCES`, page après page, au plus

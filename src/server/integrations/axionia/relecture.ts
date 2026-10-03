@@ -161,8 +161,9 @@ export function clientRelecture(c: CanalAxionia): LirePage {
       return { ok: false, motif: 'entete_illisible' };
     }
     const lignes: LigneRelue[] = [];
-    // Chaque séquence croît STRICTEMENT depuis `apres` : une page rejouée, mélangée ou d'une autre
-    // lecture (la réponse n'est liée à la requête que par cet ordre) est refusée entière.
+    // Chaque séquence croît STRICTEMENT depuis `apres` : une page rejouée ou mélangée est refusée
+    // entière. Une page authentique d'une lecture qui part PLUS LOIN dans la file passe cet ordre :
+    // la lier à sa requête attend la signature des en-têtes et des paramètres (INT-T70-P, INT-T72-A).
     let precedente = apres;
     for (const corps of r.texte === '' ? [] : r.texte.split('\n')) {
       const ligne = lireLigne(corps);

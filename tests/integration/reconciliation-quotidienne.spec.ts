@@ -353,6 +353,7 @@ describe('REQ-QA-026 — la réconciliation est une tâche du registre, jouée u
 
     const differee = await passageQuotidien({
       dernierSucces: async () => ceMatin,
+      derniersCompteurs: async () => null,
       maintenant,
       reconcilier: reconcilierCompte,
     })();
@@ -360,6 +361,7 @@ describe('REQ-QA-026 — la réconciliation est une tâche du registre, jouée u
 
     const jouees = await passageQuotidien({
       dernierSucces: async () => hier,
+      derniersCompteurs: async () => null,
       maintenant,
       reconcilier: reconcilierCompte,
     })();
@@ -368,6 +370,7 @@ describe('REQ-QA-026 — la réconciliation est une tâche du registre, jouée u
 
     await passageQuotidien({
       dernierSucces: async () => null,
+      derniersCompteurs: async () => null,
       maintenant,
       reconcilier: reconcilierCompte,
     })();
