@@ -188,9 +188,20 @@
             }
           },
           "else": {
-            "properties": {
-              "branch": {
-                "pattern": "^(t/[A-Za-z0-9][A-Za-z0-9._-]*|lot/[A-Za-z0-9][A-Za-z0-9._/-]*)$"
+            "_commentaire": "GOV-143 — UNE exception nommee, fermee et datee : INT-T08-P, fusionnee par #539 depuis une branche hors motif, admet cette branche et elle seule ; toute autre tache de Partners garde le motif de partners/ADR-0007, inchange. La liste vit dans scripts/lot/cloture.ts (BRANCHES_HORS_MOTIF_ADMISES), qui exige aussi la PR et le sha attestes.",
+            "if": {
+              "required": ["id", "branch"],
+              "properties": {
+                "id": { "const": "INT-T08-P" },
+                "branch": { "const": "feat/INT-T08-P" }
+              }
+            },
+            "then": true,
+            "else": {
+              "properties": {
+                "branch": {
+                  "pattern": "^(t/[A-Za-z0-9][A-Za-z0-9._-]*|lot/[A-Za-z0-9][A-Za-z0-9._/-]*)$"
+                }
               }
             }
           }
