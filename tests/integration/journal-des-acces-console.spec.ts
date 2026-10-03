@@ -1,9 +1,10 @@
 // @req REQ-SEC-058
 /**
- * SEC-58 — le journal des accès à la console, en base RÉELLE (forme d'A02). Ajout seul, tenu par la
- * base : UPDATE et TRUNCATE refusés ; DELETE refusé hors du marqueur de la purge, posé par elle seule,
- * en local à sa transaction. Une connexion n'a pas de cible, une lecture en a toujours une. La purge
- * supprime l'échu et garde le reste, à la milliseconde. Le lecteur unique trace AVANT de déchiffrer.
+ * SEC-58 — le journal des accès à la console, en base RÉELLE (forme commune d'A02 et de la sécurité).
+ * Ajout seul par le gabarit commun `refuser_modification_sauf` : la purge vide l'utilisateur, la cible
+ * et l'empreinte réseau, et pose `purge_at`, une fois ; la ligne nue reste. UPDATE hors purge, DELETE
+ * et TRUNCATE refusés. Une connexion n'a pas de cible, une lecture en a toujours une, avant la purge.
+ * Seule une connexion réussie s'inscrit. Le lecteur unique trace AVANT de déchiffrer.
  * Sous `partners_app`, le rôle du serveur, sauf TRUNCATE, refusé même au propriétaire.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
@@ -17,7 +18,7 @@ import {
 import {
   journaliserConnexionConsole,
   lireCoordonneesDeLApporteur,
-} from '../../src/server/console/journal-acces';
+} from '../../src/server/console/journal-des-acces';
 import {
   limiteDuJournalDesAcces,
   purgerLeJournalDesAccesConsole,
@@ -31,6 +32,7 @@ let base: Base;
 let app: PrismaClient;
 
 const MAINTENANT = new Date('2027-10-03T12:00:00.000Z');
+const IP_HASH = '0123456789abcdef';
 const hex = (octets: number) => randomBytes(octets).toString('hex');
 /** Des clés de test, fabriquées à l'exécution (jamais un secret réel). */
 const cles = clesPii({
@@ -87,19 +89,23 @@ async function unApporteur(): Promise<string> {
   return id;
 }
 
+/** Une trace de lecture, posée à la date donnée. */
 async function uneTrace(utilisateurConsoleId: string, survenuAt: Date): Promise<string> {
-  return (
-    await base.prisma.journalAccesConsole.create({
-      data: {
-        id: randomUUID(),
-        utilisateurConsoleId,
-        nature: 'connexion',
-        cibleId: null,
-        survenuAt,
-      },
-    })
-  ).id;
+  const id = randomUUID();
+  await base.prisma.journalAccesConsole.create({
+    data: {
+      id,
+      utilisateurConsoleId,
+      nature: 'lecture_coordonnees_apporteur',
+      cibleId: randomUUID(),
+      ipHash: IP_HASH,
+      survenuAt,
+    },
+  });
+  return id;
 }
+
+const ligne = (id: string) => base.prisma.journalAccesConsole.findUniqueOrThrow({ where: { id } });
 
 async function refus(p: Promise<unknown>): Promise<string> {
   try {
@@ -110,11 +116,96 @@ async function refus(p: Promise<unknown>): Promise<string> {
   throw new Error('aucun refus');
 }
 
-const existe = async (id: string) =>
-  (await base.prisma.journalAccesConsole.count({ where: { id } })) === 1;
+const GABARIT = /refuser_modification_sauf|ajout seul/i;
 
-describe('REQ-SEC-058 — le journal des accès à la console est en ajout seul', () => {
-  it('REQ-SEC-058 : TÉMOIN — un UPDATE est refusé, sous le rôle du serveur', async () => {
+describe('REQ-SEC-058 — une ligne par accès, par identifiants seuls', () => {
+  it('REQ-SEC-058 : TÉMOIN — une lecture de coordonnées écrit UNE ligne, et rend le clair', async () => {
+    const u = await unUtilisateur();
+    const a = await unApporteur();
+    const lu = await lireCoordonneesDeLApporteur(
+      app,
+      { utilisateurConsoleId: u, apporteurId: a, ipHash: IP_HASH },
+      cles
+    );
+    expect(lu.nom).toBe('Témoin');
+    const lignes = await base.prisma.journalAccesConsole.findMany({
+      where: { utilisateurConsoleId: u },
+    });
+    expect(lignes).toHaveLength(1);
+    expect(lignes[0]).toMatchObject({
+      nature: 'lecture_coordonnees_apporteur',
+      cibleId: a,
+      ipHash: IP_HASH,
+    });
+  });
+
+  it('REQ-SEC-058 : TÉMOIN — une connexion réussie écrit une ligne sans cible ; une connexion échouée n’en écrit aucune', async () => {
+    const u = await unUtilisateur();
+    await journaliserConnexionConsole(app, { utilisateurConsoleId: u, ipHash: IP_HASH });
+    const lignes = await base.prisma.journalAccesConsole.findMany({
+      where: { utilisateurConsoleId: u },
+    });
+    expect(lignes).toHaveLength(1);
+    expect(lignes[0]).toMatchObject({ nature: 'connexion', cibleId: null });
+    // Une connexion échouée n'a pas d'utilisateur : la base refuse une ligne sans lui, avant la purge.
+    expect(
+      await refus(
+        app.journalAccesConsole.create({
+          data: { id: randomUUID(), nature: 'connexion', ipHash: IP_HASH },
+        })
+      )
+    ).toContain('journal_acces_console_purge_liee');
+  });
+
+  it('REQ-SEC-058 : TÉMOIN — aucune colonne ne peut porter une donnée de personne', async () => {
+    const colonnes = (
+      await base.prisma.$queryRawUnsafe<{ c: string; t: string }[]>(
+        `SELECT column_name AS c, data_type AS t FROM information_schema.columns
+         WHERE table_name = 'journal_acces_console' ORDER BY column_name`
+      )
+    ).map((r) => `${r.c}:${r.t}`);
+    expect(colonnes).toEqual([
+      'cible_id:uuid',
+      'id:uuid',
+      'ip_hash:character',
+      'nature:USER-DEFINED',
+      'purge_at:timestamp with time zone',
+      'survenu_at:timestamp with time zone',
+      'utilisateur_console_id:uuid',
+    ]);
+  });
+
+  it('REQ-SEC-058 : TÉMOIN — une empreinte hors forme est refusée sur le nom du CHECK', async () => {
+    const u = await unUtilisateur();
+    expect(
+      await refus(
+        app.journalAccesConsole.create({
+          data: {
+            id: randomUUID(),
+            utilisateurConsoleId: u,
+            nature: 'connexion',
+            ipHash: 'ADRESSE-EN-CLAIR',
+          },
+        })
+      )
+    ).toContain('journal_acces_console_ip_hash_hex');
+  });
+
+  it('REQ-SEC-058 : TÉMOIN — une connexion avec cible, ou une lecture sans cible, est refusée (journal_acces_console_cible)', async () => {
+    const u = await unUtilisateur();
+    const ecrire = (nature: 'connexion' | 'lecture_coordonnees_contact', cibleId: string | null) =>
+      app.journalAccesConsole.create({
+        data: { id: randomUUID(), utilisateurConsoleId: u, nature, cibleId },
+      });
+    expect(await refus(ecrire('connexion', randomUUID()))).toContain('journal_acces_console_cible');
+    expect(await refus(ecrire('lecture_coordonnees_contact', null))).toContain(
+      'journal_acces_console_cible'
+    );
+  });
+});
+
+describe('REQ-SEC-058 — ajout seul, sauf la purge', () => {
+  it('REQ-SEC-058 : TÉMOIN — un UPDATE hors purge, un DELETE et un TRUNCATE sont refusés', async () => {
     const id = await uneTrace(await unUtilisateur(), MAINTENANT);
     expect(
       await refus(
@@ -123,98 +214,67 @@ describe('REQ-SEC-058 — le journal des accès à la console est en ajout seul'
           id
         )
       )
-    ).toContain('journal_acces_console_refuser');
-  });
-
-  it('REQ-SEC-058 : TÉMOIN — un DELETE sans marqueur est refusé', async () => {
-    const id = await uneTrace(await unUtilisateur(), new Date('2020-01-01T00:00:00.000Z'));
+    ).toMatch(GABARIT);
     expect(
       await refus(
         app.$executeRawUnsafe(`DELETE FROM "journal_acces_console" WHERE "id" = $1::uuid`, id)
       )
-    ).toContain('journal_acces_console_refuser');
-    expect(await existe(id)).toBe(true);
-  });
-
-  it('REQ-SEC-058 : TÉMOIN — TRUNCATE est refusé, même au propriétaire', async () => {
-    expect(
-      await refus(base.prisma.$executeRawUnsafe(`TRUNCATE "journal_acces_console"`))
-    ).toContain('journal_acces_console_refuser');
-  });
-
-  it('REQ-SEC-058 : TÉMOIN — le marqueur ne fuit pas hors de sa transaction', async () => {
-    const id = await uneTrace(await unUtilisateur(), new Date('2020-01-01T00:00:00.000Z'));
-    await app.$transaction(async (tx) => {
-      await tx.$executeRawUnsafe(`SELECT set_config('partners.purge_journal_acces', 'on', true)`);
-    });
-    expect(
-      await refus(
-        app.$executeRawUnsafe(`DELETE FROM "journal_acces_console" WHERE "id" = $1::uuid`, id)
-      )
-    ).toContain('journal_acces_console_refuser');
-  });
-
-  it('REQ-SEC-058 : TÉMOIN — une connexion avec cible, ou une lecture sans cible, est refusée sur le nom du CHECK', async () => {
-    const u = await unUtilisateur();
-    const ecrire = (
-      nature: 'connexion' | 'lecture_coordonnees_apporteur',
-      cibleId: string | null
-    ) =>
-      app.journalAccesConsole.create({
-        data: { id: randomUUID(), utilisateurConsoleId: u, nature, cibleId },
-      });
-    expect(await refus(ecrire('connexion', randomUUID()))).toContain('journal_acces_console_cible');
-    expect(await refus(ecrire('lecture_coordonnees_apporteur', null))).toContain(
-      'journal_acces_console_cible'
+    ).toMatch(GABARIT);
+    expect(await refus(base.prisma.$executeRawUnsafe(`TRUNCATE "journal_acces_console"`))).toMatch(
+      GABARIT
     );
   });
 
-  it('REQ-SEC-058 : la table est protégée par ses déclencheurs (ligne et troncature)', async () => {
-    const noms = (
-      await base.prisma.$queryRawUnsafe<{ n: string }[]>(
-        `SELECT tgname AS n FROM pg_trigger WHERE tgrelid = 'journal_acces_console'::regclass AND NOT tgisinternal ORDER BY 1`
+  it('REQ-SEC-058 : TÉMOIN — une purge PARTIELLE est refusée (journal_acces_console_purge_liee)', async () => {
+    const id = await uneTrace(await unUtilisateur(), MAINTENANT);
+    expect(
+      await refus(
+        app.$executeRawUnsafe(
+          `UPDATE "journal_acces_console" SET "utilisateur_console_id" = NULL, "purge_at" = now() WHERE "id" = $1::uuid`,
+          id
+        )
       )
-    ).map((r) => r.n);
-    expect(noms).toEqual(['journal_acces_console_ajout_seul', 'journal_acces_console_troncature']);
+    ).toContain('journal_acces_console_purge_liee');
+  });
+
+  it('REQ-SEC-058 : TÉMOIN — après la purge, un purge_at réécrit ou une valeur qui revient est refusé', async () => {
+    const u = await unUtilisateur();
+    const id = await uneTrace(u, new Date('2020-01-01T00:00:00.000Z'));
+    await purgerLeJournalDesAccesConsole(app, MAINTENANT);
+    expect(
+      await refus(
+        app.$executeRawUnsafe(
+          `UPDATE "journal_acces_console" SET "purge_at" = now() WHERE "id" = $1::uuid`,
+          id
+        )
+      )
+    ).toMatch(GABARIT);
+    expect(
+      await refus(
+        app.$executeRawUnsafe(
+          `UPDATE "journal_acces_console" SET "utilisateur_console_id" = $2::uuid, "purge_at" = NULL WHERE "id" = $1::uuid`,
+          id,
+          u
+        )
+      )
+    ).toMatch(GABARIT);
   });
 });
 
 describe('REQ-SEC-058 — la purge à l’échéance', () => {
-  it('REQ-SEC-058 : TÉMOIN — la purge supprime l’échu et garde le reste, à la milliseconde', async () => {
+  it('REQ-SEC-058 : TÉMOIN — la purge vide l’échu, à la milliseconde, garde le reste, et garde la ligne nue', async () => {
     const u = await unUtilisateur();
     const limite = limiteDuJournalDesAcces(MAINTENANT);
     const echue = await uneTrace(u, new Date(limite.getTime() - 1));
     const aLaBorne = await uneTrace(u, limite);
     await purgerLeJournalDesAccesConsole(app, MAINTENANT);
-    expect(await existe(echue)).toBe(false);
-    expect(await existe(aLaBorne)).toBe(true);
-  });
-});
-
-describe('REQ-SEC-058 — le lecteur unique trace, puis déchiffre', () => {
-  it('REQ-SEC-058 : TÉMOIN — une lecture de coordonnées laisse UNE trace, par identifiants, et rend le clair', async () => {
-    const u = await unUtilisateur();
-    const a = await unApporteur();
-    const lu = await lireCoordonneesDeLApporteur(
-      app,
-      { utilisateurConsoleId: u, apporteurId: a },
-      cles
-    );
-    expect(lu.nom).toBe('Témoin');
-    const traces = await base.prisma.journalAccesConsole.findMany({
-      where: { utilisateurConsoleId: u },
+    expect(await ligne(echue)).toMatchObject({
+      utilisateurConsoleId: null,
+      cibleId: null,
+      ipHash: null,
+      purgeAt: MAINTENANT,
+      nature: 'lecture_coordonnees_apporteur',
     });
-    expect(traces).toHaveLength(1);
-    expect(traces[0]).toMatchObject({ nature: 'lecture_coordonnees_apporteur', cibleId: a });
-  });
-
-  it('REQ-SEC-058 : une connexion laisse une trace sans cible', async () => {
-    const u = await unUtilisateur();
-    await journaliserConnexionConsole(app, u);
-    const traces = await base.prisma.journalAccesConsole.findMany({
-      where: { utilisateurConsoleId: u },
-    });
-    expect(traces).toHaveLength(1);
-    expect(traces[0]).toMatchObject({ nature: 'connexion', cibleId: null });
+    expect(await ligne(aLaBorne)).toMatchObject({ utilisateurConsoleId: u, purgeAt: null });
   });
 });
