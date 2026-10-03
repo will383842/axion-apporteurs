@@ -670,7 +670,7 @@ DE COMMERÇANT. À DÉFAUT, LES RÈGLES DE COMPÉTENCE DE DROIT COMMUN S'APPLIQU
 **Les parties reconnaissent que la présente clause a fait l'objet, dans l'enveloppe de signature
 électronique, d'une acceptation distincte et spécialement signalée, conservée dans le fichier de preuve
 (article 48 du code de procédure civile : spécification très apparente). L'Apporteur déclare contracter en
-qualité de {{APPORTEUR_QUALITE}}.**
+la qualité suivante : {{APPORTEUR_QUALITE}}.**
 
 > *Cette clause a été portée à la connaissance de l'Apporteur et acceptée par lui de manière spécifique,
 > par une case distincte au moment de la signature électronique (article 48 du code de procédure civile).*
