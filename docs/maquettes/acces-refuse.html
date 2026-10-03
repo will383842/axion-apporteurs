@@ -1401,6 +1401,129 @@
           display: flex;
         }
       }
+      /* epure:atelier — l'atelier replié par défaut (UX-P1-52) */
+      body:not(.atelier-ouvert) .atelier {
+        grid-template-columns: minmax(0, 1fr);
+      }
+      body:not(.atelier-ouvert) .etats,
+      body:not(.atelier-ouvert) .notes {
+        display: none;
+      }
+      body:not(.atelier-ouvert) .scene {
+        grid-column: 1;
+      }
+      .atelier-tete h1 small {
+        display: none;
+      }
+      .atelier-tete {
+        padding: 8px 20px;
+      }
+      .atelier-tete h1 {
+        font-size: 20px;
+      }
+      .fictif {
+        font-size: 14px;
+        padding: 4px 10px;
+      }
+      #voir-atelier[aria-pressed='true'] {
+        background: var(--atelier-texte);
+        color: var(--atelier-surface);
+      }
+      /* epure:ecran — contraste et hiérarchie (UX-P1-52). Mocha franc sur ivoire, carte
+         blanche détachée, bouton terracotta plein ; aucun gris pâle pour une information utile. */
+      .defile.centre {
+        background: var(--fond);
+      }
+      .defile.centre .panneau {
+        background: var(--surface);
+        border: 1px solid var(--surface-2);
+        border-radius: 16px;
+        box-shadow:
+          0 2px 4px rgba(42, 37, 32, 0.08),
+          0 12px 32px rgba(42, 37, 32, 0.12);
+        padding: 32px;
+        width: min(420px, 100%);
+        gap: 20px;
+        color: var(--texte);
+      }
+      .defile.centre .panneau h2 {
+        font-size: 28px;
+        font-weight: 800;
+        letter-spacing: -0.01em;
+      }
+      .defile.centre .panneau .etiquette {
+        font-weight: 700;
+        color: var(--texte);
+      }
+      .defile.centre .panneau input {
+        min-height: 52px;
+        font-size: 18px;
+        border: 2px solid var(--bord);
+      }
+      .defile.centre .panneau .c-bouton {
+        min-height: 52px;
+        font-size: 18px;
+        width: 100%;
+      }
+      .defile.centre .panneau .aide {
+        margin: 0;
+        font-size: 15px;
+        color: var(--texte-doux);
+        text-align: center;
+      }
+      .defile.centre .panneau .doux {
+        color: var(--texte-doux);
+      }
+      /* Toutes les pages : le fond ivoire, des cartes blanches détachées, un titre qui domine. */
+      .app .defile {
+        background: var(--fond);
+      }
+      .app .defile .carte {
+        background: var(--surface);
+        border: 1px solid var(--surface-2);
+        border-radius: 14px;
+        box-shadow:
+          0 1px 2px rgba(42, 37, 32, 0.08),
+          0 6px 18px rgba(42, 37, 32, 0.1);
+      }
+      .app .c-titre {
+        font-size: 30px;
+        font-weight: 800;
+        letter-spacing: -0.01em;
+        color: var(--texte);
+      }
+      .app .doux {
+        color: var(--texte-doux);
+      }
+      /* Un état vide ou un refus : une carte pleine, pas un cadre pointillé. */
+      .app .defile .vide {
+        background: var(--surface);
+        border: 1px solid var(--surface-2);
+        border-radius: 14px;
+        box-shadow:
+          0 1px 2px rgba(42, 37, 32, 0.08),
+          0 6px 18px rgba(42, 37, 32, 0.1);
+      }
+      /* Les tableaux sur une carte blanche, les adresses dans la police du texte. */
+      .app .defile table {
+        background: var(--surface);
+        border-radius: 12px;
+        box-shadow:
+          0 1px 2px rgba(42, 37, 32, 0.08),
+          0 6px 18px rgba(42, 37, 32, 0.1);
+      }
+      .app .mono {
+        font-family: inherit;
+        font-size: 15px;
+      }
+      .defile.centre .panneau .rangee {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px 16px;
+        margin: 0;
+      }
 
       /* charte:fin */
       .cache {
@@ -1422,6 +1545,7 @@
       </h1>
       <p class="fictif">Données fictives : aucune entreprise, personne ni adresse réelles.</p>
       <div class="reglages" role="group" aria-label="Réglages de la maquette">
+        <button type="button" id="voir-atelier" aria-pressed="false">États et notes</button>
         <button type="button" data-largeur="1280" data-hauteur="800" aria-pressed="true">
           Bureau 1280
         </button>
@@ -1556,10 +1680,7 @@
                       </svg>
                       Cette page n’est pas ouverte à votre rôle
                     </h3>
-                    <p>
-                      « Contrats » est réservé aux rôles administrateur et comptable. Votre rôle,
-                      qualifieur, ouvre la qualification, les apporteurs et les prospects.
-                    </p>
+                    <p>« Contrats » est réservé aux administrateurs et aux comptables.</p>
                     <p>
                       <b>Quoi faire :</b> si vous avez besoin de cette page, demandez à un
                       administrateur de changer votre rôle.
@@ -1669,10 +1790,7 @@
                         <path d="M8 11V8a4 4 0 018 0v3" /></svg
                       >Ce geste n’est pas ouvert à votre rôle
                     </p>
-                    <p>
-                      Suspendre un apporteur est réservé aux administrateurs : rien n’a été modifié.
-                      Si la suspension vous paraît nécessaire, signalez-la à un administrateur.
-                    </p>
+                    <p>Rien n’a été modifié. Seul un administrateur peut suspendre un apporteur.</p>
                     <p>
                       <a class="c-bouton second" href="console-cadre.html#etat-comptable"
                         >Revenir à la liste</a
@@ -1699,11 +1817,7 @@
                 <div class="defile centre" tabindex="0" role="region" aria-label="Session">
                   <div class="panneau">
                     <h2>Votre session a pris fin</h2>
-                    <p>
-                      Les sessions de la console sont courtes, pour qu’un poste laissé ouvert ne le
-                      reste pas longtemps. Reconnectez-vous : vous reviendrez sur la page que vous
-                      consultiez.
-                    </p>
+                    <p>Reconnectez-vous : vous reviendrez sur cette page.</p>
                     <a class="c-bouton" href="connexion-console.html#etat-adresse"
                       >Me reconnecter</a
                     >
@@ -1720,10 +1834,7 @@
                 <div class="defile centre" tabindex="0" role="region" aria-label="Accès fermé">
                   <div class="panneau">
                     <h2>Votre accès à la console est fermé</h2>
-                    <p>
-                      Un administrateur a désactivé ce compte. Ce qui a été fait reste enregistré.
-                      Pour rouvrir l’accès, adressez-vous à un administrateur d’Axion-IA.
-                    </p>
+                    <p>Pour rouvrir l’accès, adressez-vous à un administrateur d’Axion-IA.</p>
                   </div>
                 </div>
               </div>
@@ -2270,6 +2381,25 @@
               champ.focus();
             }
           }
+        });
+      })();
+    </script>
+    <script>
+      // epure:atelier — ouvrir ou replier la liste des états et les notes, puis réajuster l'écran.
+      (function () {
+        var b = document.getElementById('voir-atelier');
+        var ajuster = function () {
+          var z = document.getElementById('zoom-ajuster');
+          if (z) z.click();
+        };
+        if (b)
+          b.addEventListener('click', function () {
+            var ouvert = document.body.classList.toggle('atelier-ouvert');
+            b.setAttribute('aria-pressed', String(ouvert));
+            setTimeout(ajuster, 0);
+          });
+        window.addEventListener('load', function () {
+          setTimeout(ajuster, 50);
         });
       })();
     </script>
