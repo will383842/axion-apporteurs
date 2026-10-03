@@ -64,6 +64,7 @@ const PORTS: PortsDuDepot = {
   adresseDe: async () => 'apporteur.temoin@example.org',
   notifier: async () => undefined,
   debit: async () => ({ autorise: true, repriseAt: null }),
+  captcha: async () => 'non_requis',
 };
 
 /** Le dépôt, sous un débit qui laisse passer : un « réessayer » ici serait un défaut du banc. */
@@ -138,6 +139,7 @@ function demande(apporteurId: string, siren: string): DemandeDeDepot {
     },
     fiche: { raisonSociale: 'Entreprise Témoin SAS', etatAdministratif: 'actif' },
     ipHash: hex(8),
+    reponseCaptcha: null,
     agentHash: hex(32),
     clientCapturedAt: null,
   };
@@ -468,5 +470,18 @@ describe('REQ-SEC-022 — le refus est notifié (`refus_declaration`)', () => {
     await deposerOuEchouer(base.prisma, demande(await apporteur('signe'), siren), ports);
     await deposerOuEchouer(base.prisma, demande(await apporteur('suspendu'), unSiren()), ports);
     expect(envois).toEqual([]);
+  });
+});
+
+describe('REQ-DM-010 — un captcha résolu ne refuse aucun dépôt', () => {
+  it('REQ-DM-010 : défi résolu → le dépôt est enregistré, comme sans défi', async () => {
+    const siren = unSiren();
+    const r = await deposerOuEchouer(
+      base.prisma,
+      { ...demande(await apporteur('signe'), siren), reponseCaptcha: 'reponse-du-defi' },
+      { ...PORTS, captcha: async (_ip, reponse) => (reponse === null ? 'a_presenter' : 'resolu') }
+    );
+    expect(r.issue).toBe('enregistree');
+    expect(await base.prisma.attribution.count({ where: { siren } })).toBe(1);
   });
 });

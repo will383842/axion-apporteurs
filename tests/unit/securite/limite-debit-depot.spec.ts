@@ -1,4 +1,5 @@
 // @req REQ-DM-009
+// @req REQ-DM-010
 /**
  * SEC-12 — la limite de débit du dépôt : TECHNIQUE, identique pour tous, sans compte par apporteur
  * (REQ-DM-009, texte de la juriste du rattrapage 84).
@@ -8,7 +9,10 @@
  *   2. AU-DELÀ DU DÉBIT, la réponse demande de réessayer, avec l'heure de reprise, et RIEN n'est écrit :
  *      le client de base n'est même pas touché ;
  *   3. le seul compteur consommé est celui de l'empreinte réseau — jamais un compteur par identité :
- *      aucun dépôt d'un apporteur n'est compté.
+ *      aucun dépôt d'un apporteur n'est compté ;
+ *   4. LE CAPTCHA (REQ-DM-010) se décide sur un signal TECHNIQUE : le port ne reçoit que l'empreinte
+ *      réseau et la réponse au défi, jamais l'apporteur ; présenté, il ne laisse aucune trace ; résolu,
+ *      il ne refuse rien.
  */
 import { describe, it, expect } from 'vitest';
 import type { PrismaClient } from '@prisma/client';
@@ -93,5 +97,54 @@ describe('REQ-DM-009 — une limite technique, jamais un compte par apporteur', 
       reessayer: true,
       repriseAt: T0 + MINUTE,
     });
+  });
+});
+
+describe('REQ-DM-010 — le captcha, sur un signal technique seulement', () => {
+  const prismaInterdit = new Proxy(
+    {},
+    {
+      get(_c, propriete) {
+        throw new Error(`base touchée : ${String(propriete)}`);
+      },
+    }
+  ) as PrismaClient;
+
+  it('REQ-DM-010 : à présenter → issue `captcha`, rien n’est écrit ; le port ne reçoit ni l’apporteur ni ses dépôts', async () => {
+    const appels: unknown[][] = [];
+    const ports = {
+      debit: async () => ({ autorise: true, repriseAt: null }),
+      captcha: async (...args: unknown[]) => {
+        appels.push(args);
+        return 'a_presenter' as const;
+      },
+    } as unknown as PortsDuDepot;
+    const demande = {
+      apporteurId: '33333333-3333-4333-8333-333333333333',
+      ipHash: IP,
+      reponseCaptcha: null,
+    } as unknown as DemandeDeDepot;
+    expect(await deposer(prismaInterdit, demande, ports)).toEqual({
+      issue: 'captcha',
+      attributionId: null,
+    });
+    expect(appels).toEqual([[IP, null]]);
+  });
+
+  it('REQ-DM-010 : la réponse au défi est transmise telle quelle au port, et lui seul la juge', async () => {
+    const appels: unknown[][] = [];
+    const ports = {
+      debit: async () => ({ autorise: true, repriseAt: null }),
+      captcha: async (...args: unknown[]) => {
+        appels.push(args);
+        return 'a_presenter' as const;
+      },
+    } as unknown as PortsDuDepot;
+    await deposer(
+      prismaInterdit,
+      { ipHash: IP, reponseCaptcha: 'reponse-du-defi' } as unknown as DemandeDeDepot,
+      ports
+    );
+    expect(appels).toEqual([[IP, 'reponse-du-defi']]);
   });
 });
