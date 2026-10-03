@@ -174,8 +174,8 @@
     {
       "id": "REQ-DM-011",
       "domaine": "domaine-donnees",
-      "texte": "Le statut d'apporteur est un enum {candidat, retenu, vivier, refuse, kyc_en_cours, pret_a_signer, signe, suspendu, resilie} avec matrice de transitions ; `resiliationMotif` enum {ordinaire_apporteur, ordinaire_axion, manquement_grave} — le mot « faute » est proscrit (décision du 2026-09-03), le vocabulaire disciplinaire est retiré du produit ; la résiliation applique ses effets sur les attributions et les lignes dans une seule transaction qui écrit un événement par effet.",
-      "source": "outil §5 étape 12 ; anti-abus F9, §4 ; nouvelle (F-DM-12, F-DM-24)",
+      "texte": "Le statut d'apporteur est un enum {candidat, retenu, vivier, refuse, kyc_en_cours, pret_a_signer, signe, suspendu, resilie} avec matrice de transitions ; `resiliationMotif` enum {ordinaire_apporteur, ordinaire_axion, manquement_grave} [l'enum compte TROIS valeurs aujourd'hui, celles ci-dessus, dans le code et le schéma ; la valeur `fin_de_plein_droit` est À VENIR : DM-64 l'ajoutera EN FIN d'enum, à sa livraison, et amendera alors cette liste (rattrapage 92 ; contrat art. 12.5 : décès, cessation ou radiation, sans préavis ni décision de la Société ; une procédure collective n'en est pas une, juriste)] — le mot « faute » est proscrit (décision du 2026-09-03), le vocabulaire disciplinaire est retiré du produit ; la résiliation applique ses effets sur les attributions et les lignes dans une seule transaction qui écrit un événement par effet.",
+      "source": "outil §5 étape 12 ; anti-abus F9, §4 ; nouvelle (F-DM-12, F-DM-24) ; art. 12.5, juriste et A02 (DM-64), rattrapage 92",
       "statut": "active",
       "remplaceePar": null,
       "module": 4,
@@ -688,7 +688,6 @@
         "DM-31",
         "DM-53",
         "DM-62",
-        "JUR-T31",
         "UX-P1-51"
       ]
     },
@@ -1344,7 +1343,6 @@
         "DM-30",
         "DM-31",
         "INT-T28",
-        "JUR-T31",
         "QA-T31",
         "SEC-34",
         "SEC-51",
@@ -2488,6 +2486,7 @@
       "taches": [
         "JUR-T01",
         "JUR-T01b",
+        "JUR-T31",
         "JUR-T40",
         "JUR-T46",
         "JUR-T48"
@@ -5477,7 +5476,6 @@
         "DM-07",
         "DM-30",
         "INT-T28",
-        "JUR-T31",
         "QA-T31",
         "SEC-34",
         "UX-P2-12"
@@ -6235,7 +6233,6 @@
       "taches": [
         "DM-30",
         "INT-T28",
-        "JUR-T31",
         "SEC-34",
         "UX-P2-15"
       ]
