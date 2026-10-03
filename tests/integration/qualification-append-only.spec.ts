@@ -122,8 +122,15 @@ async function refus(promesse: Promise<unknown>): Promise<string> {
   throw new Error('aucun refus');
 }
 
-/** Une qualification insérée directement (sous le propriétaire), pour juger les contraintes. */
-async function inserer(attributionId: string, colonnes: Record<string, string> = {}) {
+/**
+ * Une qualification insérée directement, pour juger les contraintes : sous le propriétaire par défaut,
+ * sous `partners_app` quand le témoin le demande.
+ */
+async function inserer(
+  attributionId: string,
+  colonnes: Record<string, string> = {},
+  client: { $executeRawUnsafe: PrismaClient['$executeRawUnsafe'] } = base.prisma
+) {
   const c = {
     resultat_contact: `'injoignable'`,
     prochaine_etape: `'aucune'`,
@@ -135,7 +142,7 @@ async function inserer(attributionId: string, colonnes: Record<string, string> =
     ...colonnes,
   };
   const id = randomUUID();
-  await base.prisma.$executeRawUnsafe(
+  await client.$executeRawUnsafe(
     `INSERT INTO qualifications (id, attribution_id, resultat_contact, prochaine_etape, motif_perte,
        rdv_at, rappeler_at, personne_interrogee_chiffre, termes_reponse_chiffre, auteur_id)
      VALUES ($1::uuid, $2::uuid, ${c.resultat_contact}, ${c.prochaine_etape}, ${c.motif_perte},
@@ -199,6 +206,47 @@ describe('REQ-DM-008 — les contraintes nommées de la qualification', () => {
       )
     );
     expect(r).toContain('qualifications_purge_liee');
+  });
+
+  it('REQ-DM-031 : TÉMOIN — sous partners_app, les blocs d’un contact joint ne se vident pas sans la date de purge', async () => {
+    const a = await uneAttribution();
+    const joint = { resultat_contact: `'non_confirme'` };
+    const q = await inserer(a, joint, app);
+    const maj = (sql: string) => app.$executeRawUnsafe(sql, q);
+    // Les deux blocs vidés sans date : la preuve d'un démenti effacée en silence.
+    expect(
+      await refus(
+        maj(
+          `UPDATE qualifications SET personne_interrogee_chiffre = NULL, termes_reponse_chiffre = NULL WHERE id = $1::uuid`
+        )
+      )
+    ).toContain('qualifications_reponse_presente');
+    // Un seul bloc vidé sans date : refusé de même.
+    expect(
+      await refus(
+        maj(`UPDATE qualifications SET termes_reponse_chiffre = NULL WHERE id = $1::uuid`)
+      )
+    ).toContain('qualifications_reponse_presente');
+    // Un contact joint NAÎT sans ses blocs : refusé.
+    const sansBloc: Record<string, string>[] = [
+      { personne_interrogee_chiffre: 'NULL' },
+      { termes_reponse_chiffre: 'NULL' },
+    ];
+    for (const sans of sansBloc) {
+      expect(await refus(inserer(a, { ...joint, ...sans }, app))).toContain(
+        'qualifications_reponse_presente'
+      );
+    }
+    // Contre-témoins : la purge DATÉE est admise ; un injoignable peut naître sans blocs.
+    await maj(
+      `UPDATE qualifications SET personne_interrogee_chiffre = NULL, termes_reponse_chiffre = NULL, contact_purge_at = now() WHERE id = $1::uuid`
+    );
+    const [apres] = await base.prisma.$queryRawUnsafe<{ purge: Date | null }[]>(
+      `SELECT contact_purge_at AS purge FROM qualifications WHERE id = $1::uuid`,
+      q
+    );
+    expect(apres?.purge).toBeInstanceOf(Date);
+    await inserer(a, { personne_interrogee_chiffre: 'NULL', termes_reponse_chiffre: 'NULL' }, app);
   });
 });
 

@@ -69,6 +69,10 @@ ALTER TABLE "qualifications" ADD CONSTRAINT "qualifications_termes_non_vides"
 -- La purge est datée : une fois la date posée, les deux blocs du tiers sont vides (REQ-DM-031).
 ALTER TABLE "qualifications" ADD CONSTRAINT "qualifications_purge_liee"
   CHECK ("contact_purge_at" IS NULL OR ("personne_interrogee_chiffre" IS NULL AND "termes_reponse_chiffre" IS NULL));
+-- Et l'autre sens (sécurité, 2026-10-03) : un contact JOINT porte ses deux blocs tant que la purge n'est
+-- pas datée. Vider la personne et les termes sans date effacerait en silence la preuve d'un démenti.
+ALTER TABLE "qualifications" ADD CONSTRAINT "qualifications_reponse_presente"
+  CHECK ("resultat_contact" = 'injoignable' OR "contact_purge_at" IS NOT NULL OR ("personne_interrogee_chiffre" IS NOT NULL AND "termes_reponse_chiffre" IS NOT NULL));
 
 -- Le gabarit générique (HYP-A02-GABARIT-AJOUT-SEUL), branché, jamais recréé : les deux blocs du tiers
 -- peuvent s'effacer, la date de purge s'écrit une fois, rien d'autre ne change ; DELETE et TRUNCATE
