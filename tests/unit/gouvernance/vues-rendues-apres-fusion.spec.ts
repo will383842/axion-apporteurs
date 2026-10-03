@@ -119,25 +119,51 @@ describe('REQ-GOV-032 — la porte A rend les vues avant de les lire', () => {
   ).scripts;
 
   it('REQ-GOV-032 — `pnpm vues:rendre` suit l’installation et précède tout vérificateur de vue, la suite et gov:etat', () => {
-    const i = runs.indexOf('pnpm vues:rendre');
-    expect(i, '`pnpm vues:rendre` absent de ci.yml').toBeGreaterThan(-1);
-    expect(runs[i - 1]).toBe('pnpm install --frozen-lockfile');
+    expect(runs, '`pnpm vues:rendre` absent de ci.yml').toContain('pnpm vues:rendre');
     // `adr:index:verifier` n'est pas une étape : `gov:adr` le joue, et il est dans la liste ci-dessous.
     const verificateurs = VUES_DERIVEES.map((v) => v.verificateur).filter((v) => runs.includes(v));
     expect(verificateurs.length, 'les vérificateurs de vue ont quitté la porte A').toBe(6);
+    // GOV-142 : la suite se joue en éclats, puis se fusionne ; l'un et l'autre lisent les vues.
     const lecteurs = [
       ...verificateurs,
-      'pnpm test',
+      'pnpm test:eclat',
+      'pnpm test:fusion',
+      'pnpm gov:etat',
       'pnpm gov:attributions',
       'pnpm gov:adr',
       'pnpm gov:inventaire',
       'pnpm gov:entite',
     ];
+    const lit = (r: string, l: string) => r === l || r.startsWith(`${l} `);
     for (const l of lecteurs) {
-      const j = runs.findIndex((r) => r === l || r.startsWith(`${l} `));
-      expect(j, `\`${l}\` absent de ci.yml`).toBeGreaterThan(-1);
-      expect(j, `\`${l}\` lit une vue AVANT qu’elle soit rendue`).toBeGreaterThan(i);
+      expect(
+        runs.some((r) => lit(r, l)),
+        `\`${l}\` absent de ci.yml`
+      ).toBe(true);
     }
+    // GOV-142 : la porte A est découpée en jobs, et chaque job a SON arbre. Dans CHAQUE job qui lit
+    // une vue, le rendu suit l'installation et précède le lecteur.
+    const blocs = ci.split(/^ {2}(?=[\w-]+:\s*$)/m).slice(1);
+    let jugesDansUnJob = 0;
+    for (const bloc of blocs) {
+      const nom = /^([\w-]+):/.exec(bloc)?.[1] ?? '?';
+      const duJob = [...bloc.matchAll(/^\s+(?:- )?run: (.+)$/gm)].map((m) => m[1]!.trim());
+      const presents = lecteurs.filter((l) => duJob.some((r) => lit(r, l)));
+      if (presents.length === 0) continue;
+      const i = duJob.indexOf('pnpm vues:rendre');
+      expect(i, `le job ${nom} lit une vue sans la rendre`).toBeGreaterThan(-1);
+      expect(duJob[i - 1], `le job ${nom} rend les vues avant l’installation`).toBe(
+        'pnpm install --frozen-lockfile'
+      );
+      for (const l of presents) {
+        jugesDansUnJob += 1;
+        expect(
+          duJob.findIndex((r) => lit(r, l)),
+          `\`${l}\` lit une vue AVANT qu’elle soit rendue (job ${nom})`
+        ).toBeGreaterThan(i);
+      }
+    }
+    expect(jugesDansUnJob).toBeGreaterThanOrEqual(lecteurs.length);
   });
 
   it('REQ-GOV-032 — `pnpm vues:hors-git` est une étape de la porte A, et les deux scripts existent', () => {
