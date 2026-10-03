@@ -20,7 +20,7 @@
 | Ma conformité / Mon profil (ouverture limitée, état vide) | `conformite.html` | UX-P1-09 | 2026-10-03 | Will |
 | Se connecter (lien, code à 6 chiffres, lien déjà utilisé) | `connexion.html` | UX-P1-04 | 2026-10-03 | Will |
 | Mon contrat | `mon-contrat.html` | UX-P1-44 | 2026-10-03 | Will |
-| Fiche d'une entreprise (frise, échanges) | `mes-entreprises-fiche.html` | EXT-T01 | — | — |
+| Fiche d'une entreprise (frise, échanges) | `mes-entreprises-fiche.html` | EXT-T01 | 2026-10-03 | Will |
 | Personnes qui agissent pour l'apporteur | `personnes.html` | UX-P1-15 | — | — |
 | Dépôt par lien privé | `depot-lien-prive.html` | UX-P1-03 | — | — |
 | Notifications | `notifications.html` | UX-P1-08 | — | — |
