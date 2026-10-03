@@ -334,7 +334,7 @@ function candidatsDe(table: string, schema: SchemaVu): string[] {
   for (const v of variantesEnum) {
     for (const r of remplissages) if (candidat(v, r)) return sortie;
   }
-  // SECONDE PASSE, APRÈS toutes les autres (DM-12) : DEUX groupes de nullables remplis ENSEMBLE,
+  // SECONDE PASSE, APRÈS toutes les autres (tables de #556) : DEUX groupes de nullables remplis ENSEMBLE,
   // l'union de deux fermetures. Un CHECK comme « exactement un porteur » (lu sous une forme que
   // `liensDesChecks` ne reconnaît pas, `num_nonnulls(…) = CASE … END`) et un autre comme « l'empreinte
   // ou sa purge » exigent un membre de CHACUN : aucun candidat d'une seule fermeture ne les tient.

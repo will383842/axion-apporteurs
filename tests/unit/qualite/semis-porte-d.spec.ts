@@ -1,7 +1,7 @@
 // @req REQ-QA-021
 /**
  * Le semeur de la porte D (`scripts/lib/semis-porte-d.ts`) sème une table dont les CHECK exigent DEUX
- * groupes de colonnes nullables remplis ENSEMBLE — mesuré sur les tables de DM-12 (#556) : toute PR
+ * groupes de colonnes nullables remplis ENSEMBLE — mesuré sur les tables versées par #556 : toute PR
  * à migration rougissait sur « tables que le semeur n'a pas su semer : contestations, verifications ».
  *
  * Les schémas sont INJECTÉS, sous la forme que rend le catalogue (`pg_get_constraintdef`) : le semeur
@@ -74,7 +74,7 @@ const REFERENCES: SchemaVu = {
   contraintes: [],
 };
 
-/** La forme de `verifications` (DM-12) : un porteur et un seul, et l'empreinte réseau ou sa purge. */
+/** La forme de `verifications` : un porteur et un seul, et l'empreinte réseau ou sa purge. */
 const VERIFICATIONS: SchemaVu = {
   colonnes: [
     ...REFERENCES.colonnes,
@@ -105,7 +105,7 @@ const VERIFICATIONS: SchemaVu = {
   ],
 };
 
-/** La forme de `contestations` (DM-12) : la cible suit l'objet, et le texte ou sa purge. */
+/** La forme de `contestations` : la cible suit l'objet, et le texte ou sa purge. */
 const CONTESTATIONS: SchemaVu = {
   colonnes: [
     ...REFERENCES.colonnes,
