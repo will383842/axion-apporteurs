@@ -66,7 +66,7 @@ function remplacerUneFois(texte: string, cherche: string, par: string): string {
 
 /**
  * GOV-142 : les étapes du socle se répètent dans chaque job de la porte A. Remplace la PREMIÈRE
- * occurrence (celle du premier job, `gardes`), et refuse si le texte n'y est pas.
+ * occurrence (celle du premier job, `forge`), et refuse si le texte n'y est pas.
  */
 function remplacerLaPremiere(texte: string, cherche: string, par: string): string {
   const i = texte.indexOf(cherche);

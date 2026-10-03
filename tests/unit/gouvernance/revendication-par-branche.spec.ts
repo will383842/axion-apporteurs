@@ -336,8 +336,8 @@ describe('REQ-QA-013 — la porte A ne tourne pas sur une PR DÉJÀ FUSIONNÉE',
     for (const [quoi, sources] of cas) {
       const ws = await workflowsSurPullRequest(sources);
       const tournent = CONTEXTES_FUSIONNES.flatMap(([, ctx]) => jobsQuiTournent(ws, ctx));
-      // GOV-142 : la mutation touche le PREMIER `if:` de job du fichier, celui de `gardes`.
-      expect(tournent, quoi).toContain(`${CI_YML}#gardes`);
+      // GOV-142 : la mutation touche le PREMIER `if:` de job du fichier, celui de `forge`.
+      expect(tournent, quoi).toContain(`${CI_YML}#forge`);
     }
   });
 
