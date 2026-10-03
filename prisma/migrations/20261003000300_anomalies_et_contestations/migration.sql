@@ -40,6 +40,7 @@ CREATE TABLE "verifications" (
     "resultat" "resultat_verification" NOT NULL,
     "ip_hash" CHAR(16),
     "empreinte_reseau_purgee_at" TIMESTAMPTZ(3),
+    "porteur_purge_at" TIMESTAMPTZ(3),
     "verifiee_at" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "verifications_pkey" PRIMARY KEY ("id")
@@ -48,10 +49,11 @@ CREATE TABLE "verifications" (
 -- CreateTable
 CREATE TABLE "alertes_liberation" (
     "id" UUID NOT NULL,
-    "apporteur_id" UUID NOT NULL,
+    "apporteur_id" UUID,
     "siren" CHAR(9) NOT NULL,
     "cree_at" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "envoyee_at" TIMESTAMPTZ(3),
+    "apporteur_purge_at" TIMESTAMPTZ(3),
 
     CONSTRAINT "alertes_liberation_pkey" PRIMARY KEY ("id")
 );
@@ -192,9 +194,10 @@ ALTER TABLE "verifications" ADD CONSTRAINT "verifications_siren_forme"
   CHECK ("siren" ~ '^[0-9]{9}$');
 ALTER TABLE "verifications" ADD CONSTRAINT "verifications_ip_hash_hex"
   CHECK ("ip_hash" IS NULL OR "ip_hash" ~ '^[0-9a-f]{16}$');
--- W19 : un porteur et un seul, l'apporteur ou le conseiller salarié (patron de DM-07).
+-- W19 : un porteur et un seul, l'apporteur ou le conseiller salarié (patron de DM-07) ; à l'échéance
+-- du registre, la purge le vide avec sa date, et la ligne nue (SIREN, résultat, date) reste.
 ALTER TABLE "verifications" ADD CONSTRAINT "verifications_porteur_unique"
-  CHECK (num_nonnulls("apporteur_id", "utilisateur_console_id") = 1);
+  CHECK (num_nonnulls("apporteur_id", "utilisateur_console_id") = CASE WHEN "porteur_purge_at" IS NULL THEN 1 ELSE 0 END);
 -- Toute vérification naît avec son empreinte d'adresse réseau ; elle ne la perd que par la purge,
 -- qui pose sa date dans la MÊME écriture. Égalité, et non implication : une empreinte vidée sans
 -- date serait indiscernable d'une empreinte jamais posée.
@@ -219,21 +222,24 @@ $$;
 CREATE TRIGGER verifications_porteur_conseiller
   BEFORE INSERT OR UPDATE OF "utilisateur_console_id" ON "verifications"
   FOR EACH ROW EXECUTE FUNCTION verifications_porteur_conseiller();
--- Ajout seul : seule l'empreinte se purge, une fois, avec sa date posée une fois.
+-- Ajout seul : l'empreinte, puis le porteur, se purgent, chacun une fois, avec sa date posée une fois.
 CREATE TRIGGER verifications_ajout_seul BEFORE UPDATE OR DELETE ON "verifications"
-  FOR EACH ROW EXECUTE FUNCTION refuser_modification_sauf('purge:ip_hash', 'une_fois:empreinte_reseau_purgee_at');
+  FOR EACH ROW EXECUTE FUNCTION refuser_modification_sauf('purge:ip_hash', 'une_fois:empreinte_reseau_purgee_at', 'purge:apporteur_id', 'purge:utilisateur_console_id', 'une_fois:porteur_purge_at');
 CREATE TRIGGER verifications_troncature BEFORE TRUNCATE ON "verifications"
-  FOR EACH STATEMENT EXECUTE FUNCTION refuser_modification_sauf('purge:ip_hash', 'une_fois:empreinte_reseau_purgee_at');
+  FOR EACH STATEMENT EXECUTE FUNCTION refuser_modification_sauf('purge:ip_hash', 'une_fois:empreinte_reseau_purgee_at', 'purge:apporteur_id', 'purge:utilisateur_console_id', 'une_fois:porteur_purge_at');
 
 -- ── alertes_liberation : une seule en attente, l'envoi posé une fois ────────────────────────
 ALTER TABLE "alertes_liberation" ADD CONSTRAINT "alertes_liberation_siren_forme"
   CHECK ("siren" ~ '^[0-9]{9}$');
 CREATE UNIQUE INDEX "alertes_liberation_une_en_attente" ON "alertes_liberation" ("apporteur_id", "siren")
   WHERE "envoyee_at" IS NULL;
+-- À l'échéance du registre, l'apporteur se purge avec sa date : la ligne nue reste.
+ALTER TABLE "alertes_liberation" ADD CONSTRAINT "alertes_liberation_apporteur_purge_liee"
+  CHECK (("apporteur_purge_at" IS NULL) = ("apporteur_id" IS NOT NULL));
 CREATE TRIGGER alertes_liberation_ajout_seul BEFORE UPDATE OR DELETE ON "alertes_liberation"
-  FOR EACH ROW EXECUTE FUNCTION refuser_modification_sauf('une_fois:envoyee_at');
+  FOR EACH ROW EXECUTE FUNCTION refuser_modification_sauf('une_fois:envoyee_at', 'purge:apporteur_id', 'une_fois:apporteur_purge_at');
 CREATE TRIGGER alertes_liberation_troncature BEFORE TRUNCATE ON "alertes_liberation"
-  FOR EACH STATEMENT EXECUTE FUNCTION refuser_modification_sauf('une_fois:envoyee_at');
+  FOR EACH STATEMENT EXECUTE FUNCTION refuser_modification_sauf('une_fois:envoyee_at', 'purge:apporteur_id', 'une_fois:apporteur_purge_at');
 
 -- ── anomalies : la forme, et une clôture une seule fois, sans retour ────────────────────────
 -- Le score existe si et seulement si l'anomalie est de sincérité, entier de 0 à 100 ; l'anonymisation
@@ -427,6 +433,11 @@ BEGIN
   IF OLD."repondue_at" IS NULL AND NEW."purgee_at" IS NULL
      AND num_nonnulls(NEW."reponse_chiffre", NEW."repondue_par_id", NEW."repondue_at") NOT IN (0, 3) THEN
     RAISE EXCEPTION 'contestations_refuser_substitution : la réponse pose texte, auteur et date ensemble (REQ-DM-043)';
+  END IF;
+  -- La purge ne fabrique pas la trace d'une réponse : sur une contestation jamais répondue, elle ne
+  -- pose ni l'auteur ni la date d'une réponse (la date fait courir le délai de quinze jours).
+  IF NEW."purgee_at" IS NOT NULL AND OLD."repondue_at" IS NULL AND NEW."repondue_at" IS NOT NULL THEN
+    RAISE EXCEPTION 'contestations_refuser_substitution : la purge ne pose pas de réponse (REQ-DM-043)';
   END IF;
   RETURN NEW;
 END;

@@ -1068,6 +1068,8 @@ model Verification {
   resultat                ResultatVerification
   ipHash                  String?              @map("ip_hash") @db.Char(16)
   empreinteReseauPurgeeAt DateTime?            @map("empreinte_reseau_purgee_at") @db.Timestamptz(3)
+  /// La purge du porteur à l'échéance du registre, posée une fois.
+  porteurPurgeAt          DateTime?            @map("porteur_purge_at") @db.Timestamptz(3)
   verifieeAt              DateTime             @default(now()) @map("verifiee_at") @db.Timestamptz(3)
 
   @@index([apporteurId])
@@ -1079,12 +1081,14 @@ model Verification {
 /// Une alerte de libération d'une entreprise suivie (REQ-DM-032) : une seule en attente par
 /// (apporteur, SIREN), index partiel ; l'envoi se pose une fois.
 model AlerteLiberation {
-  id          String    @id @default(uuid()) @db.Uuid
-  apporteurId String    @map("apporteur_id") @db.Uuid
-  apporteur   Apporteur @relation(fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  siren       String    @db.Char(9)
-  creeAt      DateTime  @default(now()) @map("cree_at") @db.Timestamptz(3)
-  envoyeeAt   DateTime? @map("envoyee_at") @db.Timestamptz(3)
+  id               String     @id @default(uuid()) @db.Uuid
+  apporteurId      String?    @map("apporteur_id") @db.Uuid
+  apporteur        Apporteur? @relation(fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  siren            String     @db.Char(9)
+  creeAt           DateTime   @default(now()) @map("cree_at") @db.Timestamptz(3)
+  envoyeeAt        DateTime?  @map("envoyee_at") @db.Timestamptz(3)
+  /// La purge de l'apporteur à l'échéance du registre, posée une fois.
+  apporteurPurgeAt DateTime?  @map("apporteur_purge_at") @db.Timestamptz(3)
 
   @@index([apporteurId])
   @@map("alertes_liberation")

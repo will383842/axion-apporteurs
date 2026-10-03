@@ -356,7 +356,7 @@ export const CHAMPS_RENDUS = {
 
 /** Ce que la couche TAIT : le propriétaire (connu de la session), les secrets, les traces techniques. */
 export const CHAMPS_TUS = {
-  alerteLiberation: ['apporteurId'],
+  alerteLiberation: ['apporteurId', 'apporteurPurgeAt'],
   contestation: ['apporteurId', 'texteChiffre', 'reponseChiffre', 'repondueParId', 'purgeeAt'],
   verification: [
     'apporteurId',
@@ -364,6 +364,7 @@ export const CHAMPS_TUS = {
     'resultat',
     'ipHash',
     'empreinteReseauPurgeeAt',
+    'porteurPurgeAt',
   ],
   // DM-07 : le porteur, la grille, le jeton, les traces de sincérité, le contact chiffré et sa
   // purge, la suspension de péremption (un acte de la console) et le verrou de la fiche.
