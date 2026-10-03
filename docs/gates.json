@@ -1217,6 +1217,15 @@
       "preuveRouge": "Mesuré par A06 le 2026-10-03 sur main 2cb0df48, où l'ancienne phrase de l'état vide de l'accueil (« Si elle signe, vous touchez une commission. ») est encore servie : EXIT=1, « ❌ jur:copy-indicative — 11 faute(s) » ([remuneration_ferme] src/content/micro-copy/espace/etats-vides.ts:24 « vous touchez », et dix autres « vous touchez » ou « Touchez » dans docs/maquettes et etats-vides.ts:36, réécrites par la micro-copy W20 et par les tournures d'A07 du 2026-10-03) ; --prove : 8 témoins rougissent chacun sur sa seule famille, 4 contre-témoins verts (dont la tournure d'A07 pour l'accueil). Rouge constaté par: A06"
     },
     {
+      "id": "notifications:lue-at-inerte",
+      "phase": 1,
+      "script": "scripts/gates/notifications-lue-at-inerte.ts",
+      "tache": "UX-P1-10",
+      "verifie": "La date de lecture d'une notification de l'espace (notifications_espace.lue_at) n'est le point de départ d'aucun délai ni d'aucun droit (REQ-JUR-039) ; un délai court de courriels_envoyes.envoye_at (REQ-UX-016). Arbre syntaxique de tout fichier suivi de src/ (un commentaire n'est pas une lecture) : `lueAt` ou `lue_at` nommé hors des lecteurs permis rougit (lue_at_lu) ; dans un lecteur permis, sous une autre forme que la sienne (colonne d'une liste) (forme_non_permise) ; SQL des migrations : lue_at hors de la migration qui crée la colonne (lue_at_en_sql) ; une permission qui ne couvre plus rien (permission_orpheline) ; aucun fichier lu (perimetre_vide). Lancée en porte A par `pnpm notifications:lue-at-inerte` et `pnpm notifications:lue-at-inerte:prove`. CE QU'ELLE NE TIENT PAS : une lecture par un détour qu'aucun nom ne trahit (une colonne indexée par une variable) ; la couche cloisonnée sélectionne colonne par colonne.",
+      "fixtureRouge": "export const fixtureRouge = (n: { lueAt: Date }) => n.lueAt.getTime(); ajouté à src/server/notifications/envoyer.ts",
+      "preuveRouge": "Mesuré par A06 le 2026-10-02 sur t/ux-p1-10 : la fixture posée dans src/server/notifications/envoyer.ts -> EXIT=1, « ❌ notifications:lue-at-inerte — 2 faute(s) » ([lue_at_lu] envoyer.ts:208, deux occurrences) ; retirée -> EXIT=0, « ✅ notifications:lue-at-inerte — 128 fichiers de src/ et 16 migrations lus » ; --prove : 5 témoins rougissent chacun sur sa seule famille (lue_at_lu, forme_non_permise, lue_at_en_sql, permission_orpheline, perimetre_vide), 3 contre-témoins verts. Rouge constaté par: A06"
+    },
+    {
       "id": "forge:instantane",
       "phase": 1,
       "script": "scripts/gates/forge-instantane.ts",

@@ -89,6 +89,8 @@
     "jur:grille-chiffree:prove": "tsx scripts/gates/jur-grille-chiffree.ts --prove",
     "ssot:seuils": "tsx scripts/gates/seuils-ssot.ts",
     "ssot:seuils:prove": "tsx scripts/gates/seuils-ssot.ts --prove",
+    "notifications:lue-at-inerte": "tsx scripts/gates/notifications-lue-at-inerte.ts",
+    "notifications:lue-at-inerte:prove": "tsx scripts/gates/notifications-lue-at-inerte.ts --prove",
     "jur:aucun-agregat-reseau": "tsx scripts/gates/jur-aucun-agregat-reseau.ts",
     "jur:aucun-agregat-reseau:prove": "tsx scripts/gates/jur-aucun-agregat-reseau.ts --prove",
     "csp:inline": "tsx scripts/gates/csp-inline.ts",
