@@ -220,9 +220,10 @@ describe('REQ-JUR-065 — la tâche anonymise la trace à cinq ans', () => {
       expect([nom, l.attribution_id]).toEqual([nom, null]);
       expect([nom, l.trace_anonymisee_at?.toISOString()]).toEqual([nom, MAINTENANT.toISOString()]);
       // La ligne reste : droit, donnée visée, issue et dates, inchangés.
-      const { attribution_id: _a, trace_anonymisee_at: _t, ...trace } = l;
-      const { attribution_id: _b, trace_anonymisee_at: _u, ...attendu } = avant[nom];
-      expect(trace).toEqual(attendu);
+      expect({ ...l, attribution_id: 'vide', trace_anonymisee_at: null }).toEqual({
+        ...avant[nom],
+        attribution_id: 'vide',
+      });
     }
     expect((await lire(audela)).donnee_visee).toBe('telephone');
   });
@@ -259,7 +260,9 @@ describe('REQ-JUR-065 — la tâche anonymise la trace à cinq ans', () => {
     const aApres = await lire(a);
     expect((await lire(b)).attribution_id).not.toBeNull();
     const plusTard = new Date(MAINTENANT.getTime() + 10 * MINUTE);
-    expect(await anonymiserLesTracesDesDroits(app, plusTard)).toEqual({ anonymisees: 1 });
+    // Le compte n'est pas jugé : la base est partagée par les témoins de ce fichier, et d'autres
+    // lignes échoient dans ces dix minutes. Ce qui est jugé, c'est A intacte et B anonymisée.
+    expect((await anonymiserLesTracesDesDroits(app, plusTard)).anonymisees).toBeGreaterThan(0);
     expect(await lire(a)).toEqual(aApres);
     expect((await lire(b)).trace_anonymisee_at?.toISOString()).toBe(plusTard.toISOString());
   });
