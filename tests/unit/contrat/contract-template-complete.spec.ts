@@ -997,8 +997,7 @@ describe('REQ-JUR-003 — JUR-T31 : l’art. 3.5, entreprise déjà prise, borne
 
   it('REQ-JUR-003 : les bornes de la Société sont écrites par variables (RM-10), et aucune reconduction', () => {
     const a = art35();
-    for (const v of ['FENETRE_MOIS', 'PEREMPTION_JOURS', 'CARENCE_CONSEILLER_JOURS'])
-      expect(a).toContain(`{{${v}}}`);
+    for (const v of ['FENETRE_MOIS', 'PEREMPTION_JOURS']) expect(a).toContain(`{{${v}}}`);
     const bornes = a.slice(
       a.indexOf('obéit aux mêmes bornes'),
       a.indexOf('La Société conserve dans ses propres outils')
@@ -1039,10 +1038,11 @@ describe('REQ-JUR-003 — JUR-T31 : l’art. 3.5, entreprise déjà prise, borne
     expect(art35()).toContain('ne révèle pas qui occupe');
   });
 
-  it('REQ-JUR-003 : CARENCE_CONSEILLER_JOURS est une variable du contrat, déclarée sur la SSOT', () => {
-    expect(VARIABLES).toHaveProperty('CARENCE_CONSEILLER_JOURS');
-    expect(VARIABLES['CARENCE_CONSEILLER_JOURS' as keyof typeof VARIABLES]).toMatchObject({
-      constante: 'CARENCE_CONSEILLER_JOURS',
-    });
+  it('REQ-JUR-003 : le délai d’attente de la Société est SUPPRIMÉ (Williams, 2026-10-02) — plus de CARENCE_CONSEILLER_JOURS, seul le délai de quinze jours de l’Apporteur en attente demeure', () => {
+    expect(VARIABLES).not.toHaveProperty('CARENCE_CONSEILLER_JOURS');
+    expect(art35()).not.toContain('{{CARENCE_CONSEILLER_JOURS}}');
+    expect(art35()).toContain(
+      "La Société ne prend pas en charge une entreprise pendant le délai de quinze jours ouvert à l'Apporteur en attente au premier rang."
+    );
   });
 });
