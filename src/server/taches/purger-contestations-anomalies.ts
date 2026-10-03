@@ -2,7 +2,8 @@
  * DM-62 (REQ-DM-033, REQ-DM-043) — les anomalies, les contestations et le démenti d'un contact
  * sortent à leur échéance. Trois passages du lanceur (GOV-137), un par clé du registre des tâches.
  *
- * LES ÉCHÉANCES (durées lues dans `SEUILS`, sous-module `retention.ts`, jamais retapées) :
+ * LES ÉCHÉANCES (durées lues dans `SEUILS`, sous-module `retention.ts`, jamais retapées ; mois et
+ * années CIVILS, en heure de Paris, comme le reste du domaine — `ajouterMoisParis`) :
  *   — une anomalie LEVÉE : `ANOMALIE_LEVEE_ANONYMISEE_APRES_MOIS` après sa levée (`traite_at`) ;
  *   — une anomalie CONFIRMÉE : `ANOMALIE_CONFIRMEE_ANONYMISEE_APRES_ANS` après la fin de la mesure
  *     qu'elle a fondée (`mesure_terminee_at`) ; jamais tant que cette fin n'est pas posée, le passage
@@ -31,21 +32,25 @@
  * cause, pour la console seule.
  */
 import type { Prisma, PrismaClient } from '@prisma/client';
+import { ajouterMoisParis } from '../../domain/attribution/machine';
 import { SEUILS } from '../../domain/seuils/ssot';
 import { MS_PAR_JOUR } from '../../domain/temps/calendrier-civil';
 
-/** `maintenant` moins `mois` mois civils, en UTC. */
+/** Le calendrier, pas un délai : les mois d'une année civile. */
+const MOIS_PAR_AN = 12;
+
+/**
+ * `maintenant` moins `mois` mois civils, en heure de Paris : un jour absent du mois d'arrivée devient
+ * son dernier (deux mois avant le 30 avril, c'est le 28 février), jamais un débordement sur le mois
+ * suivant, qui ferait sortir une ligne avant son échéance.
+ */
 function moinsMois(maintenant: Date, mois: number): Date {
-  const limite = new Date(maintenant.getTime());
-  limite.setUTCMonth(limite.getUTCMonth() - mois);
-  return limite;
+  return new Date(ajouterMoisParis(maintenant.getTime(), -mois));
 }
 
-/** `maintenant` moins `ans` années civiles, en UTC. */
+/** `maintenant` moins `ans` années civiles, en heure de Paris (cinq ans avant un 29 février : le 28). */
 function moinsAns(maintenant: Date, ans: number): Date {
-  const limite = new Date(maintenant.getTime());
-  limite.setUTCFullYear(limite.getUTCFullYear() - ans);
-  return limite;
+  return moinsMois(maintenant, ans * MOIS_PAR_AN);
 }
 
 /**
@@ -89,7 +94,9 @@ export async function mesuresOuvertesAuDela(
 
 /**
  * L'anonymisation des anomalies échues, en UNE instruction : tout ce qui désigne une personne est
- * vidé, les mois d'ouverture et de traitement sont tronqués en UTC, `anonymisee_at` est posée.
+ * vidé, les mois d'ouverture et de traitement sont tronqués en UTC (la forme que la base exige,
+ * `anomalies_anonymisation_liee` : la troncature range une date, elle ne compte pas un délai),
+ * `anonymisee_at` est posée.
  * Restent l'id, le type et le statut. Le passage rend aussi le NOMBRE des mesures ouvertes au-delà
  * de la durée d'alerte, et rien d'autre.
  */
