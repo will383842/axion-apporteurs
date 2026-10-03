@@ -36,8 +36,8 @@ const RAISON_DU_COURRIER = 'en donne la raison et vous dit comment nous répondr
 export const FORMULES = {
   droitACommissionJusquau:
     "Votre droit à commission sur cette entreprise court jusqu'au {dateFin}.",
-  dejaReservee: 'déjà réservée pour un autre apporteur',
-  finDuDroit: 'si ce droit prend fin',
+  dejaReservee: 'déjà réservée',
+  finDuDroit: 'si cette réservation prend fin',
   sansSuite: 'Sans suite',
   depotsSuspendus: "vos nouveaux dépôts sont suspendus le temps d'un échange avec Axion-IA",
   courrierDeSuspension: `Le courrier électronique du {dateCourrier} ${RAISON_DU_COURRIER}`,
