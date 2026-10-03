@@ -25,6 +25,7 @@ import {
   enregistrerUneQualification,
   type Saisie,
 } from '../../src/server/qualification/enregistrer';
+import { purgerLesContacts } from '../../src/server/taches/purger-contacts';
 import { clesPii } from '../../src/server/securite/pii';
 import { NOMS_DES_SECRETS } from '../../src/lib/env';
 
@@ -85,7 +86,14 @@ beforeAll(async () => {
   ).id;
   auteurId = (
     await base.prisma.utilisateurConsole.create({
-      data: { role: 'qualifieur', creeAt: MAINTENANT },
+      // Un qualifieur ACTIF porte son adresse (`utilisateurs_console_adresse_si_actif`, DM-44) :
+      // un bloc factice et une empreinte, jamais une adresse réelle.
+      data: {
+        role: 'qualifieur',
+        creeAt: MAINTENANT,
+        emailChiffre: Buffer.from([1]),
+        emailHash: hex(32),
+      },
     })
   ).id;
 }, 180_000);
@@ -95,18 +103,23 @@ afterAll(async () => {
   await base?.arreter();
 });
 
-async function uneAttribution(statut = 'provisoire'): Promise<string> {
+async function uneAttribution(
+  statut = 'provisoire',
+  purgeContactAt: Date | null = null
+): Promise<string> {
   const id = randomUUID();
   await base.prisma.$executeRawUnsafe(
     `INSERT INTO attributions (id, apporteur_id, statut, siren, canal, grille_commission_id,
-       date_contact, verification_prioritaire, entreprise_a_verifier, lien_interet_declare)
+       date_contact, verification_prioritaire, entreprise_a_verifier, lien_interet_declare,
+       purge_contact_at)
      VALUES ($1::uuid, $2::uuid, $5::etat_attribution, $3, 'espace', $4::uuid, '2026-10-01',
-       false, false, false)`,
+       false, false, false, $6)`,
     id,
     apporteurId,
     unSiren(),
     grilleId,
-    statut
+    statut,
+    purgeContactAt
   );
   return id;
 }
@@ -331,5 +344,32 @@ describe('REQ-CPL-024 REQ-DM-008 — l’écriture d’une qualification et son 
     );
     expect(ligne?.p.toString('utf8')).not.toContain('Personne témoin');
     expect(ligne?.t.toString('utf8')).not.toContain('Termes témoins');
+  });
+});
+
+describe('REQ-DM-031 — la purge du contact, en base, sous partners_app', () => {
+  it('REQ-DM-031 : TÉMOIN — la purge vide les blocs d’une confirmation et date sa purge ; le démenti exprès est GARDÉ', async () => {
+    const a = await uneAttribution('invalidee', new Date('2026-01-01T00:00:00.000Z'));
+    const confirme = await inserer(a, { resultat_contact: `'confirme'` });
+    const dementi = await inserer(a, { resultat_contact: `'non_confirme'` });
+    const r = await purgerLesContacts(app, MAINTENANT);
+    expect(r.purgees).toBeGreaterThanOrEqual(1);
+    const lire = async (id: string) =>
+      (
+        await base.prisma.$queryRawUnsafe<
+          { p: Buffer | null; t: Buffer | null; purge: Date | null }[]
+        >(
+          `SELECT personne_interrogee_chiffre AS p, termes_reponse_chiffre AS t,
+             contact_purge_at AS purge FROM qualifications WHERE id = $1::uuid`,
+          id
+        )
+      )[0]!;
+    expect(await lire(confirme)).toEqual({ p: null, t: null, purge: MAINTENANT });
+    const garde = await lire(dementi);
+    expect([garde.p === null, garde.t === null, garde.purge]).toEqual([false, false, null]);
+    // Rejouée, la purge ne touche plus rien : le démenti reste, la date de la confirmation aussi.
+    await purgerLesContacts(app, new Date(MAINTENANT.getTime() + 86_400_000));
+    expect((await lire(confirme)).purge).toEqual(MAINTENANT);
+    expect((await lire(dementi)).p).not.toBeNull();
   });
 });

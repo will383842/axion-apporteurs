@@ -84,6 +84,7 @@ CREATE TRIGGER qualifications_troncature BEFORE TRUNCATE ON "qualifications"
 
 -- Le démenti (Williams, 2026-10-03 : « oui 5 ans ») : le nom et les termes d'une qualification
 -- `non_confirme` qui a éteint l'attribution sont gardés, chiffrés, au-delà de la purge du contact ;
--- leur purge dédiée (DM-62) pose `contact_purge_at` plus tard. L'index partiel sert cette purge.
-CREATE INDEX "qualifications_dementi_a_purger_idx" ON "qualifications"("attribution_id")
+-- leur purge dédiée (DM-62) pose `contact_purge_at` plus tard. L'index partiel sert cette purge, qui
+-- lit PAR DATE (`cree_at` + 5 ans, forme d'A02 du 2026-10-03).
+CREATE INDEX "qualifications_dementi_a_purger_idx" ON "qualifications"("cree_at")
   WHERE "resultat_contact" = 'non_confirme' AND "contact_purge_at" IS NULL;

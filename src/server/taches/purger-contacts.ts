@@ -167,6 +167,22 @@ export async function purgerLesContacts(
             purgeeAt: maintenant,
           },
         });
+        // DM-09 : la personne interrogée et les termes de sa réponse, chiffrés, partent avec le contact,
+        // sauf le DÉMENTI EXPRÈS (`non_confirme`, contrat art. 3.7) : il est conservé, chiffré, cinq
+        // ans après la fin de l'attribution, preuve de cette fin si l'apporteur la conteste, puis
+        // effacé (décision de Williams du 2026-10-03 ; sa purge propre est une tâche à part).
+        await tx.qualification.updateMany({
+          where: {
+            attributionId: a.id,
+            contactPurgeAt: null,
+            resultatContact: { not: 'non_confirme' },
+          },
+          data: {
+            personneInterrogeeChiffre: null,
+            termesReponseChiffre: null,
+            contactPurgeAt: maintenant,
+          },
+        });
         await ajouterEvenement(tx, {
           type: 'attribution_contact_purge',
           agregat: 'attribution',
