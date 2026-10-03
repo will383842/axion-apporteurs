@@ -1299,6 +1299,14 @@ describe('REQ-SEC-042 REQ-UX-002 REQ-JUR-043 — l’occupant d’une entreprise
     }
   });
 
+  it('REQ-JUR-043 : la carte « une place en attente » d’entreprise.html porte la phrase de la juriste, MOT POUR MOT : seul le premier en attente est prévenu, et il a un délai (art. 3.5 al. 2)', () => {
+    const lu = readFileSync('docs/maquettes/entreprise.html', 'utf8').replace(/\s+/g, ' ');
+    expect(lu).toContain(
+      'Vous pouvez tout de même la déposer : votre dépôt attend. Si cette réservation prend fin alors que votre dépôt est le premier en attente, vous serez prévenu, et vous aurez quinze jours pour déposer à nouveau cette entreprise.'
+    );
+    expect(lu).not.toContain('vous serez prévenu et pourrez la déposer à nouveau');
+  });
+
   it('REQ-JUR-043 : la fin d’une demande vérifiée suit le libellé d’UX-P1-41, « de nouveau disponible » ne reste qu’à la péremption et à la fin de durée (rattrapage 70)', () => {
     const lu = readFileSync('docs/maquettes/mes-entreprises.html', 'utf8');
     const libelles = [...lu.matchAll(/>\s*(Réservation terminée · [^<]+?)\s*</g)].map((m) =>
