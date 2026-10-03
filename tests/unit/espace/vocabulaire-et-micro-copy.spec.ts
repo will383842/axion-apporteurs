@@ -353,6 +353,8 @@ describe('REQ-UX-002 — un texte de l’espace ne porte que les paramètres que
     'espace/vocabulaire.ts': ['FORMULES', 'sansSuite'],
     'courriels/notifications.ts': ['TEXTES_DES_NOTIFICATIONS', 'lien_magique', 'titre'],
     'espace/confirmation-du-depot.ts': ['FORMULAIRE_DU_CONTACT', 'titre'],
+    // UX-P0-01b : le module n'exporte que ses libellés ; le contexte étranger est un export témoin.
+    'espace/etats-attribution.ts': ['EXPORT_TEMOIN', 'phrase'],
   };
 
   it('REQ-UX-002 : chaque paramètre permis rougit HORS de son contexte, dans le même fichier', () => {
@@ -848,6 +850,32 @@ describe('REQ-UX-002 — snapshot des libellés de l’espace, sans date, sans n
       espace/confirmation-du-depot.ts › BADGES_DU_DEPOT › reservationTerminee : Réservation terminée · l'entreprise est de nouveau disponible
       espace/confirmation-du-depot.ts › AIDE_DU_BADGE : Sans réponse de votre contact, votre dépôt est confirmé {delaiTacite} après la réception de notre e-mail.
       espace/confirmation-du-depot.ts › CARENCE_DU_REDEPOT : Vous pourrez déposer à nouveau cette entreprise à partir du {dateRedepot}.
+      espace/etats-attribution.ts › LIBELLES_DES_ETATS › en_attente › libelle : En attente
+      espace/etats-attribution.ts › LIBELLES_DES_ETATS › en_attente › phrase : Cette entreprise est déjà réservée. Votre dépôt attend, avec son heure d’envoi.
+      espace/etats-attribution.ts › LIBELLES_DES_ETATS › provisoire › libelle : En cours de confirmation
+      espace/etats-attribution.ts › LIBELLES_DES_ETATS › provisoire › phrase : Votre dépôt est enregistré. Axion-IA demande à l’entreprise de confirmer votre échange.
+      espace/etats-attribution.ts › LIBELLES_DES_ETATS › active › libelle : Confirmée
+      espace/etats-attribution.ts › LIBELLES_DES_ETATS › active › phrase : L’entreprise a confirmé vous avoir rencontré. Axion-IA lui propose un rendez-vous. Votre droit à commission sur cette entreprise court jusqu'au {dateFin}.
+      espace/etats-attribution.ts › LIBELLES_DES_ETATS › rdv_pris › libelle : Rendez-vous pris
+      espace/etats-attribution.ts › LIBELLES_DES_ETATS › rdv_pris › phrase : Un rendez-vous est fixé entre Axion-IA et l’entreprise. Rien à faire de votre côté. Votre droit à commission sur cette entreprise court jusqu'au {dateFin}.
+      espace/etats-attribution.ts › LIBELLES_DES_ETATS › proposition › libelle : Proposition envoyée
+      espace/etats-attribution.ts › LIBELLES_DES_ETATS › proposition › phrase : Axion-IA a envoyé une proposition. C’est à l’entreprise de décider. Votre droit à commission sur cette entreprise court jusqu'au {dateFin}.
+      espace/etats-attribution.ts › LIBELLES_DES_ETATS › signee › libelle : Signée
+      espace/etats-attribution.ts › LIBELLES_DES_ETATS › signee › phrase : L’entreprise a signé. Votre commission est versée après son paiement. Votre droit à commission sur cette entreprise court jusqu'au {dateFin}.
+      espace/etats-attribution.ts › LIBELLES_DES_ETATS › convertie › libelle : Payée par l’entreprise
+      espace/etats-attribution.ts › LIBELLES_DES_ETATS › convertie › phrase : L’entreprise a payé. Votre commission sera sur votre prochain relevé. Votre droit à commission sur cette entreprise court jusqu'au {dateFin}.
+      espace/etats-attribution.ts › LIBELLES_DES_ETATS › figee_resiliation › libelle : Contrat terminé
+      espace/etats-attribution.ts › LIBELLES_DES_ETATS › figee_resiliation › phrase : Votre contrat a pris fin.
+      espace/etats-attribution.ts › LIBELLES_DES_ETATS › invalidee › libelle : Non confirmée
+      espace/etats-attribution.ts › LIBELLES_DES_ETATS › invalidee › phrase : Ce dépôt a pris fin. Le motif vous a été indiqué par notification.
+      espace/etats-attribution.ts › LIBELLES_DES_ETATS › perdue › libelle : Sans suite
+      espace/etats-attribution.ts › LIBELLES_DES_ETATS › perdue › phrase : L’entreprise ne souhaite pas donner suite pour le moment. Elle redevient libre.
+      espace/etats-attribution.ts › LIBELLES_DES_ETATS › perimee › libelle : Terminée sans suite
+      espace/etats-attribution.ts › LIBELLES_DES_ETATS › perimee › phrase : Aucun rendez-vous, devis ni commande dans le délai prévu par le contrat : ce dépôt a pris fin. L’entreprise est de nouveau disponible.
+      espace/etats-attribution.ts › LIBELLES_DES_ETATS › expiree › libelle : Droit à commission terminé
+      espace/etats-attribution.ts › LIBELLES_DES_ETATS › expiree › phrase : Ce dépôt a pris fin le {dateFin} : sa durée est écoulée, ou votre contrat a pris fin.
+      espace/etats-attribution.ts › LIBELLES_DES_ETATS › annulee › libelle : Annulée
+      espace/etats-attribution.ts › LIBELLES_DES_ETATS › annulee › phrase : Ce dépôt est annulé. Le motif vous a été indiqué par notification.
       courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › lien_magique › titre : Votre lien de connexion à votre espace
       courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › lien_magique › appel : Ouvrir mon espace
       courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › depot_injoignable_j5 › titre : {entreprise} : la confirmation de l'échange est en cours
@@ -933,6 +961,9 @@ describe('REQ-UX-002 REQ-UX-019 — une formule ou un libellé d’action s’é
     const formules = Object.values(FORMULES).flatMap((f) =>
       f
         .split(parametre())
+        // UX-P0-01b : `split` sur une expression à groupe capturant rend AUSSI les noms capturés,
+        // aux indices impairs ; ce sont des noms de paramètre, pas des morceaux de formule.
+        .filter((_, i) => i % 2 === 0)
         .map((morceau) => morceau.trim())
         .filter((morceau) => /\p{L}{3}/u.test(morceau))
     );

@@ -8,7 +8,7 @@
  * (`mes-entreprises.html`, version corrigée par UX-P1-17), sans les détails propres à l'écran : ni
  * date de rendez-vous, ni montant, ni délai, que l'écran de la liste (UX-P1-05) ajoute. Les états
  * que les maquettes nommaient de plusieurs façons sont tranchés par la juriste (2026-10-03) : la
- * confirmation en cours, la déclaration non confirmée, l'annulation, la fin sans suite, la fin de
+ * confirmation en cours, la déclaration non confirmée, l'annulation, la fin sans rendez-vous ni commande, la fin de
  * contrat et la fin du droit, qui couvre deux causes depuis DM-63. Le motif d'une fin est donné par
  * la notification (art. 3.7), jamais par le badge.
  *
@@ -69,7 +69,8 @@ export const LIBELLES_DES_ETATS = {
     phrase: 'L’entreprise ne souhaite pas donner suite pour le moment. Elle redevient libre.',
   },
   perimee: {
-    libelle: 'Terminée sans suite',
+    // Texte de la juriste : « Terminée », puis la formule de `FORMULES`, jamais retapée.
+    libelle: `Terminée ${FORMULES.sansSuite.toLowerCase()}`,
     phrase:
       'Aucun rendez-vous, devis ni commande dans le délai prévu par le contrat : ce dépôt a pris fin. L’entreprise est de nouveau disponible.',
   },
