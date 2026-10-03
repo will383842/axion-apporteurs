@@ -81,7 +81,8 @@ describe('REQ-UX-048 — au bureau, la barre latérale', () => {
       expect(barreLaterale(corps), `${f}#${id}`).toMatch(
         /<nav class="s-nav" aria-label="Console">/
       );
-      expect(corps, `${f}#${id}`).toMatch(/<div class="app avec-barre">/);
+      // `est-ouvert` : l'état « Menu ouvert (téléphone) » montre le tiroir ouvert.
+      expect(corps, `${f}#${id}`).toMatch(/<div class="app avec-barre(?: est-ouvert)?">/);
     }
   });
 
@@ -96,7 +97,7 @@ describe('REQ-UX-048 — au bureau, la barre latérale', () => {
       const sections = nav.split('<div class="s-section">').slice(1);
       expect(sections.length, `${f}#${id}`).toBeGreaterThan(0);
       for (const s of sections) {
-        expect(s, `${f}#${id}`).toMatch(/^<p class="s-titre">[^<]+<\/p>/);
+        expect(s, `${f}#${id}`).toMatch(/^\s*<p class="s-titre">\s*[^<\s][^<]*<\/p\s*>/);
         expect(liens(s).length, `${f}#${id}`).toBeGreaterThan(0);
       }
     }
