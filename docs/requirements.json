@@ -166,7 +166,6 @@
       "phase": 0,
       "taches": [
         "DM-06",
-        "DM-09",
         "JUR-T24",
         "SEC-12",
         "SEC-56"
@@ -538,6 +537,7 @@
       "phase": 1,
       "taches": [
         "DM-12",
+        "DM-62",
         "SEC-14"
       ]
     },
@@ -683,6 +683,7 @@
         "DM-25",
         "DM-31",
         "DM-53",
+        "DM-62",
         "JUR-T31",
         "UX-P1-51"
       ]
@@ -706,15 +707,16 @@
     {
       "id": "REQ-SEC-002",
       "domaine": "anti-abus-securite",
-      "texte": "La demande de lien magique est limitée à 10 / 15 min par hash IP et 5 / 15 min par email, avec `surPanne: refuser` ; le message générique explique la suspension sans révéler l'existence du compte.",
-      "source": "nouvelle (patron `auth.actions.ts`)",
+      "texte": "La demande de lien magique est limitée à 10 / 15 min par hash IP et 5 / 15 min par email, avec `surPanne: refuser` ; le message générique explique la suspension sans révéler l'existence du compte. La vérification du code à six chiffres (SEC-54) est limitée, en plus du plafond de cinq essais par lien tenu par la base, à 20 / 15 min par hash IP au code et à 10 / 15 min par email au code, avec `surPanne: refuser` ; ces deux compteurs sont distincts de ceux de la demande de lien, une saisie mal formée y est comptée, et leur refus est une réponse générique, identique que le compte existe ou non : le statut 429 pour une route, et pour une action serveur une redirection unique, sans paramètre qui distingue le compteur ni le compte.",
+      "source": "nouvelle (patron `auth.actions.ts`) ; complétée le 2026-10-03 (cadrage de la lentille sécurité pour SEC-54, rattrapage 86) ; réponse générique précisée le 2026-10-03 (lentille sécurité, rattrapage 87)",
       "statut": "active",
       "remplaceePar": null,
       "module": 21,
       "etape": 12,
       "phase": 0,
       "taches": [
-        "SEC-03"
+        "SEC-03",
+        "SEC-54"
       ]
     },
     {
@@ -2145,7 +2147,8 @@
         "INT-T21-P",
         "INT-T51",
         "INT-T70-A",
-        "INT-T70-P"
+        "INT-T70-P",
+        "INT-T74-P"
       ]
     },
     {
@@ -2527,7 +2530,8 @@
       "etape": 12,
       "phase": 1,
       "taches": [
-        "DM-09"
+        "JUR-T28",
+        "SEC-15"
       ]
     },
     {
@@ -2802,6 +2806,7 @@
         "JUR-T34",
         "JUR-T36",
         "JUR-T57",
+        "JUR-T60",
         "SEC-53",
         "T-ARG-033"
       ]
@@ -3335,8 +3340,8 @@
     {
       "id": "REQ-UX-029",
       "domaine": "produit-ux",
-      "texte": "Mon activité n'affiche aucun objectif, classement ni comparaison à d'autres apporteurs ; aucun palier n'y est affiché, puisqu'aucun palier n'existe par apporteur (REQ-DM-009), et rien n'y est formulé comme un quota de vente.",
-      "source": "audit-outil §3.2, §7 Mon activité ; plan §3.2 ; palier retiré le 2026-10-03 (décision de Williams, aucun palier par apporteur, REQ-DM-009, rattrapage 84)",
+      "texte": "Mon activité n'affiche aucun objectif, classement ni comparaison à d'autres apporteurs ; aucun palier n'y est affiché, puisqu'aucun palier n'existe par apporteur (REQ-DM-009), et rien n'y est formulé comme un quota de vente ; aucun score ni aucun taux propre à l'apporteur n'y est affiché, et son activité y est restituée comme des faits (dépôts, états, commissions), jamais comme une performance.",
+      "source": "audit-outil §3.2, §7 Mon activité ; plan §3.2 ; palier retiré le 2026-10-03 (décision de Williams, aucun palier par apporteur, REQ-DM-009, rattrapage 84) ; complétée le 2026-10-03, texte de la juriste (rattrapage 85)",
       "statut": "active",
       "remplaceePar": null,
       "module": 13,
@@ -3410,8 +3415,8 @@
     {
       "id": "REQ-UX-034",
       "domaine": "produit-ux",
-      "texte": "Le mode sombre et le mode clair de l'espace sont pilotés par des tokens propres (jamais ceux de la console admin), tous deux passant les mêmes tests de contraste.",
-      "source": "audit-outil §12.3 point 6",
+      "texte": "Le mode sombre et le mode clair de l'espace sont pilotés par des tokens propres (jamais ceux de la console admin), tous deux passant les mêmes tests de contraste. Une seule marque pour l'espace et la console (décision de Williams du 2026-10-03) : les deux blocs de jetons peuvent porter les mêmes valeurs ; chacun est déclaré à part et passe les mêmes seuils de contraste.",
+      "source": "audit-outil §12.3 point 6 ; précisée le 2026-10-03 : décision de Williams du 2026-10-03 (réponses « NON C4ETAIT MIEUX JUSTE AVANT » et « oui 5 ans et ok pour la console »), rattrapage 85",
       "statut": "active",
       "remplaceePar": null,
       "module": 17,
@@ -3633,6 +3638,7 @@
         "GOV-076",
         "GOV-083",
         "GOV-140",
+        "GOV-142",
         "QA-T00",
         "QA-T01",
         "QA-T07",
@@ -5306,8 +5312,8 @@
     {
       "id": "REQ-UX-048",
       "domaine": "produit-ux",
-      "texte": "Carte des routes unique pour la console (`docs/CONSOLE-ROUTES.md`) : route, écran, rôle, phase et statut (prévue ou livrée), REQ, maquette. Navigation DÉRIVÉE des droits `ecran:*` de la matrice. Bureau : ≤ 7 entrées de premier niveau groupées par métier ; moins de 768 px : barre inférieure de ≤ 4 entrées plus un menu, sans défilement horizontal à 320 px. Accueil par rôle ET par phase : la première route livrée de la liste de préférence du rôle ; à défaut, un état vide guidant qui dit ce qui arrive et quand ; jamais de 404. Connexion propre à la console : lien et code à 6 chiffres, page « lien déjà utilisé » ; elle mène à l'accueil ou à l'URL demandée (chemin relatif `/console/`) en une action. Écran d'accès refusé qui explique quoi faire. Recherche globale bornée par la matrice. Page « Votre rôle » dérivée du GLOSSAIRE §7.",
-      "source": "décision de Will du 2026-09-29, W19 (docs/chantiers/W19-conseillers-salaries.md §4.1) ; module repris de REQ-UX-018 (console), sans étape",
+      "texte": "Carte des routes unique pour la console (`docs/CONSOLE-ROUTES.md`) : route, écran, rôle, phase et statut (prévue ou livrée), REQ, maquette. Navigation DÉRIVÉE des droits `ecran:*` de la matrice. Bureau : une barre latérale de ≤ 7 entrées de premier niveau groupées par métier ; moins de 768 px : barre inférieure de ≤ 4 entrées plus un bouton Menu qui ouvre la barre latérale en tiroir, sans défilement horizontal à 320 px. Accueil par rôle ET par phase : la première route livrée de la liste de préférence du rôle ; à défaut, un état vide guidant qui dit ce qui arrive et quand ; jamais de 404. Connexion propre à la console : lien et code à 6 chiffres, page « lien déjà utilisé » ; elle mène à l'accueil ou à l'URL demandée (chemin relatif `/console/`) en une action. Écran d'accès refusé qui explique quoi faire. Recherche globale bornée par la matrice. Page « Votre rôle » dérivée du GLOSSAIRE §7.",
+      "source": "décision de Will du 2026-09-29, W19 (docs/chantiers/W19-conseillers-salaries.md §4.1) ; module repris de REQ-UX-018 (console), sans étape ; précisée le 2026-10-03 : décision de Williams du 2026-10-03 (réponses « NON C4ETAIT MIEUX JUSTE AVANT » et « oui 5 ans et ok pour la console »), rattrapage 85",
       "statut": "active",
       "remplaceePar": null,
       "module": 17,

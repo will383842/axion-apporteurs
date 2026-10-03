@@ -32,6 +32,11 @@ export const TACHES = {
   droits_contact_purger: { req: 'REQ-JUR-065' },
   /** DM-60 — l'anonymisation, cinq ans après sa clôture, de la trace d'une demande de droit du contact. */
   droits_contact_anonymiser: { req: 'REQ-JUR-065' },
+  /**
+   * INT-T08-P — la réconciliation quotidienne avec axion-ia : relecture de sa file depuis la plus
+   * haute séquence reçue, rejeu des trous (`src/server/jobs/reconciliation.ts`).
+   */
+  reconciliation_axionia: { req: 'REQ-INT-013' },
 } as const satisfies Readonly<Record<string, { req: `REQ-${string}` }>>;
 
 export type NomDeTache = keyof typeof TACHES;
