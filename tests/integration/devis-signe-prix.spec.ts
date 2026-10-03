@@ -48,7 +48,8 @@ function devisSigne(prixDeReference: (ligne: Record<string, unknown>) => unknown
 const sansLeChamp = () => {
   const p = devisSigne(() => 0);
   p.lignes = (p.lignes as Record<string, unknown>[]).map((l) => {
-    const { prixReferenceHt: _retire, ...reste } = l;
+    const reste = { ...l };
+    delete reste.prixReferenceHt;
     return reste;
   });
   return p;

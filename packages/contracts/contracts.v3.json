@@ -611,6 +611,17 @@
                     "type": "null"
                   }
                 ]
+              },
+              "prixReferenceHt": {
+                "anyOf": [
+                  {
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
               }
             },
             "required": [
@@ -620,7 +631,8 @@
               "montantHtCents",
               "offreCode",
               "commissionId",
-              "commission"
+              "commission",
+              "prixReferenceHt"
             ],
             "type": "object"
           },

@@ -112,6 +112,11 @@ const ligneDeDevis = ferme({
   offreCode: ouNul(chaine),
   commissionId: ouNul(chaine),
   commission: commissionDeLigne,
+  // Version 3, amendée avant son adoption par axion-ia (décision de Williams du 2026-10-01) : le
+  // prix PUBLIC en vigueur à la date du devis signé, en centimes, lu par le producteur dans sa grille
+  // de prix. Le prix VENDU reste `montantHtCents`. Nul pour une ligne sans prix public (palier au
+  // forfait sur devis) : une absence de prix de référence n'est jamais un prix nul.
+  prixReferenceHt: ouNul(centimes),
 });
 
 // ── les douze charges ────────────────────────────────────────────────────────
