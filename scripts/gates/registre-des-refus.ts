@@ -383,6 +383,9 @@ export const REFUS_NOMMES: Readonly<Record<string, readonly string[]>> = {
   'scripts/gates/harnais-mcp.ts': ['principal().then › ∅ › (code)'],
   'scripts/gates/journal-sans-pii.ts': ['module › si LANCE_EN_SCRIPT › (decision.code)'],
   'scripts/gates/csp-inline.ts': ['module › si LANCE_EN_SCRIPT › (decision.code)'],
+  'scripts/gates/notifications-lue-at-inerte.ts': [
+    'module › si APPELE_DIRECTEMENT › si echecs.length > 0 › (= 1)',
+  ],
   'scripts/gates/jur-aucun-agregat-reseau.ts': ['module › si LANCE_EN_SCRIPT › (decision.code)'],
   'scripts/gates/jur-aucune-progression.ts': ['module › si LANCE_EN_SCRIPT › (decision.code)'],
   'scripts/gates/jur-grille-chiffree.ts': [

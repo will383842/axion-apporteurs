@@ -408,6 +408,11 @@ function donneesNeuves(modele: ModeleCloisonne, lienMagiqueId: string): Record<s
         creeAt,
         expireAt: new Date(t0 + 60 * MINUTE),
       };
+    // UX-P1-10 : une clé de la FORME admise par la base ; sa valeur se juge en amont, par Zod.
+    case 'notificationEspace':
+      return { cle: 'essai_cloisonnement', creeAt };
+    case 'preferenceNotification':
+      return { cle: 'essai_cloisonnement', active: true, modifieeAt: creeAt };
   }
 }
 
@@ -436,6 +441,10 @@ function modification(modele: ModeleCloisonne, n: number): Record<string, unknow
       return { tentativesCode: n };
     case 'sessionEspace':
       return { derniereVueAt: instant };
+    case 'notificationEspace':
+      return { lueAt: instant };
+    case 'preferenceNotification':
+      return { modifieeAt: instant };
   }
 }
 
